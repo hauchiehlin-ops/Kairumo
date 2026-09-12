@@ -19,6 +19,14 @@ chacha20poly1305 = "0.10"
 base64 = "0.22"
 getrandom = "0.2"
 uniffi = { version = "0.29", features = ["cli"] }
+# 原生相依。libopus 為 BSD-3，見 models/MODELS.md。
+audiopus = "0.2"
+# whisper.cpp 綁定。程式碼與 Whisper 模型權重皆為 MIT（見 models/MODELS.md）。
+whisper-rs = "0.16"
+# PDFium 為 BSD-3。❌ 絕不使用 MuPDF（AGPL），見 deny.toml。
+# thread_safe：PDFium 的 C API 不是執行緒安全的，這個 feature 會在呼叫周圍
+# 加互斥鎖。沒有它就無法滿足 PdfDocument 的 Send + Sync 約束。
+pdfium-render = { version = "0.8", features = ["thread_safe"] }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

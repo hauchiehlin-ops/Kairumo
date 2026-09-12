@@ -27,6 +27,19 @@
 - **高風險**：語者分離模型（pyannote 系條款嚴格）
 - **記錄於**：`models/MODELS.md`
 
+### H8. libpdfium 執行期庫
+- **卡在**：`pdfium-render` 只是綁定，實際的 `libpdfium` 動態庫需另外提供
+- **要做**：iOS 靜態連結、macOS/Windows 隨 App 附帶；取得或自建 libpdfium
+- **備註**：**建構成功不代表能執行** —— 目前只驗證了介面與邊界檢查
+- **另注意**：PDFium 的 C API 非執行緒安全，多頁渲染實際是序列化的，
+  J2 的效能預算只能靠 `PageCache` 的預抓，不能靠平行渲染
+
+### H9. whisper 轉錄品質實測
+- **卡在**：模型檔 574 MB 需下載；且中文品質必須用 H2 的測試集驗證
+- **已就緒**：`padnote-asr-whisper` 編譯通過、錯誤路徑已測
+- **備註**：whisper 定位是**多語備援**。中文主力應是 Paraformer-zh（S-24），
+  但其模型權重授權尚未確認（H3）
+
 ### H4. Apple Pencil 實機行為驗證
 - 壓感曲線調校、懸停（hover）、雙擊切換工具
 - `coalescedTouches` 在 120Hz 下的實際取樣數
@@ -68,6 +81,10 @@
 | S-17 | WP13 | `padnote-core::setup`：引擎與權限中心狀態機 |
 | S-16 | WP1 | `padnote-doc::text`：文字 CRDT + 二進位編碼，**端到端同步已驗證** |
 | S-12 | — | UniFFI：Swift/Kotlin 綁定、產生腳本、XCFramework 腳本、CI 閘門 |
+| S-23 | — | 文件 op-log 持久化：12 種 DocOp、落盤、`open()` 重播還原 |
+| S-13 | WP5 | `padnote-audio`：Opus 編碼 + Ogg 容器（**ffprobe 驗證通過**）|
+| S-15 | WP5 | `padnote-asr-whisper`：whisper.cpp `AsrEngine`（**轉錄品質待實測**）|
+| S-21 | WP7 | `padnote-pdf-pdfium`：PDFium 適配層（**執行期需 libpdfium**）|
 
 ### 待做
 | ID | 工作包 | 內容 | 備註 |
