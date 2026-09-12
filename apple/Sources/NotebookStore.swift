@@ -96,10 +96,10 @@ public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
 
     public var localizationKey: String {
         switch self {
-        case .blank: return "blank"
-        case .grid: return "grid"
-        case .lined: return "lined"
-        case .cornell: return "cornell"
+        case .blank: return "tmpl_blank"
+        case .grid: return "tmpl_grid"
+        case .lined: return "tmpl_lined"
+        case .cornell: return "tmpl_cornell"
         case .dotGridFine: return "tmpl_dot_grid_fine"
         case .goldenRatio: return "tmpl_golden_ratio"
         case .moodboardMatrix: return "tmpl_moodboard"
@@ -114,10 +114,10 @@ public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
 
     public var descriptionLocalizationKey: String {
         switch self {
-        case .blank: return "blank"
-        case .grid: return "grid"
-        case .lined: return "lined"
-        case .cornell: return "cornell"
+        case .blank: return "tmpl_blank_desc"
+        case .grid: return "tmpl_grid_desc"
+        case .lined: return "tmpl_lined_desc"
+        case .cornell: return "tmpl_cornell_desc"
         case .dotGridFine: return "tmpl_dot_grid_fine_desc"
         case .goldenRatio: return "tmpl_golden_ratio_desc"
         case .moodboardMatrix: return "tmpl_moodboard_desc"
@@ -200,6 +200,30 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     /// 筆記內嵌討論圖釘清單
     public var commentPins: [NoteCommentPin]?
 
+    /// 系統預設標題的語系鍵。
+    ///
+    /// 內建的示範筆記若把中文標題直接寫死存進 JSON，切換介面語言時檔名不會跟著變
+    /// —— 但標題同時又是使用者可以改的資料，不能每次都用翻譯覆蓋。折衷做法是記下
+    /// 「這個標題還是系統給的」：顯示時翻譯，使用者一改名就清掉這個標記，
+    /// 從此完全尊重使用者輸入。
+    public var titleKey: String?
+    /// 系統預設摘要的語系鍵，語意同 `titleKey`。
+    public var snippetKey: String?
+
+    /// 顯示用標題：系統預設標題會跟著介面語言走。
+    @MainActor
+    public func displayTitle(_ l10n: LocalizationManager = .shared) -> String {
+        guard let key = titleKey else { return title }
+        return l10n.localized(key)
+    }
+
+    /// 顯示用摘要，語意同 `displayTitle`。
+    @MainActor
+    public func displaySnippet(_ l10n: LocalizationManager = .shared) -> String? {
+        if let key = snippetKey { return l10n.localized(key) }
+        return previewSnippet
+    }
+
     public func height(forPage pageIndex: Int, defaultHeight: CGFloat = 1800) -> CGFloat {
         guard let heights = pageHeights, pageIndex >= 0, pageIndex < heights.count else {
             return defaultHeight
@@ -270,6 +294,18 @@ public enum ImageFilterStyle: String, Codable, CaseIterable, Identifiable {
     case warm = "柔光"
 
     public var id: String { rawValue }
+
+    /// 顯示名稱的語系鍵。rawValue 是持久化用的識別字，不可拿來顯示 ——
+    /// 那會讓濾鏡名稱永遠是中文。
+    public var localizationKey: String {
+        switch self {
+        case .original: return "filter_original"
+        case .vintage: return "filter_vintage"
+        case .mono: return "filter_mono"
+        case .contrast: return "filter_contrast"
+        case .warm: return "filter_warm"
+        }
+    }
 }
 
 /// 外觀材料屬性（支援 3D 模型 PBR 物理反射與 2D 圖片材質濾鏡）
@@ -625,9 +661,25 @@ public final class NotebookStore: ObservableObject {
     @Published public var notebooks: [NotebookDocument] = []
     @Published public var recordings: [AudioRecordingRecord] = []
     @Published public var folders: [FolderItem] = []
-    @Published public var rootFolderName: String = "我的筆記"
+    /// 根資料夾名稱。空字串代表「使用者沒有自訂」，顯示時走語系預設值。
+    @Published public var rootFolderName: String = ""
+
+    /// 顯示用根資料夾名稱。
+    public var displayRootFolderName: String {
+        rootFolderName.isEmpty
+            ? LocalizationManager.shared.localized("default_root_folder")
+            : rootFolderName
+    }
 
     private let rootFolderNameKey = "kairumo.notebooks.rootFolderName"
+
+    /// 舊版寫死的根資料夾預設名稱。
+    ///
+    /// 舊版每次存檔都會把這個預設值寫進 UserDefaults，所以升級上來的使用者看起來
+    /// 像是「已經自訂過名稱」，切語言時名稱不會跟著變。認得出這幾個字串就當成
+    /// 未自訂，交還給語系處理；使用者真的把資料夾取名叫「我的筆記」的話，
+    /// 顯示結果在中文介面下完全一樣，不會有感。
+    private static let legacyDefaultRootNames: Set<String> = ["我的筆記", "我的笔记", "My Notes"]
 
     private var documentsDir: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
@@ -657,7 +709,7 @@ public final class NotebookStore: ObservableObject {
     public func loadData() {
         if let data = try? Data(contentsOf: notebooksFile),
            let list = try? JSONDecoder().decode([NotebookDocument].self, from: data) {
-            self.notebooks = list
+            self.notebooks = list.map(migrateSeedTitles)
         }
 
         if let recData = try? Data(contentsOf: recordingsFile),
@@ -670,22 +722,85 @@ public final class NotebookStore: ObservableObject {
             self.folders = fList
         }
 
-        if let savedRoot = UserDefaults.standard.string(forKey: rootFolderNameKey), !savedRoot.isEmpty {
+        if let savedRoot = UserDefaults.standard.string(forKey: rootFolderNameKey),
+           !savedRoot.isEmpty,
+           !Self.legacyDefaultRootNames.contains(savedRoot) {
             self.rootFolderName = savedRoot
         }
     }
 
+    /// 背景序列寫檔佇列。
+    ///
+    /// 編碼與原子寫檔原本在主執行緒同步執行，而拖曳／縮放物件時每一幀都會呼叫
+    /// 到這裡 —— 一秒鐘六十次「整份 notebooks 重新 JSON 編碼 + 三次原子寫檔」，
+    /// 主執行緒被卡住，畫面就抖。改成丟到背景佇列，並用 `pendingWrite` 合併
+    /// 連續請求：中途的版本沒有人看得到，只有最後一版需要落盤。
+    private static let ioQueue = DispatchQueue(label: "kairumo.store.io", qos: .utility)
+    private var pendingWrite: Bool = false
+
+    /// 舊版種子筆記的標題 → 語系鍵。
+    ///
+    /// 這兩本示範筆記在舊版是把中文標題直接寫死存進 JSON 的，升級上來的使用者
+    /// 切語言時檔名不會變。認出來就補上 `titleKey`；使用者若已改過名，
+    /// 字串對不上就不會被動到。
+    private static let legacySeedTitles: [String: (title: String, snippet: String)] = [
+        "歡迎使用 Kairumo": ("seed_welcome_title", "seed_welcome_snippet"),
+        "课堂与会议记录": ("seed_meeting_title", "seed_meeting_snippet"),
+        "課堂與會議記錄": ("seed_meeting_title", "seed_meeting_snippet")
+    ]
+
+    private func migrateSeedTitles(_ doc: NotebookDocument) -> NotebookDocument {
+        guard doc.titleKey == nil, let keys = Self.legacySeedTitles[doc.title] else { return doc }
+        var migrated = doc
+        migrated.titleKey = keys.title
+        migrated.snippetKey = keys.snippet
+        return migrated
+    }
+
     public func persistData() {
-        if let data = try? JSONEncoder().encode(notebooks) {
-            try? data.write(to: notebooksFile, options: .atomic)
+        // 快照必須在主執行緒取得：這些陣列是 @MainActor 隔離的狀態。
+        let snapshot = (notebooks: notebooks, recordings: recordings, folders: folders)
+        let rootName = rootFolderName
+        let files = (notebooks: notebooksFile, recordings: recordingsFile, folders: foldersFile)
+        let key = rootFolderNameKey
+
+        guard !pendingWrite else { return }
+        pendingWrite = true
+
+        Self.ioQueue.async { [weak self] in
+            if let data = try? JSONEncoder().encode(snapshot.notebooks) {
+                try? data.write(to: files.notebooks, options: .atomic)
+            }
+            if let recData = try? JSONEncoder().encode(snapshot.recordings) {
+                try? recData.write(to: files.recordings, options: .atomic)
+            }
+            if let fData = try? JSONEncoder().encode(snapshot.folders) {
+                try? fData.write(to: files.folders, options: .atomic)
+            }
+            UserDefaults.standard.set(rootName, forKey: key)
+
+            Task { @MainActor in
+                guard let self else { return }
+                self.pendingWrite = false
+                // 寫檔期間若又有變更，補寫最後一版，否則會漏掉結尾的編輯。
+                if self.needsAnotherWrite {
+                    self.needsAnotherWrite = false
+                    self.persistData()
+                }
+            }
         }
-        if let recData = try? JSONEncoder().encode(recordings) {
-            try? recData.write(to: recordingsFile, options: .atomic)
+    }
+
+    /// 寫檔進行中又收到新變更的標記。
+    private var needsAnotherWrite: Bool = false
+
+    /// 標記資料已變更並排程落盤。寫檔進行中則記下，待目前這次寫完再補一次。
+    public func markDirtyAndPersist() {
+        if pendingWrite {
+            needsAnotherWrite = true
+        } else {
+            persistData()
         }
-        if let fData = try? JSONEncoder().encode(folders) {
-            try? fData.write(to: foldersFile, options: .atomic)
-        }
-        UserDefaults.standard.set(rootFolderName, forKey: rootFolderNameKey)
     }
 
     /// 專屬畫布筆畫向量二進位儲存目錄
@@ -752,7 +867,9 @@ public final class NotebookStore: ObservableObject {
     }
 
     private func seedDefaultNotebooks() {
-        let n1 = NotebookDocument(
+        // title/previewSnippet 仍然寫入（供未安裝語系或外部讀取時 fallback），
+        // 但顯示一律走 titleKey/snippetKey。
+        var n1 = NotebookDocument(
             title: "歡迎使用 Kairumo",
             createdAt: Date().addingTimeInterval(-86400 * 2),
             lastModifiedDate: Date().addingTimeInterval(-3600),
@@ -762,7 +879,7 @@ public final class NotebookStore: ObservableObject {
             template: .blank
         )
 
-        let n2 = NotebookDocument(
+        var n2 = NotebookDocument(
             title: "課堂與會議記錄",
             createdAt: Date().addingTimeInterval(-86400),
             lastModifiedDate: Date().addingTimeInterval(-7200),
@@ -771,6 +888,11 @@ public final class NotebookStore: ObservableObject {
             previewSnippet: "支援麥克風即時收音，聲音與筆跡精確對齊",
             template: .cornell
         )
+
+        n1.titleKey = "seed_welcome_title"
+        n1.snippetKey = "seed_welcome_snippet"
+        n2.titleKey = "seed_meeting_title"
+        n2.snippetKey = "seed_meeting_snippet"
 
         self.notebooks = [n1, n2]
         persistData()
@@ -801,7 +923,7 @@ public final class NotebookStore: ObservableObject {
             var updated = doc
             updated.lastModifiedDate = Date()
             notebooks[idx] = updated
-            persistData()
+            markDirtyAndPersist()
         }
     }
 
@@ -840,6 +962,8 @@ public final class NotebookStore: ObservableObject {
         let clean = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         if !clean.isEmpty {
             notebooks[idx].title = clean
+            // 使用者親自命名之後就不再翻譯，否則改了名字又被語系蓋回去。
+            notebooks[idx].titleKey = nil
             notebooks[idx].lastModifiedDate = Date()
             persistData()
         }

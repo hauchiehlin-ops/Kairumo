@@ -144,14 +144,6 @@ public final class LocalizationManager: ObservableObject {
             .ko: "모든 노트",
             .th: "บันทึกทั้งหมด"
         ],
-        "switch_account": [
-            .zhHant: "切換帳號",
-            .en: "Switch Account",
-            .zhHans: "切换账号",
-            .ja: "アカウント切替",
-            .ko: "계정 전환",
-            .th: "สลับบัญชี"
-        ],
         "open_folder": [
             .zhHant: "開啟 Kairumo Record 資料夾",
             .en: "Open Kairumo Record Folder",
@@ -489,22 +481,6 @@ public final class LocalizationManager: ObservableObject {
             .ko: "계정 및 보안",
             .th: "บัญชีและความปลอดภัย"
         ],
-        "login_status": [
-            .zhHant: "登入狀態",
-            .en: "Login Status",
-            .zhHans: "登录状态",
-            .ja: "ログイン状態",
-            .ko: "로그인 상태",
-            .th: "สถานะการเข้าสู่ระบบ"
-        ],
-        "logged_in": [
-            .zhHant: "已登入",
-            .en: "Signed In",
-            .zhHans: "已登录",
-            .ja: "ログイン中",
-            .ko: "로그인됨",
-            .th: "เข้าสู่ระบบแล้ว"
-        ],
         "storage_location": [
             .zhHant: "資料儲存位置",
             .en: "Data Storage Location",
@@ -528,14 +504,6 @@ public final class LocalizationManager: ObservableObject {
             .ja: "エンドツーエンド ローカル隔離",
             .ko: "엔드투엔드 로컬 격리",
             .th: "การแยกพื้นที่จัดเก็บเฉพาะเครื่องแบบ End-to-End"
-        ],
-        "guest_account": [
-            .zhHant: "切換為訪客帳號",
-            .en: "Switch to Guest Account",
-            .zhHans: "切换为访客账号",
-            .ja: "ゲストアカウントに切替",
-            .ko: "게스트 계정으로 전환",
-            .th: "เปลี่ยนเป็นบัญชีผู้เยี่ยมชม"
         ],
         "audio_rec_title": [
             .zhHant: "語音錄音與對齊",
@@ -2510,14 +2478,6 @@ public final class LocalizationManager: ObservableObject {
             .ko: "새 제목 입력",
             .th: "ใส่ชื่อเรื่องใหม่"
         ],
-        "online_status": [
-            .zhHant: "線上",
-            .en: "Online",
-            .zhHans: "在线",
-            .ja: "オンライン",
-            .ko: "온라인",
-            .th: "ออนไลน์"
-        ],
         "untitled_note": [
             .zhHant: "未命名筆記",
             .en: "Untitled Note",
@@ -3005,6 +2965,342 @@ public final class LocalizationManager: ObservableObject {
             .ja: "値",
             .ko: "값",
             .th: "ค่า"
+        ],
+        "all_pages": [
+            .zhHant: "全部頁面",
+            .en: "All Pages",
+            .zhHans: "全部页面",
+            .ja: "全ページ",
+            .ko: "전체 페이지",
+            .th: "ทุกหน้า"
+        ],
+        "bullet_list": [
+            .zhHant: "項目符號",
+            .en: "Bulleted List",
+            .zhHans: "项目符号",
+            .ja: "箇条書き",
+            .ko: "글머리 기호",
+            .th: "รายการสัญลักษณ์"
+        ],
+        "current_user": [
+            .zhHant: "目前使用者",
+            .en: "Current User",
+            .zhHans: "当前用户",
+            .ja: "現在のユーザー",
+            .ko: "현재 사용자",
+            .th: "ผู้ใช้ปัจจุบัน"
+        ],
+        "delete": [
+            .zhHant: "刪除",
+            .en: "Delete",
+            .zhHans: "删除",
+            .ja: "削除",
+            .ko: "삭제",
+            .th: "ลบ"
+        ],
+        "delete_item": [
+            .zhHant: "刪除項目",
+            .en: "Delete Item",
+            .zhHans: "删除项目",
+            .ja: "項目を削除",
+            .ko: "항목 삭제",
+            .th: "ลบรายการ"
+        ],
+        "done": [
+            .zhHant: "完成",
+            .en: "Done",
+            .zhHans: "完成",
+            .ja: "完了",
+            .ko: "완료",
+            .th: "เสร็จสิ้น"
+        ],
+        "export_pdf": [
+            .zhHant: "匯出 PDF",
+            .en: "Export PDF",
+            .zhHans: "导出 PDF",
+            .ja: "PDF を書き出す",
+            .ko: "PDF 내보내기",
+            .th: "ส่งออก PDF"
+        ],
+        "insert": [
+            .zhHant: "插入",
+            .en: "Insert",
+            .zhHans: "插入",
+            .ja: "挿入",
+            .ko: "삽입",
+            .th: "แทรก"
+        ],
+        "model3d_studio": [
+            .zhHant: "3D 模型工作室",
+            .en: "3D Model Studio",
+            .zhHans: "3D 模型工作室",
+            .ja: "3D モデルスタジオ",
+            .ko: "3D 모델 스튜디오",
+            .th: "สตูดิโอโมเดล 3D"
+        ],
+        "model3d_title": [
+            .zhHant: "3D 幾何模型",
+            .en: "3D Model",
+            .zhHans: "3D 几何模型",
+            .ja: "3D 幾何モデル",
+            .ko: "3D 기하 모델",
+            .th: "โมเดลเรขาคณิต 3D"
+        ],
+        "new_notebook": [
+            .zhHant: "新增筆記本",
+            .en: "New Notebook",
+            .zhHans: "新建笔记本",
+            .ja: "新規ノートブック",
+            .ko: "새 노트북",
+            .th: "สมุดบันทึกใหม่"
+        ],
+        "numbered_list": [
+            .zhHant: "編號清單",
+            .en: "Numbered List",
+            .zhHans: "编号列表",
+            .ja: "番号付きリスト",
+            .ko: "번호 매기기 목록",
+            .th: "รายการลำดับเลข"
+        ],
+        "open": [
+            .zhHant: "開啟",
+            .en: "Open",
+            .zhHans: "打开",
+            .ja: "開く",
+            .ko: "열기",
+            .th: "เปิด"
+        ],
+        "punctuation_symbols": [
+            .zhHant: "標點符號",
+            .en: "Punctuation",
+            .zhHans: "标点符号",
+            .ja: "句読点",
+            .ko: "문장 부호",
+            .th: "เครื่องหมายวรรคตอน"
+        ],
+        "quick_record": [
+            .zhHant: "快速錄音",
+            .en: "Quick Record",
+            .zhHans: "快速录音",
+            .ja: "クイック録音",
+            .ko: "빠른 녹음",
+            .th: "บันทึกเสียงด่วน"
+        ],
+        "reset": [
+            .zhHant: "重設",
+            .en: "Reset",
+            .zhHans: "重置",
+            .ja: "リセット",
+            .ko: "초기화",
+            .th: "รีเซ็ต"
+        ],
+        "roman_symbols": [
+            .zhHant: "羅馬符號",
+            .en: "Roman Numerals",
+            .zhHans: "罗马符号",
+            .ja: "ローマ数字",
+            .ko: "로마 숫자",
+            .th: "เลขโรมัน"
+        ],
+        "select_template": [
+            .zhHant: "選擇樣板",
+            .en: "Choose Template",
+            .zhHans: "选择模板",
+            .ja: "テンプレートを選択",
+            .ko: "템플릿 선택",
+            .th: "เลือกเทมเพลต"
+        ],
+        "share_note": [
+            .zhHant: "分享筆記",
+            .en: "Share Note",
+            .zhHans: "分享笔记",
+            .ja: "ノートを共有",
+            .ko: "노트 공유",
+            .th: "แชร์บันทึก"
+        ],
+        "theme_category": [
+            .zhHant: "主題分類",
+            .en: "Theme",
+            .zhHans: "主题分类",
+            .ja: "テーマ",
+            .ko: "테마 분류",
+            .th: "หมวดธีม"
+        ],
+        "undo": [
+            .zhHant: "復原",
+            .en: "Undo",
+            .zhHans: "撤销",
+            .ja: "取り消す",
+            .ko: "실행 취소",
+            .th: "เลิกทำ"
+        ],
+        "seed_welcome_title": [
+            .zhHant: "歡迎使用 Kairumo",
+            .en: "Welcome to Kairumo",
+            .zhHans: "欢迎使用 Kairumo",
+            .ja: "Kairumo へようこそ",
+            .ko: "Kairumo에 오신 것을 환영합니다",
+            .th: "ยินดีต้อนรับสู่ Kairumo"
+        ],
+        "seed_welcome_snippet": [
+            .zhHant: "點擊進入畫布即可隨心手寫、繪製圖形、插入錄音並導出 PDF",
+            .en: "Open the canvas to handwrite, draw, record audio and export to PDF",
+            .zhHans: "点击进入画布即可随心手写、绘制图形、插入录音并导出 PDF",
+            .ja: "キャンバスを開いて手書き、作図、録音、PDF 書き出しができます",
+            .ko: "캔버스를 열어 손글씨, 도형, 녹음, PDF 내보내기를 사용해 보세요",
+            .th: "เปิดผืนผ้าใบเพื่อเขียนด้วยลายมือ วาดรูป บันทึกเสียง และส่งออกเป็น PDF"
+        ],
+        "seed_meeting_title": [
+            .zhHant: "課堂與會議記錄",
+            .en: "Lectures & Meetings",
+            .zhHans: "课堂与会议记录",
+            .ja: "授業と会議の記録",
+            .ko: "강의 및 회의 기록",
+            .th: "บันทึกการเรียนและการประชุม"
+        ],
+        "seed_meeting_snippet": [
+            .zhHant: "支援麥克風即時收音，聲音與筆跡精確對齊",
+            .en: "Live microphone capture with audio precisely aligned to your ink",
+            .zhHans: "支持麦克风实时收音，声音与笔迹精确对齐",
+            .ja: "マイクでのリアルタイム録音、音声と筆跡を正確に同期",
+            .ko: "마이크 실시간 녹음, 음성과 필기를 정확히 정렬",
+            .th: "บันทึกเสียงสดจากไมโครโฟน พร้อมจัดเรียงเสียงให้ตรงกับลายมือ"
+        ],
+        "default_root_folder": [
+            .zhHant: "我的筆記",
+            .en: "My Notes",
+            .zhHans: "我的笔记",
+            .ja: "マイノート",
+            .ko: "내 노트",
+            .th: "บันทึกของฉัน"
+        ],
+        "default_user_name": [
+            .zhHant: "使用者",
+            .en: "You",
+            .zhHans: "用户",
+            .ja: "ユーザー",
+            .ko: "사용자",
+            .th: "ผู้ใช้"
+        ],
+        "edit_identity": [
+            .zhHant: "編輯身分",
+            .en: "Edit Identity",
+            .zhHans: "编辑身份",
+            .ja: "表示名を編集",
+            .ko: "표시 정보 편집",
+            .th: "แก้ไขตัวตน"
+        ],
+        "identity_title": [
+            .zhHant: "協作身分",
+            .en: "Collaboration Identity",
+            .zhHans: "协作身份",
+            .ja: "共同編集の表示名",
+            .ko: "공동 작업 표시 정보",
+            .th: "ตัวตนสำหรับทำงานร่วมกัน"
+        ],
+        "identity_color": [
+            .zhHant: "身分顏色",
+            .en: "Identity Colour",
+            .zhHans: "身份颜色",
+            .ja: "表示カラー",
+            .ko: "표시 색상",
+            .th: "สีประจำตัว"
+        ],
+        "identity_preview_hint": [
+            .zhHant: "協作時其他人看到的樣子",
+            .en: "How others see you while collaborating",
+            .zhHans: "协作时其他人看到的样子",
+            .ja: "共同編集中に相手に見える表示",
+            .ko: "공동 작업 중 상대에게 보이는 모습",
+            .th: "สิ่งที่คนอื่นเห็นขณะทำงานร่วมกัน"
+        ],
+        "identity_desc": [
+            .zhHant: "這個名稱與顏色只用於多人協作時顯示「誰在編輯」。它存在這台裝置上，不是帳號，不需要註冊，也不會連到任何雲端或系統帳號。",
+            .en: "This name and colour are only used to show who is editing during collaboration. They live on this device — not an account, no sign-up, and never linked to any cloud or system account.",
+            .zhHans: "这个名称与颜色仅用于多人协作时显示“谁在编辑”。它存在这台设备上，不是账号，无需注册，也不会连接任何云端或系统账号。",
+            .ja: "この名前と色は共同編集中に「誰が編集しているか」を示すためだけに使われます。この端末内に保存され、アカウントではなく、登録も不要で、クラウドやシステムアカウントとは一切連携しません。",
+            .ko: "이 이름과 색상은 공동 작업 중 '누가 편집 중인지' 표시하는 데만 사용됩니다. 이 기기에만 저장되며 계정이 아니고 가입도 필요 없으며 클라우드나 시스템 계정과 연결되지 않습니다.",
+            .th: "ชื่อและสีนี้ใช้เพื่อแสดงว่าใครกำลังแก้ไขขณะทำงานร่วมกันเท่านั้น ข้อมูลอยู่ในเครื่องนี้ ไม่ใช่บัญชี ไม่ต้องสมัคร และไม่เชื่อมต่อกับคลาวด์หรือบัญชีระบบใด ๆ"
+        ],
+        "identity_desc_short": [
+            .zhHant: "協作時顯示的身分 · 僅存於本機",
+            .en: "Shown while collaborating · stored on this device",
+            .zhHans: "协作时显示的身份 · 仅存于本机",
+            .ja: "共同編集時の表示名 · 端末内に保存",
+            .ko: "공동 작업 시 표시 · 이 기기에만 저장",
+            .th: "แสดงขณะทำงานร่วมกัน · เก็บในเครื่องนี้"
+        ],
+        "style_blueprint": [
+            .zhHant: "線框圖",
+            .en: "Blueprint",
+            .zhHans: "线框图",
+            .ja: "線画",
+            .ko: "선화",
+            .th: "ภาพลายเส้น"
+        ],
+        "style_solid": [
+            .zhHant: "實物",
+            .en: "Solid",
+            .zhHans: "实物",
+            .ja: "実物",
+            .ko: "실물",
+            .th: "ภาพทึบ"
+        ],
+        "filter_original": [
+            .zhHant: "原圖",
+            .en: "Original",
+            .zhHans: "原图",
+            .ja: "オリジナル",
+            .ko: "원본",
+            .th: "ต้นฉบับ"
+        ],
+        "filter_vintage": [
+            .zhHant: "復古",
+            .en: "Vintage",
+            .zhHans: "复古",
+            .ja: "ヴィンテージ",
+            .ko: "빈티지",
+            .th: "วินเทจ"
+        ],
+        "filter_mono": [
+            .zhHant: "黑白",
+            .en: "Mono",
+            .zhHans: "黑白",
+            .ja: "モノクロ",
+            .ko: "흑백",
+            .th: "ขาวดำ"
+        ],
+        "filter_contrast": [
+            .zhHant: "清晰",
+            .en: "Sharp",
+            .zhHans: "清晰",
+            .ja: "シャープ",
+            .ko: "선명",
+            .th: "คมชัด"
+        ],
+        "filter_warm": [
+            .zhHant: "柔光",
+            .en: "Warm",
+            .zhHans: "柔光",
+            .ja: "ソフト",
+            .ko: "부드럽게",
+            .th: "นวลตา"
+        ],
+        "rotate_right_90": [
+            .zhHant: "向右轉 90°",
+            .en: "Rotate 90°",
+            .zhHans: "向右转 90°",
+            .ja: "90° 回転",
+            .ko: "90° 회전",
+            .th: "หมุน 90°"
+        ],
+        "remove_image_from_canvas": [
+            .zhHant: "從畫布移除",
+            .en: "Remove from canvas",
+            .zhHans: "从画布移除",
+            .ja: "キャンバスから削除",
+            .ko: "캔버스에서 제거",
+            .th: "ลบออกจากผืนผ้าใบ"
         ],
         "math_input_hint": [
             .zhHant: "請在上方輸入算式後點擊「計算求解」",

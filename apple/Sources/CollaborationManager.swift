@@ -119,7 +119,12 @@ public class CollaborationManager: ObservableObject {
     public var maxKnownLamport: UInt64 = 0
 
     public let currentUserId: String = UUID().uuidString
-    public let myColorHex: String
+
+    /// 協作辨識色。取自使用者的身分設定 —— 舊版每次啟動隨機挑一個，
+    /// 同一個人在隊友畫面上每次連線都換顏色，反而認不出來。
+    public var myColorHex: String {
+        AccountManager.shared.profile.colorHex
+    }
 
     private var webSocketTask: URLSessionWebSocketTask?
     private var pingTimer: Timer?
@@ -130,9 +135,6 @@ public class CollaborationManager: ObservableObject {
         let savedServer = UserDefaults.standard.string(forKey: "kairumo_relay_server_url")
         self.serverAddress = savedServer ?? "ws://127.0.0.1:9002"
 
-        // 為當前使用者生成固定的辨識色彩
-        let colors = ["#007AFF", "#34C759", "#AF52DE", "#FF9500", "#FF2D55", "#5856D6"]
-        self.myColorHex = colors.randomElement() ?? "#007AFF"
     }
 
     // MARK: - 端對端加密輔助函式

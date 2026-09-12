@@ -16,6 +16,15 @@ public struct AssetLibraryView: View {
 
     var onInsertToCanvas: ((UIImage, AssetItem) -> Void)?
 
+    /// 卡片預覽與插入畫布使用的算繪樣式。
+    /// 預設實物 —— 貼進筆記本的多半希望是個物件，而不是一張工程圖紙。
+    @AppStorage("kairumo.assetRenderStyle") private var renderStyleRaw: String =
+        AssetLibraryManager.AssetRenderStyle.solid.rawValue
+
+    private var renderStyle: AssetLibraryManager.AssetRenderStyle {
+        AssetLibraryManager.AssetRenderStyle(rawValue: renderStyleRaw) ?? .solid
+    }
+
     @State private var selectedTheme: NoteThemeCategory? = nil
     @State private var selectedCategory: AssetCategory = .all
     @State private var selectedSourceFilter: AssetSourceType? = nil
@@ -137,12 +146,22 @@ public struct AssetLibraryView: View {
             // 寬螢幕水平排列
             HStack(spacing: 10) {
                 searchFieldView
-                sourceFilterPicker.frame(width: 260)
+                sourceFilterPicker.frame(width: 240)
+                renderStylePicker.frame(width: 150)
+            }
+            // 中等寬度：搜尋獨立一行
+            VStack(spacing: 8) {
+                searchFieldView
+                HStack(spacing: 10) {
+                    sourceFilterPicker
+                    renderStylePicker.frame(width: 150)
+                }
             }
             // 窄螢幕垂直分行
             VStack(spacing: 8) {
                 searchFieldView
                 sourceFilterPicker
+                renderStylePicker
             }
         }
         .padding(.horizontal, 16)
@@ -172,6 +191,17 @@ public struct AssetLibraryView: View {
         .cornerRadius(10)
     }
 
+    /// 線框 / 實物 顯示樣式切換
+    private var renderStylePicker: some View {
+        Picker("", selection: $renderStyleRaw) {
+            Text(localizationManager.localized("style_blueprint"))
+                .tag(AssetLibraryManager.AssetRenderStyle.blueprint.rawValue)
+            Text(localizationManager.localized("style_solid"))
+                .tag(AssetLibraryManager.AssetRenderStyle.solid.rawValue)
+        }
+        .pickerStyle(.segmented)
+    }
+
     private var sourceFilterPicker: some View {
         Picker("", selection: $selectedSourceFilter) {
             Text(localizationManager.localized("all_asset_types")).tag(AssetSourceType?.none)
@@ -183,8 +213,8 @@ public struct AssetLibraryView: View {
 
     // MARK: - 2. 三大主題主標籤篩選列
     private var themeFilterBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
+        // 換行排列，任何寬度下四個主題都同時可見。
+        FlowLayout(spacing: 8, lineSpacing: 8) {
                 // 全部主題
                 themeChip(theme: nil, title: localizationManager.localized("all_themes"), icon: "square.grid.2x2")
 
@@ -196,10 +226,10 @@ public struct AssetLibraryView: View {
 
                 // 數位體驗
                 themeChip(theme: .digital, title: localizationManager.localized("theme_digital"), icon: "iphone.gen3")
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.95))
         .overlay(Divider(), alignment: .bottom)
     }
@@ -233,9 +263,8 @@ public struct AssetLibraryView: View {
 
     // MARK: - 2. 主題類別橫向滑動列
     private var categoryFilterScrollView: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(availableCategories) { cat in
+        FlowLayout(spacing: 8, lineSpacing: 8) {
+            ForEach(availableCategories) { cat in
                     let isSelected = (selectedCategory == cat)
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {
@@ -255,11 +284,11 @@ public struct AssetLibraryView: View {
                         .cornerRadius(20)
                     }
                     .buttonStyle(.plain)
-                }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
         }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.8))
     }
 
@@ -300,6 +329,14 @@ public struct AssetLibraryView: View {
     }
 
     // MARK: - 4. 單一素材卡片
+    /// 容量標示：已落盤回報真實檔案大小，未落盤的預估值加上 `~`。
+    private func sizeLabel(for item: AssetItem) -> String {
+        if let real = libraryManager.cachedSizeMB(for: item.id) {
+            return String(format: "%.1f MB", real)
+        }
+        return String(format: "~%.1f MB", item.fileSizeMB)
+    }
+
     private func assetCardView(item: AssetItem) -> some View {
         let isDownloaded = libraryManager.isDownloaded(item.id)
         let isDownloading = libraryManager.downloadingItemIds.contains(item.id)
@@ -310,7 +347,7 @@ public struct AssetLibraryView: View {
                 viewingDetailItem = item
             } label: {
                 ZStack(alignment: .topTrailing) {
-                    let img = libraryManager.renderItemImage(for: item)
+                    let img = libraryManager.renderItemImage(for: item, style: renderStyle)
                     Image(uiImage: img)
                         .resizable()
                         .scaledToFill()
@@ -354,7 +391,8 @@ public struct AssetLibraryView: View {
                         .font(.system(size: 10, weight: .medium, design: .monospaced))
                         .foregroundColor(.accentColor)
                     Spacer()
-                    Text("\(String(format: "%.1f", item.fileSizeMB)) MB")
+                    // 已落盤的顯示真實檔案大小；未落盤的是預估值，用 ~ 標示出來。
+                    Text(sizeLabel(for: item))
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
                 }
@@ -386,7 +424,12 @@ public struct AssetLibraryView: View {
                     // 若提供畫布回調，顯示「插入畫布」按鈕
                     if let onInsert = onInsertToCanvas {
                         Button {
-                            let img = libraryManager.renderItemImage(for: item)
+                            // 插入畫布一律用透明底，才不會在筆記頁上壓出一塊白方框。
+                            let img = libraryManager.renderItemImage(
+                                for: item,
+                                style: renderStyle,
+                                transparent: true
+                            )
                             onInsert(img, item)
                             dismiss()
                         } label: {
@@ -437,7 +480,7 @@ public struct AssetLibraryView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
-                    let img = libraryManager.renderItemImage(for: item)
+                    let img = libraryManager.renderItemImage(for: item, style: renderStyle)
                     Image(uiImage: img)
                         .resizable()
                         .scaledToFit()
@@ -498,7 +541,7 @@ public struct AssetLibraryView: View {
                                 Text(localizationManager.localized("spec_filesize"))
                                     .fontWeight(.medium)
                                     .frame(width: 80, alignment: .leading)
-                                Text("\(String(format: "%.1f", item.fileSizeMB)) MB")
+                                Text(sizeLabel(for: item))
                                     .foregroundColor(.secondary)
                             }
                             .font(.subheadline)
@@ -529,7 +572,11 @@ public struct AssetLibraryView: View {
 
                             if let onInsert = onInsertToCanvas {
                                 Button {
-                                    let img = libraryManager.renderItemImage(for: item)
+                                    let img = libraryManager.renderItemImage(
+                                        for: item,
+                                        style: renderStyle,
+                                        transparent: true
+                                    )
                                     onInsert(img, item)
                                     viewingDetailItem = nil
                                     dismiss()

@@ -108,7 +108,7 @@ public struct HomeWorkbenchView: View {
 
         if !searchText.isEmpty {
             list = list.filter {
-                $0.title.localizedCaseInsensitiveContains(searchText) ||
+                $0.displayTitle().localizedCaseInsensitiveContains(searchText) ||
                 ($0.previewSnippet?.localizedCaseInsensitiveContains(searchText) ?? false)
             }
         }
@@ -117,7 +117,7 @@ public struct HomeWorkbenchView: View {
         case .byDate:
             return list.sorted { $0.lastModifiedDate > $1.lastModifiedDate }
         case .byTitle:
-            return list.sorted { $0.title.localizedCompare($1.title) == .orderedAscending }
+            return list.sorted { $0.displayTitle().localizedCompare($1.displayTitle()) == .orderedAscending }
         case .onlyRecordings:
             return list.filter { $0.hasRecording }
         }
@@ -380,7 +380,7 @@ public struct HomeWorkbenchView: View {
     private var userAvatarCircle: some View {
         ZStack {
             Circle()
-                .fill(LinearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .fill(Color(hex: accountManager.profile.colorHex) ?? .blue)
                 .frame(width: 42, height: 42)
             Text(String(accountManager.profile.displayName.prefix(1)).uppercased())
                 .font(.title3)
@@ -391,20 +391,13 @@ public struct HomeWorkbenchView: View {
 
     private var userProfileTexts: some View {
         VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 6) {
-                Text(accountManager.profile.displayName)
-                    .font(.headline)
-                    .foregroundColor(.primary)
-                Text(localizationManager.localized("online_status"))
-                    .font(.system(size: 10, weight: .bold))
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(Color.green.opacity(0.15))
-                    .foregroundColor(.green)
-                    .cornerRadius(6)
-            }
+            Text(accountManager.profile.displayName)
+                .font(.headline)
+                .foregroundColor(.primary)
 
-            Text("\(accountManager.profile.email.isEmpty ? "@" + accountManager.profile.username : accountManager.profile.email) • \(accountManager.profile.syncStatusText)")
+            // 這裡以前掛著「線上」徽章與同步狀態，但沒有伺服器也沒有帳號，
+            // 那是不成立的狀態。改成說明這個身分的實際用途。
+            Text(localizationManager.localized("identity_desc_short"))
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
@@ -415,7 +408,7 @@ public struct HomeWorkbenchView: View {
         Button {
             showAccountSheet = true
         } label: {
-            Text(localizationManager.localized("switch_account"))
+            Text(localizationManager.localized("edit_identity"))
                 .font(.caption)
                 .fontWeight(.medium)
                 .padding(.horizontal, 10)
@@ -689,7 +682,7 @@ public struct HomeWorkbenchView: View {
                                                 Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
                                             }
                                             Button {
-                                                renameText = note.title
+                                                renameText = note.displayTitle()
                                                 renamingNotebookId = note.id
                                             } label: {
                                                 Label(localizationManager.localized("rename_note"), systemImage: "pencil")
@@ -720,12 +713,12 @@ public struct HomeWorkbenchView: View {
                                         .buttonStyle(.plain)
                                     }
 
-                                    Text(note.title)
+                                    Text(note.displayTitle())
                                         .font(.headline)
                                         .foregroundColor(.primary)
                                         .lineLimit(1)
 
-                                    if let snippet = note.previewSnippet {
+                                    if let snippet = note.displaySnippet() {
                                         Text(snippet)
                                             .font(.caption)
                                             .foregroundColor(.secondary)
@@ -1068,11 +1061,11 @@ public struct HomeWorkbenchView: View {
                     Image(systemName: "tray.2.fill")
                         .foregroundColor(.accentColor)
                         .font(.subheadline)
-                    Text(notebookStore.rootFolderName)
+                    Text(notebookStore.displayRootFolderName)
                         .font(.subheadline)
                         .fontWeight(.bold)
                     Button {
-                        rootFolderRenameText = notebookStore.rootFolderName
+                        rootFolderRenameText = notebookStore.displayRootFolderName
                         showRenameRootFolderAlert = true
                     } label: {
                         Image(systemName: "pencil")
@@ -1190,7 +1183,7 @@ public struct HomeWorkbenchView: View {
                                     Image(systemName: note.template.iconName)
                                         .font(.largeTitle)
                                         .foregroundColor(.accentColor.opacity(0.7))
-                                    Text(note.title)
+                                    Text(note.displayTitle())
                                         .font(.caption2)
                                         .lineLimit(1)
                                         .foregroundColor(.secondary)
@@ -1213,7 +1206,7 @@ public struct HomeWorkbenchView: View {
                                         Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
                                     }
                                     Button {
-                                        renameText = note.title
+                                        renameText = note.displayTitle()
                                         renamingNotebookId = note.id
                                     } label: {
                                         Label(localizationManager.localized("rename_note"), systemImage: "pencil")
@@ -1244,7 +1237,7 @@ public struct HomeWorkbenchView: View {
                                 .buttonStyle(.plain)
                             }
 
-                            Text(note.title)
+                            Text(note.displayTitle())
                                 .font(.subheadline)
                                 .fontWeight(.medium)
                                 .foregroundColor(.primary)
@@ -1483,7 +1476,7 @@ struct QuickAudioRecorderModal: View {
                     Picker(localizationManager.localized("attach_picker_label"), selection: $targetNotebookId) {
                         Text(localizationManager.localized("standalone_recording")).tag(nil as String?)
                         ForEach(notebookStore.notebooks) { nb in
-                            Text(nb.title).tag(nb.id as String?)
+                            Text(nb.displayTitle()).tag(nb.id as String?)
                         }
                     }
                     .pickerStyle(.menu)

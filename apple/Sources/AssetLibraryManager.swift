@@ -181,62 +181,147 @@ public final class AssetLibraryManager: ObservableObject {
     private init() {
         loadDownloadedState()
         seedLibraryItems()
+        reconcileWithDisk()
+        updateItemStates()
     }
 
-    /// 總計本機已下載容量 (MB)
+    /// 素材快取目錄。
+    ///
+    /// 素材是由向量繪圖程式在本機算繪出來的，沒有遠端伺服器可下載 ——
+    /// 所謂「下載」實際上是**算繪並落盤**。以前這裡只是跑一個 0.6 秒的計時器把
+    /// 布林值翻成 true，容量數字也是寫死的，畫面上那句「已下載 4 (7.3 MB)」
+    /// 完全是假的。現在真的產出 PNG 檔，容量也照實際位元組數回報。
+    public var assetsDirectory: URL {
+        let dir = FileManager.default
+            .urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("AssetLibrary", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: dir.path) {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        return dir
+    }
+
+    public func fileURL(for id: String) -> URL {
+        assetsDirectory.appendingPathComponent("\(id).png")
+    }
+
+    /// 各素材實際佔用的位元組數（僅已落盤者）。
+    @Published public private(set) var cachedSizes: [String: Int] = [:]
+
+    /// 總計本機已快取容量 (MB)，來自真實檔案大小。
     public var totalDownloadedSizeMB: Double {
-        items.filter { downloadedItemIds.contains($0.id) }
-            .reduce(0.0) { $0 + $1.fileSizeMB }
+        Double(cachedSizes.values.reduce(0, +)) / 1_048_576.0
     }
 
-    /// 檢查是否已下載
+    /// 單一素材的實際大小 (MB)。尚未落盤時回傳 nil。
+    public func cachedSizeMB(for id: String) -> Double? {
+        guard let bytes = cachedSizes[id] else { return nil }
+        return Double(bytes) / 1_048_576.0
+    }
+
+    /// 檢查是否已落盤。以**檔案是否存在**為準，而不是只看旗標 ——
+    /// 使用者可能從系統層把 Documents 清掉。
     public func isDownloaded(_ id: String) -> Bool {
         downloadedItemIds.contains(id)
     }
 
-    /// 隨需下載指定素材
+    /// 算繪並落盤指定素材。
     public func downloadItem(id: String) {
         guard !downloadedItemIds.contains(id), !downloadingItemIds.contains(id) else { return }
+        guard let item = items.first(where: { $0.id == id }) else { return }
         downloadingItemIds.insert(id)
 
-        // 模擬即時網路下載
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+        Task { @MainActor in
+            let bytes = await self.materialize(item)
             self.downloadingItemIds.remove(id)
+            guard bytes > 0 else { return }
             self.downloadedItemIds.insert(id)
+            self.cachedSizes[id] = bytes
             self.saveDownloadedState()
             self.updateItemStates()
         }
     }
 
-    /// 一鍵下載指定主題包
+    /// 一鍵算繪整個主題包。
     public func downloadCategory(_ category: AssetCategory) {
-        let targets = items.filter { (category == .all || $0.category == category) && !downloadedItemIds.contains($0.id) }
-        for it in targets {
-            downloadingItemIds.insert(it.id)
+        let targets = items.filter {
+            (category == .all || $0.category == category) && !downloadedItemIds.contains($0.id)
         }
+        guard !targets.isEmpty else { return }
+        for it in targets { downloadingItemIds.insert(it.id) }
 
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+        Task { @MainActor in
             for it in targets {
+                let bytes = await self.materialize(it)
                 self.downloadingItemIds.remove(it.id)
-                self.downloadedItemIds.insert(it.id)
+                if bytes > 0 {
+                    self.downloadedItemIds.insert(it.id)
+                    self.cachedSizes[it.id] = bytes
+                }
             }
             self.saveDownloadedState()
             self.updateItemStates()
         }
     }
 
+    /// 把素材算繪成 PNG 寫進快取目錄，回傳實際位元組數（失敗為 0）。
+    ///
+    /// 算繪在主執行緒完成（UIGraphics 需要），寫檔丟到背景 —— 一次算 50 幾張的
+    /// 「下載本類全部」若整包同步跑會卡住畫面。
+    private func materialize(_ item: AssetItem) async -> Int {
+        let image = renderItemImage(for: item)
+        let url = fileURL(for: item.id)
+        return await Task.detached(priority: .utility) {
+            guard let data = image.pngData() else { return 0 }
+            do {
+                try data.write(to: url, options: .atomic)
+                return data.count
+            } catch {
+                return 0
+            }
+        }.value
+    }
+
+    /// 讀回已落盤的素材。
+    public func cachedImage(for id: String) -> UIImage? {
+        UIImage(contentsOfFile: fileURL(for: id).path)
+    }
+
     /// 移除指定素材之本機快取
     public func removeItem(id: String) {
+        try? FileManager.default.removeItem(at: fileURL(for: id))
         downloadedItemIds.remove(id)
+        cachedSizes.removeValue(forKey: id)
         saveDownloadedState()
         updateItemStates()
     }
 
     /// 一鍵清除所有素材快取（釋放本機硬碟空間）
     public func clearAllCache() {
+        for id in downloadedItemIds {
+            try? FileManager.default.removeItem(at: fileURL(for: id))
+        }
         downloadedItemIds.removeAll()
+        cachedSizes.removeAll()
         saveDownloadedState()
         updateItemStates()
+    }
+
+    /// 以磁碟上的實際檔案為準，重建已快取清單與容量統計。
+    private func reconcileWithDisk() {
+        var present: Set<String> = []
+        var sizes: [String: Int] = [:]
+        for id in downloadedItemIds {
+            let url = fileURL(for: id)
+            if let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+               let size = attrs[.size] as? Int {
+                present.insert(id)
+                sizes[id] = size
+            }
+        }
+        downloadedItemIds = present
+        cachedSizes = sizes
+        saveDownloadedState()
     }
 
     private func updateItemStates() {
@@ -248,10 +333,9 @@ public final class AssetLibraryManager: ObservableObject {
     private func loadDownloadedState() {
         if let saved = UserDefaults.standard.array(forKey: downloadedDefaultsKey) as? [String] {
             self.downloadedItemIds = Set(saved)
-        } else {
-            // 預設內建 4 項精選實體物件（方便使用者離線立即可用）
-            self.downloadedItemIds = ["mech_01", "elec_01", "hard_01", "digi_01"]
         }
+        // 已下載清單一律以磁碟實況為準；舊版會預先塞 4 個 id 假裝已下載，
+        // 但那些檔案從來不存在。
     }
 
     private func saveDownloadedState() {
@@ -940,44 +1024,58 @@ public final class AssetLibraryManager: ObservableObject {
 
     // MARK: - 高解析度實體工業線圖/概念圖向量產生器
     /// 將圖庫項目渲染為畫布適用的高品質 UIImage
-    public func renderItemImage(for item: AssetItem) -> UIImage {
-        let size = CGSize(width: 400, height: 400)
-        let renderer = UIGraphicsImageRenderer(size: size)
+    /// 素材算繪樣式。
+    public enum AssetRenderStyle: String, CaseIterable, Codable {
+        /// 工程線框：藍圖風格，只有線條。
+        case blueprint
+        /// 實物：填色 + 投影，看起來像一個實際的物件而非圖紙。
+        case solid
+    }
 
-        return renderer.image { ctx in
+    /// 算繪素材圖。
+    ///
+    /// 分兩段做：幾何先畫在**透明**圖層上，再決定要不要鋪底圖。這樣「背景透明」
+    /// 不是把底色塗成白色再挖掉，而是真的從來沒畫過底 —— 貼進筆記頁面時不會
+    /// 壓住底下的手寫線條或紙張紋理。
+    ///
+    /// - Parameters:
+    ///   - style: 線框或實物。
+    ///   - transparent: true 時不畫方格底與標題欄，輸出可直接疊在畫布上。
+    public func renderItemImage(
+        for item: AssetItem,
+        style: AssetRenderStyle = .blueprint,
+        transparent: Bool = false
+    ) -> UIImage {
+        let size = CGSize(width: 400, height: 400)
+        let isDark = (item.sourceType == .aiConcept) && !transparent
+
+        // --- 第一段：只有幾何，背景全透明 ---
+        let artFormat = UIGraphicsImageRendererFormat.default()
+        artFormat.opaque = false
+        let art = UIGraphicsImageRenderer(size: size, format: artFormat).image { ctx in
+            currentStyle = style
+            currentIsDark = isDark
+            defer { currentStyle = .blueprint; currentIsDark = false }
+            drawObjectGraphics(code: item.drawingCode, cg: ctx.cgContext, isDark: isDark)
+        }
+
+        // --- 第二段：合成 ---
+        let format = UIGraphicsImageRendererFormat.default()
+        format.opaque = false
+        return UIGraphicsImageRenderer(size: size, format: format).image { ctx in
             let cg = ctx.cgContext
             let rect = CGRect(origin: .zero, size: size)
 
-            // 背景卡片底色
-            let isDark = (item.sourceType == .aiConcept)
-            if isDark {
-                let darkColor = UIColor(red: 0.1, green: 0.12, blue: 0.18, alpha: 1.0)
-                cg.setFillColor(darkColor.cgColor)
-                cg.fill(rect)
-
-                // 科技網格背景
-                cg.setStrokeColor(UIColor.cyan.withAlphaComponent(0.12).cgColor)
-                cg.setLineWidth(1.0)
-                var x: CGFloat = 20
-                while x < 400 {
-                    cg.move(to: CGPoint(x: x, y: 0))
-                    cg.addLine(to: CGPoint(x: x, y: 400))
-                    x += 20
+            if !transparent {
+                if isDark {
+                    cg.setFillColor(UIColor(red: 0.1, green: 0.12, blue: 0.18, alpha: 1.0).cgColor)
+                    cg.fill(rect)
+                    cg.setStrokeColor(UIColor.cyan.withAlphaComponent(0.12).cgColor)
+                } else {
+                    cg.setFillColor(UIColor(red: 0.96, green: 0.97, blue: 0.99, alpha: 1.0).cgColor)
+                    cg.fill(rect)
+                    cg.setStrokeColor(UIColor.systemBlue.withAlphaComponent(0.1).cgColor)
                 }
-                var y: CGFloat = 20
-                while y < 400 {
-                    cg.move(to: CGPoint(x: 0, y: y))
-                    cg.addLine(to: CGPoint(x: 400, y: y))
-                    y += 20
-                }
-                cg.strokePath()
-            } else {
-                let lightColor = UIColor(red: 0.96, green: 0.97, blue: 0.99, alpha: 1.0)
-                cg.setFillColor(lightColor.cgColor)
-                cg.fill(rect)
-
-                // 工程坐標網格
-                cg.setStrokeColor(UIColor.systemBlue.withAlphaComponent(0.1).cgColor)
                 cg.setLineWidth(0.8)
                 var x: CGFloat = 20
                 while x < 400 {
@@ -994,14 +1092,27 @@ public final class AssetLibraryManager: ObservableObject {
                 cg.strokePath()
             }
 
-            // 繪製各物件專屬精確線條
-            drawObjectGraphics(code: item.drawingCode, cg: cg, isDark: isDark)
+            // 實物模式加一道整體投影，讓物件從紙面上「浮起來」。
+            // 對整張圖層下陰影而不是逐個形狀，否則內部細節線也會各自投影，糊成一片。
+            if style == .solid {
+                cg.saveGState()
+                cg.setShadow(
+                    offset: CGSize(width: 0, height: 6),
+                    blur: 14,
+                    color: UIColor.black.withAlphaComponent(transparent ? 0.28 : 0.18).cgColor
+                )
+                art.draw(in: rect)
+                cg.restoreGState()
+            } else {
+                art.draw(in: rect)
+            }
+
+            guard !transparent else { return }
 
             // 底部標註規格小標題欄
             let titleBox = CGRect(x: 16, y: 350, width: 368, height: 36)
             cg.setFillColor((isDark ? UIColor.black.withAlphaComponent(0.6) : UIColor.white.withAlphaComponent(0.85)).cgColor)
-            let path = UIBezierPath(roundedRect: titleBox, cornerRadius: 6)
-            cg.addPath(path.cgPath)
+            cg.addPath(UIBezierPath(roundedRect: titleBox, cornerRadius: 6).cgPath)
             cg.fillPath()
 
             let attrs: [NSAttributedString.Key: Any] = [
@@ -1011,6 +1122,82 @@ public final class AssetLibraryManager: ObservableObject {
             let subtitle = "\(item.title)  [\(item.dimensionsMm)]"
             (subtitle as NSString).draw(at: CGPoint(x: 26, y: 360), withAttributes: attrs)
         }
+    }
+
+    // MARK: - 繪圖小工具
+
+    /// 目前這次算繪使用的樣式。
+    ///
+    /// 用實例屬性而非逐一傳參數：輔助函式在 58 個案例裡被呼叫數百次，
+    /// 每個都多帶一個參數只會讓繪圖程式更難讀。`AssetLibraryManager` 是
+    /// `@MainActor`，算繪從頭到尾在同一執行緒同步完成，不會有交錯問題。
+    private var currentStyle: AssetRenderStyle = .blueprint
+    private var currentIsDark: Bool = false
+
+    /// 實物模式的填色。線框模式回傳 nil（不填）。
+    private var fillColor: UIColor? {
+        guard currentStyle == .solid else { return nil }
+        return currentIsDark
+            ? UIColor.cyan.withAlphaComponent(0.22)
+            : UIColor(red: 0.42, green: 0.58, blue: 0.82, alpha: 0.30)
+    }
+
+    /// 封閉路徑：實物模式先填色再描邊，線框模式只描邊。
+    private func fillAndStroke(_ cg: CGContext, _ path: CGPath) {
+        if let fill = fillColor {
+            cg.addPath(path)
+            cg.setFillColor(fill.cgColor)
+            cg.fillPath()
+        }
+        cg.addPath(path)
+        cg.strokePath()
+    }
+
+    private func stroke(_ cg: CGContext, rounded rect: CGRect, radius: CGFloat) {
+        fillAndStroke(cg, UIBezierPath(roundedRect: rect, cornerRadius: radius).cgPath)
+    }
+
+    /// 折線。`closed` 為 true 時首尾相連（封閉者在實物模式會填色）。
+    private func polyline(_ cg: CGContext, _ pts: [CGPoint], closed: Bool = false) {
+        guard let first = pts.first else { return }
+        if closed {
+            let path = CGMutablePath()
+            path.move(to: first)
+            for p in pts.dropFirst() { path.addLine(to: p) }
+            path.closeSubpath()
+            fillAndStroke(cg, path)
+            return
+        }
+        cg.move(to: first)
+        for p in pts.dropFirst() { cg.addLine(to: p) }
+        cg.strokePath()
+    }
+
+    private func ellipse(_ cg: CGContext, _ rect: CGRect) {
+        fillAndStroke(cg, UIBezierPath(ovalIn: rect).cgPath)
+    }
+
+    /// 以中心點與半徑畫圓。
+    private func circle(_ cg: CGContext, _ center: CGPoint, _ radius: CGFloat) {
+        ellipse(cg, CGRect(
+            x: center.x - radius,
+            y: center.y - radius,
+            width: radius * 2,
+            height: radius * 2
+        ))
+    }
+
+    /// 螺紋鋸齒側視輪廓，用在螺釘與鉚釘。
+    private func threadProfile(_ cg: CGContext, x: CGFloat, top: CGFloat, bottom: CGFloat, halfWidth: CGFloat, pitch: CGFloat) {
+        var y = top
+        var left = true
+        var pts: [CGPoint] = []
+        while y <= bottom {
+            pts.append(CGPoint(x: x + (left ? -halfWidth : halfWidth), y: y))
+            left.toggle()
+            y += pitch
+        }
+        polyline(cg, pts)
     }
 
     private func drawObjectGraphics(code: String, cg: CGContext, isDark: Bool) {
@@ -1023,8 +1210,8 @@ public final class AssetLibraryManager: ObservableObject {
         switch code {
         case "gear_pair":
             // 繪製嚙合雙齒輪組
-            cg.strokeEllipse(in: CGRect(x: 70, y: 120, width: 120, height: 120))
-            cg.strokeEllipse(in: CGRect(x: 110, y: 160, width: 40, height: 40))
+            ellipse(cg, CGRect(x: 70, y: 120, width: 120, height: 120))
+            ellipse(cg, CGRect(x: 110, y: 160, width: 40, height: 40))
             for i in 0..<12 {
                 let angle = CGFloat(i) * (.pi / 6)
                 let x1 = 130 + cos(angle) * 60
@@ -1035,8 +1222,8 @@ public final class AssetLibraryManager: ObservableObject {
                 cg.addLine(to: CGPoint(x: x2, y: y2))
             }
             // 大齒輪
-            cg.strokeEllipse(in: CGRect(x: 180, y: 110, width: 160, height: 160))
-            cg.strokeEllipse(in: CGRect(x: 230, y: 160, width: 60, height: 60))
+            ellipse(cg, CGRect(x: 180, y: 110, width: 160, height: 160))
+            ellipse(cg, CGRect(x: 230, y: 160, width: 60, height: 60))
             for i in 0..<18 {
                 let angle = CGFloat(i) * (.pi / 9)
                 let x1 = 260 + cos(angle) * 80
@@ -1050,13 +1237,13 @@ public final class AssetLibraryManager: ObservableObject {
 
         case "bearing_iso":
             // 軸承內外環與滾子陣列
-            cg.strokeEllipse(in: CGRect(x: 100, y: 75, width: 200, height: 200))
-            cg.strokeEllipse(in: CGRect(x: 140, y: 115, width: 120, height: 120))
+            ellipse(cg, CGRect(x: 100, y: 75, width: 200, height: 200))
+            ellipse(cg, CGRect(x: 140, y: 115, width: 120, height: 120))
             for i in 0..<8 {
                 let angle = CGFloat(i) * (.pi / 4)
                 let rx = 200 + cos(angle) * 80 - 15
                 let ry = 175 + sin(angle) * 80 - 15
-                cg.strokeEllipse(in: CGRect(x: rx, y: ry, width: 30, height: 30))
+                ellipse(cg, CGRect(x: rx, y: ry, width: 30, height: 30))
             }
             cg.strokePath()
 
@@ -1093,8 +1280,8 @@ public final class AssetLibraryManager: ObservableObject {
             cg.addLine(to: CGPoint(x: 50, y: 220))
             cg.strokePath()
             // 輪框
-            cg.strokeEllipse(in: CGRect(x: 105, y: 195, width: 50, height: 50))
-            cg.strokeEllipse(in: CGRect(x: 245, y: 195, width: 50, height: 50))
+            ellipse(cg, CGRect(x: 105, y: 195, width: 50, height: 50))
+            ellipse(cg, CGRect(x: 245, y: 195, width: 50, height: 50))
 
         case "eames_chair":
             // 包浩斯休閒椅
@@ -1128,7 +1315,7 @@ public final class AssetLibraryManager: ObservableObject {
             }
             cg.strokePath()
             // 頭部內六角孔引導
-            cg.strokeEllipse(in: CGRect(x: 180, y: 95, width: 40, height: 30))
+            ellipse(cg, CGRect(x: 180, y: 95, width: 40, height: 30))
 
         case "golden_spiral":
             // 黃金螺旋與費氏矩形分割
@@ -1161,7 +1348,7 @@ public final class AssetLibraryManager: ObservableObject {
             // 4 個黃金焦點交點圓環
             let points = [CGPoint(x: 156.6, y: 140), CGPoint(x: 243.3, y: 140), CGPoint(x: 156.6, y: 200), CGPoint(x: 243.3, y: 200)]
             for pt in points {
-                cg.strokeEllipse(in: CGRect(x: pt.x - 7, y: pt.y - 7, width: 14, height: 14))
+                ellipse(cg, CGRect(x: pt.x - 7, y: pt.y - 7, width: 14, height: 14))
             }
 
         case "dynamic_symmetry":
@@ -1186,7 +1373,7 @@ public final class AssetLibraryManager: ObservableObject {
             }
             // 字符示意輪廓 'H' 與 'p'
             cg.stroke(CGRect(x: 90, y: 120, width: 60, height: 90))
-            cg.strokeEllipse(in: CGRect(x: 180, y: 160, width: 50, height: 50))
+            ellipse(cg, CGRect(x: 180, y: 160, width: 50, height: 50))
             cg.move(to: CGPoint(x: 180, y: 160)); cg.addLine(to: CGPoint(x: 180, y: 250))
             cg.strokePath()
 
@@ -1202,7 +1389,7 @@ public final class AssetLibraryManager: ObservableObject {
             cg.strokePath()
             // 永字主筆骨架
             cg.setLineWidth(3.0)
-            cg.strokeEllipse(in: CGRect(x: 195, y: 85, width: 10, height: 16))
+            ellipse(cg, CGRect(x: 195, y: 85, width: 10, height: 16))
             cg.move(to: CGPoint(x: 130, y: 125)); cg.addLine(to: CGPoint(x: 270, y: 125))
             cg.move(to: CGPoint(x: 200, y: 125)); cg.addLine(to: CGPoint(x: 200, y: 235))
             cg.addLine(to: CGPoint(x: 175, y: 215)) // 鉤
@@ -1222,7 +1409,7 @@ public final class AssetLibraryManager: ObservableObject {
 
         case "bauhaus_motif":
             // 包浩斯三原形幾何構成
-            cg.strokeEllipse(in: CGRect(x: 80, y: 90, width: 110, height: 110)) // 圓
+            ellipse(cg, CGRect(x: 80, y: 90, width: 110, height: 110)) // 圓
             cg.stroke(CGRect(x: 150, y: 140, width: 100, height: 100)) // 方
             cg.move(to: CGPoint(x: 260, y: 90))
             cg.addLine(to: CGPoint(x: 320, y: 200))
@@ -1234,7 +1421,7 @@ public final class AssetLibraryManager: ObservableObject {
             // 泰森多邊形網格
             let centers = [CGPoint(x: 140, y: 120), CGPoint(x: 220, y: 110), CGPoint(x: 180, y: 180), CGPoint(x: 120, y: 220), CGPoint(x: 260, y: 210)]
             for c in centers {
-                cg.strokeEllipse(in: CGRect(x: c.x - 4, y: c.y - 4, width: 8, height: 8))
+                ellipse(cg, CGRect(x: c.x - 4, y: c.y - 4, width: 8, height: 8))
             }
             // 連線網格
             cg.move(to: CGPoint(x: 140, y: 120)); cg.addLine(to: CGPoint(x: 220, y: 110))
@@ -1253,7 +1440,7 @@ public final class AssetLibraryManager: ObservableObject {
             cg.strokePath()
             let pads = [CGPoint(x: 80, y: 120), CGPoint(x: 290, y: 170), CGPoint(x: 110, y: 240), CGPoint(x: 310, y: 190)]
             for p in pads {
-                cg.strokeEllipse(in: CGRect(x: p.x - 6, y: p.y - 6, width: 12, height: 12))
+                ellipse(cg, CGRect(x: p.x - 6, y: p.y - 6, width: 12, height: 12))
             }
 
         case "draft_angle_mold":
@@ -1276,8 +1463,8 @@ public final class AssetLibraryManager: ObservableObject {
             cg.stroke(CGRect(x: 80, y: 220, width: 240, height: 35)) // 主壁厚 T
             cg.stroke(CGRect(x: 185, y: 100, width: 30, height: 120)) // 筋 0.6T
             // 根部圓角
-            cg.strokeEllipse(in: CGRect(x: 177, y: 212, width: 16, height: 16))
-            cg.strokeEllipse(in: CGRect(x: 207, y: 212, width: 16, height: 16))
+            ellipse(cg, CGRect(x: 177, y: 212, width: 16, height: 16))
+            ellipse(cg, CGRect(x: 207, y: 212, width: 16, height: 16))
 
         case "boss_tower":
             // 自攻牙注塑螺絲柱
@@ -1308,10 +1495,10 @@ public final class AssetLibraryManager: ObservableObject {
             cg.stroke(pocket)
             // 四個角狗骨圓孔
             let r: CGFloat = 12
-            cg.strokeEllipse(in: CGRect(x: 120 - r/2, y: 90 - r/2, width: r, height: r))
-            cg.strokeEllipse(in: CGRect(x: 280 - r/2, y: 90 - r/2, width: r, height: r))
-            cg.strokeEllipse(in: CGRect(x: 120 - r/2, y: 250 - r/2, width: r, height: r))
-            cg.strokeEllipse(in: CGRect(x: 280 - r/2, y: 250 - r/2, width: r, height: r))
+            ellipse(cg, CGRect(x: 120 - r/2, y: 90 - r/2, width: r, height: r))
+            ellipse(cg, CGRect(x: 280 - r/2, y: 90 - r/2, width: r, height: r))
+            ellipse(cg, CGRect(x: 120 - r/2, y: 250 - r/2, width: r, height: r))
+            ellipse(cg, CGRect(x: 280 - r/2, y: 250 - r/2, width: r, height: r))
 
         case "pem_standoff":
             // 壓鉚螺母柱
@@ -1352,8 +1539,8 @@ public final class AssetLibraryManager: ObservableObject {
             cg.stroke(CGRect(x: 70, y: 135, width: 40, height: 15)) // 活塞軸
             cg.stroke(CGRect(x: 70, y: 180, width: 40, height: 15)) // 下導軌
             cg.stroke(CGRect(x: 60, y: 110, width: 15, height: 110)) // 前安裝承板
-            cg.strokeEllipse(in: CGRect(x: 130, y: 105, width: 14, height: 14)) // 氣孔 A
-            cg.strokeEllipse(in: CGRect(x: 250, y: 105, width: 14, height: 14)) // 氣孔 B
+            ellipse(cg, CGRect(x: 130, y: 105, width: 14, height: 14)) // 氣孔 A
+            ellipse(cg, CGRect(x: 250, y: 105, width: 14, height: 14)) // 氣孔 B
             cg.strokePath()
 
         case "push_in_fitting":
@@ -1368,8 +1555,8 @@ public final class AssetLibraryManager: ObservableObject {
             cg.stroke(CGRect(x: 70, y: 90, width: 120, height: 150)) // iOS 大標題列
             cg.stroke(CGRect(x: 210, y: 120, width: 120, height: 120)) // Android TopAppBar
             // 導航圖標與分隔指示
-            cg.strokeEllipse(in: CGRect(x: 85, y: 105, width: 12, height: 12))
-            cg.strokeEllipse(in: CGRect(x: 225, y: 135, width: 12, height: 12))
+            ellipse(cg, CGRect(x: 85, y: 105, width: 12, height: 12))
+            ellipse(cg, CGRect(x: 225, y: 135, width: 12, height: 12))
 
         case "bottom_sheet_ui":
             // 底部操作卡片 Bottom Sheet
@@ -1394,9 +1581,9 @@ public final class AssetLibraryManager: ObservableObject {
             // 控制桿手柄
             cg.setLineWidth(1.0)
             cg.move(to: CGPoint(x: 80, y: 260)); cg.addLine(to: CGPoint(x: 160, y: 260))
-            cg.strokeEllipse(in: CGRect(x: 156, y: 256, width: 8, height: 8))
+            ellipse(cg, CGRect(x: 156, y: 256, width: 8, height: 8))
             cg.move(to: CGPoint(x: 320, y: 80)); cg.addLine(to: CGPoint(x: 240, y: 80))
-            cg.strokeEllipse(in: CGRect(x: 236, y: 76, width: 8, height: 8))
+            ellipse(cg, CGRect(x: 236, y: 76, width: 8, height: 8))
             cg.strokePath()
 
         case "spring_physics":
@@ -1464,6 +1651,719 @@ public final class AssetLibraryManager: ObservableObject {
                 cg.strokePath()
             }
 
+        // ---- 機構設計 ----
+
+        case "linear_guide":
+            // 滾珠螺桿滑軌：側視導軌 + 跨座滑塊 + 螺桿
+            stroke(cg, rounded: CGRect(x: 45, y: 205, width: 310, height: 34), radius: 4)
+            polyline(cg, [CGPoint(x: 45, y: 222), CGPoint(x: 355, y: 222)])
+            // 滑塊本體
+            stroke(cg, rounded: CGRect(x: 150, y: 178, width: 110, height: 88), radius: 8)
+            // 滑塊內的四方向滾珠循環列
+            for row in 0..<2 {
+                for col in 0..<4 {
+                    circle(cg, CGPoint(x: 168 + CGFloat(col) * 25, y: 198 + CGFloat(row) * 48), 6)
+                }
+            }
+            // 螺桿與導程牙形
+            cg.setLineWidth(1.4)
+            threadProfile(cg, x: 200, top: 100, bottom: 170, halfWidth: 14, pitch: 10)
+            polyline(cg, [CGPoint(x: 186, y: 100), CGPoint(x: 186, y: 170)])
+            polyline(cg, [CGPoint(x: 214, y: 100), CGPoint(x: 214, y: 170)])
+            cg.setLineWidth(2.5)
+            // 安裝孔
+            for i in 0..<4 {
+                circle(cg, CGPoint(x: 75 + CGFloat(i) * 83, y: 222), 5)
+            }
+
+        case "cam_follower":
+            // 盤形凸輪 + 滾子從動件
+            let camCenter = CGPoint(x: 165, y: 215)
+            circle(cg, camCenter, 16)
+            // 等徑盤形凸輪輪廓（簡諧升程：基圓半徑 + 正弦升程）
+            var camPts: [CGPoint] = []
+            for deg in stride(from: 0, through: 360, by: 6) {
+                let a = CGFloat(deg) * .pi / 180
+                let lift: CGFloat = 26 * (1 - cos(a)) / 2
+                let r = 58 + lift
+                camPts.append(CGPoint(x: camCenter.x + cos(a) * r, y: camCenter.y + sin(a) * r))
+            }
+            polyline(cg, camPts, closed: true)
+            // 滾子從動件與導桿
+            circle(cg, CGPoint(x: 165, y: 122), 16)
+            polyline(cg, [CGPoint(x: 165, y: 106), CGPoint(x: 165, y: 62)])
+            stroke(cg, rounded: CGRect(x: 148, y: 56, width: 34, height: 18), radius: 3)
+            // 行程標註
+            cg.setLineWidth(1.2)
+            cg.setStrokeColor(accentColor.cgColor)
+            polyline(cg, [CGPoint(x: 255, y: 96), CGPoint(x: 255, y: 122)])
+            polyline(cg, [CGPoint(x: 249, y: 96), CGPoint(x: 261, y: 96)])
+            polyline(cg, [CGPoint(x: 249, y: 122), CGPoint(x: 261, y: 122)])
+            cg.setStrokeColor(strokeColor.cgColor)
+            cg.setLineWidth(2.5)
+
+        case "stepper_motor":
+            // NEMA 17 正視：方形機殼 + 中心凸台 + 四角安裝孔
+            stroke(cg, rounded: CGRect(x: 110, y: 95, width: 180, height: 180), radius: 14)
+            circle(cg, CGPoint(x: 200, y: 185), 36)
+            circle(cg, CGPoint(x: 200, y: 185), 12)
+            for dx in [-1.0, 1.0] {
+                for dy in [-1.0, 1.0] {
+                    circle(cg, CGPoint(x: 200 + CGFloat(dx) * 62, y: 185 + CGFloat(dy) * 62), 8)
+                }
+            }
+            // D 形軸切邊
+            polyline(cg, [CGPoint(x: 191, y: 176), CGPoint(x: 191, y: 194)])
+            // 雙極四線出線
+            cg.setLineWidth(1.5)
+            for i in 0..<4 {
+                let y = 292 + CGFloat(i) * 5
+                polyline(cg, [CGPoint(x: 175 + CGFloat(i) * 4, y: 275), CGPoint(x: 150, y: y)])
+            }
+            cg.setLineWidth(2.5)
+
+        case "ai_exoskeleton":
+            // 外骨骼膝關節：大腿護具、仿生雙心瞬時軸、小腿護具與線性致動器
+            stroke(cg, rounded: CGRect(x: 136, y: 62, width: 88, height: 30), radius: 12)
+            polyline(cg, [CGPoint(x: 146, y: 92), CGPoint(x: 152, y: 164)])
+            polyline(cg, [CGPoint(x: 214, y: 92), CGPoint(x: 208, y: 164)])
+            // 雙心瞬時迴轉軸（兩個不同心的樞軸，仿生膝關節的關鍵特徵）
+            stroke(cg, rounded: CGRect(x: 140, y: 164, width: 80, height: 48), radius: 14)
+            circle(cg, CGPoint(x: 162, y: 180), 10)
+            circle(cg, CGPoint(x: 198, y: 196), 10)
+            polyline(cg, [CGPoint(x: 162, y: 180), CGPoint(x: 198, y: 196)])
+            // 小腿護具
+            polyline(cg, [CGPoint(x: 152, y: 212), CGPoint(x: 158, y: 278)])
+            polyline(cg, [CGPoint(x: 208, y: 212), CGPoint(x: 202, y: 278)])
+            stroke(cg, rounded: CGRect(x: 150, y: 278, width: 60, height: 26), radius: 10)
+            // 足底板
+            polyline(cg, [CGPoint(x: 150, y: 304), CGPoint(x: 246, y: 304)])
+            // 並聯線性致動器
+            stroke(cg, rounded: CGRect(x: 244, y: 96, width: 28, height: 74), radius: 8)
+            polyline(cg, [CGPoint(x: 258, y: 170), CGPoint(x: 258, y: 214)])
+            circle(cg, CGPoint(x: 258, y: 222), 9)
+            polyline(cg, [CGPoint(x: 258, y: 96), CGPoint(x: 214, y: 78)])
+            polyline(cg, [CGPoint(x: 258, y: 222), CGPoint(x: 208, y: 212)])
+
+        case "earbud_acoustic":
+            // TWS 耳機剖面：耳甲腔體、10mm 動圈、出音導管與矽膠耳塞
+            ellipse(cg, CGRect(x: 104, y: 96, width: 132, height: 124))
+            // 10mm 鍍鈹動圈單體
+            circle(cg, CGPoint(x: 170, y: 158), 40)
+            circle(cg, CGPoint(x: 170, y: 158), 16)
+            // 出音導管（往耳道方向的錐狀收口）
+            polyline(cg, [CGPoint(x: 228, y: 128), CGPoint(x: 300, y: 176)])
+            polyline(cg, [CGPoint(x: 220, y: 186), CGPoint(x: 292, y: 224)])
+            polyline(cg, [CGPoint(x: 300, y: 176), CGPoint(x: 292, y: 224)])
+            // 矽膠耳塞（傘狀）
+            cg.move(to: CGPoint(x: 300, y: 176))
+            cg.addQuadCurve(to: CGPoint(x: 292, y: 224), control: CGPoint(x: 350, y: 200))
+            cg.strokePath()
+            // 柄部（收音麥克風臂）
+            stroke(cg, rounded: CGRect(x: 128, y: 208, width: 30, height: 92), radius: 15)
+            circle(cg, CGPoint(x: 143, y: 284), 7)
+            // 雙洩壓閥微孔陣列
+            cg.setLineWidth(1.2)
+            for i in 0..<6 {
+                circle(cg, CGPoint(x: 178 + CGFloat(i % 3) * 11, y: 224 + CGFloat(i / 3) * 11), 3)
+            }
+            cg.setLineWidth(2.5)
+
+        case "camera_lens":
+            // 鏡頭光學剖面：鏡筒、雙凸／雙凹鏡片群、光軸與金屬卡口
+            stroke(cg, rounded: CGRect(x: 88, y: 116, width: 212, height: 138), radius: 8)
+            // 鏡片群：正透鏡（雙凸）與負透鏡（雙凹）交錯
+            let elements: [(CGFloat, CGFloat)] = [
+                (116, 16), (146, -11), (176, 20), (206, -9), (236, 14), (268, 18)
+            ]
+            for (x, bulge) in elements {
+                let top = CGPoint(x: x, y: 132)
+                let bottom = CGPoint(x: x, y: 238)
+                cg.move(to: top)
+                cg.addQuadCurve(to: bottom, control: CGPoint(x: x + bulge, y: 185))
+                cg.strokePath()
+                cg.move(to: top)
+                cg.addQuadCurve(to: bottom, control: CGPoint(x: x - bulge, y: 185))
+                cg.strokePath()
+            }
+            // 光軸中心線
+            cg.saveGState()
+            cg.setLineWidth(1.0)
+            cg.setLineDash(phase: 0, lengths: [10, 5, 3, 5])
+            polyline(cg, [CGPoint(x: 70, y: 185), CGPoint(x: 336, y: 185)])
+            cg.restoreGState()
+            cg.setLineWidth(2.5)
+            // 金屬卡口法蘭與防塵密封圈
+            polyline(cg, [CGPoint(x: 300, y: 100), CGPoint(x: 300, y: 270)])
+            polyline(cg, [CGPoint(x: 300, y: 100), CGPoint(x: 324, y: 100)])
+            polyline(cg, [CGPoint(x: 300, y: 270), CGPoint(x: 324, y: 270)])
+            polyline(cg, [CGPoint(x: 324, y: 100), CGPoint(x: 324, y: 270)])
+            // 對焦環滾花
+            cg.setLineWidth(1.4)
+            for i in 0..<10 {
+                polyline(cg, [
+                    CGPoint(x: 120 + CGFloat(i) * 9, y: 116),
+                    CGPoint(x: 120 + CGFloat(i) * 9, y: 130)
+                ])
+            }
+            cg.setLineWidth(2.5)
+
+        case "keyboard_gasket":
+            // 75% 配列：外殼、定位板與鍵位陣列
+            stroke(cg, rounded: CGRect(x: 40, y: 128, width: 320, height: 145), radius: 10)
+            stroke(cg, rounded: CGRect(x: 50, y: 138, width: 300, height: 125), radius: 6)
+            cg.setLineWidth(1.2)
+            // 功能列
+            for i in 0..<16 {
+                stroke(cg, rounded: CGRect(x: 57 + CGFloat(i) * 18.3, y: 144, width: 15, height: 15), radius: 2)
+            }
+            // 主鍵區四列
+            for row in 0..<4 {
+                let offset: CGFloat = [0, 5, 9, 14][row]
+                let count = [15, 14, 13, 12][row]
+                for col in 0..<count {
+                    stroke(cg, rounded: CGRect(
+                        x: 57 + offset + CGFloat(col) * 18.3,
+                        y: 164 + CGFloat(row) * 19,
+                        width: 15,
+                        height: 16
+                    ), radius: 2)
+                }
+            }
+            cg.setLineWidth(2.5)
+            // Gasket 矽膠襯墊位置
+            cg.setStrokeColor(accentColor.cgColor)
+            cg.setLineWidth(3.5)
+            for i in 0..<4 {
+                polyline(cg, [
+                    CGPoint(x: 70 + CGFloat(i) * 78, y: 128),
+                    CGPoint(x: 110 + CGFloat(i) * 78, y: 128)
+                ])
+                polyline(cg, [
+                    CGPoint(x: 70 + CGFloat(i) * 78, y: 273),
+                    CGPoint(x: 110 + CGFloat(i) * 78, y: 273)
+                ])
+            }
+            cg.setStrokeColor(strokeColor.cgColor)
+            cg.setLineWidth(2.5)
+
+        case "ai_hud_display":
+            // 曲面座艙 HUD：弧形投影面 + 準星 + 資料區塊
+            cg.move(to: CGPoint(x: 60, y: 150))
+            cg.addQuadCurve(to: CGPoint(x: 340, y: 150), control: CGPoint(x: 200, y: 100))
+            cg.addLine(to: CGPoint(x: 340, y: 250))
+            cg.addQuadCurve(to: CGPoint(x: 60, y: 250), control: CGPoint(x: 200, y: 200))
+            cg.closePath()
+            cg.strokePath()
+            // 中央準星
+            circle(cg, CGPoint(x: 200, y: 188), 30)
+            circle(cg, CGPoint(x: 200, y: 188), 6)
+            polyline(cg, [CGPoint(x: 160, y: 188), CGPoint(x: 182, y: 188)])
+            polyline(cg, [CGPoint(x: 218, y: 188), CGPoint(x: 240, y: 188)])
+            polyline(cg, [CGPoint(x: 200, y: 148), CGPoint(x: 200, y: 170)])
+            polyline(cg, [CGPoint(x: 200, y: 206), CGPoint(x: 200, y: 228)])
+            // 左右資料條
+            cg.setLineWidth(1.5)
+            for i in 0..<5 {
+                let w: CGFloat = [44, 34, 40, 28, 36][i]
+                polyline(cg, [CGPoint(x: 74, y: 168 + CGFloat(i) * 12), CGPoint(x: 74 + w, y: 168 + CGFloat(i) * 12)])
+                polyline(cg, [CGPoint(x: 326 - w, y: 168 + CGFloat(i) * 12), CGPoint(x: 326, y: 168 + CGFloat(i) * 12)])
+            }
+            cg.setLineWidth(2.5)
+            // 眼球追蹤感測模組
+            ellipse(cg, CGRect(x: 176, y: 274, width: 48, height: 24))
+            circle(cg, CGPoint(x: 200, y: 286), 6)
+
+        // ---- 汽車載具 ----
+
+        case "wheel_rim":
+            // 五輻雙柱鍛造輪框正視
+            let hub = CGPoint(x: 200, y: 190)
+            circle(cg, hub, 122)
+            circle(cg, hub, 108)
+            circle(cg, hub, 40)
+            circle(cg, hub, 14)
+            // 五組雙柱輻條
+            for i in 0..<5 {
+                let a = CGFloat(i) * (2 * .pi / 5) - .pi / 2
+                for side in [-1.0, 1.0] {
+                    let spread = CGFloat(side) * 0.13
+                    polyline(cg, [
+                        CGPoint(x: hub.x + cos(a + spread * 2.2) * 38, y: hub.y + sin(a + spread * 2.2) * 38),
+                        CGPoint(x: hub.x + cos(a + spread) * 106, y: hub.y + sin(a + spread) * 106)
+                    ])
+                }
+            }
+            // PCD 5x114.3 螺栓孔
+            for i in 0..<5 {
+                let a = CGFloat(i) * (2 * .pi / 5) - .pi / 2
+                circle(cg, CGPoint(x: hub.x + cos(a) * 27, y: hub.y + sin(a) * 27), 6)
+            }
+
+        case "suspension_geometry":
+            // 雙 A 臂懸吊：上下 A 臂、轉向節、倒插式避震與輪胎輪廓
+            // 車身側固定基準
+            cg.setLineWidth(3.0)
+            polyline(cg, [CGPoint(x: 62, y: 104), CGPoint(x: 62, y: 268)])
+            cg.setLineWidth(2.5)
+            // 上 A 臂（較短）
+            polyline(cg, [CGPoint(x: 62, y: 128), CGPoint(x: 214, y: 150)])
+            polyline(cg, [CGPoint(x: 62, y: 152), CGPoint(x: 214, y: 150)])
+            // 下 A 臂（較長）
+            polyline(cg, [CGPoint(x: 62, y: 232), CGPoint(x: 238, y: 250)])
+            polyline(cg, [CGPoint(x: 62, y: 256), CGPoint(x: 238, y: 250)])
+            // 轉向節（直立柱）
+            cg.setLineWidth(3.0)
+            polyline(cg, [CGPoint(x: 214, y: 150), CGPoint(x: 238, y: 250)])
+            cg.setLineWidth(2.5)
+            // 上下球接頭
+            circle(cg, CGPoint(x: 214, y: 150), 9)
+            circle(cg, CGPoint(x: 238, y: 250), 9)
+            // 倒插式避震器：兩側筒身 + 內部螺旋彈簧
+            polyline(cg, [CGPoint(x: 134, y: 92), CGPoint(x: 134, y: 240)])
+            polyline(cg, [CGPoint(x: 174, y: 92), CGPoint(x: 174, y: 240)])
+            polyline(cg, [CGPoint(x: 134, y: 92), CGPoint(x: 174, y: 92)])
+            cg.setLineWidth(1.8)
+            var coil: [CGPoint] = []
+            var cy: CGFloat = 104
+            var left = true
+            while cy <= 232 {
+                coil.append(CGPoint(x: left ? 136 : 172, y: cy))
+                left.toggle()
+                cy += 11
+            }
+            polyline(cg, coil)
+            cg.setLineWidth(2.5)
+            polyline(cg, [CGPoint(x: 134, y: 240), CGPoint(x: 174, y: 240)])
+            polyline(cg, [CGPoint(x: 154, y: 240), CGPoint(x: 226, y: 250)])
+            // 輪胎與輪輞
+            cg.setLineWidth(1.6)
+            circle(cg, CGPoint(x: 292, y: 200), 74)
+            cg.setLineWidth(2.5)
+            circle(cg, CGPoint(x: 292, y: 200), 44)
+            circle(cg, CGPoint(x: 292, y: 200), 12)
+            polyline(cg, [CGPoint(x: 238, y: 250), CGPoint(x: 292, y: 200)])
+
+        case "steering_wheel":
+            // D 型平底三輻方向盤：以點列組出上緣圓弧 + 下緣平底的環形輪圈
+            let wheelC = CGPoint(x: 200, y: 186)
+            let outerR: CGFloat = 112
+            let innerR: CGFloat = 86
+            // 平底切在 y = cy + 78 → 對應角度 asin(78/r)
+            let cutDeg = Double(asin(78 / outerR)) * 180 / .pi
+            var rimOuter: [CGPoint] = []
+            var deg = cutDeg
+            while deg >= -(360 - (180 - cutDeg)) {
+                let a = CGFloat(deg) * .pi / 180
+                rimOuter.append(CGPoint(x: wheelC.x + cos(a) * outerR, y: wheelC.y + sin(a) * outerR))
+                deg -= 4
+            }
+            var rimInner: [CGPoint] = []
+            deg = -(360 - (180 - cutDeg))
+            while deg <= cutDeg {
+                let a = CGFloat(deg) * .pi / 180
+                rimInner.append(CGPoint(x: wheelC.x + cos(a) * innerR, y: wheelC.y + sin(a) * innerR))
+                deg += 4
+            }
+            polyline(cg, rimOuter + rimInner, closed: true)
+            // 中央氣囊蓋
+            stroke(cg, rounded: CGRect(x: 164, y: 158, width: 72, height: 58), radius: 14)
+            // 三輻（左、右、下）
+            cg.setLineWidth(6.0)
+            polyline(cg, [CGPoint(x: 164, y: 176), CGPoint(x: 116, y: 168)])
+            polyline(cg, [CGPoint(x: 236, y: 176), CGPoint(x: 284, y: 168)])
+            polyline(cg, [CGPoint(x: 200, y: 216), CGPoint(x: 200, y: 262)])
+            cg.setLineWidth(2.5)
+            // 拇指托
+            stroke(cg, rounded: CGRect(x: 96, y: 132, width: 24, height: 54), radius: 10)
+            stroke(cg, rounded: CGRect(x: 280, y: 132, width: 24, height: 54), radius: 10)
+            // 背部碳纖維換檔撥片
+            cg.setLineWidth(1.8)
+            polyline(cg, [CGPoint(x: 128, y: 108), CGPoint(x: 156, y: 94)])
+            polyline(cg, [CGPoint(x: 272, y: 108), CGPoint(x: 244, y: 94)])
+            cg.setLineWidth(2.5)
+
+        case "ev_chassis":
+            // 滑板底盤俯視：外框、CTP 電池包、雙電機與四輪
+            stroke(cg, rounded: CGRect(x: 78, y: 92, width: 244, height: 200), radius: 24)
+            stroke(cg, rounded: CGRect(x: 96, y: 128, width: 208, height: 128), radius: 10)
+            // CTP 無模組電芯陣列
+            cg.setLineWidth(1.2)
+            for row in 0..<4 {
+                for col in 0..<10 {
+                    stroke(cg, rounded: CGRect(
+                        x: 103 + CGFloat(col) * 20,
+                        y: 135 + CGFloat(row) * 30,
+                        width: 16,
+                        height: 25
+                    ), radius: 2)
+                }
+            }
+            cg.setLineWidth(2.5)
+            // 前後永磁同步電機
+            circle(cg, CGPoint(x: 200, y: 110), 16)
+            circle(cg, CGPoint(x: 200, y: 274), 16)
+            // 四輪
+            for pos in [CGPoint(x: 68, y: 128), CGPoint(x: 332, y: 128), CGPoint(x: 68, y: 256), CGPoint(x: 332, y: 256)] {
+                stroke(cg, rounded: CGRect(x: pos.x - 12, y: pos.y - 26, width: 24, height: 52), radius: 8)
+            }
+
+        case "ai_orbital_shuttle":
+            // 多面體隱形外殼 + 向量離子推進 + 環形重力艙
+            polyline(cg, [
+                CGPoint(x: 200, y: 68), CGPoint(x: 276, y: 140), CGPoint(x: 296, y: 232),
+                CGPoint(x: 200, y: 286), CGPoint(x: 104, y: 232), CGPoint(x: 124, y: 140)
+            ], closed: true)
+            polyline(cg, [CGPoint(x: 200, y: 68), CGPoint(x: 200, y: 286)])
+            polyline(cg, [CGPoint(x: 124, y: 140), CGPoint(x: 276, y: 140)])
+            polyline(cg, [CGPoint(x: 104, y: 232), CGPoint(x: 296, y: 232)])
+            // 駕駛艙
+            ellipse(cg, CGRect(x: 176, y: 96, width: 48, height: 36))
+            // 環形重力偏轉艙
+            ellipse(cg, CGRect(x: 96, y: 176, width: 208, height: 56))
+            // 向量離子噴口
+            for x in [166.0, 200.0, 234.0] {
+                polyline(cg, [
+                    CGPoint(x: CGFloat(x) - 12, y: 286),
+                    CGPoint(x: CGFloat(x) - 18, y: 312),
+                    CGPoint(x: CGFloat(x) + 18, y: 312),
+                    CGPoint(x: CGFloat(x) + 12, y: 286)
+                ])
+            }
+
+        // ---- 工業家具 ----
+
+        case "standing_desk":
+            // 升降桌：桌板 + 雙三節升降柱 + 腳座 + 行程標註
+            stroke(cg, rounded: CGRect(x: 58, y: 104, width: 284, height: 18), radius: 4)
+            // 三節柱（兩側）
+            for baseX in [112.0, 258.0] {
+                let x = CGFloat(baseX)
+                stroke(cg, rounded: CGRect(x: x - 17, y: 122, width: 34, height: 70), radius: 3)
+                stroke(cg, rounded: CGRect(x: x - 13, y: 192, width: 26, height: 56), radius: 3)
+                stroke(cg, rounded: CGRect(x: x - 9, y: 248, width: 18, height: 42), radius: 3)
+                stroke(cg, rounded: CGRect(x: x - 44, y: 290, width: 88, height: 14), radius: 4)
+            }
+            // 橫樑
+            polyline(cg, [CGPoint(x: 112, y: 150), CGPoint(x: 258, y: 150)])
+            // 升降行程箭頭
+            cg.setStrokeColor(accentColor.cgColor)
+            cg.setLineWidth(1.6)
+            polyline(cg, [CGPoint(x: 188, y: 176), CGPoint(x: 188, y: 268)])
+            polyline(cg, [CGPoint(x: 182, y: 184), CGPoint(x: 188, y: 174), CGPoint(x: 194, y: 184)])
+            polyline(cg, [CGPoint(x: 182, y: 260), CGPoint(x: 188, y: 270), CGPoint(x: 194, y: 260)])
+            cg.setStrokeColor(strokeColor.cgColor)
+            cg.setLineWidth(2.5)
+
+        case "task_lamp":
+            // 包浩斯懸臂燈：底座 + 四連桿平行臂 + 環形燈罩
+            ellipse(cg, CGRect(x: 96, y: 278, width: 116, height: 26))
+            polyline(cg, [CGPoint(x: 154, y: 278), CGPoint(x: 154, y: 214)])
+            // 四連桿平行臂（下臂）
+            polyline(cg, [CGPoint(x: 154, y: 214), CGPoint(x: 236, y: 146)])
+            polyline(cg, [CGPoint(x: 164, y: 224), CGPoint(x: 246, y: 156)])
+            // 上臂
+            polyline(cg, [CGPoint(x: 236, y: 146), CGPoint(x: 300, y: 196)])
+            polyline(cg, [CGPoint(x: 246, y: 156), CGPoint(x: 310, y: 206)])
+            // 阻尼關節
+            circle(cg, CGPoint(x: 158, y: 218), 11)
+            circle(cg, CGPoint(x: 241, y: 151), 11)
+            // 環形無頻閃光源
+            circle(cg, CGPoint(x: 305, y: 216), 30)
+            circle(cg, CGPoint(x: 305, y: 216), 18)
+
+        case "modular_credenza":
+            // 模組收納櫃：上下兩模組、45° 倒角拉手、插榫與細腳
+            stroke(cg, rounded: CGRect(x: 66, y: 112, width: 268, height: 76), radius: 4)
+            stroke(cg, rounded: CGRect(x: 66, y: 188, width: 268, height: 76), radius: 4)
+            // 分割門片
+            polyline(cg, [CGPoint(x: 200, y: 112), CGPoint(x: 200, y: 188)])
+            polyline(cg, [CGPoint(x: 156, y: 188), CGPoint(x: 156, y: 264)])
+            polyline(cg, [CGPoint(x: 244, y: 188), CGPoint(x: 244, y: 264)])
+            // 45° 倒角隱藏拉手
+            cg.setLineWidth(1.6)
+            for handle in [
+                CGRect(x: 96, y: 146, width: 70, height: 10),
+                CGRect(x: 234, y: 146, width: 70, height: 10),
+                CGRect(x: 92, y: 220, width: 48, height: 10)
+            ] {
+                polyline(cg, [
+                    CGPoint(x: handle.minX, y: handle.maxY),
+                    CGPoint(x: handle.minX + 8, y: handle.minY),
+                    CGPoint(x: handle.maxX, y: handle.minY)
+                ])
+            }
+            cg.setLineWidth(2.5)
+            // 模組插榫
+            for x in [110.0, 200.0, 290.0] {
+                circle(cg, CGPoint(x: CGFloat(x), y: 188), 5)
+            }
+            // 細腳
+            polyline(cg, [CGPoint(x: 92, y: 264), CGPoint(x: 84, y: 300)])
+            polyline(cg, [CGPoint(x: 308, y: 264), CGPoint(x: 316, y: 300)])
+
+        // ---- 五金零件 ----
+
+        case "countersunk_screw":
+            // DIN 7991 沉頭螺釘側視 + 內六角頂視
+            polyline(cg, [
+                CGPoint(x: 108, y: 118), CGPoint(x: 292, y: 118),
+                CGPoint(x: 232, y: 166), CGPoint(x: 168, y: 166)
+            ], closed: true)
+            // 90° 錐角標註
+            cg.setLineWidth(1.2)
+            cg.setStrokeColor(accentColor.cgColor)
+            polyline(cg, [CGPoint(x: 200, y: 118), CGPoint(x: 168, y: 166)])
+            polyline(cg, [CGPoint(x: 200, y: 118), CGPoint(x: 232, y: 166)])
+            cg.setStrokeColor(strokeColor.cgColor)
+            cg.setLineWidth(2.5)
+            // 螺桿與螺紋
+            polyline(cg, [CGPoint(x: 168, y: 166), CGPoint(x: 168, y: 286)])
+            polyline(cg, [CGPoint(x: 232, y: 166), CGPoint(x: 232, y: 286)])
+            polyline(cg, [CGPoint(x: 168, y: 286), CGPoint(x: 232, y: 286)])
+            cg.setLineWidth(1.4)
+            threadProfile(cg, x: 200, top: 176, bottom: 280, halfWidth: 32, pitch: 13)
+            cg.setLineWidth(2.5)
+            // 內六角孔（頂視）
+            var hexPts: [CGPoint] = []
+            for i in 0..<6 {
+                let a = CGFloat(i) * .pi / 3 - .pi / 6
+                hexPts.append(CGPoint(x: 200 + cos(a) * 20, y: 90 + sin(a) * 20))
+            }
+            polyline(cg, hexPts, closed: true)
+
+        case "flange_nut":
+            // 六角法蘭螺母：頂視六角 + 法蘭圓 + 側視鋸齒
+            circle(cg, CGPoint(x: 200, y: 148), 74)
+            var nutPts: [CGPoint] = []
+            for i in 0..<6 {
+                let a = CGFloat(i) * .pi / 3
+                nutPts.append(CGPoint(x: 200 + cos(a) * 54, y: 148 + sin(a) * 54))
+            }
+            polyline(cg, nutPts, closed: true)
+            circle(cg, CGPoint(x: 200, y: 148), 26)
+            // 內螺紋示意
+            cg.setLineWidth(1.2)
+            circle(cg, CGPoint(x: 200, y: 148), 22)
+            cg.setLineWidth(2.5)
+            // 側視：法蘭面與底部防滑鋸齒
+            polyline(cg, [
+                CGPoint(x: 126, y: 262), CGPoint(x: 146, y: 236),
+                CGPoint(x: 254, y: 236), CGPoint(x: 274, y: 262)
+            ], closed: true)
+            cg.setLineWidth(1.4)
+            var teeth: [CGPoint] = []
+            var tx: CGFloat = 128
+            var up = false
+            while tx <= 272 {
+                teeth.append(CGPoint(x: tx, y: up ? 262 : 270))
+                up.toggle()
+                tx += 9
+            }
+            polyline(cg, teeth)
+            cg.setLineWidth(2.5)
+
+        case "blind_rivet":
+            // 封閉型抽芯盲鉚釘：法蘭頭、鉚體、封閉端與抽芯桿
+            polyline(cg, [
+                CGPoint(x: 130, y: 112), CGPoint(x: 270, y: 112),
+                CGPoint(x: 270, y: 130), CGPoint(x: 130, y: 130)
+            ], closed: true)
+            // 鉚體
+            polyline(cg, [CGPoint(x: 172, y: 130), CGPoint(x: 172, y: 252)])
+            polyline(cg, [CGPoint(x: 228, y: 130), CGPoint(x: 228, y: 252)])
+            // 封閉端（半圓收口，這正是「封閉型」的特徵）
+            cg.move(to: CGPoint(x: 172, y: 252))
+            cg.addArc(center: CGPoint(x: 200, y: 252), radius: 28, startAngle: .pi, endAngle: 0, clockwise: true)
+            cg.strokePath()
+            // 抽芯桿與斷裂槽
+            polyline(cg, [CGPoint(x: 200, y: 112), CGPoint(x: 200, y: 64)])
+            cg.setLineWidth(1.4)
+            polyline(cg, [CGPoint(x: 192, y: 96), CGPoint(x: 208, y: 96)])
+            cg.setLineWidth(2.5)
+            circle(cg, CGPoint(x: 200, y: 60), 7)
+            // 被鉚接板材
+            cg.setLineWidth(1.6)
+            polyline(cg, [CGPoint(x: 92, y: 130), CGPoint(x: 308, y: 130)])
+            polyline(cg, [CGPoint(x: 92, y: 158), CGPoint(x: 308, y: 158)])
+            cg.setLineWidth(2.5)
+
+        case "compression_spring":
+            // 圓柱螺旋壓縮彈簧側視：閉合並磨平的兩端 + 中段等節距
+            let springTop: CGFloat = 84
+            let springBottom: CGFloat = 288
+            let coils = 9
+            let pitch = (springBottom - springTop) / CGFloat(coils)
+            let outerR: CGFloat = 62
+            for i in 0...coils {
+                let y = springTop + CGFloat(i) * pitch
+                // 以扁橢圓近似一圈線圈的側視投影
+                ellipse(cg, CGRect(
+                    x: 200 - outerR,
+                    y: y - 9,
+                    width: outerR * 2,
+                    height: 18
+                ))
+            }
+            // 兩端磨平座圈
+            cg.setLineWidth(3.0)
+            polyline(cg, [CGPoint(x: 138, y: springTop - 9), CGPoint(x: 262, y: springTop - 9)])
+            polyline(cg, [CGPoint(x: 138, y: springBottom + 9), CGPoint(x: 262, y: springBottom + 9)])
+            cg.setLineWidth(2.5)
+            // 自由長度 L0 標註
+            cg.setStrokeColor(accentColor.cgColor)
+            cg.setLineWidth(1.2)
+            polyline(cg, [CGPoint(x: 296, y: springTop - 9), CGPoint(x: 296, y: springBottom + 9)])
+            polyline(cg, [CGPoint(x: 290, y: springTop - 9), CGPoint(x: 302, y: springTop - 9)])
+            polyline(cg, [CGPoint(x: 290, y: springBottom + 9), CGPoint(x: 302, y: springBottom + 9)])
+            cg.setStrokeColor(strokeColor.cgColor)
+            cg.setLineWidth(2.5)
+
+        case "bracket_l":
+            // 90° 角鐵等角視：兩片直角板 + 加強筋 + 四孔
+            polyline(cg, [
+                CGPoint(x: 96, y: 176), CGPoint(x: 176, y: 132), CGPoint(x: 176, y: 268),
+                CGPoint(x: 96, y: 312)
+            ], closed: true)
+            polyline(cg, [
+                CGPoint(x: 176, y: 132), CGPoint(x: 306, y: 132), CGPoint(x: 306, y: 268),
+                CGPoint(x: 176, y: 268)
+            ], closed: true)
+            // 加強筋
+            polyline(cg, [CGPoint(x: 176, y: 200), CGPoint(x: 244, y: 132)])
+            polyline(cg, [CGPoint(x: 176, y: 200), CGPoint(x: 176, y: 268)])
+            // 四個 M5 沉頭孔
+            for c in [CGPoint(x: 130, y: 208), CGPoint(x: 130, y: 264),
+                      CGPoint(x: 250, y: 172), CGPoint(x: 250, y: 228)] {
+                circle(cg, c, 10)
+                cg.setLineWidth(1.2)
+                circle(cg, c, 15)
+                cg.setLineWidth(2.5)
+            }
+
+        // ---- 數位產品線框 ----
+
+        case "wireframe_phone":
+            // 19.5:9 手機線框 + 動態島 + 安全邊界
+            stroke(cg, rounded: CGRect(x: 138, y: 46, width: 124, height: 270), radius: 22)
+            stroke(cg, rounded: CGRect(x: 146, y: 54, width: 108, height: 254), radius: 16)
+            // 動態島
+            stroke(cg, rounded: CGRect(x: 178, y: 62, width: 44, height: 12), radius: 6)
+            // 44pt 導航列安全界線
+            cg.setLineWidth(1.2)
+            cg.setStrokeColor(accentColor.cgColor)
+            polyline(cg, [CGPoint(x: 146, y: 90), CGPoint(x: 254, y: 90)])
+            polyline(cg, [CGPoint(x: 146, y: 282), CGPoint(x: 254, y: 282)])
+            cg.setStrokeColor(strokeColor.cgColor)
+            // 內容佔位
+            for i in 0..<4 {
+                stroke(cg, rounded: CGRect(x: 156, y: 102 + CGFloat(i) * 42, width: 88, height: 32), radius: 4)
+            }
+            cg.setLineWidth(2.5)
+            // Home indicator
+            stroke(cg, rounded: CGRect(x: 176, y: 296, width: 48, height: 5), radius: 2.5)
+
+        case "wireframe_tablet":
+            // 4:3 平板分屏多工佈局
+            stroke(cg, rounded: CGRect(x: 58, y: 76, width: 284, height: 216), radius: 16)
+            stroke(cg, rounded: CGRect(x: 68, y: 86, width: 264, height: 196), radius: 10)
+            // 分屏分隔線
+            polyline(cg, [CGPoint(x: 222, y: 86), CGPoint(x: 222, y: 252)])
+            // 側邊欄
+            cg.setLineWidth(1.4)
+            for i in 0..<5 {
+                stroke(cg, rounded: CGRect(x: 78, y: 96 + CGFloat(i) * 26, width: 60, height: 18), radius: 3)
+            }
+            // 右側工作區
+            stroke(cg, rounded: CGRect(x: 232, y: 96, width: 90, height: 60), radius: 4)
+            for i in 0..<3 {
+                polyline(cg, [CGPoint(x: 232, y: 170 + CGFloat(i) * 16), CGPoint(x: 322, y: 170 + CGFloat(i) * 16)])
+            }
+            cg.setLineWidth(2.5)
+            // 底部 Dock
+            stroke(cg, rounded: CGRect(x: 128, y: 256, width: 144, height: 26), radius: 13)
+            for i in 0..<5 {
+                circle(cg, CGPoint(x: 148 + CGFloat(i) * 26, y: 269), 7)
+            }
+
+        case "wireframe_browser":
+            // 瀏覽器視窗：三色控制鈕 + 網址膠囊 + 分頁列
+            stroke(cg, rounded: CGRect(x: 46, y: 92, width: 308, height: 212), radius: 10)
+            polyline(cg, [CGPoint(x: 46, y: 156), CGPoint(x: 354, y: 156)])
+            // 紅黃綠控制鈕
+            let lights: [UIColor] = isDark
+                ? [.systemRed, .systemYellow, .systemGreen]
+                : [.systemRed, .systemOrange, .systemGreen]
+            for (i, c) in lights.enumerated() {
+                cg.setFillColor(c.cgColor)
+                cg.fillEllipse(in: CGRect(x: 60 + CGFloat(i) * 20, y: 102, width: 12, height: 12))
+            }
+            // 分頁
+            cg.setLineWidth(1.4)
+            stroke(cg, rounded: CGRect(x: 130, y: 98, width: 84, height: 22), radius: 5)
+            stroke(cg, rounded: CGRect(x: 218, y: 98, width: 84, height: 22), radius: 5)
+            // 網址膠囊
+            stroke(cg, rounded: CGRect(x: 62, y: 128, width: 276, height: 20), radius: 10)
+            // 內容骨架
+            stroke(cg, rounded: CGRect(x: 62, y: 170, width: 130, height: 82), radius: 5)
+            for i in 0..<5 {
+                polyline(cg, [CGPoint(x: 204, y: 180 + CGFloat(i) * 17), CGPoint(x: 338, y: 180 + CGFloat(i) * 17)])
+            }
+            for i in 0..<3 {
+                polyline(cg, [CGPoint(x: 62, y: 268 + CGFloat(i) * 14), CGPoint(x: 338, y: 268 + CGFloat(i) * 14)])
+            }
+            cg.setLineWidth(2.5)
+
+        case "wireframe_gestures":
+            // 8 種核心手勢符號（2 列 x 4 欄）
+            let cols: [CGFloat] = [86, 162, 238, 314]
+            let rows: [CGFloat] = [136, 244]
+            cg.setLineWidth(2.0)
+            for (idx, center) in rows.flatMap({ r in cols.map { CGPoint(x: $0, y: r) } }).enumerated() {
+                // 指尖
+                circle(cg, center, 13)
+                switch idx {
+                case 0: // 單擊：單圈擴散
+                    circle(cg, center, 24)
+                case 1: // 雙擊：雙圈
+                    circle(cg, center, 22)
+                    circle(cg, center, 30)
+                case 2: // 長按：虛線圈
+                    cg.saveGState()
+                    cg.setLineDash(phase: 0, lengths: [4, 4])
+                    circle(cg, center, 26)
+                    cg.restoreGState()
+                case 3: // 滑動：右向箭頭
+                    polyline(cg, [CGPoint(x: center.x + 16, y: center.y), CGPoint(x: center.x + 44, y: center.y)])
+                    polyline(cg, [
+                        CGPoint(x: center.x + 36, y: center.y - 7),
+                        CGPoint(x: center.x + 46, y: center.y),
+                        CGPoint(x: center.x + 36, y: center.y + 7)
+                    ])
+                case 4: // 旋轉：弧線帶箭頭
+                    cg.addArc(center: center, radius: 26, startAngle: -.pi * 0.8, endAngle: .pi * 0.5, clockwise: false)
+                    cg.strokePath()
+                    polyline(cg, [
+                        CGPoint(x: center.x - 4, y: center.y + 20),
+                        CGPoint(x: center.x, y: center.y + 30),
+                        CGPoint(x: center.x + 8, y: center.y + 24)
+                    ])
+                case 5: // 縮放（外張）：對角雙箭頭
+                    polyline(cg, [CGPoint(x: center.x - 30, y: center.y - 30), CGPoint(x: center.x - 14, y: center.y - 14)])
+                    polyline(cg, [CGPoint(x: center.x + 30, y: center.y + 30), CGPoint(x: center.x + 14, y: center.y + 14)])
+                    polyline(cg, [CGPoint(x: center.x - 30, y: center.y - 30), CGPoint(x: center.x - 30, y: center.y - 18)])
+                    polyline(cg, [CGPoint(x: center.x - 30, y: center.y - 30), CGPoint(x: center.x - 18, y: center.y - 30)])
+                case 6: // 拖曳：虛線軌跡
+                    cg.saveGState()
+                    cg.setLineDash(phase: 0, lengths: [5, 4])
+                    polyline(cg, [CGPoint(x: center.x - 26, y: center.y + 26), CGPoint(x: center.x + 26, y: center.y - 22)])
+                    cg.restoreGState()
+                default: // 雙指
+                    circle(cg, CGPoint(x: center.x + 22, y: center.y + 8), 13)
+                }
+            }
+            cg.setLineWidth(2.5)
+
         default:
             // 預設立體透視立方幾何
             cg.move(to: CGPoint(x: 200, y: 90))
@@ -1484,6 +2384,10 @@ public final class AssetLibraryManager: ObservableObject {
         }
 
         // 尺寸引線裝飾 (Dimension Callout Arrows)
+        //
+        // 只在線框（藍圖）模式畫。實物模式是要貼進筆記當成一個物件用的，
+        // 帶著工程標註反而變成雜訊。
+        guard currentStyle == .blueprint else { return }
         cg.setStrokeColor(accentColor.cgColor)
         cg.setLineWidth(1.2)
         cg.move(to: CGPoint(x: 50, y: 320))

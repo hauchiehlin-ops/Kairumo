@@ -2,40 +2,45 @@
 //  AccountManager.swift
 //  Kairumo
 //
-//  使用者帳號與登入狀態管理員
-//  支援 macOS / iOS / iPadOS 系統帳號名稱讀取與本機持久化
+//  協作身分管理員
+//
+//  這裡**沒有帳號系統**：名稱與顏色純粹用來在多人協作時顯示「誰在編輯」，
+//  只存在本機 UserDefaults，不連任何雲端服務，也不讀取作業系統帳號。
 //
 
 import SwiftUI
 import Combine
 
-/// 使用者個人設定與帳號資料模型
+/// 協作身分。
+///
+/// 刻意只有兩個欄位。舊版還有 `username` / `email` / `isLoggedIn` /
+/// `syncStatusText`，那些是帳號系統的殘留物 —— 本 App 沒有後端也沒有登入流程，
+/// 留著只會讓畫面顯示「已登入」這種不成立的狀態。
+/// 多人協作要顯示的就兩件事：**叫什麼名字、用什麼顏色**。
 public struct UserProfile: Codable, Equatable {
     public var displayName: String
-    public var username: String
-    public var email: String
-    public var avatarColorHex: String
-    public var isLoggedIn: Bool
-    public var syncStatusText: String
+    /// 游標、選取框與留言者標記的顏色。
+    public var colorHex: String
 
-    public init(
-        displayName: String,
-        username: String,
-        email: String = "",
-        avatarColorHex: String = "#0A84FF",
-        isLoggedIn: Bool = true,
-        syncStatusText: String = "本地帳號 · 離線優先"
-    ) {
+    public init(displayName: String, colorHex: String = IdentityPalette.defaultHex) {
         self.displayName = displayName
-        self.username = username
-        self.email = email
-        self.avatarColorHex = avatarColorHex
-        self.isLoggedIn = isLoggedIn
-        self.syncStatusText = syncStatusText
+        self.colorHex = colorHex
     }
 }
 
-/// 帳號管理中樞
+/// 可選的身分顏色。
+///
+/// 固定一組而非任意調色盤：協作時顏色要能互相區辨，
+/// 讓人自由選會出現兩個人都挑到相近的灰。
+public enum IdentityPalette {
+    public static let hexes = [
+        "#007AFF", "#34C759", "#AF52DE", "#FF9500",
+        "#FF2D55", "#5856D6", "#00C7BE", "#A2845E"
+    ]
+    public static let defaultHex = "#007AFF"
+}
+
+/// 協作身分管理中樞
 @MainActor
 public final class AccountManager: ObservableObject {
     public static let shared = AccountManager()
@@ -43,9 +48,7 @@ public final class AccountManager: ObservableObject {
     private let profileKey = "kairumo.user.profile"
 
     @Published public var profile: UserProfile {
-        didSet {
-            saveProfile()
-        }
+        didSet { saveProfile() }
     }
 
     private init() {
@@ -53,25 +56,22 @@ public final class AccountManager: ObservableObject {
            let decoded = try? JSONDecoder().decode(UserProfile.self, from: savedData) {
             self.profile = decoded
         } else {
-            // 自動讀取系統使用者名稱
-            var defaultName = "Barret Lin"
-            var defaultUser = "barretlin"
-
-            #if os(macOS) || targetEnvironment(macCatalyst)
-            let sysFull = NSFullUserName()
-            let sysUser = NSUserName()
-            if !sysFull.isEmpty { defaultName = sysFull }
-            if !sysUser.isEmpty { defaultUser = sysUser }
-            #endif
-
+            // 舊版可能存過含 username/email 的格式，欄位對不上就解不出來。
+            // 盡量把名字撈回來，撈不到就用預設值，不去讀系統帳號。
+            let legacyName = (UserDefaults.standard.data(forKey: profileKey))
+                .flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] }
+                .flatMap { $0?["displayName"] as? String }
             self.profile = UserProfile(
-                displayName: defaultName,
-                username: defaultUser,
-                email: "\(defaultUser)@kairumo.local",
-                avatarColorHex: "#0A84FF",
-                isLoggedIn: true,
-                syncStatusText: "本地帳號 · 離線優先"
+                displayName: legacyName ?? LocalizationManager.shared.localized("default_user_name")
             )
+        }
+        cleanUpLegacyKeys()
+    }
+
+    /// 清掉訪客模式時代留下的鍵，避免舊狀態在未來被誤讀。
+    private func cleanUpLegacyKeys() {
+        for key in ["kairumo.user.profile.beforeGuest", "kairumo.user.isGuest"] {
+            UserDefaults.standard.removeObject(forKey: key)
         }
     }
 
@@ -81,48 +81,53 @@ public final class AccountManager: ObservableObject {
         }
     }
 
-    /// 更新使用者資訊
-    public func updateProfile(displayName: String, email: String) {
-        profile.displayName = displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "使用者" : displayName
-        profile.email = email
+    /// 更新顯示名稱。空白會退回預設名 —— 協作中出現一個沒有名字的游標最難辨認。
+    public func updateDisplayName(_ name: String) {
+        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        profile.displayName = clean.isEmpty
+            ? LocalizationManager.shared.localized("default_user_name")
+            : clean
+    }
+
+    public func updateColor(_ hex: String) {
+        profile.colorHex = hex
     }
 }
 
-/// 使用者個人檔案與帳號設定視圖
+/// 協作身分編輯視圖
 public struct AccountProfileSheet: View {
     @ObservedObject var accountManager = AccountManager.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var tempDisplayName: String = ""
-    @State private var tempEmail: String = ""
+    @State private var tempColorHex: String = IdentityPalette.defaultHex
 
     public init() {}
 
     public var body: some View {
         NavigationStack {
             Form {
-                Section(localizationManager.localized("user_profile")) {
+                Section {
                     HStack(spacing: 16) {
                         ZStack {
                             Circle()
-                                .fill(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                .fill(Color(hex: tempColorHex) ?? .blue)
                                 .frame(width: 60, height: 60)
-                            Text(String(accountManager.profile.displayName.prefix(1)).uppercased())
+                            Text(String(tempDisplayName.prefix(1)).uppercased())
                                 .font(.title)
                                 .fontWeight(.bold)
                                 .foregroundColor(.white)
                         }
 
                         VStack(alignment: .leading, spacing: 4) {
-                            Text(accountManager.profile.displayName)
+                            Text(tempDisplayName.isEmpty
+                                 ? localizationManager.localized("default_user_name")
+                                 : tempDisplayName)
                                 .font(.headline)
-                            Text("@\(accountManager.profile.username)")
+                            Text(localizationManager.localized("identity_preview_hint"))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                            Text(accountManager.profile.syncStatusText)
-                                .font(.caption2)
-                                .foregroundColor(.green)
                         }
                     }
                     .padding(.vertical, 6)
@@ -132,12 +137,28 @@ public struct AccountProfileSheet: View {
                             .frame(width: 80, alignment: .leading)
                         TextField(localizationManager.localized("display_name"), text: $tempDisplayName)
                     }
+                } header: {
+                    Text(localizationManager.localized("identity_title"))
+                } footer: {
+                    // 講清楚這不是帳號，免得使用者以為需要註冊或擔心資料上傳。
+                    Text(localizationManager.localized("identity_desc"))
+                }
 
-                    HStack {
-                        Text(localizationManager.localized("email"))
-                            .frame(width: 80, alignment: .leading)
-                        TextField(localizationManager.localized("email"), text: $tempEmail)
+                Section(localizationManager.localized("identity_color")) {
+                    let columns = [GridItem(.adaptive(minimum: 44), spacing: 12)]
+                    LazyVGrid(columns: columns, spacing: 12) {
+                        ForEach(IdentityPalette.hexes, id: \.self) { hex in
+                            Circle()
+                                .fill(Color(hex: hex) ?? .blue)
+                                .frame(width: 36, height: 36)
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.primary, lineWidth: tempColorHex == hex ? 3 : 0)
+                                )
+                                .onTapGesture { tempColorHex = hex }
+                        }
                     }
+                    .padding(.vertical, 4)
                 }
 
                 Section(localizationManager.localized("preferences_lang")) {
@@ -164,13 +185,6 @@ public struct AccountProfileSheet: View {
 
                 Section(localizationManager.localized("security")) {
                     HStack {
-                        Text(localizationManager.localized("login_status"))
-                        Spacer()
-                        Text(localizationManager.localized("logged_in"))
-                            .foregroundColor(.secondary)
-                    }
-
-                    HStack {
                         Text(localizationManager.localized("storage_location"))
                         Spacer()
                         Text("Documents / Kairumo Record")
@@ -186,33 +200,17 @@ public struct AccountProfileSheet: View {
                             .font(.caption)
                     }
                 }
-
-                Section {
-                    Button(role: .destructive) {
-                        tempDisplayName = "訪客使用者"
-                        tempEmail = "guest@kairumo.local"
-                        accountManager.updateProfile(displayName: tempDisplayName, email: tempEmail)
-                        dismiss()
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text(localizationManager.localized("guest_account"))
-                            Spacer()
-                        }
-                    }
-                }
             }
-            .navigationTitle(localizationManager.localized("account_settings"))
+            .navigationTitle(localizationManager.localized("identity_title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localizationManager.localized("cancel")) {
-                        dismiss()
-                    }
+                    Button(localizationManager.localized("cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(localizationManager.localized("save")) {
-                        accountManager.updateProfile(displayName: tempDisplayName, email: tempEmail)
+                        accountManager.updateDisplayName(tempDisplayName)
+                        accountManager.updateColor(tempColorHex)
                         dismiss()
                     }
                     .fontWeight(.bold)
@@ -220,7 +218,7 @@ public struct AccountProfileSheet: View {
             }
             .onAppear {
                 tempDisplayName = accountManager.profile.displayName
-                tempEmail = accountManager.profile.email
+                tempColorHex = accountManager.profile.colorHex
             }
         }
     }

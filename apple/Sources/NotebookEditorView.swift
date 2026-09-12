@@ -1020,7 +1020,7 @@ public struct NotebookEditorView: View {
                     notebookStructureSidebar
                         .frame(width: 280)
                         .transition(.move(edge: .leading).combined(with: .opacity))
-                    Divider()
+                    ToolbarSeparator()
                 }
 
                 // 核心手寫/打字畫布區
@@ -1404,7 +1404,29 @@ public struct NotebookEditorView: View {
 
                     // 🌟 線上多人即時彩色游標與筆尖浮層
                     RemoteCursorsOverlay()
+
+                    // 🌟 圖片美化浮動面板
+                    //
+                    // 以前是 modal sheet，蓋住整個畫布 —— 調濾鏡時看不到自己在調
+                    // 什麼。改成浮在畫布上、標題列可拖到一旁的面板：控制項與圖片
+                    // 同時在畫面上，改動直接反映在物件上。
+                    if let id = editingAttachmentId {
+                        FloatingPanel(
+                            title: localizationManager.localized("image_beautify"),
+                            onClose: { editingAttachmentId = nil }
+                        ) {
+                            ImageEditControls(attachment: binding(for: id)) {
+                                notebook.attachments?.removeAll { $0.id == id }
+                                store.updateNotebook(notebook)
+                                editingAttachmentId = nil
+                            }
+                        }
+                        .padding(.top, 24)
+                        .padding(.trailing, 24)
+                        .transition(.scale(scale: 0.95).combined(with: .opacity))
+                    }
                 }
+                .coordinateSpace(name: CanvasCoordinateSpace.name)
                 .onContinuousHover { phase in
                     switch phase {
                     case .active(let location):
@@ -1454,7 +1476,7 @@ public struct NotebookEditorView: View {
         }
         .sheet(isPresented: $showShareSheet) {
             if let data = exportPdfData {
-                ShareActivityView(data: data, filename: "\(notebook.title).pdf")
+                ShareActivityView(data: data, filename: "\(notebook.displayTitle()).pdf")
             }
         }
         .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
@@ -1478,17 +1500,6 @@ public struct NotebookEditorView: View {
         .sheet(isPresented: $showChartStudio) {
             ChartStudioView { chartImage in
                 insertImageAttachment(chartImage)
-            }
-        }
-        .sheet(isPresented: Binding(
-            get: { editingAttachmentId != nil },
-            set: { if !$0 { editingAttachmentId = nil } }
-        )) {
-            if let id = editingAttachmentId {
-                ImageEditSheet(attachment: binding(for: id)) {
-                    notebook.attachments?.removeAll { $0.id == id }
-                    store.updateNotebook(notebook)
-                }
             }
         }
         .sheet(isPresented: $showWordStudio) {
@@ -1566,6 +1577,8 @@ public struct NotebookEditorView: View {
             Button(localizationManager.localized("confirm")) {
                 if !renameText.isEmpty {
                     notebook.title = renameText
+                    // 使用者命名後不再跟著語系翻譯（見 NotebookDocument.titleKey）。
+                    notebook.titleKey = nil
                     store.updateNotebook(notebook)
                 }
             }
@@ -1636,9 +1649,13 @@ public struct NotebookEditorView: View {
 
     // MARK: - 1. 頂部自訂主工作列（自適應寬窄螢幕模式）
     private var editorTopBar: some View {
+        // 寬度夠就用單行完整版；放不下則整組改成**自動換行**（不是捲動）——
+        // 捲動雖然不會裁掉按鈕，但看不到的按鈕等於不存在。
         ViewThatFits(in: .horizontal) {
             expandedEditorTopBar
-            compactEditorTopBar
+            FlowLayout(spacing: 6, lineSpacing: 6) {
+                compactEditorTopBarItems
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 7)
@@ -1713,11 +1730,11 @@ public struct NotebookEditorView: View {
 
             // 筆記標題（點擊可修改）
             Button {
-                renameText = notebook.title
+                renameText = notebook.displayTitle()
                 showRenameAlert = true
             } label: {
                 HStack(spacing: 6) {
-                    Text(notebook.title)
+                    Text(notebook.displayTitle())
                         .font(.headline)
                         .foregroundColor(.primary)
                         .lineLimit(1)
@@ -1876,7 +1893,7 @@ public struct NotebookEditorView: View {
                     Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill")
                 }
 
-                Divider()
+                ToolbarSeparator()
 
                 Button {
                     withAnimation {
@@ -1992,7 +2009,7 @@ public struct NotebookEditorView: View {
             } else {
                 Button {
                     Task {
-                        _ = await audioManager.startRecording(title: "\(notebook.title) \(localizationManager.localized("recording_suffix"))")
+                        _ = await audioManager.startRecording(title: "\(notebook.displayTitle()) \(localizationManager.localized("recording_suffix"))")
                     }
                 } label: {
                     HStack(spacing: 4) {
@@ -2030,7 +2047,7 @@ public struct NotebookEditorView: View {
                     Label(localizationManager.localized("print_note"), systemImage: "printer.fill")
                 }
 
-                Divider()
+                ToolbarSeparator()
 
                 Button {
                     shareNotebookFile()
@@ -2059,233 +2076,235 @@ public struct NotebookEditorView: View {
     }
 
     // 窄螢幕自適應緊湊工具列
-    private var compactEditorTopBar: some View {
-        HStack(spacing: 6) {
-            // 回到首頁按鈕（緊湊模式）
-            Button {
-                saveCurrentPageDrawing()
-                dismiss()
-            } label: {
-                HStack(spacing: 3) {
-                    Image(systemName: "chevron.left")
-                        .font(.system(size: 12, weight: .bold))
-                    Image(systemName: "house.fill")
-                        .font(.system(size: 12))
-                }
-                .foregroundColor(.white)
-                .padding(.horizontal, 7)
-                .padding(.vertical, 5)
-                .background(Color.accentColor)
-                .cornerRadius(7)
-            }
-            .buttonStyle(.plain)
-            .help(localizationManager.localized("home"))
-
-            // 筆記結構側邊欄切換
-            Button {
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    showStructureSidebar.toggle()
-                }
-            } label: {
-                Image(systemName: showStructureSidebar ? "sidebar.left" : "sidebar.leading")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(showStructureSidebar ? .accentColor : .primary)
-                    .padding(5)
-                    .background(showStructureSidebar ? Color.accentColor.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
-                    .cornerRadius(7)
-            }
-            .buttonStyle(.plain)
-
-            // 模式切換（緊湊圖標）
-            Picker("", selection: $editorMode) {
-                Image(systemName: "pencil.tip").tag(EditorMode.draw)
-                Image(systemName: "keyboard").tag(EditorMode.type)
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 76)
-
-            // 筆記標題（彈性縮寫）
-            Button {
-                renameText = notebook.title
-                showRenameAlert = true
-            } label: {
-                Text(notebook.title)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .lineLimit(1)
-            }
-            .buttonStyle(.plain)
-
-            Spacer(minLength: 2)
-
-            // 頁碼切換
+    /// 緊湊模式的按鈕們（不含容器）。
+    ///
+    /// 刻意不自帶 `HStack` —— `FlowLayout` 必須看得到每一顆按鈕才能決定要在
+    /// 哪裡換行；包在 HStack 裡它只會看到「一個」超寬的子視圖，於是永遠不換行。
+    @ViewBuilder
+    private var compactEditorTopBarItems: some View {
+        // 回到首頁按鈕（緊湊模式）
+        Button {
+            saveCurrentPageDrawing()
+            dismiss()
+        } label: {
             HStack(spacing: 3) {
-                Button {
-                    if currentPageIndex > 0 {
-                        saveCurrentPageDrawing()
-                        currentPageIndex -= 1
-                        loadCurrentPage()
-                    }
-                } label: {
-                    Image(systemName: "chevron.left.circle")
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 12, weight: .bold))
+                Image(systemName: "house.fill")
+                    .font(.system(size: 12))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .background(Color.accentColor)
+            .cornerRadius(7)
+        }
+        .buttonStyle(.plain)
+        .help(localizationManager.localized("home"))
+
+        // 筆記結構側邊欄切換
+        Button {
+            withAnimation(.easeInOut(duration: 0.25)) {
+                showStructureSidebar.toggle()
+            }
+        } label: {
+            Image(systemName: showStructureSidebar ? "sidebar.left" : "sidebar.leading")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundColor(showStructureSidebar ? .accentColor : .primary)
+                .padding(5)
+                .background(showStructureSidebar ? Color.accentColor.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
+                .cornerRadius(7)
+        }
+        .buttonStyle(.plain)
+
+        // 模式切換（緊湊圖標）
+        Picker("", selection: $editorMode) {
+            Image(systemName: "pencil.tip").tag(EditorMode.draw)
+            Image(systemName: "keyboard").tag(EditorMode.type)
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 76)
+
+        // 筆記標題（彈性縮寫）
+        Button {
+            renameText = notebook.displayTitle()
+            showRenameAlert = true
+        } label: {
+            Text(notebook.displayTitle())
+                .font(.caption)
+                .fontWeight(.semibold)
+                .lineLimit(1)
+        }
+        .buttonStyle(.plain)
+
+        Spacer(minLength: 2)
+
+        // 頁碼切換
+        HStack(spacing: 3) {
+            Button {
+                if currentPageIndex > 0 {
+                    saveCurrentPageDrawing()
+                    currentPageIndex -= 1
+                    loadCurrentPage()
                 }
-                .disabled(currentPageIndex <= 0)
+            } label: {
+                Image(systemName: "chevron.left.circle")
+            }
+            .disabled(currentPageIndex <= 0)
 
-                Text("\(currentPageIndex + 1)/\(max(1, notebook.pageCount))")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundColor(.secondary)
+            Text("\(currentPageIndex + 1)/\(max(1, notebook.pageCount))")
+                .font(.system(size: 11, weight: .medium))
+                .foregroundColor(.secondary)
 
-                Button {
-                    if currentPageIndex < notebook.pageCount - 1 {
-                        saveCurrentPageDrawing()
-                        currentPageIndex += 1
-                        loadCurrentPage()
-                    }
-                } label: {
-                    Image(systemName: "chevron.right.circle")
+            Button {
+                if currentPageIndex < notebook.pageCount - 1 {
+                    saveCurrentPageDrawing()
+                    currentPageIndex += 1
+                    loadCurrentPage()
                 }
-                .disabled(currentPageIndex >= notebook.pageCount - 1)
+            } label: {
+                Image(systemName: "chevron.right.circle")
+            }
+            .disabled(currentPageIndex >= notebook.pageCount - 1)
 
-                Button {
-                    addNewPage()
-                } label: {
-                    Image(systemName: "plus.square.dashed")
-                        .foregroundColor(.accentColor)
+            Button {
+                addNewPage()
+            } label: {
+                Image(systemName: "plus.square.dashed")
+                    .foregroundColor(.accentColor)
+            }
+        }
+
+        // 📦 素材圖庫（緊湊按鈕）
+        Button {
+            showAssetLibrarySheet = true
+        } label: {
+            Image(systemName: "shippingbox.fill")
+                .font(.caption)
+                .foregroundColor(.purple)
+                .padding(5)
+                .background(Color.purple.opacity(0.12))
+                .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+        .help(localizationManager.localized("asset_library"))
+
+        // ➕ 插入物件（緊湊選單）
+        Menu {
+            Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
+            Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
+            Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
+            Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
+            Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
+            Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
+            Divider()
+            Button { withAnimation { isPlacingCommentPin = true } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
+            Divider()
+            Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
+        } label: {
+            Image(systemName: "plus.circle.fill")
+                .font(.caption)
+                .foregroundColor(.accentColor)
+                .padding(5)
+                .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+        .help(localizationManager.localized("insert_object"))
+
+        // 💬 討論圖釘（緊湊按鈕）
+        Button {
+            withAnimation {
+                isPlacingCommentPin.toggle()
+            }
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: isPlacingCommentPin ? "pin.circle.fill" : "text.bubble.fill")
+                    .font(.caption)
+                    .foregroundColor(isPlacingCommentPin ? .orange : .accentColor)
+                    .padding(5)
+                    .background(isPlacingCommentPin ? Color.orange.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(6)
+
+                if let count = notebook.commentPins?.filter({ !$0.isResolved }).count, count > 0 {
+                    Circle()
+                        .fill(Color.orange)
+                        .frame(width: 6, height: 6)
+                        .offset(x: 2, y: -2)
                 }
             }
+        }
+        .buttonStyle(.plain)
+        .help(localizationManager.localized("comment_pin"))
 
-            // 📦 素材圖庫（緊湊按鈕）
-            Button {
-                showAssetLibrarySheet = true
-            } label: {
-                Image(systemName: "shippingbox.fill")
+        // 👥 線上協同（緊湊按鈕）
+        Button {
+            showCollaborationSheet = true
+        } label: {
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: isCollaborating ? "person.2.wave.2.fill" : "person.2.fill")
                     .font(.caption)
-                    .foregroundColor(.purple)
+                    .foregroundColor(isCollaborating ? .green : .accentColor)
                     .padding(5)
-                    .background(Color.purple.opacity(0.12))
+                    .background(isCollaborating ? Color.green.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(6)
+
+                if isCollaborating {
+                    Circle()
+                        .fill(Color.green)
+                        .frame(width: 6, height: 6)
+                        .offset(x: 2, y: -2)
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .help(localizationManager.localized("collaborate"))
+
+        // 錄音
+        if audioManager.status == .recording {
+            Button {
+                stopAndSaveRecording()
+            } label: {
+                Circle()
+                    .fill(Color.red)
+                    .frame(width: 12, height: 12)
+                    .padding(5)
+                    .background(Color.red.opacity(0.15))
                     .cornerRadius(6)
             }
-            .buttonStyle(.plain)
-            .help(localizationManager.localized("asset_library"))
-
-            // ➕ 插入物件（緊湊選單）
-            Menu {
-                Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
-                Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
-                Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
-                Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
-                Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
-                Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
-                Divider()
-                Button { withAnimation { isPlacingCommentPin = true } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
-                Divider()
-                Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
+        } else {
+            Button {
+                Task {
+                    _ = await audioManager.startRecording(title: "\(notebook.displayTitle()) \(localizationManager.localized("recording_suffix"))")
+                }
             } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.caption)
-                    .foregroundColor(.accentColor)
+                Image(systemName: "mic.fill")
+                    .font(.caption2)
+                    .foregroundColor(.red)
                     .padding(5)
                     .background(Color(uiColor: .tertiarySystemGroupedBackground))
                     .cornerRadius(6)
             }
-            .buttonStyle(.plain)
-            .help(localizationManager.localized("insert_object"))
-
-            // 💬 討論圖釘（緊湊按鈕）
-            Button {
-                withAnimation {
-                    isPlacingCommentPin.toggle()
-                }
-            } label: {
-                ZStack(alignment: .topTrailing) {
-                    Image(systemName: isPlacingCommentPin ? "pin.circle.fill" : "text.bubble.fill")
-                        .font(.caption)
-                        .foregroundColor(isPlacingCommentPin ? .orange : .accentColor)
-                        .padding(5)
-                        .background(isPlacingCommentPin ? Color.orange.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
-                        .cornerRadius(6)
-
-                    if let count = notebook.commentPins?.filter({ !$0.isResolved }).count, count > 0 {
-                        Circle()
-                            .fill(Color.orange)
-                            .frame(width: 6, height: 6)
-                            .offset(x: 2, y: -2)
-                    }
-                }
-            }
-            .buttonStyle(.plain)
-            .help(localizationManager.localized("comment_pin"))
-
-            // 👥 線上協同（緊湊按鈕）
-            Button {
-                showCollaborationSheet = true
-            } label: {
-                ZStack(alignment: .topTrailing) {
-                    Image(systemName: isCollaborating ? "person.2.wave.2.fill" : "person.2.fill")
-                        .font(.caption)
-                        .foregroundColor(isCollaborating ? .green : .accentColor)
-                        .padding(5)
-                        .background(isCollaborating ? Color.green.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
-                        .cornerRadius(6)
-
-                    if isCollaborating {
-                        Circle()
-                            .fill(Color.green)
-                            .frame(width: 6, height: 6)
-                            .offset(x: 2, y: -2)
-                    }
-                }
-            }
-            .buttonStyle(.plain)
-            .help(localizationManager.localized("collaborate"))
-
-            // 錄音
-            if audioManager.status == .recording {
-                Button {
-                    stopAndSaveRecording()
-                } label: {
-                    Circle()
-                        .fill(Color.red)
-                        .frame(width: 12, height: 12)
-                        .padding(5)
-                        .background(Color.red.opacity(0.15))
-                        .cornerRadius(6)
-                }
-            } else {
-                Button {
-                    Task {
-                        _ = await audioManager.startRecording(title: "\(notebook.title) \(localizationManager.localized("recording_suffix"))")
-                    }
-                } label: {
-                    Image(systemName: "mic.fill")
-                        .font(.caption2)
-                        .foregroundColor(.red)
-                        .padding(5)
-                        .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                        .cornerRadius(6)
-                }
-            }
-
-            // 匯出功能選單
-            Menu {
-                Button { exportAsPdf() } label: { Label(localizationManager.localized("export_pdf"), systemImage: "doc.text.fill") }
-                Button { exportAsPngImage() } label: { Label(localizationManager.localized("export_image"), systemImage: "photo") }
-                Button { printCurrentNotebook() } label: { Label(localizationManager.localized("print_note"), systemImage: "printer.fill") }
-                Divider()
-                Button { shareNotebookFile() } label: { Label(localizationManager.localized("share_note"), systemImage: "square.and.arrow.up") }
-            } label: {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.white)
-                    .padding(5)
-                    .background(Color.accentColor)
-                    .cornerRadius(6)
-            }
-            .buttonStyle(.plain)
         }
+
+        // 匯出功能選單
+        Menu {
+            Button { exportAsPdf() } label: { Label(localizationManager.localized("export_pdf"), systemImage: "doc.text.fill") }
+            Button { exportAsPngImage() } label: { Label(localizationManager.localized("export_image"), systemImage: "photo") }
+            Button { printCurrentNotebook() } label: { Label(localizationManager.localized("print_note"), systemImage: "printer.fill") }
+            Divider()
+            Button { shareNotebookFile() } label: { Label(localizationManager.localized("share_note"), systemImage: "square.and.arrow.up") }
+        } label: {
+            Image(systemName: "square.and.arrow.up")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundColor(.white)
+                .padding(5)
+                .background(Color.accentColor)
+                .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
     }
 
-    // MARK: - 筆記結構目錄側邊欄（支援「頁面結構」與「資料夾目錄」雙模式）
     private var notebookStructureSidebar: some View {
         VStack(spacing: 0) {
             // 頂部導覽列與分頁模式切換
@@ -2397,7 +2416,7 @@ public struct NotebookEditorView: View {
                                     }
 
                                     if notebook.pageCount > 1 {
-                                        Divider()
+                                        ToolbarSeparator()
                                         Button(role: .destructive) {
                                             pageToDeleteIndex = idx
                                             showDeletePageAlert = true
@@ -2434,7 +2453,14 @@ public struct NotebookEditorView: View {
                                         .shadow(color: Color.black.opacity(isSelected ? 0.15 : 0.04), radius: isSelected ? 4 : 2, y: 1)
 
                                     let pageDrawing = (idx == currentPageIndex) ? currentDrawing : store.loadDrawing(notebookId: notebook.id, pageIndex: idx)
-                                    let img = pageDrawing.image(from: CGRect(x: 0, y: 0, width: 612, height: 792), scale: 0.5)
+                                    // 合成整頁所有圖層：手繪只是其中一層，文字方塊、
+                                    // 圖片、3D 與圖釘都要畫進去，否則縮圖與實際頁面對不上。
+                                    let img = PageThumbnailRenderer.render(
+                                        notebook: notebook,
+                                        pageIndex: idx,
+                                        drawing: pageDrawing,
+                                        store: store
+                                    )
                                     Image(uiImage: img)
                                         .resizable()
                                         .scaledToFit()
@@ -2511,7 +2537,7 @@ public struct NotebookEditorView: View {
                     .font(.system(size: 15))
                     .foregroundColor(.accentColor)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(store.rootFolderName)
+                    Text(store.displayRootFolderName)
                         .font(.subheadline)
                         .fontWeight(.bold)
                         .foregroundColor(.primary)
@@ -2522,7 +2548,7 @@ public struct NotebookEditorView: View {
                 }
                 Spacer()
                 Button {
-                    rootFolderRenameText = store.rootFolderName
+                    rootFolderRenameText = store.displayRootFolderName
                     showRenameRootFolderAlert = true
                 } label: {
                     Image(systemName: "pencil.circle.fill")
@@ -2697,7 +2723,7 @@ public struct NotebookEditorView: View {
                             Label(localizationManager.localized("rename_folder"), systemImage: "pencil")
                         }
 
-                        Divider()
+                        ToolbarSeparator()
 
                         Button(role: .destructive) {
                             store.deleteFolder(id: folder.id)
@@ -2745,7 +2771,7 @@ public struct NotebookEditorView: View {
                 .font(.system(size: 12))
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(note.title)
+                Text(note.displayTitle())
                     .font(.caption)
                     .fontWeight(isCurrent ? .bold : .regular)
                     .foregroundColor(isCurrent ? .accentColor : .primary)
@@ -2778,7 +2804,7 @@ public struct NotebookEditorView: View {
                     Label(localizationManager.localized("rename_note"), systemImage: "pencil")
                 }
 
-                Divider()
+                ToolbarSeparator()
 
                 Button(role: .destructive) {
                     store.deleteNotebook(id: note.id)
@@ -2814,31 +2840,31 @@ public struct NotebookEditorView: View {
 
     // MARK: - 2. 🌟 實體手繪工具列（水平滑動包裹、免擠壓、隨點隨用）
     private var drawingToolbar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 14) {
+        // 換行而非捲動：所有筆刷與插入工具在任何視窗寬度下都要同時看得到。
+        FlowLayout(spacing: 14, lineSpacing: 10) {
                 // 工具選擇群組（鋼筆、原子筆、毛筆、麥克筆、螢光筆、鉛筆、水彩筆、橡皮擦、套索）
-                HStack(spacing: 4) {
-                    ForEach(EditorToolType.allCases) { tool in
-                        Button {
-                            selectedTool = tool
-                        } label: {
-                            VStack(spacing: 3) {
-                                Image(systemName: tool.iconName)
-                                    .font(.system(size: 16, weight: selectedTool == tool ? .bold : .regular))
-                                Text(localizationManager.localized(tool.localizationKey))
-                                    .font(.system(size: 10))
-                            }
-                            .foregroundColor(selectedTool == tool ? .accentColor : .secondary)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .background(selectedTool == tool ? Color.accentColor.opacity(0.15) : Color.clear)
-                            .cornerRadius(8)
+            // 每一支筆都是 FlowLayout 的獨立子視圖，這樣視窗變窄時筆刷群組
+            // 本身也會換行；包在 HStack 裡的話它是「一個」寬子視圖，永遠不換行。
+                ForEach(EditorToolType.allCases) { tool in
+                    Button {
+                        selectedTool = tool
+                    } label: {
+                        VStack(spacing: 3) {
+                            Image(systemName: tool.iconName)
+                                .font(.system(size: 16, weight: selectedTool == tool ? .bold : .regular))
+                            Text(localizationManager.localized(tool.localizationKey))
+                                .font(.system(size: 10))
                         }
-                        .buttonStyle(.plain)
+                        .foregroundColor(selectedTool == tool ? .accentColor : .secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 5)
+                        .background(selectedTool == tool ? Color.accentColor.opacity(0.15) : Color.clear)
+                        .cornerRadius(8)
                     }
+                    .buttonStyle(.plain)
                 }
 
-                Divider()
+                ToolbarSeparator()
                     .frame(height: 24)
 
                 // 筆刷粗細切換
@@ -2859,7 +2885,7 @@ public struct NotebookEditorView: View {
                     }
                 }
 
-                Divider()
+                ToolbarSeparator()
                     .frame(height: 24)
 
                 // 色彩選擇盤
@@ -2902,7 +2928,7 @@ public struct NotebookEditorView: View {
 
                 // 若為套索選取工具，即時展開剪下、複製與刪除選取筆劃按鈕
                 if selectedTool == .lasso {
-                    Divider()
+                    ToolbarSeparator()
                         .frame(height: 24)
 
                     HStack(spacing: 6) {
@@ -2972,7 +2998,7 @@ public struct NotebookEditorView: View {
                 .buttonStyle(.plain)
                 .help(localizationManager.localized("extend_page_amount"))
 
-                Divider()
+                ToolbarSeparator()
                     .frame(height: 24)
 
                 // 插入圖片按鈕
@@ -3110,7 +3136,7 @@ public struct NotebookEditorView: View {
                 .buttonStyle(.plain)
                 .help(localizationManager.localized("theme_tools"))
 
-                Divider()
+                ToolbarSeparator()
                     .frame(height: 24)
 
                 // 復原與重做
@@ -3143,16 +3169,15 @@ public struct NotebookEditorView: View {
                     .help(localizationManager.localized("clear_page"))
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(uiColor: .tertiarySystemGroupedBackground))
     }
 
     // MARK: - 🌟 實體鍵盤打字與排版工具列
     private var typingToolbar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
+        FlowLayout(spacing: 12, lineSpacing: 10) {
                 // 插入文字方塊
                 Button {
                     newTextDraft = NoteTextAttachment(pageIndex: currentPageIndex)
@@ -3385,9 +3410,9 @@ public struct NotebookEditorView: View {
                     .help(localizationManager.localized("redo"))
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 8)
-        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(uiColor: .tertiarySystemGroupedBackground))
     }
 
@@ -4269,6 +4294,17 @@ struct ShareActivityView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
+/// 畫布共用座標系名稱。
+///
+/// 拖曳手勢**必須**綁在這個具名座標系上，不能用預設的 `.local`：
+/// `.position()` 由手勢自己的 translation 驅動，而 `.local` 是「手勢所在那個
+/// 視圖」的座標系 —— 視圖一被移動，座標原點跟著移動，translation 就會被重新
+/// 換算回較小的值，形成「移動 → 原點位移 → translation 縮回」的回授迴圈，
+/// 表現出來就是物件在手指底下抖動、跟不上。
+enum CanvasCoordinateSpace {
+    static let name = "kairumoCanvas"
+}
+
 /// 畫布內嵌附件視圖（支援圖片、算式卡片、數據圖表）
 /// 支援手勢拖曳平移、角落手柄縮放、即時濾鏡美化、邊框、立體陰影與旋轉
 struct AttachmentItemView: View {
@@ -4282,10 +4318,22 @@ struct AttachmentItemView: View {
     @State private var dragOffset: CGSize = .zero
     @State private var isSelected: Bool = false
     @State private var isDragging: Bool = false
+    /// 縮放期間的本地預覽尺寸。
+    ///
+    /// 縮放中**不寫入 store**：每寫一次就會整份 notebooks 重新 JSON 編碼並原子
+    /// 寫檔三次（見 `NotebookStore.persistData`），一秒鐘做六十次會直接卡住主執
+    /// 行緒。只在手勢結束時提交一次。
+    @State private var liveSize: CGSize? = nil
+    /// 手勢開始時的原始尺寸。translation 是「從起點累計」的量，
+    /// 若每幀都加到已更新的寬度上，尺寸會以平方成長。
+    @State private var resizeBaseSize: CGSize? = nil
 
     private var lockedByPeer: CollaboratorPeer? {
         collaborationManager.peers.first(where: { $0.selectedId == attachment.id })
     }
+
+    private var displayWidth: CGFloat { liveSize?.width ?? attachment.width }
+    private var displayHeight: CGFloat { liveSize?.height ?? attachment.height }
 
     var body: some View {
         let currentX = attachment.x + dragOffset.width
@@ -4297,7 +4345,7 @@ struct AttachmentItemView: View {
                     Image(uiImage: uiImage)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
-                        .frame(width: attachment.width, height: attachment.height)
+                        .frame(width: displayWidth, height: displayHeight)
                         .modifier(ImageFilterModifier(filter: attachment.filterStyle))
                         .objectMaterial(attachment.materialType)
                         .clipShape(RoundedRectangle(cornerRadius: attachment.cornerRadius))
@@ -4317,7 +4365,7 @@ struct AttachmentItemView: View {
                 } else {
                     RoundedRectangle(cornerRadius: attachment.cornerRadius)
                         .fill(Color.secondary.opacity(0.15))
-                        .frame(width: attachment.width, height: attachment.height)
+                        .frame(width: displayWidth, height: displayHeight)
                         .overlay(
                             ProgressView()
                         )
@@ -4330,7 +4378,7 @@ struct AttachmentItemView: View {
                 collaborationManager.broadcastSelection(selectedId: isSelected ? attachment.id : nil)
             }
             .gesture(
-                DragGesture()
+                DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
                         isDragging = true
@@ -4429,22 +4477,34 @@ struct AttachmentItemView: View {
                             .background(Color.accentColor)
                             .clipShape(Circle())
                             .gesture(
-                                DragGesture()
+                                DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                                     .onChanged { value in
-                                        let newW = max(80, attachment.width + value.translation.width)
-                                        let ratio = attachment.height / max(1, attachment.width)
-                                        let newH = max(60, newW * ratio)
-                                        attachment.width = newW
-                                        attachment.height = newH
+                                        let base = resizeBaseSize ?? CGSize(width: attachment.width, height: attachment.height)
+                                        if resizeBaseSize == nil { resizeBaseSize = base }
+                                        let ratio = base.height / max(1, base.width)
+                                        let newW = max(80, base.width + value.translation.width)
+                                        liveSize = CGSize(width: newW, height: max(60, newW * ratio))
+                                    }
+                                    .onEnded { _ in
+                                        if let size = liveSize {
+                                            attachment.width = size.width
+                                            attachment.height = size.height
+                                            if let data = try? JSONEncoder().encode(attachment),
+                                               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                                                collaborationManager.broadcastAttachmentUpsert(type: "image", itemDict: dict)
+                                            }
+                                        }
+                                        resizeBaseSize = nil
+                                        liveSize = nil
                                     }
                             )
                             .offset(x: 6, y: 6)
                     }
                 }
-                .frame(width: attachment.width, height: attachment.height)
+                .frame(width: displayWidth, height: displayHeight)
             }
         }
-        .position(x: currentX + attachment.width / 2, y: currentY + attachment.height / 2)
+        .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
     }
 }
 
@@ -4486,12 +4546,17 @@ struct TextAttachmentItemView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject var collaborationManager = CollaborationManager.shared
     @State private var dragOffset: CGSize = .zero
+    /// 縮放期間的本地預覽寬度（理由同 `AttachmentItemView.liveSize`）。
+    @State private var liveWidth: CGFloat? = nil
+    @State private var resizeBaseWidth: CGFloat? = nil
     @State private var isSelected: Bool = false
     @State private var isDragging: Bool = false
 
     private var lockedByPeer: CollaboratorPeer? {
         collaborationManager.peers.first(where: { $0.selectedId == textItem.id })
     }
+
+    private var displayWidth: CGFloat { liveWidth ?? textItem.width }
 
     var body: some View {
         let currentX = textItem.x + dragOffset.width
@@ -4509,7 +4574,7 @@ struct TextAttachmentItemView: View {
                     .frame(maxWidth: .infinity, alignment: resolveFrameAlignment(textItem.alignmentRaw))
             }
             .padding(14)
-            .frame(width: textItem.width)
+            .frame(width: displayWidth)
             .background(resolveBackground(textItem.backgroundColorHex))
             .clipShape(RoundedRectangle(cornerRadius: textItem.cornerRadius))
             .overlay(
@@ -4531,7 +4596,7 @@ struct TextAttachmentItemView: View {
                 collaborationManager.broadcastSelection(selectedId: isSelected ? textItem.id : nil)
             }
             .gesture(
-                DragGesture()
+                DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
                         isDragging = true
@@ -4630,18 +4695,25 @@ struct TextAttachmentItemView: View {
                             .background(Color.accentColor)
                             .clipShape(Circle())
                             .gesture(
-                                DragGesture()
+                                DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                                     .onChanged { value in
-                                        textItem.width = max(140, textItem.width + value.translation.width)
+                                        let base = resizeBaseWidth ?? textItem.width
+                                        if resizeBaseWidth == nil { resizeBaseWidth = base }
+                                        liveWidth = max(140, base + value.translation.width)
+                                    }
+                                    .onEnded { _ in
+                                        if let w = liveWidth { textItem.width = w }
+                                        resizeBaseWidth = nil
+                                        liveWidth = nil
                                     }
                             )
                             .offset(x: 6, y: 6)
                     }
                 }
-                .frame(width: textItem.width)
+                .frame(width: displayWidth)
             }
         }
-        .position(x: currentX + textItem.width / 2, y: currentY + 60)
+        .position(x: currentX + displayWidth / 2, y: currentY + 60)
     }
 
     private func resolveBackground(_ hex: String) -> Color {
@@ -4745,7 +4817,7 @@ struct LinkAttachmentItemView: View {
                 isSelected.toggle()
             }
             .gesture(
-                DragGesture()
+                DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         dragOffset = value.translation
                     }
@@ -4826,7 +4898,7 @@ struct Model3DCanvasItemView: View {
             .cornerRadius(8)
             .contentShape(Rectangle())
             .gesture(
-                DragGesture()
+                DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
                         dragOffset = value.translation
@@ -4884,7 +4956,7 @@ public struct MoveNotebookSheet: View {
                         HStack {
                             Image(systemName: "tray.2.fill")
                                 .foregroundColor(.accentColor)
-                            Text("\(store.rootFolderName) (\(localizationManager.localized("root_folder")))")
+                            Text("\(store.displayRootFolderName) (\(localizationManager.localized("root_folder")))")
                                 .foregroundColor(.primary)
                             Spacer()
                             if let note = store.notebooks.first(where: { $0.id == notebookId }), note.folderId == nil {
