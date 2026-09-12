@@ -245,3 +245,83 @@ fn s25_multiple_recordings_accumulate() {
     }
     assert_eq!(s.recorded_audio_us(), 2_000_000, "兩段各 1 秒");
 }
+
+// ---- S-26：Silero VAD 整合 ----
+
+fn silero_model() -> Option<std::path::PathBuf> {
+    let p = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../models/cache/silero-vad-v4.onnx");
+    p.exists().then_some(p)
+}
+
+#[test]
+fn s26_missing_vad_model_degrades_instead_of_failing() {
+    // 錄音不該因為 VAD 模型沒下載就停擺（S-25 的音檔優先原則）。
+    let mut s = session("vad-missing");
+    s.set_vad_model("/definitely/not/here.onnx");
+    assert!(!s.uses_neural_vad(), "不存在的模型不該被當成可用");
+
+    s.start_recording().unwrap();
+    s.feed_audio(&speech(16_000)).unwrap();
+    s.stop_recording().unwrap();
+    assert_eq!(s.recorded_audio_us(), 1_000_000, "音檔仍須完整");
+}
+
+#[test]
+fn s26_neural_vad_is_used_when_the_model_is_available() {
+    let Some(model) = silero_model() else { return };
+
+    let mut s = session("vad-silero");
+    s.set_vad_model(&model);
+    assert!(s.uses_neural_vad());
+
+    s.start_recording().unwrap();
+    // 有聲 + 靜音，Silero 應能切出語音段
+    s.feed_audio(&speech(16_000)).unwrap();
+    s.feed_audio(&silence(16_000)).unwrap();
+    s.stop_recording().unwrap();
+
+    assert_eq!(s.recorded_audio_us(), 2_000_000);
+}
+
+#[test]
+fn s26_silero_rejects_steady_noise_that_fools_the_energy_vad() {
+    // 這是換掉 EnergyVad 的全部理由：穩定的寬頻噪音（冷氣、風扇）
+    // 能量很高，但不是語音。
+    let Some(model) = silero_model() else { return };
+
+    // 偽隨機白噪音，振幅與語音相當
+    let noise: Vec<f32> = {
+        let mut x = 0x2545_F491u32;
+        (0..16_000 * 2)
+            .map(|_| {
+                x ^= x << 13;
+                x ^= x >> 17;
+                x ^= x << 5;
+                (x as f32 / u32::MAX as f32 - 0.5) * 1.2
+            })
+            .collect()
+    };
+
+    use padnote_core::asr::VoiceActivityDetector;
+    use padnote_core::vad::SileroVad;
+
+    let mut energy = padnote_core::recorder::default_vad();
+    let mut silero = SileroVad::load(&model).unwrap();
+
+    let energy_says_speech = noise.chunks(320).filter(|f| energy.is_speech(f)).count();
+    let silero_says_speech = noise.chunks(320).filter(|f| silero.is_speech(f)).count();
+
+    assert!(
+        energy_says_speech > 0,
+        "測試前提：能量門檻法確實會被噪音騙到"
+    );
+    eprintln!(
+        "S-26 噪音抑制：100 個音框中，EnergyVad 誤判 {energy_says_speech} 個為語音，\
+         Silero 誤判 {silero_says_speech} 個"
+    );
+    assert!(
+        silero_says_speech * 4 < energy_says_speech,
+        "Silero 應明顯更少誤判：silero={silero_says_speech} energy={energy_says_speech}"
+    );
+}

@@ -5,6 +5,58 @@
 
 ---
 
+## 2026-09-12 (7) · Silero VAD（S-26）
+
+### 做了什麼
+376 → **395 個測試**。`padnote-vad-silero`（ort + Silero v4）、
+遲滯開關邏輯、接進 `NotebookSession` 與 FFI、修正 manifest 的壞 URL。
+
+### 為什麼換掉 EnergyVad —— 有數字
+白噪音（振幅與語音相當）餵進兩個 VAD，100 個音框：
+
+```
+EnergyVad 誤判 100 個為語音
+Silero    誤判   0 個
+```
+
+能量門檻法在真實教室（冷氣、投影機風扇）等於完全不可用。
+
+### 選型過程
+
+**先試純 Rust 的 tract，失敗了（ADR-0005）。**
+`tract-onnx` 無法載入 Silero —— v4 與 v5 都含 8k/16k 的條件分支，
+兩個分支輸出秩不一致，`ToTypedTranslator` 直接失敗。這是 tract 的能力邊界，
+不是設定問題。
+
+改用 `ort` 其實是**更好的架構決定**：同一個執行期之後還要服務
+Paraformer-zh（S-24）與 PP-OCRv5（D4），一套推論庫服務三個用途。
+
+**遲滯邏輯與模型推論分離。**
+`SpeechGate` 是純邏輯、零相依、完整可測。用單門檻會在機率貼近臨界時
+來回跳動，把一句話切成碎片 —— 有測試明確驗證遲滯區間內零狀態切換。
+
+**內部緩衝而非要求對齊。**
+Silero v4 只吃 512 樣本，但 `Segmenter` 用 20 ms（320 樣本）。
+讓 VAD 內部緩衝，呼叫端不必為了模型改變粒度。
+
+**模型缺失時降級而非失敗。**
+錄音不該因為 VAD 用不了就停擺（S-25 的音檔優先原則）。
+`uses_neural_vad()` 讓 UI 能提示使用者分段品質會下降。
+
+### 踩到的坑
+
+**manifest 裡的 URL 從來沒被驗證過。**
+原本 silero 指向的 HuggingFace 路徑需要登入，`curl` 拿到的是 29 bytes 的
+`Invalid username or password`，副檔名還是 `.onnx`。
+**清單裡沒被實際下載過的 URL 等於沒有。** 已改用官方 repo 並補上真實雜湊，
+同時加測試要求「已填雜湊的項目不得仍標記授權待審」。
+
+**`ort` 2.0-rc 的 API 與舊版差異大**：`session.inputs` 變成 `inputs()`、
+`name` 變成 `name()`、`to_array_view` 變成 `try_extract_tensor` 回傳
+`(shape, slice)` 元組。
+
+---
+
 ## 2026-09-12 (6) · 錄音編排（S-25）
 
 ### 做了什麼

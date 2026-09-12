@@ -3,6 +3,7 @@
 .DS_Store
 
 # 模型權重按需下載，永不入版控（D4）
+/models/cache/
 /models/*.onnx
 /models/*.bin
 /models/*.gguf

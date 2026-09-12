@@ -15,8 +15,27 @@ fn manifest() -> ModelCatalog {
 fn manifest_parses_and_has_entries() {
     let c = manifest();
     assert!(c.models.len() >= 5, "清單不該是空的");
-    assert!(c.get("silero-vad").is_some());
+    assert!(c.get("silero-vad-v4").is_some());
     assert!(c.get("qwen3-4b-instruct-q4").is_some());
+}
+
+/// 已確認的項目必須真的能下載且雜湊相符。
+///
+/// 這條測試的由來：原本 silero-vad 的 URL 指向一個需要登入的 HuggingFace
+/// 路徑，`curl` 只拿到 29 bytes 的 "Invalid username or password"。
+/// 清單裡的 URL 沒被驗證過就等於沒有。
+#[test]
+fn confirmed_entries_declare_a_real_hash_and_size() {
+    for m in manifest().models.iter().filter(|m| m.sha256 != "pending") {
+        assert_eq!(m.sha256.len(), 64, "{} 的雜湊長度錯誤", m.id);
+        assert!(
+            m.size_bytes > 1000,
+            "{} 的大小看起來不對：{}",
+            m.id,
+            m.size_bytes
+        );
+        assert_ne!(m.license, "pending-review", "{} 已有雜湊卻未確認授權", m.id);
+    }
 }
 
 #[test]
@@ -76,7 +95,7 @@ fn capabilities_referenced_by_the_app_are_covered() {
     // 程式裡用到的能力字串必須在清單裡找得到對應模型，
     // 否則使用者會看到「需要下載模型」卻沒有東西可下載。
     let c = manifest();
-    for capability in ["asr.zh", "asr.multilingual", "ocr", "llm.summary"] {
+    for capability in ["asr.zh", "asr.multilingual", "ocr", "llm.summary", "vad"] {
         assert!(
             !c.for_capability(capability).is_empty(),
             "能力 {capability} 沒有對應的模型"

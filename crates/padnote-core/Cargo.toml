@@ -30,3 +30,4 @@ padnote-crypto = { path = "../padnote-crypto" }
 padnote-models = { path = "../padnote-models" }
 padnote-pdf = { path = "../padnote-pdf" }
 padnote-recorder = { path = "../padnote-recorder" }
+padnote-vad-silero = { path = "../padnote-vad-silero" }

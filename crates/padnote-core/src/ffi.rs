@@ -416,6 +416,21 @@ impl PadnoteSession {
         })
     }
 
+    /// 設定 Silero VAD 模型路徑（S-26）。下一次開始錄音時生效。
+    ///
+    /// 模型由 `padnote-models` 的下載器取得（`silero-vad-v4`，1.8 MB）。
+    pub fn set_vad_model(&self, path: String) {
+        self.lock().set_vad_model(path);
+    }
+
+    /// 目前是否使用神經網路 VAD。
+    ///
+    /// `false` 代表退回能量門檻法 —— 實測在白噪音下 **100 個音框全部誤判為
+    /// 語音**（Silero 為 0 個）。UI 應提示使用者下載模型以改善分段品質。
+    pub fn uses_neural_vad(&self) -> bool {
+        self.lock().uses_neural_vad()
+    }
+
     /// 已寫入音檔的時長（微秒）。停止錄音後仍可查。
     pub fn recorded_audio_us(&self) -> u64 {
         self.lock().recorded_audio_us()
@@ -965,6 +980,15 @@ mod tests {
         // C1：點轉錄詞跳回錄音的第 2 秒
         let pos = s.playback_at(3_000_000).expect("應對應到錄音");
         assert_eq!(pos.offset_us, 2_000_000);
+    }
+
+    #[test]
+    fn vad_model_can_be_configured_across_the_boundary() {
+        let s = session("ffi-vad");
+        assert!(!s.uses_neural_vad(), "預設應為能量門檻法");
+
+        s.set_vad_model("/nonexistent.onnx".into());
+        assert!(!s.uses_neural_vad(), "不存在的模型不該被當成可用");
     }
 
     #[test]

@@ -92,6 +92,8 @@ pub struct NotebookSession {
     /// 獨立於 `pipeline` 保存 —— 停止錄音後 pipeline 會被取走，
     /// 但 UI 仍需要知道剛剛錄了多久。
     recorded_audio_us: u64,
+    /// Silero VAD 模型路徑。未設定時退回能量門檻法。
+    vad_model: Option<std::path::PathBuf>,
 }
 
 impl NotebookSession {
@@ -116,6 +118,7 @@ impl NotebookSession {
             editor: TextEditor::new(device),
             pipeline: None,
             recorded_audio_us: 0,
+            vad_model: None,
         };
         let first = Uuid::now_v7();
         session.record(vec![DocOp::AddPage {
@@ -145,6 +148,7 @@ impl NotebookSession {
             editor: TextEditor::new(device),
             pipeline: None,
             recorded_audio_us: 0,
+            vad_model: None,
         };
 
         let ops = session.package.read_doc_ops()?;
@@ -579,7 +583,7 @@ impl NotebookSession {
             BufWriter::new(file),
             session,
             self.now,
-            Box::new(padnote_recorder::default_vad()),
+            self.build_vad(),
         )?);
 
         self.record(vec![DocOp::StartAudio {
@@ -588,6 +592,32 @@ impl NotebookSession {
             media_path,
         }])?;
         Ok(session)
+    }
+
+    /// 設定 Silero VAD 模型（S-26）。未設定時退回能量門檻法。
+    ///
+    /// 模型由 `padnote-models` 的下載器取得。設定後於**下一次**開始錄音時生效。
+    pub fn set_vad_model(&mut self, path: impl Into<std::path::PathBuf>) {
+        self.vad_model = Some(path.into());
+    }
+
+    /// 目前是否會使用 Silero VAD。
+    ///
+    /// `false` 代表退回能量門檻法 —— **有背景噪音時會把冷氣聲當成語音**，
+    /// UI 應該讓使用者知道轉錄分段品質會下降。
+    pub fn uses_neural_vad(&self) -> bool {
+        self.vad_model.as_ref().is_some_and(|p| p.exists())
+    }
+
+    /// 建立 VAD。模型缺失或載入失敗時**降級而非失敗** ——
+    /// 錄音本身不該因為 VAD 用不了就停擺（S-25 的音檔優先原則）。
+    fn build_vad(&self) -> Box<dyn padnote_asr::VoiceActivityDetector> {
+        if let Some(path) = &self.vad_model
+            && let Ok(vad) = padnote_vad_silero::SileroVad::load(path)
+        {
+            return Box::new(vad);
+        }
+        Box::new(padnote_recorder::default_vad())
     }
 
     /// 餵入麥克風取樣。

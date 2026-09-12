@@ -24,6 +24,7 @@ pub use padnote_recorder as recorder;
 pub use padnote_search as search;
 pub use padnote_storage as storage;
 pub use padnote_sync as sync;
+pub use padnote_vad_silero as vad;
 
 pub use app::{AppError, NotebookSession, RecordingState};
 pub use setup::{Capability, Feature, FeatureReadiness, SetupAction, SetupCenter, Status};

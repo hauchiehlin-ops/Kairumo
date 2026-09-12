@@ -2,16 +2,19 @@
   "_comment": [
     "模型清單的機器可讀版本，對應 models/MODELS.md。",
     "sha256 為 'pending' 者尚未取得實際雜湊值，下載器會拒絕它們（不是靜默通過）。",
-    "上架前必須全部換成真實雜湊 —— 見 docs/TODO.md H3。"
+    "上架前必須全部換成真實雜湊 —— 見 docs/TODO.md H3。",
+    "已確認的項目其 url 與 sha256 皆經實際下載驗證。"
   ],
   "models": [
     {
-      "id": "silero-vad",
-      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-silero-vad/resolve/main/silero_vad.onnx",
-      "sha256": "pending",
-      "size_bytes": 2217524,
+      "id": "silero-vad-v4",
+      "url": "https://github.com/snakers4/silero-vad/raw/v4.0/files/silero_vad.onnx",
+      "sha256": "a35ebf52fd3ce5f1469b2a36158dba761bc47b973ea3382b3186ca15b1f5af28",
+      "size_bytes": 1807522,
       "license": "MIT",
-      "required_for": ["asr.zh", "asr.en"]
+      "required_for": [
+        "vad"
+      ]
     },
     {
       "id": "paraformer-zh",
@@ -19,7 +22,9 @@
       "sha256": "pending",
       "size_bytes": 230686720,
       "license": "pending-review",
-      "required_for": ["asr.zh"]
+      "required_for": [
+        "asr.zh"
+      ]
     },
     {
       "id": "sensevoice-small",
@@ -27,7 +32,9 @@
       "sha256": "pending",
       "size_bytes": 492831744,
       "license": "pending-review",
-      "required_for": ["asr.codeswitch"]
+      "required_for": [
+        "asr.codeswitch"
+      ]
     },
     {
       "id": "ct-punct-zh",
@@ -35,7 +42,9 @@
       "sha256": "pending",
       "size_bytes": 293601280,
       "license": "pending-review",
-      "required_for": ["asr.zh"]
+      "required_for": [
+        "asr.zh"
+      ]
     },
     {
       "id": "whisper-large-v3-turbo-q5",
@@ -43,7 +52,9 @@
       "sha256": "pending",
       "size_bytes": 574041600,
       "license": "MIT",
-      "required_for": ["asr.multilingual"]
+      "required_for": [
+        "asr.multilingual"
+      ]
     },
     {
       "id": "ppocr-v5",
@@ -51,7 +62,10 @@
       "sha256": "pending",
       "size_bytes": 16777216,
       "license": "Apache-2.0",
-      "required_for": ["ocr", "hwr.fallback"]
+      "required_for": [
+        "ocr",
+        "hwr.fallback"
+      ]
     },
     {
       "id": "qwen3-4b-instruct-q4",
@@ -59,7 +73,9 @@
       "sha256": "pending",
       "size_bytes": 2621440000,
       "license": "Apache-2.0",
-      "required_for": ["llm.summary"]
+      "required_for": [
+        "llm.summary"
+      ]
     }
   ]
 }

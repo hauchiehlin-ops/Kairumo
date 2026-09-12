@@ -27,6 +27,9 @@ whisper-rs = "0.16"
 # thread_safe：PDFium 的 C API 不是執行緒安全的，這個 feature 會在呼叫周圍
 # 加互斥鎖。沒有它就無法滿足 PdfDocument 的 Send + Sync 約束。
 pdfium-render = { version = "0.8", features = ["thread_safe"] }
+# ONNX Runtime。同一個執行期同時服務 Silero VAD、Paraformer-zh（S-24）
+# 與 PP-OCRv5（D4），比每個模型各帶一套推論庫划算。
+ort = { version = "2.0.0-rc.10", features = ["download-binaries"] }
 
 [workspace.lints.rust]
 unsafe_code = "deny"

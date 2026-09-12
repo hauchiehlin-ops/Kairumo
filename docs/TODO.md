@@ -23,7 +23,11 @@
 
 ### H3. 模型權重授權確認（M0/S4 殘留）
 - **卡在**：需人工逐一查閱模型發布頁的授權條款
+- ✅ **已確認**：silero-vad-v4（MIT，URL 與雜湊皆經實際下載驗證）、
+  whisper-large-v3-turbo（MIT）、ppocr-v5（Apache-2.0）、qwen3-4b（Apache-2.0）
 - **待確認**：Paraformer-zh、SenseVoice-Small、CT-Transformer punc、speaker-diarization
+- ⚠️ **另一個教訓**：原本 silero 的 HuggingFace URL 需要登入，`curl` 只拿到
+  29 bytes 的 "Invalid username or password"。**清單裡沒被驗證過的 URL 等於沒有**
 - **高風險**：語者分離模型（pyannote 系條款嚴格）
 - **記錄於**：`models/MODELS.md`
 
@@ -87,6 +91,8 @@
 | S-21 | WP7 | `padnote-pdf-pdfium`：PDFium 適配層（**執行期需 libpdfium**）|
 | S-25 | WP5/6 | `padnote-recorder`：錄音編排。管線與 ASR 引擎型別上分離，
 音檔優先落地。**ffprobe 驗證端到端產出為 3.00 秒合法 Ogg-Opus** |
+| S-26 | WP5 | `padnote-vad-silero`：Silero VAD（ort）。**實測白噪音下
+EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 
 ### 待做
 | ID | 工作包 | 內容 | 備註 |
