@@ -268,6 +268,31 @@ impl NotebookSession {
                     },
                 );
             }
+            DocOp::AddEmbeddedBlock {
+                page,
+                id,
+                blob,
+                format,
+                interaction,
+                text,
+                created_at,
+            } => {
+                self.add_block_to_page(
+                    *page,
+                    Block {
+                        id: *id,
+                        kind: BlockKind::Embedded {
+                            blob: blob.clone(),
+                            format: format.clone(),
+                            interaction: interaction.clone(),
+                            text: text.clone(),
+                        },
+                        position: None,
+                        created_at: *created_at,
+                    },
+                );
+                self.reindex_block(*page, *id, text, Source::Text);
+            }
             DocOp::RemoveBlock { id } => {
                 self.texts.remove(id);
                 if let Some(page) = self.page_of_block(*id) {
@@ -871,6 +896,175 @@ impl NotebookSession {
         let doc = padnote_export::from_json(text)
             .map_err(|e| AppError::Storage(StorageError::MalformedManifest(e)))?;
         self.import_document(&doc)
+    }
+
+    // ---- 嵌入文件（S-41 / ADR-0009）----
+
+    /// 匯入外部文件到指定頁面。
+    ///
+    /// 依 ADR-0009 的互動層級決定行為：
+    /// - **可編輯格式**（docx／xlsx／md／json）→ 解析成**原生區塊**，
+    ///   使用者能像自己打的字一樣編輯、搜尋、同步
+    /// - **僅預覽格式**（pptx／pdf）→ 建立嵌入區塊，由平台原生元件渲染
+    ///
+    /// **原始檔一律存進 blob** —— 解析必然失真，使用者要能拿回原本的東西。
+    pub fn import_embedded(
+        &mut self,
+        page: Uuid,
+        path: impl AsRef<std::path::Path>,
+    ) -> Result<Uuid, AppError> {
+        use padnote_embed::{EmbedFormat, Interaction};
+
+        let path = path.as_ref();
+        if self.notebook.page(page).is_none() {
+            return Err(AppError::PageNotFound(page));
+        }
+        let format = EmbedFormat::from_path(path).ok_or_else(|| {
+            AppError::Storage(StorageError::MalformedManifest(format!(
+                "不支援的格式：{}",
+                path.display()
+            )))
+        })?;
+
+        // 原檔先落地。解析失敗也要留著。
+        let bytes = std::fs::read(path).map_err(|e| AppError::Storage(StorageError::Io(e)))?;
+        let blob = self
+            .package
+            .blobs()
+            .put(&bytes)
+            .map_err(|e| AppError::Storage(StorageError::MalformedManifest(e.to_string())))?
+            .to_string();
+
+        let (interaction, text) = self.extract_embedded(format, path, &bytes)?;
+
+        let id = Uuid::now_v7();
+        self.record(vec![DocOp::AddEmbeddedBlock {
+            page,
+            id,
+            blob,
+            format: format!("{format:?}").to_lowercase(),
+            interaction: match interaction {
+                Interaction::Preview => "preview",
+                Interaction::Editable => "editable",
+                Interaction::Linked => "linked",
+            }
+            .to_string(),
+            text,
+            created_at: self.now,
+        }])?;
+
+        // 可編輯格式另外拆成原生區塊，讓它真的能編輯。
+        if format.is_editable() {
+            self.expand_editable(page, format, path, &bytes)?;
+        }
+        Ok(id)
+    }
+
+    /// 取出供搜尋與離線顯示的純文字快照。
+    fn extract_embedded(
+        &self,
+        format: padnote_embed::EmbedFormat,
+        path: &std::path::Path,
+        bytes: &[u8],
+    ) -> Result<(padnote_embed::Interaction, String), AppError> {
+        use padnote_embed::EmbedFormat;
+
+        let text = match format {
+            EmbedFormat::Docx => padnote_embed::import_docx_bytes(bytes)
+                .map(|d| {
+                    std::iter::once(d.title.clone())
+                        .chain(d.blocks.iter().filter_map(|b| match b {
+                            padnote_export::ImportedBlock::Text { content, .. } => {
+                                Some(content.clone())
+                            }
+                            _ => None,
+                        }))
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                })
+                .unwrap_or_default(),
+            EmbedFormat::Xlsx => padnote_embed::import_xlsx(path)
+                .map(|sheets| {
+                    sheets
+                        .iter()
+                        .map(padnote_embed::Sheet::to_markdown)
+                        .collect::<Vec<_>>()
+                        .join("\n")
+                })
+                .unwrap_or_default(),
+            // 只知道張數；內容由平台原生元件渲染。
+            EmbedFormat::Pptx => padnote_embed::import_pptx(path)
+                .map(|d| format!("簡報（{} 張投影片）", d.slide_count))
+                .unwrap_or_else(|e| format!("簡報（無法讀取：{e}）")),
+            EmbedFormat::Markdown => String::from_utf8_lossy(bytes).into_owned(),
+            EmbedFormat::Json | EmbedFormat::Pdf => String::new(),
+        };
+        Ok((format.default_interaction(), text))
+    }
+
+    /// 把可編輯格式拆成原生區塊。
+    fn expand_editable(
+        &mut self,
+        page: Uuid,
+        format: padnote_embed::EmbedFormat,
+        path: &std::path::Path,
+        bytes: &[u8],
+    ) -> Result<(), AppError> {
+        use padnote_embed::EmbedFormat;
+
+        match format {
+            EmbedFormat::Docx => {
+                if let Ok(doc) = padnote_embed::import_docx_bytes(bytes) {
+                    self.append_imported_blocks(page, &doc)?;
+                }
+            }
+            EmbedFormat::Xlsx => {
+                // 試算表以 Markdown 表格呈現。編輯儲存格會取代公式 ——
+                // 要編輯公式就得實作公式引擎，那是另一個產品。
+                if let Ok(sheets) = padnote_embed::import_xlsx(path) {
+                    for sheet in sheets {
+                        self.add_text_block(page, &sheet.name, TextStyle::Heading3)?;
+                        self.add_text_block(page, &sheet.to_markdown(), TextStyle::Body)?;
+                    }
+                }
+            }
+            EmbedFormat::Markdown => {
+                let doc = padnote_export::from_markdown(&String::from_utf8_lossy(bytes));
+                self.append_imported_blocks(page, &doc)?;
+            }
+            EmbedFormat::Json => {
+                if let Ok(doc) = padnote_export::from_json(&String::from_utf8_lossy(bytes)) {
+                    self.append_imported_blocks(page, &doc)?;
+                }
+            }
+            EmbedFormat::Pptx | EmbedFormat::Pdf => {}
+        }
+        Ok(())
+    }
+
+    fn append_imported_blocks(
+        &mut self,
+        page: Uuid,
+        doc: &padnote_export::ImportedDocument,
+    ) -> Result<(), AppError> {
+        use padnote_export::ImportedBlock;
+
+        if !doc.title.is_empty() {
+            self.add_text_block(page, &doc.title, TextStyle::Heading1)?;
+        }
+        for block in &doc.blocks {
+            match block {
+                ImportedBlock::Text { content, style } => {
+                    self.add_text_block(page, content, *style)?;
+                }
+                ImportedBlock::Image { source, .. } => {
+                    self.add_image_block(page, source, 0.0, 0.0)?;
+                }
+                // 嵌入時不另開新頁 —— 使用者選的是「插進這一頁」。
+                ImportedBlock::PageBreak => {}
+            }
+        }
+        Ok(())
     }
 
     /// 供平台層存取底層套件（例如寫入 blob）。

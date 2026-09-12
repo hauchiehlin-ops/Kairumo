@@ -53,6 +53,22 @@ pub enum BlockKind {
     Transcript { session: Uuid, text: String },
     /// PDF 標註層的錨點（E2）
     PdfAnnotation { page_index: u32, text: String },
+    /// 嵌入的外部文件（ADR-0009 / 決策 D-10）。
+    ///
+    /// `interaction` 決定呈現方式：`preview` 渲染為圖像、
+    /// `editable` 已被拆成原生區塊（此處僅保留原檔供「開啟原始檔」）、
+    /// `linked` 只存連結。
+    Embedded {
+        /// 原始檔的內容定址雜湊。**原檔一律保留** ——
+        /// 解析失真時使用者還能拿回原本的東西。
+        blob: String,
+        /// `docx` / `xlsx` / `pptx` / `pdf`
+        format: String,
+        /// `preview` / `editable` / `linked`
+        interaction: String,
+        /// 供搜尋與離線顯示的純文字快照。
+        text: String,
+    },
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
@@ -88,6 +104,7 @@ impl Block {
             BlockKind::Text { content, .. } => Some(content),
             BlockKind::Transcript { text, .. } => Some(text),
             BlockKind::PdfAnnotation { text, .. } => Some(text),
+            BlockKind::Embedded { text, .. } => Some(text),
             BlockKind::Image { .. } => None,
         }
     }
@@ -95,7 +112,7 @@ impl Block {
     /// 引用到的 blob（供 GC 計算引用集合）。
     pub fn referenced_blob(&self) -> Option<&str> {
         match &self.kind {
-            BlockKind::Image { blob, .. } => Some(blob),
+            BlockKind::Image { blob, .. } | BlockKind::Embedded { blob, .. } => Some(blob),
             _ => None,
         }
     }

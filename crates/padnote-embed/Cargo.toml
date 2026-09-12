@@ -1,0 +1,15 @@
+[package]
+name = "padnote-embed"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+padnote-doc = { path = "../padnote-doc" }
+padnote-export = { path = "../padnote-export" }
+calamine = "0.31"
+docx-rs = "0.4"
+
+[lints]
+workspace = true

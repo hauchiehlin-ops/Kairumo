@@ -182,6 +182,7 @@ C1（筆跡↔錄音跳轉）、C4（詞級時間戳）、A10（筆跡重播）�
 **錄音**：`StartAudio` / `EndAudio` / `AddWord`
 **物件**（ADR-0010）：`AddObject` / `RemoveObject` / `SetObjectTransform` /
 `Group` / `Ungroup`
+**嵌入文件**（ADR-0009）：`AddEmbeddedBlock`
 
 字串以 `u32` **位元組**長度前綴（非字元數）。UUID 為原始 16 bytes。
 時間為 `u64` 微秒，落在統一時間軸上（§4）。

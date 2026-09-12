@@ -16,6 +16,7 @@ pub mod transcript;
 pub use padnote_asr as asr;
 pub use padnote_crypto as crypto;
 pub use padnote_doc as doc;
+pub use padnote_embed as embed;
 pub use padnote_export as export;
 pub use padnote_ink as ink;
 pub use padnote_models as models;

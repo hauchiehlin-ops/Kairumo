@@ -33,3 +33,4 @@ padnote-recorder = { path = "../padnote-recorder" }
 padnote-vad-silero = { path = "../padnote-vad-silero" }
 padnote-text = { path = "../padnote-text" }
 padnote-punct-ct = { path = "../padnote-punct-ct" }
+padnote-embed = { path = "../padnote-embed" }

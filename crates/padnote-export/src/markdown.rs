@@ -77,6 +77,14 @@ pub fn to_markdown(
                 BlockKind::PdfAnnotation { text, page_index } => {
                     out.push_str(&format!("> **p.{}**：{text}\n\n", page_index + 1));
                 }
+                BlockKind::Embedded { format, text, .. } => {
+                    // 明示這是嵌入的外部文件，而不是使用者寫的內容。
+                    out.push_str(&format!("> _[嵌入的 {format} 文件]_\n\n"));
+                    if !text.is_empty() {
+                        out.push_str(text);
+                        out.push_str("\n\n");
+                    }
+                }
             }
         }
 

@@ -48,6 +48,16 @@ pub enum DocOp {
         height: f32,
         created_at: NotebookTime,
     },
+    /// 嵌入外部文件（ADR-0009）。
+    AddEmbeddedBlock {
+        page: Uuid,
+        id: Uuid,
+        blob: String,
+        format: String,
+        interaction: String,
+        text: String,
+        created_at: NotebookTime,
+    },
     RemoveBlock {
         id: Uuid,
     },
@@ -121,6 +131,7 @@ const OP_REMOVE_OBJECT: u8 = 14;
 const OP_SET_OBJECT_TRANSFORM: u8 = 15;
 const OP_GROUP: u8 = 16;
 const OP_UNGROUP: u8 = 17;
+const OP_ADD_EMBEDDED_BLOCK: u8 = 18;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DocCodecError {
@@ -450,6 +461,24 @@ pub fn encode(ops: &[DocOp]) -> Vec<u8> {
                     .object_kind(kind)
                     .affine(*transform);
             }
+            DocOp::AddEmbeddedBlock {
+                page,
+                id,
+                blob,
+                format,
+                interaction,
+                text,
+                created_at,
+            } => {
+                w.u8(OP_ADD_EMBEDDED_BLOCK)
+                    .uuid(*page)
+                    .uuid(*id)
+                    .str(blob)
+                    .str(format)
+                    .str(interaction)
+                    .str(text)
+                    .time(*created_at);
+            }
             DocOp::RemoveObject { id } => {
                 w.u8(OP_REMOVE_OBJECT).uuid(*id);
             }
@@ -548,6 +577,15 @@ pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
                 id: r.uuid()?,
                 kind: r.object_kind()?,
                 transform: r.affine()?,
+            },
+            OP_ADD_EMBEDDED_BLOCK => DocOp::AddEmbeddedBlock {
+                page: r.uuid()?,
+                id: r.uuid()?,
+                blob: r.str()?,
+                format: r.str()?,
+                interaction: r.str()?,
+                text: r.str()?,
+                created_at: r.time()?,
             },
             OP_REMOVE_OBJECT => DocOp::RemoveObject { id: r.uuid()? },
             OP_SET_OBJECT_TRANSFORM => DocOp::SetObjectTransform {
@@ -674,6 +712,15 @@ mod tests {
                 members: vec![uid(30), uid(33)],
             },
             DocOp::Ungroup { id: uid(40) },
+            DocOp::AddEmbeddedBlock {
+                page: uid(1),
+                id: uid(50),
+                blob: "deadbeef".into(),
+                format: "xlsx".into(),
+                interaction: "editable".into(),
+                text: "項目 數量 單價".into(),
+                created_at: NotebookTime::from_micros(7_000_000),
+            },
         ]
     }
 
@@ -693,8 +740,8 @@ mod tests {
             .collect();
         assert_eq!(
             tags.len(),
-            17,
-            "17 種操作標籤都要被測到，實得 {}",
+            18,
+            "18 種操作標籤都要被測到，實得 {}",
             tags.len()
         );
     }
