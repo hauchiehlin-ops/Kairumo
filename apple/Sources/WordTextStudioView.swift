@@ -13,6 +13,7 @@ public struct WordTextStudioView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var localizationManager = LocalizationManager.shared
 
+    @FocusState private var isEditorFocused: Bool
     @State private var selectedSymbolCategory: Int = 0
 
     // 四大特殊元件庫
@@ -314,6 +315,7 @@ public struct WordTextStudioView: View {
                 )
 
             TextEditor(text: $attachment.text)
+                .focused($isEditorFocused)
                 .font(.system(size: attachment.fontSize, weight: attachment.isBold ? .bold : .regular))
                 .italic(attachment.isItalic)
                 .foregroundColor(Color(hex: attachment.textColorHex) ?? .primary)
@@ -321,6 +323,11 @@ public struct WordTextStudioView: View {
                 .padding(16)
                 .scrollContentBackground(.hidden)
                 .background(Color.clear)
+                .onAppear {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        isEditorFocused = true
+                    }
+                }
         }
         .frame(minHeight: 220)
     }

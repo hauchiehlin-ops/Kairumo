@@ -44,12 +44,33 @@ public struct HomeWorkbenchView: View {
     @State private var hiddenNoteIds: Set<String> = []
     @State private var hiddenRecordingIds: Set<String> = []
 
+    // 資料夾管理與過濾狀態
+    @State private var selectedFolderId: String? = nil
+    @State private var showRenameRootFolderAlert: Bool = false
+    @State private var rootFolderRenameText: String = ""
+    @State private var showNewFolderAlert: Bool = false
+    @State private var newFolderNameText: String = ""
+    @State private var newFolderParentId: String? = nil
+    @State private var folderToRename: FolderItem? = nil
+    @State private var folderRenameText: String = ""
+    @State private var showMoveNotebookSheet: Bool = false
+    @State private var notebookToMoveId: String? = nil
+
     public enum SortOption: String, CaseIterable, Identifiable {
-        case byDate = "依修改時間排序"
-        case byTitle = "依名稱排序"
-        case onlyRecordings = "僅顯示含錄音筆記"
+        case byDate = "date"
+        case byTitle = "title"
+        case onlyRecordings = "recordings"
 
         public var id: String { rawValue }
+
+        @MainActor
+        public func localizedTitle(using localizationManager: LocalizationManager) -> String {
+            switch self {
+            case .byDate: return localizationManager.localized("sort_by_date")
+            case .byTitle: return localizationManager.localized("sort_by_title")
+            case .onlyRecordings: return localizationManager.localized("sort_only_recordings")
+            }
+        }
     }
 
     public init() {}
@@ -69,15 +90,15 @@ public struct HomeWorkbenchView: View {
         #if targetEnvironment(macCatalyst)
         return "Mac Catalyst (Apple Silicon / Intel)"
         #elseif os(macOS)
-        return "macOS 原生"
+        return "macOS Native"
         #elseif os(iOS)
         #if targetEnvironment(simulator)
-        return "iOS 模擬器"
+        return "iOS Simulator"
         #else
-        return "iOS / iPadOS 實機"
+        return "iOS / iPadOS Device"
         #endif
         #else
-        return "Apple 通用架構"
+        return "Apple Universal"
         #endif
     }
 
@@ -139,7 +160,7 @@ public struct HomeWorkbenchView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     HStack(spacing: 8) {
-                        // 介面語系選單
+                        // 介面語系下拉式選單 (Prominent Language Dropdown)
                         Menu {
                             ForEach(AppLanguage.allCases) { lang in
                                 Button {
@@ -154,19 +175,29 @@ public struct HomeWorkbenchView: View {
                                 }
                             }
                         } label: {
-                            HStack(spacing: 4) {
+                            HStack(spacing: 5) {
                                 Image(systemName: "globe")
+                                    .font(.system(size: 13, weight: .bold))
+                                    .foregroundColor(.accentColor)
                                 Text(localizationManager.currentLanguage.endonym)
-                                    .font(.caption2)
-                                    .fontWeight(.semibold)
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundColor(.primary)
+                                Image(systemName: "chevron.down")
+                                    .font(.system(size: 9, weight: .bold))
+                                    .foregroundColor(.secondary)
                             }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .background(Color.primary.opacity(0.08))
-                            .cornerRadius(12)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 10)
+                                    .stroke(Color.accentColor.opacity(0.35), lineWidth: 1.2)
+                            )
+                            .cornerRadius(10)
+                            .shadow(color: Color.black.opacity(0.04), radius: 2, y: 1)
                         }
                         .buttonStyle(.plain)
-                        .help("選擇介面語言 (Language)")
+                        .help(localizationManager.localized("select_language"))
 
                         // 📦 素材圖庫快捷鍵
                         Button {
@@ -198,7 +229,7 @@ public struct HomeWorkbenchView: View {
                             Button {
                                 audioManager.openRecordingsFolderInFinder()
                             } label: {
-                                Label("開啟 Kairumo Record 資料夾", systemImage: "folder")
+                                Label(localizationManager.localized("open_record_folder"), systemImage: "folder")
                             }
 
                             Divider()
@@ -206,7 +237,7 @@ public struct HomeWorkbenchView: View {
                             Button {
                                 showInfoSheet = true
                             } label: {
-                                Label("系統診斷與版本號 (\(appVersionString))", systemImage: "info.circle")
+                                Label("\(localizationManager.localized("system_diagnostics")) (\(appVersionString))", systemImage: "info.circle")
                             }
                         } label: {
                             HStack(spacing: 4) {
@@ -249,17 +280,50 @@ public struct HomeWorkbenchView: View {
                     NotebookEditorView(notebook: $notebookStore.notebooks[index])
                 }
             }
-            .alert("重新命名筆記", isPresented: Binding(
+            .alert(localizationManager.localized("rename_note"), isPresented: Binding(
                 get: { renamingNotebookId != nil },
                 set: { if !$0 { renamingNotebookId = nil } }
             )) {
-                TextField("輸入新標題", text: $renameText)
-                Button("取消", role: .cancel) { renamingNotebookId = nil }
-                Button("儲存") {
+                TextField(localizationManager.localized("enter_title"), text: $renameText)
+                Button(localizationManager.localized("cancel"), role: .cancel) { renamingNotebookId = nil }
+                Button(localizationManager.localized("save")) {
                     if let id = renamingNotebookId {
                         notebookStore.renameNotebook(id: id, newTitle: renameText)
                     }
                     renamingNotebookId = nil
+                }
+            }
+            .alert(localizationManager.localized("edit_root_folder"), isPresented: $showRenameRootFolderAlert) {
+                TextField(localizationManager.localized("root_folder"), text: $rootFolderRenameText)
+                Button(localizationManager.localized("cancel"), role: .cancel) {}
+                Button(localizationManager.localized("confirm")) {
+                    notebookStore.renameRootFolder(newName: rootFolderRenameText)
+                }
+            }
+            .alert(localizationManager.localized("new_subfolder"), isPresented: $showNewFolderAlert) {
+                TextField(localizationManager.localized("folder_name"), text: $newFolderNameText)
+                Button(localizationManager.localized("cancel"), role: .cancel) {}
+                Button(localizationManager.localized("confirm")) {
+                    _ = notebookStore.createFolder(name: newFolderNameText, parentId: newFolderParentId)
+                    newFolderNameText = ""
+                }
+            }
+            .alert(localizationManager.localized("rename_folder"), isPresented: Binding(
+                get: { folderToRename != nil },
+                set: { if !$0 { folderToRename = nil } }
+            )) {
+                TextField(localizationManager.localized("folder_name"), text: $folderRenameText)
+                Button(localizationManager.localized("cancel"), role: .cancel) { folderToRename = nil }
+                Button(localizationManager.localized("confirm")) {
+                    if let f = folderToRename {
+                        notebookStore.renameFolder(id: f.id, newName: folderRenameText)
+                    }
+                    folderToRename = nil
+                }
+            }
+            .sheet(isPresented: $showMoveNotebookSheet) {
+                if let id = notebookToMoveId {
+                    MoveNotebookSheet(notebookId: id)
                 }
             }
             .alert(localizationManager.localized("mic_permission_title"), isPresented: $audioManager.showPermissionAlert) {
@@ -271,6 +335,15 @@ public struct HomeWorkbenchView: View {
                 }
             } message: {
                 Text(localizationManager.localized("mic_permission_msg"))
+            }
+            .onAppear {
+                #if targetEnvironment(macCatalyst)
+                DispatchQueue.main.async {
+                    if let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first {
+                        scene.title = "Kairumo \(appVersionString)"
+                    }
+                }
+                #endif
             }
         }
     }
@@ -322,7 +395,7 @@ public struct HomeWorkbenchView: View {
                 Text(accountManager.profile.displayName)
                     .font(.headline)
                     .foregroundColor(.primary)
-                Text("線上")
+                Text(localizationManager.localized("online_status"))
                     .font(.system(size: 10, weight: .bold))
                     .padding(.horizontal, 6)
                     .padding(.vertical, 2)
@@ -381,7 +454,7 @@ public struct HomeWorkbenchView: View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 190, maximum: 380), spacing: 12)], spacing: 12) {
             // 真實動作 1：新增筆記（彈出範本選擇器）
             Button {
-                newNoteTitle = "未命名筆記 \(notebookStore.notebooks.count + 1)"
+                newNoteTitle = "\(localizationManager.localized("untitled_note")) \(notebookStore.notebooks.count + 1)"
                 selectedTemplate = .blank
                 showNewNotebookSheet = true
             } label: {
@@ -564,7 +637,7 @@ public struct HomeWorkbenchView: View {
             if visibleList.isEmpty {
                 HStack {
                     Spacer()
-                    Text(searchText.isEmpty ? "尚無筆記或皆已隱藏，點選「新增筆記」開始繪製" : "找不到符合「\(searchText)」的筆記")
+                    Text(searchText.isEmpty ? localizationManager.localized("no_notes_hint") : String(format: localizationManager.localized("no_search_results"), searchText))
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                         .padding(.vertical, 24)
@@ -606,7 +679,7 @@ public struct HomeWorkbenchView: View {
                                             Button {
                                                 selectedNotebookForEditing = note
                                             } label: {
-                                                Label("開啟編輯", systemImage: "pencil.and.scribble")
+                                                Label(localizationManager.localized("open_editor"), systemImage: "pencil.and.scribble")
                                             }
                                             Button {
                                                 withAnimation {
@@ -619,12 +692,18 @@ public struct HomeWorkbenchView: View {
                                                 renameText = note.title
                                                 renamingNotebookId = note.id
                                             } label: {
-                                                Label("重新命名", systemImage: "pencil")
+                                                Label(localizationManager.localized("rename_note"), systemImage: "pencil")
+                                            }
+                                            Button {
+                                                notebookToMoveId = note.id
+                                                showMoveNotebookSheet = true
+                                            } label: {
+                                                Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
                                             }
                                             Button {
                                                 notebookStore.duplicateNotebook(id: note.id)
                                             } label: {
-                                                Label("建立副本", systemImage: "doc.on.doc")
+                                                Label(localizationManager.localized("duplicate_note"), systemImage: "doc.on.doc")
                                             }
                                             Divider()
                                             Button(role: .destructive) {
@@ -656,7 +735,7 @@ public struct HomeWorkbenchView: View {
                                     Spacer(minLength: 0)
 
                                     HStack {
-                                        Text("\(note.pageCount) 頁 · \(note.template.rawValue)")
+                                        Text("\(note.pageCount) \(localizationManager.localized("pages_count_suffix")) · \(localizationManager.localized(note.template.localizationKey))")
                                             .font(.caption2)
                                             .foregroundColor(.secondary)
                                         Spacer()
@@ -733,7 +812,7 @@ public struct HomeWorkbenchView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "folder")
-                            Text("開啟 Kairumo Record")
+                            Text(localizationManager.localized("open_record_folder"))
                         }
                         .font(.caption)
                         .foregroundColor(.accentColor)
@@ -743,7 +822,7 @@ public struct HomeWorkbenchView: View {
                         .cornerRadius(8)
                     }
                     .buttonStyle(.plain)
-                    .help("在 Finder 開啟本機文件夾中的 Kairumo Record 錄音目錄")
+                    .help(localizationManager.localized("open_record_folder"))
                 }
 
                 // 窄螢幕分行並排
@@ -795,7 +874,7 @@ public struct HomeWorkbenchView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "folder")
-                                Text("資料夾")
+                                Text(localizationManager.localized("folders"))
                             }
                             .font(.caption)
                             .foregroundColor(.accentColor)
@@ -816,7 +895,7 @@ public struct HomeWorkbenchView: View {
                         Image(systemName: "mic.slash")
                             .font(.title2)
                             .foregroundColor(.secondary)
-                        Text("目前尚無錄音檔或皆已隱藏，點擊「開始錄音」即可即時收音")
+                        Text(localizationManager.localized("no_recordings_hint"))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -892,13 +971,13 @@ public struct HomeWorkbenchView: View {
                                 Button {
                                     audioManager.openRecordingsFolderInFinder()
                                 } label: {
-                                    Label("在資料夾中顯示", systemImage: "folder")
+                                    Label(localizationManager.localized("show_in_folder"), systemImage: "folder")
                                 }
                                 Divider()
                                 Button(role: .destructive) {
                                     notebookStore.deleteRecording(id: rec.id)
                                 } label: {
-                                    Label("刪除錄音檔", systemImage: "trash")
+                                    Label(localizationManager.localized("delete_recording"), systemImage: "trash")
                                 }
                             } label: {
                                 Image(systemName: "ellipsis.circle")
@@ -919,7 +998,14 @@ public struct HomeWorkbenchView: View {
 
     // MARK: - 6. 全部筆記（真實多頁手繪文件）
     private var allNotebooksSection: some View {
-        let visibleList = filteredNotebooks.filter { !hiddenNoteIds.contains($0.id) }
+        let baseList = filteredNotebooks.filter { !hiddenNoteIds.contains($0.id) }
+        let visibleList: [NotebookDocument] = {
+            if let fId = selectedFolderId {
+                return baseList.filter { $0.folderId == fId }
+            } else {
+                return baseList
+            }
+        }()
 
         return VStack(alignment: .leading, spacing: 12) {
             ViewThatFits(in: .horizontal) {
@@ -976,6 +1062,119 @@ public struct HomeWorkbenchView: View {
                 }
             }
 
+            // 📁 資料夾分類導覽列（顯示最上層資料夾名稱與子資料夾）
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Image(systemName: "tray.2.fill")
+                        .foregroundColor(.accentColor)
+                        .font(.subheadline)
+                    Text(notebookStore.rootFolderName)
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                    Button {
+                        rootFolderRenameText = notebookStore.rootFolderName
+                        showRenameRootFolderAlert = true
+                    } label: {
+                        Image(systemName: "pencil")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help(localizationManager.localized("edit_root_folder"))
+
+                    Spacer()
+
+                    Button {
+                        newFolderParentId = nil
+                        newFolderNameText = ""
+                        showNewFolderAlert = true
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "folder.badge.plus")
+                            Text(localizationManager.localized("new_subfolder"))
+                        }
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.accentColor)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.accentColor.opacity(0.12))
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        // 全部檔案
+                        Button {
+                            selectedFolderId = nil
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "square.grid.2x2")
+                                Text(localizationManager.localized("all_folders"))
+                            }
+                            .font(.caption)
+                            .fontWeight(selectedFolderId == nil ? .bold : .regular)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(selectedFolderId == nil ? Color.accentColor : Color(uiColor: .tertiarySystemGroupedBackground))
+                            .foregroundColor(selectedFolderId == nil ? .white : .primary)
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+
+                        // 各資料夾
+                        ForEach(notebookStore.folders) { folder in
+                            let isSel = (selectedFolderId == folder.id)
+                            let count = notebookStore.notebooks(in: folder.id).count
+                            Menu {
+                                Button {
+                                    newFolderParentId = folder.id
+                                    newFolderNameText = ""
+                                    showNewFolderAlert = true
+                                } label: {
+                                    Label(localizationManager.localized("new_subfolder"), systemImage: "folder.badge.plus")
+                                }
+                                Button {
+                                    folderToRename = folder
+                                    folderRenameText = folder.name
+                                } label: {
+                                    Label(localizationManager.localized("rename_folder"), systemImage: "pencil")
+                                }
+                                Divider()
+                                Button(role: .destructive) {
+                                    notebookStore.deleteFolder(id: folder.id)
+                                    if selectedFolderId == folder.id {
+                                        selectedFolderId = nil
+                                    }
+                                } label: {
+                                    Label(localizationManager.localized("delete_folder"), systemImage: "trash")
+                                }
+                            } label: {
+                                HStack(spacing: 4) {
+                                    Image(systemName: folder.parentId == nil ? "folder.fill" : "folder.badge.gearshape")
+                                    Text("\(folder.name) (\(count))")
+                                }
+                                .font(.caption)
+                                .fontWeight(isSel ? .bold : .regular)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(isSel ? Color.accentColor : Color(uiColor: .tertiarySystemGroupedBackground))
+                                .foregroundColor(isSel ? .white : .primary)
+                                .cornerRadius(8)
+                            } primaryAction: {
+                                selectedFolderId = folder.id
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .padding(10)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(12)
+
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 14)], spacing: 14) {
                 ForEach(visibleList) { note in
                     Button {
@@ -1004,7 +1203,7 @@ public struct HomeWorkbenchView: View {
                                     Button {
                                         selectedNotebookForEditing = note
                                     } label: {
-                                        Label("開啟編輯", systemImage: "pencil.and.scribble")
+                                        Label(localizationManager.localized("open_editor"), systemImage: "pencil.and.scribble")
                                     }
                                     Button {
                                         withAnimation {
@@ -1017,12 +1216,18 @@ public struct HomeWorkbenchView: View {
                                         renameText = note.title
                                         renamingNotebookId = note.id
                                     } label: {
-                                        Label("重新命名", systemImage: "pencil")
+                                        Label(localizationManager.localized("rename_note"), systemImage: "pencil")
+                                    }
+                                    Button {
+                                        notebookToMoveId = note.id
+                                        showMoveNotebookSheet = true
+                                    } label: {
+                                        Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
                                     }
                                     Button {
                                         notebookStore.duplicateNotebook(id: note.id)
                                     } label: {
-                                        Label("建立副本", systemImage: "doc.on.doc")
+                                        Label(localizationManager.localized("duplicate_note"), systemImage: "doc.on.doc")
                                     }
                                     Divider()
                                     Button(role: .destructive) {
@@ -1046,7 +1251,7 @@ public struct HomeWorkbenchView: View {
                                 .lineLimit(1)
 
                             HStack {
-                                Text("\(note.pageCount) 頁")
+                                Text("\(note.pageCount) \(localizationManager.localized("pages_count_suffix"))")
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                                 Spacer()
@@ -1073,7 +1278,7 @@ public struct HomeWorkbenchView: View {
                     selectedSortOption = opt
                 } label: {
                     HStack {
-                        Text(opt.rawValue)
+                        Text(opt.localizedTitle(using: localizationManager))
                         if selectedSortOption == opt {
                             Image(systemName: "checkmark")
                         }
@@ -1082,7 +1287,7 @@ public struct HomeWorkbenchView: View {
             }
         } label: {
             HStack(spacing: 4) {
-                Text(selectedSortOption.rawValue)
+                Text(selectedSortOption.localizedTitle(using: localizationManager))
                     .font(.caption)
                 Image(systemName: "line.3.horizontal.decrease.circle")
                     .font(.caption)
@@ -1115,7 +1320,7 @@ public struct HomeWorkbenchView: View {
                     showInfoSheet = true
                 } label: {
                     HStack(spacing: 4) {
-                        Text("版本 \(appVersionString)")
+                        Text("\(localizationManager.localized("version_number")): \(appVersionString)")
                             .font(.footnote)
                             .foregroundColor(.secondary)
                         Image(systemName: "chevron.right")
@@ -1135,7 +1340,7 @@ public struct HomeWorkbenchView: View {
             }
             .frame(maxWidth: .infinity, alignment: .center)
 
-            Text("手寫與錄音雙向對齊 · 離線優先 · 開源透明")
+            Text(localizationManager.localized("app_slogan"))
                 .font(.caption2)
                 .foregroundColor(.secondary.opacity(0.6))
         }
@@ -1233,9 +1438,10 @@ public struct HomeWorkbenchView: View {
 struct QuickAudioRecorderModal: View {
     @ObservedObject var audioManager = AudioRecorderManager.shared
     @ObservedObject var notebookStore = NotebookStore.shared
+    @ObservedObject var localizationManager = LocalizationManager.shared
     @Environment(\.dismiss) private var dismiss
 
-    @State private var recordingTitle: String = "課堂/會議錄音 \(Date().formatted(date: .numeric, time: .shortened))"
+    @State private var recordingTitle: String = ""
     @State private var targetNotebookId: String? = nil
 
     var body: some View {
@@ -1260,22 +1466,22 @@ struct QuickAudioRecorderModal: View {
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("錄音標題")
+                    Text(localizationManager.localized("recording_title"))
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    TextField("輸入錄音標題", text: $recordingTitle)
+                    TextField(localizationManager.localized("enter_recording_title"), text: $recordingTitle)
                         .textFieldStyle(.roundedBorder)
                 }
                 .padding(.horizontal, 32)
 
                 // 🌟 筆記附加對齊選項（解決使用者疑問：錄音如何被利用、是否即時出現在筆記中）
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("附加至指定筆記（錄音完成後將即時出現在該筆記中）")
+                    Text(localizationManager.localized("attach_to_note"))
                         .font(.caption)
                         .foregroundColor(.secondary)
 
-                    Picker("附加至筆記", selection: $targetNotebookId) {
-                        Text("不附加（僅儲存為獨立錄音）").tag(nil as String?)
+                    Picker(localizationManager.localized("attach_picker_label"), selection: $targetNotebookId) {
+                        Text(localizationManager.localized("standalone_recording")).tag(nil as String?)
                         ForEach(notebookStore.notebooks) { nb in
                             Text(nb.title).tag(nb.id as String?)
                         }
@@ -1304,7 +1510,7 @@ struct QuickAudioRecorderModal: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "stop.fill")
-                            Text("停止並儲存至 Kairumo Record")
+                            Text(localizationManager.localized("stop_and_save_record"))
                                 .fontWeight(.bold)
                         }
                         .padding()
@@ -1322,7 +1528,7 @@ struct QuickAudioRecorderModal: View {
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "record.circle")
-                            Text("開始錄音")
+                            Text(localizationManager.localized("quick_record_title"))
                                 .fontWeight(.bold)
                         }
                         .padding()
@@ -1336,11 +1542,11 @@ struct QuickAudioRecorderModal: View {
 
                 Spacer()
             }
-            .navigationTitle("語音錄音與對齊")
+            .navigationTitle(localizationManager.localized("quick_record"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("關閉") {
+                    Button(localizationManager.localized("close")) {
                         if audioManager.status == .recording {
                             _ = audioManager.stopRecording()
                         }
@@ -1357,10 +1563,13 @@ struct QuickAudioRecorderModal: View {
                                 .font(.caption)
                         }
                     }
-                    .help("在 Finder 開啟 Kairumo Record 資料夾")
+                    .help(localizationManager.localized("open_record_folder"))
                 }
             }
             .onAppear {
+                if recordingTitle.isEmpty {
+                    recordingTitle = "\(localizationManager.localized("quick_record_title")) \(Date().formatted(date: .numeric, time: .shortened))"
+                }
                 Task {
                     _ = await audioManager.startRecording(title: recordingTitle)
                 }
@@ -1379,14 +1588,15 @@ struct QuickAudioRecorderModal: View {
 public struct AppDiagnosticsSheet: View {
     let versionString: String
     let platformDesc: String
+    @ObservedObject var localizationManager = LocalizationManager.shared
     @Environment(\.dismiss) private var dismiss
 
     public var body: some View {
         NavigationStack {
             List {
-                Section("應用程式版本資訊") {
+                Section(localizationManager.localized("app_version_info")) {
                     HStack {
-                        Text("版本號")
+                        Text(localizationManager.localized("version_number"))
                         Spacer()
                         Text(versionString)
                             .foregroundColor(.secondary)
@@ -1394,48 +1604,48 @@ public struct AppDiagnosticsSheet: View {
                     }
 
                     HStack {
-                        Text("Rust Core 引擎")
+                        Text(localizationManager.localized("core_engine"))
                         Spacer()
                         Text(versionString)
                             .foregroundColor(.secondary)
                     }
 
                     HStack {
-                        Text("執行平台")
+                        Text(localizationManager.localized("platform_desc"))
                         Spacer()
                         Text(platformDesc)
                             .foregroundColor(.secondary)
                     }
 
                     HStack {
-                        Text("架構模式")
+                        Text(localizationManager.localized("arch_mode"))
                         Spacer()
-                        Text("Mac Catalyst / iOS 通用 (方案一)")
+                        Text("Mac Catalyst / iOS Universal")
                             .foregroundColor(.secondary)
                     }
                 }
 
-                Section("核心技術與授權") {
+                Section(localizationManager.localized("about_app")) {
                     HStack {
-                        Text("開源授權")
+                        Text("License")
                         Spacer()
                         Text("Apache-2.0")
                             .foregroundColor(.secondary)
                     }
 
                     HStack {
-                        Text("跨平台架構")
+                        Text("Stack")
                         Spacer()
                         Text("Rust Core + UniFFI + PencilKit/Metal/SwiftUI")
                             .foregroundColor(.secondary)
                     }
                 }
             }
-            .navigationTitle("關於 Kairumo")
+            .navigationTitle(localizationManager.localized("about_app"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("關閉") {
+                    Button(localizationManager.localized("close")) {
                         dismiss()
                     }
                 }

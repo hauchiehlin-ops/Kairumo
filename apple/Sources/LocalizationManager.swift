@@ -49,7 +49,7 @@ public final class LocalizationManager: ObservableObject {
            let lang = AppLanguage(rawValue: saved) {
             self.currentLanguage = lang
         } else {
-            self.currentLanguage = .zhHant
+            self.currentLanguage = .en
         }
     }
 
@@ -59,7 +59,7 @@ public final class LocalizationManager: ObservableObject {
 
     public func localized(_ key: String) -> String {
         guard let dict = stringDictionary[key] else { return key }
-        return dict[currentLanguage] ?? dict[.zhHant] ?? key
+        return dict[currentLanguage] ?? dict[.en] ?? dict[.zhHant] ?? key
     }
 
     // MARK: - 跨平台 6 國語言完整對齊辭典
@@ -1908,6 +1908,751 @@ public final class LocalizationManager: ObservableObject {
             .ja: "遷移フロー",
             .ko: "인터랙션 플로우",
             .th: "ผังกระบวนการ"
+        ],
+        // MARK: - 資料夾與分頁結構管理
+        "structure_pages": [
+            .zhHant: "頁面結構",
+            .en: "Pages",
+            .zhHans: "页面结构",
+            .ja: "ページ構成",
+            .ko: "페이지 구성",
+            .th: "โครงสร้างหน้า"
+        ],
+        "structure_folders": [
+            .zhHant: "資料夾目錄",
+            .en: "Folders",
+            .zhHans: "文件夹目录",
+            .ja: "フォルダ一覧",
+            .ko: "폴더 목록",
+            .th: "โครงสร้างโฟลเดอร์"
+        ],
+        "root_folder": [
+            .zhHant: "最上層資料夾",
+            .en: "Root Folder",
+            .zhHans: "最上层文件夹",
+            .ja: "ルートフォルダ",
+            .ko: "최상위 폴더",
+            .th: "โฟลเดอร์ระดับบนสุด"
+        ],
+        "edit_root_folder": [
+            .zhHant: "編輯最上層資料夾名稱",
+            .en: "Rename Root Folder",
+            .zhHans: "编辑最上层文件夹名称",
+            .ja: "ルートフォルダ名を変更",
+            .ko: "최상위 폴더 이름 변경",
+            .th: "แก้ไขชื่อโฟลเดอร์ระดับบนสุด"
+        ],
+        "new_subfolder": [
+            .zhHant: "新增子資料夾",
+            .en: "New Subfolder",
+            .zhHans: "新建子文件夹",
+            .ja: "サブフォルダを追加",
+            .ko: "하위 폴더 추가",
+            .th: "สร้างโฟลเดอร์ย่อยใหม่"
+        ],
+        "delete_folder": [
+            .zhHant: "刪除資料夾",
+            .en: "Delete Folder",
+            .zhHans: "删除文件夹",
+            .ja: "フォルダを削除",
+            .ko: "폴더 삭제",
+            .th: "ลบโฟลเดอร์"
+        ],
+        "rename_folder": [
+            .zhHant: "重新命名資料夾",
+            .en: "Rename Folder",
+            .zhHans: "重命名文件夹",
+            .ja: "フォルダ名を変更",
+            .ko: "폴더 이름 변경",
+            .th: "เปลี่ยนชื่อโฟลเดอร์"
+        ],
+        "move_to_folder": [
+            .zhHant: "移動至資料夾",
+            .en: "Move to Folder",
+            .zhHans: "移动至文件夹",
+            .ja: "フォルダへ移動",
+            .ko: "폴더로 이동",
+            .th: "ย้ายไปยังโฟลเดอร์"
+        ],
+        "folder_name": [
+            .zhHant: "資料夾名稱",
+            .en: "Folder Name",
+            .zhHans: "文件夹名称",
+            .ja: "フォルダ名",
+            .ko: "폴더 이름",
+            .th: "ชื่อโฟลเดอร์"
+        ],
+        "all_folders": [
+            .zhHant: "全部檔案",
+            .en: "All Files",
+            .zhHans: "全部文件",
+            .ja: "すべてのファイル",
+            .ko: "모든 파일",
+            .th: "ไฟล์ทั้งหมด"
+        ],
+        "unfiled_notes": [
+            .zhHant: "未分類檔案",
+            .en: "Unfiled Notes",
+            .zhHans: "未分类文件",
+            .ja: "未分類ノート",
+            .ko: "미분류 노트",
+            .th: "บันทึกที่ไม่ได้จัดหมวดหมู่"
+        ],
+        "add_next_page": [
+            .zhHant: "＋ 新增下一頁",
+            .en: "+ Add Next Page",
+            .zhHans: "＋ 新增下一页",
+            .ja: "＋ 次のページを追加",
+            .ko: "＋ 다음 페이지 추가",
+            .th: "＋ เพิ่มหน้าถัดไป"
+        ],
+        "add_note_to_folder": [
+            .zhHant: "在此資料夾新增筆記",
+            .en: "New Note in Folder",
+            .zhHans: "在此文件夹新建笔记",
+            .ja: "このフォルダに新規ノート",
+            .ko: "이 폴더에 새 노트 추가",
+            .th: "สร้างบันทึกใหม่ในโฟลเดอร์นี้"
+        ],
+        "select_destination_folder": [
+            .zhHant: "選擇目標資料夾",
+            .en: "Select Target Folder",
+            .zhHans: "选择目标文件夹",
+            .ja: "移動先フォルダを選択",
+            .ko: "대상 폴더 선택",
+            .th: "เลือกโฟลเดอร์ปลายทาง"
+        ],
+        "folder_contains_notes": [
+            .zhHant: "包含檔案",
+            .en: "Notes count",
+            .zhHans: "包含文件",
+            .ja: "ファイル件数",
+            .ko: "포함된 파일 수",
+            .th: "จำนวนไฟล์"
+        ],
+        "tap_to_type_hint": [
+            .zhHant: "點選畫布任意處即可開始打字輸入",
+            .en: "Tap anywhere on the canvas to type",
+            .zhHans: "点击画布任意处即可开始打字输入",
+            .ja: "キャンバスをタップして文字を入力",
+            .ko: "캔버스를 탭하여 텍스트 입력",
+            .th: "แตะที่ใดก็ได้บนผืนผ้าใบเพื่อพิมพ์"
+        ],
+        "type_mode_active": [
+            .zhHant: "打字模式已就緒（畫筆已鎖定）",
+            .en: "Typing Mode Ready (Pen Locked)",
+            .zhHans: "打字模式已就绪（画笔已锁定）",
+            .ja: "入力モード準備完了（ペンロック）",
+            .ko: "타이핑 모드 준비 완료 (펜 잠금)",
+            .th: "โหมดการพิมพ์พร้อมใช้งาน (ล็อคปากกา)"
+        ],
+        "keep_border": [
+            .zhHant: "保留邊框",
+            .en: "Keep Border",
+            .zhHans: "保留边框",
+            .ja: "枠線を維持",
+            .ko: "테두리 유지",
+            .th: "เก็บเส้นขอบ"
+        ],
+        "remove_border": [
+            .zhHant: "刪除邊框",
+            .en: "Remove Border",
+            .zhHans: "删除边框",
+            .ja: "枠線を削除",
+            .ko: "테두리 제거",
+            .th: "ลบเส้นขอบ"
+        ],
+        "toggle_border": [
+            .zhHant: "邊框開關 (保留/刪除)",
+            .en: "Toggle Border (Keep/Remove)",
+            .zhHans: "边框开关 (保留/删除)",
+            .ja: "枠線の切替 (維持/削除)",
+            .ko: "테두리 전환 (유지/제거)",
+            .th: "สลับเส้นขอบ (เก็บ/ลบ)"
+        ],
+        "insert_page_after": [
+            .zhHant: "在後方插入新頁面",
+            .en: "Insert Page After",
+            .zhHans: "在后方插入新页面",
+            .ja: "後ろに新規ページを挿入",
+            .ko: "뒤에 새 페이지 삽입",
+            .th: "แทรกหน้าใหม่หลังจากนี้"
+        ],
+        "add_page_large": [
+            .zhHant: "＋ 新增頁面",
+            .en: "+ Add Page",
+            .zhHans: "＋ 新增页面",
+            .ja: "＋ ページを追加",
+            .ko: "＋ 페이지 추가",
+            .th: "＋ เพิ่มหน้าใหม่"
+        ],
+        "math_card_border": [
+            .zhHant: "保留卡片邊框",
+            .en: "Keep Card Border",
+            .zhHans: "保留卡片边框",
+            .ja: "カードの枠線を維持",
+            .ko: "카드 테두리 유지",
+            .th: "เก็บเส้นขอบการ์ด"
+        ],
+        "sort_by_date": [
+            .zhHant: "依修改時間排序",
+            .en: "Sort by Date Modified",
+            .zhHans: "按修改时间排序",
+            .ja: "更新日時順",
+            .ko: "수정 날짜순",
+            .th: "เรียงตามวันที่แก้ไข"
+        ],
+        "sort_by_title": [
+            .zhHant: "依名稱排序",
+            .en: "Sort by Name",
+            .zhHans: "按名称排序",
+            .ja: "名前順",
+            .ko: "이름순",
+            .th: "เรียงตามชื่อ"
+        ],
+        "sort_only_recordings": [
+            .zhHant: "僅顯示含錄音筆記",
+            .en: "Recordings Only",
+            .zhHans: "仅显示含录音笔记",
+            .ja: "録音付きのみ",
+            .ko: "녹음 포함만",
+            .th: "เฉพาะที่มีเสียงบันทึก"
+        ],
+        "select_language": [
+            .zhHant: "選擇介面語言",
+            .en: "Select Language",
+            .zhHans: "选择界面语言",
+            .ja: "言語を選択",
+            .ko: "언어 선택",
+            .th: "เลือกภาษา"
+        ],
+        "open_record_folder": [
+            .zhHant: "開啟 Kairumo Record 資料夾",
+            .en: "Open Kairumo Record Folder",
+            .zhHans: "打开 Kairumo Record 文件夹",
+            .ja: "Kairumo Record フォルダを開く",
+            .ko: "Kairumo Record 폴더 열기",
+            .th: "เปิดโฟลเดอร์ Kairumo Record"
+        ],
+        "system_diagnostics": [
+            .zhHant: "系統診斷與版本資訊",
+            .en: "Diagnostics & Version Info",
+            .zhHans: "系统诊断与版本信息",
+            .ja: "システム診断とバージョン情報",
+            .ko: "시스템 진단 및 버전 정보",
+            .th: "ข้อมูลการวินิจฉัยและเวอร์ชัน"
+        ],
+        "enter_title": [
+            .zhHant: "輸入新標題",
+            .en: "Enter New Title",
+            .zhHans: "输入新标题",
+            .ja: "新しいタイトルを入力",
+            .ko: "새 제목 입력",
+            .th: "ใส่ชื่อเรื่องใหม่"
+        ],
+        "online_status": [
+            .zhHant: "線上",
+            .en: "Online",
+            .zhHans: "在线",
+            .ja: "オンライン",
+            .ko: "온라인",
+            .th: "ออนไลน์"
+        ],
+        "untitled_note": [
+            .zhHant: "未命名筆記",
+            .en: "Untitled Note",
+            .zhHans: "未命名笔记",
+            .ja: "無題のノート",
+            .ko: "제목 없는 노트",
+            .th: "บันทึกที่ไม่มีชื่อ"
+        ],
+        "no_notes_hint": [
+            .zhHant: "尚無筆記或皆已隱藏，點選「新增筆記」開始繪製",
+            .en: "No notes found. Tap \"New Note\" to get started.",
+            .zhHans: "暂无笔记，点击“新建笔记”开始绘制",
+            .ja: "ノートがありません。「新規ノート」をクリックして作成",
+            .ko: "노트가 없습니다. \"새 노트\"를 클릭하여 시작하세요.",
+            .th: "ยังไม่มีบันทึก แตะ \"บันทึกใหม่\" เพื่อเริ่มต้น"
+        ],
+        "no_search_results": [
+            .zhHant: "找不到符合「%@」的筆記",
+            .en: "No notes matching \"%@\"",
+            .zhHans: "未找到匹配“%@”的笔记",
+            .ja: "「%@」に一致するノートは見つかりません",
+            .ko: "\"%@\"에 일치하는 노트가 없습니다",
+            .th: "ไม่พบบันทึกที่ตรงกับ \"%@\""
+        ],
+        "open_editor": [
+            .zhHant: "開啟編輯",
+            .en: "Open Editor",
+            .zhHans: "打开编辑",
+            .ja: "編集を開く",
+            .ko: "편집 열기",
+            .th: "เปิดแก้ไข"
+        ],
+        "duplicate_note": [
+            .zhHant: "建立副本",
+            .en: "Duplicate Note",
+            .zhHans: "创建副本",
+            .ja: "複製を作成",
+            .ko: "사본 생성",
+            .th: "ทำซ้ำบันทึก"
+        ],
+        "pages_count_suffix": [
+            .zhHant: "頁",
+            .en: "Pages",
+            .zhHans: "页",
+            .ja: "ページ",
+            .ko: "페이지",
+            .th: "หน้า"
+        ],
+        "folders": [
+            .zhHant: "資料夾",
+            .en: "Folders",
+            .zhHans: "文件夹",
+            .ja: "フォルダ",
+            .ko: "폴더",
+            .th: "โฟลเดอร์"
+        ],
+        "no_recordings_hint": [
+            .zhHant: "目前尚無錄音檔或皆已隱藏，點擊「開始錄音」即可即時收音",
+            .en: "No audio recordings yet. Tap \"Start Recording\" to record audio.",
+            .zhHans: "暂无录音文件，点击“开始录音”即可录音",
+            .ja: "録音がありません。「録音開始」で音声を録音します",
+            .ko: "녹음 파일이 없습니다. \"녹음 시작\"을 탭하여 녹음하세요.",
+            .th: "ยังไม่มีเสียงบันทึก แตะ \"เริ่มบันทึก\" เพื่อบันทึกเสียง"
+        ],
+        "show_in_folder": [
+            .zhHant: "在資料夾中顯示",
+            .en: "Show in Folder",
+            .zhHans: "在文件夹中显示",
+            .ja: "フォルダで表示",
+            .ko: "폴더에서 보기",
+            .th: "แสดงในโฟลเดอร์"
+        ],
+        "delete_recording": [
+            .zhHant: "刪除錄音檔",
+            .en: "Delete Recording",
+            .zhHans: "删除录音",
+            .ja: "録音を削除",
+            .ko: "녹음 삭제",
+            .th: "ลบเสียงบันทึก"
+        ],
+        "app_slogan": [
+            .zhHant: "手寫與錄音雙向對齊 · 離線優先 · 開源透明",
+            .en: "Dual Ink & Audio Sync · Offline First · Open Source",
+            .zhHans: "手写与录音对齐 · 离线优先 · 开源透明",
+            .ja: "手書きと録音の同期 · オフライン優先 · オープンソース",
+            .ko: "필기와 녹음 동기화 · 오프라인 우선 · 오픈 소스",
+            .th: "ซิงค์ลายมือและเสียง · ออฟไลน์ก่อน · โอเพ่นซอร์ส"
+        ],
+        "quick_record_title": [
+            .zhHant: "語音錄音與對齊",
+            .en: "Audio Recording & Sync",
+            .zhHans: "语音录音与对齐",
+            .ja: "音声録音と同期",
+            .ko: "음성 녹음 및 동기화",
+            .th: "การบันทึกเสียงและการซิงค์"
+        ],
+        "recording_title": [
+            .zhHant: "錄音標題",
+            .en: "Recording Title",
+            .zhHans: "录音标题",
+            .ja: "録音タイトル",
+            .ko: "녹음 제목",
+            .th: "ชื่อการบันทึก"
+        ],
+        "enter_recording_title": [
+            .zhHant: "輸入錄音標題",
+            .en: "Enter recording title",
+            .zhHans: "输入录音标题",
+            .ja: "録音タイトルを入力",
+            .ko: "녹음 제목 입력",
+            .th: "ใส่ชื่อการบันทึก"
+        ],
+        "attach_picker_label": [
+            .zhHant: "附加至筆記",
+            .en: "Attach to Note",
+            .zhHans: "附加至笔记",
+            .ja: "ノートに添付",
+            .ko: "노트에 첨부",
+            .th: "แนบกับบันทึก"
+        ],
+        "standalone_recording": [
+            .zhHant: "不附加（僅儲存為獨立錄音）",
+            .en: "Standalone (Save as separate audio file)",
+            .zhHans: "不附加（仅保存为独立录音）",
+            .ja: "添付しない（独立ファイルとして保存）",
+            .ko: "첨부 안 함 (독립 오디오로 저장)",
+            .th: "ไม่แนบ (บันทึกเป็นไฟล์เสียงแยก)"
+        ],
+        "stop_and_save_record": [
+            .zhHant: "停止並儲存至 Kairumo Record",
+            .en: "Stop & Save to Kairumo Record",
+            .zhHans: "停止并保存至 Kairumo Record",
+            .ja: "停止して Kairumo Record に保存",
+            .ko: "정지 및 Kairumo Record에 저장",
+            .th: "หยุดและบันทึกไปยัง Kairumo Record"
+        ],
+        "app_version_info": [
+            .zhHant: "應用程式版本資訊",
+            .en: "Application Version Info",
+            .zhHans: "应用程序版本信息",
+            .ja: "アプリバージョン情報",
+            .ko: "앱 버전 정보",
+            .th: "ข้อมูลเวอร์ชันแอปพลิเคชัน"
+        ],
+        "version_number": [
+            .zhHant: "版本號",
+            .en: "Version",
+            .zhHans: "版本号",
+            .ja: "バージョン",
+            .ko: "버전",
+            .th: "เวอร์ชัน"
+        ],
+        "core_engine": [
+            .zhHant: "Rust Core 引擎",
+            .en: "Rust Core Engine",
+            .zhHans: "Rust Core 引擎",
+            .ja: "Rust Core エンジン",
+            .ko: "Rust Core 엔진",
+            .th: "เอนจิน Rust Core"
+        ],
+        "platform_desc": [
+            .zhHant: "執行平台",
+            .en: "Platform",
+            .zhHans: "运行平台",
+            .ja: "プラットフォーム",
+            .ko: "플랫폼",
+            .th: "แพลตฟอร์ม"
+        ],
+        "arch_mode": [
+            .zhHant: "架構模式",
+            .en: "Architecture Mode",
+            .zhHans: "架构模式",
+            .ja: "アーキテクチャモード",
+            .ko: "아키텍처 모드",
+            .th: "โหมดสถาปัตยกรรม"
+        ],
+        "about_app": [
+            .zhHant: "關於 Kairumo",
+            .en: "About Kairumo",
+            .zhHans: "关于 Kairumo",
+            .ja: "Kairumo について",
+            .ko: "Kairumo 정보",
+            .th: "เกี่ยวกับ Kairumo"
+        ],
+        "delete_page_confirm_msg": [
+            .zhHant: "確定要刪除第 %d 頁嗎？此動作無法復原。",
+            .en: "Are you sure you want to delete Page %d? This cannot be undone.",
+            .zhHans: "确定要删除第 %d 页吗？此操作无法撤销。",
+            .ja: "%d ページを削除してもよろしいですか？元に戻せません。",
+            .ko: "%d페이지를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+            .th: "คุณแน่ใจหรือไม่ว่าต้องการลบหน้า %d? การดำเนินการนี้ไม่สามารถยกเลิกได้"
+        ],
+        "recording_suffix": [
+            .zhHant: "錄音",
+            .en: "Recording",
+            .zhHans: "录音",
+            .ja: "録音",
+            .ko: "녹음",
+            .th: "การบันทึก"
+        ],
+        "sync_recording_in_progress": [
+            .zhHant: "同步錄音中",
+            .en: "Sync Recording",
+            .zhHans: "同步录音中",
+            .ja: "同期録音中",
+            .ko: "동기화 녹음 중",
+            .th: "กำลังบันทึกเสียงพร้อมกัน"
+        ],
+        "txt_count": [
+            .zhHant: "文字",
+            .en: "Text",
+            .zhHans: "文本",
+            .ja: "テキスト",
+            .ko: "텍스트",
+            .th: "ข้อความ"
+        ],
+        "img_count": [
+            .zhHant: "圖片",
+            .en: "Images",
+            .zhHans: "图片",
+            .ja: "画像",
+            .ko: "이미지",
+            .th: "รูปภาพ"
+        ],
+        "model3d_count": [
+            .zhHant: "3D 模型",
+            .en: "3D",
+            .zhHans: "3D 模型",
+            .ja: "3D",
+            .ko: "3D",
+            .th: "3D"
+        ],
+        "drag_card_hint": [
+            .zhHant: "拖曳移動卡片",
+            .en: "Drag to move card",
+            .zhHans: "拖拽移动卡片",
+            .ja: "ドラッグして移動",
+            .ko: "드래그하여 이동",
+            .th: "ลากเพื่อย้ายการ์ด"
+        ],
+        "chart_type": [
+            .zhHant: "圖表類型",
+            .en: "Chart Type",
+            .zhHans: "图表类型",
+            .ja: "グラフの種類",
+            .ko: "차트 유형",
+            .th: "ประเภทแผนภูมิ"
+        ],
+        "data_list": [
+            .zhHant: "數據列表",
+            .en: "Data Entries",
+            .zhHans: "数据列表",
+            .ja: "データ一覧",
+            .ko: "데이터 목록",
+            .th: "รายการข้อมูล"
+        ],
+        "add_data_entry": [
+            .zhHant: "新增項目",
+            .en: "Add Entry",
+            .zhHans: "添加项目",
+            .ja: "項目を追加",
+            .ko: "항목 추가",
+            .th: "เพิ่มรายการ"
+        ],
+        "preview_chart": [
+            .zhHant: "圖表即時預覽",
+            .en: "Live Chart Preview",
+            .zhHans: "图表实时预览",
+            .ja: "プレビュー",
+            .ko: "실시간 미리보기",
+            .th: "ดูตัวอย่างแผนภูมิ"
+        ],
+        "geom_shape": [
+            .zhHant: "幾何形狀",
+            .en: "Geometric Shape",
+            .zhHans: "几何形状",
+            .ja: "幾何学形状",
+            .ko: "기하학적 도형",
+            .th: "รูปทรงเรขาคณิต"
+        ],
+        "geom_preview": [
+            .zhHant: "3D 預覽",
+            .en: "3D Preview",
+            .zhHans: "3D 预览",
+            .ja: "3D プレビュー",
+            .ko: "3D 미리보기",
+            .th: "ดูตัวอย่าง 3D"
+        ],
+        "golden_spiral_ref": [
+            .zhHant: "黃金螺旋參考線 (Golden Spiral)",
+            .en: "Golden Spiral Guide",
+            .zhHans: "黄金螺旋参考线 (Golden Spiral)",
+            .ja: "黄金螺旋ガイド",
+            .ko: "황금 나선 가이드",
+            .th: "เส้นนำเกลียวทอง"
+        ],
+        "golden_spiral_desc": [
+            .zhHant: "以 1:1.618 斐波那契螺旋疊加於畫布，引導視覺焦點",
+            .en: "1:1.618 Fibonacci spiral overlay to guide focal point",
+            .zhHans: "以 1:1.618 斐波那契螺旋叠加于画布，引导视觉焦点",
+            .ja: "1:1.618のフィボナッチ螺旋で視線を自然に誘導",
+            .ko: "1:1.618 피보나치 나선 오버레이로 시선 유도",
+            .th: "ซ้อนทับเกลียวฟีโบนัชชี 1:1.618 เพื่อนำสายตา"
+        ],
+        "rule_of_thirds_ref": [
+            .zhHant: "九宮格三分構圖線 (Rule of Thirds)",
+            .en: "Rule of Thirds Grid",
+            .zhHans: "九宫格三分构图线 (Rule of Thirds)",
+            .ja: "三分割構図ガイド",
+            .ko: "3등분 법칙 격자",
+            .th: "ตารางกฎสามส่วน"
+        ],
+        "rule_of_thirds_desc": [
+            .zhHant: "標準三等分縱橫輔助線與交會四點焦點指示",
+            .en: "Standard 3x3 grid lines with 4 intersection power points",
+            .zhHans: "标准三等分纵横辅助线与交会四点焦点指示",
+            .ja: "標準3分割ラインと4つの交点フォーカス表示",
+            .ko: "표준 3분할 라인 및 4개 교차점 초점 가이드",
+            .th: "เส้นกริดมาตรฐาน 3x3 พร้อมจุดโฟกัส 4 จุด"
+        ],
+        "palette_tip": [
+            .zhHant: "點選色彩可吸取 / 點「插入」貼至畫布",
+            .en: "Tap color to sample / Tap insert to paste swatch",
+            .zhHans: "点击颜色可吸取 / 点“插入”贴至画布",
+            .ja: "タップで色取得 /「挿入」で配置",
+            .ko: "색상 탭하여 추출 / \"삽입\"으로 배치",
+            .th: "แตะสีเพื่อเลือก / แตะ \"แทรก\" เพื่อวาง"
+        ],
+        "insert_swatch": [
+            .zhHant: "插入色票卡",
+            .en: "Insert Color Swatch",
+            .zhHans: "插入色票卡",
+            .ja: "スウォッチカードを挿入",
+            .ko: "색상 견본 카드 삽입",
+            .th: "แทรกการ์ดตัวอย่างสี"
+        ],
+        "engineering_dim_tip": [
+            .zhHant: "點擊一鍵貼入畫布零件旁",
+            .en: "Tap to insert dimension next to parts",
+            .zhHans: "点击一键贴入画布零件旁",
+            .ja: "タップで部品の横に寸法を挿入",
+            .ko: "탭하여 부품 옆에 치수 삽입",
+            .th: "แตะเพื่อแทรกขนาดข้างชิ้นส่วน"
+        ],
+        "material_specs_tip": [
+            .zhHant: "插入工程材質與表面工藝標籤",
+            .en: "Insert Engineering Material & Specs Label",
+            .zhHans: "插入工程材质与表面工艺标签",
+            .ja: "材質・表面処理仕様ラベルを挿入",
+            .ko: "엔지니어링 재질 및 표면 사양 라벨 삽입",
+            .th: "แทรกฉลากวัสดุและข้อกำหนดทางวิศวกรรม"
+        ],
+        "ui_wireframe_tip": [
+            .zhHant: "快速貼上標準 UI 元件線框",
+            .en: "Quickly insert standard UI wireframe components",
+            .zhHans: "快速贴上标准 UI 组件线框",
+            .ja: "標準UIワイヤーフレームを素早く配置",
+            .ko: "표준 UI 와이어프레임 컴포넌트 빠른 삽입",
+            .th: "แทรกไวร์เฟรมคอมโพเนนต์ UI มาตรฐานอย่างรวดเร็ว"
+        ],
+        "interaction_flow_tip": [
+            .zhHant: "標示使用者點擊與滑動流向",
+            .en: "Mark user tap & interaction flow directions",
+            .zhHans: "标示用户点击与滑动流向",
+            .ja: "タップやスワイプの操作フローを指示",
+            .ko: "사용자 탭 및 인터랙션 흐름 표시",
+            .th: "ระบุทิศทางการแตะและการโต้ตอบของผู้ใช้"
+        ],
+        "clear_cache_confirm": [
+            .zhHant: "確定要清除所有本機素材快取以釋放硬碟空間嗎？已插入筆記中的內容不受影響。",
+            .en: "Are you sure you want to clear all local asset cache? Items already inserted into notes will not be affected.",
+            .zhHans: "确定要清除所有本地素材缓存以释放存储空间吗？已插入笔记中的内容不受影响。",
+            .ja: "すべてのローカルアセットキャッシュを消去しますか？ノートに挿入済みのコンテンツには影響しません。",
+            .ko: "모든 로컬 에셋 캐시를 지우시겠습니까? 노트에 이미 삽입된 콘텐츠에는 영향을 주지 않습니다.",
+            .th: "คุณแน่ใจหรือไม่ว่าต้องการล้างแคชเนื้อหาในเครื่องทั้งหมด? เนื้อหาที่แทรกลงในบันทึกแล้วจะไม่ได้รับผลกระทบ"
+        ],
+        "search_assets_placeholder": [
+            .zhHant: "搜尋機構、3C、零件、規格、色彩...",
+            .en: "Search mechanisms, 3C, components, specs, colors...",
+            .zhHans: "搜索机构、3C、零件、规格、色彩...",
+            .ja: "機構、3C、パーツ、仕様、カラーを検索...",
+            .ko: "기구, 3C, 부품, 사양, 색상 검색...",
+            .th: "ค้นหากลไก, 3C, ชิ้นส่วน, สเปก, สี..."
+        ],
+        "all_asset_types": [
+            .zhHant: "全部型態",
+            .en: "All Types",
+            .zhHans: "全部类型",
+            .ja: "すべてのタイプ",
+            .ko: "모든 유형",
+            .th: "ทุกประเภท"
+        ],
+        "all_themes": [
+            .zhHant: "全部主題",
+            .en: "All Themes",
+            .zhHans: "全部主题",
+            .ja: "すべてのテーマ",
+            .ko: "모든 테마",
+            .th: "ทุกธีม"
+        ],
+        "download_all_category": [
+            .zhHant: "下載本類全部",
+            .en: "Download All in Category",
+            .zhHans: "下载本类全部",
+            .ja: "このカテゴリをすべてダウンロード",
+            .ko: "이 카테고리 모두 다운로드",
+            .th: "ดาวน์โหลดทั้งหมดในหมวดหมู่นี้"
+        ],
+        "downloading": [
+            .zhHant: "下載中...",
+            .en: "Downloading...",
+            .zhHans: "下载中...",
+            .ja: "ダウンロード中...",
+            .ko: "다운로드 중...",
+            .th: "กำลังดาวน์โหลด..."
+        ],
+        "spec_specs": [
+            .zhHant: "主要規格：",
+            .en: "Main Specs: ",
+            .zhHans: "主要规格：",
+            .ja: "主要仕様：",
+            .ko: "주요 사양: ",
+            .th: "สเปกหลัก: "
+        ],
+        "spec_materials": [
+            .zhHant: "材質工藝：",
+            .en: "Material & Finish: ",
+            .zhHans: "材质工艺：",
+            .ja: "材質・仕上げ：",
+            .ko: "소재 및 공정: ",
+            .th: "วัสดุและกระบวนการ: "
+        ],
+        "spec_dimensions": [
+            .zhHant: "參考尺寸：",
+            .en: "Reference Dimensions: ",
+            .zhHans: "参考尺寸：",
+            .ja: "参考寸法：",
+            .ko: "참고 치수: ",
+            .th: "ขนาดอ้างอิง: "
+        ],
+        "spec_filesize": [
+            .zhHant: "檔案大小：",
+            .en: "File Size: ",
+            .zhHans: "文件大小：",
+            .ja: "ファイルサイズ：",
+            .ko: "파일 크기: ",
+            .th: "ขนาดไฟล์: "
+        ],
+        "remove_cache": [
+            .zhHant: "移除本機快取",
+            .en: "Remove Local Cache",
+            .zhHans: "移除本地缓存",
+            .ja: "ローカルキャッシュを削除",
+            .ko: "로컬 캐시 제거",
+            .th: "ลบแคชในเครื่อง"
+        ],
+        "no_assets_found": [
+            .zhHant: "未找到符合條件的素材",
+            .en: "No matching assets found",
+            .zhHans: "未找到符合条件的素材",
+            .ja: "一致するアセットが見つかりません",
+            .ko: "일치하는 에셋을 찾을 수 없습니다",
+            .th: "ไม่พบเนื้อหาที่ตรงกัน"
+        ],
+        "no_assets_hint": [
+            .zhHant: "嘗試更換搜尋關鍵字或切換主題分類標籤",
+            .en: "Try different keywords or switch theme tabs",
+            .zhHans: "尝试更换搜索关键字或切换主题分类标签",
+            .ja: "検索キーワードを変更するか、テーマタブを切り替えてください",
+            .ko: "다른 검색어를 입력하거나 테마 탭을 전환해 보세요",
+            .th: "ลองเปลี่ยนคำค้นหาหรือสลับแท็บธีม"
+        ],
+        "math_placeholder": [
+            .zhHant: "例如: 125 * 8 + 45",
+            .en: "e.g., 125 * 8 + 45",
+            .zhHans: "例如: 125 * 8 + 45",
+            .ja: "例: 125 * 8 + 45",
+            .ko: "예: 125 * 8 + 45",
+            .th: "เช่น: 125 * 8 + 45"
+        ],
+        "math_value_prefix": [
+            .zhHant: "數值",
+            .en: "Value",
+            .zhHans: "数值",
+            .ja: "値",
+            .ko: "값",
+            .th: "ค่า"
+        ],
+        "math_input_hint": [
+            .zhHant: "請在上方輸入算式後點擊「計算求解」",
+            .en: "Enter formula above and click 'Calculate Solution'",
+            .zhHans: "请在上方输入算式后点击“计算求解”",
+            .ja: "上部に計算式を入力して「計算実行」をクリックしてください",
+            .ko: "위에 수식을 입력한 후 '계산 실행'을 클릭하세요",
+            .th: "ป้อนสูตรด้านบนแล้วคลิก 'คำนวณผลลัพธ์'"
         ]
     ]
 }

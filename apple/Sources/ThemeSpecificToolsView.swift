@@ -12,9 +12,9 @@
 import SwiftUI
 
 public enum ActiveThemeTab: String, CaseIterable, Identifiable {
-    case aesthetic = "美學視覺"
-    case engineering = "工程製程"
-    case digital = "數位體驗"
+    case aesthetic = "aesthetic"
+    case engineering = "engineering"
+    case digital = "digital"
 
     public var id: String { rawValue }
 
@@ -100,7 +100,7 @@ public struct ThemeSpecificToolsView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("關閉") {
+                    Button(localizationManager.localized("close")) {
                         dismiss()
                     }
                 }
@@ -121,10 +121,10 @@ public struct ThemeSpecificToolsView: View {
                         Image(systemName: "camera.metering.center.weighted")
                             .foregroundColor(.orange)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("黃金螺旋參考線 (Golden Spiral)")
+                            Text(localizationManager.localized("golden_spiral_ref"))
                                 .font(.subheadline)
                                 .fontWeight(.medium)
-                            Text("以 1:1.618 斐波那契螺旋疊加於畫布，引導視覺焦點")
+                            Text(localizationManager.localized("golden_spiral_desc"))
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
@@ -138,10 +138,10 @@ public struct ThemeSpecificToolsView: View {
                         Image(systemName: "grid")
                             .foregroundColor(.blue)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text("九宮格三分構圖線 (Rule of Thirds)")
+                            Text(localizationManager.localized("rule_of_thirds_ref"))
                                 .font(.subheadline)
                                 .fontWeight(.medium)
-                            Text("標準三等分縱橫輔助線與交會四點焦點指示")
+                            Text(localizationManager.localized("rule_of_thirds_desc"))
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
@@ -158,7 +158,7 @@ public struct ThemeSpecificToolsView: View {
                     Text(localizationManager.localized("palette_swatches"))
                         .font(.headline)
                     Spacer()
-                    Text("點選色彩可吸取 / 點「插入」貼至畫布")
+                    Text(localizationManager.localized("palette_tip"))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -177,7 +177,7 @@ public struct ThemeSpecificToolsView: View {
                             } label: {
                                 HStack(spacing: 3) {
                                     Image(systemName: "plus.rectangle.fill")
-                                    Text("插入色票卡")
+                                    Text(localizationManager.localized("insert_swatch"))
                                 }
                                 .font(.caption2)
                                 .fontWeight(.semibold)
@@ -190,26 +190,28 @@ public struct ThemeSpecificToolsView: View {
                             .buttonStyle(.plain)
                         }
 
+                        // 色塊橫排
                         HStack(spacing: 6) {
-                            ForEach(0..<pal.colors.count, id: \.self) { i in
+                            ForEach(0..<pal.colors.count, id: \.self) { idx in
                                 Button {
-                                    currentBrushColor = pal.colors[i]
+                                    // 點選該色票即吸取該顏色至目前工具筆刷
+                                    currentBrushColor = pal.colors[idx]
                                 } label: {
-                                    VStack(spacing: 4) {
+                                    VStack(spacing: 2) {
                                         RoundedRectangle(cornerRadius: 6)
-                                            .fill(pal.colors[i])
-                                            .frame(height: 38)
+                                            .fill(pal.colors[idx])
+                                            .frame(height: 36)
                                             .overlay(
                                                 RoundedRectangle(cornerRadius: 6)
-                                                    .stroke(Color.primary.opacity(0.1), lineWidth: 1)
+                                                    .stroke(Color.black.opacity(0.1), lineWidth: 1)
                                             )
-                                        Text(pal.hexes[i])
+                                        Text(pal.hexes[idx])
                                             .font(.system(size: 9, design: .monospaced))
                                             .foregroundColor(.secondary)
                                     }
                                 }
                                 .buttonStyle(.plain)
-                                .help("點選套用此色至目前筆刷")
+                                .help(localizationManager.localized("palette_tip"))
                             }
                         }
                     }
@@ -233,7 +235,7 @@ public struct ThemeSpecificToolsView: View {
                     Text(localizationManager.localized("dimension_callout"))
                         .font(.headline)
                     Spacer()
-                    Text("點擊一鍵貼入畫布零件旁")
+                    Text(localizationManager.localized("engineering_dim_tip"))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -281,7 +283,7 @@ public struct ThemeSpecificToolsView: View {
                     Text(localizationManager.localized("material_specs_card"))
                         .font(.headline)
                     Spacer()
-                    Text("插入工程材質與表面工藝標籤")
+                    Text(localizationManager.localized("material_specs_tip"))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -323,7 +325,7 @@ public struct ThemeSpecificToolsView: View {
                         } label: {
                             HStack(spacing: 3) {
                                 Image(systemName: "doc.badge.plus")
-                                Text("貼上規格")
+                                Text(localizationManager.localized("insert"))
                             }
                             .font(.caption2)
                             .fontWeight(.semibold)
@@ -355,7 +357,7 @@ public struct ThemeSpecificToolsView: View {
                     Text(localizationManager.localized("wireframe_kit"))
                         .font(.headline)
                     Spacer()
-                    Text("快速貼上標準 UI 元件線框")
+                    Text(localizationManager.localized("ui_wireframe_tip"))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -405,7 +407,7 @@ public struct ThemeSpecificToolsView: View {
                     Text(localizationManager.localized("interaction_arrow"))
                         .font(.headline)
                     Spacer()
-                    Text("標示使用者點擊與滑動流向")
+                    Text(localizationManager.localized("interaction_flow_tip"))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }

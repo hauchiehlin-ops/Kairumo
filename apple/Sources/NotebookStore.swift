@@ -149,6 +149,29 @@ public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+/// 筆記資料夾模型（支援多層級子資料夾與自訂名稱）
+public struct FolderItem: Identifiable, Codable, Hashable {
+    public let id: String
+    public var name: String
+    public var parentId: String? // nil 代表位於最上層根目錄下
+    public var createdAt: Date
+    public var colorHex: String?
+
+    public init(
+        id: String = UUID().uuidString,
+        name: String,
+        parentId: String? = nil,
+        createdAt: Date = Date(),
+        colorHex: String? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.parentId = parentId
+        self.createdAt = createdAt
+        self.colorHex = colorHex
+    }
+}
+
 /// 筆記文件本機模型
 public struct NotebookDocument: Identifiable, Codable, Hashable {
     public let id: String
@@ -160,6 +183,8 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     public var previewSnippet: String?
     public var template: NoteTemplate
     public var recordingAudioPath: String?
+    /// 所屬資料夾 ID（nil 代表位於最上層根目錄或未分類）
+    public var folderId: String?
     /// 各頁面之 PKDrawing 向量筆跡資料（以 Data 形式持久化）
     public var pagesData: [Data]
     /// 各頁面之客製化畫布長度（以 pt 為單位，預設 1800pt，支援自由向下延長）
@@ -199,6 +224,7 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
         previewSnippet: String? = nil,
         template: NoteTemplate = .blank,
         recordingAudioPath: String? = nil,
+        folderId: String? = nil,
         pagesData: [Data] = [],
         pageHeights: [CGFloat]? = nil,
         attachments: [NoteImageAttachment]? = [],
@@ -215,6 +241,7 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
         self.previewSnippet = previewSnippet
         self.template = template
         self.recordingAudioPath = recordingAudioPath
+        self.folderId = folderId
         self.pageHeights = pageHeights
         self.attachments = attachments ?? []
         self.textAttachments = textAttachments ?? []
@@ -500,6 +527,10 @@ public final class NotebookStore: ObservableObject {
 
     @Published public var notebooks: [NotebookDocument] = []
     @Published public var recordings: [AudioRecordingRecord] = []
+    @Published public var folders: [FolderItem] = []
+    @Published public var rootFolderName: String = "我的筆記"
+
+    private let rootFolderNameKey = "kairumo.notebooks.rootFolderName"
 
     private var documentsDir: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
@@ -511,6 +542,10 @@ public final class NotebookStore: ObservableObject {
 
     private var recordingsFile: URL {
         documentsDir.appendingPathComponent("recordings_v1.json")
+    }
+
+    private var foldersFile: URL {
+        documentsDir.appendingPathComponent("folders_v1.json")
     }
 
     private init() {
@@ -532,6 +567,15 @@ public final class NotebookStore: ObservableObject {
            let recList = try? JSONDecoder().decode([AudioRecordingRecord].self, from: recData) {
             self.recordings = recList
         }
+
+        if let fData = try? Data(contentsOf: foldersFile),
+           let fList = try? JSONDecoder().decode([FolderItem].self, from: fData) {
+            self.folders = fList
+        }
+
+        if let savedRoot = UserDefaults.standard.string(forKey: rootFolderNameKey), !savedRoot.isEmpty {
+            self.rootFolderName = savedRoot
+        }
     }
 
     public func persistData() {
@@ -541,6 +585,10 @@ public final class NotebookStore: ObservableObject {
         if let recData = try? JSONEncoder().encode(recordings) {
             try? recData.write(to: recordingsFile, options: .atomic)
         }
+        if let fData = try? JSONEncoder().encode(folders) {
+            try? fData.write(to: foldersFile, options: .atomic)
+        }
+        UserDefaults.standard.set(rootFolderName, forKey: rootFolderNameKey)
     }
 
     /// 專屬畫布筆畫向量二進位儲存目錄
@@ -577,6 +625,9 @@ public final class NotebookStore: ObservableObject {
         return dir
     }
 
+    /// 記憶體層級圖片快取，徹底消除物件拖曳時每秒 60-120 次磁碟讀取解碼產生的殘影與掉幀
+    private let imageCache = NSCache<NSString, UIImage>()
+
     /// 儲存圖片附件至本地磁碟，回傳儲存後的檔名
     public func saveAttachmentImage(_ image: UIImage) -> String? {
         let fileName = "att_\(UUID().uuidString).png"
@@ -584,17 +635,23 @@ public final class NotebookStore: ObservableObject {
         guard let data = image.pngData() else { return nil }
         do {
             try data.write(to: fileUrl, options: .atomic)
+            imageCache.setObject(image, forKey: fileName as NSString)
             return fileName
         } catch {
             return nil
         }
     }
 
-    /// 讀取圖片附件
+    /// 讀取圖片附件（優先自記憶體快取命中，未命中則自磁碟讀取並寫入快取）
     public func loadAttachmentImage(fileName: String) -> UIImage? {
+        let key = fileName as NSString
+        if let cached = imageCache.object(forKey: key) {
+            return cached
+        }
         let fileUrl = attachmentsDirectory.appendingPathComponent(fileName)
-        guard let data = try? Data(contentsOf: fileUrl) else { return nil }
-        return UIImage(data: data)
+        guard let data = try? Data(contentsOf: fileUrl), let img = UIImage(data: data) else { return nil }
+        imageCache.setObject(img, forKey: key)
+        return img
     }
 
     private func seedDefaultNotebooks() {
@@ -625,7 +682,7 @@ public final class NotebookStore: ObservableObject {
     // MARK: - 筆記操作 CRUD
 
     @discardableResult
-    public func createNotebook(title: String, template: NoteTemplate) -> NotebookDocument {
+    public func createNotebook(title: String, template: NoteTemplate, folderId: String? = nil) -> NotebookDocument {
         let safeTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "未命名筆記" : title
         let newDoc = NotebookDocument(
             title: safeTitle,
@@ -634,7 +691,8 @@ public final class NotebookStore: ObservableObject {
             pageCount: 1,
             hasRecording: false,
             previewSnippet: "建立於 \(Date().formatted(date: .abbreviated, time: .shortened))",
-            template: template
+            template: template,
+            folderId: folderId
         )
         notebooks.insert(newDoc, at: 0)
         persistData()
@@ -667,8 +725,13 @@ public final class NotebookStore: ObservableObject {
             previewSnippet: original.previewSnippet,
             template: original.template,
             recordingAudioPath: original.recordingAudioPath,
+            folderId: original.folderId,
             pagesData: original.pagesData,
-            pageHeights: original.pageHeights
+            pageHeights: original.pageHeights,
+            attachments: original.attachments,
+            textAttachments: original.textAttachments,
+            linkAttachments: original.linkAttachments,
+            model3DAttachments: original.model3DAttachments
         )
         notebooks.insert(copy, at: 0)
         persistData()
@@ -682,6 +745,258 @@ public final class NotebookStore: ObservableObject {
             notebooks[idx].lastModifiedDate = Date()
             persistData()
         }
+    }
+
+    // MARK: - 資料夾管理 CRUD
+
+    @discardableResult
+    public func createFolder(name: String, parentId: String? = nil, colorHex: String? = nil) -> FolderItem {
+        let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "新增資料夾" : name
+        let folder = FolderItem(name: cleanName, parentId: parentId, colorHex: colorHex)
+        folders.append(folder)
+        persistData()
+        return folder
+    }
+
+    public func renameFolder(id: String, newName: String) {
+        guard let idx = folders.firstIndex(where: { $0.id == id }) else { return }
+        let clean = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !clean.isEmpty {
+            folders[idx].name = clean
+            persistData()
+        }
+    }
+
+    public func deleteFolder(id: String) {
+        // 將該資料夾內的筆記安全移回其父資料夾（若無父資料夾則移回根目錄 nil）
+        let targetFolder = folders.first(where: { $0.id == id })
+        let fallbackParentId = targetFolder?.parentId
+        for i in 0..<notebooks.count {
+            if notebooks[i].folderId == id {
+                notebooks[i].folderId = fallbackParentId
+            }
+        }
+        // 將該資料夾底下的子資料夾提升至父資料夾
+        for i in 0..<folders.count {
+            if folders[i].parentId == id {
+                folders[i].parentId = fallbackParentId
+            }
+        }
+        folders.removeAll { $0.id == id }
+        persistData()
+    }
+
+    public func renameRootFolder(newName: String) {
+        let clean = newName.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !clean.isEmpty {
+            rootFolderName = clean
+            persistData()
+        }
+    }
+
+    public func moveNotebook(id: String, toFolderId: String?) {
+        guard let idx = notebooks.firstIndex(where: { $0.id == id }) else { return }
+        notebooks[idx].folderId = toFolderId
+        notebooks[idx].lastModifiedDate = Date()
+        persistData()
+    }
+
+    public func subfolders(of parentId: String?) -> [FolderItem] {
+        folders.filter { $0.parentId == parentId }
+    }
+
+    public func notebooks(in folderId: String?) -> [NotebookDocument] {
+        notebooks.filter { $0.folderId == folderId }
+    }
+
+    // MARK: - 集中單一事實分頁管理 (Atomic Page Management)
+
+    /// 為指定筆記安全原子新增下一頁，回傳新頁碼 index
+    @discardableResult
+    public func addPage(notebookId: String) -> Int {
+        guard let idx = notebooks.firstIndex(where: { $0.id == notebookId }) else { return 0 }
+        let oldPageCount = max(1, notebooks[idx].pageCount)
+        let newPageCount = oldPageCount + 1
+        notebooks[idx].pageCount = newPageCount
+
+        // 確保 pageHeights 陣列長度對齊
+        var heights = notebooks[idx].pageHeights ?? Array(repeating: 1800.0, count: oldPageCount)
+        while heights.count < newPageCount {
+            heights.append(1800.0)
+        }
+        notebooks[idx].pageHeights = heights
+        notebooks[idx].lastModifiedDate = Date()
+
+        let newPageIndex = newPageCount - 1
+        // 儲存空白筆跡至磁碟
+        saveDrawing(notebookId: notebookId, pageIndex: newPageIndex, drawing: PKDrawing())
+        persistData()
+        return newPageIndex
+    }
+
+    /// 在指定頁面後方插入新頁面，平移後續頁面並回傳新插入頁面之 pageIndex
+    @discardableResult
+    public func insertPage(notebookId: String, afterIndex: Int) -> Int {
+        guard let idx = notebooks.firstIndex(where: { $0.id == notebookId }) else { return 0 }
+        let oldPageCount = max(1, notebooks[idx].pageCount)
+        let newPageCount = oldPageCount + 1
+        let insertIndex = min(max(0, afterIndex + 1), oldPageCount)
+
+        // 從最後一頁往前平移圖檔
+        var p = oldPageCount - 1
+        while p >= insertIndex {
+            let existingDrawing = loadDrawing(notebookId: notebookId, pageIndex: p)
+            saveDrawing(notebookId: notebookId, pageIndex: p + 1, drawing: existingDrawing)
+            p -= 1
+        }
+        // 將新插入的一頁設為空白
+        saveDrawing(notebookId: notebookId, pageIndex: insertIndex, drawing: PKDrawing())
+
+        // 更新 pageHeights
+        var heights = notebooks[idx].pageHeights ?? Array(repeating: 1800.0, count: oldPageCount)
+        while heights.count < oldPageCount {
+            heights.append(1800.0)
+        }
+        heights.insert(1800.0, at: insertIndex)
+        notebooks[idx].pageHeights = heights
+
+        // 平移各類附件之 pageIndex
+        if let atts = notebooks[idx].attachments {
+            notebooks[idx].attachments = atts.map { item in
+                var mod = item
+                if mod.pageIndex >= insertIndex { mod.pageIndex += 1 }
+                return mod
+            }
+        }
+        if let txts = notebooks[idx].textAttachments {
+            notebooks[idx].textAttachments = txts.map { item in
+                var mod = item
+                if mod.pageIndex >= insertIndex { mod.pageIndex += 1 }
+                return mod
+            }
+        }
+        if let lnks = notebooks[idx].linkAttachments {
+            notebooks[idx].linkAttachments = lnks.map { item in
+                var mod = item
+                if mod.pageIndex >= insertIndex { mod.pageIndex += 1 }
+                return mod
+            }
+        }
+        if let mods = notebooks[idx].model3DAttachments {
+            notebooks[idx].model3DAttachments = mods.map { item in
+                var mod = item
+                if mod.pageIndex >= insertIndex { mod.pageIndex += 1 }
+                return mod
+            }
+        }
+
+        notebooks[idx].pageCount = newPageCount
+        notebooks[idx].lastModifiedDate = Date()
+        persistData()
+        return insertIndex
+    }
+
+    /// 刪除指定頁面，平移後續頁面並回傳安全之 currentPageIndex
+    @discardableResult
+    public func deletePage(notebookId: String, pageIndex: Int, currentIndex: Int) -> Int {
+        guard let idx = notebooks.firstIndex(where: { $0.id == notebookId }) else { return 0 }
+        let total = notebooks[idx].pageCount
+        guard total > 1, pageIndex >= 0, pageIndex < total else { return currentIndex }
+
+        // 平移磁碟圖檔
+        var p = pageIndex
+        while p < total - 1 {
+            let nextDrawing = loadDrawing(notebookId: notebookId, pageIndex: p + 1)
+            saveDrawing(notebookId: notebookId, pageIndex: p, drawing: nextDrawing)
+            p += 1
+        }
+        // 移除最後一頁檔案
+        let lastFileUrl = drawingsDirectory.appendingPathComponent("\(notebookId)_p\(total - 1).drawing")
+        try? FileManager.default.removeItem(at: lastFileUrl)
+
+        // 平移高度陣列
+        if var heights = notebooks[idx].pageHeights, heights.count >= total {
+            heights.remove(at: pageIndex)
+            notebooks[idx].pageHeights = heights
+        }
+
+        // 平移附件之 pageIndex
+        notebooks[idx].attachments?.removeAll { $0.pageIndex == pageIndex }
+        if let atts = notebooks[idx].attachments {
+            notebooks[idx].attachments = atts.map { item in
+                var mod = item
+                if mod.pageIndex > pageIndex { mod.pageIndex -= 1 }
+                return mod
+            }
+        }
+        notebooks[idx].textAttachments?.removeAll { $0.pageIndex == pageIndex }
+        if let txts = notebooks[idx].textAttachments {
+            notebooks[idx].textAttachments = txts.map { item in
+                var mod = item
+                if mod.pageIndex > pageIndex { mod.pageIndex -= 1 }
+                return mod
+            }
+        }
+        notebooks[idx].linkAttachments?.removeAll { $0.pageIndex == pageIndex }
+        if let lnks = notebooks[idx].linkAttachments {
+            notebooks[idx].linkAttachments = lnks.map { item in
+                var mod = item
+                if mod.pageIndex > pageIndex { mod.pageIndex -= 1 }
+                return mod
+            }
+        }
+        notebooks[idx].model3DAttachments?.removeAll { $0.pageIndex == pageIndex }
+        if let mods = notebooks[idx].model3DAttachments {
+            notebooks[idx].model3DAttachments = mods.map { item in
+                var mod = item
+                if mod.pageIndex > pageIndex { mod.pageIndex -= 1 }
+                return mod
+            }
+        }
+
+        let newPageCount = total - 1
+        notebooks[idx].pageCount = newPageCount
+        notebooks[idx].lastModifiedDate = Date()
+        persistData()
+
+        var safeCurrent = currentIndex
+        if safeCurrent >= newPageCount {
+            safeCurrent = max(0, newPageCount - 1)
+        }
+        return safeCurrent
+    }
+
+    /// 複製指定頁面並插入於其後，回傳新頁碼 index
+    @discardableResult
+    public func duplicatePage(notebookId: String, pageIndex: Int) -> Int {
+        guard let idx = notebooks.firstIndex(where: { $0.id == notebookId }) else { return 0 }
+        let total = notebooks[idx].pageCount
+        guard pageIndex >= 0, pageIndex < total else { return pageIndex }
+
+        let drawingToCopy = loadDrawing(notebookId: notebookId, pageIndex: pageIndex)
+
+        // 後續頁面往後移動一格
+        var p = total
+        while p > pageIndex + 1 {
+            let prev = loadDrawing(notebookId: notebookId, pageIndex: p - 1)
+            saveDrawing(notebookId: notebookId, pageIndex: p, drawing: prev)
+            p -= 1
+        }
+        // 寫入複製內容至 pageIndex + 1
+        saveDrawing(notebookId: notebookId, pageIndex: pageIndex + 1, drawing: drawingToCopy)
+
+        // 複製高度
+        var heights = notebooks[idx].pageHeights ?? Array(repeating: 1800.0, count: total)
+        while heights.count < total { heights.append(1800.0) }
+        let copyHeight = heights[pageIndex]
+        heights.insert(copyHeight, at: pageIndex + 1)
+        notebooks[idx].pageHeights = heights
+
+        notebooks[idx].pageCount = total + 1
+        notebooks[idx].lastModifiedDate = Date()
+        persistData()
+
+        return pageIndex + 1
     }
 
     // MARK: - 錄音操作 CRUD

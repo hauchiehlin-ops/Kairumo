@@ -10,11 +10,20 @@
 import SwiftUI
 
 public enum ChartType: String, CaseIterable, Identifiable {
-    case bar = "長條圖"
-    case line = "折線圖"
-    case pie = "圓餅圖"
+    case bar = "bar"
+    case line = "line"
+    case pie = "pie"
 
     public var id: String { rawValue }
+
+    @MainActor
+    public func localizedTitle(using localizationManager: LocalizationManager) -> String {
+        switch self {
+        case .bar: return localizationManager.localized("chart_bar")
+        case .line: return localizationManager.localized("chart_line")
+        case .pie: return localizationManager.localized("chart_pie")
+        }
+    }
 
     public var iconName: String {
         switch self {
@@ -41,14 +50,14 @@ public struct ChartStudioView: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var localizationManager = LocalizationManager.shared
 
-    @State private var chartTitle: String = "數據分析圖表"
+    @State private var chartTitle: String = "Analysis Chart"
     @State private var selectedChartType: ChartType = .bar
     @State private var entries: [ChartDataEntry] = [
-        ChartDataEntry(label: "一月", value: 150),
-        ChartDataEntry(label: "二月", value: 280),
-        ChartDataEntry(label: "三月", value: 210),
-        ChartDataEntry(label: "四月", value: 360),
-        ChartDataEntry(label: "五月", value: 310)
+        ChartDataEntry(label: "Jan", value: 150),
+        ChartDataEntry(label: "Feb", value: 280),
+        ChartDataEntry(label: "Mar", value: 210),
+        ChartDataEntry(label: "Apr", value: 360),
+        ChartDataEntry(label: "May", value: 310)
     ]
 
     private let chartColors: [Color] = [
@@ -68,22 +77,22 @@ public struct ChartStudioView: View {
                         .textFieldStyle(.roundedBorder)
                         .padding(.horizontal)
 
-                    Picker("圖表類型", selection: $selectedChartType) {
+                    Picker(localizationManager.localized("chart_type"), selection: $selectedChartType) {
                         ForEach(ChartType.allCases) { type in
-                            Label(type.rawValue, systemImage: type.iconName).tag(type)
+                            Label(type.localizedTitle(using: localizationManager), systemImage: type.iconName).tag(type)
                         }
                     }
                     .pickerStyle(.segmented)
                     .padding(.horizontal)
 
                     HStack {
-                        Text("數據列表")
+                        Text(localizationManager.localized("data_list"))
                             .font(.caption)
                             .fontWeight(.bold)
                             .foregroundColor(.secondary)
                         Spacer()
-                        Button("新增項目") {
-                            entries.append(ChartDataEntry(label: "項目 \(entries.count + 1)", value: Double.random(in: 50...300).rounded()))
+                        Button(localizationManager.localized("add_data_entry")) {
+                            entries.append(ChartDataEntry(label: "Item \(entries.count + 1)", value: Double.random(in: 50...300).rounded()))
                         }
                         .font(.caption)
 
@@ -97,11 +106,11 @@ public struct ChartStudioView: View {
                     List {
                         ForEach($entries) { $entry in
                             HStack {
-                                TextField("標籤", text: $entry.label)
+                                TextField("Label", text: $entry.label)
                                     .frame(maxWidth: 90)
                                     .textFieldStyle(.roundedBorder)
 
-                                TextField("數值", value: $entry.value, format: .number)
+                                TextField("Value", value: $entry.value, format: .number)
                                     .keyboardType(.decimalPad)
                                     .textFieldStyle(.roundedBorder)
 
@@ -126,7 +135,7 @@ public struct ChartStudioView: View {
 
                 // 右側：即時圖表預覽
                 VStack(spacing: 16) {
-                    Text("圖表即時預覽")
+                    Text(localizationManager.localized("preview_chart"))
                         .font(.headline)
                         .foregroundColor(.secondary)
 
@@ -325,12 +334,12 @@ public struct ChartStudioView: View {
     }
 
     private func loadSamplePreset() {
-        self.chartTitle = "2026 季度收支報表"
+        self.chartTitle = "Quarterly Financials 2026"
         self.entries = [
-            ChartDataEntry(label: "第一季", value: 420),
-            ChartDataEntry(label: "第二季", value: 650),
-            ChartDataEntry(label: "第三季", value: 580),
-            ChartDataEntry(label: "第四季", value: 890)
+            ChartDataEntry(label: "Q1", value: 420),
+            ChartDataEntry(label: "Q2", value: 650),
+            ChartDataEntry(label: "Q3", value: 580),
+            ChartDataEntry(label: "Q4", value: 890)
         ]
     }
 

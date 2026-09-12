@@ -23,8 +23,13 @@ struct KairumoApp: App {
         #endif
     }
 
+    private var appVersionTitle: String {
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.3.0"
+        return "Kairumo v\(version)"
+    }
+
     var body: some Scene {
-        WindowGroup {
+        WindowGroup(appVersionTitle) {
             HomeWorkbenchView()
                 #if os(macOS) || targetEnvironment(macCatalyst)
                 .frame(minWidth: 800, minHeight: 600)

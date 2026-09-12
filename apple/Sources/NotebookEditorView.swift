@@ -18,15 +18,15 @@ import PadnoteCore
 
 /// 繪圖工具模式
 public enum EditorToolType: String, CaseIterable, Identifiable {
-    case pen = "鋼筆"
-    case ballpoint = "原子筆"
-    case brush = "毛筆"
-    case marker = "麥克筆"
-    case highlighter = "螢光筆"
-    case pencil = "鉛筆"
-    case watercolor = "水彩筆"
-    case eraser = "橡皮擦"
-    case lasso = "套索選取"
+    case pen = "pen"
+    case ballpoint = "ballpoint"
+    case brush = "brush"
+    case marker = "marker"
+    case highlighter = "highlighter"
+    case pencil = "pencil"
+    case watercolor = "watercolor"
+    case eraser = "eraser"
+    case lasso = "lasso"
 
     public var id: String { rawValue }
 
@@ -411,6 +411,7 @@ struct CanvasRepresentable: UIViewRepresentable {
     var isRulerActive: Bool
     var template: NoteTemplate
     var pageHeight: CGFloat
+    var editorMode: EditorMode = .draw
     var onDrawingChanged: ((PKDrawing) -> Void)?
     var onAutoExtendHeight: ((CGFloat) -> Void)?
     var onSelectionChanged: ((Bool) -> Void)?
@@ -418,7 +419,7 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func makeUIView(context: Context) -> PKCanvasView {
         let canvas = PKCanvasView()
-        canvas.drawingPolicy = .anyInput
+        canvas.drawingPolicy = (editorMode == .draw) ? .anyInput : .pencilOnly
         canvas.delegate = context.coordinator
         canvas.backgroundColor = .clear
         canvas.isOpaque = false
@@ -447,8 +448,14 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
         context.coordinator.parent = self
+        let targetPolicy: PKCanvasViewDrawingPolicy = (editorMode == .draw) ? .anyInput : .pencilOnly
+        if uiView.drawingPolicy != targetPolicy {
+            uiView.drawingPolicy = targetPolicy
+        }
         if uiView.drawing != drawing {
+            context.coordinator.isProgrammaticUpdate = true
             uiView.drawing = drawing
+            context.coordinator.isProgrammaticUpdate = false
         }
         uiView.isRulerActive = isRulerActive
 
@@ -475,12 +482,14 @@ struct CanvasRepresentable: UIViewRepresentable {
     class Coordinator: NSObject, PKCanvasViewDelegate {
         var parent: CanvasRepresentable
         weak var backgroundView: TemplateCanvasBackgroundView?
+        var isProgrammaticUpdate: Bool = false
 
         init(_ parent: CanvasRepresentable) {
             self.parent = parent
         }
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
+            guard !isProgrammaticUpdate else { return }
             parent.drawing = canvasView.drawing
             parent.onDrawingChanged?(canvasView.drawing)
 
@@ -919,8 +928,27 @@ public struct NotebookEditorView: View {
     // 筆記主模式：手繪 (Draw) vs 鍵盤打字 (Type)
     @State private var editorMode: EditorMode = .draw
 
+    public enum SidebarTabMode: String, CaseIterable, Identifiable {
+        case pages = "pages"
+        case folders = "folders"
+        public var id: String { rawValue }
+    }
+
     // 筆記結構欄（側邊頁面縮圖大綱目錄欄）
     @State private var showStructureSidebar: Bool = false
+    @State private var sidebarTab: SidebarTabMode = .pages
+
+    // 資料夾管理狀態
+    @State private var showRenameRootFolderAlert: Bool = false
+    @State private var rootFolderRenameText: String = ""
+    @State private var showNewFolderAlert: Bool = false
+    @State private var newFolderNameText: String = ""
+    @State private var newFolderParentId: String? = nil
+    @State private var folderToRename: FolderItem? = nil
+    @State private var folderRenameText: String = ""
+    @State private var showMoveNotebookSheet: Bool = false
+    @State private var notebookToMoveId: String? = nil
+    @State private var expandedFolderIds: Set<String> = []
 
     // 頁面刪除警告
     @State private var pageToDeleteIndex: Int? = nil
@@ -973,7 +1001,7 @@ public struct NotebookEditorView: View {
             HStack(spacing: 0) {
                 if showStructureSidebar {
                     notebookStructureSidebar
-                        .frame(width: 250)
+                        .frame(width: 280)
                         .transition(.move(edge: .leading).combined(with: .opacity))
                     Divider()
                 }
@@ -988,10 +1016,10 @@ public struct NotebookEditorView: View {
                         isRulerActive: isRulerActive,
                         template: notebook.template,
                         pageHeight: currentPageHeight,
+                        editorMode: editorMode,
                         onDrawingChanged: { newDrawing in
-                            // 即時自動儲存至專屬二進位檔案
+                            // 即時自動儲存至專屬二進位檔案（不觸發 Struct 重新賦值以防競態覆蓋）
                             store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: newDrawing)
-                            notebook.lastModifiedDate = Date()
                         },
                         onAutoExtendHeight: { newHeight in
                             currentPageHeight = newHeight
@@ -1005,6 +1033,47 @@ public struct NotebookEditorView: View {
                             self.canvasView = ref
                         }
                     )
+
+                    // 🌟 打字模式畫布互動層：點選空白處新增文字方塊並直接彈出鍵盤
+                    if editorMode == .type {
+                        GeometryReader { geo in
+                            Color.black.opacity(0.001)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .contentShape(Rectangle())
+                                .onTapGesture { location in
+                                    let newDraft = NoteTextAttachment(
+                                        id: UUID().uuidString,
+                                        pageIndex: currentPageIndex,
+                                        text: "",
+                                        x: max(20, location.x - 130),
+                                        y: max(20, location.y - 40)
+                                    )
+                                    if notebook.textAttachments == nil {
+                                        notebook.textAttachments = []
+                                    }
+                                    notebook.textAttachments?.append(newDraft)
+                                    store.updateNotebook(notebook)
+                                    self.editingTextId = newDraft.id
+                                }
+                        }
+
+                        // 打字模式頂部提示條
+                        HStack(spacing: 6) {
+                            Image(systemName: "keyboard.fill")
+                                .foregroundColor(.accentColor)
+                            Text(localizationManager.localized("tap_to_type_hint"))
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.primary)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(20)
+                        .shadow(color: Color.black.opacity(0.12), radius: 5, y: 2)
+                        .padding(.top, 14)
+                        .padding(.trailing, 20)
+                    }
 
                     // 🌟 筆記內嵌圖片與圖表展示層（支援等比縮放、拖曳平移與濾鏡美化）
                     ForEach(notebook.attachments ?? []) { item in
@@ -1124,6 +1193,27 @@ public struct NotebookEditorView: View {
 
                             Spacer()
 
+                            // ＋ 新增下一頁
+                            Button {
+                                addNewPage()
+                            } label: {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "plus.square.dashed")
+                                        .font(.subheadline)
+                                    Text(localizationManager.localized("add_next_page"))
+                                        .font(.caption)
+                                        .fontWeight(.semibold)
+                                }
+                                .foregroundColor(.accentColor)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 7)
+                                .background(.ultraThinMaterial)
+                                .cornerRadius(18)
+                                .shadow(color: Color.black.opacity(0.12), radius: 4, y: 2)
+                            }
+                            .buttonStyle(.plain)
+                            .help(localizationManager.localized("add_next_page"))
+
                             Button {
                                 extendCurrentPage(by: 800)
                             } label: {
@@ -1172,6 +1262,14 @@ public struct NotebookEditorView: View {
         .navigationBarBackButtonHidden(true)
         .onAppear {
             loadCurrentPage()
+            #if targetEnvironment(macCatalyst)
+            DispatchQueue.main.async {
+                let ver = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.2.0"
+                if let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first {
+                    scene.title = "Kairumo v\(ver)"
+                }
+            }
+            #endif
         }
         .sheet(isPresented: $showShareSheet) {
             if let data = exportPdfData {
@@ -1312,7 +1410,40 @@ public struct NotebookEditorView: View {
                 }
             }
         } message: {
-            Text("確定要刪除第 \((pageToDeleteIndex ?? 0) + 1) 頁嗎？此動作無法復原。")
+            Text(String(format: localizationManager.localized("delete_page_confirm_msg"), (pageToDeleteIndex ?? 0) + 1))
+        }
+        .alert(localizationManager.localized("edit_root_folder"), isPresented: $showRenameRootFolderAlert) {
+            TextField(localizationManager.localized("root_folder"), text: $rootFolderRenameText)
+            Button(localizationManager.localized("cancel"), role: .cancel) {}
+            Button(localizationManager.localized("confirm")) {
+                store.renameRootFolder(newName: rootFolderRenameText)
+            }
+        }
+        .alert(localizationManager.localized("new_subfolder"), isPresented: $showNewFolderAlert) {
+            TextField(localizationManager.localized("folder_name"), text: $newFolderNameText)
+            Button(localizationManager.localized("cancel"), role: .cancel) {}
+            Button(localizationManager.localized("confirm")) {
+                _ = store.createFolder(name: newFolderNameText, parentId: newFolderParentId)
+                newFolderNameText = ""
+            }
+        }
+        .alert(localizationManager.localized("rename_folder"), isPresented: Binding(
+            get: { folderToRename != nil },
+            set: { if !$0 { folderToRename = nil } }
+        )) {
+            TextField(localizationManager.localized("folder_name"), text: $folderRenameText)
+            Button(localizationManager.localized("cancel"), role: .cancel) {
+                folderToRename = nil
+            }
+            Button(localizationManager.localized("confirm")) {
+                if let f = folderToRename {
+                    store.renameFolder(id: f.id, newName: folderRenameText)
+                }
+                folderToRename = nil
+            }
+        }
+        .sheet(isPresented: $showMoveNotebookSheet) {
+            MoveNotebookSheet(notebookId: notebookToMoveId ?? notebook.id)
         }
     }
 
@@ -1443,13 +1574,7 @@ public struct NotebookEditorView: View {
 
                 // 新增頁面
                 Button {
-                    saveCurrentPageDrawing()
-                    let empty = PKDrawing()
-                    notebook.pageCount += 1
-                    currentPageIndex = notebook.pageCount - 1
-                    store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: empty)
-                    loadCurrentPage()
-                    store.updateNotebook(notebook)
+                    addNewPage()
                 } label: {
                     Image(systemName: "plus.square.dashed")
                         .foregroundColor(.accentColor)
@@ -1493,7 +1618,7 @@ public struct NotebookEditorView: View {
             } else {
                 Button {
                     Task {
-                        _ = await audioManager.startRecording(title: "\(notebook.title) 錄音")
+                        _ = await audioManager.startRecording(title: "\(notebook.title) \(localizationManager.localized("recording_suffix"))")
                     }
                 } label: {
                     HStack(spacing: 4) {
@@ -1648,13 +1773,7 @@ public struct NotebookEditorView: View {
                 .disabled(currentPageIndex >= notebook.pageCount - 1)
 
                 Button {
-                    saveCurrentPageDrawing()
-                    let empty = PKDrawing()
-                    notebook.pageCount += 1
-                    currentPageIndex = notebook.pageCount - 1
-                    store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: empty)
-                    loadCurrentPage()
-                    store.updateNotebook(notebook)
+                    addNewPage()
                 } label: {
                     Image(systemName: "plus.square.dashed")
                         .foregroundColor(.accentColor)
@@ -1676,7 +1795,7 @@ public struct NotebookEditorView: View {
             } else {
                 Button {
                     Task {
-                        _ = await audioManager.startRecording(title: "\(notebook.title) 錄音")
+                        _ = await audioManager.startRecording(title: "\(notebook.title) \(localizationManager.localized("recording_suffix"))")
                     }
                 } label: {
                     Image(systemName: "mic.fill")
@@ -1707,57 +1826,88 @@ public struct NotebookEditorView: View {
         }
     }
 
-    // MARK: - 筆記結構目錄側邊欄（頁面縮圖大綱）
+    // MARK: - 筆記結構目錄側邊欄（支援「頁面結構」與「資料夾目錄」雙模式）
     private var notebookStructureSidebar: some View {
         VStack(spacing: 0) {
-            // 側邊欄頂部操作
-            HStack {
-                HStack(spacing: 6) {
-                    Image(systemName: "sidebar.left")
-                        .foregroundColor(.accentColor)
-                    Text(localizationManager.localized("structure_sidebar"))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                }
-
-                Spacer()
-
-                Button {
-                    saveCurrentPageDrawing()
-                    let empty = PKDrawing()
-                    notebook.pageCount += 1
-                    currentPageIndex = notebook.pageCount - 1
-                    store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: empty)
-                    loadCurrentPage()
-                    store.updateNotebook(notebook)
-                } label: {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.system(size: 18))
-                        .foregroundColor(.accentColor)
-                }
-                .buttonStyle(.plain)
-                .help(localizationManager.localized("add_page"))
-
-                Button {
-                    withAnimation {
-                        showStructureSidebar = false
+            // 頂部導覽列與分頁模式切換
+            VStack(spacing: 8) {
+                HStack {
+                    HStack(spacing: 6) {
+                        Image(systemName: sidebarTab == .pages ? "sidebar.left" : "folder.fill")
+                            .foregroundColor(.accentColor)
+                        Text(sidebarTab == .pages ? localizationManager.localized("structure_pages") : localizationManager.localized("structure_folders"))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
                     }
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .foregroundColor(.secondary)
+
+                    Spacer()
+
+                    if sidebarTab == .pages {
+                        Button {
+                            addNewPage()
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 20))
+                                .foregroundColor(.accentColor)
+                                .frame(width: 32, height: 32)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help(localizationManager.localized("add_page"))
+                    } else {
+                        Button {
+                            newFolderParentId = nil
+                            newFolderNameText = ""
+                            showNewFolderAlert = true
+                        } label: {
+                            Image(systemName: "folder.badge.plus")
+                                .font(.system(size: 16))
+                                .foregroundColor(.accentColor)
+                                .frame(width: 32, height: 32)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .help(localizationManager.localized("new_subfolder"))
+                    }
+
+                    Button {
+                        withAnimation {
+                            showStructureSidebar = false
+                        }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+
+                Picker("", selection: $sidebarTab) {
+                    Text(localizationManager.localized("structure_pages")).tag(SidebarTabMode.pages)
+                    Text(localizationManager.localized("structure_folders")).tag(SidebarTabMode.folders)
+                }
+                .pickerStyle(.segmented)
             }
             .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
             .background(Color(uiColor: .secondarySystemGroupedBackground))
 
             Divider()
 
-            // 頁面縮圖卡片清單
+            if sidebarTab == .pages {
+                pagesStructureView
+            } else {
+                foldersStructureView
+            }
+        }
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+    }
+
+    // MARK: - 頁面結構縮圖清單
+    private var pagesStructureView: some View {
+        VStack(spacing: 0) {
             ScrollView {
                 LazyVStack(spacing: 10) {
-                    ForEach(0..<max(1, notebook.pageCount), id: \.self) { idx in
+                    ForEach(Array(0..<max(1, notebook.pageCount)), id: \.self) { idx in
                         let isSelected = (idx == currentPageIndex)
                         VStack(spacing: 4) {
                             HStack {
@@ -1769,6 +1919,12 @@ public struct NotebookEditorView: View {
                                 Spacer()
 
                                 Menu {
+                                    Button {
+                                        insertPageAfter(idx)
+                                    } label: {
+                                        Label(localizationManager.localized("insert_page_after"), systemImage: "plus.square")
+                                    }
+
                                     Button {
                                         duplicatePage(at: idx)
                                     } label: {
@@ -1834,7 +1990,33 @@ public struct NotebookEditorView: View {
                         .background(isSelected ? Color.accentColor.opacity(0.08) : Color.clear)
                         .cornerRadius(8)
                     }
+
+                    // 🌟 顯著的新增頁面大按鈕卡片
+                    Button {
+                        addNewPage()
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 15, weight: .bold))
+                            Text(localizationManager.localized("add_page_large"))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.accentColor)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.accentColor.opacity(0.08))
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(Color.accentColor.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [4]))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 8)
+                    .padding(.top, 4)
                 }
+                .id(notebook.pageCount)
                 .padding(.vertical, 8)
             }
 
@@ -1850,7 +2032,7 @@ public struct NotebookEditorView: View {
                     let txtCount = (notebook.textAttachments ?? []).count
                     let imgCount = (notebook.attachments ?? []).count
                     let modelCount = (notebook.model3DAttachments ?? []).count
-                    Text("文字:\(txtCount) 圖片:\(imgCount) 3D:\(modelCount)")
+                    Text("\(localizationManager.localized("txt_count")): \(txtCount)  \(localizationManager.localized("img_count")): \(imgCount)  \(localizationManager.localized("model3d_count")): \(modelCount)")
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -1859,7 +2041,316 @@ public struct NotebookEditorView: View {
             .padding(.vertical, 8)
             .background(Color(uiColor: .secondarySystemGroupedBackground))
         }
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
+    }
+
+    // MARK: - 資料夾階層結構目錄
+    private var foldersStructureView: some View {
+        VStack(spacing: 0) {
+            // 最上層根資料夾標題（可自訂與重命名）
+            HStack(spacing: 8) {
+                Image(systemName: "tray.2.fill")
+                    .font(.system(size: 15))
+                    .foregroundColor(.accentColor)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(store.rootFolderName)
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
+                    Text(localizationManager.localized("root_folder"))
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                Button {
+                    rootFolderRenameText = store.rootFolderName
+                    showRenameRootFolderAlert = true
+                } label: {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 17))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+                .help(localizationManager.localized("edit_root_folder"))
+            }
+            .padding(8)
+            .background(Color(uiColor: .tertiarySystemGroupedBackground))
+            .cornerRadius(8)
+            .padding(.horizontal, 10)
+            .padding(.top, 8)
+
+            // 新增子資料夾按鈕
+            Button {
+                newFolderParentId = nil
+                newFolderNameText = ""
+                showNewFolderAlert = true
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "folder.badge.plus")
+                        .font(.caption)
+                    Text(localizationManager.localized("new_subfolder"))
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                    Spacer()
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(Color.accentColor.opacity(0.1))
+                .foregroundColor(.accentColor)
+                .cornerRadius(8)
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+
+            Divider()
+
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 4) {
+                    // 最上層子資料夾
+                    ForEach(store.folders.filter { $0.parentId == nil }) { folder in
+                        folderRowView(folder: folder, level: 0)
+                    }
+
+                    // 最上層未分類筆記
+                    let rootNotes = store.notebooks.filter { $0.folderId == nil }
+                    if !rootNotes.isEmpty {
+                        VStack(alignment: .leading, spacing: 3) {
+                            HStack {
+                                Image(systemName: "tray.fill")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                Text(localizationManager.localized("unfiled_notes"))
+                                    .font(.caption)
+                                    .fontWeight(.bold)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text("\(rootNotes.count)")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 1)
+                                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                                    .clipShape(Capsule())
+                            }
+                            .padding(.horizontal, 10)
+                            .padding(.top, 8)
+
+                            ForEach(rootNotes) { note in
+                                notebookItemRow(note: note, indent: 8)
+                            }
+                        }
+                    }
+                }
+                .padding(.vertical, 6)
+            }
+
+            Divider()
+
+            // 目錄統計
+            HStack {
+                Text("\(localizationManager.localized("structure_folders")): \(store.folders.count)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                Spacer()
+                Text("\(localizationManager.localized("all_folders")): \(store.notebooks.count)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 8)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+        }
+    }
+
+    // 單一資料夾列視圖（支援遞迴子資料夾與展開）
+    private func folderRowView(folder: FolderItem, level: Int) -> AnyView {
+        let isExpanded = expandedFolderIds.contains(folder.id)
+        let subfolders = store.subfolders(of: folder.id)
+        let folderNotes = store.notebooks(in: folder.id)
+
+        return AnyView(
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    // 展開箭頭
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            if isExpanded {
+                                expandedFolderIds.remove(folder.id)
+                            } else {
+                                expandedFolderIds.insert(folder.id)
+                            }
+                        }
+                    } label: {
+                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.secondary)
+                            .frame(width: 16, height: 16)
+                    }
+                    .buttonStyle(.plain)
+
+                    // 資料夾圖示與名稱
+                    Image(systemName: isExpanded ? "folder.fill" : "folder")
+                        .foregroundColor(.accentColor)
+                        .font(.system(size: 13))
+
+                    Text(folder.name)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .lineLimit(1)
+
+                    Spacer()
+
+                    // 筆記件數徽章
+                    Text("\(folderNotes.count)")
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 1)
+                        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                        .clipShape(Capsule())
+
+                    // 功能選單
+                    Menu {
+                        Button {
+                            newFolderParentId = folder.id
+                            newFolderNameText = ""
+                            showNewFolderAlert = true
+                        } label: {
+                            Label(localizationManager.localized("new_subfolder"), systemImage: "folder.badge.plus")
+                        }
+
+                        Button {
+                            let created = store.createNotebook(
+                                title: localizationManager.localized("new_notebook"),
+                                template: notebook.template,
+                                folderId: folder.id
+                            )
+                            switchToNotebook(created)
+                        } label: {
+                            Label(localizationManager.localized("add_note_to_folder"), systemImage: "plus.square")
+                        }
+
+                        Button {
+                            folderToRename = folder
+                            folderRenameText = folder.name
+                        } label: {
+                            Label(localizationManager.localized("rename_folder"), systemImage: "pencil")
+                        }
+
+                        Divider()
+
+                        Button(role: .destructive) {
+                            store.deleteFolder(id: folder.id)
+                        } label: {
+                            Label(localizationManager.localized("delete_folder"), systemImage: "trash")
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 11))
+                            .foregroundColor(.secondary)
+                            .padding(4)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.leading, CGFloat(level * 14 + 6))
+                .padding(.trailing, 8)
+                .padding(.vertical, 4)
+                .background(Color(uiColor: .tertiarySystemGroupedBackground).opacity(0.5))
+                .cornerRadius(6)
+
+                // 若展開，渲染子資料夾與內部筆記檔案
+                if isExpanded {
+                    // 子資料夾
+                    ForEach(subfolders) { sub in
+                        folderRowView(folder: sub, level: level + 1)
+                    }
+
+                    // 該資料夾所屬筆記檔案
+                    ForEach(folderNotes) { note in
+                        notebookItemRow(note: note, indent: CGFloat((level + 1) * 14 + 6))
+                    }
+                }
+            }
+            .padding(.horizontal, 6)
+        )
+    }
+
+    // 單一筆記檔案列視圖（支援快速點選切換編輯）
+    @ViewBuilder
+    private func notebookItemRow(note: NotebookDocument, indent: CGFloat) -> some View {
+        let isCurrent = (note.id == notebook.id)
+        HStack(spacing: 6) {
+            Image(systemName: isCurrent ? "doc.fill" : "doc.plaintext")
+                .foregroundColor(isCurrent ? .accentColor : .secondary)
+                .font(.system(size: 12))
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(note.title)
+                    .font(.caption)
+                    .fontWeight(isCurrent ? .bold : .regular)
+                    .foregroundColor(isCurrent ? .accentColor : .primary)
+                    .lineLimit(1)
+                Text("\(note.pageCount) \(localizationManager.localized("pages_count_suffix"))")
+                    .font(.system(size: 9))
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            if isCurrent {
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 6, height: 6)
+            }
+
+            Menu {
+                Button {
+                    notebookToMoveId = note.id
+                    showMoveNotebookSheet = true
+                } label: {
+                    Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
+                }
+
+                Button {
+                    renameText = note.title
+                    showRenameAlert = true
+                } label: {
+                    Label(localizationManager.localized("rename_note"), systemImage: "pencil")
+                }
+
+                Divider()
+
+                Button(role: .destructive) {
+                    store.deleteNotebook(id: note.id)
+                    if note.id == notebook.id {
+                        if let first = store.notebooks.first {
+                            switchToNotebook(first)
+                        } else {
+                            let created = store.createNotebook(title: localizationManager.localized("untitled_note"), template: .blank)
+                            switchToNotebook(created)
+                        }
+                    }
+                } label: {
+                    Label(localizationManager.localized("delete"), systemImage: "trash")
+                }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .padding(3)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.leading, indent)
+        .padding(.trailing, 8)
+        .padding(.vertical, 4)
+        .background(isCurrent ? Color.accentColor.opacity(0.12) : Color.clear)
+        .cornerRadius(6)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            switchToNotebook(note)
+        }
     }
 
     // MARK: - 2. 🌟 實體手繪工具列（水平滑動包裹、免擠壓、隨點隨用）
@@ -2172,7 +2663,7 @@ public struct NotebookEditorView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
-                    .help("復原 (Undo)")
+                    .help(localizationManager.localized("undo"))
 
                     Button {
                         canvasView?.undoManager?.redo()
@@ -2423,7 +2914,7 @@ public struct NotebookEditorView: View {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
-                    .help("復原 (Undo)")
+                    .help(localizationManager.localized("undo"))
 
                     Button {
                         canvasView?.undoManager?.redo()
@@ -2515,7 +3006,7 @@ public struct NotebookEditorView: View {
                 Circle()
                     .fill(Color.red)
                     .frame(width: 10, height: 10)
-                Text("同步錄音中: \(formatTime(seconds: audioManager.elapsedSeconds))")
+                Text("\(localizationManager.localized("sync_recording_in_progress")): \(formatTime(seconds: audioManager.elapsedSeconds))")
                     .font(.caption)
                     .fontWeight(.semibold)
                     .foregroundColor(.red)
@@ -2803,6 +3294,9 @@ public struct NotebookEditorView: View {
 
     // MARK: - 儲存、延伸與套索編輯核心
     private func loadCurrentPage() {
+        if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
+            self.notebook = updated
+        }
         let loaded = store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
         self.currentDrawing = loaded
         self.currentPageHeight = notebook.height(forPage: currentPageIndex, defaultHeight: 1800)
@@ -2881,7 +3375,7 @@ public struct NotebookEditorView: View {
             notebook.recordingAudioPath = fileName
             store.updateNotebook(notebook)
             store.addRecording(
-                title: "\(notebook.title) 課程錄音",
+                title: "\(notebook.title) \(localizationManager.localized("recording_suffix"))",
                 durationSeconds: Int(result.duration),
                 fileName: fileName,
                 linkedNotebookId: notebook.id
@@ -2941,42 +3435,56 @@ public struct NotebookEditorView: View {
         exportAsPdf()
     }
 
+    private func addNewPage() {
+        saveCurrentPageDrawing()
+        let newIndex = store.addPage(notebookId: notebook.id)
+        if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
+            self.notebook = updated
+        }
+        self.currentPageIndex = newIndex
+        self.loadCurrentPage()
+    }
+
+    private func insertPageAfter(_ index: Int) {
+        saveCurrentPageDrawing()
+        let newIndex = store.insertPage(notebookId: notebook.id, afterIndex: index)
+        if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
+            self.notebook = updated
+        }
+        self.currentPageIndex = newIndex
+        self.loadCurrentPage()
+    }
+
     private func duplicatePage(at index: Int) {
         saveCurrentPageDrawing()
-        let drawingToCopy = store.loadDrawing(notebookId: notebook.id, pageIndex: index)
-
-        // Shift drawings after index
-        let total = notebook.pageCount
-        var p = total
-        while p > index + 1 {
-            let prev = store.loadDrawing(notebookId: notebook.id, pageIndex: p - 1)
-            store.saveDrawing(notebookId: notebook.id, pageIndex: p, drawing: prev)
-            p -= 1
+        let newIndex = store.duplicatePage(notebookId: notebook.id, pageIndex: index)
+        if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
+            self.notebook = updated
         }
-        store.saveDrawing(notebookId: notebook.id, pageIndex: index + 1, drawing: drawingToCopy)
-
-        notebook.pageCount += 1
-        currentPageIndex = index + 1
-        loadCurrentPage()
-        store.updateNotebook(notebook)
+        self.currentPageIndex = newIndex
+        self.loadCurrentPage()
     }
 
     private func deletePage(at index: Int) {
         guard notebook.pageCount > 1 else { return }
-        let total = notebook.pageCount
-        var p = index
-        while p < total - 1 {
-            let next = store.loadDrawing(notebookId: notebook.id, pageIndex: p + 1)
-            store.saveDrawing(notebookId: notebook.id, pageIndex: p, drawing: next)
-            p += 1
+        let safeIndex = store.deletePage(notebookId: notebook.id, pageIndex: index, currentIndex: currentPageIndex)
+        if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
+            self.notebook = updated
         }
+        self.currentPageIndex = safeIndex
+        self.loadCurrentPage()
+    }
 
-        notebook.pageCount -= 1
-        if currentPageIndex >= notebook.pageCount {
-            currentPageIndex = max(0, notebook.pageCount - 1)
+    private func switchToNotebook(_ target: NotebookDocument) {
+        guard target.id != notebook.id else { return }
+        saveCurrentPageDrawing()
+        if let updatedTarget = store.notebooks.first(where: { $0.id == target.id }) {
+            self.notebook = updatedTarget
+        } else {
+            self.notebook = target
         }
-        loadCurrentPage()
-        store.updateNotebook(notebook)
+        self.currentPageIndex = 0
+        self.loadCurrentPage()
     }
 
     private func insertQuickTextSnippet(_ text: String) {
@@ -3108,8 +3616,10 @@ struct AttachmentItemView: View {
     let onDelete: () -> Void
 
     @ObservedObject var store = NotebookStore.shared
+    @ObservedObject var localizationManager = LocalizationManager.shared
     @State private var dragOffset: CGSize = .zero
     @State private var isSelected: Bool = false
+    @State private var isDragging: Bool = false
 
     var body: some View {
         let currentX = attachment.x + dragOffset.width
@@ -3127,9 +3637,9 @@ struct AttachmentItemView: View {
                         .clipShape(RoundedRectangle(cornerRadius: attachment.cornerRadius))
                         .overlay(
                             RoundedRectangle(cornerRadius: attachment.cornerRadius)
-                                .stroke(attachment.hasBorder ? Color.white : (isSelected ? Color.accentColor : Color.clear), lineWidth: attachment.hasBorder ? 3 : 1.5)
+                                .stroke(attachment.hasBorder ? Color.accentColor.opacity(0.8) : (isSelected ? Color.accentColor : Color.clear), lineWidth: attachment.hasBorder ? 2.5 : 1.5)
                         )
-                        .shadow(color: attachment.hasShadow ? Color.black.opacity(0.2) : Color.clear, radius: 8, x: 2, y: 4)
+                        .shadow(color: (attachment.hasShadow && !isDragging) ? Color.black.opacity(0.18) : Color.clear, radius: 8, x: 2, y: 4)
                         .rotationEffect(.degrees(attachment.rotationDegrees))
                 } else {
                     RoundedRectangle(cornerRadius: attachment.cornerRadius)
@@ -3147,16 +3657,26 @@ struct AttachmentItemView: View {
             .gesture(
                 DragGesture()
                     .onChanged { value in
-                        dragOffset = value.translation
+                        isDragging = true
+                        var transaction = Transaction()
+                        transaction.animation = nil
+                        withTransaction(transaction) {
+                            dragOffset = value.translation
+                        }
                     }
                     .onEnded { value in
-                        attachment.x += value.translation.width
-                        attachment.y += value.translation.height
-                        dragOffset = .zero
+                        var transaction = Transaction()
+                        transaction.animation = nil
+                        withTransaction(transaction) {
+                            attachment.x += value.translation.width
+                            attachment.y += value.translation.height
+                            dragOffset = .zero
+                            isDragging = false
+                        }
                     }
             )
 
-            // 選取時顯示浮動小操作把手：編輯（美化）、刪除、右下角縮放把手
+            // 選取時顯示浮動小操作把手：編輯（美化）、邊框保留/刪除、刪除、右下角縮放把手
             if isSelected {
                 HStack(spacing: 6) {
                     Button {
@@ -3170,6 +3690,20 @@ struct AttachmentItemView: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
+
+                    // 邊框保留或刪除快速開關
+                    Button {
+                        attachment.hasBorder.toggle()
+                    } label: {
+                        Image(systemName: attachment.hasBorder ? "rectangle.inset.filled" : "rectangle")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(5)
+                            .background(attachment.hasBorder ? Color.purple : Color.secondary)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(localizationManager.localized("toggle_border"))
 
                     Button {
                         onDelete()
@@ -3251,8 +3785,10 @@ struct TextAttachmentItemView: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
 
+    @ObservedObject var localizationManager = LocalizationManager.shared
     @State private var dragOffset: CGSize = .zero
     @State private var isSelected: Bool = false
+    @State private var isDragging: Bool = false
 
     var body: some View {
         let currentX = textItem.x + dragOffset.width
@@ -3275,9 +3811,9 @@ struct TextAttachmentItemView: View {
             .clipShape(RoundedRectangle(cornerRadius: textItem.cornerRadius))
             .overlay(
                 RoundedRectangle(cornerRadius: textItem.cornerRadius)
-                    .stroke(textItem.hasBorder ? Color.secondary.opacity(0.35) : (isSelected ? Color.accentColor : Color.clear), lineWidth: textItem.hasBorder ? 1.5 : 1)
+                    .stroke(textItem.hasBorder ? Color.secondary.opacity(0.4) : (isSelected ? Color.accentColor : Color.clear), lineWidth: textItem.hasBorder ? 1.5 : 1)
             )
-            .shadow(color: Color.black.opacity(0.08), radius: 6, y: 3)
+            .shadow(color: isDragging ? Color.clear : Color.black.opacity(0.08), radius: 6, y: 3)
             .contentShape(Rectangle())
             .onTapGesture {
                 isSelected.toggle()
@@ -3285,12 +3821,22 @@ struct TextAttachmentItemView: View {
             .gesture(
                 DragGesture()
                     .onChanged { value in
-                        dragOffset = value.translation
+                        isDragging = true
+                        var transaction = Transaction()
+                        transaction.animation = nil
+                        withTransaction(transaction) {
+                            dragOffset = value.translation
+                        }
                     }
                     .onEnded { value in
-                        textItem.x += value.translation.width
-                        textItem.y += value.translation.height
-                        dragOffset = .zero
+                        var transaction = Transaction()
+                        transaction.animation = nil
+                        withTransaction(transaction) {
+                            textItem.x += value.translation.width
+                            textItem.y += value.translation.height
+                            dragOffset = .zero
+                            isDragging = false
+                        }
                     }
             )
 
@@ -3308,6 +3854,20 @@ struct TextAttachmentItemView: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
+
+                    // 邊框保留或刪除快速開關
+                    Button {
+                        textItem.hasBorder.toggle()
+                    } label: {
+                        Image(systemName: textItem.hasBorder ? "rectangle.inset.filled" : "rectangle")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(5)
+                            .background(textItem.hasBorder ? Color.purple : Color.secondary)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .help(localizationManager.localized("toggle_border"))
 
                     Button {
                         onDelete()
@@ -3381,6 +3941,7 @@ struct TextAttachmentItemView: View {
 
 /// 畫布內嵌 Rich Link 預覽卡片視圖
 struct LinkAttachmentItemView: View {
+    @ObservedObject var localizationManager = LocalizationManager.shared
     @Binding var linkItem: NoteLinkAttachment
     let onDelete: () -> Void
 
@@ -3409,7 +3970,7 @@ struct LinkAttachmentItemView: View {
                         }
                     } label: {
                         HStack(spacing: 3) {
-                            Text("開啟")
+                            Text(localizationManager.localized("open"))
                                 .font(.system(size: 10, weight: .medium))
                             Image(systemName: "arrow.up.right.square")
                                 .font(.system(size: 11))
@@ -3482,6 +4043,7 @@ struct LinkAttachmentItemView: View {
 
 /// 畫布內嵌 3D 幾何模型互動項目視圖
 struct Model3DCanvasItemView: View {
+    @ObservedObject var localizationManager = LocalizationManager.shared
     @Binding var item: Note3DAttachment
     let onDelete: () -> Void
 
@@ -3497,7 +4059,7 @@ struct Model3DCanvasItemView: View {
                 Image(systemName: "arrow.up.and.down.and.arrow.left.and.right")
                     .font(.system(size: 10))
                     .foregroundColor(.secondary)
-                Text("拖曳移動卡片")
+                Text(localizationManager.localized("drag_card_hint"))
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.secondary)
                 Spacer()
@@ -3528,3 +4090,73 @@ struct Model3DCanvasItemView: View {
         .position(x: currentX + item.width / 2, y: currentY + item.height / 2)
     }
 }
+
+/// 移動筆記至指定資料夾彈窗
+public struct MoveNotebookSheet: View {
+    public let notebookId: String
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var store = NotebookStore.shared
+    @ObservedObject var localizationManager = LocalizationManager.shared
+
+    public init(notebookId: String) {
+        self.notebookId = notebookId
+    }
+
+    public var body: some View {
+        NavigationStack {
+            List {
+                Section(header: Text(localizationManager.localized("select_destination_folder"))) {
+                    // 最上層根資料夾
+                    Button {
+                        store.moveNotebook(id: notebookId, toFolderId: nil)
+                        dismiss()
+                    } label: {
+                        HStack {
+                            Image(systemName: "tray.2.fill")
+                                .foregroundColor(.accentColor)
+                            Text("\(store.rootFolderName) (\(localizationManager.localized("root_folder")))")
+                                .foregroundColor(.primary)
+                            Spacer()
+                            if let note = store.notebooks.first(where: { $0.id == notebookId }), note.folderId == nil {
+                                Image(systemName: "checkmark")
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                    }
+
+                    // 自訂資料夾清單
+                    ForEach(store.folders) { folder in
+                        Button {
+                            store.moveNotebook(id: notebookId, toFolderId: folder.id)
+                            dismiss()
+                        } label: {
+                            HStack {
+                                Image(systemName: folder.parentId == nil ? "folder.fill" : "folder.badge.gearshape")
+                                    .foregroundColor(folder.parentId == nil ? .accentColor : .secondary)
+                                Text(folder.name)
+                                    .foregroundColor(.primary)
+                                    .padding(.leading, folder.parentId == nil ? 0 : 16)
+                                Spacer()
+                                if let note = store.notebooks.first(where: { $0.id == notebookId }), note.folderId == folder.id {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.accentColor)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle(localizationManager.localized("move_to_folder"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(localizationManager.localized("cancel")) {
+                        dismiss()
+                    }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+

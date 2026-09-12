@@ -16,6 +16,7 @@ public struct MathCalculatorSheet: View {
     @State private var formulaInput: String = "125 * 8 + 45"
     @State private var currentResult: MathResult? = nil
     @State private var errorMessage: String? = nil
+    @State private var keepCardBorder: Bool = true
 
     private let quickFormulas = [
         "125 * 8 + 45",
@@ -41,7 +42,7 @@ public struct MathCalculatorSheet: View {
                         .foregroundColor(.secondary)
 
                     HStack {
-                        TextField("例如: 125 * 8 + 45", text: $formulaInput)
+                        TextField(localizationManager.localized("math_placeholder"), text: $formulaInput)
                             .textFieldStyle(.roundedBorder)
                             .font(.system(.body, design: .monospaced))
                             .onSubmit {
@@ -86,7 +87,7 @@ public struct MathCalculatorSheet: View {
                                 .font(.system(size: 26, weight: .bold, design: .rounded))
                                 .foregroundColor(.primary)
 
-                            Text("數值: \(res.formattedResult)")
+                            Text("\(localizationManager.localized("math_value_prefix")): \(res.formattedResult)")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -102,7 +103,7 @@ public struct MathCalculatorSheet: View {
                         }
                         .padding(24)
                     } else {
-                        Text("請在上方輸入算式後點擊「計算求解」")
+                        Text(localizationManager.localized("math_input_hint"))
                             .font(.caption)
                             .foregroundColor(.secondary)
                             .padding(24)
@@ -110,6 +111,19 @@ public struct MathCalculatorSheet: View {
                 }
                 .frame(maxHeight: 180)
                 .padding(.horizontal)
+
+                // 3.5 邊框選項
+                if currentResult != nil {
+                    Toggle(isOn: $keepCardBorder) {
+                        HStack(spacing: 6) {
+                            Image(systemName: keepCardBorder ? "rectangle.inset.filled" : "rectangle")
+                                .foregroundColor(.accentColor)
+                            Text(localizationManager.localized("math_card_border"))
+                                .font(.subheadline)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
 
                 Spacer()
 
@@ -182,10 +196,14 @@ public struct MathCalculatorSheet: View {
             .background(Color(uiColor: .systemBackground))
             .cornerRadius(14)
             .overlay(
-                RoundedRectangle(cornerRadius: 14)
-                    .stroke(Color.accentColor.opacity(0.3), lineWidth: 1.5)
+                Group {
+                    if keepCardBorder {
+                        RoundedRectangle(cornerRadius: 14)
+                            .stroke(Color.accentColor.opacity(0.35), lineWidth: 1.5)
+                    }
+                }
             )
-            .shadow(color: Color.black.opacity(0.1), radius: 6, y: 3)
+            .shadow(color: Color.black.opacity(keepCardBorder ? 0.08 : 0.04), radius: 6, y: 3)
             .padding(10)
         )
         renderer.scale = 2.0

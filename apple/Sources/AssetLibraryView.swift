@@ -123,7 +123,7 @@ public struct AssetLibraryView: View {
                     libraryManager.clearAllCache()
                 }
             } message: {
-                Text("確定要清除所有本機素材快取以釋放硬碟空間嗎？已插入筆記中的內容不受影響。")
+                Text(localizationManager.localized("clear_cache_confirm"))
             }
             .sheet(item: $viewingDetailItem) { item in
                 assetDetailSheet(item: item)
@@ -154,7 +154,7 @@ public struct AssetLibraryView: View {
         HStack(spacing: 6) {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
-            TextField("搜尋機構、3C、零件、規格、色彩...", text: $searchText)
+            TextField(localizationManager.localized("search_assets_placeholder"), text: $searchText)
                 .textFieldStyle(.plain)
             if !searchText.isEmpty {
                 Button {
@@ -174,7 +174,7 @@ public struct AssetLibraryView: View {
 
     private var sourceFilterPicker: some View {
         Picker("", selection: $selectedSourceFilter) {
-            Text("全部型態").tag(AssetSourceType?.none)
+            Text(localizationManager.localized("all_asset_types")).tag(AssetSourceType?.none)
             Text(localizationManager.localized("filter_physical")).tag(AssetSourceType?.some(.physicalSpec))
             Text(localizationManager.localized("filter_ai")).tag(AssetSourceType?.some(.aiConcept))
         }
@@ -186,7 +186,7 @@ public struct AssetLibraryView: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 // 全部主題
-                themeChip(theme: nil, title: "全部主題", icon: "square.grid.2x2")
+                themeChip(theme: nil, title: localizationManager.localized("all_themes"), icon: "square.grid.2x2")
 
                 // 美學視覺
                 themeChip(theme: .aesthetic, title: localizationManager.localized("theme_aesthetic"), icon: "paintpalette.fill")
@@ -271,7 +271,7 @@ public struct AssetLibraryView: View {
                 .font(.subheadline)
 
             let downloadedCount = libraryManager.items.filter { libraryManager.isDownloaded($0.id) }.count
-            Text("已下載 \(downloadedCount) 項 (\(String(format: "%.1f", libraryManager.totalDownloadedSizeMB)) MB) / 雲端隨需 \(libraryManager.items.count - downloadedCount) 項")
+            Text("\(localizationManager.localized("downloaded")) \(downloadedCount) (\(String(format: "%.1f", libraryManager.totalDownloadedSizeMB)) MB) / \(libraryManager.items.count - downloadedCount)")
                 .font(.caption)
                 .foregroundColor(.secondary)
 
@@ -282,7 +282,7 @@ public struct AssetLibraryView: View {
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.down.circle")
-                    Text("下載本類全部")
+                    Text(localizationManager.localized("download_all_category"))
                 }
                 .font(.caption2)
                 .fontWeight(.semibold)
@@ -367,7 +367,7 @@ public struct AssetLibraryView: View {
                 if isDownloading {
                     ProgressView()
                         .scaleEffect(0.8)
-                    Text("下載中...")
+                    Text(localizationManager.localized("downloading"))
                         .font(.caption2)
                         .foregroundColor(.secondary)
                     Spacer()
@@ -468,7 +468,7 @@ public struct AssetLibraryView: View {
                                 .font(.headline)
 
                             HStack(alignment: .top) {
-                                Text("主要規格：")
+                                Text(localizationManager.localized("spec_specs"))
                                     .fontWeight(.medium)
                                     .frame(width: 80, alignment: .leading)
                                 Text(item.specsSummary)
@@ -477,7 +477,7 @@ public struct AssetLibraryView: View {
                             .font(.subheadline)
 
                             HStack(alignment: .top) {
-                                Text("材質工藝：")
+                                Text(localizationManager.localized("spec_materials"))
                                     .fontWeight(.medium)
                                     .frame(width: 80, alignment: .leading)
                                 Text(item.materialSuggestion)
@@ -486,7 +486,7 @@ public struct AssetLibraryView: View {
                             .font(.subheadline)
 
                             HStack(alignment: .top) {
-                                Text("參考尺寸：")
+                                Text(localizationManager.localized("spec_dimensions"))
                                     .fontWeight(.medium)
                                     .frame(width: 80, alignment: .leading)
                                 Text(item.dimensionsMm)
@@ -495,10 +495,10 @@ public struct AssetLibraryView: View {
                             .font(.subheadline)
 
                             HStack(alignment: .top) {
-                                Text("檔案大小：")
+                                Text(localizationManager.localized("spec_filesize"))
                                     .fontWeight(.medium)
                                     .frame(width: 80, alignment: .leading)
-                                Text("\(String(format: "%.1f", item.fileSizeMB)) MB (向量高解析)")
+                                Text("\(String(format: "%.1f", item.fileSizeMB)) MB")
                                     .foregroundColor(.secondary)
                             }
                             .font(.subheadline)
@@ -518,7 +518,7 @@ public struct AssetLibraryView: View {
                             } label: {
                                 HStack {
                                     Image(systemName: "trash")
-                                    Text("移除本機快取")
+                                    Text(localizationManager.localized("remove_cache"))
                                 }
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
@@ -571,7 +571,7 @@ public struct AssetLibraryView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("關閉") {
+                    Button(localizationManager.localized("close")) {
                         viewingDetailItem = nil
                     }
                 }
@@ -585,9 +585,9 @@ public struct AssetLibraryView: View {
             Image(systemName: "square.stack.3d.slash")
                 .font(.system(size: 48))
                 .foregroundColor(.secondary)
-            Text("未找到符合條件的素材")
+            Text(localizationManager.localized("no_assets_found"))
                 .font(.headline)
-            Text("嘗試更換搜尋關鍵字或切換主題分類標籤")
+            Text(localizationManager.localized("no_assets_hint"))
                 .font(.caption)
                 .foregroundColor(.secondary)
             Spacer(minLength: 40)

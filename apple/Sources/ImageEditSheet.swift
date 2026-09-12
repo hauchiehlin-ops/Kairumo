@@ -45,7 +45,7 @@ public struct ImageEditSheet: View {
 
                 // 2. 邊框與陰影裝飾
                 Section(header: Text(localizationManager.localized("image_border"))) {
-                    Toggle(localizationManager.localized("image_border"), isOn: $attachment.hasBorder)
+                    Toggle(attachment.hasBorder ? localizationManager.localized("keep_border") : localizationManager.localized("remove_border"), isOn: $attachment.hasBorder)
                     Toggle(localizationManager.localized("image_shadow"), isOn: $attachment.hasShadow)
                 }
 

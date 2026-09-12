@@ -29,12 +29,12 @@ public enum Model3DType: String, CaseIterable, Identifiable {
 
     public var displayName: String {
         switch self {
-        case .sphere: return "球體 (Sphere)"
-        case .cube: return "立方體 (Cube)"
-        case .cylinder: return "圓柱體 (Cylinder)"
-        case .torus: return "甜甜圈環 (Torus)"
-        case .pyramid: return "金字塔 (Pyramid)"
-        case .capsule: return "膠囊 (Capsule)"
+        case .sphere: return "Sphere"
+        case .cube: return "Cube"
+        case .cylinder: return "Cylinder"
+        case .torus: return "Torus"
+        case .pyramid: return "Pyramid"
+        case .capsule: return "Capsule"
         }
     }
 
@@ -138,7 +138,7 @@ public struct Model3DStudioView: View {
             HStack(spacing: 0) {
                 // 左側：3D 即時動態預覽
                 VStack(spacing: 12) {
-                    Text(title.isEmpty ? "3D 預覽" : title)
+                    Text(title.isEmpty ? localizationManager.localized("geom_preview") : title)
                         .font(.headline)
                         .padding(.top, 16)
 
@@ -188,8 +188,8 @@ public struct Model3DStudioView: View {
                         TextField(localizationManager.localized("model_title"), text: $title)
                     }
 
-                    Section(header: Text("幾何形狀")) {
-                        Picker("幾何形狀", selection: $selectedModelType) {
+                    Section(header: Text(localizationManager.localized("geom_shape"))) {
+                        Picker(localizationManager.localized("geom_shape"), selection: $selectedModelType) {
                             ForEach(Model3DType.allCases) { type in
                                 HStack {
                                     Image(systemName: type.iconName)
@@ -221,7 +221,7 @@ public struct Model3DStudioView: View {
                             let newAttachment = Note3DAttachment(
                                 id: UUID().uuidString,
                                 pageIndex: 0,
-                                title: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "3D 物件" : title,
+                                title: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localizationManager.localized("model3d_title") : title,
                                 modelTypeRaw: selectedModelType.rawValue,
                                 materialType: selectedMaterial,
                                 rotationX: previewRotationX,
@@ -238,21 +238,23 @@ public struct Model3DStudioView: View {
                         } label: {
                             HStack {
                                 Spacer()
-                                Image(systemName: "cube.transparent")
-                                Text(localizationManager.localized("insert_3d"))
+                                Image(systemName: "plus.circle.fill")
+                                Text(localizationManager.localized("insert_to_canvas"))
                                     .fontWeight(.bold)
                                 Spacer()
                             }
+                            .padding(.vertical, 4)
                         }
                         .buttonStyle(.borderedProminent)
                     }
                 }
-                .frame(width: 320)
+                .frame(width: 300)
             }
-            .navigationTitle(localizationManager.localized("insert_3d"))
+            .navigationTitle(localizationManager.localized("model3d_studio"))
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(localizationManager.localized("cancel")) {
+                    Button(localizationManager.localized("close")) {
                         dismiss()
                     }
                 }
@@ -263,15 +265,15 @@ public struct Model3DStudioView: View {
 
     private func materialDescription(_ mat: MaterialType) -> String {
         switch mat {
-        case .plastic: return "經典平滑合成塑膠，色彩飽和明亮，微帶柔和高光。"
-        case .gold: return "尊榮奢華黃金，具備 100% 高度金屬性與溫潤鏡面高光反射。"
-        case .silver: return "冷冽純銀，超高反射度與亮白金屬光澤。"
-        case .copper: return "溫潤紅銅，帶有暖紅金屬反光質感。"
-        case .iron: return "工藝鋼鐵，深灰亞光金屬質感與堅固沉穩外觀。"
-        case .wood: return "自然原木，零金屬度，呈現大地溫暖漫反射與粗糙度。"
-        case .marble: return "典雅大理石，微透白皙，高拋光細膩石材反射。"
-        case .granite: return "質樸花崗岩，粗糙顆粒感石材，漫反射自然陰影。"
-        case .obsidian: return "深邃黑曜石，火山玻璃鏡面反射，深黑高對比亮澤。"
+        case .plastic: return "Smooth synthetic polymer with balanced specular highlights."
+        case .gold: return "100% metallic gold with warm mirror specular reflection."
+        case .silver: return "High-reflectance pure silver with radiant chrome finish."
+        case .copper: return "Warm reddish metallic sheen with soft specular tone."
+        case .iron: return "Dark matte industrial steel with robust weight appearance."
+        case .wood: return "Natural organic grain with warm diffuse scattering."
+        case .marble: return "Polished stone with subtle translucency and delicate veins."
+        case .granite: return "Textured mineral rock with natural granular diffusion."
+        case .obsidian: return "Volcanic glass with deep contrast and glossy sheen."
         }
     }
 }
