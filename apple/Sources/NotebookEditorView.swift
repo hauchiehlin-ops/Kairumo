@@ -925,6 +925,18 @@ public struct NotebookEditorView: View {
     @State private var isGoldenSpiralOverlay: Bool = false
     @State private var isRuleOfThirdsOverlay: Bool = false
 
+    // 線上多人即時協同狀態
+    @ObservedObject var collaborationManager = CollaborationManager.shared
+    @State private var showCollaborationSheet: Bool = false
+    @State private var isApplyingRemoteUpdate: Bool = false
+    @State private var lastStrokeCount: Int = 0
+    private var isCollaborating: Bool {
+        if case .connected = collaborationManager.status {
+            return true
+        }
+        return false
+    }
+
     // 筆記主模式：手繪 (Draw) vs 鍵盤打字 (Type)
     @State private var editorMode: EditorMode = .draw
 
@@ -1020,6 +1032,34 @@ public struct NotebookEditorView: View {
                         onDrawingChanged: { newDrawing in
                             // 即時自動儲存至專屬二進位檔案（不觸發 Struct 重新賦值以防競態覆蓋）
                             store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: newDrawing)
+
+                            if !isApplyingRemoteUpdate && isCollaborating {
+                                let count = newDrawing.strokes.count
+                                if count > lastStrokeCount {
+                                    let deltaStrokes = Array(newDrawing.strokes.suffix(count - lastStrokeCount))
+                                    let deltaDrawing = PKDrawing(strokes: deltaStrokes)
+                                    let b64 = deltaDrawing.dataRepresentation().base64EncodedString()
+                                    collaborationManager.broadcastOplog(
+                                        kind: "stroke_delta",
+                                        payload: [
+                                            "page_index": currentPageIndex,
+                                            "drawing_base64": b64
+                                        ]
+                                    )
+                                } else if count < lastStrokeCount {
+                                    let b64 = newDrawing.dataRepresentation().base64EncodedString()
+                                    collaborationManager.broadcastOplog(
+                                        kind: "drawing_replace",
+                                        payload: [
+                                            "page_index": currentPageIndex,
+                                            "drawing_base64": b64
+                                        ]
+                                    )
+                                }
+                                lastStrokeCount = count
+                            } else if !isApplyingRemoteUpdate {
+                                lastStrokeCount = newDrawing.strokes.count
+                            }
                         },
                         onAutoExtendHeight: { newHeight in
                             currentPageHeight = newHeight
@@ -1236,6 +1276,22 @@ public struct NotebookEditorView: View {
                         }
                         .padding(14)
                     }
+
+                    // 🌟 線上多人即時彩色游標與筆尖浮層
+                    RemoteCursorsOverlay()
+                }
+                .onContinuousHover { phase in
+                    switch phase {
+                    case .active(let location):
+                        collaborationManager.broadcastCursor(
+                            x: location.x,
+                            y: location.y,
+                            isDrawing: false,
+                            tool: selectedTool.rawValue
+                        )
+                    case .ended:
+                        break
+                    }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .shadow(color: Color.black.opacity(0.06), radius: 8, y: 4)
@@ -1359,6 +1415,12 @@ public struct NotebookEditorView: View {
             AssetLibraryView { image, _ in
                 insertImageAttachment(image)
             }
+        }
+        .sheet(isPresented: $showCollaborationSheet) {
+            CollaborationSheet()
+        }
+        .onReceive(collaborationManager.oplogReceived) { event in
+            handleRemoteOplog(event)
         }
         .sheet(isPresented: $showThemeToolsSheet) {
             ThemeSpecificToolsView(
@@ -1711,6 +1773,37 @@ public struct NotebookEditorView: View {
             .buttonStyle(.plain)
             .help(localizationManager.localized("insert_object"))
 
+            // 👥 線上多人即時協同按鈕
+            Button {
+                showCollaborationSheet = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: isCollaborating ? "person.2.wave.2.fill" : "person.2.fill")
+                        .foregroundColor(isCollaborating ? .green : .accentColor)
+                    Text(localizationManager.localized("collaborate"))
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                    if isCollaborating {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 6, height: 6)
+                        Text("\(collaborationManager.peers.count + 1)")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(.green)
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(isCollaborating ? Color.green.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
+                .cornerRadius(7)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7)
+                        .stroke(isCollaborating ? Color.green.opacity(0.4) : Color.clear, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .help(localizationManager.localized("collaborate"))
+
             // 錄音按鈕
             if audioManager.status == .recording {
                 Button {
@@ -1928,6 +2021,29 @@ public struct NotebookEditorView: View {
             }
             .buttonStyle(.plain)
             .help(localizationManager.localized("insert_object"))
+
+            // 👥 線上協同（緊湊按鈕）
+            Button {
+                showCollaborationSheet = true
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: isCollaborating ? "person.2.wave.2.fill" : "person.2.fill")
+                        .font(.caption)
+                        .foregroundColor(isCollaborating ? .green : .accentColor)
+                        .padding(5)
+                        .background(isCollaborating ? Color.green.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
+                        .cornerRadius(6)
+
+                    if isCollaborating {
+                        Circle()
+                            .fill(Color.green)
+                            .frame(width: 6, height: 6)
+                            .offset(x: 2, y: -2)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .help(localizationManager.localized("collaborate"))
 
             // 錄音
             if audioManager.status == .recording {
@@ -3448,10 +3564,64 @@ public struct NotebookEditorView: View {
         }
         let loaded = store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
         self.currentDrawing = loaded
+        self.lastStrokeCount = loaded.strokes.count
         self.currentPageHeight = notebook.height(forPage: currentPageIndex, defaultHeight: 1800)
         self.hasLassoSelection = false
         self.originalSketchBackup = nil
         self.refinedSketchCache = nil
+    }
+
+    /// 處理協同遠端廣播操作（CRDT Oplog 合併）
+    private func handleRemoteOplog(_ event: RemoteOplogEvent) {
+        switch event.kind {
+        case "stroke_delta":
+            guard let pageIdx = event.payload["page_index"] as? Int,
+                  let b64 = event.payload["drawing_base64"] as? String,
+                  let data = Data(base64Encoded: b64),
+                  let remoteDrawing = try? PKDrawing(data: data) else { return }
+
+            if pageIdx == currentPageIndex {
+                if let canvas = canvasView {
+                    isApplyingRemoteUpdate = true
+                    let merged = canvas.drawing.appending(remoteDrawing)
+                    canvas.drawing = merged
+                    currentDrawing = merged
+                    lastStrokeCount = merged.strokes.count
+                    store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: merged)
+                    DispatchQueue.main.async {
+                        isApplyingRemoteUpdate = false
+                    }
+                }
+            } else {
+                let existing = store.loadDrawing(notebookId: notebook.id, pageIndex: pageIdx)
+                let merged = existing.appending(remoteDrawing)
+                store.saveDrawing(notebookId: notebook.id, pageIndex: pageIdx, drawing: merged)
+            }
+
+        case "drawing_replace":
+            guard let pageIdx = event.payload["page_index"] as? Int,
+                  let b64 = event.payload["drawing_base64"] as? String,
+                  let data = Data(base64Encoded: b64),
+                  let remoteDrawing = try? PKDrawing(data: data) else { return }
+
+            if pageIdx == currentPageIndex {
+                if let canvas = canvasView {
+                    isApplyingRemoteUpdate = true
+                    canvas.drawing = remoteDrawing
+                    currentDrawing = remoteDrawing
+                    lastStrokeCount = remoteDrawing.strokes.count
+                    store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: remoteDrawing)
+                    DispatchQueue.main.async {
+                        isApplyingRemoteUpdate = false
+                    }
+                }
+            } else {
+                store.saveDrawing(notebookId: notebook.id, pageIndex: pageIdx, drawing: remoteDrawing)
+            }
+
+        default:
+            break
+        }
     }
 
     private func saveCurrentPageDrawing() {
@@ -4308,4 +4478,49 @@ public struct MoveNotebookSheet: View {
         .presentationDetents([.medium, .large])
     }
 }
+
+/// 遠端協同成員即時游標浮動圖層（平滑動畫、具名標籤與筆尖狀態指示）
+struct RemoteCursorsOverlay: View {
+    @ObservedObject var collaborationManager = CollaborationManager.shared
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(collaborationManager.peers) { peer in
+                if let cursor = peer.cursor {
+                    HStack(alignment: .top, spacing: 3) {
+                        // 游標 / 筆尖指示圖示
+                        Image(systemName: cursor.isDrawing ? "pencil.tip" : "cursorarrow.rays")
+                            .font(.system(size: cursor.isDrawing ? 14 : 12, weight: .bold))
+                            .foregroundColor(Color(hex: peer.userColor) ?? .accentColor)
+                            .shadow(color: Color.black.opacity(0.2), radius: 2, y: 1)
+
+                        // 成員姓名徽章
+                        HStack(spacing: 3) {
+                            Text(peer.userName)
+                                .font(.system(size: 9, weight: .bold))
+                                .foregroundColor(.white)
+                                .lineLimit(1)
+
+                            if cursor.isDrawing {
+                                Circle()
+                                    .fill(Color.white)
+                                    .frame(width: 4, height: 4)
+                            }
+                        }
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(Color(hex: peer.userColor) ?? .accentColor)
+                        .cornerRadius(4)
+                        .shadow(color: Color.black.opacity(0.15), radius: 3, y: 1)
+                    }
+                    .position(x: cursor.x, y: cursor.y)
+                    .animation(.spring(response: 0.15, dampingFraction: 0.8), value: cursor.x)
+                    .animation(.spring(response: 0.15, dampingFraction: 0.8), value: cursor.y)
+                }
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
 

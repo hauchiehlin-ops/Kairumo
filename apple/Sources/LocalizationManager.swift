@@ -785,6 +785,166 @@ public final class LocalizationManager: ObservableObject {
             .ko: "수채화 붓",
             .th: "พู่กันสีน้ำ"
         ],
+        "collaborate": [
+            .zhHant: "線上協同",
+            .en: "Collaborate",
+            .zhHans: "线上协同",
+            .ja: "共同編集",
+            .ko: "공동 편집",
+            .th: "การทำงานร่วมกัน"
+        ],
+        "start_collaboration": [
+            .zhHant: "開啟多人協同",
+            .en: "Start Collaboration",
+            .zhHans: "开启多人协同",
+            .ja: "共同編集を開始",
+            .ko: "공동 편집 시작",
+            .th: "เริ่มการทำงานร่วมกัน"
+        ],
+        "end_collaboration": [
+            .zhHant: "結束協同會議",
+            .en: "End Collaboration",
+            .zhHans: "结束协同会议",
+            .ja: "共同編集を終了",
+            .ko: "공동 편집 종료",
+            .th: "สิ้นสุดการทำงานร่วมกัน"
+        ],
+        "disconnect": [
+            .zhHant: "中斷連線",
+            .en: "Disconnect",
+            .zhHans: "断开连接",
+            .ja: "切断",
+            .ko: "연결 끊기",
+            .th: "ตัดการเชื่อมต่อ"
+        ],
+        "room_id": [
+            .zhHant: "房間識別碼",
+            .en: "Room ID",
+            .zhHans: "房间识别码",
+            .ja: "ルームID",
+            .ko: "방 ID",
+            .th: "รหัสห้อง"
+        ],
+        "copy_room_id": [
+            .zhHant: "複製房間碼",
+            .en: "Copy Room ID",
+            .zhHans: "复制房间码",
+            .ja: "ルームIDをコピー",
+            .ko: "방 ID 복사",
+            .th: "คัดลอกรหัสห้อง"
+        ],
+        "room_id_copied": [
+            .zhHant: "已複製房間識別碼",
+            .en: "Room ID Copied",
+            .zhHans: "已复制房间识别码",
+            .ja: "ルームIDをコピーしました",
+            .ko: "방 ID가 복사되었습니다",
+            .th: "คัดลอกรหัสห้องแล้ว"
+        ],
+        "share_invite_link": [
+            .zhHant: "分享邀請連結",
+            .en: "Share Invite Link",
+            .zhHans: "分享邀请链接",
+            .ja: "招待リンクを共有",
+            .ko: "초대 링크 공유",
+            .th: "แชร์ลิงก์คำเชิญ"
+        ],
+        "online_participants": [
+            .zhHant: "在線成員",
+            .en: "Online Participants",
+            .zhHans: "在线成员",
+            .ja: "オンラインメンバー",
+            .ko: "온라인 참여자",
+            .th: "ผู้เข้าร่วมออนไลน์"
+        ],
+        "connection_status": [
+            .zhHant: "連線狀態",
+            .en: "Connection Status",
+            .zhHans: "连接状态",
+            .ja: "接続状態",
+            .ko: "연결 상태",
+            .th: "สถานะการเชื่อมต่อ"
+        ],
+        "status_connected": [
+            .zhHant: "已連線",
+            .en: "Connected",
+            .zhHans: "已连接",
+            .ja: "接続中",
+            .ko: "연결됨",
+            .th: "เชื่อมต่อแล้ว"
+        ],
+        "status_connecting": [
+            .zhHant: "連線中...",
+            .en: "Connecting...",
+            .zhHans: "连接中...",
+            .ja: "接続試行中...",
+            .ko: "연결 중...",
+            .th: "กำลังเชื่อมต่อ..."
+        ],
+        "status_disconnected": [
+            .zhHant: "未連線",
+            .en: "Disconnected",
+            .zhHans: "未连接",
+            .ja: "未接続",
+            .ko: "연결 끊김",
+            .th: "ไม่ได้เชื่อมต่อ"
+        ],
+        "role_owner": [
+            .zhHant: "房主 (擁有者)",
+            .en: "Host (Owner)",
+            .zhHans: "房主 (拥有者)",
+            .ja: "ホスト (所有者)",
+            .ko: "방장 (소유자)",
+            .th: "เจ้าของห้อง"
+        ],
+        "role_editor": [
+            .zhHant: "編輯者",
+            .en: "Editor",
+            .zhHans: "编辑者",
+            .ja: "編集者",
+            .ko: "편집자",
+            .th: "ผู้แก้ไข"
+        ],
+        "role_viewer": [
+            .zhHant: "檢視者",
+            .en: "Viewer",
+            .zhHans: "查看者",
+            .ja: "閲覧者",
+            .ko: "뷰어",
+            .th: "ผู้ชม"
+        ],
+        "relay_server_address": [
+            .zhHant: "協同伺服器位址",
+            .en: "Relay Server Address",
+            .zhHans: "协同服务器地址",
+            .ja: "中継サーバーアドレス",
+            .ko: "중계 서버 주소",
+            .th: "ที่อยู่เซิร์ฟเวอร์รีเลย์"
+        ],
+        "join_room": [
+            .zhHant: "加入協同房間",
+            .en: "Join Room",
+            .zhHans: "加入协同房间",
+            .ja: "ルームに参加",
+            .ko: "방 참가",
+            .th: "เข้าร่วมห้อง"
+        ],
+        "enter_room_id": [
+            .zhHant: "請輸入房間識別代碼",
+            .en: "Enter Room ID",
+            .zhHans: "请输入房间识别代码",
+            .ja: "ルームIDを入力してください",
+            .ko: "방 ID를 입력하세요",
+            .th: "ใส่รหัสห้อง"
+        ],
+        "end_session_confirm": [
+            .zhHant: "確認結束多人協同會議？所有在線成員將被中斷連線。",
+            .en: "End collaborative session? All online participants will be disconnected.",
+            .zhHans: "确认结束多人协同会议？所有在线成员将被断开连接。",
+            .ja: "共同編集を終了しますか？全メンバーの接続が切断されます。",
+            .ko: "공동 편집 세션을 종료하시겠습니까? 모든 참여자의 연결이 끊어집니다.",
+            .th: "สิ้นสุดเซสชันหรือไม่? ผู้เข้าร่วมทั้งหมดจะถูกตัดการเชื่อมต่อ"
+        ],
         "insert_object": [
             .zhHant: "插入",
             .en: "Insert",
