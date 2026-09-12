@@ -21,6 +21,8 @@ DerivedData/
 /apple/Generated/
 /android/Generated/
 /apple/PadnoteCore.xcframework/
+/apple/ExportConfig.env
+/build/apple/
 
 # 自行匯出的模型（ADR-0006）。檔案太大不入版控，
 # 但 PROVENANCE.json 是授權證據，必須保留。
