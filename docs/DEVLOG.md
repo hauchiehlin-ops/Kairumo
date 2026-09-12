@@ -5,6 +5,52 @@
 
 ---
 
+## 2026-09-12 (10) · 簡繁轉換與完整中文管線
+
+### 做了什麼
+463 → **487 個測試**。`padnote-text`（簡繁轉換）與
+`padnote-core::transcript`（後處理管線），串起完整的中文鏈：
+
+```
+ASR 輸出 : 下周三下午三点在研讨室开会请大家准时参加
+管線輸出 : 下週三下午三點在研討室開會，請大家準時參加。
+```
+
+### 為什麼這是必要的一步
+Paraformer 與 ct-punc 都是**簡體模型**。在此之前整條管線的輸出是
+沒有標點的簡體中文 —— 對台灣使用者等於不能用。
+
+### 授權：差一點把 GPL 拉進來
+`zhconv` 的 `Cargo.toml` 宣告 `license = "GPL-2.0-or-later"`。
+直接 `cargo add zhconv` 會讓專案的 Apache-2.0 立場崩掉。
+
+但讀 README 才發現那是因為**預設綁了 MediaWiki 的轉換表**：
+
+> The library itself is licensed under MIT OR Apache-2.0 … BUT it may bundle
+> conversion tables from MediaWiki … For MIT compatibility, disable the
+> default `mediawiki` feature and enable `opencc`.
+
+改用 `default-features = false, features = ["opencc"]` 後，綁的是 OpenCC 詞典
+（Apache-2.0）。**而且品質取捨剛好相反**：OpenCC 表把「下周三」正確轉成
+「下週三」，MediaWiki 表沒有。授權乾淨的選項同時也是比較好的選項。
+
+### 兩個真實缺陷
+
+**OpenCC 表在上下文中會誤判。**
+「里面」單獨轉換是對的（→裡面），但在「代數里面」中，最長匹配先吃掉
+「数里」，剩下的「面」被單獨轉成食物的「麵」。以專案維護的修正表補救，
+**每一條修正都有測試**，且有反向測試確保不誤傷真正的「麵條」。
+
+**逐詞轉換會失去詞組上下文 —— 這是測試抓到的。**
+ASR 的詞多半是單字。「下」「周」「三」分開轉，「周」永遠不會變「週」，
+因為那需要看到整個「下周三」。改成**整段轉換後再依字數分回各詞**；
+字數改變時（少數詞彙替換會）退回逐詞轉換 ——
+寧可少一點上下文，也不能讓時間戳錯位。
+
+C1（點文字跳回錄音）完全依賴時間戳不變，這條不能妥協。
+
+---
+
 ## 2026-09-12 (9) · 中文 ASR 與標點（S-24 / S-30）
 
 ### 做了什麼

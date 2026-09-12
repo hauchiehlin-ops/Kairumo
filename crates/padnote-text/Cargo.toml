@@ -1,0 +1,17 @@
+[package]
+name = "padnote-text"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+# ⚠️ 必須關掉預設 feature。
+# zhconv 預設綁 MediaWiki 的轉換表，那些表是 **GPL-2.0-or-later**，
+# 與本專案的 Apache-2.0 不相容。改用 `opencc` feature 後綁的是 OpenCC 的
+# 詞典（Apache-2.0），函式庫本體則是 MIT OR Apache-2.0。
+# 詳見 crates/padnote-text/src/lib.rs 的授權說明。
+zhconv = { version = "0.4.2", default-features = false, features = ["opencc", "compress"] }
+
+[lints]
+workspace = true

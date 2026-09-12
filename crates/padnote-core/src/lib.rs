@@ -11,6 +11,7 @@ uniffi::setup_scaffolding!();
 pub mod app;
 pub mod ffi;
 pub mod setup;
+pub mod transcript;
 
 pub use padnote_asr as asr;
 pub use padnote_crypto as crypto;
@@ -19,15 +20,18 @@ pub use padnote_export as export;
 pub use padnote_ink as ink;
 pub use padnote_models as models;
 pub use padnote_pdf as pdf;
+pub use padnote_punct_ct as punct_ct;
 pub use padnote_recognize as recognize;
 pub use padnote_recorder as recorder;
 pub use padnote_search as search;
 pub use padnote_storage as storage;
 pub use padnote_sync as sync;
+pub use padnote_text as text;
 pub use padnote_vad_silero as vad;
 
 pub use app::{AppError, NotebookSession, RecordingState};
 pub use setup::{Capability, Feature, FeatureReadiness, SetupAction, SetupCenter, Status};
+pub use transcript::TranscriptPostProcessor;
 
 /// 本 build 所實作的 `.padnote` 格式版本（`format-spec.md` §3）。
 pub const SPEC_VERSION: u32 = 1;

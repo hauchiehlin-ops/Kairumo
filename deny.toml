@@ -27,6 +27,11 @@ multiple-versions = "warn"
 wildcards = "deny"
 
 # 明確封鎖：AGPL 依賴會強制整個 App 開源並提供原始碼給終端使用者。
+# zhconv 預設會綁 MediaWiki 的 GPL-2.0 轉換表。本專案以
+# default-features = false + features = ["opencc"] 改用 Apache-2.0 的 OpenCC 詞典。
+# 白名單不含 GPL，因此若有人誤開預設 feature，這裡會擋下來。
+# 說明見 crates/padnote-text/src/lib.rs。
+
 [[bans.deny]]
 name = "mupdf"
 reason = "AGPL-3.0 會污染整個 App。PDF 一律使用 PDFium (BSD-3)，見 docs/architecture.md §2.4"

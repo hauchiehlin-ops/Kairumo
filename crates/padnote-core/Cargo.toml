@@ -31,3 +31,5 @@ padnote-models = { path = "../padnote-models" }
 padnote-pdf = { path = "../padnote-pdf" }
 padnote-recorder = { path = "../padnote-recorder" }
 padnote-vad-silero = { path = "../padnote-vad-silero" }
+padnote-text = { path = "../padnote-text" }
+padnote-punct-ct = { path = "../padnote-punct-ct" }

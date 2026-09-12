@@ -105,6 +105,8 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 故管線順序必須是「先標點、再轉繁體」。標點接在詞尾以保留時間戳 |
 | S-24 | WP5 | `padnote-asr-paraformer`：fbank（與 FunASR 參考特徵逐點吻合）
 + LFR + CMVN + CIF + encoder/decoder。**fp32 輸出與 FunASR 完全吻合** |
+| S-34 | WP5 | `padnote-text` + `core::transcript`：簡繁轉換與完整中文管線。
+**無標點簡體 → 有標點台灣正體**，時間戳全程不變 |
 
 ### 待做
 | ID | 工作包 | 內容 | 備註 |

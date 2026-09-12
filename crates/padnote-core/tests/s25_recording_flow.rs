@@ -325,3 +325,53 @@ fn s26_silero_rejects_steady_noise_that_fools_the_energy_vad() {
         "Silero 應明顯更少誤判：silero={silero_says_speech} energy={energy_says_speech}"
     );
 }
+
+// ---- 完整中文管線：ASR → 標點 → 簡繁轉換 ----
+
+#[test]
+fn chinese_pipeline_produces_punctuated_traditional_chinese() {
+    use padnote_core::TranscriptPostProcessor;
+    use padnote_core::punct_ct::{CtPunctuator, default_paths};
+
+    let dir =
+        std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../models/exported-int8/ct-punc");
+    let (model, tokens) = default_paths(&dir);
+    if !model.exists() || !tokens.exists() {
+        return; // 模型不入版控，缺席時跳過
+    }
+    let mut punct = CtPunctuator::load(model, tokens).unwrap();
+
+    // 模擬 ASR 的輸出：無標點的簡體，逐字帶時間戳
+    let asr_output = "下周三下午三点在研讨室开会请大家准时参加";
+    let words: Vec<TranscriptWord> = asr_output
+        .chars()
+        .enumerate()
+        .map(|(i, c)| TranscriptWord {
+            text: c.to_string(),
+            start: NotebookTime::from_micros(i as u64 * 200_000),
+            end: NotebookTime::from_micros((i as u64 + 1) * 200_000),
+            confidence: 0.9,
+        })
+        .collect();
+
+    let out = TranscriptPostProcessor::traditional_tw()
+        .process(&words, Some(&mut punct))
+        .unwrap();
+
+    let text: String = out.iter().map(|w| w.text.as_str()).collect();
+    eprintln!("  ASR 輸出 : {asr_output}");
+    eprintln!("  管線輸出 : {text}");
+
+    assert!(
+        text.contains('，') || text.contains('。'),
+        "應有標點：{text}"
+    );
+    assert!(text.contains("週三"), "應為台灣正體：{text}");
+    assert!(text.contains("研討室"), "字形應已轉換：{text}");
+    assert!(!text.contains('开'), "不該殘留簡體：{text}");
+
+    // C1 的前提：時間戳一路不變
+    assert_eq!(out.len(), words.len());
+    assert_eq!(out[0].start, words[0].start);
+    assert_eq!(out.last().unwrap().end, words.last().unwrap().end);
+}
