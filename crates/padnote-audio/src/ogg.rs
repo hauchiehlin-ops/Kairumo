@@ -57,6 +57,11 @@ impl<W: Write> OggOpusWriter<W> {
         Ok(w)
     }
 
+    /// 取得底層輸出目標的參照。
+    pub fn inner(&self) -> &W {
+        &self.out
+    }
+
     /// 加入一個編碼好的 Opus 封包（20 ms）。
     pub fn push(&mut self, packet: Vec<u8>) -> Result<(), AudioError> {
         self.packets.push(packet);

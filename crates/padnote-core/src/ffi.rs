@@ -15,7 +15,7 @@
 
 use crate::app::{AppError, NotebookSession, RecordingState};
 use crate::setup::{Capability, Feature, SetupCenter, Status};
-use padnote_doc::{NotebookTime, PageTemplate, TextStyle, Uuid};
+use padnote_doc::{NotebookTime, PageTemplate, TextStyle, TranscriptWord, Uuid};
 use padnote_ink::{InkPoint, Stroke, Tool};
 use std::sync::Mutex;
 
@@ -149,6 +149,31 @@ pub struct PlaybackPosition {
     pub media_path: String,
     /// 音檔內的播放偏移（微秒）。
     pub offset_us: u64,
+}
+
+/// 一次 `feed_audio` 的統計。
+#[derive(Clone, Copy, Debug, uniffi::Record)]
+pub struct RecordingStats {
+    /// 本次寫進 Opus 檔的音框數。
+    pub frames_written: u64,
+    /// 本次切出並入列待轉錄的語音段數。
+    pub segments_queued: u32,
+    /// 累計因佇列滿而丟棄的段數。**非零代表 ASR 跟不上錄音速度**，
+    /// UI 應提示使用者改用較小的模型。音檔本身不受影響。
+    pub segments_dropped: u64,
+    /// 已落盤的音訊總時長。
+    pub recorded_us: u64,
+    /// 待轉錄的音訊時長。
+    pub backlog_us: u64,
+}
+
+/// 平台層傳入的轉錄結果。時間戳必須已在筆記本時間軸上。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct TranscriptWordInput {
+    pub text: String,
+    pub start_us: u64,
+    pub end_us: u64,
+    pub confidence: f32,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -373,6 +398,57 @@ impl PadnoteSession {
             self.lock().recording_state(),
             RecordingState::Recording { .. }
         )
+    }
+
+    /// 餵入麥克風取樣（16 kHz 單聲道 f32）。
+    ///
+    /// **音檔在此同步落地**。轉錄只是把語音段入列，由背景 worker 取用 ——
+    /// 因此這個呼叫的耗時與 ASR 模型無關，不會拖累錄音執行緒。
+    pub fn feed_audio(&self, pcm_16k_mono: Vec<f32>) -> Result<RecordingStats, FfiError> {
+        let mut guard = self.lock();
+        let out = guard.feed_audio(&pcm_16k_mono)?;
+        Ok(RecordingStats {
+            frames_written: out.frames_written,
+            segments_queued: out.segments_queued as u32,
+            segments_dropped: out.segments_dropped,
+            recorded_us: guard.recorded_audio_us(),
+            backlog_us: guard.transcription_backlog_us(),
+        })
+    }
+
+    /// 已寫入音檔的時長（微秒）。停止錄音後仍可查。
+    pub fn recorded_audio_us(&self) -> u64 {
+        self.lock().recorded_audio_us()
+    }
+
+    /// 轉錄落後的音訊時長。UI 顯示「轉錄落後 N 秒」。
+    pub fn transcription_backlog_us(&self) -> u64 {
+        self.lock().transcription_backlog_us()
+    }
+
+    /// 寫入一批轉錄結果。
+    ///
+    /// 平台層從背景 worker 取得結果後呼叫。時間戳必須已經在筆記本時間軸上。
+    pub fn add_transcript(
+        &self,
+        page_id: String,
+        session_id: String,
+        words: Vec<TranscriptWordInput>,
+    ) -> Result<String, FfiError> {
+        let (page, session) = (parse_uuid(&page_id)?, parse_uuid(&session_id)?);
+        let words = words
+            .into_iter()
+            .map(|w| TranscriptWord {
+                text: w.text,
+                start: NotebookTime::from_micros(w.start_us),
+                end: NotebookTime::from_micros(w.end_us),
+                confidence: w.confidence,
+            })
+            .collect();
+        Ok(self
+            .lock()
+            .add_transcript(page, session, words)?
+            .to_string())
     }
 
     /// **功能 C1**：某個筆記本時刻對應的錄音位置。
@@ -845,6 +921,50 @@ mod tests {
         let blob = s.put_blob(b"png bytes".to_vec()).unwrap();
         let img = s.add_image(page, blob, 640.0, 480.0).unwrap();
         assert!(!img.is_empty());
+    }
+
+    #[test]
+    fn audio_feed_reports_progress_across_the_boundary() {
+        let s = session("ffi-audio");
+        s.start_recording().unwrap();
+
+        let pcm: Vec<f32> = (0..16_000).map(|i| (i as f32 * 0.3).sin() * 0.6).collect();
+        let stats = s.feed_audio(pcm).unwrap();
+
+        assert_eq!(stats.frames_written, 50, "1 秒 = 50 個 20ms 音框");
+        assert_eq!(stats.recorded_us, 1_000_000);
+        assert_eq!(stats.segments_dropped, 0);
+    }
+
+    #[test]
+    fn feeding_audio_without_recording_throws() {
+        let s = session("ffi-noaudio");
+        assert!(s.feed_audio(vec![0.0; 100]).is_err());
+    }
+
+    #[test]
+    fn transcripts_can_be_written_back_from_the_platform() {
+        let s = session("ffi-transcript");
+        let page = s.first_page_id().unwrap();
+        s.advance_time(1_000_000);
+        let rec = s.start_recording().unwrap();
+
+        s.add_transcript(
+            page,
+            rec,
+            vec![TranscriptWordInput {
+                text: "特徵值".into(),
+                start_us: 3_000_000,
+                end_us: 3_800_000,
+                confidence: 0.9,
+            }],
+        )
+        .unwrap();
+
+        assert_eq!(s.search("特徵".into(), 10).len(), 1);
+        // C1：點轉錄詞跳回錄音的第 2 秒
+        let pos = s.playback_at(3_000_000).expect("應對應到錄音");
+        assert_eq!(pos.offset_us, 2_000_000);
     }
 
     #[test]

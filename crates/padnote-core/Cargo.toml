@@ -29,3 +29,4 @@ padnote-export = { path = "../padnote-export" }
 padnote-crypto = { path = "../padnote-crypto" }
 padnote-models = { path = "../padnote-models" }
 padnote-pdf = { path = "../padnote-pdf" }
+padnote-recorder = { path = "../padnote-recorder" }

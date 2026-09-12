@@ -777,6 +777,7 @@ dependencies = [
  "padnote-models",
  "padnote-pdf",
  "padnote-recognize",
+ "padnote-recorder",
  "padnote-search",
  "padnote-storage",
  "padnote-sync",
@@ -840,6 +841,15 @@ dependencies = [
 [[package]]
 name = "padnote-recognize"
 version = "0.1.0"
+
+[[package]]
+name = "padnote-recorder"
+version = "0.1.0"
+dependencies = [
+ "padnote-asr",
+ "padnote-audio",
+ "padnote-doc",
+]
 
 [[package]]
 name = "padnote-render"

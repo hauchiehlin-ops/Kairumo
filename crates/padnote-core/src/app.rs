@@ -10,9 +10,12 @@ use padnote_doc::{
 };
 use padnote_export::{MarkdownOptions, to_markdown};
 use padnote_ink::{InkRecord, Stroke, materialize};
+use padnote_recorder::{FeedOutcome, PendingSegment, RecorderError, RecordingPipeline};
 use padnote_search::{DocId, SearchIndex, Source};
 use padnote_storage::{NotebookPackage, StorageError};
 use std::fmt;
+use std::fs::File;
+use std::io::BufWriter;
 
 #[derive(Debug)]
 pub enum AppError {
@@ -22,6 +25,7 @@ pub enum AppError {
     NotRecording,
     PageNotFound(Uuid),
     BlockNotFound(Uuid),
+    Recorder(RecorderError),
 }
 
 impl fmt::Display for AppError {
@@ -32,11 +36,18 @@ impl fmt::Display for AppError {
             Self::NotRecording => write!(f, "目前沒有錄音"),
             Self::PageNotFound(id) => write!(f, "找不到頁面：{id}"),
             Self::BlockNotFound(id) => write!(f, "找不到區塊：{id}"),
+            Self::Recorder(e) => write!(f, "{e}"),
         }
     }
 }
 
 impl std::error::Error for AppError {}
+
+impl From<RecorderError> for AppError {
+    fn from(e: RecorderError) -> Self {
+        Self::Recorder(e)
+    }
+}
 
 impl From<StorageError> for AppError {
     fn from(e: StorageError) -> Self {
@@ -73,6 +84,14 @@ pub struct NotebookSession {
     /// 每個文字區塊的 CRDT 狀態（ADR-0004）。
     texts: std::collections::HashMap<Uuid, TextCrdt>,
     editor: TextEditor,
+    /// 錄音中的管線。**不持有 ASR 引擎** —— 轉錄由外部 worker 負責，
+    /// 因此轉錄慢或失敗都不可能影響錄音（S-25）。
+    pipeline: Option<RecordingPipeline<BufWriter<File>>>,
+    /// 本次開啟期間累計寫入的音訊時長。
+    ///
+    /// 獨立於 `pipeline` 保存 —— 停止錄音後 pipeline 會被取走，
+    /// 但 UI 仍需要知道剛剛錄了多久。
+    recorded_audio_us: u64,
 }
 
 impl NotebookSession {
@@ -95,6 +114,8 @@ impl NotebookSession {
             lamport: 0,
             texts: Default::default(),
             editor: TextEditor::new(device),
+            pipeline: None,
+            recorded_audio_us: 0,
         };
         let first = Uuid::now_v7();
         session.record(vec![DocOp::AddPage {
@@ -122,6 +143,8 @@ impl NotebookSession {
             lamport: 0,
             texts: Default::default(),
             editor: TextEditor::new(device),
+            pipeline: None,
+            recorded_audio_us: 0,
         };
 
         let ops = session.package.read_doc_ops()?;
@@ -542,18 +565,76 @@ impl NotebookSession {
             return Err(AppError::AlreadyRecording);
         }
         let session = Uuid::now_v7();
+        let media_path = format!("media/audio/{session}.opus");
+
+        // 音檔路徑先建立、檔案先開好，**再**記錄 session。
+        // 顛倒的話，當機時會留下「有 session 記錄但沒有音檔」的孤兒。
+        let full = self.package.root().join(&media_path);
+        if let Some(parent) = full.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| AppError::Storage(StorageError::Io(e)))?;
+        }
+        let file = File::create(&full).map_err(|e| AppError::Storage(StorageError::Io(e)))?;
+
+        self.pipeline = Some(RecordingPipeline::new(
+            BufWriter::new(file),
+            session,
+            self.now,
+            Box::new(padnote_recorder::default_vad()),
+        )?);
+
         self.record(vec![DocOp::StartAudio {
             id: session,
             started_at: self.now,
-            media_path: format!("media/audio/{session}.opus"),
+            media_path,
         }])?;
         Ok(session)
+    }
+
+    /// 餵入麥克風取樣。
+    ///
+    /// **音檔在此同步落地**；轉錄只是把語音段放進佇列，由外部 worker 取用。
+    /// 因此轉錄再慢也不會拖累錄音（S-25）。
+    pub fn feed_audio(&mut self, pcm_16k_mono: &[f32]) -> Result<FeedOutcome, AppError> {
+        let Some(p) = self.pipeline.as_mut() else {
+            return Err(AppError::NotRecording);
+        };
+        Ok(p.feed(pcm_16k_mono)?)
+    }
+
+    /// 取出待轉錄的語音段，交給背景 worker。
+    pub fn take_pending_segments(&mut self) -> Vec<PendingSegment> {
+        self.pipeline
+            .as_mut()
+            .map(RecordingPipeline::take_segments)
+            .unwrap_or_default()
+    }
+
+    /// 轉錄落後的音訊時長。UI 顯示「轉錄落後 N 秒」。
+    pub fn transcription_backlog_us(&self) -> u64 {
+        self.pipeline
+            .as_ref()
+            .map_or(0, RecordingPipeline::backlog_us)
+    }
+
+    /// 已寫入音檔的時長。與 `timeline()` 的 session 長度不同 ——
+    /// 這個反映的是**實際落盤**的音訊，停止錄音後仍然可查。
+    pub fn recorded_audio_us(&self) -> u64 {
+        self.recorded_audio_us
+            + self
+                .pipeline
+                .as_ref()
+                .map_or(0, RecordingPipeline::recorded_duration_us)
     }
 
     pub fn stop_recording(&mut self) -> Result<Uuid, AppError> {
         let RecordingState::Recording { session, .. } = self.recording else {
             return Err(AppError::NotRecording);
         };
+        // 先沖出音檔的殘餘與 Ogg 結尾頁，再記錄結束事件。
+        if let Some(mut p) = self.pipeline.take() {
+            p.finish()?;
+            self.recorded_audio_us += p.recorded_duration_us();
+        }
         self.record(vec![DocOp::EndAudio {
             id: session,
             ended_at: self.now,

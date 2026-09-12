@@ -20,6 +20,7 @@ pub use padnote_ink as ink;
 pub use padnote_models as models;
 pub use padnote_pdf as pdf;
 pub use padnote_recognize as recognize;
+pub use padnote_recorder as recorder;
 pub use padnote_search as search;
 pub use padnote_storage as storage;
 pub use padnote_sync as sync;
