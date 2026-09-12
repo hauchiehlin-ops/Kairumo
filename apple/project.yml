@@ -13,15 +13,22 @@ targets:
       - path: Sources
       - path: Examples/HomeWorkbenchUsage.swift
       - path: Generated/padnote_core.swift
+      - path: Assets.xcassets
     dependencies:
       - framework: PadnoteCore.xcframework
-        embed: true
+        embed: false
     settings:
       base:
         ARCHS: arm64
         PRODUCT_NAME: Kairumo
         PRODUCT_BUNDLE_IDENTIFIER: com.kairumo.padnote
         DEVELOPMENT_TEAM: 6UJ8GS752W
+        MARKETING_VERSION: "0.1.7"
+        CURRENT_PROJECT_VERSION: "1"
+        INFOPLIST_KEY_CFBundleShortVersionString: "0.1.7"
+        INFOPLIST_KEY_CFBundleVersion: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        INFOPLIST_KEY_CFBundleIconName: AppIcon
         SUPPORTS_MACCATALYST: YES
         TARGETED_DEVICE_FAMILY: "1,2,6" # 1: iPhone, 2: iPad, 6: Mac Catalyst
         ENABLE_BITCODE: NO

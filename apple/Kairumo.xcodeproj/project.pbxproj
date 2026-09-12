@@ -8,27 +8,13 @@
 
 /* Begin PBXBuildFile section */
 		023C029A763DC77377F7804E /* HomeWorkbenchUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB04C4FA3426304F705E5046 /* HomeWorkbenchUsage.swift */; };
-		1C3E44B2F55F9741594CEB90 /* PadnoteCore.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 7245DE41B9104E9F47F0C21B /* PadnoteCore.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		4778715DC0B3FB2B8CAB004B /* padnote_core.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28A8E33C21E81EED174CEBA3 /* padnote_core.swift */; };
 		643674D7CEE546261D15F308 /* ExportPrintManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */; };
 		68C1811CB88877353FF14D31 /* CStubs.c in Sources */ = {isa = PBXBuildFile; fileRef = 26F09C378F9F1B6835D9ECB2 /* CStubs.c */; };
 		A63608E6DD600F35CB565FE4 /* PadnoteCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7245DE41B9104E9F47F0C21B /* PadnoteCore.xcframework */; };
 		B3DFF4CFC65E91FEEA6AA7B4 /* HomeWorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */; };
+		EB15B2D411DC5BA9B5335B94 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9DEABFE677080C2925F1968D /* Assets.xcassets */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		EECA915F9452044FF008A75E /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-				1C3E44B2F55F9741594CEB90 /* PadnoteCore.xcframework in Embed Frameworks */,
-			);
-			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeWorkbenchView.swift; sourceTree = "<group>"; };
@@ -36,6 +22,7 @@
 		28A8E33C21E81EED174CEBA3 /* padnote_core.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = padnote_core.swift; sourceTree = "<group>"; };
 		625C3383D7E7C3F1B7A6D1F1 /* Kairumo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Kairumo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7245DE41B9104E9F47F0C21B /* PadnoteCore.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = PadnoteCore.xcframework; sourceTree = "<group>"; };
+		9DEABFE677080C2925F1968D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		AB04C4FA3426304F705E5046 /* HomeWorkbenchUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeWorkbenchUsage.swift; sourceTree = "<group>"; };
 		E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPrintManager.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -71,6 +58,7 @@
 		B4C83A5E69DB56E9D3761F3B = {
 			isa = PBXGroup;
 			children = (
+				9DEABFE677080C2925F1968D /* Assets.xcassets */,
 				D6E56CB73EE4D2B95BAA4723 /* Examples */,
 				07AEA3051AAD14D8367E5D1A /* Generated */,
 				FE24CD0F7EA498AAB508EE5E /* Sources */,
@@ -113,8 +101,8 @@
 			buildConfigurationList = F345055BC6733DA8C8AACEEB /* Build configuration list for PBXNativeTarget "Kairumo" */;
 			buildPhases = (
 				98C08BF10747CDA04D7367C8 /* Sources */,
+				5B8F8427DD31427BE6752B87 /* Resources */,
 				BDF231B4E97180F4659EA861 /* Frameworks */,
-				EECA915F9452044FF008A75E /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -159,6 +147,17 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		5B8F8427DD31427BE6752B87 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EB15B2D411DC5BA9B5335B94 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		98C08BF10747CDA04D7367C8 /* Sources */ = {
@@ -301,6 +300,7 @@
 				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -309,6 +309,9 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Kairumo;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
+				INFOPLIST_KEY_CFBundleShortVersionString = 0.1.7;
+				INFOPLIST_KEY_CFBundleVersion = 1;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -318,6 +321,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 0.1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kairumo.padnote;
 				PRODUCT_NAME = Kairumo;
 				SDKROOT = iphoneos;
@@ -333,6 +337,7 @@
 				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -341,6 +346,9 @@
 				);
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Kairumo;
+				INFOPLIST_KEY_CFBundleIconName = AppIcon;
+				INFOPLIST_KEY_CFBundleShortVersionString = 0.1.7;
+				INFOPLIST_KEY_CFBundleVersion = 1;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -350,6 +358,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
+				MARKETING_VERSION = 0.1.7;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kairumo.padnote;
 				PRODUCT_NAME = Kairumo;
 				SDKROOT = iphoneos;

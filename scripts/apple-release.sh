@@ -111,7 +111,8 @@ cat << PLIST_EOF > "$EXPORT_PLIST"
 PLIST_EOF
 
 # 4. 步驟三：xcodebuild archive 封裝
-echo "📦 [3/4] 執行 xcodebuild archive 封裝通用應用程式..."
+APP_VER=$(python3 -c "import re; m=re.search(r'version\s*=\s*\"([^\"]+)\"', open('${REPO_ROOT}/Cargo.toml').read()); print(m.group(1) if m else '0.1.7')")
+echo "📦 [3/4] 執行 xcodebuild archive 封裝通用應用程式 (版本: v${APP_VER})..."
 xcodebuild archive \
     -project "$PROJECT_PATH" \
     -scheme "$SCHEME" \
@@ -119,6 +120,10 @@ xcodebuild archive \
     -destination "generic/platform=iOS" \
     -archivePath "$ARCHIVE_PATH" \
     DEVELOPMENT_TEAM="${APPLE_TEAM_ID}" \
+    MARKETING_VERSION="${APP_VER}" \
+    CURRENT_PROJECT_VERSION="1" \
+    INFOPLIST_KEY_CFBundleShortVersionString="${APP_VER}" \
+    INFOPLIST_KEY_CFBundleVersion="1" \
     -quiet
 
 # 5. 導出 IPA
