@@ -3,9 +3,9 @@
 //! 測試集格式為 TSV，刻意不用 JSON —— 無外部相依、diff 友善、標註者可用試算表編輯。
 //!
 //! ```text
-//! scenario<TAB>id<TAB>reference<TAB>hypothesis
-//! quiet	lec001	線性代數的特徵值	線性代數的特徵值
-//! noisy	mtg014	下週三開會	下週三開\u{6703}
+//! scenario  id       reference        hypothesis      ← 欄位間為單一 Tab
+//! quiet     lec001   線性代數的特徵值   線性代數的特徵值
+//! noisy     mtg014   下週三開會        下週三開回
 //! ```
 
 use crate::cer::cer;
@@ -147,8 +147,8 @@ impl fmt::Display for ScoreReport {
         // 表頭用 ASCII：CJK 字元的顯示寬度是 2，用 `{:<n}` 對齊會跑掉。
         writeln!(
             f,
-            "{:<12} {:>6}   {:>7}  {:>6}   {}",
-            "scenario", "n", "CER", "limit", "result"
+            "{:<12} {:>6}   {:>7}  {:>6}   result",
+            "scenario", "n", "CER", "limit"
         )?;
         writeln!(f, "{}", "-".repeat(46))?;
         for (&s, &(rate, n)) in &self.by_scenario {

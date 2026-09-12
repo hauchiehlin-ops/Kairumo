@@ -139,13 +139,10 @@ mod tests {
         for l in ["0000000000000010", "0000000000000002", "0000000000000100"] {
             p.put(&format!("ops/{l}-aaaaaaaa.oplog"), b"x").unwrap();
         }
-        let names: Vec<&str> = p
-            .list("ops")
-            .unwrap()
+        let entries = p.list("ops").unwrap();
+        let names: Vec<&str> = entries
             .iter()
-            .map(|e| e.path.rsplit('/').next().unwrap())
-            .map(|s| &s[..16])
-            .map(|s| Box::leak(s.to_string().into_boxed_str()) as &str)
+            .map(|e| &e.path.rsplit('/').next().unwrap()[..16])
             .collect();
         assert_eq!(
             names,
