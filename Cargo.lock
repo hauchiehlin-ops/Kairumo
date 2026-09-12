@@ -1121,6 +1121,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "padnote-input"
+version = "0.1.0"
+
+[[package]]
 name = "padnote-models"
 version = "0.1.0"
 dependencies = [
