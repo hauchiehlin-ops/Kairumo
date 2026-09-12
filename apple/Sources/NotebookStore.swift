@@ -197,6 +197,8 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     public var linkAttachments: [NoteLinkAttachment]?
     /// 筆記內嵌 3D 空間模型清單
     public var model3DAttachments: [Note3DAttachment]?
+    /// 筆記內嵌討論圖釘清單
+    public var commentPins: [NoteCommentPin]?
 
     public func height(forPage pageIndex: Int, defaultHeight: CGFloat = 1800) -> CGFloat {
         guard let heights = pageHeights, pageIndex >= 0, pageIndex < heights.count else {
@@ -230,7 +232,8 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
         attachments: [NoteImageAttachment]? = [],
         textAttachments: [NoteTextAttachment]? = [],
         linkAttachments: [NoteLinkAttachment]? = [],
-        model3DAttachments: [Note3DAttachment]? = []
+        model3DAttachments: [Note3DAttachment]? = [],
+        commentPins: [NoteCommentPin]? = []
     ) {
         self.id = id
         self.title = title
@@ -247,6 +250,7 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
         self.textAttachments = textAttachments ?? []
         self.linkAttachments = linkAttachments ?? []
         self.model3DAttachments = model3DAttachments ?? []
+        self.commentPins = commentPins ?? []
         if pagesData.isEmpty {
             // 預設建立一頁空白筆劃
             let emptyDrawing = PKDrawing()
@@ -485,6 +489,99 @@ public struct NoteLinkAttachment: Identifiable, Codable, Hashable {
         self.y = y
         self.width = width
         self.height = height
+    }
+}
+
+/// 筆記內嵌討論留言訊息模型
+public struct NoteCommentMessage: Identifiable, Codable, Hashable {
+    public let id: String
+    public let authorId: String
+    public let authorName: String
+    public let authorColor: String
+    public var text: String
+    public let createdAt: Date
+
+    public init(
+        id: String = UUID().uuidString,
+        authorId: String,
+        authorName: String,
+        authorColor: String,
+        text: String,
+        createdAt: Date = Date()
+    ) {
+        self.id = id
+        self.authorId = authorId
+        self.authorName = authorName
+        self.authorColor = authorColor
+        self.text = text
+        self.createdAt = createdAt
+    }
+}
+
+/// 筆記內嵌討論圖釘模型
+public struct NoteCommentPin: Identifiable, Codable, Hashable {
+    public let id: String
+    public var pageIndex: Int
+    public var x: CGFloat
+    public var y: CGFloat
+    public let authorId: String
+    public let authorName: String
+    public let authorColor: String
+    public let createdAt: Date
+    public var isResolved: Bool
+    public var messages: [NoteCommentMessage]
+
+    public init(
+        id: String = UUID().uuidString,
+        pageIndex: Int = 0,
+        x: CGFloat,
+        y: CGFloat,
+        authorId: String,
+        authorName: String,
+        authorColor: String,
+        createdAt: Date = Date(),
+        isResolved: Bool = false,
+        messages: [NoteCommentMessage] = []
+    ) {
+        self.id = id
+        self.pageIndex = pageIndex
+        self.x = x
+        self.y = y
+        self.authorId = authorId
+        self.authorName = authorName
+        self.authorColor = authorColor
+        self.createdAt = createdAt
+        self.isResolved = isResolved
+        self.messages = messages
+    }
+}
+
+/// 筆記里程碑快照資料模型（時光機歷史版本）
+public struct NotebookMilestoneSnapshot: Identifiable, Codable {
+    public let id: String
+    public let notebookId: String
+    public let title: String
+    public let creatorName: String
+    public let createdAt: Date
+    public let noteData: Data
+    public let pagesData: [Data]
+
+    public init(
+        id: String = UUID().uuidString,
+        notebookId: String,
+        title: String,
+        creatorName: String,
+        createdAt: Date = Date(),
+        noteData: Data,
+        pagesData: [Data]
+    ) {
+        self.id = id
+        self.notebookId = notebookId
+        self.title = title
+        self.creatorName = creatorName
+        self.createdAt = createdAt
+        self.noteData = noteData
+        self.pagesData = pagesData
     }
 }
 
@@ -731,7 +828,8 @@ public final class NotebookStore: ObservableObject {
             attachments: original.attachments,
             textAttachments: original.textAttachments,
             linkAttachments: original.linkAttachments,
-            model3DAttachments: original.model3DAttachments
+            model3DAttachments: original.model3DAttachments,
+            commentPins: original.commentPins
         )
         notebooks.insert(copy, at: 0)
         persistData()
@@ -889,6 +987,13 @@ public final class NotebookStore: ObservableObject {
                 return mod
             }
         }
+        if let pins = notebooks[idx].commentPins {
+            notebooks[idx].commentPins = pins.map { item in
+                var mod = item
+                if mod.pageIndex >= insertIndex { mod.pageIndex += 1 }
+                return mod
+            }
+        }
 
         notebooks[idx].pageCount = newPageCount
         notebooks[idx].lastModifiedDate = Date()
@@ -948,6 +1053,14 @@ public final class NotebookStore: ObservableObject {
         notebooks[idx].model3DAttachments?.removeAll { $0.pageIndex == pageIndex }
         if let mods = notebooks[idx].model3DAttachments {
             notebooks[idx].model3DAttachments = mods.map { item in
+                var mod = item
+                if mod.pageIndex > pageIndex { mod.pageIndex -= 1 }
+                return mod
+            }
+        }
+        notebooks[idx].commentPins?.removeAll { $0.pageIndex == pageIndex }
+        if let pins = notebooks[idx].commentPins {
+            notebooks[idx].commentPins = pins.map { item in
                 var mod = item
                 if mod.pageIndex > pageIndex { mod.pageIndex -= 1 }
                 return mod
@@ -1028,5 +1141,89 @@ public final class NotebookStore: ObservableObject {
         }
         recordings.removeAll { $0.id == id }
         persistData()
+    }
+
+    // MARK: - 里程碑快照時光機 (Milestone Snapshots)
+
+    /// 里程碑快照目錄
+    public var snapshotsDirectory: URL {
+        let dir = documentsDir.appendingPathComponent("Snapshots", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: dir.path) {
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        }
+        return dir
+    }
+
+    /// 建立里程碑快照
+    @discardableResult
+    public func createMilestoneSnapshot(notebookId: String, title: String, creatorName: String) -> NotebookMilestoneSnapshot? {
+        guard let note = notebooks.first(where: { $0.id == notebookId }) else { return nil }
+        var drawingsData: [Data] = []
+        for p in 0..<note.pageCount {
+            let drawing = loadDrawing(notebookId: notebookId, pageIndex: p)
+            drawingsData.append(drawing.dataRepresentation())
+        }
+
+        guard let noteData = try? JSONEncoder().encode(note) else { return nil }
+
+        let snapshot = NotebookMilestoneSnapshot(
+            id: UUID().uuidString,
+            notebookId: notebookId,
+            title: title.isEmpty ? "協同快照" : title,
+            creatorName: creatorName,
+            createdAt: Date(),
+            noteData: noteData,
+            pagesData: drawingsData
+        )
+
+        let noteSnapshotDir = snapshotsDirectory.appendingPathComponent(notebookId, isDirectory: true)
+        if !FileManager.default.fileExists(atPath: noteSnapshotDir.path) {
+            try? FileManager.default.createDirectory(at: noteSnapshotDir, withIntermediateDirectories: true)
+        }
+
+        let fileUrl = noteSnapshotDir.appendingPathComponent("\(snapshot.id).snapshot")
+        if let snapData = try? JSONEncoder().encode(snapshot) {
+            try? snapData.write(to: fileUrl, options: .atomic)
+            return snapshot
+        }
+        return nil
+    }
+
+    /// 列出指定筆記之所有里程碑快照
+    public func listMilestoneSnapshots(notebookId: String) -> [NotebookMilestoneSnapshot] {
+        let noteSnapshotDir = snapshotsDirectory.appendingPathComponent(notebookId, isDirectory: true)
+        guard let files = try? FileManager.default.contentsOfDirectory(at: noteSnapshotDir, includingPropertiesForKeys: nil) else {
+            return []
+        }
+
+        var list: [NotebookMilestoneSnapshot] = []
+        for file in files where file.pathExtension == "snapshot" {
+            if let data = try? Data(contentsOf: file),
+               let snap = try? JSONDecoder().decode(NotebookMilestoneSnapshot.self, from: data) {
+                list.append(snap)
+            }
+        }
+        return list.sorted(by: { $0.createdAt > $1.createdAt })
+    }
+
+    /// 回滾至指定快照
+    @discardableResult
+    public func restoreMilestoneSnapshot(notebookId: String, snapshot: NotebookMilestoneSnapshot) -> Bool {
+        guard let restoredNote = try? JSONDecoder().decode(NotebookDocument.self, from: snapshot.noteData) else {
+            return false
+        }
+        guard let idx = notebooks.firstIndex(where: { $0.id == notebookId }) else { return false }
+
+        // 回滾各頁筆跡
+        for (pageIdx, data) in snapshot.pagesData.enumerated() {
+            if let drawing = try? PKDrawing(data: data) {
+                saveDrawing(notebookId: notebookId, pageIndex: pageIdx, drawing: drawing)
+            }
+        }
+
+        notebooks[idx] = restoredNote
+        notebooks[idx].lastModifiedDate = Date()
+        persistData()
+        return true
     }
 }

@@ -11,13 +11,25 @@ public struct CollaborationSheet: View {
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var collaborationManager = CollaborationManager.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
+    @ObservedObject var store = NotebookStore.shared
+
+    public let notebookId: String?
 
     @State private var inputRoomId: String = ""
     @State private var showCopiedAlert: Bool = false
     @State private var showEndSessionAlert: Bool = false
     @State private var isEditingServerUrl: Bool = false
 
-    public init() {}
+    // 里程碑快照狀態
+    @State private var snapshots: [NotebookMilestoneSnapshot] = []
+    @State private var showCreateSnapshotAlert: Bool = false
+    @State private var newSnapshotTitle: String = ""
+    @State private var targetRestoreSnapshot: NotebookMilestoneSnapshot? = nil
+    @State private var showRestoreConfirmAlert: Bool = false
+
+    public init(notebookId: String? = nil) {
+        self.notebookId = notebookId
+    }
 
     public var body: some View {
         NavigationStack {
@@ -36,10 +48,18 @@ public struct CollaborationSheet: View {
                         disconnectedActionSection
                     }
 
+                    // 📸 里程碑快照時光機區塊
+                    if notebookId != nil {
+                        milestonesSection
+                    }
+
                     // 進階伺服器位址設定
                     serverConfigSection
                 }
                 .padding(20)
+            }
+            .onAppear {
+                loadSnapshots()
             }
             .navigationTitle(localizationManager.localized("collaborate"))
             #if os(iOS) || targetEnvironment(macCatalyst)
@@ -63,6 +83,23 @@ public struct CollaborationSheet: View {
                 }
             } message: {
                 Text(localizationManager.localized("end_session_confirm"))
+            }
+            .alert(localizationManager.localized("create_snapshot"), isPresented: $showCreateSnapshotAlert) {
+                TextField(localizationManager.localized("snapshot_name"), text: $newSnapshotTitle)
+                Button(localizationManager.localized("cancel"), role: .cancel) {}
+                Button(localizationManager.localized("confirm")) {
+                    createSnapshot()
+                }
+            }
+            .alert(localizationManager.localized("restore_snapshot"), isPresented: $showRestoreConfirmAlert) {
+                Button(localizationManager.localized("cancel"), role: .cancel) {}
+                Button(localizationManager.localized("restore_snapshot"), role: .destructive) {
+                    if let target = targetRestoreSnapshot {
+                        restoreSnapshot(target)
+                    }
+                }
+            } message: {
+                Text(localizationManager.localized("restore_snapshot_confirm"))
             }
         }
         #if os(macOS) || targetEnvironment(macCatalyst)
@@ -389,5 +426,146 @@ public struct CollaborationSheet: View {
         .padding(12)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
         .cornerRadius(10)
+    }
+
+    // MARK: - 📸 里程碑快照時光機
+    private var milestonesSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                HStack(spacing: 6) {
+                    Image(systemName: "camera.fill")
+                        .foregroundColor(.blue)
+                    Text(localizationManager.localized("milestone_snapshots"))
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+
+                Button {
+                    newSnapshotTitle = ""
+                    showCreateSnapshotAlert = true
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "plus.circle.fill")
+                        Text(localizationManager.localized("create_snapshot"))
+                    }
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(Color.blue.opacity(0.12))
+                    .foregroundColor(.blue)
+                    .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
+            }
+
+            if snapshots.isEmpty {
+                HStack {
+                    Spacer()
+                    VStack(spacing: 6) {
+                        Image(systemName: "clock.arrow.circlepath")
+                            .font(.system(size: 24))
+                            .foregroundColor(.secondary.opacity(0.6))
+                        Text(localizationManager.localized("milestone_snapshots"))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.vertical, 16)
+                    Spacer()
+                }
+                .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                .cornerRadius(10)
+            } else {
+                VStack(spacing: 8) {
+                    ForEach(snapshots) { snap in
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(Color.blue.opacity(0.15))
+                                .frame(width: 28, height: 28)
+                                .overlay(
+                                    Image(systemName: "clock.fill")
+                                        .font(.system(size: 11))
+                                        .foregroundColor(.blue)
+                                )
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(snap.title)
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.primary)
+
+                                HStack(spacing: 6) {
+                                    Text(snap.creatorName)
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    Text("•")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    Text(formatSnapshotDate(snap.createdAt))
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+
+                            Spacer()
+
+                            Button {
+                                targetRestoreSnapshot = snap
+                                showRestoreConfirmAlert = true
+                            } label: {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "arrow.uturn.backward.circle.fill")
+                                    Text(localizationManager.localized("restore_snapshot"))
+                                }
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.orange.opacity(0.15))
+                                .foregroundColor(.orange)
+                                .cornerRadius(6)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(10)
+                        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                        .cornerRadius(8)
+                    }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .cornerRadius(12)
+    }
+
+    private func loadSnapshots() {
+        guard let nId = notebookId else { return }
+        snapshots = store.listMilestoneSnapshots(notebookId: nId)
+    }
+
+    private func createSnapshot() {
+        guard let nId = notebookId else { return }
+        let name = AccountManager.shared.profile.displayName
+        if let created = store.createMilestoneSnapshot(notebookId: nId, title: newSnapshotTitle, creatorName: name) {
+            snapshots.insert(created, at: 0)
+        }
+    }
+
+    private func restoreSnapshot(_ snap: NotebookMilestoneSnapshot) {
+        guard let nId = notebookId else { return }
+        if store.restoreMilestoneSnapshot(notebookId: nId, snapshot: snap) {
+            loadSnapshots()
+            dismiss()
+        }
+    }
+
+    private func formatSnapshotDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy/MM/dd HH:mm"
+        return formatter.string(from: date)
     }
 }

@@ -945,6 +945,142 @@ public final class LocalizationManager: ObservableObject {
             .ko: "공동 편집 세션을 종료하시겠습니까? 모든 참여자의 연결이 끊어집니다.",
             .th: "สิ้นสุดเซสชันหรือไม่? ผู้เข้าร่วมทั้งหมดจะถูกตัดการเชื่อมต่อ"
         ],
+        "comment_pin": [
+            .zhHant: "討論圖釘",
+            .en: "Comment Pin",
+            .zhHans: "讨论图钉",
+            .ja: "コメントピン",
+            .ko: "댓글 핀",
+            .th: "หมุดความคิดเห็น"
+        ],
+        "add_comment_pin": [
+            .zhHant: "新增討論圖釘",
+            .en: "Add Comment Pin",
+            .zhHans: "添加讨论图钉",
+            .ja: "コメントピンを追加",
+            .ko: "댓글 핀 추가",
+            .th: "เพิ่มหมุดความคิดเห็น"
+        ],
+        "tap_to_place_pin": [
+            .zhHant: "請在畫布上輕點以放置圖釘",
+            .en: "Tap on canvas to place pin",
+            .zhHans: "请在画布上轻点以放置图钉",
+            .ja: "キャンバスをタップしてピンを配置",
+            .ko: "캔버스를 탭하여 핀을 배치하세요",
+            .th: "แตะบนผืนผ้าใบเพื่อปักหมุด"
+        ],
+        "comment_placeholder": [
+            .zhHant: "輸入留言或回覆...",
+            .en: "Type a comment or reply...",
+            .zhHans: "输入留言或回复...",
+            .ja: "コメントまたは返信を入力...",
+            .ko: "댓글이나 답글을 입력하세요...",
+            .th: "พิมพ์ความคิดเห็นหรือตอบกลับ..."
+        ],
+        "reply": [
+            .zhHant: "回覆",
+            .en: "Reply",
+            .zhHans: "回复",
+            .ja: "返信",
+            .ko: "답글",
+            .th: "ตอบกลับ"
+        ],
+        "resolve": [
+            .zhHant: "標記為已解決",
+            .en: "Resolve",
+            .zhHans: "标记为已解决",
+            .ja: "解決済みにする",
+            .ko: "해결됨으로 표시",
+            .th: "ทำเครื่องหมายว่าแก้ไขแล้ว"
+        ],
+        "reopen": [
+            .zhHant: "重新開啟",
+            .en: "Reopen",
+            .zhHans: "重新开启",
+            .ja: "再オープン",
+            .ko: "다시 열기",
+            .th: "เปิดใหม่"
+        ],
+        "resolved": [
+            .zhHant: "已解決",
+            .en: "Resolved",
+            .zhHans: "已解决",
+            .ja: "解決済み",
+            .ko: "해결됨",
+            .th: "แก้ไขแล้ว"
+        ],
+        "delete_comment": [
+            .zhHant: "刪除圖釘",
+            .en: "Delete Pin",
+            .zhHans: "删除图钉",
+            .ja: "ピンを削除",
+            .ko: "핀 삭제",
+            .th: "ลบหมุด"
+        ],
+        "object_locked_by": [
+            .zhHant: "正在編輯中",
+            .en: "is editing",
+            .zhHans: "正在编辑中",
+            .ja: "が編集中",
+            .ko: "편집 중",
+            .th: "กำลังแก้ไข"
+        ],
+        "milestone_snapshots": [
+            .zhHant: "里程碑快照時光機",
+            .en: "Milestone Snapshots",
+            .zhHans: "里程碑快照时光机",
+            .ja: "マイルストーンスナップショット",
+            .ko: "마일스톤 스냅샷",
+            .th: "สแนปช็อตเหตุการณ์สำคัญ"
+        ],
+        "create_snapshot": [
+            .zhHant: "建立協同快照",
+            .en: "Create Snapshot",
+            .zhHans: "创建协同快照",
+            .ja: "スナップショットを作成",
+            .ko: "스냅샷 생성",
+            .th: "สร้างสแนปช็อต"
+        ],
+        "snapshot_name": [
+            .zhHant: "快照名稱或備註",
+            .en: "Snapshot Name",
+            .zhHans: "快照名称或备注",
+            .ja: "スナップショット名",
+            .ko: "스냅샷 이름",
+            .th: "ชื่อสแนปช็อต"
+        ],
+        "snapshot_created": [
+            .zhHant: "快照已成功建立",
+            .en: "Snapshot Created",
+            .zhHans: "快照已成功创建",
+            .ja: "スナップショットが作成されました",
+            .ko: "스냅샷이 생성되었습니다",
+            .th: "สร้างสแนปช็อตเรียบร้อยแล้ว"
+        ],
+        "restore_snapshot": [
+            .zhHant: "回滾至此版本",
+            .en: "Rollback to Snapshot",
+            .zhHans: "回滚至此版本",
+            .ja: "このバージョンに復元",
+            .ko: "이 버전으로 롤백",
+            .th: "ย้อนกลับไปยังเวอร์ชันนี้"
+        ],
+        "restore_snapshot_confirm": [
+            .zhHant: "確認要將筆記回滾至此快照？當前未保存的內容將被取代。",
+            .en: "Roll back notebook to this snapshot? Current unsaved changes will be replaced.",
+            .zhHans: "确认要将笔记回滚至此快照？当前未保存的内容将被替换。",
+            .ja: "ノートをこのスナップショットにロールバックしますか？現在の未保存内容は置換されます。",
+            .ko: "노트를 이 스냅샷으로 롤백하시겠습니까? 저장되지 않은 변경 사항은 대체됩니다.",
+            .th: "ย้อนกลับสมุดบันทึกเป็นสแนปช็อตนี้หรือไม่? การเปลี่ยนแปลงปัจจุบันจะถูกแทนที่"
+        ],
+        "open_comments": [
+            .zhHant: "討論圖釘列表",
+            .en: "Comments",
+            .zhHans: "讨论图钉列表",
+            .ja: "コメント一覧",
+            .ko: "댓글 목록",
+            .th: "รายการความคิดเห็น"
+        ],
         "insert_object": [
             .zhHant: "插入",
             .en: "Insert",

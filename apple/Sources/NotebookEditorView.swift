@@ -930,6 +930,11 @@ public struct NotebookEditorView: View {
     @State private var showCollaborationSheet: Bool = false
     @State private var isApplyingRemoteUpdate: Bool = false
     @State private var lastStrokeCount: Int = 0
+    // 第二階段協同防護與討論狀態
+    @State private var isPlacingCommentPin: Bool = false
+    @State private var selectedCommentPinId: String? = nil
+    @State private var deletedAttachmentBackup: (type: String, data: Any)? = nil
+
     private var isCollaborating: Bool {
         if case .connected = collaborationManager.status {
             return true
@@ -1124,8 +1129,11 @@ public struct NotebookEditorView: View {
                                     self.editingAttachmentId = item.id
                                 },
                                 onDelete: {
+                                    deletedAttachmentBackup = (type: "image", data: item)
+                                    collaborationManager.broadcastAttachmentDelete(id: item.id, type: "image")
                                     notebook.attachments?.removeAll { $0.id == item.id }
                                     store.updateNotebook(notebook)
+                                    collaborationManager.broadcastSelection(selectedId: nil)
                                 }
                             )
                         }
@@ -1140,8 +1148,11 @@ public struct NotebookEditorView: View {
                                     self.editingTextId = item.id
                                 },
                                 onDelete: {
+                                    deletedAttachmentBackup = (type: "text", data: item)
+                                    collaborationManager.broadcastAttachmentDelete(id: item.id, type: "text")
                                     notebook.textAttachments?.removeAll { $0.id == item.id }
                                     store.updateNotebook(notebook)
+                                    collaborationManager.broadcastSelection(selectedId: nil)
                                 }
                             )
                         }
@@ -1166,11 +1177,125 @@ public struct NotebookEditorView: View {
                             Model3DCanvasItemView(
                                 item: binding(forModel3DId: item.id),
                                 onDelete: {
+                                    deletedAttachmentBackup = (type: "3d", data: item)
+                                    collaborationManager.broadcastAttachmentDelete(id: item.id, type: "3d")
                                     notebook.model3DAttachments?.removeAll { $0.id == item.id }
                                     store.updateNotebook(notebook)
+                                    collaborationManager.broadcastSelection(selectedId: nil)
                                 }
                             )
                         }
+                    }
+
+                    // 🌟 筆記內嵌討論圖釘展示層（支援多方訊息留言串、已解決標記與即時推播）
+                    ForEach(notebook.commentPins ?? []) { pin in
+                        if pin.pageIndex == currentPageIndex {
+                            CommentPinMarkerView(
+                                pin: pin,
+                                isSelected: selectedCommentPinId == pin.id,
+                                onTap: {
+                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                        if selectedCommentPinId == pin.id {
+                                            selectedCommentPinId = nil
+                                            collaborationManager.broadcastSelection(selectedId: nil)
+                                        } else {
+                                            selectedCommentPinId = pin.id
+                                            collaborationManager.broadcastSelection(selectedId: pin.id)
+                                        }
+                                    }
+                                }
+                            )
+                            .position(x: pin.x, y: pin.y)
+                        }
+                    }
+
+                    // 展開的討論圖釘詳細對話框
+                    if let pinId = selectedCommentPinId,
+                       let pin = (notebook.commentPins ?? []).first(where: { $0.id == pinId }),
+                       pin.pageIndex == currentPageIndex {
+                        CommentThreadDialog(
+                            pin: pin,
+                            currentUserId: collaborationManager.currentUserId,
+                            currentUserName: AccountManager.shared.profile.displayName,
+                            currentUserColor: collaborationManager.myColorHex,
+                            onReply: { pId, text in
+                                addCommentReply(pinId: pId, text: text)
+                            },
+                            onToggleResolve: { pId in
+                                toggleCommentResolve(pinId: pId)
+                            },
+                            onDelete: { pId in
+                                deleteCommentPin(pinId: pId)
+                            },
+                            onClose: {
+                                withAnimation {
+                                    selectedCommentPinId = nil
+                                    collaborationManager.broadcastSelection(selectedId: nil)
+                                }
+                            }
+                        )
+                        .position(
+                            x: min(max(170, pin.x), 650),
+                            y: min(max(150, pin.y - 120), currentPageHeight - 120)
+                        )
+                    }
+
+                    // 放置討論圖釘模式互動層
+                    if isPlacingCommentPin {
+                        GeometryReader { geo in
+                            Color.blue.opacity(0.001)
+                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .contentShape(Rectangle())
+                                .onTapGesture { location in
+                                    let newPin = NoteCommentPin(
+                                        pageIndex: currentPageIndex,
+                                        x: location.x,
+                                        y: location.y,
+                                        authorId: collaborationManager.currentUserId,
+                                        authorName: AccountManager.shared.profile.displayName,
+                                        authorColor: collaborationManager.myColorHex,
+                                        messages: [
+                                            NoteCommentMessage(
+                                                authorId: collaborationManager.currentUserId,
+                                                authorName: AccountManager.shared.profile.displayName,
+                                                authorColor: collaborationManager.myColorHex,
+                                                text: localizationManager.localized("add_comment_pin")
+                                            )
+                                        ]
+                                    )
+                                    if notebook.commentPins == nil {
+                                        notebook.commentPins = []
+                                    }
+                                    notebook.commentPins?.append(newPin)
+                                    store.updateNotebook(notebook)
+                                    selectedCommentPinId = newPin.id
+                                    isPlacingCommentPin = false
+                                    broadcastCommentPinUpsert(newPin)
+                                    collaborationManager.broadcastSelection(selectedId: newPin.id)
+                                }
+                        }
+
+                        // 放置圖釘模式頂部提示條
+                        HStack(spacing: 8) {
+                            Image(systemName: "pin.fill")
+                                .foregroundColor(.orange)
+                            Text(localizationManager.localized("tap_to_place_pin"))
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                            Button(action: { isPlacingCommentPin = false }) {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(20)
+                        .shadow(color: Color.black.opacity(0.12), radius: 5, y: 2)
+                        .padding(.top, 14)
+                        .padding(.leading, 20)
                     }
 
                     // 🌟 美學構圖輔助 HUD 疊層（黃金螺旋與三分構圖）
@@ -1417,7 +1542,7 @@ public struct NotebookEditorView: View {
             }
         }
         .sheet(isPresented: $showCollaborationSheet) {
-            CollaborationSheet()
+            CollaborationSheet(notebookId: notebook.id)
         }
         .onReceive(collaborationManager.oplogReceived) { event in
             handleRemoteOplog(event)
@@ -1662,7 +1787,7 @@ public struct NotebookEditorView: View {
             // 復原與重做 (Undo / Redo)
             HStack(spacing: 3) {
                 Button {
-                    canvasView?.undoManager?.undo()
+                    performUndo()
                 } label: {
                     Image(systemName: "arrow.uturn.backward")
                         .font(.system(size: 11, weight: .medium))
@@ -1743,6 +1868,14 @@ public struct NotebookEditorView: View {
                     Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill")
                 }
 
+                Button {
+                    withAnimation {
+                        isPlacingCommentPin = true
+                    }
+                } label: {
+                    Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill")
+                }
+
                 Divider()
 
                 Button {
@@ -1772,6 +1905,40 @@ public struct NotebookEditorView: View {
             }
             .buttonStyle(.plain)
             .help(localizationManager.localized("insert_object"))
+
+            // 💬 畫布討論圖釘快捷按鈕
+            Button {
+                withAnimation {
+                    isPlacingCommentPin.toggle()
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: isPlacingCommentPin ? "pin.circle.fill" : "text.bubble.fill")
+                        .foregroundColor(isPlacingCommentPin ? .orange : .accentColor)
+                    Text(localizationManager.localized("comment_pin"))
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                    if let count = notebook.commentPins?.filter({ !$0.isResolved }).count, count > 0 {
+                        Text("\(count)")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(Color.orange)
+                            .clipShape(Capsule())
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(isPlacingCommentPin ? Color.orange.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
+                .cornerRadius(7)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 7)
+                        .stroke(isPlacingCommentPin ? Color.orange.opacity(0.4) : Color.clear, lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+            .help(localizationManager.localized("comment_pin"))
 
             // 👥 線上多人即時協同按鈕
             Button {
@@ -2010,6 +2177,8 @@ public struct NotebookEditorView: View {
                 Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
                 Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
                 Divider()
+                Button { withAnimation { isPlacingCommentPin = true } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
+                Divider()
                 Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
             } label: {
                 Image(systemName: "plus.circle.fill")
@@ -2021,6 +2190,31 @@ public struct NotebookEditorView: View {
             }
             .buttonStyle(.plain)
             .help(localizationManager.localized("insert_object"))
+
+            // 💬 討論圖釘（緊湊按鈕）
+            Button {
+                withAnimation {
+                    isPlacingCommentPin.toggle()
+                }
+            } label: {
+                ZStack(alignment: .topTrailing) {
+                    Image(systemName: isPlacingCommentPin ? "pin.circle.fill" : "text.bubble.fill")
+                        .font(.caption)
+                        .foregroundColor(isPlacingCommentPin ? .orange : .accentColor)
+                        .padding(5)
+                        .background(isPlacingCommentPin ? Color.orange.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
+                        .cornerRadius(6)
+
+                    if let count = notebook.commentPins?.filter({ !$0.isResolved }).count, count > 0 {
+                        Circle()
+                            .fill(Color.orange)
+                            .frame(width: 6, height: 6)
+                            .offset(x: 2, y: -2)
+                    }
+                }
+            }
+            .buttonStyle(.plain)
+            .help(localizationManager.localized("comment_pin"))
 
             // 👥 線上協同（緊湊按鈕）
             Button {
@@ -2922,7 +3116,7 @@ public struct NotebookEditorView: View {
                 // 復原與重做
                 HStack(spacing: 8) {
                     Button {
-                        canvasView?.undoManager?.undo()
+                        performUndo()
                     } label: {
                         Image(systemName: "arrow.uturn.backward")
                             .font(.subheadline)
@@ -3173,7 +3367,7 @@ public struct NotebookEditorView: View {
                 // 復原與重做
                 HStack(spacing: 8) {
                     Button {
-                        canvasView?.undoManager?.undo()
+                        performUndo()
                     } label: {
                         Image(systemName: "arrow.uturn.backward")
                             .font(.subheadline)
@@ -3619,8 +3813,156 @@ public struct NotebookEditorView: View {
                 store.saveDrawing(notebookId: notebook.id, pageIndex: pageIdx, drawing: remoteDrawing)
             }
 
+        case "attachment_upsert":
+            guard let attType = event.payload["attachment_type"] as? String,
+                  let itemDict = event.payload["item"] as? [String: Any],
+                  let jsonData = try? JSONSerialization.data(withJSONObject: itemDict) else { return }
+
+            if attType == "text", let textItem = try? JSONDecoder().decode(NoteTextAttachment.self, from: jsonData) {
+                if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == textItem.id }) {
+                    notebook.textAttachments?[idx] = textItem
+                } else {
+                    if notebook.textAttachments == nil { notebook.textAttachments = [] }
+                    notebook.textAttachments?.append(textItem)
+                }
+                store.updateNotebook(notebook)
+            } else if attType == "image", let imgItem = try? JSONDecoder().decode(NoteImageAttachment.self, from: jsonData) {
+                if let idx = notebook.attachments?.firstIndex(where: { $0.id == imgItem.id }) {
+                    notebook.attachments?[idx] = imgItem
+                } else {
+                    if notebook.attachments == nil { notebook.attachments = [] }
+                    notebook.attachments?.append(imgItem)
+                }
+                store.updateNotebook(notebook)
+            } else if attType == "3d", let modelItem = try? JSONDecoder().decode(Note3DAttachment.self, from: jsonData) {
+                if let idx = notebook.model3DAttachments?.firstIndex(where: { $0.id == modelItem.id }) {
+                    notebook.model3DAttachments?[idx] = modelItem
+                } else {
+                    if notebook.model3DAttachments == nil { notebook.model3DAttachments = [] }
+                    notebook.model3DAttachments?.append(modelItem)
+                }
+                store.updateNotebook(notebook)
+            }
+
+        case "attachment_delete":
+            guard let attId = event.payload["id"] as? String,
+                  let attType = event.payload["attachment_type"] as? String else { return }
+
+            if attType == "text" {
+                notebook.textAttachments?.removeAll { $0.id == attId }
+            } else if attType == "image" {
+                notebook.attachments?.removeAll { $0.id == attId }
+            } else if attType == "3d" {
+                notebook.model3DAttachments?.removeAll { $0.id == attId }
+            }
+            store.updateNotebook(notebook)
+
+        case "comment_upsert":
+            guard let pinDict = event.payload["pin"] as? [String: Any],
+                  let jsonData = try? JSONSerialization.data(withJSONObject: pinDict),
+                  let pin = try? JSONDecoder().decode(NoteCommentPin.self, from: jsonData) else { return }
+
+            if let idx = notebook.commentPins?.firstIndex(where: { $0.id == pin.id }) {
+                notebook.commentPins?[idx] = pin
+            } else {
+                if notebook.commentPins == nil { notebook.commentPins = [] }
+                notebook.commentPins?.append(pin)
+            }
+            store.updateNotebook(notebook)
+
+        case "comment_resolve":
+            guard let pinId = event.payload["pin_id"] as? String,
+                  let isResolved = event.payload["is_resolved"] as? Bool else { return }
+
+            if let idx = notebook.commentPins?.firstIndex(where: { $0.id == pinId }) {
+                notebook.commentPins?[idx].isResolved = isResolved
+                store.updateNotebook(notebook)
+            }
+
+        case "comment_delete":
+            guard let pinId = event.payload["pin_id"] as? String else { return }
+            notebook.commentPins?.removeAll { $0.id == pinId }
+            if selectedCommentPinId == pinId {
+                selectedCommentPinId = nil
+            }
+            store.updateNotebook(notebook)
+
         default:
             break
+        }
+    }
+
+    private func broadcastCommentPinUpsert(_ pin: NoteCommentPin) {
+        guard let data = try? JSONEncoder().encode(pin),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else { return }
+        collaborationManager.broadcastCommentUpsert(pinDict: dict)
+    }
+
+    private func addCommentReply(pinId: String, text: String) {
+        let msg = NoteCommentMessage(
+            authorId: collaborationManager.currentUserId,
+            authorName: AccountManager.shared.profile.displayName,
+            authorColor: collaborationManager.myColorHex,
+            text: text
+        )
+        if let idx = notebook.commentPins?.firstIndex(where: { $0.id == pinId }) {
+            notebook.commentPins?[idx].messages.append(msg)
+            store.updateNotebook(notebook)
+            if let pin = notebook.commentPins?[idx] {
+                broadcastCommentPinUpsert(pin)
+            }
+        }
+    }
+
+    private func toggleCommentResolve(pinId: String) {
+        if let idx = notebook.commentPins?.firstIndex(where: { $0.id == pinId }) {
+            notebook.commentPins?[idx].isResolved.toggle()
+            let state = notebook.commentPins?[idx].isResolved ?? false
+            store.updateNotebook(notebook)
+            collaborationManager.broadcastCommentResolve(pinId: pinId, isResolved: state)
+        }
+    }
+
+    private func deleteCommentPin(pinId: String) {
+        notebook.commentPins?.removeAll { $0.id == pinId }
+        store.updateNotebook(notebook)
+        selectedCommentPinId = nil
+        collaborationManager.broadcastCommentDelete(pinId: pinId)
+        collaborationManager.broadcastSelection(selectedId: nil)
+    }
+
+    /// 協同個人專屬復原與防誤刪墓碑還原
+    private func performUndo() {
+        if let backup = deletedAttachmentBackup {
+            // 優先復原防誤刪墓碑中的物件
+            if backup.type == "image", let item = backup.data as? NoteImageAttachment {
+                if notebook.attachments == nil { notebook.attachments = [] }
+                notebook.attachments?.append(item)
+                store.updateNotebook(notebook)
+                if let data = try? JSONEncoder().encode(item),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    collaborationManager.broadcastAttachmentUpsert(type: "image", itemDict: dict)
+                }
+            } else if backup.type == "text", let item = backup.data as? NoteTextAttachment {
+                if notebook.textAttachments == nil { notebook.textAttachments = [] }
+                notebook.textAttachments?.append(item)
+                store.updateNotebook(notebook)
+                if let data = try? JSONEncoder().encode(item),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
+                }
+            } else if backup.type == "3d", let item = backup.data as? Note3DAttachment {
+                if notebook.model3DAttachments == nil { notebook.model3DAttachments = [] }
+                notebook.model3DAttachments?.append(item)
+                store.updateNotebook(notebook)
+                if let data = try? JSONEncoder().encode(item),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    collaborationManager.broadcastAttachmentUpsert(type: "3d", itemDict: dict)
+                }
+            }
+            deletedAttachmentBackup = nil
+        } else {
+            canvasView?.undoManager?.undo()
         }
     }
 
@@ -3936,9 +4278,14 @@ struct AttachmentItemView: View {
 
     @ObservedObject var store = NotebookStore.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
+    @ObservedObject var collaborationManager = CollaborationManager.shared
     @State private var dragOffset: CGSize = .zero
     @State private var isSelected: Bool = false
     @State private var isDragging: Bool = false
+
+    private var lockedByPeer: CollaboratorPeer? {
+        collaborationManager.peers.first(where: { $0.selectedId == attachment.id })
+    }
 
     var body: some View {
         let currentX = attachment.x + dragOffset.width
@@ -3955,8 +4302,15 @@ struct AttachmentItemView: View {
                         .objectMaterial(attachment.materialType)
                         .clipShape(RoundedRectangle(cornerRadius: attachment.cornerRadius))
                         .overlay(
-                            RoundedRectangle(cornerRadius: attachment.cornerRadius)
-                                .stroke(attachment.hasBorder ? Color.accentColor.opacity(0.8) : (isSelected ? Color.accentColor : Color.clear), lineWidth: attachment.hasBorder ? 2.5 : 1.5)
+                            Group {
+                                if let peer = lockedByPeer {
+                                    RoundedRectangle(cornerRadius: attachment.cornerRadius)
+                                        .stroke(Color(hex: peer.userColor) ?? .blue, lineWidth: 3)
+                                } else {
+                                    RoundedRectangle(cornerRadius: attachment.cornerRadius)
+                                        .stroke(attachment.hasBorder ? Color.accentColor.opacity(0.8) : (isSelected ? Color.accentColor : Color.clear), lineWidth: attachment.hasBorder ? 2.5 : 1.5)
+                                }
+                            }
                         )
                         .shadow(color: (attachment.hasShadow && !isDragging) ? Color.black.opacity(0.18) : Color.clear, radius: 8, x: 2, y: 4)
                         .rotationEffect(.degrees(attachment.rotationDegrees))
@@ -3971,11 +4325,14 @@ struct AttachmentItemView: View {
             }
             .contentShape(Rectangle())
             .onTapGesture {
+                guard lockedByPeer == nil else { return }
                 isSelected.toggle()
+                collaborationManager.broadcastSelection(selectedId: isSelected ? attachment.id : nil)
             }
             .gesture(
                 DragGesture()
                     .onChanged { value in
+                        guard lockedByPeer == nil else { return }
                         isDragging = true
                         var transaction = Transaction()
                         transaction.animation = nil
@@ -3984,6 +4341,7 @@ struct AttachmentItemView: View {
                         }
                     }
                     .onEnded { value in
+                        guard lockedByPeer == nil else { return }
                         var transaction = Transaction()
                         transaction.animation = nil
                         withTransaction(transaction) {
@@ -3992,8 +4350,29 @@ struct AttachmentItemView: View {
                             dragOffset = .zero
                             isDragging = false
                         }
+                        if let data = try? JSONEncoder().encode(attachment),
+                           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                            collaborationManager.broadcastAttachmentUpsert(type: "image", itemDict: dict)
+                        }
                     }
             )
+
+            // 遠端成員軟鎖定中指示徽章
+            if let peer = lockedByPeer {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color(hex: peer.userColor) ?? .blue)
+                        .frame(width: 8, height: 8)
+                    Text("\(peer.userName) \(localizationManager.localized("object_locked_by"))")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color(hex: peer.userColor)?.opacity(0.95) ?? Color.blue)
+                .cornerRadius(10)
+                .offset(x: -8, y: -24)
+            }
 
             // 選取時顯示浮動小操作把手：編輯（美化）、邊框保留/刪除、刪除、右下角縮放把手
             if isSelected {
@@ -4105,9 +4484,14 @@ struct TextAttachmentItemView: View {
     let onDelete: () -> Void
 
     @ObservedObject var localizationManager = LocalizationManager.shared
+    @ObservedObject var collaborationManager = CollaborationManager.shared
     @State private var dragOffset: CGSize = .zero
     @State private var isSelected: Bool = false
     @State private var isDragging: Bool = false
+
+    private var lockedByPeer: CollaboratorPeer? {
+        collaborationManager.peers.first(where: { $0.selectedId == textItem.id })
+    }
 
     var body: some View {
         let currentX = textItem.x + dragOffset.width
@@ -4129,17 +4513,27 @@ struct TextAttachmentItemView: View {
             .background(resolveBackground(textItem.backgroundColorHex))
             .clipShape(RoundedRectangle(cornerRadius: textItem.cornerRadius))
             .overlay(
-                RoundedRectangle(cornerRadius: textItem.cornerRadius)
-                    .stroke(textItem.hasBorder ? Color.secondary.opacity(0.4) : (isSelected ? Color.accentColor : Color.clear), lineWidth: textItem.hasBorder ? 1.5 : 1)
+                Group {
+                    if let peer = lockedByPeer {
+                        RoundedRectangle(cornerRadius: textItem.cornerRadius)
+                            .stroke(Color(hex: peer.userColor) ?? .blue, lineWidth: 3)
+                    } else {
+                        RoundedRectangle(cornerRadius: textItem.cornerRadius)
+                            .stroke(textItem.hasBorder ? Color.secondary.opacity(0.4) : (isSelected ? Color.accentColor : Color.clear), lineWidth: textItem.hasBorder ? 1.5 : 1)
+                    }
+                }
             )
             .shadow(color: isDragging ? Color.clear : Color.black.opacity(0.08), radius: 6, y: 3)
             .contentShape(Rectangle())
             .onTapGesture {
+                guard lockedByPeer == nil else { return }
                 isSelected.toggle()
+                collaborationManager.broadcastSelection(selectedId: isSelected ? textItem.id : nil)
             }
             .gesture(
                 DragGesture()
                     .onChanged { value in
+                        guard lockedByPeer == nil else { return }
                         isDragging = true
                         var transaction = Transaction()
                         transaction.animation = nil
@@ -4148,6 +4542,7 @@ struct TextAttachmentItemView: View {
                         }
                     }
                     .onEnded { value in
+                        guard lockedByPeer == nil else { return }
                         var transaction = Transaction()
                         transaction.animation = nil
                         withTransaction(transaction) {
@@ -4156,8 +4551,29 @@ struct TextAttachmentItemView: View {
                             dragOffset = .zero
                             isDragging = false
                         }
+                        if let data = try? JSONEncoder().encode(textItem),
+                           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                            collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
+                        }
                     }
             )
+
+            // 遠端成員軟鎖定中指示徽章
+            if let peer = lockedByPeer {
+                HStack(spacing: 4) {
+                    Circle()
+                        .fill(Color(hex: peer.userColor) ?? .blue)
+                        .frame(width: 8, height: 8)
+                    Text("\(peer.userName) \(localizationManager.localized("object_locked_by"))")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundColor(.white)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(Color(hex: peer.userColor)?.opacity(0.95) ?? Color.blue)
+                .cornerRadius(10)
+                .offset(x: -8, y: -24)
+            }
 
             // 選取時浮動把手
             if isSelected {
@@ -4363,10 +4779,15 @@ struct LinkAttachmentItemView: View {
 /// 畫布內嵌 3D 幾何模型互動項目視圖
 struct Model3DCanvasItemView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
+    @ObservedObject var collaborationManager = CollaborationManager.shared
     @Binding var item: Note3DAttachment
     let onDelete: () -> Void
 
     @State private var dragOffset: CGSize = .zero
+
+    private var lockedByPeer: CollaboratorPeer? {
+        collaborationManager.peers.first(where: { $0.selectedId == item.id })
+    }
 
     var body: some View {
         let currentX = item.x + dragOffset.width
@@ -4382,6 +4803,22 @@ struct Model3DCanvasItemView: View {
                     .font(.system(size: 10, weight: .medium))
                     .foregroundColor(.secondary)
                 Spacer()
+
+                // 遠端成員軟鎖定中提示
+                if let peer = lockedByPeer {
+                    HStack(spacing: 4) {
+                        Circle()
+                            .fill(Color(hex: peer.userColor) ?? .blue)
+                            .frame(width: 7, height: 7)
+                        Text("\(peer.userName) \(localizationManager.localized("object_locked_by"))")
+                            .font(.system(size: 9, weight: .semibold))
+                            .foregroundColor(.white)
+                    }
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color(hex: peer.userColor)?.opacity(0.95) ?? Color.blue)
+                    .cornerRadius(8)
+                }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -4391,18 +4828,32 @@ struct Model3DCanvasItemView: View {
             .gesture(
                 DragGesture()
                     .onChanged { value in
+                        guard lockedByPeer == nil else { return }
                         dragOffset = value.translation
                     }
                     .onEnded { value in
+                        guard lockedByPeer == nil else { return }
                         item.x += value.translation.width
                         item.y += value.translation.height
                         dragOffset = .zero
+                        if let data = try? JSONEncoder().encode(item),
+                           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                            collaborationManager.broadcastAttachmentUpsert(type: "3d", itemDict: dict)
+                        }
                     }
             )
 
             Model3DInteractiveCardView(
                 attachment: $item,
                 onDelete: onDelete
+            )
+            .overlay(
+                Group {
+                    if let peer = lockedByPeer {
+                        RoundedRectangle(cornerRadius: 12)
+                            .stroke(Color(hex: peer.userColor) ?? .blue, lineWidth: 3)
+                    }
+                }
             )
         }
         .frame(width: max(200, item.width))

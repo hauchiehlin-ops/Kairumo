@@ -30,12 +30,14 @@ public struct PeerCursor: Codable, Equatable {
     public var y: CGFloat
     public var isDrawing: Bool
     public var tool: String
+    public var selectedId: String?
 
-    public init(x: CGFloat, y: CGFloat, isDrawing: Bool = false, tool: String = "pen") {
+    public init(x: CGFloat, y: CGFloat, isDrawing: Bool = false, tool: String = "pen", selectedId: String? = nil) {
         self.x = x
         self.y = y
         self.isDrawing = isDrawing
         self.tool = tool
+        self.selectedId = selectedId
     }
 }
 
@@ -47,14 +49,16 @@ public struct CollaboratorPeer: Identifiable, Codable, Equatable {
     public let userColor: String
     public var role: CollaboratorRole
     public var cursor: PeerCursor?
+    public var selectedId: String?
     public var lastActive: Date
 
-    public init(userId: String, userName: String, userColor: String, role: CollaboratorRole, cursor: PeerCursor? = nil, lastActive: Date = Date()) {
+    public init(userId: String, userName: String, userColor: String, role: CollaboratorRole, cursor: PeerCursor? = nil, selectedId: String? = nil, lastActive: Date = Date()) {
         self.userId = userId
         self.userName = userName
         self.userColor = userColor
         self.role = role
         self.cursor = cursor
+        self.selectedId = selectedId
         self.lastActive = lastActive
     }
 }
@@ -210,15 +214,23 @@ public class CollaborationManager: ObservableObject {
 
     // MARK: - 暫態廣播 (Presence) 與 Oplog
 
-    /// 廣播本地游標與筆劃狀態（自動 30Hz 節流防溢流）
-    public func broadcastCursor(x: CGFloat, y: CGFloat, isDrawing: Bool, tool: String) {
+    public var mySelectedId: String? = nil
+    private var lastCursorLocation: (x: CGFloat, y: CGFloat) = (0, 0)
+
+    /// 廣播本地游標與筆劃狀態（自動 30Hz 節流防溢流），並支援攜帶物件軟鎖定狀態
+    public func broadcastCursor(x: CGFloat, y: CGFloat, isDrawing: Bool, tool: String, selectedId: String? = nil) {
         guard case .connected(let rid) = status else { return }
+
+        lastCursorLocation = (x, y)
+        if let sel = selectedId {
+            mySelectedId = sel
+        }
 
         let now = Date().timeIntervalSince1970
         guard now - lastPresenceSentTime >= presenceThrottleInterval else { return }
         lastPresenceSentTime = now
 
-        let payload: [String: Any] = [
+        var payload: [String: Any] = [
             "type": "presence",
             "room_id": rid,
             "user_id": currentUserId,
@@ -229,6 +241,31 @@ public class CollaborationManager: ObservableObject {
                 "tool": tool
             ]
         ]
+        if let sel = mySelectedId {
+            payload["selected_id"] = sel
+        }
+        sendJson(payload)
+    }
+
+    /// 立即廣播物件選取/軟鎖定狀態
+    public func broadcastSelection(selectedId: String?) {
+        self.mySelectedId = selectedId
+        guard case .connected(let rid) = status else { return }
+
+        var payload: [String: Any] = [
+            "type": "presence",
+            "room_id": rid,
+            "user_id": currentUserId,
+            "cursor": [
+                "x": Float(lastCursorLocation.x),
+                "y": Float(lastCursorLocation.y),
+                "is_drawing": false,
+                "tool": "select"
+            ]
+        ]
+        if let sel = selectedId {
+            payload["selected_id"] = sel
+        }
         sendJson(payload)
     }
 
@@ -245,6 +282,42 @@ public class CollaborationManager: ObservableObject {
             "payload": payload
         ]
         sendJson(msg)
+    }
+
+    /// 廣播附件新增或更新 (Text, Image, 3D)
+    public func broadcastAttachmentUpsert(type: String, itemDict: [String: Any]) {
+        let payload: [String: Any] = [
+            "attachment_type": type,
+            "item": itemDict
+        ]
+        broadcastOplog(kind: "attachment_upsert", payload: payload)
+    }
+
+    /// 廣播附件刪除
+    public func broadcastAttachmentDelete(id: String, type: String) {
+        let payload: [String: Any] = [
+            "id": id,
+            "attachment_type": type
+        ]
+        broadcastOplog(kind: "attachment_delete", payload: payload)
+    }
+
+    /// 廣播討論圖釘新增或回覆
+    public func broadcastCommentUpsert(pinDict: [String: Any]) {
+        broadcastOplog(kind: "comment_upsert", payload: ["pin": pinDict])
+    }
+
+    /// 廣播討論圖釘狀態切換 (已解決 / 重新開啟)
+    public func broadcastCommentResolve(pinId: String, isResolved: Bool) {
+        broadcastOplog(kind: "comment_resolve", payload: [
+            "pin_id": pinId,
+            "is_resolved": isResolved
+        ])
+    }
+
+    /// 廣播討論圖釘刪除
+    public func broadcastCommentDelete(pinId: String) {
+        broadcastOplog(kind: "comment_delete", payload: ["pin_id": pinId])
     }
 
     // MARK: - 內部接收與心跳機制
@@ -320,9 +393,11 @@ public class CollaborationManager: ObservableObject {
             let y = CGFloat((cursorDict["y"] as? NSNumber)?.floatValue ?? 0)
             let isDrawing = (cursorDict["is_drawing"] as? Bool) ?? false
             let tool = (cursorDict["tool"] as? String) ?? "pen"
+            let selectedId = json["selected_id"] as? String
 
             if let idx = peers.firstIndex(where: { $0.userId == uid }) {
-                peers[idx].cursor = PeerCursor(x: x, y: y, isDrawing: isDrawing, tool: tool)
+                peers[idx].cursor = PeerCursor(x: x, y: y, isDrawing: isDrawing, tool: tool, selectedId: selectedId)
+                peers[idx].selectedId = selectedId
                 peers[idx].lastActive = Date()
             }
 

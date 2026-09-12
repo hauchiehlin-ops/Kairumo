@@ -20,6 +20,7 @@
 		7DB76F0C390DA40B48AC10F9 /* AudioRecorderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FEF2B249C62AD4AE2E3C246 /* AudioRecorderManager.swift */; };
 		880DCFF8C76BF936EADB63DF /* NotebookEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E0D4938AD7ED09F531105A2 /* NotebookEditorView.swift */; };
 		891B35800C7FEFD3421B7293 /* ProColorPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 824AF14643DF914996543B0B /* ProColorPickerSheet.swift */; };
+		95A26994BC9D5BCCF7291E2F /* CommentThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 205572122F598A01BD07BC2A /* CommentThreadView.swift */; };
 		9F7D5560009E83A4BA38D058 /* ImageEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 23F1AEEA9309F41C8A2FB9E4 /* ImageEditSheet.swift */; };
 		A63608E6DD600F35CB565FE4 /* PadnoteCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7245DE41B9104E9F47F0C21B /* PadnoteCore.xcframework */; };
 		AFF32DB932FC4031A86B8F57 /* MaterialEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51E8541179F28A49C13A1967 /* MaterialEngine.swift */; };
@@ -39,6 +40,7 @@
 /* Begin PBXFileReference section */
 		0B829DBCA4D5374715A49087 /* LinkPreviewEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkPreviewEngine.swift; sourceTree = "<group>"; };
 		0FF2EC412BA37683FBBE2FC1 /* CollaborationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollaborationSheet.swift; sourceTree = "<group>"; };
+		205572122F598A01BD07BC2A /* CommentThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentThreadView.swift; sourceTree = "<group>"; };
 		236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeWorkbenchView.swift; sourceTree = "<group>"; };
 		23F1AEEA9309F41C8A2FB9E4 /* ImageEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageEditSheet.swift; sourceTree = "<group>"; };
 		26F09C378F9F1B6835D9ECB2 /* CStubs.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = CStubs.c; sourceTree = "<group>"; };
@@ -133,6 +135,7 @@
 				86EC0F8038D34C787D2A729D /* ChartStudioView.swift */,
 				44D061C8E2977FB257C12E81 /* CollaborationManager.swift */,
 				0FF2EC412BA37683FBBE2FC1 /* CollaborationSheet.swift */,
+				205572122F598A01BD07BC2A /* CommentThreadView.swift */,
 				26F09C378F9F1B6835D9ECB2 /* CStubs.c */,
 				E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */,
 				236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */,
@@ -232,6 +235,7 @@
 				C54CB75E7D13D0F98B966CC0 /* ChartStudioView.swift in Sources */,
 				EBB0282BC8BEC636B952FE2C /* CollaborationManager.swift in Sources */,
 				6142C12FB584E6D8D7B38221 /* CollaborationSheet.swift in Sources */,
+				95A26994BC9D5BCCF7291E2F /* CommentThreadView.swift in Sources */,
 				643674D7CEE546261D15F308 /* ExportPrintManager.swift in Sources */,
 				023C029A763DC77377F7804E /* HomeWorkbenchUsage.swift in Sources */,
 				B3DFF4CFC65E91FEEA6AA7B4 /* HomeWorkbenchView.swift in Sources */,
