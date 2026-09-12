@@ -40,6 +40,7 @@ public enum AppVersion {
 public enum MacWindowTitle {
     private static var desiredTitle: String = AppVersion.windowTitle
     private static var observersInstalled = false
+    private static var keeperTimer: Timer?
 
     /// 設定（並持續維持）Mac 視窗標題。
     @MainActor
@@ -71,6 +72,15 @@ public enum MacWindowTitle {
     private static func installObserversIfNeeded() {
         guard !observersInstalled else { return }
         observersInstalled = true
+
+        // 後備守門員：SwiftUI 在自己的更新時機會重設 scene.title
+        // （例如 fullScreenCover 推上來、navigationTitle 重算），
+        // 那些時機沒有對應的通知可以掛。這個計時器只在「目前值與預期不同」
+        // 時才寫入，所以既不會閃爍，也不會做多餘的工作。
+        keeperTimer?.invalidate()
+        keeperTimer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
+            Task { @MainActor in assign(retriesLeft: 0) }
+        }
 
         let names: [Notification.Name] = [
             UIScene.didActivateNotification,

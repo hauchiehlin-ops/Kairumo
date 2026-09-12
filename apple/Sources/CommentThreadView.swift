@@ -111,7 +111,11 @@ public struct CommentThreadDialog: View {
     /// 拖曳浮層用的手勢。只掛在標題列（或縮小後的整條列）上，
     /// 避免和訊息列表的捲動、輸入框的點擊互相搶事件。
     private var moveGesture: some Gesture {
-        DragGesture(minimumDistance: 2)
+        // 座標系必須用 .global。用預設的 .local 時，手勢的座標系會跟著
+        // 被 `.offset` 移動的視圖一起動 —— 位移改變 → 座標系改變 →
+        // translation 又被重算，形成回授迴圈，畫面就是劇烈抖動。
+        // 全域座標系不受自身位移影響，拖曳才會穩。
+        DragGesture(minimumDistance: 2, coordinateSpace: .global)
             .updating($liveDrag) { value, state, _ in
                 state = value.translation
             }
@@ -222,12 +226,16 @@ public struct CommentThreadDialog: View {
                     Text(pin.authorName)
                         .font(.subheadline)
                         .fontWeight(.bold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
                     Text(formatDate(pin.createdAt))
                         .font(.system(size: 10))
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
+                .layoutPriority(1)
 
-                Spacer()
+                Spacer(minLength: 4)
 
                 // 已解決 / 未解決切換鈕
                 Button(action: {
@@ -239,6 +247,8 @@ public struct CommentThreadDialog: View {
                         Text(pin.isResolved ? localizationManager.localized("reopen") : localizationManager.localized("resolve"))
                             .font(.caption)
                             .fontWeight(.medium)
+                            .lineLimit(1)
+                            .fixedSize()
                     }
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -357,7 +367,7 @@ public struct CommentThreadDialog: View {
             .padding(10)
             .background(Color(uiColor: .secondarySystemBackground))
         }
-        .frame(width: 320)
+        .frame(width: 360)
         .background(Color(uiColor: .systemBackground))
         .cornerRadius(14)
         .shadow(color: Color.black.opacity(0.18), radius: 12, y: 6)

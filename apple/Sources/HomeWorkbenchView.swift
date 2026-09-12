@@ -275,9 +275,7 @@ public struct HomeWorkbenchView: View {
                 QuickAudioRecorderModal()
             }
             .fullScreenCover(item: $selectedNotebookForEditing) { doc in
-                if let index = notebookStore.notebooks.firstIndex(where: { $0.id == doc.id }) {
-                    NotebookEditorView(notebook: $notebookStore.notebooks[index])
-                }
+                NotebookEditorHost(store: notebookStore, initialNotebookId: doc.id)
             }
             .alert(localizationManager.localized("rename_note"), isPresented: Binding(
                 get: { renamingNotebookId != nil },
@@ -1644,4 +1642,33 @@ public struct AppDiagnosticsSheet: View {
 
 #Preview {
     HomeWorkbenchView()
+}
+
+
+/// 編輯器的宿主視圖。
+///
+/// 為什麼需要它：`fullScreenCover` 原本直接把 `$store.notebooks[index]` 傳進
+/// 編輯器，而 index 是呈現當下算好的。編輯器裡的「切換到另一則筆記」
+/// 只能靠寫入那個 Binding —— 那等於覆蓋掉目前這一格。
+/// 由宿主持有「現在是哪一則」的 id，每次重算索引，切換就只是換 id，
+/// 不會動到任何一則筆記的內容，也不必關掉再重開浮層。
+struct NotebookEditorHost: View {
+    @ObservedObject var store: NotebookStore
+    @State private var currentNotebookId: String
+
+    init(store: NotebookStore, initialNotebookId: String) {
+        self.store = store
+        self._currentNotebookId = State(initialValue: initialNotebookId)
+    }
+
+    var body: some View {
+        if let index = store.notebooks.firstIndex(where: { $0.id == currentNotebookId }) {
+            NotebookEditorView(
+                notebook: $store.notebooks[index],
+                onRequestSwitch: { target in
+                    currentNotebookId = target.id
+                }
+            )
+        }
+    }
 }

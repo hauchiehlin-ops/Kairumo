@@ -1000,8 +1000,20 @@ public struct NotebookEditorView: View {
         .gray
     ]
 
-    public init(notebook: Binding<NotebookDocument>) {
+    /// 要求外層改綁到另一則筆記。
+    ///
+    /// 不能自己 `self.notebook = target` —— `notebook` 是
+    /// `$store.notebooks[index]` 的 Binding，寫進去等於把「目前這則筆記」
+    /// 在陣列裡的那一格覆蓋成目標筆記：原本那則的紀錄直接消失，
+    /// 陣列還會出現兩筆相同 id，畫面隨即整片空白。
+    public var onRequestSwitch: ((NotebookDocument) -> Void)?
+
+    public init(
+        notebook: Binding<NotebookDocument>,
+        onRequestSwitch: ((NotebookDocument) -> Void)? = nil
+    ) {
         self._notebook = notebook
+        self.onRequestSwitch = onRequestSwitch
     }
 
     public var body: some View {
@@ -1489,6 +1501,12 @@ public struct NotebookEditorView: View {
         }
         .background(Color(uiColor: .systemGroupedBackground))
         .navigationBarBackButtonHidden(true)
+        .onChange(of: notebook.id) { _ in
+            // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
+            currentPageIndex = 0
+            loadCurrentPage()
+            PageThumbnailRenderer.invalidateAll()
+        }
         .onAppear {
             loadCurrentPage()
             // iPad / Mac 有足夠寬度時直接把結構欄展開；iPhone 上 280pt 的側欄
@@ -4018,13 +4036,8 @@ public struct NotebookEditorView: View {
     private func switchToNotebook(_ target: NotebookDocument) {
         guard target.id != notebook.id else { return }
         saveCurrentPageDrawing()
-        if let updatedTarget = store.notebooks.first(where: { $0.id == target.id }) {
-            self.notebook = updatedTarget
-        } else {
-            self.notebook = target
-        }
-        self.currentPageIndex = 0
-        self.loadCurrentPage()
+        // 由外層換掉 Binding 指向的索引；這裡自己寫會覆蓋掉目前這則筆記。
+        onRequestSwitch?(target)
     }
 
     private func insertQuickTextSnippet(_ text: String) {

@@ -706,10 +706,35 @@ public final class NotebookStore: ObservableObject {
 
     // MARK: - 資料載入與持久化
 
+    /// 移除重複 id 的筆記，保留最後修改的那一筆。
+    ///
+    /// 正常情況不該出現重複；但編輯器曾經把「切換到另一則筆記」實作成
+    /// 直接寫進 `$store.notebooks[index]` 這個 Binding —— 那會把目前開著的
+    /// 那一格覆蓋成目標筆記，於是陣列裡出現兩筆相同 id，
+    /// `ForEach` 的識別就壞了（畫面整片空白），原本那則筆記的紀錄也不見了。
+    /// 根因已修（見 `NotebookEditorView.switchToNotebook`），這裡負責讓
+    /// 已經寫壞的檔案在下次啟動時自己痊癒，而不是一直卡著。
+    static func deduplicateById(_ list: [NotebookDocument]) -> [NotebookDocument] {
+        var seen: [String: Int] = [:]
+        var result: [NotebookDocument] = []
+        for item in list {
+            if let idx = seen[item.id] {
+                if item.lastModifiedDate > result[idx].lastModifiedDate {
+                    result[idx] = item
+                }
+            } else {
+                seen[item.id] = result.count
+                result.append(item)
+            }
+        }
+        return result
+    }
+
+
     public func loadData() {
         if let data = try? Data(contentsOf: notebooksFile),
            let list = try? JSONDecoder().decode([NotebookDocument].self, from: data) {
-            self.notebooks = list.map(migrateSeedTitles)
+            self.notebooks = Self.deduplicateById(list.map(migrateSeedTitles))
         }
 
         if let recData = try? Data(contentsOf: recordingsFile),
