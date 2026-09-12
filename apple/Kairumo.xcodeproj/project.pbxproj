@@ -8,12 +8,30 @@
 
 /* Begin PBXBuildFile section */
 		023C029A763DC77377F7804E /* HomeWorkbenchUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB04C4FA3426304F705E5046 /* HomeWorkbenchUsage.swift */; };
+		1E1747CEA9F8FB95CC222C4A /* LocalizationManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7617B23BC996C4B427F52EB4 /* LocalizationManager.swift */; };
 		4778715DC0B3FB2B8CAB004B /* padnote_core.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28A8E33C21E81EED174CEBA3 /* padnote_core.swift */; };
 		643674D7CEE546261D15F308 /* ExportPrintManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */; };
 		68C1811CB88877353FF14D31 /* CStubs.c in Sources */ = {isa = PBXBuildFile; fileRef = 26F09C378F9F1B6835D9ECB2 /* CStubs.c */; };
+		7DB76F0C390DA40B48AC10F9 /* AudioRecorderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FEF2B249C62AD4AE2E3C246 /* AudioRecorderManager.swift */; };
+		880DCFF8C76BF936EADB63DF /* NotebookEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E0D4938AD7ED09F531105A2 /* NotebookEditorView.swift */; };
 		A63608E6DD600F35CB565FE4 /* PadnoteCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7245DE41B9104E9F47F0C21B /* PadnoteCore.xcframework */; };
 		B3DFF4CFC65E91FEEA6AA7B4 /* HomeWorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */; };
+		C1A7C585E17B35EF60632C65 /* AccountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76577BBB3DC564A4B287380C /* AccountManager.swift */; };
 		EB15B2D411DC5BA9B5335B94 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9DEABFE677080C2925F1968D /* Assets.xcassets */; };
+		F582ACE682ECDB8D43C78140 /* NotebookStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = C72410287ED6D6BF9B550D5B /* NotebookStore.swift */; };
+		B000000182ECDB8D43C70001 /* MathEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000017ED6D6BF9B550001 /* MathEngine.swift */; };
+		B000000282ECDB8D43C70002 /* ChartStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000027ED6D6BF9B550002 /* ChartStudioView.swift */; };
+		B000000382ECDB8D43C70003 /* ImageEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000037ED6D6BF9B550003 /* ImageEditSheet.swift */; };
+		B000000482ECDB8D43C70004 /* MathCalculatorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000047ED6D6BF9B550004 /* MathCalculatorSheet.swift */; };
+		B000000582ECDB8D43C70005 /* WordTextStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000057ED6D6BF9B550005 /* WordTextStudioView.swift */; };
+		B000000682ECDB8D43C70006 /* LinkPreviewEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000067ED6D6BF9B550006 /* LinkPreviewEngine.swift */; };
+		B000000782ECDB8D43C70007 /* ProColorPickerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000077ED6D6BF9B550007 /* ProColorPickerSheet.swift */; };
+		B000000882ECDB8D43C70008 /* SketchRefineEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000087ED6D6BF9B550008 /* SketchRefineEngine.swift */; };
+		B000000982ECDB8D43C70009 /* MaterialEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = F00000097ED6D6BF9B550009 /* MaterialEngine.swift */; };
+		B000000A82ECDB8D43C7000A /* Model3DStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000000A7ED6D6BF9B55000A /* Model3DStudioView.swift */; };
+		B000000B82ECDB8D43C7000B /* AssetLibraryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000000B7ED6D6BF9B55000B /* AssetLibraryManager.swift */; };
+		B000000C82ECDB8D43C7000C /* AssetLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000000C7ED6D6BF9B55000C /* AssetLibraryView.swift */; };
+		B000000D82ECDB8D43C7000D /* ThemeSpecificToolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F000000D7ED6D6BF9B55000D /* ThemeSpecificToolsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -22,9 +40,27 @@
 		28A8E33C21E81EED174CEBA3 /* padnote_core.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = padnote_core.swift; sourceTree = "<group>"; };
 		625C3383D7E7C3F1B7A6D1F1 /* Kairumo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Kairumo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7245DE41B9104E9F47F0C21B /* PadnoteCore.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = PadnoteCore.xcframework; sourceTree = "<group>"; };
+		7617B23BC996C4B427F52EB4 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
+		76577BBB3DC564A4B287380C /* AccountManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountManager.swift; sourceTree = "<group>"; };
+		8FEF2B249C62AD4AE2E3C246 /* AudioRecorderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorderManager.swift; sourceTree = "<group>"; };
 		9DEABFE677080C2925F1968D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		9E0D4938AD7ED09F531105A2 /* NotebookEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookEditorView.swift; sourceTree = "<group>"; };
 		AB04C4FA3426304F705E5046 /* HomeWorkbenchUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeWorkbenchUsage.swift; sourceTree = "<group>"; };
+		C72410287ED6D6BF9B550D5B /* NotebookStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookStore.swift; sourceTree = "<group>"; };
 		E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPrintManager.swift; sourceTree = "<group>"; };
+		F00000017ED6D6BF9B550001 /* MathEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathEngine.swift; sourceTree = "<group>"; };
+		F00000027ED6D6BF9B550002 /* ChartStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartStudioView.swift; sourceTree = "<group>"; };
+		F00000037ED6D6BF9B550003 /* ImageEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageEditSheet.swift; sourceTree = "<group>"; };
+		F00000047ED6D6BF9B550004 /* MathCalculatorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathCalculatorSheet.swift; sourceTree = "<group>"; };
+		F00000057ED6D6BF9B550005 /* WordTextStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordTextStudioView.swift; sourceTree = "<group>"; };
+		F00000067ED6D6BF9B550006 /* LinkPreviewEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkPreviewEngine.swift; sourceTree = "<group>"; };
+		F00000077ED6D6BF9B550007 /* ProColorPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProColorPickerSheet.swift; sourceTree = "<group>"; };
+		F00000087ED6D6BF9B550008 /* SketchRefineEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchRefineEngine.swift; sourceTree = "<group>"; };
+		F00000097ED6D6BF9B550009 /* MaterialEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialEngine.swift; sourceTree = "<group>"; };
+		F000000A7ED6D6BF9B55000A /* Model3DStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model3DStudioView.swift; sourceTree = "<group>"; };
+		F000000B7ED6D6BF9B55000B /* AssetLibraryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetLibraryManager.swift; sourceTree = "<group>"; };
+		F000000C7ED6D6BF9B55000C /* AssetLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetLibraryView.swift; sourceTree = "<group>"; };
+		F000000D7ED6D6BF9B55000D /* ThemeSpecificToolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSpecificToolsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -86,9 +122,27 @@
 		FE24CD0F7EA498AAB508EE5E /* Sources */ = {
 			isa = PBXGroup;
 			children = (
+				76577BBB3DC564A4B287380C /* AccountManager.swift */,
+				8FEF2B249C62AD4AE2E3C246 /* AudioRecorderManager.swift */,
 				26F09C378F9F1B6835D9ECB2 /* CStubs.c */,
 				E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */,
 				236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */,
+				7617B23BC996C4B427F52EB4 /* LocalizationManager.swift */,
+				9E0D4938AD7ED09F531105A2 /* NotebookEditorView.swift */,
+				C72410287ED6D6BF9B550D5B /* NotebookStore.swift */,
+				F00000017ED6D6BF9B550001 /* MathEngine.swift */,
+				F00000027ED6D6BF9B550002 /* ChartStudioView.swift */,
+				F00000037ED6D6BF9B550003 /* ImageEditSheet.swift */,
+				F00000047ED6D6BF9B550004 /* MathCalculatorSheet.swift */,
+				F00000057ED6D6BF9B550005 /* WordTextStudioView.swift */,
+				F00000067ED6D6BF9B550006 /* LinkPreviewEngine.swift */,
+				F00000077ED6D6BF9B550007 /* ProColorPickerSheet.swift */,
+				F00000087ED6D6BF9B550008 /* SketchRefineEngine.swift */,
+				F00000097ED6D6BF9B550009 /* MaterialEngine.swift */,
+				F000000A7ED6D6BF9B55000A /* Model3DStudioView.swift */,
+				F000000B7ED6D6BF9B55000B /* AssetLibraryManager.swift */,
+				F000000C7ED6D6BF9B55000C /* AssetLibraryView.swift */,
+				F000000D7ED6D6BF9B55000D /* ThemeSpecificToolsView.swift */,
 			);
 			path = Sources;
 			sourceTree = "<group>";
@@ -164,11 +218,29 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C1A7C585E17B35EF60632C65 /* AccountManager.swift in Sources */,
+				7DB76F0C390DA40B48AC10F9 /* AudioRecorderManager.swift in Sources */,
 				68C1811CB88877353FF14D31 /* CStubs.c in Sources */,
 				643674D7CEE546261D15F308 /* ExportPrintManager.swift in Sources */,
 				023C029A763DC77377F7804E /* HomeWorkbenchUsage.swift in Sources */,
 				B3DFF4CFC65E91FEEA6AA7B4 /* HomeWorkbenchView.swift in Sources */,
+				1E1747CEA9F8FB95CC222C4A /* LocalizationManager.swift in Sources */,
+				880DCFF8C76BF936EADB63DF /* NotebookEditorView.swift in Sources */,
+				F582ACE682ECDB8D43C78140 /* NotebookStore.swift in Sources */,
 				4778715DC0B3FB2B8CAB004B /* padnote_core.swift in Sources */,
+				B000000182ECDB8D43C70001 /* MathEngine.swift in Sources */,
+				B000000282ECDB8D43C70002 /* ChartStudioView.swift in Sources */,
+				B000000382ECDB8D43C70003 /* ImageEditSheet.swift in Sources */,
+				B000000482ECDB8D43C70004 /* MathCalculatorSheet.swift in Sources */,
+				B000000582ECDB8D43C70005 /* WordTextStudioView.swift in Sources */,
+				B000000682ECDB8D43C70006 /* LinkPreviewEngine.swift in Sources */,
+				B000000782ECDB8D43C70007 /* ProColorPickerSheet.swift in Sources */,
+				B000000882ECDB8D43C70008 /* SketchRefineEngine.swift in Sources */,
+				B000000982ECDB8D43C70009 /* MaterialEngine.swift in Sources */,
+				B000000A82ECDB8D43C7000A /* Model3DStudioView.swift in Sources */,
+				B000000B82ECDB8D43C7000B /* AssetLibraryManager.swift in Sources */,
+				B000000C82ECDB8D43C7000C /* AssetLibraryView.swift in Sources */,
+				B000000D82ECDB8D43C7000D /* ThemeSpecificToolsView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -300,7 +372,7 @@
 				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -310,8 +382,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Kairumo;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
-				INFOPLIST_KEY_CFBundleShortVersionString = 0.1.7;
-				INFOPLIST_KEY_CFBundleVersion = 1;
+				INFOPLIST_KEY_CFBundleShortVersionString = 1.1.0;
+				INFOPLIST_KEY_CFBundleVersion = 2;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -322,7 +394,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.7;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kairumo.padnote;
 				PRODUCT_NAME = Kairumo;
 				SDKROOT = iphoneos;
@@ -338,7 +410,7 @@
 				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -348,8 +420,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Kairumo;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
-				INFOPLIST_KEY_CFBundleShortVersionString = 0.1.7;
-				INFOPLIST_KEY_CFBundleVersion = 1;
+				INFOPLIST_KEY_CFBundleShortVersionString = 1.1.0;
+				INFOPLIST_KEY_CFBundleVersion = 2;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -360,7 +432,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 0.1.7;
+				MARKETING_VERSION = 1.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kairumo.padnote;
 				PRODUCT_NAME = Kairumo;
 				SDKROOT = iphoneos;

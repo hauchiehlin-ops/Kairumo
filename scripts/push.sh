@@ -25,11 +25,24 @@ if [[ $# -ge 1 ]]; then
             shift
             ;;
         *)
-            # 如果第一個參數不是 patch/minor/major，當作 commit message
-            CUSTOM_MSG="$1"
-            shift
+            if [[ "$1" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+                BUMP_TYPE="$1"
+                shift
+            else
+                # 如果第一個參數不是 patch/minor/major/版本號，當作 commit message
+                CUSTOM_MSG="$1"
+                shift
+            fi
             ;;
     esac
+fi
+
+BUNDLE_ARG=""
+if [[ $# -ge 1 ]]; then
+    if [[ "$1" =~ ^[0-9]+$ ]]; then
+        BUNDLE_ARG="$1"
+        shift
+    fi
 fi
 
 if [[ $# -ge 1 && -z "$CUSTOM_MSG" ]]; then
@@ -47,10 +60,11 @@ echo "🚀 準備更新版本並推送到 GitHub ($REMOTE_NAME/$CURRENT_BRANCH)"
 echo "=================================================="
 
 # 2. 執行版本升級（預設 patch）
-OUTPUT=$("${SCRIPT_DIR}/bump-version.sh" "$BUMP_TYPE")
+OUTPUT=$("${SCRIPT_DIR}/bump-version.sh" "$BUMP_TYPE" "$BUNDLE_ARG")
 echo "$OUTPUT"
 
 NEW_VERSION=$(echo "$OUTPUT" | grep '^NEW_VERSION=' | cut -d'=' -f2)
+NEW_BUNDLE_VERSION=$(echo "$OUTPUT" | grep '^NEW_BUNDLE_VERSION=' | cut -d'=' -f2)
 
 if [[ -z "$NEW_VERSION" ]]; then
     echo "❌ 無法取得新版本號" >&2
@@ -62,10 +76,15 @@ git add -A
 
 # 如果工作目錄有其他已修改的檔案，一併加入提交
 if ! git diff --cached --quiet; then
+    BUNDLE_INFO=""
+    if [[ -n "$NEW_BUNDLE_VERSION" ]]; then
+        BUNDLE_INFO=" (bundle ${NEW_BUNDLE_VERSION})"
+    fi
+
     if [[ -n "$CUSTOM_MSG" ]]; then
-        COMMIT_MSG="chore(release): bump version to v${NEW_VERSION} - ${CUSTOM_MSG}"
+        COMMIT_MSG="chore(release): bump version to v${NEW_VERSION}${BUNDLE_INFO} - ${CUSTOM_MSG}"
     else
-        COMMIT_MSG="chore(release): bump version to v${NEW_VERSION}"
+        COMMIT_MSG="chore(release): bump version to v${NEW_VERSION}${BUNDLE_INFO}"
     fi
 
     echo "📝 建立提交：$COMMIT_MSG"

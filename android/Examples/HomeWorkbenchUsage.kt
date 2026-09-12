@@ -43,10 +43,25 @@ object HomeWorkbenchUsage {
 
     /**
      * 取得供首頁底部或 Drawer / 側邊欄顯示的版本標籤字串。
-     * 例如："Kairumo v0.1.4 (Android / aarch64)"
+     * 例如："Kairumo v1.0.0 (Android / aarch64)"
      */
     fun getFooterVersionLabel(): String {
         val version = coreVersion()
         return "Kairumo v$version"
+    }
+
+    /**
+     * Android 麥克風權限自動化引導輔助工具。
+     *
+     * 遵循跨平台一致體驗：
+     * 當使用者拒絕權限時，彈出在地化提示，並提供一鍵直達「應用程式設定」頁面。
+     */
+    object AudioPermissionHelper {
+        fun createSettingsIntent(context: Context): android.content.Intent {
+            return android.content.Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                data = android.net.Uri.fromParts("package", context.packageName, null)
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+        }
     }
 }

@@ -111,8 +111,9 @@ cat << PLIST_EOF > "$EXPORT_PLIST"
 PLIST_EOF
 
 # 4. 步驟三：xcodebuild archive 封裝
-APP_VER=$(python3 -c "import re; m=re.search(r'version\s*=\s*\"([^\"]+)\"', open('${REPO_ROOT}/Cargo.toml').read()); print(m.group(1) if m else '0.1.7')")
-echo "📦 [3/4] 執行 xcodebuild archive 封裝通用應用程式 (版本: v${APP_VER})..."
+APP_VER=$(python3 -c "import re; m=re.search(r'version\s*=\s*\"([^\"]+)\"', open('${REPO_ROOT}/Cargo.toml').read()); print(m.group(1) if m else '1.0.0')")
+BUNDLE_VER=$(python3 -c "import re, os; f='${REPO_ROOT}/apple/Kairumo.xcodeproj/project.pbxproj'; content=open(f).read() if os.path.exists(f) else ''; m=re.search(r'CURRENT_PROJECT_VERSION\s*=\s*(\d+)', content); print(m.group(1) if m else '1')")
+echo "📦 [3/4] 執行 xcodebuild archive 封裝通用應用程式 (版本: v${APP_VER}, Bundle: ${BUNDLE_VER})..."
 xcodebuild archive \
     -project "$PROJECT_PATH" \
     -scheme "$SCHEME" \
@@ -121,9 +122,9 @@ xcodebuild archive \
     -archivePath "$ARCHIVE_PATH" \
     DEVELOPMENT_TEAM="${APPLE_TEAM_ID}" \
     MARKETING_VERSION="${APP_VER}" \
-    CURRENT_PROJECT_VERSION="1" \
+    CURRENT_PROJECT_VERSION="${BUNDLE_VER}" \
     INFOPLIST_KEY_CFBundleShortVersionString="${APP_VER}" \
-    INFOPLIST_KEY_CFBundleVersion="1" \
+    INFOPLIST_KEY_CFBundleVersion="${BUNDLE_VER}" \
     INFOPLIST_KEY_ITSAppUsesNonExemptEncryption="NO" \
     -quiet
 

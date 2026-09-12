@@ -1,0 +1,232 @@
+//
+//  AudioRecorderManager.swift
+//  Kairumo
+//
+//  真實音訊錄製與播放管理員（AVFoundation 實作）
+//  支援即時波形計算、時間戳對齊與音訊檔案持久化
+//  預設儲存路徑：本機「文件」資料夾中的「Kairumo Record」目錄
+//
+
+import Foundation
+import AVFoundation
+import Combine
+import UIKit
+
+/// 即時錄音狀態
+public enum RecordingStatus {
+    case idle
+    case recording
+    case paused
+}
+
+@MainActor
+public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioRecorderDelegate, AVAudioPlayerDelegate {
+    public static let shared = AudioRecorderManager()
+
+    @Published public var status: RecordingStatus = .idle
+    @Published public var elapsedSeconds: TimeInterval = 0
+    @Published public var audioLevels: [CGFloat] = Array(repeating: 0.15, count: 20)
+    @Published public var showPermissionAlert: Bool = false
+    @Published public var isPlaying: Bool = false
+    @Published public var playingRecordingId: String? = nil
+    @Published public var playbackProgress: Double = 0.0
+
+    private var audioRecorder: AVAudioRecorder?
+    private var audioPlayer: AVAudioPlayer?
+    private var timer: Timer?
+    private var playbackTimer: Timer?
+    private var currentAudioUrl: URL?
+
+    /// 錄音檔預設儲存位置：本機文件資料夾（自動新設「Kairumo Record」資料夾）
+    public var recordingsDirectory: URL {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let kairumoRecordDir = docs.appendingPathComponent("Kairumo Record", isDirectory: true)
+
+        if !FileManager.default.fileExists(atPath: kairumoRecordDir.path) {
+            do {
+                try FileManager.default.createDirectory(at: kairumoRecordDir, withIntermediateDirectories: true, attributes: nil)
+                print("📁 成功建立錄音目錄: \(kairumoRecordDir.path)")
+            } catch {
+                print("⚠️ 建立 Kairumo Record 目錄失敗: \(error)")
+            }
+        }
+        return kairumoRecordDir
+    }
+
+    private override init() {
+        super.init()
+        _ = recordingsDirectory // 啟動時自動檢查並建立「Kairumo Record」資料夾
+    }
+
+    /// 在 Finder 中開啟「Kairumo Record」資料夾
+    public func openRecordingsFolderInFinder() {
+        let folderUrl = recordingsDirectory
+        #if targetEnvironment(macCatalyst) || os(macOS)
+        if let wsClass = NSClassFromString("NSWorkspace") as? NSObjectProtocol,
+           let shared = wsClass.perform(NSSelectorFromString("sharedWorkspace"))?.takeUnretainedValue() {
+            _ = shared.perform(NSSelectorFromString("openURL:"), with: folderUrl)
+            return
+        }
+        #endif
+        UIApplication.shared.open(folderUrl, options: [:], completionHandler: nil)
+    }
+
+    /// 自動引導使用者開啟系統隱私與安全性設定頁面（自動化權限流程）
+    public func openSystemSettings() {
+        showPermissionAlert = false
+        #if targetEnvironment(macCatalyst) || os(macOS)
+        // Mac Catalyst: 優先嘗試開啟系統設定中的「麥克風」隱私頁面
+        if let micPrefUrl = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
+            if let wsClass = NSClassFromString("NSWorkspace") as? NSObjectProtocol,
+               let shared = wsClass.perform(NSSelectorFromString("sharedWorkspace"))?.takeUnretainedValue() {
+                _ = shared.perform(NSSelectorFromString("openURL:"), with: micPrefUrl)
+                return
+            }
+        }
+        #endif
+
+        if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(settingsUrl, options: [:], completionHandler: nil)
+        }
+    }
+
+    // MARK: - 錄音控制
+
+    /// 請求麥克風權限並啟動錄音
+    public func startRecording(title: String? = nil) async -> Bool {
+        #if os(iOS) || targetEnvironment(macCatalyst)
+        let session = AVAudioSession.sharedInstance()
+        let permissionGranted: Bool
+        if #available(iOS 17.0, *) {
+            permissionGranted = await AVAudioApplication.requestRecordPermission()
+        } else {
+            permissionGranted = await withCheckedContinuation { continuation in
+                session.requestRecordPermission { granted in
+                    continuation.resume(returning: granted)
+                }
+            }
+        }
+
+        guard permissionGranted else {
+            print("[AudioRecorderManager] 麥克風權限被拒絕，自動啟動設定引導流程")
+            self.showPermissionAlert = true
+            return false
+        }
+
+        do {
+            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+            try session.setActive(true)
+        } catch {
+            print("[AudioRecorderManager] 音訊 Session 設定失敗: \(error)")
+        }
+        #endif
+
+        let fileId = UUID().uuidString
+        let fileUrl = recordingsDirectory.appendingPathComponent("\(fileId).m4a")
+        self.currentAudioUrl = fileUrl
+
+        let settings: [String: Any] = [
+            AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
+            AVSampleRateKey: 44100.0,
+            AVNumberOfChannelsKey: 1,
+            AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
+        ]
+
+        do {
+            let recorder = try AVAudioRecorder(url: fileUrl, settings: settings)
+            recorder.delegate = self
+            recorder.isMeteringEnabled = true
+            guard recorder.record() else { return false }
+
+            self.audioRecorder = recorder
+            self.status = .recording
+            self.elapsedSeconds = 0
+
+            self.timer?.invalidate()
+            self.timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+                guard let self = self, let rec = self.audioRecorder, rec.isRecording else { return }
+                rec.updateMeters()
+                self.elapsedSeconds = rec.currentTime
+                let power = rec.averagePower(forChannel: 0)
+                let normalized = max(0.12, CGFloat((power + 60.0) / 60.0))
+                var current = self.audioLevels
+                current.removeFirst()
+                current.append(normalized)
+                self.audioLevels = current
+            }
+            return true
+        } catch {
+            print("[AudioRecorderManager] 建立錄音器失敗: \(error)")
+            return false
+        }
+    }
+
+    /// 停止錄音並回傳儲存的檔案 URL 及總時長（秒）
+    public func stopRecording() -> (url: URL, duration: TimeInterval)? {
+        guard let recorder = audioRecorder, status == .recording else { return nil }
+        let duration = recorder.currentTime
+        recorder.stop()
+        timer?.invalidate()
+        timer = nil
+        status = .idle
+        audioLevels = Array(repeating: 0.15, count: 20)
+
+        guard let url = currentAudioUrl else { return nil }
+        return (url, duration)
+    }
+
+    // MARK: - 播放控制
+
+    public func playAudio(url: URL, recordingId: String) {
+        if playingRecordingId == recordingId && isPlaying {
+            pauseAudio()
+            return
+        }
+
+        stopPlayback()
+
+        do {
+            #if os(iOS) || targetEnvironment(macCatalyst)
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            try AVAudioSession.sharedInstance().setActive(true)
+            #endif
+
+            let player = try AVAudioPlayer(contentsOf: url)
+            player.delegate = self
+            player.prepareToPlay()
+            player.play()
+
+            self.audioPlayer = player
+            self.isPlaying = true
+            self.playingRecordingId = recordingId
+
+            self.playbackTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+                guard let self = self, let p = self.audioPlayer else { return }
+                if p.duration > 0 {
+                    self.playbackProgress = p.currentTime / p.duration
+                }
+            }
+        } catch {
+            print("[AudioRecorderManager] 播放音訊失敗: \(error)")
+        }
+    }
+
+    public func pauseAudio() {
+        audioPlayer?.pause()
+        isPlaying = false
+    }
+
+    public func stopPlayback() {
+        audioPlayer?.stop()
+        audioPlayer = nil
+        playbackTimer?.invalidate()
+        playbackTimer = nil
+        isPlaying = false
+        playingRecordingId = nil
+        playbackProgress = 0.0
+    }
+
+    public func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
+        stopPlayback()
+    }
+}
