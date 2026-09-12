@@ -81,8 +81,7 @@ public struct HomeWorkbenchView: View {
         let v = coreVersion()
         if !v.isEmpty { return "v\(v)" }
         #endif
-        let bundleVer = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
-        return "v\(bundleVer)"
+        return "v\(AppVersion.marketing)"
     }
 
     /// 核心平台環境描述
@@ -338,11 +337,7 @@ public struct HomeWorkbenchView: View {
             }
             .onAppear {
                 #if targetEnvironment(macCatalyst)
-                DispatchQueue.main.async {
-                    if let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first {
-                        scene.title = "Kairumo \(appVersionString)"
-                    }
-                }
+                MacWindowTitle.apply()
                 #endif
             }
         }

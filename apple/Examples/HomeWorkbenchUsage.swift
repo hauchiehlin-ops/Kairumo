@@ -23,10 +23,7 @@ struct KairumoApp: App {
         #endif
     }
 
-    private var appVersionTitle: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.4.0"
-        return "Kairumo v\(version)"
-    }
+    private var appVersionTitle: String { AppVersion.windowTitle }
 
     var body: some Scene {
         WindowGroup(appVersionTitle) {

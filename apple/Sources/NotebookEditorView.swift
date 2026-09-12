@@ -955,6 +955,8 @@ public struct NotebookEditorView: View {
     // 開啟筆記時預設展開，否則使用者每次進入新筆記都要先自己按一次才看得到
     // 資料夾目錄，等於把「這則筆記放在哪裡」藏起來。
     @State private var showStructureSidebar: Bool = false
+    /// 畫布目前的實際內容寬度。縮圖要用同一個寬度算，物件位置與比例才會對得上。
+    @State private var canvasContentWidth: CGFloat = PageThumbnailRenderer.minPageWidth
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage("kairumo_editor_sidebar_tab") private var sidebarTabRaw: String = SidebarTabMode.folders.rawValue
 
@@ -1091,6 +1093,15 @@ public struct NotebookEditorView: View {
                         },
                         canvasRef: { ref in
                             self.canvasView = ref
+                        }
+                    )
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear
+                                .onAppear { updateCanvasContentWidth(geo.size.width) }
+                                .onChange(of: geo.size.width) { newWidth in
+                                    updateCanvasContentWidth(newWidth)
+                                }
                         }
                     )
 
@@ -1486,12 +1497,7 @@ public struct NotebookEditorView: View {
                 showStructureSidebar = true
             }
             #if targetEnvironment(macCatalyst)
-            DispatchQueue.main.async {
-                let ver = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.2.0"
-                if let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first {
-                    scene.title = "Kairumo v\(ver)"
-                }
-            }
+            MacWindowTitle.apply()
             #endif
         }
         .sheet(isPresented: $showShareSheet) {
@@ -1669,11 +1675,16 @@ public struct NotebookEditorView: View {
 
     // MARK: - 1. 頂部自訂主工作列（自適應寬窄螢幕模式）
     private var editorTopBar: some View {
-        // 寬度夠就用單行完整版；放不下則切到緊湊版，把次要功能收進「更多」選單。
-        // 工具列維持單行高度，不換行也不捲動 —— 主要動作永遠在同一個位置。
+        // 寬度夠就用單行完整版；放不下則切到緊湊版，把次要功能收進「更多」選單；
+        // 都還塞不下才換行。優先維持單行，主要動作才會固定在同一個位置。
         ViewThatFits(in: .horizontal) {
             expandedEditorTopBar
             HStack(spacing: 6) {
+                compactEditorTopBarItems
+            }
+            // 連緊湊版都放不下時換行。否則「首頁」與「匯出與列印」
+            // 會被擠到視窗外，使用者連退出筆記都做不到。
+            WrapLayout(spacing: 6, lineSpacing: 6) {
                 compactEditorTopBarItems
             }
         }
@@ -2251,6 +2262,13 @@ public struct NotebookEditorView: View {
         .buttonStyle(.plain)
     }
 
+    /// 畫布內容寬度與 `CanvasRepresentable` 的 `max(bounds.width, 800)` 保持一致。
+    private func updateCanvasContentWidth(_ viewWidth: CGFloat) {
+        let width = max(viewWidth, PageThumbnailRenderer.minPageWidth)
+        guard abs(width - canvasContentWidth) > 0.5 else { return }
+        canvasContentWidth = width
+    }
+
     // MARK: - 手繪／打字模式切換器
     //
     // 原本用 `.pickerStyle(.segmented)`，但每個選項裡放的是 `HStack { Image; Text }`：
@@ -2438,31 +2456,27 @@ public struct NotebookEditorView: View {
                                     loadCurrentPage()
                                 }
                             } label: {
-                                ZStack {
-                                    RoundedRectangle(cornerRadius: 6)
-                                        .fill(Color(uiColor: .systemBackground))
-                                        .frame(height: 130)
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 6)
-                                                .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.2), lineWidth: isSelected ? 2.5 : 1)
-                                        )
-                                        .shadow(color: Color.black.opacity(isSelected ? 0.15 : 0.04), radius: isSelected ? 4 : 2, y: 1)
-
-                                    let pageDrawing = (idx == currentPageIndex) ? currentDrawing : store.loadDrawing(notebookId: notebook.id, pageIndex: idx)
-                                    // 合成整頁所有圖層：手繪只是其中一層，文字方塊、
-                                    // 圖片、3D 與圖釘都要畫進去，否則縮圖與實際頁面對不上。
-                                    let img = PageThumbnailRenderer.render(
-                                        notebook: notebook,
-                                        pageIndex: idx,
-                                        drawing: pageDrawing,
-                                        store: store
+                                // 縮圖用畫布的實際寬度算繪，並讓卡片維持同樣的長寬比 ——
+                                // 舊版固定 800 寬、卡片固定 130 高，一張 800x1800 的頁面
+                                // scaledToFit 之後只剩 50pt 寬，物件小到看不出是什麼。
+                                let pageDrawing = (idx == currentPageIndex) ? currentDrawing : store.loadDrawing(notebookId: notebook.id, pageIndex: idx)
+                                let img = PageThumbnailRenderer.render(
+                                    notebook: notebook,
+                                    pageIndex: idx,
+                                    drawing: pageDrawing,
+                                    store: store,
+                                    canvasWidth: canvasContentWidth
+                                )
+                                Image(uiImage: img)
+                                    .resizable()
+                                    .aspectRatio(img.size.width / max(img.size.height, 1), contentMode: .fit)
+                                    .frame(maxWidth: .infinity)
+                                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 6)
+                                            .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.2), lineWidth: isSelected ? 2.5 : 1)
                                     )
-                                    Image(uiImage: img)
-                                        .resizable()
-                                        .scaledToFit()
-                                        .frame(maxHeight: 120)
-                                        .padding(4)
-                                }
+                                    .shadow(color: Color.black.opacity(isSelected ? 0.15 : 0.04), radius: isSelected ? 4 : 2, y: 1)
                             }
                             .buttonStyle(.plain)
                         }
@@ -2836,11 +2850,18 @@ public struct NotebookEditorView: View {
 
     // MARK: - 2. 🌟 實體手繪工具列（水平滑動包裹、免擠壓、隨點隨用）
     private var drawingToolbar: some View {
-        // 單行、不捲動也不換行。放不下時分兩步退讓：
-        // 先收掉筆刷底下的文字標籤，再不夠就由「更多」選單承接次要工具。
+        // 放不下時分三步退讓：先收掉筆刷底下的文字標籤，
+        // 再不夠就由「更多」選單承接次要工具，最後才換行 ——
+        // 換行會改變按鈕位置，所以放在最後，不是第一選擇。
         ViewThatFits(in: .horizontal) {
             drawingToolbarRow(showToolLabels: true)
             drawingToolbarRow(showToolLabels: false)
+            // 兩種單行版本都塞不下時的保底：自動換行。
+            // 沒有這一層，ViewThatFits 會直接採用最後一個候選，
+            // 工具列就會比視窗寬、左右兩端被裁掉。
+            WrapLayout(spacing: 12, lineSpacing: 8) {
+                drawingToolbarItems(showToolLabels: false)
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -2850,6 +2871,14 @@ public struct NotebookEditorView: View {
 
     private func drawingToolbarRow(showToolLabels: Bool) -> some View {
         HStack(spacing: 14) {
+            drawingToolbarItems(showToolLabels: showToolLabels)
+        }
+    }
+
+    /// 工具列的內容。攤平成一連串子視圖，`HStack` 與 `WrapLayout` 共用同一份 ——
+    /// 換行版才不會因為內容被包在容器裡而永遠不換行。
+    @ViewBuilder
+    private func drawingToolbarItems(showToolLabels: Bool) -> some View {
                 // 工具選擇群組（鋼筆、原子筆、毛筆、麥克筆、螢光筆、鉛筆、水彩筆、橡皮擦、套索）
                 ForEach(EditorToolType.allCases) { tool in
                     Button {
@@ -3070,13 +3099,27 @@ public struct NotebookEditorView: View {
                     }
                     .help(localizationManager.localized("clear_page"))
                 }
-        }
     }
 
     // MARK: - 🌟 實體鍵盤打字與排版工具列
     private var typingToolbar: some View {
-        // 單行、不捲動也不換行：次要的插入工具收進「更多」選單。
-        HStack(spacing: 12) {
+        // 次要的插入工具收進「更多」選單；真的還是塞不下時才換行。
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 12) {
+                typingToolbarItems
+            }
+            WrapLayout(spacing: 12, lineSpacing: 8) {
+                typingToolbarItems
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+    }
+
+    @ViewBuilder
+    private var typingToolbarItems: some View {
                 // 插入文字方塊
                 Button {
                     newTextDraft = NoteTextAttachment(pageIndex: currentPageIndex)
@@ -3225,11 +3268,6 @@ public struct NotebookEditorView: View {
                     }
                     .help(localizationManager.localized("redo"))
                 }
-            }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(uiColor: .tertiarySystemGroupedBackground))
     }
 
     // MARK: - 3. 尺規旋轉與量測輔助列

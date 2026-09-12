@@ -17,8 +17,13 @@ import PencilKit
 /// 座標系與 `CanvasRepresentable` 一致：寬 `pageWidth`、高為該頁的實際高度。
 public enum PageThumbnailRenderer {
 
-    /// 與 `CanvasRepresentable.contentSize` 相同的基準寬度。
-    public static let pageWidth: CGFloat = 800
+    /// 畫布寬度的下限，與 `CanvasRepresentable.contentSize` 的 `max(bounds.width, 800)` 一致。
+    public static let minPageWidth: CGFloat = 800
+
+    /// 縮圖最多畫到「寬度的幾倍高」。頁面預設 1800pt 高，若整頁塞進側邊欄，
+    /// 卡片不是變成細長一條、就是要縮到物件看不清 —— 超過的部分裁掉，
+    /// 底部畫漸層提示還有內容。
+    public static let maxHeightRatio: CGFloat = 1.25
 
     /// 縮圖快取。側邊欄每次重繪都重新合成整頁會很慢，而內容沒變時結果是一樣的。
     private static let cache = NSCache<NSString, UIImage>()
@@ -29,9 +34,10 @@ public enum PageThumbnailRenderer {
     private static func cacheKey(
         notebook: NotebookDocument,
         pageIndex: Int,
-        drawing: PKDrawing
+        drawing: PKDrawing,
+        canvasWidth: CGFloat
     ) -> NSString {
-        "\(notebook.id)|\(pageIndex)|\(notebook.lastModifiedDate.timeIntervalSince1970)|\(drawing.strokes.count)" as NSString
+        "\(notebook.id)|\(pageIndex)|\(notebook.lastModifiedDate.timeIntervalSince1970)|\(drawing.strokes.count)|\(Int(canvasWidth))" as NSString
     }
 
     /// 清空快取（例如切換筆記本時）。
@@ -40,19 +46,27 @@ public enum PageThumbnailRenderer {
     }
 
     /// 合成單頁縮圖。`scale` 越小越省記憶體，縮圖只需要看得出輪廓。
+    /// - Parameter canvasWidth: 畫布目前的實際內容寬度。
+    ///   物件的 x/y 存的是畫布座標，而畫布寬度是 `max(視圖寬度, 800)` ——
+    ///   縮圖若一律當成 800 寬，在 Mac 這種寬視窗上物件位置會整個偏掉。
     @MainActor
     public static func render(
         notebook: NotebookDocument,
         pageIndex: Int,
         drawing: PKDrawing,
         store: NotebookStore,
-        scale: CGFloat = 0.25
+        canvasWidth: CGFloat,
+        scale: CGFloat = 0.4
     ) -> UIImage {
-        let key = cacheKey(notebook: notebook, pageIndex: pageIndex, drawing: drawing)
+        let width = max(canvasWidth, minPageWidth)
+        let key = cacheKey(notebook: notebook, pageIndex: pageIndex, drawing: drawing, canvasWidth: width)
         if let cached = cache.object(forKey: key) { return cached }
 
         let pageHeight = notebook.height(forPage: pageIndex)
-        let pageRect = CGRect(x: 0, y: 0, width: pageWidth, height: pageHeight)
+        let visibleHeight = min(pageHeight, width * maxHeightRatio)
+        let pageRect = CGRect(x: 0, y: 0, width: width, height: visibleHeight)
+        // 手繪要用整頁的座標系取圖，否則落在裁切線以下的筆畫會被擠上來。
+        let fullPageRect = CGRect(x: 0, y: 0, width: width, height: pageHeight)
 
         let format = UIGraphicsImageRendererFormat.default()
         format.scale = scale
@@ -63,7 +77,8 @@ public enum PageThumbnailRenderer {
             ctx.fill(pageRect)
 
             // 疊放順序刻意對齊畫布：手繪在最底，圖釘在最上。
-            drawing.image(from: pageRect, scale: scale).draw(in: pageRect)
+            drawing.image(from: fullPageRect, scale: scale)
+                .draw(in: fullPageRect)
 
             for item in notebook.attachments ?? [] where item.pageIndex == pageIndex {
                 drawImage(item, store: store, ctx: ctx)
@@ -79,6 +94,33 @@ public enum PageThumbnailRenderer {
             }
             for pin in notebook.commentPins ?? [] where pin.pageIndex == pageIndex {
                 drawPin(pin)
+            }
+
+            // 有被裁掉的內容時，底部畫一道漸層，讓使用者知道這不是整頁。
+            if pageHeight > visibleHeight {
+                let fadeHeight: CGFloat = min(60, visibleHeight * 0.12)
+                let fadeRect = CGRect(
+                    x: 0,
+                    y: visibleHeight - fadeHeight,
+                    width: width,
+                    height: fadeHeight
+                )
+                let bg = UIColor.systemBackground
+                if let gradient = CGGradient(
+                    colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                    colors: [bg.withAlphaComponent(0).cgColor, bg.cgColor] as CFArray,
+                    locations: [0, 1]
+                ) {
+                    ctx.cgContext.saveGState()
+                    ctx.cgContext.clip(to: fadeRect)
+                    ctx.cgContext.drawLinearGradient(
+                        gradient,
+                        start: CGPoint(x: 0, y: fadeRect.minY),
+                        end: CGPoint(x: 0, y: fadeRect.maxY),
+                        options: []
+                    )
+                    ctx.cgContext.restoreGState()
+                }
             }
         }
 
