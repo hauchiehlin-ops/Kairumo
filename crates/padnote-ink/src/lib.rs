@@ -6,8 +6,10 @@
 //! 能回溯受益 —— 競品多存已擬合的貝茲曲線，資訊一去不回。
 
 pub mod codec;
+pub mod geometry;
 
 pub use codec::{StrokeReader, StrokeWriter};
+pub use geometry::{Rect, distance_to_segment, half_width, simplify, smooth_path};
 use padnote_doc::{NotebookTime, Uuid};
 
 /// 筆刷類型（format-spec §5.3）。

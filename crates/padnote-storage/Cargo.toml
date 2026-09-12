@@ -7,3 +7,10 @@ license.workspace = true
 
 [lints]
 workspace = true
+
+[dependencies]
+padnote-doc = { path = "../padnote-doc" }
+padnote-ink = { path = "../padnote-ink" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
