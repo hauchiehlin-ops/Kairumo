@@ -81,6 +81,8 @@ Kairumo —— 手寫、打字、錄音轉文字三合一的筆記 App。
 | `features.md` | 要確認某功能的優先序與競品對照 |
 | `roadmap.md` | 要知道階段與 Go 門檻 |
 | `adr/` | 想知道某個決策的理由 |
+| `manual/index.html` | 使用者操作手冊（六國語系、實機截圖、可連結目錄） |
+| `legal/privacy.html` | 隱私權政策（六國語系；App Store 送審需要這份的公開網址） |
 
 ## ⚠️ 需求檢視（2026-09-12）
 

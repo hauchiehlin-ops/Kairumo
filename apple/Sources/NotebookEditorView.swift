@@ -958,6 +958,7 @@ public struct NotebookEditorView: View {
     /// 畫布目前的實際內容寬度。縮圖要用同一個寬度算，物件位置與比例才會對得上。
     @State private var canvasContentWidth: CGFloat = PageThumbnailRenderer.minPageWidth
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @State private var didAutoOpenSidebar: Bool = false
     @AppStorage("kairumo_editor_sidebar_tab") private var sidebarTabRaw: String = SidebarTabMode.folders.rawValue
 
     private var sidebarTab: SidebarTabMode {
@@ -1507,13 +1508,16 @@ public struct NotebookEditorView: View {
             loadCurrentPage()
             PageThumbnailRenderer.invalidateAll()
         }
+        .background(
+            // 用實際量到的寬度決定要不要展開結構欄。
+            // 原本看 horizontalSizeClass，但在 fullScreenCover 剛推上來的那一瞬間
+            // 它可能還回報 compact，於是 iPad 上時開時不開。
+            GeometryReader { geo in
+                Color.clear.onAppear { autoOpenSidebarIfWideEnough(width: geo.size.width) }
+            }
+        )
         .onAppear {
             loadCurrentPage()
-            // iPad / Mac 有足夠寬度時直接把結構欄展開；iPhone 上 280pt 的側欄
-            // 會把畫布擠到不能用，所以維持收合、由使用者自己叫出來。
-            if horizontalSizeClass != .compact {
-                showStructureSidebar = true
-            }
             #if targetEnvironment(macCatalyst)
             MacWindowTitle.apply()
             #endif
@@ -2278,6 +2282,16 @@ public struct NotebookEditorView: View {
                 .cornerRadius(6)
         }
         .buttonStyle(.plain)
+    }
+
+    /// 寬度足夠時自動展開結構欄（只做一次，之後尊重使用者自己的開關）。
+    /// iPhone 這種窄寬度維持收合 —— 280pt 的側欄會把畫布擠到不能用。
+    private func autoOpenSidebarIfWideEnough(width: CGFloat) {
+        guard !didAutoOpenSidebar else { return }
+        didAutoOpenSidebar = true
+        if width >= 700 {
+            showStructureSidebar = true
+        }
     }
 
     /// 畫布內容寬度與 `CanvasRepresentable` 的 `max(bounds.width, 800)` 保持一致。

@@ -1,0 +1,482 @@
+<title>Kairumo Manual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper: #F5F7F9;
+    --surface: #FFFFFF;
+    --surface-sunk: #EEF1F5;
+    --ink: #141A22;
+    --ink-soft: #4B5666;
+    --ink-faint: #7C8798;
+    --rule: #DBE1E9;
+    --accent: #1F4FD8;
+    --accent-soft: #E9EEFC;
+    --mark: #0E7C53;
+    --mark-soft: #E4F3EC;
+    --serif: "Newsreader", "Songti TC", "Songti SC", "Hiragino Mincho ProN", "Apple SD Gothic Neo", "Sarabun", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "PingFang SC", "Hiragino Sans", "Noto Sans KR", "Apple SD Gothic Neo", "Noto Sans Thai", "Sarabun", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0E1217;
+      --surface: #161B22;
+      --surface-sunk: #12171E;
+      --ink: #E6EBF2;
+      --ink-soft: #98A4B4;
+      --ink-faint: #6B7789;
+      --rule: #242C37;
+      --accent: #7FA9FF;
+      --accent-soft: #16233A;
+      --mark: #4CC38A;
+      --mark-soft: #12261E;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0E1217;
+    --surface: #161B22;
+    --surface-sunk: #12171E;
+    --ink: #E6EBF2;
+    --ink-soft: #98A4B4;
+    --ink-faint: #6B7789;
+    --rule: #242C37;
+    --accent: #7FA9FF;
+    --accent-soft: #16233A;
+    --mark: #4CC38A;
+    --mark-soft: #12261E;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  img { display: block; max-width: 100%; }
+  a { color: var(--accent); }
+
+  /* ---------- 報頭 ---------- */
+  .masthead {
+    background: var(--surface);
+    border-bottom: 1px solid var(--rule);
+    padding: 44px 0 30px;
+  }
+  .shell { max-width: 1180px; margin: 0 auto; padding: 0 28px; }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(32px, 5vw, 46px);
+    line-height: 1.12;
+    margin: 0 0 12px;
+    text-wrap: balance;
+  }
+  .tagline { color: var(--ink-soft); margin: 0 0 18px; max-width: 62ch; }
+  .version {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-faint);
+    margin: 0 0 22px;
+  }
+  .langbar { display: flex; flex-wrap: wrap; gap: 6px; }
+  .langbar button {
+    font: inherit;
+    font-size: 13px;
+    padding: 5px 12px;
+    border-radius: 999px;
+    border: 1px solid var(--rule);
+    background: transparent;
+    color: var(--ink-soft);
+    cursor: pointer;
+  }
+  .langbar button:hover { border-color: var(--accent); color: var(--accent); }
+  .langbar button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .langbar button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- 版面 ---------- */
+  .layout {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 36px 28px 110px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 40px;
+  }
+  @media (min-width: 1000px) {
+    .layout { grid-template-columns: 250px minmax(0, 1fr); gap: 56px; align-items: start; }
+    .toc { position: sticky; top: 24px; }
+  }
+
+  /* ---------- 目錄 ---------- */
+  .toc h2 {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 4px;
+    font-weight: 500;
+  }
+  .toc .hint { font-size: 12px; color: var(--ink-faint); margin: 0 0 14px; line-height: 1.5; }
+  .toc ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+  .toc li { border-top: 1px solid var(--rule); }
+  .toc li:last-child { border-bottom: 1px solid var(--rule); }
+  .toc a {
+    display: grid;
+    grid-template-columns: 26px 1fr;
+    gap: 8px;
+    align-items: baseline;
+    padding: 9px 4px;
+    text-decoration: none;
+    color: var(--ink-soft);
+    font-size: 14px;
+    line-height: 1.4;
+  }
+  .toc a .n { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); }
+  .toc a:hover { color: var(--accent); }
+  .toc a:hover .n { color: var(--accent); }
+  .toc a.current { color: var(--accent); font-weight: 600; }
+  .toc a.current .n { color: var(--accent); }
+  .toc a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .toc .legal { margin-top: 16px; font-size: 13px; }
+
+  /* ---------- 內文 ---------- */
+  .content { min-width: 0; }
+  section.step-section {
+    padding-bottom: 40px;
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--rule);
+    scroll-margin-top: 20px;
+  }
+  section.step-section:last-child { border-bottom: 0; }
+  section h2.sec-title {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(24px, 3.4vw, 30px);
+    line-height: 1.2;
+    margin: 0 0 8px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: baseline;
+    text-wrap: balance;
+  }
+  section h2 .num {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .lead { color: var(--ink-soft); margin: 0 0 18px; max-width: 64ch; }
+
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 20px; align-items: center; }
+  .chips .chip-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-right: 2px;
+  }
+  .chip {
+    font-size: 12.5px;
+    padding: 3px 10px;
+    border-radius: 6px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+
+  .steps-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 8px;
+  }
+  ol.steps { counter-reset: s; list-style: none; margin: 0 0 22px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  ol.steps li {
+    counter-increment: s;
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 12px;
+    max-width: 68ch;
+  }
+  ol.steps li::before {
+    content: counter(s, decimal-leading-zero);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    padding-top: 4px;
+  }
+  ul.plain { list-style: none; margin: 0 0 22px; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  ul.plain li {
+    display: grid;
+    grid-template-columns: 26px minmax(0, 1fr);
+    gap: 12px;
+    max-width: 68ch;
+  }
+  ul.plain li::before { content: "—"; font-family: var(--mono); font-size: 12px; color: var(--accent); padding-top: 4px; }
+
+  .tip {
+    background: var(--mark-soft);
+    border-left: 3px solid var(--mark);
+    padding: 14px 18px;
+    border-radius: 0 8px 8px 0;
+    max-width: 68ch;
+    margin: 0 0 22px;
+  }
+  .tip .k {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--mark);
+    display: block;
+    margin-bottom: 3px;
+  }
+  .tip p { margin: 0; font-size: 15px; }
+
+  figure {
+    margin: 0 0 22px;
+    background: var(--surface-sunk);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 14px;
+    max-width: 560px;
+  }
+  figure img { border-radius: 6px; border: 1px solid var(--rule); width: 100%; }
+  figcaption { font-size: 13px; color: var(--ink-soft); margin-top: 10px; line-height: 1.5; }
+  figcaption .shot-note {
+    display: block;
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--ink-faint);
+    margin-top: 4px;
+  }
+
+  dl.faq { margin: 0; display: flex; flex-direction: column; gap: 18px; max-width: 68ch; }
+  dl.faq dt { font-weight: 600; margin-bottom: 2px; }
+  dl.faq dd { margin: 0; color: var(--ink-soft); }
+
+  .back { font-family: var(--mono); font-size: 12px; text-decoration: none; }
+  .back:hover { text-decoration: underline; }
+
+  footer.page-foot {
+    border-top: 1px solid var(--rule);
+    margin-top: 10px;
+    padding-top: 18px;
+    font-size: 13px;
+    color: var(--ink-faint);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 20px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    html { scroll-behavior: smooth; }
+  }
+</style>
+
+<header class="masthead">
+  <div class="shell">
+    <p class="eyebrow">Kairumo</p>
+    <h1 id="doc-title"></h1>
+    <p class="tagline" id="doc-tagline"></p>
+    <p class="version" id="doc-version"></p>
+    <div class="langbar" id="langbar" role="group" aria-label="Language"></div>
+  </div>
+</header>
+
+<div class="layout">
+  <nav class="toc" id="toc" aria-label="Contents"></nav>
+  <main class="content" id="content"></main>
+</div>
+
+<script src="manual.js" charset="utf-8"></script>
+<script>
+  const PRIVACY_URL = "https://claude.ai/code/artifact/c9e37c83-b380-4eee-81ce-57e778cdf3e1";
+  const ORDER = ["zh-Hant", "en", "zh-Hans", "ja", "ko", "th"];
+  const STORE_KEY = "kairumo.manual.lang";
+  const M = window.KAIRUMO_MANUAL;
+
+  const pad = n => String(n).padStart(2, "0");
+  const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
+
+  function figure(figKey, caption, figset, note) {
+    const f = el("figure");
+    const img = el("img");
+    img.src = "img/" + figset + "_" + figKey + ".png";
+    img.alt = caption || "";
+    img.loading = "lazy";
+    f.appendChild(img);
+    const cap = el("figcaption");
+    cap.textContent = caption || "";
+    const n = el("span", "shot-note");
+    n.textContent = note;
+    cap.appendChild(n);
+    f.appendChild(cap);
+    return f;
+  }
+
+  function render(code) {
+    const d = M[code];
+    const ui = d.ui;
+    document.documentElement.lang = code;
+    document.title = ui.docTitle;
+    document.getElementById("doc-title").textContent = ui.docTitle;
+    document.getElementById("doc-tagline").textContent = ui.tagline;
+    document.getElementById("doc-version").textContent = ui.version;
+
+    // 目錄
+    const toc = document.getElementById("toc");
+    toc.innerHTML = "";
+    const th = el("h2"); th.textContent = ui.tocTitle; toc.appendChild(th);
+    const hint = el("p", "hint"); hint.textContent = ui.tocHint; toc.appendChild(hint);
+    const ol = el("ol");
+    d.sections.forEach((s, i) => {
+      const li = el("li");
+      const a = el("a");
+      a.href = "#" + s.id;
+      a.innerHTML = '<span class="n">' + pad(i + 1) + "</span><span>" + s.title + "</span>";
+      li.appendChild(a);
+      ol.appendChild(li);
+    });
+    toc.appendChild(ol);
+    const legal = el("p", "legal");
+    const pl = el("a");
+    pl.href = PRIVACY_URL;
+    pl.target = "_blank";
+    pl.rel = "noopener";
+    pl.textContent = ui.privacyLink + " →";
+    legal.appendChild(pl);
+    toc.appendChild(legal);
+
+    // 內文
+    const content = document.getElementById("content");
+    content.innerHTML = "";
+    d.sections.forEach((s, i) => {
+      const sec = el("section", "step-section");
+      sec.id = s.id;
+
+      const h = el("h2", "sec-title");
+      h.innerHTML = '<span class="num">' + pad(i + 1) + "</span><span>" + s.title + "</span>";
+      sec.appendChild(h);
+
+      if (s.lead) { const p = el("p", "lead"); p.textContent = s.lead; sec.appendChild(p); }
+
+      if (s.buttons && s.buttons.length) {
+        const chips = el("div", "chips");
+        const lab = el("span", "chip-label"); lab.textContent = ui.buttonsLabel; chips.appendChild(lab);
+        s.buttons.forEach(b => { const c = el("span", "chip"); c.textContent = b; chips.appendChild(c); });
+        sec.appendChild(chips);
+      }
+
+      if (s.steps && s.steps.length) {
+        const lab = el("p", "steps-label"); lab.textContent = ui.stepsLabel; sec.appendChild(lab);
+        // 有明確先後順序的用編號，純說明用破折號
+        const ordered = s.id !== "home" && s.id !== "start" && s.id !== "editor";
+        const list = el(ordered ? "ol" : "ul", ordered ? "steps" : "plain");
+        s.steps.forEach(t => { const li = el("li"); const sp = el("span"); sp.textContent = t; li.appendChild(sp); list.appendChild(li); });
+        sec.appendChild(list);
+      }
+
+      if (s.fig) sec.appendChild(figure(s.fig, s.cap, d.figset, ui.figNote));
+      if (s.fig2) sec.appendChild(figure(s.fig2, s.cap2, d.figset, ui.figNote));
+
+      if (s.tip) {
+        const t = el("div", "tip");
+        const k = el("span", "k"); k.textContent = ui.tipLabel;
+        const p = el("p"); p.textContent = s.tip;
+        t.appendChild(k); t.appendChild(p);
+        sec.appendChild(t);
+      }
+
+      if (s.faq) {
+        const dl = el("dl", "faq");
+        s.faq.forEach(([q, a]) => {
+          const dt = el("dt"); dt.textContent = q;
+          const dd = el("dd"); dd.textContent = a;
+          dl.appendChild(dt); dl.appendChild(dd);
+        });
+        sec.appendChild(dl);
+      }
+
+      const back = el("a", "back");
+      back.href = "#" + d.sections[0].id;
+      back.textContent = "↑ " + ui.backToTop;
+      sec.appendChild(back);
+
+      content.appendChild(sec);
+    });
+
+    const foot = el("footer", "page-foot");
+    const f1 = el("span"); f1.textContent = ui.version;
+    const f2 = el("a"); f2.href = PRIVACY_URL; f2.target = "_blank"; f2.rel = "noopener"; f2.textContent = ui.privacyLink;
+    foot.appendChild(f1); foot.appendChild(f2);
+    content.appendChild(foot);
+
+    document.querySelectorAll("#langbar button").forEach(b => {
+      b.setAttribute("aria-pressed", String(b.dataset.code === code));
+    });
+    try { localStorage.setItem(STORE_KEY, code); } catch (e) { /* 私密視窗會擋，忽略 */ }
+    observeSections();
+  }
+
+  // 目錄跟著閱讀位置highlight
+  let observer = null;
+  function observeSections() {
+    if (observer) observer.disconnect();
+    const links = new Map();
+    document.querySelectorAll("#toc a[href^='#']").forEach(a => links.set(a.getAttribute("href").slice(1), a));
+    observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          links.forEach(a => a.classList.remove("current"));
+          const a = links.get(e.target.id);
+          if (a) a.classList.add("current");
+        }
+      });
+    }, { rootMargin: "-10% 0px -75% 0px", threshold: 0 });
+    document.querySelectorAll("section.step-section").forEach(s => observer.observe(s));
+  }
+
+  const bar = document.getElementById("langbar");
+  ORDER.forEach(code => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.dataset.code = code;
+    b.textContent = M[code].name;
+    b.addEventListener("click", () => render(code));
+    bar.appendChild(b);
+  });
+
+  let initial = "zh-Hant";
+  try {
+    const saved = localStorage.getItem(STORE_KEY);
+    if (saved && M[saved]) initial = saved;
+    else {
+      const nav = (navigator.language || "").toLowerCase();
+      if (nav.startsWith("en")) initial = "en";
+      else if (nav.startsWith("ja")) initial = "ja";
+      else if (nav.startsWith("ko")) initial = "ko";
+      else if (nav.startsWith("th")) initial = "th";
+      else if (nav.includes("hans") || nav === "zh-cn") initial = "zh-Hans";
+    }
+  } catch (e) { /* ignore */ }
+  render(initial);
+</script>
