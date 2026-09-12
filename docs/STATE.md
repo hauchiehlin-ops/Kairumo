@@ -69,6 +69,13 @@ Padnote —— 手寫、打字、錄音轉文字三合一的筆記 App。
 | `roadmap.md` | 要知道階段與 Go 門檻 |
 | `adr/` | 想知道某個決策的理由 |
 
+## ⚠️ 目前唯一的阻擋項
+
+**D-07：Paraformer-zh / ct-punc 的授權決策。**
+官方 HF repo 有完整 Apache-2.0 LICENSE 檔，但 FunASR GitHub 的 MODEL_LICENSE
+v1.1 寫「僅供參考與學習」。**影響 P0 功能 C5 中文標點還原。**
+四個選項與建議見 `models/LICENSE-AUDIT.md` §5 —— 需要專案擁有者拍板。
+
 ## 目前進度一句話
 
 M0 工程地基完成（S3 同步收斂、S4 授權稽核已 Go）；核心邏輯層 11 個 crate、

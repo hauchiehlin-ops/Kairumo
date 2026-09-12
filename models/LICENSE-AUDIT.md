@@ -1,0 +1,100 @@
+# 模型權重授權稽核
+
+> 日期：2026-09-12　|　對應 `docs/TODO.md` H3、決策 D6
+> **免責**：以下是工程稽核，不是法律意見。有商業風險的項目已標明，需由專案擁有者決定。
+
+---
+
+## 1. 結論摘要
+
+| 模型 | 權重授權 | 可用於 Padnote？ |
+|---|---|---|
+| `silero-vad-v4` | MIT | ✅ **已採用**（S-26） |
+| `whisper-large-v3-turbo` | MIT | ✅ 可用 |
+| `ppocr-v5` | Apache-2.0 | ✅ 可用 |
+| `qwen3-4b-instruct` | Apache-2.0 | ✅ 可用 |
+| `paraformer-zh` | ⚠️ **雙通路衝突** | ⚠️ **待決策 D-07** |
+| `ct-punc`（中文標點） | ⚠️ **同上** | ⚠️ **待決策 D-07** |
+| `sensevoice-small` | ❌ FunASR Model License v1.1 | ❌ **不採用** |
+| speaker-diarization | 未確認 | ⏸️ 延後（P2） |
+
+---
+
+## 2. Paraformer-zh 與 ct-punc 的雙通路衝突 ★核心問題★
+
+同一份權重，經由兩個通路散布，授權條款**不一致**：
+
+### 通路 A：HuggingFace `funasr/*`（官方組織）
+- `funasr/paraformer-zh`、`funasr/paraformer-zh-streaming`、`funasr/ct-punc`
+- metadata 標記 `license: apache-2.0`
+- **repo 內含完整的 Apache-2.0 LICENSE 檔案**（不只是標籤）
+- README 明文：「This repository publishes the model weights and accompanying
+  files under the Apache License 2.0, unless an individual file carries a
+  different notice.」
+
+### 通路 B：FunASR GitHub 的 `MODEL_LICENSE`
+「FunASR Model Open Source License Agreement, Version 1.1」，關鍵條款：
+- 授予使用、複製、修改、分享的權利，但限定 **"for reference and learning
+  purposes only"（僅供參考與學習使用）**
+- 必須標註來源與作者，保留模型名稱
+- 含「不得無理詆毀、惡意抹黑」條款，違反者**授權自動終止**
+
+### 判讀
+- 著作權人在自己的 HF repo 放上完整 Apache-2.0 授權檔，是明確的授權讓與。
+  同一權利人本來就可以對不同通路採不同授權（雙重授權是常見做法）。
+- 但通路 B 的「僅供參考與學習」若被主張適用，商業／產品使用就有疑義。
+- 「不得詆毀 + 自動終止」**不是 OSI 認可的開源授權**，與專案宣稱的
+  「全開源」定位不一致（見 `features.md` §4 賣點 3、4）。
+
+### ⚠️ 另一層：ONNX 從哪來
+官方 `funasr/*` repo **只有 PyTorch 權重（`model.pt`），沒有 ONNX**。
+目前 manifest 指向的是 `csukuangfj/sherpa-onnx-*` 的第三方轉換版，
+該 repo 自行宣告 `apache-2.0`。Apache-2.0 允許衍生作品，但 provenance
+多了一層：轉換者的宣告不能高於上游授予的權利。
+
+**若要 provenance 完全乾淨**：從 `funasr/*` 取 `model.pt`，用 FunASR 的匯出
+腳本自行產生 ONNX，並保留匯出紀錄。成本是多一條建置流程。
+
+---
+
+## 3. SenseVoice-Small —— 不採用
+
+- 權重走 **FunASR Model License v1.1**，非 Apache-2.0
+- 社群開的商用釐清 issue（[FunAudioLLM/SenseVoice#279](https://github.com/FunAudioLLM/SenseVoice/issues/279)，
+  2026-01-16）詢問「付費 App 可否使用」，**至今無維護者回覆**
+- 「不得詆毀 + 自動終止」條款不符合專案的開源定位
+
+**替代方案**：C9（中英夾雜）改用 `whisper-large-v3-turbo`（MIT）。
+Whisper 原生支援 code-switching，品質待 H2 測試集實測，但授權完全乾淨。
+
+---
+
+## 4. 已確認可用的項目
+
+| 模型 | 授權 | 驗證方式 |
+|---|---|---|
+| `silero-vad-v4` | MIT | 實際下載，雜湊 `a35ebf52…` 已記入 manifest |
+| `whisper-large-v3-turbo` | MIT | whisper.cpp 與 Whisper 權重皆為 MIT |
+| `ppocr-v5` | Apache-2.0 | PaddleOCR 專案授權 |
+| `qwen3-4b-instruct` | Apache-2.0 | Qwen3 系列採 Apache-2.0 |
+
+---
+
+## 5. 待決策：D-07
+
+> **是否採用 Paraformer-zh 與 ct-punc？**
+
+| 選項 | 優 | 劣 |
+|---|---|---|
+| **A. 不採用** | 授權零風險，全線 MIT/Apache | 中文 ASR 只能靠 Whisper；**失去中文標點還原（C5，P0 功能）** |
+| **B. 採用，用第三方 ONNX** | 成本最低，立刻可整合 | provenance 多一層；通路 B 的疑義未解 |
+| **C. 採用，自行從官方權重匯出 ONNX** | provenance 乾淨，直接受 HF 的 Apache-2.0 LICENSE 涵蓋 | 多一條匯出流程；需 Python + FunASR 環境 |
+| **D. 先寄信詢問 FunASR 團隊** | 得到明確答覆最保險 | 等待時間不可控（SenseVoice 的 issue 等了數月無回應） |
+
+**工程上的建議：C**。官方 repo 的 Apache-2.0 LICENSE 檔是最強的授權依據，
+自行匯出讓整條鏈都落在那份授權底下。但這是**帶法律性質的判斷，應由專案擁有者決定**。
+
+### ⚠️ C5 是 P0 功能
+中文標點還原（`features.md` C5）被列為 **P0 —— 中文轉錄沒有標點等於沒用**。
+若選 A，需要另找開源的中文標點模型，或接受無標點的轉錄品質。
+這個影響必須在決策時一併考慮。

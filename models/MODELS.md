@@ -3,6 +3,10 @@
 > 決策 D4：模型按需下載，託管於 Hugging Face / GitHub Releases，SHA-256 驗證 + 斷點續傳。
 > 決策 D6：**程式碼授權與模型權重授權不同，必須分別確認**。每次升級模型須重審本表。
 
+> 📋 **完整稽核與判讀見 [`LICENSE-AUDIT.md`](LICENSE-AUDIT.md)。**
+> 其中 Paraformer-zh / ct-punc 的雙通路授權衝突是目前唯一的阻擋項（D-07），
+> 且**影響 P0 功能 C5 中文標點還原**。
+
 ## 稽核狀態圖例
 - ✅ 已確認可商用/可自由散布
 - ⚠️ **待確認** —— M0/S4 工作項
@@ -13,10 +17,10 @@
 | 模型 | 用途 | 大小(約) | 程式碼授權 | **權重授權** | 狀態 |
 |---|---|---|---|---|---|
 | `whisper-large-v3-turbo` (q5_0, ggml) | 多語備援 | 800 MB | whisper.cpp MIT | MIT | ✅ |
-| `Paraformer-zh` | 中文主力、串流 | 220 MB | sherpa-onnx Apache-2.0 | ⚠️ 待確認 | ⚠️ |
-| `SenseVoice-Small` | 中英夾雜 (C9) | 470 MB | Apache-2.0 | ⚠️ 待確認 | ⚠️ |
-| `Silero VAD` | 語音端點偵測 | 2 MB | MIT | MIT | ✅ |
-| `CT-Transformer punc` | 中文標點還原 | 280 MB | Apache-2.0 | ⚠️ 待確認 | ⚠️ |
+| `Paraformer-zh` | 中文主力、串流 | 220 MB | sherpa-onnx Apache-2.0 | ⚠️ **雙通路衝突** | ⚠️ **待決策 D-07** |
+| ~~`SenseVoice-Small`~~ | ~~中英夾雜 (C9)~~ | — | — | ❌ FunASR Model License v1.1 | ❌ **已排除**，C9 改用 whisper-turbo |
+| `Silero VAD v4` | 語音端點偵測 | 1.8 MB | MIT | **MIT（已驗證）** | ✅ **已採用** |
+| `CT-Transformer punc` | 中文標點還原 | 280 MB | Apache-2.0 | ⚠️ **雙通路衝突** | ⚠️ **待決策 D-07** |
 | speaker-diarization (C8) | 語者分離 | 90 MB | sherpa-onnx Apache-2.0 | ⚠️ **高風險**，pyannote 系模型條款嚴格 | ⚠️ |
 
 ## OCR 與手寫辨識

@@ -21,19 +21,9 @@
       "url": "https://huggingface.co/csukuangfj/sherpa-onnx-streaming-paraformer-bilingual-zh-en/resolve/main/model.onnx",
       "sha256": "pending",
       "size_bytes": 230686720,
-      "license": "pending-review",
+      "license": "apache-2.0 (HF funasr/*) / 與 GitHub MODEL_LICENSE v1.1 衝突 — 見 models/LICENSE-AUDIT.md，待決策 D-07",
       "required_for": [
         "asr.zh"
-      ]
-    },
-    {
-      "id": "sensevoice-small",
-      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue/resolve/main/model.onnx",
-      "sha256": "pending",
-      "size_bytes": 492831744,
-      "license": "pending-review",
-      "required_for": [
-        "asr.codeswitch"
       ]
     },
     {
@@ -41,7 +31,7 @@
       "url": "https://huggingface.co/csukuangfj/sherpa-onnx-punct-ct-transformer/resolve/main/model.onnx",
       "sha256": "pending",
       "size_bytes": 293601280,
-      "license": "pending-review",
+      "license": "apache-2.0 (HF funasr/*) / 與 GitHub MODEL_LICENSE v1.1 衝突 — 見 models/LICENSE-AUDIT.md，待決策 D-07",
       "required_for": [
         "asr.zh"
       ]
@@ -53,7 +43,8 @@
       "size_bytes": 574041600,
       "license": "MIT",
       "required_for": [
-        "asr.multilingual"
+        "asr.multilingual",
+        "asr.codeswitch"
       ]
     },
     {

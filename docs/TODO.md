@@ -25,7 +25,11 @@
 - **卡在**：需人工逐一查閱模型發布頁的授權條款
 - ✅ **已確認**：silero-vad-v4（MIT，URL 與雜湊皆經實際下載驗證）、
   whisper-large-v3-turbo（MIT）、ppocr-v5（Apache-2.0）、qwen3-4b（Apache-2.0）
-- **待確認**：Paraformer-zh、SenseVoice-Small、CT-Transformer punc、speaker-diarization
+- ❌ **已排除**：SenseVoice-Small（FunASR Model License v1.1，非 OSI 開源；
+  商用釐清 issue 數月無回覆）。C9 中英夾雜改由 whisper-turbo 承擔
+- ⚠️ **雙通路衝突**：Paraformer-zh 與 ct-punc → **待決策 D-07**
+- ⏸️ **延後**：speaker-diarization（P2）
+- **完整稽核**：`models/LICENSE-AUDIT.md`
 - ⚠️ **另一個教訓**：原本 silero 的 HuggingFace URL 需要登入，`curl` 只拿到
   29 bytes 的 "Invalid username or password"。**清單裡沒被驗證過的 URL 等於沒有**
 - **高風險**：語者分離模型（pyannote 系條款嚴格）
@@ -116,3 +120,4 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | D-04 | 自訂筆（`tool_id` 100+）的參數序列化格式 | |
 | D-05 | 長期維護與營收模式 | 全免費無後端 ⇒ 無營收；捐贈？桌面版買斷？ |
 | D-06 | 多裝置金鑰首次配對的 UX | QR code 傳遞 DEK 的具體流程 |
+| **D-07** | **是否採用 Paraformer-zh 與 ct-punc？** | 官方 HF repo 有完整 Apache-2.0 LICENSE 檔，但 FunASR GitHub 的 MODEL_LICENSE v1.1 寫「僅供參考與學習」且含不得詆毀/自動終止條款。**影響 P0 功能 C5 中文標點還原**。四個選項與建議見 `models/LICENSE-AUDIT.md` §5 |
