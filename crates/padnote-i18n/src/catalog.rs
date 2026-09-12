@@ -59,6 +59,8 @@ pub enum Key {
     ImportWillLoseFeatures,
     OriginalFilePreserved,
     HandwritingOnlyInPdf,
+    // ---- 資訊與首頁 ----
+    Version,
 }
 
 /// 取得字串。
@@ -287,12 +289,20 @@ const fn entry(key: Key) -> [&'static str; LOCALE_COUNT] {
             "ไฟล์ต้นฉบับจะถูกเก็บไว้และสามารถกู้คืนได้",
         ],
         Key::HandwritingOnlyInPdf => [
-            "Handwriting is only included in PDF export",
-            "手寫內容僅包含於 PDF 匯出",
-            "手写内容仅包含于 PDF 导出",
-            "手書きは PDF 書き出しのみに含まれます",
-            "손글씨는 PDF 내보내기에만 포함됩니다",
-            "ลายมือจะรวมอยู่ในการส่งออก PDF เท่านั้น",
+            "Handwriting is only visible when exported as PDF",
+            "手寫筆跡僅在匯出為 PDF 時可見",
+            "手写笔迹仅在导出为 PDF 时可见",
+            "手書きはPDFとして書き出す場合のみ表示されます",
+            "손글씨는 PDF로 내보낼 때만 표시됩니다",
+            "ลายมือเขียนจะมองเห็นได้เมื่อส่งออกเป็น PDF เท่านั้น",
+        ],
+        Key::Version => [
+            "Version",
+            "版本",
+            "版本",
+            "バージョン",
+            "버전",
+            "เวอร์ชัน",
         ],
     }
 }
@@ -343,6 +353,7 @@ pub const ALL_KEYS: &[Key] = &[
     Key::ImportWillLoseFeatures,
     Key::OriginalFilePreserved,
     Key::HandwritingOnlyInPdf,
+    Key::Version,
 ];
 
 #[cfg(test)]
@@ -437,7 +448,7 @@ mod tests {
         // 這裡以數量作為近似檢查。
         assert_eq!(
             ALL_KEYS.len(),
-            44,
+            45,
             "新增 Key 後請一併更新 ALL_KEYS 與此數字"
         );
     }

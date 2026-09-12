@@ -80,6 +80,14 @@ pub fn locale_for_tag(tag: String) -> FfiLocale {
     Locale::from_tag_or_default(&tag).into()
 }
 
+/// 首頁與工作台版本顯示文字，依照指定語言回傳。
+/// 例如繁中為 "版本 0.1.4"，英文為 "Version 0.1.4"。
+#[uniffi::export]
+pub fn localized_version_string(locale: FfiLocale) -> String {
+    let label = catalog::text(catalog::Key::Version, locale.into());
+    format!("{} {}", label, env!("CARGO_PKG_VERSION"))
+}
+
 /// 一組已在地化的按鈕文字。
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct FfiToolInfo {
@@ -420,5 +428,16 @@ mod tests {
         // 泰文標籤明顯比英文長，預設開文字會爆版。
         assert!(!FfiToolbar::new(FfiLocale::Thai).show_labels());
         assert!(FfiToolbar::new(FfiLocale::English).show_labels());
+    }
+
+    #[test]
+    fn localized_version_string_matches_locale() {
+        let en = localized_version_string(FfiLocale::English);
+        assert!(en.starts_with("Version "), "英文應以 Version 開頭，實得：{en}");
+        assert!(en.contains(env!("CARGO_PKG_VERSION")));
+
+        let zh = localized_version_string(FfiLocale::TraditionalChinese);
+        assert!(zh.starts_with("版本 "), "繁中應以 版本 開頭，實得：{zh}");
+        assert!(zh.contains(env!("CARGO_PKG_VERSION")));
     }
 }

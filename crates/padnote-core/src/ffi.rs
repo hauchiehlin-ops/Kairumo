@@ -206,6 +206,39 @@ pub struct FeatureStatus {
     pub explanation: String,
 }
 
+// ---- 應用程式與核心版本資訊 ----
+
+/// 核心引擎與套件版本號（例如 "0.1.4"），與 Cargo.toml 同步。
+#[uniffi::export]
+pub fn core_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
+/// 應用程式基本資訊，供各平台首頁、關於頁與診斷中心使用。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct AppInfo {
+    pub name: String,
+    pub version: String,
+    pub build_profile: String,
+    pub target_os: String,
+    pub target_arch: String,
+}
+
+#[uniffi::export]
+pub fn app_info() -> AppInfo {
+    AppInfo {
+        name: "Kairumo".to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        build_profile: if cfg!(debug_assertions) {
+            "debug".to_string()
+        } else {
+            "release".to_string()
+        },
+        target_os: std::env::consts::OS.to_string(),
+        target_arch: std::env::consts::ARCH.to_string(),
+    }
+}
+
 // ---- Session ----
 
 /// 一個開啟中的筆記本。各平台持有它的參照。
@@ -275,6 +308,11 @@ impl PadnoteSession {
     pub fn set_title(&self, title: String) -> Result<(), FfiError> {
         self.lock().set_title(&title)?;
         Ok(())
+    }
+
+    /// 取得核心引擎版本號。
+    pub fn version(&self) -> String {
+        core_version()
     }
 
     // ---- 手寫 ----
