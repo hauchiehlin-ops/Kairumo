@@ -395,3 +395,188 @@ mod tests {
         );
     }
 }
+
+/// 串流特徵前端：跨呼叫維持 fbank 與 LFR 的邊界狀態。
+///
+/// 分塊處理有兩個接縫會出錯，兩個都必須用狀態接起來：
+///
+/// 1. **fbank 的幀邊界**：一幀 400 樣本、步長 160。塊尾不足一幀的樣本
+///    若直接丟棄，每個塊邊界都會損失最多 2.4 個幀的音訊。
+/// 2. **LFR 的堆疊邊界**：LFR 要看 7 個連續 fbank 幀。塊首若沒有前一塊的
+///    尾巴，每個邊界會少堆疊出一幀。
+#[derive(Debug)]
+pub struct StreamingFrontend {
+    extractor: FbankExtractor,
+    /// 尚未構成完整一幀的 PCM 尾巴。
+    pcm_tail: Vec<f32>,
+    /// 供下一塊 LFR 堆疊用的 fbank 幀尾巴。
+    frame_tail: Vec<Vec<f32>>,
+    /// 是否為第一塊（只有第一塊要做左側補齊）。
+    started: bool,
+}
+
+impl Default for StreamingFrontend {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl StreamingFrontend {
+    pub fn new() -> Self {
+        Self {
+            extractor: FbankExtractor::new(),
+            pcm_tail: Vec::new(),
+            frame_tail: Vec::new(),
+            started: false,
+        }
+    }
+
+    pub fn reset(&mut self) {
+        self.pcm_tail.clear();
+        self.frame_tail.clear();
+        self.started = false;
+    }
+
+    /// 餵入一塊 PCM，回傳這塊產生的 LFR 特徵。
+    pub fn push(&mut self, pcm: &[f32]) -> Vec<Vec<f32>> {
+        let mut buf = std::mem::take(&mut self.pcm_tail);
+        buf.extend_from_slice(pcm);
+
+        let frames = self.extractor.compute(&buf);
+        // 保留未被完整幀消耗的樣本，讓下一塊接得上。
+        let consumed = FbankExtractor::num_frames(buf.len()) * FRAME_SHIFT;
+        self.pcm_tail = buf[consumed.min(buf.len())..].to_vec();
+
+        if frames.is_empty() {
+            return Vec::new();
+        }
+
+        // 把上一塊的尾巴接在前面，讓 LFR 能跨塊堆疊。
+        let mut all = std::mem::take(&mut self.frame_tail);
+        let carried = all.len();
+        all.extend(frames);
+
+        // 保留最後 LFR_M-1 幀給下一塊
+        let keep = (LFR_M - 1).min(all.len());
+        self.frame_tail = all[all.len() - keep..].to_vec();
+
+        let lfr = if self.started {
+            // 非第一塊：不做左側補齊，且要跳過由 carried 幀重複產生的部分。
+            lfr_without_padding(&all)
+        } else {
+            self.started = true;
+            apply_lfr(&all)
+        };
+
+        // carried 幀已經在上一塊輸出過，對應的 LFR 幀要跳掉。
+        let skip = carried / LFR_N;
+        lfr.into_iter().skip(skip).collect()
+    }
+
+    /// 錄音結束：沖出殘餘。
+    pub fn finish(&mut self) -> Vec<Vec<f32>> {
+        let tail = std::mem::take(&mut self.pcm_tail);
+        self.frame_tail.clear();
+        if tail.len() < FRAME_LENGTH {
+            return Vec::new();
+        }
+        let frames = self.extractor.compute(&tail);
+        apply_lfr(&frames)
+    }
+}
+
+/// 不做左側補齊的 LFR（串流的非首塊使用）。
+fn lfr_without_padding(frames: &[Vec<f32>]) -> Vec<Vec<f32>> {
+    if frames.is_empty() {
+        return Vec::new();
+    }
+    let count = frames.len().div_ceil(LFR_N);
+    (0..count)
+        .map(|i| {
+            let mut row = Vec::with_capacity(FEATURE_DIM);
+            for j in 0..LFR_M {
+                row.extend_from_slice(&frames[(i * LFR_N + j).min(frames.len() - 1)]);
+            }
+            row
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod streaming_tests {
+    use super::*;
+
+    fn noise(n: usize, seed: u64) -> Vec<f32> {
+        let mut x = seed;
+        (0..n)
+            .map(|_| {
+                x ^= x << 13;
+                x ^= x >> 7;
+                x ^= x << 17;
+                (x as f32 / u64::MAX as f32 - 0.5) * 0.6
+            })
+            .collect()
+    }
+
+    #[test]
+    fn partial_frames_are_carried_across_chunks() {
+        // 塊尾不足一幀的樣本若丟棄，每個邊界會損失音訊。
+        let mut fe = StreamingFrontend::new();
+        let pcm = noise(500, 7);
+
+        fe.push(&pcm[..450]);
+        let tail_before = fe.pcm_tail.len();
+        assert!(tail_before > 0, "應保留不足一幀的尾巴");
+
+        fe.push(&pcm[450..]);
+        assert!(fe.pcm_tail.len() < 500, "尾巴不該無限增長");
+    }
+
+    #[test]
+    fn chunked_feature_count_approximates_whole() {
+        // 分塊與整段的特徵幀數應該接近；差太多代表接縫處掉了東西。
+        let pcm = noise(16_000, 11);
+
+        let whole = apply_lfr(&FbankExtractor::new().compute(&pcm)).len();
+
+        let mut fe = StreamingFrontend::new();
+        let mut streamed = 0;
+        for chunk in pcm.chunks(1_600) {
+            streamed += fe.push(chunk).len();
+        }
+        streamed += fe.finish().len();
+
+        let diff = whole.abs_diff(streamed);
+        assert!(
+            diff * 5 <= whole,
+            "分塊 {streamed} 與整段 {whole} 差異過大（{diff}）"
+        );
+    }
+
+    #[test]
+    fn feature_dimension_is_stable() {
+        let mut fe = StreamingFrontend::new();
+        for chunk in noise(9_600, 3).chunks(3_200) {
+            for row in fe.push(chunk) {
+                assert_eq!(row.len(), FEATURE_DIM);
+            }
+        }
+    }
+
+    #[test]
+    fn reset_clears_all_boundary_state() {
+        let mut fe = StreamingFrontend::new();
+        fe.push(&noise(1_000, 5));
+        fe.reset();
+        assert!(fe.pcm_tail.is_empty());
+        assert!(fe.frame_tail.is_empty());
+        assert!(!fe.started);
+    }
+
+    #[test]
+    fn empty_chunks_are_harmless() {
+        let mut fe = StreamingFrontend::new();
+        assert!(fe.push(&[]).is_empty());
+        assert!(fe.finish().is_empty());
+    }
+}

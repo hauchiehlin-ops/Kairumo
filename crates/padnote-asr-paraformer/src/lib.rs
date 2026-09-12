@@ -45,6 +45,6 @@ pub mod cif;
 pub mod engine;
 pub mod frontend;
 
-pub use cif::{CifOutput, cif};
+pub use cif::{CifOutput, CifState, cif};
 pub use engine::{ParaformerEngine, ParaformerError};
-pub use frontend::{Cmvn, FbankExtractor, apply_lfr};
+pub use frontend::{Cmvn, FbankExtractor, StreamingFrontend, apply_lfr};

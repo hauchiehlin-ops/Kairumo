@@ -55,8 +55,7 @@ fn read_wav_16k(path: &std::path::Path) -> Option<Vec<f32>> {
 
 fn transcribe_whole(pcm: &[f32]) -> String {
     let mut e = ParaformerEngine::load(&ModelPaths::in_dir(model_dir().unwrap())).unwrap();
-    // 匯出的 encoder 是整段式的（沒有 cache 輸入），必須整段處理。
-    e.set_chunk_samples(usize::MAX);
+    // 預設即整段處理：feed 只累積，finish 才辨識。
     e.feed(pcm).unwrap();
     e.finish().unwrap().into_iter().map(|s| s.text).collect()
 }

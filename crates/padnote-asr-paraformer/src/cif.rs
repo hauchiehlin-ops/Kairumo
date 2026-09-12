@@ -93,6 +93,81 @@ pub fn cif(hidden: &[Vec<f32>], alphas: &[f32]) -> CifOutput {
     }
 }
 
+/// 跨呼叫保留的 CIF 狀態（串流用）。
+///
+/// 沒有這個狀態，每個音訊塊都從 `integrate = 0` 重新開始：
+/// 跨塊邊界的字會被切斷，累積量不足門檻的部分直接消失。
+/// 實測會產生漏字與重複。
+#[derive(Debug, Clone, Default)]
+pub struct CifState {
+    integrate: f32,
+    accumulator: Vec<f32>,
+}
+
+impl CifState {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// 清除狀態。新的一段語音開始時呼叫。
+    pub fn reset(&mut self) {
+        self.integrate = 0.0;
+        self.accumulator.clear();
+    }
+
+    /// 目前累積但尚未發射的量。用於判斷是否還有半個字懸在邊界上。
+    pub fn pending(&self) -> f32 {
+        self.integrate
+    }
+
+    /// 處理一塊，保留跨塊狀態。
+    pub fn step(&mut self, hidden: &[Vec<f32>], alphas: &[f32]) -> CifOutput {
+        let frames = hidden.len().min(alphas.len());
+        if frames == 0 {
+            return CifOutput {
+                embeddings: Vec::new(),
+                frame_indices: Vec::new(),
+            };
+        }
+        let dim = hidden[0].len();
+        if self.accumulator.len() != dim {
+            self.accumulator = vec![0.0; dim];
+        }
+
+        let mut embeddings = Vec::new();
+        let mut frame_indices = Vec::new();
+
+        for t in 0..frames {
+            let alpha = alphas[t];
+            let completion = THRESHOLD - self.integrate;
+            self.integrate += alpha;
+
+            if self.integrate >= THRESHOLD {
+                for (a, h) in self.accumulator.iter_mut().zip(&hidden[t]) {
+                    *a += completion * h;
+                }
+                embeddings.push(std::mem::replace(&mut self.accumulator, vec![0.0; dim]));
+                frame_indices.push(t);
+
+                self.integrate -= THRESHOLD;
+                let remainder = alpha - completion;
+                for (a, h) in self.accumulator.iter_mut().zip(&hidden[t]) {
+                    *a = remainder * h;
+                }
+            } else {
+                for (a, h) in self.accumulator.iter_mut().zip(&hidden[t]) {
+                    *a += alpha * h;
+                }
+            }
+        }
+
+        CifOutput {
+            embeddings,
+            frame_indices,
+        }
+    }
+}
+
 /// 依 `alphas` 預估 token 數，不實際計算嵌入。
 ///
 /// 用於在解碼前判斷這段音訊值不值得送進 decoder ——
@@ -228,6 +303,48 @@ mod tests {
         // 預估為 0 就可以跳過 decoder，省下一次推論。
         assert_eq!(estimate_token_count(&[0.01; 50]), 0);
         assert_eq!(estimate_token_count(&[]), 0);
+    }
+
+    #[test]
+    fn streaming_state_matches_processing_everything_at_once() {
+        // 串流的正確性判準：分塊處理的結果必須等同整段處理。
+        let alphas: Vec<f32> = vec![0.3, 0.5, 0.4, 0.2, 0.7, 0.6, 0.3, 0.5];
+        let h = frames(alphas.len());
+
+        let whole = cif(&h, &alphas);
+
+        let mut state = CifState::new();
+        let mut streamed = Vec::new();
+        for (hc, ac) in h.chunks(3).zip(alphas.chunks(3)) {
+            streamed.extend(state.step(hc, ac).embeddings);
+        }
+
+        assert_eq!(streamed.len(), whole.len(), "分塊與整段的 token 數必須相同");
+        for (a, b) in streamed.iter().zip(&whole.embeddings) {
+            for (x, y) in a.iter().zip(b) {
+                assert!((x - y).abs() < 1e-5, "嵌入內容不一致");
+            }
+        }
+    }
+
+    #[test]
+    fn state_carries_partial_accumulation_across_chunks() {
+        // 沒有跨塊狀態的話，邊界上累積不足門檻的部分會直接消失。
+        let mut state = CifState::new();
+        let out = state.step(&frames(2), &[0.4, 0.4]);
+        assert!(out.is_empty(), "尚未達門檻");
+        assert!((state.pending() - 0.8).abs() < 1e-6, "累積量必須保留");
+
+        let out = state.step(&frames(1), &[0.5]);
+        assert_eq!(out.len(), 1, "下一塊應接續發射");
+    }
+
+    #[test]
+    fn reset_clears_streaming_state() {
+        let mut state = CifState::new();
+        state.step(&frames(2), &[0.4, 0.4]);
+        state.reset();
+        assert_eq!(state.pending(), 0.0);
     }
 
     #[test]

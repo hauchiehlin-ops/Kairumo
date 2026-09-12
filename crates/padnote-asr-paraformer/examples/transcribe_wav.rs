@@ -60,7 +60,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mode = std::env::args().nth(3).unwrap_or_else(|| "whole".into());
 
     let mut text = String::new();
+    if let Some(n) = std::env::args().nth(4).and_then(|s| s.parse().ok()) {
+        engine.set_context_frames(n);
+    }
+
     if mode == "chunked" {
+        engine.enable_experimental_frame_streaming();
         // 每 100 ms 餵一次
         for chunk in pcm.chunks(1_600) {
             for seg in engine.feed(chunk)? {
@@ -68,8 +73,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
     } else {
-        // 整段一次處理：匯出的 encoder 沒有 cache 輸入，屬整段式模型
-        engine.set_chunk_samples(usize::MAX);
+        // 整段一次處理（預設行為）
         engine.feed(&pcm)?;
     }
     for seg in engine.finish()? {

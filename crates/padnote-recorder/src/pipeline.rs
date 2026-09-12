@@ -16,8 +16,16 @@ const HANGOVER_MS: u32 = 400;
 
 /// 語音段的長度上限。
 ///
-/// 沒有這個上限，連續講話會讓首字延遲無限增長，違反 C2 的「≤2 秒部分結果」。
-const MAX_SEGMENT_MS: u32 = 8_000;
+/// 這個值直接決定**轉錄延遲**：ASR 是段級處理（見 `padnote-asr-paraformer`
+/// 的說明），文字要等整段結束才出得來。連續講話時，使用者最久要等這麼久。
+///
+/// 取捨：
+/// - 太長 → 延遲高，違反 C2 的「≤2 秒部分結果」
+/// - 太短 → ASR 看到的上下文少，辨識品質下降
+///
+/// 5 秒是折衷值。⚠️ **真正的甜蜜點要用 `padnote-bench` 的中文測試集
+/// 實測不同長度的 CER 後決定**（TODO H2）。
+const MAX_SEGMENT_MS: u32 = 5_000;
 
 /// 佇列上限（段數）。超過代表 ASR 跟不上錄音速度。
 const QUEUE_CAPACITY: usize = 64;
@@ -120,6 +128,11 @@ impl<W: Write> RecordingPipeline<W> {
     /// 待轉錄的音訊總時長。UI 用它顯示「轉錄落後 N 秒」。
     pub fn backlog_us(&self) -> u64 {
         self.queue.backlog_us()
+    }
+
+    /// 語音段的長度上限（微秒）。UI 可用它告訴使用者最久要等多久才看到文字。
+    pub fn max_segment_us() -> u64 {
+        u64::from(MAX_SEGMENT_MS) * 1_000
     }
 
     /// 餵入麥克風取樣。
