@@ -58,7 +58,7 @@ if [[ -z "$NEW_VERSION" ]]; then
 fi
 
 # 3. 準備提交
-git add Cargo.toml Cargo.lock
+git add -A
 
 # 如果工作目錄有其他已修改的檔案，一併加入提交
 if ! git diff --cached --quiet; then

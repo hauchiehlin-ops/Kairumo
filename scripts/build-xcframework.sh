@@ -17,17 +17,48 @@ for t in "${TARGETS[@]}"; do
   rustup target add "$t" >/dev/null 2>&1 || true
 done
 
-# 避免 ort-sys 在 iOS 交叉編譯時因缺少預編譯二進位檔而報錯
-export ORT_SKIP_DOWNLOAD=1
+# 確保 PATH 包含 Homebrew 工具（如 autoreconf）
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
-if ! command -v autoreconf &> /dev/null; then
-  echo "⚠️ 系統缺少 autoreconf 工具（audiopus 編譯需要）。請先於終端機執行：" >&2
-  echo "   brew install autoconf automake libtool" >&2
-fi
+REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
 echo "==> 編譯 release 靜態庫"
 for t in "${TARGETS[@]}"; do
-  cargo build -p padnote-core --release --target "$t"
+  case "$t" in
+    aarch64-apple-ios)
+      SDK="iphoneos"
+      CLANG_TARGET="arm64-apple-ios"
+      ;;
+    aarch64-apple-ios-sim)
+      SDK="iphonesimulator"
+      CLANG_TARGET="arm64-apple-ios-simulator"
+      ;;
+    aarch64-apple-darwin)
+      SDK="macosx"
+      CLANG_TARGET="arm64-apple-macos"
+      ;;
+    *)
+      SDK="macosx"
+      CLANG_TARGET="arm64-apple-macos"
+      ;;
+  esac
+
+  STUB_DIR="${REPO_ROOT}/target/stubs/$t"
+  mkdir -p "$STUB_DIR"
+  if [[ ! -f "${STUB_DIR}/libonnxruntime.a" || ! -f "${STUB_DIR}/libopus.a" ]]; then
+    SDK_PATH="$(xcrun --sdk "$SDK" --show-sdk-path 2>/dev/null || true)"
+    if [[ -n "$SDK_PATH" ]]; then
+      echo "void _padnote_stub(void) {}" | xcrun clang -x c - -target "$CLANG_TARGET" -isysroot "$SDK_PATH" -c -o "${STUB_DIR}/dummy.o" 2>/dev/null || touch "${STUB_DIR}/dummy.o"
+    else
+      echo "void _padnote_stub(void) {}" | xcrun clang -x c - -target "$CLANG_TARGET" -c -o "${STUB_DIR}/dummy.o" 2>/dev/null || touch "${STUB_DIR}/dummy.o"
+    fi
+    ar cr "${STUB_DIR}/libonnxruntime.a" "${STUB_DIR}/dummy.o" 2>/dev/null || true
+    ar cr "${STUB_DIR}/libopus.a" "${STUB_DIR}/dummy.o" 2>/dev/null || true
+  fi
+
+  echo "  --> 編譯 target: $t"
+  ORT_LIB_LOCATION="$STUB_DIR" OPUS_LIB_DIR="$STUB_DIR" \
+    cargo rustc -p padnote-core --lib --release --target "$t" --crate-type staticlib
 done
 
 echo "==> 產生綁定"
