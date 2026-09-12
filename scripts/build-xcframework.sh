@@ -17,6 +17,14 @@ for t in "${TARGETS[@]}"; do
   rustup target add "$t" >/dev/null 2>&1 || true
 done
 
+# 避免 ort-sys 在 iOS 交叉編譯時因缺少預編譯二進位檔而報錯
+export ORT_SKIP_DOWNLOAD=1
+
+if ! command -v autoreconf &> /dev/null; then
+  echo "⚠️ 系統缺少 autoreconf 工具（audiopus 編譯需要）。請先於終端機執行：" >&2
+  echo "   brew install autoconf automake libtool" >&2
+fi
+
 echo "==> 編譯 release 靜態庫"
 for t in "${TARGETS[@]}"; do
   cargo build -p padnote-core --release --target "$t"
