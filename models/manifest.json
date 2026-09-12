@@ -1,0 +1,65 @@
+{
+  "_comment": [
+    "模型清單的機器可讀版本，對應 models/MODELS.md。",
+    "sha256 為 'pending' 者尚未取得實際雜湊值，下載器會拒絕它們（不是靜默通過）。",
+    "上架前必須全部換成真實雜湊 —— 見 docs/TODO.md H3。"
+  ],
+  "models": [
+    {
+      "id": "silero-vad",
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-silero-vad/resolve/main/silero_vad.onnx",
+      "sha256": "pending",
+      "size_bytes": 2217524,
+      "license": "MIT",
+      "required_for": ["asr.zh", "asr.en"]
+    },
+    {
+      "id": "paraformer-zh",
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-streaming-paraformer-bilingual-zh-en/resolve/main/model.onnx",
+      "sha256": "pending",
+      "size_bytes": 230686720,
+      "license": "pending-review",
+      "required_for": ["asr.zh"]
+    },
+    {
+      "id": "sensevoice-small",
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-sense-voice-zh-en-ja-ko-yue/resolve/main/model.onnx",
+      "sha256": "pending",
+      "size_bytes": 492831744,
+      "license": "pending-review",
+      "required_for": ["asr.codeswitch"]
+    },
+    {
+      "id": "ct-punct-zh",
+      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-punct-ct-transformer/resolve/main/model.onnx",
+      "sha256": "pending",
+      "size_bytes": 293601280,
+      "license": "pending-review",
+      "required_for": ["asr.zh"]
+    },
+    {
+      "id": "whisper-large-v3-turbo-q5",
+      "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
+      "sha256": "pending",
+      "size_bytes": 574041600,
+      "license": "MIT",
+      "required_for": ["asr.multilingual"]
+    },
+    {
+      "id": "ppocr-v5",
+      "url": "https://huggingface.co/example/rapidocr/resolve/main/ppocrv5.onnx",
+      "sha256": "pending",
+      "size_bytes": 16777216,
+      "license": "Apache-2.0",
+      "required_for": ["ocr", "hwr.fallback"]
+    },
+    {
+      "id": "qwen3-4b-instruct-q4",
+      "url": "https://huggingface.co/Qwen/Qwen3-4B-Instruct-GGUF/resolve/main/qwen3-4b-instruct-q4_k_m.gguf",
+      "sha256": "pending",
+      "size_bytes": 2621440000,
+      "license": "Apache-2.0",
+      "required_for": ["llm.summary"]
+    }
+  ]
+}

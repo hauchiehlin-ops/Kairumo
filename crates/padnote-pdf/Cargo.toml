@@ -1,0 +1,12 @@
+[package]
+name = "padnote-pdf"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[dependencies]
+padnote-doc = { path = "../padnote-doc" }
+
+[lints]
+workspace = true

@@ -18,3 +18,5 @@ padnote-storage = { path = "../padnote-storage" }
 padnote-search = { path = "../padnote-search" }
 padnote-export = { path = "../padnote-export" }
 padnote-crypto = { path = "../padnote-crypto" }
+padnote-models = { path = "../padnote-models" }
+padnote-pdf = { path = "../padnote-pdf" }

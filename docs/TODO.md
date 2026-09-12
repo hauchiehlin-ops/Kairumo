@@ -62,21 +62,23 @@
 | S-08 | WP10 | `padnote-sync`：SyncEngine、框架化 chunk、增量游標、加密整合 |
 | S-09 | H1/H2 | `padnote-export`：Markdown + SVG 匯出 |
 | S-11 | — | `padnote-core`：NotebookSession 門面（含 C1 筆跡↔錄音跳轉） |
+| S-06 | WP12 | `padnote-recognize::registry`：引擎註冊表與 fallback 鏈 |
+| S-10 | WP7 | `padnote-pdf`：文件介面、座標轉換、LRU 頁面快取與預抓 |
+| S-14 | D4 | `padnote-models`：清單、SHA-256 驗證、斷點續傳、可刪除 |
+| S-17 | WP13 | `padnote-core::setup`：引擎與權限中心狀態機 |
 
 ### 待做
 | ID | 工作包 | 內容 | 備註 |
 |---|---|---|---|
-| S-06 | WP12 | `padnote-recognize`：引擎註冊表與 fallback 鏈 | trait 已定義，缺平台實作綁定 |
-| S-10 | WP7 | `padnote-pdf`：PDFium 介面層 | 需引入 `pdfium-render`，實機驗證見 H6 |
 | S-12 | — | UniFFI 綁定產生（Swift / Kotlin） | 核心 API 已穩定，可以開始 |
-| S-13 | WP5 | Opus 編碼整合 | 需 `libopus` 綁定 |
-| S-14 | D4 | 模型下載器：SHA-256 驗證 + 斷點續傳 | 對應 `models/MODELS.md` |
-| S-15 | WP5 | sherpa-onnx / whisper.cpp 引擎實作 `AsrEngine` | 管線編排已就緒，插進去即可 |
-| S-16 | — | 本機 op-log 持久化與 CRDT 文件合併 | 筆畫已完成；文字需 Yrs/Automerge |
-| S-17 | WP13 | 引擎與權限中心的狀態模型 | UI 在 Swift 層，狀態機在 core |
-| S-18 | — | PDF 匯出（含標註） | 依賴 S-10 |
+| S-13 | WP5 | Opus 編碼整合 | 需 `libopus` 綁定，**無法在此驗證** |
+| S-15 | WP5 | sherpa-onnx / whisper.cpp 實作 `AsrEngine` | 管線編排已就緒，插進去即可 |
+| S-16 | — | 文字 CRDT 與 op-log 持久化 | 筆畫已完成；文字需 Yrs/Automerge |
+| S-18 | — | PDF 匯出（含標註） | 依賴 PDFium 綁定 |
 | S-19 | WP20 | iCloud `CloudProvider` 實作 | Swift 側；演算法已由 S3 驗證 |
 | S-20 | WP23 | llama.cpp 整合（摘要、待辦抽取） | P2 |
+| S-21 | WP7 | PDFium 綁定（`pdfium-render`）| 介面與快取已完成，**需原生庫，實機驗證見 H6** |
+| S-22 | WP12 | Apple Vision / ML Kit 的 `HwrEngine` 實作 | 註冊表與 fallback 鏈已完成 |
 
 ## ⚪ 待決策（需要人拍板）
 

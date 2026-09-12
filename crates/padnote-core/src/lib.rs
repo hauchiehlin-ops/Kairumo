@@ -7,18 +7,22 @@
 //! TODO(S-11)：以 UniFFI 產生 Swift / Kotlin 綁定。
 
 pub mod app;
+pub mod setup;
 
 pub use padnote_asr as asr;
 pub use padnote_crypto as crypto;
 pub use padnote_doc as doc;
 pub use padnote_export as export;
 pub use padnote_ink as ink;
+pub use padnote_models as models;
+pub use padnote_pdf as pdf;
 pub use padnote_recognize as recognize;
 pub use padnote_search as search;
 pub use padnote_storage as storage;
 pub use padnote_sync as sync;
 
 pub use app::{AppError, NotebookSession, RecordingState};
+pub use setup::{Capability, Feature, FeatureReadiness, SetupAction, SetupCenter, Status};
 
 /// 本 build 所實作的 `.padnote` 格式版本（`format-spec.md` §3）。
 pub const SPEC_VERSION: u32 = 1;

@@ -6,6 +6,10 @@
 //! HWR 被刻意隔離為「可選增強」：即使完全不可用，手寫／打字／錄音轉文字
 //! 三大核心需求仍然成立。這是對 `architecture.md` 缺口 #1 的風險隔離。
 
+pub mod registry;
+
+pub use registry::{Availability, HwrRegistry, RegisteredEngine};
+
 use std::fmt::Debug;
 
 /// 手寫辨識引擎。實作依平台選擇，見 `HwrBackend`。
@@ -30,7 +34,7 @@ pub struct RecognitionStroke {
     pub started_at_us: u64,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Candidate {
     pub text: String,
     pub confidence: f32,

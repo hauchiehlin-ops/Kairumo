@@ -197,6 +197,8 @@ dependencies = [
  "padnote-doc",
  "padnote-export",
  "padnote-ink",
+ "padnote-models",
+ "padnote-pdf",
  "padnote-recognize",
  "padnote-search",
  "padnote-storage",
@@ -228,6 +230,22 @@ dependencies = [
 
 [[package]]
 name = "padnote-ink"
+version = "0.1.0"
+dependencies = [
+ "padnote-doc",
+]
+
+[[package]]
+name = "padnote-models"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
+name = "padnote-pdf"
 version = "0.1.0"
 dependencies = [
  "padnote-doc",
