@@ -95,7 +95,7 @@ cat << PLIST_EOF > "$EXPORT_PLIST"
 <plist version="1.0">
 <dict>
     <key>method</key>
-    <string>app-store</string>
+    <string>app-store-connect</string>
     <key>signingStyle</key>
     <string>automatic</string>
     <key>teamID</key>
@@ -163,6 +163,11 @@ if [[ -n "${APP_STORE_CONNECT_API_KEY_ID:-}" && -n "${APP_STORE_CONNECT_ISSUER_I
         --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
         --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
 elif [[ -n "${APPLE_ID:-}" && -n "${APP_SPECIFIC_PASSWORD:-}" ]]; then
+    if [[ "$APPLE_ID" == *"您的Apple帳號Email"* || "$APPLE_ID" == *"example.com"* ]]; then
+        echo "❌ 請先在 apple/ExportConfig.env 中將 APPLE_ID 修改為您真實的 Apple 帳號 Email！" >&2
+        echo "   目前套件 $IPA_FILE 已打包完成，填寫正確 Email 後即可上傳，或直接用 Transporter App 上傳。" >&2
+        exit 1
+    fi
     # 使用帳號密碼模式
     echo "🔐 使用 Apple ID ($APPLE_ID) 與 App 專用密碼..."
     xcrun altool "$ALTOOL_ACTION" \
