@@ -6,8 +6,9 @@
 //! 與筆畫一樣是 **append-only**：每個變更追加一筆 `DocOp`，重開時重播得到
 //! 目前狀態。刪除用墓碑而非移除記錄，保持記錄可交換（同步收斂的前提）。
 
+use crate::object::ObjectKind;
 use crate::text::{OpId, TextOp};
-use crate::{NotebookTime, PageTemplate, TextStyle, Uuid};
+use crate::{Affine2, NotebookTime, PageTemplate, TextStyle, Uuid};
 
 /// 一個文件變更。
 #[derive(Clone, Debug, PartialEq)]
@@ -68,6 +69,30 @@ pub enum DocOp {
         id: Uuid,
         ended_at: NotebookTime,
     },
+    /// 新增物件（ADR-0010）。
+    AddObject {
+        page: Uuid,
+        id: Uuid,
+        kind: ObjectKind,
+        transform: Affine2,
+    },
+    RemoveObject {
+        id: Uuid,
+    },
+    /// 變更物件的變換。**不改寫任何取樣點**（ADR-0010）。
+    SetObjectTransform {
+        id: Uuid,
+        transform: Affine2,
+    },
+    /// 把多個物件收進新群組。群組只記錄成員 id，不搬動筆畫資料。
+    Group {
+        page: Uuid,
+        group_id: Uuid,
+        members: Vec<Uuid>,
+    },
+    Ungroup {
+        id: Uuid,
+    },
     /// 一個轉錄詞，時間戳在筆記本時間軸上（format-spec §4.1）。
     AddWord {
         text: String,
@@ -91,6 +116,11 @@ const OP_TEXT_EDIT: u8 = 9;
 const OP_START_AUDIO: u8 = 10;
 const OP_END_AUDIO: u8 = 11;
 const OP_ADD_WORD: u8 = 12;
+const OP_ADD_OBJECT: u8 = 13;
+const OP_REMOVE_OBJECT: u8 = 14;
+const OP_SET_OBJECT_TRANSFORM: u8 = 15;
+const OP_GROUP: u8 = 16;
+const OP_UNGROUP: u8 = 17;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DocCodecError {
@@ -98,6 +128,7 @@ pub enum DocCodecError {
     UnknownOp(u8),
     UnknownTemplate(u8),
     UnknownStyle(u8),
+    UnknownObjectKind(u8),
     InvalidUtf8,
     InvalidChar(u32),
 }
@@ -109,6 +140,7 @@ impl std::fmt::Display for DocCodecError {
             Self::UnknownOp(k) => write!(f, "未知的操作類型：{k}"),
             Self::UnknownTemplate(t) => write!(f, "未知的頁面模板：{t}"),
             Self::UnknownStyle(s) => write!(f, "未知的文字樣式：{s}"),
+            Self::UnknownObjectKind(k) => write!(f, "未知的物件類型：{k}"),
             Self::InvalidUtf8 => write!(f, "字串不是合法的 UTF-8"),
             Self::InvalidChar(c) => write!(f, "非法的 Unicode 碼位：{c}"),
         }
@@ -150,6 +182,23 @@ impl Writer {
     }
     fn op_id(&mut self, id: OpId) -> &mut Self {
         self.u64(id.seq).u32(id.site)
+    }
+    fn affine(&mut self, t: Affine2) -> &mut Self {
+        self.f32(t.a).f32(t.b).f32(t.c).f32(t.d).f32(t.tx).f32(t.ty)
+    }
+    fn uuids(&mut self, ids: &[Uuid]) -> &mut Self {
+        self.u32(ids.len() as u32);
+        for id in ids {
+            self.uuid(*id);
+        }
+        self
+    }
+    fn object_kind(&mut self, k: &ObjectKind) -> &mut Self {
+        match k {
+            ObjectKind::Strokes(ids) => self.u8(0).uuids(ids),
+            ObjectKind::Block(id) => self.u8(1).uuid(*id),
+            ObjectKind::Group(ids) => self.u8(2).uuids(ids),
+        }
     }
     fn template(&mut self, t: &PageTemplate) -> &mut Self {
         match t {
@@ -216,6 +265,28 @@ impl<'a> Reader<'a> {
         std::str::from_utf8(self.take(n)?)
             .map(str::to_string)
             .map_err(|_| DocCodecError::InvalidUtf8)
+    }
+    fn affine(&mut self) -> Result<Affine2, DocCodecError> {
+        Ok(Affine2 {
+            a: self.f32()?,
+            b: self.f32()?,
+            c: self.f32()?,
+            d: self.f32()?,
+            tx: self.f32()?,
+            ty: self.f32()?,
+        })
+    }
+    fn uuids(&mut self) -> Result<Vec<Uuid>, DocCodecError> {
+        let n = self.u32()? as usize;
+        (0..n).map(|_| self.uuid()).collect()
+    }
+    fn object_kind(&mut self) -> Result<ObjectKind, DocCodecError> {
+        Ok(match self.u8()? {
+            0 => ObjectKind::Strokes(self.uuids()?),
+            1 => ObjectKind::Block(self.uuid()?),
+            2 => ObjectKind::Group(self.uuids()?),
+            k => return Err(DocCodecError::UnknownObjectKind(k)),
+        })
     }
     fn op_id(&mut self) -> Result<OpId, DocCodecError> {
         Ok(OpId {
@@ -367,6 +438,34 @@ pub fn encode(ops: &[DocOp]) -> Vec<u8> {
                     .time(*end)
                     .f32(*confidence);
             }
+            DocOp::AddObject {
+                page,
+                id,
+                kind,
+                transform,
+            } => {
+                w.u8(OP_ADD_OBJECT)
+                    .uuid(*page)
+                    .uuid(*id)
+                    .object_kind(kind)
+                    .affine(*transform);
+            }
+            DocOp::RemoveObject { id } => {
+                w.u8(OP_REMOVE_OBJECT).uuid(*id);
+            }
+            DocOp::SetObjectTransform { id, transform } => {
+                w.u8(OP_SET_OBJECT_TRANSFORM).uuid(*id).affine(*transform);
+            }
+            DocOp::Group {
+                page,
+                group_id,
+                members,
+            } => {
+                w.u8(OP_GROUP).uuid(*page).uuid(*group_id).uuids(members);
+            }
+            DocOp::Ungroup { id } => {
+                w.u8(OP_UNGROUP).uuid(*id);
+            }
         }
     }
     w.0
@@ -444,6 +543,23 @@ pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
                 end: r.time()?,
                 confidence: r.f32()?,
             },
+            OP_ADD_OBJECT => DocOp::AddObject {
+                page: r.uuid()?,
+                id: r.uuid()?,
+                kind: r.object_kind()?,
+                transform: r.affine()?,
+            },
+            OP_REMOVE_OBJECT => DocOp::RemoveObject { id: r.uuid()? },
+            OP_SET_OBJECT_TRANSFORM => DocOp::SetObjectTransform {
+                id: r.uuid()?,
+                transform: r.affine()?,
+            },
+            OP_GROUP => DocOp::Group {
+                page: r.uuid()?,
+                group_id: r.uuid()?,
+                members: r.uuids()?,
+            },
+            OP_UNGROUP => DocOp::Ungroup { id: r.uuid()? },
             k => return Err(DocCodecError::UnknownOp(k)),
         };
         out.push(op);
@@ -541,6 +657,23 @@ mod tests {
                 end: NotebookTime::from_micros(3_800_000),
                 confidence: 0.93,
             },
+            DocOp::AddObject {
+                page: uid(1),
+                id: uid(30),
+                kind: ObjectKind::Strokes(vec![uid(31), uid(32)]),
+                transform: Affine2::translate(10.5, -3.25),
+            },
+            DocOp::RemoveObject { id: uid(30) },
+            DocOp::SetObjectTransform {
+                id: uid(30),
+                transform: Affine2::scale(2.0, 0.5),
+            },
+            DocOp::Group {
+                page: uid(1),
+                group_id: uid(40),
+                members: vec![uid(30), uid(33)],
+            },
+            DocOp::Ungroup { id: uid(40) },
         ]
     }
 
@@ -560,8 +693,8 @@ mod tests {
             .collect();
         assert_eq!(
             tags.len(),
-            12,
-            "12 種操作標籤都要被測到，實得 {}",
+            17,
+            "17 種操作標籤都要被測到，實得 {}",
             tags.len()
         );
     }
@@ -614,6 +747,59 @@ mod tests {
                 "{s:?}"
             );
         }
+    }
+
+    #[test]
+    fn object_kinds_roundtrip() {
+        for kind in [
+            ObjectKind::Strokes(vec![uid(1), uid(2)]),
+            ObjectKind::Strokes(vec![]),
+            ObjectKind::Block(uid(3)),
+            ObjectKind::Group(vec![uid(4)]),
+        ] {
+            let op = DocOp::AddObject {
+                page: uid(1),
+                id: uid(2),
+                kind: kind.clone(),
+                transform: Affine2::IDENTITY,
+            };
+            assert_eq!(
+                decode(&encode(std::slice::from_ref(&op))).unwrap()[0],
+                op,
+                "{kind:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn transforms_survive_exactly() {
+        // 變換是 f32，必須位元級無損 —— 否則反覆存讀會讓物件緩慢漂移。
+        let t = Affine2 {
+            a: 1.5,
+            b: -0.25,
+            c: 0.125,
+            d: 2.0,
+            tx: 123.456,
+            ty: -789.012,
+        };
+        let op = DocOp::SetObjectTransform {
+            id: uid(1),
+            transform: t,
+        };
+        let DocOp::SetObjectTransform { transform, .. } =
+            &decode(&encode(std::slice::from_ref(&op))).unwrap()[0]
+        else {
+            panic!()
+        };
+        assert_eq!(*transform, t);
+    }
+
+    #[test]
+    fn unknown_object_kind_is_rejected() {
+        let mut bytes = vec![OP_ADD_OBJECT];
+        bytes.extend_from_slice(&[1u8; 32]); // page + id
+        bytes.push(99); // 未知類型
+        assert_eq!(decode(&bytes), Err(DocCodecError::UnknownObjectKind(99)));
     }
 
     #[test]

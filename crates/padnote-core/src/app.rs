@@ -5,8 +5,8 @@
 //! 這種最糟的失敗模式（Notability 的教訓）。
 
 use padnote_doc::{
-    AudioSession, Block, BlockKind, DocOp, Notebook, NotebookTime, Page, PageTemplate, TextCrdt,
-    TextEditor, TextStyle, Timeline, TranscriptWord, Uuid,
+    Affine2, AudioSession, Block, BlockKind, DocOp, Notebook, NotebookTime, ObjectNode, ObjectTree,
+    Page, PageTemplate, TextCrdt, TextEditor, TextStyle, Timeline, TranscriptWord, Uuid,
 };
 use padnote_export::{MarkdownOptions, to_markdown};
 use padnote_ink::{InkRecord, Stroke, materialize};
@@ -94,6 +94,9 @@ pub struct NotebookSession {
     recorded_audio_us: u64,
     /// Silero VAD 模型路徑。未設定時退回能量門檻法。
     vad_model: Option<std::path::PathBuf>,
+    /// 每一頁的物件樹（ADR-0010）。群組與變換住在這裡，
+    /// **筆畫資料完全不動**。
+    objects: std::collections::HashMap<Uuid, ObjectTree>,
 }
 
 impl NotebookSession {
@@ -119,6 +122,7 @@ impl NotebookSession {
             pipeline: None,
             recorded_audio_us: 0,
             vad_model: None,
+            objects: Default::default(),
         };
         let first = Uuid::now_v7();
         session.record(vec![DocOp::AddPage {
@@ -149,6 +153,7 @@ impl NotebookSession {
             pipeline: None,
             recorded_audio_us: 0,
             vad_model: None,
+            objects: Default::default(),
         };
 
         let ops = session.package.read_doc_ops()?;
@@ -313,6 +318,48 @@ impl NotebookSession {
             DocOp::EndAudio { id, ended_at } => {
                 self.close_session(*id, *ended_at);
                 self.recording = RecordingState::Idle;
+            }
+            DocOp::AddObject {
+                page,
+                id,
+                kind,
+                transform,
+            } => {
+                let tree = self.objects.entry(*page).or_default();
+                tree.insert(ObjectNode {
+                    id: *id,
+                    kind: kind.clone(),
+                    transform: *transform,
+                });
+            }
+            DocOp::RemoveObject { id } => {
+                for tree in self.objects.values_mut() {
+                    tree.remove(*id);
+                }
+            }
+            DocOp::SetObjectTransform { id, transform } => {
+                for tree in self.objects.values_mut() {
+                    let _ = tree.set_transform(*id, *transform);
+                }
+            }
+            DocOp::Group {
+                page,
+                group_id,
+                members,
+            } => {
+                // 重播時忽略失敗：成員可能已被刪除，或來源是較新的版本。
+                // 靜默忽略比中斷整個重播好 —— 使用者寧可少一個群組，
+                // 也不要整本筆記打不開。
+                let _ = self
+                    .objects
+                    .entry(*page)
+                    .or_default()
+                    .group(*group_id, members);
+            }
+            DocOp::Ungroup { id } => {
+                for tree in self.objects.values_mut() {
+                    let _ = tree.ungroup(*id);
+                }
             }
             DocOp::AddWord {
                 text,
@@ -727,6 +774,52 @@ impl NotebookSession {
             Source::Handwriting,
             text,
         );
+    }
+
+    // ---- 物件（ADR-0010）----
+
+    /// 某一頁的物件樹。
+    pub fn objects(&self, page: Uuid) -> Option<&ObjectTree> {
+        self.objects.get(&page)
+    }
+
+    /// 把筆畫收成一個物件，讓它能被群組與變換。
+    pub fn create_stroke_object(
+        &mut self,
+        page: Uuid,
+        strokes: Vec<Uuid>,
+    ) -> Result<Uuid, AppError> {
+        if self.notebook.page(page).is_none() {
+            return Err(AppError::PageNotFound(page));
+        }
+        let id = Uuid::now_v7();
+        self.record(vec![DocOp::AddObject {
+            page,
+            id,
+            kind: padnote_doc::ObjectKind::Strokes(strokes),
+            transform: Affine2::IDENTITY,
+        }])?;
+        Ok(id)
+    }
+
+    /// 群組多個物件。
+    pub fn group_objects(&mut self, page: Uuid, members: Vec<Uuid>) -> Result<Uuid, AppError> {
+        let group_id = Uuid::now_v7();
+        self.record(vec![DocOp::Group {
+            page,
+            group_id,
+            members,
+        }])?;
+        Ok(group_id)
+    }
+
+    pub fn ungroup(&mut self, id: Uuid) -> Result<(), AppError> {
+        self.record(vec![DocOp::Ungroup { id }])
+    }
+
+    /// 變更物件的變換。**不改寫任何取樣點**（ADR-0010）。
+    pub fn transform_object(&mut self, id: Uuid, transform: Affine2) -> Result<(), AppError> {
+        self.record(vec![DocOp::SetObjectTransform { id, transform }])
     }
 
     /// 供平台層存取底層套件（例如寫入 blob）。

@@ -5,11 +5,14 @@
 //! 抗鋸齒全在渲染期進行。理由是未來換渲染演算法或訓練 HWR 模型時，歷史筆記
 //! 能回溯受益 —— 競品多存已擬合的貝茲曲線，資訊一去不回。
 
+pub mod align;
 pub mod codec;
 pub mod geometry;
 
+pub use align::{Alignment, SnapResult, align, distribute, snap};
 pub use codec::{StrokeReader, StrokeWriter};
 pub use geometry::{Rect, distance_to_segment, half_width, simplify, smooth_path};
+pub use padnote_doc::Affine2;
 use padnote_doc::{NotebookTime, Uuid};
 
 /// 筆刷類型（format-spec §5.3）。

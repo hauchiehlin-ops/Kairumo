@@ -174,15 +174,33 @@ C1（筆跡↔錄音跳轉）、C4（詞級時間戳）、A10（筆跡重播）�
 [1B 操作類型][操作內容…]
 ```
 
-12 種操作：`SetTitle` / `AddPage` / `RemovePage` / `AddTextBlock` /
-`AddTranscriptBlock` / `AddImageBlock` / `RemoveBlock` / `SetBlockStyle` /
-`TextEdit` / `StartAudio` / `EndAudio` / `AddWord`。
+17 種操作：
+
+**文件結構**：`SetTitle` / `AddPage` / `RemovePage`
+**內容區塊**：`AddTextBlock` / `AddTranscriptBlock` / `AddImageBlock` /
+`RemoveBlock` / `SetBlockStyle` / `TextEdit`
+**錄音**：`StartAudio` / `EndAudio` / `AddWord`
+**物件**（ADR-0010）：`AddObject` / `RemoveObject` / `SetObjectTransform` /
+`Group` / `Ungroup`
 
 字串以 `u32` **位元組**長度前綴（非字元數）。UUID 為原始 16 bytes。
 時間為 `u64` 微秒，落在統一時間軸上（§4）。
 
 `TextEdit` 內嵌文字 CRDT 操作（ADR-0004）：插入記錄 `(id, origin, 字元碼位)`，
 刪除記錄 `(id)`。**位置以 origin 參照表示，不是索引** —— 索引在併發編輯下會錯位。
+
+### 物件與變換（ADR-0010）
+
+物件持有 2×3 仿射矩陣（6 個 `f32`，row-major：`a b c d tx ty`）。
+
+**取樣點永不因變換而改寫。** 縮放、旋轉、移動都只改矩陣，渲染與命中測試時
+把變換套用在讀取端。直接改寫座標會讓「存原始取樣點」的性質消失（ADR-0002），
+而且反覆縮放會累積浮點誤差讓筆跡走樣。
+
+群組只記錄成員 id，**不搬動筆畫資料** —— 因此群組與解散是 O(1) 且完全可逆。
+
+⚠️ 寫入物件操作時 `min_reader_version` 必須提升為 **2**：
+舊讀取器遇到未知的 op 類型會靜默丟失群組與變換資訊。
 
 重開筆記本時依檔名順序重播全部記錄即得目前狀態。損毀的記錄會**回報錯誤而非
 略過** —— 靜默略過會讓使用者以為只是「某些內容不見了」。
