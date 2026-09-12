@@ -24,7 +24,7 @@ struct KairumoApp: App {
     }
 
     private var appVersionTitle: String {
-        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.3.0"
+        let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.4.0"
         return "Kairumo v\(version)"
     }
 

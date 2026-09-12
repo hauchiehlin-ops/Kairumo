@@ -372,7 +372,7 @@
 				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -382,8 +382,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Kairumo;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
-				INFOPLIST_KEY_CFBundleShortVersionString = 1.3.0;
-				INFOPLIST_KEY_CFBundleVersion = 4;
+				INFOPLIST_KEY_CFBundleShortVersionString = 1.4.0;
+				INFOPLIST_KEY_CFBundleVersion = 5;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -394,7 +394,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3.0;
+				MARKETING_VERSION = 1.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kairumo.padnote;
 				PRODUCT_NAME = Kairumo;
 				SDKROOT = iphoneos;
@@ -410,7 +410,7 @@
 				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -420,8 +420,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Kairumo;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
-				INFOPLIST_KEY_CFBundleShortVersionString = 1.3.0;
-				INFOPLIST_KEY_CFBundleVersion = 4;
+				INFOPLIST_KEY_CFBundleShortVersionString = 1.4.0;
+				INFOPLIST_KEY_CFBundleVersion = 5;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -432,7 +432,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.3.0;
+				MARKETING_VERSION = 1.4.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kairumo.padnote;
 				PRODUCT_NAME = Kairumo;
 				SDKROOT = iphoneos;
