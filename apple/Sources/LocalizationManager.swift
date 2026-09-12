@@ -881,6 +881,30 @@ public final class LocalizationManager: ObservableObject {
             .ko: "뷰어",
             .th: "ผู้ชม"
         ],
+        "hosting_local_relay": [
+            .zhHant: "本機正在提供協同中繼",
+            .en: "Hosting relay on this device",
+            .zhHans: "本机正在提供协同中继",
+            .ja: "この端末が中継を提供中",
+            .ko: "이 기기에서 릴레이 호스팅 중",
+            .th: "อุปกรณ์นี้กำลังเป็นรีเลย์"
+        ],
+        "local_relay_hint": [
+            .zhHant: "位址指向本機（127.0.0.1）時，App 會直接在這台裝置上開啟協同中繼；隊友請改填房主顯示的區域網路位址。",
+            .en: "When the address points at this device (127.0.0.1), Kairumo runs the relay locally. Teammates should enter the LAN address shown by the host instead.",
+            .zhHans: "地址指向本机（127.0.0.1）时，App 会直接在这台设备上开启协同中继；队友请改填房主显示的局域网地址。",
+            .ja: "アドレスが端末自身 (127.0.0.1) の場合、この端末で中継を起動します。参加者はホストに表示された LAN アドレスを入力してください。",
+            .ko: "주소가 이 기기(127.0.0.1)를 가리키면 앱이 직접 릴레이를 실행합니다. 참가자는 호스트에 표시된 LAN 주소를 입력하세요.",
+            .th: "เมื่อที่อยู่ชี้มาที่อุปกรณ์นี้ (127.0.0.1) แอปจะเปิดรีเลย์บนเครื่องนี้ ผู้ร่วมงานให้กรอกที่อยู่ LAN ที่โฮสต์แสดงไว้"
+        ],
+        "minimize_dialog": [
+            .zhHant: "縮小視窗",
+            .en: "Minimize",
+            .zhHans: "缩小窗口",
+            .ja: "最小化",
+            .ko: "최소화",
+            .th: "ย่อหน้าต่าง"
+        ],
         "relay_server_address": [
             .zhHant: "協同伺服器位址",
             .en: "Relay Server Address",
@@ -3301,6 +3325,14 @@ public final class LocalizationManager: ObservableObject {
             .ja: "キャンバスから削除",
             .ko: "캔버스에서 제거",
             .th: "ลบออกจากผืนผ้าใบ"
+        ],
+        "more_tools": [
+            .zhHant: "更多",
+            .en: "More",
+            .zhHans: "更多",
+            .ja: "その他",
+            .ko: "더 보기",
+            .th: "เพิ่มเติม"
         ],
         "math_input_hint": [
             .zhHant: "請在上方輸入算式後點擊「計算求解」",

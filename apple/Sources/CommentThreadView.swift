@@ -77,6 +77,13 @@ public struct CommentThreadDialog: View {
 
     @State private var replyText: String = ""
 
+    // 浮層自由拖曳位移。圖釘固定在畫布座標上，但對話框常常正好蓋住
+    // 要討論的那塊內容，所以浮層本身必須可以被拖到旁邊；縮小成標題列
+    // 之後同樣要能拖，否則縮小只是換個地方擋住畫面。
+    @State private var dragOffset: CGSize = .zero
+    @GestureState private var liveDrag: CGSize = .zero
+    @State private var isMinimized: Bool = false
+
     public init(
         pin: NoteCommentPin,
         currentUserId: String,
@@ -101,10 +108,107 @@ public struct CommentThreadDialog: View {
         Color(hex: pin.authorColor) ?? .blue
     }
 
+    /// 拖曳浮層用的手勢。只掛在標題列（或縮小後的整條列）上，
+    /// 避免和訊息列表的捲動、輸入框的點擊互相搶事件。
+    private var moveGesture: some Gesture {
+        DragGesture(minimumDistance: 2)
+            .updating($liveDrag) { value, state, _ in
+                state = value.translation
+            }
+            .onEnded { value in
+                dragOffset.width += value.translation.width
+                dragOffset.height += value.translation.height
+            }
+    }
+
+    private var totalOffset: CGSize {
+        CGSize(width: dragOffset.width + liveDrag.width, height: dragOffset.height + liveDrag.height)
+    }
+
+    /// 縮小後的精簡標題列（仍可拖曳、可還原、可關閉）
+    private var minimizedBar: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "line.3.horizontal")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Circle()
+                .fill(pinAuthorColor)
+                .frame(width: 18, height: 18)
+                .overlay(
+                    Text(String(pin.authorName.prefix(1)).uppercased())
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundColor(.white)
+                )
+
+            Text(pin.authorName)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .lineLimit(1)
+
+            Text("\(pin.messages.count)")
+                .font(.system(size: 10, weight: .bold))
+                .foregroundColor(.white)
+                .padding(.horizontal, 5)
+                .padding(.vertical, 1)
+                .background(Color.accentColor)
+                .clipShape(Capsule())
+
+            Button(action: { withAnimation(.easeInOut(duration: 0.18)) { isMinimized = false } }) {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .padding(5)
+                    .background(Color.secondary.opacity(0.1))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+
+            Button(action: onClose) {
+                Image(systemName: "xmark")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .padding(5)
+                    .background(Color.secondary.opacity(0.1))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .frame(width: 240)
+        .background(Color(uiColor: .systemBackground))
+        .cornerRadius(12)
+        .shadow(color: Color.black.opacity(0.18), radius: 10, y: 4)
+        .overlay(
+            RoundedRectangle(cornerRadius: 12)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        )
+        .contentShape(Rectangle())
+        .gesture(moveGesture)
+    }
+
     public var body: some View {
+        Group {
+            if isMinimized {
+                minimizedBar
+            } else {
+                expandedDialog
+            }
+        }
+        .offset(x: totalOffset.width, y: totalOffset.height)
+    }
+
+    private var expandedDialog: some View {
         VStack(spacing: 0) {
             // 頂部導覽資訊
             HStack(spacing: 10) {
+                // 拖曳握把：按住這裡可以把整個對話框搬到不擋住內容的位置
+                Image(systemName: "line.3.horizontal")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.trailing, 2)
+
                 Circle()
                     .fill(pinAuthorColor)
                     .frame(width: 26, height: 26)
@@ -158,6 +262,20 @@ public struct CommentThreadDialog: View {
                 .buttonStyle(.plain)
                 .help(localizationManager.localized("delete_comment"))
 
+                // 縮小按鈕（縮成標題列，仍可繼續拖曳移動）
+                Button(action: {
+                    withAnimation(.easeInOut(duration: 0.18)) { isMinimized = true }
+                }) {
+                    Image(systemName: "minus")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(6)
+                        .background(Color.secondary.opacity(0.1))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .help(localizationManager.localized("minimize_dialog"))
+
                 // 關閉按鈕
                 Button(action: onClose) {
                     Image(systemName: "xmark")
@@ -172,6 +290,8 @@ public struct CommentThreadDialog: View {
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
             .background(Color(uiColor: .secondarySystemBackground))
+            .contentShape(Rectangle())
+            .gesture(moveGesture)
 
             Divider()
 

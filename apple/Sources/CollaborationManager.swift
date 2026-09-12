@@ -109,6 +109,13 @@ public class CollaborationManager: ObservableObject {
     @Published public var roomKeyBase64: String? = nil
     private var roomKey: SymmetricKey? = nil
 
+    /// 最近一次連線錯誤說明（給 UI 顯示，避免只剩無聲的「重連中」轉圈）
+    @Published public var lastErrorMessage: String? = nil
+    /// 本機是否正在提供內建中繼服務
+    @Published public var isHostingLocalRelay: Bool = false
+    /// 本機中繼服務在區域網路上的位址（給隊友輸入）
+    @Published public var lanRelayAddress: String? = nil
+
     // MARK: - 離線暫存佇列與自動斷線重連
     @Published public var queuedOplogCount: Int = 0
     private var offlineOplogQueue: [[String: Any]] = []
@@ -257,9 +264,21 @@ public class CollaborationManager: ObservableObject {
 
         guard let url = URL(string: serverAddress) else {
             print("❌ 無效的 WebSocket 伺服器網址: \(serverAddress)")
+            self.lastErrorMessage = "無效的協同伺服器位址：\(serverAddress)"
             self.status = .disconnected
             return
         }
+
+        // 位址指向本機時，直接由這台裝置提供中繼服務。
+        // 沒有這一步，預設的 ws://127.0.0.1:9002 後面根本沒有人在聽，
+        // 連線一定失敗，畫面就永遠卡在「正在自動重新連線」。
+        if Self.isLoopbackHost(url.host) {
+            startLocalRelayIfNeeded(port: UInt16(url.port ?? 9002))
+        } else {
+            isHostingLocalRelay = false
+            lanRelayAddress = nil
+        }
+        lastErrorMessage = nil
 
         let session = URLSession(configuration: .default)
         let task = session.webSocketTask(with: url)
@@ -281,6 +300,31 @@ public class CollaborationManager: ObservableObject {
             "role": roleStr
         ]
         sendJson(joinPayload)
+    }
+
+    /// 判斷位址是否指向本機（含未填主機名的情況）
+    static func isLoopbackHost(_ host: String?) -> Bool {
+        guard let host = host?.lowercased(), !host.isEmpty else { return true }
+        return host == "127.0.0.1" || host == "localhost" || host == "::1" || host == "0.0.0.0"
+    }
+
+    /// 啟動內建中繼服務（冪等；已在執行中則直接沿用）
+    private func startLocalRelayIfNeeded(port: UInt16) {
+        switch LocalRelayServer.shared.start(port: port) {
+        case .success:
+            isHostingLocalRelay = true
+            if let ip = LocalRelayServer.lanIPv4Address() {
+                lanRelayAddress = "ws://\(ip):\(port)"
+            } else {
+                lanRelayAddress = nil
+            }
+        case .failure(let error):
+            // 埠被佔用通常代表已經有一個中繼（例如 cargo run -p padnote-relay）
+            // 在聽，那就照常連過去，不要把這當成致命錯誤。
+            print("⚠️ 內建中繼服務啟動失敗：\(error.localizedDescription)")
+            isHostingLocalRelay = false
+            lanRelayAddress = nil
+        }
     }
 
     /// 主動中斷連線
@@ -315,6 +359,11 @@ public class CollaborationManager: ObservableObject {
             self.currentRoomId = ""
             self.isHost = false
             self.peers.removeAll()
+            if isHostingLocalRelay {
+                LocalRelayServer.shared.stop()
+                isHostingLocalRelay = false
+                lanRelayAddress = nil
+            }
         }
     }
 
@@ -339,6 +388,7 @@ public class CollaborationManager: ObservableObject {
         guard !userInitiatedDisconnect, !currentRoomId.isEmpty else { return }
         if reconnectAttempt >= maxReconnectAttempts {
             print("❌ 已達到最大重連次數 (\(maxReconnectAttempts))")
+            self.lastErrorMessage = "無法連上協同伺服器 \(serverAddress)，已停止重試。"
             self.status = .disconnected
             return
         }
@@ -542,6 +592,7 @@ public class CollaborationManager: ObservableObject {
 
                 case .failure(let error):
                     print("⚠️ WebSocket 接收中斷: \(error.localizedDescription)")
+                    self.lastErrorMessage = error.localizedDescription
                     if !self.userInitiatedDisconnect {
                         self.scheduleReconnect()
                     } else {
@@ -561,6 +612,7 @@ public class CollaborationManager: ObservableObject {
         case "joined":
             if let rid = json["room_id"] as? String {
                 self.status = .connected(roomId: rid)
+                self.lastErrorMessage = nil
                 self.reconnectAttempt = 0
                 self.reconnectTimer?.invalidate()
                 self.reconnectTimer = nil

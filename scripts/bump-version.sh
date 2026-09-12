@@ -29,46 +29,97 @@ if [[ ! -f "$CARGO_TOML" ]]; then
     exit 1
 fi
 
-# 1. 取得當前版本號
-CURRENT_VERSION=$(python3 -c '
-import re, sys
-with open(sys.argv[1], "r", encoding="utf-8") as f:
-    content = f.read()
-match = re.search(r"\[workspace\.package\][\s\S]*?version\s*=\s*\"([^\"]+)\"", content)
-if match:
-    print(match.group(1))
-else:
+# 1. 取得當前版本號與 Bundle 號
+#
+# 版本號的來源刻意取「所有來源的最大值」，而不是只信 Cargo.toml。
+# 踩過的坑：v1.5.0 那次發版只改了 Apple 專案檔、沒動 Cargo.toml，
+# 腳本下次再跑就會從 1.4.0 重新算，永遠追不上真實版本，tag 也停在 v1.4.0。
+# 來源包含：Cargo.toml、apple/project.yml、project.pbxproj、最新的 git tag。
+VERSION_INFO=$(python3 -c '
+import re, sys, os, subprocess
+
+cargo, yml, pbx, repo_root = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+
+def read(path):
+    if not os.path.isfile(path):
+        return ""
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
+
+versions = []   # (版本元組, 來源說明)
+bundles = []
+
+cargo_text = read(cargo)
+m = re.search(r"\[workspace\.package\][\s\S]*?version\s*=\s*\"([^\"]+)\"", cargo_text)
+if m:
+    versions.append((m.group(1), "Cargo.toml"))
+
+yml_text = read(yml)
+m = re.search(r"MARKETING_VERSION:\s*\"?([0-9]+\.[0-9]+\.[0-9]+)\"?", yml_text)
+if m:
+    versions.append((m.group(1), "apple/project.yml"))
+m = re.search(r"CURRENT_PROJECT_VERSION:\s*\"?(\d+)\"?", yml_text)
+if m:
+    bundles.append(int(m.group(1)))
+
+pbx_text = read(pbx)
+m = re.search(r"MARKETING_VERSION\s*=\s*([0-9]+\.[0-9]+\.[0-9]+)", pbx_text)
+if m:
+    versions.append((m.group(1), "project.pbxproj"))
+m = re.search(r"CURRENT_PROJECT_VERSION\s*=\s*(\d+);", pbx_text)
+if m:
+    bundles.append(int(m.group(1)))
+
+try:
+    tags = subprocess.run(
+        ["git", "-C", repo_root, "tag", "--list", "v[0-9]*"],
+        capture_output=True, text=True, check=True,
+    ).stdout.split()
+    # 只取最新的一個 tag：把所有歷史 tag 都列進來，漂移訊息會長到看不出重點
+    tag_versions = [
+        (m.group(1), "git tag " + t)
+        for t in tags
+        if (m := re.fullmatch(r"v([0-9]+\.[0-9]+\.[0-9]+)", t))
+    ]
+    if tag_versions:
+        versions.append(max(tag_versions, key=lambda i: tuple(int(x) for x in i[0].split("."))))
+except Exception:
+    pass
+
+if not versions:
     sys.exit(1)
-' "$CARGO_TOML")
+
+def key(item):
+    return tuple(int(x) for x in item[0].split("."))
+
+best = max(versions, key=key)
+distinct = {v for v, _ in versions}
+
+print("CURRENT=" + best[0])
+print("SOURCE=" + best[1])
+print("BUNDLE=" + str(max(bundles) if bundles else 1))
+if len(distinct) > 1:
+    detail = ", ".join(sorted({f"{v} ({src})" for v, src in versions}))
+    print("DRIFT=" + detail)
+' "$CARGO_TOML" "$APPLE_PROJECT_YML" "$APPLE_PBXPROJ" "$REPO_ROOT") || {
+    echo "❌ 無法解析目前的版本號" >&2
+    exit 1
+}
+
+CURRENT_VERSION=$(echo "$VERSION_INFO" | sed -n 's/^CURRENT=//p')
+VERSION_SOURCE=$(echo "$VERSION_INFO" | sed -n 's/^SOURCE=//p')
+CURRENT_BUNDLE_VERSION=$(echo "$VERSION_INFO" | sed -n 's/^BUNDLE=//p')
+DRIFT_DETAIL=$(echo "$VERSION_INFO" | sed -n 's/^DRIFT=//p')
 
 if [[ -z "$CURRENT_VERSION" ]]; then
-    echo "❌ 無法在 $CARGO_TOML 中解析到 [workspace.package] 的版本號" >&2
+    echo "❌ 無法解析目前的版本號" >&2
     exit 1
 fi
 
-# 2. 取得當前 Bundle / Build 號
-CURRENT_BUNDLE_VERSION=$(python3 -c '
-import re, sys, os
-pbxproj = sys.argv[1]
-project_yml = sys.argv[2]
-bundle = None
-
-if os.path.isfile(pbxproj):
-    with open(pbxproj, "r", encoding="utf-8") as f:
-        content = f.read()
-    m = re.search(r"CURRENT_PROJECT_VERSION\s*=\s*(\d+);", content)
-    if m:
-        bundle = m.group(1)
-
-if not bundle and os.path.isfile(project_yml):
-    with open(project_yml, "r", encoding="utf-8") as f:
-        content = f.read()
-    m = re.search(r"CURRENT_PROJECT_VERSION:\s*\"?(\d+)\"?", content)
-    if m:
-        bundle = m.group(1)
-
-print(bundle if bundle else "1")
-' "$APPLE_PBXPROJ" "$APPLE_PROJECT_YML")
+if [[ -n "$DRIFT_DETAIL" ]]; then
+    echo "⚠️ 各來源的版本號不一致：$DRIFT_DETAIL"
+    echo "   以最大者 v$CURRENT_VERSION（來自 $VERSION_SOURCE）為準，本次升級後會全部對齊。"
+fi
 
 # 3. 計算新版本號
 IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
@@ -169,6 +220,49 @@ if os.path.isfile(yml_file):
     with open(yml_file, "w", encoding="utf-8") as f:
         f.write(yml)
 ' "$APPLE_PBXPROJ" "$APPLE_PROJECT_YML" "$NEW_VERSION" "$NEW_BUNDLE_VERSION"
+
+# 6.5 寫入後驗證：確認每個檔案都真的帶上新版本號。
+# 沒有這一步的話，任何一個正則沒對上都會靜默跳過，接著又是一次版本漂移。
+python3 -c '
+import re, sys, os
+
+cargo, yml, pbx, new_ver, new_bundle = sys.argv[1:6]
+problems = []
+
+def read(path):
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
+
+m = re.search(r"\[workspace\.package\][\s\S]*?version\s*=\s*\"([^\"]+)\"", read(cargo))
+if not m or m.group(1) != new_ver:
+    problems.append(f"Cargo.toml 的 workspace 版本沒有更新成 {new_ver}")
+
+if os.path.isfile(yml):
+    t = read(yml)
+    for key in ("MARKETING_VERSION", "INFOPLIST_KEY_CFBundleShortVersionString"):
+        m = re.search(key + r":\s*\"?([0-9]+\.[0-9]+\.[0-9]+)\"?", t)
+        if not m or m.group(1) != new_ver:
+            problems.append(f"project.yml 的 {key} 沒有更新成 {new_ver}")
+    for key in ("CURRENT_PROJECT_VERSION", "INFOPLIST_KEY_CFBundleVersion"):
+        m = re.search(key + r":\s*\"?(\d+)\"?", t)
+        if not m or m.group(1) != new_bundle:
+            problems.append(f"project.yml 的 {key} 沒有更新成 {new_bundle}")
+
+if os.path.isfile(pbx):
+    t = read(pbx)
+    for key in ("MARKETING_VERSION", "INFOPLIST_KEY_CFBundleShortVersionString"):
+        if not re.search(key + r"\s*=\s*" + re.escape(new_ver) + r"\s*;", t):
+            problems.append(f"project.pbxproj 的 {key} 沒有更新成 {new_ver}")
+    for key in ("CURRENT_PROJECT_VERSION", "INFOPLIST_KEY_CFBundleVersion"):
+        if not re.search(key + r"\s*=\s*" + re.escape(new_bundle) + r"\s*;", t):
+            problems.append(f"project.pbxproj 的 {key} 沒有更新成 {new_bundle}")
+
+if problems:
+    for p in problems:
+        print("❌ " + p, file=sys.stderr)
+    sys.exit(1)
+print("✅ 版本號已在 Cargo.toml / project.yml / project.pbxproj 全數對齊")
+' "$CARGO_TOML" "$APPLE_PROJECT_YML" "$APPLE_PBXPROJ" "$NEW_VERSION" "$NEW_BUNDLE_VERSION"
 
 # 7. 同步更新 Cargo.lock
 echo "🔄 同步 Cargo.lock..."

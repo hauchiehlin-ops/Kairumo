@@ -264,6 +264,23 @@ public struct CollaborationSheet: View {
                 .padding(12)
                 .background(Color(uiColor: .tertiarySystemGroupedBackground))
                 .cornerRadius(10)
+
+                // 本機正在當中繼點時，把隊友要輸入的區域網路位址直接顯示出來，
+                // 否則對方只拿到房號，還是不知道要連到哪一台。
+                if collaborationManager.isHostingLocalRelay {
+                    HStack(spacing: 6) {
+                        Image(systemName: "antenna.radiowaves.left.and.right")
+                            .font(.caption2)
+                            .foregroundColor(.green)
+                        Text(collaborationManager.lanRelayAddress.map {
+                            "\(localizationManager.localized("hosting_local_relay"))  \($0)"
+                        } ?? localizationManager.localized("hosting_local_relay"))
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.secondary)
+                            .textSelection(.enabled)
+                    }
+                    .padding(.horizontal, 4)
+                }
             }
 
             // 在線成員名單
@@ -385,6 +402,13 @@ public struct CollaborationSheet: View {
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
                 }
+
+                if let err = collaborationManager.lastErrorMessage {
+                    Text(err)
+                        .font(.caption2)
+                        .foregroundColor(.orange)
+                        .multilineTextAlignment(.center)
+                }
             }
 
             Button {
@@ -497,6 +521,11 @@ public struct CollaborationSheet: View {
                     }
                     .font(.caption)
                 }
+
+                Text(localizationManager.localized("local_relay_hint"))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.top, 8)
         } label: {

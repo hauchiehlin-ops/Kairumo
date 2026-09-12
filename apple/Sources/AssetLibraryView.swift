@@ -213,8 +213,8 @@ public struct AssetLibraryView: View {
 
     // MARK: - 2. 三大主題主標籤篩選列
     private var themeFilterBar: some View {
-        // 換行排列，任何寬度下四個主題都同時可見。
-        FlowLayout(spacing: 8, lineSpacing: 8) {
+        // 只有四個主題，任何寬度都放得下，維持單行。
+        HStack(spacing: 8) {
                 // 全部主題
                 themeChip(theme: nil, title: localizationManager.localized("all_themes"), icon: "square.grid.2x2")
 
@@ -226,6 +226,8 @@ public struct AssetLibraryView: View {
 
                 // 數位體驗
                 themeChip(theme: .digital, title: localizationManager.localized("theme_digital"), icon: "iphone.gen3")
+
+                Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -262,34 +264,83 @@ public struct AssetLibraryView: View {
     }
 
     // MARK: - 2. 主題類別橫向滑動列
+    /// 主分類列上直接顯示的數量。其餘收進「更多」選單。
+    private let visibleCategoryCount = 5
+
+    /// 列上顯示的分類。
+    ///
+    /// 目前選取的分類一定會出現在列上 —— 若它落在溢位區而被藏進選單，
+    /// 使用者會看不出自己正在篩什麼。
+    private var primaryCategories: [AssetCategory] {
+        let all = availableCategories
+        var shown = Array(all.prefix(visibleCategoryCount))
+        if !shown.contains(selectedCategory), all.contains(selectedCategory) {
+            shown[shown.count - 1] = selectedCategory
+        }
+        return shown
+    }
+
+    private var overflowCategories: [AssetCategory] {
+        availableCategories.filter { !primaryCategories.contains($0) }
+    }
+
+    // MARK: - 2. 主題類別列（次要分類收進「更多」）
     private var categoryFilterScrollView: some View {
-        FlowLayout(spacing: 8, lineSpacing: 8) {
-            ForEach(availableCategories) { cat in
-                    let isSelected = (selectedCategory == cat)
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            selectedCategory = cat
-                        }
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: cat.iconName)
-                                .font(.system(size: 13, weight: .semibold))
-                            Text(localizationManager.localized(cat.localizationKey))
-                                .font(.system(size: 13, weight: isSelected ? .bold : .medium))
-                        }
-                        .foregroundColor(isSelected ? .white : .primary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(isSelected ? Color.accentColor : Color(uiColor: .tertiarySystemGroupedBackground))
-                        .cornerRadius(20)
-                    }
-                    .buttonStyle(.plain)
+        HStack(spacing: 8) {
+            ForEach(primaryCategories) { cat in
+                categoryChip(cat)
             }
+
+            if !overflowCategories.isEmpty {
+                Menu {
+                    ForEach(overflowCategories) { cat in
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) { selectedCategory = cat }
+                        } label: {
+                            Label(localizationManager.localized(cat.localizationKey), systemImage: cat.iconName)
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "ellipsis")
+                            .font(.system(size: 13, weight: .semibold))
+                        Text(localizationManager.localized("more_tools"))
+                            .font(.system(size: 13, weight: .medium))
+                    }
+                    .foregroundColor(.primary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(20)
+                }
+                .buttonStyle(.plain)
+            }
+
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.8))
+    }
+
+    private func categoryChip(_ cat: AssetCategory) -> some View {
+        let isSelected = (selectedCategory == cat)
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) { selectedCategory = cat }
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: cat.iconName)
+                    .font(.system(size: 13, weight: .semibold))
+                Text(localizationManager.localized(cat.localizationKey))
+                    .font(.system(size: 13, weight: isSelected ? .bold : .medium))
+            }
+            .foregroundColor(isSelected ? .white : .primary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(isSelected ? Color.accentColor : Color(uiColor: .tertiarySystemGroupedBackground))
+            .cornerRadius(20)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - 3. 快取容量與隨需下載管理列

@@ -952,8 +952,23 @@ public struct NotebookEditorView: View {
     }
 
     // 筆記結構欄（側邊頁面縮圖大綱目錄欄）
+    // 開啟筆記時預設展開，否則使用者每次進入新筆記都要先自己按一次才看得到
+    // 資料夾目錄，等於把「這則筆記放在哪裡」藏起來。
     @State private var showStructureSidebar: Bool = false
-    @State private var sidebarTab: SidebarTabMode = .pages
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @AppStorage("kairumo_editor_sidebar_tab") private var sidebarTabRaw: String = SidebarTabMode.folders.rawValue
+
+    private var sidebarTab: SidebarTabMode {
+        get { SidebarTabMode(rawValue: sidebarTabRaw) ?? .folders }
+        nonmutating set { sidebarTabRaw = newValue.rawValue }
+    }
+
+    private var sidebarTabBinding: Binding<SidebarTabMode> {
+        Binding(
+            get: { SidebarTabMode(rawValue: sidebarTabRaw) ?? .folders },
+            set: { sidebarTabRaw = $0.rawValue }
+        )
+    }
 
     // 資料夾管理狀態
     @State private var showRenameRootFolderAlert: Bool = false
@@ -1465,6 +1480,11 @@ public struct NotebookEditorView: View {
         .navigationBarBackButtonHidden(true)
         .onAppear {
             loadCurrentPage()
+            // iPad / Mac 有足夠寬度時直接把結構欄展開；iPhone 上 280pt 的側欄
+            // 會把畫布擠到不能用，所以維持收合、由使用者自己叫出來。
+            if horizontalSizeClass != .compact {
+                showStructureSidebar = true
+            }
             #if targetEnvironment(macCatalyst)
             DispatchQueue.main.async {
                 let ver = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.2.0"
@@ -1649,11 +1669,11 @@ public struct NotebookEditorView: View {
 
     // MARK: - 1. 頂部自訂主工作列（自適應寬窄螢幕模式）
     private var editorTopBar: some View {
-        // 寬度夠就用單行完整版；放不下則整組改成**自動換行**（不是捲動）——
-        // 捲動雖然不會裁掉按鈕，但看不到的按鈕等於不存在。
+        // 寬度夠就用單行完整版；放不下則切到緊湊版，把次要功能收進「更多」選單。
+        // 工具列維持單行高度，不換行也不捲動 —— 主要動作永遠在同一個位置。
         ViewThatFits(in: .horizontal) {
             expandedEditorTopBar
-            FlowLayout(spacing: 6, lineSpacing: 6) {
+            HStack(spacing: 6) {
                 compactEditorTopBarItems
             }
         }
@@ -1711,22 +1731,8 @@ public struct NotebookEditorView: View {
 
             Spacer()
 
-            // 手繪與打字模式切換器 (Picker)
-            Picker("", selection: $editorMode) {
-                HStack(spacing: 4) {
-                    Image(systemName: "pencil.tip")
-                    Text(localizationManager.localized("handwriting_mode"))
-                }
-                .tag(EditorMode.draw)
-
-                HStack(spacing: 4) {
-                    Image(systemName: "keyboard")
-                    Text(localizationManager.localized("typing_mode"))
-                }
-                .tag(EditorMode.type)
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 190)
+            // 手繪與打字模式切換器
+            editorModeSwitcher(compact: false)
 
             // 筆記標題（點擊可修改）
             Button {
@@ -2076,10 +2082,7 @@ public struct NotebookEditorView: View {
     }
 
     // 窄螢幕自適應緊湊工具列
-    /// 緊湊模式的按鈕們（不含容器）。
-    ///
-    /// 刻意不自帶 `HStack` —— `FlowLayout` 必須看得到每一顆按鈕才能決定要在
-    /// 哪裡換行；包在 HStack 裡它只會看到「一個」超寬的子視圖，於是永遠不換行。
+    /// 緊湊模式的按鈕們（容器由呼叫端提供）。
     @ViewBuilder
     private var compactEditorTopBarItems: some View {
         // 回到首頁按鈕（緊湊模式）
@@ -2118,12 +2121,7 @@ public struct NotebookEditorView: View {
         .buttonStyle(.plain)
 
         // 模式切換（緊湊圖標）
-        Picker("", selection: $editorMode) {
-            Image(systemName: "pencil.tip").tag(EditorMode.draw)
-            Image(systemName: "keyboard").tag(EditorMode.type)
-        }
-        .pickerStyle(.segmented)
-        .frame(width: 76)
+        editorModeSwitcher(compact: true)
 
         // 筆記標題（彈性縮寫）
         Button {
@@ -2175,34 +2173,30 @@ public struct NotebookEditorView: View {
             }
         }
 
-        // 📦 素材圖庫（緊湊按鈕）
-        Button {
-            showAssetLibrarySheet = true
-        } label: {
-            Image(systemName: "shippingbox.fill")
-                .font(.caption)
-                .foregroundColor(.purple)
-                .padding(5)
-                .background(Color.purple.opacity(0.12))
-                .cornerRadius(6)
-        }
-        .buttonStyle(.plain)
-        .help(localizationManager.localized("asset_library"))
-
-        // ➕ 插入物件（緊湊選單）
+        // ⋯ 更多（次要功能收在這裡）
+        //
+        // 緊湊模式下不再把每個功能都攤在工具列上 —— 視窗一窄就會互相擠掉。
+        // 主要動作（首頁、模式、頁碼、錄音、匯出）留在列上，其餘收進選單，
+        // 位置固定、不會因為視窗寬度而消失。
         Menu {
-            Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
-            Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
-            Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
-            Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
-            Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
-            Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
-            Divider()
-            Button { withAnimation { isPlacingCommentPin = true } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
-            Divider()
-            Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
+            Section {
+                Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
+                Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
+                Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
+                Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
+                Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
+                Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
+            } header: {
+                Text(localizationManager.localized("insert_object"))
+            }
+
+            Section {
+                Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
+                Button { withAnimation { isPlacingCommentPin.toggle() } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
+                Button { showCollaborationSheet = true } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }
+            }
         } label: {
-            Image(systemName: "plus.circle.fill")
+            Image(systemName: "ellipsis.circle.fill")
                 .font(.caption)
                 .foregroundColor(.accentColor)
                 .padding(5)
@@ -2210,55 +2204,7 @@ public struct NotebookEditorView: View {
                 .cornerRadius(6)
         }
         .buttonStyle(.plain)
-        .help(localizationManager.localized("insert_object"))
-
-        // 💬 討論圖釘（緊湊按鈕）
-        Button {
-            withAnimation {
-                isPlacingCommentPin.toggle()
-            }
-        } label: {
-            ZStack(alignment: .topTrailing) {
-                Image(systemName: isPlacingCommentPin ? "pin.circle.fill" : "text.bubble.fill")
-                    .font(.caption)
-                    .foregroundColor(isPlacingCommentPin ? .orange : .accentColor)
-                    .padding(5)
-                    .background(isPlacingCommentPin ? Color.orange.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
-                    .cornerRadius(6)
-
-                if let count = notebook.commentPins?.filter({ !$0.isResolved }).count, count > 0 {
-                    Circle()
-                        .fill(Color.orange)
-                        .frame(width: 6, height: 6)
-                        .offset(x: 2, y: -2)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .help(localizationManager.localized("comment_pin"))
-
-        // 👥 線上協同（緊湊按鈕）
-        Button {
-            showCollaborationSheet = true
-        } label: {
-            ZStack(alignment: .topTrailing) {
-                Image(systemName: isCollaborating ? "person.2.wave.2.fill" : "person.2.fill")
-                    .font(.caption)
-                    .foregroundColor(isCollaborating ? .green : .accentColor)
-                    .padding(5)
-                    .background(isCollaborating ? Color.green.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
-                    .cornerRadius(6)
-
-                if isCollaborating {
-                    Circle()
-                        .fill(Color.green)
-                        .frame(width: 6, height: 6)
-                        .offset(x: 2, y: -2)
-                }
-            }
-        }
-        .buttonStyle(.plain)
-        .help(localizationManager.localized("collaborate"))
+        .help(localizationManager.localized("more_tools"))
 
         // 錄音
         if audioManager.status == .recording {
@@ -2303,6 +2249,56 @@ public struct NotebookEditorView: View {
                 .cornerRadius(6)
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - 手繪／打字模式切換器
+    //
+    // 原本用 `.pickerStyle(.segmented)`，但每個選項裡放的是 `HStack { Image; Text }`：
+    // UIKit 的分段控制項只吃單一 Text 或單一 Image，HStack 會被拆平成好幾段，
+    // `.tag()` 跟著失效 —— 畫面上看得到「打字」，點下去卻永遠切不過去。
+    // 改成兩顆自己畫的按鈕，狀態由 editorMode 直接驅動，行為確定。
+    private func editorModeSwitcher(compact: Bool) -> some View {
+        HStack(spacing: 2) {
+            editorModeButton(mode: .draw, icon: "pencil.tip", titleKey: "handwriting_mode", compact: compact)
+            editorModeButton(mode: .type, icon: "keyboard", titleKey: "typing_mode", compact: compact)
+        }
+        .padding(2)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+        .cornerRadius(compact ? 7 : 9)
+    }
+
+    private func editorModeButton(mode: EditorMode, icon: String, titleKey: String, compact: Bool) -> some View {
+        let isActive = (editorMode == mode)
+        return Button {
+            guard editorMode != mode else { return }
+            // 切到打字模式前先把目前筆劃落盤，否則切換時的畫布重建會吃掉未存的筆跡
+            saveCurrentPageDrawing()
+            withAnimation(.easeInOut(duration: 0.18)) {
+                editorMode = mode
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: compact ? 12 : 13, weight: .semibold))
+                if !compact {
+                    Text(localizationManager.localized(titleKey))
+                        .font(.system(size: 12, weight: .medium))
+                        .lineLimit(1)
+                        .fixedSize()
+                }
+            }
+            .foregroundColor(isActive ? .accentColor : .secondary)
+            .padding(.horizontal, compact ? 8 : 10)
+            .padding(.vertical, compact ? 4 : 6)
+            .background(
+                RoundedRectangle(cornerRadius: compact ? 5 : 7)
+                    .fill(isActive ? Color(uiColor: .systemBackground) : Color.clear)
+                    .shadow(color: Color.black.opacity(isActive ? 0.12 : 0), radius: 2, y: 1)
+            )
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .help(localizationManager.localized(titleKey))
     }
 
     private var notebookStructureSidebar: some View {
@@ -2359,7 +2355,7 @@ public struct NotebookEditorView: View {
                     .buttonStyle(.plain)
                 }
 
-                Picker("", selection: $sidebarTab) {
+                Picker("", selection: sidebarTabBinding) {
                     Text(localizationManager.localized("structure_pages")).tag(SidebarTabMode.pages)
                     Text(localizationManager.localized("structure_folders")).tag(SidebarTabMode.folders)
                 }
@@ -2840,11 +2836,21 @@ public struct NotebookEditorView: View {
 
     // MARK: - 2. 🌟 實體手繪工具列（水平滑動包裹、免擠壓、隨點隨用）
     private var drawingToolbar: some View {
-        // 換行而非捲動：所有筆刷與插入工具在任何視窗寬度下都要同時看得到。
-        FlowLayout(spacing: 14, lineSpacing: 10) {
+        // 單行、不捲動也不換行。放不下時分兩步退讓：
+        // 先收掉筆刷底下的文字標籤，再不夠就由「更多」選單承接次要工具。
+        ViewThatFits(in: .horizontal) {
+            drawingToolbarRow(showToolLabels: true)
+            drawingToolbarRow(showToolLabels: false)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+    }
+
+    private func drawingToolbarRow(showToolLabels: Bool) -> some View {
+        HStack(spacing: 14) {
                 // 工具選擇群組（鋼筆、原子筆、毛筆、麥克筆、螢光筆、鉛筆、水彩筆、橡皮擦、套索）
-            // 每一支筆都是 FlowLayout 的獨立子視圖，這樣視窗變窄時筆刷群組
-            // 本身也會換行；包在 HStack 裡的話它是「一個」寬子視圖，永遠不換行。
                 ForEach(EditorToolType.allCases) { tool in
                     Button {
                         selectedTool = tool
@@ -2852,8 +2858,10 @@ public struct NotebookEditorView: View {
                         VStack(spacing: 3) {
                             Image(systemName: tool.iconName)
                                 .font(.system(size: 16, weight: selectedTool == tool ? .bold : .regular))
-                            Text(localizationManager.localized(tool.localizationKey))
-                                .font(.system(size: 10))
+                            if showToolLabels {
+                                Text(localizationManager.localized(tool.localizationKey))
+                                    .font(.system(size: 10))
+                            }
                         }
                         .foregroundColor(selectedTool == tool ? .accentColor : .secondary)
                         .padding(.horizontal, 8)
@@ -3001,140 +3009,34 @@ public struct NotebookEditorView: View {
                 ToolbarSeparator()
                     .frame(height: 24)
 
-                // 插入圖片按鈕
-                Button {
-                    showPhotoPicker = true
+                // ⋯ 更多：次要工具收在這裡
+                //
+                // 這些插入類工具原本全部攤在列上，視窗一窄就被擠出畫面外。
+                // 收進選單後位置固定，不會因為視窗寬度而消失。
+                Menu {
+                    Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
+                    Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
+                    Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
+                    Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
+                    Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
+                    Divider()
+                    Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
+                    Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
                 } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: "photo.badge.plus")
-                            .font(.system(size: 15))
-                        Text(localizationManager.localized("insert_image"))
-                            .font(.system(size: 10))
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
-                    .background(Color.secondary.opacity(0.1))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-                .help(localizationManager.localized("insert_image"))
-
-                // 算式計算按鈕
-                Button {
-                    showMathCalculator = true
-                } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: "plus.forwardslash.minus")
-                            .font(.system(size: 15))
-                        Text(localizationManager.localized("math_calc"))
-                            .font(.system(size: 10))
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
-                    .background(Color.secondary.opacity(0.1))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-                .help(localizationManager.localized("math_calc"))
-
-                // 數字製圖按鈕
-                Button {
-                    showChartStudio = true
-                } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: "chart.bar.xaxis")
-                            .font(.system(size: 15))
-                        Text(localizationManager.localized("chart_studio"))
-                            .font(.system(size: 10))
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
-                    .background(Color.secondary.opacity(0.1))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-                .help(localizationManager.localized("chart_studio"))
-
-                // 🪄 草圖智慧修飾按鈕
-                Button {
-                    withAnimation {
-                        showSketchRefineBar.toggle()
-                    }
-                } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: "wand.and.stars")
-                            .font(.system(size: 15))
-                        Text(localizationManager.localized("refine_sketch"))
-                            .font(.system(size: 10))
-                    }
-                    .foregroundColor(showSketchRefineBar ? .purple : .primary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
-                    .background(showSketchRefineBar ? Color.purple.opacity(0.15) : Color.secondary.opacity(0.1))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-                .help(localizationManager.localized("refine_sketch"))
-
-                // 🧊 3D 模型插入按鈕
-                Button {
-                    show3DStudio = true
-                } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: "cube.transparent")
-                            .font(.system(size: 15))
-                        Text(localizationManager.localized("insert_3d"))
-                            .font(.system(size: 10))
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
-                    .background(Color.secondary.opacity(0.1))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-                .help(localizationManager.localized("insert_3d"))
-
-                // 📦 素材圖庫按鈕
-                Button {
-                    showAssetLibrarySheet = true
-                } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: "shippingbox.fill")
-                            .font(.system(size: 15))
-                        Text(localizationManager.localized("asset_library"))
-                            .font(.system(size: 10))
+                    HStack(spacing: 4) {
+                        Image(systemName: "ellipsis.circle")
+                            .font(.system(size: 15, weight: .semibold))
+                        Text(localizationManager.localized("more_tools"))
+                            .font(.system(size: 11))
                     }
                     .foregroundColor(.accentColor)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
-                    .background(Color.accentColor.opacity(0.12))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(Color.accentColor.opacity(0.10))
                     .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
-                .help(localizationManager.localized("asset_library"))
-
-                // 🎨 三大主題專屬加速工具按鈕
-                Button {
-                    showThemeToolsSheet = true
-                } label: {
-                    VStack(spacing: 3) {
-                        Image(systemName: "paintpalette.fill")
-                            .font(.system(size: 15))
-                        Text(localizationManager.localized("theme_tools"))
-                            .font(.system(size: 10))
-                    }
-                    .foregroundColor(.purple)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 4)
-                    .background(Color.purple.opacity(0.15))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-                .help(localizationManager.localized("theme_tools"))
+                .help(localizationManager.localized("more_tools"))
 
                 ToolbarSeparator()
                     .frame(height: 24)
@@ -3168,16 +3070,13 @@ public struct NotebookEditorView: View {
                     }
                     .help(localizationManager.localized("clear_page"))
                 }
-            }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+        }
     }
 
     // MARK: - 🌟 實體鍵盤打字與排版工具列
     private var typingToolbar: some View {
-        FlowLayout(spacing: 12, lineSpacing: 10) {
+        // 單行、不捲動也不換行：次要的插入工具收進「更多」選單。
+        HStack(spacing: 12) {
                 // 插入文字方塊
                 Button {
                     newTextDraft = NoteTextAttachment(pageIndex: currentPageIndex)
@@ -3261,113 +3160,30 @@ public struct NotebookEditorView: View {
                 .buttonStyle(.plain)
                 .help(localizationManager.localized("insert_link"))
 
-                // 插入圖片
-                Button {
-                    showPhotoPicker = true
+                // ⋯ 更多：次要插入工具
+                Menu {
+                    Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
+                    Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
+                    Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
+                    Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
+                    Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
+                    Divider()
+                    Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
                 } label: {
                     HStack(spacing: 4) {
-                        Image(systemName: "photo.badge.plus")
-                            .font(.system(size: 14))
-                        Text(localizationManager.localized("insert_image"))
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.secondary.opacity(0.12))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-
-                // 算式計算
-                Button {
-                    showMathCalculator = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "plus.forwardslash.minus")
-                            .font(.system(size: 14))
-                        Text(localizationManager.localized("math_calc"))
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.secondary.opacity(0.12))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-
-                // 數字製圖
-                Button {
-                    showChartStudio = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "chart.bar.xaxis")
-                            .font(.system(size: 14))
-                        Text(localizationManager.localized("chart_studio"))
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.secondary.opacity(0.12))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-
-                // 插入 3D 模型
-                Button {
-                    show3DStudio = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "cube.transparent")
-                            .font(.system(size: 14))
-                        Text(localizationManager.localized("insert_3d"))
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.secondary.opacity(0.12))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-
-                // 📦 素材圖庫按鈕
-                Button {
-                    showAssetLibrarySheet = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "shippingbox.fill")
-                            .font(.system(size: 14))
-                        Text(localizationManager.localized("asset_library"))
+                        Image(systemName: "ellipsis.circle")
+                            .font(.system(size: 15, weight: .semibold))
+                        Text(localizationManager.localized("more_tools"))
                             .font(.system(size: 11))
                     }
                     .foregroundColor(.accentColor)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 5)
-                    .background(Color.accentColor.opacity(0.12))
+                    .background(Color.accentColor.opacity(0.10))
                     .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
-
-                // 🎨 三大主題加速工具按鈕
-                Button {
-                    showThemeToolsSheet = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "paintpalette.fill")
-                            .font(.system(size: 14))
-                        Text(localizationManager.localized("theme_tools"))
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(.purple)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.purple.opacity(0.15))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
+                .help(localizationManager.localized("more_tools"))
 
                 // 延長本頁
                 Button {

@@ -38,7 +38,12 @@ if [[ -f "$BUMP_SCRIPT" ]]; then
     NEW_VERSION=$(echo "$OUTPUT" | grep '^NEW_VERSION=' | cut -d'=' -f2)
 
     if [[ -n "$NEW_VERSION" ]]; then
-        git add "${REPO_ROOT}/Cargo.toml" "${REPO_ROOT}/Cargo.lock"
+        # Apple 專案檔也必須一起提交 —— 只 commit Cargo 檔的話，
+        # 被改掉的 MARKETING_VERSION / CURRENT_PROJECT_VERSION 會留在工作目錄裡，
+        # 下一次發版就會出現「Cargo 與 Apple 版本不一致」的漂移。
+        git add "${REPO_ROOT}/Cargo.toml" "${REPO_ROOT}/Cargo.lock" \
+                "${REPO_ROOT}/apple/project.yml" \
+                "${REPO_ROOT}/apple/Kairumo.xcodeproj/project.pbxproj"
         git commit -m "chore(release): bump version to v${NEW_VERSION}"
         TAG_NAME="v${NEW_VERSION}"
         if ! git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
