@@ -10,6 +10,8 @@
 
 pub mod catalog;
 pub mod download;
+pub mod provenance;
 
 pub use catalog::{ModelCatalog, ModelEntry};
 pub use download::{DownloadError, DownloadState, Downloader, Fetcher, RangeRequest};
+pub use provenance::{LicenseEvidence, Provenance, ProvenanceError};

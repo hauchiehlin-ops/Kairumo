@@ -1,0 +1,53 @@
+{
+  "model_id": "ct-punc",
+  "purpose": "中文標點還原（功能 C5，P0）",
+  "capabilities": [
+    "punctuation.zh"
+  ],
+  "source": {
+    "host": "huggingface.co",
+    "repo": "funasr/ct-punc",
+    "revision": "d0e55e2b8722a78b63705ff443d09c4f86e5d750",
+    "url": "https://huggingface.co/funasr/ct-punc/tree/d0e55e2b8722a78b63705ff443d09c4f86e5d750"
+  },
+  "license": {
+    "evidence": "model_card_metadata",
+    "declared_license": "apache-2.0",
+    "url": "https://huggingface.co/api/models/funasr/ct-punc",
+    "readme_url": "https://huggingface.co/funasr/ct-punc/raw/d0e55e2b8722a78b63705ff443d09c4f86e5d750/README.md",
+    "readme_sha256": "caa13cf2d2b7ea4246d6da5390925d6adcb03de2805017c42d86fe53264c1d15",
+    "sha256": "fbea03a0f7e90768f6205884fc27229552d26cb488612a6e5931ed9cee051522",
+    "bytes": 2090
+  },
+  "exported_at_utc": "2026-09-12T10:19:53.906740+00:00",
+  "exported_by": "scripts/export-funasr-onnx.py",
+  "tools": {
+    "python": "3.14.6",
+    "torch": "2.14.0",
+    "funasr": "1.4.15",
+    "onnx": "1.22.0"
+  },
+  "artifacts": [
+    {
+      "file": "config.yaml",
+      "sha256": "c5ffb25cd063ed366cb26283908dca05a08ecfef8e90bef1d498ef9ffacd7552",
+      "bytes": 812
+    },
+    {
+      "file": "configuration.json",
+      "sha256": "7043245e6264cea789404e498a6f55a330a18585a4690d35dfe71741e6982237",
+      "bytes": 450
+    },
+    {
+      "file": "model.onnx",
+      "sha256": "d2b08924a2cfd0fde95dfd89e906dc6e52dfb72022e51146752e4cfce9da08f7",
+      "bytes": 1125777554
+    },
+    {
+      "file": "tokens.json",
+      "sha256": "89951fe0669380ed33298ee048c4a2b0ebcaaf6ee8f332d85c281c41d0f38392",
+      "bytes": 8280697
+    }
+  ],
+  "note": "依 ADR-0006 / 決策 D-07 自行匯出。授權依據為上方 license 欄位所記錄的檔案內容（其雜湊已固定），而非任何第三方轉換者的宣告。"
+}

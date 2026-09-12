@@ -13,8 +13,8 @@
 | `whisper-large-v3-turbo` | MIT | ✅ 可用 |
 | `ppocr-v5` | Apache-2.0 | ✅ 可用 |
 | `qwen3-4b-instruct` | Apache-2.0 | ✅ 可用 |
-| `paraformer-zh` | ⚠️ **雙通路衝突** | ⚠️ **待決策 D-07** |
-| `ct-punc`（中文標點） | ⚠️ **同上** | ⚠️ **待決策 D-07** |
+| `paraformer-zh-streaming` | Apache-2.0（**repo 內含完整授權原文**） | ✅ **已自行匯出**（D-07 選 C） |
+| `ct-punc`（中文標點） | Apache-2.0（**僅 model card 標籤**） | ⚠️ 證據較弱，且**體積不可行**（見 §6） |
 | `sensevoice-small` | ❌ FunASR Model License v1.1 | ❌ **不採用** |
 | speaker-diarization | 未確認 | ⏸️ 延後（P2） |
 
@@ -25,9 +25,17 @@
 同一份權重，經由兩個通路散布，授權條款**不一致**：
 
 ### 通路 A：HuggingFace `funasr/*`（官方組織）
-- `funasr/paraformer-zh`、`funasr/paraformer-zh-streaming`、`funasr/ct-punc`
-- metadata 標記 `license: apache-2.0`
-- **repo 內含完整的 Apache-2.0 LICENSE 檔案**（不只是標籤）
+
+⚠️ **實際查驗後發現三個 repo 的證據強度不同**（`curl` HF API 逐一確認）：
+
+| repo | metadata 標籤 | repo 內 LICENSE 檔 | 證據強度 |
+|---|---|---|---|
+| `funasr/paraformer-zh-streaming` | apache-2.0 | ✅ **有**（11,358 bytes 的 Apache-2.0 全文） | **最強** |
+| `funasr/paraformer-zh` | apache-2.0 | ❌ 無 | 較弱 |
+| `funasr/ct-punc` | apache-2.0 | ❌ 無 | 較弱 |
+
+**只有 streaming 版內含完整授權原文。** 幸運的是 streaming 正是功能 C2
+（邊錄邊出字）需要的形態 —— 授權證據與功能需求剛好一致。
 - README 明文：「This repository publishes the model weights and accompanying
   files under the Apache License 2.0, unless an individual file carries a
   different notice.」
@@ -80,6 +88,32 @@ Whisper 原生支援 code-switching，品質待 H2 測試集實測，但授權�
 
 ---
 
+## 6. ⚠️ ct-punc 的體積問題（新發現）
+
+自行匯出後的實測大小：
+
+| 模型 | FP32 | int8 量化 |
+|---|---|---|
+| `paraformer-zh-streaming` (encoder) | 606.9 MB | **158.6 MB** |
+| `paraformer-zh-streaming` (decoder) | 217.9 MB | **68.5 MB** |
+| `ct-punc` | 1,073.6 MB | **965.0 MB** ⚠️ |
+
+Paraformer 量化後合計約 **227 MB**，完全可行。
+
+但 **ct-punc 量化幾乎沒有效果**（1,074 → 965 MB）。原因是它的體積由
+**詞嵌入表**主導（vocab 272,727），而動態 int8 量化只處理 MatMul 權重，
+不碰 embedding。
+
+**965 MB 的標點模型在行動裝置上不可行。** C5 是 P0 功能，因此這是新的阻擋項：
+
+- 可能有較小的變體（sherpa-onnx 的轉換版約 280 MB，值得查是不是不同 checkpoint）
+- 或需要詞表裁剪 / 知識蒸餾
+- 或改用規則式 + 輕量模型的混合方案
+
+→ 記為 `docs/TODO.md` **S-29**。
+
+---
+
 ## 5. 待決策：D-07
 
 > **是否採用 Paraformer-zh 與 ct-punc？**
@@ -93,6 +127,13 @@ Whisper 原生支援 code-switching，品質待 H2 測試集實測，但授權�
 
 **工程上的建議：C**。官方 repo 的 Apache-2.0 LICENSE 檔是最強的授權依據，
 自行匯出讓整條鏈都落在那份授權底下。但這是**帶法律性質的判斷，應由專案擁有者決定**。
+
+### ✅ 已決議（2026-09-12）：選擇 C
+
+見 `docs/adr/0006-self-export-funasr-onnx.md`。匯出流程為
+`scripts/export-funasr-onnx.py`，產出的 `PROVENANCE.json` 記錄：
+來源 repo 與**實際 commit sha**、授權證據及其雜湊、匯出工具版本、產出檔雜湊。
+Rust 端有 `padnote-models::Provenance` 驗證這些紀錄的完整性（測試釘住）。
 
 ### ⚠️ C5 是 P0 功能
 中文標點還原（`features.md` C5）被列為 **P0 —— 中文轉錄沒有標點等於沒用**。

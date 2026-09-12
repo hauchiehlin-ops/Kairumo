@@ -27,7 +27,9 @@
   whisper-large-v3-turbo（MIT）、ppocr-v5（Apache-2.0）、qwen3-4b（Apache-2.0）
 - ❌ **已排除**：SenseVoice-Small（FunASR Model License v1.1，非 OSI 開源；
   商用釐清 issue 數月無回覆）。C9 中英夾雜改由 whisper-turbo 承擔
-- ⚠️ **雙通路衝突**：Paraformer-zh 與 ct-punc → **待決策 D-07**
+- ✅ **已解決**：Paraformer-zh-streaming 自行從官方權重匯出（repo 內含完整
+  Apache-2.0 授權原文，11,358 bytes，雜湊已記入 PROVENANCE.json）
+- ⚠️ **ct-punc 證據較弱**：repo 內**無** LICENSE 檔，僅 model card 標籤
 - ⏸️ **延後**：speaker-diarization（P2）
 - **完整稽核**：`models/LICENSE-AUDIT.md`
 - ⚠️ **另一個教訓**：原本 silero 的 HuggingFace URL 需要登入，`curl` 只拿到
@@ -120,4 +122,4 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | D-04 | 自訂筆（`tool_id` 100+）的參數序列化格式 | |
 | D-05 | 長期維護與營收模式 | 全免費無後端 ⇒ 無營收；捐贈？桌面版買斷？ |
 | D-06 | 多裝置金鑰首次配對的 UX | QR code 傳遞 DEK 的具體流程 |
-| **D-07** | **是否採用 Paraformer-zh 與 ct-punc？** | 官方 HF repo 有完整 Apache-2.0 LICENSE 檔，但 FunASR GitHub 的 MODEL_LICENSE v1.1 寫「僅供參考與學習」且含不得詆毀/自動終止條款。**影響 P0 功能 C5 中文標點還原**。四個選項與建議見 `models/LICENSE-AUDIT.md` §5 |
+| ~~D-07~~ | ~~是否採用 Paraformer-zh 與 ct-punc？~~ ✅ **已決議：選 C 自行匯出**（ADR-0006） | 官方 HF repo 有完整 Apache-2.0 LICENSE 檔，但 FunASR GitHub 的 MODEL_LICENSE v1.1 寫「僅供參考與學習」且含不得詆毀/自動終止條款。**影響 P0 功能 C5 中文標點還原**。四個選項與建議見 `models/LICENSE-AUDIT.md` §5 |

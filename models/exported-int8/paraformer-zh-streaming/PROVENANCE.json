@@ -1,0 +1,72 @@
+{
+  "model_id": "paraformer-zh-streaming",
+  "purpose": "中文 ASR 主力引擎（串流，功能 C2）",
+  "capabilities": [
+    "asr.zh"
+  ],
+  "source": {
+    "host": "huggingface.co",
+    "repo": "funasr/paraformer-zh-streaming",
+    "revision": "fd2af606b37d7fb8b3b8a218c5be5b07b53ef6ba",
+    "url": "https://huggingface.co/funasr/paraformer-zh-streaming/tree/fd2af606b37d7fb8b3b8a218c5be5b07b53ef6ba"
+  },
+  "license": {
+    "evidence": "license_file",
+    "file": "LICENSE",
+    "url": "https://huggingface.co/funasr/paraformer-zh-streaming/raw/fd2af606b37d7fb8b3b8a218c5be5b07b53ef6ba/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "bytes": 11358
+  },
+  "exported_at_utc": "2026-09-12T10:21:46.866403+00:00",
+  "exported_by": "scripts/export-funasr-onnx.py",
+  "tools": {
+    "python": "3.14.6",
+    "torch": "2.14.0",
+    "funasr": "1.4.15",
+    "onnx": "1.22.0"
+  },
+  "artifacts": [
+    {
+      "file": "am.mvn",
+      "sha256": "29b3c740a2c0cfc6b308126d31d7f265fa2be74f3bb095cd2f143ea970896ae5",
+      "bytes": 11203
+    },
+    {
+      "file": "config.yaml",
+      "sha256": "35e6bf41f8c7eaf9a0f787af7fdc8fc5ed75fa8009ade7d3c2f3ef5bce20c648",
+      "bytes": 2940
+    },
+    {
+      "file": "configuration.json",
+      "sha256": "1aae0f45e3e503f52512eee4798d241611a44cc732a7a91d2e2d2f65dd9755be",
+      "bytes": 472
+    },
+    {
+      "file": "decoder.onnx",
+      "sha256": "1ca008807db6cf99f060011a0dfbfb52df5ec357eb6288bbc741b126c7234460",
+      "bytes": 228466759
+    },
+    {
+      "file": "decoder_quant.onnx",
+      "sha256": "bede8560a148aa7f9811dc2a7b3a0a959ee8341780b3ff4b11b7c7a8761ebb15",
+      "bytes": 71867694
+    },
+    {
+      "file": "model.onnx",
+      "sha256": "685216d71669d3396d1bcfc0d7b70e3e34b4880edc277df5d586a807ff07a89e",
+      "bytes": 636337570
+    },
+    {
+      "file": "model_quant.onnx",
+      "sha256": "86aa672b59f57707ad43ce28b333d8a0f3eba0bab91bc7764fbc9e1dd7582f64",
+      "bytes": 166351438
+    },
+    {
+      "file": "tokens.json",
+      "sha256": "2b20c2b12572d682afff84ce1c8d560f67b8b32a4c1f21567411d141ed352127",
+      "bytes": 93676
+    }
+  ],
+  "quantized": true,
+  "note": "依 ADR-0006 / 決策 D-07 自行匯出。授權依據為上方 license 欄位所記錄的檔案內容（其雜湊已固定），而非任何第三方轉換者的宣告。"
+}
