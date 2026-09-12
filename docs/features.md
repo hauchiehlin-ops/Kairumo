@@ -135,7 +135,7 @@
 |---|---|---|---|
 | I1 | **引擎與權限中心**（統一設定頁） | 一頁列出所有引擎/權限狀態，需要動作時一鍵跳轉：<br>• 手寫辨識引擎（Apple Vision ✓／ML Kit／OCR fallback）<br>• ASR 模型（未下載／下載中／就緒，顯示大小與來源）<br>• 麥克風・語音辨識權限<br>• iCloud 容器狀態<br>• Google Drive 授權<br>• 本機同步資料夾路徑<br>⚠️ Apple Vision 與 ML Kit **免申請、免 key**，僅需權限授予 | **P1** |
 | I2 | 模型按需下載管理 | HF/GitHub Releases、SHA-256 驗證、斷點續傳、可刪除釋放空間 | **P1** |
-| I3 | Apple Pencil 雙擊/懸停 | 切換工具、懸停預覽 | **P1** |
+| I3 | Apple Pencil 雙擊/懸停 | ✅ 懸停預覽與位置回報已實作（S-36）；雙擊需 `UIPencilInteraction`（S-40） | **P1** |
 | I4 | 鍵盤快捷鍵 / 外接鍵盤 | — | **P2** |
 | I5 | Handoff / 多視窗 / 拖放 | iPad 系統整合 | **P2** |
 | I6 | 快速備忘（鎖定畫面／小工具） | — | **P3** |

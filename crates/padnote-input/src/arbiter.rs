@@ -29,6 +29,15 @@ pub enum Phase {
     Ended,
     /// 被系統取消（來電、手勢接管…）。
     Cancelled,
+    /// 筆懸停在螢幕上方但**尚未接觸**（Apple Pencil Pro／Pencil 2 於 M2 iPad、
+    /// S Pen 的 Air View、Windows 的 hover）。
+    ///
+    /// 兩個用途：
+    /// 1. 顯示落筆預覽 —— 使用者看得到筆尖會落在哪
+    /// 2. **提前啟動掌拒** —— 筆在上方時手掌往往已經貼上螢幕了
+    Hover,
+    /// 筆離開懸停範圍。
+    HoverEnded,
 }
 
 /// 平台層轉換後的統一指標事件。
@@ -57,6 +66,8 @@ pub enum Verdict {
     Gesture,
     /// 手掌或誤觸，忽略。
     Reject,
+    /// 懸停 —— 顯示落筆預覽，不產生筆跡。
+    Hover,
 }
 
 /// 一次仲裁的完整決定。
@@ -112,6 +123,12 @@ pub struct ArbiterConfig {
     pub retract_window_us: u64,
     /// 同時幾根手指視為手勢。
     pub gesture_finger_count: usize,
+    /// 筆懸停時是否提前啟動掌拒。
+    ///
+    /// 筆在螢幕上方時，使用者的手掌往往已經貼上去了。提前啟動能擋掉
+    /// 「手掌先落」的一大部分，讓回溯撤銷少被用到 ——
+    /// **不畫出來再收回，比畫出來再收回好**。
+    pub palm_reject_on_hover: bool,
 }
 
 impl Default for ArbiterConfig {
@@ -122,6 +139,7 @@ impl Default for ArbiterConfig {
             pen_grace_us: 300_000,
             retract_window_us: 500_000,
             gesture_finger_count: 2,
+            palm_reject_on_hover: true,
         }
     }
 }
@@ -145,6 +163,10 @@ pub struct PointerArbiter {
     pen_down: bool,
     /// 筆最後一次抬起的時間。
     pen_lifted_at_us: Option<u64>,
+    /// 筆目前是否懸停在螢幕上方。
+    pen_hovering: bool,
+    /// 懸停位置，供 UI 畫落筆預覽。
+    hover_position: Option<(f32, f32)>,
 }
 
 impl Default for PointerArbiter {
@@ -160,6 +182,8 @@ impl PointerArbiter {
             active: HashMap::new(),
             pen_down: false,
             pen_lifted_at_us: None,
+            pen_hovering: false,
+            hover_position: None,
         }
     }
 
@@ -183,11 +207,23 @@ impl PointerArbiter {
         self.pen_down
     }
 
+    /// 筆是否懸停在螢幕上方。
+    pub fn is_pen_hovering(&self) -> bool {
+        self.pen_hovering
+    }
+
+    /// 懸停位置，供 UI 畫落筆預覽。筆未懸停時為 `None`。
+    pub fn hover_position(&self) -> Option<(f32, f32)> {
+        self.hover_position
+    }
+
     /// 清空狀態。切換頁面或視圖時呼叫。
     pub fn reset(&mut self) {
         self.active.clear();
         self.pen_down = false;
         self.pen_lifted_at_us = None;
+        self.pen_hovering = false;
+        self.hover_position = None;
     }
 
     /// 餵入一個事件並取得決定。
@@ -196,7 +232,38 @@ impl PointerArbiter {
             Phase::Began => self.on_began(e),
             Phase::Moved => self.on_moved(e),
             Phase::Ended | Phase::Cancelled => self.on_ended(e),
+            Phase::Hover => self.on_hover(e),
+            Phase::HoverEnded => self.on_hover_ended(e),
         }
+    }
+
+    fn on_hover(&mut self, e: &PointerEvent) -> Decision {
+        // 只有筆能懸停。手指的「懸停」在多數平台上不存在，
+        // 就算有也不該觸發預覽。
+        if !e.kind.is_stylus() {
+            return Decision::plain(Verdict::Reject);
+        }
+        self.pen_hovering = true;
+        self.hover_position = Some((e.x, e.y));
+
+        // 筆已經在上方 —— 提前收回可疑的筆畫，不要等它落下。
+        // 不畫出來再收回，比畫出來再收回好。
+        let retract = if self.config.palm_reject_on_hover {
+            self.retract_suspects(e.timestamp_us)
+        } else {
+            Vec::new()
+        };
+
+        Decision {
+            verdict: Verdict::Hover,
+            retract,
+        }
+    }
+
+    fn on_hover_ended(&mut self, _e: &PointerEvent) -> Decision {
+        self.pen_hovering = false;
+        self.hover_position = None;
+        Decision::plain(Verdict::Hover)
     }
 
     fn on_began(&mut self, e: &PointerEvent) -> Decision {
@@ -232,9 +299,13 @@ impl PointerArbiter {
             return Verdict::Reject;
         }
 
-        // 筆正按著，或剛抬起不久 —— 同時出現的觸控幾乎必然是手掌。
-        // 手掌通常比筆**晚**離開螢幕，因此抬起後仍有保護期。
-        if self.pen_down || self.within_pen_grace(e.timestamp_us) {
+        // 筆正按著、剛抬起不久、或懸停在上方 —— 同時出現的觸控幾乎必然是手掌。
+        // 手掌通常比筆**晚**離開螢幕，因此抬起後仍有保護期；
+        // 而筆懸停時手掌往往已經貼上螢幕了。
+        if self.pen_down
+            || self.within_pen_grace(e.timestamp_us)
+            || (self.config.palm_reject_on_hover && self.pen_hovering)
+        {
             return Verdict::Reject;
         }
 
@@ -558,11 +629,99 @@ mod tests {
     }
 
     #[test]
+    fn hover_reports_position_without_drawing() {
+        let mut a = PointerArbiter::default();
+        let mut e = ev(1, PointerKind::Pen, Phase::Hover, 0);
+        e.x = 150.0;
+        e.y = 250.0;
+
+        let d = a.handle(&e);
+        assert_eq!(d.verdict, Verdict::Hover, "懸停不該產生筆跡");
+        assert!(a.is_pen_hovering());
+        assert_eq!(a.hover_position(), Some((150.0, 250.0)));
+        assert!(!a.is_pen_down(), "懸停不等於落筆");
+    }
+
+    #[test]
+    fn hover_engages_palm_rejection_early() {
+        // 筆在螢幕上方時手掌往往已經貼上去了。提前擋掉比事後收回好 ——
+        // **不畫出來再收回，比畫出來再收回好**。
+        let mut a = PointerArbiter::default();
+        a.handle(&ev(1, PointerKind::Pen, Phase::Hover, 0));
+
+        assert_eq!(
+            a.handle(&ev(2, PointerKind::Finger, Phase::Began, 10_000))
+                .verdict,
+            Verdict::Reject,
+            "筆懸停時的觸控應直接擋掉"
+        );
+    }
+
+    #[test]
+    fn hover_retracts_strokes_that_already_started() {
+        // 手掌先落、筆才抬到螢幕上方 —— 此時就該收回，不必等筆落下。
+        let mut a = PointerArbiter::default();
+        a.handle(&ev(1, PointerKind::Finger, Phase::Began, 0));
+
+        let d = a.handle(&ev(2, PointerKind::Pen, Phase::Hover, 100_000));
+        assert_eq!(d.retract, vec![1], "懸停就該收回可疑筆畫");
+    }
+
+    #[test]
+    fn hover_can_be_disabled_for_palm_rejection() {
+        // 某些裝置的懸停偵測不穩，使用者可以關掉這個行為。
+        let mut a = PointerArbiter::new(ArbiterConfig {
+            palm_reject_on_hover: false,
+            ..Default::default()
+        });
+        a.handle(&ev(1, PointerKind::Pen, Phase::Hover, 0));
+
+        assert_eq!(
+            a.handle(&ev(2, PointerKind::Finger, Phase::Began, 10_000))
+                .verdict,
+            Verdict::Draw
+        );
+    }
+
+    #[test]
+    fn hover_ending_clears_the_preview() {
+        let mut a = PointerArbiter::default();
+        a.handle(&ev(1, PointerKind::Pen, Phase::Hover, 0));
+        a.handle(&ev(1, PointerKind::Pen, Phase::HoverEnded, 100_000));
+
+        assert!(!a.is_pen_hovering());
+        assert!(a.hover_position().is_none());
+    }
+
+    #[test]
+    fn finger_hover_is_ignored() {
+        // 手指的「懸停」在多數平台不存在，就算有也不該觸發預覽。
+        let mut a = PointerArbiter::default();
+        let d = a.handle(&ev(1, PointerKind::Finger, Phase::Hover, 0));
+        assert_eq!(d.verdict, Verdict::Reject);
+        assert!(!a.is_pen_hovering());
+    }
+
+    #[test]
+    fn hover_then_touch_still_draws() {
+        // 懸停之後真的落筆，當然要畫。
+        let mut a = PointerArbiter::default();
+        a.handle(&ev(1, PointerKind::Pen, Phase::Hover, 0));
+        assert_eq!(
+            a.handle(&ev(1, PointerKind::Pen, Phase::Began, 50_000))
+                .verdict,
+            Verdict::Draw
+        );
+    }
+
+    #[test]
     fn reset_clears_everything() {
         let mut a = PointerArbiter::default();
         a.handle(&ev(1, PointerKind::Pen, Phase::Began, 0));
         a.reset();
         assert!(!a.is_pen_down());
+        assert!(!a.is_pen_hovering());
+        assert!(a.hover_position().is_none());
         assert_eq!(a.drawing_count(), 0);
     }
 

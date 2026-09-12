@@ -40,6 +40,12 @@ pub enum FfiPhase {
     Moved,
     Ended,
     Cancelled,
+    /// 筆懸停在螢幕上方但尚未接觸。
+    ///
+    /// 兩個用途：顯示落筆預覽、**提前啟動掌拒**
+    /// （筆在上方時手掌往往已經貼上螢幕了）。
+    Hover,
+    HoverEnded,
 }
 
 impl From<FfiPhase> for Phase {
@@ -49,6 +55,8 @@ impl From<FfiPhase> for Phase {
             FfiPhase::Moved => Self::Moved,
             FfiPhase::Ended => Self::Ended,
             FfiPhase::Cancelled => Self::Cancelled,
+            FfiPhase::Hover => Self::Hover,
+            FfiPhase::HoverEnded => Self::HoverEnded,
         }
     }
 }
@@ -61,6 +69,8 @@ pub enum FfiVerdict {
     Gesture,
     /// 手掌或誤觸，忽略。
     Reject,
+    /// 懸停 —— 顯示落筆預覽，不產生筆跡。
+    Hover,
 }
 
 /// 平台層轉換後的指標事件。
@@ -154,6 +164,7 @@ impl InkArbiter {
                 Verdict::Draw => FfiVerdict::Draw,
                 Verdict::Gesture => FfiVerdict::Gesture,
                 Verdict::Reject => FfiVerdict::Reject,
+                Verdict::Hover => FfiVerdict::Hover,
             },
             retract: d.retract,
         }
@@ -185,6 +196,16 @@ impl InkArbiter {
 
     pub fn is_pen_down(&self) -> bool {
         self.lock().is_pen_down()
+    }
+
+    /// 筆是否懸停在螢幕上方。
+    pub fn is_pen_hovering(&self) -> bool {
+        self.lock().is_pen_hovering()
+    }
+
+    /// 懸停位置 `[x, y]`，供 UI 畫落筆預覽。未懸停時為 `None`。
+    pub fn hover_position(&self) -> Option<Vec<f32>> {
+        self.lock().hover_position().map(|(x, y)| vec![x, y])
     }
 
     /// 切換頁面或視圖時呼叫。
@@ -333,6 +354,29 @@ mod tests {
         a.set_pressure_action(FfiPressureAction::QuickToolbar);
         assert!(a.is_deep_press(0.95));
         assert!(!a.is_deep_press(0.5));
+    }
+
+    #[test]
+    fn hover_crosses_the_boundary_with_position() {
+        let a = InkArbiter::new();
+        let mut e = ev(1, FfiPointerKind::Pen, FfiPhase::Hover, 0, 2.0);
+        e.x = 150.0;
+        e.y = 250.0;
+
+        let d = a.handle(e);
+        assert!(matches!(d.verdict, FfiVerdict::Hover));
+        assert!(a.is_pen_hovering());
+        assert_eq!(a.hover_position(), Some(vec![150.0, 250.0]));
+    }
+
+    #[test]
+    fn hover_engages_palm_rejection_early() {
+        // 不畫出來再收回，比畫出來再收回好。
+        let a = InkArbiter::new();
+        a.handle(ev(1, FfiPointerKind::Pen, FfiPhase::Hover, 0, 2.0));
+
+        let d = a.handle(ev(2, FfiPointerKind::Finger, FfiPhase::Began, 10_000, 10.0));
+        assert!(matches!(d.verdict, FfiVerdict::Reject));
     }
 
     #[test]
