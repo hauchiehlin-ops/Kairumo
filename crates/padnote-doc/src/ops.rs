@@ -1,0 +1,662 @@
+//! 文件操作日誌（工作項 S-23，`format-spec.md` §6）。
+//!
+//! 在此之前只有**筆畫**會落盤，頁面、區塊、錄音 session 都只活在記憶體裡 ——
+//! 關掉 App 就沒了。這個模組補上整條文件的持久化。
+//!
+//! 與筆畫一樣是 **append-only**：每個變更追加一筆 `DocOp`，重開時重播得到
+//! 目前狀態。刪除用墓碑而非移除記錄，保持記錄可交換（同步收斂的前提）。
+
+use crate::text::{OpId, TextOp};
+use crate::{NotebookTime, PageTemplate, TextStyle, Uuid};
+
+/// 一個文件變更。
+#[derive(Clone, Debug, PartialEq)]
+pub enum DocOp {
+    SetTitle {
+        title: String,
+    },
+    AddPage {
+        id: Uuid,
+        template: PageTemplate,
+        /// 插入位置。超出範圍時接在最後。
+        index: u32,
+    },
+    RemovePage {
+        id: Uuid,
+    },
+    /// 文字區塊。內容本身由後續的 `TextEdit` 操作構成（CRDT）。
+    AddTextBlock {
+        page: Uuid,
+        id: Uuid,
+        style: TextStyle,
+        created_at: NotebookTime,
+    },
+    /// 轉錄區塊。文字來自 ASR，不可協同編輯，因此直接存字串。
+    AddTranscriptBlock {
+        page: Uuid,
+        id: Uuid,
+        session: Uuid,
+        text: String,
+        created_at: NotebookTime,
+    },
+    AddImageBlock {
+        page: Uuid,
+        id: Uuid,
+        blob: String,
+        width: f32,
+        height: f32,
+        created_at: NotebookTime,
+    },
+    RemoveBlock {
+        id: Uuid,
+    },
+    SetBlockStyle {
+        id: Uuid,
+        style: TextStyle,
+    },
+    /// 文字 CRDT 操作（ADR-0004）。
+    TextEdit {
+        block: Uuid,
+        op: TextOp,
+    },
+    StartAudio {
+        id: Uuid,
+        started_at: NotebookTime,
+        media_path: String,
+    },
+    EndAudio {
+        id: Uuid,
+        ended_at: NotebookTime,
+    },
+    /// 一個轉錄詞，時間戳在筆記本時間軸上（format-spec §4.1）。
+    AddWord {
+        text: String,
+        start: NotebookTime,
+        end: NotebookTime,
+        confidence: f32,
+    },
+}
+
+// ---- 編碼 ----
+
+const OP_SET_TITLE: u8 = 1;
+const OP_ADD_PAGE: u8 = 2;
+const OP_REMOVE_PAGE: u8 = 3;
+const OP_ADD_TEXT_BLOCK: u8 = 4;
+const OP_ADD_TRANSCRIPT_BLOCK: u8 = 5;
+const OP_ADD_IMAGE_BLOCK: u8 = 6;
+const OP_REMOVE_BLOCK: u8 = 7;
+const OP_SET_BLOCK_STYLE: u8 = 8;
+const OP_TEXT_EDIT: u8 = 9;
+const OP_START_AUDIO: u8 = 10;
+const OP_END_AUDIO: u8 = 11;
+const OP_ADD_WORD: u8 = 12;
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum DocCodecError {
+    Truncated,
+    UnknownOp(u8),
+    UnknownTemplate(u8),
+    UnknownStyle(u8),
+    InvalidUtf8,
+    InvalidChar(u32),
+}
+
+impl std::fmt::Display for DocCodecError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Truncated => write!(f, "文件操作資料被截斷"),
+            Self::UnknownOp(k) => write!(f, "未知的操作類型：{k}"),
+            Self::UnknownTemplate(t) => write!(f, "未知的頁面模板：{t}"),
+            Self::UnknownStyle(s) => write!(f, "未知的文字樣式：{s}"),
+            Self::InvalidUtf8 => write!(f, "字串不是合法的 UTF-8"),
+            Self::InvalidChar(c) => write!(f, "非法的 Unicode 碼位：{c}"),
+        }
+    }
+}
+
+impl std::error::Error for DocCodecError {}
+
+struct Writer(Vec<u8>);
+
+impl Writer {
+    fn u8(&mut self, v: u8) -> &mut Self {
+        self.0.push(v);
+        self
+    }
+    fn u32(&mut self, v: u32) -> &mut Self {
+        self.0.extend_from_slice(&v.to_le_bytes());
+        self
+    }
+    fn u64(&mut self, v: u64) -> &mut Self {
+        self.0.extend_from_slice(&v.to_le_bytes());
+        self
+    }
+    fn f32(&mut self, v: f32) -> &mut Self {
+        self.0.extend_from_slice(&v.to_le_bytes());
+        self
+    }
+    fn uuid(&mut self, v: Uuid) -> &mut Self {
+        self.0.extend_from_slice(v.as_bytes());
+        self
+    }
+    fn time(&mut self, v: NotebookTime) -> &mut Self {
+        self.u64(v.as_micros())
+    }
+    fn str(&mut self, s: &str) -> &mut Self {
+        self.u32(s.len() as u32);
+        self.0.extend_from_slice(s.as_bytes());
+        self
+    }
+    fn op_id(&mut self, id: OpId) -> &mut Self {
+        self.u64(id.seq).u32(id.site)
+    }
+    fn template(&mut self, t: &PageTemplate) -> &mut Self {
+        match t {
+            PageTemplate::Blank => self.u8(0),
+            PageTemplate::Lined => self.u8(1),
+            PageTemplate::Grid => self.u8(2),
+            PageTemplate::Dotted => self.u8(3),
+            PageTemplate::Cornell => self.u8(4),
+            PageTemplate::MusicStaff => self.u8(5),
+            PageTemplate::Pdf { blob, page_index } => self.u8(6).str(blob).u32(*page_index),
+            PageTemplate::Custom { blob } => self.u8(7).str(blob),
+        }
+    }
+    fn style(&mut self, s: TextStyle) -> &mut Self {
+        match s {
+            TextStyle::Body => self.u8(0),
+            TextStyle::Heading1 => self.u8(1),
+            TextStyle::Heading2 => self.u8(2),
+            TextStyle::Heading3 => self.u8(3),
+            TextStyle::Bullet => self.u8(4),
+            TextStyle::Numbered => self.u8(5),
+            TextStyle::Quote => self.u8(6),
+            TextStyle::Code => self.u8(7),
+            TextStyle::Todo { done } => self.u8(8).u8(u8::from(done)),
+        }
+    }
+}
+
+struct Reader<'a> {
+    data: &'a [u8],
+    pos: usize,
+}
+
+impl<'a> Reader<'a> {
+    fn take(&mut self, n: usize) -> Result<&'a [u8], DocCodecError> {
+        let end = self.pos.checked_add(n).ok_or(DocCodecError::Truncated)?;
+        let s = self
+            .data
+            .get(self.pos..end)
+            .ok_or(DocCodecError::Truncated)?;
+        self.pos = end;
+        Ok(s)
+    }
+    fn u8(&mut self) -> Result<u8, DocCodecError> {
+        Ok(self.take(1)?[0])
+    }
+    fn u32(&mut self) -> Result<u32, DocCodecError> {
+        Ok(u32::from_le_bytes(self.take(4)?.try_into().unwrap()))
+    }
+    fn u64(&mut self) -> Result<u64, DocCodecError> {
+        Ok(u64::from_le_bytes(self.take(8)?.try_into().unwrap()))
+    }
+    fn f32(&mut self) -> Result<f32, DocCodecError> {
+        Ok(f32::from_le_bytes(self.take(4)?.try_into().unwrap()))
+    }
+    fn uuid(&mut self) -> Result<Uuid, DocCodecError> {
+        Ok(Uuid::from_bytes(self.take(16)?.try_into().unwrap()))
+    }
+    fn time(&mut self) -> Result<NotebookTime, DocCodecError> {
+        Ok(NotebookTime::from_micros(self.u64()?))
+    }
+    fn str(&mut self) -> Result<String, DocCodecError> {
+        let n = self.u32()? as usize;
+        std::str::from_utf8(self.take(n)?)
+            .map(str::to_string)
+            .map_err(|_| DocCodecError::InvalidUtf8)
+    }
+    fn op_id(&mut self) -> Result<OpId, DocCodecError> {
+        Ok(OpId {
+            seq: self.u64()?,
+            site: self.u32()?,
+        })
+    }
+    fn template(&mut self) -> Result<PageTemplate, DocCodecError> {
+        Ok(match self.u8()? {
+            0 => PageTemplate::Blank,
+            1 => PageTemplate::Lined,
+            2 => PageTemplate::Grid,
+            3 => PageTemplate::Dotted,
+            4 => PageTemplate::Cornell,
+            5 => PageTemplate::MusicStaff,
+            6 => PageTemplate::Pdf {
+                blob: self.str()?,
+                page_index: self.u32()?,
+            },
+            7 => PageTemplate::Custom { blob: self.str()? },
+            t => return Err(DocCodecError::UnknownTemplate(t)),
+        })
+    }
+    fn style(&mut self) -> Result<TextStyle, DocCodecError> {
+        Ok(match self.u8()? {
+            0 => TextStyle::Body,
+            1 => TextStyle::Heading1,
+            2 => TextStyle::Heading2,
+            3 => TextStyle::Heading3,
+            4 => TextStyle::Bullet,
+            5 => TextStyle::Numbered,
+            6 => TextStyle::Quote,
+            7 => TextStyle::Code,
+            8 => TextStyle::Todo {
+                done: self.u8()? == 1,
+            },
+            s => return Err(DocCodecError::UnknownStyle(s)),
+        })
+    }
+}
+
+pub fn encode(ops: &[DocOp]) -> Vec<u8> {
+    let mut w = Writer(Vec::with_capacity(ops.len() * 48));
+    for op in ops {
+        match op {
+            DocOp::SetTitle { title } => {
+                w.u8(OP_SET_TITLE).str(title);
+            }
+            DocOp::AddPage {
+                id,
+                template,
+                index,
+            } => {
+                w.u8(OP_ADD_PAGE).uuid(*id).template(template).u32(*index);
+            }
+            DocOp::RemovePage { id } => {
+                w.u8(OP_REMOVE_PAGE).uuid(*id);
+            }
+            DocOp::AddTextBlock {
+                page,
+                id,
+                style,
+                created_at,
+            } => {
+                w.u8(OP_ADD_TEXT_BLOCK)
+                    .uuid(*page)
+                    .uuid(*id)
+                    .style(*style)
+                    .time(*created_at);
+            }
+            DocOp::AddTranscriptBlock {
+                page,
+                id,
+                session,
+                text,
+                created_at,
+            } => {
+                w.u8(OP_ADD_TRANSCRIPT_BLOCK)
+                    .uuid(*page)
+                    .uuid(*id)
+                    .uuid(*session)
+                    .str(text)
+                    .time(*created_at);
+            }
+            DocOp::AddImageBlock {
+                page,
+                id,
+                blob,
+                width,
+                height,
+                created_at,
+            } => {
+                w.u8(OP_ADD_IMAGE_BLOCK)
+                    .uuid(*page)
+                    .uuid(*id)
+                    .str(blob)
+                    .f32(*width)
+                    .f32(*height)
+                    .time(*created_at);
+            }
+            DocOp::RemoveBlock { id } => {
+                w.u8(OP_REMOVE_BLOCK).uuid(*id);
+            }
+            DocOp::SetBlockStyle { id, style } => {
+                w.u8(OP_SET_BLOCK_STYLE).uuid(*id).style(*style);
+            }
+            DocOp::TextEdit { block, op } => {
+                w.u8(OP_TEXT_EDIT).uuid(*block);
+                match op {
+                    TextOp::Insert { id, origin, ch } => {
+                        w.u8(1).op_id(*id);
+                        match origin {
+                            Some(o) => {
+                                w.u8(1).op_id(*o);
+                            }
+                            None => {
+                                w.u8(0);
+                            }
+                        }
+                        w.u32(*ch as u32);
+                    }
+                    TextOp::Delete { id } => {
+                        w.u8(2).op_id(*id);
+                    }
+                }
+            }
+            DocOp::StartAudio {
+                id,
+                started_at,
+                media_path,
+            } => {
+                w.u8(OP_START_AUDIO)
+                    .uuid(*id)
+                    .time(*started_at)
+                    .str(media_path);
+            }
+            DocOp::EndAudio { id, ended_at } => {
+                w.u8(OP_END_AUDIO).uuid(*id).time(*ended_at);
+            }
+            DocOp::AddWord {
+                text,
+                start,
+                end,
+                confidence,
+            } => {
+                w.u8(OP_ADD_WORD)
+                    .str(text)
+                    .time(*start)
+                    .time(*end)
+                    .f32(*confidence);
+            }
+        }
+    }
+    w.0
+}
+
+pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
+    let mut r = Reader { data, pos: 0 };
+    let mut out = Vec::new();
+
+    while r.pos < data.len() {
+        let op = match r.u8()? {
+            OP_SET_TITLE => DocOp::SetTitle { title: r.str()? },
+            OP_ADD_PAGE => DocOp::AddPage {
+                id: r.uuid()?,
+                template: r.template()?,
+                index: r.u32()?,
+            },
+            OP_REMOVE_PAGE => DocOp::RemovePage { id: r.uuid()? },
+            OP_ADD_TEXT_BLOCK => DocOp::AddTextBlock {
+                page: r.uuid()?,
+                id: r.uuid()?,
+                style: r.style()?,
+                created_at: r.time()?,
+            },
+            OP_ADD_TRANSCRIPT_BLOCK => DocOp::AddTranscriptBlock {
+                page: r.uuid()?,
+                id: r.uuid()?,
+                session: r.uuid()?,
+                text: r.str()?,
+                created_at: r.time()?,
+            },
+            OP_ADD_IMAGE_BLOCK => DocOp::AddImageBlock {
+                page: r.uuid()?,
+                id: r.uuid()?,
+                blob: r.str()?,
+                width: r.f32()?,
+                height: r.f32()?,
+                created_at: r.time()?,
+            },
+            OP_REMOVE_BLOCK => DocOp::RemoveBlock { id: r.uuid()? },
+            OP_SET_BLOCK_STYLE => DocOp::SetBlockStyle {
+                id: r.uuid()?,
+                style: r.style()?,
+            },
+            OP_TEXT_EDIT => {
+                let block = r.uuid()?;
+                let op = match r.u8()? {
+                    1 => {
+                        let id = r.op_id()?;
+                        let origin = if r.u8()? == 1 { Some(r.op_id()?) } else { None };
+                        let cp = r.u32()?;
+                        TextOp::Insert {
+                            id,
+                            origin,
+                            ch: char::from_u32(cp).ok_or(DocCodecError::InvalidChar(cp))?,
+                        }
+                    }
+                    2 => TextOp::Delete { id: r.op_id()? },
+                    k => return Err(DocCodecError::UnknownOp(k)),
+                };
+                DocOp::TextEdit { block, op }
+            }
+            OP_START_AUDIO => DocOp::StartAudio {
+                id: r.uuid()?,
+                started_at: r.time()?,
+                media_path: r.str()?,
+            },
+            OP_END_AUDIO => DocOp::EndAudio {
+                id: r.uuid()?,
+                ended_at: r.time()?,
+            },
+            OP_ADD_WORD => DocOp::AddWord {
+                text: r.str()?,
+                start: r.time()?,
+                end: r.time()?,
+                confidence: r.f32()?,
+            },
+            k => return Err(DocCodecError::UnknownOp(k)),
+        };
+        out.push(op);
+    }
+    Ok(out)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn uid(b: u8) -> Uuid {
+        Uuid::from_bytes([b; 16])
+    }
+
+    fn all_op_kinds() -> Vec<DocOp> {
+        vec![
+            DocOp::SetTitle {
+                title: "線性代數 第三週".into(),
+            },
+            DocOp::AddPage {
+                id: uid(1),
+                template: PageTemplate::Cornell,
+                index: 0,
+            },
+            DocOp::AddPage {
+                id: uid(2),
+                template: PageTemplate::Pdf {
+                    blob: "abc123".into(),
+                    page_index: 7,
+                },
+                index: 1,
+            },
+            DocOp::RemovePage { id: uid(2) },
+            DocOp::AddTextBlock {
+                page: uid(1),
+                id: uid(10),
+                style: TextStyle::Heading2,
+                created_at: NotebookTime::from_micros(1_000_000),
+            },
+            DocOp::SetBlockStyle {
+                id: uid(10),
+                style: TextStyle::Todo { done: true },
+            },
+            DocOp::AddTranscriptBlock {
+                page: uid(1),
+                id: uid(11),
+                session: uid(20),
+                text: "今天要講的是特徵值".into(),
+                created_at: NotebookTime::from_micros(2_000_000),
+            },
+            DocOp::AddImageBlock {
+                page: uid(1),
+                id: uid(12),
+                blob: "deadbeef".into(),
+                width: 640.5,
+                height: 480.25,
+                created_at: NotebookTime::ZERO,
+            },
+            DocOp::RemoveBlock { id: uid(12) },
+            DocOp::TextEdit {
+                block: uid(10),
+                op: TextOp::Insert {
+                    id: OpId::new(3, 7),
+                    origin: None,
+                    ch: '線',
+                },
+            },
+            DocOp::TextEdit {
+                block: uid(10),
+                op: TextOp::Insert {
+                    id: OpId::new(3, 8),
+                    origin: Some(OpId::new(3, 7)),
+                    ch: '🖋',
+                },
+            },
+            DocOp::TextEdit {
+                block: uid(10),
+                op: TextOp::Delete {
+                    id: OpId::new(3, 7),
+                },
+            },
+            DocOp::StartAudio {
+                id: uid(20),
+                started_at: NotebookTime::from_micros(500_000),
+                media_path: "media/audio/x.opus".into(),
+            },
+            DocOp::EndAudio {
+                id: uid(20),
+                ended_at: NotebookTime::from_micros(9_000_000),
+            },
+            DocOp::AddWord {
+                text: "特徵值".into(),
+                start: NotebookTime::from_micros(3_000_000),
+                end: NotebookTime::from_micros(3_800_000),
+                confidence: 0.93,
+            },
+        ]
+    }
+
+    #[test]
+    fn every_op_kind_roundtrips() {
+        let ops = all_op_kinds();
+        assert_eq!(decode(&encode(&ops)).unwrap(), ops);
+    }
+
+    #[test]
+    fn covers_all_op_tags() {
+        // 新增 DocOp 變體卻忘記加進測試，這條會提醒你。
+        let ops = all_op_kinds();
+        let tags: std::collections::HashSet<u8> = ops
+            .iter()
+            .map(|o| encode(std::slice::from_ref(o))[0])
+            .collect();
+        assert_eq!(
+            tags.len(),
+            12,
+            "12 種操作標籤都要被測到，實得 {}",
+            tags.len()
+        );
+    }
+
+    #[test]
+    fn every_page_template_roundtrips() {
+        for t in [
+            PageTemplate::Blank,
+            PageTemplate::Lined,
+            PageTemplate::Grid,
+            PageTemplate::Dotted,
+            PageTemplate::Cornell,
+            PageTemplate::MusicStaff,
+            PageTemplate::Custom { blob: "x".into() },
+        ] {
+            let op = DocOp::AddPage {
+                id: uid(1),
+                template: t.clone(),
+                index: 0,
+            };
+            assert_eq!(
+                decode(&encode(std::slice::from_ref(&op))).unwrap()[0],
+                op,
+                "{t:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn every_text_style_roundtrips() {
+        for s in [
+            TextStyle::Body,
+            TextStyle::Heading1,
+            TextStyle::Heading2,
+            TextStyle::Heading3,
+            TextStyle::Bullet,
+            TextStyle::Numbered,
+            TextStyle::Quote,
+            TextStyle::Code,
+            TextStyle::Todo { done: false },
+            TextStyle::Todo { done: true },
+        ] {
+            let op = DocOp::SetBlockStyle {
+                id: uid(1),
+                style: s,
+            };
+            assert_eq!(
+                decode(&encode(std::slice::from_ref(&op))).unwrap()[0],
+                op,
+                "{s:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn multibyte_strings_survive() {
+        // 字串長度用位元組數而非字元數 —— 搞錯會把中文切一半。
+        let op = DocOp::SetTitle {
+            title: "線性代數 🖋️ Linear Algebra".into(),
+        };
+        assert_eq!(decode(&encode(std::slice::from_ref(&op))).unwrap()[0], op);
+    }
+
+    #[test]
+    fn empty_input_is_empty_output() {
+        assert!(decode(&[]).unwrap().is_empty());
+        assert!(encode(&[]).is_empty());
+    }
+
+    #[test]
+    fn truncated_data_is_reported_not_silently_dropped() {
+        let ops = all_op_kinds();
+        let mut bytes = encode(&ops);
+        bytes.truncate(bytes.len() - 3);
+        assert_eq!(decode(&bytes), Err(DocCodecError::Truncated));
+    }
+
+    #[test]
+    fn unknown_op_tag_is_rejected() {
+        assert_eq!(decode(&[200u8]), Err(DocCodecError::UnknownOp(200)));
+    }
+
+    #[test]
+    fn unknown_template_tag_is_rejected() {
+        let mut bytes = vec![OP_ADD_PAGE];
+        bytes.extend_from_slice(&[1u8; 16]);
+        bytes.push(99); // 未知模板
+        assert_eq!(decode(&bytes), Err(DocCodecError::UnknownTemplate(99)));
+    }
+
+    #[test]
+    fn invalid_utf8_is_rejected() {
+        let mut bytes = vec![OP_SET_TITLE];
+        bytes.extend_from_slice(&2u32.to_le_bytes());
+        bytes.extend_from_slice(&[0xFF, 0xFE]);
+        assert_eq!(decode(&bytes), Err(DocCodecError::InvalidUtf8));
+    }
+}

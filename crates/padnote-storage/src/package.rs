@@ -2,7 +2,7 @@
 
 use crate::blob::BlobStore;
 use crate::manifest::Manifest;
-use padnote_doc::Uuid;
+use padnote_doc::{DocOp, Uuid};
 use padnote_ink::{InkRecord, StrokeReader, StrokeWriter, codec::CodecError};
 use std::fmt;
 use std::fs;
@@ -17,6 +17,7 @@ pub enum StorageError {
         supported: u32,
     },
     MalformedManifest(String),
+    DocOps(String),
     Ink(CodecError),
     Io(std::io::Error),
 }
@@ -33,6 +34,7 @@ impl fmt::Display for StorageError {
                 "此筆記本需要版本 {required} 的讀取器，本程式為 {supported}，請升級"
             ),
             Self::MalformedManifest(m) => write!(f, "manifest 解析失敗：{m}"),
+            Self::DocOps(m) => write!(f, "文件操作日誌損毀：{m}"),
             Self::Ink(e) => write!(f, "筆畫檔錯誤：{e}"),
             Self::Io(e) => write!(f, "IO 錯誤：{e}"),
         }
@@ -168,6 +170,58 @@ impl NotebookPackage {
         }
         let bytes = fs::read(&path)?;
         Ok(StrokeReader::new(&bytes)?.read_all()?)
+    }
+
+    // ---- 文件操作日誌（format-spec §6.1）----
+
+    /// 追加一批文件操作。
+    ///
+    /// 檔名為 `<lamport:016x>-<device:08x>.oplog`：Lamport 時戳固定寬度前置
+    /// ⇒ **檔名字典序即因果序**，掃描目錄即得套用順序，不需要額外的索引檔
+    /// （少一個可能損毀的單點）。裝置 id 在檔名裡 ⇒ 兩台裝置永不寫同一個檔。
+    pub fn append_doc_ops(
+        &self,
+        lamport: u64,
+        device: u32,
+        ops: &[DocOp],
+    ) -> Result<PathBuf, StorageError> {
+        let dir = self.root.join("doc/ops");
+        fs::create_dir_all(&dir)?;
+        let path = dir.join(format!("{lamport:016x}-{device:08x}.oplog"));
+
+        let bytes = padnote_doc::ops::encode(ops);
+        use std::io::Write;
+        fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&path)?
+            .write_all(&bytes)?;
+        Ok(path)
+    }
+
+    /// 依因果序讀出全部文件操作。
+    pub fn read_doc_ops(&self) -> Result<Vec<DocOp>, StorageError> {
+        let dir = self.root.join("doc/ops");
+        if !dir.exists() {
+            return Ok(Vec::new());
+        }
+
+        let mut files: Vec<PathBuf> = fs::read_dir(&dir)?
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|e| e == "oplog"))
+            .collect();
+        files.sort(); // 字典序 = 因果序
+
+        let mut out = Vec::new();
+        for f in files {
+            let bytes = fs::read(&f)?;
+            out.extend(
+                padnote_doc::ops::decode(&bytes)
+                    .map_err(|e| StorageError::DocOps(e.to_string()))?,
+            );
+        }
+        Ok(out)
     }
 
     /// 列出所有有筆畫的頁面。
@@ -314,6 +368,111 @@ mod tests {
 
         let pages = pkg.ink_pages().unwrap();
         assert_eq!(pages, vec![p1, p2]);
+    }
+
+    #[test]
+    fn doc_ops_persist_and_replay_in_causal_order() {
+        let root = tmp("docops");
+        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+
+        // 故意以非遞增的 lamport 寫入，驗證讀取時會依序排好
+        pkg.append_doc_ops(
+            5,
+            0xB2,
+            &[DocOp::SetTitle {
+                title: "第三".into(),
+            }],
+        )
+        .unwrap();
+        pkg.append_doc_ops(
+            1,
+            0xA1,
+            &[DocOp::SetTitle {
+                title: "第一".into(),
+            }],
+        )
+        .unwrap();
+        pkg.append_doc_ops(
+            3,
+            0xA1,
+            &[DocOp::SetTitle {
+                title: "第二".into(),
+            }],
+        )
+        .unwrap();
+
+        let titles: Vec<String> = pkg
+            .read_doc_ops()
+            .unwrap()
+            .into_iter()
+            .map(|op| match op {
+                DocOp::SetTitle { title } => title,
+                _ => unreachable!(),
+            })
+            .collect();
+        assert_eq!(titles, ["第一", "第二", "第三"], "檔名字典序必須等於因果序");
+    }
+
+    #[test]
+    fn doc_ops_append_within_the_same_file() {
+        let root = tmp("docappend");
+        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        let a = pkg
+            .append_doc_ops(
+                1,
+                0xA1,
+                &[DocOp::RemoveBlock {
+                    id: Uuid::from_bytes([1; 16]),
+                }],
+            )
+            .unwrap();
+        let b = pkg
+            .append_doc_ops(
+                1,
+                0xA1,
+                &[DocOp::RemoveBlock {
+                    id: Uuid::from_bytes([2; 16]),
+                }],
+            )
+            .unwrap();
+
+        assert_eq!(a, b, "同一 lamport+device 應寫入同一個檔");
+        assert_eq!(pkg.read_doc_ops().unwrap().len(), 2, "append 不得覆寫");
+    }
+
+    #[test]
+    fn two_devices_never_share_an_oplog_file() {
+        let root = tmp("docdevices");
+        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        let a = pkg
+            .append_doc_ops(7, 0xA1, &[DocOp::SetTitle { title: "a".into() }])
+            .unwrap();
+        let b = pkg
+            .append_doc_ops(7, 0xB2, &[DocOp::SetTitle { title: "b".into() }])
+            .unwrap();
+        assert_ne!(a, b, "同 lamport 不同裝置必須是不同檔案");
+        assert_eq!(pkg.read_doc_ops().unwrap().len(), 2);
+    }
+
+    #[test]
+    fn reading_ops_from_fresh_package_is_empty() {
+        let root = tmp("docempty");
+        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        assert!(pkg.read_doc_ops().unwrap().is_empty());
+    }
+
+    #[test]
+    fn corrupted_oplog_is_reported_not_skipped() {
+        // 靜默略過損毀的 oplog 會讓使用者以為只是「某些內容不見了」。
+        let root = tmp("doccorrupt");
+        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        fs::write(
+            root.join("doc/ops/0000000000000001-000000a1.oplog"),
+            [200u8],
+        )
+        .unwrap();
+
+        assert!(matches!(pkg.read_doc_ops(), Err(StorageError::DocOps(_))));
     }
 
     #[test]

@@ -180,13 +180,33 @@ pub struct PadnoteSession {
 
 #[uniffi::export]
 impl PadnoteSession {
-    /// 建立新筆記本。`path` 是 `.padnote` 套件的目錄位置。
+    /// 建立新筆記本。
+    ///
+    /// `path` 是 `.padnote` 套件的目錄位置。`device_id` 必須是**這台裝置穩定
+    /// 不變**的識別碼（例如 iOS 的 `identifierForVendor` 雜湊後取 32 bit）——
+    /// 它會進 oplog 檔名，用來保證兩台裝置永不寫同一個檔。
     #[uniffi::constructor]
-    pub fn create(path: String, title: String, now_unix_ms: u64) -> Result<Self, FfiError> {
-        Ok(Self {
-            inner: Mutex::new(NotebookSession::create(path, &title, now_unix_ms)?),
-            setup: Mutex::new(SetupCenter::new("paraformer-zh", "qwen3-4b-instruct-q4")),
-        })
+    pub fn create(
+        path: String,
+        title: String,
+        now_unix_ms: u64,
+        device_id: u32,
+    ) -> Result<Self, FfiError> {
+        Ok(Self::wrap(NotebookSession::create(
+            path,
+            &title,
+            now_unix_ms,
+            device_id,
+        )?))
+    }
+
+    /// 開啟既有筆記本，重播 op-log 還原全部內容。
+    ///
+    /// ⚠️ 名稱刻意不叫 `open` —— `open` 是 Swift 的存取修飾關鍵字，
+    /// UniFFI 會**靜默略過**該建構子，Swift 端就完全看不到它。
+    #[uniffi::constructor]
+    pub fn open_existing(path: String, device_id: u32) -> Result<Self, FfiError> {
+        Ok(Self::wrap(NotebookSession::open(path, device_id)?))
     }
 
     /// 推進筆記本時間軸。平台層以 monotonic clock 餵入，**必須單調遞增**。
@@ -211,8 +231,13 @@ impl PadnoteSession {
         self.lock().first_page().map(|id| id.to_string())
     }
 
-    pub fn add_page(&self, style: PageStyle) -> String {
-        self.lock().add_page(style.into()).to_string()
+    pub fn add_page(&self, style: PageStyle) -> Result<String, FfiError> {
+        Ok(self.lock().add_page(style.into())?.to_string())
+    }
+
+    pub fn set_title(&self, title: String) -> Result<(), FfiError> {
+        self.lock().set_title(&title)?;
+        Ok(())
     }
 
     // ---- 手寫 ----
@@ -281,6 +306,56 @@ impl PadnoteSession {
             .lock()
             .add_text_block(page, &content, style.into())?
             .to_string())
+    }
+
+    /// 在文字區塊的第 `index` 個**字元**（非位元組）位置插入文字。
+    ///
+    /// 用字元索引是必要的：UTF-16 或位元組索引都會把中文與 emoji 切壞。
+    pub fn insert_text(&self, block_id: String, index: u32, text: String) -> Result<(), FfiError> {
+        let block = parse_uuid(&block_id)?;
+        self.lock().insert_text(block, index as usize, &text)?;
+        Ok(())
+    }
+
+    pub fn delete_text(&self, block_id: String, index: u32, count: u32) -> Result<(), FfiError> {
+        let block = parse_uuid(&block_id)?;
+        self.lock()
+            .delete_text(block, index as usize, count as usize)?;
+        Ok(())
+    }
+
+    pub fn block_text(&self, block_id: String) -> Result<Option<String>, FfiError> {
+        Ok(self.lock().block_text(parse_uuid(&block_id)?))
+    }
+
+    pub fn remove_block(&self, block_id: String) -> Result<(), FfiError> {
+        self.lock().remove_block(parse_uuid(&block_id)?)?;
+        Ok(())
+    }
+
+    /// 插入圖片。`blob` 為內容定址雜湊。
+    pub fn add_image(
+        &self,
+        page_id: String,
+        blob: String,
+        width: f32,
+        height: f32,
+    ) -> Result<String, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self
+            .lock()
+            .add_image_block(page, &blob, width, height)?
+            .to_string())
+    }
+
+    /// 把位元組存成內容定址 blob，回傳其雜湊。供 `add_image` 使用。
+    pub fn put_blob(&self, bytes: Vec<u8>) -> Result<String, FfiError> {
+        self.lock()
+            .package()
+            .blobs()
+            .put(&bytes)
+            .map(|id| id.to_string())
+            .map_err(|e| FfiError::Failed(e.to_string()))
     }
 
     // ---- 錄音 ----
@@ -397,6 +472,13 @@ impl PadnoteSession {
 }
 
 impl PadnoteSession {
+    fn wrap(session: NotebookSession) -> Self {
+        Self {
+            inner: Mutex::new(session),
+            setup: Mutex::new(SetupCenter::new("paraformer-zh", "qwen3-4b-instruct-q4")),
+        }
+    }
+
     fn lock(&self) -> std::sync::MutexGuard<'_, NotebookSession> {
         // 鎖中毒代表其他執行緒 panic 過。繼續用髒狀態比明確崩掉更危險。
         self.inner.lock().expect("session 鎖中毒")
@@ -501,7 +583,7 @@ mod tests {
     }
 
     fn session(name: &str) -> PadnoteSession {
-        PadnoteSession::create(tmp(name), "線性代數".into(), 1_757_635_200_000).unwrap()
+        PadnoteSession::create(tmp(name), "線性代數".into(), 1_757_635_200_000, 0xA1).unwrap()
     }
 
     fn points() -> Vec<StrokePoint> {
@@ -709,6 +791,60 @@ mod tests {
         let md = s.export_markdown().unwrap();
         assert!(md.contains("## 重點"));
         assert!(md.contains("手寫內容"));
+    }
+
+    #[test]
+    fn reopening_restores_everything_through_the_ffi() {
+        let path = tmp("ffi-reopen");
+        let block_text;
+        let page;
+        {
+            let s =
+                PadnoteSession::create(path.clone(), "線性代數".into(), 1_757_635_200_000, 0xA1)
+                    .unwrap();
+            page = s.first_page_id().unwrap();
+            let b = s
+                .add_text(page.clone(), "特徵值".into(), BlockStyle::Body)
+                .unwrap();
+            s.insert_text(b.clone(), 3, "與特徵向量".into()).unwrap();
+            block_text = b;
+        }
+
+        let reopened = PadnoteSession::open_existing(path, 0xA1).unwrap();
+        assert_eq!(reopened.title(), "線性代數");
+        assert_eq!(
+            reopened.block_text(block_text).unwrap().as_deref(),
+            Some("特徵值與特徵向量")
+        );
+        assert_eq!(reopened.search("特徵".into(), 10).len(), 1);
+    }
+
+    #[test]
+    fn text_editing_uses_character_indices_not_bytes() {
+        // 用位元組索引會把中文切壞 —— 這條測試把它釘死。
+        let s = session("charindex");
+        let page = s.first_page_id().unwrap();
+        let b = s
+            .add_text(page, "線性代數".into(), BlockStyle::Body)
+            .unwrap();
+
+        s.insert_text(b.clone(), 2, "XX".into()).unwrap();
+        assert_eq!(
+            s.block_text(b.clone()).unwrap().as_deref(),
+            Some("線性XX代數")
+        );
+
+        s.delete_text(b.clone(), 2, 2).unwrap();
+        assert_eq!(s.block_text(b).unwrap().as_deref(), Some("線性代數"));
+    }
+
+    #[test]
+    fn blob_and_image_round_trip() {
+        let s = session("ffi-image");
+        let page = s.first_page_id().unwrap();
+        let blob = s.put_blob(b"png bytes".to_vec()).unwrap();
+        let img = s.add_image(page, blob, 640.0, 480.0).unwrap();
+        assert!(!img.is_empty());
     }
 
     #[test]

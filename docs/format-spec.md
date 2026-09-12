@@ -166,7 +166,28 @@ C1（筆跡↔錄音跳轉）、C4（詞級時間戳）、A10（筆跡重播）�
 - 筆畫**不放進 CRDT**。筆畫走 §5 的 append-only 串流，CRDT 只持有 `page_uuid → strokes 檔` 的引用。
   - 理由：一筆畫數百個點，放進 CRDT 會讓 op 數量爆炸、合併成本失控。append-only + 墓碑已足以保證收斂（新增/刪除可交換）。
 
-### 6.1 oplog 檔名
+### 6.1 文件操作日誌
+
+`doc/ops/` 下的每個檔案是一串 `DocOp` 記錄，逐筆緊密排列：
+
+```
+[1B 操作類型][操作內容…]
+```
+
+12 種操作：`SetTitle` / `AddPage` / `RemovePage` / `AddTextBlock` /
+`AddTranscriptBlock` / `AddImageBlock` / `RemoveBlock` / `SetBlockStyle` /
+`TextEdit` / `StartAudio` / `EndAudio` / `AddWord`。
+
+字串以 `u32` **位元組**長度前綴（非字元數）。UUID 為原始 16 bytes。
+時間為 `u64` 微秒，落在統一時間軸上（§4）。
+
+`TextEdit` 內嵌文字 CRDT 操作（ADR-0004）：插入記錄 `(id, origin, 字元碼位)`，
+刪除記錄 `(id)`。**位置以 origin 參照表示，不是索引** —— 索引在併發編輯下會錯位。
+
+重開筆記本時依檔名順序重播全部記錄即得目前狀態。損毀的記錄會**回報錯誤而非
+略過** —— 靜默略過會讓使用者以為只是「某些內容不見了」。
+
+### 6.2 oplog 檔名
 ```
 <lamport:016x>-<device_id>.oplog
 例：0000000000001a2f-7c4e9b12.oplog

@@ -5,8 +5,8 @@
 //! 這種最糟的失敗模式（Notability 的教訓）。
 
 use padnote_doc::{
-    AudioSession, Block, BlockKind, Notebook, NotebookTime, Page, PageTemplate, Timeline,
-    TranscriptWord, Uuid,
+    AudioSession, Block, BlockKind, DocOp, Notebook, NotebookTime, Page, PageTemplate, TextCrdt,
+    TextEditor, TextStyle, Timeline, TranscriptWord, Uuid,
 };
 use padnote_export::{MarkdownOptions, to_markdown};
 use padnote_ink::{InkRecord, Stroke, materialize};
@@ -21,6 +21,7 @@ pub enum AppError {
     AlreadyRecording,
     NotRecording,
     PageNotFound(Uuid),
+    BlockNotFound(Uuid),
 }
 
 impl fmt::Display for AppError {
@@ -30,6 +31,7 @@ impl fmt::Display for AppError {
             Self::AlreadyRecording => write!(f, "已經在錄音中"),
             Self::NotRecording => write!(f, "目前沒有錄音"),
             Self::PageNotFound(id) => write!(f, "找不到頁面：{id}"),
+            Self::BlockNotFound(id) => write!(f, "找不到區塊：{id}"),
         }
     }
 }
@@ -52,6 +54,9 @@ pub enum RecordingState {
 }
 
 /// 一個開啟中的筆記本工作階段。
+///
+/// 所有變更都會**立即追加到文件 op-log 並落盤**（S-23）。在此之前只有筆畫
+/// 會持久化，頁面與區塊關掉 App 就沒了。
 #[derive(Debug)]
 pub struct NotebookSession {
     package: NotebookPackage,
@@ -61,6 +66,13 @@ pub struct NotebookSession {
     recording: RecordingState,
     /// 單調遞增的筆記本時間。由平台層以 monotonic clock 餵入。
     now: NotebookTime,
+    /// 本裝置識別碼。進 oplog 檔名，保證兩台裝置永不寫同一個檔。
+    device: u32,
+    /// Lamport 時戳，決定 oplog 檔名的因果序。
+    lamport: u64,
+    /// 每個文字區塊的 CRDT 狀態（ADR-0004）。
+    texts: std::collections::HashMap<Uuid, TextCrdt>,
+    editor: TextEditor,
 }
 
 impl NotebookSession {
@@ -68,20 +80,288 @@ impl NotebookSession {
         root: impl Into<std::path::PathBuf>,
         title: &str,
         now_unix_ms: u64,
+        device: u32,
     ) -> Result<Self, AppError> {
         let package = NotebookPackage::create(root, title, now_unix_ms)?;
         let id = Uuid::now_v7();
-        let mut notebook = Notebook::new(id, title);
-        notebook.add_page(Page::new(Uuid::now_v7(), PageTemplate::Lined));
-
-        Ok(Self {
+        let mut session = Self {
             package,
-            notebook,
+            notebook: Notebook::new(id, title),
             timeline: Timeline::new(),
             index: SearchIndex::new(),
             recording: RecordingState::Idle,
             now: NotebookTime::ZERO,
-        })
+            device,
+            lamport: 0,
+            texts: Default::default(),
+            editor: TextEditor::new(device),
+        };
+        let first = Uuid::now_v7();
+        session.record(vec![DocOp::AddPage {
+            id: first,
+            template: PageTemplate::Lined,
+            index: 0,
+        }])?;
+        Ok(session)
+    }
+
+    /// 開啟既有筆記本並重播 op-log。
+    ///
+    /// 重播而非讀快照：op-log 是唯一的事實來源，快照只是最佳化（尚未實作）。
+    pub fn open(root: impl Into<std::path::PathBuf>, device: u32) -> Result<Self, AppError> {
+        let package = NotebookPackage::open(root)?;
+        let title = package.manifest().title.clone();
+        let mut session = Self {
+            package,
+            notebook: Notebook::new(Uuid::now_v7(), title),
+            timeline: Timeline::new(),
+            index: SearchIndex::new(),
+            recording: RecordingState::Idle,
+            now: NotebookTime::ZERO,
+            device,
+            lamport: 0,
+            texts: Default::default(),
+            editor: TextEditor::new(device),
+        };
+
+        let ops = session.package.read_doc_ops()?;
+        session.replay(&ops);
+        Ok(session)
+    }
+
+    /// 記錄一批操作：**先落盤、再套用**。
+    ///
+    /// 順序很重要 —— 先套用再落盤的話，中途當機會讓記憶體與磁碟不一致，
+    /// 而使用者看到的是「有效果但沒存到」。
+    fn record(&mut self, ops: Vec<DocOp>) -> Result<(), AppError> {
+        if ops.is_empty() {
+            return Ok(());
+        }
+        self.lamport += 1;
+        self.package
+            .append_doc_ops(self.lamport, self.device, &ops)?;
+        self.replay(&ops);
+        Ok(())
+    }
+
+    /// 套用來自其他裝置的操作（同步）。不再落盤 —— 呼叫端負責寫入。
+    pub fn apply_remote(&mut self, ops: &[DocOp]) {
+        self.replay(ops);
+    }
+
+    fn replay(&mut self, ops: &[DocOp]) {
+        for op in ops {
+            self.apply_one(op);
+        }
+    }
+
+    fn apply_one(&mut self, op: &DocOp) {
+        match op {
+            DocOp::SetTitle { title } => self.notebook.title = title.clone(),
+
+            DocOp::AddPage {
+                id,
+                template,
+                index,
+            } => {
+                self.notebook
+                    .insert_page(*index as usize, Page::new(*id, template.clone()));
+            }
+            DocOp::RemovePage { id } => {
+                self.notebook.remove_page(*id);
+                self.index
+                    .remove_page(&self.notebook.id.to_string(), &id.to_string());
+            }
+
+            DocOp::AddTextBlock {
+                page,
+                id,
+                style,
+                created_at,
+            } => {
+                self.texts.insert(*id, TextCrdt::new());
+                self.add_block_to_page(
+                    *page,
+                    Block {
+                        id: *id,
+                        kind: BlockKind::Text {
+                            content: String::new(),
+                            style: *style,
+                        },
+                        position: None,
+                        created_at: *created_at,
+                    },
+                );
+            }
+            DocOp::AddTranscriptBlock {
+                page,
+                id,
+                session,
+                text,
+                created_at,
+            } => {
+                self.add_block_to_page(
+                    *page,
+                    Block {
+                        id: *id,
+                        kind: BlockKind::Transcript {
+                            session: *session,
+                            text: text.clone(),
+                        },
+                        position: None,
+                        created_at: *created_at,
+                    },
+                );
+                self.reindex_block(*page, *id, text, Source::Transcript);
+            }
+            DocOp::AddImageBlock {
+                page,
+                id,
+                blob,
+                width,
+                height,
+                created_at,
+            } => {
+                self.add_block_to_page(
+                    *page,
+                    Block {
+                        id: *id,
+                        kind: BlockKind::Image {
+                            blob: blob.clone(),
+                            width: *width,
+                            height: *height,
+                        },
+                        position: None,
+                        created_at: *created_at,
+                    },
+                );
+            }
+            DocOp::RemoveBlock { id } => {
+                self.texts.remove(id);
+                if let Some(page) = self.page_of_block(*id) {
+                    if let Some(p) = self.notebook.page_mut(page) {
+                        p.remove_block(*id);
+                    }
+                    self.index.remove(&DocId::new(
+                        &self.notebook.id.to_string(),
+                        &page.to_string(),
+                        &id.to_string(),
+                    ));
+                }
+            }
+            DocOp::SetBlockStyle { id, style } => {
+                if let Some(page) = self.page_of_block(*id)
+                    && let Some(b) = self.notebook.page_mut(page).and_then(|p| p.block_mut(*id))
+                    && let BlockKind::Text { style: s, .. } = &mut b.kind
+                {
+                    *s = *style;
+                }
+            }
+
+            DocOp::TextEdit { block, op } => {
+                // 讓本地時鐘追上遠端，避免重連後產生撞號的 OpId。
+                self.editor.observe(op.id());
+                let crdt = self.texts.entry(*block).or_default();
+                crdt.apply(op.clone());
+                let text = crdt.text();
+                self.sync_text_block(*block, text);
+            }
+
+            DocOp::StartAudio {
+                id,
+                started_at,
+                media_path,
+            } => {
+                self.timeline.add_session(AudioSession {
+                    id: *id,
+                    started_at: *started_at,
+                    ended_at: None,
+                    media_path: media_path.clone(),
+                });
+                self.recording = RecordingState::Recording {
+                    session: *id,
+                    started_at: *started_at,
+                };
+            }
+            DocOp::EndAudio { id, ended_at } => {
+                self.close_session(*id, *ended_at);
+                self.recording = RecordingState::Idle;
+            }
+            DocOp::AddWord {
+                text,
+                start,
+                end,
+                confidence,
+            } => {
+                self.timeline.add_word(TranscriptWord {
+                    text: text.clone(),
+                    start: *start,
+                    end: *end,
+                    confidence: *confidence,
+                });
+            }
+        }
+    }
+
+    fn add_block_to_page(&mut self, page: Uuid, block: Block) {
+        if let Some(p) = self.notebook.page_mut(page) {
+            p.add_block(block);
+        }
+    }
+
+    fn page_of_block(&self, block: Uuid) -> Option<Uuid> {
+        self.notebook
+            .pages()
+            .iter()
+            .find(|p| p.blocks().iter().any(|b| b.id == block))
+            .map(|p| p.id)
+    }
+
+    /// 文字 CRDT 變動後，同步區塊內容與搜尋索引。
+    fn sync_text_block(&mut self, block: Uuid, text: String) {
+        let Some(page) = self.page_of_block(block) else {
+            return;
+        };
+        if let Some(b) = self
+            .notebook
+            .page_mut(page)
+            .and_then(|p| p.block_mut(block))
+            && let BlockKind::Text { content, .. } = &mut b.kind
+        {
+            *content = text.clone();
+        }
+        self.reindex_block(page, block, &text, Source::Text);
+    }
+
+    fn reindex_block(&mut self, page: Uuid, block: Uuid, text: &str, source: Source) {
+        let doc = DocId::new(
+            &self.notebook.id.to_string(),
+            &page.to_string(),
+            &block.to_string(),
+        );
+        if text.is_empty() {
+            self.index.remove(&doc);
+        } else {
+            self.index.insert(doc, source, text);
+        }
+    }
+
+    fn close_session(&mut self, session: Uuid, at: NotebookTime) {
+        let mut rebuilt = Timeline::new();
+        for s in self.timeline.sessions() {
+            let mut s = s.clone();
+            if s.id == session && s.ended_at.is_none() {
+                s.ended_at = Some(at);
+            }
+            rebuilt.add_session(s);
+        }
+        for w in self
+            .timeline
+            .words_in(NotebookTime::ZERO, NotebookTime(u64::MAX))
+        {
+            rebuilt.add_word(w.clone());
+        }
+        self.timeline = rebuilt;
     }
 
     pub fn notebook(&self) -> &Notebook {
@@ -107,10 +387,25 @@ impl NotebookSession {
 
     // ---- 頁面 ----
 
-    pub fn add_page(&mut self, template: PageTemplate) -> Uuid {
+    pub fn add_page(&mut self, template: PageTemplate) -> Result<Uuid, AppError> {
         let id = Uuid::now_v7();
-        self.notebook.add_page(Page::new(id, template));
-        id
+        let index = self.notebook.page_count() as u32;
+        self.record(vec![DocOp::AddPage {
+            id,
+            template,
+            index,
+        }])?;
+        Ok(id)
+    }
+
+    pub fn remove_page(&mut self, id: Uuid) -> Result<(), AppError> {
+        self.record(vec![DocOp::RemovePage { id }])
+    }
+
+    pub fn set_title(&mut self, title: &str) -> Result<(), AppError> {
+        self.record(vec![DocOp::SetTitle {
+            title: title.to_string(),
+        }])
     }
 
     pub fn first_page(&self) -> Option<Uuid> {
@@ -142,37 +437,97 @@ impl NotebookSession {
 
     // ---- 文字 ----
 
+    /// 建立文字區塊。內容透過 CRDT 操作寫入，因此一開始就是可協同編輯的。
     pub fn add_text_block(
         &mut self,
         page: Uuid,
         content: &str,
-        style: padnote_doc::TextStyle,
+        style: TextStyle,
     ) -> Result<Uuid, AppError> {
+        if self.notebook.page(page).is_none() {
+            return Err(AppError::PageNotFound(page));
+        }
         let id = Uuid::now_v7();
-        let block = Block {
+        let mut ops = vec![DocOp::AddTextBlock {
+            page,
             id,
-            kind: BlockKind::Text {
-                content: content.into(),
-                style,
-            },
-            position: None,
+            style,
             created_at: self.now,
-        };
-        let page_ref = self
-            .notebook
-            .page_mut(page)
-            .ok_or(AppError::PageNotFound(page))?;
-        page_ref.add_block(block);
+        }];
 
-        self.index.insert(
-            DocId::new(
-                &self.notebook.id.to_string(),
-                &page.to_string(),
-                &id.to_string(),
-            ),
-            Source::Text,
-            content,
-        );
+        if !content.is_empty() {
+            let empty = TextCrdt::new();
+            ops.extend(
+                self.editor
+                    .insert(&empty, 0, content)
+                    .into_iter()
+                    .map(|op| DocOp::TextEdit { block: id, op }),
+            );
+        }
+        self.record(ops)?;
+        Ok(id)
+    }
+
+    /// 在文字區塊的第 `index` 個字元位置插入文字。
+    pub fn insert_text(&mut self, block: Uuid, index: usize, s: &str) -> Result<(), AppError> {
+        let crdt = self
+            .texts
+            .get(&block)
+            .ok_or(AppError::BlockNotFound(block))?;
+        let ops = self.editor.insert(crdt, index, s);
+        self.record(
+            ops.into_iter()
+                .map(|op| DocOp::TextEdit { block, op })
+                .collect(),
+        )
+    }
+
+    /// 刪除文字區塊中從 `index` 起的 `count` 個字元。
+    pub fn delete_text(&mut self, block: Uuid, index: usize, count: usize) -> Result<(), AppError> {
+        let crdt = self
+            .texts
+            .get(&block)
+            .ok_or(AppError::BlockNotFound(block))?;
+        let ops = self.editor.delete(crdt, index, count);
+        self.record(
+            ops.into_iter()
+                .map(|op| DocOp::TextEdit { block, op })
+                .collect(),
+        )
+    }
+
+    pub fn block_text(&self, block: Uuid) -> Option<String> {
+        self.texts.get(&block).map(TextCrdt::text)
+    }
+
+    pub fn set_block_style(&mut self, block: Uuid, style: TextStyle) -> Result<(), AppError> {
+        self.record(vec![DocOp::SetBlockStyle { id: block, style }])
+    }
+
+    pub fn remove_block(&mut self, block: Uuid) -> Result<(), AppError> {
+        self.record(vec![DocOp::RemoveBlock { id: block }])
+    }
+
+    /// 插入圖片。`blob` 為內容定址雜湊（由 `package().blobs().put()` 取得）。
+    pub fn add_image_block(
+        &mut self,
+        page: Uuid,
+        blob: &str,
+        width: f32,
+        height: f32,
+    ) -> Result<Uuid, AppError> {
+        if self.notebook.page(page).is_none() {
+            return Err(AppError::PageNotFound(page));
+        }
+        let id = Uuid::now_v7();
+        self.record(vec![DocOp::AddImageBlock {
+            page,
+            id,
+            blob: blob.to_string(),
+            width,
+            height,
+            created_at: self.now,
+        }])?;
         Ok(id)
     }
 
@@ -187,16 +542,11 @@ impl NotebookSession {
             return Err(AppError::AlreadyRecording);
         }
         let session = Uuid::now_v7();
-        self.timeline.add_session(AudioSession {
+        self.record(vec![DocOp::StartAudio {
             id: session,
             started_at: self.now,
-            ended_at: None,
             media_path: format!("media/audio/{session}.opus"),
-        });
-        self.recording = RecordingState::Recording {
-            session,
-            started_at: self.now,
-        };
+        }])?;
         Ok(session)
     }
 
@@ -204,23 +554,10 @@ impl NotebookSession {
         let RecordingState::Recording { session, .. } = self.recording else {
             return Err(AppError::NotRecording);
         };
-        // Timeline 內的 session 由 close 更新；此處重建以維持排序不變式。
-        let mut rebuilt = Timeline::new();
-        for s in self.timeline.sessions() {
-            let mut s = s.clone();
-            if s.id == session {
-                s.ended_at = Some(self.now);
-            }
-            rebuilt.add_session(s);
-        }
-        for w in self
-            .timeline
-            .words_in(NotebookTime::ZERO, NotebookTime(u64::MAX))
-        {
-            rebuilt.add_word(w.clone());
-        }
-        self.timeline = rebuilt;
-        self.recording = RecordingState::Idle;
+        self.record(vec![DocOp::EndAudio {
+            id: session,
+            ended_at: self.now,
+        }])?;
         Ok(session)
     }
 
@@ -231,35 +568,27 @@ impl NotebookSession {
         session: Uuid,
         words: Vec<TranscriptWord>,
     ) -> Result<Uuid, AppError> {
-        let text: String = words.iter().map(|w| w.text.as_str()).collect();
-        for w in words {
-            self.timeline.add_word(w);
+        if self.notebook.page(page).is_none() {
+            return Err(AppError::PageNotFound(page));
         }
-
+        let text: String = words.iter().map(|w| w.text.as_str()).collect();
         let id = Uuid::now_v7();
-        let block = Block {
-            id,
-            kind: BlockKind::Transcript {
-                session,
-                text: text.clone(),
-            },
-            position: None,
-            created_at: self.now,
-        };
-        self.notebook
-            .page_mut(page)
-            .ok_or(AppError::PageNotFound(page))?
-            .add_block(block);
 
-        self.index.insert(
-            DocId::new(
-                &self.notebook.id.to_string(),
-                &page.to_string(),
-                &id.to_string(),
-            ),
-            Source::Transcript,
-            &text,
-        );
+        let mut ops = vec![DocOp::AddTranscriptBlock {
+            page,
+            id,
+            session,
+            text,
+            created_at: self.now,
+        }];
+        ops.extend(words.into_iter().map(|w| DocOp::AddWord {
+            text: w.text,
+            start: w.start,
+            end: w.end,
+            confidence: w.confidence,
+        }));
+
+        self.record(ops)?;
         Ok(id)
     }
 
@@ -289,6 +618,11 @@ impl NotebookSession {
         );
     }
 
+    /// 供平台層存取底層套件（例如寫入 blob）。
+    pub fn package(&self) -> &NotebookPackage {
+        &self.package
+    }
+
     pub fn export_markdown(&self) -> Result<String, AppError> {
         let ink_pages = self.package.ink_pages()?;
         Ok(to_markdown(
@@ -312,7 +646,7 @@ mod tests {
     }
 
     fn session(name: &str) -> NotebookSession {
-        NotebookSession::create(tmp(name), "線性代數", 1_757_635_200_000).unwrap()
+        NotebookSession::create(tmp(name), "線性代數", 1_757_635_200_000, 0xA1).unwrap()
     }
 
     fn stroke() -> Stroke {
@@ -336,6 +670,13 @@ mod tests {
             end: NotebookTime(end),
             confidence: 0.95,
         }
+    }
+
+    /// 關掉再開，內容必須完整還原。
+    fn reopen(session: NotebookSession) -> NotebookSession {
+        let root = session.package().root().to_path_buf();
+        drop(session);
+        NotebookSession::open(root, 0xA1).unwrap()
     }
 
     #[test]
@@ -512,6 +853,157 @@ mod tests {
             .words_in(NotebookTime(2_000_000), NotebookTime(4_000_000));
         assert_eq!(found.len(), 1);
         assert_eq!(found[0].text, "特徵值");
+    }
+
+    // ---- 持久化（S-23）----
+
+    #[test]
+    fn pages_and_text_survive_a_reopen() {
+        // 在此之前頁面與區塊只活在記憶體裡，關掉 App 就沒了。
+        let mut s = session("persist-doc");
+        let page = s.first_page().unwrap();
+        let block = s
+            .add_text_block(page, "線性代數的特徵值", TextStyle::Heading2)
+            .unwrap();
+        let extra = s.add_page(PageTemplate::Cornell).unwrap();
+        s.set_title("改過的標題").unwrap();
+
+        let s = reopen(s);
+
+        assert_eq!(s.notebook().title, "改過的標題");
+        assert_eq!(s.notebook().page_count(), 2);
+        assert!(s.notebook().page(page).is_some());
+        assert_eq!(
+            s.notebook().page(extra).unwrap().template,
+            PageTemplate::Cornell
+        );
+        assert_eq!(s.block_text(block).as_deref(), Some("線性代數的特徵值"));
+    }
+
+    #[test]
+    fn search_index_is_rebuilt_on_reopen() {
+        let mut s = session("persist-index");
+        let page = s.first_page().unwrap();
+        s.add_text_block(page, "矩陣運算的重點", TextStyle::Body)
+            .unwrap();
+
+        let s = reopen(s);
+        assert_eq!(s.search("矩陣", 10).len(), 1, "索引必須從 op-log 重建");
+    }
+
+    #[test]
+    fn recording_sessions_and_transcripts_survive_a_reopen() {
+        let mut s = session("persist-audio");
+        let page = s.first_page().unwrap();
+
+        s.advance_time(NotebookTime(1_000_000));
+        let sess = s.start_recording().unwrap();
+        s.advance_time(NotebookTime(4_500_000));
+        s.add_stroke(page, stroke()).unwrap();
+        s.add_transcript(page, sess, vec![word("特徵值", 3_000_000, 3_800_000)])
+            .unwrap();
+        s.advance_time(NotebookTime(10_000_000));
+        s.stop_recording().unwrap();
+
+        let s = reopen(s);
+
+        // C1 的跳轉關係必須在重開後仍然成立
+        let st = &s.visible_strokes(page).unwrap()[0];
+        let (_, offset) = s.playback_for_stroke(st).expect("重開後仍應找得到錄音");
+        assert_eq!(offset, NotebookTime(3_500_000));
+
+        assert_eq!(s.timeline().recorded_duration(), NotebookTime(9_000_000));
+        assert_eq!(s.search("特徵", 10).len(), 1);
+        assert_eq!(
+            s.recording_state(),
+            RecordingState::Idle,
+            "重開後不該是錄音中"
+        );
+    }
+
+    #[test]
+    fn text_edits_replay_in_order() {
+        let mut s = session("persist-edits");
+        let page = s.first_page().unwrap();
+        let block = s.add_text_block(page, "線性數", TextStyle::Body).unwrap();
+
+        s.insert_text(block, 2, "代").unwrap();
+        assert_eq!(s.block_text(block).as_deref(), Some("線性代數"));
+
+        s.delete_text(block, 0, 2).unwrap();
+        assert_eq!(s.block_text(block).as_deref(), Some("代數"));
+
+        let s = reopen(s);
+        assert_eq!(
+            s.block_text(block).as_deref(),
+            Some("代數"),
+            "編輯歷史必須完整重播"
+        );
+    }
+
+    #[test]
+    fn removed_block_stays_removed_after_reopen() {
+        // 墓碑要寫進 op-log，否則重播時被刪的東西會復活。
+        let mut s = session("persist-remove");
+        let page = s.first_page().unwrap();
+        let keep = s.add_text_block(page, "保留", TextStyle::Body).unwrap();
+        let drop_it = s.add_text_block(page, "刪除", TextStyle::Body).unwrap();
+        s.remove_block(drop_it).unwrap();
+
+        let s = reopen(s);
+        assert_eq!(s.notebook().page(page).unwrap().blocks().len(), 1);
+        assert_eq!(s.block_text(keep).as_deref(), Some("保留"));
+        assert!(s.block_text(drop_it).is_none(), "被刪的區塊不該復活");
+        assert!(s.search("刪除", 10).is_empty(), "索引也要跟著清掉");
+    }
+
+    #[test]
+    fn images_and_blob_references_survive() {
+        let mut s = session("persist-image");
+        let page = s.first_page().unwrap();
+        let blob = s.package().blobs().put(b"image bytes").unwrap().to_string();
+        s.add_image_block(page, &blob, 640.0, 480.0).unwrap();
+
+        let s = reopen(s);
+        assert_eq!(s.notebook().referenced_blobs(), vec![blob.clone()]);
+        assert_eq!(
+            s.package()
+                .blobs()
+                .get(padnote_storage::BlobId::from_hex(&blob).unwrap())
+                .unwrap(),
+            b"image bytes"
+        );
+    }
+
+    #[test]
+    fn editing_a_missing_block_is_rejected() {
+        let mut s = session("badblock");
+        assert!(matches!(
+            s.insert_text(Uuid::now_v7(), 0, "x"),
+            Err(AppError::BlockNotFound(_))
+        ));
+    }
+
+    #[test]
+    fn remote_ops_apply_without_being_written_again() {
+        // 同步拉到的操作由 sync 層負責落盤，session 只負責套用。
+        let mut s = session("remote");
+        let page = s.first_page().unwrap();
+
+        let remote_block = Uuid::now_v7();
+        s.apply_remote(&[DocOp::AddTextBlock {
+            page,
+            id: remote_block,
+            style: TextStyle::Body,
+            created_at: NotebookTime::ZERO,
+        }]);
+
+        assert!(s.block_text(remote_block).is_some());
+        assert_eq!(
+            s.notebook().page(page).unwrap().blocks().len(),
+            1,
+            "遠端區塊要出現在頁面上"
+        );
     }
 
     #[test]
