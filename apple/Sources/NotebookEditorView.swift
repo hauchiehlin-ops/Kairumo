@@ -1592,10 +1592,124 @@ public struct NotebookEditorView: View {
                 Image(systemName: "ruler")
                     .foregroundColor(isRulerActive ? .accentColor : .secondary)
                     .padding(5)
-                    .background(isRulerActive ? Color.accentColor.opacity(0.15) : Color.clear)
+                    .background(isRulerActive ? Color.accentColor.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
                     .cornerRadius(6)
             }
             .help(localizationManager.localized("ruler"))
+
+            // 復原與重做 (Undo / Redo)
+            HStack(spacing: 3) {
+                Button {
+                    canvasView?.undoManager?.undo()
+                } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.primary)
+                        .padding(5)
+                        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                        .cornerRadius(6)
+                }
+                .help(localizationManager.localized("undo"))
+
+                Button {
+                    canvasView?.undoManager?.redo()
+                } label: {
+                    Image(systemName: "arrow.uturn.forward")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundColor(.primary)
+                        .padding(5)
+                        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                        .cornerRadius(6)
+                }
+                .help(localizationManager.localized("redo"))
+            }
+
+            // 📦 素材圖庫快捷按鈕（與 iOS 首頁一致）
+            Button {
+                showAssetLibrarySheet = true
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "shippingbox.fill")
+                        .foregroundColor(.purple)
+                    Text(localizationManager.localized("asset_library"))
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Color.purple.opacity(0.12))
+                .cornerRadius(7)
+            }
+            .buttonStyle(.plain)
+            .help(localizationManager.localized("asset_library"))
+
+            // ➕ 插入物件下拉選單（整合圖片、算式、圖表、3D、主題工具）
+            Menu {
+                Button {
+                    showAssetLibrarySheet = true
+                } label: {
+                    Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill")
+                }
+
+                Button {
+                    showPhotoPicker = true
+                } label: {
+                    Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus")
+                }
+
+                Button {
+                    showMathCalculator = true
+                } label: {
+                    Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus")
+                }
+
+                Button {
+                    showChartStudio = true
+                } label: {
+                    Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis")
+                }
+
+                Button {
+                    show3DStudio = true
+                } label: {
+                    Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent")
+                }
+
+                Button {
+                    showThemeToolsSheet = true
+                } label: {
+                    Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill")
+                }
+
+                Divider()
+
+                Button {
+                    withAnimation {
+                        showSketchRefineBar.toggle()
+                    }
+                } label: {
+                    Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars")
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "plus.circle.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.accentColor)
+                    Text(localizationManager.localized("insert_object"))
+                        .font(.caption2)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                .cornerRadius(7)
+            }
+            .buttonStyle(.plain)
+            .help(localizationManager.localized("insert_object"))
 
             // 錄音按鈕
             if audioManager.status == .recording {
@@ -1779,6 +1893,41 @@ public struct NotebookEditorView: View {
                         .foregroundColor(.accentColor)
                 }
             }
+
+            // 📦 素材圖庫（緊湊按鈕）
+            Button {
+                showAssetLibrarySheet = true
+            } label: {
+                Image(systemName: "shippingbox.fill")
+                    .font(.caption)
+                    .foregroundColor(.purple)
+                    .padding(5)
+                    .background(Color.purple.opacity(0.12))
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .help(localizationManager.localized("asset_library"))
+
+            // ➕ 插入物件（緊湊選單）
+            Menu {
+                Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
+                Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
+                Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
+                Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
+                Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
+                Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
+                Divider()
+                Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
+            } label: {
+                Image(systemName: "plus.circle.fill")
+                    .font(.caption)
+                    .foregroundColor(.accentColor)
+                    .padding(5)
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .help(localizationManager.localized("insert_object"))
 
             // 錄音
             if audioManager.status == .recording {

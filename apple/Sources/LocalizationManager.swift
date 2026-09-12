@@ -785,6 +785,14 @@ public final class LocalizationManager: ObservableObject {
             .ko: "수채화 붓",
             .th: "พู่กันสีน้ำ"
         ],
+        "insert_object": [
+            .zhHant: "插入",
+            .en: "Insert",
+            .zhHans: "插入",
+            .ja: "挿入",
+            .ko: "삽입",
+            .th: "แทรก"
+        ],
         "insert_image": [
             .zhHant: "插入圖片",
             .en: "Insert Image",
