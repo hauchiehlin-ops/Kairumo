@@ -17,7 +17,7 @@
     "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "bytes": 11358
   },
-  "exported_at_utc": "2026-09-12T10:21:46.866403+00:00",
+  "exported_at_utc": "2026-09-12T10:30:05.688390+00:00",
   "exported_by": "scripts/export-funasr-onnx.py",
   "tools": {
     "python": "3.14.6",
@@ -42,24 +42,24 @@
       "bytes": 472
     },
     {
+      "file": "decoder.int8.onnx",
+      "sha256": "42f07ba7f13ec97a09fec8ad0b3e9539cb74a1394ad8c9745653f01a643f7ea9",
+      "bytes": 58588885
+    },
+    {
       "file": "decoder.onnx",
       "sha256": "1ca008807db6cf99f060011a0dfbfb52df5ec357eb6288bbc741b126c7234460",
       "bytes": 228466759
     },
     {
-      "file": "decoder_quant.onnx",
-      "sha256": "bede8560a148aa7f9811dc2a7b3a0a959ee8341780b3ff4b11b7c7a8761ebb15",
-      "bytes": 71867694
+      "file": "model.int8.onnx",
+      "sha256": "057e7e0e4555d53823f7f172a33677572305f4d2cbcd9fa6701232d9e403c763",
+      "bytes": 165249355
     },
     {
       "file": "model.onnx",
       "sha256": "685216d71669d3396d1bcfc0d7b70e3e34b4880edc277df5d586a807ff07a89e",
       "bytes": 636337570
-    },
-    {
-      "file": "model_quant.onnx",
-      "sha256": "86aa672b59f57707ad43ce28b333d8a0f3eba0bab91bc7764fbc9e1dd7582f64",
-      "bytes": 166351438
     },
     {
       "file": "tokens.json",

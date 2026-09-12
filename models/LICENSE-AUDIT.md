@@ -88,29 +88,62 @@ Whisper 原生支援 code-switching，品質待 H2 測試集實測，但授權�
 
 ---
 
-## 6. ⚠️ ct-punc 的體積問題（新發現）
+## 6. ✅ ct-punc 的體積問題（S-29，已解決）
 
-自行匯出後的實測大小：
+### 問題
+FunASR 內建的量化把 ct-punc 從 1,074 MB 只壓到 965 MB —— 幾乎沒效果。
 
-| 模型 | FP32 | int8 量化 |
-|---|---|---|
-| `paraformer-zh-streaming` (encoder) | 606.9 MB | **158.6 MB** |
-| `paraformer-zh-streaming` (decoder) | 217.9 MB | **68.5 MB** |
-| `ct-punc` | 1,073.6 MB | **965.0 MB** ⚠️ |
+### 診斷
+用 `onnx` 直接檢視張量大小：
 
-Paraformer 量化後合計約 **227 MB**，完全可行。
+```
+參數總量：1073.3 MB
+最大的張量：927.2 MB  [471067, 516]  embed.weight   ← 占 86.4%
+其次        4.0 MB  [2048, 516]   onnx::MatMul_…
+```
 
-但 **ct-punc 量化幾乎沒有效果**（1,074 → 965 MB）。原因是它的體積由
-**詞嵌入表**主導（vocab 272,727），而動態 int8 量化只處理 MatMul 權重，
-不碰 embedding。
+**體積完全由詞嵌入表主導**，而 onnxruntime 的動態量化預設
+`op_types_to_quantize` **不含 `Gather`**，也就是不碰 embedding。
+不量化它等於什麼都沒做。
 
-**965 MB 的標點模型在行動裝置上不可行。** C5 是 P0 功能，因此這是新的阻擋項：
+### 解法
+量化時納入 `Gather`：
 
-- 可能有較小的變體（sherpa-onnx 的轉換版約 280 MB，值得查是不是不同 checkpoint）
-- 或需要詞表裁剪 / 知識蒸餾
-- 或改用規則式 + 輕量模型的混合方案
+```python
+quantize_dynamic(
+    op_types_to_quantize=["MatMul", "Gather", "Attention", "LSTM"],
+    weight_type=QuantType.QInt8,
+    extra_options={"MatMulConstBOnly": False},
+)
+```
 
-→ 記為 `docs/TODO.md` **S-29**。
+### 結果
+
+| 模型 | FP32 | FunASR 內建量化 | **含 embedding 量化** |
+|---|---|---|---|
+| `paraformer-zh-streaming` encoder | 606.9 MB | 158.6 MB | **157.6 MB** |
+| `paraformer-zh-streaming` decoder | 217.9 MB | 68.5 MB | **55.9 MB** |
+| `ct-punc` | 1,073.6 MB | 965.0 MB ⚠️ | **269.3 MB** ✅ |
+
+**中文 ASR + 標點合計約 483 MB**，可用按需下載提供。
+
+### 品質驗證
+量化前後對同一輸入比較（隨機 token 序列，長度 24）：
+
+```
+argmax 一致率  : 100.0%
+logits 相關係數: 1.0000
+最大絕對差     : 0.2866
+```
+
+⚠️ **這只是 smoke test。** 真實中文標點品質必須用 `padnote-bench` 的
+中文測試集驗證（TODO H2）—— 隨機 token 的一致率不等於真實文本的品質。
+
+### 順帶發現：sherpa-onnx 的轉換版**沒有宣告授權**
+`csukuangfj/sherpa-onnx-punct-ct-transformer-zh-en-vocab272727-2024-04-12`
+的 model card **`license` 欄位是 `None`** —— 連標籤都沒有，比我們的 ct-punc
+（至少有 apache-2.0 標籤）更弱。這反過來證明 D-07 選 C（自行匯出）是對的：
+若當初直接用第三方轉換版，授權依據會比現在更薄弱。
 
 ---
 

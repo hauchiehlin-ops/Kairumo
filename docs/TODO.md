@@ -99,6 +99,8 @@
 音檔優先落地。**ffprobe 驗證端到端產出為 3.00 秒合法 Ogg-Opus** |
 | S-26 | WP5 | `padnote-vad-silero`：Silero VAD（ort）。**實測白噪音下
 EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
+| S-29 | WP5 | **ct-punc 體積問題已解**：量化納入 `Gather`（嵌入表占 86.4%
+體積），1,074 MB → **269 MB**，argmax 一致率 100% |
 
 ### 待做
 | ID | 工作包 | 內容 | 備註 |

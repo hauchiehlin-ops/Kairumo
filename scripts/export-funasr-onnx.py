@@ -190,6 +190,46 @@ def force_legacy_onnx_exporter() -> None:
     print("  (已強制使用舊版 ONNX 匯出器：torch 2.9+ 的 dynamo 匯出器不相容 FunASR)")
 
 
+def quantize_onnx(src: Path) -> Path | None:
+    """int8 動態量化，**包含嵌入表**。
+
+    FunASR 內建的量化（以及 onnxruntime 的預設）不會碰 ``Gather``，
+    也就是不量化詞嵌入表。對標點模型來說這等於沒量化：
+
+    | ct-punc 量化方式 | 大小 |
+    |---|---|
+    | FP32 原始 | 1,073.6 MB |
+    | 預設量化（不含 embedding） | 965.0 MB |
+    | **含 embedding** | **269.3 MB** |
+
+    原因是 `embed.weight` 的形狀是 `[471067, 516]` = 927 MB，
+    **占整個模型的 86.4%**。不量化它就等於什麼都沒做。
+
+    品質影響：對隨機 token 序列，量化前後的 argmax 一致率 100%、
+    logits 相關係數 1.0000。⚠️ 但這只是 smoke test，
+    **真實中文品質必須用 `padnote-bench` 的測試集驗證**（TODO H2）。
+    """
+    try:
+        from onnxruntime.quantization import QuantType, quantize_dynamic
+    except ImportError:
+        print("  ! 需要 onnxruntime 才能量化：pip install onnxruntime")
+        return None
+
+    dst = src.with_name(f"{src.stem}.int8{src.suffix}")
+    quantize_dynamic(
+        model_input=src,
+        model_output=dst,
+        # Gather 是關鍵 —— 沒有它，占 86% 體積的嵌入表不會被量化。
+        op_types_to_quantize=["MatMul", "Gather", "Attention", "LSTM"],
+        weight_type=QuantType.QInt8,
+        extra_options={"MatMulConstBOnly": False},
+    )
+    before = src.stat().st_size / 1048576
+    after = dst.stat().st_size / 1048576
+    print(f"    量化：{before:.1f} MB → {after:.1f} MB（{before / max(after, 0.1):.1f}×）")
+    return dst
+
+
 def export_one(spec: dict, out_root: Path, *, quantize: bool = False) -> bool:
     from funasr import AutoModel
 
@@ -212,7 +252,8 @@ def export_one(spec: dict, out_root: Path, *, quantize: bool = False) -> bool:
 
     print("  匯出 ONNX 中…")
     model = AutoModel(model=spec["repo"], hub="hf", disable_update=True)
-    exported = model.export(type="onnx", quantize=quantize)
+    # 不用 FunASR 內建的量化 —— 它不會碰嵌入表，對標點模型等於沒效果。
+    exported = model.export(type="onnx", quantize=False)
     print(f"  匯出完成：{exported}")
 
     # 把產出搬進我們的目錄並計算雜湊。
@@ -220,7 +261,17 @@ def export_one(spec: dict, out_root: Path, *, quantize: bool = False) -> bool:
     artifacts = []
     first = Path(exported[0] if isinstance(exported, (list, tuple)) else exported)
     src_dir = first if first.is_dir() else first.parent
+
+    if quantize:
+        for onnx_file in sorted(src_dir.glob("*.onnx")):
+            if ".int8" in onnx_file.name or "_quant" in onnx_file.name:
+                continue
+            quantize_onnx(onnx_file)
     for f in sorted(src_dir.glob("*")):
+        # 排除 FunASR 自帶量化的產出：它不量化嵌入表，對標點模型幾乎無效，
+        # 我們用自己的 `.int8` 取代。留著只會讓 provenance 出現不會發布的檔案。
+        if "_quant" in f.name:
+            continue
         if f.suffix in (".onnx", ".json", ".txt", ".yaml", ".mvn"):
             target = model_dir / f.name
             target.write_bytes(f.read_bytes())
@@ -268,8 +319,8 @@ def main() -> int:
     ap.add_argument(
         "--quantize",
         action="store_true",
-        help="同時產生 int8 量化版。FP32 的 ct-punc 有 1.1 GB，行動裝置帶不動；"
-        "量化後約四分之一。品質影響需以 padnote-bench 實測（TODO H2）。",
+        help="同時產生 int8 量化版（含嵌入表）。ct-punc 由 1,074 MB 降到 269 MB；"
+        "品質影響需以 padnote-bench 實測（TODO H2）。",
     )
     args = ap.parse_args()
 
