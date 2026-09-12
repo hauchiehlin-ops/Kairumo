@@ -1,0 +1,34 @@
+name: Kairumo
+options:
+  bundleIdPrefix: com.kairumo
+  deploymentTarget:
+    iOS: "16.0"
+
+targets:
+  Kairumo:
+    type: application
+    platform: iOS
+    deploymentTarget: "16.0"
+    sources:
+      - path: Sources
+      - path: Examples/HomeWorkbenchUsage.swift
+      - path: Generated/padnote_core.swift
+    dependencies:
+      - framework: PadnoteCore.xcframework
+        embed: true
+    settings:
+      base:
+        ARCHS: arm64
+        PRODUCT_NAME: Kairumo
+        PRODUCT_BUNDLE_IDENTIFIER: com.kairumo.padnote
+        DEVELOPMENT_TEAM: 6UJ8GS752W
+        SUPPORTS_MACCATALYST: YES
+        TARGETED_DEVICE_FAMILY: "1,2,6" # 1: iPhone, 2: iPad, 6: Mac Catalyst
+        ENABLE_BITCODE: NO
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: "Kairumo"
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。"
+        SWIFT_VERSION: "5.0"

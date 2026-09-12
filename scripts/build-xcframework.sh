@@ -7,9 +7,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 TARGETS=(
-  aarch64-apple-ios          # 實機
+  aarch64-apple-ios          # 實機 (iPhone / iPad)
   aarch64-apple-ios-sim      # Apple Silicon 模擬器
-  aarch64-apple-darwin       # macOS
+  aarch64-apple-ios-macabi   # Mac Catalyst (Mac 通用)
 )
 
 echo "==> 確認 target 已安裝"
@@ -32,6 +32,10 @@ for t in "${TARGETS[@]}"; do
     aarch64-apple-ios-sim)
       SDK="iphonesimulator"
       CLANG_TARGET="arm64-apple-ios-simulator"
+      ;;
+    aarch64-apple-ios-macabi)
+      SDK="macosx"
+      CLANG_TARGET="arm64-apple-ios14.0-macabi"
       ;;
     aarch64-apple-darwin)
       SDK="macosx"
@@ -75,9 +79,9 @@ cp apple/Generated/padnote_coreFFI.modulemap "$HEADERS/module.modulemap"
 
 echo "==> 組裝 XCFramework"
 xcodebuild -create-xcframework \
-  -library "target/aarch64-apple-ios/release/libpadnote_core.a"     -headers "$HEADERS" \
-  -library "target/aarch64-apple-ios-sim/release/libpadnote_core.a" -headers "$HEADERS" \
-  -library "target/aarch64-apple-darwin/release/libpadnote_core.a"  -headers "$HEADERS" \
+  -library "target/aarch64-apple-ios/release/libpadnote_core.a"        -headers "$HEADERS" \
+  -library "target/aarch64-apple-ios-sim/release/libpadnote_core.a"    -headers "$HEADERS" \
+  -library "target/aarch64-apple-ios-macabi/release/libpadnote_core.a" -headers "$HEADERS" \
   -output "$OUT"
 
 echo "==> 完成：$OUT"
