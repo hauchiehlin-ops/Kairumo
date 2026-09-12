@@ -16,6 +16,7 @@ public struct AssetLibraryView: View {
 
     var onInsertToCanvas: ((UIImage, AssetItem) -> Void)?
 
+    @State private var selectedTheme: NoteThemeCategory? = nil
     @State private var selectedCategory: AssetCategory = .all
     @State private var selectedSourceFilter: AssetSourceType? = nil
     @State private var searchText: String = ""
@@ -26,42 +27,64 @@ public struct AssetLibraryView: View {
         self.onInsertToCanvas = onInsertToCanvas
     }
 
+    /// 根據所選主題過濾次級分類標籤
+    private var availableCategories: [AssetCategory] {
+        if let theme = selectedTheme {
+            return [.all] + AssetCategory.allCases.filter { $0 != .all && $0.themeCategory == theme }
+        } else {
+            return AssetCategory.allCases
+        }
+    }
+
     private var filteredItems: [AssetItem] {
         libraryManager.items.filter { item in
+            let matchesTheme: Bool
+            if let theme = selectedTheme {
+                matchesTheme = (item.category.themeCategory == theme)
+            } else {
+                matchesTheme = true
+            }
+
             let matchesCategory = (selectedCategory == .all || item.category == selectedCategory)
             let matchesSource = (selectedSourceFilter == nil || item.sourceType == selectedSourceFilter)
             let matchesSearch = searchText.isEmpty ||
                 item.title.localizedCaseInsensitiveContains(searchText) ||
                 item.specsSummary.localizedCaseInsensitiveContains(searchText) ||
                 item.materialSuggestion.localizedCaseInsensitiveContains(searchText)
-            return matchesCategory && matchesSource && matchesSearch
+            return matchesTheme && matchesCategory && matchesSource && matchesSearch
         }
     }
 
     public var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // 1. 頂部搜尋列
+                // 1. 頂部搜尋列與來源型態過濾（自適應寬窄螢幕）
                 searchAndFilterBar
 
-                // 2. 主題類別橫向滑動標籤
+                // 2. 三大主題主標籤篩選列（全部、美學視覺、工程製程、數位體驗）
+                themeFilterBar
+
+                // 3. 次級主題類別橫向滑動標籤
                 categoryFilterScrollView
 
-                // 3. 快取容量與隨需下載管理列
+                // 4. 快取容量與隨需下載管理列
                 storageManagementBanner
 
-                // 4. 素材卡片瀑布流網格
-                ScrollView {
-                    if filteredItems.isEmpty {
-                        emptyStateView
-                    } else {
-                        LazyVGrid(columns: [GridItem(.adaptive(minimum: 220, maximum: 280), spacing: 14)], spacing: 14) {
-                            ForEach(filteredItems) { item in
-                                assetCardView(item: item)
+                // 5. 素材卡片瀑布流自適應網格
+                GeometryReader { proxy in
+                    ScrollView {
+                        if filteredItems.isEmpty {
+                            emptyStateView
+                        } else {
+                            LazyVGrid(columns: [GridItem(.adaptive(minimum: 180, maximum: 280), spacing: 14)], spacing: 14) {
+                                ForEach(filteredItems) { item in
+                                    assetCardView(item: item)
+                                }
                             }
+                            .padding(14)
                         }
-                        .padding(16)
                     }
+                    .frame(width: proxy.size.width, alignment: .topLeading)
                 }
             }
             .background(Color(uiColor: .systemGroupedBackground))
@@ -108,48 +131,111 @@ public struct AssetLibraryView: View {
         }
     }
 
-    // MARK: - 1. 搜尋與型態過濾
+    // MARK: - 1. 搜尋與型態過濾（響應式 ViewThatFits）
     private var searchAndFilterBar: some View {
-        HStack(spacing: 10) {
-            HStack(spacing: 6) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.secondary)
-                TextField("搜尋機構、3C、零件、規格...", text: $searchText)
-                    .textFieldStyle(.plain)
-                if !searchText.isEmpty {
-                    Button {
-                        searchText = ""
-                    } label: {
-                        Image(systemName: "xmark.circle.fill")
-                            .foregroundColor(.secondary)
-                    }
-                    .buttonStyle(.plain)
-                }
+        ViewThatFits(in: .horizontal) {
+            // 寬螢幕水平排列
+            HStack(spacing: 10) {
+                searchFieldView
+                sourceFilterPicker.frame(width: 260)
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
-            .cornerRadius(10)
-
-            // 實體規格 vs AI 概念切換
-            Picker("", selection: $selectedSourceFilter) {
-                Text("全部型態").tag(AssetSourceType?.none)
-                Text(localizationManager.localized("filter_physical")).tag(AssetSourceType?.some(.physicalSpec))
-                Text(localizationManager.localized("filter_ai")).tag(AssetSourceType?.some(.aiConcept))
+            // 窄螢幕垂直分行
+            VStack(spacing: 8) {
+                searchFieldView
+                sourceFilterPicker
             }
-            .pickerStyle(.segmented)
-            .frame(width: 250)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 10)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
     }
 
+    private var searchFieldView: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(.secondary)
+            TextField("搜尋機構、3C、零件、規格、色彩...", text: $searchText)
+                .textFieldStyle(.plain)
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+        .cornerRadius(10)
+    }
+
+    private var sourceFilterPicker: some View {
+        Picker("", selection: $selectedSourceFilter) {
+            Text("全部型態").tag(AssetSourceType?.none)
+            Text(localizationManager.localized("filter_physical")).tag(AssetSourceType?.some(.physicalSpec))
+            Text(localizationManager.localized("filter_ai")).tag(AssetSourceType?.some(.aiConcept))
+        }
+        .pickerStyle(.segmented)
+    }
+
+    // MARK: - 2. 三大主題主標籤篩選列
+    private var themeFilterBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                // 全部主題
+                themeChip(theme: nil, title: "全部主題", icon: "square.grid.2x2")
+
+                // 美學視覺
+                themeChip(theme: .aesthetic, title: localizationManager.localized("theme_aesthetic"), icon: "paintpalette.fill")
+
+                // 工程製程
+                themeChip(theme: .engineering, title: localizationManager.localized("theme_engineering"), icon: "wrench.and.screwdriver.fill")
+
+                // 數位體驗
+                themeChip(theme: .digital, title: localizationManager.localized("theme_digital"), icon: "iphone.gen3")
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+        }
+        .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.95))
+        .overlay(Divider(), alignment: .bottom)
+    }
+
+    private func themeChip(theme: NoteThemeCategory?, title: String, icon: String) -> some View {
+        let isSelected = (selectedTheme == theme)
+        return Button {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                selectedTheme = theme
+                // 若當前次分類不屬於新主題，重置為 .all
+                if let theme = theme, selectedCategory != .all, selectedCategory.themeCategory != theme {
+                    selectedCategory = .all
+                }
+            }
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: icon)
+                    .font(.caption)
+                Text(title)
+                    .font(.caption)
+                    .fontWeight(isSelected ? .bold : .medium)
+            }
+            .foregroundColor(isSelected ? .white : .primary)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(isSelected ? Color.accentColor : Color(uiColor: .tertiarySystemGroupedBackground))
+            .cornerRadius(16)
+        }
+        .buttonStyle(.plain)
+    }
+
     // MARK: - 2. 主題類別橫向滑動列
     private var categoryFilterScrollView: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(AssetCategory.allCases) { cat in
+                ForEach(availableCategories) { cat in
                     let isSelected = (selectedCategory == cat)
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) {

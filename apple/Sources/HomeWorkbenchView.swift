@@ -104,31 +104,34 @@ public struct HomeWorkbenchView: View {
 
     public var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-                    // 1. 頂部使用者帳號資訊條
-                    userAccountBanner
+            GeometryReader { proxy in
+                ScrollView(.vertical, showsIndicators: true) {
+                    VStack(alignment: .leading, spacing: 24) {
+                        // 1. 頂部使用者帳號資訊條（自適應寬窄螢幕）
+                        userAccountBanner
 
-                    // 2. 頂部搜尋列
-                    searchBarSection
+                        // 2. 頂部搜尋列
+                        searchBarSection
 
-                    // 3. 主要動作：新增筆記、開始錄音（皆為真實可操作按鈕）
-                    primaryActionsSection
+                        // 3. 主要動作：新增筆記、開始錄音、📦素材圖庫（自適應網格）
+                        primaryActionsSection
 
-                    // 4. 繼續：最近開啟之真實筆記
-                    continueWorkingSection
+                        // 4. 繼續：最近開啟之真實筆記
+                        continueWorkingSection
 
-                    // 5. 最近錄音：真實音訊播放與轉錄清單
-                    recentRecordingsSection
+                        // 5. 最近錄音：真實音訊播放與轉錄清單
+                        recentRecordingsSection
 
-                    // 6. 全部筆記（真實多頁手繪文件）
-                    allNotebooksSection
+                        // 6. 全部筆記（真實多頁手繪文件）
+                        allNotebooksSection
 
-                    // 7. 底部工作台品牌與版本號
-                    footerVersionSection
+                        // 7. 底部工作台品牌與版本號
+                        footerVersionSection
+                    }
+                    .padding(.horizontal, max(12, min(22, proxy.size.width * 0.035)))
+                    .padding(.vertical, 16)
+                    .frame(width: proxy.size.width, alignment: .topLeading)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
             }
             .background(Color(uiColor: .systemGroupedBackground))
             // 將「今日工作台」標題改為「使用者登入帳號名稱」
@@ -165,83 +168,64 @@ public struct HomeWorkbenchView: View {
                         .buttonStyle(.plain)
                         .help("選擇介面語言 (Language)")
 
-                        // 開啟 Kairumo Record 資料夾按鈕
-                        Button {
-                            audioManager.openRecordingsFolderInFinder()
-                        } label: {
-                            Image(systemName: "folder")
-                                .font(.caption)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 6)
-                                .background(Color(uiColor: .secondarySystemGroupedBackground))
-                                .cornerRadius(12)
-                        }
-                        .buttonStyle(.plain)
-                        .help("在 Finder 開啟 Kairumo Record 錄音資料夾")
-
-                        // 📦 素材圖庫按鈕
+                        // 📦 素材圖庫快捷鍵
                         Button {
                             showAssetLibrarySheet = true
                         } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: "shippingbox.fill")
-                                    .foregroundColor(.accentColor)
-                                Text(localizationManager.localized("asset_library"))
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color(uiColor: .secondarySystemGroupedBackground))
-                            .cornerRadius(14)
-                        }
-                        .buttonStyle(.plain)
-                        .help(localizationManager.localized("asset_library"))
-
-                        // 使用者頭像按鈕（點擊進入個人資料管理）
-                        Button {
-                            showAccountSheet = true
-                        } label: {
-                            HStack(spacing: 6) {
-                                ZStack {
-                                    Circle()
-                                        .fill(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                        .frame(width: 26, height: 26)
-                                    Text(String(accountManager.profile.displayName.prefix(1)).uppercased())
-                                        .font(.system(size: 13, weight: .bold))
-                                        .foregroundColor(.white)
-                                }
-                                Text(accountManager.profile.displayName)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color(uiColor: .secondarySystemGroupedBackground))
-                            .cornerRadius(14)
-                        }
-                        .buttonStyle(.plain)
-                        .help("點擊管理帳號資料")
-
-                        // 版本資訊膠囊按鈕
-                        Button {
-                            showInfoSheet = true
-                        } label: {
                             HStack(spacing: 4) {
-                                Image(systemName: "info.circle")
-                                Text(appVersionString)
+                                Image(systemName: "shippingbox.fill")
+                                    .foregroundColor(.purple)
+                                Text(localizationManager.localized("asset_library"))
                                     .font(.caption2)
                                     .fontWeight(.semibold)
                             }
                             .padding(.horizontal, 8)
                             .padding(.vertical, 5)
-                            .background(Color.accentColor.opacity(0.12))
+                            .background(Color.purple.opacity(0.12))
                             .cornerRadius(12)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("關於 Kairumo 與版本號")
+                        .help(localizationManager.localized("asset_library"))
+
+                        // 快捷工作台選單（開啟資料夾、帳號設定、診斷）
+                        Menu {
+                            Button {
+                                showAccountSheet = true
+                            } label: {
+                                Label(accountManager.profile.displayName, systemImage: "person.crop.circle")
+                            }
+
+                            Button {
+                                audioManager.openRecordingsFolderInFinder()
+                            } label: {
+                                Label("開啟 Kairumo Record 資料夾", systemImage: "folder")
+                            }
+
+                            Divider()
+
+                            Button {
+                                showInfoSheet = true
+                            } label: {
+                                Label("系統診斷與版本號 (\(appVersionString))", systemImage: "info.circle")
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                ZStack {
+                                    Circle()
+                                        .fill(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
+                                        .frame(width: 22, height: 22)
+                                    Text(String(accountManager.profile.displayName.prefix(1)).uppercased())
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundColor(.white)
+                                }
+                                Image(systemName: "ellipsis.circle")
+                                    .font(.caption)
+                            }
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(Color(uiColor: .secondarySystemGroupedBackground))
+                            .cornerRadius(12)
+                        }
                     }
                 }
             }
@@ -291,56 +275,82 @@ public struct HomeWorkbenchView: View {
         }
     }
 
-    // MARK: - 1. 頂部使用者帳號橫幅
+    // MARK: - 1. 頂部使用者帳號橫幅（響應式自適應寬度）
     private var userAccountBanner: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                Circle()
-                    .fill(LinearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing))
-                    .frame(width: 44, height: 44)
-                Text(String(accountManager.profile.displayName.prefix(1)).uppercased())
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
+        ViewThatFits(in: .horizontal) {
+            // 寬螢幕排版（橫向並排）
+            HStack(spacing: 12) {
+                userAvatarCircle
+                userProfileTexts
+                Spacer(minLength: 8)
+                switchAccountButton
             }
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(accountManager.profile.displayName)
-                        .font(.headline)
-                        .foregroundColor(.primary)
-                    Text("線上")
-                        .font(.system(size: 10, weight: .bold))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.green.opacity(0.15))
-                        .foregroundColor(.green)
-                        .cornerRadius(6)
+            // 窄螢幕排版（頭像資訊在上、切換按鈕在下）
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 12) {
+                    userAvatarCircle
+                    userProfileTexts
+                    Spacer(minLength: 4)
                 }
-
-                Text("\(accountManager.profile.email.isEmpty ? "@" + accountManager.profile.username : accountManager.profile.email) • \(accountManager.profile.syncStatusText)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                HStack {
+                    Spacer()
+                    switchAccountButton
+                }
             }
-
-            Spacer()
-
-            Button {
-                showAccountSheet = true
-            } label: {
-                Text(localizationManager.localized("switch_account"))
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 5)
-                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                    .cornerRadius(8)
-            }
-            .buttonStyle(.plain)
         }
         .padding(12)
         .background(Color(uiColor: .secondarySystemGroupedBackground))
         .cornerRadius(12)
+    }
+
+    private var userAvatarCircle: some View {
+        ZStack {
+            Circle()
+                .fill(LinearGradient(colors: [.blue, .cyan], startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 42, height: 42)
+            Text(String(accountManager.profile.displayName.prefix(1)).uppercased())
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+        }
+    }
+
+    private var userProfileTexts: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Text(accountManager.profile.displayName)
+                    .font(.headline)
+                    .foregroundColor(.primary)
+                Text("線上")
+                    .font(.system(size: 10, weight: .bold))
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.green.opacity(0.15))
+                    .foregroundColor(.green)
+                    .cornerRadius(6)
+            }
+
+            Text("\(accountManager.profile.email.isEmpty ? "@" + accountManager.profile.username : accountManager.profile.email) • \(accountManager.profile.syncStatusText)")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+        }
+    }
+
+    private var switchAccountButton: some View {
+        Button {
+            showAccountSheet = true
+        } label: {
+            Text(localizationManager.localized("switch_account"))
+                .font(.caption)
+                .fontWeight(.medium)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                .cornerRadius(8)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - 2. 頂部搜尋列
@@ -366,10 +376,10 @@ public struct HomeWorkbenchView: View {
         .shadow(color: Color.black.opacity(0.03), radius: 4, y: 2)
     }
 
-    // MARK: - 3. 主要動作按鈕（真實可操作）
+    // MARK: - 3. 主要動作按鈕（響應式自適應網格：新增筆記、開始錄音、📦素材圖庫）
     private var primaryActionsSection: some View {
-        HStack(spacing: 14) {
-            // 真實動作：新增筆記（彈出範本選擇器）
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 190, maximum: 380), spacing: 12)], spacing: 12) {
+            // 真實動作 1：新增筆記（彈出範本選擇器）
             Button {
                 newNoteTitle = "未命名筆記 \(notebookStore.notebooks.count + 1)"
                 selectedTemplate = .blank
@@ -384,17 +394,18 @@ public struct HomeWorkbenchView: View {
                         Text(localizationManager.localized("new_note_desc"))
                             .font(.caption2)
                             .opacity(0.85)
+                            .lineLimit(1)
                     }
-                    Spacer()
+                    Spacer(minLength: 4)
                 }
-                .padding()
+                .padding(14)
                 .foregroundColor(.white)
                 .background(LinearGradient(colors: [.accentColor, .accentColor.opacity(0.85)], startPoint: .topLeading, endPoint: .bottomTrailing))
                 .cornerRadius(14)
             }
             .buttonStyle(.plain)
 
-            // 真實動作：開始麥克風錄音（彈出即時錄音器）
+            // 真實動作 2：開始麥克風錄音（彈出即時錄音器）
             Button {
                 showQuickRecordSheet = true
             } label: {
@@ -409,15 +420,45 @@ public struct HomeWorkbenchView: View {
                         Text(localizationManager.localized("start_recording_desc"))
                             .font(.caption2)
                             .foregroundColor(.secondary)
+                            .lineLimit(1)
                     }
-                    Spacer()
+                    Spacer(minLength: 4)
                 }
-                .padding()
+                .padding(14)
                 .background(Color(uiColor: .secondarySystemGroupedBackground))
                 .cornerRadius(14)
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
                         .stroke(Color.red.opacity(0.25), lineWidth: 1)
+                )
+            }
+            .buttonStyle(.plain)
+
+            // 真實動作 3：📦 素材圖庫（涵蓋三大主題、機構、3C、零件）
+            Button {
+                showAssetLibrarySheet = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "shippingbox.fill")
+                        .font(.title3)
+                        .foregroundColor(.purple)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(localizationManager.localized("asset_library"))
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                        Text(localizationManager.localized("responsive_asset_desc"))
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                    Spacer(minLength: 4)
+                }
+                .padding(14)
+                .background(Color(uiColor: .secondarySystemGroupedBackground))
+                .cornerRadius(14)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14)
+                        .stroke(Color.purple.opacity(0.25), lineWidth: 1)
                 )
             }
             .buttonStyle(.plain)
@@ -430,45 +471,94 @@ public struct HomeWorkbenchView: View {
         let displayedList = showAllContinue ? visibleList : Array(visibleList.prefix(5))
 
         return VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(localizationManager.localized("continue"))
-                    .font(.title3)
-                    .fontWeight(.bold)
+            ViewThatFits(in: .horizontal) {
+                // 寬螢幕水平並排
+                HStack {
+                    Text(localizationManager.localized("continue"))
+                        .font(.title3)
+                        .fontWeight(.bold)
 
-                if !hiddenNoteIds.isEmpty {
+                    if !hiddenNoteIds.isEmpty {
+                        Button {
+                            withAnimation {
+                                hiddenNoteIds.removeAll()
+                            }
+                        } label: {
+                            Text(localizationManager.localized("unhide_items"))
+                                .font(.caption2)
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Spacer()
+
+                    // 各區塊「All / 全部」展開切換功能
                     Button {
-                        withAnimation {
-                            hiddenNoteIds.removeAll()
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showAllContinue.toggle()
                         }
                     } label: {
-                        Text(localizationManager.localized("unhide_items"))
-                            .font(.caption2)
-                            .foregroundColor(.accentColor)
+                        HStack(spacing: 4) {
+                            Text(showAllContinue ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleList.count))")
+                            Image(systemName: showAllContinue ? "chevron.up" : "chevron.down")
+                        }
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.accentColor)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.accentColor.opacity(0.12))
+                        .cornerRadius(8)
                     }
                     .buttonStyle(.plain)
                 }
 
-                Spacer()
+                // 窄螢幕垂直分行
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(localizationManager.localized("continue"))
+                            .font(.title3)
+                            .fontWeight(.bold)
 
-                // 各區塊「All / 全部」展開切換功能
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showAllContinue.toggle()
+                        if !hiddenNoteIds.isEmpty {
+                            Button {
+                                withAnimation {
+                                    hiddenNoteIds.removeAll()
+                                }
+                            } label: {
+                                Text(localizationManager.localized("unhide_items"))
+                                    .font(.caption2)
+                                    .foregroundColor(.accentColor)
+                            }
+                            .buttonStyle(.plain)
+                        }
+
+                        Spacer()
                     }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(showAllContinue ? "收合" : "\(localizationManager.localized("show_all")) (\(visibleList.count))")
-                        Image(systemName: showAllContinue ? "chevron.up" : "chevron.down")
+
+                    HStack {
+                        Spacer()
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showAllContinue.toggle()
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(showAllContinue ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleList.count))")
+                                Image(systemName: showAllContinue ? "chevron.up" : "chevron.down")
+                            }
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.accentColor)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.accentColor.opacity(0.12))
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.accentColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.accentColor.opacity(0.12))
-                    .cornerRadius(8)
                 }
-                .buttonStyle(.plain)
             }
 
             if visibleList.isEmpty {
@@ -596,62 +686,127 @@ public struct HomeWorkbenchView: View {
         let displayedRecordings = showAllRecordings ? visibleRecordings : Array(visibleRecordings.prefix(4))
 
         return VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text(localizationManager.localized("recent_recordings"))
-                    .font(.title3)
-                    .fontWeight(.bold)
+            ViewThatFits(in: .horizontal) {
+                // 寬螢幕水平並排
+                HStack {
+                    Text(localizationManager.localized("recent_recordings"))
+                        .font(.title3)
+                        .fontWeight(.bold)
 
-                if !hiddenRecordingIds.isEmpty {
+                    if !hiddenRecordingIds.isEmpty {
+                        Button {
+                            withAnimation {
+                                hiddenRecordingIds.removeAll()
+                            }
+                        } label: {
+                            Text(localizationManager.localized("unhide_items"))
+                                .font(.caption2)
+                                .foregroundColor(.accentColor)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Spacer()
+
+                    // 各區塊「All / 全部」展開切換功能
                     Button {
-                        withAnimation {
-                            hiddenRecordingIds.removeAll()
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showAllRecordings.toggle()
                         }
                     } label: {
-                        Text(localizationManager.localized("unhide_items"))
-                            .font(.caption2)
-                            .foregroundColor(.accentColor)
+                        HStack(spacing: 4) {
+                            Text(showAllRecordings ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleRecordings.count))")
+                            Image(systemName: showAllRecordings ? "chevron.up" : "chevron.down")
+                        }
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.accentColor)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.accentColor.opacity(0.12))
+                        .cornerRadius(8)
                     }
                     .buttonStyle(.plain)
+
+                    Button {
+                        audioManager.openRecordingsFolderInFinder()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "folder")
+                            Text("開啟 Kairumo Record")
+                        }
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(Color.accentColor.opacity(0.1))
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                    .help("在 Finder 開啟本機文件夾中的 Kairumo Record 錄音目錄")
                 }
 
-                Spacer()
+                // 窄螢幕分行並排
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text(localizationManager.localized("recent_recordings"))
+                            .font(.title3)
+                            .fontWeight(.bold)
 
-                // 各區塊「All / 全部」展開切換功能
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        showAllRecordings.toggle()
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(showAllRecordings ? "收合" : "\(localizationManager.localized("show_all")) (\(visibleRecordings.count))")
-                        Image(systemName: showAllRecordings ? "chevron.up" : "chevron.down")
-                    }
-                    .font(.caption)
-                    .fontWeight(.medium)
-                    .foregroundColor(.accentColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.accentColor.opacity(0.12))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
+                        if !hiddenRecordingIds.isEmpty {
+                            Button {
+                                withAnimation {
+                                    hiddenRecordingIds.removeAll()
+                                }
+                            } label: {
+                                Text(localizationManager.localized("unhide_items"))
+                                    .font(.caption2)
+                                    .foregroundColor(.accentColor)
+                            }
+                            .buttonStyle(.plain)
+                        }
 
-                Button {
-                    audioManager.openRecordingsFolderInFinder()
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "folder")
-                        Text("開啟 Kairumo Record")
+                        Spacer()
                     }
-                    .font(.caption)
-                    .foregroundColor(.accentColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Color.accentColor.opacity(0.1))
-                    .cornerRadius(8)
+
+                    HStack(spacing: 8) {
+                        Spacer()
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                showAllRecordings.toggle()
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Text(showAllRecordings ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleRecordings.count))")
+                                Image(systemName: showAllRecordings ? "chevron.up" : "chevron.down")
+                            }
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.accentColor)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.accentColor.opacity(0.12))
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button {
+                            audioManager.openRecordingsFolderInFinder()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "folder")
+                                Text("資料夾")
+                            }
+                            .font(.caption)
+                            .foregroundColor(.accentColor)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(Color.accentColor.opacity(0.1))
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
-                .buttonStyle(.plain)
-                .help("在 Finder 開啟本機文件夾中的 Kairumo Record 錄音目錄")
             }
 
             if visibleRecordings.isEmpty {
@@ -767,46 +922,57 @@ public struct HomeWorkbenchView: View {
         let visibleList = filteredNotebooks.filter { !hiddenNoteIds.contains($0.id) }
 
         return VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("\(localizationManager.localized("all_notebooks")) (\(visibleList.count))")
-                    .font(.title3)
-                    .fontWeight(.bold)
+            ViewThatFits(in: .horizontal) {
+                // 寬螢幕排版
+                HStack {
+                    Text("\(localizationManager.localized("all_notebooks")) (\(visibleList.count))")
+                        .font(.title3)
+                        .fontWeight(.bold)
 
-                if !hiddenNoteIds.isEmpty {
-                    Button {
-                        withAnimation {
-                            hiddenNoteIds.removeAll()
+                    if !hiddenNoteIds.isEmpty {
+                        Button {
+                            withAnimation {
+                                hiddenNoteIds.removeAll()
+                            }
+                        } label: {
+                            Text(localizationManager.localized("unhide_items"))
+                                .font(.caption2)
+                                .foregroundColor(.accentColor)
                         }
-                    } label: {
-                        Text(localizationManager.localized("unhide_items"))
-                            .font(.caption2)
-                            .foregroundColor(.accentColor)
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+
+                    Spacer()
+                    allNotebooksSortMenu
                 }
 
-                Spacer()
-                Menu {
-                    ForEach(SortOption.allCases) { opt in
-                        Button {
-                            selectedSortOption = opt
-                        } label: {
-                            HStack {
-                                Text(opt.rawValue)
-                                if selectedSortOption == opt {
-                                    Image(systemName: "checkmark")
+                // 窄螢幕排版
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack {
+                        Text("\(localizationManager.localized("all_notebooks")) (\(visibleList.count))")
+                            .font(.title3)
+                            .fontWeight(.bold)
+
+                        if !hiddenNoteIds.isEmpty {
+                            Button {
+                                withAnimation {
+                                    hiddenNoteIds.removeAll()
                                 }
+                            } label: {
+                                Text(localizationManager.localized("unhide_items"))
+                                    .font(.caption2)
+                                    .foregroundColor(.accentColor)
                             }
+                            .buttonStyle(.plain)
                         }
+
+                        Spacer()
                     }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text(selectedSortOption.rawValue)
-                            .font(.caption)
-                        Image(systemName: "line.3.horizontal.decrease.circle")
-                            .font(.caption)
+
+                    HStack {
+                        Spacer()
+                        allNotebooksSortMenu
                     }
-                    .foregroundColor(.secondary)
                 }
             }
 
@@ -897,6 +1063,35 @@ public struct HomeWorkbenchView: View {
                     .buttonStyle(.plain)
                 }
             }
+        }
+    }
+
+    private var allNotebooksSortMenu: some View {
+        Menu {
+            ForEach(SortOption.allCases) { opt in
+                Button {
+                    selectedSortOption = opt
+                } label: {
+                    HStack {
+                        Text(opt.rawValue)
+                        if selectedSortOption == opt {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(selectedSortOption.rawValue)
+                    .font(.caption)
+                Image(systemName: "line.3.horizontal.decrease.circle")
+                    .font(.caption)
+            }
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(Color(uiColor: .tertiarySystemGroupedBackground))
+            .cornerRadius(8)
         }
     }
 

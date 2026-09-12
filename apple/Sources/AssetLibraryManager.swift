@@ -10,9 +10,11 @@
 import SwiftUI
 import UIKit
 
-/// 圖庫核心主題分類
+/// 圖庫核心主題分類（涵蓋機構、3C、汽車、家具、五金、數位，以及三大主題深度擴充）
 public enum AssetCategory: String, CaseIterable, Identifiable, Codable {
     case all = "全部"
+
+    // 經典實體產業大類
     case mechanism = "機構設計"
     case electronics3C = "3C 電子"
     case automotive = "汽車載具"
@@ -20,7 +22,37 @@ public enum AssetCategory: String, CaseIterable, Identifiable, Codable {
     case hardware = "五金零件"
     case digital = "數位產品"
 
+    // 美學視覺擴充 (Aesthetic & Visual)
+    case aestheticComposition = "美學構圖與黃金比例"
+    case typography = "字體排印與版面網格"
+    case designMotifs = "造型語彙與工藝紋樣"
+
+    // 工程製程擴充 (Engineering & Manufacturing)
+    case toolingMolding = "模具與注塑成型"
+    case sheetMetalCNC = "鈑金折彎與 CNC 加工"
+    case surfaceFinishing = "表面處理與材料工藝"
+    case pneumaticsPiping = "機構傳動與流體管路"
+
+    // 數位體驗擴充 (Digital UX & UI)
+    case crossPlatformUI = "跨平台系統標準件"
+    case uxMotion = "互動手勢與動效軌跡"
+    case infoArchitecture = "資訊架構與服務流程"
+    case designTokens = "設計系統原子元件"
+
     public var id: String { rawValue }
+
+    public var themeCategory: NoteThemeCategory? {
+        switch self {
+        case .all:
+            return nil
+        case .furniture, .aestheticComposition, .typography, .designMotifs:
+            return .aesthetic
+        case .mechanism, .electronics3C, .automotive, .hardware, .toolingMolding, .sheetMetalCNC, .surfaceFinishing, .pneumaticsPiping:
+            return .engineering
+        case .digital, .crossPlatformUI, .uxMotion, .infoArchitecture, .designTokens:
+            return .digital
+        }
+    }
 
     public var iconName: String {
         switch self {
@@ -31,6 +63,20 @@ public enum AssetCategory: String, CaseIterable, Identifiable, Codable {
         case .furniture: return "chair.lounge.fill"
         case .hardware: return "wrench.and.screwdriver.fill"
         case .digital: return "macwindow"
+
+        case .aestheticComposition: return "camera.metering.center.weighted"
+        case .typography: return "textformat.size"
+        case .designMotifs: return "circle.hexagongrid.fill"
+
+        case .toolingMolding: return "cube.transparent.fill"
+        case .sheetMetalCNC: return "scissors"
+        case .surfaceFinishing: return "sparkle"
+        case .pneumaticsPiping: return "point.topleft.down.curvedto.point.bottomright.up"
+
+        case .crossPlatformUI: return "rectangle.portrait.on.rectangle.portrait.angled"
+        case .uxMotion: return "hand.tap.fill"
+        case .infoArchitecture: return "arrow.triangle.branch"
+        case .designTokens: return "puzzlepiece.fill"
         }
     }
 
@@ -43,6 +89,20 @@ public enum AssetCategory: String, CaseIterable, Identifiable, Codable {
         case .furniture: return "cat_furniture"
         case .hardware: return "cat_hardware"
         case .digital: return "cat_digital"
+
+        case .aestheticComposition: return "cat_aesthetic_comp"
+        case .typography: return "cat_typography"
+        case .designMotifs: return "cat_design_motifs"
+
+        case .toolingMolding: return "cat_tooling_molding"
+        case .sheetMetalCNC: return "cat_sheetmetal_cnc"
+        case .surfaceFinishing: return "cat_surface_finishing"
+        case .pneumaticsPiping: return "cat_pneumatics_piping"
+
+        case .crossPlatformUI: return "cat_crossplatform_ui"
+        case .uxMotion: return "cat_ux_motion"
+        case .infoArchitecture: return "cat_info_arch"
+        case .designTokens: return "cat_design_tokens"
         }
     }
 }
@@ -555,6 +615,325 @@ public final class AssetLibraryManager: ObservableObject {
             drawingCode: "wireframe_gestures"
         ))
 
+        // 7. 美學視覺 - 構圖與黃金分割 (Aesthetic Composition)
+        list.append(AssetItem(
+            id: "aes_comp_01",
+            title: "黃金螺旋對數構圖尺標 (Golden Spiral Logarithmic Guide)",
+            category: .aestheticComposition,
+            sourceType: .physicalSpec,
+            specsSummary: "黃金比例 phi=1.618033、費氏數列方格、向心對稱引導線",
+            materialSuggestion: "精密光學刻度尺 / 向量比例規格",
+            dimensionsMm: "1:1.618 (動態向量縮放)",
+            fileSizeMB: 1.2,
+            drawingCode: "golden_spiral"
+        ))
+        list.append(AssetItem(
+            id: "aes_comp_02",
+            title: "經典攝影三分法則九宮格 (Rule of Thirds Grid)",
+            category: .aestheticComposition,
+            sourceType: .physicalSpec,
+            specsSummary: "4 個視覺焦點交叉點、上中下水平分割、左中右垂直平衡",
+            materialSuggestion: "16:9 比例畫幅視覺輔助規",
+            dimensionsMm: "16:9 / 3:2 向量縮放",
+            fileSizeMB: 1.1,
+            drawingCode: "rule_of_thirds"
+        ))
+        list.append(AssetItem(
+            id: "aes_comp_03",
+            title: "動態對稱菱形構圖引導 (Dynamic Symmetry Armatures)",
+            category: .aestheticComposition,
+            sourceType: .physicalSpec,
+            specsSummary: "巴洛克對角線、反對角線交點、古典大師繪畫構圖幾何網",
+            materialSuggestion: "構圖比例規 / 幾何分割網格",
+            dimensionsMm: "1:1.414 (銀根矩形)",
+            fileSizeMB: 1.3,
+            drawingCode: "dynamic_symmetry"
+        ))
+
+        // 8. 美學視覺 - 字體排印與度量 (Typography & Metrics)
+        list.append(AssetItem(
+            id: "typo_01",
+            title: "拉丁字體排印五線度量基準 (Type Anatomy Baseline Metrics)",
+            category: .typography,
+            sourceType: .physicalSpec,
+            specsSummary: "包含 Cap Height、x-Height、Baseline、Ascender、Descender 基準線",
+            materialSuggestion: "DIN 1451 / OpenType 字符度量規格",
+            dimensionsMm: "48pt 參考字級 / 500pt 寬",
+            fileSizeMB: 1.4,
+            drawingCode: "type_anatomy"
+        ))
+        list.append(AssetItem(
+            id: "typo_02",
+            title: "中文字型永字八法九宮格 (Chinese Glyph 9-Grid Calligraphy)",
+            category: .typography,
+            sourceType: .physicalSpec,
+            specsSummary: "米字格、九宮格、筆畫重心平衡、外圓內方筆勢軌跡",
+            materialSuggestion: "向量書法教學標註規格",
+            dimensionsMm: "100 x 100 mm",
+            fileSizeMB: 1.3,
+            drawingCode: "yong_eight_strokes"
+        ))
+        list.append(AssetItem(
+            id: "typo_03",
+            title: "版面編排字級模矩比例尺 (Modular Type Scale 1.250)",
+            category: .typography,
+            sourceType: .physicalSpec,
+            specsSummary: "Major Third 等比倍率字級階梯 (12, 16, 20, 25, 31, 39, 48pt) 視覺對比",
+            materialSuggestion: "印刷排版基準規格",
+            dimensionsMm: "寬 360 x 高 240 pt",
+            fileSizeMB: 1.2,
+            drawingCode: "modular_type_scale"
+        ))
+
+        // 9. 美學視覺 - 視覺紋樣與裝飾 (Design Motifs)
+        list.append(AssetItem(
+            id: "motif_01",
+            title: "包浩斯幾何構成裝飾組 (Bauhaus Geometric Motif Set)",
+            category: .designMotifs,
+            sourceType: .physicalSpec,
+            specsSummary: "純粹圓形、三角形、正方形色彩交集與抽象網格組合",
+            materialSuggestion: "向量幾何裝飾組標本",
+            dimensionsMm: "200 x 200 mm",
+            fileSizeMB: 1.5,
+            drawingCode: "bauhaus_motif"
+        ))
+        list.append(AssetItem(
+            id: "motif_02",
+            title: "參數化 Voronoi 泰森多邊形紋樣 (Parametric Voronoi Cellular)",
+            category: .designMotifs,
+            sourceType: .physicalSpec,
+            specsSummary: "自然生長仿生多孔結構、自適應點陣分佈、輕量化吸能骨架",
+            materialSuggestion: "3D 打印尼龍 SLS / 幾何孔洞",
+            dimensionsMm: "180 x 180 x 厚 2.5 mm",
+            fileSizeMB: 2.2,
+            drawingCode: "voronoi_pattern"
+        ))
+        list.append(AssetItem(
+            id: "motif_03",
+            title: "未來賽博賽道光軌幾何 (Cyberpunk Vector Circuit Tracks)",
+            category: .designMotifs,
+            sourceType: .aiConcept,
+            specsSummary: "45° 折線電路軌跡、端點測試點標籤、高科技光感線框",
+            materialSuggestion: "AI 概念渲染 / 向量幾何",
+            dimensionsMm: "300 x 200 pt",
+            fileSizeMB: 2.0,
+            drawingCode: "cyber_circuit"
+        ))
+
+        // 10. 工程製程 - 模具成型與拔模 (Tooling & Molding)
+        list.append(AssetItem(
+            id: "mold_01",
+            title: "注塑模具 1.5° 拔模角與分模線剖面 (Draft Angle & Parting Line)",
+            category: .toolingMolding,
+            sourceType: .physicalSpec,
+            specsSummary: "凸模 (Core) 與凹模 (Cavity) 拔模公差、防止拉傷脫模結構",
+            materialSuggestion: "P20 / 718H 預硬模具鋼結構",
+            dimensionsMm: "250 x 150 x 120 mm",
+            fileSizeMB: 2.8,
+            drawingCode: "draft_angle_mold"
+        ))
+        list.append(AssetItem(
+            id: "mold_02",
+            title: "塑膠件均勻壁厚與加強筋規範 (Plastic Rib & Wall Ratio)",
+            category: .toolingMolding,
+            sourceType: .physicalSpec,
+            specsSummary: "主壁厚 T=2.5mm、加強筋厚度 0.6T (1.5mm)、根部圓角 R=0.5T",
+            materialSuggestion: "ABS / PC 注塑防縮水變形準則",
+            dimensionsMm: "160 x 80 x 30 mm",
+            fileSizeMB: 1.9,
+            drawingCode: "plastic_rib_ratio"
+        ))
+        list.append(AssetItem(
+            id: "mold_03",
+            title: "螺絲自攻牙注塑凸柱結構 (Boss Tower & Gusset)",
+            category: .toolingMolding,
+            sourceType: .physicalSpec,
+            specsSummary: "內徑 d=2.8mm (適用 M3 自攻螺絲)、外徑 2.5d、基座三角支撐筋",
+            materialSuggestion: "POM / PA66 工程塑料凸柱",
+            dimensionsMm: "Ø7.0 x 高 15.0 mm",
+            fileSizeMB: 1.6,
+            drawingCode: "boss_tower"
+        ))
+
+        // 11. 工程製程 - 鈑金折彎與 CNC 清角 (Sheet Metal & CNC)
+        list.append(AssetItem(
+            id: "sheet_01",
+            title: "鈑金 90° V 型折彎 K-Factor 計算展開圖 (Sheet Metal Bend Deduction)",
+            category: .sheetMetalCNC,
+            sourceType: .physicalSpec,
+            specsSummary: "板厚 t=2.0mm、折彎內角 R=2.0mm、中性層 K=0.42 展開長度補償",
+            materialSuggestion: "SPCC 冷軋鋼板 / 展開標註",
+            dimensionsMm: "展開長度 124.5 mm / 折彎 90°",
+            fileSizeMB: 2.1,
+            drawingCode: "sheetmetal_bend"
+        ))
+        list.append(AssetItem(
+            id: "sheet_02",
+            title: "CNC 銑削內直角狗骨狀清角結構 (Dogbone Fillet Relief)",
+            category: .sheetMetalCNC,
+            sourceType: .physicalSpec,
+            specsSummary: "消除端銑刀 Ø3.0mm 內角死區殘留、確保矩形嵌件完美密合裝配",
+            materialSuggestion: "AL6061-T6 銑削加工規格",
+            dimensionsMm: "嵌件槽 40 x 40 mm / 刀徑 Ø3",
+            fileSizeMB: 1.7,
+            drawingCode: "cnc_dogbone"
+        ))
+        list.append(AssetItem(
+            id: "sheet_03",
+            title: "沖孔自鉚壓鉚螺母柱 (PEM Self-Clinching Standoff)",
+            category: .sheetMetalCNC,
+            sourceType: .physicalSpec,
+            specsSummary: "底板沖孔 Ø5.4mm、齒紋沉頭冷擠壓鎖入板金、拉拔扭矩達 4.8Nm",
+            materialSuggestion: "鍍鋅碳鋼 M3 / 板厚 1.5mm",
+            dimensionsMm: "M3 x 六角外徑 7.0 x 長 10 mm",
+            fileSizeMB: 1.4,
+            drawingCode: "pem_standoff"
+        ))
+
+        // 12. 工程製程 - 表面處理與色彩光澤 (Surface Finishing)
+        list.append(AssetItem(
+            id: "surf_01",
+            title: "陽極氧化膜厚與表面噴砂目數對照 (Anodizing Sandblast Grade)",
+            category: .surfaceFinishing,
+            sourceType: .physicalSpec,
+            specsSummary: "120# ~ 320# 鋯砂啞光打磨、15µm 二級陽極氧化皮膜、耐鹽霧 96h",
+            materialSuggestion: "6000 系列鋁合金表面處理",
+            dimensionsMm: "樣板標本 100 x 50 x 厚 2.0 mm",
+            fileSizeMB: 2.4,
+            drawingCode: "anodizing_spec"
+        ))
+        list.append(AssetItem(
+            id: "surf_02",
+            title: "表面粗糙度 Ra 算術平均標註規 (Surface Roughness Ra Scale)",
+            category: .surfaceFinishing,
+            sourceType: .physicalSpec,
+            specsSummary: "Ra 0.8 (精密精銑)、Ra 1.6 (普通精加工)、Ra 3.2 (粗加工粗糙度)",
+            materialSuggestion: "ISO 1302 標準幾何表面符號",
+            dimensionsMm: "標準測量基準長度 0.8 mm",
+            fileSizeMB: 1.8,
+            drawingCode: "roughness_ra"
+        ))
+
+        // 13. 工程製程 - 氣壓油壓與管路 (Pneumatics & Piping)
+        list.append(AssetItem(
+            id: "pipe_01",
+            title: "雙作用氣動滑台氣缸規格 (Dual-Acting Air Cylinder)",
+            category: .pneumaticsPiping,
+            sourceType: .physicalSpec,
+            specsSummary: "缸徑 Ø16mm、標準行程 50mm、雙導軌抗扭轉、兩端磁簧感測槽",
+            materialSuggestion: "硬質陽極氧化鋁合金缸體",
+            dimensionsMm: "長 125 x 寬 44 x 高 28 mm",
+            fileSizeMB: 2.6,
+            drawingCode: "pneumatic_cylinder"
+        ))
+        list.append(AssetItem(
+            id: "pipe_02",
+            title: "快插式直角節流閥管路接頭 (One-Touch Speed Controller)",
+            category: .pneumaticsPiping,
+            sourceType: .physicalSpec,
+            specsSummary: "外螺紋 R1/8、外接 PU 管徑 Ø6mm、刻度旋鈕精確控制氣流量",
+            materialSuggestion: "黃銅鍍鎳 + POM 釋放環",
+            dimensionsMm: "長 32 x 寬 24 x 高 28 mm",
+            fileSizeMB: 1.5,
+            drawingCode: "push_in_fitting"
+        ))
+
+        // 14. 數位體驗 - 跨平台 UI 規範 (Cross-Platform UI)
+        list.append(AssetItem(
+            id: "ui_01",
+            title: "iOS 與 Material 3 雙系統導航列對照 (Dual-OS Navbar Specs)",
+            category: .crossPlatformUI,
+            sourceType: .physicalSpec,
+            specsSummary: "iOS Large Title 96pt vs Android TopAppBar 64pt、邊距與觸控熱區",
+            materialSuggestion: "向量 UI 規範 Wireframe",
+            dimensionsMm: "393 x 120 pt 跨系統標準",
+            fileSizeMB: 1.5,
+            drawingCode: "dual_os_navbar"
+        ))
+        list.append(AssetItem(
+            id: "ui_02",
+            title: "底部操作卡片 Bottom Sheet 手勢容器 (Modal Bottom Sheet)",
+            category: .crossPlatformUI,
+            sourceType: .physicalSpec,
+            specsSummary: "頂部 Grabber 抓手把柄 (36x5pt)、半展開/全展開錨點、背景遮罩",
+            materialSuggestion: "通用行動端浮動視窗規範",
+            dimensionsMm: "393 x 480 pt (可滑動)",
+            fileSizeMB: 1.6,
+            drawingCode: "bottom_sheet_ui"
+        ))
+
+        // 15. 數位體驗 - 動效與微互動 (UX Motion)
+        list.append(AssetItem(
+            id: "motion_01",
+            title: "三次貝茲曲線動效時間函數 (Cubic Bezier Easing Curves)",
+            category: .uxMotion,
+            sourceType: .physicalSpec,
+            specsSummary: "標準 Ease-In-Out (0.42, 0, 0.58, 1) 與彈性 Overshoot 曲線圖標",
+            materialSuggestion: "CSS / Swift 動畫時間對應曲率",
+            dimensionsMm: "坐標系 300 x 200 pt",
+            fileSizeMB: 1.4,
+            drawingCode: "cubic_bezier_curve"
+        ))
+        list.append(AssetItem(
+            id: "motion_02",
+            title: "彈簧阻尼系統動態示意 (Spring Mass Damper Physics)",
+            category: .uxMotion,
+            sourceType: .physicalSpec,
+            specsSummary: "阻尼比 ζ=0.75 臨界阻尼、剛度係數 Stiffness 與衰減振幅包絡線",
+            materialSuggestion: "iOS Spatial Physics 模型圖示",
+            dimensionsMm: "波形坐標寬 320 x 高 180 pt",
+            fileSizeMB: 1.6,
+            drawingCode: "spring_physics"
+        ))
+
+        // 16. 數位體驗 - 資訊架構 (Information Architecture)
+        list.append(AssetItem(
+            id: "ia_01",
+            title: "階層式站點地圖與樹狀導航節點 (Sitemap Hierarchy Tree)",
+            category: .infoArchitecture,
+            sourceType: .physicalSpec,
+            specsSummary: "首頁根節點、一級頻道模組、次級頁面父子繼承關係線",
+            materialSuggestion: "IA 資訊架構標準向量符號",
+            dimensionsMm: "480 x 260 pt (樹狀拓撲)",
+            fileSizeMB: 1.7,
+            drawingCode: "sitemap_tree"
+        ))
+        list.append(AssetItem(
+            id: "ia_02",
+            title: "使用者狀態機躍遷流程圖 (User Journey State Machine)",
+            category: .infoArchitecture,
+            sourceType: .physicalSpec,
+            specsSummary: "起始態、條件分支 (If/Else)、等待非同步回調、終止態符號",
+            materialSuggestion: "UX 流程與邏輯架構圖",
+            dimensionsMm: "400 x 240 pt 泳道圖形",
+            fileSizeMB: 1.8,
+            drawingCode: "state_machine_flow"
+        ))
+
+        // 17. 數位體驗 - 設計規範 (Design Tokens)
+        list.append(AssetItem(
+            id: "token_01",
+            title: "8pt 空間網格與間距度量尺 (8-Point Grid Spacing Scale)",
+            category: .designTokens,
+            sourceType: .physicalSpec,
+            specsSummary: "4, 8, 12, 16, 24, 32, 48, 64pt 空間級數與原子排版基準",
+            materialSuggestion: "Design System 間距原子規範",
+            dimensionsMm: "長 360 x 寬 180 pt",
+            fileSizeMB: 1.3,
+            drawingCode: "spacing_8pt_grid"
+        ))
+        list.append(AssetItem(
+            id: "token_02",
+            title: "設計語意色彩層級與對比度矩陣 (Semantic Color Tokens WCAG)",
+            category: .designTokens,
+            sourceType: .physicalSpec,
+            specsSummary: "Surface, Primary, On-Surface, Error 與 WCAG AAA (7:1) 對比度驗證",
+            materialSuggestion: "色彩規範與無障礙標準規格",
+            dimensionsMm: "360 x 220 pt 矩陣視圖",
+            fileSizeMB: 1.5,
+            drawingCode: "semantic_color_tokens"
+        ))
+
         self.items = list
         updateItemStates()
     }
@@ -750,6 +1129,340 @@ public final class AssetLibraryManager: ObservableObject {
             cg.strokePath()
             // 頭部內六角孔引導
             cg.strokeEllipse(in: CGRect(x: 180, y: 95, width: 40, height: 30))
+
+        case "golden_spiral":
+            // 黃金螺旋與費氏矩形分割
+            let r0 = CGRect(x: 80, y: 80, width: 240, height: 148.3)
+            cg.stroke(r0)
+            cg.move(to: CGPoint(x: 228.3, y: 80))
+            cg.addLine(to: CGPoint(x: 228.3, y: 228.3))
+            cg.move(to: CGPoint(x: 228.3, y: 171.7))
+            cg.addLine(to: CGPoint(x: 320, y: 171.7))
+            cg.strokePath()
+            // 黃金對數螺線
+            cg.move(to: CGPoint(x: 80, y: 228.3))
+            cg.addCurve(to: CGPoint(x: 228.3, y: 80), control1: CGPoint(x: 80, y: 146.4), control2: CGPoint(x: 146.4, y: 80))
+            cg.addCurve(to: CGPoint(x: 320, y: 171.7), control1: CGPoint(x: 279, y: 80), control2: CGPoint(x: 320, y: 121))
+            cg.addCurve(to: CGPoint(x: 263.3, y: 228.3), control1: CGPoint(x: 320, y: 203), control2: CGPoint(x: 295, y: 228.3))
+            cg.strokePath()
+
+        case "rule_of_thirds":
+            // 九宮格三分法則
+            let gridRect = CGRect(x: 70, y: 80, width: 260, height: 180)
+            cg.stroke(gridRect)
+            cg.setLineWidth(1.0)
+            // 兩條垂直線
+            cg.move(to: CGPoint(x: 156.6, y: 80)); cg.addLine(to: CGPoint(x: 156.6, y: 260))
+            cg.move(to: CGPoint(x: 243.3, y: 80)); cg.addLine(to: CGPoint(x: 243.3, y: 260))
+            // 兩條水平線
+            cg.move(to: CGPoint(x: 70, y: 140)); cg.addLine(to: CGPoint(x: 330, y: 140))
+            cg.move(to: CGPoint(x: 70, y: 200)); cg.addLine(to: CGPoint(x: 330, y: 200))
+            cg.strokePath()
+            // 4 個黃金焦點交點圓環
+            let points = [CGPoint(x: 156.6, y: 140), CGPoint(x: 243.3, y: 140), CGPoint(x: 156.6, y: 200), CGPoint(x: 243.3, y: 200)]
+            for pt in points {
+                cg.strokeEllipse(in: CGRect(x: pt.x - 7, y: pt.y - 7, width: 14, height: 14))
+            }
+
+        case "dynamic_symmetry":
+            // 動態對稱巴洛克對角線
+            let rootRect = CGRect(x: 70, y: 70, width: 260, height: 184)
+            cg.stroke(rootRect)
+            // 主對角線與次對角線
+            cg.move(to: CGPoint(x: 70, y: 254)); cg.addLine(to: CGPoint(x: 330, y: 70))
+            cg.move(to: CGPoint(x: 70, y: 70)); cg.addLine(to: CGPoint(x: 330, y: 254))
+            // 垂直倒數互補線
+            cg.move(to: CGPoint(x: 70, y: 70)); cg.addLine(to: CGPoint(x: 220, y: 254))
+            cg.move(to: CGPoint(x: 330, y: 254)); cg.addLine(to: CGPoint(x: 180, y: 70))
+            cg.strokePath()
+
+        case "type_anatomy":
+            // 字體五線譜與度量
+            let linesY: [CGFloat] = [90, 120, 160, 210, 250]
+            for (idx, y) in linesY.enumerated() {
+                cg.setLineWidth(idx == 3 ? 2.0 : 1.0)
+                cg.move(to: CGPoint(x: 60, y: y)); cg.addLine(to: CGPoint(x: 340, y: y))
+                cg.strokePath()
+            }
+            // 字符示意輪廓 'H' 與 'p'
+            cg.stroke(CGRect(x: 90, y: 120, width: 60, height: 90))
+            cg.strokeEllipse(in: CGRect(x: 180, y: 160, width: 50, height: 50))
+            cg.move(to: CGPoint(x: 180, y: 160)); cg.addLine(to: CGPoint(x: 180, y: 250))
+            cg.strokePath()
+
+        case "yong_eight_strokes":
+            // 永字八法九宮米字格
+            let miRect = CGRect(x: 100, y: 70, width: 200, height: 200)
+            cg.stroke(miRect)
+            cg.setLineWidth(1.0)
+            cg.move(to: CGPoint(x: 100, y: 170)); cg.addLine(to: CGPoint(x: 300, y: 170))
+            cg.move(to: CGPoint(x: 200, y: 70)); cg.addLine(to: CGPoint(x: 200, y: 270))
+            cg.move(to: CGPoint(x: 100, y: 70)); cg.addLine(to: CGPoint(x: 300, y: 270))
+            cg.move(to: CGPoint(x: 100, y: 270)); cg.addLine(to: CGPoint(x: 300, y: 70))
+            cg.strokePath()
+            // 永字主筆骨架
+            cg.setLineWidth(3.0)
+            cg.strokeEllipse(in: CGRect(x: 195, y: 85, width: 10, height: 16))
+            cg.move(to: CGPoint(x: 130, y: 125)); cg.addLine(to: CGPoint(x: 270, y: 125))
+            cg.move(to: CGPoint(x: 200, y: 125)); cg.addLine(to: CGPoint(x: 200, y: 235))
+            cg.addLine(to: CGPoint(x: 175, y: 215)) // 鉤
+            cg.move(to: CGPoint(x: 200, y: 170)); cg.addLine(to: CGPoint(x: 140, y: 230)) // 撇
+            cg.move(to: CGPoint(x: 200, y: 180)); cg.addLine(to: CGPoint(x: 265, y: 240)) // 捺
+            cg.strokePath()
+
+        case "modular_type_scale":
+            // 字級比例模矩階梯
+            var y: CGFloat = 80
+            let sizes: [CGFloat] = [36, 28, 22, 18, 14, 11]
+            for sz in sizes {
+                cg.stroke(CGRect(x: 80, y: y, width: sz * 6.5, height: sz))
+                y += sz + 10
+            }
+            cg.strokePath()
+
+        case "bauhaus_motif":
+            // 包浩斯三原形幾何構成
+            cg.strokeEllipse(in: CGRect(x: 80, y: 90, width: 110, height: 110)) // 圓
+            cg.stroke(CGRect(x: 150, y: 140, width: 100, height: 100)) // 方
+            cg.move(to: CGPoint(x: 260, y: 90))
+            cg.addLine(to: CGPoint(x: 320, y: 200))
+            cg.addLine(to: CGPoint(x: 200, y: 200))
+            cg.closePath() // 三角
+            cg.strokePath()
+
+        case "voronoi_pattern":
+            // 泰森多邊形網格
+            let centers = [CGPoint(x: 140, y: 120), CGPoint(x: 220, y: 110), CGPoint(x: 180, y: 180), CGPoint(x: 120, y: 220), CGPoint(x: 260, y: 210)]
+            for c in centers {
+                cg.strokeEllipse(in: CGRect(x: c.x - 4, y: c.y - 4, width: 8, height: 8))
+            }
+            // 連線網格
+            cg.move(to: CGPoint(x: 140, y: 120)); cg.addLine(to: CGPoint(x: 220, y: 110))
+            cg.addLine(to: CGPoint(x: 260, y: 210)); cg.addLine(to: CGPoint(x: 180, y: 180))
+            cg.addLine(to: CGPoint(x: 120, y: 220)); cg.addLine(to: CGPoint(x: 140, y: 120))
+            cg.move(to: CGPoint(x: 180, y: 180)); cg.addLine(to: CGPoint(x: 140, y: 120))
+            cg.move(to: CGPoint(x: 180, y: 180)); cg.addLine(to: CGPoint(x: 220, y: 110))
+            cg.strokePath()
+
+        case "cyber_circuit":
+            // 45° 印刷電路軌跡
+            cg.move(to: CGPoint(x: 80, y: 120)); cg.addLine(to: CGPoint(x: 160, y: 120))
+            cg.addLine(to: CGPoint(x: 210, y: 170)); cg.addLine(to: CGPoint(x: 290, y: 170))
+            cg.move(to: CGPoint(x: 110, y: 240)); cg.addLine(to: CGPoint(x: 180, y: 240))
+            cg.addLine(to: CGPoint(x: 230, y: 190)); cg.addLine(to: CGPoint(x: 310, y: 190))
+            cg.strokePath()
+            let pads = [CGPoint(x: 80, y: 120), CGPoint(x: 290, y: 170), CGPoint(x: 110, y: 240), CGPoint(x: 310, y: 190)]
+            for p in pads {
+                cg.strokeEllipse(in: CGRect(x: p.x - 6, y: p.y - 6, width: 12, height: 12))
+            }
+
+        case "draft_angle_mold":
+            // 注塑模具拔模角與分模線
+            cg.move(to: CGPoint(x: 100, y: 80)); cg.addLine(to: CGPoint(x: 300, y: 80))
+            cg.addLine(to: CGPoint(x: 285, y: 180)); cg.addLine(to: CGPoint(x: 115, y: 180))
+            cg.closePath()
+            // 分模線 PL
+            cg.setLineWidth(1.0)
+            cg.move(to: CGPoint(x: 70, y: 180)); cg.addLine(to: CGPoint(x: 330, y: 180))
+            cg.strokePath()
+            // 下模凹模
+            cg.setLineWidth(2.5)
+            cg.move(to: CGPoint(x: 115, y: 180)); cg.addLine(to: CGPoint(x: 130, y: 260))
+            cg.addLine(to: CGPoint(x: 270, y: 260)); cg.addLine(to: CGPoint(x: 285, y: 180))
+            cg.strokePath()
+
+        case "plastic_rib_ratio":
+            // 塑膠主壁厚與加強筋 (Rib)
+            cg.stroke(CGRect(x: 80, y: 220, width: 240, height: 35)) // 主壁厚 T
+            cg.stroke(CGRect(x: 185, y: 100, width: 30, height: 120)) // 筋 0.6T
+            // 根部圓角
+            cg.strokeEllipse(in: CGRect(x: 177, y: 212, width: 16, height: 16))
+            cg.strokeEllipse(in: CGRect(x: 207, y: 212, width: 16, height: 16))
+
+        case "boss_tower":
+            // 自攻牙注塑螺絲柱
+            cg.stroke(CGRect(x: 160, y: 80, width: 80, height: 140)) // 外柱
+            cg.stroke(CGRect(x: 180, y: 80, width: 40, height: 100)) // 螺絲沉孔
+            // 基座三角支撐筋
+            cg.move(to: CGPoint(x: 160, y: 140)); cg.addLine(to: CGPoint(x: 110, y: 220)); cg.addLine(to: CGPoint(x: 160, y: 220))
+            cg.move(to: CGPoint(x: 240, y: 140)); cg.addLine(to: CGPoint(x: 290, y: 220)); cg.addLine(to: CGPoint(x: 240, y: 220))
+            cg.stroke(CGRect(x: 90, y: 220, width: 220, height: 25)) // 底板
+            cg.strokePath()
+
+        case "sheetmetal_bend":
+            // 鈑金折彎 90° 剖面與 K-Factor 中性層
+            cg.move(to: CGPoint(x: 80, y: 110)); cg.addLine(to: CGPoint(x: 200, y: 110))
+            cg.addLine(to: CGPoint(x: 200, y: 240)); cg.addLine(to: CGPoint(x: 230, y: 240))
+            cg.addLine(to: CGPoint(x: 230, y: 80)); cg.addLine(to: CGPoint(x: 80, y: 80))
+            cg.closePath()
+            cg.strokePath()
+            // 中性層虛線
+            cg.setLineWidth(1.2)
+            cg.move(to: CGPoint(x: 80, y: 95)); cg.addLine(to: CGPoint(x: 215, y: 95))
+            cg.addLine(to: CGPoint(x: 215, y: 240))
+            cg.strokePath()
+
+        case "cnc_dogbone":
+            // CNC 銑削狗骨狀清角
+            let pocket = CGRect(x: 120, y: 90, width: 160, height: 160)
+            cg.stroke(pocket)
+            // 四個角狗骨圓孔
+            let r: CGFloat = 12
+            cg.strokeEllipse(in: CGRect(x: 120 - r/2, y: 90 - r/2, width: r, height: r))
+            cg.strokeEllipse(in: CGRect(x: 280 - r/2, y: 90 - r/2, width: r, height: r))
+            cg.strokeEllipse(in: CGRect(x: 120 - r/2, y: 250 - r/2, width: r, height: r))
+            cg.strokeEllipse(in: CGRect(x: 280 - r/2, y: 250 - r/2, width: r, height: r))
+
+        case "pem_standoff":
+            // 壓鉚螺母柱
+            cg.stroke(CGRect(x: 155, y: 90, width: 90, height: 40)) // 六角法蘭頭
+            cg.stroke(CGRect(x: 165, y: 130, width: 70, height: 120)) // 圓柱主體
+            cg.stroke(CGRect(x: 180, y: 90, width: 40, height: 160)) // 貫穿內螺紋
+            cg.strokePath()
+
+        case "anodizing_spec":
+            // 陽極氧化皮膜剖面與微孔陣列
+            cg.stroke(CGRect(x: 80, y: 140, width: 240, height: 120)) // 鋁基材
+            cg.stroke(CGRect(x: 80, y: 90, width: 240, height: 50)) // 氧化皮膜層
+            // 微孔陣列線條
+            var px: CGFloat = 100
+            while px < 310 {
+                cg.move(to: CGPoint(x: px, y: 90)); cg.addLine(to: CGPoint(x: px, y: 135))
+                px += 18
+            }
+            cg.strokePath()
+
+        case "roughness_ra":
+            // 表面粗糙度微觀起伏
+            cg.move(to: CGPoint(x: 80, y: 160))
+            for i in 0..<8 {
+                let xBase = 80 + CGFloat(i) * 30
+                cg.addLine(to: CGPoint(x: xBase + 15, y: (i % 2 == 0) ? 120 : 200))
+                cg.addLine(to: CGPoint(x: xBase + 30, y: 160))
+            }
+            cg.strokePath()
+            // Ra 中心平均線
+            cg.setLineWidth(1.0)
+            cg.move(to: CGPoint(x: 70, y: 160)); cg.addLine(to: CGPoint(x: 330, y: 160))
+            cg.strokePath()
+
+        case "pneumatic_cylinder":
+            // 氣壓滑台雙導軌氣缸
+            cg.stroke(CGRect(x: 110, y: 120, width: 180, height: 90)) // 氣缸主體
+            cg.stroke(CGRect(x: 70, y: 135, width: 40, height: 15)) // 活塞軸
+            cg.stroke(CGRect(x: 70, y: 180, width: 40, height: 15)) // 下導軌
+            cg.stroke(CGRect(x: 60, y: 110, width: 15, height: 110)) // 前安裝承板
+            cg.strokeEllipse(in: CGRect(x: 130, y: 105, width: 14, height: 14)) // 氣孔 A
+            cg.strokeEllipse(in: CGRect(x: 250, y: 105, width: 14, height: 14)) // 氣孔 B
+            cg.strokePath()
+
+        case "push_in_fitting":
+            // 直角快插接頭
+            cg.stroke(CGRect(x: 130, y: 130, width: 80, height: 60)) // 彎頭主體
+            cg.stroke(CGRect(x: 150, y: 190, width: 40, height: 60)) // 螺紋接口
+            cg.stroke(CGRect(x: 210, y: 140, width: 50, height: 40)) // 快插套筒
+            cg.strokePath()
+
+        case "dual_os_navbar":
+            // 跨平台導航列 (iOS vs Android)
+            cg.stroke(CGRect(x: 70, y: 90, width: 120, height: 150)) // iOS 大標題列
+            cg.stroke(CGRect(x: 210, y: 120, width: 120, height: 120)) // Android TopAppBar
+            // 導航圖標與分隔指示
+            cg.strokeEllipse(in: CGRect(x: 85, y: 105, width: 12, height: 12))
+            cg.strokeEllipse(in: CGRect(x: 225, y: 135, width: 12, height: 12))
+
+        case "bottom_sheet_ui":
+            // 底部操作卡片 Bottom Sheet
+            let cardRect = CGRect(x: 90, y: 120, width: 220, height: 180)
+            let cardPath = UIBezierPath(roundedRect: cardRect, byRoundingCorners: [.topLeft, .topRight], cornerRadii: CGSize(width: 20, height: 20))
+            cg.addPath(cardPath.cgPath)
+            cg.strokePath()
+            // 頂部抓手 Grabber
+            let grabber = CGRect(x: 175, y: 135, width: 50, height: 6)
+            let grabberPath = UIBezierPath(roundedRect: grabber, cornerRadius: 3)
+            cg.addPath(grabberPath.cgPath)
+            cg.fillPath()
+
+        case "cubic_bezier_curve":
+            // 三次貝茲時間曲線
+            let box = CGRect(x: 80, y: 80, width: 240, height: 180)
+            cg.stroke(box)
+            // S 形貝茲曲線
+            cg.move(to: CGPoint(x: 80, y: 260))
+            cg.addCurve(to: CGPoint(x: 320, y: 80), control1: CGPoint(x: 160, y: 260), control2: CGPoint(x: 240, y: 80))
+            cg.strokePath()
+            // 控制桿手柄
+            cg.setLineWidth(1.0)
+            cg.move(to: CGPoint(x: 80, y: 260)); cg.addLine(to: CGPoint(x: 160, y: 260))
+            cg.strokeEllipse(in: CGRect(x: 156, y: 256, width: 8, height: 8))
+            cg.move(to: CGPoint(x: 320, y: 80)); cg.addLine(to: CGPoint(x: 240, y: 80))
+            cg.strokeEllipse(in: CGRect(x: 236, y: 76, width: 8, height: 8))
+            cg.strokePath()
+
+        case "spring_physics":
+            // 阻尼彈簧衰減正弦波
+            cg.move(to: CGPoint(x: 70, y: 160))
+            var sx: CGFloat = 70
+            while sx <= 330 {
+                let t = (sx - 70) / 260
+                let amplitude = 80 * exp(-3.0 * t)
+                let sy = 160 - amplitude * sin(t * .pi * 8)
+                cg.addLine(to: CGPoint(x: sx, y: sy))
+                sx += 4
+            }
+            cg.strokePath()
+
+        case "sitemap_tree":
+            // 資訊架構樹
+            cg.stroke(CGRect(x: 160, y: 80, width: 80, height: 40)) // 根節點
+            cg.stroke(CGRect(x: 80, y: 180, width: 65, height: 35))
+            cg.stroke(CGRect(x: 167, y: 180, width: 65, height: 35))
+            cg.stroke(CGRect(x: 255, y: 180, width: 65, height: 35))
+            // 樹狀連線
+            cg.move(to: CGPoint(x: 200, y: 120)); cg.addLine(to: CGPoint(x: 200, y: 150))
+            cg.move(to: CGPoint(x: 112, y: 150)); cg.addLine(to: CGPoint(x: 287, y: 150))
+            cg.move(to: CGPoint(x: 112, y: 150)); cg.addLine(to: CGPoint(x: 112, y: 180))
+            cg.move(to: CGPoint(x: 200, y: 150)); cg.addLine(to: CGPoint(x: 200, y: 180))
+            cg.move(to: CGPoint(x: 287, y: 150)); cg.addLine(to: CGPoint(x: 287, y: 180))
+            cg.strokePath()
+
+        case "state_machine_flow":
+            // 狀態機躍遷流程
+            let s1 = CGRect(x: 80, y: 140, width: 70, height: 50)
+            let s2 = CGRect(x: 250, y: 140, width: 70, height: 50)
+            let p1 = UIBezierPath(roundedRect: s1, cornerRadius: 10)
+            let p2 = UIBezierPath(roundedRect: s2, cornerRadius: 10)
+            cg.addPath(p1.cgPath); cg.strokePath()
+            cg.addPath(p2.cgPath); cg.strokePath()
+            // 雙向箭頭
+            cg.move(to: CGPoint(x: 150, y: 155)); cg.addLine(to: CGPoint(x: 250, y: 155))
+            cg.move(to: CGPoint(x: 250, y: 175)); cg.addLine(to: CGPoint(x: 150, y: 175))
+            cg.strokePath()
+
+        case "spacing_8pt_grid":
+            // 8pt 空間尺度網格
+            let gridSizes: [CGFloat] = [8, 16, 24, 32, 48, 64]
+            var gx: CGFloat = 70
+            for gs in gridSizes {
+                cg.stroke(CGRect(x: gx, y: 180 - gs, width: gs, height: gs))
+                gx += gs + 8
+                if gx > 320 { break }
+            }
+            cg.strokePath()
+
+        case "semantic_color_tokens":
+            // 語意色彩 Token 矩陣
+            let cols = [
+                CGRect(x: 80, y: 90, width: 105, height: 60),
+                CGRect(x: 215, y: 90, width: 105, height: 60),
+                CGRect(x: 80, y: 180, width: 105, height: 60),
+                CGRect(x: 215, y: 180, width: 105, height: 60)
+            ]
+            for c in cols {
+                let cp = UIBezierPath(roundedRect: c, cornerRadius: 8)
+                cg.addPath(cp.cgPath)
+                cg.strokePath()
+            }
 
         default:
             // 預設立體透視立方幾何

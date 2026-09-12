@@ -1668,6 +1668,118 @@ public final class LocalizationManager: ObservableObject {
             .ko: "디지털 제품",
             .th: "ผลิตภัณฑ์ดิจิทัล"
         ],
+        "cat_aesthetic_comp": [
+            .zhHant: "美學構圖與黃金比例",
+            .en: "Aesthetic Composition",
+            .zhHans: "美学构图与黄金比例",
+            .ja: "構図と黄金比",
+            .ko: "미학 구도 및 황금비율",
+            .th: "องค์ประกอบความงามและสัดส่วนทองคำ"
+        ],
+        "cat_typography": [
+            .zhHant: "字體排印與版面網格",
+            .en: "Typography & Layout",
+            .zhHans: "字体排印与版面网格",
+            .ja: "タイポグラフィとグリッド",
+            .ko: "타이포그래피 및 레이아웃 그리드",
+            .th: "การจัดพิมพ์และตารางเค้าโครง"
+        ],
+        "cat_design_motifs": [
+            .zhHant: "造型語彙與工藝紋樣",
+            .en: "Design Motifs & Form",
+            .zhHans: "造型语汇与工艺纹样",
+            .ja: "造形言語・装飾パターン",
+            .ko: "조형 어휘 및 공예 문양",
+            .th: "ภาษาการออกแบบและลวดลาย"
+        ],
+        "cat_tooling_molding": [
+            .zhHant: "模具與注塑成型",
+            .en: "Tooling & Molding",
+            .zhHans: "模具与注塑成型",
+            .ja: "金型・射出成形",
+            .ko: "금형 및 사출 성형",
+            .th: "แม่พิมพ์และการฉีดขึ้นรูป"
+        ],
+        "cat_sheetmetal_cnc": [
+            .zhHant: "鈑金折彎與 CNC 加工",
+            .en: "Sheet Metal & CNC",
+            .zhHans: "钣金折弯与 CNC 加工",
+            .ja: "板金・CNC切削加工",
+            .ko: "판금 절곡 및 CNC 가공",
+            .th: "แผ่นโลหะและเครื่องซีเอ็นซี"
+        ],
+        "cat_surface_finishing": [
+            .zhHant: "表面處理與材料工藝",
+            .en: "Surface Finishing",
+            .zhHans: "表面处理与材料工艺",
+            .ja: "表面処理・材料工芸",
+            .ko: "표면 처리 및 재료 공정",
+            .th: "การปรับสภาพผิวและวิศวกรรมวัสดุ"
+        ],
+        "cat_pneumatics_piping": [
+            .zhHant: "機構傳動與流體管路",
+            .en: "Drive Mechanisms & Piping",
+            .zhHans: "机构传动与流体管路",
+            .ja: "伝動機構・流体配管",
+            .ko: "구동 기구 및 유체 배관",
+            .th: "กลไกขับเคลื่อนและท่อของไหล"
+        ],
+        "cat_crossplatform_ui": [
+            .zhHant: "跨平台系統標準件",
+            .en: "Cross-Platform UI Kit",
+            .zhHans: "跨平台系统标准件",
+            .ja: "クロスプラットフォームUI",
+            .ko: "크로스 플랫폼 시스템 표준 컴포넌트",
+            .th: "ชุด UI ข้ามแพลตฟอร์ม"
+        ],
+        "cat_ux_motion": [
+            .zhHant: "互動手勢與動效軌跡",
+            .en: "UX Gestures & Motion",
+            .zhHans: "交互手势与动效轨迹",
+            .ja: "ジェスチャーと動的軌跡",
+            .ko: "인터랙션 제스처 및 모션 궤적",
+            .th: "ท่าทางสัมผัสและภาพเคลื่อนไหว"
+        ],
+        "cat_info_arch": [
+            .zhHant: "資訊架構與服務流程",
+            .en: "Information Architecture",
+            .zhHans: "信息架构与服务流程",
+            .ja: "情報設計とユーザーフロー",
+            .ko: "정보 구조 및 서비스 흐름",
+            .th: "สถาปัตยกรรมสารสนเทศและแผนผังงาน"
+        ],
+        "cat_design_tokens": [
+            .zhHant: "設計系統原子元件",
+            .en: "Design System Tokens",
+            .zhHans: "设计系统原子元件",
+            .ja: "デザインシステム・アトム",
+            .ko: "디자인 시스템 원자 컴포넌트",
+            .th: "ส่วนประกอบระบบการออกแบบ"
+        ],
+        "responsive_asset_desc": [
+            .zhHant: "隨需下載高解析實體規格圖與 3D 零組件",
+            .en: "Download on-demand physical specs & 3D models",
+            .zhHans: "随需下载高解析实体规格图与 3D 零部件",
+            .ja: "高解像度の仕様書と3DモデルをオンデマンドDL",
+            .ko: "고해상도 실제 사양도 및 3D 부품 온디맨드 다운로드",
+            .th: "ดาวน์โหลดสเปกจริงและชิ้นส่วน 3D ตามความต้องการ"
+        ],
+        "collapse": [
+            .zhHant: "收合",
+            .en: "Collapse",
+            .zhHans: "收起",
+            .ja: "折りたたむ",
+            .ko: "접기",
+            .th: "ยุบ"
+        ],
+        "expand": [
+            .zhHant: "展開",
+            .en: "Expand",
+            .zhHans: "展开",
+            .ja: "展開",
+            .ko: "펼치기",
+            .th: "ขยาย"
+        ],
         "filter_physical": [
             .zhHant: "實體規格圖",
             .en: "Physical Specs",

@@ -1316,8 +1316,19 @@ public struct NotebookEditorView: View {
         }
     }
 
-    // MARK: - 1. 頂部自訂主工作列
+    // MARK: - 1. 頂部自訂主工作列（自適應寬窄螢幕模式）
     private var editorTopBar: some View {
+        ViewThatFits(in: .horizontal) {
+            expandedEditorTopBar
+            compactEditorTopBar
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 7)
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+    }
+
+    // 寬螢幕完整主工具列
+    private var expandedEditorTopBar: some View {
         HStack(spacing: 10) {
             // 回到首頁按鈕（明顯、易見、帶底色）
             Button {
@@ -1546,9 +1557,154 @@ public struct NotebookEditorView: View {
             .buttonStyle(.plain)
             .help(localizationManager.localized("export_print"))
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(Color(uiColor: .secondarySystemGroupedBackground))
+    }
+
+    // 窄螢幕自適應緊湊工具列
+    private var compactEditorTopBar: some View {
+        HStack(spacing: 6) {
+            // 回到首頁按鈕（緊湊模式）
+            Button {
+                saveCurrentPageDrawing()
+                dismiss()
+            } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 12, weight: .bold))
+                    Image(systemName: "house.fill")
+                        .font(.system(size: 12))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 7)
+                .padding(.vertical, 5)
+                .background(Color.accentColor)
+                .cornerRadius(7)
+            }
+            .buttonStyle(.plain)
+            .help(localizationManager.localized("home"))
+
+            // 筆記結構側邊欄切換
+            Button {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    showStructureSidebar.toggle()
+                }
+            } label: {
+                Image(systemName: showStructureSidebar ? "sidebar.left" : "sidebar.leading")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(showStructureSidebar ? .accentColor : .primary)
+                    .padding(5)
+                    .background(showStructureSidebar ? Color.accentColor.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(7)
+            }
+            .buttonStyle(.plain)
+
+            // 模式切換（緊湊圖標）
+            Picker("", selection: $editorMode) {
+                Image(systemName: "pencil.tip").tag(EditorMode.draw)
+                Image(systemName: "keyboard").tag(EditorMode.type)
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 76)
+
+            // 筆記標題（彈性縮寫）
+            Button {
+                renameText = notebook.title
+                showRenameAlert = true
+            } label: {
+                Text(notebook.title)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
+            }
+            .buttonStyle(.plain)
+
+            Spacer(minLength: 2)
+
+            // 頁碼切換
+            HStack(spacing: 3) {
+                Button {
+                    if currentPageIndex > 0 {
+                        saveCurrentPageDrawing()
+                        currentPageIndex -= 1
+                        loadCurrentPage()
+                    }
+                } label: {
+                    Image(systemName: "chevron.left.circle")
+                }
+                .disabled(currentPageIndex <= 0)
+
+                Text("\(currentPageIndex + 1)/\(max(1, notebook.pageCount))")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundColor(.secondary)
+
+                Button {
+                    if currentPageIndex < notebook.pageCount - 1 {
+                        saveCurrentPageDrawing()
+                        currentPageIndex += 1
+                        loadCurrentPage()
+                    }
+                } label: {
+                    Image(systemName: "chevron.right.circle")
+                }
+                .disabled(currentPageIndex >= notebook.pageCount - 1)
+
+                Button {
+                    saveCurrentPageDrawing()
+                    let empty = PKDrawing()
+                    notebook.pageCount += 1
+                    currentPageIndex = notebook.pageCount - 1
+                    store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: empty)
+                    loadCurrentPage()
+                    store.updateNotebook(notebook)
+                } label: {
+                    Image(systemName: "plus.square.dashed")
+                        .foregroundColor(.accentColor)
+                }
+            }
+
+            // 錄音
+            if audioManager.status == .recording {
+                Button {
+                    stopAndSaveRecording()
+                } label: {
+                    Circle()
+                        .fill(Color.red)
+                        .frame(width: 12, height: 12)
+                        .padding(5)
+                        .background(Color.red.opacity(0.15))
+                        .cornerRadius(6)
+                }
+            } else {
+                Button {
+                    Task {
+                        _ = await audioManager.startRecording(title: "\(notebook.title) 錄音")
+                    }
+                } label: {
+                    Image(systemName: "mic.fill")
+                        .font(.caption2)
+                        .foregroundColor(.red)
+                        .padding(5)
+                        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                        .cornerRadius(6)
+                }
+            }
+
+            // 匯出功能選單
+            Menu {
+                Button { exportAsPdf() } label: { Label(localizationManager.localized("export_pdf"), systemImage: "doc.text.fill") }
+                Button { exportAsPngImage() } label: { Label(localizationManager.localized("export_image"), systemImage: "photo") }
+                Button { printCurrentNotebook() } label: { Label(localizationManager.localized("print_note"), systemImage: "printer.fill") }
+                Divider()
+                Button { shareNotebookFile() } label: { Label(localizationManager.localized("share_note"), systemImage: "square.and.arrow.up") }
+            } label: {
+                Image(systemName: "square.and.arrow.up")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.white)
+                    .padding(5)
+                    .background(Color.accentColor)
+                    .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     // MARK: - 筆記結構目錄側邊欄（頁面縮圖大綱）
