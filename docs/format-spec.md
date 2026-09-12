@@ -178,16 +178,29 @@ Lamport 時戳前置 ⇒ 檔名字典序即因果序，掃描目錄即可得到�
 ## 7. 同步層（`sync/`）
 
 ### 7.1 chunk 格式
+
+chunk 是**框架串流**。每次推送追加一個框架：
+
 ```
-[24B nonce][ciphertext...][16B Poly1305 tag]
-明文 = zstd(序列化後的 op 批次)
+[4B 長度(u32 LE)][payload...]
+
+payload（加密時） = [24B nonce][ciphertext][16B Poly1305 tag]
+payload（未加密） = zstd(序列化後的 op 批次)
 ```
-未加密時 `scheme: "none"`，chunk 即 `zstd(ops)`。
+
+**為什麼需要長度前綴**：兩次推送之間只拉取一次時，讀到的位元組範圍會橫跨
+兩個獨立的密文塊。沒有框架邊界，解密必然失敗。
+
+**部分框架**：寫到一半當機會留下不完整的尾巴。讀取端只消耗完整框架並據此
+推進游標，殘缺的部分留待下次補齊 —— 不當成損毀資料丟棄。
+
+**AAD**：加密時以 chunk 路徑作為 additional authenticated data，防止攻擊者把
+A 檔的密文搬到 B 檔的位置。內容雖然仍讀不懂，但重排本身就足以破壞資料。
 
 ### 7.2 provider 能力差異
 | Provider | append 支援 | 策略 |
 |---|---|---|
-| 本機資料夾 / Syncthing / Dropbox | ✅ | 直接 append 至 `log-0.bin` |
+| 本機資料夾 / Syncthing / Dropbox | ✅ | 直接 append 至 `log-<seq>.bin`，超過 4 MiB 換新檔 |
 | iCloud Drive | ✅（經 NSFileCoordinator） | 同上；需處理未下載（evicted）狀態 |
 | Google Drive | ❌ 無 append API | 每次同步寫新檔 `log-<seq>.bin`，達 N 個檔後合併 |
 

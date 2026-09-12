@@ -21,9 +21,10 @@ pub struct Manifest {
     pub encryption: Encryption,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(tag = "scheme", rename_all = "kebab-case")]
 pub enum Encryption {
+    #[default]
     None,
     #[serde(rename = "xchacha20poly1305-argon2id")]
     XChaCha20Poly1305Argon2id {
@@ -31,12 +32,6 @@ pub enum Encryption {
         wrapped_dek_b64: String,
         recovery: RecoveryParams,
     },
-}
-
-impl Default for Encryption {
-    fn default() -> Self {
-        Self::None
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

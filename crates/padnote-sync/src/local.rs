@@ -35,21 +35,7 @@ impl CloudProvider for LocalFolderProvider {
             return Ok(Vec::new());
         }
         let mut out = Vec::new();
-        for entry in fs::read_dir(&dir)? {
-            let entry = entry?;
-            let meta = entry.metadata()?;
-            if meta.is_file() {
-                let name = entry.file_name().to_string_lossy().into_owned();
-                out.push(RemoteEntry {
-                    path: if prefix.is_empty() {
-                        name
-                    } else {
-                        format!("{}/{name}", prefix.trim_end_matches('/'))
-                    },
-                    size: meta.len(),
-                });
-            }
-        }
+        collect_recursive(&dir, prefix.trim_end_matches('/'), &mut out)?;
         // 檔名字典序即因果序（format-spec §6.1），排序後即為套用順序。
         out.sort_by(|a, b| a.path.cmp(&b.path));
         Ok(out)
@@ -97,6 +83,33 @@ impl CloudProvider for LocalFolderProvider {
     fn supports_native_append(&self) -> bool {
         true
     }
+}
+
+/// 遞迴收集檔案，維持物件儲存的前綴列舉語意。
+fn collect_recursive(
+    dir: &Path,
+    prefix: &str,
+    out: &mut Vec<RemoteEntry>,
+) -> Result<(), SyncError> {
+    for entry in fs::read_dir(dir)? {
+        let entry = entry?;
+        let meta = entry.metadata()?;
+        let name = entry.file_name().to_string_lossy().into_owned();
+        let path = if prefix.is_empty() {
+            name
+        } else {
+            format!("{prefix}/{name}")
+        };
+        if meta.is_dir() {
+            collect_recursive(&entry.path(), &path, out)?;
+        } else if meta.is_file() {
+            out.push(RemoteEntry {
+                path,
+                size: meta.len(),
+            });
+        }
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -147,6 +160,26 @@ mod tests {
         assert_eq!(
             names,
             ["0000000000000002", "0000000000000010", "0000000000000100"]
+        );
+    }
+
+    #[test]
+    fn list_is_prefix_recursive_not_single_level() {
+        // 同步引擎靠這個看到其他裝置的目錄；只列單層會讓 pull 永遠空手而回。
+        let root = tmp("recursive");
+        let p = LocalFolderProvider::new(&root);
+        p.put("sync/000000a1/log-0.bin", b"a").unwrap();
+        p.put("sync/000000b2/log-0.bin", b"b").unwrap();
+
+        let paths: Vec<String> = p
+            .list("sync")
+            .unwrap()
+            .into_iter()
+            .map(|e| e.path)
+            .collect();
+        assert_eq!(
+            paths,
+            ["sync/000000a1/log-0.bin", "sync/000000b2/log-0.bin"]
         );
     }
 

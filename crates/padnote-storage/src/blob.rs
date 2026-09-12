@@ -8,7 +8,7 @@
 use sha2::{Digest, Sha256};
 use std::fmt;
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 /// blob 的內容雜湊。
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

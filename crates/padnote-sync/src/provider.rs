@@ -46,6 +46,10 @@ impl From<std::io::Error> for SyncError {
 
 /// 啞檔案桶介面。雲端不做任何運算，也看不見內容（chunk 已加密）。
 pub trait CloudProvider: Send + Sync + Debug {
+    /// 依**前綴遞迴**列出檔案（物件儲存語意，非「列單層目錄」）。
+    ///
+    /// 這點很重要：`list("sync")` 必須回傳 `sync/<device>/log-0.bin`，
+    /// 否則同步引擎看不到其他裝置的目錄。
     fn list(&self, prefix: &str) -> Result<Vec<RemoteEntry>, SyncError>;
 
     /// 增量拉取 —— 避免每次同步重下整個 log。

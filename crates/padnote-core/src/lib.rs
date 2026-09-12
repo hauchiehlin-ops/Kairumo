@@ -1,14 +1,24 @@
-//! Padnote 核心門面。各平台外殼（Swift / Kotlin）透過此 crate 的 UniFFI
-//! 介面存取所有業務邏輯。
+//! Padnote 核心門面。
 //!
-//! 架構：`docs/architecture.md`。UI 與墨跡渲染以外的一切都在這裡，
-//! 因此「跨平台功能對等」是架構保證，而非靠紀律維持。
+//! 各平台外殼（Swift / Kotlin）**只透過這一層**存取業務邏輯。
+//! UI 與墨跡渲染以外的一切都在 Rust core，因此「跨平台功能對等」是架構保證，
+//! 而非靠紀律維持。
+//!
+//! TODO(S-11)：以 UniFFI 產生 Swift / Kotlin 綁定。
+
+pub mod app;
 
 pub use padnote_asr as asr;
+pub use padnote_crypto as crypto;
 pub use padnote_doc as doc;
+pub use padnote_export as export;
 pub use padnote_ink as ink;
 pub use padnote_recognize as recognize;
+pub use padnote_search as search;
+pub use padnote_storage as storage;
 pub use padnote_sync as sync;
+
+pub use app::{AppError, NotebookSession, RecordingState};
 
 /// 本 build 所實作的 `.padnote` 格式版本（`format-spec.md` §3）。
 pub const SPEC_VERSION: u32 = 1;
@@ -32,13 +42,11 @@ mod tests {
 
     #[test]
     fn forward_compatible_when_reader_version_allows() {
-        // 未來版本但宣告舊讀取器仍可解析 ⇒ 允許，忽略未知欄位。
         assert!(can_open(99, 1));
     }
 
     #[test]
     fn refuses_when_file_demands_newer_reader() {
-        // 靜默解析會造成資料損毀，寧可拒絕開啟。
         assert!(!can_open(99, 99));
     }
 }

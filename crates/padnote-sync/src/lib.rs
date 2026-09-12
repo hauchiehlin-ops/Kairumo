@@ -7,10 +7,12 @@
 //!
 //! ⇒ **檔案層級衝突在數學上不可能發生**（Dropbox/iCloud 的 "conflicted copy"）。
 
+pub mod engine;
 pub mod local;
 pub mod oplog;
 pub mod provider;
 
+pub use engine::{PulledBatch, SyncCursors, SyncEngine};
 pub use local::LocalFolderProvider;
 pub use oplog::{DeviceId, OplogName};
 pub use provider::{CloudProvider, RemoteEntry, SyncError};

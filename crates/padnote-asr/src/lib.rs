@@ -6,6 +6,12 @@
 //! 2. 轉錄任務可中斷、可續傳，狀態存 SQLite。
 //! 3. ASR 執行緒優先權必須低於 UI/墨跡執行緒 —— 寧可轉錄慢，不可寫字卡。
 
+pub mod pipeline;
+
+pub use pipeline::{
+    EnergyVad, RingBuffer, Segment, SegmentQueue, Segmenter, VoiceActivityDetector,
+};
+
 use std::fmt::Debug;
 
 /// 串流 ASR 引擎。實作可為 Paraformer-zh、SenseVoice、Whisper-turbo。
