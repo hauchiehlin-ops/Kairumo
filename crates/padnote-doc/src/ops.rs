@@ -48,6 +48,33 @@ pub enum DocOp {
         height: f32,
         created_at: NotebookTime,
     },
+    /// 調整同層內的堆疊順序（需求 1：物件可自由排列）。
+    ///
+    /// 記錄**絕對索引**而非「上移一層」：相對操作在併發下會疊加，
+    /// 兩個裝置各按一次「移到最上層」就會得出誰也沒預期的順序。
+    SetZIndex {
+        id: Uuid,
+        index: u32,
+    },
+    /// 新增表格（需求 2）。
+    AddTableBlock {
+        page: Uuid,
+        id: Uuid,
+        rows: u32,
+        cols: u32,
+        cells: Vec<String>,
+        header_row: bool,
+        created_at: NotebookTime,
+    },
+    /// 修改單一儲存格。
+    ///
+    /// 逐格記錄而非整表覆寫 —— 兩人同時編輯不同格時才不會互相覆蓋。
+    SetTableCell {
+        id: Uuid,
+        row: u32,
+        col: u32,
+        text: String,
+    },
     /// 嵌入外部文件（ADR-0009）。
     AddEmbeddedBlock {
         page: Uuid,
@@ -132,6 +159,9 @@ const OP_SET_OBJECT_TRANSFORM: u8 = 15;
 const OP_GROUP: u8 = 16;
 const OP_UNGROUP: u8 = 17;
 const OP_ADD_EMBEDDED_BLOCK: u8 = 18;
+const OP_ADD_TABLE_BLOCK: u8 = 19;
+const OP_SET_TABLE_CELL: u8 = 20;
+const OP_SET_Z_INDEX: u8 = 21;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DocCodecError {
@@ -196,6 +226,13 @@ impl Writer {
     }
     fn affine(&mut self, t: Affine2) -> &mut Self {
         self.f32(t.a).f32(t.b).f32(t.c).f32(t.d).f32(t.tx).f32(t.ty)
+    }
+    fn strings(&mut self, items: &[String]) -> &mut Self {
+        self.u32(items.len() as u32);
+        for s in items {
+            self.str(s);
+        }
+        self
     }
     fn uuids(&mut self, ids: &[Uuid]) -> &mut Self {
         self.u32(ids.len() as u32);
@@ -286,6 +323,10 @@ impl<'a> Reader<'a> {
             tx: self.f32()?,
             ty: self.f32()?,
         })
+    }
+    fn strings(&mut self) -> Result<Vec<String>, DocCodecError> {
+        let n = self.u32()? as usize;
+        (0..n).map(|_| self.str()).collect()
     }
     fn uuids(&mut self) -> Result<Vec<Uuid>, DocCodecError> {
         let n = self.u32()? as usize;
@@ -479,6 +520,34 @@ pub fn encode(ops: &[DocOp]) -> Vec<u8> {
                     .str(text)
                     .time(*created_at);
             }
+            DocOp::AddTableBlock {
+                page,
+                id,
+                rows,
+                cols,
+                cells,
+                header_row,
+                created_at,
+            } => {
+                w.u8(OP_ADD_TABLE_BLOCK)
+                    .uuid(*page)
+                    .uuid(*id)
+                    .u32(*rows)
+                    .u32(*cols)
+                    .strings(cells)
+                    .u8(u8::from(*header_row))
+                    .time(*created_at);
+            }
+            DocOp::SetTableCell { id, row, col, text } => {
+                w.u8(OP_SET_TABLE_CELL)
+                    .uuid(*id)
+                    .u32(*row)
+                    .u32(*col)
+                    .str(text);
+            }
+            DocOp::SetZIndex { id, index } => {
+                w.u8(OP_SET_Z_INDEX).uuid(*id).u32(*index);
+            }
             DocOp::RemoveObject { id } => {
                 w.u8(OP_REMOVE_OBJECT).uuid(*id);
             }
@@ -586,6 +655,25 @@ pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
                 interaction: r.str()?,
                 text: r.str()?,
                 created_at: r.time()?,
+            },
+            OP_ADD_TABLE_BLOCK => DocOp::AddTableBlock {
+                page: r.uuid()?,
+                id: r.uuid()?,
+                rows: r.u32()?,
+                cols: r.u32()?,
+                cells: r.strings()?,
+                header_row: r.u8()? == 1,
+                created_at: r.time()?,
+            },
+            OP_SET_TABLE_CELL => DocOp::SetTableCell {
+                id: r.uuid()?,
+                row: r.u32()?,
+                col: r.u32()?,
+                text: r.str()?,
+            },
+            OP_SET_Z_INDEX => DocOp::SetZIndex {
+                id: r.uuid()?,
+                index: r.u32()?,
             },
             OP_REMOVE_OBJECT => DocOp::RemoveObject { id: r.uuid()? },
             OP_SET_OBJECT_TRANSFORM => DocOp::SetObjectTransform {
@@ -721,6 +809,25 @@ mod tests {
                 text: "項目 數量 單價".into(),
                 created_at: NotebookTime::from_micros(7_000_000),
             },
+            DocOp::AddTableBlock {
+                page: uid(1),
+                id: uid(60),
+                rows: 2,
+                cols: 2,
+                cells: vec!["項目".into(), "數量".into(), "筆記本".into(), "3".into()],
+                header_row: true,
+                created_at: NotebookTime::from_micros(8_000_000),
+            },
+            DocOp::SetTableCell {
+                id: uid(60),
+                row: 1,
+                col: 1,
+                text: "5".into(),
+            },
+            DocOp::SetZIndex {
+                id: uid(61),
+                index: 2,
+            },
         ]
     }
 
@@ -740,8 +847,8 @@ mod tests {
             .collect();
         assert_eq!(
             tags.len(),
-            18,
-            "18 種操作標籤都要被測到，實得 {}",
+            21,
+            "21 種操作標籤都要被測到，實得 {}",
             tags.len()
         );
     }

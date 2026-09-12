@@ -35,3 +35,6 @@ padnote-text = { path = "../padnote-text" }
 padnote-punct-ct = { path = "../padnote-punct-ct" }
 padnote-embed = { path = "../padnote-embed" }
 padnote-input = { path = "../padnote-input" }
+padnote-shapes = { path = "../padnote-shapes" }
+padnote-i18n = { path = "../padnote-i18n" }
+padnote-toolbar = { path = "../padnote-toolbar" }

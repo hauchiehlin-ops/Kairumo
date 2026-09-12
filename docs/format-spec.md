@@ -174,14 +174,15 @@ C1（筆跡↔錄音跳轉）、C4（詞級時間戳）、A10（筆跡重播）�
 [1B 操作類型][操作內容…]
 ```
 
-17 種操作：
+21 種操作：
 
 **文件結構**：`SetTitle` / `AddPage` / `RemovePage`
 **內容區塊**：`AddTextBlock` / `AddTranscriptBlock` / `AddImageBlock` /
 `RemoveBlock` / `SetBlockStyle` / `TextEdit`
 **錄音**：`StartAudio` / `EndAudio` / `AddWord`
 **物件**（ADR-0010）：`AddObject` / `RemoveObject` / `SetObjectTransform` /
-`Group` / `Ungroup`
+`Group` / `Ungroup` / `SetZIndex`
+**表格**：`AddTableBlock` / `SetTableCell`
 **嵌入文件**（ADR-0009）：`AddEmbeddedBlock`
 
 字串以 `u32` **位元組**長度前綴（非字元數）。UUID 為原始 16 bytes。
@@ -189,6 +190,20 @@ C1（筆跡↔錄音跳轉）、C4（詞級時間戳）、A10（筆跡重播）�
 
 `TextEdit` 內嵌文字 CRDT 操作（ADR-0004）：插入記錄 `(id, origin, 字元碼位)`，
 刪除記錄 `(id)`。**位置以 origin 參照表示，不是索引** —— 索引在併發編輯下會錯位。
+
+### 堆疊順序
+
+`SetZIndex` 記錄的是**絕對索引**，不是「上移一層」。相對操作在併發下會疊加：
+兩台裝置各按一次「移到最上層」，合併後會得出誰也沒預期的順序。
+索引**只在同層內有效** —— 跨層移動等於改變父子關係，那是 `Group`／`Ungroup`
+的職責。讀取端必須把越界索引夾到合法範圍，不得拒絕整份 oplog。
+
+### 表格
+
+`AddTableBlock` 的 `cells` 以**列為主**扁平展開，長度必為 `rows × cols`；
+長度不符時讀取端補空白或截斷，不得丟棄整個表格。
+
+`SetTableCell` **逐格**記錄。整表覆寫會讓兩人同時編輯不同格時互相蓋掉。
 
 ### 物件與變換（ADR-0010）
 

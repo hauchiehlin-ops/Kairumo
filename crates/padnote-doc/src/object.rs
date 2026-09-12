@@ -195,6 +195,89 @@ impl ObjectTree {
         Ok(members)
     }
 
+    // ---- z 序（S-46）----
+    //
+    // `roots` 的順序**就是**繪製順序：索引 0 最底層，最後一個在最上面。
+    // 群組內的成員順序同理。
+
+    /// 物件在同層中的位置。
+    pub fn z_index(&self, id: Uuid) -> Option<usize> {
+        self.siblings_of(id)?.iter().position(|x| *x == id)
+    }
+
+    /// 同層的物件序列（含自己）。
+    /// 與 `id` 同層的物件數量（含自己）。
+    ///
+    /// 「移到最上層」要知道上界，而上界是**同層**的數量，
+    /// 不是整棵樹的數量 —— 群組裡的物件只在群組內排序。
+    pub fn sibling_count(&self, id: Uuid) -> usize {
+        self.siblings_of(id).map_or(0, Vec::len)
+    }
+
+    fn siblings_of(&self, id: Uuid) -> Option<&Vec<Uuid>> {
+        match self.parent.get(&id) {
+            Some(p) => match &self.nodes.get(p)?.kind {
+                ObjectKind::Group(members) => Some(members),
+                _ => None,
+            },
+            None => self.roots.contains(&id).then_some(&self.roots),
+        }
+    }
+
+    fn siblings_mut(&mut self, id: Uuid) -> Option<&mut Vec<Uuid>> {
+        match self.parent.get(&id).copied() {
+            Some(p) => match &mut self.nodes.get_mut(&p)?.kind {
+                ObjectKind::Group(members) => Some(members),
+                _ => None,
+            },
+            None => self.roots.contains(&id).then_some(&mut self.roots),
+        }
+    }
+
+    /// 移到同層的指定位置。
+    ///
+    /// **只在同層內移動** —— 跨層移動等於改變父子關係，那是 group／ungroup
+    /// 的職責。混在一起會讓 z 序調整意外改變群組結構。
+    pub fn set_z_index(&mut self, id: Uuid, index: usize) -> Result<(), ObjectError> {
+        let siblings = self.siblings_mut(id).ok_or(ObjectError::NotFound(id))?;
+        let Some(from) = siblings.iter().position(|x| *x == id) else {
+            return Err(ObjectError::NotFound(id));
+        };
+        let item = siblings.remove(from);
+        siblings.insert(index.min(siblings.len()), item);
+        Ok(())
+    }
+
+    /// 移到最上層。
+    pub fn bring_to_front(&mut self, id: Uuid) -> Result<(), ObjectError> {
+        let last = self.siblings_of(id).ok_or(ObjectError::NotFound(id))?.len();
+        self.set_z_index(id, last)
+    }
+
+    /// 移到最底層。
+    pub fn send_to_back(&mut self, id: Uuid) -> Result<(), ObjectError> {
+        self.set_z_index(id, 0)
+    }
+
+    /// 往上一層。
+    pub fn bring_forward(&mut self, id: Uuid) -> Result<(), ObjectError> {
+        let i = self.z_index(id).ok_or(ObjectError::NotFound(id))?;
+        self.set_z_index(id, i + 1)
+    }
+
+    /// 往下一層。
+    pub fn send_backward(&mut self, id: Uuid) -> Result<(), ObjectError> {
+        let i = self.z_index(id).ok_or(ObjectError::NotFound(id))?;
+        self.set_z_index(id, i.saturating_sub(1))
+    }
+
+    /// 依繪製順序展開所有葉節點（由底到頂）。
+    ///
+    /// 渲染時照這個順序畫，覆蓋關係才會正確。
+    pub fn draw_order(&self) -> Vec<(Uuid, Affine2)> {
+        self.roots.iter().flat_map(|r| self.flatten(*r)).collect()
+    }
+
     pub fn set_transform(&mut self, id: Uuid, transform: Affine2) -> Result<(), ObjectError> {
         self.nodes
             .get_mut(&id)
@@ -354,6 +437,107 @@ mod tests {
         for (_, transform) in &leaves {
             assert_eq!(transform.apply(0.0, 0.0), (10.0, 0.0));
         }
+    }
+
+    // ---- z 序（S-46）----
+
+    #[test]
+    fn insertion_order_is_the_draw_order() {
+        let (t, a, b) = tree_with_two();
+        assert_eq!(t.z_index(a), Some(0), "先插入的在底層");
+        assert_eq!(t.z_index(b), Some(1));
+    }
+
+    #[test]
+    fn sibling_count_is_per_layer_not_whole_tree() {
+        let (mut t, a, b) = tree_with_two();
+        let c = uid(3);
+        t.insert(ObjectNode::strokes(c, vec![uid(12)]));
+        t.group(uid(100), &[a, b]).unwrap();
+        // 根層現在是 c 與群組；群組內是 a 與 b。
+        assert_eq!(t.sibling_count(c), 2, "根層應有 c 與群組");
+        assert_eq!(t.sibling_count(a), 2, "群組內應有 a 與 b");
+    }
+
+    #[test]
+    fn bring_to_front_and_send_to_back() {
+        let (mut t, a, b) = tree_with_two();
+        t.bring_to_front(a).unwrap();
+        assert_eq!(t.roots(), &[b, a]);
+
+        t.send_to_back(a).unwrap();
+        assert_eq!(t.roots(), &[a, b]);
+    }
+
+    #[test]
+    fn stepwise_reordering() {
+        let mut t = ObjectTree::new();
+        let ids: Vec<Uuid> = (1..=3).map(uid).collect();
+        for id in &ids {
+            t.insert(ObjectNode::strokes(*id, vec![]));
+        }
+
+        t.bring_forward(ids[0]).unwrap();
+        assert_eq!(t.roots(), &[ids[1], ids[0], ids[2]]);
+
+        t.send_backward(ids[0]).unwrap();
+        assert_eq!(t.roots(), &[ids[0], ids[1], ids[2]]);
+    }
+
+    #[test]
+    fn reordering_at_the_edges_is_a_noop_not_an_error() {
+        // 最上層再往上、最下層再往下，都不該報錯 ——
+        // 使用者連按按鈕時不該跳出錯誤訊息。
+        let (mut t, a, b) = tree_with_two();
+        t.send_backward(a).unwrap();
+        assert_eq!(t.roots(), &[a, b]);
+
+        t.bring_to_front(b).unwrap();
+        t.bring_forward(b).unwrap();
+        assert_eq!(t.roots(), &[a, b]);
+    }
+
+    #[test]
+    fn z_order_works_inside_groups() {
+        let (mut t, a, b) = tree_with_two();
+        t.group(uid(100), &[a, b]).unwrap();
+
+        assert_eq!(t.z_index(a), Some(0), "群組內也有 z 序");
+        t.bring_to_front(a).unwrap();
+        assert_eq!(t.get(uid(100)).unwrap().members(), &[b, a]);
+    }
+
+    #[test]
+    fn reordering_does_not_change_grouping() {
+        // z 序只在同層內移動。跨層移動是 group/ungroup 的職責，
+        // 混在一起會讓調整順序意外改變群組結構。
+        let (mut t, a, b) = tree_with_two();
+        t.group(uid(100), &[a, b]).unwrap();
+        t.bring_to_front(a).unwrap();
+
+        assert_eq!(t.parent_of(a), Some(uid(100)), "父子關係不變");
+        assert_eq!(t.roots(), &[uid(100)]);
+    }
+
+    #[test]
+    fn draw_order_follows_the_root_sequence() {
+        let (mut t, a, _b) = tree_with_two();
+        let order: Vec<Uuid> = t.draw_order().into_iter().map(|(id, _)| id).collect();
+        assert_eq!(order, vec![uid(10), uid(11)], "底層先畫");
+
+        t.bring_to_front(a).unwrap();
+        let order: Vec<Uuid> = t.draw_order().into_iter().map(|(id, _)| id).collect();
+        assert_eq!(order, vec![uid(11), uid(10)], "調整後順序要跟著變");
+    }
+
+    #[test]
+    fn reordering_an_unknown_object_errors() {
+        let mut t = ObjectTree::new();
+        assert_eq!(
+            t.bring_to_front(uid(99)),
+            Err(ObjectError::NotFound(uid(99)))
+        );
+        assert!(t.z_index(uid(99)).is_none());
     }
 
     #[test]

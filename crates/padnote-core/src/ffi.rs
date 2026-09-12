@@ -176,6 +176,14 @@ pub struct TranscriptWordInput {
     pub confidence: f32,
 }
 
+/// 繪製順序中的一項。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct DrawItem {
+    pub object_id: String,
+    /// 世界變換 `[a, b, c, d, tx, ty]`。
+    pub transform: Vec<f32>,
+}
+
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct StrokeSummary {
     pub id: String,
@@ -572,6 +580,93 @@ impl PadnoteSession {
         cy: f32,
     ) -> Result<(), FfiError> {
         self.apply_transform(&object_id, Affine2::rotate_around(radians, cx, cy))
+    }
+
+    // ---- 堆疊順序（S-46，需求 1）----
+
+    /// 移到同層最上層。
+    pub fn bring_to_front(&self, page_id: String, object_id: String) -> Result<(), FfiError> {
+        let (page, id) = (parse_uuid(&page_id)?, parse_uuid(&object_id)?);
+        self.lock().bring_to_front(page, id)?;
+        Ok(())
+    }
+
+    /// 移到同層最下層。
+    pub fn send_to_back(&self, object_id: String) -> Result<(), FfiError> {
+        self.lock().send_to_back(parse_uuid(&object_id)?)?;
+        Ok(())
+    }
+
+    /// 上移一層。
+    pub fn bring_forward(&self, page_id: String, object_id: String) -> Result<(), FfiError> {
+        let (page, id) = (parse_uuid(&page_id)?, parse_uuid(&object_id)?);
+        self.lock().bring_forward(page, id)?;
+        Ok(())
+    }
+
+    /// 下移一層。
+    pub fn send_backward(&self, page_id: String, object_id: String) -> Result<(), FfiError> {
+        let (page, id) = (parse_uuid(&page_id)?, parse_uuid(&object_id)?);
+        self.lock().send_backward(page, id)?;
+        Ok(())
+    }
+
+    /// 物件在同層中的位置。
+    pub fn z_index(&self, page_id: String, object_id: String) -> Result<Option<u32>, FfiError> {
+        let (page, id) = (parse_uuid(&page_id)?, parse_uuid(&object_id)?);
+        Ok(self.lock().z_index(page, id).map(|i| i as u32))
+    }
+
+    /// 整頁的繪製順序：由下而上的 `(物件 id, 世界變換)`。
+    ///
+    /// 這是渲染要的**唯一**順序來源 —— 平台層照著畫就對了，
+    /// 不必自己重建樹狀結構。
+    pub fn draw_order(&self, page_id: String) -> Result<Vec<DrawItem>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let guard = self.lock();
+        Ok(guard
+            .objects(page)
+            .map(|tree| {
+                tree.draw_order()
+                    .into_iter()
+                    .map(|(id, t)| DrawItem {
+                        object_id: id.to_string(),
+                        transform: vec![t.a, t.b, t.c, t.d, t.tx, t.ty],
+                    })
+                    .collect()
+            })
+            .unwrap_or_default())
+    }
+
+    // ---- 表格（S-48，需求 2）----
+
+    /// 插入表格。`cells` 以列為主展開，不足補空白。
+    pub fn insert_table(
+        &self,
+        page_id: String,
+        rows: u32,
+        cols: u32,
+        cells: Vec<String>,
+        header_row: bool,
+    ) -> Result<String, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self
+            .lock()
+            .insert_table(page, rows, cols, cells, header_row)?
+            .to_string())
+    }
+
+    /// 改寫單一儲存格。
+    pub fn set_table_cell(
+        &self,
+        block_id: String,
+        row: u32,
+        col: u32,
+        text: String,
+    ) -> Result<(), FfiError> {
+        self.lock()
+            .set_table_cell(parse_uuid(&block_id)?, row, col, &text)?;
+        Ok(())
     }
 
     /// 物件在頁面上的累積變換，回傳 `[a, b, c, d, tx, ty]`。

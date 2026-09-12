@@ -1232,6 +1232,7 @@ dependencies = [
  "padnote-doc",
  "padnote-embed",
  "padnote-export",
+ "padnote-i18n",
  "padnote-ink",
  "padnote-input",
  "padnote-models",
@@ -1240,9 +1241,11 @@ dependencies = [
  "padnote-recognize",
  "padnote-recorder",
  "padnote-search",
+ "padnote-shapes",
  "padnote-storage",
  "padnote-sync",
  "padnote-text",
+ "padnote-toolbar",
  "padnote-vad-silero",
  "uniffi",
 ]
@@ -1280,6 +1283,10 @@ dependencies = [
  "padnote-ink",
  "serde_json",
 ]
+
+[[package]]
+name = "padnote-i18n"
+version = "0.1.0"
 
 [[package]]
 name = "padnote-ink"
@@ -1349,6 +1356,14 @@ name = "padnote-search"
 version = "0.1.0"
 
 [[package]]
+name = "padnote-shapes"
+version = "0.1.0"
+dependencies = [
+ "padnote-doc",
+ "padnote-ink",
+]
+
+[[package]]
 name = "padnote-storage"
 version = "0.1.0"
 dependencies = [
@@ -1372,6 +1387,15 @@ name = "padnote-text"
 version = "0.1.0"
 dependencies = [
  "zhconv",
+]
+
+[[package]]
+name = "padnote-toolbar"
+version = "0.1.0"
+dependencies = [
+ "padnote-i18n",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

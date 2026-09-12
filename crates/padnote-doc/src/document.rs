@@ -53,6 +53,21 @@ pub enum BlockKind {
     Transcript { session: Uuid, text: String },
     /// PDF 標註層的錨點（E2）
     PdfAnnotation { page_index: u32, text: String },
+    /// 表格（需求 2：試算表可嵌入且可編輯）。
+    ///
+    /// 與 `Embedded` 的差別：這是**畫布上的原生物件**，
+    /// 每格都能像文字一樣編輯，而不是渲染成圖像的外部文件。
+    Table {
+        rows: u32,
+        cols: u32,
+        /// 逐列展開的儲存格文字，長度必為 `rows * cols`。
+        ///
+        /// 用扁平陣列而非巢狀 Vec：增刪欄時只要 splice，
+        /// 巢狀結構要逐列處理且容易出現長度不一致的列。
+        cells: Vec<String>,
+        /// 第一列是否為表頭。
+        header_row: bool,
+    },
     /// 嵌入的外部文件（ADR-0009 / 決策 D-10）。
     ///
     /// `interaction` 決定呈現方式：`preview` 渲染為圖像、
@@ -105,7 +120,36 @@ impl Block {
             BlockKind::Transcript { text, .. } => Some(text),
             BlockKind::PdfAnnotation { text, .. } => Some(text),
             BlockKind::Embedded { text, .. } => Some(text),
-            BlockKind::Image { .. } => None,
+            // 表格的可搜尋文字由 `table_text()` 組出，不是單一欄位。
+            BlockKind::Table { .. } | BlockKind::Image { .. } => None,
+        }
+    }
+
+    /// 表格的可搜尋文字（所有儲存格以空白相接）。
+    pub fn table_text(&self) -> Option<String> {
+        match &self.kind {
+            BlockKind::Table { cells, .. } => Some(
+                cells
+                    .iter()
+                    .filter(|c| !c.trim().is_empty())
+                    .cloned()
+                    .collect::<Vec<_>>()
+                    .join(" "),
+            ),
+            _ => None,
+        }
+    }
+
+    /// 讀取儲存格。索引越界時回傳 `None` 而非 panic ——
+    /// 表格尺寸可能被其他裝置改過。
+    pub fn cell(&self, row: u32, col: u32) -> Option<&str> {
+        match &self.kind {
+            BlockKind::Table {
+                rows, cols, cells, ..
+            } => (row < *rows && col < *cols)
+                .then(|| cells.get((row * cols + col) as usize).map(String::as_str))
+                .flatten(),
+            _ => None,
         }
     }
 

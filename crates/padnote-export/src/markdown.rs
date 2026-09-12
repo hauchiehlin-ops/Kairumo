@@ -77,6 +77,14 @@ pub fn to_markdown(
                 BlockKind::PdfAnnotation { text, page_index } => {
                     out.push_str(&format!("> **p.{}**：{text}\n\n", page_index + 1));
                 }
+                BlockKind::Table {
+                    rows,
+                    cols,
+                    cells,
+                    header_row,
+                } => {
+                    out.push_str(&render_table(*rows, *cols, cells, *header_row));
+                }
                 BlockKind::Embedded { format, text, .. } => {
                     // 明示這是嵌入的外部文件，而不是使用者寫的內容。
                     out.push_str(&format!("> _[嵌入的 {format} 文件]_\n\n"));
@@ -97,6 +105,39 @@ pub fn to_markdown(
     while out.ends_with("\n\n\n") {
         out.pop();
     }
+    out
+}
+
+/// 表格轉 Markdown 表格語法。
+///
+/// Markdown 規定必須有表頭列；沒有表頭的表格就補一列空白表頭，
+/// 否則整張表會被當成普通段落而崩掉。
+fn render_table(rows: u32, cols: u32, cells: &[String], header_row: bool) -> String {
+    if rows == 0 || cols == 0 {
+        return String::new();
+    }
+    let at = |r: u32, c: u32| -> &str {
+        cells
+            .get((r * cols + c) as usize)
+            .map(String::as_str)
+            .unwrap_or("")
+    };
+    // 管線符號會切斷儲存格，必須跳脫。
+    let cell = |s: &str| s.replace('|', "\\|").replace('\n', " ");
+
+    let mut out = String::new();
+    let (header, body_start) = if header_row {
+        ((0..cols).map(|c| cell(at(0, c))).collect::<Vec<_>>(), 1)
+    } else {
+        (vec![String::new(); cols as usize], 0)
+    };
+    out.push_str(&format!("| {} |\n", header.join(" | ")));
+    out.push_str(&format!("| {} |\n", vec!["---"; cols as usize].join(" | ")));
+    for r in body_start..rows {
+        let row: Vec<String> = (0..cols).map(|c| cell(at(r, c))).collect();
+        out.push_str(&format!("| {} |\n", row.join(" | ")));
+    }
+    out.push('\n');
     out
 }
 

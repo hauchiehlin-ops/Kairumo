@@ -13,6 +13,8 @@ pub mod ffi;
 pub mod ffi_geometry;
 pub mod ffi_input;
 pub mod ffi_interop;
+pub mod ffi_shapes;
+pub mod ffi_ui;
 pub mod setup;
 pub mod transcript;
 
@@ -21,6 +23,7 @@ pub use padnote_crypto as crypto;
 pub use padnote_doc as doc;
 pub use padnote_embed as embed;
 pub use padnote_export as export;
+pub use padnote_i18n as i18n;
 pub use padnote_ink as ink;
 pub use padnote_input as input;
 pub use padnote_models as models;
@@ -29,9 +32,11 @@ pub use padnote_punct_ct as punct_ct;
 pub use padnote_recognize as recognize;
 pub use padnote_recorder as recorder;
 pub use padnote_search as search;
+pub use padnote_shapes as shapes;
 pub use padnote_storage as storage;
 pub use padnote_sync as sync;
 pub use padnote_text as text;
+pub use padnote_toolbar as toolbar;
 pub use padnote_vad_silero as vad;
 
 pub use app::{AppError, NotebookSession, RecordingState};

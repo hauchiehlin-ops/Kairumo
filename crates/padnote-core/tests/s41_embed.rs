@@ -89,22 +89,71 @@ fn imported_docx_text_is_actually_editable() {
 }
 
 #[test]
-fn xlsx_becomes_a_markdown_table() {
+fn xlsx_becomes_an_editable_table_object() {
+    // 需求 2：試算表要變成畫布上的表格物件，而不是一段唯讀文字。
     let mut s = session("xlsx");
     let page = s.first_page().unwrap();
     s.import_embedded(page, fixture("sample.xlsx")).unwrap();
 
-    let all: String = blocks(&s, page)
+    let titles: String = blocks(&s, page)
         .iter()
         .filter_map(|k| match k {
             BlockKind::Text { content, .. } => Some(content.clone()),
             _ => None,
         })
         .collect();
+    assert!(titles.contains("採購清單"), "工作表名稱應成為標題");
 
-    assert!(all.contains("採購清單"), "工作表名稱應成為標題");
-    assert!(all.contains("| 筆記本 | 3 | 120 |"), "表格內容：{all}");
-    assert!(all.contains("610"), "公式的計算結果應保留");
+    let table = blocks(&s, page)
+        .into_iter()
+        .find_map(|k| match k {
+            BlockKind::Table {
+                rows,
+                cols,
+                cells,
+                header_row,
+            } => Some((rows, cols, cells, header_row)),
+            _ => None,
+        })
+        .expect("試算表應展開成表格物件");
+    let (rows, cols, cells, header_row) = table;
+
+    assert_eq!(
+        cells.len() as u32,
+        rows * cols,
+        "儲存格數量必須等於 列 × 欄"
+    );
+    assert!(header_row, "第一列全是文字，應判為表頭");
+    assert!(cells.iter().any(|c| c == "筆記本"), "內容：{cells:?}");
+    assert!(cells.iter().any(|c| c == "610"), "公式的計算結果應保留");
+}
+
+#[test]
+fn table_cells_can_be_edited_and_persist() {
+    let mut s = session("xlsx-edit");
+    let page = s.first_page().unwrap();
+    let id = s
+        .insert_table(
+            page,
+            2,
+            2,
+            vec!["項目".into(), "數量".into(), "筆記本".into(), "3".into()],
+            true,
+        )
+        .unwrap();
+
+    s.set_table_cell(id, 1, 1, "7").unwrap();
+    // 越界要報錯，不能靜默吞掉。
+    assert!(s.set_table_cell(id, 9, 0, "x").is_err());
+
+    let cells = blocks(&s, page)
+        .into_iter()
+        .find_map(|k| match k {
+            BlockKind::Table { cells, .. } => Some(cells),
+            _ => None,
+        })
+        .unwrap();
+    assert_eq!(cells[3], "7", "編輯後的值：{cells:?}");
 }
 
 #[test]

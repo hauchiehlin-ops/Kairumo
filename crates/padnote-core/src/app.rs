@@ -268,6 +268,52 @@ impl NotebookSession {
                     },
                 );
             }
+            DocOp::AddTableBlock {
+                page,
+                id,
+                rows,
+                cols,
+                cells,
+                header_row,
+                created_at,
+            } => {
+                // 尺寸與內容長度不符時補齊／截斷 —— 遠端 op 不可信，
+                // 但丟掉整個表格對使用者來說比補幾格空白更糟。
+                let want = (*rows as usize) * (*cols as usize);
+                let mut cells = cells.clone();
+                cells.resize(want, String::new());
+                let text = cells.join(" ");
+                self.add_block_to_page(
+                    *page,
+                    Block {
+                        id: *id,
+                        kind: BlockKind::Table {
+                            rows: *rows,
+                            cols: *cols,
+                            cells,
+                            header_row: *header_row,
+                        },
+                        position: None,
+                        created_at: *created_at,
+                    },
+                );
+                self.reindex_block(*page, *id, &text, Source::Text);
+            }
+            DocOp::SetTableCell { id, row, col, text } => {
+                if let Some(page) = self.page_of_block(*id)
+                    && let Some(b) = self.notebook.page_mut(page).and_then(|p| p.block_mut(*id))
+                    && let BlockKind::Table {
+                        rows, cols, cells, ..
+                    } = &mut b.kind
+                    && *row < *rows
+                    && *col < *cols
+                    && let Some(slot) = cells.get_mut((*row * *cols + *col) as usize)
+                {
+                    *slot = text.clone();
+                    let joined = cells.join(" ");
+                    self.reindex_block(page, *id, &joined, Source::Text);
+                }
+            }
             DocOp::AddEmbeddedBlock {
                 page,
                 id,
@@ -360,6 +406,12 @@ impl NotebookSession {
             DocOp::RemoveObject { id } => {
                 for tree in self.objects.values_mut() {
                     tree.remove(*id);
+                }
+            }
+            DocOp::SetZIndex { id, index } => {
+                for tree in self.objects.values_mut() {
+                    // 索引可能來自物件更多的較新版本；set_z_index 自己會夾住上界。
+                    let _ = tree.set_z_index(*id, *index as usize);
                 }
             }
             DocOp::SetObjectTransform { id, transform } => {
@@ -842,6 +894,50 @@ impl NotebookSession {
         self.record(vec![DocOp::Ungroup { id }])
     }
 
+    /// 把物件移到同層內的某個位置（需求 1）。
+    pub fn set_z_index(&mut self, id: Uuid, index: usize) -> Result<(), AppError> {
+        self.record(vec![DocOp::SetZIndex {
+            id,
+            index: index as u32,
+        }])
+    }
+
+    /// 移到同層最上層。
+    ///
+    /// 目標索引在**這裡**算好再記錄，而不是記「移到最上層」——
+    /// 詳見 `DocOp::SetZIndex` 的說明。
+    pub fn bring_to_front(&mut self, page: Uuid, id: Uuid) -> Result<(), AppError> {
+        let last = self.sibling_count(page, id).saturating_sub(1);
+        self.set_z_index(id, last)
+    }
+
+    /// 移到同層最下層。
+    pub fn send_to_back(&mut self, id: Uuid) -> Result<(), AppError> {
+        self.set_z_index(id, 0)
+    }
+
+    /// 上移一層。
+    pub fn bring_forward(&mut self, page: Uuid, id: Uuid) -> Result<(), AppError> {
+        let now = self.z_index(page, id).ok_or(AppError::BlockNotFound(id))?;
+        let last = self.sibling_count(page, id).saturating_sub(1);
+        self.set_z_index(id, (now + 1).min(last))
+    }
+
+    /// 下移一層。
+    pub fn send_backward(&mut self, page: Uuid, id: Uuid) -> Result<(), AppError> {
+        let now = self.z_index(page, id).ok_or(AppError::BlockNotFound(id))?;
+        self.set_z_index(id, now.saturating_sub(1))
+    }
+
+    /// 物件在同層中的位置。
+    pub fn z_index(&self, page: Uuid, id: Uuid) -> Option<usize> {
+        self.objects.get(&page)?.z_index(id)
+    }
+
+    fn sibling_count(&self, page: Uuid, id: Uuid) -> usize {
+        self.objects.get(&page).map_or(0, |t| t.sibling_count(id))
+    }
+
     /// 變更物件的變換。**不改寫任何取樣點**（ADR-0010）。
     pub fn transform_object(&mut self, id: Uuid, transform: Affine2) -> Result<(), AppError> {
         self.record(vec![DocOp::SetObjectTransform { id, transform }])
@@ -1019,12 +1115,13 @@ impl NotebookSession {
                 }
             }
             EmbedFormat::Xlsx => {
-                // 試算表以 Markdown 表格呈現。編輯儲存格會取代公式 ——
-                // 要編輯公式就得實作公式引擎，那是另一個產品。
+                // 試算表展開成畫布上的表格物件（需求 2）—— 每格都能編輯、
+                // 整塊都能搬動。編輯儲存格會取代公式：要編輯公式就得實作
+                // 公式引擎，那是另一個產品。
                 if let Ok(sheets) = padnote_embed::import_xlsx(path) {
                     for sheet in sheets {
                         self.add_text_block(page, &sheet.name, TextStyle::Heading3)?;
-                        self.add_text_block(page, &sheet.to_markdown(), TextStyle::Body)?;
+                        self.add_sheet_as_table(page, &sheet)?;
                     }
                 }
             }
@@ -1040,6 +1137,92 @@ impl NotebookSession {
             EmbedFormat::Pptx | EmbedFormat::Pdf => {}
         }
         Ok(())
+    }
+
+    /// 把一張工作表變成畫布上的表格物件。
+    fn add_sheet_as_table(
+        &mut self,
+        page: Uuid,
+        sheet: &padnote_embed::Sheet,
+    ) -> Result<Uuid, AppError> {
+        let rows = sheet.row_count();
+        let cols = sheet.column_count();
+        // 列長不齊的工作表要補成矩形，否則索引會錯位。
+        let mut cells = Vec::with_capacity(rows * cols);
+        for r in 0..rows {
+            for c in 0..cols {
+                cells.push(
+                    sheet
+                        .cell(r, c)
+                        .map(|x| x.value.display())
+                        .unwrap_or_default(),
+                );
+            }
+        }
+        // 第一列全是文字時視為表頭 —— 這是試算表最常見的慣例。
+        let header_row = rows > 1
+            && (0..cols).all(|c| {
+                matches!(
+                    sheet.cell(0, c).map(|x| &x.value),
+                    Some(padnote_embed::CellValue::Text(_)) | None
+                )
+            });
+        self.insert_table(page, rows as u32, cols as u32, cells, header_row)
+    }
+
+    /// 在頁面上插入表格（需求 2：試算表圖形可嵌入且可編輯）。
+    pub fn insert_table(
+        &mut self,
+        page: Uuid,
+        rows: u32,
+        cols: u32,
+        cells: Vec<String>,
+        header_row: bool,
+    ) -> Result<Uuid, AppError> {
+        if self.notebook.page(page).is_none() {
+            return Err(AppError::PageNotFound(page));
+        }
+        let mut cells = cells;
+        cells.resize((rows as usize) * (cols as usize), String::new());
+        let id = Uuid::now_v7();
+        self.record(vec![DocOp::AddTableBlock {
+            page,
+            id,
+            rows,
+            cols,
+            cells,
+            header_row,
+            created_at: self.now,
+        }])?;
+        Ok(id)
+    }
+
+    /// 改寫單一儲存格。越界索引回傳錯誤而非靜默忽略 ——
+    /// 呼叫端該知道自己寫進了黑洞。
+    pub fn set_table_cell(
+        &mut self,
+        block: Uuid,
+        row: u32,
+        col: u32,
+        text: &str,
+    ) -> Result<(), AppError> {
+        let ok = self
+            .page_of_block(block)
+            .and_then(|p| self.notebook.page(p))
+            .and_then(|p| p.blocks().iter().find(|b| b.id == block))
+            .is_some_and(|b| match b.kind {
+                BlockKind::Table { rows, cols, .. } => row < rows && col < cols,
+                _ => false,
+            });
+        if !ok {
+            return Err(AppError::BlockNotFound(block));
+        }
+        self.record(vec![DocOp::SetTableCell {
+            id: block,
+            row,
+            col,
+            text: text.to_string(),
+        }])
     }
 
     fn append_imported_blocks(
