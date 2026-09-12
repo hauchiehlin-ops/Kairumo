@@ -86,6 +86,60 @@ impl PdfiumDocument {
     }
 }
 
+/// 頁面與標註資料，供 PDFium 寫入使用。
+#[derive(Clone, Debug)]
+pub struct PdfiumPageInput {
+    pub width: f32,
+    pub height: f32,
+    pub annotations: Vec<padnote_pdf::PdfAnnotation>,
+}
+
+/// 透過 PDFium 建立含有 Ink 標註之 PDF（工作項 S-43）。
+pub fn create_annotated_pdf(pages: &[PdfiumPageInput]) -> Result<Vec<u8>, PdfError> {
+    let pdfium = bind()?;
+    let mut doc = pdfium
+        .create_new_pdf()
+        .map_err(|e| PdfError::Backend(e.to_string()))?;
+
+    for input in pages {
+        let size = PdfPagePaperSize::Custom(
+            PdfPoints::new(input.width),
+            PdfPoints::new(input.height),
+        );
+        let mut page = doc
+            .pages_mut()
+            .create_page_at_end(size)
+            .map_err(|e| PdfError::Backend(e.to_string()))?;
+
+        for annot in &input.annotations {
+            if annot.kind == padnote_pdf::AnnotationKind::Ink {
+                let mut ink_annot = page
+                    .annotations_mut()
+                    .create_ink_annotation()
+                    .map_err(|e| PdfError::Backend(e.to_string()))?;
+
+                let (min_x, min_y, max_x, max_y) = annot.rect();
+                let rect = PdfRect::new(
+                    PdfPoints::new(min_x),
+                    PdfPoints::new(min_y),
+                    PdfPoints::new(max_x),
+                    PdfPoints::new(max_y),
+                );
+                let _ = ink_annot.set_bounds(rect);
+                let _ = ink_annot.set_stroke_color(PdfColor::new(
+                    (annot.color[0] * 255.0).clamp(0.0, 255.0) as u8,
+                    (annot.color[1] * 255.0).clamp(0.0, 255.0) as u8,
+                    (annot.color[2] * 255.0).clamp(0.0, 255.0) as u8,
+                    (annot.opacity * 255.0).clamp(0.0, 255.0) as u8,
+                ));
+            }
+        }
+    }
+
+    doc.save_to_bytes()
+        .map_err(|e| PdfError::Backend(e.to_string()))
+}
+
 /// 每次操作重新綁定 libpdfium。
 ///
 /// 看起來浪費，但 `Pdfium` 持有的 `Box<dyn PdfiumLibraryBindings>` 既不是
@@ -217,5 +271,38 @@ mod tests {
                 total: 3
             })
         ));
+    }
+
+    #[test]
+    fn create_annotated_pdf_produces_pdf_with_annotations() {
+        if !pdfium_available() {
+            return;
+        }
+
+        let annot = padnote_pdf::PdfAnnotation {
+            kind: padnote_pdf::AnnotationKind::Ink,
+            page_index: 0,
+            ink_paths: vec![vec![(10.0, 10.0), (100.0, 100.0)]],
+            quad_points: vec![],
+            color: [1.0, 0.0, 0.0],
+            opacity: 1.0,
+            width: 2.0,
+            contents: String::new(),
+        };
+
+        let input = PdfiumPageInput {
+            width: 595.0,
+            height: 842.0,
+            annotations: vec![annot],
+        };
+
+        let pdf_bytes = create_annotated_pdf(&[input]).expect("應成功寫出 PDF");
+        assert!(pdf_bytes.starts_with(b"%PDF"));
+
+        // 重新讀取驗證
+        let reopened = PdfiumDocument::from_bytes(pdf_bytes, None).expect("應能重新開啟");
+        assert_eq!(reopened.page_count(), 1);
+        let page = reopened.page(0).expect("應能取得第 0 頁");
+        assert_eq!(page.size, (595.0, 842.0));
     }
 }

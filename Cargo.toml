@@ -31,6 +31,8 @@ pdfium-render = { version = "0.8", features = ["thread_safe"] }
 # 與 PP-OCRv5（D4），比每個模型各帶一套推論庫划算。
 ort = { version = "2.0.0-rc.10", features = ["download-binaries"] }
 rustfft = "6"
+png = "0.18"
+miniz_oxide = "0.8"
 
 [workspace.lints.rust]
 unsafe_code = "deny"

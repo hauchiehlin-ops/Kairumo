@@ -13,6 +13,84 @@
 use crate::{Affine2, Uuid};
 use std::collections::HashMap;
 
+/// Persisted shape kinds. This mirrors the geometry crate without making the
+/// document model depend on the drawing engine.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum ShapeKind {
+    Rectangle,
+    RoundedRectangle,
+    Ellipse,
+    Triangle,
+    Diamond,
+    Pentagon,
+    Hexagon,
+    Star,
+    Process,
+    Decision,
+    Terminator,
+    Data,
+    Document,
+    Database,
+    Preparation,
+    ManualInput,
+    Connector,
+    Line,
+    Arrow,
+    DoubleArrow,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct ObjectRect {
+    pub min_x: f32,
+    pub min_y: f32,
+    pub max_x: f32,
+    pub max_y: f32,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ShapeObject {
+    pub kind: ShapeKind,
+    pub bounds: ObjectRect,
+    pub corner_radius: f32,
+    pub text: String,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum Anchor {
+    Top,
+    Right,
+    Bottom,
+    Left,
+    Center,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum RouteStyle {
+    Straight,
+    Orthogonal,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum EndCap {
+    None,
+    Arrow,
+    HollowArrow,
+    Circle,
+    Diamond,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConnectionObject {
+    pub from: Uuid,
+    pub to: Uuid,
+    pub from_anchor: Anchor,
+    pub to_anchor: Anchor,
+    pub route: RouteStyle,
+    pub start_cap: EndCap,
+    pub end_cap: EndCap,
+    pub label: String,
+}
+
 /// 物件的內容。
 #[derive(Clone, Debug, PartialEq)]
 pub enum ObjectKind {
@@ -22,6 +100,10 @@ pub enum ObjectKind {
     Block(Uuid),
     /// 群組，成員是其他物件。
     Group(Vec<Uuid>),
+    /// 原生形狀（S-52）。
+    Shape(ShapeObject),
+    /// 依附於兩個物件的連接線（S-52）。
+    Connection(ConnectionObject),
 }
 
 #[derive(Clone, Debug)]
@@ -45,6 +127,22 @@ impl ObjectNode {
         Self {
             id,
             kind: ObjectKind::Group(members),
+            transform: Affine2::IDENTITY,
+        }
+    }
+
+    pub fn shape(id: Uuid, shape: ShapeObject) -> Self {
+        Self {
+            id,
+            kind: ObjectKind::Shape(shape),
+            transform: Affine2::IDENTITY,
+        }
+    }
+
+    pub fn connection(id: Uuid, connection: ConnectionObject) -> Self {
+        Self {
+            id,
+            kind: ObjectKind::Connection(connection),
             transform: Affine2::IDENTITY,
         }
     }
@@ -328,6 +426,7 @@ impl ObjectTree {
                 out.extend(strokes.iter().map(|s| (*s, world)));
             }
             ObjectKind::Block(b) => out.push((*b, world)),
+            ObjectKind::Shape(_) | ObjectKind::Connection(_) => out.push((id, world)),
         }
     }
 }
@@ -338,6 +437,15 @@ mod tests {
 
     fn uid(b: u8) -> Uuid {
         Uuid::from_bytes([b; 16])
+    }
+
+    fn rect() -> ObjectRect {
+        ObjectRect {
+            min_x: 10.0,
+            min_y: 20.0,
+            max_x: 110.0,
+            max_y: 80.0,
+        }
     }
 
     fn tree_with_two() -> (ObjectTree, Uuid, Uuid) {
@@ -437,6 +545,50 @@ mod tests {
         for (_, transform) in &leaves {
             assert_eq!(transform.apply(0.0, 0.0), (10.0, 0.0));
         }
+    }
+
+    #[test]
+    fn shapes_and_connections_are_persistent_leaves() {
+        let mut t = ObjectTree::new();
+        let a = uid(1);
+        let b = uid(2);
+        let c = uid(3);
+        t.insert(ObjectNode::shape(
+            a,
+            ShapeObject {
+                kind: ShapeKind::Process,
+                bounds: rect(),
+                corner_radius: 6.0,
+                text: "輸入".into(),
+            },
+        ));
+        t.insert(ObjectNode::shape(
+            b,
+            ShapeObject {
+                kind: ShapeKind::Decision,
+                bounds: rect(),
+                corner_radius: 0.0,
+                text: "確認".into(),
+            },
+        ));
+        t.insert(ObjectNode::connection(
+            c,
+            ConnectionObject {
+                from: a,
+                to: b,
+                from_anchor: Anchor::Right,
+                to_anchor: Anchor::Left,
+                route: RouteStyle::Orthogonal,
+                start_cap: EndCap::None,
+                end_cap: EndCap::Arrow,
+                label: "是".into(),
+            },
+        ));
+
+        assert_eq!(
+            t.draw_order().iter().map(|(id, _)| *id).collect::<Vec<_>>(),
+            vec![a, b, c]
+        );
     }
 
     // ---- z 序（S-46）----

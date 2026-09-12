@@ -112,6 +112,7 @@ fn xlsx_becomes_an_editable_table_object() {
                 cols,
                 cells,
                 header_row,
+                ..
             } => Some((rows, cols, cells, header_row)),
             _ => None,
         })

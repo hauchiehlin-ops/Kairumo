@@ -6,6 +6,14 @@
 use crate::{NotebookTime, Uuid};
 use std::collections::BTreeMap;
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CellSpan {
+    pub row: u32,
+    pub col: u32,
+    pub row_span: u32,
+    pub col_span: u32,
+}
+
 /// 頁面底紋（功能 E5）。
 #[derive(Clone, PartialEq, Eq, Debug, Default)]
 pub enum PageTemplate {
@@ -67,6 +75,8 @@ pub enum BlockKind {
         cells: Vec<String>,
         /// 第一列是否為表頭。
         header_row: bool,
+        /// 合併儲存格的左上錨點與跨度。
+        merged_cells: Vec<CellSpan>,
     },
     /// 嵌入的外部文件（ADR-0009 / 決策 D-10）。
     ///

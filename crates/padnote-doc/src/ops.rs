@@ -6,7 +6,10 @@
 //! 與筆畫一樣是 **append-only**：每個變更追加一筆 `DocOp`，重開時重播得到
 //! 目前狀態。刪除用墓碑而非移除記錄，保持記錄可交換（同步收斂的前提）。
 
-use crate::object::ObjectKind;
+use crate::document::CellSpan;
+use crate::object::{
+    Anchor, ConnectionObject, EndCap, ObjectKind, ObjectRect, RouteStyle, ShapeKind, ShapeObject,
+};
 use crate::text::{OpId, TextOp};
 use crate::{Affine2, NotebookTime, PageTemplate, TextStyle, Uuid};
 
@@ -75,6 +78,33 @@ pub enum DocOp {
         col: u32,
         text: String,
     },
+    InsertTableRow {
+        id: Uuid,
+        index: u32,
+        cells: Vec<String>,
+    },
+    DeleteTableRow {
+        id: Uuid,
+        index: u32,
+    },
+    InsertTableColumn {
+        id: Uuid,
+        index: u32,
+        cells: Vec<String>,
+    },
+    DeleteTableColumn {
+        id: Uuid,
+        index: u32,
+    },
+    MergeTableCells {
+        id: Uuid,
+        span: CellSpan,
+    },
+    UnmergeTableCell {
+        id: Uuid,
+        row: u32,
+        col: u32,
+    },
     /// 嵌入外部文件（ADR-0009）。
     AddEmbeddedBlock {
         page: Uuid,
@@ -111,6 +141,18 @@ pub enum DocOp {
         page: Uuid,
         id: Uuid,
         kind: ObjectKind,
+        transform: Affine2,
+    },
+    AddShapeObject {
+        page: Uuid,
+        id: Uuid,
+        shape: ShapeObject,
+        transform: Affine2,
+    },
+    AddConnectionObject {
+        page: Uuid,
+        id: Uuid,
+        connection: ConnectionObject,
         transform: Affine2,
     },
     RemoveObject {
@@ -162,6 +204,14 @@ const OP_ADD_EMBEDDED_BLOCK: u8 = 18;
 const OP_ADD_TABLE_BLOCK: u8 = 19;
 const OP_SET_TABLE_CELL: u8 = 20;
 const OP_SET_Z_INDEX: u8 = 21;
+const OP_ADD_SHAPE_OBJECT: u8 = 22;
+const OP_ADD_CONNECTION_OBJECT: u8 = 23;
+const OP_INSERT_TABLE_ROW: u8 = 24;
+const OP_DELETE_TABLE_ROW: u8 = 25;
+const OP_INSERT_TABLE_COLUMN: u8 = 26;
+const OP_DELETE_TABLE_COLUMN: u8 = 27;
+const OP_MERGE_TABLE_CELLS: u8 = 28;
+const OP_UNMERGE_TABLE_CELL: u8 = 29;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DocCodecError {
@@ -170,6 +220,10 @@ pub enum DocCodecError {
     UnknownTemplate(u8),
     UnknownStyle(u8),
     UnknownObjectKind(u8),
+    UnknownShapeKind(u8),
+    UnknownAnchor(u8),
+    UnknownRouteStyle(u8),
+    UnknownEndCap(u8),
     InvalidUtf8,
     InvalidChar(u32),
 }
@@ -182,6 +236,10 @@ impl std::fmt::Display for DocCodecError {
             Self::UnknownTemplate(t) => write!(f, "未知的頁面模板：{t}"),
             Self::UnknownStyle(s) => write!(f, "未知的文字樣式：{s}"),
             Self::UnknownObjectKind(k) => write!(f, "未知的物件類型：{k}"),
+            Self::UnknownShapeKind(k) => write!(f, "未知的形狀類型：{k}"),
+            Self::UnknownAnchor(a) => write!(f, "未知的連接點：{a}"),
+            Self::UnknownRouteStyle(r) => write!(f, "未知的連接線路由：{r}"),
+            Self::UnknownEndCap(c) => write!(f, "未知的線端樣式：{c}"),
             Self::InvalidUtf8 => write!(f, "字串不是合法的 UTF-8"),
             Self::InvalidChar(c) => write!(f, "非法的 Unicode 碼位：{c}"),
         }
@@ -246,7 +304,79 @@ impl Writer {
             ObjectKind::Strokes(ids) => self.u8(0).uuids(ids),
             ObjectKind::Block(id) => self.u8(1).uuid(*id),
             ObjectKind::Group(ids) => self.u8(2).uuids(ids),
+            ObjectKind::Shape(shape) => self.u8(3).shape(shape),
+            ObjectKind::Connection(conn) => self.u8(4).connection(conn),
         }
+    }
+    fn rect(&mut self, r: ObjectRect) -> &mut Self {
+        self.f32(r.min_x).f32(r.min_y).f32(r.max_x).f32(r.max_y)
+    }
+    fn shape_kind(&mut self, k: ShapeKind) -> &mut Self {
+        self.u8(match k {
+            ShapeKind::Rectangle => 0,
+            ShapeKind::RoundedRectangle => 1,
+            ShapeKind::Ellipse => 2,
+            ShapeKind::Triangle => 3,
+            ShapeKind::Diamond => 4,
+            ShapeKind::Pentagon => 5,
+            ShapeKind::Hexagon => 6,
+            ShapeKind::Star => 7,
+            ShapeKind::Process => 8,
+            ShapeKind::Decision => 9,
+            ShapeKind::Terminator => 10,
+            ShapeKind::Data => 11,
+            ShapeKind::Document => 12,
+            ShapeKind::Database => 13,
+            ShapeKind::Preparation => 14,
+            ShapeKind::ManualInput => 15,
+            ShapeKind::Connector => 16,
+            ShapeKind::Line => 17,
+            ShapeKind::Arrow => 18,
+            ShapeKind::DoubleArrow => 19,
+        })
+    }
+    fn anchor(&mut self, a: Anchor) -> &mut Self {
+        self.u8(match a {
+            Anchor::Top => 0,
+            Anchor::Right => 1,
+            Anchor::Bottom => 2,
+            Anchor::Left => 3,
+            Anchor::Center => 4,
+        })
+    }
+    fn route_style(&mut self, r: RouteStyle) -> &mut Self {
+        self.u8(match r {
+            RouteStyle::Straight => 0,
+            RouteStyle::Orthogonal => 1,
+        })
+    }
+    fn end_cap(&mut self, c: EndCap) -> &mut Self {
+        self.u8(match c {
+            EndCap::None => 0,
+            EndCap::Arrow => 1,
+            EndCap::HollowArrow => 2,
+            EndCap::Circle => 3,
+            EndCap::Diamond => 4,
+        })
+    }
+    fn shape(&mut self, s: &ShapeObject) -> &mut Self {
+        self.shape_kind(s.kind)
+            .rect(s.bounds)
+            .f32(s.corner_radius)
+            .str(&s.text)
+    }
+    fn connection(&mut self, c: &ConnectionObject) -> &mut Self {
+        self.uuid(c.from)
+            .uuid(c.to)
+            .anchor(c.from_anchor)
+            .anchor(c.to_anchor)
+            .route_style(c.route)
+            .end_cap(c.start_cap)
+            .end_cap(c.end_cap)
+            .str(&c.label)
+    }
+    fn cell_span(&mut self, s: &CellSpan) -> &mut Self {
+        self.u32(s.row).u32(s.col).u32(s.row_span).u32(s.col_span)
     }
     fn template(&mut self, t: &PageTemplate) -> &mut Self {
         match t {
@@ -337,7 +467,97 @@ impl<'a> Reader<'a> {
             0 => ObjectKind::Strokes(self.uuids()?),
             1 => ObjectKind::Block(self.uuid()?),
             2 => ObjectKind::Group(self.uuids()?),
+            3 => ObjectKind::Shape(self.shape()?),
+            4 => ObjectKind::Connection(self.connection()?),
             k => return Err(DocCodecError::UnknownObjectKind(k)),
+        })
+    }
+    fn rect(&mut self) -> Result<ObjectRect, DocCodecError> {
+        Ok(ObjectRect {
+            min_x: self.f32()?,
+            min_y: self.f32()?,
+            max_x: self.f32()?,
+            max_y: self.f32()?,
+        })
+    }
+    fn shape_kind(&mut self) -> Result<ShapeKind, DocCodecError> {
+        Ok(match self.u8()? {
+            0 => ShapeKind::Rectangle,
+            1 => ShapeKind::RoundedRectangle,
+            2 => ShapeKind::Ellipse,
+            3 => ShapeKind::Triangle,
+            4 => ShapeKind::Diamond,
+            5 => ShapeKind::Pentagon,
+            6 => ShapeKind::Hexagon,
+            7 => ShapeKind::Star,
+            8 => ShapeKind::Process,
+            9 => ShapeKind::Decision,
+            10 => ShapeKind::Terminator,
+            11 => ShapeKind::Data,
+            12 => ShapeKind::Document,
+            13 => ShapeKind::Database,
+            14 => ShapeKind::Preparation,
+            15 => ShapeKind::ManualInput,
+            16 => ShapeKind::Connector,
+            17 => ShapeKind::Line,
+            18 => ShapeKind::Arrow,
+            19 => ShapeKind::DoubleArrow,
+            k => return Err(DocCodecError::UnknownShapeKind(k)),
+        })
+    }
+    fn anchor(&mut self) -> Result<Anchor, DocCodecError> {
+        Ok(match self.u8()? {
+            0 => Anchor::Top,
+            1 => Anchor::Right,
+            2 => Anchor::Bottom,
+            3 => Anchor::Left,
+            4 => Anchor::Center,
+            a => return Err(DocCodecError::UnknownAnchor(a)),
+        })
+    }
+    fn route_style(&mut self) -> Result<RouteStyle, DocCodecError> {
+        Ok(match self.u8()? {
+            0 => RouteStyle::Straight,
+            1 => RouteStyle::Orthogonal,
+            r => return Err(DocCodecError::UnknownRouteStyle(r)),
+        })
+    }
+    fn end_cap(&mut self) -> Result<EndCap, DocCodecError> {
+        Ok(match self.u8()? {
+            0 => EndCap::None,
+            1 => EndCap::Arrow,
+            2 => EndCap::HollowArrow,
+            3 => EndCap::Circle,
+            4 => EndCap::Diamond,
+            c => return Err(DocCodecError::UnknownEndCap(c)),
+        })
+    }
+    fn shape(&mut self) -> Result<ShapeObject, DocCodecError> {
+        Ok(ShapeObject {
+            kind: self.shape_kind()?,
+            bounds: self.rect()?,
+            corner_radius: self.f32()?,
+            text: self.str()?,
+        })
+    }
+    fn connection(&mut self) -> Result<ConnectionObject, DocCodecError> {
+        Ok(ConnectionObject {
+            from: self.uuid()?,
+            to: self.uuid()?,
+            from_anchor: self.anchor()?,
+            to_anchor: self.anchor()?,
+            route: self.route_style()?,
+            start_cap: self.end_cap()?,
+            end_cap: self.end_cap()?,
+            label: self.str()?,
+        })
+    }
+    fn cell_span(&mut self) -> Result<CellSpan, DocCodecError> {
+        Ok(CellSpan {
+            row: self.u32()?,
+            col: self.u32()?,
+            row_span: self.u32()?,
+            col_span: self.u32()?,
         })
     }
     fn op_id(&mut self) -> Result<OpId, DocCodecError> {
@@ -502,6 +722,30 @@ pub fn encode(ops: &[DocOp]) -> Vec<u8> {
                     .object_kind(kind)
                     .affine(*transform);
             }
+            DocOp::AddShapeObject {
+                page,
+                id,
+                shape,
+                transform,
+            } => {
+                w.u8(OP_ADD_SHAPE_OBJECT)
+                    .uuid(*page)
+                    .uuid(*id)
+                    .shape(shape)
+                    .affine(*transform);
+            }
+            DocOp::AddConnectionObject {
+                page,
+                id,
+                connection,
+                transform,
+            } => {
+                w.u8(OP_ADD_CONNECTION_OBJECT)
+                    .uuid(*page)
+                    .uuid(*id)
+                    .connection(connection)
+                    .affine(*transform);
+            }
             DocOp::AddEmbeddedBlock {
                 page,
                 id,
@@ -544,6 +788,30 @@ pub fn encode(ops: &[DocOp]) -> Vec<u8> {
                     .u32(*row)
                     .u32(*col)
                     .str(text);
+            }
+            DocOp::InsertTableRow { id, index, cells } => {
+                w.u8(OP_INSERT_TABLE_ROW)
+                    .uuid(*id)
+                    .u32(*index)
+                    .strings(cells);
+            }
+            DocOp::DeleteTableRow { id, index } => {
+                w.u8(OP_DELETE_TABLE_ROW).uuid(*id).u32(*index);
+            }
+            DocOp::InsertTableColumn { id, index, cells } => {
+                w.u8(OP_INSERT_TABLE_COLUMN)
+                    .uuid(*id)
+                    .u32(*index)
+                    .strings(cells);
+            }
+            DocOp::DeleteTableColumn { id, index } => {
+                w.u8(OP_DELETE_TABLE_COLUMN).uuid(*id).u32(*index);
+            }
+            DocOp::MergeTableCells { id, span } => {
+                w.u8(OP_MERGE_TABLE_CELLS).uuid(*id).cell_span(span);
+            }
+            DocOp::UnmergeTableCell { id, row, col } => {
+                w.u8(OP_UNMERGE_TABLE_CELL).uuid(*id).u32(*row).u32(*col);
             }
             DocOp::SetZIndex { id, index } => {
                 w.u8(OP_SET_Z_INDEX).uuid(*id).u32(*index);
@@ -647,6 +915,18 @@ pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
                 kind: r.object_kind()?,
                 transform: r.affine()?,
             },
+            OP_ADD_SHAPE_OBJECT => DocOp::AddShapeObject {
+                page: r.uuid()?,
+                id: r.uuid()?,
+                shape: r.shape()?,
+                transform: r.affine()?,
+            },
+            OP_ADD_CONNECTION_OBJECT => DocOp::AddConnectionObject {
+                page: r.uuid()?,
+                id: r.uuid()?,
+                connection: r.connection()?,
+                transform: r.affine()?,
+            },
             OP_ADD_EMBEDDED_BLOCK => DocOp::AddEmbeddedBlock {
                 page: r.uuid()?,
                 id: r.uuid()?,
@@ -670,6 +950,33 @@ pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
                 row: r.u32()?,
                 col: r.u32()?,
                 text: r.str()?,
+            },
+            OP_INSERT_TABLE_ROW => DocOp::InsertTableRow {
+                id: r.uuid()?,
+                index: r.u32()?,
+                cells: r.strings()?,
+            },
+            OP_DELETE_TABLE_ROW => DocOp::DeleteTableRow {
+                id: r.uuid()?,
+                index: r.u32()?,
+            },
+            OP_INSERT_TABLE_COLUMN => DocOp::InsertTableColumn {
+                id: r.uuid()?,
+                index: r.u32()?,
+                cells: r.strings()?,
+            },
+            OP_DELETE_TABLE_COLUMN => DocOp::DeleteTableColumn {
+                id: r.uuid()?,
+                index: r.u32()?,
+            },
+            OP_MERGE_TABLE_CELLS => DocOp::MergeTableCells {
+                id: r.uuid()?,
+                span: r.cell_span()?,
+            },
+            OP_UNMERGE_TABLE_CELL => DocOp::UnmergeTableCell {
+                id: r.uuid()?,
+                row: r.u32()?,
+                col: r.u32()?,
             },
             OP_SET_Z_INDEX => DocOp::SetZIndex {
                 id: r.uuid()?,
@@ -699,6 +1006,33 @@ mod tests {
 
     fn uid(b: u8) -> Uuid {
         Uuid::from_bytes([b; 16])
+    }
+
+    fn shape() -> ShapeObject {
+        ShapeObject {
+            kind: ShapeKind::Process,
+            bounds: ObjectRect {
+                min_x: 10.0,
+                min_y: 20.0,
+                max_x: 110.0,
+                max_y: 80.0,
+            },
+            corner_radius: 8.0,
+            text: "輸入".into(),
+        }
+    }
+
+    fn connection() -> ConnectionObject {
+        ConnectionObject {
+            from: uid(70),
+            to: uid(71),
+            from_anchor: Anchor::Right,
+            to_anchor: Anchor::Left,
+            route: RouteStyle::Orthogonal,
+            start_cap: EndCap::None,
+            end_cap: EndCap::Arrow,
+            label: "是".into(),
+        }
     }
 
     fn all_op_kinds() -> Vec<DocOp> {
@@ -828,6 +1162,50 @@ mod tests {
                 id: uid(61),
                 index: 2,
             },
+            DocOp::AddShapeObject {
+                page: uid(1),
+                id: uid(70),
+                shape: shape(),
+                transform: Affine2::translate(3.0, 4.0),
+            },
+            DocOp::AddConnectionObject {
+                page: uid(1),
+                id: uid(72),
+                connection: connection(),
+                transform: Affine2::IDENTITY,
+            },
+            DocOp::InsertTableRow {
+                id: uid(60),
+                index: 1,
+                cells: vec!["小計".into(), "42".into()],
+            },
+            DocOp::DeleteTableRow {
+                id: uid(60),
+                index: 2,
+            },
+            DocOp::InsertTableColumn {
+                id: uid(60),
+                index: 1,
+                cells: vec!["單價".into(), "99".into()],
+            },
+            DocOp::DeleteTableColumn {
+                id: uid(60),
+                index: 0,
+            },
+            DocOp::MergeTableCells {
+                id: uid(60),
+                span: CellSpan {
+                    row: 0,
+                    col: 0,
+                    row_span: 1,
+                    col_span: 2,
+                },
+            },
+            DocOp::UnmergeTableCell {
+                id: uid(60),
+                row: 0,
+                col: 0,
+            },
         ]
     }
 
@@ -847,8 +1225,8 @@ mod tests {
             .collect();
         assert_eq!(
             tags.len(),
-            21,
-            "21 種操作標籤都要被測到，實得 {}",
+            29,
+            "29 種操作標籤都要被測到，實得 {}",
             tags.len()
         );
     }
@@ -910,6 +1288,8 @@ mod tests {
             ObjectKind::Strokes(vec![]),
             ObjectKind::Block(uid(3)),
             ObjectKind::Group(vec![uid(4)]),
+            ObjectKind::Shape(shape()),
+            ObjectKind::Connection(connection()),
         ] {
             let op = DocOp::AddObject {
                 page: uid(1),

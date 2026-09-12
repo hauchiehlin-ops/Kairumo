@@ -6,7 +6,8 @@
 
 use padnote_core::ffi::PadnoteSession;
 use padnote_core::ffi_shapes::{
-    FfiShapeKind, all_shape_kinds, flowchart_shape_kinds, flowchart_templates, shape_semantic,
+    FfiAnchor, FfiEndCap, FfiRouteStyle, FfiShapeKind, all_shape_kinds, flowchart_shape_kinds,
+    flowchart_templates, shape_semantic,
 };
 use padnote_core::ffi_ui::{FfiLocale, FfiTool, FfiToolbar, supported_locales};
 
@@ -75,6 +76,61 @@ fn z_order_survives_a_reopen() {
 }
 
 #[test]
+fn shapes_and_connections_survive_a_reopen() {
+    // S-52：形狀與連接線必須是文件操作；只有幾何函式會讓重開後消失。
+    let path = tmp("shape-persist");
+    let (page, shape, connection) = {
+        let s =
+            PadnoteSession::create(path.clone(), "測試".into(), 1_757_635_200_000, 0xB2).unwrap();
+        let page = s.first_page_id().unwrap();
+        let a = s
+            .insert_shape(
+                page.clone(),
+                FfiShapeKind::Process,
+                20.0,
+                30.0,
+                140.0,
+                90.0,
+                8.0,
+                "輸入".into(),
+            )
+            .unwrap();
+        let b = s
+            .insert_shape(
+                page.clone(),
+                FfiShapeKind::Decision,
+                220.0,
+                30.0,
+                340.0,
+                90.0,
+                0.0,
+                "確認".into(),
+            )
+            .unwrap();
+        let c = s
+            .insert_connection(
+                page.clone(),
+                a.clone(),
+                b,
+                FfiAnchor::Right,
+                FfiAnchor::Left,
+                FfiRouteStyle::Orthogonal,
+                FfiEndCap::None,
+                FfiEndCap::Arrow,
+                "是".into(),
+            )
+            .unwrap();
+        (page, a, c)
+    };
+
+    let back = PadnoteSession::open_existing(path, 0xB2).unwrap();
+    let order = back.draw_order(page.clone()).unwrap();
+    assert_eq!(order.len(), 3, "兩個形狀加一條連接線都要回來");
+    assert!(order.iter().any(|item| item.object_id == shape));
+    assert_eq!(back.z_index(page, connection).unwrap(), Some(2));
+}
+
+#[test]
 fn tables_round_trip_through_the_ffi() {
     let (s, page) = session("table");
     let id = s
@@ -91,6 +147,47 @@ fn tables_round_trip_through_the_ffi() {
     assert!(
         s.set_table_cell(id, 5, 0, "x".into()).is_err(),
         "越界必須報錯，不能靜默吞掉"
+    );
+}
+
+#[test]
+fn table_structure_ops_round_trip_through_the_ffi() {
+    // S-51：列欄與合併儲存格都要是可重播的文件操作。
+    let path = tmp("table-structure");
+    let table = {
+        let s =
+            PadnoteSession::create(path.clone(), "測試".into(), 1_757_635_200_000, 0xB2).unwrap();
+        let page = s.first_page_id().unwrap();
+        let id = s
+            .insert_table(
+                page,
+                2,
+                2,
+                vec!["項目".into(), "數量".into(), "筆記本".into(), "3".into()],
+                true,
+            )
+            .unwrap();
+
+        s.insert_table_row(id.clone(), 1, vec!["小計".into(), "6".into()])
+            .unwrap();
+        s.insert_table_column(id.clone(), 2, vec!["備註".into(), "急件".into(), "".into()])
+            .unwrap();
+        s.merge_table_cells(id.clone(), 0, 0, 1, 2).unwrap();
+        s.unmerge_table_cell(id.clone(), 0, 0).unwrap();
+        s.delete_table_row(id.clone(), 2).unwrap();
+        s.delete_table_column(id.clone(), 1).unwrap();
+        id
+    };
+
+    let back = PadnoteSession::open_existing(path, 0xB2).unwrap();
+    let md = back.export_markdown().unwrap();
+    assert!(md.contains("項目"));
+    assert!(md.contains("備註"));
+    assert!(md.contains("急件"));
+    assert!(!md.contains("筆記本"), "刪掉的列不應重播回來：{md}");
+    assert!(
+        back.delete_table_column(table, 9).is_err(),
+        "越界刪欄必須回錯"
     );
 }
 

@@ -82,6 +82,7 @@ pub fn to_markdown(
                     cols,
                     cells,
                     header_row,
+                    ..
                 } => {
                     out.push_str(&render_table(*rows, *cols, cells, *header_row));
                 }

@@ -29,6 +29,7 @@ padnote-export = { path = "../padnote-export" }
 padnote-crypto = { path = "../padnote-crypto" }
 padnote-models = { path = "../padnote-models" }
 padnote-pdf = { path = "../padnote-pdf" }
+padnote-pdf-pdfium = { path = "../padnote-pdf-pdfium" }
 padnote-recorder = { path = "../padnote-recorder" }
 padnote-vad-silero = { path = "../padnote-vad-silero" }
 padnote-text = { path = "../padnote-text" }

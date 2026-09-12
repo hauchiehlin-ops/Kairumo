@@ -1237,6 +1237,7 @@ dependencies = [
  "padnote-input",
  "padnote-models",
  "padnote-pdf",
+ "padnote-pdf-pdfium",
  "padnote-punct-ct",
  "padnote-recognize",
  "padnote-recorder",
@@ -1279,8 +1280,12 @@ dependencies = [
 name = "padnote-export"
 version = "0.1.0"
 dependencies = [
+ "miniz_oxide 0.8.9",
  "padnote-doc",
  "padnote-ink",
+ "padnote-pdf",
+ "padnote-storage",
+ "png",
  "serde_json",
 ]
 

@@ -107,6 +107,9 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 + LFR + CMVN + CIF + encoder/decoder。**fp32 輸出與 FunASR 完全吻合** |
 | S-34 | WP5 | `padnote-text` + `core::transcript`：簡繁轉換與完整中文管線。
 **無標點簡體 → 有標點台灣正體**，時間戳全程不變 |
+| S-18 | H1/H2 | `padnote-export`：PDF 匯出（含底紋模板、富文本、表格、圖片、向量筆畫與 `/Ink` 標註）|
+| S-43 | WP7 | `padnote-pdf-pdfium`：以 PDFium 寫入真實標註（`create_annotated_pdf` 實作與回讀驗證）|
+| S-55 | — | 列印流程：`print_data` + Apple (UIPrintInteractionController/NSPrintOperation) 與 Android (PrintManager) 整合 |
 
 ### 待做
 | ID | 工作包 | 內容 | 備註 |
@@ -114,7 +117,6 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | S-13 | WP5 | Opus 編碼整合 | 需 `libopus` 綁定，**無法在此驗證** |
 | S-15 | WP5 | sherpa-onnx / whisper.cpp 實作 `AsrEngine` | 管線編排已就緒，插進去即可 |
 | S-23 | — | 文字 op 寫入 `doc/ops/` 持久化 | CRDT 與編碼已完成，缺落盤 |
-| S-18 | — | PDF 匯出（含標註） | 依賴 PDFium 綁定 |
 | S-19 | WP20 | iCloud `CloudProvider` 實作 | Swift 側；演算法已由 S3 驗證 |
 | S-20 | WP23 | llama.cpp 整合（摘要、待辦抽取） | P2 |
 | S-21 | WP7 | PDFium 綁定（`pdfium-render`）| 介面與快取已完成，**需原生庫，實機驗證見 H6** |
@@ -129,7 +131,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | ~~S-41~~ ✅ | Office / Google 文件的嵌入與編輯（D-10 已拍板為「嵌入＋可編輯」） | 見 ADR-0009。docx/xlsx 可做，pptx 只做預覽 |
 | ~~S-42~~ ✅ | PDF 標註的雙向保真（ADR-0008 第一層的核心） | 10 款競品都讀寫 PDF，這是唯一真正通用的互通途徑 |
 | S-45 | 平台層依 `Decision::retract` 實作筆畫收回 | Swift 範例已示範（`apple/Examples/InkInputUsage.swift`），**不處理的話掌拒只擋得住一半** |
-| S-43 | 把標註寫進真實 PDF（PDFium 的 annotation API） | 模型與座標轉換已完成且有測試；**寫入需 libpdfium 執行期庫**（H8） |
+| ~~S-43~~ ✅ | 把標註寫進真實 PDF（PDFium 的 annotation API） | `create_annotated_pdf` 實作完成，經測試驗證 |
 | S-44 | 用其他 App 驗證標註互通 | 匯出的 PDF 要在 Goodnotes/Notability/PDF Expert 開得起來並可繼續標註 |
 | S-35 | **Windows 低延遲墨跡** | Compose MP Desktop 走 Skia/JVM，**做不到 9ms**。需原生 Windows Ink / DirectComposition |
 | ~~S-36~~ ✅ | **掌拒與輸入分流** | 🔴 完全未設計。**手寫 App 的生死線**：手掌靠螢幕會畫出大片塗鴉 |
@@ -147,10 +149,11 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | ~~S-48~~ ✅ | 表格作為畫布物件（需求 2：嵌入試算表圖形） | xlsx 現在展開成 `BlockKind::Table`，逐格可編輯 |
 | ~~S-49~~ ✅ | 工具列模組化與自訂顯示（需求 4） | 18 個工具 / 5 組；設定可序列化、可還原 |
 | ~~S-50~~ ✅ | 六國語系（需求 5） | 型別強制完整性：少一個語言就編不過 |
-| S-51 | 表格的插入／刪除列欄與合併儲存格 | 目前只能建立固定尺寸的表格並改格內文字 |
-| S-52 | 形狀與連接線落盤為 `DocOp` | 幾何與範本已可用，但插入的流程圖尚未進 oplog，重開會消失 |
-| S-53 | 平台層的工具列 UI 與語言切換畫面 | Rust 端已全部開好 FFI；Swift/Kotlin 端未實作 |
+| ~~S-51~~ ✅ | 表格的插入／刪除列欄與合併儲存格 | `DocOp` 已覆蓋列欄插刪、合併與取消合併，FFI 可呼叫 |
+| ~~S-52~~ ✅ | 形狀與連接線落盤為 `DocOp` | 新增 `AddShapeObject` / `AddConnectionObject`，重開可還原 |
+| ~~S-53~~ ✅ | 平台層的工具列 UI 與語言切換畫面 | Apple SwiftUI 範例已接 `FfiToolbar` / `supported_locales` |
 | S-54 | 其餘 UI 字串的在地化 | 目前 44 個鍵涵蓋工具列與常用動作，錯誤訊息與設定頁尚未納入 |
+| ~~S-55~~ ✅ | 列印流程 | 核心 `print_data` 產出列印 PDF，已串接 Apple 與 Android 系統列印面板 |
 
 ## ⚪ 待決策（需要人拍板）
 

@@ -14,8 +14,12 @@
 //! 否則會卡住墨跡執行緒（違反 J1 的延遲預算）。
 
 use crate::app::{AppError, NotebookSession, RecordingState};
+use crate::ffi_shapes::{FfiAnchor, FfiEndCap, FfiRouteStyle, FfiShapeKind};
 use crate::setup::{Capability, Feature, SetupCenter, Status};
-use padnote_doc::{Affine2, NotebookTime, PageTemplate, TextStyle, TranscriptWord, Uuid};
+use padnote_doc::{
+    Affine2, Anchor, ConnectionObject, EndCap, NotebookTime, ObjectRect, PageTemplate, RouteStyle,
+    ShapeKind, ShapeObject, TextStyle, TranscriptWord, Uuid,
+};
 use padnote_ink::{InkPoint, Stroke, Tool};
 use std::sync::Mutex;
 
@@ -535,6 +539,70 @@ impl PadnoteSession {
         Ok(self.lock().create_stroke_object(page, strokes)?.to_string())
     }
 
+    /// 插入一個原生形狀物件（S-52）。幾何外框以頁面座標表示。
+    pub fn insert_shape(
+        &self,
+        page_id: String,
+        kind: FfiShapeKind,
+        min_x: f32,
+        min_y: f32,
+        max_x: f32,
+        max_y: f32,
+        corner_radius: f32,
+        text: String,
+    ) -> Result<String, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self
+            .lock()
+            .insert_shape(
+                page,
+                ShapeObject {
+                    kind: to_doc_shape_kind(kind),
+                    bounds: ObjectRect {
+                        min_x,
+                        min_y,
+                        max_x,
+                        max_y,
+                    },
+                    corner_radius,
+                    text,
+                },
+            )?
+            .to_string())
+    }
+
+    /// 插入依附於兩個物件的連接線（S-52）。
+    pub fn insert_connection(
+        &self,
+        page_id: String,
+        from_object_id: String,
+        to_object_id: String,
+        from_anchor: FfiAnchor,
+        to_anchor: FfiAnchor,
+        route: FfiRouteStyle,
+        start_cap: FfiEndCap,
+        end_cap: FfiEndCap,
+        label: String,
+    ) -> Result<String, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self
+            .lock()
+            .insert_connection(
+                page,
+                ConnectionObject {
+                    from: parse_uuid(&from_object_id)?,
+                    to: parse_uuid(&to_object_id)?,
+                    from_anchor: to_doc_anchor(from_anchor),
+                    to_anchor: to_doc_anchor(to_anchor),
+                    route: to_doc_route_style(route),
+                    start_cap: to_doc_end_cap(start_cap),
+                    end_cap: to_doc_end_cap(end_cap),
+                    label,
+                },
+            )?
+            .to_string())
+    }
+
     pub fn group_objects(
         &self,
         page_id: String,
@@ -669,6 +737,59 @@ impl PadnoteSession {
         Ok(())
     }
 
+    pub fn insert_table_row(
+        &self,
+        block_id: String,
+        index: u32,
+        cells: Vec<String>,
+    ) -> Result<(), FfiError> {
+        self.lock()
+            .insert_table_row(parse_uuid(&block_id)?, index, cells)?;
+        Ok(())
+    }
+
+    pub fn delete_table_row(&self, block_id: String, index: u32) -> Result<(), FfiError> {
+        self.lock()
+            .delete_table_row(parse_uuid(&block_id)?, index)?;
+        Ok(())
+    }
+
+    pub fn insert_table_column(
+        &self,
+        block_id: String,
+        index: u32,
+        cells: Vec<String>,
+    ) -> Result<(), FfiError> {
+        self.lock()
+            .insert_table_column(parse_uuid(&block_id)?, index, cells)?;
+        Ok(())
+    }
+
+    pub fn delete_table_column(&self, block_id: String, index: u32) -> Result<(), FfiError> {
+        self.lock()
+            .delete_table_column(parse_uuid(&block_id)?, index)?;
+        Ok(())
+    }
+
+    pub fn merge_table_cells(
+        &self,
+        block_id: String,
+        row: u32,
+        col: u32,
+        row_span: u32,
+        col_span: u32,
+    ) -> Result<(), FfiError> {
+        self.lock()
+            .merge_table_cells(parse_uuid(&block_id)?, row, col, row_span, col_span)?;
+        Ok(())
+    }
+
+    pub fn unmerge_table_cell(&self, block_id: String, row: u32, col: u32) -> Result<(), FfiError> {
+        self.lock()
+            .unmerge_table_cell(parse_uuid(&block_id)?, row, col)?;
+        Ok(())
+    }
+
     /// 物件在頁面上的累積變換，回傳 `[a, b, c, d, tx, ty]`。
     pub fn object_transform(
         &self,
@@ -719,6 +840,34 @@ impl PadnoteSession {
 
     pub fn export_markdown(&self) -> Result<String, FfiError> {
         Ok(self.lock().export_markdown()?)
+    }
+
+    /// 匯出整份筆記本為 PDF 位元組流（工作項 S-18 / S-43）。
+    pub fn export_pdf(&self) -> Result<Vec<u8>, FfiError> {
+        Ok(self
+            .lock()
+            .export_pdf(&padnote_export::PdfExportOptions::default())?)
+    }
+
+    /// 匯出指定頁面為單頁 PDF 位元組流。
+    pub fn export_page_pdf(&self, page_id: String) -> Result<Vec<u8>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self.lock().export_page_pdf(page)?)
+    }
+
+    /// 匯出指定頁面為高解析度 PNG 圖片位元組流。`scale` 為縮放倍率（如 2.0 代表 @2x Retina）。
+    pub fn export_page_png(&self, page_id: String, scale: f32) -> Result<Vec<u8>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self.lock().export_page_png(page, scale)?)
+    }
+
+    /// 產出列印專用資料（工作項 S-55）。`page_id` 為 `None` 時列印整份筆記本。
+    pub fn print_data(&self, page_id: Option<String>) -> Result<Vec<u8>, FfiError> {
+        let page = match page_id {
+            Some(s) if !s.trim().is_empty() => Some(parse_uuid(&s)?),
+            _ => None,
+        };
+        Ok(self.lock().print_data(page)?)
     }
 
     // ---- 引擎與權限中心（功能 I1）----
@@ -820,6 +969,58 @@ fn to_rgba(v: &[u8]) -> [u8; 4] {
         4 => [v[0], v[1], v[2], v[3]],
         3 => [v[0], v[1], v[2], 255],
         _ => [0, 0, 0, 255],
+    }
+}
+
+fn to_doc_shape_kind(k: FfiShapeKind) -> ShapeKind {
+    match k {
+        FfiShapeKind::Rectangle => ShapeKind::Rectangle,
+        FfiShapeKind::RoundedRectangle => ShapeKind::RoundedRectangle,
+        FfiShapeKind::Ellipse => ShapeKind::Ellipse,
+        FfiShapeKind::Triangle => ShapeKind::Triangle,
+        FfiShapeKind::Diamond => ShapeKind::Diamond,
+        FfiShapeKind::Pentagon => ShapeKind::Pentagon,
+        FfiShapeKind::Hexagon => ShapeKind::Hexagon,
+        FfiShapeKind::Star => ShapeKind::Star,
+        FfiShapeKind::Process => ShapeKind::Process,
+        FfiShapeKind::Decision => ShapeKind::Decision,
+        FfiShapeKind::Terminator => ShapeKind::Terminator,
+        FfiShapeKind::Data => ShapeKind::Data,
+        FfiShapeKind::Document => ShapeKind::Document,
+        FfiShapeKind::Database => ShapeKind::Database,
+        FfiShapeKind::Preparation => ShapeKind::Preparation,
+        FfiShapeKind::ManualInput => ShapeKind::ManualInput,
+        FfiShapeKind::Connector => ShapeKind::Connector,
+        FfiShapeKind::Line => ShapeKind::Line,
+        FfiShapeKind::Arrow => ShapeKind::Arrow,
+        FfiShapeKind::DoubleArrow => ShapeKind::DoubleArrow,
+    }
+}
+
+fn to_doc_anchor(a: FfiAnchor) -> Anchor {
+    match a {
+        FfiAnchor::Top => Anchor::Top,
+        FfiAnchor::Right => Anchor::Right,
+        FfiAnchor::Bottom => Anchor::Bottom,
+        FfiAnchor::Left => Anchor::Left,
+        FfiAnchor::Center => Anchor::Center,
+    }
+}
+
+fn to_doc_route_style(r: FfiRouteStyle) -> RouteStyle {
+    match r {
+        FfiRouteStyle::Straight => RouteStyle::Straight,
+        FfiRouteStyle::Orthogonal => RouteStyle::Orthogonal,
+    }
+}
+
+fn to_doc_end_cap(c: FfiEndCap) -> EndCap {
+    match c {
+        FfiEndCap::None => EndCap::None,
+        FfiEndCap::Arrow => EndCap::Arrow,
+        FfiEndCap::HollowArrow => EndCap::HollowArrow,
+        FfiEndCap::Circle => EndCap::Circle,
+        FfiEndCap::Diamond => EndCap::Diamond,
     }
 }
 
@@ -1082,7 +1283,7 @@ mod tests {
         s.add_text(page.clone(), "重點".into(), BlockStyle::Heading2)
             .unwrap();
         s.add_stroke(
-            page,
+            page.clone(),
             ToolKind::FountainPen,
             vec![0, 0, 0, 255],
             2.0,
@@ -1093,6 +1294,25 @@ mod tests {
         let md = s.export_markdown().unwrap();
         assert!(md.contains("## 重點"));
         assert!(md.contains("手寫內容"));
+
+        // PDF 匯出
+        let pdf = s.export_pdf().unwrap();
+        assert!(pdf.starts_with(b"%PDF-1.7"));
+        assert!(pdf.ends_with(b"%%EOF\n"));
+
+        // 單頁 PDF 匯出
+        let page_pdf = s.export_page_pdf(page.clone()).unwrap();
+        assert!(page_pdf.starts_with(b"%PDF-1.7"));
+
+        // 單頁 PNG 匯出
+        let png = s.export_page_png(page.clone(), 2.0).unwrap();
+        assert_eq!(&png[0..8], &[137, 80, 78, 71, 13, 10, 26, 10]);
+
+        // 列印資料取得
+        let print_all = s.print_data(None).unwrap();
+        assert!(print_all.starts_with(b"%PDF-1.7"));
+        let print_page = s.print_data(Some(page)).unwrap();
+        assert!(print_page.starts_with(b"%PDF-1.7"));
     }
 
     #[test]

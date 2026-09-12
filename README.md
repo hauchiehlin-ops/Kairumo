@@ -1,8 +1,13 @@
-# Padnote
+# Kairumo
 
 手寫、打字、錄音轉文字 —— 在同一份文件、同一條時間軸上。
 
 **免費 · 無帳號 · 無伺服器 · 資料在你自己的硬碟上。**
+
+> 產品名稱：**Kairumo**。技術套件與開放格式暫保留 `padnote-*` / `.padnote`
+> 命名，避免破壞既有 crate、文件格式與工具鏈相容性。
+
+![Kairumo app icon](assets/brand/kairumo-icon-v1.png)
 
 ---
 
@@ -47,7 +52,7 @@ cargo deny check
 ## 格式開放承諾
 
 `.padnote` 的完整規格公開於 [`docs/format-spec.md`](docs/format-spec.md)。
-任何人都能自行解析筆畫、文字與轉錄內容，不需要 Padnote 程式。
+任何人都能自行解析筆畫、文字與轉錄內容，不需要 Kairumo 程式。
 這是技術契約，破壞相容性需經 ADR。
 
 ## 授權

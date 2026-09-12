@@ -12,8 +12,13 @@ pub mod timeline;
 pub mod transform;
 pub mod uuid;
 
-pub use document::{Block, BlockKind, LayoutMode, Notebook, Page, PageTemplate, TextStyle};
-pub use object::{ObjectError, ObjectKind, ObjectNode, ObjectTree};
+pub use document::{
+    Block, BlockKind, CellSpan, LayoutMode, Notebook, Page, PageTemplate, TextStyle,
+};
+pub use object::{
+    Anchor, ConnectionObject, EndCap, ObjectError, ObjectKind, ObjectNode, ObjectRect, ObjectTree,
+    RouteStyle, ShapeKind, ShapeObject,
+};
 pub use ops::DocOp;
 pub use text::{OpId, TextCrdt, TextEditor, TextOp};
 pub use timeline::{AudioSession, NotebookTime, Timeline, TranscriptWord};

@@ -5,8 +5,9 @@
 //! 這種最糟的失敗模式（Notability 的教訓）。
 
 use padnote_doc::{
-    Affine2, AudioSession, Block, BlockKind, DocOp, Notebook, NotebookTime, ObjectNode, ObjectTree,
-    Page, PageTemplate, TextCrdt, TextEditor, TextStyle, Timeline, TranscriptWord, Uuid,
+    Affine2, AudioSession, Block, BlockKind, CellSpan, ConnectionObject, DocOp, Notebook,
+    NotebookTime, ObjectNode, ObjectTree, Page, PageTemplate, ShapeObject, TextCrdt, TextEditor,
+    TextStyle, Timeline, TranscriptWord, Uuid,
 };
 use padnote_export::{MarkdownOptions, to_markdown};
 use padnote_ink::{InkRecord, Stroke, materialize};
@@ -26,6 +27,7 @@ pub enum AppError {
     PageNotFound(Uuid),
     BlockNotFound(Uuid),
     Recorder(RecorderError),
+    Export(padnote_export::ExportError),
 }
 
 impl fmt::Display for AppError {
@@ -37,11 +39,18 @@ impl fmt::Display for AppError {
             Self::PageNotFound(id) => write!(f, "找不到頁面：{id}"),
             Self::BlockNotFound(id) => write!(f, "找不到區塊：{id}"),
             Self::Recorder(e) => write!(f, "{e}"),
+            Self::Export(e) => write!(f, "{e}"),
         }
     }
 }
 
 impl std::error::Error for AppError {}
+
+impl From<padnote_export::ExportError> for AppError {
+    fn from(e: padnote_export::ExportError) -> Self {
+        Self::Export(e)
+    }
+}
 
 impl From<RecorderError> for AppError {
     fn from(e: RecorderError) -> Self {
@@ -292,6 +301,7 @@ impl NotebookSession {
                             cols: *cols,
                             cells,
                             header_row: *header_row,
+                            merged_cells: Vec::new(),
                         },
                         position: None,
                         created_at: *created_at,
@@ -313,6 +323,24 @@ impl NotebookSession {
                     let joined = cells.join(" ");
                     self.reindex_block(page, *id, &joined, Source::Text);
                 }
+            }
+            DocOp::InsertTableRow { id, index, cells } => {
+                self.apply_table_row_insert(*id, *index, cells.clone());
+            }
+            DocOp::DeleteTableRow { id, index } => {
+                self.apply_table_row_delete(*id, *index);
+            }
+            DocOp::InsertTableColumn { id, index, cells } => {
+                self.apply_table_column_insert(*id, *index, cells.clone());
+            }
+            DocOp::DeleteTableColumn { id, index } => {
+                self.apply_table_column_delete(*id, *index);
+            }
+            DocOp::MergeTableCells { id, span } => {
+                self.apply_table_merge(*id, span.clone());
+            }
+            DocOp::UnmergeTableCell { id, row, col } => {
+                self.apply_table_unmerge(*id, *row, *col);
             }
             DocOp::AddEmbeddedBlock {
                 page,
@@ -400,6 +428,32 @@ impl NotebookSession {
                 tree.insert(ObjectNode {
                     id: *id,
                     kind: kind.clone(),
+                    transform: *transform,
+                });
+            }
+            DocOp::AddShapeObject {
+                page,
+                id,
+                shape,
+                transform,
+            } => {
+                let tree = self.objects.entry(*page).or_default();
+                tree.insert(ObjectNode {
+                    id: *id,
+                    kind: padnote_doc::ObjectKind::Shape(shape.clone()),
+                    transform: *transform,
+                });
+            }
+            DocOp::AddConnectionObject {
+                page,
+                id,
+                connection,
+                transform,
+            } => {
+                let tree = self.objects.entry(*page).or_default();
+                tree.insert(ObjectNode {
+                    id: *id,
+                    kind: padnote_doc::ObjectKind::Connection(connection.clone()),
                     transform: *transform,
                 });
             }
@@ -495,6 +549,180 @@ impl NotebookSession {
         } else {
             self.index.insert(doc, source, text);
         }
+    }
+
+    fn with_table_mut<R>(
+        &mut self,
+        id: Uuid,
+        f: impl FnOnce(&mut u32, &mut u32, &mut Vec<String>, &mut Vec<CellSpan>) -> R,
+    ) -> Option<(Uuid, R)> {
+        let page = self.page_of_block(id)?;
+        let block = self.notebook.page_mut(page)?.block_mut(id)?;
+        let BlockKind::Table {
+            rows,
+            cols,
+            cells,
+            merged_cells,
+            ..
+        } = &mut block.kind
+        else {
+            return None;
+        };
+        let out = f(rows, cols, cells, merged_cells);
+        Some((page, out))
+    }
+
+    fn reindex_table(&mut self, page: Uuid, id: Uuid) {
+        let Some(text) = self
+            .notebook
+            .page(page)
+            .and_then(|p| p.blocks().iter().find(|b| b.id == id))
+            .and_then(Block::table_text)
+        else {
+            return;
+        };
+        self.reindex_block(page, id, &text, Source::Text);
+    }
+
+    fn apply_table_row_insert(&mut self, id: Uuid, index: u32, mut incoming: Vec<String>) {
+        if let Some((page, ())) = self.with_table_mut(id, |rows, cols, cells, spans| {
+            let cols_usize = *cols as usize;
+            let at = index.min(*rows);
+            incoming.resize(cols_usize, String::new());
+            incoming.truncate(cols_usize);
+            cells.splice(
+                (at as usize * cols_usize)..(at as usize * cols_usize),
+                incoming,
+            );
+            *rows += 1;
+            for span in spans {
+                if span.row >= at {
+                    span.row += 1;
+                } else if at < span.row.saturating_add(span.row_span) {
+                    span.row_span += 1;
+                }
+            }
+        }) {
+            self.reindex_table(page, id);
+        }
+    }
+
+    fn apply_table_row_delete(&mut self, id: Uuid, index: u32) {
+        if let Some((page, ())) = self.with_table_mut(id, |rows, cols, cells, spans| {
+            if index >= *rows {
+                return;
+            }
+            let cols_usize = *cols as usize;
+            let start = index as usize * cols_usize;
+            cells.drain(start..start + cols_usize);
+            *rows -= 1;
+            spans.retain_mut(|span| {
+                if span.row > index {
+                    span.row -= 1;
+                    true
+                } else if index < span.row.saturating_add(span.row_span) {
+                    if span.row_span > 1 {
+                        span.row_span -= 1;
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    true
+                }
+            });
+        }) {
+            self.reindex_table(page, id);
+        }
+    }
+
+    fn apply_table_column_insert(&mut self, id: Uuid, index: u32, mut incoming: Vec<String>) {
+        if let Some((page, ())) = self.with_table_mut(id, |rows, cols, cells, spans| {
+            let at = index.min(*cols);
+            incoming.resize(*rows as usize, String::new());
+            incoming.truncate(*rows as usize);
+            let old_cols = *cols as usize;
+            let new_cols = old_cols + 1;
+            let mut next = Vec::with_capacity((*rows as usize) * new_cols);
+            for r in 0..*rows as usize {
+                let row_start = r * old_cols;
+                next.extend_from_slice(&cells[row_start..row_start + at as usize]);
+                next.push(incoming[r].clone());
+                next.extend_from_slice(&cells[row_start + at as usize..row_start + old_cols]);
+            }
+            *cells = next;
+            *cols += 1;
+            for span in spans {
+                if span.col >= at {
+                    span.col += 1;
+                } else if at < span.col.saturating_add(span.col_span) {
+                    span.col_span += 1;
+                }
+            }
+        }) {
+            self.reindex_table(page, id);
+        }
+    }
+
+    fn apply_table_column_delete(&mut self, id: Uuid, index: u32) {
+        if let Some((page, ())) = self.with_table_mut(id, |rows, cols, cells, spans| {
+            if index >= *cols {
+                return;
+            }
+            let old_cols = *cols as usize;
+            let mut next = Vec::with_capacity((*rows as usize) * old_cols.saturating_sub(1));
+            for r in 0..*rows as usize {
+                let row_start = r * old_cols;
+                for c in 0..old_cols {
+                    if c as u32 != index {
+                        next.push(cells[row_start + c].clone());
+                    }
+                }
+            }
+            *cells = next;
+            *cols -= 1;
+            spans.retain_mut(|span| {
+                if span.col > index {
+                    span.col -= 1;
+                    true
+                } else if index < span.col.saturating_add(span.col_span) {
+                    if span.col_span > 1 {
+                        span.col_span -= 1;
+                        true
+                    } else {
+                        false
+                    }
+                } else {
+                    true
+                }
+            });
+        }) {
+            self.reindex_table(page, id);
+        }
+    }
+
+    fn apply_table_merge(&mut self, id: Uuid, span: CellSpan) {
+        let _ = self.with_table_mut(id, |rows, cols, _, spans| {
+            if span.row >= *rows
+                || span.col >= *cols
+                || span.row_span == 0
+                || span.col_span == 0
+                || span.row.saturating_add(span.row_span) > *rows
+                || span.col.saturating_add(span.col_span) > *cols
+            {
+                return;
+            }
+            spans.retain(|s| !(s.row == span.row && s.col == span.col));
+            if span.row_span > 1 || span.col_span > 1 {
+                spans.push(span);
+            }
+        });
+    }
+
+    fn apply_table_unmerge(&mut self, id: Uuid, row: u32, col: u32) {
+        let _ = self.with_table_mut(id, |_, _, _, spans| {
+            spans.retain(|s| !(s.row == row && s.col == col));
+        });
     }
 
     fn close_session(&mut self, session: Uuid, at: NotebookTime) {
@@ -860,6 +1088,10 @@ impl NotebookSession {
         self.objects.get(&page)
     }
 
+    pub fn object(&self, page: Uuid, id: Uuid) -> Option<&ObjectNode> {
+        self.objects.get(&page)?.get(id)
+    }
+
     /// 把筆畫收成一個物件，讓它能被群組與變換。
     pub fn create_stroke_object(
         &mut self,
@@ -874,6 +1106,46 @@ impl NotebookSession {
             page,
             id,
             kind: padnote_doc::ObjectKind::Strokes(strokes),
+            transform: Affine2::IDENTITY,
+        }])?;
+        Ok(id)
+    }
+
+    pub fn insert_shape(&mut self, page: Uuid, shape: ShapeObject) -> Result<Uuid, AppError> {
+        if self.notebook.page(page).is_none() {
+            return Err(AppError::PageNotFound(page));
+        }
+        let id = Uuid::now_v7();
+        self.record(vec![DocOp::AddShapeObject {
+            page,
+            id,
+            shape,
+            transform: Affine2::IDENTITY,
+        }])?;
+        Ok(id)
+    }
+
+    pub fn insert_connection(
+        &mut self,
+        page: Uuid,
+        connection: ConnectionObject,
+    ) -> Result<Uuid, AppError> {
+        if self.notebook.page(page).is_none() {
+            return Err(AppError::PageNotFound(page));
+        }
+        let has_endpoint = |id| {
+            self.objects
+                .get(&page)
+                .is_some_and(|tree| tree.get(id).is_some())
+        };
+        if !has_endpoint(connection.from) || !has_endpoint(connection.to) {
+            return Err(AppError::BlockNotFound(connection.from));
+        }
+        let id = Uuid::now_v7();
+        self.record(vec![DocOp::AddConnectionObject {
+            page,
+            id,
+            connection,
             transform: Affine2::IDENTITY,
         }])?;
         Ok(id)
@@ -1225,6 +1497,105 @@ impl NotebookSession {
         }])
     }
 
+    pub fn insert_table_row(
+        &mut self,
+        block: Uuid,
+        index: u32,
+        cells: Vec<String>,
+    ) -> Result<(), AppError> {
+        let (rows, _) = self.table_dims(block)?;
+        if index > rows {
+            return Err(AppError::BlockNotFound(block));
+        }
+        self.record(vec![DocOp::InsertTableRow {
+            id: block,
+            index,
+            cells,
+        }])
+    }
+
+    pub fn delete_table_row(&mut self, block: Uuid, index: u32) -> Result<(), AppError> {
+        let (rows, _) = self.table_dims(block)?;
+        if index >= rows {
+            return Err(AppError::BlockNotFound(block));
+        }
+        self.record(vec![DocOp::DeleteTableRow { id: block, index }])
+    }
+
+    pub fn insert_table_column(
+        &mut self,
+        block: Uuid,
+        index: u32,
+        cells: Vec<String>,
+    ) -> Result<(), AppError> {
+        let (_, cols) = self.table_dims(block)?;
+        if index > cols {
+            return Err(AppError::BlockNotFound(block));
+        }
+        self.record(vec![DocOp::InsertTableColumn {
+            id: block,
+            index,
+            cells,
+        }])
+    }
+
+    pub fn delete_table_column(&mut self, block: Uuid, index: u32) -> Result<(), AppError> {
+        let (_, cols) = self.table_dims(block)?;
+        if index >= cols {
+            return Err(AppError::BlockNotFound(block));
+        }
+        self.record(vec![DocOp::DeleteTableColumn { id: block, index }])
+    }
+
+    pub fn merge_table_cells(
+        &mut self,
+        block: Uuid,
+        row: u32,
+        col: u32,
+        row_span: u32,
+        col_span: u32,
+    ) -> Result<(), AppError> {
+        let (rows, cols) = self.table_dims(block)?;
+        if row >= rows
+            || col >= cols
+            || row_span == 0
+            || col_span == 0
+            || row.saturating_add(row_span) > rows
+            || col.saturating_add(col_span) > cols
+        {
+            return Err(AppError::BlockNotFound(block));
+        }
+        self.record(vec![DocOp::MergeTableCells {
+            id: block,
+            span: CellSpan {
+                row,
+                col,
+                row_span,
+                col_span,
+            },
+        }])
+    }
+
+    pub fn unmerge_table_cell(&mut self, block: Uuid, row: u32, col: u32) -> Result<(), AppError> {
+        self.table_dims(block)?;
+        self.record(vec![DocOp::UnmergeTableCell {
+            id: block,
+            row,
+            col,
+        }])
+    }
+
+    fn table_dims(&self, block: Uuid) -> Result<(u32, u32), AppError> {
+        self.page_of_block(block)
+            .and_then(|p| self.notebook.page(p))
+            .and_then(|p| p.blocks().iter().find(|b| b.id == block))
+            .and_then(|b| match b.kind {
+                BlockKind::Table { rows, cols, .. } => Some((rows, cols)),
+                _ => None,
+            })
+            .ok_or(AppError::BlockNotFound(block))
+    }
+
     fn append_imported_blocks(
         &mut self,
         page: Uuid,
@@ -1262,6 +1633,93 @@ impl NotebookSession {
             &ink_pages,
             &MarkdownOptions::default(),
         ))
+    }
+
+    /// 匯出整份筆記本為 PDF 位元組流（工作項 S-18 / S-43）。
+    pub fn export_pdf(&self, options: &padnote_export::PdfExportOptions) -> Result<Vec<u8>, AppError> {
+        let mut strokes_map = std::collections::HashMap::new();
+        for page in self.notebook.pages() {
+            if let Ok(strokes) = self.visible_strokes(page.id) {
+                strokes_map.insert(page.id, strokes);
+            }
+        }
+        let blobs = self.package.blobs();
+        Ok(padnote_export::to_pdf(
+            &self.notebook,
+            &strokes_map,
+            Some(&blobs),
+            options,
+        )?)
+    }
+
+    /// 匯出指定頁面為單頁 PDF 位元組流。
+    pub fn export_page_pdf(&self, page_id: Uuid) -> Result<Vec<u8>, AppError> {
+        let strokes = self.visible_strokes(page_id)?;
+        let blobs = self.package.blobs();
+        Ok(padnote_export::page_to_pdf(
+            &self.notebook,
+            page_id,
+            &strokes,
+            Some(&blobs),
+            &padnote_export::PdfExportOptions::default(),
+        )?)
+    }
+
+    /// 匯出指定頁面為高解析度 PNG 圖片位元組流（支援 PDFium 向量排版雙軌渲染與自動回退）。
+    pub fn export_page_png(&self, page_id: Uuid, scale: f32) -> Result<Vec<u8>, AppError> {
+        let page = self
+            .notebook
+            .page(page_id)
+            .ok_or(AppError::PageNotFound(page_id))?;
+        let strokes = self.visible_strokes(page_id)?;
+        let blobs = self.package.blobs();
+
+        // 第一軌：嘗試使用 PDFium 渲染全頁向量（包含文字排版、表格、圖片與向量筆畫抗鋸齒）
+        let pdf_opt = padnote_export::PdfExportOptions {
+            include_background_template: true,
+            include_annotations: false,
+            page_range: None,
+            compress_streams: false,
+        };
+        if let Ok(pdf_bytes) = padnote_export::page_to_pdf(
+            &self.notebook,
+            page_id,
+            &strokes,
+            Some(&blobs),
+            &pdf_opt,
+        ) {
+            use padnote_pdf::PdfDocument;
+            if let Ok(doc) = padnote_pdf_pdfium::PdfiumDocument::from_bytes(pdf_bytes, None) {
+                if let Ok(rgba) = doc.render(0, scale) {
+                    let (orig_w, orig_h) = page.size;
+                    let target_w = ((orig_w * scale).round() as u32).max(1);
+                    let target_h = ((orig_h * scale).round() as u32).max(1);
+                    if let Ok(png_bytes) = padnote_export::encode_png(&rgba, target_w, target_h) {
+                        return Ok(png_bytes);
+                    }
+                }
+            }
+        }
+
+        // 第二軌：純 Rust 幾何抗鋸齒光柵化引擎（零外部相依 fallback）
+        let opt = padnote_export::ImageExportOptions {
+            scale,
+            include_background: true,
+        };
+        Ok(padnote_export::to_png(
+            page,
+            &strokes,
+            Some(&blobs),
+            &opt,
+        )?)
+    }
+
+    /// 產出列印專用資料（工作項 S-55）。`page_id` 為 `None` 時列印整份筆記本。
+    pub fn print_data(&self, page_id: Option<Uuid>) -> Result<Vec<u8>, AppError> {
+        match page_id {
+            Some(pid) => self.export_page_pdf(pid),
+            None => self.export_pdf(&padnote_export::PdfExportOptions::default()),
+        }
     }
 }
 
