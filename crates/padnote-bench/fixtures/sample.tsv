@@ -1,0 +1,6 @@
+# 範例測試集 —— 用於驗證評分工具本身，非真實 ASR 輸出。
+# 真實測試集請依 README.md 錄製後放在同目錄。
+quiet	sample-q1	線性代數的特徵值與特徵向量	線性代數的特徵值與特徵向量
+quiet	sample-q2	下週三下午三點在研討室開會	下週三下午三點在研討室開會
+noisy	sample-n1	這個專案的期限是十二月底	這個專案的其限是十二月底
+codeswitch	sample-c1	我們用 Rust 寫核心邏輯	我們用 Rust 寫核心邏輯

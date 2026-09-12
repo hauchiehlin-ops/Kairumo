@@ -34,6 +34,24 @@ M0 技術驗證 ──▶ M1 可用核心 ──▶ M2 公開 Beta ──▶ M3 
 | S3 | **無伺服器同步** | Rust oplog + Automerge/Yrs，3 台裝置經 iCloud Drive 與本機資料夾互寫 | 2 | 500 次隨機併發編輯後 **三台狀態完全一致、0 個 conflicted copy、0 資料遺失** |
 | S4 | 授權與選型稽核 | `cargo deny` 設定；逐一確認 PDFium/sherpa 模型/diarization 權重授權 → `MODELS.md` | 1 | 清單完成，無 AGPL 依賴 |
 
+### M0 目前進度（2026-09-12）
+
+| Spike | 狀態 | 結果 |
+|---|---|---|
+| **S1 墨跡延遲** | 🟡 **待實機量測** | Swift 實作完成並通過 iOS SDK 語法檢查（`apple/InkSpike/`）。量測協定見 `apple/README.md`。**需要實體 iPad + 240fps 攝影機**，模擬器數字無意義 |
+| **S2 中文 ASR** | 🟡 **待錄製測試集** | CER 評測工具完成（`cargo run -p padnote-bench --bin asr-score`），分場景門檻已設定。**需要 ≥3 小時真實台灣場景音檔** |
+| **S3 無伺服器同步** | ✅ **Go** | 三裝置 500 次隨機併發編輯：306 新增 / 92 刪除 / 214 可見、39 個 oplog 檔、**conflicted copy 0 個、三台狀態完全一致、零資料遺失**。含「Remove 先於 Add 抵達」與「離線裝置追平」迴歸測試 |
+| **S4 授權稽核** | ✅ **完成** | `deny.toml` 白名單制並封鎖 MuPDF (AGPL)；`models/MODELS.md` 建立，6 項模型權重授權標記待確認 |
+
+**已完成的工程地基**
+- `docs/format-spec.md` v0.1 —— `.padnote` 公開格式定稿（統一時間軸、筆畫二進位、oplog 命名、同步收斂保證）
+- Rust workspace 11 crates，**55 個測試通過、clippy 零警告**
+- CI：三平台 fmt/clippy/test + cargo-deny + 格式相容性測試
+- ADR 0001–0003
+
+> ⚠️ **S1 與 S2 卡在硬體與資料，不是程式。** 這兩項是 M0 Go/No-Go 的其餘部分，
+> 必須在進入 M1 前完成 —— 尤其 S1，它決定「自建墨跡引擎」的跨平台方案是否成立。
+
 **M0 產出**
 - `docs/format-spec.md` v0.1（**統一時間軸與 `.padnote` 格式定稿**）
 - `docs/MODELS.md`（模型來源＋授權＋SHA-256）
