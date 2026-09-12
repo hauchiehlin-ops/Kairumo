@@ -38,4 +38,5 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。"
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         SWIFT_VERSION: "5.0"

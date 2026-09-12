@@ -124,6 +124,7 @@ xcodebuild archive \
     CURRENT_PROJECT_VERSION="1" \
     INFOPLIST_KEY_CFBundleShortVersionString="${APP_VER}" \
     INFOPLIST_KEY_CFBundleVersion="1" \
+    INFOPLIST_KEY_ITSAppUsesNonExemptEncryption="NO" \
     -quiet
 
 # 5. 導出 IPA
