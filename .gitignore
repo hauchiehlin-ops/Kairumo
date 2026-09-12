@@ -1,0 +1,16 @@
+/target
+**/*.rs.bk
+.DS_Store
+
+# 模型權重按需下載，永不入版控（D4）
+/models/*.onnx
+/models/*.bin
+/models/*.gguf
+
+# ASR 測試集音檔（體積大，另行管理）
+/crates/padnote-bench/fixtures/audio/
+
+# Apple
+xcuserdata/
+*.xcuserstate
+DerivedData/

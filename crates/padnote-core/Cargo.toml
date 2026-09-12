@@ -1,0 +1,16 @@
+[package]
+name = "padnote-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+padnote-doc = { path = "../padnote-doc" }
+padnote-ink = { path = "../padnote-ink" }
+padnote-sync = { path = "../padnote-sync" }
+padnote-asr = { path = "../padnote-asr" }
+padnote-recognize = { path = "../padnote-recognize" }

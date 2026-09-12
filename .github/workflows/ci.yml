@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all --check
+      - run: cargo clippy --workspace --all-targets
+      - run: cargo test --workspace
+
+  # 決策 D6：授權稽核。禁止 AGPL 進入相依樹。
+  licenses:
+    name: License audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          command: check bans licenses sources advisories
+
+  # J7：資料遺失零容忍。格式層的截斷與版本相容測試在此擋關。
+  format-compat:
+    name: Format compatibility
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: 編解碼往返、截斷偵測、版本拒絕
+        run: cargo test -p padnote-ink -p padnote-core -- --nocapture
+
+  # --- 以下為 M0 完成後啟用的效能與品質閘門（docs/roadmap.md）---
+  #
+  # ink-latency:   J1 墨跡 motion-to-photon ≤ 9ms，不得回退
+  # asr-cer:       M0/S2 中文 CER 安靜 ≤8% / 嘈雜 ≤18%，不得惡化
+  # crash-safety:  J7 隨機殺行程 + 斷電模擬，驗證零資料遺失
+  #
+  # 目前 blocked on：實體 iPad 測試機、padnote-bench 中文測試集
