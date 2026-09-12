@@ -10,6 +10,9 @@ uniffi::setup_scaffolding!();
 
 pub mod app;
 pub mod ffi;
+pub mod ffi_geometry;
+pub mod ffi_input;
+pub mod ffi_interop;
 pub mod setup;
 pub mod transcript;
 
@@ -19,6 +22,7 @@ pub use padnote_doc as doc;
 pub use padnote_embed as embed;
 pub use padnote_export as export;
 pub use padnote_ink as ink;
+pub use padnote_input as input;
 pub use padnote_models as models;
 pub use padnote_pdf as pdf;
 pub use padnote_punct_ct as punct_ct;

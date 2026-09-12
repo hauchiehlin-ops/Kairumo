@@ -15,7 +15,7 @@
 
 use crate::app::{AppError, NotebookSession, RecordingState};
 use crate::setup::{Capability, Feature, SetupCenter, Status};
-use padnote_doc::{NotebookTime, PageTemplate, TextStyle, TranscriptWord, Uuid};
+use padnote_doc::{Affine2, NotebookTime, PageTemplate, TextStyle, TranscriptWord, Uuid};
 use padnote_ink::{InkPoint, Stroke, Tool};
 use std::sync::Mutex;
 
@@ -511,6 +511,95 @@ impl PadnoteSession {
         Ok(())
     }
 
+    // ---- 物件（S-38 / ADR-0010）----
+
+    /// 把筆畫收成一個物件，讓它能被群組與變換。
+    pub fn create_stroke_object(
+        &self,
+        page_id: String,
+        stroke_ids: Vec<String>,
+    ) -> Result<String, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let strokes = stroke_ids
+            .iter()
+            .map(|s| parse_uuid(s))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(self.lock().create_stroke_object(page, strokes)?.to_string())
+    }
+
+    pub fn group_objects(
+        &self,
+        page_id: String,
+        object_ids: Vec<String>,
+    ) -> Result<String, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let members = object_ids
+            .iter()
+            .map(|s| parse_uuid(s))
+            .collect::<Result<Vec<_>, _>>()?;
+        Ok(self.lock().group_objects(page, members)?.to_string())
+    }
+
+    /// 解散群組。成員的位置不會跳動 —— 群組的變換會往下傳給它們。
+    pub fn ungroup(&self, object_id: String) -> Result<(), FfiError> {
+        self.lock().ungroup(parse_uuid(&object_id)?)?;
+        Ok(())
+    }
+
+    /// 平移物件。**不改寫任何取樣點**（ADR-0010）。
+    pub fn translate_object(&self, object_id: String, dx: f32, dy: f32) -> Result<(), FfiError> {
+        self.apply_transform(&object_id, Affine2::translate(dx, dy))
+    }
+
+    /// 以 `(cx, cy)` 為中心縮放。以原點縮放會讓物件同時飛走。
+    pub fn scale_object(
+        &self,
+        object_id: String,
+        sx: f32,
+        sy: f32,
+        cx: f32,
+        cy: f32,
+    ) -> Result<(), FfiError> {
+        self.apply_transform(&object_id, Affine2::scale_around(sx, sy, cx, cy))
+    }
+
+    /// 以 `(cx, cy)` 為中心旋轉（弧度）。
+    pub fn rotate_object(
+        &self,
+        object_id: String,
+        radians: f32,
+        cx: f32,
+        cy: f32,
+    ) -> Result<(), FfiError> {
+        self.apply_transform(&object_id, Affine2::rotate_around(radians, cx, cy))
+    }
+
+    /// 物件在頁面上的累積變換，回傳 `[a, b, c, d, tx, ty]`。
+    pub fn object_transform(
+        &self,
+        page_id: String,
+        object_id: String,
+    ) -> Result<Vec<f32>, FfiError> {
+        let (page, object) = (parse_uuid(&page_id)?, parse_uuid(&object_id)?);
+        let guard = self.lock();
+        let t = guard
+            .objects(page)
+            .map_or(Affine2::IDENTITY, |tree| tree.world_transform(object));
+        Ok(vec![t.a, t.b, t.c, t.d, t.tx, t.ty])
+    }
+
+    // ---- 嵌入文件（S-41 / ADR-0009）----
+
+    /// 匯入外部文件。
+    ///
+    /// 可編輯格式（docx／xlsx／md／json）會解析成**原生區塊**；
+    /// 僅預覽格式（pptx／pdf）建立嵌入區塊。
+    /// **原始檔一律保留** —— 解析必然失真。
+    pub fn import_embedded(&self, page_id: String, path: String) -> Result<String, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self.lock().import_embedded(page, path)?.to_string())
+    }
+
     /// 匯入 Markdown。回傳新建立的頁面 id。
     ///
     /// **加進來而非取代** —— 按錯不該弄丟既有筆記。
@@ -585,6 +674,11 @@ impl PadnoteSession {
 }
 
 impl PadnoteSession {
+    fn apply_transform(&self, object_id: &str, t: Affine2) -> Result<(), FfiError> {
+        self.lock().transform_object(parse_uuid(object_id)?, t)?;
+        Ok(())
+    }
+
     fn wrap(session: NotebookSession) -> Self {
         Self {
             inner: Mutex::new(session),
@@ -1025,6 +1119,67 @@ mod tests {
 
         assert!(!pages.is_empty());
         assert_eq!(s.search("重點".into(), 10).len(), 2, "原有的與匯入的各一份");
+    }
+
+    #[test]
+    fn object_operations_cross_the_boundary() {
+        let s = session("ffi-objects");
+        let page = s.first_page_id().unwrap();
+        let stroke = s
+            .add_stroke(
+                page.clone(),
+                ToolKind::BallPoint,
+                vec![0, 0, 0, 255],
+                2.0,
+                points(),
+            )
+            .unwrap();
+
+        let obj = s.create_stroke_object(page.clone(), vec![stroke]).unwrap();
+        s.translate_object(obj.clone(), 10.0, 20.0).unwrap();
+
+        let t = s.object_transform(page, obj).unwrap();
+        assert_eq!(t.len(), 6);
+        assert_eq!((t[4], t[5]), (10.0, 20.0), "位移應反映在變換上");
+    }
+
+    #[test]
+    fn grouping_and_ungrouping_cross_the_boundary() {
+        let s = session("ffi-group");
+        let page = s.first_page_id().unwrap();
+
+        let mut objects = Vec::new();
+        for _ in 0..2 {
+            let stroke = s
+                .add_stroke(
+                    page.clone(),
+                    ToolKind::BallPoint,
+                    vec![0, 0, 0, 255],
+                    2.0,
+                    points(),
+                )
+                .unwrap();
+            objects.push(s.create_stroke_object(page.clone(), vec![stroke]).unwrap());
+        }
+
+        let group = s.group_objects(page.clone(), objects.clone()).unwrap();
+        s.translate_object(group.clone(), 50.0, 0.0).unwrap();
+
+        // 群組的變換要傳到成員身上
+        let member = s
+            .object_transform(page.clone(), objects[0].clone())
+            .unwrap();
+        assert_eq!(member[4], 50.0, "成員應繼承群組的位移");
+
+        s.ungroup(group).unwrap();
+        let after = s.object_transform(page, objects[0].clone()).unwrap();
+        assert_eq!(after[4], 50.0, "解散後位置不該跳動");
+    }
+
+    #[test]
+    fn malformed_object_id_is_rejected() {
+        let s = session("ffi-badobj");
+        assert!(s.translate_object("not-a-uuid".into(), 1.0, 1.0).is_err());
     }
 
     #[test]

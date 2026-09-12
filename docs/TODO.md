@@ -128,6 +128,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 |---|---|---|
 | ~~S-41~~ ✅ | Office / Google 文件的嵌入與編輯（D-10 已拍板為「嵌入＋可編輯」） | 見 ADR-0009。docx/xlsx 可做，pptx 只做預覽 |
 | ~~S-42~~ ✅ | PDF 標註的雙向保真（ADR-0008 第一層的核心） | 10 款競品都讀寫 PDF，這是唯一真正通用的互通途徑 |
+| S-45 | 平台層依 `Decision::retract` 實作筆畫收回 | Swift 範例已示範（`apple/Examples/InkInputUsage.swift`），**不處理的話掌拒只擋得住一半** |
 | S-43 | 把標註寫進真實 PDF（PDFium 的 annotation API） | 模型與座標轉換已完成且有測試；**寫入需 libpdfium 執行期庫**（H8） |
 | S-44 | 用其他 App 驗證標註互通 | 匯出的 PDF 要在 Goodnotes/Notability/PDF Expert 開得起來並可繼續標註 |
 | S-35 | **Windows 低延遲墨跡** | Compose MP Desktop 走 Skia/JVM，**做不到 9ms**。需原生 Windows Ink / DirectComposition |

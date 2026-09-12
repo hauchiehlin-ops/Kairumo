@@ -1233,6 +1233,7 @@ dependencies = [
  "padnote-embed",
  "padnote-export",
  "padnote-ink",
+ "padnote-input",
  "padnote-models",
  "padnote-pdf",
  "padnote-punct-ct",
