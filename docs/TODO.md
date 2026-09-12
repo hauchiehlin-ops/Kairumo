@@ -101,6 +101,10 @@
 EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | S-29 | WP5 | **ct-punc 體積問題已解**：量化納入 `Gather`（嵌入表占 86.4%
 體積），1,074 MB → **269 MB**，argmax 一致率 100% |
+| S-30 | WP5 | `padnote-punct-ct`：中文標點還原。**詞表是簡體**，
+故管線順序必須是「先標點、再轉繁體」。標點接在詞尾以保留時間戳 |
+| S-24 | WP5 | `padnote-asr-paraformer`：fbank（與 FunASR 參考特徵逐點吻合）
++ LFR + CMVN + CIF + encoder/decoder。**fp32 輸出與 FunASR 完全吻合** |
 
 ### 待做
 | ID | 工作包 | 內容 | 備註 |

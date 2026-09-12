@@ -1,12 +1,15 @@
 [package]
-name = "padnote-asr"
+name = "padnote-punct-ct"
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
 [dependencies]
+padnote-asr = { path = "../padnote-asr" }
 padnote-doc = { path = "../padnote-doc" }
+ort = { workspace = true }
+serde_json = { workspace = true }
 
 [lints]
 workspace = true

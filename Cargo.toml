@@ -30,6 +30,7 @@ pdfium-render = { version = "0.8", features = ["thread_safe"] }
 # ONNX Runtime。同一個執行期同時服務 Silero VAD、Paraformer-zh（S-24）
 # 與 PP-OCRv5（D4），比每個模型各帶一套推論庫划算。
 ort = { version = "2.0.0-rc.10", features = ["download-binaries"] }
+rustfft = "6"
 
 [workspace.lints.rust]
 unsafe_code = "deny"

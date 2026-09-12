@@ -7,6 +7,9 @@
 //! 3. ASR 執行緒優先權必須低於 UI/墨跡執行緒 —— 寧可轉錄慢，不可寫字卡。
 
 pub mod pipeline;
+pub mod punct;
+
+pub use punct::{PunctError, PunctuationEngine};
 
 pub use pipeline::{
     EnergyVad, RingBuffer, Segment, SegmentQueue, Segmenter, VoiceActivityDetector,
