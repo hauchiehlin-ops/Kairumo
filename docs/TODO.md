@@ -120,6 +120,19 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | S-21 | WP7 | PDFium 綁定（`pdfium-render`）| 介面與快取已完成，**需原生庫，實機驗證見 H6** |
 | S-22 | WP12 | Apple Vision / ML Kit 的 `HwrEngine` 實作 | 註冊表與 fallback 鏈已完成 |
 
+## 🆕 需求檢視新增項目（2026-09-12）
+
+> 完整分析見 [`docs/requirements-review.md`](requirements-review.md)。
+
+| ID | 項目 | 備註 |
+|---|---|---|
+| S-35 | **Windows 低延遲墨跡** | Compose MP Desktop 走 Skia/JVM，**做不到 9ms**。需原生 Windows Ink / DirectComposition |
+| S-36 | **掌拒與輸入分流** | 🔴 完全未設計。**手寫 App 的生死線**：手掌靠螢幕會畫出大片塗鴉 |
+| S-37 | UI/UX 設計 | 🔴 完全未開始。可與 M0 並行，不依賴 S1 |
+| S-38 | 物件模型：群組／對齊／吸附／變換 | 需 ADR —— 會影響 `.padnote` 格式。目前 `Stroke` 沒有「物件」概念 |
+| S-39 | Markdown 匯入、JSON 匯入匯出 | 容易，可立即做 |
+| S-40 | 各平台數位板協定與藍牙筆按鈕 | 「WiFi 手寫筆」實際不存在；壓感走數位板，藍牙只傳按鈕 |
+
 ## ⚪ 待決策（需要人拍板）
 
 | ID | 問題 | 背景 |
@@ -130,4 +143,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | D-04 | 自訂筆（`tool_id` 100+）的參數序列化格式 | |
 | D-05 | 長期維護與營收模式 | 全免費無後端 ⇒ 無營收；捐贈？桌面版買斷？ |
 | D-06 | 多裝置金鑰首次配對的 UX | QR code 傳遞 DEK 的具體流程 |
+| **D-08** | **壓感觸發的語意** | 按壓深度要觸發什麼？切換筆刷？橡皮擦？這是產品決策不是實作細節 |
+| **D-09** | **格式互通策略** | ⛔ 「與 10 款競品完全相容互通」**無法達成**（多數為專有未公開格式，且互通需對方也讀我們的格式）。建議改為「PDF/MD 為主 + 盡力而為的單向匯入」，見 requirements-review.md §6 |
+| **D-10** | **Office／Google 文件的呈現方式** | 試算表與簡報放進手寫筆記本要長什麼樣？唯讀嵌入／可編輯／轉文字 |
 | ~~D-07~~ | ~~是否採用 Paraformer-zh 與 ct-punc？~~ ✅ **已決議：選 C 自行匯出**（ADR-0006） | 官方 HF repo 有完整 Apache-2.0 LICENSE 檔，但 FunASR GitHub 的 MODEL_LICENSE v1.1 寫「僅供參考與學習」且含不得詆毀/自動終止條款。**影響 P0 功能 C5 中文標點還原**。四個選項與建議見 `models/LICENSE-AUDIT.md` §5 |
