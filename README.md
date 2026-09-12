@@ -49,6 +49,22 @@ cargo clippy --workspace --all-targets
 cargo deny check
 ```
 
+### 自動版本更新與推送
+
+專案提供自動更新版本並推送到 GitHub 的工具（預設為 `patch` 升級）：
+
+```bash
+# 1. 快速推送並升級 patch 版本（例如 0.1.0 -> 0.1.1，自動 commit、tag 並 push）
+./scripts/push.sh
+
+# 2. 亦可指定升級 minor 或 major
+./scripts/push.sh minor
+./scripts/push.sh major
+
+# 3. （選用）安裝 Git pre-push hook，使原生 `git push` 也自動升級版本
+./scripts/install-git-hook.sh
+```
+
 ## 格式開放承諾
 
 `.padnote` 的完整規格公開於 [`docs/format-spec.md`](docs/format-spec.md)。
