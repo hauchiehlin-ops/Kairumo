@@ -4,8 +4,10 @@
 //! 匯出受限（MyScript 甚至只能存自家雲）。Padnote 的立場是：
 //! 使用者隨時可以把資料完整帶走。
 
+pub mod import;
 pub mod markdown;
 pub mod svg;
 
+pub use import::{ImportedBlock, ImportedDocument, from_json, from_markdown};
 pub use markdown::{MarkdownOptions, to_markdown};
 pub use svg::stroke_to_svg_path;

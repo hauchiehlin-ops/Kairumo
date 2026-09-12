@@ -511,6 +511,28 @@ impl PadnoteSession {
         Ok(())
     }
 
+    /// 匯入 Markdown。回傳新建立的頁面 id。
+    ///
+    /// **加進來而非取代** —— 按錯不該弄丟既有筆記。
+    pub fn import_markdown(&self, text: String) -> Result<Vec<String>, FfiError> {
+        Ok(self
+            .lock()
+            .import_markdown(&text)?
+            .into_iter()
+            .map(|id| id.to_string())
+            .collect())
+    }
+
+    /// 匯入 JSON。Schema 見 `padnote_export::from_json`。
+    pub fn import_json(&self, text: String) -> Result<Vec<String>, FfiError> {
+        Ok(self
+            .lock()
+            .import_json(&text)?
+            .into_iter()
+            .map(|id| id.to_string())
+            .collect())
+    }
+
     pub fn export_markdown(&self) -> Result<String, FfiError> {
         Ok(self.lock().export_markdown()?)
     }
@@ -989,6 +1011,20 @@ mod tests {
 
         s.set_vad_model("/nonexistent.onnx".into());
         assert!(!s.uses_neural_vad(), "不存在的模型不該被當成可用");
+    }
+
+    #[test]
+    fn markdown_round_trips_across_the_boundary() {
+        let s = session("ffi-import");
+        let page = s.first_page_id().unwrap();
+        s.add_text(page, "重點整理".into(), BlockStyle::Heading2)
+            .unwrap();
+
+        let md = s.export_markdown().unwrap();
+        let pages = s.import_markdown(md).unwrap();
+
+        assert!(!pages.is_empty());
+        assert_eq!(s.search("重點".into(), 10).len(), 2, "原有的與匯入的各一份");
     }
 
     #[test]

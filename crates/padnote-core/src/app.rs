@@ -822,6 +822,57 @@ impl NotebookSession {
         self.record(vec![DocOp::SetObjectTransform { id, transform }])
     }
 
+    // ---- 匯入（S-39 / ADR-0008 第二層）----
+
+    /// 匯入一份解析好的文件。
+    ///
+    /// 每個分頁符開一頁。**不覆蓋現有內容** —— 匯入是「加進來」不是「取代」，
+    /// 使用者按錯不該弄丟既有筆記。
+    pub fn import_document(
+        &mut self,
+        doc: &padnote_export::ImportedDocument,
+    ) -> Result<Vec<Uuid>, AppError> {
+        use padnote_export::ImportedBlock;
+
+        if !doc.title.is_empty() && self.notebook.title.is_empty() {
+            self.set_title(&doc.title)?;
+        }
+
+        let mut pages = Vec::new();
+        let mut current = self.add_page(PageTemplate::Blank)?;
+        pages.push(current);
+
+        for block in &doc.blocks {
+            match block {
+                ImportedBlock::PageBreak => {
+                    current = self.add_page(PageTemplate::Blank)?;
+                    pages.push(current);
+                }
+                ImportedBlock::Text { content, style } => {
+                    self.add_text_block(current, content, *style)?;
+                }
+                ImportedBlock::Image { source, .. } => {
+                    // 圖片內容由呼叫端先放進 blob store；這裡只記引用。
+                    self.add_image_block(current, source, 0.0, 0.0)?;
+                }
+            }
+        }
+        Ok(pages)
+    }
+
+    /// 匯入 Markdown。
+    pub fn import_markdown(&mut self, text: &str) -> Result<Vec<Uuid>, AppError> {
+        let doc = padnote_export::from_markdown(text);
+        self.import_document(&doc)
+    }
+
+    /// 匯入 JSON。
+    pub fn import_json(&mut self, text: &str) -> Result<Vec<Uuid>, AppError> {
+        let doc = padnote_export::from_json(text)
+            .map_err(|e| AppError::Storage(StorageError::MalformedManifest(e)))?;
+        self.import_document(&doc)
+    }
+
     /// 供平台層存取底層套件（例如寫入 blob）。
     pub fn package(&self) -> &NotebookPackage {
         &self.package

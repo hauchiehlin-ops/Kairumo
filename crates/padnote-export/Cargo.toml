@@ -9,5 +9,7 @@ license.workspace = true
 padnote-doc = { path = "../padnote-doc" }
 padnote-ink = { path = "../padnote-ink" }
 
+serde_json = { workspace = true }
+
 [lints]
 workspace = true

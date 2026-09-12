@@ -1111,6 +1111,7 @@ version = "0.1.0"
 dependencies = [
  "padnote-doc",
  "padnote-ink",
+ "serde_json",
 ]
 
 [[package]]
