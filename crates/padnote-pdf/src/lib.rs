@@ -8,8 +8,13 @@
 //!
 //! 本 crate 只定義介面與快取策略；PDFium 綁定屬原生相依，見 `docs/TODO.md` S-10。
 
+pub mod annotation;
 pub mod cache;
 pub mod document;
 
+pub use annotation::{
+    AnnotationKind, PageMapping, PdfAnnotation, annotation_to_strokes, quad_points_for_rect,
+    stroke_to_annotation,
+};
 pub use cache::{PageCache, RenderKey};
 pub use document::{PdfDocument, PdfError, PdfPage, TextSpan};

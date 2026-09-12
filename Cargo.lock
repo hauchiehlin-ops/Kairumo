@@ -1305,6 +1305,7 @@ name = "padnote-pdf"
 version = "0.1.0"
 dependencies = [
  "padnote-doc",
+ "padnote-ink",
 ]
 
 [[package]]
