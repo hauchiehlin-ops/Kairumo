@@ -1081,6 +1081,62 @@ public final class LocalizationManager: ObservableObject {
             .ko: "댓글 목록",
             .th: "รายการความคิดเห็น"
         ],
+        "e2ee_protected": [
+            .zhHant: "端對端加密保護",
+            .en: "End-to-End Encrypted",
+            .zhHans: "端对端加密保护",
+            .ja: "エンドツーエンド暗号化",
+            .ko: "종단간 암호화",
+            .th: "การเข้ารหัสจากต้นทางถึงปลายทาง"
+        ],
+        "e2ee_protected_desc": [
+            .zhHant: "筆劃、附件與討論皆在本地完成硬體加密，中繼伺服器無法窺探。",
+            .en: "Strokes, attachments, and comments are encrypted locally. Relay server cannot inspect contents.",
+            .zhHans: "笔划、附件与讨论均在本地完成硬件加密，中继服务器无法窥探。",
+            .ja: "ストローク、添付ファイル、コメントはローカルで暗号化され、リレーサーバーは内容を閲覧できません。",
+            .ko: "획, 첨부 파일 및 댓글은 로컬에서 암호화되며 릴레이 서버는 내용을 볼 수 없습니다.",
+            .th: "เส้นวาด ไฟล์แนบ และความคิดเห็นได้รับการเข้ารหัสบนเครื่อง เซิร์ฟเวอร์รีเลย์ไม่สามารถตรวจสอบเนื้อหาได้"
+        ],
+        "reconnecting_status": [
+            .zhHant: "連線中斷，正在自動重新連線 (第 %d/%d 次)...",
+            .en: "Connection lost. Reconnecting (%d/%d)...",
+            .zhHans: "连接中断，正在自动重新连接 (第 %d/%d 次)...",
+            .ja: "接続が切断されました。再接続中 (%d/%d)...",
+            .ko: "연결이 끊어졌습니다. 다시 연결하는 중 (%d/%d)...",
+            .th: "การเชื่อมต่อขาดหาย กำลังเชื่อมต่อใหม่ (%d/%d)..."
+        ],
+        "reconnect_now": [
+            .zhHant: "立即重連",
+            .en: "Reconnect Now",
+            .zhHans: "立即重连",
+            .ja: "今すぐ再接続",
+            .ko: "지금 다시 연결",
+            .th: "เชื่อมต่อใหม่ทันที"
+        ],
+        "offline_queue_hint": [
+            .zhHant: "目前離線，已暫存 %d 筆操作，連線恢復時將自動同步。",
+            .en: "Offline mode: %d operations queued. Will auto-sync once reconnected.",
+            .zhHans: "目前离线，已暂存 %d 笔操作，连接恢复时将自动同步。",
+            .ja: "オフラインです：%d 件の操作が保留中です。再接続時に自動同期されます。",
+            .ko: "오프라인 상태입니다: %d개 작업 대기 중. 다시 연결되면 자동 동기화됩니다.",
+            .th: "ออฟไลน์อยู่: รอคิว %d รายการ จะซิงค์อัตโนมัติเมื่อเชื่อมต่อใหม่"
+        ],
+        "copy_encrypted_link": [
+            .zhHant: "複製加密邀請連結",
+            .en: "Copy Encrypted Invite Link",
+            .zhHans: "复制加密邀请链接",
+            .ja: "暗号化招待リンクをコピー",
+            .ko: "암호화된 초대 링크 복사",
+            .th: "คัดลอกลิงก์คำเชิญที่เข้ารหัส"
+        ],
+        "reconnected_sync_complete": [
+            .zhHant: "已重新連線，離線變更已同步完成",
+            .en: "Reconnected. Offline changes synced.",
+            .zhHans: "已重新连接，离线变更已同步完成",
+            .ja: "再接続されました。オフラインの変更が同期されました",
+            .ko: "다시 연결되었습니다. 오프라인 변경 사항이 동기화되었습니다",
+            .th: "เชื่อมต่อใหม่แล้ว ซิงค์การเปลี่ยนแปลงออฟไลน์เรียบร้อยแล้ว"
+        ],
         "insert_object": [
             .zhHant: "插入",
             .en: "Insert",

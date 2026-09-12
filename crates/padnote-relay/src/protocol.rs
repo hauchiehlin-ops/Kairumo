@@ -48,7 +48,14 @@ pub enum ClientMessage {
         user_id: String,
         lamport: u64,
         kind: String,
+        #[serde(default)]
+        encrypted: Option<bool>,
         payload: serde_json::Value,
+    },
+    /// 請求補發指定 Lamport 時鐘之後的遺漏 Oplog（斷線重連自我修復）
+    Catchup {
+        room_id: String,
+        last_lamport: u64,
     },
     /// 離開房間
     Leave {
@@ -94,7 +101,14 @@ pub enum ServerMessage {
         user_id: String,
         lamport: u64,
         kind: String,
+        #[serde(default)]
+        encrypted: Option<bool>,
         payload: serde_json::Value,
+    },
+    /// 批次補發 Oplog（重連追趕）
+    OplogBatch {
+        room_id: String,
+        oplogs: Vec<ServerMessage>,
     },
     /// 成員離開或斷線廣播
     PeerLeft {

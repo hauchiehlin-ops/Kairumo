@@ -44,7 +44,9 @@ public struct CollaborationSheet: View {
                         connectedRoomSection(roomId: roomId)
                     case .connecting:
                         connectingSection
-                    case .disconnected, .reconnecting:
+                    case .reconnecting(let attempt, let maxAttempts):
+                        reconnectingSection(attempt: attempt, maxAttempts: maxAttempts)
+                    case .disconnected:
                         disconnectedActionSection
                     }
 
@@ -169,8 +171,10 @@ public struct CollaborationSheet: View {
         switch collaborationManager.status {
         case .connected:
             return localizationManager.localized("status_connected")
-        case .connecting, .reconnecting:
+        case .connecting:
             return localizationManager.localized("status_connecting")
+        case .reconnecting(let attempt, let maxAttempts):
+            return String(format: localizationManager.localized("reconnecting_status"), attempt, maxAttempts)
         case .disconnected:
             return localizationManager.localized("status_disconnected")
         }
@@ -180,8 +184,14 @@ public struct CollaborationSheet: View {
         switch collaborationManager.status {
         case .connected(let rid):
             return "\(localizationManager.localized("room_id")): \(rid)"
-        case .connecting, .reconnecting:
+        case .connecting:
             return collaborationManager.serverAddress
+        case .reconnecting:
+            if collaborationManager.queuedOplogCount > 0 {
+                return String(format: localizationManager.localized("offline_queue_hint"), collaborationManager.queuedOplogCount)
+            } else {
+                return collaborationManager.serverAddress
+            }
         case .disconnected:
             return localizationManager.localized("start_collaboration")
         }
@@ -190,6 +200,33 @@ public struct CollaborationSheet: View {
     // MARK: - 已連線房間詳情與成員清單
     private func connectedRoomSection(roomId: String) -> some View {
         VStack(spacing: 16) {
+            // 🔒 端對端加密保護提示條
+            HStack(spacing: 10) {
+                Image(systemName: "lock.shield.fill")
+                    .font(.system(size: 22))
+                    .foregroundColor(.green)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(localizationManager.localized("e2ee_protected"))
+                        .font(.subheadline)
+                        .fontWeight(.bold)
+                        .foregroundColor(.primary)
+
+                    Text(localizationManager.localized("e2ee_protected_desc"))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+            }
+            .padding(12)
+            .background(Color.green.opacity(0.1))
+            .cornerRadius(10)
+            .overlay(
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.green.opacity(0.25), lineWidth: 1)
+            )
+
             // 房間識別碼與快速複製
             VStack(alignment: .leading, spacing: 8) {
                 Text(localizationManager.localized("room_id"))
@@ -207,13 +244,13 @@ public struct CollaborationSheet: View {
 
                     Button {
                         #if canImport(UIKit)
-                        UIPasteboard.general.string = roomId
+                        UIPasteboard.general.string = collaborationManager.encryptedInviteLink
                         #endif
                         showCopiedAlert = true
                     } label: {
                         HStack(spacing: 4) {
-                            Image(systemName: showCopiedAlert ? "checkmark" : "doc.on.doc")
-                            Text(showCopiedAlert ? localizationManager.localized("room_id_copied") : localizationManager.localized("copy_room_id"))
+                            Image(systemName: showCopiedAlert ? "checkmark" : "link.badge.plus")
+                            Text(showCopiedAlert ? localizationManager.localized("room_id_copied") : localizationManager.localized("copy_encrypted_link"))
                         }
                         .font(.caption)
                         .padding(.horizontal, 10)
@@ -328,6 +365,55 @@ public struct CollaborationSheet: View {
             .buttonStyle(.bordered)
         }
         .padding(.vertical, 30)
+    }
+
+    // MARK: - 斷線自動重連中過渡狀態
+    private func reconnectingSection(attempt: Int, maxAttempts: Int) -> some View {
+        VStack(spacing: 16) {
+            ProgressView()
+                .controlSize(.large)
+                .padding(.top, 10)
+
+            VStack(spacing: 6) {
+                Text(String(format: localizationManager.localized("reconnecting_status"), attempt, maxAttempts))
+                    .font(.headline)
+                    .foregroundColor(.primary)
+
+                if collaborationManager.queuedOplogCount > 0 {
+                    Text(String(format: localizationManager.localized("offline_queue_hint"), collaborationManager.queuedOplogCount))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+            }
+
+            Button {
+                collaborationManager.forceReconnect()
+            } label: {
+                HStack(spacing: 6) {
+                    Image(systemName: "arrow.clockwise")
+                    Text(localizationManager.localized("reconnect_now"))
+                }
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(Color.accentColor)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+            }
+            .buttonStyle(.plain)
+
+            Button(localizationManager.localized("cancel")) {
+                collaborationManager.disconnect()
+            }
+            .buttonStyle(.bordered)
+            .padding(.top, 4)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity)
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+        .cornerRadius(14)
     }
 
     // MARK: - 未連線時的操作選單

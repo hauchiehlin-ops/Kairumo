@@ -170,4 +170,73 @@ mod tests {
         // 房間已被移除
         assert_eq!(hub.room_count().await, 0);
     }
+
+    #[tokio::test]
+    async fn test_oplog_history_and_catchup() {
+        let hub = RoomHub::new();
+        let (tx1, _rx1) = mpsc::unbounded_channel();
+        let (tx2, _rx2) = mpsc::unbounded_channel();
+
+        let _ = hub
+            .join(
+                "room-303".to_string(),
+                "user-1".to_string(),
+                "Alice".to_string(),
+                "#FF0000".to_string(),
+                "owner".to_string(),
+                None,
+                tx1,
+            )
+            .await
+            .unwrap();
+
+        // 用戶 1 廣播兩筆 Oplog (lamport = 1, 2)
+        hub.broadcast_oplog(
+            "room-303",
+            "user-1",
+            1,
+            "attachment_upsert".to_string(),
+            Some(true),
+            serde_json::json!({"id": "item-1"}),
+        )
+        .await;
+
+        hub.broadcast_oplog(
+            "room-303",
+            "user-1",
+            2,
+            "comment_upsert".to_string(),
+            Some(false),
+            serde_json::json!({"id": "pin-1"}),
+        )
+        .await;
+
+        // 用戶 2 稍後加入房間
+        let _ = hub
+            .join(
+                "room-303".to_string(),
+                "user-2".to_string(),
+                "Bob".to_string(),
+                "#00FF00".to_string(),
+                "editor".to_string(),
+                None,
+                tx2.clone(),
+            )
+            .await
+            .unwrap();
+
+        // 用戶 2 請求 catchup（已知 last_lamport = 1，期望取得 lamport > 1 的 oplog）
+        let missing = hub.catchup("room-303", 1).await;
+        assert_eq!(missing.len(), 1);
+        if let ServerMessage::PeerOplog { lamport, kind, .. } = &missing[0] {
+            assert_eq!(*lamport, 2);
+            assert_eq!(kind, "comment_upsert");
+        } else {
+            panic!("Expected PeerOplog in catchup batch");
+        }
+
+        // 用戶 2 請求從頭 catchup (last_lamport = 0)
+        let all = hub.catchup("room-303", 0).await;
+        assert_eq!(all.len(), 2);
+    }
 }

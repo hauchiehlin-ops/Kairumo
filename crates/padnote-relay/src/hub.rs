@@ -3,7 +3,7 @@
 //! 管理所有活躍的協同房間、在線成員連線通道與高頻廣播。
 
 use crate::protocol::{ClientMessage, CursorState, PeerInfo, ServerMessage};
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
 use tokio::sync::{mpsc, RwLock};
 
@@ -21,6 +21,7 @@ pub struct Room {
     pub owner_id: String,
     pub passcode: Option<String>,
     pub peers: HashMap<String, Peer>,
+    pub recent_oplogs: VecDeque<ServerMessage>,
 }
 
 impl Room {
@@ -30,6 +31,7 @@ impl Room {
             owner_id,
             passcode,
             peers: HashMap::new(),
+            recent_oplogs: VecDeque::with_capacity(200),
         }
     }
 
@@ -139,29 +141,56 @@ impl RoomHub {
         }
     }
 
-    /// 廣播持久化 CRDT Oplog。
+    /// 廣播持久化 CRDT Oplog，並存入房間環形快取中以供斷線補發。
     pub async fn broadcast_oplog(
         &self,
         room_id: &str,
         user_id: &str,
         lamport: u64,
         kind: String,
+        encrypted: Option<bool>,
         payload: serde_json::Value,
     ) {
-        let rooms = self.rooms.read().await;
-        if let Some(room) = rooms.get(room_id) {
+        let mut rooms = self.rooms.write().await;
+        if let Some(room) = rooms.get_mut(room_id) {
             let msg = ServerMessage::PeerOplog {
                 room_id: room_id.to_string(),
                 user_id: user_id.to_string(),
                 lamport,
                 kind,
+                encrypted,
                 payload,
             };
+            if room.recent_oplogs.len() >= 200 {
+                room.recent_oplogs.pop_front();
+            }
+            room.recent_oplogs.push_back(msg.clone());
+
             for (pid, peer) in &room.peers {
                 if pid != user_id {
                     let _ = peer.sender.send(msg.clone());
                 }
             }
+        }
+    }
+
+    /// 取得指定房間在 last_lamport 之後的所有遺漏 Oplog（斷線追趕補發）
+    pub async fn catchup(&self, room_id: &str, last_lamport: u64) -> Vec<ServerMessage> {
+        let rooms = self.rooms.read().await;
+        if let Some(room) = rooms.get(room_id) {
+            room.recent_oplogs
+                .iter()
+                .filter(|msg| {
+                    if let ServerMessage::PeerOplog { lamport, .. } = msg {
+                        *lamport > last_lamport
+                    } else {
+                        false
+                    }
+                })
+                .cloned()
+                .collect()
+        } else {
+            Vec::new()
         }
     }
 
@@ -274,11 +303,22 @@ impl RoomHub {
                 user_id,
                 lamport,
                 kind,
+                encrypted,
                 payload,
             } => {
-                self.broadcast_oplog(&room_id, &user_id, lamport, kind, payload)
+                self.broadcast_oplog(&room_id, &user_id, lamport, kind, encrypted, payload)
                     .await;
                 None
+            }
+            ClientMessage::Catchup {
+                room_id,
+                last_lamport,
+            } => {
+                let missing = self.catchup(&room_id, last_lamport).await;
+                Some(ServerMessage::OplogBatch {
+                    room_id,
+                    oplogs: missing,
+                })
             }
             ClientMessage::Leave { room_id, user_id } => {
                 self.leave(&room_id, &user_id).await;
