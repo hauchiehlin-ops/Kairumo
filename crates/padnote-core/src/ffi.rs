@@ -1,0 +1,720 @@
+//! UniFFI 門面（工作項 S-12）。
+//!
+//! Swift 與 Kotlin **只透過這一層**呼叫 Rust core。
+//!
+//! ## 為什麼要獨立一層，而不直接匯出內部型別
+//! 1. FFI 邊界只能傳簡單型別（record/enum/字串/數字）。內部的 `Uuid`、
+//!    `NotebookTime`、trait 物件都過不去。
+//! 2. 內部重構不該逼著兩個平台的 UI 一起改。這一層是**穩定的契約**。
+//! 3. 錯誤要變成各平台慣用的形式（Swift 的 `throws`、Kotlin 的 exception）。
+//!
+//! ## 執行緒
+//! `PadnoteSession` 內含 `Mutex`。UI 執行緒與背景的 ASR／同步執行緒都會碰它，
+//! 因此每個方法都短暫持鎖後立刻釋放 —— **絕不在持鎖期間做 IO 以外的長工作**，
+//! 否則會卡住墨跡執行緒（違反 J1 的延遲預算）。
+
+use crate::app::{AppError, NotebookSession, RecordingState};
+use crate::setup::{Capability, Feature, SetupCenter, Status};
+use padnote_doc::{NotebookTime, PageTemplate, TextStyle, Uuid};
+use padnote_ink::{InkPoint, Stroke, Tool};
+use std::sync::Mutex;
+
+// ---- 錯誤 ----
+
+#[derive(Debug, uniffi::Error)]
+#[uniffi(flat_error)]
+pub enum FfiError {
+    /// 訊息已在地化，可直接顯示給使用者。
+    Failed(String),
+}
+
+impl std::fmt::Display for FfiError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Failed(m) => f.write_str(m),
+        }
+    }
+}
+
+impl std::error::Error for FfiError {}
+
+impl From<AppError> for FfiError {
+    fn from(e: AppError) -> Self {
+        Self::Failed(e.to_string())
+    }
+}
+
+// ---- 資料型別 ----
+
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+pub enum ToolKind {
+    FountainPen,
+    BallPoint,
+    Highlighter,
+    Pencil,
+}
+
+impl From<ToolKind> for Tool {
+    fn from(t: ToolKind) -> Self {
+        match t {
+            ToolKind::FountainPen => Tool::FountainPen,
+            ToolKind::BallPoint => Tool::BallPoint,
+            ToolKind::Highlighter => Tool::Highlighter,
+            ToolKind::Pencil => Tool::Pencil,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+pub enum PageStyle {
+    Blank,
+    Lined,
+    Grid,
+    Dotted,
+    Cornell,
+    MusicStaff,
+}
+
+impl From<PageStyle> for PageTemplate {
+    fn from(p: PageStyle) -> Self {
+        match p {
+            PageStyle::Blank => PageTemplate::Blank,
+            PageStyle::Lined => PageTemplate::Lined,
+            PageStyle::Grid => PageTemplate::Grid,
+            PageStyle::Dotted => PageTemplate::Dotted,
+            PageStyle::Cornell => PageTemplate::Cornell,
+            PageStyle::MusicStaff => PageTemplate::MusicStaff,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+pub enum BlockStyle {
+    Body,
+    Heading1,
+    Heading2,
+    Heading3,
+    Bullet,
+    Quote,
+    Code,
+    TodoOpen,
+    TodoDone,
+}
+
+impl From<BlockStyle> for TextStyle {
+    fn from(b: BlockStyle) -> Self {
+        match b {
+            BlockStyle::Body => TextStyle::Body,
+            BlockStyle::Heading1 => TextStyle::Heading1,
+            BlockStyle::Heading2 => TextStyle::Heading2,
+            BlockStyle::Heading3 => TextStyle::Heading3,
+            BlockStyle::Bullet => TextStyle::Bullet,
+            BlockStyle::Quote => TextStyle::Quote,
+            BlockStyle::Code => TextStyle::Code,
+            BlockStyle::TodoOpen => TextStyle::Todo { done: false },
+            BlockStyle::TodoDone => TextStyle::Todo { done: true },
+        }
+    }
+}
+
+/// 一個觸控取樣點。欄位對應 `InkPoint`（format-spec §5.4）。
+///
+/// ⚠️ 平台層**不得**把預測筆跡（predicted touches）放進來 ——
+/// 那是視覺補償，不是真實輸入。
+#[derive(Clone, Copy, Debug, uniffi::Record)]
+pub struct StrokePoint {
+    pub x: f32,
+    pub y: f32,
+    pub pressure: f32,
+    pub tilt: f32,
+    pub azimuth: f32,
+    /// 距前一點的微秒差。
+    pub dt_us: u32,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct SearchResult {
+    pub page_id: String,
+    pub block_id: String,
+    /// `text` / `transcript` / `handwriting` / `pdf` / `ocr`
+    pub source: String,
+    pub score: f32,
+    pub snippet: String,
+}
+
+/// 功能 C1 的回傳值：某個時刻對應的錄音位置。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct PlaybackPosition {
+    /// 相對筆記本根目錄的音檔路徑。
+    pub media_path: String,
+    /// 音檔內的播放偏移（微秒）。
+    pub offset_us: u64,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct StrokeSummary {
+    pub id: String,
+    pub started_at_us: u64,
+    pub point_count: u32,
+    /// 含筆寬的外框 `[min_x, min_y, max_x, max_y]`，供命中測試與重繪。
+    pub bounds: Vec<f32>,
+}
+
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FeatureStatus {
+    /// `core_notes` / `recording` / `live_transcription` / …
+    pub feature: String,
+    pub ready: bool,
+    /// 給使用者看的一句話，例如「需要：麥克風、語音模型」。
+    pub explanation: String,
+}
+
+// ---- Session ----
+
+/// 一個開啟中的筆記本。各平台持有它的參照。
+#[derive(Debug, uniffi::Object)]
+pub struct PadnoteSession {
+    inner: Mutex<NotebookSession>,
+    setup: Mutex<SetupCenter>,
+}
+
+#[uniffi::export]
+impl PadnoteSession {
+    /// 建立新筆記本。`path` 是 `.padnote` 套件的目錄位置。
+    #[uniffi::constructor]
+    pub fn create(path: String, title: String, now_unix_ms: u64) -> Result<Self, FfiError> {
+        Ok(Self {
+            inner: Mutex::new(NotebookSession::create(path, &title, now_unix_ms)?),
+            setup: Mutex::new(SetupCenter::new("paraformer-zh", "qwen3-4b-instruct-q4")),
+        })
+    }
+
+    /// 推進筆記本時間軸。平台層以 monotonic clock 餵入，**必須單調遞增**。
+    pub fn advance_time(&self, notebook_time_us: u64) {
+        self.lock()
+            .advance_time(NotebookTime::from_micros(notebook_time_us));
+    }
+
+    pub fn now_us(&self) -> u64 {
+        self.lock().now().as_micros()
+    }
+
+    pub fn title(&self) -> String {
+        self.lock().notebook().title.clone()
+    }
+
+    pub fn page_count(&self) -> u32 {
+        self.lock().notebook().page_count() as u32
+    }
+
+    pub fn first_page_id(&self) -> Option<String> {
+        self.lock().first_page().map(|id| id.to_string())
+    }
+
+    pub fn add_page(&self, style: PageStyle) -> String {
+        self.lock().add_page(style.into()).to_string()
+    }
+
+    // ---- 手寫 ----
+
+    /// 寫入一筆畫，回傳其 id。時間戳由 core 依當前時間軸填入。
+    pub fn add_stroke(
+        &self,
+        page_id: String,
+        tool: ToolKind,
+        color_rgba: Vec<u8>,
+        base_width: f32,
+        points: Vec<StrokePoint>,
+    ) -> Result<String, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let id = Uuid::now_v7();
+        let stroke = Stroke {
+            id,
+            started_at: NotebookTime::ZERO, // core 會覆寫為當前時間
+            tool: tool.into(),
+            color_rgba8: to_rgba(&color_rgba),
+            base_width,
+            points: points.into_iter().map(to_ink_point).collect(),
+        };
+        self.lock().add_stroke(page, stroke)?;
+        Ok(id.to_string())
+    }
+
+    pub fn erase_stroke(&self, page_id: String, stroke_id: String) -> Result<(), FfiError> {
+        let (page, stroke) = (parse_uuid(&page_id)?, parse_uuid(&stroke_id)?);
+        self.lock().erase_stroke(page, stroke)?;
+        Ok(())
+    }
+
+    /// 目前可見的筆畫摘要。
+    ///
+    /// 刻意不回傳全部取樣點 —— 一頁數萬個點跨 FFI 邊界會很慢。
+    /// 渲染用的原始資料由平台層直接讀 `.strokes` 檔。
+    pub fn visible_strokes(&self, page_id: String) -> Result<Vec<StrokeSummary>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self
+            .lock()
+            .visible_strokes(page)?
+            .into_iter()
+            .map(|s| {
+                let b = s.inked_bounds();
+                StrokeSummary {
+                    id: s.id.to_string(),
+                    started_at_us: s.started_at.as_micros(),
+                    point_count: s.points.len() as u32,
+                    bounds: b.map_or_else(Vec::new, |r| vec![r.min_x, r.min_y, r.max_x, r.max_y]),
+                }
+            })
+            .collect())
+    }
+
+    // ---- 文字 ----
+
+    pub fn add_text(
+        &self,
+        page_id: String,
+        content: String,
+        style: BlockStyle,
+    ) -> Result<String, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self
+            .lock()
+            .add_text_block(page, &content, style.into())?
+            .to_string())
+    }
+
+    // ---- 錄音 ----
+
+    pub fn start_recording(&self) -> Result<String, FfiError> {
+        Ok(self.lock().start_recording()?.to_string())
+    }
+
+    pub fn stop_recording(&self) -> Result<String, FfiError> {
+        Ok(self.lock().stop_recording()?.to_string())
+    }
+
+    pub fn is_recording(&self) -> bool {
+        matches!(
+            self.lock().recording_state(),
+            RecordingState::Recording { .. }
+        )
+    }
+
+    /// **功能 C1**：某個筆記本時刻對應的錄音位置。
+    ///
+    /// 使用者點一筆畫時，平台層傳入該筆畫的 `started_at_us`。
+    pub fn playback_at(&self, notebook_time_us: u64) -> Option<PlaybackPosition> {
+        self.lock()
+            .timeline()
+            .playback_at(NotebookTime::from_micros(notebook_time_us))
+            .map(|(s, offset)| PlaybackPosition {
+                media_path: s.media_path.clone(),
+                offset_us: offset.as_micros(),
+            })
+    }
+
+    pub fn recorded_duration_us(&self) -> u64 {
+        self.lock().timeline().recorded_duration().as_micros()
+    }
+
+    // ---- 搜尋與匯出 ----
+
+    pub fn search(&self, query: String, limit: u32) -> Vec<SearchResult> {
+        self.lock()
+            .search(&query, limit as usize)
+            .into_iter()
+            .map(|h| SearchResult {
+                page_id: h.doc.page,
+                block_id: h.doc.block,
+                source: source_name(h.source).into(),
+                score: h.score,
+                snippet: h.snippet,
+            })
+            .collect()
+    }
+
+    /// 手寫辨識完成後回填索引（辨識是非同步的，故獨立於 `add_stroke`）。
+    pub fn index_handwriting(
+        &self,
+        page_id: String,
+        stroke_id: String,
+        text: String,
+    ) -> Result<(), FfiError> {
+        let (page, stroke) = (parse_uuid(&page_id)?, parse_uuid(&stroke_id)?);
+        self.lock().index_handwriting(page, stroke, &text);
+        Ok(())
+    }
+
+    pub fn export_markdown(&self) -> Result<String, FfiError> {
+        Ok(self.lock().export_markdown()?)
+    }
+
+    // ---- 引擎與權限中心（功能 I1）----
+
+    /// 平台層回報某項能力的狀態。
+    ///
+    /// `capability`：`microphone` / `speech` / `handwriting` / `asr_model` /
+    /// `llm_model` / `local_folder` / `icloud` / `google_drive`
+    /// `state`：`ready` / `needs_permission` / `denied` / `needs_download` /
+    /// `not_configured` / `unsupported`
+    pub fn report_capability(&self, capability: String, state: String, size_bytes: u64) {
+        let Some(cap) = parse_capability(&capability) else {
+            return;
+        };
+        let status = match state.as_str() {
+            "ready" => Status::Ready,
+            "needs_permission" => Status::NeedsPermission,
+            "denied" => Status::PermissionDenied,
+            "needs_download" => Status::NeedsDownload { size_bytes },
+            "not_configured" => Status::NotConfigured,
+            _ => Status::Unsupported,
+        };
+        self.setup.lock().expect("setup 鎖中毒").set(cap, status);
+    }
+
+    /// 各功能目前能不能用、不能的話缺什麼。設定頁直接畫這個列表。
+    pub fn feature_status(&self) -> Vec<FeatureStatus> {
+        self.setup
+            .lock()
+            .expect("setup 鎖中毒")
+            .all_readiness()
+            .into_iter()
+            .map(|r| FeatureStatus {
+                feature: feature_name(r.feature).into(),
+                ready: r.ready,
+                explanation: r.explanation(),
+            })
+            .collect()
+    }
+
+    /// 待下載的總位元組數。空間不足時要先警告使用者。
+    pub fn pending_download_bytes(&self) -> u64 {
+        self.setup
+            .lock()
+            .expect("setup 鎖中毒")
+            .total_download_bytes()
+    }
+}
+
+impl PadnoteSession {
+    fn lock(&self) -> std::sync::MutexGuard<'_, NotebookSession> {
+        // 鎖中毒代表其他執行緒 panic 過。繼續用髒狀態比明確崩掉更危險。
+        self.inner.lock().expect("session 鎖中毒")
+    }
+}
+
+// ---- 自由函式 ----
+
+/// 本 build 支援的 `.padnote` 格式版本。
+#[uniffi::export]
+pub fn spec_version() -> u32 {
+    crate::SPEC_VERSION
+}
+
+/// 這份筆記本能不能用目前的版本開啟（format-spec §8）。
+#[uniffi::export]
+pub fn can_open(spec_version: u32, min_reader_version: u32) -> bool {
+    crate::can_open(spec_version, min_reader_version)
+}
+
+// ---- 轉換輔助 ----
+
+fn to_ink_point(p: StrokePoint) -> InkPoint {
+    InkPoint {
+        x: p.x,
+        y: p.y,
+        pressure: p.pressure,
+        tilt: p.tilt,
+        azimuth: p.azimuth,
+        dt_us: p.dt_us,
+    }
+}
+
+/// 不足 4 個位元組時補為不透明黑色，而不是 panic —— FFI 輸入不可信。
+fn to_rgba(v: &[u8]) -> [u8; 4] {
+    match v.len() {
+        4 => [v[0], v[1], v[2], v[3]],
+        3 => [v[0], v[1], v[2], 255],
+        _ => [0, 0, 0, 255],
+    }
+}
+
+fn parse_uuid(s: &str) -> Result<Uuid, FfiError> {
+    let hex: String = s.chars().filter(|c| *c != '-').collect();
+    if hex.len() != 32 {
+        return Err(FfiError::Failed(format!("不是合法的 id：{s}")));
+    }
+    let mut out = [0u8; 16];
+    for (i, c) in hex.as_bytes().chunks(2).enumerate() {
+        out[i] = std::str::from_utf8(c)
+            .ok()
+            .and_then(|h| u8::from_str_radix(h, 16).ok())
+            .ok_or_else(|| FfiError::Failed(format!("不是合法的 id：{s}")))?;
+    }
+    Ok(Uuid::from_bytes(out))
+}
+
+fn source_name(s: padnote_search::Source) -> &'static str {
+    use padnote_search::Source;
+    match s {
+        Source::Text => "text",
+        Source::Transcript => "transcript",
+        Source::Handwriting => "handwriting",
+        Source::PdfText => "pdf",
+        Source::Ocr => "ocr",
+    }
+}
+
+fn feature_name(f: Feature) -> &'static str {
+    match f {
+        Feature::CoreNotes => "core_notes",
+        Feature::Recording => "recording",
+        Feature::LiveTranscription => "live_transcription",
+        Feature::HandwritingToText => "handwriting_to_text",
+        Feature::AiSummary => "ai_summary",
+        Feature::Sync => "sync",
+    }
+}
+
+fn parse_capability(s: &str) -> Option<Capability> {
+    Some(match s {
+        "microphone" => Capability::Microphone,
+        "speech" => Capability::SpeechPermission,
+        "handwriting" => Capability::Handwriting,
+        "asr_model" => Capability::AsrModel("paraformer-zh".into()),
+        "llm_model" => Capability::LlmModel("qwen3-4b-instruct-q4".into()),
+        "local_folder" => Capability::LocalSyncFolder,
+        "icloud" => Capability::ICloudDrive,
+        "google_drive" => Capability::GoogleDrive,
+        _ => return None,
+    })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn tmp(name: &str) -> String {
+        let d = std::env::temp_dir().join(format!("padnote-ffi-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        d.to_string_lossy().into_owned()
+    }
+
+    fn session(name: &str) -> PadnoteSession {
+        PadnoteSession::create(tmp(name), "線性代數".into(), 1_757_635_200_000).unwrap()
+    }
+
+    fn points() -> Vec<StrokePoint> {
+        vec![
+            StrokePoint {
+                x: 0.0,
+                y: 0.0,
+                pressure: 0.5,
+                tilt: 0.0,
+                azimuth: 0.0,
+                dt_us: 0,
+            },
+            StrokePoint {
+                x: 10.0,
+                y: 10.0,
+                pressure: 0.8,
+                tilt: 0.0,
+                azimuth: 0.0,
+                dt_us: 8_000,
+            },
+        ]
+    }
+
+    #[test]
+    fn session_round_trip_through_the_ffi_surface() {
+        let s = session("roundtrip");
+        assert_eq!(s.title(), "線性代數");
+        assert_eq!(s.page_count(), 1);
+
+        let page = s.first_page_id().unwrap();
+        let stroke = s
+            .add_stroke(
+                page.clone(),
+                ToolKind::FountainPen,
+                vec![0, 0, 0, 255],
+                2.0,
+                points(),
+            )
+            .unwrap();
+
+        let strokes = s.visible_strokes(page.clone()).unwrap();
+        assert_eq!(strokes.len(), 1);
+        assert_eq!(strokes[0].id, stroke);
+        assert_eq!(strokes[0].point_count, 2);
+        assert_eq!(strokes[0].bounds.len(), 4);
+
+        s.erase_stroke(page.clone(), stroke).unwrap();
+        assert!(s.visible_strokes(page).unwrap().is_empty());
+    }
+
+    #[test]
+    fn malformed_id_returns_error_instead_of_panicking() {
+        // FFI 輸入來自另一個語言，不可信。
+        let s = session("badid");
+        assert!(
+            s.add_stroke(
+                "not-a-uuid".into(),
+                ToolKind::BallPoint,
+                vec![],
+                1.0,
+                points()
+            )
+            .is_err()
+        );
+        assert!(s.visible_strokes("".into()).is_err());
+        assert!(s.erase_stroke("zzzz".into(), "zzzz".into()).is_err());
+    }
+
+    #[test]
+    fn short_color_array_falls_back_instead_of_panicking() {
+        assert_eq!(to_rgba(&[]), [0, 0, 0, 255]);
+        assert_eq!(to_rgba(&[1, 2, 3]), [1, 2, 3, 255]);
+        assert_eq!(to_rgba(&[1, 2, 3, 4]), [1, 2, 3, 4]);
+        assert_eq!(to_rgba(&[1, 2, 3, 4, 5]), [0, 0, 0, 255]);
+    }
+
+    #[test]
+    fn c1_playback_lookup_works_across_the_boundary() {
+        let s = session("c1");
+        let page = s.first_page_id().unwrap();
+
+        s.advance_time(1_000_000);
+        s.start_recording().unwrap();
+        assert!(s.is_recording());
+
+        s.advance_time(4_500_000);
+        s.add_stroke(
+            page.clone(),
+            ToolKind::BallPoint,
+            vec![0, 0, 0, 255],
+            2.0,
+            points(),
+        )
+        .unwrap();
+
+        s.advance_time(10_000_000);
+        s.stop_recording().unwrap();
+        assert!(!s.is_recording());
+
+        let stroke = &s.visible_strokes(page).unwrap()[0];
+        let pos = s.playback_at(stroke.started_at_us).expect("應找得到錄音");
+        assert_eq!(pos.offset_us, 3_500_000);
+        assert!(pos.media_path.ends_with(".opus"));
+
+        assert_eq!(s.recorded_duration_us(), 9_000_000);
+    }
+
+    #[test]
+    fn search_reports_its_source() {
+        let s = session("search");
+        let page = s.first_page_id().unwrap();
+        s.add_text(page.clone(), "線性代數筆記".into(), BlockStyle::Body)
+            .unwrap();
+
+        let stroke = s
+            .add_stroke(
+                page.clone(),
+                ToolKind::Pencil,
+                vec![0, 0, 0, 255],
+                2.0,
+                points(),
+            )
+            .unwrap();
+        s.index_handwriting(page, stroke, "手寫的線性代數".into())
+            .unwrap();
+
+        let hits = s.search("線性".into(), 10);
+        assert_eq!(hits.len(), 2);
+        assert_eq!(hits[0].source, "text", "打字應排在手寫辨識之前");
+        assert!(hits.iter().any(|h| h.source == "handwriting"));
+    }
+
+    #[test]
+    fn feature_status_starts_with_only_core_notes_ready() {
+        // 全新安裝、零權限：手寫與打字就該能用，其他都需要設定。
+        let s = session("features");
+        let all = s.feature_status();
+        assert_eq!(all.len(), 6);
+
+        let core = all.iter().find(|f| f.feature == "core_notes").unwrap();
+        assert!(core.ready);
+        assert_eq!(core.explanation, "可以使用");
+
+        let transcription = all
+            .iter()
+            .find(|f| f.feature == "live_transcription")
+            .unwrap();
+        assert!(!transcription.ready);
+        assert!(transcription.explanation.contains("麥克風"));
+    }
+
+    #[test]
+    fn reporting_capabilities_unblocks_features() {
+        let s = session("caps");
+        s.report_capability("microphone".into(), "ready".into(), 0);
+        assert!(
+            s.feature_status()
+                .iter()
+                .find(|f| f.feature == "recording")
+                .unwrap()
+                .ready
+        );
+
+        s.report_capability("speech".into(), "ready".into(), 0);
+        s.report_capability("asr_model".into(), "ready".into(), 0);
+        assert!(
+            s.feature_status()
+                .iter()
+                .find(|f| f.feature == "live_transcription")
+                .unwrap()
+                .ready
+        );
+    }
+
+    #[test]
+    fn unknown_capability_name_is_ignored_not_fatal() {
+        let s = session("unknowncap");
+        s.report_capability("teleportation".into(), "ready".into(), 0);
+        assert_eq!(s.feature_status().len(), 6);
+    }
+
+    #[test]
+    fn pending_download_size_is_reported() {
+        let s = session("download");
+        s.report_capability("asr_model".into(), "needs_download".into(), 230_686_720);
+        s.report_capability("llm_model".into(), "needs_download".into(), 2_621_440_000);
+        assert_eq!(s.pending_download_bytes(), 2_852_126_720);
+    }
+
+    #[test]
+    fn export_crosses_the_boundary() {
+        let s = session("export");
+        let page = s.first_page_id().unwrap();
+        s.add_text(page.clone(), "重點".into(), BlockStyle::Heading2)
+            .unwrap();
+        s.add_stroke(
+            page,
+            ToolKind::FountainPen,
+            vec![0, 0, 0, 255],
+            2.0,
+            points(),
+        )
+        .unwrap();
+
+        let md = s.export_markdown().unwrap();
+        assert!(md.contains("## 重點"));
+        assert!(md.contains("手寫內容"));
+    }
+
+    #[test]
+    fn version_helpers_are_exported() {
+        assert_eq!(spec_version(), crate::SPEC_VERSION);
+        assert!(can_open(1, 1));
+        assert!(!can_open(99, 99));
+    }
+}

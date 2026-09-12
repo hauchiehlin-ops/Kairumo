@@ -5,10 +5,19 @@ edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
 
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+
 [lints]
 workspace = true
 
+[lib]
+# cdylib 供 Swift/Kotlin 動態連結；staticlib 供 iOS 靜態連結。
+crate-type = ["lib", "cdylib", "staticlib"]
+
 [dependencies]
+uniffi = { workspace = true }
 padnote-doc = { path = "../padnote-doc" }
 padnote-ink = { path = "../padnote-ink" }
 padnote-sync = { path = "../padnote-sync" }

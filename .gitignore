@@ -14,3 +14,9 @@
 xcuserdata/
 *.xcuserstate
 DerivedData/
+
+# UniFFI 綁定為衍生檔案，由 scripts/generate-bindings.sh 產生。
+# 與 core API 不同步的綁定比沒有更危險，因此不進版控。
+/apple/Generated/
+/android/Generated/
+/apple/PadnoteCore.xcframework/

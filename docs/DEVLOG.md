@@ -5,6 +5,54 @@
 
 ---
 
+## 2026-09-12 (4) · 文字 CRDT 與 UniFFI 綁定
+
+### 做了什麼
+265 → **299 個測試**。`padnote-doc::text`（CRDT + 二進位編碼）、
+文字同步端到端驗證（S-16）、`padnote-core::ffi`（UniFFI 門面）、
+Swift/Kotlin 綁定產生腳本、XCFramework 建置腳本、CI 綁定閘門。
+
+### 為什麼這樣做
+
+**先做 CRDT 再做 UniFFI。**
+CRDT 會改變 core 的 API 表面，反過來做等於要重弄一次綁定。
+
+**自行實作 CRDT 而非引入 yrs（ADR-0004）。**
+需求是純文字 —— 粗體、標題、待辦這些屬性住在 `Block` 層級，不在字元流裡。
+換到的是與既有 oplog／Lamport 一致、零額外相依、每條收斂性質都有測試。
+
+**FFI 獨立一層，不直接匯出內部型別。**
+`Uuid`、`NotebookTime`、trait 物件都過不了 FFI 邊界；更重要的是，
+內部重構不該逼著兩個平台的 UI 一起改。這一層是穩定契約。
+
+**`visible_strokes` 只回傳摘要，不回傳取樣點。**
+一頁數萬個點跨 FFI 邊界會很慢。渲染資料由平台層直接讀 `.strokes` 檔。
+
+**綁定不進版控。**
+與 core API 不同步的綁定比沒有更危險。改 `ffi.rs` 後跑
+`scripts/generate-bindings.sh`，CI 也會驗證產得出來。
+
+### 踩到的坑
+- **併發插入的測試一開始就寫錯**：忘記讓兩端先套用自己的操作，
+  結果是「兩邊各缺一半」而非不收斂。**測試本身錯了比實作錯更難發現** ——
+  修正後補上「各自本地結果」的中間斷言，這樣下次失敗會指向正確的地方
+- `uniffi` 的 bindgen 需要 `features = ["cli"]`，否則 `uniffi_bindgen_main` 找不到
+- `#[derive(uniffi::Object)]` 的結構仍受 `missing_debug_implementations` 檢查
+
+### 驗證結果
+S-16 端到端：三站 300 次併發編輯（插入 430 字、刪除 105 字），
+經二進位編碼 → 加密 → SyncEngine → 本機資料夾 → 拉取 → 解密 → 解碼 → 套用，
+**三台文字完全一致、緩衝區歸零**。另含「刪除與插入交錯」「離線追平」
+「同位置併發輸入兩邊都保留」「磁碟上為密文」等迴歸測試。
+
+Swift 綁定已產生並通過 iOS SDK 語法檢查，API 為慣用的 camelCase + throws。
+
+### 下一步
+剩下的幾乎都需要原生相依或實機：PDFium、Opus、sherpa-onnx、
+Apple Vision 的 `HwrEngine` 實作。
+
+---
+
 ## 2026-09-12 (3) · 引擎、模型與 PDF 層
 
 ### 做了什麼

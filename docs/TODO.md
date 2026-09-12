@@ -66,14 +66,15 @@
 | S-10 | WP7 | `padnote-pdf`：文件介面、座標轉換、LRU 頁面快取與預抓 |
 | S-14 | D4 | `padnote-models`：清單、SHA-256 驗證、斷點續傳、可刪除 |
 | S-17 | WP13 | `padnote-core::setup`：引擎與權限中心狀態機 |
+| S-16 | WP1 | `padnote-doc::text`：文字 CRDT + 二進位編碼，**端到端同步已驗證** |
+| S-12 | — | UniFFI：Swift/Kotlin 綁定、產生腳本、XCFramework 腳本、CI 閘門 |
 
 ### 待做
 | ID | 工作包 | 內容 | 備註 |
 |---|---|---|---|
-| S-12 | — | UniFFI 綁定產生（Swift / Kotlin） | 核心 API 已穩定，可以開始 |
 | S-13 | WP5 | Opus 編碼整合 | 需 `libopus` 綁定，**無法在此驗證** |
 | S-15 | WP5 | sherpa-onnx / whisper.cpp 實作 `AsrEngine` | 管線編排已就緒，插進去即可 |
-| S-16 | — | 文字 CRDT 與 op-log 持久化 | 筆畫已完成；文字需 Yrs/Automerge |
+| S-23 | — | 文字 op 寫入 `doc/ops/` 持久化 | CRDT 與編碼已完成，缺落盤 |
 | S-18 | — | PDF 匯出（含標註） | 依賴 PDFium 綁定 |
 | S-19 | WP20 | iCloud `CloudProvider` 實作 | Swift 側；演算法已由 S3 驗證 |
 | S-20 | WP23 | llama.cpp 整合（摘要、待辦抽取） | P2 |

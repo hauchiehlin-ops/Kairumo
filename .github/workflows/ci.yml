@@ -48,6 +48,22 @@ jobs:
       - name: 編解碼往返、截斷偵測、版本拒絕
         run: cargo test -p padnote-ink -p padnote-core -- --nocapture
 
+  # S-12：FFI 綁定必須產得出來。core 的 API 改壞時在這裡就會爆，
+  # 而不是等到 Xcode 編不過。
+  bindings:
+    name: FFI bindings
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: 產生 Swift / Kotlin 綁定
+        run: ./scripts/generate-bindings.sh
+      - name: Swift 語法檢查
+        run: |
+          xcrun --sdk iphoneos swiftc -parse -target arm64-apple-ios17.0 \
+            apple/Generated/padnote_core.swift apple/Examples/SessionUsage.swift
+
   # --- 以下為 M0 完成後啟用的效能與品質閘門（docs/roadmap.md）---
   #
   # ink-latency:   J1 墨跡 motion-to-photon ≤ 9ms，不得回退

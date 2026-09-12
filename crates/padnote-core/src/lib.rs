@@ -6,7 +6,10 @@
 //!
 //! TODO(S-11)：以 UniFFI 產生 Swift / Kotlin 綁定。
 
+uniffi::setup_scaffolding!();
+
 pub mod app;
+pub mod ffi;
 pub mod setup;
 
 pub use padnote_asr as asr;
