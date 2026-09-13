@@ -2071,6 +2071,14 @@ extension LocalizationManager {
             .ko: "\"%@\"에 일치하는 노트가 없습니다",
             .th: "ไม่พบบันทึกที่ตรงกับ \"%@\""
         ],
+        "no_strokes": [
+            .zhHant: "這一頁還沒有手寫內容",
+            .en: "Nothing handwritten on this page yet",
+            .zhHans: "这一页还没有手写内容",
+            .ja: "このページにはまだ手書きがありません",
+            .ko: "이 페이지에는 아직 손글씨가 없습니다",
+            .th: "หน้านี้ยังไม่มีลายมือ"
+        ],
         "not_downloaded": [
             .zhHant: "隨需下載",
             .en: "On Demand",
@@ -2414,6 +2422,30 @@ extension LocalizationManager {
             .ja: "最近の録音と文字起こし",
             .ko: "최근 녹음 및 필사",
             .th: "การบันทึกและการถอดเสียงล่าสุด"
+        ],
+        "recognize_handwriting": [
+            .zhHant: "辨識手寫",
+            .en: "Recognize Handwriting",
+            .zhHans: "识别手写",
+            .ja: "手書きを認識",
+            .ko: "손글씨 인식",
+            .th: "รู้จำลายมือ"
+        ],
+        "recognized_result": [
+            .zhHant: "已索引 %1@ 組：%2@",
+            .en: "Indexed %1@ group(s): %2@",
+            .zhHans: "已索引 %1@ 组：%2@",
+            .ja: "%1@ 組を索引に登録：%2@",
+            .ko: "%1@개 그룹 색인됨: %2@",
+            .th: "จัดทำดัชนี %1@ กลุ่ม: %2@"
+        ],
+        "recognizing": [
+            .zhHant: "辨識中…",
+            .en: "Recognizing…",
+            .zhHans: "识别中…",
+            .ja: "認識中…",
+            .ko: "인식 중…",
+            .th: "กำลังรู้จำ…"
         ],
         "reconnect_now": [
             .zhHant: "立即重連",

@@ -103,6 +103,26 @@ class CoreCapabilityTest {
     }
 
     @Test
+    fun recognizedHandwritingBecomesSearchable() {
+        // WP7 的驗收條件是「辨識結果進入全文搜尋索引且搜得到」。
+        //
+        // 辨識本身要模型、要網路，放進自動化測試會變成在測 Google 的服務。
+        // 這裡用固定文字走同一條回填路徑，把「索引 → 搜尋」這一段釘死；
+        // 辨識那一段由實機操作驗證（見 DEVLOG）。
+        val (s, page) = session("hwr")
+        val strokeId = s.visibleStrokeDetails(page).first().id
+
+        s.indexHandwriting(page, strokeId, "會議紀錄")
+
+        val hits = s.search("會議", 10u)
+        assertTrue("辨識出來的字應該搜得到", hits.isNotEmpty())
+        assertTrue(
+            "命中來源應該標成手寫，實得 ${hits.map { it.source }}",
+            hits.any { it.source.contains("hand", ignoreCase = true) }
+        )
+    }
+
+    @Test
     fun searchFindsTextWrittenOnThisDevice() {
         val (s, page) = session("search")
         s.addText(page, "會議重點：下週交付", uniffi.padnote_core.BlockStyle.BODY)

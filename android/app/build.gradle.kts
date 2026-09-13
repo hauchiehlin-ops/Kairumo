@@ -82,6 +82,11 @@ dependencies {
     // 預測筆跡。補的是「手已經到了、畫面還沒跟上」的那一段視覺落差。
     implementation("androidx.input:input-motionprediction:1.0.0-beta05")
 
+    // 手寫辨識。ML Kit 是既有架構決策 D2 已接受的例外（需要 Google Play 服務），
+    // 沒有服務的裝置要明確降級，不能靜默失敗。
+    implementation("com.google.mlkit:digital-ink-recognition:18.1.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
+
     // UniFFI 產生的 Kotlin 綁定透過 JNA 呼叫 libpadnote_core.so
     implementation("net.java.dev.jna:jna:5.15.0@aar")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")

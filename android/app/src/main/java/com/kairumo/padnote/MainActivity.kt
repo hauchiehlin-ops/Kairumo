@@ -36,6 +36,9 @@ import com.kairumo.padnote.ink.InkCanvas
 import com.kairumo.padnote.platform.AudioCapture
 import com.kairumo.padnote.platform.DocsViewer
 import com.kairumo.padnote.platform.Exporter
+import com.kairumo.padnote.platform.Handwriting
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import com.kairumo.padnote.ink.InkEngine
 import com.kairumo.padnote.ink.InkLatencyMeter
 import com.kairumo.padnote.ink.LowLatencyInkCanvas
@@ -97,6 +100,7 @@ private fun InkScreen() {
     var recording by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var docsAsset by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
 
     val micPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -216,6 +220,23 @@ private fun InkScreen() {
                         val session = notebook?.first ?: return@DropdownMenuItem
                         runCatching { Exporter.print(activity, session) }
                             .onFailure { message = it.message }
+                    }
+                )
+                Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n("recognize_handwriting")) },
+                    onClick = {
+                        showMenu = false
+                        val session = notebook?.first
+                        val page = notebook?.second
+                        if (session == null || page == null) {
+                            message = "核心未就緒"
+                        } else {
+                            message = l10n("recognizing")
+                            scope.launch {
+                                message = recognizeHandwriting(session, page, engine)
+                            }
+                        }
                     }
                 )
                 Divider()
@@ -549,4 +570,43 @@ private fun exportAndShare(
                 .replace("%@", t.message ?: t.toString())
         }
     )
+}
+
+/**
+ * 把這一頁的手寫辨識成文字並寫進搜尋索引（工作包 WP7）。
+ *
+ * 辨識結果**只進索引**，不取代也不修改任何一筆畫 —— 手寫筆記的價值就在那個
+ * 手寫，辨識只是讓它搜得到。
+ *
+ * 每一組的文字只掛在該組的**第一筆**上。掛在每一筆的話，搜「交付」會為同一個
+ * 詞回報好幾個命中，使用者看到的是一堆重複的結果。
+ */
+private suspend fun recognizeHandwriting(
+    session: PadnoteSession,
+    pageId: String,
+    engine: InkEngine
+): String {
+    val strokes = engine.strokes.filter { it.coreStrokeId != null }
+    if (strokes.isEmpty()) return LocalizationStrings.localized("no_strokes", deviceLanguageTag())
+
+    val groups = Handwriting.group(
+        strokeIds = strokes.map { it.coreStrokeId!! },
+        strokes = strokes.map { it.points },
+        strokeTimesMs = strokes.map { it.startedAtMs }
+    )
+
+    var indexed = 0
+    val recognized = StringBuilder()
+    for (group in groups) {
+        val result = Handwriting.recognize(group.strokes, deviceLanguageTag())
+        result.onFailure { return it.message ?: it.toString() }
+        val text = result.getOrNull().orEmpty()
+        if (text.isBlank()) continue
+        runCatching { session.indexHandwriting(pageId, group.strokeIds.first(), text) }
+            .onSuccess { indexed++; recognized.append(text) }
+    }
+
+    return LocalizationStrings.localized("recognized_result", deviceLanguageTag())
+        .replace("%1@", "$indexed")
+        .replace("%2@", recognized.toString().take(40))
 }

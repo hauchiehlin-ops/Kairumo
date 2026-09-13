@@ -2055,6 +2055,14 @@
     "zhHans": "未找到匹配“%@”的笔记",
     "zhHant": "找不到符合「%@」的筆記"
   },
+  "no_strokes": {
+    "en": "Nothing handwritten on this page yet",
+    "ja": "このページにはまだ手書きがありません",
+    "ko": "이 페이지에는 아직 손글씨가 없습니다",
+    "th": "หน้านี้ยังไม่มีลายมือ",
+    "zhHans": "这一页还没有手写内容",
+    "zhHant": "這一頁還沒有手寫內容"
+  },
   "not_downloaded": {
     "en": "On Demand",
     "ja": "未DL",
@@ -2398,6 +2406,30 @@
     "th": "การบันทึกและการถอดเสียงล่าสุด",
     "zhHans": "最近录音与转录",
     "zhHant": "最近錄音與轉錄"
+  },
+  "recognize_handwriting": {
+    "en": "Recognize Handwriting",
+    "ja": "手書きを認識",
+    "ko": "손글씨 인식",
+    "th": "รู้จำลายมือ",
+    "zhHans": "识别手写",
+    "zhHant": "辨識手寫"
+  },
+  "recognized_result": {
+    "en": "Indexed %1@ group(s): %2@",
+    "ja": "%1@ 組を索引に登録：%2@",
+    "ko": "%1@개 그룹 색인됨: %2@",
+    "th": "จัดทำดัชนี %1@ กลุ่ม: %2@",
+    "zhHans": "已索引 %1@ 组：%2@",
+    "zhHant": "已索引 %1@ 組：%2@"
+  },
+  "recognizing": {
+    "en": "Recognizing…",
+    "ja": "認識中…",
+    "ko": "인식 중…",
+    "th": "กำลังรู้จำ…",
+    "zhHans": "识别中…",
+    "zhHant": "辨識中…"
   },
   "reconnect_now": {
     "en": "Reconnect Now",

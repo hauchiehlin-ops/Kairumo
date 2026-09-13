@@ -2066,6 +2066,14 @@ object LocalizationStrings {
             "ko" to "\"%@\"에 일치하는 노트가 없습니다",
             "th" to "ไม่พบบันทึกที่ตรงกับ \"%@\""
         ),
+        "no_strokes" to mapOf(
+            "zh-Hant" to "這一頁還沒有手寫內容",
+            "en" to "Nothing handwritten on this page yet",
+            "zh-Hans" to "这一页还没有手写内容",
+            "ja" to "このページにはまだ手書きがありません",
+            "ko" to "이 페이지에는 아직 손글씨가 없습니다",
+            "th" to "หน้านี้ยังไม่มีลายมือ"
+        ),
         "not_downloaded" to mapOf(
             "zh-Hant" to "隨需下載",
             "en" to "On Demand",
@@ -2409,6 +2417,30 @@ object LocalizationStrings {
             "ja" to "最近の録音と文字起こし",
             "ko" to "최근 녹음 및 필사",
             "th" to "การบันทึกและการถอดเสียงล่าสุด"
+        ),
+        "recognize_handwriting" to mapOf(
+            "zh-Hant" to "辨識手寫",
+            "en" to "Recognize Handwriting",
+            "zh-Hans" to "识别手写",
+            "ja" to "手書きを認識",
+            "ko" to "손글씨 인식",
+            "th" to "รู้จำลายมือ"
+        ),
+        "recognized_result" to mapOf(
+            "zh-Hant" to "已索引 %1@ 組：%2@",
+            "en" to "Indexed %1@ group(s): %2@",
+            "zh-Hans" to "已索引 %1@ 组：%2@",
+            "ja" to "%1@ 組を索引に登録：%2@",
+            "ko" to "%1@개 그룹 색인됨: %2@",
+            "th" to "จัดทำดัชนี %1@ กลุ่ม: %2@"
+        ),
+        "recognizing" to mapOf(
+            "zh-Hant" to "辨識中…",
+            "en" to "Recognizing…",
+            "zh-Hans" to "识别中…",
+            "ja" to "認識中…",
+            "ko" to "인식 중…",
+            "th" to "กำลังรู้จำ…"
         ),
         "reconnect_now" to mapOf(
             "zh-Hant" to "立即重連",

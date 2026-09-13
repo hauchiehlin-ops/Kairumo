@@ -41,7 +41,9 @@ class InkEngine(
         val pointerId: ULong,
         val coreStrokeId: String?,
         val points: List<StrokePoint>,
-        val tool: ToolKind
+        val tool: ToolKind,
+        /** 落筆時刻（毫秒）。手寫辨識靠它把筆畫依書寫停頓分組。 */
+        val startedAtMs: Long
     )
 
     /** 一次事件處理的結果，供 UI 決定要不要重繪。 */
@@ -151,7 +153,13 @@ class InkEngine(
             null
         }
 
-        val stroke = CompletedStroke(id, coreId, points, tool)
+        val stroke = CompletedStroke(
+            pointerId = id,
+            coreStrokeId = coreId,
+            points = points,
+            tool = tool,
+            startedAtMs = (samples.first().event.timestampUs / 1_000uL).toLong()
+        )
         _strokes += stroke
         if (coreId != null) committed[id] = coreId
         return stroke
