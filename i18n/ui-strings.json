@@ -1383,6 +1383,38 @@
     "zhHans": "图片",
     "zhHant": "圖片"
   },
+  "ink_clear": {
+    "en": "Clear",
+    "ja": "消去",
+    "ko": "지우기",
+    "th": "ล้าง",
+    "zhHans": "清除",
+    "zhHant": "清除"
+  },
+  "ink_pen_only": {
+    "en": "Stylus Only",
+    "ja": "スタイラスのみ",
+    "ko": "스타일러스 전용",
+    "th": "ปากกาสไตลัสเท่านั้น",
+    "zhHans": "仅限触控笔",
+    "zhHant": "僅限觸控筆"
+  },
+  "ink_stroke_count": {
+    "en": "%@ strokes",
+    "ja": "%@ ストローク",
+    "ko": "%@획",
+    "th": "%@ เส้น",
+    "zhHans": "%@ 笔",
+    "zhHant": "%@ 筆"
+  },
+  "ink_write_here": {
+    "en": "Write here",
+    "ja": "ここに書いてください",
+    "ko": "여기에 쓰세요",
+    "th": "เขียนที่นี่",
+    "zhHans": "在这里书写",
+    "zhHant": "在這裡書寫"
+  },
   "insert": {
     "en": "Insert",
     "ja": "挿入",

@@ -1399,6 +1399,38 @@ extension LocalizationManager {
             .ko: "이미지",
             .th: "รูปภาพ"
         ],
+        "ink_clear": [
+            .zhHant: "清除",
+            .en: "Clear",
+            .zhHans: "清除",
+            .ja: "消去",
+            .ko: "지우기",
+            .th: "ล้าง"
+        ],
+        "ink_pen_only": [
+            .zhHant: "僅限觸控筆",
+            .en: "Stylus Only",
+            .zhHans: "仅限触控笔",
+            .ja: "スタイラスのみ",
+            .ko: "스타일러스 전용",
+            .th: "ปากกาสไตลัสเท่านั้น"
+        ],
+        "ink_stroke_count": [
+            .zhHant: "%@ 筆",
+            .en: "%@ strokes",
+            .zhHans: "%@ 笔",
+            .ja: "%@ ストローク",
+            .ko: "%@획",
+            .th: "%@ เส้น"
+        ],
+        "ink_write_here": [
+            .zhHant: "在這裡書寫",
+            .en: "Write here",
+            .zhHans: "在这里书写",
+            .ja: "ここに書いてください",
+            .ko: "여기에 쓰세요",
+            .th: "เขียนที่นี่"
+        ],
         "insert": [
             .zhHant: "插入",
             .en: "Insert",

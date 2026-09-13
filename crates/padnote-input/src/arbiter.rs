@@ -167,6 +167,13 @@ pub struct PointerArbiter {
     pen_hovering: bool,
     /// 懸停位置，供 UI 畫落筆預覽。
     hover_position: Option<(f32, f32)>,
+    /// **剛剛結束**、且被採納為墨跡的非筆指標：`(id, 起始時間)`。
+    ///
+    /// 為什麼需要它：使用者把手放上螢幕時，手掌常常是「碰一下、滑一小段、
+    /// 隨著手安定下來抬起」，接著筆才落下。那一小段在筆落下之前就已經
+    /// **結束**了，從 `active` 裡消失，於是收不回來 —— 畫面上留下一道
+    /// 誰也不知道哪來的短線。只看 `active` 的掌拒擋不住這一種。
+    recent_draws: Vec<(u64, u64)>,
 }
 
 impl Default for PointerArbiter {
@@ -184,6 +191,7 @@ impl PointerArbiter {
             pen_lifted_at_us: None,
             pen_hovering: false,
             hover_position: None,
+            recent_draws: Vec::new(),
         }
     }
 
@@ -224,6 +232,7 @@ impl PointerArbiter {
         self.pen_lifted_at_us = None;
         self.pen_hovering = false;
         self.hover_position = None;
+        self.recent_draws.clear();
     }
 
     /// 餵入一個事件並取得決定。
@@ -339,6 +348,10 @@ impl PointerArbiter {
     }
 
     /// 筆落下時，收回時間窗內開始的非筆筆畫。
+    ///
+    /// 涵蓋兩種：還按著的（`active`），以及**剛剛才結束**的
+    /// （`recent_draws`）。只看前者的話，「手掌碰一下就抬起、筆隨後落下」
+    /// 留下的那一道短線永遠收不回來。
     fn retract_suspects(&mut self, now_us: u64) -> Vec<u64> {
         let window = self.config.retract_window_us;
         let mut ids: Vec<u64> = self
@@ -352,7 +365,15 @@ impl PointerArbiter {
             })
             .map(|(id, _)| *id)
             .collect();
+
+        for (id, started_at_us) in std::mem::take(&mut self.recent_draws) {
+            if now_us.saturating_sub(started_at_us) <= window && !ids.contains(&id) {
+                ids.push(id);
+            }
+        }
+
         ids.sort_unstable();
+        ids.dedup();
 
         for id in &ids {
             if let Some(t) = self.active.get_mut(id) {
@@ -360,6 +381,13 @@ impl PointerArbiter {
             }
         }
         ids
+    }
+
+    /// 丟掉已經超出收回時間窗的記錄，避免長時間書寫時無上限成長。
+    fn prune_recent(&mut self, now_us: u64) {
+        let window = self.config.retract_window_us;
+        self.recent_draws
+            .retain(|(_, started)| now_us.saturating_sub(*started) <= window);
     }
 
     fn on_moved(&mut self, e: &PointerEvent) -> Decision {
@@ -386,10 +414,18 @@ impl PointerArbiter {
     }
 
     fn on_ended(&mut self, e: &PointerEvent) -> Decision {
-        let verdict = self
-            .active
-            .remove(&e.id)
-            .map_or(Verdict::Reject, |t| t.verdict);
+        let track = self.active.remove(&e.id);
+        let verdict = track.as_ref().map_or(Verdict::Reject, |t| t.verdict);
+
+        // 非筆的筆畫結束後仍要留一段時間可被收回（見 retract_suspects）。
+        if let Some(t) = track.as_ref()
+            && t.verdict == Verdict::Draw
+            && !t.kind.is_stylus()
+            && t.kind != PointerKind::Mouse
+        {
+            self.recent_draws.push((e.id, t.started_at_us));
+        }
+        self.prune_recent(e.timestamp_us);
 
         if e.kind.is_stylus() {
             self.pen_down = self.active.values().any(|t| t.kind.is_stylus());
@@ -415,6 +451,71 @@ impl PointerArbiter {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_finger_stroke_that_already_ended_is_still_retracted_when_the_pen_lands() {
+        // 手掌碰一下、滑一小段、抬起，筆隨後落下 —— 使用者把手放上螢幕的
+        // 自然動作。那一小段在筆落下前就結束了，只看 active 的話收不回來。
+        let mut a = PointerArbiter::default();
+        assert_eq!(a.handle(&ev(1, PointerKind::Finger, Phase::Began, 0)).verdict, Verdict::Draw);
+        a.handle(&ev(1, PointerKind::Finger, Phase::Moved, 10_000));
+        a.handle(&ev(1, PointerKind::Finger, Phase::Ended, 20_000));
+
+        let d = a.handle(&ev(2, PointerKind::Pen, Phase::Began, 100_000));
+        assert_eq!(d.verdict, Verdict::Draw);
+        assert_eq!(d.retract, vec![1], "剛結束的手指筆畫必須被收回");
+    }
+
+    #[test]
+    fn an_old_finger_stroke_outside_the_window_is_left_alone() {
+        // 收回是為了「剛剛那一下」。五秒前寫的東西是使用者真的要的，
+        // 不能因為現在拿起筆就被抹掉。
+        let mut a = PointerArbiter::default();
+        a.handle(&ev(1, PointerKind::Finger, Phase::Began, 0));
+        a.handle(&ev(1, PointerKind::Finger, Phase::Ended, 10_000));
+
+        let d = a.handle(&ev(2, PointerKind::Pen, Phase::Began, 5_000_000));
+        assert!(d.retract.is_empty(), "超出時間窗的筆畫不該被收回");
+    }
+
+    #[test]
+    fn a_retracted_stroke_is_not_retracted_twice() {
+        // 重複回報會讓平台層對同一筆畫呼叫兩次刪除 —— 第二次可能誤刪別的東西。
+        let mut a = PointerArbiter::default();
+        a.handle(&ev(1, PointerKind::Finger, Phase::Began, 0));
+        a.handle(&ev(1, PointerKind::Finger, Phase::Ended, 10_000));
+
+        let first = a.handle(&ev(2, PointerKind::Pen, Phase::Began, 50_000));
+        assert_eq!(first.retract, vec![1]);
+        a.handle(&ev(2, PointerKind::Pen, Phase::Ended, 60_000));
+
+        let second = a.handle(&ev(3, PointerKind::Pen, Phase::Began, 70_000));
+        assert!(second.retract.is_empty(), "同一筆畫不該被收回兩次");
+    }
+
+    #[test]
+    fn a_finger_stroke_that_was_rejected_is_not_reported_as_retractable() {
+        // 已經被擋掉的根本沒畫出來，回報它只會讓平台層去刪一個不存在的東西。
+        let mut a = PointerArbiter::default();
+        let mut big = ev(1, PointerKind::Finger, Phase::Began, 0);
+        big.contact_radius = 90.0; // 明確的手掌
+        assert_eq!(a.handle(&big).verdict, Verdict::Reject);
+        a.handle(&ev(1, PointerKind::Finger, Phase::Ended, 10_000));
+
+        let d = a.handle(&ev(2, PointerKind::Pen, Phase::Began, 50_000));
+        assert!(d.retract.is_empty());
+    }
+
+    #[test]
+    fn reset_forgets_recently_ended_strokes() {
+        let mut a = PointerArbiter::default();
+        a.handle(&ev(1, PointerKind::Finger, Phase::Began, 0));
+        a.handle(&ev(1, PointerKind::Finger, Phase::Ended, 10_000));
+        a.reset();
+
+        let d = a.handle(&ev(2, PointerKind::Pen, Phase::Began, 50_000));
+        assert!(d.retract.is_empty(), "換頁之後不該還記得上一頁的筆畫");
+    }
 
     fn ev(id: u64, kind: PointerKind, phase: Phase, t_us: u64) -> PointerEvent {
         PointerEvent {

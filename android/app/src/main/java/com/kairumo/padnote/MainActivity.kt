@@ -9,9 +9,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.kairumo.padnote.ink.InkCanvas
+import com.kairumo.padnote.ink.InkEngine
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -40,10 +53,91 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    CoreStatusScreen()
+                    InkScreen()
                 }
             }
         }
+    }
+}
+
+/**
+ * 手寫畫面（工作包 WP5）。
+ *
+ * 主體是畫布 —— 這是一個筆記 App，開起來就該能寫字。核心狀態那些數字移進
+ * 對話框：它們是驗證用的憑據，不是使用者每天要看的東西。
+ */
+@Composable
+private fun InkScreen() {
+    val activity = LocalContext.current as ComponentActivity
+    val l10n = { key: String -> uiString(key) }
+    val engine = remember { InkEngine() }
+    var penOnly by remember { mutableStateOf(false) }
+    var revision by remember { mutableIntStateOf(0) }
+    var showStatus by remember { mutableStateOf(false) }
+
+    Column(modifier = Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                "Kairumo",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.weight(1f)
+            )
+            FilterChip(
+                selected = penOnly,
+                onClick = {
+                    penOnly = !penOnly
+                    // 掌拒最可靠的模式：手指一律當手勢，只有筆能寫。
+                    engine.setPenOnly(penOnly)
+                },
+                label = { Text(l10n("ink_pen_only")) }
+            )
+            TextButton(onClick = { engine.reset(); revision++ }) { Text(l10n("ink_clear")) }
+            TextButton(onClick = { showStatus = true }) { Text("ⓘ") }
+        }
+
+        // 讀一下 revision 讓筆畫數會跟著重繪；真相來源仍是 engine。
+        val strokeCount = remember(revision) { engine.strokes.size }
+        Text(
+            l10n("ink_stroke_count").replace("%@", "$strokeCount"),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 12.dp)
+        )
+
+        Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
+            InkCanvas(
+                engine = engine,
+                modifier = Modifier.fillMaxSize(),
+                onInkChanged = { revision++ }
+            )
+        }
+    }
+
+    if (showStatus) {
+        val rows = remember { readCoreStatus(activity) }
+        AlertDialog(
+            onDismissRequest = { showStatus = false },
+            confirmButton = {
+                TextButton(onClick = { showStatus = false }) { Text(l10n("close")) }
+            },
+            title = { Text("Kairumo · WP5") },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    rows.forEach { (label, value) ->
+                        Text("$label：$value",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace)
+                    }
+                }
+            }
+        )
     }
 }
 

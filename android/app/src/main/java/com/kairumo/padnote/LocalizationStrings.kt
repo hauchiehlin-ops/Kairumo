@@ -1394,6 +1394,38 @@ object LocalizationStrings {
             "ko" to "이미지",
             "th" to "รูปภาพ"
         ),
+        "ink_clear" to mapOf(
+            "zh-Hant" to "清除",
+            "en" to "Clear",
+            "zh-Hans" to "清除",
+            "ja" to "消去",
+            "ko" to "지우기",
+            "th" to "ล้าง"
+        ),
+        "ink_pen_only" to mapOf(
+            "zh-Hant" to "僅限觸控筆",
+            "en" to "Stylus Only",
+            "zh-Hans" to "仅限触控笔",
+            "ja" to "スタイラスのみ",
+            "ko" to "스타일러스 전용",
+            "th" to "ปากกาสไตลัสเท่านั้น"
+        ),
+        "ink_stroke_count" to mapOf(
+            "zh-Hant" to "%@ 筆",
+            "en" to "%@ strokes",
+            "zh-Hans" to "%@ 笔",
+            "ja" to "%@ ストローク",
+            "ko" to "%@획",
+            "th" to "%@ เส้น"
+        ),
+        "ink_write_here" to mapOf(
+            "zh-Hant" to "在這裡書寫",
+            "en" to "Write here",
+            "zh-Hans" to "在这里书写",
+            "ja" to "ここに書いてください",
+            "ko" to "여기에 쓰세요",
+            "th" to "เขียนที่นี่"
+        ),
         "insert" to mapOf(
             "zh-Hant" to "插入",
             "en" to "Insert",
