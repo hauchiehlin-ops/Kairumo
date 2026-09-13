@@ -60,6 +60,40 @@ class InkEngine(
     var baseWidth: Float = 3f
 
     /**
+     * 擦除模式。
+     *
+     * 擦除不是一種筆刷 —— 核心的 `ToolKind` 只有筆刷種類，擦除走
+     * `erase_stroke`。所以它是引擎的一個狀態，不是 `tool` 的一個值。
+     */
+    var isErasing: Boolean = false
+
+    /**
+     * 擦掉碰到的筆畫。
+     *
+     * 用「碰到就整筆擦掉」而不是切斷筆畫：切斷需要把一筆拆成兩筆並改寫取樣點，
+     * 那會破壞「存原始取樣點」的不變式（ADR-0002）。整筆擦除是 append-only
+     * 的墓碑，與同步、回溯都相容。
+     */
+    private fun eraseAt(x: Float, y: Float, radius: Float): List<CompletedStroke> {
+        val hit = _strokes.filter { stroke ->
+            stroke.points.any { p ->
+                val dx = p.x - x
+                val dy = p.y - y
+                dx * dx + dy * dy <= radius * radius
+            }
+        }
+        val target = session
+        val page = pageId
+        for (stroke in hit) {
+            _strokes.remove(stroke)
+            stroke.coreStrokeId?.let { id ->
+                if (target != null && page != null) runCatching { target.eraseStroke(page, id) }
+            }
+        }
+        return hit
+    }
+
+    /**
      * 最後一個事件的原始資訊，給畫面上的診斷列用。
      *
      * 為什麼要顯示在畫面上而不是寫 log：使用者手上的裝置我碰不到，
@@ -87,7 +121,13 @@ class InkEngine(
             when (decision.verdict) {
                 FfiVerdict.DRAW -> {
                     drawn++
-                    accumulate(sample)?.let { completedNow += it }
+                    if (isErasing) {
+                        // 擦除半徑與畫出來的粗細用同一組推算，
+                        // 否則使用者會覺得「橡皮擦比看起來的小」。
+                        eraseAt(sample.event.x, sample.event.y, baseWidth * 1.5f)
+                    } else {
+                        accumulate(sample)?.let { completedNow += it }
+                    }
                 }
                 FfiVerdict.REJECT -> {
                     rejected++

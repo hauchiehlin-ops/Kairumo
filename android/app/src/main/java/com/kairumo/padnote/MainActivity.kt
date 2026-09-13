@@ -49,6 +49,8 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.kairumo.padnote.ink.InkEngine
+import com.kairumo.padnote.ink.InkTool
+import com.kairumo.padnote.ink.InkToolbar
 import com.kairumo.padnote.ink.InkLatencyMeter
 import com.kairumo.padnote.ink.LowLatencyInkCanvas
 import androidx.compose.runtime.Composable
@@ -162,6 +164,12 @@ private fun InkScreen() {
     var lowLatencyUnavailable by remember { mutableStateOf(false) }
     var revision by remember { mutableIntStateOf(0) }
     var clearToken by remember { mutableIntStateOf(0) }
+
+    // 筆刷、顏色、筆寬。在此之前 Android 只有一支固定的黑色鋼筆，
+    // 連橡皮擦都選不到 —— 核心一直支援，缺的只是 UI。
+    var inkTool by remember { mutableStateOf(InkTool.FOUNTAIN_PEN) }
+    var inkColorHex by remember { mutableStateOf("#000000") }
+    var inkWidth by remember { mutableStateOf(3f) }
     var showStatus by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
 
@@ -324,6 +332,26 @@ private fun InkScreen() {
                 )
             }
         }
+
+        InkToolbar(
+            tool = inkTool,
+            colorHex = inkColorHex,
+            width = inkWidth,
+            languageTag = deviceLanguageTag(),
+            onToolChange = { picked ->
+                inkTool = picked
+                engine.isErasing = picked.isEraser
+                picked.kind?.let { engine.tool = it }
+            },
+            onColorChange = { hex ->
+                inkColorHex = hex
+                engine.colorRgba = hexToRgba(hex)
+            },
+            onWidthChange = { value ->
+                inkWidth = value
+                engine.baseWidth = value
+            }
+        )
 
         // 讀一下 revision 讓筆畫數會跟著重繪；真相來源仍是 engine。
         val strokeCount = remember(revision) { engine.strokes.size }
@@ -785,4 +813,19 @@ private fun runRestore(activity: ComponentActivity, uri: android.net.Uri): Strin
     }.getOrElse {
         LocalizationStrings.localized("backup_invalid", lang) + "（${it.message}）"
     }
+}
+
+/** `#RRGGBB` → 核心要的 RGBA 位元組（不透明）。 */
+private fun hexToRgba(hex: String): ByteArray {
+    val value = hex.removePrefix("#")
+    if (value.length != 6) return byteArrayOf(0, 0, 0, -1)
+    return runCatching {
+        val n = value.toLong(16)
+        byteArrayOf(
+            ((n shr 16) and 0xFF).toByte(),
+            ((n shr 8) and 0xFF).toByte(),
+            (n and 0xFF).toByte(),
+            -1
+        )
+    }.getOrDefault(byteArrayOf(0, 0, 0, -1))
 }

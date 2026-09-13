@@ -2168,7 +2168,17 @@ ZStack(alignment: .topTrailing) {
                 .padding(.trailing, 20)
             }
 
-            // 🌟 筆記內嵌圖片與圖表展示層（支援等比縮放、拖曳平移與濾鏡美化）
+            // 🌟 插入物件層（圖片、文字方塊、3D 模型、連結卡片、討論圖釘）
+            //
+            // **手寫模式下這一整層不攔截觸控。**
+            //
+            // 這些物件是疊在 PKCanvasView 之上的 SwiftUI 視圖，預設會吃掉觸控 ——
+            // 於是使用者拿筆想在一張圖上圈重點，筆畫根本到不了畫布，看起來就是
+            // 「筆刷在物件上沒作用」。在一個手寫筆記 App 裡，那是最該能做的事之一。
+            //
+            // 代價是手寫模式下不能直接拖動物件 —— 要搬動或編輯就切到打字模式。
+            // 這個取捨是刻意的：手寫模式的主角是筆，物件操作有它自己的模式。
+            Group {
             ForEach(notebook.attachments ?? []) { item in
                 if item.pageIndex == currentPageIndex {
                     AttachmentItemView(
@@ -2256,6 +2266,9 @@ ZStack(alignment: .topTrailing) {
                     .position(x: pin.x, y: pin.y)
                 }
             }
+
+            }
+            .allowsHitTesting(editorMode != .draw)
 
             // 展開的討論圖釘詳細對話框
             if let pinId = selectedCommentPinId,

@@ -148,6 +148,7 @@ public struct HomeWorkbenchView: View {
                         allNotebooksSection
 
                         // 7. 底部工作台品牌與版本號
+                        dataAndSyncSection
                         documentsSection
 
                     footerVersionSection
@@ -1378,6 +1379,92 @@ public struct HomeWorkbenchView: View {
             print("🔎EXPORT audit written: \(url.path) size=\(image.size)")
         }
         notebookStore.deleteNotebook(id: doc.id)
+    }
+
+    /// 資料與同步入口。
+    ///
+    /// 這三項原本只藏在「系統診斷」裡 —— 使用者回報「一鍵備份的功能在哪裡？」
+    /// 「同步的功能在哪裡？」。備份與同步是會在**出事之後**才想起來的功能，
+    /// 那時使用者不會去翻診斷頁。放在首頁。
+    private var dataAndSyncSection: AnyView { AnyView(dataAndSyncSectionContent) }
+
+    private var dataAndSyncSectionContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Text(localizationManager.localized("data_and_sync"))
+                    .font(.headline)
+                    .fontWeight(.bold)
+                // 直接講「不需要帳號」：使用者會找「登入」，找不到會以為功能不存在。
+                Text(localizationManager.localized("no_account_needed"))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    dataCard("externaldrive.badge.timemachine", "backup_create",
+                             "backup_create_desc", .blue) { showDiagnosticsForData() }
+                    dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
+                             "backup_restore_desc", .orange) { showDiagnosticsForData() }
+                    dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
+                             "sync_folder_desc", .teal) { showDiagnosticsForData() }
+                }
+                VStack(spacing: 12) {
+                    dataCard("externaldrive.badge.timemachine", "backup_create",
+                             "backup_create_desc", .blue) { showDiagnosticsForData() }
+                    dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
+                             "backup_restore_desc", .orange) { showDiagnosticsForData() }
+                    dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
+                             "sync_folder_desc", .teal) { showDiagnosticsForData() }
+                }
+            }
+        }
+        .padding(.top, 6)
+    }
+
+    private func showDiagnosticsForData() {
+        showInfoSheet = true
+    }
+
+    private func dataCard(
+        _ icon: String, _ titleKey: String, _ descKey: String,
+        _ tint: Color, action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(tint)
+                    .frame(width: 30)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(localizationManager.localized(titleKey))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Text(localizationManager.localized(descKey))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: 4)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     /// 說明文件入口：操作手冊與隱私權政策（離線可讀，隨 App 打包）

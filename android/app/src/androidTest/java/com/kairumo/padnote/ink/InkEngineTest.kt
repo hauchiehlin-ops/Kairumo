@@ -167,6 +167,48 @@ class InkEngineTest {
     }
 
     @Test
+    fun theEraserRemovesStrokesInsteadOfAddingThem() {
+        // 擦除是 append-only 的墓碑，不是「畫一筆白色」—— 後者在透明背景上
+        // 會留下一條白線，而且同步過去在別的裝置上看得到。
+        val engine = InkEngine()
+        feed(
+            engine,
+            touch(MotionEvent.ACTION_DOWN, MotionEvent.TOOL_TYPE_STYLUS, 10f, 4f, 1_000L),
+            touch(MotionEvent.ACTION_MOVE, MotionEvent.TOOL_TYPE_STYLUS, 20f, 4f, 1_008L),
+            touch(MotionEvent.ACTION_UP, MotionEvent.TOOL_TYPE_STYLUS, 30f, 4f, 1_016L)
+        )
+        assertEquals(1, engine.strokes.size)
+
+        engine.isErasing = true
+        engine.baseWidth = 20f
+        feed(
+            engine,
+            touch(MotionEvent.ACTION_DOWN, MotionEvent.TOOL_TYPE_STYLUS, 20f, 4f, 2_000L),
+            touch(MotionEvent.ACTION_MOVE, MotionEvent.TOOL_TYPE_STYLUS, 20f, 4f, 2_008L)
+        )
+        assertEquals("碰到的筆畫應該被擦掉", 0, engine.strokes.size)
+    }
+
+    @Test
+    fun theEraserLeavesStrokesItDidNotTouch() {
+        // 擦除半徑太大的話會把旁邊的字一起吃掉。
+        val engine = InkEngine()
+        feed(
+            engine,
+            touch(MotionEvent.ACTION_DOWN, MotionEvent.TOOL_TYPE_STYLUS, 10f, 4f, 1_000L),
+            touch(MotionEvent.ACTION_MOVE, MotionEvent.TOOL_TYPE_STYLUS, 20f, 4f, 1_008L),
+            touch(MotionEvent.ACTION_UP, MotionEvent.TOOL_TYPE_STYLUS, 30f, 4f, 1_016L)
+        )
+        engine.isErasing = true
+        engine.baseWidth = 2f
+        feed(
+            engine,
+            touch(MotionEvent.ACTION_DOWN, MotionEvent.TOOL_TYPE_STYLUS, 900f, 4f, 2_000L)
+        )
+        assertEquals("離很遠的筆畫不該被擦掉", 1, engine.strokes.size)
+    }
+
+    @Test
     fun resetClearsEverything() {
         val engine = InkEngine()
         feed(
@@ -231,5 +273,59 @@ class InkEngineTest {
             "重新開啟後不該看到被收回的那一筆",
             0, reopened.visibleStrokeDetails(pageId).size
         )
+    }
+}
+
+/**
+ * 筆刷、顏色、筆寬與橡皮擦（Android）。
+ *
+ * 在此之前 Android 只有一支固定的黑色鋼筆 —— 核心一直支援這些，缺的只是 UI。
+ */
+@RunWith(AndroidJUnit4::class)
+class InkToolbarTest {
+
+    @Test
+    fun everyBrushMapsToACoreToolExceptTheEraser() {
+        // 擦除不是一種筆刷 —— 核心的 ToolKind 只有筆刷種類，擦除走 erase_stroke。
+        for (tool in InkTool.entries) {
+            if (tool == InkTool.ERASER) {
+                assertTrue("橡皮擦不該對到某一種筆刷", tool.isEraser)
+            } else {
+                assertTrue("${tool.name} 沒有對到核心的筆刷", tool.kind != null)
+            }
+        }
+    }
+
+    @Test
+    fun theWidthRangeMatchesTheOtherPlatform() {
+        // 同一個設定在兩個平台畫出來要一樣粗。
+        assertEquals(1f, inkWidthRange.start)
+        assertEquals(30f, inkWidthRange.endInclusive)
+    }
+
+    @Test
+    fun thePreviewGrowsWithTheWidth() {
+        assertTrue(
+            previewDiameter(InkTool.FOUNTAIN_PEN, 20f) >
+                previewDiameter(InkTool.FOUNTAIN_PEN, 2f)
+        )
+    }
+
+    @Test
+    fun thePreviewIsCappedSoTheToolbarDoesNotGrow() {
+        assertTrue(previewDiameter(InkTool.HIGHLIGHTER, 30f) <= 22f)
+    }
+
+    @Test
+    fun theHighlighterIsWiderThanTheBallpointAtTheSameWidth() {
+        assertTrue(
+            previewDiameter(InkTool.HIGHLIGHTER, 4f) > previewDiameter(InkTool.BALLPOINT, 4f)
+        )
+    }
+
+    @Test
+    fun thePaletteHasDistinctColors() {
+        // 重複的色票只是佔位置。
+        assertEquals(inkPalette.size, inkPalette.map { it.first }.toSet().size)
     }
 }

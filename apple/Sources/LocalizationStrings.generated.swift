@@ -295,6 +295,14 @@ extension LocalizationManager {
             .ko: "백업 만들기",
             .th: "สร้างไฟล์สำรอง"
         ],
+        "backup_create_desc": [
+            .zhHant: "把筆記、手繪、錄音與設定存成一個檔案",
+            .en: "Save notes, handwriting, recordings and settings into one file",
+            .zhHans: "把笔记、手绘、录音与设置存成一个文件",
+            .ja: "ノート・手書き・録音・設定を 1 つのファイルに保存",
+            .ko: "노트·손글씨·녹음·설정을 파일 하나로 저장",
+            .th: "บันทึกโน้ต ลายมือ เสียง และการตั้งค่าเป็นไฟล์เดียว"
+        ],
         "backup_created": [
             .zhHant: "已建立備份：%1@ 個檔案、%2@",
             .en: "Backup created: %1@ files, %2@",
@@ -326,6 +334,14 @@ extension LocalizationManager {
             .ja: "バックアップから復元",
             .ko: "백업에서 복원",
             .th: "กู้คืนจากไฟล์สำรอง"
+        ],
+        "backup_restore_desc": [
+            .zhHant: "App 毀損或換裝置時，一鍵把資料放回來",
+            .en: "One tap to put everything back after a crash or a new device",
+            .zhHans: "App 损坏或换设备时，一键把数据放回来",
+            .ja: "アプリの破損や機種変更時にワンタップで復元",
+            .ko: "앱 손상이나 기기 변경 시 한 번에 복원",
+            .th: "กู้คืนทุกอย่างได้ในคลิกเดียวเมื่อแอปเสียหรือเปลี่ยนเครื่อง"
         ],
         "backup_restored": [
             .zhHant: "已復原 %@ 個檔案，請重新啟動 App",
@@ -870,6 +886,14 @@ extension LocalizationManager {
             .ja: "選択した筆跡を切り取ってクリップボードへ（元の場所からは消えます）",
             .ko: "선택한 필기를 잘라 클립보드에 넣습니다(원래 위치에서 삭제)",
             .th: "ตัดเส้นที่เลือกไปยังคลิปบอร์ด (ลบออกจากหน้า)"
+        ],
+        "data_and_sync": [
+            .zhHant: "資料與同步",
+            .en: "Data & Sync",
+            .zhHans: "数据与同步",
+            .ja: "データと同期",
+            .ko: "데이터 및 동기화",
+            .th: "ข้อมูลและการซิงก์"
         ],
         "data_list": [
             .zhHant: "數據列表",
@@ -2311,6 +2335,14 @@ extension LocalizationManager {
             .ko: "하위 폴더 추가",
             .th: "สร้างโฟลเดอร์ย่อยใหม่"
         ],
+        "no_account_needed": [
+            .zhHant: "不需要帳號，也沒有我們的伺服器",
+            .en: "No account, and no server of ours",
+            .zhHans: "不需要账号，也没有我们的服务器",
+            .ja: "アカウント不要、当方のサーバーもありません",
+            .ko: "계정이 필요 없고, 저희 서버도 없습니다",
+            .th: "ไม่ต้องมีบัญชี และไม่มีเซิร์ฟเวอร์ของเรา"
+        ],
         "no_assets_found": [
             .zhHant: "未找到符合條件的素材",
             .en: "No matching assets found",
@@ -3606,6 +3638,14 @@ extension LocalizationManager {
             .ja: "同期はお使いのクラウドドライブ（iCloud Drive、Google Drive、Dropbox など）が行います。アカウントも当方のサーバーもありません。2 台の端末を同じフォルダに向けるだけで同期されます。",
             .ko: "동기화는 사용자의 클라우드 드라이브(iCloud Drive, Google Drive, Dropbox 등)가 담당합니다. 계정도, 저희 서버도 없습니다. 두 기기를 같은 폴더로 지정하면 서로 동기화됩니다.",
             .th: "การซิงก์ทำโดยคลาวด์ไดรฟ์ของคุณเอง (iCloud Drive, Google Drive, Dropbox ฯลฯ) ไม่มีบัญชีและไม่มีเซิร์ฟเวอร์ของเรา ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์เดียวกันก็ซิงก์กันได้"
+        ],
+        "sync_folder_desc": [
+            .zhHant: "指到 iCloud Drive 或 Google Drive 的資料夾，兩台裝置就會互相同步",
+            .en: "Point two devices at the same iCloud Drive or Google Drive folder",
+            .zhHans: "指到 iCloud Drive 或 Google Drive 的文件夹，两台设备就会互相同步",
+            .ja: "iCloud Drive や Google Drive の同じフォルダを 2 台の端末に指定",
+            .ko: "두 기기를 같은 iCloud Drive 또는 Google Drive 폴더로 지정",
+            .th: "ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์ iCloud Drive หรือ Google Drive เดียวกัน"
         ],
         "sync_needs_attention": [
             .zhHant: "%@ 在兩台裝置上都被改過，已保留雲端那份，請自行確認",
