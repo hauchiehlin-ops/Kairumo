@@ -29,6 +29,20 @@
             buildForAnalyzing = "NO">
             <BuildableReference
                BuildableIdentifier = "primary"
+               BlueprintIdentifier = "7F1955B14385557E15DF8A34"
+               BuildableName = "KairumoTests.xctest"
+               BlueprintName = "KairumoTests"
+               ReferencedContainer = "container:Kairumo.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
                BlueprintIdentifier = "3465F56E5A189758EFFC9047"
                BuildableName = "KairumoUITests.xctest"
                BlueprintName = "KairumoUITests"
@@ -53,6 +67,17 @@
          </BuildableReference>
       </MacroExpansion>
       <Testables>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "7F1955B14385557E15DF8A34"
+               BuildableName = "KairumoTests.xctest"
+               BlueprintName = "KairumoTests"
+               ReferencedContainer = "container:Kairumo.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
          <TestableReference
             skipped = "NO"
             parallelizable = "NO">

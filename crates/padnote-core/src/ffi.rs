@@ -69,6 +69,18 @@ impl From<ToolKind> for Tool {
     }
 }
 
+impl From<Tool> for ToolKind {
+    /// 反向轉換是互通用的：`.padnote` 讀回來要能還原成平台的筆刷。
+    fn from(t: Tool) -> Self {
+        match t {
+            Tool::FountainPen => ToolKind::FountainPen,
+            Tool::BallPoint => ToolKind::BallPoint,
+            Tool::Highlighter => ToolKind::Highlighter,
+            Tool::Pencil => ToolKind::Pencil,
+        }
+    }
+}
+
 #[derive(Clone, Copy, Debug, uniffi::Enum)]
 pub enum PageStyle {
     Blank,
@@ -195,6 +207,23 @@ pub struct StrokeSummary {
     pub point_count: u32,
     /// 含筆寬的外框 `[min_x, min_y, max_x, max_y]`，供命中測試與重繪。
     pub bounds: Vec<f32>,
+}
+
+/// 一筆畫的**完整**內容，含每一個取樣點。
+///
+/// 與 `StrokeSummary` 的分工要說清楚，否則很容易誤用：
+/// - `StrokeSummary` 給**渲染與命中測試**，刻意不帶點，一頁數萬個點過 FFI 會很慢。
+/// - `FullStroke` 給**互通與遷移**：把 Apple 的 PKDrawing 轉進核心、或把核心的
+///   筆畫還原回平台筆刷時，少一個欄位就是資料遺失，所以這裡一個都不能省。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FullStroke {
+    pub id: String,
+    pub started_at_us: u64,
+    pub tool: ToolKind,
+    /// RGBA 各 0–255，固定 4 個位元組。
+    pub color_rgba: Vec<u8>,
+    pub base_width: f32,
+    pub points: Vec<StrokePoint>,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -366,6 +395,36 @@ impl PadnoteSession {
                 }
             })
             .collect())
+    }
+
+    /// 某一頁全部可見筆畫的**完整**內容（含取樣點）。
+    ///
+    /// 這是互通與遷移用的出口，不是渲染路徑 —— 渲染請走 `visible_strokes`。
+    /// 沒有這個出口，「iOS 寫的字在 Android 開起來一模一樣」就無從驗證：
+    /// 只能比對筆畫數與外框，比不到座標、壓感與時間差。
+    pub fn visible_stroke_details(&self, page_id: String) -> Result<Vec<FullStroke>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self
+            .lock()
+            .visible_strokes(page)?
+            .into_iter()
+            .map(to_full_stroke)
+            .collect())
+    }
+
+    /// 單一筆畫的完整內容。查無此筆畫（或已被擦除）時回傳 `None`。
+    pub fn stroke_detail(
+        &self,
+        page_id: String,
+        stroke_id: String,
+    ) -> Result<Option<FullStroke>, FfiError> {
+        let (page, wanted) = (parse_uuid(&page_id)?, parse_uuid(&stroke_id)?);
+        Ok(self
+            .lock()
+            .visible_strokes(page)?
+            .into_iter()
+            .find(|s| s.id == wanted)
+            .map(to_full_stroke))
     }
 
     // ---- 文字 ----
@@ -1022,6 +1081,28 @@ pub fn session_open(key_base64: String, sealed_base64: String) -> Result<Vec<u8>
 }
 
 // ---- 轉換輔助 ----
+
+fn to_full_stroke(s: Stroke) -> FullStroke {
+    FullStroke {
+        id: s.id.to_string(),
+        started_at_us: s.started_at.as_micros(),
+        tool: s.tool.into(),
+        color_rgba: s.color_rgba8.to_vec(),
+        base_width: s.base_width,
+        points: s.points.into_iter().map(from_ink_point).collect(),
+    }
+}
+
+fn from_ink_point(p: InkPoint) -> StrokePoint {
+    StrokePoint {
+        x: p.x,
+        y: p.y,
+        pressure: p.pressure,
+        tilt: p.tilt,
+        azimuth: p.azimuth,
+        dt_us: p.dt_us,
+    }
+}
 
 fn to_ink_point(p: StrokePoint) -> InkPoint {
     InkPoint {

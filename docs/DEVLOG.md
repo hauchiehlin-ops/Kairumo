@@ -5,6 +5,66 @@
 
 ---
 
+## 2026-09-13 (10) · WP4a：筆畫轉換器與往返保真度
+
+### 這一步只做「證明得了」的部分
+
+WP4 的驗收條件是「iOS 建立的筆記在 Android 打開後，筆畫數、座標、顏色與原稿
+一致」。要能檢查這句話，得先有兩樣東西：核心能把筆畫**完整**吐回來，以及
+Apple 端有一個 PKDrawing ⇄ 核心格式的轉換器。這一步先把這兩樣做出來並釘上
+測試；儲存層的實際遷移（含備份與回滾）留到下一步，因為那會動到使用者手上的
+真實資料，不該和轉換器的對錯混在同一次改動裡。
+
+### 核心：`FullStroke` 與 `visible_stroke_details`
+
+原本的 `visible_strokes` 刻意只回傳摘要（id、點數、外框）—— 一頁數萬個點過
+FFI 很慢，渲染路徑本來就不該走那裡。但摘要驗不出座標錯位、壓感遺失、筆刷對應
+寫反這些錯，所以另開一條互通專用的出口 `FullStroke`，把每個取樣點原樣帶出來。
+兩者的分工寫進了註解，免得日後有人拿 `FullStroke` 去做渲染。
+
+### 壓感不從 `PKStrokePoint.force` 取
+
+直覺寫法是 force 夾到 0–1 當壓感。實際上 PencilKit 沒有公開 force 的數值範圍，
+手指與 Apple Pencil 也不一致，硬夾的結果是重壓的筆畫整段飽和。改成從
+PencilKit **實際畫出來的每點寬度**回推 —— 依核心 `half_width()` 的
+`width = base × (0.35 + 0.65 × pressure)` 反解。這樣 Android 端用同一條公式
+畫出來的粗細，才會跟 iPad 上看到的一樣。測試逐格掃過 0–1 確認兩個方向互為反函數。
+
+### 踩到的坑
+
+**tilt 與 altitude 是互補角，不是同一個東西。** PencilKit 的 altitude 是
+「筆與螢幕平面的夾角」（π/2 為垂直握筆），核心的 tilt 是「偏離垂直的角度」。
+直接對接的話，筆越立起來核心會以為越躺平 —— 而且畫面上完全看不出來。
+
+**第一版 Rust 測試紅在測試自己身上。** 我把 pressure / tilt / azimuth 也寫成
+位元組相等，結果失敗。格式規格 §5.4 明訂這三個欄位各用一個 u16 定點數儲存
+（整點 16 bytes），本來就有量化誤差。把期望改成「誤差不超過一個量化格」，
+這條測試才擋得住真正的錯（欄位接錯、角度用錯最大值）。同樣地，Swift 端的
+altitude 容差要放到 1e-4：PKStrokePoint 存 0.6 讀回來是 0.60001…，那是
+PencilKit 的儲存精度，收得比它還小只會紅在一個不能也不該修的地方。
+
+### 新增 Apple 單元測試 target
+
+轉換器是純邏輯，塞進 UI 測試裡跑很浪費。新開 `KairumoTests`（`apple/Tests`），
+14 條測試在 0.02 秒內跑完。UI 測試維持原樣。
+
+### 對現有 Apple 功能的影響：無
+
+`InkInterop` 是一組純函式，沒有被畫布或 `NotebookStore` 呼叫 —— 現有的
+iOS / iPadOS / macOS 路徑一行都沒改。核心那邊是新增兩個方法，既有 API 不動。
+
+### 驗證
+- `cargo test --workspace`：790 通過（新增 5 條 `s47_ink_interop`）、0 失敗
+- `KairumoTests`：14 條全過
+- iOS 與 Mac Catalyst 建置皆 **BUILD SUCCEEDED**
+- Android `assembleDebug` 成功（`.so` 與 Kotlin 綁定已用新 FFI 重新產生）
+
+### 下一步
+WP4b：把轉換器接上實際的匯出／匯入 —— 從 `NotebookStore` 產生一份 `.padnote`
+套件，並在 Android 端開起來比對。儲存層的正式遷移排在那之後。
+
+---
+
 ## 2026-09-13 (9) · WP3c：介面字串收斂成單一來源
 
 ### 為什麼要動這 430 條字串

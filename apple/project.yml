@@ -45,6 +45,20 @@ targets:
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         SWIFT_VERSION: "5.0"
 
+  # 單元測試：轉換器這類純邏輯要能在毫秒內驗完，不該塞進 UI 測試裡跑。
+  KairumoTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: Kairumo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kairumo.padnote.tests
+        DEVELOPMENT_TEAM: 6UJ8GS752W
+        GENERATE_INFOPLIST_FILE: YES
+
   KairumoUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -68,12 +82,13 @@ schemes:
     build:
       targets:
         Kairumo: all
+        KairumoTests: [test]
         KairumoUITests: [test]
     run:
       config: Debug
     test:
       config: Debug
-      targets: [KairumoUITests]
+      targets: [KairumoTests, KairumoUITests]
     profile:
       config: Release
     analyze:
