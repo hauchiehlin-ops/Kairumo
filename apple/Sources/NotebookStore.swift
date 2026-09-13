@@ -446,6 +446,10 @@ public struct NoteTextAttachment: Identifiable, Codable, Hashable {
     public var backgroundColorHex: String // e.g. "#FFFFFF", "#FFF9C4", "clear"
     public var hasBorder: Bool
     public var cornerRadius: CGFloat
+    /// 邊框顏色（舊檔沒有這個欄位，解碼時會落到預設值）
+    public var borderColorHex: String?
+    /// 邊框粗細
+    public var borderWidth: CGFloat?
     public var x: CGFloat
     public var y: CGFloat
     public var width: CGFloat
@@ -465,6 +469,8 @@ public struct NoteTextAttachment: Identifiable, Codable, Hashable {
         backgroundColorHex: String = "#FFFFFF",
         hasBorder: Bool = true,
         cornerRadius: CGFloat = 8,
+        borderColorHex: String? = nil,
+        borderWidth: CGFloat? = nil,
         x: CGFloat = 100,
         y: CGFloat = 150,
         width: CGFloat = 300,
@@ -483,6 +489,8 @@ public struct NoteTextAttachment: Identifiable, Codable, Hashable {
         self.backgroundColorHex = backgroundColorHex
         self.hasBorder = hasBorder
         self.cornerRadius = cornerRadius
+        self.borderColorHex = borderColorHex
+        self.borderWidth = borderWidth
         self.x = x
         self.y = y
         self.width = width

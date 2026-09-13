@@ -13,10 +13,13 @@
 		31303FA237927EC5B53EFE38 /* AssetLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A351D8EB2219ECF83FF78645 /* AssetLibraryView.swift */; };
 		4778715DC0B3FB2B8CAB004B /* padnote_core.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28A8E33C21E81EED174CEBA3 /* padnote_core.swift */; };
 		4E956F4EA57EA9FAED4B8EEB /* MathCalculatorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DEEDC3EBFC3C910FFC5735C /* MathCalculatorSheet.swift */; };
+		57C009B329081703B31BB1EE /* CanvasScrollbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B72B2C88A99AD52C89B0787 /* CanvasScrollbar.swift */; };
+		613D0C4337E03D7899725FA7 /* SmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC6D1F547D3EA6FBF9266760 /* SmokeUITests.swift */; };
 		6142C12FB584E6D8D7B38221 /* CollaborationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF2EC412BA37683FBBE2FC1 /* CollaborationSheet.swift */; };
 		643674D7CEE546261D15F308 /* ExportPrintManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */; };
 		68C1811CB88877353FF14D31 /* CStubs.c in Sources */ = {isa = PBXBuildFile; fileRef = 26F09C378F9F1B6835D9ECB2 /* CStubs.c */; };
 		723A25DA76A24DB5650DCDAA /* LinkPreviewEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B829DBCA4D5374715A49087 /* LinkPreviewEngine.swift */; };
+		7B6B71CF69CE9F1C2CB2E953 /* DocumentViewerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E46CD750DA486212251DC0 /* DocumentViewerSheet.swift */; };
 		7BF616F79113EDEF36132B11 /* WordTextStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30959766B1D00F248AD7D2D /* WordTextStudioView.swift */; };
 		7DB76F0C390DA40B48AC10F9 /* AudioRecorderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FEF2B249C62AD4AE2E3C246 /* AudioRecorderManager.swift */; };
 		880DCFF8C76BF936EADB63DF /* NotebookEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E0D4938AD7ED09F531105A2 /* NotebookEditorView.swift */; };
@@ -27,6 +30,7 @@
 		A63608E6DD600F35CB565FE4 /* PadnoteCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7245DE41B9104E9F47F0C21B /* PadnoteCore.xcframework */; };
 		AFF32DB932FC4031A86B8F57 /* MaterialEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51E8541179F28A49C13A1967 /* MaterialEngine.swift */; };
 		B3DFF4CFC65E91FEEA6AA7B4 /* HomeWorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */; };
+		B461E05D52232C76413B2DB2 /* Docs in Resources */ = {isa = PBXBuildFile; fileRef = B7FE882F90D6ABA99E0820BF /* Docs */; };
 		BBA43DAF3585326259C48FE6 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D059ACC4F96D906F5A18970D /* AppVersion.swift */; };
 		C1A7C585E17B35EF60632C65 /* AccountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76577BBB3DC564A4B287380C /* AccountManager.swift */; };
 		C54CB75E7D13D0F98B966CC0 /* ChartStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86EC0F8038D34C787D2A729D /* ChartStudioView.swift */; };
@@ -43,6 +47,16 @@
 		FE7819F27B65DF1C258ED52E /* WrapLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EA2D926C0FD0991AE0BC01D /* WrapLayout.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		26183387B2FD0219EE13CF0C /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0DA6FA8514EC791DE3C48575 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 1C2549A2B1BF63595E246D97;
+			remoteInfo = Kairumo;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		02895D54063C3AA4B5D30463 /* PageThumbnailRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageThumbnailRenderer.swift; sourceTree = "<group>"; };
 		0B829DBCA4D5374715A49087 /* LinkPreviewEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkPreviewEngine.swift; sourceTree = "<group>"; };
@@ -57,9 +71,12 @@
 		3E642D648CC5479DA382CE35 /* MathEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathEngine.swift; sourceTree = "<group>"; };
 		44D061C8E2977FB257C12E81 /* CollaborationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollaborationManager.swift; sourceTree = "<group>"; };
 		51E8541179F28A49C13A1967 /* MaterialEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialEngine.swift; sourceTree = "<group>"; };
+		59E46CD750DA486212251DC0 /* DocumentViewerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentViewerSheet.swift; sourceTree = "<group>"; };
+		5B72B2C88A99AD52C89B0787 /* CanvasScrollbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CanvasScrollbar.swift; sourceTree = "<group>"; };
 		5DEEDC3EBFC3C910FFC5735C /* MathCalculatorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathCalculatorSheet.swift; sourceTree = "<group>"; };
 		61D0BC500318C879D185099E /* Model3DStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model3DStudioView.swift; sourceTree = "<group>"; };
 		625C3383D7E7C3F1B7A6D1F1 /* Kairumo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Kairumo.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		68513B13585ABBABB6573267 /* KairumoUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KairumoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		6EA2D926C0FD0991AE0BC01D /* WrapLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WrapLayout.swift; sourceTree = "<group>"; };
 		7245DE41B9104E9F47F0C21B /* PadnoteCore.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = PadnoteCore.xcframework; sourceTree = "<group>"; };
 		7617B23BC996C4B427F52EB4 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
@@ -72,10 +89,12 @@
 		A351D8EB2219ECF83FF78645 /* AssetLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetLibraryView.swift; sourceTree = "<group>"; };
 		A94975999121E1FFF8139B6A /* FloatingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPanel.swift; sourceTree = "<group>"; };
 		AB04C4FA3426304F705E5046 /* HomeWorkbenchUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeWorkbenchUsage.swift; sourceTree = "<group>"; };
+		B7FE882F90D6ABA99E0820BF /* Docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Docs; path = Resources/Docs; sourceTree = SOURCE_ROOT; };
 		C72410287ED6D6BF9B550D5B /* NotebookStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookStore.swift; sourceTree = "<group>"; };
 		D059ACC4F96D906F5A18970D /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
 		DA24513DE1A6A5996FB190AC /* AssetLibraryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetLibraryManager.swift; sourceTree = "<group>"; };
 		DC2F0D7F265BF495CF6D7B79 /* ThemeSpecificToolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSpecificToolsView.swift; sourceTree = "<group>"; };
+		DC6D1F547D3EA6FBF9266760 /* SmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeUITests.swift; sourceTree = "<group>"; };
 		DC7046379C24B0D590B6F0E8 /* ToolbarSeparator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarSeparator.swift; sourceTree = "<group>"; };
 		E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPrintManager.swift; sourceTree = "<group>"; };
 		F30959766B1D00F248AD7D2D /* WordTextStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordTextStudioView.swift; sourceTree = "<group>"; };
@@ -105,17 +124,28 @@
 			isa = PBXGroup;
 			children = (
 				625C3383D7E7C3F1B7A6D1F1 /* Kairumo.app */,
+				68513B13585ABBABB6573267 /* KairumoUITests.xctest */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		7D3DF22B3FEC4288146A9780 /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				DC6D1F547D3EA6FBF9266760 /* SmokeUITests.swift */,
+			);
+			path = UITests;
 			sourceTree = "<group>";
 		};
 		B4C83A5E69DB56E9D3761F3B = {
 			isa = PBXGroup;
 			children = (
 				9DEABFE677080C2925F1968D /* Assets.xcassets */,
+				B7FE882F90D6ABA99E0820BF /* Docs */,
 				D6E56CB73EE4D2B95BAA4723 /* Examples */,
 				07AEA3051AAD14D8367E5D1A /* Generated */,
 				FE24CD0F7EA498AAB508EE5E /* Sources */,
+				7D3DF22B3FEC4288146A9780 /* UITests */,
 				EA32A1B532F499DEC0425B81 /* Frameworks */,
 				1F93ED97981F21F996EF3DA0 /* Products */,
 			);
@@ -145,11 +175,13 @@
 				DA24513DE1A6A5996FB190AC /* AssetLibraryManager.swift */,
 				A351D8EB2219ECF83FF78645 /* AssetLibraryView.swift */,
 				8FEF2B249C62AD4AE2E3C246 /* AudioRecorderManager.swift */,
+				5B72B2C88A99AD52C89B0787 /* CanvasScrollbar.swift */,
 				86EC0F8038D34C787D2A729D /* ChartStudioView.swift */,
 				44D061C8E2977FB257C12E81 /* CollaborationManager.swift */,
 				0FF2EC412BA37683FBBE2FC1 /* CollaborationSheet.swift */,
 				205572122F598A01BD07BC2A /* CommentThreadView.swift */,
 				26F09C378F9F1B6835D9ECB2 /* CStubs.c */,
+				59E46CD750DA486212251DC0 /* DocumentViewerSheet.swift */,
 				E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */,
 				A94975999121E1FFF8139B6A /* FloatingPanel.swift */,
 				236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */,
@@ -196,6 +228,24 @@
 			productReference = 625C3383D7E7C3F1B7A6D1F1 /* Kairumo.app */;
 			productType = "com.apple.product-type.application";
 		};
+		3465F56E5A189758EFFC9047 /* KairumoUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 354353588FCF4171C25E4904 /* Build configuration list for PBXNativeTarget "KairumoUITests" */;
+			buildPhases = (
+				7BC6B60A67FA3DACB4B7C409 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				B53CF05FA6E893EA812863B4 /* PBXTargetDependency */,
+			);
+			name = KairumoUITests;
+			packageProductDependencies = (
+			);
+			productName = KairumoUITests;
+			productReference = 68513B13585ABBABB6573267 /* KairumoUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -207,6 +257,10 @@
 				TargetAttributes = {
 					1C2549A2B1BF63595E246D97 = {
 						DevelopmentTeam = 6UJ8GS752W;
+					};
+					3465F56E5A189758EFFC9047 = {
+						DevelopmentTeam = 6UJ8GS752W;
+						TestTargetID = 1C2549A2B1BF63595E246D97;
 					};
 				};
 			};
@@ -225,6 +279,7 @@
 			projectRoot = "";
 			targets = (
 				1C2549A2B1BF63595E246D97 /* Kairumo */,
+				3465F56E5A189758EFFC9047 /* KairumoUITests */,
 			);
 		};
 /* End PBXProject section */
@@ -235,12 +290,21 @@
 			buildActionMask = 2147483647;
 			files = (
 				EB15B2D411DC5BA9B5335B94 /* Assets.xcassets in Resources */,
+				B461E05D52232C76413B2DB2 /* Docs in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		7BC6B60A67FA3DACB4B7C409 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				613D0C4337E03D7899725FA7 /* SmokeUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		98C08BF10747CDA04D7367C8 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -251,10 +315,12 @@
 				31303FA237927EC5B53EFE38 /* AssetLibraryView.swift in Sources */,
 				7DB76F0C390DA40B48AC10F9 /* AudioRecorderManager.swift in Sources */,
 				68C1811CB88877353FF14D31 /* CStubs.c in Sources */,
+				57C009B329081703B31BB1EE /* CanvasScrollbar.swift in Sources */,
 				C54CB75E7D13D0F98B966CC0 /* ChartStudioView.swift in Sources */,
 				EBB0282BC8BEC636B952FE2C /* CollaborationManager.swift in Sources */,
 				6142C12FB584E6D8D7B38221 /* CollaborationSheet.swift in Sources */,
 				95A26994BC9D5BCCF7291E2F /* CommentThreadView.swift in Sources */,
+				7B6B71CF69CE9F1C2CB2E953 /* DocumentViewerSheet.swift in Sources */,
 				643674D7CEE546261D15F308 /* ExportPrintManager.swift in Sources */,
 				FDBFCB97F11915C9DA8EA7A9 /* FloatingPanel.swift in Sources */,
 				023C029A763DC77377F7804E /* HomeWorkbenchUsage.swift in Sources */,
@@ -281,6 +347,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		B53CF05FA6E893EA812863B4 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 1C2549A2B1BF63595E246D97 /* Kairumo */;
+			targetProxy = 26183387B2FD0219EE13CF0C /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		01D0ADD488FC3DDC8F5B9FD3 /* Release */ = {
@@ -402,13 +476,30 @@
 			};
 			name = Debug;
 		};
+		9A4BF9B04C3066A5B09D2059 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = 6UJ8GS752W;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.kairumo.padnote.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Kairumo;
+			};
+			name = Debug;
+		};
 		A6C36DFF6214AE9B8CB512AB /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -418,8 +509,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Kairumo;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
-				INFOPLIST_KEY_CFBundleShortVersionString = 2.2.0;
-				INFOPLIST_KEY_CFBundleVersion = 10;
+				INFOPLIST_KEY_CFBundleShortVersionString = 2.3.0;
+				INFOPLIST_KEY_CFBundleVersion = 11;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -430,7 +521,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.2.0;
+				MARKETING_VERSION = 2.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kairumo.padnote;
 				PRODUCT_NAME = Kairumo;
 				SDKROOT = iphoneos;
@@ -440,13 +531,30 @@
 			};
 			name = Debug;
 		};
+		BADEF4C07CF4149C958F6329 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				DEVELOPMENT_TEAM = 6UJ8GS752W;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.kairumo.padnote.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Kairumo;
+			};
+			name = Release;
+		};
 		D40BC10D8EF7763B93420CA9 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ARCHS = arm64;
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 10;
+				CURRENT_PROJECT_VERSION = 11;
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
 				ENABLE_BITCODE = NO;
 				FRAMEWORK_SEARCH_PATHS = (
@@ -456,8 +564,8 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Kairumo;
 				INFOPLIST_KEY_CFBundleIconName = AppIcon;
-				INFOPLIST_KEY_CFBundleShortVersionString = 2.2.0;
-				INFOPLIST_KEY_CFBundleVersion = 10;
+				INFOPLIST_KEY_CFBundleShortVersionString = 2.3.0;
+				INFOPLIST_KEY_CFBundleVersion = 11;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -468,7 +576,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 2.2.0;
+				MARKETING_VERSION = 2.3.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.kairumo.padnote;
 				PRODUCT_NAME = Kairumo;
 				SDKROOT = iphoneos;
@@ -486,6 +594,15 @@
 			buildConfigurations = (
 				589075731BD5B3FA09E56476 /* Debug */,
 				01D0ADD488FC3DDC8F5B9FD3 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		354353588FCF4171C25E4904 /* Build configuration list for PBXNativeTarget "KairumoUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9A4BF9B04C3066A5B09D2059 /* Debug */,
+				BADEF4C07CF4149C958F6329 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

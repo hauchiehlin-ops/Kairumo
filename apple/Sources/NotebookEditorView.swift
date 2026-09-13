@@ -402,6 +402,36 @@ final class TemplateCanvasBackgroundView: UIView {
     }
 }
 
+/// 會在版面變動時自行重算內容寬度的畫布。
+///
+/// 為什麼需要子類：`updateUIView` 是在 SwiftUI 狀態改變時呼叫，那個時間點
+/// `bounds.width` 還是**舊的**（版面尚未跑完）。所以收合左側結構欄之後，
+/// contentSize 仍停在「扣掉側欄」的寬度，畫布右側就空出一塊灰色。
+/// 真正知道新寬度的時機是 `layoutSubviews`。
+final class AdaptiveCanvasView: PKCanvasView {
+    /// 這一頁的高度（由 SwiftUI 端更新）
+    var pageContentHeight: CGFloat = 1800 {
+        didSet { if pageContentHeight != oldValue { syncContentSize() } }
+    }
+    /// 底層樣板背景，要跟著 contentSize 一起變
+    weak var templateBackgroundView: UIView?
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        syncContentSize()
+    }
+
+    func syncContentSize() {
+        let targetWidth = max(bounds.width, 1)
+        let targetHeight = max(pageContentHeight, bounds.height)
+        let target = CGSize(width: targetWidth, height: targetHeight)
+        guard contentSize != target else { return }
+        contentSize = target
+        templateBackgroundView?.frame = CGRect(origin: .zero, size: target)
+        templateBackgroundView?.setNeedsDisplay()
+    }
+}
+
 /// PencilKit 畫布之 SwiftUI 封裝（跨 iOS / iPadOS / Mac Catalyst，支援無限高度延長、背景同步滾動與套索選取監聽）
 struct CanvasRepresentable: UIViewRepresentable {
     @Binding var drawing: PKDrawing
@@ -416,9 +446,11 @@ struct CanvasRepresentable: UIViewRepresentable {
     var onAutoExtendHeight: ((CGFloat) -> Void)?
     var onSelectionChanged: ((Bool) -> Void)?
     var canvasRef: ((PKCanvasView) -> Void)?
+    /// 回報捲動狀態（可見比例、捲動比例），給自訂捲軸用
+    var onScrollMetrics: ((_ visibleFraction: CGFloat, _ scrollFraction: CGFloat) -> Void)?
 
     func makeUIView(context: Context) -> PKCanvasView {
-        let canvas = PKCanvasView()
+        let canvas = AdaptiveCanvasView()
         canvas.drawingPolicy = (editorMode == .draw) ? .anyInput : .pencilOnly
         canvas.delegate = context.coordinator
         canvas.backgroundColor = .clear
@@ -429,14 +461,16 @@ struct CanvasRepresentable: UIViewRepresentable {
         canvas.showsHorizontalScrollIndicator = false
         canvas.drawing = drawing
 
-        let initialWidth = max(canvas.bounds.width, 800)
-        let initialHeight = max(pageHeight, 1800)
-        canvas.contentSize = CGSize(width: initialWidth, height: initialHeight)
+        // 給自動化測試一個穩定的抓取點（畫面上有多個 scroll view）
+        canvas.accessibilityIdentifier = "kairumo.canvas"
+        canvas.pageContentHeight = max(pageHeight, 1800)
+        canvas.contentSize = CGSize(width: max(canvas.bounds.width, 1), height: canvas.pageContentHeight)
 
         // 嵌入底層背景樣板視圖（隨畫布滾動）
         let bgView = TemplateCanvasBackgroundView(frame: CGRect(origin: .zero, size: canvas.contentSize))
         bgView.template = template
         canvas.insertSubview(bgView, at: 0)
+        canvas.templateBackgroundView = bgView
         context.coordinator.backgroundView = bgView
 
         context.coordinator.parent = self
@@ -459,14 +493,11 @@ struct CanvasRepresentable: UIViewRepresentable {
         }
         uiView.isRulerActive = isRulerActive
 
-        // 更新高度與滾動範圍
-        let targetWidth = max(uiView.bounds.width, 800)
-        let targetHeight = max(pageHeight, 1800)
-        let currentSize = uiView.contentSize
-        if currentSize.height != targetHeight || currentSize.width != targetWidth {
-            uiView.contentSize = CGSize(width: targetWidth, height: targetHeight)
-            context.coordinator.backgroundView?.frame = CGRect(origin: .zero, size: uiView.contentSize)
-            context.coordinator.backgroundView?.setNeedsDisplay()
+        // 更新高度與滾動範圍。寬度交給 AdaptiveCanvasView 在 layoutSubviews 處理 ——
+        // 這裡拿到的 bounds 可能還是版面變動前的舊值。
+        if let adaptive = uiView as? AdaptiveCanvasView {
+            adaptive.pageContentHeight = max(pageHeight, 1800)
+            adaptive.syncContentSize()
         }
         if context.coordinator.backgroundView?.template != template {
             context.coordinator.backgroundView?.template = template
@@ -480,6 +511,20 @@ struct CanvasRepresentable: UIViewRepresentable {
     }
 
     class Coordinator: NSObject, PKCanvasViewDelegate {
+        /// 把捲動狀態回報給 SwiftUI（自訂捲軸需要）
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            reportScrollMetrics(scrollView)
+        }
+
+        func reportScrollMetrics(_ scrollView: UIScrollView) {
+            let contentH = max(scrollView.contentSize.height, 1)
+            let viewportH = scrollView.bounds.height
+            let visible = min(1, viewportH / contentH)
+            let scrollable = max(contentH - viewportH, 1)
+            let fraction = min(1, max(0, scrollView.contentOffset.y / scrollable))
+            parent.onScrollMetrics?(visible, fraction)
+        }
+
         var parent: CanvasRepresentable
         weak var backgroundView: TemplateCanvasBackgroundView?
         var isProgrammaticUpdate: Bool = false
@@ -957,6 +1002,9 @@ public struct NotebookEditorView: View {
     @State private var showStructureSidebar: Bool = false
     /// 畫布目前的實際內容寬度。縮圖要用同一個寬度算，物件位置與比例才會對得上。
     @State private var canvasContentWidth: CGFloat = PageThumbnailRenderer.minPageWidth
+    // 自訂捲軸狀態：iOS 原生捲動指示器不接受互動，Mac 上使用者會想用游標拖它
+    @State private var canvasVisibleFraction: CGFloat = 1
+    @State private var canvasScrollFraction: CGFloat = 0
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var didAutoOpenSidebar: Bool = false
     @AppStorage("kairumo_editor_sidebar_tab") private var sidebarTabRaw: String = SidebarTabMode.folders.rawValue
@@ -984,6 +1032,9 @@ public struct NotebookEditorView: View {
     @State private var showMoveNotebookSheet: Bool = false
     @State private var notebookToMoveId: String? = nil
     @State private var expandedFolderIds: Set<String> = []
+    /// 目前被拖曳懸停的資料夾（nil 代表「未分類」區）
+    @State private var dropTargetFolderId: String? = nil
+    @State private var isUnfiledDropTargeted: Bool = false
 
     // 頁面刪除警告
     @State private var pageToDeleteIndex: Int? = nil
@@ -1054,435 +1105,7 @@ public struct NotebookEditorView: View {
                 }
 
                 // 核心手寫/打字畫布區
-                ZStack(alignment: .topTrailing) {
-                    CanvasRepresentable(
-                        drawing: $currentDrawing,
-                        selectedTool: selectedTool,
-                        selectedColor: selectedColor,
-                        strokeWidth: strokeWidth,
-                        isRulerActive: isRulerActive,
-                        template: notebook.template,
-                        pageHeight: currentPageHeight,
-                        editorMode: editorMode,
-                        onDrawingChanged: { newDrawing in
-                            // 即時自動儲存至專屬二進位檔案（不觸發 Struct 重新賦值以防競態覆蓋）
-                            store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: newDrawing)
-
-                            if !isApplyingRemoteUpdate && isCollaborating {
-                                let count = newDrawing.strokes.count
-                                if count > lastStrokeCount {
-                                    let deltaStrokes = Array(newDrawing.strokes.suffix(count - lastStrokeCount))
-                                    let deltaDrawing = PKDrawing(strokes: deltaStrokes)
-                                    let b64 = deltaDrawing.dataRepresentation().base64EncodedString()
-                                    collaborationManager.broadcastOplog(
-                                        kind: "stroke_delta",
-                                        payload: [
-                                            "page_index": currentPageIndex,
-                                            "drawing_base64": b64
-                                        ]
-                                    )
-                                } else if count < lastStrokeCount {
-                                    let b64 = newDrawing.dataRepresentation().base64EncodedString()
-                                    collaborationManager.broadcastOplog(
-                                        kind: "drawing_replace",
-                                        payload: [
-                                            "page_index": currentPageIndex,
-                                            "drawing_base64": b64
-                                        ]
-                                    )
-                                }
-                                lastStrokeCount = count
-                            } else if !isApplyingRemoteUpdate {
-                                lastStrokeCount = newDrawing.strokes.count
-                            }
-                        },
-                        onAutoExtendHeight: { newHeight in
-                            currentPageHeight = newHeight
-                            notebook.setHeight(newHeight, forPage: currentPageIndex)
-                            store.updateNotebook(notebook)
-                        },
-                        onSelectionChanged: { hasSel in
-                            self.hasLassoSelection = hasSel
-                        },
-                        canvasRef: { ref in
-                            self.canvasView = ref
-                        }
-                    )
-                    .background(
-                        GeometryReader { geo in
-                            Color.clear
-                                .onAppear { updateCanvasContentWidth(geo.size.width) }
-                                .onChange(of: geo.size.width) { newWidth in
-                                    updateCanvasContentWidth(newWidth)
-                                }
-                        }
-                    )
-
-                    // 🌟 打字模式畫布互動層：點選空白處新增文字方塊並直接彈出鍵盤
-                    if editorMode == .type {
-                        GeometryReader { geo in
-                            Color.black.opacity(0.001)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .contentShape(Rectangle())
-                                .onTapGesture { location in
-                                    let newDraft = NoteTextAttachment(
-                                        id: UUID().uuidString,
-                                        pageIndex: currentPageIndex,
-                                        text: "",
-                                        x: max(20, location.x - 130),
-                                        y: max(20, location.y - 40)
-                                    )
-                                    if notebook.textAttachments == nil {
-                                        notebook.textAttachments = []
-                                    }
-                                    notebook.textAttachments?.append(newDraft)
-                                    store.updateNotebook(notebook)
-                                    self.editingTextId = newDraft.id
-                                }
-                        }
-
-                        // 打字模式頂部提示條
-                        HStack(spacing: 6) {
-                            Image(systemName: "keyboard.fill")
-                                .foregroundColor(.accentColor)
-                            Text(localizationManager.localized("tap_to_type_hint"))
-                                .font(.caption)
-                                .fontWeight(.medium)
-                                .foregroundColor(.primary)
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 7)
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(20)
-                        .shadow(color: Color.black.opacity(0.12), radius: 5, y: 2)
-                        .padding(.top, 14)
-                        .padding(.trailing, 20)
-                    }
-
-                    // 🌟 筆記內嵌圖片與圖表展示層（支援等比縮放、拖曳平移與濾鏡美化）
-                    ForEach(notebook.attachments ?? []) { item in
-                        if item.pageIndex == currentPageIndex {
-                            AttachmentItemView(
-                                attachment: binding(for: item.id),
-                                onEdit: {
-                                    self.editingAttachmentId = item.id
-                                },
-                                onDelete: {
-                                    deletedAttachmentBackup = (type: "image", data: item)
-                                    collaborationManager.broadcastAttachmentDelete(id: item.id, type: "image")
-                                    notebook.attachments?.removeAll { $0.id == item.id }
-                                    store.updateNotebook(notebook)
-                                    collaborationManager.broadcastSelection(selectedId: nil)
-                                }
-                            )
-                        }
-                    }
-
-                    // 🌟 筆記內嵌 Word 級文字方塊（支援段落對齊、特殊符號與便利貼卡片底色）
-                    ForEach(notebook.textAttachments ?? []) { item in
-                        if item.pageIndex == currentPageIndex {
-                            TextAttachmentItemView(
-                                textItem: binding(forTextId: item.id),
-                                onEdit: {
-                                    self.editingTextId = item.id
-                                },
-                                onDelete: {
-                                    deletedAttachmentBackup = (type: "text", data: item)
-                                    collaborationManager.broadcastAttachmentDelete(id: item.id, type: "text")
-                                    notebook.textAttachments?.removeAll { $0.id == item.id }
-                                    store.updateNotebook(notebook)
-                                    collaborationManager.broadcastSelection(selectedId: nil)
-                                }
-                            )
-                        }
-                    }
-
-                    // 🌟 筆記內嵌網址 Rich Link 預覽卡片（支援點擊跳轉瀏覽器與自由平移）
-                    ForEach(notebook.linkAttachments ?? []) { item in
-                        if item.pageIndex == currentPageIndex {
-                            LinkAttachmentItemView(
-                                linkItem: binding(forLinkId: item.id),
-                                onDelete: {
-                                    notebook.linkAttachments?.removeAll { $0.id == item.id }
-                                    store.updateNotebook(notebook)
-                                }
-                            )
-                        }
-                    }
-
-                    // 🌟 筆記內嵌 3D 幾何模型展示層（支援 360° 空間旋轉、9大材質 PBR 物理反射、縮放與文字標題）
-                    ForEach(notebook.model3DAttachments ?? []) { item in
-                        if item.pageIndex == currentPageIndex {
-                            Model3DCanvasItemView(
-                                item: binding(forModel3DId: item.id),
-                                onDelete: {
-                                    deletedAttachmentBackup = (type: "3d", data: item)
-                                    collaborationManager.broadcastAttachmentDelete(id: item.id, type: "3d")
-                                    notebook.model3DAttachments?.removeAll { $0.id == item.id }
-                                    store.updateNotebook(notebook)
-                                    collaborationManager.broadcastSelection(selectedId: nil)
-                                }
-                            )
-                        }
-                    }
-
-                    // 🌟 筆記內嵌討論圖釘展示層（支援多方訊息留言串、已解決標記與即時推播）
-                    ForEach(notebook.commentPins ?? []) { pin in
-                        if pin.pageIndex == currentPageIndex {
-                            CommentPinMarkerView(
-                                pin: pin,
-                                isSelected: selectedCommentPinId == pin.id,
-                                onTap: {
-                                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                                        if selectedCommentPinId == pin.id {
-                                            selectedCommentPinId = nil
-                                            collaborationManager.broadcastSelection(selectedId: nil)
-                                        } else {
-                                            selectedCommentPinId = pin.id
-                                            collaborationManager.broadcastSelection(selectedId: pin.id)
-                                        }
-                                    }
-                                }
-                            )
-                            .position(x: pin.x, y: pin.y)
-                        }
-                    }
-
-                    // 展開的討論圖釘詳細對話框
-                    if let pinId = selectedCommentPinId,
-                       let pin = (notebook.commentPins ?? []).first(where: { $0.id == pinId }),
-                       pin.pageIndex == currentPageIndex {
-                        CommentThreadDialog(
-                            pin: pin,
-                            currentUserId: collaborationManager.currentUserId,
-                            currentUserName: AccountManager.shared.profile.displayName,
-                            currentUserColor: collaborationManager.myColorHex,
-                            onReply: { pId, text in
-                                addCommentReply(pinId: pId, text: text)
-                            },
-                            onToggleResolve: { pId in
-                                toggleCommentResolve(pinId: pId)
-                            },
-                            onDelete: { pId in
-                                deleteCommentPin(pinId: pId)
-                            },
-                            onClose: {
-                                withAnimation {
-                                    selectedCommentPinId = nil
-                                    collaborationManager.broadcastSelection(selectedId: nil)
-                                }
-                            }
-                        )
-                        .position(
-                            x: min(max(170, pin.x), 650),
-                            y: min(max(150, pin.y - 120), currentPageHeight - 120)
-                        )
-                    }
-
-                    // 放置討論圖釘模式互動層
-                    if isPlacingCommentPin {
-                        GeometryReader { geo in
-                            Color.blue.opacity(0.001)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .contentShape(Rectangle())
-                                .onTapGesture { location in
-                                    let newPin = NoteCommentPin(
-                                        pageIndex: currentPageIndex,
-                                        x: location.x,
-                                        y: location.y,
-                                        authorId: collaborationManager.currentUserId,
-                                        authorName: AccountManager.shared.profile.displayName,
-                                        authorColor: collaborationManager.myColorHex,
-                                        messages: [
-                                            NoteCommentMessage(
-                                                authorId: collaborationManager.currentUserId,
-                                                authorName: AccountManager.shared.profile.displayName,
-                                                authorColor: collaborationManager.myColorHex,
-                                                text: localizationManager.localized("add_comment_pin")
-                                            )
-                                        ]
-                                    )
-                                    if notebook.commentPins == nil {
-                                        notebook.commentPins = []
-                                    }
-                                    notebook.commentPins?.append(newPin)
-                                    store.updateNotebook(notebook)
-                                    selectedCommentPinId = newPin.id
-                                    isPlacingCommentPin = false
-                                    broadcastCommentPinUpsert(newPin)
-                                    collaborationManager.broadcastSelection(selectedId: newPin.id)
-                                }
-                        }
-
-                        // 放置圖釘模式頂部提示條
-                        HStack(spacing: 8) {
-                            Image(systemName: "pin.fill")
-                                .foregroundColor(.orange)
-                            Text(localizationManager.localized("tap_to_place_pin"))
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                                .foregroundColor(.primary)
-                            Button(action: { isPlacingCommentPin = false }) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundColor(.secondary)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 7)
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(20)
-                        .shadow(color: Color.black.opacity(0.12), radius: 5, y: 2)
-                        .padding(.top, 14)
-                        .padding(.leading, 20)
-                    }
-
-                    // 🌟 美學構圖輔助 HUD 疊層（黃金螺旋與三分構圖）
-                    if isGoldenSpiralOverlay {
-                        GoldenSpiralOverlayView()
-                            .allowsHitTesting(false)
-                            .frame(height: currentPageHeight)
-                    }
-                    if isRuleOfThirdsOverlay {
-                        RuleOfThirdsOverlayView()
-                            .allowsHitTesting(false)
-                            .frame(height: currentPageHeight)
-                    }
-
-                    // 🌟 草圖智慧修飾浮動控制面板（支援一鍵修飾、恢復原草圖、重做與強度調整）
-                    if showSketchRefineBar {
-                        VStack {
-                            sketchRefineFloatingBar
-                                .padding(.top, 12)
-                            Spacer()
-                        }
-                        .frame(maxWidth: .infinity, alignment: .top)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
-
-                    // 🌟 套索選取浮動控制面板（當套索工具啟動時浮現：支援剪下、複製、刪除選取筆劃）
-                    if selectedTool == .lasso {
-                        VStack {
-                            lassoFloatingActionBar
-                                .padding(.top, 12)
-                            Spacer()
-                        }
-                        .frame(maxWidth: .infinity, alignment: .top)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                    }
-
-                    // 🌟 即時浮動錄音圖示徽章（筆記錄音完成後立即在已開啟筆記中呈現！）
-                    if notebook.hasRecording, let audioPath = notebook.recordingAudioPath {
-                        floatingAudioBadge(fileName: audioPath)
-                            .padding(16)
-                            .transition(.scale.combined(with: .opacity))
-                    }
-
-                    // 🌟 畫布底部浮動延伸膠囊按鈕（保留彈性：讓使用者隨時可向下延伸本頁）
-                    VStack {
-                        Spacer()
-                        HStack {
-                            if showExtendedBanner {
-                                Text(localizationManager.localized("page_extended_hint"))
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
-                                    .padding(.horizontal, 12)
-                                    .padding(.vertical, 6)
-                                    .background(.ultraThinMaterial)
-                                    .cornerRadius(16)
-                                    .shadow(color: Color.black.opacity(0.1), radius: 4, y: 2)
-                                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                            }
-
-                            Spacer()
-
-                            // ＋ 新增下一頁
-                            Button {
-                                addNewPage()
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "plus.square.dashed")
-                                        .font(.subheadline)
-                                    Text(localizationManager.localized("add_next_page"))
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                }
-                                .foregroundColor(.accentColor)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
-                                .background(.ultraThinMaterial)
-                                .cornerRadius(18)
-                                .shadow(color: Color.black.opacity(0.12), radius: 4, y: 2)
-                            }
-                            .buttonStyle(.plain)
-                            .help(localizationManager.localized("add_next_page"))
-
-                            Button {
-                                extendCurrentPage(by: 800)
-                            } label: {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "arrow.down.to.line.compact")
-                                        .font(.subheadline)
-                                    Text(localizationManager.localized("extend_page_amount"))
-                                        .font(.caption)
-                                        .fontWeight(.semibold)
-                                }
-                                .foregroundColor(.primary)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 7)
-                                .background(.ultraThinMaterial)
-                                .cornerRadius(18)
-                                .shadow(color: Color.black.opacity(0.12), radius: 4, y: 2)
-                            }
-                            .buttonStyle(.plain)
-                            .help(localizationManager.localized("extend_page_amount"))
-                        }
-                        .padding(14)
-                    }
-
-                    // 🌟 線上多人即時彩色游標與筆尖浮層
-                    RemoteCursorsOverlay()
-
-                    // 🌟 圖片美化浮動面板
-                    //
-                    // 以前是 modal sheet，蓋住整個畫布 —— 調濾鏡時看不到自己在調
-                    // 什麼。改成浮在畫布上、標題列可拖到一旁的面板：控制項與圖片
-                    // 同時在畫面上，改動直接反映在物件上。
-                    if let id = editingAttachmentId {
-                        FloatingPanel(
-                            title: localizationManager.localized("image_beautify"),
-                            onClose: { editingAttachmentId = nil }
-                        ) {
-                            ImageEditControls(attachment: binding(for: id)) {
-                                notebook.attachments?.removeAll { $0.id == id }
-                                store.updateNotebook(notebook)
-                                editingAttachmentId = nil
-                            }
-                        }
-                        .padding(.top, 24)
-                        .padding(.trailing, 24)
-                        .transition(.scale(scale: 0.95).combined(with: .opacity))
-                    }
-                }
-                .coordinateSpace(name: CanvasCoordinateSpace.name)
-                .onContinuousHover { phase in
-                    switch phase {
-                    case .active(let location):
-                        collaborationManager.broadcastCursor(
-                            x: location.x,
-                            y: location.y,
-                            isDrawing: false,
-                            tool: selectedTool.rawValue
-                        )
-                    case .ended:
-                        break
-                    }
-                }
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-                .shadow(color: Color.black.opacity(0.06), radius: 8, y: 4)
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
+                canvasWorkArea
             }
             .background {
                 Group {
@@ -1518,15 +1141,13 @@ public struct NotebookEditorView: View {
         )
         .onAppear {
             loadCurrentPage()
-            #if targetEnvironment(macCatalyst)
             MacWindowTitle.apply()
-            #endif
         }
-        .sheet(isPresented: $showShareSheet) {
+        .sheet(isPresented: $showShareSheet) { erasedView {
             if let data = exportPdfData {
                 ShareActivityView(data: data, filename: "\(notebook.displayTitle()).pdf")
             }
-        }
+        } }
         .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
         .onChange(of: selectedPhotoItem) { newItem in
             Task {
@@ -1540,17 +1161,17 @@ public struct NotebookEditorView: View {
                 }
             }
         }
-        .sheet(isPresented: $showMathCalculator) {
+        .sheet(isPresented: $showMathCalculator) { erasedView {
             MathCalculatorSheet { exprText, cardImage in
                 insertImageAttachment(cardImage)
             }
-        }
-        .sheet(isPresented: $showChartStudio) {
+        } }
+        .sheet(isPresented: $showChartStudio) { erasedView {
             ChartStudioView { chartImage in
                 insertImageAttachment(chartImage)
             }
-        }
-        .sheet(isPresented: $showWordStudio) {
+        } }
+        .sheet(isPresented: $showWordStudio) { erasedView {
             WordTextStudioView(attachment: $newTextDraft) { created in
                 if notebook.textAttachments == nil {
                     notebook.textAttachments = []
@@ -1558,11 +1179,11 @@ public struct NotebookEditorView: View {
                 notebook.textAttachments?.append(created)
                 store.updateNotebook(notebook)
             }
-        }
+        } }
         .sheet(isPresented: Binding(
             get: { editingTextId != nil },
             set: { if !$0 { editingTextId = nil } }
-        )) {
+        )) { erasedView {
             if let id = editingTextId {
                 WordTextStudioView(attachment: binding(forTextId: id)) { updated in
                     if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
@@ -1571,8 +1192,8 @@ public struct NotebookEditorView: View {
                     }
                 }
             }
-        }
-        .sheet(isPresented: $showLinkPreviewSheet) {
+        } }
+        .sheet(isPresented: $showLinkPreviewSheet) { erasedView {
             LinkPreviewSheet { linkItem in
                 if notebook.linkAttachments == nil {
                     notebook.linkAttachments = []
@@ -1580,11 +1201,11 @@ public struct NotebookEditorView: View {
                 notebook.linkAttachments?.append(linkItem)
                 store.updateNotebook(notebook)
             }
-        }
-        .sheet(isPresented: $showProColorPicker) {
+        } }
+        .sheet(isPresented: $showProColorPicker) { erasedView {
             ProColorPickerSheet(selectedColor: $selectedColor)
-        }
-        .sheet(isPresented: $show3DStudio) {
+        } }
+        .sheet(isPresented: $show3DStudio) { erasedView {
             Model3DStudioView { new3DAttachment in
                 if notebook.model3DAttachments == nil {
                     notebook.model3DAttachments = []
@@ -1594,19 +1215,19 @@ public struct NotebookEditorView: View {
                 notebook.model3DAttachments?.append(att)
                 store.updateNotebook(notebook)
             }
-        }
-        .sheet(isPresented: $showAssetLibrarySheet) {
+        } }
+        .sheet(isPresented: $showAssetLibrarySheet) { erasedView {
             AssetLibraryView { image, _ in
                 insertImageAttachment(image)
             }
-        }
-        .sheet(isPresented: $showCollaborationSheet) {
+        } }
+        .sheet(isPresented: $showCollaborationSheet) { erasedView {
             CollaborationSheet(notebookId: notebook.id)
-        }
+        } }
         .onReceive(collaborationManager.oplogReceived) { event in
             handleRemoteOplog(event)
         }
-        .sheet(isPresented: $showThemeToolsSheet) {
+        .sheet(isPresented: $showThemeToolsSheet) { erasedView {
             ThemeSpecificToolsView(
                 currentBrushColor: $selectedColor,
                 isGoldenSpiralActive: $isGoldenSpiralOverlay,
@@ -1618,7 +1239,7 @@ public struct NotebookEditorView: View {
                     insertQuickTextSnippet(text)
                 }
             )
-        }
+        } }
         .alert(localizationManager.localized("rename_note"), isPresented: $showRenameAlert) {
             TextField(localizationManager.localized("note_title"), text: $renameText)
             Button(localizationManager.localized("cancel"), role: .cancel) {}
@@ -1690,13 +1311,17 @@ public struct NotebookEditorView: View {
                 folderToRename = nil
             }
         }
-        .sheet(isPresented: $showMoveNotebookSheet) {
+        .sheet(isPresented: $showMoveNotebookSheet) { erasedView {
             MoveNotebookSheet(notebookId: notebookToMoveId ?? notebook.id)
-        }
+        } }
     }
 
     // MARK: - 1. 頂部自訂主工作列（自適應寬窄螢幕模式）
-    private var editorTopBar: some View {
+    /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
+    /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
+    private var editorTopBar: AnyView { AnyView(editorTopBarContent) }
+
+    private var editorTopBarContent: some View {
         // 寬度夠就用單行完整版；放不下則切到緊湊版，把次要功能收進「更多」選單；
         // 都還塞不下才換行。優先維持單行，主要動作才會固定在同一個位置。
         ViewThatFits(in: .horizontal) {
@@ -1740,6 +1365,10 @@ public struct NotebookEditorView: View {
             }
             .buttonStyle(.plain)
             .help(localizationManager.localized("home"))
+
+            // 版本標示。不要只靠視窗標題列 —— 在 Mac 上跑的 iOS 版（Designed for iPad）
+            // 由系統決定標題，App 設什麼都不一定反映得出來。畫在自己的工具列裡最可靠。
+            versionBadge
 
             // 筆記結構側邊欄切換鈕
             Button {
@@ -2138,6 +1767,8 @@ public struct NotebookEditorView: View {
         .buttonStyle(.plain)
         .help(localizationManager.localized("home"))
 
+        versionBadge
+
         // 筆記結構側邊欄切換
         Button {
             withAnimation(.easeInOut(duration: 0.25)) {
@@ -2296,9 +1927,505 @@ public struct NotebookEditorView: View {
 
     /// 畫布內容寬度與 `CanvasRepresentable` 的 `max(bounds.width, 800)` 保持一致。
     private func updateCanvasContentWidth(_ viewWidth: CGFloat) {
-        let width = max(viewWidth, PageThumbnailRenderer.minPageWidth)
+        // 與 AdaptiveCanvasView 一致：畫布內容寬度就是視圖寬度
+        let width = max(viewWidth, 320)
         guard abs(width - canvasContentWidth) > 0.5 else { return }
         canvasContentWidth = width
+    }
+
+    /// 畫布工作區。抽出來並加上 AnyView 邊界 —— 這一塊（畫布 + 附件圖層 +
+    /// 圖釘 + 浮動列）原本整棵樹的型別都被編進 body 的 mangled 名稱裡。
+    private var canvasWorkArea: AnyView { AnyView(canvasWorkAreaContent) }
+
+    private var canvasWorkAreaContent: some View {
+ZStack(alignment: .topTrailing) {
+            CanvasRepresentable(
+                drawing: $currentDrawing,
+                selectedTool: selectedTool,
+                selectedColor: selectedColor,
+                strokeWidth: strokeWidth,
+                isRulerActive: isRulerActive,
+                template: notebook.template,
+                pageHeight: currentPageHeight,
+                editorMode: editorMode,
+                onDrawingChanged: { newDrawing in
+                    // 即時自動儲存至專屬二進位檔案（不觸發 Struct 重新賦值以防競態覆蓋）
+                    store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: newDrawing)
+
+                    if !isApplyingRemoteUpdate && isCollaborating {
+                        let count = newDrawing.strokes.count
+                        if count > lastStrokeCount {
+                            let deltaStrokes = Array(newDrawing.strokes.suffix(count - lastStrokeCount))
+                            let deltaDrawing = PKDrawing(strokes: deltaStrokes)
+                            let b64 = deltaDrawing.dataRepresentation().base64EncodedString()
+                            collaborationManager.broadcastOplog(
+                                kind: "stroke_delta",
+                                payload: [
+                                    "page_index": currentPageIndex,
+                                    "drawing_base64": b64
+                                ]
+                            )
+                        } else if count < lastStrokeCount {
+                            let b64 = newDrawing.dataRepresentation().base64EncodedString()
+                            collaborationManager.broadcastOplog(
+                                kind: "drawing_replace",
+                                payload: [
+                                    "page_index": currentPageIndex,
+                                    "drawing_base64": b64
+                                ]
+                            )
+                        }
+                        lastStrokeCount = count
+                    } else if !isApplyingRemoteUpdate {
+                        lastStrokeCount = newDrawing.strokes.count
+                    }
+                },
+                onAutoExtendHeight: { newHeight in
+                    currentPageHeight = newHeight
+                    notebook.setHeight(newHeight, forPage: currentPageIndex)
+                    store.updateNotebook(notebook)
+                },
+                onSelectionChanged: { hasSel in
+                    self.hasLassoSelection = hasSel
+                },
+                canvasRef: { ref in
+                    self.canvasView = ref
+                },
+                onScrollMetrics: { visible, fraction in
+                    canvasVisibleFraction = visible
+                    canvasScrollFraction = fraction
+                }
+            )
+            .background(
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear { updateCanvasContentWidth(geo.size.width) }
+                        .onChange(of: geo.size.width) { newWidth in
+                            updateCanvasContentWidth(newWidth)
+                        }
+                }
+            )
+
+            // 🌟 打字模式畫布互動層：點選空白處新增文字方塊並直接彈出鍵盤
+            if editorMode == .type {
+                GeometryReader { geo in
+                    Color.black.opacity(0.001)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture { location in
+                            let newDraft = NoteTextAttachment(
+                                id: UUID().uuidString,
+                                pageIndex: currentPageIndex,
+                                text: "",
+                                x: max(20, location.x - 130),
+                                y: max(20, location.y - 40)
+                            )
+                            if notebook.textAttachments == nil {
+                                notebook.textAttachments = []
+                            }
+                            notebook.textAttachments?.append(newDraft)
+                            store.updateNotebook(notebook)
+                            self.editingTextId = newDraft.id
+                        }
+                }
+
+                // 打字模式頂部提示條
+                HStack(spacing: 6) {
+                    Image(systemName: "keyboard.fill")
+                        .foregroundColor(.accentColor)
+                    Text(localizationManager.localized("tap_to_type_hint"))
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.primary)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(.ultraThinMaterial)
+                .cornerRadius(20)
+                .shadow(color: Color.black.opacity(0.12), radius: 5, y: 2)
+                .padding(.top, 14)
+                .padding(.trailing, 20)
+            }
+
+            // 🌟 筆記內嵌圖片與圖表展示層（支援等比縮放、拖曳平移與濾鏡美化）
+            ForEach(notebook.attachments ?? []) { item in
+                if item.pageIndex == currentPageIndex {
+                    AttachmentItemView(
+                        attachment: binding(for: item.id),
+                        onEdit: {
+                            self.editingAttachmentId = item.id
+                        },
+                        onDelete: {
+                            deletedAttachmentBackup = (type: "image", data: item)
+                            collaborationManager.broadcastAttachmentDelete(id: item.id, type: "image")
+                            notebook.attachments?.removeAll { $0.id == item.id }
+                            store.updateNotebook(notebook)
+                            collaborationManager.broadcastSelection(selectedId: nil)
+                        }
+                    )
+                }
+            }
+
+            // 🌟 筆記內嵌 Word 級文字方塊（支援段落對齊、特殊符號與便利貼卡片底色）
+            ForEach(notebook.textAttachments ?? []) { item in
+                if item.pageIndex == currentPageIndex {
+                    TextAttachmentItemView(
+                        textItem: binding(forTextId: item.id),
+                        onEdit: {
+                            self.editingTextId = item.id
+                        },
+                        onDelete: {
+                            deletedAttachmentBackup = (type: "text", data: item)
+                            collaborationManager.broadcastAttachmentDelete(id: item.id, type: "text")
+                            notebook.textAttachments?.removeAll { $0.id == item.id }
+                            store.updateNotebook(notebook)
+                            collaborationManager.broadcastSelection(selectedId: nil)
+                        }
+                    )
+                }
+            }
+
+            // 🌟 筆記內嵌網址 Rich Link 預覽卡片（支援點擊跳轉瀏覽器與自由平移）
+            ForEach(notebook.linkAttachments ?? []) { item in
+                if item.pageIndex == currentPageIndex {
+                    LinkAttachmentItemView(
+                        linkItem: binding(forLinkId: item.id),
+                        onDelete: {
+                            notebook.linkAttachments?.removeAll { $0.id == item.id }
+                            store.updateNotebook(notebook)
+                        }
+                    )
+                }
+            }
+
+            // 🌟 筆記內嵌 3D 幾何模型展示層（支援 360° 空間旋轉、9大材質 PBR 物理反射、縮放與文字標題）
+            ForEach(notebook.model3DAttachments ?? []) { item in
+                if item.pageIndex == currentPageIndex {
+                    Model3DCanvasItemView(
+                        item: binding(forModel3DId: item.id),
+                        onDelete: {
+                            deletedAttachmentBackup = (type: "3d", data: item)
+                            collaborationManager.broadcastAttachmentDelete(id: item.id, type: "3d")
+                            notebook.model3DAttachments?.removeAll { $0.id == item.id }
+                            store.updateNotebook(notebook)
+                            collaborationManager.broadcastSelection(selectedId: nil)
+                        }
+                    )
+                }
+            }
+
+            // 🌟 筆記內嵌討論圖釘展示層（支援多方訊息留言串、已解決標記與即時推播）
+            ForEach(notebook.commentPins ?? []) { pin in
+                if pin.pageIndex == currentPageIndex {
+                    CommentPinMarkerView(
+                        pin: pin,
+                        isSelected: selectedCommentPinId == pin.id,
+                        onTap: {
+                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                if selectedCommentPinId == pin.id {
+                                    selectedCommentPinId = nil
+                                    collaborationManager.broadcastSelection(selectedId: nil)
+                                } else {
+                                    selectedCommentPinId = pin.id
+                                    collaborationManager.broadcastSelection(selectedId: pin.id)
+                                }
+                            }
+                        }
+                    )
+                    .position(x: pin.x, y: pin.y)
+                }
+            }
+
+            // 展開的討論圖釘詳細對話框
+            if let pinId = selectedCommentPinId,
+               let pin = (notebook.commentPins ?? []).first(where: { $0.id == pinId }),
+               pin.pageIndex == currentPageIndex {
+                CommentThreadDialog(
+                    pin: pin,
+                    currentUserId: collaborationManager.currentUserId,
+                    currentUserName: AccountManager.shared.profile.displayName,
+                    currentUserColor: collaborationManager.myColorHex,
+                    onReply: { pId, text in
+                        addCommentReply(pinId: pId, text: text)
+                    },
+                    onToggleResolve: { pId in
+                        toggleCommentResolve(pinId: pId)
+                    },
+                    onDelete: { pId in
+                        deleteCommentPin(pinId: pId)
+                    },
+                    onDeleteMessage: { pId, mId in
+                        deleteCommentMessage(pinId: pId, messageId: mId)
+                    },
+                    onClose: {
+                        withAnimation {
+                            selectedCommentPinId = nil
+                            collaborationManager.broadcastSelection(selectedId: nil)
+                        }
+                    }
+                )
+                .position(
+                    x: min(max(170, pin.x), 650),
+                    y: min(max(150, pin.y - 120), currentPageHeight - 120)
+                )
+            }
+
+            // 放置討論圖釘模式互動層
+            if isPlacingCommentPin {
+                GeometryReader { geo in
+                    Color.blue.opacity(0.001)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .contentShape(Rectangle())
+                        .onTapGesture { location in
+                            let newPin = NoteCommentPin(
+                                pageIndex: currentPageIndex,
+                                x: location.x,
+                                y: location.y,
+                                authorId: collaborationManager.currentUserId,
+                                authorName: AccountManager.shared.profile.displayName,
+                                authorColor: collaborationManager.myColorHex,
+                                messages: [
+                                    NoteCommentMessage(
+                                        authorId: collaborationManager.currentUserId,
+                                        authorName: AccountManager.shared.profile.displayName,
+                                        authorColor: collaborationManager.myColorHex,
+                                        text: localizationManager.localized("add_comment_pin")
+                                    )
+                                ]
+                            )
+                            if notebook.commentPins == nil {
+                                notebook.commentPins = []
+                            }
+                            notebook.commentPins?.append(newPin)
+                            store.updateNotebook(notebook)
+                            selectedCommentPinId = newPin.id
+                            isPlacingCommentPin = false
+                            broadcastCommentPinUpsert(newPin)
+                            collaborationManager.broadcastSelection(selectedId: newPin.id)
+                        }
+                }
+
+                // 放置圖釘模式頂部提示條
+                HStack(spacing: 8) {
+                    Image(systemName: "pin.fill")
+                        .foregroundColor(.orange)
+                    Text(localizationManager.localized("tap_to_place_pin"))
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Button(action: { isPlacingCommentPin = false }) {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(.ultraThinMaterial)
+                .cornerRadius(20)
+                .shadow(color: Color.black.opacity(0.12), radius: 5, y: 2)
+                .padding(.top, 14)
+                .padding(.leading, 20)
+            }
+
+            // 🌟 美學構圖輔助 HUD 疊層（黃金螺旋與三分構圖）
+            if isGoldenSpiralOverlay {
+                GoldenSpiralOverlayView()
+                    .allowsHitTesting(false)
+                    .frame(height: currentPageHeight)
+            }
+            if isRuleOfThirdsOverlay {
+                RuleOfThirdsOverlayView()
+                    .allowsHitTesting(false)
+                    .frame(height: currentPageHeight)
+            }
+
+            // 🌟 草圖智慧修飾浮動控制面板（支援一鍵修飾、恢復原草圖、重做與強度調整）
+            if showSketchRefineBar {
+                VStack {
+                    sketchRefineFloatingBar
+                        .padding(.top, 12)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, alignment: .top)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            // 🌟 套索選取浮動控制面板（當套索工具啟動時浮現：支援剪下、複製、刪除選取筆劃）
+            if selectedTool == .lasso {
+                VStack {
+                    lassoFloatingActionBar
+                        .padding(.top, 12)
+                    Spacer()
+                }
+                .frame(maxWidth: .infinity, alignment: .top)
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+
+            // 🌟 即時浮動錄音圖示徽章（筆記錄音完成後立即在已開啟筆記中呈現！）
+            if notebook.hasRecording, let audioPath = notebook.recordingAudioPath {
+                floatingAudioBadge(fileName: audioPath)
+                    .padding(16)
+                    .transition(.scale.combined(with: .opacity))
+            }
+
+            // 🌟 畫布底部浮動延伸膠囊按鈕（保留彈性：讓使用者隨時可向下延伸本頁）
+            VStack {
+                Spacer()
+                HStack {
+                    if showExtendedBanner {
+                        Text(localizationManager.localized("page_extended_hint"))
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(.ultraThinMaterial)
+                            .cornerRadius(16)
+                            .shadow(color: Color.black.opacity(0.1), radius: 4, y: 2)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                    }
+
+                    Spacer()
+
+                    // ＋ 新增下一頁
+                    Button {
+                        addNewPage()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "plus.square.dashed")
+                                .font(.subheadline)
+                            Text(localizationManager.localized("add_next_page"))
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.accentColor)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(18)
+                        .shadow(color: Color.black.opacity(0.12), radius: 4, y: 2)
+                    }
+                    .buttonStyle(.plain)
+                    .help(localizationManager.localized("add_next_page"))
+
+                    Button {
+                        extendCurrentPage(by: 800)
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.down.to.line.compact")
+                                .font(.subheadline)
+                            Text(localizationManager.localized("extend_page_amount"))
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.primary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(.ultraThinMaterial)
+                        .cornerRadius(18)
+                        .shadow(color: Color.black.opacity(0.12), radius: 4, y: 2)
+                    }
+                    .buttonStyle(.plain)
+                    .help(localizationManager.localized("extend_page_amount"))
+                }
+                .padding(14)
+            }
+
+            // 🌟 線上多人即時彩色游標與筆尖浮層
+            RemoteCursorsOverlay()
+
+            // 🌟 圖片美化浮動面板
+            //
+            // 以前是 modal sheet，蓋住整個畫布 —— 調濾鏡時看不到自己在調
+            // 什麼。改成浮在畫布上、標題列可拖到一旁的面板：控制項與圖片
+            // 同時在畫面上，改動直接反映在物件上。
+            if let id = editingAttachmentId {
+                FloatingPanel(
+                    title: localizationManager.localized("image_beautify"),
+                    onClose: { editingAttachmentId = nil }
+                ) {
+                    ImageEditControls(attachment: binding(for: id)) {
+                        notebook.attachments?.removeAll { $0.id == id }
+                        store.updateNotebook(notebook)
+                        editingAttachmentId = nil
+                    }
+                }
+                .padding(.top, 24)
+                .padding(.trailing, 24)
+                .transition(.scale(scale: 0.95).combined(with: .opacity))
+            }
+        }
+        .overlay(alignment: .trailing) {
+            // 可用游標拖曳的捲軸（iOS 原生指示器不接受互動）
+            CanvasScrollbar(
+                visibleFraction: canvasVisibleFraction,
+                scrollFraction: canvasScrollFraction
+            ) { fraction in
+                guard let canvas = canvasView else { return }
+                let scrollable = max(canvas.contentSize.height - canvas.bounds.height, 0)
+                canvas.setContentOffset(CGPoint(x: canvas.contentOffset.x, y: scrollable * fraction), animated: false)
+                canvasScrollFraction = fraction
+            }
+            .padding(.trailing, 4)
+            .padding(.vertical, 10)
+        }
+        .coordinateSpace(name: CanvasCoordinateSpace.name)
+        .onContinuousHover { phase in
+            switch phase {
+            case .active(let location):
+                collaborationManager.broadcastCursor(
+                    x: location.x,
+                    y: location.y,
+                    isDrawing: false,
+                    tool: selectedTool.rawValue
+                )
+            case .ended:
+                break
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .shadow(color: Color.black.opacity(0.06), radius: 8, y: 4)
+        .padding(.horizontal, 16)
+        .padding(.bottom, 12)
+    }
+
+    /// 套索操作按鈕：圖示 + 文字 + 說明提示
+    private func lassoActionButton(_ icon: String, _ titleKey: String, _ hintKey: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.caption)
+                Text(localizationManager.localized(titleKey))
+                    .font(.system(size: 11, weight: .medium))
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .foregroundColor(.primary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 5)
+            .background(Color.secondary.opacity(0.12))
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+        .help(localizationManager.localized(hintKey))
+    }
+
+    /// 版本標示（v2.2.0 這種）。點一下可複製，回報問題時直接貼上。
+    private var versionBadge: some View {
+        Text("v\(AppVersion.marketing)")
+            .font(.system(size: 11, weight: .medium, design: .monospaced))
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
+            .background(Color(uiColor: .tertiarySystemGroupedBackground))
+            .cornerRadius(5)
+            .help("Kairumo v\(AppVersion.marketing) (build \(AppVersion.build))")
+            .onTapGesture {
+                #if canImport(UIKit)
+                UIPasteboard.general.string = "Kairumo v\(AppVersion.marketing) (build \(AppVersion.build))"
+                #endif
+            }
     }
 
     // MARK: - 手繪／打字模式切換器
@@ -2351,7 +2478,11 @@ public struct NotebookEditorView: View {
         .help(localizationManager.localized(titleKey))
     }
 
-    private var notebookStructureSidebar: some View {
+    /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
+    /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
+    private var notebookStructureSidebar: AnyView { AnyView(notebookStructureSidebarContent) }
+
+    private var notebookStructureSidebarContent: some View {
         VStack(spacing: 0) {
             // 頂部導覽列與分頁模式切換
             VStack(spacing: 8) {
@@ -2427,7 +2558,11 @@ public struct NotebookEditorView: View {
     }
 
     // MARK: - 頁面結構縮圖清單
-    private var pagesStructureView: some View {
+    /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
+    /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
+    private var pagesStructureView: AnyView { AnyView(pagesStructureViewContent) }
+
+    private var pagesStructureViewContent: some View {
         VStack(spacing: 0) {
             ScrollView {
                 LazyVStack(spacing: 10) {
@@ -2571,7 +2706,11 @@ public struct NotebookEditorView: View {
     }
 
     // MARK: - 資料夾階層結構目錄
-    private var foldersStructureView: some View {
+    /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
+    /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
+    private var foldersStructureView: AnyView { AnyView(foldersStructureViewContent) }
+
+    private var foldersStructureViewContent: some View {
         VStack(spacing: 0) {
             // 最上層根資料夾標題（可自訂與重命名）
             HStack(spacing: 8) {
@@ -2662,6 +2801,15 @@ public struct NotebookEditorView: View {
                             }
                             .padding(.horizontal, 10)
                             .padding(.top, 8)
+                            .padding(.vertical, 4)
+                            .background(isUnfiledDropTargeted ? Color.accentColor.opacity(0.18) : Color.clear)
+                            .cornerRadius(6)
+                            // 把筆記拖回這裡，就會移出資料夾
+                            .dropDestination(for: String.self) { items, _ in
+                                guard let noteId = items.first else { return false }
+                                store.moveNotebook(id: noteId, toFolderId: nil)
+                                return true
+                            } isTargeted: { isUnfiledDropTargeted = $0 }
 
                             ForEach(rootNotes) { note in
                                 notebookItemRow(note: note, indent: 8)
@@ -2783,8 +2931,24 @@ public struct NotebookEditorView: View {
                 .padding(.leading, CGFloat(level * 14 + 6))
                 .padding(.trailing, 8)
                 .padding(.vertical, 4)
-                .background(Color(uiColor: .tertiarySystemGroupedBackground).opacity(0.5))
+                .background(
+                    (dropTargetFolderId == folder.id ? Color.accentColor.opacity(0.22)
+                                                     : Color(uiColor: .tertiarySystemGroupedBackground).opacity(0.5))
+                )
                 .cornerRadius(6)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(Color.accentColor, lineWidth: dropTargetFolderId == folder.id ? 2 : 0)
+                )
+                // 把筆記拖到資料夾上即完成分類
+                .dropDestination(for: String.self) { items, _ in
+                    guard let noteId = items.first else { return false }
+                    store.moveNotebook(id: noteId, toFolderId: folder.id)
+                    expandedFolderIds.insert(folder.id)
+                    return true
+                } isTargeted: { hovering in
+                    dropTargetFolderId = hovering ? folder.id : (dropTargetFolderId == folder.id ? nil : dropTargetFolderId)
+                }
 
                 // 若展開，渲染子資料夾與內部筆記檔案
                 if isExpanded {
@@ -2878,10 +3042,25 @@ public struct NotebookEditorView: View {
         .onTapGesture {
             switchToNotebook(note)
         }
+        // 拖到資料夾列上即可分類；拖到「未分類檔案」標題可移出資料夾
+        .draggable(note.id) {
+            HStack(spacing: 6) {
+                Image(systemName: "doc.fill")
+                Text(note.displayTitle()).lineLimit(1)
+            }
+            .font(.caption)
+            .padding(8)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(8)
+        }
     }
 
     // MARK: - 2. 🌟 實體手繪工具列（水平滑動包裹、免擠壓、隨點隨用）
-    private var drawingToolbar: some View {
+    /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
+    /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
+    private var drawingToolbar: AnyView { AnyView(drawingToolbarContent) }
+
+    private var drawingToolbarContent: some View {
         // 放不下時分三步退讓：先收掉筆刷底下的文字標籤，
         // 再不夠就由「更多」選單承接次要工具，最後才換行 ——
         // 換行會改變按鈕位置，所以放在最後，不是第一選擇。
@@ -3001,31 +3180,11 @@ public struct NotebookEditorView: View {
                         .frame(height: 24)
 
                     HStack(spacing: 6) {
-                        Button {
-                            cutSelectedStrokes()
-                        } label: {
-                            Image(systemName: "scissors")
-                                .font(.subheadline)
-                                .foregroundColor(.primary)
-                                .padding(6)
-                                .background(Color.secondary.opacity(0.12))
-                                .cornerRadius(6)
-                        }
-                        .buttonStyle(.plain)
-                        .help(localizationManager.localized("cut_selected"))
-
-                        Button {
-                            copySelectedStrokes()
-                        } label: {
-                            Image(systemName: "doc.on.doc")
-                                .font(.subheadline)
-                                .foregroundColor(.primary)
-                                .padding(6)
-                                .background(Color.secondary.opacity(0.12))
-                                .cornerRadius(6)
-                        }
-                        .buttonStyle(.plain)
-                        .help(localizationManager.localized("copy_selected"))
+                        // 圖示配文字：純圖示看不出是「對選取的筆劃」做事
+                        lassoActionButton("scissors", "cut_selected", "cut_selected_hint") { cutSelectedStrokes() }
+                        lassoActionButton("doc.on.doc", "copy_selected", "copy_selected_hint") { copySelectedStrokes() }
+                        lassoActionButton("plus.square.on.square", "duplicate_selected", "duplicate_selected_hint") { duplicateSelectedStrokes() }
+                        lassoActionButton("doc.on.clipboard", "paste_strokes", "paste_strokes_hint") { pasteStrokes() }
 
                         Button {
                             deleteSelectedStrokes()
@@ -3134,7 +3293,11 @@ public struct NotebookEditorView: View {
     }
 
     // MARK: - 🌟 實體鍵盤打字與排版工具列
-    private var typingToolbar: some View {
+    /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
+    /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
+    private var typingToolbar: AnyView { AnyView(typingToolbarContent) }
+
+    private var typingToolbarContent: some View {
         // 次要的插入工具收進「更多」選單；真的還是塞不下時才換行。
         ViewThatFits(in: .horizontal) {
             HStack(spacing: 12) {
@@ -3303,7 +3466,11 @@ public struct NotebookEditorView: View {
     }
 
     // MARK: - 3. 尺規旋轉與量測輔助列
-    private var rulerControlBar: some View {
+    /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
+    /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
+    private var rulerControlBar: AnyView { AnyView(rulerControlBarContent) }
+
+    private var rulerControlBarContent: some View {
         HStack(spacing: 12) {
             Image(systemName: "ruler")
                 .foregroundColor(.accentColor)
@@ -3333,7 +3500,9 @@ public struct NotebookEditorView: View {
     }
 
     // MARK: - 4. 錄音播放器橫條
-    private func audioPlaybackBar(fileName: String) -> some View {
+    private func audioPlaybackBar(fileName: String) -> AnyView { AnyView(audioPlaybackBarContent(fileName: fileName)) }
+
+    private func audioPlaybackBarContent(fileName: String) -> some View {
         let fileUrl = audioManager.recordingsDirectory.appendingPathComponent(fileName)
         let isCurrentPlaying = audioManager.isPlaying && audioManager.playingRecordingId == fileName
 
@@ -3370,7 +3539,11 @@ public struct NotebookEditorView: View {
     }
 
     // MARK: - 5. 即時錄音狀態列
-    private var liveRecordingBar: some View {
+    /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
+    /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
+    private var liveRecordingBar: AnyView { AnyView(liveRecordingBarContent) }
+
+    private var liveRecordingBarContent: some View {
         HStack(spacing: 12) {
             HStack(spacing: 6) {
                 Circle()
@@ -3410,7 +3583,9 @@ public struct NotebookEditorView: View {
     }
 
     // MARK: - 6. 畫布上之即時浮動錄音圖示徽章
-    private func floatingAudioBadge(fileName: String) -> some View {
+    private func floatingAudioBadge(fileName: String) -> AnyView { AnyView(floatingAudioBadgeContent(fileName: fileName)) }
+
+    private func floatingAudioBadgeContent(fileName: String) -> some View {
         let fileUrl = audioManager.recordingsDirectory.appendingPathComponent(fileName)
         let isCurrentPlaying = audioManager.isPlaying && audioManager.playingRecordingId == fileName
 
@@ -3464,7 +3639,11 @@ public struct NotebookEditorView: View {
     }
 
     // MARK: - 7. 🌟 套索選取浮動工具列（圈選筆跡後隨選隨刪、隨選隨複製）
-    private var lassoFloatingActionBar: some View {
+    /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
+    /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
+    private var lassoFloatingActionBar: AnyView { AnyView(lassoFloatingActionBarContent) }
+
+    private var lassoFloatingActionBarContent: some View {
         HStack(spacing: 10) {
             Image(systemName: "lasso")
                 .foregroundColor(.accentColor)
@@ -3509,6 +3688,41 @@ public struct NotebookEditorView: View {
                 .cornerRadius(6)
             }
             .buttonStyle(.plain)
+            .help(localizationManager.localized("copy_selected_hint"))
+
+            Button {
+                duplicateSelectedStrokes()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "plus.square.on.square")
+                    Text(localizationManager.localized("duplicate_selected"))
+                }
+                .font(.caption2)
+                .foregroundColor(.primary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.secondary.opacity(0.15))
+                .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .help(localizationManager.localized("duplicate_selected_hint"))
+
+            Button {
+                pasteStrokes()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "doc.on.clipboard")
+                    Text(localizationManager.localized("paste_strokes"))
+                }
+                .font(.caption2)
+                .foregroundColor(.primary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.secondary.opacity(0.15))
+                .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
+            .help(localizationManager.localized("paste_strokes_hint"))
 
             Button {
                 deleteSelectedStrokes()
@@ -3535,7 +3749,11 @@ public struct NotebookEditorView: View {
     }
 
     // MARK: - 🌟 草圖智慧修飾浮動控制面板
-    private var sketchRefineFloatingBar: some View {
+    /// 型別邊界：SwiftUI 會把整棵子樹的型別編進 body 的 mangled 名稱，
+    /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
+    private var sketchRefineFloatingBar: AnyView { AnyView(sketchRefineFloatingBarContent) }
+
+    private var sketchRefineFloatingBarContent: some View {
         HStack(spacing: 12) {
             HStack(spacing: 6) {
                 Image(systemName: "wand.and.stars")
@@ -3834,6 +4052,20 @@ public struct NotebookEditorView: View {
         }
     }
 
+    /// 刪除討論串中的單一則留言。
+    /// 只剩最後一則時不刪 —— 沒有任何訊息的圖釘在畫布上等於一個看不出用途的點，
+    /// 要整個移除請用圖釘上的垃圾桶。
+    private func deleteCommentMessage(pinId: String, messageId: String) {
+        guard let idx = notebook.commentPins?.firstIndex(where: { $0.id == pinId }),
+              let count = notebook.commentPins?[idx].messages.count,
+              count > 1 else { return }
+        notebook.commentPins?[idx].messages.removeAll { $0.id == messageId }
+        store.updateNotebook(notebook)
+        if let pin = notebook.commentPins?[idx] {
+            broadcastCommentPinUpsert(pin)
+        }
+    }
+
     private func deleteCommentPin(pinId: String) {
         notebook.commentPins?.removeAll { $0.id == pinId }
         store.updateNotebook(notebook)
@@ -3930,6 +4162,40 @@ public struct NotebookEditorView: View {
         hasLassoSelection = false
     }
 
+    /// 貼上剪貼簿中的筆劃。
+    ///
+    /// 為什麼需要自己做一顆：PencilKit 的內建選單（Cut / Copy / Duplicate…）只在
+    /// **有選取時**才出現，複製完取消選取後就沒有入口可以貼上了。
+    private func pasteStrokes() {
+        guard let canvas = canvasView else { return }
+        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
+            if sv.responds(to: #selector(UIResponderStandardEditActions.paste(_:))) {
+                sv.perform(#selector(UIResponderStandardEditActions.paste(_:)), with: nil)
+            }
+        }
+        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.paste(_:)), to: nil, from: nil, for: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            self.currentDrawing = canvas.drawing
+            self.saveCurrentPageDrawing()
+        }
+    }
+
+    /// 就地複製選取的筆劃並稍微偏移（不經過剪貼簿）—— 這就是「再製」與「複製」的差別：
+    /// 「複製」把東西放進剪貼簿等你貼上，「再製」直接在旁邊多一份。
+    private func duplicateSelectedStrokes() {
+        guard let canvas = canvasView else { return }
+        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
+            if sv.responds(to: #selector(UIResponderStandardEditActions.duplicate(_:))) {
+                sv.perform(#selector(UIResponderStandardEditActions.duplicate(_:)), with: nil)
+            }
+        }
+        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.duplicate(_:)), to: nil, from: nil, for: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            self.currentDrawing = canvas.drawing
+            self.saveCurrentPageDrawing()
+        }
+    }
+
     private func copySelectedStrokes() {
         guard let canvas = canvasView else { return }
         for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
@@ -3955,34 +4221,48 @@ public struct NotebookEditorView: View {
         }
     }
 
-    private func exportAsPdf() {
+    /// 每一頁完整算繪成一張圖，再組成 PDF。
+    ///
+    /// 舊版寫死 612×792（信紙尺寸）並且只畫 `PKDrawing` —— 但畫布座標是
+    /// 「視圖寬度 × 頁面高度」，通常遠大於這個框，所以只截到左上角一小塊，
+    /// 匯出檔看起來就是空白；文字方塊、圖片、3D、圖釘也全都沒畫進去。
+    private func composedPageImages(scale: CGFloat) -> [(image: UIImage, size: CGSize)] {
+        let width = max(canvasContentWidth, PageThumbnailRenderer.minPageWidth)
+        return (0..<max(1, notebook.pageCount)).map { i in
+            let drawing = (i == currentPageIndex) ? currentDrawing : store.loadDrawing(notebookId: notebook.id, pageIndex: i)
+            let image = PageThumbnailRenderer.renderFullPage(
+                notebook: notebook,
+                pageIndex: i,
+                drawing: drawing,
+                store: store,
+                canvasWidth: width,
+                scale: scale
+            )
+            return (image, CGSize(width: width, height: notebook.height(forPage: i)))
+        }
+    }
+
+    private func buildNotebookPdf(scale: CGFloat = 2.0) -> Data {
         saveCurrentPageDrawing()
-        let bounds = CGRect(x: 0, y: 0, width: 612, height: 792)
-        let renderer = UIGraphicsPDFRenderer(bounds: bounds)
-        let pdf = renderer.pdfData { context in
-            for i in 0..<max(1, notebook.pageCount) {
-                context.beginPage()
-                let drawing = (i == currentPageIndex) ? currentDrawing : store.loadDrawing(notebookId: notebook.id, pageIndex: i)
-                let image = drawing.image(from: bounds, scale: 2.0)
-                image.draw(in: bounds)
+        let pages = composedPageImages(scale: scale)
+        let firstSize = pages.first?.size ?? CGSize(width: 612, height: 792)
+        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(origin: .zero, size: firstSize))
+        return renderer.pdfData { context in
+            for page in pages {
+                // 每一頁用自己的尺寸開頁：頁面可以被「向下延長」，高度不一定相同
+                context.beginPage(withBounds: CGRect(origin: .zero, size: page.size), pageInfo: [:])
+                page.image.draw(in: CGRect(origin: .zero, size: page.size))
             }
         }
-        self.exportPdfData = pdf
+    }
+
+    private func exportAsPdf() {
+        self.exportPdfData = buildNotebookPdf()
         self.showShareSheet = true
     }
 
     private func printCurrentNotebook() {
-        saveCurrentPageDrawing()
-        let bounds = CGRect(x: 0, y: 0, width: 612, height: 792)
-        let renderer = UIGraphicsPDFRenderer(bounds: bounds)
-        let pdfData = renderer.pdfData { context in
-            for i in 0..<max(1, notebook.pageCount) {
-                context.beginPage()
-                let drawing = (i == currentPageIndex) ? currentDrawing : store.loadDrawing(notebookId: notebook.id, pageIndex: i)
-                let img = drawing.image(from: bounds, scale: 2.0)
-                img.draw(in: bounds)
-            }
-        }
+        let pdfData = buildNotebookPdf()
 
         let printController = UIPrintInteractionController.shared
         let printInfo = UIPrintInfo(dictionary: nil)
@@ -3995,8 +4275,15 @@ public struct NotebookEditorView: View {
 
     private func exportAsPngImage() {
         saveCurrentPageDrawing()
-        let bounds = CGRect(x: 0, y: 0, width: 612, height: max(792, currentPageHeight))
-        let img = currentDrawing.image(from: bounds, scale: 2.0)
+        let width = max(canvasContentWidth, PageThumbnailRenderer.minPageWidth)
+        let img = PageThumbnailRenderer.renderFullPage(
+            notebook: notebook,
+            pageIndex: currentPageIndex,
+            drawing: currentDrawing,
+            store: store,
+            canvasWidth: width,
+            scale: 2.0
+        )
         if let pngData = img.pngData() {
             self.exportPdfData = pngData
             self.showShareSheet = true
@@ -4432,9 +4719,32 @@ struct TextAttachmentItemView: View {
     @State private var resizeBaseWidth: CGFloat? = nil
     @State private var isSelected: Bool = false
     @State private var isDragging: Bool = false
+    /// 就地編輯：直接在畫布上改字，不必先開面板
+    @State private var isEditingInline: Bool = false
+    @FocusState private var inlineFocused: Bool
 
     private var lockedByPeer: CollaboratorPeer? {
         collaborationManager.peers.first(where: { $0.selectedId == textItem.id })
+    }
+
+    /// 選取時的動作按鈕（圖示 + 文字，看得懂也點得到）
+    private func textActionButton(_ icon: String, _ titleKey: String, _ tint: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 11, weight: .bold))
+                Text(localizationManager.localized(titleKey))
+                    .font(.system(size: 11, weight: .semibold))
+                    .fixedSize()
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 6)
+            .background(tint)
+            .cornerRadius(7)
+        }
+        .buttonStyle(.plain)
+        .help(localizationManager.localized(titleKey))
     }
 
     private var displayWidth: CGFloat { liveWidth ?? textItem.width }
@@ -4445,14 +4755,42 @@ struct TextAttachmentItemView: View {
 
         ZStack(alignment: .topTrailing) {
             VStack(alignment: resolveAlignment(textItem.alignmentRaw), spacing: 4) {
-                Text(textItem.text)
-                    .font(.system(size: textItem.fontSize, weight: textItem.isBold ? .bold : .regular))
-                    .italic(textItem.isItalic)
-                    .underline(textItem.isUnderline)
-                    .strikethrough(textItem.isStrikethrough)
-                    .foregroundColor(Color(hex: textItem.textColorHex) ?? .primary)
-                    .multilineTextAlignment(resolveMultilineAlignment(textItem.alignmentRaw))
-                    .frame(maxWidth: .infinity, alignment: resolveFrameAlignment(textItem.alignmentRaw))
+                if isEditingInline {
+                    // 就地編輯：點兩下就能直接改字，不必先開面板
+                    TextEditor(text: $textItem.text)
+                        .font(.system(size: textItem.fontSize, weight: textItem.isBold ? .bold : .regular))
+                        .foregroundColor(Color(hex: textItem.textColorHex) ?? .primary)
+                        .scrollContentBackground(.hidden)
+                        .background(Color.clear)
+                        .frame(minHeight: 60)
+                        .focused($inlineFocused)
+                        .overlay(alignment: .bottomTrailing) {
+                            Button {
+                                isEditingInline = false
+                                inlineFocused = false
+                                broadcastTextChange()
+                            } label: {
+                                Text(localizationManager.localized("done"))
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Color.accentColor)
+                                    .cornerRadius(6)
+                            }
+                            .buttonStyle(.plain)
+                            .offset(x: 4, y: 22)
+                        }
+                } else {
+                    Text(textItem.text)
+                        .font(.system(size: textItem.fontSize, weight: textItem.isBold ? .bold : .regular))
+                        .italic(textItem.isItalic)
+                        .underline(textItem.isUnderline)
+                        .strikethrough(textItem.isStrikethrough)
+                        .foregroundColor(Color(hex: textItem.textColorHex) ?? .primary)
+                        .multilineTextAlignment(resolveMultilineAlignment(textItem.alignmentRaw))
+                        .frame(maxWidth: .infinity, alignment: resolveFrameAlignment(textItem.alignmentRaw))
+                }
             }
             .padding(14)
             .frame(width: displayWidth)
@@ -4465,16 +4803,51 @@ struct TextAttachmentItemView: View {
                             .stroke(Color(hex: peer.userColor) ?? .blue, lineWidth: 3)
                     } else {
                         RoundedRectangle(cornerRadius: textItem.cornerRadius)
-                            .stroke(textItem.hasBorder ? Color.secondary.opacity(0.4) : (isSelected ? Color.accentColor : Color.clear), lineWidth: textItem.hasBorder ? 1.5 : 1)
+                            .stroke(
+                                textItem.hasBorder
+                                    ? (Color(hex: textItem.borderColorHex ?? "") ?? Color.secondary.opacity(0.4))
+                                    : (isSelected ? Color.accentColor : Color.clear),
+                                lineWidth: textItem.hasBorder ? (textItem.borderWidth ?? 1.5) : 1
+                            )
                     }
                 }
             )
             .shadow(color: isDragging ? Color.clear : Color.black.opacity(0.08), radius: 6, y: 3)
             .contentShape(Rectangle())
+            .onTapGesture(count: 2) {
+                // 點兩下＝就地編輯（最直覺的路徑）
+                guard lockedByPeer == nil else { return }
+                isSelected = true
+                isEditingInline = true
+                inlineFocused = true
+            }
             .onTapGesture {
                 guard lockedByPeer == nil else { return }
+                if isEditingInline { return }
                 isSelected.toggle()
                 collaborationManager.broadcastSelection(selectedId: isSelected ? textItem.id : nil)
+            }
+            // 右鍵／長按也要能刪除 —— 這是大家最先嘗試的操作
+            .contextMenu {
+                Button {
+                    isSelected = true
+                    isEditingInline = true
+                    inlineFocused = true
+                } label: { Label(localizationManager.localized("edit_in_place"), systemImage: "character.cursor.ibeam") }
+
+                Button {
+                    onEdit()
+                } label: { Label(localizationManager.localized("text_studio"), systemImage: "textformat") }
+
+                Button {
+                    textItem.hasBorder.toggle()
+                } label: { Label(localizationManager.localized("toggle_border"), systemImage: "rectangle") }
+
+                Divider()
+
+                Button(role: .destructive) {
+                    onDelete()
+                } label: { Label(localizationManager.localized("delete"), systemImage: "trash") }
             }
             .gesture(
                 DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
@@ -4521,80 +4894,37 @@ struct TextAttachmentItemView: View {
                 .offset(x: -8, y: -24)
             }
 
-            // 選取時浮動把手
-            if isSelected {
+            // 選取時的動作列。按鈕帶文字，且整條移到方塊上方 ——
+            // 原本是三顆無標示的小圓點又壓在方塊角上，很難點也看不懂。
+            if isSelected && !isEditingInline {
                 HStack(spacing: 6) {
-                    Button {
-                        onEdit()
-                    } label: {
-                        Image(systemName: "pencil")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(5)
-                            .background(Color.blue)
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-
-                    // 邊框保留或刪除快速開關
-                    Button {
-                        textItem.hasBorder.toggle()
-                    } label: {
-                        Image(systemName: textItem.hasBorder ? "rectangle.inset.filled" : "rectangle")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(5)
-                            .background(textItem.hasBorder ? Color.purple : Color.secondary)
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .help(localizationManager.localized("toggle_border"))
-
-                    Button {
-                        onDelete()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(5)
-                            .background(Color.red)
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
+                    textActionButton("pencil", "edit", .blue) { onEdit() }
+                    textActionButton(
+                        textItem.hasBorder ? "rectangle.inset.filled" : "rectangle",
+                        "toggle_border",
+                        textItem.hasBorder ? .purple : .gray
+                    ) { textItem.hasBorder.toggle() }
+                    textActionButton("trash.fill", "delete", .red) { onDelete() }
                 }
-                .offset(x: 10, y: -10)
+                .padding(4)
+                .background(Color(uiColor: .systemBackground).opacity(0.95))
+                .cornerRadius(10)
+                .shadow(color: Color.black.opacity(0.15), radius: 5, y: 2)
+                .offset(x: 6, y: -42)
 
-                // 右下角縮放把手
-                VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        Image(systemName: "arrow.left.and.right")
-                            .font(.system(size: 10))
-                            .foregroundColor(.white)
-                            .padding(4)
-                            .background(Color.accentColor)
-                            .clipShape(Circle())
-                            .gesture(
-                                DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
-                                    .onChanged { value in
-                                        let base = resizeBaseWidth ?? textItem.width
-                                        if resizeBaseWidth == nil { resizeBaseWidth = base }
-                                        liveWidth = max(140, base + value.translation.width)
-                                    }
-                                    .onEnded { _ in
-                                        if let w = liveWidth { textItem.width = w }
-                                        resizeBaseWidth = nil
-                                        liveWidth = nil
-                                    }
-                            )
-                            .offset(x: 6, y: 6)
-                    }
-                }
-                .frame(width: displayWidth)
+                // 原本這裡有一顆「雙向箭頭」縮放把手：它很小、會擋住文字、
+                // 又只能改寬度，使用者反映沒必要。寬度改到「文字排版」裡調整，
+                // 畫布上只保留編輯／邊框／刪除三個明確的動作。
             }
         }
         .position(x: currentX + displayWidth / 2, y: currentY + 60)
+    }
+
+    private func broadcastTextChange() {
+        if let data = try? JSONEncoder().encode(textItem),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
+        }
     }
 
     private func resolveBackground(_ hex: String) -> Color {

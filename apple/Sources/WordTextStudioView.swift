@@ -87,6 +87,8 @@ public struct WordTextStudioView: View {
 
                 // 4. 底色與邊框版面配置列
                 cardStyleBar
+
+                borderStyleBar
                     .padding(.horizontal)
                     .padding(.vertical, 10)
                     .background(Color(uiColor: .secondarySystemGroupedBackground))
@@ -367,19 +369,115 @@ public struct WordTextStudioView: View {
                 }
             }
 
+            // 自訂底色（預設色之外想用什麼都可以）
+            ColorPicker("", selection: Binding(
+                get: { resolveCardBackground(attachment.backgroundColorHex) },
+                set: { attachment.backgroundColorHex = $0.toHex() ?? "#FFFFFF" }
+            ))
+            .labelsHidden()
+            .frame(width: 26)
+            .help(localizationManager.localized("custom_color"))
+
             Spacer()
 
             // 邊框開關
-            Toggle("邊框", isOn: $attachment.hasBorder)
-                .toggleStyle(.switch)
-                .font(.caption)
-                .labelsHidden()
-
-            Text("邊框")
-                .font(.caption)
-                .foregroundColor(.secondary)
+            Toggle(isOn: $attachment.hasBorder) {
+                Text(localizationManager.localized("border_style"))
+            }
+            .toggleStyle(.switch)
+            .font(.caption)
+            .fixedSize()
         }
     }
+
+    /// 邊框樣式：顏色、粗細、圓角、方塊寬度
+    private var borderStyleBar: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            if attachment.hasBorder {
+                HStack(spacing: 12) {
+                    Text(localizationManager.localized("border_color"))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    ForEach(borderColorOptions, id: \.self) { hex in
+                        Button {
+                            attachment.borderColorHex = hex
+                        } label: {
+                            Circle()
+                                .fill(Color(hex: hex) ?? .gray)
+                                .frame(width: 20, height: 20)
+                                .overlay(
+                                    Circle().stroke(
+                                        (attachment.borderColorHex ?? "#8E8E93") == hex ? Color.accentColor : Color.secondary.opacity(0.3),
+                                        lineWidth: (attachment.borderColorHex ?? "#8E8E93") == hex ? 2.5 : 1
+                                    )
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    ColorPicker("", selection: Binding(
+                        get: { Color(hex: attachment.borderColorHex ?? "#8E8E93") ?? .gray },
+                        set: { attachment.borderColorHex = $0.toHex() ?? "#8E8E93" }
+                    ))
+                    .labelsHidden()
+                    .frame(width: 26)
+
+                    Divider().frame(height: 18)
+
+                    ForEach([1.0, 2.0, 3.5], id: \.self) { w in
+                        Button {
+                            attachment.borderWidth = CGFloat(w)
+                        } label: {
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill((attachment.borderWidth ?? 1.5) == CGFloat(w) ? Color.accentColor : Color.secondary.opacity(0.5))
+                                .frame(width: 26, height: CGFloat(w) + 1)
+                                .padding(.vertical, 6)
+                                .padding(.horizontal, 4)
+                                .background((attachment.borderWidth ?? 1.5) == CGFloat(w) ? Color.accentColor.opacity(0.12) : Color.clear)
+                                .cornerRadius(5)
+                        }
+                        .buttonStyle(.plain)
+                    }
+
+                    Spacer()
+                }
+            }
+
+            HStack(spacing: 12) {
+                Text(localizationManager.localized("corner_style"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                ForEach([0.0, 8.0, 18.0], id: \.self) { r in
+                    Button {
+                        attachment.cornerRadius = CGFloat(r)
+                    } label: {
+                        RoundedRectangle(cornerRadius: CGFloat(r) / 2)
+                            .stroke(attachment.cornerRadius == CGFloat(r) ? Color.accentColor : Color.secondary.opacity(0.5),
+                                    lineWidth: attachment.cornerRadius == CGFloat(r) ? 2 : 1)
+                            .frame(width: 30, height: 20)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Divider().frame(height: 18)
+
+                Text(localizationManager.localized("box_width"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Slider(value: $attachment.width, in: 160...900, step: 10)
+                    .frame(maxWidth: 220)
+
+                Text("\(Int(attachment.width))")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
+
+    private let borderColorOptions: [String] = ["#8E8E93", "#000000", "#0A84FF", "#34C759", "#FF9500", "#FF3B30"]
 
     // 輔助函式
     private func insertSymbol(_ symbol: String) {

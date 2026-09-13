@@ -905,6 +905,136 @@ public final class LocalizationManager: ObservableObject {
             .ko: "최소화",
             .th: "ย่อหน้าต่าง"
         ],
+        "thread_resolved": [
+            .zhHant: "此討論已標記為已解決",
+            .en: "This thread is resolved",
+            .zhHans: "此讨论已标记为已解决",
+            .ja: "このスレッドは解決済みです",
+            .ko: "이 스레드는 해결됨으로 표시되었습니다",
+            .th: "การสนทนานี้ถูกทำเครื่องหมายว่าแก้ไขแล้ว"
+        ],
+        "delete_message": [
+            .zhHant: "刪除這則留言",
+            .en: "Delete this message",
+            .zhHans: "删除这条留言",
+            .ja: "このメッセージを削除",
+            .ko: "이 메시지 삭제",
+            .th: "ลบข้อความนี้"
+        ],
+        "help_and_legal": [
+            .zhHant: "說明與條款",
+            .en: "Help & Legal",
+            .zhHans: "说明与条款",
+            .ja: "ヘルプと規約",
+            .ko: "도움말 및 약관",
+            .th: "ความช่วยเหลือและข้อกำหนด"
+        ],
+        "user_manual": [
+            .zhHant: "操作手冊",
+            .en: "User Manual",
+            .zhHans: "操作手册",
+            .ja: "操作マニュアル",
+            .ko: "사용 설명서",
+            .th: "คู่มือการใช้งาน"
+        ],
+        "user_manual_desc": [
+            .zhHant: "十四章手把手教學，含實機畫面",
+            .en: "Fourteen step-by-step chapters with screenshots",
+            .zhHans: "十四章手把手教学，含实机画面",
+            .ja: "実機画面つきの全14章ガイド",
+            .ko: "실제 화면이 포함된 14개 장 안내",
+            .th: "คู่มือ 14 บท พร้อมภาพหน้าจอจริง"
+        ],
+        "privacy_policy": [
+            .zhHant: "隱私權政策",
+            .en: "Privacy Policy",
+            .zhHans: "隐私政策",
+            .ja: "プライバシーポリシー",
+            .ko: "개인정보 처리방침",
+            .th: "นโยบายความเป็นส่วนตัว"
+        ],
+        "privacy_policy_desc": [
+            .zhHant: "沒有帳號、沒有伺服器、沒有追蹤",
+            .en: "No accounts, no servers, no tracking",
+            .zhHans: "没有账号、没有服务器、没有追踪",
+            .ja: "アカウントもサーバーも追跡もなし",
+            .ko: "계정도 서버도 추적도 없음",
+            .th: "ไม่มีบัญชี ไม่มีเซิร์ฟเวอร์ ไม่มีการติดตาม"
+        ],
+        "document_missing": [
+            .zhHant: "找不到打包的文件檔案，請回報這個問題。",
+            .en: "The bundled document is missing. Please report this.",
+            .zhHans: "找不到打包的文档文件，请反馈这个问题。",
+            .ja: "同梱ドキュメントが見つかりません。ご報告ください。",
+            .ko: "동봉된 문서를 찾을 수 없습니다. 알려 주세요.",
+            .th: "ไม่พบเอกสารที่มากับแอป โปรดแจ้งปัญหานี้"
+        ],
+        "duplicate_selected": [
+            .zhHant: "再製", .en: "Duplicate", .zhHans: "再制", .ja: "複製を作成", .ko: "복제", .th: "ทำซ้ำ"
+        ],
+        "paste_strokes": [
+            .zhHant: "貼上", .en: "Paste", .zhHans: "粘贴", .ja: "ペースト", .ko: "붙여넣기", .th: "วาง"
+        ],
+        "cut_selected_hint": [
+            .zhHant: "把選取的筆劃剪下放進剪貼簿（原處移除）",
+            .en: "Cut the selected strokes to the clipboard (removed from the page)",
+            .zhHans: "把选取的笔画剪切到剪贴板（原处移除）",
+            .ja: "選択した筆跡を切り取ってクリップボードへ（元の場所からは消えます）",
+            .ko: "선택한 필기를 잘라 클립보드에 넣습니다(원래 위치에서 삭제)",
+            .th: "ตัดเส้นที่เลือกไปยังคลิปบอร์ด (ลบออกจากหน้า)"
+        ],
+        "copy_selected_hint": [
+            .zhHant: "複製到剪貼簿，之後用「貼上」放到想要的位置",
+            .en: "Copy to the clipboard; use Paste to place it where you want",
+            .zhHans: "复制到剪贴板，之后用“粘贴”放到想要的位置",
+            .ja: "クリップボードにコピーします。「ペースト」で好きな位置に置けます",
+            .ko: "클립보드로 복사합니다. “붙여넣기”로 원하는 위치에 놓으세요",
+            .th: "คัดลอกไปยังคลิปบอร์ด แล้วใช้ “วาง” เพื่อวางในตำแหน่งที่ต้องการ"
+        ],
+        "duplicate_selected_hint": [
+            .zhHant: "直接在旁邊多做一份，不經過剪貼簿",
+            .en: "Make a second copy right next to it, without using the clipboard",
+            .zhHans: "直接在旁边多做一份，不经过剪贴板",
+            .ja: "クリップボードを使わず、すぐ隣にもう一つ作ります",
+            .ko: "클립보드를 거치지 않고 바로 옆에 하나 더 만듭니다",
+            .th: "สร้างสำเนาอีกชุดไว้ข้าง ๆ ทันที โดยไม่ผ่านคลิปบอร์ด"
+        ],
+        "paste_strokes_hint": [
+            .zhHant: "把剪貼簿中的筆劃貼到這一頁",
+            .en: "Paste the strokes from the clipboard onto this page",
+            .zhHans: "把剪贴板中的笔画粘贴到这一页",
+            .ja: "クリップボードの筆跡をこのページに貼り付けます",
+            .ko: "클립보드의 필기를 이 페이지에 붙여넣습니다",
+            .th: "วางเส้นจากคลิปบอร์ดลงในหน้านี้"
+        ],
+        "edit_in_place": [
+            .zhHant: "就地編輯文字", .en: "Edit text here", .zhHans: "就地编辑文字",
+            .ja: "その場で編集", .ko: "여기에서 편집", .th: "แก้ไขข้อความตรงนี้"
+        ],
+        "text_studio": [
+            .zhHant: "文字排版", .en: "Text Studio", .zhHans: "文字排版",
+            .ja: "文字スタイル", .ko: "텍스트 서식", .th: "จัดรูปแบบข้อความ"
+        ],
+        "border_style": [
+            .zhHant: "邊框樣式", .en: "Border", .zhHans: "边框样式",
+            .ja: "枠線スタイル", .ko: "테두리 스타일", .th: "รูปแบบกรอบ"
+        ],
+        "border_color": [
+            .zhHant: "邊框顏色", .en: "Border color", .zhHans: "边框颜色",
+            .ja: "枠線の色", .ko: "테두리 색", .th: "สีกรอบ"
+        ],
+        "custom_color": [
+            .zhHant: "自訂顏色", .en: "Custom color", .zhHans: "自定义颜色",
+            .ja: "カスタムカラー", .ko: "사용자 색상", .th: "สีกำหนดเอง"
+        ],
+        "corner_style": [
+            .zhHant: "圓角", .en: "Corners", .zhHans: "圆角",
+            .ja: "角丸", .ko: "모서리", .th: "มุมโค้ง"
+        ],
+        "box_width": [
+            .zhHant: "方塊寬度", .en: "Box width", .zhHans: "方块宽度",
+            .ja: "ボックス幅", .ko: "상자 너비", .th: "ความกว้างกล่อง"
+        ],
         "relay_server_address": [
             .zhHant: "協同伺服器位址",
             .en: "Relay Server Address",

@@ -14,6 +14,10 @@ targets:
       - path: Examples/HomeWorkbenchUsage.swift
       - path: Generated/padnote_core.swift
       - path: Assets.xcassets
+      # 說明文件（操作手冊、隱私權政策）以資料夾參照打包，
+      # 子目錄結構要保留，HTML 裡的相對路徑（manual.js、img/）才找得到。
+      - path: Resources/Docs
+        type: folder
     dependencies:
       - framework: PadnoteCore.xcframework
         embed: false
@@ -23,10 +27,10 @@ targets:
         PRODUCT_NAME: Kairumo
         PRODUCT_BUNDLE_IDENTIFIER: com.kairumo.padnote
         DEVELOPMENT_TEAM: 6UJ8GS752W
-        MARKETING_VERSION: "2.2.0"
-        CURRENT_PROJECT_VERSION: "10"
-        INFOPLIST_KEY_CFBundleShortVersionString: "2.2.0"
-        INFOPLIST_KEY_CFBundleVersion: "10"
+        MARKETING_VERSION: "2.3.0"
+        CURRENT_PROJECT_VERSION: "11"
+        INFOPLIST_KEY_CFBundleShortVersionString: "2.3.0"
+        INFOPLIST_KEY_CFBundleVersion: "11"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_CFBundleIconName: AppIcon
         SUPPORTS_MACCATALYST: YES
@@ -40,3 +44,36 @@ targets:
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。"
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         SWIFT_VERSION: "5.0"
+
+  KairumoUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: UITests
+    dependencies:
+      - target: Kairumo
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.kairumo.padnote.uitests
+        DEVELOPMENT_TEAM: 6UJ8GS752W
+        TEST_TARGET_NAME: Kairumo
+
+# 明示定義 scheme：一旦寫了 schemes 區塊，xcodegen 就不再自動產生同名 scheme，
+# 而 scripts/apple-release.sh 與日常建置都用 -scheme Kairumo。
+schemes:
+  Kairumo:
+    build:
+      targets:
+        Kairumo: all
+        KairumoUITests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets: [KairumoUITests]
+    profile:
+      config: Release
+    analyze:
+      config: Debug
+    archive:
+      config: Release

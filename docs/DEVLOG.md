@@ -5,6 +5,139 @@
 
 ---
 
+## 2026-09-13 (5) · 匯出是空白的，以及文字方塊的互動重做
+
+### 匯出 PDF／圖片全是空白
+
+`exportAsPdf` 寫死 `CGRect(0, 0, 612, 792)`（信紙尺寸）並且**只畫 PKDrawing**。
+但畫布的座標系是「視圖寬度 × 頁面高度」，在 Mac 上常常是 1500×1800 以上 ——
+所以那個框只截到左上角一小塊，使用者寫在中間的內容完全落在框外，
+匯出檔看起來就是一片空白。文字方塊、圖片、3D 與圖釘也從來沒被畫進去。
+
+這跟先前「側邊欄縮圖只畫 PKDrawing」是同一個錯誤，只是這次還多了尺寸寫死。
+
+修法：把縮圖用的整頁合成抽成 `PageThumbnailRenderer.renderFullPage`
+（不裁切、不取快取、可指定 scale），匯出 PDF／PNG／列印三條路徑共用它，
+並且**每一頁用自己的尺寸開 PDF 頁** —— 頁面可以被「向下延長」，高度不一定相同。
+
+驗證方式（`KAIRUMO_EXPORT_AUDIT=1`）：在模擬器裡合成一份帶手繪筆劃（刻意畫在
+舊版取圖框之外的 y≈1000）、文字方塊（自訂底色＋紅色 3pt 邊框）與討論圖釘的頁面，
+走匯出路徑輸出 PNG。結果三種內容都在圖裡，位置與畫布一致。
+
+### 文字方塊：刪不掉、莫名的雙向箭頭、不能就地編輯
+
+- 刪除鍵原本是三顆**無標示的小圓點**，壓在方塊右上角、還往外偏移 —— 難點也看不懂。
+  改成帶文字的按鈕列（編輯／邊框／刪除）浮在方塊上方，並補上**右鍵／長按選單**
+  （就地編輯、文字排版、邊框、刪除）—— 那是大家最先嘗試的操作。
+- 移除右下角的「雙向箭頭」縮放把手：它只能改寬度、又小又會擋住文字。
+  寬度改到「文字排版」面板裡用滑桿調。
+- **點兩下＝就地編輯**：直接在畫布上改字，不必先開面板。
+- 文字排版面板補上：自訂底色（ColorPicker）、邊框顏色（六色 + 自訂）、
+  邊框粗細（三段）、圓角（直角／圓角／大圓角）、方塊寬度滑桿。
+  `NoteTextAttachment` 新增 `borderColorHex` / `borderWidth` 兩個可選欄位
+  （舊檔解碼時落到預設值，不影響相容性），匯出算繪也會套用同樣的邊框樣式。
+
+---
+
+## 2026-09-13 (4) · 畫布自適應、可拖曳捲軸、筆記拖放分類、套索工具列
+
+### 收合側欄後畫布沒有變寬
+
+`updateUIView` 是在 SwiftUI 狀態改變時呼叫，那個時間點 `bounds.width` 還是
+**版面變動前**的舊值 —— 所以收合結構欄之後 contentSize 仍停在「扣掉側欄」的
+寬度，右側空出一塊灰色。真正知道新寬度的時機是 `layoutSubviews`。
+
+改用 `AdaptiveCanvasView`（PKCanvasView 子類）在 `layoutSubviews` 重算
+contentSize 與樣板背景的尺寸。順帶拿掉寫死的 800pt 下限 —— 畫布內容寬度
+就是視圖寬度，縮圖算繪也改用同一個基準。
+
+UI 測試驗證：開啟筆記 → 收合側欄 → 斷言畫布寬度 > 視窗寬度的 85%。
+
+### 游標拖不動捲軸
+
+iOS 的捲動指示器是**純顯示**的，不接受互動。在 iPad 上沒差，但在 Mac 上跑時
+使用者會很自然地想用游標去拖它。新增 `CanvasScrollbar`：自己畫一條捲軸，
+接受拖曳與點擊軌道，直接設定 `contentOffset`；捲動狀態由
+`scrollViewDidScroll` 回報給 SwiftUI。
+
+### 未分類筆記可以拖進資料夾
+
+側欄的筆記列加上 `.draggable(note.id)`，資料夾列與「未分類檔案」標題加上
+`.dropDestination`，懸停時高亮。拖進資料夾即分類，拖回「未分類」即移出。
+
+### Copy 與 Duplicate 的差別，以及缺少的「貼上」
+
+畫布上長按出現的 Cut / Copy / Delete / Duplicate / Insert Space Above 是
+**PencilKit 自己的系統選單**，不是我們畫的，也改不了它的文字。差別是：
+Copy 進剪貼簿等你貼上，Duplicate 直接在旁邊多一份。
+
+問題在於**那個選單只在有選取時出現**，複製完取消選取就沒有貼上的入口了。
+所以在我們自己的套索工具列補上「貼上」與「再製」，並把純圖示按鈕改成
+圖示＋文字＋說明提示（游標停留會顯示「複製到剪貼簿，之後用『貼上』放到
+想要的位置」這類說明）。
+
+---
+
+## 2026-09-13 (3) · iOS 實機閃退：SwiftUI 型別名稱把主執行緒堆疊撐爆
+
+### 症狀與當機記錄
+
+實機（iPhone 17 Pro / iOS 27）一碰筆記或頁面就閃退，模擬器（iOS 18 與 27、
+Debug 與 Release）與 Mac 上都正常。當機記錄：
+
+```
+Exception Type:  EXC_BAD_ACCESS (SIGSEGV)
+Exception Subtype: KERN_PROTECTION_FAILURE ... Stack Guard
+Thread 0 Crashed:
+0..56  swift::Demangle::TypeDecoder::decodeMangledType / decodeGenericArgs  ← 遞迴 57 層
+57     swift_getTypeByMangledName
+58     swift_getTypeByMangledNameInContext
+59-60  Kairumo
+61     SwiftUICore ViewBodyAccessor.updateBody
+```
+
+不是我們的程式碼在崩，是 **Swift runtime 解析型別名稱時遞迴到爆堆疊**。
+
+### 根因：body 的 mangled 型別名稱長達 89,768 字元
+
+SwiftUI 把 `body` 整棵子樹的型別（包含每個 `.sheet` 內容的完整型別）編進
+外層的 mangled 名稱。量測結果：
+
+| | 修正前 | 修正後 |
+|---|---|---|
+| `NotebookEditorView.Body` | **89,768** 字元 | **6,478** |
+| `HomeWorkbenchView.Body` | 31,977 | 6,002 |
+
+**為什麼只在實機當：iOS 主執行緒堆疊只有 1MB，模擬器有 8MB。** 同一份程式碼
+在模擬器上解析得完，在實機上遞迴到一半就撞上 Stack Guard。這也解釋了為什麼
+使用者在 Mac 上跑同一個 iOS 二進位（Designed for iPad）不會當 —— 那裡的
+主執行緒堆疊同樣寬裕。
+
+### 修法：在大型子視圖插入型別邊界
+
+把 20 個大型子視圖改成回傳 `AnyView`（`editorTopBar`、`drawingToolbar`、
+`canvasWorkArea`、`allNotebooksSection` …），並用 `erasedView { }` 包住每個
+`.sheet` / `.fullScreenCover` 的內容。父視圖的型別裡只剩 `AnyView` 三個字，
+子樹的型別各自獨立解析。
+
+代價是那些子樹失去結構化 diff，多一點重繪成本 —— 相對於實機必當，這個交換
+很划算。
+
+**量測方式留在程式裡**：`KAIRUMO_TYPE_AUDIT=1` 啟動時會印出兩個 body 的
+型別名稱長度。這是唯一能在模擬器上看見這個問題的方法，改大型視圖後應該複查。
+
+### 一併修掉
+
+- 版本號：`MacWindowTitle` 原本包在 `#if targetEnvironment(macCatalyst)` 裡，
+  但使用者在 Mac 上跑的是 **iOS 版**（`otool -l` → `platform 2`），整段程式
+  沒被編譯進去 —— 這是版本號改三次都沒出現的真正原因。拿掉條件編譯，
+  並在編輯器工具列直接畫上版本標籤，不再只依賴系統視窗標題。
+- 討論串可以刪除單一則留言；已解決時多一條明顯的狀態列。
+- 操作手冊與隱私權政策打包進 App，首頁「說明與條款」離線可讀（WKWebView）。
+- 兩份文件的語言切換改成下拉式選單。
+
+---
+
 ## 2026-09-13 (2) · 拖曳抖動、視窗標題守門員，與一個會覆蓋筆記的 Binding
 
 ### 圖釘浮層拖曳抖動：又是 .local 座標系的回授迴圈

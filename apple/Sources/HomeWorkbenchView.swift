@@ -8,6 +8,7 @@
 //
 
 import SwiftUI
+import PencilKit
 
 #if canImport(PadnoteCore)
 import PadnoteCore
@@ -21,6 +22,7 @@ public struct HomeWorkbenchView: View {
     @StateObject private var localizationManager = LocalizationManager.shared
 
     @State private var searchText: String = ""
+    @State private var viewingDocument: BundledDocument? = nil
     @State private var showInfoSheet: Bool = false
     @State private var showAccountSheet: Bool = false
     @State private var showNewNotebookSheet: Bool = false
@@ -146,7 +148,9 @@ public struct HomeWorkbenchView: View {
                         allNotebooksSection
 
                         // 7. 底部工作台品牌與版本號
-                        footerVersionSection
+                        documentsSection
+
+                    footerVersionSection
                     }
                     .padding(.horizontal, max(12, min(22, proxy.size.width * 0.035)))
                     .padding(.vertical, 16)
@@ -259,24 +263,27 @@ public struct HomeWorkbenchView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showAssetLibrarySheet) {
+            .sheet(isPresented: $showAssetLibrarySheet) { erasedView {
                 AssetLibraryView()
-            }
-            .sheet(isPresented: $showAccountSheet) {
+            } }
+            .sheet(isPresented: $showAccountSheet) { erasedView {
                 AccountProfileSheet()
-            }
-            .sheet(isPresented: $showInfoSheet) {
+            } }
+            .sheet(item: $viewingDocument) { doc in erasedView {
+                DocumentViewerSheet(document: doc)
+            } }
+            .sheet(isPresented: $showInfoSheet) { erasedView {
                 AppDiagnosticsSheet(versionString: appVersionString, platformDesc: platformArchitectureDescription)
-            }
-            .sheet(isPresented: $showNewNotebookSheet) {
+            } }
+            .sheet(isPresented: $showNewNotebookSheet) { erasedView {
                 newNotebookModal
-            }
-            .sheet(isPresented: $showQuickRecordSheet) {
+            } }
+            .sheet(isPresented: $showQuickRecordSheet) { erasedView {
                 QuickAudioRecorderModal()
-            }
-            .fullScreenCover(item: $selectedNotebookForEditing) { doc in
+            } }
+            .fullScreenCover(item: $selectedNotebookForEditing) { doc in erasedView {
                 NotebookEditorHost(store: notebookStore, initialNotebookId: doc.id)
-            }
+            } }
             .alert(localizationManager.localized("rename_note"), isPresented: Binding(
                 get: { renamingNotebookId != nil },
                 set: { if !$0 { renamingNotebookId = nil } }
@@ -318,11 +325,11 @@ public struct HomeWorkbenchView: View {
                     folderToRename = nil
                 }
             }
-            .sheet(isPresented: $showMoveNotebookSheet) {
+            .sheet(isPresented: $showMoveNotebookSheet) { erasedView {
                 if let id = notebookToMoveId {
                     MoveNotebookSheet(notebookId: id)
                 }
-            }
+            } }
             .alert(localizationManager.localized("mic_permission_title"), isPresented: $audioManager.showPermissionAlert) {
                 Button(localizationManager.localized("cancel"), role: .cancel) {
                     audioManager.showPermissionAlert = false
@@ -334,15 +341,26 @@ public struct HomeWorkbenchView: View {
                 Text(localizationManager.localized("mic_permission_msg"))
             }
             .onAppear {
-                #if targetEnvironment(macCatalyst)
+                // 不限定 macCatalyst：使用者在 Mac 上跑的是 iOS 版（Designed for iPad）
                 MacWindowTitle.apply()
-                #endif
+                if ProcessInfo.processInfo.environment["KAIRUMO_EXPORT_AUDIT"] != nil {
+                    runExportAudit()
+                }
+                if ProcessInfo.processInfo.environment["KAIRUMO_TYPE_AUDIT"] != nil {
+                    let n = _typeName(NotebookEditorView.Body.self, qualified: true).count
+                    let h = _typeName(HomeWorkbenchView.Body.self, qualified: true).count
+                    print("🔎TYPE editor.body name length = \(n)")
+                    print("🔎TYPE home.body   name length = \(h)")
+                }
             }
         }
     }
 
     // MARK: - 1. 頂部使用者帳號橫幅（響應式自適應寬度）
-    private var userAccountBanner: some View {
+    /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
+    private var userAccountBanner: AnyView { AnyView(userAccountBannerContent) }
+
+    private var userAccountBannerContent: some View {
         ViewThatFits(in: .horizontal) {
             // 寬螢幕排版（橫向並排）
             HStack(spacing: 12) {
@@ -413,7 +431,10 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 2. 頂部搜尋列
-    private var searchBarSection: some View {
+    /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
+    private var searchBarSection: AnyView { AnyView(searchBarSectionContent) }
+
+    private var searchBarSectionContent: some View {
         HStack(spacing: 12) {
             Image(systemName: "magnifyingglass")
                 .foregroundColor(.secondary)
@@ -436,7 +457,10 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 3. 主要動作按鈕（響應式自適應網格：新增筆記、開始錄音、📦素材圖庫）
-    private var primaryActionsSection: some View {
+    /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
+    private var primaryActionsSection: AnyView { AnyView(primaryActionsSectionContent) }
+
+    private var primaryActionsSectionContent: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 190, maximum: 380), spacing: 12)], spacing: 12) {
             // 真實動作 1：新增筆記（彈出範本選擇器）
             Button {
@@ -525,7 +549,10 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 4. 繼續 Working Section（真實筆記）
-    private var continueWorkingSection: some View {
+    /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
+    private var continueWorkingSection: AnyView { AnyView(continueWorkingSectionContent) }
+
+    private var continueWorkingSectionContent: some View {
         let visibleList = filteredNotebooks.filter { !hiddenNoteIds.contains($0.id) }
         let displayedList = showAllContinue ? visibleList : Array(visibleList.prefix(5))
 
@@ -746,7 +773,10 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 5. 最近錄音（真實實體播放）
-    private var recentRecordingsSection: some View {
+    /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
+    private var recentRecordingsSection: AnyView { AnyView(recentRecordingsSectionContent) }
+
+    private var recentRecordingsSectionContent: some View {
         let visibleRecordings = notebookStore.recordings.filter { !hiddenRecordingIds.contains($0.id) }
         let displayedRecordings = showAllRecordings ? visibleRecordings : Array(visibleRecordings.prefix(4))
 
@@ -983,7 +1013,10 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 6. 全部筆記（真實多頁手繪文件）
-    private var allNotebooksSection: some View {
+    /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
+    private var allNotebooksSection: AnyView { AnyView(allNotebooksSectionContent) }
+
+    private var allNotebooksSectionContent: some View {
         let baseList = filteredNotebooks.filter { !hiddenNoteIds.contains($0.id) }
         let visibleList: [NotebookDocument] = {
             if let fId = selectedFolderId {
@@ -1257,7 +1290,10 @@ public struct HomeWorkbenchView: View {
         }
     }
 
-    private var allNotebooksSortMenu: some View {
+    /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
+    private var allNotebooksSortMenu: AnyView { AnyView(allNotebooksSortMenuContent) }
+
+    private var allNotebooksSortMenuContent: some View {
         Menu {
             ForEach(SortOption.allCases) { opt in
                 Button {
@@ -1287,7 +1323,123 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 7. 底部工作台品牌與版本號
-    private var footerVersionSection: some View {
+    /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
+    /// 匯出內容稽核（只在 KAIRUMO_EXPORT_AUDIT=1 時執行）。
+    ///
+    /// 造一份帶手繪筆劃、文字方塊與討論圖釘的頁面，走**匯出用的整頁算繪路徑**
+    /// 輸出 PNG 到 Documents，用來確認匯出不是空白 —— 這是唯一能在模擬器上
+    /// 客觀檢查匯出內容的方法。
+    private func runExportAudit() {
+        let width: CGFloat = 1200
+        var doc = notebookStore.createNotebook(title: "Export Audit", template: .blank)
+        doc.textAttachments = [
+            NoteTextAttachment(
+                pageIndex: 0,
+                text: "匯出稽核用文字方塊 / Export audit text box",
+                fontSize: 28,
+                backgroundColorHex: "#FFF9C4",
+                hasBorder: true,
+                borderColorHex: "#FF3B30",
+                borderWidth: 3,
+                x: 120, y: 700, width: 620, height: 160
+            )
+        ]
+        doc.commentPins = [
+            NoteCommentPin(pageIndex: 0, x: 900, y: 500, authorId: "audit", authorName: "Audit", authorColor: "#34C759", messages: [])
+        ]
+        notebookStore.updateNotebook(doc)
+
+        // 一條橫跨頁面的筆劃：位置刻意放在舊版 612x792 取圖框「之外」
+        var points: [PKStrokePoint] = []
+        for i in 0...60 {
+            let t = CGFloat(i) / 60
+            let p = CGPoint(x: 100 + t * (width - 200), y: 1000 + sin(t * 6) * 180)
+            points.append(PKStrokePoint(location: p, timeOffset: TimeInterval(i) * 0.01,
+                                        size: CGSize(width: 8, height: 8), opacity: 1, force: 1, azimuth: 0, altitude: 0))
+        }
+        let stroke = PKStroke(ink: PKInk(.pen, color: .black), path: PKStrokePath(controlPoints: points, creationDate: Date()))
+        let drawing = PKDrawing(strokes: [stroke])
+        notebookStore.saveDrawing(notebookId: doc.id, pageIndex: 0, drawing: drawing)
+
+        let image = PageThumbnailRenderer.renderFullPage(
+            notebook: doc, pageIndex: 0, drawing: drawing, store: notebookStore,
+            canvasWidth: width, scale: 1.0
+        )
+        if let data = image.pngData() {
+            let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("export_audit.png")
+            try? data.write(to: url)
+            print("🔎EXPORT audit written: \(url.path) size=\(image.size)")
+        }
+        notebookStore.deleteNotebook(id: doc.id)
+    }
+
+    /// 說明文件入口：操作手冊與隱私權政策（離線可讀，隨 App 打包）
+    private var documentsSection: AnyView { AnyView(documentsSectionContent) }
+
+    private var documentsSectionContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(localizationManager.localized("help_and_legal"))
+                .font(.headline)
+                .fontWeight(.bold)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    documentCard(.manual)
+                    documentCard(.privacy)
+                }
+                VStack(spacing: 12) {
+                    documentCard(.manual)
+                    documentCard(.privacy)
+                }
+            }
+        }
+        .padding(.top, 6)
+    }
+
+    private func documentCard(_ doc: BundledDocument) -> some View {
+        Button {
+            viewingDocument = doc
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: doc == .manual ? "book.pages.fill" : "lock.shield.fill")
+                    .font(.title3)
+                    .foregroundColor(doc == .manual ? .accentColor : .green)
+                    .frame(width: 30)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(localizationManager.localized(doc.titleKey))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Text(localizationManager.localized(doc == .manual ? "user_manual_desc" : "privacy_policy_desc"))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: 4)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(12)
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var footerVersionSection: AnyView { AnyView(footerVersionSectionContent) }
+
+    private var footerVersionSectionContent: some View {
         VStack(spacing: 8) {
             Divider()
                 .padding(.vertical, 8)
@@ -1335,7 +1487,10 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 新增筆記彈窗
-    private var newNotebookModal: some View {
+    /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
+    private var newNotebookModal: AnyView { AnyView(newNotebookModalContent) }
+
+    private var newNotebookModalContent: some View {
         NavigationStack {
             Form {
                 Section(localizationManager.localized("note_title")) {
@@ -1662,13 +1817,30 @@ struct NotebookEditorHost: View {
     }
 
     var body: some View {
-        if let index = store.notebooks.firstIndex(where: { $0.id == currentNotebookId }) {
+        if let current = store.notebooks.first(where: { $0.id == currentNotebookId }) {
             NotebookEditorView(
-                notebook: $store.notebooks[index],
+                notebook: binding(fallback: current),
                 onRequestSwitch: { target in
                     currentNotebookId = target.id
                 }
             )
         }
+    }
+
+    /// 以 id 在**存取當下**查索引的綁定。
+    ///
+    /// 先前是 `$store.notebooks[index]`，index 在 body 求值時就算好。
+    /// 只要陣列在那之後縮短（刪除筆記、載入時去重、任何重排），
+    /// 之後每一次寫入都是越界存取 —— 而編輯器裡幾乎所有操作都會寫入它，
+    /// 症狀就是「一碰筆記就閃退」。改成寫入時才查 id，索引不可能過期；
+    /// 找不到就安靜略過，而不是讓 App 當掉。
+    private func binding(fallback: NotebookDocument) -> Binding<NotebookDocument> {
+        Binding(
+            get: { store.notebooks.first(where: { $0.id == currentNotebookId }) ?? fallback },
+            set: { updated in
+                guard let idx = store.notebooks.firstIndex(where: { $0.id == currentNotebookId }) else { return }
+                store.notebooks[idx] = updated
+            }
+        )
     }
 }

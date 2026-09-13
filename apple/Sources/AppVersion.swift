@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import SwiftUI
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -27,8 +28,7 @@ public enum AppVersion {
     public static var windowTitle: String { "Kairumo v\(marketing)" }
 }
 
-#if targetEnvironment(macCatalyst)
-/// Mac 視窗標題的維持器。
+/// 視窗標題的維持器。
 ///
 /// 為什麼不是設一次就好：原本在 `onAppear` 裡 `DispatchQueue.main.async` 設一次，
 /// 但那個時間點 `connectedScenes` 可能還是空的（視窗場景尚未接上），
@@ -37,6 +37,12 @@ public enum AppVersion {
 ///
 /// 所以改成：場景還沒出現就短暫重試，並在場景／視窗／App 重新啟用時再確認一次。
 /// 只有在目前標題不同時才寫入，不會造成閃爍。
+///
+/// **不要再加上 `#if targetEnvironment(macCatalyst)`。** 踩過的坑：使用者在 Mac 上
+/// 跑的其實是 TestFlight 的 **iOS 版**（Apple Silicon 的「Designed for iPad」），
+/// 那個二進位的 `targetEnvironment(macCatalyst)` 是 false —— 整段程式根本沒被編進去，
+/// 所以標題永遠停在 App 名稱。iOS 上設定 `UIWindowScene.title` 沒有副作用，
+/// 在 Mac 上跑的 iOS App 也會反映到視窗標題列。
 public enum MacWindowTitle {
     private static var desiredTitle: String = AppVersion.windowTitle
     private static var observersInstalled = false
@@ -94,4 +100,14 @@ public enum MacWindowTitle {
         }
     }
 }
-#endif
+
+/// 型別邊界工具。
+///
+/// SwiftUI 會把每個 `.sheet` / `.fullScreenCover` 內容的完整型別編進外層 view 的
+/// mangled 型別名稱裡。累積起來，`NotebookEditorView.Body` 的型別名稱長達 89,768 字元，
+/// 裝置端（主執行緒只有 1MB 堆疊）在 `swift_getTypeByMangledName` 解析時會遞迴爆堆疊
+/// —— 模擬器的堆疊是 8MB，所以只在實機上當掉。
+/// 用它把內容包成 AnyView，外層型別裡就只剩 "AnyView"。
+func erasedView<V: View>(@ViewBuilder _ content: () -> V) -> AnyView {
+    AnyView(content())
+}

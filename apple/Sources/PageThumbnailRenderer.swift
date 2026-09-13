@@ -58,12 +58,46 @@ public enum PageThumbnailRenderer {
         canvasWidth: CGFloat,
         scale: CGFloat = 0.4
     ) -> UIImage {
+        compose(notebook: notebook, pageIndex: pageIndex, drawing: drawing, store: store,
+                canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: true, useCache: true)
+    }
+
+    /// 整頁算繪（不裁切、不取快取），給匯出 PDF / 圖片與列印用。
+    ///
+    /// 匯出原本只畫 `PKDrawing`，而且寫死成 612×792 的信紙尺寸 —— 但畫布的座標
+    /// 是「視圖寬度 × 頁面高度」（常常是 1500×1800 以上）。結果是只截到左上角
+    /// 那一小塊，使用者寫在中間的內容完全不在裡面，匯出檔看起來就是一片空白，
+    /// 而且文字方塊、圖片、3D 與圖釘也全都沒畫進去。
+    @MainActor
+    public static func renderFullPage(
+        notebook: NotebookDocument,
+        pageIndex: Int,
+        drawing: PKDrawing,
+        store: NotebookStore,
+        canvasWidth: CGFloat,
+        scale: CGFloat = 2.0
+    ) -> UIImage {
+        compose(notebook: notebook, pageIndex: pageIndex, drawing: drawing, store: store,
+                canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: false, useCache: false)
+    }
+
+    @MainActor
+    private static func compose(
+        notebook: NotebookDocument,
+        pageIndex: Int,
+        drawing: PKDrawing,
+        store: NotebookStore,
+        canvasWidth: CGFloat,
+        scale: CGFloat,
+        cropToPreviewRatio: Bool,
+        useCache: Bool
+    ) -> UIImage {
         let width = max(canvasWidth, minPageWidth)
         let key = cacheKey(notebook: notebook, pageIndex: pageIndex, drawing: drawing, canvasWidth: width)
-        if let cached = cache.object(forKey: key) { return cached }
+        if useCache, let cached = cache.object(forKey: key) { return cached }
 
         let pageHeight = notebook.height(forPage: pageIndex)
-        let visibleHeight = min(pageHeight, width * maxHeightRatio)
+        let visibleHeight = cropToPreviewRatio ? min(pageHeight, width * maxHeightRatio) : pageHeight
         let pageRect = CGRect(x: 0, y: 0, width: width, height: visibleHeight)
         // 手繪要用整頁的座標系取圖，否則落在裁切線以下的筆畫會被擠上來。
         let fullPageRect = CGRect(x: 0, y: 0, width: width, height: pageHeight)
@@ -97,7 +131,7 @@ public enum PageThumbnailRenderer {
             }
 
             // 有被裁掉的內容時，底部畫一道漸層，讓使用者知道這不是整頁。
-            if pageHeight > visibleHeight {
+            if cropToPreviewRatio, pageHeight > visibleHeight {
                 let fadeHeight: CGFloat = min(60, visibleHeight * 0.12)
                 let fadeRect = CGRect(
                     x: 0,
@@ -124,7 +158,7 @@ public enum PageThumbnailRenderer {
             }
         }
 
-        cache.setObject(image, forKey: key)
+        if useCache { cache.setObject(image, forKey: key) }
         return image
     }
 
@@ -173,9 +207,11 @@ public enum PageThumbnailRenderer {
             UIBezierPath(roundedRect: rect, cornerRadius: item.cornerRadius).fill()
         }
         if item.hasBorder {
-            UIColor.tintColor.withAlphaComponent(0.5).setStroke()
+            // 邊框顏色與粗細要跟畫布上看到的一致（使用者可自訂）
+            let borderColor = UIColor(hexString: item.borderColorHex ?? "") ?? UIColor.tintColor.withAlphaComponent(0.5)
+            borderColor.setStroke()
             let border = UIBezierPath(roundedRect: rect, cornerRadius: item.cornerRadius)
-            border.lineWidth = 1.5
+            border.lineWidth = item.borderWidth ?? 1.5
             border.stroke()
         }
 

@@ -73,6 +73,9 @@ public struct CommentThreadDialog: View {
     public let onReply: (String, String) -> Void // pinId, messageText
     public let onToggleResolve: (String) -> Void // pinId
     public let onDelete: (String) -> Void // pinId
+    /// 刪除討論串裡的單一則留言（pinId, messageId）。
+    /// 「標記為已解決」處理的是整個圖釘，使用者要剔除的往往只是其中一則訊息。
+    public let onDeleteMessage: (String, String) -> Void
     public let onClose: () -> Void
 
     @State private var replyText: String = ""
@@ -92,6 +95,7 @@ public struct CommentThreadDialog: View {
         onReply: @escaping (String, String) -> Void,
         onToggleResolve: @escaping (String) -> Void,
         onDelete: @escaping (String) -> Void,
+        onDeleteMessage: @escaping (String, String) -> Void = { _, _ in },
         onClose: @escaping () -> Void
     ) {
         self.pin = pin
@@ -101,6 +105,7 @@ public struct CommentThreadDialog: View {
         self.onReply = onReply
         self.onToggleResolve = onToggleResolve
         self.onDelete = onDelete
+        self.onDeleteMessage = onDeleteMessage
         self.onClose = onClose
     }
 
@@ -132,9 +137,17 @@ public struct CommentThreadDialog: View {
     /// 縮小後的精簡標題列（仍可拖曳、可還原、可關閉）
     private var minimizedBar: some View {
         HStack(spacing: 8) {
+            // 拖曳握把：給足夠大的可抓取範圍，並自己掛上手勢。
+            // 只靠外層的 .gesture 在「Mac 上執行的 iPad 版」有時抓不到，
+            // 指標裝置的事件會先被其他互動吃掉。
             Image(systemName: "line.3.horizontal")
-                .font(.caption)
+                .font(.system(size: 15, weight: .semibold))
                 .foregroundColor(.secondary)
+                .frame(width: 34, height: 30)
+                .background(Color.secondary.opacity(0.12))
+                .cornerRadius(7)
+                .contentShape(Rectangle())
+                .highPriorityGesture(moveGesture)
 
             Circle()
                 .fill(pinAuthorColor)
@@ -189,7 +202,7 @@ public struct CommentThreadDialog: View {
                 .stroke(Color.primary.opacity(0.08), lineWidth: 1)
         )
         .contentShape(Rectangle())
-        .gesture(moveGesture)
+        .highPriorityGesture(moveGesture)
     }
 
     public var body: some View {
@@ -209,9 +222,13 @@ public struct CommentThreadDialog: View {
             HStack(spacing: 10) {
                 // 拖曳握把：按住這裡可以把整個對話框搬到不擋住內容的位置
                 Image(systemName: "line.3.horizontal")
-                    .font(.caption)
+                    .font(.system(size: 15, weight: .semibold))
                     .foregroundColor(.secondary)
-                    .padding(.trailing, 2)
+                    .frame(width: 32, height: 30)
+                    .background(Color.secondary.opacity(0.12))
+                    .cornerRadius(7)
+                    .contentShape(Rectangle())
+                    .highPriorityGesture(moveGesture)
 
                 Circle()
                     .fill(pinAuthorColor)
@@ -301,7 +318,24 @@ public struct CommentThreadDialog: View {
             .padding(.vertical, 12)
             .background(Color(uiColor: .secondarySystemBackground))
             .contentShape(Rectangle())
-            .gesture(moveGesture)
+            .highPriorityGesture(moveGesture)
+
+            // 已解決時給一條明確的狀態列。原本只有按鈕文字從「標記為已解決」
+            // 變成「重新開啟」，變化太小，使用者會以為按了沒反應。
+            if pin.isResolved {
+                HStack(spacing: 6) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .font(.caption)
+                    Text(localizationManager.localized("thread_resolved"))
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                    Spacer()
+                }
+                .foregroundColor(.green)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(Color.green.opacity(0.12))
+            }
 
             Divider()
 
@@ -328,6 +362,22 @@ public struct CommentThreadDialog: View {
                                     Text(formatDate(msg.createdAt))
                                         .font(.system(size: 9))
                                         .foregroundColor(.secondary)
+
+                                    Spacer(minLength: 4)
+
+                                    // 刪除這一則留言（不影響整個圖釘）
+                                    Button {
+                                        onDeleteMessage(pin.id, msg.id)
+                                    } label: {
+                                        Image(systemName: "xmark")
+                                            .font(.system(size: 9, weight: .semibold))
+                                            .foregroundColor(.secondary)
+                                            .padding(4)
+                                            .background(Color.secondary.opacity(0.12))
+                                            .clipShape(Circle())
+                                    }
+                                    .buttonStyle(.plain)
+                                    .help(localizationManager.localized("delete_message"))
                                 }
 
                                 Text(msg.text)

@@ -64,8 +64,8 @@ public class SketchRefineEngine {
 
     // MARK: - 幾何圖形偵測與重繪
     private static func detectAndGenerateGeometricShape(points: [CGPoint], count: Int) -> [CGPoint]? {
-        let first = points.first!
-        let last = points.last!
+        // 空陣列會讓 first!/last! 直接當掉；筆畫在擦除或極短點擊時真的可能是空的
+        guard let first = points.first, let last = points.last else { return nil }
         let startEndDistance = hypot(first.x - last.x, first.y - last.y)
 
         // 計算邊界與中心
