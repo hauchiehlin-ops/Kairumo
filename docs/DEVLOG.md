@@ -5,6 +5,57 @@
 
 ---
 
+## 2026-09-13 (9) · WP3c：介面字串收斂成單一來源
+
+### 為什麼要動這 430 條字串
+
+它們原本只活在 `LocalizationManager.swift` 的字典字面值裡。Android 一旦自己
+再寫一份，同一句話就有兩個版本 —— 改了一邊忘了另一邊只是時間問題，而且是那種
+上架後才被使用者發現的錯。所以收斂成 `i18n/ui-strings.json`，由
+`scripts/i18n_tool.py` 同時產生 Swift 與 Kotlin 兩份表。
+
+硬前提是不影響 Apple 現有行為，所以做法刻意保守：**產生出來的字與原本逐字相同**，
+`LocalizationManager.localized(_:)` 的公開簽名與回退順序（目前語系 → en → 繁中 →
+key 本身）一個字都沒動，只是字典改從產生檔取。
+
+### 憑據不是「我覺得一樣」
+
+`i18n_tool.py verify` 把產生的 Swift 檔與 Kotlin 檔各自**讀回來**再跟 catalog
+逐條比對，三者必須完全相同才算過。這條檢查也進了 pre-push hook —— 有人手改產生檔
+就會在推送前被擋下來。
+
+### 踩到的坑：跳脫被做了兩次
+
+第一次 verify 就抓到 4 條不一致。原因是從 Swift 抽出來時把 `\"` 當成兩個字元
+原樣收進 catalog，輸出時 `swift_escape` 又跳脫一次，變成 `\\"` —— 畫面上會多出
+反斜線。修法是讓「還原跳脫」只發生在讀取端、「跳脫」只發生在輸出端，各一次。
+這正是為什麼要有 verify：肉眼看 430 條 JSON 不會看出這種差別。
+
+### 順手補掉的漏洞：Android 沒進版本腳本
+
+`bump-version.sh` 當初只顧 Cargo 與 Apple 專案檔。新加的 `build.gradle.kts`
+沒被納入，就會重演 v1.4.0 那次的版本漂移，只是換個平台。現在版本來源、寫入與
+寫入後驗證都包含 Android，pre-push hook 也會一起提交它。Android 畫面上的版本號
+改讀 `BuildConfig`，不再是手寫的字串。
+
+### 驗證
+- `cargo test --workspace`：785 通過、0 失敗
+- iOS（generic/platform=iOS）與 Mac Catalyst 建置皆 **BUILD SUCCEEDED**
+- Android `assembleDebug` 成功，裝到模擬器實測畫面顯示「字串表：430 條」、
+  示例字串正確取到 `about_app`
+- `i18n_tool.py verify`：Swift 與 Kotlin 產生表都與 catalog 完全一致（430 條）
+- XCUITest 冒煙測試：4 項全過（**TEST SUCCEEDED**）
+
+順帶修掉一件會讓上面這條驗證形同虛設的事：`KairumoUITests` 少了
+`GENERATE_INFOPLIST_FILE`，`xcodebuild test` 會在簽章階段就失敗 —— 那不是
+「測試失敗」，是測試根本沒跑，而錯誤訊息長得很像單純一則 build 警告。
+
+### 下一步
+WP4 檔案互通：把 Apple 端的儲存層換成核心格式（含 PKDrawing → `add_stroke`
+轉換器與資料遷移），兩邊的筆記檔才真的能互開。
+
+---
+
 ## 2026-09-13 (8) · WP3b：協同中繼進核心 FFI，但**預設關閉**
 
 ### 為什麼是 feature 而不是直接換掉 Apple 的那份

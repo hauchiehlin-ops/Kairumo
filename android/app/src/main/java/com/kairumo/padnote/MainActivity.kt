@@ -24,6 +24,7 @@ import uniffi.padnote_core.sessionKeyGenerate
 import uniffi.padnote_core.sessionOpen
 import uniffi.padnote_core.sessionSeal
 import uniffi.padnote_core.RelayServer
+import java.util.Locale
 
 /**
  * Android 外殼的起點（工作包 WP2）。
@@ -77,9 +78,12 @@ private fun readCoreStatus(): List<Pair<String, String>> = try {
     listOf(
         "核心版本" to coreVersion(),
         "目標平台" to "${info.targetOs}/${info.targetArch}",
-        "介面版本" to "2.3.1 (11)",
+        "介面版本" to "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
         "協同加密" to checkSessionCrypto(),
-        "協同中繼" to checkRelay()
+        "協同中繼" to checkRelay(),
+        "介面語系" to deviceLanguageTag(),
+        "字串表" to "${LocalizationStrings.table.size} 條（與 Apple 版同源）",
+        "示例字串" to uiString("about_app")
     )
 } catch (t: Throwable) {
     // 綁定或 .so 載入失敗時要講清楚，不要給一個空白畫面
@@ -106,6 +110,27 @@ private fun checkRelay(): String = try {
     if (running && port > 0u) "已啟動於埠 $port（已停止）" else "啟動失敗"
 } catch (t: Throwable) {
     "失敗：${t.message}"
+}
+
+/**
+ * 依裝置語系取介面字串。
+ *
+ * 字串表由 i18n/ui-strings.json 產生，Apple 版的 LocalizationManager 讀的是
+ * 同一份來源產出的 Swift 表 —— 兩邊逐字相同，不會各自漂移。
+ */
+private fun uiString(key: String): String =
+    LocalizationStrings.localized(key, deviceLanguageTag())
+
+/** 把系統語系對應成字串表用的標籤（中文要分繁簡，所以不能只看語言碼）。 */
+private fun deviceLanguageTag(): String {
+    val locale = Locale.getDefault()
+    return when (locale.language) {
+        "zh" -> if (locale.script == "Hans" || locale.country in setOf("CN", "SG")) "zh-Hans" else "zh-Hant"
+        "ja" -> "ja"
+        "ko" -> "ko"
+        "th" -> "th"
+        else -> "en"
+    }
 }
 
 private fun checkSessionCrypto(): String = try {

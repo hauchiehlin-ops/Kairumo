@@ -29,6 +29,7 @@
 		9F604F0E1403CBF029FDB93A /* LocalRelayServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFA100928CD3224E43D7382 /* LocalRelayServer.swift */; };
 		A63608E6DD600F35CB565FE4 /* PadnoteCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7245DE41B9104E9F47F0C21B /* PadnoteCore.xcframework */; };
 		AFF32DB932FC4031A86B8F57 /* MaterialEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51E8541179F28A49C13A1967 /* MaterialEngine.swift */; };
+		B09B7D4D3FA9CB33C0E89FE0 /* LocalizationStrings.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F65D4DD5D5DF9A56132D032E /* LocalizationStrings.generated.swift */; };
 		B3DFF4CFC65E91FEEA6AA7B4 /* HomeWorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */; };
 		B461E05D52232C76413B2DB2 /* Docs in Resources */ = {isa = PBXBuildFile; fileRef = B7FE882F90D6ABA99E0820BF /* Docs */; };
 		BBA43DAF3585326259C48FE6 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D059ACC4F96D906F5A18970D /* AppVersion.swift */; };
@@ -98,6 +99,7 @@
 		DC7046379C24B0D590B6F0E8 /* ToolbarSeparator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarSeparator.swift; sourceTree = "<group>"; };
 		E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPrintManager.swift; sourceTree = "<group>"; };
 		F30959766B1D00F248AD7D2D /* WordTextStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordTextStudioView.swift; sourceTree = "<group>"; };
+		F65D4DD5D5DF9A56132D032E /* LocalizationStrings.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationStrings.generated.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -188,6 +190,7 @@
 				29BFE1D24D00A1328C62BA89 /* ImageEditControls.swift */,
 				0B829DBCA4D5374715A49087 /* LinkPreviewEngine.swift */,
 				7617B23BC996C4B427F52EB4 /* LocalizationManager.swift */,
+				F65D4DD5D5DF9A56132D032E /* LocalizationStrings.generated.swift */,
 				0FFA100928CD3224E43D7382 /* LocalRelayServer.swift */,
 				51E8541179F28A49C13A1967 /* MaterialEngine.swift */,
 				5DEEDC3EBFC3C910FFC5735C /* MathCalculatorSheet.swift */,
@@ -329,6 +332,7 @@
 				723A25DA76A24DB5650DCDAA /* LinkPreviewEngine.swift in Sources */,
 				9F604F0E1403CBF029FDB93A /* LocalRelayServer.swift in Sources */,
 				1E1747CEA9F8FB95CC222C4A /* LocalizationManager.swift in Sources */,
+				B09B7D4D3FA9CB33C0E89FE0 /* LocalizationStrings.generated.swift in Sources */,
 				AFF32DB932FC4031A86B8F57 /* MaterialEngine.swift in Sources */,
 				4E956F4EA57EA9FAED4B8EEB /* MathCalculatorSheet.swift in Sources */,
 				FC1A97633808D861B89FE967 /* MathEngine.swift in Sources */,
@@ -481,6 +485,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -536,6 +541,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				DEVELOPMENT_TEAM = 6UJ8GS752W;
+				GENERATE_INFOPLIST_FILE = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

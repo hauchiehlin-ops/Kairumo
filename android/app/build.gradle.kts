@@ -14,8 +14,9 @@ android {
         // 那是手寫延遲的關鍵，不為舊機另寫一條渲染路徑。
         minSdk = 29
         targetSdk = 35
-        versionCode = 11
-        versionName = "2.3.0"
+        // 版本號由 scripts/bump-version.sh 與 Apple 端一起更新，不要手改
+        versionCode = 14
+        versionName = "2.3.3"
     }
 
     buildTypes {
@@ -31,7 +32,11 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
 
-    buildFeatures { compose = true }
+    buildFeatures {
+        compose = true
+        // 讓畫面顯示的版本直接取自建置設定，不要再手寫一份會過期的字串
+        buildConfig = true
+    }
 
     // libpadnote_core.so 由 scripts/build-android-libs.sh 產生
     sourceSets["main"].jniLibs.srcDirs("src/main/jniLibs")

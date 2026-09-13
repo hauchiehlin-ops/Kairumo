@@ -1,0 +1,3442 @@
+{
+  "about_app": {
+    "en": "About Kairumo",
+    "ja": "Kairumo について",
+    "ko": "Kairumo 정보",
+    "th": "เกี่ยวกับ Kairumo",
+    "zhHans": "关于 Kairumo",
+    "zhHant": "關於 Kairumo"
+  },
+  "account_settings": {
+    "en": "Account & Settings",
+    "ja": "アカウントと設定",
+    "ko": "계정 및 설정",
+    "th": "บัญชีและการตั้งค่า",
+    "zhHans": "用户账号与设置",
+    "zhHant": "使用者帳號與設定"
+  },
+  "action_delete": {
+    "en": "Delete",
+    "ja": "削除",
+    "ko": "삭제",
+    "th": "ลบ",
+    "zhHans": "删除",
+    "zhHant": "刪除"
+  },
+  "action_duplicate": {
+    "en": "Duplicate",
+    "ja": "複製を作成",
+    "ko": "복제본 만들기",
+    "th": "ทำสำเนา",
+    "zhHans": "创建副本",
+    "zhHant": "建立副本"
+  },
+  "action_open": {
+    "en": "Open Editor",
+    "ja": "編集を開く",
+    "ko": "편집 열기",
+    "th": "เปิดตัวแก้ไข",
+    "zhHans": "打开编辑",
+    "zhHant": "開啟編輯"
+  },
+  "action_rename": {
+    "en": "Rename",
+    "ja": "名前を変更",
+    "ko": "이름 변경",
+    "th": "เปลี่ยนชื่อ",
+    "zhHans": "重命名",
+    "zhHant": "重新命名"
+  },
+  "add_comment_pin": {
+    "en": "Add Comment Pin",
+    "ja": "コメントピンを追加",
+    "ko": "댓글 핀 추가",
+    "th": "เพิ่มหมุดความคิดเห็น",
+    "zhHans": "添加讨论图钉",
+    "zhHant": "新增討論圖釘"
+  },
+  "add_data_entry": {
+    "en": "Add Entry",
+    "ja": "項目を追加",
+    "ko": "항목 추가",
+    "th": "เพิ่มรายการ",
+    "zhHans": "添加项目",
+    "zhHant": "新增項目"
+  },
+  "add_favorite_color": {
+    "en": "Add to Favorites",
+    "ja": "お気に入りに追加",
+    "ko": "즐겨찾기에 추가",
+    "th": "เพิ่มในรายการโปรด",
+    "zhHans": "收藏此色彩",
+    "zhHant": "收藏此色彩"
+  },
+  "add_next_page": {
+    "en": "+ Add Next Page",
+    "ja": "＋ 次のページを追加",
+    "ko": "＋ 다음 페이지 추가",
+    "th": "＋ เพิ่มหน้าถัดไป",
+    "zhHans": "＋ 新增下一页",
+    "zhHant": "＋ 新增下一頁"
+  },
+  "add_note_to_folder": {
+    "en": "New Note in Folder",
+    "ja": "このフォルダに新規ノート",
+    "ko": "이 폴더에 새 노트 추가",
+    "th": "สร้างบันทึกใหม่ในโฟลเดอร์นี้",
+    "zhHans": "在此文件夹新建笔记",
+    "zhHant": "在此資料夾新增筆記"
+  },
+  "add_page": {
+    "en": "Add Page",
+    "ja": "ページを追加",
+    "ko": "페이지 추가",
+    "th": "เพิ่มหน้า",
+    "zhHans": "新建一页",
+    "zhHant": "新增一頁"
+  },
+  "add_page_large": {
+    "en": "+ Add Page",
+    "ja": "＋ ページを追加",
+    "ko": "＋ 페이지 추가",
+    "th": "＋ เพิ่มหน้าใหม่",
+    "zhHans": "＋ 新增页面",
+    "zhHant": "＋ 新增頁面"
+  },
+  "all_asset_types": {
+    "en": "All Types",
+    "ja": "すべてのタイプ",
+    "ko": "모든 유형",
+    "th": "ทุกประเภท",
+    "zhHans": "全部类型",
+    "zhHant": "全部型態"
+  },
+  "all_folders": {
+    "en": "All Files",
+    "ja": "すべてのファイル",
+    "ko": "모든 파일",
+    "th": "ไฟล์ทั้งหมด",
+    "zhHans": "全部文件",
+    "zhHant": "全部檔案"
+  },
+  "all_notebooks": {
+    "en": "All Notebooks",
+    "ja": "すべてのノート",
+    "ko": "모든 노트",
+    "th": "บันทึกทั้งหมด",
+    "zhHans": "全部笔记",
+    "zhHant": "全部筆記"
+  },
+  "all_pages": {
+    "en": "All Pages",
+    "ja": "全ページ",
+    "ko": "전체 페이지",
+    "th": "ทุกหน้า",
+    "zhHans": "全部页面",
+    "zhHant": "全部頁面"
+  },
+  "all_themes": {
+    "en": "All Themes",
+    "ja": "すべてのテーマ",
+    "ko": "모든 테마",
+    "th": "ทุกธีม",
+    "zhHans": "全部主题",
+    "zhHant": "全部主題"
+  },
+  "app_slogan": {
+    "en": "Dual Ink & Audio Sync · Offline First · Open Source",
+    "ja": "手書きと録音の同期 · オフライン優先 · オープンソース",
+    "ko": "필기와 녹음 동기화 · 오프라인 우선 · 오픈 소스",
+    "th": "ซิงค์ลายมือและเสียง · ออฟไลน์ก่อน · โอเพ่นซอร์ส",
+    "zhHans": "手写与录音对齐 · 离线优先 · 开源透明",
+    "zhHant": "手寫與錄音雙向對齊 · 離線優先 · 開源透明"
+  },
+  "app_version_info": {
+    "en": "Application Version Info",
+    "ja": "アプリバージョン情報",
+    "ko": "앱 버전 정보",
+    "th": "ข้อมูลเวอร์ชันแอปพลิเคชัน",
+    "zhHans": "应用程序版本信息",
+    "zhHant": "應用程式版本資訊"
+  },
+  "apply_refine": {
+    "en": "Auto Refine",
+    "ja": "自動補正",
+    "ko": "자동 보정",
+    "th": "ปรับแต่งอัตโนมัติ",
+    "zhHans": "一键修饰",
+    "zhHant": "一鍵修飾"
+  },
+  "arch_mode": {
+    "en": "Architecture Mode",
+    "ja": "アーキテクチャモード",
+    "ko": "아키텍처 모드",
+    "th": "โหมดสถาปัตยกรรม",
+    "zhHans": "架构模式",
+    "zhHant": "架構模式"
+  },
+  "asset_library": {
+    "en": "Asset Library",
+    "ja": "アセットライブラリ",
+    "ko": "에셋 라이브러리",
+    "th": "คลังแอสเซท",
+    "zhHans": "素材图库",
+    "zhHant": "素材圖庫"
+  },
+  "asset_library_desc": {
+    "en": "Mechanisms, Physical Products (3C, Auto, Furniture), Hardware & Digital",
+    "ja": "機構設計、製品(3C、自動車、家具)、金物、デジタルUI部品",
+    "ko": "기구 설계, 실제 제품(3C, 자동차, 가구), 하드웨어 부품 및 디지털 와이어프레임",
+    "th": "ครอบคลุมการออกแบบกลไก, ผลิตภัณฑ์จริง (3C, รถยนต์, เฟอร์นิเจอร์), ฮาร์ดแวร์ และดิจิทัล",
+    "zhHans": "涵盖机构设计、实体产品 (3C、汽车、家具)、五金零件与数字线框",
+    "zhHant": "涵蓋機構設計、實體產品 (3C、汽車、家具)、五金零件與數位線框"
+  },
+  "attach_none": {
+    "en": "None (Save as standalone audio)",
+    "ja": "添付しない（独立した音声として保存）",
+    "ko": "첨부 안 함 (단독 오디오로 저장)",
+    "th": "ไม่แนบ (บันทึกเป็นไฟล์เสียงเดี่ยว)",
+    "zhHans": "不附加（仅保存为独立录音）",
+    "zhHant": "不附加（僅儲存為獨立錄音）"
+  },
+  "attach_picker_label": {
+    "en": "Attach to Note",
+    "ja": "ノートに添付",
+    "ko": "노트에 첨부",
+    "th": "แนบกับบันทึก",
+    "zhHans": "附加至笔记",
+    "zhHant": "附加至筆記"
+  },
+  "attach_to_note": {
+    "en": "Attach to Note (Instant sync to note canvas)",
+    "ja": "指定ノートに添付（筆跡キャンバスに即時同期）",
+    "ko": "지정 노트에 첨부 (캔버스에 실시간 동기화)",
+    "th": "แนบกับบันทึกที่กำหนด (ซิงค์กับผืนผ้าใบทันที)",
+    "zhHans": "附加至指定笔记（录音即时同步至笔记画布）",
+    "zhHant": "附加至指定筆記（錄音即時同步至筆記畫布）"
+  },
+  "attached_audio": {
+    "en": "Attached Audio",
+    "ja": "ノート添付音声",
+    "ko": "노트 첨부 오디오",
+    "th": "เสียงที่แนบมากับบันทึก",
+    "zhHans": "笔记随附录音",
+    "zhHant": "筆記隨附錄音"
+  },
+  "audio_hint": {
+    "en": "Tap to Play · Ink & Audio Aligned",
+    "ja": "タップして再生 · 筆跡と音声の完全同期",
+    "ko": "탭하여 재생 · 필기와 오디오 정밀 동기화",
+    "th": "แตะเพื่อเล่น · การเขียนและเสียงตรงกันอย่างแม่นยำ",
+    "zhHans": "点击播放 · 笔划时间精确对齐",
+    "zhHant": "點擊播放 · 筆劃時間精確對齊"
+  },
+  "audio_playback_align": {
+    "en": "Real Audio Playback & Alignment",
+    "ja": "リアル音声再生と同期",
+    "ko": "실시간 오디오 재생 및 동기화",
+    "th": "เล่นเสียงจริงและจัดตำแหน่ง",
+    "zhHans": "真实音频播放与对齐",
+    "zhHant": "真實音訊播放與對齊"
+  },
+  "audio_playing": {
+    "en": "Playing Synced Audio",
+    "ja": "同期再生中",
+    "ko": "동기화 재생 중",
+    "th": "กำลังเล่นเสียงซิงค์",
+    "zhHans": "同步播放中",
+    "zhHant": "同步播放中"
+  },
+  "audio_rec_title": {
+    "en": "Audio Recording & Alignment",
+    "ja": "音声録音と同期",
+    "ko": "오디오 녹음 및 동기화",
+    "th": "การบันทึกเสียงและการจัดตำแหน่ง",
+    "zhHans": "语音录音与对齐",
+    "zhHant": "語音錄音與對齊"
+  },
+  "border_color": {
+    "en": "Border color",
+    "ja": "枠線の色",
+    "ko": "테두리 색",
+    "th": "สีกรอบ",
+    "zhHans": "边框颜色",
+    "zhHant": "邊框顏色"
+  },
+  "border_style": {
+    "en": "Border",
+    "ja": "枠線スタイル",
+    "ko": "테두리 스타일",
+    "th": "รูปแบบกรอบ",
+    "zhHans": "边框样式",
+    "zhHant": "邊框樣式"
+  },
+  "box_width": {
+    "en": "Box width",
+    "ja": "ボックス幅",
+    "ko": "상자 너비",
+    "th": "ความกว้างกล่อง",
+    "zhHans": "方块宽度",
+    "zhHant": "方塊寬度"
+  },
+  "bullet_list": {
+    "en": "Bulleted List",
+    "ja": "箇条書き",
+    "ko": "글머리 기호",
+    "th": "รายการสัญลักษณ์",
+    "zhHans": "项目符号",
+    "zhHant": "項目符號"
+  },
+  "cancel": {
+    "en": "Cancel",
+    "ja": "キャンセル",
+    "ko": "취소",
+    "th": "ยกเลิก",
+    "zhHans": "取消",
+    "zhHant": "取消"
+  },
+  "card_style": {
+    "en": "Card Style",
+    "ja": "カードスタイル",
+    "ko": "카드 스타일",
+    "th": "รูปแบบการ์ด",
+    "zhHans": "卡片样式",
+    "zhHant": "卡片樣式"
+  },
+  "cat_aesthetic_comp": {
+    "en": "Aesthetic Composition",
+    "ja": "構図と黄金比",
+    "ko": "미학 구도 및 황금비율",
+    "th": "องค์ประกอบความงามและสัดส่วนทองคำ",
+    "zhHans": "美学构图与黄金比例",
+    "zhHant": "美學構圖與黃金比例"
+  },
+  "cat_all": {
+    "en": "All Assets",
+    "ja": "すべて",
+    "ko": "전체 에셋",
+    "th": "ทั้งหมด",
+    "zhHans": "全部素材",
+    "zhHant": "全部素材"
+  },
+  "cat_automotive": {
+    "en": "Automotive",
+    "ja": "自動車・車体",
+    "ko": "자동차 및 운송",
+    "th": "ยานยนต์",
+    "zhHans": "汽车载具",
+    "zhHant": "汽車載具"
+  },
+  "cat_crossplatform_ui": {
+    "en": "Cross-Platform UI Kit",
+    "ja": "クロスプラットフォームUI",
+    "ko": "크로스 플랫폼 시스템 표준 컴포넌트",
+    "th": "ชุด UI ข้ามแพลตฟอร์ม",
+    "zhHans": "跨平台系统标准件",
+    "zhHant": "跨平台系統標準件"
+  },
+  "cat_design_motifs": {
+    "en": "Design Motifs & Form",
+    "ja": "造形言語・装飾パターン",
+    "ko": "조형 어휘 및 공예 문양",
+    "th": "ภาษาการออกแบบและลวดลาย",
+    "zhHans": "造型语汇与工艺纹样",
+    "zhHant": "造型語彙與工藝紋樣"
+  },
+  "cat_design_tokens": {
+    "en": "Design System Tokens",
+    "ja": "デザインシステム・アトム",
+    "ko": "디자인 시스템 원자 컴포넌트",
+    "th": "ส่วนประกอบระบบการออกแบบ",
+    "zhHans": "设计系统原子元件",
+    "zhHant": "設計系統原子元件"
+  },
+  "cat_digital": {
+    "en": "Digital Wireframes",
+    "ja": "デジタルUI",
+    "ko": "디지털 제품",
+    "th": "ผลิตภัณฑ์ดิจิทัล",
+    "zhHans": "数字产品",
+    "zhHant": "數位產品"
+  },
+  "cat_electronics": {
+    "en": "3C Electronics",
+    "ja": "3C・電器",
+    "ko": "3C 전자",
+    "th": "อุปกรณ์อิเล็กทรอนิกส์ 3C",
+    "zhHans": "3C 电子",
+    "zhHant": "3C 電子"
+  },
+  "cat_furniture": {
+    "en": "Furniture",
+    "ja": "家具・インテリア",
+    "ko": "산업 가구",
+    "th": "เฟอร์นิเจอร์",
+    "zhHans": "工业家具",
+    "zhHant": "工業家具"
+  },
+  "cat_hardware": {
+    "en": "Hardware",
+    "ja": "金物・ネジ",
+    "ko": "하드웨어 부품",
+    "th": "ฮาร์ดแวร์",
+    "zhHans": "五金零件",
+    "zhHant": "五金零件"
+  },
+  "cat_info_arch": {
+    "en": "Information Architecture",
+    "ja": "情報設計とユーザーフロー",
+    "ko": "정보 구조 및 서비스 흐름",
+    "th": "สถาปัตยกรรมสารสนเทศและแผนผังงาน",
+    "zhHans": "信息架构与服务流程",
+    "zhHant": "資訊架構與服務流程"
+  },
+  "cat_mechanism": {
+    "en": "Mechanism",
+    "ja": "機構設計",
+    "ko": "기구 설계",
+    "th": "กลไก",
+    "zhHans": "机构设计",
+    "zhHant": "機構設計"
+  },
+  "cat_pneumatics_piping": {
+    "en": "Drive Mechanisms & Piping",
+    "ja": "伝動機構・流体配管",
+    "ko": "구동 기구 및 유체 배관",
+    "th": "กลไกขับเคลื่อนและท่อของไหล",
+    "zhHans": "机构传动与流体管路",
+    "zhHant": "機構傳動與流體管路"
+  },
+  "cat_sheetmetal_cnc": {
+    "en": "Sheet Metal & CNC",
+    "ja": "板金・CNC切削加工",
+    "ko": "판금 절곡 및 CNC 가공",
+    "th": "แผ่นโลหะและเครื่องซีเอ็นซี",
+    "zhHans": "钣金折弯与 CNC 加工",
+    "zhHant": "鈑金折彎與 CNC 加工"
+  },
+  "cat_surface_finishing": {
+    "en": "Surface Finishing",
+    "ja": "表面処理・材料工芸",
+    "ko": "표면 처리 및 재료 공정",
+    "th": "การปรับสภาพผิวและวิศวกรรมวัสดุ",
+    "zhHans": "表面处理与材料工艺",
+    "zhHant": "表面處理與材料工藝"
+  },
+  "cat_tooling_molding": {
+    "en": "Tooling & Molding",
+    "ja": "金型・射出成形",
+    "ko": "금형 및 사출 성형",
+    "th": "แม่พิมพ์และการฉีดขึ้นรูป",
+    "zhHans": "模具与注塑成型",
+    "zhHant": "模具與注塑成型"
+  },
+  "cat_typography": {
+    "en": "Typography & Layout",
+    "ja": "タイポグラフィとグリッド",
+    "ko": "타이포그래피 및 레이아웃 그리드",
+    "th": "การจัดพิมพ์และตารางเค้าโครง",
+    "zhHans": "字体排印与版面网格",
+    "zhHant": "字體排印與版面網格"
+  },
+  "cat_ux_motion": {
+    "en": "UX Gestures & Motion",
+    "ja": "ジェスチャーと動的軌跡",
+    "ko": "인터랙션 제스처 및 모션 궤적",
+    "th": "ท่าทางสัมผัสและภาพเคลื่อนไหว",
+    "zhHans": "交互手势与动效轨迹",
+    "zhHant": "互動手勢與動效軌跡"
+  },
+  "chart_bar": {
+    "en": "Bar Chart",
+    "ja": "棒グラフ",
+    "ko": "막대형",
+    "th": "แผนภูมิแท่ง",
+    "zhHans": "柱状图",
+    "zhHant": "長條圖"
+  },
+  "chart_line": {
+    "en": "Line Chart",
+    "ja": "折れ線",
+    "ko": "꺾은선형",
+    "th": "แผนภูมิเส้น",
+    "zhHans": "折线图",
+    "zhHant": "折線圖"
+  },
+  "chart_pie": {
+    "en": "Pie Chart",
+    "ja": "円グラフ",
+    "ko": "원형",
+    "th": "แผนภูมิวงกลม",
+    "zhHans": "饼状图",
+    "zhHant": "圓餅圖"
+  },
+  "chart_studio": {
+    "en": "Chart Studio",
+    "ja": "グラフ作成",
+    "ko": "데이터 차트",
+    "th": "สร้างแผนภูมิ",
+    "zhHans": "数字制图",
+    "zhHant": "數字製圖"
+  },
+  "chart_title": {
+    "en": "Chart Title",
+    "ja": "グラフタイトル",
+    "ko": "차트 제목",
+    "th": "ชื่อแผนภูมิ",
+    "zhHans": "图表标题",
+    "zhHant": "圖表標題"
+  },
+  "chart_type": {
+    "en": "Chart Type",
+    "ja": "グラフの種類",
+    "ko": "차트 유형",
+    "th": "ประเภทแผนภูมิ",
+    "zhHans": "图表类型",
+    "zhHant": "圖表類型"
+  },
+  "clear_cache": {
+    "en": "Clear Cache",
+    "ja": "キャッシュ削除",
+    "ko": "캐시 지우기",
+    "th": "ล้างแคช",
+    "zhHans": "清除缓存",
+    "zhHant": "清除快取"
+  },
+  "clear_cache_confirm": {
+    "en": "Are you sure you want to clear all local asset cache? Items already inserted into notes will not be affected.",
+    "ja": "すべてのローカルアセットキャッシュを消去しますか？ノートに挿入済みのコンテンツには影響しません。",
+    "ko": "모든 로컬 에셋 캐시를 지우시겠습니까? 노트에 이미 삽입된 콘텐츠에는 영향을 주지 않습니다.",
+    "th": "คุณแน่ใจหรือไม่ว่าต้องการล้างแคชเนื้อหาในเครื่องทั้งหมด? เนื้อหาที่แทรกลงในบันทึกแล้วจะไม่ได้รับผลกระทบ",
+    "zhHans": "确定要清除所有本地素材缓存以释放存储空间吗？已插入笔记中的内容不受影响。",
+    "zhHant": "確定要清除所有本機素材快取以釋放硬碟空間嗎？已插入筆記中的內容不受影響。"
+  },
+  "clear_confirm": {
+    "en": "Clear All",
+    "ja": "消去する",
+    "ko": "지우기 확인",
+    "th": "ยืนยันการล้าง",
+    "zhHans": "确定清空",
+    "zhHant": "確定清除"
+  },
+  "clear_page": {
+    "en": "Clear Current Page",
+    "ja": "このページを消去",
+    "ko": "현재 페이지 지우기",
+    "th": "ล้างหน้านี้",
+    "zhHans": "清空本页内容",
+    "zhHant": "清除本頁內容"
+  },
+  "clear_page_confirm": {
+    "en": "This action will remove all ink strokes on the current page.",
+    "ja": "この操作により、現在のページのすべての手書きストロークが消去されます。",
+    "ko": "이 작업은 현재 페이지의 모든 필기 획을 지웁니다.",
+    "th": "การดำเนินการนี้จะลบลายเส้นการเขียนทั้งหมดในหน้านี้",
+    "zhHans": "此操作将清空当前页面之所有手写笔画。",
+    "zhHant": "此操作將清空當前頁面之所有手寫筆劃。"
+  },
+  "close": {
+    "en": "Close",
+    "ja": "閉じる",
+    "ko": "닫기",
+    "th": "ปิด",
+    "zhHans": "关闭",
+    "zhHant": "關閉"
+  },
+  "close_ruler": {
+    "en": "Close Ruler",
+    "ja": "定規を閉じる",
+    "ko": "자 닫기",
+    "th": "ปิดไม้บรรทัด",
+    "zhHans": "关闭标尺",
+    "zhHant": "關閉尺規"
+  },
+  "collaborate": {
+    "en": "Collaborate",
+    "ja": "共同編集",
+    "ko": "공동 편집",
+    "th": "การทำงานร่วมกัน",
+    "zhHans": "线上协同",
+    "zhHant": "線上協同"
+  },
+  "collapse": {
+    "en": "Collapse",
+    "ja": "折りたたむ",
+    "ko": "접기",
+    "th": "ยุบ",
+    "zhHans": "收起",
+    "zhHant": "收合"
+  },
+  "color_mode": {
+    "en": "Color Mode",
+    "ja": "カラーモード",
+    "ko": "색상 모드",
+    "th": "โหมดสี",
+    "zhHans": "调色模式",
+    "zhHant": "調色模式"
+  },
+  "comment_pin": {
+    "en": "Comment Pin",
+    "ja": "コメントピン",
+    "ko": "댓글 핀",
+    "th": "หมุดความคิดเห็น",
+    "zhHans": "讨论图钉",
+    "zhHant": "討論圖釘"
+  },
+  "comment_placeholder": {
+    "en": "Type a comment or reply...",
+    "ja": "コメントまたは返信を入力...",
+    "ko": "댓글이나 답글을 입력하세요...",
+    "th": "พิมพ์ความคิดเห็นหรือตอบกลับ...",
+    "zhHans": "输入留言或回复...",
+    "zhHant": "輸入留言或回覆..."
+  },
+  "composition_overlay": {
+    "en": "Composition HUD",
+    "ja": "構図補助線",
+    "ko": "구도 가이드",
+    "th": "เส้นไกด์การจัดองค์ประกอบ",
+    "zhHans": "构图辅助线",
+    "zhHant": "構圖輔助線"
+  },
+  "confirm": {
+    "en": "OK",
+    "ja": "OK",
+    "ko": "확인",
+    "th": "ตกลง",
+    "zhHans": "确认",
+    "zhHant": "確認"
+  },
+  "connection_status": {
+    "en": "Connection Status",
+    "ja": "接続状態",
+    "ko": "연결 상태",
+    "th": "สถานะการเชื่อมต่อ",
+    "zhHans": "连接状态",
+    "zhHant": "連線狀態"
+  },
+  "continue": {
+    "en": "Continue",
+    "ja": "続ける",
+    "ko": "계속하기",
+    "th": "ทำต่อ",
+    "zhHans": "继续",
+    "zhHant": "繼續"
+  },
+  "copy_encrypted_link": {
+    "en": "Copy Encrypted Invite Link",
+    "ja": "暗号化招待リンクをコピー",
+    "ko": "암호화된 초대 링크 복사",
+    "th": "คัดลอกลิงก์คำเชิญที่เข้ารหัส",
+    "zhHans": "复制加密邀请链接",
+    "zhHant": "複製加密邀請連結"
+  },
+  "copy_room_id": {
+    "en": "Copy Room ID",
+    "ja": "ルームIDをコピー",
+    "ko": "방 ID 복사",
+    "th": "คัดลอกรหัสห้อง",
+    "zhHans": "复制房间码",
+    "zhHant": "複製房間碼"
+  },
+  "copy_selected": {
+    "en": "Copy Selection",
+    "ja": "選択範囲をコピー",
+    "ko": "선택 항목 복사",
+    "th": "คัดลอกส่วนที่เลือก",
+    "zhHans": "复制选中",
+    "zhHant": "複製選取"
+  },
+  "copy_selected_hint": {
+    "en": "Copy to the clipboard; use Paste to place it where you want",
+    "ja": "クリップボードにコピーします。「ペースト」で好きな位置に置けます",
+    "ko": "클립보드로 복사합니다. “붙여넣기”로 원하는 위치에 놓으세요",
+    "th": "คัดลอกไปยังคลิปบอร์ด แล้วใช้ “วาง” เพื่อวางในตำแหน่งที่ต้องการ",
+    "zhHans": "复制到剪贴板，之后用“粘贴”放到想要的位置",
+    "zhHant": "複製到剪貼簿，之後用「貼上」放到想要的位置"
+  },
+  "core_engine": {
+    "en": "Rust Core Engine",
+    "ja": "Rust Core エンジン",
+    "ko": "Rust Core 엔진",
+    "th": "เอนจิน Rust Core",
+    "zhHans": "Rust Core 引擎",
+    "zhHant": "Rust Core 引擎"
+  },
+  "corner_style": {
+    "en": "Corners",
+    "ja": "角丸",
+    "ko": "모서리",
+    "th": "มุมโค้ง",
+    "zhHans": "圆角",
+    "zhHant": "圓角"
+  },
+  "create_snapshot": {
+    "en": "Create Snapshot",
+    "ja": "スナップショットを作成",
+    "ko": "스냅샷 생성",
+    "th": "สร้างสแนปช็อต",
+    "zhHans": "创建协同快照",
+    "zhHant": "建立協同快照"
+  },
+  "current_user": {
+    "en": "Current User",
+    "ja": "現在のユーザー",
+    "ko": "현재 사용자",
+    "th": "ผู้ใช้ปัจจุบัน",
+    "zhHans": "当前用户",
+    "zhHant": "目前使用者"
+  },
+  "custom_color": {
+    "en": "Custom color",
+    "ja": "カスタムカラー",
+    "ko": "사용자 색상",
+    "th": "สีกำหนดเอง",
+    "zhHans": "自定义颜色",
+    "zhHant": "自訂顏色"
+  },
+  "cut_selected": {
+    "en": "Cut Selection",
+    "ja": "選択範囲を切り取り",
+    "ko": "선택 항목 잘라내기",
+    "th": "ตัดส่วนที่เลือก",
+    "zhHans": "剪切选中",
+    "zhHant": "剪下選取"
+  },
+  "cut_selected_hint": {
+    "en": "Cut the selected strokes to the clipboard (removed from the page)",
+    "ja": "選択した筆跡を切り取ってクリップボードへ（元の場所からは消えます）",
+    "ko": "선택한 필기를 잘라 클립보드에 넣습니다(원래 위치에서 삭제)",
+    "th": "ตัดเส้นที่เลือกไปยังคลิปบอร์ด (ลบออกจากหน้า)",
+    "zhHans": "把选取的笔画剪切到剪贴板（原处移除）",
+    "zhHant": "把選取的筆劃剪下放進剪貼簿（原處移除）"
+  },
+  "data_list": {
+    "en": "Data Entries",
+    "ja": "データ一覧",
+    "ko": "데이터 목록",
+    "th": "รายการข้อมูล",
+    "zhHans": "数据列表",
+    "zhHant": "數據列表"
+  },
+  "default_root_folder": {
+    "en": "My Notes",
+    "ja": "マイノート",
+    "ko": "내 노트",
+    "th": "บันทึกของฉัน",
+    "zhHans": "我的笔记",
+    "zhHant": "我的筆記"
+  },
+  "default_user_name": {
+    "en": "You",
+    "ja": "ユーザー",
+    "ko": "사용자",
+    "th": "ผู้ใช้",
+    "zhHans": "用户",
+    "zhHant": "使用者"
+  },
+  "delete": {
+    "en": "Delete",
+    "ja": "削除",
+    "ko": "삭제",
+    "th": "ลบ",
+    "zhHans": "删除",
+    "zhHant": "刪除"
+  },
+  "delete_comment": {
+    "en": "Delete Pin",
+    "ja": "ピンを削除",
+    "ko": "핀 삭제",
+    "th": "ลบหมุด",
+    "zhHans": "删除图钉",
+    "zhHant": "刪除圖釘"
+  },
+  "delete_folder": {
+    "en": "Delete Folder",
+    "ja": "フォルダを削除",
+    "ko": "폴더 삭제",
+    "th": "ลบโฟลเดอร์",
+    "zhHans": "删除文件夹",
+    "zhHant": "刪除資料夾"
+  },
+  "delete_item": {
+    "en": "Delete Item",
+    "ja": "項目を削除",
+    "ko": "항목 삭제",
+    "th": "ลบรายการ",
+    "zhHans": "删除项目",
+    "zhHant": "刪除項目"
+  },
+  "delete_message": {
+    "en": "Delete this message",
+    "ja": "このメッセージを削除",
+    "ko": "이 메시지 삭제",
+    "th": "ลบข้อความนี้",
+    "zhHans": "删除这条留言",
+    "zhHant": "刪除這則留言"
+  },
+  "delete_page": {
+    "en": "Delete Page",
+    "ja": "ページを削除",
+    "ko": "페이지 삭제",
+    "th": "ลบหน้านี้",
+    "zhHans": "删除此页",
+    "zhHant": "刪除此頁"
+  },
+  "delete_page_confirm_msg": {
+    "en": "Are you sure you want to delete Page %d? This cannot be undone.",
+    "ja": "%d ページを削除してもよろしいですか？元に戻せません。",
+    "ko": "%d페이지를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "th": "คุณแน่ใจหรือไม่ว่าต้องการลบหน้า %d? การดำเนินการนี้ไม่สามารถยกเลิกได้",
+    "zhHans": "确定要删除第 %d 页吗？此操作无法撤销。",
+    "zhHant": "確定要刪除第 %d 頁嗎？此動作無法復原。"
+  },
+  "delete_recording": {
+    "en": "Delete Recording",
+    "ja": "録音を削除",
+    "ko": "녹음 삭제",
+    "th": "ลบเสียงบันทึก",
+    "zhHans": "删除录音",
+    "zhHant": "刪除錄音檔"
+  },
+  "delete_selected": {
+    "en": "Delete Selection",
+    "ja": "選択ストロークを削除",
+    "ko": "선택된 획 삭제",
+    "th": "ลบลายเส้นที่เลือก",
+    "zhHans": "删除选中笔画",
+    "zhHant": "刪除選取筆劃"
+  },
+  "dimension_callout": {
+    "en": "Dimension Callout",
+    "ja": "寸法引出線",
+    "ko": "치수 인출선",
+    "th": "บอลลูนระบุขนาด",
+    "zhHans": "工程引线标注",
+    "zhHant": "工程引線標註"
+  },
+  "disconnect": {
+    "en": "Disconnect",
+    "ja": "切断",
+    "ko": "연결 끊기",
+    "th": "ตัดการเชื่อมต่อ",
+    "zhHans": "断开连接",
+    "zhHant": "中斷連線"
+  },
+  "display_name": {
+    "en": "Display Name",
+    "ja": "表示名",
+    "ko": "표시 이름",
+    "th": "ชื่อที่แสดง",
+    "zhHans": "显示名称",
+    "zhHant": "顯示名稱"
+  },
+  "document_missing": {
+    "en": "The bundled document is missing. Please report this.",
+    "ja": "同梱ドキュメントが見つかりません。ご報告ください。",
+    "ko": "동봉된 문서를 찾을 수 없습니다. 알려 주세요.",
+    "th": "ไม่พบเอกสารที่มากับแอป โปรดแจ้งปัญหานี้",
+    "zhHans": "找不到打包的文档文件，请反馈这个问题。",
+    "zhHant": "找不到打包的文件檔案，請回報這個問題。"
+  },
+  "done": {
+    "en": "Done",
+    "ja": "完了",
+    "ko": "완료",
+    "th": "เสร็จสิ้น",
+    "zhHans": "完成",
+    "zhHant": "完成"
+  },
+  "download_all": {
+    "en": "Download All",
+    "ja": "すべてDL",
+    "ko": "전체 다운로드",
+    "th": "ดาวน์โหลดทั้งหมด",
+    "zhHans": "全部下载",
+    "zhHant": "下載全部"
+  },
+  "download_all_category": {
+    "en": "Download All in Category",
+    "ja": "このカテゴリをすべてダウンロード",
+    "ko": "이 카테고리 모두 다운로드",
+    "th": "ดาวน์โหลดทั้งหมดในหมวดหมู่นี้",
+    "zhHans": "下载本类全部",
+    "zhHant": "下載本類全部"
+  },
+  "download_item": {
+    "en": "Download",
+    "ja": "ダウンロード",
+    "ko": "다운로드",
+    "th": "ดาวน์โหลด",
+    "zhHans": "下载",
+    "zhHant": "下載"
+  },
+  "downloaded": {
+    "en": "Downloaded",
+    "ja": "DL済",
+    "ko": "다운로드됨",
+    "th": "ดาวน์โหลดแล้ว",
+    "zhHans": "已下载",
+    "zhHant": "已下載"
+  },
+  "downloading": {
+    "en": "Downloading...",
+    "ja": "ダウンロード中...",
+    "ko": "다운로드 중...",
+    "th": "กำลังดาวน์โหลด...",
+    "zhHans": "下载中...",
+    "zhHant": "下載中..."
+  },
+  "drag_card_hint": {
+    "en": "Drag to move card",
+    "ja": "ドラッグして移動",
+    "ko": "드래그하여 이동",
+    "th": "ลากเพื่อย้ายการ์ด",
+    "zhHans": "拖拽移动卡片",
+    "zhHant": "拖曳移動卡片"
+  },
+  "duplicate_note": {
+    "en": "Duplicate Note",
+    "ja": "複製を作成",
+    "ko": "사본 생성",
+    "th": "ทำซ้ำบันทึก",
+    "zhHans": "创建副本",
+    "zhHant": "建立副本"
+  },
+  "duplicate_page": {
+    "en": "Duplicate Page",
+    "ja": "ページを複製",
+    "ko": "페이지 복제",
+    "th": "ทำซ้ำหน้านี้",
+    "zhHans": "建立此页副本",
+    "zhHant": "建立此頁副本"
+  },
+  "duplicate_selected": {
+    "en": "Duplicate",
+    "ja": "複製を作成",
+    "ko": "복제",
+    "th": "ทำซ้ำ",
+    "zhHans": "再制",
+    "zhHant": "再製"
+  },
+  "duplicate_selected_hint": {
+    "en": "Make a second copy right next to it, without using the clipboard",
+    "ja": "クリップボードを使わず、すぐ隣にもう一つ作ります",
+    "ko": "클립보드를 거치지 않고 바로 옆에 하나 더 만듭니다",
+    "th": "สร้างสำเนาอีกชุดไว้ข้าง ๆ ทันที โดยไม่ผ่านคลิปบอร์ด",
+    "zhHans": "直接在旁边多做一份，不经过剪贴板",
+    "zhHant": "直接在旁邊多做一份，不經過剪貼簿"
+  },
+  "e2ee_protected": {
+    "en": "End-to-End Encrypted",
+    "ja": "エンドツーエンド暗号化",
+    "ko": "종단간 암호화",
+    "th": "การเข้ารหัสจากต้นทางถึงปลายทาง",
+    "zhHans": "端对端加密保护",
+    "zhHant": "端對端加密保護"
+  },
+  "e2ee_protected_desc": {
+    "en": "Strokes, attachments, and comments are encrypted locally. Relay server cannot inspect contents.",
+    "ja": "ストローク、添付ファイル、コメントはローカルで暗号化され、リレーサーバーは内容を閲覧できません。",
+    "ko": "획, 첨부 파일 및 댓글은 로컬에서 암호화되며 릴레이 서버는 내용을 볼 수 없습니다.",
+    "th": "เส้นวาด ไฟล์แนบ และความคิดเห็นได้รับการเข้ารหัสบนเครื่อง เซิร์ฟเวอร์รีเลย์ไม่สามารถตรวจสอบเนื้อหาได้",
+    "zhHans": "笔划、附件与讨论均在本地完成硬件加密，中继服务器无法窥探。",
+    "zhHant": "筆劃、附件與討論皆在本地完成硬體加密，中繼伺服器無法窺探。"
+  },
+  "edit_identity": {
+    "en": "Edit Identity",
+    "ja": "表示名を編集",
+    "ko": "표시 정보 편집",
+    "th": "แก้ไขตัวตน",
+    "zhHans": "编辑身份",
+    "zhHant": "編輯身分"
+  },
+  "edit_in_place": {
+    "en": "Edit text here",
+    "ja": "その場で編集",
+    "ko": "여기에서 편집",
+    "th": "แก้ไขข้อความตรงนี้",
+    "zhHans": "就地编辑文字",
+    "zhHant": "就地編輯文字"
+  },
+  "edit_root_folder": {
+    "en": "Rename Root Folder",
+    "ja": "ルートフォルダ名を変更",
+    "ko": "최상위 폴더 이름 변경",
+    "th": "แก้ไขชื่อโฟลเดอร์ระดับบนสุด",
+    "zhHans": "编辑最上层文件夹名称",
+    "zhHant": "編輯最上層資料夾名稱"
+  },
+  "email": {
+    "en": "Email",
+    "ja": "メールアドレス",
+    "ko": "이메일",
+    "th": "อีเมล",
+    "zhHans": "电子邮件",
+    "zhHant": "電子郵件"
+  },
+  "encryption": {
+    "en": "Data Encryption",
+    "ja": "データ暗号化",
+    "ko": "데이터 암호화",
+    "th": "การเข้ารหัสข้อมูล",
+    "zhHans": "数据加密",
+    "zhHant": "資料加密"
+  },
+  "encryption_desc": {
+    "en": "End-to-End Local Isolation",
+    "ja": "エンドツーエンド ローカル隔離",
+    "ko": "엔드투엔드 로컬 격리",
+    "th": "การแยกพื้นที่จัดเก็บเฉพาะเครื่องแบบ End-to-End",
+    "zhHans": "端对端本地隔离",
+    "zhHant": "端對端本地隔離"
+  },
+  "end_collaboration": {
+    "en": "End Collaboration",
+    "ja": "共同編集を終了",
+    "ko": "공동 편집 종료",
+    "th": "สิ้นสุดการทำงานร่วมกัน",
+    "zhHans": "结束协同会议",
+    "zhHant": "結束協同會議"
+  },
+  "end_session_confirm": {
+    "en": "End collaborative session? All online participants will be disconnected.",
+    "ja": "共同編集を終了しますか？全メンバーの接続が切断されます。",
+    "ko": "공동 편집 세션을 종료하시겠습니까? 모든 참여자의 연결이 끊어집니다.",
+    "th": "สิ้นสุดเซสชันหรือไม่? ผู้เข้าร่วมทั้งหมดจะถูกตัดการเชื่อมต่อ",
+    "zhHans": "确认结束多人协同会议？所有在线成员将被断开连接。",
+    "zhHant": "確認結束多人協同會議？所有在線成員將被中斷連線。"
+  },
+  "engineering_dim_tip": {
+    "en": "Tap to insert dimension next to parts",
+    "ja": "タップで部品の横に寸法を挿入",
+    "ko": "탭하여 부품 옆에 치수 삽입",
+    "th": "แตะเพื่อแทรกขนาดข้างชิ้นส่วน",
+    "zhHans": "点击一键贴入画布零件旁",
+    "zhHant": "點擊一鍵貼入畫布零件旁"
+  },
+  "enter_recording_title": {
+    "en": "Enter recording title",
+    "ja": "録音タイトルを入力",
+    "ko": "녹음 제목 입력",
+    "th": "ใส่ชื่อการบันทึก",
+    "zhHans": "输入录音标题",
+    "zhHant": "輸入錄音標題"
+  },
+  "enter_room_id": {
+    "en": "Enter Room ID",
+    "ja": "ルームIDを入力してください",
+    "ko": "방 ID를 입력하세요",
+    "th": "ใส่รหัสห้อง",
+    "zhHans": "请输入房间识别代码",
+    "zhHant": "請輸入房間識別代碼"
+  },
+  "enter_title": {
+    "en": "Enter New Title",
+    "ja": "新しいタイトルを入力",
+    "ko": "새 제목 입력",
+    "th": "ใส่ชื่อเรื่องใหม่",
+    "zhHans": "输入新标题",
+    "zhHant": "輸入新標題"
+  },
+  "enter_url": {
+    "en": "Enter URL",
+    "ja": "URLを入力",
+    "ko": "URL 입력",
+    "th": "ป้อน URL",
+    "zhHans": "输入网址 (URL)",
+    "zhHant": "輸入網址 (URL)"
+  },
+  "expand": {
+    "en": "Expand",
+    "ja": "展開",
+    "ko": "펼치기",
+    "th": "ขยาย",
+    "zhHans": "展开",
+    "zhHant": "展開"
+  },
+  "export_image": {
+    "en": "Export Image",
+    "ja": "画像として書き出し",
+    "ko": "이미지로 내보내기",
+    "th": "ส่งออกเป็นรูปภาพ",
+    "zhHans": "导出为图片",
+    "zhHant": "匯出為圖片"
+  },
+  "export_pdf": {
+    "en": "Export PDF",
+    "ja": "PDF を書き出す",
+    "ko": "PDF 내보내기",
+    "th": "ส่งออก PDF",
+    "zhHans": "导出 PDF",
+    "zhHant": "匯出 PDF"
+  },
+  "export_print": {
+    "en": "Export & Print",
+    "ja": "書き出しと印刷",
+    "ko": "내보내기 및 인쇄",
+    "th": "ส่งออกและพิมพ์",
+    "zhHans": "导出与打印",
+    "zhHant": "匯出與列印"
+  },
+  "extend_page": {
+    "en": "Extend Page",
+    "ja": "ページを延長",
+    "ko": "페이지 연장",
+    "th": "ขยายหน้านี้",
+    "zhHans": "延长此页",
+    "zhHant": "延長此頁"
+  },
+  "extend_page_amount": {
+    "en": "Extend Downwards (+800pt)",
+    "ja": "下へページ延長 (+800pt)",
+    "ko": "아래로 페이지 연장 (+800pt)",
+    "th": "ขยายหน้าลงด้านล่าง (+800pt)",
+    "zhHans": "向下延长此页 (+800pt)",
+    "zhHant": "向下延長此頁 (+800pt)"
+  },
+  "favorite_colors": {
+    "en": "Favorites",
+    "ja": "お気に入り",
+    "ko": "즐겨찾는 색상",
+    "th": "สีที่ชอบ",
+    "zhHans": "收藏色盘",
+    "zhHant": "收藏色盤"
+  },
+  "fetch_preview": {
+    "en": "Fetch Preview",
+    "ja": "プレビュー取得",
+    "ko": "미리보기 가져오기",
+    "th": "ดึงตัวอย่าง",
+    "zhHans": "解析预览",
+    "zhHant": "解析預覽"
+  },
+  "filter_ai": {
+    "en": "AI Concepts",
+    "ja": "AI コンセプト",
+    "ko": "AI 개념 렌더",
+    "th": "คอนเซ็ปต์ AI",
+    "zhHans": "AI 概念渲染",
+    "zhHant": "AI 概念渲染"
+  },
+  "filter_contrast": {
+    "en": "Sharp",
+    "ja": "シャープ",
+    "ko": "선명",
+    "th": "คมชัด",
+    "zhHans": "清晰",
+    "zhHant": "清晰"
+  },
+  "filter_mono": {
+    "en": "Mono",
+    "ja": "モノクロ",
+    "ko": "흑백",
+    "th": "ขาวดำ",
+    "zhHans": "黑白",
+    "zhHant": "黑白"
+  },
+  "filter_original": {
+    "en": "Original",
+    "ja": "オリジナル",
+    "ko": "원본",
+    "th": "ต้นฉบับ",
+    "zhHans": "原图",
+    "zhHant": "原圖"
+  },
+  "filter_physical": {
+    "en": "Physical Specs",
+    "ja": "実体規格図",
+    "ko": "실제 사양도",
+    "th": "ภาพสเปกจริง",
+    "zhHans": "实体规格图",
+    "zhHant": "實體規格圖"
+  },
+  "filter_vintage": {
+    "en": "Vintage",
+    "ja": "ヴィンテージ",
+    "ko": "빈티지",
+    "th": "วินเทจ",
+    "zhHans": "复古",
+    "zhHant": "復古"
+  },
+  "filter_warm": {
+    "en": "Warm",
+    "ja": "ソフト",
+    "ko": "부드럽게",
+    "th": "นวลตา",
+    "zhHans": "柔光",
+    "zhHant": "柔光"
+  },
+  "finish_recording": {
+    "en": "Finish Recording",
+    "ja": "録音完了",
+    "ko": "녹음 완료",
+    "th": "เสร็จสิ้นการบันทึก",
+    "zhHans": "完成录音",
+    "zhHant": "完成錄音"
+  },
+  "folder_contains_notes": {
+    "en": "Notes count",
+    "ja": "ファイル件数",
+    "ko": "포함된 파일 수",
+    "th": "จำนวนไฟล์",
+    "zhHans": "包含文件",
+    "zhHant": "包含檔案"
+  },
+  "folder_name": {
+    "en": "Folder Name",
+    "ja": "フォルダ名",
+    "ko": "폴더 이름",
+    "th": "ชื่อโฟลเดอร์",
+    "zhHans": "文件夹名称",
+    "zhHant": "資料夾名稱"
+  },
+  "folders": {
+    "en": "Folders",
+    "ja": "フォルダ",
+    "ko": "폴더",
+    "th": "โฟลเดอร์",
+    "zhHans": "文件夹",
+    "zhHant": "資料夾"
+  },
+  "font_size": {
+    "en": "Font Size",
+    "ja": "文字サイズ",
+    "ko": "글꼴 크기",
+    "th": "ขนาดตัวอักษร",
+    "zhHans": "字号大小",
+    "zhHant": "字級大小"
+  },
+  "geom_preview": {
+    "en": "3D Preview",
+    "ja": "3D プレビュー",
+    "ko": "3D 미리보기",
+    "th": "ดูตัวอย่าง 3D",
+    "zhHans": "3D 预览",
+    "zhHant": "3D 預覽"
+  },
+  "geom_shape": {
+    "en": "Geometric Shape",
+    "ja": "幾何学形状",
+    "ko": "기하학적 도형",
+    "th": "รูปทรงเรขาคณิต",
+    "zhHans": "几何形状",
+    "zhHant": "幾何形狀"
+  },
+  "golden_spiral_desc": {
+    "en": "1:1.618 Fibonacci spiral overlay to guide focal point",
+    "ja": "1:1.618のフィボナッチ螺旋で視線を自然に誘導",
+    "ko": "1:1.618 피보나치 나선 오버레이로 시선 유도",
+    "th": "ซ้อนทับเกลียวฟีโบนัชชี 1:1.618 เพื่อนำสายตา",
+    "zhHans": "以 1:1.618 斐波那契螺旋叠加于画布，引导视觉焦点",
+    "zhHant": "以 1:1.618 斐波那契螺旋疊加於畫布，引導視覺焦點"
+  },
+  "golden_spiral_ref": {
+    "en": "Golden Spiral Guide",
+    "ja": "黄金螺旋ガイド",
+    "ko": "황금 나선 가이드",
+    "th": "เส้นนำเกลียวทอง",
+    "zhHans": "黄金螺旋参考线 (Golden Spiral)",
+    "zhHant": "黃金螺旋參考線 (Golden Spiral)"
+  },
+  "handwriting_mode": {
+    "en": "Handwriting",
+    "ja": "手描き",
+    "ko": "손글씨",
+    "th": "วาดเขียน",
+    "zhHans": "手绘模式",
+    "zhHant": "手繪模式"
+  },
+  "help_and_legal": {
+    "en": "Help & Legal",
+    "ja": "ヘルプと規約",
+    "ko": "도움말 및 약관",
+    "th": "ความช่วยเหลือและข้อกำหนด",
+    "zhHans": "说明与条款",
+    "zhHant": "說明與條款"
+  },
+  "hex_code": {
+    "en": "HEX Code",
+    "ja": "16進数コード",
+    "ko": "HEX 코드",
+    "th": "รหัส HEX",
+    "zhHans": "十六进制色码",
+    "zhHant": "十六進位色碼"
+  },
+  "hide_item": {
+    "en": "Hide",
+    "ja": "非表示",
+    "ko": "숨기기",
+    "th": "ซ่อนรายการนี้",
+    "zhHans": "隐藏此项",
+    "zhHant": "隱藏此項目"
+  },
+  "home": {
+    "en": "Home",
+    "ja": "ホーム",
+    "ko": "홈",
+    "th": "หน้าแรก",
+    "zhHans": "首页",
+    "zhHant": "首頁"
+  },
+  "hosting_local_relay": {
+    "en": "Hosting relay on this device",
+    "ja": "この端末が中継を提供中",
+    "ko": "이 기기에서 릴레이 호스팅 중",
+    "th": "อุปกรณ์นี้กำลังเป็นรีเลย์",
+    "zhHans": "本机正在提供协同中继",
+    "zhHant": "本機正在提供協同中繼"
+  },
+  "identity_color": {
+    "en": "Identity Colour",
+    "ja": "表示カラー",
+    "ko": "표시 색상",
+    "th": "สีประจำตัว",
+    "zhHans": "身份颜色",
+    "zhHant": "身分顏色"
+  },
+  "identity_desc": {
+    "en": "This name and colour are only used to show who is editing during collaboration. They live on this device — not an account, no sign-up, and never linked to any cloud or system account.",
+    "ja": "この名前と色は共同編集中に「誰が編集しているか」を示すためだけに使われます。この端末内に保存され、アカウントではなく、登録も不要で、クラウドやシステムアカウントとは一切連携しません。",
+    "ko": "이 이름과 색상은 공동 작업 중 '누가 편집 중인지' 표시하는 데만 사용됩니다. 이 기기에만 저장되며 계정이 아니고 가입도 필요 없으며 클라우드나 시스템 계정과 연결되지 않습니다.",
+    "th": "ชื่อและสีนี้ใช้เพื่อแสดงว่าใครกำลังแก้ไขขณะทำงานร่วมกันเท่านั้น ข้อมูลอยู่ในเครื่องนี้ ไม่ใช่บัญชี ไม่ต้องสมัคร และไม่เชื่อมต่อกับคลาวด์หรือบัญชีระบบใด ๆ",
+    "zhHans": "这个名称与颜色仅用于多人协作时显示“谁在编辑”。它存在这台设备上，不是账号，无需注册，也不会连接任何云端或系统账号。",
+    "zhHant": "這個名稱與顏色只用於多人協作時顯示「誰在編輯」。它存在這台裝置上，不是帳號，不需要註冊，也不會連到任何雲端或系統帳號。"
+  },
+  "identity_desc_short": {
+    "en": "Shown while collaborating · stored on this device",
+    "ja": "共同編集時の表示名 · 端末内に保存",
+    "ko": "공동 작업 시 표시 · 이 기기에만 저장",
+    "th": "แสดงขณะทำงานร่วมกัน · เก็บในเครื่องนี้",
+    "zhHans": "协作时显示的身份 · 仅存于本机",
+    "zhHant": "協作時顯示的身分 · 僅存於本機"
+  },
+  "identity_preview_hint": {
+    "en": "How others see you while collaborating",
+    "ja": "共同編集中に相手に見える表示",
+    "ko": "공동 작업 중 상대에게 보이는 모습",
+    "th": "สิ่งที่คนอื่นเห็นขณะทำงานร่วมกัน",
+    "zhHans": "协作时其他人看到的样子",
+    "zhHant": "協作時其他人看到的樣子"
+  },
+  "identity_title": {
+    "en": "Collaboration Identity",
+    "ja": "共同編集の表示名",
+    "ko": "공동 작업 표시 정보",
+    "th": "ตัวตนสำหรับทำงานร่วมกัน",
+    "zhHans": "协作身份",
+    "zhHant": "協作身分"
+  },
+  "image_beautify": {
+    "en": "Beautify Image",
+    "ja": "画像を加工",
+    "ko": "이미지 보정",
+    "th": "ตกแต่งรูปภาพ",
+    "zhHans": "美化图片",
+    "zhHant": "美化圖片"
+  },
+  "image_border": {
+    "en": "Border",
+    "ja": "フレーム枠線",
+    "ko": "테두리 스타일",
+    "th": "ขอบตกแต่ง",
+    "zhHans": "边框装饰",
+    "zhHant": "邊框裝飾"
+  },
+  "image_filter": {
+    "en": "Style Filter",
+    "ja": "スタイルフィルター",
+    "ko": "스타일 필터",
+    "th": "ฟิลเตอร์สไตล์",
+    "zhHans": "风格滤镜",
+    "zhHant": "風格濾鏡"
+  },
+  "image_rotate": {
+    "en": "Rotate 90°",
+    "ja": "90°回転",
+    "ko": "90° 회전",
+    "th": "หมุน 90°",
+    "zhHans": "旋转90°",
+    "zhHant": "旋轉90°"
+  },
+  "image_rounded": {
+    "en": "Corner Radius",
+    "ja": "角丸加工",
+    "ko": "부드러운 곡률",
+    "th": "มุมโค้งมน",
+    "zhHans": "柔和圆角",
+    "zhHant": "柔和圓角"
+  },
+  "image_shadow": {
+    "en": "Drop Shadow",
+    "ja": "立体シャドウ",
+    "ko": "입체 그림자",
+    "th": "เงาสามมิติ",
+    "zhHans": "立体阴影",
+    "zhHant": "立體陰影"
+  },
+  "img_count": {
+    "en": "Images",
+    "ja": "画像",
+    "ko": "이미지",
+    "th": "รูปภาพ",
+    "zhHans": "图片",
+    "zhHant": "圖片"
+  },
+  "insert": {
+    "en": "Insert",
+    "ja": "挿入",
+    "ko": "삽입",
+    "th": "แทรก",
+    "zhHans": "插入",
+    "zhHant": "插入"
+  },
+  "insert_3d": {
+    "en": "Insert 3D Model",
+    "ja": "3Dモデルを挿入",
+    "ko": "3D 모델 삽입",
+    "th": "แทรกโมเดล 3 มิติ",
+    "zhHans": "插入3D模型",
+    "zhHant": "插入3D模型"
+  },
+  "insert_chart": {
+    "en": "Insert Chart to Note",
+    "ja": "ノートにグラフを挿入",
+    "ko": "노트에 차트 삽입",
+    "th": "แทรกแผนภูมิในบันทึก",
+    "zhHans": "插入图表至笔记",
+    "zhHant": "插入圖表至筆記"
+  },
+  "insert_image": {
+    "en": "Insert Image",
+    "ja": "画像を挿入",
+    "ko": "이미지 삽입",
+    "th": "แทรกรูปภาพ",
+    "zhHans": "插入图片",
+    "zhHant": "插入圖片"
+  },
+  "insert_link": {
+    "en": "Insert Link",
+    "ja": "リンク挿入",
+    "ko": "링크 삽입",
+    "th": "แทรกลิงก์",
+    "zhHans": "插入链接",
+    "zhHant": "插入連結"
+  },
+  "insert_object": {
+    "en": "Insert",
+    "ja": "挿入",
+    "ko": "삽입",
+    "th": "แทรก",
+    "zhHans": "插入",
+    "zhHant": "插入"
+  },
+  "insert_page_after": {
+    "en": "Insert Page After",
+    "ja": "後ろに新規ページを挿入",
+    "ko": "뒤에 새 페이지 삽입",
+    "th": "แทรกหน้าใหม่หลังจากนี้",
+    "zhHans": "在后方插入新页面",
+    "zhHant": "在後方插入新頁面"
+  },
+  "insert_swatch": {
+    "en": "Insert Color Swatch",
+    "ja": "スウォッチカードを挿入",
+    "ko": "색상 견본 카드 삽입",
+    "th": "แทรกการ์ดตัวอย่างสี",
+    "zhHans": "插入色票卡",
+    "zhHant": "插入色票卡"
+  },
+  "insert_text_box": {
+    "en": "Insert Text Box",
+    "ja": "テキストボックスを挿入",
+    "ko": "텍스트 상자 삽입",
+    "th": "แทรกกล่องข้อความ",
+    "zhHans": "插入文本框",
+    "zhHant": "插入文字方塊"
+  },
+  "insert_to_canvas": {
+    "en": "Insert to Canvas",
+    "ja": "キャンバスに挿入",
+    "ko": "캔버스에 삽입",
+    "th": "แทรกลงในผืนผ้าใบ",
+    "zhHans": "插入至当前画布",
+    "zhHant": "插入至目前畫布"
+  },
+  "interaction_arrow": {
+    "en": "Interaction Flows",
+    "ja": "遷移フロー",
+    "ko": "인터랙션 플로우",
+    "th": "ผังกระบวนการ",
+    "zhHans": "手势流程跳转",
+    "zhHant": "手勢流程跳轉"
+  },
+  "interaction_flow_tip": {
+    "en": "Mark user tap & interaction flow directions",
+    "ja": "タップやスワイプの操作フローを指示",
+    "ko": "사용자 탭 및 인터랙션 흐름 표시",
+    "th": "ระบุทิศทางการแตะและการโต้ตอบของผู้ใช้",
+    "zhHans": "标示用户点击与滑动流向",
+    "zhHant": "標示使用者點擊與滑動流向"
+  },
+  "join_room": {
+    "en": "Join Room",
+    "ja": "ルームに参加",
+    "ko": "방 참가",
+    "th": "เข้าร่วมห้อง",
+    "zhHans": "加入协同房间",
+    "zhHant": "加入協同房間"
+  },
+  "keep_border": {
+    "en": "Keep Border",
+    "ja": "枠線を維持",
+    "ko": "테두리 유지",
+    "th": "เก็บเส้นขอบ",
+    "zhHans": "保留边框",
+    "zhHant": "保留邊框"
+  },
+  "language": {
+    "en": "Language",
+    "ja": "表示言語",
+    "ko": "인터페이스 언어",
+    "th": "ภาษาของอินเทอร์เฟซ",
+    "zhHans": "界面语言",
+    "zhHant": "介面語系"
+  },
+  "lasso_active_hint": {
+    "en": "Strokes Selected: Drag to move, or tap Delete / Cut / Copy",
+    "ja": "ストローク選択中：ドラッグで移動、または削除/切り取り/コピー",
+    "ko": "획 선택됨: 드래그하여 이동 또는 삭제/잘라내기/복사",
+    "th": "เลือกลายเส้นแล้ว: ลากเพื่อย้าย หรือแตะลบ / ตัด / คัดลอก",
+    "zhHans": "已圈选笔画：可拖曳移动，或点击删除 / 剪切 / 复制",
+    "zhHant": "已圈選筆劃：可拖曳移動，或點擊刪除 / 剪下 / 複製"
+  },
+  "link_preview": {
+    "en": "Link Preview",
+    "ja": "リンクプレビュー",
+    "ko": "링크 미리보기",
+    "th": "ดูตัวอย่างลิงก์",
+    "zhHans": "网页预览",
+    "zhHant": "網頁預覽"
+  },
+  "local_relay_hint": {
+    "en": "When the address points at this device (127.0.0.1), Kairumo runs the relay locally. Teammates should enter the LAN address shown by the host instead.",
+    "ja": "アドレスが端末自身 (127.0.0.1) の場合、この端末で中継を起動します。参加者はホストに表示された LAN アドレスを入力してください。",
+    "ko": "주소가 이 기기(127.0.0.1)를 가리키면 앱이 직접 릴레이를 실행합니다. 참가자는 호스트에 표시된 LAN 주소를 입력하세요.",
+    "th": "เมื่อที่อยู่ชี้มาที่อุปกรณ์นี้ (127.0.0.1) แอปจะเปิดรีเลย์บนเครื่องนี้ ผู้ร่วมงานให้กรอกที่อยู่ LAN ที่โฮสต์แสดงไว้",
+    "zhHans": "地址指向本机（127.0.0.1）时，App 会直接在这台设备上开启协同中继；队友请改填房主显示的局域网地址。",
+    "zhHant": "位址指向本機（127.0.0.1）時，App 會直接在這台裝置上開啟協同中繼；隊友請改填房主顯示的區域網路位址。"
+  },
+  "mat_copper": {
+    "en": "Copper",
+    "ja": "カッパー (銅)",
+    "ko": "구리 (동)",
+    "th": "ทองแดง",
+    "zhHans": "红铜",
+    "zhHant": "紅銅"
+  },
+  "mat_gold": {
+    "en": "Gold",
+    "ja": "ゴールド",
+    "ko": "골드 (금)",
+    "th": "ทองคำ",
+    "zhHans": "黄金",
+    "zhHant": "黃金"
+  },
+  "mat_granite": {
+    "en": "Granite",
+    "ja": "花崗岩",
+    "ko": "화강암",
+    "th": "หินแกรนิต",
+    "zhHans": "花岗岩",
+    "zhHant": "花崗岩"
+  },
+  "mat_iron": {
+    "en": "Steel",
+    "ja": "スチール (鉄)",
+    "ko": "강철",
+    "th": "เหล็กกล้า",
+    "zhHans": "钢铁",
+    "zhHant": "鋼鐵"
+  },
+  "mat_marble": {
+    "en": "Marble",
+    "ja": "大理石",
+    "ko": "대리석",
+    "th": "หินอ่อน",
+    "zhHans": "大理石",
+    "zhHant": "大理石"
+  },
+  "mat_none": {
+    "en": "None",
+    "ja": "なし",
+    "ko": "없음",
+    "th": "ไม่มี",
+    "zhHans": "无特殊材质",
+    "zhHant": "無特殊材質"
+  },
+  "mat_obsidian": {
+    "en": "Obsidian",
+    "ja": "黒曜石",
+    "ko": "흑요석",
+    "th": "หินออบซิเดียน",
+    "zhHans": "黑曜石",
+    "zhHant": "黑曜石"
+  },
+  "mat_plastic": {
+    "en": "Plastic",
+    "ja": "プラスチック",
+    "ko": "플라스틱",
+    "th": "พาสติก",
+    "zhHans": "塑料",
+    "zhHant": "塑膠"
+  },
+  "mat_silver": {
+    "en": "Silver",
+    "ja": "シルバー",
+    "ko": "실버 (은)",
+    "th": "เงิน",
+    "zhHans": "白银",
+    "zhHant": "白銀"
+  },
+  "mat_wood": {
+    "en": "Wood",
+    "ja": "ウッド (木材)",
+    "ko": "목재",
+    "th": "ไม้",
+    "zhHans": "原木",
+    "zhHant": "原木"
+  },
+  "material_specs_card": {
+    "en": "Material Specs Card",
+    "ja": "材料仕様カード",
+    "ko": "재료 사양 카드",
+    "th": "การ์ดสเปกวัสดุ",
+    "zhHans": "材料规格卡",
+    "zhHant": "材料規格卡"
+  },
+  "material_specs_tip": {
+    "en": "Insert Engineering Material & Specs Label",
+    "ja": "材質・表面処理仕様ラベルを挿入",
+    "ko": "엔지니어링 재질 및 표면 사양 라벨 삽입",
+    "th": "แทรกฉลากวัสดุและข้อกำหนดทางวิศวกรรม",
+    "zhHans": "插入工程材质与表面工艺标签",
+    "zhHant": "插入工程材質與表面工藝標籤"
+  },
+  "material_style": {
+    "en": "Material",
+    "ja": "マテリアル",
+    "ko": "재질 특성",
+    "th": "คุณสมบัติวัสดุ",
+    "zhHans": "外观材质",
+    "zhHant": "外觀材質"
+  },
+  "math_calc": {
+    "en": "Math Calculator",
+    "ja": "数式計算",
+    "ko": "수식 계산",
+    "th": "คำนวณคณิตศาสตร์",
+    "zhHans": "算式计算",
+    "zhHant": "算式計算"
+  },
+  "math_calculate": {
+    "en": "Calculate",
+    "ja": "計算実行",
+    "ko": "계산하기",
+    "th": "คำนวณผลลัพธ์",
+    "zhHans": "计算求解",
+    "zhHant": "計算求解"
+  },
+  "math_card_border": {
+    "en": "Keep Card Border",
+    "ja": "カードの枠線を維持",
+    "ko": "카드 테두리 유지",
+    "th": "เก็บเส้นขอบการ์ด",
+    "zhHans": "保留卡片边框",
+    "zhHant": "保留卡片邊框"
+  },
+  "math_error": {
+    "en": "Invalid formula or syntax error",
+    "ja": "無効な数式または構文エラー",
+    "ko": "잘못된 수식 형식",
+    "th": "รูปแบบสูตรไม่ถูกต้อง",
+    "zhHans": "算式格式无效或无法计算",
+    "zhHant": "算式格式無效或無法計算"
+  },
+  "math_expression": {
+    "en": "Enter formula (e.g. 125 * 8 + 45 or sqrt(144))",
+    "ja": "数式を入力（例: 125 * 8 + 45 または sqrt(144)）",
+    "ko": "수식 입력 (예: 125 * 8 + 45 또는 sqrt(144))",
+    "th": "ป้อนสูตร (เช่น 125 * 8 + 45 หรือ sqrt(144))",
+    "zhHans": "输入或手写算式（例如: 125 * 8 + 45 或 sqrt(144)）",
+    "zhHant": "輸入或手寫算式（例如: 125 * 8 + 45 或 sqrt(144)）"
+  },
+  "math_input_hint": {
+    "en": "Enter formula above and click 'Calculate Solution'",
+    "ja": "上部に計算式を入力して「計算実行」をクリックしてください",
+    "ko": "위에 수식을 입력한 후 '계산 실행'을 클릭하세요",
+    "th": "ป้อนสูตรด้านบนแล้วคลิก 'คำนวณผลลัพธ์'",
+    "zhHans": "请在上方输入算式后点击“计算求解”",
+    "zhHant": "請在上方輸入算式後點擊「計算求解」"
+  },
+  "math_insert": {
+    "en": "Insert to Canvas",
+    "ja": "キャンバスに貼付",
+    "ko": "캔버스에 삽입",
+    "th": "แทรกลงในผืนผ้าใบ",
+    "zhHans": "将算式贴入画布",
+    "zhHant": "將算式貼入畫布"
+  },
+  "math_placeholder": {
+    "en": "e.g., 125 * 8 + 45",
+    "ja": "例: 125 * 8 + 45",
+    "ko": "예: 125 * 8 + 45",
+    "th": "เช่น: 125 * 8 + 45",
+    "zhHans": "例如: 125 * 8 + 45",
+    "zhHant": "例如: 125 * 8 + 45"
+  },
+  "math_symbols": {
+    "en": "Math Symbols",
+    "ja": "数学記号",
+    "ko": "수학 기호",
+    "th": "สัญลักษณ์ทางคณิตศาสตร์",
+    "zhHans": "数学代号",
+    "zhHant": "數學代號"
+  },
+  "math_value_prefix": {
+    "en": "Value",
+    "ja": "値",
+    "ko": "값",
+    "th": "ค่า",
+    "zhHans": "数值",
+    "zhHant": "數值"
+  },
+  "mic_permission_msg": {
+    "en": "Kairumo needs microphone access to record lectures and sync audio with your handwriting. Tap 'Open Settings' to grant permission.",
+    "ja": "Kairumo は授業や会議の録音と筆跡を同期させるためにマイクへのアクセス権が必要です。「設定を開く」をタップして許可してください。",
+    "ko": "Kairumo 는 수업 및 회의 녹음을 손글씨와 동기화하기 위해 마이크 권한이 필요합니다. '설정 열기'를 눌러 권한을 허용해주세요.",
+    "th": "Kairumo ต้องการสิทธิ์เข้าถึงไมโครโฟนเพื่อบันทึกเสียงและจัดตำแหน่งให้ตรงกับการเขียนของคุณ แตะ 'เปิดการตั้งค่า' เพื่ออนุญาต",
+    "zhHans": "Kairumo 需要麦克风权限以进行课堂与会议录音，并与手写笔记同步对齐。请点击“前往系统设置”开启权限。",
+    "zhHant": "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。請點擊「前往系統設定」開啟權限。"
+  },
+  "mic_permission_title": {
+    "en": "Microphone Access Required",
+    "ja": "マイクへのアクセス権が必要です",
+    "ko": "마이크 접근 권한 필요",
+    "th": "จำเป็นต้องได้รับอนุญาตให้ใช้ไมโครโฟน",
+    "zhHans": "需要麦克风使用权限",
+    "zhHant": "需要麥克風使用權限"
+  },
+  "milestone_snapshots": {
+    "en": "Milestone Snapshots",
+    "ja": "マイルストーンスナップショット",
+    "ko": "마일스톤 스냅샷",
+    "th": "สแนปช็อตเหตุการณ์สำคัญ",
+    "zhHans": "里程碑快照时光机",
+    "zhHant": "里程碑快照時光機"
+  },
+  "minimize_dialog": {
+    "en": "Minimize",
+    "ja": "最小化",
+    "ko": "최소화",
+    "th": "ย่อหน้าต่าง",
+    "zhHans": "缩小窗口",
+    "zhHant": "縮小視窗"
+  },
+  "model3d_count": {
+    "en": "3D",
+    "ja": "3D",
+    "ko": "3D",
+    "th": "3D",
+    "zhHans": "3D 模型",
+    "zhHant": "3D 模型"
+  },
+  "model3d_studio": {
+    "en": "3D Model Studio",
+    "ja": "3D モデルスタジオ",
+    "ko": "3D 모델 스튜디오",
+    "th": "สตูดิโอโมเดล 3D",
+    "zhHans": "3D 模型工作室",
+    "zhHant": "3D 模型工作室"
+  },
+  "model3d_title": {
+    "en": "3D Model",
+    "ja": "3D 幾何モデル",
+    "ko": "3D 기하 모델",
+    "th": "โมเดลเรขาคณิต 3D",
+    "zhHans": "3D 几何模型",
+    "zhHant": "3D 幾何模型"
+  },
+  "model_3d": {
+    "en": "3D Model",
+    "ja": "3Dモデル",
+    "ko": "3D 모델",
+    "th": "โมเดล 3 มิติ",
+    "zhHans": "3D模型",
+    "zhHant": "3D模型"
+  },
+  "model_title": {
+    "en": "Object Title",
+    "ja": "オブジェクト名",
+    "ko": "개체 이름",
+    "th": "ชื่อวัตถุ",
+    "zhHans": "物体名称",
+    "zhHant": "物件名稱"
+  },
+  "more_tools": {
+    "en": "More",
+    "ja": "その他",
+    "ko": "더 보기",
+    "th": "เพิ่มเติม",
+    "zhHans": "更多",
+    "zhHant": "更多"
+  },
+  "move_to_folder": {
+    "en": "Move to Folder",
+    "ja": "フォルダへ移動",
+    "ko": "폴더로 이동",
+    "th": "ย้ายไปยังโฟลเดอร์",
+    "zhHans": "移动至文件夹",
+    "zhHant": "移動至資料夾"
+  },
+  "new_note": {
+    "en": "New Note",
+    "ja": "新規ノート",
+    "ko": "새 노트",
+    "th": "สร้างบันทึกใหม่",
+    "zhHans": "新建笔记",
+    "zhHant": "新增筆記"
+  },
+  "new_note_desc": {
+    "en": "Blank, Grid, Cornell",
+    "ja": "白紙、グリッド、コーネル式",
+    "ko": "빈 용지, 모눈, 코넬",
+    "th": "กระดาษเปล่า, ตาราง, คอร์เนลล์",
+    "zhHans": "空白纸张、网格、康奈尔",
+    "zhHant": "空白紙張、網格、康乃爾"
+  },
+  "new_notebook": {
+    "en": "New Notebook",
+    "ja": "新規ノートブック",
+    "ko": "새 노트북",
+    "th": "สมุดบันทึกใหม่",
+    "zhHans": "新建笔记本",
+    "zhHant": "新增筆記本"
+  },
+  "new_subfolder": {
+    "en": "New Subfolder",
+    "ja": "サブフォルダを追加",
+    "ko": "하위 폴더 추가",
+    "th": "สร้างโฟลเดอร์ย่อยใหม่",
+    "zhHans": "新建子文件夹",
+    "zhHant": "新增子資料夾"
+  },
+  "no_assets_found": {
+    "en": "No matching assets found",
+    "ja": "一致するアセットが見つかりません",
+    "ko": "일치하는 에셋을 찾을 수 없습니다",
+    "th": "ไม่พบเนื้อหาที่ตรงกัน",
+    "zhHans": "未找到符合条件的素材",
+    "zhHant": "未找到符合條件的素材"
+  },
+  "no_assets_hint": {
+    "en": "Try different keywords or switch theme tabs",
+    "ja": "検索キーワードを変更するか、テーマタブを切り替えてください",
+    "ko": "다른 검색어를 입력하거나 테마 탭을 전환해 보세요",
+    "th": "ลองเปลี่ยนคำค้นหาหรือสลับแท็บธีม",
+    "zhHans": "尝试更换搜索关键字或切换主题分类标签",
+    "zhHant": "嘗試更換搜尋關鍵字或切換主題分類標籤"
+  },
+  "no_notes_empty": {
+    "en": "No notes yet. Tap 'New Note' to start.",
+    "ja": "ノートがありません。「新規ノート」をタップして開始。",
+    "ko": "노트가 없습니다. '새 노트'를 눌러 시작하세요.",
+    "th": "ยังไม่มีบันทึก แตะ 'สร้างบันทึกใหม่' เพื่อเริ่ม",
+    "zhHans": "尚无笔记，点击“新建笔记”开始绘制",
+    "zhHant": "尚無筆記，點選「新增筆記」開始繪製"
+  },
+  "no_notes_hint": {
+    "en": "No notes found. Tap \"New Note\" to get started.",
+    "ja": "ノートがありません。「新規ノート」をクリックして作成",
+    "ko": "노트가 없습니다. \"새 노트\"를 클릭하여 시작하세요.",
+    "th": "ยังไม่มีบันทึก แตะ \"บันทึกใหม่\" เพื่อเริ่มต้น",
+    "zhHans": "暂无笔记，点击“新建笔记”开始绘制",
+    "zhHant": "尚無筆記或皆已隱藏，點選「新增筆記」開始繪製"
+  },
+  "no_notes_match": {
+    "en": "No matching notes found",
+    "ja": "一致するノートが見つかりません",
+    "ko": "일치하는 노트를 찾을 수 없습니다",
+    "th": "ไม่พบบันทึกที่ตรงกัน",
+    "zhHans": "未找到符合的笔记",
+    "zhHant": "找不到符合的筆記"
+  },
+  "no_recordings_hint": {
+    "en": "No audio recordings yet. Tap \"Start Recording\" to record audio.",
+    "ja": "録音がありません。「録音開始」で音声を録音します",
+    "ko": "녹음 파일이 없습니다. \"녹음 시작\"을 탭하여 녹음하세요.",
+    "th": "ยังไม่มีเสียงบันทึก แตะ \"เริ่มบันทึก\" เพื่อบันทึกเสียง",
+    "zhHans": "暂无录音文件，点击“开始录音”即可录音",
+    "zhHant": "目前尚無錄音檔或皆已隱藏，點擊「開始錄音」即可即時收音"
+  },
+  "no_search_results": {
+    "en": "No notes matching \"%@\"",
+    "ja": "「%@」に一致するノートは見つかりません",
+    "ko": "\"%@\"에 일치하는 노트가 없습니다",
+    "th": "ไม่พบบันทึกที่ตรงกับ \"%@\"",
+    "zhHans": "未找到匹配“%@”的笔记",
+    "zhHant": "找不到符合「%@」的筆記"
+  },
+  "not_downloaded": {
+    "en": "On Demand",
+    "ja": "未DL",
+    "ko": "필요 시 다운",
+    "th": "ตามต้องการ",
+    "zhHans": "随需下载",
+    "zhHant": "隨需下載"
+  },
+  "note_title": {
+    "en": "Notebook Title",
+    "ja": "ノートのタイトル",
+    "ko": "노트 제목",
+    "th": "ชื่อบันทึก",
+    "zhHans": "笔记标题",
+    "zhHant": "筆記標題"
+  },
+  "numbered_list": {
+    "en": "Numbered List",
+    "ja": "番号付きリスト",
+    "ko": "번호 매기기 목록",
+    "th": "รายการลำดับเลข",
+    "zhHans": "编号列表",
+    "zhHant": "編號清單"
+  },
+  "object_locked_by": {
+    "en": "is editing",
+    "ja": "が編集中",
+    "ko": "편집 중",
+    "th": "กำลังแก้ไข",
+    "zhHans": "正在编辑中",
+    "zhHant": "正在編輯中"
+  },
+  "offline_queue_hint": {
+    "en": "Offline mode: %d operations queued. Will auto-sync once reconnected.",
+    "ja": "オフラインです：%d 件の操作が保留中です。再接続時に自動同期されます。",
+    "ko": "오프라인 상태입니다: %d개 작업 대기 중. 다시 연결되면 자동 동기화됩니다.",
+    "th": "ออฟไลน์อยู่: รอคิว %d รายการ จะซิงค์อัตโนมัติเมื่อเชื่อมต่อใหม่",
+    "zhHans": "目前离线，已暂存 %d 笔操作，连接恢复时将自动同步。",
+    "zhHant": "目前離線，已暫存 %d 筆操作，連線恢復時將自動同步。"
+  },
+  "online": {
+    "en": "Online",
+    "ja": "オンライン",
+    "ko": "온라인",
+    "th": "ออนไลน์",
+    "zhHans": "在线",
+    "zhHant": "線上"
+  },
+  "online_participants": {
+    "en": "Online Participants",
+    "ja": "オンラインメンバー",
+    "ko": "온라인 참여자",
+    "th": "ผู้เข้าร่วมออนไลน์",
+    "zhHans": "在线成员",
+    "zhHant": "在線成員"
+  },
+  "opacity": {
+    "en": "Opacity",
+    "ja": "不透明度",
+    "ko": "불투명도",
+    "th": "ความทึบแสง",
+    "zhHans": "不透明度",
+    "zhHant": "不透明度"
+  },
+  "open": {
+    "en": "Open",
+    "ja": "開く",
+    "ko": "열기",
+    "th": "เปิด",
+    "zhHans": "打开",
+    "zhHant": "開啟"
+  },
+  "open_comments": {
+    "en": "Comments",
+    "ja": "コメント一覧",
+    "ko": "댓글 목록",
+    "th": "รายการความคิดเห็น",
+    "zhHans": "讨论图钉列表",
+    "zhHant": "討論圖釘列表"
+  },
+  "open_editor": {
+    "en": "Open Editor",
+    "ja": "編集を開く",
+    "ko": "편집 열기",
+    "th": "เปิดแก้ไข",
+    "zhHans": "打开编辑",
+    "zhHant": "開啟編輯"
+  },
+  "open_folder": {
+    "en": "Open Kairumo Record Folder",
+    "ja": "Kairumo Record フォルダを開く",
+    "ko": "Kairumo Record 폴더 열기",
+    "th": "เปิดโฟลเดอร์ Kairumo Record",
+    "zhHans": "打开 Kairumo Record 文件夹",
+    "zhHant": "開啟 Kairumo Record 資料夾"
+  },
+  "open_link": {
+    "en": "Open Link",
+    "ja": "リンクを開く",
+    "ko": "링크 열기",
+    "th": "เปิดลิงก์",
+    "zhHans": "打开链接",
+    "zhHant": "開啟連結"
+  },
+  "open_record_folder": {
+    "en": "Open Kairumo Record Folder",
+    "ja": "Kairumo Record フォルダを開く",
+    "ko": "Kairumo Record 폴더 열기",
+    "th": "เปิดโฟลเดอร์ Kairumo Record",
+    "zhHans": "打开 Kairumo Record 文件夹",
+    "zhHant": "開啟 Kairumo Record 資料夾"
+  },
+  "open_settings": {
+    "en": "Open Settings",
+    "ja": "設定を開く",
+    "ko": "설정 열기",
+    "th": "เปิดการตั้งค่า",
+    "zhHans": "前往系统设置开启",
+    "zhHant": "前往系統設定開啟"
+  },
+  "page_extended_hint": {
+    "en": "Page length extended (+800pt)",
+    "ja": "キャンバス長を延長しました (+800pt)",
+    "ko": "캔버스 길이가 연장되었습니다 (+800pt)",
+    "th": "ขยายความยาวของผืนผ้าใบแล้ว (+800pt)",
+    "zhHans": "已向下延长画布长度 (+800pt)",
+    "zhHant": "已向下延長畫布長度 (+800pt)"
+  },
+  "pages": {
+    "en": "pages",
+    "ja": "ページ",
+    "ko": "페이지",
+    "th": "หน้า",
+    "zhHans": "页",
+    "zhHant": "頁"
+  },
+  "pages_count_suffix": {
+    "en": "Pages",
+    "ja": "ページ",
+    "ko": "페이지",
+    "th": "หน้า",
+    "zhHans": "页",
+    "zhHant": "頁"
+  },
+  "palette_business": {
+    "en": "Business",
+    "ja": "ビジネス",
+    "ko": "비즈니스",
+    "th": "ธุรกิจ",
+    "zhHans": "经典商务",
+    "zhHant": "經典商務"
+  },
+  "palette_morandi": {
+    "en": "Morandi",
+    "ja": "モランディ",
+    "ko": "모란디",
+    "th": "โมรันดี",
+    "zhHans": "莫兰迪系",
+    "zhHant": "莫蘭迪系"
+  },
+  "palette_neon": {
+    "en": "Neon Vivid",
+    "ja": "ネオン",
+    "ko": "네온",
+    "th": "นีออน",
+    "zhHans": "鲜艳霓虹",
+    "zhHant": "鮮豔霓虹"
+  },
+  "palette_pastel": {
+    "en": "Pastel",
+    "ja": "パステル",
+    "ko": "파스텔",
+    "th": "พาสเทล",
+    "zhHans": "柔和粉彩",
+    "zhHant": "柔和粉彩"
+  },
+  "palette_swatches": {
+    "en": "Color Palettes",
+    "ja": "配色パレット",
+    "ko": "색상 팔레트",
+    "th": "จานสีคลาสสิก",
+    "zhHans": "经典色卡库",
+    "zhHant": "經典色卡庫"
+  },
+  "palette_tip": {
+    "en": "Tap color to sample / Tap insert to paste swatch",
+    "ja": "タップで色取得 /「挿入」で配置",
+    "ko": "색상 탭하여 추출 / \"삽입\"으로 배치",
+    "th": "แตะสีเพื่อเลือก / แตะ \"แทรก\" เพื่อวาง",
+    "zhHans": "点击颜色可吸取 / 点“插入”贴至画布",
+    "zhHant": "點選色彩可吸取 / 點「插入」貼至畫布"
+  },
+  "palette_vintage": {
+    "en": "Vintage",
+    "ja": "ヴィンテージ",
+    "ko": "빈티지",
+    "th": "วินเทจ",
+    "zhHans": "复古手帐",
+    "zhHant": "復古手帳"
+  },
+  "paragraph_align": {
+    "en": "Paragraph Alignment",
+    "ja": "段落の配置",
+    "ko": "단락 정렬",
+    "th": "การจัดแนวข้อความ",
+    "zhHans": "段落对齐",
+    "zhHant": "段落對齊"
+  },
+  "paste_strokes": {
+    "en": "Paste",
+    "ja": "ペースト",
+    "ko": "붙여넣기",
+    "th": "วาง",
+    "zhHans": "粘贴",
+    "zhHant": "貼上"
+  },
+  "paste_strokes_hint": {
+    "en": "Paste the strokes from the clipboard onto this page",
+    "ja": "クリップボードの筆跡をこのページに貼り付けます",
+    "ko": "클립보드의 필기를 이 페이지에 붙여넣습니다",
+    "th": "วางเส้นจากคลิปบอร์ดลงในหน้านี้",
+    "zhHans": "把剪贴板中的笔画粘贴到这一页",
+    "zhHant": "把剪貼簿中的筆劃貼到這一頁"
+  },
+  "platform_desc": {
+    "en": "Platform",
+    "ja": "プラットフォーム",
+    "ko": "플랫폼",
+    "th": "แพลตฟอร์ม",
+    "zhHans": "运行平台",
+    "zhHant": "執行平台"
+  },
+  "preferences_lang": {
+    "en": "Preferences & Language",
+    "ja": "環境設定と表示言語",
+    "ko": "환경설정 및 언어",
+    "th": "การตั้งค่าและภาษา",
+    "zhHans": "偏好设置与界面语言",
+    "zhHant": "偏好設定與介面語言"
+  },
+  "preview_chart": {
+    "en": "Live Chart Preview",
+    "ja": "プレビュー",
+    "ko": "실시간 미리보기",
+    "th": "ดูตัวอย่างแผนภูมิ",
+    "zhHans": "图表实时预览",
+    "zhHant": "圖表即時預覽"
+  },
+  "print_note": {
+    "en": "Print Notebook",
+    "ja": "ノートを印刷",
+    "ko": "노트 인쇄",
+    "th": "พิมพ์สมุดบันทึก",
+    "zhHans": "打印笔记",
+    "zhHant": "列印筆記"
+  },
+  "privacy_policy": {
+    "en": "Privacy Policy",
+    "ja": "プライバシーポリシー",
+    "ko": "개인정보 처리방침",
+    "th": "นโยบายความเป็นส่วนตัว",
+    "zhHans": "隐私政策",
+    "zhHant": "隱私權政策"
+  },
+  "privacy_policy_desc": {
+    "en": "No accounts, no servers, no tracking",
+    "ja": "アカウントもサーバーも追跡もなし",
+    "ko": "계정도 서버도 추적도 없음",
+    "th": "ไม่มีบัญชี ไม่มีเซิร์ฟเวอร์ ไม่มีการติดตาม",
+    "zhHans": "没有账号、没有服务器、没有追踪",
+    "zhHant": "沒有帳號、沒有伺服器、沒有追蹤"
+  },
+  "pro_color": {
+    "en": "Pro Color Studio",
+    "ja": "プロ調色",
+    "ko": "전문 조색",
+    "th": "จานสีมืออาชีพ",
+    "zhHans": "专业调色",
+    "zhHant": "專業調色"
+  },
+  "punctuation_marks": {
+    "en": "Punctuation",
+    "ja": "句読点",
+    "ko": "문장 부호",
+    "th": "เครื่องหมายวรรคตอน",
+    "zhHans": "标点符号",
+    "zhHant": "標點符號"
+  },
+  "punctuation_symbols": {
+    "en": "Punctuation",
+    "ja": "句読点",
+    "ko": "문장 부호",
+    "th": "เครื่องหมายวรรคตอน",
+    "zhHans": "标点符号",
+    "zhHant": "標點符號"
+  },
+  "quick_record": {
+    "en": "Quick Record",
+    "ja": "クイック録音",
+    "ko": "빠른 녹음",
+    "th": "บันทึกเสียงด่วน",
+    "zhHans": "快速录音",
+    "zhHant": "快速錄音"
+  },
+  "quick_record_title": {
+    "en": "Audio Recording & Sync",
+    "ja": "音声録音と同期",
+    "ko": "음성 녹음 및 동기화",
+    "th": "การบันทึกเสียงและการซิงค์",
+    "zhHans": "语音录音与对齐",
+    "zhHant": "語音錄音與對齊"
+  },
+  "rec_title_input": {
+    "en": "Recording Title",
+    "ja": "録音タイトル",
+    "ko": "녹음 제목",
+    "th": "ชื่อการบันทึก",
+    "zhHans": "录音标题",
+    "zhHant": "錄音標題"
+  },
+  "recent_colors": {
+    "en": "Recent",
+    "ja": "最近使用した色",
+    "ko": "최근 사용",
+    "th": "สีที่ใช้ล่าสุด",
+    "zhHans": "最近使用",
+    "zhHant": "最近使用"
+  },
+  "recent_opened": {
+    "en": "Recently Opened",
+    "ja": "最近開いた",
+    "ko": "최근 열림",
+    "th": "เปิดล่าสุด",
+    "zhHans": "最近打开",
+    "zhHant": "最近開啟"
+  },
+  "recent_recordings": {
+    "en": "Recent Recordings & Transcripts",
+    "ja": "最近の録音と文字起こし",
+    "ko": "최근 녹음 및 필사",
+    "th": "การบันทึกและการถอดเสียงล่าสุด",
+    "zhHans": "最近录音与转录",
+    "zhHant": "最近錄音與轉錄"
+  },
+  "reconnect_now": {
+    "en": "Reconnect Now",
+    "ja": "今すぐ再接続",
+    "ko": "지금 다시 연결",
+    "th": "เชื่อมต่อใหม่ทันที",
+    "zhHans": "立即重连",
+    "zhHant": "立即重連"
+  },
+  "reconnected_sync_complete": {
+    "en": "Reconnected. Offline changes synced.",
+    "ja": "再接続されました。オフラインの変更が同期されました",
+    "ko": "다시 연결되었습니다. 오프라인 변경 사항이 동기화되었습니다",
+    "th": "เชื่อมต่อใหม่แล้ว ซิงค์การเปลี่ยนแปลงออฟไลน์เรียบร้อยแล้ว",
+    "zhHans": "已重新连接，离线变更已同步完成",
+    "zhHant": "已重新連線，離線變更已同步完成"
+  },
+  "reconnecting_status": {
+    "en": "Connection lost. Reconnecting (%d/%d)...",
+    "ja": "接続が切断されました。再接続中 (%d/%d)...",
+    "ko": "연결이 끊어졌습니다. 다시 연결하는 중 (%d/%d)...",
+    "th": "การเชื่อมต่อขาดหาย กำลังเชื่อมต่อใหม่ (%d/%d)...",
+    "zhHans": "连接中断，正在自动重新连接 (第 %d/%d 次)...",
+    "zhHant": "連線中斷，正在自動重新連線 (第 %d/%d 次)..."
+  },
+  "record": {
+    "en": "Record",
+    "ja": "録音",
+    "ko": "녹음",
+    "th": "บันทึก",
+    "zhHans": "录音",
+    "zhHant": "錄音"
+  },
+  "recording_suffix": {
+    "en": "Recording",
+    "ja": "録音",
+    "ko": "녹음",
+    "th": "การบันทึก",
+    "zhHans": "录音",
+    "zhHant": "錄音"
+  },
+  "recording_title": {
+    "en": "Recording Title",
+    "ja": "録音タイトル",
+    "ko": "녹음 제목",
+    "th": "ชื่อการบันทึก",
+    "zhHans": "录音标题",
+    "zhHant": "錄音標題"
+  },
+  "redo": {
+    "en": "Redo",
+    "ja": "やり直し",
+    "ko": "다시 실행",
+    "th": "ทำซ้ำ",
+    "zhHans": "重做",
+    "zhHant": "重做"
+  },
+  "redo_refine": {
+    "en": "Redo Refine",
+    "ja": "やり直す",
+    "ko": "다시 실행",
+    "th": "ทำซ้ำการปรับแต่ง",
+    "zhHans": "重做修饰",
+    "zhHant": "重做修飾"
+  },
+  "refine_sketch": {
+    "en": "Refine Sketch",
+    "ja": "スケッチ補正",
+    "ko": "스케치 보정",
+    "th": "ปรับแต่งภาพร่าง",
+    "zhHans": "草图修饰",
+    "zhHant": "草圖修飾"
+  },
+  "refine_strength": {
+    "en": "Intensity",
+    "ja": "補正強度",
+    "ko": "보정 강도",
+    "th": "ความเข้มข้น",
+    "zhHans": "修饰强度",
+    "zhHant": "修飾強度"
+  },
+  "relay_server_address": {
+    "en": "Relay Server Address",
+    "ja": "中継サーバーアドレス",
+    "ko": "중계 서버 주소",
+    "th": "ที่อยู่เซิร์ฟเวอร์รีเลย์",
+    "zhHans": "协同服务器地址",
+    "zhHant": "協同伺服器位址"
+  },
+  "remove_border": {
+    "en": "Remove Border",
+    "ja": "枠線を削除",
+    "ko": "테두리 제거",
+    "th": "ลบเส้นขอบ",
+    "zhHans": "删除边框",
+    "zhHant": "刪除邊框"
+  },
+  "remove_cache": {
+    "en": "Remove Local Cache",
+    "ja": "ローカルキャッシュを削除",
+    "ko": "로컬 캐시 제거",
+    "th": "ลบแคชในเครื่อง",
+    "zhHans": "移除本地缓存",
+    "zhHant": "移除本機快取"
+  },
+  "remove_image_from_canvas": {
+    "en": "Remove from canvas",
+    "ja": "キャンバスから削除",
+    "ko": "캔버스에서 제거",
+    "th": "ลบออกจากผืนผ้าใบ",
+    "zhHans": "从画布移除",
+    "zhHant": "從畫布移除"
+  },
+  "rename_folder": {
+    "en": "Rename Folder",
+    "ja": "フォルダ名を変更",
+    "ko": "폴더 이름 변경",
+    "th": "เปลี่ยนชื่อโฟลเดอร์",
+    "zhHans": "重命名文件夹",
+    "zhHant": "重新命名資料夾"
+  },
+  "rename_note": {
+    "en": "Rename Notebook",
+    "ja": "ノートの名前を変更",
+    "ko": "노트 이름 바꾸기",
+    "th": "เปลี่ยนชื่อสมุดบันทึก",
+    "zhHans": "重命名笔记",
+    "zhHant": "重新命名筆記"
+  },
+  "reopen": {
+    "en": "Reopen",
+    "ja": "再オープン",
+    "ko": "다시 열기",
+    "th": "เปิดใหม่",
+    "zhHans": "重新开启",
+    "zhHant": "重新開啟"
+  },
+  "reply": {
+    "en": "Reply",
+    "ja": "返信",
+    "ko": "답글",
+    "th": "ตอบกลับ",
+    "zhHans": "回复",
+    "zhHant": "回覆"
+  },
+  "reset": {
+    "en": "Reset",
+    "ja": "リセット",
+    "ko": "초기화",
+    "th": "รีเซ็ต",
+    "zhHans": "重置",
+    "zhHant": "重設"
+  },
+  "resolve": {
+    "en": "Resolve",
+    "ja": "解決済みにする",
+    "ko": "해결됨으로 표시",
+    "th": "ทำเครื่องหมายว่าแก้ไขแล้ว",
+    "zhHans": "标记为已解决",
+    "zhHant": "標記為已解決"
+  },
+  "resolved": {
+    "en": "Resolved",
+    "ja": "解決済み",
+    "ko": "해결됨",
+    "th": "แก้ไขแล้ว",
+    "zhHans": "已解决",
+    "zhHant": "已解決"
+  },
+  "responsive_asset_desc": {
+    "en": "Download on-demand physical specs & 3D models",
+    "ja": "高解像度の仕様書と3DモデルをオンデマンドDL",
+    "ko": "고해상도 실제 사양도 및 3D 부품 온디맨드 다운로드",
+    "th": "ดาวน์โหลดสเปกจริงและชิ้นส่วน 3D ตามความต้องการ",
+    "zhHans": "随需下载高解析实体规格图与 3D 零部件",
+    "zhHant": "隨需下載高解析實體規格圖與 3D 零組件"
+  },
+  "restore_original": {
+    "en": "Restore Original",
+    "ja": "元に戻す",
+    "ko": "원본 복원",
+    "th": "กู้คืนต้นฉบับ",
+    "zhHans": "恢复原草图",
+    "zhHant": "恢復原草圖"
+  },
+  "restore_snapshot": {
+    "en": "Rollback to Snapshot",
+    "ja": "このバージョンに復元",
+    "ko": "이 버전으로 롤백",
+    "th": "ย้อนกลับไปยังเวอร์ชันนี้",
+    "zhHans": "回滚至此版本",
+    "zhHant": "回滾至此版本"
+  },
+  "restore_snapshot_confirm": {
+    "en": "Roll back notebook to this snapshot? Current unsaved changes will be replaced.",
+    "ja": "ノートをこのスナップショットにロールバックしますか？現在の未保存内容は置換されます。",
+    "ko": "노트를 이 스냅샷으로 롤백하시겠습니까? 저장되지 않은 변경 사항은 대체됩니다.",
+    "th": "ย้อนกลับสมุดบันทึกเป็นสแนปช็อตนี้หรือไม่? การเปลี่ยนแปลงปัจจุบันจะถูกแทนที่",
+    "zhHans": "确认要将笔记回滚至此快照？当前未保存的内容将被替换。",
+    "zhHant": "確認要將筆記回滾至此快照？當前未保存的內容將被取代。"
+  },
+  "role_editor": {
+    "en": "Editor",
+    "ja": "編集者",
+    "ko": "편집자",
+    "th": "ผู้แก้ไข",
+    "zhHans": "编辑者",
+    "zhHant": "編輯者"
+  },
+  "role_owner": {
+    "en": "Host (Owner)",
+    "ja": "ホスト (所有者)",
+    "ko": "방장 (소유자)",
+    "th": "เจ้าของห้อง",
+    "zhHans": "房主 (拥有者)",
+    "zhHant": "房主 (擁有者)"
+  },
+  "role_viewer": {
+    "en": "Viewer",
+    "ja": "閲覧者",
+    "ko": "뷰어",
+    "th": "ผู้ชม",
+    "zhHans": "查看者",
+    "zhHant": "檢視者"
+  },
+  "roman_numerals": {
+    "en": "Roman Numerals",
+    "ja": "ローマ数字",
+    "ko": "로마 숫자",
+    "th": "ตัวเลขโรมัน",
+    "zhHans": "罗马符号",
+    "zhHant": "羅馬符號"
+  },
+  "roman_symbols": {
+    "en": "Roman Numerals",
+    "ja": "ローマ数字",
+    "ko": "로마 숫자",
+    "th": "เลขโรมัน",
+    "zhHans": "罗马符号",
+    "zhHant": "羅馬符號"
+  },
+  "room_id": {
+    "en": "Room ID",
+    "ja": "ルームID",
+    "ko": "방 ID",
+    "th": "รหัสห้อง",
+    "zhHans": "房间识别码",
+    "zhHant": "房間識別碼"
+  },
+  "room_id_copied": {
+    "en": "Room ID Copied",
+    "ja": "ルームIDをコピーしました",
+    "ko": "방 ID가 복사되었습니다",
+    "th": "คัดลอกรหัสห้องแล้ว",
+    "zhHans": "已复制房间识别码",
+    "zhHant": "已複製房間識別碼"
+  },
+  "root_folder": {
+    "en": "Root Folder",
+    "ja": "ルートフォルダ",
+    "ko": "최상위 폴더",
+    "th": "โฟลเดอร์ระดับบนสุด",
+    "zhHans": "最上层文件夹",
+    "zhHant": "最上層資料夾"
+  },
+  "rotate_hint": {
+    "en": "Drag to Rotate",
+    "ja": "ドラッグして回転",
+    "ko": "드래그하여 회전",
+    "th": "ลากเพื่อหมุน",
+    "zhHans": "拖拽旋转3D视角",
+    "zhHant": "拖曳旋轉3D視角"
+  },
+  "rotate_right_90": {
+    "en": "Rotate 90°",
+    "ja": "90° 回転",
+    "ko": "90° 회전",
+    "th": "หมุน 90°",
+    "zhHans": "向右转 90°",
+    "zhHant": "向右轉 90°"
+  },
+  "rule_of_thirds_desc": {
+    "en": "Standard 3x3 grid lines with 4 intersection power points",
+    "ja": "標準3分割ラインと4つの交点フォーカス表示",
+    "ko": "표준 3분할 라인 및 4개 교차점 초점 가이드",
+    "th": "เส้นกริดมาตรฐาน 3x3 พร้อมจุดโฟกัส 4 จุด",
+    "zhHans": "标准三等分纵横辅助线与交会四点焦点指示",
+    "zhHant": "標準三等分縱橫輔助線與交會四點焦點指示"
+  },
+  "rule_of_thirds_ref": {
+    "en": "Rule of Thirds Grid",
+    "ja": "三分割構図ガイド",
+    "ko": "3등분 법칙 격자",
+    "th": "ตารางกฎสามส่วน",
+    "zhHans": "九宫格三分构图线 (Rule of Thirds)",
+    "zhHant": "九宮格三分構圖線 (Rule of Thirds)"
+  },
+  "ruler": {
+    "en": "Ruler Guide",
+    "ja": "定規ガイド",
+    "ko": "자 가이드",
+    "th": "เส้นบรรทัดนำสายตา",
+    "zhHans": "标尺辅助线",
+    "zhHant": "尺規輔助線"
+  },
+  "ruler_hint": {
+    "en": "• Hint: Rotate with two fingers on trackpad or hold Option while dragging",
+    "ja": "• ヒント：トラックパッドを2本指で回転、またはOptionキーを押しながら回転",
+    "ko": "• 힌트: 트랙패드 두 손가락 회전, 또는 Option 키를 누른 채 드래그하여 회전",
+    "th": "• คำแนะนำ: หมุนด้วยสองนิ้วบนแทร็กแพด หรือกด Option ค้างไว้ขณะลาก",
+    "zhHans": "• 提示：触控板两指旋转，或按住 Option 键滑动旋转",
+    "zhHant": "• 提示：觸控板兩指旋轉，或按住 Option 鍵滑動旋轉"
+  },
+  "ruler_mode": {
+    "en": "Ruler & Measurement Mode",
+    "ja": "定規・測定モード",
+    "ko": "자 및 측정 모드",
+    "th": "โหมดไม้บรรทัดและการวัด",
+    "zhHans": "标尺量测模式",
+    "zhHant": "尺規量測模式"
+  },
+  "sample_data": {
+    "en": "Load Sample Data",
+    "ja": "サンプル読込",
+    "ko": "샘플 불러오기",
+    "th": "โหลดข้อมูลตัวอย่าง",
+    "zhHans": "载入范例数据",
+    "zhHant": "載入範例數據"
+  },
+  "save": {
+    "en": "Save",
+    "ja": "保存",
+    "ko": "저장",
+    "th": "บันทึก",
+    "zhHans": "保存",
+    "zhHant": "儲存"
+  },
+  "search_assets_placeholder": {
+    "en": "Search mechanisms, 3C, components, specs, colors...",
+    "ja": "機構、3C、パーツ、仕様、カラーを検索...",
+    "ko": "기구, 3C, 부품, 사양, 색상 검색...",
+    "th": "ค้นหากลไก, 3C, ชิ้นส่วน, สเปก, สี...",
+    "zhHans": "搜索机构、3C、零件、规格、色彩...",
+    "zhHant": "搜尋機構、3C、零件、規格、色彩..."
+  },
+  "search_placeholder": {
+    "en": "Search note titles, drafts, or transcripts…",
+    "ja": "ノートのタイトル、下書き、内容を検索…",
+    "ko": "노트 제목, 초안 또는 내용 검색…",
+    "th": "ค้นหาชื่อบันทึก ร่าง หรือเนื้อหา…",
+    "zhHans": "搜索笔记标题、草稿或内容…",
+    "zhHant": "搜尋筆記標題、草稿或內容…"
+  },
+  "security": {
+    "en": "Account & Security",
+    "ja": "アカウントとセキュリティ",
+    "ko": "계정 및 보안",
+    "th": "บัญชีและความปลอดภัย",
+    "zhHans": "账号与安全",
+    "zhHant": "帳號與安全"
+  },
+  "seed_meeting_snippet": {
+    "en": "Live microphone capture with audio precisely aligned to your ink",
+    "ja": "マイクでのリアルタイム録音、音声と筆跡を正確に同期",
+    "ko": "마이크 실시간 녹음, 음성과 필기를 정확히 정렬",
+    "th": "บันทึกเสียงสดจากไมโครโฟน พร้อมจัดเรียงเสียงให้ตรงกับลายมือ",
+    "zhHans": "支持麦克风实时收音，声音与笔迹精确对齐",
+    "zhHant": "支援麥克風即時收音，聲音與筆跡精確對齊"
+  },
+  "seed_meeting_title": {
+    "en": "Lectures & Meetings",
+    "ja": "授業と会議の記録",
+    "ko": "강의 및 회의 기록",
+    "th": "บันทึกการเรียนและการประชุม",
+    "zhHans": "课堂与会议记录",
+    "zhHant": "課堂與會議記錄"
+  },
+  "seed_welcome_snippet": {
+    "en": "Open the canvas to handwrite, draw, record audio and export to PDF",
+    "ja": "キャンバスを開いて手書き、作図、録音、PDF 書き出しができます",
+    "ko": "캔버스를 열어 손글씨, 도형, 녹음, PDF 내보내기를 사용해 보세요",
+    "th": "เปิดผืนผ้าใบเพื่อเขียนด้วยลายมือ วาดรูป บันทึกเสียง และส่งออกเป็น PDF",
+    "zhHans": "点击进入画布即可随心手写、绘制图形、插入录音并导出 PDF",
+    "zhHant": "點擊進入畫布即可隨心手寫、繪製圖形、插入錄音並導出 PDF"
+  },
+  "seed_welcome_title": {
+    "en": "Welcome to Kairumo",
+    "ja": "Kairumo へようこそ",
+    "ko": "Kairumo에 오신 것을 환영합니다",
+    "th": "ยินดีต้อนรับสู่ Kairumo",
+    "zhHans": "欢迎使用 Kairumo",
+    "zhHant": "歡迎使用 Kairumo"
+  },
+  "select_destination_folder": {
+    "en": "Select Target Folder",
+    "ja": "移動先フォルダを選択",
+    "ko": "대상 폴더 선택",
+    "th": "เลือกโฟลเดอร์ปลายทาง",
+    "zhHans": "选择目标文件夹",
+    "zhHant": "選擇目標資料夾"
+  },
+  "select_language": {
+    "en": "Select Language",
+    "ja": "言語を選択",
+    "ko": "언어 선택",
+    "th": "เลือกภาษา",
+    "zhHans": "选择界面语言",
+    "zhHant": "選擇介面語言"
+  },
+  "select_template": {
+    "en": "Choose Template",
+    "ja": "テンプレートを選択",
+    "ko": "템플릿 선택",
+    "th": "เลือกเทมเพลต",
+    "zhHans": "选择模板",
+    "zhHant": "選擇樣板"
+  },
+  "share_invite_link": {
+    "en": "Share Invite Link",
+    "ja": "招待リンクを共有",
+    "ko": "초대 링크 공유",
+    "th": "แชร์ลิงก์คำเชิญ",
+    "zhHans": "分享邀请链接",
+    "zhHant": "分享邀請連結"
+  },
+  "share_note": {
+    "en": "Share Note",
+    "ja": "ノートを共有",
+    "ko": "노트 공유",
+    "th": "แชร์บันทึก",
+    "zhHans": "分享笔记",
+    "zhHant": "分享筆記"
+  },
+  "show_all": {
+    "en": "All",
+    "ja": "すべて",
+    "ko": "전체",
+    "th": "ทั้งหมด",
+    "zhHans": "全部",
+    "zhHant": "全部"
+  },
+  "show_in_folder": {
+    "en": "Show in Folder",
+    "ja": "フォルダで表示",
+    "ko": "폴더에서 보기",
+    "th": "แสดงในโฟลเดอร์",
+    "zhHans": "在文件夹中显示",
+    "zhHant": "在資料夾中顯示"
+  },
+  "snapshot_created": {
+    "en": "Snapshot Created",
+    "ja": "スナップショットが作成されました",
+    "ko": "스냅샷이 생성되었습니다",
+    "th": "สร้างสแนปช็อตเรียบร้อยแล้ว",
+    "zhHans": "快照已成功创建",
+    "zhHant": "快照已成功建立"
+  },
+  "snapshot_name": {
+    "en": "Snapshot Name",
+    "ja": "スナップショット名",
+    "ko": "스냅샷 이름",
+    "th": "ชื่อสแนปช็อต",
+    "zhHans": "快照名称或备注",
+    "zhHant": "快照名稱或備註"
+  },
+  "sort_by_date": {
+    "en": "Sort by Date Modified",
+    "ja": "更新日時順",
+    "ko": "수정 날짜순",
+    "th": "เรียงตามวันที่แก้ไข",
+    "zhHans": "按修改时间排序",
+    "zhHant": "依修改時間排序"
+  },
+  "sort_by_title": {
+    "en": "Sort by Name",
+    "ja": "名前順",
+    "ko": "이름순",
+    "th": "เรียงตามชื่อ",
+    "zhHans": "按名称排序",
+    "zhHant": "依名稱排序"
+  },
+  "sort_date": {
+    "en": "Sort by Date Modified",
+    "ja": "変更日順で並べ替え",
+    "ko": "수정일순 정렬",
+    "th": "เรียงตามวันที่แก้ไข",
+    "zhHans": "按修改时间排序",
+    "zhHant": "依修改時間排序"
+  },
+  "sort_only_recordings": {
+    "en": "Recordings Only",
+    "ja": "録音付きのみ",
+    "ko": "녹음 포함만",
+    "th": "เฉพาะที่มีเสียงบันทึก",
+    "zhHans": "仅显示含录音笔记",
+    "zhHant": "僅顯示含錄音筆記"
+  },
+  "sort_recordings": {
+    "en": "Only Notes with Audio",
+    "ja": "録音付きノートのみ表示",
+    "ko": "녹음 포함 노트만 표시",
+    "th": "เฉพาะบันทึกที่มีเสียง",
+    "zhHans": "仅显示含录音笔记",
+    "zhHant": "僅顯示含錄音筆記"
+  },
+  "sort_title": {
+    "en": "Sort by Title",
+    "ja": "名前順で並べ替え",
+    "ko": "이름순 정렬",
+    "th": "เรียงตามชื่อ",
+    "zhHans": "按名称排序",
+    "zhHant": "依名稱排序"
+  },
+  "spec_dimensions": {
+    "en": "Reference Dimensions: ",
+    "ja": "参考寸法：",
+    "ko": "참고 치수: ",
+    "th": "ขนาดอ้างอิง: ",
+    "zhHans": "参考尺寸：",
+    "zhHant": "參考尺寸："
+  },
+  "spec_filesize": {
+    "en": "File Size: ",
+    "ja": "ファイルサイズ：",
+    "ko": "파일 크기: ",
+    "th": "ขนาดไฟล์: ",
+    "zhHans": "文件大小：",
+    "zhHant": "檔案大小："
+  },
+  "spec_materials": {
+    "en": "Material & Finish: ",
+    "ja": "材質・仕上げ：",
+    "ko": "소재 및 공정: ",
+    "th": "วัสดุและกระบวนการ: ",
+    "zhHans": "材质工艺：",
+    "zhHant": "材質工藝："
+  },
+  "spec_specs": {
+    "en": "Main Specs: ",
+    "ja": "主要仕様：",
+    "ko": "주요 사양: ",
+    "th": "สเปกหลัก: ",
+    "zhHans": "主要规格：",
+    "zhHant": "主要規格："
+  },
+  "special_symbols": {
+    "en": "Special Symbols",
+    "ja": "特殊記号",
+    "ko": "특수 기호",
+    "th": "สัญลักษณ์พิเศษ",
+    "zhHans": "特殊符号",
+    "zhHant": "特殊符號"
+  },
+  "specs_info": {
+    "en": "Specs & Material Suggestions",
+    "ja": "仕様・材料の提案",
+    "ko": "사양 및 재료 권장사항",
+    "th": "ข้อมูลจำเพาะและคำแนะนำวัสดุ",
+    "zhHans": "实体规格与材料建议",
+    "zhHant": "實體規格與材料建議"
+  },
+  "standalone_recording": {
+    "en": "Standalone (Save as separate audio file)",
+    "ja": "添付しない（独立ファイルとして保存）",
+    "ko": "첨부 안 함 (독립 오디오로 저장)",
+    "th": "ไม่แนบ (บันทึกเป็นไฟล์เสียงแยก)",
+    "zhHans": "不附加（仅保存为独立录音）",
+    "zhHant": "不附加（僅儲存為獨立錄音）"
+  },
+  "start_collaboration": {
+    "en": "Start Collaboration",
+    "ja": "共同編集を開始",
+    "ko": "공동 편집 시작",
+    "th": "เริ่มการทำงานร่วมกัน",
+    "zhHans": "开启多人协同",
+    "zhHant": "開啟多人協同"
+  },
+  "start_recording": {
+    "en": "Start Recording",
+    "ja": "録音開始",
+    "ko": "녹음 시작",
+    "th": "เริ่มบันทึกเสียง",
+    "zhHans": "开始录音",
+    "zhHant": "開始錄音"
+  },
+  "start_recording_desc": {
+    "en": "Sync voice transcription & strokes",
+    "ja": "音声書き起こしと筆跡の同期",
+    "ko": "음성 필사 및 필기 동기화",
+    "th": "การถอดเสียงและการจัดตำแหน่งการเขียน",
+    "zhHans": "同步语音转录与书写对齐",
+    "zhHant": "同步語音轉錄與書寫對齊"
+  },
+  "status_connected": {
+    "en": "Connected",
+    "ja": "接続中",
+    "ko": "연결됨",
+    "th": "เชื่อมต่อแล้ว",
+    "zhHans": "已连接",
+    "zhHant": "已連線"
+  },
+  "status_connecting": {
+    "en": "Connecting...",
+    "ja": "接続試行中...",
+    "ko": "연결 중...",
+    "th": "กำลังเชื่อมต่อ...",
+    "zhHans": "连接中...",
+    "zhHant": "連線中..."
+  },
+  "status_disconnected": {
+    "en": "Disconnected",
+    "ja": "未接続",
+    "ko": "연결 끊김",
+    "th": "ไม่ได้เชื่อมต่อ",
+    "zhHans": "未连接",
+    "zhHant": "未連線"
+  },
+  "stop_and_save_record": {
+    "en": "Stop & Save to Kairumo Record",
+    "ja": "停止して Kairumo Record に保存",
+    "ko": "정지 및 Kairumo Record에 저장",
+    "th": "หยุดและบันทึกไปยัง Kairumo Record",
+    "zhHans": "停止并保存至 Kairumo Record",
+    "zhHant": "停止並儲存至 Kairumo Record"
+  },
+  "stop_and_save_to_folder": {
+    "en": "Stop & Save to Kairumo Record",
+    "ja": "停止して Kairumo Record に保存",
+    "ko": "중지하고 Kairumo Record 에 저장",
+    "th": "หยุดและบันทึกลงใน Kairumo Record",
+    "zhHans": "停止并保存至 Kairumo Record",
+    "zhHant": "停止並儲存至 Kairumo Record"
+  },
+  "stop_recording": {
+    "en": "Stop Recording",
+    "ja": "録音停止",
+    "ko": "녹음 중지",
+    "th": "หยุดบันทึก",
+    "zhHans": "停止录音",
+    "zhHant": "停止錄音"
+  },
+  "storage_location": {
+    "en": "Data Storage Location",
+    "ja": "データ保存先",
+    "ko": "데이터 저장 위치",
+    "th": "ตำแหน่งจัดเก็บข้อมูล",
+    "zhHans": "数据存储位置",
+    "zhHant": "資料儲存位置"
+  },
+  "stroke_width": {
+    "en": "Stroke Width",
+    "ja": "線の太さ",
+    "ko": "선 굵기",
+    "th": "ความหนาของเส้น",
+    "zhHans": "笔画粗细",
+    "zhHant": "筆畫粗細"
+  },
+  "structure_folders": {
+    "en": "Folders",
+    "ja": "フォルダ一覧",
+    "ko": "폴더 목록",
+    "th": "โครงสร้างโฟลเดอร์",
+    "zhHans": "文件夹目录",
+    "zhHant": "資料夾目錄"
+  },
+  "structure_pages": {
+    "en": "Pages",
+    "ja": "ページ構成",
+    "ko": "페이지 구성",
+    "th": "โครงสร้างหน้า",
+    "zhHans": "页面结构",
+    "zhHant": "頁面結構"
+  },
+  "structure_sidebar": {
+    "en": "Structure",
+    "ja": "ノート構造",
+    "ko": "노트 구조",
+    "th": "โครงสร้างสมุด",
+    "zhHans": "笔记结构",
+    "zhHant": "筆記結構"
+  },
+  "style_blueprint": {
+    "en": "Blueprint",
+    "ja": "線画",
+    "ko": "선화",
+    "th": "ภาพลายเส้น",
+    "zhHans": "线框图",
+    "zhHant": "線框圖"
+  },
+  "style_solid": {
+    "en": "Solid",
+    "ja": "実物",
+    "ko": "실물",
+    "th": "ภาพทึบ",
+    "zhHans": "实物",
+    "zhHant": "實物"
+  },
+  "sync_recording_in_progress": {
+    "en": "Sync Recording",
+    "ja": "同期録音中",
+    "ko": "동기화 녹음 중",
+    "th": "กำลังบันทึกเสียงพร้อมกัน",
+    "zhHans": "同步录音中",
+    "zhHant": "同步錄音中"
+  },
+  "system_diagnostics": {
+    "en": "Diagnostics & Version Info",
+    "ja": "システム診断とバージョン情報",
+    "ko": "시스템 진단 및 버전 정보",
+    "th": "ข้อมูลการวินิจฉัยและเวอร์ชัน",
+    "zhHans": "系统诊断与版本信息",
+    "zhHant": "系統診斷與版本資訊"
+  },
+  "tap_to_place_pin": {
+    "en": "Tap on canvas to place pin",
+    "ja": "キャンバスをタップしてピンを配置",
+    "ko": "캔버스를 탭하여 핀을 배치하세요",
+    "th": "แตะบนผืนผ้าใบเพื่อปักหมุด",
+    "zhHans": "请在画布上轻点以放置图钉",
+    "zhHant": "請在畫布上輕點以放置圖釘"
+  },
+  "tap_to_type_hint": {
+    "en": "Tap anywhere on the canvas to type",
+    "ja": "キャンバスをタップして文字を入力",
+    "ko": "캔버스를 탭하여 텍스트 입력",
+    "th": "แตะที่ใดก็ได้บนผืนผ้าใบเพื่อพิมพ์",
+    "zhHans": "点击画布任意处即可开始打字输入",
+    "zhHant": "點選畫布任意處即可開始打字輸入"
+  },
+  "text_studio": {
+    "en": "Text Studio",
+    "ja": "文字スタイル",
+    "ko": "텍스트 서식",
+    "th": "จัดรูปแบบข้อความ",
+    "zhHans": "文字排版",
+    "zhHant": "文字排版"
+  },
+  "text_style": {
+    "en": "Text Style",
+    "ja": "テキスト書式",
+    "ko": "텍스트 서식",
+    "th": "รูปแบบข้อความ",
+    "zhHans": "文字格式",
+    "zhHant": "文字格式"
+  },
+  "theme_aesthetic": {
+    "en": "Aesthetic & Visual",
+    "ja": "美的・視覚デザイン",
+    "ko": "미학 및 시각 디자인",
+    "th": "สุนทรียศาสตร์และการมองเห็น",
+    "zhHans": "美学视觉",
+    "zhHant": "美學視覺"
+  },
+  "theme_category": {
+    "en": "Theme",
+    "ja": "テーマ",
+    "ko": "테마 분류",
+    "th": "หมวดธีม",
+    "zhHans": "主题分类",
+    "zhHant": "主題分類"
+  },
+  "theme_digital": {
+    "en": "Digital Experience",
+    "ja": "デジタル体験・UI",
+    "ko": "디지털 경험 및 UI",
+    "th": "ประสบการณ์ดิจิทัลและ UI",
+    "zhHans": "数字化体验",
+    "zhHant": "數位體驗"
+  },
+  "theme_engineering": {
+    "en": "Engineering & Process",
+    "ja": "工学・製造設計",
+    "ko": "엔지니어링 및 공정",
+    "th": "วิศวกรรมและกระบวนการผลิต",
+    "zhHans": "工程制程",
+    "zhHant": "工程製程"
+  },
+  "theme_general": {
+    "en": "General",
+    "ja": "基本スタイル",
+    "ko": "기본 스타일",
+    "th": "ทั่วไป",
+    "zhHans": "通用基础",
+    "zhHant": "通用基礎"
+  },
+  "theme_tools": {
+    "en": "Theme Tools",
+    "ja": "テーマ別ツール",
+    "ko": "테마 도구",
+    "th": "เครื่องมือธีม",
+    "zhHans": "主题工具",
+    "zhHant": "主題工具"
+  },
+  "thread_resolved": {
+    "en": "This thread is resolved",
+    "ja": "このスレッドは解決済みです",
+    "ko": "이 스레드는 해결됨으로 표시되었습니다",
+    "th": "การสนทนานี้ถูกทำเครื่องหมายว่าแก้ไขแล้ว",
+    "zhHans": "此讨论已标记为已解决",
+    "zhHant": "此討論已標記為已解決"
+  },
+  "tmpl_blank": {
+    "en": "Blank Paper",
+    "ja": "白紙",
+    "ko": "빈 용지",
+    "th": "กระดาษเปล่า",
+    "zhHans": "空白纸张",
+    "zhHant": "空白紙張"
+  },
+  "tmpl_blank_desc": {
+    "en": "Best for sketching, mind maps & free drafting",
+    "ja": "自由な手描き、マインドマップ、スケッチに最適",
+    "ko": "자유 스케치, 마인드맵, 초안 작성에 최적",
+    "th": "เหมาะสำหรับการวาดภาพ แผนผังความคิด และร่างแบบอิสระ",
+    "zhHans": "适合自由手绘、思维导图与草稿",
+    "zhHant": "適合自由手繪、心智圖與草稿"
+  },
+  "tmpl_blueprint": {
+    "en": "Engineering Metric Blueprint",
+    "ja": "工学製図ブループリント",
+    "ko": "엔지니어링 청사진",
+    "th": "พิมพ์เขียววิศวกรรม",
+    "zhHans": "工程蓝图坐标纸",
+    "zhHant": "工程藍圖坐標紙"
+  },
+  "tmpl_blueprint_desc": {
+    "en": "Cyan metric millimeter grid with standard Title Block",
+    "ja": "シアン系ミリ方眼と標準図面表題欄",
+    "ko": "시안 밀리미터 방안 및 표준 표제란",
+    "th": "กริดมิลลิเมตรสีฟ้าครามพร้อมบล็อกชื่อมาตรฐาน",
+    "zhHans": "青蓝精密毫米网格，含右下角标准 Title Block 标题栏",
+    "zhHant": "青藍精密毫米網格，含右下角標準 Title Block 標題欄"
+  },
+  "tmpl_cornell": {
+    "en": "Cornell Notes",
+    "ja": "コーネル式",
+    "ko": "코넬 양식",
+    "th": "คอร์เนลล์",
+    "zhHans": "康奈尔模板",
+    "zhHant": "康乃爾樣板"
+  },
+  "tmpl_cornell_desc": {
+    "en": "Cues on left, notes on right, summary at bottom",
+    "ja": "左にキーワード、右にノート本文、下にまとめ",
+    "ko": "왼쪽 핵심 요약, 오른쪽 본문, 하단 총괄 요약",
+    "th": "ประเด็นหลักด้านซ้าย โน้ตด้านขวา และสรุปด้านล่าง",
+    "zhHans": "左侧提纲摘要、右侧主体笔记、底部总结",
+    "zhHant": "左側提綱摘要、右側主體筆記、底部總結"
+  },
+  "tmpl_dot_grid_fine": {
+    "en": "Fine Dot Grid (5mm)",
+    "ja": "極細ドット方眼 (5mm)",
+    "ko": "극세 도트 방안 (5mm)",
+    "th": "ดอทกริดละเอียด (5 มม.)",
+    "zhHans": "极细点阵 (5mm)",
+    "zhHant": "極細點陣 (5mm)"
+  },
+  "tmpl_dot_grid_fine_desc": {
+    "en": "Warm gray precision dots for visual & layout designers",
+    "ja": "視覚・レイアウトデザイナー向け精密ドット",
+    "ko": "시각 및 레이아웃 디자이너를 위한 온회색 정밀 도트",
+    "th": "ดอทกริดสีเทาอบอุ่นสำหรับนักออกแบบ",
+    "zhHans": "视觉艺术与版面设计师专用暖灰精密点阵",
+    "zhHant": "視覺藝術與版面設計師專用暖灰精密點陣"
+  },
+  "tmpl_golden_ratio": {
+    "en": "Golden Ratio & Thirds",
+    "ja": "黄金比と三分分割構図",
+    "ko": "황금비 및 3분할 구도",
+    "th": "สัดส่วนทองคำและกฎสามส่วน",
+    "zhHans": "黄金比例与三分构图",
+    "zhHant": "黃金比例與三分構圖"
+  },
+  "tmpl_golden_ratio_desc": {
+    "en": "Classical golden spiral & rule-of-thirds composition guides",
+    "ja": "黄金比螺旋と三分割構図ガイドライン",
+    "ko": "황금비 나선 및 3분할 가이드라인",
+    "th": "เส้นนำเกลียวทองคำและกฎสามส่วน",
+    "zhHans": "经典黄金分割线与九宫格参考辅助线",
+    "zhHant": "經典黃金分割線與九宮格參考輔助線"
+  },
+  "tmpl_grid": {
+    "en": "Grid & Dots",
+    "ja": "グリッド・ドット",
+    "ko": "모눈 점선",
+    "th": "ตารางจุด",
+    "zhHans": "方格点阵",
+    "zhHant": "方格點陣"
+  },
+  "tmpl_grid_desc": {
+    "en": "Geometry, formulas & precise diagrams",
+    "ja": "幾何学、数式展開、精密図形描画",
+    "ko": "기하학, 공식 유도 및 정밀 도표 작성",
+    "th": "เรขาคณิต สูตร และแผนภาพที่แม่นยำ",
+    "zhHans": "几何绘图、公式推导与图表绘制",
+    "zhHant": "幾何繪圖、公式推導與圖表繪製"
+  },
+  "tmpl_isometric": {
+    "en": "30° Isometric 3D Grid",
+    "ja": "30° 等角投影立体グリッド",
+    "ko": "30° 등각 투영 그리드",
+    "th": "กริดไอโซเมตริก 30°",
+    "zhHans": "30° 等角立体轴测网格",
+    "zhHant": "30° 等角立體軸測網格"
+  },
+  "tmpl_isometric_desc": {
+    "en": "Dedicated for mechanism components, 3D products & exploded views",
+    "ja": "機構部品、3D製品外観、分解斜視図専用",
+    "ko": "기구 부품, 3D 제품 외관 및 분해 투시도 전용",
+    "th": "สำหรับชิ้นส่วนกลไก ผลิตภัณฑ์ 3 มิติ และภาพระเบิด",
+    "zhHans": "机械构件、三维产品外观与爆炸透视专用",
+    "zhHant": "機械構件、三維產品外觀與爆炸透視專用"
+  },
+  "tmpl_lined": {
+    "en": "Ruled Lines",
+    "ja": "罫線ノート",
+    "ko": "줄 노트",
+    "th": "เส้นบรรทัด",
+    "zhHans": "横线笔记",
+    "zhHant": "橫線筆記"
+  },
+  "tmpl_lined_desc": {
+    "en": "Lectures, meeting transcripts & writing",
+    "ja": "講義ノート、議事録、文章作成",
+    "ko": "강의 노트, 회의록 및 글쓰기",
+    "th": "บันทึกการบรรยาย รายงานการประชุม และการเขียน",
+    "zhHans": "课堂笔记、会议逐字与文稿撰写",
+    "zhHant": "課堂筆記、會議逐字與行文撰寫"
+  },
+  "tmpl_mobile_wireframe": {
+    "en": "Mobile Wireframe (8pt)",
+    "ja": "モバイルワイヤーフレーム (8pt)",
+    "ko": "모바일 와이어프레임 (8pt)",
+    "th": "ไวร์เฟรมมือถือ (กริด 8pt)",
+    "zhHans": "移动端线框 (8pt Grid)",
+    "zhHant": "行動端線框 (8pt Grid)"
+  },
+  "tmpl_mobile_wireframe_desc": {
+    "en": "Dual phone frame outlines with 8pt pixel snap grid",
+    "ja": "デュアルスマホ枠と8ptグリッド内蔵",
+    "ko": "듀얼 스마트폰 프레임 및 8pt 픽셀 그리드",
+    "th": "กรอบมือถือคู่พร้อมกริด 8pt",
+    "zhHans": "内建双手机屏幕轮廓框与 8pt 像素网格",
+    "zhHant": "內建雙手機螢幕輪廓框與 8pt 像素網格"
+  },
+  "tmpl_moodboard": {
+    "en": "Moodboard & Palette",
+    "ja": "ムードボードと配色",
+    "ko": "무드보드 및 색상 매트릭스",
+    "th": "มู้ดบอร์ดและตารางจานสี",
+    "zhHans": "情绪板与色卡矩阵",
+    "zhHant": "情緒板與色卡矩陣"
+  },
+  "tmpl_moodboard_desc": {
+    "en": "Top 5-color swatch strip with central inspiration canvas",
+    "ja": "上部に5色のカラースウォッチ、中央にインスピレーション空間",
+    "ko": "상단 5색 스와치 및 중앙 영감 캔버스",
+    "th": "แถบสี 5 สีด้านบนพร้อมผืนผ้าใบสร้างแรงบันดาลใจ",
+    "zhHans": "顶部5格代表色票位，中央大尺寸灵感画布",
+    "zhHant": "頂部 5 格代表色票位，中央大尺寸靈感畫布"
+  },
+  "tmpl_orthographic": {
+    "en": "Orthographic Multi-View",
+    "ja": "三面図と断面図テンプレート",
+    "ko": "3면도 및 단면도 템플릿",
+    "th": "แม่แบบภาพฉายสามด้าน",
+    "zhHans": "三视图与剖面范本",
+    "zhHant": "三視圖與剖面範本"
+  },
+  "tmpl_orthographic_desc": {
+    "en": "Front, Top, Side views & isometric quadrant guides",
+    "ja": "正面・平面・側面・立体の4象限分割ガイド",
+    "ko": "정면도, 평면도, 측면도 및 입체 4분면 가이드",
+    "th": "แบ่ง 4 ส่วน: ด้านหน้า ด้านบน ด้านข้าง และภาพสามมิติ",
+    "zhHans": "正视、俯视、侧视与立体轴测四象限分区引导",
+    "zhHant": "正視、俯視、側視與立體軸測四象限分區引導"
+  },
+  "tmpl_user_journey": {
+    "en": "User Journey & Flow",
+    "ja": "ユーザージャーニーとフロー",
+    "ko": "사용자 여정 및 플로우",
+    "th": "แผนผังการเดินทางของผู้ใช้",
+    "zhHans": "用户旅程与流程图",
+    "zhHant": "使用者旅程與流程圖"
+  },
+  "tmpl_user_journey_desc": {
+    "en": "Swimlanes, step nodes & decision branch guides",
+    "ja": "スイムレーン、ステップノード、分岐条件ガイド",
+    "ko": "스윔레인, 단계 노드 및 의사결정 분기 가이드",
+    "th": "เลนว่ายน้ำ โหนดขั้นตอน และการแยกการตัดสินใจ",
+    "zhHans": "阶段泳道、步骤节点与决策条件分支引导",
+    "zhHant": "階段泳道、步驟節點與決策條件分支引導"
+  },
+  "tmpl_web_grid": {
+    "en": "Responsive Web 12-Column",
+    "ja": "レスポンシブWeb 12カラム",
+    "ko": "반응형 웹 12컬럼",
+    "th": "กริดเว็บ 12 คอลัมน์",
+    "zhHans": "响应式 Web 12 栏网格",
+    "zhHant": "響應式 Web 12 欄網格"
+  },
+  "tmpl_web_grid_desc": {
+    "en": "Standard 12-column layout, gutters & safe margins",
+    "ja": "標準12カラム、ガター、マージンレイアウト",
+    "ko": "표준 12컬럼, 거터 및 안전 여백 가이드",
+    "th": "เลย์เอาต์ 12 คอลัมน์มาตรฐานพร้อมระยะขอบ",
+    "zhHans": "标准 12 栏格线、间距与安全边距引导",
+    "zhHant": "標準 12 欄格線、間距 (Gutter) 與安全邊距引導"
+  },
+  "toggle_border": {
+    "en": "Toggle Border (Keep/Remove)",
+    "ja": "枠線の切替 (維持/削除)",
+    "ko": "테두리 전환 (유지/제거)",
+    "th": "สลับเส้นขอบ (เก็บ/ลบ)",
+    "zhHans": "边框开关 (保留/删除)",
+    "zhHant": "邊框開關 (保留/刪除)"
+  },
+  "tool_ballpoint": {
+    "en": "Ballpoint",
+    "ja": "ボールペン",
+    "ko": "볼펜",
+    "th": "ปากกาลูกลื่น",
+    "zhHans": "圆珠笔",
+    "zhHant": "原子筆"
+  },
+  "tool_brush": {
+    "en": "Calligraphy Brush",
+    "ja": "毛筆",
+    "ko": "붓",
+    "th": "พู่กัน",
+    "zhHans": "毛笔",
+    "zhHant": "毛筆"
+  },
+  "tool_eraser": {
+    "en": "Eraser",
+    "ja": "消しゴム",
+    "ko": "지우개",
+    "th": "ยางลบ",
+    "zhHans": "橡皮擦",
+    "zhHant": "橡皮擦"
+  },
+  "tool_highlighter": {
+    "en": "Highlighter",
+    "ja": "蛍光ペン",
+    "ko": "형광펜",
+    "th": "ปากกาเน้นข้อความ",
+    "zhHans": "荧光笔",
+    "zhHant": "螢光筆"
+  },
+  "tool_lasso": {
+    "en": "Lasso",
+    "ja": "投げ縄",
+    "ko": "올가미",
+    "th": "บ่วงบาศก์",
+    "zhHans": "套索选取",
+    "zhHant": "套索選取"
+  },
+  "tool_marker": {
+    "en": "Marker",
+    "ja": "マーカー",
+    "ko": "마커펜",
+    "th": "ปากกามาร์กเกอร์",
+    "zhHans": "马克笔",
+    "zhHant": "麥克筆"
+  },
+  "tool_pen": {
+    "en": "Pen",
+    "ja": "ペン",
+    "ko": "만년필",
+    "th": "ปากกาหมึกซึม",
+    "zhHans": "钢笔",
+    "zhHant": "鋼筆"
+  },
+  "tool_pencil": {
+    "en": "Pencil",
+    "ja": "鉛筆",
+    "ko": "연필",
+    "th": "ดินสอ",
+    "zhHans": "铅笔",
+    "zhHant": "鉛筆"
+  },
+  "tool_text": {
+    "en": "Text Studio",
+    "ja": "テキスト編集",
+    "ko": "텍스트 편집",
+    "th": "สตูดิโอข้อความ",
+    "zhHans": "文字排版",
+    "zhHant": "文字排版"
+  },
+  "tool_watercolor": {
+    "en": "Watercolor",
+    "ja": "水彩筆",
+    "ko": "수채화 붓",
+    "th": "พู่กันสีน้ำ",
+    "zhHans": "水彩笔",
+    "zhHant": "水彩筆"
+  },
+  "txt_count": {
+    "en": "Text",
+    "ja": "テキスト",
+    "ko": "텍스트",
+    "th": "ข้อความ",
+    "zhHans": "文本",
+    "zhHant": "文字"
+  },
+  "type_mode_active": {
+    "en": "Typing Mode Ready (Pen Locked)",
+    "ja": "入力モード準備完了（ペンロック）",
+    "ko": "타이핑 모드 준비 완료 (펜 잠금)",
+    "th": "โหมดการพิมพ์พร้อมใช้งาน (ล็อคปากกา)",
+    "zhHans": "打字模式已就绪（画笔已锁定）",
+    "zhHant": "打字模式已就緒（畫筆已鎖定）"
+  },
+  "typing_mode": {
+    "en": "Typing",
+    "ja": "タイピング",
+    "ko": "타이핑",
+    "th": "พิมพ์ข้อความ",
+    "zhHans": "打字模式",
+    "zhHant": "打字模式"
+  },
+  "ui_wireframe_tip": {
+    "en": "Quickly insert standard UI wireframe components",
+    "ja": "標準UIワイヤーフレームを素早く配置",
+    "ko": "표준 UI 와이어프레임 컴포넌트 빠른 삽입",
+    "th": "แทรกไวร์เฟรมคอมโพเนนต์ UI มาตรฐานอย่างรวดเร็ว",
+    "zhHans": "快速贴上标准 UI 组件线框",
+    "zhHant": "快速貼上標準 UI 元件線框"
+  },
+  "undo": {
+    "en": "Undo",
+    "ja": "取り消す",
+    "ko": "실행 취소",
+    "th": "เลิกทำ",
+    "zhHans": "撤销",
+    "zhHant": "復原"
+  },
+  "unfiled_notes": {
+    "en": "Unfiled Notes",
+    "ja": "未分類ノート",
+    "ko": "미분류 노트",
+    "th": "บันทึกที่ไม่ได้จัดหมวดหมู่",
+    "zhHans": "未分类文件",
+    "zhHant": "未分類檔案"
+  },
+  "unhide_items": {
+    "en": "Reset Hidden",
+    "ja": "非表示を解除",
+    "ko": "숨김 초기화",
+    "th": "รีเซ็ตที่ซ่อน",
+    "zhHans": "重置隐藏项",
+    "zhHant": "重置隱藏項目"
+  },
+  "untitled_note": {
+    "en": "Untitled Note",
+    "ja": "無題のノート",
+    "ko": "제목 없는 노트",
+    "th": "บันทึกที่ไม่มีชื่อ",
+    "zhHans": "未命名笔记",
+    "zhHant": "未命名筆記"
+  },
+  "user_manual": {
+    "en": "User Manual",
+    "ja": "操作マニュアル",
+    "ko": "사용 설명서",
+    "th": "คู่มือการใช้งาน",
+    "zhHans": "操作手册",
+    "zhHant": "操作手冊"
+  },
+  "user_manual_desc": {
+    "en": "Fourteen step-by-step chapters with screenshots",
+    "ja": "実機画面つきの全14章ガイド",
+    "ko": "실제 화면이 포함된 14개 장 안내",
+    "th": "คู่มือ 14 บท พร้อมภาพหน้าจอจริง",
+    "zhHans": "十四章手把手教学，含实机画面",
+    "zhHant": "十四章手把手教學，含實機畫面"
+  },
+  "user_profile": {
+    "en": "Profile Information",
+    "ja": "プロフィール情報",
+    "ko": "프로필 정보",
+    "th": "ข้อมูลส่วนตัว",
+    "zhHans": "个人基本信息",
+    "zhHant": "個人基本資訊"
+  },
+  "version_number": {
+    "en": "Version",
+    "ja": "バージョン",
+    "ko": "버전",
+    "th": "เวอร์ชัน",
+    "zhHans": "版本号",
+    "zhHant": "版本號"
+  },
+  "wireframe_kit": {
+    "en": "UI Wireframes",
+    "ja": "UI ワイヤーフレーム",
+    "ko": "UI 와이어프레임",
+    "th": "ไวร์เฟรม UI",
+    "zhHans": "UI 原型线框",
+    "zhHant": "UI 原型線框"
+  },
+  "word_studio": {
+    "en": "Word Text Studio",
+    "ja": "文書テキスト編集",
+    "ko": "워드 텍스트 편집",
+    "th": "การแก้ไขข้อความ Word",
+    "zhHans": "Word文字编修",
+    "zhHant": "Word文字編修"
+  }
+}

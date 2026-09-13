@@ -29,6 +29,15 @@ if [[ "$LAST_COMMIT_MSG" =~ ^chore\(release\):\ bump\ version\ to\ v[0-9]+\.[0-9
     exit 0
 fi
 
+# 介面字串必須與 catalog 一致 —— 有人手改了產生檔就在這裡擋下來，
+# 不要等到 Android 與 Apple 的用語各說各話才發現。
+if [[ -f "${REPO_ROOT}/scripts/i18n_tool.py" ]]; then
+    if ! python3 "${REPO_ROOT}/scripts/i18n_tool.py" verify; then
+        echo "❌ 介面字串表與 i18n/ui-strings.json 不一致，請改 catalog 後重跑 generate。" >&2
+        exit 1
+    fi
+fi
+
 echo "🔔 [pre-push hook] 偵測到推送操作，正在自動更新版本（預設 patch）..."
 
 BUMP_SCRIPT="${REPO_ROOT}/scripts/bump-version.sh"
@@ -43,7 +52,8 @@ if [[ -f "$BUMP_SCRIPT" ]]; then
         # 下一次發版就會出現「Cargo 與 Apple 版本不一致」的漂移。
         git add "${REPO_ROOT}/Cargo.toml" "${REPO_ROOT}/Cargo.lock" \
                 "${REPO_ROOT}/apple/project.yml" \
-                "${REPO_ROOT}/apple/Kairumo.xcodeproj/project.pbxproj"
+                "${REPO_ROOT}/apple/Kairumo.xcodeproj/project.pbxproj" \
+                "${REPO_ROOT}/android/app/build.gradle.kts"
         git commit -m "chore(release): bump version to v${NEW_VERSION}"
         TAG_NAME="v${NEW_VERSION}"
         if ! git rev-parse "$TAG_NAME" >/dev/null 2>&1; then

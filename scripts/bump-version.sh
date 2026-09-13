@@ -20,6 +20,7 @@ REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 CARGO_TOML="${REPO_ROOT}/Cargo.toml"
 APPLE_PROJECT_YML="${REPO_ROOT}/apple/project.yml"
 APPLE_PBXPROJ="${REPO_ROOT}/apple/Kairumo.xcodeproj/project.pbxproj"
+ANDROID_GRADLE="${REPO_ROOT}/android/app/build.gradle.kts"
 
 BUMP_TYPE="${1:-patch}"
 EXPLICIT_BUNDLE="${2:-}"
@@ -34,11 +35,11 @@ fi
 # 版本號的來源刻意取「所有來源的最大值」，而不是只信 Cargo.toml。
 # 踩過的坑：v1.5.0 那次發版只改了 Apple 專案檔、沒動 Cargo.toml，
 # 腳本下次再跑就會從 1.4.0 重新算，永遠追不上真實版本，tag 也停在 v1.4.0。
-# 來源包含：Cargo.toml、apple/project.yml、project.pbxproj、最新的 git tag。
+# 來源包含：Cargo.toml、apple/project.yml、project.pbxproj、android/app/build.gradle.kts、最新的 git tag。
 VERSION_INFO=$(python3 -c '
 import re, sys, os, subprocess
 
-cargo, yml, pbx, repo_root = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+cargo, yml, pbx, gradle, repo_root = sys.argv[1:6]
 
 def read(path):
     if not os.path.isfile(path):
@@ -67,6 +68,14 @@ m = re.search(r"MARKETING_VERSION\s*=\s*([0-9]+\.[0-9]+\.[0-9]+)", pbx_text)
 if m:
     versions.append((m.group(1), "project.pbxproj"))
 m = re.search(r"CURRENT_PROJECT_VERSION\s*=\s*(\d+);", pbx_text)
+if m:
+    bundles.append(int(m.group(1)))
+
+gradle_text = read(gradle)
+m = re.search(r"versionName\s*=\s*\"([0-9]+\.[0-9]+\.[0-9]+)\"", gradle_text)
+if m:
+    versions.append((m.group(1), "android/app/build.gradle.kts"))
+m = re.search(r"versionCode\s*=\s*(\d+)", gradle_text)
 if m:
     bundles.append(int(m.group(1)))
 
@@ -101,7 +110,7 @@ print("BUNDLE=" + str(max(bundles) if bundles else 1))
 if len(distinct) > 1:
     detail = ", ".join(sorted({f"{v} ({src})" for v, src in versions}))
     print("DRIFT=" + detail)
-' "$CARGO_TOML" "$APPLE_PROJECT_YML" "$APPLE_PBXPROJ" "$REPO_ROOT") || {
+' "$CARGO_TOML" "$APPLE_PROJECT_YML" "$APPLE_PBXPROJ" "$ANDROID_GRADLE" "$REPO_ROOT") || {
     echo "❌ 無法解析目前的版本號" >&2
     exit 1
 }
@@ -221,12 +230,28 @@ if os.path.isfile(yml_file):
         f.write(yml)
 ' "$APPLE_PBXPROJ" "$APPLE_PROJECT_YML" "$NEW_VERSION" "$NEW_BUNDLE_VERSION"
 
+# 6.2 同步更新 Android（Gradle）
+#
+# Android 一開始沒被納進來 —— 那正是當年 Apple 版漂移到 1.4.0 的同一個坑，
+# 差別只在平台。新增平台就要同時進這支腳本。
+python3 -c '
+import re, sys, os
+gradle_file, new_ver, new_bundle = sys.argv[1], sys.argv[2], sys.argv[3]
+if os.path.isfile(gradle_file):
+    with open(gradle_file, "r", encoding="utf-8") as f:
+        t = f.read()
+    t = re.sub(r"(versionName\s*=\s*)\"[^\"]*\"", lambda m: m.group(1) + "\"" + new_ver + "\"", t)
+    t = re.sub(r"(versionCode\s*=\s*)\d+", lambda m: m.group(1) + new_bundle, t)
+    with open(gradle_file, "w", encoding="utf-8") as f:
+        f.write(t)
+' "$ANDROID_GRADLE" "$NEW_VERSION" "$NEW_BUNDLE_VERSION"
+
 # 6.5 寫入後驗證：確認每個檔案都真的帶上新版本號。
 # 沒有這一步的話，任何一個正則沒對上都會靜默跳過，接著又是一次版本漂移。
 python3 -c '
 import re, sys, os
 
-cargo, yml, pbx, new_ver, new_bundle = sys.argv[1:6]
+cargo, yml, pbx, gradle, new_ver, new_bundle = sys.argv[1:7]
 problems = []
 
 def read(path):
@@ -257,12 +282,21 @@ if os.path.isfile(pbx):
         if not re.search(key + r"\s*=\s*" + re.escape(new_bundle) + r"\s*;", t):
             problems.append(f"project.pbxproj 的 {key} 沒有更新成 {new_bundle}")
 
+if os.path.isfile(gradle):
+    t = read(gradle)
+    m = re.search(r"versionName\s*=\s*\"([0-9]+\.[0-9]+\.[0-9]+)\"", t)
+    if not m or m.group(1) != new_ver:
+        problems.append(f"android/app/build.gradle.kts 的 versionName 沒有更新成 {new_ver}")
+    m = re.search(r"versionCode\s*=\s*(\d+)", t)
+    if not m or m.group(1) != new_bundle:
+        problems.append(f"android/app/build.gradle.kts 的 versionCode 沒有更新成 {new_bundle}")
+
 if problems:
     for p in problems:
         print("❌ " + p, file=sys.stderr)
     sys.exit(1)
-print("✅ 版本號已在 Cargo.toml / project.yml / project.pbxproj 全數對齊")
-' "$CARGO_TOML" "$APPLE_PROJECT_YML" "$APPLE_PBXPROJ" "$NEW_VERSION" "$NEW_BUNDLE_VERSION"
+print("✅ 版本號已在 Cargo.toml / project.yml / project.pbxproj / build.gradle.kts 全數對齊")
+' "$CARGO_TOML" "$APPLE_PROJECT_YML" "$APPLE_PBXPROJ" "$ANDROID_GRADLE" "$NEW_VERSION" "$NEW_BUNDLE_VERSION"
 
 # 7. 同步更新 Cargo.lock
 echo "🔄 同步 Cargo.lock..."
