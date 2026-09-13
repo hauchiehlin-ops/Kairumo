@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -42,6 +43,11 @@ import com.kairumo.padnote.sync.FolderSync
 import com.kairumo.padnote.backup.BackupManager
 import com.kairumo.padnote.text.TextBox
 import com.kairumo.padnote.text.TextBoxEditor
+import com.kairumo.padnote.chart.ChartLayer
+import com.kairumo.padnote.chart.ChartObject
+import com.kairumo.padnote.chart.ChartSpec
+import com.kairumo.padnote.chart.ChartStore
+import com.kairumo.padnote.chart.ChartStudio
 import com.kairumo.padnote.text.TextBoxLayer
 import com.kairumo.padnote.text.TextBoxStore
 import androidx.compose.ui.platform.LocalDensity
@@ -119,6 +125,15 @@ private fun InkScreen() {
     var selectedTextId by remember { mutableStateOf<String?>(null) }
     var editingText by remember { mutableStateOf<TextBox?>(null) }
     LaunchedEffect(notebook) { textStore.load(); textRevision++ }
+
+    // 數字製圖。設定存進區塊外觀，所以插進去之後還改得動 ——
+    // 與 Apple 端同一份 ChartSpec 與同一個核心版面引擎。
+    val chartStore = remember(notebook) { ChartStore(notebook?.first, notebook?.second) }
+    var chartRevision by remember { mutableIntStateOf(0) }
+    var selectedChartId by remember { mutableStateOf<String?>(null) }
+    var editingChart by remember { mutableStateOf<ChartObject?>(null) }
+    var insertingChart by remember { mutableStateOf(false) }
+    LaunchedEffect(notebook) { chartStore.load(); chartRevision++ }
 
     // 雲端同步（決策 D3 選項 A）：使用者挑一個資料夾，兩台裝置指同一個地方。
     // 備份檔：選一個既有的備份來復原。
@@ -276,6 +291,10 @@ private fun InkScreen() {
                         editingText = box
                     }
                 )
+                DropdownMenuItem(
+                    text = { Text(l10n("chart_studio")) },
+                    onClick = { showMenu = false; insertingChart = true }
+                )
                 Divider()
                 DropdownMenuItem(
                     text = { Text(l10n("backup_create")) },
@@ -420,6 +439,19 @@ private fun InkScreen() {
                     modifier = Modifier.fillMaxSize()
                 )
             }
+
+            // 圖表疊在文字方塊之上 —— 與 Apple 端的疊放順序一致。
+            key(chartRevision) {
+                ChartLayer(
+                    charts = chartStore.all,
+                    density = canvasDensity,
+                    selectedId = selectedChartId,
+                    onSelect = { selectedChartId = it },
+                    onEdit = { editingChart = it },
+                    onChanged = { chart -> chartStore.persist(chart); chartRevision++ },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 
@@ -436,6 +468,43 @@ private fun InkScreen() {
             },
             onDismiss = { editingText = null }
         )
+    }
+
+    // 插入一張新圖表。
+    if (insertingChart) {
+        Dialog(onDismissRequest = { insertingChart = false }) {
+            Surface(shape = RoundedCornerShape(12.dp)) {
+                ChartStudio(
+                    languageTag = deviceLanguageTag(),
+                    onCommit = { spec ->
+                        chartStore.create(spec)
+                        chartRevision++
+                        insertingChart = false
+                    },
+                    onDismiss = { insertingChart = false }
+                )
+            }
+        }
+    }
+
+    // 重新編修既有的圖表。帶著原本的設定進去，使用者看到的是自己當初輸入的
+    // 數字 —— 而不是一張只能刪掉重做的圖。
+    editingChart?.let { chart ->
+        Dialog(onDismissRequest = { editingChart = null }) {
+            Surface(shape = RoundedCornerShape(12.dp)) {
+                ChartStudio(
+                    languageTag = deviceLanguageTag(),
+                    initial = chart.spec,
+                    onCommit = { spec ->
+                        // 位置與尺寸原地保留：使用者只是改了裡面的數字。
+                        chartStore.persist(chart.copy(spec = spec))
+                        chartRevision++
+                        editingChart = null
+                    },
+                    onDismiss = { editingChart = null }
+                )
+            }
+        }
     }
 
     docsAsset?.let { asset ->

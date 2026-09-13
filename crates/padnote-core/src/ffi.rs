@@ -523,6 +523,43 @@ impl PadnoteSession {
             .unwrap_or_default())
     }
 
+    /// 這一頁所有圖片區塊的 id，依加入順序。
+    ///
+    /// 沒有這個出口，圖表就是**單向**的：寫得進 `.padnote`，另一台裝置卻列不出
+    /// 有哪些圖片區塊，也就找不到它的圖表設定 —— 使用者會看到一張改不動的圖，
+    /// 而設定其實好端端地躺在檔案裡。
+    pub fn image_block_ids(&self, page_id: String) -> Result<Vec<String>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let guard = self.lock();
+        Ok(guard
+            .notebook()
+            .page(page)
+            .map(|p| {
+                p.blocks()
+                    .iter()
+                    .filter(|b| matches!(b.kind, padnote_doc::BlockKind::Image { .. }))
+                    .map(|b| b.id.to_string())
+                    .collect()
+            })
+            .unwrap_or_default())
+    }
+
+    /// 圖片區塊的尺寸 `[width, height]`。非圖片區塊回傳 `None`。
+    pub fn image_block_size(&self, block_id: String) -> Result<Option<Vec<f32>>, FfiError> {
+        let block = parse_uuid(&block_id)?;
+        let guard = self.lock();
+        Ok(guard
+            .notebook()
+            .pages()
+            .iter()
+            .flat_map(|p| p.blocks())
+            .find(|b| b.id == block)
+            .and_then(|b| match b.kind {
+                padnote_doc::BlockKind::Image { width, height, .. } => Some(vec![width, height]),
+                _ => None,
+            }))
+    }
+
     /// 設定區塊的外觀（平台自訂的 JSON）。
     ///
     /// 核心不解讀內容。兩個平台用同一組鍵名（`format-spec.md` §6.2），
@@ -1760,5 +1797,66 @@ mod tests {
         assert_eq!(spec_version(), crate::SPEC_VERSION);
         assert!(can_open(1, 1));
         assert!(!can_open(99, 99));
+    }
+
+    // ── 圖片區塊的出口（數字製圖靠它才回得來）─────────────────
+
+    fn image_block(s: &PadnoteSession, page: &str, w: f32, h: f32) -> String {
+        let blob = s.put_blob(vec![1, 2, 3, 4]).unwrap();
+        s.add_image(page.into(), blob, w, h).unwrap()
+    }
+
+    #[test]
+    fn image_blocks_can_be_listed_back() {
+        // 列不出來的話，圖表就是單向的：寫得進檔案，另一台裝置卻找不到它。
+        let s = session("image-list");
+        let page = s.first_page_id().unwrap();
+        let first = image_block(&s, &page, 200.0, 120.0);
+        let second = image_block(&s, &page, 90.0, 90.0);
+
+        assert_eq!(s.image_block_ids(page).unwrap(), vec![first, second]);
+    }
+
+    #[test]
+    fn listing_image_blocks_excludes_text_blocks() {
+        let s = session("image-list-excludes-text");
+        let page = s.first_page_id().unwrap();
+        let text = s.add_text(page.clone(), "字".into(), BlockStyle::Body).unwrap();
+        let image = image_block(&s, &page, 10.0, 10.0);
+
+        assert_eq!(s.image_block_ids(page.clone()).unwrap(), vec![image]);
+        assert_eq!(s.text_block_ids(page).unwrap(), vec![text]);
+    }
+
+    #[test]
+    fn an_image_block_reports_its_size() {
+        // 尺寸拿不回來的話，重新打開的圖表只能猜一個大小，畫出來就不是原樣。
+        let s = session("image-size");
+        let page = s.first_page_id().unwrap();
+        let id = image_block(&s, &page, 420.0, 300.0);
+
+        assert_eq!(s.image_block_size(id).unwrap(), Some(vec![420.0, 300.0]));
+    }
+
+    #[test]
+    fn a_text_block_has_no_image_size() {
+        let s = session("image-size-text");
+        let page = s.first_page_id().unwrap();
+        let text = s.add_text(page, "字".into(), BlockStyle::Body).unwrap();
+        assert_eq!(s.image_block_size(text).unwrap(), None);
+    }
+
+    #[test]
+    fn a_chart_spec_survives_on_an_image_block() {
+        // 這是「圖表跨平台還改得動」的完整來回：寫進去、列出來、讀回設定。
+        let s = session("image-chart-appearance");
+        let page = s.first_page_id().unwrap();
+        let id = image_block(&s, &page, 420.0, 300.0);
+        let spec = crate::ffi_chart::chart_default_spec_json();
+        s.set_block_appearance(id.clone(), spec.clone()).unwrap();
+
+        let listed = s.image_block_ids(page).unwrap();
+        assert_eq!(listed, vec![id.clone()]);
+        assert_eq!(s.block_appearance(id).unwrap(), Some(spec));
     }
 }

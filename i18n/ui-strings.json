@@ -543,6 +543,54 @@
     "zhHans": "交互手势与动效轨迹",
     "zhHant": "互動手勢與動效軌跡"
   },
+  "chart_add_row": {
+    "zhHant": "新增列",
+    "en": "Add Row",
+    "zhHans": "新增行",
+    "ja": "行を追加",
+    "ko": "행 추가",
+    "th": "เพิ่มแถว"
+  },
+  "chart_add_series": {
+    "zhHant": "新增數列",
+    "en": "Add Series",
+    "zhHans": "新增系列",
+    "ja": "系列を追加",
+    "ko": "계열 추가",
+    "th": "เพิ่มชุดข้อมูล"
+  },
+  "chart_axis_auto": {
+    "zhHant": "自動",
+    "en": "Automatic",
+    "zhHans": "自动",
+    "ja": "自動",
+    "ko": "자동",
+    "th": "อัตโนมัติ"
+  },
+  "chart_axis_max": {
+    "zhHant": "最大值",
+    "en": "Maximum",
+    "zhHans": "最大值",
+    "ja": "最大値",
+    "ko": "최댓값",
+    "th": "ค่าสูงสุด"
+  },
+  "chart_axis_min": {
+    "zhHant": "最小值",
+    "en": "Minimum",
+    "zhHans": "最小值",
+    "ja": "最小値",
+    "ko": "최솟값",
+    "th": "ค่าต่ำสุด"
+  },
+  "chart_axis_step": {
+    "zhHant": "刻度間距",
+    "en": "Major Unit",
+    "zhHans": "刻度间距",
+    "ja": "目盛間隔",
+    "ko": "주 단위",
+    "th": "ระยะขีด"
+  },
   "chart_bar": {
     "en": "Bar Chart",
     "ja": "棒グラフ",
@@ -550,6 +598,238 @@
     "th": "แผนภูมิแท่ง",
     "zhHans": "柱状图",
     "zhHant": "長條圖"
+  },
+  "chart_bar_width": {
+    "zhHant": "長條寬度",
+    "en": "Bar Width",
+    "zhHans": "柱形宽度",
+    "ja": "棒の幅",
+    "ko": "막대 너비",
+    "th": "ความกว้างแท่ง"
+  },
+  "chart_category_column": {
+    "zhHant": "類別",
+    "en": "Category",
+    "zhHans": "类别",
+    "ja": "カテゴリ",
+    "ko": "항목",
+    "th": "หมวดหมู่"
+  },
+  "chart_data_labels": {
+    "zhHant": "資料標籤",
+    "en": "Data Labels",
+    "zhHans": "数据标签",
+    "ja": "データラベル",
+    "ko": "데이터 레이블",
+    "th": "ป้ายกำกับข้อมูล"
+  },
+  "chart_delete_row": {
+    "zhHant": "刪除此列",
+    "en": "Delete Row",
+    "zhHans": "删除此行",
+    "ja": "この行を削除",
+    "ko": "이 행 삭제",
+    "th": "ลบแถวนี้"
+  },
+  "chart_delete_series": {
+    "zhHant": "刪除此數列",
+    "en": "Delete Series",
+    "zhHans": "删除此系列",
+    "ja": "この系列を削除",
+    "ko": "이 계열 삭제",
+    "th": "ลบชุดข้อมูลนี้"
+  },
+  "chart_doughnut_hole": {
+    "zhHant": "環圈孔徑",
+    "en": "Doughnut Hole Size",
+    "zhHans": "圆环孔径",
+    "ja": "ドーナツの穴の大きさ",
+    "ko": "도넛 구멍 크기",
+    "th": "ขนาดรูโดนัท"
+  },
+  "chart_edit": {
+    "zhHant": "編修圖表",
+    "en": "Edit Chart",
+    "zhHans": "编辑图表",
+    "ja": "グラフを編集",
+    "ko": "차트 편집",
+    "th": "แก้ไขแผนภูมิ"
+  },
+  "chart_insert": {
+    "zhHant": "插入圖表",
+    "en": "Insert Chart",
+    "zhHans": "插入图表",
+    "ja": "グラフを挿入",
+    "ko": "차트 삽입",
+    "th": "แทรกแผนภูมิ"
+  },
+  "chart_kind_area": {
+    "zhHant": "區域圖",
+    "en": "Area",
+    "zhHans": "面积图",
+    "ja": "面グラフ",
+    "ko": "영역형",
+    "th": "แผนภูมิพื้นที่"
+  },
+  "chart_kind_bar": {
+    "zhHant": "直條圖",
+    "en": "Column",
+    "zhHans": "柱形图",
+    "ja": "縦棒グラフ",
+    "ko": "세로 막대",
+    "th": "แผนภูมิแท่ง"
+  },
+  "chart_kind_doughnut": {
+    "zhHant": "環圈圖",
+    "en": "Doughnut",
+    "zhHans": "圆环图",
+    "ja": "ドーナツグラフ",
+    "ko": "도넛형",
+    "th": "แผนภูมิโดนัท"
+  },
+  "chart_kind_horizontalBar": {
+    "zhHant": "橫條圖",
+    "en": "Bar",
+    "zhHans": "条形图",
+    "ja": "横棒グラフ",
+    "ko": "가로 막대",
+    "th": "แผนภูมิแท่งแนวนอน"
+  },
+  "chart_kind_line": {
+    "zhHant": "折線圖",
+    "en": "Line",
+    "zhHans": "折线图",
+    "ja": "折れ線グラフ",
+    "ko": "꺾은선형",
+    "th": "กราฟเส้น"
+  },
+  "chart_kind_pie": {
+    "zhHant": "圓餅圖",
+    "en": "Pie",
+    "zhHans": "饼图",
+    "ja": "円グラフ",
+    "ko": "원형",
+    "th": "แผนภูมิวงกลม"
+  },
+  "chart_kind_radar": {
+    "zhHant": "雷達圖",
+    "en": "Radar",
+    "zhHans": "雷达图",
+    "ja": "レーダーチャート",
+    "ko": "방사형",
+    "th": "แผนภูมิเรดาร์"
+  },
+  "chart_kind_scatter": {
+    "zhHant": "散佈圖",
+    "en": "Scatter",
+    "zhHans": "散点图",
+    "ja": "散布図",
+    "ko": "분산형",
+    "th": "แผนภูมิกระจาย"
+  },
+  "chart_kind_smoothLine": {
+    "zhHant": "平滑曲線圖",
+    "en": "Smooth Line",
+    "zhHans": "平滑曲线图",
+    "ja": "平滑曲線",
+    "ko": "부드러운 선",
+    "th": "เส้นโค้ง"
+  },
+  "chart_kind_stackedArea": {
+    "zhHant": "堆疊區域圖",
+    "en": "Stacked Area",
+    "zhHans": "堆积面积图",
+    "ja": "積み上げ面",
+    "ko": "누적 영역형",
+    "th": "พื้นที่ซ้อน"
+  },
+  "chart_kind_stackedBar": {
+    "zhHant": "堆疊直條圖",
+    "en": "Stacked Column",
+    "zhHans": "堆积柱形图",
+    "ja": "積み上げ縦棒",
+    "ko": "누적 세로 막대",
+    "th": "แท่งซ้อน"
+  },
+  "chart_label_decimals": {
+    "zhHant": "小數位數",
+    "en": "Decimal Places",
+    "zhHans": "小数位数",
+    "ja": "小数点以下の桁数",
+    "ko": "소수 자릿수",
+    "th": "ตำแหน่งทศนิยม"
+  },
+  "chart_labels_center": {
+    "zhHant": "置中",
+    "en": "Center",
+    "zhHans": "居中",
+    "ja": "中央",
+    "ko": "가운데",
+    "th": "ตรงกลาง"
+  },
+  "chart_labels_inside": {
+    "zhHant": "內側",
+    "en": "Inside End",
+    "zhHans": "内侧",
+    "ja": "内側",
+    "ko": "안쪽 끝",
+    "th": "ด้านใน"
+  },
+  "chart_labels_none": {
+    "zhHant": "不顯示",
+    "en": "None",
+    "zhHans": "不显示",
+    "ja": "なし",
+    "ko": "없음",
+    "th": "ไม่แสดง"
+  },
+  "chart_labels_outside": {
+    "zhHant": "外側",
+    "en": "Outside End",
+    "zhHans": "外侧",
+    "ja": "外側",
+    "ko": "바깥쪽 끝",
+    "th": "ด้านนอก"
+  },
+  "chart_legend_bottom": {
+    "zhHant": "下方",
+    "en": "Bottom",
+    "zhHans": "下方",
+    "ja": "下",
+    "ko": "아래쪽",
+    "th": "ด้านล่าง"
+  },
+  "chart_legend_none": {
+    "zhHant": "不顯示",
+    "en": "Hidden",
+    "zhHans": "不显示",
+    "ja": "非表示",
+    "ko": "숨김",
+    "th": "ซ่อน"
+  },
+  "chart_legend_position": {
+    "zhHant": "圖例位置",
+    "en": "Legend Position",
+    "zhHans": "图例位置",
+    "ja": "凡例の位置",
+    "ko": "범례 위치",
+    "th": "ตำแหน่งคำอธิบาย"
+  },
+  "chart_legend_right": {
+    "zhHant": "右側",
+    "en": "Right",
+    "zhHans": "右侧",
+    "ja": "右",
+    "ko": "오른쪽",
+    "th": "ด้านขวา"
+  },
+  "chart_legend_top": {
+    "zhHant": "上方",
+    "en": "Top",
+    "zhHans": "上方",
+    "ja": "上",
+    "ko": "위쪽",
+    "th": "ด้านบน"
   },
   "chart_line": {
     "en": "Line Chart",
@@ -567,6 +847,78 @@
     "zhHans": "饼状图",
     "zhHant": "圓餅圖"
   },
+  "chart_section_axes": {
+    "zhHant": "座標軸",
+    "en": "Axes",
+    "zhHans": "坐标轴",
+    "ja": "軸",
+    "ko": "축",
+    "th": "แกน"
+  },
+  "chart_section_legend": {
+    "zhHant": "圖例與標籤",
+    "en": "Legend & Labels",
+    "zhHans": "图例与标签",
+    "ja": "凡例とラベル",
+    "ko": "범례 및 레이블",
+    "th": "คำอธิบายและป้ายกำกับ"
+  },
+  "chart_section_series": {
+    "zhHant": "資料數列",
+    "en": "Series",
+    "zhHans": "数据系列",
+    "ja": "データ系列",
+    "ko": "데이터 계열",
+    "th": "ชุดข้อมูล"
+  },
+  "chart_section_style": {
+    "zhHant": "樣式",
+    "en": "Style",
+    "zhHans": "样式",
+    "ja": "スタイル",
+    "ko": "스타일",
+    "th": "สไตล์"
+  },
+  "chart_series_color": {
+    "zhHant": "數列顏色",
+    "en": "Series Color",
+    "zhHans": "系列颜色",
+    "ja": "系列の色",
+    "ko": "계열 색상",
+    "th": "สีชุดข้อมูล"
+  },
+  "chart_series_name": {
+    "zhHant": "數列名稱",
+    "en": "Series Name",
+    "zhHans": "系列名称",
+    "ja": "系列名",
+    "ko": "계열 이름",
+    "th": "ชื่อชุดข้อมูล"
+  },
+  "chart_show_axis_labels": {
+    "zhHant": "顯示刻度標籤",
+    "en": "Axis Labels",
+    "zhHans": "显示刻度标签",
+    "ja": "軸ラベル",
+    "ko": "축 레이블",
+    "th": "ป้ายกำกับแกน"
+  },
+  "chart_show_grid": {
+    "zhHant": "顯示格線",
+    "en": "Gridlines",
+    "zhHans": "显示网格线",
+    "ja": "目盛線",
+    "ko": "눈금선",
+    "th": "เส้นตาราง"
+  },
+  "chart_single_series_hint": {
+    "zhHant": "這個類型只會畫第一個數列。",
+    "en": "This chart type draws only the first series.",
+    "zhHans": "此类型只会绘制第一个系列。",
+    "ja": "この種類は最初の系列のみ描画します。",
+    "ko": "이 차트 종류는 첫 번째 계열만 그립니다.",
+    "th": "แผนภูมิชนิดนี้จะวาดเฉพาะชุดข้อมูลแรก"
+  },
   "chart_studio": {
     "en": "Chart Studio",
     "ja": "グラフ作成",
@@ -574,6 +926,30 @@
     "th": "สร้างแผนภูมิ",
     "zhHans": "数字制图",
     "zhHant": "數字製圖"
+  },
+  "chart_tab_data": {
+    "zhHant": "資料",
+    "en": "Data",
+    "zhHans": "数据",
+    "ja": "データ",
+    "ko": "데이터",
+    "th": "ข้อมูล"
+  },
+  "chart_tab_format": {
+    "zhHant": "格式",
+    "en": "Format",
+    "zhHans": "格式",
+    "ja": "書式",
+    "ko": "서식",
+    "th": "รูปแบบ"
+  },
+  "chart_tab_type": {
+    "zhHant": "類型",
+    "en": "Type",
+    "zhHans": "类型",
+    "ja": "種類",
+    "ko": "종류",
+    "th": "ประเภท"
   },
   "chart_title": {
     "en": "Chart Title",
@@ -590,6 +966,30 @@
     "th": "ประเภทแผนภูมิ",
     "zhHans": "图表类型",
     "zhHant": "圖表類型"
+  },
+  "chart_update": {
+    "zhHant": "更新圖表",
+    "en": "Update Chart",
+    "zhHans": "更新图表",
+    "ja": "グラフを更新",
+    "ko": "차트 업데이트",
+    "th": "อัปเดตแผนภูมิ"
+  },
+  "chart_x_axis_title": {
+    "zhHant": "水平軸標題",
+    "en": "Horizontal Axis Title",
+    "zhHans": "水平轴标题",
+    "ja": "横軸のタイトル",
+    "ko": "가로 축 제목",
+    "th": "ชื่อแกนนอน"
+  },
+  "chart_y_axis_title": {
+    "zhHant": "垂直軸標題",
+    "en": "Vertical Axis Title",
+    "zhHans": "垂直轴标题",
+    "ja": "縦軸のタイトル",
+    "ko": "세로 축 제목",
+    "th": "ชื่อแกนตั้ง"
   },
   "clear_cache": {
     "en": "Clear Cache",

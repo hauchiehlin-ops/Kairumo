@@ -23,5 +23,9 @@ mkdir -p android/Generated
 cargo run -q -p padnote-core --bin uniffi-bindgen -- generate \
   --library "$LIB" --language kotlin --out-dir android/Generated
 
+# ⚠️ 這裡產生的 Kotlin 綁定**不要**複製進 android/app/src/main/java。
+# 那份必須由 scripts/build-android-libs.sh 產生：Android 版用的是不同的
+# feature 組合（--no-default-features 再加 relay），用預設 feature 產出的
+# 綁定會少掉 RelayServer 之類的型別，Kotlin 端就編不過。
 echo "==> 完成"
 ls -1 apple/Generated android/Generated/uniffi/padnote_core 2>/dev/null

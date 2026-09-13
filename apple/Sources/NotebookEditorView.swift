@@ -1073,6 +1073,8 @@ public struct NotebookEditorView: View {
     @State private var showMathCalculator: Bool = false
     @State private var showChartStudio: Bool = false
     @State private var editingAttachmentId: String? = nil
+    /// 正在重新編修的圖表。帶著規格一起，`sheet(item:)` 才有東西可以開。
+    @State private var editingChartAttachmentId: ChartEditTarget? = nil
 
     // Word 文字排版、網址預覽與專業調色狀態
     @State private var showWordStudio: Bool = false
@@ -1293,8 +1295,15 @@ public struct NotebookEditorView: View {
             }
         } }
         .sheet(isPresented: $showChartStudio) { erasedView {
-            ChartStudioView { chartImage in
-                insertImageAttachment(chartImage)
+            ChartStudioView { chartSpec, chartImage in
+                insertImageAttachment(chartImage, chartSpecJSON: chartSpec.encodedJSON())
+            }
+        } }
+        // 重新編修既有的圖表。帶著原本的規格進去，使用者看到的是自己當初
+        // 輸入的數字 —— 而不是一張只能刪掉重做的圖。
+        .sheet(item: $editingChartAttachmentId) { identifier in erasedView {
+            ChartStudioView(editing: identifier.spec) { updatedSpec, updatedImage in
+                replaceChartAttachment(id: identifier.id, spec: updatedSpec, image: updatedImage)
             }
         } }
         .sheet(isPresented: $showWordStudio) { erasedView {
@@ -2487,10 +2496,27 @@ ZStack(alignment: .topTrailing) {
                     title: localizationManager.localized("image_beautify"),
                     onClose: { editingAttachmentId = nil }
                 ) {
-                    ImageEditControls(attachment: binding(for: id)) {
-                        notebook.attachments?.removeAll { $0.id == id }
-                        store.updateNotebook(notebook)
-                        editingAttachmentId = nil
+                    VStack(spacing: 10) {
+                        // 這張圖如果是數字製圖，先給重新編修的入口 ——
+                        // 濾鏡與邊框改不了圖表裡的數字。
+                        if let spec = notebook.attachments?
+                            .first(where: { $0.id == id })?.chartSpec {
+                            Button {
+                                editingChartAttachmentId = ChartEditTarget(id: id, spec: spec)
+                            } label: {
+                                Label(localizationManager.localized("chart_edit"),
+                                      systemImage: "chart.bar.xaxis")
+                                    .frame(maxWidth: .infinity)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .controlSize(.small)
+                        }
+
+                        ImageEditControls(attachment: binding(for: id)) {
+                            notebook.attachments?.removeAll { $0.id == id }
+                            store.updateNotebook(notebook)
+                            editingAttachmentId = nil
+                        }
                     }
                 }
                 .padding(.top, 24)
@@ -4494,7 +4520,7 @@ ZStack(alignment: .topTrailing) {
     }
 
     // MARK: - 附件管理核心
-    private func insertImageAttachment(_ image: UIImage) {
+    private func insertImageAttachment(_ image: UIImage, chartSpecJSON: String? = nil) {
         guard let fileName = store.saveAttachmentImage(image) else { return }
         let aspect = image.size.width / max(1, image.size.height)
         let w: CGFloat = 280
@@ -4510,13 +4536,27 @@ ZStack(alignment: .topTrailing) {
             cornerRadius: 8,
             hasShadow: true,
             hasBorder: false,
-            filterStyle: .original
+            filterStyle: .original,
+            chartSpecJSON: chartSpecJSON
         )
         if notebook.attachments == nil {
             notebook.attachments = []
         }
         notebook.attachments?.append(newAttachment)
         store.updateNotebook(notebook)
+    }
+
+    /// 用新算出來的圖表取代原本那一張。
+    ///
+    /// 位置、尺寸、邊框、濾鏡全部原地保留 —— 使用者只是改了裡面的數字，
+    /// 圖不該跳回預設大小、跑回左上角。
+    private func replaceChartAttachment(id: String, spec: ChartSpec, image: UIImage) {
+        guard let index = notebook.attachments?.firstIndex(where: { $0.id == id }),
+              let fileName = store.saveAttachmentImage(image) else { return }
+        notebook.attachments?[index].fileName = fileName
+        notebook.attachments?[index].chartSpecJSON = spec.encodedJSON()
+        store.updateNotebook(notebook)
+        editingChartAttachmentId = nil
     }
 
     private func binding(for id: String) -> Binding<NoteImageAttachment> {

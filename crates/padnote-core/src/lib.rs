@@ -13,6 +13,7 @@ pub mod ffi;
 #[cfg(feature = "relay")]
 pub mod ffi_relay;
 pub mod ffi_backup;
+pub mod ffi_chart;
 pub mod ffi_folder_sync;
 pub mod ffi_geometry;
 pub mod ffi_input;
@@ -23,6 +24,7 @@ pub mod setup;
 pub mod transcript;
 
 pub use padnote_asr as asr;
+pub use padnote_chart as chart;
 pub use padnote_crypto as crypto;
 pub use padnote_doc as doc;
 pub use padnote_embed as embed;

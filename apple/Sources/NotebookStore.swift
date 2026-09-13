@@ -384,6 +384,13 @@ public struct NoteImageAttachment: Identifiable, Codable, Hashable, ObjectFrameS
     public var borderWidth: CGFloat?
     /// 方框底色。`"clear"` 為透明；`nil` 時不畫底色（圖片本來就是滿版的）。
     public var backgroundColorHex: String?
+    /// 這張圖如果是數字製圖，這裡放它的設定 JSON（見 `ChartSpec`）。
+    ///
+    /// 有了它，圖表才**改得動**：重新編修時讀回原本的數字與樣式，而不是
+    /// 面對一張只能刪掉重做的點陣圖。`nil` 代表這是一般的圖片。
+    /// 這份 JSON 也會寫進 `.padnote` 套件的區塊外觀，所以在 Android 上
+    /// 一樣改得動。
+    public var chartSpecJSON: String?
 
     public init(
         id: String = UUID().uuidString,
@@ -401,7 +408,8 @@ public struct NoteImageAttachment: Identifiable, Codable, Hashable, ObjectFrameS
         materialType: MaterialType? = nil,
         borderColorHex: String? = nil,
         borderWidth: CGFloat? = nil,
-        backgroundColorHex: String? = nil
+        backgroundColorHex: String? = nil,
+        chartSpecJSON: String? = nil
     ) {
         self.id = id
         self.fileName = fileName
@@ -417,8 +425,17 @@ public struct NoteImageAttachment: Identifiable, Codable, Hashable, ObjectFrameS
         self.borderColorHex = borderColorHex
         self.borderWidth = borderWidth
         self.backgroundColorHex = backgroundColorHex
+        self.chartSpecJSON = chartSpecJSON
         self.filterStyle = filterStyle
         self.materialType = materialType
+    }
+
+    /// 這張圖的圖表設定，讀得回來才回傳。
+    ///
+    /// 讀不回來時回 `nil` 而不是丟出錯誤：規格壞掉最多是「這張圖改不動了」，
+    /// 不該讓整本筆記開不起來。
+    public var chartSpec: ChartSpec? {
+        chartSpecJSON.flatMap(ChartSpec.decode(from:))
     }
 }
 

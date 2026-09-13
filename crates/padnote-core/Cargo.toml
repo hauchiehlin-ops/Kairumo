@@ -36,6 +36,7 @@ relay = ["dep:padnote-relay", "dep:tokio"]
 
 [dependencies]
 uniffi = { workspace = true }
+padnote-chart = { path = "../padnote-chart" }
 padnote-doc = { path = "../padnote-doc" }
 padnote-ink = { path = "../padnote-ink" }
 padnote-sync = { path = "../padnote-sync" }

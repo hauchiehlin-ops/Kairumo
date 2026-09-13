@@ -76,7 +76,7 @@ Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對�
 | A12 | **討論圖釘與留言串** | `CommentThreadView` | 完全沒有 |
 | A13 | **即時協同** | `CollaborationManager` + `LocalRelayServer` | Android 只在診斷頁「啟動再關閉」測試過 |
 | A14 | **素材庫**（2,401 行） | `AssetLibraryManager` / `View` | 完全沒有 |
-| A15 | **數字製圖** | `ChartStudioView` | 完全沒有 |
+| ~~A15~~ | ~~**數字製圖**~~ | `ChartStudioView`（11 種圖型、可重新編修） | ✅ **已對等**：`chart/ChartStudio.kt`，同一份 `ChartSpec`、同一個核心版面引擎 |
 | A16 | **數學計算** | `MathCalculatorSheet` / `MathEngine` | 完全沒有 |
 | A17 | **草圖優化** | `SketchRefineEngine` | 完全沒有 |
 | A18 | **主題專用工具** | `ThemeSpecificToolsView` | 完全沒有 |

@@ -162,6 +162,12 @@ enum NotebookPackageBridge {
                         width: Float(image.width), height: Float(image.height))
                     try session.setBlockPosition(
                         blockId: blockId, x: Float(image.x), y: Float(image.y))
+                    // 這張圖如果是數字製圖，設定要一起過去 —— 只帶點陣圖的話，
+                    // 在 Android 上打開會是一張改不動的圖片。
+                    if let spec = image.chartSpec {
+                        try session.setBlockAppearance(
+                            blockId: blockId, json: ChartAppearance.encode(spec))
+                    }
                     summary.imageCount += 1
                 }
             }
@@ -231,6 +237,36 @@ enum NotebookPackageBridge {
         }
     }
 
+    /// 套件裡每一張圖表的設定與位置，依頁次。
+    ///
+    /// # 為什麼讀回來這件事需要自己的出口
+    ///
+    /// 匯出時圖表寫成「圖片區塊 + 圖表設定外觀」。少了這一支，設定就是**單向**的：
+    /// 寫得進 `.padnote`，在另一台裝置上卻找不回來 —— 使用者看到一張改不動的圖，
+    /// 而他的數字好端端地躺在檔案裡。
+    ///
+    /// 只認得外觀帶著圖表標記的圖片區塊，一般的圖片照樣是圖片。
+    static func charts(fromPackageAt path: URL, deviceId: UInt32) throws -> [ImportedChart] {
+        let session = try PadnoteSession.openExisting(path: path.path, deviceId: deviceId)
+        var result: [ImportedChart] = []
+        for (index, pageId) in try pageIds(of: session).enumerated() {
+            for blockId in try session.imageBlockIds(pageId: pageId) {
+                guard let json = try session.blockAppearance(blockId: blockId),
+                      let spec = ChartAppearance.decode(json) else { continue }
+                let position = try session.blockPosition(blockId: blockId) ?? [0, 0]
+                let size = try session.imageBlockSize(blockId: blockId) ?? [420, 300]
+                result.append(
+                    ImportedChart(
+                        id: blockId, pageIndex: index, spec: spec,
+                        x: CGFloat(position.first ?? 0), y: CGFloat(position.last ?? 0),
+                        width: CGFloat(size.first ?? 420), height: CGFloat(size.last ?? 300)
+                    )
+                )
+            }
+        }
+        return result
+    }
+
     // MARK: - 私有
 
     /// 依頁次取出頁面 id。
@@ -244,6 +280,17 @@ enum NotebookPackageBridge {
             if let id = try session.pageIdAt(index: UInt32(index)) { ids.append(id) }
         }
         return ids
+    }
+
+    /// 從套件讀回來的一張圖表。
+    struct ImportedChart: Hashable {
+        let id: String
+        let pageIndex: Int
+        let spec: ChartSpec
+        let x: CGFloat
+        let y: CGFloat
+        let width: CGFloat
+        let height: CGFloat
     }
 
     static func pageStyle(for template: NoteTemplate) -> PageStyle {

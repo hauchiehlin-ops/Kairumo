@@ -554,6 +554,54 @@ object LocalizationStrings {
             "ko" to "인터랙션 제스처 및 모션 궤적",
             "th" to "ท่าทางสัมผัสและภาพเคลื่อนไหว"
         ),
+        "chart_add_row" to mapOf(
+            "zh-Hant" to "新增列",
+            "en" to "Add Row",
+            "zh-Hans" to "新增行",
+            "ja" to "行を追加",
+            "ko" to "행 추가",
+            "th" to "เพิ่มแถว"
+        ),
+        "chart_add_series" to mapOf(
+            "zh-Hant" to "新增數列",
+            "en" to "Add Series",
+            "zh-Hans" to "新增系列",
+            "ja" to "系列を追加",
+            "ko" to "계열 추가",
+            "th" to "เพิ่มชุดข้อมูล"
+        ),
+        "chart_axis_auto" to mapOf(
+            "zh-Hant" to "自動",
+            "en" to "Automatic",
+            "zh-Hans" to "自动",
+            "ja" to "自動",
+            "ko" to "자동",
+            "th" to "อัตโนมัติ"
+        ),
+        "chart_axis_max" to mapOf(
+            "zh-Hant" to "最大值",
+            "en" to "Maximum",
+            "zh-Hans" to "最大值",
+            "ja" to "最大値",
+            "ko" to "최댓값",
+            "th" to "ค่าสูงสุด"
+        ),
+        "chart_axis_min" to mapOf(
+            "zh-Hant" to "最小值",
+            "en" to "Minimum",
+            "zh-Hans" to "最小值",
+            "ja" to "最小値",
+            "ko" to "최솟값",
+            "th" to "ค่าต่ำสุด"
+        ),
+        "chart_axis_step" to mapOf(
+            "zh-Hant" to "刻度間距",
+            "en" to "Major Unit",
+            "zh-Hans" to "刻度间距",
+            "ja" to "目盛間隔",
+            "ko" to "주 단위",
+            "th" to "ระยะขีด"
+        ),
         "chart_bar" to mapOf(
             "zh-Hant" to "長條圖",
             "en" to "Bar Chart",
@@ -561,6 +609,238 @@ object LocalizationStrings {
             "ja" to "棒グラフ",
             "ko" to "막대형",
             "th" to "แผนภูมิแท่ง"
+        ),
+        "chart_bar_width" to mapOf(
+            "zh-Hant" to "長條寬度",
+            "en" to "Bar Width",
+            "zh-Hans" to "柱形宽度",
+            "ja" to "棒の幅",
+            "ko" to "막대 너비",
+            "th" to "ความกว้างแท่ง"
+        ),
+        "chart_category_column" to mapOf(
+            "zh-Hant" to "類別",
+            "en" to "Category",
+            "zh-Hans" to "类别",
+            "ja" to "カテゴリ",
+            "ko" to "항목",
+            "th" to "หมวดหมู่"
+        ),
+        "chart_data_labels" to mapOf(
+            "zh-Hant" to "資料標籤",
+            "en" to "Data Labels",
+            "zh-Hans" to "数据标签",
+            "ja" to "データラベル",
+            "ko" to "데이터 레이블",
+            "th" to "ป้ายกำกับข้อมูล"
+        ),
+        "chart_delete_row" to mapOf(
+            "zh-Hant" to "刪除此列",
+            "en" to "Delete Row",
+            "zh-Hans" to "删除此行",
+            "ja" to "この行を削除",
+            "ko" to "이 행 삭제",
+            "th" to "ลบแถวนี้"
+        ),
+        "chart_delete_series" to mapOf(
+            "zh-Hant" to "刪除此數列",
+            "en" to "Delete Series",
+            "zh-Hans" to "删除此系列",
+            "ja" to "この系列を削除",
+            "ko" to "이 계열 삭제",
+            "th" to "ลบชุดข้อมูลนี้"
+        ),
+        "chart_doughnut_hole" to mapOf(
+            "zh-Hant" to "環圈孔徑",
+            "en" to "Doughnut Hole Size",
+            "zh-Hans" to "圆环孔径",
+            "ja" to "ドーナツの穴の大きさ",
+            "ko" to "도넛 구멍 크기",
+            "th" to "ขนาดรูโดนัท"
+        ),
+        "chart_edit" to mapOf(
+            "zh-Hant" to "編修圖表",
+            "en" to "Edit Chart",
+            "zh-Hans" to "编辑图表",
+            "ja" to "グラフを編集",
+            "ko" to "차트 편집",
+            "th" to "แก้ไขแผนภูมิ"
+        ),
+        "chart_insert" to mapOf(
+            "zh-Hant" to "插入圖表",
+            "en" to "Insert Chart",
+            "zh-Hans" to "插入图表",
+            "ja" to "グラフを挿入",
+            "ko" to "차트 삽입",
+            "th" to "แทรกแผนภูมิ"
+        ),
+        "chart_kind_area" to mapOf(
+            "zh-Hant" to "區域圖",
+            "en" to "Area",
+            "zh-Hans" to "面积图",
+            "ja" to "面グラフ",
+            "ko" to "영역형",
+            "th" to "แผนภูมิพื้นที่"
+        ),
+        "chart_kind_bar" to mapOf(
+            "zh-Hant" to "直條圖",
+            "en" to "Column",
+            "zh-Hans" to "柱形图",
+            "ja" to "縦棒グラフ",
+            "ko" to "세로 막대",
+            "th" to "แผนภูมิแท่ง"
+        ),
+        "chart_kind_doughnut" to mapOf(
+            "zh-Hant" to "環圈圖",
+            "en" to "Doughnut",
+            "zh-Hans" to "圆环图",
+            "ja" to "ドーナツグラフ",
+            "ko" to "도넛형",
+            "th" to "แผนภูมิโดนัท"
+        ),
+        "chart_kind_horizontalBar" to mapOf(
+            "zh-Hant" to "橫條圖",
+            "en" to "Bar",
+            "zh-Hans" to "条形图",
+            "ja" to "横棒グラフ",
+            "ko" to "가로 막대",
+            "th" to "แผนภูมิแท่งแนวนอน"
+        ),
+        "chart_kind_line" to mapOf(
+            "zh-Hant" to "折線圖",
+            "en" to "Line",
+            "zh-Hans" to "折线图",
+            "ja" to "折れ線グラフ",
+            "ko" to "꺾은선형",
+            "th" to "กราฟเส้น"
+        ),
+        "chart_kind_pie" to mapOf(
+            "zh-Hant" to "圓餅圖",
+            "en" to "Pie",
+            "zh-Hans" to "饼图",
+            "ja" to "円グラフ",
+            "ko" to "원형",
+            "th" to "แผนภูมิวงกลม"
+        ),
+        "chart_kind_radar" to mapOf(
+            "zh-Hant" to "雷達圖",
+            "en" to "Radar",
+            "zh-Hans" to "雷达图",
+            "ja" to "レーダーチャート",
+            "ko" to "방사형",
+            "th" to "แผนภูมิเรดาร์"
+        ),
+        "chart_kind_scatter" to mapOf(
+            "zh-Hant" to "散佈圖",
+            "en" to "Scatter",
+            "zh-Hans" to "散点图",
+            "ja" to "散布図",
+            "ko" to "분산형",
+            "th" to "แผนภูมิกระจาย"
+        ),
+        "chart_kind_smoothLine" to mapOf(
+            "zh-Hant" to "平滑曲線圖",
+            "en" to "Smooth Line",
+            "zh-Hans" to "平滑曲线图",
+            "ja" to "平滑曲線",
+            "ko" to "부드러운 선",
+            "th" to "เส้นโค้ง"
+        ),
+        "chart_kind_stackedArea" to mapOf(
+            "zh-Hant" to "堆疊區域圖",
+            "en" to "Stacked Area",
+            "zh-Hans" to "堆积面积图",
+            "ja" to "積み上げ面",
+            "ko" to "누적 영역형",
+            "th" to "พื้นที่ซ้อน"
+        ),
+        "chart_kind_stackedBar" to mapOf(
+            "zh-Hant" to "堆疊直條圖",
+            "en" to "Stacked Column",
+            "zh-Hans" to "堆积柱形图",
+            "ja" to "積み上げ縦棒",
+            "ko" to "누적 세로 막대",
+            "th" to "แท่งซ้อน"
+        ),
+        "chart_label_decimals" to mapOf(
+            "zh-Hant" to "小數位數",
+            "en" to "Decimal Places",
+            "zh-Hans" to "小数位数",
+            "ja" to "小数点以下の桁数",
+            "ko" to "소수 자릿수",
+            "th" to "ตำแหน่งทศนิยม"
+        ),
+        "chart_labels_center" to mapOf(
+            "zh-Hant" to "置中",
+            "en" to "Center",
+            "zh-Hans" to "居中",
+            "ja" to "中央",
+            "ko" to "가운데",
+            "th" to "ตรงกลาง"
+        ),
+        "chart_labels_inside" to mapOf(
+            "zh-Hant" to "內側",
+            "en" to "Inside End",
+            "zh-Hans" to "内侧",
+            "ja" to "内側",
+            "ko" to "안쪽 끝",
+            "th" to "ด้านใน"
+        ),
+        "chart_labels_none" to mapOf(
+            "zh-Hant" to "不顯示",
+            "en" to "None",
+            "zh-Hans" to "不显示",
+            "ja" to "なし",
+            "ko" to "없음",
+            "th" to "ไม่แสดง"
+        ),
+        "chart_labels_outside" to mapOf(
+            "zh-Hant" to "外側",
+            "en" to "Outside End",
+            "zh-Hans" to "外侧",
+            "ja" to "外側",
+            "ko" to "바깥쪽 끝",
+            "th" to "ด้านนอก"
+        ),
+        "chart_legend_bottom" to mapOf(
+            "zh-Hant" to "下方",
+            "en" to "Bottom",
+            "zh-Hans" to "下方",
+            "ja" to "下",
+            "ko" to "아래쪽",
+            "th" to "ด้านล่าง"
+        ),
+        "chart_legend_none" to mapOf(
+            "zh-Hant" to "不顯示",
+            "en" to "Hidden",
+            "zh-Hans" to "不显示",
+            "ja" to "非表示",
+            "ko" to "숨김",
+            "th" to "ซ่อน"
+        ),
+        "chart_legend_position" to mapOf(
+            "zh-Hant" to "圖例位置",
+            "en" to "Legend Position",
+            "zh-Hans" to "图例位置",
+            "ja" to "凡例の位置",
+            "ko" to "범례 위치",
+            "th" to "ตำแหน่งคำอธิบาย"
+        ),
+        "chart_legend_right" to mapOf(
+            "zh-Hant" to "右側",
+            "en" to "Right",
+            "zh-Hans" to "右侧",
+            "ja" to "右",
+            "ko" to "오른쪽",
+            "th" to "ด้านขวา"
+        ),
+        "chart_legend_top" to mapOf(
+            "zh-Hant" to "上方",
+            "en" to "Top",
+            "zh-Hans" to "上方",
+            "ja" to "上",
+            "ko" to "위쪽",
+            "th" to "ด้านบน"
         ),
         "chart_line" to mapOf(
             "zh-Hant" to "折線圖",
@@ -578,6 +858,78 @@ object LocalizationStrings {
             "ko" to "원형",
             "th" to "แผนภูมิวงกลม"
         ),
+        "chart_section_axes" to mapOf(
+            "zh-Hant" to "座標軸",
+            "en" to "Axes",
+            "zh-Hans" to "坐标轴",
+            "ja" to "軸",
+            "ko" to "축",
+            "th" to "แกน"
+        ),
+        "chart_section_legend" to mapOf(
+            "zh-Hant" to "圖例與標籤",
+            "en" to "Legend & Labels",
+            "zh-Hans" to "图例与标签",
+            "ja" to "凡例とラベル",
+            "ko" to "범례 및 레이블",
+            "th" to "คำอธิบายและป้ายกำกับ"
+        ),
+        "chart_section_series" to mapOf(
+            "zh-Hant" to "資料數列",
+            "en" to "Series",
+            "zh-Hans" to "数据系列",
+            "ja" to "データ系列",
+            "ko" to "데이터 계열",
+            "th" to "ชุดข้อมูล"
+        ),
+        "chart_section_style" to mapOf(
+            "zh-Hant" to "樣式",
+            "en" to "Style",
+            "zh-Hans" to "样式",
+            "ja" to "スタイル",
+            "ko" to "스타일",
+            "th" to "สไตล์"
+        ),
+        "chart_series_color" to mapOf(
+            "zh-Hant" to "數列顏色",
+            "en" to "Series Color",
+            "zh-Hans" to "系列颜色",
+            "ja" to "系列の色",
+            "ko" to "계열 색상",
+            "th" to "สีชุดข้อมูล"
+        ),
+        "chart_series_name" to mapOf(
+            "zh-Hant" to "數列名稱",
+            "en" to "Series Name",
+            "zh-Hans" to "系列名称",
+            "ja" to "系列名",
+            "ko" to "계열 이름",
+            "th" to "ชื่อชุดข้อมูล"
+        ),
+        "chart_show_axis_labels" to mapOf(
+            "zh-Hant" to "顯示刻度標籤",
+            "en" to "Axis Labels",
+            "zh-Hans" to "显示刻度标签",
+            "ja" to "軸ラベル",
+            "ko" to "축 레이블",
+            "th" to "ป้ายกำกับแกน"
+        ),
+        "chart_show_grid" to mapOf(
+            "zh-Hant" to "顯示格線",
+            "en" to "Gridlines",
+            "zh-Hans" to "显示网格线",
+            "ja" to "目盛線",
+            "ko" to "눈금선",
+            "th" to "เส้นตาราง"
+        ),
+        "chart_single_series_hint" to mapOf(
+            "zh-Hant" to "這個類型只會畫第一個數列。",
+            "en" to "This chart type draws only the first series.",
+            "zh-Hans" to "此类型只会绘制第一个系列。",
+            "ja" to "この種類は最初の系列のみ描画します。",
+            "ko" to "이 차트 종류는 첫 번째 계열만 그립니다.",
+            "th" to "แผนภูมิชนิดนี้จะวาดเฉพาะชุดข้อมูลแรก"
+        ),
         "chart_studio" to mapOf(
             "zh-Hant" to "數字製圖",
             "en" to "Chart Studio",
@@ -585,6 +937,30 @@ object LocalizationStrings {
             "ja" to "グラフ作成",
             "ko" to "데이터 차트",
             "th" to "สร้างแผนภูมิ"
+        ),
+        "chart_tab_data" to mapOf(
+            "zh-Hant" to "資料",
+            "en" to "Data",
+            "zh-Hans" to "数据",
+            "ja" to "データ",
+            "ko" to "데이터",
+            "th" to "ข้อมูล"
+        ),
+        "chart_tab_format" to mapOf(
+            "zh-Hant" to "格式",
+            "en" to "Format",
+            "zh-Hans" to "格式",
+            "ja" to "書式",
+            "ko" to "서식",
+            "th" to "รูปแบบ"
+        ),
+        "chart_tab_type" to mapOf(
+            "zh-Hant" to "類型",
+            "en" to "Type",
+            "zh-Hans" to "类型",
+            "ja" to "種類",
+            "ko" to "종류",
+            "th" to "ประเภท"
         ),
         "chart_title" to mapOf(
             "zh-Hant" to "圖表標題",
@@ -601,6 +977,30 @@ object LocalizationStrings {
             "ja" to "グラフの種類",
             "ko" to "차트 유형",
             "th" to "ประเภทแผนภูมิ"
+        ),
+        "chart_update" to mapOf(
+            "zh-Hant" to "更新圖表",
+            "en" to "Update Chart",
+            "zh-Hans" to "更新图表",
+            "ja" to "グラフを更新",
+            "ko" to "차트 업데이트",
+            "th" to "อัปเดตแผนภูมิ"
+        ),
+        "chart_x_axis_title" to mapOf(
+            "zh-Hant" to "水平軸標題",
+            "en" to "Horizontal Axis Title",
+            "zh-Hans" to "水平轴标题",
+            "ja" to "横軸のタイトル",
+            "ko" to "가로 축 제목",
+            "th" to "ชื่อแกนนอน"
+        ),
+        "chart_y_axis_title" to mapOf(
+            "zh-Hant" to "垂直軸標題",
+            "en" to "Vertical Axis Title",
+            "zh-Hans" to "垂直轴标题",
+            "ja" to "縦軸のタイトル",
+            "ko" to "세로 축 제목",
+            "th" to "ชื่อแกนตั้ง"
         ),
         "clear_cache" to mapOf(
             "zh-Hant" to "清除快取",
