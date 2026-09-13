@@ -105,3 +105,32 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawInkStroke(
     // StrokeJoin 只在 Path 上有意義；逐段畫時用 Round cap 讓轉折不出現缺口。
     @Suppress("UNUSED_EXPRESSION") StrokeJoin.Round
 }
+
+/**
+ * 低延遲畫布：把 [InkSurfaceView] 包成 Compose 元件。
+ *
+ * 建不起來（OEM 不支援前緩衝）時呼叫 [onUnavailable]，由上層退回一般畫布。
+ * 手寫可以比較鈍，但不能不能用。
+ */
+@Composable
+fun LowLatencyInkCanvas(
+    engine: InkEngine,
+    latency: InkLatencyMeter,
+    modifier: Modifier = Modifier,
+    onInkChanged: () -> Unit = {},
+    onUnavailable: () -> Unit = {},
+    /// 外層改變這個值就會清空畫面（按下「清除」時遞增）。
+    clearToken: Int = 0
+) {
+    val density = LocalDensity.current.density
+    androidx.compose.ui.viewinterop.AndroidView(
+        modifier = modifier,
+        factory = { context ->
+            InkSurfaceView(context, engine, latency, density, onInkChanged).also { view ->
+                if (!view.start()) onUnavailable()
+            }
+        },
+        update = { view -> if (clearToken > 0 && engine.strokes.isEmpty()) view.clearAll() },
+        onRelease = { it.stop() }
+    )
+}

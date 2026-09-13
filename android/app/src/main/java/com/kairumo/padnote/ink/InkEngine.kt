@@ -165,6 +165,14 @@ class InkEngine(
         arbiter.reset()
     }
 
+    /**
+     * 這根指標目前是否被採納為墨跡。
+     *
+     * 低延遲渲染要用：前緩衝是**先畫了才知道對不對**的路徑，所以下筆之前
+     * 必須先問過仲裁結果，否則手掌的軌跡會先閃一下才被擦掉。
+     */
+    fun isDrawing(pointerId: ULong): Boolean = inFlight.containsKey(pointerId)
+
     /** 目前正在畫、尚未結束的取樣點（供即時預覽）。 */
     fun liveSamples(): List<List<InkInput.Sample>> = inFlight.values.map { it.toList() }
 

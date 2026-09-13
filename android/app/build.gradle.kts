@@ -58,6 +58,11 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
 
+    // 前緩衝渲染（低延遲手寫）。需要 API 29 以上 —— minSdk 就是為它訂的。
+    implementation("androidx.graphics:graphics-core:1.0.2")
+    // 預測筆跡。補的是「手已經到了、畫面還沒跟上」的那一段視覺落差。
+    implementation("androidx.input:input-motionprediction:1.0.0-beta05")
+
     // UniFFI 產生的 Kotlin 綁定透過 JNA 呼叫 libpadnote_core.so
     implementation("net.java.dev.jna:jna:5.15.0@aar")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.kairumo.padnote.ink.InkCanvas
 import com.kairumo.padnote.ink.InkEngine
+import com.kairumo.padnote.ink.InkLatencyMeter
+import com.kairumo.padnote.ink.LowLatencyInkCanvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -71,20 +74,33 @@ private fun InkScreen() {
     val activity = LocalContext.current as ComponentActivity
     val l10n = { key: String -> uiString(key) }
     val engine = remember { InkEngine() }
+    val latency = remember { InkLatencyMeter() }
     var penOnly by remember { mutableStateOf(false) }
+    // 預設開啟低延遲：那是這個工作包的重點。裝置不支援時會自己退回去。
+    var lowLatency by remember { mutableStateOf(true) }
+    var lowLatencyUnavailable by remember { mutableStateOf(false) }
     var revision by remember { mutableIntStateOf(0) }
+    var clearToken by remember { mutableIntStateOf(0) }
     var showStatus by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
+        // 工具列用水平捲動而不是讓標題去搶空間：窄螢幕上標題被擠成一欄一個字，
+        // 會把畫布整個往下推。
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                "Kairumo",
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f)
+          // 資訊鈕留在外面、不進捲動區：它在窄螢幕上會被推出畫面，
+          // 而那正是要看延遲數字的時候。
+          Row(
+            modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+          ) {
+            FilterChip(
+                selected = lowLatency && !lowLatencyUnavailable,
+                enabled = !lowLatencyUnavailable,
+                onClick = { lowLatency = !lowLatency; latency.clear() },
+                label = { Text(l10n("ink_low_latency")) }
             )
             FilterChip(
                 selected = penOnly,
@@ -95,8 +111,14 @@ private fun InkScreen() {
                 },
                 label = { Text(l10n("ink_pen_only")) }
             )
-            TextButton(onClick = { engine.reset(); revision++ }) { Text(l10n("ink_clear")) }
-            TextButton(onClick = { showStatus = true }) { Text("ⓘ") }
+            TextButton(onClick = {
+                engine.reset()
+                latency.clear()
+                revision++
+                clearToken++   // 表面上的像素也要清，不是只清資料
+            }) { Text(l10n("ink_clear")) }
+          }
+          TextButton(onClick = { showStatus = true }) { Text("ⓘ") }
         }
 
         // 讀一下 revision 讓筆畫數會跟著重繪；真相來源仍是 engine。
@@ -108,12 +130,32 @@ private fun InkScreen() {
             modifier = Modifier.padding(horizontal = 12.dp)
         )
 
-        Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
-            InkCanvas(
-                engine = engine,
-                modifier = Modifier.fillMaxSize(),
-                onInkChanged = { revision++ }
+        if (lowLatencyUnavailable) {
+            Text(
+                l10n("ink_low_latency_unavailable"),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(horizontal = 12.dp)
             )
+        }
+
+        Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
+            if (lowLatency && !lowLatencyUnavailable) {
+                LowLatencyInkCanvas(
+                    engine = engine,
+                    latency = latency,
+                    modifier = Modifier.fillMaxSize(),
+                    onInkChanged = { revision++ },
+                    onUnavailable = { lowLatencyUnavailable = true },
+                    clearToken = clearToken
+                )
+            } else {
+                InkCanvas(
+                    engine = engine,
+                    modifier = Modifier.fillMaxSize(),
+                    onInkChanged = { revision++ }
+                )
+            }
         }
     }
 
@@ -130,6 +172,12 @@ private fun InkScreen() {
                     modifier = Modifier.verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    // 延遲要即時反映，所以不進 remember 的那份快照。
+                    Text(
+                        "${l10n("ink_latency_label")}：${latency.summaryMs()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        fontFamily = FontFamily.Monospace
+                    )
                     rows.forEach { (label, value) ->
                         Text("$label：$value",
                             style = MaterialTheme.typography.bodySmall,

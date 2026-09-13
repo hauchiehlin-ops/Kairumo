@@ -1407,6 +1407,30 @@ extension LocalizationManager {
             .ko: "지우기",
             .th: "ล้าง"
         ],
+        "ink_latency_label": [
+            .zhHant: "輸入延遲",
+            .en: "Input latency",
+            .zhHans: "输入延迟",
+            .ja: "入力遅延",
+            .ko: "입력 지연",
+            .th: "ความหน่วงอินพุต"
+        ],
+        "ink_low_latency": [
+            .zhHant: "低延遲",
+            .en: "Low Latency",
+            .zhHans: "低延迟",
+            .ja: "低遅延",
+            .ko: "저지연",
+            .th: "หน่วงต่ำ"
+        ],
+        "ink_low_latency_unavailable": [
+            .zhHant: "這台裝置不支援前緩衝渲染，已改用一般畫布",
+            .en: "Front-buffered rendering is unavailable on this device; using the standard canvas",
+            .zhHans: "这台设备不支持前缓冲渲染，已改用一般画布",
+            .ja: "この端末はフロントバッファ描画に対応していないため、通常のキャンバスを使用します",
+            .ko: "이 기기는 프런트 버퍼 렌더링을 지원하지 않아 일반 캔버스를 사용합니다",
+            .th: "อุปกรณ์นี้ไม่รองรับการเรนเดอร์แบบ front-buffer จึงใช้ผืนผ้าใบมาตรฐานแทน"
+        ],
         "ink_pen_only": [
             .zhHant: "僅限觸控筆",
             .en: "Stylus Only",

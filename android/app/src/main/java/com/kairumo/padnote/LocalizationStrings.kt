@@ -1402,6 +1402,30 @@ object LocalizationStrings {
             "ko" to "지우기",
             "th" to "ล้าง"
         ),
+        "ink_latency_label" to mapOf(
+            "zh-Hant" to "輸入延遲",
+            "en" to "Input latency",
+            "zh-Hans" to "输入延迟",
+            "ja" to "入力遅延",
+            "ko" to "입력 지연",
+            "th" to "ความหน่วงอินพุต"
+        ),
+        "ink_low_latency" to mapOf(
+            "zh-Hant" to "低延遲",
+            "en" to "Low Latency",
+            "zh-Hans" to "低延迟",
+            "ja" to "低遅延",
+            "ko" to "저지연",
+            "th" to "หน่วงต่ำ"
+        ),
+        "ink_low_latency_unavailable" to mapOf(
+            "zh-Hant" to "這台裝置不支援前緩衝渲染，已改用一般畫布",
+            "en" to "Front-buffered rendering is unavailable on this device; using the standard canvas",
+            "zh-Hans" to "这台设备不支持前缓冲渲染，已改用一般画布",
+            "ja" to "この端末はフロントバッファ描画に対応していないため、通常のキャンバスを使用します",
+            "ko" to "이 기기는 프런트 버퍼 렌더링을 지원하지 않아 일반 캔버스를 사용합니다",
+            "th" to "อุปกรณ์นี้ไม่รองรับการเรนเดอร์แบบ front-buffer จึงใช้ผืนผ้าใบมาตรฐานแทน"
+        ),
         "ink_pen_only" to mapOf(
             "zh-Hant" to "僅限觸控筆",
             "en" to "Stylus Only",

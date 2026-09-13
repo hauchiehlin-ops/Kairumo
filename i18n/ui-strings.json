@@ -1391,6 +1391,30 @@
     "zhHans": "清除",
     "zhHant": "清除"
   },
+  "ink_latency_label": {
+    "en": "Input latency",
+    "ja": "入力遅延",
+    "ko": "입력 지연",
+    "th": "ความหน่วงอินพุต",
+    "zhHans": "输入延迟",
+    "zhHant": "輸入延遲"
+  },
+  "ink_low_latency": {
+    "en": "Low Latency",
+    "ja": "低遅延",
+    "ko": "저지연",
+    "th": "หน่วงต่ำ",
+    "zhHans": "低延迟",
+    "zhHant": "低延遲"
+  },
+  "ink_low_latency_unavailable": {
+    "en": "Front-buffered rendering is unavailable on this device; using the standard canvas",
+    "ja": "この端末はフロントバッファ描画に対応していないため、通常のキャンバスを使用します",
+    "ko": "이 기기는 프런트 버퍼 렌더링을 지원하지 않아 일반 캔버스를 사용합니다",
+    "th": "อุปกรณ์นี้ไม่รองรับการเรนเดอร์แบบ front-buffer จึงใช้ผืนผ้าใบมาตรฐานแทน",
+    "zhHans": "这台设备不支持前缓冲渲染，已改用一般画布",
+    "zhHant": "這台裝置不支援前緩衝渲染，已改用一般畫布"
+  },
   "ink_pen_only": {
     "en": "Stylus Only",
     "ja": "スタイラスのみ",
