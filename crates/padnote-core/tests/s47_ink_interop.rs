@@ -155,3 +155,68 @@ fn many_points_survive_the_ffi_boundary() {
     let got = s.stroke_detail(page, id).unwrap().unwrap();
     assert_points_identical(&points, &got.points);
 }
+
+// ---- 頁面尺寸與區塊座標（WP4 的另外兩項驗收條件）----
+
+#[test]
+fn page_height_survives_reopening() {
+    // 「頁面高度與原稿一致」是驗收條件之一。Kairumo 的畫布可以向下延長，
+    // 沒有落盤的話另一個平台會變回預設高度，看起來像內容被截掉。
+    let path = tmp("pagesize");
+    let page = {
+        let s = PadnoteSession::create(path.clone(), "長畫布".into(), 1_757_635_200_000, 0xC1).unwrap();
+        let page = s.first_page_id().unwrap();
+        s.set_page_size(page.clone(), 595.0, 3_200.0).unwrap();
+        assert_eq!(s.page_size(page.clone()).unwrap(), Some(vec![595.0, 3_200.0]));
+        page
+    };
+
+    let reopened = PadnoteSession::open_existing(path, 0xC2).unwrap();
+    assert_eq!(
+        reopened.page_size(page).unwrap(),
+        Some(vec![595.0, 3_200.0]),
+        "延長過的頁面高度必須跟著檔案走"
+    );
+}
+
+#[test]
+fn block_position_survives_reopening() {
+    // 文字方塊與圖片是絕對定位的。位置沒進 op-log 的話，跨平台打開會擠在一起。
+    let path = tmp("blockpos");
+    let block = {
+        let s = PadnoteSession::create(path.clone(), "定位".into(), 1_757_635_200_000, 0xC3).unwrap();
+        let page = s.first_page_id().unwrap();
+        let block = s
+            .add_text(page, "會議重點".into(), padnote_core::ffi::BlockStyle::Body)
+            .unwrap();
+        assert_eq!(s.block_position(block.clone()).unwrap(), None, "尚未定位前應為 None");
+        s.set_block_position(block.clone(), 120.5, 480.25).unwrap();
+        block
+    };
+
+    let reopened = PadnoteSession::open_existing(path, 0xC4).unwrap();
+    assert_eq!(reopened.block_position(block).unwrap(), Some(vec![120.5, 480.25]));
+}
+
+#[test]
+fn positioning_a_missing_block_is_an_error_not_a_silent_noop() {
+    // 靜默忽略的話，平台層會以為位置寫進去了，直到使用者發現物件跑掉。
+    let s = PadnoteSession::create(tmp("misspos"), "錯誤".into(), 1_757_635_200_000, 0xC5).unwrap();
+    let ghost = "00000000-0000-7000-8000-0000000000ff".to_string();
+    assert!(s.set_block_position(ghost, 1.0, 2.0).is_err());
+}
+
+#[test]
+fn every_page_can_be_reached_by_index() {
+    // 多頁筆記若只拿得到第一頁，「多頁筆記在 Android 開起來一致」就無從談起。
+    let s = PadnoteSession::create(tmp("pages"), "多頁".into(), 1_757_635_200_000, 0xC6).unwrap();
+    let first = s.first_page_id().unwrap();
+    let second = s.add_page(padnote_core::ffi::PageStyle::Grid).unwrap();
+    let third = s.add_page(padnote_core::ffi::PageStyle::Lined).unwrap();
+
+    assert_eq!(s.page_count(), 3);
+    assert_eq!(s.page_id_at(0), Some(first));
+    assert_eq!(s.page_id_at(1), Some(second));
+    assert_eq!(s.page_id_at(2), Some(third));
+    assert_eq!(s.page_id_at(3), None, "超出範圍要回 None，不是 panic 也不是最後一頁");
+}

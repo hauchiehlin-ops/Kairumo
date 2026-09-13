@@ -389,6 +389,20 @@ impl NotebookSession {
                 }
             }
 
+            DocOp::SetPageSize { id, width, height } => {
+                if let Some(page) = self.notebook.page_mut(*id) {
+                    page.size = (*width, *height);
+                }
+            }
+
+            DocOp::SetBlockPosition { id, x, y } => {
+                if let Some(page) = self.page_of_block(*id)
+                    && let Some(b) = self.notebook.page_mut(page).and_then(|p| p.block_mut(*id))
+                {
+                    b.position = Some((*x, *y));
+                }
+            }
+
             DocOp::TextEdit { block, op } => {
                 // 讓本地時鐘追上遠端，避免重連後產生撞號的 OpId。
                 self.editor.observe(op.id());
@@ -881,6 +895,26 @@ impl NotebookSession {
 
     pub fn set_block_style(&mut self, block: Uuid, style: TextStyle) -> Result<(), AppError> {
         self.record(vec![DocOp::SetBlockStyle { id: block, style }])
+    }
+
+    /// 設定頁面尺寸（點）。長畫布就是靠這個落盤的。
+    pub fn set_page_size(&mut self, page: Uuid, width: f32, height: f32) -> Result<(), AppError> {
+        if self.notebook.page(page).is_none() {
+            return Err(AppError::PageNotFound(page));
+        }
+        self.record(vec![DocOp::SetPageSize {
+            id: page,
+            width,
+            height,
+        }])
+    }
+
+    /// 設定區塊在頁面上的絕對座標。
+    pub fn set_block_position(&mut self, block: Uuid, x: f32, y: f32) -> Result<(), AppError> {
+        if self.page_of_block(block).is_none() {
+            return Err(AppError::BlockNotFound(block));
+        }
+        self.record(vec![DocOp::SetBlockPosition { id: block, x, y }])
     }
 
     pub fn remove_block(&mut self, block: Uuid) -> Result<(), AppError> {

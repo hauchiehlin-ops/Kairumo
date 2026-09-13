@@ -330,6 +330,18 @@ impl PadnoteSession {
         self.lock().first_page().map(|id| id.to_string())
     }
 
+    /// 第 `index` 頁的 id（由 0 起算）。超出範圍時回傳 `None`。
+    ///
+    /// 沒有這個出口，平台層只拿得到第一頁 —— 多頁筆記根本走不完。
+    /// 頁面 id 的產生規則是內部實作，平台層不該去猜。
+    pub fn page_id_at(&self, index: u32) -> Option<String> {
+        self.lock()
+            .notebook()
+            .pages()
+            .get(index as usize)
+            .map(|p| p.id.to_string())
+    }
+
     pub fn add_page(&self, style: PageStyle) -> Result<String, FfiError> {
         Ok(self.lock().add_page(style.into())?.to_string())
     }
@@ -460,6 +472,47 @@ impl PadnoteSession {
 
     pub fn block_text(&self, block_id: String) -> Result<Option<String>, FfiError> {
         Ok(self.lock().block_text(parse_uuid(&block_id)?))
+    }
+
+    /// 設定頁面尺寸（點）。
+    ///
+    /// Kairumo 的畫布可以向下延長，使用者拉長過的那一頁若沒有把高度寫進檔案，
+    /// 另一個平台打開會變回預設高度 —— 內容看起來像被截掉了。
+    pub fn set_page_size(&self, page_id: String, width: f32, height: f32) -> Result<(), FfiError> {
+        self.lock()
+            .set_page_size(parse_uuid(&page_id)?, width, height)?;
+        Ok(())
+    }
+
+    /// 頁面尺寸 `[width, height]`（點）。查無此頁時回傳 `None`。
+    pub fn page_size(&self, page_id: String) -> Result<Option<Vec<f32>>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self
+            .lock()
+            .notebook()
+            .page(page)
+            .map(|p| vec![p.size.0, p.size.1]))
+    }
+
+    /// 設定區塊在頁面上的絕對座標。
+    pub fn set_block_position(&self, block_id: String, x: f32, y: f32) -> Result<(), FfiError> {
+        self.lock()
+            .set_block_position(parse_uuid(&block_id)?, x, y)?;
+        Ok(())
+    }
+
+    /// 區塊的絕對座標 `[x, y]`。隨文流排版（未定位）或查無此區塊時回傳 `None`。
+    pub fn block_position(&self, block_id: String) -> Result<Option<Vec<f32>>, FfiError> {
+        let block = parse_uuid(&block_id)?;
+        let guard = self.lock();
+        Ok(guard
+            .notebook()
+            .pages()
+            .iter()
+            .flat_map(|p| p.blocks())
+            .find(|b| b.id == block)
+            .and_then(|b| b.position)
+            .map(|(x, y)| vec![x, y]))
     }
 
     pub fn remove_block(&self, block_id: String) -> Result<(), FfiError> {

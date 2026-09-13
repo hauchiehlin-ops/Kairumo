@@ -172,6 +172,26 @@ pub enum DocOp {
     Ungroup {
         id: Uuid,
     },
+    /// 調整頁面尺寸（點）。
+    ///
+    /// 沒有這個操作的話，「可向下延長的長畫布」在檔案裡完全沒有記錄 ——
+    /// iPad 上拉長到 3200pt 的那一頁，在另一個平台會變回預設高度，
+    /// 上面的內容看起來就像被截掉了。
+    SetPageSize {
+        id: Uuid,
+        width: f32,
+        height: f32,
+    },
+    /// 設定區塊在頁面上的絕對座標。
+    ///
+    /// `Block.position` 這個欄位一直存在，卻沒有任何操作寫得進去 —— 於是文字
+    /// 方塊與圖片的擺放位置無法落進 op-log。跨平台打開時所有物件會擠在一起，
+    /// 而且在原本的平台上看不出來（位置是另外存的）。
+    SetBlockPosition {
+        id: Uuid,
+        x: f32,
+        y: f32,
+    },
     /// 一個轉錄詞，時間戳在筆記本時間軸上（format-spec §4.1）。
     AddWord {
         text: String,
@@ -212,6 +232,8 @@ const OP_INSERT_TABLE_COLUMN: u8 = 26;
 const OP_DELETE_TABLE_COLUMN: u8 = 27;
 const OP_MERGE_TABLE_CELLS: u8 = 28;
 const OP_UNMERGE_TABLE_CELL: u8 = 29;
+const OP_SET_PAGE_SIZE: u8 = 30;
+const OP_SET_BLOCK_POSITION: u8 = 31;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DocCodecError {
@@ -816,6 +838,12 @@ pub fn encode(ops: &[DocOp]) -> Vec<u8> {
             DocOp::SetZIndex { id, index } => {
                 w.u8(OP_SET_Z_INDEX).uuid(*id).u32(*index);
             }
+            DocOp::SetPageSize { id, width, height } => {
+                w.u8(OP_SET_PAGE_SIZE).uuid(*id).f32(*width).f32(*height);
+            }
+            DocOp::SetBlockPosition { id, x, y } => {
+                w.u8(OP_SET_BLOCK_POSITION).uuid(*id).f32(*x).f32(*y);
+            }
             DocOp::RemoveObject { id } => {
                 w.u8(OP_REMOVE_OBJECT).uuid(*id);
             }
@@ -981,6 +1009,16 @@ pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
             OP_SET_Z_INDEX => DocOp::SetZIndex {
                 id: r.uuid()?,
                 index: r.u32()?,
+            },
+            OP_SET_PAGE_SIZE => DocOp::SetPageSize {
+                id: r.uuid()?,
+                width: r.f32()?,
+                height: r.f32()?,
+            },
+            OP_SET_BLOCK_POSITION => DocOp::SetBlockPosition {
+                id: r.uuid()?,
+                x: r.f32()?,
+                y: r.f32()?,
             },
             OP_REMOVE_OBJECT => DocOp::RemoveObject { id: r.uuid()? },
             OP_SET_OBJECT_TRANSFORM => DocOp::SetObjectTransform {
@@ -1162,6 +1200,16 @@ mod tests {
                 id: uid(61),
                 index: 2,
             },
+            DocOp::SetPageSize {
+                id: uid(1),
+                width: 595.0,
+                height: 3200.0,
+            },
+            DocOp::SetBlockPosition {
+                id: uid(61),
+                x: 120.5,
+                y: 480.25,
+            },
             DocOp::AddShapeObject {
                 page: uid(1),
                 id: uid(70),
@@ -1225,8 +1273,8 @@ mod tests {
             .collect();
         assert_eq!(
             tags.len(),
-            29,
-            "29 種操作標籤都要被測到，實得 {}",
+            31,
+            "31 種操作標籤都要被測到，實得 {}",
             tags.len()
         );
     }

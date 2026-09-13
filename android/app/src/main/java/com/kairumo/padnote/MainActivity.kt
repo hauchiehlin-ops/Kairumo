@@ -15,6 +15,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -23,6 +24,7 @@ import uniffi.padnote_core.coreVersion
 import uniffi.padnote_core.sessionKeyGenerate
 import uniffi.padnote_core.sessionOpen
 import uniffi.padnote_core.sessionSeal
+import uniffi.padnote_core.PadnoteSession
 import uniffi.padnote_core.RelayServer
 import java.util.Locale
 
@@ -48,7 +50,9 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun CoreStatusScreen() {
     // 真的呼叫 Rust —— 這裡回傳值出得來，就代表 .so 有被載入、JNA 綁定也對得上
-    val status = remember { readCoreStatus() }
+    // 需要 Activity 才拿得到 App 專屬外部目錄（交接檔就放在那裡）。
+    val activity = LocalContext.current as ComponentActivity
+    val status = remember { readCoreStatus(activity) }
 
     Column(
         modifier = Modifier
@@ -73,7 +77,7 @@ private fun CoreStatusScreen() {
     }
 }
 
-private fun readCoreStatus(): List<Pair<String, String>> = try {
+private fun readCoreStatus(activity: ComponentActivity): List<Pair<String, String>> = try {
     val info = appInfo()
     listOf(
         "核心版本" to coreVersion(),
@@ -84,7 +88,7 @@ private fun readCoreStatus(): List<Pair<String, String>> = try {
         "介面語系" to deviceLanguageTag(),
         "字串表" to "${LocalizationStrings.table.size} 條（與 Apple 版同源）",
         "示例字串" to uiString("about_app")
-    )
+    ) + activity.readHandoffPackage()
 } catch (t: Throwable) {
     // 綁定或 .so 載入失敗時要講清楚，不要給一個空白畫面
     listOf("核心載入失敗" to (t.message ?: t.toString()))
@@ -110,6 +114,46 @@ private fun checkRelay(): String = try {
     if (running && port > 0u) "已啟動於埠 $port（已停止）" else "啟動失敗"
 } catch (t: Throwable) {
     "失敗：${t.message}"
+}
+
+/**
+ * 打開 iOS 端匯出的 `.padnote` 套件並回報內容（工作包 WP4 的驗收）。
+ *
+ * 驗收條件是「iOS 建立的多頁筆記在 Android 開啟後，筆畫數、座標、顏色與
+ * 頁面高度與原稿一致」。所以這裡不只顯示「開得起來」—— 要把可以逐項比對的
+ * 數字攤出來：每頁筆畫數、第一筆的顏色與起點座標、每頁高度。
+ *
+ * 檔案放在 App 內部 filesDir。不用外部目錄：Android 10 之後 adb push 進去的
+ * 檔案屬於 shell、App 反而讀不到，會得到一個看起來像「檔案壞掉」的錯誤訊息。
+ * 放內部目錄則用 `adb shell run-as` 解壓進去即可（debug 版）。
+ * 沒有檔案時整段略過。
+ */
+private fun ComponentActivity.readHandoffPackage(): List<Pair<String, String>> {
+    val pkg = java.io.File(filesDir, "handoff.padnote")
+    if (!pkg.exists()) return emptyList()
+
+    return try {
+        val session = PadnoteSession.openExisting(pkg.absolutePath, 0xB0u)
+        val rows = mutableListOf<Pair<String, String>>()
+        rows += "跨平台筆記" to session.title()
+        val pageCount = session.pageCount().toInt()
+        rows += "頁數" to pageCount.toString()
+
+        for (i in 0 until pageCount) {
+            val pageId = session.pageIdAt(i.toUInt()) ?: continue
+            val strokes = session.visibleStrokeDetails(pageId)
+            val height = session.pageSize(pageId)?.getOrNull(1) ?: 0f
+            rows += "第 ${i + 1} 頁" to "筆畫 ${strokes.size}、高 ${height.toInt()}pt"
+            strokes.firstOrNull()?.let { s ->
+                val rgba = s.colorRgba.joinToString(",") { (it.toInt() and 0xFF).toString() }
+                val p0 = s.points.first()
+                rows += "　首筆" to "RGBA($rgba)、起點(${p0.x}, ${p0.y})、${s.points.size} 點"
+            }
+        }
+        rows
+    } catch (t: Throwable) {
+        listOf("跨平台筆記" to "開啟失敗：${t.message}")
+    }
 }
 
 /**

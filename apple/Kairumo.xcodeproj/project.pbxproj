@@ -30,7 +30,9 @@
 		9F604F0E1403CBF029FDB93A /* LocalRelayServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFA100928CD3224E43D7382 /* LocalRelayServer.swift */; };
 		A63608E6DD600F35CB565FE4 /* PadnoteCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7245DE41B9104E9F47F0C21B /* PadnoteCore.xcframework */; };
 		AFF32DB932FC4031A86B8F57 /* MaterialEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51E8541179F28A49C13A1967 /* MaterialEngine.swift */; };
+		B0078B7EFE63AC61A9459A23 /* NotebookPackageBridgeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B05DE382C8B7C4EE39BD076B /* NotebookPackageBridgeTests.swift */; };
 		B09B7D4D3FA9CB33C0E89FE0 /* LocalizationStrings.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F65D4DD5D5DF9A56132D032E /* LocalizationStrings.generated.swift */; };
+		B0A3045EEDEA33E102E52D82 /* NotebookPackageBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A09B19AED1DC70D31503F82C /* NotebookPackageBridge.swift */; };
 		B3DFF4CFC65E91FEEA6AA7B4 /* HomeWorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */; };
 		B461E05D52232C76413B2DB2 /* Docs in Resources */ = {isa = PBXBuildFile; fileRef = B7FE882F90D6ABA99E0820BF /* Docs */; };
 		BBA43DAF3585326259C48FE6 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D059ACC4F96D906F5A18970D /* AppVersion.swift */; };
@@ -98,9 +100,11 @@
 		8FEF2B249C62AD4AE2E3C246 /* AudioRecorderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorderManager.swift; sourceTree = "<group>"; };
 		9DEABFE677080C2925F1968D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9E0D4938AD7ED09F531105A2 /* NotebookEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookEditorView.swift; sourceTree = "<group>"; };
+		A09B19AED1DC70D31503F82C /* NotebookPackageBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookPackageBridge.swift; sourceTree = "<group>"; };
 		A351D8EB2219ECF83FF78645 /* AssetLibraryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetLibraryView.swift; sourceTree = "<group>"; };
 		A94975999121E1FFF8139B6A /* FloatingPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPanel.swift; sourceTree = "<group>"; };
 		AB04C4FA3426304F705E5046 /* HomeWorkbenchUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeWorkbenchUsage.swift; sourceTree = "<group>"; };
+		B05DE382C8B7C4EE39BD076B /* NotebookPackageBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookPackageBridgeTests.swift; sourceTree = "<group>"; };
 		B7FE882F90D6ABA99E0820BF /* Docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Docs; path = Resources/Docs; sourceTree = SOURCE_ROOT; };
 		C72410287ED6D6BF9B550D5B /* NotebookStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookStore.swift; sourceTree = "<group>"; };
 		D059ACC4F96D906F5A18970D /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
@@ -148,6 +152,7 @@
 			isa = PBXGroup;
 			children = (
 				691C8F15D077838E27650DFC /* InkInteropTests.swift */,
+				B05DE382C8B7C4EE39BD076B /* NotebookPackageBridgeTests.swift */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
@@ -220,6 +225,7 @@
 				3E642D648CC5479DA382CE35 /* MathEngine.swift */,
 				61D0BC500318C879D185099E /* Model3DStudioView.swift */,
 				9E0D4938AD7ED09F531105A2 /* NotebookEditorView.swift */,
+				A09B19AED1DC70D31503F82C /* NotebookPackageBridge.swift */,
 				C72410287ED6D6BF9B550D5B /* NotebookStore.swift */,
 				02895D54063C3AA4B5D30463 /* PageThumbnailRenderer.swift */,
 				824AF14643DF914996543B0B /* ProColorPickerSheet.swift */,
@@ -350,6 +356,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C9792F66F734F3441E471BE4 /* InkInteropTests.swift in Sources */,
+				B0078B7EFE63AC61A9459A23 /* NotebookPackageBridgeTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -392,6 +399,7 @@
 				FC1A97633808D861B89FE967 /* MathEngine.swift in Sources */,
 				EE282DFD419D4B01DE647AC2 /* Model3DStudioView.swift in Sources */,
 				880DCFF8C76BF936EADB63DF /* NotebookEditorView.swift in Sources */,
+				B0A3045EEDEA33E102E52D82 /* NotebookPackageBridge.swift in Sources */,
 				F582ACE682ECDB8D43C78140 /* NotebookStore.swift in Sources */,
 				2823612B8F3A376A45042712 /* PageThumbnailRenderer.swift in Sources */,
 				891B35800C7FEFD3421B7293 /* ProColorPickerSheet.swift in Sources */,

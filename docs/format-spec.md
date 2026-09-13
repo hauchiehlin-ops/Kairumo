@@ -174,15 +174,16 @@ C1（筆跡↔錄音跳轉）、C4（詞級時間戳）、A10（筆跡重播）�
 [1B 操作類型][操作內容…]
 ```
 
-21 種操作：
+31 種操作：
 
-**文件結構**：`SetTitle` / `AddPage` / `RemovePage`
+**文件結構**：`SetTitle` / `AddPage` / `RemovePage` / `SetPageSize`
 **內容區塊**：`AddTextBlock` / `AddTranscriptBlock` / `AddImageBlock` /
-`RemoveBlock` / `SetBlockStyle` / `TextEdit`
+`RemoveBlock` / `SetBlockStyle` / `SetBlockPosition` / `TextEdit`
 **錄音**：`StartAudio` / `EndAudio` / `AddWord`
 **物件**（ADR-0010）：`AddObject` / `RemoveObject` / `SetObjectTransform` /
 `Group` / `Ungroup` / `SetZIndex`
-**表格**：`AddTableBlock` / `SetTableCell`
+**表格**：`AddTableBlock` / `SetTableCell` / `InsertTableRow` / `DeleteTableRow` /
+`InsertTableColumn` / `DeleteTableColumn` / `MergeTableCells` / `UnmergeTableCell`
 **嵌入文件**（ADR-0009）：`AddEmbeddedBlock`
 
 字串以 `u32` **位元組**長度前綴（非字元數）。UUID 為原始 16 bytes。
@@ -190,6 +191,16 @@ C1（筆跡↔錄音跳轉）、C4（詞級時間戳）、A10（筆跡重播）�
 
 `TextEdit` 內嵌文字 CRDT 操作（ADR-0004）：插入記錄 `(id, origin, 字元碼位)`，
 刪除記錄 `(id)`。**位置以 origin 參照表示，不是索引** —— 索引在併發編輯下會錯位。
+
+### 頁面尺寸與區塊座標
+
+`SetPageSize` 記錄頁面的寬高（點）。頁面高度是**內容的一部分**，不是顯示偏好：
+使用者向下延長過的長畫布若沒有落盤，換一個平台打開會回到預設高度，
+畫在下半部的內容看起來就像被截掉了。
+
+`SetBlockPosition` 記錄區塊在頁面上的絕對座標。沒有這個操作時 `Block.position`
+永遠是 `None`，所有絕對定位的物件（文字方塊、圖片）跨平台開啟後會擠在一起 ——
+而且在原本的平台上看不出來，因為位置是另外存的。
 
 ### 堆疊順序
 
