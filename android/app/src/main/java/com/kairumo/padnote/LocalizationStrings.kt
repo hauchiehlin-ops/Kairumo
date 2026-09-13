@@ -1466,6 +1466,14 @@ object LocalizationStrings {
             "ko" to "녹음 완료",
             "th" to "เสร็จสิ้นการบันทึก"
         ),
+        "first_line_indent" to mapOf(
+            "zh-Hant" to "首行",
+            "en" to "First",
+            "zh-Hans" to "首行",
+            "ja" to "字下げ",
+            "ko" to "첫 줄",
+            "th" to "บรรทัดแรก"
+        ),
         "folder_contains_notes" to mapOf(
             "zh-Hant" to "包含檔案",
             "en" to "Notes count",
@@ -1857,6 +1865,14 @@ object LocalizationStrings {
             "ja" to "ストローク選択中：ドラッグで移動、または削除/切り取り/コピー",
             "ko" to "획 선택됨: 드래그하여 이동 또는 삭제/잘라내기/복사",
             "th" to "เลือกลายเส้นแล้ว: ลากเพื่อย้าย หรือแตะลบ / ตัด / คัดลอก"
+        ),
+        "line_spacing" to mapOf(
+            "zh-Hant" to "行距",
+            "en" to "Line",
+            "zh-Hans" to "行距",
+            "ja" to "行間",
+            "ko" to "줄 간격",
+            "th" to "ระยะบรรทัด"
         ),
         "link_preview" to mapOf(
             "zh-Hant" to "網頁預覽",
@@ -2666,6 +2682,30 @@ object LocalizationStrings {
             "ko" to "단락 정렬",
             "th" to "การจัดแนวข้อความ"
         ),
+        "paragraph_indent" to mapOf(
+            "zh-Hant" to "縮排",
+            "en" to "Indent",
+            "zh-Hans" to "缩排",
+            "ja" to "インデント",
+            "ko" to "들여쓰기",
+            "th" to "เยื้อง"
+        ),
+        "paragraph_spacing" to mapOf(
+            "zh-Hant" to "段距",
+            "en" to "Para",
+            "zh-Hans" to "段距",
+            "ja" to "段落間",
+            "ko" to "단락 간격",
+            "th" to "ระยะย่อหน้า"
+        ),
+        "paragraph_style" to mapOf(
+            "zh-Hant" to "段落",
+            "en" to "Paragraph",
+            "zh-Hans" to "段落",
+            "ja" to "段落",
+            "ko" to "단락",
+            "th" to "ย่อหน้า"
+        ),
         "paste_strokes" to mapOf(
             "zh-Hant" to "貼上",
             "en" to "Paste",
@@ -2985,6 +3025,14 @@ object LocalizationStrings {
             "ja" to "リセット",
             "ko" to "초기화",
             "th" to "รีเซ็ต"
+        ),
+        "resize_text_box" to mapOf(
+            "zh-Hant" to "拖曳調整文字方塊大小",
+            "en" to "Drag to resize the text box",
+            "zh-Hans" to "拖曳调整文字方块大小",
+            "ja" to "ドラッグしてテキストボックスのサイズを変更",
+            "ko" to "끌어서 텍스트 상자 크기 조절",
+            "th" to "ลากเพื่อปรับขนาดกล่องข้อความ"
         ),
         "resolve" to mapOf(
             "zh-Hant" to "標記為已解決",

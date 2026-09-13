@@ -8,7 +8,19 @@
 import SwiftUI
 
 public struct WordTextStudioView: View {
+
+    /// 這個面板怎麼被呈現。
+    ///
+    /// `sheet` 是建立新文字方塊時用的 —— 那時畫布上還沒有東西可看，蓋住沒關係。
+    /// `inlinePanel` 是編輯既有方塊時用的：面板浮在畫布上，**不能蓋住正在改的
+    /// 那個方塊**，所以不要 NavigationStack、不要取消／確認按鈕（改動即時生效）。
+    public enum Presentation {
+        case sheet
+        case inlinePanel
+    }
+
     @Binding var attachment: NoteTextAttachment
+    var presentation: Presentation = .sheet
     var onSave: (NoteTextAttachment) -> Void
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var localizationManager = LocalizationManager.shared
@@ -52,15 +64,61 @@ public struct WordTextStudioView: View {
         ("透明畫布", "clear", .clear)
     ]
 
+    /// 自訂底色的暫存狀態。見 `cardStyleBar` 裡的說明。
+    @State private var customBackground: Color = .white
+
     // 常用字級
     private let fontSizes: [CGFloat] = [12, 14, 16, 18, 20, 24, 28, 36, 48]
 
-    public init(attachment: Binding<NoteTextAttachment>, onSave: @escaping (NoteTextAttachment) -> Void) {
+    public init(
+        attachment: Binding<NoteTextAttachment>,
+        presentation: Presentation = .sheet,
+        onSave: @escaping (NoteTextAttachment) -> Void
+    ) {
         self._attachment = attachment
+        self.presentation = presentation
         self.onSave = onSave
     }
 
     public var body: some View {
+        switch presentation {
+        case .inlinePanel: panelContent
+        case .sheet: sheetContent
+        }
+    }
+
+    /// 浮動面板版：沒有導覽列，改動即時生效。
+    ///
+    /// 預覽區也拿掉了 —— 正在改的那個文字方塊就在畫布上，面板裡再放一份
+    /// 預覽只是佔位置，而且兩份看起來不一樣的時候使用者不知道該信哪一個。
+    private var panelContent: some View {
+        VStack(spacing: 0) {
+            wordFormatToolbar
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+
+            Divider()
+
+            specialElementsBar
+                .padding(.vertical, 8)
+
+            Divider()
+
+            paragraphBar
+            cardStyleBar
+
+            borderStyleBar
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+        }
+        .frame(width: 520)
+        .onChange(of: attachment) { updated in
+            // 浮動面板沒有「確認」按鈕 —— 改了就算數，畫布上同步看得到。
+            onSave(updated)
+        }
+    }
+
+    private var sheetContent: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 // 1. 🌟 Word 級格式與段落工具列 (Word Toolbar)
@@ -86,6 +144,7 @@ public struct WordTextStudioView: View {
                 Divider()
 
                 // 4. 底色與邊框版面配置列
+                paragraphBar
                 cardStyleBar
 
                 borderStyleBar
@@ -335,6 +394,96 @@ public struct WordTextStudioView: View {
     }
 
     // MARK: - 4. 版面配置與底色樣式列
+    /// 段落設定。
+    ///
+    /// 原本只有對齊與清單 —— 那是「字」的設定，不是「段落」的設定。
+    /// 行距與縮排才是讓一段文字看起來像文件而不是一團字的東西。
+    private var paragraphBar: some View {
+        HStack(spacing: 14) {
+            Text(localizationManager.localized("paragraph_style"))
+                .font(.caption)
+                .fontWeight(.bold)
+                .foregroundColor(.secondary)
+
+            stepperControl(
+                label: localizationManager.localized("line_spacing"),
+                value: Binding(
+                    get: { attachment.lineSpacing ?? 0 },
+                    set: { attachment.lineSpacing = $0 }
+                ),
+                range: 0...24, step: 2)
+
+            stepperControl(
+                label: localizationManager.localized("paragraph_spacing"),
+                value: Binding(
+                    get: { attachment.paragraphSpacing ?? 0 },
+                    set: { attachment.paragraphSpacing = $0 }
+                ),
+                range: 0...40, step: 4)
+
+            stepperControl(
+                label: localizationManager.localized("first_line_indent"),
+                value: Binding(
+                    get: { attachment.firstLineIndent ?? 0 },
+                    set: { attachment.firstLineIndent = $0 }
+                ),
+                range: 0...64, step: 8)
+
+            stepperControl(
+                label: localizationManager.localized("paragraph_indent"),
+                value: Binding(
+                    get: { attachment.paragraphIndent ?? 0 },
+                    set: { attachment.paragraphIndent = $0 }
+                ),
+                range: 0...64, step: 8)
+
+            Spacer()
+        }
+        .padding(.horizontal, 18)
+        .padding(.vertical, 8)
+    }
+
+    /// 一個「標籤 + 減 / 數值 / 加」的小控制項。
+    ///
+    /// 用按鈕而不是滑桿：這些值的合理範圍很小（行距 0–24pt），滑桿在這種
+    /// 範圍下很難精準，而且看不到目前是多少。
+    private func stepperControl(
+        label: String,
+        value: Binding<CGFloat>,
+        range: ClosedRange<CGFloat>,
+        step: CGFloat
+    ) -> some View {
+        HStack(spacing: 4) {
+            Text(label)
+                .font(.system(size: 11))
+                .foregroundColor(.secondary)
+            Button {
+                value.wrappedValue = max(range.lowerBound, value.wrappedValue - step)
+            } label: {
+                Image(systemName: "minus").font(.system(size: 10, weight: .bold))
+            }
+            .buttonStyle(.plain)
+            .disabled(value.wrappedValue <= range.lowerBound)
+
+            Text("\(Int(value.wrappedValue))")
+                .font(.system(size: 11, weight: .semibold))
+                .frame(width: 22)
+                .monospacedDigit()
+
+            Button {
+                value.wrappedValue = min(range.upperBound, value.wrappedValue + step)
+            } label: {
+                Image(systemName: "plus").font(.system(size: 10, weight: .bold))
+            }
+            .buttonStyle(.plain)
+            .disabled(value.wrappedValue >= range.upperBound)
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .background(Color.secondary.opacity(0.08))
+        .cornerRadius(8)
+    }
+
     private var cardStyleBar: some View {
         HStack(spacing: 16) {
             Text(localizationManager.localized("card_style"))
@@ -356,6 +505,16 @@ public struct WordTextStudioView: View {
                                     Circle()
                                         .stroke(Color.secondary.opacity(0.4), lineWidth: 1)
                                 )
+                            // 透明畫成一條斜線。不畫的話它跟白色長得一模一樣，
+                            // 使用者根本認不出哪一個是透明。
+                            if opt.hex == "clear" {
+                                Path { path in
+                                    path.move(to: CGPoint(x: 4, y: 18))
+                                    path.addLine(to: CGPoint(x: 18, y: 4))
+                                }
+                                .stroke(Color.red.opacity(0.7), lineWidth: 1.5)
+                                .frame(width: 22, height: 22)
+                            }
 
                             if attachment.backgroundColorHex == opt.hex {
                                 Image(systemName: "checkmark")
@@ -370,13 +529,20 @@ public struct WordTextStudioView: View {
             }
 
             // 自訂底色（預設色之外想用什麼都可以）
-            ColorPicker("", selection: Binding(
-                get: { resolveCardBackground(attachment.backgroundColorHex) },
-                set: { attachment.backgroundColorHex = $0.toHex() ?? "#FFFFFF" }
-            ))
-            .labelsHidden()
-            .frame(width: 26)
-            .help(localizationManager.localized("custom_color"))
+            // 自訂底色。
+            //
+            // 原本綁的是**衍生值**（從 hex 算出 Color，再寫回 hex）。SwiftUI 的
+            // ColorPicker 會在互動時把值寫回去，而 `toHex()` 丟掉 alpha ——
+            // 於是使用者剛選的「透明」會立刻被覆蓋成 #000000。
+            // 改成自己的狀態、只在真的變動時寫回，「透明」才留得住。
+            ColorPicker("", selection: $customBackground)
+                .labelsHidden()
+                .frame(width: 26)
+                .help(localizationManager.localized("custom_color"))
+                .onChange(of: customBackground) { newValue in
+                    guard let hex = newValue.toHex() else { return }
+                    attachment.backgroundColorHex = hex
+                }
 
             Spacer()
 

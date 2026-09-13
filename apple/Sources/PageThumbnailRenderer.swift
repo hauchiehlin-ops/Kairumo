@@ -340,6 +340,13 @@ public enum PageThumbnailRenderer {
         // 把使用者寫的東西吃掉一部分。
         paragraph.lineBreakMode = .byWordWrapping
 
+        // 段落設定。畫布上套了什麼，匯出就要套什麼 —— 行距差幾點，
+        // 整塊文字的行數就不同，版面又會對不起來。
+        if let value = item.lineSpacing { paragraph.lineSpacing = value }
+        if let value = item.paragraphSpacing { paragraph.paragraphSpacing = value }
+        if let value = item.firstLineIndent { paragraph.firstLineHeadIndent = value }
+        if let value = item.paragraphIndent { paragraph.headIndent = value }
+
         var attrs: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: UIColor(hexString: item.textColorHex) ?? .label,

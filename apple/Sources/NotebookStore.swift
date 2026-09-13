@@ -513,6 +513,20 @@ public struct NoteTextAttachment: Identifiable, Codable, Hashable, ObjectFrameSt
     public var width: CGFloat
     public var height: CGFloat
 
+    // MARK: - 段落
+    //
+    // 全部是 Optional：舊檔沒有這些欄位，解碼後是 nil，套用系統預設 ——
+    // 升級上來的筆記排版不會變。
+
+    /// 行距（點）。`nil` 為系統預設。
+    public var lineSpacing: CGFloat?
+    /// 段落之間的額外間距（點）。
+    public var paragraphSpacing: CGFloat?
+    /// 首行縮排（點）。
+    public var firstLineIndent: CGFloat?
+    /// 整段縮排（點）。
+    public var paragraphIndent: CGFloat?
+
     public init(
         id: String = UUID().uuidString,
         pageIndex: Int = 0,
@@ -532,7 +546,11 @@ public struct NoteTextAttachment: Identifiable, Codable, Hashable, ObjectFrameSt
         x: CGFloat = 100,
         y: CGFloat = 150,
         width: CGFloat = 300,
-        height: CGFloat = 160
+        height: CGFloat = 160,
+        lineSpacing: CGFloat? = nil,
+        paragraphSpacing: CGFloat? = nil,
+        firstLineIndent: CGFloat? = nil,
+        paragraphIndent: CGFloat? = nil
     ) {
         self.id = id
         self.pageIndex = pageIndex
@@ -553,6 +571,10 @@ public struct NoteTextAttachment: Identifiable, Codable, Hashable, ObjectFrameSt
         self.y = y
         self.width = width
         self.height = height
+        self.lineSpacing = lineSpacing
+        self.paragraphSpacing = paragraphSpacing
+        self.firstLineIndent = firstLineIndent
+        self.paragraphIndent = paragraphIndent
     }
 }
 

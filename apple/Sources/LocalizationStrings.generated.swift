@@ -1471,6 +1471,14 @@ extension LocalizationManager {
             .ko: "녹음 완료",
             .th: "เสร็จสิ้นการบันทึก"
         ],
+        "first_line_indent": [
+            .zhHant: "首行",
+            .en: "First",
+            .zhHans: "首行",
+            .ja: "字下げ",
+            .ko: "첫 줄",
+            .th: "บรรทัดแรก"
+        ],
         "folder_contains_notes": [
             .zhHant: "包含檔案",
             .en: "Notes count",
@@ -1862,6 +1870,14 @@ extension LocalizationManager {
             .ja: "ストローク選択中：ドラッグで移動、または削除/切り取り/コピー",
             .ko: "획 선택됨: 드래그하여 이동 또는 삭제/잘라내기/복사",
             .th: "เลือกลายเส้นแล้ว: ลากเพื่อย้าย หรือแตะลบ / ตัด / คัดลอก"
+        ],
+        "line_spacing": [
+            .zhHant: "行距",
+            .en: "Line",
+            .zhHans: "行距",
+            .ja: "行間",
+            .ko: "줄 간격",
+            .th: "ระยะบรรทัด"
         ],
         "link_preview": [
             .zhHant: "網頁預覽",
@@ -2671,6 +2687,30 @@ extension LocalizationManager {
             .ko: "단락 정렬",
             .th: "การจัดแนวข้อความ"
         ],
+        "paragraph_indent": [
+            .zhHant: "縮排",
+            .en: "Indent",
+            .zhHans: "缩排",
+            .ja: "インデント",
+            .ko: "들여쓰기",
+            .th: "เยื้อง"
+        ],
+        "paragraph_spacing": [
+            .zhHant: "段距",
+            .en: "Para",
+            .zhHans: "段距",
+            .ja: "段落間",
+            .ko: "단락 간격",
+            .th: "ระยะย่อหน้า"
+        ],
+        "paragraph_style": [
+            .zhHant: "段落",
+            .en: "Paragraph",
+            .zhHans: "段落",
+            .ja: "段落",
+            .ko: "단락",
+            .th: "ย่อหน้า"
+        ],
         "paste_strokes": [
             .zhHant: "貼上",
             .en: "Paste",
@@ -2990,6 +3030,14 @@ extension LocalizationManager {
             .ja: "リセット",
             .ko: "초기화",
             .th: "รีเซ็ต"
+        ],
+        "resize_text_box": [
+            .zhHant: "拖曳調整文字方塊大小",
+            .en: "Drag to resize the text box",
+            .zhHans: "拖曳调整文字方块大小",
+            .ja: "ドラッグしてテキストボックスのサイズを変更",
+            .ko: "끌어서 텍스트 상자 크기 조절",
+            .th: "ลากเพื่อปรับขนาดกล่องข้อความ"
         ],
         "resolve": [
             .zhHant: "標記為已解決",

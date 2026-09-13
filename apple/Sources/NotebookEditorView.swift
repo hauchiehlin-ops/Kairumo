@@ -1261,19 +1261,6 @@ public struct NotebookEditorView: View {
                 store.updateNotebook(notebook)
             }
         } }
-        .sheet(isPresented: Binding(
-            get: { editingTextId != nil },
-            set: { if !$0 { editingTextId = nil } }
-        )) { erasedView {
-            if let id = editingTextId {
-                WordTextStudioView(attachment: binding(forTextId: id)) { updated in
-                    if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
-                        notebook.textAttachments?[idx] = updated
-                        store.updateNotebook(notebook)
-                    }
-                }
-            }
-        } }
         .sheet(isPresented: $showLinkPreviewSheet) { erasedView {
             LinkPreviewSheet { linkItem in
                 if notebook.linkAttachments == nil {
@@ -2406,6 +2393,31 @@ ZStack(alignment: .topTrailing) {
 
             // 🌟 線上多人即時彩色游標與筆尖浮層
             RemoteCursorsOverlay()
+
+            // 🌟 文字編修浮動面板
+            //
+            // 以前是 modal sheet，蓋住整個畫布 —— 要調一個文字方塊的排版，
+            // 卻看不到那個文字方塊。與圖片美化面板同樣的問題、同樣的解法：
+            // 浮在畫布上、標題列可以拖到一旁，改動直接反映在物件上。
+            if let id = editingTextId {
+                FloatingPanel(
+                    title: localizationManager.localized("text_studio"),
+                    onClose: { editingTextId = nil }
+                ) {
+                    WordTextStudioView(
+                        attachment: binding(forTextId: id),
+                        presentation: .inlinePanel
+                    ) { updated in
+                        if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
+                            notebook.textAttachments?[idx] = updated
+                            store.updateNotebook(notebook)
+                        }
+                    }
+                }
+                .padding(.top, 24)
+                .padding(.trailing, 24)
+                .transition(.scale(scale: 0.95).combined(with: .opacity))
+            }
 
             // 🌟 圖片美化浮動面板
             //
@@ -4834,6 +4846,10 @@ struct TextAttachmentItemView: View {
     }
 
     private var displayWidth: CGFloat { liveWidth ?? textItem.width }
+    private var displayHeight: CGFloat { liveHeight ?? textItem.height }
+    /// 拖曳縮放中的即時高度。
+    @State private var liveHeight: CGFloat? = nil
+    @State private var resizeBaseSize: CGSize? = nil
 
     var body: some View {
         let currentX = textItem.x + dragOffset.width
@@ -4875,6 +4891,9 @@ struct TextAttachmentItemView: View {
                         .strikethrough(textItem.isStrikethrough)
                         .foregroundColor(Color(hex: textItem.textColorHex) ?? .primary)
                         .multilineTextAlignment(resolveMultilineAlignment(textItem.alignmentRaw))
+                        // 段落設定要跟匯出端套同一組值，否則行數不同、版面又分家。
+                        .lineSpacing(textItem.lineSpacing ?? 0)
+                        .padding(.leading, textItem.paragraphIndent ?? 0)
                         .frame(maxWidth: .infinity, alignment: resolveFrameAlignment(textItem.alignmentRaw))
                 }
             }
@@ -4899,6 +4918,44 @@ struct TextAttachmentItemView: View {
                 }
             )
             .shadow(color: isDragging ? Color.clear : Color.black.opacity(0.08), radius: 6, y: 3)
+            // 右下角的縮放把手。
+            //
+            // 原本只能進到「Word 文字編修」面板拉「方塊寬度」滑桿 ——
+            // 要改一個方框的大小卻得先開一個蓋住它的面板，而且只能改寬度。
+            // 圖片早就有這個把手了，文字方塊沒有。
+            .overlay(alignment: .bottomTrailing) {
+                if isSelected && lockedByPeer == nil && !isEditingInline {
+                    Image(systemName: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(5)
+                        .background(Color.accentColor)
+                        .clipShape(Circle())
+                        .offset(x: 8, y: 8)
+                        .help(localizationManager.localized("resize_text_box"))
+                        .gesture(
+                            DragGesture(minimumDistance: 1,
+                                        coordinateSpace: .named(CanvasCoordinateSpace.name))
+                                .onChanged { value in
+                                    let base = resizeBaseSize
+                                        ?? CGSize(width: textItem.width, height: textItem.height)
+                                    if resizeBaseSize == nil { resizeBaseSize = base }
+                                    // 下限不是隨手取的：比一行字還窄的方框，
+                                    // 每個字都會自己換一行，看起來像壞掉。
+                                    liveWidth = max(120, base.width + value.translation.width)
+                                    liveHeight = max(60, base.height + value.translation.height)
+                                }
+                                .onEnded { _ in
+                                    if let w = liveWidth { textItem.width = w }
+                                    if let h = liveHeight { textItem.height = h }
+                                    resizeBaseSize = nil
+                                    liveWidth = nil
+                                    liveHeight = nil
+                                    broadcastTextChange()
+                                }
+                        )
+                }
+            }
             .contentShape(Rectangle())
             .onTapGesture(count: 2) {
                 // 點兩下＝就地編輯（最直覺的路徑）

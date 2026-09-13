@@ -1455,6 +1455,14 @@
     "zhHans": "完成录音",
     "zhHant": "完成錄音"
   },
+  "first_line_indent": {
+    "en": "First",
+    "ja": "字下げ",
+    "ko": "첫 줄",
+    "th": "บรรทัดแรก",
+    "zhHans": "首行",
+    "zhHant": "首行"
+  },
   "folder_contains_notes": {
     "en": "Notes count",
     "ja": "ファイル件数",
@@ -1846,6 +1854,14 @@
     "th": "เลือกลายเส้นแล้ว: ลากเพื่อย้าย หรือแตะลบ / ตัด / คัดลอก",
     "zhHans": "已圈选笔画：可拖曳移动，或点击删除 / 剪切 / 复制",
     "zhHant": "已圈選筆劃：可拖曳移動，或點擊刪除 / 剪下 / 複製"
+  },
+  "line_spacing": {
+    "en": "Line",
+    "ja": "行間",
+    "ko": "줄 간격",
+    "th": "ระยะบรรทัด",
+    "zhHans": "行距",
+    "zhHant": "行距"
   },
   "link_preview": {
     "en": "Link Preview",
@@ -2655,6 +2671,30 @@
     "zhHans": "段落对齐",
     "zhHant": "段落對齊"
   },
+  "paragraph_indent": {
+    "en": "Indent",
+    "ja": "インデント",
+    "ko": "들여쓰기",
+    "th": "เยื้อง",
+    "zhHans": "缩排",
+    "zhHant": "縮排"
+  },
+  "paragraph_spacing": {
+    "en": "Para",
+    "ja": "段落間",
+    "ko": "단락 간격",
+    "th": "ระยะย่อหน้า",
+    "zhHans": "段距",
+    "zhHant": "段距"
+  },
+  "paragraph_style": {
+    "en": "Paragraph",
+    "ja": "段落",
+    "ko": "단락",
+    "th": "ย่อหน้า",
+    "zhHans": "段落",
+    "zhHant": "段落"
+  },
   "paste_strokes": {
     "en": "Paste",
     "ja": "ペースト",
@@ -2974,6 +3014,14 @@
     "th": "รีเซ็ต",
     "zhHans": "重置",
     "zhHant": "重設"
+  },
+  "resize_text_box": {
+    "en": "Drag to resize the text box",
+    "ja": "ドラッグしてテキストボックスのサイズを変更",
+    "ko": "끌어서 텍스트 상자 크기 조절",
+    "th": "ลากเพื่อปรับขนาดกล่องข้อความ",
+    "zhHans": "拖曳调整文字方块大小",
+    "zhHant": "拖曳調整文字方塊大小"
   },
   "resolve": {
     "en": "Resolve",
