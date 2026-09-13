@@ -177,6 +177,67 @@ public enum PageThumbnailRenderer {
         return image
     }
 
+    // MARK: - 共用外框
+
+    /// 各型別原本的外觀。使用者沒有自訂時回落到這裡 ——
+    /// 升級上來的舊筆記看起來必須跟以前一模一樣。
+    struct FrameDefaults {
+        var borderColor: UIColor
+        var borderWidth: CGFloat
+        /// `nil` 代表這個型別原本就沒有底色。
+        var background: UIColor?
+
+        static let image = FrameDefaults(
+            borderColor: .tintColor.withAlphaComponent(0.8), borderWidth: 2.5, background: nil)
+        static let text = FrameDefaults(
+            borderColor: .tintColor.withAlphaComponent(0.5), borderWidth: 1.5, background: .white)
+        static let link = FrameDefaults(
+            borderColor: .separator, borderWidth: 1, background: .tertiarySystemBackground)
+        static let model3D = FrameDefaults(
+            borderColor: .tintColor.withAlphaComponent(0.45), borderWidth: 1.5,
+            background: .secondarySystemBackground)
+    }
+
+    /// 解析出實際要用的底色。`"clear"` 代表使用者選了透明。
+    static func resolvedBackground(
+        _ style: some ObjectFrameStyled, defaults: FrameDefaults
+    ) -> UIColor? {
+        guard let hex = style.backgroundColorHex else { return defaults.background }
+        if hex == "clear" { return nil }
+        return UIColor(hexString: hex) ?? defaults.background
+    }
+
+    static func resolvedBorderColor(
+        _ style: some ObjectFrameStyled, defaults: FrameDefaults
+    ) -> UIColor {
+        style.borderColorHex.flatMap { UIColor(hexString: $0) } ?? defaults.borderColor
+    }
+
+    static func resolvedBorderWidth(
+        _ style: some ObjectFrameStyled, defaults: FrameDefaults
+    ) -> CGFloat {
+        style.borderWidth ?? defaults.borderWidth
+    }
+
+    /// 畫底色。邊框另外畫 —— 有些型別要先畫內容再描邊。
+    static func fillFrame(
+        _ style: some ObjectFrameStyled, in rect: CGRect, defaults: FrameDefaults
+    ) {
+        guard let bg = resolvedBackground(style, defaults: defaults) else { return }
+        bg.setFill()
+        UIBezierPath(roundedRect: rect, cornerRadius: style.cornerRadius).fill()
+    }
+
+    static func strokeFrame(
+        _ style: some ObjectFrameStyled, in rect: CGRect, defaults: FrameDefaults
+    ) {
+        guard style.hasBorder else { return }
+        resolvedBorderColor(style, defaults: defaults).setStroke()
+        let path = UIBezierPath(roundedRect: rect, cornerRadius: style.cornerRadius)
+        path.lineWidth = resolvedBorderWidth(style, defaults: defaults)
+        path.stroke()
+    }
+
     // MARK: - 各圖層
 
     @MainActor
@@ -186,6 +247,7 @@ public enum PageThumbnailRenderer {
         ctx: UIGraphicsImageRendererContext
     ) {
         let rect = CGRect(x: item.x, y: item.y, width: item.width, height: item.height)
+        fillFrame(item, in: rect, defaults: .image)
         guard let image = store.loadAttachmentImage(fileName: item.fileName) else {
             // 圖檔還沒載入完也要佔位，否則縮圖會與畫布對不起來。
             UIColor.secondarySystemFill.setFill()
@@ -206,12 +268,7 @@ public enum PageThumbnailRenderer {
         image.draw(in: rect)
         cg.restoreGState()
 
-        if item.hasBorder {
-            UIColor.tintColor.withAlphaComponent(0.8).setStroke()
-            let border = UIBezierPath(roundedRect: rect, cornerRadius: item.cornerRadius)
-            border.lineWidth = 2.5
-            border.stroke()
-        }
+        strokeFrame(item, in: rect, defaults: .image)
     }
 
     /// 畫布上的文字方塊內距。與 `TextBoxCanvasItemView` 的 `.padding(14)` 一致。
@@ -270,18 +327,8 @@ public enum PageThumbnailRenderer {
             width: item.width, height: measuredHeight(for: item)
         )
 
-        if item.backgroundColorHex != "clear", let bg = UIColor(hexString: item.backgroundColorHex) {
-            bg.setFill()
-            UIBezierPath(roundedRect: rect, cornerRadius: item.cornerRadius).fill()
-        }
-        if item.hasBorder {
-            // 邊框顏色與粗細要跟畫布上看到的一致（使用者可自訂）
-            let borderColor = UIColor(hexString: item.borderColorHex ?? "") ?? UIColor.tintColor.withAlphaComponent(0.5)
-            borderColor.setStroke()
-            let border = UIBezierPath(roundedRect: rect, cornerRadius: item.cornerRadius)
-            border.lineWidth = item.borderWidth ?? 1.5
-            border.stroke()
-        }
+        fillFrame(item, in: rect, defaults: .text)
+        strokeFrame(item, in: rect, defaults: .text)
 
         guard !item.text.isEmpty else { return }
 
@@ -299,12 +346,8 @@ public enum PageThumbnailRenderer {
 
     private static func drawLink(_ item: NoteLinkAttachment) {
         let rect = CGRect(x: item.x, y: item.y, width: item.width, height: max(60, item.height))
-        UIColor.tertiarySystemBackground.setFill()
-        UIBezierPath(roundedRect: rect, cornerRadius: 10).fill()
-        UIColor.separator.setStroke()
-        let border = UIBezierPath(roundedRect: rect, cornerRadius: 10)
-        border.lineWidth = 1
-        border.stroke()
+        fillFrame(item, in: rect, defaults: .link)
+        strokeFrame(item, in: rect, defaults: .link)
 
         let title = item.title.isEmpty ? item.urlString : item.title
         NSAttributedString(
@@ -334,7 +377,9 @@ public enum PageThumbnailRenderer {
         // 匯出時真的把模型算繪出來。畫佔位圖示等於「把使用者放進去的東西
         // 換成一個 icon」—— 在側邊欄縮圖上那是合理的取捨，在匯出的檔案上不是。
         if quality == .export, let rendered = renderModel3D(item, scale: scale) {
+            fillFrame(item, in: rect, defaults: .model3D)
             rendered.draw(in: rect)
+            strokeFrame(item, in: rect, defaults: .model3D)
             return
         }
 
@@ -365,12 +410,8 @@ public enum PageThumbnailRenderer {
     }
 
     private static func drawModel3DPlaceholder(_ item: Note3DAttachment, rect: CGRect) {
-        UIColor.secondarySystemBackground.setFill()
-        UIBezierPath(roundedRect: rect, cornerRadius: 12).fill()
-        UIColor.tintColor.withAlphaComponent(0.45).setStroke()
-        let border = UIBezierPath(roundedRect: rect, cornerRadius: 12)
-        border.lineWidth = 1.5
-        border.stroke()
+        fillFrame(item, in: rect, defaults: .model3D)
+        strokeFrame(item, in: rect, defaults: .model3D)
 
         if let cube = UIImage(systemName: "cube.transparent") {
             let side = min(rect.width, rect.height) * 0.4

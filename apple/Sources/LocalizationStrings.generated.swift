@@ -583,6 +583,38 @@ extension LocalizationManager {
             .ko: "접기",
             .th: "ยุบ"
         ],
+        "color_black": [
+            .zhHant: "深黑",
+            .en: "Near Black",
+            .zhHans: "深黑",
+            .ja: "ほぼ黒",
+            .ko: "거의 검정",
+            .th: "ดำเกือบสนิท"
+        ],
+        "color_blue": [
+            .zhHant: "淡藍",
+            .en: "Pale Blue",
+            .zhHans: "淡蓝",
+            .ja: "淡い青",
+            .ko: "연파랑",
+            .th: "ฟ้าอ่อน"
+        ],
+        "color_gray": [
+            .zhHant: "淺灰",
+            .en: "Light Gray",
+            .zhHans: "浅灰",
+            .ja: "ライトグレー",
+            .ko: "밝은 회색",
+            .th: "เทาอ่อน"
+        ],
+        "color_green": [
+            .zhHant: "淡綠",
+            .en: "Pale Green",
+            .zhHans: "淡绿",
+            .ja: "淡い緑",
+            .ko: "연초록",
+            .th: "เขียวอ่อน"
+        ],
         "color_mode": [
             .zhHant: "調色模式",
             .en: "Color Mode",
@@ -590,6 +622,38 @@ extension LocalizationManager {
             .ja: "カラーモード",
             .ko: "색상 모드",
             .th: "โหมดสี"
+        ],
+        "color_pink": [
+            .zhHant: "淡粉",
+            .en: "Pale Pink",
+            .zhHans: "淡粉",
+            .ja: "淡いピンク",
+            .ko: "연분홍",
+            .th: "ชมพูอ่อน"
+        ],
+        "color_transparent": [
+            .zhHant: "透明",
+            .en: "Transparent",
+            .zhHans: "透明",
+            .ja: "透明",
+            .ko: "투명",
+            .th: "โปร่งใส"
+        ],
+        "color_white": [
+            .zhHant: "白",
+            .en: "White",
+            .zhHans: "白",
+            .ja: "白",
+            .ko: "흰색",
+            .th: "ขาว"
+        ],
+        "color_yellow": [
+            .zhHant: "淡黃",
+            .en: "Pale Yellow",
+            .zhHans: "淡黄",
+            .ja: "淡い黄",
+            .ko: "연노랑",
+            .th: "เหลืองอ่อน"
         ],
         "comment_pin": [
             .zhHant: "討論圖釘",
@@ -2103,6 +2167,54 @@ extension LocalizationManager {
             .ko: "번호 매기기 목록",
             .th: "รายการลำดับเลข"
         ],
+        "object_background_color": [
+            .zhHant: "底色",
+            .en: "Background",
+            .zhHans: "底色",
+            .ja: "背景色",
+            .ko: "배경색",
+            .th: "สีพื้นหลัง"
+        ],
+        "object_border_color": [
+            .zhHant: "邊框顏色",
+            .en: "Border Color",
+            .zhHans: "边框颜色",
+            .ja: "枠線の色",
+            .ko: "테두리 색상",
+            .th: "สีเส้นขอบ"
+        ],
+        "object_border_width": [
+            .zhHant: "邊框粗細",
+            .en: "Border Width",
+            .zhHans: "边框粗细",
+            .ja: "枠線の太さ",
+            .ko: "테두리 두께",
+            .th: "ความหนาเส้นขอบ"
+        ],
+        "object_corner_radius": [
+            .zhHant: "圓角",
+            .en: "Corner Radius",
+            .zhHans: "圆角",
+            .ja: "角の丸み",
+            .ko: "모서리 둥글기",
+            .th: "ความมนของมุม"
+        ],
+        "object_corner_square": [
+            .zhHant: "直角",
+            .en: "Square",
+            .zhHans: "直角",
+            .ja: "直角",
+            .ko: "직각",
+            .th: "มุมฉาก"
+        ],
+        "object_frame_style": [
+            .zhHant: "外框與底色",
+            .en: "Frame & Background",
+            .zhHans: "外框与底色",
+            .ja: "枠と背景",
+            .ko: "테두리 및 배경",
+            .th: "กรอบและพื้นหลัง"
+        ],
         "object_locked_by": [
             .zhHant: "正在編輯中",
             .en: "is editing",
@@ -2110,6 +2222,22 @@ extension LocalizationManager {
             .ja: "が編集中",
             .ko: "편집 중",
             .th: "กำลังแก้ไข"
+        ],
+        "object_show_border": [
+            .zhHant: "顯示邊框",
+            .en: "Show Border",
+            .zhHans: "显示边框",
+            .ja: "枠線を表示",
+            .ko: "테두리 표시",
+            .th: "แสดงเส้นขอบ"
+        ],
+        "object_use_default": [
+            .zhHant: "回復預設",
+            .en: "Use Default",
+            .zhHans: "恢复默认",
+            .ja: "既定に戻す",
+            .ko: "기본값으로",
+            .th: "ใช้ค่าเริ่มต้น"
         ],
         "offline_queue_hint": [
             .zhHant: "目前離線，已暫存 %d 筆操作，連線恢復時將自動同步。",

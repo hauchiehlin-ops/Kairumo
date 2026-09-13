@@ -492,7 +492,10 @@ public struct WordTextStudioView: View {
         }
     }
 
-    private func resolveCardBackground(_ hex: String) -> Color {
+    /// 解析方框底色。`nil` 是舊檔沒有這個欄位（回落成白色），
+    /// `"clear"` 是使用者選了透明 —— 兩者不一樣，不能混為一談。
+    private func resolveCardBackground(_ hex: String?) -> Color {
+        guard let hex else { return .white }
         if hex == "clear" { return .clear }
         return Color(hex: hex) ?? .white
     }

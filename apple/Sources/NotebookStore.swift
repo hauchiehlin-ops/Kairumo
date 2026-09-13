@@ -10,6 +10,31 @@ import SwiftUI
 import Combine
 import PencilKit
 
+/// 插入物件共用的外框樣式。
+///
+/// 文字方塊、圖片、3D 模型、網址預覽在畫布上都是「一個有邊框與底色的方框」。
+/// 樣式各寫一份的結果是：改了文字方塊的邊框，圖片的邊框還是寫死的 ——
+/// 使用者的期待是「所有插入的東西都能調」，所以共用同一組欄位與同一份繪製規則。
+///
+/// 全部是 `Optional` 並帶預設值：舊檔沒有這些欄位，解碼時會落到 `nil`，
+/// 由 `resolved*` 取回各型別原本的外觀，升級上來的筆記看起來不會變。
+public protocol ObjectFrameStyled {
+    /// 是否畫邊框。
+    var hasBorder: Bool { get set }
+    /// 邊框顏色（`#RRGGBB`）。`nil` 代表沿用該型別的預設色。
+    var borderColorHex: String? { get set }
+    /// 邊框粗細。`nil` 代表沿用預設。
+    var borderWidth: CGFloat? { get set }
+    /// 方框底色。`"clear"` 代表透明；`nil` 代表沿用該型別的預設。
+    var backgroundColorHex: String? { get set }
+    var cornerRadius: CGFloat { get set }
+}
+
+public extension ObjectFrameStyled {
+    /// 底色是否為透明。
+    var isBackgroundClear: Bool { backgroundColorHex == "clear" }
+}
+
 /// 筆記三大核心主題分類
 public enum NoteThemeCategory: String, Codable, CaseIterable, Identifiable {
     case general = "通用基礎"
@@ -338,7 +363,7 @@ public enum MaterialType: String, Codable, CaseIterable, Identifiable {
 }
 
 /// 筆記內嵌圖片與圖表附件模型
-public struct NoteImageAttachment: Identifiable, Codable, Hashable {
+public struct NoteImageAttachment: Identifiable, Codable, Hashable, ObjectFrameStyled {
     public let id: String
     public var fileName: String
     public var pageIndex: Int
@@ -352,6 +377,12 @@ public struct NoteImageAttachment: Identifiable, Codable, Hashable {
     public var hasBorder: Bool
     public var filterStyle: ImageFilterStyle
     public var materialType: MaterialType?
+    /// 邊框顏色。舊檔沒有這個欄位，`nil` 時沿用原本的強調色。
+    public var borderColorHex: String?
+    /// 邊框粗細。`nil` 時沿用原本的 2.5。
+    public var borderWidth: CGFloat?
+    /// 方框底色。`"clear"` 為透明；`nil` 時不畫底色（圖片本來就是滿版的）。
+    public var backgroundColorHex: String?
 
     public init(
         id: String = UUID().uuidString,
@@ -366,7 +397,10 @@ public struct NoteImageAttachment: Identifiable, Codable, Hashable {
         hasShadow: Bool = true,
         hasBorder: Bool = false,
         filterStyle: ImageFilterStyle = .original,
-        materialType: MaterialType? = nil
+        materialType: MaterialType? = nil,
+        borderColorHex: String? = nil,
+        borderWidth: CGFloat? = nil,
+        backgroundColorHex: String? = nil
     ) {
         self.id = id
         self.fileName = fileName
@@ -379,13 +413,16 @@ public struct NoteImageAttachment: Identifiable, Codable, Hashable {
         self.cornerRadius = cornerRadius
         self.hasShadow = hasShadow
         self.hasBorder = hasBorder
+        self.borderColorHex = borderColorHex
+        self.borderWidth = borderWidth
+        self.backgroundColorHex = backgroundColorHex
         self.filterStyle = filterStyle
         self.materialType = materialType
     }
 }
 
 /// 筆記內嵌 3D 模型附件模型
-public struct Note3DAttachment: Identifiable, Codable, Hashable {
+public struct Note3DAttachment: Identifiable, Codable, Hashable, ObjectFrameStyled {
     public let id: String
     public var pageIndex: Int
     public var title: String
@@ -399,6 +436,15 @@ public struct Note3DAttachment: Identifiable, Codable, Hashable {
     public var y: CGFloat
     public var width: CGFloat
     public var height: CGFloat
+    /// 是否畫邊框。
+    public var hasBorder: Bool
+    /// 邊框顏色。`nil` 時沿用該型別原本的預設色。
+    public var borderColorHex: String?
+    /// 邊框粗細。`nil` 時沿用原本的預設。
+    public var borderWidth: CGFloat?
+    /// 方框底色。`"clear"` 為透明；`nil` 時沿用原本的預設底色。
+    public var backgroundColorHex: String?
+    public var cornerRadius: CGFloat
 
     public init(
         id: String = UUID().uuidString,
@@ -413,7 +459,12 @@ public struct Note3DAttachment: Identifiable, Codable, Hashable {
         x: CGFloat = 80,
         y: CGFloat = 160,
         width: CGFloat = 280,
-        height: CGFloat = 240
+        height: CGFloat = 240,
+        hasBorder: Bool = true,
+        borderColorHex: String? = nil,
+        borderWidth: CGFloat? = nil,
+        backgroundColorHex: String? = nil,
+        cornerRadius: CGFloat = 12
     ) {
         self.id = id
         self.pageIndex = pageIndex
@@ -428,11 +479,16 @@ public struct Note3DAttachment: Identifiable, Codable, Hashable {
         self.y = y
         self.width = width
         self.height = height
+        self.hasBorder = hasBorder
+        self.borderColorHex = borderColorHex
+        self.borderWidth = borderWidth
+        self.backgroundColorHex = backgroundColorHex
+        self.cornerRadius = cornerRadius
     }
 }
 
 /// 筆記內嵌 Word 級文字方塊附件模型
-public struct NoteTextAttachment: Identifiable, Codable, Hashable {
+public struct NoteTextAttachment: Identifiable, Codable, Hashable, ObjectFrameStyled {
     public let id: String
     public var pageIndex: Int
     public var text: String
@@ -443,7 +499,8 @@ public struct NoteTextAttachment: Identifiable, Codable, Hashable {
     public var isStrikethrough: Bool
     public var alignmentRaw: String // "left", "center", "right", "justified"
     public var textColorHex: String // e.g. "#000000"
-    public var backgroundColorHex: String // e.g. "#FFFFFF", "#FFF9C4", "clear"
+    /// e.g. "#FFFFFF"、"#FFF9C4"、"clear"（透明）
+    public var backgroundColorHex: String?
     public var hasBorder: Bool
     public var cornerRadius: CGFloat
     /// 邊框顏色（舊檔沒有這個欄位，解碼時會落到預設值）
@@ -499,7 +556,7 @@ public struct NoteTextAttachment: Identifiable, Codable, Hashable {
 }
 
 /// 筆記內嵌網頁連結預覽附件模型
-public struct NoteLinkAttachment: Identifiable, Codable, Hashable {
+public struct NoteLinkAttachment: Identifiable, Codable, Hashable, ObjectFrameStyled {
     public let id: String
     public var pageIndex: Int
     public var urlString: String
@@ -510,6 +567,15 @@ public struct NoteLinkAttachment: Identifiable, Codable, Hashable {
     public var y: CGFloat
     public var width: CGFloat
     public var height: CGFloat
+    /// 是否畫邊框。
+    public var hasBorder: Bool
+    /// 邊框顏色。`nil` 時沿用該型別原本的預設色。
+    public var borderColorHex: String?
+    /// 邊框粗細。`nil` 時沿用原本的預設。
+    public var borderWidth: CGFloat?
+    /// 方框底色。`"clear"` 為透明；`nil` 時沿用原本的預設底色。
+    public var backgroundColorHex: String?
+    public var cornerRadius: CGFloat
 
     public init(
         id: String = UUID().uuidString,
@@ -521,7 +587,12 @@ public struct NoteLinkAttachment: Identifiable, Codable, Hashable {
         x: CGFloat = 80,
         y: CGFloat = 180,
         width: CGFloat = 320,
-        height: CGFloat = 120
+        height: CGFloat = 120,
+        hasBorder: Bool = true,
+        borderColorHex: String? = nil,
+        borderWidth: CGFloat? = nil,
+        backgroundColorHex: String? = nil,
+        cornerRadius: CGFloat = 10
     ) {
         self.id = id
         self.pageIndex = pageIndex
@@ -533,6 +604,11 @@ public struct NoteLinkAttachment: Identifiable, Codable, Hashable {
         self.y = y
         self.width = width
         self.height = height
+        self.hasBorder = hasBorder
+        self.borderColorHex = borderColorHex
+        self.borderWidth = borderWidth
+        self.backgroundColorHex = backgroundColorHex
+        self.cornerRadius = cornerRadius
     }
 }
 

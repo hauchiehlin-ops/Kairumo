@@ -4516,6 +4516,10 @@ struct AttachmentItemView: View {
                         .frame(width: displayWidth, height: displayHeight)
                         .modifier(ImageFilterModifier(filter: attachment.filterStyle))
                         .objectMaterial(attachment.materialType)
+                        .background(
+                            RoundedRectangle(cornerRadius: attachment.cornerRadius)
+                                .fill(ObjectFrameStyleResolver.background(attachment, .image))
+                        )
                         .clipShape(RoundedRectangle(cornerRadius: attachment.cornerRadius))
                         .overlay(
                             Group {
@@ -4524,12 +4528,26 @@ struct AttachmentItemView: View {
                                         .stroke(Color(hex: peer.userColor) ?? .blue, lineWidth: 3)
                                 } else {
                                     RoundedRectangle(cornerRadius: attachment.cornerRadius)
-                                        .stroke(attachment.hasBorder ? Color.accentColor.opacity(0.8) : (isSelected ? Color.accentColor : Color.clear), lineWidth: attachment.hasBorder ? 2.5 : 1.5)
+                                        .stroke(
+                                            attachment.hasBorder
+                                                ? ObjectFrameStyleResolver.borderColor(attachment, .image)
+                                                : (isSelected ? Color.accentColor : Color.clear),
+                                            lineWidth: attachment.hasBorder
+                                                ? ObjectFrameStyleResolver.borderWidth(attachment, .image)
+                                                : 1.5
+                                        )
                                 }
                             }
                         )
                         .shadow(color: (attachment.hasShadow && !isDragging) ? Color.black.opacity(0.18) : Color.clear, radius: 8, x: 2, y: 4)
                         .rotationEffect(.degrees(attachment.rotationDegrees))
+                        .contextMenu {
+                            ObjectFrameStyleMenu(style: $attachment)
+                            Divider()
+                            Button(role: .destructive, action: onDelete) {
+                                Label(localizationManager.localized("delete"), systemImage: "trash")
+                            }
+                        }
                 } else {
                     RoundedRectangle(cornerRadius: attachment.cornerRadius)
                         .fill(Color.secondary.opacity(0.15))
@@ -4839,9 +4857,7 @@ struct TextAttachmentItemView: View {
                     onEdit()
                 } label: { Label(localizationManager.localized("text_studio"), systemImage: "textformat") }
 
-                Button {
-                    textItem.hasBorder.toggle()
-                } label: { Label(localizationManager.localized("toggle_border"), systemImage: "rectangle") }
+                ObjectFrameStyleMenu(style: $textItem, onChange: broadcastTextChange)
 
                 Divider()
 
@@ -4927,7 +4943,10 @@ struct TextAttachmentItemView: View {
         }
     }
 
-    private func resolveBackground(_ hex: String) -> Color {
+    /// 解析方框底色。`nil` 是舊檔沒有這個欄位（回落成白色），
+    /// `"clear"` 是使用者主動選了透明 —— 兩者不一樣，不能混為一談。
+    private func resolveBackground(_ hex: String?) -> Color {
+        guard let hex else { return .white }
         if hex == "clear" { return .clear }
         return Color(hex: hex) ?? .white
     }
@@ -5060,6 +5079,48 @@ struct LinkAttachmentItemView: View {
 }
 
 /// 畫布內嵌 3D 幾何模型互動項目視圖
+
+/// 插入物件共用的外框樣式解析（SwiftUI 端）。
+///
+/// 匯出端有一份等價的實作（`PageThumbnailRenderer.FrameDefaults`）。兩邊必須
+/// 給出同樣的結果 —— 否則「畫布所見」與「匯出所得」又會分家。差異用
+/// `ObjectFrameStyleTests` 釘住。
+enum ObjectFrameStyleResolver {
+    struct Defaults {
+        var borderColor: Color
+        var borderWidth: CGFloat
+        /// `nil` 代表這個型別原本就沒有底色。
+        var background: Color?
+
+        static let image = Defaults(
+            borderColor: .accentColor.opacity(0.8), borderWidth: 2.5, background: nil)
+        static let text = Defaults(
+            borderColor: .accentColor.opacity(0.5), borderWidth: 1.5, background: .white)
+        static let link = Defaults(
+            borderColor: Color(UIColor.separator), borderWidth: 1,
+            background: Color(UIColor.tertiarySystemBackground))
+        static let model3D = Defaults(
+            borderColor: .accentColor.opacity(0.45), borderWidth: 1.5,
+            background: Color(UIColor.secondarySystemBackground))
+    }
+
+    /// 底色。`nil`（舊檔沒這欄位）回落預設；`"clear"` 是使用者選的透明。
+    static func background(_ style: some ObjectFrameStyled, _ defaults: Defaults) -> Color {
+        guard let hex = style.backgroundColorHex else { return defaults.background ?? .clear }
+        if hex == "clear" { return .clear }
+        return Color(hex: hex) ?? defaults.background ?? .clear
+    }
+
+    static func borderColor(_ style: some ObjectFrameStyled, _ defaults: Defaults) -> Color {
+        guard style.hasBorder else { return .clear }
+        return style.borderColorHex.flatMap { Color(hex: $0) } ?? defaults.borderColor
+    }
+
+    static func borderWidth(_ style: some ObjectFrameStyled, _ defaults: Defaults) -> CGFloat {
+        style.hasBorder ? (style.borderWidth ?? defaults.borderWidth) : 0
+    }
+}
+
 struct Model3DCanvasItemView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject var collaborationManager = CollaborationManager.shared
@@ -5130,14 +5191,34 @@ struct Model3DCanvasItemView: View {
                 attachment: $item,
                 onDelete: onDelete
             )
+            // 底色與邊框吃使用者的設定。原本是寫死的 —— 那表示「所有插入的
+            // 東西都能調外框」這件事在 3D 模型上是假的。
+            .background(
+                RoundedRectangle(cornerRadius: item.cornerRadius)
+                    .fill(ObjectFrameStyleResolver.background(item, .model3D))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: item.cornerRadius)
+                    .stroke(
+                        ObjectFrameStyleResolver.borderColor(item, .model3D),
+                        lineWidth: ObjectFrameStyleResolver.borderWidth(item, .model3D)
+                    )
+            )
             .overlay(
                 Group {
                     if let peer = lockedByPeer {
-                        RoundedRectangle(cornerRadius: 12)
+                        RoundedRectangle(cornerRadius: item.cornerRadius)
                             .stroke(Color(hex: peer.userColor) ?? .blue, lineWidth: 3)
                     }
                 }
             )
+            .contextMenu {
+                ObjectFrameStyleMenu(style: $item)
+                Divider()
+                Button(role: .destructive, action: onDelete) {
+                    Label(localizationManager.localized("delete"), systemImage: "trash")
+                }
+            }
         }
         .frame(width: max(200, item.width))
         .position(x: currentX + item.width / 2, y: currentY + item.height / 2)

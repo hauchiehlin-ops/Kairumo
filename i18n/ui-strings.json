@@ -567,6 +567,38 @@
     "zhHans": "收起",
     "zhHant": "收合"
   },
+  "color_black": {
+    "en": "Near Black",
+    "ja": "ほぼ黒",
+    "ko": "거의 검정",
+    "th": "ดำเกือบสนิท",
+    "zhHans": "深黑",
+    "zhHant": "深黑"
+  },
+  "color_blue": {
+    "en": "Pale Blue",
+    "ja": "淡い青",
+    "ko": "연파랑",
+    "th": "ฟ้าอ่อน",
+    "zhHans": "淡蓝",
+    "zhHant": "淡藍"
+  },
+  "color_gray": {
+    "en": "Light Gray",
+    "ja": "ライトグレー",
+    "ko": "밝은 회색",
+    "th": "เทาอ่อน",
+    "zhHans": "浅灰",
+    "zhHant": "淺灰"
+  },
+  "color_green": {
+    "en": "Pale Green",
+    "ja": "淡い緑",
+    "ko": "연초록",
+    "th": "เขียวอ่อน",
+    "zhHans": "淡绿",
+    "zhHant": "淡綠"
+  },
   "color_mode": {
     "en": "Color Mode",
     "ja": "カラーモード",
@@ -574,6 +606,38 @@
     "th": "โหมดสี",
     "zhHans": "调色模式",
     "zhHant": "調色模式"
+  },
+  "color_pink": {
+    "en": "Pale Pink",
+    "ja": "淡いピンク",
+    "ko": "연분홍",
+    "th": "ชมพูอ่อน",
+    "zhHans": "淡粉",
+    "zhHant": "淡粉"
+  },
+  "color_transparent": {
+    "en": "Transparent",
+    "ja": "透明",
+    "ko": "투명",
+    "th": "โปร่งใส",
+    "zhHans": "透明",
+    "zhHant": "透明"
+  },
+  "color_white": {
+    "en": "White",
+    "ja": "白",
+    "ko": "흰색",
+    "th": "ขาว",
+    "zhHans": "白",
+    "zhHant": "白"
+  },
+  "color_yellow": {
+    "en": "Pale Yellow",
+    "ja": "淡い黄",
+    "ko": "연노랑",
+    "th": "เหลืองอ่อน",
+    "zhHans": "淡黄",
+    "zhHant": "淡黃"
   },
   "comment_pin": {
     "en": "Comment Pin",
@@ -2087,6 +2151,54 @@
     "zhHans": "编号列表",
     "zhHant": "編號清單"
   },
+  "object_background_color": {
+    "en": "Background",
+    "ja": "背景色",
+    "ko": "배경색",
+    "th": "สีพื้นหลัง",
+    "zhHans": "底色",
+    "zhHant": "底色"
+  },
+  "object_border_color": {
+    "en": "Border Color",
+    "ja": "枠線の色",
+    "ko": "테두리 색상",
+    "th": "สีเส้นขอบ",
+    "zhHans": "边框颜色",
+    "zhHant": "邊框顏色"
+  },
+  "object_border_width": {
+    "en": "Border Width",
+    "ja": "枠線の太さ",
+    "ko": "테두리 두께",
+    "th": "ความหนาเส้นขอบ",
+    "zhHans": "边框粗细",
+    "zhHant": "邊框粗細"
+  },
+  "object_corner_radius": {
+    "en": "Corner Radius",
+    "ja": "角の丸み",
+    "ko": "모서리 둥글기",
+    "th": "ความมนของมุม",
+    "zhHans": "圆角",
+    "zhHant": "圓角"
+  },
+  "object_corner_square": {
+    "en": "Square",
+    "ja": "直角",
+    "ko": "직각",
+    "th": "มุมฉาก",
+    "zhHans": "直角",
+    "zhHant": "直角"
+  },
+  "object_frame_style": {
+    "en": "Frame & Background",
+    "ja": "枠と背景",
+    "ko": "테두리 및 배경",
+    "th": "กรอบและพื้นหลัง",
+    "zhHans": "外框与底色",
+    "zhHant": "外框與底色"
+  },
   "object_locked_by": {
     "en": "is editing",
     "ja": "が編集中",
@@ -2094,6 +2206,22 @@
     "th": "กำลังแก้ไข",
     "zhHans": "正在编辑中",
     "zhHant": "正在編輯中"
+  },
+  "object_show_border": {
+    "en": "Show Border",
+    "ja": "枠線を表示",
+    "ko": "테두리 표시",
+    "th": "แสดงเส้นขอบ",
+    "zhHans": "显示边框",
+    "zhHant": "顯示邊框"
+  },
+  "object_use_default": {
+    "en": "Use Default",
+    "ja": "既定に戻す",
+    "ko": "기본값으로",
+    "th": "ใช้ค่าเริ่มต้น",
+    "zhHans": "恢复默认",
+    "zhHant": "回復預設"
   },
   "offline_queue_hint": {
     "en": "Offline mode: %d operations queued. Will auto-sync once reconnected.",

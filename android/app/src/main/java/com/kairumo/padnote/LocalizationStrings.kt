@@ -578,6 +578,38 @@ object LocalizationStrings {
             "ko" to "접기",
             "th" to "ยุบ"
         ),
+        "color_black" to mapOf(
+            "zh-Hant" to "深黑",
+            "en" to "Near Black",
+            "zh-Hans" to "深黑",
+            "ja" to "ほぼ黒",
+            "ko" to "거의 검정",
+            "th" to "ดำเกือบสนิท"
+        ),
+        "color_blue" to mapOf(
+            "zh-Hant" to "淡藍",
+            "en" to "Pale Blue",
+            "zh-Hans" to "淡蓝",
+            "ja" to "淡い青",
+            "ko" to "연파랑",
+            "th" to "ฟ้าอ่อน"
+        ),
+        "color_gray" to mapOf(
+            "zh-Hant" to "淺灰",
+            "en" to "Light Gray",
+            "zh-Hans" to "浅灰",
+            "ja" to "ライトグレー",
+            "ko" to "밝은 회색",
+            "th" to "เทาอ่อน"
+        ),
+        "color_green" to mapOf(
+            "zh-Hant" to "淡綠",
+            "en" to "Pale Green",
+            "zh-Hans" to "淡绿",
+            "ja" to "淡い緑",
+            "ko" to "연초록",
+            "th" to "เขียวอ่อน"
+        ),
         "color_mode" to mapOf(
             "zh-Hant" to "調色模式",
             "en" to "Color Mode",
@@ -585,6 +617,38 @@ object LocalizationStrings {
             "ja" to "カラーモード",
             "ko" to "색상 모드",
             "th" to "โหมดสี"
+        ),
+        "color_pink" to mapOf(
+            "zh-Hant" to "淡粉",
+            "en" to "Pale Pink",
+            "zh-Hans" to "淡粉",
+            "ja" to "淡いピンク",
+            "ko" to "연분홍",
+            "th" to "ชมพูอ่อน"
+        ),
+        "color_transparent" to mapOf(
+            "zh-Hant" to "透明",
+            "en" to "Transparent",
+            "zh-Hans" to "透明",
+            "ja" to "透明",
+            "ko" to "투명",
+            "th" to "โปร่งใส"
+        ),
+        "color_white" to mapOf(
+            "zh-Hant" to "白",
+            "en" to "White",
+            "zh-Hans" to "白",
+            "ja" to "白",
+            "ko" to "흰색",
+            "th" to "ขาว"
+        ),
+        "color_yellow" to mapOf(
+            "zh-Hant" to "淡黃",
+            "en" to "Pale Yellow",
+            "zh-Hans" to "淡黄",
+            "ja" to "淡い黄",
+            "ko" to "연노랑",
+            "th" to "เหลืองอ่อน"
         ),
         "comment_pin" to mapOf(
             "zh-Hant" to "討論圖釘",
@@ -2098,6 +2162,54 @@ object LocalizationStrings {
             "ko" to "번호 매기기 목록",
             "th" to "รายการลำดับเลข"
         ),
+        "object_background_color" to mapOf(
+            "zh-Hant" to "底色",
+            "en" to "Background",
+            "zh-Hans" to "底色",
+            "ja" to "背景色",
+            "ko" to "배경색",
+            "th" to "สีพื้นหลัง"
+        ),
+        "object_border_color" to mapOf(
+            "zh-Hant" to "邊框顏色",
+            "en" to "Border Color",
+            "zh-Hans" to "边框颜色",
+            "ja" to "枠線の色",
+            "ko" to "테두리 색상",
+            "th" to "สีเส้นขอบ"
+        ),
+        "object_border_width" to mapOf(
+            "zh-Hant" to "邊框粗細",
+            "en" to "Border Width",
+            "zh-Hans" to "边框粗细",
+            "ja" to "枠線の太さ",
+            "ko" to "테두리 두께",
+            "th" to "ความหนาเส้นขอบ"
+        ),
+        "object_corner_radius" to mapOf(
+            "zh-Hant" to "圓角",
+            "en" to "Corner Radius",
+            "zh-Hans" to "圆角",
+            "ja" to "角の丸み",
+            "ko" to "모서리 둥글기",
+            "th" to "ความมนของมุม"
+        ),
+        "object_corner_square" to mapOf(
+            "zh-Hant" to "直角",
+            "en" to "Square",
+            "zh-Hans" to "直角",
+            "ja" to "直角",
+            "ko" to "직각",
+            "th" to "มุมฉาก"
+        ),
+        "object_frame_style" to mapOf(
+            "zh-Hant" to "外框與底色",
+            "en" to "Frame & Background",
+            "zh-Hans" to "外框与底色",
+            "ja" to "枠と背景",
+            "ko" to "테두리 및 배경",
+            "th" to "กรอบและพื้นหลัง"
+        ),
         "object_locked_by" to mapOf(
             "zh-Hant" to "正在編輯中",
             "en" to "is editing",
@@ -2105,6 +2217,22 @@ object LocalizationStrings {
             "ja" to "が編集中",
             "ko" to "편집 중",
             "th" to "กำลังแก้ไข"
+        ),
+        "object_show_border" to mapOf(
+            "zh-Hant" to "顯示邊框",
+            "en" to "Show Border",
+            "zh-Hans" to "显示边框",
+            "ja" to "枠線を表示",
+            "ko" to "테두리 표시",
+            "th" to "แสดงเส้นขอบ"
+        ),
+        "object_use_default" to mapOf(
+            "zh-Hant" to "回復預設",
+            "en" to "Use Default",
+            "zh-Hans" to "恢复默认",
+            "ja" to "既定に戻す",
+            "ko" to "기본값으로",
+            "th" to "ใช้ค่าเริ่มต้น"
         ),
         "offline_queue_hint" to mapOf(
             "zh-Hant" to "目前離線，已暫存 %d 筆操作，連線恢復時將自動同步。",
