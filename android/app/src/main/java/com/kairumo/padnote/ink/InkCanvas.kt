@@ -47,13 +47,11 @@ fun InkCanvas(
             .background(backgroundColor)
             .pointerInteropFilter { event ->
                 val outcome = engine.onMotionEvent(event, density)
-                if (outcome.drawnSamples > 0 || outcome.retracted.isNotEmpty() ||
-                    outcome.completed.isNotEmpty()
-                ) {
-                    revision++
-                    liveVersion = System.nanoTime()
-                    onInkChanged()
-                }
+                revision++
+                liveVersion = System.nanoTime()
+                // 每個事件都通知：被「拒絕」的那些才是需要診斷的，
+                // 只在畫得出東西時回報，等於看不到問題發生的那一刻。
+                onInkChanged()
                 // 手勢判定的事件要讓給外層（捲動、縮放）；其餘由畫布消化。
                 outcome.gestureSamples == 0
             }
@@ -126,7 +124,7 @@ fun LowLatencyInkCanvas(
     androidx.compose.ui.viewinterop.AndroidView(
         modifier = modifier,
         factory = { context ->
-            InkSurfaceView(context, engine, latency, density, onInkChanged).also { view ->
+            InkSurfaceView(context, engine, latency, pxPerDp = density, onInkChanged = onInkChanged).also { view ->
                 if (!view.start()) onUnavailable()
             }
         },

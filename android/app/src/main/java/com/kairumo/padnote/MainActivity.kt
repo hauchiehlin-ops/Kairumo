@@ -76,8 +76,12 @@ private fun InkScreen() {
     val engine = remember { InkEngine() }
     val latency = remember { InkLatencyMeter() }
     var penOnly by remember { mutableStateOf(false) }
-    // 預設開啟低延遲：那是這個工作包的重點。裝置不支援時會自己退回去。
-    var lowLatency by remember { mutableStateOf(true) }
+    // 預設**關閉**低延遲。
+    //
+    // 實機回報：開著的時候畫布全白、連工具列的按鈕都按不動。前緩衝那條路
+    // 還沒在實機上驗過，不能讓它擋在使用者與「能不能寫字」之間 ——
+    // 已經驗過會動的那條路才該是預設值。
+    var lowLatency by remember { mutableStateOf(false) }
     var lowLatencyUnavailable by remember { mutableStateOf(false) }
     var revision by remember { mutableIntStateOf(0) }
     var clearToken by remember { mutableIntStateOf(0) }
@@ -118,14 +122,25 @@ private fun InkScreen() {
                 clearToken++   // 表面上的像素也要清，不是只清資料
             }) { Text(l10n("ink_clear")) }
           }
-          TextButton(onClick = { showStatus = true }) { Text("ⓘ") }
+          // 用文字而不是「ⓘ」：那個字元不是每個裝置的字型都有，
+          // 沒有的話按鈕就變成一塊看不見的區域 —— 實機上正是如此。
+          TextButton(onClick = { showStatus = true }) { Text("Info") }
         }
 
         // 讀一下 revision 讓筆畫數會跟著重繪；真相來源仍是 engine。
         val strokeCount = remember(revision) { engine.strokes.size }
+        val eventDebug = remember(revision) { engine.lastEventDebug }
         Text(
             l10n("ink_stroke_count").replace("%@", "$strokeCount"),
             style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(horizontal = 12.dp)
+        )
+        // 診斷列：一張截圖就要能告訴我平台回報了什麼。
+        Text(
+            eventDebug,
+            style = MaterialTheme.typography.labelSmall,
+            fontFamily = FontFamily.Monospace,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 12.dp)
         )

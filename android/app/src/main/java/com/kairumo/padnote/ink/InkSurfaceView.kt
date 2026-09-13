@@ -37,7 +37,15 @@ class InkSurfaceView(
     context: Context,
     private val engine: InkEngine,
     private val latency: InkLatencyMeter,
-    private val density: Float,
+    /**
+     * 每 dp 幾個像素。
+     *
+     * **不要叫它 `density`。** 這個檔案裡有寫在 `Canvas` 上的擴充函式，
+     * 而 `Canvas` 本身有一個 `density` 成員 —— 接收者的成員會蓋過外層類別的
+     * 屬性，於是座標與線寬全被乘上 `Canvas.density`（未設定時是 0），
+     * 筆畫整條塌到原點、線寬變 0。編譯器不會警告，畫面上就是一片空白。
+     */
+    private val pxPerDp: Float,
     private val onInkChanged: () -> Unit = {}
 ) : SurfaceView(context) {
 
@@ -75,9 +83,9 @@ class InkSurfaceView(
         override fun onDrawMultiBufferedLayer(
             canvas: Canvas, bufferWidth: Int, bufferHeight: Int, params: Collection<Segment>
         ) {
-            // 這一層每次 commit 都是全新的緩衝，所以要重畫**全部**內容。
-            // 只畫 params 的話，抬筆的瞬間先前的筆畫會整片消失。
             canvas.drawColor(Color.WHITE)
+            // 這一層每次 commit 都是全新的緩衝，所以要重畫全部內容 ——
+            // 只畫增量的話，抬筆瞬間先前的筆畫會整片消失。
             for (stroke in engine.strokes) {
                 canvas.drawStroke(stroke.points, stroke.tool)
             }
@@ -87,6 +95,11 @@ class InkSurfaceView(
 
     /** 建立前緩衝渲染器。裝置不支援時回傳 `false`，由上層退回一般畫布。 */
     fun start(): Boolean = runCatching {
+        // SurfaceView 預設在**視窗底下**，靠在視窗上打洞才看得見。Compose 的
+        // Surface 會畫一層不透明底色，那個洞就被蓋住了 —— 畫面上看到的是
+        // 一片底色，不是我們畫的東西。實機回報「畫布全白」就是這個。
+        setZOrderOnTop(true)
+        holder.setFormat(android.graphics.PixelFormat.TRANSLUCENT)
         renderer = CanvasFrontBufferedRenderer(this, callback)
         predictor = MotionEventPredictor.newInstance(this)
         true
@@ -117,7 +130,7 @@ class InkSurfaceView(
         val active = renderer ?: return false
         predictor?.record(event)
 
-        val outcome = engine.onMotionEvent(event, density)
+        val outcome = engine.onMotionEvent(event, pxPerDp)
         latency.record(event)
 
         if (outcome.retracted.isNotEmpty()) {
@@ -142,11 +155,11 @@ class InkSurfaceView(
 
     /** 把這個事件帶來的取樣點（含歷史點）接成線段畫出去，最後補上預測。 */
     private fun drawIncoming(event: MotionEvent, active: CanvasFrontBufferedRenderer<Segment>) {
-        for (sample in InkInput.samples(event, density)) {
+        for (sample in InkInput.samples(event, pxPerDp)) {
             if (!engine.isDrawing(sample.event.id)) continue
             val id = sample.event.id
-            val x = sample.event.x * density
-            val y = sample.event.y * density
+            val x = sample.event.x * pxPerDp
+            val y = sample.event.y * pxPerDp
             val previous = lastPoint[id]
             if (previous != null) {
                 active.renderFrontBufferedLayer(
@@ -160,12 +173,12 @@ class InkSurfaceView(
         // 預測只在筆還按著時有意義。
         if (event.actionMasked != MotionEvent.ACTION_MOVE) return
         val predicted = predictor?.predict() ?: return
-        for (sample in InkInput.samples(predicted, density)) {
+        for (sample in InkInput.samples(predicted, pxPerDp)) {
             if (!engine.isDrawing(sample.event.id)) continue
             val previous = lastPoint[sample.event.id] ?: continue
             active.renderFrontBufferedLayer(
                 Segment(previous.first, previous.second,
-                    sample.event.x * density, sample.event.y * density,
+                    sample.event.x * pxPerDp, sample.event.y * pxPerDp,
                     widthFor(sample.event.pressure), predicted = true)
             )
             // 刻意不更新 lastPoint：下一個真實點要從**真實**的位置接續，
@@ -177,7 +190,7 @@ class InkSurfaceView(
     private fun widthFor(pressure: Float): Float {
         val sensitive = engine.tool == ToolKind.FOUNTAIN_PEN || engine.tool == ToolKind.PENCIL
         val scale = if (sensitive) 0.35f + 0.65f * pressure.coerceIn(0f, 1f) else 1f
-        return engine.baseWidth * scale * density
+        return engine.baseWidth * scale * pxPerDp
     }
 
     private fun Canvas.drawSegment(s: Segment) {
@@ -193,8 +206,8 @@ class InkSurfaceView(
             val a = points[i - 1]
             val b = points[i]
             val scale = if (sensitive) 0.35f + 0.65f * b.pressure.coerceIn(0f, 1f) else 1f
-            paint.strokeWidth = engine.baseWidth * scale * density
-            drawLine(a.x * density, a.y * density, b.x * density, b.y * density, paint)
+            paint.strokeWidth = engine.baseWidth * scale * pxPerDp
+            drawLine(a.x * pxPerDp, a.y * pxPerDp, b.x * pxPerDp, b.y * pxPerDp, paint)
         }
     }
 }

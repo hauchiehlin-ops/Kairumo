@@ -57,6 +57,16 @@ class InkEngine(
     var colorRgba: ByteArray = byteArrayOf(0, 0, 0, -1) // 不透明黑
     var baseWidth: Float = 3f
 
+    /**
+     * 最後一個事件的原始資訊，給畫面上的診斷列用。
+     *
+     * 為什麼要顯示在畫面上而不是寫 log：使用者手上的裝置我碰不到，
+     * 一張截圖要能告訴我「平台回報的是什麼」—— 工具類型、接觸半徑、仲裁結果。
+     * 沒有這條線，遠端除錯只能用猜的。
+     */
+    var lastEventDebug: String = "—"
+        private set
+
     fun onMotionEvent(event: MotionEvent, density: Float): Outcome {
         var drawn = 0
         var rejected = 0
@@ -88,6 +98,15 @@ class InkEngine(
                 }
                 FfiVerdict.HOVER -> Unit
             }
+        }
+
+        val first = InkInput.samples(event, density).firstOrNull()
+        lastEventDebug = if (first == null) {
+            "action=${event.actionMasked} 無取樣點"
+        } else {
+            "tool=${event.getToolType(0)} r=${"%.1f".format(first.event.contactRadius)}dp " +
+                "p=${"%.2f".format(first.event.pressure)} d=$density " +
+                "draw=$drawn rej=$rejected ges=$gesture"
         }
 
         return Outcome(drawn, rejected, gesture, retractedAll, completedNow)
