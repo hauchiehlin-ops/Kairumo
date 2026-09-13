@@ -1275,14 +1275,14 @@ dependencies = [
 
 [[package]]
 name = "padnote-asr"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "padnote-doc",
 ]
 
 [[package]]
 name = "padnote-asr-paraformer"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "ort",
  "padnote-asr",
@@ -1294,7 +1294,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-asr-whisper"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "padnote-asr",
  "whisper-rs",
@@ -1302,7 +1302,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-audio"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "audiopus",
  "audiopus_sys",
@@ -1311,11 +1311,11 @@ dependencies = [
 
 [[package]]
 name = "padnote-bench"
-version = "2.3.1"
+version = "2.3.2"
 
 [[package]]
 name = "padnote-core"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "padnote-asr",
  "padnote-crypto",
@@ -1343,7 +1343,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-crypto"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "aes-gcm",
  "argon2",
@@ -1355,11 +1355,11 @@ dependencies = [
 
 [[package]]
 name = "padnote-doc"
-version = "2.3.1"
+version = "2.3.2"
 
 [[package]]
 name = "padnote-embed"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "calamine",
  "docx-rs",
@@ -1369,7 +1369,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-export"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "miniz_oxide 0.8.9",
  "padnote-doc",
@@ -1382,22 +1382,22 @@ dependencies = [
 
 [[package]]
 name = "padnote-i18n"
-version = "2.3.1"
+version = "2.3.2"
 
 [[package]]
 name = "padnote-ink"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "padnote-doc",
 ]
 
 [[package]]
 name = "padnote-input"
-version = "2.3.1"
+version = "2.3.2"
 
 [[package]]
 name = "padnote-models"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "serde",
  "serde_json",
@@ -1406,7 +1406,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-pdf"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "padnote-doc",
  "padnote-ink",
@@ -1414,7 +1414,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-pdf-pdfium"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "padnote-pdf",
  "pdfium-render",
@@ -1422,7 +1422,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-punct-ct"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "ort",
  "padnote-asr",
@@ -1432,11 +1432,11 @@ dependencies = [
 
 [[package]]
 name = "padnote-recognize"
-version = "2.3.1"
+version = "2.3.2"
 
 [[package]]
 name = "padnote-recorder"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "padnote-asr",
  "padnote-audio",
@@ -1445,7 +1445,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-relay"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "futures-util",
  "serde",
@@ -1456,15 +1456,15 @@ dependencies = [
 
 [[package]]
 name = "padnote-render"
-version = "2.3.1"
+version = "2.3.2"
 
 [[package]]
 name = "padnote-search"
-version = "2.3.1"
+version = "2.3.2"
 
 [[package]]
 name = "padnote-shapes"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "padnote-doc",
  "padnote-ink",
@@ -1472,7 +1472,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-storage"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "padnote-doc",
  "padnote-ink",
@@ -1483,7 +1483,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-sync"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "padnote-crypto",
  "padnote-doc",
@@ -1491,14 +1491,14 @@ dependencies = [
 
 [[package]]
 name = "padnote-text"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "zhconv",
 ]
 
 [[package]]
 name = "padnote-toolbar"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "padnote-i18n",
  "serde",
@@ -1507,7 +1507,7 @@ dependencies = [
 
 [[package]]
 name = "padnote-vad-silero"
-version = "2.3.1"
+version = "2.3.2"
 dependencies = [
  "ort",
  "padnote-asr",
