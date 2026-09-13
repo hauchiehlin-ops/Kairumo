@@ -114,6 +114,14 @@ class InkEngine(
         return Outcome(drawn, rejected, gesture, retractedAll, completedNow)
     }
 
+    /**
+     * 內容寫到頁尾時通知外層準備下一頁。
+     *
+     * 與 Apple 端一致：**不自動翻頁** —— 使用者可能只是把最後一行寫到很下面，
+     * 畫面自己跳走比繼續留在原地更糟。
+     */
+    var onReachedPageBottom: (() -> Unit)? = null
+
     private fun accumulate(sample: InkInput.Sample): CompletedStroke? {
         val id = sample.event.id
         when (sample.event.phase) {
@@ -124,6 +132,7 @@ class InkEngine(
                 // 沒有 BEGAN 就收到 MOVED（例如前一筆被收回後又有事件進來）
                 // 不該無中生有一筆畫。
                 inFlight[id]?.add(sample)
+                if (sample.event.y + 200f > PageGeometry.height) onReachedPageBottom?.invoke()
             }
             FfiPhase.ENDED -> {
                 val collected = inFlight.remove(id) ?: return null

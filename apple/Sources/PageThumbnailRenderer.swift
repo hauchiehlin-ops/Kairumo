@@ -107,11 +107,15 @@ public enum PageThumbnailRenderer {
         useCache: Bool,
         quality: Quality = .preview
     ) -> UIImage {
-        let width = max(canvasWidth, minPageWidth)
+        // 匯出與縮圖一律以**頁面**為準，不是以當下的畫布寬度為準。
+        // 以畫布寬度取圖的話，同一則筆記在 Mac 與 iPhone 上匯出的結果不一樣 ——
+        // 那正是「匯出與畫布對不起來」的根本原因。
+        _ = canvasWidth
+        let width = PageGeometry.width
         let key = cacheKey(notebook: notebook, pageIndex: pageIndex, drawing: drawing, canvasWidth: width)
         if useCache, let cached = cache.object(forKey: key) { return cached }
 
-        let pageHeight = notebook.height(forPage: pageIndex)
+        let pageHeight = PageGeometry.height
         let visibleHeight = cropToPreviewRatio ? min(pageHeight, width * maxHeightRatio) : pageHeight
         let pageRect = CGRect(x: 0, y: 0, width: width, height: visibleHeight)
         // 手繪要用整頁的座標系取圖，否則落在裁切線以下的筆畫會被擠上來。

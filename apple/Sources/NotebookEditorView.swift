@@ -84,9 +84,41 @@ final class TemplateCanvasBackgroundView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
+    /// 畫出頁面與可列印區的界線。
+    ///
+    /// 使用者要看得到「這一頁到哪裡為止」，而且那條線必須**就是**匯出與列印
+    /// 的邊界 —— 畫一條僅供參考的框線，比不畫還糟：他會相信它。
+    ///
+    /// 頁面之外的區域畫成灰底，因為在寬螢幕上畫布比頁面寬，不畫的話使用者
+    /// 會以為整片都能寫。
+    private func drawPageBoundary(_ ctx: CGContext) {
+        let page = PageGeometry.rect
+
+        // 頁面以外（寬螢幕上右側多出來的部分）
+        if bounds.width > page.width {
+            UIColor.secondarySystemBackground.setFill()
+            ctx.fill(CGRect(x: page.maxX, y: 0, width: bounds.width - page.width, height: bounds.height))
+        }
+
+        // 頁面邊緣
+        UIColor.separator.setStroke()
+        let edge = UIBezierPath(rect: page)
+        edge.lineWidth = 1
+        edge.stroke()
+
+        // 可列印區：虛線，明顯是輔助線而不是內容
+        UIColor.tertiaryLabel.setStroke()
+        let printable = UIBezierPath(rect: PageGeometry.printableRect)
+        printable.lineWidth = 1
+        printable.setLineDash([6, 5], count: 2, phase: 0)
+        printable.stroke()
+    }
+
     override func draw(_ rect: CGRect) {
         super.draw(rect)
         guard let ctx = UIGraphicsGetCurrentContext() else { return }
+
+        drawPageBoundary(ctx)
 
         let w = bounds.width
         let h = bounds.height
@@ -410,7 +442,7 @@ final class TemplateCanvasBackgroundView: UIView {
 /// 真正知道新寬度的時機是 `layoutSubviews`。
 final class AdaptiveCanvasView: PKCanvasView {
     /// 這一頁的高度（由 SwiftUI 端更新）
-    var pageContentHeight: CGFloat = 1800 {
+    var pageContentHeight: CGFloat = PageGeometry.height {
         didSet { if pageContentHeight != oldValue { syncContentSize() } }
     }
     /// 底層樣板背景，要跟著 contentSize 一起變
@@ -443,7 +475,11 @@ struct CanvasRepresentable: UIViewRepresentable {
     var pageHeight: CGFloat
     var editorMode: EditorMode = .draw
     var onDrawingChanged: ((PKDrawing) -> Void)?
-    var onAutoExtendHeight: ((CGFloat) -> Void)?
+    /// 筆跡寫到接近頁尾時通知編輯器。
+    ///
+    /// 舊版是「把這一頁拉長」，於是同一本筆記裡每頁高度都不同，匯出與列印
+    /// 無從對齊紙張。現在頁面高度固定，到底了就準備下一頁。
+    var onReachedPageBottom: (() -> Void)?
     var onSelectionChanged: ((Bool) -> Void)?
     var canvasRef: ((PKCanvasView) -> Void)?
     /// 回報捲動狀態（可見比例、捲動比例），給自訂捲軸用
@@ -463,7 +499,7 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         // 給自動化測試一個穩定的抓取點（畫面上有多個 scroll view）
         canvas.accessibilityIdentifier = "kairumo.canvas"
-        canvas.pageContentHeight = max(pageHeight, 1800)
+        canvas.pageContentHeight = PageGeometry.height
         canvas.contentSize = CGSize(width: max(canvas.bounds.width, 1), height: canvas.pageContentHeight)
 
         // 嵌入底層背景樣板視圖（隨畫布滾動）
@@ -496,7 +532,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         // 更新高度與滾動範圍。寬度交給 AdaptiveCanvasView 在 layoutSubviews 處理 ——
         // 這裡拿到的 bounds 可能還是版面變動前的舊值。
         if let adaptive = uiView as? AdaptiveCanvasView {
-            adaptive.pageContentHeight = max(pageHeight, 1800)
+            adaptive.pageContentHeight = PageGeometry.height
             adaptive.syncContentSize()
         }
         if context.coordinator.backgroundView?.template != template {
@@ -538,11 +574,13 @@ struct CanvasRepresentable: UIViewRepresentable {
             parent.drawing = canvasView.drawing
             parent.onDrawingChanged?(canvasView.drawing)
 
-            // 智慧邊界感應：若筆劃接近當前畫布底部（距離小於 250pt），自動向上擴展長度
+            // 寫到接近頁尾就先把下一頁準備好。
+            //
+            // 刻意**不自動翻頁**：使用者可能只是把最後一行寫到很下面，
+            // 畫面自己跳走比繼續留在原地更糟。準備好下一頁、讓他自己翻。
             let maxY = canvasView.drawing.bounds.maxY
-            if maxY > 0 && maxY + 250 > parent.pageHeight {
-                let newHeight = max(parent.pageHeight + 600, maxY + 450)
-                parent.onAutoExtendHeight?(newHeight)
+            if maxY > 0 && maxY + 200 > PageGeometry.height {
+                parent.onReachedPageBottom?()
             }
         }
 
@@ -1980,10 +2018,8 @@ ZStack(alignment: .topTrailing) {
                         lastStrokeCount = newDrawing.strokes.count
                     }
                 },
-                onAutoExtendHeight: { newHeight in
-                    currentPageHeight = newHeight
-                    notebook.setHeight(newHeight, forPage: currentPageIndex)
-                    store.updateNotebook(notebook)
+                onReachedPageBottom: {
+                    ensureNextPageExists()
                 },
                 onSelectionChanged: { hasSel in
                     self.hasLassoSelection = hasSel
@@ -2309,25 +2345,8 @@ ZStack(alignment: .topTrailing) {
                     .buttonStyle(.plain)
                     .help(localizationManager.localized("add_next_page"))
 
-                    Button {
-                        extendCurrentPage(by: 800)
-                    } label: {
-                        HStack(spacing: 6) {
-                            Image(systemName: "arrow.down.to.line.compact")
-                                .font(.subheadline)
-                            Text(localizationManager.localized("extend_page_amount"))
-                                .font(.caption)
-                                .fontWeight(.semibold)
-                        }
-                        .foregroundColor(.primary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 7)
-                        .background(.ultraThinMaterial)
-                        .cornerRadius(18)
-                        .shadow(color: Color.black.opacity(0.12), radius: 4, y: 2)
-                    }
-                    .buttonStyle(.plain)
-                    .help(localizationManager.localized("extend_page_amount"))
+                    // 「延長本頁」已移除：頁面高度固定（PageGeometry），
+                    // 寫到頁尾會自動準備下一頁。
                 }
                 .padding(14)
             }
@@ -2588,12 +2607,6 @@ ZStack(alignment: .topTrailing) {
                                         duplicatePage(at: idx)
                                     } label: {
                                         Label(localizationManager.localized("duplicate_page"), systemImage: "plus.square.on.square")
-                                    }
-
-                                    Button {
-                                        extendCurrentPage(by: 800)
-                                    } label: {
-                                        Label(localizationManager.localized("extend_page_amount"), systemImage: "arrow.down.to.line.compact")
                                     }
 
                                     if notebook.pageCount > 1 {
@@ -3207,25 +3220,6 @@ ZStack(alignment: .topTrailing) {
                     }
                 }
 
-                // 延長本頁按鈕
-                Button {
-                    extendCurrentPage(by: 800)
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.down.to.line.compact")
-                            .font(.system(size: 13, weight: .semibold))
-                        Text(localizationManager.localized("extend_page"))
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(.accentColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.accentColor.opacity(0.12))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-                .help(localizationManager.localized("extend_page_amount"))
-
                 ToolbarSeparator()
                     .frame(height: 24)
 
@@ -3423,23 +3417,8 @@ ZStack(alignment: .topTrailing) {
                 .buttonStyle(.plain)
                 .help(localizationManager.localized("more_tools"))
 
-                // 延長本頁
-                Button {
-                    extendCurrentPage(by: 800)
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "arrow.down.to.line.compact")
-                            .font(.system(size: 13, weight: .semibold))
-                        Text(localizationManager.localized("extend_page"))
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(.accentColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.accentColor.opacity(0.12))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
+                // 「延長本頁」已移除：頁面高度固定（PageGeometry），
+                // 寫到頁尾會自動準備下一頁。
 
                 Spacer()
 
@@ -4111,14 +4090,17 @@ ZStack(alignment: .topTrailing) {
 
     private func saveCurrentPageDrawing() {
         store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: currentDrawing)
-        notebook.setHeight(currentPageHeight, forPage: currentPageIndex)
         notebook.lastModifiedDate = Date()
         store.updateNotebook(notebook)
     }
 
-    private func extendCurrentPage(by amount: CGFloat = 800) {
-        currentPageHeight += amount
-        notebook.setHeight(currentPageHeight, forPage: currentPageIndex)
+    /// 內容寫到頁尾時，確保後面有一頁可以接下去。
+    ///
+    /// 只在目前是最後一頁時才新增 —— 否則在中間的頁面寫到底，會憑空多出
+    /// 一堆空白頁。
+    private func ensureNextPageExists() {
+        guard currentPageIndex == notebook.pageCount - 1 else { return }
+        notebook.pageCount += 1
         store.updateNotebook(notebook)
 
         withAnimation {

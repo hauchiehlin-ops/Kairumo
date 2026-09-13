@@ -2330,6 +2330,54 @@ object LocalizationStrings {
             "ko" to "캔버스 길이가 연장되었습니다 (+800pt)",
             "th" to "ขยายความยาวของผืนผ้าใบแล้ว (+800pt)"
         ),
+        "page_model_done" to mapOf(
+            "zh-Hant" to "已重新分頁 %@ 本",
+            "en" to "%@ notebooks repaginated",
+            "zh-Hans" to "已重新分页 %@ 本",
+            "ja" to "%@ 冊を再分割しました",
+            "ko" to "%@권을 다시 나눴습니다",
+            "th" to "แบ่งหน้าใหม่แล้ว %@ เล่ม"
+        ),
+        "page_model_explainer" to mapOf(
+            "zh-Hant" to "每一頁改成固定高度，畫布上會畫出頁面與可列印區界線。內容寫到頁尾會自動準備下一頁。原始資料已備份。",
+            "en" to "Every page becomes a fixed height, and the canvas shows the page and printable-area boundaries. Writing to the bottom prepares the next page. Your original data is backed up.",
+            "zh-Hans" to "每一页改成固定高度，画布上会画出页面与可打印区界线。内容写到页尾会自动准备下一页。原始数据已备份。",
+            "ja" to "各ページが固定の高さになり、キャンバスにページと印刷可能領域の境界が表示されます。ページ末尾まで書くと次のページが用意されます。元のデータはバックアップ済みです。",
+            "ko" to "모든 페이지가 고정 높이가 되고, 캔버스에 페이지와 인쇄 가능 영역 경계가 표시됩니다. 페이지 끝까지 쓰면 다음 페이지가 준비됩니다. 원본 데이터는 백업되었습니다.",
+            "th" to "ทุกหน้าจะมีความสูงคงที่ และผืนผ้าใบจะแสดงขอบเขตหน้าและพื้นที่พิมพ์ได้ เมื่อเขียนถึงท้ายหน้าจะเตรียมหน้าถัดไปให้ ข้อมูลเดิมได้รับการสำรองไว้แล้ว"
+        ),
+        "page_model_failed" to mapOf(
+            "zh-Hant" to "%@ 本重新分頁失敗，已保留原樣",
+            "en" to "%@ notebooks failed and were left unchanged",
+            "zh-Hans" to "%@ 本重新分页失败，已保留原样",
+            "ja" to "%@ 冊が失敗したため、そのままにしました",
+            "ko" to "%@권이 실패하여 원래대로 두었습니다",
+            "th" to "%@ เล่มล้มเหลว จึงคงไว้ตามเดิม"
+        ),
+        "page_model_needs_repagination" to mapOf(
+            "zh-Hant" to "有筆記還在用舊版的可延長頁面，匯出與列印無法對齊紙張",
+            "en" to "Some notes still use the old extendable pages, so export and printing cannot match paper",
+            "zh-Hans" to "有笔记还在用旧版的可延长页面，导出与打印无法对齐纸张",
+            "ja" to "一部のノートが旧来の可変長ページのままで、書き出しと印刷が用紙に合いません",
+            "ko" to "일부 노트가 예전의 늘어나는 페이지를 사용하고 있어 내보내기와 인쇄가 용지에 맞지 않습니다",
+            "th" to "บางบันทึกยังใช้หน้าที่ยืดได้แบบเดิม การส่งออกและการพิมพ์จึงไม่ตรงกับกระดาษ"
+        ),
+        "page_model_repaginate" to mapOf(
+            "zh-Hant" to "重新分頁",
+            "en" to "Repaginate",
+            "zh-Hans" to "重新分页",
+            "ja" to "ページを再分割",
+            "ko" to "페이지 다시 나누기",
+            "th" to "แบ่งหน้าใหม่"
+        ),
+        "page_model_section" to mapOf(
+            "zh-Hant" to "頁面格式",
+            "en" to "Page Format",
+            "zh-Hans" to "页面格式",
+            "ja" to "ページ形式",
+            "ko" to "페이지 형식",
+            "th" to "รูปแบบหน้า"
+        ),
         "pages" to mapOf(
             "zh-Hant" to "頁",
             "en" to "pages",

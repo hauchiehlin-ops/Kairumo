@@ -66,8 +66,9 @@ final class NotebookPackageBridgeTests: XCTestCase {
                 NoteTextAttachment(pageIndex: 1, text: "第二頁的重點", x: 60, y: 1_900)
             ]
         )
-        // 第二頁被使用者向下拉長過 —— 高度必須跟著檔案走。
-        doc.setHeight(3_200, forPage: 1)
+        // 頁面高度現在是固定的（PageGeometry）。這條測試原本驗的是
+        // 「使用者拉長過的頁面高度要跟著檔案走」—— 那個功能已經移除，
+        // 現在要驗的是「每一頁的高度都等於標準頁高」。
 
         let drawings = [
             PKDrawing(strokes: [stroke(at: 10, color: .red), stroke(at: 90, color: .blue)]),
@@ -139,8 +140,8 @@ final class NotebookPackageBridgeTests: XCTestCase {
         }
     }
 
-    func testExtendedPageHeightSurvivesTheRoundTrip() throws {
-        // 使用者把第二頁拉長到 3200pt。沒有記錄的話，另一個平台會看到被截短的一頁。
+    func testPageHeightSurvivesTheRoundTrip() throws {
+        // 頁面高度仍然要寫進檔案：另一個平台才知道這份筆記用的是哪個頁面尺寸。
         let (doc, drawings) = sampleNotebook()
         let path = workDir.appendingPathComponent("height.padnote")
         try NotebookPackageBridge.export(
@@ -148,8 +149,9 @@ final class NotebookPackageBridgeTests: XCTestCase {
 
         let heights = try NotebookPackageBridge.pageHeights(fromPackageAt: path, deviceId: 0xB5)
         XCTAssertEqual(heights.count, 2)
-        XCTAssertEqual(heights[0], 1_800, accuracy: 0.5)
-        XCTAssertEqual(heights[1], 3_200, accuracy: 0.5)
+        for height in heights {
+            XCTAssertEqual(height, PageGeometry.height, accuracy: 0.5)
+        }
     }
 
     // MARK: - 邊界

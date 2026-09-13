@@ -59,6 +59,8 @@ fun InkCanvas(
         @Suppress("UNUSED_EXPRESSION") revision
         @Suppress("UNUSED_EXPRESSION") liveVersion
 
+        drawPageBoundary(density)
+
         for (stroke in engine.strokes) {
             drawInkStroke(stroke.points, stroke.tool, engine.baseWidth, inkColor, density)
         }
@@ -68,6 +70,37 @@ fun InkCanvas(
                 InkInput.strokePoints(live), engine.tool, engine.baseWidth, inkColor, density)
         }
     }
+}
+
+/**
+ * 畫出頁面與可列印區的界線。
+ *
+ * 與 Apple 端畫的是同一組矩形（尺寸來自核心）。使用者要看得到「這一頁到哪裡
+ * 為止」，而且那條線必須**就是**匯出與列印的邊界 —— 畫一條僅供參考的框線，
+ * 比不畫還糟：他會相信它。
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawPageBoundary(density: Float) {
+    val w = PageGeometry.width * density
+    val h = PageGeometry.height * density
+    val inset = PageGeometry.PRINTABLE_INSET * density
+
+    drawRect(
+        color = Color(0x33000000),
+        topLeft = Offset(0f, 0f),
+        size = androidx.compose.ui.geometry.Size(w, h),
+        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1f * density)
+    )
+    drawRect(
+        color = Color(0x22000000),
+        topLeft = Offset(inset, inset),
+        size = androidx.compose.ui.geometry.Size(w - inset * 2, h - inset * 2),
+        style = androidx.compose.ui.graphics.drawscope.Stroke(
+            width = 1f * density,
+            pathEffect = androidx.compose.ui.graphics.PathEffect.dashPathEffect(
+                floatArrayOf(6f * density, 5f * density), 0f
+            )
+        )
+    )
 }
 
 /**

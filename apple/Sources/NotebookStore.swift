@@ -249,20 +249,21 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
         return previewSnippet
     }
 
-    public func height(forPage pageIndex: Int, defaultHeight: CGFloat = 1800) -> CGFloat {
-        guard let heights = pageHeights, pageIndex >= 0, pageIndex < heights.count else {
-            return defaultHeight
-        }
-        return max(defaultHeight, heights[pageIndex])
+    /// 頁面高度。**固定值** —— 每一頁都一樣高。
+    ///
+    /// 舊版可以任意延長頁面，於是同一本筆記裡每頁高度都不同，匯出與列印無從
+    /// 對齊紙張。現在高度由 `PageGeometry` 決定；`pageHeights` 這個欄位只為了
+    /// 舊檔解碼而保留，遷移時用來判斷哪些頁需要重新分頁（見 `PageRepagination`）。
+    public func height(forPage pageIndex: Int, defaultHeight: CGFloat = PageGeometry.height) -> CGFloat {
+        PageGeometry.height
     }
 
-    public mutating func setHeight(_ height: CGFloat, forPage pageIndex: Int) {
-        var heights = pageHeights ?? Array(repeating: 1800.0, count: max(pageCount, pageIndex + 1))
-        while heights.count <= pageIndex {
-            heights.append(1800.0)
+    /// 舊版存下來的頁面高度。只有遷移會用到。
+    public func legacyHeight(forPage pageIndex: Int) -> CGFloat? {
+        guard let heights = pageHeights, pageIndex >= 0, pageIndex < heights.count else {
+            return nil
         }
-        heights[pageIndex] = height
-        self.pageHeights = heights
+        return heights[pageIndex]
     }
 
     public init(
@@ -1401,6 +1402,36 @@ public final class NotebookStore: ObservableObject {
                 return try? Data(contentsOf: url)
             }
         )
+    }
+
+    /// 把舊版的可延長頁面重新切成固定高度的頁（問題 3＋5）。
+    ///
+    /// **不會在啟動時自動執行。** 它會動到使用者的頁面配置，必須是明確的動作。
+    /// 原始資料在備份裡，可以還原。
+    @discardableResult
+    public func repaginateToFixedPages() -> PageRepagination.Report {
+        let report = PageRepagination.migrate(
+            documents: notebooks,
+            root: documentsDir,
+            drawingLoader: { [weak self] id, page in
+                self?.loadDrawing(notebookId: id, pageIndex: page) ?? PKDrawing()
+            },
+            drawingWriter: { [weak self] id, page, drawing in
+                self?.saveDrawing(notebookId: id, pageIndex: page, drawing: drawing)
+            },
+            documentWriter: { [weak self] doc in
+                guard let self, let index = self.notebooks.firstIndex(where: { $0.id == doc.id })
+                else { return }
+                self.notebooks[index] = doc
+            }
+        )
+        persistData()
+        return report
+    }
+
+    /// 有沒有筆記還在用舊版的可延長頁面。
+    public var needsRepagination: Bool {
+        notebooks.contains(where: PageRepagination.needsRepagination)
     }
 
     /// 從備份還原，並清掉遷移產物。

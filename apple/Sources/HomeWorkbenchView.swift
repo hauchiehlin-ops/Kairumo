@@ -1749,6 +1749,9 @@ public struct AppDiagnosticsSheet: View {
     @State private var showFolderPicker = false
     @State private var syncMessage: String?
 
+    /// 固定頁面模型的重新分頁（問題 3＋5）。
+    @State private var repaginationMessage: String?
+
     public var body: some View {
         NavigationStack {
             List {
@@ -1785,6 +1788,7 @@ public struct AppDiagnosticsSheet: View {
 
                 migrationSection
                 cloudSyncSection
+                pageModelSection
 
                 Section(localizationManager.localized("about_app")) {
                     HStack {
@@ -1816,6 +1820,41 @@ public struct AppDiagnosticsSheet: View {
 }
 
 extension AppDiagnosticsSheet {
+
+    /// 固定頁面模型。
+    ///
+    /// 舊版可以任意延長頁面，於是同一本筆記裡每頁高度都不同，匯出與列印無從
+    /// 對齊紙張。這個動作把過長的頁面切成固定高度的頁。會動到頁面配置，
+    /// 所以是明確的按鈕，不在啟動時自動跑。
+    @ViewBuilder
+    var pageModelSection: some View {
+        if store.needsRepagination || repaginationMessage != nil {
+            Section(localizationManager.localized("page_model_section")) {
+                if let repaginationMessage {
+                    Text(repaginationMessage)
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                } else {
+                    Text(localizationManager.localized("page_model_needs_repagination"))
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                }
+
+                Button(localizationManager.localized("page_model_repaginate")) {
+                    let report = store.repaginateToFixedPages()
+                    repaginationMessage = report.allSucceeded
+                        ? localizationManager.localized("page_model_done")
+                            .replacingFirst("%@", with: "\(report.changedCount)")
+                        : localizationManager.localized("page_model_failed")
+                            .replacingFirst("%@", with: "\(report.failedCount)")
+                }
+
+                Text(localizationManager.localized("page_model_explainer"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+        }
+    }
 
     /// 雲端同步 —— 使用者自己的雲端硬碟（決策 D3 選項 A）。
     ///

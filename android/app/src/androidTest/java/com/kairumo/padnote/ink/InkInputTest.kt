@@ -161,3 +161,42 @@ class InkInputTest {
         assertEquals(0u, points.first().dtUs)
     }
 }
+
+/**
+ * 固定頁面幾何（問題 3＋5）。
+ *
+ * 尺寸來自核心，與 Apple 端同一個來源。這些測試釘住「兩個平台會算出同樣的
+ * 分頁位置」—— 差一點點的後果是同一則筆記在 iPad 上是三頁、在 Android 上四頁。
+ */
+@RunWith(AndroidJUnit4::class)
+class PageGeometryTest {
+
+    @Test
+    fun theSizeComesFromTheCore() {
+        assertEquals(800f, PageGeometry.width, 0.01f)
+        assertEquals(1132f, PageGeometry.height, 0.01f)
+    }
+
+    @Test
+    fun pageIndexIsFloorDivision() {
+        assertEquals(0, PageGeometry.pageIndex(0f))
+        assertEquals(0, PageGeometry.pageIndex(PageGeometry.height - 1f))
+        assertEquals(1, PageGeometry.pageIndex(PageGeometry.height))
+        assertEquals(2, PageGeometry.pageIndex(PageGeometry.height * 2 + 5f))
+    }
+
+    @Test
+    fun yWithinPageWrapsToTheTopOfEachPage() {
+        // 沒有把 y 減掉整頁高度的話，物件會落在新頁面下方很遠處 ——
+        // 也就是頁面之外，使用者看起來就是「不見了」。
+        assertEquals(200f, PageGeometry.yWithinPage(PageGeometry.height + 200f), 0.01f)
+        assertEquals(0f, PageGeometry.yWithinPage(PageGeometry.height), 0.01f)
+    }
+
+    @Test
+    fun pointsOutsideThePageAreDetected() {
+        assertTrue(PageGeometry.contains(10f, 10f))
+        assertTrue(!PageGeometry.contains(PageGeometry.width + 1f, 10f))
+        assertTrue(!PageGeometry.contains(10f, PageGeometry.height + 1f))
+    }
+}
