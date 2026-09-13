@@ -5,6 +5,47 @@
 
 ---
 
+## 2026-09-13 (8) · WP3b：協同中繼進核心 FFI，但**預設關閉**
+
+### 為什麼是 feature 而不是直接換掉 Apple 的那份
+
+Apple 版的 Swift 中繼（Network.framework）已經在使用者手上穩定運作。
+把 tokio 拉進 iOS 的二進位不但沒有好處，還會動到已經穩定的功能 ——
+硬前提就是不准這樣。所以 `relay` 這個 feature **預設關閉**：Android 建置時開，
+Apple 不開。兩邊仍然共用 `padnote-relay` 的同一份 JSON 協定，
+加密走 WP3a 的 `padnote_crypto::session`，所以 iOS 與 Android 能進同一個房間。
+
+驗證這件事本身也要有憑據：`cargo tree -p padnote-core` 在未開 feature 時
+**tokio 出現 0 次**，開了才是 3 次。
+
+### bind 與 serve 拆開
+
+`padnote-relay` 原本的 `run_server` 是「綁定完就進迴圈」，沒有機會回報實際埠號。
+App 端常常用 port 0 讓系統挑，然後必須把**實際**綁到的埠顯示給使用者（邀請隊友
+要填）。所以拆成 `bind()` / `serve(listener, hub, shutdown)`。
+
+### 踩到的坑：不要在 FFI 裡 block_on
+
+第一版 `RelayServer::start` 用 `runtime.block_on(bind(addr))`，測試立刻炸：
+`Cannot start a runtime from within a runtime` —— 呼叫端本身在 async runtime 的
+執行緒上。改成用同步的 `std::net::TcpListener` 綁定（順便就拿到埠號），
+設成非阻塞後再交給 runtime。這樣不管呼叫端在什麼執行緒上都安全。
+
+### 另一個坑：綁定要用相同的 feature 組合產生
+
+Kotlin 端出現 `Unresolved reference: RelayServer` —— 因為產生綁定那一步用的是
+預設 feature 的函式庫，裡面根本沒有 relay 的型別。建置腳本已改為用與 Android
+相同的 feature 組合產生綁定。
+
+### 驗收
+
+- `crates/padnote-core/tests/relay_ffi.rs`：起中繼 → 兩個 WebSocket 客戶端加入
+  同一房間 → 驗 joined / peers / peer_joined / oplog 轉發 → 停止。2 個測試通過。
+- Android 模擬器實機：畫面顯示「協同中繼：已啟動於埠 36451（已停止）」。
+- 硬前提回歸：`cargo test --workspace` 785 通過、iOS 建置 BUILD SUCCEEDED。
+
+---
+
 ## 2026-09-13 (7) · WP3a：協同加密下沉到核心，並用跨語言測試證明相容
 
 ### 兩邊的加密其實是兩套演算法

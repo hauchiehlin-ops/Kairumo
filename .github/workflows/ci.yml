@@ -48,7 +48,9 @@ jobs:
           sdkmanager --install "ndk;28.2.13676358"
           echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.2.13676358" >> "$GITHUB_ENV"
           cargo install cargo-ndk --locked
-      - name: 核心能為 Android 編譯（第一版不含語音，關掉 asr/pdf）
+      - name: 核心的中繼實作測試（relay feature）
+        run: cargo test -p padnote-core --features relay --test relay_ffi
+      - name: 核心能為 Android 編譯（第一版不含語音，關掉 asr/pdf，開啟 relay）
         run: ./scripts/build-android-libs.sh
       - name: 組 APK
         working-directory: android
