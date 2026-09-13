@@ -10,6 +10,8 @@ uniffi::setup_scaffolding!();
 
 pub mod app;
 pub mod ffi;
+#[cfg(feature = "relay")]
+pub mod ffi_relay;
 pub mod ffi_geometry;
 pub mod ffi_input;
 pub mod ffi_interop;

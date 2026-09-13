@@ -12,6 +12,7 @@
 #   - asr（Silero VAD + 中文標點）需要 ONNX Runtime，而 `ort` 目前沒有
 #     aarch64-linux-android 的預編譯二進位（第一版不含語音轉錄）。
 #   - pdf（PDFium）需要各 ABI 的 libpdfium.so，尚未納入打包。
+# 預設額外開啟 relay：Android 走核心的協同中繼。
 # Apple 版不受影響 —— 它走 padnote-core 的預設 features（asr + pdf 全開）。
 
 set -euo pipefail
@@ -22,7 +23,8 @@ cd "$REPO_ROOT"
 PROFILE="${1:-release}"
 ABIS=(arm64-v8a x86_64)
 OUT_DIR="android/app/src/main/jniLibs"
-EXTRA_FEATURES="${KAIRUMO_ANDROID_FEATURES:-}"
+# relay：Android 用核心的中繼實作（Apple 版維持自己的 Swift 實作，不受影響）
+EXTRA_FEATURES="${KAIRUMO_ANDROID_FEATURES:-relay}"
 
 # --- NDK 位置 ------------------------------------------------------------
 if [[ -z "${ANDROID_NDK_HOME:-}" ]]; then
@@ -86,7 +88,10 @@ done
 find "$OUT_DIR" -name "*.so" ! -name "libpadnote_core.so" -delete
 
 echo "==> 產生 Kotlin 綁定 → android/app/src/main/java"
-cargo build -p padnote-core >/dev/null
+# 綁定必須由「與 Android 版相同 feature 組合」的函式庫產生 ——
+# 用預設 feature 產出的綁定會少掉 relay 之類只在 Android 開啟的型別，
+# Kotlin 端就會出現 Unresolved reference。
+cargo build -p padnote-core "${FEATURE_ARGS[@]}" >/dev/null
 LIB="target/debug/libpadnote_core.dylib"
 [[ -f "$LIB" ]] || LIB="target/debug/libpadnote_core.so"
 mkdir -p android/app/src/main/java

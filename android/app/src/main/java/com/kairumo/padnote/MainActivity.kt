@@ -23,6 +23,7 @@ import uniffi.padnote_core.coreVersion
 import uniffi.padnote_core.sessionKeyGenerate
 import uniffi.padnote_core.sessionOpen
 import uniffi.padnote_core.sessionSeal
+import uniffi.padnote_core.RelayServer
 
 /**
  * Android 外殼的起點（工作包 WP2）。
@@ -77,7 +78,8 @@ private fun readCoreStatus(): List<Pair<String, String>> = try {
         "核心版本" to coreVersion(),
         "目標平台" to "${info.targetOs}/${info.targetArch}",
         "介面版本" to "2.3.1 (11)",
-        "協同加密" to checkSessionCrypto()
+        "協同加密" to checkSessionCrypto(),
+        "協同中繼" to checkRelay()
     )
 } catch (t: Throwable) {
     // 綁定或 .so 載入失敗時要講清楚，不要給一個空白畫面
@@ -90,6 +92,22 @@ private fun readCoreStatus(): List<Pair<String, String>> = try {
  * 格式與 Apple 版的 CryptoKit AES-256-GCM 逐位元組相同（核心那邊有跨語言測試），
  * 所以 Android 與 iOS 能在同一個協同房間裡互相解得開。
  */
+/**
+ * 啟動核心的協同中繼（padnote-relay），確認在 Android 上真的綁得到埠。
+ *
+ * 與 Apple 版共用同一份 JSON 協定 —— Apple 端維持它自己的 Swift 實作，
+ * 兩邊仍然可以加入同一個房間。
+ */
+private fun checkRelay(): String = try {
+    val relay = RelayServer()
+    val port = relay.start(0u)
+    val running = relay.isRunning()
+    relay.stop()
+    if (running && port > 0u) "已啟動於埠 $port（已停止）" else "啟動失敗"
+} catch (t: Throwable) {
+    "失敗：${t.message}"
+}
+
 private fun checkSessionCrypto(): String = try {
     val key = sessionKeyGenerate()
     val message = "Kairumo 協同訊息"

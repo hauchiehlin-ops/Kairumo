@@ -6,7 +6,7 @@ pub mod server;
 
 pub use hub::RoomHub;
 pub use protocol::{ClientMessage, CursorState, PeerInfo, ServerMessage};
-pub use server::run_server;
+pub use server::{bind, run_server, serve};
 
 #[cfg(test)]
 mod tests {

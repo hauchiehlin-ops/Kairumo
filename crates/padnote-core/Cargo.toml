@@ -28,6 +28,12 @@ asr = ["dep:padnote-vad-silero", "dep:padnote-punct-ct"]
 # PDF 匯入／算繪。需要各 ABI 的 libpdfium 系統函式庫。
 pdf = ["dep:padnote-pdf-pdfium"]
 
+# 內建協同中繼（WebSocket）。**預設關閉**：
+# Apple 版已經有自己的 Swift 實作（Network.framework）且運作穩定，
+# 不需要也不應該把 tokio 拉進 iOS 的二進位。Android 建置時開啟即可，
+# 兩邊仍然共用 padnote-relay 的同一份 JSON 協定。
+relay = ["dep:padnote-relay", "dep:tokio"]
+
 [dependencies]
 uniffi = { workspace = true }
 padnote-doc = { path = "../padnote-doc" }
@@ -51,3 +57,11 @@ padnote-input = { path = "../padnote-input" }
 padnote-shapes = { path = "../padnote-shapes" }
 padnote-i18n = { path = "../padnote-i18n" }
 padnote-toolbar = { path = "../padnote-toolbar" }
+padnote-relay = { path = "../padnote-relay", optional = true }
+tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "macros"], optional = true }
+
+[dev-dependencies]
+tokio-tungstenite = "0.26"
+futures-util = { version = "0.3", default-features = false, features = ["sink", "std"] }
+serde_json = { workspace = true }
+tokio = { version = "1", features = ["full"] }

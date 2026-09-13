@@ -1317,6 +1317,7 @@ version = "2.3.2"
 name = "padnote-core"
 version = "2.3.2"
 dependencies = [
+ "futures-util",
  "padnote-asr",
  "padnote-crypto",
  "padnote-doc",
@@ -1331,6 +1332,7 @@ dependencies = [
  "padnote-punct-ct",
  "padnote-recognize",
  "padnote-recorder",
+ "padnote-relay",
  "padnote-search",
  "padnote-shapes",
  "padnote-storage",
@@ -1338,6 +1340,9 @@ dependencies = [
  "padnote-text",
  "padnote-toolbar",
  "padnote-vad-silero",
+ "serde_json",
+ "tokio",
+ "tokio-tungstenite",
  "uniffi",
 ]
 

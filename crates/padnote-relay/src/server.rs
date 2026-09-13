@@ -9,6 +9,38 @@ use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::mpsc;
 use tokio_tungstenite::tungstenite::Message;
 
+/// 綁定監聽埠，但還不開始服務。
+///
+/// 為什麼要把 bind 與 serve 拆開：App 端常常用 port 0 讓系統挑一個可用的埠，
+/// 然後必須把**實際**綁到的埠顯示給使用者（邀請隊友時要填）。
+/// `run_server` 那種「綁完就進迴圈」的寫法沒有機會回報埠號。
+pub async fn bind(addr: SocketAddr) -> std::io::Result<TcpListener> {
+    TcpListener::bind(addr).await
+}
+
+/// 在已綁定的 listener 上提供服務，直到 `shutdown` 被觸發。
+pub async fn serve(
+    listener: TcpListener,
+    hub: RoomHub,
+    mut shutdown: tokio::sync::oneshot::Receiver<()>,
+) {
+    let hub = Arc::new(hub);
+    loop {
+        tokio::select! {
+            _ = &mut shutdown => break,
+            accepted = listener.accept() => {
+                let Ok((stream, client_addr)) = accepted else { break };
+                let hub_clone = Arc::clone(&hub);
+                tokio::spawn(async move {
+                    if let Err(e) = handle_connection(stream, client_addr, hub_clone).await {
+                        eprintln!("⚠️ 連線異常 [{}]: {}", client_addr, e);
+                    }
+                });
+            }
+        }
+    }
+}
+
 /// 啟動中繼微服務監聽循環。
 pub async fn run_server(addr: SocketAddr, hub: RoomHub) -> Result<(), Box<dyn std::error::Error>> {
     let listener = TcpListener::bind(addr).await?;
