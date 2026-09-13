@@ -7,25 +7,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 
 /**
- * 把網頁片段補成一份完整文件。
- *
- * 只補外框與 viewport，不動內容 —— 內容是已經審過的那一份，
- * 在這裡改樣式只會讓兩個平台看到的說明不一樣。
- */
-private fun wrapFragment(fragment: String): String = """
-    <!doctype html>
-    <html>
-    <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    </head>
-    <body>
-    $fragment
-    </body>
-    </html>
-""".trimIndent()
-
-/**
  * 操作手冊與隱私權政策的檢視器（工作包 WP6）。
  *
  * 文件是既有的 HTML（`docs/manual`、`docs/legal`），由 Gradle 在建置時複製
@@ -51,23 +32,17 @@ fun DocsViewer(assetPath: String, modifier: Modifier = Modifier) {
                 settings.builtInZoomControls = true
                 settings.displayZoomControls = false
 
-                // 手冊與隱私權政策是為了網頁發佈而寫的**片段**（沒有 <html>，
-                // 也沒有 viewport meta）。直接 loadUrl 的話，WebView 會用桌面
-                // 寬度排版，手機上整頁縮成看不清的小字。補上最小的外框再載入，
-                // 並保留 asset 的 base URL，讓 manual.js 與 img/ 的相對路徑還找得到。
-                val base = "file:///android_asset/" +
-                    assetPath.substringBeforeLast('/', "") + "/"
-                val raw = runCatching {
-                    context.assets.open(assetPath).bufferedReader().use { it.readText() }
-                }.getOrNull()
-
-                if (raw == null) {
-                    loadUrl("file:///android_asset/$assetPath")
-                } else if (raw.contains("<html", ignoreCase = true)) {
-                    loadDataWithBaseURL(base, raw, "text/html", "utf-8", null)
-                } else {
-                    loadDataWithBaseURL(base, wrapFragment(raw), "text/html", "utf-8", null)
-                }
+                // 文件本身已經是完整的 HTML（有 DOCTYPE、charset 與 viewport），
+                // 直接載入即可。
+                //
+                // 以前這裡會先把內容讀成字串、補上外框再 `loadDataWithBaseURL` ——
+                // 因為那時來源是沒有 <html> 的片段。現在來源補齊了，那一層反而是
+                // 多的：直接 loadUrl 讓 manual.js 與 img/ 的相對路徑自然生效，
+                // 也不必把整份文件（近 100 KB）先搬進記憶體。
+                //
+                // charset 由文件自己宣告。少了它，WebView 只能猜編碼，中文會變成
+                // 一堆亂碼 —— Apple 端實際發生過這件事。
+                loadUrl("file:///android_asset/$assetPath")
             }
         }
     )

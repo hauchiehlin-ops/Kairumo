@@ -34,3 +34,4 @@ pub use worker::{TranscriptionWorker, WorkerOutcome};
 pub fn default_vad() -> padnote_asr::EnergyVad {
     padnote_asr::EnergyVad { threshold: 0.02 }
 }
+pub mod mic;

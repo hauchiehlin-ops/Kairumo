@@ -43,7 +43,11 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。"
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
+        # Mac App Store 必填（上傳時被 altool 以 90242 擋下過）。
+        INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"
         SWIFT_VERSION: "5.0"
+        # 沙盒只掛在 macOS 上。iOS 一律沙盒化，帶這個鍵反而會讓佈建檔對不上。
+        CODE_SIGN_ENTITLEMENTS[sdk=macosx*]: Kairumo-Mac.entitlements
 
   # 單元測試：轉換器這類純邏輯要能在毫秒內驗完，不該塞進 UI 測試裡跑。
   KairumoTests:

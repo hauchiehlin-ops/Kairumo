@@ -250,11 +250,15 @@ struct ShapeThumbnail: View {
 /// 畫布上的形狀物件：可拖曳、可縮放、可刪除。
 struct ShapeAttachmentItemView: View {
     @Binding var shape: NoteShapeAttachment
+    /// 選取狀態由外面管 —— 群組要整組一起亮起來，各自為政的話做不到。
+    let isSelected: Bool
+    let onSelect: () -> Void
+    /// 拖曳的位移。同一組的其他成員要跟著走，那是呼叫端的事。
+    let onMove: (CGSize) -> Void
     let onDelete: () -> Void
 
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @State private var dragOffset: CGSize = .zero
-    @State private var isSelected: Bool = false
     @State private var isEditingLabel: Bool = false
 
     var body: some View {
@@ -278,16 +282,14 @@ struct ShapeAttachmentItemView: View {
             .gesture(
                 DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
-                        isSelected = true
                         dragOffset = value.translation
                     }
                     .onEnded { _ in
-                        shape.x += dragOffset.width
-                        shape.y += dragOffset.height
+                        onMove(dragOffset)
                         dragOffset = .zero
                     }
             )
-            .onTapGesture { isSelected.toggle() }
+            .onTapGesture(perform: onSelect)
             .position(x: currentX + shape.width / 2, y: currentY + shape.height / 2)
             .alert(
                 localizationManager.localized("shape_label"),

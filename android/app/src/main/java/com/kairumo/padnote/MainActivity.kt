@@ -47,6 +47,8 @@ import com.kairumo.padnote.library.NotebookLibrary
 import com.kairumo.padnote.shape.NoteConnection
 import com.kairumo.padnote.shape.NoteShape
 import com.kairumo.padnote.shape.ShapeLayer
+import com.kairumo.padnote.shape.LayerPanel
+import com.kairumo.padnote.shape.ObjectLayer
 import com.kairumo.padnote.shape.ShapePicker
 import com.kairumo.padnote.shape.ShapeStore
 import com.kairumo.padnote.table.NoteTable
@@ -158,9 +160,9 @@ private fun InkScreen() {
     // 形狀本身也是核心的原生物件，所以關掉 App 再打開它們還在。
     val shapeStore = remember(notebook) { ShapeStore(notebook?.first, notebook?.second) }
     var shapeRevision by remember { mutableIntStateOf(0) }
-    var connections by remember(notebook) { mutableStateOf(listOf<NoteConnection>()) }
-    var selectedShapeId by remember { mutableStateOf<String?>(null) }
+    var selectedShapeIds by remember { mutableStateOf(setOf<String>()) }
     var insertingShape by remember { mutableStateOf(false) }
+    var showLayerPanel by remember { mutableStateOf(false) }
     LaunchedEffect(notebook) { shapeStore.load(); shapeRevision++ }
 
     // 雲端同步（決策 D3 選項 A）：使用者挑一個資料夾，兩台裝置指同一個地方。
@@ -331,6 +333,10 @@ private fun InkScreen() {
                     text = { Text(l10n("shape_studio")) },
                     onClick = { showMenu = false; insertingShape = true }
                 )
+                DropdownMenuItem(
+                    text = { Text(l10n("layers_panel")) },
+                    onClick = { showMenu = false; showLayerPanel = true }
+                )
                 Divider()
                 DropdownMenuItem(
                     text = { Text(l10n("backup_create")) },
@@ -480,18 +486,41 @@ private fun InkScreen() {
             key(shapeRevision) {
                 ShapeLayer(
                     shapes = shapeStore.all,
-                    connections = connections,
+                    connections = shapeStore.allConnections,
                     density = canvasDensity,
-                    selectedId = selectedShapeId,
-                    onSelect = { selectedShapeId = it },
+                    selectedIds = selectedShapeIds,
+                    onSelect = { id ->
+                        // 選到群組裡的一個就整組選起來 —— 那正是群組的意義。
+                        val mates = if (id == null) emptySet()
+                                    else ObjectLayer.groupMates(id, shapeStore.all)
+                        selectedShapeIds =
+                            if (selectedShapeIds.containsAll(mates) && mates.isNotEmpty()) {
+                                selectedShapeIds - mates
+                            } else {
+                                selectedShapeIds + mates
+                            }
+                    },
                     onEdit = { shape ->
                         // 點兩下刪除選中的形狀 —— 插錯一個卻刪不掉是最惱人的。
                         shapeStore.remove(shape)
                         shapeRevision++
-                        selectedShapeId = null
+                        selectedShapeIds = selectedShapeIds - shape.id
                     },
                     onChanged = { updated ->
+                        // 拖曳一個形狀時，同一組的其他成員要跟著走 ——
+                        // 不跟的話，群組起來的流程圖一拖就散開了。
+                        val previous = shapeStore.all.firstOrNull { it.id == updated.id }
+                        val dx = updated.x - (previous?.x ?: updated.x)
+                        val dy = updated.y - (previous?.y ?: updated.y)
                         shapeStore.persist(updated)
+                        for (mate in ObjectLayer.groupMates(updated.id, shapeStore.all)) {
+                            if (mate == updated.id) continue
+                            shapeStore.all.firstOrNull { it.id == mate }?.let { other ->
+                                shapeStore.persist(
+                                    other.copyShape().apply { x += dx; y += dy }
+                                )
+                            }
+                        }
                         shapeRevision++
                     },
                     modifier = Modifier.fillMaxSize()
@@ -548,19 +577,33 @@ private fun InkScreen() {
                 // 範本的連線指向的是**核心給的 id**，不是範本裡的暫時 id ——
                 // 用暫時 id 的話，線會指向不存在的物件，畫面上是一條從空氣
                 // 連出來的線。
-                val idMap = mutableMapOf<String, String>()
+                val created = mutableMapOf<String, NoteShape>()
                 for (shape in newShapes) {
-                    idMap[shape.id] = shapeStore.create(shape).id
+                    created[shape.id] = shapeStore.create(shape)
                 }
-                connections = connections + newConnections.mapNotNull { link ->
-                    val from = idMap[link.fromShapeId] ?: return@mapNotNull null
-                    val to = idMap[link.toShapeId] ?: return@mapNotNull null
-                    link.copy(fromShapeId = from, toShapeId = to)
+                for (link in newConnections) {
+                    val from = created[link.fromShapeId] ?: continue
+                    val to = created[link.toShapeId] ?: continue
+                    shapeStore.connect(from, to, link.label)
                 }
                 shapeRevision++
                 insertingShape = false
             },
             onDismiss = { insertingShape = false }
+        )
+    }
+
+    if (showLayerPanel) {
+        LayerPanel(
+            shapes = shapeStore.all,
+            selection = selectedShapeIds,
+            languageTag = deviceLanguageTag(),
+            onSelectionChange = { selectedShapeIds = it },
+            onShapesChange = { updated ->
+                shapeStore.replaceAll(updated)
+                shapeRevision++
+            },
+            onDismiss = { showLayerPanel = false }
         )
     }
 

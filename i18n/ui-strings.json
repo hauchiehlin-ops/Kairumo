@@ -2303,6 +2303,102 @@
     "zhHans": "已圈选笔画：可拖曳移动，或点击删除 / 剪切 / 复制",
     "zhHant": "已圈選筆劃：可拖曳移動，或點擊刪除 / 剪下 / 複製"
   },
+  "layer_bring_forward": {
+    "zhHant": "上移一層",
+    "en": "Bring Forward",
+    "zhHans": "上移一层",
+    "ja": "前面へ",
+    "ko": "앞으로",
+    "th": "เลื่อนขึ้น"
+  },
+  "layer_bring_front": {
+    "zhHant": "移到最上層",
+    "en": "Bring to Front",
+    "zhHans": "移到最上层",
+    "ja": "最前面へ",
+    "ko": "맨 앞으로",
+    "th": "ไปหน้าสุด"
+  },
+  "layer_group": {
+    "zhHant": "群組",
+    "en": "Group",
+    "zhHans": "组合",
+    "ja": "グループ化",
+    "ko": "그룹",
+    "th": "จัดกลุ่ม"
+  },
+  "layer_group_name": {
+    "zhHant": "群組（%@ 個物件）",
+    "en": "Group (%@ objects)",
+    "zhHans": "组合（%@ 个对象）",
+    "ja": "グループ（%@ 個）",
+    "ko": "그룹(%@개)",
+    "th": "กลุ่ม (%@ รายการ)"
+  },
+  "layer_select_two": {
+    "zhHant": "選兩個以上的物件才能群組",
+    "en": "Select two or more objects to group",
+    "zhHans": "选两个以上的对象才能组合",
+    "ja": "2 つ以上選ぶとグループ化できます",
+    "ko": "두 개 이상 선택해야 그룹으로 묶을 수 있습니다",
+    "th": "เลือกตั้งแต่สองรายการขึ้นไปจึงจะจัดกลุ่มได้"
+  },
+  "layer_send_back": {
+    "zhHant": "移到最下層",
+    "en": "Send to Back",
+    "zhHans": "移到最下层",
+    "ja": "最背面へ",
+    "ko": "맨 뒤로",
+    "th": "ไปหลังสุด"
+  },
+  "layer_send_backward": {
+    "zhHant": "下移一層",
+    "en": "Send Backward",
+    "zhHans": "下移一层",
+    "ja": "背面へ",
+    "ko": "뒤로",
+    "th": "เลื่อนลง"
+  },
+  "layer_ungroup": {
+    "zhHant": "解散群組",
+    "en": "Ungroup",
+    "zhHans": "取消组合",
+    "ja": "グループ解除",
+    "ko": "그룹 해제",
+    "th": "ยกเลิกกลุ่ม"
+  },
+  "layer_unnamed": {
+    "zhHant": "未命名形狀",
+    "en": "Untitled shape",
+    "zhHans": "未命名形状",
+    "ja": "名称未設定の図形",
+    "ko": "이름 없는 도형",
+    "th": "รูปร่างไม่มีชื่อ"
+  },
+  "layers_empty": {
+    "zhHant": "這一頁還沒有形狀",
+    "en": "No shapes on this page yet",
+    "zhHans": "这一页还没有形状",
+    "ja": "このページにはまだ図形がありません",
+    "ko": "이 페이지에는 아직 도형이 없습니다",
+    "th": "ยังไม่มีรูปร่างในหน้านี้"
+  },
+  "layers_hint": {
+    "zhHant": "清單由上到下＝由前到後",
+    "en": "Top of the list is in front",
+    "zhHans": "列表由上到下＝由前到后",
+    "ja": "リストの上が手前です",
+    "ko": "목록 위쪽이 앞입니다",
+    "th": "รายการด้านบนคือด้านหน้า"
+  },
+  "layers_panel": {
+    "zhHant": "圖層",
+    "en": "Layers",
+    "zhHans": "图层",
+    "ja": "レイヤー",
+    "ko": "레이어",
+    "th": "เลเยอร์"
+  },
   "line_spacing": {
     "en": "Line",
     "ja": "行間",

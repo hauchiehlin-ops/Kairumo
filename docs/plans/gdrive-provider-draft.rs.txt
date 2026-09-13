@@ -1,0 +1,48 @@
+//! Google Drive 同步 Provider (WP31)。
+//! 實作 `CloudProvider`，以 Google Drive 為後端進行同步。
+
+use crate::provider::{CloudProvider, RemoteEntry, SyncError};
+use async_trait::async_trait;
+use std::fmt::Debug;
+use std::path::PathBuf;
+
+/// Google Drive Provider。
+#[derive(Debug)]
+pub struct GDriveProvider {
+    /// OAuth token。
+    access_token: String,
+    /// 應用程式資料夾 ID。
+    app_data_folder_id: Option<String>,
+}
+
+impl GDriveProvider {
+    pub fn new(access_token: String) -> Self {
+        Self {
+            access_token,
+            app_data_folder_id: None,
+        }
+    }
+}
+
+#[async_trait]
+impl CloudProvider for GDriveProvider {
+    async fn list_entries(&self, _prefix: &str) -> Result<Vec<RemoteEntry>, SyncError> {
+        // TODO: 呼叫 Google Drive API `files.list`。
+        Ok(vec![])
+    }
+
+    async fn download(&self, _remote_path: &str, _local_path: &std::path::Path) -> Result<(), SyncError> {
+        // TODO: 呼叫 Google Drive API 下載。
+        Ok(())
+    }
+
+    async fn upload(&self, _local_path: &std::path::Path, _remote_path: &str) -> Result<(), SyncError> {
+        // TODO: 呼叫 Google Drive API 上傳 (multipart)。
+        Ok(())
+    }
+
+    async fn delete(&self, _remote_path: &str) -> Result<(), SyncError> {
+        // TODO: 呼叫 Google Drive API 刪除。
+        Ok(())
+    }
+}

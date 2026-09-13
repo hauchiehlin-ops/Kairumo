@@ -41,7 +41,14 @@ data class NoteShape(
     var strokeColorHex: String? = null,
     /** `"clear"` 為透明。 */
     var fillColorHex: String? = null,
-    var lineWidth: Float = 2f
+    var lineWidth: Float = 2f,
+    /**
+     * 所屬群組的 id。`null` 代表這個形狀在最上層。
+     *
+     * 群組是核心物件樹裡真正的節點（`Group`），不是平台自己畫出來的框 ——
+     * 所以它跨得過平台：在一台裝置上群組起來，另一台打開仍然是一組。
+     */
+    var groupId: String? = null
 ) {
     /** 核心認得的種類。對不上時退回方框 —— 使用者至少看得到一個形狀。 */
     val kind: FfiShapeKind get() = kindOf(kindName) ?: FfiShapeKind.PROCESS
@@ -71,6 +78,7 @@ data class NoteShape(
         put("cornerRadius", cornerRadius.toDouble())
         put("label", label)
         put("lineWidth", lineWidth.toDouble())
+        groupId?.let { put("groupId", it) }
         strokeColorHex?.let { put("strokeColorHex", it) }
         fillColorHex?.let { put("fillColorHex", it) }
     }.toString()
@@ -94,7 +102,8 @@ data class NoteShape(
                 label = obj.optString("label", ""),
                 strokeColorHex = if (obj.has("strokeColorHex")) obj.optString("strokeColorHex") else null,
                 fillColorHex = if (obj.has("fillColorHex")) obj.optString("fillColorHex") else null,
-                lineWidth = obj.optDouble("lineWidth", 2.0).toFloat()
+                lineWidth = obj.optDouble("lineWidth", 2.0).toFloat(),
+                groupId = if (obj.has("groupId")) obj.optString("groupId") else null
             )
         }
     }

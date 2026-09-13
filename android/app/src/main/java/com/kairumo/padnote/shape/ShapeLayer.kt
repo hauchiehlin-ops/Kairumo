@@ -35,7 +35,7 @@ fun ShapeLayer(
     shapes: List<NoteShape>,
     connections: List<NoteConnection>,
     density: Float,
-    selectedId: String?,
+    selectedIds: Set<String>,
     onSelect: (String?) -> Unit,
     onEdit: (NoteShape) -> Unit,
     onChanged: (NoteShape) -> Unit,
@@ -71,7 +71,8 @@ fun ShapeLayer(
         }
 
         for (shape in shapes) {
-            ShapeObjectView(shape, density, shape.id == selectedId, onSelect, onEdit, onChanged)
+            ShapeObjectView(
+                shape, density, selectedIds.contains(shape.id), onSelect, onEdit, onChanged)
         }
     }
 }

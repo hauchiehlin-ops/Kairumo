@@ -44,6 +44,10 @@ enum NotebookPackageBridge {
         var strokeCount: Int
         var textBlockCount: Int
         var imageCount: Int
+        /// 寫進核心物件樹的形狀數。
+        var shapeCount: Int = 0
+        /// 寫進核心物件樹的連接線數。
+        var connectionCount: Int = 0
     }
 
     // MARK: - 匯出
@@ -180,6 +184,56 @@ enum NotebookPackageBridge {
                         json: ImageAppearance.encodeDerived(
                             objectKind: "link", fileName: "\(link.id).png"))
                     summary.imageCount += 1
+                }
+
+                // 形狀與連接線寫成**核心的原生物件**，不是平台自己另存的 JSON。
+                //
+                // 差別在於：原生物件跨得過平台 —— Android 讀的是同一組物件。
+                // 存在筆記檔的 JSON 裡只有這個平台看得懂，同一張流程圖傳過去
+                // 會整個消失，而且不會有任何錯誤訊息。
+                var shapeObjectIds: [String: String] = [:]
+                for shape in document.shapeAttachments?.filter({ $0.pageIndex == index }) ?? [] {
+                    let objectId = try session.insertShape(
+                        pageId: pageId,
+                        kind: shape.kind,
+                        minX: Float(shape.x), minY: Float(shape.y),
+                        maxX: Float(shape.x + shape.width), maxY: Float(shape.y + shape.height),
+                        cornerRadius: Float(shape.cornerRadius),
+                        text: shape.label
+                    )
+                    shapeObjectIds[shape.id] = objectId
+                    summary.shapeCount += 1
+                }
+
+                // 群組：把同一組的形狀收成核心的 Group 節點。
+                //
+                // 群組是物件樹裡真正的節點，不是平台自己畫出來的框 ——
+                // 所以它跨得過平台：在一台裝置上群組起來，另一台打開仍然是一組。
+                let groups = Dictionary(
+                    grouping: document.shapeAttachments?
+                        .filter { $0.pageIndex == index && $0.groupId != nil } ?? [],
+                    by: { $0.groupId! }
+                )
+                for (_, members) in groups where members.count > 1 {
+                    let objectIds = members.compactMap { shapeObjectIds[$0.id] }
+                    guard objectIds.count > 1 else { continue }
+                    _ = try? session.groupObjects(pageId: pageId, objectIds: objectIds)
+                }
+
+                for link in document.connectionAttachments?.filter({ $0.pageIndex == index }) ?? [] {
+                    // 兩端都要找得到對應的核心物件。找不到就跳過這一條 ——
+                    // 寫進去的話會是一條指向不存在物件的線。
+                    guard let from = shapeObjectIds[link.fromShapeId],
+                          let to = shapeObjectIds[link.toShapeId] else { continue }
+                    _ = try session.insertConnection(
+                        pageId: pageId,
+                        fromObjectId: from, toObjectId: to,
+                        fromAnchor: .center, toAnchor: .center,
+                        route: .straight,
+                        startCap: .none, endCap: .arrow,
+                        label: link.label
+                    )
+                    summary.connectionCount += 1
                 }
 
                 for image in document.attachments?.filter({ $0.pageIndex == index }) ?? [] {
@@ -469,6 +523,71 @@ enum NotebookPackageBridge {
             }
         }
 
+        // 形狀與連接線從核心的物件樹讀回來。
+        //
+        // 物件 id 是核心給的，與這台裝置原本的 id 無關 —— 連接線必須用
+        // **物件 id** 去對，用舊的 id 會連到不存在的形狀上。
+        var shapes: [NoteShapeAttachment] = []
+        var connections: [NoteConnectionAttachment] = []
+        for (index, pageId) in pageIds.enumerated() {
+            // 群組之後，成員就**不是根物件**了 —— 只看根層的話，整組形狀會
+            // 從畫面上消失，而檔案裡其實好端端地存在。所以要往下遞迴。
+            var pending: [(object: FfiObject, groupId: String?)] =
+                try session.rootObjects(pageId: pageId).map { ($0, nil) }
+
+            while let entry = pending.first {
+                pending.removeFirst()
+                let object = entry.object
+                switch object.kind {
+                case .group:
+                    // 群組本身不畫，它的成員才畫。成員記下自己屬於哪一組，
+                    // 下次匯出才重組得回來。
+                    for memberId in object.members {
+                        guard let member = try session.objectNode(
+                            pageId: pageId, objectId: memberId) else { continue }
+                        pending.append((member, object.id))
+                    }
+                case .shape:
+                    guard let core = try session.shapeObject(
+                        pageId: pageId, objectId: object.id) else { continue }
+                    // 位移走的是變換，不改寫形狀的原始邊界（ADR-0010）——
+                    // 不套上去的話，搬動過的形狀會跳回原位。
+                    let transform = (try? session.objectTransform(
+                        pageId: pageId, objectId: object.id)) ?? []
+                    let dx = transform.count >= 6 ? CGFloat(transform[4]) : 0
+                    let dy = transform.count >= 6 ? CGFloat(transform[5]) : 0
+                    shapes.append(
+                        NoteShapeAttachment(
+                            id: object.id,
+                            pageIndex: index,
+                            kindName: NoteShapeAttachment.name(of: core.kind),
+                            x: CGFloat(core.minX) + dx,
+                            y: CGFloat(core.minY) + dy,
+                            width: CGFloat(core.maxX - core.minX),
+                            height: CGFloat(core.maxY - core.minY),
+                            cornerRadius: CGFloat(core.cornerRadius),
+                            label: core.text,
+                            groupId: entry.groupId
+                        )
+                    )
+                case .connection:
+                    guard let core = try session.connectionObject(
+                        pageId: pageId, objectId: object.id) else { continue }
+                    connections.append(
+                        NoteConnectionAttachment(
+                            id: object.id,
+                            pageIndex: index,
+                            fromShapeId: core.fromObjectId,
+                            toShapeId: core.toObjectId,
+                            label: core.label
+                        )
+                    )
+                default:
+                    continue
+                }
+            }
+        }
+
         var document = NotebookDocument(
             id: documentId ?? path.deletingPathExtension().lastPathComponent,
             title: session.title(),
@@ -477,12 +596,18 @@ enum NotebookPackageBridge {
         )
         document.textAttachments = texts.isEmpty ? nil : texts
         document.attachments = images.isEmpty ? nil : images
+        document.shapeAttachments = shapes.isEmpty ? nil : shapes
+        document.connectionAttachments = connections.isEmpty ? nil : connections
 
         // 中繼資料最後套：樣板、資料夾、圖釘、連結卡片、3D 模型都在裡面。
         // 讀不懂時保留預設值，筆畫與文字仍然回得來。
         if let json = session.notebookMeta(), let meta = NotebookMeta.decode(from: json) {
             meta.apply(to: &document)
         }
+        // 中繼資料套完之後再放回形狀：形狀的事實來源是**核心的物件樹**，
+        // 不是中繼資料。兩邊都帶的話會變成兩份。
+        document.shapeAttachments = shapes.isEmpty ? nil : shapes
+        document.connectionAttachments = connections.isEmpty ? nil : connections
 
         // 頁面 id 一律以**檔案裡實際的那批**為準，不是中繼資料寫的那批 ——
         // 中繼資料可能是別台裝置寫的舊版本。下次匯出要沿用這批。

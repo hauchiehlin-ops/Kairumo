@@ -355,6 +355,159 @@ extension PackageRoundTripTests {
     }
 }
 
+/// 形狀與流程圖跨過 `.padnote` 套件。
+///
+/// # 為什麼這組測試存在
+///
+/// 形狀原本存在筆記檔的 JSON 裡 —— 只有這個平台看得懂。同一張流程圖傳到另一台
+/// 裝置會**整個消失**，而且不會有任何錯誤訊息：檔案同步成功、筆記打得開，
+/// 就是那些方塊不見了。
+///
+/// 改成寫進核心的物件樹之後，Android 讀的是同一組物件。這裡驗的就是那條路。
+final class PackageShapeRoundTripTests: XCTestCase {
+
+    private var workDir: URL!
+
+    override func setUpWithError() throws {
+        workDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kairumo-shape-rt-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: workDir)
+    }
+
+    /// 一張三個節點的小流程圖。
+    private func flowchart() -> NotebookDocument {
+        var document = NotebookDocument(title: "流程圖", pageCount: 1)
+        let start = NoteShapeAttachment(
+            kindName: "terminator", x: 40, y: 60, width: 120, height: 50, label: "開始")
+        let decide = NoteShapeAttachment(
+            kindName: "decision", x: 40, y: 180, width: 120, height: 80, label: "要繼續嗎？")
+        let finish = NoteShapeAttachment(
+            kindName: "process", x: 240, y: 180, width: 120, height: 60, label: "處理")
+        document.shapeAttachments = [start, decide, finish]
+        document.connectionAttachments = [
+            NoteConnectionAttachment(fromShapeId: start.id, toShapeId: decide.id, label: ""),
+            NoteConnectionAttachment(fromShapeId: decide.id, toShapeId: finish.id, label: "是")
+        ]
+        return document
+    }
+
+    private func roundTrip(_ name: String) throws -> NotebookPackageBridge.ImportedNotebook {
+        let path = workDir.appendingPathComponent("\(name).padnote")
+        try NotebookPackageBridge.export(
+            document: flowchart(), drawings: [PKDrawing()], to: path, deviceId: 0x51)
+        return try NotebookPackageBridge.importDocument(fromPackageAt: path, deviceId: 0x52)
+    }
+
+    func testShapesSurviveThePackage() throws {
+        // 這條測試掉了，同一張流程圖在另一台裝置上就是不見了。
+        let imported = try roundTrip("shapes")
+        let shapes = try XCTUnwrap(imported.document.shapeAttachments)
+        XCTAssertEqual(shapes.count, 3, "形狀沒有跨過套件")
+        XCTAssertEqual(Set(shapes.map(\.label)), ["開始", "要繼續嗎？", "處理"])
+    }
+
+    func testEachShapeKeepsItsKind() throws {
+        // 全部變成方框的話，流程圖就失去意義了。
+        let imported = try roundTrip("kinds")
+        let kinds = Set((imported.document.shapeAttachments ?? []).map(\.kindName))
+        XCTAssertEqual(kinds, ["terminator", "decision", "process"])
+    }
+
+    func testEachShapeKeepsItsPlaceAndSize() throws {
+        let imported = try roundTrip("geometry")
+        let decide = try XCTUnwrap(
+            imported.document.shapeAttachments?.first { $0.label == "要繼續嗎？" })
+        XCTAssertEqual(decide.x, 40, accuracy: 0.5)
+        XCTAssertEqual(decide.y, 180, accuracy: 0.5)
+        XCTAssertEqual(decide.width, 120, accuracy: 0.5)
+        XCTAssertEqual(decide.height, 80, accuracy: 0.5)
+    }
+
+    func testConnectionsSurviveThePackage() throws {
+        // 線沒跨過去的話，另一台裝置看到的是一堆沒有連起來的方塊。
+        let imported = try roundTrip("connections")
+        let connections = try XCTUnwrap(imported.document.connectionAttachments)
+        XCTAssertEqual(connections.count, 2)
+        XCTAssertEqual(Set(connections.map(\.label)), ["", "是"])
+    }
+
+    func testConnectionsPointAtShapesThatExist() throws {
+        // 端點用舊的 id 的話，線會連到不存在的形狀上 ——
+        // 畫面上是一條從空氣連出來的線。
+        let imported = try roundTrip("endpoints")
+        let shapeIds = Set((imported.document.shapeAttachments ?? []).map(\.id))
+        for link in imported.document.connectionAttachments ?? [] {
+            XCTAssertTrue(shapeIds.contains(link.fromShapeId), "起點指向不存在的形狀")
+            XCTAssertTrue(shapeIds.contains(link.toShapeId), "終點指向不存在的形狀")
+        }
+    }
+
+    func testTheRestoredFlowchartStillDrawsConnections() throws {
+        // 「讀得回來」還不夠 —— 讀回來的東西要真的畫得出線。
+        let imported = try roundTrip("draws")
+        let shapes = try XCTUnwrap(imported.document.shapeAttachments)
+        let link = try XCTUnwrap(imported.document.connectionAttachments?.first)
+        let from = try XCTUnwrap(shapes.first { $0.id == link.fromShapeId })
+        let to = try XCTUnwrap(shapes.first { $0.id == link.toShapeId })
+
+        let geometry = try XCTUnwrap(ShapeGeometry.connection(link, from: from, to: to))
+        XCTAssertGreaterThanOrEqual(geometry.path.count, 2)
+        XCTAssertGreaterThanOrEqual(geometry.arrowHead.count, 3)
+    }
+
+    func testASecondRoundTripDoesNotDuplicateShapes() throws {
+        // 每同步一趟多一份的話，幾趟之後畫面上會疊滿方塊。
+        let first = workDir.appendingPathComponent("a.padnote")
+        try NotebookPackageBridge.export(
+            document: flowchart(), drawings: [PKDrawing()], to: first, deviceId: 0x53)
+        let once = try NotebookPackageBridge.importDocument(fromPackageAt: first, deviceId: 0x54)
+
+        let second = workDir.appendingPathComponent("b.padnote")
+        try NotebookPackageBridge.export(
+            document: once.document, drawings: once.drawings, to: second, deviceId: 0x55)
+        let twice = try NotebookPackageBridge.importDocument(fromPackageAt: second, deviceId: 0x56)
+
+        XCTAssertEqual(twice.document.shapeAttachments?.count, 3)
+        XCTAssertEqual(twice.document.connectionAttachments?.count, 2)
+    }
+
+    func testANotebookWithoutShapesImportsCleanly() throws {
+        let path = workDir.appendingPathComponent("plain.padnote")
+        try NotebookPackageBridge.export(
+            document: NotebookDocument(title: "沒有形狀", pageCount: 1),
+            drawings: [PKDrawing()], to: path, deviceId: 0x57)
+
+        let imported = try NotebookPackageBridge.importDocument(fromPackageAt: path, deviceId: 0x58)
+        XCTAssertNil(imported.document.shapeAttachments)
+        XCTAssertNil(imported.document.connectionAttachments)
+    }
+
+    func testTheExportSummaryCountsShapesAndConnections() throws {
+        // 數字對不上時要看得出來是哪一類掉了。
+        let path = workDir.appendingPathComponent("summary.padnote")
+        let summary = try NotebookPackageBridge.export(
+            document: flowchart(), drawings: [PKDrawing()], to: path, deviceId: 0x59)
+        XCTAssertEqual(summary.shapeCount, 3)
+        XCTAssertEqual(summary.connectionCount, 2)
+    }
+
+    func testAConnectionWithAMissingEndpointIsSkippedNotWritten() throws {
+        // 寫進去的話會是一條指向不存在物件的線，而且核心會拒絕整個匯出。
+        var document = flowchart()
+        document.connectionAttachments?.append(
+            NoteConnectionAttachment(fromShapeId: "不存在", toShapeId: "也不存在"))
+
+        let path = workDir.appendingPathComponent("dangling.padnote")
+        let summary = try NotebookPackageBridge.export(
+            document: document, drawings: [PKDrawing()], to: path, deviceId: 0x5A)
+        XCTAssertEqual(summary.connectionCount, 2, "斷掉的那一條要跳過，其餘照常寫入")
+    }
+}
+
 /// 兩台裝置寫同一個套件。
 ///
 /// # 這組測試在守什麼

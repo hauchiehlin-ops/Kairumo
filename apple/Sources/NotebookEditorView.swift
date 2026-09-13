@@ -1096,6 +1096,9 @@ public struct NotebookEditorView: View {
     @State private var showChartStudio: Bool = false
     @State private var showTableStudio: Bool = false
     @State private var showShapeStudio: Bool = false
+    @State private var showLayerPanel: Bool = false
+    /// 圖層面板裡選取的形狀。多選才群組得起來。
+    @State private var selectedShapeIds: Set<String> = []
     /// 正在重新編修的表格。
     @State private var editingTable: NoteTableAttachment? = nil
     @State private var editingAttachmentId: String? = nil
@@ -2036,6 +2039,7 @@ public struct NotebookEditorView: View {
                 Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
                 Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
                 Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
+                Button { showLayerPanel.toggle() } label: { Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d") }
                 Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
                 Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
             } header: {
@@ -2287,6 +2291,9 @@ ZStack(alignment: .topTrailing) {
                 if item.pageIndex == currentPageIndex {
                     ShapeAttachmentItemView(
                         shape: shapeBinding(for: item.id),
+                        isSelected: selectedShapeIds.contains(item.id),
+                        onSelect: { toggleShapeSelection(item.id) },
+                        onMove: { delta in moveShapeGroup(item.id, by: delta) },
                         onDelete: {
                             notebook.shapeAttachments?.removeAll { $0.id == item.id }
                             // 連著的線也要跟著走 —— 留著的話會指向一個不存在的
@@ -2298,6 +2305,24 @@ ZStack(alignment: .topTrailing) {
                         }
                     )
                 }
+            }
+
+            if showLayerPanel {
+                FloatingPanel(
+                    title: localizationManager.localized("layers_panel"),
+                    onClose: { showLayerPanel = false }
+                ) {
+                    ObjectLayerPanel(
+                        shapes: Binding(
+                            get: { pageShapes },
+                            set: { updated in replacePageShapes(with: updated) }
+                        ),
+                        selection: $selectedShapeIds
+                    )
+                }
+                .padding(.top, 24)
+                .padding(.trailing, 24)
+                .transition(.scale(scale: 0.95).combined(with: .opacity))
             }
 
             // 表格。與文字方塊一樣疊在墨跡之上，手寫模式下不攔截觸控。
@@ -3480,6 +3505,7 @@ ZStack(alignment: .topTrailing) {
                     Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
                 Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
                 Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
+                Button { showLayerPanel.toggle() } label: { Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d") }
                     Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
                     Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
                     Divider()
@@ -3648,6 +3674,7 @@ ZStack(alignment: .topTrailing) {
                     Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
                 Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
                 Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
+                Button { showLayerPanel.toggle() } label: { Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d") }
                     Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
                     Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
                     Divider()
@@ -4669,6 +4696,46 @@ ZStack(alignment: .topTrailing) {
         notebook.attachments?[index].chartSpecJSON = spec.encodedJSON()
         store.updateNotebook(notebook)
         editingChartAttachmentId = nil
+    }
+
+    /// 目前這一頁的形狀，依堆疊順序。
+    private var pageShapes: [NoteShapeAttachment] {
+        (notebook.shapeAttachments ?? []).filter { $0.pageIndex == currentPageIndex }
+    }
+
+    /// 換掉這一頁的形狀，其餘頁面原封不動。
+    ///
+    /// 陣列順序就是堆疊順序，所以整段換掉是必要的 —— 只改個別元素的話，
+    /// 圖層面板調的順序不會反映到畫布上。
+    private func replacePageShapes(with updated: [NoteShapeAttachment]) {
+        var others = (notebook.shapeAttachments ?? []).filter { $0.pageIndex != currentPageIndex }
+        others.append(contentsOf: updated)
+        notebook.shapeAttachments = others
+        store.updateNotebook(notebook)
+    }
+
+    private func toggleShapeSelection(_ id: String) {
+        // 選到群組裡的一個就整組選起來 —— 那正是群組的意義。
+        let mates = ObjectLayerOps.groupMates(of: id, in: pageShapes)
+        if mates.isSubset(of: selectedShapeIds) {
+            selectedShapeIds.subtract(mates)
+        } else {
+            selectedShapeIds.formUnion(mates)
+        }
+    }
+
+    /// 拖曳一個形狀時，同一組的其他成員要跟著走。
+    ///
+    /// 不跟的話，群組起來的流程圖一拖就散開了。
+    private func moveShapeGroup(_ id: String, by delta: CGSize) {
+        let mates = ObjectLayerOps.groupMates(of: id, in: pageShapes)
+        guard var all = notebook.shapeAttachments else { return }
+        for index in all.indices where mates.contains(all[index].id) {
+            all[index].x += delta.width
+            all[index].y += delta.height
+        }
+        notebook.shapeAttachments = all
+        store.updateNotebook(notebook)
     }
 
     private func shapeBinding(for id: String) -> Binding<NoteShapeAttachment> {

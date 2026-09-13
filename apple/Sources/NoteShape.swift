@@ -36,6 +36,11 @@ public struct NoteShapeAttachment: Identifiable, Codable, Hashable {
     /// `"clear"` 為透明。
     public var fillColorHex: String?
     public var lineWidth: CGFloat
+    /// 所屬群組的 id。`nil` 代表這個形狀在最上層。
+    ///
+    /// 群組是核心物件樹裡真正的節點（`Group`），不是平台自己畫出來的框 ——
+    /// 所以它跨得過平台：在一台裝置上群組起來，另一台打開仍然是一組。
+    public var groupId: String?
 
     public init(
         id: String = UUID().uuidString,
@@ -49,7 +54,8 @@ public struct NoteShapeAttachment: Identifiable, Codable, Hashable {
         label: String = "",
         strokeColorHex: String? = nil,
         fillColorHex: String? = nil,
-        lineWidth: CGFloat = 2
+        lineWidth: CGFloat = 2,
+        groupId: String? = nil
     ) {
         self.id = id
         self.pageIndex = pageIndex
@@ -63,6 +69,7 @@ public struct NoteShapeAttachment: Identifiable, Codable, Hashable {
         self.strokeColorHex = strokeColorHex
         self.fillColorHex = fillColorHex
         self.lineWidth = lineWidth
+        self.groupId = groupId
     }
 
     /// 核心認得的形狀種類。名稱對不上時退回「處理」方框 —— 那是最無害的選擇，
@@ -110,6 +117,11 @@ public struct NoteConnectionAttachment: Identifiable, Codable, Hashable {
     public var label: String
     public var colorHex: String?
     public var lineWidth: CGFloat
+    /// 所屬群組的 id。`nil` 代表這個形狀在最上層。
+    ///
+    /// 群組是核心物件樹裡真正的節點（`Group`），不是平台自己畫出來的框 ——
+    /// 所以它跨得過平台：在一台裝置上群組起來，另一台打開仍然是一組。
+    public var groupId: String?
 
     public init(
         id: String = UUID().uuidString,
@@ -118,7 +130,8 @@ public struct NoteConnectionAttachment: Identifiable, Codable, Hashable {
         toShapeId: String,
         label: String = "",
         colorHex: String? = nil,
-        lineWidth: CGFloat = 2
+        lineWidth: CGFloat = 2,
+        groupId: String? = nil
     ) {
         self.id = id
         self.pageIndex = pageIndex

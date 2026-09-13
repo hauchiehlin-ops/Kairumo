@@ -1439,6 +1439,34 @@ fn to_doc_end_cap(c: FfiEndCap) -> EndCap {
     }
 }
 
+/// 從文件模型的錨點轉回 FFI 的。讀回連接線時需要。
+pub(crate) fn from_doc_anchor(a: Anchor) -> FfiAnchor {
+    match a {
+        Anchor::Top => FfiAnchor::Top,
+        Anchor::Right => FfiAnchor::Right,
+        Anchor::Bottom => FfiAnchor::Bottom,
+        Anchor::Left => FfiAnchor::Left,
+        Anchor::Center => FfiAnchor::Center,
+    }
+}
+
+pub(crate) fn from_doc_route_style(r: RouteStyle) -> FfiRouteStyle {
+    match r {
+        RouteStyle::Straight => FfiRouteStyle::Straight,
+        RouteStyle::Orthogonal => FfiRouteStyle::Orthogonal,
+    }
+}
+
+pub(crate) fn from_doc_end_cap(c: EndCap) -> FfiEndCap {
+    match c {
+        EndCap::None => FfiEndCap::None,
+        EndCap::Arrow => FfiEndCap::Arrow,
+        EndCap::HollowArrow => FfiEndCap::HollowArrow,
+        EndCap::Circle => FfiEndCap::Circle,
+        EndCap::Diamond => FfiEndCap::Diamond,
+    }
+}
+
 pub(crate) fn parse_uuid(s: &str) -> Result<Uuid, FfiError> {
     let hex: String = s.chars().filter(|c| *c != '-').collect();
     if hex.len() != 32 {

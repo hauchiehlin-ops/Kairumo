@@ -2314,6 +2314,102 @@ object LocalizationStrings {
             "ko" to "획 선택됨: 드래그하여 이동 또는 삭제/잘라내기/복사",
             "th" to "เลือกลายเส้นแล้ว: ลากเพื่อย้าย หรือแตะลบ / ตัด / คัดลอก"
         ),
+        "layer_bring_forward" to mapOf(
+            "zh-Hant" to "上移一層",
+            "en" to "Bring Forward",
+            "zh-Hans" to "上移一层",
+            "ja" to "前面へ",
+            "ko" to "앞으로",
+            "th" to "เลื่อนขึ้น"
+        ),
+        "layer_bring_front" to mapOf(
+            "zh-Hant" to "移到最上層",
+            "en" to "Bring to Front",
+            "zh-Hans" to "移到最上层",
+            "ja" to "最前面へ",
+            "ko" to "맨 앞으로",
+            "th" to "ไปหน้าสุด"
+        ),
+        "layer_group" to mapOf(
+            "zh-Hant" to "群組",
+            "en" to "Group",
+            "zh-Hans" to "组合",
+            "ja" to "グループ化",
+            "ko" to "그룹",
+            "th" to "จัดกลุ่ม"
+        ),
+        "layer_group_name" to mapOf(
+            "zh-Hant" to "群組（%@ 個物件）",
+            "en" to "Group (%@ objects)",
+            "zh-Hans" to "组合（%@ 个对象）",
+            "ja" to "グループ（%@ 個）",
+            "ko" to "그룹(%@개)",
+            "th" to "กลุ่ม (%@ รายการ)"
+        ),
+        "layer_select_two" to mapOf(
+            "zh-Hant" to "選兩個以上的物件才能群組",
+            "en" to "Select two or more objects to group",
+            "zh-Hans" to "选两个以上的对象才能组合",
+            "ja" to "2 つ以上選ぶとグループ化できます",
+            "ko" to "두 개 이상 선택해야 그룹으로 묶을 수 있습니다",
+            "th" to "เลือกตั้งแต่สองรายการขึ้นไปจึงจะจัดกลุ่มได้"
+        ),
+        "layer_send_back" to mapOf(
+            "zh-Hant" to "移到最下層",
+            "en" to "Send to Back",
+            "zh-Hans" to "移到最下层",
+            "ja" to "最背面へ",
+            "ko" to "맨 뒤로",
+            "th" to "ไปหลังสุด"
+        ),
+        "layer_send_backward" to mapOf(
+            "zh-Hant" to "下移一層",
+            "en" to "Send Backward",
+            "zh-Hans" to "下移一层",
+            "ja" to "背面へ",
+            "ko" to "뒤로",
+            "th" to "เลื่อนลง"
+        ),
+        "layer_ungroup" to mapOf(
+            "zh-Hant" to "解散群組",
+            "en" to "Ungroup",
+            "zh-Hans" to "取消组合",
+            "ja" to "グループ解除",
+            "ko" to "그룹 해제",
+            "th" to "ยกเลิกกลุ่ม"
+        ),
+        "layer_unnamed" to mapOf(
+            "zh-Hant" to "未命名形狀",
+            "en" to "Untitled shape",
+            "zh-Hans" to "未命名形状",
+            "ja" to "名称未設定の図形",
+            "ko" to "이름 없는 도형",
+            "th" to "รูปร่างไม่มีชื่อ"
+        ),
+        "layers_empty" to mapOf(
+            "zh-Hant" to "這一頁還沒有形狀",
+            "en" to "No shapes on this page yet",
+            "zh-Hans" to "这一页还没有形状",
+            "ja" to "このページにはまだ図形がありません",
+            "ko" to "이 페이지에는 아직 도형이 없습니다",
+            "th" to "ยังไม่มีรูปร่างในหน้านี้"
+        ),
+        "layers_hint" to mapOf(
+            "zh-Hant" to "清單由上到下＝由前到後",
+            "en" to "Top of the list is in front",
+            "zh-Hans" to "列表由上到下＝由前到后",
+            "ja" to "リストの上が手前です",
+            "ko" to "목록 위쪽이 앞입니다",
+            "th" to "รายการด้านบนคือด้านหน้า"
+        ),
+        "layers_panel" to mapOf(
+            "zh-Hant" to "圖層",
+            "en" to "Layers",
+            "zh-Hans" to "图层",
+            "ja" to "レイヤー",
+            "ko" to "레이어",
+            "th" to "เลเยอร์"
+        ),
         "line_spacing" to mapOf(
             "zh-Hant" to "行距",
             "en" to "Line",

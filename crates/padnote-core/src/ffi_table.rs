@@ -106,6 +106,39 @@ impl PadnoteSession {
             }))
     }
 
+    /// 設定物件在同層裡的堆疊位置。
+    ///
+    /// 帶的是**絕對索引**，不是「上移一層」。相對操作在併發下會疊加：
+    /// 兩台裝置各按一次「移到最上層」，合併後會得出誰也沒預期的順序
+    /// （`format-spec.md` §6.2 的「堆疊順序」）。
+    ///
+    /// 圖層面板一次重排整批物件時，就是逐個帶索引進來。
+    pub fn set_object_z_index(&self, object_id: String, index: u32) -> Result<(), FfiError> {
+        self.lock()
+            .set_z_index(parse_uuid(&object_id)?, index as usize)?;
+        Ok(())
+    }
+
+    /// 依 id 取一個物件節點，不論它在不在最上層。
+    ///
+    /// [`Self::root_objects`] 只回傳根層的物件。群組之後，成員就不是根物件了 ——
+    /// 平台若只看根層，整組形狀會從畫面上消失，而檔案裡其實好端端地存在。
+    /// 要走進群組就需要這一支。
+    ///
+    /// `z_index` 只在同層內有意義；非根層的物件回傳它在所屬層裡的位置。
+    pub fn object_node(
+        &self,
+        page_id: String,
+        object_id: String,
+    ) -> Result<Option<FfiObject>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let id = parse_uuid(&object_id)?;
+        let guard = self.lock();
+        let Some(tree) = guard.objects(page) else { return Ok(None) };
+        let Some(node) = tree.get(id) else { return Ok(None) };
+        Ok(Some(describe_object(node, tree.z_index(id).unwrap_or(0))))
+    }
+
     /// 這一頁最上層的物件，**依堆疊順序**（索引 0 在最底層）。
     pub fn root_objects(&self, page_id: String) -> Result<Vec<FfiObject>, FfiError> {
         let page = parse_uuid(&page_id)?;
@@ -117,27 +150,7 @@ impl PadnoteSession {
             .roots()
             .iter()
             .enumerate()
-            .filter_map(|(index, id)| {
-                tree.get(*id).map(|node| FfiObject {
-                    id: node.id.to_string(),
-                    kind: match &node.kind {
-                        padnote_doc::ObjectKind::Strokes(_) => FfiObjectKind::Strokes,
-                        padnote_doc::ObjectKind::Block(_) => FfiObjectKind::Block,
-                        padnote_doc::ObjectKind::Group(_) => FfiObjectKind::Group,
-                        padnote_doc::ObjectKind::Shape(_) => FfiObjectKind::Shape,
-                        padnote_doc::ObjectKind::Connection(_) => FfiObjectKind::Connection,
-                    },
-                    members: match &node.kind {
-                        padnote_doc::ObjectKind::Strokes(ids)
-                        | padnote_doc::ObjectKind::Group(ids) => {
-                            ids.iter().map(|i| i.to_string()).collect()
-                        }
-                        padnote_doc::ObjectKind::Block(id) => vec![id.to_string()],
-                        _ => Vec::new(),
-                    },
-                    z_index: index as u32,
-                })
-            })
+            .filter_map(|(index, id)| tree.get(*id).map(|node| describe_object(node, index)))
             .collect())
     }
 }
@@ -180,6 +193,28 @@ pub struct FfiTableLayout {
     pub row_heights: Vec<f64>,
 }
 
+/// 把物件樹的節點描述成 FFI 的形狀。
+fn describe_object(node: &padnote_doc::ObjectNode, z_index: usize) -> FfiObject {
+    FfiObject {
+        id: node.id.to_string(),
+        kind: match &node.kind {
+            padnote_doc::ObjectKind::Strokes(_) => FfiObjectKind::Strokes,
+            padnote_doc::ObjectKind::Block(_) => FfiObjectKind::Block,
+            padnote_doc::ObjectKind::Group(_) => FfiObjectKind::Group,
+            padnote_doc::ObjectKind::Shape(_) => FfiObjectKind::Shape,
+            padnote_doc::ObjectKind::Connection(_) => FfiObjectKind::Connection,
+        },
+        members: match &node.kind {
+            padnote_doc::ObjectKind::Strokes(ids) | padnote_doc::ObjectKind::Group(ids) => {
+                ids.iter().map(|i| i.to_string()).collect()
+            }
+            padnote_doc::ObjectKind::Block(id) => vec![id.to_string()],
+            _ => Vec::new(),
+        },
+        z_index: z_index as u32,
+    }
+}
+
 /// 一個形狀物件的內容。
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct FfiShapeObject {
@@ -217,6 +252,52 @@ impl PadnoteSession {
                 max_y: shape.bounds.max_y,
                 corner_radius: shape.corner_radius,
                 text: shape.text.clone(),
+            }),
+            _ => None,
+        }))
+    }
+}
+
+/// 一條連接線物件的內容。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiConnectionObject {
+    pub object_id: String,
+    pub from_object_id: String,
+    pub to_object_id: String,
+    pub from_anchor: crate::ffi_shapes::FfiAnchor,
+    pub to_anchor: crate::ffi_shapes::FfiAnchor,
+    pub route: crate::ffi_shapes::FfiRouteStyle,
+    pub start_cap: crate::ffi_shapes::FfiEndCap,
+    pub end_cap: crate::ffi_shapes::FfiEndCap,
+    pub label: String,
+}
+
+#[uniffi::export]
+impl PadnoteSession {
+    /// 讀回一條連接線。不是連接線時回 `None`。
+    ///
+    /// 與形狀、表格是同一類漏洞：`insert_connection` 寫得進去卻讀不回來，
+    /// 於是連接線只能由平台自己另存一份 —— 換一台裝置打開，流程圖就只剩
+    /// 一堆沒有線連起來的方塊。
+    pub fn connection_object(
+        &self,
+        page_id: String,
+        object_id: String,
+    ) -> Result<Option<FfiConnectionObject>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let id = parse_uuid(&object_id)?;
+        let guard = self.lock();
+        Ok(guard.object(page, id).and_then(|node| match &node.kind {
+            padnote_doc::ObjectKind::Connection(conn) => Some(FfiConnectionObject {
+                object_id: object_id.clone(),
+                from_object_id: conn.from.to_string(),
+                to_object_id: conn.to.to_string(),
+                from_anchor: crate::ffi::from_doc_anchor(conn.from_anchor),
+                to_anchor: crate::ffi::from_doc_anchor(conn.to_anchor),
+                route: crate::ffi::from_doc_route_style(conn.route),
+                start_cap: crate::ffi::from_doc_end_cap(conn.start_cap),
+                end_cap: crate::ffi::from_doc_end_cap(conn.end_cap),
+                label: conn.label.clone(),
             }),
             _ => None,
         }))
@@ -504,6 +585,76 @@ mod tests {
     }
 
     #[test]
+    fn a_connection_can_be_read_back() {
+        // 讀不回來的話，換一台裝置打開，流程圖就只剩一堆沒有線連起來的方塊。
+        let (s, page) = session("connection-read-back");
+        let from = s
+            .insert_shape(page.clone(), crate::ffi_shapes::FfiShapeKind::Terminator,
+                          0.0, 0.0, 100.0, 50.0, 0.0, "開始".into())
+            .unwrap();
+        let to = s
+            .insert_shape(page.clone(), crate::ffi_shapes::FfiShapeKind::Process,
+                          200.0, 0.0, 300.0, 50.0, 0.0, "處理".into())
+            .unwrap();
+        let link = s
+            .insert_connection(
+                page.clone(), from.clone(), to.clone(),
+                crate::ffi_shapes::FfiAnchor::Right,
+                crate::ffi_shapes::FfiAnchor::Left,
+                crate::ffi_shapes::FfiRouteStyle::Orthogonal,
+                crate::ffi_shapes::FfiEndCap::None,
+                crate::ffi_shapes::FfiEndCap::Arrow,
+                "是".into(),
+            )
+            .unwrap();
+
+        let conn = s.connection_object(page, link.clone()).unwrap().expect("連接線讀不回來");
+        assert_eq!(conn.object_id, link);
+        assert_eq!(conn.from_object_id, from);
+        assert_eq!(conn.to_object_id, to);
+        assert_eq!(conn.label, "是");
+        assert_eq!(conn.route, crate::ffi_shapes::FfiRouteStyle::Orthogonal);
+        assert_eq!(conn.end_cap, crate::ffi_shapes::FfiEndCap::Arrow);
+    }
+
+    #[test]
+    fn a_connection_survives_a_reopen() {
+        let dir = std::env::temp_dir().join(format!("padnote-conn-reopen-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let path = dir.to_string_lossy().into_owned();
+        let (page, link, from) = {
+            let s = PadnoteSession::create(path.clone(), "連線".into(), 1_757_635_200_000, 0xA1)
+                .unwrap();
+            let page = s.first_page_id().unwrap();
+            let a = s.insert_shape(page.clone(), crate::ffi_shapes::FfiShapeKind::Process,
+                                   0.0, 0.0, 10.0, 10.0, 0.0, String::new()).unwrap();
+            let b = s.insert_shape(page.clone(), crate::ffi_shapes::FfiShapeKind::Process,
+                                   50.0, 0.0, 60.0, 10.0, 0.0, String::new()).unwrap();
+            let link = s.insert_connection(
+                page.clone(), a.clone(), b,
+                crate::ffi_shapes::FfiAnchor::Right, crate::ffi_shapes::FfiAnchor::Left,
+                crate::ffi_shapes::FfiRouteStyle::Straight,
+                crate::ffi_shapes::FfiEndCap::None, crate::ffi_shapes::FfiEndCap::Arrow,
+                "標籤".into()).unwrap();
+            (page, link, a)
+        };
+
+        let reopened = PadnoteSession::open_existing(path, 0xA1).unwrap();
+        let conn = reopened.connection_object(page, link).unwrap().expect("重開之後連線不見了");
+        assert_eq!(conn.from_object_id, from);
+        assert_eq!(conn.label, "標籤");
+    }
+
+    #[test]
+    fn a_shape_is_not_a_connection() {
+        // 認錯的話，形狀會被當成線畫出來。
+        let (s, page) = session("shape-not-connection");
+        let shape = s.insert_shape(page.clone(), crate::ffi_shapes::FfiShapeKind::Process,
+                                   0.0, 0.0, 10.0, 10.0, 0.0, String::new()).unwrap();
+        assert!(s.connection_object(page, shape).unwrap().is_none());
+    }
+
+    #[test]
     fn a_stroke_object_is_not_a_shape() {
         // 認錯的話，一組筆畫會被當成形狀畫出來。
         let (s, page) = session("shape-not-a-shape");
@@ -563,6 +714,69 @@ mod tests {
         s.ungroup(group).unwrap();
 
         assert_eq!(s.root_objects(page).unwrap().len(), 2);
+    }
+
+    #[test]
+    fn setting_an_absolute_z_index_reorders_the_page() {
+        // 帶絕對索引而不是「上移一層」：相對操作在併發下會疊加，
+        // 兩台裝置各按一次「移到最上層」會得出誰也沒預期的順序。
+        let (s, page) = session("z-index-absolute");
+        let bottom = s.create_stroke_object(page.clone(), vec![]).unwrap();
+        let middle = s.create_stroke_object(page.clone(), vec![]).unwrap();
+        let top = s.create_stroke_object(page.clone(), vec![]).unwrap();
+
+        // 把最底下那個直接指到最上層。
+        s.set_object_z_index(bottom.clone(), 2).unwrap();
+
+        let ids: Vec<String> = s.root_objects(page).unwrap().iter().map(|o| o.id.clone()).collect();
+        assert_eq!(ids, vec![middle, top, bottom]);
+    }
+
+    #[test]
+    fn an_out_of_range_z_index_is_clamped_not_rejected() {
+        // 讀取端必須把越界索引夾到合法範圍，不得拒絕整份 oplog
+        // （format-spec §6.2）。整批重排時很容易帶到超出範圍的值。
+        let (s, page) = session("z-index-clamp");
+        let a = s.create_stroke_object(page.clone(), vec![]).unwrap();
+        s.create_stroke_object(page.clone(), vec![]).unwrap();
+
+        s.set_object_z_index(a.clone(), 99).unwrap();
+
+        let ids: Vec<String> = s.root_objects(page).unwrap().iter().map(|o| o.id.clone()).collect();
+        assert_eq!(ids.len(), 2, "物件不該因為越界索引而消失");
+        assert_eq!(ids[1], a, "越界的索引要夾到最上層");
+    }
+
+    #[test]
+    fn a_grouped_member_is_still_reachable_by_id() {
+        // root_objects 只回傳根層。群組之後成員就不是根物件了 —— 平台若只看
+        // 根層，整組形狀會從畫面上消失，而檔案裡其實好端端地存在。
+        let (s, page) = session("object-node");
+        let a = s.insert_shape(page.clone(), crate::ffi_shapes::FfiShapeKind::Process,
+                               0.0, 0.0, 10.0, 10.0, 0.0, "甲".into()).unwrap();
+        let b = s.insert_shape(page.clone(), crate::ffi_shapes::FfiShapeKind::Process,
+                               50.0, 0.0, 60.0, 10.0, 0.0, "乙".into()).unwrap();
+        let group = s.group_objects(page.clone(), vec![a.clone(), b.clone()]).unwrap();
+
+        // 根層只剩群組
+        let roots = s.root_objects(page.clone()).unwrap();
+        assert_eq!(roots.len(), 1);
+        assert_eq!(roots[0].id, group);
+        assert_eq!(roots[0].members, vec![a.clone(), b.clone()]);
+
+        // 成員仍然拿得到
+        let member = s.object_node(page.clone(), a.clone()).unwrap().expect("群組成員取不到");
+        assert_eq!(member.id, a);
+        assert_eq!(member.kind, super::FfiObjectKind::Shape);
+        // 而且它的內容也還在
+        assert_eq!(s.shape_object(page, a).unwrap().unwrap().text, "甲");
+    }
+
+    #[test]
+    fn asking_for_an_unknown_object_returns_none() {
+        let (s, page) = session("object-node-missing");
+        let missing = "01920000-0000-7000-8000-0000000000ff";
+        assert!(s.object_node(page, missing.into()).unwrap().is_none());
     }
 
     #[test]

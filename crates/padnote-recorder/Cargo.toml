@@ -12,3 +12,4 @@ padnote-doc = { path = "../padnote-doc" }
 
 [lints]
 workspace = true
+cpal = { workspace = true }

@@ -11,3 +11,7 @@ workspace = true
 [dependencies]
 padnote-doc = { path = "../padnote-doc" }
 padnote-crypto = { path = "../padnote-crypto" }
+reqwest = { version = "0.11", features = ["json", "stream", "blocking"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+async-trait = "0.1"

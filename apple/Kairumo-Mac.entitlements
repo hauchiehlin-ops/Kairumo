@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  Mac App Store 的必要條件（上傳時被 altool 以 90296 擋下過）。
+	  iOS 上一律沙盒化，不需要也不該帶這個鍵，所以這份檔案只掛在 macOS SDK 上。
+	-->
+	<key>com.apple.security.app-sandbox</key>
+	<true/>
+
+	<!--
+	  同步資料夾與備份檔都由使用者自己挑。沒有這一條，選檔對話框回來的 URL
+	  在沙盒裡讀不到 —— 而且不會有錯誤，只是什麼都沒同步到。
+	-->
+	<key>com.apple.security.files.user-selected.read-write</key>
+	<true/>
+
+	<!--
+	  下次啟動還要能存取同一個資料夾。少了它，書籤解得開卻沒有權限，
+	  使用者每次開 App 都得重選一次資料夾。
+	-->
+	<key>com.apple.security.files.bookmarks.app-scope</key>
+	<true/>
+
+	<!-- 課堂與會議錄音。 -->
+	<key>com.apple.security.device.audio-input</key>
+	<true/>
+
+	<!--
+	  線上協同：發起的那台裝置自己擔任中繼點，所以兩個方向都要。
+	  只開 client 的話，別人連不進來；只開 server 的話，自己加入不了別人的房間。
+	-->
+	<key>com.apple.security.network.server</key>
+	<true/>
+	<key>com.apple.security.network.client</key>
+	<true/>
+</dict>
+</plist>

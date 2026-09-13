@@ -190,6 +190,79 @@ class ShapeTest {
         assertTrue(ShapeStore(s, page).apply { load() }.all.isEmpty())
     }
 
+    // ── 連接線（流程圖跨得過平台的關鍵）────────────────────
+
+    @Test
+    fun aConnectionSurvivesTheNotebook() {
+        // 連接線沒存進核心的話，另一台裝置看到的是一堆沒有線連起來的方塊。
+        val (s, page) = session("connection-roundtrip")
+        val store = ShapeStore(s, page)
+        val from = store.create(shape("terminator").apply { label = "開始" })
+        val to = store.create(shape("process").apply { x = 300f; label = "處理" })
+        store.connect(from, to, "是")
+
+        val reopened = ShapeStore(s, page).apply { load() }
+        assertEquals(2, reopened.all.size)
+        assertEquals(1, reopened.allConnections.size)
+        val link = reopened.allConnections[0]
+        assertEquals("是", link.label)
+        assertEquals(from.id, link.fromShapeId)
+        assertEquals(to.id, link.toShapeId)
+    }
+
+    @Test
+    fun connectionEndpointsPointAtShapesThatExist() {
+        // 端點用平台自己生的 id 的話，線會連到不存在的物件上 ——
+        // 畫面上是一條從空氣連出來的線。
+        val (s, page) = session("connection-endpoints")
+        val store = ShapeStore(s, page)
+        val from = store.create(shape())
+        val to = store.create(shape().apply { x = 300f })
+        store.connect(from, to)
+
+        val reopened = ShapeStore(s, page).apply { load() }
+        val ids = reopened.all.map { it.id }.toSet()
+        for (link in reopened.allConnections) {
+            assertTrue("起點指向不存在的形狀", ids.contains(link.fromShapeId))
+            assertTrue("終點指向不存在的形狀", ids.contains(link.toShapeId))
+        }
+    }
+
+    @Test
+    fun deletingAShapeAlsoRemovesItsConnections() {
+        // 留著的話會指向一個不存在的形狀，畫面上是一條從空氣連出來的線。
+        val (s, page) = session("connection-cascade")
+        val store = ShapeStore(s, page)
+        val from = store.create(shape())
+        val to = store.create(shape().apply { x = 300f })
+        store.connect(from, to)
+
+        store.remove(from)
+
+        val reopened = ShapeStore(s, page).apply { load() }
+        assertTrue("形狀刪掉了，連著它的線還在", reopened.allConnections.isEmpty())
+        assertEquals(1, reopened.all.size)
+    }
+
+    @Test
+    fun aRestoredConnectionStillDrawsItsPath() {
+        // 「讀得回來」還不夠 —— 讀回來的東西要真的畫得出線。
+        val (s, page) = session("connection-draws")
+        val store = ShapeStore(s, page)
+        val from = store.create(shape())
+        val to = store.create(shape().apply { x = 300f })
+        store.connect(from, to)
+
+        val reopened = ShapeStore(s, page).apply { load() }
+        val link = reopened.allConnections[0]
+        val a = reopened.all.first { it.id == link.fromShapeId }
+        val b = reopened.all.first { it.id == link.toShapeId }
+
+        val geometry = ShapeGeometry.connection(a, b)
+        assertNotNull("讀回來的形狀畫不出連接線", geometry)
+        assertTrue(geometry!!.arrowHead.size >= 3)
+    }
+
     @Test
     fun aShapeWithoutASessionStillWorksInMemory() {
         val store = ShapeStore(null, null)
@@ -204,5 +277,193 @@ class ShapeTest {
         s.createStrokeObject(page, emptyList())
 
         assertTrue(ShapeStore(s, page).apply { load() }.all.isEmpty())
+    }
+}
+
+/**
+ * 形狀的堆疊順序與群組（Android）。
+ *
+ * # 這組測試在守什麼
+ *
+ * 順序的錯誤不會跳例外，只會讓畫面上的東西**疊錯**：該在上面的跑到下面、
+ * 群組裡的成員被別的東西夾在中間。那種錯只有測試抓得到。
+ *
+ * 規則與 Apple 的 `ObjectLayerOps` 一字不差 —— 同一組案例兩邊各驗一次，
+ * 不然「同一個操作在兩個平台結果不同」只有使用者會發現。
+ */
+@RunWith(AndroidJUnit4::class)
+class ObjectLayerTest {
+
+    private fun shapes(vararg ids: String): List<NoteShape> =
+        ids.map { NoteShape(id = it, label = it) }
+
+    private fun order(shapes: List<NoteShape>) = shapes.map { it.id }
+
+    // ── 堆疊順序 ────────────────────────────────────────────
+
+    @Test
+    fun bringToFrontPutsItOnTop() {
+        assertEquals(
+            listOf("b", "c", "a"),
+            order(ObjectLayer.bringToFront("a", shapes("a", "b", "c")))
+        )
+    }
+
+    @Test
+    fun sendToBackPutsItAtTheBottom() {
+        assertEquals(
+            listOf("c", "a", "b"),
+            order(ObjectLayer.sendToBack("c", shapes("a", "b", "c")))
+        )
+    }
+
+    @Test
+    fun bringForwardMovesOneStepOnly() {
+        // 一次跳兩層的話，使用者要按幾次才對得準就沒人知道了。
+        assertEquals(
+            listOf("b", "a", "c"),
+            order(ObjectLayer.bringForward("a", shapes("a", "b", "c")))
+        )
+    }
+
+    @Test
+    fun sendBackwardMovesOneStepOnly() {
+        assertEquals(
+            listOf("a", "c", "b"),
+            order(ObjectLayer.sendBackward("c", shapes("a", "b", "c")))
+        )
+    }
+
+    @Test
+    fun movingBeyondTheEdgeDoesNothing() {
+        // 夾住而不是繞回去：已經在最上層還按「上移」，東西不該跑到最底下。
+        val items = shapes("a", "b")
+        assertEquals(listOf("a", "b"), order(ObjectLayer.bringForward("b", items)))
+        assertEquals(listOf("a", "b"), order(ObjectLayer.sendBackward("a", items)))
+    }
+
+    @Test
+    fun movingAnUnknownIdChangesNothing() {
+        assertEquals(listOf("a", "b"), order(ObjectLayer.bringToFront("不存在", shapes("a", "b"))))
+    }
+
+    @Test
+    fun reorderingKeepsEveryShape() {
+        // 少一個就是畫面上有東西不見了。
+        var items = shapes("a", "b", "c", "d")
+        items = ObjectLayer.bringToFront("b", items)
+        items = ObjectLayer.sendToBack("d", items)
+        items = ObjectLayer.bringForward("a", items)
+        assertEquals(setOf("a", "b", "c", "d"), order(items).toSet())
+        assertEquals(4, items.size)
+    }
+
+    // ── 群組 ────────────────────────────────────────────────
+
+    @Test
+    fun groupingMarksEveryMember() {
+        val (items, groupId) = ObjectLayer.group(setOf("a", "c"), shapes("a", "b", "c"))
+        assertNotNull(groupId)
+        assertEquals(groupId, items.first { it.id == "a" }.groupId)
+        assertEquals(groupId, items.first { it.id == "c" }.groupId)
+        assertNull("沒選到的不該被拉進群組", items.first { it.id == "b" }.groupId)
+    }
+
+    @Test
+    fun groupingASingleShapeIsRefused() {
+        // 一個物件的「群組」沒有意義，解散之後使用者會發現什麼也沒變，
+        // 只會覺得按鈕壞了。
+        val (items, groupId) = ObjectLayer.group(setOf("a"), shapes("a", "b"))
+        assertNull(groupId)
+        assertNull(items[0].groupId)
+    }
+
+    @Test
+    fun ungroupingReleasesEveryMemberButKeepsThem() {
+        // 解散群組不是刪除 —— 成員要留在原地。
+        val (grouped, groupId) = ObjectLayer.group(setOf("a", "b"), shapes("a", "b"))
+        val released = ObjectLayer.ungroup(groupId!!, grouped)
+        assertTrue(released.all { it.groupId == null })
+        assertEquals(listOf("a", "b"), order(released))
+    }
+
+    @Test
+    fun groupMatesIncludeEveryMember() {
+        // 選到群組裡的一個，整組都要一起動 —— 那正是群組的意義。
+        val (items, _) = ObjectLayer.group(setOf("a", "b"), shapes("a", "b", "c"))
+        assertEquals(setOf("a", "b"), ObjectLayer.groupMates("a", items))
+    }
+
+    @Test
+    fun anUngroupedShapeIsItsOwnMate() {
+        assertEquals(setOf("a"), ObjectLayer.groupMates("a", shapes("a", "b")))
+    }
+
+    // ── 面板的列 ────────────────────────────────────────────
+
+    @Test
+    fun rowsAreListedFrontToBack() {
+        // 面板由上到下＝由前到後，那是圖層面板的慣例。反過來的話，
+        // 使用者每按一次「上移」都要在腦中翻譯一次。
+        val rows = ObjectLayer.rows(shapes("底", "中", "頂"), "未命名") { "群組 $it" }
+        assertEquals(listOf("頂", "中", "底"), rows.map { it.label })
+    }
+
+    @Test
+    fun aGroupCollapsesIntoOneRow() {
+        // 一個群組在面板上是一列，不是散開的成員。
+        val (items, _) = ObjectLayer.group(setOf("a", "b"), shapes("a", "b", "c"))
+        val rows = ObjectLayer.rows(items, "未命名") { "群組 $it" }
+        assertEquals(2, rows.size)
+        assertEquals(1, rows.count { it.isGroup })
+        assertEquals(2, rows.first { it.isGroup }.memberCount)
+    }
+
+    @Test
+    fun anUnnamedShapeGetsAPlaceholderLabel() {
+        // 空字串在清單裡是一列看不出是什麼的空白。
+        val rows = ObjectLayer.rows(listOf(NoteShape(id = "a", label = "")), "未命名") { "群組 $it" }
+        assertEquals("未命名", rows[0].label)
+    }
+
+    // ── 存回核心 ────────────────────────────────────────────
+
+    @Test
+    fun reorderingIsWrittenBackToTheCore() {
+        // 只改記憶體的話，關掉 App 順序就跑回去了。
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val dir = File(context.cacheDir, "layer-order-${System.nanoTime()}")
+        val s = PadnoteSession.create(dir.absolutePath, "圖層", 1_757_635_200_000uL, 0xF5u)
+        val page = s.firstPageId()!!
+        val store = ShapeStore(s, page)
+
+        val bottom = store.create(NoteShape(kindName = "process", label = "底"))
+        val top = store.create(NoteShape(kindName = "process", label = "頂", x = 300f))
+        store.replaceAll(ObjectLayer.bringToFront(bottom.id, store.all))
+
+        val reopened = ShapeStore(s, page).apply { load() }
+        assertEquals(listOf(top.id, bottom.id), reopened.all.map { it.id })
+    }
+
+    @Test
+    fun groupingIsWrittenBackToTheCore() {
+        // 群組是核心物件樹裡真正的節點 —— 沒寫回去的話，
+        // 換一台裝置打開群組就散了。
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val dir = File(context.cacheDir, "layer-group-${System.nanoTime()}")
+        val s = PadnoteSession.create(dir.absolutePath, "圖層", 1_757_635_200_000uL, 0xF6u)
+        val page = s.firstPageId()!!
+        val store = ShapeStore(s, page)
+
+        val a = store.create(NoteShape(kindName = "process", label = "甲"))
+        val b = store.create(NoteShape(kindName = "process", label = "乙", x = 300f))
+        val (grouped, _) = ObjectLayer.group(setOf(a.id, b.id), store.all)
+        store.replaceAll(grouped)
+
+        // 群組之後，根層只剩那個 Group 節點。
+        val roots = s.rootObjects(page)
+        assertEquals(1, roots.size)
+        assertEquals(uniffi.padnote_core.FfiObjectKind.GROUP, roots[0].kind)
+        assertEquals(setOf(a.id, b.id), roots[0].members.toSet())
     }
 }

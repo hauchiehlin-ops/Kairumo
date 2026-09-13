@@ -2,6 +2,7 @@ package com.kairumo.padnote.platform
 
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -50,13 +51,40 @@ class DocsAssetTest {
     }
 
     @Test
-    fun theManualIsAFragmentSoTheViewerMustWrapIt() {
-        // 這兩份文件是為了網頁發佈而寫的片段，沒有 <html> 也沒有 viewport meta。
-        // 直接丟給 WebView 會用桌面寬度排版，手機上整頁縮成看不清的小字。
-        // DocsViewer 負責補外框 —— 這條測試釘住「它確實是片段」這個前提，
-        // 哪天來源改成完整文件，這裡會提醒去簡化 DocsViewer。
-        val html = assets.open("manual/index.html").bufferedReader().use { it.readText() }
-        assertFalse(html.contains("<html", ignoreCase = true))
-        assertFalse(html.contains("name=\"viewport\"", ignoreCase = true))
+    fun everyDocumentIsACompleteHtmlDocument() {
+        // 這兩份文件現在是完整的 HTML，DocsViewer 直接 loadUrl 就好。
+        //
+        // 少了 charset 宣告，WebView 只能猜編碼，中文會整頁變成亂碼 ——
+        // Apple 端實際發生過這件事，使用者回報了才發現。
+        // 少了 viewport，手機上會用桌面寬度排版，整頁縮成看不清的小字。
+        for (path in listOf("manual/index.html", "legal/privacy.html")) {
+            val html = assets.open(path).bufferedReader().use { it.readText() }
+            assertTrue("$path 沒有 DOCTYPE", html.trimStart().startsWith("<!DOCTYPE html>", true))
+            assertTrue("$path 缺少編碼宣告，會顯示成亂碼",
+                html.contains("<meta charset=\"utf-8\">", ignoreCase = true))
+            assertTrue("$path 缺少 viewport，手機上會縮成小字",
+                html.contains("name=\"viewport\"", ignoreCase = true))
+        }
+    }
+
+    @Test
+    fun documentsDoNotNameOperatingSystems() {
+        // 同一份手冊要給所有平台的使用者看。列出某個平台的名字，
+        // 會讓其他平台的使用者以為那些功能自己沒有。
+        val forbidden = listOf("iPad", "iPhone", "iOS", "macOS", "Android", "Apple Pencil", "iCloud")
+        for (path in listOf("manual/index.html", "manual/manual.js", "legal/privacy.html")) {
+            val text = assets.open(path).bufferedReader().use { it.readText() }
+            for (word in forbidden) {
+                assertFalse("$path 裡出現了「$word」", text.contains(word))
+            }
+        }
+    }
+
+    @Test
+    fun theManualCoversBackupAndSync() {
+        // 使用者問過「備份的功能在哪裡」—— 手冊裡沒有這一段，
+        // 那本身就是問題的一部分。六個語系都要有。
+        val manual = assets.open("manual/manual.js").bufferedReader().use { it.readText() }
+        assertEquals(6, manual.split("id: \"data\"").size - 1)
     }
 }
