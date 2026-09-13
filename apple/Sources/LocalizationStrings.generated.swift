@@ -959,6 +959,14 @@ extension LocalizationManager {
             .ko: "선택된 획 삭제",
             .th: "ลบลายเส้นที่เลือก"
         ],
+        "designer_palette": [
+            .zhHant: "設計師色系",
+            .en: "Designer Palette",
+            .zhHans: "设计师色系",
+            .ja: "デザイナーパレット",
+            .ko: "디자이너 팔레트",
+            .th: "จานสีนักออกแบบ"
+        ],
         "dimension_callout": [
             .zhHant: "工程引線標註",
             .en: "Dimension Callout",
@@ -1198,6 +1206,118 @@ extension LocalizationManager {
             .ja: "URLを入力",
             .ko: "URL 입력",
             .th: "ป้อน URL"
+        ],
+        "err_backup_failed": [
+            .zhHant: "備份失敗，未進行：%@",
+            .en: "Backup failed, nothing was changed: %@",
+            .zhHans: "备份失败，未进行：%@",
+            .ja: "バックアップに失敗したため、何も変更していません：%@",
+            .ko: "백업에 실패하여 아무것도 변경하지 않았습니다: %@",
+            .th: "สำรองข้อมูลไม่สำเร็จ จึงไม่มีการเปลี่ยนแปลง: %@"
+        ],
+        "err_coordinate_drift": [
+            .zhHant: "第 %1@ 頁第 %2@ 筆的座標對不上",
+            .en: "Coordinates do not match for stroke %2@ on page %1@",
+            .zhHans: "第 %1@ 页第 %2@ 笔的坐标对不上",
+            .ja: "%1@ ページ目 %2@ 本目のストロークの座標が一致しません",
+            .ko: "%1@쪽 %2@번째 획의 좌표가 맞지 않습니다",
+            .th: "พิกัดของเส้นที่ %2@ บนหน้า %1@ ไม่ตรงกัน"
+        ],
+        "err_core_not_ready": [
+            .zhHant: "核心未就緒",
+            .en: "The core engine is not ready",
+            .zhHans: "核心未就绪",
+            .ja: "コアエンジンの準備ができていません",
+            .ko: "코어 엔진이 준비되지 않았습니다",
+            .th: "เครื่องยนต์หลักยังไม่พร้อม"
+        ],
+        "err_hwr_download": [
+            .zhHant: "手寫模型下載失敗（請連上 Wi-Fi）：%@",
+            .en: "Handwriting model download failed (please connect to Wi-Fi): %@",
+            .zhHans: "手写模型下载失败（请连上 Wi-Fi）：%@",
+            .ja: "手書きモデルのダウンロードに失敗しました（Wi-Fi に接続してください）：%@",
+            .ko: "손글씨 모델 다운로드에 실패했습니다(Wi-Fi에 연결해 주세요): %@",
+            .th: "ดาวน์โหลดโมเดลลายมือไม่สำเร็จ (โปรดเชื่อมต่อ Wi-Fi): %@"
+        ],
+        "err_hwr_failed": [
+            .zhHant: "辨識失敗：%@",
+            .en: "Recognition failed: %@",
+            .zhHans: "识别失败：%@",
+            .ja: "認識に失敗しました：%@",
+            .ko: "인식에 실패했습니다: %@",
+            .th: "การรู้จำล้มเหลว: %@"
+        ],
+        "err_hwr_no_model": [
+            .zhHant: "沒有「%@」的手寫模型",
+            .en: "No handwriting model for “%@”",
+            .zhHans: "没有「%@」的手写模型",
+            .ja: "「%@」の手書きモデルがありません",
+            .ko: "‘%@’용 손글씨 모델이 없습니다",
+            .th: "ไม่มีโมเดลลายมือสำหรับ “%@”"
+        ],
+        "err_hwr_unsupported": [
+            .zhHant: "這台裝置無法使用手寫辨識（需要 Google Play 服務）：%@",
+            .en: "Handwriting recognition is unavailable on this device (Google Play services required): %@",
+            .zhHans: "这台设备无法使用手写识别（需要 Google Play 服务）：%@",
+            .ja: "この端末では手書き認識を利用できません（Google Play 開発者サービスが必要）：%@",
+            .ko: "이 기기에서는 손글씨 인식을 사용할 수 없습니다(Google Play 서비스 필요): %@",
+            .th: "อุปกรณ์นี้ใช้การรู้จำลายมือไม่ได้ (ต้องมี Google Play services): %@"
+        ],
+        "err_mic_open_failed": [
+            .zhHant: "無法開啟麥克風：%@",
+            .en: "Could not open the microphone: %@",
+            .zhHans: "无法开启麦克风：%@",
+            .ja: "マイクを開けませんでした：%@",
+            .ko: "마이크를 열 수 없습니다: %@",
+            .th: "เปิดไมโครโฟนไม่ได้: %@"
+        ],
+        "err_mic_unsupported": [
+            .zhHant: "這台裝置不支援 16kHz 單聲道錄音",
+            .en: "This device does not support 16 kHz mono recording",
+            .zhHans: "这台设备不支持 16kHz 单声道录音",
+            .ja: "この端末は 16kHz モノラル録音に対応していません",
+            .ko: "이 기기는 16kHz 모노 녹음을 지원하지 않습니다",
+            .th: "อุปกรณ์นี้ไม่รองรับการบันทึกเสียงแบบโมโน 16 kHz"
+        ],
+        "err_no_mic_permission": [
+            .zhHant: "沒有麥克風權限",
+            .en: "No microphone permission",
+            .zhHans: "没有麦克风权限",
+            .ja: "マイクの権限がありません",
+            .ko: "마이크 권한이 없습니다",
+            .th: "ไม่ได้รับสิทธิ์ไมโครโฟน"
+        ],
+        "err_no_pages": [
+            .zhHant: "這本筆記沒有任何頁面",
+            .en: "This notebook has no pages",
+            .zhHans: "这本笔记没有任何页面",
+            .ja: "このノートにはページがありません",
+            .ko: "이 노트에는 페이지가 없습니다",
+            .th: "สมุดบันทึกนี้ไม่มีหน้า"
+        ],
+        "err_page_count_mismatch": [
+            .zhHant: "頁數不符：原稿 %1@ 頁、套件 %2@ 頁",
+            .en: "Page count differs: %1@ in the original, %2@ in the package",
+            .zhHans: "页数不符：原稿 %1@ 页、套件 %2@ 页",
+            .ja: "ページ数が一致しません：原本 %1@ ページ、パッケージ %2@ ページ",
+            .ko: "페이지 수가 다릅니다: 원본 %1@쪽, 패키지 %2@쪽",
+            .th: "จำนวนหน้าไม่ตรงกัน: ต้นฉบับ %1@ หน้า แพ็กเกจ %2@ หน้า"
+        ],
+        "err_stroke_count_mismatch": [
+            .zhHant: "第 %1@ 頁筆畫數不符：原稿 %2@ 筆、套件 %3@ 筆",
+            .en: "Page %1@ stroke count differs: %2@ in the original, %3@ in the package",
+            .zhHans: "第 %1@ 页笔画数不符：原稿 %2@ 笔、套件 %3@ 笔",
+            .ja: "%1@ ページ目のストローク数が一致しません：原本 %2@、パッケージ %3@",
+            .ko: "%1@쪽의 획 수가 다릅니다: 원본 %2@, 패키지 %3@",
+            .th: "จำนวนเส้นของหน้า %1@ ไม่ตรงกัน: ต้นฉบับ %2@ แพ็กเกจ %3@"
+        ],
+        "err_sync_folder_failed": [
+            .zhHant: "無法在同步資料夾建立 %@",
+            .en: "Could not create %@ in the sync folder",
+            .zhHans: "无法在同步文件夹创建 %@",
+            .ja: "同期フォルダに %@ を作成できませんでした",
+            .ko: "동기화 폴더에 %@을(를) 만들 수 없습니다",
+            .th: "สร้าง %@ ในโฟลเดอร์ซิงก์ไม่ได้"
         ],
         "expand": [
             .zhHant: "展開",
@@ -1750,6 +1870,22 @@ extension LocalizationManager {
             .ja: "リンクプレビュー",
             .ko: "링크 미리보기",
             .th: "ดูตัวอย่างลิงก์"
+        ],
+        "link_preview_hint": [
+            .zhHant: "輸入網址後點選「解析預覽」以產生卡片",
+            .en: "Enter a URL, then tap Preview to build the card",
+            .zhHans: "输入网址后点选「解析预览」以生成卡片",
+            .ja: "URL を入力して「プレビュー」を押すとカードを作成します",
+            .ko: "URL을 입력한 뒤 ‘미리보기’를 누르면 카드가 만들어집니다",
+            .th: "ป้อน URL แล้วแตะ ‘ดูตัวอย่าง’ เพื่อสร้างการ์ด"
+        ],
+        "link_preview_insert": [
+            .zhHant: "將連結預覽卡片插入筆記",
+            .en: "Insert the link card into the note",
+            .zhHans: "将链接预览卡片插入笔记",
+            .ja: "リンクカードをノートに挿入",
+            .ko: "링크 카드를 노트에 삽입",
+            .th: "แทรกการ์ดลิงก์ลงในบันทึก"
         ],
         "local_relay_hint": [
             .zhHant: "位址指向本機（127.0.0.1）時，App 會直接在這台裝置上開啟協同中繼；隊友請改填房主顯示的區域網路位址。",

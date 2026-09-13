@@ -170,7 +170,7 @@ public enum PageRepagination {
             } catch {
                 for doc in documents {
                     report.outcomes[doc.id] = .failed(
-                        reason: "備份失敗，未進行重新分頁：\(error.localizedDescription)")
+                        reason: L("err_backup_failed", error.localizedDescription))
                 }
                 return report
             }

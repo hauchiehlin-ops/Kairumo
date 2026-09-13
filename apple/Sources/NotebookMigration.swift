@@ -23,6 +23,23 @@ import Foundation
 import PencilKit
 import UIKit
 
+/// 取在地化字串並依序填入 `%1@`、`%2@`…
+///
+/// 錯誤訊息原本是寫死的繁體中文。英文或日文使用者出錯時看到中文，
+/// 等於這個訊息對他完全沒有作用 —— 而錯誤訊息正是最需要看得懂的時候。
+func L(_ key: String, _ arguments: String...) -> String {
+    // 不標 @MainActor：錯誤訊息會在背景執行緒組成（遷移跑在背景），
+    // 而字串表是唯讀的靜態資料，從哪個執行緒讀都一樣。
+    var text = LocalizationManager.shared.localizedUnsafe(key)
+    if arguments.count == 1 {
+        text = text.replacingOccurrences(of: "%@", with: arguments[0])
+    }
+    for (index, value) in arguments.enumerated() {
+        text = text.replacingOccurrences(of: "%\(index + 1)@", with: value)
+    }
+    return text
+}
+
 public enum NotebookMigration {
 
     // MARK: - 裝置識別碼
@@ -192,7 +209,7 @@ public enum NotebookMigration {
                 // 備份失敗就整個停手。沒有退路的遷移不該開始。
                 for doc in documents {
                     report.outcomes[doc.id] = .failed(
-                        reason: "備份失敗，未進行遷移：\(error.localizedDescription)")
+                        reason: L("err_backup_failed", error.localizedDescription))
                 }
                 return report
             }
@@ -263,14 +280,17 @@ public enum NotebookMigration {
 
         public var errorDescription: String? {
             switch self {
+            // 錯誤訊息也要在地化：英文或日文使用者出錯時看到中文，
+            // 等於這個訊息對他完全沒有作用。
             case .pageCountMismatch(let e, let g):
-                return "頁數不符：原稿 \(e) 頁、套件 \(g) 頁"
+                return L("err_page_count_mismatch", "\(e)", "\(g)")
             case .strokeCountMismatch(let p, let e, let g):
-                return "第 \(p + 1) 頁筆畫數不符：原稿 \(e) 筆、套件 \(g) 筆"
+                return L("err_stroke_count_mismatch", "\(p + 1)", "\(e)", "\(g)")
             case .pointCountMismatch(let p, let s, let e, let g):
-                return "第 \(p + 1) 頁第 \(s + 1) 筆的取樣點數不符：原稿 \(e) 點、套件 \(g) 點"
-            case .coordinateDrift(let p, let s, let i):
-                return "第 \(p + 1) 頁第 \(s + 1) 筆的第 \(i + 1) 個點座標對不上"
+                return L("err_stroke_count_mismatch", "\(p + 1)", "\(e)", "\(g)")
+                    + "（\(s + 1)）"
+            case .coordinateDrift(let p, let s, _):
+                return L("err_coordinate_drift", "\(p + 1)", "\(s + 1)")
             }
         }
     }

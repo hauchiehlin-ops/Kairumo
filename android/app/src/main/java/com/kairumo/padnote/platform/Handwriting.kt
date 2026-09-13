@@ -161,12 +161,20 @@ object Handwriting {
 
     class HandwritingError(val failure: Failure) : Exception(describe(failure))
 
-    /** 給使用者看的一句話。 */
-    fun describe(failure: Failure): String = when (failure) {
-        is Failure.Unsupported ->
-            "這台裝置無法使用手寫辨識（需要 Google Play 服務）：${failure.detail}"
-        is Failure.NoModel -> "沒有「${failure.languageTag}」的手寫模型"
-        is Failure.DownloadFailed -> "手寫模型下載失敗（請連上 Wi-Fi）：${failure.detail}"
-        is Failure.RecognitionFailed -> "辨識失敗：${failure.detail}"
+    /**
+     * 給使用者看的一句話。
+     *
+     * 走字串表而不是寫死中文：英文或日文使用者出錯時看到中文，等於這個訊息
+     * 對他完全沒有作用 —— 而錯誤訊息正是最需要看得懂的時候。
+     */
+    fun describe(failure: Failure, languageTag: String = "zh-Hant"): String {
+        fun l(key: String, arg: String) =
+            com.kairumo.padnote.LocalizationStrings.localized(key, languageTag).replace("%@", arg)
+        return when (failure) {
+            is Failure.Unsupported -> l("err_hwr_unsupported", failure.detail)
+            is Failure.NoModel -> l("err_hwr_no_model", failure.languageTag)
+            is Failure.DownloadFailed -> l("err_hwr_download", failure.detail)
+            is Failure.RecognitionFailed -> l("err_hwr_failed", failure.detail)
+        }
     }
 }

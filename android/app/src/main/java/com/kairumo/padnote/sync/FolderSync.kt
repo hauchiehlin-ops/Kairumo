@@ -99,11 +99,22 @@ object FolderSync {
      *
      * @param remoteRoot 使用者選的資料夾。套件會以同名子目錄存在其中。
      */
-    fun sync(context: Context, localPackage: File, remoteRoot: DocumentFile): Result {
+    fun sync(
+        context: Context,
+        localPackage: File,
+        remoteRoot: DocumentFile,
+        languageTag: String = "zh-Hant"
+    ): Result {
         val packageName = localPackage.name
         val remotePackage = remoteRoot.findFile(packageName)?.takeIf { it.isDirectory }
             ?: remoteRoot.createDirectory(packageName)
-            ?: return Result(failures = mapOf("<資料夾>" to "無法在同步資料夾建立 $packageName"))
+            ?: return Result(
+                failures = mapOf(
+                    "<資料夾>" to com.kairumo.padnote.LocalizationStrings
+                        .localized("err_sync_folder_failed", languageTag)
+                        .replace("%@", packageName)
+                )
+            )
 
         val plan = planFolderSync(localEntries(localPackage), remoteEntries(remotePackage))
 

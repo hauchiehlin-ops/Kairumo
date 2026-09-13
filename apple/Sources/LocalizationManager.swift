@@ -48,14 +48,35 @@ public final class LocalizationManager: ObservableObject {
         if let saved = UserDefaults.standard.string(forKey: languageKey),
            let lang = AppLanguage(rawValue: saved) {
             self.currentLanguage = lang
+            Self.snapshotLanguage = lang
         } else {
             self.currentLanguage = .en
+            Self.snapshotLanguage = .en
         }
     }
 
     public func setLanguage(_ lang: AppLanguage) {
         self.currentLanguage = lang
+        Self.snapshotLanguage = lang
     }
+
+    /// 不受 actor 隔離的查表。
+    ///
+    /// 錯誤訊息會在背景執行緒組成（遷移、備份、同步都跑在背景），
+    /// 而字串表是唯讀的靜態資料 —— 從哪個執行緒讀都一樣。目前語言是
+    /// `@MainActor` 隔離的，所以這裡取一次快照。
+    public nonisolated func localizedUnsafe(_ key: String) -> String {
+        guard let dict = Self.generatedStrings[key] else { return key }
+        let language = Self.snapshotLanguage
+        return dict[language] ?? dict[.en] ?? dict[.zhHant] ?? key
+    }
+
+    /// 目前語言的快照，供背景執行緒查表用。
+    ///
+    /// 用 `nonisolated(unsafe)` 是刻意的：它只被寫入一次（切換語言時），
+    /// 而讀到舊值的後果只是一句錯誤訊息用了上一個語言 —— 不值得為此付
+    /// 同步的代價。
+    nonisolated(unsafe) static var snapshotLanguage: AppLanguage = .zhHant
 
     public func localized(_ key: String) -> String {
         guard let dict = Self.generatedStrings[key] else { return key }

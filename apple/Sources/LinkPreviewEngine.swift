@@ -203,7 +203,7 @@ public struct LinkPreviewSheet: View {
                         }
                         .padding(18)
                     } else {
-                        Text("輸入網址後點選「解析預覽」以產生卡片")
+                        Text(LocalizationManager.shared.localized("link_preview_hint"))
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -231,7 +231,7 @@ public struct LinkPreviewSheet: View {
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "link.badge.plus")
-                            Text("將連結預覽卡片插入筆記")
+                            Text(LocalizationManager.shared.localized("link_preview_insert"))
                         }
                         .font(.headline)
                         .foregroundColor(.white)

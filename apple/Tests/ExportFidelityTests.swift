@@ -94,3 +94,46 @@ final class ExportFidelityTests: XCTestCase {
         XCTAssertGreaterThan(upperBottom, upper.y + upper.height)
     }
 }
+
+/// 錯誤訊息的在地化（工作項 S-54）。
+///
+/// 錯誤訊息原本全是寫死的繁體中文。英文或日文使用者出錯時看到中文，
+/// 等於這個訊息對他完全沒有作用 —— 而錯誤訊息正是最需要看得懂的時候。
+final class LocalizedErrorTests: XCTestCase {
+
+    override func tearDown() {
+        LocalizationManager.snapshotLanguage = .zhHant
+        super.tearDown()
+    }
+
+    func testErrorMessagesFollowTheSelectedLanguage() {
+        LocalizationManager.snapshotLanguage = .en
+        let english = L("err_no_pages")
+        LocalizationManager.snapshotLanguage = .ja
+        let japanese = L("err_no_pages")
+
+        XCTAssertTrue(english.contains("no pages"), "英文版不該還是中文，實得：\(english)")
+        XCTAssertTrue(japanese.contains("ページ"), "日文版不該還是中文，實得：\(japanese)")
+    }
+
+    func testNumberedPlaceholdersAreAllFilled() {
+        // 一個訊息裡有好幾個 %1@ / %2@。用 replacingOccurrences 一次全換的話，
+        // 會變成「原稿 3 頁、套件 3 頁」這種永遠相等的句子。
+        LocalizationManager.snapshotLanguage = .en
+        let text = L("err_page_count_mismatch", "3", "5")
+        XCTAssertTrue(text.contains("3") && text.contains("5"))
+        XCTAssertFalse(text.contains("%1@"))
+        XCTAssertFalse(text.contains("%2@"))
+    }
+
+    func testASingleArgumentAlsoFillsThePlainPlaceholder() {
+        LocalizationManager.snapshotLanguage = .en
+        let text = L("err_backup_failed", "disk full")
+        XCTAssertTrue(text.contains("disk full"))
+        XCTAssertFalse(text.contains("%@"))
+    }
+
+    func testAnUnknownKeyReturnsTheKeyInsteadOfCrashing() {
+        XCTAssertEqual(L("this_key_does_not_exist"), "this_key_does_not_exist")
+    }
+}

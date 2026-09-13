@@ -127,7 +127,7 @@ private fun InkScreen() {
     ) { granted ->
         val session = notebook?.first
         if (granted && session != null) {
-            message = audio.start(session) { message = it }
+            message = audio.start(session, deviceLanguageTag()) { message = it }
             recording = audio.isRecording
         } else {
             message = uiString("mic_permission_denied")
@@ -204,7 +204,7 @@ private fun InkScreen() {
                             recording = false
                             message = l10n("recorded_duration").replace("%@", "${us / 1_000_000uL}")
                         } else if (AudioCapture.hasPermission(activity)) {
-                            message = audio.start(session) { message = it }
+                            message = audio.start(session, deviceLanguageTag()) { message = it }
                             recording = audio.isRecording
                         } else {
                             micPermission.launch(Manifest.permission.RECORD_AUDIO)
@@ -273,7 +273,7 @@ private fun InkScreen() {
                         val session = notebook?.first
                         val page = notebook?.second
                         if (session == null || page == null) {
-                            message = "核心未就緒"
+                            message = uiString("err_core_not_ready")
                         } else {
                             message = l10n("recognizing")
                             scope.launch {
@@ -595,7 +595,7 @@ private fun exportAndShare(
     session: PadnoteSession?,
     format: Exporter.Format
 ): String {
-    if (session == null) return "核心未就緒"
+    if (session == null) return LocalizationStrings.localized("err_core_not_ready", deviceLanguageTag())
     return Exporter.export(activity, session, format).fold(
         onSuccess = { file ->
             runCatching {
@@ -670,7 +670,7 @@ private fun runFolderSync(activity: ComponentActivity, session: PadnoteSession?)
     runCatching { session?.title() }
 
     val local = java.io.File(activity.filesDir, "notebook.padnote")
-    val result = FolderSync.sync(activity, local, remote)
+    val result = FolderSync.sync(activity, local, remote, deviceLanguageTag())
 
     val lang = deviceLanguageTag()
     result.needsAttention.firstOrNull()?.let {

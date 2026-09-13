@@ -954,6 +954,14 @@ object LocalizationStrings {
             "ko" to "선택된 획 삭제",
             "th" to "ลบลายเส้นที่เลือก"
         ),
+        "designer_palette" to mapOf(
+            "zh-Hant" to "設計師色系",
+            "en" to "Designer Palette",
+            "zh-Hans" to "设计师色系",
+            "ja" to "デザイナーパレット",
+            "ko" to "디자이너 팔레트",
+            "th" to "จานสีนักออกแบบ"
+        ),
         "dimension_callout" to mapOf(
             "zh-Hant" to "工程引線標註",
             "en" to "Dimension Callout",
@@ -1193,6 +1201,118 @@ object LocalizationStrings {
             "ja" to "URLを入力",
             "ko" to "URL 입력",
             "th" to "ป้อน URL"
+        ),
+        "err_backup_failed" to mapOf(
+            "zh-Hant" to "備份失敗，未進行：%@",
+            "en" to "Backup failed, nothing was changed: %@",
+            "zh-Hans" to "备份失败，未进行：%@",
+            "ja" to "バックアップに失敗したため、何も変更していません：%@",
+            "ko" to "백업에 실패하여 아무것도 변경하지 않았습니다: %@",
+            "th" to "สำรองข้อมูลไม่สำเร็จ จึงไม่มีการเปลี่ยนแปลง: %@"
+        ),
+        "err_coordinate_drift" to mapOf(
+            "zh-Hant" to "第 %1@ 頁第 %2@ 筆的座標對不上",
+            "en" to "Coordinates do not match for stroke %2@ on page %1@",
+            "zh-Hans" to "第 %1@ 页第 %2@ 笔的坐标对不上",
+            "ja" to "%1@ ページ目 %2@ 本目のストロークの座標が一致しません",
+            "ko" to "%1@쪽 %2@번째 획의 좌표가 맞지 않습니다",
+            "th" to "พิกัดของเส้นที่ %2@ บนหน้า %1@ ไม่ตรงกัน"
+        ),
+        "err_core_not_ready" to mapOf(
+            "zh-Hant" to "核心未就緒",
+            "en" to "The core engine is not ready",
+            "zh-Hans" to "核心未就绪",
+            "ja" to "コアエンジンの準備ができていません",
+            "ko" to "코어 엔진이 준비되지 않았습니다",
+            "th" to "เครื่องยนต์หลักยังไม่พร้อม"
+        ),
+        "err_hwr_download" to mapOf(
+            "zh-Hant" to "手寫模型下載失敗（請連上 Wi-Fi）：%@",
+            "en" to "Handwriting model download failed (please connect to Wi-Fi): %@",
+            "zh-Hans" to "手写模型下载失败（请连上 Wi-Fi）：%@",
+            "ja" to "手書きモデルのダウンロードに失敗しました（Wi-Fi に接続してください）：%@",
+            "ko" to "손글씨 모델 다운로드에 실패했습니다(Wi-Fi에 연결해 주세요): %@",
+            "th" to "ดาวน์โหลดโมเดลลายมือไม่สำเร็จ (โปรดเชื่อมต่อ Wi-Fi): %@"
+        ),
+        "err_hwr_failed" to mapOf(
+            "zh-Hant" to "辨識失敗：%@",
+            "en" to "Recognition failed: %@",
+            "zh-Hans" to "识别失败：%@",
+            "ja" to "認識に失敗しました：%@",
+            "ko" to "인식에 실패했습니다: %@",
+            "th" to "การรู้จำล้มเหลว: %@"
+        ),
+        "err_hwr_no_model" to mapOf(
+            "zh-Hant" to "沒有「%@」的手寫模型",
+            "en" to "No handwriting model for “%@”",
+            "zh-Hans" to "没有「%@」的手写模型",
+            "ja" to "「%@」の手書きモデルがありません",
+            "ko" to "‘%@’용 손글씨 모델이 없습니다",
+            "th" to "ไม่มีโมเดลลายมือสำหรับ “%@”"
+        ),
+        "err_hwr_unsupported" to mapOf(
+            "zh-Hant" to "這台裝置無法使用手寫辨識（需要 Google Play 服務）：%@",
+            "en" to "Handwriting recognition is unavailable on this device (Google Play services required): %@",
+            "zh-Hans" to "这台设备无法使用手写识别（需要 Google Play 服务）：%@",
+            "ja" to "この端末では手書き認識を利用できません（Google Play 開発者サービスが必要）：%@",
+            "ko" to "이 기기에서는 손글씨 인식을 사용할 수 없습니다(Google Play 서비스 필요): %@",
+            "th" to "อุปกรณ์นี้ใช้การรู้จำลายมือไม่ได้ (ต้องมี Google Play services): %@"
+        ),
+        "err_mic_open_failed" to mapOf(
+            "zh-Hant" to "無法開啟麥克風：%@",
+            "en" to "Could not open the microphone: %@",
+            "zh-Hans" to "无法开启麦克风：%@",
+            "ja" to "マイクを開けませんでした：%@",
+            "ko" to "마이크를 열 수 없습니다: %@",
+            "th" to "เปิดไมโครโฟนไม่ได้: %@"
+        ),
+        "err_mic_unsupported" to mapOf(
+            "zh-Hant" to "這台裝置不支援 16kHz 單聲道錄音",
+            "en" to "This device does not support 16 kHz mono recording",
+            "zh-Hans" to "这台设备不支持 16kHz 单声道录音",
+            "ja" to "この端末は 16kHz モノラル録音に対応していません",
+            "ko" to "이 기기는 16kHz 모노 녹음을 지원하지 않습니다",
+            "th" to "อุปกรณ์นี้ไม่รองรับการบันทึกเสียงแบบโมโน 16 kHz"
+        ),
+        "err_no_mic_permission" to mapOf(
+            "zh-Hant" to "沒有麥克風權限",
+            "en" to "No microphone permission",
+            "zh-Hans" to "没有麦克风权限",
+            "ja" to "マイクの権限がありません",
+            "ko" to "마이크 권한이 없습니다",
+            "th" to "ไม่ได้รับสิทธิ์ไมโครโฟน"
+        ),
+        "err_no_pages" to mapOf(
+            "zh-Hant" to "這本筆記沒有任何頁面",
+            "en" to "This notebook has no pages",
+            "zh-Hans" to "这本笔记没有任何页面",
+            "ja" to "このノートにはページがありません",
+            "ko" to "이 노트에는 페이지가 없습니다",
+            "th" to "สมุดบันทึกนี้ไม่มีหน้า"
+        ),
+        "err_page_count_mismatch" to mapOf(
+            "zh-Hant" to "頁數不符：原稿 %1@ 頁、套件 %2@ 頁",
+            "en" to "Page count differs: %1@ in the original, %2@ in the package",
+            "zh-Hans" to "页数不符：原稿 %1@ 页、套件 %2@ 页",
+            "ja" to "ページ数が一致しません：原本 %1@ ページ、パッケージ %2@ ページ",
+            "ko" to "페이지 수가 다릅니다: 원본 %1@쪽, 패키지 %2@쪽",
+            "th" to "จำนวนหน้าไม่ตรงกัน: ต้นฉบับ %1@ หน้า แพ็กเกจ %2@ หน้า"
+        ),
+        "err_stroke_count_mismatch" to mapOf(
+            "zh-Hant" to "第 %1@ 頁筆畫數不符：原稿 %2@ 筆、套件 %3@ 筆",
+            "en" to "Page %1@ stroke count differs: %2@ in the original, %3@ in the package",
+            "zh-Hans" to "第 %1@ 页笔画数不符：原稿 %2@ 笔、套件 %3@ 笔",
+            "ja" to "%1@ ページ目のストローク数が一致しません：原本 %2@、パッケージ %3@",
+            "ko" to "%1@쪽의 획 수가 다릅니다: 원본 %2@, 패키지 %3@",
+            "th" to "จำนวนเส้นของหน้า %1@ ไม่ตรงกัน: ต้นฉบับ %2@ แพ็กเกจ %3@"
+        ),
+        "err_sync_folder_failed" to mapOf(
+            "zh-Hant" to "無法在同步資料夾建立 %@",
+            "en" to "Could not create %@ in the sync folder",
+            "zh-Hans" to "无法在同步文件夹创建 %@",
+            "ja" to "同期フォルダに %@ を作成できませんでした",
+            "ko" to "동기화 폴더에 %@을(를) 만들 수 없습니다",
+            "th" to "สร้าง %@ ในโฟลเดอร์ซิงก์ไม่ได้"
         ),
         "expand" to mapOf(
             "zh-Hant" to "展開",
@@ -1745,6 +1865,22 @@ object LocalizationStrings {
             "ja" to "リンクプレビュー",
             "ko" to "링크 미리보기",
             "th" to "ดูตัวอย่างลิงก์"
+        ),
+        "link_preview_hint" to mapOf(
+            "zh-Hant" to "輸入網址後點選「解析預覽」以產生卡片",
+            "en" to "Enter a URL, then tap Preview to build the card",
+            "zh-Hans" to "输入网址后点选「解析预览」以生成卡片",
+            "ja" to "URL を入力して「プレビュー」を押すとカードを作成します",
+            "ko" to "URL을 입력한 뒤 ‘미리보기’를 누르면 카드가 만들어집니다",
+            "th" to "ป้อน URL แล้วแตะ ‘ดูตัวอย่าง’ เพื่อสร้างการ์ด"
+        ),
+        "link_preview_insert" to mapOf(
+            "zh-Hant" to "將連結預覽卡片插入筆記",
+            "en" to "Insert the link card into the note",
+            "zh-Hans" to "将链接预览卡片插入笔记",
+            "ja" to "リンクカードをノートに挿入",
+            "ko" to "링크 카드를 노트에 삽입",
+            "th" to "แทรกการ์ดลิงก์ลงในบันทึก"
         ),
         "local_relay_hint" to mapOf(
             "zh-Hant" to "位址指向本機（127.0.0.1）時，App 會直接在這台裝置上開啟協同中繼；隊友請改填房主顯示的區域網路位址。",

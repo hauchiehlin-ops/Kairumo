@@ -30,8 +30,10 @@ enum NotebookPackageBridge {
 
         var errorDescription: String? {
             switch self {
-            case .coreRejected(let detail): return "核心拒絕了這份資料：\(detail)"
-            case .noPages: return "這本筆記沒有任何頁面"
+            case .coreRejected(let detail):
+                return LocalizationManager.shared.localizedUnsafe("err_core_not_ready") + "：\(detail)"
+            case .noPages:
+                return LocalizationManager.shared.localizedUnsafe("err_no_pages")
             }
         }
     }

@@ -442,6 +442,25 @@ final class TemplateCanvasBackgroundView: UIView {
 /// 真正知道新寬度的時機是 `layoutSubviews`。
 final class AdaptiveCanvasView: PKCanvasView {
     /// 這一頁的高度（由 SwiftUI 端更新）
+    /// 觸控觀察。
+    ///
+    /// 觀察而**不攔截**：一律呼叫 `super`，PencilKit 的繪製路徑完全不受影響。
+    /// 我們只是在旁邊看，決定要不要切換輸入政策、以及有沒有東西要收回。
+    ///
+    /// 寫在類別本體而不是 extension：在 extension 裡 override UIKit 方法雖然
+    /// 編得過，但那是靠 @objc 動態派發矇混，不是 Swift 保證的行為。
+    var onTouchObserved: ((UITouch) -> Void)?
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        touches.forEach { onTouchObserved?($0) }
+        super.touchesBegan(touches, with: event)
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        touches.forEach { onTouchObserved?($0) }
+        super.touchesEnded(touches, with: event)
+    }
+
     var pageContentHeight: CGFloat = PageGeometry.height {
         didSet { if pageContentHeight != oldValue { syncContentSize() } }
     }
@@ -484,10 +503,32 @@ struct CanvasRepresentable: UIViewRepresentable {
     var canvasRef: ((PKCanvasView) -> Void)?
     /// 回報捲動狀態（可見比例、捲動比例），給自訂捲軸用
     var onScrollMetrics: ((_ visibleFraction: CGFloat, _ scrollFraction: CGFloat) -> Void)?
+    /// 掌拒（工作項 S-45）。判定規則走核心，與 Android 同一份。
+    var palmRejection: PalmRejectionCoordinator?
+    /// 仲裁器要求收回筆畫時通知編輯器。
+    var onRetractStrokes: ((Date) -> Void)?
+
+    /// 目前該用哪個輸入政策。
+    ///
+    /// 打字模式一律只有筆能寫（手指要用來捲動與選取）。手寫模式交給掌拒
+    /// 協調器決定 —— 沒有它時退回原本的 `.anyInput`，行為與以前相同。
+    private func resolvedPolicy(now: Date = Date()) -> PKCanvasViewDrawingPolicy {
+        guard editorMode == .draw else { return .pencilOnly }
+        return palmRejection?.drawingPolicy(now: now) ?? .anyInput
+    }
 
     func makeUIView(context: Context) -> PKCanvasView {
         let canvas = AdaptiveCanvasView()
-        canvas.drawingPolicy = (editorMode == .draw) ? .anyInput : .pencilOnly
+        canvas.drawingPolicy = resolvedPolicy()
+        canvas.onTouchObserved = { [weak canvas] touch in
+            guard let palm = palmRejection else { return }
+            let landed = Date()
+            if palm.observe(touch: touch, now: landed) {
+                onRetractStrokes?(landed)
+            }
+            let policy = palm.drawingPolicy(now: landed)
+            if canvas?.drawingPolicy != policy { canvas?.drawingPolicy = policy }
+        }
         canvas.delegate = context.coordinator
         canvas.backgroundColor = .clear
         canvas.isOpaque = false
@@ -518,7 +559,7 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
         context.coordinator.parent = self
-        let targetPolicy: PKCanvasViewDrawingPolicy = (editorMode == .draw) ? .anyInput : .pencilOnly
+        let targetPolicy = resolvedPolicy()
         if uiView.drawingPolicy != targetPolicy {
             uiView.drawingPolicy = targetPolicy
         }
@@ -961,7 +1002,9 @@ public struct NotebookEditorView: View {
     @State private var currentPageIndex: Int = 0
     @State private var currentDrawing: PKDrawing = PKDrawing()
     @State private var canvasView: PKCanvasView? = nil
-    @State private var currentPageHeight: CGFloat = 1800.0
+    @State private var currentPageHeight: CGFloat = PageGeometry.height
+    /// 掌拒（工作項 S-45）。判定規則走核心，與 Android 同一份。
+    @State private var palmRejection = PalmRejectionCoordinator()
     @State private var hasLassoSelection: Bool = false
     @State private var showExtendedBanner: Bool = false
 
@@ -2030,6 +2073,16 @@ ZStack(alignment: .topTrailing) {
                 onScrollMetrics: { visible, fraction in
                     canvasVisibleFraction = visible
                     canvasScrollFraction = fraction
+                },
+                palmRejection: palmRejection,
+                onRetractStrokes: { landedAt in
+                    // 手掌先碰、筆才落下 —— 把手掌剛畫出來的那一段收回。
+                    let cleaned = PalmRejectionCoordinator.retracting(
+                        currentDrawing, landedAt: landedAt)
+                    guard cleaned.strokes.count != currentDrawing.strokes.count else { return }
+                    currentDrawing = cleaned
+                    canvasView?.drawing = cleaned
+                    saveCurrentPageDrawing()
                 }
             )
             .background(

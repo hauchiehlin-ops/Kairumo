@@ -90,7 +90,7 @@ public struct ProColorPickerSheet: View {
                     Text("RGB").tag(0)
                     Text("HSB").tag(1)
                     Text("HEX").tag(2)
-                    Text("設計師色系").tag(3)
+                    Text(LocalizationManager.shared.localized("designer_palette")).tag(3)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal)

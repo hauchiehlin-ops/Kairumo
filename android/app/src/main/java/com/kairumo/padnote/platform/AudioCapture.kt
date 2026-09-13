@@ -8,6 +8,7 @@ import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.MediaRecorder
 import androidx.core.content.ContextCompat
+import com.kairumo.padnote.LocalizationStrings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -52,14 +53,21 @@ class AudioCapture(private val context: Context) {
      *         「錄不起來」有好幾種原因，使用者需要知道是哪一種。
      */
     @SuppressLint("MissingPermission")
-    fun start(session: PadnoteSession, onError: (String) -> Unit = {}): String? {
+    fun start(
+        session: PadnoteSession,
+        languageTag: String = "zh-Hant",
+        onError: (String) -> Unit = {}
+    ): String? {
+        fun l(key: String, arg: String = "") =
+            LocalizationStrings.localized(key, languageTag).replace("%@", arg)
+
         if (isRecording) return null
-        if (!hasPermission(context)) return "沒有麥克風權限"
+        if (!hasPermission(context)) return l("err_no_mic_permission")
 
         val minBuffer = AudioRecord.getMinBufferSize(
             SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_FLOAT
         )
-        if (minBuffer <= 0) return "這台裝置不支援 16kHz 單聲道錄音"
+        if (minBuffer <= 0) return l("err_mic_unsupported")
 
         // 緩衝取最小值的四倍：剛好最小值的話，背景執行緒稍微被排程延遲就掉資料。
         val bufferBytes = minBuffer * 4
@@ -72,19 +80,19 @@ class AudioCapture(private val context: Context) {
                 bufferBytes
             )
         } catch (t: Throwable) {
-            return "無法開啟麥克風：${t.message}"
+            return l("err_mic_open_failed", t.message ?: "")
         }
 
         if (recorder.state != AudioRecord.STATE_INITIALIZED) {
             recorder.release()
-            return "麥克風初始化失敗"
+            return l("err_mic_open_failed", "init")
         }
 
         record = recorder
         recorder.startRecording()
         runCatching { session.startRecording() }.onFailure {
             stop(session)
-            return "核心無法開始錄音：${it.message}"
+            return l("err_core_not_ready") + "：${it.message}"
         }
 
         val chunk = FloatArray(bufferBytes / 4 / 2)

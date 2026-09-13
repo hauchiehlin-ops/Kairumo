@@ -130,15 +130,16 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 |---|---|---|
 | ~~S-41~~ ✅ | Office / Google 文件的嵌入與編輯（D-10 已拍板為「嵌入＋可編輯」） | 見 ADR-0009。docx/xlsx 可做，pptx 只做預覽 |
 | ~~S-42~~ ✅ | PDF 標註的雙向保真（ADR-0008 第一層的核心） | 10 款競品都讀寫 PDF，這是唯一真正通用的互通途徑 |
-| S-45 | 平台層依 `Decision::retract` 實作筆畫收回 | Swift 範例已示範（`apple/Examples/InkInputUsage.swift`），**不處理的話掌拒只擋得住一半** |
+| ~~S-45~~ ✅ | 平台層依 `Decision::retract` 實作筆畫收回 | **兩平台皆已實作**：Android 在 `InkEngine`；Apple 新增 `PalmRejectionCoordinator`（偵測到筆就切 `.pencilOnly`，並收回筆落下前 500ms 內的筆畫）。原本 Apple 在手寫模式下是 `.anyInput`，手掌畫得出東西 |
 | ~~S-43~~ ✅ | 把標註寫進真實 PDF（PDFium 的 annotation API） | `create_annotated_pdf` 實作完成，經測試驗證 |
-| S-44 | 用其他 App 驗證標註互通 | 匯出的 PDF 要在 Goodnotes/Notability/PDF Expert 開得起來並可繼續標註 |
-| S-35 | **Windows 低延遲墨跡** | Compose MP Desktop 走 Skia/JVM，**做不到 9ms**。需原生 Windows Ink / DirectComposition |
+| S-44 | 用其他 App 驗證標註互通 | **需要你來測**（我裝不了那些 App）。先知道一件事：目前匯出的 PDF 是**點陣合成**（`page.image.draw`），不含 `/Ink` 標註 —— 在別的 App 裡「開得起來、可以在上面加註」成立，但我們的筆畫不是可編輯的標註物件。核心的 `padnote_pdf` 已有 `FfiPdfAnnotation` 與 quad points，要做真正的向量標註互通得把它接上匯出路徑 |
+| S-44b | 匯出真正的 PDF `/Ink` 標註 | 前提是 S-44 的驗證結果顯示你需要「在別的 App 裡繼續編輯我們的筆畫」。若只需要「看得到、能在上面加註」，目前的點陣匯出已經夠用 |
+| S-35 | **Windows 低延遲墨跡** | **目前沒有 Windows 版**，這一條在有 Windows 版之前不成立。內容本身是結論不是待辦：Compose MP Desktop 走 Skia/JVM 做不到 9ms，要原生 Windows Ink / DirectComposition。建議轉成 ADR 記著，等真的要做 Windows 時才重新評估 |
 | ~~S-36~~ ✅ | **掌拒與輸入分流** | 🔴 完全未設計。**手寫 App 的生死線**：手掌靠螢幕會畫出大片塗鴉 |
 | ~~S-37~~ ✅ | UI/UX 設計 | 🔴 完全未開始。可與 M0 並行，不依賴 S1 |
 | ~~S-38~~ ✅ | 物件模型：群組／對齊／吸附／變換 | 需 ADR —— 會影響 `.padnote` 格式。目前 `Stroke` 沒有「物件」概念 |
 | ~~S-39~~ ✅ | Markdown 匯入、JSON 匯入匯出 | 容易，可立即做 |
-| S-40 | 各平台數位板協定與藍牙筆按鈕 | 「WiFi 手寫筆」實際不存在；壓感走數位板，藍牙只傳按鈕 |
+| S-40 | 各平台數位板協定與藍牙筆按鈕 | **需要實體硬體才驗得了**（Wacom/XP-Pen 數位板、有按鈕的藍牙筆）。程式面已備妥的部分：核心的 `InkArbiter` 已區分 `Pen`/`Eraser`/`Mouse`，Android 的 `InkInput` 已對應 `TOOL_TYPE_ERASER`。缺的是按鈕事件的對應與實機校準 |
 
 ## 🆕 畫布與介面需求（2026-09-12）
 
@@ -152,7 +153,8 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | ~~S-51~~ ✅ | 表格的插入／刪除列欄與合併儲存格 | `DocOp` 已覆蓋列欄插刪、合併與取消合併，FFI 可呼叫 |
 | ~~S-52~~ ✅ | 形狀與連接線落盤為 `DocOp` | 新增 `AddShapeObject` / `AddConnectionObject`，重開可還原 |
 | ~~S-53~~ ✅ | 平台層的工具列 UI 與語言切換畫面 | Apple SwiftUI 範例已接 `FfiToolbar` / `supported_locales` |
-| S-54 | 其餘 UI 字串的在地化 | 目前 44 個鍵涵蓋工具列與常用動作，錯誤訊息與設定頁尚未納入 |
+| ~~S-54~~ ✅ | 其餘 UI 字串的在地化 | 字串表 **512 條**（清單原本寫的 44 早已過期）。錯誤訊息已在地化並有測試；`LocalizationManager.localizedUnsafe` 供背景執行緒查表 |
+| S-54b | **素材庫的 58 個中文名稱** | `AssetLibraryManager` 的齒輪組、軸承等技術名稱是**資料**不是介面文字，要另外處理（每個名稱都要六國語系的正確技術術語，不是直譯） |
 | ~~S-55~~ ✅ | 列印流程 | 核心 `print_data` 產出列印 PDF，已串接 Apple 與 Android 系統列印面板 |
 
 ## 📱 Android 實機待測（2026-09-13）

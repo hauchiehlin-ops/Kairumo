@@ -112,4 +112,20 @@ class HandwritingTest {
         assertTrue(messages[0].contains("Google Play"))
         assertTrue(messages[2].contains("Wi-Fi"))
     }
+
+    @Test
+    fun failureMessagesAreLocalized() {
+        // 錯誤訊息寫死中文的話，英文或日文使用者出錯時看到的是中文 ——
+        // 而錯誤訊息正是最需要看得懂的時候。
+        val chinese = Handwriting.describe(Handwriting.Failure.NoModel("zz"), "zh-Hant")
+        val english = Handwriting.describe(Handwriting.Failure.NoModel("zz"), "en")
+        val japanese = Handwriting.describe(Handwriting.Failure.NoModel("zz"), "ja")
+
+        assertTrue("英文版不該還是中文", english.contains("No handwriting model"))
+        assertTrue(japanese.contains("手書きモデル"))
+        assertTrue(chinese.contains("手寫模型"))
+        // 參數也要填進去，不能留下 %@
+        assertTrue(english.contains("zz"))
+        assertTrue(!english.contains("%@"))
+    }
 }
