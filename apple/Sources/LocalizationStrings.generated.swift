@@ -1743,6 +1743,86 @@ extension LocalizationManager {
             .ko: "마이크 접근 권한 필요",
             .th: "จำเป็นต้องได้รับอนุญาตให้ใช้ไมโครโฟน"
         ],
+        "migration_converted_count": [
+            .zhHant: "已轉換 %@ 本",
+            .en: "%@ notebooks converted",
+            .zhHans: "已转换 %@ 本",
+            .ja: "%@ 冊を変換済み",
+            .ko: "%@권 변환됨",
+            .th: "แปลงแล้ว %@ เล่ม"
+        ],
+        "migration_explainer": [
+            .zhHant: "轉換後的檔案可在 Android 版開啟。原始筆記不會被更動，轉換前會自動備份，隨時可以還原。",
+            .en: "Converted files open in the Android version. Your original notes are never modified; a backup is made first and you can restore it at any time.",
+            .zhHans: "转换后的文件可在 Android 版打开。原始笔记不会被更动，转换前会自动备份，随时可以还原。",
+            .ja: "変換後のファイルは Android 版で開けます。元のノートは変更されません。変換前に自動でバックアップを作成し、いつでも復元できます。",
+            .ko: "변환된 파일은 Android 버전에서 열 수 있습니다. 원본 노트는 변경되지 않으며, 변환 전에 백업이 만들어져 언제든 복원할 수 있습니다.",
+            .th: "ไฟล์ที่แปลงแล้วเปิดได้ในเวอร์ชัน Android ข้อมูลบันทึกต้นฉบับจะไม่ถูกแก้ไข และจะสำรองข้อมูลก่อนแปลงเสมอ คุณกู้คืนได้ทุกเมื่อ"
+        ],
+        "migration_never_run": [
+            .zhHant: "尚未轉換",
+            .en: "Not converted yet",
+            .zhHans: "尚未转换",
+            .ja: "未変換",
+            .ko: "아직 변환하지 않음",
+            .th: "ยังไม่ได้แปลง"
+        ],
+        "migration_result_summary": [
+            .zhHant: "成功 %@、略過 %@、失敗 %@",
+            .en: "%@ succeeded, %@ skipped, %@ failed",
+            .zhHans: "成功 %@、跳过 %@、失败 %@",
+            .ja: "成功 %@、スキップ %@、失敗 %@",
+            .ko: "성공 %@, 건너뜀 %@, 실패 %@",
+            .th: "สำเร็จ %@ ข้าม %@ ล้มเหลว %@"
+        ],
+        "migration_rollback": [
+            .zhHant: "還原備份",
+            .en: "Restore Backup",
+            .zhHans: "还原备份",
+            .ja: "バックアップを復元",
+            .ko: "백업 복원",
+            .th: "กู้คืนข้อมูลสำรอง"
+        ],
+        "migration_rollback_done": [
+            .zhHant: "已從備份還原",
+            .en: "Restored from backup",
+            .zhHans: "已从备份还原",
+            .ja: "バックアップから復元しました",
+            .ko: "백업에서 복원했습니다",
+            .th: "กู้คืนจากข้อมูลสำรองแล้ว"
+        ],
+        "migration_run": [
+            .zhHant: "轉換為跨平台格式",
+            .en: "Convert to Cross-Platform Format",
+            .zhHans: "转换为跨平台格式",
+            .ja: "クロスプラットフォーム形式に変換",
+            .ko: "크로스플랫폼 형식으로 변환",
+            .th: "แปลงเป็นรูปแบบข้ามแพลตฟอร์ม"
+        ],
+        "migration_running": [
+            .zhHant: "轉換中…",
+            .en: "Converting…",
+            .zhHans: "转换中…",
+            .ja: "変換中…",
+            .ko: "변환 중…",
+            .th: "กำลังแปลง…"
+        ],
+        "migration_section": [
+            .zhHant: "跨平台格式",
+            .en: "Cross-Platform Format",
+            .zhHans: "跨平台格式",
+            .ja: "クロスプラットフォーム形式",
+            .ko: "크로스플랫폼 형식",
+            .th: "รูปแบบข้ามแพลตฟอร์ม"
+        ],
+        "migration_status": [
+            .zhHant: "狀態",
+            .en: "Status",
+            .zhHans: "状态",
+            .ja: "状態",
+            .ko: "상태",
+            .th: "สถานะ"
+        ],
         "milestone_snapshots": [
             .zhHant: "里程碑快照時光機",
             .en: "Milestone Snapshots",

@@ -1300,6 +1300,49 @@ public final class NotebookStore: ObservableObject {
         persistData()
     }
 
+    // MARK: - 核心格式遷移（工作包 WP4c）
+
+    /// 把目前所有筆記遷移成核心的 `.padnote` 套件。
+    ///
+    /// **不會在啟動時自動執行。** 這是一個明確的動作，由呼叫端決定何時做 ——
+    /// 在 App 啟動路徑上偷偷跑一次會動到使用者的資料，而且出事的時候他們
+    /// 連自己做過什麼都不知道。
+    ///
+    /// 遷移只讀既有資料，產物寫到 `Documents/Packages/`；動手前先備份，
+    /// 每一本都匯出後立刻讀回來逐點驗過才算數。詳見 `NotebookMigration`。
+    @discardableResult
+    public func migrateToCoreFormat() -> NotebookMigration.Report {
+        NotebookMigration.migrate(
+            documents: notebooks,
+            root: documentsDir,
+            deviceId: NotebookMigration.deviceId,
+            drawingLoader: { [weak self] id, page in
+                self?.loadDrawing(notebookId: id, pageIndex: page) ?? PKDrawing()
+            },
+            imageLoader: { [weak self] fileName in
+                guard let self else { return nil }
+                let url = self.attachmentsDirectory.appendingPathComponent(fileName)
+                return try? Data(contentsOf: url)
+            }
+        )
+    }
+
+    /// 從備份還原，並清掉遷移產物。
+    public func rollbackCoreMigration(from backup: URL) throws {
+        try NotebookMigration.rollback(root: documentsDir, from: backup)
+        loadData()
+    }
+
+    /// 目前的遷移狀態（哪幾本已經遷好、各有幾筆畫）。
+    public var coreMigrationState: NotebookMigration.State {
+        NotebookMigration.loadState(in: documentsDir)
+    }
+
+    /// 遷移產物的位置。
+    public var corePackagesDirectory: URL {
+        NotebookMigration.packagesDirectory(in: documentsDir)
+    }
+
     // MARK: - 里程碑快照時光機 (Milestone Snapshots)
 
     /// 里程碑快照目錄

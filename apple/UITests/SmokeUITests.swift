@@ -135,3 +135,61 @@ final class SmokeUITests: XCTestCase {
         assertAlive(app, "收合側欄")
     }
 }
+
+extension SmokeUITests {
+
+    /// 跨平台格式轉換：從 UI 真的按下去，確認它會跑完並回報結果。
+    ///
+    /// 單元測試證明的是遷移邏輯對；這一條證明的是**使用者按得到、按了有反應**。
+    /// 之前踩過的坑就是「能力建好了卻沒開到使用者面前」，等於沒建。
+    func testMigrationRunsFromTheDiagnosticsSheet() {
+        let app = XCUIApplication()
+        app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        // 用 accessibility identifier 而不是圖示名稱：靠 "ellipsis" 去猜會先
+        // 命中筆記卡片上的那個「⋯」。
+        let menu = app.buttons["home.workbenchMenu"]
+        guard menu.waitForExistence(timeout: 10) else {
+            return XCTFail("找不到首頁的快捷選單按鈕")
+        }
+        menu.tap()
+        sleep(1)
+
+        let diagnostics = app.buttons["home.diagnostics"]
+        guard diagnostics.waitForExistence(timeout: 5) else {
+            return XCTFail("快捷選單裡找不到診斷")
+        }
+        diagnostics.tap()
+        sleep(2)
+        XCTAssertEqual(app.state, .runningForeground, "開啟診斷頁後 App 不在前景")
+
+        let convert = app.buttons["migration.run"]
+        guard convert.waitForExistence(timeout: 5) else {
+            return XCTFail("診斷頁裡找不到轉換按鈕")
+        }
+        convert.tap()
+
+        // 轉換完成後狀態列會從「尚未轉換」變成「已轉換 N 本」
+        let converted = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS[c] 'converted' OR label CONTAINS[c] '已轉換'")
+        ).firstMatch
+        XCTAssertTrue(converted.waitForExistence(timeout: 30), "轉換沒有回報完成")
+
+        // 把結果畫面留在測試報告裡：出問題時「當時螢幕長怎樣」比任何敘述都有用。
+        let shot = XCTAttachment(screenshot: app.screenshot())
+        shot.name = "migration-result"
+        shot.lifetime = .keepAlways
+        add(shot)
+        XCTAssertEqual(app.state, .runningForeground, "轉換之後 App 不在前景")
+
+        // 失敗的話畫面上會有紅字說明；這裡確認沒有任何一本失敗
+        let failed = app.staticTexts.matching(
+            NSPredicate(format: "label CONTAINS[c] 'failed' OR label CONTAINS[c] '失敗'")
+        ).firstMatch
+        if failed.exists {
+            XCTAssertTrue(failed.label.contains("0"), "有筆記轉換失敗：\(failed.label)")
+        }
+    }
+}

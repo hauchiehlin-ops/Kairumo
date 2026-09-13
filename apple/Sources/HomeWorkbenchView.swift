@@ -242,6 +242,7 @@ public struct HomeWorkbenchView: View {
                             } label: {
                                 Label("\(localizationManager.localized("system_diagnostics")) (\(appVersionString))", systemImage: "info.circle")
                             }
+                            .accessibilityIdentifier("home.diagnostics")
                         } label: {
                             HStack(spacing: 4) {
                                 ZStack {
@@ -260,6 +261,9 @@ public struct HomeWorkbenchView: View {
                             .background(Color(uiColor: .secondarySystemGroupedBackground))
                             .cornerRadius(12)
                         }
+                        // UI 測試要能穩定點到這個選單。靠 "ellipsis" 這種系統圖示名稱
+                        // 去猜，會先命中筆記卡片上的那個「⋯」。
+                        .accessibilityIdentifier("home.workbenchMenu")
                     }
                 }
             }
@@ -349,8 +353,10 @@ public struct HomeWorkbenchView: View {
                 if ProcessInfo.processInfo.environment["KAIRUMO_TYPE_AUDIT"] != nil {
                     let n = _typeName(NotebookEditorView.Body.self, qualified: true).count
                     let h = _typeName(HomeWorkbenchView.Body.self, qualified: true).count
+                    let d = _typeName(AppDiagnosticsSheet.Body.self, qualified: true).count
                     print("🔎TYPE editor.body name length = \(n)")
                     print("🔎TYPE home.body   name length = \(h)")
+                    print("🔎TYPE diag.body   name length = \(d)")
                 }
             }
         }
@@ -1730,7 +1736,14 @@ public struct AppDiagnosticsSheet: View {
     let versionString: String
     let platformDesc: String
     @ObservedObject var localizationManager = LocalizationManager.shared
+    @ObservedObject private var store = NotebookStore.shared
     @Environment(\.dismiss) private var dismiss
+
+    /// 遷移是明確的動作，不在啟動時自動跑 —— 所以要有一個按鈕，
+    /// 而且結果要看得到，包含失敗的那幾本是為什麼失敗。
+    @State private var isMigrating = false
+    @State private var migrationReport: NotebookMigration.Report?
+    @State private var rollbackMessage: String?
 
     public var body: some View {
         NavigationStack {
@@ -1766,6 +1779,8 @@ public struct AppDiagnosticsSheet: View {
                     }
                 }
 
+                migrationSection
+
                 Section(localizationManager.localized("about_app")) {
                     HStack {
                         Text("License")
@@ -1792,6 +1807,124 @@ public struct AppDiagnosticsSheet: View {
                 }
             }
         }
+    }
+}
+
+extension AppDiagnosticsSheet {
+
+    /// 跨平台格式轉換。
+    ///
+    /// 放在診斷頁而不是主畫面：這是進階動作，不該是使用者第一天就會按到的東西。
+    @ViewBuilder
+    var migrationSection: some View {
+        Section(localizationManager.localized("migration_section")) {
+            HStack {
+                Text(localizationManager.localized("migration_status"))
+                Spacer()
+                Text(migrationStatusText)
+                    .foregroundColor(.secondary)
+                    .accessibilityIdentifier("migration.status")
+            }
+
+            if let report = migrationReport {
+                HStack {
+                    Text(localizationManager.localized("migration_result_summary")
+                        .replacingFirst("%@", with: "\(report.migratedCount)")
+                        .replacingFirst("%@", with: "\(report.skippedCount)")
+                        .replacingFirst("%@", with: "\(report.failedCount)"))
+                        .font(.footnote)
+                        .foregroundColor(report.allSucceeded ? .secondary : .red)
+                    Spacer()
+                }
+
+                // 失敗的那幾本要講清楚是為什麼，不能只給一個數字。
+                ForEach(failedEntries(in: report), id: \.0) { entry in
+                    Text("\(notebookTitle(for: entry.0))：\(entry.1)")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                }
+            }
+
+            if let message = rollbackMessage {
+                Text(message).font(.footnote).foregroundColor(.secondary)
+            }
+
+            Button {
+                runMigration()
+            } label: {
+                HStack {
+                    if isMigrating { ProgressView().padding(.trailing, 6) }
+                    Text(localizationManager.localized(
+                        isMigrating ? "migration_running" : "migration_run"))
+                }
+            }
+            .disabled(isMigrating)
+            .accessibilityIdentifier("migration.run")
+
+            if let backup = migrationReport?.backupPath {
+                Button(role: .destructive) {
+                    rollback(to: backup)
+                } label: {
+                    Text(localizationManager.localized("migration_rollback"))
+                }
+                .disabled(isMigrating)
+            }
+
+            Text(localizationManager.localized("migration_explainer"))
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
+    private var migrationStatusText: String {
+        let count = store.coreMigrationState.entries.count
+        guard count > 0 else { return localizationManager.localized("migration_never_run") }
+        return localizationManager.localized("migration_converted_count")
+            .replacingFirst("%@", with: "\(count)")
+    }
+
+    private func failedEntries(in report: NotebookMigration.Report) -> [(String, String)] {
+        report.outcomes.compactMap { id, outcome in
+            if case .failed(let reason) = outcome { return (id, reason) }
+            return nil
+        }
+        .sorted { $0.0 < $1.0 }
+    }
+
+    private func notebookTitle(for id: String) -> String {
+        store.notebooks.first(where: { $0.id == id })?.displayTitle(localizationManager) ?? id
+    }
+
+    private func runMigration() {
+        isMigrating = true
+        rollbackMessage = nil
+        // 先讓「轉換中…」畫出來再開始做事，否則使用者按下去只會看到畫面卡住。
+        Task { @MainActor in
+            await Task.yield()
+            migrationReport = store.migrateToCoreFormat()
+            isMigrating = false
+        }
+    }
+
+    private func rollback(to backup: URL) {
+        do {
+            try store.rollbackCoreMigration(from: backup)
+            migrationReport = nil
+            rollbackMessage = localizationManager.localized("migration_rollback_done")
+        } catch {
+            rollbackMessage = error.localizedDescription
+        }
+    }
+}
+
+private extension String {
+    /// 只換掉第一個佔位符。
+    ///
+    /// 這些訊息有多個 `%@`，要逐一填不同的值；`replacingOccurrences` 會一次
+    /// 全換成同一個數字，看起來像「成功 3、略過 3、失敗 3」。
+    func replacingFirst(_ target: String, with replacement: String) -> String {
+        guard let range = self.range(of: target) else { return self }
+        return self.replacingCharacters(in: range, with: replacement)
     }
 }
 

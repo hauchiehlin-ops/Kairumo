@@ -1727,6 +1727,86 @@
     "zhHans": "需要麦克风使用权限",
     "zhHant": "需要麥克風使用權限"
   },
+  "migration_converted_count": {
+    "en": "%@ notebooks converted",
+    "ja": "%@ 冊を変換済み",
+    "ko": "%@권 변환됨",
+    "th": "แปลงแล้ว %@ เล่ม",
+    "zhHans": "已转换 %@ 本",
+    "zhHant": "已轉換 %@ 本"
+  },
+  "migration_explainer": {
+    "en": "Converted files open in the Android version. Your original notes are never modified; a backup is made first and you can restore it at any time.",
+    "ja": "変換後のファイルは Android 版で開けます。元のノートは変更されません。変換前に自動でバックアップを作成し、いつでも復元できます。",
+    "ko": "변환된 파일은 Android 버전에서 열 수 있습니다. 원본 노트는 변경되지 않으며, 변환 전에 백업이 만들어져 언제든 복원할 수 있습니다.",
+    "th": "ไฟล์ที่แปลงแล้วเปิดได้ในเวอร์ชัน Android ข้อมูลบันทึกต้นฉบับจะไม่ถูกแก้ไข และจะสำรองข้อมูลก่อนแปลงเสมอ คุณกู้คืนได้ทุกเมื่อ",
+    "zhHans": "转换后的文件可在 Android 版打开。原始笔记不会被更动，转换前会自动备份，随时可以还原。",
+    "zhHant": "轉換後的檔案可在 Android 版開啟。原始筆記不會被更動，轉換前會自動備份，隨時可以還原。"
+  },
+  "migration_never_run": {
+    "en": "Not converted yet",
+    "ja": "未変換",
+    "ko": "아직 변환하지 않음",
+    "th": "ยังไม่ได้แปลง",
+    "zhHans": "尚未转换",
+    "zhHant": "尚未轉換"
+  },
+  "migration_result_summary": {
+    "en": "%@ succeeded, %@ skipped, %@ failed",
+    "ja": "成功 %@、スキップ %@、失敗 %@",
+    "ko": "성공 %@, 건너뜀 %@, 실패 %@",
+    "th": "สำเร็จ %@ ข้าม %@ ล้มเหลว %@",
+    "zhHans": "成功 %@、跳过 %@、失败 %@",
+    "zhHant": "成功 %@、略過 %@、失敗 %@"
+  },
+  "migration_rollback": {
+    "en": "Restore Backup",
+    "ja": "バックアップを復元",
+    "ko": "백업 복원",
+    "th": "กู้คืนข้อมูลสำรอง",
+    "zhHans": "还原备份",
+    "zhHant": "還原備份"
+  },
+  "migration_rollback_done": {
+    "en": "Restored from backup",
+    "ja": "バックアップから復元しました",
+    "ko": "백업에서 복원했습니다",
+    "th": "กู้คืนจากข้อมูลสำรองแล้ว",
+    "zhHans": "已从备份还原",
+    "zhHant": "已從備份還原"
+  },
+  "migration_run": {
+    "en": "Convert to Cross-Platform Format",
+    "ja": "クロスプラットフォーム形式に変換",
+    "ko": "크로스플랫폼 형식으로 변환",
+    "th": "แปลงเป็นรูปแบบข้ามแพลตฟอร์ม",
+    "zhHans": "转换为跨平台格式",
+    "zhHant": "轉換為跨平台格式"
+  },
+  "migration_running": {
+    "en": "Converting…",
+    "ja": "変換中…",
+    "ko": "변환 중…",
+    "th": "กำลังแปลง…",
+    "zhHans": "转换中…",
+    "zhHant": "轉換中…"
+  },
+  "migration_section": {
+    "en": "Cross-Platform Format",
+    "ja": "クロスプラットフォーム形式",
+    "ko": "크로스플랫폼 형식",
+    "th": "รูปแบบข้ามแพลตฟอร์ม",
+    "zhHans": "跨平台格式",
+    "zhHant": "跨平台格式"
+  },
+  "migration_status": {
+    "en": "Status",
+    "ja": "状態",
+    "ko": "상태",
+    "th": "สถานะ",
+    "zhHans": "状态",
+    "zhHant": "狀態"
+  },
   "milestone_snapshots": {
     "en": "Milestone Snapshots",
     "ja": "マイルストーンスナップショット",
