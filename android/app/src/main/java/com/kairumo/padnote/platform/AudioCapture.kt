@@ -1,0 +1,118 @@
+package com.kairumo.padnote.platform
+
+import android.Manifest
+import android.annotation.SuppressLint
+import android.content.Context
+import android.content.pm.PackageManager
+import android.media.AudioFormat
+import android.media.AudioRecord
+import android.media.MediaRecorder
+import androidx.core.content.ContextCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
+import uniffi.padnote_core.PadnoteSession
+
+/**
+ * 麥克風擷取（工作包 WP6）。
+ *
+ * # 為什麼是 16kHz 單聲道 float
+ *
+ * 核心的 `feed_audio` 收的就是這個格式 —— 與 Apple 端同一條路徑、同一個
+ * Opus 編碼器、同一份時間軸。取樣率換算若放在平台層各寫一次，兩邊錄出來的
+ * 檔案就會不一樣，而「同一份筆記在兩個平台聽起來不一樣」是沒辦法解釋的。
+ *
+ * # 第一版沒有語音轉錄，但**錄音是可用的**
+ *
+ * `asr` feature 關掉的是轉錄（ONNX Runtime），不是錄音。libopus 有交叉編譯
+ * 進來，實測 `feed_audio` 確實會寫出音框（見 `CoreCapabilityTest`）。
+ */
+class AudioCapture(private val context: Context) {
+
+    companion object {
+        const val SAMPLE_RATE = 16_000
+
+        /** 有沒有麥克風權限。沒有就不要假裝在錄 —— 使用者會以為錄到了。 */
+        fun hasPermission(context: Context): Boolean =
+            ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+                PackageManager.PERMISSION_GRANTED
+    }
+
+    private var record: AudioRecord? = null
+    private var job: Job? = null
+    private val scope = CoroutineScope(Dispatchers.IO)
+
+    val isRecording: Boolean get() = job?.isActive == true
+
+    /**
+     * 開始錄音並持續餵給核心。
+     *
+     * @return 失敗的原因；成功時為 `null`。回傳字串而不是 boolean，是因為
+     *         「錄不起來」有好幾種原因，使用者需要知道是哪一種。
+     */
+    @SuppressLint("MissingPermission")
+    fun start(session: PadnoteSession, onError: (String) -> Unit = {}): String? {
+        if (isRecording) return null
+        if (!hasPermission(context)) return "沒有麥克風權限"
+
+        val minBuffer = AudioRecord.getMinBufferSize(
+            SAMPLE_RATE, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_FLOAT
+        )
+        if (minBuffer <= 0) return "這台裝置不支援 16kHz 單聲道錄音"
+
+        // 緩衝取最小值的四倍：剛好最小值的話，背景執行緒稍微被排程延遲就掉資料。
+        val bufferBytes = minBuffer * 4
+        val recorder = try {
+            AudioRecord(
+                MediaRecorder.AudioSource.VOICE_RECOGNITION,
+                SAMPLE_RATE,
+                AudioFormat.CHANNEL_IN_MONO,
+                AudioFormat.ENCODING_PCM_FLOAT,
+                bufferBytes
+            )
+        } catch (t: Throwable) {
+            return "無法開啟麥克風：${t.message}"
+        }
+
+        if (recorder.state != AudioRecord.STATE_INITIALIZED) {
+            recorder.release()
+            return "麥克風初始化失敗"
+        }
+
+        record = recorder
+        recorder.startRecording()
+        runCatching { session.startRecording() }.onFailure {
+            stop(session)
+            return "核心無法開始錄音：${it.message}"
+        }
+
+        val chunk = FloatArray(bufferBytes / 4 / 2)
+        job = scope.launch {
+            while (isActiveRecording()) {
+                val read = recorder.read(chunk, 0, chunk.size, AudioRecord.READ_BLOCKING)
+                if (read <= 0) continue
+                val slice = if (read == chunk.size) chunk else chunk.copyOf(read)
+                runCatching { session.feedAudio(slice.toList()) }
+                    .onFailure { onError("餵音訊失敗：${it.message}"); return@launch }
+            }
+        }
+        return null
+    }
+
+    private fun isActiveRecording(): Boolean =
+        record?.recordingState == AudioRecord.RECORDSTATE_RECORDING
+
+    /** 停止錄音。回傳核心記錄到的時長（微秒）。 */
+    fun stop(session: PadnoteSession): ULong {
+        job?.cancel()
+        job = null
+        record?.let { r ->
+            runCatching { if (r.state == AudioRecord.STATE_INITIALIZED) r.stop() }
+            r.release()
+        }
+        record = null
+        runCatching { session.stopRecording() }
+        return runCatching { session.recordedAudioUs() }.getOrDefault(0uL)
+    }
+}

@@ -24,7 +24,18 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import android.Manifest
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import com.kairumo.padnote.ink.InkCanvas
+import com.kairumo.padnote.platform.AudioCapture
+import com.kairumo.padnote.platform.DocsViewer
+import com.kairumo.padnote.platform.Exporter
 import com.kairumo.padnote.ink.InkEngine
 import com.kairumo.padnote.ink.InkLatencyMeter
 import com.kairumo.padnote.ink.LowLatencyInkCanvas
@@ -32,6 +43,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -73,8 +86,35 @@ class MainActivity : ComponentActivity() {
 private fun InkScreen() {
     val activity = LocalContext.current as ComponentActivity
     val l10n = { key: String -> uiString(key) }
-    val engine = remember { InkEngine() }
+    // 真的開一本筆記本：沒有 session 的話，匯出與錄音都沒有東西可寫，
+    // 這一頁就只是個畫圖玩具而不是筆記 App。
+    val notebook = remember { openNotebook(activity) }
+    val engine = remember(notebook) {
+        InkEngine(session = notebook?.first, pageId = notebook?.second)
+    }
     val latency = remember { InkLatencyMeter() }
+    val audio = remember { AudioCapture(activity) }
+    var recording by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var docsAsset by remember { mutableStateOf<String?>(null) }
+
+    val micPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        val session = notebook?.first
+        if (granted && session != null) {
+            message = audio.start(session) { message = it }
+            recording = audio.isRecording
+        } else {
+            message = uiString("mic_permission_denied")
+        }
+    }
+
+    // 離開畫面時一定要停掉麥克風 —— 忘了停的話，App 退到背景還在錄，
+    // 使用者只會看到狀態列那個紅點，不知道是誰。
+    DisposableEffect(Unit) {
+        onDispose { notebook?.first?.let { audio.stop(it) } }
+    }
     var penOnly by remember { mutableStateOf(false) }
     // 預設**關閉**低延遲。
     //
@@ -86,20 +126,18 @@ private fun InkScreen() {
     var revision by remember { mutableIntStateOf(0) }
     var clearToken by remember { mutableIntStateOf(0) }
     var showStatus by remember { mutableStateOf(false) }
+    var showMenu by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
-        // 工具列用水平捲動而不是讓標題去搶空間：窄螢幕上標題被擠成一欄一個字，
-        // 會把畫布整個往下推。
+        // 只有兩個切換留在工具列上，其餘進溢位選單。
+        //
+        // 先前把全部動作排成一列再讓它水平捲動 —— 在 320dp 寬的螢幕上，
+        // 錄音、匯出、列印、手冊全都被推到畫面外，而且捲不太動。
+        // 功能點不到就等於沒做。
         Row(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-          // 資訊鈕留在外面、不進捲動區：它在窄螢幕上會被推出畫面，
-          // 而那正是要看延遲數字的時候。
-          Row(
-            modifier = Modifier.weight(1f).horizontalScroll(rememberScrollState()),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-          ) {
             FilterChip(
                 selected = lowLatency && !lowLatencyUnavailable,
                 enabled = !lowLatencyUnavailable,
@@ -115,16 +153,86 @@ private fun InkScreen() {
                 },
                 label = { Text(l10n("ink_pen_only")) }
             )
-            TextButton(onClick = {
-                engine.reset()
-                latency.clear()
-                revision++
-                clearToken++   // 表面上的像素也要清，不是只清資料
-            }) { Text(l10n("ink_clear")) }
-          }
-          // 用文字而不是「ⓘ」：那個字元不是每個裝置的字型都有，
-          // 沒有的話按鈕就變成一塊看不見的區域 —— 實機上正是如此。
-          TextButton(onClick = { showStatus = true }) { Text("Info") }
+            Box(modifier = Modifier.weight(1f))
+            // 只留一個按鈕。兩個切換加兩個按鈕在 320dp 寬的螢幕上就已經
+            // 把最右邊那個擠出畫面 —— 而被擠掉的那個永遠是最後加上去的。
+            TextButton(onClick = { showMenu = true }) { Text("...") }
+
+            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text(l10n("ink_clear")) },
+                    onClick = {
+                        showMenu = false
+                        engine.reset()
+                        latency.clear()
+                        revision++
+                        clearToken++   // 表面上的像素也要清，不是只清資料
+                    }
+                )
+                Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n(if (recording) "stop_recording" else "start_recording")) },
+                    onClick = {
+                        showMenu = false
+                        val session = notebook?.first ?: return@DropdownMenuItem
+                        if (recording) {
+                            val us = audio.stop(session)
+                            recording = false
+                            message = l10n("recorded_duration").replace("%@", "${us / 1_000_000uL}")
+                        } else if (AudioCapture.hasPermission(activity)) {
+                            message = audio.start(session) { message = it }
+                            recording = audio.isRecording
+                        } else {
+                            micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    }
+                )
+                Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n("export_pdf")) },
+                    onClick = {
+                        showMenu = false
+                        message = exportAndShare(activity, notebook?.first, Exporter.Format.PDF)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("export_image")) },
+                    onClick = {
+                        showMenu = false
+                        message = exportAndShare(activity, notebook?.first, Exporter.Format.PNG)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("export_markdown")) },
+                    onClick = {
+                        showMenu = false
+                        message = exportAndShare(activity, notebook?.first, Exporter.Format.MARKDOWN)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("print_note")) },
+                    onClick = {
+                        showMenu = false
+                        val session = notebook?.first ?: return@DropdownMenuItem
+                        runCatching { Exporter.print(activity, session) }
+                            .onFailure { message = it.message }
+                    }
+                )
+                Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n("user_manual")) },
+                    onClick = { showMenu = false; docsAsset = "manual/index.html" }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("privacy_policy")) },
+                    onClick = { showMenu = false; docsAsset = "legal/privacy.html" }
+                )
+                Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n("system_diagnostics")) },
+                    onClick = { showMenu = false; showStatus = true }
+                )
+            }
         }
 
         // 讀一下 revision 讓筆畫數會跟著重繪；真相來源仍是 engine。
@@ -136,6 +244,16 @@ private fun InkScreen() {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 12.dp)
         )
+
+        message?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
+        }
+
         // 診斷列：一張截圖就要能告訴我平台回報了什麼。
         Text(
             eventDebug,
@@ -170,6 +288,27 @@ private fun InkScreen() {
                     modifier = Modifier.fillMaxSize(),
                     onInkChanged = { revision++ }
                 )
+            }
+        }
+    }
+
+    docsAsset?.let { asset ->
+        // 全螢幕對話框而不是 AlertDialog：說明文件是要「讀」的，
+        // 塞進一個固定高度的小框裡，使用者看到的是一小條白色。
+        Dialog(
+            onDismissRequest = { docsAsset = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { docsAsset = null }) { Text(l10n("close")) }
+                    }
+                    DocsViewer(asset, modifier = Modifier.fillMaxSize())
+                }
             }
         }
     }
@@ -342,4 +481,72 @@ private fun checkSessionCrypto(): String = try {
     if (opened == message) "AES-256-GCM round-trip 通過" else "內容不符"
 } catch (t: Throwable) {
     "失敗：${t.message}"
+}
+
+/**
+ * 開啟（必要時建立）這台裝置上的筆記本。
+ *
+ * 目前是單一本 —— 多筆記本的管理是 Apple 端才有的畫面，Android 這一版先把
+ * 「寫得下去、匯得出來」做通。回傳 `null` 代表核心開不起來，UI 會退成
+ * 純畫圖模式而不是整個當掉。
+ */
+private fun openNotebook(activity: ComponentActivity): Pair<PadnoteSession, String>? = try {
+    val dir = java.io.File(activity.filesDir, "notebook.padnote")
+    val session = if (dir.exists()) {
+        PadnoteSession.openExisting(dir.absolutePath, deviceId(activity))
+    } else {
+        PadnoteSession.create(
+            dir.absolutePath, "Kairumo", System.currentTimeMillis().toULong(), deviceId(activity)
+        )
+    }
+    val page = session.firstPageId() ?: session.addPage(uniffi.padnote_core.PageStyle.BLANK)
+    session to page
+} catch (t: Throwable) {
+    null
+}
+
+/**
+ * 這台裝置穩定不變的 32 位元識別碼。
+ *
+ * 它會進 oplog 檔名，用來保證兩台裝置永遠不寫同一個檔 —— 撞號的後果是
+ * 兩邊的編輯互相覆蓋，而且在單機測試時完全不會發生。存下來這一步不能省：
+ * 每次啟動換一個 id，同一台裝置在檔案裡會看起來像很多台。
+ */
+private fun deviceId(activity: ComponentActivity): UInt {
+    val prefs = activity.getSharedPreferences("kairumo", android.content.Context.MODE_PRIVATE)
+    val saved = prefs.getInt("deviceId", 0)
+    if (saved != 0) return saved.toUInt()
+    var hash = 2_166_136_261u // FNV-1a
+    for (b in java.util.UUID.randomUUID().toString().toByteArray()) {
+        hash = hash xor b.toUInt()
+        hash *= 16_777_619u
+    }
+    prefs.edit().putInt("deviceId", hash.toInt()).apply()
+    return hash
+}
+
+/** 匯出後直接叫出分享面板，並回報給使用者看的一句話。 */
+private fun exportAndShare(
+    activity: ComponentActivity,
+    session: PadnoteSession?,
+    format: Exporter.Format
+): String {
+    if (session == null) return "核心未就緒"
+    return Exporter.export(activity, session, format).fold(
+        onSuccess = { file ->
+            runCatching {
+                activity.startActivity(
+                    android.content.Intent.createChooser(
+                        Exporter.shareIntent(activity, file, format), null
+                    )
+                )
+            }
+            LocalizationStrings.localized("export_done", deviceLanguageTag())
+                .replace("%@", file.name)
+        },
+        onFailure = { t ->
+            LocalizationStrings.localized("export_failed", deviceLanguageTag())
+                .replace("%@", t.message ?: t.toString())
+        }
+    )
 }

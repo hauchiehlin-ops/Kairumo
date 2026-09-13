@@ -1071,6 +1071,22 @@ extension LocalizationManager {
             .ko: "펼치기",
             .th: "ขยาย"
         ],
+        "export_done": [
+            .zhHant: "已匯出：%@",
+            .en: "Exported: %@",
+            .zhHans: "已导出：%@",
+            .ja: "書き出しました：%@",
+            .ko: "내보냈습니다: %@",
+            .th: "ส่งออกแล้ว: %@"
+        ],
+        "export_failed": [
+            .zhHant: "匯出失敗：%@",
+            .en: "Export failed: %@",
+            .zhHans: "导出失败：%@",
+            .ja: "書き出しに失敗しました：%@",
+            .ko: "내보내기 실패: %@",
+            .th: "ส่งออกไม่สำเร็จ: %@"
+        ],
         "export_image": [
             .zhHant: "匯出為圖片",
             .en: "Export Image",
@@ -1078,6 +1094,14 @@ extension LocalizationManager {
             .ja: "画像として書き出し",
             .ko: "이미지로 내보내기",
             .th: "ส่งออกเป็นรูปภาพ"
+        ],
+        "export_markdown": [
+            .zhHant: "匯出 Markdown",
+            .en: "Export Markdown",
+            .zhHans: "导出 Markdown",
+            .ja: "Markdown を書き出す",
+            .ko: "Markdown 내보내기",
+            .th: "ส่งออก Markdown"
         ],
         "export_pdf": [
             .zhHant: "匯出 PDF",
@@ -1783,6 +1807,14 @@ extension LocalizationManager {
             .ko: "값",
             .th: "ค่า"
         ],
+        "mic_permission_denied": [
+            .zhHant: "沒有麥克風權限，無法錄音",
+            .en: "Microphone permission denied; cannot record",
+            .zhHans: "没有麦克风权限，无法录音",
+            .ja: "マイクの権限がないため録音できません",
+            .ko: "마이크 권한이 없어 녹음할 수 없습니다",
+            .th: "ไม่ได้รับสิทธิ์ไมโครโฟน จึงบันทึกเสียงไม่ได้"
+        ],
         "mic_permission_msg": [
             .zhHant: "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。請點擊「前往系統設定」開啟權限。",
             .en: "Kairumo needs microphone access to record lectures and sync audio with your handwriting. Tap 'Open Settings' to grant permission.",
@@ -2414,6 +2446,14 @@ extension LocalizationManager {
             .ja: "録音",
             .ko: "녹음",
             .th: "บันทึก"
+        ],
+        "recorded_duration": [
+            .zhHant: "已錄 %@ 秒",
+            .en: "Recorded %@s",
+            .zhHans: "已录 %@ 秒",
+            .ja: "%@ 秒録音",
+            .ko: "%@초 녹음됨",
+            .th: "บันทึกแล้ว %@ วินาที"
         ],
         "recording_suffix": [
             .zhHant: "錄音",

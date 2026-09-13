@@ -1066,6 +1066,22 @@ object LocalizationStrings {
             "ko" to "펼치기",
             "th" to "ขยาย"
         ),
+        "export_done" to mapOf(
+            "zh-Hant" to "已匯出：%@",
+            "en" to "Exported: %@",
+            "zh-Hans" to "已导出：%@",
+            "ja" to "書き出しました：%@",
+            "ko" to "내보냈습니다: %@",
+            "th" to "ส่งออกแล้ว: %@"
+        ),
+        "export_failed" to mapOf(
+            "zh-Hant" to "匯出失敗：%@",
+            "en" to "Export failed: %@",
+            "zh-Hans" to "导出失败：%@",
+            "ja" to "書き出しに失敗しました：%@",
+            "ko" to "내보내기 실패: %@",
+            "th" to "ส่งออกไม่สำเร็จ: %@"
+        ),
         "export_image" to mapOf(
             "zh-Hant" to "匯出為圖片",
             "en" to "Export Image",
@@ -1073,6 +1089,14 @@ object LocalizationStrings {
             "ja" to "画像として書き出し",
             "ko" to "이미지로 내보내기",
             "th" to "ส่งออกเป็นรูปภาพ"
+        ),
+        "export_markdown" to mapOf(
+            "zh-Hant" to "匯出 Markdown",
+            "en" to "Export Markdown",
+            "zh-Hans" to "导出 Markdown",
+            "ja" to "Markdown を書き出す",
+            "ko" to "Markdown 내보내기",
+            "th" to "ส่งออก Markdown"
         ),
         "export_pdf" to mapOf(
             "zh-Hant" to "匯出 PDF",
@@ -1778,6 +1802,14 @@ object LocalizationStrings {
             "ko" to "값",
             "th" to "ค่า"
         ),
+        "mic_permission_denied" to mapOf(
+            "zh-Hant" to "沒有麥克風權限，無法錄音",
+            "en" to "Microphone permission denied; cannot record",
+            "zh-Hans" to "没有麦克风权限，无法录音",
+            "ja" to "マイクの権限がないため録音できません",
+            "ko" to "마이크 권한이 없어 녹음할 수 없습니다",
+            "th" to "ไม่ได้รับสิทธิ์ไมโครโฟน จึงบันทึกเสียงไม่ได้"
+        ),
         "mic_permission_msg" to mapOf(
             "zh-Hant" to "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。請點擊「前往系統設定」開啟權限。",
             "en" to "Kairumo needs microphone access to record lectures and sync audio with your handwriting. Tap 'Open Settings' to grant permission.",
@@ -2409,6 +2441,14 @@ object LocalizationStrings {
             "ja" to "録音",
             "ko" to "녹음",
             "th" to "บันทึก"
+        ),
+        "recorded_duration" to mapOf(
+            "zh-Hant" to "已錄 %@ 秒",
+            "en" to "Recorded %@s",
+            "zh-Hans" to "已录 %@ 秒",
+            "ja" to "%@ 秒録音",
+            "ko" to "%@초 녹음됨",
+            "th" to "บันทึกแล้ว %@ วินาที"
         ),
         "recording_suffix" to mapOf(
             "zh-Hant" to "錄音",

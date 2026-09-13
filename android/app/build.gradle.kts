@@ -44,10 +44,29 @@ android {
     // libpadnote_core.so 由 scripts/build-android-libs.sh 產生
     sourceSets["main"].jniLibs.srcDirs("src/main/jniLibs")
 
+    // 說明手冊與隱私權政策取自 repo 的 docs/，不在 android/ 再放一份副本 ——
+    // 兩份文件遲早會不一致，而且不一致的那一份會出現在使用者手上。
+    //
+    // **只複製這兩個子目錄。** 直接把整個 docs/ 掛成 assets 的話，
+    // DEVLOG、TODO、ADR、內部計畫全都會隨 APK 出貨給使用者。
+    sourceSets["main"].assets.srcDirs(layout.buildDirectory.dir("generated/docsAssets"))
+
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
 }
+
+/** 只把要給使用者看的文件複製進 assets。 */
+val copyUserDocs by tasks.registering(Copy::class) {
+    from("$rootDir/../docs/manual") { into("manual") }
+    from("$rootDir/../docs/legal") { into("legal") }
+    into(layout.buildDirectory.dir("generated/docsAssets"))
+}
+
+tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }
+    .configureEach { dependsOn(copyUserDocs) }
+tasks.matching { it.name.endsWith("AndroidTestAssets") }
+    .configureEach { dependsOn(copyUserDocs) }
 
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")

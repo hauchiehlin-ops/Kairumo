@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- 匯出的檔案只放在 App 私有 cache 底下，透過 FileProvider 授權給
+         接收方讀取一次。不用外部儲存：那會把使用者的筆記內容留在
+         任何 App 都讀得到的地方。 -->
+    <cache-path name="exports" path="exports/" />
+</paths>

@@ -1055,6 +1055,22 @@
     "zhHans": "展开",
     "zhHant": "展開"
   },
+  "export_done": {
+    "en": "Exported: %@",
+    "ja": "書き出しました：%@",
+    "ko": "내보냈습니다: %@",
+    "th": "ส่งออกแล้ว: %@",
+    "zhHans": "已导出：%@",
+    "zhHant": "已匯出：%@"
+  },
+  "export_failed": {
+    "en": "Export failed: %@",
+    "ja": "書き出しに失敗しました：%@",
+    "ko": "내보내기 실패: %@",
+    "th": "ส่งออกไม่สำเร็จ: %@",
+    "zhHans": "导出失败：%@",
+    "zhHant": "匯出失敗：%@"
+  },
   "export_image": {
     "en": "Export Image",
     "ja": "画像として書き出し",
@@ -1062,6 +1078,14 @@
     "th": "ส่งออกเป็นรูปภาพ",
     "zhHans": "导出为图片",
     "zhHant": "匯出為圖片"
+  },
+  "export_markdown": {
+    "en": "Export Markdown",
+    "ja": "Markdown を書き出す",
+    "ko": "Markdown 내보내기",
+    "th": "ส่งออก Markdown",
+    "zhHans": "导出 Markdown",
+    "zhHant": "匯出 Markdown"
   },
   "export_pdf": {
     "en": "Export PDF",
@@ -1767,6 +1791,14 @@
     "zhHans": "数值",
     "zhHant": "數值"
   },
+  "mic_permission_denied": {
+    "en": "Microphone permission denied; cannot record",
+    "ja": "マイクの権限がないため録音できません",
+    "ko": "마이크 권한이 없어 녹음할 수 없습니다",
+    "th": "ไม่ได้รับสิทธิ์ไมโครโฟน จึงบันทึกเสียงไม่ได้",
+    "zhHans": "没有麦克风权限，无法录音",
+    "zhHant": "沒有麥克風權限，無法錄音"
+  },
   "mic_permission_msg": {
     "en": "Kairumo needs microphone access to record lectures and sync audio with your handwriting. Tap 'Open Settings' to grant permission.",
     "ja": "Kairumo は授業や会議の録音と筆跡を同期させるためにマイクへのアクセス権が必要です。「設定を開く」をタップして許可してください。",
@@ -2398,6 +2430,14 @@
     "th": "บันทึก",
     "zhHans": "录音",
     "zhHant": "錄音"
+  },
+  "recorded_duration": {
+    "en": "Recorded %@s",
+    "ja": "%@ 秒録音",
+    "ko": "%@초 녹음됨",
+    "th": "บันทึกแล้ว %@ วินาที",
+    "zhHans": "已录 %@ 秒",
+    "zhHant": "已錄 %@ 秒"
   },
   "recording_suffix": {
     "en": "Recording",
