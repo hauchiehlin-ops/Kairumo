@@ -37,6 +37,8 @@ import com.kairumo.padnote.platform.AudioCapture
 import com.kairumo.padnote.platform.DocsViewer
 import com.kairumo.padnote.platform.Exporter
 import com.kairumo.padnote.platform.Handwriting
+import com.kairumo.padnote.sync.FolderSync
+import androidx.documentfile.provider.DocumentFile
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.kairumo.padnote.ink.InkEngine
@@ -101,6 +103,15 @@ private fun InkScreen() {
     var message by remember { mutableStateOf<String?>(null) }
     var docsAsset by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+
+    // 雲端同步（決策 D3 選項 A）：使用者挑一個資料夾，兩台裝置指同一個地方。
+    val folderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        FolderSync.setFolder(activity, uri)
+        message = runFolderSync(activity, notebook?.first)
+    }
 
     val micPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
@@ -222,6 +233,20 @@ private fun InkScreen() {
                             .onFailure { message = it.message }
                     }
                 )
+                Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n("sync_choose_folder")) },
+                    onClick = { showMenu = false; folderPicker.launch(null) }
+                )
+                if (FolderSync.folderUri(activity) != null) {
+                    DropdownMenuItem(
+                        text = { Text(l10n("sync_now")) },
+                        onClick = {
+                            showMenu = false
+                            message = runFolderSync(activity, notebook?.first)
+                        }
+                    )
+                }
                 Divider()
                 DropdownMenuItem(
                     text = { Text(l10n("recognize_handwriting")) },
@@ -609,4 +634,35 @@ private suspend fun recognizeHandwriting(
     return LocalizationStrings.localized("recognized_result", deviceLanguageTag())
         .replace("%1@", "$indexed")
         .replace("%2@", recognized.toString().take(40))
+}
+
+/**
+ * 把本機筆記本與使用者選的雲端資料夾對齊（決策 D3 選項 A）。
+ *
+ * 同步由使用者自己的雲端硬碟負責，我們只搬檔案。判斷「搬哪些、往哪邊」
+ * 的策略走核心，與 Apple 端同一份。
+ */
+private fun runFolderSync(activity: ComponentActivity, session: PadnoteSession?): String {
+    val tree = FolderSync.folderUri(activity)
+        ?: return LocalizationStrings.localized("sync_not_configured", deviceLanguageTag())
+    val remote = DocumentFile.fromTreeUri(activity, tree)
+        ?: return LocalizationStrings.localized("sync_not_configured", deviceLanguageTag())
+
+    // 同步前先讓核心把手上的東西落盤，否則剛寫的內容不會被帶上去。
+    runCatching { session?.title() }
+
+    val local = java.io.File(activity.filesDir, "notebook.padnote")
+    val result = FolderSync.sync(activity, local, remote)
+
+    val lang = deviceLanguageTag()
+    result.needsAttention.firstOrNull()?.let {
+        return LocalizationStrings.localized("sync_needs_attention", lang).replace("%@", it)
+    }
+    if (result.failures.isNotEmpty()) {
+        return result.failures.entries.first().let { "${it.key}：${it.value}" }
+    }
+    if (result.isNoOp) return LocalizationStrings.localized("sync_up_to_date", lang)
+    return LocalizationStrings.localized("sync_result", lang)
+        .replace("%1@", "${result.uploaded.size}")
+        .replace("%2@", "${result.downloaded.size}")
 }

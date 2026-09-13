@@ -117,6 +117,10 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui-tooling-preview")
 
+    // 使用者自己的雲端硬碟（Google Drive 等）以 SAF 的 DocumentsProvider 呈現，
+    // 沒有 POSIX 路徑 —— 只能透過 DocumentFile 讀寫。
+    implementation("androidx.documentfile:documentfile:1.0.1")
+
     // 前緩衝渲染（低延遲手寫）。需要 API 29 以上 —— minSdk 就是為它訂的。
     implementation("androidx.graphics:graphics-core:1.0.2")
     // 預測筆跡。補的是「手已經到了、畫面還沒跟上」的那一段視覺落差。

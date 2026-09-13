@@ -115,7 +115,8 @@ impl NotebookSession {
         now_unix_ms: u64,
         device: u32,
     ) -> Result<Self, AppError> {
-        let package = NotebookPackage::create(root, title, now_unix_ms)?;
+        // 筆畫檔名要帶 device，兩台裝置才不會寫同一個檔（架構不變式 1）。
+        let package = NotebookPackage::create(root, title, now_unix_ms)?.with_device(device);
         let id = Uuid::now_v7();
         let mut session = Self {
             package,
@@ -146,7 +147,7 @@ impl NotebookSession {
     ///
     /// 重播而非讀快照：op-log 是唯一的事實來源，快照只是最佳化（尚未實作）。
     pub fn open(root: impl Into<std::path::PathBuf>, device: u32) -> Result<Self, AppError> {
-        let package = NotebookPackage::open(root)?;
+        let package = NotebookPackage::open(root)?.with_device(device);
         let title = package.manifest().title.clone();
         let mut session = Self {
             package,

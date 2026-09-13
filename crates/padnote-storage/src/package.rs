@@ -60,6 +60,11 @@ impl From<CodecError> for StorageError {
 pub struct NotebookPackage {
     root: PathBuf,
     manifest: Manifest,
+    /// 這台裝置的識別碼，寫入筆畫檔名用。
+    ///
+    /// 預設 0 是為了讓既有的呼叫端（與測試）不用全部改；真正在用的路徑
+    /// 會透過 [`NotebookPackage::with_device`] 設定成裝置實際的 id。
+    device: u32,
 }
 
 impl NotebookPackage {
@@ -76,9 +81,21 @@ impl NotebookPackage {
         }
 
         let manifest = Manifest::new(Uuid::now_v7().to_string(), title.to_string(), now_unix_ms);
-        let pkg = Self { root, manifest };
+        let pkg = Self { root, manifest, device: 0 };
         pkg.write_manifest()?;
         Ok(pkg)
+    }
+
+    /// 指定這台裝置的識別碼。**多裝置同步時必須設定** ——
+    /// 沒設定的話兩台裝置都會寫進 `…-00000000.strokes`，又回到互相覆蓋。
+    #[must_use]
+    pub fn with_device(mut self, device: u32) -> Self {
+        self.device = device;
+        self
+    }
+
+    pub fn device(&self) -> u32 {
+        self.device
     }
 
     pub fn open(root: impl Into<PathBuf>) -> Result<Self, StorageError> {
@@ -99,7 +116,7 @@ impl NotebookPackage {
                 supported: crate::manifest::SPEC_VERSION,
             });
         }
-        Ok(Self { root, manifest })
+        Ok(Self { root, manifest, device: 0 })
     }
 
     pub fn manifest(&self) -> &Manifest {
@@ -133,8 +150,48 @@ impl NotebookPackage {
 
     // ---- 筆畫 ----
 
-    fn ink_path(&self, page: Uuid) -> PathBuf {
-        self.root.join(format!("ink/{page}.strokes"))
+    /// 這台裝置要寫入的筆畫檔。
+    ///
+    /// # 為什麼檔名裡要有 device
+    ///
+    /// 架構不變式 1 是「每台裝置只寫自己 `device_id` 的檔案」—— 有了它，
+    /// 檔案層級的衝突在數學上不可能發生，同步就只是把檔案湊在一起。
+    /// `doc/ops/` 一直都遵守這條，但筆畫檔原本是 `ink/<page>.strokes`，
+    /// **每一頁一個檔、與裝置無關**。兩台裝置在同一頁上寫字，就會寫同一個
+    /// 檔名 —— 放進共用資料夾同步時，後到的那份會蓋掉先到的，
+    /// 使用者的手寫**就這樣不見了**，而且沒有任何錯誤訊息。
+    fn ink_write_path(&self, page: Uuid) -> PathBuf {
+        self.root
+            .join(format!("ink/{page}-{:08x}.strokes", self.device))
+    }
+
+    /// 這一頁所有裝置的筆畫檔，含舊版的 `ink/<page>.strokes`。
+    ///
+    /// 舊檔必須繼續讀得到：使用者手上已經有那種檔案了。
+    fn ink_read_paths(&self, page: Uuid) -> Vec<PathBuf> {
+        let dir = self.root.join("ink");
+        let prefix = format!("{page}");
+        let mut paths = Vec::new();
+
+        let legacy = dir.join(format!("{prefix}.strokes"));
+        if legacy.exists() {
+            paths.push(legacy);
+        }
+
+        if let Ok(entries) = fs::read_dir(&dir) {
+            for entry in entries.flatten() {
+                let name = entry.file_name().to_string_lossy().into_owned();
+                if let Some(stem) = name.strip_suffix(".strokes")
+                    && let Some(rest) = stem.strip_prefix(&prefix)
+                    && rest.starts_with('-')
+                {
+                    paths.push(entry.path());
+                }
+            }
+        }
+        // 固定順序：同一份資料在任何裝置上讀出來的結果必須一樣。
+        paths.sort();
+        paths
     }
 
     /// 追加筆畫記錄。**append-only** —— 既有位元組永不被修改（ADR-0002）。
@@ -142,7 +199,7 @@ impl NotebookPackage {
         if records.is_empty() {
             return Ok(());
         }
-        let path = self.ink_path(page);
+        let path = self.ink_write_path(page);
         let exists = path.exists();
 
         let mut writer = StrokeWriter::new(page);
@@ -163,13 +220,17 @@ impl NotebookPackage {
         Ok(())
     }
 
+    /// 這一頁的全部筆畫記錄 —— **所有裝置的檔案串起來**。
+    ///
+    /// 串接的順序不影響結果：`materialize` 會先收齊墓碑再過濾，
+    /// 所以「刪除」出現在「新增」之前也不會出錯。
     pub fn read_ink(&self, page: Uuid) -> Result<Vec<InkRecord>, StorageError> {
-        let path = self.ink_path(page);
-        if !path.exists() {
-            return Ok(Vec::new());
+        let mut out = Vec::new();
+        for path in self.ink_read_paths(page) {
+            let bytes = fs::read(&path)?;
+            out.extend(StrokeReader::new(&bytes)?.read_all()?);
         }
-        let bytes = fs::read(&path)?;
-        Ok(StrokeReader::new(&bytes)?.read_all()?)
+        Ok(out)
     }
 
     // ---- 文件操作日誌（format-spec §6.1）----
@@ -233,10 +294,15 @@ impl NotebookPackage {
         let mut out = Vec::new();
         for entry in fs::read_dir(&dir)? {
             let name = entry?.file_name().to_string_lossy().into_owned();
-            if let Some(stem) = name.strip_suffix(".strokes")
-                && let Some(id) = parse_uuid(stem)
-            {
-                out.push(id);
+            // 檔名可能是舊版的 `<page>.strokes` 或新版的 `<page>-<device>.strokes`。
+            if let Some(stem) = name.strip_suffix(".strokes") {
+                let page_part = stem.split_once('-').map_or(stem, |_| {
+                    // UUID 本身也含 '-'，所以要從**最後一個** '-' 切
+                    stem.rsplit_once('-').map_or(stem, |(head, _)| head)
+                });
+                if let Some(id) = parse_uuid(page_part) {
+                    out.push(id);
+                }
             }
         }
         out.sort();

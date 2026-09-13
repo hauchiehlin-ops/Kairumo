@@ -1745,6 +1745,10 @@ public struct AppDiagnosticsSheet: View {
     @State private var migrationReport: NotebookMigration.Report?
     @State private var rollbackMessage: String?
 
+    /// 雲端同步（決策 D3 選項 A）。
+    @State private var showFolderPicker = false
+    @State private var syncMessage: String?
+
     public var body: some View {
         NavigationStack {
             List {
@@ -1780,6 +1784,7 @@ public struct AppDiagnosticsSheet: View {
                 }
 
                 migrationSection
+                cloudSyncSection
 
                 Section(localizationManager.localized("about_app")) {
                     HStack {
@@ -1811,6 +1816,94 @@ public struct AppDiagnosticsSheet: View {
 }
 
 extension AppDiagnosticsSheet {
+
+    /// 雲端同步 —— 使用者自己的雲端硬碟（決策 D3 選項 A）。
+    ///
+    /// 沒有帳號、沒有我們的伺服器。同步由 iCloud Drive / Google Drive / Dropbox
+    /// 負責，我們只是把 `.padnote` 套件放進使用者挑的資料夾。
+    @ViewBuilder
+    var cloudSyncSection: some View {
+        Section(localizationManager.localized("sync_section")) {
+            HStack {
+                Text(localizationManager.localized("migration_status"))
+                Spacer()
+                Text(CloudSyncFolder.resolveFolder()?.lastPathComponent
+                     ?? localizationManager.localized("sync_not_configured"))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            }
+
+            if let syncMessage {
+                Text(syncMessage)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+
+            Button(localizationManager.localized("sync_choose_folder")) {
+                showFolderPicker = true
+            }
+
+            if CloudSyncFolder.resolveFolder() != nil {
+                Button(localizationManager.localized("sync_now")) { runSync() }
+            }
+
+            Text(localizationManager.localized("sync_explainer"))
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .fileImporter(
+            isPresented: $showFolderPicker,
+            allowedContentTypes: [.folder],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                // 使用者選的資料夾在 App 沙箱之外，必須先取得存取權才能存書籤。
+                let scoped = url.startAccessingSecurityScopedResource()
+                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                do {
+                    try CloudSyncFolder.setFolder(url)
+                    runSync()
+                } catch {
+                    syncMessage = error.localizedDescription
+                }
+            case .failure(let error):
+                syncMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func runSync() {
+        guard let folder = CloudSyncFolder.resolveFolder() else { return }
+        let scoped = folder.startAccessingSecurityScopedResource()
+        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+
+        let packages = (try? FileManager.default.contentsOfDirectory(
+            at: store.corePackagesDirectory,
+            includingPropertiesForKeys: nil
+        ))?.filter { $0.pathExtension == "padnote" } ?? []
+
+        var uploaded = 0, downloaded = 0
+        var attention: [String] = []
+        for package in packages {
+            let result = CloudSyncFolder.sync(localPackage: package, into: folder)
+            uploaded += result.uploaded.count
+            downloaded += result.downloaded.count
+            attention.append(contentsOf: result.needsAttention)
+        }
+
+        if let first = attention.first {
+            syncMessage = localizationManager.localized("sync_needs_attention")
+                .replacingFirst("%@", with: first)
+        } else if uploaded == 0 && downloaded == 0 {
+            syncMessage = localizationManager.localized("sync_up_to_date")
+        } else {
+            syncMessage = localizationManager.localized("sync_result")
+                .replacingFirst("%1@", with: "\(uploaded)")
+                .replacingFirst("%2@", with: "\(downloaded)")
+        }
+    }
 
     /// 跨平台格式轉換。
     ///

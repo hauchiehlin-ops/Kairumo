@@ -172,6 +172,8 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | A-07 | 錄音 | 錄一段後波形時間軸與筆跡對得上 | WP6 |
 | A-08 | 匯出與列印 | 匯出的檔案內容與畫布一致 | WP6（模擬器已驗檔案格式，實機驗內容） |
 | A-09 | 手寫辨識率 | 中英文各 20 句，辨識結果搜得到 | WP7（模擬器已驗端到端可用；辨識率要真的筆跡才算數） |
+| A-11 | 雲端同步端到端 | 兩台真實裝置指到同一個雲端資料夾，A 寫的字在 B 上打得開 | 檔案層級的邏輯已測；雲端傳輸是 OS 與服務的事 |
+| A-12 | 同步資料夾權限存活 | 重啟 App 後仍有存取權，不需重選資料夾 | Apple 用 security-scoped bookmark、Android 用 persistable URI permission |
 | A-10 | 分組門檻 | 正常書寫節奏下，一個詞不會被切成兩組 | 停頓門檻 700ms 是起點值 |
 
 **測試方式**：`cd android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :app:installDebug`，

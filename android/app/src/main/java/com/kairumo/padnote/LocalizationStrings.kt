@@ -3274,6 +3274,46 @@ object LocalizationStrings {
             "ko" to "실물",
             "th" to "ภาพทึบ"
         ),
+        "sync_choose_folder" to mapOf(
+            "zh-Hant" to "選擇同步資料夾",
+            "en" to "Choose Sync Folder",
+            "zh-Hans" to "选择同步文件夹",
+            "ja" to "同期フォルダを選択",
+            "ko" to "동기화 폴더 선택",
+            "th" to "เลือกโฟลเดอร์ซิงก์"
+        ),
+        "sync_explainer" to mapOf(
+            "zh-Hant" to "同步由你自己的雲端硬碟負責（iCloud Drive、Google Drive、Dropbox…）。沒有帳號、沒有我們的伺服器。兩台裝置指到同一個資料夾就會互相同步。",
+            "en" to "Syncing is handled by your own cloud drive (iCloud Drive, Google Drive, Dropbox…). No account, no server of ours. Point two devices at the same folder and they stay in sync.",
+            "zh-Hans" to "同步由你自己的云端硬盘负责（iCloud Drive、Google Drive、Dropbox…）。没有账号、没有我们的服务器。两台设备指到同一个文件夹就会互相同步。",
+            "ja" to "同期はお使いのクラウドドライブ（iCloud Drive、Google Drive、Dropbox など）が行います。アカウントも当方のサーバーもありません。2 台の端末を同じフォルダに向けるだけで同期されます。",
+            "ko" to "동기화는 사용자의 클라우드 드라이브(iCloud Drive, Google Drive, Dropbox 등)가 담당합니다. 계정도, 저희 서버도 없습니다. 두 기기를 같은 폴더로 지정하면 서로 동기화됩니다.",
+            "th" to "การซิงก์ทำโดยคลาวด์ไดรฟ์ของคุณเอง (iCloud Drive, Google Drive, Dropbox ฯลฯ) ไม่มีบัญชีและไม่มีเซิร์ฟเวอร์ของเรา ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์เดียวกันก็ซิงก์กันได้"
+        ),
+        "sync_needs_attention" to mapOf(
+            "zh-Hant" to "%@ 在兩台裝置上都被改過，已保留雲端那份，請自行確認",
+            "en" to "%@ was changed on both devices; the cloud copy was kept — please check",
+            "zh-Hans" to "%@ 在两台设备上都被改过，已保留云端那份，请自行确认",
+            "ja" to "%@ は両方の端末で変更されています。クラウド側を残しました。ご確認ください",
+            "ko" to "%@ 이(가) 양쪽 기기에서 모두 변경되었습니다. 클라우드 사본을 유지했습니다. 확인해 주세요",
+            "th" to "%@ ถูกแก้ไขบนทั้งสองอุปกรณ์ ระบบเก็บสำเนาบนคลาวด์ไว้ โปรดตรวจสอบ"
+        ),
+        "sync_not_configured" to mapOf(
+            "zh-Hant" to "尚未選擇資料夾",
+            "en" to "No folder chosen yet",
+            "zh-Hans" to "尚未选择文件夹",
+            "ja" to "フォルダ未選択",
+            "ko" to "폴더를 아직 선택하지 않음",
+            "th" to "ยังไม่ได้เลือกโฟลเดอร์"
+        ),
+        "sync_now" to mapOf(
+            "zh-Hant" to "立即同步",
+            "en" to "Sync Now",
+            "zh-Hans" to "立即同步",
+            "ja" to "今すぐ同期",
+            "ko" to "지금 동기화",
+            "th" to "ซิงก์เดี๋ยวนี้"
+        ),
         "sync_recording_in_progress" to mapOf(
             "zh-Hant" to "同步錄音中",
             "en" to "Sync Recording",
@@ -3281,6 +3321,30 @@ object LocalizationStrings {
             "ja" to "同期録音中",
             "ko" to "동기화 녹음 중",
             "th" to "กำลังบันทึกเสียงพร้อมกัน"
+        ),
+        "sync_result" to mapOf(
+            "zh-Hant" to "上傳 %1@、下載 %2@",
+            "en" to "%1@ uploaded, %2@ downloaded",
+            "zh-Hans" to "上传 %1@、下载 %2@",
+            "ja" to "%1@ 件アップロード、%2@ 件ダウンロード",
+            "ko" to "%1@개 업로드, %2@개 다운로드",
+            "th" to "อัปโหลด %1@ ดาวน์โหลด %2@"
+        ),
+        "sync_section" to mapOf(
+            "zh-Hant" to "雲端同步",
+            "en" to "Cloud Sync",
+            "zh-Hans" to "云端同步",
+            "ja" to "クラウド同期",
+            "ko" to "클라우드 동기화",
+            "th" to "ซิงก์คลาวด์"
+        ),
+        "sync_up_to_date" to mapOf(
+            "zh-Hant" to "已是最新",
+            "en" to "Already up to date",
+            "zh-Hans" to "已是最新",
+            "ja" to "最新の状態です",
+            "ko" to "이미 최신 상태",
+            "th" to "เป็นเวอร์ชันล่าสุดแล้ว"
         ),
         "system_diagnostics" to mapOf(
             "zh-Hant" to "系統診斷與版本資訊",
