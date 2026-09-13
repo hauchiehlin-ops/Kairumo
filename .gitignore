@@ -29,3 +29,12 @@ DerivedData/
 /models/exported*/**/*.onnx
 /models/exported*/**/*.mvn
 /models/exported*/**/tokens.json
+
+# Android 衍生檔（由 scripts/build-android-libs.sh 產生，不進版控）
+/android/app/src/main/jniLibs/
+/android/prebuilt/
+/android/app/src/main/java/uniffi/
+/android/build/
+/android/app/build/
+/android/.gradle/
+/android/local.properties

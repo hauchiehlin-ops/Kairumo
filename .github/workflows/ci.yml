@@ -27,6 +27,37 @@ jobs:
       - run: cargo clippy --workspace --all-targets
       - run: cargo test --workspace
 
+  # WP1/WP2：Android 產出必須跟著每次提交一起驗證，否則 Apple 端的改動會
+  # 悄悄弄壞跨平台建置（例如把新的 ONNX 相依加進核心）。
+  android:
+    name: Android build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - name: 安裝 NDK 與 cargo-ndk
+        run: |
+          sdkmanager --install "ndk;28.2.13676358"
+          echo "ANDROID_NDK_HOME=$ANDROID_SDK_ROOT/ndk/28.2.13676358" >> "$GITHUB_ENV"
+          cargo install cargo-ndk --locked
+      - name: 核心能為 Android 編譯（第一版不含語音，關掉 asr/pdf）
+        run: ./scripts/build-android-libs.sh
+      - name: 組 APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kairumo-debug-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
   # 決策 D6：授權稽核。禁止 AGPL 進入相依樹。
   licenses:
     name: License audit

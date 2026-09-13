@@ -964,6 +964,9 @@ impl NotebookSession {
     /// 建立 VAD。模型缺失或載入失敗時**降級而非失敗** ——
     /// 錄音本身不該因為 VAD 用不了就停擺（S-25 的音檔優先原則）。
     fn build_vad(&self) -> Box<dyn padnote_asr::VoiceActivityDetector> {
+        // `asr` feature 關閉時（Android 第一版）沒有 Silero，
+        // 直接用內建的能量式 VAD —— 錄音本身照常運作，只是分段較粗。
+        #[cfg(feature = "asr")]
         if let Some(path) = &self.vad_model
             && let Ok(vad) = padnote_vad_silero::SileroVad::load(path)
         {
@@ -1681,16 +1684,21 @@ impl NotebookSession {
             page_range: None,
             compress_streams: false,
         };
-        if let Ok(pdf_bytes) = padnote_export::page_to_pdf(
+        if let Ok(_pdf_bytes) = padnote_export::page_to_pdf(
             &self.notebook,
             page_id,
             &strokes,
             Some(&blobs),
             &pdf_opt,
         ) {
-            use padnote_pdf::PdfDocument;
-            if let Ok(doc) = padnote_pdf_pdfium::PdfiumDocument::from_bytes(pdf_bytes, None) {
-                if let Ok(rgba) = doc.render(0, scale) {
+            // `pdf` feature 關閉時（Android 第一版沒有 libpdfium）直接跳過，
+            // 由下面的純 Rust 光柵化 fallback 接手。
+            #[cfg(feature = "pdf")]
+            {
+                use padnote_pdf::PdfDocument;
+                if let Ok(doc) = padnote_pdf_pdfium::PdfiumDocument::from_bytes(_pdf_bytes, None)
+                    && let Ok(rgba) = doc.render(0, scale)
+                {
                     let (orig_w, orig_h) = page.size;
                     let target_w = ((orig_w * scale).round() as u32).max(1);
                     let target_h = ((orig_h * scale).round() as u32).max(1);

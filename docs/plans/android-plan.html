@@ -1,0 +1,682 @@
+<title>Kairumo Android 計畫</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper: #F5F7F9;
+    --surface: #FFFFFF;
+    --surface-sunk: #EDF1F5;
+    --ink: #141A22;
+    --ink-soft: #4B5666;
+    --ink-faint: #7C8798;
+    --rule: #DBE1E9;
+    --accent: #1F4FD8;
+    --accent-soft: #E9EEFC;
+    --blocked: #B3400C;
+    --blocked-soft: #FCEDE5;
+    --ready: #0E7C53;
+    --ready-soft: #E4F3EC;
+    --decide: #6532C4;
+    --decide-soft: #EFE9FC;
+    --serif: "Newsreader", "Songti TC", "Songti SC", Georgia, serif;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "PingFang SC", "Hiragino Sans", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0E1217;
+      --surface: #161B22;
+      --surface-sunk: #12171E;
+      --ink: #E6EBF2;
+      --ink-soft: #98A4B4;
+      --ink-faint: #6B7789;
+      --rule: #242C37;
+      --accent: #7FA9FF;
+      --accent-soft: #16233A;
+      --blocked: #FF9466;
+      --blocked-soft: #2C1810;
+      --ready: #4CC38A;
+      --ready-soft: #12261E;
+      --decide: #B79CF5;
+      --decide-soft: #1F1830;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0E1217;
+    --surface: #161B22;
+    --surface-sunk: #12171E;
+    --ink: #E6EBF2;
+    --ink-soft: #98A4B4;
+    --ink-faint: #6B7789;
+    --rule: #242C37;
+    --accent: #7FA9FF;
+    --accent-soft: #16233A;
+    --blocked: #FF9466;
+    --blocked-soft: #2C1810;
+    --ready: #4CC38A;
+    --ready-soft: #12261E;
+    --decide: #B79CF5;
+    --decide-soft: #1F1830;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .shell { max-width: 940px; margin: 0 auto; padding: 0 28px; }
+
+  header.masthead {
+    background: var(--surface);
+    border-bottom: 1px solid var(--rule);
+    padding: 44px 0 30px;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: clamp(30px, 5vw, 44px);
+    line-height: 1.12;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  .standfirst { color: var(--ink-soft); margin: 0 0 18px; max-width: 62ch; }
+  .meta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-faint);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 18px;
+    margin: 0;
+  }
+
+  main { padding: 40px 0 100px; }
+  section { margin: 0 0 46px; scroll-margin-top: 20px; }
+  h2 {
+    font-family: var(--serif);
+    font-weight: 600;
+    font-size: 26px;
+    line-height: 1.25;
+    margin: 0 0 6px;
+    text-wrap: balance;
+  }
+  h3 {
+    font-size: 15px;
+    font-weight: 700;
+    margin: 0 0 6px;
+  }
+  .sec-note { color: var(--ink-soft); margin: 0 0 20px; max-width: 66ch; }
+  p { margin: 0 0 14px; }
+  strong { font-weight: 700; }
+
+  .kicker {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin: 0 0 8px;
+  }
+
+  /* 決策分岔 */
+  .routes { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 780px) { .routes { grid-template-columns: repeat(3, 1fr); } }
+  .route {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .route.pick { border-color: var(--decide); box-shadow: 0 0 0 3px var(--decide-soft); }
+  .route .tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .route.pick .tag { color: var(--decide); }
+  .route h3 { margin: 0; font-size: 17px; }
+  .route p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+  .route dl { margin: 4px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; font-size: 13px; }
+  .route dt { color: var(--ink-faint); font-family: var(--mono); font-size: 11px; }
+  .route dd { margin: 0; }
+
+  /* 現況表 */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 10px; background: var(--surface); }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; }
+  th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th {
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    font-weight: 500;
+    background: var(--surface-sunk);
+  }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.num { font-variant-numeric: tabular-nums; font-family: var(--mono); font-size: 13px; }
+
+  .pill {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .pill.blocked { background: var(--blocked-soft); color: var(--blocked); }
+  .pill.ready { background: var(--ready-soft); color: var(--ready); }
+  .pill.gap { background: var(--accent-soft); color: var(--accent); }
+
+  pre {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    line-height: 1.6;
+    background: var(--surface-sunk);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 14px 16px;
+    overflow-x: auto;
+    margin: 0 0 16px;
+    color: var(--ink-soft);
+  }
+  code {
+    font-family: var(--mono);
+    font-size: 0.88em;
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 1px 6px;
+    border-radius: 4px;
+  }
+  pre code { background: none; color: inherit; padding: 0; }
+
+  /* 工作包 */
+  .wps { display: flex; flex-direction: column; gap: 14px; }
+  .wp {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 18px 20px;
+    display: grid;
+    gap: 12px;
+    grid-template-columns: 1fr;
+  }
+  @media (min-width: 820px) {
+    .wp { grid-template-columns: 148px minmax(0, 1fr); align-items: start; }
+  }
+  .wp-id {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .wp-id .code {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--accent);
+  }
+  .wp-id .size {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    font-variant-numeric: tabular-nums;
+  }
+  .wp-body h3 { margin-bottom: 4px; font-size: 17px; }
+  .wp-body p { margin: 0 0 10px; color: var(--ink-soft); font-size: 14.5px; }
+  .wp-body ul { margin: 0 0 10px; padding-left: 18px; font-size: 14px; }
+  .wp-body li { margin: 4px 0; }
+  .wp-body li::marker { color: var(--accent); }
+  .accept {
+    font-size: 13.5px;
+    background: var(--ready-soft);
+    border-left: 3px solid var(--ready);
+    padding: 9px 12px;
+    border-radius: 0 7px 7px 0;
+  }
+  .accept b { color: var(--ready); font-weight: 700; }
+  .deps { font-family: var(--mono); font-size: 11px; color: var(--ink-faint); margin-top: 8px; }
+
+  /* 里程碑 */
+  .miles { display: grid; gap: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 720px) { .miles { grid-template-columns: 1fr 1fr; } }
+  .mile {
+    border: 1px solid var(--rule);
+    border-radius: 12px;
+    padding: 18px;
+    background: var(--surface);
+  }
+  .mile .kicker { color: var(--accent); }
+  .mile ol { margin: 8px 0 0; padding-left: 18px; font-size: 14px; }
+  .mile li { margin: 5px 0; }
+
+  .risks { display: flex; flex-direction: column; gap: 10px; }
+  .risk {
+    display: grid;
+    gap: 4px 14px;
+    grid-template-columns: 1fr;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 10px;
+  }
+  @media (min-width: 720px) { .risk { grid-template-columns: 200px minmax(0, 1fr); } }
+  .risk:last-child { border-bottom: 0; }
+  .risk h3 { margin: 0; font-size: 14.5px; }
+  .risk p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+
+  .asks { counter-reset: ask; display: flex; flex-direction: column; gap: 14px; }
+  .ask {
+    counter-increment: ask;
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 12px;
+    background: var(--decide-soft);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .ask::before {
+    content: counter(ask);
+    font-family: var(--mono);
+    font-size: 13px;
+    color: var(--decide);
+    font-weight: 500;
+  }
+  .ask h3 { margin: 0 0 2px; font-size: 15px; }
+  .ask p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+  .ask .rec { color: var(--decide); font-weight: 600; }
+
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 18px;
+    font-size: 13px;
+    color: var(--ink-faint);
+    font-family: var(--mono);
+  }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<header class="masthead">
+  <div class="shell">
+    <p class="eyebrow">Kairumo · 工程計畫</p>
+    <h1>Android 計畫</h1>
+    <p class="standfirst">
+      目標：做出可用的 Android 版，而且<strong>兩邊的筆記檔案要能互相打開</strong>。
+      這份計畫把「今天卡在哪、要做什麼、怎麼算做完」攤開，最後列出三件需要你拍板的事。
+    </p>
+    <p class="meta">
+      <span>基準版本 v2.3.0（bundle 11）</span>
+      <span>2026-09-13</span>
+      <span>現況為實際查證，非推測</span>
+    </p>
+  </div>
+</header>
+
+<main class="shell">
+
+  <section id="decision">
+    <p class="kicker">最先要決定的事</p>
+    <h2>三條路線</h2>
+    <p class="sec-note">
+      這個決定會決定後面所有工作的形狀。原因很單純：Apple App 目前把筆記存成
+      <code>notebooks_v1.json</code> 加上 <code>PKDrawing</code> 的專有二進位，
+      而 <strong>PKDrawing 只有 Apple 平台解析得了</strong>。
+    </p>
+
+    <div class="routes">
+      <div class="route pick">
+        <span class="tag">建議</span>
+        <h3>路線 1｜先互通，後統一</h3>
+        <p>Android 從第一天就讀寫核心的 <code>.padnote</code> 格式；Apple 端補一座「匯入／匯出」橋接，把 PKDrawing 轉成核心筆畫。Apple 的儲存層之後再遷移。</p>
+        <dl>
+          <dt>檔案互通</dt><dd>做得到（經匯入匯出）</dd>
+          <dt>風險</dt><dd>分散，可分段驗收</dd>
+          <dt>規模</dt><dd>中</dd>
+        </dl>
+      </div>
+
+      <div class="route">
+        <span class="tag">最徹底</span>
+        <h3>路線 2｜一次到位</h3>
+        <p>Apple 的儲存層直接改用核心，兩平台同格式。同步與協同天生互通，不需要轉換器。</p>
+        <dl>
+          <dt>檔案互通</dt><dd>完全互通</dd>
+          <dt>風險</dt><dd>集中在一次大改，要寫資料遷移</dd>
+          <dt>規模</dt><dd>大</dd>
+        </dl>
+      </div>
+
+      <div class="route">
+        <span class="tag">最快出 APK</span>
+        <h3>路線 3｜Android 單機</h3>
+        <p>不處理互通，Android 自成一套。最快看到可安裝的檔案，但兩邊筆記打不開彼此。</p>
+        <dl>
+          <dt>檔案互通</dt><dd>沒有</dd>
+          <dt>風險</dt><dd>低，但之後仍要回頭處理</dd>
+          <dt>規模</dt><dd>小</dd>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <section id="status">
+    <p class="kicker">查證過的現況</p>
+    <h2>今天站在哪裡</h2>
+    <p class="sec-note">以下每一列都是實際跑過指令或讀過原始碼得到的，不是估計。</p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>項目</th><th>現況</th><th>狀態</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Android 專案</td>
+            <td><code>android/</code> 只有 3 個檔案：兩個 Kotlin 範例、一份衍生的 UniFFI 綁定。沒有 Gradle 專案。</td>
+            <td><span class="pill blocked">缺</span></td>
+          </tr>
+          <tr>
+            <td>核心能否為 Android 編譯</td>
+            <td><code>cargo check --target aarch64-linux-android</code> 失敗於 <code>ort-sys</code>（ONNX Runtime 沒有 Android 預編譯檔）。</td>
+            <td><span class="pill blocked">阻擋</span></td>
+          </tr>
+          <tr>
+            <td>ASR／VAD／標點</td>
+            <td><code>ort</code> 在 workspace 是必要相依、沒有做成 feature，所以「第一版先不做語音」目前也辦不到。</td>
+            <td><span class="pill blocked">阻擋</span></td>
+          </tr>
+          <tr>
+            <td>PDF</td>
+            <td><code>pdfium-render</code> 走 <code>bind_to_system_library()</code>，需要每個 ABI 的 <code>libpdfium.so</code> 隨 APK 打包。</td>
+            <td><span class="pill gap">要補</span></td>
+          </tr>
+          <tr>
+            <td>核心 FFI</td>
+            <td>71 個公開函式：文件、筆畫、文字、圖片、錄音、轉錄、匯出、同步。Kotlin 綁定產生器已就緒。</td>
+            <td><span class="pill ready">可用</span></td>
+          </tr>
+          <tr>
+            <td>Apple App 用了多少核心</td>
+            <td>只有 <code>coreVersion()</code> 一個函式。儲存、筆跡、匯出、加密、協同全部是 Swift 另寫的。</td>
+            <td><span class="pill blocked">關鍵</span></td>
+          </tr>
+          <tr>
+            <td>介面字串</td>
+            <td>Swift <code>LocalizationManager</code> 有 430 條；Rust <code>padnote-i18n</code> 只有 45 條。</td>
+            <td><span class="pill gap">會變三份</span></td>
+          </tr>
+          <tr>
+            <td>協同中繼</td>
+            <td>Rust 有 <code>padnote-relay</code>，但沒有透過 FFI 曝露；Swift 另外用 Network.framework 重寫了一份。</td>
+            <td><span class="pill gap">重複</span></td>
+          </tr>
+          <tr>
+            <td>端對端加密</td>
+            <td>Swift 用 CryptoKit 自行實作 AES-256-GCM，沒有走 <code>padnote-crypto</code>。兩邊要互通必須逐位元組相同。</td>
+            <td><span class="pill gap">重複</span></td>
+          </tr>
+          <tr>
+            <td>CI</td>
+            <td><code>.github/workflows/ci.yml</code> 沒有任何 Android job。</td>
+            <td><span class="pill blocked">缺</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="kicker" style="margin-top:22px">實際錯誤訊息</p>
+    <pre><code>$ cargo check -p padnote-core --target aarch64-linux-android
+
+error: failed to run custom build command for `ort-sys v2.0.0-rc.10`
+  downloaded binaries not available for target aarch64-linux-android
+  you may have to compile ONNX Runtime from source</code></pre>
+  </section>
+
+  <section id="packages">
+    <p class="kicker">工作包</p>
+    <h2>要做的事，依相依順序</h2>
+    <p class="sec-note">
+      規模是「一個人全職」的粗估天數，用來排序而不是承諾。
+      驗收標準寫成可以當場檢查的條件 —— 沒有「大致可用」這種說法。
+    </p>
+
+    <div class="wps">
+
+      <article class="wp">
+        <div class="wp-id"><span class="code">WP1</span><span class="size">3–5 日</span></div>
+        <div class="wp-body">
+          <h3>讓核心在 Android 編得出來</h3>
+          <p>這是所有事情的前提，而且與路線選擇無關，可以馬上動工。</p>
+          <ul>
+            <li><code>ort</code> 改為 optional feature，並改用 <code>load-dynamic</code>，執行期載入 ONNX Runtime 的 Android AAR 內附 <code>.so</code>。</li>
+            <li><code>padnote-core</code> 切出 <code>asr</code> / <code>pdf</code> 兩個 feature，讓 Android 第一版能先關掉語音。</li>
+            <li>取得三個 ABI 的 <code>libpdfium.so</code>（arm64-v8a、armeabi-v7a、x86_64）。</li>
+            <li>導入 <code>cargo-ndk</code>，產出 <code>jniLibs/&lt;abi&gt;/libpadnote_core.so</code>。</li>
+          </ul>
+          <p class="accept"><b>驗收：</b><code>cargo ndk -t arm64-v8a -t x86_64 build -p padnote-core --release</code> 成功產出 <code>.so</code>；關掉 <code>asr</code> feature 時 763 個既有測試仍全綠。</p>
+          <p class="deps">相依：無</p>
+        </div>
+      </article>
+
+      <article class="wp">
+        <div class="wp-id"><span class="code">WP2</span><span class="size">2–3 日</span></div>
+        <div class="wp-body">
+          <h3>Gradle 專案骨架與綁定整合</h3>
+          <p>先讓一個空殼 App 能啟動並確實呼叫到 Rust。</p>
+          <ul>
+            <li>建立 <code>android/app</code>（Compose），設定 minSdk、ABI splits、jniLibs 路徑。</li>
+            <li>把 UniFFI Kotlin 綁定的產生接進 Gradle task，跟 <code>generate-bindings.sh</code> 同一份來源。</li>
+            <li>CI 加 Android job：組 debug APK＋跑 Kotlin 單元測試。</li>
+          </ul>
+          <p class="accept"><b>驗收：</b>模擬器安裝後啟動，畫面顯示 <code>coreVersion()</code> 回傳的版本字串；CI 產出可下載的 debug APK。</p>
+          <p class="deps">相依：WP1</p>
+        </div>
+      </article>
+
+      <article class="wp">
+        <div class="wp-id"><span class="code">WP3</span><span class="size">4–6 日</span></div>
+        <div class="wp-body">
+          <h3>把重複邏輯下沉到核心</h3>
+          <p><strong>現在做最便宜</strong> —— 目前每一項都只有一份 Swift 實作，等 Android 也寫了一份就變成兩倍工。</p>
+          <ul>
+            <li>端對端加密改走 <code>padnote-crypto</code>，Swift 端換掉 CryptoKit 那份。</li>
+            <li><code>padnote-relay</code> 透過 FFI 曝露，兩平台共用同一個中繼與同一份 JSON 協定。</li>
+            <li>430 條介面字串移進 <code>padnote-i18n</code>，Swift 與 Kotlin 都從核心取字串。</li>
+          </ul>
+          <p class="accept"><b>驗收：</b>iOS 與 Android 兩台裝置加入同一個協同房間，互相看得到筆畫與圖釘；關閉網路再恢復，離線佇列補送成功。</p>
+          <p class="deps">相依：WP2</p>
+        </div>
+      </article>
+
+      <article class="wp">
+        <div class="wp-id"><span class="code">WP4</span><span class="size">5–8 日</span></div>
+        <div class="wp-body">
+          <h3>檔案互通</h3>
+          <p>依路線而定。<strong>轉換器一定要寫在 Apple 端</strong> —— 只有 PencilKit 解析得了 PKDrawing，Android 沒有任何途徑。</p>
+          <ul>
+            <li>路線 1：Apple 端把 <code>PKDrawing.strokes</code> 的控制點餵進核心的 <code>add_stroke(page_id, tool, color_rgba, base_width, points)</code>，匯出 <code>.padnote</code>；Android 直接讀寫核心格式。</li>
+            <li>路線 2：Apple 儲存層整個改用核心，另外寫一次性資料遷移（含備份與回滾）。</li>
+            <li>兩條路都要有逐筆畫的往返比對測試。</li>
+          </ul>
+          <p class="accept"><b>驗收：</b>iOS 建立的多頁筆記（含手寫、文字方塊、圖片、圖釘）在 Android 開啟後，筆畫數、座標、顏色、頁面高度與原稿一致。</p>
+          <p class="deps">相依：WP0 決策、WP2</p>
+        </div>
+      </article>
+
+      <article class="wp">
+        <div class="wp-id"><span class="code">WP5</span><span class="size">8–12 日</span></div>
+        <div class="wp-body">
+          <h3>Android 筆跡引擎</h3>
+          <p>最大的一塊。PencilKit 在 Apple 是免費奉送，Android 這邊要自己寫，而且<strong>掌拒是手寫 App 的生死線</strong>。</p>
+          <ul>
+            <li>Compose Canvas 繪製；用 <code>MotionEvent.getHistorical*</code> 取回 120Hz 的所有取樣點（只讀 <code>getX()</code> 會掉點）。</li>
+            <li>壓力、傾斜、方位對應到核心的 <code>StrokePoint</code>。</li>
+            <li><code>androidx.graphics.lowlatency</code> 前緩衝渲染降延遲（需 API 29+）。</li>
+            <li>掌拒：依 <code>getToolType()</code> 與接觸面積過濾，S Pen 與一般觸控分開處理。</li>
+            <li>預測筆跡用 <code>MotionEventPredictor</code>，且<strong>永不寫入持久化資料</strong>（既有架構不變式）。</li>
+          </ul>
+          <p class="accept"><b>驗收：</b>手掌貼在螢幕上書寫不產生任何筆畫；筆尖延遲量測 ≤ 一般觸控繪圖 App 的水準；快速書寫不掉點。</p>
+          <p class="deps">相依：WP2</p>
+        </div>
+      </article>
+
+      <article class="wp">
+        <div class="wp-id"><span class="code">WP6</span><span class="size">5–7 日</span></div>
+        <div class="wp-body">
+          <h3>Android 平台功能</h3>
+          <ul>
+            <li>錄音：<code>AudioRecord</code> 16kHz mono 餵進核心的 <code>feed_audio</code>。</li>
+            <li>匯出與列印：核心已有 <code>exportPdf</code> / <code>print_data</code>，接上 <code>PrintManager</code> 與 <code>ACTION_SEND</code>。</li>
+            <li>說明文件：既有的 HTML 手冊與隱私權政策直接放進 assets，用 WebView 呈現。</li>
+            <li>權限：麥克風、相片、同網段連線（Android 13+ 的 <code>NEARBY_WIFI_DEVICES</code>）。</li>
+          </ul>
+          <p class="accept"><b>驗收：</b>錄音→轉錄→匯出 PDF 一條龍跑通；匯出的 PDF 內容與畫布一致（Apple 端剛修好的同一個坑）。</p>
+          <p class="deps">相依：WP2（語音部分另需 WP1 的 asr feature）</p>
+        </div>
+      </article>
+
+      <article class="wp">
+        <div class="wp-id"><span class="code">WP7</span><span class="size">2–3 日</span></div>
+        <div class="wp-body">
+          <h3>手寫辨識（ML Kit Digital Ink）</h3>
+          <p>核心的 <code>HwrBackend</code> 已經預留 <code>MlKit</code> 分支，架構決策 D2 也已經接受這個例外。</p>
+          <ul>
+            <li>接 ML Kit Digital Ink，模型按需下載（zh-Hant／en）。</li>
+            <li>沒有 Google Play 服務的裝置要有明確的降級說明，不能靜默失敗。</li>
+          </ul>
+          <p class="accept"><b>驗收：</b>手寫中英文各 20 句，辨識結果進入全文搜尋索引且搜得到。</p>
+          <p class="deps">相依：WP5</p>
+        </div>
+      </article>
+
+      <article class="wp">
+        <div class="wp-id"><span class="code">WP8</span><span class="size">2–3 日</span></div>
+        <div class="wp-body">
+          <h3>出可安裝的檔案</h3>
+          <ul>
+            <li>簽章金鑰與 Play App Signing、版本號沿用現有的 <code>bump-version.sh</code>（再加 Android 的 versionCode / versionName）。</li>
+            <li>產出 AAB 上內部測試軌；同時保留可直接安裝的 APK。</li>
+            <li>Play Console 的隱私權政策網址用現成那份。</li>
+          </ul>
+          <p class="accept"><b>驗收：</b>內部測試軌可安裝執行；<code>bump-version.sh</code> 一次更新四處版本（Cargo、Apple、Android、文件）且無漂移。</p>
+          <p class="deps">相依：WP2；上架前需 WP5、WP6</p>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section id="milestones">
+    <p class="kicker">兩個里程碑</p>
+    <h2>怎麼排</h2>
+    <div class="miles">
+      <div class="mile">
+        <p class="kicker">M-A · 看得到東西</p>
+        <h3>能編、能跑、能開檔</h3>
+        <p style="font-size:14px;color:var(--ink-soft);margin:6px 0 0">約 10–16 日</p>
+        <ol>
+          <li>WP1 核心可編（可與決策並行）</li>
+          <li>WP2 Gradle 骨架與 CI</li>
+          <li>WP4 檔案互通（依你選的路線）</li>
+        </ol>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:10px 0 0">
+          做完這段，你手上會有一個可安裝的 APK，能打開 iOS 建立的筆記 —— 還不能寫字，但「檔案可用」這件事已經成立。
+        </p>
+      </div>
+      <div class="mile">
+        <p class="kicker">M-B · 真的能用</p>
+        <h3>可以當筆記本用、可以上架</h3>
+        <p style="font-size:14px;color:var(--ink-soft);margin:6px 0 0">再約 20–30 日</p>
+        <ol>
+          <li>WP5 筆跡引擎（最大一塊）</li>
+          <li>WP6 平台功能</li>
+          <li>WP3 共用邏輯下沉（可與 WP5 並行）</li>
+          <li>WP7 手寫辨識、WP8 上架</li>
+        </ol>
+        <p style="font-size:13.5px;color:var(--ink-soft);margin:10px 0 0">
+          WP3 排在這裡是因為它不擋 M-A，但一定要在 Android 的協同與字串寫死之前完成，否則就會出現第三份副本。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section id="risks">
+    <p class="kicker">已知地雷</p>
+    <h2>會咬人的地方</h2>
+    <div class="risks">
+      <div class="risk">
+        <h3>ONNX Runtime 的 Android 版</h3>
+        <p><code>load-dynamic</code> 加官方 AAR 是最省事的路，但 ABI 與版本必須對齊。萬一走不通，第一版關掉語音功能 —— WP1 切出的 feature 就是為此準備的。</p>
+      </div>
+      <div class="risk">
+        <h3>掌拒沒有系統級支援</h3>
+        <p>Apple 內建，Android 要自己判斷。這是整個計畫裡最容易低估的一項，也是使用者最快感覺到「這 App 不能用」的地方。</p>
+      </div>
+      <div class="risk">
+        <h3>前緩衝渲染的裝置差異</h3>
+        <p><code>androidx.graphics.lowlatency</code> 需要 API 29+，且各家 OEM 行為不一致。要準備一條「退回一般渲染」的路徑。</p>
+      </div>
+      <div class="risk">
+        <h3>PKDrawing 的單向性</h3>
+        <p>只有 Apple 平台解析得了，所以轉換器必須寫在 Apple 端。這條相依關係不能繞過，排程時要先排。</p>
+      </div>
+      <div class="risk">
+        <h3>協同互通的位元組級一致</h3>
+        <p>AES-256-GCM 的封裝方式與 JSON 協定欄位必須完全相同。與其兩邊各寫一次再對，不如 WP3 直接走同一份核心實作。</p>
+      </div>
+      <div class="risk">
+        <h3>ML Kit 需要 Google Play 服務</h3>
+        <p>部分裝置沒有。要嘛接受降級（手寫不轉文字），要嘛另找裝置端方案 —— 這會影響目標市場，建議一併決定。</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="asks">
+    <p class="kicker">需要你拍板</p>
+    <h2>三件事，決定了我就開工</h2>
+    <div class="asks">
+      <div class="ask">
+        <div>
+          <h3>走哪條路線？</h3>
+          <p>路線 1（先互通後統一）、路線 2（一次到位）、路線 3（Android 單機）。
+          <span class="rec">建議路線 1</span> —— 它最快讓「檔案可用」成立，而且把大改拆成可以分段驗收的段落。</p>
+        </div>
+      </div>
+      <div class="ask">
+        <div>
+          <h3>Android 最低版本？</h3>
+          <p>前緩衝渲染需要 API 29（Android 10）。
+          <span class="rec">建議 minSdk 29</span>，涵蓋率足夠，也免去為舊機另寫一條渲染路徑。</p>
+        </div>
+      </div>
+      <div class="ask">
+        <div>
+          <h3>第一版要不要含語音轉錄？</h3>
+          <p>若不含，ONNX Runtime 的 Android 風險直接歸零，M-A 會更快到。
+          <span class="rec">建議第一版不含</span>，等 Android 外殼站穩再補。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    Kairumo v2.3.0 · 計畫撰於 2026-09-13 · 現況數據皆為當日實測
+  </footer>
+</main>

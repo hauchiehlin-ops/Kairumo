@@ -5,6 +5,55 @@
 
 ---
 
+## 2026-09-13 (6) · Android WP1–WP2：核心可編、APK 跑起來了
+
+決策（專案擁有者拍板）：**路線 2（一次到位，Apple 儲存層改用核心格式）**、
+**minSdk 29**、**第一版不含語音轉錄**。硬前提：不得影響現有 iOS / iPadOS / macOS。
+
+### WP1 · 讓核心在 Android 編得出來
+
+三個真實阻擋，逐一解掉：
+
+**1. ONNX Runtime 沒有 Android 預編譯檔。** `ort-sys` 的 build.rs 直接 panic。
+`padnote-core` 切出 `asr`（Silero VAD + 中文標點）與 `pdf`（PDFium）兩個 feature，
+**預設全開 → Apple 端相依與行為完全不變**；Android 用 `--no-default-features` 建置。
+VAD 在 feature 關閉時退回內建的能量式 VAD，錄音本身照常。
+
+**2. libopus 缺席。** 這個最陰險：第一顆 APK 裝起來、跑起來，然後畫面顯示
+`dlopen failed: cannot locate symbol "opus_encoder_destroy"` —— `.so` 帶著未定義
+符號出貨了。Android 沒有系統 libopus，而 `audiopus-sys` 交叉編譯時不會自己建。
+新增 `scripts/build-android-opus.sh`：用 NDK 的 CMake 工具鏈把 libopus 編成靜態庫
+（下載後比對 xiph 官方 SHA256SUMS，符合 D4 的下載驗證規則），再由
+`OPUS_LIB_DIR` 指給 audiopus-sys 靜態連結。
+
+**3. audiopus-sys 沒有宣告 `rerun-if-env-changed`。** 換 ABI 時 cargo 會沿用上一個
+ABI 的建置結果，於是 x86_64 的 .so 又帶著未定義符號。建置腳本改為逐 ABI
+先 `cargo clean -p audiopus_sys` 再編。
+
+驗收：`llvm-readelf --dyn-syms` 對兩個 ABI 的 `libpadnote_core.so` 查未定義 opus
+符號，皆為 **0**；`NEEDED` 只剩 libc / libm / libdl。
+
+### WP2 · Gradle 骨架與綁定整合
+
+`android/`（Compose、minSdk 29、targetSdk 35、AGP 8.7.3 / Gradle 8.11.1），
+UniFFI Kotlin 綁定經 JNA 呼叫 `.so`。CI 新增 android job：建 .so → 組 APK → 上傳產物。
+
+驗收：模擬器（Pixel / Android 15）安裝執行，畫面顯示 **由 Rust 回傳的**
+核心版本 2.3.0 與 `android/aarch64` —— Kotlin ⇄ UniFFI ⇄ Rust 這條路確認打通。
+
+### 硬前提的回歸驗證
+
+| 檢查 | 結果 |
+|---|---|
+| `cargo test --workspace` | 778 通過 · 0 失敗 |
+| iOS 模擬器建置 | BUILD SUCCEEDED |
+| Mac Catalyst 建置 | BUILD SUCCEEDED |
+
+（clippy 有 4 個既有警告，位於 `ffi.rs` 的 insert_shape/insert_connection 與
+`app.rs` 的表格迴圈，與本次改動無關；STATE.md 說的「零警告」已經過時。）
+
+---
+
 ## 2026-09-13 (5) · 匯出是空白的，以及文字方塊的互動重做
 
 ### 匯出 PDF／圖片全是空白

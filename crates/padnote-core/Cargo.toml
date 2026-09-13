@@ -16,6 +16,18 @@ workspace = true
 # cdylib 供 Swift/Kotlin 動態連結；staticlib 供 iOS 靜態連結。
 crate-type = ["lib", "cdylib", "staticlib"]
 
+[features]
+# 預設全開：Apple 版（iOS / iPadOS / macOS）的行為與相依完全不變。
+default = ["asr", "pdf"]
+
+# 語音相關（Silero VAD + 中文標點還原）。依賴 ONNX Runtime，
+# 而 ort 目前沒有 aarch64-linux-android 的預編譯二進位 ——
+# Android 第一版不含語音轉錄，就用 --no-default-features 關掉這一組。
+asr = ["dep:padnote-vad-silero", "dep:padnote-punct-ct"]
+
+# PDF 匯入／算繪。需要各 ABI 的 libpdfium 系統函式庫。
+pdf = ["dep:padnote-pdf-pdfium"]
+
 [dependencies]
 uniffi = { workspace = true }
 padnote-doc = { path = "../padnote-doc" }
@@ -29,11 +41,11 @@ padnote-export = { path = "../padnote-export" }
 padnote-crypto = { path = "../padnote-crypto" }
 padnote-models = { path = "../padnote-models" }
 padnote-pdf = { path = "../padnote-pdf" }
-padnote-pdf-pdfium = { path = "../padnote-pdf-pdfium" }
+padnote-pdf-pdfium = { path = "../padnote-pdf-pdfium", optional = true }
 padnote-recorder = { path = "../padnote-recorder" }
-padnote-vad-silero = { path = "../padnote-vad-silero" }
+padnote-vad-silero = { path = "../padnote-vad-silero", optional = true }
 padnote-text = { path = "../padnote-text" }
-padnote-punct-ct = { path = "../padnote-punct-ct" }
+padnote-punct-ct = { path = "../padnote-punct-ct", optional = true }
 padnote-embed = { path = "../padnote-embed" }
 padnote-input = { path = "../padnote-input" }
 padnote-shapes = { path = "../padnote-shapes" }

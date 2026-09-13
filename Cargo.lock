@@ -1261,6 +1261,7 @@ name = "padnote-audio"
 version = "2.3.0"
 dependencies = [
  "audiopus",
+ "audiopus_sys",
  "padnote-doc",
 ]
 

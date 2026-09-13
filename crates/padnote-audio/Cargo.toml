@@ -11,3 +11,10 @@ audiopus = { workspace = true }
 
 [lints]
 workspace = true
+
+# Android 沒有系統 libopus，而 audiopus 0.2 沒有把 static 轉發給 audiopus-sys。
+# 這裡直接對 audiopus-sys 指定 static，讓 libopus 靜態編進 libpadnote_core.so
+# （否則 .so 會缺少 opus_encoder_destroy 之類的符號，App 一啟動就載入失敗）。
+# 只對 Android target 生效，Apple 端的連結方式完全不變。
+[target.'cfg(target_os = "android")'.dependencies]
+audiopus_sys = { version = "0.1", features = ["static"] }
