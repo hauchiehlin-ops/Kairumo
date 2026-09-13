@@ -53,7 +53,9 @@ if [[ -f "$BUMP_SCRIPT" ]]; then
         git add "${REPO_ROOT}/Cargo.toml" "${REPO_ROOT}/Cargo.lock" \
                 "${REPO_ROOT}/apple/project.yml" \
                 "${REPO_ROOT}/apple/Kairumo.xcodeproj/project.pbxproj" \
-                "${REPO_ROOT}/android/app/build.gradle.kts"
+                "${REPO_ROOT}/android/app/build.gradle.kts" \
+                "${REPO_ROOT}/docs/manual/manual.js" \
+                "${REPO_ROOT}/docs/legal/privacy.html"
         git commit -m "chore(release): bump version to v${NEW_VERSION}"
         TAG_NAME="v${NEW_VERSION}"
         if ! git rev-parse "$TAG_NAME" >/dev/null 2>&1; then

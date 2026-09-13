@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -22,11 +24,47 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    // 發佈簽章設定。
+    //
+    // 金鑰與密碼**不進版控** —— 它們放在 android/keystore.properties（已忽略）
+    // 或同名的環境變數裡。沒有設定時 release 版就是未簽章的，
+    // 建置仍然會成功，只是不能上架 —— 這比「靜默用 debug 金鑰簽下去」好：
+    // 用 debug 金鑰簽的 AAB 上傳 Play Console 會被拒絕，而錯誤訊息不會告訴你原因。
+    val keystoreProperties = Properties().apply {
+        val file = rootProject.file("keystore.properties")
+        if (file.exists()) file.inputStream().use { load(it) }
+    }
+    fun key(name: String): String? =
+        keystoreProperties.getProperty(name) ?: System.getenv("KAIRUMO_${name.uppercase()}")
+
+    signingConfigs {
+        if (key("storeFile") != null) {
+            create("release") {
+                storeFile = file(key("storeFile")!!)
+                storePassword = key("storePassword")
+                keyAlias = key("keyAlias")
+                keyPassword = key("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // 不開混淆：UniFFI 的 Kotlin 綁定透過 JNA 以**名稱**對應原生符號，
+            // 被重新命名之後會在執行期才炸開，而且是在使用者手上炸。
+            // 體積的代價（約 2MB）換一個不會在半夜出事的發佈版本，值得。
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
+    }
+
+    // AAB 依 ABI 切分：Play 只會下發使用者裝置需要的那一個 .so。
+    // 兩個 ABI 各約 7MB，不切的話每個使用者都多下載一份用不到的。
+    bundle {
+        abi { enableSplit = true }
+        language { enableSplit = false }  // 六國語系在同一份字串表裡，切了會缺字
+        density { enableSplit = true }
     }
 
     compileOptions {
@@ -63,10 +101,12 @@ val copyUserDocs by tasks.registering(Copy::class) {
     into(layout.buildDirectory.dir("generated/docsAssets"))
 }
 
-tasks.matching { it.name.startsWith("merge") && it.name.endsWith("Assets") }
-    .configureEach { dependsOn(copyUserDocs) }
-tasks.matching { it.name.endsWith("AndroidTestAssets") }
-    .configureEach { dependsOn(copyUserDocs) }
+// 任何會讀到 assets 的工作都要等複製完成。只掛 merge*Assets 的話，
+// lint 與打包流程會在檔案還沒到位時就去讀那個目錄，Gradle 會直接擋下來。
+tasks.matching {
+    it.name.contains("Assets") || it.name.startsWith("lint") ||
+        it.name.startsWith("generate") && it.name.contains("Lint")
+}.configureEach { dependsOn(copyUserDocs) }
 
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")

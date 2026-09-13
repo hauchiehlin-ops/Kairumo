@@ -5,6 +5,72 @@
 
 ---
 
+## 2026-09-13 (18) · WP8：出得了可安裝的檔案
+
+### 文件的版本號原本沒人管
+
+WP8 的驗收條件是「`bump-version.sh` 一次更新四處版本（Cargo、Apple、Android、
+文件）且無漂移」。檢查的時候發現文件那一處從來沒被納入，而且**已經漂了**：
+手冊的英文版停在 2.1.1、其他語言停在 2.3.0，程式是 2.3.4 —— 使用者拿到的
+說明書標示的版本跟手上的 App 對不起來。
+
+現在腳本會更新 `manual.js` 與 `privacy.html` 的「適用版本」，並在寫入後驗證
+沒有殘留的舊版本號。替換刻意只針對那幾行與行文中明確的 `Kairumo vX.Y.Z`
+範例 —— 全檔盲目換數字會動到日期、尺寸與快捷鍵。pre-push hook 也一起提交這兩份。
+
+### 簽章：不做的事比做的事重要
+
+`build.gradle.kts` 從 `keystore.properties`（已忽略）或 `KAIRUMO_*` 環境變數
+讀簽章設定。沒設定時 release 版就是未簽章的 —— 這比「靜默用 debug 金鑰簽下去」
+好：用 debug 金鑰簽的 AAB 上傳 Play Console 會被拒絕，而錯誤訊息不會告訴你原因。
+
+這支腳本不會替使用者產生正式金鑰，也不把任何密碼寫進版控。上架金鑰弄丟等於
+這個 applicationId 再也更新不了，那把鑰匙必須是他自己的。
+
+`--test-sign` 會產一把**拋棄式**金鑰，只為了在本機驗證「簽章 → 安裝 → 啟動」
+這條路是通的。它的密碼就寫在腳本裡，所以用完立刻刪掉設定檔 —— 留在原地的話，
+之後任何一次 `./gradlew bundleRelease` 都會靜默用它簽，而簽出來的東西
+看起來跟正式版一模一樣。
+
+### 不開混淆，而且這是有意識的選擇
+
+UniFFI 的 Kotlin 綁定透過 JNA 以**名稱**對應原生符號。被 R8 重新命名之後
+會在執行期才炸開，而且是在使用者手上炸。體積的代價（約 2MB）換一個不會在
+半夜出事的發佈版本，值得。
+
+AAB 依 ABI 與密度切分，但**語言不切** —— 六國語系在同一份字串表裡，
+切了會缺字。
+
+### 踩到的坑
+
+把 `docs/` 複製進 assets 的那個工作只掛在 `merge*Assets` 上，release 建置直接
+被 Gradle 擋下來：lint 會在檔案還沒到位時去讀那個目錄。改成所有會碰到 assets
+或 lint 的工作都依賴它。
+
+另外：裝過 release 簽章的版本之後，`connectedDebugAndroidTest` 會以
+`INSTALL_FAILED_UPDATE_INCOMPATIBLE` 失敗（簽章不同）。先移除再跑即可，
+但錯誤訊息本身看起來像測試壞了。
+
+### 驗證
+- `./scripts/android-release.sh --test-sign` 產出 AAB 27MB、通用 APK 81MB
+- **release 簽章的 APK 實際安裝到模擬器、啟動、寫得出字**，
+  `versionCode=15 / versionName=2.3.4` 與其他所有來源一致
+- `./scripts/bump-version.sh` 現在回報「Cargo.toml / project.yml /
+  project.pbxproj / build.gradle.kts / 使用者文件 全數對齊」
+- Android instrumented 51/51、`cargo test --workspace` 799、
+  iOS 與 Mac Catalyst 建置成功
+
+### CI
+既有的 Android job 加上「組不簽章的 AAB」與 AAB 產物上傳；另外新增一個跑
+instrumented 測試的 job（需要模擬器與 KVM，所以獨立）。**CI 設定沒辦法在本機
+驗證**，第一次推上去可能要調。
+
+### 下一步
+剩下的都是人要做的：產生正式上傳金鑰、Play Console 建立應用程式、上傳 AAB 到
+內部測試軌、隱私權政策填現成那份的網址。以及 `TODO.md` 裡那批實機待測。
+
+---
+
 ## 2026-09-13 (17) · WP7：ML Kit 手寫辨識
 
 ### 辨識結果只進索引，不碰筆跡

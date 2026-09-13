@@ -21,6 +21,8 @@ CARGO_TOML="${REPO_ROOT}/Cargo.toml"
 APPLE_PROJECT_YML="${REPO_ROOT}/apple/project.yml"
 APPLE_PBXPROJ="${REPO_ROOT}/apple/Kairumo.xcodeproj/project.pbxproj"
 ANDROID_GRADLE="${REPO_ROOT}/android/app/build.gradle.kts"
+DOC_MANUAL="${REPO_ROOT}/docs/manual/manual.js"
+DOC_PRIVACY="${REPO_ROOT}/docs/legal/privacy.html"
 
 BUMP_TYPE="${1:-patch}"
 EXPLICIT_BUNDLE="${2:-}"
@@ -246,12 +248,42 @@ if os.path.isfile(gradle_file):
         f.write(t)
 ' "$ANDROID_GRADLE" "$NEW_VERSION" "$NEW_BUNDLE_VERSION"
 
+# 6.3 同步更新使用者看得到的文件
+#
+# 手冊與隱私權政策上都印著「適用版本」。沒被納進來的後果已經發生過：
+# 英文版停在 2.1.1、其他語言停在 2.3.0，而程式是 2.3.4 —— 使用者拿到的
+# 說明書標示的版本跟手上的 App 對不起來。
+python3 -c '
+import re, sys, os
+manual, privacy, new_ver, new_bundle = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+
+def bump(path):
+    if not os.path.isfile(path):
+        return
+    with open(path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    out = []
+    for line in lines:
+        # 只動「適用版本」那幾行與行文中明確寫出的 "Kairumo vX.Y.Z" 範例，
+        # 不要全檔盲目替換數字 —— 文件裡還有日期、尺寸、快捷鍵之類的數字。
+        if re.search(r"\b(version|appver)\s*:", line):
+            line = re.sub(r"\d+\.\d+\.\d+", new_ver, line)
+            line = re.sub(r"(bundle\s*)\d+", r"\g<1>" + new_bundle, line)
+        line = re.sub(r"(Kairumo\s+v)\d+\.\d+\.\d+", r"\g<1>" + new_ver, line)
+        out.append(line)
+    with open(path, "w", encoding="utf-8") as f:
+        f.writelines(out)
+
+bump(manual)
+bump(privacy)
+' "$DOC_MANUAL" "$DOC_PRIVACY" "$NEW_VERSION" "$NEW_BUNDLE_VERSION"
+
 # 6.5 寫入後驗證：確認每個檔案都真的帶上新版本號。
 # 沒有這一步的話，任何一個正則沒對上都會靜默跳過，接著又是一次版本漂移。
 python3 -c '
 import re, sys, os
 
-cargo, yml, pbx, gradle, new_ver, new_bundle = sys.argv[1:7]
+cargo, yml, pbx, gradle, manual, privacy, new_ver, new_bundle = sys.argv[1:9]
 problems = []
 
 def read(path):
@@ -291,12 +323,23 @@ if os.path.isfile(gradle):
     if not m or m.group(1) != new_bundle:
         problems.append(f"android/app/build.gradle.kts 的 versionCode 沒有更新成 {new_bundle}")
 
+for doc, label in ((manual, "docs/manual/manual.js"), (privacy, "docs/legal/privacy.html")):
+    if not os.path.isfile(doc):
+        continue
+    text = read(doc)
+    stale = set()
+    for line in text.splitlines():
+        if re.search(r"\b(version|appver)\s*:", line):
+            stale.update(v for v in re.findall(r"\d+\.\d+\.\d+", line) if v != new_ver)
+    if stale:
+        problems.append(f"{label} 還有沒更新的版本號：{sorted(stale)}")
+
 if problems:
     for p in problems:
         print("❌ " + p, file=sys.stderr)
     sys.exit(1)
-print("✅ 版本號已在 Cargo.toml / project.yml / project.pbxproj / build.gradle.kts 全數對齊")
-' "$CARGO_TOML" "$APPLE_PROJECT_YML" "$APPLE_PBXPROJ" "$ANDROID_GRADLE" "$NEW_VERSION" "$NEW_BUNDLE_VERSION"
+print("✅ 版本號已在 Cargo.toml / project.yml / project.pbxproj / build.gradle.kts / 使用者文件 全數對齊")
+' "$CARGO_TOML" "$APPLE_PROJECT_YML" "$APPLE_PBXPROJ" "$ANDROID_GRADLE" "$DOC_MANUAL" "$DOC_PRIVACY" "$NEW_VERSION" "$NEW_BUNDLE_VERSION"
 
 # 7. 同步更新 Cargo.lock
 echo "🔄 同步 Cargo.lock..."
