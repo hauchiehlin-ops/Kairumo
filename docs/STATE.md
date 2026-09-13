@@ -2,7 +2,7 @@
 
 > **每次開發階段開始前先讀這份。** 目的是讓不同的開發階段／不同的人／不同的 AI
 > 不必重新推導已經決定過的事。
-> 最後更新：2026-09-12
+> 最後更新：2026-09-13
 
 ---
 
@@ -100,9 +100,37 @@ v1.1 寫「僅供參考與學習」。**影響 P0 功能 C5 中文標點還原�
 
 ## 目前進度一句話
 
-M0 工程地基完成（S3 同步收斂、S4 授權稽核已 Go）；核心邏輯層 27 個 crate、
-**763 個測試通過、clippy 零警告**。S1（墨跡延遲）與 S2（中文 ASR）卡在硬體與
-資料，**不卡在程式**。UI、PDFium、ASR 模型整合尚未開始 —— 見 `TODO.md`。
+Apple 版（iOS / iPadOS / macOS）已在使用者手上穩定運作，v2.3.4。
+**Android 版 WP1–WP8 全部完成**：核心可交叉編譯、Compose 外殼、共用邏輯下沉、
+檔案互通、筆跡引擎、平台功能、手寫辨識、上架檔產出 —— 模擬器上端到端可用，
+release 簽章的 APK 裝得起來也寫得出字。
+
+剩下的是**只有實機才驗得了的那批**（見 `TODO.md` §Android 實機待測 A-01～A-10）
+與上架的人工步驟（正式金鑰、Play Console）。
+
+## 跨平台的現況（2026-09-13）
+
+| 面向 | 狀況 |
+|---|---|
+| 核心測試 | `cargo test --workspace` **799 通過** |
+| Apple | `KairumoTests` 40、`KairumoUITests` 5，iOS 與 Mac Catalyst 建置綠 |
+| Android | instrumented **51 通過**（需真的 Android runtime） |
+| 介面字串 | 單一來源 `i18n/ui-strings.json` **456 條**，產生 Swift 與 Kotlin 兩份表 |
+| 版本號 | `bump-version.sh` 同時更新 Cargo / Apple 專案 / Android Gradle / 使用者文件並驗證 |
+| 檔案互通 | iOS 匯出的 `.padnote` 在 Android 開啟後筆畫數、座標、顏色、頁高一致（實測） |
+
+### Android 這一版刻意沒有的東西
+
+- **語音轉錄**（`asr` feature 關閉，ONNX Runtime 沒有 Android 預編譯檔）。
+  但**錄音本身可用** —— 關掉的是轉錄不是錄音，兩者常被搞混。
+- **讀 PDF**（`pdf` feature 關閉，PDFium 需各 ABI 的 .so）。
+  但**匯出 PDF 可用** —— 匯出是 `padnote-export` 自己產的。
+- **多筆記本管理**：Android 目前是單一本 `notebook.padnote`。
+
+### Apple 的儲存層還沒切過去
+
+WP4c 做的是**遷移**（原檔不動、可回滾），不是切換讀取路徑。App 讀的仍是既有的
+JSON + `.drawing`。在同一次改動裡既搬資料又換讀取來源的話，回滾就失去意義了。
 
 ## 已可運作的能力（皆有測試覆蓋）
 
