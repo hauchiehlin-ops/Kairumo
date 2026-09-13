@@ -118,6 +118,11 @@ pub struct Block {
     pub kind: BlockKind,
     /// 頁面座標。`None` 表示隨文流排版而非絕對定位。
     pub position: Option<(f32, f32)>,
+    /// 外觀（顏色、邊框、段落…），平台自訂的 JSON。核心不解讀它的內容。
+    ///
+    /// 存在的理由：使用者在 iPad 上把文字方塊設成透明底、加了行距，換到
+    /// Android 打開卻變回白底無行距 —— 那不是「還沒支援」，是資料遺失。
+    pub appearance: Option<String>,
     /// 建立時刻，落在統一時間軸上（B6 版本回溯的依據）。
     pub created_at: NotebookTime,
 }
@@ -355,6 +360,7 @@ mod tests {
                 style: TextStyle::Body,
             },
             position: None,
+            appearance: None,
             created_at: NotebookTime::from_micros(u64::from(b) * 1_000_000),
         }
     }
@@ -368,6 +374,7 @@ mod tests {
                 height: 100.0,
             },
             position: Some((10.0, 20.0)),
+            appearance: None,
             created_at: NotebookTime::ZERO,
         }
     }
@@ -464,6 +471,7 @@ mod tests {
                 text: "轉錄內容".into(),
             },
             position: None,
+            appearance: None,
             created_at: NotebookTime::ZERO,
         };
         assert_eq!(transcript.searchable_text(), Some("轉錄內容"));

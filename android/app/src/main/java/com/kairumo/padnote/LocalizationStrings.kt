@@ -114,6 +114,14 @@ object LocalizationStrings {
             "ko" to "＋ 페이지 추가",
             "th" to "＋ เพิ่มหน้าใหม่"
         ),
+        "add_text_box" to mapOf(
+            "zh-Hant" to "新增文字方塊",
+            "en" to "Add Text Box",
+            "zh-Hans" to "新增文字方块",
+            "ja" to "テキストボックスを追加",
+            "ko" to "텍스트 상자 추가",
+            "th" to "เพิ่มกล่องข้อความ"
+        ),
         "all_asset_types" to mapOf(
             "zh-Hant" to "全部型態",
             "en" to "All Types",

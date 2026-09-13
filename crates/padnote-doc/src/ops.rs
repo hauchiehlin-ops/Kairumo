@@ -192,6 +192,20 @@ pub enum DocOp {
         x: f32,
         y: f32,
     },
+    /// 設定區塊的外觀（顏色、邊框、段落…），內容是平台自訂的 JSON。
+    ///
+    /// # 為什麼是一團不解讀的 JSON
+    ///
+    /// 核心不需要知道「淡黃色」或「圓角 12」是什麼意思 —— 那是平台的 UI 詞彙。
+    /// 但那些值**必須跨得過平台**：使用者在 iPad 上把文字方塊設成透明底、
+    /// 加了行距，換到 Android 打開卻變回白底無行距，那不是「還沒支援」，
+    /// 是資料遺失。
+    ///
+    /// 兩個平台用同一組鍵名（見 `format-spec.md` §6.2），核心只負責原樣搬運。
+    SetBlockAppearance {
+        id: Uuid,
+        json: String,
+    },
     /// 一個轉錄詞，時間戳在筆記本時間軸上（format-spec §4.1）。
     AddWord {
         text: String,
@@ -234,6 +248,7 @@ const OP_MERGE_TABLE_CELLS: u8 = 28;
 const OP_UNMERGE_TABLE_CELL: u8 = 29;
 const OP_SET_PAGE_SIZE: u8 = 30;
 const OP_SET_BLOCK_POSITION: u8 = 31;
+const OP_SET_BLOCK_APPEARANCE: u8 = 32;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DocCodecError {
@@ -844,6 +859,9 @@ pub fn encode(ops: &[DocOp]) -> Vec<u8> {
             DocOp::SetBlockPosition { id, x, y } => {
                 w.u8(OP_SET_BLOCK_POSITION).uuid(*id).f32(*x).f32(*y);
             }
+            DocOp::SetBlockAppearance { id, json } => {
+                w.u8(OP_SET_BLOCK_APPEARANCE).uuid(*id).str(json);
+            }
             DocOp::RemoveObject { id } => {
                 w.u8(OP_REMOVE_OBJECT).uuid(*id);
             }
@@ -1019,6 +1037,10 @@ pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
                 id: r.uuid()?,
                 x: r.f32()?,
                 y: r.f32()?,
+            },
+            OP_SET_BLOCK_APPEARANCE => DocOp::SetBlockAppearance {
+                id: r.uuid()?,
+                json: r.str()?,
             },
             OP_REMOVE_OBJECT => DocOp::RemoveObject { id: r.uuid()? },
             OP_SET_OBJECT_TRANSFORM => DocOp::SetObjectTransform {
@@ -1210,6 +1232,10 @@ mod tests {
                 x: 120.5,
                 y: 480.25,
             },
+            DocOp::SetBlockAppearance {
+                id: uid(61),
+                json: "{\"backgroundColorHex\":\"clear\",\"lineSpacing\":8}".into(),
+            },
             DocOp::AddShapeObject {
                 page: uid(1),
                 id: uid(70),
@@ -1273,8 +1299,8 @@ mod tests {
             .collect();
         assert_eq!(
             tags.len(),
-            31,
-            "31 種操作標籤都要被測到，實得 {}",
+            32,
+            "32 種操作標籤都要被測到，實得 {}",
             tags.len()
         );
     }

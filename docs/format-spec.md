@@ -174,11 +174,11 @@ C1（筆跡↔錄音跳轉）、C4（詞級時間戳）、A10（筆跡重播）�
 [1B 操作類型][操作內容…]
 ```
 
-31 種操作：
+32 種操作：
 
 **文件結構**：`SetTitle` / `AddPage` / `RemovePage` / `SetPageSize`
 **內容區塊**：`AddTextBlock` / `AddTranscriptBlock` / `AddImageBlock` /
-`RemoveBlock` / `SetBlockStyle` / `SetBlockPosition` / `TextEdit`
+`RemoveBlock` / `SetBlockStyle` / `SetBlockPosition` / `SetBlockAppearance` / `TextEdit`
 **錄音**：`StartAudio` / `EndAudio` / `AddWord`
 **物件**（ADR-0010）：`AddObject` / `RemoveObject` / `SetObjectTransform` /
 `Group` / `Ungroup` / `SetZIndex`
@@ -191,6 +191,38 @@ C1（筆跡↔錄音跳轉）、C4（詞級時間戳）、A10（筆跡重播）�
 
 `TextEdit` 內嵌文字 CRDT 操作（ADR-0004）：插入記錄 `(id, origin, 字元碼位)`，
 刪除記錄 `(id)`。**位置以 origin 參照表示，不是索引** —— 索引在併發編輯下會錯位。
+
+### 6.2 區塊外觀（`SetBlockAppearance`）
+
+`SetBlockAppearance` 帶的是一段 **JSON 字串，核心不解讀內容**。
+
+理由：核心不需要知道「淡黃色」或「圓角 12」是什麼意思 —— 那是平台的 UI 詞彙。
+但那些值**必須跨得過平台**：使用者在 iPad 上把文字方塊設成透明底、加了行距，
+換到 Android 打開卻變回白底無行距，那不是「還沒支援」，是資料遺失。
+
+**兩個平台必須用同一組鍵名。** 目前定義如下（全部可省略，省略即採平台預設）：
+
+| 鍵 | 型別 | 說明 |
+|---|---|---|
+| `fontSize` | number | 字級（點） |
+| `bold` / `italic` / `underline` / `strikethrough` | bool | 字形 |
+| `alignment` | string | `left` / `center` / `right` / `justified` |
+| `textColorHex` | string | `#RRGGBB` |
+| `backgroundColorHex` | string | `#RRGGBB`，或 **`"clear"`（透明）** |
+| `hasBorder` | bool | |
+| `borderColorHex` | string | `#RRGGBB` |
+| `borderWidth` | number | 點 |
+| `cornerRadius` | number | 點 |
+| `width` / `height` | number | 方框尺寸（點） |
+| `lineSpacing` | number | 行距（點） |
+| `paragraphSpacing` | number | 段落間距（點） |
+| `firstLineIndent` | number | 首行縮排（點） |
+| `paragraphIndent` | number | 整段縮排（點） |
+
+`"clear"` 是**哨符**，不是顏色：它與 `#FFFFFF` 是兩回事，而且不能走顏色轉換
+（多數 hex 轉換會丟掉 alpha，透明就變成黑色）。
+
+新增鍵時只要兩個平台一起加即可，核心不必動。
 
 ### 頁面尺寸與區塊座標
 

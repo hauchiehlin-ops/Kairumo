@@ -6,6 +6,7 @@
 //
 
 import XCTest
+import PencilKit
 @testable import Kairumo
 
 final class TextBoxEditingTests: XCTestCase {
@@ -104,5 +105,99 @@ final class TextBoxEditingTests: XCTestCase {
         XCTAssertEqual(item.width, 420)
         XCTAssertEqual(item.height, 300)
         XCTAssertGreaterThanOrEqual(PageThumbnailRenderer.measuredHeight(for: item), 300)
+    }
+}
+
+/// 文字方塊外觀的跨平台編碼（`format-spec.md` §6.2）。
+///
+/// 匯出到 `.padnote` 時原本只帶「文字」與「位置」—— 顏色、邊框、段落設定
+/// 全留在 Apple 自己的 JSON 裡。使用者在 iPad 上設成透明底、加了行距，
+/// 換到 Android 打開會變回白底無行距。那不是「還沒支援」，是資料遺失。
+final class TextBoxAppearanceTests: XCTestCase {
+
+    private func styled() -> NoteTextAttachment {
+        var item = NoteTextAttachment(pageIndex: 0, text: "會議重點", x: 40, y: 100)
+        item.fontSize = 22
+        item.isBold = true
+        item.alignmentRaw = "center"
+        item.textColorHex = "#112233"
+        item.backgroundColorHex = "clear"
+        item.hasBorder = false
+        item.borderWidth = 3
+        item.cornerRadius = 20
+        item.width = 420
+        item.height = 260
+        item.lineSpacing = 8
+        item.paragraphSpacing = 16
+        item.firstLineIndent = 24
+        item.paragraphIndent = 32
+        return item
+    }
+
+    func testEverySettingSurvivesTheRoundTrip() {
+        let original = styled()
+        var restored = NoteTextAttachment(pageIndex: 0, text: "會議重點")
+        TextBoxAppearance.apply(TextBoxAppearance.encode(original), to: &restored)
+
+        XCTAssertEqual(restored.fontSize, original.fontSize)
+        XCTAssertEqual(restored.isBold, original.isBold)
+        XCTAssertEqual(restored.alignmentRaw, original.alignmentRaw)
+        XCTAssertEqual(restored.backgroundColorHex, "clear")
+        XCTAssertEqual(restored.hasBorder, false)
+        XCTAssertEqual(restored.lineSpacing, 8)
+        XCTAssertEqual(restored.paragraphIndent, 32)
+        XCTAssertEqual(restored.width, 420)
+    }
+
+    func testUnsetFieldsAreNotWrittenIntoTheJson() {
+        // `nil` 寫成 0 的話，接收端就分不出「沒設定」與「設成 0」——
+        // 於是每一個從另一個平台來的方塊都會被當成「行距 0」。
+        let json = TextBoxAppearance.encode(NoteTextAttachment(pageIndex: 0, text: "x"))
+        XCTAssertFalse(json.contains("lineSpacing"))
+        XCTAssertFalse(json.contains("paragraphSpacing"))
+        XCTAssertFalse(json.contains("borderWidth"))
+    }
+
+    func testClearIsCarriedVerbatim() {
+        // "clear" 是哨符不是顏色 —— 不能走任何顏色轉換，那會丟掉 alpha。
+        var item = NoteTextAttachment(pageIndex: 0, text: "x")
+        item.backgroundColorHex = "clear"
+        XCTAssertTrue(TextBoxAppearance.encode(item).contains("\"clear\""))
+    }
+
+    func testUnknownKeysAreIgnoredNotFatal() {
+        // 另一個平台可能帶了我們還沒實作的欄位。該做的是保留其餘設定，
+        // 不是整塊樣式都不套。
+        var item = NoteTextAttachment(pageIndex: 0, text: "x")
+        TextBoxAppearance.apply(#"{"fontSize":30,"somethingFromTheFuture":{"a":1}}"#, to: &item)
+        XCTAssertEqual(item.fontSize, 30)
+    }
+
+    func testMalformedJsonLeavesTheBoxUntouched() {
+        var item = NoteTextAttachment(pageIndex: 0, text: "x")
+        item.fontSize = 16
+        TextBoxAppearance.apply("這不是 JSON", to: &item)
+        XCTAssertEqual(item.fontSize, 16)
+    }
+
+    func testTheExportedPackageCarriesTheAppearance() throws {
+        // 端到端：匯出成 .padnote 之後，另一個平台讀得到這些設定。
+        let doc = NotebookDocument(
+            id: "appear", title: "外觀", pageCount: 1,
+            textAttachments: [styled()])
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("appearance-\(UUID().uuidString).padnote")
+        defer { try? FileManager.default.removeItem(at: dir) }
+
+        try NotebookPackageBridge.export(
+            document: doc, drawings: [PKDrawing()], to: dir, deviceId: 0xAB)
+
+        let session = try PadnoteSession.openExisting(path: dir.path, deviceId: 0xCD)
+        let page = try XCTUnwrap(try session.firstPageId())
+        let blockId = try XCTUnwrap(try session.textBlockIds(pageId: page).first)
+        let json = try XCTUnwrap(try session.blockAppearance(blockId: blockId))
+
+        XCTAssertTrue(json.contains("\"clear\""), "透明底色沒有跟著檔案走")
+        XCTAssertTrue(json.contains("lineSpacing"), "行距沒有跟著檔案走")
     }
 }

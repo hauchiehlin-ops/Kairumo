@@ -119,6 +119,14 @@ extension LocalizationManager {
             .ko: "＋ 페이지 추가",
             .th: "＋ เพิ่มหน้าใหม่"
         ],
+        "add_text_box": [
+            .zhHant: "新增文字方塊",
+            .en: "Add Text Box",
+            .zhHans: "新增文字方块",
+            .ja: "テキストボックスを追加",
+            .ko: "텍스트 상자 추가",
+            .th: "เพิ่มกล่องข้อความ"
+        ],
         "all_asset_types": [
             .zhHant: "全部型態",
             .en: "All Types",

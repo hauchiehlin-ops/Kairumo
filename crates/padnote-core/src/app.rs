@@ -231,6 +231,7 @@ impl NotebookSession {
                             style: *style,
                         },
                         position: None,
+                        appearance: None,
                         created_at: *created_at,
                     },
                 );
@@ -251,6 +252,7 @@ impl NotebookSession {
                             text: text.clone(),
                         },
                         position: None,
+                        appearance: None,
                         created_at: *created_at,
                     },
                 );
@@ -274,6 +276,7 @@ impl NotebookSession {
                             height: *height,
                         },
                         position: None,
+                        appearance: None,
                         created_at: *created_at,
                     },
                 );
@@ -305,6 +308,7 @@ impl NotebookSession {
                             merged_cells: Vec::new(),
                         },
                         position: None,
+                        appearance: None,
                         created_at: *created_at,
                     },
                 );
@@ -363,6 +367,7 @@ impl NotebookSession {
                             text: text.clone(),
                         },
                         position: None,
+                        appearance: None,
                         created_at: *created_at,
                     },
                 );
@@ -393,6 +398,14 @@ impl NotebookSession {
             DocOp::SetPageSize { id, width, height } => {
                 if let Some(page) = self.notebook.page_mut(*id) {
                     page.size = (*width, *height);
+                }
+            }
+
+            DocOp::SetBlockAppearance { id, json } => {
+                if let Some(page) = self.page_of_block(*id)
+                    && let Some(b) = self.notebook.page_mut(page).and_then(|p| p.block_mut(*id))
+                {
+                    b.appearance = Some(json.clone());
                 }
             }
 
@@ -907,6 +920,19 @@ impl NotebookSession {
             id: page,
             width,
             height,
+        }])
+    }
+
+    /// 設定區塊的外觀（平台自訂的 JSON）。
+    ///
+    /// 核心不解讀內容 —— 它只確保這些值跨得過平台與重開。
+    pub fn set_block_appearance(&mut self, block: Uuid, json: &str) -> Result<(), AppError> {
+        if self.page_of_block(block).is_none() {
+            return Err(AppError::BlockNotFound(block));
+        }
+        self.record(vec![DocOp::SetBlockAppearance {
+            id: block,
+            json: json.to_string(),
         }])
     }
 

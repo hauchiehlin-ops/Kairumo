@@ -902,6 +902,7 @@ mod tests {
                 style: TextStyle::Heading1,
             },
             position: Some((50.0, 50.0)),
+            appearance: None,
             created_at: padnote_doc::NotebookTime::ZERO,
         };
         page.add_block(b1);
@@ -916,6 +917,7 @@ mod tests {
                 merged_cells: vec![],
             },
             position: Some((50.0, 100.0)),
+            appearance: None,
             created_at: padnote_doc::NotebookTime::ZERO,
         };
         page.add_block(b2);
@@ -1032,6 +1034,7 @@ mod tests {
                 height: 150.0,
             },
             position: Some((40.0, 50.0)),
+            appearance: None,
             created_at: padnote_doc::NotebookTime::ZERO,
         };
         page.add_block(img_block);

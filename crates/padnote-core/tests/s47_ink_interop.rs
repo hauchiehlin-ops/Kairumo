@@ -220,3 +220,71 @@ fn every_page_can_be_reached_by_index() {
     assert_eq!(s.page_id_at(2), Some(third));
     assert_eq!(s.page_id_at(3), None, "超出範圍要回 None，不是 panic 也不是最後一頁");
 }
+
+// ---- 文字方塊的外觀（跨平台）----
+
+#[test]
+fn block_appearance_survives_reopening() {
+    // 使用者在 iPad 上把文字方塊設成透明底、加了行距，換到 Android 打開卻
+    // 變回白底無行距 —— 那不是「還沒支援」，是資料遺失。
+    let path = tmp("appearance");
+    let style = r#"{"backgroundColorHex":"clear","lineSpacing":8,"hasBorder":false}"#;
+    let block = {
+        let s = PadnoteSession::create(path.clone(), "外觀".into(), 1_757_635_200_000, 0xD1).unwrap();
+        let page = s.first_page_id().unwrap();
+        let block = s
+            .add_text(page, "會議重點".into(), padnote_core::ffi::BlockStyle::Body)
+            .unwrap();
+        assert_eq!(s.block_appearance(block.clone()).unwrap(), None, "尚未設定前應為 None");
+        s.set_block_appearance(block.clone(), style.into()).unwrap();
+        block
+    };
+
+    let reopened = PadnoteSession::open_existing(path, 0xD2).unwrap();
+    assert_eq!(reopened.block_appearance(block).unwrap().as_deref(), Some(style));
+}
+
+#[test]
+fn the_core_does_not_interpret_the_appearance_json() {
+    // 核心不該對內容有任何假設 —— 平台之後新增欄位時不必動核心。
+    let s = PadnoteSession::create(tmp("opaque"), "不解讀".into(), 1_757_635_200_000, 0xD3).unwrap();
+    let page = s.first_page_id().unwrap();
+    let block = s
+        .add_text(page, "x".into(), padnote_core::ffi::BlockStyle::Body)
+        .unwrap();
+
+    let odd = r#"{"somethingWeHaveNotInventedYet":[1,2,3],"nested":{"a":"b"}}"#;
+    s.set_block_appearance(block.clone(), odd.into()).unwrap();
+    assert_eq!(s.block_appearance(block).unwrap().as_deref(), Some(odd));
+}
+
+#[test]
+fn appearance_on_a_missing_block_is_an_error_not_a_silent_noop() {
+    // 靜默忽略的話，平台層會以為樣式存進去了，直到使用者發現它沒有跨過去。
+    let s = PadnoteSession::create(tmp("missappear"), "錯誤".into(), 1_757_635_200_000, 0xD4).unwrap();
+    let ghost = "00000000-0000-7000-8000-0000000000ee".to_string();
+    assert!(s.set_block_appearance(ghost, "{}".into()).is_err());
+}
+
+#[test]
+fn text_blocks_on_a_page_can_be_enumerated() {
+    // 拿得到某個區塊的內容與外觀，卻列不出有哪些區塊的話，
+    // 平台層就打不開別的裝置寫進來的文字方塊。
+    let s = PadnoteSession::create(tmp("enum"), "列舉".into(), 1_757_635_200_000, 0xD5).unwrap();
+    let page = s.first_page_id().unwrap();
+
+    let a = s.add_text(page.clone(), "第一段".into(), padnote_core::ffi::BlockStyle::Body).unwrap();
+    let b = s.add_text(page.clone(), "第二段".into(), padnote_core::ffi::BlockStyle::Body).unwrap();
+    // 圖片不是文字區塊，不該被列進來
+    let blob = s.put_blob(vec![1, 2, 3]).unwrap();
+    s.add_image(page.clone(), blob, 10.0, 10.0).unwrap();
+
+    assert_eq!(s.text_block_ids(page).unwrap(), vec![a, b]);
+}
+
+#[test]
+fn enumerating_an_unknown_page_is_empty_not_an_error() {
+    let s = PadnoteSession::create(tmp("enum2"), "列舉".into(), 1_757_635_200_000, 0xD6).unwrap();
+    let ghost = "00000000-0000-7000-8000-0000000000dd".to_string();
+    assert!(s.text_block_ids(ghost).unwrap().is_empty());
+}

@@ -32,6 +32,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.key
 import com.kairumo.padnote.ink.InkCanvas
 import com.kairumo.padnote.platform.AudioCapture
 import com.kairumo.padnote.platform.DocsViewer
@@ -39,6 +40,11 @@ import com.kairumo.padnote.platform.Exporter
 import com.kairumo.padnote.platform.Handwriting
 import com.kairumo.padnote.sync.FolderSync
 import com.kairumo.padnote.backup.BackupManager
+import com.kairumo.padnote.text.TextBox
+import com.kairumo.padnote.text.TextBoxEditor
+import com.kairumo.padnote.text.TextBoxLayer
+import com.kairumo.padnote.text.TextBoxStore
+import androidx.compose.ui.platform.LocalDensity
 import androidx.documentfile.provider.DocumentFile
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -104,6 +110,13 @@ private fun InkScreen() {
     var message by remember { mutableStateOf<String?>(null) }
     var docsAsset by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+
+    // 畫布文字方塊。與 Apple 端同一組資料模型與外觀規則（format-spec §6.2）。
+    val textStore = remember(notebook) { TextBoxStore(notebook?.first, notebook?.second) }
+    var textRevision by remember { mutableIntStateOf(0) }
+    var selectedTextId by remember { mutableStateOf<String?>(null) }
+    var editingText by remember { mutableStateOf<TextBox?>(null) }
+    LaunchedEffect(notebook) { textStore.load(); textRevision++ }
 
     // 雲端同步（決策 D3 選項 A）：使用者挑一個資料夾，兩台裝置指同一個地方。
     // 備份檔：選一個既有的備份來復原。
@@ -244,6 +257,19 @@ private fun InkScreen() {
                 )
                 Divider()
                 DropdownMenuItem(
+                    text = { Text(l10n("add_text_box")) },
+                    onClick = {
+                        showMenu = false
+                        // 放在頁面左上一點的位置：使用者接著就會把它拖到想要的地方，
+                        // 放在正中央反而會蓋住他剛寫的東西。
+                        val box = textStore.create(x = 60f, y = 80f)
+                        textRevision++
+                        selectedTextId = box.id
+                        editingText = box
+                    }
+                )
+                Divider()
+                DropdownMenuItem(
                     text = { Text(l10n("backup_create")) },
                     onClick = { showMenu = false; message = runBackup(activity) }
                 )
@@ -336,6 +362,7 @@ private fun InkScreen() {
             )
         }
 
+        val canvasDensity = LocalDensity.current.density
         Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
             if (lowLatency && !lowLatencyUnavailable) {
                 LowLatencyInkCanvas(
@@ -353,7 +380,34 @@ private fun InkScreen() {
                     onInkChanged = { revision++ }
                 )
             }
+
+            // 文字方塊疊在墨跡之上 —— 與 Apple 端的疊放順序一致。
+            key(textRevision) {
+                TextBoxLayer(
+                    boxes = textStore.all,
+                    density = canvasDensity,
+                    selectedId = selectedTextId,
+                    onSelect = { selectedTextId = it },
+                    onChanged = { box -> textStore.persist(box); textRevision++ },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
+    }
+
+    editingText?.let { box ->
+        TextBoxEditor(
+            box = box,
+            languageTag = deviceLanguageTag(),
+            onChanged = { textStore.persist(it); textRevision++ },
+            onDelete = {
+                textStore.remove(box)
+                editingText = null
+                selectedTextId = null
+                textRevision++
+            },
+            onDismiss = { editingText = null }
+        )
     }
 
     docsAsset?.let { asset ->

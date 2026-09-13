@@ -103,6 +103,14 @@
     "zhHans": "＋ 新增页面",
     "zhHant": "＋ 新增頁面"
   },
+  "add_text_box": {
+    "en": "Add Text Box",
+    "ja": "テキストボックスを追加",
+    "ko": "텍스트 상자 추가",
+    "th": "เพิ่มกล่องข้อความ",
+    "zhHans": "新增文字方块",
+    "zhHant": "新增文字方塊"
+  },
   "all_asset_types": {
     "en": "All Types",
     "ja": "すべてのタイプ",

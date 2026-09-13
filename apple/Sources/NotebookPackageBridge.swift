@@ -118,6 +118,10 @@ enum NotebookPackageBridge {
                         pageId: pageId, content: text.text, style: .body)
                     try session.setBlockPosition(
                         blockId: blockId, x: Float(text.x), y: Float(text.y))
+                    // 顏色、邊框、段落也要跨過去。只帶文字與位置的話，
+                    // 使用者在另一個平台打開會看到一個白底無行距的方框。
+                    try session.setBlockAppearance(
+                        blockId: blockId, json: TextBoxAppearance.encode(text))
                     summary.textBlockCount += 1
                 }
 

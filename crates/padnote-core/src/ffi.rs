@@ -503,6 +503,50 @@ impl PadnoteSession {
             .map(|p| vec![p.size.0, p.size.1]))
     }
 
+    /// 這一頁所有文字區塊的 id，依加入順序。
+    ///
+    /// 沒有這個出口，平台層拿得到某個區塊的內容與外觀，卻**列不出有哪些區塊**
+    /// —— 也就打不開別的裝置寫進來的文字方塊。
+    pub fn text_block_ids(&self, page_id: String) -> Result<Vec<String>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let guard = self.lock();
+        Ok(guard
+            .notebook()
+            .page(page)
+            .map(|p| {
+                p.blocks()
+                    .iter()
+                    .filter(|b| matches!(b.kind, padnote_doc::BlockKind::Text { .. }))
+                    .map(|b| b.id.to_string())
+                    .collect()
+            })
+            .unwrap_or_default())
+    }
+
+    /// 設定區塊的外觀（平台自訂的 JSON）。
+    ///
+    /// 核心不解讀內容。兩個平台用同一組鍵名（`format-spec.md` §6.2），
+    /// 這樣文字方塊的顏色、邊框與段落設定才跨得過平台 —— 否則使用者在 iPad 上
+    /// 設成透明底、加了行距，換到 Android 打開會變回白底無行距。
+    pub fn set_block_appearance(&self, block_id: String, json: String) -> Result<(), FfiError> {
+        self.lock()
+            .set_block_appearance(parse_uuid(&block_id)?, &json)?;
+        Ok(())
+    }
+
+    /// 區塊的外觀 JSON。未設定時回傳 `None`。
+    pub fn block_appearance(&self, block_id: String) -> Result<Option<String>, FfiError> {
+        let block = parse_uuid(&block_id)?;
+        let guard = self.lock();
+        Ok(guard
+            .notebook()
+            .pages()
+            .iter()
+            .flat_map(|p| p.blocks())
+            .find(|b| b.id == block)
+            .and_then(|b| b.appearance.clone()))
+    }
+
     /// 設定區塊在頁面上的絕對座標。
     pub fn set_block_position(&self, block_id: String, x: f32, y: f32) -> Result<(), FfiError> {
         self.lock()

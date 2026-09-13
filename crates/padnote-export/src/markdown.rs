@@ -172,6 +172,7 @@ mod tests {
             id: uid(id),
             kind,
             position: None,
+            appearance: None,
             created_at: NotebookTime::ZERO,
         }
     }
