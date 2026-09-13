@@ -5,6 +5,51 @@
 
 ---
 
+## 2026-09-13 (7) · WP3a：協同加密下沉到核心，並用跨語言測試證明相容
+
+### 兩邊的加密其實是兩套演算法
+
+盤點發現核心與 Apple 版用的根本不是同一個東西：
+
+| | 演算法 | 用途 |
+|---|---|---|
+| `padnote-crypto::envelope` | XChaCha20-Poly1305 + Argon2id | **落盤**的同步檔案 |
+| Swift `CollaborationManager` | AES-256-GCM（CryptoKit） | **即時協同訊息** |
+
+也就是說協同訊息這條路，核心從來沒有實作過。Android 若自己再寫一份，
+兩邊要在同一個房間裡互相解得開就得逐位元組對齊 —— 那是典型的安靜失敗。
+
+### 做法：核心實作「與已上線 Apple 版相同」的那一套
+
+新增 `padnote_crypto::session`，AES-256-GCM，位元組佈局照抄 CryptoKit 的
+`AES.GCM.seal(...).combined`：
+
+```text
+combined = nonce(12) || ciphertext || tag(16)
+```
+
+**刻意不動 Swift。** 硬前提是不影響已穩定的 Apple 版，而且使用者手上已經有
+在跑的 iOS 版 —— 讓核心去配合既有格式，Android 就能直接與它互通，Apple 端
+一行都不用改。日後 iOS 要改走核心也不會有 wire 格式變動。
+
+### 相容性不是用推論的，是測出來的
+
+`crates/padnote-crypto/tests/cryptokit_interop.rs`：Rust 加密 → 真的叫 `swift`
+用 CryptoKit 解；CryptoKit 加密 → Rust 解。雙向都通過。
+沒有 Swift 工具鏈的機器（Linux CI）自動跳過，不會因此變紅。
+
+FFI 曝露 `session_key_generate` / `session_seal` / `session_open` 三個函式，
+Android 端在模擬器上實機跑過 round-trip：畫面顯示「AES-256-GCM round-trip 通過」。
+
+新增相依 `aes-gcm`（連同 aes / ctr / ghash / polyval）皆為 MIT OR Apache-2.0，
+符合 deny.toml 的白名單。
+
+### 硬前提回歸
+
+`cargo test --workspace` 785 通過、0 失敗；iOS 建置 BUILD SUCCEEDED。
+
+---
+
 ## 2026-09-13 (6) · Android WP1–WP2：核心可編、APK 跑起來了
 
 決策（專案擁有者拍板）：**路線 2（一次到位，Apple 儲存層改用核心格式）**、

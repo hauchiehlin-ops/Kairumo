@@ -20,6 +20,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import uniffi.padnote_core.appInfo
 import uniffi.padnote_core.coreVersion
+import uniffi.padnote_core.sessionKeyGenerate
+import uniffi.padnote_core.sessionOpen
+import uniffi.padnote_core.sessionSeal
 
 /**
  * Android 外殼的起點（工作包 WP2）。
@@ -73,9 +76,26 @@ private fun readCoreStatus(): List<Pair<String, String>> = try {
     listOf(
         "核心版本" to coreVersion(),
         "目標平台" to "${info.targetOs}/${info.targetArch}",
-        "介面版本" to "2.3.0 (11)"
+        "介面版本" to "2.3.1 (11)",
+        "協同加密" to checkSessionCrypto()
     )
 } catch (t: Throwable) {
     // 綁定或 .so 載入失敗時要講清楚，不要給一個空白畫面
     listOf("核心載入失敗" to (t.message ?: t.toString()))
+}
+
+/**
+ * 走核心的協同加密做一次 round-trip。
+ *
+ * 格式與 Apple 版的 CryptoKit AES-256-GCM 逐位元組相同（核心那邊有跨語言測試），
+ * 所以 Android 與 iOS 能在同一個協同房間裡互相解得開。
+ */
+private fun checkSessionCrypto(): String = try {
+    val key = sessionKeyGenerate()
+    val message = "Kairumo 協同訊息"
+    val sealed = sessionSeal(key, message.toByteArray())
+    val opened = String(sessionOpen(key, sealed))
+    if (opened == message) "AES-256-GCM round-trip 通過" else "內容不符"
+} catch (t: Throwable) {
+    "失敗：${t.message}"
 }

@@ -18,6 +18,7 @@
 
 pub mod envelope;
 pub mod recovery;
+pub mod session;
 
 pub use envelope::{CryptoError, Dek, Envelope, KdfParams};
 pub use recovery::{RecoveryCode, RecoveryError};

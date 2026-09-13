@@ -11,6 +11,8 @@ workspace = true
 [dependencies]
 argon2 = { workspace = true }
 chacha20poly1305 = { workspace = true }
+# 協同訊息用 AES-256-GCM —— 必須與已上線的 Apple 版（CryptoKit）逐位元組相容
+aes-gcm = "0.10"
 base64 = { workspace = true }
 getrandom = { workspace = true }
 sha2 = { workspace = true }

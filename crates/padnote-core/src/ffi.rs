@@ -988,6 +988,39 @@ pub fn can_open(spec_version: u32, min_reader_version: u32) -> bool {
     crate::can_open(spec_version, min_reader_version)
 }
 
+// ---- 協同訊息加密（工作包 WP3）----
+//
+// 為什麼放在核心：Apple 版用 CryptoKit 的 AES-256-GCM，Android 若自己再寫一份，
+// 兩邊要在同一個房間裡互相解得開就得逐位元組對齊 —— 那是個安靜失敗的來源。
+// 這裡讓所有新平台共用同一份實作，格式與已上線的 Apple 版完全相同
+// （由 padnote-crypto 的 cryptokit_interop 測試把關）。
+
+/// 產生新的協同房間金鑰，回傳 base64（就是邀請連結裡帶的那一段）。
+#[uniffi::export]
+pub fn session_key_generate() -> Result<String, FfiError> {
+    padnote_crypto::session::SessionKey::generate()
+        .map(|k| k.to_base64())
+        .map_err(|e| FfiError::Failed(e.to_string()))
+}
+
+/// 用房間金鑰加密一段訊息，回傳 base64 密文。
+#[uniffi::export]
+pub fn session_seal(key_base64: String, plaintext: Vec<u8>) -> Result<String, FfiError> {
+    let key = padnote_crypto::session::SessionKey::from_base64(&key_base64)
+        .map_err(|e| FfiError::Failed(e.to_string()))?;
+    key.seal_to_base64(&plaintext)
+        .map_err(|e| FfiError::Failed(e.to_string()))
+}
+
+/// 解開 base64 密文。金鑰不符或內容被竄改都會失敗，不會回傳可疑內容。
+#[uniffi::export]
+pub fn session_open(key_base64: String, sealed_base64: String) -> Result<Vec<u8>, FfiError> {
+    let key = padnote_crypto::session::SessionKey::from_base64(&key_base64)
+        .map_err(|e| FfiError::Failed(e.to_string()))?;
+    key.open_from_base64(&sealed_base64)
+        .map_err(|e| FfiError::Failed(e.to_string()))
+}
+
 // ---- 轉換輔助 ----
 
 fn to_ink_point(p: StrokePoint) -> InkPoint {
