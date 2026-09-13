@@ -15,8 +15,8 @@ android {
         minSdk = 29
         targetSdk = 35
         // 版本號由 scripts/bump-version.sh 與 Apple 端一起更新，不要手改
-        versionCode = 14
-        versionName = "2.3.3"
+        versionCode = 15
+        versionName = "2.3.4"
     }
 
     buildTypes {
