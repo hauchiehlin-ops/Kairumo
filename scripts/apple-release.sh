@@ -7,6 +7,14 @@
 #   ./scripts/apple-release.sh                  # 完整建置、封裝並上傳
 #   ./scripts/apple-release.sh --validate-only  # 僅驗證不真正上傳
 #   ./scripts/apple-release.sh --skip-rust      # 略過 Rust XCFramework 編譯以節省時間
+#   ./scripts/apple-release.sh --ios-only       # 只做 iOS 版（不產 Mac 版）
+#
+# ⚠️ Mac 版是**另一個組建**，不是同一個。
+#
+# iOS 的 .ipa 上傳之後，Mac 版的 TestFlight 是看不到的 —— 使用者按下安裝會得到
+# 「要求的 App 無法使用或不存在」。那不是 App Store Connect 的狀態問題，
+# 是根本沒有 macOS 的組建可以給它。Mac Catalyst 必須用
+# `generic/platform=macOS,variant=Mac Catalyst` 另外封裝，並以 `-t macos` 上傳。
 #
 
 set -euo pipefail
@@ -23,6 +31,8 @@ fi
 
 VALIDATE_ONLY=0
 SKIP_RUST=0
+# 預設兩個平台都做。使用者在 Mac 上裝不到 App 的那次，就是因為只有 iOS 組建。
+BUILD_MAC=1
 
 for arg in "$@"; do
     case "$arg" in
@@ -32,8 +42,11 @@ for arg in "$@"; do
         --skip-rust)
             SKIP_RUST=1
             ;;
+        --ios-only)
+            BUILD_MAC=0
+            ;;
         -h|--help)
-            echo "用法: $0 [--validate-only] [--skip-rust]"
+            echo "用法: $0 [--validate-only] [--skip-rust] [--ios-only]"
             exit 0
             ;;
     esac
@@ -113,40 +126,8 @@ PLIST_EOF
 # 4. 步驟三：xcodebuild archive 封裝
 APP_VER=$(python3 -c "import re; m=re.search(r'version\s*=\s*\"([^\"]+)\"', open('${REPO_ROOT}/Cargo.toml').read()); print(m.group(1) if m else '1.0.0')")
 BUNDLE_VER=$(python3 -c "import re, os; f='${REPO_ROOT}/apple/Kairumo.xcodeproj/project.pbxproj'; content=open(f).read() if os.path.exists(f) else ''; m=re.search(r'CURRENT_PROJECT_VERSION\s*=\s*(\d+)', content); print(m.group(1) if m else '1')")
-echo "📦 [3/4] 執行 xcodebuild archive 封裝通用應用程式 (版本: v${APP_VER}, Bundle: ${BUNDLE_VER})..."
-xcodebuild archive \
-    -project "$PROJECT_PATH" \
-    -scheme "$SCHEME" \
-    -configuration Release \
-    -destination "generic/platform=iOS" \
-    -archivePath "$ARCHIVE_PATH" \
-    DEVELOPMENT_TEAM="${APPLE_TEAM_ID}" \
-    MARKETING_VERSION="${APP_VER}" \
-    CURRENT_PROJECT_VERSION="${BUNDLE_VER}" \
-    INFOPLIST_KEY_CFBundleShortVersionString="${APP_VER}" \
-    INFOPLIST_KEY_CFBundleVersion="${BUNDLE_VER}" \
-    INFOPLIST_KEY_ITSAppUsesNonExemptEncryption="NO" \
-    -quiet
+echo "📦 [3/4] 封裝 (版本: v${APP_VER}, Bundle: ${BUNDLE_VER})..."
 
-# 5. 導出 IPA
-echo "📤 導出 App Store 發行套件 (IPA)..."
-xcodebuild -exportArchive \
-    -archivePath "$ARCHIVE_PATH" \
-    -exportPath "$EXPORT_PATH" \
-    -exportOptionsPlist "$EXPORT_PLIST" \
-    -allowProvisioningUpdates \
-    -quiet
-
-IPA_FILE=$(find "$EXPORT_PATH" -name "*.ipa" | head -n 1)
-
-if [[ -z "$IPA_FILE" || ! -f "$IPA_FILE" ]]; then
-    echo "❌ 導出失敗：在 $EXPORT_PATH 未找到 IPA 檔案" >&2
-    exit 1
-fi
-
-echo "✅ 成功產出發行檔案：$IPA_FILE"
-
-# 6. 步驟四：上傳至 App Store Connect
 ACTION_NAME="上傳"
 ALTOOL_ACTION="--upload-app"
 if [[ "$VALIDATE_ONLY" -eq 1 ]]; then
@@ -154,42 +135,92 @@ if [[ "$VALIDATE_ONLY" -eq 1 ]]; then
     ALTOOL_ACTION="--validate-app"
 fi
 
-echo "🚀 [4/4] 正在${ACTION_NAME}至 App Store Connect..."
+# 把「封裝 → 匯出 → 上傳」抽成一段，兩個平台走同一條路。
+#
+# $1 = 人看的名稱、$2 = xcodebuild 的 destination、$3 = altool 的平台代號
+archive_export_upload() {
+    local label="$1" destination="$2" altool_platform="$3"
+    local archive="${BUILD_DIR}/${SCHEME}-${altool_platform}.xcarchive"
+    local export_dir="${BUILD_DIR}/export-${altool_platform}"
 
-if [[ -n "${APP_STORE_CONNECT_API_KEY_ID:-}" && -n "${APP_STORE_CONNECT_ISSUER_ID:-}" && -n "${APP_STORE_CONNECT_KEY_PATH:-}" ]]; then
-    # 使用 API Key 模式
-    echo "🔐 使用 App Store Connect API Key (Key ID: $APP_STORE_CONNECT_API_KEY_ID)..."
-    # altool 預設會尋找 ~/.appstoreconnect/private_keys 或 ~/.private_keys
-    KEYS_DIR="${HOME}/.appstoreconnect/private_keys"
-    mkdir -p "$KEYS_DIR"
-    cp -f "$APP_STORE_CONNECT_KEY_PATH" "${KEYS_DIR}/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+    echo "──────────────────────────────────────────────────"
+    echo "📦 封裝 ${label}（${destination}）"
+    xcodebuild archive \
+        -project "$PROJECT_PATH" \
+        -scheme "$SCHEME" \
+        -configuration Release \
+        -destination "$destination" \
+        -archivePath "$archive" \
+        DEVELOPMENT_TEAM="${APPLE_TEAM_ID}" \
+        MARKETING_VERSION="${APP_VER}" \
+        CURRENT_PROJECT_VERSION="${BUNDLE_VER}" \
+        INFOPLIST_KEY_CFBundleShortVersionString="${APP_VER}" \
+        INFOPLIST_KEY_CFBundleVersion="${BUNDLE_VER}" \
+        INFOPLIST_KEY_ITSAppUsesNonExemptEncryption="NO" \
+        -quiet
 
-    xcrun altool "$ALTOOL_ACTION" \
-        -f "$IPA_FILE" \
-        -t ios \
-        --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
-        --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
-elif [[ -n "${APPLE_ID:-}" && -n "${APP_SPECIFIC_PASSWORD:-}" ]]; then
-    if [[ "$APPLE_ID" == *"您的Apple帳號Email"* || "$APPLE_ID" == *"example.com"* ]]; then
-        echo "❌ 請先在 apple/ExportConfig.env 中將 APPLE_ID 修改為您真實的 Apple 帳號 Email！" >&2
-        echo "   目前套件 $IPA_FILE 已打包完成，填寫正確 Email 後即可上傳，或直接用 Transporter App 上傳。" >&2
-        exit 1
+    echo "📤 匯出 ${label} 發行套件..."
+    xcodebuild -exportArchive \
+        -archivePath "$archive" \
+        -exportPath "$export_dir" \
+        -exportOptionsPlist "$EXPORT_PLIST" \
+        -allowProvisioningUpdates \
+        -quiet
+
+    # iOS 匯出 .ipa，Mac Catalyst 匯出 .pkg —— 兩種都要找得到。
+    local package
+    package=$(find "$export_dir" \( -name "*.ipa" -o -name "*.pkg" \) | head -n 1)
+    if [[ -z "$package" || ! -f "$package" ]]; then
+        echo "❌ ${label} 匯出失敗：在 $export_dir 找不到 .ipa 或 .pkg" >&2
+        return 1
     fi
-    # 使用帳號密碼模式
-    echo "🔐 使用 Apple ID ($APPLE_ID) 與 App 專用密碼..."
-    xcrun altool "$ALTOOL_ACTION" \
-        -f "$IPA_FILE" \
-        -t ios \
-        -u "$APPLE_ID" \
-        -p "$APP_SPECIFIC_PASSWORD"
+    echo "✅ ${label} 產出：$package"
+
+    echo "🚀 正在${ACTION_NAME} ${label} 至 App Store Connect..."
+    if [[ -n "${APP_STORE_CONNECT_API_KEY_ID:-}" && -n "${APP_STORE_CONNECT_ISSUER_ID:-}" && -n "${APP_STORE_CONNECT_KEY_PATH:-}" ]]; then
+        local keys_dir="${HOME}/.appstoreconnect/private_keys"
+        mkdir -p "$keys_dir"
+        cp -f "$APP_STORE_CONNECT_KEY_PATH" "${keys_dir}/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+        xcrun altool "$ALTOOL_ACTION" \
+            -f "$package" \
+            -t "$altool_platform" \
+            --apiKey "$APP_STORE_CONNECT_API_KEY_ID" \
+            --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
+    elif [[ -n "${APPLE_ID:-}" && -n "${APP_SPECIFIC_PASSWORD:-}" ]]; then
+        if [[ "$APPLE_ID" == *"您的Apple帳號Email"* || "$APPLE_ID" == *"example.com"* ]]; then
+            echo "❌ 請先在 apple/ExportConfig.env 中將 APPLE_ID 改成真實的 Apple 帳號 Email。" >&2
+            echo "   $package 已打包完成，填好之後即可上傳，或用 Transporter App 手動上傳。" >&2
+            return 1
+        fi
+        xcrun altool "$ALTOOL_ACTION" \
+            -f "$package" \
+            -t "$altool_platform" \
+            -u "$APPLE_ID" \
+            -p "$APP_SPECIFIC_PASSWORD"
+    else
+        echo "❌ 缺少上傳憑證資訊。" >&2
+        echo "   請在 apple/ExportConfig.env 填入【方式 A: API Key】或【方式 B: 專用密碼】。" >&2
+        echo "   $package 已保留，也可以用 Transporter App 手動上傳。" >&2
+        return 1
+    fi
+}
+
+echo "🚀 [4/4] ${ACTION_NAME}至 App Store Connect"
+archive_export_upload "iPhone / iPad" "generic/platform=iOS" "ios"
+
+if [[ "$BUILD_MAC" -eq 1 ]]; then
+    # Mac 版必須另外封裝。只上傳 iOS 的話，Mac 的 TestFlight 會顯示
+    # 「要求的 App 無法使用或不存在」—— 因為那裡根本沒有可安裝的組建。
+    archive_export_upload "Mac" "generic/platform=macOS,variant=Mac Catalyst" "macos"
 else
-    echo "❌ 缺少上傳憑證資訊！"
-    echo "   請在 apple/ExportConfig.env 中填入【方式 A: API Key】或【方式 B: 專用密碼】。"
-    echo "   檔案路徑：$IPA_FILE 已保留，您亦可使用 Transporter App 手動上傳。"
-    exit 1
+    echo "⏩ 略過 Mac 版（--ios-only）。Mac 的 TestFlight 將看不到這個版本。"
 fi
 
 echo "=================================================="
-echo "🎉 恭喜！Kairumo 通用應用程式已成功${ACTION_NAME}至 App Store Connect！"
-echo "   iPhone、iPad 與 Mac 使用者即將可以在 App Store 下載。"
+echo "🎉 Kairumo 已成功${ACTION_NAME}至 App Store Connect。"
+if [[ "$BUILD_MAC" -eq 1 ]]; then
+    echo "   iPhone / iPad 與 Mac 兩個組建都已送出 —— 兩邊的 TestFlight 都會看到。"
+else
+    echo "   只送出了 iPhone / iPad 組建。"
+fi
 echo "=================================================="

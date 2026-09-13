@@ -2175,6 +2175,22 @@ extension LocalizationManager {
             .ko: "여기에 쓰세요",
             .th: "เขียนที่นี่"
         ],
+        "input_diagnostics": [
+            .zhHant: "輸入診斷",
+            .en: "Input Diagnostics",
+            .zhHans: "输入诊断",
+            .ja: "入力診断",
+            .ko: "입력 진단",
+            .th: "การวินิจฉัยอินพุต"
+        ],
+        "input_diagnostics_explainer": [
+            .zhHant: "量到的是「事件在硬體上發生 → 交給畫面」，不是筆尖到光子（面板的掃描時間量不到）。它的用途是同一台裝置上開關某個選項的前後對比。",
+            .en: "Measures hardware event time to frame delivery — not pen-to-photon (panel scan time cannot be measured here). Use it to compare before and after toggling a setting on the same device.",
+            .zhHans: "测量的是「事件在硬件上发生 → 交给画面」，不是笔尖到光子（面板扫描时间测不到）。用途是同一台设备上开关某个选项的前后对比。",
+            .ja: "計測するのは「ハードウェアでのイベント発生 → 画面への引き渡し」で、ペン先から発光までではありません（パネルの走査時間は計測できません）。同一端末で設定を切り替えた前後の比較に使います。",
+            .ko: "하드웨어 이벤트 발생부터 화면 전달까지를 측정합니다. 펜 끝에서 빛까지가 아닙니다(패널 주사 시간은 측정 불가). 같은 기기에서 설정을 켜고 끈 전후 비교에 사용하세요.",
+            .th: "วัดจากเวลาที่เหตุการณ์เกิดขึ้นในฮาร์ดแวร์จนถึงการส่งเฟรม ไม่ใช่จากปลายปากกาถึงแสง (วัดเวลาสแกนหน้าจอไม่ได้) ใช้เปรียบเทียบก่อนและหลังเปิดปิดการตั้งค่าบนเครื่องเดียวกัน"
+        ],
         "insert": [
             .zhHant: "插入",
             .en: "Insert",
@@ -3743,6 +3759,86 @@ extension LocalizationManager {
             .ko: "템플릿 선택",
             .th: "เลือกเทมเพลต"
         ],
+        "shape_edit": [
+            .zhHant: "編修形狀",
+            .en: "Edit Shape",
+            .zhHans: "编辑形状",
+            .ja: "図形を編集",
+            .ko: "도형 편집",
+            .th: "แก้ไขรูปร่าง"
+        ],
+        "shape_fill": [
+            .zhHant: "填滿顏色",
+            .en: "Fill",
+            .zhHans: "填充颜色",
+            .ja: "塗りつぶし",
+            .ko: "채우기",
+            .th: "สีพื้น"
+        ],
+        "shape_label": [
+            .zhHant: "標籤文字",
+            .en: "Label",
+            .zhHans: "标签文字",
+            .ja: "ラベル",
+            .ko: "레이블",
+            .th: "ป้ายกำกับ"
+        ],
+        "shape_line_width": [
+            .zhHant: "線條粗細",
+            .en: "Line Width",
+            .zhHans: "线条粗细",
+            .ja: "線の太さ",
+            .ko: "선 두께",
+            .th: "ความหนาเส้น"
+        ],
+        "shape_node_count": [
+            .zhHant: "%@ 個節點",
+            .en: "%@ nodes",
+            .zhHans: "%@ 个节点",
+            .ja: "%@ 個のノード",
+            .ko: "노드 %@개",
+            .th: "%@ โหนด"
+        ],
+        "shape_section_basic": [
+            .zhHant: "基本形狀",
+            .en: "Basic Shapes",
+            .zhHans: "基本形状",
+            .ja: "基本図形",
+            .ko: "기본 도형",
+            .th: "รูปร่างพื้นฐาน"
+        ],
+        "shape_section_flowchart": [
+            .zhHant: "流程圖符號（ISO 5807）",
+            .en: "Flowchart Symbols (ISO 5807)",
+            .zhHans: "流程图符号（ISO 5807）",
+            .ja: "フローチャート記号（ISO 5807）",
+            .ko: "순서도 기호(ISO 5807)",
+            .th: "สัญลักษณ์ผังงาน (ISO 5807)"
+        ],
+        "shape_section_templates": [
+            .zhHant: "範本",
+            .en: "Templates",
+            .zhHans: "模板",
+            .ja: "テンプレート",
+            .ko: "템플릿",
+            .th: "แม่แบบ"
+        ],
+        "shape_stroke": [
+            .zhHant: "線條顏色",
+            .en: "Stroke",
+            .zhHans: "线条颜色",
+            .ja: "線の色",
+            .ko: "선 색상",
+            .th: "สีเส้น"
+        ],
+        "shape_studio": [
+            .zhHant: "形狀與流程圖",
+            .en: "Shapes & Flowcharts",
+            .zhHans: "形状与流程图",
+            .ja: "図形とフローチャート",
+            .ko: "도형 및 순서도",
+            .th: "รูปร่างและผังงาน"
+        ],
         "share_invite_link": [
             .zhHant: "分享邀請連結",
             .en: "Share Invite Link",
@@ -4110,6 +4206,118 @@ extension LocalizationManager {
             .ja: "システム診断とバージョン情報",
             .ko: "시스템 진단 및 버전 정보",
             .th: "ข้อมูลการวินิจฉัยและเวอร์ชัน"
+        ],
+        "table_add_column": [
+            .zhHant: "新增欄",
+            .en: "Add Column",
+            .zhHans: "新增列",
+            .ja: "列を追加",
+            .ko: "열 추가",
+            .th: "เพิ่มคอลัมน์"
+        ],
+        "table_add_row": [
+            .zhHant: "新增列",
+            .en: "Add Row",
+            .zhHans: "新增行",
+            .ja: "行を追加",
+            .ko: "행 추가",
+            .th: "เพิ่มแถว"
+        ],
+        "table_delete_column": [
+            .zhHant: "刪除欄",
+            .en: "Delete Column",
+            .zhHans: "删除列",
+            .ja: "列を削除",
+            .ko: "열 삭제",
+            .th: "ลบคอลัมน์"
+        ],
+        "table_delete_row": [
+            .zhHant: "刪除列",
+            .en: "Delete Row",
+            .zhHans: "删除行",
+            .ja: "行を削除",
+            .ko: "행 삭제",
+            .th: "ลบแถว"
+        ],
+        "table_edit": [
+            .zhHant: "編修表格",
+            .en: "Edit Table",
+            .zhHans: "编辑表格",
+            .ja: "表を編集",
+            .ko: "표 편집",
+            .th: "แก้ไขตาราง"
+        ],
+        "table_font_size": [
+            .zhHant: "文字大小",
+            .en: "Font Size",
+            .zhHans: "文字大小",
+            .ja: "文字サイズ",
+            .ko: "글자 크기",
+            .th: "ขนาดตัวอักษร"
+        ],
+        "table_header_row": [
+            .zhHant: "第一列為表頭",
+            .en: "Header Row",
+            .zhHans: "第一行为表头",
+            .ja: "先頭行を見出しに",
+            .ko: "머리글 행",
+            .th: "แถวหัวตาราง"
+        ],
+        "table_insert": [
+            .zhHant: "插入表格",
+            .en: "Insert Table",
+            .zhHans: "插入表格",
+            .ja: "表を挿入",
+            .ko: "표 삽입",
+            .th: "แทรกตาราง"
+        ],
+        "table_merge_down": [
+            .zhHant: "向下合併",
+            .en: "Merge Down",
+            .zhHans: "向下合并",
+            .ja: "下へ結合",
+            .ko: "아래쪽 병합",
+            .th: "ผสานลงล่าง"
+        ],
+        "table_merge_right": [
+            .zhHant: "向右合併",
+            .en: "Merge Right",
+            .zhHans: "向右合并",
+            .ja: "右へ結合",
+            .ko: "오른쪽 병합",
+            .th: "ผสานไปทางขวา"
+        ],
+        "table_studio": [
+            .zhHant: "表格",
+            .en: "Table",
+            .zhHans: "表格",
+            .ja: "表",
+            .ko: "표",
+            .th: "ตาราง"
+        ],
+        "table_unmerge": [
+            .zhHant: "取消合併",
+            .en: "Unmerge",
+            .zhHans: "取消合并",
+            .ja: "結合を解除",
+            .ko: "병합 해제",
+            .th: "ยกเลิกการผสาน"
+        ],
+        "table_update": [
+            .zhHant: "更新表格",
+            .en: "Update Table",
+            .zhHans: "更新表格",
+            .ja: "表を更新",
+            .ko: "표 업데이트",
+            .th: "อัปเดตตาราง"
+        ],
+        "table_width": [
+            .zhHant: "表格寬度",
+            .en: "Table Width",
+            .zhHans: "表格宽度",
+            .ja: "表の幅",
+            .ko: "표 너비",
+            .th: "ความกว้างตาราง"
         ],
         "tap_to_place_pin": [
             .zhHant: "請在畫布上輕點以放置圖釘",

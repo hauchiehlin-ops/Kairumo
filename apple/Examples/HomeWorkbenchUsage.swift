@@ -32,5 +32,16 @@ struct KairumoApp: App {
                 .frame(minWidth: 800, minHeight: 600)
                 #endif
         }
+
+        // 操作手冊與隱私權政策各自是一個**真正的視窗**，不是彈出的工作表。
+        //
+        // 工作表在 Mac 上既不能移動也不能調整大小 —— 使用者要一邊看手冊
+        // 一邊操作 App 的時候，那個工作表就擋在那裡。
+        WindowGroup(id: DocumentWindow.id, for: BundledDocument.ID.self) { $documentId in
+            DocumentWindowContent(documentId: documentId)
+                #if os(macOS) || targetEnvironment(macCatalyst)
+                .frame(minWidth: 520, minHeight: 420)
+                #endif
+        }
     }
 }

@@ -1,0 +1,149 @@
+package com.kairumo.padnote.table
+
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.dp
+
+/**
+ * 畫布上的表格圖層（Android）。
+ *
+ * 格線與文字都照**核心算好的位置**畫 —— 這一層不做任何排版。自己再斷一次行
+ * 的話，同一張表在 iPad 與 Android 上的高度會不一樣，而表格的高度會影響它
+ * 底下的東西，整頁版面就分家了。
+ *
+ * 對照 `apple/Sources/TableStudioView.swift` 的 `NoteTableView`。
+ */
+@Composable
+fun TableLayer(
+    tables: List<NoteTable>,
+    density: Float,
+    selectedId: String?,
+    onSelect: (String?) -> Unit,
+    onEdit: (NoteTable) -> Unit,
+    onChanged: (NoteTable) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier) {
+        for (table in tables) {
+            TableObjectView(table, density, table.id == selectedId, onSelect, onEdit, onChanged)
+        }
+    }
+}
+
+@Composable
+private fun TableObjectView(
+    table: NoteTable,
+    density: Float,
+    isSelected: Boolean,
+    onSelect: (String?) -> Unit,
+    onEdit: (NoteTable) -> Unit,
+    onChanged: (NoteTable) -> Unit
+) {
+    val layout = table.layout()
+    val foreground = MaterialTheme.colorScheme.onSurface
+    val ruleColor = table.ruleColorHex
+        ?.let { hex -> ChartColorOrNull(hex) }
+        ?: foreground.copy(alpha = 0.35f)
+    val headerFill = when (val hex = table.headerBackgroundHex) {
+        // "clear" 是哨符不是顏色 —— 走顏色轉換會變成黑色。
+        "clear" -> Color.Transparent
+        null -> foreground.copy(alpha = 0.06f)
+        else -> ChartColorOrNull(hex) ?: foreground.copy(alpha = 0.06f)
+    }
+
+    Box(
+        Modifier
+            .offset((table.x / density).dp, (table.y / density).dp)
+            .size((layout.width / density).dp.value.dp, (layout.height / density).dp.value.dp)
+            .border(
+                if (isSelected) 1.5.dp else 0.dp,
+                MaterialTheme.colorScheme.primary,
+                RoundedCornerShape(4.dp)
+            )
+            .pointerInput(table.id) {
+                detectTapGestures(
+                    onTap = { onSelect(table.id) },
+                    // 點兩下進編輯面板 —— 與 Apple 端一致。
+                    onDoubleTap = { onEdit(table) }
+                )
+            }
+            .pointerInput(table.id) {
+                detectDragGestures { change, drag ->
+                    change.consume()
+                    onChanged(
+                        table.copyTable().apply {
+                            x = table.x + drag.x * density
+                            y = table.y + drag.y * density
+                        }
+                    )
+                }
+            }
+    ) {
+        Canvas(Modifier.size((layout.width / density).dp, (layout.height / density).dp)) {
+            val scale = 1f / density
+            // 表頭底色先畫，才會在格線與文字下面。
+            for (cell in layout.cells) {
+                if (!cell.isHeader) continue
+                drawRect(
+                    color = headerFill,
+                    topLeft = Offset((cell.x * scale).toFloat(), (cell.y * scale).toFloat()),
+                    size = Size((cell.width * scale).toFloat(), (cell.height * scale).toFloat())
+                )
+            }
+
+            drawIntoCanvas { canvas ->
+                val native = canvas.nativeCanvas
+                val stroke = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    style = android.graphics.Paint.Style.STROKE
+                    strokeWidth = 1f
+                    color = ruleColor.toArgb()
+                }
+                for (rule in layout.rules) {
+                    native.drawLine(
+                        (rule.x1 * scale).toFloat(), (rule.y1 * scale).toFloat(),
+                        (rule.x2 * scale).toFloat(), (rule.y2 * scale).toFloat(), stroke
+                    )
+                }
+
+                val text = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    color = foreground.toArgb()
+                    textSize = (table.fontSize * scale) * density
+                }
+                val lineHeight = table.fontSize * 1.35f * scale
+                for (cell in layout.cells) {
+                    text.isFakeBoldText = cell.isHeader
+                    var baseline = (cell.y * scale).toFloat() + lineHeight
+                    for (line in cell.lines) {
+                        native.drawText(
+                            line,
+                            (cell.x * scale).toFloat() + 6f * scale,
+                            baseline,
+                            text
+                        )
+                        baseline += lineHeight
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** 解析 `#RRGGBB`，失敗時回 `null`（讓呼叫端自己挑 fallback）。 */
+private fun ChartColorOrNull(hex: String): Color? =
+    com.kairumo.padnote.chart.ChartRenderer.parseColor(hex)?.let { Color(it) }

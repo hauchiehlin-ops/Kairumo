@@ -43,6 +43,16 @@ import com.kairumo.padnote.sync.FolderSync
 import com.kairumo.padnote.backup.BackupManager
 import com.kairumo.padnote.text.TextBox
 import com.kairumo.padnote.text.TextBoxEditor
+import com.kairumo.padnote.library.NotebookLibrary
+import com.kairumo.padnote.shape.NoteConnection
+import com.kairumo.padnote.shape.NoteShape
+import com.kairumo.padnote.shape.ShapeLayer
+import com.kairumo.padnote.shape.ShapePicker
+import com.kairumo.padnote.shape.ShapeStore
+import com.kairumo.padnote.table.NoteTable
+import com.kairumo.padnote.table.TableEditor
+import com.kairumo.padnote.table.TableLayer
+import com.kairumo.padnote.table.TableStore
 import com.kairumo.padnote.chart.ChartLayer
 import com.kairumo.padnote.chart.ChartObject
 import com.kairumo.padnote.chart.ChartSpec
@@ -134,6 +144,24 @@ private fun InkScreen() {
     var editingChart by remember { mutableStateOf<ChartObject?>(null) }
     var insertingChart by remember { mutableStateOf(false) }
     LaunchedEffect(notebook) { chartStore.load(); chartRevision++ }
+
+    // 表格。內容走核心原生的表格區塊，樣式走區塊外觀 ——
+    // 與 Apple 端同一組操作，所以表格互相打得開。
+    val tableStore = remember(notebook) { TableStore(notebook?.first, notebook?.second) }
+    var tableRevision by remember { mutableIntStateOf(0) }
+    var selectedTableId by remember { mutableStateOf<String?>(null) }
+    var editingTable by remember { mutableStateOf<NoteTable?>(null) }
+    var insertingTable by remember { mutableStateOf(false) }
+    LaunchedEffect(notebook) { tableStore.load(); tableRevision++ }
+
+    // 形狀與流程圖。幾何全部來自核心，與 Apple 端是同一組頂點；
+    // 形狀本身也是核心的原生物件，所以關掉 App 再打開它們還在。
+    val shapeStore = remember(notebook) { ShapeStore(notebook?.first, notebook?.second) }
+    var shapeRevision by remember { mutableIntStateOf(0) }
+    var connections by remember(notebook) { mutableStateOf(listOf<NoteConnection>()) }
+    var selectedShapeId by remember { mutableStateOf<String?>(null) }
+    var insertingShape by remember { mutableStateOf(false) }
+    LaunchedEffect(notebook) { shapeStore.load(); shapeRevision++ }
 
     // 雲端同步（決策 D3 選項 A）：使用者挑一個資料夾，兩台裝置指同一個地方。
     // 備份檔：選一個既有的備份來復原。
@@ -295,6 +323,14 @@ private fun InkScreen() {
                     text = { Text(l10n("chart_studio")) },
                     onClick = { showMenu = false; insertingChart = true }
                 )
+                DropdownMenuItem(
+                    text = { Text(l10n("table_studio")) },
+                    onClick = { showMenu = false; insertingTable = true }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("shape_studio")) },
+                    onClick = { showMenu = false; insertingShape = true }
+                )
                 Divider()
                 DropdownMenuItem(
                     text = { Text(l10n("backup_create")) },
@@ -440,6 +476,41 @@ private fun InkScreen() {
                 )
             }
 
+            // 形狀與連接線。
+            key(shapeRevision) {
+                ShapeLayer(
+                    shapes = shapeStore.all,
+                    connections = connections,
+                    density = canvasDensity,
+                    selectedId = selectedShapeId,
+                    onSelect = { selectedShapeId = it },
+                    onEdit = { shape ->
+                        // 點兩下刪除選中的形狀 —— 插錯一個卻刪不掉是最惱人的。
+                        shapeStore.remove(shape)
+                        shapeRevision++
+                        selectedShapeId = null
+                    },
+                    onChanged = { updated ->
+                        shapeStore.persist(updated)
+                        shapeRevision++
+                    },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            // 表格疊在文字方塊之上。
+            key(tableRevision) {
+                TableLayer(
+                    tables = tableStore.all,
+                    density = canvasDensity,
+                    selectedId = selectedTableId,
+                    onSelect = { selectedTableId = it },
+                    onEdit = { editingTable = it },
+                    onChanged = { table -> tableStore.persist(table); tableRevision++ },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
             // 圖表疊在文字方塊之上 —— 與 Apple 端的疊放順序一致。
             key(chartRevision) {
                 ChartLayer(
@@ -467,6 +538,69 @@ private fun InkScreen() {
                 textRevision++
             },
             onDismiss = { editingText = null }
+        )
+    }
+
+    if (insertingShape) {
+        ShapePicker(
+            languageTag = deviceLanguageTag(),
+            onCommit = { newShapes, newConnections ->
+                // 範本的連線指向的是**核心給的 id**，不是範本裡的暫時 id ——
+                // 用暫時 id 的話，線會指向不存在的物件，畫面上是一條從空氣
+                // 連出來的線。
+                val idMap = mutableMapOf<String, String>()
+                for (shape in newShapes) {
+                    idMap[shape.id] = shapeStore.create(shape).id
+                }
+                connections = connections + newConnections.mapNotNull { link ->
+                    val from = idMap[link.fromShapeId] ?: return@mapNotNull null
+                    val to = idMap[link.toShapeId] ?: return@mapNotNull null
+                    link.copy(fromShapeId = from, toShapeId = to)
+                }
+                shapeRevision++
+                insertingShape = false
+            },
+            onDismiss = { insertingShape = false }
+        )
+    }
+
+    // 插入一張新表格。
+    if (insertingTable) {
+        TableEditor(
+            table = NoteTable(),
+            languageTag = deviceLanguageTag(),
+            isNew = true,
+            onCommit = { table ->
+                tableStore.create(table)
+                tableRevision++
+                insertingTable = false
+            },
+            onDelete = { insertingTable = false },
+            onDismiss = { insertingTable = false }
+        )
+    }
+
+    // 重新編修既有的表格。
+    editingTable?.let { table ->
+        TableEditor(
+            table = table,
+            languageTag = deviceLanguageTag(),
+            isNew = false,
+            onCommit = { updated ->
+                // 位置原地保留：使用者只是改了裡面的內容。
+                tableStore.persist(
+                    updated.copyTable().apply { x = table.x; y = table.y }
+                )
+                tableRevision++
+                editingTable = null
+            },
+            onDelete = {
+                tableStore.remove(table)
+                tableRevision++
+                editingTable = null
+                selectedTableId = null
+            },
+            onDismiss = { editingTable = null }
         )
     }
 
@@ -705,19 +839,20 @@ private fun checkSessionCrypto(): String = try {
  * 「寫得下去、匯得出來」做通。回傳 `null` 代表核心開不起來，UI 會退成
  * 純畫圖模式而不是整個當掉。
  */
-private fun openNotebook(activity: ComponentActivity): Pair<PadnoteSession, String>? = try {
-    val dir = java.io.File(activity.filesDir, "notebook.padnote")
-    val session = if (dir.exists()) {
-        PadnoteSession.openExisting(dir.absolutePath, deviceId(activity))
-    } else {
-        PadnoteSession.create(
-            dir.absolutePath, "Kairumo", System.currentTimeMillis().toULong(), deviceId(activity)
-        )
-    }
-    val page = session.firstPageId() ?: session.addPage(uniffi.padnote_core.PageStyle.BLANK)
-    session to page
-} catch (t: Throwable) {
-    null
+/**
+ * 開啟這台裝置目前那一本筆記。
+ *
+ * 走 [NotebookLibrary] 而不是固定檔名：iPad 那邊每一本筆記是一個以 id 命名的
+ * 套件，只認 `notebook.padnote` 的話，同步下來的筆記本永遠不會被開啟 ——
+ * 檔案躺在資料夾裡，畫面上什麼也沒有。
+ */
+private fun openNotebook(
+    activity: ComponentActivity,
+    notebookId: String? = null
+): Pair<PadnoteSession, String>? {
+    val device = deviceId(activity)
+    val id = notebookId ?: NotebookLibrary.currentOrCreate(activity, device) ?: return null
+    return NotebookLibrary.open(activity, id, device)
 }
 
 /**
@@ -820,10 +955,11 @@ private fun runFolderSync(activity: ComponentActivity, session: PadnoteSession?)
     // 同步前先讓核心把手上的東西落盤，否則剛寫的內容不會被帶上去。
     runCatching { session?.title() }
 
-    val local = java.io.File(activity.filesDir, "notebook.padnote")
-    val result = FolderSync.sync(activity, local, remote, deviceLanguageTag())
-
     val lang = deviceLanguageTag()
+    // 先把另一台裝置新建的筆記本整包抓下來 —— FolderSync 只對齊「本機已經有的
+    // 那些套件」，沒見過的它不會主動去拿，那些筆記本就永遠不會出現。
+    NotebookLibrary.pullNewNotebooks(activity, remote, lang)
+    val result = NotebookLibrary.syncAll(activity, remote, lang)
     result.needsAttention.firstOrNull()?.let {
         return LocalizationStrings.localized("sync_needs_attention", lang).replace("%@", it)
     }

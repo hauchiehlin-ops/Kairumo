@@ -1,0 +1,8 @@
+[package]
+name = "padnote-table"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+padnote-chart = { path = "../padnote-chart" }

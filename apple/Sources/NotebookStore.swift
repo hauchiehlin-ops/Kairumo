@@ -224,6 +224,14 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     public var model3DAttachments: [Note3DAttachment]?
     /// 筆記內嵌討論圖釘清單
     public var commentPins: [NoteCommentPin]?
+    /// 筆記內嵌形狀清單（含流程圖符號）。
+    public var shapeAttachments: [NoteShapeAttachment]?
+    /// 形狀之間的連接線。
+    public var connectionAttachments: [NoteConnectionAttachment]?
+    /// 筆記內嵌表格清單。
+    ///
+    /// 舊檔沒有這個欄位，解碼後是 `nil` —— 升級上來的筆記不會有任何變化。
+    public var tableAttachments: [NoteTableAttachment]?
 
     /// 系統預設標題的語系鍵。
     ///
@@ -283,7 +291,10 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
         textAttachments: [NoteTextAttachment]? = [],
         linkAttachments: [NoteLinkAttachment]? = [],
         model3DAttachments: [Note3DAttachment]? = [],
-        commentPins: [NoteCommentPin]? = []
+        commentPins: [NoteCommentPin]? = [],
+        tableAttachments: [NoteTableAttachment]? = [],
+        shapeAttachments: [NoteShapeAttachment]? = [],
+        connectionAttachments: [NoteConnectionAttachment]? = []
     ) {
         self.id = id
         self.title = title
@@ -296,6 +307,9 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
         self.recordingAudioPath = recordingAudioPath
         self.folderId = folderId
         self.pageHeights = pageHeights
+        self.tableAttachments = tableAttachments ?? []
+        self.shapeAttachments = shapeAttachments ?? []
+        self.connectionAttachments = connectionAttachments ?? []
         self.attachments = attachments ?? []
         self.textAttachments = textAttachments ?? []
         self.linkAttachments = linkAttachments ?? []
@@ -1077,6 +1091,23 @@ public final class NotebookStore: ObservableObject {
             notebooks[idx] = updated
             markDirtyAndPersist()
         }
+    }
+
+    /// 有就更新、沒有就新增。
+    ///
+    /// 與 `updateNotebook` 的差別在最後那句：`updateNotebook` 找不到 id 時
+    /// **什麼也不做**。同步時另一台裝置新建的筆記本正好是「本機還沒有」的那種，
+    /// 走 `updateNotebook` 會靜靜地被丟掉 —— 使用者看到的是「同步成功，
+    /// 但筆記沒出現」。
+    ///
+    /// 也不更新 `lastModifiedDate`：這份內容是從檔案讀回來的，不是使用者剛改的。
+    public func upsertNotebook(_ doc: NotebookDocument) {
+        if let index = notebooks.firstIndex(where: { $0.id == doc.id }) {
+            notebooks[index] = doc
+        } else {
+            notebooks.append(doc)
+        }
+        markDirtyAndPersist()
     }
 
     public func deleteNotebook(id: String) {

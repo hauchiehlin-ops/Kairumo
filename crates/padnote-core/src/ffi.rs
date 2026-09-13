@@ -308,6 +308,27 @@ impl PadnoteSession {
         )?))
     }
 
+    /// 建立一本**沒有任何頁**的筆記本。
+    ///
+    /// 重建套件時（匯出、同步）頁面必須沿用既有的 id，`create` 自動給的那一頁
+    /// 就成了多餘的。而「先加一頁、再把它移掉」在多裝置合併時不保證互相抵銷 ——
+    /// 兩台裝置各自的 Add/Remove 交錯之後可能留下一頁空白，而且每同步一趟再多
+    /// 一頁。不產生它，就沒有需要抵銷的東西。
+    #[uniffi::constructor]
+    pub fn create_empty(
+        path: String,
+        title: String,
+        now_unix_ms: u64,
+        device_id: u32,
+    ) -> Result<Self, FfiError> {
+        Ok(Self::wrap(NotebookSession::create_empty(
+            path,
+            &title,
+            now_unix_ms,
+            device_id,
+        )?))
+    }
+
     /// 開啟既有筆記本，重播 op-log 還原全部內容。
     ///
     /// ⚠️ 名稱刻意不叫 `open` —— `open` 是 Swift 的存取修飾關鍵字，
@@ -353,6 +374,26 @@ impl PadnoteSession {
 
     pub fn add_page(&self, style: PageStyle) -> Result<String, FfiError> {
         Ok(self.lock().add_page(style.into())?.to_string())
+    }
+
+    /// 移除一頁。
+    ///
+    /// 平台原本加得了頁卻移不掉。匯出時若要沿用既有的頁面 id，建立筆記本
+    /// 自動產生的那一頁就成了多餘的第一頁 —— 沒有這一支，頁數每次匯出都會多一。
+    pub fn remove_page(&self, page_id: String) -> Result<(), FfiError> {
+        self.lock().remove_page(parse_uuid(&page_id)?)?;
+        Ok(())
+    }
+
+    /// 用指定的 id 新增一頁；已經有同 id 的頁時什麼也不做。
+    ///
+    /// 頁面身分必須跟著筆記走，不是跟著某一次匯出走 —— 每次重建都隨機生一批
+    /// id 的話，兩台裝置的頁永遠不會收斂，合併後會變成兩倍的頁數，
+    /// 而且每同步一趟就再多一批。
+    pub fn add_page_with_id(&self, page_id: String, style: PageStyle) -> Result<(), FfiError> {
+        self.lock()
+            .add_page_with_id(parse_uuid(&page_id)?, style.into())?;
+        Ok(())
     }
 
     pub fn set_title(&self, title: String) -> Result<(), FfiError> {
@@ -521,6 +562,49 @@ impl PadnoteSession {
                     .collect()
             })
             .unwrap_or_default())
+    }
+
+    /// 設定筆記本層級的平台中繼資料（平台自訂的 JSON）。
+    ///
+    /// 核心不解讀內容。放的是「一本筆記的屬性、但核心沒有對應概念」的東西：
+    /// 版面樣板、所屬資料夾、討論圖釘、建立時間。少了它，同一本筆記在另一台
+    /// 裝置上會變回空白樣板、掉出資料夾、圖釘整串消失。
+    pub fn set_notebook_meta(&self, json: String) -> Result<(), FfiError> {
+        self.lock().set_notebook_meta(&json)?;
+        Ok(())
+    }
+
+    /// 筆記本層級的中繼資料 JSON。未設定時回傳 `None`。
+    pub fn notebook_meta(&self) -> Option<String> {
+        self.lock().notebook().meta.clone()
+    }
+
+    /// 區塊引用的 blob 雜湊。沒有 blob 的區塊（文字、表格）回傳 `None`。
+    pub fn block_blob_id(&self, block_id: String) -> Result<Option<String>, FfiError> {
+        let block = parse_uuid(&block_id)?;
+        let guard = self.lock();
+        Ok(guard
+            .notebook()
+            .pages()
+            .iter()
+            .flat_map(|p| p.blocks())
+            .find(|b| b.id == block)
+            .and_then(|b| b.referenced_blob())
+            .map(|blob| blob.to_string()))
+    }
+
+    /// 取回 blob 的位元組。
+    ///
+    /// 沒有這一支，圖片就是**單向**的：位元組進得去、出不來，另一台裝置打得開
+    /// 筆記卻拿不到圖，畫面上會是一格一格的空白。
+    pub fn blob_bytes(&self, blob_id: String) -> Result<Vec<u8>, FfiError> {
+        let id = padnote_storage::BlobId::from_hex(&blob_id)
+            .ok_or_else(|| FfiError::Failed(format!("blob id 無法解析：{blob_id}")))?;
+        self.lock()
+            .package()
+            .blobs()
+            .get(id)
+            .map_err(|e| FfiError::Failed(e.to_string()))
     }
 
     /// 這一頁所有圖片區塊的 id，依加入順序。
@@ -856,6 +940,14 @@ impl PadnoteSession {
         Ok(self.lock().group_objects(page, members)?.to_string())
     }
 
+    /// 移除一個物件。
+    ///
+    /// 平台原本插得進形狀卻刪不掉它 —— 使用者插錯一個形狀就永遠留在那裡了。
+    pub fn remove_object(&self, object_id: String) -> Result<(), FfiError> {
+        self.lock().remove_object(parse_uuid(&object_id)?)?;
+        Ok(())
+    }
+
     /// 解散群組。成員的位置不會跳動 —— 群組的變換會往下傳給它們。
     pub fn ungroup(&self, object_id: String) -> Result<(), FfiError> {
         self.lock().ungroup(parse_uuid(&object_id)?)?;
@@ -1170,7 +1262,7 @@ impl PadnoteSession {
         }
     }
 
-    fn lock(&self) -> std::sync::MutexGuard<'_, NotebookSession> {
+    pub(crate) fn lock(&self) -> std::sync::MutexGuard<'_, NotebookSession> {
         // 鎖中毒代表其他執行緒 panic 過。繼續用髒狀態比明確崩掉更危險。
         self.inner.lock().expect("session 鎖中毒")
     }
@@ -1267,6 +1359,34 @@ fn to_rgba(v: &[u8]) -> [u8; 4] {
     }
 }
 
+/// 從文件模型的形狀種類轉回 FFI 的。
+///
+/// 讀回形狀時需要它 —— 少了反向對應，`insert_shape` 寫得進去的東西就讀不回來。
+pub(crate) fn from_doc_shape_kind(k: ShapeKind) -> FfiShapeKind {
+    match k {
+        ShapeKind::Rectangle => FfiShapeKind::Rectangle,
+        ShapeKind::RoundedRectangle => FfiShapeKind::RoundedRectangle,
+        ShapeKind::Ellipse => FfiShapeKind::Ellipse,
+        ShapeKind::Triangle => FfiShapeKind::Triangle,
+        ShapeKind::Diamond => FfiShapeKind::Diamond,
+        ShapeKind::Pentagon => FfiShapeKind::Pentagon,
+        ShapeKind::Hexagon => FfiShapeKind::Hexagon,
+        ShapeKind::Star => FfiShapeKind::Star,
+        ShapeKind::Process => FfiShapeKind::Process,
+        ShapeKind::Decision => FfiShapeKind::Decision,
+        ShapeKind::Terminator => FfiShapeKind::Terminator,
+        ShapeKind::Data => FfiShapeKind::Data,
+        ShapeKind::Document => FfiShapeKind::Document,
+        ShapeKind::Database => FfiShapeKind::Database,
+        ShapeKind::Preparation => FfiShapeKind::Preparation,
+        ShapeKind::ManualInput => FfiShapeKind::ManualInput,
+        ShapeKind::Connector => FfiShapeKind::Connector,
+        ShapeKind::Line => FfiShapeKind::Line,
+        ShapeKind::Arrow => FfiShapeKind::Arrow,
+        ShapeKind::DoubleArrow => FfiShapeKind::DoubleArrow,
+    }
+}
+
 fn to_doc_shape_kind(k: FfiShapeKind) -> ShapeKind {
     match k {
         FfiShapeKind::Rectangle => ShapeKind::Rectangle,
@@ -1319,7 +1439,7 @@ fn to_doc_end_cap(c: FfiEndCap) -> EndCap {
     }
 }
 
-fn parse_uuid(s: &str) -> Result<Uuid, FfiError> {
+pub(crate) fn parse_uuid(s: &str) -> Result<Uuid, FfiError> {
     let hex: String = s.chars().filter(|c| *c != '-').collect();
     if hex.len() != 32 {
         return Err(FfiError::Failed(format!("不是合法的 id：{s}")));
@@ -1797,6 +1917,140 @@ mod tests {
         assert_eq!(spec_version(), crate::SPEC_VERSION);
         assert!(can_open(1, 1));
         assert!(!can_open(99, 99));
+    }
+
+    // ── 頁面身分（兩台裝置的頁要收斂在同一頁）──────────────────
+
+    #[test]
+    fn a_page_can_be_created_with_a_given_id() {
+        let s = session("page-with-id");
+        let id = "01920000-0000-7000-8000-000000000001";
+        s.add_page_with_id(id.into(), PageStyle::Grid).unwrap();
+        let ids: Vec<String> = (0..s.page_count()).filter_map(|i| s.page_id_at(i)).collect();
+        assert!(ids.contains(&id.to_string()), "指定 id 建的頁沒有出現：{ids:?}");
+    }
+
+    #[test]
+    fn creating_the_same_page_twice_is_a_no_op() {
+        // 重複匯出會再呼叫一次。變成兩頁的話，每同步一趟就多一批頁。
+        let s = session("page-with-id-twice");
+        let id = "01920000-0000-7000-8000-000000000002";
+        let before = s.page_count();
+        s.add_page_with_id(id.into(), PageStyle::Blank).unwrap();
+        s.add_page_with_id(id.into(), PageStyle::Blank).unwrap();
+        assert_eq!(s.page_count(), before + 1);
+    }
+
+    #[test]
+    fn an_empty_notebook_starts_with_no_pages() {
+        // 重建套件時要沿用既有的頁面 id，自動給的那一頁是多餘的 ——
+        // 而「先加再移」在多裝置合併時不保證互相抵銷。
+        let s = PadnoteSession::create_empty(tmp("create-empty"), "空的".into(), 1_757_635_200_000, 0xA1)
+            .unwrap();
+        assert_eq!(s.page_count(), 0);
+        assert_eq!(s.first_page_id(), None);
+    }
+
+    #[test]
+    fn a_normal_notebook_still_starts_with_one_page() {
+        // 開一本新筆記時自動給一頁是對的，這個行為不能變。
+        let s = session("create-has-page");
+        assert_eq!(s.page_count(), 1);
+        assert!(s.first_page_id().is_some());
+    }
+
+    #[test]
+    fn a_page_can_be_removed() {
+        // 加得了卻移不掉的話，沿用頁面 id 時自動產生的那一頁會變成多餘的第一頁。
+        let s = session("page-remove");
+        let first = s.first_page_id().unwrap();
+        let id = "01920000-0000-7000-8000-000000000003";
+        s.add_page_with_id(id.into(), PageStyle::Blank).unwrap();
+        s.remove_page(first).unwrap();
+
+        let ids: Vec<String> = (0..s.page_count()).filter_map(|i| s.page_id_at(i)).collect();
+        assert_eq!(ids, vec![id.to_string()]);
+    }
+
+    #[test]
+    fn a_malformed_page_id_is_rejected() {
+        // 悄悄改用隨機 id 的話，頁面身分就斷了，而且沒有人會知道。
+        let s = session("page-with-id-bad");
+        assert!(s.add_page_with_id("不是 uuid".into(), PageStyle::Blank).is_err());
+    }
+
+    // ── 筆記本中繼資料（跨平台來回不掉東西靠它）──────────────
+
+    #[test]
+    fn notebook_meta_survives_a_reopen() {
+        // 這是「A 裝置寫、B 裝置打開就有」缺的那一塊：樣板、資料夾、圖釘
+        // 這些核心沒有對應概念的東西，少了它在另一台裝置上就會整批消失。
+        let dir = tmp("meta-reopen");
+        let json = r#"{"template":"cornell","folderId":"work"}"#;
+        {
+            let s = PadnoteSession::create(dir.clone(), "筆記".into(), 1_757_635_200_000, 0xA1)
+                .unwrap();
+            s.set_notebook_meta(json.into()).unwrap();
+            assert_eq!(s.notebook_meta(), Some(json.to_string()));
+        }
+        let reopened = PadnoteSession::open_existing(dir, 0xA1).unwrap();
+        assert_eq!(reopened.notebook_meta(), Some(json.to_string()));
+    }
+
+    #[test]
+    fn an_unset_notebook_meta_is_none() {
+        // `None` 與「空物件」要分得出來：讀到 None 代表這份檔案還沒有中繼資料，
+        // 讀到 "{}" 代表有人刻意清空了。
+        let s = session("meta-unset");
+        assert_eq!(s.notebook_meta(), None);
+    }
+
+    #[test]
+    fn the_last_write_of_notebook_meta_wins() {
+        // 語意是整份取代，不是合併 —— 核心看不懂內容，合不了。
+        let s = session("meta-replace");
+        s.set_notebook_meta(r#"{"a":1}"#.into()).unwrap();
+        s.set_notebook_meta(r#"{"b":2}"#.into()).unwrap();
+        assert_eq!(s.notebook_meta(), Some(r#"{"b":2}"#.to_string()));
+    }
+
+    #[test]
+    fn notebook_meta_is_not_interpreted() {
+        // 核心原樣搬運。內容不是 JSON 也照收 —— 解讀是平台的事。
+        let s = session("meta-opaque");
+        s.set_notebook_meta("不是 JSON".into()).unwrap();
+        assert_eq!(s.notebook_meta(), Some("不是 JSON".to_string()));
+    }
+
+    // ── blob 的出口（圖片回得來靠它）──────────────────────────
+
+    #[test]
+    fn image_bytes_come_back_out() {
+        // 位元組進得去、出不來的話，另一台裝置打得開筆記卻拿不到圖，
+        // 畫面上會是一格一格的空白。
+        let s = session("blob-roundtrip");
+        let page = s.first_page_id().unwrap();
+        let bytes = vec![0x89, 0x50, 0x4E, 0x47, 1, 2, 3];
+        let blob = s.put_blob(bytes.clone()).unwrap();
+        let block = s.add_image(page, blob.clone(), 100.0, 80.0).unwrap();
+
+        assert_eq!(s.block_blob_id(block).unwrap(), Some(blob.clone()));
+        assert_eq!(s.blob_bytes(blob).unwrap(), bytes);
+    }
+
+    #[test]
+    fn a_text_block_references_no_blob() {
+        let s = session("blob-text");
+        let page = s.first_page_id().unwrap();
+        let text = s.add_text(page, "字".into(), BlockStyle::Body).unwrap();
+        assert_eq!(s.block_blob_id(text).unwrap(), None);
+    }
+
+    #[test]
+    fn a_bad_blob_id_reports_an_error_instead_of_empty_bytes() {
+        // 回空位元組的話，呼叫端會以為那是一張 0 位元組的圖而把它畫成空白。
+        let s = session("blob-bad-id");
+        assert!(s.blob_bytes("不是雜湊".into()).is_err());
     }
 
     // ── 圖片區塊的出口（數字製圖靠它才回得來）─────────────────

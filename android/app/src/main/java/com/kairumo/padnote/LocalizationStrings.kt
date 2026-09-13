@@ -2170,6 +2170,22 @@ object LocalizationStrings {
             "ko" to "여기에 쓰세요",
             "th" to "เขียนที่นี่"
         ),
+        "input_diagnostics" to mapOf(
+            "zh-Hant" to "輸入診斷",
+            "en" to "Input Diagnostics",
+            "zh-Hans" to "输入诊断",
+            "ja" to "入力診断",
+            "ko" to "입력 진단",
+            "th" to "การวินิจฉัยอินพุต"
+        ),
+        "input_diagnostics_explainer" to mapOf(
+            "zh-Hant" to "量到的是「事件在硬體上發生 → 交給畫面」，不是筆尖到光子（面板的掃描時間量不到）。它的用途是同一台裝置上開關某個選項的前後對比。",
+            "en" to "Measures hardware event time to frame delivery — not pen-to-photon (panel scan time cannot be measured here). Use it to compare before and after toggling a setting on the same device.",
+            "zh-Hans" to "测量的是「事件在硬件上发生 → 交给画面」，不是笔尖到光子（面板扫描时间测不到）。用途是同一台设备上开关某个选项的前后对比。",
+            "ja" to "計測するのは「ハードウェアでのイベント発生 → 画面への引き渡し」で、ペン先から発光までではありません（パネルの走査時間は計測できません）。同一端末で設定を切り替えた前後の比較に使います。",
+            "ko" to "하드웨어 이벤트 발생부터 화면 전달까지를 측정합니다. 펜 끝에서 빛까지가 아닙니다(패널 주사 시간은 측정 불가). 같은 기기에서 설정을 켜고 끈 전후 비교에 사용하세요.",
+            "th" to "วัดจากเวลาที่เหตุการณ์เกิดขึ้นในฮาร์ดแวร์จนถึงการส่งเฟรม ไม่ใช่จากปลายปากกาถึงแสง (วัดเวลาสแกนหน้าจอไม่ได้) ใช้เปรียบเทียบก่อนและหลังเปิดปิดการตั้งค่าบนเครื่องเดียวกัน"
+        ),
         "insert" to mapOf(
             "zh-Hant" to "插入",
             "en" to "Insert",
@@ -3738,6 +3754,86 @@ object LocalizationStrings {
             "ko" to "템플릿 선택",
             "th" to "เลือกเทมเพลต"
         ),
+        "shape_edit" to mapOf(
+            "zh-Hant" to "編修形狀",
+            "en" to "Edit Shape",
+            "zh-Hans" to "编辑形状",
+            "ja" to "図形を編集",
+            "ko" to "도형 편집",
+            "th" to "แก้ไขรูปร่าง"
+        ),
+        "shape_fill" to mapOf(
+            "zh-Hant" to "填滿顏色",
+            "en" to "Fill",
+            "zh-Hans" to "填充颜色",
+            "ja" to "塗りつぶし",
+            "ko" to "채우기",
+            "th" to "สีพื้น"
+        ),
+        "shape_label" to mapOf(
+            "zh-Hant" to "標籤文字",
+            "en" to "Label",
+            "zh-Hans" to "标签文字",
+            "ja" to "ラベル",
+            "ko" to "레이블",
+            "th" to "ป้ายกำกับ"
+        ),
+        "shape_line_width" to mapOf(
+            "zh-Hant" to "線條粗細",
+            "en" to "Line Width",
+            "zh-Hans" to "线条粗细",
+            "ja" to "線の太さ",
+            "ko" to "선 두께",
+            "th" to "ความหนาเส้น"
+        ),
+        "shape_node_count" to mapOf(
+            "zh-Hant" to "%@ 個節點",
+            "en" to "%@ nodes",
+            "zh-Hans" to "%@ 个节点",
+            "ja" to "%@ 個のノード",
+            "ko" to "노드 %@개",
+            "th" to "%@ โหนด"
+        ),
+        "shape_section_basic" to mapOf(
+            "zh-Hant" to "基本形狀",
+            "en" to "Basic Shapes",
+            "zh-Hans" to "基本形状",
+            "ja" to "基本図形",
+            "ko" to "기본 도형",
+            "th" to "รูปร่างพื้นฐาน"
+        ),
+        "shape_section_flowchart" to mapOf(
+            "zh-Hant" to "流程圖符號（ISO 5807）",
+            "en" to "Flowchart Symbols (ISO 5807)",
+            "zh-Hans" to "流程图符号（ISO 5807）",
+            "ja" to "フローチャート記号（ISO 5807）",
+            "ko" to "순서도 기호(ISO 5807)",
+            "th" to "สัญลักษณ์ผังงาน (ISO 5807)"
+        ),
+        "shape_section_templates" to mapOf(
+            "zh-Hant" to "範本",
+            "en" to "Templates",
+            "zh-Hans" to "模板",
+            "ja" to "テンプレート",
+            "ko" to "템플릿",
+            "th" to "แม่แบบ"
+        ),
+        "shape_stroke" to mapOf(
+            "zh-Hant" to "線條顏色",
+            "en" to "Stroke",
+            "zh-Hans" to "线条颜色",
+            "ja" to "線の色",
+            "ko" to "선 색상",
+            "th" to "สีเส้น"
+        ),
+        "shape_studio" to mapOf(
+            "zh-Hant" to "形狀與流程圖",
+            "en" to "Shapes & Flowcharts",
+            "zh-Hans" to "形状与流程图",
+            "ja" to "図形とフローチャート",
+            "ko" to "도형 및 순서도",
+            "th" to "รูปร่างและผังงาน"
+        ),
         "share_invite_link" to mapOf(
             "zh-Hant" to "分享邀請連結",
             "en" to "Share Invite Link",
@@ -4105,6 +4201,118 @@ object LocalizationStrings {
             "ja" to "システム診断とバージョン情報",
             "ko" to "시스템 진단 및 버전 정보",
             "th" to "ข้อมูลการวินิจฉัยและเวอร์ชัน"
+        ),
+        "table_add_column" to mapOf(
+            "zh-Hant" to "新增欄",
+            "en" to "Add Column",
+            "zh-Hans" to "新增列",
+            "ja" to "列を追加",
+            "ko" to "열 추가",
+            "th" to "เพิ่มคอลัมน์"
+        ),
+        "table_add_row" to mapOf(
+            "zh-Hant" to "新增列",
+            "en" to "Add Row",
+            "zh-Hans" to "新增行",
+            "ja" to "行を追加",
+            "ko" to "행 추가",
+            "th" to "เพิ่มแถว"
+        ),
+        "table_delete_column" to mapOf(
+            "zh-Hant" to "刪除欄",
+            "en" to "Delete Column",
+            "zh-Hans" to "删除列",
+            "ja" to "列を削除",
+            "ko" to "열 삭제",
+            "th" to "ลบคอลัมน์"
+        ),
+        "table_delete_row" to mapOf(
+            "zh-Hant" to "刪除列",
+            "en" to "Delete Row",
+            "zh-Hans" to "删除行",
+            "ja" to "行を削除",
+            "ko" to "행 삭제",
+            "th" to "ลบแถว"
+        ),
+        "table_edit" to mapOf(
+            "zh-Hant" to "編修表格",
+            "en" to "Edit Table",
+            "zh-Hans" to "编辑表格",
+            "ja" to "表を編集",
+            "ko" to "표 편집",
+            "th" to "แก้ไขตาราง"
+        ),
+        "table_font_size" to mapOf(
+            "zh-Hant" to "文字大小",
+            "en" to "Font Size",
+            "zh-Hans" to "文字大小",
+            "ja" to "文字サイズ",
+            "ko" to "글자 크기",
+            "th" to "ขนาดตัวอักษร"
+        ),
+        "table_header_row" to mapOf(
+            "zh-Hant" to "第一列為表頭",
+            "en" to "Header Row",
+            "zh-Hans" to "第一行为表头",
+            "ja" to "先頭行を見出しに",
+            "ko" to "머리글 행",
+            "th" to "แถวหัวตาราง"
+        ),
+        "table_insert" to mapOf(
+            "zh-Hant" to "插入表格",
+            "en" to "Insert Table",
+            "zh-Hans" to "插入表格",
+            "ja" to "表を挿入",
+            "ko" to "표 삽입",
+            "th" to "แทรกตาราง"
+        ),
+        "table_merge_down" to mapOf(
+            "zh-Hant" to "向下合併",
+            "en" to "Merge Down",
+            "zh-Hans" to "向下合并",
+            "ja" to "下へ結合",
+            "ko" to "아래쪽 병합",
+            "th" to "ผสานลงล่าง"
+        ),
+        "table_merge_right" to mapOf(
+            "zh-Hant" to "向右合併",
+            "en" to "Merge Right",
+            "zh-Hans" to "向右合并",
+            "ja" to "右へ結合",
+            "ko" to "오른쪽 병합",
+            "th" to "ผสานไปทางขวา"
+        ),
+        "table_studio" to mapOf(
+            "zh-Hant" to "表格",
+            "en" to "Table",
+            "zh-Hans" to "表格",
+            "ja" to "表",
+            "ko" to "표",
+            "th" to "ตาราง"
+        ),
+        "table_unmerge" to mapOf(
+            "zh-Hant" to "取消合併",
+            "en" to "Unmerge",
+            "zh-Hans" to "取消合并",
+            "ja" to "結合を解除",
+            "ko" to "병합 해제",
+            "th" to "ยกเลิกการผสาน"
+        ),
+        "table_update" to mapOf(
+            "zh-Hant" to "更新表格",
+            "en" to "Update Table",
+            "zh-Hans" to "更新表格",
+            "ja" to "表を更新",
+            "ko" to "표 업데이트",
+            "th" to "อัปเดตตาราง"
+        ),
+        "table_width" to mapOf(
+            "zh-Hant" to "表格寬度",
+            "en" to "Table Width",
+            "zh-Hans" to "表格宽度",
+            "ja" to "表の幅",
+            "ko" to "표 너비",
+            "th" to "ความกว้างตาราง"
         ),
         "tap_to_place_pin" to mapOf(
             "zh-Hant" to "請在畫布上輕點以放置圖釘",

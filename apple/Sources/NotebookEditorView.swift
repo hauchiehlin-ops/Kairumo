@@ -451,6 +451,13 @@ final class AdaptiveCanvasView: PKCanvasView {
     /// 編得過，但那是靠 @objc 動態派發矇混，不是 Swift 保證的行為。
     var onTouchObserved: ((UITouch) -> Void)?
 
+    /// 輸入診斷。掛在同一個觀察點上 —— 出問題時要看得到輸入本身長什麼樣。
+    ///
+    /// `touchesMoved` 也要記：`coalescedTouches` 的數量只有在移動時才有意義，
+    /// 只在 began／ended 取樣的話永遠是 1，而那正是「快速書寫變折線」的徵兆
+    /// 被漏掉的原因。
+    var onTouchDiagnostics: ((UITouch, UIEvent?) -> Void)?
+
     /// 目前的筆頭形狀。由 `CanvasRepresentable` 更新。
     ///
     /// 用 `UIPointerInteraction` 而不是 `NSCursor`：這個 App 在 iPadOS 與
@@ -474,12 +481,23 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        touches.forEach { onTouchObserved?($0) }
+        touches.forEach {
+            onTouchObserved?($0)
+            onTouchDiagnostics?($0, event)
+        }
         super.touchesBegan(touches, with: event)
     }
 
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        touches.forEach { onTouchDiagnostics?($0, event) }
+        super.touchesMoved(touches, with: event)
+    }
+
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
-        touches.forEach { onTouchObserved?($0) }
+        touches.forEach {
+            onTouchObserved?($0)
+            onTouchDiagnostics?($0, event)
+        }
         super.touchesEnded(touches, with: event)
     }
 
@@ -550,6 +568,10 @@ struct CanvasRepresentable: UIViewRepresentable {
             }
             let policy = palm.drawingPolicy(now: landed)
             if canvas?.drawingPolicy != policy { canvas?.drawingPolicy = policy }
+        }
+        canvas.onTouchDiagnostics = { [weak canvas] touch, event in
+            guard let canvas else { return }
+            InkInputDiagnostics.shared.record(touch: touch, event: event, in: canvas)
         }
         canvas.delegate = context.coordinator
         canvas.backgroundColor = .clear
@@ -1072,6 +1094,10 @@ public struct NotebookEditorView: View {
     @State private var showPhotoPicker: Bool = false
     @State private var showMathCalculator: Bool = false
     @State private var showChartStudio: Bool = false
+    @State private var showTableStudio: Bool = false
+    @State private var showShapeStudio: Bool = false
+    /// 正在重新編修的表格。
+    @State private var editingTable: NoteTableAttachment? = nil
     @State private var editingAttachmentId: String? = nil
     /// 正在重新編修的圖表。帶著規格一起，`sheet(item:)` 才有東西可以開。
     @State private var editingChartAttachmentId: ChartEditTarget? = nil
@@ -1292,6 +1318,44 @@ public struct NotebookEditorView: View {
         .sheet(isPresented: $showMathCalculator) { erasedView {
             MathCalculatorSheet { exprText, cardImage in
                 insertImageAttachment(cardImage)
+            }
+        } }
+        .sheet(isPresented: $showShapeStudio) { erasedView {
+            ShapeStudioView { shapes, connections in
+                if notebook.shapeAttachments == nil { notebook.shapeAttachments = [] }
+                if notebook.connectionAttachments == nil { notebook.connectionAttachments = [] }
+                for shape in shapes {
+                    var placed = shape
+                    placed.pageIndex = currentPageIndex
+                    notebook.shapeAttachments?.append(placed)
+                }
+                for connection in connections {
+                    var placed = connection
+                    placed.pageIndex = currentPageIndex
+                    notebook.connectionAttachments?.append(placed)
+                }
+                store.updateNotebook(notebook)
+            }
+        } }
+        .sheet(isPresented: $showTableStudio) { erasedView {
+            TableStudioView { created in
+                var table = created
+                table.pageIndex = currentPageIndex
+                if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
+                notebook.tableAttachments?.append(table)
+                store.updateNotebook(notebook)
+            }
+        } }
+        .sheet(item: $editingTable) { target in erasedView {
+            TableStudioView(editing: target) { updated in
+                guard let index = notebook.tableAttachments?
+                    .firstIndex(where: { $0.id == updated.id }) else { return }
+                // 位置原地保留：使用者只是改了裡面的內容。
+                var table = updated
+                table.x = notebook.tableAttachments?[index].x ?? table.x
+                table.y = notebook.tableAttachments?[index].y ?? table.y
+                notebook.tableAttachments?[index] = table
+                store.updateNotebook(notebook)
             }
         } }
         .sheet(isPresented: $showChartStudio) { erasedView {
@@ -1970,6 +2034,8 @@ public struct NotebookEditorView: View {
                 Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
                 Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
                 Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
+                Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
+                Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
                 Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
                 Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
             } header: {
@@ -2201,6 +2267,48 @@ ZStack(alignment: .topTrailing) {
                             notebook.attachments?.removeAll { $0.id == item.id }
                             store.updateNotebook(notebook)
                             collaborationManager.broadcastSelection(selectedId: nil)
+                        }
+                    )
+                }
+            }
+
+            // 連接線先畫 —— 畫在形狀之上的話，線會壓過方塊的邊，看起來像穿幫。
+            ForEach(notebook.connectionAttachments ?? []) { item in
+                if item.pageIndex == currentPageIndex,
+                   let from = notebook.shapeAttachments?.first(where: { $0.id == item.fromShapeId }),
+                   let to = notebook.shapeAttachments?.first(where: { $0.id == item.toShapeId }),
+                   let geometry = ShapeGeometry.connection(item, from: from, to: to) {
+                    ConnectionLineView(connection: item, geometry: geometry)
+                }
+            }
+
+            // 形狀。
+            ForEach(notebook.shapeAttachments ?? []) { item in
+                if item.pageIndex == currentPageIndex {
+                    ShapeAttachmentItemView(
+                        shape: shapeBinding(for: item.id),
+                        onDelete: {
+                            notebook.shapeAttachments?.removeAll { $0.id == item.id }
+                            // 連著的線也要跟著走 —— 留著的話會指向一個不存在的
+                            // 形狀，畫面上是一條從空氣連出來的線。
+                            notebook.connectionAttachments?.removeAll {
+                                $0.fromShapeId == item.id || $0.toShapeId == item.id
+                            }
+                            store.updateNotebook(notebook)
+                        }
+                    )
+                }
+            }
+
+            // 表格。與文字方塊一樣疊在墨跡之上，手寫模式下不攔截觸控。
+            ForEach(notebook.tableAttachments ?? []) { item in
+                if item.pageIndex == currentPageIndex {
+                    TableAttachmentItemView(
+                        table: tableBinding(for: item.id),
+                        onEdit: { editingTable = item },
+                        onDelete: {
+                            notebook.tableAttachments?.removeAll { $0.id == item.id }
+                            store.updateNotebook(notebook)
                         }
                     )
                 }
@@ -3370,6 +3478,8 @@ ZStack(alignment: .topTrailing) {
                     Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
                     Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
                     Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
+                Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
+                Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
                     Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
                     Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
                     Divider()
@@ -3536,6 +3646,8 @@ ZStack(alignment: .topTrailing) {
                     Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
                     Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
                     Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
+                Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
+                Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
                     Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
                     Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
                     Divider()
@@ -4557,6 +4669,36 @@ ZStack(alignment: .topTrailing) {
         notebook.attachments?[index].chartSpecJSON = spec.encodedJSON()
         store.updateNotebook(notebook)
         editingChartAttachmentId = nil
+    }
+
+    private func shapeBinding(for id: String) -> Binding<NoteShapeAttachment> {
+        Binding(
+            get: {
+                notebook.shapeAttachments?.first(where: { $0.id == id })
+                    ?? NoteShapeAttachment(id: id)
+            },
+            set: { updated in
+                guard let index = notebook.shapeAttachments?
+                    .firstIndex(where: { $0.id == id }) else { return }
+                notebook.shapeAttachments?[index] = updated
+                store.updateNotebook(notebook)
+            }
+        )
+    }
+
+    private func tableBinding(for id: String) -> Binding<NoteTableAttachment> {
+        Binding(
+            get: {
+                notebook.tableAttachments?.first(where: { $0.id == id })
+                    ?? NoteTableAttachment(id: id)
+            },
+            set: { updated in
+                guard let index = notebook.tableAttachments?
+                    .firstIndex(where: { $0.id == id }) else { return }
+                notebook.tableAttachments?[index] = updated
+                store.updateNotebook(notebook)
+            }
+        )
     }
 
     private func binding(for id: String) -> Binding<NoteImageAttachment> {

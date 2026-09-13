@@ -251,6 +251,8 @@ pub struct Notebook {
     pub id: Uuid,
     pub title: String,
     pub layout: LayoutMode,
+    /// 平台自訂的筆記本中繼資料（見 `DocOp::SetNotebookMeta`）。核心不解讀。
+    pub meta: Option<String>,
     pages: Vec<Page>,
     /// 頁面 id → 索引，避免每次查找都掃全部。
     page_index: BTreeMap<Uuid, usize>,
@@ -262,6 +264,7 @@ impl Notebook {
             id,
             title: title.into(),
             layout: LayoutMode::default(),
+            meta: None,
             pages: Vec::new(),
             page_index: BTreeMap::new(),
         }

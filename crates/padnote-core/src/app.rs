@@ -115,6 +115,31 @@ impl NotebookSession {
         now_unix_ms: u64,
         device: u32,
     ) -> Result<Self, AppError> {
+        let mut session = Self::create_empty(root, title, now_unix_ms, device)?;
+        session.record(vec![DocOp::AddPage {
+            id: Uuid::now_v7(),
+            template: PageTemplate::Lined,
+            index: 0,
+        }])?;
+        Ok(session)
+    }
+
+    /// 建立一本**沒有任何頁**的筆記本。
+    ///
+    /// # 為什麼需要這個
+    ///
+    /// `create` 會自動給第一頁，對「開一本新筆記」是對的。但重建套件時
+    /// （匯出、同步）頁面必須沿用既有的 id，那個自動產生的頁就成了多餘的 ——
+    /// 而「先加一頁、再把它移掉」在多裝置合併時不保證互相抵銷：兩台裝置各自的
+    /// Add/Remove 交錯之後，可能留下一頁空白，而且每次同步都再多一頁。
+    ///
+    /// 不產生它，就沒有需要抵銷的東西。
+    pub fn create_empty(
+        root: impl Into<std::path::PathBuf>,
+        title: &str,
+        now_unix_ms: u64,
+        device: u32,
+    ) -> Result<Self, AppError> {
         // 筆畫檔名要帶 device，兩台裝置才不會寫同一個檔（架構不變式 1）。
         let package = NotebookPackage::create(root, title, now_unix_ms)?.with_device(device);
         let id = Uuid::now_v7();
@@ -134,12 +159,6 @@ impl NotebookSession {
             vad_model: None,
             objects: Default::default(),
         };
-        let first = Uuid::now_v7();
-        session.record(vec![DocOp::AddPage {
-            id: first,
-            template: PageTemplate::Lined,
-            index: 0,
-        }])?;
         Ok(session)
     }
 
@@ -200,14 +219,22 @@ impl NotebookSession {
     fn apply_one(&mut self, op: &DocOp) {
         match op {
             DocOp::SetTitle { title } => self.notebook.title = title.clone(),
+            DocOp::SetNotebookMeta { json } => self.notebook.meta = Some(json.clone()),
 
             DocOp::AddPage {
                 id,
                 template,
                 index,
             } => {
-                self.notebook
-                    .insert_page(*index as usize, Page::new(*id, template.clone()));
+                // 同一個頁 id 只能存在一頁。
+                //
+                // 兩台裝置同步之後，雙方的 oplog 都可能帶著同一頁的 AddPage
+                // （各自建立時都寫了一筆）。不去重的話合併後會變成兩頁 ——
+                // 使用者看到的是一本頁數莫名變兩倍的筆記，而且內容各半。
+                if self.notebook.page(*id).is_none() {
+                    self.notebook
+                        .insert_page(*index as usize, Page::new(*id, template.clone()));
+                }
             }
             DocOp::RemovePage { id } => {
                 self.notebook.remove_page(*id);
@@ -805,6 +832,25 @@ impl NotebookSession {
         Ok(id)
     }
 
+    /// 用指定的 id 新增一頁。已經存在同 id 的頁時什麼也不做。
+    ///
+    /// # 為什麼需要指定 id
+    ///
+    /// 每次重建筆記本都隨機生一批頁面 id 的話，兩台裝置的頁**永遠不會收斂** ——
+    /// 合併之後不是一頁有兩邊的內容，而是變成兩頁，而且每同步一趟就再多一批。
+    /// 頁面身分必須跟著筆記走，不是跟著某一次匯出走。
+    pub fn add_page_with_id(&mut self, id: Uuid, template: PageTemplate) -> Result<(), AppError> {
+        if self.notebook.page(id).is_some() {
+            return Ok(());
+        }
+        let index = self.notebook.page_count() as u32;
+        self.record(vec![DocOp::AddPage {
+            id,
+            template,
+            index,
+        }])
+    }
+
     pub fn remove_page(&mut self, id: Uuid) -> Result<(), AppError> {
         self.record(vec![DocOp::RemovePage { id }])
     }
@@ -932,6 +978,15 @@ impl NotebookSession {
         }
         self.record(vec![DocOp::SetBlockAppearance {
             id: block,
+            json: json.to_string(),
+        }])
+    }
+
+    /// 設定筆記本層級的平台中繼資料（平台自訂的 JSON）。
+    ///
+    /// 核心不解讀內容。語意是整份取代 —— 合併不是核心的工作，因為核心看不懂內容。
+    pub fn set_notebook_meta(&mut self, json: &str) -> Result<(), AppError> {
+        self.record(vec![DocOp::SetNotebookMeta {
             json: json.to_string(),
         }])
     }
@@ -1224,6 +1279,13 @@ impl NotebookSession {
             members,
         }])?;
         Ok(group_id)
+    }
+
+    /// 移除一個物件（形狀、連接線、筆畫物件或群組）。
+    ///
+    /// 沒有它的話，平台插得進形狀卻刪不掉 —— 使用者插錯一個就永遠留在那裡。
+    pub fn remove_object(&mut self, id: Uuid) -> Result<(), AppError> {
+        self.record(vec![DocOp::RemoveObject { id }])
     }
 
     pub fn ungroup(&mut self, id: Uuid) -> Result<(), AppError> {
@@ -1806,6 +1868,37 @@ mod tests {
 
     fn session(name: &str) -> NotebookSession {
         NotebookSession::create(tmp(name), "線性代數", 1_757_635_200_000, 0xA1).unwrap()
+    }
+
+    /// 同一個頁 id 只能存在一頁。
+    ///
+    /// 兩台裝置同步之後，雙方的 oplog 都可能帶著同一頁的 `AddPage`（各自建立時
+    /// 都寫了一筆）。不去重的話合併後頁數會變兩倍，內容各半 —— 使用者看到的
+    /// 是一本莫名多出一堆頁的筆記，而且沒有任何錯誤訊息。
+    #[test]
+    fn applying_the_same_add_page_twice_yields_one_page() {
+        let mut s = session("dedup-add-page");
+        let before = s.notebook().page_count();
+        let id = Uuid::now_v7();
+        let op = DocOp::AddPage {
+            id,
+            template: PageTemplate::Blank,
+            index: 0,
+        };
+        s.apply_remote(&[op.clone(), op]);
+        assert_eq!(s.notebook().page_count(), before + 1);
+    }
+
+    /// 去重是依 id，不是依位置 —— 不同 id 的頁當然各自成頁。
+    #[test]
+    fn different_page_ids_still_create_separate_pages() {
+        let mut s = session("dedup-distinct-pages");
+        let before = s.notebook().page_count();
+        s.apply_remote(&[
+            DocOp::AddPage { id: Uuid::now_v7(), template: PageTemplate::Blank, index: 0 },
+            DocOp::AddPage { id: Uuid::now_v7(), template: PageTemplate::Blank, index: 0 },
+        ]);
+        assert_eq!(s.notebook().page_count(), before + 2);
     }
 
     fn stroke() -> Stroke {

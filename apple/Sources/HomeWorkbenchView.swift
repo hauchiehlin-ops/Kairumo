@@ -23,6 +23,7 @@ public struct HomeWorkbenchView: View {
 
     @State private var searchText: String = ""
     @State private var viewingDocument: BundledDocument? = nil
+    @Environment(\.openWindow) private var openWindow
     @State private var showInfoSheet: Bool = false
     @State private var showAccountSheet: Bool = false
     @State private var showNewNotebookSheet: Bool = false
@@ -1492,7 +1493,13 @@ public struct HomeWorkbenchView: View {
 
     private func documentCard(_ doc: BundledDocument) -> some View {
         Button {
-            viewingDocument = doc
+            // Mac 上開成獨立視窗：可以移動、可以調整大小、可以擺在旁邊
+            // 一邊看一邊操作。工作表做不到這三件事。
+            if DocumentWindow.supportsSeparateWindow {
+                openWindow(id: DocumentWindow.id, value: doc.id)
+            } else {
+                viewingDocument = doc
+            }
         } label: {
             HStack(spacing: 12) {
                 Image(systemName: doc == .manual ? "book.pages.fill" : "lock.shield.fill")
@@ -1839,6 +1846,11 @@ public struct AppDiagnosticsSheet: View {
     /// 固定頁面模型的重新分頁（問題 3＋5）。
     @State private var repaginationMessage: String?
 
+    /// 輸入診斷。與 Android 端同一組定義，兩邊的數字才比得起來。
+    ///
+    /// 用共用的那一份：使用者在編輯器裡寫字，接著到這裡來看數字。
+    private var inputDiagnostics: InkInputDiagnostics { .shared }
+
     /// 備份與復原。
     @State private var backupMessage: String?
     @State private var showRestorePicker = false
@@ -1882,6 +1894,7 @@ public struct AppDiagnosticsSheet: View {
                 cloudSyncSection
                 pageModelSection
                 backupSection
+                inputDiagnosticsSection
 
                 Section(localizationManager.localized("about_app")) {
                     HStack {
@@ -2092,29 +2105,48 @@ extension AppDiagnosticsSheet {
         let scoped = folder.startAccessingSecurityScopedResource()
         defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
 
-        let packages = (try? FileManager.default.contentsOfDirectory(
-            at: store.corePackagesDirectory,
-            includingPropertiesForKeys: nil
-        ))?.filter { $0.pathExtension == "padnote" } ?? []
+        // 匯出 → 搬檔 → 匯入。順序不能顛倒：先搬檔的話上傳的是舊內容，
+        // 不匯入的話另一台裝置寫的東西永遠不會變成筆記。
+        let report = NotebookSyncCoordinator.run(
+            store: store, folder: folder, deviceId: NotebookMigration.deviceId)
 
-        var uploaded = 0, downloaded = 0
-        var attention: [String] = []
-        for package in packages {
-            let result = CloudSyncFolder.sync(localPackage: package, into: folder)
-            uploaded += result.uploaded.count
-            downloaded += result.downloaded.count
-            attention.append(contentsOf: result.needsAttention)
-        }
-
-        if let first = attention.first {
+        if let first = report.needsAttention.first {
             syncMessage = localizationManager.localized("sync_needs_attention")
                 .replacingFirst("%@", with: first)
-        } else if uploaded == 0 && downloaded == 0 {
+        } else if let failure = report.failures.first {
+            syncMessage = "\(failure.key)：\(failure.value)"
+        } else if report.isNoOp {
             syncMessage = localizationManager.localized("sync_up_to_date")
         } else {
             syncMessage = localizationManager.localized("sync_result")
-                .replacingFirst("%1@", with: "\(uploaded)")
-                .replacingFirst("%2@", with: "\(downloaded)")
+                .replacingFirst("%1@", with: "\(report.uploaded)")
+                .replacingFirst("%2@", with: "\(report.downloaded)")
+        }
+    }
+
+    /// 輸入診斷與筆尖延遲。
+    ///
+    /// Android 早就有這一欄，Apple 一直沒有 —— 於是 iPad 出問題時只能猜。
+    /// 上一輪 Android 畫布全白那次，就是靠這條線找到原因的。
+    ///
+    /// 量到的是「事件在硬體上發生 → 交給畫面」，**不是筆尖到光子**：
+    /// 面板的掃描與亮起時間量不到。它真正有用的地方是同一台裝置上開關某個
+    /// 選項的前後對比。
+    @ViewBuilder
+    var inputDiagnosticsSection: some View {
+        Section(localizationManager.localized("input_diagnostics")) {
+            ForEach(inputDiagnostics.lines(), id: \.0) { label, value in
+                HStack {
+                    Text(label)
+                    Spacer()
+                    Text(value)
+                        .foregroundColor(.secondary)
+                        .font(.system(.body, design: .monospaced))
+                }
+            }
+            Text(localizationManager.localized("input_diagnostics_explainer"))
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
     }
 

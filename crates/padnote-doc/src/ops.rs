@@ -206,6 +206,20 @@ pub enum DocOp {
         id: Uuid,
         json: String,
     },
+    /// 筆記本層級的平台中繼資料（平台自訂的 JSON）。
+    ///
+    /// 與 [`DocOp::SetBlockAppearance`] 同一個契約：**核心不解讀內容**。
+    ///
+    /// 為什麼需要它：有些東西是「一本筆記」的屬性而不是某個區塊的 ——
+    /// 版面樣板、所屬資料夾、討論圖釘、建立時間。核心的文件模型沒有這些概念，
+    /// 但它們必須跨得過平台，否則同一本筆記在另一台裝置上會變回空白樣板、
+    /// 掉出資料夾、圖釘整串消失。那不是「還沒支援」，是資料遺失。
+    ///
+    /// 語意是**整份取代**（後寫者贏），與 [`DocOp::SetTitle`] 相同 ——
+    /// 合併不是核心的工作，因為核心看不懂內容。
+    SetNotebookMeta {
+        json: String,
+    },
     /// 一個轉錄詞，時間戳在筆記本時間軸上（format-spec §4.1）。
     AddWord {
         text: String,
@@ -249,6 +263,7 @@ const OP_UNMERGE_TABLE_CELL: u8 = 29;
 const OP_SET_PAGE_SIZE: u8 = 30;
 const OP_SET_BLOCK_POSITION: u8 = 31;
 const OP_SET_BLOCK_APPEARANCE: u8 = 32;
+const OP_SET_NOTEBOOK_META: u8 = 33;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DocCodecError {
@@ -862,6 +877,9 @@ pub fn encode(ops: &[DocOp]) -> Vec<u8> {
             DocOp::SetBlockAppearance { id, json } => {
                 w.u8(OP_SET_BLOCK_APPEARANCE).uuid(*id).str(json);
             }
+            DocOp::SetNotebookMeta { json } => {
+                w.u8(OP_SET_NOTEBOOK_META).str(json);
+            }
             DocOp::RemoveObject { id } => {
                 w.u8(OP_REMOVE_OBJECT).uuid(*id);
             }
@@ -1042,6 +1060,7 @@ pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
                 id: r.uuid()?,
                 json: r.str()?,
             },
+            OP_SET_NOTEBOOK_META => DocOp::SetNotebookMeta { json: r.str()? },
             OP_REMOVE_OBJECT => DocOp::RemoveObject { id: r.uuid()? },
             OP_SET_OBJECT_TRANSFORM => DocOp::SetObjectTransform {
                 id: r.uuid()?,
@@ -1236,6 +1255,9 @@ mod tests {
                 id: uid(61),
                 json: "{\"backgroundColorHex\":\"clear\",\"lineSpacing\":8}".into(),
             },
+            DocOp::SetNotebookMeta {
+                json: "{\"template\":\"cornell\",\"folderId\":\"abc\"}".into(),
+            },
             DocOp::AddShapeObject {
                 page: uid(1),
                 id: uid(70),
@@ -1299,8 +1321,8 @@ mod tests {
             .collect();
         assert_eq!(
             tags.len(),
-            32,
-            "32 種操作標籤都要被測到，實得 {}",
+            33,
+            "33 種操作標籤都要被測到，實得 {}",
             tags.len()
         );
     }

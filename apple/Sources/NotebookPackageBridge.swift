@@ -62,14 +62,20 @@ enum NotebookPackageBridge {
         drawings: [PKDrawing],
         imageData: [String: Data] = [:],
         to destination: URL,
-        deviceId: UInt32
+        deviceId: UInt32,
+        pageIds knownPageIds: [String]? = nil
     ) throws -> ExportSummary {
         let pageCount = max(document.pageCount, drawings.count)
         guard pageCount > 0 else { throw BridgeError.noPages }
 
         let session: PadnoteSession
         do {
-            session = try PadnoteSession.create(
+            // 沒有自動產生的第一頁 —— 頁面全部由下面明確建立。
+            //
+            // 讓核心先給一頁、再把多的移掉，在多裝置合併時**不保證互相抵銷**：
+            // 兩台裝置各自的 Add/Remove 交錯之後會留下一頁空白，而且每同步一趟
+            // 再多一頁。不產生它，就沒有需要抵銷的東西。
+            session = try PadnoteSession.createEmpty(
                 path: destination.path,
                 title: document.title,
                 nowUnixMs: UInt64(document.createdAt.timeIntervalSince1970 * 1000),
@@ -84,12 +90,26 @@ enum NotebookPackageBridge {
 
         do {
             // 建立筆記本時核心已經給了第一頁，其餘的才要補。
-            var pageIds: [String] = []
-            if let first = try session.firstPageId() { pageIds.append(first) }
+            //
+            // 有已知的頁面 id 就照用 —— 頁面身分要跟著筆記走，不是跟著某一次
+            // 匯出走，否則兩台裝置的頁永遠不會收斂。
             let style = pageStyle(for: document.template)
+            var pageIds: [String] = []
+            // 有已知的頁面 id 就照用 —— 頁面身分要跟著筆記走，不是跟著某一次
+            // 匯出走，否則兩台裝置的頁永遠不會收斂。
+            for id in (knownPageIds ?? []).prefix(pageCount) {
+                try session.addPageWithId(pageId: id, style: style)
+                pageIds.append(id)
+            }
             while pageIds.count < pageCount {
                 pageIds.append(try session.addPage(style: style))
             }
+
+            // 筆記本層級的中繼資料（樣板、資料夾、圖釘、連結卡片、3D、頁面 id）。
+            // 核心沒有這些概念，不另外寫進去的話，在另一台裝置上整批消失。
+            var meta = NotebookMeta(from: document)
+            meta.pageIds = pageIds
+            try session.setNotebookMeta(json: meta.encodedJSON())
 
             for (index, pageId) in pageIds.enumerated() {
                 // 頁面高度是內容的一部分：使用者向下延長過的頁面若沒寫進去，
@@ -137,6 +157,12 @@ enum NotebookPackageBridge {
                         width: Float(model.width), height: Float(model.height))
                     try session.setBlockPosition(
                         blockId: blockId, x: Float(model.x), y: Float(model.y))
+                    // 標記成衍生圖片：它的真身在筆記本中繼資料裡，匯入時要跳過
+                    // 這一張，否則同一個模型會變成兩份。
+                    try session.setBlockAppearance(
+                        blockId: blockId,
+                        json: ImageAppearance.encodeDerived(
+                            objectKind: "model3d", fileName: "\(model.id).png"))
                     summary.imageCount += 1
                 }
 
@@ -149,6 +175,10 @@ enum NotebookPackageBridge {
                         width: Float(link.width), height: Float(max(60, link.height)))
                     try session.setBlockPosition(
                         blockId: blockId, x: Float(link.x), y: Float(link.y))
+                    try session.setBlockAppearance(
+                        blockId: blockId,
+                        json: ImageAppearance.encodeDerived(
+                            objectKind: "link", fileName: "\(link.id).png"))
                     summary.imageCount += 1
                 }
 
@@ -162,12 +192,11 @@ enum NotebookPackageBridge {
                         width: Float(image.width), height: Float(image.height))
                     try session.setBlockPosition(
                         blockId: blockId, x: Float(image.x), y: Float(image.y))
-                    // 這張圖如果是數字製圖，設定要一起過去 —— 只帶點陣圖的話，
-                    // 在 Android 上打開會是一張改不動的圖片。
-                    if let spec = image.chartSpec {
-                        try session.setBlockAppearance(
-                            blockId: blockId, json: ChartAppearance.encode(spec))
-                    }
+                    // 圓角、邊框、陰影、濾鏡、旋轉，以及「這是不是一張圖表」。
+                    // 只帶點陣圖的話，在另一台裝置上會變成一張沒有樣式的方形照片，
+                    // 而且圖表會改不動。
+                    try session.setBlockAppearance(
+                        blockId: blockId, json: ImageAppearance.encode(image))
                     summary.imageCount += 1
                 }
             }
@@ -265,6 +294,211 @@ enum NotebookPackageBridge {
             }
         }
         return result
+    }
+
+    // MARK: - 匯出（保留其他裝置寫的東西）
+
+    /// 把筆記寫進套件，但**不動別台裝置寫的檔案**。
+    ///
+    /// # 為什麼不能直接重匯出
+    ///
+    /// `export(...)` 是從零建一個套件：它會先把目的地整個刪掉。單機轉檔沒問題，
+    /// 但同步之後那個目錄裡已經有**另一台裝置下載下來的 oplog 與筆畫檔** ——
+    /// 刪掉等於把對方的編輯洗掉，而且雙方都不會收到任何錯誤，只是內容悄悄不見。
+    ///
+    /// 架構上本來就有一條保證：`doc/ops/<lamport>-<device>.oplog` 與
+    /// `ink/<page>-<device>.strokes` 的檔名帶著寫入者的 device id，**一個檔案
+    /// 只有一個寫者**。所以這裡只做一件事：把屬於這台裝置的檔案換掉，
+    /// 其餘原樣留著。blob 是內容定址的，補上去不會覆蓋到任何東西。
+    @discardableResult
+    static func exportPreservingOtherDevices(
+        document: NotebookDocument,
+        drawings: [PKDrawing],
+        imageData: [String: Data] = [:],
+        to destination: URL,
+        deviceId: UInt32,
+        pageIds knownPageIds: [String]? = nil
+    ) throws -> ExportSummary {
+        let fm = FileManager.default
+        // 已知的頁面 id 優先用呼叫端給的；沒給就沿用套件裡現有的那批 ——
+        // 換一批新 id 等於把同一頁分裂成兩頁。
+        let pageIds = knownPageIds ?? existingPageIds(in: destination, deviceId: deviceId)
+
+        // 目的地還不存在時就是一般的匯出，沒有別人的東西要保護。
+        guard fm.fileExists(atPath: destination.path) else {
+            return try export(
+                document: document, drawings: drawings, imageData: imageData,
+                to: destination, deviceId: deviceId, pageIds: pageIds)
+        }
+
+        let staging = fm.temporaryDirectory
+            .appendingPathComponent("kairumo-staging-\(UUID().uuidString)", isDirectory: true)
+        defer { try? fm.removeItem(at: staging) }
+        let fresh = staging.appendingPathComponent(destination.lastPathComponent)
+
+        let summary = try export(
+            document: document, drawings: drawings, imageData: imageData,
+            to: fresh, deviceId: deviceId, pageIds: pageIds)
+
+        let suffix = deviceSuffix(deviceId)
+        // 1. 先清掉這台裝置舊的 oplog 與筆畫檔 —— 不清的話新舊會疊加。
+        for relative in relativeFiles(in: destination) where relative.contains(suffix) {
+            try? fm.removeItem(at: destination.appendingPathComponent(relative))
+        }
+        // 2. 再把新的搬過去。blob 與 manifest 缺的才補，不覆蓋既有的。
+        for relative in relativeFiles(in: fresh) {
+            let src = fresh.appendingPathComponent(relative)
+            let dst = destination.appendingPathComponent(relative)
+            let isOwn = relative.contains(suffix)
+            if !isOwn && fm.fileExists(atPath: dst.path) { continue }
+            try? fm.createDirectory(
+                at: dst.deletingLastPathComponent(), withIntermediateDirectories: true)
+            let bytes = try Data(contentsOf: src)
+            try bytes.write(to: dst, options: .atomic)
+        }
+        return summary
+    }
+
+    /// 套件裡現有的頁面 id，依頁次。開不起來時回 `nil`。
+    private static func existingPageIds(in package: URL, deviceId: UInt32) -> [String]? {
+        guard FileManager.default.fileExists(atPath: package.path),
+              let session = try? PadnoteSession.openExisting(path: package.path, deviceId: deviceId),
+              let ids = try? pageIds(of: session), !ids.isEmpty
+        else { return nil }
+        return ids
+    }
+
+    /// 檔名裡代表這台裝置的那一段（`format-spec.md` §2）。
+    static func deviceSuffix(_ deviceId: UInt32) -> String {
+        String(format: "-%08x", deviceId)
+    }
+
+    /// 套件目錄下所有檔案的相對路徑。
+    ///
+    /// 一定要**遞迴**：真正的內容在 `doc/ops/` 與 `ink/` 底下。
+    private static func relativeFiles(in root: URL) -> [String] {
+        let fm = FileManager.default
+        guard let walker = fm.enumerator(
+            at: root, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]
+        ) else { return [] }
+        var out: [String] = []
+        for case let url as URL in walker {
+            guard (try? url.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true
+            else { continue }
+            out.append(url.path.replacingOccurrences(of: root.path + "/", with: ""))
+        }
+        return out
+    }
+
+    // MARK: - 匯入
+
+    /// 從套件讀回一本可以繼續編輯的筆記。
+    ///
+    /// # 為什麼需要它
+    ///
+    /// 沒有這一支，同步就是**單向**的：檔案下載得到，卻變不回一本筆記。
+    /// 使用者在 A 裝置寫、B 裝置打開什麼也沒有 —— 而那正是他要的那件事。
+    ///
+    /// - Returns: 文件本身、每一頁的手繪內容，以及圖片附件的檔名 → 位元組
+    ///   （呼叫端負責把它們存進自己的附件目錄）。
+    static func importDocument(
+        fromPackageAt path: URL,
+        deviceId: UInt32,
+        documentId: String? = nil
+    ) throws -> ImportedNotebook {
+        let session: PadnoteSession
+        do {
+            session = try PadnoteSession.openExisting(path: path.path, deviceId: deviceId)
+        } catch {
+            throw BridgeError.coreRejected(String(describing: error))
+        }
+
+        let pageIds = try pageIds(of: session)
+        guard !pageIds.isEmpty else { throw BridgeError.noPages }
+
+        var drawings: [PKDrawing] = []
+        var texts: [NoteTextAttachment] = []
+        var images: [NoteImageAttachment] = []
+        var imageData: [String: Data] = [:]
+
+        for (index, pageId) in pageIds.enumerated() {
+            drawings.append(InkInterop.drawing(from: try session.visibleStrokeDetails(pageId: pageId)))
+
+            for blockId in try session.textBlockIds(pageId: pageId) {
+                var item = NoteTextAttachment(pageIndex: index, text: "")
+                item.text = (try session.blockText(blockId: blockId)) ?? ""
+                if let position = try session.blockPosition(blockId: blockId), position.count >= 2 {
+                    item.x = CGFloat(position[0])
+                    item.y = CGFloat(position[1])
+                }
+                if let appearance = try session.blockAppearance(blockId: blockId) {
+                    TextBoxAppearance.apply(appearance, to: &item)
+                }
+                texts.append(item)
+            }
+
+            for blockId in try session.imageBlockIds(pageId: pageId) {
+                let appearance = try session.blockAppearance(blockId: blockId)
+                // 連結卡片與 3D 模型在套件裡是算繪出來的圖片，真身在中繼資料裡。
+                // 不跳過的話，同一個物件會變成兩份，而且每同步一趟就再多一份。
+                if ImageAppearance.isDerived(appearance) { continue }
+
+                var item = NoteImageAttachment(fileName: "", pageIndex: index)
+                if let position = try session.blockPosition(blockId: blockId), position.count >= 2 {
+                    item.x = CGFloat(position[0])
+                    item.y = CGFloat(position[1])
+                }
+                if let size = try session.imageBlockSize(blockId: blockId), size.count >= 2 {
+                    item.width = CGFloat(size[0])
+                    item.height = CGFloat(size[1])
+                }
+                if let appearance {
+                    ImageAppearance.apply(appearance, to: &item)
+                }
+                // 檔名沿用原本那個：每次同步都換一組新檔名的話，比對與去重就失效了。
+                item.fileName = appearance.flatMap(ImageAppearance.fileName(in:))
+                    ?? "\(blockId).png"
+
+                // 位元組拿不到就跳過這張圖，而不是讓整本筆記匯不進來 ——
+                // 缺一張圖，跟整本打不開，對使用者是完全不同等級的損失。
+                if let blob = (try? session.blockBlobId(blockId: blockId)) ?? nil,
+                   let bytes = try? session.blobBytes(blobId: blob) {
+                    imageData[item.fileName] = Data(bytes)
+                }
+                images.append(item)
+            }
+        }
+
+        var document = NotebookDocument(
+            id: documentId ?? path.deletingPathExtension().lastPathComponent,
+            title: session.title(),
+            pageCount: pageIds.count,
+            template: .blank
+        )
+        document.textAttachments = texts.isEmpty ? nil : texts
+        document.attachments = images.isEmpty ? nil : images
+
+        // 中繼資料最後套：樣板、資料夾、圖釘、連結卡片、3D 模型都在裡面。
+        // 讀不懂時保留預設值，筆畫與文字仍然回得來。
+        if let json = session.notebookMeta(), let meta = NotebookMeta.decode(from: json) {
+            meta.apply(to: &document)
+        }
+
+        // 頁面 id 一律以**檔案裡實際的那批**為準，不是中繼資料寫的那批 ——
+        // 中繼資料可能是別台裝置寫的舊版本。下次匯出要沿用這批。
+        return ImportedNotebook(
+            document: document, drawings: drawings, imageData: imageData, pageIds: pageIds)
+    }
+
+    /// 從套件讀回來的一本筆記。
+    struct ImportedNotebook {
+        let document: NotebookDocument
+        /// 每一頁的手繪內容，索引與頁次相同。
+        let drawings: [PKDrawing]
+        /// 圖片附件的檔名 → 位元組。
+        let imageData: [String: Data]
+        /// 這本筆記在核心裡的頁面 id，依頁次。下次匯出要沿用它。
+        let pageIds: [String]
     }
 
     // MARK: - 私有

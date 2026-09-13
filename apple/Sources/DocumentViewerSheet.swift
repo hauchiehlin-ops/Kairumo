@@ -64,6 +64,67 @@ struct DocumentWebView: UIViewRepresentable {
     func updateUIView(_ uiView: WKWebView, context: Context) {}
 }
 
+/// 文件視窗的識別。
+public enum DocumentWindow {
+    public static let id = "kairumo.document"
+
+    /// 這個平台開不開得出獨立視窗。
+    ///
+    /// Mac 才有「可以移動、可以調整大小、可以放在旁邊」的視窗概念。
+    /// iPhone 與 iPad 上仍然用工作表 —— 在那裡強行開一個新場景，
+    /// 使用者只會看到 App 整個換了一頁，而且回不去。
+    public static var supportsSeparateWindow: Bool {
+        #if targetEnvironment(macCatalyst)
+        return true
+        #else
+        return false
+        #endif
+    }
+}
+
+/// 獨立視窗裡的文件內容。
+///
+/// 沒有工作表的導覽列與「完成」按鈕 —— 視窗本身就有關閉鈕，
+/// 再放一個只是多一個看起來一樣、行為不同的東西。
+public struct DocumentWindowContent: View {
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+    private let document: BundledDocument?
+
+    public init(documentId: BundledDocument.ID?) {
+        self.document = documentId.flatMap(BundledDocument.init(rawValue:))
+    }
+
+    public var body: some View {
+        Group {
+            if let document, let url = document.url {
+                DocumentWebView(url: url)
+            } else {
+                DocumentMissingView()
+            }
+        }
+        .navigationTitle(document.map { localizationManager.localized($0.titleKey) } ?? "")
+    }
+}
+
+/// 打包漏掉檔案時要講清楚，而不是給一個空白畫面。
+struct DocumentMissingView: View {
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "doc.questionmark")
+                .font(.largeTitle)
+                .foregroundColor(.secondary)
+            Text(localizationManager.localized("document_missing"))
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .padding()
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+}
+
 /// 文件檢視彈窗
 public struct DocumentViewerSheet: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
@@ -80,21 +141,14 @@ public struct DocumentViewerSheet: View {
                 if let url = document.url {
                     DocumentWebView(url: url)
                 } else {
-                    // 打包漏掉檔案時要講清楚，而不是給一個空白畫面
-                    VStack(spacing: 10) {
-                        Image(systemName: "doc.questionmark")
-                            .font(.largeTitle)
-                            .foregroundColor(.secondary)
-                        Text(localizationManager.localized("document_missing"))
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding()
+                    DocumentMissingView()
                 }
             }
             .navigationTitle(localizationManager.localized(document.titleKey))
             .navigationBarTitleDisplayMode(.inline)
+            // iPad 上讓使用者把工作表拉大拉小 —— 那是這個平台的「調整大小」。
+            .presentationDetents([.large, .medium])
+            .presentationDragIndicator(.visible)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(localizationManager.localized("done")) { dismiss() }
