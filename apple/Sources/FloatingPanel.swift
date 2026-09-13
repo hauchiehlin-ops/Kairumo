@@ -78,13 +78,25 @@ struct FloatingPanel<Content: View>: View {
         .padding(.vertical, 10)
         .contentShape(Rectangle())
         // 只有標題列可拖曳：整片都能拖的話，面板內的滑桿會搶不到手勢。
+        //
+        // **座標空間一定要用 `.global`。** 預設的 `.local` 會跟著這個 view 一起
+        // 被 `.offset` 移動 —— 於是位移是對著一個**正在移動的參考點**量的，
+        // 形成正回饋：面板移動 → 參考點移動 → 量到更大的位移 → 移動更多。
+        // 畫面上看到的就是劇烈晃動。畫布上的物件之所以拖得平順，
+        // 正是因為它們用的是固定的具名座標空間。
         .gesture(
-            DragGesture()
+            DragGesture(coordinateSpace: .global)
                 .onChanged { value in
-                    offset = CGSize(
-                        width: dragStart.width + value.translation.width,
-                        height: dragStart.height + value.translation.height
-                    )
+                    // 拖曳不要動畫：SwiftUI 會替每一次位置變化插補，
+                    // 手指已經到了、面板還在追，看起來就是黏滯與抖動。
+                    var transaction = Transaction()
+                    transaction.animation = nil
+                    withTransaction(transaction) {
+                        offset = CGSize(
+                            width: dragStart.width + value.translation.width,
+                            height: dragStart.height + value.translation.height
+                        )
+                    }
                 }
                 .onEnded { _ in dragStart = offset }
         )

@@ -451,6 +451,28 @@ final class AdaptiveCanvasView: PKCanvasView {
     /// 編得過，但那是靠 @objc 動態派發矇混，不是 Swift 保證的行為。
     var onTouchObserved: ((UITouch) -> Void)?
 
+    /// 目前的筆頭形狀。由 `CanvasRepresentable` 更新。
+    ///
+    /// 用 `UIPointerInteraction` 而不是 `NSCursor`：這個 App 在 iPadOS 與
+    /// Mac Catalyst 上跑同一份程式碼，而 Catalyst 沒有直接可用的 `NSCursor`。
+    var brushPointerPath: UIBezierPath?
+
+    func refreshPointer(_ path: UIBezierPath?) {
+        brushPointerPath = path
+        // 讓系統重新問一次要顯示什麼游標。不呼叫的話，換了筆刷游標仍是舊的，
+        // 要把滑鼠移出去再移回來才會更新。
+        pointerInteractions.forEach { $0.invalidate() }
+    }
+
+    private var pointerInteractions: [UIPointerInteraction] {
+        interactions.compactMap { $0 as? UIPointerInteraction }
+    }
+
+    func installPointerInteractionIfNeeded(delegate: UIPointerInteractionDelegate) {
+        guard pointerInteractions.isEmpty else { return }
+        addInteraction(UIPointerInteraction(delegate: delegate))
+    }
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         touches.forEach { onTouchObserved?($0) }
         super.touchesBegan(touches, with: event)
@@ -540,6 +562,8 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         // 給自動化測試一個穩定的抓取點（畫面上有多個 scroll view）
         canvas.accessibilityIdentifier = "kairumo.canvas"
+        canvas.installPointerInteractionIfNeeded(delegate: context.coordinator)
+        canvas.refreshPointer(BrushCursor.path(for: selectedTool, strokeWidth: strokeWidth))
         canvas.pageContentHeight = PageGeometry.height
         canvas.contentSize = CGSize(width: max(canvas.bounds.width, 1), height: canvas.pageContentHeight)
 
@@ -563,6 +587,13 @@ struct CanvasRepresentable: UIViewRepresentable {
         if uiView.drawingPolicy != targetPolicy {
             uiView.drawingPolicy = targetPolicy
         }
+        // 換筆刷或拉筆寬時，游標要跟著變 —— 不更新的話使用者得把滑鼠移出去
+        // 再移回來才看得到新的筆頭。
+        if let adaptive = uiView as? AdaptiveCanvasView {
+            adaptive.installPointerInteractionIfNeeded(delegate: context.coordinator)
+            adaptive.refreshPointer(BrushCursor.path(for: selectedTool, strokeWidth: strokeWidth))
+        }
+
         if uiView.drawing != drawing {
             context.coordinator.isProgrammaticUpdate = true
             uiView.drawing = drawing
@@ -587,7 +618,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         Coordinator(self)
     }
 
-    class Coordinator: NSObject, PKCanvasViewDelegate {
+    class Coordinator: NSObject, PKCanvasViewDelegate, UIPointerInteractionDelegate {
         /// 把捲動狀態回報給 SwiftUI（自訂捲軸需要）
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             reportScrollMetrics(scrollView)
@@ -623,6 +654,20 @@ struct CanvasRepresentable: UIViewRepresentable {
             if maxY > 0 && maxY + 200 > PageGeometry.height {
                 parent.onReachedPageBottom?()
             }
+        }
+
+        /// 自訂筆頭游標。
+        ///
+        /// 選了螢光筆卻看到一個箭頭 —— 使用者得先畫一筆才知道自己選到什麼、
+        /// 那一筆會有多粗。把游標換成對應的筆頭，落筆之前就看得見。
+        func pointerInteraction(
+            _ interaction: UIPointerInteraction,
+            styleFor region: UIPointerRegion
+        ) -> UIPointerStyle? {
+            guard let canvas = interaction.view as? AdaptiveCanvasView,
+                  let path = canvas.brushPointerPath else { return nil }
+            // 不加 `constrainedAxes`：筆頭要能自由移動，限制軸是給滑桿用的。
+            return UIPointerStyle(shape: .path(path), constrainedAxes: [])
         }
 
         func canvasViewSelectionDidChange(_ canvasView: PKCanvasView) {
@@ -2823,29 +2868,9 @@ ZStack(alignment: .topTrailing) {
             .padding(.horizontal, 10)
             .padding(.top, 8)
 
-            // 新增子資料夾按鈕
-            Button {
-                newFolderParentId = nil
-                newFolderNameText = ""
-                showNewFolderAlert = true
-            } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "folder.badge.plus")
-                        .font(.caption)
-                    Text(localizationManager.localized("new_subfolder"))
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                    Spacer()
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 7)
-                .background(Color.accentColor.opacity(0.1))
-                .foregroundColor(.accentColor)
-                .cornerRadius(8)
-            }
-            .buttonStyle(.plain)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            // 「新增子資料夾」已移除：側欄標題列右上角那顆 folder.badge.plus
+            // 做的是同一件事。同一個動作給兩個入口，只是讓側欄變窄、讓使用者
+            // 多想一秒「這兩個一樣嗎」。
 
             Divider()
 
@@ -3193,22 +3218,32 @@ ZStack(alignment: .topTrailing) {
                 ToolbarSeparator()
                     .frame(height: 24)
 
-                // 筆刷粗細切換
+                // 筆刷粗細：四個預設點 + 可拖曳的滑桿
+                //
+                // 點點給的是「常用的四種」，一下就選到；滑桿給的是「就是要
+                // 這個粗細」。只有點點的話，想要 5pt 的人永遠只能在 4 與 8
+                // 之間挑一個。游標的筆頭大小跟著這個值走。
                 HStack(spacing: 6) {
                     ForEach([2.0, 4.0, 8.0, 14.0], id: \.self) { w in
                         Button {
                             strokeWidth = CGFloat(w)
                         } label: {
                             Circle()
-                                .fill(strokeWidth == CGFloat(w) ? Color.accentColor : Color.secondary.opacity(0.5))
+                                .fill(abs(strokeWidth - CGFloat(w)) < 0.01 ? Color.accentColor : Color.secondary.opacity(0.5))
                                 .frame(width: max(6, CGFloat(w)), height: max(6, CGFloat(w)))
                                 .padding(4)
-                                .background(strokeWidth == CGFloat(w) ? Color.accentColor.opacity(0.15) : Color.clear)
+                                .background(abs(strokeWidth - CGFloat(w)) < 0.01 ? Color.accentColor.opacity(0.15) : Color.clear)
                                 .clipShape(Circle())
                         }
                         .buttonStyle(.plain)
                         .help("\(localizationManager.localized("stroke_width")) \(Int(w))pt")
                     }
+
+                    StrokeWidthSlider(
+                        width: $strokeWidth,
+                        tool: selectedTool,
+                        color: selectedColor
+                    )
                 }
 
                 ToolbarSeparator()
