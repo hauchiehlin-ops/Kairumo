@@ -7,6 +7,8 @@
 
 import UIKit
 import PencilKit
+import SceneKit
+import Metal
 
 /// 把一頁的**所有圖層**合成為單張縮圖。
 ///
@@ -78,10 +80,22 @@ public enum PageThumbnailRenderer {
         scale: CGFloat = 2.0
     ) -> UIImage {
         compose(notebook: notebook, pageIndex: pageIndex, drawing: drawing, store: store,
-                canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: false, useCache: false)
+                canvasWidth: canvasWidth, scale: scale, cropToPreviewRatio: false,
+                useCache: false, quality: .export)
     }
 
     @MainActor
+    /// 算繪品質。
+    ///
+    /// 側邊欄縮圖與匯出走的是同一份繪圖程式碼（不然兩邊遲早長得不一樣），
+    /// 但有些東西在縮圖上不值得付代價、在匯出上又非做不可 ——
+    /// 3D 模型就是這種：離屏算繪很貴，縮圖畫個佔位卡就夠了，
+    /// 匯出畫佔位卡則是**把使用者的內容換成一個圖示**，那是錯的。
+    enum Quality {
+        case preview
+        case export
+    }
+
     private static func compose(
         notebook: NotebookDocument,
         pageIndex: Int,
@@ -90,7 +104,8 @@ public enum PageThumbnailRenderer {
         canvasWidth: CGFloat,
         scale: CGFloat,
         cropToPreviewRatio: Bool,
-        useCache: Bool
+        useCache: Bool,
+        quality: Quality = .preview
     ) -> UIImage {
         let width = max(canvasWidth, minPageWidth)
         let key = cacheKey(notebook: notebook, pageIndex: pageIndex, drawing: drawing, canvasWidth: width)
@@ -118,13 +133,13 @@ public enum PageThumbnailRenderer {
                 drawImage(item, store: store, ctx: ctx)
             }
             for item in notebook.textAttachments ?? [] where item.pageIndex == pageIndex {
-                drawText(item)
+                drawText(item, ctx: ctx)
             }
             for item in notebook.linkAttachments ?? [] where item.pageIndex == pageIndex {
                 drawLink(item)
             }
             for item in notebook.model3DAttachments ?? [] where item.pageIndex == pageIndex {
-                drawModel3D(item)
+                drawModel3D(item, quality: quality, scale: scale)
             }
             for pin in notebook.commentPins ?? [] where pin.pageIndex == pageIndex {
                 drawPin(pin)
@@ -199,8 +214,61 @@ public enum PageThumbnailRenderer {
         }
     }
 
-    private static func drawText(_ item: NoteTextAttachment) {
-        let rect = CGRect(x: item.x, y: item.y, width: item.width, height: item.height)
+    /// 畫布上的文字方塊內距。與 `TextBoxCanvasItemView` 的 `.padding(14)` 一致。
+    ///
+    /// 這個數字必須跟畫布那邊同步。匯出原本用的是 8/6，於是同一段文字在兩邊
+    /// 從不同的位置開始排，行數一不同，整塊版面就對不起來了。
+    static let textBoxPadding: CGFloat = 14
+
+    /// 依內容算出文字方塊實際需要的高度。
+    ///
+    /// 畫布上的高度是**內容撐出來的**（SwiftUI 的 intrinsic size），存下來的
+    /// `item.height` 只是最後一次調整時的值。匯出時直接用存下來的高度，
+    /// 文字一多就會被截掉或溢出框外壓到旁邊的東西 —— 那正是「方框重疊」的來源。
+    static func measuredHeight(for item: NoteTextAttachment) -> CGFloat {
+        let inner = max(item.width - textBoxPadding * 2, 1)
+        let bounds = attributedText(for: item).boundingRect(
+            with: CGSize(width: inner, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        return max(item.height, ceil(bounds.height) + textBoxPadding * 2)
+    }
+
+    private static func attributedText(for item: NoteTextAttachment) -> NSAttributedString {
+        var traits: UIFontDescriptor.SymbolicTraits = []
+        if item.isBold { traits.insert(.traitBold) }
+        if item.isItalic { traits.insert(.traitItalic) }
+        let base = UIFont.systemFont(ofSize: item.fontSize)
+        let font = base.fontDescriptor.withSymbolicTraits(traits)
+            .map { UIFont(descriptor: $0, size: item.fontSize) } ?? base
+
+        let paragraph = NSMutableParagraphStyle()
+        switch item.alignmentRaw {
+        case "center": paragraph.alignment = .center
+        case "right": paragraph.alignment = .right
+        case "justified": paragraph.alignment = .justified
+        default: paragraph.alignment = .left
+        }
+        // 換行而不是截斷：畫布上的文字是會自動換行的，截斷等於匯出時
+        // 把使用者寫的東西吃掉一部分。
+        paragraph.lineBreakMode = .byWordWrapping
+
+        var attrs: [NSAttributedString.Key: Any] = [
+            .font: font,
+            .foregroundColor: UIColor(hexString: item.textColorHex) ?? .label,
+            .paragraphStyle: paragraph
+        ]
+        if item.isUnderline { attrs[.underlineStyle] = NSUnderlineStyle.single.rawValue }
+        if item.isStrikethrough { attrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
+        return NSAttributedString(string: item.text, attributes: attrs)
+    }
+
+    private static func drawText(_ item: NoteTextAttachment, ctx: UIGraphicsImageRendererContext) {
+        let rect = CGRect(
+            x: item.x, y: item.y,
+            width: item.width, height: measuredHeight(for: item)
+        )
 
         if item.backgroundColorHex != "clear", let bg = UIColor(hexString: item.backgroundColorHex) {
             bg.setFill()
@@ -217,31 +285,16 @@ public enum PageThumbnailRenderer {
 
         guard !item.text.isEmpty else { return }
 
-        var traits: UIFontDescriptor.SymbolicTraits = []
-        if item.isBold { traits.insert(.traitBold) }
-        if item.isItalic { traits.insert(.traitItalic) }
-        let base = UIFont.systemFont(ofSize: item.fontSize)
-        let font = base.fontDescriptor.withSymbolicTraits(traits).map { UIFont(descriptor: $0, size: item.fontSize) } ?? base
-
-        let paragraph = NSMutableParagraphStyle()
-        switch item.alignmentRaw {
-        case "center": paragraph.alignment = .center
-        case "right": paragraph.alignment = .right
-        case "justified": paragraph.alignment = .justified
-        default: paragraph.alignment = .left
-        }
-        paragraph.lineBreakMode = .byTruncatingTail
-
-        var attrs: [NSAttributedString.Key: Any] = [
-            .font: font,
-            .foregroundColor: UIColor(hexString: item.textColorHex) ?? .label,
-            .paragraphStyle: paragraph
-        ]
-        if item.isUnderline { attrs[.underlineStyle] = NSUnderlineStyle.single.rawValue }
-        if item.isStrikethrough { attrs[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
-
-        NSAttributedString(string: item.text, attributes: attrs)
-            .draw(in: rect.insetBy(dx: 8, dy: 6))
+        // 裁切到方框內。沒有這一步，超出高度的文字會直接畫到框外、
+        // 壓在旁邊的物件上 —— 畫布上不會這樣，因為那邊有 clipShape。
+        ctx.cgContext.saveGState()
+        UIBezierPath(roundedRect: rect, cornerRadius: item.cornerRadius).addClip()
+        attributedText(for: item).draw(
+            with: rect.insetBy(dx: textBoxPadding, dy: textBoxPadding),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        ctx.cgContext.restoreGState()
     }
 
     private static func drawLink(_ item: NoteLinkAttachment) {
@@ -271,10 +324,47 @@ public enum PageThumbnailRenderer {
         ).draw(at: CGPoint(x: rect.minX + 10, y: rect.minY + 32))
     }
 
-    private static func drawModel3D(_ item: Note3DAttachment) {
+    private static func drawModel3D(
+        _ item: Note3DAttachment,
+        quality: Quality,
+        scale: CGFloat
+    ) {
         let rect = CGRect(x: item.x, y: item.y, width: item.width, height: item.height)
-        // SceneKit 離屏算繪對縮圖來說太昂貴，畫一個帶標題的佔位卡片即可 ——
-        // 目的是讓使用者知道「這一頁這個位置有個 3D 模型」。
+
+        // 匯出時真的把模型算繪出來。畫佔位圖示等於「把使用者放進去的東西
+        // 換成一個 icon」—— 在側邊欄縮圖上那是合理的取捨，在匯出的檔案上不是。
+        if quality == .export, let rendered = renderModel3D(item, scale: scale) {
+            rendered.draw(in: rect)
+            return
+        }
+
+        drawModel3DPlaceholder(item, rect: rect)
+    }
+
+    /// SceneKit 離屏算繪。失敗時回傳 `nil`，由呼叫端退回佔位卡片。
+    private static func renderModel3D(_ item: Note3DAttachment, scale: CGFloat) -> UIImage? {
+        let size = CGSize(width: max(item.width, 1), height: max(item.height, 1))
+        let scene = SceneKitHelper.makeScene(
+            modelTypeRaw: item.modelTypeRaw,
+            material: item.materialType,
+            rotationX: item.rotationX,
+            rotationY: item.rotationY,
+            rotationZ: item.rotationZ,
+            scale: item.scale
+        )
+
+        let renderer = SCNRenderer(device: MTLCreateSystemDefaultDevice(), options: nil)
+        renderer.scene = scene
+        // 與畫布上的 SceneView 一樣開預設光源，否則匯出的模型會是一片黑。
+        renderer.autoenablesDefaultLighting = true
+        renderer.pointOfView = scene.rootNode.childNode(withName: "camera", recursively: true)
+            ?? scene.rootNode.childNodes.first { $0.camera != nil }
+
+        let image = renderer.snapshot(atTime: 0, with: size, antialiasingMode: .multisampling4X)
+        return image.size.width > 0 ? image : nil
+    }
+
+    private static func drawModel3DPlaceholder(_ item: Note3DAttachment, rect: CGRect) {
         UIColor.secondarySystemBackground.setFill()
         UIBezierPath(roundedRect: rect, cornerRadius: 12).fill()
         UIColor.tintColor.withAlphaComponent(0.45).setStroke()
@@ -293,17 +383,23 @@ public enum PageThumbnailRenderer {
             cube.withTintColor(.tintColor, renderingMode: .alwaysOriginal).draw(in: box)
         }
 
+        guard !item.title.isEmpty else { return }
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = .center
         paragraph.lineBreakMode = .byTruncatingTail
         NSAttributedString(
             string: item.title,
             attributes: [
-                .font: UIFont.systemFont(ofSize: 13, weight: .medium),
+                .font: UIFont.systemFont(ofSize: 12, weight: .medium),
                 .foregroundColor: UIColor.secondaryLabel,
                 .paragraphStyle: paragraph
             ]
-        ).draw(in: CGRect(x: rect.minX + 6, y: rect.maxY - 26, width: rect.width - 12, height: 20))
+        ).draw(in: CGRect(
+            x: rect.minX + 8,
+            y: rect.maxY - 26,
+            width: rect.width - 16,
+            height: 18
+        ))
     }
 
     private static func drawPin(_ pin: NoteCommentPin) {

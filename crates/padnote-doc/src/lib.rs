@@ -13,7 +13,8 @@ pub mod transform;
 pub mod uuid;
 
 pub use document::{
-    Block, BlockKind, CellSpan, LayoutMode, Notebook, Page, PageTemplate, TextStyle,
+    Block, BlockKind, CellSpan, LayoutMode, Notebook, PAGE_HEIGHT, PAGE_WIDTH, Page, PageTemplate,
+    TextStyle,
 };
 pub use object::{
     Anchor, ConnectionObject, EndCap, ObjectError, ObjectKind, ObjectNode, ObjectRect, ObjectTree,

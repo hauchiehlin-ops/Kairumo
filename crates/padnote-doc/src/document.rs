@@ -172,11 +172,25 @@ impl Block {
     }
 }
 
+/// 標準頁面尺寸（點）：寬 800、高 1132。
+///
+/// # 為什麼不是 A4 的 595×842
+///
+/// 平台層既有的畫布名目寬度就是 800。改成 595 會讓所有既有筆記的物件
+/// 水平縮放，動到的東西遠比需要的多。維持 800 寬、把高度訂成 A4 的比例
+/// （800 × 842/595 ≈ 1132），既保住既有內容的水平位置，列印與匯出時
+/// 又是正確的紙張比例。
+///
+/// **這是兩個平台唯一的頁面尺寸來源。** 各自寫一份常數，遲早會差一點點，
+/// 而差一點點的後果就是「畫布上看到的」與「匯出的」對不起來。
+pub const PAGE_WIDTH: f32 = 800.0;
+pub const PAGE_HEIGHT: f32 = 1132.0;
+
 #[derive(Clone, Debug)]
 pub struct Page {
     pub id: Uuid,
     pub template: PageTemplate,
-    /// 頁面尺寸（點）。A4 直式約 595×842。
+    /// 頁面尺寸（點）。預設為 [`PAGE_WIDTH`] × [`PAGE_HEIGHT`]。
     pub size: (f32, f32),
     blocks: Vec<Block>,
 }
@@ -186,7 +200,7 @@ impl Page {
         Self {
             id,
             template,
-            size: (595.0, 842.0),
+            size: (PAGE_WIDTH, PAGE_HEIGHT),
             blocks: Vec::new(),
         }
     }

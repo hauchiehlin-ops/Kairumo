@@ -237,6 +237,15 @@ pub struct FeatureStatus {
 
 // ---- 應用程式與核心版本資訊 ----
 
+/// 標準頁面尺寸 `[寬, 高]`（點）。
+///
+/// 平台層**必須**用這個值，不要各自寫一份常數 —— 差一點點的後果就是
+/// 「畫布上看到的」與「匯出的」對不起來，而那種偏差沒有人會在開發時發現。
+#[uniffi::export]
+pub fn standard_page_size() -> Vec<f32> {
+    vec![padnote_doc::PAGE_WIDTH, padnote_doc::PAGE_HEIGHT]
+}
+
 /// 核心引擎與套件版本號（例如 "0.1.4"），與 Cargo.toml 同步。
 #[uniffi::export]
 pub fn core_version() -> String {
