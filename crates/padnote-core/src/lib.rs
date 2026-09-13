@@ -12,6 +12,7 @@ pub mod app;
 pub mod ffi;
 #[cfg(feature = "relay")]
 pub mod ffi_relay;
+pub mod ffi_backup;
 pub mod ffi_folder_sync;
 pub mod ffi_geometry;
 pub mod ffi_input;

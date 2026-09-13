@@ -266,6 +266,78 @@ object LocalizationStrings {
             "ko" to "오디오 녹음 및 동기화",
             "th" to "การบันทึกเสียงและการจัดตำแหน่ง"
         ),
+        "backup_corrupted" to mapOf(
+            "zh-Hant" to "%@ 個檔案損毀，未寫入（其餘已復原）",
+            "en" to "%@ files were corrupted and skipped (the rest were restored)",
+            "zh-Hans" to "%@ 个文件损坏，未写入（其余已恢复）",
+            "ja" to "%@ 件が破損していたためスキップしました（残りは復元済み）",
+            "ko" to "%@개 파일이 손상되어 건너뛰었습니다(나머지는 복원됨)",
+            "th" to "%@ ไฟล์เสียหายจึงข้ามไป (ที่เหลือกู้คืนแล้ว)"
+        ),
+        "backup_create" to mapOf(
+            "zh-Hant" to "建立備份檔",
+            "en" to "Create Backup",
+            "zh-Hans" to "创建备份文件",
+            "ja" to "バックアップを作成",
+            "ko" to "백업 만들기",
+            "th" to "สร้างไฟล์สำรอง"
+        ),
+        "backup_created" to mapOf(
+            "zh-Hant" to "已建立備份：%1@ 個檔案、%2@",
+            "en" to "Backup created: %1@ files, %2@",
+            "zh-Hans" to "已创建备份：%1@ 个文件、%2@",
+            "ja" to "バックアップを作成しました：%1@ 件、%2@",
+            "ko" to "백업을 만들었습니다: %1@개 파일, %2@",
+            "th" to "สร้างไฟล์สำรองแล้ว: %1@ ไฟล์ %2@"
+        ),
+        "backup_explainer" to mapOf(
+            "zh-Hant" to "備份檔包含筆記本、筆記頁、手繪、圖片、錄音、資料夾結構與 App 設定。把它存到雲端或電腦，App 毀損時可一鍵復原。",
+            "en" to "The backup contains notebooks, pages, handwriting, images, recordings, folder structure and app settings. Keep it in the cloud or on a computer — one tap restores everything if the app breaks.",
+            "zh-Hans" to "备份文件包含笔记本、笔记页、手绘、图片、录音、文件夹结构与 App 设置。把它存到云端或电脑，App 损坏时可一键恢复。",
+            "ja" to "バックアップにはノート、ページ、手書き、画像、録音、フォルダ構成、アプリ設定が含まれます。クラウドやパソコンに保存しておけば、アプリが壊れてもワンタップで復元できます。",
+            "ko" to "백업에는 노트북, 페이지, 손글씨, 이미지, 녹음, 폴더 구조, 앱 설정이 들어 있습니다. 클라우드나 컴퓨터에 보관해 두면 앱이 손상돼도 한 번에 복원할 수 있습니다.",
+            "th" to "ไฟล์สำรองมีสมุดบันทึก หน้า ลายมือ รูปภาพ ไฟล์เสียง โครงสร้างโฟลเดอร์ และการตั้งค่าแอป เก็บไว้บนคลาวด์หรือคอมพิวเตอร์ แล้วกู้คืนทั้งหมดได้ในคลิกเดียวหากแอปเสียหาย"
+        ),
+        "backup_invalid" to mapOf(
+            "zh-Hant" to "這不是 Kairumo 的備份檔",
+            "en" to "This is not a Kairumo backup file",
+            "zh-Hans" to "这不是 Kairumo 的备份文件",
+            "ja" to "Kairumo のバックアップファイルではありません",
+            "ko" to "Kairumo 백업 파일이 아닙니다",
+            "th" to "นี่ไม่ใช่ไฟล์สำรองของ Kairumo"
+        ),
+        "backup_restore" to mapOf(
+            "zh-Hant" to "從備份復原",
+            "en" to "Restore from Backup",
+            "zh-Hans" to "从备份恢复",
+            "ja" to "バックアップから復元",
+            "ko" to "백업에서 복원",
+            "th" to "กู้คืนจากไฟล์สำรอง"
+        ),
+        "backup_restored" to mapOf(
+            "zh-Hant" to "已復原 %@ 個檔案，請重新啟動 App",
+            "en" to "%@ files restored — please restart the app",
+            "zh-Hans" to "已恢复 %@ 个文件，请重新启动 App",
+            "ja" to "%@ 件を復元しました。アプリを再起動してください",
+            "ko" to "%@개 파일을 복원했습니다. 앱을 다시 시작해 주세요",
+            "th" to "กู้คืนแล้ว %@ ไฟล์ โปรดเปิดแอปใหม่"
+        ),
+        "backup_safety_note" to mapOf(
+            "zh-Hant" to "復原之前會自動把目前的資料另存一份，出事時回得去。",
+            "en" to "Your current data is backed up automatically before restoring, so you can go back.",
+            "zh-Hans" to "恢复之前会自动把当前数据另存一份，出事时回得去。",
+            "ja" to "復元の前に現在のデータを自動でバックアップするので、元に戻せます。",
+            "ko" to "복원 전에 현재 데이터를 자동으로 백업하므로 되돌릴 수 있습니다.",
+            "th" to "ระบบจะสำรองข้อมูลปัจจุบันอัตโนมัติก่อนกู้คืน คุณจึงย้อนกลับได้"
+        ),
+        "backup_section" to mapOf(
+            "zh-Hant" to "備份與復原",
+            "en" to "Backup & Restore",
+            "zh-Hans" to "备份与恢复",
+            "ja" to "バックアップと復元",
+            "ko" to "백업 및 복원",
+            "th" to "สำรองและกู้คืน"
+        ),
         "border_color" to mapOf(
             "zh-Hant" to "邊框顏色",
             "en" to "Border color",

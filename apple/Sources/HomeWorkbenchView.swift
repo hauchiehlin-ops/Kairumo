@@ -1752,6 +1752,11 @@ public struct AppDiagnosticsSheet: View {
     /// 固定頁面模型的重新分頁（問題 3＋5）。
     @State private var repaginationMessage: String?
 
+    /// 備份與復原。
+    @State private var backupMessage: String?
+    @State private var showRestorePicker = false
+    @State private var shareBackupURL: URL?
+
     public var body: some View {
         NavigationStack {
             List {
@@ -1789,6 +1794,7 @@ public struct AppDiagnosticsSheet: View {
                 migrationSection
                 cloudSyncSection
                 pageModelSection
+                backupSection
 
                 Section(localizationManager.localized("about_app")) {
                     HStack {
@@ -1820,6 +1826,87 @@ public struct AppDiagnosticsSheet: View {
 }
 
 extension AppDiagnosticsSheet {
+
+    /// 備份與復原。
+    ///
+    /// 備份檔包含整個 Documents 目錄與 App 自己的設定 —— 目標是「換一台裝置
+    /// 或重裝之後，一鍵回到原樣」。容器格式在核心，所以 iPad 上做的備份
+    /// 在 Android 也開得起來。
+    @ViewBuilder
+    var backupSection: some View {
+        Section(localizationManager.localized("backup_section")) {
+            if let backupMessage {
+                Text(backupMessage)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+
+            Button(localizationManager.localized("backup_create")) { createBackup() }
+
+            Button(localizationManager.localized("backup_restore")) {
+                showRestorePicker = true
+            }
+
+            Text(localizationManager.localized("backup_safety_note"))
+                .font(.caption)
+                .foregroundColor(.secondary)
+            Text(localizationManager.localized("backup_explainer"))
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .fileImporter(
+            isPresented: $showRestorePicker,
+            allowedContentTypes: [.data],
+            allowsMultipleSelection: false
+        ) { result in
+            guard case .success(let urls) = result, let url = urls.first else { return }
+            restoreBackup(from: url)
+        }
+        .sheet(item: Binding(
+            get: { shareBackupURL.map { IdentifiableURL(url: $0) } },
+            set: { shareBackupURL = $0?.url }
+        )) { item in
+            ShareSheet(items: [item.url])
+        }
+    }
+
+    private func createBackup() {
+        do {
+            let (url, info) = try BackupManager.createBackup(
+                documentsDirectory: store.documentsDirectory)
+            backupMessage = localizationManager.localized("backup_created")
+                .replacingFirst("%1@", with: "\(info.fileCount)")
+                .replacingFirst("%2@", with: ByteCountFormatter.string(
+                    fromByteCount: Int64(info.totalBytes), countStyle: .file))
+            // 直接叫出分享面板：備份檔留在 tmp 裡等於沒有備份，
+            // 使用者要把它放到雲端或電腦上才算數。
+            shareBackupURL = url
+        } catch {
+            backupMessage = error.localizedDescription
+        }
+    }
+
+    private func restoreBackup(from url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        do {
+            // 先看一眼再動手：使用者要知道自己選到的是什麼。
+            _ = try BackupManager.inspect(url)
+            let outcome = try BackupManager.restore(
+                from: url, into: store.documentsDirectory)
+            store.loadData()
+
+            var message = localizationManager.localized("backup_restored")
+                .replacingFirst("%@", with: "\(outcome.restored)")
+            if !outcome.corrupted.isEmpty {
+                message += "　" + localizationManager.localized("backup_corrupted")
+                    .replacingFirst("%@", with: "\(outcome.corrupted.count)")
+            }
+            backupMessage = message
+        } catch {
+            backupMessage = error.localizedDescription
+        }
+    }
 
     /// 固定頁面模型。
     ///
@@ -2108,4 +2195,21 @@ struct NotebookEditorHost: View {
             }
         )
     }
+}
+
+/// `sheet(item:)` 需要 Identifiable，而 URL 不是。
+private struct IdentifiableURL: Identifiable {
+    let url: URL
+    var id: String { url.path }
+}
+
+/// 系統分享面板。備份檔留在 tmp 裡等於沒有備份 —— 一定要讓使用者把它帶走。
+private struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }

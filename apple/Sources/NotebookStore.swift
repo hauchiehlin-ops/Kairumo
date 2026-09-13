@@ -766,6 +766,9 @@ public final class NotebookStore: ObservableObject {
     /// 顯示結果在中文介面下完全一樣，不會有感。
     private static let legacyDefaultRootNames: Set<String> = ["我的筆記", "我的笔记", "My Notes"]
 
+    /// 資料根目錄。備份與同步都要知道它在哪。
+    public var documentsDirectory: URL { documentsDir }
+
     private var documentsDir: URL {
         FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
     }

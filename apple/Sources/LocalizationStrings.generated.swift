@@ -271,6 +271,78 @@ extension LocalizationManager {
             .ko: "오디오 녹음 및 동기화",
             .th: "การบันทึกเสียงและการจัดตำแหน่ง"
         ],
+        "backup_corrupted": [
+            .zhHant: "%@ 個檔案損毀，未寫入（其餘已復原）",
+            .en: "%@ files were corrupted and skipped (the rest were restored)",
+            .zhHans: "%@ 个文件损坏，未写入（其余已恢复）",
+            .ja: "%@ 件が破損していたためスキップしました（残りは復元済み）",
+            .ko: "%@개 파일이 손상되어 건너뛰었습니다(나머지는 복원됨)",
+            .th: "%@ ไฟล์เสียหายจึงข้ามไป (ที่เหลือกู้คืนแล้ว)"
+        ],
+        "backup_create": [
+            .zhHant: "建立備份檔",
+            .en: "Create Backup",
+            .zhHans: "创建备份文件",
+            .ja: "バックアップを作成",
+            .ko: "백업 만들기",
+            .th: "สร้างไฟล์สำรอง"
+        ],
+        "backup_created": [
+            .zhHant: "已建立備份：%1@ 個檔案、%2@",
+            .en: "Backup created: %1@ files, %2@",
+            .zhHans: "已创建备份：%1@ 个文件、%2@",
+            .ja: "バックアップを作成しました：%1@ 件、%2@",
+            .ko: "백업을 만들었습니다: %1@개 파일, %2@",
+            .th: "สร้างไฟล์สำรองแล้ว: %1@ ไฟล์ %2@"
+        ],
+        "backup_explainer": [
+            .zhHant: "備份檔包含筆記本、筆記頁、手繪、圖片、錄音、資料夾結構與 App 設定。把它存到雲端或電腦，App 毀損時可一鍵復原。",
+            .en: "The backup contains notebooks, pages, handwriting, images, recordings, folder structure and app settings. Keep it in the cloud or on a computer — one tap restores everything if the app breaks.",
+            .zhHans: "备份文件包含笔记本、笔记页、手绘、图片、录音、文件夹结构与 App 设置。把它存到云端或电脑，App 损坏时可一键恢复。",
+            .ja: "バックアップにはノート、ページ、手書き、画像、録音、フォルダ構成、アプリ設定が含まれます。クラウドやパソコンに保存しておけば、アプリが壊れてもワンタップで復元できます。",
+            .ko: "백업에는 노트북, 페이지, 손글씨, 이미지, 녹음, 폴더 구조, 앱 설정이 들어 있습니다. 클라우드나 컴퓨터에 보관해 두면 앱이 손상돼도 한 번에 복원할 수 있습니다.",
+            .th: "ไฟล์สำรองมีสมุดบันทึก หน้า ลายมือ รูปภาพ ไฟล์เสียง โครงสร้างโฟลเดอร์ และการตั้งค่าแอป เก็บไว้บนคลาวด์หรือคอมพิวเตอร์ แล้วกู้คืนทั้งหมดได้ในคลิกเดียวหากแอปเสียหาย"
+        ],
+        "backup_invalid": [
+            .zhHant: "這不是 Kairumo 的備份檔",
+            .en: "This is not a Kairumo backup file",
+            .zhHans: "这不是 Kairumo 的备份文件",
+            .ja: "Kairumo のバックアップファイルではありません",
+            .ko: "Kairumo 백업 파일이 아닙니다",
+            .th: "นี่ไม่ใช่ไฟล์สำรองของ Kairumo"
+        ],
+        "backup_restore": [
+            .zhHant: "從備份復原",
+            .en: "Restore from Backup",
+            .zhHans: "从备份恢复",
+            .ja: "バックアップから復元",
+            .ko: "백업에서 복원",
+            .th: "กู้คืนจากไฟล์สำรอง"
+        ],
+        "backup_restored": [
+            .zhHant: "已復原 %@ 個檔案，請重新啟動 App",
+            .en: "%@ files restored — please restart the app",
+            .zhHans: "已恢复 %@ 个文件，请重新启动 App",
+            .ja: "%@ 件を復元しました。アプリを再起動してください",
+            .ko: "%@개 파일을 복원했습니다. 앱을 다시 시작해 주세요",
+            .th: "กู้คืนแล้ว %@ ไฟล์ โปรดเปิดแอปใหม่"
+        ],
+        "backup_safety_note": [
+            .zhHant: "復原之前會自動把目前的資料另存一份，出事時回得去。",
+            .en: "Your current data is backed up automatically before restoring, so you can go back.",
+            .zhHans: "恢复之前会自动把当前数据另存一份，出事时回得去。",
+            .ja: "復元の前に現在のデータを自動でバックアップするので、元に戻せます。",
+            .ko: "복원 전에 현재 데이터를 자동으로 백업하므로 되돌릴 수 있습니다.",
+            .th: "ระบบจะสำรองข้อมูลปัจจุบันอัตโนมัติก่อนกู้คืน คุณจึงย้อนกลับได้"
+        ],
+        "backup_section": [
+            .zhHant: "備份與復原",
+            .en: "Backup & Restore",
+            .zhHans: "备份与恢复",
+            .ja: "バックアップと復元",
+            .ko: "백업 및 복원",
+            .th: "สำรองและกู้คืน"
+        ],
         "border_color": [
             .zhHant: "邊框顏色",
             .en: "Border color",

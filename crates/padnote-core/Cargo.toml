@@ -59,6 +59,10 @@ padnote-i18n = { path = "../padnote-i18n" }
 padnote-toolbar = { path = "../padnote-toolbar" }
 padnote-relay = { path = "../padnote-relay", optional = true }
 tokio = { version = "1", features = ["rt-multi-thread", "net", "sync", "macros"], optional = true }
+# 備份容器：索引用 JSON、逐檔與整體校驗用 SHA-256
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
 
 [dev-dependencies]
 tokio-tungstenite = "0.26"

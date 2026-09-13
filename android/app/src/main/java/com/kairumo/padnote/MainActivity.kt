@@ -38,6 +38,7 @@ import com.kairumo.padnote.platform.DocsViewer
 import com.kairumo.padnote.platform.Exporter
 import com.kairumo.padnote.platform.Handwriting
 import com.kairumo.padnote.sync.FolderSync
+import com.kairumo.padnote.backup.BackupManager
 import androidx.documentfile.provider.DocumentFile
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
@@ -105,6 +106,14 @@ private fun InkScreen() {
     val scope = rememberCoroutineScope()
 
     // 雲端同步（決策 D3 選項 A）：使用者挑一個資料夾，兩台裝置指同一個地方。
+    // 備份檔：選一個既有的備份來復原。
+    val backupPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        message = runRestore(activity, uri)
+    }
+
     val folderPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocumentTree()
     ) { uri ->
@@ -232,6 +241,15 @@ private fun InkScreen() {
                         runCatching { Exporter.print(activity, session) }
                             .onFailure { message = it.message }
                     }
+                )
+                Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n("backup_create")) },
+                    onClick = { showMenu = false; message = runBackup(activity) }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("backup_restore")) },
+                    onClick = { showMenu = false; backupPicker.launch(arrayOf("*/*")) }
                 )
                 Divider()
                 DropdownMenuItem(
@@ -665,4 +683,52 @@ private fun runFolderSync(activity: ComponentActivity, session: PadnoteSession?)
     return LocalizationStrings.localized("sync_result", lang)
         .replace("%1@", "${result.uploaded.size}")
         .replace("%2@", "${result.downloaded.size}")
+}
+
+/**
+ * 建立備份檔並叫出分享面板。
+ *
+ * 一定要讓使用者把它帶走：留在 cache 裡的備份檔，在 App 被清除資料時
+ * 會跟著消失 —— 那正是他最需要它的時候。
+ */
+private fun runBackup(activity: ComponentActivity): String {
+    val lang = deviceLanguageTag()
+    return runCatching {
+        val (file, info) = BackupManager.create(activity, BuildConfig.VERSION_NAME)
+        runCatching {
+            activity.startActivity(
+                android.content.Intent.createChooser(
+                    Exporter.shareIntent(activity, file, Exporter.Format.PDF).apply {
+                        type = "application/octet-stream"
+                    },
+                    null
+                )
+            )
+        }
+        LocalizationStrings.localized("backup_created", lang)
+            .replace("%1@", "${info.fileCount}")
+            .replace("%2@", android.text.format.Formatter.formatShortFileSize(
+                activity, info.totalBytes.toLong()))
+    }.getOrElse { it.message ?: it.toString() }
+}
+
+/** 從使用者選的備份檔一鍵復原。 */
+private fun runRestore(activity: ComponentActivity, uri: android.net.Uri): String {
+    val lang = deviceLanguageTag()
+    return runCatching {
+        val staged = BackupManager.stage(activity, uri)
+        // 先看一眼再動手：使用者要知道自己選到的是什麼。
+        BackupManager.inspect(staged)
+        val outcome = BackupManager.restore(activity, staged, BuildConfig.VERSION_NAME)
+
+        var text = LocalizationStrings.localized("backup_restored", lang)
+            .replace("%@", "${outcome.restored}")
+        if (outcome.corrupted.isNotEmpty()) {
+            text += "　" + LocalizationStrings.localized("backup_corrupted", lang)
+                .replace("%@", "${outcome.corrupted.size}")
+        }
+        text
+    }.getOrElse {
+        LocalizationStrings.localized("backup_invalid", lang) + "（${it.message}）"
+    }
 }
