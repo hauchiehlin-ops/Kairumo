@@ -4277,8 +4277,41 @@ ZStack(alignment: .topTrailing) {
         }
     }
 
+    /// 匯出 PDF。
+    ///
+    /// 走核心的匯出器，因為它同時輸出**向量筆畫與標準 `/Ink` 標註** ——
+    /// 在 Goodnotes / Notability / PDF Expert 打開後可以繼續編輯那些筆畫。
+    /// App 原本的做法是把整頁算繪成點陣圖，那樣只能「在上面加註」，
+    /// 我們的筆畫本身不是物件。
+    ///
+    /// 核心拒絕這份資料時退回原本的點陣匯出 —— 拿得到一份看得見內容的 PDF，
+    /// 比拿到一個錯誤訊息好。
     private func buildNotebookPdf(scale: CGFloat = 2.0) -> Data {
         saveCurrentPageDrawing()
+
+        let drawings = (0..<max(notebook.pageCount, 1)).map {
+            store.loadDrawing(notebookId: notebook.id, pageIndex: $0)
+        }
+        var images: [String: Data] = [:]
+        for attachment in notebook.attachments ?? [] {
+            if let image = store.loadAttachmentImage(fileName: attachment.fileName),
+               let png = image.pngData() {
+                images[attachment.fileName] = png
+            }
+        }
+
+        if let data = try? NotebookPackageBridge.exportPdf(
+            document: notebook, drawings: drawings, imageData: images,
+            deviceId: NotebookMigration.deviceId
+        ), !data.isEmpty {
+            return data
+        }
+
+        return buildRasterPdf(scale: scale)
+    }
+
+    /// 點陣匯出（備援）。與畫布逐像素一致，但筆畫不是可編輯的標註。
+    private func buildRasterPdf(scale: CGFloat = 2.0) -> Data {
         let pages = composedPageImages(scale: scale)
         let firstSize = pages.first?.size ?? CGSize(width: 612, height: 792)
         let renderer = UIGraphicsPDFRenderer(bounds: CGRect(origin: .zero, size: firstSize))

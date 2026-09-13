@@ -132,8 +132,8 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | ~~S-42~~ ✅ | PDF 標註的雙向保真（ADR-0008 第一層的核心） | 10 款競品都讀寫 PDF，這是唯一真正通用的互通途徑 |
 | ~~S-45~~ ✅ | 平台層依 `Decision::retract` 實作筆畫收回 | **兩平台皆已實作**：Android 在 `InkEngine`；Apple 新增 `PalmRejectionCoordinator`（偵測到筆就切 `.pencilOnly`，並收回筆落下前 500ms 內的筆畫）。原本 Apple 在手寫模式下是 `.anyInput`，手掌畫得出東西 |
 | ~~S-43~~ ✅ | 把標註寫進真實 PDF（PDFium 的 annotation API） | `create_annotated_pdf` 實作完成，經測試驗證 |
-| S-44 | 用其他 App 驗證標註互通 | **需要你來測**（我裝不了那些 App）。先知道一件事：目前匯出的 PDF 是**點陣合成**（`page.image.draw`），不含 `/Ink` 標註 —— 在別的 App 裡「開得起來、可以在上面加註」成立，但我們的筆畫不是可編輯的標註物件。核心的 `padnote_pdf` 已有 `FfiPdfAnnotation` 與 quad points，要做真正的向量標註互通得把它接上匯出路徑 |
-| S-44b | 匯出真正的 PDF `/Ink` 標註 | 前提是 S-44 的驗證結果顯示你需要「在別的 App 裡繼續編輯我們的筆畫」。若只需要「看得到、能在上面加註」，目前的點陣匯出已經夠用 |
+| ~~S-44b~~ ✅ | 匯出真正的 PDF `/Ink` 標註 | **兩平台皆已達成**。Apple 的匯出改走核心的匯出器（原本是點陣合成）；核心同時輸出向量筆畫與 `/Subtype /Ink` + `/InkList` + `/BS`。3D 模型與連結卡片核心沒有那兩種型別，改以算繪後的圖片帶進去，內容不會掉 |
+| S-44 | 用其他 App 實測 | **需要你來測**（我裝不了那些 App）。已產出範例 PDF（兩頁、三筆畫、三個獨立 Ink 標註）。判準：那三條線能不能在 Goodnotes / Notability / PDF Expert 裡被**選取、搬動、刪除** |
 | S-35 | **Windows 低延遲墨跡** | **目前沒有 Windows 版**，這一條在有 Windows 版之前不成立。內容本身是結論不是待辦：Compose MP Desktop 走 Skia/JVM 做不到 9ms，要原生 Windows Ink / DirectComposition。建議轉成 ADR 記著，等真的要做 Windows 時才重新評估 |
 | ~~S-36~~ ✅ | **掌拒與輸入分流** | 🔴 完全未設計。**手寫 App 的生死線**：手掌靠螢幕會畫出大片塗鴉 |
 | ~~S-37~~ ✅ | UI/UX 設計 | 🔴 完全未開始。可與 M0 並行，不依賴 S1 |
@@ -220,7 +220,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | D-02 | 墓碑 GC 策略 | 保留期 vs 快照後清除；影響檔案成長速度 |
 | D-03 | 大型筆記本的 strokes 檔分片閾值 | |
 | D-04 | 自訂筆（`tool_id` 100+）的參數序列化格式 | |
-| D-05 | 長期維護與營收模式 | 見 `plans/sustainability-evaluation.md`。**先算錢：每年約 US$99（僅 Apple 開發者帳號）**，其餘全部 US$0。建議「不營收 + 捐贈連結」，付費選項隨時可加且不需後端。要拍板：接受嗎、捐贈放哪個平台 |
+| ~~D-05~~ | ~~長期維護與營收模式~~ ✅ **已決議：不營收 + 捐贈連結**（2026-09-13）。`.github/FUNDING.yml` 已備妥，**待填入你自己的 GitHub Sponsors 或 Ko-fi 帳號**；`docs/SUPPORT.md` 說明了每年約 US$99 的實際支出與不會做的三件事 |
 | D-06 | 多裝置金鑰首次配對的 UX | QR code 傳遞 DEK 的具體流程 |
 | **D-08** | **壓感觸發的語意** | 按壓深度要觸發什麼？切換筆刷？橡皮擦？這是產品決策不是實作細節 |
 | **D-09** | **格式互通策略** | ⛔ 「與 10 款競品完全相容互通」**無法達成**（多數為專有未公開格式，且互通需對方也讀我們的格式）。建議改為「PDF/MD 為主 + 盡力而為的單向匯入」，見 requirements-review.md §6 |

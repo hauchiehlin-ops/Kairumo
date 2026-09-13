@@ -121,6 +121,33 @@ enum NotebookPackageBridge {
                     summary.textBlockCount += 1
                 }
 
+                // 3D 模型與連結卡片：核心的文件模型沒有這兩種型別，直接跳過的話
+                // 匯出的 PDF 就會少掉它們。算繪成圖片帶進去 —— 使用者看到的
+                // 是同一個東西，只是在 PDF 裡它是一張圖而不是可轉的模型。
+                for model in document.model3DAttachments?.filter({ $0.pageIndex == index }) ?? [] {
+                    guard let png = PageThumbnailRenderer.renderObjectImage(model)?.pngData()
+                    else { continue }
+                    let blob = try session.putBlob(bytes: png)
+                    let blockId = try session.addImage(
+                        pageId: pageId, blob: blob,
+                        width: Float(model.width), height: Float(model.height))
+                    try session.setBlockPosition(
+                        blockId: blockId, x: Float(model.x), y: Float(model.y))
+                    summary.imageCount += 1
+                }
+
+                for link in document.linkAttachments?.filter({ $0.pageIndex == index }) ?? [] {
+                    guard let png = PageThumbnailRenderer.renderObjectImage(link)?.pngData()
+                    else { continue }
+                    let blob = try session.putBlob(bytes: png)
+                    let blockId = try session.addImage(
+                        pageId: pageId, blob: blob,
+                        width: Float(link.width), height: Float(max(60, link.height)))
+                    try session.setBlockPosition(
+                        blockId: blockId, x: Float(link.x), y: Float(link.y))
+                    summary.imageCount += 1
+                }
+
                 for image in document.attachments?.filter({ $0.pageIndex == index }) ?? [] {
                     // 讀不到某張圖不該讓整本筆記匯不出去 —— 缺一張圖，
                     // 跟整份匯出失敗，對使用者是完全不同等級的損失。
@@ -141,6 +168,38 @@ enum NotebookPackageBridge {
         }
 
         return summary
+    }
+
+    // MARK: - 匯出 PDF（可再編輯的標註）
+
+    /// 匯出成帶有 `/Ink` 標註的 PDF。
+    ///
+    /// # 為什麼繞一圈走核心
+    ///
+    /// App 原本的 PDF 匯出是把整頁算繪成點陣圖再塞進 PDF —— 在別的 App 裡
+    /// 開得起來、可以在上面加註，但**我們的筆畫不是可編輯的物件**。
+    /// 核心的匯出器同時輸出向量筆畫與標準 `/Subtype /Ink` 標註，
+    /// Goodnotes / Notability / PDF Expert 打開後可以直接繼續改那些筆畫。
+    ///
+    /// 而且 Android 走的是同一支匯出器 —— 兩個平台匯出的 PDF 結構相同，
+    /// 不是各寫一個「差不多」的產生器。
+    static func exportPdf(
+        document: NotebookDocument,
+        drawings: [PKDrawing],
+        imageData: [String: Data] = [:],
+        deviceId: UInt32
+    ) throws -> Data {
+        // 用一個暫存套件當中繼。它在匯出完就沒有用了。
+        let staging = FileManager.default.temporaryDirectory
+            .appendingPathComponent("pdf-\(UUID().uuidString).padnote")
+        defer { try? FileManager.default.removeItem(at: staging) }
+
+        try export(
+            document: document, drawings: drawings, imageData: imageData,
+            to: staging, deviceId: deviceId)
+
+        let session = try PadnoteSession.openExisting(path: staging.path, deviceId: deviceId)
+        return try session.exportPdf()
     }
 
     // MARK: - 讀回（驗證用）

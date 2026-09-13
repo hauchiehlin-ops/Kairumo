@@ -54,6 +54,19 @@ class CoreCapabilityTest {
     }
 
     @Test
+    fun exportedPdfCarriesEditableInkAnnotations() {
+        // 工作項 S-44：匯出的 PDF 要能在別的 App 裡**繼續編輯我們的筆畫**。
+        // 「開得起來」與「可以繼續編輯」是兩件事 —— 後者需要標準的
+        // /Subtype /Ink 標註。Android 與 Apple 走同一支核心匯出器，
+        // 所以兩邊匯出的 PDF 結構相同。
+        val (s, _) = session("ink")
+        val text = String(s.exportPdf(), Charsets.ISO_8859_1)
+        assertTrue("PDF 裡必須有標準的 Ink 標註", text.contains("/Subtype /Ink"))
+        assertTrue("Ink 標註必須帶著實際的筆跡座標", text.contains("/InkList"))
+        assertTrue("標註要掛到頁面上，否則檢視器不會顯示", text.contains("/Annots"))
+    }
+
+    @Test
     fun singlePagePdfExportWorks() {
         val (s, page) = session("page-pdf")
         val bytes = s.exportPagePdf(page)

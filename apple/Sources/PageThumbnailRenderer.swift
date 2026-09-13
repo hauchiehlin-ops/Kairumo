@@ -181,6 +181,31 @@ public enum PageThumbnailRenderer {
         return image
     }
 
+    /// 把單一物件算繪成圖片。
+    ///
+    /// 匯出 PDF 時，核心的文件模型沒有 3D 模型與連結卡片這兩種型別。
+    /// 直接跳過的話匯出就會少掉它們 —— 算繪成圖片帶進去，使用者看到的
+    /// 是同一個東西。
+    static func renderObjectImage(_ item: Note3DAttachment) -> UIImage? {
+        let size = CGSize(width: max(item.width, 1), height: max(item.height, 1))
+        return UIGraphicsImageRenderer(size: size).image { _ in
+            var local = item
+            local.x = 0
+            local.y = 0
+            drawModel3D(local, quality: .export, scale: 2)
+        }
+    }
+
+    static func renderObjectImage(_ item: NoteLinkAttachment) -> UIImage? {
+        let size = CGSize(width: max(item.width, 1), height: max(60, item.height))
+        return UIGraphicsImageRenderer(size: size).image { _ in
+            var local = item
+            local.x = 0
+            local.y = 0
+            drawLink(local)
+        }
+    }
+
     // MARK: - 共用外框
 
     /// 各型別原本的外觀。使用者沒有自訂時回落到這裡 ——
