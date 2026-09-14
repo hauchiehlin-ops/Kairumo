@@ -76,6 +76,18 @@ if [[ -z "$APPLE_TEAM_ID" ]]; then
     echo ""
 fi
 
+# 版本閘門。android-release.sh 本來就有這道，apple 這邊沒有 —— 2.8.0 (20)
+# 那顆裝不起來的 build 就是這樣送出去的。放在編譯前，錯了就別浪費那十分鐘。
+echo "==> 檢查版本一致性"
+"${SCRIPT_DIR}/check-version-consistency.sh"
+
+# 打包進 App 的手冊是 apple/Resources/Docs 底下的副本。改了 docs/ 卻忘了同步，
+# 兩邊檔案都在、都不會報錯，只有使用者會看到舊版本號。同步是冪等的，直接跑。
+if [[ -f "${SCRIPT_DIR}/sync-docs.sh" ]]; then
+    "${SCRIPT_DIR}/sync-docs.sh" > /dev/null
+    echo "==> 使用者文件已同步至 apple/Resources/Docs"
+fi
+
 # 2. 步驟一：編譯 Rust 核心與 XCFramework
 if [[ "$SKIP_RUST" -eq 0 ]]; then
     echo "⚙️ [1/4] 編譯 Rust 核心與生成 PadnoteCore.xcframework..."

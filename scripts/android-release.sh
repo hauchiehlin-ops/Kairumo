@@ -33,38 +33,7 @@ export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 # --- 1. 版本一致性 -------------------------------------------------------
 # 上架前最不該發生的事，就是 Play Console 收到的 versionCode 跟你以為的不一樣。
 echo "==> 檢查版本一致性"
-python3 - <<'PY'
-import re, sys, pathlib
-root = pathlib.Path(__file__).resolve().parent if False else pathlib.Path(".").resolve().parent
-def read(p):
-    f = root / p
-    return f.read_text(encoding="utf-8") if f.is_file() else ""
-
-versions, bundles = {}, {}
-m = re.search(r"\[workspace\.package\][\s\S]*?version\s*=\s*\"([^\"]+)\"", read("Cargo.toml"))
-if m: versions["Cargo.toml"] = m.group(1)
-yml = read("apple/project.yml")
-m = re.search(r"MARKETING_VERSION:\s*\"?([0-9.]+)\"?", yml)
-if m: versions["apple/project.yml"] = m.group(1)
-m = re.search(r"CURRENT_PROJECT_VERSION:\s*\"?(\d+)\"?", yml)
-if m: bundles["apple/project.yml"] = m.group(1)
-g = read("android/app/build.gradle.kts")
-m = re.search(r"versionName\s*=\s*\"([0-9.]+)\"", g)
-if m: versions["android"] = m.group(1)
-m = re.search(r"versionCode\s*=\s*(\d+)", g)
-if m: bundles["android"] = m.group(1)
-for doc in ("docs/manual/manual.js", "docs/legal/privacy.html"):
-    for line in read(doc).splitlines():
-        if re.search(r"\b(version|appver)\s*:", line):
-            for v in re.findall(r"\d+\.\d+\.\d+", line):
-                versions.setdefault(doc, v)
-
-if len(set(versions.values())) > 1 or len(set(bundles.values())) > 1:
-    print("❌ 版本不一致：", versions, bundles, file=sys.stderr)
-    print("   請先跑 ./scripts/bump-version.sh 對齊。", file=sys.stderr)
-    sys.exit(1)
-print(f"   版本 {next(iter(versions.values()))}　build {next(iter(bundles.values()))}")
-PY
+"$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/check-version-consistency.sh"
 
 # --- 2. 原生函式庫 -------------------------------------------------------
 if [[ ! -f app/src/main/jniLibs/arm64-v8a/libpadnote_core.so ]]; then
