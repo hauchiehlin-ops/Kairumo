@@ -17,6 +17,10 @@
 
 set -euo pipefail
 
+# 腳本輸出含中文。使用者的終端機若不是 UTF-8 locale，內嵌 python3 印中文會
+# UnicodeEncodeError 直接中止（實際踩過）。強制輸出編碼，與終端機 locale 脫鉤。
+export PYTHONIOENCODING=utf-8
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
@@ -68,7 +72,7 @@ mkdir -p "$OUT_DIR"
 for abi in "${ABIS[@]}"; do
     export OPUS_LIB_DIR="$REPO_ROOT/android/prebuilt/opus/$abi"
     export LIBOPUS_LIB_DIR="$OPUS_LIB_DIR"
-    echo "==> 建置 $abi（libopus: $OPUS_LIB_DIR）"
+    echo "==> 建置 ${abi}（libopus: ${OPUS_LIB_DIR}）"
     # audiopus-sys 沒有宣告 rerun-if-env-changed，換 ABI 時 cargo 會沿用上一個
     # ABI 的建置結果 —— 結果就是 .so 帶著未定義的 opus 符號出貨。強制重建它。
     case "$abi" in

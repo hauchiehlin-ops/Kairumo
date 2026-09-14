@@ -13,6 +13,10 @@
 
 set -euo pipefail
 
+# 腳本輸出含中文。使用者的終端機若不是 UTF-8 locale，內嵌 python3 印中文會
+# UnicodeEncodeError 直接中止（實際踩過）。強制輸出編碼，與終端機 locale 脫鉤。
+export PYTHONIOENCODING=utf-8
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_ROOT"
 
@@ -65,7 +69,7 @@ if [[ -z "$EXPECTED" ]]; then
     exit 1
 fi
 if [[ "$EXPECTED" != "$ACTUAL" ]]; then
-    echo "❌ SHA-256 不符：預期 $EXPECTED，實得 $ACTUAL" >&2
+    echo "❌ SHA-256 不符：預期 ${EXPECTED}，實得 $ACTUAL" >&2
     exit 1
 fi
 echo "   OK  $ACTUAL"
@@ -75,7 +79,7 @@ echo "   OK  $ACTUAL"
 # --- 逐 ABI 編譯 ---------------------------------------------------------
 cd "$REPO_ROOT"
 for abi in "${ABIS[@]}"; do
-    echo "==> 編譯 libopus（$abi）"
+    echo "==> 編譯 libopus（${abi}）"
     BUILD_DIR="$WORK_DIR/build-$abi"
     rm -rf "$BUILD_DIR"
     cmake -S "$WORK_DIR/opus-${OPUS_VERSION}" -B "$BUILD_DIR" \
