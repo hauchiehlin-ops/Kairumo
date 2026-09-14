@@ -196,6 +196,35 @@ archive_export_upload() {
     fi
     echo "✅ ${label} 產出：$package"
 
+    # iOS 的 App 圖示若沒編進套件，送審會被 ITMS-90713 擋下。
+    #
+    # 注意：頂層 CFBundleIconName 不存在是**正常的**。使用 asset catalog 時，
+    # 圖示相關的鍵由 actool 接管，它只寫巢狀的
+    # CFBundleIcons.CFBundlePrimaryIcon.CFBundleIconName。
+    # 查過 xcodebuild -showBuildSettings，設定完全正確，是工具鏈行為使然，
+    # 在命令列硬塞 INFOPLIST_KEY_CFBundleIconName 也進不去（試過）。
+    # 所以這裡檢查的是巢狀鍵與 Assets.car，那才是圖示真的有沒有進去。
+    if [[ "$altool_platform" == "ios" ]]; then
+        local ipa_plist_dir="${BUILD_DIR}/plistcheck-${altool_platform}"
+        rm -rf "$ipa_plist_dir"; mkdir -p "$ipa_plist_dir"
+        if unzip -q -o "$package" "Payload/*/Info.plist" "Payload/*/Assets.car" -d "$ipa_plist_dir" 2>/dev/null; then
+            local checked
+            checked=$(find "$ipa_plist_dir/Payload" -name Info.plist -maxdepth 2 | head -n 1)
+            if [[ -n "$checked" ]] && ! /usr/libexec/PlistBuddy -c "Print :CFBundleIcons:CFBundlePrimaryIcon:CFBundleIconName" "$checked" >/dev/null 2>&1; then
+                echo "❌ ${label}：套件內找不到 App 圖示（CFBundleIcons 未指向 AppIcon），送審會被 ITMS-90713 擋下。" >&2
+                rm -rf "$ipa_plist_dir"
+                return 1
+            fi
+            if [[ -z "$(find "$ipa_plist_dir/Payload" -name Assets.car -maxdepth 2)" ]]; then
+                echo "❌ ${label}：套件內沒有 Assets.car，asset catalog 未編入。" >&2
+                rm -rf "$ipa_plist_dir"
+                return 1
+            fi
+            echo "   ✅ App 圖示檢查通過"
+        fi
+        rm -rf "$ipa_plist_dir"
+    fi
+
     # --validate-only 不碰 App Store Connect。
     #
     # 原本這裡是走 altool --validate-app。那看似無害，實際上會在 ASC 註冊一筆
