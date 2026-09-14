@@ -101,7 +101,18 @@ if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "   --dry-run：不建立 commit，版本號改動會在結束時自動還原。"
 else
     # 沿用 chore(release): bump version to vX.Y.Z 的訊息格式，發版紀錄好辨認。
-    git add -A
+    # 只暫存版本相關的檔案。原本是 git add -A，結果把當下工作目錄裡任何
+    # 進行中的改動都掃進了發版 commit（實際發生過：一次發版把整批 CI 修正
+    # 混了進去）。發版 commit 就該只有版本號。
+    git add -- \
+        "${REPO_ROOT}/Cargo.toml" \
+        "${REPO_ROOT}/Cargo.lock" \
+        "${REPO_ROOT}/apple/project.yml" \
+        "${REPO_ROOT}/apple/Kairumo.xcodeproj/project.pbxproj" \
+        "${REPO_ROOT}/android/app/build.gradle.kts" \
+        "${REPO_ROOT}/docs/manual/manual.js" \
+        "${REPO_ROOT}/docs/legal/privacy.html" \
+        "${REPO_ROOT}/apple/Resources/Docs"
     git commit -q -m "chore(release): bump version to v${NEW_VERSION} (bundle ${NEW_BUNDLE})"
     git tag -f "v${NEW_VERSION}" >/dev/null
     RELEASED=1
