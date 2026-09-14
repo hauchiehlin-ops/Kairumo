@@ -328,14 +328,13 @@ impl PdfWriter {
             let mut images = Vec::new();
             if let Some(store) = blobs {
                 for block in page.blocks() {
-                    if let BlockKind::Image { blob, .. } = &block.kind {
-                        if let Some(blob_id) = BlobId::from_hex(blob) {
-                            if let Ok(data) = store.get(blob_id) {
-                                let img_obj_id = self.next_id();
-                                let processed = process_image_data(img_obj_id, blob.clone(), &data);
-                                images.push(processed);
-                            }
-                        }
+                    if let BlockKind::Image { blob, .. } = &block.kind
+                        && let Some(blob_id) = BlobId::from_hex(blob)
+                        && let Ok(data) = store.get(blob_id)
+                    {
+                        let img_obj_id = self.next_id();
+                        let processed = process_image_data(img_obj_id, blob.clone(), &data);
+                        images.push(processed);
                     }
                 }
             }
@@ -747,18 +746,17 @@ impl PdfWriter {
                     for r in 0..*rows {
                         for c in 0..*cols {
                             let idx = (r * cols + c) as usize;
-                            if let Some(cell_str) = cells.get(idx) {
-                                if !cell_str.trim().is_empty() {
-                                    let cell_x = bx + (c as f32 * col_w) + 4.0;
-                                    let cell_y = pdf_y - (r as f32 * row_h) - 16.0;
-                                    let def_font =
-                                        if *header_row && r == 0 { "/F2" } else { "/F1" };
-                                    let (font, literal) = format_pdf_text(cell_str, def_font);
-                                    let _ = writeln!(
-                                        content,
-                                        "BT {font} 10 Tf 0.1 0.1 0.1 rg {cell_x:.2} {cell_y:.2} Td {literal} Tj ET"
-                                    );
-                                }
+                            if let Some(cell_str) = cells.get(idx)
+                                && !cell_str.trim().is_empty()
+                            {
+                                let cell_x = bx + (c as f32 * col_w) + 4.0;
+                                let cell_y = pdf_y - (r as f32 * row_h) - 16.0;
+                                let def_font = if *header_row && r == 0 { "/F2" } else { "/F1" };
+                                let (font, literal) = format_pdf_text(cell_str, def_font);
+                                let _ = writeln!(
+                                    content,
+                                    "BT {font} 10 Tf 0.1 0.1 0.1 rg {cell_x:.2} {cell_y:.2} Td {literal} Tj ET"
+                                );
                             }
                         }
                     }

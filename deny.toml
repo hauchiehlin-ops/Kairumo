@@ -25,9 +25,41 @@ allow = [
 ]
 confidence-threshold = 0.9
 
+# zhconv 在 crates.io 上宣告為 GPL-2.0-or-later，但那是最保守的統括宣告。
+# 上游 README 寫得很清楚：
+#
+#   "The library itself is licensed under MIT OR Apache-2.0 ... BUT it may
+#    bundle: Conversion tables from MediaWiki (the default, gated by the
+#    feature `mediawiki`) which are licensed under GPL-2.0-or-later;
+#    Dictionaries from OpenCC (gated by the feature `opencc`) licensed under
+#    Apache-2.0. For MIT compatibility, disable the default `mediawiki`
+#    feature and enable `opencc`."
+#
+# crates/padnote-text/Cargo.toml 正是這樣設定的（default-features = false，
+# features = ["opencc", "compress"]），可用以下指令複驗實際啟用的 feature：
+#
+#   cargo tree -p padnote-text -e features --depth 1
+#
+# 目前輸出只有 "compress" 與 "opencc" —— GPL 的 MediaWiki 轉換表沒有被打包。
+# cargo-deny 只讀 crates.io 的 license 欄位，看不到 feature 層級的差異，
+# 所以在這裡澄清它在本專案的實際授權。
+#
+# ⚠️ 若哪天 padnote-text 打開了 mediawiki feature，這份澄清就不成立，
+#    整個 App 會落入 GPL。改那個 feature 之前必須回來重新評估。
+# 這裡放行的是「crates.io 上那個保守的統括宣告」，不是接受 GPL 進入本專案。
+# 依上述設定，實際打包進來的只有 OpenCC 的 Apache-2.0 詞典。
+[[licenses.exceptions]]
+name = "zhconv"
+allow = ["GPL-2.0-or-later"]
+
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# workspace 內部的 path 相依（padnote-* 互相引用）沒有版本需求，會被
+# wildcards = "deny" 判成萬用字元。這些 crate 不發佈到 crates.io，
+# 版本永遠與 workspace 同步，不存在「意外拉到不相容版本」的風險。
+# 要擋的是**外部**相依寫成 "*"，那個依然會被擋下。
+allow-wildcard-paths = true
 
 # 明確封鎖：AGPL 依賴會強制整個 App 開源並提供原始碼給終端使用者。
 # zhconv 預設會綁 MediaWiki 的 GPL-2.0 轉換表。本專案以
@@ -46,6 +78,26 @@ reason = "同上"
 [advisories]
 version = 2
 yanked = "deny"
+# 每一筆豁免都必須寫明「為什麼這個專案不受影響」，而不只是「先讓 CI 過」。
+# 上游一有修好的版本就該回來拿掉對應條目。
+ignore = [
+    # paste：proc-macro，只在編譯期執行，不會進到 App 裡。
+    # 來源是 wgpu 0.19 → wgpu-hal → metal，要換掉得整包升 wgpu。
+    # 標記為 unmaintained，並非已知漏洞。
+    "RUSTSEC-2024-0436",
+
+    # audiopus_sys：Opus 的 C 綁定，標記為 unmaintained，並非已知漏洞。
+    # Opus 本身（BSD-3）仍在維護，缺的是 Rust 綁定層的維護者。
+    "RUSTSEC-2026-0150",
+
+    # quick-xml 的兩筆 DoS：惡意 XML 可造成二次方時間或記憶體耗盡。
+    # 來源是 calamine（讀 xlsx）與 docx-rs（讀 docx），兩者都把 quick-xml
+    # 的版本鎖死，無法單獨更新。影響面是「使用者自己開啟一個惡意文件時，
+    # App 佔用過多資源」—— 沒有遠端攻擊面，資料也不會外洩。
+    # 待辦：calamine / docx-rs 放行修補版後就回來移除這兩條。
+    "RUSTSEC-2026-0194",
+    "RUSTSEC-2026-0195",
+]
 
 [sources]
 unknown-registry = "deny"

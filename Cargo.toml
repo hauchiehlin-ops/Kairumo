@@ -5,7 +5,10 @@ members = ["crates/*"]
 [workspace.package]
 version = "2.9.0"
 edition = "2024"
-rust-version = "1.85"
+# 1.88：修掉 RUSTSEC-2026-0009 需要 time 0.3.47，而它要求 1.88。
+# time 只是 build-dependency（vergen → zhconv 的 build script），
+# 不會進到 App 裡，但建置主機仍需要 1.88 才編得動，所以宣告必須跟上。
+rust-version = "1.88"
 license = "Apache-2.0"
 repository = "https://github.com/padnote/padnote"
 
@@ -35,7 +38,7 @@ png = "0.18"
 miniz_oxide = "0.8"
 # 預設的 native-tls 會在 Android 上拉進 openssl-sys，需要系統 OpenSSL 才編得過。
 # rustls 是純 Rust，跨平台一致，也不必在 CI 裝 OpenSSL。
-reqwest = { version = "0.11", default-features = false, features = ["json", "stream", "blocking", "rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "blocking", "rustls-tls"] }
 cpal = "0.15"
 wgpu = "0.19"
 bytemuck = { version = "1.15", features = ["derive"] }

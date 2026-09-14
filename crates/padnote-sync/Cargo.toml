@@ -4,6 +4,8 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 license.workspace = true
+# 內部 crate，不發佈到 crates.io（workspace 內以 path 互相引用）。
+publish = false
 
 [lints]
 workspace = true
@@ -11,7 +13,9 @@ workspace = true
 [dependencies]
 padnote-doc = { path = "../padnote-doc" }
 padnote-crypto = { path = "../padnote-crypto" }
-reqwest = { version = "0.11", features = ["json", "stream", "blocking"] }
+# 用 workspace 的設定（rustls，非 native-tls）。自己寫版本與 feature 的話，
+# 根 Cargo.toml 的統一設定會被完全繞過 —— Android 的 openssl-sys 就是這樣來的。
+reqwest = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 async-trait = "0.1"

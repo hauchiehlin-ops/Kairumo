@@ -74,10 +74,10 @@ async fn handle_connection(
     // 轉發 channel 訊息至 WebSocket
     let send_task = tokio::spawn(async move {
         while let Some(msg) = rx.recv().await {
-            if let Ok(json_str) = serde_json::to_string(&msg) {
-                if ws_sender.send(Message::text(json_str)).await.is_err() {
-                    break;
-                }
+            if let Ok(json_str) = serde_json::to_string(&msg)
+                && ws_sender.send(Message::text(json_str)).await.is_err()
+            {
+                break;
             }
         }
     });

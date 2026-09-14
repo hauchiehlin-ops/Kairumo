@@ -3,6 +3,8 @@ name = "padnote-chart"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+# 內部 crate，不發佈到 crates.io（workspace 內以 path 互相引用）。
+publish = false
 
 [dependencies]
 serde = { workspace = true }

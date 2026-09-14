@@ -73,10 +73,11 @@ impl RoomHub {
             .or_insert_with(|| Room::new(room_id.clone(), user_id.clone(), passcode.clone()));
 
         // 密碼檢查（若有設置）
-        if let Some(ref required_passcode) = room.passcode {
-            if passcode.as_ref() != Some(required_passcode) && room.owner_id != user_id {
-                return Err("密碼錯誤，無法加入房間".to_string());
-            }
+        if let Some(ref required_passcode) = room.passcode
+            && passcode.as_ref() != Some(required_passcode)
+            && room.owner_id != user_id
+        {
+            return Err("密碼錯誤，無法加入房間".to_string());
         }
 
         let actual_role = if room.owner_id == user_id {
