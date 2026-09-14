@@ -61,6 +61,15 @@ for t in "${TARGETS[@]}"; do
   fi
 
   echo "  --> 編譯 target: $t"
+  # coreaudio-sys（cpal 的相依）的 build.rs 只認得 darwin / ios / ios-sim，
+  # 碰到 Mac Catalyst 的 aarch64-apple-ios-macabi 會直接 unreachable!() panic。
+  # 它會優先讀 COREAUDIO_SDK_PATH，所以把上面已經算好的 SDK 路徑餵給它繞過去。
+  CA_SDK_PATH="$(xcrun --sdk "$SDK" --show-sdk-path 2>/dev/null || true)"
+  if [[ -n "$CA_SDK_PATH" ]]; then
+    export COREAUDIO_SDK_PATH="$CA_SDK_PATH"
+  else
+    unset COREAUDIO_SDK_PATH
+  fi
   ORT_LIB_LOCATION="$STUB_DIR" OPUS_LIB_DIR="$STUB_DIR" \
     cargo rustc -p padnote-core --lib --release --target "$t" --crate-type staticlib
 done

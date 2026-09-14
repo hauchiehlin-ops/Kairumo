@@ -9,7 +9,7 @@ license.workspace = true
 padnote-asr = { path = "../padnote-asr" }
 padnote-audio = { path = "../padnote-audio" }
 padnote-doc = { path = "../padnote-doc" }
+cpal = { workspace = true }
 
 [lints]
 workspace = true
-cpal = { workspace = true }

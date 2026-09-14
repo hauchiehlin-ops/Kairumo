@@ -49,6 +49,14 @@ for arg in "$@"; do
             echo "用法: $0 [--validate-only] [--skip-rust] [--ios-only]"
             exit 0
             ;;
+        *)
+            # 沒有這個分支時，打錯的旗標會被靜默吃掉，然後直接**真的上傳**。
+            # 踩過一次：想跑 --validate-app（那是 altool 的動作名，不是本腳本的旗標），
+            # 結果整包送上 App Store Connect。寧可在這裡停下來。
+            echo "❌ 未知參數：$arg" >&2
+            echo "   用法: $0 [--validate-only] [--skip-rust] [--ios-only]" >&2
+            exit 2
+            ;;
     esac
 done
 
