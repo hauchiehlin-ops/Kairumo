@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 #
 # scripts/install-git-hook.sh
-# 安裝 Git pre-push hook，使每次執行 `git push` 時自動更新版本號（預設 patch）
+# 安裝 pre-push hook：推送前做一致性檢查。
 #
+# 這支 hook 以前會在 push 時自動 patch 升版並 commit，已經移除，原因有二：
+#   1. 版本號改由 ./scripts/release.sh 單一入口負責。兩套機制各自改版本號，
+#      就是 2.8.0 (20) 那顆 TestFlight 裝不起來的 build 的來源。
+#   2. 更根本的問題：pre-push 執行時，要推送的 ref 清單早就定好了。
+#      hook 在這個階段建立的 commit 不會被這次 push 帶出去，只會留在本機，
+#      下次 push 才補上 —— 遠端看到的版本因此永遠落後一拍。
+#
+# 現在它只做檢查、不改任何檔案，所以也不再需要 PADNOTE_NO_BUMP 逃生口。
 
 set -euo pipefail
+export PYTHONIOENCODING=utf-8
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -13,21 +22,13 @@ HOOK_FILE="${REPO_ROOT}/.git/hooks/pre-push"
 cat << 'HOOK_EOF' > "$HOOK_FILE"
 #!/usr/bin/env bash
 #
-# Padnote 自動版本更新 pre-push hook
-# 若欲跳過本次自動升版，可使用：PADNOTE_NO_BUMP=1 git push
+# Padnote pre-push hook：只做檢查，不改任何檔案。
+# 版本號一律由 ./scripts/release.sh 負責。
 #
-
-if [[ "${PADNOTE_NO_BUMP:-0}" == "1" ]]; then
-    exit 0
-fi
+set -uo pipefail
+export PYTHONIOENCODING=utf-8
 
 REPO_ROOT="$(git rev-parse --show-toplevel)"
-LAST_COMMIT_MSG="$(git log -1 --pretty=%B 2>/dev/null || echo '')"
-
-# 若最新的 commit 已經是版本升級提交，避免重複觸發
-if [[ "$LAST_COMMIT_MSG" =~ ^chore\(release\):\ bump\ version\ to\ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
-    exit 0
-fi
 
 # 介面字串必須與 catalog 一致 —— 有人手改了產生檔就在這裡擋下來，
 # 不要等到 Android 與 Apple 的用語各說各話才發現。
@@ -38,31 +39,11 @@ if [[ -f "${REPO_ROOT}/scripts/i18n_tool.py" ]]; then
     fi
 fi
 
-echo "🔔 [pre-push hook] 偵測到推送操作，正在自動更新版本（預設 patch）..."
-
-BUMP_SCRIPT="${REPO_ROOT}/scripts/bump-version.sh"
-if [[ -f "$BUMP_SCRIPT" ]]; then
-    OUTPUT=$("$BUMP_SCRIPT" patch)
-    echo "$OUTPUT"
-    NEW_VERSION=$(echo "$OUTPUT" | grep '^NEW_VERSION=' | cut -d'=' -f2)
-
-    if [[ -n "$NEW_VERSION" ]]; then
-        # Apple 專案檔也必須一起提交 —— 只 commit Cargo 檔的話，
-        # 被改掉的 MARKETING_VERSION / CURRENT_PROJECT_VERSION 會留在工作目錄裡，
-        # 下一次發版就會出現「Cargo 與 Apple 版本不一致」的漂移。
-        git add "${REPO_ROOT}/Cargo.toml" "${REPO_ROOT}/Cargo.lock" \
-                "${REPO_ROOT}/apple/project.yml" \
-                "${REPO_ROOT}/apple/Kairumo.xcodeproj/project.pbxproj" \
-                "${REPO_ROOT}/android/app/build.gradle.kts" \
-                "${REPO_ROOT}/docs/manual/manual.js" \
-                "${REPO_ROOT}/docs/legal/privacy.html"
-        git commit -m "chore(release): bump version to v${NEW_VERSION}"
-        TAG_NAME="v${NEW_VERSION}"
-        if ! git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            git tag -a "$TAG_NAME" -m "Release $TAG_NAME"
-            echo "🏷️ 自動建立標籤：$TAG_NAME"
-        fi
-        echo "✅ 版本更新完成，繼續執行推送..."
+# 版本號漂移在這裡就攔下來，不要等到發版才發現遠端是壞的。
+if [[ -x "${REPO_ROOT}/scripts/check-version-consistency.sh" ]]; then
+    if ! "${REPO_ROOT}/scripts/check-version-consistency.sh"; then
+        echo "   （要跳過這次檢查：git push --no-verify）" >&2
+        exit 1
     fi
 fi
 
@@ -70,5 +51,5 @@ exit 0
 HOOK_EOF
 
 chmod +x "$HOOK_FILE"
-echo "✅ Git pre-push hook 安裝成功！"
-echo "👉 現在只要執行 'git push' 或 './scripts/push.sh'，都會自動更新 patch 版本並推送到 GitHub。"
+echo "✅ pre-push hook 已安裝：僅做 i18n 與版本一致性檢查，不會自動升版。"
+echo "👉 升版與發版請用：./scripts/release.sh [patch|minor|major]"

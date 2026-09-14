@@ -100,9 +100,7 @@ step "5/5 發版 commit"
 if [[ "$DRY_RUN" -eq 1 ]]; then
     echo "   --dry-run：不建立 commit，版本號改動會在結束時自動還原。"
 else
-    # 訊息格式必須是 chore(release): bump version to vX.Y.Z ——
-    # pre-push hook 認這個字串才會跳過自動升版，否則 push 時會再偷升一版，
-    # repo 就跟剛送上去的 build 對不上了。
+    # 沿用 chore(release): bump version to vX.Y.Z 的訊息格式，發版紀錄好辨認。
     git add -A
     git commit -q -m "chore(release): bump version to v${NEW_VERSION} (bundle ${NEW_BUNDLE})"
     git tag -f "v${NEW_VERSION}" >/dev/null
