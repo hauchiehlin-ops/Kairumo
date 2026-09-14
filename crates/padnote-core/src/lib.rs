@@ -10,14 +10,14 @@ uniffi::setup_scaffolding!();
 
 pub mod app;
 pub mod ffi;
-#[cfg(feature = "relay")]
-pub mod ffi_relay;
 pub mod ffi_backup;
 pub mod ffi_chart;
 pub mod ffi_folder_sync;
 pub mod ffi_geometry;
 pub mod ffi_input;
 pub mod ffi_interop;
+#[cfg(feature = "relay")]
+pub mod ffi_relay;
 pub mod ffi_shapes;
 pub mod ffi_table;
 pub mod ffi_ui;
@@ -42,8 +42,8 @@ pub use padnote_recorder as recorder;
 pub use padnote_search as search;
 pub use padnote_shapes as shapes;
 pub use padnote_storage as storage;
-pub use padnote_table as table;
 pub use padnote_sync as sync;
+pub use padnote_table as table;
 pub use padnote_text as text;
 pub use padnote_toolbar as toolbar;
 #[cfg(feature = "asr")]

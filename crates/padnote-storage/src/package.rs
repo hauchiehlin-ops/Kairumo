@@ -81,7 +81,11 @@ impl NotebookPackage {
         }
 
         let manifest = Manifest::new(Uuid::now_v7().to_string(), title.to_string(), now_unix_ms);
-        let pkg = Self { root, manifest, device: 0 };
+        let pkg = Self {
+            root,
+            manifest,
+            device: 0,
+        };
         pkg.write_manifest()?;
         Ok(pkg)
     }
@@ -116,7 +120,11 @@ impl NotebookPackage {
                 supported: crate::manifest::SPEC_VERSION,
             });
         }
-        Ok(Self { root, manifest, device: 0 })
+        Ok(Self {
+            root,
+            manifest,
+            device: 0,
+        })
     }
 
     pub fn manifest(&self) -> &Manifest {

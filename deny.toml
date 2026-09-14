@@ -19,6 +19,9 @@ allow = [
     "CC0-1.0",
     "MPL-2.0",      # UniFFI；file-level copyleft，不污染整體
     "Unlicense",    # SQLite
+    # webpki-root-certs：只是一份 CA 根憑證資料，不是程式碼。
+    # CDLA-Permissive-2.0 是資料用的寬鬆授權，無 copyleft 義務。
+    "CDLA-Permissive-2.0",
 ]
 confidence-threshold = 0.9
 

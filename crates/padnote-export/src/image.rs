@@ -200,8 +200,8 @@ fn draw_stroke(pixels: &mut [u8], width: u32, height: u32, stroke: &Stroke, scal
                 let dy = y as f32 + 0.5 - py;
                 let dist = (dx * dx + dy * dy).sqrt();
                 if dist <= radius {
-                    let alpha_factor = (1.0 - (dist - (radius - 1.0)).clamp(0.0, 1.0))
-                        * (color[3] as f32 / 255.0);
+                    let alpha_factor =
+                        (1.0 - (dist - (radius - 1.0)).clamp(0.0, 1.0)) * (color[3] as f32 / 255.0);
                     let mut c = color;
                     c[3] = (alpha_factor * 255.0) as u8;
                     set_pixel_blend(pixels, width, height, x, y, c);
@@ -219,15 +219,14 @@ fn draw_stroke(pixels: &mut [u8], width: u32, height: u32, stroke: &Stroke, scal
         let min_x = (p0x.min(p1x) - radius - 1.0).floor().max(0.0) as i32;
         let max_x = (p0x.max(p1x) + radius + 1.0).ceil().min((width - 1) as f32) as i32;
         let min_y = (p0y.min(p1y) - radius - 1.0).floor().max(0.0) as i32;
-        let max_y = (p0y.max(p1y) + radius + 1.0).ceil().min((height - 1) as f32) as i32;
+        let max_y = (p0y.max(p1y) + radius + 1.0)
+            .ceil()
+            .min((height - 1) as f32) as i32;
 
         for y in min_y..=max_y {
             for x in min_x..=max_x {
-                let dist = distance_to_segment(
-                    (x as f32 + 0.5, y as f32 + 0.5),
-                    (p0x, p0y),
-                    (p1x, p1y),
-                );
+                let dist =
+                    distance_to_segment((x as f32 + 0.5, y as f32 + 0.5), (p0x, p0y), (p1x, p1y));
                 if dist <= radius + 0.5 {
                     let edge = radius - 0.5;
                     let alpha_factor = if dist <= edge {

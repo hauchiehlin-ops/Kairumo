@@ -8,7 +8,18 @@ use std::sync::mpsc::Sender;
 
 /// 麥克風錄音器，管理音訊串流的生命週期。
 pub struct MicrophoneRecorder {
+    // 這個欄位不會被讀取，但**必須持有**：cpal::Stream 一旦 drop 就停止錄音。
+    // 它是 RAII guard，不是死碼，所以這裡明確豁免而不是刪掉。
+    #[allow(dead_code)]
     stream: cpal::Stream,
+}
+
+// cpal::Stream 沒有實作 Debug，而 workspace lint 要求每個公開型別都要有，
+// 所以手寫一個。串流內部狀態印不出有意義的東西，只印型別名。
+impl std::fmt::Debug for MicrophoneRecorder {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("MicrophoneRecorder").finish_non_exhaustive()
+    }
 }
 
 impl MicrophoneRecorder {
@@ -55,11 +66,11 @@ impl MicrophoneRecorder {
         f32: cpal::FromSample<T>,
     {
         let channels = config.channels as usize;
-        
+
         // 注意：這裡直接丟失了重採樣（Resampling）邏輯。
         // 在生產環境中，如果是 48kHz 或 44.1kHz，我們必須使用如 `rubato` 將其降頻至 16kHz。
         let err_fn = |err| eprintln!("an error occurred on stream: {}", err);
-        
+
         let stream = device
             .build_input_stream(
                 config,

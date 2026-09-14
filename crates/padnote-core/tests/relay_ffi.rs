@@ -66,7 +66,11 @@ async fn two_clients_can_join_the_same_room_and_relay() {
 
     let bob_joined = recv_json(&mut bob).await;
     assert_eq!(bob_joined["type"], "joined");
-    assert_eq!(bob_joined["peers"].as_array().unwrap().len(), 1, "Bob 應看到既有的 Alice");
+    assert_eq!(
+        bob_joined["peers"].as_array().unwrap().len(),
+        1,
+        "Bob 應看到既有的 Alice"
+    );
 
     // Alice 應收到 peer_joined
     let notify = recv_json(&mut alice).await;

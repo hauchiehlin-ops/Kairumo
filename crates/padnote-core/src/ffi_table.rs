@@ -53,7 +53,6 @@ pub struct FfiObject {
 
 #[uniffi::export]
 impl PadnoteSession {
-
     /// 這一頁所有表格區塊的 id，依加入順序。
     pub fn table_block_ids(&self, page_id: String) -> Result<Vec<String>, FfiError> {
         let page = parse_uuid(&page_id)?;
@@ -134,8 +133,12 @@ impl PadnoteSession {
         let page = parse_uuid(&page_id)?;
         let id = parse_uuid(&object_id)?;
         let guard = self.lock();
-        let Some(tree) = guard.objects(page) else { return Ok(None) };
-        let Some(node) = tree.get(id) else { return Ok(None) };
+        let Some(tree) = guard.objects(page) else {
+            return Ok(None);
+        };
+        let Some(node) = tree.get(id) else {
+            return Ok(None);
+        };
         Ok(Some(describe_object(node, tree.z_index(id).unwrap_or(0))))
     }
 
@@ -154,7 +157,6 @@ impl PadnoteSession {
             .collect())
     }
 }
-
 
 /// 一格算好的位置與已經斷好行的文字。
 #[derive(Clone, Debug, uniffi::Record)]
@@ -309,11 +311,7 @@ impl PadnoteSession {
 /// 欄寬、列高與斷行都在核心算 —— 兩個平台各算一份的話，同一張表會斷行位置
 /// 不同、總高度不同，而表格的高度會影響它底下的東西，整頁版面就分家了。
 #[uniffi::export]
-pub fn table_layout(
-    table: FfiTable,
-    width: f64,
-    font_size: f64,
-) -> FfiTableLayout {
+pub fn table_layout(table: FfiTable, width: f64, font_size: f64) -> FfiTableLayout {
     let merged: Vec<padnote_table::CellSpan> = table
         .merged_cells
         .iter()
@@ -360,7 +358,12 @@ pub fn table_layout(
         rules: laid
             .rules
             .into_iter()
-            .map(|r| FfiTableRule { x1: r.x1, y1: r.y1, x2: r.x2, y2: r.y2 })
+            .map(|r| FfiTableRule {
+                x1: r.x1,
+                y1: r.y1,
+                x2: r.x2,
+                y2: r.y2,
+            })
             .collect(),
         column_widths: laid.column_widths,
         row_heights: laid.row_heights,
@@ -372,8 +375,7 @@ mod tests {
     use crate::ffi::PadnoteSession;
 
     fn session(name: &str) -> (PadnoteSession, String) {
-        let dir = std::env::temp_dir()
-            .join(format!("padnote-table-{name}-{}", std::process::id()));
+        let dir = std::env::temp_dir().join(format!("padnote-table-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&dir);
         let s = PadnoteSession::create(
             dir.to_string_lossy().into_owned(),
@@ -414,7 +416,9 @@ mod tests {
     fn short_cell_lists_are_padded_not_truncated() {
         // 少給幾格就少幾格的話，表格會變成一列長一列短。
         let (s, page) = session("pad");
-        let id = s.insert_table(page, 2, 3, vec!["只有一格".into()], false).unwrap();
+        let id = s
+            .insert_table(page, 2, 3, vec!["只有一格".into()], false)
+            .unwrap();
         let table = s.table(id).unwrap().unwrap();
         assert_eq!(table.cells.len(), 6);
         assert_eq!(table.cells[0], "只有一格");
@@ -435,8 +439,11 @@ mod tests {
     #[test]
     fn inserting_a_row_shows_up_when_read_back() {
         let (s, page) = session("insert-row");
-        let id = s.insert_table(page, 1, 2, vec!["a".into(), "b".into()], false).unwrap();
-        s.insert_table_row(id.clone(), 1, vec!["c".into(), "d".into()]).unwrap();
+        let id = s
+            .insert_table(page, 1, 2, vec!["a".into(), "b".into()], false)
+            .unwrap();
+        s.insert_table_row(id.clone(), 1, vec!["c".into(), "d".into()])
+            .unwrap();
 
         let table = s.table(id).unwrap().unwrap();
         assert_eq!(table.rows, 2);
@@ -447,7 +454,13 @@ mod tests {
     fn deleting_a_column_shows_up_when_read_back() {
         let (s, page) = session("delete-col");
         let id = s
-            .insert_table(page, 2, 2, vec!["a".into(), "b".into(), "c".into(), "d".into()], false)
+            .insert_table(
+                page,
+                2,
+                2,
+                vec!["a".into(), "b".into(), "c".into(), "d".into()],
+                false,
+            )
             .unwrap();
         s.delete_table_column(id.clone(), 0).unwrap();
 
@@ -488,7 +501,8 @@ mod tests {
             let s = PadnoteSession::create(path.clone(), "表格".into(), 1_757_635_200_000, 0xA1)
                 .unwrap();
             let page = s.first_page_id().unwrap();
-            s.insert_table(page, 1, 2, vec!["甲".into(), "乙".into()], false).unwrap()
+            s.insert_table(page, 1, 2, vec!["甲".into(), "乙".into()], false)
+                .unwrap()
         };
 
         let reopened = PadnoteSession::open_existing(path, 0xA1).unwrap();
@@ -500,7 +514,13 @@ mod tests {
         // 轉換表漏一個欄位，平台那邊就是靜靜地少畫一塊。
         let (s, page) = session("layout-ffi");
         let id = s
-            .insert_table(page, 2, 2, vec!["甲".into(), "乙".into(), "丙".into(), "丁".into()], true)
+            .insert_table(
+                page,
+                2,
+                2,
+                vec!["甲".into(), "乙".into(), "丙".into(), "丁".into()],
+                true,
+            )
             .unwrap();
         let table = s.table(id).unwrap().unwrap();
 
@@ -533,7 +553,10 @@ mod tests {
             )
             .unwrap();
 
-        let shape = s.shape_object(page, id.clone()).unwrap().expect("形狀讀不回來");
+        let shape = s
+            .shape_object(page, id.clone())
+            .unwrap()
+            .expect("形狀讀不回來");
         assert_eq!(shape.object_id, id);
         assert_eq!(shape.kind, crate::ffi_shapes::FfiShapeKind::Decision);
         assert_eq!((shape.min_x, shape.min_y), (10.0, 20.0));
@@ -555,14 +578,22 @@ mod tests {
                 .insert_shape(
                     page.clone(),
                     crate::ffi_shapes::FfiShapeKind::Terminator,
-                    0.0, 0.0, 100.0, 50.0, 0.0, "開始".into(),
+                    0.0,
+                    0.0,
+                    100.0,
+                    50.0,
+                    0.0,
+                    "開始".into(),
                 )
                 .unwrap();
             (page, id)
         };
 
         let reopened = PadnoteSession::open_existing(path, 0xA1).unwrap();
-        let shape = reopened.shape_object(page, id).unwrap().expect("重開之後形狀不見了");
+        let shape = reopened
+            .shape_object(page, id)
+            .unwrap()
+            .expect("重開之後形狀不見了");
         assert_eq!(shape.text, "開始");
         assert_eq!(shape.kind, crate::ffi_shapes::FfiShapeKind::Terminator);
     }
@@ -575,7 +606,12 @@ mod tests {
             .insert_shape(
                 page.clone(),
                 crate::ffi_shapes::FfiShapeKind::Process,
-                0.0, 0.0, 10.0, 10.0, 0.0, String::new(),
+                0.0,
+                0.0,
+                10.0,
+                10.0,
+                0.0,
+                String::new(),
             )
             .unwrap();
         s.remove_object(id.clone()).unwrap();
@@ -589,16 +625,34 @@ mod tests {
         // 讀不回來的話，換一台裝置打開，流程圖就只剩一堆沒有線連起來的方塊。
         let (s, page) = session("connection-read-back");
         let from = s
-            .insert_shape(page.clone(), crate::ffi_shapes::FfiShapeKind::Terminator,
-                          0.0, 0.0, 100.0, 50.0, 0.0, "開始".into())
+            .insert_shape(
+                page.clone(),
+                crate::ffi_shapes::FfiShapeKind::Terminator,
+                0.0,
+                0.0,
+                100.0,
+                50.0,
+                0.0,
+                "開始".into(),
+            )
             .unwrap();
         let to = s
-            .insert_shape(page.clone(), crate::ffi_shapes::FfiShapeKind::Process,
-                          200.0, 0.0, 300.0, 50.0, 0.0, "處理".into())
+            .insert_shape(
+                page.clone(),
+                crate::ffi_shapes::FfiShapeKind::Process,
+                200.0,
+                0.0,
+                300.0,
+                50.0,
+                0.0,
+                "處理".into(),
+            )
             .unwrap();
         let link = s
             .insert_connection(
-                page.clone(), from.clone(), to.clone(),
+                page.clone(),
+                from.clone(),
+                to.clone(),
                 crate::ffi_shapes::FfiAnchor::Right,
                 crate::ffi_shapes::FfiAnchor::Left,
                 crate::ffi_shapes::FfiRouteStyle::Orthogonal,
@@ -608,7 +662,10 @@ mod tests {
             )
             .unwrap();
 
-        let conn = s.connection_object(page, link.clone()).unwrap().expect("連接線讀不回來");
+        let conn = s
+            .connection_object(page, link.clone())
+            .unwrap()
+            .expect("連接線讀不回來");
         assert_eq!(conn.object_id, link);
         assert_eq!(conn.from_object_id, from);
         assert_eq!(conn.to_object_id, to);
@@ -626,21 +683,51 @@ mod tests {
             let s = PadnoteSession::create(path.clone(), "連線".into(), 1_757_635_200_000, 0xA1)
                 .unwrap();
             let page = s.first_page_id().unwrap();
-            let a = s.insert_shape(page.clone(), crate::ffi_shapes::FfiShapeKind::Process,
-                                   0.0, 0.0, 10.0, 10.0, 0.0, String::new()).unwrap();
-            let b = s.insert_shape(page.clone(), crate::ffi_shapes::FfiShapeKind::Process,
-                                   50.0, 0.0, 60.0, 10.0, 0.0, String::new()).unwrap();
-            let link = s.insert_connection(
-                page.clone(), a.clone(), b,
-                crate::ffi_shapes::FfiAnchor::Right, crate::ffi_shapes::FfiAnchor::Left,
-                crate::ffi_shapes::FfiRouteStyle::Straight,
-                crate::ffi_shapes::FfiEndCap::None, crate::ffi_shapes::FfiEndCap::Arrow,
-                "標籤".into()).unwrap();
+            let a = s
+                .insert_shape(
+                    page.clone(),
+                    crate::ffi_shapes::FfiShapeKind::Process,
+                    0.0,
+                    0.0,
+                    10.0,
+                    10.0,
+                    0.0,
+                    String::new(),
+                )
+                .unwrap();
+            let b = s
+                .insert_shape(
+                    page.clone(),
+                    crate::ffi_shapes::FfiShapeKind::Process,
+                    50.0,
+                    0.0,
+                    60.0,
+                    10.0,
+                    0.0,
+                    String::new(),
+                )
+                .unwrap();
+            let link = s
+                .insert_connection(
+                    page.clone(),
+                    a.clone(),
+                    b,
+                    crate::ffi_shapes::FfiAnchor::Right,
+                    crate::ffi_shapes::FfiAnchor::Left,
+                    crate::ffi_shapes::FfiRouteStyle::Straight,
+                    crate::ffi_shapes::FfiEndCap::None,
+                    crate::ffi_shapes::FfiEndCap::Arrow,
+                    "標籤".into(),
+                )
+                .unwrap();
             (page, link, a)
         };
 
         let reopened = PadnoteSession::open_existing(path, 0xA1).unwrap();
-        let conn = reopened.connection_object(page, link).unwrap().expect("重開之後連線不見了");
+        let conn = reopened
+            .connection_object(page, link)
+            .unwrap()
+            .expect("重開之後連線不見了");
         assert_eq!(conn.from_object_id, from);
         assert_eq!(conn.label, "標籤");
     }
@@ -649,8 +736,18 @@ mod tests {
     fn a_shape_is_not_a_connection() {
         // 認錯的話，形狀會被當成線畫出來。
         let (s, page) = session("shape-not-connection");
-        let shape = s.insert_shape(page.clone(), crate::ffi_shapes::FfiShapeKind::Process,
-                                   0.0, 0.0, 10.0, 10.0, 0.0, String::new()).unwrap();
+        let shape = s
+            .insert_shape(
+                page.clone(),
+                crate::ffi_shapes::FfiShapeKind::Process,
+                0.0,
+                0.0,
+                10.0,
+                10.0,
+                0.0,
+                String::new(),
+            )
+            .unwrap();
         assert!(s.connection_object(page, shape).unwrap().is_none());
     }
 
@@ -673,7 +770,10 @@ mod tests {
         let second = s.create_stroke_object(page.clone(), vec![]).unwrap();
 
         let objects = s.root_objects(page).unwrap();
-        assert_eq!(objects.iter().map(|o| o.id.clone()).collect::<Vec<_>>(), vec![first, second]);
+        assert_eq!(
+            objects.iter().map(|o| o.id.clone()).collect::<Vec<_>>(),
+            vec![first, second]
+        );
         assert_eq!(objects[0].z_index, 0, "先建立的在底層");
         assert_eq!(objects[1].z_index, 1);
     }
@@ -686,7 +786,12 @@ mod tests {
         let top = s.create_stroke_object(page.clone(), vec![]).unwrap();
         s.bring_to_front(page.clone(), bottom.clone()).unwrap();
 
-        let ids: Vec<String> = s.root_objects(page).unwrap().iter().map(|o| o.id.clone()).collect();
+        let ids: Vec<String> = s
+            .root_objects(page)
+            .unwrap()
+            .iter()
+            .map(|o| o.id.clone())
+            .collect();
         assert_eq!(ids, vec![top, bottom]);
     }
 
@@ -696,7 +801,9 @@ mod tests {
         let (s, page) = session("objects-group");
         let a = s.create_stroke_object(page.clone(), vec![]).unwrap();
         let b = s.create_stroke_object(page.clone(), vec![]).unwrap();
-        let group = s.group_objects(page.clone(), vec![a.clone(), b.clone()]).unwrap();
+        let group = s
+            .group_objects(page.clone(), vec![a.clone(), b.clone()])
+            .unwrap();
 
         let objects = s.root_objects(page).unwrap();
         assert_eq!(objects.len(), 1, "群組之後最上層只剩一個物件");
@@ -728,7 +835,12 @@ mod tests {
         // 把最底下那個直接指到最上層。
         s.set_object_z_index(bottom.clone(), 2).unwrap();
 
-        let ids: Vec<String> = s.root_objects(page).unwrap().iter().map(|o| o.id.clone()).collect();
+        let ids: Vec<String> = s
+            .root_objects(page)
+            .unwrap()
+            .iter()
+            .map(|o| o.id.clone())
+            .collect();
         assert_eq!(ids, vec![middle, top, bottom]);
     }
 
@@ -742,7 +854,12 @@ mod tests {
 
         s.set_object_z_index(a.clone(), 99).unwrap();
 
-        let ids: Vec<String> = s.root_objects(page).unwrap().iter().map(|o| o.id.clone()).collect();
+        let ids: Vec<String> = s
+            .root_objects(page)
+            .unwrap()
+            .iter()
+            .map(|o| o.id.clone())
+            .collect();
         assert_eq!(ids.len(), 2, "物件不該因為越界索引而消失");
         assert_eq!(ids[1], a, "越界的索引要夾到最上層");
     }
@@ -752,11 +869,33 @@ mod tests {
         // root_objects 只回傳根層。群組之後成員就不是根物件了 —— 平台若只看
         // 根層，整組形狀會從畫面上消失，而檔案裡其實好端端地存在。
         let (s, page) = session("object-node");
-        let a = s.insert_shape(page.clone(), crate::ffi_shapes::FfiShapeKind::Process,
-                               0.0, 0.0, 10.0, 10.0, 0.0, "甲".into()).unwrap();
-        let b = s.insert_shape(page.clone(), crate::ffi_shapes::FfiShapeKind::Process,
-                               50.0, 0.0, 60.0, 10.0, 0.0, "乙".into()).unwrap();
-        let group = s.group_objects(page.clone(), vec![a.clone(), b.clone()]).unwrap();
+        let a = s
+            .insert_shape(
+                page.clone(),
+                crate::ffi_shapes::FfiShapeKind::Process,
+                0.0,
+                0.0,
+                10.0,
+                10.0,
+                0.0,
+                "甲".into(),
+            )
+            .unwrap();
+        let b = s
+            .insert_shape(
+                page.clone(),
+                crate::ffi_shapes::FfiShapeKind::Process,
+                50.0,
+                0.0,
+                60.0,
+                10.0,
+                0.0,
+                "乙".into(),
+            )
+            .unwrap();
+        let group = s
+            .group_objects(page.clone(), vec![a.clone(), b.clone()])
+            .unwrap();
 
         // 根層只剩群組
         let roots = s.root_objects(page.clone()).unwrap();
@@ -765,7 +904,10 @@ mod tests {
         assert_eq!(roots[0].members, vec![a.clone(), b.clone()]);
 
         // 成員仍然拿得到
-        let member = s.object_node(page.clone(), a.clone()).unwrap().expect("群組成員取不到");
+        let member = s
+            .object_node(page.clone(), a.clone())
+            .unwrap()
+            .expect("群組成員取不到");
         assert_eq!(member.id, a);
         assert_eq!(member.kind, super::FfiObjectKind::Shape);
         // 而且它的內容也還在

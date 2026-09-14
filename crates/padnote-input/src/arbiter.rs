@@ -457,7 +457,11 @@ mod tests {
         // 手掌碰一下、滑一小段、抬起，筆隨後落下 —— 使用者把手放上螢幕的
         // 自然動作。那一小段在筆落下前就結束了，只看 active 的話收不回來。
         let mut a = PointerArbiter::default();
-        assert_eq!(a.handle(&ev(1, PointerKind::Finger, Phase::Began, 0)).verdict, Verdict::Draw);
+        assert_eq!(
+            a.handle(&ev(1, PointerKind::Finger, Phase::Began, 0))
+                .verdict,
+            Verdict::Draw
+        );
         a.handle(&ev(1, PointerKind::Finger, Phase::Moved, 10_000));
         a.handle(&ev(1, PointerKind::Finger, Phase::Ended, 20_000));
 

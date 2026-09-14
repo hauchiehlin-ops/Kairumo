@@ -38,21 +38,38 @@ fn two_devices_writing_the_same_page_keep_both_sets_of_strokes() {
         let a = PadnoteSession::create(path.clone(), "共用".into(), 1_757_635_200_000, 0xAAAA_AAAA)
             .unwrap();
         let page = a.first_page_id().unwrap();
-        a.add_stroke(page.clone(), ToolKind::FountainPen, vec![0, 0, 0, 255], 3.0, points(0.0))
-            .unwrap();
+        a.add_stroke(
+            page.clone(),
+            ToolKind::FountainPen,
+            vec![0, 0, 0, 255],
+            3.0,
+            points(0.0),
+        )
+        .unwrap();
         page
     };
 
     // 另一台裝置開同一個套件（同步資料夾裡就是這樣）並在同一頁上寫字
     {
         let b = PadnoteSession::open_existing(path.clone(), 0xBBBB_BBBB).unwrap();
-        b.add_stroke(page.clone(), ToolKind::BallPoint, vec![255, 0, 0, 255], 2.0, points(500.0))
-            .unwrap();
+        b.add_stroke(
+            page.clone(),
+            ToolKind::BallPoint,
+            vec![255, 0, 0, 255],
+            2.0,
+            points(500.0),
+        )
+        .unwrap();
     }
 
     let reader = PadnoteSession::open_existing(path, 0xCCCC_CCCC).unwrap();
     let strokes = reader.visible_stroke_details(page).unwrap();
-    assert_eq!(strokes.len(), 2, "兩台裝置的筆畫都要在，實得 {}", strokes.len());
+    assert_eq!(
+        strokes.len(),
+        2,
+        "兩台裝置的筆畫都要在，實得 {}",
+        strokes.len()
+    );
 
     let xs: Vec<f32> = strokes.iter().map(|s| s.points[0].x).collect();
     assert!(xs.contains(&0.0), "A 裝置的筆畫不見了");
@@ -67,8 +84,14 @@ fn each_device_writes_its_own_ink_file() {
         let a = PadnoteSession::create(path.clone(), "檔名".into(), 1_757_635_200_000, 0x1111_1111)
             .unwrap();
         let page = a.first_page_id().unwrap();
-        a.add_stroke(page.clone(), ToolKind::Pencil, vec![0, 0, 0, 255], 1.0, points(1.0))
-            .unwrap();
+        a.add_stroke(
+            page.clone(),
+            ToolKind::Pencil,
+            vec![0, 0, 0, 255],
+            1.0,
+            points(1.0),
+        )
+        .unwrap();
         page
     };
     {
@@ -95,10 +118,21 @@ fn strokes_written_by_the_legacy_layout_are_still_readable() {
         let s = PadnoteSession::create(path.clone(), "舊版".into(), 1_757_635_200_000, 0x3333_3333)
             .unwrap();
         let page = s.first_page_id().unwrap();
-        s.add_stroke(page.clone(), ToolKind::FountainPen, vec![0, 0, 0, 255], 3.0, points(7.0))
-            .unwrap();
+        s.add_stroke(
+            page.clone(),
+            ToolKind::FountainPen,
+            vec![0, 0, 0, 255],
+            3.0,
+            points(7.0),
+        )
+        .unwrap();
         let ink_dir = std::path::Path::new(&path).join("ink");
-        let written = std::fs::read_dir(&ink_dir).unwrap().next().unwrap().unwrap().path();
+        let written = std::fs::read_dir(&ink_dir)
+            .unwrap()
+            .next()
+            .unwrap()
+            .unwrap()
+            .path();
         let bytes = std::fs::read(&written).unwrap();
         std::fs::remove_file(&written).unwrap();
         (page, bytes)
@@ -126,7 +160,13 @@ fn a_stroke_erased_on_one_device_stays_erased_on_the_other() {
             .unwrap();
         let page = a.first_page_id().unwrap();
         let id = a
-            .add_stroke(page.clone(), ToolKind::Pencil, vec![0, 0, 0, 255], 1.0, points(3.0))
+            .add_stroke(
+                page.clone(),
+                ToolKind::Pencil,
+                vec![0, 0, 0, 255],
+                1.0,
+                points(3.0),
+            )
             .unwrap();
         (page, id)
     };

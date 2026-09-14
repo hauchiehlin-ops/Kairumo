@@ -119,11 +119,17 @@ mod tests {
     #[test]
     fn the_longer_side_wins_because_append_only_means_superset() {
         // 這條推論是整個方案的地基。它成立的前提是「同一個檔名只有一台裝置在寫」。
-        let plan = plan_folder_sync(vec![e("ink/p-aaaa.strokes", 500)], vec![e("ink/p-aaaa.strokes", 300)]);
+        let plan = plan_folder_sync(
+            vec![e("ink/p-aaaa.strokes", 500)],
+            vec![e("ink/p-aaaa.strokes", 300)],
+        );
         assert_eq!(plan.upload, vec!["ink/p-aaaa.strokes"]);
         assert!(plan.download.is_empty());
 
-        let other = plan_folder_sync(vec![e("ink/p-aaaa.strokes", 300)], vec![e("ink/p-aaaa.strokes", 500)]);
+        let other = plan_folder_sync(
+            vec![e("ink/p-aaaa.strokes", 300)],
+            vec![e("ink/p-aaaa.strokes", 500)],
+        );
         assert_eq!(other.download, vec!["ink/p-aaaa.strokes"]);
     }
 

@@ -102,10 +102,8 @@ pub fn create_annotated_pdf(pages: &[PdfiumPageInput]) -> Result<Vec<u8>, PdfErr
         .map_err(|e| PdfError::Backend(e.to_string()))?;
 
     for input in pages {
-        let size = PdfPagePaperSize::Custom(
-            PdfPoints::new(input.width),
-            PdfPoints::new(input.height),
-        );
+        let size =
+            PdfPagePaperSize::Custom(PdfPoints::new(input.width), PdfPoints::new(input.height));
         let mut page = doc
             .pages_mut()
             .create_page_at_end(size)

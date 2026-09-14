@@ -186,64 +186,127 @@ impl std::error::Error for FfiChartError {}
 impl From<LayoutError> for FfiChartError {
     fn from(e: LayoutError) -> Self {
         match e {
-            LayoutError::TooSmall => Self::TooSmall { reason: e.to_string() },
-            LayoutError::Spec(_) => Self::BadSpec { reason: e.to_string() },
+            LayoutError::TooSmall => Self::TooSmall {
+                reason: e.to_string(),
+            },
+            LayoutError::Spec(_) => Self::BadSpec {
+                reason: e.to_string(),
+            },
         }
     }
 }
 
 fn convert(l: ChartLayout) -> FfiChartLayout {
-    let line = |g: padnote_chart::GridLine| FfiChartLine { x1: g.x1, y1: g.y1, x2: g.x2, y2: g.y2 };
+    let line = |g: padnote_chart::GridLine| FfiChartLine {
+        x1: g.x1,
+        y1: g.y1,
+        x2: g.x2,
+        y2: g.y2,
+    };
     let tick = |t: padnote_chart::TickMark| FfiChartTick {
-        x: t.x, y: t.y, x2: t.x2, y2: t.y2,
-        label: t.label, label_x: t.label_x, label_y: t.label_y, align: t.align.into(),
+        x: t.x,
+        y: t.y,
+        x2: t.x2,
+        y2: t.y2,
+        label: t.label,
+        label_x: t.label_x,
+        label_y: t.label_y,
+        align: t.align.into(),
     };
     let point = |p: padnote_chart::PlotPoint| FfiChartPoint {
-        x: p.x, y: p.y,
+        x: p.x,
+        y: p.y,
         series_index: p.series_index as u32,
         point_index: p.point_index as u32,
         value: p.value,
     };
 
     FfiChartLayout {
-        width: l.width, height: l.height,
-        plot_x: l.plot_x, plot_y: l.plot_y,
-        plot_width: l.plot_width, plot_height: l.plot_height,
+        width: l.width,
+        height: l.height,
+        plot_x: l.plot_x,
+        plot_y: l.plot_y,
+        plot_width: l.plot_width,
+        plot_height: l.plot_height,
         grid_lines: l.grid_lines.into_iter().map(line).collect(),
         axis_lines: l.axis_lines.into_iter().map(line).collect(),
         x_ticks: l.x_ticks.into_iter().map(tick).collect(),
         y_ticks: l.y_ticks.into_iter().map(tick).collect(),
-        bars: l.bars.into_iter().map(|b| FfiChartBar {
-            x: b.x, y: b.y, width: b.width, height: b.height,
-            series_index: b.series_index as u32, point_index: b.point_index as u32,
-            color_hex: b.color_hex, value: b.value,
-        }).collect(),
-        polylines: l.polylines.into_iter().map(|p| FfiChartPolyline {
-            points: p.points.into_iter().map(point).collect(),
-            series_index: p.series_index as u32,
-            color_hex: p.color_hex, smooth: p.smooth,
-            fill_to_y: p.fill_to_y, show_markers: p.show_markers,
-        }).collect(),
+        bars: l
+            .bars
+            .into_iter()
+            .map(|b| FfiChartBar {
+                x: b.x,
+                y: b.y,
+                width: b.width,
+                height: b.height,
+                series_index: b.series_index as u32,
+                point_index: b.point_index as u32,
+                color_hex: b.color_hex,
+                value: b.value,
+            })
+            .collect(),
+        polylines: l
+            .polylines
+            .into_iter()
+            .map(|p| FfiChartPolyline {
+                points: p.points.into_iter().map(point).collect(),
+                series_index: p.series_index as u32,
+                color_hex: p.color_hex,
+                smooth: p.smooth,
+                fill_to_y: p.fill_to_y,
+                show_markers: p.show_markers,
+            })
+            .collect(),
         scatter_points: l.scatter_points.into_iter().map(point).collect(),
-        slices: l.slices.into_iter().map(|s| FfiChartSlice {
-            center_x: s.center_x, center_y: s.center_y,
-            radius: s.radius, inner_radius: s.inner_radius,
-            start_angle: s.start_angle, end_angle: s.end_angle,
-            point_index: s.point_index as u32, color_hex: s.color_hex,
-            value: s.value, fraction: s.fraction,
-        }).collect(),
-        radar_rings: l.radar_rings.into_iter()
+        slices: l
+            .slices
+            .into_iter()
+            .map(|s| FfiChartSlice {
+                center_x: s.center_x,
+                center_y: s.center_y,
+                radius: s.radius,
+                inner_radius: s.inner_radius,
+                start_angle: s.start_angle,
+                end_angle: s.end_angle,
+                point_index: s.point_index as u32,
+                color_hex: s.color_hex,
+                value: s.value,
+                fraction: s.fraction,
+            })
+            .collect(),
+        radar_rings: l
+            .radar_rings
+            .into_iter()
             .map(|r| r.into_iter().map(point).collect())
             .collect(),
         radar_spokes: l.radar_spokes.into_iter().map(line).collect(),
-        legend: l.legend.into_iter().map(|e| FfiChartLegendEntry {
-            swatch_x: e.swatch_x, swatch_y: e.swatch_y, swatch_size: e.swatch_size,
-            text_x: e.text_x, text_y: e.text_y, text: e.text, color_hex: e.color_hex,
-        }).collect(),
-        labels: l.labels.into_iter().map(|t| FfiChartLabel {
-            x: t.x, y: t.y, text: t.text, font_size: t.font_size,
-            align: t.align.into(), color_hex: t.color_hex, rotation: t.rotation,
-        }).collect(),
+        legend: l
+            .legend
+            .into_iter()
+            .map(|e| FfiChartLegendEntry {
+                swatch_x: e.swatch_x,
+                swatch_y: e.swatch_y,
+                swatch_size: e.swatch_size,
+                text_x: e.text_x,
+                text_y: e.text_y,
+                text: e.text,
+                color_hex: e.color_hex,
+            })
+            .collect(),
+        labels: l
+            .labels
+            .into_iter()
+            .map(|t| FfiChartLabel {
+                x: t.x,
+                y: t.y,
+                text: t.text,
+                font_size: t.font_size,
+                align: t.align.into(),
+                color_hex: t.color_hex,
+                rotation: t.rotation,
+            })
+            .collect(),
     }
 }
 
@@ -252,9 +315,14 @@ fn convert(l: ChartLayout) -> FfiChartLayout {
 /// `spec_json` 是存在區塊外觀裡的那份設定（見 `set_block_appearance`）。
 /// 兩個平台傳同一份設定、同一個尺寸進來，就會拿到位元相同的版面。
 #[uniffi::export]
-pub fn chart_layout(spec_json: String, width: f64, height: f64) -> Result<FfiChartLayout, FfiChartError> {
-    let spec = ChartSpec::from_json(&spec_json)
-        .map_err(|e| FfiChartError::BadSpec { reason: e.to_string() })?;
+pub fn chart_layout(
+    spec_json: String,
+    width: f64,
+    height: f64,
+) -> Result<FfiChartLayout, FfiChartError> {
+    let spec = ChartSpec::from_json(&spec_json).map_err(|e| FfiChartError::BadSpec {
+        reason: e.to_string(),
+    })?;
     Ok(convert(layout(&spec, width, height)?))
 }
 
@@ -264,7 +332,9 @@ pub fn chart_layout(spec_json: String, width: f64, height: f64) -> Result<FfiCha
 /// 忽然變成空白。
 #[uniffi::export]
 pub fn chart_spec_is_drawable(spec_json: String) -> bool {
-    ChartSpec::from_json(&spec_json).map(|s| s.validate().is_ok()).unwrap_or(false)
+    ChartSpec::from_json(&spec_json)
+        .map(|s| s.validate().is_ok())
+        .unwrap_or(false)
 }
 
 /// 一份可以直接畫的預設設定。
@@ -324,8 +394,14 @@ mod tests {
         assert_eq!(l.legend.len(), 1);
         assert!(!l.y_ticks.is_empty(), "Y 軸刻度沒有跨過 FFI");
         assert!(!l.grid_lines.is_empty(), "格線沒有跨過 FFI");
-        assert!(l.labels.iter().any(|t| t.text == "季度營收"), "標題沒有跨過 FFI");
-        assert!(l.labels.iter().any(|t| t.text == "10"), "資料標籤沒有跨過 FFI");
+        assert!(
+            l.labels.iter().any(|t| t.text == "季度營收"),
+            "標題沒有跨過 FFI"
+        );
+        assert!(
+            l.labels.iter().any(|t| t.text == "10"),
+            "資料標籤沒有跨過 FFI"
+        );
     }
 
     #[test]
@@ -338,7 +414,8 @@ mod tests {
 
     #[test]
     fn radar_rings_cross_the_boundary() {
-        let json = r#"{"kind":"radar","categories":["a","b","c"],"series":[{"values":[1,2,3]}]}"#.to_string();
+        let json = r#"{"kind":"radar","categories":["a","b","c"],"series":[{"values":[1,2,3]}]}"#
+            .to_string();
         let l = chart_layout(json, 400.0, 400.0).unwrap();
         assert_eq!(l.radar_spokes.len(), 3);
         assert!(l.radar_rings.iter().all(|r| r.len() == 3));
@@ -377,6 +454,10 @@ mod tests {
         // 取色器抄第二份色碼的那一刻就開始漂移了。
         assert!(chart_palette_count() >= 8);
         assert!(chart_palette_color(0).starts_with('#'));
-        assert_eq!(chart_palette_color(0), chart_palette_color(chart_palette_count()), "色盤要繞回來");
+        assert_eq!(
+            chart_palette_color(0),
+            chart_palette_color(chart_palette_count()),
+            "色盤要繞回來"
+        );
     }
 }

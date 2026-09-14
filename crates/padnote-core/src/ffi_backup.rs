@@ -39,7 +39,10 @@ const DIGEST_LEN: usize = 32;
 pub enum BackupError {
     NotABackup,
     /// 讀取器不支援的版本 —— 必須拒絕而非猜測解析。
-    UnsupportedVersion { found: u16, supported: u16 },
+    UnsupportedVersion {
+        found: u16,
+        supported: u16,
+    },
     Corrupt(String),
     Io(String),
 }
@@ -478,7 +481,11 @@ mod tests {
         bytes[len - DIGEST_LEN - 1] ^= 0xFF;
         fs::write(&archive, &bytes).unwrap();
 
-        assert!(!inspect_backup(archive.to_string_lossy().into()).unwrap().digest_ok);
+        assert!(
+            !inspect_backup(archive.to_string_lossy().into())
+                .unwrap()
+                .digest_ok
+        );
     }
 
     #[test]
@@ -544,7 +551,11 @@ mod tests {
         )
         .unwrap();
         assert_eq!(info.file_count, 0);
-        assert!(inspect_backup(archive.to_string_lossy().into()).unwrap().digest_ok);
+        assert!(
+            inspect_backup(archive.to_string_lossy().into())
+                .unwrap()
+                .digest_ok
+        );
     }
 
     #[test]

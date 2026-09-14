@@ -864,6 +864,8 @@ impl PadnoteSession {
     }
 
     /// 插入一個原生形狀物件（S-52）。幾何外框以頁面座標表示。
+    // UniFFI 的公開介面：改簽章等於同時改掉 Swift 與 Kotlin 兩邊的產生碼。
+    #[allow(clippy::too_many_arguments)]
     pub fn insert_shape(
         &self,
         page_id: String,
@@ -896,6 +898,8 @@ impl PadnoteSession {
     }
 
     /// 插入依附於兩個物件的連接線（S-52）。
+    // UniFFI 的公開介面：改簽章等於同時改掉 Swift 與 Kotlin 兩邊的產生碼。
+    #[allow(clippy::too_many_arguments)]
     pub fn insert_connection(
         &self,
         page_id: String,
@@ -1954,8 +1958,13 @@ mod tests {
         let s = session("page-with-id");
         let id = "01920000-0000-7000-8000-000000000001";
         s.add_page_with_id(id.into(), PageStyle::Grid).unwrap();
-        let ids: Vec<String> = (0..s.page_count()).filter_map(|i| s.page_id_at(i)).collect();
-        assert!(ids.contains(&id.to_string()), "指定 id 建的頁沒有出現：{ids:?}");
+        let ids: Vec<String> = (0..s.page_count())
+            .filter_map(|i| s.page_id_at(i))
+            .collect();
+        assert!(
+            ids.contains(&id.to_string()),
+            "指定 id 建的頁沒有出現：{ids:?}"
+        );
     }
 
     #[test]
@@ -1973,8 +1982,13 @@ mod tests {
     fn an_empty_notebook_starts_with_no_pages() {
         // 重建套件時要沿用既有的頁面 id，自動給的那一頁是多餘的 ——
         // 而「先加再移」在多裝置合併時不保證互相抵銷。
-        let s = PadnoteSession::create_empty(tmp("create-empty"), "空的".into(), 1_757_635_200_000, 0xA1)
-            .unwrap();
+        let s = PadnoteSession::create_empty(
+            tmp("create-empty"),
+            "空的".into(),
+            1_757_635_200_000,
+            0xA1,
+        )
+        .unwrap();
         assert_eq!(s.page_count(), 0);
         assert_eq!(s.first_page_id(), None);
     }
@@ -1996,7 +2010,9 @@ mod tests {
         s.add_page_with_id(id.into(), PageStyle::Blank).unwrap();
         s.remove_page(first).unwrap();
 
-        let ids: Vec<String> = (0..s.page_count()).filter_map(|i| s.page_id_at(i)).collect();
+        let ids: Vec<String> = (0..s.page_count())
+            .filter_map(|i| s.page_id_at(i))
+            .collect();
         assert_eq!(ids, vec![id.to_string()]);
     }
 
@@ -2004,7 +2020,10 @@ mod tests {
     fn a_malformed_page_id_is_rejected() {
         // 悄悄改用隨機 id 的話，頁面身分就斷了，而且沒有人會知道。
         let s = session("page-with-id-bad");
-        assert!(s.add_page_with_id("不是 uuid".into(), PageStyle::Blank).is_err());
+        assert!(
+            s.add_page_with_id("不是 uuid".into(), PageStyle::Blank)
+                .is_err()
+        );
     }
 
     // ── 筆記本中繼資料（跨平台來回不掉東西靠它）──────────────
@@ -2103,7 +2122,9 @@ mod tests {
     fn listing_image_blocks_excludes_text_blocks() {
         let s = session("image-list-excludes-text");
         let page = s.first_page_id().unwrap();
-        let text = s.add_text(page.clone(), "字".into(), BlockStyle::Body).unwrap();
+        let text = s
+            .add_text(page.clone(), "字".into(), BlockStyle::Body)
+            .unwrap();
         let image = image_block(&s, &page, 10.0, 10.0);
 
         assert_eq!(s.image_block_ids(page.clone()).unwrap(), vec![image]);

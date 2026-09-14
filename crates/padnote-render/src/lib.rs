@@ -2,7 +2,6 @@
 //! Apple 平台走原生 Metal（`apple/` 下的 InkView）。
 
 use bytemuck::{Pod, Zeroable};
-use padnote_ink::Stroke;
 use std::borrow::Cow;
 
 #[repr(C)]
@@ -33,6 +32,7 @@ impl Vertex {
     }
 }
 
+#[derive(Debug)]
 pub struct Renderer {
     pub device: wgpu::Device,
     pub queue: wgpu::Queue,

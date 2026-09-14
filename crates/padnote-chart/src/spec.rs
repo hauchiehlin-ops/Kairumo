@@ -108,7 +108,7 @@ impl Default for AxisSpec {
 }
 
 /// 一個資料數列。
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", default)]
 pub struct Series {
     pub name: String,
@@ -117,17 +117,6 @@ pub struct Series {
     pub color_hex: String,
     /// 只對混合圖有意義：這個數列要用哪種畫法。
     pub kind_override: Option<ChartKind>,
-}
-
-impl Default for Series {
-    fn default() -> Self {
-        Self {
-            name: String::new(),
-            values: Vec::new(),
-            color_hex: String::new(),
-            kind_override: None,
-        }
-    }
 }
 
 /// 一張圖表的完整規格。
@@ -220,7 +209,11 @@ impl ChartSpec {
 
     /// 最長的數列有幾個點。
     pub fn point_count(&self) -> usize {
-        self.series.iter().map(|s| s.values.len()).max().unwrap_or(0)
+        self.series
+            .iter()
+            .map(|s| s.values.len())
+            .max()
+            .unwrap_or(0)
     }
 
     pub fn validate(&self) -> Result<(), SpecError> {

@@ -5,7 +5,7 @@
 use crate::protocol::{ClientMessage, CursorState, PeerInfo, ServerMessage};
 use std::collections::{HashMap, VecDeque};
 use std::sync::Arc;
-use tokio::sync::{mpsc, RwLock};
+use tokio::sync::{RwLock, mpsc};
 
 /// 單一在線成員狀態。
 #[derive(Debug)]
@@ -54,6 +54,9 @@ impl RoomHub {
     }
 
     /// 成員申請加入房間。若房間不存在，則第一位加入者自動成為房主 (Owner)。
+    // 參數量由連線協定決定，包成 struct 只是把同樣的欄位換個地方寫，
+    // 反而讓呼叫端與 protocol.rs 的對應變難追。
+    #[allow(clippy::too_many_arguments)]
     pub async fn join(
         &self,
         room_id: String,
@@ -65,9 +68,9 @@ impl RoomHub {
         tx: mpsc::UnboundedSender<ServerMessage>,
     ) -> Result<ServerMessage, String> {
         let mut rooms = self.rooms.write().await;
-        let room = rooms.entry(room_id.clone()).or_insert_with(|| {
-            Room::new(room_id.clone(), user_id.clone(), passcode.clone())
-        });
+        let room = rooms
+            .entry(room_id.clone())
+            .or_insert_with(|| Room::new(room_id.clone(), user_id.clone(), passcode.clone()));
 
         // 密碼檢查（若有設置）
         if let Some(ref required_passcode) = room.passcode {

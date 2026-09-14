@@ -186,7 +186,13 @@ const PAD: f64 = 12.0;
 /// 位置。各自去問系統字型反而會讓同一張圖在兩邊不一樣。
 pub fn estimate_text_width(text: &str, font_size: f64) -> f64 {
     text.chars()
-        .map(|c| if (c as u32) > 0x2E80 { font_size } else { font_size * 0.55 })
+        .map(|c| {
+            if (c as u32) > 0x2E80 {
+                font_size
+            } else {
+                font_size * 0.55
+            }
+        })
         .sum()
 }
 
@@ -223,7 +229,11 @@ fn value_range(spec: &ChartSpec) -> (f64, f64) {
             let (mut positive, mut negative) = (0.0, 0.0);
             for s in series {
                 let v = s.values.get(index).copied().unwrap_or(0.0);
-                if v >= 0.0 { positive += v } else { negative += v }
+                if v >= 0.0 {
+                    positive += v
+                } else {
+                    negative += v
+                }
             }
             min = min.min(negative);
             max = max.max(positive);
@@ -246,15 +256,22 @@ fn value_range(spec: &ChartSpec) -> (f64, f64) {
     // 最常見的誤導。折線圖則允許不從 0 起算，因為那裡看的是趨勢。
     if matches!(
         spec.kind,
-        ChartKind::Bar | ChartKind::StackedBar | ChartKind::HorizontalBar
-            | ChartKind::Area | ChartKind::StackedArea
+        ChartKind::Bar
+            | ChartKind::StackedBar
+            | ChartKind::HorizontalBar
+            | ChartKind::Area
+            | ChartKind::StackedArea
     ) {
         min = min.min(0.0);
         max = max.max(0.0);
     }
     if (max - min).abs() < f64::EPSILON {
         // 所有值相同：撐開一點，否則等一下會除以零。
-        let pad = if max.abs() < f64::EPSILON { 1.0 } else { max.abs() * 0.5 };
+        let pad = if max.abs() < f64::EPSILON {
+            1.0
+        } else {
+            max.abs() * 0.5
+        };
         min -= pad;
         max += pad;
     }
@@ -270,17 +287,28 @@ fn axis_scale(spec: &ChartSpec, span_px: f64) -> (f64, f64, f64) {
 
     // 想要的格數由可用像素決定：格子太密會糊成一片。
     let target = (span_px / 48.0).clamp(2.0, 10.0);
-    let step = spec.y_axis.step.filter(|s| *s > 0.0).unwrap_or_else(|| nice_step((max - min) / target));
+    let step = spec
+        .y_axis
+        .step
+        .filter(|s| *s > 0.0)
+        .unwrap_or_else(|| nice_step((max - min) / target));
 
     let lower = (min / step).floor() * step;
     let upper = (max / step).ceil() * step;
-    (lower, if upper <= lower { lower + step } else { upper }, step)
+    (
+        lower,
+        if upper <= lower { lower + step } else { upper },
+        step,
+    )
 }
 
 fn format_value(value: f64, decimals: u32) -> String {
     let s = format!("{:.*}", decimals as usize, value);
     // -0 讀起來像錯誤。
-    if s.trim_start_matches('-').chars().all(|c| c == '0' || c == '.') {
+    if s.trim_start_matches('-')
+        .chars()
+        .all(|c| c == '0' || c == '.')
+    {
         s.trim_start_matches('-').to_string()
     } else {
         s
@@ -309,7 +337,11 @@ pub fn layout(spec: &ChartSpec, width: f64, height: f64) -> Result<ChartLayout, 
         return Err(LayoutError::TooSmall);
     }
 
-    let mut out = ChartLayout { width, height, ..Default::default() };
+    let mut out = ChartLayout {
+        width,
+        height,
+        ..Default::default()
+    };
     let series = spec.effective_series().to_vec();
 
     // ── 標題 ──────────────────────────────────────────────
@@ -338,7 +370,11 @@ pub fn layout(spec: &ChartSpec, width: f64, height: f64) -> Result<ChartLayout, 
             .iter()
             .enumerate()
             .map(|(i, s)| {
-                let name = if s.name.is_empty() { format!("數列 {}", i + 1) } else { s.name.clone() };
+                let name = if s.name.is_empty() {
+                    format!("數列 {}", i + 1)
+                } else {
+                    s.name.clone()
+                };
                 (name, spec.series_color(i))
             })
             .collect()
@@ -415,8 +451,16 @@ fn layout_cartesian(spec: &ChartSpec, out: &mut ChartLayout) {
     let horizontal = spec.kind == ChartKind::HorizontalBar;
     // 水平長條的「值」沿 x 走，「類別」沿 y 走 —— 兩個方向共用同一段程式，
     // 靠這兩個變數交換。
-    let value_span = if horizontal { out.plot_width } else { out.plot_height };
-    let category_span = if horizontal { out.plot_height } else { out.plot_width };
+    let value_span = if horizontal {
+        out.plot_width
+    } else {
+        out.plot_height
+    };
+    let category_span = if horizontal {
+        out.plot_height
+    } else {
+        out.plot_width
+    };
 
     let (lo, hi, step) = axis_scale(spec, value_span);
     let decimals = tick_decimals(step);
@@ -437,7 +481,12 @@ fn layout_cartesian(spec: &ChartSpec, out: &mut ChartLayout) {
         let text = format_value(v, decimals);
         if horizontal {
             if spec.y_axis.show_grid {
-                out.grid_lines.push(GridLine { x1: p, y1: out.plot_y, x2: p, y2: out.plot_y + out.plot_height });
+                out.grid_lines.push(GridLine {
+                    x1: p,
+                    y1: out.plot_y,
+                    x2: p,
+                    y2: out.plot_y + out.plot_height,
+                });
             }
             if spec.x_axis.show_labels {
                 out.x_ticks.push(TickMark {
@@ -453,7 +502,12 @@ fn layout_cartesian(spec: &ChartSpec, out: &mut ChartLayout) {
             }
         } else {
             if spec.y_axis.show_grid {
-                out.grid_lines.push(GridLine { x1: out.plot_x, y1: p, x2: out.plot_x + out.plot_width, y2: p });
+                out.grid_lines.push(GridLine {
+                    x1: out.plot_x,
+                    y1: p,
+                    x2: out.plot_x + out.plot_width,
+                    y2: p,
+                });
             }
             if spec.y_axis.show_labels {
                 out.y_ticks.push(TickMark {
@@ -476,18 +530,26 @@ fn layout_cartesian(spec: &ChartSpec, out: &mut ChartLayout) {
     if spec.x_axis.show_line {
         if horizontal {
             out.axis_lines.push(GridLine {
-                x1: out.plot_x, y1: out.plot_y + out.plot_height,
-                x2: out.plot_x + out.plot_width, y2: out.plot_y + out.plot_height,
+                x1: out.plot_x,
+                y1: out.plot_y + out.plot_height,
+                x2: out.plot_x + out.plot_width,
+                y2: out.plot_y + out.plot_height,
             });
         } else {
             out.axis_lines.push(GridLine {
-                x1: out.plot_x, y1: baseline, x2: out.plot_x + out.plot_width, y2: baseline,
+                x1: out.plot_x,
+                y1: baseline,
+                x2: out.plot_x + out.plot_width,
+                y2: baseline,
             });
         }
     }
     if spec.y_axis.show_line {
         out.axis_lines.push(GridLine {
-            x1: out.plot_x, y1: out.plot_y, x2: out.plot_x, y2: out.plot_y + out.plot_height,
+            x1: out.plot_x,
+            y1: out.plot_y,
+            x2: out.plot_x,
+            y2: out.plot_y + out.plot_height,
         });
     }
 
@@ -510,8 +572,10 @@ fn layout_cartesian(spec: &ChartSpec, out: &mut ChartLayout) {
             let c = category_center(i);
             if horizontal {
                 out.y_ticks.push(TickMark {
-                    x: out.plot_x, y: c,
-                    x2: out.plot_x - TICK_LEN, y2: c,
+                    x: out.plot_x,
+                    y: c,
+                    x2: out.plot_x - TICK_LEN,
+                    y2: c,
                     label: spec.category(i),
                     label_x: out.plot_x - TICK_LEN - 4.0,
                     label_y: c + AXIS_FONT * 0.35,
@@ -519,8 +583,10 @@ fn layout_cartesian(spec: &ChartSpec, out: &mut ChartLayout) {
                 });
             } else {
                 out.x_ticks.push(TickMark {
-                    x: c, y: out.plot_y + out.plot_height,
-                    x2: c, y2: out.plot_y + out.plot_height + TICK_LEN,
+                    x: c,
+                    y: out.plot_y + out.plot_height,
+                    x2: c,
+                    y2: out.plot_y + out.plot_height + TICK_LEN,
                     label: spec.category(i),
                     label_x: c,
                     label_y: out.plot_y + out.plot_height + TICK_LEN + AXIS_FONT,
@@ -555,7 +621,10 @@ fn layout_cartesian(spec: &ChartSpec, out: &mut ChartLayout) {
     }
 
     let series = spec.effective_series().to_vec();
-    let bar_like = matches!(spec.kind, ChartKind::Bar | ChartKind::StackedBar | ChartKind::HorizontalBar);
+    let bar_like = matches!(
+        spec.kind,
+        ChartKind::Bar | ChartKind::StackedBar | ChartKind::HorizontalBar
+    );
 
     if bar_like {
         let group = slot * spec.bar_width_ratio.clamp(0.1, 1.0);
@@ -574,7 +643,11 @@ fn layout_cartesian(spec: &ChartSpec, out: &mut ChartLayout) {
                     continue;
                 }
                 let (from, to) = if stacked {
-                    let base = if value >= 0.0 { &mut stack_positive[i] } else { &mut stack_negative[i] };
+                    let base = if value >= 0.0 {
+                        &mut stack_positive[i]
+                    } else {
+                        &mut stack_negative[i]
+                    };
                     let start = *base;
                     *base += value;
                     (start, *base)
@@ -584,36 +657,70 @@ fn layout_cartesian(spec: &ChartSpec, out: &mut ChartLayout) {
                 let p1 = to_value_px(from);
                 let p2 = to_value_px(to);
                 let center = category_center(i);
-                let lane_start = center - group / 2.0 + lane * if stacked { 0.0 } else { si as f64 };
+                let lane_start =
+                    center - group / 2.0 + lane * if stacked { 0.0 } else { si as f64 };
 
                 let bar = if horizontal {
                     PlotBar {
-                        x: p1.min(p2), y: lane_start,
-                        width: (p2 - p1).abs(), height: lane,
-                        series_index: si, point_index: i, color_hex: color.clone(), value,
+                        x: p1.min(p2),
+                        y: lane_start,
+                        width: (p2 - p1).abs(),
+                        height: lane,
+                        series_index: si,
+                        point_index: i,
+                        color_hex: color.clone(),
+                        value,
                     }
                 } else {
                     PlotBar {
-                        x: lane_start, y: p1.min(p2),
-                        width: lane, height: (p2 - p1).abs(),
-                        series_index: si, point_index: i, color_hex: color.clone(), value,
+                        x: lane_start,
+                        y: p1.min(p2),
+                        width: lane,
+                        height: (p2 - p1).abs(),
+                        series_index: si,
+                        point_index: i,
+                        color_hex: color.clone(),
+                        value,
                     }
                 };
 
                 if spec.data_labels != LabelPosition::None {
                     let (lx, ly, align) = match (horizontal, spec.data_labels) {
-                        (false, LabelPosition::Inside) => (bar.x + bar.width / 2.0, bar.y + LABEL_FONT + 2.0, TextAlign::Center),
-                        (false, LabelPosition::Center) => (bar.x + bar.width / 2.0, bar.y + bar.height / 2.0 + LABEL_FONT * 0.35, TextAlign::Center),
+                        (false, LabelPosition::Inside) => (
+                            bar.x + bar.width / 2.0,
+                            bar.y + LABEL_FONT + 2.0,
+                            TextAlign::Center,
+                        ),
+                        (false, LabelPosition::Center) => (
+                            bar.x + bar.width / 2.0,
+                            bar.y + bar.height / 2.0 + LABEL_FONT * 0.35,
+                            TextAlign::Center,
+                        ),
                         (false, _) => (bar.x + bar.width / 2.0, bar.y - 3.0, TextAlign::Center),
-                        (true, LabelPosition::Inside) => (bar.x + bar.width - 4.0, bar.y + bar.height / 2.0 + LABEL_FONT * 0.35, TextAlign::Trailing),
-                        (true, LabelPosition::Center) => (bar.x + bar.width / 2.0, bar.y + bar.height / 2.0 + LABEL_FONT * 0.35, TextAlign::Center),
-                        (true, _) => (bar.x + bar.width + 4.0, bar.y + bar.height / 2.0 + LABEL_FONT * 0.35, TextAlign::Leading),
+                        (true, LabelPosition::Inside) => (
+                            bar.x + bar.width - 4.0,
+                            bar.y + bar.height / 2.0 + LABEL_FONT * 0.35,
+                            TextAlign::Trailing,
+                        ),
+                        (true, LabelPosition::Center) => (
+                            bar.x + bar.width / 2.0,
+                            bar.y + bar.height / 2.0 + LABEL_FONT * 0.35,
+                            TextAlign::Center,
+                        ),
+                        (true, _) => (
+                            bar.x + bar.width + 4.0,
+                            bar.y + bar.height / 2.0 + LABEL_FONT * 0.35,
+                            TextAlign::Leading,
+                        ),
                     };
                     out.labels.push(TextLabel {
-                        x: lx, y: ly,
+                        x: lx,
+                        y: ly,
                         text: format_value(value, spec.label_decimals),
-                        font_size: LABEL_FONT, align,
-                        color_hex: String::new(), rotation: 0.0,
+                        font_size: LABEL_FONT,
+                        align,
+                        color_hex: String::new(),
+                        rotation: 0.0,
                     });
                 }
                 out.bars.push(bar);
@@ -627,21 +734,31 @@ fn layout_cartesian(spec: &ChartSpec, out: &mut ChartLayout) {
     for (si, s) in series.iter().enumerate() {
         let color = spec.series_color(si);
         let mut points = Vec::with_capacity(count);
-        for i in 0..count {
+        for (i, slot) in stack.iter_mut().enumerate() {
             let raw = s.values.get(i).copied().unwrap_or(0.0);
             if !raw.is_finite() {
                 continue;
             }
             let value = if spec.kind.is_stacked() {
-                stack[i] += raw;
-                stack[i]
+                *slot += raw;
+                *slot
             } else {
                 raw
             };
             points.push(PlotPoint {
-                x: if horizontal { to_value_px(value) } else { category_center(i) },
-                y: if horizontal { category_center(i) } else { to_value_px(value) },
-                series_index: si, point_index: i, value: raw,
+                x: if horizontal {
+                    to_value_px(value)
+                } else {
+                    category_center(i)
+                },
+                y: if horizontal {
+                    category_center(i)
+                } else {
+                    to_value_px(value)
+                },
+                series_index: si,
+                point_index: i,
+                value: raw,
             });
 
             if spec.data_labels != LabelPosition::None {
@@ -666,7 +783,8 @@ fn layout_cartesian(spec: &ChartSpec, out: &mut ChartLayout) {
                 series_index: si,
                 color_hex: color,
                 smooth: spec.kind == ChartKind::SmoothLine,
-                fill_to_y: matches!(spec.kind, ChartKind::Area | ChartKind::StackedArea).then_some(baseline),
+                fill_to_y: matches!(spec.kind, ChartKind::Area | ChartKind::StackedArea)
+                    .then_some(baseline),
                 show_markers: !matches!(spec.kind, ChartKind::Area | ChartKind::StackedArea),
             });
         }
@@ -676,9 +794,15 @@ fn layout_cartesian(spec: &ChartSpec, out: &mut ChartLayout) {
 // ── 圓餅／環圈 ──────────────────────────────────────────────
 
 fn layout_pie(spec: &ChartSpec, out: &mut ChartLayout) {
-    let Some(series) = spec.effective_series().first() else { return };
+    let Some(series) = spec.effective_series().first() else {
+        return;
+    };
     // 負值在圓餅圖上沒有意義（扇形沒有「負的角度」），取絕對值。
-    let values: Vec<f64> = series.values.iter().map(|v| if v.is_finite() { v.abs() } else { 0.0 }).collect();
+    let values: Vec<f64> = series
+        .values
+        .iter()
+        .map(|v| if v.is_finite() { v.abs() } else { 0.0 })
+        .collect();
     let total: f64 = values.iter().sum();
     if total <= 0.0 {
         return;
@@ -698,9 +822,16 @@ fn layout_pie(spec: &ChartSpec, out: &mut ChartLayout) {
         let fraction = value / total;
         let sweep = fraction * std::f64::consts::TAU;
         out.slices.push(PieSlice {
-            center_x: cx, center_y: cy, radius, inner_radius: inner,
-            start_angle: angle, end_angle: angle + sweep,
-            point_index: i, color_hex: spec.slice_color(i), value, fraction,
+            center_x: cx,
+            center_y: cy,
+            radius,
+            inner_radius: inner,
+            start_angle: angle,
+            end_angle: angle + sweep,
+            point_index: i,
+            color_hex: spec.slice_color(i),
+            value,
+            fraction,
         });
 
         if spec.data_labels != LabelPosition::None {
@@ -751,7 +882,13 @@ fn layout_radar(spec: &ChartSpec, out: &mut ChartLayout) {
         let ring: Vec<PlotPoint> = (0..count)
             .map(|i| {
                 let (x, y) = point_at(i, t);
-                PlotPoint { x, y, series_index: usize::MAX, point_index: i, value: v }
+                PlotPoint {
+                    x,
+                    y,
+                    series_index: usize::MAX,
+                    point_index: i,
+                    value: v,
+                }
             })
             .collect();
         out.radar_rings.push(ring);
@@ -770,11 +907,17 @@ fn layout_radar(spec: &ChartSpec, out: &mut ChartLayout) {
     }
     for i in 0..count {
         let (x, y) = point_at(i, 1.0);
-        out.radar_spokes.push(GridLine { x1: cx, y1: cy, x2: x, y2: y });
+        out.radar_spokes.push(GridLine {
+            x1: cx,
+            y1: cy,
+            x2: x,
+            y2: y,
+        });
         if spec.x_axis.show_labels {
             let (lx, ly) = point_at(i, 1.12);
             out.labels.push(TextLabel {
-                x: lx, y: ly + AXIS_FONT * 0.35,
+                x: lx,
+                y: ly + AXIS_FONT * 0.35,
                 text: spec.category(i),
                 font_size: AXIS_FONT,
                 align: TextAlign::Center,
@@ -790,7 +933,13 @@ fn layout_radar(spec: &ChartSpec, out: &mut ChartLayout) {
                 let raw = s.values.get(i).copied().unwrap_or(lo);
                 let t = ((raw - lo) / (hi - lo)).clamp(0.0, 1.0);
                 let (x, y) = point_at(i, t);
-                PlotPoint { x, y, series_index: si, point_index: i, value: raw }
+                PlotPoint {
+                    x,
+                    y,
+                    series_index: si,
+                    point_index: i,
+                    value: raw,
+                }
             })
             .collect();
         // 雷達的輪廓要收口，否則最後一段邊不會畫出來。
@@ -798,9 +947,12 @@ fn layout_radar(spec: &ChartSpec, out: &mut ChartLayout) {
             points.push(first);
         }
         out.polylines.push(PlotPolyline {
-            points, series_index: si,
+            points,
+            series_index: si,
             color_hex: spec.series_color(si),
-            smooth: false, fill_to_y: None, show_markers: true,
+            smooth: false,
+            fill_to_y: None,
+            show_markers: true,
         });
     }
 }
@@ -819,10 +971,13 @@ fn layout_legend(spec: &ChartSpec, items: &[(String, String)], out: &mut ChartLa
             for (i, (text, color)) in items.iter().enumerate() {
                 let y = start + line * i as f64;
                 out.legend.push(LegendEntry {
-                    swatch_x: x, swatch_y: y, swatch_size: LEGEND_SWATCH,
+                    swatch_x: x,
+                    swatch_y: y,
+                    swatch_size: LEGEND_SWATCH,
                     text_x: x + LEGEND_SWATCH + 5.0,
                     text_y: y + LEGEND_SWATCH * 0.85,
-                    text: text.clone(), color_hex: color.clone(),
+                    text: text.clone(),
+                    color_hex: color.clone(),
                 });
             }
         }
@@ -832,7 +987,8 @@ fn layout_legend(spec: &ChartSpec, items: &[(String, String)], out: &mut ChartLa
                 .iter()
                 .map(|(t, _)| LEGEND_SWATCH + 5.0 + estimate_text_width(t, LEGEND_FONT))
                 .collect();
-            let total: f64 = widths.iter().sum::<f64>() + PAD * (items.len().saturating_sub(1)) as f64;
+            let total: f64 =
+                widths.iter().sum::<f64>() + PAD * (items.len().saturating_sub(1)) as f64;
             let mut x = (out.width - total) / 2.0;
             let y = if spec.legend == LegendPosition::Top {
                 out.plot_y - LEGEND_FONT - PAD * 0.5
@@ -841,10 +997,13 @@ fn layout_legend(spec: &ChartSpec, items: &[(String, String)], out: &mut ChartLa
             };
             for (i, (text, color)) in items.iter().enumerate() {
                 out.legend.push(LegendEntry {
-                    swatch_x: x, swatch_y: y, swatch_size: LEGEND_SWATCH,
+                    swatch_x: x,
+                    swatch_y: y,
+                    swatch_size: LEGEND_SWATCH,
                     text_x: x + LEGEND_SWATCH + 5.0,
                     text_y: y + LEGEND_SWATCH * 0.85,
-                    text: text.clone(), color_hex: color.clone(),
+                    text: text.clone(),
+                    color_hex: color.clone(),
                 });
                 x += widths[i] + PAD;
             }

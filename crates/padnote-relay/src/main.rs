@@ -1,6 +1,6 @@
 //! Padnote 線上多人協同中繼伺服器執行檔。
 
-use padnote_relay::{run_server, RoomHub};
+use padnote_relay::{RoomHub, run_server};
 use std::env;
 use std::net::SocketAddr;
 
@@ -15,7 +15,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let addr: SocketAddr = format!("{}:{}", host, port).parse()?;
 
     println!("=======================================================");
-    println!("  Padnote Collaborative Relay Server v{}", env!("CARGO_PKG_VERSION"));
+    println!(
+        "  Padnote Collaborative Relay Server v{}",
+        env!("CARGO_PKG_VERSION")
+    );
     println!("  輕量 WebSocket 房間中繼微服務已啟動");
     println!("  監聽位址: ws://{}", addr);
     println!("=======================================================");

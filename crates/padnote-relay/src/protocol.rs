@@ -53,20 +53,11 @@ pub enum ClientMessage {
         payload: serde_json::Value,
     },
     /// 請求補發指定 Lamport 時鐘之後的遺漏 Oplog（斷線重連自我修復）
-    Catchup {
-        room_id: String,
-        last_lamport: u64,
-    },
+    Catchup { room_id: String, last_lamport: u64 },
     /// 離開房間
-    Leave {
-        room_id: String,
-        user_id: String,
-    },
+    Leave { room_id: String, user_id: String },
     /// 房主關閉房間並結束協同會議
-    CloseRoom {
-        room_id: String,
-        user_id: String,
-    },
+    CloseRoom { room_id: String, user_id: String },
     /// 心跳 Ping
     Ping,
 }
@@ -83,10 +74,7 @@ pub enum ServerMessage {
         peers: Vec<PeerInfo>,
     },
     /// 有新成員加入廣播
-    PeerJoined {
-        room_id: String,
-        peer: PeerInfo,
-    },
+    PeerJoined { room_id: String, peer: PeerInfo },
     /// 轉發成員的即時游標動態
     PeerPresence {
         room_id: String,
@@ -111,20 +99,11 @@ pub enum ServerMessage {
         oplogs: Vec<ServerMessage>,
     },
     /// 成員離開或斷線廣播
-    PeerLeft {
-        room_id: String,
-        user_id: String,
-    },
+    PeerLeft { room_id: String, user_id: String },
     /// 房間已被房主關閉
-    RoomClosed {
-        room_id: String,
-        reason: String,
-    },
+    RoomClosed { room_id: String, reason: String },
     /// 錯誤提示
-    Error {
-        code: String,
-        message: String,
-    },
+    Error { code: String, message: String },
     /// 心跳 Pong
     Pong,
 }

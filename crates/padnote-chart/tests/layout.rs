@@ -7,7 +7,11 @@
 use padnote_chart::*;
 
 fn series(name: &str, values: &[f64]) -> Series {
-    Series { name: name.into(), values: values.to_vec(), ..Default::default() }
+    Series {
+        name: name.into(),
+        values: values.to_vec(),
+        ..Default::default()
+    }
 }
 
 fn sample(kind: ChartKind) -> ChartSpec {
@@ -15,7 +19,10 @@ fn sample(kind: ChartKind) -> ChartSpec {
         kind,
         title: "季度營收".into(),
         categories: vec!["Q1".into(), "Q2".into(), "Q3".into(), "Q4".into()],
-        series: vec![series("北區", &[120.0, 150.0, 90.0, 200.0]), series("南區", &[80.0, 60.0, 130.0, 110.0])],
+        series: vec![
+            series("北區", &[120.0, 150.0, 90.0, 200.0]),
+            series("南區", &[80.0, 60.0, 130.0, 110.0]),
+        ],
         ..Default::default()
     }
 }
@@ -59,14 +66,19 @@ fn missing_fields_fall_back_to_defaults() {
     let spec = ChartSpec::from_json(r#"{"series":[{"values":[3]}]}"#).unwrap();
     assert_eq!(spec.kind, ChartKind::Bar);
     assert_eq!(spec.legend, LegendPosition::Bottom);
-    assert!(spec.y_axis.show_grid, "Y 軸格線預設要開，沒有格線的長條圖讀不出數量級");
+    assert!(
+        spec.y_axis.show_grid,
+        "Y 軸格線預設要開，沒有格線的長條圖讀不出數量級"
+    );
 }
 
 #[test]
 fn an_empty_spec_is_rejected_with_a_reason() {
     assert_eq!(ChartSpec::default().validate(), Err(SpecError::NoSeries));
-    let mut spec = ChartSpec::default();
-    spec.series = vec![series("空", &[])];
+    let spec = ChartSpec {
+        series: vec![series("空", &[])],
+        ..Default::default()
+    };
     assert_eq!(spec.validate(), Err(SpecError::NoValues));
 }
 
@@ -79,21 +91,38 @@ fn bars_start_from_zero() {
     spec.series = vec![series("只有高值", &[100.0, 102.0, 104.0])];
     let layout = layout(&spec, 480.0, 320.0).unwrap();
 
-    let shortest = layout.bars.iter().map(|b| b.height).fold(f64::INFINITY, f64::min);
+    let shortest = layout
+        .bars
+        .iter()
+        .map(|b| b.height)
+        .fold(f64::INFINITY, f64::min);
     let tallest = layout.bars.iter().map(|b| b.height).fold(0.0, f64::max);
     let ratio = shortest / tallest;
-    assert!(ratio > 0.9, "100 與 104 的長條長度不該差這麼多（比例 {ratio}）");
+    assert!(
+        ratio > 0.9,
+        "100 與 104 的長條長度不該差這麼多（比例 {ratio}）"
+    );
 }
 
 #[test]
 fn every_bar_stays_inside_the_plot_area() {
-    for kind in [ChartKind::Bar, ChartKind::StackedBar, ChartKind::HorizontalBar] {
+    for kind in [
+        ChartKind::Bar,
+        ChartKind::StackedBar,
+        ChartKind::HorizontalBar,
+    ] {
         let layout = layout(&sample(kind), 520.0, 360.0).unwrap();
         for bar in &layout.bars {
             assert!(bar.x >= layout.plot_x - 0.5, "{kind:?} 有長條伸出左邊界");
-            assert!(bar.x + bar.width <= layout.plot_x + layout.plot_width + 0.5, "{kind:?} 有長條伸出右邊界");
+            assert!(
+                bar.x + bar.width <= layout.plot_x + layout.plot_width + 0.5,
+                "{kind:?} 有長條伸出右邊界"
+            );
             assert!(bar.y >= layout.plot_y - 0.5, "{kind:?} 有長條伸出上邊界");
-            assert!(bar.y + bar.height <= layout.plot_y + layout.plot_height + 0.5, "{kind:?} 有長條伸出下邊界");
+            assert!(
+                bar.y + bar.height <= layout.plot_y + layout.plot_height + 0.5,
+                "{kind:?} 有長條伸出下邊界"
+            );
         }
     }
 }
@@ -104,7 +133,10 @@ fn grouped_bars_do_not_overlap() {
     let first: Vec<&PlotBar> = layout.bars.iter().filter(|b| b.point_index == 0).collect();
     assert_eq!(first.len(), 2, "同一類別要有兩根長條");
     let (a, b) = (first[0], first[1]);
-    assert!(a.x + a.width <= b.x + 0.01 || b.x + b.width <= a.x + 0.01, "同一類別的兩根長條疊在一起了");
+    assert!(
+        a.x + a.width <= b.x + 0.01 || b.x + b.width <= a.x + 0.01,
+        "同一類別的兩根長條疊在一起了"
+    );
 }
 
 #[test]
@@ -112,12 +144,15 @@ fn stacked_bars_sit_on_top_of_each_other() {
     let spec = sample(ChartKind::StackedBar);
     let layout = layout(&spec, 600.0, 360.0).unwrap();
     let mut first: Vec<&PlotBar> = layout.bars.iter().filter(|b| b.point_index == 0).collect();
-    first.sort_by(|a, b| a.series_index.cmp(&b.series_index));
+    first.sort_by_key(|a| a.series_index);
 
     assert_eq!(first[0].x, first[1].x, "堆疊的長條要在同一欄");
     assert_eq!(first[0].width, first[1].width);
     // 第二段的底要接在第一段的頂（螢幕 y 向下，所以第二段在上方）。
-    assert!((first[1].y + first[1].height - first[0].y).abs() < 0.5, "堆疊之間有縫或重疊");
+    assert!(
+        (first[1].y + first[1].height - first[0].y).abs() < 0.5,
+        "堆疊之間有縫或重疊"
+    );
 }
 
 #[test]
@@ -130,7 +165,10 @@ fn negative_values_extend_below_the_baseline() {
     let negative = &layout.bars[1];
     assert!(negative.y > positive.y, "負值的長條要落在正值下方");
     // 兩根共用同一條基線：正值的底 == 負值的頂。
-    assert!((positive.y + positive.height - negative.y).abs() < 0.5, "正負長條沒有共用基線");
+    assert!(
+        (positive.y + positive.height - negative.y).abs() < 0.5,
+        "正負長條沒有共用基線"
+    );
 }
 
 #[test]
@@ -182,17 +220,35 @@ fn stacked_areas_accumulate() {
 
 #[test]
 fn a_smooth_line_is_flagged_for_the_platform() {
-    assert!(layout(&sample(ChartKind::SmoothLine), 400.0, 300.0).unwrap().polylines[0].smooth);
-    assert!(!layout(&sample(ChartKind::Line), 400.0, 300.0).unwrap().polylines[0].smooth);
+    assert!(
+        layout(&sample(ChartKind::SmoothLine), 400.0, 300.0)
+            .unwrap()
+            .polylines[0]
+            .smooth
+    );
+    assert!(
+        !layout(&sample(ChartKind::Line), 400.0, 300.0)
+            .unwrap()
+            .polylines[0]
+            .smooth
+    );
 }
 
 #[test]
 fn scatter_points_span_the_full_width() {
     let layout = layout(&sample(ChartKind::Scatter), 520.0, 340.0).unwrap();
-    let xs: Vec<f64> = layout.scatter_points.iter().filter(|p| p.series_index == 0).map(|p| p.x).collect();
+    let xs: Vec<f64> = layout
+        .scatter_points
+        .iter()
+        .filter(|p| p.series_index == 0)
+        .map(|p| p.x)
+        .collect();
     assert_eq!(xs.len(), 4);
     assert!((xs[0] - layout.plot_x).abs() < 0.5, "第一點要貼齊左邊界");
-    assert!((xs[3] - (layout.plot_x + layout.plot_width)).abs() < 0.5, "最後一點要貼齊右邊界");
+    assert!(
+        (xs[3] - (layout.plot_x + layout.plot_width)).abs() < 0.5,
+        "最後一點要貼齊右邊界"
+    );
 }
 
 // ── 圓餅與環圈 ──────────────────────────────────────────────
@@ -204,8 +260,15 @@ fn pie_slices_add_up_to_a_full_turn() {
     let layout = layout(&spec, 400.0, 400.0).unwrap();
 
     assert_eq!(layout.slices.len(), 3);
-    let sweep: f64 = layout.slices.iter().map(|s| s.end_angle - s.start_angle).sum();
-    assert!((sweep - std::f64::consts::TAU).abs() < 1e-9, "扇形加起來不是一整圈");
+    let sweep: f64 = layout
+        .slices
+        .iter()
+        .map(|s| s.end_angle - s.start_angle)
+        .sum();
+    assert!(
+        (sweep - std::f64::consts::TAU).abs() < 1e-9,
+        "扇形加起來不是一整圈"
+    );
     let fractions: f64 = layout.slices.iter().map(|s| s.fraction).sum();
     assert!((fractions - 1.0).abs() < 1e-9);
 }
@@ -216,7 +279,10 @@ fn pie_slices_are_contiguous() {
     spec.series = vec![series("市佔", &[10.0, 20.0, 30.0, 40.0])];
     let layout = layout(&spec, 400.0, 400.0).unwrap();
     for pair in layout.slices.windows(2) {
-        assert!((pair[0].end_angle - pair[1].start_angle).abs() < 1e-12, "扇形之間有縫");
+        assert!(
+            (pair[0].end_angle - pair[1].start_angle).abs() < 1e-12,
+            "扇形之間有縫"
+        );
     }
 }
 
@@ -243,7 +309,13 @@ fn a_doughnut_has_a_hole_and_a_pie_does_not() {
     let doughnut = layout(&sample(ChartKind::Doughnut), 400.0, 400.0).unwrap();
     assert!(doughnut.slices[0].inner_radius > 0.0);
     assert!(doughnut.slices[0].inner_radius < doughnut.slices[0].radius);
-    assert_eq!(layout(&sample(ChartKind::Pie), 400.0, 400.0).unwrap().slices[0].inner_radius, 0.0);
+    assert_eq!(
+        layout(&sample(ChartKind::Pie), 400.0, 400.0)
+            .unwrap()
+            .slices[0]
+            .inner_radius,
+        0.0
+    );
 }
 
 #[test]
@@ -276,7 +348,10 @@ fn a_radar_closes_its_outline() {
 fn a_radar_has_one_spoke_per_category() {
     let layout = layout(&sample(ChartKind::Radar), 420.0, 420.0).unwrap();
     assert_eq!(layout.radar_spokes.len(), 4);
-    assert!(!layout.radar_rings.is_empty(), "沒有同心圈的雷達圖讀不出數值");
+    assert!(
+        !layout.radar_rings.is_empty(),
+        "沒有同心圈的雷達圖讀不出數值"
+    );
 }
 
 #[test]
@@ -297,12 +372,18 @@ fn tick_steps_are_readable_numbers() {
     spec.series = vec![series("零散", &[0.0, 33.3, 66.7, 97.4])];
     let layout = layout(&spec, 520.0, 340.0).unwrap();
 
-    let values: Vec<f64> = layout.y_ticks.iter().filter_map(|t| t.label.parse().ok()).collect();
+    let values: Vec<f64> = layout
+        .y_ticks
+        .iter()
+        .filter_map(|t| t.label.parse().ok())
+        .collect();
     assert!(values.len() >= 3);
     let step = values[1] - values[0];
     let normalized = step / 10f64.powf(step.log10().floor());
     assert!(
-        [1.0, 2.0, 5.0].iter().any(|n| (normalized - n).abs() < 1e-9),
+        [1.0, 2.0, 5.0]
+            .iter()
+            .any(|n| (normalized - n).abs() < 1e-9),
         "刻度間距 {step} 不是 1/2/5 的次方倍，軸上會出現沒人想讀的數字"
     );
 }
@@ -325,7 +406,11 @@ fn a_fixed_axis_range_is_honoured() {
     spec.y_axis.step = Some(100.0);
     let layout = layout(&spec, 520.0, 340.0).unwrap();
 
-    let values: Vec<f64> = layout.y_ticks.iter().filter_map(|t| t.label.parse().ok()).collect();
+    let values: Vec<f64> = layout
+        .y_ticks
+        .iter()
+        .filter_map(|t| t.label.parse().ok())
+        .collect();
     assert_eq!(values, vec![0.0, 100.0, 200.0, 300.0, 400.0, 500.0]);
 }
 
@@ -343,7 +428,11 @@ fn a_missing_category_name_falls_back_to_its_number() {
     spec.categories = vec!["Q1".into()];
     let layout = layout(&spec, 520.0, 340.0).unwrap();
     let labels: Vec<&str> = layout.x_ticks.iter().map(|t| t.label.as_str()).collect();
-    assert_eq!(labels, vec!["Q1", "2", "3", "4"], "缺名字要補序號，留白會讓軸看起來壞掉");
+    assert_eq!(
+        labels,
+        vec!["Q1", "2", "3", "4"],
+        "缺名字要補序號，留白會讓軸看起來壞掉"
+    );
 }
 
 #[test]
@@ -394,7 +483,10 @@ fn a_right_legend_shrinks_the_plot_area() {
 
     let b = layout(&bottom, 520.0, 340.0).unwrap();
     let r = layout(&right, 520.0, 340.0).unwrap();
-    assert!(r.plot_width < b.plot_width, "圖例放右邊卻沒有讓出寬度，會蓋到圖上");
+    assert!(
+        r.plot_width < b.plot_width,
+        "圖例放右邊卻沒有讓出寬度，會蓋到圖上"
+    );
     assert!(r.plot_height > b.plot_height);
 }
 
@@ -426,13 +518,20 @@ fn label_decimals_are_respected() {
     spec.label_decimals = 2;
     let layout = layout(&spec, 520.0, 340.0).unwrap();
     let texts: Vec<&str> = layout.labels.iter().map(|l| l.text.as_str()).collect();
-    assert!(texts.contains(&"0.13") || texts.contains(&"0.12"), "{texts:?}");
+    assert!(
+        texts.contains(&"0.13") || texts.contains(&"0.12"),
+        "{texts:?}"
+    );
 }
 
 #[test]
 fn the_title_is_emitted_once_and_centred() {
     let layout = layout(&sample(ChartKind::Bar), 520.0, 340.0).unwrap();
-    let titles: Vec<&TextLabel> = layout.labels.iter().filter(|l| l.text == "季度營收").collect();
+    let titles: Vec<&TextLabel> = layout
+        .labels
+        .iter()
+        .filter(|l| l.text == "季度營收")
+        .collect();
     assert_eq!(titles.len(), 1);
     assert!((titles[0].x - 260.0).abs() < 0.5);
 }
@@ -450,7 +549,10 @@ fn an_empty_title_leaves_no_gap() {
 
 #[test]
 fn a_tiny_canvas_reports_an_error_instead_of_drawing_nonsense() {
-    assert!(matches!(layout(&sample(ChartKind::Bar), 20.0, 20.0), Err(LayoutError::TooSmall)));
+    assert!(matches!(
+        layout(&sample(ChartKind::Bar), 20.0, 20.0),
+        Err(LayoutError::TooSmall)
+    ));
 }
 
 #[test]
@@ -468,7 +570,11 @@ fn non_finite_values_are_skipped_rather_than_poisoning_the_chart() {
     let mut spec = sample(ChartKind::Line);
     spec.series = vec![series("有洞", &[10.0, f64::NAN, 30.0])];
     let layout = layout(&spec, 400.0, 300.0).unwrap();
-    assert_eq!(layout.polylines[0].points.len(), 2, "NaN 應該跳過，不是畫到畫布外");
+    assert_eq!(
+        layout.polylines[0].points.len(),
+        2,
+        "NaN 應該跳過，不是畫到畫布外"
+    );
     for point in &layout.polylines[0].points {
         assert!(point.x.is_finite() && point.y.is_finite());
     }
@@ -487,13 +593,28 @@ fn series_shorter_than_the_category_list_still_render() {
 fn every_chart_kind_produces_something_drawable() {
     // 新增類型時最容易發生的事，是忘了接上版面引擎 —— 圖表會靜靜地空白。
     for kind in [
-        ChartKind::Bar, ChartKind::StackedBar, ChartKind::HorizontalBar,
-        ChartKind::Line, ChartKind::SmoothLine, ChartKind::Area, ChartKind::StackedArea,
-        ChartKind::Pie, ChartKind::Doughnut, ChartKind::Scatter, ChartKind::Radar,
+        ChartKind::Bar,
+        ChartKind::StackedBar,
+        ChartKind::HorizontalBar,
+        ChartKind::Line,
+        ChartKind::SmoothLine,
+        ChartKind::Area,
+        ChartKind::StackedArea,
+        ChartKind::Pie,
+        ChartKind::Doughnut,
+        ChartKind::Scatter,
+        ChartKind::Radar,
     ] {
-        let layout = layout(&sample(kind), 520.0, 400.0).unwrap_or_else(|e| panic!("{kind:?}：{e}"));
-        let drawn = layout.bars.len() + layout.slices.len() + layout.scatter_points.len()
-            + layout.polylines.iter().map(|p| p.points.len()).sum::<usize>();
+        let layout =
+            layout(&sample(kind), 520.0, 400.0).unwrap_or_else(|e| panic!("{kind:?}：{e}"));
+        let drawn = layout.bars.len()
+            + layout.slices.len()
+            + layout.scatter_points.len()
+            + layout
+                .polylines
+                .iter()
+                .map(|p| p.points.len())
+                .sum::<usize>();
         assert!(drawn > 0, "{kind:?} 算不出任何圖形");
     }
 }

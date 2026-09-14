@@ -433,7 +433,10 @@ mod tests {
     #[test]
     fn localized_version_string_matches_locale() {
         let en = localized_version_string(FfiLocale::English);
-        assert!(en.starts_with("Version "), "英文應以 Version 開頭，實得：{en}");
+        assert!(
+            en.starts_with("Version "),
+            "英文應以 Version 開頭，實得：{en}"
+        );
         assert!(en.contains(env!("CARGO_PKG_VERSION")));
 
         let zh = localized_version_string(FfiLocale::TraditionalChinese);

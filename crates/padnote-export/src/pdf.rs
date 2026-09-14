@@ -350,10 +350,7 @@ impl PdfWriter {
 
         // 1. Catalog
         self.start_object(catalog_id);
-        let _ = writeln!(
-            self.buf,
-            "<< /Type /Catalog /Pages {pages_tree_id} 0 R >>"
-        );
+        let _ = writeln!(self.buf, "<< /Type /Catalog /Pages {pages_tree_id} 0 R >>");
         self.end_object();
 
         // 2. Pages Tree
@@ -587,7 +584,11 @@ impl PdfWriter {
                 let _ = writeln!(content, "q 0.88 0.88 0.90 RG 0.75 w");
                 let mut y = height - 50.0;
                 while y >= 50.0 {
-                    let _ = writeln!(content, "36.0 {y:.2} m {x1:.2} {y:.2} l S", x1 = width - 36.0);
+                    let _ = writeln!(
+                        content,
+                        "36.0 {y:.2} m {x1:.2} {y:.2} l S",
+                        x1 = width - 36.0
+                    );
                     y -= 24.0;
                 }
                 content.extend_from_slice(b"Q\n");
@@ -635,7 +636,11 @@ impl PdfWriter {
                 while staff_top >= 80.0 {
                     for line in 0..5 {
                         let y = staff_top - (line as f32 * 8.0);
-                        let _ = writeln!(content, "36.0 {y:.2} m {x1:.2} {y:.2} l S", x1 = width - 36.0);
+                        let _ = writeln!(
+                            content,
+                            "36.0 {y:.2} m {x1:.2} {y:.2} l S",
+                            x1 = width - 36.0
+                        );
                     }
                     staff_top -= 64.0;
                 }
@@ -746,11 +751,8 @@ impl PdfWriter {
                                 if !cell_str.trim().is_empty() {
                                     let cell_x = bx + (c as f32 * col_w) + 4.0;
                                     let cell_y = pdf_y - (r as f32 * row_h) - 16.0;
-                                    let def_font = if *header_row && r == 0 {
-                                        "/F2"
-                                    } else {
-                                        "/F1"
-                                    };
+                                    let def_font =
+                                        if *header_row && r == 0 { "/F2" } else { "/F1" };
                                     let (font, literal) = format_pdf_text(cell_str, def_font);
                                     let _ = writeln!(
                                         content,
@@ -769,11 +771,12 @@ impl PdfWriter {
                     height: user_h,
                 } => {
                     // P1: 補齊圖片繪製指令與真實尺寸縮放
-                    if let Some((img_idx, img_info)) =
-                        images.iter().enumerate().find(|(_, img)| img.blob_key == *blob)
+                    if let Some((img_idx, img_info)) = images
+                        .iter()
+                        .enumerate()
+                        .find(|(_, img)| img.blob_key == *blob)
                     {
-                        let (pixel_w, pixel_h) =
-                            (img_info.pixel_w as f32, img_info.pixel_h as f32);
+                        let (pixel_w, pixel_h) = (img_info.pixel_w as f32, img_info.pixel_h as f32);
                         let (disp_w, disp_h) = if *user_w > 0.0 && *user_h > 0.0 {
                             (*user_w, *user_h)
                         } else {
@@ -912,7 +915,12 @@ mod tests {
             kind: BlockKind::Table {
                 rows: 2,
                 cols: 2,
-                cells: vec!["矩陣 A".into(), "特徵值".into(), "A1".into(), "λ1, λ2".into()],
+                cells: vec![
+                    "矩陣 A".into(),
+                    "特徵值".into(),
+                    "A1".into(),
+                    "λ1, λ2".into(),
+                ],
                 header_row: true,
                 merged_cells: vec![],
             },
@@ -960,10 +968,16 @@ mod tests {
         assert!(pdf_str.contains("/Type /Pages"), "需包含 Pages 樹");
         assert!(pdf_str.contains("/Type /Page"), "需包含 Page 物件");
         assert!(pdf_str.contains("/Type /Annot"), "需包含 Annot 標註物件");
-        assert!(pdf_str.contains("/Subtype /Ink"), "需包含 /Subtype /Ink 筆畫標註");
+        assert!(
+            pdf_str.contains("/Subtype /Ink"),
+            "需包含 /Subtype /Ink 筆畫標註"
+        );
         assert!(pdf_str.contains("/InkList"), "需包含 /InkList 標註點序列");
         assert!(pdf_str.contains("/F_CJK"), "需包含 CJK 字型宣告");
-        assert!(pdf_str.contains("<FEFF"), "中文需輸出為 UTF-16BE 十六進位字串");
+        assert!(
+            pdf_str.contains("<FEFF"),
+            "中文需輸出為 UTF-16BE 十六進位字串"
+        );
     }
 
     #[test]
@@ -982,8 +996,14 @@ mod tests {
         let pdf_raw = to_pdf(&nb, &strokes, None, &opt_raw).unwrap();
 
         let comp_str = String::from_utf8_lossy(&pdf_compressed);
-        assert!(comp_str.contains("/Filter /FlateDecode"), "需包含 Flate 壓縮濾鏡");
-        assert!(pdf_compressed.len() < pdf_raw.len(), "啟用 Flate 壓縮後檔案大小應當顯著小於未壓縮大小");
+        assert!(
+            comp_str.contains("/Filter /FlateDecode"),
+            "需包含 Flate 壓縮濾鏡"
+        );
+        assert!(
+            pdf_compressed.len() < pdf_raw.len(),
+            "啟用 Flate 壓縮後檔案大小應當顯著小於未壓縮大小"
+        );
     }
 
     #[test]
@@ -992,8 +1012,14 @@ mod tests {
         let page_id = nb.pages()[0].id;
         let page_strokes = &strokes[&page_id];
 
-        let pdf = page_to_pdf(&nb, page_id, page_strokes, None, &PdfExportOptions::default())
-            .unwrap();
+        let pdf = page_to_pdf(
+            &nb,
+            page_id,
+            page_strokes,
+            None,
+            &PdfExportOptions::default(),
+        )
+        .unwrap();
 
         assert!(pdf.starts_with(b"%PDF-1.7"));
         let pdf_str = String::from_utf8_lossy(&pdf);
@@ -1049,6 +1075,9 @@ mod tests {
 
         assert!(pdf_str.contains("/XObject << /Im0"), "需註冊 /Im0 XObject");
         assert!(pdf_str.contains("/Im0 Do"), "內容流需包含 /Im0 Do 繪製指令");
-        assert!(pdf_str.contains("/Width 10 /Height 10"), "需解析出 PNG 真實 10x10 寬高");
+        assert!(
+            pdf_str.contains("/Width 10 /Height 10"),
+            "需解析出 PNG 真實 10x10 寬高"
+        );
     }
 }

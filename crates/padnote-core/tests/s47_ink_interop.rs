@@ -18,9 +18,30 @@ fn tmp(name: &str) -> String {
 /// 刻意用不規則的數值：整數或 0 很容易讓「欄位接錯位置」的 bug 蒙混過關。
 fn sample_points() -> Vec<StrokePoint> {
     vec![
-        StrokePoint { x: 12.5, y: 300.25, pressure: 0.125, tilt: 0.75, azimuth: 1.5, dt_us: 0 },
-        StrokePoint { x: 13.75, y: 301.5, pressure: 0.5, tilt: 0.8, azimuth: 1.75, dt_us: 8_333 },
-        StrokePoint { x: 60.0, y: 280.125, pressure: 0.875, tilt: 0.2, azimuth: 4.5, dt_us: 8_334 },
+        StrokePoint {
+            x: 12.5,
+            y: 300.25,
+            pressure: 0.125,
+            tilt: 0.75,
+            azimuth: 1.5,
+            dt_us: 0,
+        },
+        StrokePoint {
+            x: 13.75,
+            y: 301.5,
+            pressure: 0.5,
+            tilt: 0.8,
+            azimuth: 1.75,
+            dt_us: 8_333,
+        },
+        StrokePoint {
+            x: 60.0,
+            y: 280.125,
+            pressure: 0.875,
+            tilt: 0.2,
+            azimuth: 4.5,
+            dt_us: 8_334,
+        },
     ]
 }
 
@@ -64,10 +85,19 @@ fn a_stroke_survives_write_then_read_without_losing_anything() {
     let points = sample_points();
 
     let id = s
-        .add_stroke(page.clone(), ToolKind::Highlighter, vec![10, 200, 30, 128], 4.25, points.clone())
+        .add_stroke(
+            page.clone(),
+            ToolKind::Highlighter,
+            vec![10, 200, 30, 128],
+            4.25,
+            points.clone(),
+        )
         .unwrap();
 
-    let got = s.stroke_detail(page, id.clone()).unwrap().expect("應該找得到剛寫入的筆畫");
+    let got = s
+        .stroke_detail(page, id.clone())
+        .unwrap()
+        .expect("應該找得到剛寫入的筆畫");
     assert_eq!(got.id, id);
     assert!(matches!(got.tool, ToolKind::Highlighter));
     assert_eq!(got.color_rgba, vec![10, 200, 30, 128]);
@@ -81,10 +111,17 @@ fn reopening_the_package_gives_back_the_same_bytes() {
     let path = tmp("reopen");
     let points = sample_points();
     let (page, id) = {
-        let s = PadnoteSession::create(path.clone(), "重開".into(), 1_757_635_200_000, 0xA2).unwrap();
+        let s =
+            PadnoteSession::create(path.clone(), "重開".into(), 1_757_635_200_000, 0xA2).unwrap();
         let page = s.first_page_id().unwrap();
         let id = s
-            .add_stroke(page.clone(), ToolKind::FountainPen, vec![0, 0, 0, 255], 2.0, points.clone())
+            .add_stroke(
+                page.clone(),
+                ToolKind::FountainPen,
+                vec![0, 0, 0, 255],
+                2.0,
+                points.clone(),
+            )
             .unwrap();
         (page, id)
     };
@@ -123,13 +160,22 @@ fn erased_strokes_do_not_come_back() {
     let s = PadnoteSession::create(tmp("erase"), "擦除".into(), 1_757_635_200_000, 0xA4).unwrap();
     let page = s.first_page_id().unwrap();
     let id = s
-        .add_stroke(page.clone(), ToolKind::Pencil, vec![9, 9, 9, 255], 1.5, sample_points())
+        .add_stroke(
+            page.clone(),
+            ToolKind::Pencil,
+            vec![9, 9, 9, 255],
+            1.5,
+            sample_points(),
+        )
         .unwrap();
 
     s.erase_stroke(page.clone(), id.clone()).unwrap();
 
     assert!(s.visible_stroke_details(page.clone()).unwrap().is_empty());
-    assert!(s.stroke_detail(page, id).unwrap().is_none(), "擦掉的筆畫不該被互通路徑撈回來");
+    assert!(
+        s.stroke_detail(page, id).unwrap().is_none(),
+        "擦掉的筆畫不該被互通路徑撈回來"
+    );
 }
 
 #[test]
@@ -150,7 +196,13 @@ fn many_points_survive_the_ffi_boundary() {
         .collect();
 
     let id = s
-        .add_stroke(page.clone(), ToolKind::BallPoint, vec![255, 0, 0, 255], 3.0, points.clone())
+        .add_stroke(
+            page.clone(),
+            ToolKind::BallPoint,
+            vec![255, 0, 0, 255],
+            3.0,
+            points.clone(),
+        )
         .unwrap();
     let got = s.stroke_detail(page, id).unwrap().unwrap();
     assert_points_identical(&points, &got.points);
@@ -164,10 +216,14 @@ fn page_height_survives_reopening() {
     // 沒有落盤的話另一個平台會變回預設高度，看起來像內容被截掉。
     let path = tmp("pagesize");
     let page = {
-        let s = PadnoteSession::create(path.clone(), "長畫布".into(), 1_757_635_200_000, 0xC1).unwrap();
+        let s =
+            PadnoteSession::create(path.clone(), "長畫布".into(), 1_757_635_200_000, 0xC1).unwrap();
         let page = s.first_page_id().unwrap();
         s.set_page_size(page.clone(), 595.0, 3_200.0).unwrap();
-        assert_eq!(s.page_size(page.clone()).unwrap(), Some(vec![595.0, 3_200.0]));
+        assert_eq!(
+            s.page_size(page.clone()).unwrap(),
+            Some(vec![595.0, 3_200.0])
+        );
         page
     };
 
@@ -184,18 +240,26 @@ fn block_position_survives_reopening() {
     // 文字方塊與圖片是絕對定位的。位置沒進 op-log 的話，跨平台打開會擠在一起。
     let path = tmp("blockpos");
     let block = {
-        let s = PadnoteSession::create(path.clone(), "定位".into(), 1_757_635_200_000, 0xC3).unwrap();
+        let s =
+            PadnoteSession::create(path.clone(), "定位".into(), 1_757_635_200_000, 0xC3).unwrap();
         let page = s.first_page_id().unwrap();
         let block = s
             .add_text(page, "會議重點".into(), padnote_core::ffi::BlockStyle::Body)
             .unwrap();
-        assert_eq!(s.block_position(block.clone()).unwrap(), None, "尚未定位前應為 None");
+        assert_eq!(
+            s.block_position(block.clone()).unwrap(),
+            None,
+            "尚未定位前應為 None"
+        );
         s.set_block_position(block.clone(), 120.5, 480.25).unwrap();
         block
     };
 
     let reopened = PadnoteSession::open_existing(path, 0xC4).unwrap();
-    assert_eq!(reopened.block_position(block).unwrap(), Some(vec![120.5, 480.25]));
+    assert_eq!(
+        reopened.block_position(block).unwrap(),
+        Some(vec![120.5, 480.25])
+    );
 }
 
 #[test]
@@ -218,7 +282,11 @@ fn every_page_can_be_reached_by_index() {
     assert_eq!(s.page_id_at(0), Some(first));
     assert_eq!(s.page_id_at(1), Some(second));
     assert_eq!(s.page_id_at(2), Some(third));
-    assert_eq!(s.page_id_at(3), None, "超出範圍要回 None，不是 panic 也不是最後一頁");
+    assert_eq!(
+        s.page_id_at(3),
+        None,
+        "超出範圍要回 None，不是 panic 也不是最後一頁"
+    );
 }
 
 // ---- 文字方塊的外觀（跨平台）----
@@ -230,24 +298,33 @@ fn block_appearance_survives_reopening() {
     let path = tmp("appearance");
     let style = r#"{"backgroundColorHex":"clear","lineSpacing":8,"hasBorder":false}"#;
     let block = {
-        let s = PadnoteSession::create(path.clone(), "外觀".into(), 1_757_635_200_000, 0xD1).unwrap();
+        let s =
+            PadnoteSession::create(path.clone(), "外觀".into(), 1_757_635_200_000, 0xD1).unwrap();
         let page = s.first_page_id().unwrap();
         let block = s
             .add_text(page, "會議重點".into(), padnote_core::ffi::BlockStyle::Body)
             .unwrap();
-        assert_eq!(s.block_appearance(block.clone()).unwrap(), None, "尚未設定前應為 None");
+        assert_eq!(
+            s.block_appearance(block.clone()).unwrap(),
+            None,
+            "尚未設定前應為 None"
+        );
         s.set_block_appearance(block.clone(), style.into()).unwrap();
         block
     };
 
     let reopened = PadnoteSession::open_existing(path, 0xD2).unwrap();
-    assert_eq!(reopened.block_appearance(block).unwrap().as_deref(), Some(style));
+    assert_eq!(
+        reopened.block_appearance(block).unwrap().as_deref(),
+        Some(style)
+    );
 }
 
 #[test]
 fn the_core_does_not_interpret_the_appearance_json() {
     // 核心不該對內容有任何假設 —— 平台之後新增欄位時不必動核心。
-    let s = PadnoteSession::create(tmp("opaque"), "不解讀".into(), 1_757_635_200_000, 0xD3).unwrap();
+    let s =
+        PadnoteSession::create(tmp("opaque"), "不解讀".into(), 1_757_635_200_000, 0xD3).unwrap();
     let page = s.first_page_id().unwrap();
     let block = s
         .add_text(page, "x".into(), padnote_core::ffi::BlockStyle::Body)
@@ -261,7 +338,8 @@ fn the_core_does_not_interpret_the_appearance_json() {
 #[test]
 fn appearance_on_a_missing_block_is_an_error_not_a_silent_noop() {
     // 靜默忽略的話，平台層會以為樣式存進去了，直到使用者發現它沒有跨過去。
-    let s = PadnoteSession::create(tmp("missappear"), "錯誤".into(), 1_757_635_200_000, 0xD4).unwrap();
+    let s =
+        PadnoteSession::create(tmp("missappear"), "錯誤".into(), 1_757_635_200_000, 0xD4).unwrap();
     let ghost = "00000000-0000-7000-8000-0000000000ee".to_string();
     assert!(s.set_block_appearance(ghost, "{}".into()).is_err());
 }
@@ -273,8 +351,20 @@ fn text_blocks_on_a_page_can_be_enumerated() {
     let s = PadnoteSession::create(tmp("enum"), "列舉".into(), 1_757_635_200_000, 0xD5).unwrap();
     let page = s.first_page_id().unwrap();
 
-    let a = s.add_text(page.clone(), "第一段".into(), padnote_core::ffi::BlockStyle::Body).unwrap();
-    let b = s.add_text(page.clone(), "第二段".into(), padnote_core::ffi::BlockStyle::Body).unwrap();
+    let a = s
+        .add_text(
+            page.clone(),
+            "第一段".into(),
+            padnote_core::ffi::BlockStyle::Body,
+        )
+        .unwrap();
+    let b = s
+        .add_text(
+            page.clone(),
+            "第二段".into(),
+            padnote_core::ffi::BlockStyle::Body,
+        )
+        .unwrap();
     // 圖片不是文字區塊，不該被列進來
     let blob = s.put_blob(vec![1, 2, 3]).unwrap();
     s.add_image(page.clone(), blob, 10.0, 10.0).unwrap();

@@ -143,7 +143,7 @@ impl NotebookSession {
         // 筆畫檔名要帶 device，兩台裝置才不會寫同一個檔（架構不變式 1）。
         let package = NotebookPackage::create(root, title, now_unix_ms)?.with_device(device);
         let id = Uuid::now_v7();
-        let mut session = Self {
+        let session = Self {
             package,
             notebook: Notebook::new(id, title),
             timeline: Timeline::new(),
@@ -699,10 +699,11 @@ impl NotebookSession {
             let old_cols = *cols as usize;
             let new_cols = old_cols + 1;
             let mut next = Vec::with_capacity((*rows as usize) * new_cols);
-            for r in 0..*rows as usize {
+            // incoming 在上面已 resize + truncate 成剛好 rows 長，可直接迭代。
+            for (r, cell) in incoming.iter().enumerate() {
                 let row_start = r * old_cols;
                 next.extend_from_slice(&cells[row_start..row_start + at as usize]);
-                next.push(incoming[r].clone());
+                next.push(cell.clone());
                 next.extend_from_slice(&cells[row_start + at as usize..row_start + old_cols]);
             }
             *cells = next;
@@ -1762,7 +1763,10 @@ impl NotebookSession {
     }
 
     /// 匯出整份筆記本為 PDF 位元組流（工作項 S-18 / S-43）。
-    pub fn export_pdf(&self, options: &padnote_export::PdfExportOptions) -> Result<Vec<u8>, AppError> {
+    pub fn export_pdf(
+        &self,
+        options: &padnote_export::PdfExportOptions,
+    ) -> Result<Vec<u8>, AppError> {
         let mut strokes_map = std::collections::HashMap::new();
         for page in self.notebook.pages() {
             if let Ok(strokes) = self.visible_strokes(page.id) {
@@ -1807,13 +1811,9 @@ impl NotebookSession {
             page_range: None,
             compress_streams: false,
         };
-        if let Ok(_pdf_bytes) = padnote_export::page_to_pdf(
-            &self.notebook,
-            page_id,
-            &strokes,
-            Some(&blobs),
-            &pdf_opt,
-        ) {
+        if let Ok(_pdf_bytes) =
+            padnote_export::page_to_pdf(&self.notebook, page_id, &strokes, Some(&blobs), &pdf_opt)
+        {
             // `pdf` feature 關閉時（Android 第一版沒有 libpdfium）直接跳過，
             // 由下面的純 Rust 光柵化 fallback 接手。
             #[cfg(feature = "pdf")]
@@ -1837,12 +1837,7 @@ impl NotebookSession {
             scale,
             include_background: true,
         };
-        Ok(padnote_export::to_png(
-            page,
-            &strokes,
-            Some(&blobs),
-            &opt,
-        )?)
+        Ok(padnote_export::to_png(page, &strokes, Some(&blobs), &opt)?)
     }
 
     /// 產出列印專用資料（工作項 S-55）。`page_id` 為 `None` 時列印整份筆記本。
@@ -1895,8 +1890,16 @@ mod tests {
         let mut s = session("dedup-distinct-pages");
         let before = s.notebook().page_count();
         s.apply_remote(&[
-            DocOp::AddPage { id: Uuid::now_v7(), template: PageTemplate::Blank, index: 0 },
-            DocOp::AddPage { id: Uuid::now_v7(), template: PageTemplate::Blank, index: 0 },
+            DocOp::AddPage {
+                id: Uuid::now_v7(),
+                template: PageTemplate::Blank,
+                index: 0,
+            },
+            DocOp::AddPage {
+                id: Uuid::now_v7(),
+                template: PageTemplate::Blank,
+                index: 0,
+            },
         ]);
         assert_eq!(s.notebook().page_count(), before + 2);
     }

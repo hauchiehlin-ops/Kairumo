@@ -51,9 +51,7 @@ impl SessionKey {
         let raw = BASE64
             .decode(encoded.trim())
             .map_err(|_| SessionCryptoError::InvalidKey)?;
-        let bytes: [u8; 32] = raw
-            .try_into()
-            .map_err(|_| SessionCryptoError::InvalidKey)?;
+        let bytes: [u8; 32] = raw.try_into().map_err(|_| SessionCryptoError::InvalidKey)?;
         Ok(Self(bytes))
     }
 
