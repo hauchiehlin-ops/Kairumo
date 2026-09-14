@@ -43,6 +43,23 @@ done
 
 step() { echo ""; echo "━━━ $* ━━━"; }
 
+# 升版會改動九個檔案。中途 Ctrl-C 或任何一步失敗，半套的版本號就會留在
+# 工作目錄裡，下次發版被閘門擋下還得自己收拾（實際踩過）。
+# 除了「真的發版成功並已建立 commit」以外，一律還原。
+BUMPED=0
+RELEASED=0
+cleanup() {
+    if [[ "$BUMPED" -eq 1 && "$RELEASED" -eq 0 ]]; then
+        echo ""
+        echo "↩️  發版未完成，還原版本號改動…"
+        git -C "$REPO_ROOT" checkout -- . 2>/dev/null || true
+    fi
+}
+trap cleanup EXIT
+# INT/TERM 要另外接：只掛在 trap 上的話，handler 跑完會回到原處繼續執行，
+# Ctrl-C 之後腳本還會若無其事地往下跑。這裡明確結束。
+trap 'trap - EXIT; cleanup; echo "   已中斷。"; exit 130' INT TERM
+
 # 工作目錄必須乾淨。混著未提交的改動發版，事後根本分不清送出去的是哪個版本。
 if [[ -n "$(git status --porcelain)" ]]; then
     echo "❌ 工作目錄有未提交的改動，發版中止：" >&2
@@ -51,6 +68,7 @@ if [[ -n "$(git status --porcelain)" ]]; then
 fi
 
 step "1/5 升版本號"
+BUMPED=1
 BUMP_OUT="$("${SCRIPT_DIR}/bump-version.sh" "${BUMP_ARGS[@]:-patch}")"
 echo "$BUMP_OUT"
 NEW_VERSION="$(echo "$BUMP_OUT"  | sed -n 's/^NEW_VERSION=//p')"
@@ -80,8 +98,7 @@ fi
 
 step "5/5 發版 commit"
 if [[ "$DRY_RUN" -eq 1 ]]; then
-    echo "   --dry-run：不建立 commit，版本號改動仍留在工作目錄。"
-    echo "   要還原：git checkout -- ."
+    echo "   --dry-run：不建立 commit，版本號改動會在結束時自動還原。"
 else
     # 訊息格式必須是 chore(release): bump version to vX.Y.Z ——
     # pre-push hook 認這個字串才會跳過自動升版，否則 push 時會再偷升一版，
@@ -89,6 +106,7 @@ else
     git add -A
     git commit -q -m "chore(release): bump version to v${NEW_VERSION} (bundle ${NEW_BUNDLE})"
     git tag -f "v${NEW_VERSION}" >/dev/null
+    RELEASED=1
     echo "   ✅ 已建立 commit 與 tag v${NEW_VERSION}"
 fi
 
