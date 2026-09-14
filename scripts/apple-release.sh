@@ -154,10 +154,6 @@ echo "📦 [3/4] 封裝 (版本: v${APP_VER}, Bundle: ${BUNDLE_VER})..."
 
 ACTION_NAME="上傳"
 ALTOOL_ACTION="--upload-app"
-if [[ "$VALIDATE_ONLY" -eq 1 ]]; then
-    ACTION_NAME="驗證"
-    ALTOOL_ACTION="--validate-app"
-fi
 
 # 把「封裝 → 匯出 → 上傳」抽成一段，兩個平台走同一條路。
 #
@@ -200,6 +196,18 @@ archive_export_upload() {
     fi
     echo "✅ ${label} 產出：$package"
 
+    # --validate-only 不碰 App Store Connect。
+    #
+    # 原本這裡是走 altool --validate-app。那看似無害，實際上會在 ASC 註冊一筆
+    # build 紀錄卻不送出 IPA —— TestFlight 清單看得到、狀態還顯示「正在測試」，
+    # 但裝置按下安裝時伺服器回 200 卻沒有檔案，錯誤是
+    # 「Error Downloading Install Data / 要求的 App 無法使用或不存在」。
+    # 一顆裝不起來的幽靈 build，比不驗證還糟。本機打包成功就是最有價值的驗證。
+    if [[ "$VALIDATE_ONLY" -eq 1 ]]; then
+        echo "🔍 --validate-only：${label} 已在本機打包完成，不送出至 App Store Connect。"
+        return 0
+    fi
+
     echo "🚀 正在${ACTION_NAME} ${label} 至 App Store Connect..."
     if [[ -n "${APP_STORE_CONNECT_API_KEY_ID:-}" && -n "${APP_STORE_CONNECT_ISSUER_ID:-}" && -n "${APP_STORE_CONNECT_KEY_PATH:-}" ]]; then
         local keys_dir="${HOME}/.appstoreconnect/private_keys"
@@ -229,7 +237,11 @@ archive_export_upload() {
     fi
 }
 
-echo "🚀 [4/4] ${ACTION_NAME}至 App Store Connect"
+if [[ "$VALIDATE_ONLY" -eq 1 ]]; then
+    echo "🔍 [4/4] 僅本機打包驗證（不送出至 App Store Connect）"
+else
+    echo "🚀 [4/4] ${ACTION_NAME}至 App Store Connect"
+fi
 archive_export_upload "iPhone / iPad" "generic/platform=iOS" "ios"
 
 if [[ "$BUILD_MAC" -eq 1 ]]; then
