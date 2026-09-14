@@ -190,7 +190,7 @@ fn parse_png_image(data: &[u8]) -> Option<(u32, u32, Vec<u8>)> {
         png::ColorType::Rgb => buf[..info.buffer_size()].to_vec(),
         png::ColorType::Rgba => {
             let mut out = Vec::with_capacity((w * h * 3) as usize);
-            for chunk in buf[..info.buffer_size()].chunks_exact(4) {
+            for chunk in buf[..info.buffer_size()].as_chunks::<4>().0 {
                 out.extend_from_slice(&chunk[0..3]);
             }
             out
@@ -204,7 +204,7 @@ fn parse_png_image(data: &[u8]) -> Option<(u32, u32, Vec<u8>)> {
         }
         png::ColorType::GrayscaleAlpha => {
             let mut out = Vec::with_capacity((w * h * 3) as usize);
-            for chunk in buf[..info.buffer_size()].chunks_exact(2) {
+            for chunk in buf[..info.buffer_size()].as_chunks::<2>().0 {
                 let g = chunk[0];
                 out.extend_from_slice(&[g, g, g]);
             }

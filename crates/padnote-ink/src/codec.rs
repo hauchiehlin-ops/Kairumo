@@ -194,8 +194,12 @@ impl<'a> StrokeReader<'a> {
                 if pts.len() < count * POINT_LEN {
                     return Err(CodecError::Truncated);
                 }
+                // as_chunks 直接產生 &[u8; POINT_LEN]，長度在型別層就固定住，
+                // 比 chunks_exact 少一次執行期長度檢查（clippy 1.98 起會要求）。
                 let points = pts
-                    .chunks_exact(POINT_LEN)
+                    .as_chunks::<POINT_LEN>()
+                    .0
+                    .iter()
                     .take(count)
                     .map(|c| InkPoint {
                         x: f32::from_le_bytes(c[0..4].try_into().unwrap()),
