@@ -141,8 +141,14 @@ cat << PLIST_EOF > "$EXPORT_PLIST"
     <false/>
     <key>uploadSymbols</key>
     <true/>
+    <!-- 必須是 false。true 會讓 Xcode 在**匯出時**自行改寫版本與 build 號：
+         archive 是 2.10.0 (23)，匯出的 IPA 卻變成 2.10.0 (24)，
+         repo 因此永遠比 App Store Connect 少一號，
+         check-version-consistency.sh 這道閘門也被從背後繞過。
+         關掉之後，build 號一律由 bump-version.sh 決定；
+         若號碼撞號，上傳會直接失敗 —— 那正是我們要的，而不是靜默改寫。 -->
     <key>manageAppVersionAndBuildNumber</key>
-    <true/>
+    <false/>
 </dict>
 </plist>
 PLIST_EOF
