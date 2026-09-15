@@ -2951,6 +2951,22 @@ extension LocalizationManager {
             .ko: "최소화",
             .th: "ย่อหน้าต่าง"
         ],
+        "mode_draw": [
+            .zhHant: "手寫",
+            .en: "Draw",
+            .zhHans: "手写",
+            .ja: "手書き",
+            .ko: "필기",
+            .th: "เขียน"
+        ],
+        "mode_type": [
+            .zhHant: "打字",
+            .en: "Type",
+            .zhHans: "打字",
+            .ja: "入力",
+            .ko: "입력",
+            .th: "พิมพ์"
+        ],
         "model3d_count": [
             .zhHant: "3D 模型",
             .en: "3D",

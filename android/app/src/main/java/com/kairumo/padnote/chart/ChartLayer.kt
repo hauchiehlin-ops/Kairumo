@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.kairumo.padnote.canvas.gesturesIf
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
@@ -27,6 +28,15 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun ChartLayer(
+    /**
+     * 這一層要不要吃觸控。
+     *
+     * 手寫模式下一律 false：使用者拿筆想在物件上圈重點，筆畫要到得了
+     * 底下的畫布。與 Apple 端 `allowsHitTesting(editorMode != .draw)`
+     * 是同一條規則 —— 兩邊不一致的話，同一個人換裝置就會發現
+     * 「在 iPad 上圈得到重點，在 Android 上圈不到」。
+     */
+    interactive: Boolean,
     charts: List<ChartObject>,
     density: Float,
     selectedId: String?,
@@ -37,7 +47,9 @@ fun ChartLayer(
 ) {
     Box(modifier = modifier) {
         for (chart in charts) {
-            ChartObjectView(chart, density, chart.id == selectedId, onSelect, onEdit, onChanged)
+            ChartObjectView(
+                chart, density, chart.id == selectedId, onSelect, onEdit, onChanged,
+                interactive = interactive)
         }
     }
 }
@@ -49,7 +61,9 @@ private fun ChartObjectView(
     isSelected: Boolean,
     onSelect: (String?) -> Unit,
     onEdit: (ChartObject) -> Unit,
-    onChanged: (ChartObject) -> Unit
+    onChanged: (ChartObject) -> Unit,
+    /** 見同檔案公開版本的說明。 */
+    interactive: Boolean = true
 ) {
     val foreground = MaterialTheme.colorScheme.onSurface
     val grid = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
@@ -63,14 +77,14 @@ private fun ChartObjectView(
                 MaterialTheme.colorScheme.primary,
                 RoundedCornerShape(6.dp)
             )
-            .pointerInput(chart.id) {
+            .gesturesIf(interactive) { pointerInput(chart.id) {
                 detectTapGestures(
                     onTap = { onSelect(chart.id) },
                     // 點兩下進編輯器 —— 這就是「可重新編修」在畫布上的入口。
                     onDoubleTap = { onEdit(chart) }
                 )
-            }
-            .pointerInput(chart.id) {
+            } }
+            .gesturesIf(interactive) { pointerInput(chart.id) {
                 detectDragGestures { change, drag ->
                     change.consume()
                     onChanged(
@@ -80,7 +94,7 @@ private fun ChartObjectView(
                         )
                     )
                 }
-            }
+            } }
     ) {
         Canvas(Modifier.size((chart.width / density).dp, (chart.height / density).dp)) {
             val layout = ChartRenderer.layout(chart.spec, size.width, size.height) ?: return@Canvas

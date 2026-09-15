@@ -2946,6 +2946,22 @@ object LocalizationStrings {
             "ko" to "최소화",
             "th" to "ย่อหน้าต่าง"
         ),
+        "mode_draw" to mapOf(
+            "zh-Hant" to "手寫",
+            "en" to "Draw",
+            "zh-Hans" to "手写",
+            "ja" to "手書き",
+            "ko" to "필기",
+            "th" to "เขียน"
+        ),
+        "mode_type" to mapOf(
+            "zh-Hant" to "打字",
+            "en" to "Type",
+            "zh-Hans" to "打字",
+            "ja" to "入力",
+            "ko" to "입력",
+            "th" to "พิมพ์"
+        ),
         "model3d_count" to mapOf(
             "zh-Hant" to "3D 模型",
             "en" to "3D",

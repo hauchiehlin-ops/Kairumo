@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.kairumo.padnote.canvas.gesturesIf
 import androidx.compose.ui.graphics.graphicsLayer
 import com.kairumo.padnote.canvas.CanvasRotation
 import com.kairumo.padnote.canvas.ResizeHandle
@@ -37,6 +38,15 @@ import androidx.compose.ui.unit.sp
  */
 @Composable
 fun ShapeLayer(
+    /**
+     * 這一層要不要吃觸控。
+     *
+     * 手寫模式下一律 false：使用者拿筆想在物件上圈重點，筆畫要到得了
+     * 底下的畫布。與 Apple 端 `allowsHitTesting(editorMode != .draw)`
+     * 是同一條規則 —— 兩邊不一致的話，同一個人換裝置就會發現
+     * 「在 iPad 上圈得到重點，在 Android 上圈不到」。
+     */
+    interactive: Boolean,
     shapes: List<NoteShape>,
     connections: List<NoteConnection>,
     density: Float,
@@ -79,7 +89,7 @@ fun ShapeLayer(
         for (shape in shapes) {
             ShapeObjectView(
                 shape, density, selectedIds.contains(shape.id), onSelect, onEdit,
-                onEditStyle, onChanged)
+                onEditStyle, onChanged, interactive = interactive)
         }
     }
 }
@@ -92,7 +102,9 @@ private fun ShapeObjectView(
     onSelect: (String?) -> Unit,
     onEdit: (NoteShape) -> Unit,
     onEditStyle: (NoteShape) -> Unit,
-    onChanged: (NoteShape) -> Unit
+    onChanged: (NoteShape) -> Unit,
+    /** 見同檔案公開版本的說明。 */
+    interactive: Boolean = true
 ) {
     val foreground = MaterialTheme.colorScheme.onSurface
     val stroke = shape.strokeColorHex?.let { parseColor(it) } ?: foreground
@@ -118,13 +130,13 @@ private fun ShapeObjectView(
                 MaterialTheme.colorScheme.primary,
                 RoundedCornerShape(2.dp)
             )
-            .pointerInput(shape.id) {
+            .gesturesIf(interactive) { pointerInput(shape.id) {
                 detectTapGestures(
                     onTap = { onSelect(shape.id) },
                     onDoubleTap = { onEdit(shape) }
                 )
-            }
-            .pointerInput(shape.id) {
+            } }
+            .gesturesIf(interactive) { pointerInput(shape.id) {
                 detectDragGestures { change, drag ->
                     change.consume()
                     onChanged(
@@ -134,7 +146,7 @@ private fun ShapeObjectView(
                         }
                     )
                 }
-            },
+            } },
         contentAlignment = Alignment.Center
     ) {
         Canvas(Modifier.fillMaxSize()) {

@@ -46,6 +46,7 @@ import com.kairumo.padnote.backup.BackupManager
 import com.kairumo.padnote.text.TextBox
 import com.kairumo.padnote.text.TextBoxEditor
 import com.kairumo.padnote.account.AccountManager
+import com.kairumo.padnote.canvas.EditorMode
 import com.kairumo.padnote.account.IdentityDialog
 import com.kairumo.padnote.library.HomeScreen
 import com.kairumo.padnote.library.RenameNotebookDialog
@@ -397,6 +398,15 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     var showInkDebug by remember { mutableStateOf(false) }
     var deletingPage by remember { mutableStateOf(false) }
 
+    /**
+     * 手寫／打字模式。**與 Apple 端的 EditorMode 同一組語意。**
+     *
+     * 在此之前 Android 沒有這個概念：物件層永遠吃觸控，於是拿筆想在一張圖
+     * 上圈重點，筆畫根本到不了畫布 —— 而那在一個手寫筆記 App 裡是最該能做
+     * 的事之一。iPad 上圈得到、Android 上圈不到，同一個人換裝置就會發現。
+     */
+    var editorMode by remember { mutableStateOf(EditorMode.DRAW) }
+
     // 系統返回鍵＝回首頁。Android 使用者按的第一個東西就是它，
     // 不接的話按下去會直接把 App 關掉 —— 看起來像當掉。
     if (onBack != null) {
@@ -438,6 +448,28 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 },
                 label = { Text(l10n("ink_pen_only")) }
             )
+            // 手寫／打字切換。與 Apple 端一樣放在最前面 ——
+            // 它決定了其餘每一個工具的意義。
+            FilterChip(
+                selected = editorMode == EditorMode.DRAW,
+                onClick = {
+                    editorMode = EditorMode.DRAW
+                    // 切回手寫時要清掉選取。留著的話，畫面上會浮著一組
+                    // 旋轉／樣式／縮放把手，而它們在手寫模式下完全按不動
+                    // —— 看得到、點不到的控制項比沒有更糟。
+                    selectedTextId = null
+                    selectedShapeIds = emptySet()
+                    selectedTableId = null
+                    selectedChartId = null
+                },
+                label = { Text(l10n("mode_draw")) }
+            )
+            FilterChip(
+                selected = editorMode == EditorMode.TYPE,
+                onClick = { editorMode = EditorMode.TYPE },
+                label = { Text(l10n("mode_type")) }
+            )
+
             // 分頁導覽。與 Apple 端同一組：上一頁 · 頁碼 · 下一頁 · 新增。
             TextButton(
                 onClick = { if (pageIndex > 0) pageIndex-- },
@@ -710,6 +742,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             // 文字方塊疊在墨跡之上 —— 與 Apple 端的疊放順序一致。
             key(textRevision) {
                 TextBoxLayer(
+                    interactive = editorMode == EditorMode.TYPE,
                     boxes = textStore.all,
                     density = canvasDensity,
                     selectedId = selectedTextId,
@@ -722,6 +755,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             // 形狀與連接線。
             key(shapeRevision) {
                 ShapeLayer(
+                    interactive = editorMode == EditorMode.TYPE,
                     shapes = shapeStore.all,
                     connections = shapeStore.allConnections,
                     density = canvasDensity,
@@ -768,6 +802,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             // 表格疊在文字方塊之上。
             key(tableRevision) {
                 TableLayer(
+                    interactive = editorMode == EditorMode.TYPE,
                     tables = tableStore.all,
                     density = canvasDensity,
                     selectedId = selectedTableId,
@@ -781,6 +816,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             // 圖表疊在文字方塊之上 —— 與 Apple 端的疊放順序一致。
             key(chartRevision) {
                 ChartLayer(
+                    interactive = editorMode == EditorMode.TYPE,
                     charts = chartStore.all,
                     density = canvasDensity,
                     selectedId = selectedChartId,

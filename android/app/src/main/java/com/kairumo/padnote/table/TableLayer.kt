@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.kairumo.padnote.canvas.gesturesIf
 import androidx.compose.ui.graphics.graphicsLayer
 import com.kairumo.padnote.canvas.CanvasRotation
 import com.kairumo.padnote.canvas.RotationHandle
@@ -34,6 +35,15 @@ import androidx.compose.ui.unit.dp
  */
 @Composable
 fun TableLayer(
+    /**
+     * 這一層要不要吃觸控。
+     *
+     * 手寫模式下一律 false：使用者拿筆想在物件上圈重點，筆畫要到得了
+     * 底下的畫布。與 Apple 端 `allowsHitTesting(editorMode != .draw)`
+     * 是同一條規則 —— 兩邊不一致的話，同一個人換裝置就會發現
+     * 「在 iPad 上圈得到重點，在 Android 上圈不到」。
+     */
+    interactive: Boolean,
     tables: List<NoteTable>,
     density: Float,
     selectedId: String?,
@@ -44,7 +54,9 @@ fun TableLayer(
 ) {
     Box(modifier = modifier) {
         for (table in tables) {
-            TableObjectView(table, density, table.id == selectedId, onSelect, onEdit, onChanged)
+            TableObjectView(
+                table, density, table.id == selectedId, onSelect, onEdit, onChanged,
+                interactive = interactive)
         }
     }
 }
@@ -56,7 +68,9 @@ private fun TableObjectView(
     isSelected: Boolean,
     onSelect: (String?) -> Unit,
     onEdit: (NoteTable) -> Unit,
-    onChanged: (NoteTable) -> Unit
+    onChanged: (NoteTable) -> Unit,
+    /** 見同檔案公開版本的說明。 */
+    interactive: Boolean = true
 ) {
     val layout = table.layout()
     val foreground = MaterialTheme.colorScheme.onSurface
@@ -85,14 +99,14 @@ private fun TableObjectView(
                 MaterialTheme.colorScheme.primary,
                 RoundedCornerShape(4.dp)
             )
-            .pointerInput(table.id) {
+            .gesturesIf(interactive) { pointerInput(table.id) {
                 detectTapGestures(
                     onTap = { onSelect(table.id) },
                     // 點兩下進編輯面板 —— 與 Apple 端一致。
                     onDoubleTap = { onEdit(table) }
                 )
-            }
-            .pointerInput(table.id) {
+            } }
+            .gesturesIf(interactive) { pointerInput(table.id) {
                 detectDragGestures { change, drag ->
                     change.consume()
                     onChanged(
@@ -102,7 +116,7 @@ private fun TableObjectView(
                         }
                     )
                 }
-            }
+            } }
     ) {
         Canvas(Modifier.size((layout.width / density).dp, (layout.height / density).dp)) {
             val scale = 1f / density

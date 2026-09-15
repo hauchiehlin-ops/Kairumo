@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import com.kairumo.padnote.canvas.gesturesIf
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -44,6 +45,15 @@ const val TEXT_BOX_PADDING = 14f
 
 @Composable
 fun TextBoxLayer(
+    /**
+     * 這一層要不要吃觸控。
+     *
+     * 手寫模式下一律 false：使用者拿筆想在物件上圈重點，筆畫要到得了
+     * 底下的畫布。與 Apple 端 `allowsHitTesting(editorMode != .draw)`
+     * 是同一條規則 —— 兩邊不一致的話，同一個人換裝置就會發現
+     * 「在 iPad 上圈得到重點，在 Android 上圈不到」。
+     */
+    interactive: Boolean,
     boxes: List<TextBox>,
     density: Float,
     selectedId: String?,
@@ -54,6 +64,7 @@ fun TextBoxLayer(
     Box(modifier = modifier) {
         for (box in boxes) {
             TextBoxView(
+                interactive = interactive,
                 box = box,
                 density = density,
                 isSelected = box.id == selectedId,
@@ -66,6 +77,8 @@ fun TextBoxLayer(
 
 @Composable
 private fun TextBoxView(
+    /** 見 TextBoxLayer 的說明。 */
+    interactive: Boolean,
     box: TextBox,
     density: Float,
     isSelected: Boolean,
@@ -98,7 +111,7 @@ private fun TextBoxView(
                     Modifier
                 }
             )
-            .pointerInput(box.id) {
+            .gesturesIf(interactive) { pointerInput(box.id) {
                 detectDragGestures(
                     onDragStart = { onSelect() },
                     onDrag = { change, drag ->
@@ -109,7 +122,7 @@ private fun TextBoxView(
                     },
                     onDragEnd = { onChanged(box) }
                 )
-            }
+            } }
             .padding(TEXT_BOX_PADDING.dp)
     ) {
         Text(
