@@ -62,7 +62,8 @@ fun ShapeLayer(
     Box(modifier = modifier) {
         // 連接線先畫 —— 畫在形狀之上的話，線會壓過方塊的邊，看起來像穿幫。
         Canvas(Modifier.fillMaxSize()) {
-            val scale = 1f / density
+            // Canvas 內部的座標是**像素**，而頂點是頁面點 —— 要乘上 density。
+            val scale = density
             for (link in connections) {
                 val from = shapes.firstOrNull { it.id == link.fromShapeId } ?: continue
                 val to = shapes.firstOrNull { it.id == link.toShapeId } ?: continue
@@ -116,12 +117,19 @@ private fun ShapeObjectView(
 
     val rotation = CanvasRotation.normalized(shape.rotationDegrees ?: 0f)
 
+    // 座標的單位是**頁面點**（＝dp），與 Apple 端和 format-spec 一致。
+    //
+    // 原本這裡把存下來的值當成**像素**在用（offset 與 size 都除以 density，
+    // 拖曳再乘回去）。在 density = 1.0 的模擬器上看不出差別 —— 但真實手機
+    // 是 2～3.5 倍，同一本筆記裡的形狀會縮到三分之一並擠在左上角，
+    // 而同一份筆記在 iPad 上位置是對的。文字方塊一直都用 dp，兩套並存
+    // 代表同一頁裡的文字與形狀連相對位置都對不上。
     // 外層只定位、不旋轉 —— 旋轉把手掛在這一層。
-    Box(Modifier.offset((shape.x / density).dp, (shape.y / density).dp)) {
+    Box(Modifier.offset(shape.x.dp, shape.y.dp)) {
 
     Box(
         Modifier
-            .size((shape.width / density).dp, (shape.height / density).dp)
+            .size(shape.width.dp, shape.height.dp)
             // 整個視圖一起轉（輪廓 + 標籤）。核心的 outline 刻意不轉：
             // 只轉輪廓的話標籤會留在正的，而且轉過的輪廓會超出畫布被裁掉。
             .graphicsLayer { rotationZ = rotation }
@@ -141,8 +149,8 @@ private fun ShapeObjectView(
                     change.consume()
                     onChanged(
                         shape.copyShape().apply {
-                            x = shape.x + drag.x * density
-                            y = shape.y + drag.y * density
+                            x = shape.x + drag.x / density
+                            y = shape.y + drag.y / density
                         }
                     )
                 }
@@ -152,7 +160,8 @@ private fun ShapeObjectView(
         Canvas(Modifier.fillMaxSize()) {
             val points = shape.outline()
             if (points.size < 2) return@Canvas
-            val scale = 1f / density
+            // Canvas 內部是像素，頂點是頁面點 —— 乘上 density。
+            val scale = density
             val linear = shape.isLinear
             val path = Path().apply {
                 // 頂點是畫布座標，這個 Canvas 的原點在物件左上角 —— 要減掉偏移。
@@ -193,22 +202,22 @@ private fun ShapeObjectView(
             // 一個流程圖節點要配合文字長短，不能調大小等於不能用。
             // 樣式鈕：線條顏色、填滿顏色、線條粗細、標籤。
             StyleHandle(
-                widthDp = shape.width / density,
-                heightDp = shape.height / density,
+                widthDp = shape.width,
+                heightDp = shape.height,
                 onTap = { onEditStyle(shape) }
             )
 
             ResizeHandle(
-                widthDp = shape.width / density,
-                heightDp = shape.height / density,
+                widthDp = shape.width,
+                heightDp = shape.height,
                 density = density,
                 onResize = { dw, dh ->
                     onChanged(
                         shape.copyShape().apply {
                             // 下限比文字方塊小：箭頭與連接線本來就可以很短。
                             // **必須與 Apple 端的 24 一致。**
-                            width = maxOf(24f, shape.width + dw * density)
-                            height = maxOf(24f, shape.height + dh * density)
+                            width = maxOf(24f, shape.width + dw)
+                            height = maxOf(24f, shape.height + dh)
                         }
                     )
                 },
@@ -217,8 +226,8 @@ private fun ShapeObjectView(
 
             RotationHandle(
                 degrees = rotation,
-                widthDp = shape.width / density,
-                heightDp = shape.height / density,
+                widthDp = shape.width,
+                heightDp = shape.height,
                 density = density,
                 onRotate = { deg ->
                     onChanged(shape.copyShape().apply { rotationDegrees = deg })

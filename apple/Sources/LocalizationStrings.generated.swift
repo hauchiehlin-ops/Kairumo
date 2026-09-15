@@ -1791,6 +1791,14 @@ extension LocalizationManager {
             .ko: "이 기기에서는 손글씨 인식을 사용할 수 없습니다(Google Play 서비스 필요): %@",
             .th: "อุปกรณ์นี้ใช้การรู้จำลายมือไม่ได้ (ต้องมี Google Play services): %@"
         ],
+        "err_image_read_failed": [
+            .zhHant: "讀不到這張圖片",
+            .en: "Could not read that image",
+            .zhHans: "读不到这张图片",
+            .ja: "その画像を読み込めません",
+            .ko: "이미지를 읽을 수 없습니다",
+            .th: "อ่านรูปภาพนี้ไม่ได้"
+        ],
         "err_mic_open_failed": [
             .zhHant: "無法開啟麥克風：%@",
             .en: "Could not open the microphone: %@",
@@ -2191,6 +2199,14 @@ extension LocalizationManager {
             .ko: "테두리 스타일",
             .th: "ขอบตกแต่ง"
         ],
+        "image_corner_radius": [
+            .zhHant: "圓角",
+            .en: "Corner radius",
+            .zhHans: "圆角",
+            .ja: "角の丸み",
+            .ko: "모서리 둥글기",
+            .th: "ความมนมุม"
+        ],
         "image_filter": [
             .zhHant: "風格濾鏡",
             .en: "Style Filter",
@@ -2222,6 +2238,14 @@ extension LocalizationManager {
             .ja: "立体シャドウ",
             .ko: "입체 그림자",
             .th: "เงาสามมิติ"
+        ],
+        "image_style": [
+            .zhHant: "圖片樣式",
+            .en: "Image style",
+            .zhHans: "图片样式",
+            .ja: "画像スタイル",
+            .ko: "이미지 스타일",
+            .th: "สไตล์รูปภาพ"
         ],
         "img_count": [
             .zhHant: "圖片",

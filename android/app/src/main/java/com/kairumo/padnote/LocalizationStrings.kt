@@ -1786,6 +1786,14 @@ object LocalizationStrings {
             "ko" to "이 기기에서는 손글씨 인식을 사용할 수 없습니다(Google Play 서비스 필요): %@",
             "th" to "อุปกรณ์นี้ใช้การรู้จำลายมือไม่ได้ (ต้องมี Google Play services): %@"
         ),
+        "err_image_read_failed" to mapOf(
+            "zh-Hant" to "讀不到這張圖片",
+            "en" to "Could not read that image",
+            "zh-Hans" to "读不到这张图片",
+            "ja" to "その画像を読み込めません",
+            "ko" to "이미지를 읽을 수 없습니다",
+            "th" to "อ่านรูปภาพนี้ไม่ได้"
+        ),
         "err_mic_open_failed" to mapOf(
             "zh-Hant" to "無法開啟麥克風：%@",
             "en" to "Could not open the microphone: %@",
@@ -2186,6 +2194,14 @@ object LocalizationStrings {
             "ko" to "테두리 스타일",
             "th" to "ขอบตกแต่ง"
         ),
+        "image_corner_radius" to mapOf(
+            "zh-Hant" to "圓角",
+            "en" to "Corner radius",
+            "zh-Hans" to "圆角",
+            "ja" to "角の丸み",
+            "ko" to "모서리 둥글기",
+            "th" to "ความมนมุม"
+        ),
         "image_filter" to mapOf(
             "zh-Hant" to "風格濾鏡",
             "en" to "Style Filter",
@@ -2217,6 +2233,14 @@ object LocalizationStrings {
             "ja" to "立体シャドウ",
             "ko" to "입체 그림자",
             "th" to "เงาสามมิติ"
+        ),
+        "image_style" to mapOf(
+            "zh-Hant" to "圖片樣式",
+            "en" to "Image style",
+            "zh-Hans" to "图片样式",
+            "ja" to "画像スタイル",
+            "ko" to "이미지 스타일",
+            "th" to "สไตล์รูปภาพ"
         ),
         "img_count" to mapOf(
             "zh-Hant" to "圖片",

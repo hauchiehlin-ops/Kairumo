@@ -36,6 +36,10 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
+import com.kairumo.padnote.image.ImageEditor
+import com.kairumo.padnote.image.ImageLayer
+import com.kairumo.padnote.image.ImageStore
+import com.kairumo.padnote.image.NoteImage
 import com.kairumo.padnote.ink.InkCanvas
 import com.kairumo.padnote.platform.AudioCapture
 import com.kairumo.padnote.platform.DocsViewer
@@ -332,6 +336,44 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
 
     // 形狀與流程圖。幾何全部來自核心，與 Apple 端是同一組頂點；
     // 形狀本身也是核心的原生物件，所以關掉 App 再打開它們還在。
+    /**
+     * 手寫／打字模式。**與 Apple 端的 EditorMode 同一組語意。**
+     *
+     * 在此之前 Android 沒有這個概念：物件層永遠吃觸控，於是拿筆想在一張圖
+     * 上圈重點，筆畫根本到不了畫布 —— 而那在一個手寫筆記 App 裡是最該能做
+     * 的事之一。iPad 上圈得到、Android 上圈不到，同一個人換裝置就會發現。
+     */
+    var editorMode by remember { mutableStateOf(EditorMode.DRAW) }
+
+    val imageStore = remember(notebook, pageId) { ImageStore(notebook?.first, pageId) }
+    var imageRevision by remember { mutableIntStateOf(0) }
+    var selectedImageId by remember { mutableStateOf<String?>(null) }
+    var editingImage by remember { mutableStateOf<NoteImage?>(null) }
+    LaunchedEffect(notebook, pageId) { imageStore.load(); imageRevision++ }
+
+    // 相簿選圖。用 OpenDocument 而不是舊的 GET_CONTENT：前者拿得到持久權限，
+    // 而且在 Android 13+ 不需要任何儲存權限。
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val bytes = runCatching {
+                activity.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+            }.getOrNull()
+            val name = uri.lastPathSegment?.substringAfterLast('/') ?: "image.png"
+            if (bytes != null) {
+                val inserted = imageStore.insert(bytes, name)
+                imageRevision++
+                selectedImageId = inserted?.id
+                // 插入後自動切到打字模式 —— 手寫模式下物件不吃觸控，
+                // 使用者剛插進來的圖會拖不動，看起來像插壞了。
+                if (inserted != null) editorMode = EditorMode.TYPE
+            } else {
+                message = l10n("err_image_read_failed")
+            }
+        }
+    }
+
     val shapeStore = remember(notebook, pageId) { ShapeStore(notebook?.first, pageId) }
     var shapeRevision by remember { mutableIntStateOf(0) }
     var selectedShapeIds by remember { mutableStateOf(setOf<String>()) }
@@ -398,14 +440,6 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     var showInkDebug by remember { mutableStateOf(false) }
     var deletingPage by remember { mutableStateOf(false) }
 
-    /**
-     * 手寫／打字模式。**與 Apple 端的 EditorMode 同一組語意。**
-     *
-     * 在此之前 Android 沒有這個概念：物件層永遠吃觸控，於是拿筆想在一張圖
-     * 上圈重點，筆畫根本到不了畫布 —— 而那在一個手寫筆記 App 裡是最該能做
-     * 的事之一。iPad 上圈得到、Android 上圈不到，同一個人換裝置就會發現。
-     */
-    var editorMode by remember { mutableStateOf(EditorMode.DRAW) }
 
     // 系統返回鍵＝回首頁。Android 使用者按的第一個東西就是它，
     // 不接的話按下去會直接把 App 關掉 —— 看起來像當掉。
@@ -559,6 +593,10 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     }
                 )
                 Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n("insert_image")) },
+                    onClick = { showMenu = false; imagePicker.launch(arrayOf("image/*")) }
+                )
                 DropdownMenuItem(
                     text = { Text(l10n("add_text_box")) },
                     onClick = {
@@ -739,6 +777,22 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 )
             }
 
+            // 圖片疊在墨跡之上、文字方塊之下 —— 與 Apple 端的預設層級一致
+            // （ObjectStacking.Kind.defaultLayer：image=0、text=6）。
+            key(imageRevision) {
+                ImageLayer(
+                    images = imageStore.all,
+                    store = imageStore,
+                    density = canvasDensity,
+                    selectedId = selectedImageId,
+                    interactive = editorMode == EditorMode.TYPE,
+                    onSelect = { selectedImageId = it },
+                    onEditStyle = { editingImage = it },
+                    onChanged = { imageStore.persist(it); imageRevision++ },
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
             // 文字方塊疊在墨跡之上 —— 與 Apple 端的疊放順序一致。
             key(textRevision) {
                 TextBoxLayer(
@@ -852,6 +906,20 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             dismissButton = {
                 TextButton(onClick = { deletingPage = false }) { Text(l10n("cancel")) }
             }
+        )
+    }
+
+    editingImage?.let { image ->
+        ImageEditor(
+            image = image,
+            languageTag = deviceLanguageTag(),
+            onChanged = { imageStore.persist(it); imageRevision++ },
+            onDelete = {
+                imageStore.remove(image)
+                selectedImageId = null
+                imageRevision++
+            },
+            onDismiss = { editingImage = null }
         )
     }
 

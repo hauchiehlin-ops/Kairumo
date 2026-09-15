@@ -87,11 +87,14 @@ private fun TableObjectView(
     val rotation = CanvasRotation.normalized(table.rotationDegrees ?: 0f)
 
     // 外層只定位、不旋轉 —— 旋轉把手掛在這一層。
-    Box(Modifier.offset((table.x / density).dp, (table.y / density).dp)) {
+        // 座標的單位是**頁面點**（＝dp），與 Apple 端和 format-spec 一致。
+    // 原本當成像素在用，在 density = 1.0 的模擬器上看不出來，真實手機
+    // （2～3.5 倍）上會縮到三分之一並擠向左上角。詳見 ShapeLayer 的說明。
+    Box(Modifier.offset(table.x.dp, table.y.dp)) {
 
     Box(
         Modifier
-            .size((layout.width / density).dp.value.dp, (layout.height / density).dp.value.dp)
+            .size(layout.width.toFloat().dp, layout.height.toFloat().dp)
             // 整個表格一起轉（格線 + 文字）。
             .graphicsLayer { rotationZ = rotation }
             .border(
@@ -111,15 +114,16 @@ private fun TableObjectView(
                     change.consume()
                     onChanged(
                         table.copyTable().apply {
-                            x = table.x + drag.x * density
-                            y = table.y + drag.y * density
+                            x = table.x + drag.x / density
+                            y = table.y + drag.y / density
                         }
                     )
                 }
             } }
     ) {
-        Canvas(Modifier.size((layout.width / density).dp, (layout.height / density).dp)) {
-            val scale = 1f / density
+        Canvas(Modifier.size(layout.width.toFloat().dp, layout.height.toFloat().dp)) {
+            // Canvas 內部是像素，版面是頁面點 —— 乘上 density。
+            val scale = density
             // 表頭底色先畫，才會在格線與文字下面。
             for (cell in layout.cells) {
                 if (!cell.isHeader) continue
@@ -146,7 +150,7 @@ private fun TableObjectView(
 
                 val text = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
                     color = foreground.toArgb()
-                    textSize = (table.fontSize * scale) * density
+                    textSize = table.fontSize * scale
                 }
                 val lineHeight = table.fontSize * 1.35f * scale
                 for (cell in layout.cells) {
@@ -169,8 +173,8 @@ private fun TableObjectView(
         if (isSelected) {
             RotationHandle(
                 degrees = rotation,
-                widthDp = (layout.width / density).toFloat(),
-                heightDp = (layout.height / density).toFloat(),
+                widthDp = layout.width.toFloat(),
+                heightDp = layout.height.toFloat(),
                 density = density,
                 onRotate = { deg ->
                     onChanged(table.copyTable().apply { rotationDegrees = deg })

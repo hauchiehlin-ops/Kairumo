@@ -70,8 +70,8 @@ private fun ChartObjectView(
 
     Box(
         Modifier
-            .offset((chart.x / density).dp, (chart.y / density).dp)
-            .size((chart.width / density).dp, (chart.height / density).dp)
+            .offset(chart.x.dp, chart.y.dp)
+            .size(chart.width.dp, chart.height.dp)
             .border(
                 if (isSelected) 1.5.dp else 0.dp,
                 MaterialTheme.colorScheme.primary,
@@ -89,14 +89,14 @@ private fun ChartObjectView(
                     change.consume()
                     onChanged(
                         chart.copy(
-                            x = chart.x + drag.x * density,
-                            y = chart.y + drag.y * density
+                            x = chart.x + drag.x / density,
+                            y = chart.y + drag.y / density
                         )
                     )
                 }
             } }
     ) {
-        Canvas(Modifier.size((chart.width / density).dp, (chart.height / density).dp)) {
+        Canvas(Modifier.size(chart.width.dp, chart.height.dp)) {
             val layout = ChartRenderer.layout(chart.spec, size.width, size.height) ?: return@Canvas
             drawIntoCanvas { canvas ->
                 ChartRenderer.draw(

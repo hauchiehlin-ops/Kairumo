@@ -5246,5 +5246,29 @@
     "ja": "入力",
     "ko": "입력",
     "th": "พิมพ์"
+  },
+  "image_style": {
+    "zhHant": "圖片樣式",
+    "en": "Image style",
+    "zhHans": "图片样式",
+    "ja": "画像スタイル",
+    "ko": "이미지 스타일",
+    "th": "สไตล์รูปภาพ"
+  },
+  "image_corner_radius": {
+    "zhHant": "圓角",
+    "en": "Corner radius",
+    "zhHans": "圆角",
+    "ja": "角の丸み",
+    "ko": "모서리 둥글기",
+    "th": "ความมนมุม"
+  },
+  "err_image_read_failed": {
+    "zhHant": "讀不到這張圖片",
+    "en": "Could not read that image",
+    "zhHans": "读不到这张图片",
+    "ja": "その画像を読み込めません",
+    "ko": "이미지를 읽을 수 없습니다",
+    "th": "อ่านรูปภาพนี้ไม่ได้"
   }
 }
