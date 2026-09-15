@@ -192,7 +192,13 @@ object GoogleAuth {
         signOutLocally(context)
     }
 
-    private fun signOutLocally(context: Context) {
+    /**
+     * 只清本機權杖，不打撤銷 API。
+     *
+     * 用在「refresh token 已經失效」的情況：那時候撤銷也沒有意義（它已經無效），
+     * 但本機必須清掉，否則背景會一直拿一個死權杖重試。
+     */
+    fun signOutLocally(context: Context) {
         store(context)?.edit()?.clear()?.apply()
     }
 

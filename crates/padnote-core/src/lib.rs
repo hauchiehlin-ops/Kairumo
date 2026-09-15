@@ -17,6 +17,7 @@ pub mod ffi_backup;
 pub mod ffi_chart;
 pub mod ffi_collab;
 pub mod ffi_folder_sync;
+pub mod ffi_gdrive;
 pub mod ffi_geometry;
 pub mod ffi_math;
 pub mod ffi_model3d;

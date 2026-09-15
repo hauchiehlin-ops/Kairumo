@@ -170,7 +170,19 @@ impl<H: DriveHttp> GDriveProvider<H> {
         best.map(|(id, _)| id)
             .ok_or_else(|| SyncError::NotFound(path.to_string()))
     }
+
+    /// 整個檔案的內容。
+    ///
+    /// 同步的中繼資料（`settings/global.json`、`notebooks/index.json`）都很小，
+    /// 分段拉沒有意義。而且用 `get_range(0..u64::MAX)` 會送出一個
+    /// Drive 不接受的 Range 標頭 —— 那種錯誤看起來像「檔案壞了」。
+    pub fn get_all(&self, path: &str) -> Result<Vec<u8>, SyncError> {
+        let file_id = self.find_file_id(path)?;
+        self.http
+            .get_bytes(&format!("{FILES_URL}/{file_id}?alt=media"), None)
+    }
 }
+
 
 impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
     fn list(&self, prefix: &str) -> Result<Vec<RemoteEntry>, SyncError> {
@@ -528,6 +540,15 @@ mod tests {
         let patched = drive.http.patched.lock().unwrap();
         assert_eq!(patched.len(), 2);
         assert_eq!(patched[1].1, b"second");
+    }
+
+    #[test]
+    fn get_all_reads_the_whole_file() {
+        let drive = GDriveProvider::new(FakeDrive::with(
+            &[("notebooks/index.json", b"{\"items\":{}}")],
+            100,
+        ));
+        assert_eq!(drive.get_all("notebooks/index.json").unwrap(), b"{\"items\":{}}");
     }
 
     #[test]

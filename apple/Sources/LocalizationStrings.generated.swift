@@ -1631,6 +1631,14 @@ extension LocalizationManager {
             .ko: "자 닫기",
             .th: "ปิดไม้บรรทัด"
         ],
+        "cloud_sync": [
+            .zhHant: "雲端同步",
+            .en: "Cloud sync",
+            .zhHans: "云端同步",
+            .ja: "クラウド同期",
+            .ko: "클라우드 동기화",
+            .th: "ซิงค์บนคลาวด์"
+        ],
         "collaborate": [
             .zhHant: "線上協同",
             .en: "Collaborate",
@@ -4247,6 +4255,14 @@ extension LocalizationManager {
             .ko: "필요 시 다운",
             .th: "ตามต้องการ"
         ],
+        "not_signed_in": [
+            .zhHant: "未登入",
+            .en: "Not signed in",
+            .zhHans: "未登录",
+            .ja: "未ログイン",
+            .ko: "로그인되지 않음",
+            .th: "ยังไม่ได้ลงชื่อเข้าใช้"
+        ],
         "note_title": [
             .zhHant: "筆記標題",
             .en: "Notebook Title",
@@ -5375,6 +5391,22 @@ extension LocalizationManager {
             .ko: "폴더에서 보기",
             .th: "แสดงในโฟลเดอร์"
         ],
+        "sign_in_google": [
+            .zhHant: "使用 Google 登入",
+            .en: "Sign in with Google",
+            .zhHans: "使用 Google 登录",
+            .ja: "Google でログイン",
+            .ko: "Google 계정으로 로그인",
+            .th: "ลงชื่อเข้าใช้ด้วย Google"
+        ],
+        "sign_out": [
+            .zhHant: "登出",
+            .en: "Sign out",
+            .zhHans: "登出",
+            .ja: "ログアウト",
+            .ko: "로그아웃",
+            .th: "ออกจากระบบ"
+        ],
         "snapshot_created": [
             .zhHant: "快照已成功建立",
             .en: "Snapshot Created",
@@ -5647,6 +5679,14 @@ extension LocalizationManager {
             .ko: "동기화 폴더 선택",
             .th: "เลือกโฟลเดอร์ซิงก์"
         ],
+        "sync_done": [
+            .zhHant: "同步完成",
+            .en: "Sync complete",
+            .zhHans: "同步完成",
+            .ja: "同期が完了しました",
+            .ko: "동기화 완료",
+            .th: "ซิงค์เสร็จแล้ว"
+        ],
         "sync_explainer": [
             .zhHant: "同步由你自己的雲端硬碟負責（iCloud Drive、Google Drive、Dropbox…）。沒有帳號、沒有我們的伺服器。兩台裝置指到同一個資料夾就會互相同步。",
             .en: "Syncing is handled by your own cloud drive (iCloud Drive, Google Drive, Dropbox…). No account, no server of ours. Point two devices at the same folder and they stay in sync.",
@@ -5654,6 +5694,14 @@ extension LocalizationManager {
             .ja: "同期はお使いのクラウドドライブ（iCloud Drive、Google Drive、Dropbox など）が行います。アカウントも当方のサーバーもありません。2 台の端末を同じフォルダに向けるだけで同期されます。",
             .ko: "동기화는 사용자의 클라우드 드라이브(iCloud Drive, Google Drive, Dropbox 등)가 담당합니다. 계정도, 저희 서버도 없습니다. 두 기기를 같은 폴더로 지정하면 서로 동기화됩니다.",
             .th: "การซิงก์ทำโดยคลาวด์ไดรฟ์ของคุณเอง (iCloud Drive, Google Drive, Dropbox ฯลฯ) ไม่มีบัญชีและไม่มีเซิร์ฟเวอร์ของเรา ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์เดียวกันก็ซิงก์กันได้"
+        ],
+        "sync_failed": [
+            .zhHant: "同步失敗：%@",
+            .en: "Sync failed: %@",
+            .zhHans: "同步失败：%@",
+            .ja: "同期に失敗しました：%@",
+            .ko: "동기화 실패: %@",
+            .th: "ซิงค์ไม่สำเร็จ: %@"
         ],
         "sync_folder_desc": [
             .zhHant: "指到 iCloud Drive 或 Google Drive 的資料夾，兩台裝置就會互相同步",
@@ -5670,6 +5718,14 @@ extension LocalizationManager {
             .ja: "%@ は両方の端末で変更されています。クラウド側を残しました。ご確認ください",
             .ko: "%@ 이(가) 양쪽 기기에서 모두 변경되었습니다. 클라우드 사본을 유지했습니다. 확인해 주세요",
             .th: "%@ ถูกแก้ไขบนทั้งสองอุปกรณ์ ระบบเก็บสำเนาบนคลาวด์ไว้ โปรดตรวจสอบ"
+        ],
+        "sync_needs_reauth": [
+            .zhHant: "登入狀態已過期，請重新登入",
+            .en: "Session expired — please sign in again",
+            .zhHans: "登录状态已过期，请重新登录",
+            .ja: "セッションの有効期限が切れました。もう一度ログインしてください",
+            .ko: "세션이 만료되었습니다. 다시 로그인해 주세요",
+            .th: "เซสชันหมดอายุ โปรดลงชื่อเข้าใช้ใหม่"
         ],
         "sync_not_configured": [
             .zhHant: "尚未選擇資料夾",
@@ -5718,6 +5774,14 @@ extension LocalizationManager {
             .ja: "最新の状態です",
             .ko: "이미 최신 상태",
             .th: "เป็นเวอร์ชันล่าสุดแล้ว"
+        ],
+        "syncing": [
+            .zhHant: "同步中…",
+            .en: "Syncing…",
+            .zhHans: "同步中…",
+            .ja: "同期中…",
+            .ko: "동기화 중…",
+            .th: "กำลังซิงค์…"
         ],
         "system_diagnostics": [
             .zhHant: "系統診斷與版本資訊",

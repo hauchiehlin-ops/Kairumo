@@ -64,6 +64,7 @@
 		B09B7D4D3FA9CB33C0E89FE0 /* LocalizationStrings.generated.swift in Sources */ = {isa = PBXBuildFile; fileRef = F65D4DD5D5DF9A56132D032E /* LocalizationStrings.generated.swift */; };
 		B0A3045EEDEA33E102E52D82 /* NotebookPackageBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = A09B19AED1DC70D31503F82C /* NotebookPackageBridge.swift */; };
 		B0D47F59443CA7009A7EC043 /* ContinuousPagesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A0C24F3FD1D464196490E2D /* ContinuousPagesView.swift */; };
+		4E3DFA9744F14E80A3F47232 /* DriveHttpClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = CF663AD25047457BBAD7C050 /* DriveHttpClient.swift */; };
 		2F4A7845894241929DBD2770 /* GoogleAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F1AF42AD51B4ECF8CBCA511 /* GoogleAuth.swift */; };
 		AA663818A22D47C3A2C23CF2 /* AccountSyncStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01AFB3F20C5549BBBF4DFBFE /* AccountSyncStore.swift */; };
 		B89C263C1A1A49EBA16D42B2 /* ICloudSyncFolder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7A293858C84789874DFCA3 /* ICloudSyncFolder.swift */; };
@@ -157,6 +158,7 @@
 		68513B13585ABBABB6573267 /* KairumoUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KairumoUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		691C8F15D077838E27650DFC /* InkInteropTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InkInteropTests.swift; sourceTree = "<group>"; };
 		6A0C24F3FD1D464196490E2D /* ContinuousPagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinuousPagesView.swift; sourceTree = "<group>"; };
+		CF663AD25047457BBAD7C050 /* DriveHttpClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DriveHttpClient.swift; sourceTree = "<group>"; };
 		8F1AF42AD51B4ECF8CBCA511 /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
 		01AFB3F20C5549BBBF4DFBFE /* AccountSyncStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSyncStore.swift; sourceTree = "<group>"; };
 		BF7A293858C84789874DFCA3 /* ICloudSyncFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudSyncFolder.swift; sourceTree = "<group>"; };
@@ -332,6 +334,7 @@
 				0FF2EC412BA37683FBBE2FC1 /* CollaborationSheet.swift */,
 				205572122F598A01BD07BC2A /* CommentThreadView.swift */,
 				6A0C24F3FD1D464196490E2D /* ContinuousPagesView.swift */,
+				CF663AD25047457BBAD7C050 /* DriveHttpClient.swift */,
 				8F1AF42AD51B4ECF8CBCA511 /* GoogleAuth.swift */,
 				01AFB3F20C5549BBBF4DFBFE /* AccountSyncStore.swift */,
 				BF7A293858C84789874DFCA3 /* ICloudSyncFolder.swift */,
@@ -555,6 +558,7 @@
 				6142C12FB584E6D8D7B38221 /* CollaborationSheet.swift in Sources */,
 				95A26994BC9D5BCCF7291E2F /* CommentThreadView.swift in Sources */,
 				B0D47F59443CA7009A7EC043 /* ContinuousPagesView.swift in Sources */,
+				4E3DFA9744F14E80A3F47232 /* DriveHttpClient.swift in Sources */,
 				2F4A7845894241929DBD2770 /* GoogleAuth.swift in Sources */,
 				AA663818A22D47C3A2C23CF2 /* AccountSyncStore.swift in Sources */,
 				B89C263C1A1A49EBA16D42B2 /* ICloudSyncFolder.swift in Sources */,

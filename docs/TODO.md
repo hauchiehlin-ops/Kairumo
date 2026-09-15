@@ -202,11 +202,12 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 
 | ID | 項目 | 判定條件 |
 |---|---|---|
-| G-01 | Google OAuth 設定與登入 | **程式已完成，等實機驗證。** OAuth client 已建立（Apple / Android 各一）。PKCE、授權網址、權杖交換與更新、撤銷全在核心 `ffi_oauth`（13 項測試）；平台只做「開系統瀏覽器 + 打 HTTP + 存進安全儲存區」：Apple `ASWebAuthenticationSession` + Keychain、Android Custom Tabs + EncryptedSharedPreferences。URL scheme 兩邊都註冊好了（Apple 的 `Info.plist`、Android 的 `OAuthRedirectActivity`）。**還沒有真的登入過任何一次** —— 需要在實機或模擬器上走完一輪，見下方注意事項 |
+| G-01 | Google OAuth 設定與登入 | **程式已完成，等實機驗證。** OAuth client 已建立（Apple / Android 各一）。PKCE、授權網址、權杖交換與更新、撤銷全在核心 `ffi_oauth`（13 項測試）；平台只做「開系統瀏覽器 + 打 HTTP + 存進安全儲存區」：Apple `ASWebAuthenticationSession` + Keychain、Android Custom Tabs + EncryptedSharedPreferences。URL scheme 兩邊都註冊好了（Apple 的 `Info.plist`、Android 的 `OAuthRedirectActivity`）。模擬器實測到「開啟系統瀏覽器 → 載入 Google 授權頁」為止，**還沒有真的登入過**（要真實 Google 帳號）。中途抓到一個外部設定問題，見下方「Android 還要開一個開關」|
 | ~~G-02~~ ✅ | appDataFolder Provider 完整化 | `crates/padnote-sync/src/gdrive.rs`。**原本這個檔案根本沒有被編譯**（`lib.rs` 裡沒有 `pub mod gdrive;`），所以裡面的 `unimplemented!()`、少掉的分頁、沒跳脫的查詢字串都沒人發現。已補：分頁跟到底、`trashed = false`、查詢字串跳脫、前綴（而非子字串）比對、同名取最新、append 回錯誤而不是 panic、401/403 分類成權限錯誤。HTTP 抽成 trait，9 項測試用假的 Drive 驗分頁與查詢邏輯 |
 | ~~G-03~~ ✅ | 同步資料佈局 | `format-spec.md` §7.0 |
 | ~~G-04~~ ✅ | 全域設定同步 | `padnote-sync::settings` + `ffi_account_sync`。`SyncedSettings` 與 `DeviceSettings` 是**兩個型別**，「不要同步」寫在型別上而不是註解裡；有一項測試專門確認低延遲、掌拒門檻、SAF 權限權杖連序列化都不會出現在同步 JSON 裡。逐欄位帶 Lamport 時戳合併（整包 LWW 的話，A 改語言、B 改工具列會互相蓋掉）。**已接上兩邊 UI**：Apple 的 `LocalizationManager.setLanguage` 與 Android 新增的語言選擇器（Android 原本只能跟著系統語系走）都寫進同步設定，啟動時跨裝置設定優先於本機記錄。模擬器實測：選日文 → 介面變日文 → 重啟仍是日文，SharedPreferences 裡就是核心產生的那份 JSON |
 | ~~G-05~~ ✅ | 筆記本與資料夾同步 | `padnote-sync::library` + `ffi_account_sync`。刪除是**墓碑**不是「不在清單裡」—— 靠比對清單的話，還沒同步到刪除的那台會把筆記本傳回去，每同步一次復活一次。另含：已刪資料夾底下的項目一起隱藏（否則變成打不開也刪不掉的幽靈）、父子環的迴圈保護（兩台各自把 A 搬進 B、B 搬進 A 會凍住 App）、搬移前先問會不會成環。12 項測試含「離線兩台各自增改刪後收斂」。**已接上兩邊 UI**：兩邊的新增／改名／搬移／刪除、資料夾的建立／改名／刪除都會記進索引（`AccountSyncStore`），刪除留墓碑，列表濾掉已刪項。模擬器實測：新增 → 索引出現該筆；刪除 → 同一筆變成 `deleted: true` 而不是消失 |
+| ~~G-02b~~ ✅ | Drive provider 接上授權 | `ffi_gdrive::gdrive_sync_metadata`：讀雲端 → 合併 → 寫回。**HTTP 由平台出**（`FfiDriveHttp` callback interface）而不是核心用 reqwest —— 後者會把整個 rustls 堆疊連進行動端函式庫（`libpadnote_core.so` 8.1 MB → 13 MB），而且與 `ffi_collab` 已定下的「socket 留在平台層」不一致。查詢字串、分頁、合併規則仍全在核心 |
 | G-06 | 實機矩陣 | iPad + macOS + Android 同一 Google 帳號端到端測試：新增、編輯、刪除、改設定、重啟、離線再上線皆通過 |
 
 **目前的狀態**：G-02～G-05 的核心與兩邊 UI 都完成了，但**還沒有真的上傳下載** ——
@@ -229,6 +230,17 @@ restricted scope 那種要付費的第三方安全評估。
 
 第三筆最容易漏：Play 會用**它自己的**金鑰重新簽 App，所以使用者裝到的版本
 用的是那個憑證。只登錄前兩筆的話，自己測都正常，上架之後所有人登入都失敗。
+
+**Android 還要開一個開關（實測踩到）**：Google 對 **Android** 型別的 client
+預設**關閉**自訂 URI scheme —— 授權頁會載入（代表 client id 有效），
+但直接回 `Error 400: invalid_request`，詳細訊息是
+「Custom URI scheme is not enabled for your Android client」。
+
+開啟位置：Google Cloud Console → 憑證 → 點進 Android 的 OAuth client →
+**進階設定（Advanced Settings）** → 把「啟用自訂 URI 配置
+（Enable Custom URI scheme）」打開 → 儲存。改完可能要等幾分鐘生效。
+
+iOS 型別**不受影響**，自訂 scheme 在那邊本來就是標準做法。
 
 **Testing 狀態的陷阱**：專案維持在 `Testing` 且使用 sensitive 範圍時，
 refresh token **七天就過期**。長期測試時會以為是自己的程式壞了。

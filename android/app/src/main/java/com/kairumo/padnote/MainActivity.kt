@@ -91,7 +91,9 @@ import com.kairumo.padnote.text.TextBoxStore
 import androidx.compose.ui.platform.LocalDensity
 import androidx.documentfile.provider.DocumentFile
 import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import com.kairumo.padnote.ink.InkEngine
 import com.kairumo.padnote.ink.SketchRefineBar
 import com.kairumo.padnote.asset.AssetLibrarySheet
@@ -808,6 +810,39 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 DropdownMenuItem(
                     text = { Text(l10n("language")) },
                     onClick = { showMenu = false; showLanguagePicker = true }
+                )
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            if (com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) {
+                                l10n("cloud_sync")
+                            } else {
+                                l10n("sign_in_google")
+                            }
+                        )
+                    },
+                    onClick = {
+                        showMenu = false
+                        if (!com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) {
+                            // 授權會跳到系統瀏覽器，回來時由 OAuthRedirectActivity 接。
+                            com.kairumo.padnote.oauth.GoogleAuth.startSignIn(activity)
+                            return@DropdownMenuItem
+                        }
+                        message = l10n("syncing")
+                        scope.launch {
+                            // 同步會阻塞網路 I/O —— 一定要在背景執行緒，
+                            // 在主執行緒跑會直接卡死畫面。
+                            val result = withContext(Dispatchers.IO) {
+                                com.kairumo.padnote.library.CloudSync.runOnce(activity)
+                            }
+                            message = when {
+                                result == null -> l10n("not_signed_in")
+                                result.ok -> l10n("sync_done")
+                                result.needsReauth -> l10n("sync_needs_reauth")
+                                else -> l10n("sync_failed").replace("%@", result.error)
+                            }
+                        }
+                    }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("insert_image")) },

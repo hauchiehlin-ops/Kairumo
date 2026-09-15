@@ -6438,5 +6438,69 @@
     "th": "การรู้จำลายมือไม่รองรับ “%@”",
     "zhHans": "手写辨识不支持「%@」",
     "zhHant": "手寫辨識不支援「%@」"
+  },
+  "sign_in_google": {
+    "en": "Sign in with Google",
+    "ja": "Google でログイン",
+    "ko": "Google 계정으로 로그인",
+    "th": "ลงชื่อเข้าใช้ด้วย Google",
+    "zhHans": "使用 Google 登录",
+    "zhHant": "使用 Google 登入"
+  },
+  "sign_out": {
+    "en": "Sign out",
+    "ja": "ログアウト",
+    "ko": "로그아웃",
+    "th": "ออกจากระบบ",
+    "zhHans": "登出",
+    "zhHant": "登出"
+  },
+  "cloud_sync": {
+    "en": "Cloud sync",
+    "ja": "クラウド同期",
+    "ko": "클라우드 동기화",
+    "th": "ซิงค์บนคลาวด์",
+    "zhHans": "云端同步",
+    "zhHant": "雲端同步"
+  },
+  "syncing": {
+    "en": "Syncing…",
+    "ja": "同期中…",
+    "ko": "동기화 중…",
+    "th": "กำลังซิงค์…",
+    "zhHans": "同步中…",
+    "zhHant": "同步中…"
+  },
+  "sync_done": {
+    "en": "Sync complete",
+    "ja": "同期が完了しました",
+    "ko": "동기화 완료",
+    "th": "ซิงค์เสร็จแล้ว",
+    "zhHans": "同步完成",
+    "zhHant": "同步完成"
+  },
+  "sync_failed": {
+    "en": "Sync failed: %@",
+    "ja": "同期に失敗しました：%@",
+    "ko": "동기화 실패: %@",
+    "th": "ซิงค์ไม่สำเร็จ: %@",
+    "zhHans": "同步失败：%@",
+    "zhHant": "同步失敗：%@"
+  },
+  "not_signed_in": {
+    "en": "Not signed in",
+    "ja": "未ログイン",
+    "ko": "로그인되지 않음",
+    "th": "ยังไม่ได้ลงชื่อเข้าใช้",
+    "zhHans": "未登录",
+    "zhHant": "未登入"
+  },
+  "sync_needs_reauth": {
+    "en": "Session expired — please sign in again",
+    "ja": "セッションの有効期限が切れました。もう一度ログインしてください",
+    "ko": "세션이 만료되었습니다. 다시 로그인해 주세요",
+    "th": "เซสชันหมดอายุ โปรดลงชื่อเข้าใช้ใหม่",
+    "zhHans": "登录状态已过期，请重新登录",
+    "zhHant": "登入狀態已過期，請重新登入"
   }
 }
