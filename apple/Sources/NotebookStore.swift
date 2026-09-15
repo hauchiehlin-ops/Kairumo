@@ -271,16 +271,39 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     /// 舊檔沒有這個欄位，解碼後是 `nil` —— 升級上來的筆記不會有任何變化。
     public var tableAttachments: [NoteTableAttachment]?
 
-    /// 畫布物件的**堆疊順序**：由後到前的 id 清單。
+    /// 畫布物件的**堆疊順序**，逐頁一份：`["頁次": [由後到前的物件 id]]`。
     ///
-    /// 為什麼是一份清單而不是每個物件各帶一個 z 值：
+    /// 為什麼是一份順序清單而不是每個物件各帶一個 z 值：
     /// 物件散在七個不同型別的陣列裡（圖片、文字、表格、圖表、3D、連結、形狀）。
     /// 每個型別各加一個欄位＝七次資料格式變更、七份遷移；而真正要表達的
     /// 只有一件事 —— 誰在誰上面。那是一個順序，就用順序來存。
     ///
     /// 不在清單裡的 id 排在最後面（最上層），順序照型別的預設值 ——
     /// 舊筆記沒有這個欄位，疊放順序與過去完全相同。
+    public var objectOrderByPage: [String: [String]]?
+
+    /// v3.8.0 的舊欄位：**整本一份**的堆疊順序。只讀不寫。
+    ///
+    /// 那一版有 bug：面板讀的是「這一頁的物件」，寫回去的卻是整個欄位 ——
+    /// 在第 2 頁調一次順序，第 1 頁的順序就被清掉了。
+    ///
+    /// 不能直接把欄位型別改掉：v3.8.0 (32) 已經送上 TestFlight，那些筆記裡
+    /// 存的是陣列。同名改成字典的話，Swift 的 Codable 會在解碼時丟例外，
+    /// 而那會讓**整本筆記解不開**（見 `canvasRotation` 的說明）。
+    /// 所以留著它、只當成沒有分頁資訊時的退路。
     public var objectOrder: [String]?
+
+    /// 某一頁的堆疊順序。沒有逐頁資料時退回舊欄位。
+    public func objectOrder(forPage page: Int) -> [String]? {
+        objectOrderByPage?[String(page)] ?? objectOrder
+    }
+
+    /// 寫入某一頁的堆疊順序。**只動那一頁**，其餘頁面原封不動。
+    public mutating func setObjectOrder(_ order: [String], forPage page: Int) {
+        var map = objectOrderByPage ?? [:]
+        map[String(page)] = order
+        objectOrderByPage = map
+    }
 
     /// 系統預設標題的語系鍵。
     ///

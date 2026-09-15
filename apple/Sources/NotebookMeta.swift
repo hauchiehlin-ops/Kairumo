@@ -46,6 +46,16 @@ struct NotebookMeta: Codable, Hashable {
     /// 而是變成兩頁，每同步一趟再多一批。
     var pageIds: [String]?
 
+    /// 畫布物件的堆疊順序：`["頁次": [由後到前的物件 id]]`。
+    ///
+    /// 放在這裡而不是只留在 Apple 自己的 JSON 裡，是為了讓它**跨得過平台** ——
+    /// 這份中繼資料會寫進 `.padnote`，Android 讀的是同一組鍵。
+    /// 只留在平台自己的檔案裡的話，在 iPad 上排好的疊放順序，換到 Android
+    /// 就回到型別預設，而使用者會以為圖層被打亂了。
+    ///
+    /// 鍵是頁次的字串（JSON 的物件鍵只能是字串）。
+    var objectOrderByPage: [String: [String]]?
+
     /// 核心沒有對應區塊型別的物件，原樣保存。
     var linkAttachments: [NoteLinkAttachment]?
     var model3DAttachments: [Note3DAttachment]?
@@ -96,6 +106,7 @@ struct NotebookMeta: Codable, Hashable {
         linkAttachments = document.linkAttachments
         model3DAttachments = document.model3DAttachments
         commentPins = document.commentPins
+        objectOrderByPage = document.objectOrderByPage
     }
 
     /// 把中繼資料套回文件。缺的欄位一律保留文件原本的值。
@@ -112,5 +123,6 @@ struct NotebookMeta: Codable, Hashable {
         if let linkAttachments { document.linkAttachments = linkAttachments }
         if let model3DAttachments { document.model3DAttachments = model3DAttachments }
         if let commentPins { document.commentPins = commentPins }
+        if let objectOrderByPage { document.objectOrderByPage = objectOrderByPage }
     }
 }

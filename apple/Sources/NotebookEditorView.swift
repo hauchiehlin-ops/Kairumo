@@ -2321,7 +2321,7 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
-                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .image, order: notebook.objectOrder))
+                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .image, order: notebook.objectOrder(forPage: page)))
                     }
                 }
 
@@ -2353,7 +2353,7 @@ public struct NotebookEditorView: View {
                                 store.updateNotebook(notebook)
                             }
                         )
-                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .shape, order: notebook.objectOrder))
+                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .shape, order: notebook.objectOrder(forPage: page)))
                     }
                 }
 
@@ -2372,11 +2372,14 @@ public struct NotebookEditorView: View {
                                     get: {
                                         ObjectStacking.normalized(
                                             objects: pageStackableObjects,
-                                            order: notebook.objectOrder
+                                            order: notebook.objectOrder(forPage: currentPageIndex)
                                         )
                                     },
                                     set: { updated in
-                                        notebook.objectOrder = updated
+                                        // **只寫這一頁。** 整個欄位覆蓋掉的話，在第 2 頁
+                                        // 調一次順序，第 1 頁的順序就被清光了 ——
+                                        // 那是 v3.8.0 (32) 已經出貨的 bug。
+                                        notebook.setObjectOrder(updated, forPage: currentPageIndex)
                                         store.updateNotebook(notebook)
                                     }
                                 ),
@@ -2414,7 +2417,7 @@ public struct NotebookEditorView: View {
                                 store.updateNotebook(notebook)
                             }
                         )
-                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .table, order: notebook.objectOrder))
+                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .table, order: notebook.objectOrder(forPage: page)))
                     }
                 }
 
@@ -2434,7 +2437,7 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
-                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .text, order: notebook.objectOrder))
+                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .text, order: notebook.objectOrder(forPage: page)))
                     }
                 }
 
@@ -2448,7 +2451,7 @@ public struct NotebookEditorView: View {
                                 store.updateNotebook(notebook)
                             }
                         )
-                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .link, order: notebook.objectOrder))
+                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .link, order: notebook.objectOrder(forPage: page)))
                     }
                 }
 
@@ -2465,7 +2468,7 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
-                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .model3D, order: notebook.objectOrder))
+                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .model3D, order: notebook.objectOrder(forPage: page)))
                     }
                 }
 
@@ -2488,7 +2491,7 @@ public struct NotebookEditorView: View {
                             }
                         )
                         .position(x: pin.x, y: pin.y)
-                        .zIndex(ObjectStacking.zIndex(for: pin.id, kind: .pin, order: notebook.objectOrder))
+                        .zIndex(ObjectStacking.zIndex(for: pin.id, kind: .pin, order: notebook.objectOrder(forPage: page)))
                     }
                 }
 

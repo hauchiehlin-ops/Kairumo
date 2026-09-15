@@ -317,14 +317,17 @@ Android 現在有首頁、翻得動頁、分得清手寫與打字。
 
 | ID | 項目 | 說明 |
 |---|---|---|
-| Z-01 | Android 端的堆疊順序 | Android 的物件是**核心 block**，Apple 的物件在自己的 JSON 裡。兩邊的順序來源不同 |
-| Z-02 | 收斂到核心的 `draw_order` | 核心的物件樹早就有 `bring_to_front` / `send_to_back` / `z_index` / `draw_order`（`ffi.rs`），而且 FFI 已經開出來了 —— **那才該是唯一的順序來源** |
+| ~~Z-02~~ ✅ | 順序改放在筆記本中繼資料 | `objectOrderByPage` 走 `SetNotebookMeta`，跨得過平台（format-spec §6.2.1） |
+| Z-03 ✅ | v3.8.0 的逐頁 bug | 那一版在第 2 頁調順序會清掉第 1 頁的。已改成逐頁，並保留舊欄位當退路（直接改型別會讓整本筆記解不開） |
+| Z-01 | Android 端的圖層面板 | 資料格式已經就緒，缺的是 Android 的 UI |
 
-Apple 目前的 `objectOrder` 是**過渡做法**：它讓使用者現在就能排序，但
-Apple 的附件 id 與核心物件 id 只在匯出 `.padnote` 時建立對應
-（`NotebookPackageBridge` 的 `shapeObjectIds`），所以這份順序跨不到 Android。
-真正的解法是讓核心物件樹成為 Apple 的即時模型，那牽動的範圍與 A-01～A-03 相當，
-建議與 Android 改版一起做。
+順序現在存在筆記本中繼資料裡（`objectOrderByPage`），那份 JSON 會寫進
+`.padnote` 並跟著同步走，所以兩個平台讀的是同一份。Android 還缺的是讀寫
+它的圖層面板 UI。
+
+核心的物件樹另有一套 `bring_to_front` / `draw_order`，那是給**形狀**用的
+（形狀是核心的原生物件）。文字與圖片是 block 不是 object，不在那棵樹上，
+所以跨型別的順序仍然需要中繼資料這一層。
 
 
 ## ⚪ 待決策（需要人拍板）
