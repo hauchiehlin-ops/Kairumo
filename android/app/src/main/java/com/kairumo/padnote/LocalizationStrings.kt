@@ -3266,6 +3266,30 @@ object LocalizationStrings {
             "ko" to "캔버스 길이가 연장되었습니다 (+800pt)",
             "th" to "ขยายความยาวของผืนผ้าใบแล้ว (+800pt)"
         ),
+        "page_mode" to mapOf(
+            "zh-Hant" to "頁面模式",
+            "en" to "Page mode",
+            "zh-Hans" to "页面模式",
+            "ja" to "ページ表示",
+            "ko" to "페이지 모드",
+            "th" to "โหมดหน้า"
+        ),
+        "page_mode_continuous" to mapOf(
+            "zh-Hant" to "連續頁面",
+            "en" to "Continuous",
+            "zh-Hans" to "连续页面",
+            "ja" to "連続ページ",
+            "ko" to "연속 페이지",
+            "th" to "เลื่อนต่อเนื่อง"
+        ),
+        "page_mode_single" to mapOf(
+            "zh-Hant" to "整頁",
+            "en" to "Single page",
+            "zh-Hans" to "整页",
+            "ja" to "単一ページ",
+            "ko" to "한 페이지",
+            "th" to "หน้าเดียว"
+        ),
         "page_model_done" to mapOf(
             "zh-Hant" to "已重新分頁 %@ 本",
             "en" to "%@ notebooks repaginated",

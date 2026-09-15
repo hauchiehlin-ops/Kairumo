@@ -3271,6 +3271,30 @@ extension LocalizationManager {
             .ko: "캔버스 길이가 연장되었습니다 (+800pt)",
             .th: "ขยายความยาวของผืนผ้าใบแล้ว (+800pt)"
         ],
+        "page_mode": [
+            .zhHant: "頁面模式",
+            .en: "Page mode",
+            .zhHans: "页面模式",
+            .ja: "ページ表示",
+            .ko: "페이지 모드",
+            .th: "โหมดหน้า"
+        ],
+        "page_mode_continuous": [
+            .zhHant: "連續頁面",
+            .en: "Continuous",
+            .zhHans: "连续页面",
+            .ja: "連続ページ",
+            .ko: "연속 페이지",
+            .th: "เลื่อนต่อเนื่อง"
+        ],
+        "page_mode_single": [
+            .zhHant: "整頁",
+            .en: "Single page",
+            .zhHans: "整页",
+            .ja: "単一ページ",
+            .ko: "한 페이지",
+            .th: "หน้าเดียว"
+        ],
         "page_model_done": [
             .zhHant: "已重新分頁 %@ 本",
             .en: "%@ notebooks repaginated",

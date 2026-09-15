@@ -533,6 +533,12 @@ struct CanvasRepresentable: UIViewRepresentable {
     var template: NoteTemplate
     var pageHeight: CGFloat
     var editorMode: EditorMode = .draw
+    /// 這個畫布要不要自己捲動。
+    ///
+    /// 連續頁面模式下每一頁都是一個 PKCanvasView，外面還有一個 ScrollView。
+    /// 兩層都能捲的話，手指放在畫布上時捲到的是裡層那一頁 —— 捲不出去，
+    /// 看起來像卡住。連續模式把裡層關掉，捲動交給外面那一層。
+    var isScrollEnabled: Bool = true
     var onDrawingChanged: ((PKDrawing) -> Void)?
     /// 筆跡寫到接近頁尾時通知編輯器。
     ///
@@ -576,9 +582,9 @@ struct CanvasRepresentable: UIViewRepresentable {
         canvas.delegate = context.coordinator
         canvas.backgroundColor = .clear
         canvas.isOpaque = false
-        canvas.isScrollEnabled = true
-        canvas.alwaysBounceVertical = true
-        canvas.showsVerticalScrollIndicator = true
+        canvas.isScrollEnabled = isScrollEnabled
+        canvas.alwaysBounceVertical = isScrollEnabled
+        canvas.showsVerticalScrollIndicator = isScrollEnabled
         canvas.showsHorizontalScrollIndicator = false
         canvas.drawing = drawing
 
@@ -605,6 +611,13 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
         context.coordinator.parent = self
+        // 模式切換時要跟著改 —— 只在 makeUIView 設的話，從連續切回整頁
+        // 會得到一個捲不動的畫布（SwiftUI 會重用同一個 UIView）。
+        if uiView.isScrollEnabled != isScrollEnabled {
+            uiView.isScrollEnabled = isScrollEnabled
+            uiView.alwaysBounceVertical = isScrollEnabled
+            uiView.showsVerticalScrollIndicator = isScrollEnabled
+        }
         let targetPolicy = resolvedPolicy()
         if uiView.drawingPolicy != targetPolicy {
             uiView.drawingPolicy = targetPolicy
@@ -1067,6 +1080,17 @@ public struct NotebookEditorView: View {
 
     // 頁面狀態
     @State private var currentPageIndex: Int = 0
+
+    /// 頁面顯示模式。**預設整頁**；使用者切過之後記住他的選擇。
+    ///
+    /// 存在 AppStorage 而不是筆記裡：它是「怎麼看」而不是「內容是什麼」，
+    /// 跟著人走比跟著筆記走合理 —— 跟著筆記的話，同一個人在不同本筆記裡
+    /// 會拿到不同的捲動方式。
+    @AppStorage("kairumo.editor.pageDisplayMode")
+    private var pageDisplayModeRaw: String = PageDisplayMode.single.rawValue
+    private var pageDisplayMode: PageDisplayMode {
+        PageDisplayMode(rawValue: pageDisplayModeRaw) ?? .single
+    }
     @State private var currentDrawing: PKDrawing = PKDrawing()
     @State private var canvasView: PKCanvasView? = nil
     @State private var currentPageHeight: CGFloat = PageGeometry.height
@@ -2024,6 +2048,28 @@ public struct NotebookEditorView: View {
                 Image(systemName: "plus.square.dashed")
                     .foregroundColor(.accentColor)
             }
+
+            // 整頁／連續切換。放在頁碼旁邊 —— 它改的就是這一組按鈕的意義：
+            // 連續模式下上一頁／下一頁變成捲到那一頁，而不是換掉整個畫布。
+            Button {
+                pageDisplayModeRaw = (pageDisplayMode == .single
+                    ? PageDisplayMode.continuous
+                    : PageDisplayMode.single).rawValue
+                // 切換前把當頁存好。整頁模式的筆跡在記憶體裡，不存就丟了。
+                if pageDisplayMode == .continuous {
+                    saveCurrentPageDrawing()
+                } else {
+                    loadCurrentPage()
+                }
+            } label: {
+                Image(systemName: pageDisplayMode == .continuous
+                    ? "rectangle.split.1x2"
+                    : "doc.plaintext")
+                    .foregroundColor(pageDisplayMode == .continuous ? .accentColor : .secondary)
+            }
+            .help(localizationManager.localized(
+                pageDisplayMode == .continuous ? "page_mode_continuous" : "page_mode_single"))
+            .accessibilityLabel(localizationManager.localized("page_mode"))
         }
 
         // ⋯ 更多（次要功能收在這裡）
@@ -2127,7 +2173,125 @@ public struct NotebookEditorView: View {
 
     /// 畫布工作區。抽出來並加上 AnyView 邊界 —— 這一塊（畫布 + 附件圖層 +
     /// 圖釘 + 浮動列）原本整棵樹的型別都被編進 body 的 mangled 名稱裡。
-    private var canvasWorkArea: AnyView { AnyView(canvasWorkAreaContent) }
+    private var canvasWorkArea: AnyView {
+        // 兩條完全獨立的路。連續模式不碰整頁模式的任何一行 ——
+        // 那一段綁著存檔、協同、掌拒與套索，是最沒本錢壞掉的地方。
+        switch pageDisplayMode {
+        case .single:     return AnyView(canvasWorkAreaContent)
+        case .continuous: return AnyView(continuousPagesContent)
+        }
+    }
+
+    /// 連續頁面模式的工作區。
+    private var continuousPagesContent: some View {
+        GeometryReader { outer in
+            // 頁面是固定的 800 × 1132（P-01），視窗不是。縮到剛好放得下，
+            // 不縮的話側欄一開，頁面右半邊就被切掉 —— 而使用者看不出那是
+            // 「超出去」還是「畫布壞了」。
+            //
+            // 只縮不放：放大到超過原尺寸會讓筆跡變糊（圖層是先算繪再變換的）。
+            let available = max(outer.size.width - 32, 1)
+            let scale = min(1, available / PageGeometry.width)
+            continuousPages(scale: scale)
+        }
+    }
+
+    @ViewBuilder
+    private func continuousPages(scale: CGFloat) -> some View {
+        ScrollViewReader { proxy in
+            ScrollView(.vertical) {
+                LazyVStack(spacing: 20) {
+                    ForEach(0..<max(1, notebook.pageCount), id: \.self) { index in
+                        ContinuousPageView(
+                            pageIndex: index,
+                            notebookId: notebook.id,
+                            template: notebook.template,
+                            store: store,
+                            selectedTool: selectedTool,
+                            selectedColor: selectedColor,
+                            strokeWidth: strokeWidth,
+                            isRulerActive: isRulerActive,
+                            editorMode: editorMode,
+                            palmRejection: palmRejection,
+                            isFocused: index == currentPageIndex,
+                            objectLayer: { objectLayer(forPage: index) },
+                            onDrawingChanged: { page, updated in
+                                broadcastDrawingChange(page: page, drawing: updated)
+                            },
+                            onSelectionChanged: { hasLassoSelection = $0 },
+                            onReachedPageBottom: { ensureNextPageExists() },
+                            canvasRef: { canvasView = $0 }
+                        )
+                        .scaleEffect(scale, anchor: .top)
+                        // 縮放後的實際高度要讓出來，否則每一頁之間會留下
+                        // (1 - scale) × 1132 的空白，看起來像頁與頁之間破了一個洞。
+                        .frame(
+                            width: PageGeometry.width * scale,
+                            height: PageGeometry.height * scale
+                        )
+                        .id(index)
+                        .background(
+                            // 哪一頁在畫面中央，哪一頁就是焦點頁。
+                            // 插入物件要落在使用者正在看的那一頁，不是他上次
+                            // 按過上一頁／下一頁的那一頁。
+                            GeometryReader { geo in
+                                Color.clear.preference(
+                                    key: PageFocusPreferenceKey.self,
+                                    value: [index: geo.frame(in: .named(ContinuousPagesSpace.name)).midY]
+                                )
+                            }
+                        )
+                    }
+                }
+                .padding(.vertical, 20)
+                .frame(maxWidth: .infinity)
+            }
+            .coordinateSpace(name: ContinuousPagesSpace.name)
+            .background(
+                GeometryReader { geo in
+                    Color.clear
+                        .onAppear { continuousViewportHeight = geo.size.height }
+                        .onChange(of: geo.size.height) { h in continuousViewportHeight = h }
+                }
+            )
+            .onPreferenceChange(PageFocusPreferenceKey.self) { mids in
+                updateFocusedPage(from: mids)
+            }
+            .onAppear {
+                // 從整頁模式切過來時，停在原本那一頁而不是回到第 1 頁。
+                proxy.scrollTo(currentPageIndex, anchor: .top)
+            }
+        }
+    }
+
+    /// 連續模式下捲動容器的高度。焦點判定要拿它算中線。
+    @State private var continuousViewportHeight: CGFloat = 800
+
+    /// 把某一頁的筆跡變動廣播出去（協同）。
+    ///
+    /// 與整頁模式走同一組 oplog 事件與同一個 `page_index` —— 兩邊各發一種
+    /// 事件的話，對方會在不同的模式下收到不同的東西。
+    private func broadcastDrawingChange(page: Int, drawing: PKDrawing) {
+        guard !isApplyingRemoteUpdate, isCollaborating else { return }
+        let b64 = drawing.dataRepresentation().base64EncodedString()
+        collaborationManager.broadcastOplog(
+            kind: "drawing_replace",
+            payload: ["page_index": page, "drawing_base64": b64]
+        )
+    }
+
+    /// 取畫面中央最近的那一頁當焦點頁。
+    private func updateFocusedPage(from mids: [Int: CGFloat]) {
+        guard !mids.isEmpty else { return }
+        // 視窗中央的 y。用固定的頁高估一個中線就夠 —— 這裡只要挑出
+        // 「最接近中央的那一頁」，不需要精準的可見面積。
+        let viewportCenter = continuousViewportHeight / 2
+        let nearest = mids.min {
+            abs($0.value - viewportCenter) < abs($1.value - viewportCenter)
+        }
+        guard let page = nearest?.key, page != currentPageIndex else { return }
+        currentPageIndex = page
+    }
 
 
     /// 某一頁的插入物件層（圖片、形狀、表格、文字、連結、3D、討論圖釘）。
