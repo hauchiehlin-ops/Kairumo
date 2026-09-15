@@ -2207,6 +2207,14 @@ extension LocalizationManager {
             .ko: "지우기",
             .th: "ล้าง"
         ],
+        "ink_input_debug": [
+            .zhHant: "顯示輸入診斷",
+            .en: "Show input diagnostics",
+            .zhHans: "显示输入诊断",
+            .ja: "入力診断を表示",
+            .ko: "입력 진단 표시",
+            .th: "แสดงการวินิจฉัยอินพุต"
+        ],
         "ink_latency_label": [
             .zhHant: "輸入延遲",
             .en: "Input latency",

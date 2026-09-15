@@ -2202,6 +2202,14 @@ object LocalizationStrings {
             "ko" to "지우기",
             "th" to "ล้าง"
         ),
+        "ink_input_debug" to mapOf(
+            "zh-Hant" to "顯示輸入診斷",
+            "en" to "Show input diagnostics",
+            "zh-Hans" to "显示输入诊断",
+            "ja" to "入力診断を表示",
+            "ko" to "입력 진단 표시",
+            "th" to "แสดงการวินิจฉัยอินพุต"
+        ),
         "ink_latency_label" to mapOf(
             "zh-Hant" to "輸入延遲",
             "en" to "Input latency",

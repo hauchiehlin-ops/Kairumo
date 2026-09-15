@@ -220,6 +220,12 @@ private fun InkScreen() {
     var inkColorHex by remember { mutableStateOf("#000000") }
     var inkWidth by remember { mutableStateOf(3f) }
     var showStatus by remember { mutableStateOf(false) }
+    /// 畫布上方那行輸入診斷（tool=/r=/p=/draw=/rej=/ges=）要不要顯示。
+    ///
+    /// 預設關。那一行是給開發看的，對使用者沒有任何意義，卻讓整個 App
+    /// 看起來像個測試程式 —— 使用者就是這樣回報的。留一個開關是因為
+    /// 掌拒與筆壓的問題只有實機重現得出來，屆時要能一鍵打開。
+    var showInkDebug by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -395,6 +401,11 @@ private fun InkScreen() {
                     text = { Text(l10n("system_diagnostics")) },
                     onClick = { showMenu = false; showStatus = true }
                 )
+                DropdownMenuItem(
+                    text = { Text(l10n("ink_input_debug")) },
+                    trailingIcon = { if (showInkDebug) Text("✓") },
+                    onClick = { showMenu = false; showInkDebug = !showInkDebug }
+                )
             }
         }
 
@@ -438,13 +449,19 @@ private fun InkScreen() {
         }
 
         // 診斷列：一張截圖就要能告訴我平台回報了什麼。
-        Text(
-            eventDebug,
-            style = MaterialTheme.typography.labelSmall,
-            fontFamily = FontFamily.Monospace,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(horizontal = 12.dp)
-        )
+        //
+        // 但它**不該預設顯示**。`tool=1 r=27.0dp p=0.41 draw=0 rej=1 ges=0`
+        // 這行對使用者沒有任何意義，只會讓整個 App 看起來像個測試程式
+        // —— 使用者就是這樣回報的。改成跟著「顯示核心狀態」那個選單項走。
+        if (showInkDebug) {
+            Text(
+                eventDebug,
+                style = MaterialTheme.typography.labelSmall,
+                fontFamily = FontFamily.Monospace,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 12.dp)
+            )
+        }
 
         if (lowLatencyUnavailable) {
             Text(
