@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.sp
 
 /**
@@ -55,11 +56,20 @@ fun ShapeLayer(
     onEdit: (NoteShape) -> Unit,
     onEditStyle: (NoteShape) -> Unit,
     onChanged: (NoteShape) -> Unit,
+    /**
+     * 這個物件的堆疊 z 值。跨型別共用同一份順序（見 ObjectStacking）。
+     */
+    zIndexOf: (String) -> Float,
     modifier: Modifier = Modifier
 ) {
     val foreground = MaterialTheme.colorScheme.onSurface
 
-    Box(modifier = modifier) {
+    // **不包一層自己的 Box。**
+    //
+    // Compose 的 zIndex 只在**同一個父容器的兄弟之間**生效。每一層各包一個 Box
+    // 的話，圖片的 zIndex 只跟圖片比、文字的只跟文字比 —— 跨型別永遠是
+    // 「圖片一定在文字下面」，圖層面板就排不動。
+    // 直接把物件發到呼叫端的 Box 裡，它們才是彼此的兄弟。
         // 連接線先畫 —— 畫在形狀之上的話，線會壓過方塊的邊，看起來像穿幫。
         Canvas(Modifier.fillMaxSize()) {
             // Canvas 內部的座標是**像素**，而頂點是頁面點 —— 要乘上 density。
@@ -89,14 +99,16 @@ fun ShapeLayer(
 
         for (shape in shapes) {
             ShapeObjectView(
+                zIndex = zIndexOf(shape.id),
                 shape, density, selectedIds.contains(shape.id), onSelect, onEdit,
                 onEditStyle, onChanged, interactive = interactive)
         }
-    }
 }
 
 @Composable
 private fun ShapeObjectView(
+    /** 堆疊 z 值，見 ObjectStacking。 */
+    zIndex: Float,
     shape: NoteShape,
     density: Float,
     isSelected: Boolean,
@@ -125,7 +137,7 @@ private fun ShapeObjectView(
     // 而同一份筆記在 iPad 上位置是對的。文字方塊一直都用 dp，兩套並存
     // 代表同一頁裡的文字與形狀連相對位置都對不上。
     // 外層只定位、不旋轉 —— 旋轉把手掛在這一層。
-    Box(Modifier.offset(shape.x.dp, shape.y.dp)) {
+    Box(Modifier.offset(shape.x.dp, shape.y.dp).zIndex(zIndex)) {
 
     Box(
         Modifier

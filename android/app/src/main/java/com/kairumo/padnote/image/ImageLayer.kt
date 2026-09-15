@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import com.kairumo.padnote.canvas.CanvasRotation
 import com.kairumo.padnote.canvas.MIN_OBJECT_HEIGHT_DP
 import com.kairumo.padnote.canvas.MIN_OBJECT_WIDTH_DP
@@ -45,11 +46,21 @@ fun ImageLayer(
     onSelect: (String) -> Unit,
     onEditStyle: (NoteImage) -> Unit,
     onChanged: (NoteImage) -> Unit,
+    /**
+     * 這個物件的堆疊 z 值。跨型別共用同一份順序（見 ObjectStacking）。
+     */
+    zIndexOf: (String) -> Float,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier) {
+    // **不包一層自己的 Box。**
+    //
+    // Compose 的 zIndex 只在**同一個父容器的兄弟之間**生效。每一層各包一個 Box
+    // 的話，圖片的 zIndex 只跟圖片比、文字的只跟文字比 —— 跨型別永遠是
+    // 「圖片一定在文字下面」，圖層面板就排不動。
+    // 直接把物件發到呼叫端的 Box 裡，它們才是彼此的兄弟。
         for (image in images) {
             ImageObjectView(
+                zIndex = zIndexOf(image.id),
                 image = image,
                 bitmapProvider = { store.bitmap(image) },
                 density = density,
@@ -60,11 +71,12 @@ fun ImageLayer(
                 onChanged = onChanged
             )
         }
-    }
 }
 
 @Composable
 private fun ImageObjectView(
+    /** 堆疊 z 值，見 ObjectStacking。 */
+    zIndex: Float,
     image: NoteImage,
     bitmapProvider: () -> androidx.compose.ui.graphics.ImageBitmap?,
     density: Float,
@@ -80,7 +92,7 @@ private fun ImageObjectView(
     // 外層只定位、不旋轉 —— 旋轉把手掛在這一層。包進旋轉裡的話，拖曳算出的
     // 角度會疊加自身旋轉，物件會失控加速。
     // 座標的單位是**頁面點**（＝dp），與 Apple 端和 format-spec 一致。
-    Box(modifier = Modifier.offset(image.x.dp, image.y.dp)) {
+    Box(modifier = Modifier.offset(image.x.dp, image.y.dp).zIndex(zIndex)) {
 
         Box(
             modifier = Modifier

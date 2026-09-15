@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.canvas.CanvasRotation
@@ -68,11 +69,21 @@ fun TextBoxLayer(
      */
     onEditStyle: (TextBox) -> Unit,
     onChanged: (TextBox) -> Unit,
+    /**
+     * 這個物件的堆疊 z 值。跨型別共用同一份順序（見 ObjectStacking）。
+     */
+    zIndexOf: (String) -> Float,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier) {
+    // **不包一層自己的 Box。**
+    //
+    // Compose 的 zIndex 只在**同一個父容器的兄弟之間**生效。每一層各包一個 Box
+    // 的話，圖片的 zIndex 只跟圖片比、文字的只跟文字比 —— 跨型別永遠是
+    // 「圖片一定在文字下面」，圖層面板就排不動。
+    // 直接把物件發到呼叫端的 Box 裡，它們才是彼此的兄弟。
         for (box in boxes) {
             TextBoxView(
+                zIndex = zIndexOf(box.id),
                 interactive = interactive,
                 box = box,
                 density = density,
@@ -82,11 +93,12 @@ fun TextBoxLayer(
                 onChanged = onChanged
             )
         }
-    }
 }
 
 @Composable
 private fun TextBoxView(
+    /** 堆疊 z 值，見 ObjectStacking。 */
+    zIndex: Float,
     /** 見 TextBoxLayer 的說明。 */
     interactive: Boolean,
     box: TextBox,
@@ -101,7 +113,7 @@ private fun TextBoxView(
 
     // 外層只負責定位，**不旋轉** —— 旋轉把手要掛在這一層，
     // 放進旋轉裡的話拖曳算出的角度會疊加自身旋轉，物件會失控加速。
-    Box(modifier = Modifier.offset(x = box.x.dp, y = box.y.dp)) {
+    Box(modifier = Modifier.offset(x = box.x.dp, y = box.y.dp).zIndex(zIndex)) {
 
     Box(
         modifier = Modifier

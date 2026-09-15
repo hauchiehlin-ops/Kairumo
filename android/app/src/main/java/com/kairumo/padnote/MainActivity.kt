@@ -50,6 +50,9 @@ import com.kairumo.padnote.backup.BackupManager
 import com.kairumo.padnote.text.TextBox
 import com.kairumo.padnote.text.TextBoxEditor
 import com.kairumo.padnote.account.AccountManager
+import com.kairumo.padnote.canvas.ObjectStacking
+import com.kairumo.padnote.library.NotebookMeta
+import com.kairumo.padnote.canvas.CanvasStackPanel
 import com.kairumo.padnote.canvas.EditorMode
 import com.kairumo.padnote.account.IdentityDialog
 import com.kairumo.padnote.library.HomeScreen
@@ -345,6 +348,15 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
      */
     var editorMode by remember { mutableStateOf(EditorMode.DRAW) }
 
+    // 筆記本中繼資料。Android 在此之前**完全沒有讀過它** —— Apple 放在這裡的
+    // 樣板、資料夾、圖釘、連結卡片、3D 與物件堆疊順序，同步過來就像不存在。
+    val meta = remember(notebook) { NotebookMeta.load(notebook?.first) }
+    var stackRevision by remember { mutableIntStateOf(0) }
+    var showStackPanel by remember { mutableStateOf(false) }
+
+
+
+
     val imageStore = remember(notebook, pageId) { ImageStore(notebook?.first, pageId) }
     var imageRevision by remember { mutableIntStateOf(0) }
     var selectedImageId by remember { mutableStateOf<String?>(null) }
@@ -380,6 +392,43 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     var insertingShape by remember { mutableStateOf(false) }
     var showLayerPanel by remember { mutableStateOf(false) }
     LaunchedEffect(notebook, pageId) { shapeStore.load(); shapeRevision++ }
+
+    // 這一頁所有可堆疊的物件，跨五種型別收成同一份清單。
+    // 名字取得出來就用內容，取不出來就用型別名 —— 面板上一整排「未命名」
+    // 的話，使用者分不出哪一列是哪一個。
+    val stackItems = remember(
+        textRevision, shapeRevision, tableRevision, chartRevision, imageRevision, pageId
+    ) {
+        buildList {
+            imageStore.all.forEach {
+                add(ObjectStacking.Item(it.id, ObjectStacking.Kind.IMAGE, l10n("layer_kind_image")))
+            }
+            shapeStore.all.forEach {
+                add(ObjectStacking.Item(
+                    it.id, ObjectStacking.Kind.SHAPE,
+                    it.label.ifBlank { l10n("layer_kind_shape") }))
+            }
+            tableStore.all.forEach {
+                add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TABLE, l10n("layer_kind_table")))
+            }
+            chartStore.all.forEach {
+                add(ObjectStacking.Item(it.id, ObjectStacking.Kind.CHART, l10n("chart_studio")))
+            }
+            textStore.all.forEach {
+                add(ObjectStacking.Item(
+                    it.id, ObjectStacking.Kind.TEXT,
+                    it.text.trim().take(24).ifBlank { l10n("layer_kind_text") }))
+            }
+        }
+    }
+
+    val stackOrder = remember(stackItems, stackRevision) {
+        ObjectStacking.normalized(stackItems, meta.objectOrder(pageIndex))
+    }
+    val kindOf = remember(stackItems) { stackItems.associate { it.id to it.kind } }
+    val zIndexOf: (String) -> Float = { id ->
+        ObjectStacking.zIndex(id, kindOf[id] ?: ObjectStacking.Kind.TEXT, stackOrder)
+    }
 
     // 雲端同步（決策 D3 選項 A）：使用者挑一個資料夾，兩台裝置指同一個地方。
     // 備份檔：選一個既有的備份來復原。
@@ -594,6 +643,10 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 )
                 Divider()
                 DropdownMenuItem(
+                    text = { Text(l10n("layers_panel")) },
+                    onClick = { showMenu = false; showStackPanel = true }
+                )
+                DropdownMenuItem(
                     text = { Text(l10n("insert_image")) },
                     onClick = { showMenu = false; imagePicker.launch(arrayOf("image/*")) }
                 )
@@ -622,7 +675,10 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     onClick = { showMenu = false; insertingShape = true }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("layers_panel")) },
+                    // 這一個只認形狀，做的是**群組**（連接線要接得住，其餘型別
+                    // 沒有這回事）。與上面那個跨型別的圖層面板同名的話，
+                    // 使用者不知道該點哪一個。
+                    text = { Text(l10n("layer_group")) },
                     onClick = { showMenu = false; showLayerPanel = true }
                 )
                 Divider()
@@ -759,6 +815,8 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
         }
 
         val canvasDensity = LocalDensity.current.density
+
+
         Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
             if (lowLatency && !lowLatencyUnavailable) {
                 LowLatencyInkCanvas(
@@ -781,6 +839,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             // （ObjectStacking.Kind.defaultLayer：image=0、text=6）。
             key(imageRevision) {
                 ImageLayer(
+                    zIndexOf = zIndexOf,
                     images = imageStore.all,
                     store = imageStore,
                     density = canvasDensity,
@@ -796,6 +855,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             // 文字方塊疊在墨跡之上 —— 與 Apple 端的疊放順序一致。
             key(textRevision) {
                 TextBoxLayer(
+                    zIndexOf = zIndexOf,
                     interactive = editorMode == EditorMode.TYPE,
                     boxes = textStore.all,
                     density = canvasDensity,
@@ -810,6 +870,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             // 形狀與連接線。
             key(shapeRevision) {
                 ShapeLayer(
+                    zIndexOf = zIndexOf,
                     interactive = editorMode == EditorMode.TYPE,
                     shapes = shapeStore.all,
                     connections = shapeStore.allConnections,
@@ -857,6 +918,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             // 表格疊在文字方塊之上。
             key(tableRevision) {
                 TableLayer(
+                    zIndexOf = zIndexOf,
                     interactive = editorMode == EditorMode.TYPE,
                     tables = tableStore.all,
                     density = canvasDensity,
@@ -871,6 +933,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             // 圖表疊在文字方塊之上 —— 與 Apple 端的疊放順序一致。
             key(chartRevision) {
                 ChartLayer(
+                    zIndexOf = zIndexOf,
                     interactive = editorMode == EditorMode.TYPE,
                     charts = chartStore.all,
                     density = canvasDensity,
@@ -907,6 +970,20 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             dismissButton = {
                 TextButton(onClick = { deletingPage = false }) { Text(l10n("cancel")) }
             }
+        )
+    }
+
+    if (showStackPanel) {
+        CanvasStackPanel(
+            items = stackItems,
+            order = stackOrder,
+            languageTag = deviceLanguageTag(),
+            onOrderChange = { updated ->
+                // 只寫這一頁，其餘頁面與其餘中繼資料欄位原封不動。
+                meta.setObjectOrder(notebook?.first, pageIndex, updated)
+                stackRevision++
+            },
+            onDismiss = { showStackPanel = false }
         )
     }
 

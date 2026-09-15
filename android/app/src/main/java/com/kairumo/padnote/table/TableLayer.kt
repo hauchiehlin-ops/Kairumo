@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 
 /**
  * 畫布上的表格圖層（Android）。
@@ -50,19 +51,30 @@ fun TableLayer(
     onSelect: (String?) -> Unit,
     onEdit: (NoteTable) -> Unit,
     onChanged: (NoteTable) -> Unit,
+    /**
+     * 這個物件的堆疊 z 值。跨型別共用同一份順序（見 ObjectStacking）。
+     */
+    zIndexOf: (String) -> Float,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier) {
+    // **不包一層自己的 Box。**
+    //
+    // Compose 的 zIndex 只在**同一個父容器的兄弟之間**生效。每一層各包一個 Box
+    // 的話，圖片的 zIndex 只跟圖片比、文字的只跟文字比 —— 跨型別永遠是
+    // 「圖片一定在文字下面」，圖層面板就排不動。
+    // 直接把物件發到呼叫端的 Box 裡，它們才是彼此的兄弟。
         for (table in tables) {
             TableObjectView(
+                zIndex = zIndexOf(table.id),
                 table, density, table.id == selectedId, onSelect, onEdit, onChanged,
                 interactive = interactive)
         }
-    }
 }
 
 @Composable
 private fun TableObjectView(
+    /** 堆疊 z 值，見 ObjectStacking。 */
+    zIndex: Float,
     table: NoteTable,
     density: Float,
     isSelected: Boolean,
@@ -90,7 +102,7 @@ private fun TableObjectView(
         // 座標的單位是**頁面點**（＝dp），與 Apple 端和 format-spec 一致。
     // 原本當成像素在用，在 density = 1.0 的模擬器上看不出來，真實手機
     // （2～3.5 倍）上會縮到三分之一並擠向左上角。詳見 ShapeLayer 的說明。
-    Box(Modifier.offset(table.x.dp, table.y.dp)) {
+    Box(Modifier.offset(table.x.dp, table.y.dp).zIndex(zIndex)) {
 
     Box(
         Modifier

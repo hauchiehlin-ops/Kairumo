@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 
 /**
  * 畫布上的圖表圖層（Android）。
@@ -43,15 +44,23 @@ fun ChartLayer(
     onSelect: (String?) -> Unit,
     onEdit: (ChartObject) -> Unit,
     onChanged: (ChartObject) -> Unit,
+    /**
+     * 這個物件的堆疊 z 值。跨型別共用同一份順序（見 ObjectStacking）。
+     */
+    zIndexOf: (String) -> Float,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier) {
+    // **不包一層自己的 Box。**
+    //
+    // Compose 的 zIndex 只在**同一個父容器的兄弟之間**生效。每一層各包一個 Box
+    // 的話，圖片的 zIndex 只跟圖片比、文字的只跟文字比 —— 跨型別永遠是
+    // 「圖片一定在文字下面」，圖層面板就排不動。
+    // 直接把物件發到呼叫端的 Box 裡，它們才是彼此的兄弟。
         for (chart in charts) {
             ChartObjectView(
                 chart, density, chart.id == selectedId, onSelect, onEdit, onChanged,
-                interactive = interactive)
+                interactive = interactive, zIndex = zIndexOf(chart.id))
         }
-    }
 }
 
 @Composable
@@ -63,7 +72,9 @@ private fun ChartObjectView(
     onEdit: (ChartObject) -> Unit,
     onChanged: (ChartObject) -> Unit,
     /** 見同檔案公開版本的說明。 */
-    interactive: Boolean = true
+    interactive: Boolean = true,
+    /** 堆疊 z 值，見 ObjectStacking。 */
+    zIndex: Float = 0f
 ) {
     val foreground = MaterialTheme.colorScheme.onSurface
     val grid = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
@@ -71,6 +82,7 @@ private fun ChartObjectView(
     Box(
         Modifier
             .offset(chart.x.dp, chart.y.dp)
+            .zIndex(zIndex)
             .size(chart.width.dp, chart.height.dp)
             .border(
                 if (isSelected) 1.5.dp else 0.dp,
