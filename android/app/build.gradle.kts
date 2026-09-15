@@ -131,6 +131,14 @@ dependencies {
     implementation("com.google.mlkit:digital-ink-recognition:18.1.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-play-services:1.9.0")
 
+    // OAuth 要在系統瀏覽器裡完成 —— Google 會拒絕 WebView 裡的授權
+    // （disallowed_useragent），而且 WebView 拿不到使用者已登入的 session。
+    implementation("androidx.browser:browser:1.8.0")
+
+    // refresh token 等同「不必再問密碼就能存取雲端硬碟」的長期憑證，
+    // 不可以明文躺在 SharedPreferences 的 XML 裡。
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
+
     // 協同編輯的 WebSocket。Android 沒有 java.net.http（那是 JDK 11 的東西），
     // 也沒有 URLSession 的對應品 —— OkHttp 是這裡唯一實務上的選擇。
     implementation("com.squareup.okhttp3:okhttp:4.12.0")

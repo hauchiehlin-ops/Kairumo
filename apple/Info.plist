@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!--
+	  這個檔案**只放產生器表達不了的鍵**。
+
+	  專案是 GENERATE_INFOPLIST_FILE = YES，其餘設定都走 INFOPLIST_KEY_*；
+	  Xcode 會把產生的那些鍵併進這個檔案。所以這裡不要重複寫版本號、
+	  權限說明之類的東西 —— 寫了會變成兩個來源，而版本號是 bump 腳本在改的。
+
+	  CFBundleURLTypes 是巢狀的陣列包字典，INFOPLIST_KEY_* 表達不了，
+	  這就是這個檔案存在的唯一理由。
+	-->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<!--
+			  Google OAuth 的 redirect scheme（反轉的 client id）。
+
+			  **必須與核心 `oauth_url_scheme(.apple)` 完全一致。** 不一致的話，
+			  使用者在瀏覽器裡授權完會回不到 App —— 畫面停在一個打不開的
+			  網址上，而且沒有任何錯誤訊息指向這裡。
+			-->
+			<key>CFBundleURLName</key>
+			<string>com.kairumo.padnote.oauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.155748821200-elecovdu3l4m1t17dpf6q1snb3coctld</string>
+			</array>
+		</dict>
+	</array>
+</dict>
+</plist>

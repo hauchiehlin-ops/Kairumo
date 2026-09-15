@@ -202,7 +202,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 
 | ID | 項目 | 判定條件 |
 |---|---|---|
-| G-01 | Google OAuth 設定與登入 | iOS/iPadOS/macOS/Android 都能取得 `drive.appdata` access token，登出與撤銷權限有明確狀態。**卡在外部前置**：要先有 Google Cloud OAuth client（見本節末）。程式面能先做的是權杖保存與更新流程，但沒有 client id 就驗不了 |
+| G-01 | Google OAuth 設定與登入 | **程式已完成，等實機驗證。** OAuth client 已建立（Apple / Android 各一）。PKCE、授權網址、權杖交換與更新、撤銷全在核心 `ffi_oauth`（13 項測試）；平台只做「開系統瀏覽器 + 打 HTTP + 存進安全儲存區」：Apple `ASWebAuthenticationSession` + Keychain、Android Custom Tabs + EncryptedSharedPreferences。URL scheme 兩邊都註冊好了（Apple 的 `Info.plist`、Android 的 `OAuthRedirectActivity`）。**還沒有真的登入過任何一次** —— 需要在實機或模擬器上走完一輪，見下方注意事項 |
 | ~~G-02~~ ✅ | appDataFolder Provider 完整化 | `crates/padnote-sync/src/gdrive.rs`。**原本這個檔案根本沒有被編譯**（`lib.rs` 裡沒有 `pub mod gdrive;`），所以裡面的 `unimplemented!()`、少掉的分頁、沒跳脫的查詢字串都沒人發現。已補：分頁跟到底、`trashed = false`、查詢字串跳脫、前綴（而非子字串）比對、同名取最新、append 回錯誤而不是 panic、401/403 分類成權限錯誤。HTTP 抽成 trait，9 項測試用假的 Drive 驗分頁與查詢邏輯 |
 | ~~G-03~~ ✅ | 同步資料佈局 | `format-spec.md` §7.0 |
 | ~~G-04~~ ✅ | 全域設定同步 | `padnote-sync::settings` + `ffi_account_sync`。`SyncedSettings` 與 `DeviceSettings` 是**兩個型別**，「不要同步」寫在型別上而不是註解裡；有一項測試專門確認低延遲、掌拒門檻、SAF 權限權杖連序列化都不會出現在同步 JSON 裡。逐欄位帶 Lamport 時戳合併（整包 LWW 的話，A 改語言、B 改工具列會互相蓋掉）。**已接上兩邊 UI**：Apple 的 `LocalizationManager.setLanguage` 與 Android 新增的語言選擇器（Android 原本只能跟著系統語系走）都寫進同步設定，啟動時跨裝置設定優先於本機記錄。模擬器實測：選日文 → 介面變日文 → 重啟仍是日文，SharedPreferences 裡就是核心產生的那份 JSON |
@@ -214,8 +214,26 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 最典型的是刪除 —— 沒有墓碑的話，等雲端接上，另一台裝置會把已經刪掉的筆記本
 原封不動傳回來。
 
-**外部前置**：需要建立 Google Cloud OAuth client（iOS/macOS bundle id、Android
-package name + signing SHA-1），並在同意畫面聲明 `drive.appdata` scope。
+**外部前置（已完成）**：Google Cloud OAuth client 已建立。
+`drive.appdata` 在同意畫面上標示為 **sensitive**（不是 restricted）——
+代表上 Production 要做 OAuth 驗證（填表、錄操作影片），但**不需要**
+restricted scope 那種要付費的第三方安全評估。
+
+**Android 的 SHA-1 要三筆，目前只登錄了兩筆**：
+
+| 用途 | 指紋 | 狀態 |
+|---|---|---|
+| debug | `BB:79:DA:…:61:3F` | 已登錄 |
+| release 上傳金鑰 | `D1:94:14:…:A6:25` | 已登錄 |
+| Play App Signing | 上傳到 Play Console 之後才拿得到 | **尚未** |
+
+第三筆最容易漏：Play 會用**它自己的**金鑰重新簽 App，所以使用者裝到的版本
+用的是那個憑證。只登錄前兩筆的話，自己測都正常，上架之後所有人登入都失敗。
+
+**Testing 狀態的陷阱**：專案維持在 `Testing` 且使用 sensitive 範圍時，
+refresh token **七天就過期**。長期測試時會以為是自己的程式壞了。
+程式面已經把這個狀況與「網路壞了」分開（`oauth_needs_reauth`），
+會要求重新登入而不是無限重試。
 
 
 ## 📄 固定頁面模型（2026-09-13，問題 3＋5）

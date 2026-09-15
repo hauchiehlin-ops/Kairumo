@@ -38,6 +38,32 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!--
+            Google OAuth 的 redirect 接收端。
+
+            使用者在 Custom Tabs 裡授權完，Google 會跳轉到這個自訂 scheme，
+            由這個 activity 把授權碼交回 App。
+
+            scheme **必須與核心 `oauthUrlScheme(ANDROID)` 完全一致**（反轉的
+            client id）。不一致的話，使用者授權完會回不到 App —— 瀏覽器停在
+            一個打不開的網址上，而且沒有任何錯誤訊息指向這裡。
+
+            `exported="true"` 是必要的：跳轉是從瀏覽器（另一個 App）進來的。
+            這個 activity 不接受任何其他輸入，只解析授權碼。
+        -->
+        <activity
+            android:name=".oauth.OAuthRedirectActivity"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.NoDisplay">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.googleusercontent.apps.155748821200-ff0a8ni2tsfdct1j2877t01kpjdiv5mi" />
+            </intent-filter>
+        </activity>
         <!-- 匯出檔的分享。授權是逐次、暫時的，不開放整個目錄。 -->
         <provider
             android:name="androidx.core.content.FileProvider"
