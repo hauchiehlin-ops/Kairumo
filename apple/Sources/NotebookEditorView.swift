@@ -513,9 +513,30 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     func syncContentSize() {
-        let targetWidth = max(bounds.width, 1)
+        // 內容寬度是**頁寬**，不是視窗寬度。
+        //
+        // 原本是拿 bounds.width 當內容寬，於是寬螢幕上畫布比頁面寬一大截，
+        // 而背景視圖把「頁面右邊多出來的部分」塗成灰色 —— 所有留白都堆在
+        // 右邊，看起來像版面壞掉而不像頁面的邊界。
+        // 實測 iPad Pro 13"：頁面 800pt，右側一整條 232pt 的灰。
+        //
+        // 螢幕比頁面窄時（iPhone）就用視窗寬度，讓內容自己捲。
+        let targetWidth = min(max(bounds.width, 1), PageGeometry.width)
         let targetHeight = max(pageContentHeight, bounds.height)
         let target = CGSize(width: targetWidth, height: targetHeight)
+
+        // 多出來的空間左右各分一半。
+        //
+        // 用 `contentInset` 而不是把頁面畫在偏移的位置：inset 只移動**顯示**，
+        // 內容座標一點都沒有變。畫在偏移位置的話，筆跡座標、匯出、命中測試、
+        // 同步過去的 oplog 全部要跟著補那個偏移量，而漏掉任何一處就是
+        // 「同一則筆記在不同裝置上位置不一樣」。
+        let slack = max(0, bounds.width - targetWidth)
+        let sideInset = (slack / 2).rounded(.down)
+        if abs(contentInset.left - sideInset) > 0.5 {
+            contentInset = UIEdgeInsets(top: 0, left: sideInset, bottom: 0, right: sideInset)
+        }
+
         guard contentSize != target else { return }
         contentSize = target
         templateBackgroundView?.frame = CGRect(origin: .zero, size: target)
@@ -614,6 +635,7 @@ struct CanvasRepresentable: UIViewRepresentable {
             action: #selector(Coordinator.handleLassoPan(_:)))
         lassoPan.maximumNumberOfTouches = 1
         lassoPan.isEnabled = (selectedTool == .lasso)
+        lassoPan.delegate = context.coordinator
         canvas.addGestureRecognizer(lassoPan)
         context.coordinator.lassoPan = lassoPan
 
@@ -671,7 +693,20 @@ struct CanvasRepresentable: UIViewRepresentable {
         Coordinator(self)
     }
 
-    class Coordinator: NSObject, PKCanvasViewDelegate, UIPointerInteractionDelegate {
+    class Coordinator: NSObject, PKCanvasViewDelegate, UIPointerInteractionDelegate,
+                       UIGestureRecognizerDelegate {
+
+        /// 套索手勢要能與畫布既有的辨識器**同時**成立。
+        ///
+        /// PKCanvasView 是一個 UIScrollView，而且 PencilKit 自己還掛了幾個
+        /// 辨識器在上面。不允許同時成立的話，我們這一個會被它們擋掉 ——
+        /// 症狀是圈了半天完全沒有反應，而且不會有任何錯誤。
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+        ) -> Bool {
+            true
+        }
         /// 把捲動狀態回報給 SwiftUI（自訂捲軸需要）
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             reportScrollMetrics(scrollView)
@@ -798,7 +833,18 @@ struct CanvasRepresentable: UIViewRepresentable {
                 // 覆蓋層；不關的話使用者圈一圈就真的畫了一條線出來。
                 canvas.tool = PKInkingTool(.pen, color: .clear, width: 1)
             }
-            canvas.drawingGestureRecognizer.isEnabled = (parent.selectedTool != .lasso)
+            let lassoMode = (parent.selectedTool == .lasso)
+            canvas.drawingGestureRecognizer.isEnabled = !lassoMode
+
+            // **一根手指要讓給套索。**
+            //
+            // PKCanvasView 是一個 UIScrollView，它自己的 pan 會吃掉單指拖曳去
+            // 捲動 —— 我們掛上去的套索手勢搶不贏它，症狀是圈了半天畫面只是
+            // 捲動，一條選取也做不出來。
+            //
+            // 套索期間把捲動改成**兩指**，與連續模式的手勢慣例一致；
+            // 離開套索就還原成一指，不然一般模式下就捲不動了。
+            canvas.panGestureRecognizer.minimumNumberOfTouches = lassoMode ? 2 : 1
         }
     }
 
@@ -2461,7 +2507,16 @@ public struct NotebookEditorView: View {
     }
 
     private var canvasWorkAreaContent: some View {
-ZStack(alignment: .topTrailing) {
+        // **這個 frame 不能省。**
+        //
+        // ZStack 沒有自己的尺寸，它照最大的子視圖走；而 `CanvasRepresentable`
+        // 是 UIViewRepresentable，SwiftUI 問不到它想要多大。結果是整個工作區
+        // 只長到「上一次版面給它的寬度」—— 側邊欄一關，畫布不會跟著長回來，
+        // 右邊留下一條灰帶，而使用者會問「為什麼畫布不佈滿視窗」。
+        //
+        // 明確要求佔滿之後，bounds 會變，`syncContentSize()` 在
+        // `layoutSubviews` 裡自然跟上。
+        ZStack(alignment: .topTrailing) {
             CanvasRepresentable(
                 drawing: $currentDrawing,
                 selectedTool: selectedTool,
@@ -2856,6 +2911,7 @@ ZStack(alignment: .topTrailing) {
                 .transition(.scale(scale: 0.95).combined(with: .opacity))
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(alignment: .trailing) {
             // 可用游標拖曳的捲軸（iOS 原生指示器不接受互動）
             CanvasScrollbar(

@@ -157,6 +157,33 @@ for abi in "${ABIS[@]}"; do
     cp -f "$CXX_SO" "$OUT_DIR/$abi/"
 done
 
+# --- libpdfium：PDF 的執行期庫（docs/TODO.md H8，D-11 已決定隨 App 出貨）--
+#
+# `pdfium-render` 只是 Rust 綁定，**裡面沒有 PDFium 本身**。少了這個 .so，
+# 任何開 PDF 的動作都會在執行期失敗，而編譯完全不會報錯 ——
+# 與上面 libc++_shared 那一段是同一類的坑。
+#
+# 來源與雜湊由 `scripts/fetch-pdfium.sh` 負責（版本釘死、逐檔驗雜湊）。
+# 這裡只做「複製到 jniLibs」。沒抓過就跳過並**明講**，不要靜靜略過 ——
+# 靜靜略過的話，下一個發現的人是使用者。
+PDFIUM_DIR="${PDFIUM_DIR:-third_party/pdfium}"
+for abi in "${ABIS[@]}"; do
+    case "$abi" in
+        arm64-v8a)   PDFIUM_PKG=pdfium-android-arm64 ;;
+        x86_64)      PDFIUM_PKG=pdfium-android-x64 ;;
+        armeabi-v7a) PDFIUM_PKG=pdfium-android-arm ;;
+        *) continue ;;
+    esac
+    SO="$PDFIUM_DIR/$PDFIUM_PKG/lib/libpdfium.so"
+    if [[ -f "$SO" ]]; then
+        cp -f "$SO" "$OUT_DIR/$abi/"
+        echo "   libpdfium.so → $abi"
+    else
+        echo "⚠️  ${abi} 沒有 libpdfium.so（找不到 ${SO}）。"
+        echo "    PDF 功能在執行期會失敗。先跑：./scripts/fetch-pdfium.sh all"
+    fi
+done
+
 # --- 驗證：每一個 NEEDED 都要找得到 -------------------------------------
 #
 # 這道檢查存在的理由就是上面那段。假設寫在註解裡會過期，寫成檢查才不會 ——

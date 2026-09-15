@@ -61,12 +61,24 @@
   沒有設 `DYLD_LIBRARY_PATH` 時 `bound=false`，設了之後 `bound=true`；
   設了之後 `padnote-pdf-pdfium` 的 4 項測試**真的走到實作**
   （原本 libpdfium 不在時它們會自己跳過，看起來一樣是綠的）
-- ⚪ **還要你拍板**：要不要把這幾個二進位檔**隨 App 出貨**。
-  那是供應鏈決定：第三方預建的原生庫會進到使用者的裝置裡。
-  授權面沒有問題 —— PDFium 是 BSD-3-Clause（Google），
-  打包腳本是 MIT（Benoit Blanchon），兩者都相容於本專案的 Apache-2.0
-- **還沒做**：iOS 的靜態連結、Android 的 jniLibs 擺放、xcframework 的整合。
-  那幾步等上面那個決定
+- ✅ **已拍板：隨 App 出貨**（2026-09-16，D-11）。授權面沒有問題 ——
+  PDFium 是 BSD-3-Clause（Google），打包腳本是 MIT（Benoit Blanchon），
+  兩者都相容於本專案的 Apache-2.0
+- ✅ **Android 已接好**：`build-android-libs.sh` 會把 `libpdfium.so` 複製進
+  `jniLibs/<abi>/`（arm64-v8a 6.2 MB、x86_64 6.4 MB）。沒抓過時會**明講**
+  並說下一步，不會靜靜略過 —— 靜靜略過的話，下一個發現的人是使用者
+- ✅ **iOS 的 XCFramework 已產生**：`./scripts/build-pdfium-xcframework.sh`。
+  `install_name` 改成 `@rpath/libpdfium.dylib`（維持 `./libpdfium.dylib` 的話
+  App 一啟動就閃退，而訊息指向 dyld，不指向我們）
+- ⚠️ **還沒做 1：Xcode 專案的嵌入**。要把 `PDFium.xcframework` 加進專案並選
+  **Embed & Sign**。只 Link 不 Embed 的話，開發機上跑得動、裝到裝置上
+  一開就閃退。這一步我沒有動 `project.pbxproj` —— 手改嵌入階段弄壞專案檔的
+  風險，高過它省下的時間
+- 🔴 **還沒做 2：Mac Catalyst 沒有可用的二進位檔**。bblanchon 發佈的 mac 版是
+  **平台 1（macOS）**，不是平台 6（MACCATALYST），Catalyst 的建置不會選它。
+  三條路：(a) 自己用 depot_tools + gn + ninja 建一份 Catalyst 的 PDFium、
+  (b) Mac 上走另一條 PDF 路徑（PDFKit 是系統內建的）、(c) Mac 上不支援 PDF。
+  **這一項違反「每項修改都要同時滿足四個平台」，需要你選一條**
 - **另注意**：PDFium 的 C API 非執行緒安全，多頁渲染實際是序列化的，
   J2 的效能預算只能靠 `PageCache` 的預抓，不能靠平行渲染
 
@@ -302,6 +314,32 @@ refresh token **七天就過期**。長期測試時會以為是自己的程式�
 **風險**：P-04 會動到使用者手上的真實資料。做法比照 WP4c：先寫遷移與回滾測試、
 動手前備份、每一本驗過才算數、一本失敗不影響其餘。
 
+
+## 🪢 套索選取重寫（2026-09-16，使用者回報「按鍵全部無效」）
+
+原本整個套索建在 PencilKit 的**私有內部**上：用 `_hasSelection` 這個私有
+選擇器（`unsafeBitCast` 硬轉函式指標）判斷有沒有選取，再把
+`UIResponderStandardEditActions` 送給名稱含 `PKTiledView` 的私有子視圖。
+送給不是 first responder 的視圖，那些 action 根本不會執行；Mac Catalyst
+的 responder chain 與 PencilKit 的套索實作又都與 iOS 不同。
+使用者看到的就是五顆按鈕全部沒有反應。
+
+已改成自己做（`apple/Sources/LassoSelection.swift`）：手勢自己收、
+多邊形自己算、`PKDrawing.strokes` 自己改，全部公開 API。判定規則
+（`lasso_encloses`）在核心，與 Android 同一段程式碼。
+
+| ID | 項目 | 狀態 |
+|---|---|---|
+| ~~L-01~~ ✅ | 核心的多邊形套索幾何 | `padnote-ink::is_enclosed_by_polygon`，5 項測試含「L 形套索不會抓到凹角外面的東西」與「開放套索自動封閉」|
+| ~~L-02~~ ✅ | 核心的 session 套索操作 | `lasso_select` / `delete` / `copy` / `paste` / `translate`，5 項測試。**Android 從此也有套索能力**（原本完全沒有）|
+| ~~L-03~~ ✅ | 移除私有 API | `_hasSelection` 與 `PKTiledView` 的 responder 戳法全部拿掉 |
+| ~~L-04~~ ✅ | 重複的工具列 | 工具列上那一排移除，只留畫布上的浮動列，且改成**只在真的有東西可以做時**才出現 |
+| **L-05** | **Apple 端的手勢實測** | ⚠️ **沒有驗過。** 模擬器上圈選沒有任何反應：沒有虛線框、沒有選取。試過把畫布捲動改成兩指、讓辨識器可同時成立，都沒有效果，而且分不出是「手勢沒觸發」還是「觸發了但選不到」。**需要在真機上手動確認**，或改用 UIKit 的觸控回呼而不是 `UIPanGestureRecognizer` |
+| **L-06** | **Android 的套索 UI** | 核心能力已經在，但 Android 還沒有套索工具的介面 |
+
+**現況要講清楚**：這一版把一個**已知壞掉而且用私有 API** 的實作，換成一個
+**公開 API、幾何有測試、但端到端沒驗過**的實作。前者確定不能用，後者
+至少沒有審核風險；但「現在能用了」這句話我還不能說。
 
 ## 📜 連續頁面模式（2026-09-15，使用者需求）
 
