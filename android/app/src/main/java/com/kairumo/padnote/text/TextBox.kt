@@ -39,6 +39,12 @@ data class TextBox(
      */
     var backgroundColorHex: String? = null,
     var hasBorder: Boolean = true,
+    /**
+     * 畫布上的旋轉角度（度，順時針）。`null` = 沒設定（等同 0）。
+     *
+     * 與 Apple 端 `NoteTextAttachment.rotationDegrees` 同一個鍵、同一個語意。
+     */
+    var rotationDegrees: Float? = null,
     var borderColorHex: String? = null,
     var borderWidth: Float? = null,
     var cornerRadius: Float = 8f,
@@ -78,6 +84,8 @@ object TextBoxAppearance {
         box.backgroundColorHex?.let { json.put("backgroundColorHex", it) }
         box.borderColorHex?.let { json.put("borderColorHex", it) }
         box.borderWidth?.let { json.put("borderWidth", it.toDouble()) }
+        // 畫布旋轉。與 Apple 端同一個鍵，不然轉過的方塊換平台打開會變回正的。
+        box.rotationDegrees?.let { json.put("rotationDegrees", it.toDouble()) }
         box.lineSpacing?.let { json.put("lineSpacing", it.toDouble()) }
         box.paragraphSpacing?.let { json.put("paragraphSpacing", it.toDouble()) }
         box.firstLineIndent?.let { json.put("firstLineIndent", it.toDouble()) }
@@ -108,6 +116,7 @@ object TextBoxAppearance {
         if (obj.has("cornerRadius")) box.cornerRadius = obj.getDouble("cornerRadius").toFloat()
         if (obj.has("width")) box.width = obj.getDouble("width").toFloat()
         if (obj.has("height")) box.height = obj.getDouble("height").toFloat()
+        if (obj.has("rotationDegrees")) box.rotationDegrees = obj.getDouble("rotationDegrees").toFloat()
         if (obj.has("lineSpacing")) box.lineSpacing = obj.getDouble("lineSpacing").toFloat()
         if (obj.has("paragraphSpacing")) box.paragraphSpacing = obj.getDouble("paragraphSpacing").toFloat()
         if (obj.has("firstLineIndent")) box.firstLineIndent = obj.getDouble("firstLineIndent").toFloat()

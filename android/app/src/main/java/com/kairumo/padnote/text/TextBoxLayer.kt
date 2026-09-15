@@ -13,6 +13,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import com.kairumo.padnote.canvas.CanvasRotation
+import com.kairumo.padnote.canvas.RotationHandle
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.style.TextAlign
@@ -67,11 +70,16 @@ private fun TextBoxView(
     onChanged: (TextBox) -> Unit
 ) {
     val shape = RoundedCornerShape(box.cornerRadius.dp)
+    val rotation = CanvasRotation.normalized(box.rotationDegrees ?: 0f)
+
+    // 外層只負責定位，**不旋轉** —— 旋轉把手要掛在這一層，
+    // 放進旋轉裡的話拖曳算出的角度會疊加自身旋轉，物件會失控加速。
+    Box(modifier = Modifier.offset(x = box.x.dp, y = box.y.dp)) {
 
     Box(
         modifier = Modifier
-            .offset(x = box.x.dp, y = box.y.dp)
             .size(width = box.width.dp, height = box.height.dp)
+            .graphicsLayer { rotationZ = rotation }
             .clip(shape)
             .background(resolveBackground(box))
             .then(
@@ -116,6 +124,18 @@ private fun TextBoxView(
             ),
             modifier = Modifier.padding(start = (box.paragraphIndent ?: 0f).dp)
         )
+    }
+
+        if (isSelected) {
+            RotationHandle(
+                degrees = rotation,
+                widthDp = box.width,
+                heightDp = box.height,
+                density = density,
+                onRotate = { box.rotationDegrees = it },
+                onCommit = { onChanged(box) }
+            )
+        }
     }
 }
 

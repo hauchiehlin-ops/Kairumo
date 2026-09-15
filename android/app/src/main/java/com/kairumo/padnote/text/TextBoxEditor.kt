@@ -1,17 +1,25 @@
 package com.kairumo.padnote.text
 
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Divider
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Slider
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -24,13 +32,16 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.LocalizationStrings
+import com.kairumo.padnote.canvas.CanvasRotation
 
 /**
  * 文字方塊的編輯面板（Android）。
  *
- * 控制項與 Apple 端的「Word 文字編修」對齊：字級、字形、對齊、底色（含透明）、
- * 邊框、段落（行距／段距／首行／縮排）。**改了就算數**，沒有確認按鈕 ——
- * 與 Apple 的浮動面板一致。
+ * 控制項與分頁結構與 Apple 端的 `WordTextStudioView` 對齊：
+ * 字體／段落／樣式／符號四頁。**改了就算數**，沒有確認按鈕。
+ *
+ * 分頁不是裝飾：原本是一條長 Column 塞進 AlertDialog，控制項一多就超出
+ * 對話框高度被裁掉 —— 與 Apple 端浮動面板原本的毛病一模一樣。
  */
 @Composable
 fun TextBoxEditor(
@@ -44,6 +55,8 @@ fun TextBoxEditor(
 
     var text by remember(box.id) { mutableStateOf(box.text) }
     var revision by remember(box.id) { mutableStateOf(0) }
+    var tab by remember(box.id) { mutableStateOf(0) }
+    var symbolCategory by remember(box.id) { mutableStateOf(0) }
 
     fun mutate(change: (TextBox) -> Unit) {
         change(box)
@@ -54,9 +67,7 @@ fun TextBoxEditor(
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = onDismiss) { Text(l("close")) } },
-        dismissButton = {
-            TextButton(onClick = onDelete) { Text(l("delete")) }
-        },
+        dismissButton = { TextButton(onClick = onDelete) { Text(l("delete")) } },
         title = { Text(l("text_studio")) },
         text = {
             Column(
@@ -78,83 +89,193 @@ fun TextBoxEditor(
 
                 Divider()
 
-                // 字級
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                TabRow(selectedTabIndex = tab) {
+                    listOf("text_tab_font", "paragraph_style", "text_tab_style", "text_tab_symbols")
+                        .forEachIndexed { index, key ->
+                            Tab(
+                                selected = tab == index,
+                                onClick = { tab = index },
+                                text = { Text(l(key), style = MaterialTheme.typography.labelSmall) }
+                            )
+                        }
+                }
+
+                // 對話框高度有限，內容一律可捲 —— 被裁掉的控制項等於不存在。
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = 280.dp)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(l("font_size"), style = MaterialTheme.typography.labelSmall)
-                    for (size in listOf(12f, 16f, 20f, 28f, 36f)) {
-                        FilterChip(
-                            selected = box.fontSize == size && revision >= 0,
-                            onClick = { mutate { it.fontSize = size } },
-                            label = { Text("${size.toInt()}") }
-                        )
+                    when (tab) {
+                        0 -> {
+                            label(l("font_size"))
+                            chipRow(listOf(12f, 16f, 20f, 28f, 36f).map { size ->
+                                ChipSpec("${size.toInt()}", box.fontSize == size && revision >= 0) {
+                                    mutate { it.fontSize = size }
+                                }
+                            })
+                            label(l("alignment"))
+                            chipRow(listOf("left", "center", "right", "justified").map { raw ->
+                                ChipSpec(raw.take(1).uppercase(), box.alignment == raw && revision >= 0) {
+                                    mutate { it.alignment = raw }
+                                }
+                            })
+                            label(l("font_style"))
+                            chipRow(listOf(
+                                ChipSpec("B", box.bold && revision >= 0) { mutate { it.bold = !it.bold } },
+                                ChipSpec("I", box.italic && revision >= 0) { mutate { it.italic = !it.italic } },
+                                ChipSpec("U", box.underline && revision >= 0) { mutate { it.underline = !it.underline } },
+                                ChipSpec("S", box.strikethrough && revision >= 0) { mutate { it.strikethrough = !it.strikethrough } }
+                            ))
+                        }
+
+                        1 -> {
+                            stepperRow(l("line_spacing"), box.lineSpacing ?: 0f, 0f..24f, 2f) { v ->
+                                mutate { it.lineSpacing = v }
+                            }
+                            stepperRow(l("paragraph_spacing"), box.paragraphSpacing ?: 0f, 0f..40f, 4f) { v ->
+                                mutate { it.paragraphSpacing = v }
+                            }
+                            stepperRow(l("first_line_indent"), box.firstLineIndent ?: 0f, 0f..64f, 8f) { v ->
+                                mutate { it.firstLineIndent = v }
+                            }
+                            stepperRow(l("paragraph_indent"), box.paragraphIndent ?: 0f, 0f..64f, 8f) { v ->
+                                mutate { it.paragraphIndent = v }
+                            }
+                        }
+
+                        2 -> {
+                            // 透明放最前面：那是使用者最常想要、原本完全做不到的一項。
+                            label(l("object_background_color"))
+                            chipRow(
+                                listOf(
+                                    ChipSpec(l("color_transparent"), box.isBackgroundClear && revision >= 0) {
+                                        mutate { it.backgroundColorHex = "clear" }
+                                    }
+                                ) + listOf(
+                                    "color_white" to "#FFFFFF",
+                                    "color_yellow" to "#FFF9C4",
+                                    "color_blue" to "#E3F2FD",
+                                    "color_green" to "#E8F5E9"
+                                ).map { (key, hex) ->
+                                    ChipSpec(l(key), box.backgroundColorHex == hex && revision >= 0) {
+                                        mutate { it.backgroundColorHex = hex }
+                                    }
+                                }
+                            )
+
+                            // 邊框開關留在編輯面板裡，不放到畫布上當無標示的小圓鈕。
+                            chipRow(listOf(
+                                ChipSpec(l("object_show_border"), box.hasBorder && revision >= 0) {
+                                    mutate { it.hasBorder = !it.hasBorder }
+                                }
+                            ))
+
+                            Divider()
+
+                            label(l("image_rotate"))
+                            rotationRow(
+                                degrees = CanvasRotation.normalized(box.rotationDegrees ?: 0f),
+                                resetLabel = l("reset")
+                            ) { v -> mutate { it.rotationDegrees = v } }
+                            Text(
+                                l("rotation_free_hint"),
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                        }
+
+                        else -> {
+                            chipRow(
+                                listOf("special_symbols", "punctuation_marks", "math_symbols", "roman_numerals")
+                                    .mapIndexed { index, key ->
+                                        ChipSpec(l(key), symbolCategory == index) { symbolCategory = index }
+                                    }
+                            )
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(44.dp),
+                                modifier = Modifier.fillMaxWidth().heightIn(max = 180.dp)
+                            ) {
+                                items(SYMBOL_SETS[symbolCategory]) { symbol ->
+                                    TextButton(onClick = {
+                                        text += symbol
+                                        mutate { it.text = text }
+                                    }) { Text(symbol) }
+                                }
+                            }
+                        }
                     }
-                }
-
-                // 對齊
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    for (raw in listOf("left", "center", "right", "justified")) {
-                        FilterChip(
-                            selected = box.alignment == raw && revision >= 0,
-                            onClick = { mutate { it.alignment = raw } },
-                            label = { Text(raw.take(1).uppercase()) }
-                        )
-                    }
-                }
-
-                Divider()
-
-                // 底色。透明放在最前面：那是使用者最常想要、而原本完全做不到的一項。
-                Row(
-                    modifier = Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(l("object_background_color"), style = MaterialTheme.typography.labelSmall)
-                    FilterChip(
-                        selected = box.isBackgroundClear && revision >= 0,
-                        onClick = { mutate { it.backgroundColorHex = "clear" } },
-                        label = { Text(l("color_transparent")) }
-                    )
-                    for ((key, hex) in listOf(
-                        "color_white" to "#FFFFFF",
-                        "color_yellow" to "#FFF9C4",
-                        "color_blue" to "#E3F2FD",
-                        "color_green" to "#E8F5E9"
-                    )) {
-                        FilterChip(
-                            selected = box.backgroundColorHex == hex && revision >= 0,
-                            onClick = { mutate { it.backgroundColorHex = hex } },
-                            label = { Text(l(key)) }
-                        )
-                    }
-                }
-
-                FilterChip(
-                    selected = box.hasBorder && revision >= 0,
-                    onClick = { mutate { it.hasBorder = !it.hasBorder } },
-                    label = { Text(l("object_show_border")) }
-                )
-
-                Divider()
-
-                // 段落
-                stepperRow(l("line_spacing"), box.lineSpacing ?: 0f, 0f..24f, 2f) { v ->
-                    mutate { it.lineSpacing = v }
-                }
-                stepperRow(l("paragraph_spacing"), box.paragraphSpacing ?: 0f, 0f..40f, 4f) { v ->
-                    mutate { it.paragraphSpacing = v }
-                }
-                stepperRow(l("first_line_indent"), box.firstLineIndent ?: 0f, 0f..64f, 8f) { v ->
-                    mutate { it.firstLineIndent = v }
-                }
-                stepperRow(l("paragraph_indent"), box.paragraphIndent ?: 0f, 0f..64f, 8f) { v ->
-                    mutate { it.paragraphIndent = v }
                 }
             }
         }
     )
+}
+
+/**
+ * 符號表。與 Apple 端 `WordTextStudioView` 的四組**逐字相同** ——
+ * 兩邊不一樣的話，同一份筆記在另一個平台就插不出同樣的符號。
+ */
+private val SYMBOL_SETS: List<List<String>> = listOf(
+    listOf("★","☆","✓","✗","▲","▼","◆","◇","●","○","→","←","↑","↓","⇄","⇒",
+           "※","§","¶","©","®","™","℃","℉","♥","♦"),
+    listOf("「","」","『","』","《","》","〈","〉","【","】","〔","〕","——","……","～","·",
+           "；","：","？！","“","”","‘","’"),
+    listOf("±","×","÷","≠","≈","≤","≥","∑","∏","√","∫","∂","∞","∈","∉","⊂",
+           "⊆","∪","∩","α","β","γ","θ","λ","π","σ","ω","Δ","Ω","°"),
+    listOf("Ⅰ","Ⅱ","Ⅲ","Ⅳ","Ⅴ","Ⅵ","Ⅶ","Ⅷ","Ⅸ","Ⅹ","Ⅺ","Ⅻ",
+           "ⅰ","ⅱ","ⅲ","ⅳ","ⅴ","ⅵ","ⅶ","ⅷ","ⅸ","ⅹ")
+)
+
+private data class ChipSpec(val label: String, val selected: Boolean, val onClick: () -> Unit)
+
+@Composable
+private fun label(text: String) {
+    Text(text, style = MaterialTheme.typography.labelSmall)
+}
+
+/** 會換行的晶片列。原本是橫向捲軸，在對話框裡使用者看不出右邊還有東西。 */
+@Composable
+private fun chipRow(specs: List<ChipSpec>) {
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(76.dp),
+        modifier = Modifier.fillMaxWidth().heightIn(max = 120.dp)
+    ) {
+        items(specs) { spec ->
+            FilterChip(
+                selected = spec.selected,
+                onClick = spec.onClick,
+                label = { Text(spec.label, style = MaterialTheme.typography.labelSmall) },
+                modifier = Modifier.padding(2.dp)
+            )
+        }
+    }
+}
+
+/** 旋轉：滑桿 + 常用角度 + 歸零。角度規則與 Apple 端共用 `CanvasRotation`。 */
+@Composable
+private fun rotationRow(degrees: Float, resetLabel: String, onChange: (Float) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Slider(
+                value = degrees,
+                onValueChange = { onChange(CanvasRotation.normalized(it)) },
+                valueRange = 0f..359f,
+                modifier = Modifier.weight(1f)
+            )
+            Text("${degrees.toInt()}°", style = MaterialTheme.typography.labelMedium,
+                 modifier = Modifier.padding(top = 12.dp))
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (angle in listOf(0f, 90f, 180f, 270f)) {
+                AssistChip(onClick = { onChange(angle) }, label = { Text("${angle.toInt()}°") })
+            }
+            TextButton(onClick = { onChange(0f) }) { Text(resetLabel) }
+        }
+    }
 }
 
 /**

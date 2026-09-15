@@ -1959,6 +1959,14 @@ extension LocalizationManager {
             .ko: "글꼴 크기",
             .th: "ขนาดตัวอักษร"
         ],
+        "font_style": [
+            .zhHant: "字形",
+            .en: "Font style",
+            .zhHans: "字形",
+            .ja: "文字スタイル",
+            .ko: "글자 스타일",
+            .th: "ลักษณะอักษร"
+        ],
         "geom_preview": [
             .zhHant: "3D 預覽",
             .en: "3D Preview",

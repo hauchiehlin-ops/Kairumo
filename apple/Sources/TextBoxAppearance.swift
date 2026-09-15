@@ -40,6 +40,8 @@ enum TextBoxAppearance {
         if let value = item.backgroundColorHex { json["backgroundColorHex"] = value }
         if let value = item.borderColorHex { json["borderColorHex"] = value }
         if let value = item.borderWidth { json["borderWidth"] = value }
+        // 畫布旋轉。兩個平台用同一個鍵，不然轉過的方塊換平台打開會變回正的。
+        if let value = item.rotationDegrees { json["rotationDegrees"] = value }
         if let value = item.lineSpacing { json["lineSpacing"] = value }
         if let value = item.paragraphSpacing { json["paragraphSpacing"] = value }
         if let value = item.firstLineIndent { json["firstLineIndent"] = value }
@@ -73,6 +75,7 @@ enum TextBoxAppearance {
         if let value = map["cornerRadius"] as? Double { item.cornerRadius = CGFloat(value) }
         if let value = map["width"] as? Double { item.width = CGFloat(value) }
         if let value = map["height"] as? Double { item.height = CGFloat(value) }
+        if let value = map["rotationDegrees"] as? Double { item.rotationDegrees = value }
         if let value = map["lineSpacing"] as? Double { item.lineSpacing = CGFloat(value) }
         if let value = map["paragraphSpacing"] as? Double { item.paragraphSpacing = CGFloat(value) }
         if let value = map["firstLineIndent"] as? Double { item.firstLineIndent = CGFloat(value) }

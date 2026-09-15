@@ -1943,6 +1943,14 @@
     "zhHans": "字号大小",
     "zhHant": "字級大小"
   },
+  "font_style": {
+    "en": "Font style",
+    "ja": "文字スタイル",
+    "ko": "글자 스타일",
+    "th": "ลักษณะอักษร",
+    "zhHans": "字形",
+    "zhHant": "字形"
+  },
   "geom_preview": {
     "en": "3D Preview",
     "ja": "3D プレビュー",

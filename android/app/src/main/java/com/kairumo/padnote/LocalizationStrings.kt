@@ -1954,6 +1954,14 @@ object LocalizationStrings {
             "ko" to "글꼴 크기",
             "th" to "ขนาดตัวอักษร"
         ),
+        "font_style" to mapOf(
+            "zh-Hant" to "字形",
+            "en" to "Font style",
+            "zh-Hans" to "字形",
+            "ja" to "文字スタイル",
+            "ko" to "글자 스타일",
+            "th" to "ลักษณะอักษร"
+        ),
         "geom_preview" to mapOf(
             "zh-Hant" to "3D 預覽",
             "en" to "3D Preview",
