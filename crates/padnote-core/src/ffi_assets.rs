@@ -64,26 +64,29 @@ pub fn asset_categories() -> Vec<FfiAssetCategory> {
 }
 
 /// 分類名稱的語系鍵。
+///
+/// 刻意沿用 Apple 端 `AssetCategory.localizationKey` 原本那組 `cat_*` 鍵，
+/// 不另造一套 —— 同一個分類名稱翻兩次，遲早會出現兩個不一樣的譯法。
 #[uniffi::export]
 pub fn asset_category_key(category: FfiAssetCategory) -> String {
     match category {
-        FfiAssetCategory::Mechanism => "asset_cat_mechanism",
-        FfiAssetCategory::Electronics3C => "asset_cat_electronics3c",
-        FfiAssetCategory::Automotive => "asset_cat_automotive",
-        FfiAssetCategory::Furniture => "asset_cat_furniture",
-        FfiAssetCategory::Hardware => "asset_cat_hardware",
-        FfiAssetCategory::Digital => "asset_cat_digital",
-        FfiAssetCategory::AestheticComposition => "asset_cat_aestheticcomposition",
-        FfiAssetCategory::Typography => "asset_cat_typography",
-        FfiAssetCategory::DesignMotifs => "asset_cat_designmotifs",
-        FfiAssetCategory::ToolingMolding => "asset_cat_toolingmolding",
-        FfiAssetCategory::SheetMetalCNC => "asset_cat_sheetmetalcnc",
-        FfiAssetCategory::SurfaceFinishing => "asset_cat_surfacefinishing",
-        FfiAssetCategory::PneumaticsPiping => "asset_cat_pneumaticspiping",
-        FfiAssetCategory::CrossPlatformUI => "asset_cat_crossplatformui",
-        FfiAssetCategory::UxMotion => "asset_cat_uxmotion",
-        FfiAssetCategory::InfoArchitecture => "asset_cat_infoarchitecture",
-        FfiAssetCategory::DesignTokens => "asset_cat_designtokens",
+        FfiAssetCategory::Mechanism => "cat_mechanism",
+        FfiAssetCategory::Electronics3C => "cat_electronics",
+        FfiAssetCategory::Automotive => "cat_automotive",
+        FfiAssetCategory::Furniture => "cat_furniture",
+        FfiAssetCategory::Hardware => "cat_hardware",
+        FfiAssetCategory::Digital => "cat_digital",
+        FfiAssetCategory::AestheticComposition => "cat_aesthetic_comp",
+        FfiAssetCategory::Typography => "cat_typography",
+        FfiAssetCategory::DesignMotifs => "cat_design_motifs",
+        FfiAssetCategory::ToolingMolding => "cat_tooling_molding",
+        FfiAssetCategory::SheetMetalCNC => "cat_sheetmetal_cnc",
+        FfiAssetCategory::SurfaceFinishing => "cat_surface_finishing",
+        FfiAssetCategory::PneumaticsPiping => "cat_pneumatics_piping",
+        FfiAssetCategory::CrossPlatformUI => "cat_crossplatform_ui",
+        FfiAssetCategory::UxMotion => "cat_ux_motion",
+        FfiAssetCategory::InfoArchitecture => "cat_info_arch",
+        FfiAssetCategory::DesignTokens => "cat_design_tokens",
     }
     .to_string()
 }
@@ -890,7 +893,7 @@ mod tests {
     fn every_category_maps_to_a_theme() {
         for category in asset_categories() {
             let key = asset_category_key(category);
-            assert!(key.starts_with("asset_cat_"), "壞的語系鍵：{key}");
+            assert!(key.starts_with("cat_"), "壞的語系鍵：{key}");
             // 呼叫得到就代表 match 是窮盡的；漏一個分類編不過。
             let _ = asset_category_theme(category);
         }

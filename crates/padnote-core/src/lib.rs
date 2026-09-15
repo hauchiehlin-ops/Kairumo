@@ -10,6 +10,7 @@ uniffi::setup_scaffolding!();
 
 pub mod app;
 pub mod ffi;
+pub mod ffi_asset_art;
 pub mod ffi_assets;
 pub mod ffi_backup;
 pub mod ffi_chart;

@@ -90,6 +90,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.kairumo.padnote.ink.InkEngine
 import com.kairumo.padnote.ink.SketchRefineBar
+import com.kairumo.padnote.asset.AssetLibrarySheet
+import com.kairumo.padnote.asset.renderAssetPng
 import com.kairumo.padnote.model3d.Model3DLayer
 import com.kairumo.padnote.model3d.Model3DObject
 import com.kairumo.padnote.model3d.Model3DStudio
@@ -532,6 +534,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
 
     /// 主題專屬工具與它的兩個構圖輔助疊層。
     var showThemeTools by remember { mutableStateOf(false) }
+    var showAssetLibrary by remember { mutableStateOf(false) }
     var goldenSpiral by remember { mutableStateOf(false) }
     var ruleOfThirds by remember { mutableStateOf(false) }
     /// 美化後按鈕的可用狀態要跟著變（engine 才是真相來源，這只是重繪訊號）。
@@ -736,6 +739,10 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 DropdownMenuItem(
                     text = { Text(l10n("model3d_studio")) },
                     onClick = { showMenu = false; insertingModel3D = true }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("asset_library")) },
+                    onClick = { showMenu = false; showAssetLibrary = true }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("insert_image")) },
@@ -1217,6 +1224,26 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 editorMode = EditorMode.TYPE
             },
             onDismiss = { insertingModel3D = false; editingModel3D = null }
+        )
+    }
+
+    if (showAssetLibrary) {
+        AssetLibrarySheet(
+            languageTag = deviceLanguageTag(),
+            onInsert = { item, style ->
+                // 素材是**線圖**，沒有可編輯的文字內容，所以插成圖片區塊
+                // ——與 Apple 端一致。向量在這裡算繪成 PNG 落盤，讓匯出 PDF
+                // 與尚未支援素材的讀取器也看得到東西。
+                val png = renderAssetPng(item.drawingCode, style, item.source)
+                if (png != null) {
+                    imageStore.insert(png, "${item.id}.png")
+                    imageRevision++
+                    editorMode = EditorMode.TYPE
+                } else {
+                    message = l10n("no_assets_found")
+                }
+            },
+            onDismiss = { showAssetLibrary = false }
         )
     }
 
