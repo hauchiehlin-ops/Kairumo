@@ -7,16 +7,26 @@
 
 ## 🟡 待實作（純軟體，可直接做）
 
-### T-R1. 形狀與表格的自由角度旋轉
-- **現況**：旋轉已完成的範圍是圖片（含圖表／連結／3D／色票卡，它們都走圖片或
-  連結附件）與文字方塊，兩個平台都有畫布拖曳把手與面板精準控制。
-  **形狀與表格還不能轉。**
-- **卡在哪（不是外部條件，是設計問題）**：形狀之間的**連接線錨點由核心計算**
-  （`ShapeGeometry.Connection`），錨在未旋轉的邊上。把形狀轉了，線會接到錯誤
-  的邊 —— 而且畫面上只是「線有點歪」，不會有任何錯誤訊息。
-- **要做**：核心的連接幾何要接受形狀角度，錨點依角度重算；兩個平台再接上
-  與文字方塊相同的 `CanvasRotation` 把手。表格沒有連接線，可以先做。
-- **判定**：兩個形狀連線後各自旋轉，線仍接在視覺上正確的邊；跨平台開啟角度一致。
+### T-R1. 表格的自由角度旋轉（形狀已完成）
+- **已完成**：圖片（含圖表／連結／3D／色票卡）、文字方塊、**形狀**。
+  兩個平台都有畫布拖曳把手與面板精準控制，核心有測試釘住責任劃分
+  （`outline` 不轉、`anchor_point` 轉）。
+- **還沒做**：表格。表格沒有連接線，理論上比形狀單純 ——
+  照 `NoteShapeAttachment` / `NoteShape` 的做法加 `rotationDegrees`
+  （**必須 Optional**）、外觀 JSON 兩端同鍵、平台整體套 `rotationEffect` /
+  `graphicsLayer`，再掛 `ObjectRotationHandle` / `RotationHandle`。
+- **判定**：轉過的表格在兩個平台角度一致；儲存後重開角度還在。
+
+### T-R2. macOS（Mac Catalyst）版面目視驗證
+- **卡在**：驗證當下使用者自己的 `/Applications/Kairumo.app` 正在執行。
+  兩個實例會寫同一份本機資料，同時跑有弄壞使用者筆記的風險，所以沒有硬上。
+- **已就緒**：Mac Catalyst target 編譯通過（`BUILD SUCCEEDED`），
+  面板是與 iPad 共用的同一份 SwiftUI 程式碼，iPad 端已逐頁目視驗證過。
+- **要做**：使用者關掉自己那個 Kairumo → 跑
+  `xcodebuild build -destination 'platform=macOS,variant=Mac Catalyst'`
+  → 開起來檢查滑鼠 hover 與視窗縮放時面板會不會被裁。
+- **為什麼仍要驗**：`FloatingPanel` 是固定 `width: 340`，Mac 上視窗可以縮到
+  比 iPad 更窄，而 iPad 沒有 hover 狀態。這兩點 iPad 那一輪驗不到。
 
 ---
 
