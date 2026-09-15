@@ -9,10 +9,12 @@
 #
 # 用法：
 #   ./scripts/dist.sh                 # 三個平台全做
-#   ./scripts/dist.sh --mac-only
-#   ./scripts/dist.sh --ios-only
-#   ./scripts/dist.sh --android-only
+#   ./scripts/dist.sh --mac --android # 只要 DMG 與 APK（跳過需要 UDID 的 iOS）
+#   ./scripts/dist.sh --mac
+#   ./scripts/dist.sh --ios
+#   ./scripts/dist.sh --android
 #   ./scripts/dist.sh --ios-install   # 不產 .ipa，直接裝進接上線的 iPhone / iPad
+#   ./scripts/dist.sh --preflight     # 只檢查環境（憑證、JDK、SDK），不打包
 #   ./scripts/dist.sh --skip-rust     # 略過 Rust XCFramework 重編（省十來分鐘）
 #   ./scripts/dist.sh --no-notarize   # Mac 不公證（只能自己用，別人開會被 Gatekeeper 擋）
 #
@@ -52,20 +54,35 @@ fi
 DO_MAC=1; DO_IOS=1; DO_ANDROID=1; SKIP_RUST=0; NOTARIZE=1
 # iOS 預設走 Ad Hoc（產出 .ipa 給人）。--ios-install 改走 development 簽章
 # 並直接裝進接上線的裝置 —— 那條路完全不需要碰 .ipa 檔案。
-IOS_INSTALL=0; IOS_METHOD="release-testing"
+IOS_INSTALL=0; IOS_METHOD="release-testing"; PREFLIGHT_ONLY=0
+
+# --mac / --ios / --android 是可以疊加的選取器：給了任何一個，就從「全都不做」
+# 開始，只打開被點名的平台。--*-only 是它們的單數別名，保留是因為既有筆記
+# 與說明文件都那樣寫。
+#
+# 為什麼需要疊加：最常見的需求是「DMG + APK，不要 iOS」——
+# 而 iOS 那條路需要事先登錄 UDID，用不到卻硬跑，要多花十來分鐘才失敗。
+# 舊寫法沒有辦法表達這件事（--mac-only --android-only 兩個互相關掉，變成什麼都不做）。
+SELECTED=0
+select_only() {
+    if [[ "$SELECTED" -eq 0 ]]; then
+        DO_MAC=0; DO_IOS=0; DO_ANDROID=0; SELECTED=1
+    fi
+}
 for arg in "$@"; do
     case "$arg" in
-        --mac-only)     DO_IOS=0; DO_ANDROID=0 ;;
-        --ios-only)     DO_MAC=0; DO_ANDROID=0 ;;
-        --android-only) DO_MAC=0; DO_IOS=0 ;;
+        --mac|--mac-only)         select_only; DO_MAC=1 ;;
+        --ios|--ios-only)         select_only; DO_IOS=1 ;;
+        --android|--android-only) select_only; DO_ANDROID=1 ;;
         --skip-rust)    SKIP_RUST=1 ;;
         --no-notarize)  NOTARIZE=0 ;;
+        --preflight)    PREFLIGHT_ONLY=1 ;;
         --ios-install)  IOS_INSTALL=1; IOS_METHOD="development" ;;
         -h|--help)      sed -n '3,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *)
             # 打錯的旗標不能靜默吃掉 —— 使用者會以為做了某件事，實際沒有。
             echo "❌ 未知參數：$arg" >&2
-            echo "   用法: $0 [--mac-only|--ios-only|--android-only] [--ios-install] [--skip-rust] [--no-notarize]" >&2
+            echo "   用法: $0 [--mac] [--ios] [--android] [--ios-install] [--preflight] [--skip-rust] [--no-notarize]" >&2
             exit 2 ;;
     esac
 done
@@ -94,9 +111,65 @@ DELIVERED=()
 # 版本一致性先擋。三個平台版本號對不上的套件發出去，之後沒人分得清誰是誰。
 step "前置檢查"
 "${SCRIPT_DIR}/check-version-consistency.sh"
+# 環境缺件在這裡就全部攤開。擺到各平台自己那一段才檢查的話，
+# Rust 與 Apple 已經先跑掉十幾分鐘，才因為一個環境變數整趟白費。
+if [[ "$DO_ANDROID" -eq 1 ]]; then
+    # Gradle 找 JDK 的順序是 JAVA_HOME → PATH。這台機器的 java 來自 keg-only 的
+    # homebrew openjdk，沒有連進 /usr/bin —— 所以 /usr/libexec/java_home 找不到它
+    # （登入時那句 "Unable to locate a Java Runtime" 就是這樣來的）。
+    # 互動 shell 靠 .zshrc 補 PATH 才看得到；換個執行環境（cron、CI、別的 shell）
+    # 就會在 gradle 那一步才爆。
+    if [[ -z "${JAVA_HOME:-}" ]]; then
+        if JAVA_BIN="$(command -v java)"; then
+            JAVA_HOME="$(cd "$(dirname "$JAVA_BIN")/.." && pwd)"
+            export JAVA_HOME
+        else
+            echo "❌ 找不到 java，Gradle 無法執行。" >&2
+            echo "   brew install openjdk@17 後，把它的 bin 加進 PATH 或設定 JAVA_HOME。" >&2
+            exit 1
+        fi
+    fi
+    echo "   ✅ JDK：${JAVA_HOME}"
+
+    export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
+    if [[ ! -d "$ANDROID_HOME" ]]; then
+        echo "❌ 找不到 Android SDK（${ANDROID_HOME}）。" >&2
+        exit 1
+    fi
+    # apksigner 是驗證那一步唯一的依據。沒有它，APK 做得出來卻無法確認能不能裝，
+    # 那就不叫「已驗證」了 —— 寧可現在停。
+    if [[ -z "$(find "${ANDROID_HOME}/build-tools" -name apksigner 2>/dev/null | head -n 1)" ]]; then
+        echo "❌ ${ANDROID_HOME}/build-tools 底下找不到 apksigner，APK 簽章無法驗證。" >&2
+        exit 1
+    fi
+    echo "   ✅ Android SDK 與 apksigner"
+fi
+
+# 公證要 Apple 帳號與 App 專用密碼。少了它，DMG 照樣做得出來，
+# 但別人下載後 macOS 會說「Apple 無法驗證」—— 而那要等打包完才知道。
+if [[ "$DO_MAC" -eq 1 && "$NOTARIZE" -eq 1 ]]; then
+    if [[ -z "${APPLE_ID:-}" || -z "${APP_SPECIFIC_PASSWORD:-}" ]]; then
+        echo "❌ apple/ExportConfig.env 缺 APPLE_ID / APP_SPECIFIC_PASSWORD，無法公證。" >&2
+        echo "   只給自己用的話：加上 --no-notarize。" >&2
+        exit 1
+    fi
+    if [[ -z "$(security find-identity -v -p codesigning | awk '/Developer ID Application/ {print $2; exit}')" ]]; then
+        echo "❌ 鑰匙圈裡沒有 Developer ID Application 憑證，簽不出能發給別人的 Mac 版。" >&2
+        exit 1
+    fi
+    echo "   ✅ Developer ID 憑證與公證帳號"
+fi
+
 if [[ -f "${SCRIPT_DIR}/sync-docs.sh" ]]; then
     "${SCRIPT_DIR}/sync-docs.sh" >/dev/null
     echo "   ✅ 使用者文件已同步至 apple/Resources/Docs"
+fi
+
+# 只跑前置檢查就結束 —— 用來確認環境是好的，不花二十分鐘打包。
+if [[ "$PREFLIGHT_ONLY" -eq 1 ]]; then
+    echo ""
+    echo "✅ --preflight：環境檢查全數通過，未進行打包。"
+    exit 0
 fi
 
 # ───────────────────────────── Apple 共用 ─────────────────────────────
@@ -436,12 +509,24 @@ EOF
 fi
 
 # ───────────────────────────── 收尾 ─────────────────────────────
-cat > "${OUT_DIR}/安裝說明.txt" <<GUIDE
+# 說明書只寫實際產出的平台。三個平台照抄的話，只做了 DMG + APK 的那一包
+# 裡會有一段教人安裝根本不存在的 .ipa —— 收件人會去找那個檔案。
+GUIDE_FILE="${OUT_DIR}/安裝說明.txt"
+cat > "$GUIDE_FILE" <<GUIDE
 Kairumo v${APP_VER} (build ${BUNDLE_VER})
+GUIDE
+
+if [[ "$DO_MAC" -eq 1 ]]; then
+cat >> "$GUIDE_FILE" <<GUIDE
 
 ■ Mac（Kairumo-${APP_VER}-mac.dmg）
   1. 打開 DMG，把 Kairumo 拖進 Applications。
   2. 直接開啟即可。已通過 Apple 公證，不需要任何額外設定。
+GUIDE
+fi
+
+if [[ "$DO_IOS" -eq 1 && "$IOS_INSTALL" -eq 0 ]]; then
+cat >> "$GUIDE_FILE" <<GUIDE
 
 ■ iPhone / iPad（Kairumo-${APP_VER}-ios.ipa）
   ⚠️ .ipa 不能直接在 iPhone / iPad 上點開。
@@ -457,18 +542,24 @@ Kairumo v${APP_VER} (build ${BUNDLE_VER})
   裝置就在開發者手邊的話，最省事的是跳過 .ipa：
      接上線後在專案目錄執行 ./scripts/dist.sh --ios-install
   完全不想碰傳輸線與 UDID 的話，只有 TestFlight（走 scripts/release.sh）。
+GUIDE
+fi
+
+if [[ "$DO_ANDROID" -eq 1 ]]; then
+cat >> "$GUIDE_FILE" <<GUIDE
 
 ■ Android（Kairumo-${APP_VER}-android.apk）
   1. 把 APK 傳到手機。
   2. 開啟檔案 → 系統詢問時允許「安裝未知應用程式」。
   3. 之後更新請用同一來源的 APK；換了簽章金鑰的版本無法覆蓋安裝。
 GUIDE
+fi
 
 step "完成"
 for f in "${DELIVERED[@]:-}"; do
     [[ -n "$f" ]] && ls -lh "$f" | awk '{printf "   ✅ %-52s %s\n", $9, $5}'
 done
-echo "   📄 ${OUT_DIR}/安裝說明.txt"
+echo "   📄 ${GUIDE_FILE}"
 
 if [[ ${#FAILED[@]} -gt 0 ]]; then
     echo ""
