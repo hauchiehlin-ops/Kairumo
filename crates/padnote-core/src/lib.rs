@@ -14,6 +14,7 @@ pub mod ffi_asset_art;
 pub mod ffi_assets;
 pub mod ffi_backup;
 pub mod ffi_chart;
+pub mod ffi_collab;
 pub mod ffi_folder_sync;
 pub mod ffi_geometry;
 pub mod ffi_math;

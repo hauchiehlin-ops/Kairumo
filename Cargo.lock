@@ -2235,7 +2235,10 @@ dependencies = [
 name = "padnote-core"
 version = "3.9.0"
 dependencies = [
+ "aes-gcm",
+ "base64 0.22.1",
  "futures-util",
+ "getrandom 0.2.17",
  "padnote-asr",
  "padnote-chart",
  "padnote-crypto",

@@ -8,7 +8,6 @@
 import SwiftUI
 import Foundation
 import Combine
-import CryptoKit
 
 /// 協同成員權限角色
 public enum CollaboratorRole: String, Codable {
@@ -107,7 +106,6 @@ public class CollaborationManager: ObservableObject {
 
     // MARK: - 端對端加密 (Zero-Knowledge E2EE)
     @Published public var roomKeyBase64: String? = nil
-    private var roomKey: SymmetricKey? = nil
 
     /// 最近一次連線錯誤說明（給 UI 顯示，避免只剩無聲的「重連中」轉圈）
     @Published public var lastErrorMessage: String? = nil
@@ -120,7 +118,9 @@ public class CollaborationManager: ObservableObject {
     @Published public var queuedOplogCount: Int = 0
     private var offlineOplogQueue: [[String: Any]] = []
     private var reconnectAttempt: Int = 0
-    private let maxReconnectAttempts: Int = 5
+    // 節流、心跳與重連次數都取自核心 —— 兩邊數字不同會讓同一間房裡的
+    // 兩台裝置行為不一致（一邊還在重連、一邊已經放棄）。
+    private let maxReconnectAttempts: Int = Int(collabTuning().maxReconnectAttempts)
     private var reconnectTimer: Timer?
     private var userInitiatedDisconnect: Bool = false
     public var maxKnownLamport: UInt64 = 0
@@ -136,117 +136,96 @@ public class CollaborationManager: ObservableObject {
     private var webSocketTask: URLSessionWebSocketTask?
     private var pingTimer: Timer?
     private var lastPresenceSentTime: TimeInterval = 0
-    private let presenceThrottleInterval: TimeInterval = 0.033 // 30Hz 頻率節流
+    private let presenceThrottleInterval: TimeInterval =
+        Double(collabTuning().presenceThrottleMs) / 1000.0
 
     public init() {
         let savedServer = UserDefaults.standard.string(forKey: "kairumo_relay_server_url")
-        self.serverAddress = savedServer ?? "ws://127.0.0.1:9002"
+        self.serverAddress = savedServer ?? collabTuning().defaultServer
 
     }
 
     // MARK: - 端對端加密輔助函式
+    //
+    // **金鑰與密文格式都在核心**（`collabEncrypt` / `collabDecrypt`）。
+    // 原本這裡是 CryptoKit 的 `AES.GCM`，Android 沒有對應品；各寫一份的話
+    // iPad 開的房間 Android 進得去卻每則訊息都解不開 —— 那種失敗極難查。
+    // 核心那邊有一組用這台 Mac 的 CryptoKit 實際產出的密文當測試向量，
+    // 確保兩邊真的相容，而不是「看起來都是 AES-GCM」。
 
     /// 生成或重設 256 位元端對端加密房間金鑰
     @discardableResult
     public func generateRoomKey() -> String {
-        let key = SymmetricKey(size: .bits256)
-        self.roomKey = key
-        let b64 = key.withUnsafeBytes { Data($0).base64EncodedString() }
-        self.roomKeyBase64 = b64
+        let b64 = collabGenerateRoomKey()
+        self.roomKeyBase64 = b64.isEmpty ? nil : b64
         return b64
     }
 
     /// 設定或解析端對端加密金鑰
     public func setRoomKey(base64: String?) {
         guard let b64 = base64?.trimmingCharacters(in: .whitespacesAndNewlines),
-              !b64.isEmpty,
-              let keyData = Data(base64Encoded: b64),
-              keyData.count == 32 else {
-            self.roomKey = nil
+              collabIsValidRoomKey(keyBase64: b64) else {
             self.roomKeyBase64 = nil
             return
         }
-        self.roomKey = SymmetricKey(data: keyData)
         self.roomKeyBase64 = b64
     }
 
-    /// 使用 AES-256-GCM 進行端對端硬體加速加密
+    /// 使用 AES-256-GCM 進行端對端加密
     public func encryptPayload(_ payload: [String: Any]) -> (encryptedPayload: [String: Any], isEncrypted: Bool) {
-        guard let key = roomKey,
-              let data = try? JSONSerialization.data(withJSONObject: payload) else {
+        guard let key = roomKeyBase64,
+              let data = try? JSONSerialization.data(withJSONObject: payload),
+              let json = String(data: data, encoding: .utf8) else {
             return (payload, false)
         }
-
-        do {
-            let sealed = try AES.GCM.seal(data, using: key)
-            if let combined = sealed.combined {
-                let cipherBase64 = combined.base64EncodedString()
-                return (["ciphertext": cipherBase64], true)
-            }
-        } catch {
-            print("⚠️ E2EE 加密失敗: \(error.localizedDescription)")
-        }
-        return (payload, false)
+        let cipher = collabEncrypt(keyBase64: key, plaintext: json)
+        // 核心加密失敗時回空字串。改送明文而不是不送 ——
+        // 少一則 oplog 是資料遺失，而使用者不會知道。
+        guard !cipher.isEmpty else { return (payload, false) }
+        return (["ciphertext": cipher], true)
     }
 
-    /// 解密接收到的遠端端對端加密 Payload
+    /// 解密接收到的遠端 Payload。解不開時回 nil，呼叫端丟掉那則訊息。
     public func decryptPayload(_ payload: [String: Any], isEncrypted: Bool) -> [String: Any]? {
         if !isEncrypted { return payload }
-        guard let key = roomKey,
-              let cipherBase64 = payload["ciphertext"] as? String,
-              let cipherData = Data(base64Encoded: cipherBase64) else {
+        guard let key = roomKeyBase64,
+              let cipherBase64 = payload["ciphertext"] as? String else {
             return payload
         }
-
-        do {
-            let box = try AES.GCM.SealedBox(combined: cipherData)
-            let decryptedData = try AES.GCM.open(box, using: key)
-            if let dict = try JSONSerialization.jsonObject(with: decryptedData) as? [String: Any] {
-                return dict
-            }
-        } catch {
-            print("⚠️ E2EE 解密失敗（可能金鑰不相符）: \(error.localizedDescription)")
+        let plain = collabDecrypt(keyBase64: key, ciphertextBase64: cipherBase64)
+        guard !plain.isEmpty,
+              let data = plain.data(using: .utf8),
+              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            // 解不開代表對方用的是另一把金鑰。把密文當內容寫進筆記
+            // 只會在畫布上留下一串亂碼。
+            return nil
         }
-        return nil
+        return dict
     }
 
     /// 取得帶有 E2EE 金鑰的安全邀請連結
     public var encryptedInviteLink: String {
-        guard !currentRoomId.isEmpty else { return "" }
-        if let key = roomKeyBase64 {
-            return "kairumo://collab?room=\(currentRoomId)#key=\(key)"
-        }
-        return "kairumo://collab?room=\(currentRoomId)"
+        collabInviteLink(roomId: currentRoomId, keyBase64: roomKeyBase64 ?? "")
     }
 
     // MARK: - 連線與房間管理
 
     /// 建立新協同房間（作為房主 Owner）
     public func createRoom(noteId: String? = nil) {
-        let prefix = "kairumo"
-        let randomCode = String(UUID().uuidString.prefix(6)).lowercased()
-        let newRoomId = "\(prefix)-\(randomCode)"
         generateRoomKey()
-        connect(roomId: newRoomId, asHost: true)
+        connect(roomId: collabNewRoomId(), asHost: true)
     }
 
     /// 加入既有協同房間
     public func joinRoom(roomId: String) {
-        let cleaned = roomId.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !cleaned.isEmpty else { return }
-
-        if cleaned.contains("#") {
-            let parts = cleaned.components(separatedBy: "#")
-            let parsedRoomId = parts[0].replacingOccurrences(of: "kairumo://collab?room=", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
-            var keyStr = parts[1]
-            if keyStr.starts(with: "key=") {
-                keyStr = String(keyStr.dropFirst(4))
-            }
-            setRoomKey(base64: keyStr)
-            connect(roomId: parsedRoomId, asHost: false)
-        } else {
-            connect(roomId: cleaned, asHost: false)
+        // 房號、連結、連結帶金鑰三種輸入都由核心解析 —— 使用者三種都會貼，
+        // 而 Android 端要用同一套規則，否則同一個連結兩邊解出不同房號。
+        let invite = collabParseInvite(text: roomId)
+        guard !invite.roomId.isEmpty else { return }
+        if !invite.keyBase64.isEmpty {
+            setRoomKey(base64: invite.keyBase64)
         }
+        connect(roomId: invite.roomId, asHost: false)
     }
 
     /// 連線至中繼伺服器
@@ -304,8 +283,7 @@ public class CollaborationManager: ObservableObject {
 
     /// 判斷位址是否指向本機（含未填主機名的情況）
     static func isLoopbackHost(_ host: String?) -> Bool {
-        guard let host = host?.lowercased(), !host.isEmpty else { return true }
-        return host == "127.0.0.1" || host == "localhost" || host == "::1" || host == "0.0.0.0"
+        collabIsLoopbackHost(host: host ?? "")
     }
 
     /// 啟動內建中繼服務（冪等；已在執行中則直接沿用）
@@ -336,7 +314,6 @@ public class CollaborationManager: ObservableObject {
             self.reconnectAttempt = 0
             self.offlineOplogQueue.removeAll()
             self.queuedOplogCount = 0
-            self.roomKey = nil
             self.roomKeyBase64 = nil
         }
 
@@ -708,7 +685,10 @@ public class CollaborationManager: ObservableObject {
 
     private func startPingTimer() {
         pingTimer?.invalidate()
-        pingTimer = Timer.scheduledTimer(withTimeInterval: 20.0, repeats: true) { [weak self] _ in
+        pingTimer = Timer.scheduledTimer(
+            withTimeInterval: Double(collabTuning().pingIntervalS),
+            repeats: true
+        ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.sendJson(["type": "ping"])
             }

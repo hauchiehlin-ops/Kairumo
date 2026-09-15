@@ -91,6 +91,8 @@ import kotlinx.coroutines.launch
 import com.kairumo.padnote.ink.InkEngine
 import com.kairumo.padnote.ink.SketchRefineBar
 import com.kairumo.padnote.asset.AssetLibrarySheet
+import com.kairumo.padnote.collab.CollaborationManager
+import com.kairumo.padnote.collab.CollaborationSheet
 import com.kairumo.padnote.asset.renderAssetPng
 import com.kairumo.padnote.model3d.Model3DLayer
 import com.kairumo.padnote.model3d.Model3DObject
@@ -535,6 +537,10 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     /// 主題專屬工具與它的兩個構圖輔助疊層。
     var showThemeTools by remember { mutableStateOf(false) }
     var showAssetLibrary by remember { mutableStateOf(false) }
+
+    /// 協同編輯。與 Apple 端講同一套協定（房號、邀請連結、端對端加密都在核心）。
+    var showCollaboration by remember { mutableStateOf(false) }
+    val collaboration = remember { CollaborationManager(activity) }
     var goldenSpiral by remember { mutableStateOf(false) }
     var ruleOfThirds by remember { mutableStateOf(false) }
     /// 美化後按鈕的可用狀態要跟著變（engine 才是真相來源，這只是重繪訊號）。
@@ -743,6 +749,10 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 DropdownMenuItem(
                     text = { Text(l10n("asset_library")) },
                     onClick = { showMenu = false; showAssetLibrary = true }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("collaborate")) },
+                    onClick = { showMenu = false; showCollaboration = true }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("insert_image")) },
@@ -1224,6 +1234,14 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 editorMode = EditorMode.TYPE
             },
             onDismiss = { insertingModel3D = false; editingModel3D = null }
+        )
+    }
+
+    if (showCollaboration) {
+        CollaborationSheet(
+            manager = collaboration,
+            languageTag = deviceLanguageTag(),
+            onDismiss = { showCollaboration = false }
         )
     }
 

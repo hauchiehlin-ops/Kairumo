@@ -12,7 +12,18 @@
 
     <uses-feature android:name="android.hardware.touchscreen.stylus" android:required="false" />
 
+    <!--
+        協同中繼走 ws://（區域網路或本機），那是明文連線，而 Android 9 以上
+        預設整個擋掉。擋掉的症狀是「一直重連但永遠連不上」，而且不會有任何
+        錯誤訊息指向這裡。
+
+        放行明文的代價在這個 App 上很小：網路流量只有一種 —— 使用者自己
+        指定的協同中繼；而 oplog 的內容是**端對端加密**的（見 ffi_collab.rs），
+        中繼與路上的任何人拿到的都只是密文。
+        走公開網路時仍然建議用 wss://。
+    -->
     <application
+        android:usesCleartextTraffic="true"
         android:allowBackup="true"
         android:label="Kairumo"
         android:supportsRtl="true"
