@@ -41,35 +41,16 @@ public struct ProColorPickerSheet: View {
     ]
 
     // 五大設計師色盤
-    private let morandiPalette = [
-        ("#9E9D89", "燕麥灰"), ("#A3B19B", "鼠尾綠"), ("#8C9DAE", "霧霾藍"),
-        ("#BAA599", "奶茶駝"), ("#D8C3A5", "暖杏色"), ("#C5A880", "焦糖粉"),
-        ("#948275", "灰豆蔻"), ("#7F7F7F", "高級灰")
-    ]
-
-    private let vintagePalette = [
-        ("#8D5B4C", "陶土紅"), ("#C68B59", "焦糖棕"), ("#D9A74A", "芥末黃"),
-        ("#4A6B6C", "復古青"), ("#2B4C5A", "黛藍色"), ("#7D3C3C", "鐵鏽紅"),
-        ("#5A3D31", "深栗褐"), ("#96705B", "落葉黃")
-    ]
-
-    private let businessPalette = [
-        ("#1A365D", "深海軍"), ("#2B6CB0", "商務藍"), ("#2C5282", "石墨藍"),
-        ("#234E52", "冷杉綠"), ("#285E61", "墨綠色"), ("#742A2A", "勃艮第酒紅"),
-        ("#4A5568", "冷石灰"), ("#1A202C", "極夜黑")
-    ]
-
-    private let pastelPalette = [
-        ("#FFB7B2", "櫻花粉"), ("#FFDAC1", "蜜桃杏"), ("#E2F0CB", "青蘋綠"),
-        ("#B5EAD7", "薄荷綠"), ("#C7CEEA", "淡紫藍"), ("#E0BBE4", "薰衣草"),
-        ("#957DAD", "葡萄灰"), ("#D291BC", "玫瑰暮")
-    ]
-
-    private let neonPalette = [
-        ("#FF007F", "電光玫紅"), ("#00F0FF", "螢光青藍"), ("#39FF14", "霓虹亮綠"),
-        ("#FF6600", "極光鮮橘"), ("#BD00FF", "幻彩紫"), ("#FFE600", "奪目亮黃"),
-        ("#FF0033", "高能熾紅"), ("#00E5FF", "天空極藍")
-    ]
+    /// 設計師色盤。**來源是核心的 `designerPalette()`，不在這裡寫死。**
+    ///
+    /// 原本這 40 個顏色與名字全寫在這個檔案裡，而名字是寫死的繁體中文 ——
+    /// 日文或英文使用者在一個已經翻成六國語系的面板裡看到一整面中文。
+    /// 顏色本身也是會落盤的資料，Android 各寫一份就會漂移。
+    private func palette(_ group: FfiPaletteGroup) -> [(String, String)] {
+        designerPalette(group: group).map {
+            ($0.hex, localizationManager.localized($0.key))
+        }
+    }
 
     public init(selectedColor: Binding<Color>) {
         self._selectedColor = selectedColor
@@ -239,11 +220,13 @@ public struct ProColorPickerSheet: View {
     // MARK: - 5. 五大設計師色盤
     private var designerPalettesView: some View {
         VStack(alignment: .leading, spacing: 14) {
-            paletteSection(title: localizationManager.localized("palette_morandi"), list: morandiPalette)
-            paletteSection(title: localizationManager.localized("palette_vintage"), list: vintagePalette)
-            paletteSection(title: localizationManager.localized("palette_business"), list: businessPalette)
-            paletteSection(title: localizationManager.localized("palette_pastel"), list: pastelPalette)
-            paletteSection(title: localizationManager.localized("palette_neon"), list: neonPalette)
+            // 組別與順序也來自核心 —— 兩邊各排一套的話，使用者換裝置要重新找。
+            ForEach(designerPaletteGroups(), id: \.self) { group in
+                paletteSection(
+                    title: localizationManager.localized(designerPaletteGroupKey(group: group)),
+                    list: palette(group)
+                )
+            }
         }
     }
 

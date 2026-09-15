@@ -2218,6 +2218,326 @@ object LocalizationStrings {
             "ko" to "이 기기에서 릴레이 호스팅 중",
             "th" to "อุปกรณ์นี้กำลังเป็นรีเลย์"
         ),
+        "hue_aurora_orange" to mapOf(
+            "zh-Hant" to "極光鮮橘",
+            "en" to "Aurora Orange",
+            "zh-Hans" to "极光鲜橘",
+            "ja" to "オーロラオレンジ",
+            "ko" to "오로라 오렌지",
+            "th" to "ส้มออโรรา"
+        ),
+        "hue_burgundy" to mapOf(
+            "zh-Hant" to "勃艮第酒紅",
+            "en" to "Burgundy",
+            "zh-Hans" to "勃艮第酒红",
+            "ja" to "バーガンディ",
+            "ko" to "버건디",
+            "th" to "เบอร์กันดี"
+        ),
+        "hue_business_blue" to mapOf(
+            "zh-Hant" to "商務藍",
+            "en" to "Business Blue",
+            "zh-Hans" to "商务蓝",
+            "ja" to "ビジネスブルー",
+            "ko" to "비즈니스 블루",
+            "th" to "น้ำเงินธุรกิจ"
+        ),
+        "hue_caramel_brown" to mapOf(
+            "zh-Hant" to "焦糖棕",
+            "en" to "Caramel Brown",
+            "zh-Hans" to "焦糖棕",
+            "ja" to "キャラメルブラウン",
+            "ko" to "캐러멜 브라운",
+            "th" to "น้ำตาลคาราเมล"
+        ),
+        "hue_caramel_pink" to mapOf(
+            "zh-Hant" to "焦糖粉",
+            "en" to "Caramel Pink",
+            "zh-Hans" to "焦糖粉",
+            "ja" to "キャラメルピンク",
+            "ko" to "캐러멜 핑크",
+            "th" to "ชมพูคาราเมล"
+        ),
+        "hue_chestnut" to mapOf(
+            "zh-Hant" to "深栗褐",
+            "en" to "Deep Chestnut",
+            "zh-Hans" to "深栗褐",
+            "ja" to "ディープチェスナット",
+            "ko" to "딥 체스트넛",
+            "th" to "น้ำตาลเกาลัด"
+        ),
+        "hue_cold_stone" to mapOf(
+            "zh-Hant" to "冷石灰",
+            "en" to "Cold Stone",
+            "zh-Hans" to "冷石灰",
+            "ja" to "コールドストーン",
+            "ko" to "콜드 스톤",
+            "th" to "หินเย็น"
+        ),
+        "hue_deep_navy" to mapOf(
+            "zh-Hant" to "深海軍",
+            "en" to "Deep Navy",
+            "zh-Hans" to "深海军",
+            "ja" to "ディープネイビー",
+            "ko" to "딥 네이비",
+            "th" to "กรมท่าเข้ม"
+        ),
+        "hue_electric_magenta" to mapOf(
+            "zh-Hant" to "電光玫紅",
+            "en" to "Electric Magenta",
+            "zh-Hans" to "电光玫红",
+            "ja" to "エレクトリックマゼンタ",
+            "ko" to "일렉트릭 마젠타",
+            "th" to "มาเจนต้าไฟฟ้า"
+        ),
+        "hue_fallen_leaf" to mapOf(
+            "zh-Hant" to "落葉黃",
+            "en" to "Fallen Leaf",
+            "zh-Hans" to "落叶黄",
+            "ja" to "フォールンリーフ",
+            "ko" to "낙엽색",
+            "th" to "ใบไม้ร่วง"
+        ),
+        "hue_fir_green" to mapOf(
+            "zh-Hant" to "冷杉綠",
+            "en" to "Fir Green",
+            "zh-Hans" to "冷杉绿",
+            "ja" to "ファーグリーン",
+            "ko" to "전나무 초록",
+            "th" to "เขียวเฟอร์"
+        ),
+        "hue_fluoro_cyan" to mapOf(
+            "zh-Hant" to "螢光青藍",
+            "en" to "Fluoro Cyan",
+            "zh-Hans" to "荧光青蓝",
+            "ja" to "フルオロシアン",
+            "ko" to "형광 시안",
+            "th" to "ฟ้าเรืองแสง"
+        ),
+        "hue_grape_gray" to mapOf(
+            "zh-Hant" to "葡萄灰",
+            "en" to "Grape Grey",
+            "zh-Hans" to "葡萄灰",
+            "ja" to "グレープグレー",
+            "ko" to "그레이프 그레이",
+            "th" to "เทาองุ่น"
+        ),
+        "hue_graphite_blue" to mapOf(
+            "zh-Hant" to "石墨藍",
+            "en" to "Graphite Blue",
+            "zh-Hans" to "石墨蓝",
+            "ja" to "グラファイトブルー",
+            "ko" to "그래파이트 블루",
+            "th" to "น้ำเงินกราไฟต์"
+        ),
+        "hue_gray_cardamom" to mapOf(
+            "zh-Hant" to "灰豆蔻",
+            "en" to "Grey Cardamom",
+            "zh-Hans" to "灰豆蔻",
+            "ja" to "グレーカルダモン",
+            "ko" to "그레이 카다몸",
+            "th" to "กระวานเทา"
+        ),
+        "hue_green_apple" to mapOf(
+            "zh-Hant" to "青蘋綠",
+            "en" to "Green Apple",
+            "zh-Hans" to "青苹绿",
+            "ja" to "グリーンアップル",
+            "ko" to "그린 애플",
+            "th" to "เขียวแอปเปิล"
+        ),
+        "hue_haze_blue" to mapOf(
+            "zh-Hant" to "霧霾藍",
+            "en" to "Haze Blue",
+            "zh-Hans" to "雾霾蓝",
+            "ja" to "ヘイズブルー",
+            "ko" to "헤이즈 블루",
+            "th" to "ฟ้าหมอก"
+        ),
+        "hue_high_energy_red" to mapOf(
+            "zh-Hant" to "高能熾紅",
+            "en" to "High-Energy Red",
+            "zh-Hans" to "高能炽红",
+            "ja" to "ハイエナジーレッド",
+            "ko" to "하이에너지 레드",
+            "th" to "แดงพลังสูง"
+        ),
+        "hue_ink_green" to mapOf(
+            "zh-Hant" to "墨綠色",
+            "en" to "Ink Green",
+            "zh-Hans" to "墨绿色",
+            "ja" to "インクグリーン",
+            "ko" to "잉크 그린",
+            "th" to "เขียวหมึก"
+        ),
+        "hue_iridescent_purple" to mapOf(
+            "zh-Hant" to "幻彩紫",
+            "en" to "Iridescent Purple",
+            "zh-Hans" to "幻彩紫",
+            "ja" to "イリデセントパープル",
+            "ko" to "이리데센트 퍼플",
+            "th" to "ม่วงเหลือบ"
+        ),
+        "hue_lavender" to mapOf(
+            "zh-Hant" to "薰衣草",
+            "en" to "Lavender",
+            "zh-Hans" to "薰衣草",
+            "ja" to "ラベンダー",
+            "ko" to "라벤더",
+            "th" to "ลาเวนเดอร์"
+        ),
+        "hue_midnight" to mapOf(
+            "zh-Hant" to "極夜黑",
+            "en" to "Midnight",
+            "zh-Hans" to "极夜黑",
+            "ja" to "ミッドナイト",
+            "ko" to "미드나이트",
+            "th" to "ดำเที่ยงคืน"
+        ),
+        "hue_milk_tea" to mapOf(
+            "zh-Hant" to "奶茶駝",
+            "en" to "Milk Tea",
+            "zh-Hans" to "奶茶驼",
+            "ja" to "ミルクティー",
+            "ko" to "밀크티",
+            "th" to "ชานม"
+        ),
+        "hue_mint_green" to mapOf(
+            "zh-Hant" to "薄荷綠",
+            "en" to "Mint Green",
+            "zh-Hans" to "薄荷绿",
+            "ja" to "ミントグリーン",
+            "ko" to "민트 그린",
+            "th" to "เขียวมิ้นต์"
+        ),
+        "hue_mustard" to mapOf(
+            "zh-Hant" to "芥末黃",
+            "en" to "Mustard",
+            "zh-Hans" to "芥末黄",
+            "ja" to "マスタード",
+            "ko" to "머스터드",
+            "th" to "มัสตาร์ด"
+        ),
+        "hue_neon_green" to mapOf(
+            "zh-Hant" to "霓虹亮綠",
+            "en" to "Neon Green",
+            "zh-Hans" to "霓虹亮绿",
+            "ja" to "ネオングリーン",
+            "ko" to "네온 그린",
+            "th" to "เขียวนีออน"
+        ),
+        "hue_oat_gray" to mapOf(
+            "zh-Hant" to "燕麥灰",
+            "en" to "Oat Grey",
+            "zh-Hans" to "燕麦灰",
+            "ja" to "オートグレー",
+            "ko" to "오트 그레이",
+            "th" to "เทาโอ๊ต"
+        ),
+        "hue_peach_apricot" to mapOf(
+            "zh-Hant" to "蜜桃杏",
+            "en" to "Peach Apricot",
+            "zh-Hans" to "蜜桃杏",
+            "ja" to "ピーチアプリコット",
+            "ko" to "피치 애프리콧",
+            "th" to "พีชแอปริคอต"
+        ),
+        "hue_periwinkle" to mapOf(
+            "zh-Hant" to "淡紫藍",
+            "en" to "Periwinkle",
+            "zh-Hans" to "淡紫蓝",
+            "ja" to "ペリウィンクル",
+            "ko" to "페리윙클",
+            "th" to "ม่วงอ่อน"
+        ),
+        "hue_premium_gray" to mapOf(
+            "zh-Hant" to "高級灰",
+            "en" to "Premium Grey",
+            "zh-Hans" to "高级灰",
+            "ja" to "プレミアムグレー",
+            "ko" to "프리미엄 그레이",
+            "th" to "เทาพรีเมียม"
+        ),
+        "hue_retro_teal" to mapOf(
+            "zh-Hant" to "復古青",
+            "en" to "Retro Teal",
+            "zh-Hans" to "复古青",
+            "ja" to "レトロティール",
+            "ko" to "레트로 틸",
+            "th" to "เขียวเรโทร"
+        ),
+        "hue_rose_dusk" to mapOf(
+            "zh-Hant" to "玫瑰暮",
+            "en" to "Rose Dusk",
+            "zh-Hans" to "玫瑰暮",
+            "ja" to "ローズダスク",
+            "ko" to "로즈 더스크",
+            "th" to "กุหลาบสนธยา"
+        ),
+        "hue_rust_red" to mapOf(
+            "zh-Hant" to "鐵鏽紅",
+            "en" to "Rust Red",
+            "zh-Hans" to "铁锈红",
+            "ja" to "ラストレッド",
+            "ko" to "러스트 레드",
+            "th" to "แดงสนิม"
+        ),
+        "hue_sage_green" to mapOf(
+            "zh-Hant" to "鼠尾綠",
+            "en" to "Sage Green",
+            "zh-Hans" to "鼠尾绿",
+            "ja" to "セージグリーン",
+            "ko" to "세이지 그린",
+            "th" to "เขียวเสจ"
+        ),
+        "hue_sakura_pink" to mapOf(
+            "zh-Hant" to "櫻花粉",
+            "en" to "Sakura Pink",
+            "zh-Hans" to "樱花粉",
+            "ja" to "さくらピンク",
+            "ko" to "사쿠라 핑크",
+            "th" to "ชมพูซากุระ"
+        ),
+        "hue_sky_ultra_blue" to mapOf(
+            "zh-Hant" to "天空極藍",
+            "en" to "Sky Ultra Blue",
+            "zh-Hans" to "天空极蓝",
+            "ja" to "スカイウルトラブルー",
+            "ko" to "스카이 울트라 블루",
+            "th" to "ฟ้าสุดขอบ"
+        ),
+        "hue_slate_blue" to mapOf(
+            "zh-Hant" to "黛藍色",
+            "en" to "Slate Blue",
+            "zh-Hans" to "黛蓝色",
+            "ja" to "スレートブルー",
+            "ko" to "슬레이트 블루",
+            "th" to "น้ำเงินหินชนวน"
+        ),
+        "hue_terracotta" to mapOf(
+            "zh-Hant" to "陶土紅",
+            "en" to "Terracotta",
+            "zh-Hans" to "陶土红",
+            "ja" to "テラコッタ",
+            "ko" to "테라코타",
+            "th" to "ดินเผา"
+        ),
+        "hue_vivid_yellow" to mapOf(
+            "zh-Hant" to "奪目亮黃",
+            "en" to "Vivid Yellow",
+            "zh-Hans" to "夺目亮黄",
+            "ja" to "ビビッドイエロー",
+            "ko" to "비비드 옐로",
+            "th" to "เหลืองสดใส"
+        ),
+        "hue_warm_almond" to mapOf(
+            "zh-Hant" to "暖杏色",
+            "en" to "Warm Almond",
+            "zh-Hans" to "暖杏色",
+            "ja" to "ウォームアーモンド",
+            "ko" to "웜 아몬드",
+            "th" to "อัลมอนด์อุ่น"
+        ),
         "identity_color" to mapOf(
             "zh-Hant" to "身分顏色",
             "en" to "Identity Colour",

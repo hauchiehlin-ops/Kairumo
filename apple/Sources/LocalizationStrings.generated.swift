@@ -2223,6 +2223,326 @@ extension LocalizationManager {
             .ko: "이 기기에서 릴레이 호스팅 중",
             .th: "อุปกรณ์นี้กำลังเป็นรีเลย์"
         ],
+        "hue_aurora_orange": [
+            .zhHant: "極光鮮橘",
+            .en: "Aurora Orange",
+            .zhHans: "极光鲜橘",
+            .ja: "オーロラオレンジ",
+            .ko: "오로라 오렌지",
+            .th: "ส้มออโรรา"
+        ],
+        "hue_burgundy": [
+            .zhHant: "勃艮第酒紅",
+            .en: "Burgundy",
+            .zhHans: "勃艮第酒红",
+            .ja: "バーガンディ",
+            .ko: "버건디",
+            .th: "เบอร์กันดี"
+        ],
+        "hue_business_blue": [
+            .zhHant: "商務藍",
+            .en: "Business Blue",
+            .zhHans: "商务蓝",
+            .ja: "ビジネスブルー",
+            .ko: "비즈니스 블루",
+            .th: "น้ำเงินธุรกิจ"
+        ],
+        "hue_caramel_brown": [
+            .zhHant: "焦糖棕",
+            .en: "Caramel Brown",
+            .zhHans: "焦糖棕",
+            .ja: "キャラメルブラウン",
+            .ko: "캐러멜 브라운",
+            .th: "น้ำตาลคาราเมล"
+        ],
+        "hue_caramel_pink": [
+            .zhHant: "焦糖粉",
+            .en: "Caramel Pink",
+            .zhHans: "焦糖粉",
+            .ja: "キャラメルピンク",
+            .ko: "캐러멜 핑크",
+            .th: "ชมพูคาราเมล"
+        ],
+        "hue_chestnut": [
+            .zhHant: "深栗褐",
+            .en: "Deep Chestnut",
+            .zhHans: "深栗褐",
+            .ja: "ディープチェスナット",
+            .ko: "딥 체스트넛",
+            .th: "น้ำตาลเกาลัด"
+        ],
+        "hue_cold_stone": [
+            .zhHant: "冷石灰",
+            .en: "Cold Stone",
+            .zhHans: "冷石灰",
+            .ja: "コールドストーン",
+            .ko: "콜드 스톤",
+            .th: "หินเย็น"
+        ],
+        "hue_deep_navy": [
+            .zhHant: "深海軍",
+            .en: "Deep Navy",
+            .zhHans: "深海军",
+            .ja: "ディープネイビー",
+            .ko: "딥 네이비",
+            .th: "กรมท่าเข้ม"
+        ],
+        "hue_electric_magenta": [
+            .zhHant: "電光玫紅",
+            .en: "Electric Magenta",
+            .zhHans: "电光玫红",
+            .ja: "エレクトリックマゼンタ",
+            .ko: "일렉트릭 마젠타",
+            .th: "มาเจนต้าไฟฟ้า"
+        ],
+        "hue_fallen_leaf": [
+            .zhHant: "落葉黃",
+            .en: "Fallen Leaf",
+            .zhHans: "落叶黄",
+            .ja: "フォールンリーフ",
+            .ko: "낙엽색",
+            .th: "ใบไม้ร่วง"
+        ],
+        "hue_fir_green": [
+            .zhHant: "冷杉綠",
+            .en: "Fir Green",
+            .zhHans: "冷杉绿",
+            .ja: "ファーグリーン",
+            .ko: "전나무 초록",
+            .th: "เขียวเฟอร์"
+        ],
+        "hue_fluoro_cyan": [
+            .zhHant: "螢光青藍",
+            .en: "Fluoro Cyan",
+            .zhHans: "荧光青蓝",
+            .ja: "フルオロシアン",
+            .ko: "형광 시안",
+            .th: "ฟ้าเรืองแสง"
+        ],
+        "hue_grape_gray": [
+            .zhHant: "葡萄灰",
+            .en: "Grape Grey",
+            .zhHans: "葡萄灰",
+            .ja: "グレープグレー",
+            .ko: "그레이프 그레이",
+            .th: "เทาองุ่น"
+        ],
+        "hue_graphite_blue": [
+            .zhHant: "石墨藍",
+            .en: "Graphite Blue",
+            .zhHans: "石墨蓝",
+            .ja: "グラファイトブルー",
+            .ko: "그래파이트 블루",
+            .th: "น้ำเงินกราไฟต์"
+        ],
+        "hue_gray_cardamom": [
+            .zhHant: "灰豆蔻",
+            .en: "Grey Cardamom",
+            .zhHans: "灰豆蔻",
+            .ja: "グレーカルダモン",
+            .ko: "그레이 카다몸",
+            .th: "กระวานเทา"
+        ],
+        "hue_green_apple": [
+            .zhHant: "青蘋綠",
+            .en: "Green Apple",
+            .zhHans: "青苹绿",
+            .ja: "グリーンアップル",
+            .ko: "그린 애플",
+            .th: "เขียวแอปเปิล"
+        ],
+        "hue_haze_blue": [
+            .zhHant: "霧霾藍",
+            .en: "Haze Blue",
+            .zhHans: "雾霾蓝",
+            .ja: "ヘイズブルー",
+            .ko: "헤이즈 블루",
+            .th: "ฟ้าหมอก"
+        ],
+        "hue_high_energy_red": [
+            .zhHant: "高能熾紅",
+            .en: "High-Energy Red",
+            .zhHans: "高能炽红",
+            .ja: "ハイエナジーレッド",
+            .ko: "하이에너지 레드",
+            .th: "แดงพลังสูง"
+        ],
+        "hue_ink_green": [
+            .zhHant: "墨綠色",
+            .en: "Ink Green",
+            .zhHans: "墨绿色",
+            .ja: "インクグリーン",
+            .ko: "잉크 그린",
+            .th: "เขียวหมึก"
+        ],
+        "hue_iridescent_purple": [
+            .zhHant: "幻彩紫",
+            .en: "Iridescent Purple",
+            .zhHans: "幻彩紫",
+            .ja: "イリデセントパープル",
+            .ko: "이리데센트 퍼플",
+            .th: "ม่วงเหลือบ"
+        ],
+        "hue_lavender": [
+            .zhHant: "薰衣草",
+            .en: "Lavender",
+            .zhHans: "薰衣草",
+            .ja: "ラベンダー",
+            .ko: "라벤더",
+            .th: "ลาเวนเดอร์"
+        ],
+        "hue_midnight": [
+            .zhHant: "極夜黑",
+            .en: "Midnight",
+            .zhHans: "极夜黑",
+            .ja: "ミッドナイト",
+            .ko: "미드나이트",
+            .th: "ดำเที่ยงคืน"
+        ],
+        "hue_milk_tea": [
+            .zhHant: "奶茶駝",
+            .en: "Milk Tea",
+            .zhHans: "奶茶驼",
+            .ja: "ミルクティー",
+            .ko: "밀크티",
+            .th: "ชานม"
+        ],
+        "hue_mint_green": [
+            .zhHant: "薄荷綠",
+            .en: "Mint Green",
+            .zhHans: "薄荷绿",
+            .ja: "ミントグリーン",
+            .ko: "민트 그린",
+            .th: "เขียวมิ้นต์"
+        ],
+        "hue_mustard": [
+            .zhHant: "芥末黃",
+            .en: "Mustard",
+            .zhHans: "芥末黄",
+            .ja: "マスタード",
+            .ko: "머스터드",
+            .th: "มัสตาร์ด"
+        ],
+        "hue_neon_green": [
+            .zhHant: "霓虹亮綠",
+            .en: "Neon Green",
+            .zhHans: "霓虹亮绿",
+            .ja: "ネオングリーン",
+            .ko: "네온 그린",
+            .th: "เขียวนีออน"
+        ],
+        "hue_oat_gray": [
+            .zhHant: "燕麥灰",
+            .en: "Oat Grey",
+            .zhHans: "燕麦灰",
+            .ja: "オートグレー",
+            .ko: "오트 그레이",
+            .th: "เทาโอ๊ต"
+        ],
+        "hue_peach_apricot": [
+            .zhHant: "蜜桃杏",
+            .en: "Peach Apricot",
+            .zhHans: "蜜桃杏",
+            .ja: "ピーチアプリコット",
+            .ko: "피치 애프리콧",
+            .th: "พีชแอปริคอต"
+        ],
+        "hue_periwinkle": [
+            .zhHant: "淡紫藍",
+            .en: "Periwinkle",
+            .zhHans: "淡紫蓝",
+            .ja: "ペリウィンクル",
+            .ko: "페리윙클",
+            .th: "ม่วงอ่อน"
+        ],
+        "hue_premium_gray": [
+            .zhHant: "高級灰",
+            .en: "Premium Grey",
+            .zhHans: "高级灰",
+            .ja: "プレミアムグレー",
+            .ko: "프리미엄 그레이",
+            .th: "เทาพรีเมียม"
+        ],
+        "hue_retro_teal": [
+            .zhHant: "復古青",
+            .en: "Retro Teal",
+            .zhHans: "复古青",
+            .ja: "レトロティール",
+            .ko: "레트로 틸",
+            .th: "เขียวเรโทร"
+        ],
+        "hue_rose_dusk": [
+            .zhHant: "玫瑰暮",
+            .en: "Rose Dusk",
+            .zhHans: "玫瑰暮",
+            .ja: "ローズダスク",
+            .ko: "로즈 더스크",
+            .th: "กุหลาบสนธยา"
+        ],
+        "hue_rust_red": [
+            .zhHant: "鐵鏽紅",
+            .en: "Rust Red",
+            .zhHans: "铁锈红",
+            .ja: "ラストレッド",
+            .ko: "러스트 레드",
+            .th: "แดงสนิม"
+        ],
+        "hue_sage_green": [
+            .zhHant: "鼠尾綠",
+            .en: "Sage Green",
+            .zhHans: "鼠尾绿",
+            .ja: "セージグリーン",
+            .ko: "세이지 그린",
+            .th: "เขียวเสจ"
+        ],
+        "hue_sakura_pink": [
+            .zhHant: "櫻花粉",
+            .en: "Sakura Pink",
+            .zhHans: "樱花粉",
+            .ja: "さくらピンク",
+            .ko: "사쿠라 핑크",
+            .th: "ชมพูซากุระ"
+        ],
+        "hue_sky_ultra_blue": [
+            .zhHant: "天空極藍",
+            .en: "Sky Ultra Blue",
+            .zhHans: "天空极蓝",
+            .ja: "スカイウルトラブルー",
+            .ko: "스카이 울트라 블루",
+            .th: "ฟ้าสุดขอบ"
+        ],
+        "hue_slate_blue": [
+            .zhHant: "黛藍色",
+            .en: "Slate Blue",
+            .zhHans: "黛蓝色",
+            .ja: "スレートブルー",
+            .ko: "슬레이트 블루",
+            .th: "น้ำเงินหินชนวน"
+        ],
+        "hue_terracotta": [
+            .zhHant: "陶土紅",
+            .en: "Terracotta",
+            .zhHans: "陶土红",
+            .ja: "テラコッタ",
+            .ko: "테라코타",
+            .th: "ดินเผา"
+        ],
+        "hue_vivid_yellow": [
+            .zhHant: "奪目亮黃",
+            .en: "Vivid Yellow",
+            .zhHans: "夺目亮黄",
+            .ja: "ビビッドイエロー",
+            .ko: "비비드 옐로",
+            .th: "เหลืองสดใส"
+        ],
+        "hue_warm_almond": [
+            .zhHant: "暖杏色",
+            .en: "Warm Almond",
+            .zhHans: "暖杏色",
+            .ja: "ウォームアーモンド",
+            .ko: "웜 아몬드",
+            .th: "อัลมอนด์อุ่น"
+        ],
         "identity_color": [
             .zhHant: "身分顏色",
             .en: "Identity Colour",

@@ -21,6 +21,9 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SRC_MANUAL="$ROOT/docs/manual"
 SRC_LEGAL="$ROOT/docs/legal"
 DEST="$ROOT/apple/Resources/Docs"
+# **Android 不在這裡處理。** 它用 Gradle 的 copyUserDocs 在建置時從 docs/
+# 直接複製進 assets —— 那樣 repo 裡不會有第二份副本。這支腳本再複製一次的話，
+# 兩份會在 mergeAssets 階段撞成 "Duplicate resources" 而整個建置失敗（踩過）。
 
 mkdir -p "$DEST"
 

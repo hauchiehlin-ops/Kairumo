@@ -278,6 +278,88 @@ pub fn card_palette() -> Vec<FfiPaletteEntry> {
     .collect()
 }
 
+/// 設計師色盤：`[(語系鍵, hex), …]`，依組別分開。
+///
+/// 理由同 [`card_palette`] —— 顏色是會落盤的資料。色名走語系鍵，不寫死文字：
+/// 原本 Apple 端這 40 個名字全是寫死的繁體中文，日文或英文使用者在一個已經
+/// 翻成六國語系的面板裡看到一整面中文。
+#[uniffi::export]
+pub fn designer_palette(group: FfiPaletteGroup) -> Vec<FfiPaletteEntry> {
+    let list: &[(&str, &str)] = match group {
+        FfiPaletteGroup::Morandi => &[
+            ("hue_oat_gray", "#9E9D89"), ("hue_sage_green", "#A3B19B"),
+            ("hue_haze_blue", "#8C9DAE"), ("hue_milk_tea", "#BAA599"),
+            ("hue_warm_almond", "#D8C3A5"), ("hue_caramel_pink", "#C5A880"),
+            ("hue_gray_cardamom", "#948275"), ("hue_premium_gray", "#7F7F7F"),
+        ],
+        FfiPaletteGroup::Vintage => &[
+            ("hue_terracotta", "#8D5B4C"), ("hue_caramel_brown", "#C68B59"),
+            ("hue_mustard", "#D9A74A"), ("hue_retro_teal", "#4A6B6C"),
+            ("hue_slate_blue", "#2B4C5A"), ("hue_rust_red", "#7D3C3C"),
+            ("hue_chestnut", "#5A3D31"), ("hue_fallen_leaf", "#96705B"),
+        ],
+        FfiPaletteGroup::Business => &[
+            ("hue_deep_navy", "#1A365D"), ("hue_business_blue", "#2B6CB0"),
+            ("hue_graphite_blue", "#2C5282"), ("hue_fir_green", "#234E52"),
+            ("hue_ink_green", "#285E61"), ("hue_burgundy", "#742A2A"),
+            ("hue_cold_stone", "#4A5568"), ("hue_midnight", "#1A202C"),
+        ],
+        FfiPaletteGroup::Pastel => &[
+            ("hue_sakura_pink", "#FFB7B2"), ("hue_peach_apricot", "#FFDAC1"),
+            ("hue_green_apple", "#E2F0CB"), ("hue_mint_green", "#B5EAD7"),
+            ("hue_periwinkle", "#C7CEEA"), ("hue_lavender", "#E0BBE4"),
+            ("hue_grape_gray", "#957DAD"), ("hue_rose_dusk", "#D291BC"),
+        ],
+        FfiPaletteGroup::Neon => &[
+            ("hue_electric_magenta", "#FF007F"), ("hue_fluoro_cyan", "#00F0FF"),
+            ("hue_neon_green", "#39FF14"), ("hue_aurora_orange", "#FF6600"),
+            ("hue_iridescent_purple", "#BD00FF"), ("hue_vivid_yellow", "#FFE600"),
+            ("hue_high_energy_red", "#FF0033"), ("hue_sky_ultra_blue", "#00E5FF"),
+        ],
+    };
+    list.iter()
+        .map(|(key, hex)| FfiPaletteEntry {
+            key: (*key).to_string(),
+            hex: (*hex).to_string(),
+        })
+        .collect()
+}
+
+/// 設計師色盤的組別。`localization_key` 給平台顯示組名。
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum FfiPaletteGroup {
+    Morandi,
+    Vintage,
+    Business,
+    Pastel,
+    Neon,
+}
+
+/// 所有組別，依面板上的顯示順序。
+#[uniffi::export]
+pub fn designer_palette_groups() -> Vec<FfiPaletteGroup> {
+    vec![
+        FfiPaletteGroup::Morandi,
+        FfiPaletteGroup::Vintage,
+        FfiPaletteGroup::Business,
+        FfiPaletteGroup::Pastel,
+        FfiPaletteGroup::Neon,
+    ]
+}
+
+/// 組名的語系鍵。
+#[uniffi::export]
+pub fn designer_palette_group_key(group: FfiPaletteGroup) -> String {
+    match group {
+        FfiPaletteGroup::Morandi => "palette_morandi",
+        FfiPaletteGroup::Vintage => "palette_vintage",
+        FfiPaletteGroup::Business => "palette_business",
+        FfiPaletteGroup::Pastel => "palette_pastel",
+        FfiPaletteGroup::Neon => "palette_neon",
+    }
+    .to_string()
+}
+
 /// 邊框顏色調色盤。理由同 [`card_palette`]。
 #[uniffi::export]
 pub fn border_palette() -> Vec<FfiPaletteEntry> {
@@ -1594,6 +1676,28 @@ mod tests {
             assert!(entry.hex.starts_with('#') && entry.hex.len() == 7, "壞的 hex：{}", entry.hex);
             assert!(seen.insert(entry.hex.clone()), "重複的顏色：{}", entry.hex);
         }
+    }
+
+    #[test]
+    fn designer_palettes_are_complete_and_unique() {
+        let mut all = std::collections::HashSet::new();
+        for group in designer_palette_groups() {
+            let list = designer_palette(group);
+            assert_eq!(list.len(), 8, "{group:?} 應該有 8 色");
+            assert!(!designer_palette_group_key(group).is_empty());
+            for entry in list {
+                assert!(entry.hex.starts_with('#') && entry.hex.len() == 7, "壞的 hex：{}", entry.hex);
+                // 色名一定要是語系鍵，不可以是寫死的文字 —— 原本 40 個名字
+                // 全是繁體中文，非中文使用者看到的就是一整面中文。
+                assert!(
+                    entry.key.starts_with("hue_"),
+                    "色名要走語系鍵，實得 {}",
+                    entry.key
+                );
+                assert!(all.insert(entry.hex.clone()), "重複的顏色：{}", entry.hex);
+            }
+        }
+        assert_eq!(all.len(), 40);
     }
 
     #[test]

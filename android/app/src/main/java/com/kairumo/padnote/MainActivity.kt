@@ -55,6 +55,7 @@ import com.kairumo.padnote.library.NotebookMeta
 import com.kairumo.padnote.canvas.CanvasStackPanel
 import com.kairumo.padnote.math.MathCalculatorDialog
 import com.kairumo.padnote.canvas.ObjectGeometry
+import com.kairumo.padnote.canvas.ProColorPicker
 import com.kairumo.padnote.canvas.EditorMode
 import com.kairumo.padnote.account.IdentityDialog
 import com.kairumo.padnote.library.HomeScreen
@@ -356,6 +357,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     var stackRevision by remember { mutableIntStateOf(0) }
     var showStackPanel by remember { mutableStateOf(false) }
     var showCalculator by remember { mutableStateOf(false) }
+    var showProColors by remember { mutableStateOf(false) }
 
 
 
@@ -645,6 +647,10 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     }
                 )
                 Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n("pro_color")) },
+                    onClick = { showMenu = false; showProColors = true }
+                )
                 DropdownMenuItem(
                     text = { Text(l10n("math_calc")) },
                     onClick = { showMenu = false; showCalculator = true }
@@ -1005,6 +1011,16 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 textStore, imageStore, tableStore, chartStore, shapeStore)
         }
         textRevision++; imageRevision++; tableRevision++; chartRevision++; shapeRevision++
+    }
+
+    if (showProColors) {
+        ProColorPicker(
+            languageTag = deviceLanguageTag(),
+            currentHex = inkColorHex,
+            // 挑完直接套到目前的筆 —— 專業色盤最常見的用途就是換筆色。
+            onPick = { inkColorHex = it },
+            onDismiss = { showProColors = false }
+        )
     }
 
     if (showCalculator) {
