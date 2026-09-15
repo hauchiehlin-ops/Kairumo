@@ -11,10 +11,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -97,48 +93,55 @@ fun RotationHandle(
     onCommit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var dragging by remember { mutableStateOf(false) }
-
-    val radius = (maxOf(heightDp, 44f) / 2f) + 26f
-    val radians = (CanvasRotation.normalized(degrees) * Math.PI / 180.0).toFloat()
-    // 把手在未旋轉座標系裡是正上方 (0, -radius)，隨物件角度繞中心轉。
-    val dx = sin(radians) * radius
-    val dy = -cos(radians) * radius
+    val radius = (maxOf(heightDp, 40f) / 2f) + 52f
+    // 元件自己撐出容納軌道的空間，**不要**用負的 offset 把把手畫到父容器外面。
+    // 負偏移看起來可行，但只要任何一層祖先有裁切，把手就整個消失 ——
+    // 而且只在把手轉到物件上方時消失，轉到右邊又看得見，非常難查
+    // （實機上就是這樣：0° 看不到、90° 看得到）。
+    val margin = radius + HANDLE_DP
 
     Box(
         modifier = modifier
-            .offset(
-                x = (widthDp / 2f + dx - 13f).dp,
-                y = (heightDp / 2f + dy - 13f).dp
-            )
-            .size(26.dp)
-            .background(MaterialTheme.colorScheme.primary, CircleShape)
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragStart = { dragging = true },
-                    onDrag = { change, _ ->
-                        change.consume()
-                        // change.position 是相對於把手自己的，換算回物件中心。
-                        val px = change.position.x / density + (widthDp / 2f + dx)
-                        val py = change.position.y / density + (heightDp / 2f + dy)
-                        val vx = px - widthDp / 2f
-                        val vy = py - heightDp / 2f
-                        // atan2 的 0 在 +x 方向，把手的 0 在正上方，差 90°。
-                        val raw = Math.toDegrees(atan2(vy, vx).toDouble()).toFloat() + 90f
-                        onRotate(CanvasRotation.snapped(raw))
-                    },
-                    onDragEnd = {
-                        dragging = false
-                        onCommit()
-                    }
-                )
-            }
+            .offset(x = (-margin).dp, y = (-margin).dp)
+            .size((widthDp + margin * 2).dp, (heightDp + margin * 2).dp)
     ) {
-        Icon(
-            imageVector = Icons.Filled.Refresh,
-            contentDescription = null,
-            tint = Color.White,
-            modifier = Modifier.size(16.dp).offset(5.dp, 5.dp)
-        )
+        val radians = (CanvasRotation.normalized(degrees) * Math.PI / 180.0).toFloat()
+        // 把手在未旋轉座標系裡是正上方 (0, -radius)，隨物件角度繞中心轉。
+        val cx = margin + widthDp / 2f
+        val cy = margin + heightDp / 2f
+        val hx = cx + sin(radians) * radius
+        val hy = cy - cos(radians) * radius
+
+        Box(
+            modifier = Modifier
+                .offset(x = (hx - HANDLE_DP / 2f).dp, y = (hy - HANDLE_DP / 2f).dp)
+                .size(HANDLE_DP.dp)
+                .background(MaterialTheme.colorScheme.primary, CircleShape)
+                .pointerInput(Unit) {
+                    detectDragGestures(
+                        onDrag = { change, _ ->
+                            change.consume()
+                            // change.position 相對於把手自己，換算回物件中心。
+                            val px = change.position.x / density + (hx - HANDLE_DP / 2f)
+                            val py = change.position.y / density + (hy - HANDLE_DP / 2f)
+                            // atan2 的 0 在 +x 方向，把手的 0 在正上方，差 90°。
+                            val raw = Math.toDegrees(
+                                atan2(py - cy, px - cx).toDouble()
+                            ).toFloat() + 90f
+                            onRotate(CanvasRotation.snapped(raw))
+                        },
+                        onDragEnd = { onCommit() }
+                    )
+                }
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Refresh,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(16.dp).offset(5.dp, 5.dp)
+            )
+        }
     }
 }
+
+private const val HANDLE_DP = 26f

@@ -20,6 +20,15 @@ import SwiftUI
 /// 畫布上的一個形狀。
 public struct NoteShapeAttachment: Identifiable, Codable, Hashable {
     public let id: String
+    /// 繞自身中心的旋轉角度（度，順時針）。
+    ///
+    /// **必須是 Optional** —— 舊檔沒有這個鍵，非 Optional 會讓整份筆記
+    /// 解碼失敗（見 `ObjectFrameStyled.canvasRotation` 的說明）。
+    public var rotationDegrees: Double?
+    public var canvasRotation: Double {
+        get { rotationDegrees ?? 0 }
+        set { rotationDegrees = newValue }
+    }
     public var pageIndex: Int
     /// `FfiShapeKind` 的名稱，例如 `"process"`、`"decision"`。
     ///
@@ -95,7 +104,8 @@ public struct NoteShapeAttachment: Identifiable, Codable, Hashable {
                     minX: Float(x), minY: Float(y),
                     maxX: Float(x + width), maxY: Float(y + height)
                 ),
-                cornerRadius: Float(cornerRadius)
+                cornerRadius: Float(cornerRadius),
+                rotationDegrees: 0
             ),
             segments: segments
         ).map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) }
@@ -183,7 +193,10 @@ public enum ShapeGeometry {
                 minX: Float(item.x), minY: Float(item.y),
                 maxX: Float(item.x + item.width), maxY: Float(item.y + item.height)
             ),
-            cornerRadius: Float(item.cornerRadius)
+            cornerRadius: Float(item.cornerRadius),
+            // 核心據此把連接點與輪廓轉到旋轉後的位置 ——
+            // 不帶過去的話，線會接在圖形外面的空氣中。
+            rotationDegrees: Float(item.canvasRotation)
         )
     }
 }

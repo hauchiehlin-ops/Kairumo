@@ -43,6 +43,12 @@ data class NoteShape(
     var fillColorHex: String? = null,
     var lineWidth: Float = 2f,
     /**
+     * 繞自身中心的旋轉角度（度，順時針）。`null` = 沒設定（等同 0）。
+     *
+     * 與 Apple 端 `NoteShapeAttachment.rotationDegrees` 同一個鍵、同一個語意。
+     */
+    var rotationDegrees: Float? = null,
+    /**
      * 所屬群組的 id。`null` 代表這個形狀在最上層。
      *
      * 群組是核心物件樹裡真正的節點（`Group`），不是平台自己畫出來的框 ——
@@ -65,7 +71,10 @@ data class NoteShape(
     fun ffiShape(): FfiShape = FfiShape(
         kind = kind,
         bounds = FfiRect(minX = x, minY = y, maxX = x + width, maxY = y + height),
-        cornerRadius = cornerRadius
+        cornerRadius = cornerRadius,
+        // 核心據此把連接點與輪廓轉到旋轉後的位置 ——
+        // 不帶過去的話，線會接在圖形外面的空氣中。
+        rotationDegrees = rotationDegrees ?: 0f
     )
 
     fun copyShape(): NoteShape = decode(encodedJson()) ?: NoteShape()
@@ -78,6 +87,7 @@ data class NoteShape(
         put("cornerRadius", cornerRadius.toDouble())
         put("label", label)
         put("lineWidth", lineWidth.toDouble())
+        rotationDegrees?.let { put("rotationDegrees", it.toDouble()) }
         groupId?.let { put("groupId", it) }
         strokeColorHex?.let { put("strokeColorHex", it) }
         fillColorHex?.let { put("fillColorHex", it) }
@@ -103,6 +113,8 @@ data class NoteShape(
                 strokeColorHex = if (obj.has("strokeColorHex")) obj.optString("strokeColorHex") else null,
                 fillColorHex = if (obj.has("fillColorHex")) obj.optString("fillColorHex") else null,
                 lineWidth = obj.optDouble("lineWidth", 2.0).toFloat(),
+                rotationDegrees = if (obj.has("rotationDegrees"))
+                    obj.optDouble("rotationDegrees").toFloat() else null,
                 groupId = if (obj.has("groupId")) obj.optString("groupId") else null
             )
         }

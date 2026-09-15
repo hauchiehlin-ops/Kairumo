@@ -14,6 +14,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import com.kairumo.padnote.canvas.CanvasRotation
+import com.kairumo.padnote.canvas.RotationHandle
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
@@ -94,10 +97,17 @@ private fun ShapeObjectView(
         else -> parseColor(hex)
     }
 
+    val rotation = CanvasRotation.normalized(shape.rotationDegrees ?: 0f)
+
+    // 外層只定位、不旋轉 —— 旋轉把手掛在這一層。
+    Box(Modifier.offset((shape.x / density).dp, (shape.y / density).dp)) {
+
     Box(
         Modifier
-            .offset((shape.x / density).dp, (shape.y / density).dp)
             .size((shape.width / density).dp, (shape.height / density).dp)
+            // 整個視圖一起轉（輪廓 + 標籤）。核心的 outline 刻意不轉：
+            // 只轉輪廓的話標籤會留在正的，而且轉過的輪廓會超出畫布被裁掉。
+            .graphicsLayer { rotationZ = rotation }
             .border(
                 if (isSelected) 1.dp else 0.dp,
                 MaterialTheme.colorScheme.primary,
@@ -144,6 +154,20 @@ private fun ShapeObjectView(
                 color = foreground,
                 fontSize = 14.sp,
                 textAlign = TextAlign.Center
+            )
+        }
+    }
+
+        if (isSelected) {
+            RotationHandle(
+                degrees = rotation,
+                widthDp = shape.width / density,
+                heightDp = shape.height / density,
+                density = density,
+                onRotate = { deg ->
+                    onChanged(shape.copyShape().apply { rotationDegrees = deg })
+                },
+                onCommit = { onChanged(shape) }
             )
         }
     }

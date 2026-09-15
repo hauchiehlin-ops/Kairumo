@@ -124,6 +124,12 @@ pub struct Shape {
     pub bounds: Rect,
     /// 圓角半徑（僅圓角矩形與起終點使用）。
     pub corner_radius: f32,
+    /// 繞自身中心的旋轉角度（度，順時針）。
+    ///
+    /// **`bounds` 永遠是未旋轉的軸對齊矩形。** 旋轉只在取點時套用
+    /// （`anchor_point` / `outline`）—— 把旋轉烘進 bounds 的話，
+    /// 每轉一次就會把外框撐大一點，連轉幾次圖形會自己長大。
+    pub rotation_degrees: f32,
 }
 
 impl Shape {
@@ -133,6 +139,7 @@ impl Shape {
             bounds,
             // 圓角預設取較短邊的 1/6，縮放時比例才會一致。
             corner_radius: bounds.width().min(bounds.height()) / 6.0,
+            rotation_degrees: 0.0,
         }
     }
 
@@ -143,22 +150,57 @@ impl Shape {
         )
     }
 
+    /// 圖形是否偏離正向。
+    pub fn is_rotated(&self) -> bool {
+        (self.rotation_degrees % 360.0).abs() > f32::EPSILON
+    }
+
+    /// 把一個點繞圖形中心旋轉。
+    fn rotate_about_center(&self, (x, y): (f32, f32)) -> (f32, f32) {
+        if !self.is_rotated() {
+            return (x, y);
+        }
+        let (cx, cy) = self.center();
+        let rad = self.rotation_degrees.to_radians();
+        let (sin, cos) = rad.sin_cos();
+        let (dx, dy) = (x - cx, y - cy);
+        (cx + dx * cos - dy * sin, cy + dx * sin + dy * cos)
+    }
+
     /// 連接點的座標。
+    ///
+    /// 圖形轉過之後，連接點也要跟著轉到旋轉後的那條邊上 ——
+    /// 否則線會接在圖形外面的空氣中，而且角度越大離得越遠。
     pub fn anchor_point(&self, anchor: Anchor) -> (f32, f32) {
         let (cx, cy) = self.center();
         let b = self.bounds;
-        match anchor {
+        let local = match anchor {
             Anchor::Top => (cx, b.min_y),
             Anchor::Right => (b.max_x, cy),
             Anchor::Bottom => (cx, b.max_y),
             Anchor::Left => (b.min_x, cy),
             Anchor::Center => (cx, cy),
-        }
+        };
+        self.rotate_about_center(local)
     }
 
     /// 輪廓多邊形。曲線（橢圓、圓柱、文件的波浪）以線段近似。
     ///
     /// `segments` 控制曲線的細緻度。渲染用高值、命中測試用低值即可。
+    /// 輪廓多邊形。**不套用旋轉。**
+    ///
+    /// 旋轉刻意留給平台做，理由有三個，每一個都是實際會壞的：
+    ///
+    /// 1. 圖形上的文字標籤是平台自己畫的。核心只轉輪廓的話，
+    ///    方塊轉了、裡面的字還是正的。
+    /// 2. 平台把輪廓畫在一個 `width × height` 的畫布裡。轉過的輪廓會超出
+    ///    那個範圍被裁掉 —— 45° 時四個角會直接消失。
+    /// 3. 平台對整個視圖套旋轉時，點擊測試也會跟著轉（SwiftUI 的
+    ///    `rotationEffect`、Compose 的 `graphicsLayer` 都是）。核心先轉一次、
+    ///    平台再轉一次，就是轉兩次。
+    ///
+    /// `anchor_point` 則相反，**必須**套用旋轉：連接線畫在兩個不同圖形之間，
+    /// 端點一定要是畫布座標。
     pub fn outline(&self, segments: usize) -> Vec<(f32, f32)> {
         let b = self.bounds;
         let (w, h) = (b.width(), b.height());
@@ -483,5 +525,75 @@ mod tests {
             let outline = Shape::new(kind, flat).outline(16);
             assert!(outline.iter().all(|(x, y)| x.is_finite() && y.is_finite()));
         }
+    }
+}
+
+#[cfg(test)]
+mod rotation_tests {
+    use super::*;
+
+    fn square() -> Shape {
+        Shape::new(
+            ShapeKind::Rectangle,
+            Rect {
+                min_x: 0.0,
+                min_y: 0.0,
+                max_x: 100.0,
+                max_y: 100.0,
+            },
+        )
+    }
+
+    fn close(a: (f32, f32), b: (f32, f32)) -> bool {
+        (a.0 - b.0).abs() < 0.01 && (a.1 - b.1).abs() < 0.01
+    }
+
+    #[test]
+    fn unrotated_anchors_are_unchanged() {
+        let s = square();
+        assert!(close(s.anchor_point(Anchor::Top), (50.0, 0.0)));
+        assert!(close(s.anchor_point(Anchor::Right), (100.0, 50.0)));
+    }
+
+    #[test]
+    fn rotating_90_moves_top_anchor_to_the_right_edge() {
+        // 這是整個功能的重點：轉了之後「上」那個連接點要落在視覺上的右邊，
+        // 不是還留在原來的位置。留在原位的話線會接到圖形外面的空氣中。
+        let mut s = square();
+        s.rotation_degrees = 90.0;
+        assert!(close(s.anchor_point(Anchor::Top), (100.0, 50.0)));
+        assert!(close(s.anchor_point(Anchor::Right), (50.0, 100.0)));
+    }
+
+    #[test]
+    fn center_anchor_never_moves() {
+        let mut s = square();
+        s.rotation_degrees = 37.0;
+        assert!(close(s.anchor_point(Anchor::Center), (50.0, 50.0)));
+    }
+
+    #[test]
+    fn rotation_does_not_grow_the_bounds() {
+        // bounds 永遠是未旋轉的軸對齊矩形。把旋轉烘進 bounds 的話，
+        // 連轉幾次圖形會自己愈長愈大。
+        let mut s = square();
+        let before = s.bounds;
+        s.rotation_degrees = 45.0;
+        let _ = s.outline(16);
+        assert_eq!(s.bounds.width(), before.width());
+        assert_eq!(s.bounds.height(), before.height());
+    }
+
+    #[test]
+    fn outline_is_never_rotated() {
+        // 責任劃分：輪廓交給平台轉（標籤要一起轉、畫布不能裁掉四個角），
+        // 連接點由核心轉（線畫在兩個圖形之間，要畫布座標）。
+        // 兩邊都轉 = 轉兩次，圖形會歪到別的地方去。
+        let mut s = square();
+        let before = s.outline(16);
+        s.rotation_degrees = 45.0;
+        assert_eq!(s.outline(16), before, "outline 不該套用旋轉");
+        // 但連接點要轉。
+        assert!(!close(s.anchor_point(Anchor::Top), (50.0, 0.0)));
     }
 }

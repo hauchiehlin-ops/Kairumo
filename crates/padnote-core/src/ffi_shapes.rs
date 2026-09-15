@@ -188,6 +188,8 @@ pub struct FfiShape {
     pub kind: FfiShapeKind,
     pub bounds: FfiRect,
     pub corner_radius: f32,
+    /// 繞自身中心的旋轉角度（度，順時針）。`bounds` 仍是未旋轉的軸對齊矩形。
+    pub rotation_degrees: f32,
 }
 
 impl From<FfiShape> for Shape {
@@ -196,6 +198,7 @@ impl From<FfiShape> for Shape {
         if s.corner_radius >= 0.0 {
             shape.corner_radius = s.corner_radius;
         }
+        shape.rotation_degrees = s.rotation_degrees;
         shape
     }
 }
@@ -428,6 +431,7 @@ mod tests {
             kind,
             bounds: rect(0.0, 0.0, 100.0, 60.0),
             corner_radius: -1.0,
+            rotation_degrees: 0.0,
         }
     }
 

@@ -231,7 +231,9 @@ struct ShapeThumbnail: View {
                         minX: 2, minY: 2,
                         maxX: Float(size.width) - 2, maxY: Float(size.height) - 2
                     ),
-                    cornerRadius: 4
+                    cornerRadius: 4,
+                    // 選單裡的預覽一律正放，才比較得出形狀本身的差別。
+                    rotationDegrees: 0
                 ),
                 segments: 40
             )
@@ -266,6 +268,16 @@ struct ShapeAttachmentItemView: View {
         let currentY = shape.y + dragOffset.height
 
         NoteShapeView(shape: $shape, isSelected: isSelected, onEdit: { isEditingLabel = true })
+            // 圖形本體跟著轉；把手與刪除鈕掛在旋轉**外面**的 overlay，
+            // 包進去的話拖曳算出的角度會疊加自身旋轉，圖形會失控加速。
+            .rotationEffect(.degrees(shape.canvasRotation))
+            .overlay {
+                if isSelected {
+                    GeometryReader { geo in
+                        ObjectRotationHandle(degrees: $shape.canvasRotation, size: geo.size)
+                    }
+                }
+            }
             .overlay(alignment: .topTrailing) {
                 if isSelected {
                     Button(role: .destructive, action: onDelete) {

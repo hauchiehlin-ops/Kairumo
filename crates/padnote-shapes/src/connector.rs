@@ -59,6 +59,17 @@ impl Connection {
         let start = from.anchor_point(self.from_anchor);
         let end = to.anchor_point(self.to_anchor);
 
+        // 任一端的圖形轉過時一律走直線。
+        //
+        // 直角折線是用「連接點的方向」算轉折的：`Anchor::Right` 代表往右出去。
+        // 圖形轉了 90° 之後那個出口其實朝下，再照原方向折就會先往右畫一段、
+        // 再硬轉回來 —— 線會從圖形側面穿出去，看起來像壞掉。
+        // 而「直角」的定義本來就要求沿著軸走，沒辦法從一個斜的出口開始。
+        // 直線接在旋轉後正確的連接點上，是這裡唯一不會騙人的選擇。
+        if from.is_rotated() || to.is_rotated() {
+            return vec![start, end];
+        }
+
         match self.route {
             RouteStyle::Straight => vec![start, end],
             RouteStyle::Orthogonal => orthogonal(start, self.from_anchor, end, self.to_anchor),

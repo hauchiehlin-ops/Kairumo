@@ -57,8 +57,11 @@ jobs:
           # （日誌只有一行 "Failed to find package 'tools'"，很容易被當成網路問題）。
           # NDK 與其他套件由下一步自己裝，這裡不需要它先裝任何東西。
           packages: ''
-      - name: 系統相依（cpal → ALSA）
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
+      - name: 系統相依（cpal → ALSA、audiopus → Opus）
+        # libopus-dev 是必要的：下一步的 relay 測試是**在 host 上**編譯的，
+        # 而 padnote-audio 會連 -lopus。android/prebuilt/opus 只有 Android 的
+        # 版本，host 用不到它 —— 少了這個就是 `unable to find library -lopus`。
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev pkg-config
       - name: 安裝 NDK 與 cargo-ndk
         run: |
           sdkmanager --install "ndk;28.2.13676358"
@@ -107,8 +110,11 @@ jobs:
           # （日誌只有一行 "Failed to find package 'tools'"，很容易被當成網路問題）。
           # NDK 與其他套件由下一步自己裝，這裡不需要它先裝任何東西。
           packages: ''
-      - name: 系統相依（cpal → ALSA）
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
+      - name: 系統相依（cpal → ALSA、audiopus → Opus）
+        # libopus-dev 是必要的：下一步的 relay 測試是**在 host 上**編譯的，
+        # 而 padnote-audio 會連 -lopus。android/prebuilt/opus 只有 Android 的
+        # 版本，host 用不到它 —— 少了這個就是 `unable to find library -lopus`。
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev pkg-config
       - name: 安裝 NDK 與 cargo-ndk
         run: |
           sdkmanager --install "ndk;28.2.13676358"
@@ -151,8 +157,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - name: 系統相依（cpal → ALSA）
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
+      - name: 系統相依（cpal → ALSA、audiopus → Opus）
+        # libopus-dev 是必要的：下一步的 relay 測試是**在 host 上**編譯的，
+        # 而 padnote-audio 會連 -lopus。android/prebuilt/opus 只有 Android 的
+        # 版本，host 用不到它 —— 少了這個就是 `unable to find library -lopus`。
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev pkg-config
       - name: 編解碼往返、截斷偵測、版本拒絕
         run: cargo test -p padnote-ink -p padnote-core -- --nocapture
 

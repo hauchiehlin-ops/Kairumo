@@ -158,7 +158,9 @@ private fun ShapeThumbnail(kind: FfiShapeKind) {
                 FfiShape(
                     kind = kind,
                     bounds = FfiRect(2f, 2f, size.width - 2f, size.height - 2f),
-                    cornerRadius = 4f
+                    cornerRadius = 4f,
+                    // 選單裡的預覽一律正放，才比較得出形狀本身的差別。
+                    rotationDegrees = 0f
                 ),
                 40u
             )
