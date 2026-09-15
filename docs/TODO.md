@@ -49,10 +49,24 @@
 - **高風險**：語者分離模型（pyannote 系條款嚴格）
 - **記錄於**：`models/MODELS.md`
 
-### H8. libpdfium 執行期庫
-- **卡在**：`pdfium-render` 只是綁定，實際的 `libpdfium` 動態庫需另外提供
-- **要做**：iOS 靜態連結、macOS/Windows 隨 App 附帶；取得或自建 libpdfium
-- **備註**：**建構成功不代表能執行** —— 目前只驗證了介面與邊界檢查
+### H8. libpdfium 執行期庫 —— **取得與執行已驗證，出貨方式待你拍板**
+- **原本卡在**：`pdfium-render` 只是綁定，`libpdfium` 動態庫要另外提供
+- ✅ **已做（2026-09-16）**：`./scripts/fetch-pdfium.sh [all]`。
+  來源 bblanchon/pdfium-binaries（Google 沒有發佈官方二進位檔），
+  版本**釘死** `chromium/8057`，七個平台的 SHA-256 **逐一驗證**，
+  與 `models/manifest.json` 同一套規矩。抓下來的東西不進版控
+  （每個 3～4 MB、可重抓，`/third_party/pdfium/` 已加進 .gitignore）
+- ✅ **「能不能執行」已經驗過**（這才是這一條真正的問題）：
+  新增 `cargo run -p padnote-pdf-pdfium --example probe`。
+  沒有設 `DYLD_LIBRARY_PATH` 時 `bound=false`，設了之後 `bound=true`；
+  設了之後 `padnote-pdf-pdfium` 的 4 項測試**真的走到實作**
+  （原本 libpdfium 不在時它們會自己跳過，看起來一樣是綠的）
+- ⚪ **還要你拍板**：要不要把這幾個二進位檔**隨 App 出貨**。
+  那是供應鏈決定：第三方預建的原生庫會進到使用者的裝置裡。
+  授權面沒有問題 —— PDFium 是 BSD-3-Clause（Google），
+  打包腳本是 MIT（Benoit Blanchon），兩者都相容於本專案的 Apache-2.0
+- **還沒做**：iOS 的靜態連結、Android 的 jniLibs 擺放、xcframework 的整合。
+  那幾步等上面那個決定
 - **另注意**：PDFium 的 C API 非執行緒安全，多頁渲染實際是序列化的，
   J2 的效能預算只能靠 `PageCache` 的預抓，不能靠平行渲染
 

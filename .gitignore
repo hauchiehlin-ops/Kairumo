@@ -52,3 +52,7 @@ __pycache__/
 
 # Kotlin 編譯器的錯誤暫存（每次建置都會變，不是原始碼）
 /android/.kotlin/
+
+# libpdfium 執行期庫（scripts/fetch-pdfium.sh 抓下來的）。
+# 每個平台 3～4 MB，而且是可以重抓、雜湊驗得過的衍生物。
+/third_party/pdfium/
