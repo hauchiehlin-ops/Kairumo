@@ -246,6 +246,57 @@ pub fn standard_page_size() -> Vec<f32> {
     vec![padnote_doc::PAGE_WIDTH, padnote_doc::PAGE_HEIGHT]
 }
 
+/// 物件底色調色盤：`[(語系鍵, hex), …]`，由後到前就是選單上的順序。
+///
+/// # 為什麼這個要放在核心
+///
+/// 它是**會落盤的資料**，不是單純的樣式偏好：使用者挑了「淡藍」，存進筆記的
+/// 是那個 hex。兩個地方各寫一份清單，同一個名字就會對到不同的顏色。
+///
+/// 實際發生過，而且是在**同一個平台裡**：Apple 的畫布快速選單給 `#E3F2FD`、
+/// 文字排版面板給 `#E1F5FE`，都叫「淡藍」。使用者在畫布上挑了藍色，再打開
+/// 排版面板，會看到七個色票沒有一個是選中的 —— 他挑的顏色不在清單裡。
+/// 灰色同樣有兩個值（`#EEEEEE` / `#F5F5F5`）。
+///
+/// 「透明」不在這裡：它是哨符（`"clear"`）不是顏色，而且不是每個地方都適用。
+#[uniffi::export]
+pub fn card_palette() -> Vec<FfiPaletteEntry> {
+    [
+        ("color_white", "#FFFFFF"),
+        ("color_yellow", "#FFF9C4"),
+        ("color_green", "#E8F5E9"),
+        ("color_pink", "#FCE4EC"),
+        ("color_blue", "#E1F5FE"),
+        ("color_gray", "#F5F5F5"),
+        ("color_black", "#212121"),
+    ]
+    .into_iter()
+    .map(|(key, hex)| FfiPaletteEntry {
+        key: key.to_string(),
+        hex: hex.to_string(),
+    })
+    .collect()
+}
+
+/// 邊框顏色調色盤。理由同 [`card_palette`]。
+#[uniffi::export]
+pub fn border_palette() -> Vec<FfiPaletteEntry> {
+    ["#8E8E93", "#000000", "#0A84FF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE"]
+        .into_iter()
+        .map(|hex| FfiPaletteEntry {
+            key: String::new(),
+            hex: hex.to_string(),
+        })
+        .collect()
+}
+
+/// 調色盤的一格。`key` 是語系鍵（沒有名字時為空字串）。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiPaletteEntry {
+    pub key: String,
+    pub hex: String,
+}
+
 /// 核心引擎與套件版本號（例如 "0.1.4"），與 Cargo.toml 同步。
 #[uniffi::export]
 pub fn core_version() -> String {
@@ -1524,6 +1575,32 @@ fn parse_capability(s: &str) -> Option<Capability> {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn palettes_are_unique_and_well_formed() {
+        // 重複的 hex 代表選單上會有兩格長得一樣，使用者分不出差別。
+        let cards = card_palette();
+        let mut seen = std::collections::HashSet::new();
+        for entry in &cards {
+            assert!(entry.hex.starts_with('#') && entry.hex.len() == 7, "壞的 hex：{}", entry.hex);
+            assert!(!entry.key.is_empty(), "底色一定要有語系鍵");
+            assert!(seen.insert(entry.hex.clone()), "重複的顏色：{}", entry.hex);
+        }
+        assert!(cards.len() >= 6);
+
+        let borders = border_palette();
+        let mut seen = std::collections::HashSet::new();
+        for entry in &borders {
+            assert!(entry.hex.starts_with('#') && entry.hex.len() == 7, "壞的 hex：{}", entry.hex);
+            assert!(seen.insert(entry.hex.clone()), "重複的顏色：{}", entry.hex);
+        }
+    }
+
+    #[test]
+    fn card_palette_has_no_sentinel() {
+        // "clear" 是哨符不是顏色。混進調色盤的話，走顏色轉換就變成黑色。
+        assert!(card_palette().iter().all(|e| e.hex != "clear"));
+    }
     use super::*;
 
     fn tmp(name: &str) -> String {

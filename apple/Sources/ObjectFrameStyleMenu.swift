@@ -27,16 +27,13 @@ struct ObjectFrameStyleMenu<Style: ObjectFrameStyled>: View {
     var onChange: () -> Void = {}
 
     /// 一組夠用的顏色。刻意不多 —— 選項太多的選單比沒有選單還難用。
+    ///
+    /// **來源是核心的 `cardPalette()`，不要在這裡寫死。**
+    /// 這裡與「文字排版」面板原本各寫一份，同一個「淡藍」一邊是 `#E3F2FD`、
+    /// 另一邊是 `#E1F5FE`（灰色也有兩個值）。使用者在畫布上挑了藍色，再打開
+    /// 排版面板，會看到七個色票沒有一個是選中的 —— 他挑的顏色不在清單裡。
     static var palette: [(key: String, hex: String)] {
-        [
-            ("color_white", "#FFFFFF"),
-            ("color_yellow", "#FFF9C4"),
-            ("color_blue", "#E3F2FD"),
-            ("color_green", "#E8F5E9"),
-            ("color_pink", "#FCE4EC"),
-            ("color_gray", "#EEEEEE"),
-            ("color_black", "#212121")
-        ]
+        cardPalette().map { (key: $0.key, hex: $0.hex) }
     }
 
     var body: some View {

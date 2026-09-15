@@ -100,9 +100,8 @@ fun ImageEditor(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         // 與形狀樣式面板同一組色 —— 同一份筆記裡兩種物件的
-                        // 可選色不同，使用者會以為是兩套系統。
-                        for (hex in listOf("#8E8E93", "#000000", "#007AFF", "#34C759",
-                                           "#FF9500", "#FF3B30", "#AF52DE")) {
+                        // 可選色不同，使用者會以為是兩套系統。來源在核心。
+                        for (hex in uniffi.padnote_core.borderPalette().map { it.hex }) {
                             val color = parse(hex) ?: Color.Gray
                             Box(
                                 modifier = Modifier.size(38.dp).clickable { borderHex = hex },

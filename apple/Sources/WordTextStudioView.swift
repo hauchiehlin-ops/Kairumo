@@ -57,16 +57,22 @@ public struct WordTextStudioView: View {
         "ⅰ", "ⅱ", "ⅲ", "ⅳ", "ⅴ", "ⅵ", "ⅶ", "ⅷ", "ⅸ", "ⅹ"
     ]
 
-    // 便簽底色選項
-    private let cardBackgroundOptions: [(name: String, hex: String, color: Color)] = [
-        ("純白卡片", "#FFFFFF", .white),
-        ("便利貼黃", "#FFF9C4", Color(red: 1.0, green: 0.976, blue: 0.769)),
-        ("清爽薄荷", "#E8F5E9", Color(red: 0.91, green: 0.96, blue: 0.91)),
-        ("櫻花暖粉", "#FCE4EC", Color(red: 0.99, green: 0.89, blue: 0.93)),
-        ("商務淡藍", "#E1F5FE", Color(red: 0.88, green: 0.96, blue: 0.99)),
-        ("簡約淡灰", "#F5F5F5", Color(red: 0.96, green: 0.96, blue: 0.96)),
-        ("透明畫布", "clear", .clear)
-    ]
+    // 便簽底色選項。
+    //
+    // **來源是核心的 `cardPalette()`**，與畫布上的快速選單同一份 ——
+    // 兩邊各寫一份的結果是同一個「淡藍」對到不同的 hex（實際發生過）。
+    // 名字走字串表，不要寫死中文：原本這裡的 name 永遠是中文，
+    // 而它就顯示在 `.help()` 上。
+    //
+    // 「透明」補在最後：它是哨符（`"clear"`）不是顏色，核心的調色盤不收它。
+    private var cardBackgroundOptions: [(name: String, hex: String, color: Color)] {
+        cardPalette().map {
+            (name: localizationManager.localized($0.key),
+             hex: $0.hex,
+             color: Color(hex: $0.hex) ?? .white)
+        } + [(name: localizationManager.localized("color_transparent"),
+              hex: "clear", color: .clear)]
+    }
 
     /// 自訂底色的暫存狀態。見 `backgroundSwatches` 裡的說明。
     @State private var customBackground: Color = .white
@@ -643,7 +649,8 @@ public struct WordTextStudioView: View {
         .cornerRadius(8)
     }
 
-    private let borderColorOptions: [String] = ["#8E8E93", "#000000", "#0A84FF", "#34C759", "#FF9500", "#FF3B30"]
+    /// 邊框顏色。來源同樣是核心 —— 見 `cardBackgroundOptions` 的說明。
+    private var borderColorOptions: [String] { borderPalette().map(\.hex) }
 
     // 輔助函式
     private func insertSymbol(_ symbol: String) {

@@ -108,10 +108,13 @@ fun ShapeStyleDialog(
     )
 }
 
-/** 與 Apple 端 `ShapeStyleSheet.palette` 同一組色。 */
-private val PALETTE = listOf(
-    "#8E8E93", "#000000", "#007AFF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE"
-)
+/**
+ * 與 Apple 端 `ShapeStyleSheet.palette` 同一組色。
+ *
+ * **來源是核心的 `borderPalette()`** —— 原本這裡寫死 #007AFF，而文字方塊
+ * 那邊是 #0A84FF，兩個都叫藍色但存進筆記的是不同的值。
+ */
+private fun palette(): List<String> = uniffi.padnote_core.borderPalette().map { it.hex }
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -146,7 +149,7 @@ private fun Swatches(
                 )
             }
         }
-        for (hex in PALETTE) {
+        for (hex in palette()) {
             val color = ChartColor(hex) ?: Color.Gray
             Box(
                 modifier = Modifier

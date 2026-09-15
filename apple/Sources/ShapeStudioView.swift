@@ -485,9 +485,11 @@ struct ShapeStyleSheet: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
 
     /// 與文字方塊邊框用同一組顏色 —— 同一份筆記裡兩種物件的可選色不同，
-    /// 使用者會以為是兩套系統。
-    private let palette = ["#8E8E93", "#000000", "#007AFF", "#34C759",
-                           "#FF9500", "#FF3B30", "#AF52DE"]
+    /// 使用者會以為是兩套系統。來源是核心的 `borderPalette()`。
+    ///
+    /// （原本這裡寫死 `#007AFF`，而文字方塊那邊是 `#0A84FF` —— 兩個都叫藍色，
+    ///   但存進筆記的是不同的值。）
+    private var palette: [String] { borderPalette().map(\.hex) }
 
     var body: some View {
         NavigationView {
