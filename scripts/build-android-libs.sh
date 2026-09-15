@@ -68,6 +68,11 @@ command -v cargo-ndk >/dev/null 2>&1 || {
     exit 1
 }
 
+# cargo-ndk 兩個變數都看。CI 的 runner 預設 ANDROID_NDK_ROOT 指向 27.3，
+# 而我們釘的是 28.2 —— 不對齊的話它會警告，而且可能真的用另一版建置，
+# 於是「本機用 28.2、CI 用 27.3」又變回不可重現的建置。
+export ANDROID_NDK_ROOT="$ANDROID_NDK_HOME"
+
 echo "==> NDK: $ANDROID_NDK_HOME"
 echo "==> ABI: ${ABIS[*]}　profile: $PROFILE"
 
@@ -107,17 +112,20 @@ for abi in "${ABIS[@]}"; do
     # NEEDED 項目，動態載入器就不會去載它，dlopen 依然找不到符號。
     # 一定要在連結時真的連上去，NEEDED 才會出現。
     #
-    # **只能掛在該 target 上，不能用全域 RUSTFLAGS。** 全域的話 build script
-    # 也會套到 —— 那些是編給 host 的，而 Linux 的 host 根本沒有
-    # libc++_shared，整包在 CI 上就連結失敗（macOS 上因為有 libc++ 剛好沒事，
-    # 所以只在 CI 炸，本機看不出來）。
-    if [[ -n "$RUST_TARGET" ]]; then
-        TARGET_ENV="CARGO_TARGET_$(echo "$RUST_TARGET" | tr 'a-z-' 'A-Z_')_RUSTFLAGS"
-        env "$TARGET_ENV=-C link-arg=-lc++_shared" \
-            cargo ndk -t "$abi" -o "$OUT_DIR" build -p padnote-core "${FEATURE_ARGS[@]}" "${PROFILE_ARGS[@]}"
-    else
+    # **要用全域 RUSTFLAGS，不能用 CARGO_TARGET_<TRIPLE>_RUSTFLAGS。**
+    #
+    # 我一度改成 target 範圍的版本，理由是「全域會汙染 host 的 build script」——
+    # 那個理由是錯的：`cargo ndk` 會傳 `--target`，而 cargo 在有 `--target` 時
+    # 本來就不會把 RUSTFLAGS 套到 build script 與 proc-macro。
+    #
+    # 而且 target 範圍那版在 CI 上**完全失效**：cargo 只要看到 `RUSTFLAGS`
+    # 有值，就會忽略 CARGO_TARGET_<TRIPLE>_RUSTFLAGS ——
+    # CI 正好設了 `RUSTFLAGS: -D warnings`。本機沒設，所以本機看起來是好的。
+    #
+    # 用 `${RUSTFLAGS:-}` 前綴保留呼叫端原本的旗標（例如 CI 的 -D warnings），
+    # 不要整個蓋掉。
+    RUSTFLAGS="${RUSTFLAGS:-} -C link-arg=-lc++_shared" \
         cargo ndk -t "$abi" -o "$OUT_DIR" build -p padnote-core "${FEATURE_ARGS[@]}" "${PROFILE_ARGS[@]}"
-    fi
 done
 
 # 相依 crate 順帶產生的 cdylib 不是我們的執行期相依，留著只會讓 APK 變大。
