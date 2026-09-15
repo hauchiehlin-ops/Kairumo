@@ -4695,6 +4695,30 @@ extension LocalizationManager {
             .ko: "클립보드의 필기를 이 페이지에 붙여넣습니다",
             .th: "วางเส้นจากคลิปบอร์ดลงในหน้านี้"
         ],
+        "pdf_not_a_pdf": [
+            .zhHant: "這個檔案不是 PDF，或者已經損壞。",
+            .en: "This file isn't a PDF, or it's damaged.",
+            .zhHans: "这个文件不是 PDF，或者已经损坏。",
+            .ja: "このファイルは PDF ではないか、壊れています。",
+            .ko: "이 파일은 PDF가 아니거나 손상되었습니다.",
+            .th: "ไฟล์นี้ไม่ใช่ PDF หรือเสียหาย"
+        ],
+        "pdf_page_out_of_range": [
+            .zhHant: "第 %1@ 頁不存在，這個 PDF 共 %2@ 頁。",
+            .en: "Page %1@ doesn't exist — this PDF has %2@ pages.",
+            .zhHans: "第 %1@ 页不存在，这个 PDF 共 %2@ 页。",
+            .ja: "%1@ ページは存在しません。この PDF は %2@ ページです。",
+            .ko: "%1@ 페이지는 없습니다. 이 PDF는 %2@ 페이지입니다.",
+            .th: "ไม่มีหน้า %1@ — PDF นี้มี %2@ หน้า"
+        ],
+        "pdf_password_required": [
+            .zhHant: "這個 PDF 需要密碼。",
+            .en: "This PDF needs a password.",
+            .zhHans: "这个 PDF 需要密码。",
+            .ja: "この PDF にはパスワードが必要です。",
+            .ko: "이 PDF는 비밀번호가 필요합니다.",
+            .th: "PDF นี้ต้องใช้รหัสผ่าน"
+        ],
         "platform_desc": [
             .zhHant: "執行平台",
             .en: "Platform",

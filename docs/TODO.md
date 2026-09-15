@@ -74,11 +74,24 @@
   **Embed & Sign**。只 Link 不 Embed 的話，開發機上跑得動、裝到裝置上
   一開就閃退。這一步我沒有動 `project.pbxproj` —— 手改嵌入階段弄壞專案檔的
   風險，高過它省下的時間
-- 🔴 **還沒做 2：Mac Catalyst 沒有可用的二進位檔**。bblanchon 發佈的 mac 版是
-  **平台 1（macOS）**，不是平台 6（MACCATALYST），Catalyst 的建置不會選它。
-  三條路：(a) 自己用 depot_tools + gn + ninja 建一份 Catalyst 的 PDFium、
-  (b) Mac 上走另一條 PDF 路徑（PDFKit 是系統內建的）、(c) Mac 上不支援 PDF。
-  **這一項違反「每項修改都要同時滿足四個平台」，需要你選一條**
+- ✅ **Catalyst 的缺口已解，選了 (b)**（D-11b，2026-09-16）：
+  **Apple 整條線改走 PDFKit，完全不用 PDFium。**
+  bblanchon 的 mac 版是平台 1（macOS）不是平台 6（MACCATALYST），
+  Catalyst 建置不會選它 —— 與其為了四個平台裡的一個去自建 PDFium
+  （depot_tools + gn + ninja，而且要長期維護），不如讓 Apple 走系統那一套：
+  PDFKit 在 iOS / iPadOS / macOS / Catalyst 全都有，`ExportPrintManager`
+  早就在用它列印。
+  - `apple/Sources/PdfKitDocument.swift`：頁數、頁面幾何、旋轉正規化、
+    文字層、算繪成 PNG。7 項測試跑在**真的 PDF** 上（用
+    `UIGraphicsPDFRenderer` 現產一份，不餵自己拼的位元組）
+  - `build-xcframework.sh` 改成 `--no-default-features --features asr`，
+    Apple 端不再連進 `padnote-pdf-pdfium`
+  - 少 6 MB × 2 的二進位、少一個第三方供應鏈、少一個會隨系統更新壞掉的東西
+  - **libpdfium 只出貨給 Android**（Android 沒有能讀文字層的系統 API，
+    `PdfRenderer` 只能算繪）。兩邊後端不同，**介面與座標約定同一份** ——
+    Swift 那 7 項測試裡有一組就是逐條對應核心 `padnote_pdf::PdfPage` 的
+    同名測試（Y 軸翻轉、來回轉換、旋轉換寬高）
+  - `apple/PDFium.xcframework` 與 `build-pdfium-xcframework.sh` 不再需要
 - **另注意**：PDFium 的 C API 非執行緒安全，多頁渲染實際是序列化的，
   J2 的效能預算只能靠 `PageCache` 的預抓，不能靠平行渲染
 

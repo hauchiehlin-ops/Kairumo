@@ -53,6 +53,7 @@
 		99B29892A3970C9ADBADEB7E /* PalmRejectionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F85F010611BBEED2B2DF9AC3 /* PalmRejectionTests.swift */; };
 		9BCE1D88DD79DE3FD381D46D /* ImageEditControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29BFE1D24D00A1328C62BA89 /* ImageEditControls.swift */; };
 		9C2756ABBB3E04433C88F83B /* ExportFidelityTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A779F6ADCC3B71D4D84A687 /* ExportFidelityTests.swift */; };
+		PT1A2B3C4D5E6F70809111 /* PdfKitDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = PT2B3C4D5E6F7080911121 /* PdfKitDocumentTests.swift */; };
 		9F2B0BAAA1DE545936528DA8 /* NotebookSyncCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D76C7E92895F6C4334996D92 /* NotebookSyncCoordinator.swift */; };
 		9F604F0E1403CBF029FDB93A /* LocalRelayServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFA100928CD3224E43D7382 /* LocalRelayServer.swift */; };
 		9FC47E009EE588F6F00894D8 /* NoteShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBEA4CFB130D285D67B343EC /* NoteShape.swift */; };
@@ -69,6 +70,7 @@
 		AA663818A22D47C3A2C23CF2 /* AccountSyncStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01AFB3F20C5549BBBF4DFBFE /* AccountSyncStore.swift */; };
 		B89C263C1A1A49EBA16D42B2 /* ICloudSyncFolder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7A293858C84789874DFCA3 /* ICloudSyncFolder.swift */; };
 		47A6AB2F9A6D48ED9324FE90 /* HandwritingRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6AFF51F2F9944F486877121 /* HandwritingRecognizer.swift */; };
+		PK1A2B3C4D5E6F70809111 /* PdfKitDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = PK2B3C4D5E6F7080911121 /* PdfKitDocument.swift */; };
 		LS1A2B3C4D5E6F7080910111 /* LassoSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = LS2B3C4D5E6F708091011121 /* LassoSelection.swift */; };
 		B281348DEEE6A0978642DF8D /* BrushCursor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A2F8130E223B0B02F303F80 /* BrushCursor.swift */; };
 		B3DFF4CFC65E91FEEA6AA7B4 /* HomeWorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */; };
@@ -139,6 +141,7 @@
 		2A90E6661A2C0079EE609AFA /* ShapeStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShapeStudioView.swift; sourceTree = "<group>"; };
 		3A1525CF56EBBE47CE94BDBD /* PdfAnnotationInteropTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PdfAnnotationInteropTests.swift; sourceTree = "<group>"; };
 		3A779F6ADCC3B71D4D84A687 /* ExportFidelityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportFidelityTests.swift; sourceTree = "<group>"; };
+		PT2B3C4D5E6F7080911121 /* PdfKitDocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PdfKitDocumentTests.swift; sourceTree = "<group>"; };
 		3CF52FA26FE1FF9A388527D6 /* InkLatencyMeterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InkLatencyMeterTests.swift; sourceTree = "<group>"; };
 		3D05E57F469CF735B91FC514 /* SketchRefineEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchRefineEngine.swift; sourceTree = "<group>"; };
 		3E642D648CC5479DA382CE35 /* MathEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathEngine.swift; sourceTree = "<group>"; };
@@ -164,6 +167,7 @@
 		01AFB3F20C5549BBBF4DFBFE /* AccountSyncStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSyncStore.swift; sourceTree = "<group>"; };
 		BF7A293858C84789874DFCA3 /* ICloudSyncFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudSyncFolder.swift; sourceTree = "<group>"; };
 		C6AFF51F2F9944F486877121 /* HandwritingRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandwritingRecognizer.swift; sourceTree = "<group>"; };
+		PK2B3C4D5E6F7080911121 /* PdfKitDocument.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PdfKitDocument.swift; sourceTree = "<group>"; };
 		LS2B3C4D5E6F708091011121 /* LassoSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LassoSelection.swift; sourceTree = "<group>"; };
 		6C2FF9AF4DA70CC155EC6704 /* ObjectLayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectLayerTests.swift; sourceTree = "<group>"; };
 		6D92ABBF09268BEEA4DD694D /* CloudSyncFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncFolder.swift; sourceTree = "<group>"; };
@@ -259,6 +263,7 @@
 				ADB3B259C241361F259FE9CD /* ChartStudioTests.swift */,
 				731CDDC574A6D78F0621BA61 /* CloudSyncFolderTests.swift */,
 				3A779F6ADCC3B71D4D84A687 /* ExportFidelityTests.swift */,
+				PT2B3C4D5E6F7080911121 /* PdfKitDocumentTests.swift */,
 				691C8F15D077838E27650DFC /* InkInteropTests.swift */,
 				3CF52FA26FE1FF9A388527D6 /* InkLatencyMeterTests.swift */,
 				621C052FCB25E32FBB633BE3 /* MacReleaseConfigTests.swift */,
@@ -341,6 +346,7 @@
 				01AFB3F20C5549BBBF4DFBFE /* AccountSyncStore.swift */,
 				BF7A293858C84789874DFCA3 /* ICloudSyncFolder.swift */,
 				C6AFF51F2F9944F486877121 /* HandwritingRecognizer.swift */,
+				PK2B3C4D5E6F7080911121 /* PdfKitDocument.swift */,
 				LS2B3C4D5E6F708091011121 /* LassoSelection.swift */,
 				26F09C378F9F1B6835D9ECB2 /* CStubs.c */,
 				59E46CD750DA486212251DC0 /* DocumentViewerSheet.swift */,
@@ -514,6 +520,7 @@
 				5DB9A9B4DBCC7AABAB0B76CC /* ChartStudioTests.swift in Sources */,
 				1946E25FC27F2BD84C08F133 /* CloudSyncFolderTests.swift in Sources */,
 				9C2756ABBB3E04433C88F83B /* ExportFidelityTests.swift in Sources */,
+				PT1A2B3C4D5E6F70809111 /* PdfKitDocumentTests.swift in Sources */,
 				C9792F66F734F3441E471BE4 /* InkInteropTests.swift in Sources */,
 				E9221BA20E33E8501513541A /* InkLatencyMeterTests.swift in Sources */,
 				C36BFAF3FE04CD8474F55984 /* MacReleaseConfigTests.swift in Sources */,
@@ -566,6 +573,7 @@
 				AA663818A22D47C3A2C23CF2 /* AccountSyncStore.swift in Sources */,
 				B89C263C1A1A49EBA16D42B2 /* ICloudSyncFolder.swift in Sources */,
 				47A6AB2F9A6D48ED9324FE90 /* HandwritingRecognizer.swift in Sources */,
+				PK1A2B3C4D5E6F70809111 /* PdfKitDocument.swift in Sources */,
 				LS1A2B3C4D5E6F7080910111 /* LassoSelection.swift in Sources */,
 				7B6B71CF69CE9F1C2CB2E953 /* DocumentViewerSheet.swift in Sources */,
 				643674D7CEE546261D15F308 /* ExportPrintManager.swift in Sources */,

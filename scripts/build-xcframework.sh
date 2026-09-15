@@ -70,8 +70,23 @@ for t in "${TARGETS[@]}"; do
   else
     unset COREAUDIO_SDK_PATH
   fi
+  # **Apple 不含 pdf feature**（決策 D-11b，2026-09-16）。
+  #
+  # 那個 feature 會連進 `padnote-pdf-pdfium`，而 PDFium 需要一份預建的原生庫。
+  # bblanchon 發佈的 mac 版是**平台 1（macOS）**，不是平台 6（MACCATALYST）——
+  # Catalyst 的建置根本不會去選它，所以 Mac 版從一開始就沒有可用的二進位檔。
+  #
+  # Apple 這邊本來就有 PDFKit（iOS / iPadOS / macOS / Catalyst 全都有，
+  # 而且 `ExportPrintManager` 已經在用它列印）。與其為了四個平台裡的一個
+  # 去自建 PDFium，不如讓 Apple 走系統的那一套：少 6 MB × 2 的二進位、
+  # 少一個第三方供應鏈、少一個會隨系統更新壞掉的東西。
+  #
+  # 核心裡 pdf feature 唯一的用途是 `export_page_png` 的一段**最佳化**，
+  # 而它本來就有純 Rust 的 fallback（Android 一直走那一條）。關掉它
+  # 只是讓 Apple 也走同一條路，功能不會少。
   ORT_LIB_LOCATION="$STUB_DIR" OPUS_LIB_DIR="$STUB_DIR" \
-    cargo rustc -p padnote-core --lib --release --target "$t" --crate-type staticlib
+    cargo rustc -p padnote-core --lib --release --target "$t" \
+    --no-default-features --features asr --crate-type staticlib
 done
 
 echo "==> 產生綁定"

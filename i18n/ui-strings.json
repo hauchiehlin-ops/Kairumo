@@ -6558,5 +6558,29 @@
     "th": "ใช้ที่อยู่รีเลย์นี้ไม่ได้",
     "zhHans": "这个中继位址无法使用。",
     "zhHant": "這個中繼位址無法使用。"
+  },
+  "pdf_not_a_pdf": {
+    "en": "This file isn't a PDF, or it's damaged.",
+    "ja": "このファイルは PDF ではないか、壊れています。",
+    "ko": "이 파일은 PDF가 아니거나 손상되었습니다.",
+    "th": "ไฟล์นี้ไม่ใช่ PDF หรือเสียหาย",
+    "zhHans": "这个文件不是 PDF，或者已经损坏。",
+    "zhHant": "這個檔案不是 PDF，或者已經損壞。"
+  },
+  "pdf_password_required": {
+    "en": "This PDF needs a password.",
+    "ja": "この PDF にはパスワードが必要です。",
+    "ko": "이 PDF는 비밀번호가 필요합니다.",
+    "th": "PDF นี้ต้องใช้รหัสผ่าน",
+    "zhHans": "这个 PDF 需要密码。",
+    "zhHant": "這個 PDF 需要密碼。"
+  },
+  "pdf_page_out_of_range": {
+    "en": "Page %1@ doesn't exist — this PDF has %2@ pages.",
+    "ja": "%1@ ページは存在しません。この PDF は %2@ ページです。",
+    "ko": "%1@ 페이지는 없습니다. 이 PDF는 %2@ 페이지입니다.",
+    "th": "ไม่มีหน้า %1@ — PDF นี้มี %2@ หน้า",
+    "zhHans": "第 %1@ 页不存在，这个 PDF 共 %2@ 页。",
+    "zhHant": "第 %1@ 頁不存在，這個 PDF 共 %2@ 頁。"
   }
 }

@@ -4727,6 +4727,30 @@ object LocalizationStrings {
             "ko" to "클립보드의 필기를 이 페이지에 붙여넣습니다",
             "th" to "วางเส้นจากคลิปบอร์ดลงในหน้านี้"
         ),
+        "pdf_not_a_pdf" to mapOf(
+            "zh-Hant" to "這個檔案不是 PDF，或者已經損壞。",
+            "en" to "This file isn't a PDF, or it's damaged.",
+            "zh-Hans" to "这个文件不是 PDF，或者已经损坏。",
+            "ja" to "このファイルは PDF ではないか、壊れています。",
+            "ko" to "이 파일은 PDF가 아니거나 손상되었습니다.",
+            "th" to "ไฟล์นี้ไม่ใช่ PDF หรือเสียหาย"
+        ),
+        "pdf_page_out_of_range" to mapOf(
+            "zh-Hant" to "第 %1@ 頁不存在，這個 PDF 共 %2@ 頁。",
+            "en" to "Page %1@ doesn't exist — this PDF has %2@ pages.",
+            "zh-Hans" to "第 %1@ 页不存在，这个 PDF 共 %2@ 页。",
+            "ja" to "%1@ ページは存在しません。この PDF は %2@ ページです。",
+            "ko" to "%1@ 페이지는 없습니다. 이 PDF는 %2@ 페이지입니다.",
+            "th" to "ไม่มีหน้า %1@ — PDF นี้มี %2@ หน้า"
+        ),
+        "pdf_password_required" to mapOf(
+            "zh-Hant" to "這個 PDF 需要密碼。",
+            "en" to "This PDF needs a password.",
+            "zh-Hans" to "这个 PDF 需要密码。",
+            "ja" to "この PDF にはパスワードが必要です。",
+            "ko" to "이 PDF는 비밀번호가 필요합니다.",
+            "th" to "PDF นี้ต้องใช้รหัสผ่าน"
+        ),
         "platform_desc" to mapOf(
             "zh-Hant" to "執行平台",
             "en" to "Platform",
@@ -5142,7 +5166,10 @@ object LocalizationStrings {
             "ja" to "ホスト (所有者)",
             "ko" to "방장 (소유자)",
             "th" to "เจ้าของห้อง"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "role_viewer" to mapOf(
             "zh-Hant" to "檢視者",
             "en" to "Viewer",
@@ -5166,10 +5193,7 @@ object LocalizationStrings {
             "ja" to "ローマ数字",
             "ko" to "로마 숫자",
             "th" to "เลขโรมัน"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "room_id" to mapOf(
             "zh-Hant" to "房間識別碼",
             "en" to "Room ID",
@@ -5785,7 +5809,10 @@ object LocalizationStrings {
             "ja" to "同期はお使いのクラウドドライブ（iCloud Drive、Google Drive、Dropbox など）が行います。アカウントも当方のサーバーもありません。2 台の端末を同じフォルダに向けるだけで同期されます。",
             "ko" to "동기화는 사용자의 클라우드 드라이브(iCloud Drive, Google Drive, Dropbox 등)가 담당합니다. 계정도, 저희 서버도 없습니다. 두 기기를 같은 폴더로 지정하면 서로 동기화됩니다.",
             "th" to "การซิงก์ทำโดยคลาวด์ไดรฟ์ของคุณเอง (iCloud Drive, Google Drive, Dropbox ฯลฯ) ไม่มีบัญชีและไม่มีเซิร์ฟเวอร์ของเรา ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์เดียวกันก็ซิงก์กันได้"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "sync_failed" to mapOf(
             "zh-Hant" to "同步失敗：%@",
             "en" to "Sync failed: %@",
@@ -5809,10 +5836,7 @@ object LocalizationStrings {
             "ja" to "%@ は両方の端末で変更されています。クラウド側を残しました。ご確認ください",
             "ko" to "%@ 이(가) 양쪽 기기에서 모두 변경되었습니다. 클라우드 사본을 유지했습니다. 확인해 주세요",
             "th" to "%@ ถูกแก้ไขบนทั้งสองอุปกรณ์ ระบบเก็บสำเนาบนคลาวด์ไว้ โปรดตรวจสอบ"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_needs_reauth" to mapOf(
             "zh-Hant" to "登入狀態已過期，請重新登入",
             "en" to "Session expired — please sign in again",
@@ -6428,7 +6452,10 @@ object LocalizationStrings {
             "ja" to "ペン",
             "ko" to "만년필",
             "th" to "ปากกาหมึกซึม"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "tool_pencil" to mapOf(
             "zh-Hant" to "鉛筆",
             "en" to "Pencil",
@@ -6452,10 +6479,7 @@ object LocalizationStrings {
             "ja" to "水彩筆",
             "ko" to "수채화 붓",
             "th" to "พู่กันสีน้ำ"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "txt_count" to mapOf(
             "zh-Hant" to "文字",
             "en" to "Text",
