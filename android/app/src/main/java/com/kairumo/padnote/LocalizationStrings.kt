@@ -3094,6 +3094,14 @@ object LocalizationStrings {
             "ko" to "웜 아몬드",
             "th" to "อัลมอนด์อุ่น"
         ),
+        "hwr_no_model" to mapOf(
+            "zh-Hant" to "手寫辨識不支援「%@」",
+            "en" to "Handwriting recognition does not support “%@”",
+            "zh-Hans" to "手写辨识不支持「%@」",
+            "ja" to "手書き認識は「%@」に対応していません",
+            "ko" to "필기 인식이 “%@”를 지원하지 않습니다",
+            "th" to "การรู้จำลายมือไม่รองรับ “%@”"
+        ),
         "identity_color" to mapOf(
             "zh-Hant" to "身分顏色",
             "en" to "Identity Colour",
@@ -3229,7 +3237,10 @@ object LocalizationStrings {
             "ja" to "入力遅延",
             "ko" to "입력 지연",
             "th" to "ความหน่วงอินพุต"
-        ),
+        )
+    )
+
+    private fun part5(): Map<String, Map<String, String>> = mapOf(
         "ink_low_latency" to mapOf(
             "zh-Hant" to "低延遲",
             "en" to "Low Latency",
@@ -3237,10 +3248,7 @@ object LocalizationStrings {
             "ja" to "低遅延",
             "ko" to "저지연",
             "th" to "หน่วงต่ำ"
-        )
-    )
-
-    private fun part5(): Map<String, Map<String, String>> = mapOf(
+        ),
         "ink_low_latency_unavailable" to mapOf(
             "zh-Hant" to "這台裝置不支援前緩衝渲染，已改用一般畫布",
             "en" to "Front-buffered rendering is unavailable on this device; using the standard canvas",
@@ -3872,7 +3880,10 @@ object LocalizationStrings {
             "ja" to "この式は解釈できません",
             "ko" to "이 수식을 이해할 수 없습니다",
             "th" to "ไม่เข้าใจนิพจน์นี้"
-        ),
+        )
+    )
+
+    private fun part6(): Map<String, Map<String, String>> = mapOf(
         "math_error_empty" to mapOf(
             "zh-Hant" to "算式不可為空",
             "en" to "Enter an expression",
@@ -3880,10 +3891,7 @@ object LocalizationStrings {
             "ja" to "式を入力してください",
             "ko" to "수식을 입력하세요",
             "th" to "กรุณาใส่นิพจน์"
-        )
-    )
-
-    private fun part6(): Map<String, Map<String, String>> = mapOf(
+        ),
         "math_error_not_finite" to mapOf(
             "zh-Hant" to "算不出有限的結果（可能除以零）",
             "en" to "No finite result (division by zero?)",
@@ -4228,6 +4236,14 @@ object LocalizationStrings {
             "ko" to "일치하는 노트를 찾을 수 없습니다",
             "th" to "ไม่พบบันทึกที่ตรงกัน"
         ),
+        "no_recognition_result" to mapOf(
+            "zh-Hant" to "這一頁沒有辨識出文字",
+            "en" to "No text recognised on this page",
+            "zh-Hans" to "这一页没有辨识出文字",
+            "ja" to "このページから文字を認識できませんでした",
+            "ko" to "이 페이지에서 글자를 인식하지 못했습니다",
+            "th" to "ไม่พบข้อความที่อ่านได้ในหน้านี้"
+        ),
         "no_recordings_hint" to mapOf(
             "zh-Hant" to "目前尚無錄音檔或皆已隱藏，點擊「開始錄音」即可即時收音",
             "en" to "No audio recordings yet. Tap \"Start Recording\" to record audio.",
@@ -4507,7 +4523,10 @@ object LocalizationStrings {
             "ja" to "各ページが固定の高さになり、キャンバスにページと印刷可能領域の境界が表示されます。ページ末尾まで書くと次のページが用意されます。元のデータはバックアップ済みです。",
             "ko" to "모든 페이지가 고정 높이가 되고, 캔버스에 페이지와 인쇄 가능 영역 경계가 표시됩니다. 페이지 끝까지 쓰면 다음 페이지가 준비됩니다. 원본 데이터는 백업되었습니다.",
             "th" to "ทุกหน้าจะมีความสูงคงที่ และผืนผ้าใบจะแสดงขอบเขตหน้าและพื้นที่พิมพ์ได้ เมื่อเขียนถึงท้ายหน้าจะเตรียมหน้าถัดไปให้ ข้อมูลเดิมได้รับการสำรองไว้แล้ว"
-        ),
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
         "page_model_failed" to mapOf(
             "zh-Hant" to "%@ 本重新分頁失敗，已保留原樣",
             "en" to "%@ notebooks failed and were left unchanged",
@@ -4523,10 +4542,7 @@ object LocalizationStrings {
             "ja" to "一部のノートが旧来の可変長ページのままで、書き出しと印刷が用紙に合いません",
             "ko" to "일부 노트가 예전의 늘어나는 페이지를 사용하고 있어 내보내기와 인쇄가 용지에 맞지 않습니다",
             "th" to "บางบันทึกยังใช้หน้าที่ยืดได้แบบเดิม การส่งออกและการพิมพ์จึงไม่ตรงกับกระดาษ"
-        )
-    )
-
-    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        ),
         "page_model_repaginate" to mapOf(
             "zh-Hant" to "重新分頁",
             "en" to "Repaginate",
@@ -5150,7 +5166,10 @@ object LocalizationStrings {
             "ja" to "定規ガイド",
             "ko" to "자 가이드",
             "th" to "เส้นบรรทัดนำสายตา"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "ruler_hint" to mapOf(
             "zh-Hant" to "• 提示：觸控板兩指旋轉，或按住 Option 鍵滑動旋轉",
             "en" to "• Hint: Rotate with two fingers on trackpad or hold Option while dragging",
@@ -5166,10 +5185,7 @@ object LocalizationStrings {
             "ja" to "定規・測定モード",
             "ko" to "자 및 측정 모드",
             "th" to "โหมดไม้บรรทัดและการวัด"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_data" to mapOf(
             "zh-Hant" to "載入範例數據",
             "en" to "Load Sample Data",
@@ -5793,7 +5809,10 @@ object LocalizationStrings {
             "ja" to "文字サイズ",
             "ko" to "글자 크기",
             "th" to "ขนาดตัวอักษร"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "table_header_row" to mapOf(
             "zh-Hant" to "第一列為表頭",
             "en" to "Header Row",
@@ -5809,10 +5828,7 @@ object LocalizationStrings {
             "ja" to "表を挿入",
             "ko" to "표 삽입",
             "th" to "แทรกตาราง"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "table_merge_down" to mapOf(
             "zh-Hant" to "向下合併",
             "en" to "Merge Down",
@@ -6436,7 +6452,10 @@ object LocalizationStrings {
             "ja" to "検索入力フィールド",
             "ko" to "검색 입력 필드",
             "th" to "ช่องค้นหา"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "wireframe_kit" to mapOf(
             "zh-Hant" to "UI 原型線框",
             "en" to "UI Wireframes",
@@ -6452,10 +6471,7 @@ object LocalizationStrings {
             "ja" to "モーダルダイアログ",
             "ko" to "모달 대화상자",
             "th" to "กล่องโต้ตอบแบบโมดัล"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wireframe_navbar" to mapOf(
             "zh-Hant" to "行動端頂部導航列",
             "en" to "Mobile top nav bar",

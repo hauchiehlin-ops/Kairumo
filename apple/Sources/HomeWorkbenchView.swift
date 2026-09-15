@@ -111,7 +111,12 @@ public struct HomeWorkbenchView: View {
         if !searchText.isEmpty {
             list = list.filter {
                 $0.displayTitle().localizedCaseInsensitiveContains(searchText) ||
-                ($0.previewSnippet?.localizedCaseInsensitiveContains(searchText) ?? false)
+                ($0.previewSnippet?.localizedCaseInsensitiveContains(searchText) ?? false) ||
+                // 手寫辨識的結果也要搜得到 —— 不然辨識完了卻找不到，
+                // 使用者會以為辨識沒有作用。
+                ($0.recognizedText?.values.contains {
+                    $0.localizedCaseInsensitiveContains(searchText)
+                } ?? false)
             }
         }
 

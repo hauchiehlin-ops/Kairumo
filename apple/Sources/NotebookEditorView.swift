@@ -1148,6 +1148,8 @@ public struct NotebookEditorView: View {
     // 三大主題專屬加速輔助工具與素材圖庫狀態
     @State private var showThemeToolsSheet: Bool = false
     @State private var showAssetLibrarySheet: Bool = false
+    /// 手寫辨識的結果或錯誤，顯示在浮動提示上。
+    @State private var recognitionMessage: String?
     @State private var isGoldenSpiralOverlay: Bool = false
     @State private var isRuleOfThirdsOverlay: Bool = false
 
@@ -2096,6 +2098,9 @@ public struct NotebookEditorView: View {
                 Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
                 Button { withAnimation { isPlacingCommentPin.toggle() } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
                 Button { showCollaborationSheet = true } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }
+                Button { recognizeHandwritingOnCurrentPage() } label: {
+                    Label(localizationManager.localized("recognize_handwriting"), systemImage: "text.viewfinder")
+                }
             }
         } label: {
             Image(systemName: "ellipsis.circle.fill")
@@ -4349,6 +4354,46 @@ ZStack(alignment: .topTrailing) {
         currentDrawing = refined
         canvasView?.drawing = refined
         store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: refined)
+    }
+
+    /// 辨識目前這一頁的手寫，結果存進筆記本供搜尋。
+    ///
+    /// **不會改動任何一筆畫。** 辨識只是讓手寫找得到 —— 手寫筆記的價值
+    /// 就在那個手寫。分組規則走核心（與 Android 同一份），辨識引擎是 Vision。
+    private func recognizeHandwritingOnCurrentPage() {
+        let drawing = currentDrawing
+        guard !drawing.strokes.isEmpty else {
+            recognitionMessage = localizationManager.localized("no_strokes")
+            return
+        }
+        recognitionMessage = localizationManager.localized("recognizing")
+        // Vision 吃 BCP-47；AppLanguage 的 rawValue 正好就是（zh-Hant / ja / …）。
+        let language = localizationManager.currentLanguage.rawValue
+        let page = currentPageIndex
+
+        Task { @MainActor in
+            switch await HandwritingRecognizer.recognize(drawing: drawing, languageTag: language) {
+            case .success(let groups):
+                let text = groups.map(\.text).joined(separator: " ")
+                guard !text.isEmpty else {
+                    recognitionMessage = localizationManager.localized("no_recognition_result")
+                    return
+                }
+                var map = notebook.recognizedText ?? [:]
+                map[String(page)] = text
+                notebook.recognizedText = map
+                store.updateNotebook(notebook)
+                recognitionMessage = text
+            case .failure(let error):
+                // 逐項分開 —— 「辨識失敗」四個字幫不了使用者。
+                recognitionMessage = switch error {
+                case .unsupported(let detail): detail
+                case .noModel(let tag): String(
+                    format: localizationManager.localized("hwr_no_model"), tag)
+                case .recognitionFailed(let detail): detail
+                }
+            }
+        }
     }
 
     private func restoreOriginalSketch() {

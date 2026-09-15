@@ -271,6 +271,16 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     /// 舊檔沒有這個欄位，解碼後是 `nil` —— 升級上來的筆記不會有任何變化。
     public var tableAttachments: [NoteTableAttachment]?
 
+    /// 手寫辨識出來的文字，逐頁一份：`["頁次": "辨識結果"]`。
+    ///
+    /// **只用來搜尋，不會取代任何一筆畫。** 手寫筆記的價值就在那個手寫，
+    /// 辨識只是讓它找得到。Android 走核心的搜尋索引（`index_handwriting`），
+    /// Apple 這邊的搜尋是在文件本身上做的，所以結果存在這裡。
+    ///
+    /// 必須是 Optional：舊筆記沒有這個欄位，非 Optional 會讓 Codable 在解碼時
+    /// 丟例外，而那會讓**整本筆記開不起來**（見 `canvasRotation` 的說明）。
+    public var recognizedText: [String: String]?
+
     /// 畫布物件的**堆疊順序**，逐頁一份：`["頁次": [由後到前的物件 id]]`。
     ///
     /// 為什麼是一份順序清單而不是每個物件各帶一個 z 值：

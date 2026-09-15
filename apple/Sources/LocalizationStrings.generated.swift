@@ -3071,6 +3071,14 @@ extension LocalizationManager {
             .ko: "웜 아몬드",
             .th: "อัลมอนด์อุ่น"
         ],
+        "hwr_no_model": [
+            .zhHant: "手寫辨識不支援「%@」",
+            .en: "Handwriting recognition does not support “%@”",
+            .zhHans: "手写辨识不支持「%@」",
+            .ja: "手書き認識は「%@」に対応していません",
+            .ko: "필기 인식이 “%@”를 지원하지 않습니다",
+            .th: "การรู้จำลายมือไม่รองรับ “%@”"
+        ],
         "identity_color": [
             .zhHant: "身分顏色",
             .en: "Identity Colour",
@@ -4198,6 +4206,14 @@ extension LocalizationManager {
             .ja: "一致するノートが見つかりません",
             .ko: "일치하는 노트를 찾을 수 없습니다",
             .th: "ไม่พบบันทึกที่ตรงกัน"
+        ],
+        "no_recognition_result": [
+            .zhHant: "這一頁沒有辨識出文字",
+            .en: "No text recognised on this page",
+            .zhHans: "这一页没有辨识出文字",
+            .ja: "このページから文字を認識できませんでした",
+            .ko: "이 페이지에서 글자를 인식하지 못했습니다",
+            .th: "ไม่พบข้อความที่อ่านได้ในหน้านี้"
         ],
         "no_recordings_hint": [
             .zhHant: "目前尚無錄音檔或皆已隱藏，點擊「開始錄音」即可即時收音",

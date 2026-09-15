@@ -6422,5 +6422,21 @@
     "th": "การแก้ไขข้อความ Word",
     "zhHans": "Word文字编修",
     "zhHant": "Word文字編修"
+  },
+  "no_recognition_result": {
+    "en": "No text recognised on this page",
+    "ja": "このページから文字を認識できませんでした",
+    "ko": "이 페이지에서 글자를 인식하지 못했습니다",
+    "th": "ไม่พบข้อความที่อ่านได้ในหน้านี้",
+    "zhHans": "这一页没有辨识出文字",
+    "zhHant": "這一頁沒有辨識出文字"
+  },
+  "hwr_no_model": {
+    "en": "Handwriting recognition does not support “%@”",
+    "ja": "手書き認識は「%@」に対応していません",
+    "ko": "필기 인식이 “%@”를 지원하지 않습니다",
+    "th": "การรู้จำลายมือไม่รองรับ “%@”",
+    "zhHans": "手写辨识不支持「%@」",
+    "zhHant": "手寫辨識不支援「%@」"
   }
 }

@@ -6,6 +6,7 @@
 //! HWR 被刻意隔離為「可選增強」：即使完全不可用，手寫／打字／錄音轉文字
 //! 三大核心需求仍然成立。這是對 `architecture.md` 缺口 #1 的風險隔離。
 
+pub mod grouping;
 pub mod registry;
 
 pub use registry::{Availability, HwrRegistry, RegisteredEngine};

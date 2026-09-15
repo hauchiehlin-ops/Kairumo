@@ -132,7 +132,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | S-19 | WP20 | iCloud `CloudProvider` 實作 | Swift 側；演算法已由 S3 驗證 |
 | S-20 | WP23 | llama.cpp 整合（摘要、待辦抽取） | P2 |
 | ~~S-21~~ ✅ | WP7 | PDFium 綁定（`pdfium-render`）| `padnote-pdf-pdfium` 已實作；執行期庫與大型 PDF 實測仍列 H8/H6 |
-| S-22 | WP12 | Apple Vision / ML Kit 的 `HwrEngine` 實作 | 註冊表與 fallback 鏈已完成 |
+| ~~S-22~~ ✅ | WP12 | Apple Vision / ML Kit 的 `HwrEngine` 實作 | Android 的 ML Kit 本來就有；**Apple 端原本完全沒有手寫辨識**（iPad 上寫的字搜不到）。新增 `HandwritingRecognizer.swift`：把每一組筆畫算繪成白底黑字的圖再送 `VNRecognizeTextRequest`。分組規則下沉核心（`padnote-recognize::grouping`），兩邊同一份 —— 切法不同會讓同一頁在兩台裝置上搜到不一樣的東西。辨識率需實機以真實筆跡驗（A-09）|
 
 ## 🆕 需求檢視新增項目（2026-09-12）
 

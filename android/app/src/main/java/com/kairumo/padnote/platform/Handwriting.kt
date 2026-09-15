@@ -30,16 +30,12 @@ object Handwriting {
     data class Group(val strokeIds: List<String>, val strokes: List<List<StrokePoint>>)
 
     /**
-     * 書寫停頓多久算換一個詞。
-     *
-     * 逐筆辨識的話中文會整個垮掉（一個字往往是好幾筆）；整頁一次送則會把
-     * 相隔很遠的內容硬湊成一句。用停頓切是最接近人怎麼寫字的切法。
-     * 700ms 是起點值，需要實機以真實書寫節奏調整。
-     */
-    const val GROUP_GAP_MS: Long = 700
-
-    /**
      * 依書寫停頓把筆畫分組。
+     *
+     * **規則在核心**（`hwrGroupStrokes`），與 Apple 端同一份。原本這裡有一份
+     * Kotlin 實作，而 Apple 端根本沒有手寫辨識；補 Apple 時若再寫一份，
+     * 兩邊「怎麼算停頓」遲早會不一樣 —— 症狀是同一頁筆記在 iPad 上辨識成
+     * 「週會記錄」、在 Android 上成了「週會」「記錄」兩組，搜尋結果因此不同。
      *
      * `strokeTimesMs` 是每一筆的落筆時刻（毫秒），與 `strokeIds`／`strokes`
      * 一一對應。
@@ -54,23 +50,16 @@ object Handwriting {
         }
         if (strokeIds.isEmpty()) return emptyList()
 
-        val out = mutableListOf<Group>()
-        var ids = mutableListOf(strokeIds[0])
-        var pts = mutableListOf(strokes[0])
-
-        for (i in 1 until strokeIds.size) {
-            // 上一筆**結束**到這一筆開始之間的停頓，才是使用者感受到的那個停頓。
-            val previousEnd = strokeTimesMs[i - 1] + durationMs(strokes[i - 1])
-            if (strokeTimesMs[i] - previousEnd > GROUP_GAP_MS) {
-                out += Group(ids, pts)
-                ids = mutableListOf()
-                pts = mutableListOf()
-            }
-            ids.add(strokeIds[i])
-            pts.add(strokes[i])
+        val timings = strokeIds.indices.map { i ->
+            uniffi.padnote_core.FfiStrokeTiming(
+                id = strokeIds[i],
+                startedAtMs = strokeTimesMs[i].toULong(),
+                durationMs = durationMs(strokes[i]).toULong()
+            )
         }
-        if (ids.isNotEmpty()) out += Group(ids, pts)
-        return out
+        val byId = strokeIds.indices.associate { strokeIds[it] to strokes[it] }
+        return uniffi.padnote_core.hwrGroupStrokes(timings, uniffi.padnote_core.hwrDefaultGapMs())
+            .map { g -> Group(g.strokeIds, g.strokeIds.mapNotNull { byId[it] }) }
     }
 
     private fun durationMs(points: List<StrokePoint>): Long =

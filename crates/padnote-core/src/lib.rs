@@ -20,6 +20,7 @@ pub mod ffi_folder_sync;
 pub mod ffi_geometry;
 pub mod ffi_math;
 pub mod ffi_model3d;
+pub mod ffi_hwr;
 pub mod ffi_input;
 pub mod ffi_interop;
 #[cfg(feature = "relay")]
