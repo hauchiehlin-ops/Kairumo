@@ -56,6 +56,9 @@ import com.kairumo.padnote.comment.CommentLayer
 import com.kairumo.padnote.comment.CommentPin
 import com.kairumo.padnote.comment.CommentThreadDialog
 import com.kairumo.padnote.canvas.CanvasStackPanel
+import com.kairumo.padnote.canvas.ContinuousPagesView
+import com.kairumo.padnote.canvas.InkSettings
+import com.kairumo.padnote.canvas.PageDisplayMode
 import com.kairumo.padnote.math.MathCalculatorDialog
 import com.kairumo.padnote.canvas.ObjectGeometry
 import com.kairumo.padnote.canvas.ProColorPicker
@@ -312,6 +315,18 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     }
     var pageIndex by remember(notebook) { mutableIntStateOf(0) }
 
+    /// 頁面顯示模式。記住使用者的選擇 —— 每次開筆記都退回整頁模式的話，
+    /// 習慣連續捲動的人每次都要再按一次。與 Apple 端的 AppStorage 對應。
+    var pageDisplayMode by remember {
+        mutableStateOf(
+            PageDisplayMode.fromWire(
+                activity.getSharedPreferences("kairumo_editor", android.content.Context.MODE_PRIVATE)
+                    .getString("pageDisplayMode", null)
+            )
+        )
+    }
+
+
     val pageId = remember(notebook, pageIndex, pageCount) {
         runCatching { notebook?.first?.pageIdAt(pageIndex.toUInt()) }.getOrNull()
             ?: notebook?.second
@@ -516,6 +531,18 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     var revision by remember { mutableIntStateOf(0) }
     var clearToken by remember { mutableIntStateOf(0) }
 
+    // 把這一頁已經存在檔案裡的筆畫讀回來。
+    //
+    // 少了這一步，使用者寫的字在重開筆記本之後就消失了 —— 資料其實還在
+    // `.padnote` 裡，只是沒有人去讀。物件（文字方塊、表格、形狀）都有各自的
+    // `load()`，只有墨跡沒有，所以症狀是「圖還在、字不見了」，
+    // 看起來像渲染壞掉而不是少讀一份資料。
+    LaunchedEffect(notebook, pageId) {
+        engine.load()
+        revision++
+        clearToken++   // 低延遲路徑的前緩衝也要重畫，否則讀回來的筆畫不會出現
+    }
+
     // 筆刷、顏色、筆寬。在此之前 Android 只有一支固定的黑色鋼筆，
     // 連橡皮擦都選不到 —— 核心一直支援，缺的只是 UI。
     var inkTool by remember { mutableStateOf(InkTool.FOUNTAIN_PEN) }
@@ -624,6 +651,23 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 onClick = { if (pageIndex < pageCount - 1) pageIndex++ },
                 enabled = pageIndex < pageCount - 1
             ) { Text("›") }
+            TextButton(onClick = {
+                pageDisplayMode = if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
+                    PageDisplayMode.SINGLE
+                } else {
+                    PageDisplayMode.CONTINUOUS
+                }
+                activity.getSharedPreferences("kairumo_editor", android.content.Context.MODE_PRIVATE)
+                    .edit().putString("pageDisplayMode", pageDisplayMode.wire).apply()
+            }) {
+                Text(
+                    l10n(
+                        if (pageDisplayMode == PageDisplayMode.CONTINUOUS) "page_mode_continuous"
+                        else "page_mode_single"
+                    ),
+                    style = MaterialTheme.typography.labelSmall
+                )
+            }
             TextButton(onClick = {
                 val session = notebook?.first
                 if (session != null) {
@@ -925,6 +969,34 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
         val canvasDensity = LocalDensity.current.density
 
 
+        // 兩條完全獨立的路。連續模式不碰整頁模式的任何一行 ——
+        // 那一段綁著存檔、物件層、掌拒與模式切換，是最沒本錢壞掉的地方。
+        if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
+            ContinuousPagesView(
+                session = notebook?.first,
+                meta = meta,
+                pageCount = pageCount,
+                focusIndex = pageIndex,
+                // 焦點頁就是外層的 pageIndex，所以選單裡的插入動作
+                // 自然落在使用者正在看的那一頁。
+                onFocusChange = { pageIndex = it },
+                ink = InkSettings(
+                    tool = engine.tool,
+                    colorRgba = engine.colorRgba,
+                    baseWidth = engine.baseWidth,
+                    isErasing = engine.isErasing,
+                    penOnly = penOnly
+                ),
+                editorMode = editorMode,
+                // 任何一種物件有變動就讓連續模式重讀。逐項接 callback 的話，
+                // 之後新增一種物件很容易忘記接上，而症狀是「插進去看不到」。
+                reloadToken = textRevision + shapeRevision + tableRevision +
+                    chartRevision + imageRevision + model3DRevision,
+                modifier = Modifier.weight(1f).fillMaxWidth()
+            )
+            return@Column
+        }
+
         Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
             if (lowLatency && !lowLatencyUnavailable) {
                 LowLatencyInkCanvas(
@@ -939,7 +1011,8 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 InkCanvas(
                     engine = engine,
                     modifier = Modifier.fillMaxSize(),
-                    onInkChanged = { revision++ }
+                    onInkChanged = { revision++ },
+                    contentVersion = revision
                 )
             }
 

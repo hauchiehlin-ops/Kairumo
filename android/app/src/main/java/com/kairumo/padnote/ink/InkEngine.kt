@@ -234,6 +234,42 @@ class InkEngine(
         return removed
     }
 
+    /**
+     * 把這一頁**已經存在檔案裡**的筆畫讀回來。
+     *
+     * # 為什麼這個方法原本不存在，而那是一個嚴重的錯誤
+     *
+     * `_strokes` 原本只裝「這一次開啟期間畫的」筆畫。寫進核心是有的、
+     * `.padnote` 裡也真的有資料 —— 但**重開筆記本之後畫面是空的**，
+     * 使用者寫的字看起來憑空消失了。物件（文字方塊、表格、形狀）都有各自的
+     * `load()`，只有墨跡沒有，所以症狀是「圖還在、字不見了」，
+     * 看起來像渲染壞掉而不是少讀一份資料。
+     *
+     * 讀回來的筆畫沒有對應的指標 id（它們不是這次畫的），所以用遞減的合成 id。
+     * 那些 id 只用在收回（retract）與擦除的對應上，不會與真實指標撞號。
+     */
+    fun load() {
+        val target = session ?: return
+        val page = pageId ?: return
+        val loaded = runCatching { target.visibleStrokeDetails(page) }.getOrNull() ?: return
+
+        _strokes.clear()
+        committed.clear()
+        var syntheticId = ULong.MAX_VALUE
+        for (stroke in loaded) {
+            _strokes += CompletedStroke(
+                pointerId = syntheticId,
+                coreStrokeId = stroke.id,
+                points = stroke.points,
+                tool = stroke.tool,
+                startedAtMs = (stroke.startedAtUs / 1_000uL).toLong()
+            )
+            syntheticId -= 1uL
+        }
+        // 讀回來的筆畫不在「可收回時間窗」內 —— 它們是上次寫的，
+        // 掌拒不該把它們收回去。所以刻意不填 committed。
+    }
+
     // ── 草圖美化 ──────────────────────────────────────────────
     //
     // 幾何辨識與平滑在核心（`sketchRefineStroke`），與 Apple 端同一份實作。

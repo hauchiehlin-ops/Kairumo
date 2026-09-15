@@ -34,7 +34,14 @@ fun InkCanvas(
     backgroundColor: Color = Color.White,
     inkColor: Color = Color.Black,
     /// 筆畫有變動時通知外層（例如更新「N 筆」的顯示）。
-    onInkChanged: () -> Unit = {}
+    onInkChanged: () -> Unit = {},
+    /**
+     * 外部改動了 engine 裡的筆畫（讀檔、草圖美化、清除）時 +1。
+     *
+     * 畫布平常只在收到觸控事件時重畫 —— 沒有這個參數的話，
+     * 「從檔案讀回來的筆畫」要等使用者下一次碰畫布才會出現。
+     */
+    contentVersion: Int = 0
 ) {
     val density = LocalDensity.current.density
     // 筆畫存在 engine 裡（它才是真相來源）。這個計數器只是用來觸發重繪 ——
@@ -57,6 +64,7 @@ fun InkCanvas(
             }
     ) {
         @Suppress("UNUSED_EXPRESSION") revision
+        @Suppress("UNUSED_EXPRESSION") contentVersion
         @Suppress("UNUSED_EXPRESSION") liveVersion
 
         drawPageBoundary(density)
