@@ -57,6 +57,9 @@ import com.kairumo.padnote.comment.CommentLayer
 import com.kairumo.padnote.comment.CommentPin
 import com.kairumo.padnote.comment.CommentThreadDialog
 import com.kairumo.padnote.canvas.CanvasStackPanel
+import com.kairumo.padnote.canvas.LassoSelection
+import com.kairumo.padnote.canvas.LassoOverlay
+import com.kairumo.padnote.canvas.LassoActionBar
 import com.kairumo.padnote.canvas.ContinuousPagesView
 import com.kairumo.padnote.canvas.InkSettings
 import com.kairumo.padnote.canvas.PageDisplayMode
@@ -478,6 +481,9 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     val engine = remember(notebook, pageId) {
         InkEngine(session = notebook?.first, pageId = pageId)
     }
+    // 套索選取。換頁就換一個 —— 選取的是「這一頁的筆畫 id」，
+    // 留著會指到另一頁不相干的東西。
+    val lasso = remember(notebook, pageId) { LassoSelection() }
     val latency = remember { InkLatencyMeter() }
     val audio = remember { AudioCapture(activity) }
     var recording by remember { mutableStateOf(false) }
@@ -1105,6 +1111,9 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 inkTool = picked
                 engine.isErasing = picked.isEraser
                 picked.kind?.let { engine.tool = it }
+                // 離開套索就清掉選取。留著的話，畫面上會浮著一個虛線框與
+                // 一排按鈕，而它們作用的對象使用者早就看不出是什麼了。
+                if (!picked.isLasso) lasso.clear()
             },
             onColorChange = { hex ->
                 inkColorHex = hex
@@ -1115,6 +1124,18 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 engine.baseWidth = value
             }
         )
+
+        // 套索的動作列。只在真的有東西可以做的時候出現 —— 一選了套索就
+        // 跳出來的話，那時候每一顆按鈕都是空操作。
+        if (inkTool.isLasso) {
+            LassoActionBar(
+                lasso = lasso,
+                engine = engine,
+                l = { key -> l10n(key) },
+                onChanged = { revision++ },
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+            )
+        }
 
         // 讀一下 revision 讓筆畫數會跟著重繪；真相來源仍是 engine。
         val strokeCount = remember(revision) { engine.strokes.size }
@@ -1206,6 +1227,18 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     modifier = Modifier.fillMaxSize(),
                     onInkChanged = { revision++ },
                     contentVersion = revision
+                )
+            }
+
+            // 套索層疊在畫布上面。套索模式下它吃掉所有觸控，畫布完全收不到 ——
+            // 不必在 InkEngine 裡加「現在是不是套索模式」的分支，而那種分支
+            // 正是墨跡路徑最不該有的東西。
+            if (inkTool.isLasso) {
+                LassoOverlay(
+                    lasso = lasso,
+                    engine = engine,
+                    onChanged = { revision++ },
+                    modifier = Modifier.fillMaxSize()
                 )
             }
 

@@ -283,6 +283,18 @@ class InkEngine(
     private var refinedCache: List<CompletedStroke>? = null
 
     /** 有沒有可以還原的原始草圖。 */
+    /**
+     * 這一頁的核心 session 與 page id，套索要用。
+     *
+     * 開出來而不是讓套索自己再開一份：`InkEngine` 已經是這一頁筆畫的
+     * 真相來源，兩份 session 指著同一個套件會在寫入時互相看不到對方。
+     */
+    fun coreHandles(): Pair<PadnoteSession, String>? {
+        val s = session ?: return null
+        val p = pageId ?: return null
+        return s to p
+    }
+
     fun canRestoreSketch(): Boolean = sketchBackup != null
 
     /** 有沒有可以重做的美化結果。 */

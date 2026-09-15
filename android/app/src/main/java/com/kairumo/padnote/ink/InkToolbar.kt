@@ -48,9 +48,21 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
     PENCIL(ToolKind.PENCIL, "tool_pencil"),
 
     /** 擦除。`kind` 為 null —— 它不是一種筆刷。 */
-    ERASER(null, "tool_eraser");
+    ERASER(null, "tool_eraser"),
 
-    val isEraser: Boolean get() = kind == null
+    /**
+     * 套索選取。`kind` 同樣為 null —— 與擦除一樣，它是一個**模式**不是一種筆。
+     *
+     * 放進同一個選單而不是另做一個開關：使用者心裡「筆現在會做什麼」
+     * 只有一個答案，分成兩處會出現「套索開著又選了螢光筆」這種說不清的狀態。
+     * Apple 端也是放在同一列工具裡。
+     */
+    LASSO(null, "tool_lasso");
+
+    /** 擦除模式。**套索不算** —— 兩者都沒有 `kind`，但行為完全不同。 */
+    val isEraser: Boolean get() = this == ERASER
+
+    val isLasso: Boolean get() = this == LASSO
 }
 
 /** 一組夠用的顏色。選項太多的工具列比沒有工具列還難用。 */
@@ -98,8 +110,9 @@ fun InkToolbar(
             )
         }
 
-        // 擦除時不需要顏色 —— 留著只會讓使用者以為可以擦成某個顏色。
-        if (!tool.isEraser) {
+        // 擦除與套索都不需要顏色 —— 留著只會讓使用者以為可以擦成某個顏色，
+        // 或是以為選取會被染色。
+        if (!tool.isEraser && !tool.isLasso) {
             for ((hex, color) in inkPalette) {
                 Box(
                     modifier = Modifier
@@ -159,6 +172,8 @@ internal fun previewDiameter(tool: InkTool, width: Float): Float {
         InkTool.FOUNTAIN_PEN -> 1.1f
         InkTool.HIGHLIGHTER -> 3.8f
         InkTool.ERASER -> 3.0f
+        // 套索不畫東西，預覽點沒有意義；給 1.0 讓它顯示成一個中性的點。
+        InkTool.LASSO -> 1.0f
     }
     return (width * scale).coerceIn(6f, 22f)
 }
