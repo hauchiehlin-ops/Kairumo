@@ -25,6 +25,42 @@ pub fn sync_index_path() -> String {
     padnote_sync::library::INDEX_PATH.to_string()
 }
 
+/// 下一個可用的 Lamport 時戳：這份文件裡看過的最大值加一。
+///
+/// # 為什麼不用牆上時間
+///
+/// 裝置時鐘不同步是常態。用牆上時間的話，「時鐘快五分鐘的那台」會永遠贏 ——
+/// 使用者在慢的那台改的設定，一同步就被蓋掉，而且看起來毫無道理。
+///
+/// # 為什麼由核心算
+///
+/// 兩個平台各自維護一個計數器的話，遲早會有一邊忘了在合併之後往前跳，
+/// 於是它寫出去的每一筆都比對方舊、永遠推不上去。從文件本身推導就沒有
+/// 「忘了更新」這回事。
+///
+/// 傳設定 JSON 或索引 JSON 都可以；解析不出來時回 1。
+#[uniffi::export]
+pub fn sync_next_lamport(json: String) -> u64 {
+    let from_index = LibraryIndex::from_json(&json)
+        .items
+        .values()
+        .map(|i| i.lamport)
+        .max()
+        .unwrap_or(0);
+    let settings = SyncedSettings::from_json(&json);
+    let from_settings = [
+        settings.locale.as_ref().map(|s| s.lamport),
+        settings.toolbar_json.as_ref().map(|s| s.lamport),
+        settings.default_pen.as_ref().map(|s| s.lamport),
+        settings.identity.as_ref().map(|s| s.lamport),
+    ]
+    .into_iter()
+    .flatten()
+    .max()
+    .unwrap_or(0);
+    from_index.max(from_settings) + 1
+}
+
 // ── 全域設定（G-04）──────────────────────────────────────────────
 
 /// 合併兩份設定 JSON，回傳合併後的 JSON。
@@ -175,6 +211,20 @@ pub fn sync_children_of(index_json: String, parent_id: String) -> Vec<FfiLibrary
     index.children_of(parent).into_iter().map(Into::into).collect()
 }
 
+/// 這個 id 是不是已經被刪除（索引裡有它的墓碑）。
+///
+/// 索引裡**沒有**這一筆時回 false —— 那是「沒看過」，不是「被刪了」。
+/// 兩者混在一起的話，剛從另一台同步過來、本機索引還沒有的筆記本
+/// 會被當成已刪除而收掉。
+#[uniffi::export]
+pub fn sync_is_deleted(index_json: String, item_id: String) -> bool {
+    LibraryIndex::from_json(&index_json)
+        .items
+        .get(&item_id)
+        .map(|i| i.deleted)
+        .unwrap_or(false)
+}
+
 /// 搬移之後會不會形成環。UI 要在**動手之前**問 ——
 /// 把資料夾搬進自己的子孫裡，那棵子樹會從樹上整個斷開，救不回來。
 #[uniffi::export]
@@ -267,6 +317,18 @@ mod tests {
     }
 
     #[test]
+    fn never_seen_is_not_the_same_as_deleted() {
+        // 混在一起的話，剛從另一台同步過來、本機索引還沒有的筆記本
+        // 會被當成已刪除而收掉。
+        let live = sync_upsert_item(String::new(), item("n1", "會議", 1, "dev-a"));
+        assert!(!sync_is_deleted(live.clone(), "n1".into()));
+        assert!(!sync_is_deleted(live.clone(), "從沒看過".into()));
+
+        let gone = sync_delete_item(live, "n1".into(), 2, "dev-a".into());
+        assert!(sync_is_deleted(gone, "n1".into()));
+    }
+
+    #[test]
     fn cycles_are_reported_before_the_move_happens() {
         let mut json = sync_upsert_item(
             String::new(),
@@ -282,6 +344,26 @@ mod tests {
         );
         assert!(sync_would_create_cycle(json.clone(), "f1".into(), "f2".into()));
         assert!(!sync_would_create_cycle(json, "f2".into(), String::new()));
+    }
+
+    #[test]
+    fn the_next_lamport_moves_past_everything_already_seen() {
+        // 忘了往前跳的話，這台裝置寫出去的每一筆都比對方舊，永遠推不上去。
+        let settings = sync_set_setting(
+            String::new(),
+            FfiSyncedField::Locale,
+            "ja".into(),
+            41,
+            "dev-a".into(),
+        );
+        assert_eq!(sync_next_lamport(settings), 42);
+
+        let index = sync_upsert_item(String::new(), item("n1", "會議", 99, "dev-a"));
+        assert_eq!(sync_next_lamport(index), 100);
+
+        // 空的或壞的都從 1 開始，不要回 0 —— 0 會與「沒設過」混淆。
+        assert_eq!(sync_next_lamport(String::new()), 1);
+        assert_eq!(sync_next_lamport("garbage".into()), 1);
     }
 
     #[test]

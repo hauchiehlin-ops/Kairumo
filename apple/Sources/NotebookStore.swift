@@ -1188,15 +1188,33 @@ public final class NotebookStore: ObservableObject {
             folderId: folderId
         )
         notebooks.insert(newDoc, at: 0)
+        AccountSyncStore.shared.record(
+            id: newDoc.id,
+            title: newDoc.title,
+            parentId: folderId,
+            isFolder: false
+        )
         persistData()
         return newDoc
     }
 
     public func updateNotebook(_ doc: NotebookDocument) {
         if let idx = notebooks.firstIndex(where: { $0.id == doc.id }) {
+            let previous = notebooks[idx]
             var updated = doc
             updated.lastModifiedDate = Date()
             notebooks[idx] = updated
+            // 只有**中繼資料**變了才記進同步索引。每次存檔都記的話，
+            // 寫一筆字就會把這本筆記的時戳往前推，於是它永遠贏過另一台裝置
+            // 對同一本筆記的改名 —— 而那次改名其實比較晚。
+            if previous.title != updated.title || previous.folderId != updated.folderId {
+                AccountSyncStore.shared.record(
+                    id: updated.id,
+                    title: updated.title,
+                    parentId: updated.folderId,
+                    isFolder: false
+                )
+            }
             markDirtyAndPersist()
         }
     }
@@ -1220,6 +1238,9 @@ public final class NotebookStore: ObservableObject {
 
     public func deleteNotebook(id: String) {
         notebooks.removeAll { $0.id == id }
+        // **留墓碑。** 不留的話，等雲端接上，另一台還沒同步到刪除的裝置
+        // 會把這本筆記原封不動傳回來 —— 刪除永遠刪不掉。
+        AccountSyncStore.shared.recordDeletion(id: id)
         persistData()
     }
 
@@ -1245,6 +1266,12 @@ public final class NotebookStore: ObservableObject {
             commentPins: original.commentPins
         )
         notebooks.insert(copy, at: 0)
+        AccountSyncStore.shared.record(
+            id: copy.id,
+            title: copy.title,
+            parentId: copy.folderId,
+            isFolder: false
+        )
         persistData()
     }
 
@@ -1267,6 +1294,12 @@ public final class NotebookStore: ObservableObject {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "新增資料夾" : name
         let folder = FolderItem(name: cleanName, parentId: parentId, colorHex: colorHex)
         folders.append(folder)
+        AccountSyncStore.shared.record(
+            id: folder.id,
+            title: cleanName,
+            parentId: parentId,
+            isFolder: true
+        )
         persistData()
         return folder
     }
@@ -1276,6 +1309,12 @@ public final class NotebookStore: ObservableObject {
         let clean = newName.trimmingCharacters(in: .whitespacesAndNewlines)
         if !clean.isEmpty {
             folders[idx].name = clean
+            AccountSyncStore.shared.record(
+                id: id,
+                title: clean,
+                parentId: folders[idx].parentId,
+                isFolder: true
+            )
             persistData()
         }
     }
@@ -1284,18 +1323,34 @@ public final class NotebookStore: ObservableObject {
         // 將該資料夾內的筆記安全移回其父資料夾（若無父資料夾則移回根目錄 nil）
         let targetFolder = folders.first(where: { $0.id == id })
         let fallbackParentId = targetFolder?.parentId
+        // 每一個被搬出來的項目都要記進索引 —— 只記「資料夾刪了」的話，
+        // 另一台裝置合併之後會依照核心的規則把裡面的東西一起隱藏
+        // （已刪資料夾底下的項目不顯示），而它們在這台其實已經搬到外面了。
         for i in 0..<notebooks.count {
             if notebooks[i].folderId == id {
                 notebooks[i].folderId = fallbackParentId
+                AccountSyncStore.shared.record(
+                    id: notebooks[i].id,
+                    title: notebooks[i].title,
+                    parentId: fallbackParentId,
+                    isFolder: false
+                )
             }
         }
         // 將該資料夾底下的子資料夾提升至父資料夾
         for i in 0..<folders.count {
             if folders[i].parentId == id {
                 folders[i].parentId = fallbackParentId
+                AccountSyncStore.shared.record(
+                    id: folders[i].id,
+                    title: folders[i].name,
+                    parentId: fallbackParentId,
+                    isFolder: true
+                )
             }
         }
         folders.removeAll { $0.id == id }
+        AccountSyncStore.shared.recordDeletion(id: id)
         persistData()
     }
 
@@ -1311,6 +1366,12 @@ public final class NotebookStore: ObservableObject {
         guard let idx = notebooks.firstIndex(where: { $0.id == id }) else { return }
         notebooks[idx].folderId = toFolderId
         notebooks[idx].lastModifiedDate = Date()
+        AccountSyncStore.shared.record(
+            id: id,
+            title: notebooks[idx].title,
+            parentId: toFolderId,
+            isFolder: false
+        )
         persistData()
     }
 

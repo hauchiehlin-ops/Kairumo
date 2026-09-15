@@ -70,6 +70,10 @@ object NotebookLibrary {
         val entries = directory(context).listFiles()
             ?.filter { it.isDirectory && it.name.endsWith(".$EXTENSION") }
             ?.mapNotNull { describe(it, deviceId) }
+            // 另一台裝置刪掉的不要列出來。檔案這時可能還在本機硬碟上
+            // （真正的清除是同步引擎的事），但它已經被刪了 ——
+            // 還列出來的話，使用者在 A 上刪掉、走到 B 前面又看到它。
+            ?.filter { !AccountSyncStore.isDeleted(context, it.id) }
             ?: return emptyList()
         return when (sort) {
             // 最近修改排前面 —— 使用者要找的十之八九是剛剛在寫的那本。
@@ -101,6 +105,9 @@ object NotebookLibrary {
             if (!path.exists()) return false
             val session = PadnoteSession.openExisting(path.absolutePath, deviceId)
             session.setTitle(title)
+            // 記進同步索引。改名**不能**靠「刪掉舊的再加一個」表示 ——
+            // 那在合併時與真正的刪除完全一樣，另一台裝置會把它當成已刪除。
+            AccountSyncStore.record(context, id = id, title = title)
             true
         }.getOrDefault(false)
 
@@ -111,8 +118,13 @@ object NotebookLibrary {
      * 這是使用者唯一的一份資料。
      */
     fun delete(context: Context, id: String): Boolean =
-        runCatching { File(directory(context), "$id.$EXTENSION").deleteRecursively() }
-            .getOrDefault(false)
+        runCatching {
+            val removed = File(directory(context), "$id.$EXTENSION").deleteRecursively()
+            // **留墓碑。** 不留的話，等雲端接上，另一台還沒同步到刪除的裝置
+            // 會把這本筆記原封不動傳回來 —— 刪除永遠刪不掉。
+            if (removed) AccountSyncStore.recordDeletion(context, id)
+            removed
+        }.getOrDefault(false)
 
     /** 開啟（或建立）一本筆記本，回傳 session 與第一頁。 */
     fun open(context: Context, id: String, deviceId: UInt, title: String = "Kairumo"):
@@ -133,7 +145,9 @@ object NotebookLibrary {
     /** 建立一本新筆記本，回傳它的 id。 */
     fun create(context: Context, title: String, deviceId: UInt): String? {
         val id = java.util.UUID.randomUUID().toString()
-        return if (open(context, id, deviceId, title) != null) id else null
+        if (open(context, id, deviceId, title) == null) return null
+        AccountSyncStore.record(context, id = id, title = title)
+        return id
     }
 
     /**

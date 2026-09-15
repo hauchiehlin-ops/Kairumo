@@ -205,9 +205,14 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | G-01 | Google OAuth 設定與登入 | iOS/iPadOS/macOS/Android 都能取得 `drive.appdata` access token，登出與撤銷權限有明確狀態。**卡在外部前置**：要先有 Google Cloud OAuth client（見本節末）。程式面能先做的是權杖保存與更新流程，但沒有 client id 就驗不了 |
 | ~~G-02~~ ✅ | appDataFolder Provider 完整化 | `crates/padnote-sync/src/gdrive.rs`。**原本這個檔案根本沒有被編譯**（`lib.rs` 裡沒有 `pub mod gdrive;`），所以裡面的 `unimplemented!()`、少掉的分頁、沒跳脫的查詢字串都沒人發現。已補：分頁跟到底、`trashed = false`、查詢字串跳脫、前綴（而非子字串）比對、同名取最新、append 回錯誤而不是 panic、401/403 分類成權限錯誤。HTTP 抽成 trait，9 項測試用假的 Drive 驗分頁與查詢邏輯 |
 | ~~G-03~~ ✅ | 同步資料佈局 | `format-spec.md` §7.0 |
-| ~~G-04~~ ✅ | 全域設定同步 | `padnote-sync::settings` + `ffi_account_sync`。`SyncedSettings` 與 `DeviceSettings` 是**兩個型別**，「不要同步」寫在型別上而不是註解裡；有一項測試專門確認低延遲、掌拒門檻、SAF 權限權杖連序列化都不會出現在同步 JSON 裡。逐欄位帶 Lamport 時戳合併（整包 LWW 的話，A 改語言、B 改工具列會互相蓋掉）。**尚未接上平台 UI** |
-| ~~G-05~~ ✅ | 筆記本與資料夾同步 | `padnote-sync::library` + `ffi_account_sync`。刪除是**墓碑**不是「不在清單裡」—— 靠比對清單的話，還沒同步到刪除的那台會把筆記本傳回去，每同步一次復活一次。另含：已刪資料夾底下的項目一起隱藏（否則變成打不開也刪不掉的幽靈）、父子環的迴圈保護（兩台各自把 A 搬進 B、B 搬進 A 會凍住 App）、搬移前先問會不會成環。12 項測試含「離線兩台各自增改刪後收斂」。**尚未接上平台 UI** |
+| ~~G-04~~ ✅ | 全域設定同步 | `padnote-sync::settings` + `ffi_account_sync`。`SyncedSettings` 與 `DeviceSettings` 是**兩個型別**，「不要同步」寫在型別上而不是註解裡；有一項測試專門確認低延遲、掌拒門檻、SAF 權限權杖連序列化都不會出現在同步 JSON 裡。逐欄位帶 Lamport 時戳合併（整包 LWW 的話，A 改語言、B 改工具列會互相蓋掉）。**已接上兩邊 UI**：Apple 的 `LocalizationManager.setLanguage` 與 Android 新增的語言選擇器（Android 原本只能跟著系統語系走）都寫進同步設定，啟動時跨裝置設定優先於本機記錄。模擬器實測：選日文 → 介面變日文 → 重啟仍是日文，SharedPreferences 裡就是核心產生的那份 JSON |
+| ~~G-05~~ ✅ | 筆記本與資料夾同步 | `padnote-sync::library` + `ffi_account_sync`。刪除是**墓碑**不是「不在清單裡」—— 靠比對清單的話，還沒同步到刪除的那台會把筆記本傳回去，每同步一次復活一次。另含：已刪資料夾底下的項目一起隱藏（否則變成打不開也刪不掉的幽靈）、父子環的迴圈保護（兩台各自把 A 搬進 B、B 搬進 A 會凍住 App）、搬移前先問會不會成環。12 項測試含「離線兩台各自增改刪後收斂」。**已接上兩邊 UI**：兩邊的新增／改名／搬移／刪除、資料夾的建立／改名／刪除都會記進索引（`AccountSyncStore`），刪除留墓碑，列表濾掉已刪項。模擬器實測：新增 → 索引出現該筆；刪除 → 同一筆變成 `deleted: true` 而不是消失 |
 | G-06 | 實機矩陣 | iPad + macOS + Android 同一 Google 帳號端到端測試：新增、編輯、刪除、改設定、重啟、離線再上線皆通過 |
+
+**目前的狀態**：G-02～G-05 的核心與兩邊 UI 都完成了，但**還沒有真的上傳下載** ——
+那要等 G-01。先把記錄做對是有意義的：記錄漏掉的東西，之後接上雲端也補不回來。
+最典型的是刪除 —— 沒有墓碑的話，等雲端接上，另一台裝置會把已經刪掉的筆記本
+原封不動傳回來。
 
 **外部前置**：需要建立 Google Cloud OAuth client（iOS/macOS bundle id、Android
 package name + signing SHA-1），並在同意畫面聲明 `drive.appdata` scope。

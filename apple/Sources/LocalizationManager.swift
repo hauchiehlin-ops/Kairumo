@@ -45,19 +45,23 @@ public final class LocalizationManager: ObservableObject {
     }
 
     private init() {
-        if let saved = UserDefaults.standard.string(forKey: languageKey),
-           let lang = AppLanguage(rawValue: saved) {
-            self.currentLanguage = lang
-            Self.snapshotLanguage = lang
-        } else {
-            self.currentLanguage = .en
-            Self.snapshotLanguage = .en
-        }
+        // 先看跨裝置設定（G-04），再看本機記錄。
+        //
+        // 順序不能反：使用者在 iPad 上把語言改成日文之後，Mac 這台的本機
+        // 記錄還是舊的；本機優先的話，同步過來的設定永遠不會生效 ——
+        // 使用者會覺得「同步根本沒在動」。
+        let synced = AccountSyncStore.shared.syncedLanguage.flatMap(AppLanguage.init(rawValue:))
+        let local = UserDefaults.standard.string(forKey: languageKey).flatMap(AppLanguage.init(rawValue:))
+        let resolved = synced ?? local ?? .en
+        self.currentLanguage = resolved
+        Self.snapshotLanguage = resolved
     }
 
     public func setLanguage(_ lang: AppLanguage) {
         self.currentLanguage = lang
         Self.snapshotLanguage = lang
+        // 語言是**跨裝置**設定：在 iPad 上改，Mac 上也要跟著變（ADR-0011）。
+        AccountSyncStore.shared.setSyncedLanguage(lang.rawValue)
     }
 
     /// 不受 actor 隔離的查表。

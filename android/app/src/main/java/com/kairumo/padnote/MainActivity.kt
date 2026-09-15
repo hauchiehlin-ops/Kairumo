@@ -51,6 +51,7 @@ import com.kairumo.padnote.text.TextBox
 import com.kairumo.padnote.text.TextBoxEditor
 import com.kairumo.padnote.account.AccountManager
 import com.kairumo.padnote.canvas.ObjectStacking
+import com.kairumo.padnote.library.LanguagePickerDialog
 import com.kairumo.padnote.library.NotebookMeta
 import com.kairumo.padnote.comment.CommentLayer
 import com.kairumo.padnote.comment.CommentPin
@@ -135,6 +136,9 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // 跨裝置語言要在畫出任何東西**之前**讀進來，不然第一幀會是舊語言，
+        // 使用者會看到介面閃一下才變過去。
+        applySyncedLanguage(this)
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
@@ -567,6 +571,9 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
 
     /// 協同編輯。與 Apple 端講同一套協定（房號、邀請連結、端對端加密都在核心）。
     var showCollaboration by remember { mutableStateOf(false) }
+    /// 語言選擇。Apple 端一直有，Android 原本只能跟著系統語系走 ——
+    /// 而語言是跨裝置設定（G-04），在這台改了也要傳到別台。
+    var showLanguagePicker by remember { mutableStateOf(false) }
     val collaboration = remember { CollaborationManager(activity) }
     var goldenSpiral by remember { mutableStateOf(false) }
     var ruleOfThirds by remember { mutableStateOf(false) }
@@ -797,6 +804,10 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 DropdownMenuItem(
                     text = { Text(l10n("collaborate")) },
                     onClick = { showMenu = false; showCollaboration = true }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("language")) },
+                    onClick = { showMenu = false; showLanguagePicker = true }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("insert_image")) },
@@ -1310,6 +1321,20 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
         )
     }
 
+    if (showLanguagePicker) {
+        LanguagePickerDialog(
+            current = deviceLanguageTag(),
+            onPick = { tag ->
+                setAppLanguage(activity, tag)
+                showLanguagePicker = false
+                // 換語言要整個畫面重畫。重建 Activity 是最省事也最可靠的做法 ——
+                // 逐個字串狀態去追，一定會漏掉幾個沒有重組的地方。
+                activity.recreate()
+            },
+            onDismiss = { showLanguagePicker = false }
+        )
+    }
+
     if (showCollaboration) {
         CollaborationSheet(
             manager = collaboration,
@@ -1699,7 +1724,32 @@ private fun uiString(key: String): String =
     LocalizationStrings.localized(key, deviceLanguageTag())
 
 /** 把系統語系對應成字串表用的標籤（中文要分繁簡，所以不能只看語言碼）。 */
+/**
+ * 跨裝置同步過來的語言。null 表示沒設過，退回系統語系。
+ *
+ * 用 process 範圍的快取而不是每次都讀 SharedPreferences：`deviceLanguageTag()`
+ * 在每一次重組裡都會被呼叫好幾次，每次開檔案太貴。Activity 啟動時設一次
+ * （見 `syncLanguageOverride`），與 Apple 端的 `snapshotLanguage` 同一個模式。
+ */
+private var syncedLanguageOverride: String? = null
+
+/** Activity 啟動時把跨裝置設定讀進來。 */
+fun applySyncedLanguage(context: android.content.Context) {
+    syncedLanguageOverride =
+        com.kairumo.padnote.library.AccountSyncStore.syncedLanguage(context)
+}
+
+/** 改語言並記進跨裝置設定（G-04）。 */
+fun setAppLanguage(context: android.content.Context, tag: String) {
+    com.kairumo.padnote.library.AccountSyncStore.setSyncedLanguage(context, tag)
+    syncedLanguageOverride = tag
+}
+
 private fun deviceLanguageTag(): String {
+    // 跨裝置設定優先於系統語系：使用者在 iPad 上把語言改成日文之後，
+    // 這台也要跟著變（ADR-0011）。反過來的話，同步過來的設定永遠不生效，
+    // 使用者會覺得「同步根本沒在動」。
+    syncedLanguageOverride?.let { return it }
     val locale = Locale.getDefault()
     return when (locale.language) {
         "zh" -> if (locale.script == "Hans" || locale.country in setOf("CN", "SG")) "zh-Hans" else "zh-Hant"
