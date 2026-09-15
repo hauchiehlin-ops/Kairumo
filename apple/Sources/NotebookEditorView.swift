@@ -567,11 +567,6 @@ struct CanvasRepresentable: UIViewRepresentable {
     /// 無從對齊紙張。現在頁面高度固定，到底了就準備下一頁。
     var onReachedPageBottom: (() -> Void)?
     var onSelectionChanged: ((Bool) -> Void)?
-    /// 套索手勢。點是**畫布內容座標**（含捲動位移），不是螢幕座標 ——
-    /// 用螢幕座標的話，捲過一段之後圈選會整個偏掉。
-    var onLassoBegan: ((CGPoint) -> Void)?
-    var onLassoMoved: ((CGPoint) -> Void)?
-    var onLassoEnded: (() -> Void)?
     var canvasRef: ((PKCanvasView) -> Void)?
     /// 回報捲動狀態（可見比例、捲動比例），給自訂捲軸用
     var onScrollMetrics: ((_ visibleFraction: CGFloat, _ scrollFraction: CGFloat) -> Void)?
@@ -628,17 +623,6 @@ struct CanvasRepresentable: UIViewRepresentable {
         canvas.templateBackgroundView = bgView
         context.coordinator.backgroundView = bgView
 
-        // 套索手勢。**一直裝著**，只用 isEnabled 開關 —— 每次切換工具都
-        // 裝拆一次的話，切到套索的第一筆會因為辨識器還沒就緒而漏掉。
-        let lassoPan = UIPanGestureRecognizer(
-            target: context.coordinator,
-            action: #selector(Coordinator.handleLassoPan(_:)))
-        lassoPan.maximumNumberOfTouches = 1
-        lassoPan.isEnabled = (selectedTool == .lasso)
-        lassoPan.delegate = context.coordinator
-        canvas.addGestureRecognizer(lassoPan)
-        context.coordinator.lassoPan = lassoPan
-
         context.coordinator.parent = self
         context.coordinator.applyTool(to: canvas)
         canvasRef?(canvas)
@@ -648,9 +632,6 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
         context.coordinator.parent = self
-        // 工具換了就要跟著開關。只在 makeUIView 設的話，切到套索之後
-        // 手勢仍然是關的 —— 圈不出任何東西，而且沒有任何錯誤。
-        context.coordinator.lassoPan?.isEnabled = (selectedTool == .lasso)
         // 模式切換時要跟著改 —— 只在 makeUIView 設的話，從連續切回整頁
         // 會得到一個捲不動的畫布（SwiftUI 會重用同一個 UIView）。
         if uiView.isScrollEnabled != isScrollEnabled {
@@ -693,20 +674,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         Coordinator(self)
     }
 
-    class Coordinator: NSObject, PKCanvasViewDelegate, UIPointerInteractionDelegate,
-                       UIGestureRecognizerDelegate {
-
-        /// 套索手勢要能與畫布既有的辨識器**同時**成立。
-        ///
-        /// PKCanvasView 是一個 UIScrollView，而且 PencilKit 自己還掛了幾個
-        /// 辨識器在上面。不允許同時成立的話，我們這一個會被它們擋掉 ——
-        /// 症狀是圈了半天完全沒有反應，而且不會有任何錯誤。
-        func gestureRecognizer(
-            _ gestureRecognizer: UIGestureRecognizer,
-            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
-        ) -> Bool {
-            true
-        }
+    class Coordinator: NSObject, PKCanvasViewDelegate, UIPointerInteractionDelegate {
         /// 把捲動狀態回報給 SwiftUI（自訂捲軸需要）
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             reportScrollMetrics(scrollView)
@@ -724,29 +692,6 @@ struct CanvasRepresentable: UIViewRepresentable {
         var parent: CanvasRepresentable
         weak var backgroundView: TemplateCanvasBackgroundView?
         var isProgrammaticUpdate: Bool = false
-        /// 套索手勢。切換工具時只改 isEnabled，不重裝。
-        weak var lassoPan: UIPanGestureRecognizer?
-
-        /// 套索拖曳。點換算成**畫布內容座標**（含捲動位移）。
-        ///
-        /// 用 `location(in: canvas)` 而不是螢幕座標：PKCanvasView 是一個
-        /// scroll view，捲過一段之後兩者差了一個 contentOffset，
-        /// 而症狀是「捲到第二頁之後圈選整個偏掉」。
-        @objc func handleLassoPan(_ gesture: UIPanGestureRecognizer) {
-            guard let canvas = gesture.view as? PKCanvasView else { return }
-            let point = gesture.location(in: canvas)
-            switch gesture.state {
-            case .began:
-                parent.onLassoBegan?(point)
-            case .changed:
-                parent.onLassoMoved?(point)
-            case .ended, .cancelled, .failed:
-                parent.onLassoEnded?()
-            default:
-                break
-            }
-        }
-
         init(_ parent: CanvasRepresentable) {
             self.parent = parent
         }
@@ -2562,9 +2507,6 @@ public struct NotebookEditorView: View {
                     ensureNextPageExists()
                 },
                 onSelectionChanged: { _ in },
-                onLassoBegan: { lasso.begin(at: $0) },
-                onLassoMoved: { lasso.extend(to: $0) },
-                onLassoEnded: { lasso.finish(in: currentDrawing) },
                 canvasRef: { ref in
                     self.canvasView = ref
                 },
@@ -2592,23 +2534,56 @@ public struct NotebookEditorView: View {
                         }
                 }
             )
-            // 圈選中與圈選後的那一圈虛線。
+            // 套索層。**手勢與虛線都在這裡**，疊在畫布上面。
             //
-            // 疊在畫布**上面**，不進 PKDrawing —— 進去的話它會被存檔、
-            // 被匯出、被同步到另一台裝置，而它只是一個暫時的選取提示。
+            // # 為什麼不掛在 PKCanvasView 上
             //
-            // 座標要扣掉捲動位移：這一層是 SwiftUI 的，用的是視圖座標，
-            // 而手勢收到的是畫布的內容座標。不扣的話，捲過一段之後
-            // 虛線框會留在上面看不見的地方。
+            // 試過：在畫布上加一個 `UIPanGestureRecognizer`、把畫布的捲動改成
+            // 兩指、再讓辨識器可以同時成立 —— **三樣都做了還是不會觸發**，
+            // 而且沒有任何錯誤可以查。PencilKit 在畫布內部還有自己的觸控處理，
+            // 跟它搶事件是一場沒有把握的仗。
+            //
+            // 疊一層在上面就沒有這個問題：套索模式下這一層吃掉所有觸控，
+            // 畫布根本收不到；離開套索模式它就不存在，畫布的行為一行都沒變。
+            //
+            // # 座標
+            //
+            // 這一層用的是**視圖座標**，而 `PKDrawing` 的筆畫用的是**內容座標**。
+            // 兩者差一個 `contentOffset`。不換算的話，捲過一段之後圈選會整個
+            // 偏掉 —— 而且偏的量剛好是捲動距離，很容易被誤判成「選取不準」。
             .overlay(alignment: .topLeading) {
                 if selectedTool == .lasso {
                     let offset = canvasView?.contentOffset ?? .zero
                     let shown = lasso.path.isEmpty ? lasso.committed : lasso.path
-                    LassoPathOverlay(
-                        path: shown.map { CGPoint(x: $0.x - offset.x, y: $0.y - offset.y) },
-                        isCommitted: lasso.path.isEmpty
-                    )
-                    .allowsHitTesting(false)
+                    ZStack(alignment: .topLeading) {
+                        // 透明但**可命中**：Color.clear 預設不接受觸控，
+                        // 要靠 contentShape 給它一個實際的命中區域。
+                        Color.clear
+                            .contentShape(Rectangle())
+                            .gesture(
+                                DragGesture(minimumDistance: 0)
+                                    .onChanged { value in
+                                        let point = CGPoint(
+                                            x: value.location.x + offset.x,
+                                            y: value.location.y + offset.y
+                                        )
+                                        if lasso.path.isEmpty {
+                                            lasso.begin(at: point)
+                                        } else {
+                                            lasso.extend(to: point)
+                                        }
+                                    }
+                                    .onEnded { _ in
+                                        lasso.finish(in: currentDrawing)
+                                    }
+                            )
+
+                        LassoPathOverlay(
+                            path: shown.map { CGPoint(x: $0.x - offset.x, y: $0.y - offset.y) },
+                            isCommitted: lasso.path.isEmpty
+                        )
+                        .allowsHitTesting(false)
+                    }
                 }
             }
 
