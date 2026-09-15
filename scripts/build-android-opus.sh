@@ -26,7 +26,15 @@ BASE_URL="https://downloads.xiph.org/releases/opus"
 ABIS=(arm64-v8a x86_64)
 API_LEVEL=29          # 與 android/app 的 minSdk 一致
 OUT_ROOT="android/prebuilt/opus"
-WORK_DIR="target/android-opus"
+# **不要放在 target/ 底下。**
+#
+# target/ 是 cargo 的建置目錄，CI 的 Swatinem/rust-cache 會快取並**修剪**它。
+# 第三方原始碼解在那裡的話，還原回來是個殘缺目錄：目錄在、CMakeLists.txt 不在。
+# 然後下面那道「目錄存在就跳過解壓」的判斷會放行，CMake 才報
+# "does not appear to contain CMakeLists.txt" —— 錯誤訊息離真正的原因很遠。
+# （快取的 post 步驟也會噴一堆 ENOENT: opendir '.../opus-1.5.2/celt/tests/target'，
+#  那是同一件事的另一個症狀。）
+WORK_DIR=".build/android-opus"
 
 if [[ -z "${ANDROID_NDK_HOME:-}" ]]; then
     SDK="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
@@ -74,7 +82,16 @@ if [[ "$EXPECTED" != "$ACTUAL" ]]; then
 fi
 echo "   OK  $ACTUAL"
 
-[[ -d "opus-${OPUS_VERSION}" ]] || tar xzf "$TARBALL"
+# 用**原始碼樹裡真的要用到的檔案**當標記，不要用目錄存在與否。
+# 目錄可能存在卻是空的或殘缺的（被快取修剪、上次解壓中斷、磁碟滿）。
+if [[ ! -f "opus-${OPUS_VERSION}/CMakeLists.txt" ]]; then
+    rm -rf "opus-${OPUS_VERSION}"
+    tar xzf "$TARBALL"
+fi
+[[ -f "opus-${OPUS_VERSION}/CMakeLists.txt" ]] || {
+    echo "❌ 解壓後仍找不到 opus-${OPUS_VERSION}/CMakeLists.txt" >&2
+    exit 1
+}
 
 # --- 逐 ABI 編譯 ---------------------------------------------------------
 cd "$REPO_ROOT"

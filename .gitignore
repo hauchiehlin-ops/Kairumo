@@ -44,3 +44,6 @@ __pycache__/
 # 已由 android/.gitignore 擋下，這裡不重複。
 /build/dist/
 /build/dist-work/
+
+# 第三方原始碼與中間產物（不要放進 target/，CI 的 rust-cache 會修剪它）
+/.build/
