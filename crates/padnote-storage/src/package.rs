@@ -302,6 +302,65 @@ impl NotebookPackage {
             .unwrap_or(0)
     }
 
+    /// 列出 oplog 檔案：`(檔名, 位元組數)`，依因果序（＝檔名字典序）。
+    ///
+    /// 同步用得到：oplog 檔是**同步的自然單位** —— 檔名編碼了
+    /// `(lamport, device)`，所以天生唯一、不可變、而且字典序就是套用順序。
+    /// 不需要另外設計 chunk 格式，也不會有「兩台裝置寫同一個檔」的問題。
+    pub fn doc_op_files(&self) -> Result<Vec<(String, u64)>, StorageError> {
+        let dir = self.root.join("doc/ops");
+        if !dir.exists() {
+            return Ok(Vec::new());
+        }
+        let mut out: Vec<(String, u64)> = fs::read_dir(&dir)?
+            .filter_map(Result::ok)
+            .filter(|e| e.path().extension().is_some_and(|x| x == "oplog"))
+            .filter_map(|e| {
+                let name = e.file_name().to_str()?.to_string();
+                let size = e.metadata().ok()?.len();
+                Some((name, size))
+            })
+            .collect();
+        out.sort();
+        Ok(out)
+    }
+
+    /// 讀一個 oplog 檔的原始位元組。
+    pub fn read_doc_op_file(&self, name: &str) -> Result<Vec<u8>, StorageError> {
+        let path = self.doc_op_path(name)?;
+        Ok(fs::read(path)?)
+    }
+
+    /// 寫入一個從別台裝置同步下來的 oplog 檔。
+    ///
+    /// **整檔覆寫，不是 append。** 這些檔案在來源端是不可變的（同一個檔名
+    /// 永遠是同一份內容，只可能變長），所以覆寫是安全且冪等的；
+    /// append 反而會在重複同步時把內容寫兩次。
+    pub fn write_doc_op_file(&self, name: &str, bytes: &[u8]) -> Result<(), StorageError> {
+        let path = self.doc_op_path(name)?;
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, bytes)?;
+        Ok(())
+    }
+
+    /// 檢查並組出 oplog 檔的路徑。
+    ///
+    /// **檔名是從雲端來的，要當成不可信輸入。** 不擋的話，一個叫
+    /// `../../../../etc/passwd` 的檔名會讓同步寫到套件外面去。
+    fn doc_op_path(&self, name: &str) -> Result<PathBuf, StorageError> {
+        let looks_safe = !name.is_empty()
+            && name.ends_with(".oplog")
+            && !name.contains('/')
+            && !name.contains('\\')
+            && !name.contains("..");
+        if !looks_safe {
+            return Err(StorageError::DocOps(format!("不合法的 oplog 檔名：{name}")));
+        }
+        Ok(self.root.join("doc/ops").join(name))
+    }
+
     /// 依因果序讀出全部文件操作。
     pub fn read_doc_ops(&self) -> Result<Vec<DocOp>, StorageError> {
         let dir = self.root.join("doc/ops");
@@ -366,6 +425,71 @@ fn parse_uuid(s: &str) -> Option<Uuid> {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn oplog_files_are_listed_in_causal_order() {
+        let root = tmp("oplog-order");
+        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        pkg.append_doc_ops(2, 0xAA, &[DocOp::SetTitle { title: "二".into() }]).unwrap();
+        pkg.append_doc_ops(1, 0xBB, &[DocOp::SetTitle { title: "一".into() }]).unwrap();
+
+        let files: Vec<String> = pkg.doc_op_files().unwrap().into_iter().map(|(n, _)| n).collect();
+        // 檔名字典序即因果序 —— lamport 1 要排在 2 前面，與寫入順序無關。
+        assert_eq!(files.len(), 2);
+        assert!(files[0].starts_with("0000000000000001"), "{files:?}");
+        assert!(files[1].starts_with("0000000000000002"), "{files:?}");
+    }
+
+    #[test]
+    fn an_oplog_file_survives_a_round_trip() {
+        let source_root = tmp("oplog-src");
+        let source = NotebookPackage::create(&source_root, "t", 1).unwrap();
+        source.append_doc_ops(1, 0xAA, &[DocOp::SetTitle { title: "來源".into() }]).unwrap();
+        let (name, _) = source.doc_op_files().unwrap().remove(0);
+        let bytes = source.read_doc_op_file(&name).unwrap();
+
+        // 模擬同步到另一台裝置。
+        let target_root = tmp("oplog-dst");
+        let target = NotebookPackage::create(&target_root, "t", 2).unwrap();
+        target.write_doc_op_file(&name, &bytes).unwrap();
+        let ops = target.read_doc_ops().unwrap();
+        assert!(matches!(&ops[..], [DocOp::SetTitle { title }] if title == "來源"));
+    }
+
+    #[test]
+    fn writing_the_same_file_twice_does_not_duplicate_its_contents() {
+        // 同步可能重複送同一個檔。用 append 的話內容會寫兩次，
+        // 重播之後每個操作都套用兩遍。
+        let source_root = tmp("oplog-dup-src");
+        let source = NotebookPackage::create(&source_root, "t", 1).unwrap();
+        source.append_doc_ops(1, 0xAA, &[DocOp::SetTitle { title: "一次".into() }]).unwrap();
+        let (name, _) = source.doc_op_files().unwrap().remove(0);
+        let bytes = source.read_doc_op_file(&name).unwrap();
+
+        let target_root = tmp("oplog-dup-dst");
+        let target = NotebookPackage::create(&target_root, "t", 2).unwrap();
+        target.write_doc_op_file(&name, &bytes).unwrap();
+        target.write_doc_op_file(&name, &bytes).unwrap();
+        assert_eq!(target.read_doc_ops().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn a_malicious_filename_cannot_escape_the_package() {
+        // 檔名是從雲端來的，要當成不可信輸入。不擋的話，一個叫
+        // `../../..` 的檔名會讓同步寫到套件外面去。
+        let root = tmp("oplog-evil");
+        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        for bad in [
+            "../../../../tmp/evil.oplog",
+            "doc/ops/nested.oplog",
+            "..oplog",
+            "plain.txt",
+            "",
+        ] {
+            assert!(pkg.write_doc_op_file(bad, b"x").is_err(), "{bad} 應該被擋下");
+        }
+    }
+
     use super::*;
     use padnote_doc::NotebookTime;
     use padnote_ink::{InkPoint, Stroke, Tool, materialize};

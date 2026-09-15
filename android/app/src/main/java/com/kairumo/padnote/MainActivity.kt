@@ -832,14 +832,23 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                         scope.launch {
                             // 同步會阻塞網路 I/O —— 一定要在背景執行緒，
                             // 在主執行緒跑會直接卡死畫面。
-                            val result = withContext(Dispatchers.IO) {
-                                com.kairumo.padnote.library.CloudSync.runOnce(activity)
+                            val (meta, changed) = withContext(Dispatchers.IO) {
+                                // 中繼資料 → 再逐本同步內容。順序不能反：
+                                // 先收斂索引才知道哪些筆記本還活著，不然會把
+                                // 另一台已經刪掉的筆記本內容又推上去。
+                                com.kairumo.padnote.library.CloudSync.runFull(activity, deviceId(activity))
                             }
                             message = when {
-                                result == null -> l10n("not_signed_in")
-                                result.ok -> l10n("sync_done")
-                                result.needsReauth -> l10n("sync_needs_reauth")
-                                else -> l10n("sync_failed").replace("%@", result.error)
+                                meta == null -> l10n("not_signed_in")
+                                meta.needsReauth -> l10n("sync_needs_reauth")
+                                !meta.ok -> l10n("sync_failed").replace("%@", meta.error)
+                                else -> l10n("sync_done")
+                            }
+                            if (changed > 0) {
+                                // 有筆記本被別台改過。oplog 已經寫進套件，但記憶體
+                                // 裡那份還是同步前的 —— 不重載的話畫面毫無變化，
+                                // 使用者會以為同步沒作用。
+                                activity.recreate()
                             }
                         }
                     }

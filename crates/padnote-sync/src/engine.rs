@@ -71,6 +71,8 @@ pub struct SyncEngine<P: CloudProvider> {
     dek: Option<Dek>,
     /// 目前寫入中的 chunk 序號（僅在不支援 append 時使用）。
     current_chunk: u32,
+    /// 是否已經從雲端接續過序號。見 [`SyncEngine::resume_chunk_seq`]。
+    chunk_seq_resumed: bool,
 }
 
 impl<P: CloudProvider> SyncEngine<P> {
@@ -82,6 +84,7 @@ impl<P: CloudProvider> SyncEngine<P> {
             cursors: SyncCursors::new(),
             dek,
             current_chunk: 0,
+            chunk_seq_resumed: false,
         }
     }
 
@@ -123,6 +126,14 @@ impl<P: CloudProvider> SyncEngine<P> {
                 p
             }
         } else {
+            // **序號要從雲端接續，不能從 0 重來。**
+            //
+            // 不接續的話，重開 App 之後第一次推送又會寫 `log-1.bin`，
+            // 把上一個 session 的第一塊直接蓋掉 —— 而且沒有任何錯誤：
+            // 檔案數不變、上傳成功、cursors 也對得上，只是內容沒了。
+            // 只有不支援 append 的 provider（Google Drive）會踩到，
+            // 因為 append 那條路是接在後面而不是覆寫。
+            self.resume_chunk_seq()?;
             self.current_chunk += 1;
             self.chunk_path(self.current_chunk)
         };
@@ -181,6 +192,26 @@ impl<P: CloudProvider> SyncEngine<P> {
         Ok(out)
     }
 
+    /// 從雲端找出這台裝置已經寫到第幾號 chunk。
+    ///
+    /// 只做一次（之後靠記憶體裡的計數），所以不會每次推送都多一趟列舉。
+    fn resume_chunk_seq(&mut self) -> Result<(), SyncError> {
+        if self.chunk_seq_resumed {
+            return Ok(());
+        }
+        let prefix = self.own_prefix();
+        let highest = self
+            .provider
+            .list(&prefix)?
+            .into_iter()
+            .filter_map(|entry| chunk_seq_from_path(&entry.path))
+            .max()
+            .unwrap_or(0);
+        self.current_chunk = self.current_chunk.max(highest);
+        self.chunk_seq_resumed = true;
+        Ok(())
+    }
+
     fn size_of(&self, path: &str) -> Result<u64, SyncError> {
         let parent = path.rsplit_once('/').map(|(p, _)| p).unwrap_or("");
         Ok(self
@@ -229,6 +260,16 @@ fn split_frames(data: &[u8]) -> (Vec<&[u8]>, usize) {
 }
 
 /// 從 `sync/<device_id>/log-N.bin` 取出 device id。
+/// `sync/<device>/log-<seq>.bin` → `seq`。認不得的檔名回 `None`。
+fn chunk_seq_from_path(path: &str) -> Option<u32> {
+    path.rsplit('/')
+        .next()?
+        .strip_prefix("log-")?
+        .strip_suffix(".bin")?
+        .parse()
+        .ok()
+}
+
 fn device_from_path(path: &str) -> Option<DeviceId> {
     let mut parts = path.split('/');
     if parts.next()? != "sync" {
@@ -256,6 +297,97 @@ mod tests {
 
     fn engine(root: &PathBuf, id: u32, dek: Option<Dek>) -> SyncEngine<LocalFolderProvider> {
         SyncEngine::new(LocalFolderProvider::new(root), DeviceId(id), dek)
+    }
+
+    /// 不支援 append 的 provider（Google Drive 就是這一種）。
+    ///
+    /// 既有的測試全都用 `LocalFolderProvider`，而它**支援** append ——
+    /// 所以不支援 append 的那條路一行都沒有被測到，重啟覆寫的 bug
+    /// 才會一直躺在那裡。
+    #[derive(Debug, Default, Clone)]
+    struct NoAppendProvider {
+        files: std::sync::Arc<std::sync::Mutex<BTreeMap<String, Vec<u8>>>>,
+    }
+
+    impl CloudProvider for NoAppendProvider {
+        fn list(&self, prefix: &str) -> Result<Vec<crate::provider::RemoteEntry>, SyncError> {
+            Ok(self
+                .files
+                .lock()
+                .unwrap()
+                .iter()
+                .filter(|(p, _)| p.starts_with(prefix))
+                .map(|(p, d)| crate::provider::RemoteEntry {
+                    path: p.clone(),
+                    size: d.len() as u64,
+                })
+                .collect())
+        }
+        fn get_range(&self, path: &str, range: std::ops::Range<u64>) -> Result<Vec<u8>, SyncError> {
+            let files = self.files.lock().unwrap();
+            let data = files.get(path).ok_or(SyncError::NotFound(path.into()))?;
+            let start = (range.start as usize).min(data.len());
+            let end = (range.end as usize).min(data.len());
+            Ok(data[start..end].to_vec())
+        }
+        fn append(&self, _path: &str, _data: &[u8]) -> Result<(), SyncError> {
+            Err(SyncError::Backend("不支援 append".into()))
+        }
+        fn put(&self, path: &str, data: &[u8]) -> Result<(), SyncError> {
+            self.files.lock().unwrap().insert(path.to_string(), data.to_vec());
+            Ok(())
+        }
+        fn supports_native_append(&self) -> bool {
+            false
+        }
+    }
+
+    #[test]
+    fn restarting_does_not_overwrite_the_previous_sessions_chunks() {
+        // **這是一個真的資料遺失 bug 的回歸測試。**
+        //
+        // 序號原本從 0 重來，所以重開 App 之後第一次推送又寫 `log-1.bin`，
+        // 把上一個 session 的第一塊直接蓋掉 —— 沒有任何錯誤：檔案數不變、
+        // 上傳成功、cursors 也對得上，只是內容沒了。
+        let cloud = NoAppendProvider::default();
+
+        let mut first = SyncEngine::new(cloud.clone(), DeviceId(1), None);
+        first.push(b"session-1-a").unwrap();
+        first.push(b"session-1-b").unwrap();
+
+        // 重啟：全新的 engine，同一個雲端。
+        let mut second = SyncEngine::new(cloud.clone(), DeviceId(1), None);
+        second.push(b"session-2-a").unwrap();
+
+        let files = cloud.files.lock().unwrap();
+        assert_eq!(files.len(), 3, "三次推送就該有三個檔案，被蓋掉才會少");
+        assert!(files.contains_key("sync/00000001/log-1.bin"));
+        assert!(files.contains_key("sync/00000001/log-2.bin"));
+        assert!(files.contains_key("sync/00000001/log-3.bin"));
+    }
+
+    #[test]
+    fn another_device_sees_everything_written_before_a_restart() {
+        // 上一個測試證明檔案還在；這個證明**內容真的讀得回來**。
+        let cloud = NoAppendProvider::default();
+
+        let mut a1 = SyncEngine::new(cloud.clone(), DeviceId(1), None);
+        a1.push(b"before-restart").unwrap();
+        let mut a2 = SyncEngine::new(cloud.clone(), DeviceId(1), None);
+        a2.push(b"after-restart").unwrap();
+
+        let mut b = SyncEngine::new(cloud.clone(), DeviceId(2), None);
+        let payloads: Vec<Vec<u8>> = b.pull().unwrap().into_iter().map(|p| p.payload).collect();
+        assert!(payloads.contains(&b"before-restart".to_vec()), "重啟前的內容不見了");
+        assert!(payloads.contains(&b"after-restart".to_vec()));
+    }
+
+    #[test]
+    fn chunk_sequence_is_parsed_from_the_path() {
+        assert_eq!(chunk_seq_from_path("sync/00000001/log-7.bin"), Some(7));
+        // 認不得的檔名不要當成 0 —— 那會讓接續邏輯以為還沒寫過任何東西。
+        assert_eq!(chunk_seq_from_path("sync/00000001/notes.txt"), None);
+        assert_eq!(chunk_seq_from_path("sync/00000001/log-.bin"), None);
     }
 
     #[test]

@@ -15,15 +15,27 @@
 //! 所以這裡走 [`FfiDriveHttp`]：平台實作四個很薄的 HTTP 方法，
 //! **查詢字串、分頁、合併規則全部留在核心**（那才是會出錯的地方，也是有測試的地方）。
 //!
-//! # 範圍：只有中繼資料
+//! # 兩層：中繼資料與內容
 //!
-//! 同步的是 `settings/global.json` 與 `notebooks/index.json` ——
-//! 設定與「有哪些筆記本、叫什麼、在哪個資料夾、哪些被刪了」。
-//! **筆記內容本身還沒有**：那要走 chunk 與 `SyncEngine`，是下一步。
+//! - [`gdrive_sync_metadata`]：設定與筆記本清單（`settings/global.json`、
+//!   `notebooks/index.json`）。整包讀寫、逐欄位合併。
+//! - [`gdrive_sync_notebook`]：一本筆記本的**內容**，以 oplog 檔為單位。
 //!
-//! 先做中繼資料是有理由的：它小、可以整包讀寫、而且是**收斂規則最容易出錯**
-//! 的地方（刪除復活、改名互相覆蓋）。內容那一層反而單純，因為 oplog 是
-//! append-only 的。
+//! # 內容為什麼用 oplog 檔當同步單位，而不是 chunk
+//!
+//! `doc/ops/<lamport:016x>-<device:08x>.oplog` 這個檔名已經把該有的性質
+//! 全部編進去了：
+//!
+//! - **唯一**：裝置 id 在檔名裡，兩台裝置永遠不會寫同一個檔。
+//! - **不可變**：寫完就不再改（同一個 lamport 不會重複使用）。
+//! - **有序**：字典序即因果序，下載完照檔名排就是套用順序。
+//! - **冪等**：同一個檔名永遠是同一份內容，重複同步覆寫即可。
+//!
+//! 換句話說，它本來就是一個設計好的同步單位。再包一層 chunk 只是把
+//! 「哪些還沒傳」這個問題換個地方問，而且要自己處理框架、序號與游標。
+//!
+//! `SyncEngine` 的 chunk 那條路仍然在（`sync/<device>/log-N.bin`），
+//! 給的是**跨筆記本的增量串流**；這裡走的是逐本筆記的檔案鏡像。
 //!
 //! # 併發：會收斂，但不是原子的
 //!
@@ -268,6 +280,133 @@ pub fn gdrive_sync_metadata(
     }
 }
 
+// ── 筆記本內容（oplog 檔鏡像）────────────────────────────────────
+
+/// 一本筆記本的雲端 oplog 目錄。
+fn notebook_ops_prefix(notebook_id: &str) -> String {
+    format!("notebooks/{notebook_id}/doc/ops")
+}
+
+/// 一次筆記本同步的結果。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiNotebookSyncResult {
+    pub ok: bool,
+    /// 這次上傳了幾個 oplog 檔。
+    pub uploaded: u32,
+    /// 這次下載了幾個。**大於 0 表示本機內容有變，呼叫端要重開 session**
+    /// —— 不重開的話，畫面上還是同步前的樣子，使用者會以為同步沒作用。
+    pub downloaded: u32,
+    pub error: String,
+    pub needs_reauth: bool,
+}
+
+/// 同步一本筆記本的內容。
+///
+/// `package_path` 是本機 `.padnote` 套件的路徑。
+///
+/// **這個函式會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
+#[uniffi::export]
+pub fn gdrive_sync_notebook(
+    http: Arc<dyn FfiDriveHttp>,
+    package_path: String,
+    notebook_id: String,
+) -> FfiNotebookSyncResult {
+    let package = match padnote_storage::NotebookPackage::open(std::path::Path::new(&package_path)) {
+        Ok(p) => p,
+        Err(e) => return notebook_failed(format!("開不了套件：{e}")),
+    };
+    let local = match package.doc_op_files() {
+        Ok(files) => files,
+        Err(e) => return notebook_failed(format!("讀不到本機 oplog：{e}")),
+    };
+
+    let drive = GDriveProvider::new(ForeignHttp(http));
+    let prefix = notebook_ops_prefix(&notebook_id);
+
+    let remote = match drive.list(&prefix) {
+        Ok(entries) => entries,
+        Err(e) => return from_sync_error(e),
+    };
+    let remote_by_name: std::collections::BTreeMap<String, u64> = remote
+        .into_iter()
+        .filter_map(|e| {
+            let name = e.path.rsplit('/').next()?.to_string();
+            Some((name, e.size))
+        })
+        .collect();
+
+    // 上傳：雲端沒有的，或者本機這一份比較長的。
+    //
+    // 比長度而不是只看「有沒有」：`append_doc_ops` 在同一個 lamport 上是
+    // **追加**，所以一個已經上傳過的檔仍然可能變長。只看存在與否的話，
+    // 後面追加的那幾筆操作永遠傳不出去。
+    let mut uploaded = 0u32;
+    for (name, size) in &local {
+        let remote_size = remote_by_name.get(name).copied().unwrap_or(0);
+        if *size <= remote_size {
+            continue;
+        }
+        let bytes = match package.read_doc_op_file(name) {
+            Ok(b) => b,
+            Err(e) => return notebook_failed(format!("讀不到 {name}：{e}")),
+        };
+        if let Err(e) = drive.put(&format!("{prefix}/{name}"), &bytes) {
+            return from_sync_error(e);
+        }
+        uploaded += 1;
+    }
+
+    // 下載：本機沒有的，或者雲端那一份比較長的。
+    let local_by_name: std::collections::BTreeMap<&str, u64> =
+        local.iter().map(|(n, s)| (n.as_str(), *s)).collect();
+    let mut downloaded = 0u32;
+    for (name, remote_size) in &remote_by_name {
+        let local_size = local_by_name.get(name.as_str()).copied().unwrap_or(0);
+        if *remote_size <= local_size {
+            continue;
+        }
+        let bytes = match drive.get_all(&format!("{prefix}/{name}")) {
+            Ok(b) => b,
+            Err(e) => return from_sync_error(e),
+        };
+        // 檔名來自雲端，是不可信輸入 —— `write_doc_op_file` 會擋掉
+        // 路徑逃逸（`../`）之類的名字。
+        if let Err(e) = package.write_doc_op_file(name, &bytes) {
+            return notebook_failed(format!("寫不進 {name}：{e}"));
+        }
+        downloaded += 1;
+    }
+
+    FfiNotebookSyncResult {
+        ok: true,
+        uploaded,
+        downloaded,
+        error: String::new(),
+        needs_reauth: false,
+    }
+}
+
+fn notebook_failed(error: String) -> FfiNotebookSyncResult {
+    FfiNotebookSyncResult {
+        ok: false,
+        uploaded: 0,
+        downloaded: 0,
+        error,
+        needs_reauth: false,
+    }
+}
+
+fn from_sync_error(error: SyncError) -> FfiNotebookSyncResult {
+    let needs_reauth = matches!(error, SyncError::PermissionDenied(_));
+    FfiNotebookSyncResult {
+        ok: false,
+        uploaded: 0,
+        downloaded: 0,
+        error: error.to_string(),
+        needs_reauth,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -285,6 +424,204 @@ mod tests {
             device: device.into(),
             deleted: false,
         }
+    }
+
+    /// 假的 Drive，直接實作平台那一側的 `FfiDriveHttp`。
+    ///
+    /// 這樣測到的是**完整路徑**：查詢字串 → 分頁 → ForeignHttp 轉接 →
+    /// GDriveProvider → 檔案鏡像。只測合併函式的話，中間任何一段接錯
+    /// 都看不出來。
+    #[derive(Debug, Default)]
+    struct FakeDrive {
+        /// 檔名 → 內容。
+        files: std::sync::Mutex<Vec<(String, Vec<u8>)>>,
+    }
+
+    impl FakeDrive {
+        fn query<'a>(params: &'a [FfiQueryParam], key: &str) -> &'a str {
+            params
+                .iter()
+                .find(|p| p.name == key)
+                .map(|p| p.value.as_str())
+                .unwrap_or("")
+        }
+    }
+
+    impl FfiDriveHttp for FakeDrive {
+        fn get_json(&self, _url: String, query: Vec<FfiQueryParam>) -> Result<String, FfiDriveError> {
+            let q = Self::query(&query, "q").to_string();
+            let files = self.files.lock().unwrap();
+            let matches: Vec<&(String, Vec<u8>)> = files
+                .iter()
+                .filter(|(name, _)| {
+                    if let Some(rest) = q.split("name = '").nth(1) {
+                        name == rest.trim_end_matches('\'')
+                    } else if let Some(rest) = q.split("name contains '").nth(1) {
+                        name.contains(rest.trim_end_matches('\''))
+                    } else {
+                        true
+                    }
+                })
+                .collect();
+            let entries: Vec<String> = matches
+                .iter()
+                .enumerate()
+                .map(|(i, (name, data))| {
+                    format!(
+                        r#"{{"id":"id-{i}","name":"{name}","size":"{}","modifiedTime":"2026-01-01T00:00:0{}Z"}}"#,
+                        data.len(),
+                        i % 10
+                    )
+                })
+                .collect();
+            Ok(format!(r#"{{"files":[{}]}}"#, entries.join(",")))
+        }
+
+        fn get_bytes(
+            &self,
+            url: String,
+            _range: Option<FfiByteRange>,
+        ) -> Result<Vec<u8>, FfiDriveError> {
+            let index: usize = url
+                .split("files/id-")
+                .nth(1)
+                .and_then(|s| s.split('?').next())
+                .and_then(|s| s.parse().ok())
+                .ok_or(FfiDriveError::NotFound { path: url.clone() })?;
+            let files = self.files.lock().unwrap();
+            files
+                .get(index)
+                .map(|(_, d)| d.clone())
+                .ok_or(FfiDriveError::NotFound { path: url })
+        }
+
+        fn post_json(&self, _url: String, body_json: String) -> Result<String, FfiDriveError> {
+            let value: serde_json::Value = serde_json::from_str(&body_json).unwrap();
+            let name = value["name"].as_str().unwrap().to_string();
+            let mut files = self.files.lock().unwrap();
+            files.push((name, Vec::new()));
+            Ok(format!(r#"{{"id":"id-{}"}}"#, files.len() - 1))
+        }
+
+        fn patch_bytes(&self, url: String, data: Vec<u8>) -> Result<(), FfiDriveError> {
+            let index: usize = url
+                .split("files/id-")
+                .nth(1)
+                .and_then(|s| s.split('?').next())
+                .and_then(|s| s.parse().ok())
+                .ok_or(FfiDriveError::NotFound { path: url.clone() })?;
+            let mut files = self.files.lock().unwrap();
+            if let Some(slot) = files.get_mut(index) {
+                slot.1 = data;
+                Ok(())
+            } else {
+                Err(FfiDriveError::NotFound { path: url })
+            }
+        }
+    }
+
+    fn tmp_package(name: &str, device: u64) -> std::path::PathBuf {
+        let root = std::env::temp_dir()
+            .join(format!("padnote-gdrive-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&root);
+        padnote_storage::NotebookPackage::create(&root, "t", device).unwrap();
+        root
+    }
+
+    #[test]
+    fn two_devices_converge_on_notebook_content() {
+        // 這是內容層同步的主測試：A 寫、B 寫，各自同步一輪之後，
+        // 兩邊都該看得到對方的 oplog 檔。
+        use padnote_doc::ops::DocOp;
+
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
+
+        let a_root = tmp_package("conv-a", 0xAA);
+        let a = padnote_storage::NotebookPackage::open(&a_root).unwrap();
+        a.append_doc_ops(1, 0xAA, &[DocOp::SetTitle { title: "A 寫的".into() }])
+            .unwrap();
+
+        let b_root = tmp_package("conv-b", 0xBB);
+        let b = padnote_storage::NotebookPackage::open(&b_root).unwrap();
+        b.append_doc_ops(2, 0xBB, &[DocOp::SetTitle { title: "B 寫的".into() }])
+            .unwrap();
+
+        // A 先同步：上傳自己的，雲端還沒有別人的。
+        let first = gdrive_sync_notebook(
+            cloud.clone(),
+            a_root.to_string_lossy().into(),
+            "nb1".into(),
+        );
+        assert!(first.ok, "{}", first.error);
+        assert_eq!(first.uploaded, 1);
+        assert_eq!(first.downloaded, 0);
+
+        // B 同步：上傳自己的，並拿到 A 的。
+        let second = gdrive_sync_notebook(
+            cloud.clone(),
+            b_root.to_string_lossy().into(),
+            "nb1".into(),
+        );
+        assert!(second.ok, "{}", second.error);
+        assert_eq!(second.uploaded, 1);
+        assert_eq!(second.downloaded, 1, "應該要拿到 A 的那一份");
+
+        // A 再同步一次，拿到 B 的。
+        let third = gdrive_sync_notebook(
+            cloud.clone(),
+            a_root.to_string_lossy().into(),
+            "nb1".into(),
+        );
+        assert!(third.ok, "{}", third.error);
+        assert_eq!(third.downloaded, 1);
+
+        // 兩邊的 oplog 檔一模一樣。
+        let a_files: Vec<String> = padnote_storage::NotebookPackage::open(&a_root)
+            .unwrap()
+            .doc_op_files()
+            .unwrap()
+            .into_iter()
+            .map(|(n, _)| n)
+            .collect();
+        let b_files: Vec<String> = padnote_storage::NotebookPackage::open(&b_root)
+            .unwrap()
+            .doc_op_files()
+            .unwrap()
+            .into_iter()
+            .map(|(n, _)| n)
+            .collect();
+        assert_eq!(a_files, b_files, "兩台裝置沒有收斂");
+        assert_eq!(a_files.len(), 2);
+    }
+
+    #[test]
+    fn syncing_twice_uploads_nothing_the_second_time() {
+        // 每次同步都重傳一次的話，Drive 的配額與使用者的流量都白白消耗，
+        // 而且活動紀錄裡會出現一堆沒有意義的寫入。
+        use padnote_doc::ops::DocOp;
+
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
+        let root = tmp_package("idem", 0xAA);
+        let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        pkg.append_doc_ops(1, 0xAA, &[DocOp::SetTitle { title: "一".into() }])
+            .unwrap();
+
+        let path: String = root.to_string_lossy().into();
+        let first = gdrive_sync_notebook(cloud.clone(), path.clone(), "nb1".into());
+        assert_eq!(first.uploaded, 1);
+
+        let second = gdrive_sync_notebook(cloud, path, "nb1".into());
+        assert!(second.ok);
+        assert_eq!(second.uploaded, 0, "沒有變動就不該重傳");
+        assert_eq!(second.downloaded, 0, "自己剛傳的不該再抓回來");
+    }
+
+    #[test]
+    fn a_missing_package_is_an_error_not_a_panic() {
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
+        let result = gdrive_sync_notebook(cloud, "/does/not/exist".into(), "nb1".into());
+        assert!(!result.ok);
+        assert!(!result.needs_reauth, "開不了本機檔案不是授權問題");
     }
 
     #[test]

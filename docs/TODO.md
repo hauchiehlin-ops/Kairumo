@@ -207,6 +207,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | ~~G-03~~ ✅ | 同步資料佈局 | `format-spec.md` §7.0 |
 | ~~G-04~~ ✅ | 全域設定同步 | `padnote-sync::settings` + `ffi_account_sync`。`SyncedSettings` 與 `DeviceSettings` 是**兩個型別**，「不要同步」寫在型別上而不是註解裡；有一項測試專門確認低延遲、掌拒門檻、SAF 權限權杖連序列化都不會出現在同步 JSON 裡。逐欄位帶 Lamport 時戳合併（整包 LWW 的話，A 改語言、B 改工具列會互相蓋掉）。**已接上兩邊 UI**：Apple 的 `LocalizationManager.setLanguage` 與 Android 新增的語言選擇器（Android 原本只能跟著系統語系走）都寫進同步設定，啟動時跨裝置設定優先於本機記錄。模擬器實測：選日文 → 介面變日文 → 重啟仍是日文，SharedPreferences 裡就是核心產生的那份 JSON |
 | ~~G-05~~ ✅ | 筆記本與資料夾同步 | `padnote-sync::library` + `ffi_account_sync`。刪除是**墓碑**不是「不在清單裡」—— 靠比對清單的話，還沒同步到刪除的那台會把筆記本傳回去，每同步一次復活一次。另含：已刪資料夾底下的項目一起隱藏（否則變成打不開也刪不掉的幽靈）、父子環的迴圈保護（兩台各自把 A 搬進 B、B 搬進 A 會凍住 App）、搬移前先問會不會成環。12 項測試含「離線兩台各自增改刪後收斂」。**已接上兩邊 UI**：兩邊的新增／改名／搬移／刪除、資料夾的建立／改名／刪除都會記進索引（`AccountSyncStore`），刪除留墓碑，列表濾掉已刪項。模擬器實測：新增 → 索引出現該筆；刪除 → 同一筆變成 `deleted: true` 而不是消失 |
+| ~~G-02c~~ ✅ | 筆記本**內容**同步 | `ffi_gdrive::gdrive_sync_notebook`：以 **oplog 檔**為同步單位鏡像到 `notebooks/<id>/doc/ops/`。檔名 `<lamport:016x>-<device:08x>.oplog` 本來就唯一、不可變、字典序即因果序、重複覆寫冪等 —— 再包一層 chunk 只是把「哪些還沒傳」換個地方問。核心測試含「兩台裝置收斂」與「第二次同步不重傳」。**順帶修掉 SyncEngine 一個資料遺失 bug**，見下 |
 | ~~G-02b~~ ✅ | Drive provider 接上授權 | `ffi_gdrive::gdrive_sync_metadata`：讀雲端 → 合併 → 寫回。**HTTP 由平台出**（`FfiDriveHttp` callback interface）而不是核心用 reqwest —— 後者會把整個 rustls 堆疊連進行動端函式庫（`libpadnote_core.so` 8.1 MB → 13 MB），而且與 `ffi_collab` 已定下的「socket 留在平台層」不一致。查詢字串、分頁、合併規則仍全在核心 |
 | G-06 | 實機矩陣 | iPad + macOS + Android 同一 Google 帳號端到端測試：新增、編輯、刪除、改設定、重啟、離線再上線皆通過 |
 
@@ -241,6 +242,14 @@ restricted scope 那種要付費的第三方安全評估。
 （Enable Custom URI scheme）」打開 → 儲存。改完可能要等幾分鐘生效。
 
 iOS 型別**不受影響**，自訂 scheme 在那邊本來就是標準做法。
+
+**修掉的一個資料遺失 bug（SyncEngine 的非 append 路徑）**：
+`current_chunk` 從 0 重來，所以重開 App 之後第一次推送又寫 `log-1.bin`，
+把上一個 session 的第一塊直接**蓋掉** —— 沒有任何錯誤：檔案數不變、
+上傳成功、cursors 也對得上，只是內容沒了。只有不支援 append 的 provider
+（正是 Google Drive）會踩到；既有測試全用支援 append 的 `LocalFolderProvider`，
+所以那條路一行都沒被測過。已改成從雲端接續序號，並補上不支援 append 的
+假 provider 與兩項回歸測試（驗證過：移除修正後測試會紅）。
 
 **Testing 狀態的陷阱**：專案維持在 `Testing` 且使用 sensitive 範圍時，
 refresh token **七天就過期**。長期測試時會以為是自己的程式壞了。

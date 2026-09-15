@@ -141,8 +141,8 @@ final class DriveHttpClient: FfiDriveHttp {
 /// 以及核心的合併規則。合併之後的結果寫回 `AccountSyncStore` ——
 /// **雲端那邊可能有別台裝置的改動**，不寫回去的話這次同步等於白做。
 ///
-/// 目前同步的只有**中繼資料**（設定、筆記本清單、刪除墓碑），
-/// 筆記內容本身還沒有。
+/// 兩層都同步：中繼資料（設定、筆記本清單、刪除墓碑）與**內容**
+/// （每一本筆記的 oplog 檔）。
 public enum CloudSync {
 
     /// 同步一輪。回傳 nil 表示沒登入。
@@ -172,5 +172,24 @@ public enum CloudSync {
             await GoogleAuth.shared.signOut()
         }
         return result
+    }
+
+    /// 同步一本筆記本的內容。
+    ///
+    /// 回傳 `downloaded > 0` 時，**呼叫端必須重新載入這本筆記** ——
+    /// oplog 檔已經寫進套件，但記憶體裡那份還是同步前的狀態，
+    /// 畫面上看不到任何變化，使用者會以為同步沒作用。
+    public static func syncNotebook(
+        packagePath: String,
+        notebookId: String
+    ) async -> FfiNotebookSyncResult? {
+        guard let token = await GoogleAuth.shared.validAccessToken() else { return nil }
+        return await Task.detached(priority: .utility) {
+            gdriveSyncNotebook(
+                http: DriveHttpClient(accessToken: token),
+                packagePath: packagePath,
+                notebookId: notebookId
+            )
+        }.value
     }
 }
