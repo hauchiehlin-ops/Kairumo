@@ -124,6 +124,22 @@ step "2/$TOTAL 介面字串與版本一致性"
 python3 "${SCRIPT_DIR}/i18n_tool.py" verify
 "${SCRIPT_DIR}/check-version-consistency.sh"
 
+# Android 的簽章設定在這裡就確認 —— 不能等到第 4 步。
+#
+# 實際發生過：v3.7.0 (31) 的 Apple 端上傳成功、Android 因為沒有簽章金鑰失敗，
+# 回滾把版本號退回 3.6.0，但 App Store Connect 上的 build 31 是退不掉的。
+# repo 與 Apple 就此分家 —— 正是這支腳本存在的目的要防的那件事。
+# 環境缺件屬於「一秒就能判斷」的類別，沒有理由排在二十分鐘的打包後面。
+if [[ "$DO_ANDROID" -eq 1 && "$DRY_RUN" -eq 0 ]]; then
+    if [[ ! -f "${REPO_ROOT}/android/keystore.properties" && -z "${KAIRUMO_STOREFILE:-}" ]]; then
+        echo "❌ Android 簽章設定不存在，發版中止（還沒有動到任何商店）。" >&2
+        echo "   建立金鑰：./scripts/setup-android-signing.sh" >&2
+        echo "   只發 Apple：./scripts/release.sh apple" >&2
+        exit 1
+    fi
+    echo "   ✅ Android 簽章設定就位"
+fi
+
 if [[ "$TARGET" == bump ]]; then
     step "3/$TOTAL 發版 commit"
     if [[ "$DRY_RUN" -eq 1 ]]; then
