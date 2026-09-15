@@ -10,6 +10,8 @@ import uniffi.padnote_core.connectionArrowHead
 import uniffi.padnote_core.connectionBetween
 import uniffi.padnote_core.connectionPath
 import uniffi.padnote_core.shapeAcceptsText
+import uniffi.padnote_core.shapeArrowHeads
+import uniffi.padnote_core.shapeIsLinear
 import uniffi.padnote_core.shapeOutline
 import uniffi.padnote_core.shapeSemantic
 
@@ -67,6 +69,20 @@ data class NoteShape(
 
     /** 這種形狀能不能放字。連接線與箭頭不能。 */
     val acceptsText: Boolean get() = shapeAcceptsText(kind)
+
+    /** 線狀形狀（線／箭頭／雙箭頭）。路徑不能收尾，也沒有可填色的內部。 */
+    val isLinear: Boolean get() = shapeIsLinear(kind)
+
+    /**
+     * 兩端的箭頭三角形（畫布座標）。非線狀形狀回傳空清單。
+     *
+     * 箭頭大小跟著線寬走：粗線配小三角形看不出是箭頭。
+     */
+    fun arrowHeads(): List<List<FfiPoint>> {
+        if (!isLinear) return emptyList()
+        val heads = shapeArrowHeads(ffiShape(), maxOf(10f, lineWidth * 5f))
+        return listOf(heads.start, heads.end).filter { it.size >= 3 }
+    }
 
     fun ffiShape(): FfiShape = FfiShape(
         kind = kind,

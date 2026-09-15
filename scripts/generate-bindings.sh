@@ -38,8 +38,13 @@ cargo run -q -p padnote-core --bin uniffi-bindgen -- generate \
 #
 # CI 抓不到這個：XCFramework 不進版控，CI 每次都重新建，永遠是同步的。
 # 這是**本機開發專屬**的坑，所以防線得放在這裡。
+# build-xcframework.sh 自己會呼叫這支腳本，然後**立刻**重建 framework ——
+# 對它做這個檢查是死結：綁定一改，檢查就 exit 1，而唯一的解法正是跑那支
+# 被擋住的腳本。它會設這個變數把檢查關掉（實際卡住過）。
 STAMP="apple/PadnoteCore.xcframework/.bindings-sha256"
-if [[ -f "$STAMP" ]]; then
+if [[ -n "${PADNOTE_REBUILDING_XCFRAMEWORK:-}" ]]; then
+    echo "   （由 build-xcframework.sh 呼叫，略過同步檢查 —— 它接著就會重建）"
+elif [[ -f "$STAMP" ]]; then
     CURRENT="$(shasum -a 256 apple/Generated/padnote_core.swift | awk '{print $1}')"
     if [[ "$CURRENT" != "$(cat "$STAMP")" ]]; then
         echo ""

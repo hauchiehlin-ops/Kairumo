@@ -5197,7 +5197,11 @@ struct TextAttachmentItemView: View {
                 }
             }
             .padding(14)
-            .frame(width: displayWidth)
+            // 高度也要套。原本只套寬度，於是方塊的高度由內容決定：
+            //   1. 右下角的縮放把手往下拉完全沒有反應 —— 使用者說「只能調寬度」。
+            //   2. 同一個方塊在 Android 上是 `size(width, height)`，兩邊高度不一樣。
+            // `height` 這個欄位一直都在，也一直跟著同步走，只有 Apple 沒有用它。
+            .frame(width: displayWidth, height: displayHeight, alignment: .top)
             .background(resolveBackground(textItem.backgroundColorHex))
             .clipShape(RoundedRectangle(cornerRadius: textItem.cornerRadius))
             .overlay(
@@ -5217,22 +5221,32 @@ struct TextAttachmentItemView: View {
                 }
             )
             .shadow(color: isDragging ? Color.clear : Color.black.opacity(0.08), radius: 6, y: 3)
+            .contentShape(Rectangle())
+            .rotationEffect(.degrees(textItem.canvasRotation))
             // 右下角的縮放把手。
             //
             // 原本只能進到「Word 文字編修」面板拉「方塊寬度」滑桿 ——
             // 要改一個方框的大小卻得先開一個蓋住它的面板，而且只能改寬度。
             // 圖片早就有這個把手了，文字方塊沒有。
+            //
+            // **必須掛在 .contentShape(Rectangle()) 之後。** 掛在前面的話，
+            // 那個 contentShape 會把整個組合視圖的命中形狀壓成方塊本身的矩形，
+            // 而把手是 offset 到矩形外面的 —— 於是它看得到、點得到一半、
+            // 拖曳完全沒有反應（實機上就是這樣，看起來像「只能調寬度」）。
+            // 用 highPriorityGesture 是同一個道理：外層有兩個 onTapGesture，
+            // 普通 gesture 會被它們先吃掉。
             .overlay(alignment: .bottomTrailing) {
                 if isSelected && lockedByPeer == nil && !isEditingInline {
                     Image(systemName: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
                         .font(.system(size: 10, weight: .bold))
                         .foregroundColor(.white)
-                        .padding(5)
+                        .frame(width: 30, height: 30)
                         .background(Color.accentColor)
                         .clipShape(Circle())
-                        .offset(x: 8, y: 8)
+                        .contentShape(Circle())
+                        .offset(x: 10, y: 10)
                         .help(localizationManager.localized("resize_text_box"))
-                        .gesture(
+                        .highPriorityGesture(
                             DragGesture(minimumDistance: 1,
                                         coordinateSpace: .named(CanvasCoordinateSpace.name))
                                 .onChanged { value in
@@ -5255,14 +5269,10 @@ struct TextAttachmentItemView: View {
                         )
                 }
             }
-            .contentShape(Rectangle())
-            .rotationEffect(.degrees(textItem.canvasRotation))
             .overlay {
                 if isSelected && !isEditingInline && lockedByPeer == nil {
-                    // 尺寸取**實際版面框**，不是 textItem.height。
-                    // 文字方塊的算繪高度由內容決定（空方塊約 46pt），模型高度
-                    // 預設是 160 —— 拿模型高度去算，把手會飄在方塊上方很遠，
-                    // 而那條指向中心的虛線會穿過方塊落在下方的空白處（實測到）。
+                    // 尺寸取實際版面框。現在版面框就是 displayWidth × displayHeight，
+                    // 兩者一致 —— 但仍然用量到的值，把手的位置沒有猜測的餘地。
                     GeometryReader { geo in
                         ObjectRotationHandle(
                             degrees: $textItem.canvasRotation,
@@ -5370,7 +5380,10 @@ struct TextAttachmentItemView: View {
                 // 畫布上只保留編輯／邊框／刪除三個明確的動作。
             }
         }
-        .position(x: currentX + displayWidth / 2, y: currentY + 60)
+        // y 是方塊的**上緣**，與 x 的語意一致，也與 Android 的
+        // `offset(x, y)` 一致。原本這裡寫死 60（等於假設方塊高 120），
+        // 高度一改就錯位，而且同一份筆記在兩個平台的落點本來就不同。
+        .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
     }
 
     private func broadcastTextChange() {

@@ -14,17 +14,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import com.kairumo.padnote.canvas.CanvasRotation
-import com.kairumo.padnote.canvas.RotationHandle
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import com.kairumo.padnote.canvas.CanvasRotation
+import com.kairumo.padnote.canvas.MIN_OBJECT_HEIGHT_DP
+import com.kairumo.padnote.canvas.MIN_OBJECT_WIDTH_DP
+import com.kairumo.padnote.canvas.ResizeHandle
+import com.kairumo.padnote.canvas.RotationHandle
 
 /**
  * 畫布上的文字方塊圖層（Android）。
@@ -127,6 +130,19 @@ private fun TextBoxView(
     }
 
         if (isSelected) {
+            // 右下角的縮放把手。原本 Android 完全沒有 —— 文字方塊的大小
+            // 只能進編輯面板調，而 Apple 端畫布上就有把手。
+            ResizeHandle(
+                widthDp = box.width,
+                heightDp = box.height,
+                density = density,
+                onResize = { dw, dh ->
+                    box.width = maxOf(MIN_OBJECT_WIDTH_DP, box.width + dw)
+                    box.height = maxOf(MIN_OBJECT_HEIGHT_DP, box.height + dh)
+                },
+                onCommit = { onChanged(box) }
+            )
+
             RotationHandle(
                 degrees = rotation,
                 widthDp = box.width,

@@ -234,6 +234,62 @@ pub fn shape_semantic(kind: FfiShapeKind) -> Option<String> {
     ShapeKind::from(kind).semantic().map(str::to_string)
 }
 
+/// 線狀形狀（線、箭頭、雙箭頭）的箭頭。非線狀形狀兩端都是空的。
+///
+/// 為什麼要有這個：平台層拿到的 `shape_outline` 對線狀形狀只有兩個點，
+/// 畫出來是一條光禿禿的線 —— 箭頭與線長得一模一樣。箭頭的三角形自己算
+/// 也不是不行，但那會變成兩份幾何，Apple 與 Android 的角度稍有出入就
+/// 看得出來。和輪廓一樣從核心出。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiArrowHeads {
+    /// 起點端的三角形頂點；沒有箭頭時為空。
+    pub start: Vec<FfiPoint>,
+    /// 終點端的三角形頂點；沒有箭頭時為空。
+    pub end: Vec<FfiPoint>,
+}
+
+/// 是否為線狀形狀（只有起點與終點，沒有面積）。
+///
+/// 平台層用它決定路徑要不要收尾：線狀形狀收尾的話，一條線會被
+/// 折回成零面積的圖形，某些繪圖 API 乾脆什麼都不畫。
+#[uniffi::export]
+pub fn shape_is_linear(kind: FfiShapeKind) -> bool {
+    ShapeKind::from(kind).is_linear()
+}
+
+/// 線狀形狀兩端的箭頭。`size` 是箭頭長度（點）。
+#[uniffi::export]
+pub fn shape_arrow_heads(shape: FfiShape, size: f32) -> FfiArrowHeads {
+    let kind = ShapeKind::from(shape.kind);
+    let empty = FfiArrowHeads {
+        start: Vec::new(),
+        end: Vec::new(),
+    };
+    if !kind.is_linear() {
+        return empty;
+    }
+    let points = Shape::from(shape).outline(2);
+    if points.len() < 2 {
+        return empty;
+    }
+    let (a, b) = (points[0], points[points.len() - 1]);
+    let head = |tip: (f32, f32), from: (f32, f32)| -> Vec<FfiPoint> {
+        arrow_head(tip, from, size).into_iter().map(Into::into).collect()
+    };
+    match kind {
+        ShapeKind::Arrow => FfiArrowHeads {
+            start: Vec::new(),
+            end: head(b, a),
+        },
+        ShapeKind::DoubleArrow => FfiArrowHeads {
+            start: head(a, b),
+            end: head(b, a),
+        },
+        // Line 沒有箭頭。
+        _ => empty,
+    }
+}
+
 /// 是否可在形狀內輸入文字。
 #[uniffi::export]
 pub fn shape_accepts_text(kind: FfiShapeKind) -> bool {
@@ -459,6 +515,55 @@ mod tests {
             let pts = shape_outline(shape(k.into()), 24);
             assert!(pts.len() >= 2, "{k:?} 的輪廓只有 {} 點", pts.len());
         }
+    }
+
+    #[test]
+    fn linear_shapes_are_reported_as_linear() {
+        // 平台層靠這個判斷路徑要不要收尾。判錯的後果是線狀形狀完全不顯示
+        // —— 使用者插入了一個看不見的物件（實際發生過）。
+        for k in [
+            FfiShapeKind::Line,
+            FfiShapeKind::Arrow,
+            FfiShapeKind::DoubleArrow,
+        ] {
+            assert!(shape_is_linear(k), "{k:?} 應為線狀");
+        }
+        for k in [FfiShapeKind::Process, FfiShapeKind::Ellipse] {
+            assert!(!shape_is_linear(k), "{k:?} 不應為線狀");
+        }
+    }
+
+    #[test]
+    fn arrow_heads_match_the_kind() {
+        let heads = shape_arrow_heads(shape(FfiShapeKind::Line), 10.0);
+        assert!(heads.start.is_empty() && heads.end.is_empty(), "線不該有箭頭");
+
+        let heads = shape_arrow_heads(shape(FfiShapeKind::Arrow), 10.0);
+        assert!(heads.start.is_empty(), "單箭頭的起點端不該有箭頭");
+        assert_eq!(heads.end.len(), 3, "箭頭應是三角形");
+
+        let heads = shape_arrow_heads(shape(FfiShapeKind::DoubleArrow), 10.0);
+        assert_eq!(heads.start.len(), 3);
+        assert_eq!(heads.end.len(), 3);
+
+        // 非線狀形狀問了也不能拿到箭頭，否則橢圓上會冒出一個三角形。
+        let heads = shape_arrow_heads(shape(FfiShapeKind::Ellipse), 10.0);
+        assert!(heads.start.is_empty() && heads.end.is_empty());
+    }
+
+    #[test]
+    fn arrow_head_sits_at_the_far_end_of_the_line() {
+        let s = FfiShape {
+            bounds: rect(0.0, 0.0, 100.0, 100.0),
+            ..shape(FfiShapeKind::Arrow)
+        };
+        let heads = shape_arrow_heads(s, 12.0);
+        // 線是左上到右下，箭頭尖端應該落在右下角附近。
+        let tip = heads.end[0];
+        assert!(
+            (tip.x - 100.0).abs() < 0.01 && (tip.y - 100.0).abs() < 0.01,
+            "箭頭尖端應在終點，實得 {tip:?}"
+        );
     }
 
     #[test]

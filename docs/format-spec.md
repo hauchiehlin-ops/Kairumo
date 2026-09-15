@@ -213,11 +213,17 @@ C1（筆跡↔錄音跳轉）、C4（詞級時間戳）、A10（筆跡重播）�
 | `borderColorHex` | string | `#RRGGBB` |
 | `borderWidth` | number | 點 |
 | `cornerRadius` | number | 點 |
-| `width` / `height` | number | 方框尺寸（點） |
+| `width` / `height` | number | 方框尺寸（點）。**兩者都是權威值**，不是「建議值」—— 高度由內容決定的話，同一個方塊在兩個平台高度不同 |
 | `lineSpacing` | number | 行距（點） |
 | `paragraphSpacing` | number | 段落間距（點） |
 | `firstLineIndent` | number | 首行縮排（點） |
 | `paragraphIndent` | number | 整段縮排（點） |
+
+物件的 `x` / `y` 是**未旋轉版面框的左上角**，與 `width` / `height` 同一個座標系。
+
+寫下來是因為它被誤解過：Apple 端曾經把文字方塊的垂直中心定在 `y + 60`
+（等同假設方塊高 120）而不是 `y + height / 2`，於是同一份筆記的文字方塊
+在 iPad 與 Android 上落在不同的位置，且高度一改就錯位。
 
 `"clear"` 是**哨符**，不是顏色：它與 `#FFFFFF` 是兩回事，而且不能走顏色轉換
 （多數 hex 轉換會丟掉 alpha，透明就變成黑色）。

@@ -116,6 +116,31 @@ public struct NoteShapeAttachment: Identifiable, Codable, Hashable {
 
     /// 這種形狀能不能放字。連接線與箭頭不能。
     public var acceptsText: Bool { shapeAcceptsText(kind: kind) }
+
+    /// 線狀形狀（線／箭頭／雙箭頭）。路徑不能收尾，也沒有可填色的內部。
+    public var isLinear: Bool { shapeIsLinear(kind: kind) }
+
+    /// 兩端的箭頭三角形（畫布座標）。非線狀形狀回傳空陣列。
+    ///
+    /// 箭頭大小跟著線寬走：兩點的粗線配一個小三角形會看不出是箭頭。
+    public func arrowHeads() -> [[CGPoint]] {
+        guard isLinear else { return [] }
+        let heads = shapeArrowHeads(
+            shape: FfiShape(
+                kind: kind,
+                bounds: FfiRect(
+                    minX: Float(x), minY: Float(y),
+                    maxX: Float(x + width), maxY: Float(y + height)
+                ),
+                cornerRadius: Float(cornerRadius),
+                rotationDegrees: 0
+            ),
+            size: Float(max(10, lineWidth * 5))
+        )
+        return [heads.start, heads.end]
+            .filter { $0.count >= 3 }
+            .map { $0.map { CGPoint(x: CGFloat($0.x), y: CGFloat($0.y)) } }
+    }
 }
 
 /// 兩個形狀之間的連接線。

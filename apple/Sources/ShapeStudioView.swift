@@ -23,19 +23,31 @@ public struct NoteShapeView: View {
         let points = shape.outline()
         ZStack {
             Canvas { context, _ in
-                guard points.count > 2 else { return }
+                guard points.count >= 2 else { return }
                 var path = Path()
                 // 頂點是畫布座標，這裡的畫布原點在物件左上角 —— 要減掉偏移。
                 path.move(to: CGPoint(x: points[0].x - shape.x, y: points[0].y - shape.y))
                 for point in points.dropFirst() {
                     path.addLine(to: CGPoint(x: point.x - shape.x, y: point.y - shape.y))
                 }
-                path.closeSubpath()
-
-                if let fill = fillColor {
-                    context.fill(path, with: .color(fill))
+                // 線狀形狀（線／箭頭／雙箭頭）只有兩個點，不能收尾也不能填色。
+                if !shape.isLinear {
+                    path.closeSubpath()
+                    if let fill = fillColor {
+                        context.fill(path, with: .color(fill))
+                    }
                 }
                 context.stroke(path, with: .color(strokeColor), lineWidth: shape.lineWidth)
+
+                for head in shape.arrowHeads() where head.count >= 3 {
+                    var tri = Path()
+                    tri.move(to: CGPoint(x: head[0].x - shape.x, y: head[0].y - shape.y))
+                    for point in head.dropFirst() {
+                        tri.addLine(to: CGPoint(x: point.x - shape.x, y: point.y - shape.y))
+                    }
+                    tri.closeSubpath()
+                    context.fill(tri, with: .color(strokeColor))
+                }
             }
             .frame(width: shape.width, height: shape.height)
 
@@ -237,14 +249,41 @@ struct ShapeThumbnail: View {
                 ),
                 segments: 40
             )
-            guard points.count > 2 else { return }
+            // 線、箭頭、雙箭頭的輪廓只有兩個點。用 `> 2` 擋掉的話它們
+            // 整格都是空白 —— 選單裡那三格看起來像壞掉（實際發生過）。
+            guard points.count >= 2 else { return }
+            let isLinear = shapeIsLinear(kind: kind)
             var path = Path()
             path.move(to: CGPoint(x: CGFloat(points[0].x), y: CGFloat(points[0].y)))
             for point in points.dropFirst() {
                 path.addLine(to: CGPoint(x: CGFloat(point.x), y: CGFloat(point.y)))
             }
-            path.closeSubpath()
+            // 線狀形狀不能收尾：折回去就成了零面積的圖形。
+            if !isLinear { path.closeSubpath() }
             context.stroke(path, with: .color(.primary), lineWidth: 1.5)
+
+            if isLinear {
+                let heads = shapeArrowHeads(
+                    shape: FfiShape(
+                        kind: kind,
+                        bounds: FfiRect(minX: 2, minY: 2,
+                                        maxX: Float(size.width) - 2,
+                                        maxY: Float(size.height) - 2),
+                        cornerRadius: 4,
+                        rotationDegrees: 0
+                    ),
+                    size: 8
+                )
+                for head in [heads.start, heads.end] where head.count >= 3 {
+                    var tri = Path()
+                    tri.move(to: CGPoint(x: CGFloat(head[0].x), y: CGFloat(head[0].y)))
+                    for point in head.dropFirst() {
+                        tri.addLine(to: CGPoint(x: CGFloat(point.x), y: CGFloat(point.y)))
+                    }
+                    tri.closeSubpath()
+                    context.fill(tri, with: .color(.primary))
+                }
+            }
         }
     }
 }

@@ -75,7 +75,8 @@ for t in "${TARGETS[@]}"; do
 done
 
 echo "==> 產生綁定"
-./scripts/generate-bindings.sh
+# 見 generate-bindings.sh 裡的說明：不關掉同步檢查的話，這一行會被它擋下來。
+PADNOTE_REBUILDING_XCFRAMEWORK=1 ./scripts/generate-bindings.sh
 
 OUT="apple/PadnoteCore.xcframework"
 rm -rf "$OUT"

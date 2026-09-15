@@ -134,18 +134,31 @@ private fun ShapeObjectView(
     ) {
         Canvas(Modifier.fillMaxSize()) {
             val points = shape.outline()
-            if (points.size < 3) return@Canvas
+            if (points.size < 2) return@Canvas
             val scale = 1f / density
+            val linear = shape.isLinear
             val path = Path().apply {
                 // 頂點是畫布座標，這個 Canvas 的原點在物件左上角 —— 要減掉偏移。
                 moveTo((points[0].x - shape.x) * scale, (points[0].y - shape.y) * scale)
                 points.drop(1).forEach {
                     lineTo((it.x - shape.x) * scale, (it.y - shape.y) * scale)
                 }
-                close()
+                // 線狀形狀（線／箭頭／雙箭頭）只有兩個點，不能收尾也不能填色。
+                if (!linear) close()
             }
-            fill?.let { drawPath(path, it) }
+            if (!linear) fill?.let { drawPath(path, it) }
             drawPath(path, stroke, style = Stroke(width = shape.lineWidth * scale))
+
+            for (head in shape.arrowHeads()) {
+                val tri = Path().apply {
+                    moveTo((head[0].x - shape.x) * scale, (head[0].y - shape.y) * scale)
+                    head.drop(1).forEach {
+                        lineTo((it.x - shape.x) * scale, (it.y - shape.y) * scale)
+                    }
+                    close()
+                }
+                drawPath(tri, stroke)
+            }
         }
 
         if (shape.acceptsText && shape.label.isNotEmpty()) {

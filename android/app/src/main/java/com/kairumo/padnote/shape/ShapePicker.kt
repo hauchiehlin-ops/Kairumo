@@ -34,6 +34,8 @@ import uniffi.padnote_core.FfiShapeKind
 import uniffi.padnote_core.allShapeKinds
 import uniffi.padnote_core.flowchartShapeKinds
 import uniffi.padnote_core.flowchartTemplates
+import uniffi.padnote_core.shapeArrowHeads
+import uniffi.padnote_core.shapeIsLinear
 import uniffi.padnote_core.shapeOutline
 import uniffi.padnote_core.shapeSemantic
 
@@ -164,13 +166,38 @@ private fun ShapeThumbnail(kind: FfiShapeKind) {
                 ),
                 40u
             )
-            if (points.size < 3) return@Canvas
+            // 線、箭頭、雙箭頭的輪廓只有兩個點。用 `< 3` 擋掉的話它們整格
+            // 都是空白 —— 選單裡那三格看起來像壞掉（實際發生過）。
+            if (points.size < 2) return@Canvas
+            val linear = shapeIsLinear(kind)
             val path = Path().apply {
                 moveTo(points[0].x, points[0].y)
                 points.drop(1).forEach { lineTo(it.x, it.y) }
-                close()
+                // 線狀形狀不能收尾：折回去就成了零面積的圖形。
+                if (!linear) close()
             }
             drawPath(path, color, style = Stroke(width = 1.5f))
+
+            if (linear) {
+                val heads = shapeArrowHeads(
+                    FfiShape(
+                        kind = kind,
+                        bounds = FfiRect(2f, 2f, size.width - 2f, size.height - 2f),
+                        cornerRadius = 4f,
+                        rotationDegrees = 0f
+                    ),
+                    8f
+                )
+                for (head in listOf(heads.start, heads.end)) {
+                    if (head.size < 3) continue
+                    val tri = Path().apply {
+                        moveTo(head[0].x, head[0].y)
+                        head.drop(1).forEach { lineTo(it.x, it.y) }
+                        close()
+                    }
+                    drawPath(tri, color)
+                }
+            }
         }
     }
 }

@@ -345,7 +345,8 @@ public struct WordTextStudioView: View {
     private var backgroundSwatches: some View {
         // 換行排列。原本是一列七個色票加上自訂色票器，配上右邊的邊框開關
         // 就超出面板寬度，最後幾個顏色被裁掉。
-        let columns = [GridItem(.adaptive(minimum: 30), spacing: 8)]
+        // 34 是配合底下 32pt 的命中區 —— 比命中區小的話最後一欄會被擠出面板。
+        let columns = [GridItem(.adaptive(minimum: 34), spacing: 8)]
         return LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
             ForEach(cardBackgroundOptions, id: \.hex) { opt in
                 Button {
@@ -356,6 +357,10 @@ public struct WordTextStudioView: View {
                             .fill(opt.color)
                             .frame(width: 24, height: 24)
                             .overlay(Circle().stroke(Color.secondary.opacity(0.4), lineWidth: 1))
+                            // 透明色票的填色是 `.clear`，可點的只剩那圈 1pt 的邊線
+                            // 與那條斜線 —— 要正中那幾個點才有反應，使用者的感受
+                            // 是「點很多下才會中」。底下補一塊不透明的命中區。
+                            .background(Circle().fill(Color.primary.opacity(0.001)))
                         // 透明畫成一條斜線。不畫的話它跟白色長得一模一樣。
                         if opt.hex == "clear" {
                             Path { path in
@@ -373,6 +378,10 @@ public struct WordTextStudioView: View {
                     }
                 }
                 .buttonStyle(.plain)
+                // 命中區放大到 32pt 見方。24pt 的圓形色票在手指下本來就偏小，
+                // 而這裡的間距容得下，不會誤觸隔壁。
+                .frame(width: 32, height: 32)
+                .contentShape(Rectangle())
                 .help(opt.name)
             }
 
@@ -391,7 +400,7 @@ public struct WordTextStudioView: View {
 
     private var borderColorRow: some View {
         labeledRow(localizationManager.localized("border_color")) {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 28), spacing: 8)],
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 32), spacing: 8)],
                       alignment: .leading, spacing: 8) {
                 ForEach(borderColorOptions, id: \.self) { hex in
                     Button {
@@ -407,6 +416,9 @@ public struct WordTextStudioView: View {
                             )
                     }
                     .buttonStyle(.plain)
+                    // 22pt 的圓在手指下太小。命中區與底色色票同一套作法。
+                    .frame(width: 30, height: 30)
+                    .contentShape(Rectangle())
                 }
                 ColorPicker("", selection: Binding(
                     get: { Color(hex: attachment.borderColorHex ?? "#8E8E93") ?? .gray },
@@ -434,6 +446,9 @@ public struct WordTextStudioView: View {
                             .cornerRadius(5)
                     }
                     .buttonStyle(.plain)
+                    // 這裡畫的是一條 2pt 高的線。沒有這行的話，可點的就只有
+                    // 那條線本身 —— 上下各差一點就沒反應。
+                    .contentShape(Rectangle())
                 }
                 Spacer()
             }
