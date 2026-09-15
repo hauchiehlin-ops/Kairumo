@@ -245,9 +245,15 @@ archive_export_upload() {
 
     echo "🚀 正在${ACTION_NAME} ${label} 至 App Store Connect..."
     if [[ -n "${APP_STORE_CONNECT_API_KEY_ID:-}" && -n "${APP_STORE_CONNECT_ISSUER_ID:-}" && -n "${APP_STORE_CONNECT_KEY_PATH:-}" ]]; then
+        # altool 只認 ~/.appstoreconnect/private_keys 底下的金鑰，所以要複製一份。
+        # 但金鑰本來就放在那裡時，BSD cp 會以「are identical」失敗並回傳 1，
+        # 配上 set -e 就是打包全部跑完、卻卡在上傳前一步 —— 實際踩過。
         local keys_dir="${HOME}/.appstoreconnect/private_keys"
+        local key_dest="${keys_dir}/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
         mkdir -p "$keys_dir"
-        cp -f "$APP_STORE_CONNECT_KEY_PATH" "${keys_dir}/AuthKey_${APP_STORE_CONNECT_API_KEY_ID}.p8"
+        if [[ "$(cd "$(dirname "$APP_STORE_CONNECT_KEY_PATH")" && pwd)/$(basename "$APP_STORE_CONNECT_KEY_PATH")" != "$key_dest" ]]; then
+            cp -f "$APP_STORE_CONNECT_KEY_PATH" "$key_dest"
+        fi
         xcrun altool "$ALTOOL_ACTION" \
             -f "$package" \
             -t "$altool_platform" \
