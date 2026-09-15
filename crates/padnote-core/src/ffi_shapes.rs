@@ -5,6 +5,7 @@
 //! 才能拿到硬體加速與正確的次像素品質。
 
 use padnote_ink::Rect;
+use padnote_shapes::align::{AlignMode, AlignRect};
 use padnote_shapes::{Anchor, Connection, EndCap, RouteStyle, Shape, ShapeKind, arrow_head};
 
 use crate::ffi_geometry::FfiRect;
@@ -246,6 +247,59 @@ pub struct FfiArrowHeads {
     pub start: Vec<FfiPoint>,
     /// 終點端的三角形頂點；沒有箭頭時為空。
     pub end: Vec<FfiPoint>,
+}
+
+/// 對齊方式。與 `padnote_shapes::AlignMode` 一對一。
+#[derive(Clone, Copy, PartialEq, Eq, Debug, uniffi::Enum)]
+pub enum FfiAlignMode {
+    Left,
+    HorizontalCenter,
+    Right,
+    Top,
+    VerticalMiddle,
+    Bottom,
+    DistributeHorizontally,
+    DistributeVertically,
+}
+
+impl From<FfiAlignMode> for AlignMode {
+    fn from(m: FfiAlignMode) -> Self {
+        match m {
+            FfiAlignMode::Left => Self::Left,
+            FfiAlignMode::HorizontalCenter => Self::HorizontalCenter,
+            FfiAlignMode::Right => Self::Right,
+            FfiAlignMode::Top => Self::Top,
+            FfiAlignMode::VerticalMiddle => Self::VerticalMiddle,
+            FfiAlignMode::Bottom => Self::Bottom,
+            FfiAlignMode::DistributeHorizontally => Self::DistributeHorizontally,
+            FfiAlignMode::DistributeVertically => Self::DistributeVertically,
+        }
+    }
+}
+
+/// 把一組矩形對齊，回傳每個矩形的**新左上角座標**（順序與輸入相同）。
+///
+/// 基準是選取範圍，不是頁面 —— 使用者選了三個方塊按「靠左」，期待的是那三個
+/// 對齊彼此，不是統統飛到頁面左緣。
+///
+/// 放在核心而不是兩邊各寫一份：「靠左」的細節有好幾種合理答案（對齊到最左的
+/// 物件還是選取範圍？置中用選取範圍還是頁面中線？分佈時頭尾動不動？），
+/// 各自實作就會各自挑一種，而使用者在 iPad 上排好的版面到 Android 會跑掉。
+#[uniffi::export]
+pub fn align_rects(rects: Vec<FfiRect>, mode: FfiAlignMode) -> Vec<FfiPoint> {
+    let input: Vec<AlignRect> = rects
+        .iter()
+        .map(|r| AlignRect {
+            x: r.min_x,
+            y: r.min_y,
+            width: r.max_x - r.min_x,
+            height: r.max_y - r.min_y,
+        })
+        .collect();
+    padnote_shapes::align::align(&input, mode.into())
+        .into_iter()
+        .map(|(x, y)| FfiPoint { x, y })
+        .collect()
 }
 
 /// 是否為線狀形狀（只有起點與終點，沒有面積）。
@@ -515,6 +569,34 @@ mod tests {
             let pts = shape_outline(shape(k.into()), 24);
             assert!(pts.len() >= 2, "{k:?} 的輪廓只有 {} 點", pts.len());
         }
+    }
+
+    #[test]
+    fn align_rects_crosses_the_ffi_intact() {
+        // FFI 這一層只是換個型別，但換錯邊（把 max 當成寬）會讓所有東西
+        // 對齊到錯的地方，而那在單元測試裡看不出來 —— 那些測的是核心。
+        let rects = vec![
+            FfiRect { min_x: 30.0, min_y: 0.0, max_x: 40.0, max_y: 10.0 },
+            FfiRect { min_x: 10.0, min_y: 50.0, max_x: 30.0, max_y: 60.0 },
+        ];
+        let out = align_rects(rects, FfiAlignMode::Left);
+        assert_eq!(out[0].x, 10.0);
+        assert_eq!(out[1].x, 10.0);
+        // 靠左不可以動到 y。
+        assert_eq!(out[0].y, 0.0);
+        assert_eq!(out[1].y, 50.0);
+    }
+
+    #[test]
+    fn align_rects_preserves_width_when_aligning_right() {
+        let rects = vec![
+            FfiRect { min_x: 0.0, min_y: 0.0, max_x: 10.0, max_y: 10.0 },
+            FfiRect { min_x: 0.0, min_y: 50.0, max_x: 40.0, max_y: 60.0 },
+        ];
+        let out = align_rects(rects, FfiAlignMode::Right);
+        // 右緣都要落在 40：窄的那個左上角要退到 30。
+        assert_eq!(out[0].x, 30.0);
+        assert_eq!(out[1].x, 0.0);
     }
 
     #[test]

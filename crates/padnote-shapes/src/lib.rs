@@ -17,3 +17,5 @@ pub mod template;
 pub use connector::{Connection, EndCap, RouteStyle, arrow_head};
 pub use shape::{Anchor, Shape, ShapeKind};
 pub use template::{Template, TemplateNode, builtin_templates};
+
+pub mod align;

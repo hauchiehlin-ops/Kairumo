@@ -53,6 +53,7 @@ import com.kairumo.padnote.account.AccountManager
 import com.kairumo.padnote.canvas.ObjectStacking
 import com.kairumo.padnote.library.NotebookMeta
 import com.kairumo.padnote.canvas.CanvasStackPanel
+import com.kairumo.padnote.canvas.ObjectGeometry
 import com.kairumo.padnote.canvas.EditorMode
 import com.kairumo.padnote.account.IdentityDialog
 import com.kairumo.padnote.library.HomeScreen
@@ -973,6 +974,33 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
         )
     }
 
+    /**
+     * 對齊選取中的物件。
+     *
+     * 幾何交給核心的 `alignRects`；這裡只負責「哪個 id 是哪個物件」與把新座標
+     * 寫回去。**矩形的順序必須與回傳座標的順序一致**，錯位的話每個物件會搬到
+     * 別人的位置。
+     *
+     * id 由圖層面板給 —— 畫布上的選取是「每種型別各一個」，兩個文字方塊
+     * 根本選不起來，而對齊最常用的就是那種情況。
+     */
+    fun alignObjects(mode: uniffi.padnote_core.FfiAlignMode, ids: List<String>) {
+        if (ids.size < 2) return
+
+        val rects = ids.map { id ->
+            // 有任何一個找不到就整批不動 —— 只搬一半比不搬更難收拾。
+            ObjectGeometry.rectOf(id, textStore, imageStore, tableStore, chartStore, shapeStore)
+                ?: return
+        }
+        val origins = uniffi.padnote_core.alignRects(rects, mode)
+        if (origins.size != ids.size) return
+        ids.forEachIndexed { i, id ->
+            ObjectGeometry.move(id, origins[i].x, origins[i].y,
+                textStore, imageStore, tableStore, chartStore, shapeStore)
+        }
+        textRevision++; imageRevision++; tableRevision++; chartRevision++; shapeRevision++
+    }
+
     if (showStackPanel) {
         CanvasStackPanel(
             items = stackItems,
@@ -983,6 +1011,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 meta.setObjectOrder(notebook?.first, pageIndex, updated)
                 stackRevision++
             },
+            onAlign = { mode, ids -> alignObjects(mode, ids) },
             onDismiss = { showStackPanel = false }
         )
     }

@@ -127,6 +127,86 @@ extension LocalizationManager {
             .ko: "텍스트 상자 추가",
             .th: "เพิ่มกล่องข้อความ"
         ],
+        "align_bottom": [
+            .zhHant: "靠下對齊",
+            .en: "Align bottom",
+            .zhHans: "靠下对齐",
+            .ja: "下揃え",
+            .ko: "아래쪽 정렬",
+            .th: "ชิดล่าง"
+        ],
+        "align_center_h": [
+            .zhHant: "水平置中",
+            .en: "Center horizontally",
+            .zhHans: "水平居中",
+            .ja: "左右中央",
+            .ko: "가로 가운데",
+            .th: "กึ่งกลางแนวนอน"
+        ],
+        "align_distribute_h": [
+            .zhHant: "水平等距",
+            .en: "Distribute horizontally",
+            .zhHans: "水平等距",
+            .ja: "左右に等間隔",
+            .ko: "가로 균등 배치",
+            .th: "กระจายแนวนอน"
+        ],
+        "align_distribute_v": [
+            .zhHant: "垂直等距",
+            .en: "Distribute vertically",
+            .zhHans: "垂直等距",
+            .ja: "上下に等間隔",
+            .ko: "세로 균등 배치",
+            .th: "กระจายแนวตั้ง"
+        ],
+        "align_left": [
+            .zhHant: "靠左對齊",
+            .en: "Align left",
+            .zhHans: "靠左对齐",
+            .ja: "左揃え",
+            .ko: "왼쪽 정렬",
+            .th: "ชิดซ้าย"
+        ],
+        "align_middle_v": [
+            .zhHant: "垂直置中",
+            .en: "Center vertically",
+            .zhHans: "垂直居中",
+            .ja: "上下中央",
+            .ko: "세로 가운데",
+            .th: "กึ่งกลางแนวตั้ง"
+        ],
+        "align_needs_two": [
+            .zhHant: "選兩個以上的物件才能對齊",
+            .en: "Select two or more objects to align",
+            .zhHans: "选两个以上的物件才能对齐",
+            .ja: "整列するには 2 つ以上選択してください",
+            .ko: "정렬하려면 두 개 이상 선택하세요",
+            .th: "เลือกตั้งแต่ 2 ชิ้นขึ้นไปเพื่อจัดแนว"
+        ],
+        "align_objects": [
+            .zhHant: "對齊",
+            .en: "Align",
+            .zhHans: "对齐",
+            .ja: "整列",
+            .ko: "정렬",
+            .th: "จัดแนว"
+        ],
+        "align_right": [
+            .zhHant: "靠右對齊",
+            .en: "Align right",
+            .zhHans: "靠右对齐",
+            .ja: "右揃え",
+            .ko: "오른쪽 정렬",
+            .th: "ชิดขวา"
+        ],
+        "align_top": [
+            .zhHant: "靠上對齊",
+            .en: "Align top",
+            .zhHans: "靠上对齐",
+            .ja: "上揃え",
+            .ko: "위쪽 정렬",
+            .th: "ชิดบน"
+        ],
         "alignment": [
             .zhHant: "對齊",
             .en: "Alignment",

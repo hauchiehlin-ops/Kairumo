@@ -122,6 +122,86 @@ object LocalizationStrings {
             "ko" to "텍스트 상자 추가",
             "th" to "เพิ่มกล่องข้อความ"
         ),
+        "align_bottom" to mapOf(
+            "zh-Hant" to "靠下對齊",
+            "en" to "Align bottom",
+            "zh-Hans" to "靠下对齐",
+            "ja" to "下揃え",
+            "ko" to "아래쪽 정렬",
+            "th" to "ชิดล่าง"
+        ),
+        "align_center_h" to mapOf(
+            "zh-Hant" to "水平置中",
+            "en" to "Center horizontally",
+            "zh-Hans" to "水平居中",
+            "ja" to "左右中央",
+            "ko" to "가로 가운데",
+            "th" to "กึ่งกลางแนวนอน"
+        ),
+        "align_distribute_h" to mapOf(
+            "zh-Hant" to "水平等距",
+            "en" to "Distribute horizontally",
+            "zh-Hans" to "水平等距",
+            "ja" to "左右に等間隔",
+            "ko" to "가로 균등 배치",
+            "th" to "กระจายแนวนอน"
+        ),
+        "align_distribute_v" to mapOf(
+            "zh-Hant" to "垂直等距",
+            "en" to "Distribute vertically",
+            "zh-Hans" to "垂直等距",
+            "ja" to "上下に等間隔",
+            "ko" to "세로 균등 배치",
+            "th" to "กระจายแนวตั้ง"
+        ),
+        "align_left" to mapOf(
+            "zh-Hant" to "靠左對齊",
+            "en" to "Align left",
+            "zh-Hans" to "靠左对齐",
+            "ja" to "左揃え",
+            "ko" to "왼쪽 정렬",
+            "th" to "ชิดซ้าย"
+        ),
+        "align_middle_v" to mapOf(
+            "zh-Hant" to "垂直置中",
+            "en" to "Center vertically",
+            "zh-Hans" to "垂直居中",
+            "ja" to "上下中央",
+            "ko" to "세로 가운데",
+            "th" to "กึ่งกลางแนวตั้ง"
+        ),
+        "align_needs_two" to mapOf(
+            "zh-Hant" to "選兩個以上的物件才能對齊",
+            "en" to "Select two or more objects to align",
+            "zh-Hans" to "选两个以上的物件才能对齐",
+            "ja" to "整列するには 2 つ以上選択してください",
+            "ko" to "정렬하려면 두 개 이상 선택하세요",
+            "th" to "เลือกตั้งแต่ 2 ชิ้นขึ้นไปเพื่อจัดแนว"
+        ),
+        "align_objects" to mapOf(
+            "zh-Hant" to "對齊",
+            "en" to "Align",
+            "zh-Hans" to "对齐",
+            "ja" to "整列",
+            "ko" to "정렬",
+            "th" to "จัดแนว"
+        ),
+        "align_right" to mapOf(
+            "zh-Hant" to "靠右對齊",
+            "en" to "Align right",
+            "zh-Hans" to "靠右对齐",
+            "ja" to "右揃え",
+            "ko" to "오른쪽 정렬",
+            "th" to "ชิดขวา"
+        ),
+        "align_top" to mapOf(
+            "zh-Hant" to "靠上對齊",
+            "en" to "Align top",
+            "zh-Hans" to "靠上对齐",
+            "ja" to "上揃え",
+            "ko" to "위쪽 정렬",
+            "th" to "ชิดบน"
+        ),
         "alignment" to mapOf(
             "zh-Hant" to "對齊",
             "en" to "Alignment",

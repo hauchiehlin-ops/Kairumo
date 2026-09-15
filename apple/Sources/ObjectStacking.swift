@@ -122,6 +122,42 @@ public enum ObjectStacking {
     }
 }
 
+// MARK: - 對齊
+
+/// 對齊一組物件。
+///
+/// 幾何走核心的 `alignRects` —— 「靠左」的細節有好幾種合理答案（對齊到最左的
+/// 物件還是選取範圍？置中用選取範圍還是頁面中線？），兩邊各寫一份就會各挑
+/// 一種，而使用者在 iPad 上排好的版面到 Android 會跑掉。
+public enum ObjectAlignment {
+
+    /// 選單上的順序。分佈放最後，它與前六個不是同一類操作。
+    public static let modes: [(mode: FfiAlignMode, key: String, symbol: String)] = [
+        (.left, "align_left", "align.horizontal.left"),
+        (.horizontalCenter, "align_center_h", "align.horizontal.center"),
+        (.right, "align_right", "align.horizontal.right"),
+        (.top, "align_top", "align.vertical.top"),
+        (.verticalMiddle, "align_middle_v", "align.vertical.center"),
+        (.bottom, "align_bottom", "align.vertical.bottom"),
+        (.distributeHorizontally, "align_distribute_h", "distribute.horizontal"),
+        (.distributeVertically, "align_distribute_v", "distribute.vertical")
+    ]
+
+    /// 算出每個矩形對齊後的新左上角。順序與輸入相同。
+    public static func aligned(
+        rects: [CGRect],
+        mode: FfiAlignMode
+    ) -> [CGPoint] {
+        let input = rects.map {
+            FfiRect(minX: Float($0.minX), minY: Float($0.minY),
+                    maxX: Float($0.maxX), maxY: Float($0.maxY))
+        }
+        return alignRects(rects: input, mode: mode).map {
+            CGPoint(x: CGFloat($0.x), y: CGFloat($0.y))
+        }
+    }
+}
+
 // MARK: - 跨型別的堆疊面板
 
 /// 畫布上**所有**物件的堆疊面板。
@@ -133,17 +169,24 @@ public struct CanvasStackPanel: View {
     let objects: [StackableObject]
     @Binding var order: [String]
     @Binding var selection: Set<String>
+    /// 對齊指定的那些物件。
+    ///
+    /// 選取清單由這個面板持有，並且**照目前的堆疊順序**傳出去 ——
+    /// 用 `Set` 的迭代順序的話，同樣的操作每次得到的結果會不一樣。
+    let onAlign: (FfiAlignMode, [String]) -> Void
 
     @ObservedObject private var localizationManager = LocalizationManager.shared
 
     public init(
         objects: [StackableObject],
         order: Binding<[String]>,
-        selection: Binding<Set<String>>
+        selection: Binding<Set<String>>,
+        onAlign: @escaping (FfiAlignMode, [String]) -> Void = { _, _ in }
     ) {
         self.objects = objects
         _order = order
         _selection = selection
+        self.onAlign = onAlign
     }
 
     public var body: some View {
@@ -172,10 +215,44 @@ public struct CanvasStackPanel: View {
 
                 Divider()
                 orderButtons
+
+                Divider()
+                Text(localizationManager.localized("align_objects"))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                alignButtons
+                if selection.count < 2 {
+                    // 只選一個時按鈕是停用的 —— 不說原因的話，使用者會以為壞了。
+                    Text(localizationManager.localized("align_needs_two"))
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
         }
         .padding(12)
         .frame(width: 260)
+    }
+
+    /// 兩列四個。八個排成一列的話，在 260pt 寬的面板裡每個只剩 30pt。
+    private var alignButtons: some View {
+        VStack(spacing: 6) {
+            ForEach([0, 1], id: \.self) { row in
+                HStack(spacing: 6) {
+                    ForEach(Array(ObjectAlignment.modes[(row * 4)..<(row * 4 + 4)]), id: \.key) { item in
+                        Button {
+                            onAlign(item.mode, orderedSelection)
+                        } label: {
+                            Image(systemName: item.symbol).frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.bordered)
+                        .disabled(selection.count < 2)
+                        .help(localizationManager.localized(item.key))
+                        .accessibilityLabel(localizationManager.localized(item.key))
+                    }
+                }
+            }
+        }
     }
 
     private var rowsFrontToBack: [StackableObject] {

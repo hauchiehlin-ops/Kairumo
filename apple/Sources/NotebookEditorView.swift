@@ -2383,7 +2383,8 @@ public struct NotebookEditorView: View {
                                         store.updateNotebook(notebook)
                                     }
                                 ),
-                                selection: $selectedShapeIds
+                                selection: $selectedShapeIds,
+                                onAlign: { mode, ids in alignSelectedObjects(mode, ids: ids) }
                             )
 
                             // 形狀的群組操作留在原本的面板 —— 群組是形狀專屬的
@@ -4951,6 +4952,86 @@ ZStack(alignment: .topTrailing) {
     /// 目前這一頁的形狀，依堆疊順序。
     private var pageShapes: [NoteShapeAttachment] {
         (notebook.shapeAttachments ?? []).filter { $0.pageIndex == currentPageIndex }
+    }
+
+    /// 對齊目前選取的物件。
+    ///
+    /// 幾何交給核心；這裡只負責「哪個 id 是哪個附件」與把新座標寫回去。
+    /// id 由圖層面板給 —— 它才是多選發生的地方。
+    /// 七種型別各有自己的陣列，所以搬移得逐型別處理 —— 但**順序必須與
+    /// 傳給核心的矩形順序一致**，錯位的話每個物件會搬到別人的位置。
+    private func alignSelectedObjects(_ mode: FfiAlignMode, ids: [String]) {
+        guard ids.count >= 2 else { return }
+
+        // 收集矩形，順序即 ids 的順序。
+        var rects: [CGRect] = []
+        for id in ids {
+            guard let rect = frameOfObject(id: id) else { return }
+            rects.append(rect)
+        }
+
+        let origins = ObjectAlignment.aligned(rects: rects, mode: mode)
+        guard origins.count == ids.count else { return }
+        for (id, origin) in zip(ids, origins) {
+            moveObject(id: id, to: origin)
+        }
+        store.updateNotebook(notebook)
+    }
+
+    /// 某個物件目前的版面框（頁面座標）。
+    private func frameOfObject(id: String) -> CGRect? {
+        if let i = notebook.attachments?.first(where: { $0.id == id }) {
+            return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
+        }
+        if let i = notebook.shapeAttachments?.first(where: { $0.id == id }) {
+            return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
+        }
+        if let i = notebook.tableAttachments?.first(where: { $0.id == id }) {
+            return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
+        }
+        if let i = notebook.textAttachments?.first(where: { $0.id == id }) {
+            return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
+        }
+        if let i = notebook.linkAttachments?.first(where: { $0.id == id }) {
+            return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
+        }
+        if let i = notebook.model3DAttachments?.first(where: { $0.id == id }) {
+            return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
+        }
+        return nil
+    }
+
+    /// 把某個物件的左上角搬到指定座標。
+    private func moveObject(id: String, to origin: CGPoint) {
+        if let index = notebook.attachments?.firstIndex(where: { $0.id == id }) {
+            notebook.attachments?[index].x = origin.x
+            notebook.attachments?[index].y = origin.y
+            return
+        }
+        if let index = notebook.shapeAttachments?.firstIndex(where: { $0.id == id }) {
+            notebook.shapeAttachments?[index].x = origin.x
+            notebook.shapeAttachments?[index].y = origin.y
+            return
+        }
+        if let index = notebook.tableAttachments?.firstIndex(where: { $0.id == id }) {
+            notebook.tableAttachments?[index].x = origin.x
+            notebook.tableAttachments?[index].y = origin.y
+            return
+        }
+        if let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
+            notebook.textAttachments?[index].x = origin.x
+            notebook.textAttachments?[index].y = origin.y
+            return
+        }
+        if let index = notebook.linkAttachments?.firstIndex(where: { $0.id == id }) {
+            notebook.linkAttachments?[index].x = origin.x
+            notebook.linkAttachments?[index].y = origin.y
+            return
+        }
+        if let index = notebook.model3DAttachments?.firstIndex(where: { $0.id == id }) {
+            notebook.model3DAttachments?[index].x = origin.x
+            notebook.model3DAttachments?[index].y = origin.y
+        }
     }
 
     /// 這一頁上所有可堆疊的物件，跨七種型別收成同一份清單。

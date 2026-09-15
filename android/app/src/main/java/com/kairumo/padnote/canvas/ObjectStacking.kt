@@ -87,3 +87,70 @@ object ObjectStacking {
         return result
     }
 }
+
+/**
+ * 物件的版面框與搬移。
+ *
+ * 五種型別各有自己的 store 與模型，但對齊只關心「矩形在哪、搬到哪」——
+ * 收斂成兩個函式，呼叫端就不必為每種型別各寫一次。
+ */
+object ObjectGeometry {
+
+    /** 物件目前的版面框（頁面座標）。認不得的 id 回傳 `null`。 */
+    fun rectOf(
+        id: String,
+        text: com.kairumo.padnote.text.TextBoxStore,
+        image: com.kairumo.padnote.image.ImageStore,
+        table: com.kairumo.padnote.table.TableStore,
+        chart: com.kairumo.padnote.chart.ChartStore,
+        shape: com.kairumo.padnote.shape.ShapeStore
+    ): uniffi.padnote_core.FfiRect? {
+        text.all.firstOrNull { it.id == id }?.let {
+            return rect(it.x, it.y, it.width, it.height)
+        }
+        image.all.firstOrNull { it.id == id }?.let {
+            return rect(it.x, it.y, it.width, it.height)
+        }
+        table.all.firstOrNull { it.id == id }?.let {
+            return rect(it.x, it.y, it.width, it.height)
+        }
+        chart.all.firstOrNull { it.id == id }?.let {
+            return rect(it.x, it.y, it.width, it.height)
+        }
+        shape.all.firstOrNull { it.id == id }?.let {
+            return rect(it.x, it.y, it.width, it.height)
+        }
+        return null
+    }
+
+    /** 把物件的左上角搬到指定座標並落盤。 */
+    fun move(
+        id: String,
+        x: Float,
+        y: Float,
+        text: com.kairumo.padnote.text.TextBoxStore,
+        image: com.kairumo.padnote.image.ImageStore,
+        table: com.kairumo.padnote.table.TableStore,
+        chart: com.kairumo.padnote.chart.ChartStore,
+        shape: com.kairumo.padnote.shape.ShapeStore
+    ) {
+        text.all.firstOrNull { it.id == id }?.let {
+            it.x = x; it.y = y; text.persist(it); return
+        }
+        image.all.firstOrNull { it.id == id }?.let {
+            it.x = x; it.y = y; image.persist(it); return
+        }
+        table.all.firstOrNull { it.id == id }?.let {
+            it.x = x; it.y = y; table.persist(it); return
+        }
+        chart.all.firstOrNull { it.id == id }?.let {
+            it.x = x; it.y = y; chart.persist(it); return
+        }
+        shape.all.firstOrNull { it.id == id }?.let {
+            shape.persist(it.copyShape().apply { this.x = x; this.y = y })
+        }
+    }
+
+    private fun rect(x: Float, y: Float, w: Float, h: Float) =
+        uniffi.padnote_core.FfiRect(minX = x, minY = y, maxX = x + w, maxY = y + h)
+}
