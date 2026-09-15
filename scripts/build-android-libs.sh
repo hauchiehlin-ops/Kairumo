@@ -106,8 +106,18 @@ for abi in "${ABIS[@]}"; do
     # 個性函式）。光把 libc++_shared.so 放進 APK **沒有用** —— ELF 裡沒有對應的
     # NEEDED 項目，動態載入器就不會去載它，dlopen 依然找不到符號。
     # 一定要在連結時真的連上去，NEEDED 才會出現。
-    RUSTFLAGS="${RUSTFLAGS:-} -C link-arg=-lc++_shared" \
+    #
+    # **只能掛在該 target 上，不能用全域 RUSTFLAGS。** 全域的話 build script
+    # 也會套到 —— 那些是編給 host 的，而 Linux 的 host 根本沒有
+    # libc++_shared，整包在 CI 上就連結失敗（macOS 上因為有 libc++ 剛好沒事，
+    # 所以只在 CI 炸，本機看不出來）。
+    if [[ -n "$RUST_TARGET" ]]; then
+        TARGET_ENV="CARGO_TARGET_$(echo "$RUST_TARGET" | tr 'a-z-' 'A-Z_')_RUSTFLAGS"
+        env "$TARGET_ENV=-C link-arg=-lc++_shared" \
+            cargo ndk -t "$abi" -o "$OUT_DIR" build -p padnote-core "${FEATURE_ARGS[@]}" "${PROFILE_ARGS[@]}"
+    else
         cargo ndk -t "$abi" -o "$OUT_DIR" build -p padnote-core "${FEATURE_ARGS[@]}" "${PROFILE_ARGS[@]}"
+    fi
 done
 
 # 相依 crate 順帶產生的 cdylib 不是我們的執行期相依，留著只會讓 APK 變大。
@@ -123,7 +133,6 @@ find "$OUT_DIR" -name "*.so" ! -name "libpadnote_core.so" -delete
 #
 # 症狀極度誤導：編譯過、打包過、安裝過，**開啟才閃退**，而且錯誤是
 # `dlopen failed: cannot locate symbol ...`，看起來像 App 壞了而不是建置漏東西。
-NDK_HOST_LIB="$(dirname "$(find "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt" -maxdepth 1 -type d -name "*-x86_64" -o -maxdepth 1 -type d -name "*-arm64" | head -1)")"
 for abi in "${ABIS[@]}"; do
     case "$abi" in
         arm64-v8a)   TRIPLE=aarch64-linux-android ;;
