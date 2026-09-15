@@ -82,18 +82,41 @@ object CloudSync {
      * 順序不能反：先收斂索引，才知道哪些筆記本還活著 ——
      * 先同步內容的話，會把另一台已經刪掉的筆記本內容又推上去。
      */
-    fun runFull(context: Context, deviceId: UInt): Pair<FfiCloudSyncResult?, List<String>> {
+    /**
+     * 一輪完整同步的結果。
+     *
+     * **有上傳與下載的數量**，不是只有「成功了沒」。與 Apple 的
+     * `NotebookSyncCoordinator.Report` 對應 —— 只說「同步完成」的話，
+     * 使用者分不出「真的傳了東西」與「其實什麼也沒做」，而那兩件事在
+     * 「為什麼另一台還是舊的」這個問題上差很多。
+     */
+    data class FullResult(
+        val meta: FfiCloudSyncResult?,
+        val uploaded: Int,
+        val downloaded: Int,
+        /** 被別台改過、需要重開 session 的筆記本 id。 */
+        val changed: List<String>
+    )
+
+    fun runFull(context: Context, deviceId: UInt): FullResult {
         val meta = runOnce(context)
-        if (meta == null || !meta.ok) return meta to emptyList()
+        if (meta == null || !meta.ok) return FullResult(meta, 0, 0, emptyList())
+        var uploaded = 0
+        var downloaded = 0
         val changed = mutableListOf<String>()
         for (entry in NotebookLibrary.all(context, deviceId)) {
             val result = syncNotebook(context, entry.id) ?: continue
-            if (result.ok && result.downloaded > 0u) changed += entry.id
+            if (!result.ok) continue
+            uploaded += result.uploaded.toInt()
+            downloaded += result.downloaded.toInt()
+            if (result.downloaded > 0u) changed += entry.id
         }
         // 別台裝置**新建**的筆記本在本機連套件目錄都沒有，上面那一圈看不到它們。
         // 少了這一步，症狀是：索引同步成功、清單上出現了標題，點進去卻是空的。
-        changed += pullNewNotebooks(context, meta.indexJson)
-        return meta to changed
+        val pulled = pullNewNotebooks(context, meta.indexJson)
+        changed += pulled
+        downloaded += pulled.size
+        return FullResult(meta, uploaded, downloaded, changed)
     }
 
     /**

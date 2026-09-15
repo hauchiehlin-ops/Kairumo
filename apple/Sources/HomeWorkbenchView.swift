@@ -48,6 +48,10 @@ public struct HomeWorkbenchView: View {
     @State private var hiddenRecordingIds: Set<String> = []
 
     // 資料夾管理與過濾狀態
+    /// Google 帳號同步的狀態。首頁要直接看得到「登入了沒」——
+    /// 藏在設定頁裡的話，使用者不會知道有這個功能。
+    @ObservedObject private var homeGoogleAuth = GoogleAuth.shared
+
     @State private var selectedFolderId: String? = nil
     @State private var showRenameRootFolderAlert: Bool = false
     @State private var rootFolderRenameText: String = ""
@@ -1411,6 +1415,7 @@ public struct HomeWorkbenchView: View {
 
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
+                    googleSyncCard
                     dataCard("externaldrive.badge.timemachine", "backup_create",
                              "backup_create_desc", .blue) { showDiagnosticsForData() }
                     dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
@@ -1419,6 +1424,7 @@ public struct HomeWorkbenchView: View {
                              "sync_folder_desc", .teal) { showDiagnosticsForData() }
                 }
                 VStack(spacing: 12) {
+                    googleSyncCard
                     dataCard("externaldrive.badge.timemachine", "backup_create",
                              "backup_create_desc", .blue) { showDiagnosticsForData() }
                     dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
@@ -1429,6 +1435,23 @@ public struct HomeWorkbenchView: View {
             }
         }
         .padding(.top, 6)
+    }
+
+    /// Google 帳號同步。**放在首頁**，與 Android 一致。
+    ///
+    /// 原本這條路只在設定頁的「Google Drive」區塊裡，而首頁的「資料與同步」
+    /// 三張卡片講的全是另一條路（自選資料夾）—— 使用者在首頁找不到「登入」，
+    /// 只會認為這個 App 沒有帳號同步。
+    ///
+    /// 描述直接寫**目前狀態**而不是功能說明：使用者最想知道的是
+    /// 「我到底登入了沒」，那一句比任何介紹都有用。
+    private var googleSyncCard: some View {
+        dataCard(
+            "arrow.triangle.2.circlepath.icloud.fill",
+            "cloud_sync",
+            homeGoogleAuth.isSignedIn ? "sync_section" : "not_signed_in",
+            .indigo
+        ) { showDiagnosticsForData() }
     }
 
     private func showDiagnosticsForData() {
@@ -2112,6 +2135,13 @@ extension AppDiagnosticsSheet {
                     }
                 }
             }
+
+            // 這一段講的是**Google 帳號**這條路，不是上面「自選資料夾」那一條。
+            // 兩條路的說明混用的話，使用者會照著去找一個這裡根本沒有的資料夾設定。
+            // 與 Android 同一個語系鍵 —— 兩邊讀到的是同一段話。
+            Text(localizationManager.localized("cloud_sync_explainer"))
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
     }
 

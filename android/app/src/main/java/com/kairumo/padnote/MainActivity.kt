@@ -244,6 +244,43 @@ private fun NotebookHome(
     // 掃整個筆記本目錄，所以不要每次重組都做 —— 綁在 revision 上就好。
     val recordings = remember(revision) { RecordingIndex.recent(activity, device) }
 
+    // 同步都在背景執行緒跑，共用同一個 scope。宣告要在第一個使用點之前 ——
+    // Compose 的函式本體是由上往下讀的。
+    val autoSyncScope = rememberCoroutineScope()
+
+    // Google 帳號同步的畫面狀態。與 Apple 的 `googleAccountSection` 對應。
+    var cloudBusy by remember { mutableStateOf(false) }
+    var cloudMessage by remember { mutableStateOf<String?>(null) }
+    // `revision` 也當成重讀的觸發器：登入是跳出去系統瀏覽器再回來的，
+    // 回來時要重新問一次「現在登入了沒」。
+    val signedIn = remember(revision, cloudBusy) {
+        com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)
+    }
+
+    fun runCloudSync() {
+        if (cloudBusy) return
+        cloudBusy = true
+        cloudMessage = l("syncing")
+        autoSyncScope.launch {
+            val result = withContext(Dispatchers.IO) {
+                com.kairumo.padnote.library.CloudSync.runFull(activity, device)
+            }
+            val meta = result.meta
+            cloudBusy = false
+            cloudMessage = when {
+                meta == null -> l("not_signed_in")
+                meta.needsReauth -> l("sync_needs_reauth")
+                !meta.ok -> l("sync_failed").replace("%@", meta.error)
+                // 講出上傳與下載的數量，與 Apple 一致。只說「完成」的話，
+                // 使用者分不出「真的傳了東西」與「其實什麼也沒做」。
+                else -> l("sync_result")
+                    .replace("%1@", result.uploaded.toString())
+                    .replace("%2@", result.downloaded.toString())
+            }
+            if (result.changed.isNotEmpty()) revision++
+        }
+    }
+
     // 回到首頁就自動同步一輪。
     //
     // **這一段是「跨裝置感覺得到」的全部差別。** 機制本身早就寫好了，
@@ -253,19 +290,18 @@ private fun NotebookHome(
     // 放在首頁而不是編輯器裡：同步可能把別台的 oplog 寫進套件，
     // 而開著的那本在記憶體裡還是舊的。在首頁做的話沒有這個問題，
     // 重讀清單就夠了，不必 recreate 整個畫面。
-    val autoSyncScope = rememberCoroutineScope()
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event != androidx.lifecycle.Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
             if (!com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) return@LifecycleEventObserver
             autoSyncScope.launch {
-                val (meta, changed) = withContext(Dispatchers.IO) {
+                val result = withContext(Dispatchers.IO) {
                     com.kairumo.padnote.library.CloudSync.runFull(activity, device)
                 }
                 // 失敗時**不出訊息**。自動同步是背景行為，網路不通就下次再說；
                 // 每次回到首頁都跳一次「同步失敗」只會讓人關掉這個功能。
-                if (meta != null && meta.ok && changed.isNotEmpty()) revision++
+                if (result.meta?.ok == true && result.changed.isNotEmpty()) revision++
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -326,6 +362,27 @@ private fun NotebookHome(
             onBackup = { message = runBackup(activity) },
             onRestore = { restorePicker.launch(arrayOf("*/*")) },
             recordings = recordings,
+            cloud = com.kairumo.padnote.library.CloudSyncUiState(
+                signedIn = signedIn,
+                busy = cloudBusy,
+                message = cloudMessage,
+                onSignIn = {
+                    // 授權會跳到系統瀏覽器，回來時由 OAuthRedirectActivity 接。
+                    com.kairumo.padnote.oauth.GoogleAuth.startSignIn(activity)
+                },
+                onSyncNow = { runCloudSync() },
+                onSignOut = {
+                    autoSyncScope.launch {
+                        // 撤銷要打網路，不能在主執行緒。
+                        withContext(Dispatchers.IO) {
+                            com.kairumo.padnote.oauth.GoogleAuth.signOut(activity)
+                        }
+                        cloudMessage = null
+                        // 逼畫面重問一次登入狀態。
+                        revision++
+                    }
+                }
+            ),
             onOpenFolder = onFolderChange,
             onCreateFolder = { creatingFolder = true },
             onRenameFolder = { renamingFolder = it },
@@ -992,23 +1049,26 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                         scope.launch {
                             // 同步會阻塞網路 I/O —— 一定要在背景執行緒，
                             // 在主執行緒跑會直接卡死畫面。
-                            val (meta, changed) = withContext(Dispatchers.IO) {
+                            val result = withContext(Dispatchers.IO) {
                                 // 中繼資料 → 再逐本同步內容。順序不能反：
                                 // 先收斂索引才知道哪些筆記本還活著，不然會把
                                 // 另一台已經刪掉的筆記本內容又推上去。
                                 com.kairumo.padnote.library.CloudSync.runFull(activity, deviceId(activity))
                             }
+                            val meta = result.meta
                             message = when {
                                 meta == null -> l10n("not_signed_in")
                                 meta.needsReauth -> l10n("sync_needs_reauth")
                                 !meta.ok -> l10n("sync_failed").replace("%@", meta.error)
-                                else -> l10n("sync_done")
+                                else -> l10n("sync_result")
+                                    .replace("%1@", "${result.uploaded}")
+                                    .replace("%2@", "${result.downloaded}")
                             }
                             // **只重開這一本的 session，不要 recreate 整個 Activity。**
                             // recreate 會把使用者當下的一切打掉：捲動位置、選取範圍、
                             // 開著的面板、還沒送出的文字方塊內容。而真正需要重載的
                             // 只有「這一本剛好被別台改過」這一種情況。
-                            if (notebookId != null && changed.contains(notebookId)) {
+                            if (notebookId != null && result.changed.contains(notebookId)) {
                                 sessionRevision++
                             }
                         }

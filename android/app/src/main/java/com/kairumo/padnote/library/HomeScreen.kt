@@ -91,6 +91,8 @@ fun HomeScreen(
     onBackup: () -> Unit,
     onRestore: () -> Unit,
     recordings: List<RecordingIndex.Recording>,
+    /** Google 帳號同步的狀態，與 Apple 的 `googleAccountSection` 一一對應。 */
+    cloud: CloudSyncUiState,
     onOpenFolder: (String?) -> Unit,
     onCreateFolder: () -> Unit,
     onRenameFolder: (FolderTree.Folder) -> Unit,
@@ -233,7 +235,14 @@ fun HomeScreen(
             }
         }
 
-        // ── 9. 資料與同步 ────────────────────────────────────────
+        // ── 9. 雲端同步（Google 帳號）───────────────────────────
+        // 位置與 Apple 一致：在「資料與同步」之前，而且在**首頁**而不是
+        // 編輯器的選單裡。原本埋在編輯器的「⋯」底下，使用者要先開一本
+        // 筆記才找得到「登入」—— 那不是一個帳號設定該在的地方。
+        item { SectionTitle(l("cloud_sync")) }
+        item { CloudSyncCard(cloud, l) }
+
+        // ── 10. 資料與同步 ───────────────────────────────────────
         item {
             HorizontalDivider()
             SectionTitle(l("data_and_sync"))
@@ -250,7 +259,7 @@ fun HomeScreen(
             }
         }
 
-        // ── 10. 版本號 ───────────────────────────────────────────
+        // ── 11. 版本號 ───────────────────────────────────────────
         item {
             Text(
                 appVersion,
@@ -666,6 +675,87 @@ private fun RecordingRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+/**
+ * Google 帳號同步的畫面狀態。
+ *
+ * 把狀態收成一個資料類別而不是攤成六個參數：這一組要嘛全都有、要嘛全都
+ * 沒有意義，拆開來會讓呼叫端有機會只傳一半。
+ */
+data class CloudSyncUiState(
+    val signedIn: Boolean,
+    val busy: Boolean,
+    /** 給使用者看的一行字（同步中／結果／錯誤）。沒有就不顯示那一行。 */
+    val message: String?,
+    val onSignIn: () -> Unit,
+    val onSyncNow: () -> Unit,
+    val onSignOut: () -> Unit
+)
+
+/**
+ * 雲端同步卡片。欄位與動作與 Apple 的 `googleAccountSection` 一一對應。
+ *
+ * 兩邊長得不一樣沒關係（一個是 iOS 的 Form、一個是 Material 卡片），
+ * **但看得到的東西與做得到的事必須一樣**：使用者換裝置時不該發現
+ * 「這台可以登出、那台不行」。
+ */
+@Composable
+private fun CloudSyncCard(state: CloudSyncUiState, l: (String) -> String) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Google Drive", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text(
+                    // 已登入時顯示「同步」而不是帳號位址：我們沒有要求
+                    // email 範圍，手上根本沒有那個資訊，顯示一個假的更糟。
+                    if (state.signedIn) l("sync_section") else l("not_signed_in"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            state.message?.let {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            if (state.signedIn) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    TextButton(onClick = state.onSyncNow, enabled = !state.busy) {
+                        Text(l("sync_now"))
+                    }
+                    TextButton(onClick = state.onSignOut, enabled = !state.busy) {
+                        Text(l("sign_out"), color = MaterialTheme.colorScheme.error)
+                    }
+                }
+            } else {
+                TextButton(onClick = state.onSignIn, enabled = !state.busy) {
+                    Text(l("sign_in_google"))
+                }
+            }
+
+            Text(
+                // 這一段講的是**Google 帳號**這條路，不是「自選資料夾」那一條。
+                // 用錯的話，使用者會照著去找一個根本不存在的資料夾設定。
+                l("cloud_sync_explainer"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
