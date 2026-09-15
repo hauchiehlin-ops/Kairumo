@@ -50,7 +50,10 @@ impl std::fmt::Debug for RelayServer {
                 .debug_struct("RelayServer")
                 .field("running_on_port", &port)
                 .finish(),
-            None => f.debug_struct("RelayServer").field("running", &false).finish(),
+            None => f
+                .debug_struct("RelayServer")
+                .field("running", &false)
+                .finish(),
         }
     }
 }
