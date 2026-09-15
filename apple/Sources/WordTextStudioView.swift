@@ -104,11 +104,16 @@ public struct WordTextStudioView: View {
 
             Divider()
 
-            activeTabContent
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            // 容器是 FloatingPanel 的 width: 340 / maxHeight: 420。
+            // 內容不可以自己訂寬度 —— 寫死比容器寬的值，超出的部分會被**往左
+            // 裁掉**，標籤只剩後半段（實測看到「Alignment」變成「ment」）。
+            ScrollView {
+                activeTabContent
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
-        .frame(width: 420)
+        .frame(maxWidth: .infinity)
         .onChange(of: attachment) { updated in
             // 浮動面板沒有「確認」按鈕 —— 改了就算數，畫布上同步看得到。
             onSave(updated)

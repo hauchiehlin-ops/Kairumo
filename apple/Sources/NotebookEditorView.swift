@@ -5259,11 +5259,17 @@ struct TextAttachmentItemView: View {
             .rotationEffect(.degrees(textItem.canvasRotation))
             .overlay {
                 if isSelected && !isEditingInline && lockedByPeer == nil {
-                    ObjectRotationHandle(
-                        degrees: $textItem.canvasRotation,
-                        size: CGSize(width: displayWidth, height: displayHeight),
-                        onCommit: broadcastTextChange
-                    )
+                    // 尺寸取**實際版面框**，不是 textItem.height。
+                    // 文字方塊的算繪高度由內容決定（空方塊約 46pt），模型高度
+                    // 預設是 160 —— 拿模型高度去算，把手會飄在方塊上方很遠，
+                    // 而那條指向中心的虛線會穿過方塊落在下方的空白處（實測到）。
+                    GeometryReader { geo in
+                        ObjectRotationHandle(
+                            degrees: $textItem.canvasRotation,
+                            size: geo.size,
+                            onCommit: broadcastTextChange
+                        )
+                    }
                 }
             }
             .onTapGesture(count: 2) {

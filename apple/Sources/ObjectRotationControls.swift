@@ -73,14 +73,19 @@ public struct ObjectRotationDial: View {
 
                 Spacer()
 
+                // 純圖示。帶文字的話這一列在 340pt 的浮動面板裡放不下，
+                // 「Reset」會被折成兩行（實測看到「Rese」/「t」）。
                 Button {
                     degrees = 0
                 } label: {
-                    Label(localizationManager.localized("reset"), systemImage: "arrow.counterclockwise")
-                        .font(.system(size: 11))
+                    Image(systemName: "arrow.counterclockwise")
+                        .font(.system(size: 12, weight: .semibold))
+                        .frame(width: 26, height: 24)
                 }
                 .buttonStyle(.plain)
                 .foregroundColor(.accentColor)
+                .help(localizationManager.localized("reset"))
+                .accessibilityLabel(localizationManager.localized("reset"))
                 .disabled(CanvasRotation.normalized(degrees) == 0)
             }
         }
@@ -123,7 +128,11 @@ public struct ObjectRotationHandle: View {
     }
 
     /// 把手離物件中心的距離。
-    private var radius: CGFloat { max(size.height, 44) / 2 + 26 }
+    ///
+    /// 上方留 52pt 而不是 26pt：選取時的動作列（編輯／刪除）畫在方塊上方
+    /// `offset(y: -42)` 的位置，間距不夠的話把手會壓在那排按鈕上，
+    /// 兩個都不好按（實測到重疊）。
+    private var radius: CGFloat { max(size.height, 40) / 2 + 52 }
 
     public var body: some View {
         let angle = CanvasRotation.normalized(degrees) * .pi / 180
