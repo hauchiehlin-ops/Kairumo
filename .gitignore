@@ -40,10 +40,12 @@ DerivedData/
 /android/local.properties
 __pycache__/
 
-# 側載打包產物（scripts/dist.sh）。簽章金鑰與 keystore.properties
-# 已由 android/.gitignore 擋下，這裡不重複。
-/build/dist/
-/build/dist-work/
+# build/ 整個是建置輸出，一律不進版控。
+#
+# 原本只擋了 /build/apple/ 與 /build/dist/，結果一次 `git add -A` 把
+# build/DerivedDataMac（Xcode 的衍生資料，3931 個檔、344MB）整包提交進去。
+# 用列舉的方式擋目錄，遲早會漏掉下一個 —— 直接擋整層。
+/build/
 
 # 第三方原始碼與中間產物（不要放進 target/，CI 的 rust-cache 會修剪它）
 /.build/
