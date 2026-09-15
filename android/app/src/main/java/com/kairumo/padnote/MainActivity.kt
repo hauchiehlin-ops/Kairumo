@@ -70,6 +70,7 @@ import com.kairumo.padnote.library.RenameNotebookDialog
 import com.kairumo.padnote.library.DeleteNotebookDialog
 import com.kairumo.padnote.library.NotebookLibrary
 import com.kairumo.padnote.library.FolderTree
+import com.kairumo.padnote.library.RecordingIndex
 import com.kairumo.padnote.library.FolderNameDialog
 import com.kairumo.padnote.library.DeleteFolderDialog
 import com.kairumo.padnote.library.MoveToFolderDialog
@@ -232,6 +233,8 @@ private fun NotebookHome(
     val breadcrumb = remember(revision, folderId) { FolderTree.pathTo(activity, folderId) }
     // 搬移對話框要列出**全部**資料夾，不是只有這一層的。
     val allFolders = remember(revision) { FolderTree.all(activity) }
+    // 掃整個筆記本目錄，所以不要每次重組都做 —— 綁在 revision 上就好。
+    val recordings = remember(revision) { RecordingIndex.recent(activity, device) }
 
     // 回到首頁就自動同步一輪。
     //
@@ -314,6 +317,7 @@ private fun NotebookHome(
             },
             onBackup = { message = runBackup(activity) },
             onRestore = { restorePicker.launch(arrayOf("*/*")) },
+            recordings = recordings,
             onOpenFolder = onFolderChange,
             onCreateFolder = { creatingFolder = true },
             onRenameFolder = { renamingFolder = it },

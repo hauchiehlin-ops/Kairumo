@@ -438,8 +438,14 @@ Apple 的連續模式是「手指畫畫、兩指捲動」。Android 做不到同
 **第一階段（A-00～A-03）已完成** —— 那是「能不能當筆記 App 用」的分界：
 Android 現在有首頁、翻得動頁、分得清手寫與打字。
 
-**A-01 尚未涵蓋 Apple 有的**：資料夾階層、素材圖庫、最近錄音清單、
-繼續區塊的縮圖預覽。那些各自需要底層支援，排在 A-05 之後。
+**A-01 原本尚未涵蓋 Apple 有的四項，2026-09-16 全部補齊**：
+
+| 項目 | 現況 |
+|---|---|
+| 素材圖庫 | 早就有了（`asset/AssetLibrarySheet.kt`）。原本這一行是過期的 |
+| 資料夾階層 | `library/FolderTree.kt` + 首頁的麵包屑、資料夾列、搬移對話框。資料夾住在同步索引裡，不另存一份本機清單 |
+| 最近錄音清單 | `library/RecordingIndex.kt`。掃套件裡的 `media/audio`，不另外維護索引 —— 另外維護的話，從別台同步過來的錄音不會出現，而那正是最該顯示的東西 |
+| 繼續區塊的縮圖預覽 | `library/NotebookThumbnails.kt`。算繪走核心既有的 `export_page_png`，與匯出同一條路；快取的鍵帶上修改時間，不必另做失效判斷。**縮圖裡沒有畫布物件**（文字方塊、表格、圖表、圖片），所以一本只打字沒手寫的筆記縮圖是空白頁 —— 那不是壞掉 |
 
 **A-04 過程中修掉的既有缺陷**（都不是新功能，是本來就壞的）：
 - 物件座標單位錯誤：ShapeLayer / TableLayer / ChartLayer 把頁面點當成像素，
@@ -465,8 +471,9 @@ Android 現在有首頁、翻得動頁、分得清手寫與打字。
 | ~~Z-01~~ ✅ | Android 端的圖層面板 | `CanvasStackPanel` + `NotebookMeta.kt`，13 項 JUnit 測試 |
 
 順序現在存在筆記本中繼資料裡（`objectOrderByPage`），那份 JSON 會寫進
-`.padnote` 並跟著同步走，所以兩個平台讀的是同一份。Android 還缺的是讀寫
-它的圖層面板 UI。
+`.padnote` 並跟著同步走，所以兩個平台讀的是同一份。
+（2026-09-16 更正：原本這裡寫「Android 還缺圖層面板 UI」，那已經過期 ——
+`canvas/CanvasStackPanel.kt` 早就在了，見上表 Z-01。）
 
 核心的物件樹另有一套 `bring_to_front` / `draw_order`，那是給**形狀**用的
 （形狀是核心的原生物件）。文字與圖片是 block 不是 object，不在那棵樹上，

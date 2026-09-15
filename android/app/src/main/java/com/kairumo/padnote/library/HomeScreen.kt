@@ -28,7 +28,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -82,6 +90,7 @@ fun HomeScreen(
     onToggleRecording: () -> Unit,
     onBackup: () -> Unit,
     onRestore: () -> Unit,
+    recordings: List<RecordingIndex.Recording>,
     onOpenFolder: (String?) -> Unit,
     onCreateFolder: () -> Unit,
     onRenameFolder: (FolderTree.Folder) -> Unit,
@@ -214,7 +223,17 @@ fun HomeScreen(
             }
         }
 
-        // ── 6. 資料與同步 ────────────────────────────────────────
+        // ── 8. 最近錄音 ──────────────────────────────────────────
+        // 位置與 Apple 端一致 —— 順序自己排一套的話，同一個人換裝置
+        // 就要重新找每一樣東西在哪裡。
+        if (recordings.isNotEmpty() && query.isBlank()) {
+            item { SectionTitle(l("recent_recordings")) }
+            items(recordings, key = { "rec-${it.file.absolutePath}" }) { recording ->
+                RecordingRow(recording, l, onOpen)
+            }
+        }
+
+        // ── 9. 資料與同步 ────────────────────────────────────────
         item {
             HorizontalDivider()
             SectionTitle(l("data_and_sync"))
@@ -231,7 +250,7 @@ fun HomeScreen(
             }
         }
 
-        // ── 7. 版本號 ────────────────────────────────────────────
+        // ── 10. 版本號 ───────────────────────────────────────────
         item {
             Text(
                 appVersion,
@@ -288,8 +307,10 @@ private fun NotebookRow(
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            NotebookThumbnail(entry)
             Column(Modifier.weight(1f)) {
                 Text(entry.title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
                 Text(
@@ -575,4 +596,76 @@ fun MoveToFolderDialog(
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text(l("cancel")) } }
     )
+}
+
+/**
+ * 第一頁的縮圖。
+ *
+ * 產圖要開 session、重播 oplog、再光柵化一整頁，**一定要在背景執行緒** ——
+ * 清單上有二十本就是二十次，放在主執行緒會讓首頁直接卡住。
+ *
+ * 還沒算好（或算不出來）時畫一個同樣大小的空框，不要讓版面在圖片到位時
+ * 跳一下。
+ */
+@Composable
+private fun NotebookThumbnail(entry: NotebookLibrary.Entry) {
+    val context = LocalContext.current
+    // 鍵帶上修改時間：內容變了就重算，沒變就直接用快取。
+    val bitmap by produceState<ImageBitmap?>(null, entry.id, entry.modifiedAt) {
+        value = withContext(Dispatchers.IO) {
+            NotebookThumbnails.load(context, entry)
+        }
+    }
+
+    Box(
+        Modifier
+            .size(width = 34.dp, height = 46.dp)
+            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp))
+    ) {
+        bitmap?.let {
+            Image(
+                bitmap = it,
+                contentDescription = null,
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.fillMaxSize().padding(1.dp)
+            )
+        }
+    }
+}
+
+/**
+ * 一段錄音。點下去開它所屬的那一本筆記。
+ *
+ * 顯示的是**筆記本標題**而不是檔名：檔名是 uuid，對使用者沒有意義。
+ */
+@Composable
+private fun RecordingRow(
+    recording: RecordingIndex.Recording,
+    l: (String) -> String,
+    onOpen: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onOpen(recording.notebookId) },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text("🎙", fontSize = 18.sp)
+            Column(Modifier.weight(1f)) {
+                Text(recording.notebookTitle, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                Text(
+                    "${formatDate(recording.recordedAt)} · ${recording.bytes / 1024} KB",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
 }
