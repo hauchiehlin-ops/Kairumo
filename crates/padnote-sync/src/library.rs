@@ -151,6 +151,46 @@ impl LibraryIndex {
         out
     }
 
+    /// 這個項目該不該因為刪除而**從畫面上消失**。
+    ///
+    /// # 與 [`children_of`] 的規則不一樣，而且必須不一樣
+    ///
+    /// `children_of` 是在畫一棵樹，所以「父項沒看過」要當成不可見 ——
+    /// 否則會掛出一個沒有上層的孤兒。
+    ///
+    /// 這裡問的是另一件事：**本機有一個檔案，該不該把它藏起來。**
+    /// 「索引裡沒看過」不是「被刪了」：剛從另一台同步過來、或是索引還沒
+    /// 收斂完的項目都會落在這個狀態。把它當成刪除的話，使用者會看到
+    /// 自己的筆記本莫名其妙消失 —— 那比多顯示一個幽靈嚴重得多。
+    ///
+    /// 所以只有**明確的墓碑**才算：自己被刪，或祖先鏈上任何一層被刪。
+    pub fn is_hidden_by_deletion(&self, id: &str) -> bool {
+        let Some(item) = self.items.get(id) else {
+            // 沒看過。那是「還不知道」，不是「被刪了」。
+            return false;
+        };
+        if item.deleted {
+            return true;
+        }
+        let mut seen = vec![id.to_string()];
+        let mut cursor = item.parent_id.clone();
+        while let Some(parent_id) = cursor {
+            // 迴圈保護：兩台裝置各自把 A 搬進 B、把 B 搬進 A 就會接成環，
+            // 沒有這道保護的話這裡會無限迴圈 —— App 直接凍住。
+            if seen.contains(&parent_id) {
+                return false;
+            }
+            seen.push(parent_id.clone());
+            match self.items.get(&parent_id) {
+                Some(parent) if parent.deleted => return true,
+                Some(parent) => cursor = parent.parent_id.clone(),
+                // 父項沒看過：同上，不當成刪除。
+                None => return false,
+            }
+        }
+        false
+    }
+
     /// 祖先鏈上有沒有已刪除（或根本不存在）的資料夾。
     fn has_deleted_ancestor(&self, item: &LibraryItem) -> bool {
         let mut seen = Vec::new();
@@ -225,6 +265,53 @@ mod tests {
             kind: ItemKind::Folder,
             ..item(id, title, parent, lamport, device)
         }
+    }
+
+    #[test]
+    fn an_incoming_deletion_hides_the_local_file() {
+        // 這是「在 A 刪掉、B 上還在」那個 bug 的回歸測試。
+        let mut index = LibraryIndex::default();
+        index.upsert(item("n1", "會議", None, 1, "dev-a"));
+        assert!(!index.is_hidden_by_deletion("n1"));
+
+        index.tombstone("n1", 2, "dev-b");
+        assert!(index.is_hidden_by_deletion("n1"));
+    }
+
+    #[test]
+    fn deleting_a_folder_hides_the_notebooks_inside_it() {
+        let mut index = LibraryIndex::default();
+        index.upsert(folder("f1", "工作", None, 1, "dev-a"));
+        index.upsert(item("n1", "會議", Some("f1"), 2, "dev-a"));
+        index.tombstone("f1", 3, "dev-b");
+
+        assert!(index.is_hidden_by_deletion("n1"), "刪掉資料夾，裡面的要一起消失");
+    }
+
+    #[test]
+    fn something_the_index_has_never_seen_is_not_hidden() {
+        // **這一條比上面兩條更重要。** 「沒看過」不是「被刪了」——
+        // 混在一起的話，剛建好還沒同步、或索引還沒收斂完的筆記本
+        // 會在使用者眼前消失，那比多顯示一個幽靈嚴重得多。
+        let mut index = LibraryIndex::default();
+        index.upsert(item("n1", "會議", None, 1, "dev-a"));
+
+        assert!(!index.is_hidden_by_deletion("完全沒看過的 id"));
+
+        // 父項沒看過也一樣不藏。
+        index.upsert(item("n2", "孤兒", Some("不存在的資料夾"), 2, "dev-a"));
+        assert!(!index.is_hidden_by_deletion("n2"));
+    }
+
+    #[test]
+    fn a_parent_cycle_does_not_hang_the_visibility_check() {
+        // 兩台裝置各自把 A 搬進 B、把 B 搬進 A 就會接成環。
+        let mut index = LibraryIndex::default();
+        index.upsert(folder("f1", "A", Some("f2"), 1, "dev-a"));
+        index.upsert(folder("f2", "B", Some("f1"), 1, "dev-b"));
+        index.upsert(item("n1", "裡面的", Some("f1"), 2, "dev-a"));
+
+        assert!(!index.is_hidden_by_deletion("n1"));
     }
 
     #[test]

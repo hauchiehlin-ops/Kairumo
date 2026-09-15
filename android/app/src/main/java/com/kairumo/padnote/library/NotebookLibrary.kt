@@ -24,6 +24,14 @@ object NotebookLibrary {
     private const val LEGACY_NAME = "notebook.padnote"
     const val EXTENSION = "padnote"
 
+    /**
+     * `folderId` 的「不分層，全部列出來」哨兵值。
+     *
+     * 不能用 null 表示 —— null 已經是「最上層」的意思。兩者混在一起的話，
+     * 搜尋（要搜全部）與瀏覽最上層（只要根目錄那幾本）會變成同一件事。
+     */
+    val ANY_FOLDER: String = "\u0000any"
+
     /** 一本筆記本。 */
     data class Entry(
         val id: String,
@@ -65,7 +73,9 @@ object NotebookLibrary {
     fun all(
         context: Context,
         deviceId: UInt,
-        sort: Sort = Sort.MODIFIED
+        sort: Sort = Sort.MODIFIED,
+        /** 只列這個資料夾底下的。null 表示最上層；傳 [ANY_FOLDER] 表示不分層全部列。 */
+        folderId: String? = ANY_FOLDER
     ): List<Entry> {
         val entries = directory(context).listFiles()
             ?.filter { it.isDirectory && it.name.endsWith(".$EXTENSION") }
@@ -73,7 +83,11 @@ object NotebookLibrary {
             // 另一台裝置刪掉的不要列出來。檔案這時可能還在本機硬碟上
             // （真正的清除是同步引擎的事），但它已經被刪了 ——
             // 還列出來的話，使用者在 A 上刪掉、走到 B 前面又看到它。
-            ?.filter { !AccountSyncStore.isDeleted(context, it.id) }
+            //
+            // 用 `isHidden` 而不是 `isDeleted`：後者只看自己那一筆，
+            // 刪掉一個資料夾之後，裡面的筆記本仍然會被列出來。
+            ?.filter { !AccountSyncStore.isHidden(context, it.id) }
+            ?.filter { folderId == ANY_FOLDER || FolderTree.parentOf(context, it.id) == folderId }
             ?: return emptyList()
         return when (sort) {
             // 最近修改排前面 —— 使用者要找的十之八九是剛剛在寫的那本。
@@ -107,7 +121,11 @@ object NotebookLibrary {
             session.setTitle(title)
             // 記進同步索引。改名**不能**靠「刪掉舊的再加一個」表示 ——
             // 那在合併時與真正的刪除完全一樣，另一台裝置會把它當成已刪除。
-            AccountSyncStore.record(context, id = id, title = title)
+            // 保住原本所在的資料夾。不帶 parentId 的話，改個名字
+            // 就會被搬回最上層 —— 而使用者完全不知道為什麼。
+            AccountSyncStore.record(
+                context, id = id, title = title, parentId = FolderTree.parentOf(context, id)
+            )
             true
         }.getOrDefault(false)
 
@@ -142,11 +160,17 @@ object NotebookLibrary {
         session to page
     }.getOrNull()
 
-    /** 建立一本新筆記本，回傳它的 id。 */
-    fun create(context: Context, title: String, deviceId: UInt): String? {
+    /**
+     * 建立一本新筆記本，回傳它的 id。
+     *
+     * `folderId` 是它要放進哪個資料夾；null 表示最上層。建在使用者當下
+     * 看著的那一層 —— 一律建在最上層的話，人在某個資料夾裡按「新增」，
+     * 東西卻出現在別的地方。
+     */
+    fun create(context: Context, title: String, deviceId: UInt, folderId: String? = null): String? {
         val id = java.util.UUID.randomUUID().toString()
         if (open(context, id, deviceId, title) == null) return null
-        AccountSyncStore.record(context, id = id, title = title)
+        AccountSyncStore.record(context, id = id, title = title, parentId = folderId)
         return id
     }
 

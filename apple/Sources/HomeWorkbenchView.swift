@@ -106,7 +106,8 @@ public struct HomeWorkbenchView: View {
 
     /// 依搜尋關鍵字與排序選項過濾真實筆記清單
     private var filteredNotebooks: [NotebookDocument] {
-        var list = notebookStore.notebooks
+        // `visibleNotebooks` 而不是 `notebooks`：另一台裝置刪掉的要跟著消失。
+        var list = notebookStore.visibleNotebooks
 
         if !searchText.isEmpty {
             list = list.filter {
@@ -1157,7 +1158,9 @@ public struct HomeWorkbenchView: View {
                         .buttonStyle(.plain)
 
                         // 各資料夾
-                        ForEach(notebookStore.folders) { folder in
+                        // 過濾即可，**不要改成 `subfolders(of: nil)`** ——
+                        // 這份側邊清單是攤平的，換成只列最上層會讓子資料夾消失。
+                        ForEach(notebookStore.folders.filter { !notebookStore.isHiddenBySync($0.id) }) { folder in
                             let isSel = (selectedFolderId == folder.id)
                             let count = notebookStore.notebooks(in: folder.id).count
                             Menu {

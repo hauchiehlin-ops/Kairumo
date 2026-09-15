@@ -61,6 +61,11 @@ import java.util.Date
 @Composable
 fun HomeScreen(
     entries: List<NotebookLibrary.Entry>,
+    /** **不分資料夾**的全部筆記本。搜尋要搜整個筆記庫，不是只搜眼前這一層。 */
+    allEntries: List<NotebookLibrary.Entry>,
+    folders: List<FolderTree.Folder>,
+    /** 從最上層到目前位置。空的表示人在最上層。 */
+    breadcrumb: List<FolderTree.Folder>,
     profileName: String,
     profileColorHex: String,
     appVersion: String,
@@ -71,17 +76,24 @@ fun HomeScreen(
     onCreate: () -> Unit,
     onRename: (NotebookLibrary.Entry) -> Unit,
     onDelete: (NotebookLibrary.Entry) -> Unit,
+    onMove: (NotebookLibrary.Entry) -> Unit,
     onSortChange: (NotebookLibrary.Sort) -> Unit,
     onEditIdentity: () -> Unit,
     onToggleRecording: () -> Unit,
     onBackup: () -> Unit,
-    onRestore: () -> Unit
+    onRestore: () -> Unit,
+    onOpenFolder: (String?) -> Unit,
+    onCreateFolder: () -> Unit,
+    onRenameFolder: (FolderTree.Folder) -> Unit,
+    onDeleteFolder: (FolderTree.Folder) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
 
-    val filtered = remember(entries, query) {
+    // 搜尋時跨整個筆記庫，不是只搜眼前這一層 —— 人在資料夾裡搜尋卻只搜得到
+    // 這一層的話，他會以為那本筆記不見了。
+    val filtered = remember(entries, allEntries, query) {
         if (query.isBlank()) entries
-        else entries.filter { it.title.contains(query.trim(), ignoreCase = true) }
+        else allEntries.filter { it.title.contains(query.trim(), ignoreCase = true) }
     }
 
     LazyColumn(
@@ -146,6 +158,7 @@ fun HomeScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 ActionCard(l("new_note"), primary = true, onClick = onCreate)
+                ActionCard(l("new_subfolder"), primary = false, onClick = onCreateFolder)
                 ActionCard(
                     l(if (recording) "stop_recording" else "start_recording"),
                     primary = false,
@@ -158,11 +171,24 @@ fun HomeScreen(
         if (filtered.isNotEmpty() && query.isBlank()) {
             item { SectionTitle(l("continue_working")) }
             items(filtered.take(3), key = { "recent-${it.id}" }) { entry ->
-                NotebookRow(entry, l, onOpen, onRename, onDelete)
+                NotebookRow(entry, l, onOpen, onRename, onDelete, onMove)
             }
         }
 
-        // ── 5. 全部筆記 ──────────────────────────────────────────
+        // ── 5. 麵包屑（只有不在最上層時才出現）─────────────────────
+        if (breadcrumb.isNotEmpty() && query.isBlank()) {
+            item { Breadcrumb(breadcrumb, l, onOpenFolder) }
+        }
+
+        // ── 6. 資料夾 ────────────────────────────────────────────
+        if (folders.isNotEmpty() && query.isBlank()) {
+            item { SectionTitle(l("folders")) }
+            items(folders, key = { "folder-${it.id}" }) { folder ->
+                FolderRow(folder, l, onOpenFolder, onRenameFolder, onDeleteFolder)
+            }
+        }
+
+        // ── 7. 全部筆記 ──────────────────────────────────────────
         item {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -184,7 +210,7 @@ fun HomeScreen(
             }
         } else {
             items(filtered, key = { it.id }) { entry ->
-                NotebookRow(entry, l, onOpen, onRename, onDelete)
+                NotebookRow(entry, l, onOpen, onRename, onDelete, onMove)
             }
         }
 
@@ -252,7 +278,8 @@ private fun NotebookRow(
     l: (String) -> String,
     onOpen: (String) -> Unit,
     onRename: (NotebookLibrary.Entry) -> Unit,
-    onDelete: (NotebookLibrary.Entry) -> Unit
+    onDelete: (NotebookLibrary.Entry) -> Unit,
+    onMove: (NotebookLibrary.Entry) -> Unit
 ) {
     var menu by remember(entry.id) { mutableStateOf(false) }
     Card(
@@ -281,6 +308,10 @@ private fun NotebookRow(
                     DropdownMenuItem(
                         text = { Text(l("rename_note")) },
                         onClick = { menu = false; onRename(entry) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(l("move_to_folder")) },
+                        onClick = { menu = false; onMove(entry) }
                     )
                     DropdownMenuItem(
                         text = { Text(l("delete")) },
@@ -381,3 +412,165 @@ private fun formatDate(millis: Long): String =
 
 private fun parseHex(hex: String): Color? =
     com.kairumo.padnote.chart.ChartRenderer.parseColor(hex)?.let { Color(it) }
+
+/**
+ * 麵包屑：最上層 → … → 現在這一層。
+ *
+ * 每一段都點得進去。只給一個「上一層」按鈕的話，在三層深的地方要回到
+ * 最上層得按三次，而且中間每一次都會重新算一次清單。
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Breadcrumb(
+    path: List<FolderTree.Folder>,
+    l: (String) -> String,
+    onOpenFolder: (String?) -> Unit
+) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(0.dp)
+    ) {
+        TextButton(onClick = { onOpenFolder(null) }) { Text(l("root_folder")) }
+        path.forEachIndexed { index, folder ->
+            Text("›", modifier = Modifier.padding(top = 14.dp))
+            TextButton(
+                onClick = { onOpenFolder(folder.id) },
+                // 最後一段是「現在在這裡」，點它沒有意義。
+                enabled = index != path.lastIndex
+            ) { Text(folder.title, maxLines = 1) }
+        }
+    }
+}
+
+@Composable
+private fun FolderRow(
+    folder: FolderTree.Folder,
+    l: (String) -> String,
+    onOpen: (String?) -> Unit,
+    onRename: (FolderTree.Folder) -> Unit,
+    onDelete: (FolderTree.Folder) -> Unit
+) {
+    var menu by remember(folder.id) { mutableStateOf(false) }
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onOpen(folder.id) },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text("🗀", fontSize = 18.sp)
+            Text(
+                folder.title,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 16.sp,
+                modifier = Modifier.weight(1f)
+            )
+            Box {
+                TextButton(onClick = { menu = true }) { Text("⋯") }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(
+                        text = { Text(l("rename_folder")) },
+                        onClick = { menu = false; onRename(folder) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(l("delete_folder")) },
+                        onClick = { menu = false; onDelete(folder) }
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** 建立或重新命名資料夾。兩件事共用一個對話框，差別只在標題與初值。 */
+@Composable
+fun FolderNameDialog(
+    title: String,
+    initial: String,
+    l: (String) -> String,
+    onDismiss: () -> Unit,
+    onConfirm: (String) -> Unit
+) {
+    var text by remember { mutableStateOf(initial) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            OutlinedTextField(
+                value = text,
+                onValueChange = { text = it },
+                label = { Text(l("folder_name")) },
+                singleLine = true
+            )
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { onConfirm(text.trim()) },
+                // 空名字的資料夾在清單上是一條看不出是什麼的空白列。
+                enabled = text.isNotBlank()
+            ) { Text(l("confirm")) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(l("cancel")) } }
+    )
+}
+
+/**
+ * 刪除資料夾的確認。
+ *
+ * 訊息要講清楚**裡面的東西不會被刪掉** —— 只是跟著一起從清單上消失。
+ * 不講的話，使用者會以為自己剛剛毀掉了整個資料夾的筆記。
+ */
+@Composable
+fun DeleteFolderDialog(
+    folder: FolderTree.Folder,
+    l: (String) -> String,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(l("delete_folder")) },
+        text = { Text("${folder.title}\n\n${l("delete_folder_explainer")}") },
+        confirmButton = {
+            TextButton(onClick = onConfirm) { Text(l("delete")) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(l("cancel")) } }
+    )
+}
+
+/** 把一本筆記搬到哪個資料夾。列出全部資料夾加一個「最上層」。 */
+@Composable
+fun MoveToFolderDialog(
+    entryTitle: String,
+    folders: List<FolderTree.Folder>,
+    l: (String) -> String,
+    onDismiss: () -> Unit,
+    onPick: (String?) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(l("move_to_folder")) },
+        text = {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                item {
+                    Text(entryTitle, style = MaterialTheme.typography.bodySmall)
+                }
+                item {
+                    TextButton(onClick = { onPick(null) }) { Text(l("root_folder")) }
+                }
+                items(folders, key = { it.id }) { folder ->
+                    TextButton(onClick = { onPick(folder.id) }) {
+                        Text(folder.title, maxLines = 1)
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(l("cancel")) } }
+    )
+}

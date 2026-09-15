@@ -1375,12 +1375,37 @@ public final class NotebookStore: ObservableObject {
         persistData()
     }
 
+    /// 另一台裝置刪掉的東西，這台要跟著藏起來。
+    ///
+    /// # 這件事以前完全沒有做
+    ///
+    /// 刪除**寫**進同步索引是有的（`recordDeletion`），但從來沒有人**讀**它 ——
+    /// `AccountSyncStore.isDeleted` 在整個 Apple 端一個呼叫端都沒有。
+    /// 結果是：在 Android 刪掉一本筆記，同步到 iPad 之後它還在，
+    /// 而且每一輪同步都把它原封不動留著。
+    ///
+    /// 用核心的 `sync_is_hidden` 而不是 `sync_is_deleted`：後者只看自己那一筆，
+    /// 刪掉一個資料夾之後，裡面的筆記本仍然會被列出來 ——
+    /// 那就是「存在但打不開、也刪不掉」的幽靈。
+    ///
+    /// **索引裡沒看過的一律不藏。** 「沒看過」不是「被刪了」：剛建好還沒
+    /// 同步過的筆記本會落在這個狀態，藏起來的話它在使用者眼前憑空消失。
+    public func isHiddenBySync(_ id: String) -> Bool {
+        syncIsHidden(indexJson: AccountSyncStore.shared.indexJSON, itemId: id)
+    }
+
     public func subfolders(of parentId: String?) -> [FolderItem] {
-        folders.filter { $0.parentId == parentId }
+        folders.filter { $0.parentId == parentId && !isHiddenBySync($0.id) }
     }
 
     public func notebooks(in folderId: String?) -> [NotebookDocument] {
-        notebooks.filter { $0.folderId == folderId }
+        notebooks.filter { $0.folderId == folderId && !isHiddenBySync($0.id) }
+    }
+
+    /// 清單要顯示的筆記本。**不要用 `notebooks`** —— 那一份是真相來源，
+    /// 編輯器靠它找得到目前開著的那一本，過濾掉會讓正在編輯的筆記消失。
+    public var visibleNotebooks: [NotebookDocument] {
+        notebooks.filter { !isHiddenBySync($0.id) }
     }
 
     // MARK: - 集中單一事實分頁管理 (Atomic Page Management)

@@ -82,13 +82,13 @@ object CloudSync {
      * 順序不能反：先收斂索引，才知道哪些筆記本還活著 ——
      * 先同步內容的話，會把另一台已經刪掉的筆記本內容又推上去。
      */
-    fun runFull(context: Context, deviceId: UInt): Pair<FfiCloudSyncResult?, Int> {
+    fun runFull(context: Context, deviceId: UInt): Pair<FfiCloudSyncResult?, List<String>> {
         val meta = runOnce(context)
-        if (meta == null || !meta.ok) return meta to 0
-        var changed = 0
+        if (meta == null || !meta.ok) return meta to emptyList()
+        val changed = mutableListOf<String>()
         for (entry in NotebookLibrary.all(context, deviceId)) {
             val result = syncNotebook(context, entry.id) ?: continue
-            if (result.ok && result.downloaded > 0u) changed++
+            if (result.ok && result.downloaded > 0u) changed += entry.id
         }
         // 別台裝置**新建**的筆記本在本機連套件目錄都沒有，上面那一圈看不到它們。
         // 少了這一步，症狀是：索引同步成功、清單上出現了標題，點進去卻是空的。
@@ -97,14 +97,14 @@ object CloudSync {
     }
 
     /**
-     * 把雲端有、本機還沒有的筆記本整本抓下來。回傳抓了幾本。
+     * 把雲端有、本機還沒有的筆記本整本抓下來。回傳抓下來的那幾本的 id。
      *
      * 清單來自**合併後的索引**，不是本機那一份 —— 用本機的話，剛從雲端
      * 收斂進來的那幾本還不在裡面，永遠差一輪。
      */
-    private fun pullNewNotebooks(context: Context, mergedIndexJson: String): Int {
+    private fun pullNewNotebooks(context: Context, mergedIndexJson: String): List<String> {
         val dir = NotebookLibrary.directory(context)
-        var pulled = 0
+        val pulled = mutableListOf<String>()
         for (item in uniffi.padnote_core.syncLiveNotebooks(mergedIndexJson)) {
             val path = File(dir, "${item.id}.padnote")
             if (path.exists()) continue
@@ -119,7 +119,7 @@ object CloudSync {
                 System.currentTimeMillis().toULong()
             )
             if (result.ok) {
-                pulled++
+                pulled += item.id
             } else {
                 // 抓失敗時把空殼刪掉。留著的話，下一輪 `path.exists()` 為真，
                 // 這本就再也不會被重抓 —— 使用者會看到一本永遠打不開的空筆記。

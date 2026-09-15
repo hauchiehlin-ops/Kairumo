@@ -69,6 +69,10 @@ import com.kairumo.padnote.library.HomeScreen
 import com.kairumo.padnote.library.RenameNotebookDialog
 import com.kairumo.padnote.library.DeleteNotebookDialog
 import com.kairumo.padnote.library.NotebookLibrary
+import com.kairumo.padnote.library.FolderTree
+import com.kairumo.padnote.library.FolderNameDialog
+import com.kairumo.padnote.library.DeleteFolderDialog
+import com.kairumo.padnote.library.MoveToFolderDialog
 import com.kairumo.padnote.shape.NoteConnection
 import com.kairumo.padnote.shape.NoteShape
 import com.kairumo.padnote.shape.ShapeLayer
@@ -190,6 +194,12 @@ private fun NotebookHome(onOpen: (String) -> Unit) {
     var revision by remember { mutableIntStateOf(0) }
     var renaming by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
     var deleting by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
+    var moving by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
+    // 現在看的是哪一個資料夾。null 表示最上層。
+    var folderId by remember { mutableStateOf<String?>(null) }
+    var creatingFolder by remember { mutableStateOf(false) }
+    var renamingFolder by remember { mutableStateOf<FolderTree.Folder?>(null) }
+    var deletingFolder by remember { mutableStateOf<FolderTree.Folder?>(null) }
     var editingIdentity by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var recording by remember { mutableStateOf(false) }
@@ -200,7 +210,15 @@ private fun NotebookHome(onOpen: (String) -> Unit) {
 
     // revision 是重讀的觸發器。清單來自檔案系統，沒有觀察者可以訂閱 ——
     // 新增或刪除之後不主動重讀的話，畫面會停在舊的內容。
-    val entries = remember(revision, sort) { NotebookLibrary.all(activity, device, sort) }
+    val entries = remember(revision, sort, folderId) {
+        NotebookLibrary.all(activity, device, sort, folderId)
+    }
+    // 搜尋要搜整個筆記庫，不是只搜眼前這一層。
+    val allEntries = remember(revision, sort) { NotebookLibrary.all(activity, device, sort) }
+    val folders = remember(revision, folderId) { FolderTree.subfolders(activity, folderId) }
+    val breadcrumb = remember(revision, folderId) { FolderTree.pathTo(activity, folderId) }
+    // 搬移對話框要列出**全部**資料夾，不是只有這一層的。
+    val allFolders = remember(revision) { FolderTree.all(activity) }
 
     // 回到首頁就自動同步一輪。
     //
@@ -223,7 +241,7 @@ private fun NotebookHome(onOpen: (String) -> Unit) {
                 }
                 // 失敗時**不出訊息**。自動同步是背景行為，網路不通就下次再說；
                 // 每次回到首頁都跳一次「同步失敗」只會讓人關掉這個功能。
-                if (meta != null && meta.ok && changed > 0) revision++
+                if (meta != null && meta.ok && changed.isNotEmpty()) revision++
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -251,6 +269,9 @@ private fun NotebookHome(onOpen: (String) -> Unit) {
 
         HomeScreen(
             entries = entries,
+            allEntries = allEntries,
+            folders = folders,
+            breadcrumb = breadcrumb,
             profileName = profile.displayName,
             profileColorHex = profile.colorHex,
             appVersion = "Kairumo v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
@@ -259,13 +280,16 @@ private fun NotebookHome(onOpen: (String) -> Unit) {
             l = ::l,
             onOpen = onOpen,
             onCreate = {
-                val id = NotebookLibrary.create(activity, l("new_note"), device)
+                // 建在使用者當下看著的那一層 —— 一律建在最上層的話，
+                // 人在某個資料夾裡按「新增」，東西卻出現在別的地方。
+                val id = NotebookLibrary.create(activity, l("new_note"), device, folderId)
                 revision++
                 // 新增之後直接開 —— 建了一本卻停在清單上，使用者還要再點一次。
                 if (id != null) onOpen(id)
             },
             onRename = { renaming = it },
             onDelete = { deleting = it },
+            onMove = { moving = it },
             onSortChange = { sort = it },
             onEditIdentity = { editingIdentity = true },
             onToggleRecording = {
@@ -276,7 +300,72 @@ private fun NotebookHome(onOpen: (String) -> Unit) {
                 if (id != null) onOpen(id)
             },
             onBackup = { message = runBackup(activity) },
-            onRestore = { restorePicker.launch(arrayOf("*/*")) }
+            onRestore = { restorePicker.launch(arrayOf("*/*")) },
+            onOpenFolder = { folderId = it },
+            onCreateFolder = { creatingFolder = true },
+            onRenameFolder = { renamingFolder = it },
+            onDeleteFolder = { deletingFolder = it }
+        )
+    }
+
+    if (creatingFolder) {
+        FolderNameDialog(
+            title = l("new_subfolder"),
+            initial = "",
+            l = ::l,
+            onDismiss = { creatingFolder = false },
+            onConfirm = { title ->
+                FolderTree.create(activity, title, folderId)
+                creatingFolder = false
+                revision++
+            }
+        )
+    }
+
+    renamingFolder?.let { folder ->
+        FolderNameDialog(
+            title = l("rename_folder"),
+            initial = folder.title,
+            l = ::l,
+            onDismiss = { renamingFolder = null },
+            onConfirm = { title ->
+                FolderTree.rename(activity, folder.id, title)
+                renamingFolder = null
+                revision++
+            }
+        )
+    }
+
+    deletingFolder?.let { folder ->
+        DeleteFolderDialog(
+            folder = folder,
+            l = ::l,
+            onDismiss = { deletingFolder = null },
+            onConfirm = {
+                FolderTree.delete(activity, folder.id)
+                // 人站在被刪掉的那個資料夾裡面時要退回上一層，
+                // 否則畫面會停在一個已經不存在的地方，而且空無一物。
+                if (folderId == folder.id) folderId = folder.parentId
+                deletingFolder = null
+                revision++
+            }
+        )
+    }
+
+    moving?.let { entry ->
+        MoveToFolderDialog(
+            entryTitle = entry.title,
+            folders = allFolders,
+            l = ::l,
+            onDismiss = { moving = null },
+            onPick = { target ->
+                val ok = FolderTree.move(
+                    activity, entry.id, entry.title, isFolder = false, toParent = target
+                )
+                message = l(if (ok) "move_done" else "move_cycle_refused")
+                moving = null
+                revision++
+            }
         )
     }
 
@@ -333,7 +422,10 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     val l10n = { key: String -> uiString(key) }
     // 真的開一本筆記本：沒有 session 的話，匯出與錄音都沒有東西可寫，
     // 這一頁就只是個畫圖玩具而不是筆記 App。
-    val notebook = remember(notebookId) { openNotebook(activity, notebookId) }
+    // 同步把別台的 oplog 寫進套件之後，要重開 session 才看得到 ——
+    // 檔案變了，記憶體裡那份還是同步前的。
+    var sessionRevision by remember(notebookId) { mutableIntStateOf(0) }
+    val notebook = remember(notebookId, sessionRevision) { openNotebook(activity, notebookId) }
     // 分頁狀態。
     //
     // 在此之前 Android **只認第一頁** —— `notebook.second` 是 firstPageId，
@@ -872,11 +964,12 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                                 !meta.ok -> l10n("sync_failed").replace("%@", meta.error)
                                 else -> l10n("sync_done")
                             }
-                            if (changed > 0) {
-                                // 有筆記本被別台改過。oplog 已經寫進套件，但記憶體
-                                // 裡那份還是同步前的 —— 不重載的話畫面毫無變化，
-                                // 使用者會以為同步沒作用。
-                                activity.recreate()
+                            // **只重開這一本的 session，不要 recreate 整個 Activity。**
+                            // recreate 會把使用者當下的一切打掉：捲動位置、選取範圍、
+                            // 開著的面板、還沒送出的文字方塊內容。而真正需要重載的
+                            // 只有「這一本剛好被別台改過」這一種情況。
+                            if (notebookId != null && changed.contains(notebookId)) {
+                                sessionRevision++
                             }
                         }
                     }

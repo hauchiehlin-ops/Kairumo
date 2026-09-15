@@ -1943,6 +1943,14 @@ extension LocalizationManager {
             .ko: "폴더 삭제",
             .th: "ลบโฟลเดอร์"
         ],
+        "delete_folder_explainer": [
+            .zhHant: "裡面的筆記本不會被刪除，會在所有裝置上回到最上層。",
+            .en: "The notebooks inside are not deleted. They move back to the top level on every device.",
+            .zhHans: "里面的笔记本不会被删除，会在所有装置上回到最上层。",
+            .ja: "中のノートは削除されません。すべての端末で最上位フォルダに戻ります。",
+            .ko: "안에 있는 노트는 삭제되지 않습니다. 모든 기기에서 최상위로 이동합니다.",
+            .th: "สมุดบันทึกข้างในจะไม่ถูกลบ แต่จะย้ายกลับไปที่ระดับบนสุดในทุกอุปกรณ์"
+        ],
         "delete_item": [
             .zhHant: "刪除項目",
             .en: "Delete Item",
@@ -4118,6 +4126,22 @@ extension LocalizationManager {
             .ja: "その他",
             .ko: "더 보기",
             .th: "เพิ่มเติม"
+        ],
+        "move_cycle_refused": [
+            .zhHant: "不能把資料夾搬進它自己裡面。",
+            .en: "Can't move a folder into itself.",
+            .zhHans: "不能把资料夹搬进它自己里面。",
+            .ja: "フォルダを自身の中へは移動できません。",
+            .ko: "폴더를 자기 자신 안으로 옮길 수 없습니다.",
+            .th: "ย้ายโฟลเดอร์เข้าไปในตัวเองไม่ได้"
+        ],
+        "move_done": [
+            .zhHant: "已移動",
+            .en: "Moved",
+            .zhHans: "已移动",
+            .ja: "移動しました",
+            .ko: "이동했습니다",
+            .th: "ย้ายแล้ว"
         ],
         "move_to_folder": [
             .zhHant: "移動至資料夾",

@@ -239,6 +239,32 @@ pub fn sync_is_deleted(index_json: String, item_id: String) -> bool {
         .unwrap_or(false)
 }
 
+/// 索引裡的一筆。沒有就回 `None`。
+///
+/// 平台層用它問「這本筆記在哪個資料夾」與「這個資料夾叫什麼名字」——
+/// 兩者都只有索引知道，本機檔案系統上看不出來。
+#[uniffi::export]
+pub fn sync_item(index_json: String, item_id: String) -> Option<FfiLibraryItem> {
+    LibraryIndex::from_json(&index_json)
+        .items
+        .get(&item_id)
+        .map(Into::into)
+}
+
+/// 這個項目該不該因為刪除而**從畫面上消失**。
+///
+/// 清單要用這個，不是 [`sync_is_deleted`]：後者只看自己那一筆，
+/// 刪掉一個資料夾之後，裡面的筆記本仍然會被列出來 ——
+/// 那就是「存在但打不開、也刪不掉」的幽靈。
+///
+/// 索引裡**沒看過**的一律回 false。「沒看過」不是「被刪了」——
+/// 混在一起的話，剛建好還沒同步的筆記本會在使用者眼前消失，
+/// 那比多顯示一個幽靈嚴重得多。
+#[uniffi::export]
+pub fn sync_is_hidden(index_json: String, item_id: String) -> bool {
+    LibraryIndex::from_json(&index_json).is_hidden_by_deletion(&item_id)
+}
+
 /// 搬移之後會不會形成環。UI 要在**動手之前**問 ——
 /// 把資料夾搬進自己的子孫裡，那棵子樹會從樹上整個斷開，救不回來。
 #[uniffi::export]

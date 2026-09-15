@@ -102,6 +102,20 @@ object AccountSyncStore {
     fun isDeleted(context: Context, id: String): Boolean =
         syncIsDeleted(indexJson(context), id)
 
+    /**
+     * 這一筆該不該因為刪除而**從清單上消失**。
+     *
+     * 清單要用這個而不是 [isDeleted]：後者只看自己那一筆，刪掉一個資料夾
+     * 之後，裡面的筆記本仍然會被列出來 —— 那就是「存在但打不開、也刪不掉」
+     * 的幽靈。核心會走完整條祖先鏈。
+     */
+    fun isHidden(context: Context, id: String): Boolean =
+        uniffi.padnote_core.syncIsHidden(indexJson(context), id)
+
+    /** 索引裡的一筆。沒有就回 null —— 那是「還沒記錄過」，不是「被刪了」。 */
+    fun item(context: Context, id: String): FfiLibraryItem? =
+        uniffi.padnote_core.syncItem(indexJson(context), id)
+
     /** 某個資料夾底下還活著的項目。`parentId` 傳 null 表示根目錄。 */
     fun children(context: Context, parentId: String? = null): List<FfiLibraryItem> =
         syncChildrenOf(indexJson(context), parentId ?: "")
