@@ -2129,6 +2129,209 @@ public struct NotebookEditorView: View {
     /// 圖釘 + 浮動列）原本整棵樹的型別都被編進 body 的 mangled 名稱裡。
     private var canvasWorkArea: AnyView { AnyView(canvasWorkAreaContent) }
 
+
+    /// 某一頁的插入物件層（圖片、形狀、表格、文字、連結、3D、討論圖釘）。
+    ///
+    /// 抽成帶頁碼的方法，是為了讓連續頁面模式能對每一頁各叫一次 ——
+    /// 原本這一整段寫死在畫布工作區裡、只認 `currentPageIndex`，
+    /// 連續模式下就只有一頁有物件，其餘頁面是空的。
+    ///
+    /// **手寫模式下這一整層不攔截觸控。** 這些物件是疊在 PKCanvasView 之上的
+    /// SwiftUI 視圖，預設會吃掉觸控 —— 於是使用者拿筆想在一張圖上圈重點，
+    /// 筆畫根本到不了畫布，看起來就是「筆刷在物件上沒作用」。
+    @ViewBuilder
+    private func objectLayer(forPage page: Int) -> some View {
+        ZStack {
+                ForEach(notebook.attachments ?? []) { item in
+                    if item.pageIndex == page {
+                        AttachmentItemView(
+                            attachment: binding(for: item.id),
+                            onEdit: {
+                                self.editingAttachmentId = item.id
+                            },
+                            onDelete: {
+                                deletedAttachmentBackup = (type: "image", data: item)
+                                collaborationManager.broadcastAttachmentDelete(id: item.id, type: "image")
+                                notebook.attachments?.removeAll { $0.id == item.id }
+                                store.updateNotebook(notebook)
+                                collaborationManager.broadcastSelection(selectedId: nil)
+                            }
+                        )
+                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .image, order: notebook.objectOrder))
+                    }
+                }
+
+                // 連接線先畫 —— 畫在形狀之上的話，線會壓過方塊的邊，看起來像穿幫。
+                ForEach(notebook.connectionAttachments ?? []) { item in
+                    if item.pageIndex == page,
+                       let from = notebook.shapeAttachments?.first(where: { $0.id == item.fromShapeId }),
+                       let to = notebook.shapeAttachments?.first(where: { $0.id == item.toShapeId }),
+                       let geometry = ShapeGeometry.connection(item, from: from, to: to) {
+                        ConnectionLineView(connection: item, geometry: geometry)
+                    }
+                }
+
+                // 形狀。
+                ForEach(notebook.shapeAttachments ?? []) { item in
+                    if item.pageIndex == page {
+                        ShapeAttachmentItemView(
+                            shape: shapeBinding(for: item.id),
+                            isSelected: selectedShapeIds.contains(item.id),
+                            onSelect: { toggleShapeSelection(item.id) },
+                            onMove: { delta in moveShapeGroup(item.id, by: delta) },
+                            onDelete: {
+                                notebook.shapeAttachments?.removeAll { $0.id == item.id }
+                                // 連著的線也要跟著走 —— 留著的話會指向一個不存在的
+                                // 形狀，畫面上是一條從空氣連出來的線。
+                                notebook.connectionAttachments?.removeAll {
+                                    $0.fromShapeId == item.id || $0.toShapeId == item.id
+                                }
+                                store.updateNotebook(notebook)
+                            }
+                        )
+                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .shape, order: notebook.objectOrder))
+                    }
+                }
+
+                if showLayerPanel {
+                    FloatingPanel(
+                        title: localizationManager.localized("layers_panel"),
+                        onClose: { showLayerPanel = false }
+                    ) {
+                        VStack(spacing: 10) {
+                            // 跨型別的堆疊：圖片、文字、表格、圖表、3D、連結、
+                            // 形狀全部在同一份順序裡。使用者要的「圖層上下排序」
+                            // 指的是這個 —— 底下那個只認形狀。
+                            CanvasStackPanel(
+                                objects: pageStackableObjects,
+                                order: Binding(
+                                    get: {
+                                        ObjectStacking.normalized(
+                                            objects: pageStackableObjects,
+                                            order: notebook.objectOrder
+                                        )
+                                    },
+                                    set: { updated in
+                                        notebook.objectOrder = updated
+                                        store.updateNotebook(notebook)
+                                    }
+                                ),
+                                selection: $selectedShapeIds
+                            )
+
+                            // 形狀的群組操作留在原本的面板 —— 群組是形狀專屬的
+                            // 概念（連接線要接得住），其餘型別沒有這回事。
+                            if !pageShapes.isEmpty {
+                                Divider()
+                                ObjectLayerPanel(
+                                    shapes: Binding(
+                                        get: { pageShapes },
+                                        set: { updated in replacePageShapes(with: updated) }
+                                    ),
+                                    selection: $selectedShapeIds,
+                                    groupingOnly: true
+                                )
+                            }
+                        }
+                    }
+                    .padding(.top, 24)
+                    .padding(.trailing, 24)
+                    .transition(.scale(scale: 0.95).combined(with: .opacity))
+                }
+
+                // 表格。與文字方塊一樣疊在墨跡之上，手寫模式下不攔截觸控。
+                ForEach(notebook.tableAttachments ?? []) { item in
+                    if item.pageIndex == page {
+                        TableAttachmentItemView(
+                            table: tableBinding(for: item.id),
+                            onEdit: { editingTable = item },
+                            onDelete: {
+                                notebook.tableAttachments?.removeAll { $0.id == item.id }
+                                store.updateNotebook(notebook)
+                            }
+                        )
+                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .table, order: notebook.objectOrder))
+                    }
+                }
+
+                // 🌟 筆記內嵌 Word 級文字方塊（支援段落對齊、特殊符號與便利貼卡片底色）
+                ForEach(notebook.textAttachments ?? []) { item in
+                    if item.pageIndex == page {
+                        TextAttachmentItemView(
+                            textItem: binding(forTextId: item.id),
+                            onEdit: {
+                                self.editingTextId = item.id
+                            },
+                            onDelete: {
+                                deletedAttachmentBackup = (type: "text", data: item)
+                                collaborationManager.broadcastAttachmentDelete(id: item.id, type: "text")
+                                notebook.textAttachments?.removeAll { $0.id == item.id }
+                                store.updateNotebook(notebook)
+                                collaborationManager.broadcastSelection(selectedId: nil)
+                            }
+                        )
+                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .text, order: notebook.objectOrder))
+                    }
+                }
+
+                // 🌟 筆記內嵌網址 Rich Link 預覽卡片（支援點擊跳轉瀏覽器與自由平移）
+                ForEach(notebook.linkAttachments ?? []) { item in
+                    if item.pageIndex == page {
+                        LinkAttachmentItemView(
+                            linkItem: binding(forLinkId: item.id),
+                            onDelete: {
+                                notebook.linkAttachments?.removeAll { $0.id == item.id }
+                                store.updateNotebook(notebook)
+                            }
+                        )
+                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .link, order: notebook.objectOrder))
+                    }
+                }
+
+                // 🌟 筆記內嵌 3D 幾何模型展示層（支援 360° 空間旋轉、9大材質 PBR 物理反射、縮放與文字標題）
+                ForEach(notebook.model3DAttachments ?? []) { item in
+                    if item.pageIndex == page {
+                        Model3DCanvasItemView(
+                            item: binding(forModel3DId: item.id),
+                            onDelete: {
+                                deletedAttachmentBackup = (type: "3d", data: item)
+                                collaborationManager.broadcastAttachmentDelete(id: item.id, type: "3d")
+                                notebook.model3DAttachments?.removeAll { $0.id == item.id }
+                                store.updateNotebook(notebook)
+                                collaborationManager.broadcastSelection(selectedId: nil)
+                            }
+                        )
+                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .model3D, order: notebook.objectOrder))
+                    }
+                }
+
+                // 🌟 筆記內嵌討論圖釘展示層（支援多方訊息留言串、已解決標記與即時推播）
+                ForEach(notebook.commentPins ?? []) { pin in
+                    if pin.pageIndex == page {
+                        CommentPinMarkerView(
+                            pin: pin,
+                            isSelected: selectedCommentPinId == pin.id,
+                            onTap: {
+                                withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
+                                    if selectedCommentPinId == pin.id {
+                                        selectedCommentPinId = nil
+                                        collaborationManager.broadcastSelection(selectedId: nil)
+                                    } else {
+                                        selectedCommentPinId = pin.id
+                                        collaborationManager.broadcastSelection(selectedId: pin.id)
+                                    }
+                                }
+                            }
+                        )
+                        .position(x: pin.x, y: pin.y)
+                        .zIndex(ObjectStacking.zIndex(for: pin.id, kind: .pin, order: notebook.objectOrder))
+                    }
+                }
+
+        }
+        .allowsHitTesting(editorMode != .draw)
+    }
+
     private var canvasWorkAreaContent: some View {
 ZStack(alignment: .topTrailing) {
             CanvasRepresentable(
@@ -2254,195 +2457,7 @@ ZStack(alignment: .topTrailing) {
             //
             // 代價是手寫模式下不能直接拖動物件 —— 要搬動或編輯就切到打字模式。
             // 這個取捨是刻意的：手寫模式的主角是筆，物件操作有它自己的模式。
-            Group {
-            ForEach(notebook.attachments ?? []) { item in
-                if item.pageIndex == currentPageIndex {
-                    AttachmentItemView(
-                        attachment: binding(for: item.id),
-                        onEdit: {
-                            self.editingAttachmentId = item.id
-                        },
-                        onDelete: {
-                            deletedAttachmentBackup = (type: "image", data: item)
-                            collaborationManager.broadcastAttachmentDelete(id: item.id, type: "image")
-                            notebook.attachments?.removeAll { $0.id == item.id }
-                            store.updateNotebook(notebook)
-                            collaborationManager.broadcastSelection(selectedId: nil)
-                        }
-                    )
-                    .zIndex(ObjectStacking.zIndex(for: item.id, kind: .image, order: notebook.objectOrder))
-                }
-            }
-
-            // 連接線先畫 —— 畫在形狀之上的話，線會壓過方塊的邊，看起來像穿幫。
-            ForEach(notebook.connectionAttachments ?? []) { item in
-                if item.pageIndex == currentPageIndex,
-                   let from = notebook.shapeAttachments?.first(where: { $0.id == item.fromShapeId }),
-                   let to = notebook.shapeAttachments?.first(where: { $0.id == item.toShapeId }),
-                   let geometry = ShapeGeometry.connection(item, from: from, to: to) {
-                    ConnectionLineView(connection: item, geometry: geometry)
-                }
-            }
-
-            // 形狀。
-            ForEach(notebook.shapeAttachments ?? []) { item in
-                if item.pageIndex == currentPageIndex {
-                    ShapeAttachmentItemView(
-                        shape: shapeBinding(for: item.id),
-                        isSelected: selectedShapeIds.contains(item.id),
-                        onSelect: { toggleShapeSelection(item.id) },
-                        onMove: { delta in moveShapeGroup(item.id, by: delta) },
-                        onDelete: {
-                            notebook.shapeAttachments?.removeAll { $0.id == item.id }
-                            // 連著的線也要跟著走 —— 留著的話會指向一個不存在的
-                            // 形狀，畫面上是一條從空氣連出來的線。
-                            notebook.connectionAttachments?.removeAll {
-                                $0.fromShapeId == item.id || $0.toShapeId == item.id
-                            }
-                            store.updateNotebook(notebook)
-                        }
-                    )
-                    .zIndex(ObjectStacking.zIndex(for: item.id, kind: .shape, order: notebook.objectOrder))
-                }
-            }
-
-            if showLayerPanel {
-                FloatingPanel(
-                    title: localizationManager.localized("layers_panel"),
-                    onClose: { showLayerPanel = false }
-                ) {
-                    VStack(spacing: 10) {
-                        // 跨型別的堆疊：圖片、文字、表格、圖表、3D、連結、
-                        // 形狀全部在同一份順序裡。使用者要的「圖層上下排序」
-                        // 指的是這個 —— 底下那個只認形狀。
-                        CanvasStackPanel(
-                            objects: pageStackableObjects,
-                            order: Binding(
-                                get: {
-                                    ObjectStacking.normalized(
-                                        objects: pageStackableObjects,
-                                        order: notebook.objectOrder
-                                    )
-                                },
-                                set: { updated in
-                                    notebook.objectOrder = updated
-                                    store.updateNotebook(notebook)
-                                }
-                            ),
-                            selection: $selectedShapeIds
-                        )
-
-                        // 形狀的群組操作留在原本的面板 —— 群組是形狀專屬的
-                        // 概念（連接線要接得住），其餘型別沒有這回事。
-                        if !pageShapes.isEmpty {
-                            Divider()
-                            ObjectLayerPanel(
-                                shapes: Binding(
-                                    get: { pageShapes },
-                                    set: { updated in replacePageShapes(with: updated) }
-                                ),
-                                selection: $selectedShapeIds,
-                                groupingOnly: true
-                            )
-                        }
-                    }
-                }
-                .padding(.top, 24)
-                .padding(.trailing, 24)
-                .transition(.scale(scale: 0.95).combined(with: .opacity))
-            }
-
-            // 表格。與文字方塊一樣疊在墨跡之上，手寫模式下不攔截觸控。
-            ForEach(notebook.tableAttachments ?? []) { item in
-                if item.pageIndex == currentPageIndex {
-                    TableAttachmentItemView(
-                        table: tableBinding(for: item.id),
-                        onEdit: { editingTable = item },
-                        onDelete: {
-                            notebook.tableAttachments?.removeAll { $0.id == item.id }
-                            store.updateNotebook(notebook)
-                        }
-                    )
-                    .zIndex(ObjectStacking.zIndex(for: item.id, kind: .table, order: notebook.objectOrder))
-                }
-            }
-
-            // 🌟 筆記內嵌 Word 級文字方塊（支援段落對齊、特殊符號與便利貼卡片底色）
-            ForEach(notebook.textAttachments ?? []) { item in
-                if item.pageIndex == currentPageIndex {
-                    TextAttachmentItemView(
-                        textItem: binding(forTextId: item.id),
-                        onEdit: {
-                            self.editingTextId = item.id
-                        },
-                        onDelete: {
-                            deletedAttachmentBackup = (type: "text", data: item)
-                            collaborationManager.broadcastAttachmentDelete(id: item.id, type: "text")
-                            notebook.textAttachments?.removeAll { $0.id == item.id }
-                            store.updateNotebook(notebook)
-                            collaborationManager.broadcastSelection(selectedId: nil)
-                        }
-                    )
-                    .zIndex(ObjectStacking.zIndex(for: item.id, kind: .text, order: notebook.objectOrder))
-                }
-            }
-
-            // 🌟 筆記內嵌網址 Rich Link 預覽卡片（支援點擊跳轉瀏覽器與自由平移）
-            ForEach(notebook.linkAttachments ?? []) { item in
-                if item.pageIndex == currentPageIndex {
-                    LinkAttachmentItemView(
-                        linkItem: binding(forLinkId: item.id),
-                        onDelete: {
-                            notebook.linkAttachments?.removeAll { $0.id == item.id }
-                            store.updateNotebook(notebook)
-                        }
-                    )
-                    .zIndex(ObjectStacking.zIndex(for: item.id, kind: .link, order: notebook.objectOrder))
-                }
-            }
-
-            // 🌟 筆記內嵌 3D 幾何模型展示層（支援 360° 空間旋轉、9大材質 PBR 物理反射、縮放與文字標題）
-            ForEach(notebook.model3DAttachments ?? []) { item in
-                if item.pageIndex == currentPageIndex {
-                    Model3DCanvasItemView(
-                        item: binding(forModel3DId: item.id),
-                        onDelete: {
-                            deletedAttachmentBackup = (type: "3d", data: item)
-                            collaborationManager.broadcastAttachmentDelete(id: item.id, type: "3d")
-                            notebook.model3DAttachments?.removeAll { $0.id == item.id }
-                            store.updateNotebook(notebook)
-                            collaborationManager.broadcastSelection(selectedId: nil)
-                        }
-                    )
-                    .zIndex(ObjectStacking.zIndex(for: item.id, kind: .model3D, order: notebook.objectOrder))
-                }
-            }
-
-            // 🌟 筆記內嵌討論圖釘展示層（支援多方訊息留言串、已解決標記與即時推播）
-            ForEach(notebook.commentPins ?? []) { pin in
-                if pin.pageIndex == currentPageIndex {
-                    CommentPinMarkerView(
-                        pin: pin,
-                        isSelected: selectedCommentPinId == pin.id,
-                        onTap: {
-                            withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) {
-                                if selectedCommentPinId == pin.id {
-                                    selectedCommentPinId = nil
-                                    collaborationManager.broadcastSelection(selectedId: nil)
-                                } else {
-                                    selectedCommentPinId = pin.id
-                                    collaborationManager.broadcastSelection(selectedId: pin.id)
-                                }
-                            }
-                        }
-                    )
-                    .position(x: pin.x, y: pin.y)
-                    .zIndex(ObjectStacking.zIndex(for: pin.id, kind: .pin, order: notebook.objectOrder))
-                }
-            }
-
-            }
-            .allowsHitTesting(editorMode != .draw)
+            objectLayer(forPage: currentPageIndex)
 
             // 展開的討論圖釘詳細對話框
             if let pinId = selectedCommentPinId,
