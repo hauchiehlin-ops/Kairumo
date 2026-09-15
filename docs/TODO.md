@@ -7,6 +7,15 @@
 
 ## 🔴 被硬體或資料卡住（程式已就緒）
 
+### H0. iOS 側載裝置 UDID 登錄（`scripts/dist.sh`）
+- **卡在**：Ad Hoc 的 .ipa 只能裝在事先登錄 UDID 的裝置上，一個帳號上限 100 台。
+  目前描述檔只涵蓋 **1 台**裝置 —— 也就是現在產出的 .ipa 給任何別人都裝不起來。
+- **已就緒**：`./scripts/dist.sh` 已可產出通過驗證的 Ad Hoc .ipa，
+  並在打包時印出描述檔涵蓋的裝置數與到期日。
+- **要做**：收集受測者裝置 UDID → developer.apple.com → Devices 登錄 → 重跑 dist.sh。
+- **備註**：mac 的 DMG 與 Android 的 APK **沒有**這個限制，公證/簽章後給誰都能裝。
+  不想登錄 UDID 就只能走 TestFlight（`scripts/release.sh`）。
+
 ### H1. S1 墨跡延遲實機量測 —— **M0 Go/No-Go，最高優先**
 - **卡在**：實體 iPad（模擬器 Metal 路徑不同，數字無意義）＋ 240fps 攝影機
 - **已就緒**：`apple/InkSpike/` 全部原始碼、`apple/README.md` 量測協定

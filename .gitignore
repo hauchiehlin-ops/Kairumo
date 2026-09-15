@@ -39,3 +39,8 @@ DerivedData/
 /android/.gradle/
 /android/local.properties
 __pycache__/
+
+# 側載打包產物（scripts/dist.sh）。簽章金鑰與 keystore.properties
+# 已由 android/.gitignore 擋下，這裡不重複。
+/build/dist/
+/build/dist-work/
