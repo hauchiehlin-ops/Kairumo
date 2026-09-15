@@ -146,7 +146,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | ~~S-43~~ ✅ | 把標註寫進真實 PDF（PDFium 的 annotation API） | `create_annotated_pdf` 實作完成，經測試驗證 |
 | ~~S-44b~~ ✅ | 匯出真正的 PDF `/Ink` 標註 | **兩平台皆已達成**。Apple 的匯出改走核心的匯出器（原本是點陣合成）；核心同時輸出向量筆畫與 `/Subtype /Ink` + `/InkList` + `/BS`。3D 模型與連結卡片核心沒有那兩種型別，改以算繪後的圖片帶進去，內容不會掉 |
 | S-44 | 用其他 App 實測 | **需要你來測**（我裝不了那些 App）。已產出範例 PDF（兩頁、三筆畫、三個獨立 Ink 標註）。判準：那三條線能不能在 Goodnotes / Notability / PDF Expert 裡被**選取、搬動、刪除** |
-| S-35 | **Windows 低延遲墨跡** | **目前沒有 Windows 版**，這一條在有 Windows 版之前不成立。內容本身是結論不是待辦：Compose MP Desktop 走 Skia/JVM 做不到 9ms，要原生 Windows Ink / DirectComposition。建議轉成 ADR 記著，等真的要做 Windows 時才重新評估 |
+| ~~S-35~~ ➡️ | **Windows 低延遲墨跡** | **已轉成 [ADR-0012](adr/0012-windows-low-latency-ink.md)，不再排期。** 它不是待辦：目前沒有 Windows 版，這一條在有 Windows 版之前不成立。結論（Compose MP Desktop 走 Skia/JVM 做不到 9ms，要原生 Windows Ink / DirectComposition）連同重新評估的時機都記在那份 ADR |
 | ~~S-36~~ ✅ | **掌拒與輸入分流** | 🔴 完全未設計。**手寫 App 的生死線**：手掌靠螢幕會畫出大片塗鴉 |
 | ~~S-37~~ ✅ | UI/UX 設計 | 🔴 完全未開始。可與 M0 並行，不依賴 S1 |
 | ~~S-38~~ ✅ | 物件模型：群組／對齊／吸附／變換 | 需 ADR —— 會影響 `.padnote` 格式。目前 `Stroke` 沒有「物件」概念 |
@@ -202,11 +202,11 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 
 | ID | 項目 | 判定條件 |
 |---|---|---|
-| G-01 | Google OAuth 設定與登入 | iOS/iPadOS/macOS/Android 都能取得 `drive.appdata` access token，登出與撤銷權限有明確狀態 |
-| G-02 | appDataFolder Provider 完整化 | `list/get_range/put` 可在 `appDataFolder` 正確列舉、分頁、下載 range、建立與更新檔案；Drive 無 append 時走新 chunk 檔 |
-| G-03 | 同步資料佈局 | `profile/`、`settings/`、`notebooks/`、`sync/<device_id>/`、`tombstones/` 路徑規格寫進 `format-spec.md`，index/cache 明確不同步 |
-| G-04 | 全域設定同步 | 語言、工具列配置、預設筆刷、協同身分跨裝置一致；低延遲、觸控筆門檻等 device-local 設定不被同步 |
-| G-05 | 筆記本與資料夾同步 | 新裝置首次登入能拉回全部筆記本；離線兩台各自新增/改名/移動/刪除後，重新上線會收斂且不復活刪除項 |
+| G-01 | Google OAuth 設定與登入 | iOS/iPadOS/macOS/Android 都能取得 `drive.appdata` access token，登出與撤銷權限有明確狀態。**卡在外部前置**：要先有 Google Cloud OAuth client（見本節末）。程式面能先做的是權杖保存與更新流程，但沒有 client id 就驗不了 |
+| ~~G-02~~ ✅ | appDataFolder Provider 完整化 | `crates/padnote-sync/src/gdrive.rs`。**原本這個檔案根本沒有被編譯**（`lib.rs` 裡沒有 `pub mod gdrive;`），所以裡面的 `unimplemented!()`、少掉的分頁、沒跳脫的查詢字串都沒人發現。已補：分頁跟到底、`trashed = false`、查詢字串跳脫、前綴（而非子字串）比對、同名取最新、append 回錯誤而不是 panic、401/403 分類成權限錯誤。HTTP 抽成 trait，9 項測試用假的 Drive 驗分頁與查詢邏輯 |
+| ~~G-03~~ ✅ | 同步資料佈局 | `format-spec.md` §7.0 |
+| ~~G-04~~ ✅ | 全域設定同步 | `padnote-sync::settings` + `ffi_account_sync`。`SyncedSettings` 與 `DeviceSettings` 是**兩個型別**，「不要同步」寫在型別上而不是註解裡；有一項測試專門確認低延遲、掌拒門檻、SAF 權限權杖連序列化都不會出現在同步 JSON 裡。逐欄位帶 Lamport 時戳合併（整包 LWW 的話，A 改語言、B 改工具列會互相蓋掉）。**尚未接上平台 UI** |
+| ~~G-05~~ ✅ | 筆記本與資料夾同步 | `padnote-sync::library` + `ffi_account_sync`。刪除是**墓碑**不是「不在清單裡」—— 靠比對清單的話，還沒同步到刪除的那台會把筆記本傳回去，每同步一次復活一次。另含：已刪資料夾底下的項目一起隱藏（否則變成打不開也刪不掉的幽靈）、父子環的迴圈保護（兩台各自把 A 搬進 B、B 搬進 A 會凍住 App）、搬移前先問會不會成環。12 項測試含「離線兩台各自增改刪後收斂」。**尚未接上平台 UI** |
 | G-06 | 實機矩陣 | iPad + macOS + Android 同一 Google 帳號端到端測試：新增、編輯、刪除、改設定、重啟、離線再上線皆通過 |
 
 **外部前置**：需要建立 Google Cloud OAuth client（iOS/macOS bundle id、Android

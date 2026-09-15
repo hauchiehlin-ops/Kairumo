@@ -1,0 +1,294 @@
+//! 帳號式同步的平台介面（G-04 / G-05，ADR-0011）。
+//!
+//! 合併規則在 [`padnote_sync::settings`] 與 [`padnote_sync::library`]，
+//! 這裡只做型別轉換與一層「整包 JSON 進、整包 JSON 出」的門面。
+//!
+//! # 為什麼是 JSON 進出而不是逐欄位 API
+//!
+//! 這兩份資料**本來就是以 JSON 的形式存在雲端**（`settings/global.json`、
+//! `notebooks/index.json`）。平台層拿到的是位元組，要做的事只有三件：
+//! 合併、問結果、送回去。逐欄位開 API 會讓每新增一個設定就要動三個地方
+//! （核心、Swift、Kotlin），而那正是設定同步最容易漏掉東西的地方。
+
+use padnote_sync::library::{ItemKind, LibraryIndex, LibraryItem};
+use padnote_sync::settings::{Stamped, SyncedSettings};
+
+/// 雲端上的固定路徑。平台層不要自己拼字串 —— 拼錯的話兩台裝置會寫到
+/// 不同的檔案，而且不會有任何錯誤，只是永遠同步不到。
+#[uniffi::export]
+pub fn sync_settings_path() -> String {
+    padnote_sync::settings::SETTINGS_PATH.to_string()
+}
+
+#[uniffi::export]
+pub fn sync_index_path() -> String {
+    padnote_sync::library::INDEX_PATH.to_string()
+}
+
+// ── 全域設定（G-04）──────────────────────────────────────────────
+
+/// 合併兩份設定 JSON，回傳合併後的 JSON。
+///
+/// 逐欄位取較新的：A 改語言、B 改工具列，兩邊的改動都會留下來。
+/// 整包「最後寫入者勝」的話，後上傳的那個會把另一個蓋掉。
+///
+/// 任何一邊解析不出來就當成空的 —— 雲端上一份壞檔案不該讓使用者
+/// 整個進不去設定。
+#[uniffi::export]
+pub fn sync_merge_settings(mine_json: String, theirs_json: String) -> String {
+    let mut mine = SyncedSettings::from_json(&mine_json);
+    mine.merge(&SyncedSettings::from_json(&theirs_json));
+    mine.to_json()
+}
+
+/// 設定裡的一個欄位。平台層用它改單一設定，不必自己組時戳。
+#[derive(Clone, Copy, PartialEq, Eq, Debug, uniffi::Enum)]
+pub enum FfiSyncedField {
+    /// 介面語言。
+    Locale,
+    /// 工具列配置（`ToolbarConfig::to_json` 的字串）。
+    ToolbarJson,
+}
+
+/// 改一個字串設定並蓋上時戳。
+///
+/// `lamport` 要用同步引擎的邏輯時鐘，**不要用牆上時間** —— 裝置時鐘不同步
+/// 是常態，用牆上時間會讓「時鐘快五分鐘的那台」永遠贏。
+#[uniffi::export]
+pub fn sync_set_setting(
+    settings_json: String,
+    field: FfiSyncedField,
+    value: String,
+    lamport: u64,
+    device_id: String,
+) -> String {
+    let mut settings = SyncedSettings::from_json(&settings_json);
+    let stamped = Stamped::new(value, lamport, device_id);
+    match field {
+        FfiSyncedField::Locale => settings.locale = Some(stamped),
+        FfiSyncedField::ToolbarJson => settings.toolbar_json = Some(stamped),
+    }
+    settings.to_json()
+}
+
+/// 讀一個字串設定。沒有設過就回空字串。
+#[uniffi::export]
+pub fn sync_get_setting(settings_json: String, field: FfiSyncedField) -> String {
+    let settings = SyncedSettings::from_json(&settings_json);
+    let slot = match field {
+        FfiSyncedField::Locale => &settings.locale,
+        FfiSyncedField::ToolbarJson => &settings.toolbar_json,
+    };
+    slot.as_ref().map(|s| s.value.clone()).unwrap_or_default()
+}
+
+// ── 筆記本與資料夾（G-05）────────────────────────────────────────
+
+/// 樹上的一個項目。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiLibraryItem {
+    pub id: String,
+    /// true 為資料夾。
+    pub is_folder: bool,
+    pub title: String,
+    /// 空字串表示在根目錄（UniFFI 的 Option<String> 在兩邊都比較囉嗦）。
+    pub parent_id: String,
+    pub lamport: u64,
+    pub device: String,
+    pub deleted: bool,
+}
+
+impl From<&LibraryItem> for FfiLibraryItem {
+    fn from(item: &LibraryItem) -> Self {
+        Self {
+            id: item.id.clone(),
+            is_folder: item.kind == ItemKind::Folder,
+            title: item.title.clone(),
+            parent_id: item.parent_id.clone().unwrap_or_default(),
+            lamport: item.lamport,
+            device: item.device.clone(),
+            deleted: item.deleted,
+        }
+    }
+}
+
+impl From<FfiLibraryItem> for LibraryItem {
+    fn from(item: FfiLibraryItem) -> Self {
+        Self {
+            id: item.id,
+            kind: if item.is_folder {
+                ItemKind::Folder
+            } else {
+                ItemKind::Notebook
+            },
+            title: item.title,
+            parent_id: Some(item.parent_id).filter(|p| !p.is_empty()),
+            lamport: item.lamport,
+            device: item.device,
+            deleted: item.deleted,
+        }
+    }
+}
+
+/// 合併兩份索引 JSON。可交換、冪等 —— 同步引擎不保證誰先到、也不保證只送一次。
+#[uniffi::export]
+pub fn sync_merge_index(mine_json: String, theirs_json: String) -> String {
+    let mut mine = LibraryIndex::from_json(&mine_json);
+    mine.merge(&LibraryIndex::from_json(&theirs_json));
+    mine.to_json()
+}
+
+/// 新增或更新一個項目。
+#[uniffi::export]
+pub fn sync_upsert_item(index_json: String, item: FfiLibraryItem) -> String {
+    let mut index = LibraryIndex::from_json(&index_json);
+    index.upsert(item.into());
+    index.to_json()
+}
+
+/// 刪除。**留下墓碑而不是移除** —— 從「檔案不見了」推論刪除的話，
+/// 還沒同步到的那台裝置會把它傳回去，刪除永遠刪不掉。
+#[uniffi::export]
+pub fn sync_delete_item(
+    index_json: String,
+    item_id: String,
+    lamport: u64,
+    device_id: String,
+) -> String {
+    let mut index = LibraryIndex::from_json(&index_json);
+    index.tombstone(&item_id, lamport, &device_id);
+    index.to_json()
+}
+
+/// 某個資料夾底下還活著的項目。`parent_id` 傳空字串表示根目錄。
+///
+/// 已刪除資料夾底下的東西**不會**出現在任何地方 —— 否則它們會變成
+/// 「存在但打不開、也刪不掉」的幽靈。
+#[uniffi::export]
+pub fn sync_children_of(index_json: String, parent_id: String) -> Vec<FfiLibraryItem> {
+    let index = LibraryIndex::from_json(&index_json);
+    let parent = if parent_id.is_empty() {
+        None
+    } else {
+        Some(parent_id.as_str())
+    };
+    index.children_of(parent).into_iter().map(Into::into).collect()
+}
+
+/// 搬移之後會不會形成環。UI 要在**動手之前**問 ——
+/// 把資料夾搬進自己的子孫裡，那棵子樹會從樹上整個斷開，救不回來。
+#[uniffi::export]
+pub fn sync_would_create_cycle(index_json: String, item_id: String, new_parent_id: String) -> bool {
+    let index = LibraryIndex::from_json(&index_json);
+    let parent = if new_parent_id.is_empty() {
+        None
+    } else {
+        Some(new_parent_id.as_str())
+    };
+    index.would_create_cycle(&item_id, parent)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn item(id: &str, title: &str, lamport: u64, device: &str) -> FfiLibraryItem {
+        FfiLibraryItem {
+            id: id.into(),
+            is_folder: false,
+            title: title.into(),
+            parent_id: String::new(),
+            lamport,
+            device: device.into(),
+            deleted: false,
+        }
+    }
+
+    #[test]
+    fn settings_round_trip_across_the_ffi() {
+        let a = sync_set_setting(String::new(), FfiSyncedField::Locale, "ja".into(), 3, "dev-a".into());
+        assert_eq!(sync_get_setting(a.clone(), FfiSyncedField::Locale), "ja");
+
+        let b = sync_set_setting(
+            String::new(),
+            FfiSyncedField::ToolbarJson,
+            "{\"x\":1}".into(),
+            4,
+            "dev-b".into(),
+        );
+        // 兩台各改一個欄位，合併之後兩個都要在。
+        let merged = sync_merge_settings(a, b);
+        assert_eq!(sync_get_setting(merged.clone(), FfiSyncedField::Locale), "ja");
+        assert_eq!(
+            sync_get_setting(merged, FfiSyncedField::ToolbarJson),
+            "{\"x\":1}"
+        );
+    }
+
+    #[test]
+    fn an_unset_setting_is_empty_not_a_crash() {
+        assert_eq!(sync_get_setting(String::new(), FfiSyncedField::Locale), "");
+        assert_eq!(sync_get_setting("garbage".into(), FfiSyncedField::Locale), "");
+    }
+
+    #[test]
+    fn the_index_survives_the_ffi_intact() {
+        // 換型別時把 parent_id 的空字串與 None 搞混，整棵樹就會攤平到根目錄，
+        // 而那在核心的單元測試裡看不到 —— 那些測的是 Option。
+        let mut json = sync_upsert_item(
+            String::new(),
+            FfiLibraryItem {
+                is_folder: true,
+                ..item("f1", "工作", 1, "dev-a")
+            },
+        );
+        json = sync_upsert_item(
+            json,
+            FfiLibraryItem {
+                parent_id: "f1".into(),
+                ..item("n1", "會議", 2, "dev-a")
+            },
+        );
+
+        assert_eq!(sync_children_of(json.clone(), String::new()).len(), 1);
+        let inside = sync_children_of(json.clone(), "f1".into());
+        assert_eq!(inside.len(), 1);
+        assert_eq!(inside[0].title, "會議");
+        assert_eq!(inside[0].parent_id, "f1");
+    }
+
+    #[test]
+    fn a_deleted_item_stays_deleted_after_a_merge() {
+        let live = sync_upsert_item(String::new(), item("n1", "會議", 1, "dev-a"));
+        let deleted = sync_delete_item(live.clone(), "n1".into(), 5, "dev-a".into());
+        // 另一台手上還是活的那一份，合併之後不可以復活。
+        let merged = sync_merge_index(live, deleted);
+        assert!(sync_children_of(merged, String::new()).is_empty());
+    }
+
+    #[test]
+    fn cycles_are_reported_before_the_move_happens() {
+        let mut json = sync_upsert_item(
+            String::new(),
+            FfiLibraryItem { is_folder: true, ..item("f1", "上", 1, "dev-a") },
+        );
+        json = sync_upsert_item(
+            json,
+            FfiLibraryItem {
+                is_folder: true,
+                parent_id: "f1".into(),
+                ..item("f2", "下", 1, "dev-a")
+            },
+        );
+        assert!(sync_would_create_cycle(json.clone(), "f1".into(), "f2".into()));
+        assert!(!sync_would_create_cycle(json, "f2".into(), String::new()));
+    }
+
+    #[test]
+    fn the_cloud_paths_are_the_ones_in_the_spec() {
+        // 平台層自己拼字串拼錯的話，兩台裝置會寫到不同檔案，
+        // 沒有任何錯誤，只是永遠同步不到。
+        assert_eq!(sync_settings_path(), "settings/global.json");
+        assert_eq!(sync_index_path(), "notebooks/index.json");
+    }
+}

@@ -8,11 +8,17 @@
 //! ⇒ **檔案層級衝突在數學上不可能發生**（Dropbox/iCloud 的 "conflicted copy"）。
 
 pub mod engine;
+pub mod gdrive;
+pub mod library;
 pub mod local;
 pub mod oplog;
 pub mod provider;
+pub mod settings;
 
 pub use engine::{PulledBatch, SyncCursors, SyncEngine};
+pub use gdrive::{DriveHttp, GDriveProvider, ReqwestDriveHttp};
+pub use library::{INDEX_PATH, ItemKind, LibraryIndex, LibraryItem};
 pub use local::LocalFolderProvider;
 pub use oplog::{DeviceId, OplogName};
 pub use provider::{CloudProvider, RemoteEntry, SyncError};
+pub use settings::{DefaultPen, DeviceSettings, Identity, Stamped, SyncedSettings, SETTINGS_PATH};
