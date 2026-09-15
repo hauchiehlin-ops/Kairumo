@@ -28,7 +28,15 @@ set -euo pipefail
 # UnicodeEncodeError 直接中止（實際踩過）。強制輸出編碼，與終端機 locale 脫鉤。
 export PYTHONIOENCODING=utf-8
 
-REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# 路徑要在**任何 cd 之前**解析成絕對路徑並存起來。
+#
+# 底下原本有一行在 cd 到 android/ 之後才用 `dirname "${BASH_SOURCE[0]}"`
+# 重新推腳本位置 —— 以相對路徑呼叫時（CI 用的是 ./scripts/android-release.sh）
+# 那個值是 "./scripts"，而當下的工作目錄已經是 android/，於是 cd 失敗、
+# 版本檢查整個沒跑，只留下一行 exit 127。
+# 用絕對路徑呼叫（release.sh 就是）剛好沒事 —— 所以本機從來看不到。
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 cd "$REPO_ROOT/android"
 
 MODE="${1:-signed}"
@@ -37,7 +45,7 @@ export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 # --- 1. 版本一致性 -------------------------------------------------------
 # 上架前最不該發生的事，就是 Play Console 收到的 versionCode 跟你以為的不一樣。
 echo "==> 檢查版本一致性"
-"$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/check-version-consistency.sh"
+"$SCRIPT_DIR/check-version-consistency.sh"
 
 # --- 2. 原生函式庫 -------------------------------------------------------
 if [[ ! -f app/src/main/jniLibs/arm64-v8a/libpadnote_core.so ]]; then
