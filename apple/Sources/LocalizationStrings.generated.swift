@@ -2887,6 +2887,30 @@ extension LocalizationManager {
             .ko: "잘못된 수식 형식",
             .th: "รูปแบบสูตรไม่ถูกต้อง"
         ],
+        "math_error_bad_expression": [
+            .zhHant: "看不懂這個算式",
+            .en: "Can’t read that expression",
+            .zhHans: "看不懂这个算式",
+            .ja: "この式は解釈できません",
+            .ko: "이 수식을 이해할 수 없습니다",
+            .th: "ไม่เข้าใจนิพจน์นี้"
+        ],
+        "math_error_empty": [
+            .zhHant: "算式不可為空",
+            .en: "Enter an expression",
+            .zhHans: "算式不可为空",
+            .ja: "式を入力してください",
+            .ko: "수식을 입력하세요",
+            .th: "กรุณาใส่นิพจน์"
+        ],
+        "math_error_not_finite": [
+            .zhHant: "算不出有限的結果（可能除以零）",
+            .en: "No finite result (division by zero?)",
+            .zhHans: "算不出有限的结果（可能除以零）",
+            .ja: "有限の結果になりません（0 除算？）",
+            .ko: "유한한 결과가 없습니다 (0으로 나눔?)",
+            .th: "ไม่ได้ผลลัพธ์จำกัด (หารด้วยศูนย์?)"
+        ],
         "math_expression": [
             .zhHant: "輸入或手寫算式（例如: 125 * 8 + 45 或 sqrt(144)）",
             .en: "Enter formula (e.g. 125 * 8 + 45 or sqrt(144))",

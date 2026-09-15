@@ -2882,6 +2882,30 @@ object LocalizationStrings {
             "ko" to "잘못된 수식 형식",
             "th" to "รูปแบบสูตรไม่ถูกต้อง"
         ),
+        "math_error_bad_expression" to mapOf(
+            "zh-Hant" to "看不懂這個算式",
+            "en" to "Can’t read that expression",
+            "zh-Hans" to "看不懂这个算式",
+            "ja" to "この式は解釈できません",
+            "ko" to "이 수식을 이해할 수 없습니다",
+            "th" to "ไม่เข้าใจนิพจน์นี้"
+        ),
+        "math_error_empty" to mapOf(
+            "zh-Hant" to "算式不可為空",
+            "en" to "Enter an expression",
+            "zh-Hans" to "算式不可为空",
+            "ja" to "式を入力してください",
+            "ko" to "수식을 입력하세요",
+            "th" to "กรุณาใส่นิพจน์"
+        ),
+        "math_error_not_finite" to mapOf(
+            "zh-Hant" to "算不出有限的結果（可能除以零）",
+            "en" to "No finite result (division by zero?)",
+            "zh-Hans" to "算不出有限的结果（可能除以零）",
+            "ja" to "有限の結果になりません（0 除算？）",
+            "ko" to "유한한 결과가 없습니다 (0으로 나눔?)",
+            "th" to "ไม่ได้ผลลัพธ์จำกัด (หารด้วยศูนย์?)"
+        ),
         "math_expression" to mapOf(
             "zh-Hant" to "輸入或手寫算式（例如: 125 * 8 + 45 或 sqrt(144)）",
             "en" to "Enter formula (e.g. 125 * 8 + 45 or sqrt(144))",

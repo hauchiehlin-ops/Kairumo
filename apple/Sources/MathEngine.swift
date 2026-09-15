@@ -2,8 +2,16 @@
 //  MathEngine.swift
 //  Kairumo
 //
-//  安全精確的數學算式解析與求解引擎
-//  支援四則運算、括號、乘方、平方根、百分比、三角函數與常見手寫符號容錯
+//  算式求值。
+//
+//  # 這一層現在只做格式，不做計算
+//
+//  求值走核心的 `mathEvaluate` —— 原本是 `NSExpression`，那有兩個問題：
+//
+//  1. 它是 Foundation 專屬的，Android 沒有對應品。兩邊各寫一份的結果是同一條
+//     算式可能算出不同答案，而使用者是把它當計算機在用的。
+//  2. **它對錯誤輸入會丟出 Objective-C 例外，Swift 攔不到** —— 使用者打錯一個
+//     字，整個 App 直接當掉。
 //
 
 import Foundation
@@ -16,79 +24,45 @@ public struct MathResult: Identifiable {
     public let numericValue: Double
     public let displayText: String
 
-    public init(original: String, normalized: String, value: Double) {
+    public init(original: String, normalized: String, value: Double, formatted: String) {
         self.originalExpression = original
         self.normalizedExpression = normalized
         self.numericValue = value
+        self.formattedResult = formatted
+        let clean = original
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .replacingOccurrences(of: "=", with: "")
+            .trimmingCharacters(in: .whitespaces)
+        self.displayText = "\(clean) = \(formatted)"
+    }
+}
 
-        // 格式化數字：整數不顯示小數點，浮點數最多保留 6 位
-        if abs(value - Double(Int64(value))) < 1e-9 {
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .decimal
-            self.formattedResult = formatter.string(from: NSNumber(value: Int64(value))) ?? "\(Int64(value))"
-        } else {
-            let formatter = NumberFormatter()
-            formatter.numberStyle = .decimal
-            formatter.maximumFractionDigits = 6
-            self.formattedResult = formatter.string(from: NSNumber(value: value)) ?? String(format: "%.4f", value)
-        }
-        self.displayText = "\(original.trimmingCharacters(in: .whitespacesAndNewlines).replacingOccurrences(of: "=", with: "").trimmingCharacters(in: .whitespaces)) = \(self.formattedResult)"
+/// 求值失敗。`localizationKey` 是要顯示給使用者看的訊息鍵。
+public struct MathError: LocalizedError {
+    public let localizationKey: String
+    public var errorDescription: String? {
+        // localizedUnsafe：錯誤訊息會在非主執行緒組成，而字串表是唯讀的
+        // 靜態資料，從哪個執行緒讀都一樣（與 NotebookMigration 的 L() 同理）。
+        LocalizationManager.shared.localizedUnsafe(localizationKey)
     }
 }
 
 public enum MathEngine {
 
-    /// 解析並計算數學表達式
+    /// 求值。看不懂就回錯誤，不會當掉。
     public static func evaluate(_ rawInput: String) -> Result<MathResult, Error> {
-        let clean = rawInput.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty else {
-            return .failure(NSError(domain: "MathEngine", code: -1, userInfo: [NSLocalizedDescriptionKey: "算式不可為空"]))
+        let outcome = mathEvaluate(expression: rawInput)
+        guard outcome.ok else {
+            return .failure(MathError(
+                localizationKey: outcome.errorKey.isEmpty
+                    ? "math_error_bad_expression"
+                    : outcome.errorKey))
         }
-
-        // 容錯處理：移除等號、中文全形符號轉換、乘除號替換
-        var expr = clean
-        if expr.hasSuffix("=") {
-            expr.removeLast()
-        }
-        expr = expr.replacingOccurrences(of: "×", with: "*")
-        expr = expr.replacingOccurrences(of: "÷", with: "/")
-        expr = expr.replacingOccurrences(of: "—", with: "-")
-        expr = expr.replacingOccurrences(of: "–", with: "-")
-        expr = expr.replacingOccurrences(of: "（", with: "(")
-        expr = expr.replacingOccurrences(of: "）", with: ")")
-        expr = expr.replacingOccurrences(of: "π", with: "\(Double.pi)")
-        expr = expr.replacingOccurrences(of: "pi", with: "\(Double.pi)", options: .caseInsensitive)
-
-        // 支援百分比 (如 50% -> (50 * 0.01))
-        let percentRegex = try? NSRegularExpression(pattern: "([0-9.]+)\\%")
-        if let regex = percentRegex {
-            let range = NSRange(location: 0, length: expr.utf16.count)
-            expr = regex.stringByReplacingMatches(in: expr, options: [], range: range, withTemplate: "($1 * 0.01)")
-        }
-
-        // 支援平方根 sqrt(x) -> (x ** 0.5)
-        let sqrtRegex = try? NSRegularExpression(pattern: "(?i)sqrt\\(([^)]+)\\)")
-        if let regex = sqrtRegex {
-            let range = NSRange(location: 0, length: expr.utf16.count)
-            expr = regex.stringByReplacingMatches(in: expr, options: [], range: range, withTemplate: "($1 ** 0.5)")
-        }
-
-        // 支援乘方 ^ -> ** (NSExpression 乘方語法為 **)
-        expr = expr.replacingOccurrences(of: "^", with: "**")
-
-        do {
-            let nsExpr = NSExpression(format: expr)
-            guard let result = nsExpr.expressionValue(with: nil, context: nil) as? NSNumber else {
-                return .failure(NSError(domain: "MathEngine", code: -2, userInfo: [NSLocalizedDescriptionKey: "無法評估該算式"]))
-            }
-            let doubleVal = result.doubleValue
-            if doubleVal.isNaN || doubleVal.isInfinite {
-                return .failure(NSError(domain: "MathEngine", code: -3, userInfo: [NSLocalizedDescriptionKey: "算式結果無窮大或未定義（如除以零）"]))
-            }
-            let mathResult = MathResult(original: clean, normalized: expr, value: doubleVal)
-            return .success(mathResult)
-        } catch {
-            return .failure(error)
-        }
+        return .success(MathResult(
+            original: rawInput,
+            normalized: outcome.normalized,
+            value: outcome.value,
+            formatted: outcome.formatted
+        ))
     }
 }

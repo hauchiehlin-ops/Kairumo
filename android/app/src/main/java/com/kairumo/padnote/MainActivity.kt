@@ -53,6 +53,7 @@ import com.kairumo.padnote.account.AccountManager
 import com.kairumo.padnote.canvas.ObjectStacking
 import com.kairumo.padnote.library.NotebookMeta
 import com.kairumo.padnote.canvas.CanvasStackPanel
+import com.kairumo.padnote.math.MathCalculatorDialog
 import com.kairumo.padnote.canvas.ObjectGeometry
 import com.kairumo.padnote.canvas.EditorMode
 import com.kairumo.padnote.account.IdentityDialog
@@ -354,6 +355,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     val meta = remember(notebook) { NotebookMeta.load(notebook?.first) }
     var stackRevision by remember { mutableIntStateOf(0) }
     var showStackPanel by remember { mutableStateOf(false) }
+    var showCalculator by remember { mutableStateOf(false) }
 
 
 
@@ -643,6 +645,10 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     }
                 )
                 Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n("math_calc")) },
+                    onClick = { showMenu = false; showCalculator = true }
+                )
                 DropdownMenuItem(
                     text = { Text(l10n("layers_panel")) },
                     onClick = { showMenu = false; showStackPanel = true }
@@ -999,6 +1005,22 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 textStore, imageStore, tableStore, chartStore, shapeStore)
         }
         textRevision++; imageRevision++; tableRevision++; chartRevision++; shapeRevision++
+    }
+
+    if (showCalculator) {
+        MathCalculatorDialog(
+            languageTag = deviceLanguageTag(),
+            onInsert = { text ->
+                // 插成文字方塊而不是圖片 —— 算式之後還改得動。
+                val box = textStore.create(x = 60f, y = 80f)
+                box.text = text
+                textStore.persist(box)
+                textRevision++
+                selectedTextId = box.id
+                editorMode = EditorMode.TYPE
+            },
+            onDismiss = { showCalculator = false }
+        )
     }
 
     if (showStackPanel) {
