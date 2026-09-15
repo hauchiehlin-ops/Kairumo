@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kairumo - Support &amp; Help Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root {
+    --paper: #F5F7F9;
+    --surface: #FFFFFF;
+    --ink: #141A22;
+    --ink-soft: #4B5666;
+    --ink-faint: #7C8798;
+    --rule: #DBE1E9;
+    --accent: #1F4FD8;
+    --accent-soft: #E9EEFC;
+    --mark: #0E7C53;
+    --mark-soft: #E4F3EC;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang TC", "PingFang SC", "Hiragino Sans", Roboto, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #0E1217;
+      --surface: #161B22;
+      --ink: #E6EBF2;
+      --ink-soft: #98A4B4;
+      --ink-faint: #6B7789;
+      --rule: #242C37;
+      --accent: #7FA9FF;
+      --accent-soft: #16233A;
+      --mark: #4CC38A;
+      --mark-soft: #12261E;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  header {
+    margin-bottom: 40px;
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 24px;
+  }
+
+  .brand-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border-radius: 6px;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-size: 32px;
+    font-weight: 700;
+    margin: 0 0 8px 0;
+    letter-spacing: -0.5px;
+  }
+
+  .subtitle {
+    color: var(--ink-soft);
+    font-size: 16px;
+    margin: 0;
+  }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 36px 0 16px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .faq-card {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .faq-card h3 {
+    font-size: 17px;
+    margin: 0 0 10px 0;
+    color: var(--ink);
+  }
+
+  .faq-card p {
+    margin: 0;
+    color: var(--ink-soft);
+    font-size: 15px;
+    line-height: 1.6;
+  }
+
+  .contact-box {
+    background: var(--surface);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 24px;
+    margin-top: 16px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #FFFFFF !important;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 10px 18px;
+    border-radius: 8px;
+    margin-top: 12px;
+    font-size: 15px;
+    transition: opacity 0.15s ease;
+  }
+
+  .btn:hover {
+    opacity: 0.9;
+  }
+
+  .btn-secondary {
+    background: var(--accent-soft);
+    color: var(--accent) !important;
+    border: 1px solid var(--rule);
+    margin-left: 8px;
+  }
+
+  ul {
+    padding-left: 20px;
+    color: var(--ink-soft);
+    font-size: 15px;
+    margin: 8px 0;
+  }
+
+  li {
+    margin-bottom: 6px;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 14px;
+    background: var(--paper);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid var(--rule);
+  }
+
+  footer {
+    margin-top: 60px;
+    padding-top: 24px;
+    border-top: 1px solid var(--rule);
+    text-align: center;
+    font-size: 14px;
+    color: var(--ink-faint);
+  }
+
+  footer a {
+    color: var(--accent);
+    text-decoration: none;
+  }
+
+  footer a:hover {
+    text-decoration: underline;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="brand-badge">Kairumo</div>
+    <h1>Support &amp; Help Center / 支援與說明中心</h1>
+    <p class="subtitle">Welcome to Kairumo Support. Find answers to common questions or reach out to us for assistance.</p>
+  </header>
+
+  <section>
+    <h2>常見問題說明 / Frequently Asked Questions (FAQ)</h2>
+
+    <div class="faq-card">
+      <h3>Q: Kairumo 的資料儲存在哪裡？會上傳到伺服器嗎？<br><span style="font-size: 14px; font-weight: normal; color: var(--ink-faint);">Where is my data stored? Is it uploaded to any server?</span></h3>
+      <p>Kairumo 採用嚴格的「本機優先（Local-first）」架構。您的所有筆記、手寫墨跡、錄音與轉錄文字均 100% 儲存在您自己的設備儲存空間中，沒有伺服器、無需登入帳號，更不會將您的私人資料上傳至任何雲端伺服器。</p>
+    </div>
+
+    <div class="faq-card">
+      <h3>Q: 語音轉文字（AI 轉錄）需要連網嗎？<br><span style="font-size: 14px; font-weight: normal; color: var(--ink-faint);">Does speech-to-text / AI transcription require an internet connection?</span></h3>
+      <p>完全不需要。Kairumo 內建高效能的端側本機 AI 語音辨識模型，即使在飛航模式或無網路連線的環境下，也能即時、流暢地將您的錄音轉錄為文字，同時保障音訊內容的絕對隱私。</p>
+    </div>
+
+    <div class="faq-card">
+      <h3>Q: 如何進行跨裝置備份或同步？<br><span style="font-size: 14px; font-weight: normal; color: var(--ink-faint);">How can I back up or sync across my devices?</span></h3>
+      <p>您可以透過標準端到端加密通道（例如 iCloud Drive、自訂 WebDAV 或 S3 相容儲存桶）進行筆記同步。同步檔案採用開放的 <code>.padnote</code> 格式，資料主權完全掌握在您手中。</p>
+    </div>
+
+    <div class="faq-card">
+      <h3>Q: Kairumo 需要訂閱收費嗎？<br><span style="font-size: 14px; font-weight: normal; color: var(--ink-faint);">Is Kairumo subscription-based or paid?</span></h3>
+      <p>Kairumo 核心完全免費且開源（Apache-2.0 授權），無內購解鎖、無廣告置入、無強制訂閱。</p>
+    </div>
+  </section>
+
+  <section>
+    <h2>問題回報與建議 / Issue Reporting &amp; Feedback</h2>
+    <div class="contact-box">
+      <p>如果您在使用過程中遇到任何異常、錯誤，或是對新功能有建議，非常歡迎向我們回報：</p>
+      <ul>
+        <li><strong>GitHub Issue 回報（推薦）</strong>：請附上您的 App 版本號、裝置型號以及問題重現步驟。</li>
+        <li><strong>意見回饋信箱</strong>：亦可直接透過電子郵件向開發者提出回報。</li>
+      </ul>
+      <div style="margin-top: 16px;">
+        <a class="btn" href="https://github.com/hauchiehlin-ops/Kairumo/issues" target="_blank" rel="noopener">前往 GitHub Issues 回報</a>
+        <a class="btn btn-secondary" href="mailto:dr.cobra.lin@gmail.com">發送 Email 回報</a>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>聯絡我們 / Contact Support</h2>
+    <div class="contact-box">
+      <p>如有任何商務合作、技術諮詢或支援需求，歡迎隨時與我們聯絡：</p>
+      <p><strong>聯絡信箱 (Email)</strong>：<a href="mailto:dr.cobra.lin@gmail.com" style="color: var(--accent); font-weight: 500;">dr.cobra.lin@gmail.com</a></p>
+      <p style="color: var(--ink-faint); font-size: 14px; margin-top: 8px;">我們通常會在 1–2 個工作天內回覆您的來信。</p>
+    </div>
+  </section>
+
+  <footer>
+    <p>&copy; 2026 Kairumo Project. All rights reserved.</p>
+    <p>
+      <a href="legal/privacy.html">隱私權政策 (Privacy Policy)</a> &bull; 
+      <a href="https://github.com/hauchiehlin-ops/Kairumo" target="_blank" rel="noopener">GitHub 原始碼</a>
+    </p>
+  </footer>
+</div>
+
+</body>
+</html>
