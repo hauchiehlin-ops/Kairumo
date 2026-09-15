@@ -51,6 +51,7 @@ import com.kairumo.padnote.shape.LayerPanel
 import com.kairumo.padnote.shape.ObjectLayer
 import com.kairumo.padnote.shape.ShapePicker
 import com.kairumo.padnote.shape.ShapeStore
+import com.kairumo.padnote.shape.ShapeStyleDialog
 import com.kairumo.padnote.table.NoteTable
 import com.kairumo.padnote.table.TableEditor
 import com.kairumo.padnote.table.TableLayer
@@ -153,6 +154,9 @@ private fun InkScreen() {
     var tableRevision by remember { mutableIntStateOf(0) }
     var selectedTableId by remember { mutableStateOf<String?>(null) }
     var editingTable by remember { mutableStateOf<NoteTable?>(null) }
+    /// 形狀的樣式編修對話框。strokeColorHex / fillColorHex / lineWidth 這三個
+    /// 欄位一直都在、也一直跟著同步走，但過去沒有任何介面碰得到它們。
+    var editingShapeStyle by remember { mutableStateOf<NoteShape?>(null) }
     var insertingTable by remember { mutableStateOf(false) }
     LaunchedEffect(notebook) { tableStore.load(); tableRevision++ }
 
@@ -500,6 +504,7 @@ private fun InkScreen() {
                                 selectedShapeIds + mates
                             }
                     },
+                    onEditStyle = { editingShapeStyle = it },
                     onEdit = { shape ->
                         // 點兩下刪除選中的形狀 —— 插錯一個卻刪不掉是最惱人的。
                         shapeStore.remove(shape)
@@ -553,6 +558,18 @@ private fun InkScreen() {
                 )
             }
         }
+    }
+
+    editingShapeStyle?.let { shape ->
+        ShapeStyleDialog(
+            shape = shape,
+            languageTag = deviceLanguageTag(),
+            onDismiss = { editingShapeStyle = null },
+            onApply = { updated ->
+                shapeStore.persist(updated)
+                shapeRevision++
+            }
+        )
     }
 
     editingText?.let { box ->

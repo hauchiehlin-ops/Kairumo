@@ -240,24 +240,31 @@ public struct ThemeSpecificToolsView: View {
                         .foregroundColor(.secondary)
                 }
 
-                let callouts: [(title: String, symbol: String, desc: String)] = [
-                    ("線性長度標註", "↔ 120.0 ±0.05 mm", "雙向精密尺寸箭頭"),
-                    ("外徑圓標註", "Ø 48.0 H7 mm", "基準直徑與配合公差"),
-                    ("圓弧半徑標註", "R 12.5 mm", "倒圓角半徑引線"),
-                    ("平面度公差", "⏥ 0.02 A", "形位幾何公差基準"),
-                    ("零件球標 ①", "① 軸承套筒", "裝配圖零件序號引線"),
-                    ("零件球標 ②", "② 傳動正齒輪", "裝配圖零件序號引線")
+                // 標題走字串表。原本寫死繁體中文 —— 日文或英文使用者
+                // 在一個已經翻成六國語系的面板裡看到一格中文。
+                let callouts: [(titleKey: String, symbol: String)] = [
+                    ("dimension_callout_linear", "↔ 120.0 ±0.05 mm"),
+                    ("dimension_callout_diameter", "Ø 48.0 H7 mm"),
+                    ("dimension_callout_radius", "R 12.5 mm"),
+                    ("dimension_callout_flatness", "⏥ 0.02 A"),
+                    ("dimension_callout_balloon1", "① —"),
+                    ("dimension_callout_balloon2", "② —")
                 ]
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
-                    ForEach(callouts, id: \.title) { item in
+                    ForEach(callouts, id: \.titleKey) { item in
                         Button {
-                            let img = renderDimensionBadge(text: item.symbol, desc: item.desc)
-                            onInsertCardImage(img)
+                            // 插入成**文字方塊**，不是算繪好的圖片。
+                            //
+                            // 原本走 renderDimensionBadge → onInsertCardImage，
+                            // 得到的是一張點陣圖：120.0 改不了、公差改不了、
+                            // 字級顏色改不了 —— 一張標註不能改數字，等於沒有用。
+                            // 文字方塊本來就能就地編輯、換字級、縮放、旋轉。
+                            onInsertTextCard(item.symbol)
                             dismiss()
                         } label: {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(item.title)
+                                Text(localizationManager.localized(item.titleKey))
                                     .font(.caption)
                                     .foregroundColor(.secondary)
                                 Text(item.symbol)

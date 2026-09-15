@@ -1418,6 +1418,54 @@ object LocalizationStrings {
             "ko" to "치수 인출선",
             "th" to "บอลลูนระบุขนาด"
         ),
+        "dimension_callout_balloon1" to mapOf(
+            "zh-Hant" to "零件球標 ①",
+            "en" to "Part balloon ①",
+            "zh-Hans" to "零件球标 ①",
+            "ja" to "部品バルーン ①",
+            "ko" to "부품 번호 ①",
+            "th" to "หมายเลขชิ้นส่วน ①"
+        ),
+        "dimension_callout_balloon2" to mapOf(
+            "zh-Hant" to "零件球標 ②",
+            "en" to "Part balloon ②",
+            "zh-Hans" to "零件球标 ②",
+            "ja" to "部品バルーン ②",
+            "ko" to "부품 번호 ②",
+            "th" to "หมายเลขชิ้นส่วน ②"
+        ),
+        "dimension_callout_diameter" to mapOf(
+            "zh-Hant" to "外徑圓標註",
+            "en" to "Diameter callout",
+            "zh-Hans" to "外径圆标注",
+            "ja" to "直径記号",
+            "ko" to "지름 표기",
+            "th" to "บอกเส้นผ่านศูนย์กลาง"
+        ),
+        "dimension_callout_flatness" to mapOf(
+            "zh-Hant" to "平面度公差",
+            "en" to "Flatness tolerance",
+            "zh-Hans" to "平面度公差",
+            "ja" to "平面度公差",
+            "ko" to "평면도 공차",
+            "th" to "ค่าความราบ"
+        ),
+        "dimension_callout_linear" to mapOf(
+            "zh-Hant" to "線性長度標註",
+            "en" to "Linear dimension",
+            "zh-Hans" to "线性长度标注",
+            "ja" to "直線寸法",
+            "ko" to "선형 치수",
+            "th" to "บอกขนาดเชิงเส้น"
+        ),
+        "dimension_callout_radius" to mapOf(
+            "zh-Hant" to "圓弧半徑標註",
+            "en" to "Radius callout",
+            "zh-Hans" to "圆弧半径标注",
+            "ja" to "半径記号",
+            "ko" to "반지름 표기",
+            "th" to "บอกรัศมี"
+        ),
         "disconnect" to mapOf(
             "zh-Hant" to "中斷連線",
             "en" to "Disconnect",
@@ -1849,6 +1897,14 @@ object LocalizationStrings {
             "ja" to "プレビュー取得",
             "ko" to "미리보기 가져오기",
             "th" to "ดึงตัวอย่าง"
+        ),
+        "fill_color" to mapOf(
+            "zh-Hant" to "填滿顏色",
+            "en" to "Fill color",
+            "zh-Hans" to "填充颜色",
+            "ja" to "塗りつぶし",
+            "ko" to "채우기 색",
+            "th" to "สีพื้น"
         ),
         "filter_ai" to mapOf(
             "zh-Hant" to "AI 概念渲染",
@@ -2282,6 +2338,14 @@ object LocalizationStrings {
             "ko" to "텍스트 상자 삽입",
             "th" to "แทรกกล่องข้อความ"
         ),
+        "insert_text_box_hint" to mapOf(
+            "zh-Hant" to "點兩下畫布空白處新增文字方塊",
+            "en" to "Double-tap empty canvas to add a text box",
+            "zh-Hans" to "双击画布空白处新增文字方块",
+            "ja" to "空白部分をダブルタップでテキストボックスを追加",
+            "ko" to "빈 캔버스를 두 번 탭하면 텍스트 상자 추가",
+            "th" to "แตะสองครั้งบนพื้นที่ว่างเพื่อเพิ่มกล่องข้อความ"
+        ),
         "insert_to_canvas" to mapOf(
             "zh-Hant" to "插入至目前畫布",
             "en" to "Insert to Canvas",
@@ -2441,6 +2505,14 @@ object LocalizationStrings {
             "ja" to "行間",
             "ko" to "줄 간격",
             "th" to "ระยะบรรทัด"
+        ),
+        "line_width" to mapOf(
+            "zh-Hant" to "線條粗細",
+            "en" to "Line width",
+            "zh-Hans" to "线条粗细",
+            "ja" to "線の太さ",
+            "ko" to "선 두께",
+            "th" to "ความหนาเส้น"
         ),
         "link_preview" to mapOf(
             "zh-Hant" to "網頁預覽",
@@ -3602,6 +3674,14 @@ object LocalizationStrings {
             "ko" to "초기화",
             "th" to "รีเซ็ต"
         ),
+        "resize_shape" to mapOf(
+            "zh-Hant" to "調整形狀大小",
+            "en" to "Resize shape",
+            "zh-Hans" to "调整形状大小",
+            "ja" to "図形のサイズを変更",
+            "ko" to "도형 크기 조절",
+            "th" to "ปรับขนาดรูปทรง"
+        ),
         "resize_text_box" to mapOf(
             "zh-Hant" to "拖曳調整文字方塊大小",
             "en" to "Drag to resize the text box",
@@ -3962,6 +4042,14 @@ object LocalizationStrings {
             "ko" to "도형 및 순서도",
             "th" to "รูปร่างและผังงาน"
         ),
+        "shape_style" to mapOf(
+            "zh-Hant" to "形狀樣式",
+            "en" to "Shape style",
+            "zh-Hans" to "形状样式",
+            "ja" to "図形スタイル",
+            "ko" to "도형 스타일",
+            "th" to "สไตล์รูปทรง"
+        ),
         "share_invite_link" to mapOf(
             "zh-Hant" to "分享邀請連結",
             "en" to "Share Invite Link",
@@ -4193,6 +4281,14 @@ object LocalizationStrings {
             "ja" to "データ保存先",
             "ko" to "데이터 저장 위치",
             "th" to "ตำแหน่งจัดเก็บข้อมูล"
+        ),
+        "stroke_color" to mapOf(
+            "zh-Hant" to "線條顏色",
+            "en" to "Stroke color",
+            "zh-Hans" to "线条颜色",
+            "ja" to "線の色",
+            "ko" to "선 색",
+            "th" to "สีเส้น"
         ),
         "stroke_width" to mapOf(
             "zh-Hant" to "筆畫粗細",

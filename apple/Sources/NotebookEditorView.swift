@@ -2206,34 +2206,31 @@ ZStack(alignment: .topTrailing) {
                 }
             )
 
-            // 🌟 打字模式畫布互動層：點選空白處新增文字方塊並直接彈出鍵盤
+            // 🌟 打字模式畫布互動層：**點兩下**空白處才新增文字方塊。
+            //
+            // 原本是單擊就新增，而且這一層鋪滿整個畫布、吃掉所有觸控 ——
+            // 於是打字模式下想捲動畫布、想點選既有的方塊或圖片，得到的
+            // 都是一個新的空方塊。使用者最常做的兩件事各生一個垃圾物件。
+            //
+            // 單擊留給底下的畫布與物件（捲動、選取），新增改用點兩下：
+            // 仍然能指定位置，而且不會跟任何既有手勢搶。
             if editorMode == .type {
-                GeometryReader { geo in
-                    Color.black.opacity(0.001)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .contentShape(Rectangle())
-                        .onTapGesture { location in
-                            let newDraft = NoteTextAttachment(
-                                id: UUID().uuidString,
-                                pageIndex: currentPageIndex,
-                                text: "",
-                                x: max(20, location.x - 130),
-                                y: max(20, location.y - 40)
-                            )
-                            if notebook.textAttachments == nil {
-                                notebook.textAttachments = []
-                            }
-                            notebook.textAttachments?.append(newDraft)
-                            store.updateNotebook(notebook)
-                            self.editingTextId = newDraft.id
-                        }
-                }
+                // 這一層**不攔截任何觸控**。
+                //
+                // 舊寫法是鋪一層 Color.black.opacity(0.001) 加 onTapGesture 接手勢。
+                // 那層只要可命中，單擊就到不了底下 —— 改成點兩下也一樣，單擊
+                // 依然被它吃掉，結果是「點了完全沒反應」，比原本更糟。
+                // 所以必須 allowsHitTesting(false)，新增的手勢掛在下面那個
+                // simultaneousGesture 上，與畫布的捲動、物件的選取並存。
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .allowsHitTesting(false)
 
                 // 打字模式頂部提示條
                 HStack(spacing: 6) {
                     Image(systemName: "keyboard.fill")
                         .foregroundColor(.accentColor)
-                    Text(localizationManager.localized("tap_to_type_hint"))
+                    Text(localizationManager.localized("insert_text_box_hint"))
                         .font(.caption)
                         .fontWeight(.medium)
                         .foregroundColor(.primary)
@@ -2672,6 +2669,19 @@ ZStack(alignment: .topTrailing) {
             .padding(.vertical, 10)
         }
         .coordinateSpace(name: CanvasCoordinateSpace.name)
+        // 打字模式下點兩下空白處＝在該處新增文字方塊。
+        //
+        // 用 simultaneousGesture 而不是 onTapGesture：後者會把單擊也一起
+        // 接管，於是捲動與選取又回到原本壞掉的狀態。simultaneous 讓這個
+        // 手勢與底下的畫布、物件各自獨立辨識 —— 單擊照常穿透。
+        .simultaneousGesture(
+            editorMode == .type
+                ? SpatialTapGesture(count: 2, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                    .onEnded { value in
+                        insertTextBox(at: value.location)
+                    }
+                : nil
+        )
         .onContinuousHover { phase in
             switch phase {
             case .active(let location):
@@ -4634,16 +4644,39 @@ ZStack(alignment: .topTrailing) {
         onRequestSwitch?(target)
     }
 
+    /// 在畫布的指定位置新增一個空文字方塊並直接進入編輯。
+    ///
+    /// 位置往左上各退一點，讓方塊的**中心**落在手指點的地方 ——
+    /// 以點擊處當左上角的話，方塊會整個長在手指的右下方。
+    private func insertTextBox(at location: CGPoint) {
+        let draft = NoteTextAttachment(
+            id: UUID().uuidString,
+            pageIndex: currentPageIndex,
+            text: "",
+            x: max(20, location.x - 130),
+            y: max(20, location.y - 40)
+        )
+        if notebook.textAttachments == nil {
+            notebook.textAttachments = []
+        }
+        notebook.textAttachments?.append(draft)
+        store.updateNotebook(notebook)
+        editingTextId = draft.id
+    }
+
     private func insertQuickTextSnippet(_ text: String) {
+        // 尺寸配合內容。高度現在是權威值（見 format-spec §6.2），
+        // 160 × 60 配 24pt 粗體裝不下「↔ 120.0 ±0.05 mm」這種標註，
+        // 會被裁掉 —— 而使用者看不出那是尺寸問題還是字沒插進去。
         let newBox = NoteTextAttachment(
             pageIndex: currentPageIndex,
             text: text,
-            fontSize: 24,
+            fontSize: 20,
             isBold: true,
             x: 100,
             y: 120,
-            width: 160,
-            height: 60
+            width: 260,
+            height: 64
         )
         if notebook.textAttachments == nil {
             notebook.textAttachments = []

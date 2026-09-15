@@ -1423,6 +1423,54 @@ extension LocalizationManager {
             .ko: "치수 인출선",
             .th: "บอลลูนระบุขนาด"
         ],
+        "dimension_callout_balloon1": [
+            .zhHant: "零件球標 ①",
+            .en: "Part balloon ①",
+            .zhHans: "零件球标 ①",
+            .ja: "部品バルーン ①",
+            .ko: "부품 번호 ①",
+            .th: "หมายเลขชิ้นส่วน ①"
+        ],
+        "dimension_callout_balloon2": [
+            .zhHant: "零件球標 ②",
+            .en: "Part balloon ②",
+            .zhHans: "零件球标 ②",
+            .ja: "部品バルーン ②",
+            .ko: "부품 번호 ②",
+            .th: "หมายเลขชิ้นส่วน ②"
+        ],
+        "dimension_callout_diameter": [
+            .zhHant: "外徑圓標註",
+            .en: "Diameter callout",
+            .zhHans: "外径圆标注",
+            .ja: "直径記号",
+            .ko: "지름 표기",
+            .th: "บอกเส้นผ่านศูนย์กลาง"
+        ],
+        "dimension_callout_flatness": [
+            .zhHant: "平面度公差",
+            .en: "Flatness tolerance",
+            .zhHans: "平面度公差",
+            .ja: "平面度公差",
+            .ko: "평면도 공차",
+            .th: "ค่าความราบ"
+        ],
+        "dimension_callout_linear": [
+            .zhHant: "線性長度標註",
+            .en: "Linear dimension",
+            .zhHans: "线性长度标注",
+            .ja: "直線寸法",
+            .ko: "선형 치수",
+            .th: "บอกขนาดเชิงเส้น"
+        ],
+        "dimension_callout_radius": [
+            .zhHant: "圓弧半徑標註",
+            .en: "Radius callout",
+            .zhHans: "圆弧半径标注",
+            .ja: "半径記号",
+            .ko: "반지름 표기",
+            .th: "บอกรัศมี"
+        ],
         "disconnect": [
             .zhHant: "中斷連線",
             .en: "Disconnect",
@@ -1854,6 +1902,14 @@ extension LocalizationManager {
             .ja: "プレビュー取得",
             .ko: "미리보기 가져오기",
             .th: "ดึงตัวอย่าง"
+        ],
+        "fill_color": [
+            .zhHant: "填滿顏色",
+            .en: "Fill color",
+            .zhHans: "填充颜色",
+            .ja: "塗りつぶし",
+            .ko: "채우기 색",
+            .th: "สีพื้น"
         ],
         "filter_ai": [
             .zhHant: "AI 概念渲染",
@@ -2287,6 +2343,14 @@ extension LocalizationManager {
             .ko: "텍스트 상자 삽입",
             .th: "แทรกกล่องข้อความ"
         ],
+        "insert_text_box_hint": [
+            .zhHant: "點兩下畫布空白處新增文字方塊",
+            .en: "Double-tap empty canvas to add a text box",
+            .zhHans: "双击画布空白处新增文字方块",
+            .ja: "空白部分をダブルタップでテキストボックスを追加",
+            .ko: "빈 캔버스를 두 번 탭하면 텍스트 상자 추가",
+            .th: "แตะสองครั้งบนพื้นที่ว่างเพื่อเพิ่มกล่องข้อความ"
+        ],
         "insert_to_canvas": [
             .zhHant: "插入至目前畫布",
             .en: "Insert to Canvas",
@@ -2446,6 +2510,14 @@ extension LocalizationManager {
             .ja: "行間",
             .ko: "줄 간격",
             .th: "ระยะบรรทัด"
+        ],
+        "line_width": [
+            .zhHant: "線條粗細",
+            .en: "Line width",
+            .zhHans: "线条粗细",
+            .ja: "線の太さ",
+            .ko: "선 두께",
+            .th: "ความหนาเส้น"
         ],
         "link_preview": [
             .zhHant: "網頁預覽",
@@ -3607,6 +3679,14 @@ extension LocalizationManager {
             .ko: "초기화",
             .th: "รีเซ็ต"
         ],
+        "resize_shape": [
+            .zhHant: "調整形狀大小",
+            .en: "Resize shape",
+            .zhHans: "调整形状大小",
+            .ja: "図形のサイズを変更",
+            .ko: "도형 크기 조절",
+            .th: "ปรับขนาดรูปทรง"
+        ],
         "resize_text_box": [
             .zhHant: "拖曳調整文字方塊大小",
             .en: "Drag to resize the text box",
@@ -3967,6 +4047,14 @@ extension LocalizationManager {
             .ko: "도형 및 순서도",
             .th: "รูปร่างและผังงาน"
         ],
+        "shape_style": [
+            .zhHant: "形狀樣式",
+            .en: "Shape style",
+            .zhHans: "形状样式",
+            .ja: "図形スタイル",
+            .ko: "도형 스타일",
+            .th: "สไตล์รูปทรง"
+        ],
         "share_invite_link": [
             .zhHant: "分享邀請連結",
             .en: "Share Invite Link",
@@ -4198,6 +4286,14 @@ extension LocalizationManager {
             .ja: "データ保存先",
             .ko: "데이터 저장 위치",
             .th: "ตำแหน่งจัดเก็บข้อมูล"
+        ],
+        "stroke_color": [
+            .zhHant: "線條顏色",
+            .en: "Stroke color",
+            .zhHans: "线条颜色",
+            .ja: "線の色",
+            .ko: "선 색",
+            .th: "สีเส้น"
         ],
         "stroke_width": [
             .zhHant: "筆畫粗細",

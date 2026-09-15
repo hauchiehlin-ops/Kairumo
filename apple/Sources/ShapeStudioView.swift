@@ -17,10 +17,17 @@ import SwiftUI
 public struct NoteShapeView: View {
     @Binding var shape: NoteShapeAttachment
     var isSelected: Bool
+    /// 縮放拖曳中的即時尺寸。`nil` 代表用模型上的尺寸。
+    ///
+    /// 拖曳每一幀都寫回 `shape` 的話，整份筆記會跟著每一幀存檔。
+    var overrideSize: CGSize? = nil
     var onEdit: () -> Void
 
+    private var drawWidth: CGFloat { overrideSize?.width ?? shape.width }
+    private var drawHeight: CGFloat { overrideSize?.height ?? shape.height }
+
     public var body: some View {
-        let points = shape.outline()
+        let points = outlinePoints
         ZStack {
             Canvas { context, _ in
                 guard points.count >= 2 else { return }
@@ -39,7 +46,7 @@ public struct NoteShapeView: View {
                 }
                 context.stroke(path, with: .color(strokeColor), lineWidth: shape.lineWidth)
 
-                for head in shape.arrowHeads() where head.count >= 3 {
+                for head in arrowHeadPoints where head.count >= 3 {
                     var tri = Path()
                     tri.move(to: CGPoint(x: head[0].x - shape.x, y: head[0].y - shape.y))
                     for point in head.dropFirst() {
@@ -49,23 +56,41 @@ public struct NoteShapeView: View {
                     context.fill(tri, with: .color(strokeColor))
                 }
             }
-            .frame(width: shape.width, height: shape.height)
+            .frame(width: drawWidth, height: drawHeight)
 
             if shape.acceptsText && !shape.label.isEmpty {
                 Text(shape.label)
                     .font(.system(size: 14))
                     .multilineTextAlignment(.center)
                     .padding(6)
-                    .frame(width: shape.width, height: shape.height)
+                    .frame(width: drawWidth, height: drawHeight)
             }
         }
-        .frame(width: shape.width, height: shape.height)
+        .frame(width: drawWidth, height: drawHeight)
         .overlay(
             Rectangle()
                 .strokeBorder(isSelected ? Color.accentColor : .clear, lineWidth: 1)
         )
         .contentShape(Rectangle())
         .onTapGesture(count: 2, perform: onEdit)
+    }
+
+    /// 輪廓要用**畫出來的**尺寸算，不是模型尺寸 —— 否則拖曳縮放時
+    /// 外框維持原大小，只有外面的框在動，看起來像壞掉。
+    private var outlinePoints: [CGPoint] {
+        guard let size = overrideSize else { return shape.outline() }
+        var probe = shape
+        probe.width = size.width
+        probe.height = size.height
+        return probe.outline()
+    }
+
+    private var arrowHeadPoints: [[CGPoint]] {
+        guard let size = overrideSize else { return shape.arrowHeads() }
+        var probe = shape
+        probe.width = size.width
+        probe.height = size.height
+        return probe.arrowHeads()
     }
 
     private var strokeColor: Color {
@@ -301,12 +326,24 @@ struct ShapeAttachmentItemView: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @State private var dragOffset: CGSize = .zero
     @State private var isEditingLabel: Bool = false
+    @State private var isEditingStyle: Bool = false
+    /// 縮放拖曳中的即時尺寸。直接改 shape.width 會每一幀都寫回筆記。
+    @State private var liveSize: CGSize? = nil
+    @State private var resizeBase: CGSize? = nil
+
+    private var displayWidth: CGFloat { liveSize?.width ?? shape.width }
+    private var displayHeight: CGFloat { liveSize?.height ?? shape.height }
 
     var body: some View {
         let currentX = shape.x + dragOffset.width
         let currentY = shape.y + dragOffset.height
 
-        NoteShapeView(shape: $shape, isSelected: isSelected, onEdit: { isEditingLabel = true })
+        NoteShapeView(
+            shape: $shape,
+            isSelected: isSelected,
+            overrideSize: liveSize,
+            onEdit: { isEditingLabel = true }
+        )
             // 圖形本體跟著轉；把手與刪除鈕掛在旋轉**外面**的 overlay，
             // 包進去的話拖曳算出的角度會疊加自身旋轉，圖形會失控加速。
             .rotationEffect(.degrees(shape.canvasRotation))
@@ -330,6 +367,60 @@ struct ShapeAttachmentItemView: View {
                     .accessibilityLabel(localizationManager.localized("action_delete"))
                 }
             }
+            // 右下角縮放把手。形狀原本只能用插入時的預設尺寸 ——
+            // 一個流程圖節點要配合文字長短，不能調大小等於不能用。
+            .overlay(alignment: .bottomTrailing) {
+                if isSelected {
+                    Image(systemName: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundColor(.white)
+                        .frame(width: 30, height: 30)
+                        .background(Color.accentColor)
+                        .clipShape(Circle())
+                        .contentShape(Circle())
+                        .offset(x: 10, y: 10)
+                        .help(localizationManager.localized("resize_shape"))
+                        .highPriorityGesture(
+                            DragGesture(minimumDistance: 1,
+                                        coordinateSpace: .named(CanvasCoordinateSpace.name))
+                                .onChanged { value in
+                                    let base = resizeBase ?? CGSize(width: shape.width, height: shape.height)
+                                    if resizeBase == nil { resizeBase = base }
+                                    // 下限比文字方塊小：箭頭與連接點本來就可以很短。
+                                    liveSize = CGSize(
+                                        width: max(24, base.width + value.translation.width),
+                                        height: max(24, base.height + value.translation.height)
+                                    )
+                                }
+                                .onEnded { _ in
+                                    if let size = liveSize {
+                                        shape.width = size.width
+                                        shape.height = size.height
+                                    }
+                                    resizeBase = nil
+                                    liveSize = nil
+                                }
+                        )
+                }
+            }
+            // 樣式鈕。線條顏色與填滿顏色的欄位一直都在、也一直跟著同步走，
+            // 但沒有任何介面改得到它們 —— 等於存在卻用不到。
+            .overlay(alignment: .bottomLeading) {
+                if isSelected {
+                    Button { isEditingStyle = true } label: {
+                        Image(systemName: "paintpalette.fill")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 30, height: 30)
+                            .background(Color.accentColor)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(Circle())
+                    .offset(x: -10, y: 10)
+                    .help(localizationManager.localized("shape_style"))
+                }
+            }
             .gesture(
                 DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
@@ -341,13 +432,16 @@ struct ShapeAttachmentItemView: View {
                     }
             )
             .onTapGesture(perform: onSelect)
-            .position(x: currentX + shape.width / 2, y: currentY + shape.height / 2)
+            .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
+            .sheet(isPresented: $isEditingStyle) {
+                ShapeStyleSheet(shape: $shape)
+            }
             .alert(
                 localizationManager.localized("shape_label"),
                 isPresented: $isEditingLabel
             ) {
                 TextField(localizationManager.localized("shape_label"), text: $shape.label)
-                Button(localizationManager.localized("action_done")) { isEditingLabel = false }
+                Button(localizationManager.localized("done")) { isEditingLabel = false }
             }
     }
 }
@@ -377,5 +471,114 @@ struct ConnectionLineView: View {
 
     private var color: Color {
         connection.colorHex.flatMap(Color.init(hex:)) ?? .primary
+    }
+}
+
+/// 形狀的樣式編修：線條顏色、填滿顏色、線條粗細、標籤。
+///
+/// 這些欄位（`strokeColorHex` / `fillColorHex` / `lineWidth`）從一開始就在模型裡，
+/// 也一直跟著跨平台同步走 —— 但沒有任何介面碰得到它們。插進畫布的形狀
+/// 永遠是黑框白底，等於那三個欄位形同不存在。
+struct ShapeStyleSheet: View {
+    @Binding var shape: NoteShapeAttachment
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+
+    /// 與文字方塊邊框用同一組顏色 —— 同一份筆記裡兩種物件的可選色不同，
+    /// 使用者會以為是兩套系統。
+    private let palette = ["#8E8E93", "#000000", "#007AFF", "#34C759",
+                           "#FF9500", "#FF3B30", "#AF52DE"]
+
+    var body: some View {
+        NavigationView {
+            Form {
+                if shape.acceptsText {
+                    Section(localizationManager.localized("shape_label")) {
+                        TextField(localizationManager.localized("shape_label"), text: $shape.label)
+                    }
+                }
+
+                Section(localizationManager.localized("stroke_color")) {
+                    swatches(selected: shape.strokeColorHex) { shape.strokeColorHex = $0 }
+                }
+
+                // 線狀形狀沒有內部可以填。放著只會讓人以為壞了。
+                if !shape.isLinear {
+                    Section(localizationManager.localized("fill_color")) {
+                        swatches(selected: shape.fillColorHex,
+                                 includeClear: true) { shape.fillColorHex = $0 }
+                    }
+                }
+
+                Section(localizationManager.localized("line_width")) {
+                    Picker("", selection: $shape.lineWidth) {
+                        ForEach([1.0, 2.0, 3.0, 5.0], id: \.self) { w in
+                            Text(String(format: "%.0f", w)).tag(CGFloat(w))
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                }
+            }
+            .navigationTitle(localizationManager.localized("shape_style"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(localizationManager.localized("done")) { dismiss() }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func swatches(
+        selected: String?,
+        includeClear: Bool = false,
+        set: @escaping (String?) -> Void
+    ) -> some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 40), spacing: 8)],
+                  alignment: .leading, spacing: 8) {
+            if includeClear {
+                Button { set(nil) } label: {
+                    ZStack {
+                        Circle()
+                            .fill(Color.primary.opacity(0.001))
+                            .frame(width: 26, height: 26)
+                            .overlay(Circle().stroke(Color.secondary.opacity(0.4), lineWidth: 1))
+                        // 透明畫一條斜線 —— 不畫的話它跟白色長得一樣。
+                        Path { p in
+                            p.move(to: CGPoint(x: 5, y: 21))
+                            p.addLine(to: CGPoint(x: 21, y: 5))
+                        }
+                        .stroke(Color.red.opacity(0.7), lineWidth: 1.5)
+                        .frame(width: 26, height: 26)
+                        if selected == nil {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .bold))
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                // 命中區與文字排版面板同一套作法：26pt 的圓在手指下太小。
+                .frame(width: 38, height: 38)
+                .contentShape(Rectangle())
+                .help(localizationManager.localized("color_transparent"))
+            }
+
+            ForEach(palette, id: \.self) { hex in
+                Button { set(hex) } label: {
+                    Circle()
+                        .fill(Color(hex: hex) ?? .gray)
+                        .frame(width: 26, height: 26)
+                        .overlay(
+                            Circle().stroke(
+                                selected == hex ? Color.accentColor : Color.secondary.opacity(0.3),
+                                lineWidth: selected == hex ? 2.5 : 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                .frame(width: 38, height: 38)
+                .contentShape(Rectangle())
+            }
+        }
     }
 }

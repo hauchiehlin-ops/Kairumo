@@ -57,8 +57,10 @@ public struct NoteShapeAttachment: Identifiable, Codable, Hashable {
         kindName: String = "process",
         x: CGFloat = 80,
         y: CGFloat = 140,
-        width: CGFloat = 160,
-        height: CGFloat = 80,
+        // 插入尺寸刻意保守。太大的話，使用者拿到的第一件事是縮小它 ——
+        // 而縮小把手是這一版才有的。小了可以拉大，大了擋住底下的內容。
+        width: CGFloat = 120,
+        height: CGFloat = 60,
         cornerRadius: CGFloat = 8,
         label: String = "",
         strokeColorHex: String? = nil,

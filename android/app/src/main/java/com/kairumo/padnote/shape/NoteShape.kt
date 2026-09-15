@@ -36,8 +36,10 @@ data class NoteShape(
     var kindName: String = "process",
     var x: Float = 80f,
     var y: Float = 140f,
-    var width: Float = 160f,
-    var height: Float = 80f,
+    // 插入尺寸刻意保守。太大的話，使用者拿到的第一件事是縮小它。
+    // **必須與 Apple 端的預設一致**，否則同一個形狀在兩個平台大小不同。
+    var width: Float = 120f,
+    var height: Float = 60f,
     var cornerRadius: Float = 8f,
     var label: String = "",
     var strokeColorHex: String? = null,

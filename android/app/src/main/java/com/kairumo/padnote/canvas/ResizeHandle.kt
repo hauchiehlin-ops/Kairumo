@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -69,3 +71,35 @@ const val MIN_OBJECT_WIDTH_DP = 120f
 const val MIN_OBJECT_HEIGHT_DP = 60f
 
 private const val HANDLE_DP = 26f
+
+/**
+ * 畫布物件左下角的樣式鈕。
+ *
+ * 與縮放把手同一套定位方式：元件自己撐出空間，不用負的 offset。
+ */
+@Composable
+fun StyleHandle(
+    widthDp: Float,
+    heightDp: Float,
+    onTap: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier.size((widthDp + HANDLE_DP).dp, (heightDp + HANDLE_DP).dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .offset(x = (-HANDLE_DP / 2f).dp, y = (heightDp - HANDLE_DP / 2f).dp)
+                .size(HANDLE_DP.dp)
+                .background(MaterialTheme.colorScheme.primary, CircleShape)
+                .clickable { onTap() }
+        ) {
+            Icon(
+                imageVector = Icons.Filled.Edit,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(16.dp).offset(5.dp, 5.dp)
+            )
+        }
+    }
+}

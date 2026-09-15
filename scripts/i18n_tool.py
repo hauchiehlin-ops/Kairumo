@@ -180,9 +180,40 @@ def parse_kotlin_table(text: str) -> dict:
     return out
 
 
+def check_keys_exist(catalog):
+    """程式碼裡用到的鍵必須在 catalog 裡。
+
+    產生表與 catalog 一致，不代表程式碼用的鍵都在裡面 —— 打錯一個字
+    （`action_done` vs `done`），介面上就直接顯示那個原始鍵名。編譯不會
+    報錯、verify 也不會，只有使用者看得到。實際發生過：形狀樣式面板的
+    「完成」鈕上印著 action_done。
+    """
+    missing = {}
+    roots = [ROOT / "apple" / "Sources", ROOT / "android" / "app" / "src" / "main" / "java"]
+    pattern = re.compile(r'(?:localized|l10n|\bl)\(\s*"([a-z0-9_]+)"')
+    for root in roots:
+        if not root.exists():
+            continue
+        for path in list(root.rglob("*.swift")) + list(root.rglob("*.kt")):
+            if "Localization" in path.name:
+                continue
+            for key in pattern.findall(path.read_text(encoding="utf-8")):
+                if key not in catalog:
+                    missing.setdefault(key, set()).add(path.name)
+    if missing:
+        print(f"❌ 程式碼用到 {len(missing)} 個 catalog 裡沒有的鍵："
+              "介面上會直接印出鍵名")
+        for key, files in sorted(missing.items()):
+            print(f"    {key}  ← {', '.join(sorted(files))}")
+        return 1
+    return 0
+
+
 def cmd_verify():
     """產生的 Swift 表必須與 catalog 逐字相同 —— 這是 Apple 行為不變的憑據。"""
     catalog = json.loads(CATALOG.read_text())
+    if check_keys_exist(catalog) != 0:
+        return 1
     generated = parse_swift_table(
         SWIFT_OUT.read_text().replace("static let generatedStrings",
                                       "private let stringDictionary"))

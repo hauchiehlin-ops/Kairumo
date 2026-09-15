@@ -16,6 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import com.kairumo.padnote.canvas.CanvasRotation
+import com.kairumo.padnote.canvas.ResizeHandle
+import com.kairumo.padnote.canvas.StyleHandle
 import com.kairumo.padnote.canvas.RotationHandle
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -41,6 +43,7 @@ fun ShapeLayer(
     selectedIds: Set<String>,
     onSelect: (String?) -> Unit,
     onEdit: (NoteShape) -> Unit,
+    onEditStyle: (NoteShape) -> Unit,
     onChanged: (NoteShape) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -75,7 +78,8 @@ fun ShapeLayer(
 
         for (shape in shapes) {
             ShapeObjectView(
-                shape, density, selectedIds.contains(shape.id), onSelect, onEdit, onChanged)
+                shape, density, selectedIds.contains(shape.id), onSelect, onEdit,
+                onEditStyle, onChanged)
         }
     }
 }
@@ -87,6 +91,7 @@ private fun ShapeObjectView(
     isSelected: Boolean,
     onSelect: (String?) -> Unit,
     onEdit: (NoteShape) -> Unit,
+    onEditStyle: (NoteShape) -> Unit,
     onChanged: (NoteShape) -> Unit
 ) {
     val foreground = MaterialTheme.colorScheme.onSurface
@@ -172,6 +177,32 @@ private fun ShapeObjectView(
     }
 
         if (isSelected) {
+            // 右下角縮放把手。形狀原本只能用插入時的預設尺寸 ——
+            // 一個流程圖節點要配合文字長短，不能調大小等於不能用。
+            // 樣式鈕：線條顏色、填滿顏色、線條粗細、標籤。
+            StyleHandle(
+                widthDp = shape.width / density,
+                heightDp = shape.height / density,
+                onTap = { onEditStyle(shape) }
+            )
+
+            ResizeHandle(
+                widthDp = shape.width / density,
+                heightDp = shape.height / density,
+                density = density,
+                onResize = { dw, dh ->
+                    onChanged(
+                        shape.copyShape().apply {
+                            // 下限比文字方塊小：箭頭與連接線本來就可以很短。
+                            // **必須與 Apple 端的 24 一致。**
+                            width = maxOf(24f, shape.width + dw * density)
+                            height = maxOf(24f, shape.height + dh * density)
+                        }
+                    )
+                },
+                onCommit = { onChanged(shape) }
+            )
+
             RotationHandle(
                 degrees = rotation,
                 widthDp = shape.width / density,
