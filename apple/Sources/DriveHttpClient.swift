@@ -90,9 +90,45 @@ final class DriveHttpClient: FfiDriveHttp {
         _ = try send(request)
     }
 
+    /// 開一個可續傳上傳的工作階段。
+    ///
+    /// Drive 把工作階段 URI 放在**回應標頭 `Location`** 裡，不是 body ——
+    /// 這就是為什麼這一步必須由平台做，核心看不到標頭。
+    func startResumable(url: String, bodyJson: String) throws -> String {
+        guard let target = URL(string: url) else {
+            throw FfiDriveError.Backend(detail: "bad_url")
+        }
+        var request = URLRequest(url: target)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.httpBody = bodyJson.data(using: .utf8)
+        let (_, headers) = try sendWithHeaders(request)
+        guard let location = headers["Location"] as? String
+            ?? headers["location"] as? String
+        else {
+            throw FfiDriveError.Backend(detail: "可續傳上傳沒有回傳 Location")
+        }
+        return location
+    }
+
+    func putBytes(url: String, data: Data) throws {
+        guard let target = URL(string: url) else {
+            throw FfiDriveError.Backend(detail: "bad_url")
+        }
+        var request = URLRequest(url: target)
+        request.httpMethod = "PUT"
+        request.setValue("application/octet-stream", forHTTPHeaderField: "Content-Type")
+        request.httpBody = data
+        _ = try send(request)
+    }
+
     // MARK: - 內部
 
     private func send(_ base: URLRequest) throws -> Data {
+        try sendWithHeaders(base).0
+    }
+
+    private func sendWithHeaders(_ base: URLRequest) throws -> (Data, [AnyHashable: Any]) {
         var request = base
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
@@ -117,7 +153,7 @@ final class DriveHttpClient: FfiDriveHttp {
             throw FfiDriveError.Backend(detail: "no_response")
         }
         if (200..<300).contains(response.statusCode) {
-            return payload
+            return (payload, response.allHeaderFields)
         }
         throw Self.classify(
             status: response.statusCode,
@@ -185,10 +221,28 @@ public enum CloudSync {
     ) async -> FfiNotebookSyncResult? {
         guard let token = await GoogleAuth.shared.validAccessToken() else { return nil }
         return await Task.detached(priority: .utility) {
-            gdriveSyncNotebook(
-                http: DriveHttpClient(accessToken: token),
+            let http = DriveHttpClient(accessToken: token)
+            let ops = gdriveSyncNotebook(
+                http: http,
                 packagePath: packagePath,
                 notebookId: notebookId
+            )
+            guard ops.ok else { return ops }
+
+            // 媒體接在 oplog 之後。順序很重要：oplog 裡的 AddImage 會指向一個
+            // blob id，媒體還沒到的話，那一頁會有一個指向不存在檔案的圖片區塊。
+            // 反過來先傳媒體只是多佔一點空間，不會讓畫面壞掉。
+            let media = gdriveSyncMedia(
+                http: http,
+                packagePath: packagePath,
+                notebookId: notebookId
+            )
+            return FfiNotebookSyncResult(
+                ok: media.ok,
+                uploaded: ops.uploaded + media.uploaded,
+                downloaded: ops.downloaded + media.downloaded,
+                error: media.error,
+                needsReauth: media.needsReauth
             )
         }.value
     }

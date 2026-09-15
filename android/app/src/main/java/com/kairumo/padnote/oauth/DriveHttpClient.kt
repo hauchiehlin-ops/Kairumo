@@ -62,6 +62,36 @@ class DriveHttpClient(
         bytes(Request.Builder().url(url).patch(data.toRequestBody(OCTET_STREAM)))
     }
 
+    /**
+     * 開一個可續傳上傳的工作階段。
+     *
+     * Drive 把工作階段 URI 放在**回應標頭 `Location`** 裡，不是 body ——
+     * 這就是為什麼這一步必須由平台做，核心看不到標頭。
+     */
+    override fun startResumable(url: String, bodyJson: String): String {
+        val request = Request.Builder()
+            .url(url)
+            .post(bodyJson.toRequestBody(JSON))
+            .header("Authorization", "Bearer $accessToken")
+            .build()
+        val response = try {
+            http.newCall(request).execute()
+        } catch (t: Throwable) {
+            throw FfiDriveException.Backend(t.message ?: "network_error")
+        }
+        response.use {
+            if (!it.isSuccessful) {
+                throw classify(it.code, request.url.encodedPath, it.body?.string() ?: "")
+            }
+            return it.header("Location")
+                ?: throw FfiDriveException.Backend("可續傳上傳沒有回傳 Location")
+        }
+    }
+
+    override fun putBytes(url: String, data: ByteArray) {
+        bytes(Request.Builder().url(url).put(data.toRequestBody(OCTET_STREAM)))
+    }
+
     // ── 內部 ──────────────────────────────────────────────────
 
     private fun text(builder: Request.Builder): String =

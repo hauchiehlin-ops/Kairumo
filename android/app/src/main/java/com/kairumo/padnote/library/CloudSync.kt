@@ -6,6 +6,7 @@ import com.kairumo.padnote.oauth.GoogleAuth
 import java.io.File
 import uniffi.padnote_core.FfiCloudSyncResult
 import uniffi.padnote_core.gdriveSyncMetadata
+import uniffi.padnote_core.gdriveSyncMedia
 import uniffi.padnote_core.gdriveSyncNotebook
 
 /**
@@ -58,10 +59,20 @@ object CloudSync {
         val token = GoogleAuth.validAccessToken(context) ?: return null
         val path = File(NotebookLibrary.directory(context), "$notebookId.padnote")
         if (!path.exists()) return null
-        return gdriveSyncNotebook(
-            com.kairumo.padnote.oauth.DriveHttpClient(token),
-            path.absolutePath,
-            notebookId
+        val http = com.kairumo.padnote.oauth.DriveHttpClient(token)
+        val ops = gdriveSyncNotebook(http, path.absolutePath, notebookId)
+        if (!ops.ok) return ops
+
+        // 媒體接在 oplog 之後。順序很重要：oplog 裡的 AddImage 會指向一個
+        // blob id，媒體還沒到的話，那一頁會有一個指向不存在檔案的圖片區塊。
+        // 反過來先傳媒體只是多佔一點空間，不會讓畫面壞掉。
+        val media = gdriveSyncMedia(http, path.absolutePath, notebookId)
+        return uniffi.padnote_core.FfiNotebookSyncResult(
+            ok = media.ok,
+            uploaded = ops.uploaded + media.uploaded,
+            downloaded = ops.downloaded + media.downloaded,
+            error = media.error,
+            needsReauth = media.needsReauth
         )
     }
 

@@ -302,6 +302,53 @@ impl NotebookPackage {
             .unwrap_or(0)
     }
 
+    /// 列出錄音檔：`(檔名, 位元組數)`。
+    ///
+    /// 錄音檔是 `media/audio/<uuid>.opus` —— uuid 命名所以唯一，
+    /// 但**錄製中會變長**，所以同步時要比長度而不是只看存在與否。
+    pub fn audio_files(&self) -> Result<Vec<(String, u64)>, StorageError> {
+        let dir = self.root.join("media/audio");
+        if !dir.exists() {
+            return Ok(Vec::new());
+        }
+        let mut out: Vec<(String, u64)> = fs::read_dir(&dir)?
+            .filter_map(Result::ok)
+            .filter(|e| e.path().extension().is_some_and(|x| x == "opus"))
+            .filter_map(|e| {
+                let name = e.file_name().to_str()?.to_string();
+                Some((name, e.metadata().ok()?.len()))
+            })
+            .collect();
+        out.sort();
+        Ok(out)
+    }
+
+    pub fn read_audio_file(&self, name: &str) -> Result<Vec<u8>, StorageError> {
+        Ok(fs::read(self.audio_path(name)?)?)
+    }
+
+    pub fn write_audio_file(&self, name: &str, bytes: &[u8]) -> Result<(), StorageError> {
+        let path = self.audio_path(name)?;
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        fs::write(path, bytes)?;
+        Ok(())
+    }
+
+    /// 檔名從雲端來，當成不可信輸入（理由同 [`Self::doc_op_path`]）。
+    fn audio_path(&self, name: &str) -> Result<PathBuf, StorageError> {
+        let looks_safe = !name.is_empty()
+            && name.ends_with(".opus")
+            && !name.contains('/')
+            && !name.contains('\\')
+            && !name.contains("..");
+        if !looks_safe {
+            return Err(StorageError::DocOps(format!("不合法的錄音檔名：{name}")));
+        }
+        Ok(self.root.join("media/audio").join(name))
+    }
+
     /// 列出 oplog 檔案：`(檔名, 位元組數)`，依因果序（＝檔名字典序）。
     ///
     /// 同步用得到：oplog 檔是**同步的自然單位** —— 檔名編碼了

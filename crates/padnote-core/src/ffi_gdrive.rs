@@ -72,8 +72,20 @@ pub trait FfiDriveHttp: Send + Sync {
     fn get_bytes(&self, url: String, range: Option<FfiByteRange>) -> Result<Vec<u8>, FfiDriveError>;
     /// POST 一段 JSON，回應也是 JSON 字串。
     fn post_json(&self, url: String, body_json: String) -> Result<String, FfiDriveError>;
-    /// PATCH 原始位元組（上傳檔案內容）。
+    /// PATCH 原始位元組（上傳檔案內容，**小檔用**）。
     fn patch_bytes(&self, url: String, data: Vec<u8>) -> Result<(), FfiDriveError>;
+
+    /// 開一個可續傳上傳的工作階段，回傳工作階段 URI。
+    ///
+    /// Drive 把那個 URI 放在**回應標頭 `Location`** 裡，不是 body ——
+    /// 所以只有平台層做得到，核心看不到標頭。
+    ///
+    /// 為什麼需要它：Drive 單次上傳上限 5 MB，而手機照片的 blob 存的是
+    /// **原始位元組**（只有顯示尺寸被縮小），3–8 MB 是常態。
+    fn start_resumable(&self, url: String, body_json: String) -> Result<String, FfiDriveError>;
+
+    /// 把位元組 PUT 到可續傳的工作階段 URI。
+    fn put_bytes(&self, url: String, data: Vec<u8>) -> Result<(), FfiDriveError>;
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -164,6 +176,14 @@ impl DriveHttp for ForeignHttp {
 
     fn patch_bytes(&self, url: &str, data: &[u8]) -> Result<(), SyncError> {
         Ok(self.0.patch_bytes(url.to_string(), data.to_vec())?)
+    }
+
+    fn start_resumable(&self, url: &str, body: &serde_json::Value) -> Result<String, SyncError> {
+        Ok(self.0.start_resumable(url.to_string(), body.to_string())?)
+    }
+
+    fn put_bytes(&self, url: &str, data: &[u8]) -> Result<(), SyncError> {
+        Ok(self.0.put_bytes(url.to_string(), data.to_vec())?)
     }
 }
 
@@ -386,6 +406,146 @@ pub fn gdrive_sync_notebook(
     }
 }
 
+/// 同步一本筆記本的**媒體檔**（圖片 blob 與錄音）。
+///
+/// # 兩種媒體的同步方式不一樣，因為它們的命名保證不一樣
+///
+/// - **blob 是內容定址的**（檔名＝SHA-256）。同名必定同內容，所以
+///   「對面有沒有這個名字」就是完整的判斷，連長度都不必比。
+///   下載回來會**驗雜湊**：對不上就丟掉，不要把壞資料寫進套件。
+/// - **錄音是 uuid 命名的**，而且**錄製中會變長**。所以要比長度，
+///   只看存在與否的話，一段還在錄的音永遠只會同步到第一次的長度。
+///
+/// **這個函式會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
+#[uniffi::export]
+pub fn gdrive_sync_media(
+    http: Arc<dyn FfiDriveHttp>,
+    package_path: String,
+    notebook_id: String,
+) -> FfiNotebookSyncResult {
+    let root = std::path::Path::new(&package_path);
+    let package = match padnote_storage::NotebookPackage::open(root) {
+        Ok(p) => p,
+        Err(e) => return notebook_failed(format!("開不了套件：{e}")),
+    };
+    let drive = GDriveProvider::new(ForeignHttp(http));
+
+    let mut uploaded = 0u32;
+    let mut downloaded = 0u32;
+
+    // ── 圖片 blob（內容定址）──────────────────────────────────
+    let blobs = package.blobs();
+    let local_blobs = match blobs.list() {
+        Ok(ids) => ids,
+        Err(e) => return notebook_failed(format!("列不出 blob：{e}")),
+    };
+    let blob_prefix = format!("notebooks/{notebook_id}/media/blobs");
+    let remote_blobs: std::collections::BTreeSet<String> = match drive.list(&blob_prefix) {
+        Ok(entries) => entries
+            .into_iter()
+            .filter_map(|e| Some(e.path.rsplit('/').next()?.to_string()))
+            .collect(),
+        Err(e) => return from_sync_error(e),
+    };
+
+    for id in &local_blobs {
+        let name = id.to_string();
+        if remote_blobs.contains(&name) {
+            continue;
+        }
+        let bytes = match blobs.get(*id) {
+            Ok(b) => b,
+            // 本機這一份壞了（雜湊對不上）。不要上傳 —— 把壞資料推上雲端，
+            // 其他裝置也會跟著壞。
+            Err(e) => return notebook_failed(format!("blob {name} 損毀：{e}")),
+        };
+        if let Err(e) = drive.put(&format!("{blob_prefix}/{name}"), &bytes) {
+            return from_sync_error(e);
+        }
+        uploaded += 1;
+    }
+
+    let local_blob_names: std::collections::BTreeSet<String> =
+        local_blobs.iter().map(|id| id.to_string()).collect();
+    for name in &remote_blobs {
+        if local_blob_names.contains(name) {
+            continue;
+        }
+        let bytes = match drive.get_all(&format!("{blob_prefix}/{name}")) {
+            Ok(b) => b,
+            Err(e) => return from_sync_error(e),
+        };
+        // **驗雜湊。** blob 的檔名就是內容的雜湊，所以對不上就代表
+        // 傳輸壞了或有人動過手腳。直接 put 的話，壞資料會被存在
+        // 「它自己的雜湊」底下，而我們要的那一個仍然不存在 ——
+        // 同步看起來成功了，圖片卻永遠出不來。
+        let expected = padnote_storage::BlobId::from_hex(name);
+        match expected {
+            Some(id) if padnote_storage::BlobId::of(&bytes) == id => {
+                if let Err(e) = blobs.put(&bytes) {
+                    return notebook_failed(format!("寫不進 blob {name}：{e}"));
+                }
+                downloaded += 1;
+            }
+            Some(_) => return notebook_failed(format!("blob {name} 下載後雜湊不符")),
+            // 不是合法的 blob 名字：別人放進來的檔案，跳過就好。
+            None => continue,
+        }
+    }
+
+    // ── 錄音（uuid 命名，錄製中會變長）────────────────────────
+    let local_audio = match package.audio_files() {
+        Ok(files) => files,
+        Err(e) => return notebook_failed(format!("列不出錄音：{e}")),
+    };
+    let audio_prefix = format!("notebooks/{notebook_id}/media/audio");
+    let remote_audio: std::collections::BTreeMap<String, u64> = match drive.list(&audio_prefix) {
+        Ok(entries) => entries
+            .into_iter()
+            .filter_map(|e| Some((e.path.rsplit('/').next()?.to_string(), e.size)))
+            .collect(),
+        Err(e) => return from_sync_error(e),
+    };
+
+    for (name, size) in &local_audio {
+        if *size <= remote_audio.get(name).copied().unwrap_or(0) {
+            continue;
+        }
+        let bytes = match package.read_audio_file(name) {
+            Ok(b) => b,
+            Err(e) => return notebook_failed(format!("讀不到錄音 {name}：{e}")),
+        };
+        if let Err(e) = drive.put(&format!("{audio_prefix}/{name}"), &bytes) {
+            return from_sync_error(e);
+        }
+        uploaded += 1;
+    }
+
+    let local_audio_sizes: std::collections::BTreeMap<&str, u64> =
+        local_audio.iter().map(|(n, s)| (n.as_str(), *s)).collect();
+    for (name, remote_size) in &remote_audio {
+        if *remote_size <= local_audio_sizes.get(name.as_str()).copied().unwrap_or(0) {
+            continue;
+        }
+        let bytes = match drive.get_all(&format!("{audio_prefix}/{name}")) {
+            Ok(b) => b,
+            Err(e) => return from_sync_error(e),
+        };
+        if let Err(e) = package.write_audio_file(name, &bytes) {
+            return notebook_failed(format!("寫不進錄音 {name}：{e}"));
+        }
+        downloaded += 1;
+    }
+
+    FfiNotebookSyncResult {
+        ok: true,
+        uploaded,
+        downloaded,
+        error: String::new(),
+        needs_reauth: false,
+    }
+}
+
 fn notebook_failed(error: String) -> FfiNotebookSyncResult {
     FfiNotebookSyncResult {
         ok: false,
@@ -451,9 +611,13 @@ mod tests {
         fn get_json(&self, _url: String, query: Vec<FfiQueryParam>) -> Result<String, FfiDriveError> {
             let q = Self::query(&query, "q").to_string();
             let files = self.files.lock().unwrap();
-            let matches: Vec<&(String, Vec<u8>)> = files
+            // **索引要用全域的**，不是過濾後的序號 —— 讀取那一側是照
+            // `files` 的位置去取的。用過濾後的序號會讓查詢一縮小就取到別的檔，
+            // 而症狀是「下載回來的 blob 雜湊不符」，看起來像傳輸壞掉。
+            let entries: Vec<String> = files
                 .iter()
-                .filter(|(name, _)| {
+                .enumerate()
+                .filter(|(_, (name, _))| {
                     if let Some(rest) = q.split("name = '").nth(1) {
                         name == rest.trim_end_matches('\'')
                     } else if let Some(rest) = q.split("name contains '").nth(1) {
@@ -462,10 +626,6 @@ mod tests {
                         true
                     }
                 })
-                .collect();
-            let entries: Vec<String> = matches
-                .iter()
-                .enumerate()
                 .map(|(i, (name, data))| {
                     format!(
                         r#"{{"id":"id-{i}","name":"{name}","size":"{}","modifiedTime":"2026-01-01T00:00:0{}Z"}}"#,
@@ -504,18 +664,34 @@ mod tests {
         }
 
         fn patch_bytes(&self, url: String, data: Vec<u8>) -> Result<(), FfiDriveError> {
+            self.write_at(&url, data)
+        }
+
+        fn start_resumable(&self, url: String, _body: String) -> Result<String, FfiDriveError> {
+            // 真的 Drive 會回一個新的工作階段 URI；這裡把檔案 id 帶著就夠，
+            // 後面的 put_bytes 才找得到要寫哪一個。
+            Ok(format!("{url}&resumable-session=1"))
+        }
+
+        fn put_bytes(&self, url: String, data: Vec<u8>) -> Result<(), FfiDriveError> {
+            self.write_at(&url, data)
+        }
+    }
+
+    impl FakeDrive {
+        fn write_at(&self, url: &str, data: Vec<u8>) -> Result<(), FfiDriveError> {
             let index: usize = url
                 .split("files/id-")
                 .nth(1)
                 .and_then(|s| s.split('?').next())
                 .and_then(|s| s.parse().ok())
-                .ok_or(FfiDriveError::NotFound { path: url.clone() })?;
+                .ok_or(FfiDriveError::NotFound { path: url.to_string() })?;
             let mut files = self.files.lock().unwrap();
             if let Some(slot) = files.get_mut(index) {
                 slot.1 = data;
                 Ok(())
             } else {
-                Err(FfiDriveError::NotFound { path: url })
+                Err(FfiDriveError::NotFound { path: url.to_string() })
             }
         }
     }
@@ -614,6 +790,107 @@ mod tests {
         assert!(second.ok);
         assert_eq!(second.uploaded, 0, "沒有變動就不該重傳");
         assert_eq!(second.downloaded, 0, "自己剛傳的不該再抓回來");
+    }
+
+    #[test]
+    fn media_converges_across_two_devices() {
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
+
+        let a_root = tmp_package("media-a", 0xAA);
+        let a = padnote_storage::NotebookPackage::open(&a_root).unwrap();
+        let a_blob = a.blobs().put("A 的圖片位元組".as_bytes()).unwrap();
+        a.write_audio_file("11111111-1111-1111-1111-111111111111.opus", b"A-audio")
+            .unwrap();
+
+        let b_root = tmp_package("media-b", 0xBB);
+        let b = padnote_storage::NotebookPackage::open(&b_root).unwrap();
+        let b_blob = b.blobs().put("B 的圖片位元組".as_bytes()).unwrap();
+
+        let a_path: String = a_root.to_string_lossy().into();
+        let b_path: String = b_root.to_string_lossy().into();
+
+        let first = gdrive_sync_media(cloud.clone(), a_path.clone(), "nb1".into());
+        assert!(first.ok, "{}", first.error);
+        assert_eq!(first.uploaded, 2, "一個 blob 加一段錄音");
+
+        let second = gdrive_sync_media(cloud.clone(), b_path.clone(), "nb1".into());
+        assert!(second.ok, "{}", second.error);
+        assert_eq!(second.uploaded, 1);
+        assert_eq!(second.downloaded, 2, "要拿到 A 的 blob 與錄音");
+
+        let third = gdrive_sync_media(cloud.clone(), a_path, "nb1".into());
+        assert!(third.ok, "{}", third.error);
+        assert_eq!(third.downloaded, 1, "要拿到 B 的 blob");
+
+        // 兩邊都拿得到對方的圖片，而且內容正確（get 會驗雜湊）。
+        let a_after = padnote_storage::NotebookPackage::open(&a_root).unwrap();
+        let b_after = padnote_storage::NotebookPackage::open(&b_root).unwrap();
+        assert_eq!(a_after.blobs().get(b_blob).unwrap(), "B 的圖片位元組".as_bytes());
+        assert_eq!(b_after.blobs().get(a_blob).unwrap(), "A 的圖片位元組".as_bytes());
+        assert_eq!(
+            b_after
+                .read_audio_file("11111111-1111-1111-1111-111111111111.opus")
+                .unwrap(),
+            b"A-audio"
+        );
+    }
+
+    #[test]
+    fn media_sync_is_idempotent() {
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
+        let root = tmp_package("media-idem", 0xAA);
+        let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        pkg.blobs().put("一張圖".as_bytes()).unwrap();
+
+        let path: String = root.to_string_lossy().into();
+        assert_eq!(gdrive_sync_media(cloud.clone(), path.clone(), "nb1".into()).uploaded, 1);
+
+        let again = gdrive_sync_media(cloud, path, "nb1".into());
+        assert!(again.ok);
+        assert_eq!(again.uploaded, 0, "沒有變動就不該重傳");
+        assert_eq!(again.downloaded, 0, "自己剛傳的不該再抓回來");
+    }
+
+    #[test]
+    fn a_growing_recording_is_re_uploaded() {
+        // 錄音檔在錄製中會變長。只看「對面有沒有這個名字」的話，
+        // 一段還在錄的音永遠只會同步到第一次的長度。
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
+        let root = tmp_package("media-grow", 0xAA);
+        let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        let name = "22222222-2222-2222-2222-222222222222.opus";
+        pkg.write_audio_file(name, b"short").unwrap();
+
+        let path: String = root.to_string_lossy().into();
+        assert_eq!(gdrive_sync_media(cloud.clone(), path.clone(), "nb1".into()).uploaded, 1);
+
+        pkg.write_audio_file(name, b"short-plus-more-audio").unwrap();
+        let after = gdrive_sync_media(cloud, path, "nb1".into());
+        assert_eq!(after.uploaded, 1, "變長之後要再傳一次");
+    }
+
+    #[test]
+    fn a_corrupted_blob_from_the_cloud_is_rejected() {
+        // blob 的檔名就是內容的雜湊。對不上代表傳輸壞了或有人動過手腳。
+        //
+        // 不驗的話，壞資料會被存在「它自己的雜湊」底下，而我們要的那一個
+        // 仍然不存在 —— 同步看起來成功了，圖片卻永遠出不來。
+        let fake = FakeDrive::default();
+        let fake_name = padnote_storage::BlobId::of("正確內容".as_bytes()).to_string();
+        fake.files
+            .lock()
+            .unwrap()
+            .push((format!("notebooks/nb1/media/blobs/{fake_name}"), "被掉包的內容".as_bytes().to_vec()));
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(fake);
+
+        let root = tmp_package("media-corrupt", 0xAA);
+        let result = gdrive_sync_media(cloud, root.to_string_lossy().into(), "nb1".into());
+        assert!(!result.ok);
+        assert!(result.error.contains("雜湊不符"), "{}", result.error);
+
+        // 而且不可以把壞資料留在套件裡。
+        let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        assert!(pkg.blobs().list().unwrap().is_empty());
     }
 
     #[test]

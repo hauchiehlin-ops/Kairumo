@@ -29,12 +29,30 @@ use std::ops::Range;
 const FILES_URL: &str = "https://www.googleapis.com/drive/v3/files";
 const UPLOAD_URL: &str = "https://www.googleapis.com/upload/drive/v3/files";
 
+/// Drive 單次上傳（`uploadType=media`）的大小上限是 5 MB。
+///
+/// 超過就必須走可續傳上傳。手機拍的照片很容易 3–8 MB，而 blob 存的是
+/// **原始位元組**（只有顯示尺寸被縮小），所以這不是邊角情況 ——
+/// 不處理的話，使用者一放照片同步就壞。
+///
+/// 門檻取 4 MiB 留一點餘裕：Drive 算的是整個請求，不只是內容。
+pub const SIMPLE_UPLOAD_LIMIT: usize = 4 * 1024 * 1024;
+
 /// Drive REST 呼叫。抽出來是為了讓查詢與分頁邏輯測得到，見模組說明。
 pub trait DriveHttp: Send + Sync + Debug {
     fn get_json(&self, url: &str, query: &[(String, String)]) -> Result<Value, SyncError>;
     fn get_bytes(&self, url: &str, range: Option<Range<u64>>) -> Result<Vec<u8>, SyncError>;
     fn post_json(&self, url: &str, body: &Value) -> Result<Value, SyncError>;
     fn patch_bytes(&self, url: &str, data: &[u8]) -> Result<(), SyncError>;
+
+    /// 開一個可續傳上傳的工作階段，回傳工作階段 URI。
+    ///
+    /// Drive 把那個 URI 放在**回應標頭 `Location`** 裡，不是 body ——
+    /// 所以這一步只有平台層做得到（核心看不到標頭）。
+    fn start_resumable(&self, url: &str, body: &Value) -> Result<String, SyncError>;
+
+    /// 把位元組 PUT 到可續傳的工作階段 URI。
+    fn put_bytes(&self, url: &str, data: &[u8]) -> Result<(), SyncError>;
 }
 
 /// Drive 查詢字串裡的字面值跳脫。
@@ -229,8 +247,17 @@ impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
             // 那會在每次暫時失敗時多產生一個重複檔。
             Err(other) => return Err(other),
         };
-        let url = format!("{UPLOAD_URL}/{file_id}?uploadType=media");
-        self.http.patch_bytes(&url, data)
+        if data.len() <= SIMPLE_UPLOAD_LIMIT {
+            let url = format!("{UPLOAD_URL}/{file_id}?uploadType=media");
+            return self.http.patch_bytes(&url, data);
+        }
+        // 大檔走可續傳。用單次上傳的話 Drive 直接回 413，
+        // 而錯誤訊息不會說是「檔案太大」——看起來像權限或網路問題。
+        let session = self.http.start_resumable(
+            &format!("{UPLOAD_URL}/{file_id}?uploadType=resumable"),
+            &json!({}),
+        )?;
+        self.http.put_bytes(&session, data)
     }
 
     fn supports_native_append(&self) -> bool {
@@ -332,6 +359,39 @@ impl DriveHttp for ReqwestDriveHttp {
         resp.json().map_err(|e| SyncError::Backend(e.to_string()))
     }
 
+    fn start_resumable(&self, url: &str, body: &Value) -> Result<String, SyncError> {
+        let resp = self
+            .client
+            .post(url)
+            .header(reqwest::header::AUTHORIZATION, self.bearer())
+            .json(body)
+            .send()
+            .map_err(|e| SyncError::Backend(e.to_string()))?;
+        if !resp.status().is_success() {
+            return Err(Self::status_error(resp.status(), url));
+        }
+        resp.headers()
+            .get(reqwest::header::LOCATION)
+            .and_then(|v| v.to_str().ok())
+            .map(str::to_string)
+            .ok_or_else(|| SyncError::Backend("可續傳上傳沒有回傳 Location".into()))
+    }
+
+    fn put_bytes(&self, url: &str, data: &[u8]) -> Result<(), SyncError> {
+        let resp = self
+            .client
+            .put(url)
+            .header(reqwest::header::AUTHORIZATION, self.bearer())
+            .header(reqwest::header::CONTENT_TYPE, "application/octet-stream")
+            .body(data.to_vec())
+            .send()
+            .map_err(|e| SyncError::Backend(e.to_string()))?;
+        if !resp.status().is_success() {
+            return Err(Self::status_error(resp.status(), url));
+        }
+        Ok(())
+    }
+
     fn patch_bytes(&self, url: &str, data: &[u8]) -> Result<(), SyncError> {
         let resp = self
             .client
@@ -363,6 +423,8 @@ mod tests {
         /// 一頁幾筆，用來逼出分頁。
         page_size: usize,
         patched: Mutex<Vec<(String, Vec<u8>)>>,
+        /// 走可續傳上傳的那些：(工作階段 URI, 位元組數)。
+        put_large: Mutex<Vec<(String, usize)>>,
         created: Mutex<Vec<String>>,
     }
 
@@ -463,6 +525,18 @@ mod tests {
                 .push((url.to_string(), data.to_vec()));
             Ok(())
         }
+
+        fn start_resumable(&self, url: &str, _body: &Value) -> Result<String, SyncError> {
+            Ok(format!("{url}&session=1"))
+        }
+
+        fn put_bytes(&self, url: &str, data: &[u8]) -> Result<(), SyncError> {
+            self.put_large
+                .lock()
+                .unwrap()
+                .push((url.to_string(), data.len()));
+            Ok(())
+        }
     }
 
     #[test]
@@ -549,6 +623,31 @@ mod tests {
             100,
         ));
         assert_eq!(drive.get_all("notebooks/index.json").unwrap(), b"{\"items\":{}}");
+    }
+
+    #[test]
+    fn a_large_file_goes_through_the_resumable_path() {
+        // Drive 的單次上傳上限是 5 MB。手機照片很容易超過，而 blob 存的是
+        // **原始位元組** —— 用單次上傳的話 Drive 回 413，錯誤訊息還不會說
+        // 是「檔案太大」，看起來像權限或網路問題。
+        let drive = GDriveProvider::new(FakeDrive::with(&[], 100));
+        let big = vec![7u8; SIMPLE_UPLOAD_LIMIT + 1];
+        drive.put("notebooks/n1/media/blobs/abc", &big).unwrap();
+
+        assert!(drive.http.patched.lock().unwrap().is_empty(), "大檔不該走單次上傳");
+        let large = drive.http.put_large.lock().unwrap();
+        assert_eq!(large.len(), 1);
+        assert_eq!(large[0].1, big.len());
+        assert!(large[0].0.contains("uploadType=resumable"), "{}", large[0].0);
+    }
+
+    #[test]
+    fn a_small_file_still_uses_the_simple_upload() {
+        // 小檔走可續傳只是多一趟往返。
+        let drive = GDriveProvider::new(FakeDrive::with(&[], 100));
+        drive.put("settings/global.json", b"{}").unwrap();
+        assert_eq!(drive.http.patched.lock().unwrap().len(), 1);
+        assert!(drive.http.put_large.lock().unwrap().is_empty());
     }
 
     #[test]
