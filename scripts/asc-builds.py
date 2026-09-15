@@ -101,44 +101,78 @@ def main():
     app = apps[0]
     print(f"App：{app['attributes']['name']}　id={app['id']}　{bundle}\n")
 
-    data = api(cfg, f"/v1/apps/{app['id']}/builds"
-                    "?limit=100&include=preReleaseVersion&sort=-uploadedDate")
+    # 關聯端點 /v1/apps/{id}/builds 不接受 include 與 sort（實測回 400
+    # PARAMETER_ERROR.ILLEGAL）。頂層 /v1/builds 搭 filter[app] 才吃這兩個參數。
+    #
+    # buildBetaDetail 是這支工具的重點：processingState 只說 Apple 處理完了沒，
+    # 真正決定「測試者按下安裝拿不拿得到東西」的是 internal/externalBuildState。
+    data = api(cfg, f"/v1/builds?filter[app]={app['id']}"
+                    "&limit=200&include=preReleaseVersion,buildBetaDetail"
+                    "&sort=-uploadedDate")
     included = {(i["type"], i["id"]): i for i in data.get("included", [])}
 
-    print(f"{'版本':>10} {'build':>6} {'平台':<8} {'處理狀態':<12} {'已過期':<7} {'上傳時間':<22} {'可測試'}")
-    print("─" * 92)
+    def rel(b, name, typ):
+        r = b.get("relationships", {}).get(name, {}).get("data")
+        return included.get((typ, r["id"])) if r else None
+
+    # 這些狀態代表「清單看得到，但裝不了」——正是使用者回報的症狀。
+    BAD = {
+        "PROCESSING_EXCEPTION": "處理失敗（沒有可下載的二進位檔）",
+        "MISSING_EXPORT_COMPLIANCE": "缺少出口合規資訊",
+        "EXPIRED": "已過期",
+        "BETA_REJECTED": "Beta 審核被拒",
+        "READY_FOR_BETA_SUBMISSION": "尚未送 Beta 審核（外部測試者拿不到）",
+        "IN_BETA_REVIEW": "Beta 審核中（外部測試者還拿不到）",
+        "PROCESSING": "仍在處理中",
+    }
+
+    hdr = (f"{'版本':>9} {'build':>6} {'平台':<7} {'處理':<10} "
+           f"{'內部測試':<26} {'外部測試':<26}")
+    print(hdr)
+    print("─" * 96)
     suspects = []
     for b in data["data"]:
         a = b["attributes"]
-        pre = b.get("relationships", {}).get("preReleaseVersion", {}).get("data")
-        pv = included.get(("preReleaseVersions", pre["id"])) if pre else None
+        pv = rel(b, "preReleaseVersion", "preReleaseVersions")
+        bd = rel(b, "buildBetaDetail", "buildBetaDetails")
         ver = pv["attributes"]["version"] if pv else "?"
         plat = pv["attributes"]["platform"] if pv else "?"
         state = a.get("processingState", "?")
-        expired = a.get("expired")
-        # 這一欄才是「測試者按下安裝會不會拿到東西」。
-        # VALID 但 expired 的 build 仍然列在 TestFlight 裡。
-        usable = "✅" if (state == "VALID" and not expired) else "❌"
-        print(f"{ver:>10} {a.get('version',''):>6} {plat:<8} {state:<12} "
-              f"{str(bool(expired)):<7} {str(a.get('uploadedDate',''))[:19]:<22} {usable}")
-        if state != "VALID" or expired:
-            suspects.append((ver, a.get("version"), state, bool(expired), b["id"]))
+        expired = bool(a.get("expired"))
+        internal = (bd["attributes"].get("internalBuildState") if bd else None) or "?"
+        external = (bd["attributes"].get("externalBuildState") if bd else None) or "?"
+        if expired:
+            internal = external = "EXPIRED"
+        print(f"{ver:>9} {str(a.get('version','')):>6} {plat:<7} {state:<10} "
+              f"{internal:<26} {external:<26}")
+        why = []
+        if state != "VALID":
+            why.append(f"處理狀態 {state}")
+        for label, st in (("內部", internal), ("外部", external)):
+            if st in BAD:
+                why.append(f"{label}：{BAD[st]}")
+        if why:
+            suspects.append((ver, a.get("version"), plat, why, b["id"]))
         if show_groups:
-            gs = api(cfg, f"/v1/builds/{b['id']}/betaGroups")["data"]
+            # /v1/builds/{id}/betaGroups 只允許 CREATE/DELETE，GET 會回 403
+            # FORBIDDEN_ERROR。要讀就得從 betaGroups 這端反查。
+            gs = api(cfg, f"/v1/betaGroups?filter[builds]={b['id']}&limit=200")["data"]
             names = [g["attributes"]["name"] for g in gs] or ["（未指派任何群組）"]
-            print(f"{'':>10} └─ 群組：{'、'.join(names)}")
+            print(f"{'':>9} └─ 群組：{'、'.join(names)}")
 
     print()
     if suspects:
         print("⚠️ 以下 build 在 TestFlight 清單裡看得到，但測試者裝不了：")
-        for ver, bn, state, exp, bid in suspects:
-            why = "已過期" if exp else f"處理狀態 {state}"
-            print(f"   • {ver} ({bn})　{why}　id={bid}")
+        for ver, bn, plat, why, bid in suspects:
+            print(f"   • {ver} ({bn}) {plat}　{'；'.join(why)}")
+            print(f"     build id = {bid}")
         print()
-        print("   到 ASC → TestFlight → 該 build → 停止測試（Expire），")
-        print("   再把可用的那顆明確加進測試群組。")
+        print("   幽靈 build（PROCESSING_EXCEPTION／卡在 PROCESSING）：")
+        print("     ASC → TestFlight → 該 build → 停止測試（Expire），把它擋在清單外。")
+        print("   READY_FOR_BETA_SUBMISSION：外部測試群組要先送 Beta App Review。")
     else:
-        print("✅ 沒有異常 build。若測試者仍裝不了，問題在群組指派或 Beta App Review。")
+        print("✅ 每顆 build 的狀態都正常。若測試者仍裝不了，"
+              "問題在群組指派或測試者本身的帳號。")
 
 
 if __name__ == "__main__":
