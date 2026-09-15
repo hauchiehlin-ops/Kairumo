@@ -35,6 +35,12 @@ data class NoteTable(
     var mergedCells: MutableList<NoteTableSpan> = mutableListOf(),
     var fontSize: Float = 14f,
     var ruleColorHex: String? = null,
+    /**
+     * 繞自身中心的旋轉角度（度，順時針）。`null` = 沒設定（等同 0）。
+     *
+     * 與 Apple 端 `NoteTableAttachment.rotationDegrees` 同一個鍵、同一個語意。
+     */
+    var rotationDegrees: Float? = null,
     /** `"clear"` 為透明。 */
     var headerBackgroundHex: String? = null
 ) {
@@ -158,6 +164,7 @@ data class NoteTable(
             }
         })
         // null 的欄位不寫進去 —— 接收端才分得出「沒設定」與「設成透明」。
+        rotationDegrees?.let { put("rotationDegrees", it.toDouble()) }
         ruleColorHex?.let { put("ruleColorHex", it) }
         headerBackgroundHex?.let { put("headerBackgroundHex", it) }
     }.toString()
@@ -184,6 +191,8 @@ data class NoteTable(
                     )
                 },
                 fontSize = obj.optDouble("fontSize", 14.0).toFloat(),
+                rotationDegrees = if (obj.has("rotationDegrees"))
+                    obj.optDouble("rotationDegrees").toFloat() else null,
                 ruleColorHex = if (obj.has("ruleColorHex")) obj.optString("ruleColorHex") else null,
                 headerBackgroundHex =
                     if (obj.has("headerBackgroundHex")) obj.optString("headerBackgroundHex") else null

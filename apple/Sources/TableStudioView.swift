@@ -280,6 +280,18 @@ struct TableAttachmentItemView: View {
 
         NoteTableView(table: $table, isSelected: isSelected, onEdit: onEdit)
             .shadow(color: isDragging ? .clear : Color.black.opacity(0.08), radius: 6, y: 3)
+            // 表格本體跟著轉；把手掛在旋轉**外面**的 overlay ——
+            // 包進去的話拖曳算出的角度會疊加自身旋轉，表格會失控加速。
+            .rotationEffect(.degrees(table.canvasRotation))
+            .overlay {
+                if isSelected {
+                    // 尺寸取實際版面框：表格高度由列數與內容決定，
+                    // 模型裡沒有可信的 height 可用。
+                    GeometryReader { geo in
+                        ObjectRotationHandle(degrees: $table.canvasRotation, size: geo.size)
+                    }
+                }
+            }
             .overlay(alignment: .topTrailing) {
                 if isSelected {
                     Button(role: .destructive, action: onDelete) {

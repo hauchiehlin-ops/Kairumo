@@ -11,6 +11,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import com.kairumo.padnote.canvas.CanvasRotation
+import com.kairumo.padnote.canvas.RotationHandle
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -67,10 +70,16 @@ private fun TableObjectView(
         else -> ChartColorOrNull(hex) ?: foreground.copy(alpha = 0.06f)
     }
 
+    val rotation = CanvasRotation.normalized(table.rotationDegrees ?: 0f)
+
+    // 外層只定位、不旋轉 —— 旋轉把手掛在這一層。
+    Box(Modifier.offset((table.x / density).dp, (table.y / density).dp)) {
+
     Box(
         Modifier
-            .offset((table.x / density).dp, (table.y / density).dp)
             .size((layout.width / density).dp.value.dp, (layout.height / density).dp.value.dp)
+            // 整個表格一起轉（格線 + 文字）。
+            .graphicsLayer { rotationZ = rotation }
             .border(
                 if (isSelected) 1.5.dp else 0.dp,
                 MaterialTheme.colorScheme.primary,
@@ -140,6 +149,20 @@ private fun TableObjectView(
                     }
                 }
             }
+        }
+    }
+
+        if (isSelected) {
+            RotationHandle(
+                degrees = rotation,
+                widthDp = (layout.width / density).toFloat(),
+                heightDp = (layout.height / density).toFloat(),
+                density = density,
+                onRotate = { deg ->
+                    onChanged(table.copyTable().apply { rotationDegrees = deg })
+                },
+                onCommit = { onChanged(table) }
+            )
         }
     }
 }

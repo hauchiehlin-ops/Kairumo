@@ -33,6 +33,16 @@ public struct NoteTableSpan: Codable, Hashable {
 
 public struct NoteTableAttachment: Identifiable, Codable, Hashable {
     public let id: String
+    /// 繞自身中心的旋轉角度（度，順時針）。
+    ///
+    /// **必須是 Optional** —— 舊檔沒有這個鍵，非 Optional 會讓整份筆記解碼
+    /// 失敗，而載入走的是 `try?`：使用者的筆記會整批靜默消失。
+    /// 見 `ObjectFrameStyled.canvasRotation` 的說明。
+    public var rotationDegrees: Double?
+    public var canvasRotation: Double {
+        get { rotationDegrees ?? 0 }
+        set { rotationDegrees = newValue }
+    }
     public var pageIndex: Int
     public var x: CGFloat
     public var y: CGFloat
