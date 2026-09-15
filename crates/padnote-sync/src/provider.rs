@@ -1,8 +1,7 @@
 //! `CloudProvider` 抽象（`architecture.md` §4.3）。
 //!
-//! 優先序（決策 D3）：**本機資料夾 → iCloud Drive → Google Drive**。
-//! 本機資料夾 provider 零成本，且讓 Dropbox / OneDrive / Syncthing / NAS
-//! 使用者全部免費得到支援。
+//! D11 之後，正式自動同步主線是 Google Drive `appDataFolder`。
+//! 本機資料夾 provider 保留為手動備份、匯入匯出與進階使用者備援。
 
 use std::fmt::Debug;
 use std::ops::Range;

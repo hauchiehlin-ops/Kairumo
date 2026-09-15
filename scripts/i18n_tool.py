@@ -137,17 +137,29 @@ def cmd_generate():
               ' * 與 Apple 版共用同一份來源，所以兩個平台的用語永遠一致。',
               ' */',
               'object LocalizationStrings {',
-              '    val table: Map<String, Map<String, String>> = mapOf(']
-    for k in keys:
-        rows = [f'            "{LANG_CODES[lang]}" to "{kotlin_escape(table[k][lang])}"'
-                for lang in LANGS if lang in table[k]]
-        kotlin.append(f'        "{kotlin_escape(k)}" to mapOf(')
-        kotlin.append(",\n".join(rows))
-        kotlin.append('        ),')
-    kotlin[-1] = kotlin[-1].rstrip(",")
-    kotlin += ['    )',
-               '',
-               '    /** 取字串：找不到語系就退回英文，再退回繁中，最後回傳 key 本身。 */',
+              '    val table: Map<String, Map<String, String>> by lazy {',
+              '        buildMap {']
+    chunk_size = 80
+    chunks = [keys[i:i + chunk_size] for i in range(0, len(keys), chunk_size)]
+    for idx in range(len(chunks)):
+        kotlin.append(f'            putAll(part{idx}())')
+    kotlin += ['        }',
+               '    }',
+               '']
+
+    for idx, chunk in enumerate(chunks):
+        kotlin.append(f'    private fun part{idx}(): Map<String, Map<String, String>> = mapOf(')
+        for k in chunk:
+            rows = [f'            "{LANG_CODES[lang]}" to "{kotlin_escape(table[k][lang])}"'
+                    for lang in LANGS if lang in table[k]]
+            kotlin.append(f'        "{kotlin_escape(k)}" to mapOf(')
+            kotlin.append(",\n".join(rows))
+            kotlin.append('        ),')
+        kotlin[-1] = kotlin[-1].rstrip(",")
+        kotlin.append('    )')
+        kotlin.append('')
+
+    kotlin += ['    /** 取字串：找不到語系就退回英文，再退回繁中，最後回傳 key 本身。 */',
                '    fun localized(key: String, language: String): String {',
                '        val entry = table[key] ?: return key',
                '        return entry[language] ?: entry["en"] ?: entry["zh-Hant"] ?: key',

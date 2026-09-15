@@ -469,7 +469,9 @@ public final class AssetLibraryManager: ObservableObject {
                 .font: UIFont.systemFont(ofSize: 12, weight: .bold),
                 .foregroundColor: isDark ? UIColor.cyan : UIColor(red: 0.05, green: 0.35, blue: 0.75, alpha: 1.0)
             ]
-            let subtitle = "\(item.title)  [\(item.dimensionsMm)]"
+            let key = "asset_\(item.id)_title"
+            let localizedTitle = LocalizationManager.shared.localizedUnsafe(key)
+            let subtitle = "\((localizedTitle == key ? item.title : localizedTitle))  [\(item.dimensionsMm)]"
             (subtitle as NSString).draw(at: CGPoint(x: 26, y: 360), withAttributes: attrs)
         }
     }

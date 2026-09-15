@@ -9,7 +9,23 @@ package com.kairumo.padnote
  * 與 Apple 版共用同一份來源，所以兩個平台的用語永遠一致。
  */
 object LocalizationStrings {
-    val table: Map<String, Map<String, String>> = mapOf(
+    val table: Map<String, Map<String, String>> by lazy {
+        buildMap {
+            putAll(part0())
+            putAll(part1())
+            putAll(part2())
+            putAll(part3())
+            putAll(part4())
+            putAll(part5())
+            putAll(part6())
+            putAll(part7())
+            putAll(part8())
+            putAll(part9())
+            putAll(part10())
+        }
+    }
+
+    private fun part0(): Map<String, Map<String, String>> = mapOf(
         "about_app" to mapOf(
             "zh-Hant" to "關於 Kairumo",
             "en" to "About Kairumo",
@@ -282,6 +298,246 @@ object LocalizationStrings {
             "ko" to "아키텍처 모드",
             "th" to "โหมดสถาปัตยกรรม"
         ),
+        "asset_aes_comp_01_title" to mapOf(
+            "zh-Hant" to "黃金螺旋對數構圖尺標",
+            "en" to "Golden-Spiral Logarithmic Composition Guide",
+            "zh-Hans" to "黄金螺旋对数构图尺标",
+            "ja" to "黄金螺旋の対数構図ガイド",
+            "ko" to "황금나선 로그 구성 가이드",
+            "th" to "ไม้บรรทัดจัดองค์ประกอบเกลียวทองคำแบบลอการิทึม"
+        ),
+        "asset_aes_comp_02_title" to mapOf(
+            "zh-Hant" to "經典攝影三分法則九宮格",
+            "en" to "Classic Rule-of-Thirds Photography Grid",
+            "zh-Hans" to "经典摄影三分法九宫格",
+            "ja" to "写真用クラシック三分割グリッド",
+            "ko" to "클래식 사진 삼분할 그리드",
+            "th" to "ตารางกฎสามส่วนสำหรับการถ่ายภาพแบบคลาสสิก"
+        ),
+        "asset_aes_comp_03_title" to mapOf(
+            "zh-Hant" to "動態對稱菱形構圖引導",
+            "en" to "Dynamic-Symmetry Armature Composition Guide",
+            "zh-Hans" to "动态对称菱形构图引导",
+            "ja" to "動的対称アーマチュア構図ガイド",
+            "ko" to "동적 대칭 아마추어 구성 가이드",
+            "th" to "ไกด์จัดองค์ประกอบโครงสร้างสมมาตรไดนามิก"
+        ),
+        "asset_auto_01_title" to mapOf(
+            "zh-Hant" to "跑車空氣動力學流線側影",
+            "en" to "Sports Car Aerodynamic Side Profile",
+            "zh-Hans" to "跑车空气动力学流线侧影",
+            "ja" to "スポーツカー空力サイドプロファイル",
+            "ko" to "스포츠카 공기역학 사이드 프로파일",
+            "th" to "โปรไฟล์ด้านข้างเชิงอากาศพลศาสตร์ของรถสปอร์ต"
+        ),
+        "asset_auto_02_title" to mapOf(
+            "zh-Hant" to "五輻雙柱鍛造運動輪框",
+            "en" to "Five-Spoke Split Forged Sport Wheel Rim",
+            "zh-Hans" to "五辐双柱锻造运动轮毂",
+            "ja" to "5スポーク・スプリット鍛造スポーツホイールリム",
+            "ko" to "5스포크 듀얼 스플릿 단조 스포츠 휠 림",
+            "th" to "ล้อสปอร์ตฟอร์จแบบห้าก้านคู่"
+        ),
+        "asset_auto_03_title" to mapOf(
+            "zh-Hant" to "雙 A 臂獨立懸吊機構",
+            "en" to "Double-Wishbone Independent Suspension Mechanism",
+            "zh-Hans" to "双 A 臂独立悬架机构",
+            "ja" to "ダブルウィッシュボーン独立懸架機構",
+            "ko" to "더블 위시본 독립 현가 장치",
+            "th" to "ระบบกันสะเทือนอิสระแบบปีกนกคู่"
+        ),
+        "asset_auto_04_title" to mapOf(
+            "zh-Hant" to "三輻運動賽車方向盤",
+            "en" to "Three-Spoke Sport Racing Steering Wheel",
+            "zh-Hans" to "三辐运动赛车方向盘",
+            "ja" to "3スポーク・スポーツレーシングステアリングホイール",
+            "ko" to "3스포크 스포츠 레이싱 스티어링 휠",
+            "th" to "พวงมาลัยแข่งสปอร์ตสามก้าน"
+        ),
+        "asset_auto_05_title" to mapOf(
+            "zh-Hant" to "純電滑板底盤電池模組架構",
+            "en" to "EV Skateboard Chassis Battery Module Architecture",
+            "zh-Hans" to "纯电滑板底盘电池模组架构",
+            "ja" to "EVスケートボードシャシー電池モジュール構成",
+            "ko" to "전기차 스케이트보드 섀시 배터리 모듈 구조",
+            "th" to "สถาปัตยกรรมโมดูลแบตเตอรี่บนแชสซีสเกตบอร์ด EV"
+        ),
+        "asset_auto_06_title" to mapOf(
+            "zh-Hant" to "未來星際懸浮穿梭載具",
+            "en" to "Futuristic Orbital Hover Shuttle",
+            "zh-Hans" to "未来星际悬浮穿梭载具",
+            "ja" to "未来型軌道ホバーシャトル",
+            "ko" to "미래형 궤도 호버 셔틀",
+            "th" to "ยานรับส่งโฮเวอร์วงโคจรแนวอนาคต"
+        ),
+        "asset_digi_01_title" to mapOf(
+            "zh-Hant" to "旗艦智慧型手機 UI 向量線框",
+            "en" to "Flagship Smartphone UI Vector Wireframe",
+            "zh-Hans" to "旗舰智能手机 UI 向量线框",
+            "ja" to "フラッグシップスマートフォンUIベクターワイヤーフレーム",
+            "ko" to "플래그십 스마트폰 UI 벡터 와이어프레임",
+            "th" to "ไวร์เฟรมเวกเตอร์ UI สมาร์ตโฟนเรือธง"
+        ),
+        "asset_digi_02_title" to mapOf(
+            "zh-Hant" to "平板手繪多視窗佈局",
+            "en" to "Hand-Drawn Tablet Multi-Window Layout",
+            "zh-Hans" to "平板手绘多窗口布局",
+            "ja" to "タブレット用手描きマルチウィンドウレイアウト",
+            "ko" to "태블릿 손그림 멀티윈도우 레이아웃",
+            "th" to "เลย์เอาต์หลายหน้าต่างแบบวาดมือสำหรับแท็บเล็ต"
+        ),
+        "asset_digi_03_title" to mapOf(
+            "zh-Hant" to "極簡瀏覽器視窗框架",
+            "en" to "Minimal Browser Window Frame",
+            "zh-Hans" to "极简浏览器窗口框架",
+            "ja" to "ミニマルなブラウザウィンドウフレーム",
+            "ko" to "미니멀 브라우저 창 프레임",
+            "th" to "กรอบหน้าต่างเบราว์เซอร์มินิมอล"
+        ),
+        "asset_digi_04_title" to mapOf(
+            "zh-Hant" to "行動端 8 種核心手勢符號包",
+            "en" to "Mobile 8-Core-Gesture Annotation Set",
+            "zh-Hans" to "移动端 8 种核心手势符号包",
+            "ja" to "モバイル向け8種基本ジェスチャー注釈セット",
+            "ko" to "모바일 8대 핵심 제스처 주석 세트",
+            "th" to "ชุดสัญลักษณ์ 8 ท่าทางหลักสำหรับมือถือ"
+        ),
+        "asset_elec_01_title" to mapOf(
+            "zh-Hant" to "旗艦手機鋁合金中框結構",
+            "en" to "Flagship Smartphone Aluminum Mid-Frame Structure",
+            "zh-Hans" to "旗舰手机铝合金中框结构",
+            "ja" to "フラッグシップスマートフォン用アルミ合金ミッドフレーム構造",
+            "ko" to "플래그십 스마트폰 알루미늄 합금 미드프레임 구조",
+            "th" to "โครงกลางอะลูมิเนียมอัลลอยสำหรับสมาร์ตโฟนเรือธง"
+        ),
+        "asset_elec_02_title" to mapOf(
+            "zh-Hant" to "真無線降噪耳機聲學腔體",
+            "en" to "TWS Noise-Cancelling Earbud Acoustic Chamber",
+            "zh-Hans" to "真无线降噪耳机声学腔体",
+            "ja" to "完全ワイヤレスノイズキャンセリングイヤホン音響チャンバー",
+            "ko" to "TWS 노이즈 캔슬링 이어버드 음향 챔버",
+            "th" to "โพรงอะคูสติกหูฟังไร้สายตัดเสียงรบกวน TWS"
+        ),
+        "asset_elec_03_title" to mapOf(
+            "zh-Hant" to "大光圈相機鏡頭光學鏡組",
+            "en" to "Large-Aperture Camera Lens Optical Assembly",
+            "zh-Hans" to "大光圈相机镜头光学镜组",
+            "ja" to "大口径カメラレンズ光学アセンブリ",
+            "ko" to "대구경 카메라 렌즈 광학 어셈블리",
+            "th" to "ชุดเลนส์กล้องรูรับแสงกว้าง"
+        ),
+        "asset_elec_04_title" to mapOf(
+            "zh-Hant" to "75% 客製化機械鍵盤 Gasket 結構",
+            "en" to "75% Custom Mechanical Keyboard Gasket Structure",
+            "zh-Hans" to "75% 客制化机械键盘 Gasket 结构",
+            "ja" to "75% カスタムメカニカルキーボード用ガスケット構造",
+            "ko" to "75% 커스텀 기계식 키보드 가스켓 구조",
+            "th" to "โครงสร้างแกสเก็ตคีย์บอร์ดกลไกคัสตอม 75%"
+        ),
+        "asset_elec_05_title" to mapOf(
+            "zh-Hant" to "曲面未來感智慧座艙 HUD",
+            "en" to "Curved Futuristic Smart-Cockpit HUD",
+            "zh-Hans" to "曲面未来感智能座舱 HUD",
+            "ja" to "曲面型フューチャリスティック・スマートコックピットHUD",
+            "ko" to "곡면형 미래형 스마트 콕핏 HUD",
+            "th" to "HUD ห้องโดยสารอัจฉริยะทรงโค้งแนวอนาคต"
+        ),
+        "asset_furn_01_title" to mapOf(
+            "zh-Hant" to "經典伊姆斯休閒躺椅",
+            "en" to "Classic Eames Lounge Chair Geometry",
+            "zh-Hans" to "经典伊姆斯休闲躺椅",
+            "ja" to "クラシック・イームズラウンジチェア形状",
+            "ko" to "클래식 임스 라운지 체어 형상",
+            "th" to "รูปทรงเก้าอี้เลานจ์ Eames คลาสสิก"
+        ),
+        "asset_furn_02_title" to mapOf(
+            "zh-Hant" to "人體工學升降辦公桌幾何",
+            "en" to "Ergonomic Height-Adjustable Desk Geometry",
+            "zh-Hans" to "人体工学升降办公桌几何",
+            "ja" to "人間工学昇降デスク形状",
+            "ko" to "인체공학 높이 조절 책상 형상",
+            "th" to "รูปทรงโต๊ะทำงานปรับระดับตามหลักสรีรศาสตร์"
+        ),
+        "asset_furn_03_title" to mapOf(
+            "zh-Hant" to "包浩斯懸臂可調護眼檯燈",
+            "en" to "Bauhaus Adjustable Cantilever Task Lamp",
+            "zh-Hans" to "包豪斯悬臂可调护眼台灯",
+            "ja" to "バウハウス調整式カンチレバータスクランプ",
+            "ko" to "바우하우스 조절식 캔틸레버 작업등",
+            "th" to "โคมไฟทำงานแขนยื่นปรับได้สไตล์ Bauhaus"
+        ),
+        "asset_furn_04_title" to mapOf(
+            "zh-Hant" to "北歐極簡模組收納櫃",
+            "en" to "Nordic Minimal Modular Credenza",
+            "zh-Hans" to "北欧极简模块收纳柜",
+            "ja" to "北欧ミニマル・モジュラー収納キャビネット",
+            "ko" to "북유럽 미니멀 모듈형 수납장",
+            "th" to "ตู้เก็บของโมดูลาร์มินิมอลสไตล์นอร์ดิก"
+        ),
+        "asset_hard_01_title" to mapOf(
+            "zh-Hant" to "ISO 4762 內六角圓柱頭螺栓",
+            "en" to "ISO 4762 Hex Socket Head Cap Screw",
+            "zh-Hans" to "ISO 4762 内六角圆柱头螺栓",
+            "ja" to "ISO 4762 六角穴付きボルト",
+            "ko" to "ISO 4762 육각 소켓 헤드 캡 스크루",
+            "th" to "สกรูหัวจมทรงกระบอกหกเหลี่ยม ISO 4762"
+        ),
+        "asset_hard_02_title" to mapOf(
+            "zh-Hant" to "DIN 7991 沉頭內六角螺釘",
+            "en" to "DIN 7991 Hex Socket Countersunk Screw",
+            "zh-Hans" to "DIN 7991 沉头内六角螺钉",
+            "ja" to "DIN 7991 六角穴付き皿ねじ",
+            "ko" to "DIN 7991 육각 소켓 접시머리 나사",
+            "th" to "สกรูหัวฝังหกเหลี่ยม DIN 7991"
+        ),
+        "asset_hard_03_title" to mapOf(
+            "zh-Hant" to "六角法蘭面防鬆螺母",
+            "en" to "Hex Flange Lock Nut",
+            "zh-Hans" to "六角法兰面防松螺母",
+            "ja" to "六角フランジロックナット",
+            "ko" to "육각 플랜지 잠금 너트",
+            "th" to "น็อตล็อกหน้าแปลนหกเหลี่ยม"
+        ),
+        "asset_hard_04_title" to mapOf(
+            "zh-Hant" to "封閉型抽芯盲鉚釘",
+            "en" to "Closed-End Blind Rivet",
+            "zh-Hans" to "封闭型抽芯盲铆钉",
+            "ja" to "密閉型ブラインドリベット",
+            "ko" to "폐쇄형 블라인드 리벳",
+            "th" to "รีเวทตาบอดปลายปิด"
+        ),
+        "asset_hard_05_title" to mapOf(
+            "zh-Hant" to "圓柱螺旋壓縮彈簧",
+            "en" to "Cylindrical Helical Compression Spring",
+            "zh-Hans" to "圆柱螺旋压缩弹簧",
+            "ja" to "円筒コイル圧縮ばね",
+            "ko" to "원통형 헬리컬 압축 스프링",
+            "th" to "สปริงอัดขดเกลียวทรงกระบอก"
+        ),
+        "asset_hard_06_title" to mapOf(
+            "zh-Hant" to "90° 強化沖壓直角固定角鐵",
+            "en" to "90° Reinforced Stamped L-Bracket",
+            "zh-Hans" to "90° 强化冲压直角固定角码",
+            "ja" to "90° 補強プレスL字ブラケット",
+            "ko" to "90° 보강 프레스 L 브래킷",
+            "th" to "ฉากยึดตัว L ปั๊มขึ้นรูปเสริมแรง 90°"
+        ),
+        "asset_ia_01_title" to mapOf(
+            "zh-Hant" to "階層式站點地圖與樹狀導航節點",
+            "en" to "Hierarchical Sitemap and Tree Navigation Nodes",
+            "zh-Hans" to "层级式站点地图与树状导航节点",
+            "ja" to "階層型サイトマップとツリーナビゲーションノード",
+            "ko" to "계층형 사이트맵 및 트리 내비게이션 노드",
+            "th" to "แผนผังเว็บไซต์แบบลำดับชั้นและโหนดนำทางแบบต้นไม้"
+        ),
+        "asset_ia_02_title" to mapOf(
+            "zh-Hant" to "使用者狀態機躍遷流程圖",
+            "en" to "User Journey State-Machine Transition Flowchart",
+            "zh-Hans" to "用户状态机跃迁流程图",
+            "ja" to "ユーザージャーニー状態遷移フローチャート",
+            "ko" to "사용자 여정 상태 머신 전이 흐름도",
+            "th" to "ผังงานการเปลี่ยนสถานะของผู้ใช้แบบ State Machine"
+        ),
         "asset_library" to mapOf(
             "zh-Hant" to "素材圖庫",
             "en" to "Asset Library",
@@ -297,6 +553,233 @@ object LocalizationStrings {
             "ja" to "機構設計、製品(3C、自動車、家具)、金物、デジタルUI部品",
             "ko" to "기구 설계, 실제 제품(3C, 자동차, 가구), 하드웨어 부품 및 디지털 와이어프레임",
             "th" to "ครอบคลุมการออกแบบกลไก, ผลิตภัณฑ์จริง (3C, รถยนต์, เฟอร์นิเจอร์), ฮาร์ดแวร์ และดิจิทัล"
+        ),
+        "asset_mech_01_title" to mapOf(
+            "zh-Hant" to "漸開線正齒輪組",
+            "en" to "Involute Spur Gear Set",
+            "zh-Hans" to "渐开线直齿轮组",
+            "ja" to "インボリュート平歯車セット",
+            "ko" to "인벌류트 평기어 세트",
+            "th" to "ชุดเฟืองตรงอินโวลูต"
+        ),
+        "asset_mech_02_title" to mapOf(
+            "zh-Hant" to "平面圓柱滾子軸承",
+            "en" to "Cylindrical Roller Bearing",
+            "zh-Hans" to "平面圆柱滚子轴承",
+            "ja" to "円筒ころ軸受",
+            "ko" to "원통 롤러 베어링",
+            "th" to "ตลับลูกปืนลูกกลิ้งทรงกระบอก"
+        ),
+        "asset_mech_03_title" to mapOf(
+            "zh-Hant" to "精密微型滾珠螺桿滑軌",
+            "en" to "Precision Miniature Ball-Screw Linear Guide",
+            "zh-Hans" to "精密微型滚珠丝杠滑轨",
+            "ja" to "精密ミニチュアボールねじリニアガイド",
+            "ko" to "정밀 소형 볼스크루 리니어 가이드",
+            "th" to "รางสไลด์บอลสกรูขนาดเล็กความแม่นยำสูง"
+        ),
+        "asset_mech_04_title" to mapOf(
+            "zh-Hant" to "等徑盤形凸輪連桿機構",
+            "en" to "Constant-Diameter Disk Cam and Follower Mechanism",
+            "zh-Hans" to "等径盘形凸轮连杆机构",
+            "ja" to "等径円板カム・フォロワ機構",
+            "ko" to "등경 원판 캠 및 종동절 기구",
+            "th" to "กลไกจานแคมเส้นผ่านศูนย์กลางคงที่และลูกตาม"
+        ),
+        "asset_mech_05_title" to mapOf(
+            "zh-Hant" to "NEMA 17 混合式步進馬達",
+            "en" to "NEMA 17 Hybrid Stepper Motor",
+            "zh-Hans" to "NEMA 17 混合式步进电机",
+            "ja" to "NEMA 17 ハイブリッドステッピングモーター",
+            "ko" to "NEMA 17 하이브리드 스테핑 모터",
+            "th" to "สเต็ปเปอร์มอเตอร์ไฮบริด NEMA 17"
+        ),
+        "asset_mech_06_title" to mapOf(
+            "zh-Hant" to "動態外骨骼關節連桿",
+            "en" to "Dynamic Exoskeleton Joint Linkage",
+            "zh-Hans" to "动态外骨骼关节连杆",
+            "ja" to "動的外骨格ジョイントリンク機構",
+            "ko" to "동적 외골격 관절 링크 기구",
+            "th" to "ชุดข้อเชื่อมข้อต่อโครงกระดูกภายนอกแบบไดนามิก"
+        ),
+        "asset_mold_01_title" to mapOf(
+            "zh-Hant" to "注塑模具 1.5° 拔模角與分模線剖面",
+            "en" to "Injection Mold 1.5° Draft Angle and Parting-Line Section",
+            "zh-Hans" to "注塑模具 1.5° 拔模角与分型线剖面",
+            "ja" to "射出成形金型の1.5°抜き勾配とパーティングライン断面",
+            "ko" to "사출 금형 1.5° 드래프트 각도 및 파팅 라인 단면",
+            "th" to "หน้าตัดแม่พิมพ์ฉีด 1.5° มุมถอดแบบและเส้นแบ่งแม่พิมพ์"
+        ),
+        "asset_mold_02_title" to mapOf(
+            "zh-Hant" to "塑膠件均勻壁厚與加強筋規範",
+            "en" to "Plastic Part Uniform Wall Thickness and Rib Design Rules",
+            "zh-Hans" to "塑胶件均匀壁厚与加强筋规范",
+            "ja" to "樹脂部品の均一肉厚とリブ設計規則",
+            "ko" to "플라스틱 부품 균일 벽두께 및 리브 설계 규칙",
+            "th" to "ข้อกำหนดความหนาผนังสม่ำเสมอและซี่เสริมแรงของชิ้นส่วนพลาสติก"
+        ),
+        "asset_mold_03_title" to mapOf(
+            "zh-Hant" to "螺絲自攻牙注塑凸柱結構",
+            "en" to "Self-Tapping Screw Boss and Gusset Structure",
+            "zh-Hans" to "螺丝自攻牙注塑凸柱结构",
+            "ja" to "タッピンねじ用樹脂ボス・ガセット構造",
+            "ko" to "셀프 태핑 나사용 사출 보스 및 거싯 구조",
+            "th" to "โครงสร้างบอสฉีดขึ้นรูปและค้ำยันสำหรับสกรูปล่อยเกลียว"
+        ),
+        "asset_motif_01_title" to mapOf(
+            "zh-Hant" to "包浩斯幾何構成裝飾組",
+            "en" to "Bauhaus Geometric Motif Set",
+            "zh-Hans" to "包豪斯几何构成装饰组",
+            "ja" to "バウハウス幾何構成モチーフセット",
+            "ko" to "바우하우스 기하 구성 모티프 세트",
+            "th" to "ชุดลวดลายเรขาคณิตแบบ Bauhaus"
+        ),
+        "asset_motif_02_title" to mapOf(
+            "zh-Hant" to "參數化 Voronoi 泰森多邊形紋樣",
+            "en" to "Parametric Voronoi Tessellation Pattern",
+            "zh-Hans" to "参数化 Voronoi 泰森多边形纹样",
+            "ja" to "パラメトリックVoronoiボロノイ分割パターン",
+            "ko" to "파라메트릭 보로노이 테셀레이션 패턴",
+            "th" to "ลวดลายเทสเซลเลชัน Voronoi แบบพาราเมตริก"
+        ),
+        "asset_motif_03_title" to mapOf(
+            "zh-Hant" to "未來賽博賽道光軌幾何",
+            "en" to "Futuristic Cyber Circuit Light-Track Geometry",
+            "zh-Hans" to "未来赛博赛道光轨几何",
+            "ja" to "未来的サイバー回路ライトトラック幾何",
+            "ko" to "미래형 사이버 회로 라이트 트랙 기하",
+            "th" to "เรขาคณิตเส้นแสงวงจรไซเบอร์แนวอนาคต"
+        ),
+        "asset_motion_01_title" to mapOf(
+            "zh-Hant" to "三次貝茲曲線動效時間函數",
+            "en" to "Cubic Bezier Animation Timing Function",
+            "zh-Hans" to "三次贝塞尔曲线动效时间函数",
+            "ja" to "3次ベジェ曲線のアニメーションタイミング関数",
+            "ko" to "3차 베지어 애니메이션 타이밍 함수",
+            "th" to "ฟังก์ชันเวลาแอนิเมชันเส้นโค้งคิวบิกเบซิเยร์"
+        ),
+        "asset_motion_02_title" to mapOf(
+            "zh-Hant" to "彈簧阻尼系統動態示意",
+            "en" to "Spring-Mass-Damper System Dynamics Diagram",
+            "zh-Hans" to "弹簧阻尼系统动态示意",
+            "ja" to "ばね・質量・ダンパ系の動的模式図",
+            "ko" to "스프링-질량-댐퍼 시스템 동역학 도식",
+            "th" to "แผนภาพพลวัตระบบสปริง-มวล-แดมเปอร์"
+        )
+    )
+
+    private fun part1(): Map<String, Map<String, String>> = mapOf(
+        "asset_pipe_01_title" to mapOf(
+            "zh-Hant" to "雙作用氣動滑台氣缸規格",
+            "en" to "Dual-Acting Pneumatic Slide Cylinder Specification",
+            "zh-Hans" to "双作用气动滑台气缸规格",
+            "ja" to "複動形空圧スライドシリンダ仕様",
+            "ko" to "복동식 공압 슬라이드 실린더 규격",
+            "th" to "สเปกกระบอกลมสไลด์แบบสองทาง"
+        ),
+        "asset_pipe_02_title" to mapOf(
+            "zh-Hant" to "快插式直角節流閥管路接頭",
+            "en" to "One-Touch Elbow Speed-Controller Fitting",
+            "zh-Hans" to "快插式直角节流阀管路接头",
+            "ja" to "ワンタッチエルボスピードコントローラ継手",
+            "ko" to "원터치 엘보 스피드 컨트롤러 피팅",
+            "th" to "ข้อต่อควบคุมความเร็วแบบงอฉากชนิดเสียบเร็ว"
+        ),
+        "asset_sheet_01_title" to mapOf(
+            "zh-Hant" to "鈑金 90° V 型折彎 K-Factor 計算展開圖",
+            "en" to "Sheet-Metal 90° V-Bend K-Factor Flat-Pattern Calculation",
+            "zh-Hans" to "钣金 90° V 型折弯 K-Factor 计算展开图",
+            "ja" to "板金90°V曲げKファクター展開計算図",
+            "ko" to "판금 90° V 벤딩 K-Factor 전개 계산도",
+            "th" to "แบบคลี่คำนวณ K-Factor งานพับโลหะแผ่น V 90°"
+        ),
+        "asset_sheet_02_title" to mapOf(
+            "zh-Hant" to "CNC 銑削內直角狗骨狀清角結構",
+            "en" to "CNC-Milled Internal-Corner Dogbone Relief",
+            "zh-Hans" to "CNC 铣削内直角狗骨状清角结构",
+            "ja" to "CNC切削内角用ドッグボーン逃げ形状",
+            "ko" to "CNC 밀링 내부 직각 도그본 릴리프 구조",
+            "th" to "โครงสร้างเว้นมุม Dogbone สำหรับมุมในงานกัด CNC"
+        ),
+        "asset_sheet_03_title" to mapOf(
+            "zh-Hant" to "沖孔自鉚壓鉚螺母柱",
+            "en" to "Punched Self-Clinching Standoff",
+            "zh-Hans" to "冲孔自铆压铆螺母柱",
+            "ja" to "打抜き穴用セルフクリンチングスタンドオフ",
+            "ko" to "펀칭 홀용 셀프 클린칭 스탠드오프",
+            "th" to "เสารองสกรูแบบอัดย้ำตัวเองสำหรับรูเจาะ"
+        ),
+        "asset_surf_01_title" to mapOf(
+            "zh-Hant" to "陽極氧化膜厚與表面噴砂目數對照",
+            "en" to "Anodizing Film Thickness and Sandblast Grit Reference",
+            "zh-Hans" to "阳极氧化膜厚与表面喷砂目数对照",
+            "ja" to "アルマイト皮膜厚とブラスト番手の対応表",
+            "ko" to "아노다이징 피막 두께와 샌드블라스트 입도 기준",
+            "th" to "ตารางเทียบความหนาฟิล์มอโนไดซ์กับเบอร์เม็ดทรายพ่น"
+        ),
+        "asset_surf_02_title" to mapOf(
+            "zh-Hant" to "表面粗糙度 Ra 算術平均標註規",
+            "en" to "Surface Roughness Ra Arithmetic-Mean Reference Gauge",
+            "zh-Hans" to "表面粗糙度 Ra 算术平均标注规",
+            "ja" to "表面粗さRa算術平均表示ゲージ",
+            "ko" to "표면 거칠기 Ra 산술평균 표기 게이지",
+            "th" to "เกจอ้างอิงค่าความขรุขระผิว Ra แบบค่าเฉลี่ยเลขคณิต"
+        ),
+        "asset_token_01_title" to mapOf(
+            "zh-Hant" to "8pt 空間網格與間距度量尺",
+            "en" to "8-Point Spacing Grid and Scale Ruler",
+            "zh-Hans" to "8pt 空间网格与间距度量尺",
+            "ja" to "8ptスペーシンググリッドと間隔スケール定規",
+            "ko" to "8pt 공간 그리드 및 간격 스케일 자",
+            "th" to "กริดระยะ 8pt และไม้บรรทัดสเกลระยะห่าง"
+        ),
+        "asset_token_02_title" to mapOf(
+            "zh-Hant" to "設計語意色彩層級與對比度矩陣",
+            "en" to "Semantic Color Token Hierarchy and Contrast Matrix",
+            "zh-Hans" to "设计语义色彩层级与对比度矩阵",
+            "ja" to "セマンティックカラー階層とコントラスト行列",
+            "ko" to "시맨틱 컬러 토큰 계층 및 대비 매트릭스",
+            "th" to "ลำดับชั้นโทเคนสีเชิงความหมายและเมทริกซ์คอนทราสต์"
+        ),
+        "asset_typo_01_title" to mapOf(
+            "zh-Hant" to "拉丁字體排印五線度量基準",
+            "en" to "Latin Typeface Anatomy and Baseline Metrics",
+            "zh-Hans" to "拉丁字体排印五线度量基准",
+            "ja" to "ラテン書体の字形構造とベースライン指標",
+            "ko" to "라틴 서체 구조와 기준선 메트릭",
+            "th" to "เมตริกโครงสร้างตัวอักษรละตินและเส้นฐาน"
+        ),
+        "asset_typo_02_title" to mapOf(
+            "zh-Hant" to "中文字型永字八法九宮格",
+            "en" to "Chinese Glyph Nine-Grid for Eight Principles of Yong",
+            "zh-Hans" to "中文字体永字八法九宫格",
+            "ja" to "永字八法の漢字九分割グリッド",
+            "ko" to "영자팔법 한자 글리프 9분할 그리드",
+            "th" to "ตารางเก้าช่องตัวอักษรจีนตามหลักแปดวิธีของหย่ง"
+        ),
+        "asset_typo_03_title" to mapOf(
+            "zh-Hant" to "版面編排字級模矩比例尺",
+            "en" to "Modular Type-Scale Layout Ruler",
+            "zh-Hans" to "版面编排字号模数比例尺",
+            "ja" to "組版用モジュラータイプスケール定規",
+            "ko" to "편집 디자인용 모듈러 타입 스케일 자",
+            "th" to "ไม้บรรทัดสเกลตัวอักษรแบบโมดูลาร์สำหรับจัดหน้า"
+        ),
+        "asset_ui_01_title" to mapOf(
+            "zh-Hant" to "iOS 與 Material 3 雙系統導航列對照",
+            "en" to "iOS and Material 3 Navigation Bar Comparison",
+            "zh-Hans" to "iOS 与 Material 3 双系统导航栏对照",
+            "ja" to "iOSとMaterial 3のナビゲーションバー比較",
+            "ko" to "iOS와 Material 3 내비게이션 바 비교",
+            "th" to "การเปรียบเทียบแถบนำทาง iOS และ Material 3"
+        ),
+        "asset_ui_02_title" to mapOf(
+            "zh-Hant" to "底部操作卡片 Bottom Sheet 手勢容器",
+            "en" to "Bottom Sheet Gesture Container",
+            "zh-Hans" to "底部操作卡片 Bottom Sheet 手势容器",
+            "ja" to "ボトムシート・ジェスチャーコンテナ",
+            "ko" to "바텀 시트 제스처 컨테이너",
+            "th" to "คอนเทนเนอร์ Bottom Sheet สำหรับท่าทางสัมผัส"
         ),
         "attach_none" to mapOf(
             "zh-Hant" to "不附加（僅儲存為獨立錄音）",
@@ -825,7 +1308,10 @@ object LocalizationStrings {
             "ja" to "円グラフ",
             "ko" to "원형",
             "th" to "แผนภูมิวงกลม"
-        ),
+        )
+    )
+
+    private fun part2(): Map<String, Map<String, String>> = mapOf(
         "chart_kind_radar" to mapOf(
             "zh-Hant" to "雷達圖",
             "en" to "Radar",
@@ -1465,7 +1951,10 @@ object LocalizationStrings {
             "ja" to "フォルダを削除",
             "ko" to "폴더 삭제",
             "th" to "ลบโฟลเดอร์"
-        ),
+        )
+    )
+
+    private fun part3(): Map<String, Map<String, String>> = mapOf(
         "delete_item" to mapOf(
             "zh-Hant" to "刪除項目",
             "en" to "Delete Item",
@@ -2105,7 +2594,10 @@ object LocalizationStrings {
             "ja" to "録音完了",
             "ko" to "녹음 완료",
             "th" to "เสร็จสิ้นการบันทึก"
-        ),
+        )
+    )
+
+    private fun part4(): Map<String, Map<String, String>> = mapOf(
         "first_line_indent" to mapOf(
             "zh-Hant" to "首行",
             "en" to "First",
@@ -2745,7 +3237,10 @@ object LocalizationStrings {
             "ja" to "低遅延",
             "ko" to "저지연",
             "th" to "หน่วงต่ำ"
-        ),
+        )
+    )
+
+    private fun part5(): Map<String, Map<String, String>> = mapOf(
         "ink_low_latency_unavailable" to mapOf(
             "zh-Hant" to "這台裝置不支援前緩衝渲染，已改用一般畫布",
             "en" to "Front-buffered rendering is unavailable on this device; using the standard canvas",
@@ -3385,7 +3880,10 @@ object LocalizationStrings {
             "ja" to "式を入力してください",
             "ko" to "수식을 입력하세요",
             "th" to "กรุณาใส่นิพจน์"
-        ),
+        )
+    )
+
+    private fun part6(): Map<String, Map<String, String>> = mapOf(
         "math_error_not_finite" to mapOf(
             "zh-Hant" to "算不出有限的結果（可能除以零）",
             "en" to "No finite result (division by zero?)",
@@ -4025,7 +4523,10 @@ object LocalizationStrings {
             "ja" to "一部のノートが旧来の可変長ページのままで、書き出しと印刷が用紙に合いません",
             "ko" to "일부 노트가 예전의 늘어나는 페이지를 사용하고 있어 내보내기와 인쇄가 용지에 맞지 않습니다",
             "th" to "บางบันทึกยังใช้หน้าที่ยืดได้แบบเดิม การส่งออกและการพิมพ์จึงไม่ตรงกับกระดาษ"
-        ),
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
         "page_model_repaginate" to mapOf(
             "zh-Hant" to "重新分頁",
             "en" to "Repaginate",
@@ -4665,7 +5166,10 @@ object LocalizationStrings {
             "ja" to "定規・測定モード",
             "ko" to "자 및 측정 모드",
             "th" to "โหมดไม้บรรทัดและการวัด"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "sample_data" to mapOf(
             "zh-Hant" to "載入範例數據",
             "en" to "Load Sample Data",
@@ -5305,7 +5809,10 @@ object LocalizationStrings {
             "ja" to "表を挿入",
             "ko" to "표 삽입",
             "th" to "แทรกตาราง"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "table_merge_down" to mapOf(
             "zh-Hant" to "向下合併",
             "en" to "Merge Down",
@@ -5945,7 +6452,10 @@ object LocalizationStrings {
             "ja" to "モーダルダイアログ",
             "ko" to "모달 대화상자",
             "th" to "กล่องโต้ตอบแบบโมดัล"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "wireframe_navbar" to mapOf(
             "zh-Hant" to "行動端頂部導航列",
             "en" to "Mobile top nav bar",

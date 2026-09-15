@@ -126,12 +126,12 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 ### 待做
 | ID | 工作包 | 內容 | 備註 |
 |---|---|---|---|
-| S-13 | WP5 | Opus 編碼整合 | 需 `libopus` 綁定，**無法在此驗證** |
-| S-15 | WP5 | sherpa-onnx / whisper.cpp 實作 `AsrEngine` | 管線編排已就緒，插進去即可 |
-| S-23 | — | 文字 op 寫入 `doc/ops/` 持久化 | CRDT 與編碼已完成，缺落盤 |
+| ~~S-13~~ ✅ | WP5 | Opus 編碼整合 | 已由 `padnote-audio` + `padnote-recorder` 完成，Ogg-Opus 端到端樣本已驗 |
+| ~~S-15~~ ✅ | WP5 | whisper.cpp 實作 `AsrEngine` | `padnote-asr-whisper` 已實作；品質實測仍列 H9 |
+| ~~S-23~~ ✅ | — | 文字 op 寫入 `doc/ops/` 持久化 | `NotebookSession::record` 會寫 `doc/ops/<lamport>-<device>.oplog`；重開 replay 已有測試 |
 | S-19 | WP20 | iCloud `CloudProvider` 實作 | Swift 側；演算法已由 S3 驗證 |
 | S-20 | WP23 | llama.cpp 整合（摘要、待辦抽取） | P2 |
-| S-21 | WP7 | PDFium 綁定（`pdfium-render`）| 介面與快取已完成，**需原生庫，實機驗證見 H6** |
+| ~~S-21~~ ✅ | WP7 | PDFium 綁定（`pdfium-render`）| `padnote-pdf-pdfium` 已實作；執行期庫與大型 PDF 實測仍列 H8/H6 |
 | S-22 | WP12 | Apple Vision / ML Kit 的 `HwrEngine` 實作 | 註冊表與 fallback 鏈已完成 |
 
 ## 🆕 需求檢視新增項目（2026-09-12）
@@ -166,7 +166,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | ~~S-52~~ ✅ | 形狀與連接線落盤為 `DocOp` | 新增 `AddShapeObject` / `AddConnectionObject`，重開可還原 |
 | ~~S-53~~ ✅ | 平台層的工具列 UI 與語言切換畫面 | Apple SwiftUI 範例已接 `FfiToolbar` / `supported_locales` |
 | ~~S-54~~ ✅ | 其餘 UI 字串的在地化 | 字串表 **512 條**（清單原本寫的 44 早已過期）。錯誤訊息已在地化並有測試；`LocalizationManager.localizedUnsafe` 供背景執行緒查表 |
-| S-54b | **素材庫的 58 個中文名稱** | `AssetLibraryManager` 的齒輪組、軸承等技術名稱是**資料**不是介面文字，要另外處理（每個名稱都要六國語系的正確技術術語，不是直譯） |
+| ~~S-54b~~ ✅ | **素材庫的 58 個中文名稱** | 58 條 `asset_<id>_title` 已進共用 i18n catalog（英／繁中／簡中／日／韓／泰），Android/Apple 圖庫標題、搜尋與 Apple 素材 PNG 底部標題都改走語系鍵；核心繁中 title 保留為 fallback |
 | ~~S-55~~ ✅ | 列印流程 | 核心 `print_data` 產出列印 PDF，已串接 Apple 與 Android 系統列印面板 |
 
 ## 📱 Android 實機待測（2026-09-13）
@@ -192,6 +192,25 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 
 **測試方式**：`cd android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :app:installDebug`，
 寫字時截圖那條診斷列即可，它會顯示平台回報的工具類型、接觸半徑、壓感、密度與仲裁結果。
+
+
+## ☁️ Google Drive 自動同步（2026-09-15，D11 已接受）
+
+目標：不同作業平台或設備只要登入同一個 Google 帳號，Kairumo 內的筆記本、
+資料夾結構與可同步設定會自動收斂到同一狀態。正式同步使用 Google Drive
+`appDataFolder`；既有「選同步資料夾」保留為手動備份／匯入匯出。
+
+| ID | 項目 | 判定條件 |
+|---|---|---|
+| G-01 | Google OAuth 設定與登入 | iOS/iPadOS/macOS/Android 都能取得 `drive.appdata` access token，登出與撤銷權限有明確狀態 |
+| G-02 | appDataFolder Provider 完整化 | `list/get_range/put` 可在 `appDataFolder` 正確列舉、分頁、下載 range、建立與更新檔案；Drive 無 append 時走新 chunk 檔 |
+| G-03 | 同步資料佈局 | `profile/`、`settings/`、`notebooks/`、`sync/<device_id>/`、`tombstones/` 路徑規格寫進 `format-spec.md`，index/cache 明確不同步 |
+| G-04 | 全域設定同步 | 語言、工具列配置、預設筆刷、協同身分跨裝置一致；低延遲、觸控筆門檻等 device-local 設定不被同步 |
+| G-05 | 筆記本與資料夾同步 | 新裝置首次登入能拉回全部筆記本；離線兩台各自新增/改名/移動/刪除後，重新上線會收斂且不復活刪除項 |
+| G-06 | 實機矩陣 | iPad + macOS + Android 同一 Google 帳號端到端測試：新增、編輯、刪除、改設定、重啟、離線再上線皆通過 |
+
+**外部前置**：需要建立 Google Cloud OAuth client（iOS/macOS bundle id、Android
+package name + signing SHA-1），並在同意畫面聲明 `drive.appdata` scope。
 
 
 ## 📄 固定頁面模型（2026-09-13，問題 3＋5）
@@ -247,7 +266,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | ~~C-04~~ ✅ | 焦點頁由畫面中央決定 | 捲到第 2 頁，頁碼自動變 2/2、焦點框跟著移動 |
 | C-05 | 協同、掌拒、套索逐頁接上 | 協同廣播、掌拒、套索狀態、canvasRef 都已接上，但**只有單機驗過**；兩台裝置同時寫沒有實測 |
 | ~~C-06~~ ✅ | 模式切換與記住選擇 | 在頁碼旁；AppStorage 記住，重啟後仍在連續模式 |
-| C-07 | Android 同樣一套 | **尚未開始**。Android 目前連頁面導覽都沒有（見 A-02），要等那邊做完 |
+| ~~C-07~~ ✅ | Android 同樣一套 | 新增 `ContinuousPagesView`：`LazyColumn` 疊 N 頁、每頁自己的 `InkEngine` 與物件 store；`./gradlew :app:compileDebugKotlin` 通過。實機觸控筆手勢仍列入 Android 實機待測 |
 
 **做法**：連續模式是**另一棵視圖樹**，共用同一組元件
 （`CanvasRepresentable`、`objectLayer(forPage:)`）。整頁模式那條路
@@ -259,6 +278,8 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
   只縮不放，放大會讓筆跡變糊。
 - 手指在畫布上是畫畫不是捲動（與整頁模式一致）；捲動用兩指。
   這在沒有觸控筆的裝置上不直覺，但改掉會讓兩個模式的手寫行為不一致。
+- Android 連續模式刻意改成 pen-only：筆交給畫布，手指交給 `LazyColumn` 捲動。
+  沒有觸控筆的 Android 裝置若要用手指畫，切回整頁模式。
 
 
 ## 🧱 Android 介面落後（2026-09-15，使用者回報「完全不可用」）
@@ -290,7 +311,7 @@ PageRepagination、NotebookMigration、圖片插入與編修。
 | ~~A-04~~ ✅ | 第二階段 | 圖片插入與編修、文字排版面板補齊 | 模擬器驗證 |
 | ~~A-05~~ ✅ | 第二階段 | 物件通用能力 | 調色盤下沉核心、跨型別圖層面板、對齊與等距分佈 |
 | ~~A-06~~ ✅ | 第三階段 | 剩餘功能 | 九項全部完成（見下方「A-06 收尾」） |
-| A-07 | 第三階段 | 連續頁面模式（C-07） | 等 A-02 完成後可做 |
+| ~~A-07~~ ✅ | 第三階段 | 連續頁面模式（C-07） | Android 已接上並通過 Kotlin 編譯；實機觸控筆/手指捲動體感另列待測 |
 
 ### A-06 收尾（2026-09-15）
 
@@ -315,6 +336,33 @@ PageRepagination、NotebookMigration、圖片插入與編修。
   少一套快取就少一個會過期、會對不上的狀態。
 - 協同的 WebSocket 沒有下沉核心。搬進去要帶一整個 async runtime 與跨語言
   callback，換來的只是少寫幾十行連線樣板。協定與密碼學下沉就夠了。
+
+### A-07 連續頁面：一個刻意的平台差異
+
+Apple 的連續模式是「手指畫畫、兩指捲動」。Android 做不到同一套：
+`LazyColumn` 的捲動手勢在滑動超過 touch slop 時就把事件攔走，
+底下的畫布只收得到前幾個點。試過「偵測到筆就關掉 userScrollEnabled」——
+**沒有用**，重組要等到下一幀，捲動手勢在那之前已經接手。
+
+現在的做法是把判定交回核心的輸入仲裁器：連續模式下每一頁的引擎一律
+**pen-only**。筆 → 判為墨跡，畫布吃掉事件；手指 → 判為手勢，畫布放行，
+清單照常捲動。
+
+代價要講清楚：**連續模式下手指畫不出東西**。沒有觸控筆的裝置要畫就切回
+整頁模式（整頁模式的手指仍然可以畫，那條路一行都沒有改）。
+要改回與 Apple 一致的話，得關掉 `userScrollEnabled` 再用仲裁器判定的
+兩指手勢自己驅動 `listState.scrollBy` —— 那是另一件事，沒有做。
+
+### 順帶修掉的嚴重缺陷：Android 從來沒有把存檔的墨跡讀回來
+
+`InkEngine` 只裝「這一次開啟期間畫的」筆畫。寫進核心是有的、`.padnote` 裡
+也真的有資料，但**重開筆記本之後畫面是空的** —— 使用者寫的字看起來憑空消失。
+物件（文字方塊、表格、形狀、圖表）都有各自的 `load()`，只有墨跡沒有，
+所以症狀是「圖還在、字不見了」，看起來像渲染壞掉而不是少讀一份資料。
+
+已補上 `InkEngine.load()`（走核心既有的 `visible_stroke_details`）並在開頁時
+呼叫。模擬器實測：修正前「0 strokes」、畫面空白；修正後「8 strokes」、
+筆跡正常顯示。
 
 **還沒驗證的**：
 

@@ -109,9 +109,9 @@
 | # | 功能 | 標竿 | 競品痛點 | Padnote 規格 | 優先 |
 |---|---|---|---|---|---|
 | G1 | 本機優先儲存、100% 離線可用 | Obsidian, Samsung | Notion 離線差 | 所有操作先寫本機 <1ms | **P0** |
-| G2 | **本機資料夾同步 provider** | — | — | 使用者放進 Dropbox/OneDrive/Syncthing/NAS 即自動支援 | **P1** |
+| G2 | **Google Drive 自動同步** | — | — | Drive v3＋OAuth PKCE＋`drive.appdata` scope，資料放 appDataFolder | **P1** |
 | G3 | iCloud Drive 同步 | Apple Notes | — | Ubiquity Container＋NSFileCoordinator | **P2** |
-| G4 | Google Drive 同步 | — | — | Drive v3＋OAuth PKCE＋`drive.file` scope | **P3** |
+| G4 | 本機資料夾同步 provider | — | — | 手動備份／匯入匯出；使用者也可放進 Dropbox/OneDrive/Syncthing/NAS | **P2** |
 | G5 | **零衝突同步** | — | **同步丟資料是全行業痛點** | Append-only single-writer log＋CRDT ⇒ 衝突數學上不可能 | **P0** |
 | G6 | 端對端加密 | — | **Nebo 只能存自家雲** | XChaCha20-Poly1305＋Argon2id，上雲前加密 | **P2** |
 | G7 | 復原碼（BIP39 24 字） | — | — | 無後端＝無託管，建立時強制抄寫確認 | **P2** |

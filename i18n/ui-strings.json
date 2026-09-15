@@ -111,6 +111,86 @@
     "zhHans": "新增文字方块",
     "zhHant": "新增文字方塊"
   },
+  "align_bottom": {
+    "en": "Align bottom",
+    "ja": "下揃え",
+    "ko": "아래쪽 정렬",
+    "th": "ชิดล่าง",
+    "zhHans": "靠下对齐",
+    "zhHant": "靠下對齊"
+  },
+  "align_center_h": {
+    "en": "Center horizontally",
+    "ja": "左右中央",
+    "ko": "가로 가운데",
+    "th": "กึ่งกลางแนวนอน",
+    "zhHans": "水平居中",
+    "zhHant": "水平置中"
+  },
+  "align_distribute_h": {
+    "en": "Distribute horizontally",
+    "ja": "左右に等間隔",
+    "ko": "가로 균등 배치",
+    "th": "กระจายแนวนอน",
+    "zhHans": "水平等距",
+    "zhHant": "水平等距"
+  },
+  "align_distribute_v": {
+    "en": "Distribute vertically",
+    "ja": "上下に等間隔",
+    "ko": "세로 균등 배치",
+    "th": "กระจายแนวตั้ง",
+    "zhHans": "垂直等距",
+    "zhHant": "垂直等距"
+  },
+  "align_left": {
+    "en": "Align left",
+    "ja": "左揃え",
+    "ko": "왼쪽 정렬",
+    "th": "ชิดซ้าย",
+    "zhHans": "靠左对齐",
+    "zhHant": "靠左對齊"
+  },
+  "align_middle_v": {
+    "en": "Center vertically",
+    "ja": "上下中央",
+    "ko": "세로 가운데",
+    "th": "กึ่งกลางแนวตั้ง",
+    "zhHans": "垂直居中",
+    "zhHant": "垂直置中"
+  },
+  "align_needs_two": {
+    "en": "Select two or more objects to align",
+    "ja": "整列するには 2 つ以上選択してください",
+    "ko": "정렬하려면 두 개 이상 선택하세요",
+    "th": "เลือกตั้งแต่ 2 ชิ้นขึ้นไปเพื่อจัดแนว",
+    "zhHans": "选两个以上的物件才能对齐",
+    "zhHant": "選兩個以上的物件才能對齊"
+  },
+  "align_objects": {
+    "en": "Align",
+    "ja": "整列",
+    "ko": "정렬",
+    "th": "จัดแนว",
+    "zhHans": "对齐",
+    "zhHant": "對齊"
+  },
+  "align_right": {
+    "en": "Align right",
+    "ja": "右揃え",
+    "ko": "오른쪽 정렬",
+    "th": "ชิดขวา",
+    "zhHans": "靠右对齐",
+    "zhHant": "靠右對齊"
+  },
+  "align_top": {
+    "en": "Align top",
+    "ja": "上揃え",
+    "ko": "위쪽 정렬",
+    "th": "ชิดบน",
+    "zhHans": "靠上对齐",
+    "zhHant": "靠上對齊"
+  },
   "alignment": {
     "en": "Alignment",
     "ja": "配置",
@@ -191,6 +271,246 @@
     "zhHans": "架构模式",
     "zhHant": "架構模式"
   },
+  "asset_aes_comp_01_title": {
+    "en": "Golden-Spiral Logarithmic Composition Guide",
+    "ja": "黄金螺旋の対数構図ガイド",
+    "ko": "황금나선 로그 구성 가이드",
+    "th": "ไม้บรรทัดจัดองค์ประกอบเกลียวทองคำแบบลอการิทึม",
+    "zhHans": "黄金螺旋对数构图尺标",
+    "zhHant": "黃金螺旋對數構圖尺標"
+  },
+  "asset_aes_comp_02_title": {
+    "en": "Classic Rule-of-Thirds Photography Grid",
+    "ja": "写真用クラシック三分割グリッド",
+    "ko": "클래식 사진 삼분할 그리드",
+    "th": "ตารางกฎสามส่วนสำหรับการถ่ายภาพแบบคลาสสิก",
+    "zhHans": "经典摄影三分法九宫格",
+    "zhHant": "經典攝影三分法則九宮格"
+  },
+  "asset_aes_comp_03_title": {
+    "en": "Dynamic-Symmetry Armature Composition Guide",
+    "ja": "動的対称アーマチュア構図ガイド",
+    "ko": "동적 대칭 아마추어 구성 가이드",
+    "th": "ไกด์จัดองค์ประกอบโครงสร้างสมมาตรไดนามิก",
+    "zhHans": "动态对称菱形构图引导",
+    "zhHant": "動態對稱菱形構圖引導"
+  },
+  "asset_auto_01_title": {
+    "en": "Sports Car Aerodynamic Side Profile",
+    "ja": "スポーツカー空力サイドプロファイル",
+    "ko": "스포츠카 공기역학 사이드 프로파일",
+    "th": "โปรไฟล์ด้านข้างเชิงอากาศพลศาสตร์ของรถสปอร์ต",
+    "zhHans": "跑车空气动力学流线侧影",
+    "zhHant": "跑車空氣動力學流線側影"
+  },
+  "asset_auto_02_title": {
+    "en": "Five-Spoke Split Forged Sport Wheel Rim",
+    "ja": "5スポーク・スプリット鍛造スポーツホイールリム",
+    "ko": "5스포크 듀얼 스플릿 단조 스포츠 휠 림",
+    "th": "ล้อสปอร์ตฟอร์จแบบห้าก้านคู่",
+    "zhHans": "五辐双柱锻造运动轮毂",
+    "zhHant": "五輻雙柱鍛造運動輪框"
+  },
+  "asset_auto_03_title": {
+    "en": "Double-Wishbone Independent Suspension Mechanism",
+    "ja": "ダブルウィッシュボーン独立懸架機構",
+    "ko": "더블 위시본 독립 현가 장치",
+    "th": "ระบบกันสะเทือนอิสระแบบปีกนกคู่",
+    "zhHans": "双 A 臂独立悬架机构",
+    "zhHant": "雙 A 臂獨立懸吊機構"
+  },
+  "asset_auto_04_title": {
+    "en": "Three-Spoke Sport Racing Steering Wheel",
+    "ja": "3スポーク・スポーツレーシングステアリングホイール",
+    "ko": "3스포크 스포츠 레이싱 스티어링 휠",
+    "th": "พวงมาลัยแข่งสปอร์ตสามก้าน",
+    "zhHans": "三辐运动赛车方向盘",
+    "zhHant": "三輻運動賽車方向盤"
+  },
+  "asset_auto_05_title": {
+    "en": "EV Skateboard Chassis Battery Module Architecture",
+    "ja": "EVスケートボードシャシー電池モジュール構成",
+    "ko": "전기차 스케이트보드 섀시 배터리 모듈 구조",
+    "th": "สถาปัตยกรรมโมดูลแบตเตอรี่บนแชสซีสเกตบอร์ด EV",
+    "zhHans": "纯电滑板底盘电池模组架构",
+    "zhHant": "純電滑板底盤電池模組架構"
+  },
+  "asset_auto_06_title": {
+    "en": "Futuristic Orbital Hover Shuttle",
+    "ja": "未来型軌道ホバーシャトル",
+    "ko": "미래형 궤도 호버 셔틀",
+    "th": "ยานรับส่งโฮเวอร์วงโคจรแนวอนาคต",
+    "zhHans": "未来星际悬浮穿梭载具",
+    "zhHant": "未來星際懸浮穿梭載具"
+  },
+  "asset_digi_01_title": {
+    "en": "Flagship Smartphone UI Vector Wireframe",
+    "ja": "フラッグシップスマートフォンUIベクターワイヤーフレーム",
+    "ko": "플래그십 스마트폰 UI 벡터 와이어프레임",
+    "th": "ไวร์เฟรมเวกเตอร์ UI สมาร์ตโฟนเรือธง",
+    "zhHans": "旗舰智能手机 UI 向量线框",
+    "zhHant": "旗艦智慧型手機 UI 向量線框"
+  },
+  "asset_digi_02_title": {
+    "en": "Hand-Drawn Tablet Multi-Window Layout",
+    "ja": "タブレット用手描きマルチウィンドウレイアウト",
+    "ko": "태블릿 손그림 멀티윈도우 레이아웃",
+    "th": "เลย์เอาต์หลายหน้าต่างแบบวาดมือสำหรับแท็บเล็ต",
+    "zhHans": "平板手绘多窗口布局",
+    "zhHant": "平板手繪多視窗佈局"
+  },
+  "asset_digi_03_title": {
+    "en": "Minimal Browser Window Frame",
+    "ja": "ミニマルなブラウザウィンドウフレーム",
+    "ko": "미니멀 브라우저 창 프레임",
+    "th": "กรอบหน้าต่างเบราว์เซอร์มินิมอล",
+    "zhHans": "极简浏览器窗口框架",
+    "zhHant": "極簡瀏覽器視窗框架"
+  },
+  "asset_digi_04_title": {
+    "en": "Mobile 8-Core-Gesture Annotation Set",
+    "ja": "モバイル向け8種基本ジェスチャー注釈セット",
+    "ko": "모바일 8대 핵심 제스처 주석 세트",
+    "th": "ชุดสัญลักษณ์ 8 ท่าทางหลักสำหรับมือถือ",
+    "zhHans": "移动端 8 种核心手势符号包",
+    "zhHant": "行動端 8 種核心手勢符號包"
+  },
+  "asset_elec_01_title": {
+    "en": "Flagship Smartphone Aluminum Mid-Frame Structure",
+    "ja": "フラッグシップスマートフォン用アルミ合金ミッドフレーム構造",
+    "ko": "플래그십 스마트폰 알루미늄 합금 미드프레임 구조",
+    "th": "โครงกลางอะลูมิเนียมอัลลอยสำหรับสมาร์ตโฟนเรือธง",
+    "zhHans": "旗舰手机铝合金中框结构",
+    "zhHant": "旗艦手機鋁合金中框結構"
+  },
+  "asset_elec_02_title": {
+    "en": "TWS Noise-Cancelling Earbud Acoustic Chamber",
+    "ja": "完全ワイヤレスノイズキャンセリングイヤホン音響チャンバー",
+    "ko": "TWS 노이즈 캔슬링 이어버드 음향 챔버",
+    "th": "โพรงอะคูสติกหูฟังไร้สายตัดเสียงรบกวน TWS",
+    "zhHans": "真无线降噪耳机声学腔体",
+    "zhHant": "真無線降噪耳機聲學腔體"
+  },
+  "asset_elec_03_title": {
+    "en": "Large-Aperture Camera Lens Optical Assembly",
+    "ja": "大口径カメラレンズ光学アセンブリ",
+    "ko": "대구경 카메라 렌즈 광학 어셈블리",
+    "th": "ชุดเลนส์กล้องรูรับแสงกว้าง",
+    "zhHans": "大光圈相机镜头光学镜组",
+    "zhHant": "大光圈相機鏡頭光學鏡組"
+  },
+  "asset_elec_04_title": {
+    "en": "75% Custom Mechanical Keyboard Gasket Structure",
+    "ja": "75% カスタムメカニカルキーボード用ガスケット構造",
+    "ko": "75% 커스텀 기계식 키보드 가스켓 구조",
+    "th": "โครงสร้างแกสเก็ตคีย์บอร์ดกลไกคัสตอม 75%",
+    "zhHans": "75% 客制化机械键盘 Gasket 结构",
+    "zhHant": "75% 客製化機械鍵盤 Gasket 結構"
+  },
+  "asset_elec_05_title": {
+    "en": "Curved Futuristic Smart-Cockpit HUD",
+    "ja": "曲面型フューチャリスティック・スマートコックピットHUD",
+    "ko": "곡면형 미래형 스마트 콕핏 HUD",
+    "th": "HUD ห้องโดยสารอัจฉริยะทรงโค้งแนวอนาคต",
+    "zhHans": "曲面未来感智能座舱 HUD",
+    "zhHant": "曲面未來感智慧座艙 HUD"
+  },
+  "asset_furn_01_title": {
+    "en": "Classic Eames Lounge Chair Geometry",
+    "ja": "クラシック・イームズラウンジチェア形状",
+    "ko": "클래식 임스 라운지 체어 형상",
+    "th": "รูปทรงเก้าอี้เลานจ์ Eames คลาสสิก",
+    "zhHans": "经典伊姆斯休闲躺椅",
+    "zhHant": "經典伊姆斯休閒躺椅"
+  },
+  "asset_furn_02_title": {
+    "en": "Ergonomic Height-Adjustable Desk Geometry",
+    "ja": "人間工学昇降デスク形状",
+    "ko": "인체공학 높이 조절 책상 형상",
+    "th": "รูปทรงโต๊ะทำงานปรับระดับตามหลักสรีรศาสตร์",
+    "zhHans": "人体工学升降办公桌几何",
+    "zhHant": "人體工學升降辦公桌幾何"
+  },
+  "asset_furn_03_title": {
+    "en": "Bauhaus Adjustable Cantilever Task Lamp",
+    "ja": "バウハウス調整式カンチレバータスクランプ",
+    "ko": "바우하우스 조절식 캔틸레버 작업등",
+    "th": "โคมไฟทำงานแขนยื่นปรับได้สไตล์ Bauhaus",
+    "zhHans": "包豪斯悬臂可调护眼台灯",
+    "zhHant": "包浩斯懸臂可調護眼檯燈"
+  },
+  "asset_furn_04_title": {
+    "en": "Nordic Minimal Modular Credenza",
+    "ja": "北欧ミニマル・モジュラー収納キャビネット",
+    "ko": "북유럽 미니멀 모듈형 수납장",
+    "th": "ตู้เก็บของโมดูลาร์มินิมอลสไตล์นอร์ดิก",
+    "zhHans": "北欧极简模块收纳柜",
+    "zhHant": "北歐極簡模組收納櫃"
+  },
+  "asset_hard_01_title": {
+    "en": "ISO 4762 Hex Socket Head Cap Screw",
+    "ja": "ISO 4762 六角穴付きボルト",
+    "ko": "ISO 4762 육각 소켓 헤드 캡 스크루",
+    "th": "สกรูหัวจมทรงกระบอกหกเหลี่ยม ISO 4762",
+    "zhHans": "ISO 4762 内六角圆柱头螺栓",
+    "zhHant": "ISO 4762 內六角圓柱頭螺栓"
+  },
+  "asset_hard_02_title": {
+    "en": "DIN 7991 Hex Socket Countersunk Screw",
+    "ja": "DIN 7991 六角穴付き皿ねじ",
+    "ko": "DIN 7991 육각 소켓 접시머리 나사",
+    "th": "สกรูหัวฝังหกเหลี่ยม DIN 7991",
+    "zhHans": "DIN 7991 沉头内六角螺钉",
+    "zhHant": "DIN 7991 沉頭內六角螺釘"
+  },
+  "asset_hard_03_title": {
+    "en": "Hex Flange Lock Nut",
+    "ja": "六角フランジロックナット",
+    "ko": "육각 플랜지 잠금 너트",
+    "th": "น็อตล็อกหน้าแปลนหกเหลี่ยม",
+    "zhHans": "六角法兰面防松螺母",
+    "zhHant": "六角法蘭面防鬆螺母"
+  },
+  "asset_hard_04_title": {
+    "en": "Closed-End Blind Rivet",
+    "ja": "密閉型ブラインドリベット",
+    "ko": "폐쇄형 블라인드 리벳",
+    "th": "รีเวทตาบอดปลายปิด",
+    "zhHans": "封闭型抽芯盲铆钉",
+    "zhHant": "封閉型抽芯盲鉚釘"
+  },
+  "asset_hard_05_title": {
+    "en": "Cylindrical Helical Compression Spring",
+    "ja": "円筒コイル圧縮ばね",
+    "ko": "원통형 헬리컬 압축 스프링",
+    "th": "สปริงอัดขดเกลียวทรงกระบอก",
+    "zhHans": "圆柱螺旋压缩弹簧",
+    "zhHant": "圓柱螺旋壓縮彈簧"
+  },
+  "asset_hard_06_title": {
+    "en": "90° Reinforced Stamped L-Bracket",
+    "ja": "90° 補強プレスL字ブラケット",
+    "ko": "90° 보강 프레스 L 브래킷",
+    "th": "ฉากยึดตัว L ปั๊มขึ้นรูปเสริมแรง 90°",
+    "zhHans": "90° 强化冲压直角固定角码",
+    "zhHant": "90° 強化沖壓直角固定角鐵"
+  },
+  "asset_ia_01_title": {
+    "en": "Hierarchical Sitemap and Tree Navigation Nodes",
+    "ja": "階層型サイトマップとツリーナビゲーションノード",
+    "ko": "계층형 사이트맵 및 트리 내비게이션 노드",
+    "th": "แผนผังเว็บไซต์แบบลำดับชั้นและโหนดนำทางแบบต้นไม้",
+    "zhHans": "层级式站点地图与树状导航节点",
+    "zhHant": "階層式站點地圖與樹狀導航節點"
+  },
+  "asset_ia_02_title": {
+    "en": "User Journey State-Machine Transition Flowchart",
+    "ja": "ユーザージャーニー状態遷移フローチャート",
+    "ko": "사용자 여정 상태 머신 전이 흐름도",
+    "th": "ผังงานการเปลี่ยนสถานะของผู้ใช้แบบ State Machine",
+    "zhHans": "用户状态机跃迁流程图",
+    "zhHant": "使用者狀態機躍遷流程圖"
+  },
   "asset_library": {
     "en": "Asset Library",
     "ja": "アセットライブラリ",
@@ -206,6 +526,230 @@
     "th": "ครอบคลุมการออกแบบกลไก, ผลิตภัณฑ์จริง (3C, รถยนต์, เฟอร์นิเจอร์), ฮาร์ดแวร์ และดิจิทัล",
     "zhHans": "涵盖机构设计、实体产品 (3C、汽车、家具)、五金零件与数字线框",
     "zhHant": "涵蓋機構設計、實體產品 (3C、汽車、家具)、五金零件與數位線框"
+  },
+  "asset_mech_01_title": {
+    "en": "Involute Spur Gear Set",
+    "ja": "インボリュート平歯車セット",
+    "ko": "인벌류트 평기어 세트",
+    "th": "ชุดเฟืองตรงอินโวลูต",
+    "zhHans": "渐开线直齿轮组",
+    "zhHant": "漸開線正齒輪組"
+  },
+  "asset_mech_02_title": {
+    "en": "Cylindrical Roller Bearing",
+    "ja": "円筒ころ軸受",
+    "ko": "원통 롤러 베어링",
+    "th": "ตลับลูกปืนลูกกลิ้งทรงกระบอก",
+    "zhHans": "平面圆柱滚子轴承",
+    "zhHant": "平面圓柱滾子軸承"
+  },
+  "asset_mech_03_title": {
+    "en": "Precision Miniature Ball-Screw Linear Guide",
+    "ja": "精密ミニチュアボールねじリニアガイド",
+    "ko": "정밀 소형 볼스크루 리니어 가이드",
+    "th": "รางสไลด์บอลสกรูขนาดเล็กความแม่นยำสูง",
+    "zhHans": "精密微型滚珠丝杠滑轨",
+    "zhHant": "精密微型滾珠螺桿滑軌"
+  },
+  "asset_mech_04_title": {
+    "en": "Constant-Diameter Disk Cam and Follower Mechanism",
+    "ja": "等径円板カム・フォロワ機構",
+    "ko": "등경 원판 캠 및 종동절 기구",
+    "th": "กลไกจานแคมเส้นผ่านศูนย์กลางคงที่และลูกตาม",
+    "zhHans": "等径盘形凸轮连杆机构",
+    "zhHant": "等徑盤形凸輪連桿機構"
+  },
+  "asset_mech_05_title": {
+    "en": "NEMA 17 Hybrid Stepper Motor",
+    "ja": "NEMA 17 ハイブリッドステッピングモーター",
+    "ko": "NEMA 17 하이브리드 스테핑 모터",
+    "th": "สเต็ปเปอร์มอเตอร์ไฮบริด NEMA 17",
+    "zhHans": "NEMA 17 混合式步进电机",
+    "zhHant": "NEMA 17 混合式步進馬達"
+  },
+  "asset_mech_06_title": {
+    "en": "Dynamic Exoskeleton Joint Linkage",
+    "ja": "動的外骨格ジョイントリンク機構",
+    "ko": "동적 외골격 관절 링크 기구",
+    "th": "ชุดข้อเชื่อมข้อต่อโครงกระดูกภายนอกแบบไดนามิก",
+    "zhHans": "动态外骨骼关节连杆",
+    "zhHant": "動態外骨骼關節連桿"
+  },
+  "asset_mold_01_title": {
+    "en": "Injection Mold 1.5° Draft Angle and Parting-Line Section",
+    "ja": "射出成形金型の1.5°抜き勾配とパーティングライン断面",
+    "ko": "사출 금형 1.5° 드래프트 각도 및 파팅 라인 단면",
+    "th": "หน้าตัดแม่พิมพ์ฉีด 1.5° มุมถอดแบบและเส้นแบ่งแม่พิมพ์",
+    "zhHans": "注塑模具 1.5° 拔模角与分型线剖面",
+    "zhHant": "注塑模具 1.5° 拔模角與分模線剖面"
+  },
+  "asset_mold_02_title": {
+    "en": "Plastic Part Uniform Wall Thickness and Rib Design Rules",
+    "ja": "樹脂部品の均一肉厚とリブ設計規則",
+    "ko": "플라스틱 부품 균일 벽두께 및 리브 설계 규칙",
+    "th": "ข้อกำหนดความหนาผนังสม่ำเสมอและซี่เสริมแรงของชิ้นส่วนพลาสติก",
+    "zhHans": "塑胶件均匀壁厚与加强筋规范",
+    "zhHant": "塑膠件均勻壁厚與加強筋規範"
+  },
+  "asset_mold_03_title": {
+    "en": "Self-Tapping Screw Boss and Gusset Structure",
+    "ja": "タッピンねじ用樹脂ボス・ガセット構造",
+    "ko": "셀프 태핑 나사용 사출 보스 및 거싯 구조",
+    "th": "โครงสร้างบอสฉีดขึ้นรูปและค้ำยันสำหรับสกรูปล่อยเกลียว",
+    "zhHans": "螺丝自攻牙注塑凸柱结构",
+    "zhHant": "螺絲自攻牙注塑凸柱結構"
+  },
+  "asset_motif_01_title": {
+    "en": "Bauhaus Geometric Motif Set",
+    "ja": "バウハウス幾何構成モチーフセット",
+    "ko": "바우하우스 기하 구성 모티프 세트",
+    "th": "ชุดลวดลายเรขาคณิตแบบ Bauhaus",
+    "zhHans": "包豪斯几何构成装饰组",
+    "zhHant": "包浩斯幾何構成裝飾組"
+  },
+  "asset_motif_02_title": {
+    "en": "Parametric Voronoi Tessellation Pattern",
+    "ja": "パラメトリックVoronoiボロノイ分割パターン",
+    "ko": "파라메트릭 보로노이 테셀레이션 패턴",
+    "th": "ลวดลายเทสเซลเลชัน Voronoi แบบพาราเมตริก",
+    "zhHans": "参数化 Voronoi 泰森多边形纹样",
+    "zhHant": "參數化 Voronoi 泰森多邊形紋樣"
+  },
+  "asset_motif_03_title": {
+    "en": "Futuristic Cyber Circuit Light-Track Geometry",
+    "ja": "未来的サイバー回路ライトトラック幾何",
+    "ko": "미래형 사이버 회로 라이트 트랙 기하",
+    "th": "เรขาคณิตเส้นแสงวงจรไซเบอร์แนวอนาคต",
+    "zhHans": "未来赛博赛道光轨几何",
+    "zhHant": "未來賽博賽道光軌幾何"
+  },
+  "asset_motion_01_title": {
+    "en": "Cubic Bezier Animation Timing Function",
+    "ja": "3次ベジェ曲線のアニメーションタイミング関数",
+    "ko": "3차 베지어 애니메이션 타이밍 함수",
+    "th": "ฟังก์ชันเวลาแอนิเมชันเส้นโค้งคิวบิกเบซิเยร์",
+    "zhHans": "三次贝塞尔曲线动效时间函数",
+    "zhHant": "三次貝茲曲線動效時間函數"
+  },
+  "asset_motion_02_title": {
+    "en": "Spring-Mass-Damper System Dynamics Diagram",
+    "ja": "ばね・質量・ダンパ系の動的模式図",
+    "ko": "스프링-질량-댐퍼 시스템 동역학 도식",
+    "th": "แผนภาพพลวัตระบบสปริง-มวล-แดมเปอร์",
+    "zhHans": "弹簧阻尼系统动态示意",
+    "zhHant": "彈簧阻尼系統動態示意"
+  },
+  "asset_pipe_01_title": {
+    "en": "Dual-Acting Pneumatic Slide Cylinder Specification",
+    "ja": "複動形空圧スライドシリンダ仕様",
+    "ko": "복동식 공압 슬라이드 실린더 규격",
+    "th": "สเปกกระบอกลมสไลด์แบบสองทาง",
+    "zhHans": "双作用气动滑台气缸规格",
+    "zhHant": "雙作用氣動滑台氣缸規格"
+  },
+  "asset_pipe_02_title": {
+    "en": "One-Touch Elbow Speed-Controller Fitting",
+    "ja": "ワンタッチエルボスピードコントローラ継手",
+    "ko": "원터치 엘보 스피드 컨트롤러 피팅",
+    "th": "ข้อต่อควบคุมความเร็วแบบงอฉากชนิดเสียบเร็ว",
+    "zhHans": "快插式直角节流阀管路接头",
+    "zhHant": "快插式直角節流閥管路接頭"
+  },
+  "asset_sheet_01_title": {
+    "en": "Sheet-Metal 90° V-Bend K-Factor Flat-Pattern Calculation",
+    "ja": "板金90°V曲げKファクター展開計算図",
+    "ko": "판금 90° V 벤딩 K-Factor 전개 계산도",
+    "th": "แบบคลี่คำนวณ K-Factor งานพับโลหะแผ่น V 90°",
+    "zhHans": "钣金 90° V 型折弯 K-Factor 计算展开图",
+    "zhHant": "鈑金 90° V 型折彎 K-Factor 計算展開圖"
+  },
+  "asset_sheet_02_title": {
+    "en": "CNC-Milled Internal-Corner Dogbone Relief",
+    "ja": "CNC切削内角用ドッグボーン逃げ形状",
+    "ko": "CNC 밀링 내부 직각 도그본 릴리프 구조",
+    "th": "โครงสร้างเว้นมุม Dogbone สำหรับมุมในงานกัด CNC",
+    "zhHans": "CNC 铣削内直角狗骨状清角结构",
+    "zhHant": "CNC 銑削內直角狗骨狀清角結構"
+  },
+  "asset_sheet_03_title": {
+    "en": "Punched Self-Clinching Standoff",
+    "ja": "打抜き穴用セルフクリンチングスタンドオフ",
+    "ko": "펀칭 홀용 셀프 클린칭 스탠드오프",
+    "th": "เสารองสกรูแบบอัดย้ำตัวเองสำหรับรูเจาะ",
+    "zhHans": "冲孔自铆压铆螺母柱",
+    "zhHant": "沖孔自鉚壓鉚螺母柱"
+  },
+  "asset_surf_01_title": {
+    "en": "Anodizing Film Thickness and Sandblast Grit Reference",
+    "ja": "アルマイト皮膜厚とブラスト番手の対応表",
+    "ko": "아노다이징 피막 두께와 샌드블라스트 입도 기준",
+    "th": "ตารางเทียบความหนาฟิล์มอโนไดซ์กับเบอร์เม็ดทรายพ่น",
+    "zhHans": "阳极氧化膜厚与表面喷砂目数对照",
+    "zhHant": "陽極氧化膜厚與表面噴砂目數對照"
+  },
+  "asset_surf_02_title": {
+    "en": "Surface Roughness Ra Arithmetic-Mean Reference Gauge",
+    "ja": "表面粗さRa算術平均表示ゲージ",
+    "ko": "표면 거칠기 Ra 산술평균 표기 게이지",
+    "th": "เกจอ้างอิงค่าความขรุขระผิว Ra แบบค่าเฉลี่ยเลขคณิต",
+    "zhHans": "表面粗糙度 Ra 算术平均标注规",
+    "zhHant": "表面粗糙度 Ra 算術平均標註規"
+  },
+  "asset_token_01_title": {
+    "en": "8-Point Spacing Grid and Scale Ruler",
+    "ja": "8ptスペーシンググリッドと間隔スケール定規",
+    "ko": "8pt 공간 그리드 및 간격 스케일 자",
+    "th": "กริดระยะ 8pt และไม้บรรทัดสเกลระยะห่าง",
+    "zhHans": "8pt 空间网格与间距度量尺",
+    "zhHant": "8pt 空間網格與間距度量尺"
+  },
+  "asset_token_02_title": {
+    "en": "Semantic Color Token Hierarchy and Contrast Matrix",
+    "ja": "セマンティックカラー階層とコントラスト行列",
+    "ko": "시맨틱 컬러 토큰 계층 및 대비 매트릭스",
+    "th": "ลำดับชั้นโทเคนสีเชิงความหมายและเมทริกซ์คอนทราสต์",
+    "zhHans": "设计语义色彩层级与对比度矩阵",
+    "zhHant": "設計語意色彩層級與對比度矩陣"
+  },
+  "asset_typo_01_title": {
+    "en": "Latin Typeface Anatomy and Baseline Metrics",
+    "ja": "ラテン書体の字形構造とベースライン指標",
+    "ko": "라틴 서체 구조와 기준선 메트릭",
+    "th": "เมตริกโครงสร้างตัวอักษรละตินและเส้นฐาน",
+    "zhHans": "拉丁字体排印五线度量基准",
+    "zhHant": "拉丁字體排印五線度量基準"
+  },
+  "asset_typo_02_title": {
+    "en": "Chinese Glyph Nine-Grid for Eight Principles of Yong",
+    "ja": "永字八法の漢字九分割グリッド",
+    "ko": "영자팔법 한자 글리프 9분할 그리드",
+    "th": "ตารางเก้าช่องตัวอักษรจีนตามหลักแปดวิธีของหย่ง",
+    "zhHans": "中文字体永字八法九宫格",
+    "zhHant": "中文字型永字八法九宮格"
+  },
+  "asset_typo_03_title": {
+    "en": "Modular Type-Scale Layout Ruler",
+    "ja": "組版用モジュラータイプスケール定規",
+    "ko": "편집 디자인용 모듈러 타입 스케일 자",
+    "th": "ไม้บรรทัดสเกลตัวอักษรแบบโมดูลาร์สำหรับจัดหน้า",
+    "zhHans": "版面编排字号模数比例尺",
+    "zhHant": "版面編排字級模矩比例尺"
+  },
+  "asset_ui_01_title": {
+    "en": "iOS and Material 3 Navigation Bar Comparison",
+    "ja": "iOSとMaterial 3のナビゲーションバー比較",
+    "ko": "iOS와 Material 3 내비게이션 바 비교",
+    "th": "การเปรียบเทียบแถบนำทาง iOS และ Material 3",
+    "zhHans": "iOS 与 Material 3 双系统导航栏对照",
+    "zhHant": "iOS 與 Material 3 雙系統導航列對照"
+  },
+  "asset_ui_02_title": {
+    "en": "Bottom Sheet Gesture Container",
+    "ja": "ボトムシート・ジェスチャーコンテナ",
+    "ko": "바텀 시트 제스처 컨테이너",
+    "th": "คอนเทนเนอร์ Bottom Sheet สำหรับท่าทางสัมผัส",
+    "zhHans": "底部操作卡片 Bottom Sheet 手势容器",
+    "zhHant": "底部操作卡片 Bottom Sheet 手勢容器"
   },
   "attach_none": {
     "en": "None (Save as standalone audio)",
@@ -270,6 +814,14 @@
     "th": "การบันทึกเสียงและการจัดตำแหน่ง",
     "zhHans": "语音录音与对齐",
     "zhHant": "語音錄音與對齊"
+  },
+  "back_to_home": {
+    "en": "Back to home",
+    "ja": "ホームに戻る",
+    "ko": "홈으로",
+    "th": "กลับหน้าหลัก",
+    "zhHans": "回到首页",
+    "zhHant": "回到首頁"
   },
   "backup_corrupted": {
     "en": "%@ files were corrupted and skipped (the rest were restored)",
@@ -560,52 +1112,52 @@
     "zhHant": "互動手勢與動效軌跡"
   },
   "chart_add_row": {
-    "zhHant": "新增列",
     "en": "Add Row",
-    "zhHans": "新增行",
     "ja": "行を追加",
     "ko": "행 추가",
-    "th": "เพิ่มแถว"
+    "th": "เพิ่มแถว",
+    "zhHans": "新增行",
+    "zhHant": "新增列"
   },
   "chart_add_series": {
-    "zhHant": "新增數列",
     "en": "Add Series",
-    "zhHans": "新增系列",
     "ja": "系列を追加",
     "ko": "계열 추가",
-    "th": "เพิ่มชุดข้อมูล"
+    "th": "เพิ่มชุดข้อมูล",
+    "zhHans": "新增系列",
+    "zhHant": "新增數列"
   },
   "chart_axis_auto": {
-    "zhHant": "自動",
     "en": "Automatic",
-    "zhHans": "自动",
     "ja": "自動",
     "ko": "자동",
-    "th": "อัตโนมัติ"
+    "th": "อัตโนมัติ",
+    "zhHans": "自动",
+    "zhHant": "自動"
   },
   "chart_axis_max": {
-    "zhHant": "最大值",
     "en": "Maximum",
-    "zhHans": "最大值",
     "ja": "最大値",
     "ko": "최댓값",
-    "th": "ค่าสูงสุด"
+    "th": "ค่าสูงสุด",
+    "zhHans": "最大值",
+    "zhHant": "最大值"
   },
   "chart_axis_min": {
-    "zhHant": "最小值",
     "en": "Minimum",
-    "zhHans": "最小值",
     "ja": "最小値",
     "ko": "최솟값",
-    "th": "ค่าต่ำสุด"
+    "th": "ค่าต่ำสุด",
+    "zhHans": "最小值",
+    "zhHant": "最小值"
   },
   "chart_axis_step": {
-    "zhHant": "刻度間距",
     "en": "Major Unit",
-    "zhHans": "刻度间距",
     "ja": "目盛間隔",
     "ko": "주 단위",
-    "th": "ระยะขีด"
+    "th": "ระยะขีด",
+    "zhHans": "刻度间距",
+    "zhHant": "刻度間距"
   },
   "chart_bar": {
     "en": "Bar Chart",
@@ -616,236 +1168,236 @@
     "zhHant": "長條圖"
   },
   "chart_bar_width": {
-    "zhHant": "長條寬度",
     "en": "Bar Width",
-    "zhHans": "柱形宽度",
     "ja": "棒の幅",
     "ko": "막대 너비",
-    "th": "ความกว้างแท่ง"
+    "th": "ความกว้างแท่ง",
+    "zhHans": "柱形宽度",
+    "zhHant": "長條寬度"
   },
   "chart_category_column": {
-    "zhHant": "類別",
     "en": "Category",
-    "zhHans": "类别",
     "ja": "カテゴリ",
     "ko": "항목",
-    "th": "หมวดหมู่"
+    "th": "หมวดหมู่",
+    "zhHans": "类别",
+    "zhHant": "類別"
   },
   "chart_data_labels": {
-    "zhHant": "資料標籤",
     "en": "Data Labels",
-    "zhHans": "数据标签",
     "ja": "データラベル",
     "ko": "데이터 레이블",
-    "th": "ป้ายกำกับข้อมูล"
+    "th": "ป้ายกำกับข้อมูล",
+    "zhHans": "数据标签",
+    "zhHant": "資料標籤"
   },
   "chart_delete_row": {
-    "zhHant": "刪除此列",
     "en": "Delete Row",
-    "zhHans": "删除此行",
     "ja": "この行を削除",
     "ko": "이 행 삭제",
-    "th": "ลบแถวนี้"
+    "th": "ลบแถวนี้",
+    "zhHans": "删除此行",
+    "zhHant": "刪除此列"
   },
   "chart_delete_series": {
-    "zhHant": "刪除此數列",
     "en": "Delete Series",
-    "zhHans": "删除此系列",
     "ja": "この系列を削除",
     "ko": "이 계열 삭제",
-    "th": "ลบชุดข้อมูลนี้"
+    "th": "ลบชุดข้อมูลนี้",
+    "zhHans": "删除此系列",
+    "zhHant": "刪除此數列"
   },
   "chart_doughnut_hole": {
-    "zhHant": "環圈孔徑",
     "en": "Doughnut Hole Size",
-    "zhHans": "圆环孔径",
     "ja": "ドーナツの穴の大きさ",
     "ko": "도넛 구멍 크기",
-    "th": "ขนาดรูโดนัท"
+    "th": "ขนาดรูโดนัท",
+    "zhHans": "圆环孔径",
+    "zhHant": "環圈孔徑"
   },
   "chart_edit": {
-    "zhHant": "編修圖表",
     "en": "Edit Chart",
-    "zhHans": "编辑图表",
     "ja": "グラフを編集",
     "ko": "차트 편집",
-    "th": "แก้ไขแผนภูมิ"
+    "th": "แก้ไขแผนภูมิ",
+    "zhHans": "编辑图表",
+    "zhHant": "編修圖表"
   },
   "chart_insert": {
-    "zhHant": "插入圖表",
     "en": "Insert Chart",
-    "zhHans": "插入图表",
     "ja": "グラフを挿入",
     "ko": "차트 삽입",
-    "th": "แทรกแผนภูมิ"
+    "th": "แทรกแผนภูมิ",
+    "zhHans": "插入图表",
+    "zhHant": "插入圖表"
   },
   "chart_kind_area": {
-    "zhHant": "區域圖",
     "en": "Area",
-    "zhHans": "面积图",
     "ja": "面グラフ",
     "ko": "영역형",
-    "th": "แผนภูมิพื้นที่"
+    "th": "แผนภูมิพื้นที่",
+    "zhHans": "面积图",
+    "zhHant": "區域圖"
   },
   "chart_kind_bar": {
-    "zhHant": "直條圖",
     "en": "Column",
-    "zhHans": "柱形图",
     "ja": "縦棒グラフ",
     "ko": "세로 막대",
-    "th": "แผนภูมิแท่ง"
+    "th": "แผนภูมิแท่ง",
+    "zhHans": "柱形图",
+    "zhHant": "直條圖"
   },
   "chart_kind_doughnut": {
-    "zhHant": "環圈圖",
     "en": "Doughnut",
-    "zhHans": "圆环图",
     "ja": "ドーナツグラフ",
     "ko": "도넛형",
-    "th": "แผนภูมิโดนัท"
+    "th": "แผนภูมิโดนัท",
+    "zhHans": "圆环图",
+    "zhHant": "環圈圖"
   },
   "chart_kind_horizontalBar": {
-    "zhHant": "橫條圖",
     "en": "Bar",
-    "zhHans": "条形图",
     "ja": "横棒グラフ",
     "ko": "가로 막대",
-    "th": "แผนภูมิแท่งแนวนอน"
+    "th": "แผนภูมิแท่งแนวนอน",
+    "zhHans": "条形图",
+    "zhHant": "橫條圖"
   },
   "chart_kind_line": {
-    "zhHant": "折線圖",
     "en": "Line",
-    "zhHans": "折线图",
     "ja": "折れ線グラフ",
     "ko": "꺾은선형",
-    "th": "กราฟเส้น"
+    "th": "กราฟเส้น",
+    "zhHans": "折线图",
+    "zhHant": "折線圖"
   },
   "chart_kind_pie": {
-    "zhHant": "圓餅圖",
     "en": "Pie",
-    "zhHans": "饼图",
     "ja": "円グラフ",
     "ko": "원형",
-    "th": "แผนภูมิวงกลม"
+    "th": "แผนภูมิวงกลม",
+    "zhHans": "饼图",
+    "zhHant": "圓餅圖"
   },
   "chart_kind_radar": {
-    "zhHant": "雷達圖",
     "en": "Radar",
-    "zhHans": "雷达图",
     "ja": "レーダーチャート",
     "ko": "방사형",
-    "th": "แผนภูมิเรดาร์"
+    "th": "แผนภูมิเรดาร์",
+    "zhHans": "雷达图",
+    "zhHant": "雷達圖"
   },
   "chart_kind_scatter": {
-    "zhHant": "散佈圖",
     "en": "Scatter",
-    "zhHans": "散点图",
     "ja": "散布図",
     "ko": "분산형",
-    "th": "แผนภูมิกระจาย"
+    "th": "แผนภูมิกระจาย",
+    "zhHans": "散点图",
+    "zhHant": "散佈圖"
   },
   "chart_kind_smoothLine": {
-    "zhHant": "平滑曲線圖",
     "en": "Smooth Line",
-    "zhHans": "平滑曲线图",
     "ja": "平滑曲線",
     "ko": "부드러운 선",
-    "th": "เส้นโค้ง"
+    "th": "เส้นโค้ง",
+    "zhHans": "平滑曲线图",
+    "zhHant": "平滑曲線圖"
   },
   "chart_kind_stackedArea": {
-    "zhHant": "堆疊區域圖",
     "en": "Stacked Area",
-    "zhHans": "堆积面积图",
     "ja": "積み上げ面",
     "ko": "누적 영역형",
-    "th": "พื้นที่ซ้อน"
+    "th": "พื้นที่ซ้อน",
+    "zhHans": "堆积面积图",
+    "zhHant": "堆疊區域圖"
   },
   "chart_kind_stackedBar": {
-    "zhHant": "堆疊直條圖",
     "en": "Stacked Column",
-    "zhHans": "堆积柱形图",
     "ja": "積み上げ縦棒",
     "ko": "누적 세로 막대",
-    "th": "แท่งซ้อน"
+    "th": "แท่งซ้อน",
+    "zhHans": "堆积柱形图",
+    "zhHant": "堆疊直條圖"
   },
   "chart_label_decimals": {
-    "zhHant": "小數位數",
     "en": "Decimal Places",
-    "zhHans": "小数位数",
     "ja": "小数点以下の桁数",
     "ko": "소수 자릿수",
-    "th": "ตำแหน่งทศนิยม"
+    "th": "ตำแหน่งทศนิยม",
+    "zhHans": "小数位数",
+    "zhHant": "小數位數"
   },
   "chart_labels_center": {
-    "zhHant": "置中",
     "en": "Center",
-    "zhHans": "居中",
     "ja": "中央",
     "ko": "가운데",
-    "th": "ตรงกลาง"
+    "th": "ตรงกลาง",
+    "zhHans": "居中",
+    "zhHant": "置中"
   },
   "chart_labels_inside": {
-    "zhHant": "內側",
     "en": "Inside End",
-    "zhHans": "内侧",
     "ja": "内側",
     "ko": "안쪽 끝",
-    "th": "ด้านใน"
+    "th": "ด้านใน",
+    "zhHans": "内侧",
+    "zhHant": "內側"
   },
   "chart_labels_none": {
-    "zhHant": "不顯示",
     "en": "None",
-    "zhHans": "不显示",
     "ja": "なし",
     "ko": "없음",
-    "th": "ไม่แสดง"
+    "th": "ไม่แสดง",
+    "zhHans": "不显示",
+    "zhHant": "不顯示"
   },
   "chart_labels_outside": {
-    "zhHant": "外側",
     "en": "Outside End",
-    "zhHans": "外侧",
     "ja": "外側",
     "ko": "바깥쪽 끝",
-    "th": "ด้านนอก"
+    "th": "ด้านนอก",
+    "zhHans": "外侧",
+    "zhHant": "外側"
   },
   "chart_legend_bottom": {
-    "zhHant": "下方",
     "en": "Bottom",
-    "zhHans": "下方",
     "ja": "下",
     "ko": "아래쪽",
-    "th": "ด้านล่าง"
+    "th": "ด้านล่าง",
+    "zhHans": "下方",
+    "zhHant": "下方"
   },
   "chart_legend_none": {
-    "zhHant": "不顯示",
     "en": "Hidden",
-    "zhHans": "不显示",
     "ja": "非表示",
     "ko": "숨김",
-    "th": "ซ่อน"
+    "th": "ซ่อน",
+    "zhHans": "不显示",
+    "zhHant": "不顯示"
   },
   "chart_legend_position": {
-    "zhHant": "圖例位置",
     "en": "Legend Position",
-    "zhHans": "图例位置",
     "ja": "凡例の位置",
     "ko": "범례 위치",
-    "th": "ตำแหน่งคำอธิบาย"
+    "th": "ตำแหน่งคำอธิบาย",
+    "zhHans": "图例位置",
+    "zhHant": "圖例位置"
   },
   "chart_legend_right": {
-    "zhHant": "右側",
     "en": "Right",
-    "zhHans": "右侧",
     "ja": "右",
     "ko": "오른쪽",
-    "th": "ด้านขวา"
+    "th": "ด้านขวา",
+    "zhHans": "右侧",
+    "zhHant": "右側"
   },
   "chart_legend_top": {
-    "zhHant": "上方",
     "en": "Top",
-    "zhHans": "上方",
     "ja": "上",
     "ko": "위쪽",
-    "th": "ด้านบน"
+    "th": "ด้านบน",
+    "zhHans": "上方",
+    "zhHant": "上方"
   },
   "chart_line": {
     "en": "Line Chart",
@@ -864,76 +1416,76 @@
     "zhHant": "圓餅圖"
   },
   "chart_section_axes": {
-    "zhHant": "座標軸",
     "en": "Axes",
-    "zhHans": "坐标轴",
     "ja": "軸",
     "ko": "축",
-    "th": "แกน"
+    "th": "แกน",
+    "zhHans": "坐标轴",
+    "zhHant": "座標軸"
   },
   "chart_section_legend": {
-    "zhHant": "圖例與標籤",
     "en": "Legend & Labels",
-    "zhHans": "图例与标签",
     "ja": "凡例とラベル",
     "ko": "범례 및 레이블",
-    "th": "คำอธิบายและป้ายกำกับ"
+    "th": "คำอธิบายและป้ายกำกับ",
+    "zhHans": "图例与标签",
+    "zhHant": "圖例與標籤"
   },
   "chart_section_series": {
-    "zhHant": "資料數列",
     "en": "Series",
-    "zhHans": "数据系列",
     "ja": "データ系列",
     "ko": "데이터 계열",
-    "th": "ชุดข้อมูล"
+    "th": "ชุดข้อมูล",
+    "zhHans": "数据系列",
+    "zhHant": "資料數列"
   },
   "chart_section_style": {
-    "zhHant": "樣式",
     "en": "Style",
-    "zhHans": "样式",
     "ja": "スタイル",
     "ko": "스타일",
-    "th": "สไตล์"
+    "th": "สไตล์",
+    "zhHans": "样式",
+    "zhHant": "樣式"
   },
   "chart_series_color": {
-    "zhHant": "數列顏色",
     "en": "Series Color",
-    "zhHans": "系列颜色",
     "ja": "系列の色",
     "ko": "계열 색상",
-    "th": "สีชุดข้อมูล"
+    "th": "สีชุดข้อมูล",
+    "zhHans": "系列颜色",
+    "zhHant": "數列顏色"
   },
   "chart_series_name": {
-    "zhHant": "數列名稱",
     "en": "Series Name",
-    "zhHans": "系列名称",
     "ja": "系列名",
     "ko": "계열 이름",
-    "th": "ชื่อชุดข้อมูล"
+    "th": "ชื่อชุดข้อมูล",
+    "zhHans": "系列名称",
+    "zhHant": "數列名稱"
   },
   "chart_show_axis_labels": {
-    "zhHant": "顯示刻度標籤",
     "en": "Axis Labels",
-    "zhHans": "显示刻度标签",
     "ja": "軸ラベル",
     "ko": "축 레이블",
-    "th": "ป้ายกำกับแกน"
+    "th": "ป้ายกำกับแกน",
+    "zhHans": "显示刻度标签",
+    "zhHant": "顯示刻度標籤"
   },
   "chart_show_grid": {
-    "zhHant": "顯示格線",
     "en": "Gridlines",
-    "zhHans": "显示网格线",
     "ja": "目盛線",
     "ko": "눈금선",
-    "th": "เส้นตาราง"
+    "th": "เส้นตาราง",
+    "zhHans": "显示网格线",
+    "zhHant": "顯示格線"
   },
   "chart_single_series_hint": {
-    "zhHant": "這個類型只會畫第一個數列。",
     "en": "This chart type draws only the first series.",
-    "zhHans": "此类型只会绘制第一个系列。",
     "ja": "この種類は最初の系列のみ描画します。",
     "ko": "이 차트 종류는 첫 번째 계열만 그립니다.",
-    "th": "แผนภูมิชนิดนี้จะวาดเฉพาะชุดข้อมูลแรก"
+    "th": "แผนภูมิชนิดนี้จะวาดเฉพาะชุดข้อมูลแรก",
+    "zhHans": "此类型只会绘制第一个系列。",
+    "zhHant": "這個類型只會畫第一個數列。"
   },
   "chart_studio": {
     "en": "Chart Studio",
@@ -944,28 +1496,28 @@
     "zhHant": "數字製圖"
   },
   "chart_tab_data": {
-    "zhHant": "資料",
     "en": "Data",
-    "zhHans": "数据",
     "ja": "データ",
     "ko": "데이터",
-    "th": "ข้อมูล"
+    "th": "ข้อมูล",
+    "zhHans": "数据",
+    "zhHant": "資料"
   },
   "chart_tab_format": {
-    "zhHant": "格式",
     "en": "Format",
-    "zhHans": "格式",
     "ja": "書式",
     "ko": "서식",
-    "th": "รูปแบบ"
+    "th": "รูปแบบ",
+    "zhHans": "格式",
+    "zhHant": "格式"
   },
   "chart_tab_type": {
-    "zhHant": "類型",
     "en": "Type",
-    "zhHans": "类型",
     "ja": "種類",
     "ko": "종류",
-    "th": "ประเภท"
+    "th": "ประเภท",
+    "zhHans": "类型",
+    "zhHant": "類型"
   },
   "chart_title": {
     "en": "Chart Title",
@@ -984,28 +1536,28 @@
     "zhHant": "圖表類型"
   },
   "chart_update": {
-    "zhHant": "更新圖表",
     "en": "Update Chart",
-    "zhHans": "更新图表",
     "ja": "グラフを更新",
     "ko": "차트 업데이트",
-    "th": "อัปเดตแผนภูมิ"
+    "th": "อัปเดตแผนภูมิ",
+    "zhHans": "更新图表",
+    "zhHant": "更新圖表"
   },
   "chart_x_axis_title": {
-    "zhHant": "水平軸標題",
     "en": "Horizontal Axis Title",
-    "zhHans": "水平轴标题",
     "ja": "横軸のタイトル",
     "ko": "가로 축 제목",
-    "th": "ชื่อแกนนอน"
+    "th": "ชื่อแกนนอน",
+    "zhHans": "水平轴标题",
+    "zhHant": "水平軸標題"
   },
   "chart_y_axis_title": {
-    "zhHant": "垂直軸標題",
     "en": "Vertical Axis Title",
-    "zhHans": "垂直轴标题",
     "ja": "縦軸のタイトル",
     "ko": "세로 축 제목",
-    "th": "ชื่อแกนตั้ง"
+    "th": "ชื่อแกนตั้ง",
+    "zhHans": "垂直轴标题",
+    "zhHant": "垂直軸標題"
   },
   "clear_cache": {
     "en": "Clear Cache",
@@ -1151,6 +1703,14 @@
     "zhHans": "淡黄",
     "zhHant": "淡黃"
   },
+  "comment_empty": {
+    "en": "No messages yet",
+    "ja": "まだコメントはありません",
+    "ko": "아직 댓글이 없습니다",
+    "th": "ยังไม่มีข้อความ",
+    "zhHans": "还没有留言",
+    "zhHant": "還沒有留言"
+  },
   "comment_pin": {
     "en": "Comment Pin",
     "ja": "コメントピン",
@@ -1166,6 +1726,14 @@
     "th": "พิมพ์ความคิดเห็นหรือตอบกลับ...",
     "zhHans": "输入留言或回复...",
     "zhHant": "輸入留言或回覆..."
+  },
+  "comment_send": {
+    "en": "Send",
+    "ja": "送信",
+    "ko": "보내기",
+    "th": "ส่ง",
+    "zhHans": "送出",
+    "zhHant": "送出"
   },
   "composition_overlay": {
     "en": "Composition HUD",
@@ -1195,6 +1763,14 @@
     "en": "Continue",
     "ja": "続ける",
     "ko": "계속하기",
+    "th": "ทำต่อ",
+    "zhHans": "继续",
+    "zhHant": "繼續"
+  },
+  "continue_working": {
+    "en": "Continue",
+    "ja": "続きから",
+    "ko": "이어서",
     "th": "ทำต่อ",
     "zhHans": "继续",
     "zhHant": "繼續"
@@ -1359,6 +1935,14 @@
     "zhHans": "删除这条留言",
     "zhHant": "刪除這則留言"
   },
+  "delete_notebook_confirm": {
+    "en": "Delete “%@”? Everything in this note will be gone, and it cannot be undone.",
+    "ja": "「%@」を削除しますか？このノートの内容はすべて消え、元に戻せません。",
+    "ko": "‘%@’을(를) 삭제할까요? 이 노트의 모든 내용이 사라지며 되돌릴 수 없습니다.",
+    "th": "ลบ “%@” ไหม? เนื้อหาทั้งหมดจะหายไปและกู้คืนไม่ได้",
+    "zhHans": "确定要删除「%@」吗？这本笔记的所有内容都会消失，而且救不回来。",
+    "zhHant": "確定要刪除「%@」嗎？這本筆記的所有內容都會消失，而且救不回來。"
+  },
   "delete_page": {
     "en": "Delete Page",
     "ja": "ページを削除",
@@ -1366,6 +1950,14 @@
     "th": "ลบหน้านี้",
     "zhHans": "删除此页",
     "zhHant": "刪除此頁"
+  },
+  "delete_page_confirm": {
+    "en": "Delete page %@? Its handwriting and objects will be gone.",
+    "ja": "%@ ページ目を削除しますか？そのページの手書きとオブジェクトは消えます。",
+    "ko": "%@ 페이지를 삭제할까요? 해당 페이지의 필기와 객체가 사라집니다.",
+    "th": "ลบหน้า %@ ไหม? ลายมือและวัตถุในหน้านี้จะหายไป",
+    "zhHans": "确定要删除第 %@ 页吗？这一页的手写与物件都会消失。",
+    "zhHant": "確定要刪除第 %@ 頁嗎？這一頁的手寫與物件都會消失。"
   },
   "delete_page_confirm_msg": {
     "en": "Are you sure you want to delete Page %d? This cannot be undone.",
@@ -1406,6 +1998,54 @@
     "th": "บอลลูนระบุขนาด",
     "zhHans": "工程引线标注",
     "zhHant": "工程引線標註"
+  },
+  "dimension_callout_balloon1": {
+    "en": "Part balloon ①",
+    "ja": "部品バルーン ①",
+    "ko": "부품 번호 ①",
+    "th": "หมายเลขชิ้นส่วน ①",
+    "zhHans": "零件球标 ①",
+    "zhHant": "零件球標 ①"
+  },
+  "dimension_callout_balloon2": {
+    "en": "Part balloon ②",
+    "ja": "部品バルーン ②",
+    "ko": "부품 번호 ②",
+    "th": "หมายเลขชิ้นส่วน ②",
+    "zhHans": "零件球标 ②",
+    "zhHant": "零件球標 ②"
+  },
+  "dimension_callout_diameter": {
+    "en": "Diameter callout",
+    "ja": "直径記号",
+    "ko": "지름 표기",
+    "th": "บอกเส้นผ่านศูนย์กลาง",
+    "zhHans": "外径圆标注",
+    "zhHant": "外徑圓標註"
+  },
+  "dimension_callout_flatness": {
+    "en": "Flatness tolerance",
+    "ja": "平面度公差",
+    "ko": "평면도 공차",
+    "th": "ค่าความราบ",
+    "zhHans": "平面度公差",
+    "zhHant": "平面度公差"
+  },
+  "dimension_callout_linear": {
+    "en": "Linear dimension",
+    "ja": "直線寸法",
+    "ko": "선형 치수",
+    "th": "บอกขนาดเชิงเส้น",
+    "zhHans": "线性长度标注",
+    "zhHant": "線性長度標註"
+  },
+  "dimension_callout_radius": {
+    "en": "Radius callout",
+    "ja": "半径記号",
+    "ko": "반지름 표기",
+    "th": "บอกรัศมี",
+    "zhHans": "圆弧半径标注",
+    "zhHant": "圓弧半徑標註"
   },
   "disconnect": {
     "en": "Disconnect",
@@ -1695,6 +2335,14 @@
     "zhHans": "这台设备无法使用手写识别（需要 Google Play 服务）：%@",
     "zhHant": "這台裝置無法使用手寫辨識（需要 Google Play 服務）：%@"
   },
+  "err_image_read_failed": {
+    "en": "Could not read that image",
+    "ja": "その画像を読み込めません",
+    "ko": "이미지를 읽을 수 없습니다",
+    "th": "อ่านรูปภาพนี้ไม่ได้",
+    "zhHans": "读不到这张图片",
+    "zhHant": "讀不到這張圖片"
+  },
   "err_mic_open_failed": {
     "en": "Could not open the microphone: %@",
     "ja": "マイクを開けませんでした：%@",
@@ -1839,6 +2487,14 @@
     "zhHans": "解析预览",
     "zhHant": "解析預覽"
   },
+  "fill_color": {
+    "en": "Fill color",
+    "ja": "塗りつぶし",
+    "ko": "채우기 색",
+    "th": "สีพื้น",
+    "zhHans": "填充颜色",
+    "zhHant": "填滿顏色"
+  },
   "filter_ai": {
     "en": "AI Concepts",
     "ja": "AI コンセプト",
@@ -1967,6 +2623,54 @@
     "zhHans": "几何形状",
     "zhHant": "幾何形狀"
   },
+  "gesture_decision": {
+    "en": "Decision (if/else)",
+    "ja": "条件分岐（if/else）",
+    "ko": "조건 분기 (if/else)",
+    "th": "เงื่อนไขแยกทาง (if/else)",
+    "zhHans": "条件判断分支",
+    "zhHant": "條件判斷分支"
+  },
+  "gesture_loading": {
+    "en": "Loading / refresh",
+    "ja": "読み込み・更新",
+    "ko": "로딩·새로고침",
+    "th": "กำลังโหลด / รีเฟรช",
+    "zhHans": "加载更新状态",
+    "zhHant": "載入更新狀態"
+  },
+  "gesture_long_press": {
+    "en": "Long press for menu",
+    "ja": "長押しでメニュー",
+    "ko": "길게 눌러 메뉴",
+    "th": "กดค้างเพื่อเปิดเมนู",
+    "zhHans": "长按触发菜单",
+    "zhHant": "長按觸發選單"
+  },
+  "gesture_success": {
+    "en": "Success feedback",
+    "ja": "成功フィードバック",
+    "ko": "성공 피드백",
+    "th": "แจ้งผลสำเร็จ",
+    "zhHans": "成功验证反馈",
+    "zhHant": "成功驗證回饋"
+  },
+  "gesture_swipe": {
+    "en": "Swipe to switch",
+    "ja": "スワイプで切り替え",
+    "ko": "스와이프로 전환",
+    "th": "ปัดเพื่อสลับ",
+    "zhHans": "左右滑动切换",
+    "zhHant": "左右滑動切換"
+  },
+  "gesture_tap": {
+    "en": "Tap → next",
+    "ja": "タップで遷移",
+    "ko": "탭하여 이동",
+    "th": "แตะเพื่อไปต่อ",
+    "zhHans": "点击跳转",
+    "zhHant": "點擊跳轉"
+  },
   "golden_spiral_desc": {
     "en": "1:1.618 Fibonacci spiral overlay to guide focal point",
     "ja": "1:1.618のフィボナッチ螺旋で視線を自然に誘導",
@@ -2031,6 +2735,326 @@
     "zhHans": "本机正在提供协同中继",
     "zhHant": "本機正在提供協同中繼"
   },
+  "hue_aurora_orange": {
+    "en": "Aurora Orange",
+    "ja": "オーロラオレンジ",
+    "ko": "오로라 오렌지",
+    "th": "ส้มออโรรา",
+    "zhHans": "极光鲜橘",
+    "zhHant": "極光鮮橘"
+  },
+  "hue_burgundy": {
+    "en": "Burgundy",
+    "ja": "バーガンディ",
+    "ko": "버건디",
+    "th": "เบอร์กันดี",
+    "zhHans": "勃艮第酒红",
+    "zhHant": "勃艮第酒紅"
+  },
+  "hue_business_blue": {
+    "en": "Business Blue",
+    "ja": "ビジネスブルー",
+    "ko": "비즈니스 블루",
+    "th": "น้ำเงินธุรกิจ",
+    "zhHans": "商务蓝",
+    "zhHant": "商務藍"
+  },
+  "hue_caramel_brown": {
+    "en": "Caramel Brown",
+    "ja": "キャラメルブラウン",
+    "ko": "캐러멜 브라운",
+    "th": "น้ำตาลคาราเมล",
+    "zhHans": "焦糖棕",
+    "zhHant": "焦糖棕"
+  },
+  "hue_caramel_pink": {
+    "en": "Caramel Pink",
+    "ja": "キャラメルピンク",
+    "ko": "캐러멜 핑크",
+    "th": "ชมพูคาราเมล",
+    "zhHans": "焦糖粉",
+    "zhHant": "焦糖粉"
+  },
+  "hue_chestnut": {
+    "en": "Deep Chestnut",
+    "ja": "ディープチェスナット",
+    "ko": "딥 체스트넛",
+    "th": "น้ำตาลเกาลัด",
+    "zhHans": "深栗褐",
+    "zhHant": "深栗褐"
+  },
+  "hue_cold_stone": {
+    "en": "Cold Stone",
+    "ja": "コールドストーン",
+    "ko": "콜드 스톤",
+    "th": "หินเย็น",
+    "zhHans": "冷石灰",
+    "zhHant": "冷石灰"
+  },
+  "hue_deep_navy": {
+    "en": "Deep Navy",
+    "ja": "ディープネイビー",
+    "ko": "딥 네이비",
+    "th": "กรมท่าเข้ม",
+    "zhHans": "深海军",
+    "zhHant": "深海軍"
+  },
+  "hue_electric_magenta": {
+    "en": "Electric Magenta",
+    "ja": "エレクトリックマゼンタ",
+    "ko": "일렉트릭 마젠타",
+    "th": "มาเจนต้าไฟฟ้า",
+    "zhHans": "电光玫红",
+    "zhHant": "電光玫紅"
+  },
+  "hue_fallen_leaf": {
+    "en": "Fallen Leaf",
+    "ja": "フォールンリーフ",
+    "ko": "낙엽색",
+    "th": "ใบไม้ร่วง",
+    "zhHans": "落叶黄",
+    "zhHant": "落葉黃"
+  },
+  "hue_fir_green": {
+    "en": "Fir Green",
+    "ja": "ファーグリーン",
+    "ko": "전나무 초록",
+    "th": "เขียวเฟอร์",
+    "zhHans": "冷杉绿",
+    "zhHant": "冷杉綠"
+  },
+  "hue_fluoro_cyan": {
+    "en": "Fluoro Cyan",
+    "ja": "フルオロシアン",
+    "ko": "형광 시안",
+    "th": "ฟ้าเรืองแสง",
+    "zhHans": "荧光青蓝",
+    "zhHant": "螢光青藍"
+  },
+  "hue_grape_gray": {
+    "en": "Grape Grey",
+    "ja": "グレープグレー",
+    "ko": "그레이프 그레이",
+    "th": "เทาองุ่น",
+    "zhHans": "葡萄灰",
+    "zhHant": "葡萄灰"
+  },
+  "hue_graphite_blue": {
+    "en": "Graphite Blue",
+    "ja": "グラファイトブルー",
+    "ko": "그래파이트 블루",
+    "th": "น้ำเงินกราไฟต์",
+    "zhHans": "石墨蓝",
+    "zhHant": "石墨藍"
+  },
+  "hue_gray_cardamom": {
+    "en": "Grey Cardamom",
+    "ja": "グレーカルダモン",
+    "ko": "그레이 카다몸",
+    "th": "กระวานเทา",
+    "zhHans": "灰豆蔻",
+    "zhHant": "灰豆蔻"
+  },
+  "hue_green_apple": {
+    "en": "Green Apple",
+    "ja": "グリーンアップル",
+    "ko": "그린 애플",
+    "th": "เขียวแอปเปิล",
+    "zhHans": "青苹绿",
+    "zhHant": "青蘋綠"
+  },
+  "hue_haze_blue": {
+    "en": "Haze Blue",
+    "ja": "ヘイズブルー",
+    "ko": "헤이즈 블루",
+    "th": "ฟ้าหมอก",
+    "zhHans": "雾霾蓝",
+    "zhHant": "霧霾藍"
+  },
+  "hue_high_energy_red": {
+    "en": "High-Energy Red",
+    "ja": "ハイエナジーレッド",
+    "ko": "하이에너지 레드",
+    "th": "แดงพลังสูง",
+    "zhHans": "高能炽红",
+    "zhHant": "高能熾紅"
+  },
+  "hue_ink_green": {
+    "en": "Ink Green",
+    "ja": "インクグリーン",
+    "ko": "잉크 그린",
+    "th": "เขียวหมึก",
+    "zhHans": "墨绿色",
+    "zhHant": "墨綠色"
+  },
+  "hue_iridescent_purple": {
+    "en": "Iridescent Purple",
+    "ja": "イリデセントパープル",
+    "ko": "이리데센트 퍼플",
+    "th": "ม่วงเหลือบ",
+    "zhHans": "幻彩紫",
+    "zhHant": "幻彩紫"
+  },
+  "hue_lavender": {
+    "en": "Lavender",
+    "ja": "ラベンダー",
+    "ko": "라벤더",
+    "th": "ลาเวนเดอร์",
+    "zhHans": "薰衣草",
+    "zhHant": "薰衣草"
+  },
+  "hue_midnight": {
+    "en": "Midnight",
+    "ja": "ミッドナイト",
+    "ko": "미드나이트",
+    "th": "ดำเที่ยงคืน",
+    "zhHans": "极夜黑",
+    "zhHant": "極夜黑"
+  },
+  "hue_milk_tea": {
+    "en": "Milk Tea",
+    "ja": "ミルクティー",
+    "ko": "밀크티",
+    "th": "ชานม",
+    "zhHans": "奶茶驼",
+    "zhHant": "奶茶駝"
+  },
+  "hue_mint_green": {
+    "en": "Mint Green",
+    "ja": "ミントグリーン",
+    "ko": "민트 그린",
+    "th": "เขียวมิ้นต์",
+    "zhHans": "薄荷绿",
+    "zhHant": "薄荷綠"
+  },
+  "hue_mustard": {
+    "en": "Mustard",
+    "ja": "マスタード",
+    "ko": "머스터드",
+    "th": "มัสตาร์ด",
+    "zhHans": "芥末黄",
+    "zhHant": "芥末黃"
+  },
+  "hue_neon_green": {
+    "en": "Neon Green",
+    "ja": "ネオングリーン",
+    "ko": "네온 그린",
+    "th": "เขียวนีออน",
+    "zhHans": "霓虹亮绿",
+    "zhHant": "霓虹亮綠"
+  },
+  "hue_oat_gray": {
+    "en": "Oat Grey",
+    "ja": "オートグレー",
+    "ko": "오트 그레이",
+    "th": "เทาโอ๊ต",
+    "zhHans": "燕麦灰",
+    "zhHant": "燕麥灰"
+  },
+  "hue_peach_apricot": {
+    "en": "Peach Apricot",
+    "ja": "ピーチアプリコット",
+    "ko": "피치 애프리콧",
+    "th": "พีชแอปริคอต",
+    "zhHans": "蜜桃杏",
+    "zhHant": "蜜桃杏"
+  },
+  "hue_periwinkle": {
+    "en": "Periwinkle",
+    "ja": "ペリウィンクル",
+    "ko": "페리윙클",
+    "th": "ม่วงอ่อน",
+    "zhHans": "淡紫蓝",
+    "zhHant": "淡紫藍"
+  },
+  "hue_premium_gray": {
+    "en": "Premium Grey",
+    "ja": "プレミアムグレー",
+    "ko": "프리미엄 그레이",
+    "th": "เทาพรีเมียม",
+    "zhHans": "高级灰",
+    "zhHant": "高級灰"
+  },
+  "hue_retro_teal": {
+    "en": "Retro Teal",
+    "ja": "レトロティール",
+    "ko": "레트로 틸",
+    "th": "เขียวเรโทร",
+    "zhHans": "复古青",
+    "zhHant": "復古青"
+  },
+  "hue_rose_dusk": {
+    "en": "Rose Dusk",
+    "ja": "ローズダスク",
+    "ko": "로즈 더스크",
+    "th": "กุหลาบสนธยา",
+    "zhHans": "玫瑰暮",
+    "zhHant": "玫瑰暮"
+  },
+  "hue_rust_red": {
+    "en": "Rust Red",
+    "ja": "ラストレッド",
+    "ko": "러스트 레드",
+    "th": "แดงสนิม",
+    "zhHans": "铁锈红",
+    "zhHant": "鐵鏽紅"
+  },
+  "hue_sage_green": {
+    "en": "Sage Green",
+    "ja": "セージグリーン",
+    "ko": "세이지 그린",
+    "th": "เขียวเสจ",
+    "zhHans": "鼠尾绿",
+    "zhHant": "鼠尾綠"
+  },
+  "hue_sakura_pink": {
+    "en": "Sakura Pink",
+    "ja": "さくらピンク",
+    "ko": "사쿠라 핑크",
+    "th": "ชมพูซากุระ",
+    "zhHans": "樱花粉",
+    "zhHant": "櫻花粉"
+  },
+  "hue_sky_ultra_blue": {
+    "en": "Sky Ultra Blue",
+    "ja": "スカイウルトラブルー",
+    "ko": "스카이 울트라 블루",
+    "th": "ฟ้าสุดขอบ",
+    "zhHans": "天空极蓝",
+    "zhHant": "天空極藍"
+  },
+  "hue_slate_blue": {
+    "en": "Slate Blue",
+    "ja": "スレートブルー",
+    "ko": "슬레이트 블루",
+    "th": "น้ำเงินหินชนวน",
+    "zhHans": "黛蓝色",
+    "zhHant": "黛藍色"
+  },
+  "hue_terracotta": {
+    "en": "Terracotta",
+    "ja": "テラコッタ",
+    "ko": "테라코타",
+    "th": "ดินเผา",
+    "zhHans": "陶土红",
+    "zhHant": "陶土紅"
+  },
+  "hue_vivid_yellow": {
+    "en": "Vivid Yellow",
+    "ja": "ビビッドイエロー",
+    "ko": "비비드 옐로",
+    "th": "เหลืองสดใส",
+    "zhHans": "夺目亮黄",
+    "zhHant": "奪目亮黃"
+  },
+  "hue_warm_almond": {
+    "en": "Warm Almond",
+    "ja": "ウォームアーモンド",
+    "ko": "웜 아몬드",
+    "th": "อัลมอนด์อุ่น",
+    "zhHans": "暖杏色",
+    "zhHant": "暖杏色"
+  },
   "identity_color": {
     "en": "Identity Colour",
     "ja": "表示カラー",
@@ -2087,6 +3111,14 @@
     "zhHans": "边框装饰",
     "zhHant": "邊框裝飾"
   },
+  "image_corner_radius": {
+    "en": "Corner radius",
+    "ja": "角の丸み",
+    "ko": "모서리 둥글기",
+    "th": "ความมนมุม",
+    "zhHans": "圆角",
+    "zhHant": "圓角"
+  },
   "image_filter": {
     "en": "Style Filter",
     "ja": "スタイルフィルター",
@@ -2119,6 +3151,14 @@
     "zhHans": "立体阴影",
     "zhHant": "立體陰影"
   },
+  "image_style": {
+    "en": "Image style",
+    "ja": "画像スタイル",
+    "ko": "이미지 스타일",
+    "th": "สไตล์รูปภาพ",
+    "zhHans": "图片样式",
+    "zhHant": "圖片樣式"
+  },
   "img_count": {
     "en": "Images",
     "ja": "画像",
@@ -2134,6 +3174,14 @@
     "th": "ล้าง",
     "zhHans": "清除",
     "zhHant": "清除"
+  },
+  "ink_input_debug": {
+    "en": "Show input diagnostics",
+    "ja": "入力診断を表示",
+    "ko": "입력 진단 표시",
+    "th": "แสดงการวินิจฉัยอินพุต",
+    "zhHans": "显示输入诊断",
+    "zhHant": "顯示輸入診斷"
   },
   "ink_latency_label": {
     "en": "Input latency",
@@ -2184,20 +3232,20 @@
     "zhHant": "在這裡書寫"
   },
   "input_diagnostics": {
-    "zhHant": "輸入診斷",
     "en": "Input Diagnostics",
-    "zhHans": "输入诊断",
     "ja": "入力診断",
     "ko": "입력 진단",
-    "th": "การวินิจฉัยอินพุต"
+    "th": "การวินิจฉัยอินพุต",
+    "zhHans": "输入诊断",
+    "zhHant": "輸入診斷"
   },
   "input_diagnostics_explainer": {
-    "zhHant": "量到的是「事件在硬體上發生 → 交給畫面」，不是筆尖到光子（面板的掃描時間量不到）。它的用途是同一台裝置上開關某個選項的前後對比。",
     "en": "Measures hardware event time to frame delivery — not pen-to-photon (panel scan time cannot be measured here). Use it to compare before and after toggling a setting on the same device.",
-    "zhHans": "测量的是「事件在硬件上发生 → 交给画面」，不是笔尖到光子（面板扫描时间测不到）。用途是同一台设备上开关某个选项的前后对比。",
     "ja": "計測するのは「ハードウェアでのイベント発生 → 画面への引き渡し」で、ペン先から発光までではありません（パネルの走査時間は計測できません）。同一端末で設定を切り替えた前後の比較に使います。",
     "ko": "하드웨어 이벤트 발생부터 화면 전달까지를 측정합니다. 펜 끝에서 빛까지가 아닙니다(패널 주사 시간은 측정 불가). 같은 기기에서 설정을 켜고 끈 전후 비교에 사용하세요.",
-    "th": "วัดจากเวลาที่เหตุการณ์เกิดขึ้นในฮาร์ดแวร์จนถึงการส่งเฟรม ไม่ใช่จากปลายปากกาถึงแสง (วัดเวลาสแกนหน้าจอไม่ได้) ใช้เปรียบเทียบก่อนและหลังเปิดปิดการตั้งค่าบนเครื่องเดียวกัน"
+    "th": "วัดจากเวลาที่เหตุการณ์เกิดขึ้นในฮาร์ดแวร์จนถึงการส่งเฟรม ไม่ใช่จากปลายปากกาถึงแสง (วัดเวลาสแกนหน้าจอไม่ได้) ใช้เปรียบเทียบก่อนและหลังเปิดปิดการตั้งค่าบนเครื่องเดียวกัน",
+    "zhHans": "测量的是「事件在硬件上发生 → 交给画面」，不是笔尖到光子（面板扫描时间测不到）。用途是同一台设备上开关某个选项的前后对比。",
+    "zhHant": "量到的是「事件在硬體上發生 → 交給畫面」，不是筆尖到光子（面板的掃描時間量不到）。它的用途是同一台裝置上開關某個選項的前後對比。"
   },
   "insert": {
     "en": "Insert",
@@ -2271,6 +3319,14 @@
     "zhHans": "插入文本框",
     "zhHant": "插入文字方塊"
   },
+  "insert_text_box_hint": {
+    "en": "Double-tap empty canvas to add a text box",
+    "ja": "空白部分をダブルタップでテキストボックスを追加",
+    "ko": "빈 캔버스를 두 번 탭하면 텍스트 상자 추가",
+    "th": "แตะสองครั้งบนพื้นที่ว่างเพื่อเพิ่มกล่องข้อความ",
+    "zhHans": "双击画布空白处新增文字方块",
+    "zhHant": "點兩下畫布空白處新增文字方塊"
+  },
   "insert_to_canvas": {
     "en": "Insert to Canvas",
     "ja": "キャンバスに挿入",
@@ -2328,100 +3384,156 @@
     "zhHant": "已圈選筆劃：可拖曳移動，或點擊刪除 / 剪下 / 複製"
   },
   "layer_bring_forward": {
-    "zhHant": "上移一層",
     "en": "Bring Forward",
-    "zhHans": "上移一层",
     "ja": "前面へ",
     "ko": "앞으로",
-    "th": "เลื่อนขึ้น"
+    "th": "เลื่อนขึ้น",
+    "zhHans": "上移一层",
+    "zhHant": "上移一層"
   },
   "layer_bring_front": {
-    "zhHant": "移到最上層",
     "en": "Bring to Front",
-    "zhHans": "移到最上层",
     "ja": "最前面へ",
     "ko": "맨 앞으로",
-    "th": "ไปหน้าสุด"
+    "th": "ไปหน้าสุด",
+    "zhHans": "移到最上层",
+    "zhHant": "移到最上層"
   },
   "layer_group": {
-    "zhHant": "群組",
     "en": "Group",
-    "zhHans": "组合",
     "ja": "グループ化",
     "ko": "그룹",
-    "th": "จัดกลุ่ม"
+    "th": "จัดกลุ่ม",
+    "zhHans": "组合",
+    "zhHant": "群組"
   },
   "layer_group_name": {
-    "zhHant": "群組（%@ 個物件）",
     "en": "Group (%@ objects)",
-    "zhHans": "组合（%@ 个对象）",
     "ja": "グループ（%@ 個）",
     "ko": "그룹(%@개)",
-    "th": "กลุ่ม (%@ รายการ)"
+    "th": "กลุ่ม (%@ รายการ)",
+    "zhHans": "组合（%@ 个对象）",
+    "zhHant": "群組（%@ 個物件）"
+  },
+  "layer_kind_image": {
+    "en": "Image",
+    "ja": "画像",
+    "ko": "이미지",
+    "th": "รูปภาพ",
+    "zhHans": "图片",
+    "zhHant": "圖片"
+  },
+  "layer_kind_link": {
+    "en": "Link card",
+    "ja": "リンクカード",
+    "ko": "링크 카드",
+    "th": "การ์ดลิงก์",
+    "zhHans": "链接卡片",
+    "zhHant": "連結卡片"
+  },
+  "layer_kind_model3d": {
+    "en": "3D model",
+    "ja": "3D モデル",
+    "ko": "3D 모델",
+    "th": "โมเดล 3 มิติ",
+    "zhHans": "3D 模型",
+    "zhHant": "3D 模型"
+  },
+  "layer_kind_pin": {
+    "en": "Comment pin",
+    "ja": "コメントピン",
+    "ko": "댓글 핀",
+    "th": "หมุดความคิดเห็น",
+    "zhHans": "讨论图钉",
+    "zhHant": "討論圖釘"
+  },
+  "layer_kind_shape": {
+    "en": "Shape",
+    "ja": "図形",
+    "ko": "도형",
+    "th": "รูปทรง",
+    "zhHans": "形状",
+    "zhHant": "形狀"
+  },
+  "layer_kind_table": {
+    "en": "Table",
+    "ja": "表",
+    "ko": "표",
+    "th": "ตาราง",
+    "zhHans": "表格",
+    "zhHant": "表格"
+  },
+  "layer_kind_text": {
+    "en": "Text box",
+    "ja": "テキストボックス",
+    "ko": "텍스트 상자",
+    "th": "กล่องข้อความ",
+    "zhHans": "文字方块",
+    "zhHant": "文字方塊"
   },
   "layer_select_two": {
-    "zhHant": "選兩個以上的物件才能群組",
     "en": "Select two or more objects to group",
-    "zhHans": "选两个以上的对象才能组合",
     "ja": "2 つ以上選ぶとグループ化できます",
     "ko": "두 개 이상 선택해야 그룹으로 묶을 수 있습니다",
-    "th": "เลือกตั้งแต่สองรายการขึ้นไปจึงจะจัดกลุ่มได้"
+    "th": "เลือกตั้งแต่สองรายการขึ้นไปจึงจะจัดกลุ่มได้",
+    "zhHans": "选两个以上的对象才能组合",
+    "zhHant": "選兩個以上的物件才能群組"
   },
   "layer_send_back": {
-    "zhHant": "移到最下層",
     "en": "Send to Back",
-    "zhHans": "移到最下层",
     "ja": "最背面へ",
     "ko": "맨 뒤로",
-    "th": "ไปหลังสุด"
+    "th": "ไปหลังสุด",
+    "zhHans": "移到最下层",
+    "zhHant": "移到最下層"
   },
   "layer_send_backward": {
-    "zhHant": "下移一層",
     "en": "Send Backward",
-    "zhHans": "下移一层",
     "ja": "背面へ",
     "ko": "뒤로",
-    "th": "เลื่อนลง"
+    "th": "เลื่อนลง",
+    "zhHans": "下移一层",
+    "zhHant": "下移一層"
   },
   "layer_ungroup": {
-    "zhHant": "解散群組",
     "en": "Ungroup",
-    "zhHans": "取消组合",
     "ja": "グループ解除",
     "ko": "그룹 해제",
-    "th": "ยกเลิกกลุ่ม"
+    "th": "ยกเลิกกลุ่ม",
+    "zhHans": "取消组合",
+    "zhHant": "解散群組"
   },
   "layer_unnamed": {
-    "zhHant": "未命名形狀",
     "en": "Untitled shape",
-    "zhHans": "未命名形状",
     "ja": "名称未設定の図形",
     "ko": "이름 없는 도형",
-    "th": "รูปร่างไม่มีชื่อ"
+    "th": "รูปร่างไม่มีชื่อ",
+    "zhHans": "未命名形状",
+    "zhHant": "未命名形狀"
   },
   "layers_empty": {
-    "zhHant": "這一頁還沒有形狀",
     "en": "No shapes on this page yet",
-    "zhHans": "这一页还没有形状",
     "ja": "このページにはまだ図形がありません",
     "ko": "이 페이지에는 아직 도형이 없습니다",
-    "th": "ยังไม่มีรูปร่างในหน้านี้"
+    "th": "ยังไม่มีรูปร่างในหน้านี้",
+    "zhHans": "这一页还没有形状",
+    "zhHant": "這一頁還沒有形狀"
   },
   "layers_hint": {
-    "zhHant": "清單由上到下＝由前到後",
     "en": "Top of the list is in front",
-    "zhHans": "列表由上到下＝由前到后",
     "ja": "リストの上が手前です",
     "ko": "목록 위쪽이 앞입니다",
-    "th": "รายการด้านบนคือด้านหน้า"
+    "th": "รายการด้านบนคือด้านหน้า",
+    "zhHans": "列表由上到下＝由前到后",
+    "zhHant": "清單由上到下＝由前到後"
   },
   "layers_panel": {
-    "zhHant": "圖層",
     "en": "Layers",
-    "zhHans": "图层",
     "ja": "レイヤー",
     "ko": "레이어",
-    "th": "เลเยอร์"
+    "th": "เลเยอร์",
+    "zhHans": "图层",
+    "zhHant": "圖層"
   },
   "line_spacing": {
     "en": "Line",
@@ -2430,6 +3542,14 @@
     "th": "ระยะบรรทัด",
     "zhHans": "行距",
     "zhHant": "行距"
+  },
+  "line_width": {
+    "en": "Line width",
+    "ja": "線の太さ",
+    "ko": "선 두께",
+    "th": "ความหนาเส้น",
+    "zhHans": "线条粗细",
+    "zhHant": "線條粗細"
   },
   "link_preview": {
     "en": "Link Preview",
@@ -2543,6 +3663,94 @@
     "zhHans": "原木",
     "zhHant": "原木"
   },
+  "material_al6061_spec": {
+    "en": "Tensile ≥290 MPa / 12 µm hard anodising",
+    "ja": "引張強さ ≥290 MPa／硬質アルマイト 12μm",
+    "ko": "인장강도 ≥290 MPa / 경질 아노다이징 12 µm",
+    "th": "ความต้านแรงดึง ≥290 MPa / อโนไดซ์แข็ง 12 ไมครอน",
+    "zhHans": "抗拉强度 ≥290 MPa / 12μm 硬质阳极氧化",
+    "zhHant": "抗拉強度 ≥290 MPa / 12μm 硬質陽極氧化"
+  },
+  "material_al6061_trait": {
+    "en": "Aerospace-grade stiffness",
+    "ja": "航空機グレード・高剛性",
+    "ko": "항공용 고강성",
+    "th": "เกรดอากาศยาน แข็งแกร่งสูง",
+    "zhHans": "航空高刚性",
+    "zhHant": "航空高剛性"
+  },
+  "material_card_process": {
+    "en": "Process",
+    "ja": "加工仕様",
+    "ko": "공정 지표",
+    "th": "กระบวนการผลิต",
+    "zhHans": "工艺指标",
+    "zhHant": "工藝指標"
+  },
+  "material_card_title": {
+    "en": "Material spec",
+    "ja": "材料仕様",
+    "ko": "재료 사양",
+    "th": "ข้อมูลจำเพาะวัสดุ",
+    "zhHans": "材料规格",
+    "zhHant": "材料規格"
+  },
+  "material_card_trait": {
+    "en": "Properties",
+    "ja": "特性",
+    "ko": "특성",
+    "th": "คุณสมบัติ",
+    "zhHans": "特性",
+    "zhHant": "特性"
+  },
+  "material_pcabs_spec": {
+    "en": "UL94 V-0 / textured mould finish",
+    "ja": "UL94 V-0／シボ加工表面",
+    "ko": "UL94 V-0 / 시보 텍스처 표면",
+    "th": "UL94 V-0 / ผิวลายหนังจากแม่พิมพ์",
+    "zhHans": "UL94 V0 耐燃 / 模具咬花皮纹表面",
+    "zhHant": "UL94 V0 耐燃 / 模具咬花皮紋表面"
+  },
+  "material_pcabs_trait": {
+    "en": "Flame-retardant, impact-resistant",
+    "ja": "難燃・耐衝撃",
+    "ko": "난연·내충격",
+    "th": "หน่วงไฟ ทนแรงกระแทก",
+    "zhHans": "阻燃抗冲击",
+    "zhHant": "阻燃抗衝擊"
+  },
+  "material_pom_spec": {
+    "en": "Friction 0.25 / gears, bearings, sliders",
+    "ja": "摩擦係数 0.25／歯車・軸受・スライダー向け",
+    "ko": "마찰계수 0.25 / 기어·베어링·슬라이더용",
+    "th": "สัมประสิทธิ์แรงเสียดทาน 0.25 / เฟือง แบริ่ง สไลเดอร์",
+    "zhHans": "摩擦系数 0.25 / 齿轮与轴承滑块专用",
+    "zhHant": "摩擦係數 0.25 / 齒輪與軸承滑塊專用"
+  },
+  "material_pom_trait": {
+    "en": "Wear-resistant, self-lubricating",
+    "ja": "耐摩耗・自己潤滑",
+    "ko": "내마모·자기윤활",
+    "th": "ทนสึกหรอ หล่อลื่นในตัว",
+    "zhHans": "耐磨自润滑",
+    "zhHant": "耐磨自潤滑"
+  },
+  "material_skd11_spec": {
+    "en": "HRC 58–62 quenched and tempered / precision punches",
+    "ja": "焼入焼戻し HRC 58–62／精密プレスパンチ",
+    "ko": "담금질·뜨임 HRC 58–62 / 정밀 프레스 펀치",
+    "th": "ชุบแข็งและอบคืนตัว HRC 58–62 / พันช์ปั๊มความแม่นยำสูง",
+    "zhHans": "淬火回火硬度 HRC 58-62 / 精密冲压冲头",
+    "zhHant": "淬火回火硬度 HRC 58-62 / 精密沖壓沖頭"
+  },
+  "material_skd11_trait": {
+    "en": "Very high wear resistance",
+    "ja": "極めて高い耐摩耗性",
+    "ko": "초고내마모성",
+    "th": "ทนการสึกหรอสูงมาก",
+    "zhHans": "极高耐磨性",
+    "zhHant": "極高耐磨性"
+  },
   "material_specs_card": {
     "en": "Material Specs Card",
     "ja": "材料仕様カード",
@@ -2566,6 +3774,22 @@
     "th": "คุณสมบัติวัสดุ",
     "zhHans": "外观材质",
     "zhHant": "外觀材質"
+  },
+  "material_sus304_spec": {
+    "en": "Tensile ≥520 MPa / brushed and passivated",
+    "ja": "引張強さ ≥520 MPa／ヘアライン・不動態化",
+    "ko": "인장강도 ≥520 MPa / 헤어라인·부동태 처리",
+    "th": "ความต้านแรงดึง ≥520 MPa / ขัดลายเส้นและพาสซิเวต",
+    "zhHans": "抗拉强度 ≥520 MPa / 表面拉丝钝化处理",
+    "zhHant": "抗拉強度 ≥520 MPa / 表面拉絲鈍化處理"
+  },
+  "material_sus304_trait": {
+    "en": "Austenitic, corrosion-resistant",
+    "ja": "オーステナイト系・耐食",
+    "ko": "오스테나이트계 내식",
+    "th": "ออสเทนนิติก ทนการกัดกร่อน",
+    "zhHans": "奥氏体防蚀",
+    "zhHant": "奧氏體防蝕"
   },
   "math_calc": {
     "en": "Math Calculator",
@@ -2598,6 +3822,30 @@
     "th": "รูปแบบสูตรไม่ถูกต้อง",
     "zhHans": "算式格式无效或无法计算",
     "zhHant": "算式格式無效或無法計算"
+  },
+  "math_error_bad_expression": {
+    "en": "Can’t read that expression",
+    "ja": "この式は解釈できません",
+    "ko": "이 수식을 이해할 수 없습니다",
+    "th": "ไม่เข้าใจนิพจน์นี้",
+    "zhHans": "看不懂这个算式",
+    "zhHant": "看不懂這個算式"
+  },
+  "math_error_empty": {
+    "en": "Enter an expression",
+    "ja": "式を入力してください",
+    "ko": "수식을 입력하세요",
+    "th": "กรุณาใส่นิพจน์",
+    "zhHans": "算式不可为空",
+    "zhHant": "算式不可為空"
+  },
+  "math_error_not_finite": {
+    "en": "No finite result (division by zero?)",
+    "ja": "有限の結果になりません（0 除算？）",
+    "ko": "유한한 결과가 없습니다 (0으로 나눔?)",
+    "th": "ไม่ได้ผลลัพธ์จำกัด (หารด้วยศูนย์?)",
+    "zhHans": "算不出有限的结果（可能除以零）",
+    "zhHant": "算不出有限的結果（可能除以零）"
   },
   "math_expression": {
     "en": "Enter formula (e.g. 125 * 8 + 45 or sqrt(144))",
@@ -2767,6 +4015,22 @@
     "zhHans": "缩小窗口",
     "zhHant": "縮小視窗"
   },
+  "mode_draw": {
+    "en": "Draw",
+    "ja": "手書き",
+    "ko": "필기",
+    "th": "เขียน",
+    "zhHans": "手写",
+    "zhHant": "手寫"
+  },
+  "mode_type": {
+    "en": "Type",
+    "ja": "入力",
+    "ko": "입력",
+    "th": "พิมพ์",
+    "zhHans": "打字",
+    "zhHant": "打字"
+  },
   "model3d_count": {
     "en": "3D",
     "ja": "3D",
@@ -2798,6 +4062,14 @@
     "th": "โมเดล 3 มิติ",
     "zhHans": "3D模型",
     "zhHant": "3D模型"
+  },
+  "model_scale": {
+    "en": "Scale",
+    "ja": "スケール",
+    "ko": "크기",
+    "th": "ขนาด",
+    "zhHans": "缩放",
+    "zhHant": "縮放"
   },
   "model_title": {
     "en": "Object Title",
@@ -2854,6 +4126,14 @@
     "th": "สร้างโฟลเดอร์ย่อยใหม่",
     "zhHans": "新建子文件夹",
     "zhHant": "新增子資料夾"
+  },
+  "next_page": {
+    "en": "Next page",
+    "ja": "次のページ",
+    "ko": "다음 페이지",
+    "th": "หน้าถัดไป",
+    "zhHans": "下一页",
+    "zhHant": "下一頁"
   },
   "no_account_needed": {
     "en": "No account, and no server of ours",
@@ -2942,6 +4222,22 @@
     "th": "ชื่อบันทึก",
     "zhHans": "笔记标题",
     "zhHant": "筆記標題"
+  },
+  "notebook_empty": {
+    "en": "No notes yet. Tap “New note” to start.",
+    "ja": "まだノートがありません。「新規ノート」から始めましょう。",
+    "ko": "아직 노트가 없습니다. ‘새 노트’로 시작하세요.",
+    "th": "ยังไม่มีโน้ต แตะ “โน้ตใหม่” เพื่อเริ่ม",
+    "zhHans": "还没有任何笔记。点「新增笔记」开始。",
+    "zhHant": "還沒有任何筆記。點「新增筆記」開始。"
+  },
+  "nothing_to_refine": {
+    "en": "Nothing to refine — draw something first",
+    "ja": "補正できる筆跡がありません。先に何か書いてください",
+    "ko": "보정할 필기가 없습니다. 먼저 무언가를 써 보세요",
+    "th": "ยังไม่มีลายเส้นให้ปรับแต่ง — ลองเขียนอะไรสักอย่างก่อน",
+    "zhHans": "没有可修饰的笔迹 —— 请先写点东西",
+    "zhHant": "沒有可修飾的筆跡 —— 請先寫點東西"
   },
   "numbered_list": {
     "en": "Numbered List",
@@ -3095,6 +4391,14 @@
     "zhHans": "打开链接",
     "zhHant": "開啟連結"
   },
+  "open_note": {
+    "en": "Open",
+    "ja": "開く",
+    "ko": "열기",
+    "th": "เปิด",
+    "zhHans": "开启",
+    "zhHant": "開啟"
+  },
   "open_record_folder": {
     "en": "Open Kairumo Record Folder",
     "ja": "Kairumo Record フォルダを開く",
@@ -3118,6 +4422,30 @@
     "th": "ขยายความยาวของผืนผ้าใบแล้ว (+800pt)",
     "zhHans": "已向下延长画布长度 (+800pt)",
     "zhHant": "已向下延長畫布長度 (+800pt)"
+  },
+  "page_mode": {
+    "en": "Page mode",
+    "ja": "ページ表示",
+    "ko": "페이지 모드",
+    "th": "โหมดหน้า",
+    "zhHans": "页面模式",
+    "zhHant": "頁面模式"
+  },
+  "page_mode_continuous": {
+    "en": "Continuous",
+    "ja": "連続ページ",
+    "ko": "연속 페이지",
+    "th": "เลื่อนต่อเนื่อง",
+    "zhHans": "连续页面",
+    "zhHant": "連續頁面"
+  },
+  "page_mode_single": {
+    "en": "Single page",
+    "ja": "単一ページ",
+    "ko": "한 페이지",
+    "th": "หน้าเดียว",
+    "zhHans": "整页",
+    "zhHant": "整頁"
   },
   "page_model_done": {
     "en": "%@ notebooks repaginated",
@@ -3310,6 +4638,14 @@
     "th": "ดูตัวอย่างแผนภูมิ",
     "zhHans": "图表实时预览",
     "zhHant": "圖表即時預覽"
+  },
+  "previous_page": {
+    "en": "Previous page",
+    "ja": "前のページ",
+    "ko": "이전 페이지",
+    "th": "หน้าก่อน",
+    "zhHans": "上一页",
+    "zhHant": "上一頁"
   },
   "print_note": {
     "en": "Print Notebook",
@@ -3591,6 +4927,14 @@
     "zhHans": "重置",
     "zhHant": "重設"
   },
+  "resize_shape": {
+    "en": "Resize shape",
+    "ja": "図形のサイズを変更",
+    "ko": "도형 크기 조절",
+    "th": "ปรับขนาดรูปทรง",
+    "zhHans": "调整形状大小",
+    "zhHant": "調整形狀大小"
+  },
   "resize_text_box": {
     "en": "Drag to resize the text box",
     "ja": "ドラッグしてテキストボックスのサイズを変更",
@@ -3799,6 +5143,14 @@
     "zhHans": "搜索机构、3C、零件、规格、色彩...",
     "zhHant": "搜尋機構、3C、零件、規格、色彩..."
   },
+  "search_no_result": {
+    "en": "No matching notes",
+    "ja": "一致するノートがありません",
+    "ko": "일치하는 노트가 없습니다",
+    "th": "ไม่พบโน้ตที่ตรงกัน",
+    "zhHans": "找不到符合的笔记",
+    "zhHant": "找不到符合的筆記"
+  },
   "search_placeholder": {
     "en": "Search note titles, drafts, or transcripts…",
     "ja": "ノートのタイトル、下書き、内容を検索…",
@@ -3872,84 +5224,92 @@
     "zhHant": "選擇樣板"
   },
   "shape_edit": {
-    "zhHant": "編修形狀",
     "en": "Edit Shape",
-    "zhHans": "编辑形状",
     "ja": "図形を編集",
     "ko": "도형 편집",
-    "th": "แก้ไขรูปร่าง"
+    "th": "แก้ไขรูปร่าง",
+    "zhHans": "编辑形状",
+    "zhHant": "編修形狀"
   },
   "shape_fill": {
-    "zhHant": "填滿顏色",
     "en": "Fill",
-    "zhHans": "填充颜色",
     "ja": "塗りつぶし",
     "ko": "채우기",
-    "th": "สีพื้น"
+    "th": "สีพื้น",
+    "zhHans": "填充颜色",
+    "zhHant": "填滿顏色"
   },
   "shape_label": {
-    "zhHant": "標籤文字",
     "en": "Label",
-    "zhHans": "标签文字",
     "ja": "ラベル",
     "ko": "레이블",
-    "th": "ป้ายกำกับ"
+    "th": "ป้ายกำกับ",
+    "zhHans": "标签文字",
+    "zhHant": "標籤文字"
   },
   "shape_line_width": {
-    "zhHant": "線條粗細",
     "en": "Line Width",
-    "zhHans": "线条粗细",
     "ja": "線の太さ",
     "ko": "선 두께",
-    "th": "ความหนาเส้น"
+    "th": "ความหนาเส้น",
+    "zhHans": "线条粗细",
+    "zhHant": "線條粗細"
   },
   "shape_node_count": {
-    "zhHant": "%@ 個節點",
     "en": "%@ nodes",
-    "zhHans": "%@ 个节点",
     "ja": "%@ 個のノード",
     "ko": "노드 %@개",
-    "th": "%@ โหนด"
+    "th": "%@ โหนด",
+    "zhHans": "%@ 个节点",
+    "zhHant": "%@ 個節點"
   },
   "shape_section_basic": {
-    "zhHant": "基本形狀",
     "en": "Basic Shapes",
-    "zhHans": "基本形状",
     "ja": "基本図形",
     "ko": "기본 도형",
-    "th": "รูปร่างพื้นฐาน"
+    "th": "รูปร่างพื้นฐาน",
+    "zhHans": "基本形状",
+    "zhHant": "基本形狀"
   },
   "shape_section_flowchart": {
-    "zhHant": "流程圖符號（ISO 5807）",
     "en": "Flowchart Symbols (ISO 5807)",
-    "zhHans": "流程图符号（ISO 5807）",
     "ja": "フローチャート記号（ISO 5807）",
     "ko": "순서도 기호(ISO 5807)",
-    "th": "สัญลักษณ์ผังงาน (ISO 5807)"
+    "th": "สัญลักษณ์ผังงาน (ISO 5807)",
+    "zhHans": "流程图符号（ISO 5807）",
+    "zhHant": "流程圖符號（ISO 5807）"
   },
   "shape_section_templates": {
-    "zhHant": "範本",
     "en": "Templates",
-    "zhHans": "模板",
     "ja": "テンプレート",
     "ko": "템플릿",
-    "th": "แม่แบบ"
+    "th": "แม่แบบ",
+    "zhHans": "模板",
+    "zhHant": "範本"
   },
   "shape_stroke": {
-    "zhHant": "線條顏色",
     "en": "Stroke",
-    "zhHans": "线条颜色",
     "ja": "線の色",
     "ko": "선 색상",
-    "th": "สีเส้น"
+    "th": "สีเส้น",
+    "zhHans": "线条颜色",
+    "zhHant": "線條顏色"
   },
   "shape_studio": {
-    "zhHant": "形狀與流程圖",
     "en": "Shapes & Flowcharts",
-    "zhHans": "形状与流程图",
     "ja": "図形とフローチャート",
     "ko": "도형 및 순서도",
-    "th": "รูปร่างและผังงาน"
+    "th": "รูปร่างและผังงาน",
+    "zhHans": "形状与流程图",
+    "zhHant": "形狀與流程圖"
+  },
+  "shape_style": {
+    "en": "Shape style",
+    "ja": "図形スタイル",
+    "ko": "도형 스타일",
+    "th": "สไตล์รูปทรง",
+    "zhHans": "形状样式",
+    "zhHant": "形狀樣式"
   },
   "share_invite_link": {
     "en": "Share Invite Link",
@@ -4006,6 +5366,14 @@
     "th": "เรียงตามวันที่แก้ไข",
     "zhHans": "按修改时间排序",
     "zhHant": "依修改時間排序"
+  },
+  "sort_by_pages": {
+    "en": "Sort by pages",
+    "ja": "ページ数順",
+    "ko": "페이지 수순",
+    "th": "เรียงตามจำนวนหน้า",
+    "zhHans": "依页数排序",
+    "zhHant": "依頁數排序"
   },
   "sort_by_title": {
     "en": "Sort by Name",
@@ -4183,6 +5551,14 @@
     "zhHans": "数据存储位置",
     "zhHant": "資料儲存位置"
   },
+  "stroke_color": {
+    "en": "Stroke color",
+    "ja": "線の色",
+    "ko": "선 색",
+    "th": "สีเส้น",
+    "zhHans": "线条颜色",
+    "zhHant": "線條顏色"
+  },
   "stroke_width": {
     "en": "Stroke Width",
     "ja": "線の太さ",
@@ -4320,116 +5696,116 @@
     "zhHant": "系統診斷與版本資訊"
   },
   "table_add_column": {
-    "zhHant": "新增欄",
     "en": "Add Column",
-    "zhHans": "新增列",
     "ja": "列を追加",
     "ko": "열 추가",
-    "th": "เพิ่มคอลัมน์"
+    "th": "เพิ่มคอลัมน์",
+    "zhHans": "新增列",
+    "zhHant": "新增欄"
   },
   "table_add_row": {
-    "zhHant": "新增列",
     "en": "Add Row",
-    "zhHans": "新增行",
     "ja": "行を追加",
     "ko": "행 추가",
-    "th": "เพิ่มแถว"
+    "th": "เพิ่มแถว",
+    "zhHans": "新增行",
+    "zhHant": "新增列"
   },
   "table_delete_column": {
-    "zhHant": "刪除欄",
     "en": "Delete Column",
-    "zhHans": "删除列",
     "ja": "列を削除",
     "ko": "열 삭제",
-    "th": "ลบคอลัมน์"
+    "th": "ลบคอลัมน์",
+    "zhHans": "删除列",
+    "zhHant": "刪除欄"
   },
   "table_delete_row": {
-    "zhHant": "刪除列",
     "en": "Delete Row",
-    "zhHans": "删除行",
     "ja": "行を削除",
     "ko": "행 삭제",
-    "th": "ลบแถว"
+    "th": "ลบแถว",
+    "zhHans": "删除行",
+    "zhHant": "刪除列"
   },
   "table_edit": {
-    "zhHant": "編修表格",
     "en": "Edit Table",
-    "zhHans": "编辑表格",
     "ja": "表を編集",
     "ko": "표 편집",
-    "th": "แก้ไขตาราง"
+    "th": "แก้ไขตาราง",
+    "zhHans": "编辑表格",
+    "zhHant": "編修表格"
   },
   "table_font_size": {
-    "zhHant": "文字大小",
     "en": "Font Size",
-    "zhHans": "文字大小",
     "ja": "文字サイズ",
     "ko": "글자 크기",
-    "th": "ขนาดตัวอักษร"
+    "th": "ขนาดตัวอักษร",
+    "zhHans": "文字大小",
+    "zhHant": "文字大小"
   },
   "table_header_row": {
-    "zhHant": "第一列為表頭",
     "en": "Header Row",
-    "zhHans": "第一行为表头",
     "ja": "先頭行を見出しに",
     "ko": "머리글 행",
-    "th": "แถวหัวตาราง"
+    "th": "แถวหัวตาราง",
+    "zhHans": "第一行为表头",
+    "zhHant": "第一列為表頭"
   },
   "table_insert": {
-    "zhHant": "插入表格",
     "en": "Insert Table",
-    "zhHans": "插入表格",
     "ja": "表を挿入",
     "ko": "표 삽입",
-    "th": "แทรกตาราง"
+    "th": "แทรกตาราง",
+    "zhHans": "插入表格",
+    "zhHant": "插入表格"
   },
   "table_merge_down": {
-    "zhHant": "向下合併",
     "en": "Merge Down",
-    "zhHans": "向下合并",
     "ja": "下へ結合",
     "ko": "아래쪽 병합",
-    "th": "ผสานลงล่าง"
+    "th": "ผสานลงล่าง",
+    "zhHans": "向下合并",
+    "zhHant": "向下合併"
   },
   "table_merge_right": {
-    "zhHant": "向右合併",
     "en": "Merge Right",
-    "zhHans": "向右合并",
     "ja": "右へ結合",
     "ko": "오른쪽 병합",
-    "th": "ผสานไปทางขวา"
+    "th": "ผสานไปทางขวา",
+    "zhHans": "向右合并",
+    "zhHant": "向右合併"
   },
   "table_studio": {
-    "zhHant": "表格",
     "en": "Table",
-    "zhHans": "表格",
     "ja": "表",
     "ko": "표",
-    "th": "ตาราง"
+    "th": "ตาราง",
+    "zhHans": "表格",
+    "zhHant": "表格"
   },
   "table_unmerge": {
-    "zhHant": "取消合併",
     "en": "Unmerge",
-    "zhHans": "取消合并",
     "ja": "結合を解除",
     "ko": "병합 해제",
-    "th": "ยกเลิกการผสาน"
+    "th": "ยกเลิกการผสาน",
+    "zhHans": "取消合并",
+    "zhHant": "取消合併"
   },
   "table_update": {
-    "zhHant": "更新表格",
     "en": "Update Table",
-    "zhHans": "更新表格",
     "ja": "表を更新",
     "ko": "표 업데이트",
-    "th": "อัปเดตตาราง"
+    "th": "อัปเดตตาราง",
+    "zhHans": "更新表格",
+    "zhHant": "更新表格"
   },
   "table_width": {
-    "zhHant": "表格寬度",
     "en": "Table Width",
-    "zhHans": "表格宽度",
     "ja": "表の幅",
     "ko": "표 너비",
-    "th": "ความกว้างตาราง"
+    "th": "ความกว้างตาราง",
+    "zhHans": "表格宽度",
+    "zhHant": "表格寬度"
   },
   "tap_to_place_pin": {
     "en": "Tap on canvas to place pin",
@@ -4542,6 +5918,38 @@
     "th": "ทั่วไป",
     "zhHans": "通用基础",
     "zhHant": "通用基礎"
+  },
+  "theme_palette_bauhaus": {
+    "en": "Bauhaus Industrial",
+    "ja": "バウハウス インダストリアル",
+    "ko": "바우하우스 인더스트리얼",
+    "th": "เบาเฮาส์ อินดัสเทรียล",
+    "zhHans": "包豪斯复古工业",
+    "zhHant": "包浩斯復古工業"
+  },
+  "theme_palette_cyberpunk": {
+    "en": "Cyberpunk Neon",
+    "ja": "サイバーパンク ネオン",
+    "ko": "사이버펑크 네온",
+    "th": "ไซเบอร์พังก์ นีออน",
+    "zhHans": "赛博霓虹",
+    "zhHant": "賽博霓虹"
+  },
+  "theme_palette_morandi": {
+    "en": "Morandi Serene",
+    "ja": "モランディ グレージュ",
+    "ko": "모란디 뮤트 톤",
+    "th": "โทนมอรันดี",
+    "zhHans": "莫兰迪高级灰",
+    "zhHant": "莫蘭迪高級灰"
+  },
+  "theme_palette_trend": {
+    "en": "Pantone Trend Palette",
+    "ja": "パントン トレンドカラー",
+    "ko": "팬톤 트렌드 컬러",
+    "th": "พาเลตต์เทรนด์ Pantone",
+    "zhHans": "Pantone 季节潮流色",
+    "zhHant": "Pantone 季節潮流色"
   },
   "theme_tools": {
     "en": "Theme Tools",
@@ -4951,6 +6359,30 @@
     "zhHans": "版本号",
     "zhHant": "版本號"
   },
+  "wireframe_button": {
+    "en": "Primary action button (CTA)",
+    "ja": "主要アクションボタン（CTA）",
+    "ko": "주요 행동 버튼 (CTA)",
+    "th": "ปุ่มหลัก (CTA)",
+    "zhHans": "主要行动按钮 (CTA)",
+    "zhHant": "主要行動按鈕 (CTA)"
+  },
+  "wireframe_card": {
+    "en": "Content card",
+    "ja": "コンテンツカード",
+    "ko": "콘텐츠 카드",
+    "th": "การ์ดเนื้อหา",
+    "zhHans": "内容信息卡片",
+    "zhHant": "內容資訊卡片"
+  },
+  "wireframe_input": {
+    "en": "Search input field",
+    "ja": "検索入力フィールド",
+    "ko": "검색 입력 필드",
+    "th": "ช่องค้นหา",
+    "zhHans": "搜索输入文本框",
+    "zhHant": "搜尋輸入文字框"
+  },
   "wireframe_kit": {
     "en": "UI Wireframes",
     "ja": "UI ワイヤーフレーム",
@@ -4959,901 +6391,13 @@
     "zhHans": "UI 原型线框",
     "zhHant": "UI 原型線框"
   },
-  "word_studio": {
-    "en": "Word Text Studio",
-    "ja": "文書テキスト編集",
-    "ko": "워드 텍스트 편집",
-    "th": "การแก้ไขข้อความ Word",
-    "zhHans": "Word文字编修",
-    "zhHant": "Word文字編修"
-  },
-  "shape_style": {
-    "zhHant": "形狀樣式",
-    "en": "Shape style",
-    "zhHans": "形状样式",
-    "ja": "図形スタイル",
-    "ko": "도형 스타일",
-    "th": "สไตล์รูปทรง"
-  },
-  "stroke_color": {
-    "zhHant": "線條顏色",
-    "en": "Stroke color",
-    "zhHans": "线条颜色",
-    "ja": "線の色",
-    "ko": "선 색",
-    "th": "สีเส้น"
-  },
-  "fill_color": {
-    "zhHant": "填滿顏色",
-    "en": "Fill color",
-    "zhHans": "填充颜色",
-    "ja": "塗りつぶし",
-    "ko": "채우기 색",
-    "th": "สีพื้น"
-  },
-  "line_width": {
-    "zhHant": "線條粗細",
-    "en": "Line width",
-    "zhHans": "线条粗细",
-    "ja": "線の太さ",
-    "ko": "선 두께",
-    "th": "ความหนาเส้น"
-  },
-  "resize_shape": {
-    "zhHant": "調整形狀大小",
-    "en": "Resize shape",
-    "zhHans": "调整形状大小",
-    "ja": "図形のサイズを変更",
-    "ko": "도형 크기 조절",
-    "th": "ปรับขนาดรูปทรง"
-  },
-  "insert_text_box_hint": {
-    "zhHant": "點兩下畫布空白處新增文字方塊",
-    "en": "Double-tap empty canvas to add a text box",
-    "zhHans": "双击画布空白处新增文字方块",
-    "ja": "空白部分をダブルタップでテキストボックスを追加",
-    "ko": "빈 캔버스를 두 번 탭하면 텍스트 상자 추가",
-    "th": "แตะสองครั้งบนพื้นที่ว่างเพื่อเพิ่มกล่องข้อความ"
-  },
-  "dimension_callout_linear": {
-    "zhHant": "線性長度標註",
-    "en": "Linear dimension",
-    "zhHans": "线性长度标注",
-    "ja": "直線寸法",
-    "ko": "선형 치수",
-    "th": "บอกขนาดเชิงเส้น"
-  },
-  "dimension_callout_diameter": {
-    "zhHant": "外徑圓標註",
-    "en": "Diameter callout",
-    "zhHans": "外径圆标注",
-    "ja": "直径記号",
-    "ko": "지름 표기",
-    "th": "บอกเส้นผ่านศูนย์กลาง"
-  },
-  "dimension_callout_radius": {
-    "zhHant": "圓弧半徑標註",
-    "en": "Radius callout",
-    "zhHans": "圆弧半径标注",
-    "ja": "半径記号",
-    "ko": "반지름 표기",
-    "th": "บอกรัศมี"
-  },
-  "dimension_callout_flatness": {
-    "zhHant": "平面度公差",
-    "en": "Flatness tolerance",
-    "zhHans": "平面度公差",
-    "ja": "平面度公差",
-    "ko": "평면도 공차",
-    "th": "ค่าความราบ"
-  },
-  "dimension_callout_balloon1": {
-    "zhHant": "零件球標 ①",
-    "en": "Part balloon ①",
-    "zhHans": "零件球标 ①",
-    "ja": "部品バルーン ①",
-    "ko": "부품 번호 ①",
-    "th": "หมายเลขชิ้นส่วน ①"
-  },
-  "dimension_callout_balloon2": {
-    "zhHant": "零件球標 ②",
-    "en": "Part balloon ②",
-    "zhHans": "零件球标 ②",
-    "ja": "部品バルーン ②",
-    "ko": "부품 번호 ②",
-    "th": "หมายเลขชิ้นส่วน ②"
-  },
-  "layer_kind_image": {
-    "zhHant": "圖片",
-    "en": "Image",
-    "zhHans": "图片",
-    "ja": "画像",
-    "ko": "이미지",
-    "th": "รูปภาพ"
-  },
-  "layer_kind_text": {
-    "zhHant": "文字方塊",
-    "en": "Text box",
-    "zhHans": "文字方块",
-    "ja": "テキストボックス",
-    "ko": "텍스트 상자",
-    "th": "กล่องข้อความ"
-  },
-  "layer_kind_table": {
-    "zhHant": "表格",
-    "en": "Table",
-    "zhHans": "表格",
-    "ja": "表",
-    "ko": "표",
-    "th": "ตาราง"
-  },
-  "layer_kind_shape": {
-    "zhHant": "形狀",
-    "en": "Shape",
-    "zhHans": "形状",
-    "ja": "図形",
-    "ko": "도형",
-    "th": "รูปทรง"
-  },
-  "layer_kind_link": {
-    "zhHant": "連結卡片",
-    "en": "Link card",
-    "zhHans": "链接卡片",
-    "ja": "リンクカード",
-    "ko": "링크 카드",
-    "th": "การ์ดลิงก์"
-  },
-  "layer_kind_model3d": {
-    "zhHant": "3D 模型",
-    "en": "3D model",
-    "zhHans": "3D 模型",
-    "ja": "3D モデル",
-    "ko": "3D 모델",
-    "th": "โมเดล 3 มิติ"
-  },
-  "layer_kind_pin": {
-    "zhHant": "討論圖釘",
-    "en": "Comment pin",
-    "zhHans": "讨论图钉",
-    "ja": "コメントピン",
-    "ko": "댓글 핀",
-    "th": "หมุดความคิดเห็น"
-  },
-  "ink_input_debug": {
-    "zhHant": "顯示輸入診斷",
-    "en": "Show input diagnostics",
-    "zhHans": "显示输入诊断",
-    "ja": "入力診断を表示",
-    "ko": "입력 진단 표시",
-    "th": "แสดงการวินิจฉัยอินพุต"
-  },
-  "page_mode_single": {
-    "zhHant": "整頁",
-    "en": "Single page",
-    "zhHans": "整页",
-    "ja": "単一ページ",
-    "ko": "한 페이지",
-    "th": "หน้าเดียว"
-  },
-  "page_mode_continuous": {
-    "zhHant": "連續頁面",
-    "en": "Continuous",
-    "zhHans": "连续页面",
-    "ja": "連続ページ",
-    "ko": "연속 페이지",
-    "th": "เลื่อนต่อเนื่อง"
-  },
-  "page_mode": {
-    "zhHant": "頁面模式",
-    "en": "Page mode",
-    "zhHans": "页面模式",
-    "ja": "ページ表示",
-    "ko": "페이지 모드",
-    "th": "โหมดหน้า"
-  },
-  "continue_working": {
-    "zhHant": "繼續",
-    "en": "Continue",
-    "zhHans": "继续",
-    "ja": "続きから",
-    "ko": "이어서",
-    "th": "ทำต่อ"
-  },
-  "notebook_empty": {
-    "zhHant": "還沒有任何筆記。點「新增筆記」開始。",
-    "en": "No notes yet. Tap “New note” to start.",
-    "zhHans": "还没有任何笔记。点「新增笔记」开始。",
-    "ja": "まだノートがありません。「新規ノート」から始めましょう。",
-    "ko": "아직 노트가 없습니다. ‘새 노트’로 시작하세요.",
-    "th": "ยังไม่มีโน้ต แตะ “โน้ตใหม่” เพื่อเริ่ม"
-  },
-  "delete_notebook_confirm": {
-    "zhHant": "確定要刪除「%@」嗎？這本筆記的所有內容都會消失，而且救不回來。",
-    "en": "Delete “%@”? Everything in this note will be gone, and it cannot be undone.",
-    "zhHans": "确定要删除「%@」吗？这本笔记的所有内容都会消失，而且救不回来。",
-    "ja": "「%@」を削除しますか？このノートの内容はすべて消え、元に戻せません。",
-    "ko": "‘%@’을(를) 삭제할까요? 이 노트의 모든 내용이 사라지며 되돌릴 수 없습니다.",
-    "th": "ลบ “%@” ไหม? เนื้อหาทั้งหมดจะหายไปและกู้คืนไม่ได้"
-  },
-  "sort_by_pages": {
-    "zhHant": "依頁數排序",
-    "en": "Sort by pages",
-    "zhHans": "依页数排序",
-    "ja": "ページ数順",
-    "ko": "페이지 수순",
-    "th": "เรียงตามจำนวนหน้า"
-  },
-  "open_note": {
-    "zhHant": "開啟",
-    "en": "Open",
-    "zhHans": "开启",
-    "ja": "開く",
-    "ko": "열기",
-    "th": "เปิด"
-  },
-  "back_to_home": {
-    "zhHant": "回到首頁",
-    "en": "Back to home",
-    "zhHans": "回到首页",
-    "ja": "ホームに戻る",
-    "ko": "홈으로",
-    "th": "กลับหน้าหลัก"
-  },
-  "search_no_result": {
-    "zhHant": "找不到符合的筆記",
-    "en": "No matching notes",
-    "zhHans": "找不到符合的笔记",
-    "ja": "一致するノートがありません",
-    "ko": "일치하는 노트가 없습니다",
-    "th": "ไม่พบโน้ตที่ตรงกัน"
-  },
-  "previous_page": {
-    "zhHant": "上一頁",
-    "en": "Previous page",
-    "zhHans": "上一页",
-    "ja": "前のページ",
-    "ko": "이전 페이지",
-    "th": "หน้าก่อน"
-  },
-  "next_page": {
-    "zhHant": "下一頁",
-    "en": "Next page",
-    "zhHans": "下一页",
-    "ja": "次のページ",
-    "ko": "다음 페이지",
-    "th": "หน้าถัดไป"
-  },
-  "delete_page_confirm": {
-    "zhHant": "確定要刪除第 %@ 頁嗎？這一頁的手寫與物件都會消失。",
-    "en": "Delete page %@? Its handwriting and objects will be gone.",
-    "zhHans": "确定要删除第 %@ 页吗？这一页的手写与物件都会消失。",
-    "ja": "%@ ページ目を削除しますか？そのページの手書きとオブジェクトは消えます。",
-    "ko": "%@ 페이지를 삭제할까요? 해당 페이지의 필기와 객체가 사라집니다.",
-    "th": "ลบหน้า %@ ไหม? ลายมือและวัตถุในหน้านี้จะหายไป"
-  },
-  "mode_draw": {
-    "zhHant": "手寫",
-    "en": "Draw",
-    "zhHans": "手写",
-    "ja": "手書き",
-    "ko": "필기",
-    "th": "เขียน"
-  },
-  "mode_type": {
-    "zhHant": "打字",
-    "en": "Type",
-    "zhHans": "打字",
-    "ja": "入力",
-    "ko": "입력",
-    "th": "พิมพ์"
-  },
-  "image_style": {
-    "zhHant": "圖片樣式",
-    "en": "Image style",
-    "zhHans": "图片样式",
-    "ja": "画像スタイル",
-    "ko": "이미지 스타일",
-    "th": "สไตล์รูปภาพ"
-  },
-  "image_corner_radius": {
-    "zhHant": "圓角",
-    "en": "Corner radius",
-    "zhHans": "圆角",
-    "ja": "角の丸み",
-    "ko": "모서리 둥글기",
-    "th": "ความมนมุม"
-  },
-  "err_image_read_failed": {
-    "zhHant": "讀不到這張圖片",
-    "en": "Could not read that image",
-    "zhHans": "读不到这张图片",
-    "ja": "その画像を読み込めません",
-    "ko": "이미지를 읽을 수 없습니다",
-    "th": "อ่านรูปภาพนี้ไม่ได้"
-  },
-  "align_objects": {
-    "zhHant": "對齊",
-    "en": "Align",
-    "zhHans": "对齐",
-    "ja": "整列",
-    "ko": "정렬",
-    "th": "จัดแนว"
-  },
-  "align_left": {
-    "zhHant": "靠左對齊",
-    "en": "Align left",
-    "zhHans": "靠左对齐",
-    "ja": "左揃え",
-    "ko": "왼쪽 정렬",
-    "th": "ชิดซ้าย"
-  },
-  "align_center_h": {
-    "zhHant": "水平置中",
-    "en": "Center horizontally",
-    "zhHans": "水平居中",
-    "ja": "左右中央",
-    "ko": "가로 가운데",
-    "th": "กึ่งกลางแนวนอน"
-  },
-  "align_right": {
-    "zhHant": "靠右對齊",
-    "en": "Align right",
-    "zhHans": "靠右对齐",
-    "ja": "右揃え",
-    "ko": "오른쪽 정렬",
-    "th": "ชิดขวา"
-  },
-  "align_top": {
-    "zhHant": "靠上對齊",
-    "en": "Align top",
-    "zhHans": "靠上对齐",
-    "ja": "上揃え",
-    "ko": "위쪽 정렬",
-    "th": "ชิดบน"
-  },
-  "align_middle_v": {
-    "zhHant": "垂直置中",
-    "en": "Center vertically",
-    "zhHans": "垂直居中",
-    "ja": "上下中央",
-    "ko": "세로 가운데",
-    "th": "กึ่งกลางแนวตั้ง"
-  },
-  "align_bottom": {
-    "zhHant": "靠下對齊",
-    "en": "Align bottom",
-    "zhHans": "靠下对齐",
-    "ja": "下揃え",
-    "ko": "아래쪽 정렬",
-    "th": "ชิดล่าง"
-  },
-  "align_distribute_h": {
-    "zhHant": "水平等距",
-    "en": "Distribute horizontally",
-    "zhHans": "水平等距",
-    "ja": "左右に等間隔",
-    "ko": "가로 균등 배치",
-    "th": "กระจายแนวนอน"
-  },
-  "align_distribute_v": {
-    "zhHant": "垂直等距",
-    "en": "Distribute vertically",
-    "zhHans": "垂直等距",
-    "ja": "上下に等間隔",
-    "ko": "세로 균등 배치",
-    "th": "กระจายแนวตั้ง"
-  },
-  "align_needs_two": {
-    "zhHant": "選兩個以上的物件才能對齊",
-    "en": "Select two or more objects to align",
-    "zhHans": "选两个以上的物件才能对齐",
-    "ja": "整列するには 2 つ以上選択してください",
-    "ko": "정렬하려면 두 개 이상 선택하세요",
-    "th": "เลือกตั้งแต่ 2 ชิ้นขึ้นไปเพื่อจัดแนว"
-  },
-  "math_error_empty": {
-    "zhHant": "算式不可為空",
-    "en": "Enter an expression",
-    "zhHans": "算式不可为空",
-    "ja": "式を入力してください",
-    "ko": "수식을 입력하세요",
-    "th": "กรุณาใส่นิพจน์"
-  },
-  "math_error_bad_expression": {
-    "zhHant": "看不懂這個算式",
-    "en": "Can’t read that expression",
-    "zhHans": "看不懂这个算式",
-    "ja": "この式は解釈できません",
-    "ko": "이 수식을 이해할 수 없습니다",
-    "th": "ไม่เข้าใจนิพจน์นี้"
-  },
-  "math_error_not_finite": {
-    "zhHant": "算不出有限的結果（可能除以零）",
-    "en": "No finite result (division by zero?)",
-    "zhHans": "算不出有限的结果（可能除以零）",
-    "ja": "有限の結果になりません（0 除算？）",
-    "ko": "유한한 결과가 없습니다 (0으로 나눔?)",
-    "th": "ไม่ได้ผลลัพธ์จำกัด (หารด้วยศูนย์?)"
-  },
-  "hue_oat_gray": {
-    "zhHant": "燕麥灰",
-    "en": "Oat Grey",
-    "zhHans": "燕麦灰",
-    "ja": "オートグレー",
-    "ko": "오트 그레이",
-    "th": "เทาโอ๊ต"
-  },
-  "hue_sage_green": {
-    "zhHant": "鼠尾綠",
-    "en": "Sage Green",
-    "zhHans": "鼠尾绿",
-    "ja": "セージグリーン",
-    "ko": "세이지 그린",
-    "th": "เขียวเสจ"
-  },
-  "hue_haze_blue": {
-    "zhHant": "霧霾藍",
-    "en": "Haze Blue",
-    "zhHans": "雾霾蓝",
-    "ja": "ヘイズブルー",
-    "ko": "헤이즈 블루",
-    "th": "ฟ้าหมอก"
-  },
-  "hue_milk_tea": {
-    "zhHant": "奶茶駝",
-    "en": "Milk Tea",
-    "zhHans": "奶茶驼",
-    "ja": "ミルクティー",
-    "ko": "밀크티",
-    "th": "ชานม"
-  },
-  "hue_warm_almond": {
-    "zhHant": "暖杏色",
-    "en": "Warm Almond",
-    "zhHans": "暖杏色",
-    "ja": "ウォームアーモンド",
-    "ko": "웜 아몬드",
-    "th": "อัลมอนด์อุ่น"
-  },
-  "hue_caramel_pink": {
-    "zhHant": "焦糖粉",
-    "en": "Caramel Pink",
-    "zhHans": "焦糖粉",
-    "ja": "キャラメルピンク",
-    "ko": "캐러멜 핑크",
-    "th": "ชมพูคาราเมล"
-  },
-  "hue_gray_cardamom": {
-    "zhHant": "灰豆蔻",
-    "en": "Grey Cardamom",
-    "zhHans": "灰豆蔻",
-    "ja": "グレーカルダモン",
-    "ko": "그레이 카다몸",
-    "th": "กระวานเทา"
-  },
-  "hue_premium_gray": {
-    "zhHant": "高級灰",
-    "en": "Premium Grey",
-    "zhHans": "高级灰",
-    "ja": "プレミアムグレー",
-    "ko": "프리미엄 그레이",
-    "th": "เทาพรีเมียม"
-  },
-  "hue_terracotta": {
-    "zhHant": "陶土紅",
-    "en": "Terracotta",
-    "zhHans": "陶土红",
-    "ja": "テラコッタ",
-    "ko": "테라코타",
-    "th": "ดินเผา"
-  },
-  "hue_caramel_brown": {
-    "zhHant": "焦糖棕",
-    "en": "Caramel Brown",
-    "zhHans": "焦糖棕",
-    "ja": "キャラメルブラウン",
-    "ko": "캐러멜 브라운",
-    "th": "น้ำตาลคาราเมล"
-  },
-  "hue_mustard": {
-    "zhHant": "芥末黃",
-    "en": "Mustard",
-    "zhHans": "芥末黄",
-    "ja": "マスタード",
-    "ko": "머스터드",
-    "th": "มัสตาร์ด"
-  },
-  "hue_retro_teal": {
-    "zhHant": "復古青",
-    "en": "Retro Teal",
-    "zhHans": "复古青",
-    "ja": "レトロティール",
-    "ko": "레트로 틸",
-    "th": "เขียวเรโทร"
-  },
-  "hue_slate_blue": {
-    "zhHant": "黛藍色",
-    "en": "Slate Blue",
-    "zhHans": "黛蓝色",
-    "ja": "スレートブルー",
-    "ko": "슬레이트 블루",
-    "th": "น้ำเงินหินชนวน"
-  },
-  "hue_rust_red": {
-    "zhHant": "鐵鏽紅",
-    "en": "Rust Red",
-    "zhHans": "铁锈红",
-    "ja": "ラストレッド",
-    "ko": "러스트 레드",
-    "th": "แดงสนิม"
-  },
-  "hue_chestnut": {
-    "zhHant": "深栗褐",
-    "en": "Deep Chestnut",
-    "zhHans": "深栗褐",
-    "ja": "ディープチェスナット",
-    "ko": "딥 체스트넛",
-    "th": "น้ำตาลเกาลัด"
-  },
-  "hue_fallen_leaf": {
-    "zhHant": "落葉黃",
-    "en": "Fallen Leaf",
-    "zhHans": "落叶黄",
-    "ja": "フォールンリーフ",
-    "ko": "낙엽색",
-    "th": "ใบไม้ร่วง"
-  },
-  "hue_deep_navy": {
-    "zhHant": "深海軍",
-    "en": "Deep Navy",
-    "zhHans": "深海军",
-    "ja": "ディープネイビー",
-    "ko": "딥 네이비",
-    "th": "กรมท่าเข้ม"
-  },
-  "hue_business_blue": {
-    "zhHant": "商務藍",
-    "en": "Business Blue",
-    "zhHans": "商务蓝",
-    "ja": "ビジネスブルー",
-    "ko": "비즈니스 블루",
-    "th": "น้ำเงินธุรกิจ"
-  },
-  "hue_graphite_blue": {
-    "zhHant": "石墨藍",
-    "en": "Graphite Blue",
-    "zhHans": "石墨蓝",
-    "ja": "グラファイトブルー",
-    "ko": "그래파이트 블루",
-    "th": "น้ำเงินกราไฟต์"
-  },
-  "hue_fir_green": {
-    "zhHant": "冷杉綠",
-    "en": "Fir Green",
-    "zhHans": "冷杉绿",
-    "ja": "ファーグリーン",
-    "ko": "전나무 초록",
-    "th": "เขียวเฟอร์"
-  },
-  "hue_ink_green": {
-    "zhHant": "墨綠色",
-    "en": "Ink Green",
-    "zhHans": "墨绿色",
-    "ja": "インクグリーン",
-    "ko": "잉크 그린",
-    "th": "เขียวหมึก"
-  },
-  "hue_burgundy": {
-    "zhHant": "勃艮第酒紅",
-    "en": "Burgundy",
-    "zhHans": "勃艮第酒红",
-    "ja": "バーガンディ",
-    "ko": "버건디",
-    "th": "เบอร์กันดี"
-  },
-  "hue_cold_stone": {
-    "zhHant": "冷石灰",
-    "en": "Cold Stone",
-    "zhHans": "冷石灰",
-    "ja": "コールドストーン",
-    "ko": "콜드 스톤",
-    "th": "หินเย็น"
-  },
-  "hue_midnight": {
-    "zhHant": "極夜黑",
-    "en": "Midnight",
-    "zhHans": "极夜黑",
-    "ja": "ミッドナイト",
-    "ko": "미드나이트",
-    "th": "ดำเที่ยงคืน"
-  },
-  "hue_sakura_pink": {
-    "zhHant": "櫻花粉",
-    "en": "Sakura Pink",
-    "zhHans": "樱花粉",
-    "ja": "さくらピンク",
-    "ko": "사쿠라 핑크",
-    "th": "ชมพูซากุระ"
-  },
-  "hue_peach_apricot": {
-    "zhHant": "蜜桃杏",
-    "en": "Peach Apricot",
-    "zhHans": "蜜桃杏",
-    "ja": "ピーチアプリコット",
-    "ko": "피치 애프리콧",
-    "th": "พีชแอปริคอต"
-  },
-  "hue_green_apple": {
-    "zhHant": "青蘋綠",
-    "en": "Green Apple",
-    "zhHans": "青苹绿",
-    "ja": "グリーンアップル",
-    "ko": "그린 애플",
-    "th": "เขียวแอปเปิล"
-  },
-  "hue_mint_green": {
-    "zhHant": "薄荷綠",
-    "en": "Mint Green",
-    "zhHans": "薄荷绿",
-    "ja": "ミントグリーン",
-    "ko": "민트 그린",
-    "th": "เขียวมิ้นต์"
-  },
-  "hue_periwinkle": {
-    "zhHant": "淡紫藍",
-    "en": "Periwinkle",
-    "zhHans": "淡紫蓝",
-    "ja": "ペリウィンクル",
-    "ko": "페리윙클",
-    "th": "ม่วงอ่อน"
-  },
-  "hue_lavender": {
-    "zhHant": "薰衣草",
-    "en": "Lavender",
-    "zhHans": "薰衣草",
-    "ja": "ラベンダー",
-    "ko": "라벤더",
-    "th": "ลาเวนเดอร์"
-  },
-  "hue_grape_gray": {
-    "zhHant": "葡萄灰",
-    "en": "Grape Grey",
-    "zhHans": "葡萄灰",
-    "ja": "グレープグレー",
-    "ko": "그레이프 그레이",
-    "th": "เทาองุ่น"
-  },
-  "hue_rose_dusk": {
-    "zhHant": "玫瑰暮",
-    "en": "Rose Dusk",
-    "zhHans": "玫瑰暮",
-    "ja": "ローズダスク",
-    "ko": "로즈 더스크",
-    "th": "กุหลาบสนธยา"
-  },
-  "hue_electric_magenta": {
-    "zhHant": "電光玫紅",
-    "en": "Electric Magenta",
-    "zhHans": "电光玫红",
-    "ja": "エレクトリックマゼンタ",
-    "ko": "일렉트릭 마젠타",
-    "th": "มาเจนต้าไฟฟ้า"
-  },
-  "hue_fluoro_cyan": {
-    "zhHant": "螢光青藍",
-    "en": "Fluoro Cyan",
-    "zhHans": "荧光青蓝",
-    "ja": "フルオロシアン",
-    "ko": "형광 시안",
-    "th": "ฟ้าเรืองแสง"
-  },
-  "hue_neon_green": {
-    "zhHant": "霓虹亮綠",
-    "en": "Neon Green",
-    "zhHans": "霓虹亮绿",
-    "ja": "ネオングリーン",
-    "ko": "네온 그린",
-    "th": "เขียวนีออน"
-  },
-  "hue_aurora_orange": {
-    "zhHant": "極光鮮橘",
-    "en": "Aurora Orange",
-    "zhHans": "极光鲜橘",
-    "ja": "オーロラオレンジ",
-    "ko": "오로라 오렌지",
-    "th": "ส้มออโรรา"
-  },
-  "hue_iridescent_purple": {
-    "zhHant": "幻彩紫",
-    "en": "Iridescent Purple",
-    "zhHans": "幻彩紫",
-    "ja": "イリデセントパープル",
-    "ko": "이리데센트 퍼플",
-    "th": "ม่วงเหลือบ"
-  },
-  "hue_vivid_yellow": {
-    "zhHant": "奪目亮黃",
-    "en": "Vivid Yellow",
-    "zhHans": "夺目亮黄",
-    "ja": "ビビッドイエロー",
-    "ko": "비비드 옐로",
-    "th": "เหลืองสดใส"
-  },
-  "hue_high_energy_red": {
-    "zhHant": "高能熾紅",
-    "en": "High-Energy Red",
-    "zhHans": "高能炽红",
-    "ja": "ハイエナジーレッド",
-    "ko": "하이에너지 레드",
-    "th": "แดงพลังสูง"
-  },
-  "hue_sky_ultra_blue": {
-    "zhHant": "天空極藍",
-    "en": "Sky Ultra Blue",
-    "zhHans": "天空极蓝",
-    "ja": "スカイウルトラブルー",
-    "ko": "스카이 울트라 블루",
-    "th": "ฟ้าสุดขอบ"
-  },
-  "comment_send": {
-    "zhHant": "送出",
-    "en": "Send",
-    "zhHans": "送出",
-    "ja": "送信",
-    "ko": "보내기",
-    "th": "ส่ง"
-  },
-  "comment_empty": {
-    "zhHant": "還沒有留言",
-    "en": "No messages yet",
-    "zhHans": "还没有留言",
-    "ja": "まだコメントはありません",
-    "ko": "아직 댓글이 없습니다",
-    "th": "ยังไม่มีข้อความ"
-  },
-  "nothing_to_refine": {
-    "en": "Nothing to refine — draw something first",
-    "ja": "補正できる筆跡がありません。先に何か書いてください",
-    "ko": "보정할 필기가 없습니다. 먼저 무언가를 써 보세요",
-    "th": "ยังไม่มีลายเส้นให้ปรับแต่ง — ลองเขียนอะไรสักอย่างก่อน",
-    "zhHans": "没有可修饰的笔迹 —— 请先写点东西",
-    "zhHant": "沒有可修飾的筆跡 —— 請先寫點東西"
-  },
-  "theme_palette_trend": {
-    "en": "Pantone Trend Palette",
-    "ja": "パントン トレンドカラー",
-    "ko": "팬톤 트렌드 컬러",
-    "th": "พาเลตต์เทรนด์ Pantone",
-    "zhHans": "Pantone 季节潮流色",
-    "zhHant": "Pantone 季節潮流色"
-  },
-  "theme_palette_morandi": {
-    "en": "Morandi Serene",
-    "ja": "モランディ グレージュ",
-    "ko": "모란디 뮤트 톤",
-    "th": "โทนมอรันดี",
-    "zhHans": "莫兰迪高级灰",
-    "zhHant": "莫蘭迪高級灰"
-  },
-  "theme_palette_bauhaus": {
-    "en": "Bauhaus Industrial",
-    "ja": "バウハウス インダストリアル",
-    "ko": "바우하우스 인더스트리얼",
-    "th": "เบาเฮาส์ อินดัสเทรียล",
-    "zhHans": "包豪斯复古工业",
-    "zhHant": "包浩斯復古工業"
-  },
-  "theme_palette_cyberpunk": {
-    "en": "Cyberpunk Neon",
-    "ja": "サイバーパンク ネオン",
-    "ko": "사이버펑크 네온",
-    "th": "ไซเบอร์พังก์ นีออน",
-    "zhHans": "赛博霓虹",
-    "zhHant": "賽博霓虹"
-  },
-  "material_sus304_trait": {
-    "en": "Austenitic, corrosion-resistant",
-    "ja": "オーステナイト系・耐食",
-    "ko": "오스테나이트계 내식",
-    "th": "ออสเทนนิติก ทนการกัดกร่อน",
-    "zhHans": "奥氏体防蚀",
-    "zhHant": "奧氏體防蝕"
-  },
-  "material_sus304_spec": {
-    "en": "Tensile ≥520 MPa / brushed and passivated",
-    "ja": "引張強さ ≥520 MPa／ヘアライン・不動態化",
-    "ko": "인장강도 ≥520 MPa / 헤어라인·부동태 처리",
-    "th": "ความต้านแรงดึง ≥520 MPa / ขัดลายเส้นและพาสซิเวต",
-    "zhHans": "抗拉强度 ≥520 MPa / 表面拉丝钝化处理",
-    "zhHant": "抗拉強度 ≥520 MPa / 表面拉絲鈍化處理"
-  },
-  "material_al6061_trait": {
-    "en": "Aerospace-grade stiffness",
-    "ja": "航空機グレード・高剛性",
-    "ko": "항공용 고강성",
-    "th": "เกรดอากาศยาน แข็งแกร่งสูง",
-    "zhHans": "航空高刚性",
-    "zhHant": "航空高剛性"
-  },
-  "material_al6061_spec": {
-    "en": "Tensile ≥290 MPa / 12 µm hard anodising",
-    "ja": "引張強さ ≥290 MPa／硬質アルマイト 12μm",
-    "ko": "인장강도 ≥290 MPa / 경질 아노다이징 12 µm",
-    "th": "ความต้านแรงดึง ≥290 MPa / อโนไดซ์แข็ง 12 ไมครอน",
-    "zhHans": "抗拉强度 ≥290 MPa / 12μm 硬质阳极氧化",
-    "zhHant": "抗拉強度 ≥290 MPa / 12μm 硬質陽極氧化"
-  },
-  "material_pcabs_trait": {
-    "en": "Flame-retardant, impact-resistant",
-    "ja": "難燃・耐衝撃",
-    "ko": "난연·내충격",
-    "th": "หน่วงไฟ ทนแรงกระแทก",
-    "zhHans": "阻燃抗冲击",
-    "zhHant": "阻燃抗衝擊"
-  },
-  "material_pcabs_spec": {
-    "en": "UL94 V-0 / textured mould finish",
-    "ja": "UL94 V-0／シボ加工表面",
-    "ko": "UL94 V-0 / 시보 텍스처 표면",
-    "th": "UL94 V-0 / ผิวลายหนังจากแม่พิมพ์",
-    "zhHans": "UL94 V0 耐燃 / 模具咬花皮纹表面",
-    "zhHant": "UL94 V0 耐燃 / 模具咬花皮紋表面"
-  },
-  "material_pom_trait": {
-    "en": "Wear-resistant, self-lubricating",
-    "ja": "耐摩耗・自己潤滑",
-    "ko": "내마모·자기윤활",
-    "th": "ทนสึกหรอ หล่อลื่นในตัว",
-    "zhHans": "耐磨自润滑",
-    "zhHant": "耐磨自潤滑"
-  },
-  "material_pom_spec": {
-    "en": "Friction 0.25 / gears, bearings, sliders",
-    "ja": "摩擦係数 0.25／歯車・軸受・スライダー向け",
-    "ko": "마찰계수 0.25 / 기어·베어링·슬라이더용",
-    "th": "สัมประสิทธิ์แรงเสียดทาน 0.25 / เฟือง แบริ่ง สไลเดอร์",
-    "zhHans": "摩擦系数 0.25 / 齿轮与轴承滑块专用",
-    "zhHant": "摩擦係數 0.25 / 齒輪與軸承滑塊專用"
-  },
-  "material_skd11_trait": {
-    "en": "Very high wear resistance",
-    "ja": "極めて高い耐摩耗性",
-    "ko": "초고내마모성",
-    "th": "ทนการสึกหรอสูงมาก",
-    "zhHans": "极高耐磨性",
-    "zhHant": "極高耐磨性"
-  },
-  "material_skd11_spec": {
-    "en": "HRC 58–62 quenched and tempered / precision punches",
-    "ja": "焼入焼戻し HRC 58–62／精密プレスパンチ",
-    "ko": "담금질·뜨임 HRC 58–62 / 정밀 프레스 펀치",
-    "th": "ชุบแข็งและอบคืนตัว HRC 58–62 / พันช์ปั๊มความแม่นยำสูง",
-    "zhHans": "淬火回火硬度 HRC 58-62 / 精密冲压冲头",
-    "zhHant": "淬火回火硬度 HRC 58-62 / 精密沖壓沖頭"
-  },
-  "material_card_title": {
-    "en": "Material spec",
-    "ja": "材料仕様",
-    "ko": "재료 사양",
-    "th": "ข้อมูลจำเพาะวัสดุ",
-    "zhHans": "材料规格",
-    "zhHant": "材料規格"
-  },
-  "material_card_trait": {
-    "en": "Properties",
-    "ja": "特性",
-    "ko": "특성",
-    "th": "คุณสมบัติ",
-    "zhHans": "特性",
-    "zhHant": "特性"
-  },
-  "material_card_process": {
-    "en": "Process",
-    "ja": "加工仕様",
-    "ko": "공정 지표",
-    "th": "กระบวนการผลิต",
-    "zhHans": "工艺指标",
-    "zhHant": "工藝指標"
+  "wireframe_modal": {
+    "en": "Modal dialog",
+    "ja": "モーダルダイアログ",
+    "ko": "모달 대화상자",
+    "th": "กล่องโต้ตอบแบบโมดัล",
+    "zhHans": "对话框弹窗 (Modal)",
+    "zhHant": "對話框彈窗 (Modal)"
   },
   "wireframe_navbar": {
     "en": "Mobile top nav bar",
@@ -5871,92 +6415,12 @@
     "zhHans": "底部五分页 TabBar",
     "zhHant": "底部五分頁 TabBar"
   },
-  "wireframe_button": {
-    "en": "Primary action button (CTA)",
-    "ja": "主要アクションボタン（CTA）",
-    "ko": "주요 행동 버튼 (CTA)",
-    "th": "ปุ่มหลัก (CTA)",
-    "zhHans": "主要行动按钮 (CTA)",
-    "zhHant": "主要行動按鈕 (CTA)"
-  },
-  "wireframe_input": {
-    "en": "Search input field",
-    "ja": "検索入力フィールド",
-    "ko": "검색 입력 필드",
-    "th": "ช่องค้นหา",
-    "zhHans": "搜索输入文本框",
-    "zhHant": "搜尋輸入文字框"
-  },
-  "wireframe_card": {
-    "en": "Content card",
-    "ja": "コンテンツカード",
-    "ko": "콘텐츠 카드",
-    "th": "การ์ดเนื้อหา",
-    "zhHans": "内容信息卡片",
-    "zhHant": "內容資訊卡片"
-  },
-  "wireframe_modal": {
-    "en": "Modal dialog",
-    "ja": "モーダルダイアログ",
-    "ko": "모달 대화상자",
-    "th": "กล่องโต้ตอบแบบโมดัล",
-    "zhHans": "对话框弹窗 (Modal)",
-    "zhHant": "對話框彈窗 (Modal)"
-  },
-  "gesture_tap": {
-    "en": "Tap → next",
-    "ja": "タップで遷移",
-    "ko": "탭하여 이동",
-    "th": "แตะเพื่อไปต่อ",
-    "zhHans": "点击跳转",
-    "zhHant": "點擊跳轉"
-  },
-  "gesture_swipe": {
-    "en": "Swipe to switch",
-    "ja": "スワイプで切り替え",
-    "ko": "스와이프로 전환",
-    "th": "ปัดเพื่อสลับ",
-    "zhHans": "左右滑动切换",
-    "zhHant": "左右滑動切換"
-  },
-  "gesture_long_press": {
-    "en": "Long press for menu",
-    "ja": "長押しでメニュー",
-    "ko": "길게 눌러 메뉴",
-    "th": "กดค้างเพื่อเปิดเมนู",
-    "zhHans": "长按触发菜单",
-    "zhHant": "長按觸發選單"
-  },
-  "gesture_decision": {
-    "en": "Decision (if/else)",
-    "ja": "条件分岐（if/else）",
-    "ko": "조건 분기 (if/else)",
-    "th": "เงื่อนไขแยกทาง (if/else)",
-    "zhHans": "条件判断分支",
-    "zhHant": "條件判斷分支"
-  },
-  "gesture_loading": {
-    "en": "Loading / refresh",
-    "ja": "読み込み・更新",
-    "ko": "로딩·새로고침",
-    "th": "กำลังโหลด / รีเฟรช",
-    "zhHans": "加载更新状态",
-    "zhHant": "載入更新狀態"
-  },
-  "gesture_success": {
-    "en": "Success feedback",
-    "ja": "成功フィードバック",
-    "ko": "성공 피드백",
-    "th": "แจ้งผลสำเร็จ",
-    "zhHans": "成功验证反馈",
-    "zhHant": "成功驗證回饋"
-  },
-  "model_scale": {
-    "en": "Scale",
-    "ja": "スケール",
-    "ko": "크기",
-    "th": "ขนาด",
-    "zhHans": "缩放",
-    "zhHant": "縮放"
+  "word_studio": {
+    "en": "Word Text Studio",
+    "ja": "文書テキスト編集",
+    "ko": "워드 텍스트 편집",
+    "th": "การแก้ไขข้อความ Word",
+    "zhHans": "Word文字编修",
+    "zhHant": "Word文字編修"
   }
 }

@@ -12,7 +12,8 @@
 |---|---|---|---|
 | **D1** | 平台策略 | **Phase 1 iPadOS/macOS 優先**，核心以 Rust 撰寫為跨平台鋪路 | 採用「Rust Core + 原生外殼」架構 |
 | **D2** | HWR 開源例外 | **接受** Apple Vision / ML Kit 等免費非開源系統 API；App 內提供「引擎與權限中心」統一引導設定 | HWR 以 `HwrEngine` trait 隔離，開源自訓方案降為 P3 選項 |
-| **D3** | 雲端優先序 | **本機資料夾 → iCloud Drive → Google Drive** | Google Drive 延後至 M3，避開審核與配額風險 |
+| **D3** | 雲端優先序 | 已由 **D11** 取代 | 原本是本機資料夾 → iCloud Drive → Google Drive；現改以 Google Drive appDataFolder 作正式自動同步 |
+| **D11** | 帳號式跨平台同步 | **Google Drive appDataFolder** 作為正式自動同步主線；手動資料夾保留為備份/匯入匯出 | 使用者登入同一 Google 帳號後，筆記本、資料夾與可同步設定自動收斂 |
 | **D4** | 模型分發 | 按需下載，託管於 Hugging Face / GitHub Releases + SHA-256 驗證 + 斷點續傳 | 需維護 `models/MODELS.md` 清單 |
 | **D5** | 無後端限制 | 即時協作／Web 版／遙測／金鑰託管 **列為產品定位，非待辦** | 對外訴求「隱私優先、無帳號、無伺服器」 |
 | **D6** | PDF 引擎 | **PDFium (BSD-3)**；明確禁用 MuPDF (AGPL) | `cargo deny` 進 CI，另建 `MODELS.md` 稽核模型權重授權 |
@@ -203,10 +204,11 @@ pub trait CloudProvider: Send + Sync {
 | 實作 | 機制 | 注意事項 |
 |---|---|---|
 | **iCloud Drive** | Ubiquity Container + `NSFileCoordinator`/`NSFilePresenter` | 檔案可能未下載，需處理 `evict`/materialize 狀態 |
-| **Google Drive** | Drive REST v3，`drive.file` scope，OAuth 2.0 **PKCE**（原生 App 免 client secret） | 無 append API → 每次同步寫新的 chunk 檔 `log-<seq>.bin` |
-| **本機資料夾** | 直接檔案 IO | 使用者放進 Dropbox/OneDrive/Syncthing 即自動支援，**零額外開發** |
+| **Google Drive appDataFolder** | Drive REST v3，`drive.appdata` scope，OAuth 2.0 **PKCE**（原生 App 免 client secret） | 正式自動同步主線；無 append API → 每次同步寫新的 chunk 檔 `log-<seq>.bin` |
+| **本機資料夾** | 直接檔案 IO | 手動備份、匯入匯出與進階使用者備援 |
 
-> 💡 **先做「本機資料夾」provider**。它是零成本的，而且讓 Dropbox/OneDrive/Syncthing/NAS 使用者全部免費得到支援。iCloud 次之，Google Drive 最後（審核成本最高）。
+> D11 已拍板：Google Drive `appDataFolder` 是正式自動同步主線。
+> 本機資料夾仍保留，但定位是手動備份/匯入匯出，不再是主要同步體驗。
 
 ### 4.4 加密（資料放進使用者雲端，E2EE 是責任不是加分）
 ```
@@ -390,10 +392,12 @@ padnote/
 - **需要你決定**：是否接受 #1 的例外。
 
 ### 缺口 #2：Google Drive 的隱形成本
-- 需要 Google Cloud 專案 + OAuth 同意畫面審核；用 `drive.file` scope 可避開 CASA 安全評估，但**只能存取 App 自己建立的檔案**（使用者無法手動把既有筆記本丟進去）。
+- D11 已接受：正式自動同步使用 `drive.appdata` scope 與 `appDataFolder`，
+  使用者登入同一 Google 帳號後自動同步 Kairumo 自己的資料。
+- 仍需要 Google Cloud 專案、OAuth client、同意畫面設定、token refresh 與撤銷權限處理。
 - Drive **沒有 append API**，必須退化成分塊檔策略，檔案數量會膨脹（需設計 chunk 合併）。
 - API 配額綁在你的專案，使用者暴增時可能觸頂。
-- **建議**：Google Drive 降到最後做，優先「本機資料夾」＋ iCloud。
+- 使用者可見資料夾不再作為正式同步主線，保留為手動備份、匯入匯出與進階備援。
 
 ### 缺口 #3：模型分發仍需靜態託管
 - Whisper-turbo q5 ~800MB、Paraformer ~220MB、Qwen3-4B Q4 ~2.5GB，不可能塞進 App Bundle（App Store 限制）。
@@ -423,7 +427,7 @@ padnote/
 - **無障礙（VoiceOver）與 i18n**
 - **App Store 審核**：免費 App 無 IAP 最單純，但「按需下載大型模型」需說明
 
-### 立即需要你拍板的三件事
+### 已拍板／仍待拍板
 1. **平台策略**：Phase 1 是 iPad/macOS 優先，還是 Day-1 跨平台？
 2. **HWR 例外**：是否接受 Apple Vision / ML Kit 這類「免費但非開源」的系統 API？
-3. **雲端優先序**：確認「本機資料夾 → iCloud → Google Drive」的順序（我強烈建議這個順序）
+3. ~~**雲端優先序**~~：D11 已接受，正式自動同步改走 Google Drive `appDataFolder`

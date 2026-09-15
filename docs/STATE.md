@@ -21,7 +21,7 @@ Kairumo —— 手寫、打字、錄音轉文字三合一的筆記 App。
 |---|---|
 | D1 平台 | Phase 1 iPadOS/macOS 優先；核心 Rust，為跨平台鋪路 |
 | D2 HWR | **接受** Apple Vision / ML Kit 等免費非開源系統 API 作為例外 |
-| D3 雲端 | 本機資料夾 → iCloud Drive → Google Drive（依序） |
+| D3/D11 雲端 | Google Drive `appDataFolder` 作正式自動同步；本機資料夾保留為手動備份/匯入匯出 |
 | D4 模型 | 按需下載，HF / GitHub Releases + SHA-256 + 續傳 |
 | D5 無後端 | 即時協作／Web 版／遙測／金鑰託管 = **產品定位，非待辦** |
 | D6 PDF | PDFium (BSD-3)。**MuPDF 是 AGPL，已在 deny.toml 封鎖** |

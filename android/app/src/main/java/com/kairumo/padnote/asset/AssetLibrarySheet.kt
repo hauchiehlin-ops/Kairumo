@@ -38,12 +38,12 @@ import uniffi.padnote_core.FfiAssetRenderStyle
 import uniffi.padnote_core.FfiAssetSource
 import uniffi.padnote_core.assetCategories
 import uniffi.padnote_core.assetCategoryKey
-import uniffi.padnote_core.assetSearch
+import uniffi.padnote_core.assetItems
 
 /**
  * 素材圖庫（Android）。
  *
- * 目錄與線圖都來自核心（`assetSearch()` / `assetDrawing()`），與 Apple 的
+ * 目錄與線圖都來自核心（`assetItems()` / `assetDrawing()`），與 Apple 的
  * `AssetLibraryView` 是同一批 58 件素材、同樣的分類與同樣的圖形。
  *
  * # 為什麼不做「下載」
@@ -66,8 +66,17 @@ fun AssetLibrarySheet(
     var category by remember { mutableStateOf<FfiAssetCategory?>(null) }
     var style by remember { mutableStateOf(FfiAssetRenderStyle.BLUEPRINT) }
 
-    val results = remember(query, category) {
-        assetSearch(query).filter { category == null || it.category == category }
+    val results = remember(query, category, languageTag) {
+        val q = query.trim()
+        assetItems().filter {
+            val title = localizedAssetTitle(it, languageTag)
+            (category == null || it.category == category) &&
+                (q.isEmpty() ||
+                    title.contains(q, ignoreCase = true) ||
+                    it.title.contains(q, ignoreCase = true) ||
+                    it.specs.contains(q, ignoreCase = true) ||
+                    it.material.contains(q, ignoreCase = true))
+        }
     }
 
     AlertDialog(
@@ -133,7 +142,7 @@ fun AssetLibrarySheet(
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         for (item in results) {
-                            AssetRow(item, style, ::l) { onInsert(item, style); onDismiss() }
+                            AssetRow(item, style, languageTag, ::l) { onInsert(item, style); onDismiss() }
                         }
                     }
                 }
@@ -146,6 +155,7 @@ fun AssetLibrarySheet(
 private fun AssetRow(
     item: FfiAssetItem,
     style: FfiAssetRenderStyle,
+    languageTag: String,
     l: (String) -> String,
     onInsert: () -> Unit
 ) {
@@ -166,7 +176,11 @@ private fun AssetRow(
             }
         }
         Column(Modifier.weight(1f)) {
-            Text(item.title, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Bold)
+            Text(
+                localizedAssetTitle(item, languageTag),
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Bold
+            )
             Text(
                 item.specs,
                 style = MaterialTheme.typography.labelSmall,
@@ -180,4 +194,10 @@ private fun AssetRow(
             TextButton(onClick = onInsert) { Text(l("insert_to_canvas")) }
         }
     }
+}
+
+private fun localizedAssetTitle(item: FfiAssetItem, languageTag: String): String {
+    val key = "asset_${item.id}_title"
+    val localized = LocalizationStrings.localized(key, languageTag)
+    return if (localized == key) item.title else localized
 }

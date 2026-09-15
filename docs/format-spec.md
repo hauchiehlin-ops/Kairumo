@@ -327,6 +327,31 @@ Lamport 時戳前置 ⇒ 檔名字典序即因果序，掃描目錄即可得到�
 
 ## 7. 同步層（`sync/`）
 
+### 7.0 Google Drive appDataFolder 佈局
+
+D11 之後，正式自動同步使用 Google Drive `appDataFolder`。Drive 中的檔名採
+物件儲存語意；斜線是路徑的一部分，不依賴 Drive 真實資料夾層級。
+
+```
+profile/account.json                 # Google 帳號對應的 Kairumo profile
+settings/global.json                  # 跨裝置設定（語言、工具列、預設筆刷）
+notebooks/index.json                  # 筆記本與資料夾樹的索引 / tombstone 摘要
+notebooks/<notebook_id>/manifest.json
+notebooks/<notebook_id>/doc/...
+notebooks/<notebook_id>/ink/...
+notebooks/<notebook_id>/media/...
+sync/<device_id>/log-<seq>.bin        # 每台裝置只寫自己的同步 chunk
+tombstones/<object_id>.json           # 延後 GC 前的刪除記錄
+```
+
+不同步：
+- `index/`、縮圖、搜尋索引、模型快取等可重建資料
+- 低延遲、觸控筆門檻、平台權限 URI/bookmark 等裝置本地設定
+
+同一個 Google 帳號下的每次 app 安裝仍是不同裝置：`device_id` 必須穩定保存於
+本機安全儲存區；重裝後若遺失 device id，就視為新裝置加入，而不是沿用舊裝置
+目錄寫入。
+
 ### 7.1 chunk 格式
 
 chunk 是**框架串流**。每次推送追加一個框架：

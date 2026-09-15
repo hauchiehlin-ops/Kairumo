@@ -56,7 +56,9 @@ public struct AssetLibraryView: View {
 
             let matchesCategory = (selectedCategory == .all || item.category == selectedCategory)
             let matchesSource = (selectedSourceFilter == nil || item.sourceType == selectedSourceFilter)
+            let title = assetTitle(for: item)
             let matchesSearch = searchText.isEmpty ||
+                title.localizedCaseInsensitiveContains(searchText) ||
                 item.title.localizedCaseInsensitiveContains(searchText) ||
                 item.specsSummary.localizedCaseInsensitiveContains(searchText) ||
                 item.materialSuggestion.localizedCaseInsensitiveContains(searchText)
@@ -138,6 +140,12 @@ public struct AssetLibraryView: View {
                 assetDetailSheet(item: item)
             }
         }
+    }
+
+    private func assetTitle(for item: AssetItem) -> String {
+        let key = "asset_\(item.id)_title"
+        let localized = localizationManager.localized(key)
+        return localized == key ? item.title : localized
     }
 
     // MARK: - 1. 搜尋與型態過濾（響應式 ViewThatFits）
@@ -425,7 +433,7 @@ public struct AssetLibraryView: View {
 
             // 標題與規格簡介
             VStack(alignment: .leading, spacing: 3) {
-                Text(item.title)
+                Text(assetTitle(for: item))
                     .font(.subheadline)
                     .fontWeight(.bold)
                     .foregroundColor(.primary)
@@ -541,7 +549,7 @@ public struct AssetLibraryView: View {
 
                     VStack(alignment: .leading, spacing: 12) {
                         HStack {
-                            Text(item.title)
+                            Text(assetTitle(for: item))
                                 .font(.title2)
                                 .fontWeight(.bold)
                             Spacer()
@@ -665,7 +673,7 @@ public struct AssetLibraryView: View {
                 .padding(16)
             }
             .background(Color(uiColor: .systemGroupedBackground))
-            .navigationTitle(item.title)
+            .navigationTitle(assetTitle(for: item))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

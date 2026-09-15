@@ -1,7 +1,6 @@
-//! 本機資料夾 provider（決策 D3 的第一優先）。
+//! 本機資料夾 provider（D11 之後定位為手動備份／匯入匯出備援）。
 //!
-//! 零成本，且讓 Dropbox / OneDrive / Syncthing / NAS 使用者**全部免費得到支援**
-//! —— 這些工具本身就在做檔案同步，Padnote 只要把 append-only 不變式守好即可。
+//! 這些工具本身就在做檔案同步；Padnote 只要把 append-only 不變式守好即可。
 
 use crate::provider::{CloudProvider, RemoteEntry, SyncError};
 use std::fs;

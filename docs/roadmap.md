@@ -97,7 +97,7 @@ M0 技術驗證 ──▶ M1 可用核心 ──▶ M2 公開 Beta ──▶ M3 
 
 | 工作包 | 內容 | PW |
 |---|---|---|
-| WP10 `padnote-sync` | oplog 引擎、`CloudProvider` trait、**本機資料夾 provider**（G2/G5/G9） | 5 |
+| WP10 `padnote-sync` | oplog 引擎、`CloudProvider` trait、**Google Drive appDataFolder provider**（G2/G5/G9） | 5 |
 | WP11 `padnote-search` | Tantivy＋jieba 索引，涵蓋打字/轉錄/PDF 文字（F3） | 3 |
 | WP12 `padnote-recognize` | `HwrEngine` trait ＋ Apple Vision 實作；HWR 結果進索引（D1/D3） | 3 |
 | WP13 **引擎與權限中心** | 統一狀態頁；模型按需下載＋SHA-256＋續傳（I1/I2） | 3 |
@@ -146,7 +146,7 @@ M0 技術驗證 ──▶ M1 可用核心 ──▶ M2 公開 Beta ──▶ M3 
 | WP28 Android 外殼 | Compose MP、S Pen、`androidx.graphics.lowlatency` 前緩衝 | 6 |
 | WP29 ML Kit HWR | Android 的 `HwrEngine` 實作（D1） | 2 |
 | WP30 Desktop（Windows/Linux） | Compose MP Desktop | 5 |
-| WP31 **Google Drive provider** | OAuth PKCE、`drive.file`、分塊 append 模擬（G4） | 4 |
+| WP31 **Google Drive provider** | OAuth PKCE、`drive.appdata`、appDataFolder、分塊 append 模擬（G2） | 4 |
 | WP32 匯入競品備份 | Goodnotes/Notability 遷移（H5） | 4 |
 
 ---

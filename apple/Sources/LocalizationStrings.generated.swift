@@ -287,6 +287,246 @@ extension LocalizationManager {
             .ko: "아키텍처 모드",
             .th: "โหมดสถาปัตยกรรม"
         ],
+        "asset_aes_comp_01_title": [
+            .zhHant: "黃金螺旋對數構圖尺標",
+            .en: "Golden-Spiral Logarithmic Composition Guide",
+            .zhHans: "黄金螺旋对数构图尺标",
+            .ja: "黄金螺旋の対数構図ガイド",
+            .ko: "황금나선 로그 구성 가이드",
+            .th: "ไม้บรรทัดจัดองค์ประกอบเกลียวทองคำแบบลอการิทึม"
+        ],
+        "asset_aes_comp_02_title": [
+            .zhHant: "經典攝影三分法則九宮格",
+            .en: "Classic Rule-of-Thirds Photography Grid",
+            .zhHans: "经典摄影三分法九宫格",
+            .ja: "写真用クラシック三分割グリッド",
+            .ko: "클래식 사진 삼분할 그리드",
+            .th: "ตารางกฎสามส่วนสำหรับการถ่ายภาพแบบคลาสสิก"
+        ],
+        "asset_aes_comp_03_title": [
+            .zhHant: "動態對稱菱形構圖引導",
+            .en: "Dynamic-Symmetry Armature Composition Guide",
+            .zhHans: "动态对称菱形构图引导",
+            .ja: "動的対称アーマチュア構図ガイド",
+            .ko: "동적 대칭 아마추어 구성 가이드",
+            .th: "ไกด์จัดองค์ประกอบโครงสร้างสมมาตรไดนามิก"
+        ],
+        "asset_auto_01_title": [
+            .zhHant: "跑車空氣動力學流線側影",
+            .en: "Sports Car Aerodynamic Side Profile",
+            .zhHans: "跑车空气动力学流线侧影",
+            .ja: "スポーツカー空力サイドプロファイル",
+            .ko: "스포츠카 공기역학 사이드 프로파일",
+            .th: "โปรไฟล์ด้านข้างเชิงอากาศพลศาสตร์ของรถสปอร์ต"
+        ],
+        "asset_auto_02_title": [
+            .zhHant: "五輻雙柱鍛造運動輪框",
+            .en: "Five-Spoke Split Forged Sport Wheel Rim",
+            .zhHans: "五辐双柱锻造运动轮毂",
+            .ja: "5スポーク・スプリット鍛造スポーツホイールリム",
+            .ko: "5스포크 듀얼 스플릿 단조 스포츠 휠 림",
+            .th: "ล้อสปอร์ตฟอร์จแบบห้าก้านคู่"
+        ],
+        "asset_auto_03_title": [
+            .zhHant: "雙 A 臂獨立懸吊機構",
+            .en: "Double-Wishbone Independent Suspension Mechanism",
+            .zhHans: "双 A 臂独立悬架机构",
+            .ja: "ダブルウィッシュボーン独立懸架機構",
+            .ko: "더블 위시본 독립 현가 장치",
+            .th: "ระบบกันสะเทือนอิสระแบบปีกนกคู่"
+        ],
+        "asset_auto_04_title": [
+            .zhHant: "三輻運動賽車方向盤",
+            .en: "Three-Spoke Sport Racing Steering Wheel",
+            .zhHans: "三辐运动赛车方向盘",
+            .ja: "3スポーク・スポーツレーシングステアリングホイール",
+            .ko: "3스포크 스포츠 레이싱 스티어링 휠",
+            .th: "พวงมาลัยแข่งสปอร์ตสามก้าน"
+        ],
+        "asset_auto_05_title": [
+            .zhHant: "純電滑板底盤電池模組架構",
+            .en: "EV Skateboard Chassis Battery Module Architecture",
+            .zhHans: "纯电滑板底盘电池模组架构",
+            .ja: "EVスケートボードシャシー電池モジュール構成",
+            .ko: "전기차 스케이트보드 섀시 배터리 모듈 구조",
+            .th: "สถาปัตยกรรมโมดูลแบตเตอรี่บนแชสซีสเกตบอร์ด EV"
+        ],
+        "asset_auto_06_title": [
+            .zhHant: "未來星際懸浮穿梭載具",
+            .en: "Futuristic Orbital Hover Shuttle",
+            .zhHans: "未来星际悬浮穿梭载具",
+            .ja: "未来型軌道ホバーシャトル",
+            .ko: "미래형 궤도 호버 셔틀",
+            .th: "ยานรับส่งโฮเวอร์วงโคจรแนวอนาคต"
+        ],
+        "asset_digi_01_title": [
+            .zhHant: "旗艦智慧型手機 UI 向量線框",
+            .en: "Flagship Smartphone UI Vector Wireframe",
+            .zhHans: "旗舰智能手机 UI 向量线框",
+            .ja: "フラッグシップスマートフォンUIベクターワイヤーフレーム",
+            .ko: "플래그십 스마트폰 UI 벡터 와이어프레임",
+            .th: "ไวร์เฟรมเวกเตอร์ UI สมาร์ตโฟนเรือธง"
+        ],
+        "asset_digi_02_title": [
+            .zhHant: "平板手繪多視窗佈局",
+            .en: "Hand-Drawn Tablet Multi-Window Layout",
+            .zhHans: "平板手绘多窗口布局",
+            .ja: "タブレット用手描きマルチウィンドウレイアウト",
+            .ko: "태블릿 손그림 멀티윈도우 레이아웃",
+            .th: "เลย์เอาต์หลายหน้าต่างแบบวาดมือสำหรับแท็บเล็ต"
+        ],
+        "asset_digi_03_title": [
+            .zhHant: "極簡瀏覽器視窗框架",
+            .en: "Minimal Browser Window Frame",
+            .zhHans: "极简浏览器窗口框架",
+            .ja: "ミニマルなブラウザウィンドウフレーム",
+            .ko: "미니멀 브라우저 창 프레임",
+            .th: "กรอบหน้าต่างเบราว์เซอร์มินิมอล"
+        ],
+        "asset_digi_04_title": [
+            .zhHant: "行動端 8 種核心手勢符號包",
+            .en: "Mobile 8-Core-Gesture Annotation Set",
+            .zhHans: "移动端 8 种核心手势符号包",
+            .ja: "モバイル向け8種基本ジェスチャー注釈セット",
+            .ko: "모바일 8대 핵심 제스처 주석 세트",
+            .th: "ชุดสัญลักษณ์ 8 ท่าทางหลักสำหรับมือถือ"
+        ],
+        "asset_elec_01_title": [
+            .zhHant: "旗艦手機鋁合金中框結構",
+            .en: "Flagship Smartphone Aluminum Mid-Frame Structure",
+            .zhHans: "旗舰手机铝合金中框结构",
+            .ja: "フラッグシップスマートフォン用アルミ合金ミッドフレーム構造",
+            .ko: "플래그십 스마트폰 알루미늄 합금 미드프레임 구조",
+            .th: "โครงกลางอะลูมิเนียมอัลลอยสำหรับสมาร์ตโฟนเรือธง"
+        ],
+        "asset_elec_02_title": [
+            .zhHant: "真無線降噪耳機聲學腔體",
+            .en: "TWS Noise-Cancelling Earbud Acoustic Chamber",
+            .zhHans: "真无线降噪耳机声学腔体",
+            .ja: "完全ワイヤレスノイズキャンセリングイヤホン音響チャンバー",
+            .ko: "TWS 노이즈 캔슬링 이어버드 음향 챔버",
+            .th: "โพรงอะคูสติกหูฟังไร้สายตัดเสียงรบกวน TWS"
+        ],
+        "asset_elec_03_title": [
+            .zhHant: "大光圈相機鏡頭光學鏡組",
+            .en: "Large-Aperture Camera Lens Optical Assembly",
+            .zhHans: "大光圈相机镜头光学镜组",
+            .ja: "大口径カメラレンズ光学アセンブリ",
+            .ko: "대구경 카메라 렌즈 광학 어셈블리",
+            .th: "ชุดเลนส์กล้องรูรับแสงกว้าง"
+        ],
+        "asset_elec_04_title": [
+            .zhHant: "75% 客製化機械鍵盤 Gasket 結構",
+            .en: "75% Custom Mechanical Keyboard Gasket Structure",
+            .zhHans: "75% 客制化机械键盘 Gasket 结构",
+            .ja: "75% カスタムメカニカルキーボード用ガスケット構造",
+            .ko: "75% 커스텀 기계식 키보드 가스켓 구조",
+            .th: "โครงสร้างแกสเก็ตคีย์บอร์ดกลไกคัสตอม 75%"
+        ],
+        "asset_elec_05_title": [
+            .zhHant: "曲面未來感智慧座艙 HUD",
+            .en: "Curved Futuristic Smart-Cockpit HUD",
+            .zhHans: "曲面未来感智能座舱 HUD",
+            .ja: "曲面型フューチャリスティック・スマートコックピットHUD",
+            .ko: "곡면형 미래형 스마트 콕핏 HUD",
+            .th: "HUD ห้องโดยสารอัจฉริยะทรงโค้งแนวอนาคต"
+        ],
+        "asset_furn_01_title": [
+            .zhHant: "經典伊姆斯休閒躺椅",
+            .en: "Classic Eames Lounge Chair Geometry",
+            .zhHans: "经典伊姆斯休闲躺椅",
+            .ja: "クラシック・イームズラウンジチェア形状",
+            .ko: "클래식 임스 라운지 체어 형상",
+            .th: "รูปทรงเก้าอี้เลานจ์ Eames คลาสสิก"
+        ],
+        "asset_furn_02_title": [
+            .zhHant: "人體工學升降辦公桌幾何",
+            .en: "Ergonomic Height-Adjustable Desk Geometry",
+            .zhHans: "人体工学升降办公桌几何",
+            .ja: "人間工学昇降デスク形状",
+            .ko: "인체공학 높이 조절 책상 형상",
+            .th: "รูปทรงโต๊ะทำงานปรับระดับตามหลักสรีรศาสตร์"
+        ],
+        "asset_furn_03_title": [
+            .zhHant: "包浩斯懸臂可調護眼檯燈",
+            .en: "Bauhaus Adjustable Cantilever Task Lamp",
+            .zhHans: "包豪斯悬臂可调护眼台灯",
+            .ja: "バウハウス調整式カンチレバータスクランプ",
+            .ko: "바우하우스 조절식 캔틸레버 작업등",
+            .th: "โคมไฟทำงานแขนยื่นปรับได้สไตล์ Bauhaus"
+        ],
+        "asset_furn_04_title": [
+            .zhHant: "北歐極簡模組收納櫃",
+            .en: "Nordic Minimal Modular Credenza",
+            .zhHans: "北欧极简模块收纳柜",
+            .ja: "北欧ミニマル・モジュラー収納キャビネット",
+            .ko: "북유럽 미니멀 모듈형 수납장",
+            .th: "ตู้เก็บของโมดูลาร์มินิมอลสไตล์นอร์ดิก"
+        ],
+        "asset_hard_01_title": [
+            .zhHant: "ISO 4762 內六角圓柱頭螺栓",
+            .en: "ISO 4762 Hex Socket Head Cap Screw",
+            .zhHans: "ISO 4762 内六角圆柱头螺栓",
+            .ja: "ISO 4762 六角穴付きボルト",
+            .ko: "ISO 4762 육각 소켓 헤드 캡 스크루",
+            .th: "สกรูหัวจมทรงกระบอกหกเหลี่ยม ISO 4762"
+        ],
+        "asset_hard_02_title": [
+            .zhHant: "DIN 7991 沉頭內六角螺釘",
+            .en: "DIN 7991 Hex Socket Countersunk Screw",
+            .zhHans: "DIN 7991 沉头内六角螺钉",
+            .ja: "DIN 7991 六角穴付き皿ねじ",
+            .ko: "DIN 7991 육각 소켓 접시머리 나사",
+            .th: "สกรูหัวฝังหกเหลี่ยม DIN 7991"
+        ],
+        "asset_hard_03_title": [
+            .zhHant: "六角法蘭面防鬆螺母",
+            .en: "Hex Flange Lock Nut",
+            .zhHans: "六角法兰面防松螺母",
+            .ja: "六角フランジロックナット",
+            .ko: "육각 플랜지 잠금 너트",
+            .th: "น็อตล็อกหน้าแปลนหกเหลี่ยม"
+        ],
+        "asset_hard_04_title": [
+            .zhHant: "封閉型抽芯盲鉚釘",
+            .en: "Closed-End Blind Rivet",
+            .zhHans: "封闭型抽芯盲铆钉",
+            .ja: "密閉型ブラインドリベット",
+            .ko: "폐쇄형 블라인드 리벳",
+            .th: "รีเวทตาบอดปลายปิด"
+        ],
+        "asset_hard_05_title": [
+            .zhHant: "圓柱螺旋壓縮彈簧",
+            .en: "Cylindrical Helical Compression Spring",
+            .zhHans: "圆柱螺旋压缩弹簧",
+            .ja: "円筒コイル圧縮ばね",
+            .ko: "원통형 헬리컬 압축 스프링",
+            .th: "สปริงอัดขดเกลียวทรงกระบอก"
+        ],
+        "asset_hard_06_title": [
+            .zhHant: "90° 強化沖壓直角固定角鐵",
+            .en: "90° Reinforced Stamped L-Bracket",
+            .zhHans: "90° 强化冲压直角固定角码",
+            .ja: "90° 補強プレスL字ブラケット",
+            .ko: "90° 보강 프레스 L 브래킷",
+            .th: "ฉากยึดตัว L ปั๊มขึ้นรูปเสริมแรง 90°"
+        ],
+        "asset_ia_01_title": [
+            .zhHant: "階層式站點地圖與樹狀導航節點",
+            .en: "Hierarchical Sitemap and Tree Navigation Nodes",
+            .zhHans: "层级式站点地图与树状导航节点",
+            .ja: "階層型サイトマップとツリーナビゲーションノード",
+            .ko: "계층형 사이트맵 및 트리 내비게이션 노드",
+            .th: "แผนผังเว็บไซต์แบบลำดับชั้นและโหนดนำทางแบบต้นไม้"
+        ],
+        "asset_ia_02_title": [
+            .zhHant: "使用者狀態機躍遷流程圖",
+            .en: "User Journey State-Machine Transition Flowchart",
+            .zhHans: "用户状态机跃迁流程图",
+            .ja: "ユーザージャーニー状態遷移フローチャート",
+            .ko: "사용자 여정 상태 머신 전이 흐름도",
+            .th: "ผังงานการเปลี่ยนสถานะของผู้ใช้แบบ State Machine"
+        ],
         "asset_library": [
             .zhHant: "素材圖庫",
             .en: "Asset Library",
@@ -302,6 +542,230 @@ extension LocalizationManager {
             .ja: "機構設計、製品(3C、自動車、家具)、金物、デジタルUI部品",
             .ko: "기구 설계, 실제 제품(3C, 자동차, 가구), 하드웨어 부품 및 디지털 와이어프레임",
             .th: "ครอบคลุมการออกแบบกลไก, ผลิตภัณฑ์จริง (3C, รถยนต์, เฟอร์นิเจอร์), ฮาร์ดแวร์ และดิจิทัล"
+        ],
+        "asset_mech_01_title": [
+            .zhHant: "漸開線正齒輪組",
+            .en: "Involute Spur Gear Set",
+            .zhHans: "渐开线直齿轮组",
+            .ja: "インボリュート平歯車セット",
+            .ko: "인벌류트 평기어 세트",
+            .th: "ชุดเฟืองตรงอินโวลูต"
+        ],
+        "asset_mech_02_title": [
+            .zhHant: "平面圓柱滾子軸承",
+            .en: "Cylindrical Roller Bearing",
+            .zhHans: "平面圆柱滚子轴承",
+            .ja: "円筒ころ軸受",
+            .ko: "원통 롤러 베어링",
+            .th: "ตลับลูกปืนลูกกลิ้งทรงกระบอก"
+        ],
+        "asset_mech_03_title": [
+            .zhHant: "精密微型滾珠螺桿滑軌",
+            .en: "Precision Miniature Ball-Screw Linear Guide",
+            .zhHans: "精密微型滚珠丝杠滑轨",
+            .ja: "精密ミニチュアボールねじリニアガイド",
+            .ko: "정밀 소형 볼스크루 리니어 가이드",
+            .th: "รางสไลด์บอลสกรูขนาดเล็กความแม่นยำสูง"
+        ],
+        "asset_mech_04_title": [
+            .zhHant: "等徑盤形凸輪連桿機構",
+            .en: "Constant-Diameter Disk Cam and Follower Mechanism",
+            .zhHans: "等径盘形凸轮连杆机构",
+            .ja: "等径円板カム・フォロワ機構",
+            .ko: "등경 원판 캠 및 종동절 기구",
+            .th: "กลไกจานแคมเส้นผ่านศูนย์กลางคงที่และลูกตาม"
+        ],
+        "asset_mech_05_title": [
+            .zhHant: "NEMA 17 混合式步進馬達",
+            .en: "NEMA 17 Hybrid Stepper Motor",
+            .zhHans: "NEMA 17 混合式步进电机",
+            .ja: "NEMA 17 ハイブリッドステッピングモーター",
+            .ko: "NEMA 17 하이브리드 스테핑 모터",
+            .th: "สเต็ปเปอร์มอเตอร์ไฮบริด NEMA 17"
+        ],
+        "asset_mech_06_title": [
+            .zhHant: "動態外骨骼關節連桿",
+            .en: "Dynamic Exoskeleton Joint Linkage",
+            .zhHans: "动态外骨骼关节连杆",
+            .ja: "動的外骨格ジョイントリンク機構",
+            .ko: "동적 외골격 관절 링크 기구",
+            .th: "ชุดข้อเชื่อมข้อต่อโครงกระดูกภายนอกแบบไดนามิก"
+        ],
+        "asset_mold_01_title": [
+            .zhHant: "注塑模具 1.5° 拔模角與分模線剖面",
+            .en: "Injection Mold 1.5° Draft Angle and Parting-Line Section",
+            .zhHans: "注塑模具 1.5° 拔模角与分型线剖面",
+            .ja: "射出成形金型の1.5°抜き勾配とパーティングライン断面",
+            .ko: "사출 금형 1.5° 드래프트 각도 및 파팅 라인 단면",
+            .th: "หน้าตัดแม่พิมพ์ฉีด 1.5° มุมถอดแบบและเส้นแบ่งแม่พิมพ์"
+        ],
+        "asset_mold_02_title": [
+            .zhHant: "塑膠件均勻壁厚與加強筋規範",
+            .en: "Plastic Part Uniform Wall Thickness and Rib Design Rules",
+            .zhHans: "塑胶件均匀壁厚与加强筋规范",
+            .ja: "樹脂部品の均一肉厚とリブ設計規則",
+            .ko: "플라스틱 부품 균일 벽두께 및 리브 설계 규칙",
+            .th: "ข้อกำหนดความหนาผนังสม่ำเสมอและซี่เสริมแรงของชิ้นส่วนพลาสติก"
+        ],
+        "asset_mold_03_title": [
+            .zhHant: "螺絲自攻牙注塑凸柱結構",
+            .en: "Self-Tapping Screw Boss and Gusset Structure",
+            .zhHans: "螺丝自攻牙注塑凸柱结构",
+            .ja: "タッピンねじ用樹脂ボス・ガセット構造",
+            .ko: "셀프 태핑 나사용 사출 보스 및 거싯 구조",
+            .th: "โครงสร้างบอสฉีดขึ้นรูปและค้ำยันสำหรับสกรูปล่อยเกลียว"
+        ],
+        "asset_motif_01_title": [
+            .zhHant: "包浩斯幾何構成裝飾組",
+            .en: "Bauhaus Geometric Motif Set",
+            .zhHans: "包豪斯几何构成装饰组",
+            .ja: "バウハウス幾何構成モチーフセット",
+            .ko: "바우하우스 기하 구성 모티프 세트",
+            .th: "ชุดลวดลายเรขาคณิตแบบ Bauhaus"
+        ],
+        "asset_motif_02_title": [
+            .zhHant: "參數化 Voronoi 泰森多邊形紋樣",
+            .en: "Parametric Voronoi Tessellation Pattern",
+            .zhHans: "参数化 Voronoi 泰森多边形纹样",
+            .ja: "パラメトリックVoronoiボロノイ分割パターン",
+            .ko: "파라메트릭 보로노이 테셀레이션 패턴",
+            .th: "ลวดลายเทสเซลเลชัน Voronoi แบบพาราเมตริก"
+        ],
+        "asset_motif_03_title": [
+            .zhHant: "未來賽博賽道光軌幾何",
+            .en: "Futuristic Cyber Circuit Light-Track Geometry",
+            .zhHans: "未来赛博赛道光轨几何",
+            .ja: "未来的サイバー回路ライトトラック幾何",
+            .ko: "미래형 사이버 회로 라이트 트랙 기하",
+            .th: "เรขาคณิตเส้นแสงวงจรไซเบอร์แนวอนาคต"
+        ],
+        "asset_motion_01_title": [
+            .zhHant: "三次貝茲曲線動效時間函數",
+            .en: "Cubic Bezier Animation Timing Function",
+            .zhHans: "三次贝塞尔曲线动效时间函数",
+            .ja: "3次ベジェ曲線のアニメーションタイミング関数",
+            .ko: "3차 베지어 애니메이션 타이밍 함수",
+            .th: "ฟังก์ชันเวลาแอนิเมชันเส้นโค้งคิวบิกเบซิเยร์"
+        ],
+        "asset_motion_02_title": [
+            .zhHant: "彈簧阻尼系統動態示意",
+            .en: "Spring-Mass-Damper System Dynamics Diagram",
+            .zhHans: "弹簧阻尼系统动态示意",
+            .ja: "ばね・質量・ダンパ系の動的模式図",
+            .ko: "스프링-질량-댐퍼 시스템 동역학 도식",
+            .th: "แผนภาพพลวัตระบบสปริง-มวล-แดมเปอร์"
+        ],
+        "asset_pipe_01_title": [
+            .zhHant: "雙作用氣動滑台氣缸規格",
+            .en: "Dual-Acting Pneumatic Slide Cylinder Specification",
+            .zhHans: "双作用气动滑台气缸规格",
+            .ja: "複動形空圧スライドシリンダ仕様",
+            .ko: "복동식 공압 슬라이드 실린더 규격",
+            .th: "สเปกกระบอกลมสไลด์แบบสองทาง"
+        ],
+        "asset_pipe_02_title": [
+            .zhHant: "快插式直角節流閥管路接頭",
+            .en: "One-Touch Elbow Speed-Controller Fitting",
+            .zhHans: "快插式直角节流阀管路接头",
+            .ja: "ワンタッチエルボスピードコントローラ継手",
+            .ko: "원터치 엘보 스피드 컨트롤러 피팅",
+            .th: "ข้อต่อควบคุมความเร็วแบบงอฉากชนิดเสียบเร็ว"
+        ],
+        "asset_sheet_01_title": [
+            .zhHant: "鈑金 90° V 型折彎 K-Factor 計算展開圖",
+            .en: "Sheet-Metal 90° V-Bend K-Factor Flat-Pattern Calculation",
+            .zhHans: "钣金 90° V 型折弯 K-Factor 计算展开图",
+            .ja: "板金90°V曲げKファクター展開計算図",
+            .ko: "판금 90° V 벤딩 K-Factor 전개 계산도",
+            .th: "แบบคลี่คำนวณ K-Factor งานพับโลหะแผ่น V 90°"
+        ],
+        "asset_sheet_02_title": [
+            .zhHant: "CNC 銑削內直角狗骨狀清角結構",
+            .en: "CNC-Milled Internal-Corner Dogbone Relief",
+            .zhHans: "CNC 铣削内直角狗骨状清角结构",
+            .ja: "CNC切削内角用ドッグボーン逃げ形状",
+            .ko: "CNC 밀링 내부 직각 도그본 릴리프 구조",
+            .th: "โครงสร้างเว้นมุม Dogbone สำหรับมุมในงานกัด CNC"
+        ],
+        "asset_sheet_03_title": [
+            .zhHant: "沖孔自鉚壓鉚螺母柱",
+            .en: "Punched Self-Clinching Standoff",
+            .zhHans: "冲孔自铆压铆螺母柱",
+            .ja: "打抜き穴用セルフクリンチングスタンドオフ",
+            .ko: "펀칭 홀용 셀프 클린칭 스탠드오프",
+            .th: "เสารองสกรูแบบอัดย้ำตัวเองสำหรับรูเจาะ"
+        ],
+        "asset_surf_01_title": [
+            .zhHant: "陽極氧化膜厚與表面噴砂目數對照",
+            .en: "Anodizing Film Thickness and Sandblast Grit Reference",
+            .zhHans: "阳极氧化膜厚与表面喷砂目数对照",
+            .ja: "アルマイト皮膜厚とブラスト番手の対応表",
+            .ko: "아노다이징 피막 두께와 샌드블라스트 입도 기준",
+            .th: "ตารางเทียบความหนาฟิล์มอโนไดซ์กับเบอร์เม็ดทรายพ่น"
+        ],
+        "asset_surf_02_title": [
+            .zhHant: "表面粗糙度 Ra 算術平均標註規",
+            .en: "Surface Roughness Ra Arithmetic-Mean Reference Gauge",
+            .zhHans: "表面粗糙度 Ra 算术平均标注规",
+            .ja: "表面粗さRa算術平均表示ゲージ",
+            .ko: "표면 거칠기 Ra 산술평균 표기 게이지",
+            .th: "เกจอ้างอิงค่าความขรุขระผิว Ra แบบค่าเฉลี่ยเลขคณิต"
+        ],
+        "asset_token_01_title": [
+            .zhHant: "8pt 空間網格與間距度量尺",
+            .en: "8-Point Spacing Grid and Scale Ruler",
+            .zhHans: "8pt 空间网格与间距度量尺",
+            .ja: "8ptスペーシンググリッドと間隔スケール定規",
+            .ko: "8pt 공간 그리드 및 간격 스케일 자",
+            .th: "กริดระยะ 8pt และไม้บรรทัดสเกลระยะห่าง"
+        ],
+        "asset_token_02_title": [
+            .zhHant: "設計語意色彩層級與對比度矩陣",
+            .en: "Semantic Color Token Hierarchy and Contrast Matrix",
+            .zhHans: "设计语义色彩层级与对比度矩阵",
+            .ja: "セマンティックカラー階層とコントラスト行列",
+            .ko: "시맨틱 컬러 토큰 계층 및 대비 매트릭스",
+            .th: "ลำดับชั้นโทเคนสีเชิงความหมายและเมทริกซ์คอนทราสต์"
+        ],
+        "asset_typo_01_title": [
+            .zhHant: "拉丁字體排印五線度量基準",
+            .en: "Latin Typeface Anatomy and Baseline Metrics",
+            .zhHans: "拉丁字体排印五线度量基准",
+            .ja: "ラテン書体の字形構造とベースライン指標",
+            .ko: "라틴 서체 구조와 기준선 메트릭",
+            .th: "เมตริกโครงสร้างตัวอักษรละตินและเส้นฐาน"
+        ],
+        "asset_typo_02_title": [
+            .zhHant: "中文字型永字八法九宮格",
+            .en: "Chinese Glyph Nine-Grid for Eight Principles of Yong",
+            .zhHans: "中文字体永字八法九宫格",
+            .ja: "永字八法の漢字九分割グリッド",
+            .ko: "영자팔법 한자 글리프 9분할 그리드",
+            .th: "ตารางเก้าช่องตัวอักษรจีนตามหลักแปดวิธีของหย่ง"
+        ],
+        "asset_typo_03_title": [
+            .zhHant: "版面編排字級模矩比例尺",
+            .en: "Modular Type-Scale Layout Ruler",
+            .zhHans: "版面编排字号模数比例尺",
+            .ja: "組版用モジュラータイプスケール定規",
+            .ko: "편집 디자인용 모듈러 타입 스케일 자",
+            .th: "ไม้บรรทัดสเกลตัวอักษรแบบโมดูลาร์สำหรับจัดหน้า"
+        ],
+        "asset_ui_01_title": [
+            .zhHant: "iOS 與 Material 3 雙系統導航列對照",
+            .en: "iOS and Material 3 Navigation Bar Comparison",
+            .zhHans: "iOS 与 Material 3 双系统导航栏对照",
+            .ja: "iOSとMaterial 3のナビゲーションバー比較",
+            .ko: "iOS와 Material 3 내비게이션 바 비교",
+            .th: "การเปรียบเทียบแถบนำทาง iOS และ Material 3"
+        ],
+        "asset_ui_02_title": [
+            .zhHant: "底部操作卡片 Bottom Sheet 手勢容器",
+            .en: "Bottom Sheet Gesture Container",
+            .zhHans: "底部操作卡片 Bottom Sheet 手势容器",
+            .ja: "ボトムシート・ジェスチャーコンテナ",
+            .ko: "바텀 시트 제스처 컨테이너",
+            .th: "คอนเทนเนอร์ Bottom Sheet สำหรับท่าทางสัมผัส"
         ],
         "attach_none": [
             .zhHant: "不附加（僅儲存為獨立錄音）",
