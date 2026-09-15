@@ -24,6 +24,7 @@ pub mod ffi_model3d;
 pub mod ffi_hwr;
 pub mod ffi_input;
 pub mod ffi_interop;
+pub mod ffi_llm;
 pub mod ffi_oauth;
 #[cfg(feature = "relay")]
 pub mod ffi_relay;

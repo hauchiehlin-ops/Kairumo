@@ -45,6 +45,7 @@ padnote-ink = { path = "../padnote-ink" }
 padnote-sync = { path = "../padnote-sync" }
 padnote-asr = { path = "../padnote-asr" }
 padnote-recognize = { path = "../padnote-recognize" }
+padnote-llm = { path = "../padnote-llm" }
 padnote-storage = { path = "../padnote-storage" }
 padnote-search = { path = "../padnote-search" }
 padnote-export = { path = "../padnote-export" }

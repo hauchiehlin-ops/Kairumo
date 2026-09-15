@@ -169,7 +169,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | ~~S-15~~ ✅ | WP5 | whisper.cpp 實作 `AsrEngine` | `padnote-asr-whisper` 已實作；品質實測仍列 H9 |
 | ~~S-23~~ ✅ | — | 文字 op 寫入 `doc/ops/` 持久化 | `NotebookSession::record` 會寫 `doc/ops/<lamport>-<device>.oplog`；重開 replay 已有測試 |
 | ~~S-19~~ ✅ | WP20 | iCloud `CloudProvider` 實作 | **不需要另一個 provider** —— ubiquity container 就是一個檔案系統路徑，核心的 `LocalFolderProvider` 直接能用。真正的差別只有「檔案可能還沒下載」：iCloud 用 `.原檔名.icloud` 佔位檔。核心已認得佔位檔（列舉時還原成邏輯檔名、讀取時回 `NotMaterialized` 而不是 `NotFound`），Apple 端 `ICloudSyncFolder.swift` 負責觸發下載並等它完成。實機行為仍列 H5 |
-| S-20 | WP23 | llama.cpp 整合（摘要、待辦抽取） | P2 |
+| ~~S-20~~ ✅ | WP23 | llama.cpp 整合（摘要、待辦抽取） | `padnote-llm`（切塊 + 提示詞 + **解析**，18 項測試）＋ `padnote-llm-llama`（llama.cpp 後端）＋ `ffi_llm`（平台介面，4 項測試）。**llama.cpp 不是 `padnote-core` 的相依** —— 連進去會讓行動端每個使用者都下載好幾十 MB，不管他用不用得到摘要（與 reqwest 那次同一個判斷）。行動端由平台提供後端。仍待做：兩邊的 UI 入口、實際跑一份 2.4 GB 的 Qwen3-4B 驗真實輸出 |
 | ~~S-21~~ ✅ | WP7 | PDFium 綁定（`pdfium-render`）| `padnote-pdf-pdfium` 已實作；執行期庫與大型 PDF 實測仍列 H8/H6 |
 | ~~S-22~~ ✅ | WP12 | Apple Vision / ML Kit 的 `HwrEngine` 實作 | Android 的 ML Kit 本來就有；**Apple 端原本完全沒有手寫辨識**（iPad 上寫的字搜不到）。新增 `HandwritingRecognizer.swift`：把每一組筆畫算繪成白底黑字的圖再送 `VNRecognizeTextRequest`。分組規則下沉核心（`padnote-recognize::grouping`），兩邊同一份 —— 切法不同會讓同一頁在兩台裝置上搜到不一樣的東西。辨識率需實機以真實筆跡驗（A-09）|
 

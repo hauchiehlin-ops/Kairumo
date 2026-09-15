@@ -1,0 +1,18 @@
+[package]
+name = "padnote-llm-llama"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+# 內部 crate，不發佈到 crates.io（workspace 內以 path 互相引用）。
+publish = false
+
+[dependencies]
+padnote-llm = { path = "../padnote-llm" }
+llama-cpp-2 = { workspace = true }
+# `token_to_piece` 收一個 `&mut encoding_rs::Decoder`（跨 token 保留解碼狀態）。
+# llama-cpp-2 沒有 re-export 它，所以要自己宣告。Apache-2.0 OR MIT。
+encoding_rs = "0.8"
+
+[lints]
+workspace = true
