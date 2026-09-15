@@ -11,6 +11,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,6 +45,11 @@ import com.kairumo.padnote.sync.FolderSync
 import com.kairumo.padnote.backup.BackupManager
 import com.kairumo.padnote.text.TextBox
 import com.kairumo.padnote.text.TextBoxEditor
+import com.kairumo.padnote.account.AccountManager
+import com.kairumo.padnote.account.IdentityDialog
+import com.kairumo.padnote.library.HomeScreen
+import com.kairumo.padnote.library.RenameNotebookDialog
+import com.kairumo.padnote.library.DeleteNotebookDialog
 import com.kairumo.padnote.library.NotebookLibrary
 import com.kairumo.padnote.shape.NoteConnection
 import com.kairumo.padnote.shape.NoteShape
@@ -102,10 +109,151 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
-                    InkScreen()
+                    KairumoApp()
                 }
             }
         }
+    }
+}
+
+/**
+ * App 的兩個畫面：首頁與編輯器。
+ *
+ * 在此之前 Android 只有編輯器 —— App 一開就直接進一本筆記的一頁，沒有清單、
+ * 沒有搜尋、沒有「新增一本」。使用者看到的是一個畫圖玩具，不是筆記本。
+ *
+ * 用一個 `openedId` 而不是 Navigation 元件：只有兩個畫面，狀態也只有一個
+ * 「現在開著哪一本」。多拉一個導覽框架進來只會多一層要維護的東西。
+ */
+@Composable
+private fun KairumoApp() {
+    val activity = LocalContext.current as ComponentActivity
+    var openedId by remember { mutableStateOf<String?>(null) }
+
+    val id = openedId
+    if (id == null) {
+        NotebookHome(onOpen = { openedId = it })
+    } else {
+        InkScreen(notebookId = id, onBack = { openedId = null })
+    }
+}
+
+/**
+ * 首頁：筆記本清單、搜尋、新增、身分、備份。
+ *
+ * 這一層只負責「把狀態接上 [HomeScreen]」—— 版面在那邊，資料在
+ * [NotebookLibrary]，兩邊都不知道對方的存在。
+ */
+@Composable
+private fun NotebookHome(onOpen: (String) -> Unit) {
+    val activity = LocalContext.current as ComponentActivity
+    val lang = deviceLanguageTag()
+    fun l(key: String) = LocalizationStrings.localized(key, lang)
+
+    val device = remember { deviceId(activity) }
+    var sort by remember { mutableStateOf(NotebookLibrary.Sort.MODIFIED) }
+    var revision by remember { mutableIntStateOf(0) }
+    var renaming by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
+    var deleting by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
+    var editingIdentity by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    var recording by remember { mutableStateOf(false) }
+
+    var profile by remember {
+        mutableStateOf(AccountManager.load(activity, l("default_user_name")))
+    }
+
+    // revision 是重讀的觸發器。清單來自檔案系統，沒有觀察者可以訂閱 ——
+    // 新增或刪除之後不主動重讀的話，畫面會停在舊的內容。
+    val entries = remember(revision, sort) { NotebookLibrary.all(activity, device, sort) }
+
+    val restorePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            message = runRestore(activity, uri)
+            revision++
+        }
+    }
+
+    Column(Modifier.fillMaxSize()) {
+        message?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+            )
+        }
+
+        HomeScreen(
+            entries = entries,
+            profileName = profile.displayName,
+            profileColorHex = profile.colorHex,
+            appVersion = "Kairumo v${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})",
+            sort = sort,
+            recording = recording,
+            l = ::l,
+            onOpen = onOpen,
+            onCreate = {
+                val id = NotebookLibrary.create(activity, l("new_note"), device)
+                revision++
+                // 新增之後直接開 —— 建了一本卻停在清單上，使用者還要再點一次。
+                if (id != null) onOpen(id)
+            },
+            onRename = { renaming = it },
+            onDelete = { deleting = it },
+            onSortChange = { sort = it },
+            onEditIdentity = { editingIdentity = true },
+            onToggleRecording = {
+                // 錄音要有一本筆記可以寫進去。沒有的話先建一本再開，
+                // 不然錄完的音檔沒有歸屬。
+                val id = entries.firstOrNull()?.id
+                    ?: NotebookLibrary.create(activity, l("new_note"), device)
+                if (id != null) onOpen(id)
+            },
+            onBackup = { message = runBackup(activity) },
+            onRestore = { restorePicker.launch(arrayOf("*/*")) }
+        )
+    }
+
+    renaming?.let { entry ->
+        RenameNotebookDialog(
+            entry = entry,
+            l = ::l,
+            onDismiss = { renaming = null },
+            onConfirm = { title ->
+                if (title.isNotBlank()) {
+                    NotebookLibrary.rename(activity, entry.id, title, device)
+                    revision++
+                }
+            }
+        )
+    }
+
+    deleting?.let { entry ->
+        DeleteNotebookDialog(
+            entry = entry,
+            l = ::l,
+            onDismiss = { deleting = null },
+            onConfirm = {
+                NotebookLibrary.delete(activity, entry.id)
+                revision++
+            }
+        )
+    }
+
+    if (editingIdentity) {
+        IdentityDialog(
+            profile = profile,
+            l = ::l,
+            onDismiss = { editingIdentity = false },
+            onSave = { name, hex ->
+                AccountManager.saveName(activity, name, l("default_user_name"))
+                AccountManager.saveColor(activity, hex)
+                profile = AccountManager.load(activity, l("default_user_name"))
+            }
+        )
     }
 }
 
@@ -115,13 +263,14 @@ class MainActivity : ComponentActivity() {
  * 主體是畫布 —— 這是一個筆記 App，開起來就該能寫字。核心狀態那些數字移進
  * 對話框：它們是驗證用的憑據，不是使用者每天要看的東西。
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun InkScreen() {
+private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) {
     val activity = LocalContext.current as ComponentActivity
     val l10n = { key: String -> uiString(key) }
     // 真的開一本筆記本：沒有 session 的話，匯出與錄音都沒有東西可寫，
     // 這一頁就只是個畫圖玩具而不是筆記 App。
-    val notebook = remember { openNotebook(activity) }
+    val notebook = remember(notebookId) { openNotebook(activity, notebookId) }
     val engine = remember(notebook) {
         InkEngine(session = notebook?.first, pageId = notebook?.second)
     }
@@ -226,6 +375,12 @@ private fun InkScreen() {
     /// 看起來像個測試程式 —— 使用者就是這樣回報的。留一個開關是因為
     /// 掌拒與筆壓的問題只有實機重現得出來，屆時要能一鍵打開。
     var showInkDebug by remember { mutableStateOf(false) }
+
+    // 系統返回鍵＝回首頁。Android 使用者按的第一個東西就是它，
+    // 不接的話按下去會直接把 App 關掉 —— 看起來像當掉。
+    if (onBack != null) {
+        androidx.activity.compose.BackHandler { onBack() }
+    }
     var showMenu by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -234,10 +389,19 @@ private fun InkScreen() {
         // 先前把全部動作排成一列再讓它水平捲動 —— 在 320dp 寬的螢幕上，
         // 錄音、匯出、列印、手冊全都被推到畫面外，而且捲不太動。
         // 功能點不到就等於沒做。
-        Row(
+        // FlowRow 而不是 Row：320dp 寬的螢幕上，返回鈕加兩個切換再加「...」
+        // 就擠不下，Row 會把最後一個壓成一欄一個字的直書（實機上看到的
+        // 就是「Stylus Only」被壓成一直條）。換行至少每個字都看得懂。
+        FlowRow(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
+            // 回首頁。沒有這顆的話，進了筆記就出不來了 ——
+            // Android 的系統返回鍵在單一 Compose 畫面裡不會有任何作用。
+            if (onBack != null) {
+                TextButton(onClick = onBack) { Text("‹ ${l10n("back_to_home")}") }
+            }
             FilterChip(
                 selected = lowLatency && !lowLatencyUnavailable,
                 enabled = !lowLatencyUnavailable,
@@ -253,10 +417,8 @@ private fun InkScreen() {
                 },
                 label = { Text(l10n("ink_pen_only")) }
             )
-            Box(modifier = Modifier.weight(1f))
-            // 只留一個按鈕。兩個切換加兩個按鈕在 320dp 寬的螢幕上就已經
-            // 把最右邊那個擠出畫面 —— 而被擠掉的那個永遠是最後加上去的。
-            TextButton(onClick = { showMenu = true }) { Text("...") }
+            // FlowRow 裡沒有 weight 可以撐開，靠換行自然排就好。
+            TextButton(onClick = { showMenu = true }) { Text("⋯") }
 
             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                 DropdownMenuItem(

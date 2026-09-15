@@ -287,6 +287,14 @@ extension LocalizationManager {
             .ko: "오디오 녹음 및 동기화",
             .th: "การบันทึกเสียงและการจัดตำแหน่ง"
         ],
+        "back_to_home": [
+            .zhHant: "回到首頁",
+            .en: "Back to home",
+            .zhHans: "回到首页",
+            .ja: "ホームに戻る",
+            .ko: "홈으로",
+            .th: "กลับหน้าหลัก"
+        ],
         "backup_corrupted": [
             .zhHant: "%@ 個檔案損毀，未寫入（其餘已復原）",
             .en: "%@ files were corrupted and skipped (the rest were restored)",
@@ -1215,6 +1223,14 @@ extension LocalizationManager {
             .ko: "계속하기",
             .th: "ทำต่อ"
         ],
+        "continue_working": [
+            .zhHant: "繼續",
+            .en: "Continue",
+            .zhHans: "继续",
+            .ja: "続きから",
+            .ko: "이어서",
+            .th: "ทำต่อ"
+        ],
         "copy_encrypted_link": [
             .zhHant: "複製加密邀請連結",
             .en: "Copy Encrypted Invite Link",
@@ -1374,6 +1390,14 @@ extension LocalizationManager {
             .ja: "このメッセージを削除",
             .ko: "이 메시지 삭제",
             .th: "ลบข้อความนี้"
+        ],
+        "delete_notebook_confirm": [
+            .zhHant: "確定要刪除「%@」嗎？這本筆記的所有內容都會消失，而且救不回來。",
+            .en: "Delete “%@”? Everything in this note will be gone, and it cannot be undone.",
+            .zhHans: "确定要删除「%@」吗？这本笔记的所有内容都会消失，而且救不回来。",
+            .ja: "「%@」を削除しますか？このノートの内容はすべて消え、元に戻せません。",
+            .ko: "‘%@’을(를) 삭제할까요? 이 노트의 모든 내용이 사라지며 되돌릴 수 없습니다.",
+            .th: "ลบ “%@” ไหม? เนื้อหาทั้งหมดจะหายไปและกู้คืนไม่ได้"
         ],
         "delete_page": [
             .zhHant: "刪除此頁",
@@ -3095,6 +3119,14 @@ extension LocalizationManager {
             .ko: "노트 제목",
             .th: "ชื่อบันทึก"
         ],
+        "notebook_empty": [
+            .zhHant: "還沒有任何筆記。點「新增筆記」開始。",
+            .en: "No notes yet. Tap “New note” to start.",
+            .zhHans: "还没有任何笔记。点「新增笔记」开始。",
+            .ja: "まだノートがありません。「新規ノート」から始めましょう。",
+            .ko: "아직 노트가 없습니다. ‘새 노트’로 시작하세요.",
+            .th: "ยังไม่มีโน้ต แตะ “โน้ตใหม่” เพื่อเริ่ม"
+        ],
         "numbered_list": [
             .zhHant: "編號清單",
             .en: "Numbered List",
@@ -3246,6 +3278,14 @@ extension LocalizationManager {
             .ja: "リンクを開く",
             .ko: "링크 열기",
             .th: "เปิดลิงก์"
+        ],
+        "open_note": [
+            .zhHant: "開啟",
+            .en: "Open",
+            .zhHans: "开启",
+            .ja: "開く",
+            .ko: "열기",
+            .th: "เปิด"
         ],
         "open_record_folder": [
             .zhHant: "開啟 Kairumo Record 資料夾",
@@ -3983,6 +4023,14 @@ extension LocalizationManager {
             .ko: "기구, 3C, 부품, 사양, 색상 검색...",
             .th: "ค้นหากลไก, 3C, ชิ้นส่วน, สเปก, สี..."
         ],
+        "search_no_result": [
+            .zhHant: "找不到符合的筆記",
+            .en: "No matching notes",
+            .zhHans: "找不到符合的笔记",
+            .ja: "一致するノートがありません",
+            .ko: "일치하는 노트가 없습니다",
+            .th: "ไม่พบโน้ตที่ตรงกัน"
+        ],
         "search_placeholder": [
             .zhHant: "搜尋筆記標題、草稿或內容…",
             .en: "Search note titles, drafts, or transcripts…",
@@ -4198,6 +4246,14 @@ extension LocalizationManager {
             .ja: "更新日時順",
             .ko: "수정 날짜순",
             .th: "เรียงตามวันที่แก้ไข"
+        ],
+        "sort_by_pages": [
+            .zhHant: "依頁數排序",
+            .en: "Sort by pages",
+            .zhHans: "依页数排序",
+            .ja: "ページ数順",
+            .ko: "페이지 수순",
+            .th: "เรียงตามจำนวนหน้า"
         ],
         "sort_by_title": [
             .zhHant: "依名稱排序",

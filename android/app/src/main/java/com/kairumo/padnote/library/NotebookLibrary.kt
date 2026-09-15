@@ -29,8 +29,13 @@ object NotebookLibrary {
         val id: String,
         val title: String,
         val pageCount: Int,
-        val path: File
+        val path: File,
+        /** 最後修改時間（毫秒）。首頁要依此排序與顯示「最近」。 */
+        val modifiedAt: Long = 0L
     )
+
+    /** 清單排序方式。與 Apple 端的「全部筆記」排序選單同一組。 */
+    enum class Sort { MODIFIED, TITLE, PAGES }
 
     /** 套件目錄。第一次呼叫時會把舊版那本單一筆記搬進來。 */
     fun directory(context: Context): File {
@@ -57,12 +62,22 @@ object NotebookLibrary {
     }
 
     /** 所有筆記本，依標題排序。開不起來的套件會被跳過，不會讓整份清單失敗。 */
-    fun all(context: Context, deviceId: UInt): List<Entry> =
-        directory(context).listFiles()
+    fun all(
+        context: Context,
+        deviceId: UInt,
+        sort: Sort = Sort.MODIFIED
+    ): List<Entry> {
+        val entries = directory(context).listFiles()
             ?.filter { it.isDirectory && it.name.endsWith(".$EXTENSION") }
             ?.mapNotNull { describe(it, deviceId) }
-            ?.sortedBy { it.title }
-            ?: emptyList()
+            ?: return emptyList()
+        return when (sort) {
+            // 最近修改排前面 —— 使用者要找的十之八九是剛剛在寫的那本。
+            Sort.MODIFIED -> entries.sortedByDescending { it.modifiedAt }
+            Sort.TITLE -> entries.sortedBy { it.title }
+            Sort.PAGES -> entries.sortedByDescending { it.pageCount }
+        }
+    }
 
     private fun describe(path: File, deviceId: UInt): Entry? {
         val session = runCatching { PadnoteSession.openExisting(path.absolutePath, deviceId) }
@@ -71,9 +86,33 @@ object NotebookLibrary {
             id = path.nameWithoutExtension,
             title = runCatching { session.title() }.getOrDefault(path.nameWithoutExtension),
             pageCount = runCatching { session.pageCount().toInt() }.getOrDefault(0),
-            path = path
+            path = path,
+            // 取套件裡最新的那個檔案。目錄本身的 mtime 在某些檔案系統上
+            // 不會隨內容更新，拿它排序會得到一個永遠不動的清單。
+            modifiedAt = path.walkTopDown().filter { it.isFile }
+                .maxOfOrNull { it.lastModified() } ?: path.lastModified()
         )
     }
+
+    /** 改標題。改的是套件裡的標題，不是檔名 —— 檔名是 id，換掉會斷掉同步。 */
+    fun rename(context: Context, id: String, title: String, deviceId: UInt): Boolean =
+        runCatching {
+            val path = File(directory(context), "$id.$EXTENSION")
+            if (!path.exists()) return false
+            val session = PadnoteSession.openExisting(path.absolutePath, deviceId)
+            session.setTitle(title)
+            true
+        }.getOrDefault(false)
+
+    /**
+     * 刪除一本筆記本。
+     *
+     * 真的刪掉整個套件目錄。**沒有回收桶** —— 呼叫端一定要先跟使用者確認，
+     * 這是使用者唯一的一份資料。
+     */
+    fun delete(context: Context, id: String): Boolean =
+        runCatching { File(directory(context), "$id.$EXTENSION").deleteRecursively() }
+            .getOrDefault(false)
 
     /** 開啟（或建立）一本筆記本，回傳 session 與第一頁。 */
     fun open(context: Context, id: String, deviceId: UInt, title: String = "Kairumo"):

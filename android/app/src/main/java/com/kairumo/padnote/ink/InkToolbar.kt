@@ -6,6 +6,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -64,6 +66,7 @@ val inkPalette: List<Pair<String, Color>> = listOf(
 /** 筆寬可選範圍。與 Apple 端的 `StrokeWidthSlider.range` 相同。 */
 val inkWidthRange: ClosedFloatingPointRange<Float> = 1f..30f
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun InkToolbar(
     tool: InkTool,
@@ -75,13 +78,17 @@ fun InkToolbar(
     onWidthChange: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Row(
+    // FlowRow 而不是水平捲動的 Row。
+    //
+    // 捲軸在觸控上還能用，但在 320dp 寬的螢幕上最後一支筆只露出半個字，
+    // 而畫面上沒有任何東西告訴使用者「右邊還有」—— 他看到的就是
+    // 「只有三支筆」。Apple 端的符號面板踩過同一個坑，結論一樣：換行。
+    FlowRow(
         modifier = modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
             .padding(horizontal = 12.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.spacedBy(6.dp),
-        verticalAlignment = Alignment.CenterVertically
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         for (option in InkTool.entries) {
             FilterChip(

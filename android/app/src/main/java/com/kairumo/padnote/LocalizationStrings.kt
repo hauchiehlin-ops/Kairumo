@@ -282,6 +282,14 @@ object LocalizationStrings {
             "ko" to "오디오 녹음 및 동기화",
             "th" to "การบันทึกเสียงและการจัดตำแหน่ง"
         ),
+        "back_to_home" to mapOf(
+            "zh-Hant" to "回到首頁",
+            "en" to "Back to home",
+            "zh-Hans" to "回到首页",
+            "ja" to "ホームに戻る",
+            "ko" to "홈으로",
+            "th" to "กลับหน้าหลัก"
+        ),
         "backup_corrupted" to mapOf(
             "zh-Hant" to "%@ 個檔案損毀，未寫入（其餘已復原）",
             "en" to "%@ files were corrupted and skipped (the rest were restored)",
@@ -1210,6 +1218,14 @@ object LocalizationStrings {
             "ko" to "계속하기",
             "th" to "ทำต่อ"
         ),
+        "continue_working" to mapOf(
+            "zh-Hant" to "繼續",
+            "en" to "Continue",
+            "zh-Hans" to "继续",
+            "ja" to "続きから",
+            "ko" to "이어서",
+            "th" to "ทำต่อ"
+        ),
         "copy_encrypted_link" to mapOf(
             "zh-Hant" to "複製加密邀請連結",
             "en" to "Copy Encrypted Invite Link",
@@ -1369,6 +1385,14 @@ object LocalizationStrings {
             "ja" to "このメッセージを削除",
             "ko" to "이 메시지 삭제",
             "th" to "ลบข้อความนี้"
+        ),
+        "delete_notebook_confirm" to mapOf(
+            "zh-Hant" to "確定要刪除「%@」嗎？這本筆記的所有內容都會消失，而且救不回來。",
+            "en" to "Delete “%@”? Everything in this note will be gone, and it cannot be undone.",
+            "zh-Hans" to "确定要删除「%@」吗？这本笔记的所有内容都会消失，而且救不回来。",
+            "ja" to "「%@」を削除しますか？このノートの内容はすべて消え、元に戻せません。",
+            "ko" to "‘%@’을(를) 삭제할까요? 이 노트의 모든 내용이 사라지며 되돌릴 수 없습니다.",
+            "th" to "ลบ “%@” ไหม? เนื้อหาทั้งหมดจะหายไปและกู้คืนไม่ได้"
         ),
         "delete_page" to mapOf(
             "zh-Hant" to "刪除此頁",
@@ -3090,6 +3114,14 @@ object LocalizationStrings {
             "ko" to "노트 제목",
             "th" to "ชื่อบันทึก"
         ),
+        "notebook_empty" to mapOf(
+            "zh-Hant" to "還沒有任何筆記。點「新增筆記」開始。",
+            "en" to "No notes yet. Tap “New note” to start.",
+            "zh-Hans" to "还没有任何笔记。点「新增笔记」开始。",
+            "ja" to "まだノートがありません。「新規ノート」から始めましょう。",
+            "ko" to "아직 노트가 없습니다. ‘새 노트’로 시작하세요.",
+            "th" to "ยังไม่มีโน้ต แตะ “โน้ตใหม่” เพื่อเริ่ม"
+        ),
         "numbered_list" to mapOf(
             "zh-Hant" to "編號清單",
             "en" to "Numbered List",
@@ -3241,6 +3273,14 @@ object LocalizationStrings {
             "ja" to "リンクを開く",
             "ko" to "링크 열기",
             "th" to "เปิดลิงก์"
+        ),
+        "open_note" to mapOf(
+            "zh-Hant" to "開啟",
+            "en" to "Open",
+            "zh-Hans" to "开启",
+            "ja" to "開く",
+            "ko" to "열기",
+            "th" to "เปิด"
         ),
         "open_record_folder" to mapOf(
             "zh-Hant" to "開啟 Kairumo Record 資料夾",
@@ -3978,6 +4018,14 @@ object LocalizationStrings {
             "ko" to "기구, 3C, 부품, 사양, 색상 검색...",
             "th" to "ค้นหากลไก, 3C, ชิ้นส่วน, สเปก, สี..."
         ),
+        "search_no_result" to mapOf(
+            "zh-Hant" to "找不到符合的筆記",
+            "en" to "No matching notes",
+            "zh-Hans" to "找不到符合的笔记",
+            "ja" to "一致するノートがありません",
+            "ko" to "일치하는 노트가 없습니다",
+            "th" to "ไม่พบโน้ตที่ตรงกัน"
+        ),
         "search_placeholder" to mapOf(
             "zh-Hant" to "搜尋筆記標題、草稿或內容…",
             "en" to "Search note titles, drafts, or transcripts…",
@@ -4193,6 +4241,14 @@ object LocalizationStrings {
             "ja" to "更新日時順",
             "ko" to "수정 날짜순",
             "th" to "เรียงตามวันที่แก้ไข"
+        ),
+        "sort_by_pages" to mapOf(
+            "zh-Hant" to "依頁數排序",
+            "en" to "Sort by pages",
+            "zh-Hans" to "依页数排序",
+            "ja" to "ページ数順",
+            "ko" to "페이지 수순",
+            "th" to "เรียงตามจำนวนหน้า"
         ),
         "sort_by_title" to mapOf(
             "zh-Hant" to "依名稱排序",
