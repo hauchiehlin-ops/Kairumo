@@ -5,6 +5,48 @@
 
 ---
 
+## 2026-09-15 (31) · 不經商店的安裝路徑
+
+### `.ipa` 不是「可以傳給別人的安裝檔」
+
+新增 `scripts/dist.sh`，把當下的程式碼打包成能直接安裝的檔案（不升版、不
+commit、不碰商店 —— 那些是 `release.sh` 的事）。mac 與 Android 很順：
+Developer ID 簽章 + 公證 + 釘選的 DMG、apksigner 驗過的 universal APK，
+兩者給誰都能裝。
+
+iOS 不是。第一版交出一個通過所有驗證的 Ad Hoc `.ipa`，然後才發現
+**iOS 根本沒有安裝 .ipa 的功能** —— AirDrop 過去、丟進「檔案」App 再點下去，
+系統完全沒有反應。不是檔案壞了，是這個格式只有 Mac 上的 Apple Configurator /
+Finder 送得進裝置，而且目標裝置的 UDID 還得事先登錄。
+
+「打包成功、驗證全過」跟「對方裝得起來」是兩件事。這次的驗證只證明了前者，
+卻用前者的口氣回報 —— 這正是 `STATE.md` 裡那條「誠實區分已驗證與待實機」
+要擋的東西。
+
+補上兩條真的能用的路：
+
+- **自己的裝置** → `--ios-install`：development 簽章，解出 `.app` 交給
+  `devicectl` 直接裝。Xcode 會順手把接上的裝置登錄進帳號，不必先查 UDID。
+- **別人的裝置** → TestFlight（`release.sh`）。不收 UDID、對方不用 Mac。
+  這是唯一不需要事先登錄裝置的路。
+
+裝置偵測用 `hardwareProperties.reality == "physical"`。第一版拿 `platform`
+判斷，結果九台模擬器全被撈進來，一路編譯完才在安裝時報
+`capability not supported`。`pairingState` 也不行 —— 模擬器同樣是 `paired`。
+
+### 順手補起來的洞
+
+- `apksigner --print-certs` 的行首是 `V2 Signer:` 而不是 `Signer #1`。
+  grep 抓不到就回傳 1，`set -e` 讓腳本在「其實驗證成功」的地方無聲中止。
+  驗證用的 grep 一律接 `|| true`，結果另外判。
+- Android 側載金鑰做成**固定**的一把（`android/.local/`），不是拋棄式。
+  Android 認金鑰不認版本 —— 換金鑰的新版沒辦法覆蓋安裝，使用者得先移除舊版，
+  資料一起沒了。
+
+v2.10.1 (24) 的 iOS 與 Mac 組建已上傳 App Store Connect。
+
+---
+
 ## 2026-09-14 (30) · 圖層面板、Mac 上傳被擋下的兩個設定
 
 ### 物件堆疊與群組 —— 最後一項「建了用不到」

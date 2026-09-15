@@ -7,14 +7,17 @@
 
 ## 🔴 被硬體或資料卡住（程式已就緒）
 
-### H0. iOS 側載裝置 UDID 登錄（`scripts/dist.sh`）
-- **卡在**：Ad Hoc 的 .ipa 只能裝在事先登錄 UDID 的裝置上，一個帳號上限 100 台。
-  目前描述檔只涵蓋 **1 台**裝置 —— 也就是現在產出的 .ipa 給任何別人都裝不起來。
-- **已就緒**：`./scripts/dist.sh` 已可產出通過驗證的 Ad Hoc .ipa，
-  並在打包時印出描述檔涵蓋的裝置數與到期日。
-- **要做**：收集受測者裝置 UDID → developer.apple.com → Devices 登錄 → 重跑 dist.sh。
-- **備註**：mac 的 DMG 與 Android 的 APK **沒有**這個限制，公證/簽章後給誰都能裝。
-  不想登錄 UDID 就只能走 TestFlight（`scripts/release.sh`）。
+### H0. iOS 實機驗證（`--ios-install` 那條路尚未實測）
+- **卡在**：目前沒有任何實體 iPhone / iPad 連著這台 Mac。
+  帳號裡也只登錄了一支 iPhone 16 Pro Max，**沒有任何 iPad**。
+- **已就緒**：`./scripts/dist.sh --ios-install` 全部寫好，裝置偵測與
+  「沒接線就在編譯前中止」都已實測通過；但**「真的裝進裝置」那一步沒驗過**。
+- **要做**：接上 iPad → 解鎖 → 信任這台 Mac → 跑 `--ios-install`。
+- **判定**：主畫面出現 Kairumo 且能開啟 = 通過。
+- **備註**：要發給**別人**的話不走這條 —— 走 TestFlight（`scripts/release.sh`），
+  不需要 UDID、對方也不需要 Mac。v2.10.1 (24) 已上傳，等 Apple 處理完
+  就能在 App Store Connect 加測試人員。
+  `.ipa` 那條路（Apple Configurator + 事先登錄 UDID）實務上不建議給非技術使用者。
 
 ### H1. S1 墨跡延遲實機量測 —— **M0 Go/No-Go，最高優先**
 - **卡在**：實體 iPad（模擬器 Metal 路徑不同，數字無意義）＋ 240fps 攝影機
