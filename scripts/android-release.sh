@@ -99,7 +99,8 @@ cat <<'NEXT'
 
 下一步（人要做的部分）：
   1. Play Console → 內部測試 → 上傳 AAB
-  2. 隱私權政策網址填現成那份（docs/legal/privacy.html 發佈後的網址）
+  2. 隱私權政策網址：https://hauchiehlin-ops.github.io/Kairumo/legal/privacy.html
+     （由 scripts/publish-pages.sh 發佈，改了 docs/legal 之後重跑一次即可更新）
   3. 首次上傳會啟用 Play App Signing —— 你上傳的金鑰是「上傳金鑰」，
      Google 另外保管實際的簽章金鑰。上傳金鑰遺失可以申請重設，
      但**沒有啟用 Play App Signing 而弄丟正式金鑰的話，這個 applicationId 就再也更新不了**。
