@@ -39,6 +39,11 @@ import androidx.compose.runtime.key
 import com.kairumo.padnote.image.ImageEditor
 import com.kairumo.padnote.image.ImageLayer
 import com.kairumo.padnote.image.ImageStore
+import com.kairumo.padnote.image.LinkCard
+import com.kairumo.padnote.image.LinkLayer
+import com.kairumo.padnote.image.LinkObject
+import com.kairumo.padnote.image.LinkCodec
+import com.kairumo.padnote.image.LinkInsertDialog
 import com.kairumo.padnote.image.NoteImage
 import com.kairumo.padnote.ink.InkCanvas
 import com.kairumo.padnote.platform.AudioCapture
@@ -547,6 +552,13 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     // 讀的是 Apple 端寫進去的同一個鍵。
     var models3D by remember(notebook) { mutableStateOf(meta.models3D()) }
     var model3DRevision by remember { mutableIntStateOf(0) }
+    // 連結卡片。真身在中繼資料（`linkAttachments`），與 Apple 同一個鍵 ——
+    // 少了這一份，Apple 上建的卡片在 Android 上會整個看不見：資料同步過來了，
+    // 畫面上什麼都沒有（`ImageStore` 會跳過那張後備 PNG）。
+    var links by remember(notebook) { mutableStateOf(meta.links()) }
+    var linkRevision by remember { mutableIntStateOf(0) }
+    var selectedLinkId by remember { mutableStateOf<String?>(null) }
+    var insertingLink by remember { mutableStateOf(false) }
     var selectedModel3DId by remember { mutableStateOf<String?>(null) }
     var editingModel3D by remember { mutableStateOf<Model3DObject?>(null) }
     var insertingModel3D by remember { mutableStateOf(false) }
@@ -597,7 +609,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     // 的話，使用者分不出哪一列是哪一個。
     val stackItems = remember(
         textRevision, shapeRevision, tableRevision, chartRevision, imageRevision,
-        model3DRevision, pageId
+        model3DRevision, linkRevision, pageId
     ) {
         buildList {
             imageStore.all.forEach {
@@ -618,6 +630,11 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 add(ObjectStacking.Item(
                     it.id, ObjectStacking.Kind.MODEL3D,
                     it.title.ifBlank { l10n("model3d_title") }))
+            }
+            links.filter { it.pageIndex == pageIndex }.forEach {
+                add(ObjectStacking.Item(
+                    it.id, ObjectStacking.Kind.IMAGE,
+                    it.title.ifBlank { l10n("insert_link") }))
             }
             textStore.all.forEach {
                 add(ObjectStacking.Item(
@@ -1002,6 +1019,10 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     onClick = { showMenu = false; imagePicker.launch(arrayOf("image/*")) }
                 )
                 DropdownMenuItem(
+                    text = { Text(l10n("insert_link")) },
+                    onClick = { showMenu = false; insertingLink = true }
+                )
+                DropdownMenuItem(
                     text = { Text(l10n("add_text_box")) },
                     onClick = {
                         showMenu = false
@@ -1353,6 +1374,35 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             }
 
             // 3D 模型。位置與大小是頁面座標，與其他圖層同一套規則。
+            key(linkRevision) {
+                LinkLayer(
+                    interactive = editorMode == EditorMode.TYPE,
+                    links = links.filter { it.pageIndex == pageIndex },
+                    density = canvasDensity,
+                    selectedId = selectedLinkId,
+                    onSelect = { selectedLinkId = it },
+                    onOpen = { url ->
+                        // 交給系統瀏覽器。在 App 裡開 WebView 的話，使用者
+                        // 已經登入的 cookie 都不在，而那正是他點連結的理由。
+                        runCatching {
+                            activity.startActivity(
+                                android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse(url)
+                                )
+                            )
+                        }
+                    },
+                    onChanged = { updated ->
+                        links = links.map { if (it.id == updated.id) updated else it }
+                            .toMutableList()
+                        meta.setLinks(notebook?.first, links)
+                        linkRevision++
+                    },
+                    zIndexOf = zIndexOf
+                )
+            }
+
             key(model3DRevision) {
                 Model3DLayer(
                     interactive = editorMode == EditorMode.TYPE,
@@ -1496,6 +1546,56 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             // 挑完直接套到目前的筆 —— 專業色盤最常見的用途就是換筆色。
             onPick = { inkColorHex = it },
             onDismiss = { showProColors = false }
+        )
+    }
+
+    if (insertingLink) {
+        LinkInsertDialog(
+            l = { key -> l10n(key) },
+            onDismiss = { insertingLink = false },
+            // 參數叫 `fetched` 不叫 `meta` —— 外層的 `meta` 是這本筆記的
+            // NotebookMeta，同名會把它整個遮掉，而且編譯器只會說
+            // 「找不到 setLinks」，不會說是被遮蔽。
+            onInsert = { fetched ->
+                val (w, h) = LinkCard.cardSize()
+                val link = LinkObject(
+                    id = java.util.UUID.randomUUID().toString(),
+                    pageIndex = pageIndex,
+                    urlString = fetched.url,
+                    title = fetched.title,
+                    descriptionText = fetched.description,
+                    siteName = fetched.siteName,
+                    x = 60f, y = 120f, width = w, height = h
+                )
+                links = (links + link).toMutableList()
+                // 真身寫進中繼資料（會跟著同步走），另外存一張算繪好的 PNG
+                // 當後備 —— 還不認得這個型別的版本至少看得到內容。
+                meta.setLinks(notebook?.first, links)
+                LinkCard.render(
+                    uniffi.padnote_core.FfiLinkMetadata(
+                        url = link.urlString,
+                        title = link.title,
+                        description = link.descriptionText,
+                        siteName = link.siteName
+                    )
+                )?.let { png ->
+                    runCatching {
+                        val s2 = notebook?.first ?: return@runCatching
+                        val page = pageId ?: return@runCatching
+                        val blob = s2.putBlob(png)
+                        val blockId = s2.addImage(page, blob, link.width, link.height)
+                        s2.setBlockPosition(blockId, link.x, link.y)
+                        // 標成衍生圖片，`ImageStore` 才會跳過它 ——
+                        // 不標的話同一張卡片會出現兩份，各自能拖到不同地方。
+                        s2.setBlockAppearance(
+                            blockId,
+                            org.json.JSONObject().put("object", "link").toString()
+                        )
+                    }
+                }
+                insertingLink = false
+                linkRevision++
+            }
         )
     }
 

@@ -3599,6 +3599,14 @@ extension LocalizationManager {
             .ko: "선 두께",
             .th: "ความหนาเส้น"
         ],
+        "link_fetching": [
+            .zhHant: "正在讀取網頁…",
+            .en: "Reading the page…",
+            .zhHans: "正在读取网页…",
+            .ja: "ページを読み込み中…",
+            .ko: "페이지를 읽는 중…",
+            .th: "กำลังอ่านหน้าเว็บ…"
+        ],
         "link_preview": [
             .zhHant: "網頁預覽",
             .en: "Link Preview",
@@ -3622,6 +3630,14 @@ extension LocalizationManager {
             .ja: "リンクカードをノートに挿入",
             .ko: "링크 카드를 노트에 삽입",
             .th: "แทรกการ์ดลิงก์ลงในบันทึก"
+        ],
+        "link_url_hint": [
+            .zhHant: "貼上網址",
+            .en: "Paste a link",
+            .zhHans: "粘贴网址",
+            .ja: "リンクを貼り付け",
+            .ko: "링크 붙여넣기",
+            .th: "วางลิงก์"
         ],
         "local_relay_hint": [
             .zhHant: "位址指向本機（127.0.0.1）時，App 會直接在這台裝置上開啟協同中繼；隊友請改填房主顯示的區域網路位址。",

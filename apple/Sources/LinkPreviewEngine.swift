@@ -14,91 +14,60 @@ public struct LinkMetadata {
     public let siteName: String
 }
 
+/// 抓一個網址的中繼資料。
+///
+/// # 解析在核心，這裡只做 HTTP
+///
+/// 與 `FfiDriveHttp` 同一個分工。Android 那一側叫的是同一個
+/// `link_parse_metadata` —— 各寫一份正規表示式的話，兩邊遲早會分岔，
+/// 而症狀是「同一個網址在 iPad 上抓得到標題、在 Android 上抓不到」。
+///
+/// # 抓不到就回主機名，**不編**
+///
+/// 舊版對 `apple.com`、`github.com`、`wikipedia.org` 內建了一組寫死的標題
+/// 與描述（而且是寫死的繁體中文）。那是**捏造的中繼資料**：網路抓不到時，
+/// 使用者會得到一段看起來像真的、實際上是我們編的網站簡介，而且不管他的
+/// 介面語言是什麼都是中文。已經拿掉。
 public class LinkPreviewFetcher {
     public static func fetchPreview(for rawUrl: String) async -> LinkMetadata {
-        var clean = rawUrl.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !clean.lowercased().hasPrefix("http://") && !clean.lowercased().hasPrefix("https://") {
-            clean = "https://" + clean
-        }
-
-        guard let url = URL(string: clean), let host = url.host else {
+        let normalized = linkNormalizeUrl(raw: rawUrl)
+        guard let url = URL(string: normalized) else {
+            let meta = linkParseMetadata(html: "", url: normalized)
             return LinkMetadata(
                 url: URL(string: "https://")!,
-                title: "未知連結",
-                description: rawUrl,
-                siteName: "網路連結"
+                title: meta.title,
+                description: meta.description,
+                siteName: meta.siteName
             )
         }
 
-        var title = host
-        var desc = clean
-        var siteName = host.replacingOccurrences(of: "www.", with: "")
-
-        // 預設知名網站優化
-        if host.contains("apple.com") {
-            title = "Apple 官方網站"
-            desc = "探索 Apple 創新的世界，選購 iPhone、iPad、Apple Watch、Mac 等各項產品。"
-            siteName = "apple.com"
-        } else if host.contains("github.com") {
-            title = "GitHub: Let's build from here"
-            desc = "全球領先的開源程式碼託管與協作平台。"
-            siteName = "github.com"
-        } else if host.contains("wikipedia.org") {
-            title = "維基百科，自由的百科全書"
-            desc = "海量知識庫與自由開放的多語言協同百科全書。"
-            siteName = "wikipedia.org"
-        }
-
-        // 嘗試發起超時限制之非同步網路爬取以獲取真實 HTML 標題與 og 標籤
         var request = URLRequest(url: url)
+        // 三秒。抓中繼資料是錦上添花，不該讓使用者對著轉圈等一個慢站台。
         request.timeoutInterval = 3.0
-        request.setValue("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", forHTTPHeaderField: "User-Agent")
+        request.setValue(
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
+            forHTTPHeaderField: "User-Agent")
 
+        var html = ""
         if let (data, response) = try? await URLSession.shared.data(for: request),
-           let httpRes = response as? HTTPURLResponse, httpRes.statusCode == 200,
-           let html = String(data: data, encoding: .utf8) ?? String(data: data, encoding: .ascii) {
-
-            // 擷取 og:title 或 <title>
-            if let ogTitle = extractTagContent(from: html, pattern: "<meta[^>]*property=[\"']og:title[\"'][^>]*content=[\"']([^\"']+)[\"']") {
-                title = ogTitle
-            } else if let titleTag = extractTagContent(from: html, pattern: "<title[^>]*>([^<]+)</title>") {
-                title = titleTag
-            }
-
-            // 擷取 og:description 或 meta description
-            if let ogDesc = extractTagContent(from: html, pattern: "<meta[^>]*property=[\"']og:description[\"'][^>]*content=[\"']([^\"']+)[\"']") {
-                desc = ogDesc
-            } else if let metaDesc = extractTagContent(from: html, pattern: "<meta[^>]*name=[\"']description[\"'][^>]*content=[\"']([^\"']+)[\"']") {
-                desc = metaDesc
-            }
-
-            // 擷取 og:site_name
-            if let ogSite = extractTagContent(from: html, pattern: "<meta[^>]*property=[\"']og:site_name[\"'][^>]*content=[\"']([^\"']+)[\"']") {
-                siteName = ogSite
-            }
+           let http = response as? HTTPURLResponse, http.statusCode == 200 {
+            // 先試 UTF-8，再退回 ISO-8859-1。**不要用 .ascii**：
+            // 非 ASCII 的位元組會讓整份解碼失敗，而那正是中文網站的常態。
+            html = String(data: data, encoding: .utf8)
+                ?? String(data: data, encoding: .isoLatin1)
+                ?? ""
         }
 
+        let meta = linkParseMetadata(html: html, url: normalized)
         return LinkMetadata(
-            url: url,
-            title: title.trimmingCharacters(in: .whitespacesAndNewlines),
-            description: desc.trimmingCharacters(in: .whitespacesAndNewlines),
-            siteName: siteName
+            url: URL(string: meta.url) ?? url,
+            title: meta.title,
+            description: meta.description,
+            siteName: meta.siteName
         )
-    }
-
-    private static func extractTagContent(from html: String, pattern: String) -> String? {
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
-        let range = NSRange(html.startIndex..<html.endIndex, in: html)
-        if let match = regex.firstMatch(in: html, options: [], range: range),
-           match.numberOfRanges > 1,
-           let captureRange = Range(match.range(at: 1), in: html) {
-            return String(html[captureRange])
-        }
-        return nil
     }
 }
 
-/// 插入連結網址彈出面板
 public struct LinkPreviewSheet: View {
     var onInsertLink: (NoteLinkAttachment) -> Void
     @Environment(\.dismiss) private var dismiss

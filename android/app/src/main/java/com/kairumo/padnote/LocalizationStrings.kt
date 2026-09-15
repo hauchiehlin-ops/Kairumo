@@ -3625,6 +3625,14 @@ object LocalizationStrings {
             "ko" to "선 두께",
             "th" to "ความหนาเส้น"
         ),
+        "link_fetching" to mapOf(
+            "zh-Hant" to "正在讀取網頁…",
+            "en" to "Reading the page…",
+            "zh-Hans" to "正在读取网页…",
+            "ja" to "ページを読み込み中…",
+            "ko" to "페이지를 읽는 중…",
+            "th" to "กำลังอ่านหน้าเว็บ…"
+        ),
         "link_preview" to mapOf(
             "zh-Hant" to "網頁預覽",
             "en" to "Link Preview",
@@ -3648,6 +3656,14 @@ object LocalizationStrings {
             "ja" to "リンクカードをノートに挿入",
             "ko" to "링크 카드를 노트에 삽입",
             "th" to "แทรกการ์ดลิงก์ลงในบันทึก"
+        ),
+        "link_url_hint" to mapOf(
+            "zh-Hant" to "貼上網址",
+            "en" to "Paste a link",
+            "zh-Hans" to "粘贴网址",
+            "ja" to "リンクを貼り付け",
+            "ko" to "링크 붙여넣기",
+            "th" to "วางลิงก์"
         ),
         "local_relay_hint" to mapOf(
             "zh-Hant" to "位址指向本機（127.0.0.1）時，App 會直接在這台裝置上開啟協同中繼；隊友請改填房主顯示的區域網路位址。",
@@ -3864,7 +3880,10 @@ object LocalizationStrings {
             "ja" to "オーステナイト系・耐食",
             "ko" to "오스테나이트계 내식",
             "th" to "ออสเทนนิติก ทนการกัดกร่อน"
-        ),
+        )
+    )
+
+    private fun part6(): Map<String, Map<String, String>> = mapOf(
         "math_calc" to mapOf(
             "zh-Hant" to "算式計算",
             "en" to "Math Calculator",
@@ -3880,10 +3899,7 @@ object LocalizationStrings {
             "ja" to "計算実行",
             "ko" to "계산하기",
             "th" to "คำนวณผลลัพธ์"
-        )
-    )
-
-    private fun part6(): Map<String, Map<String, String>> = mapOf(
+        ),
         "math_card_border" to mapOf(
             "zh-Hant" to "保留卡片邊框",
             "en" to "Keep Card Border",
@@ -4507,7 +4523,10 @@ object LocalizationStrings {
             "ja" to "開く",
             "ko" to "열기",
             "th" to "เปิด"
-        ),
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
         "open_record_folder" to mapOf(
             "zh-Hant" to "開啟 Kairumo Record 資料夾",
             "en" to "Open Kairumo Record Folder",
@@ -4523,10 +4542,7 @@ object LocalizationStrings {
             "ja" to "設定を開く",
             "ko" to "설정 열기",
             "th" to "เปิดการตั้งค่า"
-        )
-    )
-
-    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        ),
         "page_extended_hint" to mapOf(
             "zh-Hant" to "已向下延長畫布長度 (+800pt)",
             "en" to "Page length extended (+800pt)",
@@ -5150,7 +5166,10 @@ object LocalizationStrings {
             "ja" to "ノートをこのスナップショットにロールバックしますか？現在の未保存内容は置換されます。",
             "ko" to "노트를 이 스냅샷으로 롤백하시겠습니까? 저장되지 않은 변경 사항은 대체됩니다.",
             "th" to "ย้อนกลับสมุดบันทึกเป็นสแนปช็อตนี้หรือไม่? การเปลี่ยนแปลงปัจจุบันจะถูกแทนที่"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "role_editor" to mapOf(
             "zh-Hant" to "編輯者",
             "en" to "Editor",
@@ -5166,10 +5185,7 @@ object LocalizationStrings {
             "ja" to "ホスト (所有者)",
             "ko" to "방장 (소유자)",
             "th" to "เจ้าของห้อง"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "role_viewer" to mapOf(
             "zh-Hant" to "檢視者",
             "en" to "Viewer",
@@ -5793,7 +5809,10 @@ object LocalizationStrings {
             "ja" to "同期フォルダを選択",
             "ko" to "동기화 폴더 선택",
             "th" to "เลือกโฟลเดอร์ซิงก์"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "sync_done" to mapOf(
             "zh-Hant" to "同步完成",
             "en" to "Sync complete",
@@ -5809,10 +5828,7 @@ object LocalizationStrings {
             "ja" to "同期はお使いのクラウドドライブ（iCloud Drive、Google Drive、Dropbox など）が行います。アカウントも当方のサーバーもありません。2 台の端末を同じフォルダに向けるだけで同期されます。",
             "ko" to "동기화는 사용자의 클라우드 드라이브(iCloud Drive, Google Drive, Dropbox 등)가 담당합니다. 계정도, 저희 서버도 없습니다. 두 기기를 같은 폴더로 지정하면 서로 동기화됩니다.",
             "th" to "การซิงก์ทำโดยคลาวด์ไดรฟ์ของคุณเอง (iCloud Drive, Google Drive, Dropbox ฯลฯ) ไม่มีบัญชีและไม่มีเซิร์ฟเวอร์ของเรา ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์เดียวกันก็ซิงก์กันได้"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_failed" to mapOf(
             "zh-Hant" to "同步失敗：%@",
             "en" to "Sync failed: %@",
@@ -6436,7 +6452,10 @@ object LocalizationStrings {
             "ja" to "投げ縄",
             "ko" to "올가미",
             "th" to "บ่วงบาศก์"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "tool_marker" to mapOf(
             "zh-Hant" to "麥克筆",
             "en" to "Marker",
@@ -6452,10 +6471,7 @@ object LocalizationStrings {
             "ja" to "ペン",
             "ko" to "만년필",
             "th" to "ปากกาหมึกซึม"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tool_pencil" to mapOf(
             "zh-Hant" to "鉛筆",
             "en" to "Pencil",

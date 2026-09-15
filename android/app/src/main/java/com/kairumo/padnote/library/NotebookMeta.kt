@@ -31,6 +31,12 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         private const val KEY_COMMENT_PINS = "commentPins"
         private const val KEY_MODELS_3D = "model3DAttachments"
 
+        /**
+         * 連結卡片。**鍵名與 Apple 的 `NotebookMeta.linkAttachments` 一致** ——
+         * 這份中繼資料是同步的，鍵名不一樣等於兩邊各存各的。
+         */
+        private const val KEY_LINKS = "linkAttachments"
+
         fun load(session: PadnoteSession?): NotebookMeta {
             val json = runCatching { session?.notebookMeta() }.getOrNull()
             val obj = runCatching { JSONObject(json ?: "{}") }.getOrNull() ?: JSONObject()
@@ -75,6 +81,17 @@ class NotebookMeta private constructor(private val root: JSONObject) {
      * 這本筆記的 3D 模型。核心沒有對應的區塊型別，所以 Apple 端把它們
      * 原樣放在中繼資料裡，Android 讀寫的是同一個鍵。
      */
+    fun links(): MutableList<com.kairumo.padnote.image.LinkObject> =
+        com.kairumo.padnote.image.LinkCodec.decodeAll(root.optJSONArray(KEY_LINKS))
+
+    fun setLinks(
+        session: PadnoteSession?,
+        items: List<com.kairumo.padnote.image.LinkObject>
+    ) {
+        root.put(KEY_LINKS, com.kairumo.padnote.image.LinkCodec.encodeAll(items))
+        runCatching { session?.setNotebookMeta(root.toString()) }
+    }
+
     fun models3D(): MutableList<com.kairumo.padnote.model3d.Model3DObject> =
         com.kairumo.padnote.model3d.Model3DCodec.decodeAll(root.optJSONArray(KEY_MODELS_3D))
 
