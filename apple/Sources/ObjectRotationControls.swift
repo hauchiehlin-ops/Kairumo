@@ -69,6 +69,7 @@ public struct ObjectRotationDial: View {
                             .cornerRadius(6)
                     }
                     .buttonStyle(.plain)
+                    .hoverHighlight()
                 }
 
                 Spacer()
@@ -106,6 +107,7 @@ public struct ObjectRotationDial: View {
                 .cornerRadius(6)
         }
         .buttonStyle(.plain)
+        .hoverHighlight()
     }
 }
 

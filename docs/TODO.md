@@ -5,31 +5,6 @@
 
 ---
 
-## 🟡 待實作（純軟體，可直接做）
-
-### T-R1. 表格的自由角度旋轉（形狀已完成）
-- **已完成**：圖片（含圖表／連結／3D／色票卡）、文字方塊、**形狀**。
-  兩個平台都有畫布拖曳把手與面板精準控制，核心有測試釘住責任劃分
-  （`outline` 不轉、`anchor_point` 轉）。
-- **還沒做**：表格。表格沒有連接線，理論上比形狀單純 ——
-  照 `NoteShapeAttachment` / `NoteShape` 的做法加 `rotationDegrees`
-  （**必須 Optional**）、外觀 JSON 兩端同鍵、平台整體套 `rotationEffect` /
-  `graphicsLayer`，再掛 `ObjectRotationHandle` / `RotationHandle`。
-- **判定**：轉過的表格在兩個平台角度一致；儲存後重開角度還在。
-
-### T-R2. macOS（Mac Catalyst）版面目視驗證
-- **卡在**：驗證當下使用者自己的 `/Applications/Kairumo.app` 正在執行。
-  兩個實例會寫同一份本機資料，同時跑有弄壞使用者筆記的風險，所以沒有硬上。
-- **已就緒**：Mac Catalyst target 編譯通過（`BUILD SUCCEEDED`），
-  面板是與 iPad 共用的同一份 SwiftUI 程式碼，iPad 端已逐頁目視驗證過。
-- **要做**：使用者關掉自己那個 Kairumo → 跑
-  `xcodebuild build -destination 'platform=macOS,variant=Mac Catalyst'`
-  → 開起來檢查滑鼠 hover 與視窗縮放時面板會不會被裁。
-- **為什麼仍要驗**：`FloatingPanel` 是固定 `width: 340`，Mac 上視窗可以縮到
-  比 iPad 更窄，而 iPad 沒有 hover 狀態。這兩點 iPad 那一輪驗不到。
-
----
-
 ## 🔴 被硬體或資料卡住（程式已就緒）
 
 ### H0. iOS 實機驗證（`--ios-install` 那條路尚未實測）

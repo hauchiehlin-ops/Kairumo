@@ -93,5 +93,13 @@ xcodebuild -create-xcframework \
   -library "target/aarch64-apple-ios-macabi/release/libpadnote_core.a" -headers "$HEADERS" \
   -output "$OUT"
 
+# 留下這份 XCFramework **是用哪一版綁定建的**的指紋。
+#
+# generate-bindings.sh 會拿它比對。用內容雜湊而不是檔案時間 ——
+# 這支腳本自己最後也會重新產生綁定，比時間的話綁定永遠比 framework 新，
+# 變成永久誤報（第一版就是這樣）。
+shasum -a 256 apple/Generated/padnote_core.swift | awk '{print $1}' \
+    > "$OUT/.bindings-sha256"
+
 echo "==> 完成：$OUT"
 echo "   把 $OUT 與 apple/Generated/padnote_core.swift 加入 Xcode 專案即可。"

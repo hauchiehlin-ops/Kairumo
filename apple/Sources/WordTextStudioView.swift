@@ -223,6 +223,7 @@ public struct WordTextStudioView: View {
                 .cornerRadius(6)
         }
         .buttonStyle(.plain)
+        .hoverHighlight()
     }
 
     private func iconButton(_ icon: String, help: String, action: @escaping () -> Void) -> some View {
@@ -234,6 +235,7 @@ public struct WordTextStudioView: View {
                 .cornerRadius(6)
         }
         .buttonStyle(.plain)
+        .hoverHighlight()
         .help(localizationManager.localized(help))
     }
 
@@ -553,6 +555,7 @@ public struct WordTextStudioView: View {
                 .cornerRadius(6)
         }
         .buttonStyle(.plain)
+        .hoverHighlight()
     }
 
     // MARK: - 3. 文字輸入區域
