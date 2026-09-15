@@ -111,6 +111,14 @@
     "zhHans": "新增文字方块",
     "zhHant": "新增文字方塊"
   },
+  "alignment": {
+    "en": "Alignment",
+    "ja": "配置",
+    "ko": "정렬",
+    "th": "การจัดวาง",
+    "zhHans": "对齐",
+    "zhHant": "對齊"
+  },
   "all_asset_types": {
     "en": "All Types",
     "ja": "すべてのタイプ",
@@ -366,6 +374,14 @@
     "th": "รูปแบบกรอบ",
     "zhHans": "边框样式",
     "zhHant": "邊框樣式"
+  },
+  "border_width": {
+    "en": "Border width",
+    "ja": "枠線の太さ",
+    "ko": "테두리 두께",
+    "th": "ความหนาขอบ",
+    "zhHans": "边框粗细",
+    "zhHant": "邊框粗細"
   },
   "box_width": {
     "en": "Box width",
@@ -2072,12 +2088,12 @@
     "zhHant": "風格濾鏡"
   },
   "image_rotate": {
-    "en": "Rotate 90°",
-    "ja": "90°回転",
-    "ko": "90° 회전",
-    "th": "หมุน 90°",
-    "zhHans": "旋转90°",
-    "zhHant": "旋轉90°"
+    "en": "Rotate",
+    "ja": "回転",
+    "ko": "회전",
+    "th": "หมุน",
+    "zhHans": "旋转",
+    "zhHant": "旋轉"
   },
   "image_rounded": {
     "en": "Corner Radius",
@@ -3703,6 +3719,14 @@
     "zhHans": "向右转 90°",
     "zhHant": "向右轉 90°"
   },
+  "rotation_free_hint": {
+    "en": "Drag the handle to rotate; hold near 15° steps to snap",
+    "ja": "ハンドルをドラッグして回転。15°付近でスナップします",
+    "ko": "핸들을 끌어 회전하세요. 15° 부근에서 스냅됩니다",
+    "th": "ลากที่จับเพื่อหมุน จะดูดเข้าทุก 15°",
+    "zhHans": "拖动把手旋转，靠近 15° 的倍数会自动吸附",
+    "zhHant": "拖曳把手旋轉，靠近 15° 的倍數會自動吸附"
+  },
   "rule_of_thirds_desc": {
     "en": "Standard 3x3 grid lines with 4 intersection power points",
     "ja": "標準3分割ラインと4つの交点フォーカス表示",
@@ -4415,6 +4439,14 @@
     "zhHans": "点击画布任意处即可开始打字输入",
     "zhHant": "點選畫布任意處即可開始打字輸入"
   },
+  "text_color": {
+    "en": "Text color",
+    "ja": "文字色",
+    "ko": "글자 색",
+    "th": "สีข้อความ",
+    "zhHans": "文字颜色",
+    "zhHant": "文字顏色"
+  },
   "text_studio": {
     "en": "Text Studio",
     "ja": "文字スタイル",
@@ -4430,6 +4462,30 @@
     "th": "รูปแบบข้อความ",
     "zhHans": "文字格式",
     "zhHant": "文字格式"
+  },
+  "text_tab_font": {
+    "en": "Font",
+    "ja": "フォント",
+    "ko": "글꼴",
+    "th": "แบบอักษร",
+    "zhHans": "字体",
+    "zhHant": "字體"
+  },
+  "text_tab_style": {
+    "en": "Style",
+    "ja": "スタイル",
+    "ko": "스타일",
+    "th": "สไตล์",
+    "zhHans": "样式",
+    "zhHant": "樣式"
+  },
+  "text_tab_symbols": {
+    "en": "Symbols",
+    "ja": "記号",
+    "ko": "기호",
+    "th": "สัญลักษณ์",
+    "zhHans": "符号",
+    "zhHant": "符號"
   },
   "theme_aesthetic": {
     "en": "Aesthetic & Visual",

@@ -27,6 +27,10 @@ public struct WordTextStudioView: View {
 
     @FocusState private var isEditorFocused: Bool
     @State private var selectedSymbolCategory: Int = 0
+    /// 目前分頁。原本所有控制項擠在同一個 520pt 寬的面板裡，
+    /// 段落列與卡片列是**沒有捲軸的單列 HStack** —— 超出寬度的控制項
+    /// 不是縮小，是直接被裁掉，使用者根本不知道那些功能存在。
+    @State private var activeTab: Int = 0
 
     // 四大特殊元件庫
     private let specialSymbols = [
@@ -64,7 +68,7 @@ public struct WordTextStudioView: View {
         ("透明畫布", "clear", .clear)
     ]
 
-    /// 自訂底色的暫存狀態。見 `cardStyleBar` 裡的說明。
+    /// 自訂底色的暫存狀態。見 `backgroundSwatches` 裡的說明。
     @State private var customBackground: Color = .white
 
     // 常用字級
@@ -93,64 +97,425 @@ public struct WordTextStudioView: View {
     /// 預覽只是佔位置，而且兩份看起來不一樣的時候使用者不知道該信哪一個。
     private var panelContent: some View {
         VStack(spacing: 0) {
-            wordFormatToolbar
+            tabPicker
                 .padding(.horizontal, 12)
-                .padding(.vertical, 8)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
 
             Divider()
 
-            specialElementsBar
-                .padding(.vertical, 8)
-
-            Divider()
-
-            paragraphBar
-            cardStyleBar
-
-            borderStyleBar
-                .padding(.horizontal, 12)
-                .padding(.vertical, 10)
+            activeTabContent
+                .padding(12)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(width: 520)
+        .frame(width: 420)
         .onChange(of: attachment) { updated in
             // 浮動面板沒有「確認」按鈕 —— 改了就算數，畫布上同步看得到。
             onSave(updated)
         }
     }
 
+    /// 分頁切換。四類設定各自成頁，任何一頁都塞得進面板寬度。
+    private var tabPicker: some View {
+        Picker("", selection: $activeTab) {
+            Text(localizationManager.localized("text_tab_font")).tag(0)
+            Text(localizationManager.localized("paragraph_style")).tag(1)
+            Text(localizationManager.localized("text_tab_style")).tag(2)
+            Text(localizationManager.localized("text_tab_symbols")).tag(3)
+        }
+        .pickerStyle(.segmented)
+        .labelsHidden()
+    }
+
+    @ViewBuilder
+    private var activeTabContent: some View {
+        switch activeTab {
+        case 0: fontTab
+        case 1: paragraphTab
+        case 2: styleTab
+        default: symbolsTab
+        }
+    }
+
+    // MARK: - 分頁一：字體
+
+    private var fontTab: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 10) {
+                fontSizeMenu
+                Divider().frame(height: 22)
+                styleToggle("B", isOn: attachment.isBold, weight: .black) { attachment.isBold.toggle() }
+                styleToggle("I", isOn: attachment.isItalic, italic: true) { attachment.isItalic.toggle() }
+                styleToggle("U", isOn: attachment.isUnderline, underline: true) { attachment.isUnderline.toggle() }
+                styleToggle("S", isOn: attachment.isStrikethrough, strikethrough: true) { attachment.isStrikethrough.toggle() }
+                Spacer()
+            }
+
+            labeledRow(localizationManager.localized("alignment")) {
+                HStack(spacing: 4) {
+                    alignmentButton(icon: "text.alignleft", alignKey: "left")
+                    alignmentButton(icon: "text.aligncenter", alignKey: "center")
+                    alignmentButton(icon: "text.alignright", alignKey: "right")
+                    alignmentButton(icon: "text.justify", alignKey: "justified")
+
+                    Divider().frame(height: 20).padding(.horizontal, 4)
+
+                    iconButton("list.bullet", help: "bullet_list") { insertListPrefix("• ") }
+                    iconButton("list.number", help: "numbered_list") { insertListPrefix("1. ") }
+                    Spacer()
+                }
+            }
+
+            labeledRow(localizationManager.localized("text_color")) {
+                ColorPicker("", selection: Binding(
+                    get: { Color(hex: attachment.textColorHex) ?? .primary },
+                    set: { attachment.textColorHex = $0.toHex() ?? "#000000" }
+                ))
+                .labelsHidden()
+                .frame(width: 28, height: 28)
+                Spacer()
+            }
+        }
+    }
+
+    private var fontSizeMenu: some View {
+        Menu {
+            ForEach(fontSizes, id: \.self) { sz in
+                Button("\(Int(sz)) pt") { attachment.fontSize = sz }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text("\(Int(attachment.fontSize)) pt")
+                    .font(.system(size: 13, weight: .medium))
+                Image(systemName: "chevron.down").font(.system(size: 10))
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.secondary.opacity(0.12))
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func styleToggle(
+        _ label: String,
+        isOn: Bool,
+        weight: Font.Weight = .bold,
+        italic: Bool = false,
+        underline: Bool = false,
+        strikethrough: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(label)
+                .font(.system(size: 15, weight: weight))
+                .italic(italic)
+                .underline(underline)
+                .strikethrough(strikethrough)
+                .frame(width: 30, height: 30)
+                .foregroundColor(isOn ? .white : .primary)
+                .background(isOn ? Color.accentColor : Color.secondary.opacity(0.12))
+                .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func iconButton(_ icon: String, help: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: icon)
+                .font(.system(size: 13))
+                .frame(width: 28, height: 28)
+                .background(Color.secondary.opacity(0.12))
+                .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+        .help(localizationManager.localized(help))
+    }
+
+    // MARK: - 分頁二：段落
+
+    /// 四個間距控制項排成兩欄。
+    ///
+    /// 原本是一列四個並排，在 520pt 裡放不下 —— 而且那一列**沒有捲軸**，
+    /// 排在後面的「首行」與「縮排」直接看不到。
+    private var paragraphTab: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            spacingGrid
+        }
+    }
+
+    private var spacingGrid: some View {
+        let columns = [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
+        return LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
+            stepperControl(
+                label: localizationManager.localized("line_spacing"),
+                value: Binding(get: { attachment.lineSpacing ?? 0 },
+                               set: { attachment.lineSpacing = $0 }),
+                range: 0...24, step: 2)
+            stepperControl(
+                label: localizationManager.localized("paragraph_spacing"),
+                value: Binding(get: { attachment.paragraphSpacing ?? 0 },
+                               set: { attachment.paragraphSpacing = $0 }),
+                range: 0...40, step: 4)
+            stepperControl(
+                label: localizationManager.localized("first_line_indent"),
+                value: Binding(get: { attachment.firstLineIndent ?? 0 },
+                               set: { attachment.firstLineIndent = $0 }),
+                range: 0...64, step: 8)
+            stepperControl(
+                label: localizationManager.localized("paragraph_indent"),
+                value: Binding(get: { attachment.paragraphIndent ?? 0 },
+                               set: { attachment.paragraphIndent = $0 }),
+                range: 0...64, step: 8)
+        }
+    }
+
+    // MARK: - 分頁三：樣式（底色、邊框、圓角、寬度、旋轉）
+
+    private var styleTab: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            labeledRow(localizationManager.localized("card_style")) {
+                backgroundSwatches
+            }
+
+            Divider()
+
+            // 邊框開關。畫布上那顆沒有標示的浮動小圓鈕已移除 ——
+            // 同一個值有兩個入口，而其中一個看不出自己在改什麼。
+            Toggle(isOn: $attachment.hasBorder) {
+                Text(localizationManager.localized("border_style")).font(.callout)
+            }
+            .toggleStyle(.switch)
+
+            if attachment.hasBorder {
+                borderColorRow
+                borderWidthRow
+            }
+
+            Divider()
+
+            labeledRow(localizationManager.localized("corner_style")) {
+                HStack(spacing: 10) {
+                    ForEach([0.0, 8.0, 18.0], id: \.self) { r in
+                        Button {
+                            attachment.cornerRadius = CGFloat(r)
+                        } label: {
+                            RoundedRectangle(cornerRadius: CGFloat(r) / 2)
+                                .stroke(attachment.cornerRadius == CGFloat(r) ? Color.accentColor : Color.secondary.opacity(0.5),
+                                        lineWidth: attachment.cornerRadius == CGFloat(r) ? 2 : 1)
+                                .frame(width: 34, height: 22)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Spacer()
+                }
+            }
+
+            labeledRow(localizationManager.localized("box_width")) {
+                HStack(spacing: 8) {
+                    Slider(value: $attachment.width, in: 160...900, step: 10)
+                    Text("\(Int(attachment.width))")
+                        .font(.system(size: 11, design: .monospaced))
+                        .foregroundColor(.secondary)
+                        .frame(width: 34, alignment: .trailing)
+                }
+            }
+
+            Divider()
+
+            labeledRow(localizationManager.localized("image_rotate")) {
+                VStack(alignment: .leading, spacing: 6) {
+                    ObjectRotationDial(degrees: $attachment.canvasRotation)
+                    Text(localizationManager.localized("rotation_free_hint"))
+                        .font(.system(size: 10))
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        }
+    }
+
+    private var backgroundSwatches: some View {
+        // 換行排列。原本是一列七個色票加上自訂色票器，配上右邊的邊框開關
+        // 就超出面板寬度，最後幾個顏色被裁掉。
+        let columns = [GridItem(.adaptive(minimum: 30), spacing: 8)]
+        return LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+            ForEach(cardBackgroundOptions, id: \.hex) { opt in
+                Button {
+                    attachment.backgroundColorHex = opt.hex
+                } label: {
+                    ZStack {
+                        Circle()
+                            .fill(opt.color)
+                            .frame(width: 24, height: 24)
+                            .overlay(Circle().stroke(Color.secondary.opacity(0.4), lineWidth: 1))
+                        // 透明畫成一條斜線。不畫的話它跟白色長得一模一樣。
+                        if opt.hex == "clear" {
+                            Path { path in
+                                path.move(to: CGPoint(x: 4, y: 20))
+                                path.addLine(to: CGPoint(x: 20, y: 4))
+                            }
+                            .stroke(Color.red.opacity(0.7), lineWidth: 1.5)
+                            .frame(width: 24, height: 24)
+                        }
+                        if attachment.backgroundColorHex == opt.hex {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(.primary)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+                .help(opt.name)
+            }
+
+            // 自訂底色。綁自己的狀態、只在真的變動時寫回 ——
+            // 綁衍生值的話 `toHex()` 會丟掉 alpha，剛選的「透明」立刻被覆蓋成 #000000。
+            ColorPicker("", selection: $customBackground)
+                .labelsHidden()
+                .frame(width: 26)
+                .help(localizationManager.localized("custom_color"))
+                .onChange(of: customBackground) { newValue in
+                    guard let hex = newValue.toHex() else { return }
+                    attachment.backgroundColorHex = hex
+                }
+        }
+    }
+
+    private var borderColorRow: some View {
+        labeledRow(localizationManager.localized("border_color")) {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 28), spacing: 8)],
+                      alignment: .leading, spacing: 8) {
+                ForEach(borderColorOptions, id: \.self) { hex in
+                    Button {
+                        attachment.borderColorHex = hex
+                    } label: {
+                        Circle()
+                            .fill(Color(hex: hex) ?? .gray)
+                            .frame(width: 22, height: 22)
+                            .overlay(
+                                Circle().stroke(
+                                    (attachment.borderColorHex ?? "#8E8E93") == hex ? Color.accentColor : Color.secondary.opacity(0.3),
+                                    lineWidth: (attachment.borderColorHex ?? "#8E8E93") == hex ? 2.5 : 1)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                }
+                ColorPicker("", selection: Binding(
+                    get: { Color(hex: attachment.borderColorHex ?? "#8E8E93") ?? .gray },
+                    set: { attachment.borderColorHex = $0.toHex() ?? "#8E8E93" }
+                ))
+                .labelsHidden()
+                .frame(width: 26)
+            }
+        }
+    }
+
+    private var borderWidthRow: some View {
+        labeledRow(localizationManager.localized("border_width")) {
+            HStack(spacing: 8) {
+                ForEach([1.0, 2.0, 3.5], id: \.self) { w in
+                    Button {
+                        attachment.borderWidth = CGFloat(w)
+                    } label: {
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill((attachment.borderWidth ?? 1.5) == CGFloat(w) ? Color.accentColor : Color.secondary.opacity(0.5))
+                            .frame(width: 30, height: CGFloat(w) + 1)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 6)
+                            .background((attachment.borderWidth ?? 1.5) == CGFloat(w) ? Color.accentColor.opacity(0.12) : Color.clear)
+                            .cornerRadius(5)
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
+            }
+        }
+    }
+
+    // MARK: - 分頁四：符號
+
+    /// 符號改用會換行的格線。
+    ///
+    /// 原本是橫向捲軸：捲軸在觸控上還能用，但在 macOS 上沒有可見的捲軸提示，
+    /// 使用者看到的就是「只有八個符號」。
+    private var symbolsTab: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Picker("", selection: $selectedSymbolCategory) {
+                Text(localizationManager.localized("special_symbols")).tag(0)
+                Text(localizationManager.localized("punctuation_marks")).tag(1)
+                Text(localizationManager.localized("math_symbols")).tag(2)
+                Text(localizationManager.localized("roman_numerals")).tag(3)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+
+            let columns = [GridItem(.adaptive(minimum: 36), spacing: 6)]
+            LazyVGrid(columns: columns, spacing: 6) {
+                ForEach(currentSymbolList, id: \.self) { symbol in
+                    Button {
+                        insertSymbol(symbol)
+                    } label: {
+                        Text(symbol)
+                            .font(.system(size: 16, weight: .medium, design: .serif))
+                            .frame(minWidth: 34, minHeight: 34)
+                            .foregroundColor(.primary)
+                            .background(Color.secondary.opacity(0.10))
+                            .cornerRadius(6)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var currentSymbolList: [String] {
+        switch selectedSymbolCategory {
+        case 0: return specialSymbols
+        case 1: return punctuationMarks
+        case 2: return mathSymbols
+        default: return romanNumerals
+        }
+    }
+
+    // MARK: - 版面小工具
+
+    /// 「標題在上、控制項在下」的一組。橫向擺不下就換行，不會被裁掉。
+    @ViewBuilder
+    private func labeledRow<C: View>(_ title: String, @ViewBuilder content: () -> C) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.secondary)
+            content()
+        }
+    }
+
     private var sheetContent: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // 1. 🌟 Word 級格式與段落工具列 (Word Toolbar)
-                wordFormatToolbar
-                    .padding(.horizontal)
-                    .padding(.vertical, 8)
-                    .background(Color(uiColor: .secondarySystemGroupedBackground))
-
-                Divider()
-
-                // 2. 🌟 特殊元件快速插入列 (特殊符號、標點、數學、羅馬符號)
-                specialElementsBar
-                    .padding(.vertical, 8)
-                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
-
-                Divider()
-
-                // 3. 🌟 主文字輸入與即時排版預覽區
+                // 建立新方塊時畫布上還沒有東西可看，所以 sheet 版保留預覽區。
                 textEditorArea
                     .padding(16)
                     .background(Color(uiColor: .systemGroupedBackground))
 
                 Divider()
 
-                // 4. 底色與邊框版面配置列
-                paragraphBar
-                cardStyleBar
-
-                borderStyleBar
+                // 控制項與浮動面板共用同一組分頁 —— 兩種呈現各寫一套版面的話，
+                // 改了其中一邊，另一邊就少一個功能。
+                tabPicker
                     .padding(.horizontal)
-                    .padding(.vertical, 10)
+                    .padding(.vertical, 8)
                     .background(Color(uiColor: .secondarySystemGroupedBackground))
+
+                Divider()
+
+                ScrollView {
+                    activeTabContent
+                        .padding(16)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
             }
             .navigationTitle(localizationManager.localized("word_studio"))
             .toolbar {
@@ -171,136 +536,6 @@ public struct WordTextStudioView: View {
         .frame(minWidth: 540, minHeight: 600)
     }
 
-    // MARK: - 1. Word 格式工具列
-    private var wordFormatToolbar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 12) {
-                // 字級大小選單
-                Menu {
-                    ForEach(fontSizes, id: \.self) { sz in
-                        Button("\(Int(sz)) pt") {
-                            attachment.fontSize = sz
-                        }
-                    }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("\(Int(attachment.fontSize)) pt")
-                            .font(.system(size: 13, weight: .medium))
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 10))
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.secondary.opacity(0.12))
-                    .cornerRadius(6)
-                }
-                .buttonStyle(.plain)
-
-                Divider().frame(height: 20)
-
-                // 粗體 B
-                Button {
-                    attachment.isBold.toggle()
-                } label: {
-                    Text("B")
-                        .font(.system(size: 15, weight: .black))
-                        .frame(width: 28, height: 28)
-                        .foregroundColor(attachment.isBold ? .white : .primary)
-                        .background(attachment.isBold ? Color.accentColor : Color.secondary.opacity(0.12))
-                        .cornerRadius(6)
-                }
-                .buttonStyle(.plain)
-
-                // 斜體 I
-                Button {
-                    attachment.isItalic.toggle()
-                } label: {
-                    Text("I")
-                        .font(.system(size: 15, weight: .bold))
-                        .italic()
-                        .frame(width: 28, height: 28)
-                        .foregroundColor(attachment.isItalic ? .white : .primary)
-                        .background(attachment.isItalic ? Color.accentColor : Color.secondary.opacity(0.12))
-                        .cornerRadius(6)
-                }
-                .buttonStyle(.plain)
-
-                // 底線 U
-                Button {
-                    attachment.isUnderline.toggle()
-                } label: {
-                    Text("U")
-                        .font(.system(size: 15, weight: .bold))
-                        .underline()
-                        .frame(width: 28, height: 28)
-                        .foregroundColor(attachment.isUnderline ? .white : .primary)
-                        .background(attachment.isUnderline ? Color.accentColor : Color.secondary.opacity(0.12))
-                        .cornerRadius(6)
-                }
-                .buttonStyle(.plain)
-
-                // 刪除線 S
-                Button {
-                    attachment.isStrikethrough.toggle()
-                } label: {
-                    Text("S")
-                        .font(.system(size: 15, weight: .bold))
-                        .strikethrough()
-                        .frame(width: 28, height: 28)
-                        .foregroundColor(attachment.isStrikethrough ? .white : .primary)
-                        .background(attachment.isStrikethrough ? Color.accentColor : Color.secondary.opacity(0.12))
-                        .cornerRadius(6)
-                }
-                .buttonStyle(.plain)
-
-                Divider().frame(height: 20)
-
-                // 段落對齊群組
-                HStack(spacing: 2) {
-                    alignmentButton(icon: "text.alignleft", alignKey: "left")
-                    alignmentButton(icon: "text.aligncenter", alignKey: "center")
-                    alignmentButton(icon: "text.alignright", alignKey: "right")
-                    alignmentButton(icon: "text.justify", alignKey: "justified")
-                }
-
-                Divider().frame(height: 20)
-
-                // 快速清單按鈕
-                Button {
-                    insertListPrefix("• ")
-                } label: {
-                    Image(systemName: "list.bullet")
-                        .font(.system(size: 13))
-                        .padding(6)
-                        .background(Color.secondary.opacity(0.12))
-                        .cornerRadius(6)
-                }
-                .buttonStyle(.plain)
-                .help(localizationManager.localized("bullet_list"))
-
-                Button {
-                    insertListPrefix("1. ")
-                } label: {
-                    Image(systemName: "list.number")
-                        .font(.system(size: 13))
-                        .padding(6)
-                        .background(Color.secondary.opacity(0.12))
-                        .cornerRadius(6)
-                }
-                .buttonStyle(.plain)
-                .help(localizationManager.localized("numbered_list"))
-
-                // 字體顏色選擇
-                ColorPicker("", selection: Binding(
-                    get: { Color(hex: attachment.textColorHex) ?? .primary },
-                    set: { attachment.textColorHex = $0.toHex() ?? "#000000" }
-                ))
-                .labelsHidden()
-                .frame(width: 28, height: 28)
-            }
-        }
-    }
-
     private func alignmentButton(icon: String, alignKey: String) -> some View {
         Button {
             attachment.alignmentRaw = alignKey
@@ -313,55 +548,6 @@ public struct WordTextStudioView: View {
                 .cornerRadius(6)
         }
         .buttonStyle(.plain)
-    }
-
-    // MARK: - 2. 特殊元件列
-    private var specialElementsBar: some View {
-        VStack(spacing: 6) {
-            HStack {
-                Picker("", selection: $selectedSymbolCategory) {
-                    Text(localizationManager.localized("special_symbols")).tag(0)
-                    Text(localizationManager.localized("punctuation_marks")).tag(1)
-                    Text(localizationManager.localized("math_symbols")).tag(2)
-                    Text(localizationManager.localized("roman_numerals")).tag(3)
-                }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 420)
-
-                Spacer()
-            }
-            .padding(.horizontal)
-
-            // 符號流覽捲軸
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    let currentList: [String] = {
-                        switch selectedSymbolCategory {
-                        case 0: return specialSymbols
-                        case 1: return punctuationMarks
-                        case 2: return mathSymbols
-                        default: return romanNumerals
-                        }
-                    }()
-
-                    ForEach(currentList, id: \.self) { symbol in
-                        Button {
-                            insertSymbol(symbol)
-                        } label: {
-                            Text(symbol)
-                                .font(.system(size: 16, weight: .medium, design: .serif))
-                                .frame(minWidth: 32, minHeight: 32)
-                                .foregroundColor(.primary)
-                                .background(Color(uiColor: .systemBackground))
-                                .cornerRadius(6)
-                                .shadow(color: Color.black.opacity(0.06), radius: 2, y: 1)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-                .padding(.horizontal)
-            }
-        }
     }
 
     // MARK: - 3. 文字輸入區域
@@ -391,56 +577,6 @@ public struct WordTextStudioView: View {
                 }
         }
         .frame(minHeight: 220)
-    }
-
-    // MARK: - 4. 版面配置與底色樣式列
-    /// 段落設定。
-    ///
-    /// 原本只有對齊與清單 —— 那是「字」的設定，不是「段落」的設定。
-    /// 行距與縮排才是讓一段文字看起來像文件而不是一團字的東西。
-    private var paragraphBar: some View {
-        HStack(spacing: 14) {
-            Text(localizationManager.localized("paragraph_style"))
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundColor(.secondary)
-
-            stepperControl(
-                label: localizationManager.localized("line_spacing"),
-                value: Binding(
-                    get: { attachment.lineSpacing ?? 0 },
-                    set: { attachment.lineSpacing = $0 }
-                ),
-                range: 0...24, step: 2)
-
-            stepperControl(
-                label: localizationManager.localized("paragraph_spacing"),
-                value: Binding(
-                    get: { attachment.paragraphSpacing ?? 0 },
-                    set: { attachment.paragraphSpacing = $0 }
-                ),
-                range: 0...40, step: 4)
-
-            stepperControl(
-                label: localizationManager.localized("first_line_indent"),
-                value: Binding(
-                    get: { attachment.firstLineIndent ?? 0 },
-                    set: { attachment.firstLineIndent = $0 }
-                ),
-                range: 0...64, step: 8)
-
-            stepperControl(
-                label: localizationManager.localized("paragraph_indent"),
-                value: Binding(
-                    get: { attachment.paragraphIndent ?? 0 },
-                    set: { attachment.paragraphIndent = $0 }
-                ),
-                range: 0...64, step: 8)
-
-            Spacer()
-        }
-        .padding(.horizontal, 18)
-        .padding(.vertical, 8)
     }
 
     /// 一個「標籤 + 減 / 數值 / 加」的小控制項。
@@ -482,165 +618,6 @@ public struct WordTextStudioView: View {
         .padding(.vertical, 4)
         .background(Color.secondary.opacity(0.08))
         .cornerRadius(8)
-    }
-
-    private var cardStyleBar: some View {
-        HStack(spacing: 16) {
-            Text(localizationManager.localized("card_style"))
-                .font(.caption)
-                .fontWeight(.bold)
-                .foregroundColor(.secondary)
-
-            // 底色選項
-            HStack(spacing: 8) {
-                ForEach(cardBackgroundOptions, id: \.hex) { opt in
-                    Button {
-                        attachment.backgroundColorHex = opt.hex
-                    } label: {
-                        ZStack {
-                            Circle()
-                                .fill(opt.color)
-                                .frame(width: 22, height: 22)
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.secondary.opacity(0.4), lineWidth: 1)
-                                )
-                            // 透明畫成一條斜線。不畫的話它跟白色長得一模一樣，
-                            // 使用者根本認不出哪一個是透明。
-                            if opt.hex == "clear" {
-                                Path { path in
-                                    path.move(to: CGPoint(x: 4, y: 18))
-                                    path.addLine(to: CGPoint(x: 18, y: 4))
-                                }
-                                .stroke(Color.red.opacity(0.7), lineWidth: 1.5)
-                                .frame(width: 22, height: 22)
-                            }
-
-                            if attachment.backgroundColorHex == opt.hex {
-                                Image(systemName: "checkmark")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundColor(.primary)
-                            }
-                        }
-                    }
-                    .buttonStyle(.plain)
-                    .help(opt.name)
-                }
-            }
-
-            // 自訂底色（預設色之外想用什麼都可以）
-            // 自訂底色。
-            //
-            // 原本綁的是**衍生值**（從 hex 算出 Color，再寫回 hex）。SwiftUI 的
-            // ColorPicker 會在互動時把值寫回去，而 `toHex()` 丟掉 alpha ——
-            // 於是使用者剛選的「透明」會立刻被覆蓋成 #000000。
-            // 改成自己的狀態、只在真的變動時寫回，「透明」才留得住。
-            ColorPicker("", selection: $customBackground)
-                .labelsHidden()
-                .frame(width: 26)
-                .help(localizationManager.localized("custom_color"))
-                .onChange(of: customBackground) { newValue in
-                    guard let hex = newValue.toHex() else { return }
-                    attachment.backgroundColorHex = hex
-                }
-
-            Spacer()
-
-            // 邊框開關
-            Toggle(isOn: $attachment.hasBorder) {
-                Text(localizationManager.localized("border_style"))
-            }
-            .toggleStyle(.switch)
-            .font(.caption)
-            .fixedSize()
-        }
-    }
-
-    /// 邊框樣式：顏色、粗細、圓角、方塊寬度
-    private var borderStyleBar: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            if attachment.hasBorder {
-                HStack(spacing: 12) {
-                    Text(localizationManager.localized("border_color"))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-
-                    ForEach(borderColorOptions, id: \.self) { hex in
-                        Button {
-                            attachment.borderColorHex = hex
-                        } label: {
-                            Circle()
-                                .fill(Color(hex: hex) ?? .gray)
-                                .frame(width: 20, height: 20)
-                                .overlay(
-                                    Circle().stroke(
-                                        (attachment.borderColorHex ?? "#8E8E93") == hex ? Color.accentColor : Color.secondary.opacity(0.3),
-                                        lineWidth: (attachment.borderColorHex ?? "#8E8E93") == hex ? 2.5 : 1
-                                    )
-                                )
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    ColorPicker("", selection: Binding(
-                        get: { Color(hex: attachment.borderColorHex ?? "#8E8E93") ?? .gray },
-                        set: { attachment.borderColorHex = $0.toHex() ?? "#8E8E93" }
-                    ))
-                    .labelsHidden()
-                    .frame(width: 26)
-
-                    Divider().frame(height: 18)
-
-                    ForEach([1.0, 2.0, 3.5], id: \.self) { w in
-                        Button {
-                            attachment.borderWidth = CGFloat(w)
-                        } label: {
-                            RoundedRectangle(cornerRadius: 2)
-                                .fill((attachment.borderWidth ?? 1.5) == CGFloat(w) ? Color.accentColor : Color.secondary.opacity(0.5))
-                                .frame(width: 26, height: CGFloat(w) + 1)
-                                .padding(.vertical, 6)
-                                .padding(.horizontal, 4)
-                                .background((attachment.borderWidth ?? 1.5) == CGFloat(w) ? Color.accentColor.opacity(0.12) : Color.clear)
-                                .cornerRadius(5)
-                        }
-                        .buttonStyle(.plain)
-                    }
-
-                    Spacer()
-                }
-            }
-
-            HStack(spacing: 12) {
-                Text(localizationManager.localized("corner_style"))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                ForEach([0.0, 8.0, 18.0], id: \.self) { r in
-                    Button {
-                        attachment.cornerRadius = CGFloat(r)
-                    } label: {
-                        RoundedRectangle(cornerRadius: CGFloat(r) / 2)
-                            .stroke(attachment.cornerRadius == CGFloat(r) ? Color.accentColor : Color.secondary.opacity(0.5),
-                                    lineWidth: attachment.cornerRadius == CGFloat(r) ? 2 : 1)
-                            .frame(width: 30, height: 20)
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                Divider().frame(height: 18)
-
-                Text(localizationManager.localized("box_width"))
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-
-                Slider(value: $attachment.width, in: 160...900, step: 10)
-                    .frame(maxWidth: 220)
-
-                Text("\(Int(attachment.width))")
-                    .font(.system(size: 11, design: .monospaced))
-                    .foregroundColor(.secondary)
-            }
-        }
     }
 
     private let borderColorOptions: [String] = ["#8E8E93", "#000000", "#0A84FF", "#34C759", "#FF9500", "#FF3B30"]

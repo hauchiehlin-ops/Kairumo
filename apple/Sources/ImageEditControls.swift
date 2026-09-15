@@ -62,23 +62,14 @@ public struct ImageEditControls: View {
             }
 
             group(localizationManager.localized("image_rotate")) {
-                HStack(spacing: 10) {
-                    Button {
-                        attachment.rotationDegrees =
-                            (attachment.rotationDegrees + 90.0).truncatingRemainder(dividingBy: 360.0)
-                    } label: {
-                        Label(localizationManager.localized("rotate_right_90"), systemImage: "rotate.right")
-                            .font(.subheadline)
-                    }
-                    .buttonStyle(.bordered)
+                // 原本只有「向右轉 90°」。四個直角以外的角度轉不出來，
+                // 而使用者要的通常正是那種「稍微擺歪一點」的角度。
+                ObjectRotationDial(degrees: $attachment.canvasRotation)
 
-                    Spacer()
-
-                    Text("\(Int(attachment.rotationDegrees))°")
-                        .font(.caption)
-                        .monospacedDigit()
-                        .foregroundColor(.secondary)
-                }
+                Text(localizationManager.localized("rotation_free_hint"))
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Divider()

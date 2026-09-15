@@ -127,6 +127,14 @@ extension LocalizationManager {
             .ko: "텍스트 상자 추가",
             .th: "เพิ่มกล่องข้อความ"
         ],
+        "alignment": [
+            .zhHant: "對齊",
+            .en: "Alignment",
+            .zhHans: "对齐",
+            .ja: "配置",
+            .ko: "정렬",
+            .th: "การจัดวาง"
+        ],
         "all_asset_types": [
             .zhHant: "全部型態",
             .en: "All Types",
@@ -382,6 +390,14 @@ extension LocalizationManager {
             .ja: "枠線スタイル",
             .ko: "테두리 스타일",
             .th: "รูปแบบกรอบ"
+        ],
+        "border_width": [
+            .zhHant: "邊框粗細",
+            .en: "Border width",
+            .zhHans: "边框粗细",
+            .ja: "枠線の太さ",
+            .ko: "테두리 두께",
+            .th: "ความหนาขอบ"
         ],
         "box_width": [
             .zhHant: "方塊寬度",
@@ -2088,12 +2104,12 @@ extension LocalizationManager {
             .th: "ฟิลเตอร์สไตล์"
         ],
         "image_rotate": [
-            .zhHant: "旋轉90°",
-            .en: "Rotate 90°",
-            .zhHans: "旋转90°",
-            .ja: "90°回転",
-            .ko: "90° 회전",
-            .th: "หมุน 90°"
+            .zhHant: "旋轉",
+            .en: "Rotate",
+            .zhHans: "旋转",
+            .ja: "回転",
+            .ko: "회전",
+            .th: "หมุน"
         ],
         "image_rounded": [
             .zhHant: "柔和圓角",
@@ -3719,6 +3735,14 @@ extension LocalizationManager {
             .ko: "90° 회전",
             .th: "หมุน 90°"
         ],
+        "rotation_free_hint": [
+            .zhHant: "拖曳把手旋轉，靠近 15° 的倍數會自動吸附",
+            .en: "Drag the handle to rotate; hold near 15° steps to snap",
+            .zhHans: "拖动把手旋转，靠近 15° 的倍数会自动吸附",
+            .ja: "ハンドルをドラッグして回転。15°付近でスナップします",
+            .ko: "핸들을 끌어 회전하세요. 15° 부근에서 스냅됩니다",
+            .th: "ลากที่จับเพื่อหมุน จะดูดเข้าทุก 15°"
+        ],
         "rule_of_thirds_desc": [
             .zhHant: "標準三等分縱橫輔助線與交會四點焦點指示",
             .en: "Standard 3x3 grid lines with 4 intersection power points",
@@ -4431,6 +4455,14 @@ extension LocalizationManager {
             .ko: "캔버스를 탭하여 텍스트 입력",
             .th: "แตะที่ใดก็ได้บนผืนผ้าใบเพื่อพิมพ์"
         ],
+        "text_color": [
+            .zhHant: "文字顏色",
+            .en: "Text color",
+            .zhHans: "文字颜色",
+            .ja: "文字色",
+            .ko: "글자 색",
+            .th: "สีข้อความ"
+        ],
         "text_studio": [
             .zhHant: "文字排版",
             .en: "Text Studio",
@@ -4446,6 +4478,30 @@ extension LocalizationManager {
             .ja: "テキスト書式",
             .ko: "텍스트 서식",
             .th: "รูปแบบข้อความ"
+        ],
+        "text_tab_font": [
+            .zhHant: "字體",
+            .en: "Font",
+            .zhHans: "字体",
+            .ja: "フォント",
+            .ko: "글꼴",
+            .th: "แบบอักษร"
+        ],
+        "text_tab_style": [
+            .zhHant: "樣式",
+            .en: "Style",
+            .zhHans: "样式",
+            .ja: "スタイル",
+            .ko: "스타일",
+            .th: "สไตล์"
+        ],
+        "text_tab_symbols": [
+            .zhHant: "符號",
+            .en: "Symbols",
+            .zhHans: "符号",
+            .ja: "記号",
+            .ko: "기호",
+            .th: "สัญลักษณ์"
         ],
         "theme_aesthetic": [
             .zhHant: "美學視覺",

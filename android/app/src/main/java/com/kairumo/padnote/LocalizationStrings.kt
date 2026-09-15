@@ -122,6 +122,14 @@ object LocalizationStrings {
             "ko" to "텍스트 상자 추가",
             "th" to "เพิ่มกล่องข้อความ"
         ),
+        "alignment" to mapOf(
+            "zh-Hant" to "對齊",
+            "en" to "Alignment",
+            "zh-Hans" to "对齐",
+            "ja" to "配置",
+            "ko" to "정렬",
+            "th" to "การจัดวาง"
+        ),
         "all_asset_types" to mapOf(
             "zh-Hant" to "全部型態",
             "en" to "All Types",
@@ -377,6 +385,14 @@ object LocalizationStrings {
             "ja" to "枠線スタイル",
             "ko" to "테두리 스타일",
             "th" to "รูปแบบกรอบ"
+        ),
+        "border_width" to mapOf(
+            "zh-Hant" to "邊框粗細",
+            "en" to "Border width",
+            "zh-Hans" to "边框粗细",
+            "ja" to "枠線の太さ",
+            "ko" to "테두리 두께",
+            "th" to "ความหนาขอบ"
         ),
         "box_width" to mapOf(
             "zh-Hant" to "方塊寬度",
@@ -2083,12 +2099,12 @@ object LocalizationStrings {
             "th" to "ฟิลเตอร์สไตล์"
         ),
         "image_rotate" to mapOf(
-            "zh-Hant" to "旋轉90°",
-            "en" to "Rotate 90°",
-            "zh-Hans" to "旋转90°",
-            "ja" to "90°回転",
-            "ko" to "90° 회전",
-            "th" to "หมุน 90°"
+            "zh-Hant" to "旋轉",
+            "en" to "Rotate",
+            "zh-Hans" to "旋转",
+            "ja" to "回転",
+            "ko" to "회전",
+            "th" to "หมุน"
         ),
         "image_rounded" to mapOf(
             "zh-Hant" to "柔和圓角",
@@ -3714,6 +3730,14 @@ object LocalizationStrings {
             "ko" to "90° 회전",
             "th" to "หมุน 90°"
         ),
+        "rotation_free_hint" to mapOf(
+            "zh-Hant" to "拖曳把手旋轉，靠近 15° 的倍數會自動吸附",
+            "en" to "Drag the handle to rotate; hold near 15° steps to snap",
+            "zh-Hans" to "拖动把手旋转，靠近 15° 的倍数会自动吸附",
+            "ja" to "ハンドルをドラッグして回転。15°付近でスナップします",
+            "ko" to "핸들을 끌어 회전하세요. 15° 부근에서 스냅됩니다",
+            "th" to "ลากที่จับเพื่อหมุน จะดูดเข้าทุก 15°"
+        ),
         "rule_of_thirds_desc" to mapOf(
             "zh-Hant" to "標準三等分縱橫輔助線與交會四點焦點指示",
             "en" to "Standard 3x3 grid lines with 4 intersection power points",
@@ -4426,6 +4450,14 @@ object LocalizationStrings {
             "ko" to "캔버스를 탭하여 텍스트 입력",
             "th" to "แตะที่ใดก็ได้บนผืนผ้าใบเพื่อพิมพ์"
         ),
+        "text_color" to mapOf(
+            "zh-Hant" to "文字顏色",
+            "en" to "Text color",
+            "zh-Hans" to "文字颜色",
+            "ja" to "文字色",
+            "ko" to "글자 색",
+            "th" to "สีข้อความ"
+        ),
         "text_studio" to mapOf(
             "zh-Hant" to "文字排版",
             "en" to "Text Studio",
@@ -4441,6 +4473,30 @@ object LocalizationStrings {
             "ja" to "テキスト書式",
             "ko" to "텍스트 서식",
             "th" to "รูปแบบข้อความ"
+        ),
+        "text_tab_font" to mapOf(
+            "zh-Hant" to "字體",
+            "en" to "Font",
+            "zh-Hans" to "字体",
+            "ja" to "フォント",
+            "ko" to "글꼴",
+            "th" to "แบบอักษร"
+        ),
+        "text_tab_style" to mapOf(
+            "zh-Hant" to "樣式",
+            "en" to "Style",
+            "zh-Hans" to "样式",
+            "ja" to "スタイル",
+            "ko" to "스타일",
+            "th" to "สไตล์"
+        ),
+        "text_tab_symbols" to mapOf(
+            "zh-Hant" to "符號",
+            "en" to "Symbols",
+            "zh-Hans" to "符号",
+            "ja" to "記号",
+            "ko" to "기호",
+            "th" to "สัญลักษณ์"
         ),
         "theme_aesthetic" to mapOf(
             "zh-Hant" to "美學視覺",

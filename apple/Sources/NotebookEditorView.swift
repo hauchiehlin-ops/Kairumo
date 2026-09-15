@@ -4917,7 +4917,7 @@ struct AttachmentItemView: View {
                             }
                         )
                         .shadow(color: (attachment.hasShadow && !isDragging) ? Color.black.opacity(0.18) : Color.clear, radius: 8, x: 2, y: 4)
-                        .rotationEffect(.degrees(attachment.rotationDegrees))
+                        .rotationEffect(.degrees(attachment.canvasRotation))
                         .contextMenu {
                             ObjectFrameStyleMenu(style: $attachment)
                             Divider()
@@ -5000,19 +5000,9 @@ struct AttachmentItemView: View {
                     }
                     .buttonStyle(.plain)
 
-                    // 邊框保留或刪除快速開關
-                    Button {
-                        attachment.hasBorder.toggle()
-                    } label: {
-                        Image(systemName: attachment.hasBorder ? "rectangle.inset.filled" : "rectangle")
-                            .font(.system(size: 11, weight: .bold))
-                            .foregroundColor(.white)
-                            .padding(5)
-                            .background(attachment.hasBorder ? Color.purple : Color.secondary)
-                            .clipShape(Circle())
-                    }
-                    .buttonStyle(.plain)
-                    .help(localizationManager.localized("toggle_border"))
+                    // 邊框開關已移進「美化圖片」面板（`ImageEditControls` 的
+                    // 「保留邊框」）。原本兩個地方都能改同一個值，畫布上那顆
+                    // 又只有顏色會變、沒有標示，使用者不知道自己按了什麼。
 
                     Button {
                         onDelete()
@@ -5065,6 +5055,18 @@ struct AttachmentItemView: View {
                     }
                 }
                 .frame(width: displayWidth, height: displayHeight)
+
+                // 旋轉把手。與內容同層但**不參與** `.rotationEffect` ——
+                // 包進旋轉裡的話，拖曳算出的角度會疊加自身旋轉，物件會失控加速。
+                ObjectRotationHandle(
+                    degrees: $attachment.canvasRotation,
+                    size: CGSize(width: displayWidth, height: displayHeight)
+                ) {
+                    if let data = try? JSONEncoder().encode(attachment),
+                       let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        collaborationManager.broadcastAttachmentUpsert(type: "image", itemDict: dict)
+                    }
+                }
             }
         }
         .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
@@ -5254,6 +5256,16 @@ struct TextAttachmentItemView: View {
                 }
             }
             .contentShape(Rectangle())
+            .rotationEffect(.degrees(textItem.canvasRotation))
+            .overlay {
+                if isSelected && !isEditingInline && lockedByPeer == nil {
+                    ObjectRotationHandle(
+                        degrees: $textItem.canvasRotation,
+                        size: CGSize(width: displayWidth, height: displayHeight),
+                        onCommit: broadcastTextChange
+                    )
+                }
+            }
             .onTapGesture(count: 2) {
                 // 點兩下＝就地編輯（最直覺的路徑）
                 guard lockedByPeer == nil else { return }
@@ -5337,11 +5349,8 @@ struct TextAttachmentItemView: View {
             if isSelected && !isEditingInline {
                 HStack(spacing: 6) {
                     textActionButton("pencil", "edit", .blue) { onEdit() }
-                    textActionButton(
-                        textItem.hasBorder ? "rectangle.inset.filled" : "rectangle",
-                        "toggle_border",
-                        textItem.hasBorder ? .purple : .gray
-                    ) { textItem.hasBorder.toggle() }
+                    // 邊框開關已移進「文字排版」面板的「樣式」分頁。
+                    // 保留在畫布上的只有真正需要立即觸及的動作：編輯與刪除。
                     textActionButton("trash.fill", "delete", .red) { onDelete() }
                 }
                 .padding(4)

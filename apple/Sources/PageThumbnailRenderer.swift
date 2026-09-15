@@ -285,19 +285,13 @@ public enum PageThumbnailRenderer {
         }
 
         let cg = ctx.cgContext
-        cg.saveGState()
-        if item.rotationDegrees != 0 {
-            // 旋轉必須繞著物件中心，繞原點會讓圖飛出畫面。
-            let center = CGPoint(x: rect.midX, y: rect.midY)
-            cg.translateBy(x: center.x, y: center.y)
-            cg.rotate(by: CGFloat(item.rotationDegrees) * .pi / 180)
-            cg.translateBy(x: -center.x, y: -center.y)
+        withRotation(item, in: rect) {
+            cg.saveGState()
+            UIBezierPath(roundedRect: rect, cornerRadius: item.cornerRadius).addClip()
+            image.draw(in: rect)
+            cg.restoreGState()
+            strokeFrame(item, in: rect, defaults: .image)
         }
-        UIBezierPath(roundedRect: rect, cornerRadius: item.cornerRadius).addClip()
-        image.draw(in: rect)
-        cg.restoreGState()
-
-        strokeFrame(item, in: rect, defaults: .image)
     }
 
     /// 畫布上的文字方塊內距。與 `TextBoxCanvasItemView` 的 `.padding(14)` 一致。
@@ -357,27 +351,50 @@ public enum PageThumbnailRenderer {
         return NSAttributedString(string: item.text, attributes: attrs)
     }
 
+    /// 以物件中心為軸套用畫布旋轉，畫完還原。
+    ///
+    /// 縮圖與畫布**必須用同一個角度**。只在畫布上轉、縮圖不轉的話，
+    /// 使用者會以為自己的排版沒有存進去 —— 那比完全不支援旋轉更糟。
+    ///
+    /// 繞中心而不是繞原點：繞原點的話物件會被甩到畫面外，而且離原點越遠飛得越誇張。
+    private static func withRotation<T>(
+        _ style: some ObjectFrameStyled,
+        in rect: CGRect,
+        _ body: () -> T
+    ) -> T {
+        guard style.isRotated, let cg = UIGraphicsGetCurrentContext() else { return body() }
+        cg.saveGState()
+        let center = CGPoint(x: rect.midX, y: rect.midY)
+        cg.translateBy(x: center.x, y: center.y)
+        cg.rotate(by: CGFloat(style.canvasRotation) * .pi / 180)
+        cg.translateBy(x: -center.x, y: -center.y)
+        defer { cg.restoreGState() }
+        return body()
+    }
+
     private static func drawText(_ item: NoteTextAttachment, ctx: UIGraphicsImageRendererContext) {
         let rect = CGRect(
             x: item.x, y: item.y,
             width: item.width, height: measuredHeight(for: item)
         )
 
-        fillFrame(item, in: rect, defaults: .text)
-        strokeFrame(item, in: rect, defaults: .text)
+        withRotation(item, in: rect) {
+            fillFrame(item, in: rect, defaults: .text)
+            strokeFrame(item, in: rect, defaults: .text)
 
-        guard !item.text.isEmpty else { return }
+            guard !item.text.isEmpty else { return }
 
-        // 裁切到方框內。沒有這一步，超出高度的文字會直接畫到框外、
-        // 壓在旁邊的物件上 —— 畫布上不會這樣，因為那邊有 clipShape。
-        ctx.cgContext.saveGState()
-        UIBezierPath(roundedRect: rect, cornerRadius: item.cornerRadius).addClip()
-        attributedText(for: item).draw(
-            with: rect.insetBy(dx: textBoxPadding, dy: textBoxPadding),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            context: nil
-        )
-        ctx.cgContext.restoreGState()
+            // 裁切到方框內。沒有這一步，超出高度的文字會直接畫到框外、
+            // 壓在旁邊的物件上 —— 畫布上不會這樣，因為那邊有 clipShape。
+            ctx.cgContext.saveGState()
+            UIBezierPath(roundedRect: rect, cornerRadius: item.cornerRadius).addClip()
+            attributedText(for: item).draw(
+                with: rect.insetBy(dx: textBoxPadding, dy: textBoxPadding),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                context: nil
+            )
+            ctx.cgContext.restoreGState()
+        }
     }
 
     private static func drawLink(_ item: NoteLinkAttachment) {

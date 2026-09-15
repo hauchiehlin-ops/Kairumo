@@ -28,11 +28,49 @@ public protocol ObjectFrameStyled {
     /// 方框底色。`"clear"` 代表透明；`nil` 代表沿用該型別的預設。
     var backgroundColorHex: String? { get set }
     var cornerRadius: CGFloat { get set }
+    /// 物件在畫布上的旋轉角度（度，順時針）。
+    ///
+    /// 這是**畫布上的 2D 旋轉**，與 `Note3DAttachment` 的 `rotationX/Y/Z`
+    /// （模型自身的姿態）是兩回事，不要混用。
+    ///
+    /// 宣告成計算屬性而非儲存屬性：實際的儲存欄位在各型別裡是 `Double?`。
+    /// 這些結構都是 `Codable`，而載入走的是 `try? JSONDecoder().decode(...)`
+    /// —— 新增一個**非 Optional** 的欄位，舊檔會因為缺鍵而整份解碼失敗，
+    /// `try?` 再把失敗變成 nil：使用者的筆記會**整批靜默消失**。
+    /// （`NoteTextAttachment` 的段落欄位全是 Optional 就是同一個理由。）
+    var canvasRotation: Double { get set }
 }
 
 public extension ObjectFrameStyled {
     /// 底色是否為透明。
     var isBackgroundClear: Bool { backgroundColorHex == "clear" }
+
+    /// 旋轉是否偏離正向 —— 命中測試與算繪要不要走旋轉路徑看這個。
+    var isRotated: Bool { abs(canvasRotation.truncatingRemainder(dividingBy: 360)) > 0.01 }
+}
+
+/// 畫布旋轉的共用規則，兩個平台用同一組數值。
+public enum CanvasRotation {
+    /// 拖曳旋轉把手時吸附到這個倍數（度）。
+    public static let snapStep: Double = 15
+    /// 距離吸附角多少度以內才吸附。超過就自由角度。
+    public static let snapTolerance: Double = 3
+
+    /// 把任意角度正規化到 [0, 360)。
+    public static func normalized(_ degrees: Double) -> Double {
+        let r = degrees.truncatingRemainder(dividingBy: 360)
+        return r < 0 ? r + 360 : r
+    }
+
+    /// 拖曳中的角度 → 實際要套用的角度（含吸附）。
+    ///
+    /// 吸附只在**接近**整數角時發生。無條件吸附的話使用者就永遠轉不出
+    /// 22° 這種角度，而「自由角度」正是這個功能的重點。
+    public static func snapped(_ degrees: Double) -> Double {
+        let value = normalized(degrees)
+        let nearest = (value / snapStep).rounded() * snapStep
+        return abs(value - nearest) <= snapTolerance ? normalized(nearest) : value
+    }
 }
 
 /// 筆記三大核心主題分類
@@ -380,6 +418,11 @@ public enum MaterialType: String, Codable, CaseIterable, Identifiable {
 /// 筆記內嵌圖片與圖表附件模型
 public struct NoteImageAttachment: Identifiable, Codable, Hashable, ObjectFrameStyled {
     public let id: String
+    /// 協定橋接。圖片的旋轉欄位早就存在且是非 Optional，沿用即可。
+    public var canvasRotation: Double {
+        get { rotationDegrees }
+        set { rotationDegrees = newValue }
+    }
     public var fileName: String
     public var pageIndex: Int
     public var x: CGFloat
@@ -456,6 +499,13 @@ public struct NoteImageAttachment: Identifiable, Codable, Hashable, ObjectFrameS
 /// 筆記內嵌 3D 模型附件模型
 public struct Note3DAttachment: Identifiable, Codable, Hashable, ObjectFrameStyled {
     public let id: String
+    /// 畫布旋轉角度。**必須是 Optional** —— 見 `ObjectFrameStyled.canvasRotation`
+    /// 的說明：非 Optional 會讓舊筆記整批解碼失敗而消失。
+    public var rotationDegrees: Double?
+    public var canvasRotation: Double {
+        get { rotationDegrees ?? 0 }
+        set { rotationDegrees = newValue }
+    }
     public var pageIndex: Int
     public var title: String
     public var modelTypeRaw: String // "cube", "sphere", "cylinder", "torus", "pyramid", "capsule"
@@ -522,6 +572,13 @@ public struct Note3DAttachment: Identifiable, Codable, Hashable, ObjectFrameStyl
 /// 筆記內嵌 Word 級文字方塊附件模型
 public struct NoteTextAttachment: Identifiable, Codable, Hashable, ObjectFrameStyled {
     public let id: String
+    /// 畫布旋轉角度。**必須是 Optional** —— 見 `ObjectFrameStyled.canvasRotation`
+    /// 的說明：非 Optional 會讓舊筆記整批解碼失敗而消失。
+    public var rotationDegrees: Double?
+    public var canvasRotation: Double {
+        get { rotationDegrees ?? 0 }
+        set { rotationDegrees = newValue }
+    }
     public var pageIndex: Int
     public var text: String
     public var fontSize: CGFloat
@@ -612,6 +669,13 @@ public struct NoteTextAttachment: Identifiable, Codable, Hashable, ObjectFrameSt
 /// 筆記內嵌網頁連結預覽附件模型
 public struct NoteLinkAttachment: Identifiable, Codable, Hashable, ObjectFrameStyled {
     public let id: String
+    /// 畫布旋轉角度。**必須是 Optional** —— 見 `ObjectFrameStyled.canvasRotation`
+    /// 的說明：非 Optional 會讓舊筆記整批解碼失敗而消失。
+    public var rotationDegrees: Double?
+    public var canvasRotation: Double {
+        get { rotationDegrees ?? 0 }
+        set { rotationDegrees = newValue }
+    }
     public var pageIndex: Int
     public var urlString: String
     public var title: String
