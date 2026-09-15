@@ -111,6 +111,24 @@ impl LibraryIndex {
         self.items.values().filter(|i| !i.deleted).collect()
     }
 
+    /// 所有還看得見的**筆記本**，不分層級。
+    ///
+    /// 同步要用的是這個而不是 [`live`]：判斷「雲端有、本機還沒有」時需要一份
+    /// 攤平的清單，而 `children_of` 一次只給一層。
+    ///
+    /// 已刪除資料夾底下的筆記本**不算**——它們在畫面上已經消失了，
+    /// 再把內容抓下來只是白佔空間，而且使用者永遠看不到那份下載。
+    pub fn live_notebooks(&self) -> Vec<&LibraryItem> {
+        let mut out: Vec<&LibraryItem> = self
+            .items
+            .values()
+            .filter(|i| !i.deleted && i.kind == ItemKind::Notebook)
+            .filter(|i| !self.has_deleted_ancestor(i))
+            .collect();
+        out.sort_by(|a, b| a.id.cmp(&b.id));
+        out
+    }
+
     /// 某個資料夾底下還活著的項目。
     ///
     /// 排序是**碼位順序**，不是語系排序規則。這裡要的是「同一份資料在任何
@@ -207,6 +225,31 @@ mod tests {
             kind: ItemKind::Folder,
             ..item(id, title, parent, lamport, device)
         }
+    }
+
+    #[test]
+    fn live_notebooks_is_flat_and_skips_folders() {
+        // 同步靠這份清單決定「要抓哪幾本下來」。漏掉巢狀的那幾本，
+        // 症狀是「有些筆記本同步得過來、有些永遠不來」。
+        let mut index = LibraryIndex::default();
+        index.upsert(folder("f1", "工作", None, 1, "dev-a"));
+        index.upsert(item("n1", "根目錄的", None, 2, "dev-a"));
+        index.upsert(item("n2", "資料夾裡的", Some("f1"), 3, "dev-a"));
+
+        let ids: Vec<&str> = index.live_notebooks().iter().map(|i| i.id.as_str()).collect();
+        assert_eq!(ids, vec!["n1", "n2"], "資料夾不算，巢狀的不能漏");
+    }
+
+    #[test]
+    fn a_notebook_in_a_deleted_folder_is_not_worth_downloading() {
+        // 它在畫面上已經看不到了。還把內容抓下來只是白佔空間，
+        // 而且使用者永遠看不到那份下載。
+        let mut index = LibraryIndex::default();
+        index.upsert(folder("f1", "工作", None, 1, "dev-a"));
+        index.upsert(item("n1", "會議", Some("f1"), 2, "dev-a"));
+        index.tombstone("f1", 3, "dev-b");
+
+        assert!(index.live_notebooks().is_empty());
     }
 
     #[test]

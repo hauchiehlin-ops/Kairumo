@@ -143,6 +143,105 @@ enum NotebookSyncCoordinator {
         return report
     }
 
+    /// 跑完一輪**Google Drive** 的同步。
+    ///
+    /// 三步與資料夾同步完全一樣（匯出 → 搬檔 → 匯入），只有中間那一步換成
+    /// Drive。順序同樣不能顛倒 —— 先搬檔的話上傳的是上一輪的舊內容，
+    /// 不匯入的話另一台裝置寫的東西永遠不會變成筆記。
+    ///
+    /// 回傳 nil 表示沒登入。
+    static func runDrive(store: SyncableNotebookStore, deviceId: UInt32) async -> Report? {
+        guard await GoogleAuth.shared.isSignedIn else { return nil }
+
+        var report = Report()
+        let fm = FileManager.default
+        let packagesDir = store.syncPackagesDirectory
+        try? fm.createDirectory(at: packagesDir, withIntermediateDirectories: true)
+
+        // ── 1. 匯出本機的筆記 ──────────────────────────────
+        var ownStrokes: OwnStrokes = [:]
+        for document in store.syncNotebooks {
+            let package = packagesDir.appendingPathComponent("\(document.id).padnote")
+            do {
+                let own = try exportOne(document, from: store, to: package, deviceId: deviceId)
+                ownStrokes.merge(own) { first, _ in first }
+                report.exported += 1
+            } catch {
+                report.failures[document.title] = error.localizedDescription
+            }
+        }
+
+        // ── 2. 中繼資料，再逐本搬內容 ───────────────────────
+        // 順序不能反：先收斂索引，才知道哪些筆記本還活著。先同步內容的話，
+        // 會把另一台已經刪掉的筆記本內容又推上去。
+        guard let meta = await CloudSync.runOnce() else { return nil }
+        guard meta.ok else {
+            report.failures["cloud"] = meta.error
+            return report
+        }
+
+        let packages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
+            .filter { $0.pathExtension == "padnote" } ?? []
+        for package in packages {
+            let id = package.deletingPathExtension().lastPathComponent
+            guard let result = await CloudSync.syncNotebook(
+                packagePath: package.path, notebookId: id) else { continue }
+            if result.ok {
+                report.uploaded += Int(result.uploaded)
+                report.downloaded += Int(result.downloaded)
+            } else {
+                report.failures[id] = result.error
+            }
+        }
+
+        // 別台裝置**新建**的筆記本在本機連套件目錄都沒有，上面那一圈看不到它們。
+        report.newNotebooks += await pullNewNotebooks(
+            into: packagesDir, index: meta.indexJson, report: &report)
+
+        // ── 3. 匯入回筆記 ─────────────────────────────────
+        let allPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
+            .filter { $0.pathExtension == "padnote" } ?? []
+        for package in allPackages {
+            do {
+                try importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
+                report.imported += 1
+            } catch {
+                report.failures[package.lastPathComponent] = error.localizedDescription
+            }
+        }
+
+        return report
+    }
+
+    /// 把雲端有、本機還沒有的筆記本整本抓下來。回傳抓了幾本。
+    ///
+    /// 清單來自**合併後的索引**，不是本機那一份 —— 用本機的話，剛從雲端
+    /// 收斂進來的那幾本還不在裡面，永遠差一輪。
+    private static func pullNewNotebooks(
+        into packagesDir: URL, index: String, report: inout Report
+    ) async -> Int {
+        let fm = FileManager.default
+        var pulled = 0
+        for item in syncLiveNotebooks(indexJson: index) {
+            let package = packagesDir.appendingPathComponent("\(item.id).padnote")
+            guard !fm.fileExists(atPath: package.path) else { continue }
+            guard let result = await CloudSync.cloneNotebook(
+                packagePath: package.path, notebookId: item.id, title: item.title)
+            else { break }
+            if result.ok {
+                report.downloaded += Int(result.downloaded)
+                pulled += 1
+            } else {
+                // 抓失敗時把空殼刪掉。留著的話，下一輪 `fileExists` 為真，
+                // 這本就再也不會被重抓 —— 使用者會看到一本永遠打不開的空筆記。
+                try? fm.removeItem(at: package)
+                report.failures[item.title] = result.error
+                if result.needsReauth { break }
+            }
+        }
+        return pulled
+    }
+
     // MARK: - 單本
 
     /// 匯出一本，回傳這台裝置在各頁自己擁有的筆畫。

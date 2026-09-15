@@ -25,9 +25,21 @@ struct KairumoApp: App {
 
     private var appVersionTitle: String { AppVersion.windowTitle }
 
+    /// App 回到前景時自動同步一輪。
+    ///
+    /// **這一段是「跨裝置感覺得到」的全部差別。** 機制本身早就寫好了，
+    /// 但在此之前只有設定頁裡那一個按鈕會觸發它 —— 使用者在 iPad 上寫完，
+    /// 打開 Mac，什麼也不會發生，除非他知道要去設定頁點一下。
+    @Environment(\.scenePhase) private var scenePhase
+
     var body: some Scene {
         WindowGroup(appVersionTitle) {
             HomeWorkbenchView()
+                // 單參數的 onChange：新的兩參數版本要 iOS 17，而部署目標更低。
+                .onChange(of: scenePhase) { phase in
+                    guard phase == .active else { return }
+                    Task { await AutoCloudSync.runIfSignedIn() }
+                }
                 #if os(macOS) || targetEnvironment(macCatalyst)
                 .frame(minWidth: 800, minHeight: 600)
                 // `.frame(minWidth:)` **不會限制 Mac 上的視窗大小** ——
@@ -65,3 +77,24 @@ private func applyMacWindowMinimumSize() {
     }
 }
 #endif
+
+
+/// 自動同步。與設定頁裡的「立即同步」走同一條路，差別只在**不出訊息**。
+///
+/// 自動同步是背景行為：網路不通就下次再說。每次回到前景都跳一次
+/// 「同步失敗」，使用者只會去把這個功能關掉。
+@MainActor
+enum AutoCloudSync {
+
+    /// 同一時間只跑一輪。前景切換在 Catalyst 上會連續來好幾次，
+    /// 不擋的話會有好幾輪同步同時在寫同一個套件。
+    private static var running = false
+
+    static func runIfSignedIn() async {
+        guard !running, GoogleAuth.shared.isSignedIn else { return }
+        running = true
+        defer { running = false }
+        _ = await NotebookSyncCoordinator.runDrive(
+            store: NotebookStore.shared, deviceId: NotebookMigration.deviceId)
+    }
+}

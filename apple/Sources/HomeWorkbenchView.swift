@@ -1848,6 +1848,11 @@ public struct AppDiagnosticsSheet: View {
     @State private var showFolderPicker = false
     @State private var syncMessage: String?
 
+    /// Google 帳號同步（G-01 ～ G-05）。
+    @ObservedObject private var googleAuth = GoogleAuth.shared
+    @State private var googleMessage: String?
+    @State private var isGoogleSyncing = false
+
     /// 固定頁面模型的重新分頁（問題 3＋5）。
     @State private var repaginationMessage: String?
 
@@ -1897,6 +1902,7 @@ public struct AppDiagnosticsSheet: View {
 
                 migrationSection
                 cloudSyncSection
+                googleAccountSection
                 pageModelSection
                 backupSection
                 inputDiagnosticsSection
@@ -2045,6 +2051,88 @@ extension AppDiagnosticsSheet {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+        }
+    }
+
+    /// Google 帳號同步（G-01 ～ G-05，ADR-0011）。
+    ///
+    /// 與上面那一節是**兩條不同的路**：`cloudSyncSection` 是使用者自己挑一個
+    /// 資料夾（iCloud Drive / Dropbox 都行），這一節是用 Google 帳號直接把
+    /// 資料放進 Drive 的 appDataFolder，不必挑資料夾、也不必兩台裝置各挑一次。
+    ///
+    /// 在此之前這整條路**在 Apple 上沒有任何入口** —— `GoogleAuth` 與
+    /// `CloudSync` 都寫好了，但沒有一個地方呼叫得到它們。
+    @ViewBuilder
+    var googleAccountSection: some View {
+        Section("Google Drive") {
+            HStack {
+                Text(localizationManager.localized("cloud_sync"))
+                Spacer()
+                Text(googleAuth.isSignedIn
+                     ? localizationManager.localized("sync_section")
+                     : localizationManager.localized("not_signed_in"))
+                    .foregroundColor(.secondary)
+            }
+
+            if let googleMessage {
+                Text(googleMessage)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+
+            if googleAuth.isSignedIn {
+                Button(localizationManager.localized("sync_now")) {
+                    Task { await runGoogleSync() }
+                }
+                .disabled(isGoogleSyncing)
+
+                Button(localizationManager.localized("sign_out"), role: .destructive) {
+                    Task {
+                        await GoogleAuth.shared.signOut()
+                        googleMessage = nil
+                    }
+                }
+            } else {
+                Button(localizationManager.localized("sign_in_google")) {
+                    Task {
+                        switch await GoogleAuth.shared.signIn() {
+                        case .success:
+                            // 登入之後**馬上同步一次**。停在「已登入」而什麼都
+                            // 沒發生的話，使用者不知道這個功能到底有沒有用。
+                            await runGoogleSync()
+                        case .failure(.cancelled):
+                            // 自己按取消不是錯誤，不要跳訊息。
+                            break
+                        case .failure(let error):
+                            googleMessage = error.errorDescription
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func runGoogleSync() async {
+        guard !isGoogleSyncing else { return }
+        isGoogleSyncing = true
+        defer { isGoogleSyncing = false }
+
+        googleMessage = localizationManager.localized("syncing")
+        guard let report = await NotebookSyncCoordinator.runDrive(
+            store: store, deviceId: NotebookMigration.deviceId)
+        else {
+            googleMessage = localizationManager.localized("not_signed_in")
+            return
+        }
+        if let failure = report.failures.first {
+            googleMessage = "\(failure.key)：\(failure.value)"
+        } else if report.isNoOp {
+            googleMessage = localizationManager.localized("sync_up_to_date")
+        } else {
+            googleMessage = localizationManager.localized("sync_result")
+                .replacingFirst("%1@", with: "\(report.uploaded)")
+                .replacingFirst("%2@", with: "\(report.downloaded)")
         }
     }
 

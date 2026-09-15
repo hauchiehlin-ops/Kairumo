@@ -210,6 +210,29 @@ public enum CloudSync {
         return result
     }
 
+    /// 把一本**只存在於雲端**的筆記本整本抓下來。
+    ///
+    /// 另一台裝置新建的筆記本在本機連套件目錄都沒有，`syncNotebook` 會以
+    /// 「開不了套件」失敗。少了這條路，症狀是：索引同步成功、清單上出現了
+    /// 標題，點進去卻是空的，而且每一輪都重複同樣的失敗。
+    public static func cloneNotebook(
+        packagePath: String,
+        notebookId: String,
+        title: String
+    ) async -> FfiNotebookSyncResult? {
+        guard let token = await GoogleAuth.shared.validAccessToken() else { return nil }
+        let now = UInt64(max(0, Date().timeIntervalSince1970 * 1000))
+        return await Task.detached(priority: .utility) {
+            gdriveCloneNotebook(
+                http: DriveHttpClient(accessToken: token),
+                packagePath: packagePath,
+                notebookId: notebookId,
+                title: title,
+                nowUnixMs: now
+            )
+        }.value
+    }
+
     /// 同步一本筆記本的內容。
     ///
     /// 回傳 `downloaded > 0` 時，**呼叫端必須重新載入這本筆記** ——

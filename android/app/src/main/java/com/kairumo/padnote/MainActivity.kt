@@ -202,6 +202,34 @@ private fun NotebookHome(onOpen: (String) -> Unit) {
     // 新增或刪除之後不主動重讀的話，畫面會停在舊的內容。
     val entries = remember(revision, sort) { NotebookLibrary.all(activity, device, sort) }
 
+    // 回到首頁就自動同步一輪。
+    //
+    // **這一段是「跨裝置感覺得到」的全部差別。** 機制本身早就寫好了，
+    // 但在此之前只有選單裡那一個按鈕會觸發它 —— 使用者在 A 上寫完，
+    // 走到 B 前面打開 App，什麼也不會發生，除非他知道要去點那一項。
+    //
+    // 放在首頁而不是編輯器裡：同步可能把別台的 oplog 寫進套件，
+    // 而開著的那本在記憶體裡還是舊的。在首頁做的話沒有這個問題，
+    // 重讀清單就夠了，不必 recreate 整個畫面。
+    val autoSyncScope = rememberCoroutineScope()
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event != androidx.lifecycle.Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
+            if (!com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) return@LifecycleEventObserver
+            autoSyncScope.launch {
+                val (meta, changed) = withContext(Dispatchers.IO) {
+                    com.kairumo.padnote.library.CloudSync.runFull(activity, device)
+                }
+                // 失敗時**不出訊息**。自動同步是背景行為，網路不通就下次再說；
+                // 每次回到首頁都跳一次「同步失敗」只會讓人關掉這個功能。
+                if (meta != null && meta.ok && changed > 0) revision++
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     val restorePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->

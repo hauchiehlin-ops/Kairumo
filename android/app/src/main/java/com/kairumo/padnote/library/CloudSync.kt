@@ -90,6 +90,43 @@ object CloudSync {
             val result = syncNotebook(context, entry.id) ?: continue
             if (result.ok && result.downloaded > 0u) changed++
         }
+        // 別台裝置**新建**的筆記本在本機連套件目錄都沒有，上面那一圈看不到它們。
+        // 少了這一步，症狀是：索引同步成功、清單上出現了標題，點進去卻是空的。
+        changed += pullNewNotebooks(context, meta.indexJson)
         return meta to changed
+    }
+
+    /**
+     * 把雲端有、本機還沒有的筆記本整本抓下來。回傳抓了幾本。
+     *
+     * 清單來自**合併後的索引**，不是本機那一份 —— 用本機的話，剛從雲端
+     * 收斂進來的那幾本還不在裡面，永遠差一輪。
+     */
+    private fun pullNewNotebooks(context: Context, mergedIndexJson: String): Int {
+        val dir = NotebookLibrary.directory(context)
+        var pulled = 0
+        for (item in uniffi.padnote_core.syncLiveNotebooks(mergedIndexJson)) {
+            val path = File(dir, "${item.id}.padnote")
+            if (path.exists()) continue
+            // 權杖每一本都重新取一次：整批抓下來可能跨過存取權杖的有效期，
+            // 用同一個舊的會在中途開始 401。
+            val token = GoogleAuth.validAccessToken(context) ?: break
+            val result = uniffi.padnote_core.gdriveCloneNotebook(
+                DriveHttpClient(token),
+                path.absolutePath,
+                item.id,
+                item.title,
+                System.currentTimeMillis().toULong()
+            )
+            if (result.ok) {
+                pulled++
+            } else {
+                // 抓失敗時把空殼刪掉。留著的話，下一輪 `path.exists()` 為真，
+                // 這本就再也不會被重抓 —— 使用者會看到一本永遠打不開的空筆記。
+                path.deleteRecursively()
+                if (result.needsReauth) break
+            }
+        }
+        return pulled
     }
 }

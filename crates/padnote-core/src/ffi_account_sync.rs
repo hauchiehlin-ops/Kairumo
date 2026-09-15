@@ -211,6 +211,20 @@ pub fn sync_children_of(index_json: String, parent_id: String) -> Vec<FfiLibrary
     index.children_of(parent).into_iter().map(Into::into).collect()
 }
 
+/// 所有還看得見的**筆記本**，攤平成一份清單，不分層級。
+///
+/// 同步時要用這個來回答「雲端有、本機還沒有哪幾本」——`sync_children_of`
+/// 一次只給一層，放在資料夾裡的筆記本會被漏掉，而使用者看到的症狀是
+/// 「有些筆記本同步得過來、有些永遠不來」。
+#[uniffi::export]
+pub fn sync_live_notebooks(index_json: String) -> Vec<FfiLibraryItem> {
+    LibraryIndex::from_json(&index_json)
+        .live_notebooks()
+        .into_iter()
+        .map(Into::into)
+        .collect()
+}
+
 /// 這個 id 是不是已經被刪除（索引裡有它的墓碑）。
 ///
 /// 索引裡**沒有**這一筆時回 false —— 那是「沒看過」，不是「被刪了」。

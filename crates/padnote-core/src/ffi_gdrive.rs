@@ -546,6 +546,52 @@ pub fn gdrive_sync_media(
     }
 }
 
+/// 把一本**只存在於雲端**的筆記本抓下來。
+///
+/// # 為什麼需要另一個函式
+///
+/// `gdrive_sync_notebook` 第一件事就是 `NotebookPackage::open`，而另一台裝置
+/// 新建的筆記本在本機**連目錄都沒有** —— 它會直接以「開不了套件」失敗。
+/// 結果是：索引同步成功，清單上出現了那本筆記的標題，點進去卻是空的，
+/// 而且每一輪同步都重複一樣的失敗。
+///
+/// 所以「本機還沒有」必須是一條明確的路徑：先照標題建一個空套件，
+/// 再走一般的下載流程。
+///
+/// 已經存在時**不會覆蓋**，直接當成一般同步 —— 重跑這個函式是安全的。
+///
+/// **這個函式會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
+#[uniffi::export]
+pub fn gdrive_clone_notebook(
+    http: Arc<dyn FfiDriveHttp>,
+    package_path: String,
+    notebook_id: String,
+    title: String,
+    now_unix_ms: u64,
+) -> FfiNotebookSyncResult {
+    let root = std::path::Path::new(&package_path);
+    if padnote_storage::NotebookPackage::open(root).is_err() {
+        if let Err(e) = padnote_storage::NotebookPackage::create(root, &title, now_unix_ms) {
+            return notebook_failed(format!("建不了套件：{e}"));
+        }
+    }
+
+    let ops = gdrive_sync_notebook(http.clone(), package_path.clone(), notebook_id.clone());
+    if !ops.ok {
+        return ops;
+    }
+    // 媒體接在 oplog 之後，理由與平台那一側相同：oplog 裡的 AddImage 會指向
+    // 一個 blob id，媒體還沒到的話那一頁是一個指向不存在檔案的圖片區塊。
+    let media = gdrive_sync_media(http, package_path, notebook_id);
+    FfiNotebookSyncResult {
+        ok: media.ok,
+        uploaded: ops.uploaded + media.uploaded,
+        downloaded: ops.downloaded + media.downloaded,
+        error: media.error,
+        needs_reauth: media.needs_reauth,
+    }
+}
+
 fn notebook_failed(error: String) -> FfiNotebookSyncResult {
     FfiNotebookSyncResult {
         ok: false,
@@ -768,6 +814,64 @@ mod tests {
             .collect();
         assert_eq!(a_files, b_files, "兩台裝置沒有收斂");
         assert_eq!(a_files.len(), 2);
+    }
+
+    #[test]
+    fn a_notebook_that_only_exists_in_the_cloud_can_be_cloned() {
+        // 另一台裝置新建的筆記本：本機連套件目錄都沒有。
+        // 這條路以前是斷的 —— 索引同步成功、清單上有標題，點進去卻是空的。
+        use padnote_doc::ops::DocOp;
+
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
+
+        let a_root = tmp_package("clone-a", 0xAA);
+        let a = padnote_storage::NotebookPackage::open(&a_root).unwrap();
+        a.append_doc_ops(1, 0xAA, &[DocOp::SetTitle { title: "A 新建的".into() }])
+            .unwrap();
+        let pushed = gdrive_sync_notebook(
+            cloud.clone(),
+            a_root.to_string_lossy().into(),
+            "nb-new".into(),
+        );
+        assert!(pushed.ok, "{}", pushed.error);
+
+        // B 完全沒有這個目錄。
+        let b_root = std::env::temp_dir()
+            .join(format!("padnote-gdrive-clone-b-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&b_root);
+
+        // 一般的同步在這裡會失敗 —— 那正是要修的東西。
+        let refused = gdrive_sync_notebook(
+            cloud.clone(),
+            b_root.to_string_lossy().into(),
+            "nb-new".into(),
+        );
+        assert!(!refused.ok, "沒有套件時本來就不該假裝成功");
+
+        let cloned = gdrive_clone_notebook(
+            cloud.clone(),
+            b_root.to_string_lossy().into(),
+            "nb-new".into(),
+            "A 新建的".into(),
+            1_700_000_000_000,
+        );
+        assert!(cloned.ok, "{}", cloned.error);
+        assert_eq!(cloned.downloaded, 1, "應該把 A 的那一份抓下來");
+
+        let b = padnote_storage::NotebookPackage::open(&b_root).unwrap();
+        assert_eq!(b.doc_op_files().unwrap().len(), 1);
+
+        // 再跑一次不該重建、也不該重抓 —— 重跑要是安全的。
+        let again = gdrive_clone_notebook(
+            cloud,
+            b_root.to_string_lossy().into(),
+            "nb-new".into(),
+            "A 新建的".into(),
+            1_700_000_000_000,
+        );
+        assert!(again.ok, "{}", again.error);
+        assert_eq!(again.downloaded, 0);
+        assert_eq!(again.uploaded, 0);
     }
 
     #[test]
