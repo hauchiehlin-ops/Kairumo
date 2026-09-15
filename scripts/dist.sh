@@ -12,6 +12,7 @@
 #   ./scripts/dist.sh --mac-only
 #   ./scripts/dist.sh --ios-only
 #   ./scripts/dist.sh --android-only
+#   ./scripts/dist.sh --ios-install   # 不產 .ipa，直接裝進接上線的 iPhone / iPad
 #   ./scripts/dist.sh --skip-rust     # 略過 Rust XCFramework 重編（省十來分鐘）
 #   ./scripts/dist.sh --no-notarize   # Mac 不公證（只能自己用，別人開會被 Gatekeeper 擋）
 #
@@ -19,10 +20,19 @@
 #   release.sh 是**上架**流程 —— 升版本號、建立 commit、送 App Store Connect / Play Console。
 #   dist.sh 不升版、不 commit、不碰任何商店，只把「當下這份程式碼」打包成能發給人的檔案。
 #
-# ⚠️ iOS 的硬限制（不是這支腳本的缺陷，是 Apple 的規則）：
-#   沒有企業帳號的話，.ipa 只能裝在**事先登錄 UDID** 的裝置上，一個帳號上限 100 台。
-#   要給的人必須先把 UDID 給你，你到 developer.apple.com → Devices 登錄，再重跑這支腳本。
-#   完全不登錄裝置就想給人裝 iOS App，只有 TestFlight 一條路（那要走 release.sh）。
+# ⚠️ iOS 有兩條完全不同的路，先選對再跑：
+#
+#   (a) 裝進**你自己手上**的 iPhone / iPad → `--ios-install`
+#       接上傳輸線、裝置解鎖並信任這台 Mac，跑下去就直接裝好了。
+#       Xcode 會順手把這台裝置登錄進你的帳號，不需要你先去查 UDID。
+#       全程不產生 .ipa —— 因為 .ipa **不是** iOS 能直接開啟的格式：
+#       AirDrop 或丟進「檔案」App 再點下去，iOS 不會有任何反應，那不是壞掉。
+#
+#   (b) 發給**別人** → 預設模式產出的 .ipa，或走 TestFlight
+#       .ipa 只能裝在事先登錄 UDID 的裝置上（一個帳號上限 100 台），
+#       而且對方得用 Mac 上的 Apple Configurator / Finder 才裝得進去。
+#       對方沒有 Mac、或你不想收 UDID 的話，只有 TestFlight 一條路
+#       —— 那要走 scripts/release.sh。
 #
 set -euo pipefail
 
@@ -40,6 +50,9 @@ if [[ -f "$CONFIG_FILE" ]]; then
 fi
 
 DO_MAC=1; DO_IOS=1; DO_ANDROID=1; SKIP_RUST=0; NOTARIZE=1
+# iOS 預設走 Ad Hoc（產出 .ipa 給人）。--ios-install 改走 development 簽章
+# 並直接裝進接上線的裝置 —— 那條路完全不需要碰 .ipa 檔案。
+IOS_INSTALL=0; IOS_METHOD="release-testing"
 for arg in "$@"; do
     case "$arg" in
         --mac-only)     DO_IOS=0; DO_ANDROID=0 ;;
@@ -47,11 +60,12 @@ for arg in "$@"; do
         --android-only) DO_MAC=0; DO_IOS=0 ;;
         --skip-rust)    SKIP_RUST=1 ;;
         --no-notarize)  NOTARIZE=0 ;;
+        --ios-install)  IOS_INSTALL=1; IOS_METHOD="development" ;;
         -h|--help)      sed -n '3,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *)
             # 打錯的旗標不能靜默吃掉 —— 使用者會以為做了某件事，實際沒有。
             echo "❌ 未知參數：$arg" >&2
-            echo "   用法: $0 [--mac-only|--ios-only|--android-only] [--skip-rust] [--no-notarize]" >&2
+            echo "   用法: $0 [--mac-only|--ios-only|--android-only] [--ios-install] [--skip-rust] [--no-notarize]" >&2
             exit 2 ;;
     esac
 done
@@ -216,9 +230,76 @@ fi
 
 # ───────────────────────────── iOS ─────────────────────────────
 if [[ "$DO_IOS" -eq 1 ]]; then
-    step "iOS / iPadOS（Ad Hoc，限已登錄 UDID 的裝置）"
+    if [[ "$IOS_INSTALL" -eq 1 ]]; then
+        step "iOS / iPadOS（直接安裝到接上線的裝置）"
+        # 先確認真的有裝置，再花十分鐘編譯。沒接裝置就編完才發現，很浪費。
+        DEVJSON="${WORK_DIR}/devices.json"
+        xcrun devicectl list devices --json-output "$DEVJSON" >/dev/null 2>&1 || true
+        # 只要實體且連得上的。模擬器不算 —— 模擬器上跑的不是給人用的版本。
+        #
+        # 不用 mapfile：macOS 內建的是 bash 3.2，沒有這個內建指令，
+        # 腳本會在「找不到裝置」這種看起來很像正常情況的地方莫名其妙失敗。
+        IOS_DEVICES=(); IOS_OFFLINE=()
+        while IFS= read -r line; do
+            [[ -z "$line" ]] && continue
+            if [[ "$(echo "$line" | cut -f4)" == "online" ]]; then
+                IOS_DEVICES+=("$line")
+            else
+                IOS_OFFLINE+=("$line")
+            fi
+        done < <(python3 - "$DEVJSON" <<'PYDEV'
+import json, sys
+try:
+    devs = json.load(open(sys.argv[1]))["result"]["devices"]
+except Exception:
+    sys.exit(0)
+for d in devs:
+    hw = d.get("hardwareProperties", {})
+    conn = d.get("connectionProperties", {})
+    props = d.get("deviceProperties", {})
+    # reality 才是模擬器與實機的分界。別拿 platform 或 pairingState 判斷：
+    # 模擬器的 platform 同樣是 "iOS"、pairingState 同樣是 "paired"，
+    # 照樣會被撈進來，然後在安裝時才報 "capability not supported"。
+    if hw.get("reality") != "physical":
+        continue
+    udid = hw.get("udid")
+    if not udid:
+        continue
+    # 沒接線的實機 tunnelState 是 unavailable，裝不進去。
+    # 但仍然回報出來，好讓使用者知道「就是這台，去插線」。
+    state = "online" if conn.get("tunnelState") not in (None, "unavailable") else "offline"
+    name = props.get("name") or "?"
+    model = hw.get("marketingName") or hw.get("productType") or "?"
+    print("\t".join([udid, name, model, state]))
+PYDEV
+)
+        if [[ ${#IOS_DEVICES[@]:-0} -eq 0 ]]; then
+            echo "❌ 沒有連線中的 iPhone / iPad（模擬器不算）。" >&2
+            if [[ ${#IOS_OFFLINE[@]:-0} -gt 0 ]]; then
+                echo "   這些實機這台 Mac 認得，但現在沒連上：" >&2
+                for d in "${IOS_OFFLINE[@]:-}"; do
+                    echo "     • $(echo "$d" | cut -f2)（$(echo "$d" | cut -f3)）" >&2
+                done
+            fi
+            echo "   請用傳輸線接上這台 Mac、解鎖裝置，並在跳出的對話框按「信任這部電腦」。" >&2
+            echo "   接好之後用 xcrun devicectl list devices 確認 Reality 那欄是 physical、" >&2
+            echo "   State 不是 unavailable，再重跑。" >&2
+            FAILED+=("iOS：沒有可安裝的實體裝置")
+            DO_IOS=0
+        else
+            echo "   偵測到裝置："
+            for d in "${IOS_DEVICES[@]:-}"; do
+                echo "     • $(echo "$d" | cut -f2)（$(echo "$d" | cut -f3)）  $(echo "$d" | cut -f1)"
+            done
+        fi
+    else
+        step "iOS / iPadOS（Ad Hoc .ipa，限已登錄 UDID 的裝置）"
+    fi
+fi
+
+if [[ "$DO_IOS" -eq 1 ]]; then
     # Xcode 15.3 起 method 從 ad-hoc 改名為 release-testing，語意相同。
-    if archive_and_export "iPhone / iPad" "generic/platform=iOS" "ios" "release-testing"; then
+    if archive_and_export "iPhone / iPad" "generic/platform=iOS" "ios" "$IOS_METHOD"; then
         IPA=$(find "$EXPORT_DIR" -name "*.ipa" | head -n 1)
         if [[ -z "$IPA" ]]; then
             FAILED+=("iOS：匯出後找不到 .ipa")
@@ -247,10 +328,39 @@ if [[ "$DO_IOS" -eq 1 ]]; then
                 [[ "$DEV_COUNT" == "0" ]] && FAILED+=("iOS：描述檔沒有任何登錄裝置，這個 .ipa 誰也裝不了")
             fi
             rm -rf "$PROBE"
-            DELIVERED+=("$DEST")
+
+            if [[ "$IOS_INSTALL" -eq 1 ]]; then
+                # 解出 .app 再交給 devicectl。devicectl 吃的是 .app 套件，
+                # 不是 .ipa —— 直接餵 .ipa 會被拒絕。
+                APPDIR="${WORK_DIR}/ios-app"; rm -rf "$APPDIR"; mkdir -p "$APPDIR"
+                unzip -q -o "$DEST" -d "$APPDIR"
+                IOS_APP=$(find "$APPDIR/Payload" -maxdepth 1 -name "*.app" | head -n 1)
+                INSTALLED_ANY=0
+                for d in "${IOS_DEVICES[@]:-}"; do
+                    [[ -z "$d" ]] && continue
+                    udid=$(echo "$d" | cut -f1); name=$(echo "$d" | cut -f2)
+                    echo "📲 安裝到 ${name}…"
+                    if xcrun devicectl device install app --device "$udid" "$IOS_APP"; then
+                        echo "   ✅ ${name} 安裝完成，主畫面上就有 Kairumo 了"
+                        INSTALLED_ANY=1
+                    else
+                        FAILED+=("iOS：安裝到 ${name} 失敗")
+                    fi
+                done
+                # --ios-install 的產物是「裝置上跑得起來的 App」，不是檔案。
+                # .ipa 是中間產物，留著只會讓人以為那是可以轉發的東西。
+                rm -f "$DEST"
+                [[ "$INSTALLED_ANY" -eq 0 ]] && FAILED+=("iOS：沒有任何裝置安裝成功")
+            else
+                DELIVERED+=("$DEST")
+            fi
         fi
     else
-        FAILED+=("iOS：封裝/匯出失敗（多半是帳號底下還沒登錄任何裝置 UDID）")
+        if [[ "$IOS_INSTALL" -eq 1 ]]; then
+            FAILED+=("iOS：封裝/匯出失敗（裝置可能未信任這台 Mac，或帳號無法自動建立描述檔）")
+        else
+            FAILED+=("iOS：封裝/匯出失敗（多半是帳號底下還沒登錄任何裝置 UDID）")
+        fi
     fi
 fi
 
@@ -334,11 +444,19 @@ Kairumo v${APP_VER} (build ${BUNDLE_VER})
   2. 直接開啟即可。已通過 Apple 公證，不需要任何額外設定。
 
 ■ iPhone / iPad（Kairumo-${APP_VER}-ios.ipa）
-  只能安裝在**事先登錄過 UDID** 的裝置上。
-  1. 用傳輸線把裝置接上 Mac。
-  2. 打開 Apple Configurator（免費，Mac App Store），選裝置 → 加入 → App → 選這個 .ipa。
-     或：Finder 側邊欄選裝置，把 .ipa 拖進去。
-  尚未登錄的裝置：把 UDID 給開發者 → developer.apple.com 登錄 → 重新打包。
+  ⚠️ .ipa 不能直接在 iPhone / iPad 上點開。
+     AirDrop 過去、或丟進「檔案」App 再點兩下，iOS 不會有任何反應 ——
+     那不是檔案壞了，是 iOS 本來就沒有安裝 .ipa 的功能。必須透過 Mac：
+  1. 用傳輸線把裝置接上一台 Mac。
+  2. 打開 Apple Configurator（免費，Mac App Store），選裝置 → 加入 → App →
+     左下角「選擇來自我的 Mac」→ 選這個 .ipa。
+     或：Finder 側邊欄選裝置，把 .ipa 拖到裝置上。
+  3. 而且這台裝置的 UDID 必須**事先登錄**在開發者帳號裡，否則裝上去也開不起來。
+     未登錄的話：把 UDID 給開發者 → developer.apple.com → Devices 登錄 → 重新打包。
+
+  裝置就在開發者手邊的話，最省事的是跳過 .ipa：
+     接上線後在專案目錄執行 ./scripts/dist.sh --ios-install
+  完全不想碰傳輸線與 UDID 的話，只有 TestFlight（走 scripts/release.sh）。
 
 ■ Android（Kairumo-${APP_VER}-android.apk）
   1. 把 APK 傳到手機。
