@@ -10,12 +10,20 @@
 use padnote_crypto::session::SessionKey;
 use std::process::Command;
 
-fn swift_available() -> bool {
-    Command::new("swiftc")
-        .arg("--version")
-        .output()
-        .map(|o| o.status.success())
-        .unwrap_or(false)
+/// 這台機器能不能真的跑 CryptoKit。
+///
+/// **光檢查 swiftc 存在是不夠的。** GitHub 的 ubuntu runner 現在預裝了 Swift
+/// 工具鏈，於是這個測試開始在 Linux 上真的執行，然後死在
+/// `no such module 'CryptoKit'` —— CryptoKit 是 Apple 專屬框架，
+/// Linux 的 Swift 沒有它。註解從第一天就寫著「其餘平台自動跳過」，
+/// 只是守門條件沒有真的擋住。
+fn cryptokit_available() -> bool {
+    cfg!(target_os = "macos")
+        && Command::new("swiftc")
+            .arg("--version")
+            .output()
+            .map(|o| o.status.success())
+            .unwrap_or(false)
 }
 
 /// 用 CryptoKit 解開核心加密的內容，再由 CryptoKit 加密回來讓核心解。
@@ -61,7 +69,7 @@ FileHandle.standardOutput.write(("SEALED:" + sealed.combined!.base64EncodedStrin
 
 #[test]
 fn rust_and_cryptokit_can_read_each_other() {
-    if !swift_available() {
+    if !cryptokit_available() {
         eprintln!("跳過：這台機器沒有 Swift 工具鏈");
         return;
     }

@@ -31,6 +31,30 @@ pub struct RelayServer {
     state: Mutex<Option<RunningRelay>>,
 }
 
+// 手寫而不是 derive：`RunningRelay` 裡有 tokio `Runtime` 與 oneshot sender，
+// 兩者都沒有 `Debug`。crate 的 lint 是 `-D missing-debug-implementations`，
+// 沒有這個 impl，**只有開 relay feature 時**才會編不過 —— 本機不開就看不到，
+// 一路紅到 CI 才發現。
+//
+// 只印出這裡真正有意義的狀態：有沒有在跑、跑在哪個埠。
+// 不要在這裡洩漏房間內容或任何金鑰。
+impl std::fmt::Debug for RelayServer {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let running = self
+            .state
+            .lock()
+            .ok()
+            .and_then(|g| g.as_ref().map(|r| r.port));
+        match running {
+            Some(port) => f
+                .debug_struct("RelayServer")
+                .field("running_on_port", &port)
+                .finish(),
+            None => f.debug_struct("RelayServer").field("running", &false).finish(),
+        }
+    }
+}
+
 #[uniffi::export]
 impl RelayServer {
     /// 建立一個尚未啟動的中繼。
