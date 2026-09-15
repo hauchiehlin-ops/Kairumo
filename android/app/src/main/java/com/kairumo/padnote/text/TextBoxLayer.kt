@@ -3,6 +3,7 @@ package com.kairumo.padnote.text
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -29,6 +30,7 @@ import com.kairumo.padnote.canvas.MIN_OBJECT_HEIGHT_DP
 import com.kairumo.padnote.canvas.MIN_OBJECT_WIDTH_DP
 import com.kairumo.padnote.canvas.ResizeHandle
 import com.kairumo.padnote.canvas.RotationHandle
+import com.kairumo.padnote.canvas.StyleHandle
 
 /**
  * 畫布上的文字方塊圖層（Android）。
@@ -58,6 +60,13 @@ fun TextBoxLayer(
     density: Float,
     selectedId: String?,
     onSelect: (String?) -> Unit,
+    /**
+     * 開啟這個方塊的排版面板。
+     *
+     * 原本**只有新增時**才開得起來 —— 建好之後關掉，就再也改不到字級、
+     * 顏色、邊框與段落設定了。形狀與圖片都有這顆鈕，文字方塊沒有。
+     */
+    onEditStyle: (TextBox) -> Unit,
     onChanged: (TextBox) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -69,6 +78,7 @@ fun TextBoxLayer(
                 density = density,
                 isSelected = box.id == selectedId,
                 onSelect = { onSelect(box.id) },
+                onEditStyle = { onEditStyle(box) },
                 onChanged = onChanged
             )
         }
@@ -83,6 +93,7 @@ private fun TextBoxView(
     density: Float,
     isSelected: Boolean,
     onSelect: () -> Unit,
+    onEditStyle: () -> Unit,
     onChanged: (TextBox) -> Unit
 ) {
     val shape = RoundedCornerShape(box.cornerRadius.dp)
@@ -111,6 +122,14 @@ private fun TextBoxView(
                     Modifier
                 }
             )
+            // 點一下＝選取。原本**只有拖曳**才會選到 —— 使用者點一下沒反應，
+            // 就以為這個方塊不能編輯（形狀與圖片都是點一下就選到）。
+            .gesturesIf(interactive) { pointerInput(box.id) {
+                detectTapGestures(
+                    onTap = { onSelect() },
+                    onDoubleTap = { onEditStyle() }
+                )
+            } }
             .gesturesIf(interactive) { pointerInput(box.id) {
                 detectDragGestures(
                     onDragStart = { onSelect() },
@@ -142,7 +161,14 @@ private fun TextBoxView(
         )
     }
 
-        if (isSelected) {
+        if (isSelected && interactive) {
+            // 左下角的樣式鈕：字級、顏色、邊框、圓角、段落全部在那裡。
+            StyleHandle(
+                widthDp = box.width,
+                heightDp = box.height,
+                onTap = onEditStyle
+            )
+
             // 右下角的縮放把手。原本 Android 完全沒有 —— 文字方塊的大小
             // 只能進編輯面板調，而 Apple 端畫布上就有把手。
             ResizeHandle(

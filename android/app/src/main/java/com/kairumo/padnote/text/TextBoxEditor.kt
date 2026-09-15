@@ -160,6 +160,16 @@ fun TextBoxEditor(
                                 ChipSpec("U", box.underline && revision >= 0) { mutate { it.underline = !it.underline } },
                                 ChipSpec("S", box.strikethrough && revision >= 0) { mutate { it.strikethrough = !it.strikethrough } }
                             ))
+
+                            // 文字顏色。Android 原本完全沒有這一項 —— textColorHex
+                            // 欄位一直都在，也一直跟著同步走，但改不到。
+                            // 在 iPad 上調成紅色的字，到 Android 上就再也變不回去。
+                            label(l("text_color"))
+                            chipRow(TEXT_COLORS.map { hex ->
+                                ChipSpec(hex, box.textColorHex == hex && revision >= 0) {
+                                    mutate { it.textColorHex = hex }
+                                }
+                            })
                         }
 
                         1 -> {
@@ -179,18 +189,13 @@ fun TextBoxEditor(
 
                         2 -> {
                             // 透明放最前面：那是使用者最常想要、原本完全做不到的一項。
-                            label(l("object_background_color"))
+                            label(l("card_style"))
                             chipRow(
                                 listOf(
                                     ChipSpec(l("color_transparent"), box.isBackgroundClear && revision >= 0) {
                                         mutate { it.backgroundColorHex = "clear" }
                                     }
-                                ) + listOf(
-                                    "color_white" to "#FFFFFF",
-                                    "color_yellow" to "#FFF9C4",
-                                    "color_blue" to "#E3F2FD",
-                                    "color_green" to "#E8F5E9"
-                                ).map { (key, hex) ->
+                                ) + CARD_COLORS.map { (key, hex) ->
                                     ChipSpec(l(key), box.backgroundColorHex == hex && revision >= 0) {
                                         mutate { it.backgroundColorHex = hex }
                                     }
@@ -203,6 +208,43 @@ fun TextBoxEditor(
                                     mutate { it.hasBorder = !it.hasBorder }
                                 }
                             ))
+
+                            // 邊框顏色與粗細只在開了邊框時才有意義。
+                            // 一直顯示的話，使用者會調了半天卻看不到任何變化。
+                            if (box.hasBorder) {
+                                label(l("border_color"))
+                                chipRow(BORDER_COLORS.map { hex ->
+                                    ChipSpec(
+                                        hex,
+                                        (box.borderColorHex ?: "#8E8E93") == hex && revision >= 0
+                                    ) { mutate { it.borderColorHex = hex } }
+                                })
+                                label(l("border_width"))
+                                chipRow(listOf(1f, 2f, 3.5f).map { w ->
+                                    ChipSpec(
+                                        if (w == 3.5f) "3.5" else w.toInt().toString(),
+                                        (box.borderWidth ?: 1.5f) == w && revision >= 0
+                                    ) { mutate { it.borderWidth = w } }
+                                })
+                            }
+
+                            Divider()
+
+                            // 圓角。三個級距與 Apple 端相同（0 / 8 / 18）——
+                            // 兩邊的可選值不同的話，同一個方塊換平台就調不回原樣。
+                            label(l("corner_style"))
+                            chipRow(listOf(0f, 8f, 18f).map { r ->
+                                ChipSpec(r.toInt().toString(), box.cornerRadius == r && revision >= 0) {
+                                    mutate { it.cornerRadius = r }
+                                }
+                            })
+
+                            label("${l("box_width")}　${box.width.toInt()}")
+                            Slider(
+                                value = box.width.coerceIn(160f, 900f),
+                                onValueChange = { v -> mutate { it.width = v } },
+                                valueRange = 160f..900f
+                            )
 
                             Divider()
 
@@ -247,6 +289,34 @@ fun TextBoxEditor(
  * 符號表。與 Apple 端 `WordTextStudioView` 的四組**逐字相同** ——
  * 兩邊不一樣的話，同一份筆記在另一個平台就插不出同樣的符號。
  */
+/**
+ * 卡片底色。**必須與 Apple 端 `cardBackgroundOptions` 的 hex 逐字相同。**
+ *
+ * 原本 Android 的「淡藍」是 #E3F2FD，Apple 是 #E1F5FE —— 同一個名字兩個顏色，
+ * 同一份筆記換平台打開底色就變了一點，而使用者說不出哪裡不對。
+ */
+private val CARD_COLORS: List<Pair<String, String>> = listOf(
+    "color_white" to "#FFFFFF",
+    "color_yellow" to "#FFF9C4",
+    "color_green" to "#E8F5E9",
+    "color_pink" to "#FCE4EC",
+    "color_blue" to "#E1F5FE",
+    "color_gray" to "#F5F5F5"
+)
+
+/**
+ * 文字顏色。與 Apple 端「文字顏色」色票同一組。
+ *
+ * 第一個是黑色而不是灰色：文字的預設是黑，色票的第一格應該就是它，
+ * 不然使用者以為自己沒得選回預設。
+ */
+private val TEXT_COLORS: List<String> =
+    listOf("#000000", "#8E8E93", "#0A84FF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE")
+
+/** 邊框顏色。與 Apple 端 `borderColorOptions` 逐字相同。 */
+private val BORDER_COLORS: List<String> =
+    listOf("#8E8E93", "#000000", "#0A84FF", "#34C759", "#FF9500", "#FF3B30")
+
 private val SYMBOL_SETS: List<List<String>> = listOf(
     listOf("★","☆","✓","✗","▲","▼","◆","◇","●","○","→","←","↑","↓","⇄","⇒",
            "※","§","¶","©","®","™","℃","℉","♥","♦"),

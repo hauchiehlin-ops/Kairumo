@@ -801,6 +801,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     density = canvasDensity,
                     selectedId = selectedTextId,
                     onSelect = { selectedTextId = it },
+                    onEditStyle = { editingText = it },
                     onChanged = { box -> textStore.persist(box); textRevision++ },
                     modifier = Modifier.fillMaxSize()
                 )
