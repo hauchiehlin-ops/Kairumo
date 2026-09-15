@@ -110,7 +110,7 @@ echo "   檔案總數：$(cd "$WORK" && find . -path ./.git -prune -o -type f -p
 
 if [[ "$DRY_RUN" -eq 1 ]]; then
     echo ""
-    echo "--dry-run：不推送。內容組在 $WORK（結束時會清掉）"
+    echo "--dry-run：不推送。內容組在 ${WORK}（結束時會清掉）"
     exit 0
 fi
 

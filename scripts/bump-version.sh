@@ -179,7 +179,7 @@ ASC_HIGHEST="$("${SCRIPT_DIR}/asc-latest-build.py" 2>/dev/null || echo 0)"
 
 BASELINE_BUNDLE="$CURRENT_BUNDLE_VERSION"
 if (( ASC_HIGHEST > BASELINE_BUNDLE )); then
-    echo "ℹ️  ASC 上已有 build $ASC_HIGHEST，比本機的 $CURRENT_BUNDLE_VERSION 高 —— 以 ASC 為準。"
+    echo "ℹ️  ASC 上已有 build ${ASC_HIGHEST}，比本機的 $CURRENT_BUNDLE_VERSION 高 —— 以 ASC 為準。"
     BASELINE_BUNDLE="$ASC_HIGHEST"
 fi
 
@@ -188,7 +188,7 @@ if [[ -n "$EXPLICIT_BUNDLE" ]]; then
     # 明確指定的號碼也要擋。手動指定一個已經用過的號碼，
     # 上傳會被 Apple 拒絕，而那時你已經等了十幾分鐘的打包。
     if (( ASC_HIGHEST > 0 && NEW_BUNDLE_VERSION <= ASC_HIGHEST )); then
-        echo "❌ 指定的 build 號 $NEW_BUNDLE_VERSION 不大於 ASC 上已有的 $ASC_HIGHEST。" >&2
+        echo "❌ 指定的 build 號 $NEW_BUNDLE_VERSION 不大於 ASC 上已有的 ${ASC_HIGHEST}。" >&2
         echo "   上傳一定會被 Apple 拒收。請指定 $((ASC_HIGHEST + 1)) 或更大。" >&2
         exit 1
     fi
@@ -200,7 +200,7 @@ echo "📦 版本與 Bundle 號升級："
 echo "   版本號 (Marketing Version): v$CURRENT_VERSION -> v$NEW_VERSION ($BUMP_TYPE)"
 echo "   Bundle 號 (Build Number):    $CURRENT_BUNDLE_VERSION -> $NEW_BUNDLE_VERSION"
 if (( ASC_HIGHEST > 0 )); then
-    echo "   （ASC 上最大為 $ASC_HIGHEST，新號碼已確保更高）"
+    echo "   （ASC 上最大為 ${ASC_HIGHEST}，新號碼已確保更高）"
 fi
 
 # 5. 更新 Cargo.toml

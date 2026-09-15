@@ -39,6 +39,13 @@ if [[ -f "${REPO_ROOT}/scripts/i18n_tool.py" ]]; then
     fi
 fi
 
+# 只在 UTF-8 終端機才發作的 shell 寫法（$VAR 緊接中文字），在這裡擋。
+if [[ -x "${REPO_ROOT}/scripts/check-shell-cjk-vars.sh" ]]; then
+    if ! "${REPO_ROOT}/scripts/check-shell-cjk-vars.sh"; then
+        exit 1
+    fi
+fi
+
 # 版本號漂移在這裡就攔下來，不要等到發版才發現遠端是壞的。
 if [[ -x "${REPO_ROOT}/scripts/check-version-consistency.sh" ]]; then
     if ! "${REPO_ROOT}/scripts/check-version-consistency.sh"; then

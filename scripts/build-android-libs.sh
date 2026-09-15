@@ -49,7 +49,7 @@ if [[ -z "${ANDROID_NDK_HOME:-}" ]]; then
         export ANDROID_NDK_HOME="$SDK/ndk/$PINNED_NDK"
         export ANDROID_HOME="$SDK"
     elif [[ -d "$SDK/ndk" ]]; then
-        echo "❌ 找不到釘定的 NDK $PINNED_NDK。已安裝的有：" >&2
+        echo "❌ 找不到釘定的 NDK ${PINNED_NDK}。已安裝的有：" >&2
         ls -1 "$SDK/ndk" | sed 's/^/     /' >&2
         echo "   sdkmanager --install 'ndk;$PINNED_NDK'" >&2
         echo "   （真的要用別版：KAIRUMO_NDK_VERSION=... 但請先確認能開得起來）" >&2
@@ -175,7 +175,7 @@ if [[ -n "$READELF" ]]; then
         for need in $NEEDED; do
             if [[ " $SYSTEM_LIBS " == *" $need "* ]]; then continue; fi
             if [[ ! -f "$OUT_DIR/$abi/$need" ]]; then
-                echo "❌ $abi：libpadnote_core.so 需要 $need，但 jniLibs 裡沒有它。" >&2
+                echo "❌ ${abi}：libpadnote_core.so 需要 ${need}，但 jniLibs 裡沒有它。" >&2
                 echo "   這會在 App 啟動時以 dlopen failed 閃退，而不是在這裡失敗。" >&2
                 exit 1
             fi
@@ -188,7 +188,7 @@ if [[ -n "$READELF" ]]; then
         NM_BIN="$(find "$ANDROID_NDK_HOME" -name "llvm-nm" | head -1)"
         if [[ -n "$NM_BIN" ]] && "$NM_BIN" -u "$SO" 2>/dev/null | grep -q "__gxx_personality_v0"; then
             if [[ "$NEEDED" != *"libc++_shared.so"* ]]; then
-                echo "❌ $abi：函式庫用到 C++ 執行期（__gxx_personality_v0 未定義），" >&2
+                echo "❌ ${abi}：函式庫用到 C++ 執行期（__gxx_personality_v0 未定義），" >&2
                 echo "   但沒有連上 libc++_shared.so。App 會在啟動時 dlopen failed。" >&2
                 exit 1
             fi
