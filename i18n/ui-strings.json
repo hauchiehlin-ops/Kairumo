@@ -4455,6 +4455,14 @@
     "zhHans": "文字颜色",
     "zhHant": "文字顏色"
   },
+  "text_placeholder": {
+    "en": "Type your text here…",
+    "ja": "ここにテキストを入力…",
+    "ko": "여기에 텍스트를 입력…",
+    "th": "พิมพ์ข้อความที่นี่…",
+    "zhHans": "在此输入文字…",
+    "zhHant": "在此輸入文字…"
+  },
   "text_studio": {
     "en": "Text Studio",
     "ja": "文字スタイル",

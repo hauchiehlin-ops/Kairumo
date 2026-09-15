@@ -4471,6 +4471,14 @@ extension LocalizationManager {
             .ko: "글자 색",
             .th: "สีข้อความ"
         ],
+        "text_placeholder": [
+            .zhHant: "在此輸入文字…",
+            .en: "Type your text here…",
+            .zhHans: "在此输入文字…",
+            .ja: "ここにテキストを入力…",
+            .ko: "여기에 텍스트를 입력…",
+            .th: "พิมพ์ข้อความที่นี่…"
+        ],
         "text_studio": [
             .zhHant: "文字排版",
             .en: "Text Studio",

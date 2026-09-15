@@ -4,6 +4,10 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -18,8 +22,8 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -27,7 +31,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -74,22 +81,46 @@ fun TextBoxEditor(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                BasicTextField(
-                    value = text,
-                    onValueChange = {
-                        text = it
-                        mutate { b -> b.text = it }
-                    },
-                    textStyle = TextStyle(
-                        fontSize = 16.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    ),
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // 空的時候要看得出來這裡可以打字。原本是一個沒有邊框、
+                // 沒有提示字的 BasicTextField —— 畫面上就是一塊空白，
+                // 使用者不會知道那是輸入框（模擬器上實際看不出來）。
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(
+                            MaterialTheme.colorScheme.surfaceVariant,
+                            RoundedCornerShape(8.dp)
+                        )
+                        .padding(10.dp)
+                ) {
+                    if (text.isEmpty()) {
+                        Text(
+                            l("text_placeholder"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    BasicTextField(
+                        value = text,
+                        onValueChange = {
+                            text = it
+                            mutate { b -> b.text = it }
+                        },
+                        textStyle = TextStyle(
+                            fontSize = 16.sp,
+                            color = MaterialTheme.colorScheme.onSurface
+                        ),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 Divider()
 
-                TabRow(selectedTabIndex = tab) {
+                // ScrollableTabRow 而不是 TabRow：TabRow 會把寬度平均分給四個
+                // 分頁，320dp 的螢幕上每個只有 80dp，「Paragraph」「Symbols」
+                // 會被折成兩行（實機看到「Paragr aph」）。
+                ScrollableTabRow(selectedTabIndex = tab, edgePadding = 0.dp) {
                     listOf("text_tab_font", "paragraph_style", "text_tab_style", "text_tab_symbols")
                         .forEachIndexed { index, key ->
                             Tab(
@@ -234,19 +265,27 @@ private fun label(text: String) {
     Text(text, style = MaterialTheme.typography.labelSmall)
 }
 
-/** 會換行的晶片列。原本是橫向捲軸，在對話框裡使用者看不出右邊還有東西。 */
+/**
+ * 會換行的晶片列。
+ *
+ * 用 FlowRow 而不是固定格寬的格線：晶片標籤長度差很多（「12」對上
+ * 「Transparent」），一個格寬不可能兩邊都合適 —— 窄了長標籤在晶片裡折成兩行，
+ * 寬了「12」那種短標籤會佔掉半個螢幕（兩種都在實機上看過）。
+ * FlowRow 讓每個晶片各自依內容取寬度，放不下才換行。
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun chipRow(specs: List<ChipSpec>) {
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(76.dp),
-        modifier = Modifier.fillMaxWidth().heightIn(max = 120.dp)
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
-        items(specs) { spec ->
+        for (spec in specs) {
             FilterChip(
                 selected = spec.selected,
                 onClick = spec.onClick,
-                label = { Text(spec.label, style = MaterialTheme.typography.labelSmall) },
-                modifier = Modifier.padding(2.dp)
+                label = { Text(spec.label, style = MaterialTheme.typography.labelSmall) }
             )
         }
     }
@@ -269,12 +308,13 @@ private fun rotationRow(degrees: Float, resetLabel: String, onChange: (Float) ->
             Text("${degrees.toInt()}°", style = MaterialTheme.typography.labelMedium,
                  modifier = Modifier.padding(top = 12.dp))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            for (angle in listOf(0f, 90f, 180f, 270f)) {
-                AssistChip(onClick = { onChange(angle) }, label = { Text("${angle.toInt()}°") })
-            }
-            TextButton(onClick = { onChange(0f) }) { Text(resetLabel) }
-        }
+        // 用會換行的格線，不是 Row。Row 不換行，320dp 螢幕上四個角度加一個
+        // Reset 放不下，Reset 會被整個推出畫面外 —— 而且沒有任何視覺提示。
+        chipRow(
+            listOf(0f, 90f, 180f, 270f).map { angle ->
+                ChipSpec("${angle.toInt()}°", false) { onChange(angle) }
+            } + ChipSpec(resetLabel, false) { onChange(0f) }
+        )
     }
 }
 

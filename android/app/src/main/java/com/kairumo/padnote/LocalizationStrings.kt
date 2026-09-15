@@ -4466,6 +4466,14 @@ object LocalizationStrings {
             "ko" to "글자 색",
             "th" to "สีข้อความ"
         ),
+        "text_placeholder" to mapOf(
+            "zh-Hant" to "在此輸入文字…",
+            "en" to "Type your text here…",
+            "zh-Hans" to "在此输入文字…",
+            "ja" to "ここにテキストを入力…",
+            "ko" to "여기에 텍스트를 입력…",
+            "th" to "พิมพ์ข้อความที่นี่…"
+        ),
         "text_studio" to mapOf(
             "zh-Hant" to "文字排版",
             "en" to "Text Studio",
