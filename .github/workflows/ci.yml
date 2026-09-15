@@ -51,6 +51,12 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          # 不要讓它安裝預設的 `tools`。Google 已經把那個舊套件從 SDK 倉庫移除，
+          # action 仍照裝，sdkmanager 找不到就以 exit 1 收場
+          # （日誌只有一行 "Failed to find package 'tools'"，很容易被當成網路問題）。
+          # NDK 與其他套件由下一步自己裝，這裡不需要它先裝任何東西。
+          packages: ''
       - name: 系統相依（cpal → ALSA）
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
       - name: 安裝 NDK 與 cargo-ndk
@@ -95,6 +101,12 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@v3
+        with:
+          # 不要讓它安裝預設的 `tools`。Google 已經把那個舊套件從 SDK 倉庫移除，
+          # action 仍照裝，sdkmanager 找不到就以 exit 1 收場
+          # （日誌只有一行 "Failed to find package 'tools'"，很容易被當成網路問題）。
+          # NDK 與其他套件由下一步自己裝，這裡不需要它先裝任何東西。
+          packages: ''
       - name: 系統相依（cpal → ALSA）
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
       - name: 安裝 NDK 與 cargo-ndk
