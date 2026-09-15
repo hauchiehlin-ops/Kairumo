@@ -182,6 +182,94 @@ pub fn collab_is_loopback_host(host: String) -> bool {
     host.is_empty() || host == "127.0.0.1" || host == "localhost" || host == "::1" || host == "0.0.0.0"
 }
 
+/// 中繼位址檢查的結果。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiServerCheck {
+    /// 可以連。
+    pub ok: bool,
+    /// 不能連的理由鍵（語系鍵，平台層自己翻）。`ok` 為 true 時是空字串。
+    pub reason_key: String,
+}
+
+/// 這個中繼位址能不能連。
+///
+/// # 為什麼要擋
+///
+/// 協同中繼原本接受任何 `ws://`。oplog 本身是端對端加密的，所以路上的人
+/// 拿到的是密文 —— 但**房號、成員、連線時間與流量樣態全部是明文**，
+/// 而且明文的 WebSocket 可以被中間人直接改寫或重導。
+///
+/// 區域網路與本機是另一回事：那是使用者自己的網段，而 `wss://` 在那裡
+/// 需要一張沒有人會去簽的憑證。所以規則是：
+///
+/// - `wss://` —— 一律可以。
+/// - `ws://` 指向**本機或私有網段**（RFC 1918、連結本地、`.local`）—— 可以。
+/// - `ws://` 指向其他任何地方 —— **拒絕**，要求改用 `wss://`。
+///
+/// 放在核心而不是各平台各寫一次：兩邊判斷不一致的話，同一個位址在
+/// iPad 上連得上、在 Android 上連不上，而那看起來會像 Android 壞掉。
+#[uniffi::export]
+pub fn collab_check_server(url: String) -> FfiServerCheck {
+    let url = url.trim();
+    let ok = |_: ()| FfiServerCheck { ok: true, reason_key: String::new() };
+
+    if url.is_empty() {
+        return FfiServerCheck { ok: false, reason_key: "relay_url_empty".into() };
+    }
+    if url.starts_with("wss://") {
+        return ok(());
+    }
+    let Some(rest) = url.strip_prefix("ws://") else {
+        return FfiServerCheck { ok: false, reason_key: "relay_url_scheme".into() };
+    };
+
+    // 取出主機名：切掉路徑、查詢字串與連接埠。
+    let host = rest
+        .split(['/', '?', '#'])
+        .next()
+        .unwrap_or("")
+        .rsplit_once(':')
+        .map(|(h, _)| h)
+        .unwrap_or_else(|| rest.split(['/', '?', '#']).next().unwrap_or(""))
+        .trim_matches(['[', ']'])
+        .to_lowercase();
+
+    if is_private_host(&host) {
+        ok(())
+    } else {
+        FfiServerCheck { ok: false, reason_key: "relay_needs_tls".into() }
+    }
+}
+
+/// 本機、區域網路或連結本地。
+fn is_private_host(host: &str) -> bool {
+    if collab_is_loopback_host(host.to_string()) {
+        return true;
+    }
+    // mDNS 的區域名稱。
+    if host.ends_with(".local") || host.ends_with(".home.arpa") {
+        return true;
+    }
+    if let Ok(v6) = host.parse::<std::net::Ipv6Addr>() {
+        // fc00::/7 唯一本地、fe80::/10 連結本地。
+        let first = v6.octets()[0];
+        return v6.is_loopback() || (first & 0xfe) == 0xfc || (first == 0xfe && (v6.octets()[1] & 0xc0) == 0x80);
+    }
+    let Ok(v4) = host.parse::<std::net::Ipv4Addr>() else {
+        // 不是 IP 也不是 .local：那是一個公開網域名稱。
+        return false;
+    };
+    let [a, b, ..] = v4.octets();
+    v4.is_loopback()
+        || a == 10
+        || (a == 172 && (16..=31).contains(&b))
+        || (a == 192 && b == 168)
+        // 169.254/16 連結本地（含 Wi-Fi Direct 自動指派的位址）。
+        || (a == 169 && b == 254)
+        // 100.64/10 電信級 NAT —— 有些行動網路與 Tailscale 之類的覆蓋網路用它。
+        || (a == 100 && (64..=127).contains(&b))
+}
+
 /// 兩邊都要一樣的幾個時間與次數設定。
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct FfiCollabTuning {
@@ -210,6 +298,55 @@ pub fn collab_tuning() -> FfiCollabTuning {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn plain_ws_to_the_public_internet_is_refused() {
+        // oplog 是端對端加密的，但房號、成員與流量樣態全是明文，
+        // 而且明文 WebSocket 可以被中間人直接改寫或重導。
+        assert!(!collab_check_server("ws://relay.example.com:9002".into()).ok);
+        assert!(!collab_check_server("ws://203.0.113.9:9002".into()).ok);
+        assert_eq!(
+            collab_check_server("ws://relay.example.com".into()).reason_key,
+            "relay_needs_tls"
+        );
+    }
+
+    #[test]
+    fn the_local_network_may_stay_plain() {
+        // 區域網路是使用者自己的網段，而 wss:// 在那裡需要一張
+        // 沒有人會去簽的憑證。擋掉的話協同在區網上直接不能用。
+        for url in [
+            "ws://127.0.0.1:9002",
+            "ws://localhost:9002",
+            "ws://192.168.1.42:9002",
+            "ws://10.0.0.7:9002",
+            "ws://172.16.5.1:9002",
+            "ws://169.254.3.4:9002",
+            "ws://macbook.local:9002",
+            "ws://[fe80::1]:9002",
+        ] {
+            assert!(collab_check_server(url.into()).ok, "{url} 該被放行");
+        }
+    }
+
+    #[test]
+    fn tls_is_always_fine_and_junk_is_not() {
+        assert!(collab_check_server("wss://relay.example.com".into()).ok);
+        assert_eq!(collab_check_server("".into()).reason_key, "relay_url_empty");
+        assert_eq!(
+            collab_check_server("http://relay.example.com".into()).reason_key,
+            "relay_url_scheme"
+        );
+    }
+
+    #[test]
+    fn a_public_address_that_merely_starts_like_a_private_one_is_refused() {
+        // 172.32 不在 172.16–31 裡；192.169 不是 192.168。
+        // 用字串前綴比對的話這兩個會被放行。
+        assert!(!collab_check_server("ws://172.32.0.1:9002".into()).ok);
+        assert!(!collab_check_server("ws://192.169.1.1:9002".into()).ok);
+        assert!(!collab_check_server("ws://10a.example.com".into()).ok);
+    }
 
     #[test]
     fn a_generated_key_is_usable() {

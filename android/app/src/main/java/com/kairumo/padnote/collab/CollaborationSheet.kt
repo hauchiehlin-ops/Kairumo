@@ -219,7 +219,10 @@ private fun StatusLine(manager: CollaborationManager, l: (String) -> String) {
     Text(text, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
     manager.lastError?.let {
         // 只顯示「重連中」而不說原因，使用者無從判斷是位址打錯還是對方離線。
-        Text(it, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
+        //
+        // `lastError` 放的是**語系鍵**，查表不到時 `localized` 會原樣回傳 ——
+        // 所以連線層丟回來的原始訊息（例如 OkHttp 的例外字串）仍然看得到。
+        Text(l(it), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.error)
     }
 }
 

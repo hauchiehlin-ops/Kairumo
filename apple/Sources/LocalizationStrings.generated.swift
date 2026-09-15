@@ -3391,6 +3391,14 @@ extension LocalizationManager {
             .ko: "사용자 탭 및 인터랙션 흐름 표시",
             .th: "ระบุทิศทางการแตะและการโต้ตอบของผู้ใช้"
         ],
+        "invalid_server": [
+            .zhHant: "這個中繼位址無法使用。",
+            .en: "That relay address can't be used.",
+            .zhHans: "这个中继位址无法使用。",
+            .ja: "その中継サーバーのアドレスは使えません。",
+            .ko: "그 중계 서버 주소는 사용할 수 없습니다.",
+            .th: "ใช้ที่อยู่รีเลย์นี้ไม่ได้"
+        ],
         "join_room": [
             .zhHant: "加入協同房間",
             .en: "Join Room",
@@ -4927,6 +4935,14 @@ extension LocalizationManager {
             .ko: "보정 강도",
             .th: "ความเข้มข้น"
         ],
+        "relay_needs_tls": [
+            .zhHant: "這個中繼在公開網路上，必須用 wss://（加密）。ws:// 只允許用在你自己的區域網路裡。",
+            .en: "This relay is on the public internet, so it must use wss:// (encrypted). Plain ws:// is only allowed on your own local network.",
+            .zhHans: "这个中继在公开网络上，必须用 wss://（加密）。ws:// 只允许用在你自己的局域网里。",
+            .ja: "この中継サーバーはインターネット上にあるため、wss://（暗号化）が必要です。ws:// はローカルネットワーク内でのみ使えます。",
+            .ko: "이 중계 서버는 인터넷에 있으므로 wss://(암호화)를 써야 합니다. ws://는 같은 로컬 네트워크에서만 허용됩니다.",
+            .th: "เซิร์ฟเวอร์รีเลย์นี้อยู่บนอินเทอร์เน็ต จึงต้องใช้ wss:// (เข้ารหัส) ส่วน ws:// ใช้ได้เฉพาะในเครือข่ายภายในเท่านั้น"
+        ],
         "relay_server_address": [
             .zhHant: "協同伺服器位址",
             .en: "Relay Server Address",
@@ -4934,6 +4950,22 @@ extension LocalizationManager {
             .ja: "中継サーバーアドレス",
             .ko: "중계 서버 주소",
             .th: "ที่อยู่เซิร์ฟเวอร์รีเลย์"
+        ],
+        "relay_url_empty": [
+            .zhHant: "請先填入中繼位址。",
+            .en: "Enter a relay address first.",
+            .zhHans: "请先填入中继位址。",
+            .ja: "先に中継サーバーのアドレスを入力してください。",
+            .ko: "먼저 중계 서버 주소를 입력하세요.",
+            .th: "กรุณาใส่ที่อยู่รีเลย์ก่อน"
+        ],
+        "relay_url_scheme": [
+            .zhHant: "中繼位址必須以 ws:// 或 wss:// 開頭。",
+            .en: "The relay address must start with ws:// or wss://.",
+            .zhHans: "中继位址必须以 ws:// 或 wss:// 开头。",
+            .ja: "中継サーバーのアドレスは ws:// または wss:// で始まる必要があります。",
+            .ko: "중계 서버 주소는 ws:// 또는 wss:// 로 시작해야 합니다.",
+            .th: "ที่อยู่รีเลย์ต้องขึ้นต้นด้วย ws:// หรือ wss://"
         ],
         "remove_border": [
             .zhHant: "刪除邊框",

@@ -13,14 +13,22 @@
     <uses-feature android:name="android.hardware.touchscreen.stylus" android:required="false" />
 
     <!--
-        協同中繼走 ws://（區域網路或本機），那是明文連線，而 Android 9 以上
+        協同中繼在區域網路或本機上走 ws://，那是明文連線，而 Android 9 以上
         預設整個擋掉。擋掉的症狀是「一直重連但永遠連不上」，而且不會有任何
         錯誤訊息指向這裡。
 
-        放行明文的代價在這個 App 上很小：網路流量只有一種 —— 使用者自己
-        指定的協同中繼；而 oplog 的內容是**端對端加密**的（見 ffi_collab.rs），
-        中繼與路上的任何人拿到的都只是密文。
-        走公開網路時仍然建議用 wss://。
+        **明文只到區網為止。** 核心的 `collab_check_server` 會在連線之前擋掉
+        指向公開網路的 `ws://`，要求改用 `wss://` —— 兩個平台走同一個判斷。
+        所以這個旗標放行的實際範圍是：本機、RFC 1918 私有網段、連結本地
+        與 `.local`，其餘一律連不出去。
+
+        為什麼不用 network security config 來擋：那份設定只吃固定的主機名，
+        表達不了「任何私有網段」—— 區網中繼的位址是使用者當下那台機器的
+        DHCP 位址，每次都不一樣。判斷只能在程式裡做。
+
+        oplog 的內容本身是端對端加密的（見 ffi_collab.rs），中繼與路上的
+        任何人拿到的都只是密文；但房號、成員與流量樣態是明文，這正是
+        公開網路上必須用 wss:// 的理由。
     -->
     <application
         android:usesCleartextTraffic="true"

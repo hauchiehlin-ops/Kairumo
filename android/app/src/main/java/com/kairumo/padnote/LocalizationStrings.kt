@@ -3417,6 +3417,14 @@ object LocalizationStrings {
             "ko" to "사용자 탭 및 인터랙션 흐름 표시",
             "th" to "ระบุทิศทางการแตะและการโต้ตอบของผู้ใช้"
         ),
+        "invalid_server" to mapOf(
+            "zh-Hant" to "這個中繼位址無法使用。",
+            "en" to "That relay address can't be used.",
+            "zh-Hans" to "这个中继位址无法使用。",
+            "ja" to "その中継サーバーのアドレスは使えません。",
+            "ko" to "그 중계 서버 주소는 사용할 수 없습니다.",
+            "th" to "ใช้ที่อยู่รีเลย์นี้ไม่ได้"
+        ),
         "join_room" to mapOf(
             "zh-Hant" to "加入協同房間",
             "en" to "Join Room",
@@ -3872,7 +3880,10 @@ object LocalizationStrings {
             "ja" to "計算実行",
             "ko" to "계산하기",
             "th" to "คำนวณผลลัพธ์"
-        ),
+        )
+    )
+
+    private fun part6(): Map<String, Map<String, String>> = mapOf(
         "math_card_border" to mapOf(
             "zh-Hant" to "保留卡片邊框",
             "en" to "Keep Card Border",
@@ -3880,10 +3891,7 @@ object LocalizationStrings {
             "ja" to "カードの枠線を維持",
             "ko" to "카드 테두리 유지",
             "th" to "เก็บเส้นขอบการ์ด"
-        )
-    )
-
-    private fun part6(): Map<String, Map<String, String>> = mapOf(
+        ),
         "math_error" to mapOf(
             "zh-Hant" to "算式格式無效或無法計算",
             "en" to "Invalid formula or syntax error",
@@ -4515,7 +4523,10 @@ object LocalizationStrings {
             "ja" to "設定を開く",
             "ko" to "설정 열기",
             "th" to "เปิดการตั้งค่า"
-        ),
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
         "page_extended_hint" to mapOf(
             "zh-Hant" to "已向下延長畫布長度 (+800pt)",
             "en" to "Page length extended (+800pt)",
@@ -4523,10 +4534,7 @@ object LocalizationStrings {
             "ja" to "キャンバス長を延長しました (+800pt)",
             "ko" to "캔버스 길이가 연장되었습니다 (+800pt)",
             "th" to "ขยายความยาวของผืนผ้าใบแล้ว (+800pt)"
-        )
-    )
-
-    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        ),
         "page_mode" to mapOf(
             "zh-Hant" to "頁面模式",
             "en" to "Page mode",
@@ -4959,6 +4967,14 @@ object LocalizationStrings {
             "ko" to "보정 강도",
             "th" to "ความเข้มข้น"
         ),
+        "relay_needs_tls" to mapOf(
+            "zh-Hant" to "這個中繼在公開網路上，必須用 wss://（加密）。ws:// 只允許用在你自己的區域網路裡。",
+            "en" to "This relay is on the public internet, so it must use wss:// (encrypted). Plain ws:// is only allowed on your own local network.",
+            "zh-Hans" to "这个中继在公开网络上，必须用 wss://（加密）。ws:// 只允许用在你自己的局域网里。",
+            "ja" to "この中継サーバーはインターネット上にあるため、wss://（暗号化）が必要です。ws:// はローカルネットワーク内でのみ使えます。",
+            "ko" to "이 중계 서버는 인터넷에 있으므로 wss://(암호화)를 써야 합니다. ws://는 같은 로컬 네트워크에서만 허용됩니다.",
+            "th" to "เซิร์ฟเวอร์รีเลย์นี้อยู่บนอินเทอร์เน็ต จึงต้องใช้ wss:// (เข้ารหัส) ส่วน ws:// ใช้ได้เฉพาะในเครือข่ายภายในเท่านั้น"
+        ),
         "relay_server_address" to mapOf(
             "zh-Hant" to "協同伺服器位址",
             "en" to "Relay Server Address",
@@ -4966,6 +4982,22 @@ object LocalizationStrings {
             "ja" to "中継サーバーアドレス",
             "ko" to "중계 서버 주소",
             "th" to "ที่อยู่เซิร์ฟเวอร์รีเลย์"
+        ),
+        "relay_url_empty" to mapOf(
+            "zh-Hant" to "請先填入中繼位址。",
+            "en" to "Enter a relay address first.",
+            "zh-Hans" to "请先填入中继位址。",
+            "ja" to "先に中継サーバーのアドレスを入力してください。",
+            "ko" to "먼저 중계 서버 주소를 입력하세요.",
+            "th" to "กรุณาใส่ที่อยู่รีเลย์ก่อน"
+        ),
+        "relay_url_scheme" to mapOf(
+            "zh-Hant" to "中繼位址必須以 ws:// 或 wss:// 開頭。",
+            "en" to "The relay address must start with ws:// or wss://.",
+            "zh-Hans" to "中继位址必须以 ws:// 或 wss:// 开头。",
+            "ja" to "中継サーバーのアドレスは ws:// または wss:// で始まる必要があります。",
+            "ko" to "중계 서버 주소는 ws:// 또는 wss:// 로 시작해야 합니다.",
+            "th" to "ที่อยู่รีเลย์ต้องขึ้นต้นด้วย ws:// หรือ wss://"
         ),
         "remove_border" to mapOf(
             "zh-Hant" to "刪除邊框",
@@ -5134,7 +5166,10 @@ object LocalizationStrings {
             "ja" to "ローマ数字",
             "ko" to "로마 숫자",
             "th" to "เลขโรมัน"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "room_id" to mapOf(
             "zh-Hant" to "房間識別碼",
             "en" to "Room ID",
@@ -5166,10 +5201,7 @@ object LocalizationStrings {
             "ja" to "ドラッグして回転",
             "ko" to "드래그하여 회전",
             "th" to "ลากเพื่อหมุน"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "rotate_right_90" to mapOf(
             "zh-Hant" to "向右轉 90°",
             "en" to "Rotate 90°",
@@ -5777,7 +5809,10 @@ object LocalizationStrings {
             "ja" to "%@ は両方の端末で変更されています。クラウド側を残しました。ご確認ください",
             "ko" to "%@ 이(가) 양쪽 기기에서 모두 변경되었습니다. 클라우드 사본을 유지했습니다. 확인해 주세요",
             "th" to "%@ ถูกแก้ไขบนทั้งสองอุปกรณ์ ระบบเก็บสำเนาบนคลาวด์ไว้ โปรดตรวจสอบ"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "sync_needs_reauth" to mapOf(
             "zh-Hant" to "登入狀態已過期，請重新登入",
             "en" to "Session expired — please sign in again",
@@ -5809,10 +5844,7 @@ object LocalizationStrings {
             "ja" to "同期録音中",
             "ko" to "동기화 녹음 중",
             "th" to "กำลังบันทึกเสียงพร้อมกัน"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_result" to mapOf(
             "zh-Hant" to "上傳 %1@、下載 %2@",
             "en" to "%1@ uploaded, %2@ downloaded",
@@ -6420,7 +6452,10 @@ object LocalizationStrings {
             "ja" to "水彩筆",
             "ko" to "수채화 붓",
             "th" to "พู่กันสีน้ำ"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "txt_count" to mapOf(
             "zh-Hant" to "文字",
             "en" to "Text",
@@ -6452,10 +6487,7 @@ object LocalizationStrings {
             "ja" to "標準UIワイヤーフレームを素早く配置",
             "ko" to "표준 UI 와이어프레임 컴포넌트 빠른 삽입",
             "th" to "แทรกไวร์เฟรมคอมโพเนนต์ UI มาตรฐานอย่างรวดเร็ว"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "undo" to mapOf(
             "zh-Hant" to "復原",
             "en" to "Undo",

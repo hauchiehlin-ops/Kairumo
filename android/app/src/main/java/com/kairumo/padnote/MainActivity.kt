@@ -169,9 +169,20 @@ private fun KairumoApp() {
     val activity = LocalContext.current as ComponentActivity
     var openedId by remember { mutableStateOf<String?>(null) }
 
+    // **資料夾位置放在這裡，不放在 NotebookHome 裡。**
+    //
+    // 打開一本筆記時 `NotebookHome` 會整個離開組合樹，它裡面的 `remember`
+    // 也就跟著沒了 —— 實測：從資料夾裡開一本筆記再返回，人會被丟回最上層。
+    // 在巢狀資料夾裡工作時，每開一本筆記就要重新點進去一次。
+    var folderId by remember { mutableStateOf<String?>(null) }
+
     val id = openedId
     if (id == null) {
-        NotebookHome(onOpen = { openedId = it })
+        NotebookHome(
+            folderId = folderId,
+            onFolderChange = { folderId = it },
+            onOpen = { openedId = it }
+        )
     } else {
         InkScreen(notebookId = id, onBack = { openedId = null })
     }
@@ -184,7 +195,11 @@ private fun KairumoApp() {
  * [NotebookLibrary]，兩邊都不知道對方的存在。
  */
 @Composable
-private fun NotebookHome(onOpen: (String) -> Unit) {
+private fun NotebookHome(
+    folderId: String?,
+    onFolderChange: (String?) -> Unit,
+    onOpen: (String) -> Unit
+) {
     val activity = LocalContext.current as ComponentActivity
     val lang = deviceLanguageTag()
     fun l(key: String) = LocalizationStrings.localized(key, lang)
@@ -195,8 +210,6 @@ private fun NotebookHome(onOpen: (String) -> Unit) {
     var renaming by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
     var deleting by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
     var moving by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
-    // 現在看的是哪一個資料夾。null 表示最上層。
-    var folderId by remember { mutableStateOf<String?>(null) }
     var creatingFolder by remember { mutableStateOf(false) }
     var renamingFolder by remember { mutableStateOf<FolderTree.Folder?>(null) }
     var deletingFolder by remember { mutableStateOf<FolderTree.Folder?>(null) }
@@ -301,7 +314,7 @@ private fun NotebookHome(onOpen: (String) -> Unit) {
             },
             onBackup = { message = runBackup(activity) },
             onRestore = { restorePicker.launch(arrayOf("*/*")) },
-            onOpenFolder = { folderId = it },
+            onOpenFolder = onFolderChange,
             onCreateFolder = { creatingFolder = true },
             onRenameFolder = { renamingFolder = it },
             onDeleteFolder = { deletingFolder = it }
@@ -345,7 +358,7 @@ private fun NotebookHome(onOpen: (String) -> Unit) {
                 FolderTree.delete(activity, folder.id)
                 // 人站在被刪掉的那個資料夾裡面時要退回上一層，
                 // 否則畫面會停在一個已經不存在的地方，而且空無一物。
-                if (folderId == folder.id) folderId = folder.parentId
+                if (folderId == folder.id) onFolderChange(folder.parentId)
                 deletingFolder = null
                 revision++
             }

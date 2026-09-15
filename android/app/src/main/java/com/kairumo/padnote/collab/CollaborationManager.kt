@@ -145,6 +145,18 @@ class CollaborationManager(private val context: Context) {
         }
 
         val url = serverAddress.trim()
+
+        // 明文的中繼只允許在自己的區網或本機。oplog 本身是端對端加密的，
+        // 但房號、成員與流量樣態全是明文，而且明文 WebSocket 可以被中間人
+        // 直接改寫或重導。判斷在核心，兩邊同一份 —— 各寫一次的話，同一個
+        // 位址會在 iPad 上連得上、在 Android 上連不上。
+        val check = uniffi.padnote_core.collabCheckServer(url)
+        if (!check.ok) {
+            lastError = check.reasonKey
+            status = Status.Disconnected
+            return
+        }
+
         val host = runCatching { java.net.URI(url).host ?: "" }.getOrDefault("")
         if (collabIsLoopbackHost(host)) {
             startLocalRelay(runCatching { java.net.URI(url).port }.getOrDefault(-1))

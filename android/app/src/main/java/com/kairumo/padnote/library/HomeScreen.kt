@@ -463,7 +463,9 @@ private fun FolderRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("🗀", fontSize = 18.sp)
+            // 📁 而不是 🗀 —— 後者不在 Android 的預設字型裡，模擬器上
+            // 直接是一個豆腐方塊。
+            Text("📁", fontSize = 18.sp)
             Text(
                 folder.title,
                 fontWeight = FontWeight.SemiBold,

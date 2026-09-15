@@ -241,6 +241,17 @@ public class CollaborationManager: ObservableObject {
             self.status = .connecting
         }
 
+        // 明文的中繼只允許在自己的區網或本機。oplog 本身是端對端加密的，
+        // 但房號、成員與流量樣態全是明文，而且明文 WebSocket 可以被中間人
+        // 直接改寫或重導。判斷在核心，兩邊同一份 —— 各寫一次的話，同一個
+        // 位址會在 iPad 上連得上、在 Android 上連不上。
+        let check = collabCheckServer(url: serverAddress)
+        if !check.ok {
+            self.lastErrorMessage = LocalizationManager.shared.localized(check.reasonKey)
+            self.status = .disconnected
+            return
+        }
+
         guard let url = URL(string: serverAddress) else {
             print("❌ 無效的 WebSocket 伺服器網址: \(serverAddress)")
             self.lastErrorMessage = "無效的協同伺服器位址：\(serverAddress)"
