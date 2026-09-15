@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import UIKit
 import SceneKit
 
 public class MaterialEngine {
@@ -17,65 +18,33 @@ public class MaterialEngine {
         geometry.materials = [material]
     }
 
-    /// 根據 MaterialType 建立對應的 SceneKit PBR 物理材質
+    /// 根據 MaterialType 建立對應的 SceneKit PBR 物理材質。
+    ///
+    /// **顏色與粗糙度來自核心** `model3dMaterialLook()`。原本這裡是一份寫死的
+    /// switch，Android 沒有對應品；下沉之後同一個「黃金」在兩台裝置上是同一個
+    /// 金色 —— 材質是會落盤、會同步的資料，兩邊不一致等於同一份筆記長得不一樣。
     public static func createSCNMaterial(materialType: MaterialType) -> SCNMaterial {
         let mat = SCNMaterial()
         mat.lightingModel = .physicallyBased
 
-        #if os(macOS)
-        typealias PlatformColor = NSColor
-        #else
-        typealias PlatformColor = UIColor
-        #endif
-
-        switch materialType {
-        case .plastic:
-            mat.diffuse.contents = PlatformColor(red: 0.22, green: 0.55, blue: 0.95, alpha: 1.0)
-            mat.metalness.contents = 0.05
-            mat.roughness.contents = 0.18
-
-        case .gold:
-            mat.diffuse.contents = PlatformColor(red: 1.00, green: 0.84, blue: 0.12, alpha: 1.0)
-            mat.metalness.contents = 1.0
-            mat.roughness.contents = 0.16
-
-        case .silver:
-            mat.diffuse.contents = PlatformColor(white: 0.94, alpha: 1.0)
-            mat.metalness.contents = 0.98
-            mat.roughness.contents = 0.12
-
-        case .copper:
-            mat.diffuse.contents = PlatformColor(red: 0.88, green: 0.52, blue: 0.35, alpha: 1.0)
-            mat.metalness.contents = 0.92
-            mat.roughness.contents = 0.22
-
-        case .iron:
-            mat.diffuse.contents = PlatformColor(white: 0.42, alpha: 1.0)
-            mat.metalness.contents = 0.85
-            mat.roughness.contents = 0.50
-
-        case .wood:
-            mat.diffuse.contents = PlatformColor(red: 0.56, green: 0.36, blue: 0.20, alpha: 1.0)
-            mat.metalness.contents = 0.0
-            mat.roughness.contents = 0.78
-
-        case .marble:
-            mat.diffuse.contents = PlatformColor(white: 0.96, alpha: 1.0)
-            mat.metalness.contents = 0.04
-            mat.roughness.contents = 0.16
-
-        case .granite:
-            mat.diffuse.contents = PlatformColor(white: 0.55, alpha: 1.0)
-            mat.metalness.contents = 0.02
-            mat.roughness.contents = 0.84
-
-        case .obsidian:
-            mat.diffuse.contents = PlatformColor(white: 0.12, alpha: 1.0)
-            mat.metalness.contents = 0.18
-            mat.roughness.contents = 0.06
-        }
+        // Mac 版走 Mac Catalyst，所以三個平台都是 UIKit —— 不需要 NSColor 分支。
+        let look = model3dMaterialLook(material: ffiMaterial(materialType))
+        mat.diffuse.contents = UIColor(hexString: look.hex) ?? UIColor.gray
+        mat.metalness.contents = CGFloat(look.metalness)
+        mat.roughness.contents = CGFloat(look.roughness)
 
         return mat
+    }
+
+    /// `MaterialType` → 核心的列舉。
+    ///
+    /// 用 rawValue 對照而不是逐一硬寫：rawValue 就是落盤字串，核心那邊也記著
+    /// 同一份，對不上才是真的有問題，不該被一個 `default:` 靜靜吞掉。
+    private static func ffiMaterial(_ type: MaterialType) -> FfiMaterial {
+        for candidate in model3dMaterials() where model3dMaterialLook(material: candidate).raw == type.rawValue {
+            return candidate
+        }
+        return .gold
     }
 }
 

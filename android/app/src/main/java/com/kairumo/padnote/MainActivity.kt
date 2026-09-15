@@ -89,12 +89,20 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch
 import com.kairumo.padnote.ink.InkEngine
+import com.kairumo.padnote.ink.SketchRefineBar
+import com.kairumo.padnote.model3d.Model3DLayer
+import com.kairumo.padnote.model3d.Model3DObject
+import com.kairumo.padnote.model3d.Model3DStudio
+import com.kairumo.padnote.theme.CompositionOverlay
+import com.kairumo.padnote.theme.ThemeToolsSheet
 import com.kairumo.padnote.ink.InkTool
 import com.kairumo.padnote.ink.InkToolbar
 import com.kairumo.padnote.ink.InkLatencyMeter
 import com.kairumo.padnote.ink.LowLatencyInkCanvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.window.Dialog
@@ -367,6 +375,14 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     var pinRevision by remember { mutableIntStateOf(0) }
     var openPin by remember { mutableStateOf<CommentPin?>(null) }
 
+    // 3D 模型。與圖釘一樣存在筆記本中繼資料（`model3DAttachments`），
+    // 讀的是 Apple 端寫進去的同一個鍵。
+    var models3D by remember(notebook) { mutableStateOf(meta.models3D()) }
+    var model3DRevision by remember { mutableIntStateOf(0) }
+    var selectedModel3DId by remember { mutableStateOf<String?>(null) }
+    var editingModel3D by remember { mutableStateOf<Model3DObject?>(null) }
+    var insertingModel3D by remember { mutableStateOf(false) }
+
 
 
 
@@ -412,7 +428,8 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     // 名字取得出來就用內容，取不出來就用型別名 —— 面板上一整排「未命名」
     // 的話，使用者分不出哪一列是哪一個。
     val stackItems = remember(
-        textRevision, shapeRevision, tableRevision, chartRevision, imageRevision, pageId
+        textRevision, shapeRevision, tableRevision, chartRevision, imageRevision,
+        model3DRevision, pageId
     ) {
         buildList {
             imageStore.all.forEach {
@@ -428,6 +445,11 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             }
             chartStore.all.forEach {
                 add(ObjectStacking.Item(it.id, ObjectStacking.Kind.CHART, l10n("chart_studio")))
+            }
+            models3D.filter { it.pageIndex == pageIndex }.forEach {
+                add(ObjectStacking.Item(
+                    it.id, ObjectStacking.Kind.MODEL3D,
+                    it.title.ifBlank { l10n("model3d_title") }))
             }
             textStore.all.forEach {
                 add(ObjectStacking.Item(
@@ -503,6 +525,17 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     /// 掌拒與筆壓的問題只有實機重現得出來，屆時要能一鍵打開。
     var showInkDebug by remember { mutableStateOf(false) }
     var deletingPage by remember { mutableStateOf(false) }
+
+    /// 草圖美化控制列。與 Apple 端一樣是**浮動列**而不是對話框：
+    /// 調強度時要看得到畫布上的變化，對話框會把畫布蓋住。
+    var showRefineBar by remember { mutableStateOf(false) }
+
+    /// 主題專屬工具與它的兩個構圖輔助疊層。
+    var showThemeTools by remember { mutableStateOf(false) }
+    var goldenSpiral by remember { mutableStateOf(false) }
+    var ruleOfThirds by remember { mutableStateOf(false) }
+    /// 美化後按鈕的可用狀態要跟著變（engine 才是真相來源，這只是重繪訊號）。
+    var refineRevision by remember { mutableIntStateOf(0) }
 
 
     // 系統返回鍵＝回首頁。Android 使用者按的第一個東西就是它，
@@ -691,6 +724,18 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 DropdownMenuItem(
                     text = { Text(l10n("layers_panel")) },
                     onClick = { showMenu = false; showStackPanel = true }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("refine_sketch")) },
+                    onClick = { showMenu = false; showRefineBar = true }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("theme_tools")) },
+                    onClick = { showMenu = false; showThemeTools = true }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("model3d_studio")) },
+                    onClick = { showMenu = false; insertingModel3D = true }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("insert_image")) },
@@ -991,6 +1036,25 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 )
             }
 
+            // 3D 模型。位置與大小是頁面座標，與其他圖層同一套規則。
+            key(model3DRevision) {
+                Model3DLayer(
+                    interactive = editorMode == EditorMode.TYPE,
+                    models = models3D.filter { it.pageIndex == pageIndex },
+                    density = canvasDensity,
+                    selectedId = selectedModel3DId,
+                    onSelect = { selectedModel3DId = it },
+                    onEdit = { editingModel3D = it },
+                    onChanged = { updated ->
+                        models3D = models3D.map { if (it.id == updated.id) updated else it }
+                            .toMutableList()
+                        meta.setModels3D(notebook?.first, models3D)
+                        model3DRevision++
+                    },
+                    zIndexOf = zIndexOf
+                )
+            }
+
             // 討論圖釘畫在最上層 —— 它是標記，被內容蓋住就失去意義。
             key(pinRevision) {
                 CommentLayer(
@@ -1000,6 +1064,39 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     onOpen = { openPin = it },
                     onMoved = { meta.setCommentPins(notebook?.first, pins); pinRevision++ },
                     density = canvasDensity
+                )
+            }
+
+            // 構圖輔助線。畫在所有內容之上但**不吃觸控** —— 它是參考線，
+            // 擋住筆的話等於把畫布鎖住。
+            CompositionOverlay(
+                goldenSpiral = goldenSpiral,
+                ruleOfThirds = ruleOfThirds,
+                modifier = Modifier.fillMaxSize().zIndex(9_000f)
+            )
+
+            if (showRefineBar) {
+                // 讀一下 revision，按鈕的 enabled 才會跟著美化結果更新。
+                @Suppress("UNUSED_EXPRESSION") refineRevision
+                SketchRefineBar(
+                    languageTag = deviceLanguageTag(),
+                    canRestore = engine.canRestoreSketch(),
+                    canRedo = engine.canRedoRefine(),
+                    onApply = { intensity ->
+                        val n = engine.refineSketch(intensity)
+                        refineRevision++
+                        revision++       // 畫布重繪
+                        clearToken++     // 低延遲路徑的前緩衝也要清，否則舊筆畫還留在畫面上
+                        message = if (n > 0) l10n("apply_refine") else l10n("nothing_to_refine")
+                    },
+                    onRestore = {
+                        engine.restoreSketch(); refineRevision++; revision++; clearToken++
+                    },
+                    onRedo = {
+                        engine.redoRefine(); refineRevision++; revision++; clearToken++
+                    },
+                    onDismiss = { showRefineBar = false },
+                    modifier = Modifier.align(Alignment.BottomCenter)
                 )
             }
         }
@@ -1099,6 +1196,48 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 editorMode = EditorMode.TYPE
             },
             onDismiss = { showCalculator = false }
+        )
+    }
+
+    if (insertingModel3D || editingModel3D != null) {
+        val editing = editingModel3D
+        Model3DStudio(
+            languageTag = deviceLanguageTag(),
+            existing = editing,
+            onCommit = { model ->
+                models3D = if (editing == null) {
+                    (models3D + model.copy(pageIndex = pageIndex)).toMutableList()
+                } else {
+                    models3D.map { if (it.id == model.id) model else it }.toMutableList()
+                }
+                meta.setModels3D(notebook?.first, models3D)
+                model3DRevision++
+                selectedModel3DId = model.id
+                // 插完切到打字模式，不然物件層不吃觸控、剛插的東西選不到。
+                editorMode = EditorMode.TYPE
+            },
+            onDismiss = { insertingModel3D = false; editingModel3D = null }
+        )
+    }
+
+    if (showThemeTools) {
+        ThemeToolsSheet(
+            languageTag = deviceLanguageTag(),
+            goldenSpiral = goldenSpiral,
+            ruleOfThirds = ruleOfThirds,
+            onGoldenSpiralChange = { goldenSpiral = it },
+            onRuleOfThirdsChange = { ruleOfThirds = it },
+            onPickColor = { inkColorHex = it },
+            onInsertText = { text ->
+                // 插成文字方塊而不是圖片 —— 標註插完還要改數字。
+                val box = textStore.create(x = 60f, y = 80f)
+                box.text = text
+                textStore.persist(box)
+                textRevision++
+                selectedTextId = box.id
+                editorMode = EditorMode.TYPE
+            },
+            onDismiss = { showThemeTools = false }
         )
     }
 

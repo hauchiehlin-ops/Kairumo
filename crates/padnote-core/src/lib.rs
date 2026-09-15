@@ -10,17 +10,21 @@ uniffi::setup_scaffolding!();
 
 pub mod app;
 pub mod ffi;
+pub mod ffi_assets;
 pub mod ffi_backup;
 pub mod ffi_chart;
 pub mod ffi_folder_sync;
 pub mod ffi_geometry;
 pub mod ffi_math;
+pub mod ffi_model3d;
 pub mod ffi_input;
 pub mod ffi_interop;
 #[cfg(feature = "relay")]
 pub mod ffi_relay;
 pub mod ffi_shapes;
+pub mod ffi_sketch;
 pub mod ffi_table;
+pub mod ffi_theme_tools;
 pub mod ffi_ui;
 pub mod setup;
 pub mod transcript;

@@ -240,24 +240,18 @@ public struct ThemeSpecificToolsView: View {
                         .foregroundColor(.secondary)
                 }
 
-                // 標題走字串表。原本寫死繁體中文 —— 日文或英文使用者
+                // 標註清單來自核心 `themeDimensionCallouts()`，Android 讀的是同一份。
+                // 標題走字串表 —— 原本寫死繁體中文，日文或英文使用者
                 // 在一個已經翻成六國語系的面板裡看到一格中文。
-                let callouts: [(titleKey: String, symbol: String)] = [
-                    ("dimension_callout_linear", "↔ 120.0 ±0.05 mm"),
-                    ("dimension_callout_diameter", "Ø 48.0 H7 mm"),
-                    ("dimension_callout_radius", "R 12.5 mm"),
-                    ("dimension_callout_flatness", "⏥ 0.02 A"),
-                    ("dimension_callout_balloon1", "① —"),
-                    ("dimension_callout_balloon2", "② —")
-                ]
+                let callouts = themeDimensionCallouts()
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                     ForEach(callouts, id: \.titleKey) { item in
                         Button {
                             // 插入成**文字方塊**，不是算繪好的圖片。
                             //
-                            // 原本走 renderDimensionBadge → onInsertCardImage，
-                            // 得到的是一張點陣圖：120.0 改不了、公差改不了、
+                            // 原本走「算繪成徽章圖片」那條路，得到的是一張點陣圖：
+                            // 120.0 改不了、公差改不了、
                             // 字級顏色改不了 —— 一張標註不能改數字，等於沒有用。
                             // 文字方塊本來就能就地編輯、換字級、縮放、旋轉。
                             onInsertTextCard(item.symbol)
@@ -295,13 +289,15 @@ public struct ThemeSpecificToolsView: View {
                         .foregroundColor(.secondary)
                 }
 
-                let materials: [(name: String, tag: String, specs: String)] = [
-                    ("SUS304 不鏽鋼", "奧氏體防蝕", "抗拉強度 ≥520 MPa / 表面拉絲鈍化處理"),
-                    ("AL6061-T6 鋁合金", "航空高剛性", "抗拉強度 ≥290 MPa / 12μm 硬質陽極氧化"),
-                    ("PC+ABS 工程合金", "阻燃抗衝擊", "UL94 V0 耐燃 / 模具咬花皮紋表面"),
-                    ("POM 聚甲醛賽鋼", "耐磨自潤滑", "摩擦係數 0.25 / 齒輪與軸承滑塊專用"),
-                    ("SKD11 模具工具鋼", "極高耐磨性", "淬火回火硬度 HRC 58-62 / 精密沖壓沖頭")
-                ]
+                // 材料清單來自核心 `themeMaterials()`。牌號（SUS304…）不翻譯 ——
+                // 那是國際通用代號，翻了工程師反而認不出來；特性與工藝指標走語系鍵。
+                let materials = themeMaterials().map { m in
+                    (
+                        name: m.designation,
+                        tag: localizationManager.localized(m.traitKey),
+                        specs: localizationManager.localized(m.specKey)
+                    )
+                }
 
                 ForEach(materials, id: \.name) { m in
                     HStack {
@@ -326,7 +322,12 @@ public struct ThemeSpecificToolsView: View {
                         Spacer()
 
                         Button {
-                            let textContent = "【材料規格】\(m.name)\n特性：\(m.tag)\n工藝指標：\(m.specs)"
+                            // 卡片上的標籤也要在地化：原本是寫死的「【材料規格】特性 工藝指標」。
+                            let textContent = """
+                            【\(localizationManager.localized("material_card_title"))】\(m.name)
+                            \(localizationManager.localized("material_card_trait"))：\(m.tag)
+                            \(localizationManager.localized("material_card_process"))：\(m.specs)
+                            """
                             onInsertTextCard(textContent)
                             dismiss()
                         } label: {
@@ -369,14 +370,20 @@ public struct ThemeSpecificToolsView: View {
                         .foregroundColor(.secondary)
                 }
 
-                let wireframes: [(title: String, icon: String, code: String)] = [
-                    ("行動端頂部導航列", "menubar.rectangle", "navbar"),
-                    ("底部五分頁 TabBar", "dock.rectangle", "tabbar"),
-                    ("主要行動按鈕 (CTA)", "button.programmable", "button"),
-                    ("搜尋輸入文字框", "character.textbox", "input"),
-                    ("內容資訊卡片", "rectangle.portrait", "card"),
-                    ("對話框彈窗 (Modal)", "bubble.left.and.bubble.right", "modal")
+                // 元件清單來自核心 `themeWireframes()`；名稱走語系鍵。
+                // 圖示是 SF Symbol，那是 Apple 專屬的，留在平台層。
+                let icons = [
+                    "navbar": "menubar.rectangle", "tabbar": "dock.rectangle",
+                    "button": "button.programmable", "input": "character.textbox",
+                    "card": "rectangle.portrait", "modal": "bubble.left.and.bubble.right"
                 ]
+                let wireframes = themeWireframes().map { w in
+                    (
+                        title: localizationManager.localized(w.titleKey),
+                        icon: icons[w.symbol] ?? "square.dashed",
+                        code: w.symbol
+                    )
+                }
 
                 LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                     ForEach(wireframes, id: \.title) { w in
@@ -419,14 +426,11 @@ public struct ThemeSpecificToolsView: View {
                         .foregroundColor(.secondary)
                 }
 
-                let gestures = [
-                    "👉 點擊跳轉 (Tap → Next)",
-                    "👈 左右滑動切換 (Swipe)",
-                    "⏱️ 長按觸發選單 (Long Press)",
-                    "◇ 條件判斷分支 (Decision If/Else)",
-                    "↻ 載入更新狀態 (Loading/Refresh)",
-                    "✅ 成功驗證回饋 (Success Banner)"
-                ]
+                // 流程標籤來自核心 `themeGestures()`：emoji 與語言無關，
+                // 文字查表 —— 原本整串是寫死的中英夾雜字面值。
+                let gestures = themeGestures().map { g in
+                    "\(g.symbol) \(localizationManager.localized(g.titleKey))"
+                }
 
                 ForEach(gestures, id: \.self) { g in
                     Button {
@@ -493,35 +497,6 @@ public struct ThemeSpecificToolsView: View {
         }
     }
 
-    private func renderDimensionBadge(text: String, desc: String) -> UIImage {
-        let size = CGSize(width: 260, height: 75)
-        let renderer = UIGraphicsImageRenderer(size: size)
-        return renderer.image { ctx in
-            let cg = ctx.cgContext
-            cg.setFillColor(UIColor(red: 0.94, green: 0.97, blue: 1.0, alpha: 0.95).cgColor)
-            let box = CGRect(origin: .zero, size: size)
-            cg.addPath(UIBezierPath(roundedRect: box, cornerRadius: 8).cgPath)
-            cg.fillPath()
-
-            cg.setStrokeColor(UIColor.systemBlue.cgColor)
-            cg.setLineWidth(1.5)
-            cg.addPath(UIBezierPath(roundedRect: box.insetBy(dx: 1, dy: 1), cornerRadius: 7).cgPath)
-            cg.strokePath()
-
-            let symbolAttrs: [NSAttributedString.Key: Any] = [
-                .font: UIFont.monospacedSystemFont(ofSize: 15, weight: .bold),
-                .foregroundColor: UIColor.systemBlue
-            ]
-            (text as NSString).draw(at: CGPoint(x: 14, y: 16), withAttributes: symbolAttrs)
-
-            let descAttrs: [NSAttributedString.Key: Any] = [
-                .font: UIFont.systemFont(ofSize: 11, weight: .regular),
-                .foregroundColor: UIColor.secondaryLabel
-            ]
-            (desc as NSString).draw(at: CGPoint(x: 14, y: 44), withAttributes: descAttrs)
-        }
-    }
-
     private func renderWireframeComponent(code: String, title: String) -> UIImage {
         let size = CGSize(width: 320, height: 160)
         let renderer = UIGraphicsImageRenderer(size: size)
@@ -562,51 +537,17 @@ public struct ThemeSpecificToolsView: View {
         }
     }
 
-    // 經典調色盤資料
-    private var colorPalettes: [(name: String, colors: [Color], hexes: [String])] = [
-        (
-            name: "Pantone 季節潮流色 (Trend Palette)",
-            colors: [
-                Color(red: 0.97, green: 0.58, blue: 0.47),
-                Color(red: 0.43, green: 0.65, blue: 0.82),
-                Color(red: 0.95, green: 0.77, blue: 0.45),
-                Color(red: 0.38, green: 0.62, blue: 0.54),
-                Color(red: 0.32, green: 0.33, blue: 0.45)
-            ],
-            hexes: ["#F79477", "#6EA6D1", "#F2C473", "#619E8A", "#525473"]
-        ),
-        (
-            name: "莫蘭迪高級灰 (Morandi Serene)",
-            colors: [
-                Color(red: 0.78, green: 0.76, blue: 0.74),
-                Color(red: 0.68, green: 0.67, blue: 0.62),
-                Color(red: 0.58, green: 0.63, blue: 0.62),
-                Color(red: 0.72, green: 0.66, blue: 0.65),
-                Color(red: 0.49, green: 0.48, blue: 0.46)
-            ],
-            hexes: ["#C7C2BD", "#AEAB9E", "#94A19E", "#B8A8A6", "#7D7B75"]
-        ),
-        (
-            name: "包浩斯復古工業 (Bauhaus Industrial)",
-            colors: [
-                Color(red: 0.85, green: 0.20, blue: 0.18),
-                Color(red: 0.12, green: 0.35, blue: 0.68),
-                Color(red: 0.96, green: 0.76, blue: 0.15),
-                Color(red: 0.18, green: 0.18, blue: 0.18),
-                Color(red: 0.92, green: 0.90, blue: 0.85)
-            ],
-            hexes: ["#D9332E", "#1F59AD", "#F5C226", "#2E2E2E", "#EBE6D9"]
-        ),
-        (
-            name: "Cyberpunk 賽博霓虹 (Cyberpunk Neon)",
-            colors: [
-                Color(red: 1.00, green: 0.00, blue: 0.48),
-                Color(red: 0.00, green: 0.96, blue: 1.00),
-                Color(red: 0.55, green: 0.12, blue: 0.95),
-                Color(red: 0.99, green: 0.91, blue: 0.00),
-                Color(red: 0.07, green: 0.05, blue: 0.15)
-            ],
-            hexes: ["#FF007A", "#00F5FF", "#8C1FF2", "#FCE800", "#120D26"]
-        )
-    ]
+    // 經典調色盤資料 —— **來自核心** `themePalettes()`。
+    //
+    // 原本這裡是一份寫死的陣列，名稱還是繁體中文字面值；Android 沒有對應品。
+    // 下沉之後兩個平台的配色與順序必然一致，名稱也走語系鍵。
+    private var colorPalettes: [(name: String, colors: [Color], hexes: [String])] {
+        themePalettes().map { pal in
+            (
+                name: localizationManager.localized(pal.nameKey),
+                colors: pal.hexes.map { Color(hex: $0) ?? .gray },
+                hexes: pal.hexes
+            )
+        }
+    }
 }

@@ -2170,6 +2170,54 @@ object LocalizationStrings {
             "ko" to "기하학적 도형",
             "th" to "รูปทรงเรขาคณิต"
         ),
+        "gesture_decision" to mapOf(
+            "zh-Hant" to "條件判斷分支",
+            "en" to "Decision (if/else)",
+            "zh-Hans" to "条件判断分支",
+            "ja" to "条件分岐（if/else）",
+            "ko" to "조건 분기 (if/else)",
+            "th" to "เงื่อนไขแยกทาง (if/else)"
+        ),
+        "gesture_loading" to mapOf(
+            "zh-Hant" to "載入更新狀態",
+            "en" to "Loading / refresh",
+            "zh-Hans" to "加载更新状态",
+            "ja" to "読み込み・更新",
+            "ko" to "로딩·새로고침",
+            "th" to "กำลังโหลด / รีเฟรช"
+        ),
+        "gesture_long_press" to mapOf(
+            "zh-Hant" to "長按觸發選單",
+            "en" to "Long press for menu",
+            "zh-Hans" to "长按触发菜单",
+            "ja" to "長押しでメニュー",
+            "ko" to "길게 눌러 메뉴",
+            "th" to "กดค้างเพื่อเปิดเมนู"
+        ),
+        "gesture_success" to mapOf(
+            "zh-Hant" to "成功驗證回饋",
+            "en" to "Success feedback",
+            "zh-Hans" to "成功验证反馈",
+            "ja" to "成功フィードバック",
+            "ko" to "성공 피드백",
+            "th" to "แจ้งผลสำเร็จ"
+        ),
+        "gesture_swipe" to mapOf(
+            "zh-Hant" to "左右滑動切換",
+            "en" to "Swipe to switch",
+            "zh-Hans" to "左右滑动切换",
+            "ja" to "スワイプで切り替え",
+            "ko" to "스와이프로 전환",
+            "th" to "ปัดเพื่อสลับ"
+        ),
+        "gesture_tap" to mapOf(
+            "zh-Hant" to "點擊跳轉",
+            "en" to "Tap → next",
+            "zh-Hans" to "点击跳转",
+            "ja" to "タップで遷移",
+            "ko" to "탭하여 이동",
+            "th" to "แตะเพื่อไปต่อ"
+        ),
         "golden_spiral_desc" to mapOf(
             "zh-Hant" to "以 1:1.618 斐波那契螺旋疊加於畫布，引導視覺焦點",
             "en" to "1:1.618 Fibonacci spiral overlay to guide focal point",
@@ -3162,6 +3210,94 @@ object LocalizationStrings {
             "ko" to "목재",
             "th" to "ไม้"
         ),
+        "material_al6061_spec" to mapOf(
+            "zh-Hant" to "抗拉強度 ≥290 MPa / 12μm 硬質陽極氧化",
+            "en" to "Tensile ≥290 MPa / 12 µm hard anodising",
+            "zh-Hans" to "抗拉强度 ≥290 MPa / 12μm 硬质阳极氧化",
+            "ja" to "引張強さ ≥290 MPa／硬質アルマイト 12μm",
+            "ko" to "인장강도 ≥290 MPa / 경질 아노다이징 12 µm",
+            "th" to "ความต้านแรงดึง ≥290 MPa / อโนไดซ์แข็ง 12 ไมครอน"
+        ),
+        "material_al6061_trait" to mapOf(
+            "zh-Hant" to "航空高剛性",
+            "en" to "Aerospace-grade stiffness",
+            "zh-Hans" to "航空高刚性",
+            "ja" to "航空機グレード・高剛性",
+            "ko" to "항공용 고강성",
+            "th" to "เกรดอากาศยาน แข็งแกร่งสูง"
+        ),
+        "material_card_process" to mapOf(
+            "zh-Hant" to "工藝指標",
+            "en" to "Process",
+            "zh-Hans" to "工艺指标",
+            "ja" to "加工仕様",
+            "ko" to "공정 지표",
+            "th" to "กระบวนการผลิต"
+        ),
+        "material_card_title" to mapOf(
+            "zh-Hant" to "材料規格",
+            "en" to "Material spec",
+            "zh-Hans" to "材料规格",
+            "ja" to "材料仕様",
+            "ko" to "재료 사양",
+            "th" to "ข้อมูลจำเพาะวัสดุ"
+        ),
+        "material_card_trait" to mapOf(
+            "zh-Hant" to "特性",
+            "en" to "Properties",
+            "zh-Hans" to "特性",
+            "ja" to "特性",
+            "ko" to "특성",
+            "th" to "คุณสมบัติ"
+        ),
+        "material_pcabs_spec" to mapOf(
+            "zh-Hant" to "UL94 V0 耐燃 / 模具咬花皮紋表面",
+            "en" to "UL94 V-0 / textured mould finish",
+            "zh-Hans" to "UL94 V0 耐燃 / 模具咬花皮纹表面",
+            "ja" to "UL94 V-0／シボ加工表面",
+            "ko" to "UL94 V-0 / 시보 텍스처 표면",
+            "th" to "UL94 V-0 / ผิวลายหนังจากแม่พิมพ์"
+        ),
+        "material_pcabs_trait" to mapOf(
+            "zh-Hant" to "阻燃抗衝擊",
+            "en" to "Flame-retardant, impact-resistant",
+            "zh-Hans" to "阻燃抗冲击",
+            "ja" to "難燃・耐衝撃",
+            "ko" to "난연·내충격",
+            "th" to "หน่วงไฟ ทนแรงกระแทก"
+        ),
+        "material_pom_spec" to mapOf(
+            "zh-Hant" to "摩擦係數 0.25 / 齒輪與軸承滑塊專用",
+            "en" to "Friction 0.25 / gears, bearings, sliders",
+            "zh-Hans" to "摩擦系数 0.25 / 齿轮与轴承滑块专用",
+            "ja" to "摩擦係数 0.25／歯車・軸受・スライダー向け",
+            "ko" to "마찰계수 0.25 / 기어·베어링·슬라이더용",
+            "th" to "สัมประสิทธิ์แรงเสียดทาน 0.25 / เฟือง แบริ่ง สไลเดอร์"
+        ),
+        "material_pom_trait" to mapOf(
+            "zh-Hant" to "耐磨自潤滑",
+            "en" to "Wear-resistant, self-lubricating",
+            "zh-Hans" to "耐磨自润滑",
+            "ja" to "耐摩耗・自己潤滑",
+            "ko" to "내마모·자기윤활",
+            "th" to "ทนสึกหรอ หล่อลื่นในตัว"
+        ),
+        "material_skd11_spec" to mapOf(
+            "zh-Hant" to "淬火回火硬度 HRC 58-62 / 精密沖壓沖頭",
+            "en" to "HRC 58–62 quenched and tempered / precision punches",
+            "zh-Hans" to "淬火回火硬度 HRC 58-62 / 精密冲压冲头",
+            "ja" to "焼入焼戻し HRC 58–62／精密プレスパンチ",
+            "ko" to "담금질·뜨임 HRC 58–62 / 정밀 프레스 펀치",
+            "th" to "ชุบแข็งและอบคืนตัว HRC 58–62 / พันช์ปั๊มความแม่นยำสูง"
+        ),
+        "material_skd11_trait" to mapOf(
+            "zh-Hant" to "極高耐磨性",
+            "en" to "Very high wear resistance",
+            "zh-Hans" to "极高耐磨性",
+            "ja" to "極めて高い耐摩耗性",
+            "ko" to "초고내마모성",
+            "th" to "ทนการสึกหรอสูงมาก"
+        ),
         "material_specs_card" to mapOf(
             "zh-Hant" to "材料規格卡",
             "en" to "Material Specs Card",
@@ -3185,6 +3321,22 @@ object LocalizationStrings {
             "ja" to "マテリアル",
             "ko" to "재질 특성",
             "th" to "คุณสมบัติวัสดุ"
+        ),
+        "material_sus304_spec" to mapOf(
+            "zh-Hant" to "抗拉強度 ≥520 MPa / 表面拉絲鈍化處理",
+            "en" to "Tensile ≥520 MPa / brushed and passivated",
+            "zh-Hans" to "抗拉强度 ≥520 MPa / 表面拉丝钝化处理",
+            "ja" to "引張強さ ≥520 MPa／ヘアライン・不動態化",
+            "ko" to "인장강도 ≥520 MPa / 헤어라인·부동태 처리",
+            "th" to "ความต้านแรงดึง ≥520 MPa / ขัดลายเส้นและพาสซิเวต"
+        ),
+        "material_sus304_trait" to mapOf(
+            "zh-Hant" to "奧氏體防蝕",
+            "en" to "Austenitic, corrosion-resistant",
+            "zh-Hans" to "奥氏体防蚀",
+            "ja" to "オーステナイト系・耐食",
+            "ko" to "오스테나이트계 내식",
+            "th" to "ออสเทนนิติก ทนการกัดกร่อน"
         ),
         "math_calc" to mapOf(
             "zh-Hant" to "算式計算",
@@ -3458,6 +3610,14 @@ object LocalizationStrings {
             "ko" to "3D 모델",
             "th" to "โมเดล 3 มิติ"
         ),
+        "model_scale" to mapOf(
+            "zh-Hant" to "縮放",
+            "en" to "Scale",
+            "zh-Hans" to "缩放",
+            "ja" to "スケール",
+            "ko" to "크기",
+            "th" to "ขนาด"
+        ),
         "model_title" to mapOf(
             "zh-Hant" to "物件名稱",
             "en" to "Object Title",
@@ -3617,6 +3777,14 @@ object LocalizationStrings {
             "ja" to "まだノートがありません。「新規ノート」から始めましょう。",
             "ko" to "아직 노트가 없습니다. ‘새 노트’로 시작하세요.",
             "th" to "ยังไม่มีโน้ต แตะ “โน้ตใหม่” เพื่อเริ่ม"
+        ),
+        "nothing_to_refine" to mapOf(
+            "zh-Hant" to "沒有可修飾的筆跡 —— 請先寫點東西",
+            "en" to "Nothing to refine — draw something first",
+            "zh-Hans" to "没有可修饰的笔迹 —— 请先写点东西",
+            "ja" to "補正できる筆跡がありません。先に何か書いてください",
+            "ko" to "보정할 필기가 없습니다. 먼저 무언가를 써 보세요",
+            "th" to "ยังไม่มีลายเส้นให้ปรับแต่ง — ลองเขียนอะไรสักอย่างก่อน"
         ),
         "numbered_list" to mapOf(
             "zh-Hant" to "編號清單",
@@ -5298,6 +5466,38 @@ object LocalizationStrings {
             "ko" to "기본 스타일",
             "th" to "ทั่วไป"
         ),
+        "theme_palette_bauhaus" to mapOf(
+            "zh-Hant" to "包浩斯復古工業",
+            "en" to "Bauhaus Industrial",
+            "zh-Hans" to "包豪斯复古工业",
+            "ja" to "バウハウス インダストリアル",
+            "ko" to "바우하우스 인더스트리얼",
+            "th" to "เบาเฮาส์ อินดัสเทรียล"
+        ),
+        "theme_palette_cyberpunk" to mapOf(
+            "zh-Hant" to "賽博霓虹",
+            "en" to "Cyberpunk Neon",
+            "zh-Hans" to "赛博霓虹",
+            "ja" to "サイバーパンク ネオン",
+            "ko" to "사이버펑크 네온",
+            "th" to "ไซเบอร์พังก์ นีออน"
+        ),
+        "theme_palette_morandi" to mapOf(
+            "zh-Hant" to "莫蘭迪高級灰",
+            "en" to "Morandi Serene",
+            "zh-Hans" to "莫兰迪高级灰",
+            "ja" to "モランディ グレージュ",
+            "ko" to "모란디 뮤트 톤",
+            "th" to "โทนมอรันดี"
+        ),
+        "theme_palette_trend" to mapOf(
+            "zh-Hant" to "Pantone 季節潮流色",
+            "en" to "Pantone Trend Palette",
+            "zh-Hans" to "Pantone 季节潮流色",
+            "ja" to "パントン トレンドカラー",
+            "ko" to "팬톤 트렌드 컬러",
+            "th" to "พาเลตต์เทรนด์ Pantone"
+        ),
         "theme_tools" to mapOf(
             "zh-Hant" to "主題工具",
             "en" to "Theme Tools",
@@ -5706,6 +5906,30 @@ object LocalizationStrings {
             "ko" to "버전",
             "th" to "เวอร์ชัน"
         ),
+        "wireframe_button" to mapOf(
+            "zh-Hant" to "主要行動按鈕 (CTA)",
+            "en" to "Primary action button (CTA)",
+            "zh-Hans" to "主要行动按钮 (CTA)",
+            "ja" to "主要アクションボタン（CTA）",
+            "ko" to "주요 행동 버튼 (CTA)",
+            "th" to "ปุ่มหลัก (CTA)"
+        ),
+        "wireframe_card" to mapOf(
+            "zh-Hant" to "內容資訊卡片",
+            "en" to "Content card",
+            "zh-Hans" to "内容信息卡片",
+            "ja" to "コンテンツカード",
+            "ko" to "콘텐츠 카드",
+            "th" to "การ์ดเนื้อหา"
+        ),
+        "wireframe_input" to mapOf(
+            "zh-Hant" to "搜尋輸入文字框",
+            "en" to "Search input field",
+            "zh-Hans" to "搜索输入文本框",
+            "ja" to "検索入力フィールド",
+            "ko" to "검색 입력 필드",
+            "th" to "ช่องค้นหา"
+        ),
         "wireframe_kit" to mapOf(
             "zh-Hant" to "UI 原型線框",
             "en" to "UI Wireframes",
@@ -5713,6 +5937,30 @@ object LocalizationStrings {
             "ja" to "UI ワイヤーフレーム",
             "ko" to "UI 와이어프레임",
             "th" to "ไวร์เฟรม UI"
+        ),
+        "wireframe_modal" to mapOf(
+            "zh-Hant" to "對話框彈窗 (Modal)",
+            "en" to "Modal dialog",
+            "zh-Hans" to "对话框弹窗 (Modal)",
+            "ja" to "モーダルダイアログ",
+            "ko" to "모달 대화상자",
+            "th" to "กล่องโต้ตอบแบบโมดัล"
+        ),
+        "wireframe_navbar" to mapOf(
+            "zh-Hant" to "行動端頂部導航列",
+            "en" to "Mobile top nav bar",
+            "zh-Hans" to "移动端顶部导航栏",
+            "ja" to "モバイル ナビゲーションバー",
+            "ko" to "모바일 상단 내비게이션 바",
+            "th" to "แถบนำทางด้านบนบนมือถือ"
+        ),
+        "wireframe_tabbar" to mapOf(
+            "zh-Hant" to "底部五分頁 TabBar",
+            "en" to "Bottom tab bar (5 tabs)",
+            "zh-Hans" to "底部五分页 TabBar",
+            "ja" to "ボトムタブバー（5 タブ）",
+            "ko" to "하단 탭 바 (5개 탭)",
+            "th" to "แถบแท็บด้านล่าง (5 แท็บ)"
         ),
         "word_studio" to mapOf(
             "zh-Hant" to "Word文字編修",

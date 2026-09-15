@@ -2,6 +2,7 @@ package com.kairumo.padnote.ink
 
 import android.view.MotionEvent
 import uniffi.padnote_core.FfiPhase
+import uniffi.padnote_core.FfiPoint
 import uniffi.padnote_core.FfiVerdict
 import uniffi.padnote_core.InkArbiter
 import uniffi.padnote_core.PadnoteSession
@@ -233,11 +234,107 @@ class InkEngine(
         return removed
     }
 
+    // ── 草圖美化 ──────────────────────────────────────────────
+    //
+    // 幾何辨識與平滑在核心（`sketchRefineStroke`），與 Apple 端同一份實作。
+    // 這裡負責「換掉畫布上的筆畫」：核心是 append-only，所以「改一筆」實際上
+    // 是**擦掉舊的、加一筆新的**，不是就地改座標。
+
+    /** 美化之前的樣子。按「還原」用得到。 */
+    private var sketchBackup: List<CompletedStroke>? = null
+
+    /** 上一次美化的結果。還原之後按「重做」用得到。 */
+    private var refinedCache: List<CompletedStroke>? = null
+
+    /** 有沒有可以還原的原始草圖。 */
+    fun canRestoreSketch(): Boolean = sketchBackup != null
+
+    /** 有沒有可以重做的美化結果。 */
+    fun canRedoRefine(): Boolean = refinedCache != null
+
+    /**
+     * 美化目前這一頁的所有筆畫。回傳實際換掉的筆數。
+     *
+     * 第一次呼叫會記下原始草圖；之後連按也不會覆蓋那份備份 ——
+     * 否則「還原」只能退回上一次美化的結果，退不回手寫的原樣。
+     */
+    fun refineSketch(intensity: Float): Int {
+        if (_strokes.isEmpty()) return 0
+        if (sketchBackup == null) sketchBackup = _strokes.toList()
+
+        val refined = _strokes.map { stroke ->
+            val input = stroke.points.map { FfiPoint(it.x, it.y) }
+            val result = uniffi.padnote_core.sketchRefineStroke(input, intensity)
+            // 核心保證輸出點數與輸入相同，所以壓感、傾角、時間差可以逐點沿用
+            // —— 只換位置，筆觸的粗細變化不變。
+            val points = stroke.points.mapIndexed { i, p ->
+                StrokePoint(
+                    x = result.points[i].x,
+                    y = result.points[i].y,
+                    pressure = p.pressure,
+                    tilt = p.tilt,
+                    azimuth = p.azimuth,
+                    dtUs = p.dtUs
+                )
+            }
+            stroke.copy(points = points)
+        }
+        refinedCache = replaceStrokes(refined)
+        return refinedCache?.size ?: 0
+    }
+
+    /** 回到美化之前的手寫原樣。 */
+    fun restoreSketch(): Boolean {
+        val original = sketchBackup ?: return false
+        replaceStrokes(original)
+        return true
+    }
+
+    /** 還原之後再套回美化結果。 */
+    fun redoRefine(): Boolean {
+        val refined = refinedCache ?: return false
+        replaceStrokes(refined)
+        return true
+    }
+
+    /**
+     * 用一組新筆畫取代畫布上現有的筆畫。
+     *
+     * 回傳的是**寫回核心之後**的筆畫（`coreStrokeId` 已更新）。沿用舊的 id
+     * 會讓下一次擦除打在已經是墓碑的筆畫上，那一筆就再也擦不掉了。
+     */
+    private fun replaceStrokes(next: List<CompletedStroke>): List<CompletedStroke> {
+        val target = session
+        val page = pageId
+        if (target != null && page != null) {
+            for (old in _strokes) {
+                old.coreStrokeId?.let { runCatching { target.eraseStroke(page, it) } }
+            }
+        }
+        val written = next.map { stroke ->
+            val coreId = if (target != null && page != null) {
+                runCatching {
+                    target.addStroke(page, stroke.tool, colorRgba, baseWidth, stroke.points)
+                }.getOrNull()
+            } else {
+                null
+            }
+            stroke.copy(coreStrokeId = coreId)
+        }
+        _strokes.clear()
+        _strokes += written
+        // 換過筆畫之後，舊的 pointerId → coreStrokeId 對應已經沒有意義。
+        committed.clear()
+        return written
+    }
+
     /** 切換頁面或視圖時呼叫。 */
     fun reset() {
         inFlight.clear()
         committed.clear()
         _strokes.clear()
+        sketchBackup = null
+        refinedCache = null
         arbiter.reset()
     }
 

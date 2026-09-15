@@ -5710,5 +5710,253 @@
     "ja": "まだコメントはありません",
     "ko": "아직 댓글이 없습니다",
     "th": "ยังไม่มีข้อความ"
+  },
+  "nothing_to_refine": {
+    "en": "Nothing to refine — draw something first",
+    "ja": "補正できる筆跡がありません。先に何か書いてください",
+    "ko": "보정할 필기가 없습니다. 먼저 무언가를 써 보세요",
+    "th": "ยังไม่มีลายเส้นให้ปรับแต่ง — ลองเขียนอะไรสักอย่างก่อน",
+    "zhHans": "没有可修饰的笔迹 —— 请先写点东西",
+    "zhHant": "沒有可修飾的筆跡 —— 請先寫點東西"
+  },
+  "theme_palette_trend": {
+    "en": "Pantone Trend Palette",
+    "ja": "パントン トレンドカラー",
+    "ko": "팬톤 트렌드 컬러",
+    "th": "พาเลตต์เทรนด์ Pantone",
+    "zhHans": "Pantone 季节潮流色",
+    "zhHant": "Pantone 季節潮流色"
+  },
+  "theme_palette_morandi": {
+    "en": "Morandi Serene",
+    "ja": "モランディ グレージュ",
+    "ko": "모란디 뮤트 톤",
+    "th": "โทนมอรันดี",
+    "zhHans": "莫兰迪高级灰",
+    "zhHant": "莫蘭迪高級灰"
+  },
+  "theme_palette_bauhaus": {
+    "en": "Bauhaus Industrial",
+    "ja": "バウハウス インダストリアル",
+    "ko": "바우하우스 인더스트리얼",
+    "th": "เบาเฮาส์ อินดัสเทรียล",
+    "zhHans": "包豪斯复古工业",
+    "zhHant": "包浩斯復古工業"
+  },
+  "theme_palette_cyberpunk": {
+    "en": "Cyberpunk Neon",
+    "ja": "サイバーパンク ネオン",
+    "ko": "사이버펑크 네온",
+    "th": "ไซเบอร์พังก์ นีออน",
+    "zhHans": "赛博霓虹",
+    "zhHant": "賽博霓虹"
+  },
+  "material_sus304_trait": {
+    "en": "Austenitic, corrosion-resistant",
+    "ja": "オーステナイト系・耐食",
+    "ko": "오스테나이트계 내식",
+    "th": "ออสเทนนิติก ทนการกัดกร่อน",
+    "zhHans": "奥氏体防蚀",
+    "zhHant": "奧氏體防蝕"
+  },
+  "material_sus304_spec": {
+    "en": "Tensile ≥520 MPa / brushed and passivated",
+    "ja": "引張強さ ≥520 MPa／ヘアライン・不動態化",
+    "ko": "인장강도 ≥520 MPa / 헤어라인·부동태 처리",
+    "th": "ความต้านแรงดึง ≥520 MPa / ขัดลายเส้นและพาสซิเวต",
+    "zhHans": "抗拉强度 ≥520 MPa / 表面拉丝钝化处理",
+    "zhHant": "抗拉強度 ≥520 MPa / 表面拉絲鈍化處理"
+  },
+  "material_al6061_trait": {
+    "en": "Aerospace-grade stiffness",
+    "ja": "航空機グレード・高剛性",
+    "ko": "항공용 고강성",
+    "th": "เกรดอากาศยาน แข็งแกร่งสูง",
+    "zhHans": "航空高刚性",
+    "zhHant": "航空高剛性"
+  },
+  "material_al6061_spec": {
+    "en": "Tensile ≥290 MPa / 12 µm hard anodising",
+    "ja": "引張強さ ≥290 MPa／硬質アルマイト 12μm",
+    "ko": "인장강도 ≥290 MPa / 경질 아노다이징 12 µm",
+    "th": "ความต้านแรงดึง ≥290 MPa / อโนไดซ์แข็ง 12 ไมครอน",
+    "zhHans": "抗拉强度 ≥290 MPa / 12μm 硬质阳极氧化",
+    "zhHant": "抗拉強度 ≥290 MPa / 12μm 硬質陽極氧化"
+  },
+  "material_pcabs_trait": {
+    "en": "Flame-retardant, impact-resistant",
+    "ja": "難燃・耐衝撃",
+    "ko": "난연·내충격",
+    "th": "หน่วงไฟ ทนแรงกระแทก",
+    "zhHans": "阻燃抗冲击",
+    "zhHant": "阻燃抗衝擊"
+  },
+  "material_pcabs_spec": {
+    "en": "UL94 V-0 / textured mould finish",
+    "ja": "UL94 V-0／シボ加工表面",
+    "ko": "UL94 V-0 / 시보 텍스처 표면",
+    "th": "UL94 V-0 / ผิวลายหนังจากแม่พิมพ์",
+    "zhHans": "UL94 V0 耐燃 / 模具咬花皮纹表面",
+    "zhHant": "UL94 V0 耐燃 / 模具咬花皮紋表面"
+  },
+  "material_pom_trait": {
+    "en": "Wear-resistant, self-lubricating",
+    "ja": "耐摩耗・自己潤滑",
+    "ko": "내마모·자기윤활",
+    "th": "ทนสึกหรอ หล่อลื่นในตัว",
+    "zhHans": "耐磨自润滑",
+    "zhHant": "耐磨自潤滑"
+  },
+  "material_pom_spec": {
+    "en": "Friction 0.25 / gears, bearings, sliders",
+    "ja": "摩擦係数 0.25／歯車・軸受・スライダー向け",
+    "ko": "마찰계수 0.25 / 기어·베어링·슬라이더용",
+    "th": "สัมประสิทธิ์แรงเสียดทาน 0.25 / เฟือง แบริ่ง สไลเดอร์",
+    "zhHans": "摩擦系数 0.25 / 齿轮与轴承滑块专用",
+    "zhHant": "摩擦係數 0.25 / 齒輪與軸承滑塊專用"
+  },
+  "material_skd11_trait": {
+    "en": "Very high wear resistance",
+    "ja": "極めて高い耐摩耗性",
+    "ko": "초고내마모성",
+    "th": "ทนการสึกหรอสูงมาก",
+    "zhHans": "极高耐磨性",
+    "zhHant": "極高耐磨性"
+  },
+  "material_skd11_spec": {
+    "en": "HRC 58–62 quenched and tempered / precision punches",
+    "ja": "焼入焼戻し HRC 58–62／精密プレスパンチ",
+    "ko": "담금질·뜨임 HRC 58–62 / 정밀 프레스 펀치",
+    "th": "ชุบแข็งและอบคืนตัว HRC 58–62 / พันช์ปั๊มความแม่นยำสูง",
+    "zhHans": "淬火回火硬度 HRC 58-62 / 精密冲压冲头",
+    "zhHant": "淬火回火硬度 HRC 58-62 / 精密沖壓沖頭"
+  },
+  "material_card_title": {
+    "en": "Material spec",
+    "ja": "材料仕様",
+    "ko": "재료 사양",
+    "th": "ข้อมูลจำเพาะวัสดุ",
+    "zhHans": "材料规格",
+    "zhHant": "材料規格"
+  },
+  "material_card_trait": {
+    "en": "Properties",
+    "ja": "特性",
+    "ko": "특성",
+    "th": "คุณสมบัติ",
+    "zhHans": "特性",
+    "zhHant": "特性"
+  },
+  "material_card_process": {
+    "en": "Process",
+    "ja": "加工仕様",
+    "ko": "공정 지표",
+    "th": "กระบวนการผลิต",
+    "zhHans": "工艺指标",
+    "zhHant": "工藝指標"
+  },
+  "wireframe_navbar": {
+    "en": "Mobile top nav bar",
+    "ja": "モバイル ナビゲーションバー",
+    "ko": "모바일 상단 내비게이션 바",
+    "th": "แถบนำทางด้านบนบนมือถือ",
+    "zhHans": "移动端顶部导航栏",
+    "zhHant": "行動端頂部導航列"
+  },
+  "wireframe_tabbar": {
+    "en": "Bottom tab bar (5 tabs)",
+    "ja": "ボトムタブバー（5 タブ）",
+    "ko": "하단 탭 바 (5개 탭)",
+    "th": "แถบแท็บด้านล่าง (5 แท็บ)",
+    "zhHans": "底部五分页 TabBar",
+    "zhHant": "底部五分頁 TabBar"
+  },
+  "wireframe_button": {
+    "en": "Primary action button (CTA)",
+    "ja": "主要アクションボタン（CTA）",
+    "ko": "주요 행동 버튼 (CTA)",
+    "th": "ปุ่มหลัก (CTA)",
+    "zhHans": "主要行动按钮 (CTA)",
+    "zhHant": "主要行動按鈕 (CTA)"
+  },
+  "wireframe_input": {
+    "en": "Search input field",
+    "ja": "検索入力フィールド",
+    "ko": "검색 입력 필드",
+    "th": "ช่องค้นหา",
+    "zhHans": "搜索输入文本框",
+    "zhHant": "搜尋輸入文字框"
+  },
+  "wireframe_card": {
+    "en": "Content card",
+    "ja": "コンテンツカード",
+    "ko": "콘텐츠 카드",
+    "th": "การ์ดเนื้อหา",
+    "zhHans": "内容信息卡片",
+    "zhHant": "內容資訊卡片"
+  },
+  "wireframe_modal": {
+    "en": "Modal dialog",
+    "ja": "モーダルダイアログ",
+    "ko": "모달 대화상자",
+    "th": "กล่องโต้ตอบแบบโมดัล",
+    "zhHans": "对话框弹窗 (Modal)",
+    "zhHant": "對話框彈窗 (Modal)"
+  },
+  "gesture_tap": {
+    "en": "Tap → next",
+    "ja": "タップで遷移",
+    "ko": "탭하여 이동",
+    "th": "แตะเพื่อไปต่อ",
+    "zhHans": "点击跳转",
+    "zhHant": "點擊跳轉"
+  },
+  "gesture_swipe": {
+    "en": "Swipe to switch",
+    "ja": "スワイプで切り替え",
+    "ko": "스와이프로 전환",
+    "th": "ปัดเพื่อสลับ",
+    "zhHans": "左右滑动切换",
+    "zhHant": "左右滑動切換"
+  },
+  "gesture_long_press": {
+    "en": "Long press for menu",
+    "ja": "長押しでメニュー",
+    "ko": "길게 눌러 메뉴",
+    "th": "กดค้างเพื่อเปิดเมนู",
+    "zhHans": "长按触发菜单",
+    "zhHant": "長按觸發選單"
+  },
+  "gesture_decision": {
+    "en": "Decision (if/else)",
+    "ja": "条件分岐（if/else）",
+    "ko": "조건 분기 (if/else)",
+    "th": "เงื่อนไขแยกทาง (if/else)",
+    "zhHans": "条件判断分支",
+    "zhHant": "條件判斷分支"
+  },
+  "gesture_loading": {
+    "en": "Loading / refresh",
+    "ja": "読み込み・更新",
+    "ko": "로딩·새로고침",
+    "th": "กำลังโหลด / รีเฟรช",
+    "zhHans": "加载更新状态",
+    "zhHant": "載入更新狀態"
+  },
+  "gesture_success": {
+    "en": "Success feedback",
+    "ja": "成功フィードバック",
+    "ko": "성공 피드백",
+    "th": "แจ้งผลสำเร็จ",
+    "zhHans": "成功验证反馈",
+    "zhHant": "成功驗證回饋"
+  },
+  "model_scale": {
+    "en": "Scale",
+    "ja": "スケール",
+    "ko": "크기",
+    "th": "ขนาด",
+    "zhHans": "缩放",
+    "zhHant": "縮放"
   }
 }

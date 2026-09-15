@@ -29,6 +29,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         /** v3.8.0 的舊欄位：整本一份。只讀不寫，見 format-spec §6.2.1。 */
         private const val KEY_LEGACY_ORDER = "objectOrder"
         private const val KEY_COMMENT_PINS = "commentPins"
+        private const val KEY_MODELS_3D = "model3DAttachments"
 
         fun load(session: PadnoteSession?): NotebookMeta {
             val json = runCatching { session?.notebookMeta() }.getOrNull()
@@ -67,6 +68,22 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         pins: List<com.kairumo.padnote.comment.CommentPin>
     ) {
         root.put(KEY_COMMENT_PINS, com.kairumo.padnote.comment.CommentPinCodec.encodeAll(pins))
+        runCatching { session?.setNotebookMeta(root.toString()) }
+    }
+
+    /**
+     * 這本筆記的 3D 模型。核心沒有對應的區塊型別，所以 Apple 端把它們
+     * 原樣放在中繼資料裡，Android 讀寫的是同一個鍵。
+     */
+    fun models3D(): MutableList<com.kairumo.padnote.model3d.Model3DObject> =
+        com.kairumo.padnote.model3d.Model3DCodec.decodeAll(root.optJSONArray(KEY_MODELS_3D))
+
+    /** 寫回 3D 模型並落盤。其餘欄位原封不動 —— 見這個類別開頭的說明。 */
+    fun setModels3D(
+        session: PadnoteSession?,
+        models: List<com.kairumo.padnote.model3d.Model3DObject>
+    ) {
+        root.put(KEY_MODELS_3D, com.kairumo.padnote.model3d.Model3DCodec.encodeAll(models))
         runCatching { session?.setNotebookMeta(root.toString()) }
     }
 

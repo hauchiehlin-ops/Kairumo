@@ -2175,6 +2175,54 @@ extension LocalizationManager {
             .ko: "기하학적 도형",
             .th: "รูปทรงเรขาคณิต"
         ],
+        "gesture_decision": [
+            .zhHant: "條件判斷分支",
+            .en: "Decision (if/else)",
+            .zhHans: "条件判断分支",
+            .ja: "条件分岐（if/else）",
+            .ko: "조건 분기 (if/else)",
+            .th: "เงื่อนไขแยกทาง (if/else)"
+        ],
+        "gesture_loading": [
+            .zhHant: "載入更新狀態",
+            .en: "Loading / refresh",
+            .zhHans: "加载更新状态",
+            .ja: "読み込み・更新",
+            .ko: "로딩·새로고침",
+            .th: "กำลังโหลด / รีเฟรช"
+        ],
+        "gesture_long_press": [
+            .zhHant: "長按觸發選單",
+            .en: "Long press for menu",
+            .zhHans: "长按触发菜单",
+            .ja: "長押しでメニュー",
+            .ko: "길게 눌러 메뉴",
+            .th: "กดค้างเพื่อเปิดเมนู"
+        ],
+        "gesture_success": [
+            .zhHant: "成功驗證回饋",
+            .en: "Success feedback",
+            .zhHans: "成功验证反馈",
+            .ja: "成功フィードバック",
+            .ko: "성공 피드백",
+            .th: "แจ้งผลสำเร็จ"
+        ],
+        "gesture_swipe": [
+            .zhHant: "左右滑動切換",
+            .en: "Swipe to switch",
+            .zhHans: "左右滑动切换",
+            .ja: "スワイプで切り替え",
+            .ko: "스와이프로 전환",
+            .th: "ปัดเพื่อสลับ"
+        ],
+        "gesture_tap": [
+            .zhHant: "點擊跳轉",
+            .en: "Tap → next",
+            .zhHans: "点击跳转",
+            .ja: "タップで遷移",
+            .ko: "탭하여 이동",
+            .th: "แตะเพื่อไปต่อ"
+        ],
         "golden_spiral_desc": [
             .zhHant: "以 1:1.618 斐波那契螺旋疊加於畫布，引導視覺焦點",
             .en: "1:1.618 Fibonacci spiral overlay to guide focal point",
@@ -3167,6 +3215,94 @@ extension LocalizationManager {
             .ko: "목재",
             .th: "ไม้"
         ],
+        "material_al6061_spec": [
+            .zhHant: "抗拉強度 ≥290 MPa / 12μm 硬質陽極氧化",
+            .en: "Tensile ≥290 MPa / 12 µm hard anodising",
+            .zhHans: "抗拉强度 ≥290 MPa / 12μm 硬质阳极氧化",
+            .ja: "引張強さ ≥290 MPa／硬質アルマイト 12μm",
+            .ko: "인장강도 ≥290 MPa / 경질 아노다이징 12 µm",
+            .th: "ความต้านแรงดึง ≥290 MPa / อโนไดซ์แข็ง 12 ไมครอน"
+        ],
+        "material_al6061_trait": [
+            .zhHant: "航空高剛性",
+            .en: "Aerospace-grade stiffness",
+            .zhHans: "航空高刚性",
+            .ja: "航空機グレード・高剛性",
+            .ko: "항공용 고강성",
+            .th: "เกรดอากาศยาน แข็งแกร่งสูง"
+        ],
+        "material_card_process": [
+            .zhHant: "工藝指標",
+            .en: "Process",
+            .zhHans: "工艺指标",
+            .ja: "加工仕様",
+            .ko: "공정 지표",
+            .th: "กระบวนการผลิต"
+        ],
+        "material_card_title": [
+            .zhHant: "材料規格",
+            .en: "Material spec",
+            .zhHans: "材料规格",
+            .ja: "材料仕様",
+            .ko: "재료 사양",
+            .th: "ข้อมูลจำเพาะวัสดุ"
+        ],
+        "material_card_trait": [
+            .zhHant: "特性",
+            .en: "Properties",
+            .zhHans: "特性",
+            .ja: "特性",
+            .ko: "특성",
+            .th: "คุณสมบัติ"
+        ],
+        "material_pcabs_spec": [
+            .zhHant: "UL94 V0 耐燃 / 模具咬花皮紋表面",
+            .en: "UL94 V-0 / textured mould finish",
+            .zhHans: "UL94 V0 耐燃 / 模具咬花皮纹表面",
+            .ja: "UL94 V-0／シボ加工表面",
+            .ko: "UL94 V-0 / 시보 텍스처 표면",
+            .th: "UL94 V-0 / ผิวลายหนังจากแม่พิมพ์"
+        ],
+        "material_pcabs_trait": [
+            .zhHant: "阻燃抗衝擊",
+            .en: "Flame-retardant, impact-resistant",
+            .zhHans: "阻燃抗冲击",
+            .ja: "難燃・耐衝撃",
+            .ko: "난연·내충격",
+            .th: "หน่วงไฟ ทนแรงกระแทก"
+        ],
+        "material_pom_spec": [
+            .zhHant: "摩擦係數 0.25 / 齒輪與軸承滑塊專用",
+            .en: "Friction 0.25 / gears, bearings, sliders",
+            .zhHans: "摩擦系数 0.25 / 齿轮与轴承滑块专用",
+            .ja: "摩擦係数 0.25／歯車・軸受・スライダー向け",
+            .ko: "마찰계수 0.25 / 기어·베어링·슬라이더용",
+            .th: "สัมประสิทธิ์แรงเสียดทาน 0.25 / เฟือง แบริ่ง สไลเดอร์"
+        ],
+        "material_pom_trait": [
+            .zhHant: "耐磨自潤滑",
+            .en: "Wear-resistant, self-lubricating",
+            .zhHans: "耐磨自润滑",
+            .ja: "耐摩耗・自己潤滑",
+            .ko: "내마모·자기윤활",
+            .th: "ทนสึกหรอ หล่อลื่นในตัว"
+        ],
+        "material_skd11_spec": [
+            .zhHant: "淬火回火硬度 HRC 58-62 / 精密沖壓沖頭",
+            .en: "HRC 58–62 quenched and tempered / precision punches",
+            .zhHans: "淬火回火硬度 HRC 58-62 / 精密冲压冲头",
+            .ja: "焼入焼戻し HRC 58–62／精密プレスパンチ",
+            .ko: "담금질·뜨임 HRC 58–62 / 정밀 프레스 펀치",
+            .th: "ชุบแข็งและอบคืนตัว HRC 58–62 / พันช์ปั๊มความแม่นยำสูง"
+        ],
+        "material_skd11_trait": [
+            .zhHant: "極高耐磨性",
+            .en: "Very high wear resistance",
+            .zhHans: "极高耐磨性",
+            .ja: "極めて高い耐摩耗性",
+            .ko: "초고내마모성",
+            .th: "ทนการสึกหรอสูงมาก"
+        ],
         "material_specs_card": [
             .zhHant: "材料規格卡",
             .en: "Material Specs Card",
@@ -3190,6 +3326,22 @@ extension LocalizationManager {
             .ja: "マテリアル",
             .ko: "재질 특성",
             .th: "คุณสมบัติวัสดุ"
+        ],
+        "material_sus304_spec": [
+            .zhHant: "抗拉強度 ≥520 MPa / 表面拉絲鈍化處理",
+            .en: "Tensile ≥520 MPa / brushed and passivated",
+            .zhHans: "抗拉强度 ≥520 MPa / 表面拉丝钝化处理",
+            .ja: "引張強さ ≥520 MPa／ヘアライン・不動態化",
+            .ko: "인장강도 ≥520 MPa / 헤어라인·부동태 처리",
+            .th: "ความต้านแรงดึง ≥520 MPa / ขัดลายเส้นและพาสซิเวต"
+        ],
+        "material_sus304_trait": [
+            .zhHant: "奧氏體防蝕",
+            .en: "Austenitic, corrosion-resistant",
+            .zhHans: "奥氏体防蚀",
+            .ja: "オーステナイト系・耐食",
+            .ko: "오스테나이트계 내식",
+            .th: "ออสเทนนิติก ทนการกัดกร่อน"
         ],
         "math_calc": [
             .zhHant: "算式計算",
@@ -3463,6 +3615,14 @@ extension LocalizationManager {
             .ko: "3D 모델",
             .th: "โมเดล 3 มิติ"
         ],
+        "model_scale": [
+            .zhHant: "縮放",
+            .en: "Scale",
+            .zhHans: "缩放",
+            .ja: "スケール",
+            .ko: "크기",
+            .th: "ขนาด"
+        ],
         "model_title": [
             .zhHant: "物件名稱",
             .en: "Object Title",
@@ -3622,6 +3782,14 @@ extension LocalizationManager {
             .ja: "まだノートがありません。「新規ノート」から始めましょう。",
             .ko: "아직 노트가 없습니다. ‘새 노트’로 시작하세요.",
             .th: "ยังไม่มีโน้ต แตะ “โน้ตใหม่” เพื่อเริ่ม"
+        ],
+        "nothing_to_refine": [
+            .zhHant: "沒有可修飾的筆跡 —— 請先寫點東西",
+            .en: "Nothing to refine — draw something first",
+            .zhHans: "没有可修饰的笔迹 —— 请先写点东西",
+            .ja: "補正できる筆跡がありません。先に何か書いてください",
+            .ko: "보정할 필기가 없습니다. 먼저 무언가를 써 보세요",
+            .th: "ยังไม่มีลายเส้นให้ปรับแต่ง — ลองเขียนอะไรสักอย่างก่อน"
         ],
         "numbered_list": [
             .zhHant: "編號清單",
@@ -5303,6 +5471,38 @@ extension LocalizationManager {
             .ko: "기본 스타일",
             .th: "ทั่วไป"
         ],
+        "theme_palette_bauhaus": [
+            .zhHant: "包浩斯復古工業",
+            .en: "Bauhaus Industrial",
+            .zhHans: "包豪斯复古工业",
+            .ja: "バウハウス インダストリアル",
+            .ko: "바우하우스 인더스트리얼",
+            .th: "เบาเฮาส์ อินดัสเทรียล"
+        ],
+        "theme_palette_cyberpunk": [
+            .zhHant: "賽博霓虹",
+            .en: "Cyberpunk Neon",
+            .zhHans: "赛博霓虹",
+            .ja: "サイバーパンク ネオン",
+            .ko: "사이버펑크 네온",
+            .th: "ไซเบอร์พังก์ นีออน"
+        ],
+        "theme_palette_morandi": [
+            .zhHant: "莫蘭迪高級灰",
+            .en: "Morandi Serene",
+            .zhHans: "莫兰迪高级灰",
+            .ja: "モランディ グレージュ",
+            .ko: "모란디 뮤트 톤",
+            .th: "โทนมอรันดี"
+        ],
+        "theme_palette_trend": [
+            .zhHant: "Pantone 季節潮流色",
+            .en: "Pantone Trend Palette",
+            .zhHans: "Pantone 季节潮流色",
+            .ja: "パントン トレンドカラー",
+            .ko: "팬톤 트렌드 컬러",
+            .th: "พาเลตต์เทรนด์ Pantone"
+        ],
         "theme_tools": [
             .zhHant: "主題工具",
             .en: "Theme Tools",
@@ -5711,6 +5911,30 @@ extension LocalizationManager {
             .ko: "버전",
             .th: "เวอร์ชัน"
         ],
+        "wireframe_button": [
+            .zhHant: "主要行動按鈕 (CTA)",
+            .en: "Primary action button (CTA)",
+            .zhHans: "主要行动按钮 (CTA)",
+            .ja: "主要アクションボタン（CTA）",
+            .ko: "주요 행동 버튼 (CTA)",
+            .th: "ปุ่มหลัก (CTA)"
+        ],
+        "wireframe_card": [
+            .zhHant: "內容資訊卡片",
+            .en: "Content card",
+            .zhHans: "内容信息卡片",
+            .ja: "コンテンツカード",
+            .ko: "콘텐츠 카드",
+            .th: "การ์ดเนื้อหา"
+        ],
+        "wireframe_input": [
+            .zhHant: "搜尋輸入文字框",
+            .en: "Search input field",
+            .zhHans: "搜索输入文本框",
+            .ja: "検索入力フィールド",
+            .ko: "검색 입력 필드",
+            .th: "ช่องค้นหา"
+        ],
         "wireframe_kit": [
             .zhHant: "UI 原型線框",
             .en: "UI Wireframes",
@@ -5718,6 +5942,30 @@ extension LocalizationManager {
             .ja: "UI ワイヤーフレーム",
             .ko: "UI 와이어프레임",
             .th: "ไวร์เฟรม UI"
+        ],
+        "wireframe_modal": [
+            .zhHant: "對話框彈窗 (Modal)",
+            .en: "Modal dialog",
+            .zhHans: "对话框弹窗 (Modal)",
+            .ja: "モーダルダイアログ",
+            .ko: "모달 대화상자",
+            .th: "กล่องโต้ตอบแบบโมดัล"
+        ],
+        "wireframe_navbar": [
+            .zhHant: "行動端頂部導航列",
+            .en: "Mobile top nav bar",
+            .zhHans: "移动端顶部导航栏",
+            .ja: "モバイル ナビゲーションバー",
+            .ko: "모바일 상단 내비게이션 바",
+            .th: "แถบนำทางด้านบนบนมือถือ"
+        ],
+        "wireframe_tabbar": [
+            .zhHant: "底部五分頁 TabBar",
+            .en: "Bottom tab bar (5 tabs)",
+            .zhHans: "底部五分页 TabBar",
+            .ja: "ボトムタブバー（5 タブ）",
+            .ko: "하단 탭 바 (5개 탭)",
+            .th: "แถบแท็บด้านล่าง (5 แท็บ)"
         ],
         "word_studio": [
             .zhHant: "Word文字編修",
