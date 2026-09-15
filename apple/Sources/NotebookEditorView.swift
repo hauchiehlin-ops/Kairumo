@@ -546,6 +546,11 @@ struct CanvasRepresentable: UIViewRepresentable {
     /// 無從對齊紙張。現在頁面高度固定，到底了就準備下一頁。
     var onReachedPageBottom: (() -> Void)?
     var onSelectionChanged: ((Bool) -> Void)?
+    /// 套索手勢。點是**畫布內容座標**（含捲動位移），不是螢幕座標 ——
+    /// 用螢幕座標的話，捲過一段之後圈選會整個偏掉。
+    var onLassoBegan: ((CGPoint) -> Void)?
+    var onLassoMoved: ((CGPoint) -> Void)?
+    var onLassoEnded: (() -> Void)?
     var canvasRef: ((PKCanvasView) -> Void)?
     /// 回報捲動狀態（可見比例、捲動比例），給自訂捲軸用
     var onScrollMetrics: ((_ visibleFraction: CGFloat, _ scrollFraction: CGFloat) -> Void)?
@@ -602,6 +607,16 @@ struct CanvasRepresentable: UIViewRepresentable {
         canvas.templateBackgroundView = bgView
         context.coordinator.backgroundView = bgView
 
+        // 套索手勢。**一直裝著**，只用 isEnabled 開關 —— 每次切換工具都
+        // 裝拆一次的話，切到套索的第一筆會因為辨識器還沒就緒而漏掉。
+        let lassoPan = UIPanGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleLassoPan(_:)))
+        lassoPan.maximumNumberOfTouches = 1
+        lassoPan.isEnabled = (selectedTool == .lasso)
+        canvas.addGestureRecognizer(lassoPan)
+        context.coordinator.lassoPan = lassoPan
+
         context.coordinator.parent = self
         context.coordinator.applyTool(to: canvas)
         canvasRef?(canvas)
@@ -611,6 +626,9 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     func updateUIView(_ uiView: PKCanvasView, context: Context) {
         context.coordinator.parent = self
+        // 工具換了就要跟著開關。只在 makeUIView 設的話，切到套索之後
+        // 手勢仍然是關的 —— 圈不出任何東西，而且沒有任何錯誤。
+        context.coordinator.lassoPan?.isEnabled = (selectedTool == .lasso)
         // 模式切換時要跟著改 —— 只在 makeUIView 設的話，從連續切回整頁
         // 會得到一個捲不動的畫布（SwiftUI 會重用同一個 UIView）。
         if uiView.isScrollEnabled != isScrollEnabled {
@@ -671,6 +689,28 @@ struct CanvasRepresentable: UIViewRepresentable {
         var parent: CanvasRepresentable
         weak var backgroundView: TemplateCanvasBackgroundView?
         var isProgrammaticUpdate: Bool = false
+        /// 套索手勢。切換工具時只改 isEnabled，不重裝。
+        weak var lassoPan: UIPanGestureRecognizer?
+
+        /// 套索拖曳。點換算成**畫布內容座標**（含捲動位移）。
+        ///
+        /// 用 `location(in: canvas)` 而不是螢幕座標：PKCanvasView 是一個
+        /// scroll view，捲過一段之後兩者差了一個 contentOffset，
+        /// 而症狀是「捲到第二頁之後圈選整個偏掉」。
+        @objc func handleLassoPan(_ gesture: UIPanGestureRecognizer) {
+            guard let canvas = gesture.view as? PKCanvasView else { return }
+            let point = gesture.location(in: canvas)
+            switch gesture.state {
+            case .began:
+                parent.onLassoBegan?(point)
+            case .changed:
+                parent.onLassoMoved?(point)
+            case .ended, .cancelled, .failed:
+                parent.onLassoEnded?()
+            default:
+                break
+            }
+        }
 
         init(_ parent: CanvasRepresentable) {
             self.parent = parent
@@ -703,11 +743,6 @@ struct CanvasRepresentable: UIViewRepresentable {
                   let path = canvas.brushPointerPath else { return nil }
             // 不加 `constrainedAxes`：筆頭要能自由移動，限制軸是給滑桿用的。
             return UIPointerStyle(shape: .path(path), constrainedAxes: [])
-        }
-
-        func canvasViewSelectionDidChange(_ canvasView: PKCanvasView) {
-            let hasSel = parent.checkHasSelection(in: canvasView)
-            parent.onSelectionChanged?(hasSel)
         }
 
         func applyTool(to canvas: PKCanvasView) {
@@ -757,26 +792,16 @@ struct CanvasRepresentable: UIViewRepresentable {
                 canvas.tool = PKEraserTool(.vector)
 
             case .lasso:
-                canvas.tool = PKLassoTool()
+                // **不用 PKLassoTool。** 它的選取狀態沒有公開介面，
+                // 唯一讀得到的方式是私有選擇器 —— 見 LassoSelection.swift。
+                // 套索期間把畫布的輸入整個關掉，手勢交給上面那層自己的
+                // 覆蓋層；不關的話使用者圈一圈就真的畫了一條線出來。
+                canvas.tool = PKInkingTool(.pen, color: .clear, width: 1)
             }
+            canvas.drawingGestureRecognizer.isEnabled = (parent.selectedTool != .lasso)
         }
     }
 
-    func checkHasSelection(in canvas: PKCanvasView) -> Bool {
-        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
-            let hasSel = NSSelectorFromString("_hasSelection")
-            if sv.responds(to: hasSel) {
-                let hasSelectionFunc = unsafeBitCast(
-                    sv.method(for: hasSel),
-                    to: (@convention(c) (AnyObject, Selector) -> Bool).self
-                )
-                if hasSelectionFunc(sv, hasSel) {
-                    return true
-                }
-            }
-        }
-        return false
-    }
 }
 
 /// 黃金螺旋構圖 HUD 疊層視圖 (Φ 1.618)
@@ -1096,7 +1121,8 @@ public struct NotebookEditorView: View {
     @State private var currentPageHeight: CGFloat = PageGeometry.height
     /// 掌拒（工作項 S-45）。判定規則走核心，與 Android 同一份。
     @State private var palmRejection = PalmRejectionCoordinator()
-    @State private var hasLassoSelection: Bool = false
+    /// 套索選取。自己做的 —— 理由見 LassoSelection.swift。
+    @StateObject private var lasso = LassoSelection()
     @State private var showExtendedBanner: Bool = false
 
     // 實體工具列狀態
@@ -1730,61 +1756,9 @@ public struct NotebookEditorView: View {
             .buttonStyle(.plain)
             .help(localizationManager.localized("asset_library"))
 
-            // ➕ 插入物件下拉選單（整合圖片、算式、圖表、3D、主題工具）
+            // ➕ 插入物件下拉選單。內容與其他入口同一份（insertMenuContent）。
             Menu {
-                Button {
-                    showAssetLibrarySheet = true
-                } label: {
-                    Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill")
-                }
-
-                Button {
-                    showPhotoPicker = true
-                } label: {
-                    Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus")
-                }
-
-                Button {
-                    showMathCalculator = true
-                } label: {
-                    Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus")
-                }
-
-                Button {
-                    showChartStudio = true
-                } label: {
-                    Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis")
-                }
-
-                Button {
-                    show3DStudio = true
-                } label: {
-                    Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent")
-                }
-
-                Button {
-                    showThemeToolsSheet = true
-                } label: {
-                    Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill")
-                }
-
-                Button {
-                    withAnimation {
-                        isPlacingCommentPin = true
-                    }
-                } label: {
-                    Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill")
-                }
-
-                ToolbarSeparator()
-
-                Button {
-                    withAnimation {
-                        showSketchRefineBar.toggle()
-                    }
-                } label: {
-                    Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars")
-                }
+                insertMenuContent
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "plus.circle.fill")
@@ -2080,28 +2054,7 @@ public struct NotebookEditorView: View {
         // 主要動作（首頁、模式、頁碼、錄音、匯出）留在列上，其餘收進選單，
         // 位置固定、不會因為視窗寬度而消失。
         Menu {
-            Section {
-                Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
-                Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
-                Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
-                Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
-                Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
-                Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
-                Button { showLayerPanel.toggle() } label: { Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d") }
-                Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
-                Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
-            } header: {
-                Text(localizationManager.localized("insert_object"))
-            }
-
-            Section {
-                Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
-                Button { withAnimation { isPlacingCommentPin.toggle() } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
-                Button { showCollaborationSheet = true } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }
-                Button { recognizeHandwritingOnCurrentPage() } label: {
-                    Label(localizationManager.localized("recognize_handwriting"), systemImage: "text.viewfinder")
-                }
-            }
+            insertMenuContent
         } label: {
             Image(systemName: "ellipsis.circle.fill")
                 .font(.caption)
@@ -2223,7 +2176,9 @@ public struct NotebookEditorView: View {
                             onDrawingChanged: { page, updated in
                                 broadcastDrawingChange(page: page, drawing: updated)
                             },
-                            onSelectionChanged: { hasLassoSelection = $0 },
+                            // 套索的選取狀態現在由 LassoSelection 自己管，
+                            // 不再靠 PencilKit 回報（它根本沒有公開介面）。
+                            onSelectionChanged: { _ in },
                             onReachedPageBottom: { ensureNextPageExists() },
                             canvasRef: { canvasView = $0 }
                         )
@@ -2551,9 +2506,10 @@ ZStack(alignment: .topTrailing) {
                 onReachedPageBottom: {
                     ensureNextPageExists()
                 },
-                onSelectionChanged: { hasSel in
-                    self.hasLassoSelection = hasSel
-                },
+                onSelectionChanged: { _ in },
+                onLassoBegan: { lasso.begin(at: $0) },
+                onLassoMoved: { lasso.extend(to: $0) },
+                onLassoEnded: { lasso.finish(in: currentDrawing) },
                 canvasRef: { ref in
                     self.canvasView = ref
                 },
@@ -2581,6 +2537,25 @@ ZStack(alignment: .topTrailing) {
                         }
                 }
             )
+            // 圈選中與圈選後的那一圈虛線。
+            //
+            // 疊在畫布**上面**，不進 PKDrawing —— 進去的話它會被存檔、
+            // 被匯出、被同步到另一台裝置，而它只是一個暫時的選取提示。
+            //
+            // 座標要扣掉捲動位移：這一層是 SwiftUI 的，用的是視圖座標，
+            // 而手勢收到的是畫布的內容座標。不扣的話，捲過一段之後
+            // 虛線框會留在上面看不見的地方。
+            .overlay(alignment: .topLeading) {
+                if selectedTool == .lasso {
+                    let offset = canvasView?.contentOffset ?? .zero
+                    let shown = lasso.path.isEmpty ? lasso.committed : lasso.path
+                    LassoPathOverlay(
+                        path: shown.map { CGPoint(x: $0.x - offset.x, y: $0.y - offset.y) },
+                        isCommitted: lasso.path.isEmpty
+                    )
+                    .allowsHitTesting(false)
+                }
+            }
 
             // 🌟 打字模式畫布互動層：**點兩下**空白處才新增文字方塊。
             //
@@ -2747,8 +2722,12 @@ ZStack(alignment: .topTrailing) {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
-            // 🌟 套索選取浮動控制面板（當套索工具啟動時浮現：支援剪下、複製、刪除選取筆劃）
-            if selectedTool == .lasso {
+            // 套索的浮動控制面板。
+            //
+            // **只在真的有東西可以做的時候出現。** 原本是「選了套索就出現」，
+            // 那時候還沒圈任何東西，每一顆按鈕都是空操作 —— 使用者按下去
+            // 什麼也不會發生，而畫面上也沒有任何提示說明為什麼。
+            if selectedTool == .lasso && (lasso.hasSelection || lasso.canPaste) {
                 VStack {
                     lassoFloatingActionBar
                         .padding(.top, 12)
@@ -2943,6 +2922,67 @@ ZStack(alignment: .topTrailing) {
         }
         .buttonStyle(.plain)
         .help(localizationManager.localized(hintKey))
+    }
+
+    /// 「更多／插入」選單的**唯一**內容。
+    ///
+    /// # 為什麼要合成一份
+    ///
+    /// 這份清單原本在四個地方各寫了一次（緊湊工具列、寬工具列、打字模式
+    /// 工具列、手寫模式工具列），而且**內容已經各自漂移**：有的有草圖修飾、
+    /// 有的沒有；有的有討論圖釘與線上協同、有的沒有；表格與形狀只在其中
+    /// 兩份裡。使用者看到的是「同一個『更多』按鈕，在不同地方點開來不一樣」。
+    ///
+    /// 合成一份之後，新增一個功能只要改這裡 —— 而那正是四份會漂移的原因：
+    /// 改了一處，另外三處沒人記得。
+    @ViewBuilder
+    private var insertMenuContent: some View {
+        Section {
+            Button { showAssetLibrarySheet = true } label: {
+                Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill")
+            }
+            Button { showPhotoPicker = true } label: {
+                Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus")
+            }
+            Button { showMathCalculator = true } label: {
+                Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus")
+            }
+            Button { showChartStudio = true } label: {
+                Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis")
+            }
+            Button { showTableStudio = true } label: {
+                Label(localizationManager.localized("table_studio"), systemImage: "tablecells")
+            }
+            Button { showShapeStudio = true } label: {
+                Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle")
+            }
+            Button { showLayerPanel.toggle() } label: {
+                Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d")
+            }
+            Button { show3DStudio = true } label: {
+                Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent")
+            }
+            Button { showThemeToolsSheet = true } label: {
+                Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill")
+            }
+        } header: {
+            Text(localizationManager.localized("insert_object"))
+        }
+
+        Section {
+            Button { withAnimation { showSketchRefineBar.toggle() } } label: {
+                Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars")
+            }
+            Button { withAnimation { isPlacingCommentPin.toggle() } } label: {
+                Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill")
+            }
+            Button { showCollaborationSheet = true } label: {
+                Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill")
+            }
+            Button { recognizeHandwritingOnCurrentPage() } label: {
+                Label(localizationManager.localized("recognize_handwriting"), systemImage: "text.viewfinder")
+            }
+        }
     }
 
     /// 版本標示（v2.2.0 這種）。點一下可複製，回報問題時直接貼上。
@@ -3692,38 +3732,15 @@ ZStack(alignment: .topTrailing) {
                     .help(localizationManager.localized("pro_color"))
                 }
 
-                // 若為套索選取工具，即時展開剪下、複製與刪除選取筆劃按鈕
-                if selectedTool == .lasso {
-                    ToolbarSeparator()
-                        .frame(height: 24)
-
-                    HStack(spacing: 6) {
-                        // 圖示配文字：純圖示看不出是「對選取的筆劃」做事
-                        lassoActionButton("scissors", "cut_selected", "cut_selected_hint") { cutSelectedStrokes() }
-                        lassoActionButton("doc.on.doc", "copy_selected", "copy_selected_hint") { copySelectedStrokes() }
-                        lassoActionButton("plus.square.on.square", "duplicate_selected", "duplicate_selected_hint") { duplicateSelectedStrokes() }
-                        lassoActionButton("doc.on.clipboard", "paste_strokes", "paste_strokes_hint") { pasteStrokes() }
-
-                        Button {
-                            deleteSelectedStrokes()
-                        } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "trash.fill")
-                                    .font(.caption)
-                                Text(localizationManager.localized("delete_selected"))
-                                    .font(.caption2)
-                                    .fontWeight(.medium)
-                            }
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .background(Color.red)
-                            .cornerRadius(6)
-                        }
-                        .buttonStyle(.plain)
-                        .help(localizationManager.localized("delete_selected"))
-                    }
-                }
+                // 套索的動作按鈕**不放在這裡**。
+                //
+                // 原本這裡有一整排（剪下／複製／再製／貼上／刪除），而畫布上
+                // 還有一個一模一樣的浮動列 —— 使用者看到的是「兩個重複的
+                // 工具列」。而且這一排在「選了套索但還沒圈任何東西」時就會
+                // 出現，那時候每一顆都是空操作。
+                //
+                // 現在只留畫布上那一個浮動列：它只在**真的有選取**時出現，
+                // 位置就在選取範圍旁邊，不必把視線拉回工具列。
 
                 ToolbarSeparator()
                     .frame(height: 24)
@@ -3733,17 +3750,7 @@ ZStack(alignment: .topTrailing) {
                 // 這些插入類工具原本全部攤在列上，視窗一窄就被擠出畫面外。
                 // 收進選單後位置固定，不會因為視窗寬度而消失。
                 Menu {
-                    Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
-                    Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
-                    Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
-                Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
-                Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
-                Button { showLayerPanel.toggle() } label: { Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d") }
-                    Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
-                    Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
-                    Divider()
-                    Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
-                    Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
+                    insertMenuContent
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "ellipsis.circle")
@@ -3902,16 +3909,7 @@ ZStack(alignment: .topTrailing) {
 
                 // ⋯ 更多：次要插入工具
                 Menu {
-                    Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
-                    Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
-                    Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
-                Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
-                Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
-                Button { showLayerPanel.toggle() } label: { Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d") }
-                    Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
-                    Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
-                    Divider()
-                    Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
+                    insertMenuContent
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "ellipsis.circle")
@@ -4419,7 +4417,9 @@ ZStack(alignment: .topTrailing) {
         self.currentDrawing = loaded
         self.lastStrokeCount = loaded.strokes.count
         self.currentPageHeight = notebook.height(forPage: currentPageIndex, defaultHeight: 1800)
-        self.hasLassoSelection = false
+        // 換頁就清掉選取：索引是對「這一頁的 strokes」講的，
+        // 留著會指到另一頁不相干的筆畫。
+        self.lasso.clear()
         self.originalSketchBackup = nil
         self.refinedSketchCache = nil
     }
@@ -4669,74 +4669,45 @@ ZStack(alignment: .topTrailing) {
         }
     }
 
+    // MARK: - 套索動作
+    //
+    // 五個動作全部只改 `PKDrawing.strokes`（公開 API），規則在
+    // LassoSelection.swift。原本的做法是把 `UIResponderStandardEditActions`
+    // 送給名稱裡含 `PKTiledView` 的私有子視圖，那在 Mac Catalyst 上
+    // **一顆都不會動** —— 使用者回報的「按鈕全部無效」就是這個。
+
+    /// 把改完的 drawing 寫回畫布並存檔。
+    ///
+    /// 三件事缺一不可：`currentDrawing` 是 SwiftUI 這一側的狀態、
+    /// `canvasView.drawing` 是畫面上真正顯示的那一份、存檔是落盤。
+    /// 少寫 `canvasView.drawing` 的話畫面不會變，使用者以為按鈕沒作用；
+    /// 少存檔的話重開筆記本就回到動作之前。
+    private func applyLassoResult(_ updated: PKDrawing?) {
+        guard let updated else { return }
+        currentDrawing = updated
+        canvasView?.drawing = updated
+        saveCurrentPageDrawing()
+    }
+
     private func deleteSelectedStrokes() {
-        guard let canvas = canvasView else { return }
-        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
-            if sv.responds(to: #selector(UIResponderStandardEditActions.delete(_:))) {
-                sv.perform(#selector(UIResponderStandardEditActions.delete(_:)), with: nil)
-            }
-        }
-        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.delete(_:)), to: nil, from: nil, for: nil)
-        self.currentDrawing = canvas.drawing
-        self.saveCurrentPageDrawing()
-        hasLassoSelection = false
+        applyLassoResult(lasso.deleteSelected(from: currentDrawing))
     }
 
     private func cutSelectedStrokes() {
-        guard let canvas = canvasView else { return }
-        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
-            if sv.responds(to: #selector(UIResponderStandardEditActions.cut(_:))) {
-                sv.perform(#selector(UIResponderStandardEditActions.cut(_:)), with: nil)
-            }
-        }
-        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.cut(_:)), to: nil, from: nil, for: nil)
-        self.currentDrawing = canvas.drawing
-        self.saveCurrentPageDrawing()
-        hasLassoSelection = false
-    }
-
-    /// 貼上剪貼簿中的筆劃。
-    ///
-    /// 為什麼需要自己做一顆：PencilKit 的內建選單（Cut / Copy / Duplicate…）只在
-    /// **有選取時**才出現，複製完取消選取後就沒有入口可以貼上了。
-    private func pasteStrokes() {
-        guard let canvas = canvasView else { return }
-        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
-            if sv.responds(to: #selector(UIResponderStandardEditActions.paste(_:))) {
-                sv.perform(#selector(UIResponderStandardEditActions.paste(_:)), with: nil)
-            }
-        }
-        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.paste(_:)), to: nil, from: nil, for: nil)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            self.currentDrawing = canvas.drawing
-            self.saveCurrentPageDrawing()
-        }
-    }
-
-    /// 就地複製選取的筆劃並稍微偏移（不經過剪貼簿）—— 這就是「再製」與「複製」的差別：
-    /// 「複製」把東西放進剪貼簿等你貼上，「再製」直接在旁邊多一份。
-    private func duplicateSelectedStrokes() {
-        guard let canvas = canvasView else { return }
-        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
-            if sv.responds(to: #selector(UIResponderStandardEditActions.duplicate(_:))) {
-                sv.perform(#selector(UIResponderStandardEditActions.duplicate(_:)), with: nil)
-            }
-        }
-        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.duplicate(_:)), to: nil, from: nil, for: nil)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            self.currentDrawing = canvas.drawing
-            self.saveCurrentPageDrawing()
-        }
+        applyLassoResult(lasso.cutSelected(from: currentDrawing))
     }
 
     private func copySelectedStrokes() {
-        guard let canvas = canvasView else { return }
-        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
-            if sv.responds(to: #selector(UIResponderStandardEditActions.copy(_:))) {
-                sv.perform(#selector(UIResponderStandardEditActions.copy(_:)), with: nil)
-            }
-        }
-        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.copy(_:)), to: nil, from: nil, for: nil)
+        // 複製不改內容，所以不必寫回畫布，也不必存檔。
+        lasso.copySelected(from: currentDrawing)
+    }
+
+    private func duplicateSelectedStrokes() {
+        applyLassoResult(lasso.duplicateSelected(in: currentDrawing))
+    }
+
+    private func pasteStrokes() {
+        applyLassoResult(lasso.paste(into: currentDrawing))
     }
 
     private func stopAndSaveRecording() {

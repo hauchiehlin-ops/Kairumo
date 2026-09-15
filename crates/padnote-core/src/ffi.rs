@@ -622,6 +622,159 @@ impl PadnoteSession {
             .map(to_full_stroke))
     }
 
+    // ---- 套索選取 ----
+    //
+    // # 為什麼選取要在核心
+    //
+    // Apple 端原本是拿 `UIResponderStandardEditActions` 去戳 PencilKit 的私有
+    // 子視圖（`PKTiledView`），靠它自己的選取狀態做剪下／複製／刪除。那條路
+    // 有三個問題，而且是同時發生的：
+    //
+    // 1. 相依於私有的視圖類別名稱 —— 換一版 iOS 就可能整組失效，而且不會
+    //    有任何錯誤，按鈕只是沒反應。
+    // 2. 送給不是 first responder 的視圖，那些 action 根本不會被執行。
+    // 3. Mac Catalyst 的 responder chain 與 PencilKit 的套索實作都不一樣。
+    //
+    // 結果就是使用者看到的：**按鈕全部沒有作用。**
+    //
+    // 更根本的是 Android 完全沒有套索 —— 那條路裡沒有一行是可以共用的。
+    // 選取本身是純幾何（點在不在多邊形裡），放進核心兩邊就是同一套。
+
+    /// 被套索圈中的筆畫 id。
+    ///
+    /// `polygon` 是**頁面座標**下的多邊形，成對排列 `[x0, y0, x1, y1, …]`。
+    /// 用扁平陣列而不是點的陣列：跨 FFI 邊界時前者是一次記憶體複製，
+    /// 後者要逐一建構結構。
+    ///
+    /// 判定是「**整條**都在裡面」，與橡皮擦的部分命中不同 ——
+    /// 圈到一半的筆畫被選走，使用者會覺得選取很難控制。
+    pub fn lasso_select(
+        &self,
+        page_id: String,
+        polygon: Vec<f32>,
+    ) -> Result<Vec<String>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let poly = to_polygon(&polygon);
+        Ok(self
+            .lock()
+            .visible_strokes(page)?
+            .into_iter()
+            .filter(|s| s.is_enclosed_by_polygon(&poly))
+            .map(|s| s.id.to_string())
+            .collect())
+    }
+
+    /// 刪除一組筆畫。
+    ///
+    /// 一次收一整組而不是讓平台層逐一呼叫：中途失敗時前面那幾筆已經刪掉了，
+    /// 使用者看到的是「刪了一半」，而且沒有東西告訴他發生什麼事。
+    /// 這裡遇到不存在的 id 直接跳過 —— 它可能剛被另一台裝置刪掉，
+    /// 那不是錯誤。
+    ///
+    /// 回傳的是**真的從畫面上消失的筆數**，不是「呼叫成功幾次」。
+    /// `erase_stroke` 本身是冪等的（重複擦只是多一個墓碑，不會失敗），
+    /// 所以數「沒有出錯的次數」會把已經不在的那幾筆也算進去 ——
+    /// 呼叫端拿它去顯示「已刪除 N 筆」就會報出一個比實際多的數字。
+    pub fn lasso_delete(&self, page_id: String, stroke_ids: Vec<String>) -> Result<u32, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let visible: std::collections::BTreeSet<String> = self
+            .lock()
+            .visible_strokes(page)?
+            .into_iter()
+            .map(|s| s.id.to_string())
+            .collect();
+
+        let mut removed = 0u32;
+        for id in &stroke_ids {
+            if !visible.contains(id) {
+                continue;
+            }
+            let Ok(stroke) = parse_uuid(id) else { continue };
+            if self.lock().erase_stroke(page, stroke).is_ok() {
+                removed += 1;
+            }
+        }
+        Ok(removed)
+    }
+
+    /// 把一組筆畫的完整內容取出來，當成剪貼簿內容。
+    ///
+    /// 回傳的是 [`FullStroke`]，平台層原樣存著就好，不必看懂內容。
+    /// **不放進系統剪貼簿** —— 那是平台的事，而且兩邊的剪貼簿格式不一樣。
+    pub fn lasso_copy(
+        &self,
+        page_id: String,
+        stroke_ids: Vec<String>,
+    ) -> Result<Vec<FullStroke>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let wanted: std::collections::BTreeSet<String> = stroke_ids.into_iter().collect();
+        Ok(self
+            .lock()
+            .visible_strokes(page)?
+            .into_iter()
+            .filter(|s| wanted.contains(&s.id.to_string()))
+            .map(to_full_stroke)
+            .collect())
+    }
+
+    /// 把一組筆畫貼到某一頁，整體平移 `(dx, dy)`。回傳新筆畫的 id。
+    ///
+    /// 「再製」與「貼上」走的是同一個函式，差別只在平台層給不給偏移量：
+    /// 再製給一個小偏移（不然新的那一份完全蓋在原本上面，看起來什麼也
+    /// 沒發生），貼上通常給 0 或使用者指定的位置。
+    pub fn lasso_paste(
+        &self,
+        page_id: String,
+        strokes: Vec<FullStroke>,
+        dx: f32,
+        dy: f32,
+    ) -> Result<Vec<String>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let mut created = Vec::with_capacity(strokes.len());
+        for source in strokes {
+            // **新的 id，不是原本那個。** 沿用原 id 的話這是一次「更新」
+            // 而不是「新增」，同步到另一台裝置會變成把原本那一筆搬走。
+            let id = Uuid::now_v7();
+            let stroke = padnote_ink::Stroke {
+                id,
+                started_at: NotebookTime::ZERO,
+                tool: source.tool.into(),
+                color_rgba8: to_rgba(&source.color_rgba),
+                base_width: source.base_width,
+                points: source
+                    .points
+                    .into_iter()
+                    .map(|p| {
+                        let mut point = to_ink_point(p);
+                        point.x += dx;
+                        point.y += dy;
+                        point
+                    })
+                    .collect(),
+            };
+            self.lock().add_stroke(page, stroke)?;
+            created.push(id.to_string());
+        }
+        Ok(created)
+    }
+
+    /// 把一組筆畫原地平移。拖曳選取範圍時用。
+    ///
+    /// 做法是「刪掉再以新座標加回去」—— oplog 沒有「移動筆畫」這種操作，
+    /// 而為了拖曳加一種新的 op 會讓每一個讀得懂舊格式的版本都看不懂它。
+    /// 代價是 id 會變，所以回傳新的 id，呼叫端要換掉手上那一份選取。
+    pub fn lasso_translate(
+        &self,
+        page_id: String,
+        stroke_ids: Vec<String>,
+        dx: f32,
+        dy: f32,
+    ) -> Result<Vec<String>, FfiError> {
+        let copied = self.lasso_copy(page_id.clone(), stroke_ids.clone())?;
+        self.lasso_delete(page_id.clone(), stroke_ids)?;
+        self.lasso_paste(page_id, copied, dx, dy)
+    }
+
     // ---- 文字 ----
 
     pub fn add_text(
@@ -1488,6 +1641,48 @@ fn to_ink_point(p: StrokePoint) -> InkPoint {
 }
 
 /// 不足 4 個位元組時補為不透明黑色，而不是 panic —— FFI 輸入不可信。
+/// 一條路徑的取樣點是否**整條**都在套索多邊形裡。
+///
+/// # 為什麼要有這個「散裝」版本
+///
+/// Android 的筆畫寫在核心裡，所以那邊直接用
+/// [`PadnoteSession::lasso_select`]。**Apple 不是**：編輯中的真相來源是
+/// PencilKit 的 `PKDrawing`，核心 session 只有在匯出／匯入時才會被寫到。
+/// 要讓兩邊的「圈到算不算選到」是同一條規則，只能把規則本身開出來，
+/// 讓 Apple 拿 `PKStroke` 的點來問。
+///
+/// 兩個參數都是扁平的 `[x0, y0, x1, y1, …]`。
+#[uniffi::export]
+pub fn lasso_encloses(polygon: Vec<f32>, points: Vec<f32>) -> bool {
+    let poly = to_polygon(&polygon);
+    let pts = to_polygon(&points);
+    if poly.len() < 3 || pts.is_empty() {
+        return false;
+    }
+    // 借用 Stroke 的判定，確保與 lasso_select 走的是同一段程式碼 ——
+    // 各寫一份的話，兩邊遲早會在邊界條件上分岔。
+    let stroke = padnote_ink::Stroke {
+        id: Uuid::from_bytes([0; 16]),
+        started_at: NotebookTime::ZERO,
+        tool: padnote_ink::Tool::BallPoint,
+        color_rgba8: [0, 0, 0, 255],
+        base_width: 1.0,
+        points: pts
+            .into_iter()
+            .map(|(x, y)| InkPoint::new(x, y, 1.0, 0))
+            .collect(),
+    };
+    stroke.is_enclosed_by_polygon(&poly)
+}
+
+/// 扁平的 `[x0, y0, x1, y1, …]` 轉成點的陣列。
+///
+/// 長度是奇數時**丟掉最後那個孤兒座標**，不要當成 `(x, 0)` ——
+/// 那會在多邊形上憑空多一個貼著上緣的頂點，選取範圍整個歪掉。
+fn to_polygon(flat: &[f32]) -> Vec<(f32, f32)> {
+    flat.chunks_exact(2).map(|c| (c[0], c[1])).collect()
+}
+
 fn to_rgba(v: &[u8]) -> [u8; 4] {
     match v.len() {
         4 => [v[0], v[1], v[2], v[3]],
@@ -1763,6 +1958,96 @@ mod tests {
 
         s.erase_stroke(page.clone(), stroke).unwrap();
         assert!(s.visible_strokes(page).unwrap().is_empty());
+    }
+
+    // ---- 套索 ----
+
+    /// 在 `(x, y)` 附近畫一小段線，回傳它的 id。
+    fn stroke_at(s: &PadnoteSession, page: &str, x: f32, y: f32) -> String {
+        s.add_stroke(
+            page.into(),
+            ToolKind::BallPoint,
+            vec![0, 0, 0, 255],
+            2.0,
+            vec![
+                StrokePoint { x, y, pressure: 0.5, tilt: 0.0, azimuth: 0.0, dt_us: 0 },
+                StrokePoint { x: x + 5.0, y: y + 5.0, pressure: 0.5, tilt: 0.0, azimuth: 0.0, dt_us: 8_000 },
+            ],
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn the_lasso_picks_up_only_what_it_encircles() {
+        let s = session("lasso-select");
+        let page = s.first_page_id().unwrap();
+        let inside = stroke_at(&s, &page, 20.0, 20.0);
+        let _outside = stroke_at(&s, &page, 500.0, 500.0);
+
+        let picked = s
+            .lasso_select(page, vec![0.0, 0.0, 100.0, 0.0, 100.0, 100.0, 0.0, 100.0])
+            .unwrap();
+        assert_eq!(picked, vec![inside]);
+    }
+
+    #[test]
+    fn deleting_a_selection_removes_exactly_those_strokes() {
+        let s = session("lasso-delete");
+        let page = s.first_page_id().unwrap();
+        let a = stroke_at(&s, &page, 20.0, 20.0);
+        let _b = stroke_at(&s, &page, 500.0, 500.0);
+
+        assert_eq!(s.lasso_delete(page.clone(), vec![a]).unwrap(), 1);
+        assert_eq!(s.visible_strokes(page).unwrap().len(), 1, "只該刪掉選到的那一筆");
+    }
+
+    #[test]
+    fn deleting_an_id_that_is_already_gone_is_not_an_error() {
+        // 另一台裝置可能剛剛刪掉它。那不是錯誤，也不該讓整組刪除中斷 ——
+        // 中斷的話使用者看到的是「刪了一半」。
+        let s = session("lasso-delete-twice");
+        let page = s.first_page_id().unwrap();
+        let a = stroke_at(&s, &page, 20.0, 20.0);
+
+        assert_eq!(s.lasso_delete(page.clone(), vec![a.clone()]).unwrap(), 1);
+        assert_eq!(s.lasso_delete(page, vec![a, "not-a-uuid".into()]).unwrap(), 0);
+    }
+
+    #[test]
+    fn pasting_offsets_the_copy_and_gives_it_a_new_id() {
+        let s = session("lasso-paste");
+        let page = s.first_page_id().unwrap();
+        let original = stroke_at(&s, &page, 20.0, 20.0);
+
+        let clip = s.lasso_copy(page.clone(), vec![original.clone()]).unwrap();
+        assert_eq!(clip.len(), 1);
+
+        let pasted = s.lasso_paste(page.clone(), clip, 40.0, 0.0).unwrap();
+        assert_eq!(pasted.len(), 1);
+        // **新 id。** 沿用原本的話，同步到另一台會變成把原本那一筆搬走，
+        // 而不是多一份。
+        assert_ne!(pasted[0], original);
+
+        let all = s.visible_stroke_details(page).unwrap();
+        assert_eq!(all.len(), 2, "原本那一筆要還在");
+        let xs: Vec<f32> = all.iter().map(|st| st.points[0].x).collect();
+        assert!(xs.contains(&20.0) && xs.contains(&60.0), "貼上的那一份要平移過：{xs:?}");
+    }
+
+    #[test]
+    fn translating_keeps_the_stroke_count() {
+        // 拖曳是「刪掉再以新座標加回去」。少了這一條，實作寫成「加回去
+        // 但忘了刪」的話，每拖一次就多一份，而畫面上看起來只是變粗。
+        let s = session("lasso-move");
+        let page = s.first_page_id().unwrap();
+        let a = stroke_at(&s, &page, 20.0, 20.0);
+
+        let moved = s.lasso_translate(page.clone(), vec![a], 100.0, 0.0).unwrap();
+        assert_eq!(moved.len(), 1);
+
+        let all = s.visible_stroke_details(page).unwrap();
+        assert_eq!(all.len(), 1, "拖曳不該多出一份");
+        assert_eq!(all[0].points[0].x, 120.0);
     }
 
     #[test]

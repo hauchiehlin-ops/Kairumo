@@ -69,6 +69,7 @@
 		AA663818A22D47C3A2C23CF2 /* AccountSyncStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01AFB3F20C5549BBBF4DFBFE /* AccountSyncStore.swift */; };
 		B89C263C1A1A49EBA16D42B2 /* ICloudSyncFolder.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF7A293858C84789874DFCA3 /* ICloudSyncFolder.swift */; };
 		47A6AB2F9A6D48ED9324FE90 /* HandwritingRecognizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C6AFF51F2F9944F486877121 /* HandwritingRecognizer.swift */; };
+		LS1A2B3C4D5E6F7080910111 /* LassoSelection.swift in Sources */ = {isa = PBXBuildFile; fileRef = LS2B3C4D5E6F708091011121 /* LassoSelection.swift */; };
 		B281348DEEE6A0978642DF8D /* BrushCursor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A2F8130E223B0B02F303F80 /* BrushCursor.swift */; };
 		B3DFF4CFC65E91FEEA6AA7B4 /* HomeWorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */; };
 		B461E05D52232C76413B2DB2 /* Docs in Resources */ = {isa = PBXBuildFile; fileRef = B7FE882F90D6ABA99E0820BF /* Docs */; };
@@ -163,6 +164,7 @@
 		01AFB3F20C5549BBBF4DFBFE /* AccountSyncStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSyncStore.swift; sourceTree = "<group>"; };
 		BF7A293858C84789874DFCA3 /* ICloudSyncFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudSyncFolder.swift; sourceTree = "<group>"; };
 		C6AFF51F2F9944F486877121 /* HandwritingRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandwritingRecognizer.swift; sourceTree = "<group>"; };
+		LS2B3C4D5E6F708091011121 /* LassoSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LassoSelection.swift; sourceTree = "<group>"; };
 		6C2FF9AF4DA70CC155EC6704 /* ObjectLayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectLayerTests.swift; sourceTree = "<group>"; };
 		6D92ABBF09268BEEA4DD694D /* CloudSyncFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudSyncFolder.swift; sourceTree = "<group>"; };
 		6EA2D926C0FD0991AE0BC01D /* WrapLayout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WrapLayout.swift; sourceTree = "<group>"; };
@@ -339,6 +341,7 @@
 				01AFB3F20C5549BBBF4DFBFE /* AccountSyncStore.swift */,
 				BF7A293858C84789874DFCA3 /* ICloudSyncFolder.swift */,
 				C6AFF51F2F9944F486877121 /* HandwritingRecognizer.swift */,
+				LS2B3C4D5E6F708091011121 /* LassoSelection.swift */,
 				26F09C378F9F1B6835D9ECB2 /* CStubs.c */,
 				59E46CD750DA486212251DC0 /* DocumentViewerSheet.swift */,
 				E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */,
@@ -563,6 +566,7 @@
 				AA663818A22D47C3A2C23CF2 /* AccountSyncStore.swift in Sources */,
 				B89C263C1A1A49EBA16D42B2 /* ICloudSyncFolder.swift in Sources */,
 				47A6AB2F9A6D48ED9324FE90 /* HandwritingRecognizer.swift in Sources */,
+				LS1A2B3C4D5E6F7080910111 /* LassoSelection.swift in Sources */,
 				7B6B71CF69CE9F1C2CB2E953 /* DocumentViewerSheet.swift in Sources */,
 				643674D7CEE546261D15F308 /* ExportPrintManager.swift in Sources */,
 				FDBFCB97F11915C9DA8EA7A9 /* FloatingPanel.swift in Sources */,

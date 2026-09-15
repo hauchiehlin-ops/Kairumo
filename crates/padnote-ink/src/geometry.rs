@@ -201,6 +201,35 @@ pub fn distance_to_segment(p: (f32, f32), a: (f32, f32), b: (f32, f32)) -> f32 {
     ((p.0 - proj.0).powi(2) + (p.1 - proj.1).powi(2)).sqrt()
 }
 
+/// 點是否在多邊形內（射線法，even-odd）。
+///
+/// 多邊形視為**自動封閉**：最後一點接回第一點。套索是使用者一筆畫出來的，
+/// 起訖點幾乎不會剛好重合，不自動封閉的話那個缺口會讓射線漏出去，
+/// 結果是整片選取忽有忽無。
+///
+/// 邊界上的點算在內（`>=`）：貼著套索邊緣的取樣點被判在外的話，
+/// 使用者會看到「明明圈住了卻選不到」。
+fn point_in_polygon(p: (f32, f32), polygon: &[(f32, f32)]) -> bool {
+    let (x, y) = p;
+    let mut inside = false;
+    let n = polygon.len();
+    let mut j = n - 1;
+    for i in 0..n {
+        let (xi, yi) = polygon[i];
+        let (xj, yj) = polygon[j];
+        // 只看跨越水平射線的那些邊。`(yi > y) != (yj > y)` 同時處理了
+        // 「邊完全在射線上方／下方」與「水平邊」三種情況。
+        if (yi > y) != (yj > y) {
+            let t = (y - yi) / (yj - yi);
+            if x <= xi + t * (xj - xi) {
+                inside = !inside;
+            }
+        }
+        j = i;
+    }
+    inside
+}
+
 impl Stroke {
     /// 外框（含筆寬）。dirty rect 與選取都該用這個，而不是純點外框 —— 否則
     /// 粗筆的邊緣會被裁掉。
@@ -245,6 +274,42 @@ impl Stroke {
         self.inked_bounds().is_some_and(|b| region.contains_rect(b))
     }
 
+    /// 套索選取：是否被一個**任意多邊形**完全包覆。
+    ///
+    /// # 為什麼不是只用外框
+    ///
+    /// [`is_enclosed_by`](Self::is_enclosed_by) 收的是矩形，而使用者畫出來的
+    /// 套索幾乎不會是矩形。拿套索的外接矩形去判斷的話，一個 L 形的圈選會把
+    /// 凹角外面的筆畫一起選進來 —— 使用者圈了兩團字，結果中間那一團
+    /// 沒圈到的也被搬走了。
+    ///
+    /// # 判定方式
+    ///
+    /// 筆畫的**每一個取樣點**都要在多邊形內。用點而不是外框：粗筆的外框
+    /// 會比實際墨跡大一圈，貼著套索邊緣畫的那一筆會選不到，而使用者明明
+    /// 把它整條圈進去了。
+    ///
+    /// 空的多邊形（少於三個點）一律回 false —— 那是使用者點了一下就放開，
+    /// 不是一次圈選。這時回 true 會把整頁選起來。
+    pub fn is_enclosed_by_polygon(&self, polygon: &[(f32, f32)]) -> bool {
+        if polygon.len() < 3 || self.points.is_empty() {
+            return false;
+        }
+        // 外框粗篩：多邊形的外接矩形都裝不下的，不必逐點算。
+        let mut hull = Rect::from_point(polygon[0].0, polygon[0].1);
+        for p in &polygon[1..] {
+            hull = hull.union(Rect::from_point(p.0, p.1));
+        }
+        match self.inked_bounds() {
+            Some(b) if hull.intersects(b) => {}
+            _ => return false,
+        }
+
+        self.points
+            .iter()
+            .all(|p| point_in_polygon((p.x, p.y), polygon))
+    }
+
     /// 平滑後的渲染路徑。
     pub fn render_path(&self, subdivisions: usize) -> Vec<(f32, f32)> {
         smooth_path(&self.points, subdivisions)
@@ -277,6 +342,79 @@ mod tests {
             Tool::BallPoint,
             4.0,
         )
+    }
+
+    /// 一條垂直的短線，畫在 `(x, y0)` 到 `(x, y1)`。
+    fn vertical_line(x: f32, y0: f32, y1: f32) -> Stroke {
+        stroke_from(
+            vec![
+                InkPoint::new(x, y0, 1.0, 0),
+                InkPoint::new(x, y1, 1.0, 8_000),
+            ],
+            Tool::BallPoint,
+            2.0,
+        )
+    }
+
+    // ---- 多邊形套索 ----
+
+    #[test]
+    fn a_stroke_inside_the_lasso_is_selected() {
+        let square = [(-10.0, -10.0), (110.0, -10.0), (110.0, 10.0), (-10.0, 10.0)];
+        assert!(horizontal_line().is_enclosed_by_polygon(&square));
+    }
+
+    #[test]
+    fn a_stroke_outside_the_lasso_is_not() {
+        let square = [(200.0, 200.0), (300.0, 200.0), (300.0, 300.0), (200.0, 300.0)];
+        assert!(!horizontal_line().is_enclosed_by_polygon(&square));
+    }
+
+    #[test]
+    fn a_stroke_only_half_inside_is_not_selected() {
+        // 與 is_enclosed_by 同一個規則：部分相交時使用者的意圖通常是不選它。
+        let square = [(-10.0, -10.0), (50.0, -10.0), (50.0, 10.0), (-10.0, 10.0)];
+        assert!(!horizontal_line().is_enclosed_by_polygon(&square));
+    }
+
+    #[test]
+    fn a_concave_lasso_does_not_grab_what_it_went_around() {
+        // **這是矩形版本做不到的事。** L 形的套索：右下那一塊在外框裡面，
+        // 但不在多邊形裡面。用外接矩形判斷的話，那裡的筆畫會被一起選走 ——
+        // 使用者圈了兩團字，中間沒圈到的那一團也被搬走。
+        let l_shape = [
+            (0.0, 0.0),
+            (100.0, 0.0),
+            (100.0, 40.0),
+            (40.0, 40.0),
+            (40.0, 100.0),
+            (0.0, 100.0),
+        ];
+        // 左上角的直線：在 L 的手臂裡。
+        assert!(vertical_line(20.0, 10.0, 30.0).is_enclosed_by_polygon(&l_shape));
+        // 右下角的直線：在外接矩形裡，但在 L 的凹角**外面**。
+        assert!(!vertical_line(70.0, 60.0, 90.0).is_enclosed_by_polygon(&l_shape));
+    }
+
+    #[test]
+    fn a_lasso_that_is_not_really_a_lasso_selects_nothing() {
+        // 點一下就放開。回 true 的話會把整頁選起來。
+        assert!(!horizontal_line().is_enclosed_by_polygon(&[]));
+        assert!(!horizontal_line().is_enclosed_by_polygon(&[(0.0, 0.0), (1.0, 1.0)]));
+    }
+
+    #[test]
+    fn an_open_lasso_still_closes_itself() {
+        // 使用者一筆圈出來的套索，起訖點幾乎不會剛好重合。不自動封閉的話，
+        // 那個缺口會讓射線漏出去，選取結果忽有忽無。
+        let almost_closed = [
+            (-10.0, -10.0),
+            (110.0, -10.0),
+            (110.0, 10.0),
+            (-10.0, 10.0),
+            (-10.0, -9.0), // 差一點點回到起點
+        ];
+        assert!(horizontal_line().is_enclosed_by_polygon(&almost_closed));
     }
 
     // ---- Rect ----
