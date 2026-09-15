@@ -28,6 +28,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         private const val KEY_ORDER_BY_PAGE = "objectOrderByPage"
         /** v3.8.0 的舊欄位：整本一份。只讀不寫，見 format-spec §6.2.1。 */
         private const val KEY_LEGACY_ORDER = "objectOrder"
+        private const val KEY_COMMENT_PINS = "commentPins"
 
         fun load(session: PadnoteSession?): NotebookMeta {
             val json = runCatching { session?.notebookMeta() }.getOrNull()
@@ -53,6 +54,19 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         val map = root.optJSONObject(KEY_ORDER_BY_PAGE) ?: JSONObject()
         map.put(pageIndex.toString(), JSONArray(order))
         root.put(KEY_ORDER_BY_PAGE, map)
+        runCatching { session?.setNotebookMeta(root.toString()) }
+    }
+
+    /** 這本筆記的討論圖釘。Apple 端把它們放在這裡，核心沒有這個概念。 */
+    fun commentPins(): MutableList<com.kairumo.padnote.comment.CommentPin> =
+        com.kairumo.padnote.comment.CommentPinCodec.decodeAll(root.optJSONArray(KEY_COMMENT_PINS))
+
+    /** 寫回圖釘並落盤。其餘欄位原封不動 —— 見這個類別開頭的說明。 */
+    fun setCommentPins(
+        session: PadnoteSession?,
+        pins: List<com.kairumo.padnote.comment.CommentPin>
+    ) {
+        root.put(KEY_COMMENT_PINS, com.kairumo.padnote.comment.CommentPinCodec.encodeAll(pins))
         runCatching { session?.setNotebookMeta(root.toString()) }
     }
 

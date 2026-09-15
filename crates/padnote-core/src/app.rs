@@ -185,6 +185,17 @@ impl NotebookSession {
             objects: Default::default(),
         };
 
+        // **計數器要從磁碟接續，不能從 0 重來。**
+        //
+        // 從 0 重來的話，這一次開啟寫出的第一個操作又叫 `...0001.oplog`，
+        // 被 append 進第一次開啟時建立的那個檔 —— 重播時它排在 `...0002`
+        // 之前，於是新值先套用、再被舊檔裡的舊值蓋掉。
+        //
+        // 對「附加」類操作（新增筆畫、插入文字）看不出來，所以這個 bug 藏得很深；
+        // 但對**整份取代**類（SetNotebookMeta / SetBlockAppearance /
+        // SetBlockPosition）就是靜默的資料回退：使用者改了、也存了，重開卻變回去。
+        session.lamport = session.package.max_doc_lamport();
+
         let ops = session.package.read_doc_ops()?;
         session.replay(&ops);
         Ok(session)
@@ -1863,6 +1874,60 @@ mod tests {
 
     fn session(name: &str) -> NotebookSession {
         NotebookSession::create(tmp(name), "線性代數", 1_757_635_200_000, 0xA1).unwrap()
+    }
+
+    /// **重開之後改的東西不可以被舊值蓋回去。**
+    ///
+    /// 這是實際踩到的資料回退：`lamport` 在 `open()` 時被設成 0，於是第二次
+    /// 開啟寫出的第一個操作又叫 `...0001.oplog`，被 append 進第一次開啟建立的
+    /// 那個檔。重播依檔名字典序，所以新值先套用、再被 `...0002` 裡的舊值蓋掉。
+    ///
+    /// 症狀：在 Android 上新增討論圖釘，存檔回報成功、當下讀得回來，
+    /// 離開再進來就不見了 —— 而磁碟上明明有那筆資料。
+    #[test]
+    fn edits_made_after_reopening_survive_the_next_reopen() {
+        let dir = tmp("lamport-regression");
+        let device = 0xA1;
+
+        // 第一次開啟：寫兩次 meta，製造出 0001 與 0002 兩個檔。
+        {
+            let mut s = NotebookSession::create(&dir, "筆記", 1_757_635_200_000, device).unwrap();
+            s.set_notebook_meta(r#"{"v":1}"#).unwrap();
+            s.set_notebook_meta(r#"{"v":2}"#).unwrap();
+        }
+
+        // 第二次開啟：再寫一次。lamport 沒接續的話，這一筆會被塞進 0001。
+        {
+            let mut s = NotebookSession::open(&dir, device).unwrap();
+            assert_eq!(s.notebook().meta.clone(), Some(r#"{"v":2}"#.to_string()));
+            s.set_notebook_meta(r#"{"v":3}"#).unwrap();
+            assert_eq!(s.notebook().meta.clone(), Some(r#"{"v":3}"#.to_string()));
+        }
+
+        // 第三次開啟：必須看到 v3。看到 v2 就代表新值被舊檔蓋掉了。
+        {
+            let s = NotebookSession::open(&dir, device).unwrap();
+            assert_eq!(
+                s.notebook().meta.clone(),
+                Some(r#"{"v":3}"#.to_string()),
+                "重開之後的修改被舊的 oplog 蓋回去了"
+            );
+        }
+    }
+
+    /// 計數器要從磁碟接續，不可以歸零。
+    #[test]
+    fn lamport_resumes_from_disk_on_open() {
+        let dir = tmp("lamport-resume");
+        let device = 0xA1;
+        {
+            let mut s = NotebookSession::create(&dir, "筆記", 1_757_635_200_000, device).unwrap();
+            s.set_notebook_meta(r#"{"a":1}"#).unwrap();
+            s.set_notebook_meta(r#"{"a":2}"#).unwrap();
+            s.set_notebook_meta(r#"{"a":3}"#).unwrap();
+        }
+        let s = NotebookSession::open(&dir, device).unwrap();
+        assert!(s.lamport >= 3, "開啟後 lamport 應接續磁碟上的值，實得 {}", s.lamport);
     }
 
     /// 同一個頁 id 只能存在一頁。

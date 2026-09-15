@@ -268,6 +268,40 @@ impl NotebookPackage {
         Ok(path)
     }
 
+    /// 磁碟上已經用過的最大 lamport（取自檔名）。沒有任何 oplog 時回 0。
+    ///
+    /// # 為什麼需要它
+    ///
+    /// 檔名就是因果序：[`read_doc_ops`] 依字典序讀檔，等於依 lamport 讀。
+    /// 但開啟既有筆記本時若把計數器歸零，第二次開啟寫出來的第一個操作又會
+    /// 叫 `...0001.oplog` —— 它會被 **append 進第一次開啟時建立的那個檔**，
+    /// 於是重播時它排在 `...0002` 之前。
+    ///
+    /// 對「附加」類的操作（新增筆畫、插入文字）看不出問題；但對**整份取代**
+    /// 類的操作（`SetNotebookMeta`、`SetBlockAppearance`、`SetBlockPosition`）
+    /// 就是災難：新寫的值先被套用，接著被舊檔裡的舊值蓋掉。使用者看到的是
+    /// 「改了、也存了，重開卻變回去」，而且沒有任何錯誤訊息。
+    pub fn max_doc_lamport(&self) -> u64 {
+        let dir = self.root.join("doc/ops");
+        let Ok(entries) = fs::read_dir(&dir) else {
+            return 0;
+        };
+        entries
+            .filter_map(Result::ok)
+            .filter_map(|e| {
+                let path = e.path();
+                if path.extension().is_some_and(|x| x == "oplog") {
+                    let stem = path.file_stem()?.to_str()?;
+                    // 檔名格式：{lamport:016x}-{device:08x}
+                    u64::from_str_radix(stem.split('-').next()?, 16).ok()
+                } else {
+                    None
+                }
+            })
+            .max()
+            .unwrap_or(0)
+    }
+
     /// 依因果序讀出全部文件操作。
     pub fn read_doc_ops(&self) -> Result<Vec<DocOp>, StorageError> {
         let dir = self.root.join("doc/ops");

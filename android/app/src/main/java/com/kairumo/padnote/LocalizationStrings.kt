@@ -1250,6 +1250,14 @@ object LocalizationStrings {
             "ko" to "연노랑",
             "th" to "เหลืองอ่อน"
         ),
+        "comment_empty" to mapOf(
+            "zh-Hant" to "還沒有留言",
+            "en" to "No messages yet",
+            "zh-Hans" to "还没有留言",
+            "ja" to "まだコメントはありません",
+            "ko" to "아직 댓글이 없습니다",
+            "th" to "ยังไม่มีข้อความ"
+        ),
         "comment_pin" to mapOf(
             "zh-Hant" to "討論圖釘",
             "en" to "Comment Pin",
@@ -1265,6 +1273,14 @@ object LocalizationStrings {
             "ja" to "コメントまたは返信を入力...",
             "ko" to "댓글이나 답글을 입력하세요...",
             "th" to "พิมพ์ความคิดเห็นหรือตอบกลับ..."
+        ),
+        "comment_send" to mapOf(
+            "zh-Hant" to "送出",
+            "en" to "Send",
+            "zh-Hans" to "送出",
+            "ja" to "送信",
+            "ko" to "보내기",
+            "th" to "ส่ง"
         ),
         "composition_overlay" to mapOf(
             "zh-Hant" to "構圖輔助線",

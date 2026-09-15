@@ -52,6 +52,9 @@ import com.kairumo.padnote.text.TextBoxEditor
 import com.kairumo.padnote.account.AccountManager
 import com.kairumo.padnote.canvas.ObjectStacking
 import com.kairumo.padnote.library.NotebookMeta
+import com.kairumo.padnote.comment.CommentLayer
+import com.kairumo.padnote.comment.CommentPin
+import com.kairumo.padnote.comment.CommentThreadDialog
 import com.kairumo.padnote.canvas.CanvasStackPanel
 import com.kairumo.padnote.math.MathCalculatorDialog
 import com.kairumo.padnote.canvas.ObjectGeometry
@@ -358,6 +361,13 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     var showStackPanel by remember { mutableStateOf(false) }
     var showCalculator by remember { mutableStateOf(false) }
     var showProColors by remember { mutableStateOf(false) }
+    // 討論圖釘。存在筆記本中繼資料裡，Android 在此之前讀不到 ——
+    // iPad 上標的討論同步過來就像不存在。
+    var pins by remember(notebook) { mutableStateOf(meta.commentPins()) }
+    var pinRevision by remember { mutableIntStateOf(0) }
+    var openPin by remember { mutableStateOf<CommentPin?>(null) }
+
+
 
 
 
@@ -647,6 +657,29 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     }
                 )
                 Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n("add_comment_pin")) },
+                    onClick = {
+                        showMenu = false
+                        val profile = AccountManager.load(activity, l10n("default_user_name"))
+                        val pin = CommentPin(
+                            id = java.util.UUID.randomUUID().toString(),
+                            pageIndex = pageIndex,
+                            x = 80f, y = 120f,
+                            authorId = deviceId(activity).toString(),
+                            authorName = profile.displayName,
+                            authorColor = profile.colorHex,
+                            createdAt = java.util.Date(),
+                            isResolved = false,
+                            messages = mutableListOf()
+                        )
+                        pins = (pins + pin).toMutableList()
+                        meta.setCommentPins(notebook?.first, pins)
+                        pinRevision++
+                        openPin = pin
+                        editorMode = EditorMode.TYPE
+                    }
+                )
                 DropdownMenuItem(
                     text = { Text(l10n("pro_color")) },
                     onClick = { showMenu = false; showProColors = true }
@@ -957,6 +990,18 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     modifier = Modifier.fillMaxSize()
                 )
             }
+
+            // 討論圖釘畫在最上層 —— 它是標記，被內容蓋住就失去意義。
+            key(pinRevision) {
+                CommentLayer(
+                    pins = pins,
+                    pageIndex = pageIndex,
+                    interactive = editorMode == EditorMode.TYPE,
+                    onOpen = { openPin = it },
+                    onMoved = { meta.setCommentPins(notebook?.first, pins); pinRevision++ },
+                    density = canvasDensity
+                )
+            }
         }
     }
 
@@ -1011,6 +1056,24 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 textStore, imageStore, tableStore, chartStore, shapeStore)
         }
         textRevision++; imageRevision++; tableRevision++; chartRevision++; shapeRevision++
+    }
+
+    openPin?.let { pin ->
+        val profile = AccountManager.load(activity, l10n("default_user_name"))
+        CommentThreadDialog(
+            pin = pin,
+            languageTag = deviceLanguageTag(),
+            currentUserId = deviceId(activity).toString(),
+            currentUserName = profile.displayName,
+            currentUserColor = profile.colorHex,
+            onChanged = { meta.setCommentPins(notebook?.first, pins); pinRevision++ },
+            onDelete = {
+                pins = pins.filterNot { it.id == pin.id }.toMutableList()
+                meta.setCommentPins(notebook?.first, pins)
+                pinRevision++
+            },
+            onDismiss = { openPin = null }
+        )
     }
 
     if (showProColors) {

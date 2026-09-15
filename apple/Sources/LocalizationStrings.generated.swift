@@ -1255,6 +1255,14 @@ extension LocalizationManager {
             .ko: "연노랑",
             .th: "เหลืองอ่อน"
         ],
+        "comment_empty": [
+            .zhHant: "還沒有留言",
+            .en: "No messages yet",
+            .zhHans: "还没有留言",
+            .ja: "まだコメントはありません",
+            .ko: "아직 댓글이 없습니다",
+            .th: "ยังไม่มีข้อความ"
+        ],
         "comment_pin": [
             .zhHant: "討論圖釘",
             .en: "Comment Pin",
@@ -1270,6 +1278,14 @@ extension LocalizationManager {
             .ja: "コメントまたは返信を入力...",
             .ko: "댓글이나 답글을 입력하세요...",
             .th: "พิมพ์ความคิดเห็นหรือตอบกลับ..."
+        ],
+        "comment_send": [
+            .zhHant: "送出",
+            .en: "Send",
+            .zhHans: "送出",
+            .ja: "送信",
+            .ko: "보내기",
+            .th: "ส่ง"
         ],
         "composition_overlay": [
             .zhHant: "構圖輔助線",
