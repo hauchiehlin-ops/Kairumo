@@ -256,6 +256,60 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 缺的是連續模式本身與那個切換開關。
 
 
+## 🧱 Android 介面落後（2026-09-15，使用者回報「完全不可用」）
+
+Android 目前是**單一畫面**（`MainActivity.InkScreen()`）：兩個切換鈕、一列
+筆刷、一行診斷字、一塊畫布，其餘功能全部塞在一個「...」下拉選單裡。
+沒有首頁、沒有筆記本清單、沒有頁面切換、沒有手寫／打字模式切換。
+檔案開頭的註解寫得很誠實：「現階段的唯一任務：證明 Kotlin ⇄ UniFFI ⇄
+libpadnote_core.so 這條路是通的」—— 它至今仍是那個雛形，只是長出了幾個功能。
+
+規模：Apple 31,574 行 / Android 12,444 行。Apple 有、Android 沒有的畫面：
+
+HomeWorkbenchView（首頁與筆記庫）、頁面導覽、CollaborationSheet（協同）、
+AssetLibraryView、Model3DStudioView、MathCalculatorSheet、CommentThreadView、
+ThemeSpecificToolsView、WordTextStudioView（文字排版面板）、
+ObjectFrameStyleMenu、CanvasScrollbar、DocumentViewerSheet、
+ProColorPickerSheet、SketchRefineEngine、ImageEditControls、
+PageRepagination、NotebookMigration、圖片插入與編修。
+
+另外：診斷列（`tool=1 r=27.0dp p=0.41 …`）**在正式介面上永遠顯示**。
+那一行是給開發看的，使用者看到的是「這是個測試程式」。
+
+| ID | 階段 | 內容 |
+|---|---|---|
+| A-00 | 立刻 | 診斷列改成只在開發者選項開啟時顯示 |
+| A-01 | 第一階段 | 首頁／筆記本清單／資料夾／搜尋（對應 HomeWorkbenchView） |
+| A-02 | 第一階段 | 頁面導覽（上一頁／下一頁／頁碼／新增頁） |
+| A-03 | 第一階段 | 手寫／打字模式切換與各自的工具列 |
+| A-04 | 第二階段 | 圖片插入與編修、文字排版面板 |
+| A-05 | 第二階段 | 物件通用能力：框線樣式、旋轉、對齊 |
+| A-06 | 第三階段 | 協同、資產庫、3D、數學、討論串 |
+
+**建議**：A-00 立刻做（一行判斷）。A-01～A-03 是「能不能當筆記 App 用」
+的分界，應該當成一個獨立里程碑，不要混在缺陷修正裡。
+
+
+## 🗂 物件堆疊順序（2026-09-15）
+
+已完成（Apple）：`NotebookDocument.objectOrder`＋`CanvasStackPanel`，
+七種型別（圖片／文字／表格／圖表／3D／連結／形狀）共用同一份順序，
+四個動作（移到最上／上移／下移／移到最下）11 項邏輯測試通過。
+
+**尚未收斂**：
+
+| ID | 項目 | 說明 |
+|---|---|---|
+| Z-01 | Android 端的堆疊順序 | Android 的物件是**核心 block**，Apple 的物件在自己的 JSON 裡。兩邊的順序來源不同 |
+| Z-02 | 收斂到核心的 `draw_order` | 核心的物件樹早就有 `bring_to_front` / `send_to_back` / `z_index` / `draw_order`（`ffi.rs`），而且 FFI 已經開出來了 —— **那才該是唯一的順序來源** |
+
+Apple 目前的 `objectOrder` 是**過渡做法**：它讓使用者現在就能排序，但
+Apple 的附件 id 與核心物件 id 只在匯出 `.padnote` 時建立對應
+（`NotebookPackageBridge` 的 `shapeObjectIds`），所以這份順序跨不到 Android。
+真正的解法是讓核心物件樹成為 Apple 的即時模型，那牽動的範圍與 A-01～A-03 相當，
+建議與 Android 改版一起做。
+
+
 ## ⚪ 待決策（需要人拍板）
 
 | ID | 問題 | 背景 |

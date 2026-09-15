@@ -2270,6 +2270,7 @@ ZStack(alignment: .topTrailing) {
                             collaborationManager.broadcastSelection(selectedId: nil)
                         }
                     )
+                    .zIndex(ObjectStacking.zIndex(for: item.id, kind: .image, order: notebook.objectOrder))
                 }
             }
 
@@ -2301,6 +2302,7 @@ ZStack(alignment: .topTrailing) {
                             store.updateNotebook(notebook)
                         }
                     )
+                    .zIndex(ObjectStacking.zIndex(for: item.id, kind: .shape, order: notebook.objectOrder))
                 }
             }
 
@@ -2309,13 +2311,41 @@ ZStack(alignment: .topTrailing) {
                     title: localizationManager.localized("layers_panel"),
                     onClose: { showLayerPanel = false }
                 ) {
-                    ObjectLayerPanel(
-                        shapes: Binding(
-                            get: { pageShapes },
-                            set: { updated in replacePageShapes(with: updated) }
-                        ),
-                        selection: $selectedShapeIds
-                    )
+                    VStack(spacing: 10) {
+                        // 跨型別的堆疊：圖片、文字、表格、圖表、3D、連結、
+                        // 形狀全部在同一份順序裡。使用者要的「圖層上下排序」
+                        // 指的是這個 —— 底下那個只認形狀。
+                        CanvasStackPanel(
+                            objects: pageStackableObjects,
+                            order: Binding(
+                                get: {
+                                    ObjectStacking.normalized(
+                                        objects: pageStackableObjects,
+                                        order: notebook.objectOrder
+                                    )
+                                },
+                                set: { updated in
+                                    notebook.objectOrder = updated
+                                    store.updateNotebook(notebook)
+                                }
+                            ),
+                            selection: $selectedShapeIds
+                        )
+
+                        // 形狀的群組操作留在原本的面板 —— 群組是形狀專屬的
+                        // 概念（連接線要接得住），其餘型別沒有這回事。
+                        if !pageShapes.isEmpty {
+                            Divider()
+                            ObjectLayerPanel(
+                                shapes: Binding(
+                                    get: { pageShapes },
+                                    set: { updated in replacePageShapes(with: updated) }
+                                ),
+                                selection: $selectedShapeIds,
+                                groupingOnly: true
+                            )
+                        }
+                    }
                 }
                 .padding(.top, 24)
                 .padding(.trailing, 24)
@@ -2333,6 +2363,7 @@ ZStack(alignment: .topTrailing) {
                             store.updateNotebook(notebook)
                         }
                     )
+                    .zIndex(ObjectStacking.zIndex(for: item.id, kind: .table, order: notebook.objectOrder))
                 }
             }
 
@@ -2352,6 +2383,7 @@ ZStack(alignment: .topTrailing) {
                             collaborationManager.broadcastSelection(selectedId: nil)
                         }
                     )
+                    .zIndex(ObjectStacking.zIndex(for: item.id, kind: .text, order: notebook.objectOrder))
                 }
             }
 
@@ -2365,6 +2397,7 @@ ZStack(alignment: .topTrailing) {
                             store.updateNotebook(notebook)
                         }
                     )
+                    .zIndex(ObjectStacking.zIndex(for: item.id, kind: .link, order: notebook.objectOrder))
                 }
             }
 
@@ -2381,6 +2414,7 @@ ZStack(alignment: .topTrailing) {
                             collaborationManager.broadcastSelection(selectedId: nil)
                         }
                     )
+                    .zIndex(ObjectStacking.zIndex(for: item.id, kind: .model3D, order: notebook.objectOrder))
                 }
             }
 
@@ -2403,6 +2437,7 @@ ZStack(alignment: .topTrailing) {
                         }
                     )
                     .position(x: pin.x, y: pin.y)
+                    .zIndex(ObjectStacking.zIndex(for: pin.id, kind: .pin, order: notebook.objectOrder))
                 }
             }
 
@@ -4734,6 +4769,52 @@ ZStack(alignment: .topTrailing) {
     /// 目前這一頁的形狀，依堆疊順序。
     private var pageShapes: [NoteShapeAttachment] {
         (notebook.shapeAttachments ?? []).filter { $0.pageIndex == currentPageIndex }
+    }
+
+    /// 這一頁上所有可堆疊的物件，跨七種型別收成同一份清單。
+    ///
+    /// 名字取得出來就用內容（文字方塊取內文、形狀取標籤），取不出來就用型別名
+    /// —— 面板上一整排「未命名」的話，使用者分不出哪一列是哪一個。
+    private var pageStackableObjects: [StackableObject] {
+        let page = currentPageIndex
+        let unnamed = localizationManager.localized("layer_unnamed")
+        func title(_ raw: String, _ fallbackKey: String) -> String {
+            let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty { return localizationManager.localized(fallbackKey) }
+            return String(trimmed.prefix(24))
+        }
+
+        var result: [StackableObject] = []
+        for item in (notebook.attachments ?? []) where item.pageIndex == page {
+            result.append(.init(id: item.id, kind: .image,
+                                title: localizationManager.localized("layer_kind_image")))
+        }
+        for item in (notebook.shapeAttachments ?? []) where item.pageIndex == page {
+            result.append(.init(id: item.id, kind: .shape,
+                                title: title(item.label, "layer_kind_shape")))
+        }
+        for item in (notebook.tableAttachments ?? []) where item.pageIndex == page {
+            result.append(.init(id: item.id, kind: .table,
+                                title: localizationManager.localized("layer_kind_table")))
+        }
+        for item in (notebook.textAttachments ?? []) where item.pageIndex == page {
+            result.append(.init(id: item.id, kind: .text,
+                                title: title(item.text, "layer_kind_text")))
+        }
+        for item in (notebook.linkAttachments ?? []) where item.pageIndex == page {
+            result.append(.init(id: item.id, kind: .link,
+                                title: title(item.title.isEmpty ? item.urlString : item.title, "layer_kind_link")))
+        }
+        for item in (notebook.model3DAttachments ?? []) where item.pageIndex == page {
+            result.append(.init(id: item.id, kind: .model3D,
+                                title: localizationManager.localized("layer_kind_model3d")))
+        }
+        for pin in (notebook.commentPins ?? []) where pin.pageIndex == page {
+            result.append(.init(id: pin.id, kind: .pin,
+                                title: localizationManager.localized("layer_kind_pin")))
+        }
+        _ = unnamed
+        return result
     }
 
     /// 換掉這一頁的形狀，其餘頁面原封不動。

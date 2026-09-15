@@ -2439,6 +2439,62 @@ extension LocalizationManager {
             .ko: "그룹(%@개)",
             .th: "กลุ่ม (%@ รายการ)"
         ],
+        "layer_kind_image": [
+            .zhHant: "圖片",
+            .en: "Image",
+            .zhHans: "图片",
+            .ja: "画像",
+            .ko: "이미지",
+            .th: "รูปภาพ"
+        ],
+        "layer_kind_link": [
+            .zhHant: "連結卡片",
+            .en: "Link card",
+            .zhHans: "链接卡片",
+            .ja: "リンクカード",
+            .ko: "링크 카드",
+            .th: "การ์ดลิงก์"
+        ],
+        "layer_kind_model3d": [
+            .zhHant: "3D 模型",
+            .en: "3D model",
+            .zhHans: "3D 模型",
+            .ja: "3D モデル",
+            .ko: "3D 모델",
+            .th: "โมเดล 3 มิติ"
+        ],
+        "layer_kind_pin": [
+            .zhHant: "討論圖釘",
+            .en: "Comment pin",
+            .zhHans: "讨论图钉",
+            .ja: "コメントピン",
+            .ko: "댓글 핀",
+            .th: "หมุดความคิดเห็น"
+        ],
+        "layer_kind_shape": [
+            .zhHant: "形狀",
+            .en: "Shape",
+            .zhHans: "形状",
+            .ja: "図形",
+            .ko: "도형",
+            .th: "รูปทรง"
+        ],
+        "layer_kind_table": [
+            .zhHant: "表格",
+            .en: "Table",
+            .zhHans: "表格",
+            .ja: "表",
+            .ko: "표",
+            .th: "ตาราง"
+        ],
+        "layer_kind_text": [
+            .zhHant: "文字方塊",
+            .en: "Text box",
+            .zhHans: "文字方块",
+            .ja: "テキストボックス",
+            .ko: "텍스트 상자",
+            .th: "กล่องข้อความ"
+        ],
         "layer_select_two": [
             .zhHant: "選兩個以上的物件才能群組",
             .en: "Select two or more objects to group",

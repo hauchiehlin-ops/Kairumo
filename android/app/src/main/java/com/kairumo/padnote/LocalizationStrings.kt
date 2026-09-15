@@ -2434,6 +2434,62 @@ object LocalizationStrings {
             "ko" to "그룹(%@개)",
             "th" to "กลุ่ม (%@ รายการ)"
         ),
+        "layer_kind_image" to mapOf(
+            "zh-Hant" to "圖片",
+            "en" to "Image",
+            "zh-Hans" to "图片",
+            "ja" to "画像",
+            "ko" to "이미지",
+            "th" to "รูปภาพ"
+        ),
+        "layer_kind_link" to mapOf(
+            "zh-Hant" to "連結卡片",
+            "en" to "Link card",
+            "zh-Hans" to "链接卡片",
+            "ja" to "リンクカード",
+            "ko" to "링크 카드",
+            "th" to "การ์ดลิงก์"
+        ),
+        "layer_kind_model3d" to mapOf(
+            "zh-Hant" to "3D 模型",
+            "en" to "3D model",
+            "zh-Hans" to "3D 模型",
+            "ja" to "3D モデル",
+            "ko" to "3D 모델",
+            "th" to "โมเดล 3 มิติ"
+        ),
+        "layer_kind_pin" to mapOf(
+            "zh-Hant" to "討論圖釘",
+            "en" to "Comment pin",
+            "zh-Hans" to "讨论图钉",
+            "ja" to "コメントピン",
+            "ko" to "댓글 핀",
+            "th" to "หมุดความคิดเห็น"
+        ),
+        "layer_kind_shape" to mapOf(
+            "zh-Hant" to "形狀",
+            "en" to "Shape",
+            "zh-Hans" to "形状",
+            "ja" to "図形",
+            "ko" to "도형",
+            "th" to "รูปทรง"
+        ),
+        "layer_kind_table" to mapOf(
+            "zh-Hant" to "表格",
+            "en" to "Table",
+            "zh-Hans" to "表格",
+            "ja" to "表",
+            "ko" to "표",
+            "th" to "ตาราง"
+        ),
+        "layer_kind_text" to mapOf(
+            "zh-Hant" to "文字方塊",
+            "en" to "Text box",
+            "zh-Hans" to "文字方块",
+            "ja" to "テキストボックス",
+            "ko" to "텍스트 상자",
+            "th" to "กล่องข้อความ"
+        ),
         "layer_select_two" to mapOf(
             "zh-Hant" to "選兩個以上的物件才能群組",
             "en" to "Select two or more objects to group",

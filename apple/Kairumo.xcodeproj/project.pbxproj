@@ -38,6 +38,7 @@
 		67CF9DE54436AC7DD3FF5065 /* NotebookMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C19329463E6F6E313A0F1DB /* NotebookMigration.swift */; };
 		68C1811CB88877353FF14D31 /* CStubs.c in Sources */ = {isa = PBXBuildFile; fileRef = 26F09C378F9F1B6835D9ECB2 /* CStubs.c */; };
 		6EB543F097562AD8E0751343 /* StrokeWidthSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3111941E411F546450CCE85 /* StrokeWidthSlider.swift */; };
+		718C3BE123192CC4792EB80C /* ObjectStacking.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA14AB7B6F3436E39B58DAA1 /* ObjectStacking.swift */; };
 		723A25DA76A24DB5650DCDAA /* LinkPreviewEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B829DBCA4D5374715A49087 /* LinkPreviewEngine.swift */; };
 		778281F00A39E42DC02254A7 /* TableStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61C6C10FAD15645C91E246C0 /* TableStudioView.swift */; };
 		7B6B71CF69CE9F1C2CB2E953 /* DocumentViewerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E46CD750DA486212251DC0 /* DocumentViewerSheet.swift */; };
@@ -188,6 +189,7 @@
 		C72410287ED6D6BF9B550D5B /* NotebookStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookStore.swift; sourceTree = "<group>"; };
 		D059ACC4F96D906F5A18970D /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
 		D76C7E92895F6C4334996D92 /* NotebookSyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookSyncCoordinator.swift; sourceTree = "<group>"; };
+		DA14AB7B6F3436E39B58DAA1 /* ObjectStacking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectStacking.swift; sourceTree = "<group>"; };
 		DA24513DE1A6A5996FB190AC /* AssetLibraryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetLibraryManager.swift; sourceTree = "<group>"; };
 		DBEA4CFB130D285D67B343EC /* NoteShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteShape.swift; sourceTree = "<group>"; };
 		DC2F0D7F265BF495CF6D7B79 /* ThemeSpecificToolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSpecificToolsView.swift; sourceTree = "<group>"; };
@@ -348,6 +350,7 @@
 				29C630A29EC3E773EF130E2D /* ObjectFrameStyleMenu.swift */,
 				94384F7616936803E2A4DAB3 /* ObjectLayerPanel.swift */,
 				BFC2EC4F24CB728264AB91A5 /* ObjectRotationControls.swift */,
+				DA14AB7B6F3436E39B58DAA1 /* ObjectStacking.swift */,
 				4F6548BCB85682AC49CE9184 /* PageGeometry.swift */,
 				74C26B5B3A37A7FBDAABA8A7 /* PageRepagination.swift */,
 				02895D54063C3AA4B5D30463 /* PageThumbnailRenderer.swift */,
@@ -565,6 +568,7 @@
 				C5C788E40414F0CEBD323695 /* ObjectFrameStyleMenu.swift in Sources */,
 				260CDAF04744DB75E570A1F3 /* ObjectLayerPanel.swift in Sources */,
 				0D7E2AFBD2E9D88478C4DC9B /* ObjectRotationControls.swift in Sources */,
+				718C3BE123192CC4792EB80C /* ObjectStacking.swift in Sources */,
 				1DD235EF0430767F0F67610E /* PageGeometry.swift in Sources */,
 				E77C6702EE266A8D0B24EA19 /* PageRepagination.swift in Sources */,
 				2823612B8F3A376A45042712 /* PageThumbnailRenderer.swift in Sources */,

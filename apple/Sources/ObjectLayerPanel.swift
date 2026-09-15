@@ -131,12 +131,31 @@ public struct ObjectLayerPanel: View {
 
     @ObservedObject private var localizationManager = LocalizationManager.shared
 
-    public init(shapes: Binding<[NoteShapeAttachment]>, selection: Binding<Set<String>>) {
+    /// 只顯示群組操作，不顯示清單與上下移。
+    ///
+    /// 跨型別的堆疊已經由 `CanvasStackPanel` 負責，兩個都畫的話面板上會有
+    /// 兩份清單、兩組方向鍵與兩行「最上面的在最前面」—— 使用者不知道該按哪一組。
+    var groupingOnly: Bool = false
+
+    public init(
+        shapes: Binding<[NoteShapeAttachment]>,
+        selection: Binding<Set<String>>,
+        groupingOnly: Bool = false
+    ) {
         _shapes = shapes
         _selection = selection
+        self.groupingOnly = groupingOnly
     }
 
     public var body: some View {
+        if groupingOnly {
+            groupButtons
+        } else {
+            fullPanel
+        }
+    }
+
+    private var fullPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
             if shapes.isEmpty {
                 Text(localizationManager.localized("layers_empty"))
