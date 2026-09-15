@@ -1407,6 +1407,14 @@ extension LocalizationManager {
             .ko: "페이지 삭제",
             .th: "ลบหน้านี้"
         ],
+        "delete_page_confirm": [
+            .zhHant: "確定要刪除第 %@ 頁嗎？這一頁的手寫與物件都會消失。",
+            .en: "Delete page %@? Its handwriting and objects will be gone.",
+            .zhHans: "确定要删除第 %@ 页吗？这一页的手写与物件都会消失。",
+            .ja: "%@ ページ目を削除しますか？そのページの手書きとオブジェクトは消えます。",
+            .ko: "%@ 페이지를 삭제할까요? 해당 페이지의 필기와 객체가 사라집니다.",
+            .th: "ลบหน้า %@ ไหม? ลายมือและวัตถุในหน้านี้จะหายไป"
+        ],
         "delete_page_confirm_msg": [
             .zhHant: "確定要刪除第 %d 頁嗎？此動作無法復原。",
             .en: "Are you sure you want to delete Page %d? This cannot be undone.",
@@ -3031,6 +3039,14 @@ extension LocalizationManager {
             .ko: "하위 폴더 추가",
             .th: "สร้างโฟลเดอร์ย่อยใหม่"
         ],
+        "next_page": [
+            .zhHant: "下一頁",
+            .en: "Next page",
+            .zhHans: "下一页",
+            .ja: "次のページ",
+            .ko: "다음 페이지",
+            .th: "หน้าถัดไป"
+        ],
         "no_account_needed": [
             .zhHant: "不需要帳號，也沒有我們的伺服器",
             .en: "No account, and no server of ours",
@@ -3526,6 +3542,14 @@ extension LocalizationManager {
             .ja: "プレビュー",
             .ko: "실시간 미리보기",
             .th: "ดูตัวอย่างแผนภูมิ"
+        ],
+        "previous_page": [
+            .zhHant: "上一頁",
+            .en: "Previous page",
+            .zhHans: "上一页",
+            .ja: "前のページ",
+            .ko: "이전 페이지",
+            .th: "หน้าก่อน"
         ],
         "print_note": [
             .zhHant: "列印筆記",

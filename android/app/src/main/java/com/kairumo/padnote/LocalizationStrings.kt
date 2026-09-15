@@ -1402,6 +1402,14 @@ object LocalizationStrings {
             "ko" to "페이지 삭제",
             "th" to "ลบหน้านี้"
         ),
+        "delete_page_confirm" to mapOf(
+            "zh-Hant" to "確定要刪除第 %@ 頁嗎？這一頁的手寫與物件都會消失。",
+            "en" to "Delete page %@? Its handwriting and objects will be gone.",
+            "zh-Hans" to "确定要删除第 %@ 页吗？这一页的手写与物件都会消失。",
+            "ja" to "%@ ページ目を削除しますか？そのページの手書きとオブジェクトは消えます。",
+            "ko" to "%@ 페이지를 삭제할까요? 해당 페이지의 필기와 객체가 사라집니다.",
+            "th" to "ลบหน้า %@ ไหม? ลายมือและวัตถุในหน้านี้จะหายไป"
+        ),
         "delete_page_confirm_msg" to mapOf(
             "zh-Hant" to "確定要刪除第 %d 頁嗎？此動作無法復原。",
             "en" to "Are you sure you want to delete Page %d? This cannot be undone.",
@@ -3026,6 +3034,14 @@ object LocalizationStrings {
             "ko" to "하위 폴더 추가",
             "th" to "สร้างโฟลเดอร์ย่อยใหม่"
         ),
+        "next_page" to mapOf(
+            "zh-Hant" to "下一頁",
+            "en" to "Next page",
+            "zh-Hans" to "下一页",
+            "ja" to "次のページ",
+            "ko" to "다음 페이지",
+            "th" to "หน้าถัดไป"
+        ),
         "no_account_needed" to mapOf(
             "zh-Hant" to "不需要帳號，也沒有我們的伺服器",
             "en" to "No account, and no server of ours",
@@ -3521,6 +3537,14 @@ object LocalizationStrings {
             "ja" to "プレビュー",
             "ko" to "실시간 미리보기",
             "th" to "ดูตัวอย่างแผนภูมิ"
+        ),
+        "previous_page" to mapOf(
+            "zh-Hant" to "上一頁",
+            "en" to "Previous page",
+            "zh-Hans" to "上一页",
+            "ja" to "前のページ",
+            "ko" to "이전 페이지",
+            "th" to "หน้าก่อน"
         ),
         "print_note" to mapOf(
             "zh-Hant" to "列印筆記",

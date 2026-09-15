@@ -271,8 +271,28 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     // 真的開一本筆記本：沒有 session 的話，匯出與錄音都沒有東西可寫，
     // 這一頁就只是個畫圖玩具而不是筆記 App。
     val notebook = remember(notebookId) { openNotebook(activity, notebookId) }
-    val engine = remember(notebook) {
-        InkEngine(session = notebook?.first, pageId = notebook?.second)
+    // 分頁狀態。
+    //
+    // 在此之前 Android **只認第一頁** —— `notebook.second` 是 firstPageId，
+    // 而它從頭到尾沒有變過。一本 6 頁的筆記在 iPad 上翻得動，在 Android 上
+    // 永遠停在第 1 頁，其餘 5 頁的內容看不到也刪不掉。
+    //
+    // 以**索引**為主而不是以 pageId 為主：新增與刪除之後 id 會變，索引不會，
+    // 而使用者心裡想的是「第幾頁」。
+    var pageCount by remember(notebook) {
+        mutableIntStateOf(
+            runCatching { notebook?.first?.pageCount()?.toInt() ?: 1 }.getOrDefault(1)
+        )
+    }
+    var pageIndex by remember(notebook) { mutableIntStateOf(0) }
+
+    val pageId = remember(notebook, pageIndex, pageCount) {
+        runCatching { notebook?.first?.pageIdAt(pageIndex.toUInt()) }.getOrNull()
+            ?: notebook?.second
+    }
+
+    val engine = remember(notebook, pageId) {
+        InkEngine(session = notebook?.first, pageId = pageId)
     }
     val latency = remember { InkLatencyMeter() }
     val audio = remember { AudioCapture(activity) }
@@ -282,24 +302,24 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     val scope = rememberCoroutineScope()
 
     // 畫布文字方塊。與 Apple 端同一組資料模型與外觀規則（format-spec §6.2）。
-    val textStore = remember(notebook) { TextBoxStore(notebook?.first, notebook?.second) }
+    val textStore = remember(notebook, pageId) { TextBoxStore(notebook?.first, pageId) }
     var textRevision by remember { mutableIntStateOf(0) }
     var selectedTextId by remember { mutableStateOf<String?>(null) }
     var editingText by remember { mutableStateOf<TextBox?>(null) }
-    LaunchedEffect(notebook) { textStore.load(); textRevision++ }
+    LaunchedEffect(notebook, pageId) { textStore.load(); textRevision++ }
 
     // 數字製圖。設定存進區塊外觀，所以插進去之後還改得動 ——
     // 與 Apple 端同一份 ChartSpec 與同一個核心版面引擎。
-    val chartStore = remember(notebook) { ChartStore(notebook?.first, notebook?.second) }
+    val chartStore = remember(notebook, pageId) { ChartStore(notebook?.first, pageId) }
     var chartRevision by remember { mutableIntStateOf(0) }
     var selectedChartId by remember { mutableStateOf<String?>(null) }
     var editingChart by remember { mutableStateOf<ChartObject?>(null) }
     var insertingChart by remember { mutableStateOf(false) }
-    LaunchedEffect(notebook) { chartStore.load(); chartRevision++ }
+    LaunchedEffect(notebook, pageId) { chartStore.load(); chartRevision++ }
 
     // 表格。內容走核心原生的表格區塊，樣式走區塊外觀 ——
     // 與 Apple 端同一組操作，所以表格互相打得開。
-    val tableStore = remember(notebook) { TableStore(notebook?.first, notebook?.second) }
+    val tableStore = remember(notebook, pageId) { TableStore(notebook?.first, pageId) }
     var tableRevision by remember { mutableIntStateOf(0) }
     var selectedTableId by remember { mutableStateOf<String?>(null) }
     var editingTable by remember { mutableStateOf<NoteTable?>(null) }
@@ -307,16 +327,16 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     /// 欄位一直都在、也一直跟著同步走，但過去沒有任何介面碰得到它們。
     var editingShapeStyle by remember { mutableStateOf<NoteShape?>(null) }
     var insertingTable by remember { mutableStateOf(false) }
-    LaunchedEffect(notebook) { tableStore.load(); tableRevision++ }
+    LaunchedEffect(notebook, pageId) { tableStore.load(); tableRevision++ }
 
     // 形狀與流程圖。幾何全部來自核心，與 Apple 端是同一組頂點；
     // 形狀本身也是核心的原生物件，所以關掉 App 再打開它們還在。
-    val shapeStore = remember(notebook) { ShapeStore(notebook?.first, notebook?.second) }
+    val shapeStore = remember(notebook, pageId) { ShapeStore(notebook?.first, pageId) }
     var shapeRevision by remember { mutableIntStateOf(0) }
     var selectedShapeIds by remember { mutableStateOf(setOf<String>()) }
     var insertingShape by remember { mutableStateOf(false) }
     var showLayerPanel by remember { mutableStateOf(false) }
-    LaunchedEffect(notebook) { shapeStore.load(); shapeRevision++ }
+    LaunchedEffect(notebook, pageId) { shapeStore.load(); shapeRevision++ }
 
     // 雲端同步（決策 D3 選項 A）：使用者挑一個資料夾，兩台裝置指同一個地方。
     // 備份檔：選一個既有的備份來復原。
@@ -375,6 +395,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     /// 看起來像個測試程式 —— 使用者就是這樣回報的。留一個開關是因為
     /// 掌拒與筆壓的問題只有實機重現得出來，屆時要能一鍵打開。
     var showInkDebug by remember { mutableStateOf(false) }
+    var deletingPage by remember { mutableStateOf(false) }
 
     // 系統返回鍵＝回首頁。Android 使用者按的第一個東西就是它，
     // 不接的話按下去會直接把 App 關掉 —— 看起來像當掉。
@@ -417,6 +438,31 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 },
                 label = { Text(l10n("ink_pen_only")) }
             )
+            // 分頁導覽。與 Apple 端同一組：上一頁 · 頁碼 · 下一頁 · 新增。
+            TextButton(
+                onClick = { if (pageIndex > 0) pageIndex-- },
+                enabled = pageIndex > 0
+            ) { Text("‹") }
+            Text(
+                "${pageIndex + 1}/${maxOf(1, pageCount)}",
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(top = 14.dp)
+            )
+            TextButton(
+                onClick = { if (pageIndex < pageCount - 1) pageIndex++ },
+                enabled = pageIndex < pageCount - 1
+            ) { Text("›") }
+            TextButton(onClick = {
+                val session = notebook?.first
+                if (session != null) {
+                    runCatching { session.addPage(uniffi.padnote_core.PageStyle.BLANK) }
+                    pageCount = runCatching { session.pageCount().toInt() }.getOrDefault(pageCount + 1)
+                    // 新增之後直接翻過去 —— 加了一頁卻停在原地，
+                    // 使用者不確定到底加成功了沒有。
+                    pageIndex = pageCount - 1
+                }
+            }) { Text("+") }
+
             // FlowRow 裡沒有 weight 可以撐開，靠換行自然排就好。
             TextButton(onClick = { showMenu = true }) { Text("⋯") }
 
@@ -557,6 +603,14 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 DropdownMenuItem(
                     text = { Text(l10n("privacy_policy")) },
                     onClick = { showMenu = false; docsAsset = "legal/privacy.html" }
+                )
+                Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n("delete_page")) },
+                    // 只剩一頁時不給刪 —— 刪光了就沒有東西可以寫，
+                    // 而 UI 上也沒有「建立第一頁」的入口。
+                    enabled = pageCount > 1,
+                    onClick = { showMenu = false; deletingPage = true }
                 )
                 Divider()
                 DropdownMenuItem(
@@ -737,6 +791,32 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 )
             }
         }
+    }
+
+    if (deletingPage) {
+        AlertDialog(
+            onDismissRequest = { deletingPage = false },
+            title = { Text(l10n("delete_page")) },
+            text = { Text(l10n("delete_page_confirm").replace("%@", "${pageIndex + 1}")) },
+            confirmButton = {
+                TextButton(onClick = {
+                    deletingPage = false
+                    val session = notebook?.first
+                    val target = pageId
+                    if (session != null && target != null && pageCount > 1) {
+                        runCatching { session.removePage(target) }
+                        pageCount = runCatching { session.pageCount().toInt() }
+                            .getOrDefault(maxOf(1, pageCount - 1))
+                        // 刪的是最後一頁的話，索引要往回收 —— 不收的話
+                        // pageIdAt 拿不到東西，畫面會變成一片空白。
+                        pageIndex = pageIndex.coerceIn(0, maxOf(0, pageCount - 1))
+                    }
+                }) { Text(l10n("delete")) }
+            },
+            dismissButton = {
+                TextButton(onClick = { deletingPage = false }) { Text(l10n("cancel")) }
+            }
+        )
     }
 
     editingShapeStyle?.let { shape ->
