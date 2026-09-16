@@ -6655,6 +6655,14 @@ extension LocalizationManager {
             .ko: "노트 구조",
             .th: "โครงสร้างสมุด"
         ],
+        "structure_summary": [
+            .zhHant: "%1$@ 個資料夾 · %2$@ 本筆記",
+            .en: "%1$@ folders · %2$@ notebooks",
+            .zhHans: "%1$@ 个文件夹 · %2$@ 本笔记",
+            .ja: "フォルダ %1$@ · ノート %2$@",
+            .ko: "폴더 %1$@ · 노트 %2$@",
+            .th: "%1$@ โฟลเดอร์ · %2$@ สมุด"
+        ],
         "style_blueprint": [
             .zhHant: "線框圖",
             .en: "Blueprint",

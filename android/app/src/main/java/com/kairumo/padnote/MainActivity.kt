@@ -83,6 +83,7 @@ import com.kairumo.padnote.canvas.EditorMode
 import com.kairumo.padnote.account.IdentityDialog
 import com.kairumo.padnote.library.HomeScreen
 import com.kairumo.padnote.library.DocumentTemplateCatalog
+import com.kairumo.padnote.ui.KairumoTheme
 import com.kairumo.padnote.library.NewNotebookDialog
 import com.kairumo.padnote.library.RenameNotebookDialog
 import com.kairumo.padnote.library.DeleteNotebookDialog
@@ -167,7 +168,10 @@ class MainActivity : ComponentActivity() {
         // 使用者會看到介面閃一下才變過去。
         applySyncedLanguage(this)
         setContent {
-            MaterialTheme {
+            // 用自己的主題，不用 MaterialTheme 的預設值（工作項 S-62）。
+            // 預設值是 Material 的基準紫，而且**不跟隨深色模式** ——
+            // 使用者把系統切成深色，App 仍然一片白。見 ui/Theme.kt。
+            KairumoTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     KairumoApp()
                 }

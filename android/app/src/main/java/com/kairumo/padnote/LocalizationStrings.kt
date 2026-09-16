@@ -6697,6 +6697,14 @@ object LocalizationStrings {
             "ko" to "노트 구조",
             "th" to "โครงสร้างสมุด"
         ),
+        "structure_summary" to mapOf(
+            "zh-Hant" to "%1\$@ 個資料夾 · %2\$@ 本筆記",
+            "en" to "%1\$@ folders · %2\$@ notebooks",
+            "zh-Hans" to "%1\$@ 个文件夹 · %2\$@ 本笔记",
+            "ja" to "フォルダ %1\$@ · ノート %2\$@",
+            "ko" to "폴더 %1\$@ · 노트 %2\$@",
+            "th" to "%1\$@ โฟลเดอร์ · %2\$@ สมุด"
+        ),
         "style_blueprint" to mapOf(
             "zh-Hant" to "線框圖",
             "en" to "Blueprint",
@@ -7088,7 +7096,10 @@ object LocalizationStrings {
             "ja" to "モランディ グレージュ",
             "ko" to "모란디 뮤트 톤",
             "th" to "โทนมอรันดี"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "theme_palette_trend" to mapOf(
             "zh-Hant" to "Pantone 季節潮流色",
             "en" to "Pantone Trend Palette",
@@ -7096,10 +7107,7 @@ object LocalizationStrings {
             "ja" to "パントン トレンドカラー",
             "ko" to "팬톤 트렌드 컬러",
             "th" to "พาเลตต์เทรนด์ Pantone"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "theme_tools" to mapOf(
             "zh-Hant" to "主題工具",
             "en" to "Theme Tools",

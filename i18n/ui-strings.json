@@ -6639,6 +6639,14 @@
     "zhHans": "笔记结构",
     "zhHant": "筆記結構"
   },
+  "structure_summary": {
+    "en": "%1$@ folders · %2$@ notebooks",
+    "ja": "フォルダ %1$@ · ノート %2$@",
+    "ko": "폴더 %1$@ · 노트 %2$@",
+    "th": "%1$@ โฟลเดอร์ · %2$@ สมุด",
+    "zhHans": "%1$@ 个文件夹 · %2$@ 本笔记",
+    "zhHant": "%1$@ 個資料夾 · %2$@ 本筆記"
+  },
   "style_blueprint": {
     "en": "Blueprint",
     "ja": "線画",

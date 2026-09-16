@@ -28,6 +28,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -45,8 +46,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.vector.ImageVector
 import com.kairumo.padnote.ui.DS
+import com.kairumo.padnote.ui.KairumoIcons
 import com.kairumo.padnote.ui.dsContentWidth
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -226,7 +231,7 @@ fun HomeScreen(
                     MaterialTheme.colorScheme.primary to false)
             )
             val clicks = listOf(onCreate, onToggleRecording, onAssetLibrary)
-            val glyphs = listOf("＋", "◉", "◆")
+            val icons = listOf(Icons.Filled.Add, KairumoIcons.Mic, KairumoIcons.Cube)
 
             Column(verticalArrangement = Arrangement.spacedBy(DS.Space.xs)) {
                 actions.indices.chunked(perRow).forEach { rowIndices ->
@@ -238,7 +243,7 @@ fun HomeScreen(
                             ActionCard(
                                 title = actions[i].first,
                                 subtitle = actions[i].second,
-                                glyph = glyphs[i],
+                                icon = icons[i],
                                 accent = actions[i].third.first,
                                 primary = actions[i].third.second,
                                 modifier = Modifier.weight(1f),
@@ -446,7 +451,7 @@ private fun ContinueCard(
                 entry.title,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 2,
-                modifier = Modifier.padding(top = 6.dp)
+                modifier = Modifier.padding(top = DS.Space.xs)
             )
             Text(
                 "${entry.pageCount} ${l("pages_unit")} · ${formatDate(entry.modifiedAt)}",
@@ -537,7 +542,7 @@ private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
 private fun ActionCard(
     title: String,
     subtitle: String,
-    glyph: String,
+    icon: ImageVector,
     accent: Color,
     primary: Boolean,
     modifier: Modifier = Modifier,
@@ -545,17 +550,23 @@ private fun ActionCard(
 ) {
     Card(
         modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(DS.Radius.m),
         colors = CardDefaults.cardColors(
             containerColor = if (primary) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 12.dp)) {
-            Text(
-                glyph,
-                fontSize = 16.sp,
-                color = if (primary) MaterialTheme.colorScheme.onPrimary else accent
+        Column(Modifier.padding(DS.Space.m)) {
+            // 真的圖示，不是文字符號（工作項 S-62）。
+            //
+            // 這裡原本畫的是「＋」「◉」「◆」這三個**字元**。它們會跟著
+            // 字型走，對不齊基線、大小不一致，在不同裝置的字型上長得也不
+            // 一樣 —— 那是「看起來像半成品」最直接的來源之一。
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (primary) MaterialTheme.colorScheme.onPrimary else accent,
+                modifier = Modifier.size(DS.Icon.large)
             )
             Text(
                 title,

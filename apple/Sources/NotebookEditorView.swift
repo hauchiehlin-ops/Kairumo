@@ -30,6 +30,18 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
 
     public var id: String { rawValue }
 
+    /// 這個工具是不是「筆」。
+    ///
+    /// 橡皮擦與套索不是筆：一個是擦掉、一個是選取，兩者都不沾墨，也不吃
+    /// 顏色與粗細。工具列把九個圖示排成沒有斷點的一長列時，使用者得靠
+    /// 記圖案來分辨 —— 分組之後，形狀就說明了用途（工作項 S-62）。
+    public var isBrush: Bool {
+        switch self {
+        case .eraser, .lasso: return false
+        default: return true
+        }
+    }
+
     public var iconName: String {
         switch self {
         case .pen: return "pencil.tip"
@@ -1199,6 +1211,15 @@ public struct NotebookEditorView: View {
 
     // 筆記主模式：手繪 (Draw) vs 鍵盤打字 (Type)
     @State private var editorMode: EditorMode = .draw
+    /// 模式徽章是不是正顯示著。切換模式時亮起，過幾秒自己淡掉。
+    ///
+    /// **不常駐**（工作項 S-62）：它原本一直蓋在畫布右上角，330pt 寬，
+    /// 等於永遠有一塊紙面被說明文字佔著。模式本身在工具列的切換器上看得到，
+    /// 徽章要說的是「這個模式下手勢會怎樣」—— 那是切換當下才需要的提示。
+    @State private var modeBadgeVisible: Bool = false
+    /// 用來取消上一次的淡出排程：連續切換兩次時，第一次的排程不該把
+    /// 第二次剛亮起的徽章關掉。
+    @State private var modeBadgeToken: Int = 0
 
     public enum SidebarTabMode: String, CaseIterable, Identifiable {
         case pages = "pages"
@@ -1251,15 +1272,22 @@ public struct NotebookEditorView: View {
     @State private var showDeletePageAlert: Bool = false
 
     // 常用色彩盤
+    /// 常用墨色（工作項 S-62）。
+    ///
+    /// 原本這裡是八個**純飽和原色**（`.black`、`.blue`、`.red`、`.orange`、
+    /// `.purple`…）。那組顏色的問題不是難看，是**不像筆**：真的原子筆、
+    /// 鋼筆、螢光筆都不是純色，純色排成一列看起來像小畫家的調色盤。
+    ///
+    /// 改成照實際筆墨調的顏色：墨黑不是全黑（全黑在紙上會顯得死板）、
+    /// 藍是鋼筆藍、紅是紅筆紅、綠偏森林綠、黃是螢光筆的暖黃。
+    /// 數量也從八個減到六個 —— 常用色就是這幾個，其餘交給專業調色盤。
     private let colorPalette: [Color] = [
-        .black,
-        .blue,
-        .red,
-        Color(red: 0.1, green: 0.6, blue: 0.2), // 綠色
-        .orange,
-        .purple,
-        Color(red: 0.9, green: 0.8, blue: 0.1), // 螢光黃
-        .gray
+        Color(red: 0.11, green: 0.12, blue: 0.14),  // 墨黑
+        Color(red: 0.13, green: 0.31, blue: 0.68),  // 鋼筆藍
+        Color(red: 0.76, green: 0.19, blue: 0.19),  // 紅筆紅
+        Color(red: 0.10, green: 0.44, blue: 0.29),  // 森林綠
+        Color(red: 0.91, green: 0.67, blue: 0.13),  // 螢光黃
+        Color(red: 0.45, green: 0.47, blue: 0.51)   // 鉛筆灰
     ]
 
     /// 要求外層改綁到另一則筆記。
@@ -1352,6 +1380,8 @@ public struct NotebookEditorView: View {
         .onAppear {
             loadCurrentPage()
             MacWindowTitle.apply()
+            // 進到編輯器時也亮一次：第一次開的人要知道自己在哪個模式。
+            flashModeBadge()
         }
         .sheet(isPresented: $showShareSheet) { erasedView {
             if let data = exportPdfData {
@@ -1617,10 +1647,6 @@ public struct NotebookEditorView: View {
             }
             .buttonStyle(.plain)
             .help(localizationManager.localized("home"))
-
-            // 版本標示。不要只靠視窗標題列 —— 在 Mac 上跑的 iOS 版（Designed for iPad）
-            // 由系統決定標題，App 設什麼都不一定反映得出來。畫在自己的工具列裡最可靠。
-            versionBadge
 
             // 筆記結構側邊欄切換鈕
             Button {
@@ -2045,8 +2071,6 @@ public struct NotebookEditorView: View {
         }
         .buttonStyle(.plain)
         .help(localizationManager.localized("home"))
-
-        versionBadge
 
         // 筆記結構側邊欄切換
         Button {
@@ -2690,8 +2714,10 @@ ZStack(alignment: .topTrailing) {
             // 什麼事」完全不同（筆會不會畫線、物件拖不拖得動）。看不出自己
             // 在哪個模式，就只能一直試。
             modeBadge
-                .padding(.top, 14)
-                .padding(.trailing, 20)
+                .padding(.top, DS.Space.s)
+                .padding(.trailing, DS.Space.m)
+                .opacity(modeBadgeVisible ? 1 : 0)
+                .animation(.easeInOut(duration: 0.22), value: modeBadgeVisible)
 
             // 🌟 插入物件層（圖片、文字方塊、3D 模型、連結卡片、討論圖釘）
             //
@@ -3025,21 +3051,14 @@ ZStack(alignment: .topTrailing) {
     }
 
     /// 版本標示（v2.2.0 這種）。點一下可複製，回報問題時直接貼上。
-    private var versionBadge: some View {
-        Text("v\(AppVersion.marketing)")
-            .font(.system(size: 11, weight: .medium, design: .monospaced))
-            .foregroundColor(.secondary)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 3)
-            .background(Color(uiColor: .tertiarySystemGroupedBackground))
-            .cornerRadius(5)
-            .help("Kairumo v\(AppVersion.marketing) (build \(AppVersion.build))")
-            .onTapGesture {
-                #if canImport(UIKit)
-                UIPasteboard.general.string = "Kairumo v\(AppVersion.marketing) (build \(AppVersion.build))"
-                #endif
-            }
-    }
+    // 版本號**不放在編輯器工具列**（工作項 S-62）。
+    //
+    // 原本這裡有一個等寬字體的 `v3.9.0` 標籤，理由是「Mac 上跑的 iOS 版由
+    // 系統決定視窗標題，畫在自己的工具列裡最可靠」。那個理由本身沒錯，
+    // 但結論放錯地方了：使用者每天盯著的編輯畫面不該常駐一個版本號 ——
+    // 那是開發用的東西出現在出貨的介面上。
+    //
+    // 版本號在兩個地方仍然看得到：首頁頁尾，以及快捷選單裡的系統診斷。
 
     // MARK: - 手繪／打字模式切換器
     //
@@ -3066,6 +3085,8 @@ ZStack(alignment: .topTrailing) {
             withAnimation(.easeInOut(duration: 0.18)) {
                 editorMode = mode
             }
+            // 切換當下把提示亮出來，幾秒後自己淡掉。
+            flashModeBadge()
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: icon)
@@ -3409,19 +3430,21 @@ ZStack(alignment: .topTrailing) {
 
             Divider()
 
-            // 目錄統計
-            HStack {
-                Text("\(localizationManager.localized("structure_folders")): \(store.folders.count)")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text("\(localizationManager.localized("all_folders")): \(store.notebooks.count)")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-            }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            // 目錄統計（工作項 S-62）。
+            //
+            // 原本是「Folders: 0」與「All Files: 2」分列左右兩端 ——
+            // `標籤: 數字` 是程式在印偵錯訊息的格式，不是給人看的句子。
+            // 改成一句自然語言，並靠左排（貼在兩端會讓人以為是兩個欄位）。
+            Text(
+                String(
+                    format: localizationManager.localized("structure_summary"),
+                    String(store.folders.count), String(store.notebooks.count))
+            )
+            .font(DS.Font.caption)
+            .foregroundStyle(DS.Color.tertiaryText)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, DS.Space.s)
+            .padding(.vertical, DS.Space.xs)
         }
     }
 
@@ -3677,8 +3700,8 @@ ZStack(alignment: .topTrailing) {
     /// 換行版才不會因為內容被包在容器裡而永遠不換行。
     @ViewBuilder
     private func drawingToolbarItems(showToolLabels: Bool) -> some View {
-                // 工具選擇群組（鋼筆、原子筆、毛筆、麥克筆、螢光筆、鉛筆、水彩筆、橡皮擦、套索）
-                ForEach(EditorToolType.allCases) { tool in
+                // 筆刷群組。橡皮擦與套索另成一組（見 EditorToolType.isBrush）。
+                ForEach(EditorToolType.allCases.filter(\.isBrush)) { tool in
                     Button {
                         selectedTool = tool
                     } label: {
@@ -3695,6 +3718,31 @@ ZStack(alignment: .topTrailing) {
                         .padding(.vertical, 5)
                         .background(selectedTool == tool ? Color.accentColor.opacity(0.15) : Color.clear)
                         .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                ToolbarSeparator()
+                    .frame(height: 24)
+
+                // 擦除與選取。與筆刷分開，因為它們不沾墨，也不吃顏色與粗細。
+                ForEach(EditorToolType.allCases.filter { !$0.isBrush }) { tool in
+                    Button {
+                        selectedTool = tool
+                    } label: {
+                        VStack(spacing: 3) {
+                            Image(systemName: tool.iconName)
+                                .font(.system(size: 16, weight: selectedTool == tool ? .bold : .regular))
+                            if showToolLabels {
+                                Text(localizationManager.localized(tool.localizationKey))
+                                    .font(.system(size: 10))
+                            }
+                        }
+                        .foregroundColor(selectedTool == tool ? .accentColor : .secondary)
+                        .padding(.horizontal, DS.Space.xs)
+                        .padding(.vertical, 5)
+                        .background(selectedTool == tool ? DS.Color.accentSoft : Color.clear)
+                        .cornerRadius(DS.Radius.s)
                     }
                     .buttonStyle(.plain)
                 }
@@ -3734,38 +3782,42 @@ ZStack(alignment: .topTrailing) {
                     .frame(height: 24)
 
                 // 色彩選擇盤
-                HStack(spacing: 6) {
+                HStack(spacing: DS.Space.xs) {
                     ForEach(colorPalette, id: \.self) { color in
                         Button {
                             selectedColor = color
                         } label: {
-                            ZStack {
-                                Circle()
-                                    .fill(color)
-                                    .frame(width: 18, height: 18)
-                                if selectedColor == color {
+                            // 選取環畫在色點**外面**，而不是壓在上面 ——
+                            // 壓在上面會蓋掉顏色本身，深色時尤其看不出選了誰。
+                            Circle()
+                                .fill(color)
+                                .frame(width: DS.Icon.small, height: DS.Icon.small)
+                                .overlay(
+                                    Circle().stroke(DS.Color.hairline, lineWidth: 0.5)
+                                )
+                                .padding(3)
+                                .overlay(
                                     Circle()
-                                        .stroke(Color.primary, lineWidth: 2)
-                                        .frame(width: 22, height: 22)
-                                }
-                            }
+                                        .stroke(
+                                            selectedColor == color ? DS.Color.accent : .clear,
+                                            lineWidth: 2)
+                                )
                         }
                         .buttonStyle(.plain)
                     }
-                    ColorPicker("", selection: $selectedColor)
-                        .labelsHidden()
-                        .frame(width: 24)
 
-                    // 專業調色盤按鈕
+                    // 任意色只留一個入口（工作項 S-62）。
+                    //
+                    // 這裡原本同時有系統的 `ColorPicker`（那顆彩虹圈）**與**
+                    // 專業調色盤按鈕。專業調色盤支援 RGB／HSB／HEX 與設計師
+                    // 色盤，是彩虹圈的超集 —— 兩個並排只是讓人不知道該按哪一個。
                     Button {
                         showProColorPicker = true
                     } label: {
-                        Image(systemName: "slider.horizontal.2.square")
-                            .font(.system(size: 15))
-                            .foregroundColor(.primary)
-                            .padding(5)
-                            .background(Color.secondary.opacity(0.12))
-                            .cornerRadius(6)
+                        Image(systemName: "paintpalette")
+                            .font(.system(size: DS.Icon.small, weight: .medium))
+                            .foregroundStyle(DS.Color.secondaryText)
+                            .frame(width: DS.Icon.medium, height: DS.Icon.medium)
                     }
                     .buttonStyle(.plain)
                     .help(localizationManager.localized("pro_color"))
@@ -3863,12 +3915,22 @@ ZStack(alignment: .topTrailing) {
                     }
                     .help(localizationManager.localized("redo"))
 
+                    // 「清空整頁」與復原／重做之間要有分隔（工作項 S-62）。
+                    //
+                    // 三顆按鈕原本等距排在一起，而其中一顆會**清掉整頁**。
+                    // 手指在 iPad 上點復原點偏一格，清掉的東西雖然還原得回來，
+                    // 但那一瞬間的驚嚇是真的。分隔線把「可逆」與「破壞性」
+                    // 分成兩組，這是工具列最基本的一件事。
+                    ToolbarSeparator()
+                        .frame(height: 20)
+                        .padding(.horizontal, DS.Space.xxs)
+
                     Button {
                         showClearConfirmAlert = true
                     } label: {
                         Image(systemName: "trash")
                             .font(.subheadline)
-                            .foregroundColor(.red.opacity(0.8))
+                            .foregroundStyle(DS.Color.destructive)
                     }
                     .help(localizationManager.localized("clear_page"))
                 }
@@ -5517,6 +5579,17 @@ ZStack(alignment: .topTrailing) {
     }
 
     /// 目前模式的徽章：這個模式下筆會不會畫線、物件拖不拖得動。
+    /// 讓模式徽章亮起，並排程淡出。
+    private func flashModeBadge() {
+        modeBadgeToken += 1
+        let token = modeBadgeToken
+        modeBadgeVisible = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.6) {
+            // 這段期間又切過模式的話，token 對不上，就讓後來那一次決定。
+            if token == modeBadgeToken { modeBadgeVisible = false }
+        }
+    }
+
     private var modeBadge: some View {
         let isDraw = editorMode == .draw
         return HStack(spacing: 7) {

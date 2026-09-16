@@ -607,13 +607,7 @@ public struct HomeWorkbenchView: View {
                             Text(showAllContinue ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleList.count))")
                             Image(systemName: showAllContinue ? "chevron.up" : "chevron.down")
                         }
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.accentColor)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.accentColor.opacity(0.12))
-                        .cornerRadius(8)
+                        .dsChip()
                     }
                     .buttonStyle(.plain)
                 }
@@ -652,13 +646,7 @@ public struct HomeWorkbenchView: View {
                                 Text(showAllContinue ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleList.count))")
                                 Image(systemName: showAllContinue ? "chevron.up" : "chevron.down")
                             }
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.accentColor)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.accentColor.opacity(0.12))
-                            .cornerRadius(8)
+                            .dsChip()
                         }
                         .buttonStyle(.plain)
                     }
@@ -831,13 +819,7 @@ public struct HomeWorkbenchView: View {
                             Text(showAllRecordings ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleRecordings.count))")
                             Image(systemName: showAllRecordings ? "chevron.up" : "chevron.down")
                         }
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.accentColor)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.accentColor.opacity(0.12))
-                        .cornerRadius(8)
+                        .dsChip()
                     }
                     .buttonStyle(.plain)
 
@@ -848,12 +830,7 @@ public struct HomeWorkbenchView: View {
                             Image(systemName: "folder")
                             Text(localizationManager.localized("open_record_folder"))
                         }
-                        .font(.caption)
-                        .foregroundColor(.accentColor)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.accentColor.opacity(0.1))
-                        .cornerRadius(8)
+                        .dsChip()
                     }
                     .buttonStyle(.plain)
                     .help(localizationManager.localized("open_record_folder"))
@@ -893,13 +870,7 @@ public struct HomeWorkbenchView: View {
                                 Text(showAllRecordings ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleRecordings.count))")
                                 Image(systemName: showAllRecordings ? "chevron.up" : "chevron.down")
                             }
-                            .font(.caption)
-                            .fontWeight(.medium)
-                            .foregroundColor(.accentColor)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.accentColor.opacity(0.12))
-                            .cornerRadius(8)
+                            .dsChip()
                         }
                         .buttonStyle(.plain)
 
@@ -910,12 +881,7 @@ public struct HomeWorkbenchView: View {
                                 Image(systemName: "folder")
                                 Text(localizationManager.localized("folders"))
                             }
-                            .font(.caption)
-                            .foregroundColor(.accentColor)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
-                            .background(Color.accentColor.opacity(0.1))
-                            .cornerRadius(8)
+                            .dsChip()
                         }
                         .buttonStyle(.plain)
                     }
@@ -1139,13 +1105,7 @@ public struct HomeWorkbenchView: View {
                             Image(systemName: "folder.badge.plus")
                             Text(localizationManager.localized("new_subfolder"))
                         }
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.accentColor)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(Color.accentColor.opacity(0.12))
-                        .cornerRadius(8)
+                        .dsChip()
                     }
                     .buttonStyle(.plain)
                 }
