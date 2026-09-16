@@ -252,7 +252,7 @@ fun HomeScreen(
                 Triple(l("new_note"), l("new_note_desc"),
                     MaterialTheme.colorScheme.primary to true),
                 Triple(l(if (recording) "stop_recording" else "start_recording"),
-                    l("start_recording_desc"), Color(0xFFD9453C) to false),
+                    l("start_recording_desc"), MaterialTheme.colorScheme.error to false),
                 Triple(l("asset_library"), l("asset_library_desc"),
                     MaterialTheme.colorScheme.primary to false)
             )
@@ -1062,7 +1062,11 @@ private fun RecordingRow(
                 contentAlignment = Alignment.Center
             ) {
                 @Suppress("UNUSED_EXPRESSION") tick
-                Text(if (playing) "⏸" else "▶", fontSize = 13.sp, color = Color(0xFFD9453C))
+                Text(
+                    if (playing) "⏸" else "▶",
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.error
+                )
             }
             Column(Modifier.weight(1f)) {
                 Text(recording.notebookTitle, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)

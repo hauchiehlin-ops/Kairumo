@@ -3833,15 +3833,23 @@ ZStack(alignment: .topTrailing) {
                         Button {
                             selectedColor = color
                         } label: {
-                            // 選取環畫在色點**外面**，而不是壓在上面 ——
-                            // 壓在上面會蓋掉顏色本身，深色時尤其看不出選了誰。
+                            // 色票畫在「紙」上（工作項 S-64）。
+                            //
+                            // 墨黑是 #1C1F24，深色模式的卡片底是 #1C1C1E ——
+                            // 兩者差不到一個色階，那顆色票在深色模式下
+                            // **整個看不見**。
+                            //
+                            // 襯一張紙不只是為了看得見：墨色本來就是「畫在
+                            // 紙上的顏色」，襯在深色介面上看到的根本不是它
+                            // 在頁面上的樣子。
                             Circle()
                                 .fill(color)
                                 .frame(width: DS.Icon.small, height: DS.Icon.small)
+                                .padding(3)
+                                .background(Circle().fill(Color.white))
                                 .overlay(
                                     Circle().stroke(DS.Color.hairline, lineWidth: 0.5)
                                 )
-                                .padding(3)
                                 .overlay(
                                     Circle()
                                         .stroke(

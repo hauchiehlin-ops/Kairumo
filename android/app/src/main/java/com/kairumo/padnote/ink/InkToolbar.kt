@@ -87,6 +87,14 @@ val inkPalette: List<Triple<String, Color, String>> =
         Triple(entry.hex, Color(android.graphics.Color.parseColor(entry.hex)), entry.key)
     }
 
+/**
+ * 色票底下那張「紙」的顏色。
+ *
+ * 固定白色而不是跟著主題：它代表的是**頁面**，而頁面在深色模式下仍然是白的
+ * （見 PageImageRenderer 對「紙就是紙」的處理）。
+ */
+private val INK_SWATCH_PAPER = Color(0xFFFFFFFF)
+
 /** 筆寬可選範圍。與 Apple 端的 `StrokeWidthSlider.range` 相同。 */
 val inkWidthRange: ClosedFloatingPointRange<Float> = 1f..30f
 
@@ -127,9 +135,20 @@ fun InkToolbar(
         if (!tool.isEraser && !tool.isLasso) {
             for ((hex, color, nameKey) in inkPalette) {
                 val selected = colorHex == hex
+                // 色票畫在「紙」上（工作項 S-64）。
+                //
+                // 墨黑是 #1C1F24，深色模式的卡片底是 #1C1E1E —— 兩者差不到
+                // 一個色階，那顆色票在深色模式下**整個看不見**。
+                //
+                // 加白框不只是為了看得見：墨色本來就是「畫在紙上的顏色」，
+                // 襯在深色介面上看到的根本不是它在頁面上的樣子。襯一張紙，
+                // 兩個問題一起解決。
                 Box(
                     modifier = Modifier
                         .size(26.dp)
+                        .clip(CircleShape)
+                        .background(INK_SWATCH_PAPER)
+                        .padding(3.dp)
                         .clip(CircleShape)
                         .background(color)
                         .border(
@@ -169,7 +188,7 @@ fun InkToolbar(
                     .clip(CircleShape)
                     .then(
                         if (tool.isEraser) {
-                            Modifier.border(1.5.dp, Color(0xFF888888), CircleShape)
+                            Modifier.border(1.5.dp, MaterialTheme.colorScheme.outline, CircleShape)
                         } else {
                             Modifier.background(
                                 inkPalette.firstOrNull { it.first == colorHex }?.second

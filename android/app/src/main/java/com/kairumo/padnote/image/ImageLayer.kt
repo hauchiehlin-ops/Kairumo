@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -111,7 +112,7 @@ private fun ImageObjectView(
                             shape = shape
                         )
                     } else if (isSelected) {
-                        Modifier.border(1.5f.dp, Color(0xFF4A90D9), shape)
+                        Modifier.border(1.5f.dp, MaterialTheme.colorScheme.primary, shape)
                     } else {
                         Modifier
                     }
