@@ -1239,6 +1239,8 @@ public struct NotebookEditorView: View {
 
     // Word 文字排版、網址預覽與專業調色狀態
     @State private var showWordStudio: Bool = false
+    /// 摘要與待辦（工作項 S-20）。
+    @State private var showNoteIntelligence: Bool = false
     @State private var editingTextId: String? = nil
     @State private var newTextDraft: NoteTextAttachment = NoteTextAttachment()
     @State private var showLinkPreviewSheet: Bool = false
@@ -1561,6 +1563,15 @@ public struct NotebookEditorView: View {
             ChartStudioView(editing: identifier.spec) { updatedSpec, updatedImage in
                 replaceChartAttachment(id: identifier.id, spec: updatedSpec, image: updatedImage)
             }
+        } }
+        .sheet(isPresented: $showNoteIntelligence) { erasedView {
+            NoteIntelligenceSheet(
+                // 走核心的 markdown 匯出：打字內容、表格、轉錄文字都在裡面，
+                // 而且與匯出看到的是同一份文字 —— 另外湊一份「給模型看的」
+                // 文字的話，摘要會講到使用者匯出時看不到的東西。
+                text: notebook.plainText(),
+                onInsert: { text in insertQuickTextSnippet(text) }
+            )
         } }
         .sheet(isPresented: $showWordStudio) { erasedView {
             WordTextStudioView(attachment: $newTextDraft) { created in
@@ -1988,6 +1999,16 @@ public struct NotebookEditorView: View {
                 } label: {
                     Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars")
                 }
+
+                // 摘要與待辦（工作項 S-20）。核心的 `llm_summarize` 早就在
+                // FFI 上，缺的一直是這一顆按鈕。
+                Button {
+                    showNoteIntelligence = true
+                } label: {
+                    Label(
+                        localizationManager.localized("ai_summary"),
+                        systemImage: "sparkles")
+                }
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "plus.circle.fill")
@@ -2307,6 +2328,9 @@ public struct NotebookEditorView: View {
                 Button { showCollaborationSheet = true } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }
                 Button { recognizeHandwritingOnCurrentPage() } label: {
                     Label(localizationManager.localized("recognize_handwriting"), systemImage: "text.viewfinder")
+                }
+                Button { showNoteIntelligence = true } label: {
+                    Label(localizationManager.localized("ai_summary"), systemImage: "sparkles")
                 }
             }
         } label: {
@@ -4037,6 +4061,7 @@ ZStack(alignment: .topTrailing) {
                     Divider()
                     Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
                     Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
+                    Button { showNoteIntelligence = true } label: { Label(localizationManager.localized("ai_summary"), systemImage: "sparkles") }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "ellipsis.circle")

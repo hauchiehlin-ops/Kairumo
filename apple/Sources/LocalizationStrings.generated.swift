@@ -143,6 +143,102 @@ extension LocalizationManager {
             .ko: "텍스트 상자 추가",
             .th: "เพิ่มกล่องข้อความ"
         ],
+        "ai_insert": [
+            .zhHant: "插入筆記",
+            .en: "Insert into note",
+            .zhHans: "插入笔记",
+            .ja: "ノートに挿入",
+            .ko: "노트에 삽입",
+            .th: "แทรกลงในโน้ต"
+        ],
+        "ai_key_points": [
+            .zhHant: "重點",
+            .en: "Key points",
+            .zhHans: "重点",
+            .ja: "要点",
+            .ko: "요점",
+            .th: "ประเด็นสำคัญ"
+        ],
+        "ai_no_todos": [
+            .zhHant: "這則筆記裡沒有待辦事項。",
+            .en: "No to-dos in this note.",
+            .zhHans: "这则笔记里没有待办事项。",
+            .ja: "このノートにTo-Doはありません。",
+            .ko: "이 노트에는 할 일이 없습니다.",
+            .th: "ไม่มีสิ่งที่ต้องทำในโน้ตนี้"
+        ],
+        "ai_not_ready": [
+            .zhHant: "裝置端模型還沒準備好（可能還在下載，或在系統設定裡被關掉了）。稍後再試一次。",
+            .en: "The on-device model is not ready yet — it may still be downloading, or turned off in system settings. Try again later.",
+            .zhHans: "设备端模型还没准备好（可能还在下载，或在系统设置里被关掉了）。稍后再试一次。",
+            .ja: "オンデバイスモデルの準備ができていません（ダウンロード中か、システム設定でオフになっている可能性があります）。しばらくしてからお試しください。",
+            .ko: "온디바이스 모델이 아직 준비되지 않았습니다(다운로드 중이거나 시스템 설정에서 꺼져 있을 수 있습니다). 잠시 후 다시 시도하세요.",
+            .th: "โมเดลบนเครื่องยังไม่พร้อม (อาจกำลังดาวน์โหลด หรือถูกปิดไว้ในการตั้งค่าระบบ) ลองใหม่ภายหลัง"
+        ],
+        "ai_nothing_to_summarize": [
+            .zhHant: "這則筆記還沒有文字內容。手寫的字要先辨識過才整理得出摘要。",
+            .en: "There is no text in this note yet. Handwriting has to be recognised first before it can be summarised.",
+            .zhHans: "这则笔记还没有文字内容。手写的字要先识别过才整理得出摘要。",
+            .ja: "このノートにはまだ文字がありません。手書きは先に認識しないと要約できません。",
+            .ko: "이 노트에는 아직 텍스트가 없습니다. 손글씨는 먼저 인식해야 요약할 수 있습니다.",
+            .th: "โน้ตนี้ยังไม่มีข้อความ ลายมือต้องผ่านการรู้จำก่อนจึงจะสรุปได้"
+        ],
+        "ai_on_device_note": [
+            .zhHant: "文字不會離開這台裝置。",
+            .en: "Your text never leaves this device.",
+            .zhHans: "文字不会离开这台设备。",
+            .ja: "テキストがこの端末の外に出ることはありません。",
+            .ko: "텍스트는 이 기기를 벗어나지 않습니다.",
+            .th: "ข้อความจะไม่ออกจากเครื่องนี้"
+        ],
+        "ai_run": [
+            .zhHant: "開始整理",
+            .en: "Summarize",
+            .zhHans: "开始整理",
+            .ja: "要約する",
+            .ko: "요약하기",
+            .th: "เริ่มสรุป"
+        ],
+        "ai_running": [
+            .zhHant: "整理中…",
+            .en: "Working…",
+            .zhHans: "整理中…",
+            .ja: "処理中…",
+            .ko: "처리 중…",
+            .th: "กำลังทำ…"
+        ],
+        "ai_summary": [
+            .zhHant: "摘要與待辦",
+            .en: "Summary & To-dos",
+            .zhHans: "摘要与待办",
+            .ja: "要約とTo-Do",
+            .ko: "요약과 할 일",
+            .th: "สรุปและสิ่งที่ต้องทำ"
+        ],
+        "ai_summary_desc": [
+            .zhHant: "讀過這則筆記，整理出重點與待辦事項。全程在這台裝置上完成。",
+            .en: "Reads this note and pulls out the key points and any to-dos. Everything stays on this device.",
+            .zhHans: "读过这则笔记，整理出重点与待办事项。全程在这台设备上完成。",
+            .ja: "このノートを読み、要点とTo-Doを整理します。すべてこの端末内で完結します。",
+            .ko: "이 노트를 읽고 요점과 할 일을 정리합니다. 모든 처리는 이 기기 안에서 이루어집니다.",
+            .th: "อ่านโน้ตนี้แล้วสรุปประเด็นสำคัญและสิ่งที่ต้องทำ ทุกอย่างทำบนเครื่องนี้"
+        ],
+        "ai_todos": [
+            .zhHant: "待辦事項",
+            .en: "To-dos",
+            .zhHans: "待办事项",
+            .ja: "To-Do",
+            .ko: "할 일",
+            .th: "สิ่งที่ต้องทำ"
+        ],
+        "ai_unsupported": [
+            .zhHant: "這台裝置上沒有可用的裝置端模型，所以做不了摘要。這一段完全在本機執行 —— 不會為了它把你的筆記傳出去。",
+            .en: "This device has no on-device model available, so summarising is not possible here. This runs entirely on the device — your notes are never sent anywhere for it.",
+            .zhHans: "这台设备上没有可用的设备端模型，所以做不了摘要。这一段完全在本机执行 —— 不会为了它把你的笔记传出去。",
+            .ja: "この端末には利用できるオンデバイスモデルがないため、要約はできません。この処理は端末内で完結します。要約のためにノートを送信することはありません。",
+            .ko: "이 기기에는 사용할 수 있는 온디바이스 모델이 없어 요약할 수 없습니다. 이 기능은 전부 기기 안에서 동작하며, 요약을 위해 노트를 외부로 보내지 않습니다.",
+            .th: "เครื่องนี้ไม่มีโมเดลบนเครื่องที่ใช้ได้ จึงสรุปไม่ได้ ฟีเจอร์นี้ทำงานบนเครื่องทั้งหมด และจะไม่ส่งโน้ตของคุณออกไป"
+        ],
         "align_bottom": [
             .zhHant: "靠下對齊",
             .en: "Align bottom",

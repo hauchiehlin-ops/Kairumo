@@ -127,6 +127,102 @@
     "zhHans": "新增文字方块",
     "zhHant": "新增文字方塊"
   },
+  "ai_insert": {
+    "en": "Insert into note",
+    "ja": "ノートに挿入",
+    "ko": "노트에 삽입",
+    "th": "แทรกลงในโน้ต",
+    "zhHans": "插入笔记",
+    "zhHant": "插入筆記"
+  },
+  "ai_key_points": {
+    "en": "Key points",
+    "ja": "要点",
+    "ko": "요점",
+    "th": "ประเด็นสำคัญ",
+    "zhHans": "重点",
+    "zhHant": "重點"
+  },
+  "ai_no_todos": {
+    "en": "No to-dos in this note.",
+    "ja": "このノートにTo-Doはありません。",
+    "ko": "이 노트에는 할 일이 없습니다.",
+    "th": "ไม่มีสิ่งที่ต้องทำในโน้ตนี้",
+    "zhHans": "这则笔记里没有待办事项。",
+    "zhHant": "這則筆記裡沒有待辦事項。"
+  },
+  "ai_not_ready": {
+    "en": "The on-device model is not ready yet — it may still be downloading, or turned off in system settings. Try again later.",
+    "ja": "オンデバイスモデルの準備ができていません（ダウンロード中か、システム設定でオフになっている可能性があります）。しばらくしてからお試しください。",
+    "ko": "온디바이스 모델이 아직 준비되지 않았습니다(다운로드 중이거나 시스템 설정에서 꺼져 있을 수 있습니다). 잠시 후 다시 시도하세요.",
+    "th": "โมเดลบนเครื่องยังไม่พร้อม (อาจกำลังดาวน์โหลด หรือถูกปิดไว้ในการตั้งค่าระบบ) ลองใหม่ภายหลัง",
+    "zhHans": "设备端模型还没准备好（可能还在下载，或在系统设置里被关掉了）。稍后再试一次。",
+    "zhHant": "裝置端模型還沒準備好（可能還在下載，或在系統設定裡被關掉了）。稍後再試一次。"
+  },
+  "ai_nothing_to_summarize": {
+    "en": "There is no text in this note yet. Handwriting has to be recognised first before it can be summarised.",
+    "ja": "このノートにはまだ文字がありません。手書きは先に認識しないと要約できません。",
+    "ko": "이 노트에는 아직 텍스트가 없습니다. 손글씨는 먼저 인식해야 요약할 수 있습니다.",
+    "th": "โน้ตนี้ยังไม่มีข้อความ ลายมือต้องผ่านการรู้จำก่อนจึงจะสรุปได้",
+    "zhHans": "这则笔记还没有文字内容。手写的字要先识别过才整理得出摘要。",
+    "zhHant": "這則筆記還沒有文字內容。手寫的字要先辨識過才整理得出摘要。"
+  },
+  "ai_on_device_note": {
+    "en": "Your text never leaves this device.",
+    "ja": "テキストがこの端末の外に出ることはありません。",
+    "ko": "텍스트는 이 기기를 벗어나지 않습니다.",
+    "th": "ข้อความจะไม่ออกจากเครื่องนี้",
+    "zhHans": "文字不会离开这台设备。",
+    "zhHant": "文字不會離開這台裝置。"
+  },
+  "ai_run": {
+    "en": "Summarize",
+    "ja": "要約する",
+    "ko": "요약하기",
+    "th": "เริ่มสรุป",
+    "zhHans": "开始整理",
+    "zhHant": "開始整理"
+  },
+  "ai_running": {
+    "en": "Working…",
+    "ja": "処理中…",
+    "ko": "처리 중…",
+    "th": "กำลังทำ…",
+    "zhHans": "整理中…",
+    "zhHant": "整理中…"
+  },
+  "ai_summary": {
+    "en": "Summary & To-dos",
+    "ja": "要約とTo-Do",
+    "ko": "요약과 할 일",
+    "th": "สรุปและสิ่งที่ต้องทำ",
+    "zhHans": "摘要与待办",
+    "zhHant": "摘要與待辦"
+  },
+  "ai_summary_desc": {
+    "en": "Reads this note and pulls out the key points and any to-dos. Everything stays on this device.",
+    "ja": "このノートを読み、要点とTo-Doを整理します。すべてこの端末内で完結します。",
+    "ko": "이 노트를 읽고 요점과 할 일을 정리합니다. 모든 처리는 이 기기 안에서 이루어집니다.",
+    "th": "อ่านโน้ตนี้แล้วสรุปประเด็นสำคัญและสิ่งที่ต้องทำ ทุกอย่างทำบนเครื่องนี้",
+    "zhHans": "读过这则笔记，整理出重点与待办事项。全程在这台设备上完成。",
+    "zhHant": "讀過這則筆記，整理出重點與待辦事項。全程在這台裝置上完成。"
+  },
+  "ai_todos": {
+    "en": "To-dos",
+    "ja": "To-Do",
+    "ko": "할 일",
+    "th": "สิ่งที่ต้องทำ",
+    "zhHans": "待办事项",
+    "zhHant": "待辦事項"
+  },
+  "ai_unsupported": {
+    "en": "This device has no on-device model available, so summarising is not possible here. This runs entirely on the device — your notes are never sent anywhere for it.",
+    "ja": "この端末には利用できるオンデバイスモデルがないため、要約はできません。この処理は端末内で完結します。要約のためにノートを送信することはありません。",
+    "ko": "이 기기에는 사용할 수 있는 온디바이스 모델이 없어 요약할 수 없습니다. 이 기능은 전부 기기 안에서 동작하며, 요약을 위해 노트를 외부로 보내지 않습니다.",
+    "th": "เครื่องนี้ไม่มีโมเดลบนเครื่องที่ใช้ได้ จึงสรุปไม่ได้ ฟีเจอร์นี้ทำงานบนเครื่องทั้งหมด และจะไม่ส่งโน้ตของคุณออกไป",
+    "zhHans": "这台设备上没有可用的设备端模型，所以做不了摘要。这一段完全在本机执行 —— 不会为了它把你的笔记传出去。",
+    "zhHant": "這台裝置上沒有可用的裝置端模型，所以做不了摘要。這一段完全在本機執行 —— 不會為了它把你的筆記傳出去。"
+  },
   "align_bottom": {
     "en": "Align bottom",
     "ja": "下揃え",

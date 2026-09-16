@@ -141,6 +141,8 @@ import com.kairumo.padnote.ink.PageGeometry
 import com.kairumo.padnote.ink.SketchRefineBar
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalView
+import com.kairumo.padnote.ai.NoteIntelligenceSheet
+import com.kairumo.padnote.ai.notePlainText
 import com.kairumo.padnote.ink.PenHardware
 import uniffi.padnote_core.FfiPenOutcome
 import com.kairumo.padnote.asset.AssetLibrarySheet
@@ -1273,6 +1275,18 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     /// 語言選擇。Apple 端一直有，Android 原本只能跟著系統語系走 ——
     /// 而語言是跨裝置設定（G-04），在這台改了也要傳到別台。
     var showLanguagePicker by remember { mutableStateOf(false) }
+    // 摘要與待辦（工作項 S-20）。
+    var showNoteIntelligence by remember { mutableStateOf(false) }
+    // 標題只在摘要時用得到，而編輯器畫面上不顯示它 —— 查一次存著，
+    // 不要每次重組都去掃一遍筆記庫。
+    val noteTitle = remember(notebookId) {
+        notebookId?.let { id ->
+            runCatching {
+                NotebookLibrary.all(activity, deviceId(activity))
+                    .firstOrNull { it.id == id }?.title
+            }.getOrNull()
+        }.orEmpty()
+    }
     val collaboration = remember { CollaborationManager(activity) }
     var goldenSpiral by remember { mutableStateOf(false) }
     var ruleOfThirds by remember { mutableStateOf(false) }
@@ -1475,6 +1489,12 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 DropdownMenuItem(
                     text = { Text(l10n("refine_sketch")) },
                     onClick = { showMenu = false; showRefineBar = true }
+                )
+                // 摘要與待辦（工作項 S-20）。核心的 `llm_summarize` 早就在
+                // FFI 上，缺的一直是這一顆按鈕。
+                DropdownMenuItem(
+                    text = { Text(l10n("ai_summary")) },
+                    onClick = { showMenu = false; showNoteIntelligence = true }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("theme_tools")) },
@@ -2513,6 +2533,31 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 editorMode = EditorMode.TYPE
             },
             onDismiss = { insertingModel3D = false; editingModel3D = null }
+        )
+    }
+
+    if (showNoteIntelligence) {
+        NoteIntelligenceSheet(
+            // 取的五種內容與首頁搜尋比對的**完全一樣**。不一致的話會出現
+            // 一個很難解釋的狀況：使用者搜得到某句話，但摘要說筆記裡沒有
+            // 提到它。
+            text = notePlainText(
+                // 標題從筆記庫查 —— 編輯器畫面上沒有顯示它，所以手上沒有。
+                title = noteTitle,
+                textBoxes = textStore.all.map { it.text },
+                tableCells = tableStore.all.flatMap { it.cells },
+                shapeLabels = shapeStore.all.map { it.label }
+            ),
+            locale = deviceLanguageTag(),
+            l = { key -> l10n(key) },
+            onInsert = { inserted ->
+                // 插成一個文字方塊，位置固定在左上角一帶 —— 摘要是整則筆記
+                // 的東西，不屬於任何一個特定位置。
+                val box = textStore.create(60f, 80f)
+                textStore.persist(box.copy(text = inserted))
+                textRevision++
+            },
+            onDismiss = { showNoteIntelligence = false }
         )
     }
 

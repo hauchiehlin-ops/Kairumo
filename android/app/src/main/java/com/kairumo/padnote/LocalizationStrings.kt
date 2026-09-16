@@ -156,6 +156,102 @@ object LocalizationStrings {
             "ko" to "텍스트 상자 추가",
             "th" to "เพิ่มกล่องข้อความ"
         ),
+        "ai_insert" to mapOf(
+            "zh-Hant" to "插入筆記",
+            "en" to "Insert into note",
+            "zh-Hans" to "插入笔记",
+            "ja" to "ノートに挿入",
+            "ko" to "노트에 삽입",
+            "th" to "แทรกลงในโน้ต"
+        ),
+        "ai_key_points" to mapOf(
+            "zh-Hant" to "重點",
+            "en" to "Key points",
+            "zh-Hans" to "重点",
+            "ja" to "要点",
+            "ko" to "요점",
+            "th" to "ประเด็นสำคัญ"
+        ),
+        "ai_no_todos" to mapOf(
+            "zh-Hant" to "這則筆記裡沒有待辦事項。",
+            "en" to "No to-dos in this note.",
+            "zh-Hans" to "这则笔记里没有待办事项。",
+            "ja" to "このノートにTo-Doはありません。",
+            "ko" to "이 노트에는 할 일이 없습니다.",
+            "th" to "ไม่มีสิ่งที่ต้องทำในโน้ตนี้"
+        ),
+        "ai_not_ready" to mapOf(
+            "zh-Hant" to "裝置端模型還沒準備好（可能還在下載，或在系統設定裡被關掉了）。稍後再試一次。",
+            "en" to "The on-device model is not ready yet — it may still be downloading, or turned off in system settings. Try again later.",
+            "zh-Hans" to "设备端模型还没准备好（可能还在下载，或在系统设置里被关掉了）。稍后再试一次。",
+            "ja" to "オンデバイスモデルの準備ができていません（ダウンロード中か、システム設定でオフになっている可能性があります）。しばらくしてからお試しください。",
+            "ko" to "온디바이스 모델이 아직 준비되지 않았습니다(다운로드 중이거나 시스템 설정에서 꺼져 있을 수 있습니다). 잠시 후 다시 시도하세요.",
+            "th" to "โมเดลบนเครื่องยังไม่พร้อม (อาจกำลังดาวน์โหลด หรือถูกปิดไว้ในการตั้งค่าระบบ) ลองใหม่ภายหลัง"
+        ),
+        "ai_nothing_to_summarize" to mapOf(
+            "zh-Hant" to "這則筆記還沒有文字內容。手寫的字要先辨識過才整理得出摘要。",
+            "en" to "There is no text in this note yet. Handwriting has to be recognised first before it can be summarised.",
+            "zh-Hans" to "这则笔记还没有文字内容。手写的字要先识别过才整理得出摘要。",
+            "ja" to "このノートにはまだ文字がありません。手書きは先に認識しないと要約できません。",
+            "ko" to "이 노트에는 아직 텍스트가 없습니다. 손글씨는 먼저 인식해야 요약할 수 있습니다.",
+            "th" to "โน้ตนี้ยังไม่มีข้อความ ลายมือต้องผ่านการรู้จำก่อนจึงจะสรุปได้"
+        ),
+        "ai_on_device_note" to mapOf(
+            "zh-Hant" to "文字不會離開這台裝置。",
+            "en" to "Your text never leaves this device.",
+            "zh-Hans" to "文字不会离开这台设备。",
+            "ja" to "テキストがこの端末の外に出ることはありません。",
+            "ko" to "텍스트는 이 기기를 벗어나지 않습니다.",
+            "th" to "ข้อความจะไม่ออกจากเครื่องนี้"
+        ),
+        "ai_run" to mapOf(
+            "zh-Hant" to "開始整理",
+            "en" to "Summarize",
+            "zh-Hans" to "开始整理",
+            "ja" to "要約する",
+            "ko" to "요약하기",
+            "th" to "เริ่มสรุป"
+        ),
+        "ai_running" to mapOf(
+            "zh-Hant" to "整理中…",
+            "en" to "Working…",
+            "zh-Hans" to "整理中…",
+            "ja" to "処理中…",
+            "ko" to "처리 중…",
+            "th" to "กำลังทำ…"
+        ),
+        "ai_summary" to mapOf(
+            "zh-Hant" to "摘要與待辦",
+            "en" to "Summary & To-dos",
+            "zh-Hans" to "摘要与待办",
+            "ja" to "要約とTo-Do",
+            "ko" to "요약과 할 일",
+            "th" to "สรุปและสิ่งที่ต้องทำ"
+        ),
+        "ai_summary_desc" to mapOf(
+            "zh-Hant" to "讀過這則筆記，整理出重點與待辦事項。全程在這台裝置上完成。",
+            "en" to "Reads this note and pulls out the key points and any to-dos. Everything stays on this device.",
+            "zh-Hans" to "读过这则笔记，整理出重点与待办事项。全程在这台设备上完成。",
+            "ja" to "このノートを読み、要点とTo-Doを整理します。すべてこの端末内で完結します。",
+            "ko" to "이 노트를 읽고 요점과 할 일을 정리합니다. 모든 처리는 이 기기 안에서 이루어집니다.",
+            "th" to "อ่านโน้ตนี้แล้วสรุปประเด็นสำคัญและสิ่งที่ต้องทำ ทุกอย่างทำบนเครื่องนี้"
+        ),
+        "ai_todos" to mapOf(
+            "zh-Hant" to "待辦事項",
+            "en" to "To-dos",
+            "zh-Hans" to "待办事项",
+            "ja" to "To-Do",
+            "ko" to "할 일",
+            "th" to "สิ่งที่ต้องทำ"
+        ),
+        "ai_unsupported" to mapOf(
+            "zh-Hant" to "這台裝置上沒有可用的裝置端模型，所以做不了摘要。這一段完全在本機執行 —— 不會為了它把你的筆記傳出去。",
+            "en" to "This device has no on-device model available, so summarising is not possible here. This runs entirely on the device — your notes are never sent anywhere for it.",
+            "zh-Hans" to "这台设备上没有可用的设备端模型，所以做不了摘要。这一段完全在本机执行 —— 不会为了它把你的笔记传出去。",
+            "ja" to "この端末には利用できるオンデバイスモデルがないため、要約はできません。この処理は端末内で完結します。要約のためにノートを送信することはありません。",
+            "ko" to "이 기기에는 사용할 수 있는 온디바이스 모델이 없어 요약할 수 없습니다. 이 기능은 전부 기기 안에서 동작하며, 요약을 위해 노트를 외부로 보내지 않습니다.",
+            "th" to "เครื่องนี้ไม่มีโมเดลบนเครื่องที่ใช้ได้ จึงสรุปไม่ได้ ฟีเจอร์นี้ทำงานบนเครื่องทั้งหมด และจะไม่ส่งโน้ตของคุณออกไป"
+        ),
         "align_bottom" to mapOf(
             "zh-Hant" to "靠下對齊",
             "en" to "Align bottom",
@@ -571,7 +667,10 @@ object LocalizationStrings {
             "ja" to "機構設計、製品(3C、自動車、家具)、金物、デジタルUI部品",
             "ko" to "기구 설계, 실제 제품(3C, 자동차, 가구), 하드웨어 부품 및 디지털 와이어프레임",
             "th" to "ครอบคลุมการออกแบบกลไก, ผลิตภัณฑ์จริง (3C, รถยนต์, เฟอร์นิเจอร์), ฮาร์ดแวร์ และดิจิทัล"
-        ),
+        )
+    )
+
+    private fun part1(): Map<String, Map<String, String>> = mapOf(
         "asset_mech_01_title" to mapOf(
             "zh-Hant" to "漸開線正齒輪組",
             "en" to "Involute Spur Gear Set",
@@ -667,10 +766,7 @@ object LocalizationStrings {
             "ja" to "未来的サイバー回路ライトトラック幾何",
             "ko" to "미래형 사이버 회로 라이트 트랙 기하",
             "th" to "เรขาคณิตเส้นแสงวงจรไซเบอร์แนวอนาคต"
-        )
-    )
-
-    private fun part1(): Map<String, Map<String, String>> = mapOf(
+        ),
         "asset_motion_01_title" to mapOf(
             "zh-Hant" to "三次貝茲曲線動效時間函數",
             "en" to "Cubic Bezier Animation Timing Function",
@@ -1214,7 +1310,10 @@ object LocalizationStrings {
             "ja" to "目盛間隔",
             "ko" to "주 단위",
             "th" to "ระยะขีด"
-        ),
+        )
+    )
+
+    private fun part2(): Map<String, Map<String, String>> = mapOf(
         "chart_bar" to mapOf(
             "zh-Hant" to "長條圖",
             "en" to "Bar Chart",
@@ -1310,10 +1409,7 @@ object LocalizationStrings {
             "ja" to "ドーナツグラフ",
             "ko" to "도넛형",
             "th" to "แผนภูมิโดนัท"
-        )
-    )
-
-    private fun part2(): Map<String, Map<String, String>> = mapOf(
+        ),
         "chart_kind_horizontalBar" to mapOf(
             "zh-Hant" to "橫條圖",
             "en" to "Bar",
@@ -1857,7 +1953,10 @@ object LocalizationStrings {
             "ja" to "送信",
             "ko" to "보내기",
             "th" to "ส่ง"
-        ),
+        )
+    )
+
+    private fun part3(): Map<String, Map<String, String>> = mapOf(
         "composition_overlay" to mapOf(
             "zh-Hant" to "構圖輔助線",
             "en" to "Composition HUD",
@@ -1953,10 +2052,7 @@ object LocalizationStrings {
             "ja" to "スナップショットを作成",
             "ko" to "스냅샷 생성",
             "th" to "สร้างสแนปช็อต"
-        )
-    )
-
-    private fun part3(): Map<String, Map<String, String>> = mapOf(
+        ),
         "current_user" to mapOf(
             "zh-Hant" to "目前使用者",
             "en" to "Current User",
@@ -2500,7 +2596,10 @@ object LocalizationStrings {
             "ja" to "手書きモデルのダウンロードに失敗しました（Wi-Fi に接続してください）：%@",
             "ko" to "손글씨 모델 다운로드에 실패했습니다(Wi-Fi에 연결해 주세요): %@",
             "th" to "ดาวน์โหลดโมเดลลายมือไม่สำเร็จ (โปรดเชื่อมต่อ Wi-Fi): %@"
-        ),
+        )
+    )
+
+    private fun part4(): Map<String, Map<String, String>> = mapOf(
         "err_hwr_failed" to mapOf(
             "zh-Hant" to "辨識失敗：%@",
             "en" to "Recognition failed: %@",
@@ -2596,10 +2695,7 @@ object LocalizationStrings {
             "ja" to "同期フォルダに %@ を作成できませんでした",
             "ko" to "동기화 폴더에 %@을(를) 만들 수 없습니다",
             "th" to "สร้าง %@ ในโฟลเดอร์ซิงก์ไม่ได้"
-        )
-    )
-
-    private fun part4(): Map<String, Map<String, String>> = mapOf(
+        ),
         "expand" to mapOf(
             "zh-Hant" to "展開",
             "en" to "Expand",
@@ -3143,7 +3239,10 @@ object LocalizationStrings {
             "ja" to "マスタード",
             "ko" to "머스터드",
             "th" to "มัสตาร์ด"
-        ),
+        )
+    )
+
+    private fun part5(): Map<String, Map<String, String>> = mapOf(
         "hue_neon_green" to mapOf(
             "zh-Hant" to "霓虹亮綠",
             "en" to "Neon Green",
@@ -3239,10 +3338,7 @@ object LocalizationStrings {
             "ja" to "スレートブルー",
             "ko" to "슬레이트 블루",
             "th" to "น้ำเงินหินชนวน"
-        )
-    )
-
-    private fun part5(): Map<String, Map<String, String>> = mapOf(
+        ),
         "hue_terracotta" to mapOf(
             "zh-Hant" to "陶土紅",
             "en" to "Terracotta",
@@ -3786,7 +3882,10 @@ object LocalizationStrings {
             "ja" to "リストの上が手前です",
             "ko" to "목록 위쪽이 앞입니다",
             "th" to "รายการด้านบนคือด้านหน้า"
-        ),
+        )
+    )
+
+    private fun part6(): Map<String, Map<String, String>> = mapOf(
         "layers_panel" to mapOf(
             "zh-Hant" to "圖層",
             "en" to "Layers",
@@ -3882,10 +3981,7 @@ object LocalizationStrings {
             "ja" to "リンクを貼り付け",
             "ko" to "링크 붙여넣기",
             "th" to "วางลิงก์"
-        )
-    )
-
-    private fun part6(): Map<String, Map<String, String>> = mapOf(
+        ),
         "local_relay_hint" to mapOf(
             "zh-Hant" to "位址指向本機（127.0.0.1）時，App 會直接在這台裝置上開啟協同中繼；隊友請改填房主顯示的區域網路位址。",
             "en" to "When the address points at this device (127.0.0.1), Kairumo runs the relay locally. Teammates should enter the LAN address shown by the host instead.",
@@ -4429,7 +4525,10 @@ object LocalizationStrings {
             "ja" to "3D 幾何モデル",
             "ko" to "3D 기하 모델",
             "th" to "โมเดลเรขาคณิต 3D"
-        ),
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
         "model_3d" to mapOf(
             "zh-Hant" to "3D模型",
             "en" to "3D Model",
@@ -4525,10 +4624,7 @@ object LocalizationStrings {
             "ja" to "次のページ",
             "ko" to "다음 페이지",
             "th" to "หน้าถัดไป"
-        )
-    )
-
-    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        ),
         "no_account_needed" to mapOf(
             "zh-Hant" to "不需要帳號，也沒有我們的伺服器",
             "en" to "No account, and no server of ours",
@@ -5072,7 +5168,10 @@ object LocalizationStrings {
             "ja" to "配色パレット",
             "ko" to "색상 팔레트",
             "th" to "จานสีคลาสสิก"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "palette_tip" to mapOf(
             "zh-Hant" to "點選色彩可吸取 / 點「插入」貼至畫布",
             "en" to "Tap color to sample / Tap insert to paste swatch",
@@ -5168,10 +5267,7 @@ object LocalizationStrings {
             "ja" to "設定を開く",
             "ko" to "설정 열기",
             "th" to "เปิดการตั้งค่า"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "platform_desc" to mapOf(
             "zh-Hant" to "執行平台",
             "en" to "Platform",
@@ -5715,7 +5811,10 @@ object LocalizationStrings {
             "ja" to "三分割構図ガイド",
             "ko" to "3등분 법칙 격자",
             "th" to "ตารางกฎสามส่วน"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "ruler" to mapOf(
             "zh-Hant" to "尺規輔助線",
             "en" to "Ruler Guide",
@@ -5811,10 +5910,7 @@ object LocalizationStrings {
             "ja" to "要点\n• iPad Pro で 11ms を計測、基準内。ミドルレンジ Android は未計測。\n• リリースは本番署名鍵待ちで、コードの問題ではない。\n• 来週：録音をページに挿入する手順をマニュアルに追記。\n\n（このページはサンプルです。すべて編集でき、ノートごと削除もできます。）",
             "ko" to "요점\n• iPad Pro에서 11ms 측정, 기준 내. 중급 안드로이드는 미측정.\n• 출시는 코드가 아니라 정식 서명 키 때문에 막혀 있음.\n• 다음 주: 녹음을 페이지에 삽입하는 절차를 설명서에 추가.\n\n(이 페이지는 예시입니다. 모두 수정할 수 있고 노트 전체를 삭제할 수도 있습니다.)",
             "th" to "ประเด็นสำคัญ\n• วัดได้ 11 ms บน iPad Pro อยู่ในเกณฑ์ ส่วน Android รุ่นกลางยังไม่ได้วัด\n• การปล่อยติดที่คีย์เซ็นชื่อจริง ไม่ใช่ปัญหาโค้ด\n• สัปดาห์หน้า: เขียนขั้นตอนแทรกเสียงลงในหน้าไว้ในคู่มือ\n\n(หน้านี้เป็นตัวอย่าง แก้ไขได้ทั้งหมด และลบทั้งเล่มได้)"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_meeting_p1_title" to mapOf(
             "zh-Hant" to "產品週會 — 第 38 週",
             "en" to "Product weekly — week 38",
@@ -6358,7 +6454,10 @@ object LocalizationStrings {
             "ja" to "プレート",
             "ko" to "명판",
             "th" to "แผ่นป้าย"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_preparation" to mapOf(
             "zh-Hant" to "預備",
             "en" to "Preparation",
@@ -6454,10 +6553,7 @@ object LocalizationStrings {
             "ja" to "8光星",
             "ko" to "8각 별",
             "th" to "ดาวแปดแฉก"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_storeddata" to mapOf(
             "zh-Hant" to "已儲存資料",
             "en" to "Stored data",
@@ -7001,7 +7097,10 @@ object LocalizationStrings {
             "ja" to "最新の状態です",
             "ko" to "이미 최신 상태",
             "th" to "เป็นเวอร์ชันล่าสุดแล้ว"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "syncing" to mapOf(
             "zh-Hant" to "同步中…",
             "en" to "Syncing…",
@@ -7097,10 +7196,7 @@ object LocalizationStrings {
             "ja" to "右へ結合",
             "ko" to "오른쪽 병합",
             "th" to "ผสานไปทางขวา"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "table_preview" to mapOf(
             "zh-Hant" to "預覽",
             "en" to "Preview",
@@ -7644,7 +7740,10 @@ object LocalizationStrings {
             "ja" to "未分類ノート",
             "ko" to "미분류 노트",
             "th" to "บันทึกที่ไม่ได้จัดหมวดหมู่"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "unhide_items" to mapOf(
             "zh-Hant" to "重置隱藏項目",
             "en" to "Reset Hidden",
@@ -7740,10 +7839,7 @@ object LocalizationStrings {
             "ja" to "モバイル ナビゲーションバー",
             "ko" to "모바일 상단 내비게이션 바",
             "th" to "แถบนำทางด้านบนบนมือถือ"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wireframe_tabbar" to mapOf(
             "zh-Hant" to "底部五分頁 TabBar",
             "en" to "Bottom tab bar (5 tabs)",
