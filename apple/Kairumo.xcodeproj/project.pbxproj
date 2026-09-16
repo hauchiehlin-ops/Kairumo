@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		00FEB9DFDC500F64611938FE /* PencilDoubleTap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2BF8F5F61F4D7B8B5FCC4C49 /* PencilDoubleTap.swift */; };
 		023C029A763DC77377F7804E /* HomeWorkbenchUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB04C4FA3426304F705E5046 /* HomeWorkbenchUsage.swift */; };
 		039E98A3BC24169C1031EC94 /* SeedContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE084F883D6D8A652CD86063 /* SeedContent.swift */; };
 		04A2C2BA6EE78D99402F87AD /* InkInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 893FBBAA69ABDE7B5D03BDA9 /* InkInterop.swift */; };
@@ -35,6 +36,7 @@
 		4DF85F141ECE9CBA9B5E2105 /* PdfKitDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420CDB8E187D7BF4EB48CB2E /* PdfKitDocumentTests.swift */; };
 		4E956F4EA57EA9FAED4B8EEB /* MathCalculatorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DEEDC3EBFC3C910FFC5735C /* MathCalculatorSheet.swift */; };
 		512B7389435793F9304B338D /* PalmRejection.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1064607D4E02AABFD6A63F53 /* PalmRejection.swift */; };
+		53D0DCFA7248A3914E133561 /* PencilDoubleTapTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26095C16A86515583D5A55A2 /* PencilDoubleTapTests.swift */; };
 		55B00291EB5DC3259C49B3E9 /* PackageRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0D07EB41098C2C0F9A8E37 /* PackageRoundTripTests.swift */; };
 		57C009B329081703B31BB1EE /* CanvasScrollbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B72B2C88A99AD52C89B0787 /* CanvasScrollbar.swift */; };
 		582629D6ADA3FCAEA7E65830 /* PdfKitDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43B5E732D6E01F9549B1147D /* PdfKitDocument.swift */; };
@@ -155,12 +157,14 @@
 		227366C6382850438A5B6A79 /* LassoSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LassoSelection.swift; sourceTree = "<group>"; };
 		22CA9AD55E8EDA76ABA92C78 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeWorkbenchView.swift; sourceTree = "<group>"; };
+		26095C16A86515583D5A55A2 /* PencilDoubleTapTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PencilDoubleTapTests.swift; sourceTree = "<group>"; };
 		26F09C378F9F1B6835D9ECB2 /* CStubs.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = CStubs.c; sourceTree = "<group>"; };
 		28A8E33C21E81EED174CEBA3 /* padnote_core.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = padnote_core.swift; sourceTree = "<group>"; };
 		29BFE1D24D00A1328C62BA89 /* ImageEditControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageEditControls.swift; sourceTree = "<group>"; };
 		29C630A29EC3E773EF130E2D /* ObjectFrameStyleMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectFrameStyleMenu.swift; sourceTree = "<group>"; };
 		2A2253FE74C35178B0F901C8 /* Templates */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Templates; path = Resources/Templates; sourceTree = SOURCE_ROOT; };
 		2A90E6661A2C0079EE609AFA /* ShapeStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShapeStudioView.swift; sourceTree = "<group>"; };
+		2BF8F5F61F4D7B8B5FCC4C49 /* PencilDoubleTap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PencilDoubleTap.swift; sourceTree = "<group>"; };
 		35D8819970FB01956E474387 /* ICloudSyncFolder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ICloudSyncFolder.swift; sourceTree = "<group>"; };
 		3A1525CF56EBBE47CE94BDBD /* PdfAnnotationInteropTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PdfAnnotationInteropTests.swift; sourceTree = "<group>"; };
 		3A779F6ADCC3B71D4D84A687 /* ExportFidelityTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportFidelityTests.swift; sourceTree = "<group>"; };
@@ -317,6 +321,7 @@
 				F85F010611BBEED2B2DF9AC3 /* PalmRejectionTests.swift */,
 				3A1525CF56EBBE47CE94BDBD /* PdfAnnotationInteropTests.swift */,
 				420CDB8E187D7BF4EB48CB2E /* PdfKitDocumentTests.swift */,
+				26095C16A86515583D5A55A2 /* PencilDoubleTapTests.swift */,
 				5C7088E4DBE1611C3E697B4A /* TableStudioLayoutTests.swift */,
 				DFB782C4FBD863E4DD9CC1D7 /* TextBoxEditingTests.swift */,
 			);
@@ -431,6 +436,7 @@
 				02895D54063C3AA4B5D30463 /* PageThumbnailRenderer.swift */,
 				1064607D4E02AABFD6A63F53 /* PalmRejection.swift */,
 				43B5E732D6E01F9549B1147D /* PdfKitDocument.swift */,
+				2BF8F5F61F4D7B8B5FCC4C49 /* PencilDoubleTap.swift */,
 				824AF14643DF914996543B0B /* ProColorPickerSheet.swift */,
 				EE084F883D6D8A652CD86063 /* SeedContent.swift */,
 				2A90E6661A2C0079EE609AFA /* ShapeStudioView.swift */,
@@ -592,6 +598,7 @@
 				99B29892A3970C9ADBADEB7E /* PalmRejectionTests.swift in Sources */,
 				F91E0C4A0E48E4695D0337C6 /* PdfAnnotationInteropTests.swift in Sources */,
 				4DF85F141ECE9CBA9B5E2105 /* PdfKitDocumentTests.swift in Sources */,
+				53D0DCFA7248A3914E133561 /* PencilDoubleTapTests.swift in Sources */,
 				DA19398422DF402A5ABB16F7 /* TableStudioLayoutTests.swift in Sources */,
 				F27FB2D126ECCD38DCCFE5CD /* TextBoxEditingTests.swift in Sources */,
 			);
@@ -675,6 +682,7 @@
 				2823612B8F3A376A45042712 /* PageThumbnailRenderer.swift in Sources */,
 				512B7389435793F9304B338D /* PalmRejection.swift in Sources */,
 				582629D6ADA3FCAEA7E65830 /* PdfKitDocument.swift in Sources */,
+				00FEB9DFDC500F64611938FE /* PencilDoubleTap.swift in Sources */,
 				891B35800C7FEFD3421B7293 /* ProColorPickerSheet.swift in Sources */,
 				039E98A3BC24169C1031EC94 /* SeedContent.swift in Sources */,
 				476A452C0006DB556DE70790 /* ShapeStudioView.swift in Sources */,

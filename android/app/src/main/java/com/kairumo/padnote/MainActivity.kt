@@ -129,6 +129,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.kairumo.padnote.ink.InkEngine
 import com.kairumo.padnote.ink.SketchRefineBar
+import com.kairumo.padnote.ink.StylusButton
 import com.kairumo.padnote.asset.AssetLibrarySheet
 import com.kairumo.padnote.collab.CollaborationManager
 import com.kairumo.padnote.collab.CollaborationSheet
@@ -1120,6 +1121,37 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     // 筆刷、顏色、筆寬。在此之前 Android 只有一支固定的黑色鋼筆，
     // 連橡皮擦都選不到 —— 核心一直支援，缺的只是 UI。
     var inkTool by remember { mutableStateOf(InkTool.FOUNTAIN_PEN) }
+
+    // 最後用過的**筆刷**。觸控筆放開側鍵時要回到它（工作項 S-67）。
+    // 記筆刷而不是「上一個工具」：後者在擦完之後可能回到套索。
+    var lastBrushTool by remember { mutableStateOf(InkTool.FOUNTAIN_PEN) }
+    // 現在的橡皮擦是**側鍵按出來的**，不是使用者自己在工具列上選的。
+    // 這個分別很重要：使用者自己選的橡皮擦，不能因為他放開側鍵就被換掉。
+    var stylusHeldEraser by remember { mutableStateOf(false) }
+    LaunchedEffect(inkTool) { if (inkTool.kind != null) lastBrushTool = inkTool }
+
+    // 觸控筆側鍵（或把筆倒過來）→ 橡皮擦，放開回到原本那支筆。
+    // 規則在 `StylusButton`，與 Apple Pencil 雙擊共用同一套「切到哪、回哪去」。
+    DisposableEffect(engine) {
+        engine.onStylusEraserChanged = { erasing ->
+            if (erasing) {
+                StylusButton.outcome(true, inkTool, lastBrushTool)?.let { picked ->
+                    stylusHeldEraser = true
+                    inkTool = picked
+                    engine.isErasing = true
+                }
+            } else if (stylusHeldEraser) {
+                // 只還原我們自己切過去的那一次。
+                stylusHeldEraser = false
+                StylusButton.outcome(false, inkTool, lastBrushTool)?.let { picked ->
+                    inkTool = picked
+                    engine.isErasing = picked.isEraser
+                    picked.kind?.let { engine.tool = it }
+                }
+            }
+        }
+        onDispose { engine.onStylusEraserChanged = null }
+    }
     // Ctrl+1–Ctrl+6 選工具。索引超過工具數就忽略 —— Apple 有九支、
     // Android 只有六支，按 Ctrl+7 不該讓 App 當掉。
     LaunchedEffect(Unit) {

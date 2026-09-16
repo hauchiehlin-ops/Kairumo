@@ -492,6 +492,19 @@ final class AdaptiveCanvasView: PKCanvasView {
         addInteraction(UIPointerInteraction(delegate: delegate))
     }
 
+    /// 掛上 Apple Pencil 的雙擊筆桿（工作項 S-67，規則見 `PencilDoubleTap`）。
+    ///
+    /// 掛在畫布上而不是根視圖：雙擊只有在「正在寫字」的情境下才有意義，
+    /// 掛在根視圖的話，在設定頁或檔案清單裡雙擊也會默默換掉工具。
+    func installPencilInteractionIfNeeded(delegate: UIPencilInteractionDelegate) {
+        guard interactions.compactMap({ $0 as? UIPencilInteraction }).isEmpty else { return }
+        // 不用 `init(delegate:)` —— 那個建構式是 iOS 17.5 才有的，
+        // 而部署目標比它低。分兩步寫，舊系統上一樣掛得上去。
+        let interaction = UIPencilInteraction()
+        interaction.delegate = delegate
+        addInteraction(interaction)
+    }
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
         touches.forEach {
             onTouchObserved?($0)
@@ -565,6 +578,8 @@ struct CanvasRepresentable: UIViewRepresentable {
     var palmRejection: PalmRejectionCoordinator?
     /// 仲裁器要求收回筆畫時通知編輯器。
     var onRetractStrokes: ((Date) -> Void)?
+    /// Apple Pencil 雙擊筆桿（工作項 S-67）。參數是當下的系統偏好。
+    var onPencilTap: ((UIPencilPreferredAction) -> Void)?
 
     /// 目前該用哪個輸入政策。
     ///
@@ -612,6 +627,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         // 給自動化測試一個穩定的抓取點（畫面上有多個 scroll view）
         canvas.accessibilityIdentifier = "kairumo.canvas"
         canvas.installPointerInteractionIfNeeded(delegate: context.coordinator)
+        canvas.installPencilInteractionIfNeeded(delegate: context.coordinator.pencilTaps)
         canvas.refreshPointer(BrushCursor.path(for: selectedTool, strokeWidth: strokeWidth))
         canvas.pageContentHeight = PageGeometry.height
         canvas.contentSize = CGSize(width: max(canvas.bounds.width, 1), height: canvas.pageContentHeight)
@@ -697,8 +713,17 @@ struct CanvasRepresentable: UIViewRepresentable {
         weak var backgroundView: TemplateCanvasBackgroundView?
         var isProgrammaticUpdate: Bool = false
 
+        /// Apple Pencil 雙擊的接收端。**這個屬性要持有它** ——
+        /// `UIPencilInteraction.delegate` 是 weak 的，不留一份強參考的話
+        /// 它會在 `makeUIView` 回傳之後就被釋放，雙擊從此沒有反應。
+        let pencilTaps = PencilTapForwarder()
+
         init(_ parent: CanvasRepresentable) {
             self.parent = parent
+            super.init()
+            pencilTaps.onTap = { [weak self] action in
+                self?.parent.onPencilTap?(action)
+            }
         }
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
@@ -1126,6 +1151,16 @@ public struct NotebookEditorView: View {
 
     // 實體工具列狀態
     @State private var selectedTool: EditorToolType = .pen
+
+    /// 最後用過的**筆刷**。Apple Pencil 雙擊要切回來的就是它（工作項 S-67）。
+    ///
+    /// 由 `.onChange(of: selectedTool)` 維護，不是 `didSet` ——
+    /// `@State` 的 `didSet` 在透過 binding（`$selectedTool`）改值時不會觸發，
+    /// 那會變成「用某些 UI 換筆會記到、用另一些不會」。
+    ///
+    /// 記「最後用過的筆刷」而不是「上一個工具」：後者在連按兩次之後會在
+    /// 橡皮擦與套索之間跳，而使用者按第二次想回到的是他原本那支筆。
+    @State private var lastBrushTool: EditorToolType = .pen
     @State private var selectedColor: Color = .primary
     @State private var strokeWidth: CGFloat = 3.5
     @State private var isRulerActive: Bool = false
@@ -1381,6 +1416,11 @@ public struct NotebookEditorView: View {
         }
         .background(Color(uiColor: .systemGroupedBackground))
         .navigationBarBackButtonHidden(true)
+        // Apple Pencil 雙擊要切回「最後用過的筆刷」（工作項 S-67），
+        // 所以每次換工具都要把筆刷記下來。橡皮擦與套索不算筆刷。
+        .onChange(of: selectedTool) { tool in
+            if tool.isBrush { lastBrushTool = tool }
+        }
         .onChange(of: notebook.id) { _ in
             // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
             currentPageIndex = 0
@@ -2345,7 +2385,8 @@ public struct NotebookEditorView: View {
                             },
                             onSelectionChanged: { hasLassoSelection = $0 },
                             onReachedPageBottom: { ensureNextPageExists() },
-                            canvasRef: { canvasView = $0 }
+                            canvasRef: { canvasView = $0 },
+                            onPencilTap: applyPencilTap
                         )
                         .scaleEffect(scale, anchor: .top)
                         // 縮放後的實際高度要讓出來，否則每一頁之間會留下
@@ -2704,7 +2745,8 @@ ZStack(alignment: .topTrailing) {
                     currentDrawing = cleaned
                     canvasView?.drawing = cleaned
                     saveCurrentPageDrawing()
-                }
+                },
+                onPencilTap: applyPencilTap
             )
             .background(
                 GeometryReader { geo in
@@ -4885,6 +4927,27 @@ ZStack(alignment: .topTrailing) {
             deletedAttachmentBackup = nil
         } else {
             canvasView?.undoManager?.undo()
+        }
+    }
+
+    /// Apple Pencil 雙擊筆桿（工作項 S-67）。
+    ///
+    /// 對應規則整份在 `PencilDoubleTap.outcome` 裡，是純函式、有單元測試 ——
+    /// 雙擊事件本身要實體 Apple Pencil 二代以上才發得出來（模擬器沒有這個
+    /// 事件），規則不放在可測的地方就等於完全沒驗過。實機行為列 H4。
+    ///
+    /// 打字模式下不理會：那時候畫布根本不收筆畫，換工具只會讓使用者回到
+    /// 手寫模式時發現筆莫名其妙變了。
+    private func applyPencilTap(_ action: UIPencilPreferredAction) {
+        guard editorMode == .draw else { return }
+        switch PencilDoubleTap.outcome(
+            action: action, current: selectedTool, lastBrush: lastBrushTool) {
+        case .none:
+            break
+        case .tool(let tool):
+            selectedTool = tool
+        case .showInkAttributes:
+            showProColorPicker = true
         }
     }
 

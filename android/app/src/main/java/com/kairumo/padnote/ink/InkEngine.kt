@@ -69,6 +69,21 @@ class InkEngine(
     var isErasing: Boolean = false
 
     /**
+     * 觸控筆的側鍵（或反向筆頭）狀態變了（工作項 S-67）。
+     *
+     * 只在**狀態真的翻面**時呼叫一次，不是每個事件都叫 —— 一次書寫會產生
+     * 上百個 `ACTION_MOVE`，每個都回報的話，上層的工具列狀態每秒被寫幾十次。
+     *
+     * 掛在引擎上而不是各個 View：低延遲畫布（`InkSurfaceView`）與一般畫布
+     * 是兩條繪製路徑，但都經過這裡。掛在 View 上會變成「只有其中一條路
+     * 支援側鍵」，而使用者切不切得到低延遲取決於他的裝置。
+     */
+    var onStylusEraserChanged: ((Boolean) -> Unit)? = null
+
+    /** 上一次看到的側鍵狀態。用來只在翻面時通知。 */
+    private var stylusErasing: Boolean = false
+
+    /**
      * 擦掉碰到的筆畫。
      *
      * 用「碰到就整筆擦掉」而不是切斷筆畫：切斷需要把一筆拆成兩筆並改寫取樣點，
@@ -105,6 +120,14 @@ class InkEngine(
         private set
 
     fun onMotionEvent(event: MotionEvent, density: Float): Outcome {
+        // 側鍵先看：它決定的是**這一段**要畫還是要擦，慢一個事件的話，
+        // 按下去的第一個點會先畫出一小段墨再開始擦。
+        val erasing = StylusButton.isErasing(event)
+        if (erasing != stylusErasing) {
+            stylusErasing = erasing
+            onStylusEraserChanged?.invoke(erasing)
+        }
+
         var drawn = 0
         var rejected = 0
         var gesture = 0
