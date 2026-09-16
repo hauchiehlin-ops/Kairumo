@@ -13,9 +13,9 @@ pub mod refine;
 pub use align::{Alignment, SnapResult, align, distribute, snap};
 pub use codec::{StrokeReader, StrokeWriter};
 pub use geometry::{Rect, distance_to_segment, half_width, simplify, smooth_path};
-pub use refine::{Refined, RefinedKind, refine_stroke};
 pub use padnote_doc::Affine2;
 use padnote_doc::{NotebookTime, Uuid};
+pub use refine::{Refined, RefinedKind, refine_stroke};
 
 /// 筆刷類型（format-spec §5.3）。
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]

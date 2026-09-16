@@ -208,7 +208,11 @@ pub fn sync_children_of(index_json: String, parent_id: String) -> Vec<FfiLibrary
     } else {
         Some(parent_id.as_str())
     };
-    index.children_of(parent).into_iter().map(Into::into).collect()
+    index
+        .children_of(parent)
+        .into_iter()
+        .map(Into::into)
+        .collect()
 }
 
 /// 所有還看得見的**筆記本**，攤平成一份清單，不分層級。
@@ -296,7 +300,13 @@ mod tests {
 
     #[test]
     fn settings_round_trip_across_the_ffi() {
-        let a = sync_set_setting(String::new(), FfiSyncedField::Locale, "ja".into(), 3, "dev-a".into());
+        let a = sync_set_setting(
+            String::new(),
+            FfiSyncedField::Locale,
+            "ja".into(),
+            3,
+            "dev-a".into(),
+        );
         assert_eq!(sync_get_setting(a.clone(), FfiSyncedField::Locale), "ja");
 
         let b = sync_set_setting(
@@ -308,7 +318,10 @@ mod tests {
         );
         // 兩台各改一個欄位，合併之後兩個都要在。
         let merged = sync_merge_settings(a, b);
-        assert_eq!(sync_get_setting(merged.clone(), FfiSyncedField::Locale), "ja");
+        assert_eq!(
+            sync_get_setting(merged.clone(), FfiSyncedField::Locale),
+            "ja"
+        );
         assert_eq!(
             sync_get_setting(merged, FfiSyncedField::ToolbarJson),
             "{\"x\":1}"
@@ -318,7 +331,10 @@ mod tests {
     #[test]
     fn an_unset_setting_is_empty_not_a_crash() {
         assert_eq!(sync_get_setting(String::new(), FfiSyncedField::Locale), "");
-        assert_eq!(sync_get_setting("garbage".into(), FfiSyncedField::Locale), "");
+        assert_eq!(
+            sync_get_setting("garbage".into(), FfiSyncedField::Locale),
+            ""
+        );
     }
 
     #[test]
@@ -372,7 +388,10 @@ mod tests {
     fn cycles_are_reported_before_the_move_happens() {
         let mut json = sync_upsert_item(
             String::new(),
-            FfiLibraryItem { is_folder: true, ..item("f1", "上", 1, "dev-a") },
+            FfiLibraryItem {
+                is_folder: true,
+                ..item("f1", "上", 1, "dev-a")
+            },
         );
         json = sync_upsert_item(
             json,
@@ -382,7 +401,11 @@ mod tests {
                 ..item("f2", "下", 1, "dev-a")
             },
         );
-        assert!(sync_would_create_cycle(json.clone(), "f1".into(), "f2".into()));
+        assert!(sync_would_create_cycle(
+            json.clone(),
+            "f1".into(),
+            "f2".into()
+        ));
         assert!(!sync_would_create_cycle(json, "f2".into(), String::new()));
     }
 

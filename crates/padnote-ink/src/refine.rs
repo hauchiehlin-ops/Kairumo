@@ -205,7 +205,13 @@ fn ellipse_points(cx: f32, cy: f32, rx: f32, ry: f32, count: usize) -> Vec<(f32,
         .collect()
 }
 
-fn rectangle_points(min_x: f32, max_x: f32, min_y: f32, max_y: f32, count: usize) -> Vec<(f32, f32)> {
+fn rectangle_points(
+    min_x: f32,
+    max_x: f32,
+    min_y: f32,
+    max_y: f32,
+    count: usize,
+) -> Vec<(f32, f32)> {
     let corners = [
         (min_x, min_y),
         (max_x, min_y),
@@ -239,11 +245,13 @@ fn smooth(points: &[(f32, f32)], intensity: f32) -> Vec<(f32, f32)> {
         let mut sx = 0.0;
         let mut sy = 0.0;
         let mut wsum = 0.0;
-        for j in start..=end {
+        // 用 enumerate 而不是索引取值：clippy 的 needless_range_loop 說得對，
+        // 而且權重要的是「離中心多遠」，那與索引本身無關。
+        for (j, point) in points.iter().enumerate().take(end + 1).skip(start) {
             let dist = (j as f32 - i as f32).abs();
             let weight = (1.0 - dist / (window as f32 + 1.0)).max(0.1);
-            sx += points[j].0 * weight;
-            sy += points[j].1 * weight;
+            sx += point.0 * weight;
+            sy += point.1 * weight;
             wsum += weight;
         }
         let (ox, oy) = points[i];
@@ -285,7 +293,10 @@ mod tests {
             .map(|i| {
                 let a = (i as f32 / n as f32) * std::f32::consts::TAU;
                 let wobble = if i % 2 == 0 { jitter } else { -jitter };
-                (100.0 + (60.0 + wobble) * a.cos(), 100.0 + (60.0 + wobble) * a.sin())
+                (
+                    100.0 + (60.0 + wobble) * a.cos(),
+                    100.0 + (60.0 + wobble) * a.sin(),
+                )
             })
             .collect()
     }
@@ -315,7 +326,10 @@ mod tests {
         let (x1, y1) = *out.points.last().unwrap();
         for &(x, y) in &out.points {
             let cross = (x - x0) * (y1 - y0) - (y - y0) * (x1 - x0);
-            assert!(cross.abs() / hypot(x1 - x0, y1 - y0) < 0.01, "({x},{y}) 不在線上");
+            assert!(
+                cross.abs() / hypot(x1 - x0, y1 - y0) < 0.01,
+                "({x},{y}) 不在線上"
+            );
         }
     }
 
@@ -330,7 +344,10 @@ mod tests {
             pts.push((140.0 + if i % 2 == 0 { 0.0 } else { -2.0 }, i as f32 * 6.0));
         }
         for i in 0..15 {
-            pts.push((140.0 - i as f32 * 10.0, 84.0 + if i % 2 == 0 { 0.0 } else { -2.0 }));
+            pts.push((
+                140.0 - i as f32 * 10.0,
+                84.0 + if i % 2 == 0 { 0.0 } else { -2.0 },
+            ));
         }
         for i in 0..15 {
             pts.push((if i % 2 == 0 { 0.0 } else { 2.0 }, 84.0 - i as f32 * 6.0));

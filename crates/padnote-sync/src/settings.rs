@@ -274,7 +274,8 @@ mod tests {
     fn unknown_fields_survive_a_round_trip_through_an_older_build() {
         // 舊版不認得新設定，但**不可以把它吃掉** —— 否則兩台裝置版本不同時，
         // 新設定會一直被抹掉又寫回來。
-        let json = r#"{"locale":{"value":"ja","lamport":1,"device":"a"},"futureThing":{"deep":42}}"#;
+        let json =
+            r#"{"locale":{"value":"ja","lamport":1,"device":"a"},"futureThing":{"deep":42}}"#;
         let parsed = SyncedSettings::from_json(json);
         assert!(parsed.unknown.contains_key("futureThing"));
         let round = SyncedSettings::from_json(&parsed.to_json());
@@ -284,7 +285,10 @@ mod tests {
     #[test]
     fn broken_json_falls_back_instead_of_failing() {
         // 雲端上一份壞檔案不該讓使用者整個進不去設定。
-        assert_eq!(SyncedSettings::from_json("not json at all"), SyncedSettings::default());
+        assert_eq!(
+            SyncedSettings::from_json("not json at all"),
+            SyncedSettings::default()
+        );
         assert_eq!(SyncedSettings::from_json(""), SyncedSettings::default());
     }
 

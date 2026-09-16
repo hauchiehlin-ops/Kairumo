@@ -61,9 +61,15 @@ pub fn align(rects: &[AlignRect], mode: AlignMode) -> Vec<(f32, f32)> {
     }
 
     let min_x = rects.iter().map(|r| r.x).fold(f32::INFINITY, f32::min);
-    let max_x = rects.iter().map(AlignRect::max_x).fold(f32::NEG_INFINITY, f32::max);
+    let max_x = rects
+        .iter()
+        .map(AlignRect::max_x)
+        .fold(f32::NEG_INFINITY, f32::max);
     let min_y = rects.iter().map(|r| r.y).fold(f32::INFINITY, f32::min);
-    let max_y = rects.iter().map(AlignRect::max_y).fold(f32::NEG_INFINITY, f32::max);
+    let max_y = rects
+        .iter()
+        .map(AlignRect::max_y)
+        .fold(f32::NEG_INFINITY, f32::max);
     let center_x = (min_x + max_x) / 2.0;
     let center_y = (min_y + max_y) / 2.0;
 
@@ -97,7 +103,13 @@ fn distribute(rects: &[AlignRect], horizontal: bool) -> Vec<(f32, f32)> {
         return rects.iter().map(|r| (r.x, r.y)).collect();
     }
 
-    let key = |r: &AlignRect| if horizontal { r.center_x() } else { r.center_y() };
+    let key = |r: &AlignRect| {
+        if horizontal {
+            r.center_x()
+        } else {
+            r.center_y()
+        }
+    };
 
     let mut indices: Vec<usize> = (0..rects.len()).collect();
     indices.sort_by(|&a, &b| {
@@ -128,7 +140,12 @@ mod tests {
     use super::*;
 
     fn r(x: f32, y: f32, w: f32, h: f32) -> AlignRect {
-        AlignRect { x, y, width: w, height: h }
+        AlignRect {
+            x,
+            y,
+            width: w,
+            height: h,
+        }
     }
 
     #[test]
@@ -173,19 +190,35 @@ mod tests {
     #[test]
     fn distribute_keeps_the_ends_and_evens_the_middle() {
         // 中心點 5 / 40 / 95 → 頭尾不動，中間應落在 50。
-        let rects = [r(0.0, 0.0, 10.0, 10.0), r(35.0, 0.0, 10.0, 10.0), r(90.0, 0.0, 10.0, 10.0)];
+        let rects = [
+            r(0.0, 0.0, 10.0, 10.0),
+            r(35.0, 0.0, 10.0, 10.0),
+            r(90.0, 0.0, 10.0, 10.0),
+        ];
         let out = align(&rects, AlignMode::DistributeHorizontally);
         assert_eq!(out[0].0, 0.0);
         assert_eq!(out[2].0, 90.0);
-        assert!((out[1].0 - 45.0).abs() < 0.01, "中間應在 45，實得 {}", out[1].0);
+        assert!(
+            (out[1].0 - 45.0).abs() < 0.01,
+            "中間應在 45，實得 {}",
+            out[1].0
+        );
     }
 
     #[test]
     fn distribute_works_on_unsorted_input() {
         // 輸入順序與位置無關時，結果必須一樣 —— 不然同一組物件換個選取順序
         // 就得到不同的版面。
-        let a = [r(0.0, 0.0, 10.0, 10.0), r(35.0, 0.0, 10.0, 10.0), r(90.0, 0.0, 10.0, 10.0)];
-        let b = [r(90.0, 0.0, 10.0, 10.0), r(0.0, 0.0, 10.0, 10.0), r(35.0, 0.0, 10.0, 10.0)];
+        let a = [
+            r(0.0, 0.0, 10.0, 10.0),
+            r(35.0, 0.0, 10.0, 10.0),
+            r(90.0, 0.0, 10.0, 10.0),
+        ];
+        let b = [
+            r(90.0, 0.0, 10.0, 10.0),
+            r(0.0, 0.0, 10.0, 10.0),
+            r(35.0, 0.0, 10.0, 10.0),
+        ];
         let out_a = align(&a, AlignMode::DistributeHorizontally);
         let out_b = align(&b, AlignMode::DistributeHorizontally);
         assert!((out_a[1].0 - out_b[2].0).abs() < 0.01);
@@ -194,6 +227,9 @@ mod tests {
     #[test]
     fn distribute_needs_three() {
         let rects = [r(0.0, 0.0, 10.0, 10.0), r(90.0, 0.0, 10.0, 10.0)];
-        assert_eq!(align(&rects, AlignMode::DistributeHorizontally), vec![(0.0, 0.0), (90.0, 0.0)]);
+        assert_eq!(
+            align(&rects, AlignMode::DistributeHorizontally),
+            vec![(0.0, 0.0), (90.0, 0.0)]
+        );
     }
 }

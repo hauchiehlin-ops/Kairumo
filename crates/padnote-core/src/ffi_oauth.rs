@@ -115,7 +115,11 @@ pub fn oauth_new_pkce() -> FfiPkcePair {
         };
     }
     let challenge = B64URL.encode(Sha256::digest(verifier.as_bytes()));
-    FfiPkcePair { verifier, challenge, state }
+    FfiPkcePair {
+        verifier,
+        challenge,
+        state,
+    }
 }
 
 fn random_b64url(bytes: usize) -> String {
@@ -174,17 +178,16 @@ pub struct FfiAuthCallback {
 /// 去交換一個攻擊者取得的授權碼，結果是資料同步到攻擊者的雲端硬碟。
 #[uniffi::export]
 pub fn oauth_parse_callback(url: String) -> FfiAuthCallback {
-    let query = url
-        .split_once('?')
-        .map(|(_, q)| q)
-        .unwrap_or("");
+    let query = url.split_once('?').map(|(_, q)| q).unwrap_or("");
     let mut out = FfiAuthCallback {
         code: String::new(),
         state: String::new(),
         error: String::new(),
     };
     for pair in query.split('&') {
-        let Some((k, v)) = pair.split_once('=') else { continue };
+        let Some((k, v)) = pair.split_once('=') else {
+            continue;
+        };
         let value = percent_decode(v);
         match k {
             "code" => out.code = value,
@@ -198,11 +201,7 @@ pub fn oauth_parse_callback(url: String) -> FfiAuthCallback {
 
 /// 交換權杖用的 POST 內容（`application/x-www-form-urlencoded`）。
 #[uniffi::export]
-pub fn oauth_exchange_body(
-    platform: FfiOAuthPlatform,
-    code: String,
-    verifier: String,
-) -> String {
+pub fn oauth_exchange_body(platform: FfiOAuthPlatform, code: String, verifier: String) -> String {
     encode_form(&[
         ("client_id", oauth_client_id(platform)),
         ("code", code),
@@ -257,7 +256,10 @@ pub fn oauth_parse_token_response(json: String, now_s: u64) -> FfiTokenSet {
         .and_then(|v| v.as_str())
         .unwrap_or("")
         .to_string();
-    let expires_in = value.get("expires_in").and_then(|v| v.as_u64()).unwrap_or(0);
+    let expires_in = value
+        .get("expires_in")
+        .and_then(|v| v.as_u64())
+        .unwrap_or(0);
     FfiTokenSet {
         access_token: str_field(&value, "access_token"),
         refresh_token: str_field(&value, "refresh_token"),
@@ -269,7 +271,11 @@ pub fn oauth_parse_token_response(json: String, now_s: u64) -> FfiTokenSet {
 }
 
 fn str_field(value: &serde_json::Value, key: &str) -> String {
-    value.get(key).and_then(|v| v.as_str()).unwrap_or("").to_string()
+    value
+        .get(key)
+        .and_then(|v| v.as_str())
+        .unwrap_or("")
+        .to_string()
 }
 
 /// 這組權杖現在還能用嗎。
@@ -465,10 +471,8 @@ mod tests {
     fn a_refresh_response_without_a_refresh_token_is_normal() {
         // 更新回應通常**沒有** refresh_token。呼叫端要沿用舊的；
         // 覆蓋成空字串的話下一次就再也更新不了，使用者被迫重新登入。
-        let tokens = oauth_parse_token_response(
-            r#"{"access_token":"new","expires_in":3600}"#.into(),
-            0,
-        );
+        let tokens =
+            oauth_parse_token_response(r#"{"access_token":"new","expires_in":3600}"#.into(), 0);
         assert_eq!(tokens.access_token, "new");
         assert!(tokens.refresh_token.is_empty());
         assert!(tokens.error.is_empty());

@@ -48,7 +48,7 @@ fn chunking_breaks_at_paragraphs_not_mid_sentence() {
     // 切在句子中間的話，模型會把半句話當成完整輸入去理解，
     // 摘要出來的東西可能與原意相反。
     // 預算用 200（`chunk` 的下限）。再小會被夾到 200，測試就測不到切割。
-    let para = "這一段的內容。".repeat(20);   // 約 140 字
+    let para = "這一段的內容。".repeat(20); // 約 140 字
     let text = format!("{para}\n\n{para}\n\n{para}");
     let pieces = chunk(&text, 200);
     assert!(pieces.len() > 1, "三段各 140 字、預算 200，應該要切開");
@@ -112,7 +112,14 @@ fn every_bullet_style_a_model_actually_emits_is_understood() {
     let texts: Vec<&str> = todos.iter().map(|t| t.text.as_str()).collect();
     assert_eq!(
         texts,
-        vec!["買牛奶", "寄合約", "打給廠商", "訂會議室", "準備投影片", "確認預算"]
+        vec![
+            "買牛奶",
+            "寄合約",
+            "打給廠商",
+            "訂會議室",
+            "準備投影片",
+            "確認預算"
+        ]
     );
     assert!(!todos[0].done);
     assert!(todos[1].done, "`- [x]` 要認得出是已完成");
@@ -202,8 +209,14 @@ fn empty_input_is_its_own_error() {
     // 與「模型沒載入」分開：前者是使用者對一頁空白按了摘要，
     // 後者要引導他去下載模型。混成一種，兩邊的指引都會是錯的。
     let engine = ScriptedLlm::new(&[]);
-    assert_eq!(summarize(&engine, "   ", "zh-Hant", 64), Err(LlmError::EmptyInput));
-    assert_eq!(extract_todos(&engine, "", "zh-Hant", 64), Err(LlmError::EmptyInput));
+    assert_eq!(
+        summarize(&engine, "   ", "zh-Hant", 64),
+        Err(LlmError::EmptyInput)
+    );
+    assert_eq!(
+        extract_todos(&engine, "", "zh-Hant", 64),
+        Err(LlmError::EmptyInput)
+    );
     assert_eq!(engine.calls(), 0, "空輸入不該去麻煩模型");
 }
 

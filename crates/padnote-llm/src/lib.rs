@@ -226,14 +226,14 @@ fn strip_bullet(line: &str) -> Option<(String, bool)> {
             .or_else(|| after.strip_prefix("、"))
     };
 
-    rest = match bulleted.or_else(numbered) {
-        Some(r) => r,
-        None => return None,
-    };
+    rest = bulleted.or_else(numbered)?;
     rest = rest.trim_start();
 
     // `[ ]` / `[x]` / `[X]`
-    let done = if let Some(r) = rest.strip_prefix("[x]").or_else(|| rest.strip_prefix("[X]")) {
+    let done = if let Some(r) = rest
+        .strip_prefix("[x]")
+        .or_else(|| rest.strip_prefix("[X]"))
+    {
         rest = r;
         true
     } else if let Some(r) = rest.strip_prefix("[ ]").or_else(|| rest.strip_prefix("[]")) {

@@ -47,11 +47,18 @@ fn normalize(raw: &str) -> String {
         .collect();
 
     for (from, to) in [
-        ("×", "*"), ("✕", "*"), ("·", "*"),
-        ("÷", "/"), ("∕", "/"),
-        ("—", "-"), ("–", "-"), ("−", "-"),
-        ("（", "("), ("）", ")"),
-        ("，", ","), ("　", " "),
+        ("×", "*"),
+        ("✕", "*"),
+        ("·", "*"),
+        ("÷", "/"),
+        ("∕", "/"),
+        ("—", "-"),
+        ("–", "-"),
+        ("−", "-"),
+        ("（", "("),
+        ("）", ")"),
+        ("，", ","),
+        ("　", " "),
     ] {
         s = s.replace(from, to);
     }
@@ -73,7 +80,10 @@ pub fn math_evaluate(expression: String) -> FfiMathResult {
     }
 
     let chars: Vec<char> = normalized.chars().collect();
-    let mut parser = Parser { chars: &chars, pos: 0 };
+    let mut parser = Parser {
+        chars: &chars,
+        pos: 0,
+    };
     let value = match parser.expression() {
         Some(v) => v,
         None => return failure(normalized, "math_error_bad_expression"),
@@ -257,7 +267,10 @@ impl<'a> Parser<'a> {
         if self.pos == start {
             return None;
         }
-        let name: String = self.chars[start..self.pos].iter().collect::<String>().to_lowercase();
+        let name: String = self.chars[start..self.pos]
+            .iter()
+            .collect::<String>()
+            .to_lowercase();
 
         match name.as_str() {
             "π" | "pi" => return Some(PI),

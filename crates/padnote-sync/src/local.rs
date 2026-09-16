@@ -153,9 +153,15 @@ fn collect_recursive(
                     } else {
                         format!("{prefix}/{real_name}")
                     };
-                    out.push(RemoteEntry { path: logical, size: 0 });
+                    out.push(RemoteEntry {
+                        path: logical,
+                        size: 0,
+                    });
                 }
-                None => out.push(RemoteEntry { path, size: meta.len() }),
+                None => out.push(RemoteEntry {
+                    path,
+                    size: meta.len(),
+                }),
             }
         }
     }

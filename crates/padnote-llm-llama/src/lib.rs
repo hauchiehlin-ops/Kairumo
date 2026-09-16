@@ -49,7 +49,9 @@ struct Inner {
 
 impl std::fmt::Debug for LlamaEngine {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("LlamaEngine").field("path", &self.path).finish()
+        f.debug_struct("LlamaEngine")
+            .field("path", &self.path)
+            .finish()
     }
 }
 
@@ -92,8 +94,7 @@ impl LlmEngine for LlamaEngine {
         // 上下文要裝得下「提示詞 + 生成」。只給提示詞長度的話，
         // 第一個生成的 token 就會撞牆。
         let needed = (tokens.len() as u32 + max_tokens + 8).max(512);
-        let params = LlamaContextParams::default()
-            .with_n_ctx(NonZeroU32::new(needed));
+        let params = LlamaContextParams::default().with_n_ctx(NonZeroU32::new(needed));
         let mut ctx = model
             .new_context(backend, params)
             .map_err(|e| LlmError::Backend(format!("建立 context 失敗：{e}")))?;
@@ -121,8 +122,14 @@ impl LlmEngine for LlamaEngine {
         // 症狀是「英文摘要正常、中文摘要全是問號」。
         let mut decoder = encoding_rs::UTF_8.new_decoder();
         let mut out = String::new();
+        // `n_cur` 是**模型上下文裡的絕對位置**，不是迴圈次數 —— 它從
+        // prompt 的長度開始算。clippy 會把它看成「手寫的計數器」，
+        // 但改成 `for n_cur in (start..).take(n)` 讀起來更難懂，
+        // 而且這個值要餵給 `batch.add`，語意上就是位置。
         let mut n_cur = batch.n_tokens();
 
+        // lint 掛在迴圈上（它指的是這個 `for`），不是掛在變數上。
+        #[allow(clippy::explicit_counter_loop)]
         for _ in 0..max_tokens {
             let token = sampler.sample(&ctx, batch.n_tokens() - 1);
             sampler.accept(token);

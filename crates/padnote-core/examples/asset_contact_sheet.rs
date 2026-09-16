@@ -18,9 +18,7 @@
 //! 兩邊的平台層如果把路徑畫錯（線寬、填色、座標縮放），這張圖看不出來。
 //! 它要回答的只有一個問題：**這 58 個形狀本身對不對。**
 
-use padnote_core::ffi_asset_art::{
-    FfiAssetRenderStyle, FfiPathVerb, asset_drawing, asset_palette,
-};
+use padnote_core::ffi_asset_art::{FfiAssetRenderStyle, FfiPathVerb, asset_drawing, asset_palette};
 use padnote_core::ffi_assets::asset_items;
 
 /// 每一格的邊長（素材畫在 400 × 400 裡，縮到這個大小）。
@@ -34,7 +32,9 @@ const COLUMNS: usize = 6;
 const LABEL_CHARS: usize = 13;
 
 fn main() {
-    let out = std::env::args().nth(1).unwrap_or_else(|| "assets.svg".into());
+    let out = std::env::args()
+        .nth(1)
+        .unwrap_or_else(|| "assets.svg".into());
     let items = asset_items();
     let palette = asset_palette(FfiAssetRenderStyle::Blueprint, false);
 
@@ -65,13 +65,21 @@ fn main() {
         let scale = CELL / 400.0;
         svg += &format!(r##"<g transform="translate({x},{y}) scale({scale})">"##);
         for path in asset_drawing(item.drawing_code.clone()) {
-            let color = if path.accent { &palette.accent_hex } else { &palette.stroke_hex };
+            let color = if path.accent {
+                &palette.accent_hex
+            } else {
+                &palette.stroke_hex
+            };
             let fill = if path.fillable && !path.fill_override_hex.is_empty() {
                 path.fill_override_hex.clone()
             } else {
                 "none".into()
             };
-            let dash = if path.dashed { r##" stroke-dasharray="8 6""## } else { "" };
+            let dash = if path.dashed {
+                r##" stroke-dasharray="8 6""##
+            } else {
+                ""
+            };
             svg += &format!(
                 r##"<path d="{}" fill="{fill}" stroke="{color}" stroke-width="{}"{dash}/>"##,
                 to_svg_d(&path.segs),
@@ -128,7 +136,10 @@ fn to_svg_d(segs: &[padnote_core::ffi_asset_art::FfiPathSeg]) -> String {
             FfiPathVerb::Move => d += &format!("M {} {} ", seg.x, seg.y),
             FfiPathVerb::Line => d += &format!("L {} {} ", seg.x, seg.y),
             FfiPathVerb::Curve => {
-                d += &format!("C {} {} {} {} {} {} ", seg.c1x, seg.c1y, seg.c2x, seg.c2y, seg.x, seg.y)
+                d += &format!(
+                    "C {} {} {} {} {} {} ",
+                    seg.c1x, seg.c1y, seg.c2x, seg.c2y, seg.x, seg.y
+                )
             }
             FfiPathVerb::Close => d += "Z ",
         }
@@ -138,5 +149,7 @@ fn to_svg_d(segs: &[padnote_core::ffi_asset_art::FfiPathSeg]) -> String {
 
 /// 名稱會直接進 XML，`&` 與 `<` 要跳脫，否則整張圖打不開。
 fn escape(text: &str) -> String {
-    text.replace('&', "&amp;").replace('<', "&lt;").replace('>', "&gt;")
+    text.replace('&', "&amp;")
+        .replace('<', "&lt;")
+        .replace('>', "&gt;")
 }

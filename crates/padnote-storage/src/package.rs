@@ -477,10 +477,29 @@ mod tests {
     fn oplog_files_are_listed_in_causal_order() {
         let root = tmp("oplog-order");
         let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
-        pkg.append_doc_ops(2, 0xAA, &[DocOp::SetTitle { title: "二".into() }]).unwrap();
-        pkg.append_doc_ops(1, 0xBB, &[DocOp::SetTitle { title: "一".into() }]).unwrap();
+        pkg.append_doc_ops(
+            2,
+            0xAA,
+            &[DocOp::SetTitle {
+                title: "二".into()
+            }],
+        )
+        .unwrap();
+        pkg.append_doc_ops(
+            1,
+            0xBB,
+            &[DocOp::SetTitle {
+                title: "一".into()
+            }],
+        )
+        .unwrap();
 
-        let files: Vec<String> = pkg.doc_op_files().unwrap().into_iter().map(|(n, _)| n).collect();
+        let files: Vec<String> = pkg
+            .doc_op_files()
+            .unwrap()
+            .into_iter()
+            .map(|(n, _)| n)
+            .collect();
         // 檔名字典序即因果序 —— lamport 1 要排在 2 前面，與寫入順序無關。
         assert_eq!(files.len(), 2);
         assert!(files[0].starts_with("0000000000000001"), "{files:?}");
@@ -491,7 +510,15 @@ mod tests {
     fn an_oplog_file_survives_a_round_trip() {
         let source_root = tmp("oplog-src");
         let source = NotebookPackage::create(&source_root, "t", 1).unwrap();
-        source.append_doc_ops(1, 0xAA, &[DocOp::SetTitle { title: "來源".into() }]).unwrap();
+        source
+            .append_doc_ops(
+                1,
+                0xAA,
+                &[DocOp::SetTitle {
+                    title: "來源".into(),
+                }],
+            )
+            .unwrap();
         let (name, _) = source.doc_op_files().unwrap().remove(0);
         let bytes = source.read_doc_op_file(&name).unwrap();
 
@@ -509,7 +536,15 @@ mod tests {
         // 重播之後每個操作都套用兩遍。
         let source_root = tmp("oplog-dup-src");
         let source = NotebookPackage::create(&source_root, "t", 1).unwrap();
-        source.append_doc_ops(1, 0xAA, &[DocOp::SetTitle { title: "一次".into() }]).unwrap();
+        source
+            .append_doc_ops(
+                1,
+                0xAA,
+                &[DocOp::SetTitle {
+                    title: "一次".into(),
+                }],
+            )
+            .unwrap();
         let (name, _) = source.doc_op_files().unwrap().remove(0);
         let bytes = source.read_doc_op_file(&name).unwrap();
 
@@ -533,7 +568,10 @@ mod tests {
             "plain.txt",
             "",
         ] {
-            assert!(pkg.write_doc_op_file(bad, b"x").is_err(), "{bad} 應該被擋下");
+            assert!(
+                pkg.write_doc_op_file(bad, b"x").is_err(),
+                "{bad} 應該被擋下"
+            );
         }
     }
 

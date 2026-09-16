@@ -21,4 +21,4 @@ pub use library::{INDEX_PATH, ItemKind, LibraryIndex, LibraryItem};
 pub use local::LocalFolderProvider;
 pub use oplog::{DeviceId, OplogName};
 pub use provider::{CloudProvider, RemoteEntry, SyncError};
-pub use settings::{DefaultPen, DeviceSettings, Identity, Stamped, SyncedSettings, SETTINGS_PATH};
+pub use settings::{DefaultPen, DeviceSettings, Identity, SETTINGS_PATH, Stamped, SyncedSettings};

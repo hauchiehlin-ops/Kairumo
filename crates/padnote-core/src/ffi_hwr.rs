@@ -42,7 +42,9 @@ pub fn hwr_group_strokes(strokes: Vec<FfiStrokeTiming>, gap_ms: u64) -> Vec<FfiS
         .collect();
     group_by_pause(&input, gap_ms)
         .into_iter()
-        .map(|g| FfiStrokeGroup { stroke_ids: g.stroke_ids })
+        .map(|g| FfiStrokeGroup {
+            stroke_ids: g.stroke_ids,
+        })
         .collect()
 }
 

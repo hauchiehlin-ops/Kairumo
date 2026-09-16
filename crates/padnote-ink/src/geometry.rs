@@ -366,7 +366,12 @@ mod tests {
 
     #[test]
     fn a_stroke_outside_the_lasso_is_not() {
-        let square = [(200.0, 200.0), (300.0, 200.0), (300.0, 300.0), (200.0, 300.0)];
+        let square = [
+            (200.0, 200.0),
+            (300.0, 200.0),
+            (300.0, 300.0),
+            (200.0, 300.0),
+        ];
         assert!(!horizontal_line().is_enclosed_by_polygon(&square));
     }
 

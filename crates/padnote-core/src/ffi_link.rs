@@ -121,10 +121,10 @@ fn meta_content(html: &str, key: &str) -> Option<String> {
         if !is_match {
             continue;
         }
-        if let Some(value) = attribute(tag, "content") {
-            if !value.trim().is_empty() {
-                return Some(value);
-            }
+        if let Some(value) = attribute(tag, "content")
+            && !value.trim().is_empty()
+        {
+            return Some(value);
         }
     }
     None
@@ -183,20 +183,35 @@ mod tests {
     #[test]
     fn a_bare_domain_gets_https() {
         // 使用者貼進來的十次有九次是這樣。
-        assert_eq!(link_normalize_url("example.com".into()), "https://example.com");
+        assert_eq!(
+            link_normalize_url("example.com".into()),
+            "https://example.com"
+        );
         assert_eq!(
             link_normalize_url("  https://example.com  ".into()),
             "https://example.com"
         );
-        assert_eq!(link_normalize_url("HTTP://example.com".into()), "HTTP://example.com");
+        assert_eq!(
+            link_normalize_url("HTTP://example.com".into()),
+            "HTTP://example.com"
+        );
         assert_eq!(link_normalize_url("   ".into()), "");
     }
 
     #[test]
     fn the_host_is_extracted_without_port_or_path() {
-        assert_eq!(link_host("https://example.com/a/b?c=d".into()), "example.com");
-        assert_eq!(link_host("https://example.com:8443/x".into()), "example.com");
-        assert_eq!(link_host("https://user@example.com/x".into()), "example.com");
+        assert_eq!(
+            link_host("https://example.com/a/b?c=d".into()),
+            "example.com"
+        );
+        assert_eq!(
+            link_host("https://example.com:8443/x".into()),
+            "example.com"
+        );
+        assert_eq!(
+            link_host("https://user@example.com/x".into()),
+            "example.com"
+        );
     }
 
     #[test]
@@ -250,7 +265,10 @@ mod tests {
         let meta = link_parse_metadata(String::new(), "https://www.apple.com".into());
         assert_eq!(meta.title, "apple.com", "抓不到就用主機名");
         assert_eq!(meta.site_name, "apple.com");
-        assert_eq!(meta.description, "https://www.apple.com", "描述退回網址，不編");
+        assert_eq!(
+            meta.description, "https://www.apple.com",
+            "描述退回網址，不編"
+        );
         assert!(!meta.description.contains("探索"), "不可以有捏造的簡介");
     }
 

@@ -201,7 +201,6 @@ impl<H: DriveHttp> GDriveProvider<H> {
     }
 }
 
-
 impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
     fn list(&self, prefix: &str) -> Result<Vec<RemoteEntry>, SyncError> {
         let pages = self.list_all(&list_query(prefix), "id, name, size")?;
@@ -334,9 +333,7 @@ impl DriveHttp for ReqwestDriveHttp {
                 format!("bytes={}-{}", r.start, r.end.saturating_sub(1)),
             );
         }
-        let resp = req
-            .send()
-            .map_err(|e| SyncError::Backend(e.to_string()))?;
+        let resp = req.send().map_err(|e| SyncError::Backend(e.to_string()))?;
         if !resp.status().is_success() {
             return Err(Self::status_error(resp.status(), url));
         }
@@ -591,16 +588,22 @@ mod tests {
 
     #[test]
     fn size_comes_back_as_a_number_even_though_drive_sends_a_string() {
-        let drive = GDriveProvider::new(FakeDrive::with(&[("settings/global.json", b"12345")], 100));
+        let drive =
+            GDriveProvider::new(FakeDrive::with(&[("settings/global.json", b"12345")], 100));
         let listed = drive.list("settings/").unwrap();
         assert_eq!(listed[0].size, 5);
     }
 
     #[test]
     fn get_range_asks_for_a_half_open_range() {
-        let drive =
-            GDriveProvider::new(FakeDrive::with(&[("sync/dev-a/log-0.bin", b"0123456789")], 100));
-        assert_eq!(drive.get_range("sync/dev-a/log-0.bin", 2..5).unwrap(), b"234");
+        let drive = GDriveProvider::new(FakeDrive::with(
+            &[("sync/dev-a/log-0.bin", b"0123456789")],
+            100,
+        ));
+        assert_eq!(
+            drive.get_range("sync/dev-a/log-0.bin", 2..5).unwrap(),
+            b"234"
+        );
     }
 
     #[test]
@@ -622,7 +625,10 @@ mod tests {
             &[("notebooks/index.json", b"{\"items\":{}}")],
             100,
         ));
-        assert_eq!(drive.get_all("notebooks/index.json").unwrap(), b"{\"items\":{}}");
+        assert_eq!(
+            drive.get_all("notebooks/index.json").unwrap(),
+            b"{\"items\":{}}"
+        );
     }
 
     #[test]
@@ -634,11 +640,18 @@ mod tests {
         let big = vec![7u8; SIMPLE_UPLOAD_LIMIT + 1];
         drive.put("notebooks/n1/media/blobs/abc", &big).unwrap();
 
-        assert!(drive.http.patched.lock().unwrap().is_empty(), "大檔不該走單次上傳");
+        assert!(
+            drive.http.patched.lock().unwrap().is_empty(),
+            "大檔不該走單次上傳"
+        );
         let large = drive.http.put_large.lock().unwrap();
         assert_eq!(large.len(), 1);
         assert_eq!(large[0].1, big.len());
-        assert!(large[0].0.contains("uploadType=resumable"), "{}", large[0].0);
+        assert!(
+            large[0].0.contains("uploadType=resumable"),
+            "{}",
+            large[0].0
+        );
     }
 
     #[test]
@@ -675,9 +688,15 @@ mod tests {
         // Drive 允許同名檔。取錯一份的症狀是「同步回來的是舊內容」，
         // 而且每次還可能不一樣。
         let drive = GDriveProvider::new(FakeDrive::with(
-            &[("settings/global.json", b"old"), ("settings/global.json", b"new")],
+            &[
+                ("settings/global.json", b"old"),
+                ("settings/global.json", b"new"),
+            ],
             100,
         ));
-        assert_eq!(drive.get_range("settings/global.json", 0..3).unwrap(), b"new");
+        assert_eq!(
+            drive.get_range("settings/global.json", 0..3).unwrap(),
+            b"new"
+        );
     }
 }

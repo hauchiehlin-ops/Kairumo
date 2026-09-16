@@ -287,34 +287,54 @@ pub fn card_palette() -> Vec<FfiPaletteEntry> {
 pub fn designer_palette(group: FfiPaletteGroup) -> Vec<FfiPaletteEntry> {
     let list: &[(&str, &str)] = match group {
         FfiPaletteGroup::Morandi => &[
-            ("hue_oat_gray", "#9E9D89"), ("hue_sage_green", "#A3B19B"),
-            ("hue_haze_blue", "#8C9DAE"), ("hue_milk_tea", "#BAA599"),
-            ("hue_warm_almond", "#D8C3A5"), ("hue_caramel_pink", "#C5A880"),
-            ("hue_gray_cardamom", "#948275"), ("hue_premium_gray", "#7F7F7F"),
+            ("hue_oat_gray", "#9E9D89"),
+            ("hue_sage_green", "#A3B19B"),
+            ("hue_haze_blue", "#8C9DAE"),
+            ("hue_milk_tea", "#BAA599"),
+            ("hue_warm_almond", "#D8C3A5"),
+            ("hue_caramel_pink", "#C5A880"),
+            ("hue_gray_cardamom", "#948275"),
+            ("hue_premium_gray", "#7F7F7F"),
         ],
         FfiPaletteGroup::Vintage => &[
-            ("hue_terracotta", "#8D5B4C"), ("hue_caramel_brown", "#C68B59"),
-            ("hue_mustard", "#D9A74A"), ("hue_retro_teal", "#4A6B6C"),
-            ("hue_slate_blue", "#2B4C5A"), ("hue_rust_red", "#7D3C3C"),
-            ("hue_chestnut", "#5A3D31"), ("hue_fallen_leaf", "#96705B"),
+            ("hue_terracotta", "#8D5B4C"),
+            ("hue_caramel_brown", "#C68B59"),
+            ("hue_mustard", "#D9A74A"),
+            ("hue_retro_teal", "#4A6B6C"),
+            ("hue_slate_blue", "#2B4C5A"),
+            ("hue_rust_red", "#7D3C3C"),
+            ("hue_chestnut", "#5A3D31"),
+            ("hue_fallen_leaf", "#96705B"),
         ],
         FfiPaletteGroup::Business => &[
-            ("hue_deep_navy", "#1A365D"), ("hue_business_blue", "#2B6CB0"),
-            ("hue_graphite_blue", "#2C5282"), ("hue_fir_green", "#234E52"),
-            ("hue_ink_green", "#285E61"), ("hue_burgundy", "#742A2A"),
-            ("hue_cold_stone", "#4A5568"), ("hue_midnight", "#1A202C"),
+            ("hue_deep_navy", "#1A365D"),
+            ("hue_business_blue", "#2B6CB0"),
+            ("hue_graphite_blue", "#2C5282"),
+            ("hue_fir_green", "#234E52"),
+            ("hue_ink_green", "#285E61"),
+            ("hue_burgundy", "#742A2A"),
+            ("hue_cold_stone", "#4A5568"),
+            ("hue_midnight", "#1A202C"),
         ],
         FfiPaletteGroup::Pastel => &[
-            ("hue_sakura_pink", "#FFB7B2"), ("hue_peach_apricot", "#FFDAC1"),
-            ("hue_green_apple", "#E2F0CB"), ("hue_mint_green", "#B5EAD7"),
-            ("hue_periwinkle", "#C7CEEA"), ("hue_lavender", "#E0BBE4"),
-            ("hue_grape_gray", "#957DAD"), ("hue_rose_dusk", "#D291BC"),
+            ("hue_sakura_pink", "#FFB7B2"),
+            ("hue_peach_apricot", "#FFDAC1"),
+            ("hue_green_apple", "#E2F0CB"),
+            ("hue_mint_green", "#B5EAD7"),
+            ("hue_periwinkle", "#C7CEEA"),
+            ("hue_lavender", "#E0BBE4"),
+            ("hue_grape_gray", "#957DAD"),
+            ("hue_rose_dusk", "#D291BC"),
         ],
         FfiPaletteGroup::Neon => &[
-            ("hue_electric_magenta", "#FF007F"), ("hue_fluoro_cyan", "#00F0FF"),
-            ("hue_neon_green", "#39FF14"), ("hue_aurora_orange", "#FF6600"),
-            ("hue_iridescent_purple", "#BD00FF"), ("hue_vivid_yellow", "#FFE600"),
-            ("hue_high_energy_red", "#FF0033"), ("hue_sky_ultra_blue", "#00E5FF"),
+            ("hue_electric_magenta", "#FF007F"),
+            ("hue_fluoro_cyan", "#00F0FF"),
+            ("hue_neon_green", "#39FF14"),
+            ("hue_aurora_orange", "#FF6600"),
+            ("hue_iridescent_purple", "#BD00FF"),
+            ("hue_vivid_yellow", "#FFE600"),
+            ("hue_high_energy_red", "#FF0033"),
+            ("hue_sky_ultra_blue", "#00E5FF"),
         ],
     };
     list.iter()
@@ -363,13 +383,15 @@ pub fn designer_palette_group_key(group: FfiPaletteGroup) -> String {
 /// 邊框顏色調色盤。理由同 [`card_palette`]。
 #[uniffi::export]
 pub fn border_palette() -> Vec<FfiPaletteEntry> {
-    ["#8E8E93", "#000000", "#0A84FF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE"]
-        .into_iter()
-        .map(|hex| FfiPaletteEntry {
-            key: String::new(),
-            hex: hex.to_string(),
-        })
-        .collect()
+    [
+        "#8E8E93", "#000000", "#0A84FF", "#34C759", "#FF9500", "#FF3B30", "#AF52DE",
+    ]
+    .into_iter()
+    .map(|hex| FfiPaletteEntry {
+        key: String::new(),
+        hex: hex.to_string(),
+    })
+    .collect()
 }
 
 /// 調色盤的一格。`key` 是語系鍵（沒有名字時為空字串）。
@@ -1680,7 +1702,11 @@ pub fn lasso_encloses(polygon: Vec<f32>, points: Vec<f32>) -> bool {
 /// 長度是奇數時**丟掉最後那個孤兒座標**，不要當成 `(x, 0)` ——
 /// 那會在多邊形上憑空多一個貼著上緣的頂點，選取範圍整個歪掉。
 fn to_polygon(flat: &[f32]) -> Vec<(f32, f32)> {
-    flat.chunks_exact(2).map(|c| (c[0], c[1])).collect()
+    flat.as_chunks::<2>()
+        .0
+        .iter()
+        .map(|c| (c[0], c[1]))
+        .collect()
 }
 
 fn to_rgba(v: &[u8]) -> [u8; 4] {
@@ -1929,7 +1955,11 @@ mod tests {
         let cards = card_palette();
         let mut seen = std::collections::HashSet::new();
         for entry in &cards {
-            assert!(entry.hex.starts_with('#') && entry.hex.len() == 7, "壞的 hex：{}", entry.hex);
+            assert!(
+                entry.hex.starts_with('#') && entry.hex.len() == 7,
+                "壞的 hex：{}",
+                entry.hex
+            );
             assert!(!entry.key.is_empty(), "底色一定要有語系鍵");
             assert!(seen.insert(entry.hex.clone()), "重複的顏色：{}", entry.hex);
         }
@@ -1938,7 +1968,11 @@ mod tests {
         let borders = border_palette();
         let mut seen = std::collections::HashSet::new();
         for entry in &borders {
-            assert!(entry.hex.starts_with('#') && entry.hex.len() == 7, "壞的 hex：{}", entry.hex);
+            assert!(
+                entry.hex.starts_with('#') && entry.hex.len() == 7,
+                "壞的 hex：{}",
+                entry.hex
+            );
             assert!(seen.insert(entry.hex.clone()), "重複的顏色：{}", entry.hex);
         }
     }
@@ -1951,7 +1985,11 @@ mod tests {
             assert_eq!(list.len(), 8, "{group:?} 應該有 8 色");
             assert!(!designer_palette_group_key(group).is_empty());
             for entry in list {
-                assert!(entry.hex.starts_with('#') && entry.hex.len() == 7, "壞的 hex：{}", entry.hex);
+                assert!(
+                    entry.hex.starts_with('#') && entry.hex.len() == 7,
+                    "壞的 hex：{}",
+                    entry.hex
+                );
                 // 色名一定要是語系鍵，不可以是寫死的文字 —— 原本 40 個名字
                 // 全是繁體中文，非中文使用者看到的就是一整面中文。
                 assert!(
@@ -2040,8 +2078,22 @@ mod tests {
             vec![0, 0, 0, 255],
             2.0,
             vec![
-                StrokePoint { x, y, pressure: 0.5, tilt: 0.0, azimuth: 0.0, dt_us: 0 },
-                StrokePoint { x: x + 5.0, y: y + 5.0, pressure: 0.5, tilt: 0.0, azimuth: 0.0, dt_us: 8_000 },
+                StrokePoint {
+                    x,
+                    y,
+                    pressure: 0.5,
+                    tilt: 0.0,
+                    azimuth: 0.0,
+                    dt_us: 0,
+                },
+                StrokePoint {
+                    x: x + 5.0,
+                    y: y + 5.0,
+                    pressure: 0.5,
+                    tilt: 0.0,
+                    azimuth: 0.0,
+                    dt_us: 8_000,
+                },
             ],
         )
         .unwrap()
@@ -2068,7 +2120,11 @@ mod tests {
         let _b = stroke_at(&s, &page, 500.0, 500.0);
 
         assert_eq!(s.lasso_delete(page.clone(), vec![a]).unwrap(), 1);
-        assert_eq!(s.visible_strokes(page).unwrap().len(), 1, "只該刪掉選到的那一筆");
+        assert_eq!(
+            s.visible_strokes(page).unwrap().len(),
+            1,
+            "只該刪掉選到的那一筆"
+        );
     }
 
     #[test]
@@ -2080,7 +2136,10 @@ mod tests {
         let a = stroke_at(&s, &page, 20.0, 20.0);
 
         assert_eq!(s.lasso_delete(page.clone(), vec![a.clone()]).unwrap(), 1);
-        assert_eq!(s.lasso_delete(page, vec![a, "not-a-uuid".into()]).unwrap(), 0);
+        assert_eq!(
+            s.lasso_delete(page, vec![a, "not-a-uuid".into()]).unwrap(),
+            0
+        );
     }
 
     #[test]
@@ -2101,7 +2160,10 @@ mod tests {
         let all = s.visible_stroke_details(page).unwrap();
         assert_eq!(all.len(), 2, "原本那一筆要還在");
         let xs: Vec<f32> = all.iter().map(|st| st.points[0].x).collect();
-        assert!(xs.contains(&20.0) && xs.contains(&60.0), "貼上的那一份要平移過：{xs:?}");
+        assert!(
+            xs.contains(&20.0) && xs.contains(&60.0),
+            "貼上的那一份要平移過：{xs:?}"
+        );
     }
 
     #[test]
@@ -2112,7 +2174,9 @@ mod tests {
         let page = s.first_page_id().unwrap();
         let a = stroke_at(&s, &page, 20.0, 20.0);
 
-        let moved = s.lasso_translate(page.clone(), vec![a], 100.0, 0.0).unwrap();
+        let moved = s
+            .lasso_translate(page.clone(), vec![a], 100.0, 0.0)
+            .unwrap();
         assert_eq!(moved.len(), 1);
 
         let all = s.visible_stroke_details(page).unwrap();

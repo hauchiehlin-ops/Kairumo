@@ -489,7 +489,10 @@ impl Shape {
                 .map(|i| {
                     let t = i as f32 / (n * 2) as f32 * std::f32::consts::TAU;
                     let bumps = 1.0 + 0.12 * (t * 7.0).sin() + 0.06 * (t * 3.0).cos();
-                    (cx + w / 2.0 * 0.86 * bumps * t.cos(), cy + h / 2.0 * 0.82 * bumps * t.sin())
+                    (
+                        cx + w / 2.0 * 0.86 * bumps * t.cos(),
+                        cy + h / 2.0 * 0.82 * bumps * t.sin(),
+                    )
                 })
                 .collect(),
 
@@ -498,7 +501,8 @@ impl Shape {
                 .map(|i| {
                     let t = i as f32 / (n * 2) as f32 * std::f32::consts::TAU;
                     let x = 16.0 * t.sin().powi(3);
-                    let y = -(13.0 * t.cos() - 5.0 * (2.0 * t).cos()
+                    let y = -(13.0 * t.cos()
+                        - 5.0 * (2.0 * t).cos()
                         - 2.0 * (3.0 * t).cos()
                         - (4.0 * t).cos());
                     (cx + w / 2.0 * x / 17.0, cy + h / 2.0 * y / 17.0)
@@ -520,14 +524,17 @@ impl Shape {
             ShapeKind::Moon => {
                 let mut p = Vec::with_capacity(n * 2 + 2);
                 for i in 0..=n {
-                    let t = -std::f32::consts::FRAC_PI_2
-                        + std::f32::consts::PI * i as f32 / n as f32;
+                    let t =
+                        -std::f32::consts::FRAC_PI_2 + std::f32::consts::PI * i as f32 / n as f32;
                     p.push((cx + w / 2.0 * t.cos(), cy + h / 2.0 * t.sin()));
                 }
                 for i in 0..=n {
-                    let t = std::f32::consts::FRAC_PI_2
-                        - std::f32::consts::PI * i as f32 / n as f32;
-                    p.push((cx + w / 2.0 * 0.45 * t.cos() - w * 0.08, cy + h / 2.0 * t.sin()));
+                    let t =
+                        std::f32::consts::FRAC_PI_2 - std::f32::consts::PI * i as f32 / n as f32;
+                    p.push((
+                        cx + w / 2.0 * 0.45 * t.cos() - w * 0.08,
+                        cy + h / 2.0 * t.sin(),
+                    ));
                 }
                 p
             }
@@ -591,7 +598,7 @@ impl Shape {
                 let r = (w.min(body_h) / 6.0).min(body_h / 2.0).min(w / 2.0);
                 let seg = (n / 4).max(3);
                 let mut p: Vec<(f32, f32)> = Vec::new();
-                let mut arc = |p: &mut Vec<(f32, f32)>, ox: f32, oy: f32, from: f32| {
+                let arc = |p: &mut Vec<(f32, f32)>, ox: f32, oy: f32, from: f32| {
                     for i in 0..=seg {
                         let t = from + std::f32::consts::FRAC_PI_2 * i as f32 / seg as f32;
                         p.push((ox + r * t.cos(), oy + r * t.sin()));
@@ -599,14 +606,24 @@ impl Shape {
                 };
                 // 左上 → 右上 → 右下
                 arc(&mut p, b.min_x + r, b.min_y + r, std::f32::consts::PI);
-                arc(&mut p, b.max_x - r, b.min_y + r, std::f32::consts::FRAC_PI_2 * 3.0);
+                arc(
+                    &mut p,
+                    b.max_x - r,
+                    b.min_y + r,
+                    std::f32::consts::FRAC_PI_2 * 3.0,
+                );
                 arc(&mut p, b.max_x - r, body_bottom - r, 0.0);
                 // 下緣往左走到尾巴的右腳
                 p.push((b.min_x + w * 0.38, body_bottom));
                 p.push((b.min_x + w * 0.20, b.max_y)); // 尾巴尖端
                 p.push((b.min_x + w * 0.26, body_bottom));
                 // 左下角
-                arc(&mut p, b.min_x + r, body_bottom - r, std::f32::consts::FRAC_PI_2);
+                arc(
+                    &mut p,
+                    b.min_x + r,
+                    body_bottom - r,
+                    std::f32::consts::FRAC_PI_2,
+                );
                 p
             }
 
@@ -621,7 +638,10 @@ impl Shape {
                 // 每一段都逆著角走 90°，接起來才是一圈。
                 let arcs = [
                     ((b.min_x + d, b.min_y + d), std::f32::consts::PI),
-                    ((b.max_x - d, b.min_y + d), std::f32::consts::FRAC_PI_2 * 3.0),
+                    (
+                        (b.max_x - d, b.min_y + d),
+                        std::f32::consts::FRAC_PI_2 * 3.0,
+                    ),
                     ((b.max_x - d, b.max_y - d), 0.0),
                     ((b.min_x + d, b.max_y - d), std::f32::consts::FRAC_PI_2),
                 ];
@@ -663,8 +683,8 @@ impl Shape {
             ShapeKind::Delay => {
                 let mut p = vec![(b.min_x, b.min_y), (cx, b.min_y)];
                 for i in 0..=n {
-                    let t = -std::f32::consts::FRAC_PI_2
-                        + std::f32::consts::PI * i as f32 / n as f32;
+                    let t =
+                        -std::f32::consts::FRAC_PI_2 + std::f32::consts::PI * i as f32 / n as f32;
                     p.push((cx + w / 2.0 * t.cos(), cy + h / 2.0 * t.sin()));
                 }
                 p.push((b.min_x, b.max_y));
@@ -676,14 +696,14 @@ impl Shape {
                 let rx = w / 8.0;
                 let mut p = vec![(b.min_x + rx, b.min_y), (b.max_x - rx, b.min_y)];
                 for i in 0..=n {
-                    let t = -std::f32::consts::FRAC_PI_2
-                        + std::f32::consts::PI * i as f32 / n as f32;
+                    let t =
+                        -std::f32::consts::FRAC_PI_2 + std::f32::consts::PI * i as f32 / n as f32;
                     p.push((b.max_x - rx + rx * t.cos(), cy + h / 2.0 * t.sin()));
                 }
                 p.push((b.min_x + rx, b.max_y));
                 for i in 0..=n {
-                    let t = std::f32::consts::FRAC_PI_2
-                        - std::f32::consts::PI * i as f32 / n as f32;
+                    let t =
+                        std::f32::consts::FRAC_PI_2 - std::f32::consts::PI * i as f32 / n as f32;
                     p.push((b.min_x + rx + rx * t.cos(), cy - h / 2.0 * t.sin()));
                 }
                 p
@@ -709,8 +729,8 @@ impl Shape {
                 let d = w / 6.0;
                 let mut p = vec![(b.min_x + d, b.min_y), (b.max_x - d, b.min_y)];
                 for i in 0..=n {
-                    let t = -std::f32::consts::FRAC_PI_2
-                        + std::f32::consts::PI * i as f32 / n as f32;
+                    let t =
+                        -std::f32::consts::FRAC_PI_2 + std::f32::consts::PI * i as f32 / n as f32;
                     p.push((b.max_x - d + d * t.cos(), cy + h / 2.0 * t.sin()));
                 }
                 p.push((b.min_x + d, b.max_y));
@@ -787,8 +807,7 @@ fn star_points(cx: f32, cy: f32, rx: f32, ry: f32, points: usize, inner: f32) ->
     let total = points * 2;
     (0..total)
         .map(|i| {
-            let t = i as f32 / total as f32 * std::f32::consts::TAU
-                - std::f32::consts::FRAC_PI_2;
+            let t = i as f32 / total as f32 * std::f32::consts::TAU - std::f32::consts::FRAC_PI_2;
             let r = if i % 2 == 0 { 1.0 } else { inner };
             (cx + rx * r * t.cos(), cy + ry * r * t.sin())
         })

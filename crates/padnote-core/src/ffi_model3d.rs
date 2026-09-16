@@ -230,7 +230,13 @@ pub fn model3d_faces(
         let lambert = dot(n, light).max(0.0);
         let shade = (0.28 + 0.72 * lambert).clamp(0.0, 1.0);
 
-        out.push((depth, FfiShadedFace { points: projected, shade }));
+        out.push((
+            depth,
+            FfiShadedFace {
+                points: projected,
+                shade,
+            },
+        ));
     }
 
     // 由遠而近（z 小的先畫）。
@@ -262,8 +268,14 @@ fn mesh(kind: FfiModel3dKind) -> Mesh {
 fn cube(size: f32) -> Mesh {
     let h = size / 2.0;
     let vertices = vec![
-        (-h, -h, -h), (h, -h, -h), (h, h, -h), (-h, h, -h),
-        (-h, -h, h), (h, -h, h), (h, h, h), (-h, h, h),
+        (-h, -h, -h),
+        (h, -h, -h),
+        (h, h, -h),
+        (-h, h, -h),
+        (-h, -h, h),
+        (h, -h, h),
+        (h, h, h),
+        (-h, h, h),
     ];
     let faces = vec![
         vec![4, 5, 6, 7], // 前
@@ -511,7 +523,10 @@ mod tests {
             assert_eq!(model3d_kind_from_raw(model3d_kind_raw(kind)), kind);
         }
         // 認不得的一律回球體，與 Apple 端的 default 分支一致。
-        assert_eq!(model3d_kind_from_raw("torus_v2".into()), FfiModel3dKind::Sphere);
+        assert_eq!(
+            model3d_kind_from_raw("torus_v2".into()),
+            FfiModel3dKind::Sphere
+        );
     }
 
     #[test]
@@ -519,7 +534,11 @@ mod tests {
         for m in model3d_materials() {
             let look = model3d_material_look(m);
             assert!(look.name_key.starts_with("mat_"));
-            assert!(look.hex.starts_with('#') && look.hex.len() == 7, "壞的色碼：{}", look.hex);
+            assert!(
+                look.hex.starts_with('#') && look.hex.len() == 7,
+                "壞的色碼：{}",
+                look.hex
+            );
             assert!((0.0..=1.0).contains(&look.metalness));
             assert!((0.0..=1.0).contains(&look.roughness));
             assert!(!look.raw.is_empty());
@@ -532,13 +551,14 @@ mod tests {
         // 而那在 UI 上看起來像「手勢壞了」。
         let a = model3d_faces(FfiModel3dKind::Pyramid, 0.0, 0.0, 0.0, 1.0, W, H);
         let b = model3d_faces(FfiModel3dKind::Pyramid, 0.0, 1.0, 0.0, 1.0, W, H);
-        let same = a.len() == b.len()
-            && a.iter().zip(b.iter()).all(|(fa, fb)| {
-                fa.points.len() == fb.points.len()
-                    && fa.points.iter().zip(fb.points.iter()).all(|(pa, pb)| {
-                        (pa.x - pb.x).abs() < 0.001 && (pa.y - pb.y).abs() < 0.001
-                    })
-            });
+        let same =
+            a.len() == b.len()
+                && a.iter().zip(b.iter()).all(|(fa, fb)| {
+                    fa.points.len() == fb.points.len()
+                        && fa.points.iter().zip(fb.points.iter()).all(|(pa, pb)| {
+                            (pa.x - pb.x).abs() < 0.001 && (pa.y - pb.y).abs() < 0.001
+                        })
+                });
         assert!(!same, "轉了 1 弧度畫面卻完全沒變");
     }
 }

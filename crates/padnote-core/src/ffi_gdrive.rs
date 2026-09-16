@@ -69,7 +69,8 @@ pub trait FfiDriveHttp: Send + Sync {
     /// GET，回應是 JSON 字串。`query` 是已經拆好的參數，平台負責 URL 編碼。
     fn get_json(&self, url: String, query: Vec<FfiQueryParam>) -> Result<String, FfiDriveError>;
     /// GET 原始位元組。`range` 為 None 表示整個檔案。
-    fn get_bytes(&self, url: String, range: Option<FfiByteRange>) -> Result<Vec<u8>, FfiDriveError>;
+    fn get_bytes(&self, url: String, range: Option<FfiByteRange>)
+    -> Result<Vec<u8>, FfiDriveError>;
     /// POST 一段 JSON，回應也是 JSON 字串。
     fn post_json(&self, url: String, body_json: String) -> Result<String, FfiDriveError>;
     /// PATCH 原始位元組（上傳檔案內容，**小檔用**）。
@@ -168,7 +169,11 @@ impl DriveHttp for ForeignHttp {
         Ok(self.0.get_bytes(url.to_string(), range)?)
     }
 
-    fn post_json(&self, url: &str, body: &serde_json::Value) -> Result<serde_json::Value, SyncError> {
+    fn post_json(
+        &self,
+        url: &str,
+        body: &serde_json::Value,
+    ) -> Result<serde_json::Value, SyncError> {
         let text = self.0.post_json(url.to_string(), body.to_string())?;
         serde_json::from_str(&text)
             .map_err(|e| SyncError::Backend(format!("Drive 回應不是合法 JSON：{e}")))
@@ -280,15 +285,11 @@ pub fn gdrive_sync_metadata(
     let (merged_settings, push_settings) = merge_settings(&local_settings_json, &remote_settings);
     let (merged_index, push_index) = merge_index(&local_index_json, &remote_index);
 
-    if push_settings {
-        if let Err(e) = drive.put(SETTINGS_PATH, merged_settings.as_bytes()) {
-            return FfiCloudSyncResult::failed(merged_settings, merged_index, e);
-        }
+    if push_settings && let Err(e) = drive.put(SETTINGS_PATH, merged_settings.as_bytes()) {
+        return FfiCloudSyncResult::failed(merged_settings, merged_index, e);
     }
-    if push_index {
-        if let Err(e) = drive.put(INDEX_PATH, merged_index.as_bytes()) {
-            return FfiCloudSyncResult::failed(merged_settings, merged_index, e);
-        }
+    if push_index && let Err(e) = drive.put(INDEX_PATH, merged_index.as_bytes()) {
+        return FfiCloudSyncResult::failed(merged_settings, merged_index, e);
     }
 
     FfiCloudSyncResult {
@@ -331,7 +332,8 @@ pub fn gdrive_sync_notebook(
     package_path: String,
     notebook_id: String,
 ) -> FfiNotebookSyncResult {
-    let package = match padnote_storage::NotebookPackage::open(std::path::Path::new(&package_path)) {
+    let package = match padnote_storage::NotebookPackage::open(std::path::Path::new(&package_path))
+    {
         Ok(p) => p,
         Err(e) => return notebook_failed(format!("開不了套件：{e}")),
     };
@@ -570,10 +572,10 @@ pub fn gdrive_clone_notebook(
     now_unix_ms: u64,
 ) -> FfiNotebookSyncResult {
     let root = std::path::Path::new(&package_path);
-    if padnote_storage::NotebookPackage::open(root).is_err() {
-        if let Err(e) = padnote_storage::NotebookPackage::create(root, &title, now_unix_ms) {
-            return notebook_failed(format!("建不了套件：{e}"));
-        }
+    if padnote_storage::NotebookPackage::open(root).is_err()
+        && let Err(e) = padnote_storage::NotebookPackage::create(root, &title, now_unix_ms)
+    {
+        return notebook_failed(format!("建不了套件：{e}"));
     }
 
     let ops = gdrive_sync_notebook(http.clone(), package_path.clone(), notebook_id.clone());
@@ -654,7 +656,11 @@ mod tests {
     }
 
     impl FfiDriveHttp for FakeDrive {
-        fn get_json(&self, _url: String, query: Vec<FfiQueryParam>) -> Result<String, FfiDriveError> {
+        fn get_json(
+            &self,
+            _url: String,
+            query: Vec<FfiQueryParam>,
+        ) -> Result<String, FfiDriveError> {
             let q = Self::query(&query, "q").to_string();
             let files = self.files.lock().unwrap();
             // **索引要用全域的**，不是過濾後的序號 —— 讀取那一側是照
@@ -731,20 +737,24 @@ mod tests {
                 .nth(1)
                 .and_then(|s| s.split('?').next())
                 .and_then(|s| s.parse().ok())
-                .ok_or(FfiDriveError::NotFound { path: url.to_string() })?;
+                .ok_or(FfiDriveError::NotFound {
+                    path: url.to_string(),
+                })?;
             let mut files = self.files.lock().unwrap();
             if let Some(slot) = files.get_mut(index) {
                 slot.1 = data;
                 Ok(())
             } else {
-                Err(FfiDriveError::NotFound { path: url.to_string() })
+                Err(FfiDriveError::NotFound {
+                    path: url.to_string(),
+                })
             }
         }
     }
 
     fn tmp_package(name: &str, device: u64) -> std::path::PathBuf {
-        let root = std::env::temp_dir()
-            .join(format!("padnote-gdrive-{name}-{}", std::process::id()));
+        let root =
+            std::env::temp_dir().join(format!("padnote-gdrive-{name}-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&root);
         padnote_storage::NotebookPackage::create(&root, "t", device).unwrap();
         root
@@ -760,40 +770,43 @@ mod tests {
 
         let a_root = tmp_package("conv-a", 0xAA);
         let a = padnote_storage::NotebookPackage::open(&a_root).unwrap();
-        a.append_doc_ops(1, 0xAA, &[DocOp::SetTitle { title: "A 寫的".into() }])
-            .unwrap();
+        a.append_doc_ops(
+            1,
+            0xAA,
+            &[DocOp::SetTitle {
+                title: "A 寫的".into(),
+            }],
+        )
+        .unwrap();
 
         let b_root = tmp_package("conv-b", 0xBB);
         let b = padnote_storage::NotebookPackage::open(&b_root).unwrap();
-        b.append_doc_ops(2, 0xBB, &[DocOp::SetTitle { title: "B 寫的".into() }])
-            .unwrap();
+        b.append_doc_ops(
+            2,
+            0xBB,
+            &[DocOp::SetTitle {
+                title: "B 寫的".into(),
+            }],
+        )
+        .unwrap();
 
         // A 先同步：上傳自己的，雲端還沒有別人的。
-        let first = gdrive_sync_notebook(
-            cloud.clone(),
-            a_root.to_string_lossy().into(),
-            "nb1".into(),
-        );
+        let first =
+            gdrive_sync_notebook(cloud.clone(), a_root.to_string_lossy().into(), "nb1".into());
         assert!(first.ok, "{}", first.error);
         assert_eq!(first.uploaded, 1);
         assert_eq!(first.downloaded, 0);
 
         // B 同步：上傳自己的，並拿到 A 的。
-        let second = gdrive_sync_notebook(
-            cloud.clone(),
-            b_root.to_string_lossy().into(),
-            "nb1".into(),
-        );
+        let second =
+            gdrive_sync_notebook(cloud.clone(), b_root.to_string_lossy().into(), "nb1".into());
         assert!(second.ok, "{}", second.error);
         assert_eq!(second.uploaded, 1);
         assert_eq!(second.downloaded, 1, "應該要拿到 A 的那一份");
 
         // A 再同步一次，拿到 B 的。
-        let third = gdrive_sync_notebook(
-            cloud.clone(),
-            a_root.to_string_lossy().into(),
-            "nb1".into(),
-        );
+        let third =
+            gdrive_sync_notebook(cloud.clone(), a_root.to_string_lossy().into(), "nb1".into());
         assert!(third.ok, "{}", third.error);
         assert_eq!(third.downloaded, 1);
 
@@ -826,8 +839,14 @@ mod tests {
 
         let a_root = tmp_package("clone-a", 0xAA);
         let a = padnote_storage::NotebookPackage::open(&a_root).unwrap();
-        a.append_doc_ops(1, 0xAA, &[DocOp::SetTitle { title: "A 新建的".into() }])
-            .unwrap();
+        a.append_doc_ops(
+            1,
+            0xAA,
+            &[DocOp::SetTitle {
+                title: "A 新建的".into(),
+            }],
+        )
+        .unwrap();
         let pushed = gdrive_sync_notebook(
             cloud.clone(),
             a_root.to_string_lossy().into(),
@@ -836,8 +855,8 @@ mod tests {
         assert!(pushed.ok, "{}", pushed.error);
 
         // B 完全沒有這個目錄。
-        let b_root = std::env::temp_dir()
-            .join(format!("padnote-gdrive-clone-b-{}", std::process::id()));
+        let b_root =
+            std::env::temp_dir().join(format!("padnote-gdrive-clone-b-{}", std::process::id()));
         let _ = std::fs::remove_dir_all(&b_root);
 
         // 一般的同步在這裡會失敗 —— 那正是要修的東西。
@@ -883,8 +902,14 @@ mod tests {
         let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
         let root = tmp_package("idem", 0xAA);
         let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
-        pkg.append_doc_ops(1, 0xAA, &[DocOp::SetTitle { title: "一".into() }])
-            .unwrap();
+        pkg.append_doc_ops(
+            1,
+            0xAA,
+            &[DocOp::SetTitle {
+                title: "一".into()
+            }],
+        )
+        .unwrap();
 
         let path: String = root.to_string_lossy().into();
         let first = gdrive_sync_notebook(cloud.clone(), path.clone(), "nb1".into());
@@ -929,8 +954,14 @@ mod tests {
         // 兩邊都拿得到對方的圖片，而且內容正確（get 會驗雜湊）。
         let a_after = padnote_storage::NotebookPackage::open(&a_root).unwrap();
         let b_after = padnote_storage::NotebookPackage::open(&b_root).unwrap();
-        assert_eq!(a_after.blobs().get(b_blob).unwrap(), "B 的圖片位元組".as_bytes());
-        assert_eq!(b_after.blobs().get(a_blob).unwrap(), "A 的圖片位元組".as_bytes());
+        assert_eq!(
+            a_after.blobs().get(b_blob).unwrap(),
+            "B 的圖片位元組".as_bytes()
+        );
+        assert_eq!(
+            b_after.blobs().get(a_blob).unwrap(),
+            "A 的圖片位元組".as_bytes()
+        );
         assert_eq!(
             b_after
                 .read_audio_file("11111111-1111-1111-1111-111111111111.opus")
@@ -947,7 +978,10 @@ mod tests {
         pkg.blobs().put("一張圖".as_bytes()).unwrap();
 
         let path: String = root.to_string_lossy().into();
-        assert_eq!(gdrive_sync_media(cloud.clone(), path.clone(), "nb1".into()).uploaded, 1);
+        assert_eq!(
+            gdrive_sync_media(cloud.clone(), path.clone(), "nb1".into()).uploaded,
+            1
+        );
 
         let again = gdrive_sync_media(cloud, path, "nb1".into());
         assert!(again.ok);
@@ -966,9 +1000,13 @@ mod tests {
         pkg.write_audio_file(name, b"short").unwrap();
 
         let path: String = root.to_string_lossy().into();
-        assert_eq!(gdrive_sync_media(cloud.clone(), path.clone(), "nb1".into()).uploaded, 1);
+        assert_eq!(
+            gdrive_sync_media(cloud.clone(), path.clone(), "nb1".into()).uploaded,
+            1
+        );
 
-        pkg.write_audio_file(name, b"short-plus-more-audio").unwrap();
+        pkg.write_audio_file(name, b"short-plus-more-audio")
+            .unwrap();
         let after = gdrive_sync_media(cloud, path, "nb1".into());
         assert_eq!(after.uploaded, 1, "變長之後要再傳一次");
     }
@@ -981,10 +1019,10 @@ mod tests {
         // 仍然不存在 —— 同步看起來成功了，圖片卻永遠出不來。
         let fake = FakeDrive::default();
         let fake_name = padnote_storage::BlobId::of("正確內容".as_bytes()).to_string();
-        fake.files
-            .lock()
-            .unwrap()
-            .push((format!("notebooks/nb1/media/blobs/{fake_name}"), "被掉包的內容".as_bytes().to_vec()));
+        fake.files.lock().unwrap().push((
+            format!("notebooks/nb1/media/blobs/{fake_name}"),
+            "被掉包的內容".as_bytes().to_vec(),
+        ));
         let cloud: Arc<dyn FfiDriveHttp> = Arc::new(fake);
 
         let root = tmp_package("media-corrupt", 0xAA);
@@ -1066,8 +1104,14 @@ mod tests {
         );
         assert!(denied.needs_reauth);
 
-        let offline =
-            FfiCloudSyncResult::failed("{}".into(), "{}".into(), SyncError::Backend("offline".into()));
-        assert!(!offline.needs_reauth, "網路問題重試就好，不要叫使用者重新登入");
+        let offline = FfiCloudSyncResult::failed(
+            "{}".into(),
+            "{}".into(),
+            SyncError::Backend("offline".into()),
+        );
+        assert!(
+            !offline.needs_reauth,
+            "網路問題重試就好，不要叫使用者重新登入"
+        );
     }
 }

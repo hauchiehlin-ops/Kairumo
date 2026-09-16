@@ -1935,7 +1935,11 @@ mod tests {
             s.set_notebook_meta(r#"{"a":3}"#).unwrap();
         }
         let s = NotebookSession::open(&dir, device).unwrap();
-        assert!(s.lamport >= 3, "開啟後 lamport 應接續磁碟上的值，實得 {}", s.lamport);
+        assert!(
+            s.lamport >= 3,
+            "開啟後 lamport 應接續磁碟上的值，實得 {}",
+            s.lamport
+        );
     }
 
     /// 同一個頁 id 只能存在一頁。

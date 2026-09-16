@@ -248,7 +248,13 @@ impl LibraryIndex {
 mod tests {
     use super::*;
 
-    fn item(id: &str, title: &str, parent: Option<&str>, lamport: u64, device: &str) -> LibraryItem {
+    fn item(
+        id: &str,
+        title: &str,
+        parent: Option<&str>,
+        lamport: u64,
+        device: &str,
+    ) -> LibraryItem {
         LibraryItem {
             id: id.into(),
             kind: ItemKind::Notebook,
@@ -260,7 +266,13 @@ mod tests {
         }
     }
 
-    fn folder(id: &str, title: &str, parent: Option<&str>, lamport: u64, device: &str) -> LibraryItem {
+    fn folder(
+        id: &str,
+        title: &str,
+        parent: Option<&str>,
+        lamport: u64,
+        device: &str,
+    ) -> LibraryItem {
         LibraryItem {
             kind: ItemKind::Folder,
             ..item(id, title, parent, lamport, device)
@@ -285,7 +297,10 @@ mod tests {
         index.upsert(item("n1", "會議", Some("f1"), 2, "dev-a"));
         index.tombstone("f1", 3, "dev-b");
 
-        assert!(index.is_hidden_by_deletion("n1"), "刪掉資料夾，裡面的要一起消失");
+        assert!(
+            index.is_hidden_by_deletion("n1"),
+            "刪掉資料夾，裡面的要一起消失"
+        );
     }
 
     #[test]
@@ -323,7 +338,11 @@ mod tests {
         index.upsert(item("n1", "根目錄的", None, 2, "dev-a"));
         index.upsert(item("n2", "資料夾裡的", Some("f1"), 3, "dev-a"));
 
-        let ids: Vec<&str> = index.live_notebooks().iter().map(|i| i.id.as_str()).collect();
+        let ids: Vec<&str> = index
+            .live_notebooks()
+            .iter()
+            .map(|i| i.id.as_str())
+            .collect();
         assert_eq!(ids, vec!["n1", "n2"], "資料夾不算，巢狀的不能漏");
     }
 
@@ -484,10 +503,18 @@ mod tests {
         assert_eq!(first, second);
         // 碼位順序（乙 U+4E59 在 甲 U+7532 之前），不是中文的排序習慣 ——
         // 這裡要的是「任何裝置都得到同一個順序」，顯示順序由平台層決定。
-        let titles: Vec<_> = idx.children_of(None).iter().map(|i| i.title.clone()).collect();
+        let titles: Vec<_> = idx
+            .children_of(None)
+            .iter()
+            .map(|i| i.title.clone())
+            .collect();
         assert_eq!(titles, vec!["乙", "甲"]);
         // 同一份資料算兩次要完全一樣。
-        let again: Vec<_> = idx.children_of(None).iter().map(|i| i.title.clone()).collect();
+        let again: Vec<_> = idx
+            .children_of(None)
+            .iter()
+            .map(|i| i.title.clone())
+            .collect();
         assert_eq!(titles, again);
     }
 

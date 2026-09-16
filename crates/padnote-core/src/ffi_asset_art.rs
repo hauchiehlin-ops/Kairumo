@@ -173,7 +173,15 @@ const DEFAULT_WIDTH: f32 = 2.5;
 const KAPPA: f32 = 0.5522848;
 
 fn seg(verb: FfiPathVerb, x: f32, y: f32) -> FfiPathSeg {
-    FfiPathSeg { verb, x, y, c1x: 0.0, c1y: 0.0, c2x: 0.0, c2y: 0.0 }
+    FfiPathSeg {
+        verb,
+        x,
+        y,
+        c1x: 0.0,
+        c1y: 0.0,
+        c2x: 0.0,
+        c2y: 0.0,
+    }
 }
 
 fn curve_seg(c1: (f32, f32), c2: (f32, f32), to: (f32, f32)) -> FfiPathSeg {
@@ -424,7 +432,16 @@ fn arc_segs(cx: f32, cy: f32, r: f32, start_deg: f32, end_deg: f32) -> Vec<FfiPa
     out
 }
 
+// `include!` 要在 `mod tests` **之前** —— 放在後面的話 clippy 的
+// `items_after_test_module` 會擋下來，而那條規則是對的：測試模組
+// 之後還有正式程式碼，讀的人很容易以為檔案到那裡就結束了。
 include!("asset_art_shapes.rs");
+
+/// 讓 `FfiPoint` 在這個模組裡不算未使用（平台層會用到同一個型別）。
+#[allow(dead_code)]
+fn _point_marker(p: FfiPoint) -> f32 {
+    p.x
+}
 
 #[cfg(test)]
 mod tests {
@@ -470,7 +487,11 @@ mod tests {
         // 上一條路徑的終點接下去，畫出一條原本不存在的線。
         for code in asset_drawing_codes() {
             for path in asset_drawing(code.clone()) {
-                assert_eq!(path.segs[0].verb, FfiPathVerb::Move, "{code} 的路徑沒有起點");
+                assert_eq!(
+                    path.segs[0].verb,
+                    FfiPathVerb::Move,
+                    "{code} 的路徑沒有起點"
+                );
                 assert!(path.width > 0.0, "{code} 的線寬是 0");
             }
         }
@@ -522,19 +543,23 @@ mod tests {
         for style in [FfiAssetRenderStyle::Blueprint, FfiAssetRenderStyle::Solid] {
             for dark in [true, false] {
                 let p = asset_palette(style, dark);
-                for hex in [p.stroke_hex, p.accent_hex, p.fill_hex, p.background_hex, p.grid_hex] {
+                for hex in [
+                    p.stroke_hex,
+                    p.accent_hex,
+                    p.fill_hex,
+                    p.background_hex,
+                    p.grid_hex,
+                ] {
                     assert!(hex.starts_with('#'), "壞的色碼：{hex}");
                     assert!(hex.len() == 7 || hex.len() == 9, "壞的色碼長度：{hex}");
                 }
             }
         }
         // 線框風格不填色 —— 填了就不是線框了。
-        assert!(asset_palette(FfiAssetRenderStyle::Blueprint, false).fill_hex.ends_with("00"));
+        assert!(
+            asset_palette(FfiAssetRenderStyle::Blueprint, false)
+                .fill_hex
+                .ends_with("00")
+        );
     }
-}
-
-/// 讓 `FfiPoint` 在這個模組裡不算未使用（平台層會用到同一個型別）。
-#[allow(dead_code)]
-fn _point_marker(p: FfiPoint) -> f32 {
-    p.x
 }

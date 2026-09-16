@@ -249,7 +249,8 @@ mod tests {
         assert!(!keys.is_empty());
         for key in keys {
             assert!(
-                key.chars().all(|c| c.is_ascii_lowercase() || c == '_' || c.is_ascii_digit()),
+                key.chars()
+                    .all(|c| c.is_ascii_lowercase() || c == '_' || c.is_ascii_digit()),
                 "不是語系鍵：{key}"
             );
         }
@@ -269,7 +270,11 @@ mod tests {
     fn material_designations_are_not_translated() {
         // SUS304 翻成中文反而讓工程師認不出來 —— 牌號是國際代號，不是介面文字。
         for m in theme_materials() {
-            assert!(m.designation.is_ascii(), "牌號不該被在地化：{}", m.designation);
+            assert!(
+                m.designation.is_ascii(),
+                "牌號不該被在地化：{}",
+                m.designation
+            );
         }
     }
 

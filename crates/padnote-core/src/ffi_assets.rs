@@ -165,7 +165,10 @@ pub fn asset_items() -> Vec<FfiAssetItem> {
 /// 某一個分類的素材。
 #[uniffi::export]
 pub fn asset_items_in(category: FfiAssetCategory) -> Vec<FfiAssetItem> {
-    asset_items().into_iter().filter(|i| i.category == category).collect()
+    asset_items()
+        .into_iter()
+        .filter(|i| i.category == category)
+        .collect()
 }
 
 /// 關鍵字搜尋：比對名稱、規格與材料，不分大小寫。

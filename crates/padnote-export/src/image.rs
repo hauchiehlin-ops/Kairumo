@@ -22,8 +22,8 @@
 
 use crate::pdf::ExportError;
 use padnote_doc::{
-    Affine2, BlockKind, ObjectKind, ObjectTree, Page, PageTemplate,
-    ShapeKind as DocShapeKind, ShapeObject, TextStyle,
+    Affine2, BlockKind, ObjectKind, ObjectTree, Page, PageTemplate, ShapeKind as DocShapeKind,
+    ShapeObject, TextStyle,
 };
 use padnote_ink::Stroke;
 use padnote_ink::geometry::distance_to_segment;
@@ -80,57 +80,72 @@ pub fn to_png(
         draw_stroke(&mut pixels, width, height, stroke, scale);
     }
 
-    // 3. 繪製畫布物件。
+    // 3. 繪製畫布物件（工作項 S-57）。
     //
     // 順序與畫布一致：圖片 → 形狀／連接線 → 表格 → 文字。
     // 自己排一套的話，重疊的物件在縮圖上的上下關係會與畫面相反。
-    for block in page.blocks() {
-        if let BlockKind::Image {
-            blob,
-            width: bw,
-            height: bh,
-        } = &block.kind
-        {
-            let (bx, by) = block.position.unwrap_or((0.0, 0.0));
-            draw_image_block(
-                &mut pixels, width, height, blobs, blob, bx, by, *bw, *bh, scale,
-            );
-        }
-    }
+    {
+        let mut canvas = Canvas {
+            pixels: &mut pixels,
+            width,
+            height,
+            scale,
+        };
 
-    if let Some(tree) = objects {
-        draw_objects(&mut pixels, width, height, tree, scale);
-    }
-
-    for block in page.blocks() {
-        let (bx, by) = block.position.unwrap_or((0.0, 0.0));
-        match &block.kind {
-            BlockKind::Table {
-                rows,
-                cols,
-                cells,
-                header_row,
-                ..
-            } => draw_table(
-                &mut pixels,
-                width,
-                height,
-                bx,
-                by,
-                *rows,
-                *cols,
-                cells,
-                *header_row,
-                scale,
-            ),
-            BlockKind::Text {
-                content,
-                style,
-            } => draw_text_block(&mut pixels, width, height, bx, by, content, style, scale),
-            BlockKind::Transcript { text, .. } => {
-                draw_text_block(&mut pixels, width, height, bx, by, text, &TextStyle::Body, scale)
+        for block in page.blocks() {
+            if let BlockKind::Image {
+                blob,
+                width: bw,
+                height: bh,
+            } = &block.kind
+            {
+                let (bx, by) = block.position.unwrap_or((0.0, 0.0));
+                draw_image_block(
+                    &mut canvas,
+                    blobs,
+                    blob,
+                    &ImagePlacement {
+                        x: bx,
+                        y: by,
+                        width: *bw,
+                        height: *bh,
+                    },
+                );
             }
-            _ => {}
+        }
+
+        if let Some(tree) = objects {
+            draw_objects(&mut canvas, tree);
+        }
+
+        for block in page.blocks() {
+            let (bx, by) = block.position.unwrap_or((0.0, 0.0));
+            match &block.kind {
+                BlockKind::Table {
+                    rows,
+                    cols,
+                    cells,
+                    header_row,
+                    ..
+                } => draw_table(
+                    &mut canvas,
+                    &TableBlock {
+                        x: bx,
+                        y: by,
+                        rows: *rows,
+                        cols: *cols,
+                        cells,
+                        header_row: *header_row,
+                    },
+                ),
+                BlockKind::Text { content, style } => {
+                    draw_text_block(&mut canvas, bx, by, content, style)
+                }
+                BlockKind::Transcript { text, .. } => {
+                    draw_text_block(&mut canvas, bx, by, text, &TextStyle::Body)
+                }
+                _ => {}
+            }
         }
     }
 
@@ -318,7 +333,6 @@ fn draw_stroke(pixels: &mut [u8], width: u32, height: u32, stroke: &Stroke, scal
     }
 }
 
-/// 將 RGBA 像素串流編碼為 PNG 格式。
 // MARK: - 畫布物件（工作項 S-57）
 
 /// 文字的灰條。見檔案開頭「文字為什麼是灰條不是字」。
@@ -327,65 +341,57 @@ const RULE: [u8; 4] = [150, 154, 162, 255];
 const GREEK: [u8; 4] = [90, 96, 105, 200];
 const HEADER_FILL: [u8; 4] = [233, 238, 252, 255];
 
-fn fill_rect(
-    pixels: &mut [u8],
+/// 估算用的頁寬。區塊本身沒有寬度（那是平台的外觀 JSON 在管的）。
+const PAGE_W_HINT: f32 = 800.0;
+
+/// 一塊可以畫東西的像素緩衝。
+///
+/// 把 `pixels / width / height / scale` 收成一個型別，而不是讓每個
+/// 繪圖函式都收四個參數 —— 那四個永遠一起出現，而且拆開來傳很容易
+/// 把 `width` 與 `height` 寫反（那種錯畫出來是整張圖歪斜，很難一眼看出）。
+struct Canvas<'a> {
+    pixels: &'a mut [u8],
     width: u32,
     height: u32,
-    x0: f32,
-    y0: f32,
-    x1: f32,
-    y1: f32,
-    color: [u8; 4],
+    /// 頁面點 → 像素。
     scale: f32,
-) {
-    let sx0 = (x0 * scale).round() as i32;
-    let sy0 = (y0 * scale).round() as i32;
-    let sx1 = (x1 * scale).round() as i32;
-    let sy1 = (y1 * scale).round() as i32;
-    for y in sy0.min(sy1)..sy0.max(sy1) {
-        for x in sx0.min(sx1)..sx0.max(sx1) {
-            set_pixel_blend(pixels, width, height, x, y, color);
+}
+
+impl Canvas<'_> {
+    fn dot(&mut self, x: i32, y: i32, color: [u8; 4]) {
+        set_pixel_blend(self.pixels, self.width, self.height, x, y, color);
+    }
+
+    fn fill_rect(&mut self, x0: f32, y0: f32, x1: f32, y1: f32, color: [u8; 4]) {
+        let sx0 = (x0 * self.scale).round() as i32;
+        let sy0 = (y0 * self.scale).round() as i32;
+        let sx1 = (x1 * self.scale).round() as i32;
+        let sy1 = (y1 * self.scale).round() as i32;
+        for y in sy0.min(sy1)..sy0.max(sy1) {
+            for x in sx0.min(sx1)..sx0.max(sx1) {
+                self.dot(x, y, color);
+            }
         }
     }
-}
 
-fn stroke_line(
-    pixels: &mut [u8],
-    width: u32,
-    height: u32,
-    x0: f32,
-    y0: f32,
-    x1: f32,
-    y1: f32,
-    color: [u8; 4],
-    scale: f32,
-) {
-    let (ax, ay) = (x0 * scale, y0 * scale);
-    let (bx, by) = (x1 * scale, y1 * scale);
-    let steps = ((bx - ax).abs().max((by - ay).abs()).ceil() as i32).max(1);
-    for i in 0..=steps {
-        let t = i as f32 / steps as f32;
-        let x = (ax + (bx - ax) * t).round() as i32;
-        let y = (ay + (by - ay) * t).round() as i32;
-        set_pixel_blend(pixels, width, height, x, y, color);
+    fn line(&mut self, x0: f32, y0: f32, x1: f32, y1: f32, color: [u8; 4]) {
+        let (ax, ay) = (x0 * self.scale, y0 * self.scale);
+        let (bx, by) = (x1 * self.scale, y1 * self.scale);
+        let steps = ((bx - ax).abs().max((by - ay).abs()).ceil() as i32).max(1);
+        for i in 0..=steps {
+            let t = i as f32 / steps as f32;
+            let x = (ax + (bx - ax) * t).round() as i32;
+            let y = (ay + (by - ay) * t).round() as i32;
+            self.dot(x, y, color);
+        }
     }
-}
 
-fn stroke_rect(
-    pixels: &mut [u8],
-    width: u32,
-    height: u32,
-    x0: f32,
-    y0: f32,
-    x1: f32,
-    y1: f32,
-    color: [u8; 4],
-    scale: f32,
-) {
-    stroke_line(pixels, width, height, x0, y0, x1, y0, color, scale);
-    stroke_line(pixels, width, height, x1, y0, x1, y1, color, scale);
-    stroke_line(pixels, width, height, x1, y1, x0, y1, color, scale);
-    stroke_line(pixels, width, height, x0, y1, x0, y0, color, scale);
+    fn stroke_rect(&mut self, x0: f32, y0: f32, x1: f32, y1: f32, color: [u8; 4]) {
+        self.line(x0, y0, x1, y0, color);
+        self.line(x1, y0, x1, y1, color);
+        self.line(x1, y1, x0, y1, color);
+        self.line(x0, y1, x0, y0, color);
+    }
 }
 
 /// 一段文字排成幾行、每行多寬。
@@ -402,7 +408,11 @@ fn greek_lines(text: &str, font_size: f32, box_width: f32) -> Vec<f32> {
         }
         let mut run = 0.0f32;
         for ch in paragraph.chars() {
-            let w = if ch.is_ascii() { font_size * 0.55 } else { font_size };
+            let w = if ch.is_ascii() {
+                font_size * 0.55
+            } else {
+                font_size
+            };
             if run + w > usable {
                 lines.push(usable);
                 run = 0.0;
@@ -416,16 +426,7 @@ fn greek_lines(text: &str, font_size: f32, box_width: f32) -> Vec<f32> {
     lines
 }
 
-fn draw_text_block(
-    pixels: &mut [u8],
-    width: u32,
-    height: u32,
-    x: f32,
-    y: f32,
-    text: &str,
-    style: &TextStyle,
-    scale: f32,
-) {
+fn draw_text_block(canvas: &mut Canvas, x: f32, y: f32, text: &str, style: &TextStyle) {
     if text.trim().is_empty() {
         return;
     }
@@ -437,7 +438,6 @@ fn draw_text_block(
         TextStyle::Code => (10.0, 14.0),
         _ => (11.0, 16.0),
     };
-    // 區塊沒有寬度資訊（那是平台的外觀 JSON 在管的），用頁寬扣掉左邊界估。
     let box_width = (PAGE_W_HINT - x - 40.0).max(80.0);
     let bar = (font_size * 0.42f32).max(1.0);
 
@@ -446,90 +446,88 @@ fn draw_text_block(
             continue;
         }
         let top = y + i as f32 * line_height + (line_height - bar) * 0.5;
-        fill_rect(
-            pixels, width, height, x, top, x + line_w, top + bar, GREEK, scale,
-        );
+        canvas.fill_rect(x, top, x + line_w, top + bar, GREEK);
     }
 }
 
-/// 估算用的頁寬。比實際頁面略窄，寧可短一點也不要畫出頁面。
-const PAGE_W_HINT: f32 = 800.0;
-
-#[allow(clippy::too_many_arguments)]
-fn draw_table(
-    pixels: &mut [u8],
-    width: u32,
-    height: u32,
+/// 一張表的內容。欄位一起傳，免得又是一長串位置參數。
+struct TableBlock<'a> {
     x: f32,
     y: f32,
     rows: u32,
     cols: u32,
-    cells: &[String],
+    cells: &'a [String],
     header_row: bool,
-    scale: f32,
-) {
-    if rows == 0 || cols == 0 {
+}
+
+fn draw_table(canvas: &mut Canvas, t: &TableBlock) {
+    if t.rows == 0 || t.cols == 0 {
         return;
     }
     // 與 PDF 匯出同一組尺寸。各算各的話，同一張表在 PDF 與縮圖上會不一樣高。
-    let table_w = (PAGE_W_HINT - x - 40.0).max(200.0);
+    let table_w = (PAGE_W_HINT - t.x - 40.0).max(200.0);
     let row_h = 24.0;
-    let col_w = table_w / cols as f32;
-    let table_h = rows as f32 * row_h;
+    let col_w = table_w / t.cols as f32;
+    let table_h = t.rows as f32 * row_h;
 
-    if header_row {
-        fill_rect(
-            pixels, width, height, x, y, x + table_w, y + row_h, HEADER_FILL, scale,
-        );
+    if t.header_row {
+        canvas.fill_rect(t.x, t.y, t.x + table_w, t.y + row_h, HEADER_FILL);
     }
-    for r in 0..=rows {
-        let ly = y + r as f32 * row_h;
-        stroke_line(pixels, width, height, x, ly, x + table_w, ly, RULE, scale);
+    for r in 0..=t.rows {
+        let ly = t.y + r as f32 * row_h;
+        canvas.line(t.x, ly, t.x + table_w, ly, RULE);
     }
-    for c in 0..=cols {
-        let lx = x + c as f32 * col_w;
-        stroke_line(pixels, width, height, lx, y, lx, y + table_h, RULE, scale);
+    for c in 0..=t.cols {
+        let lx = t.x + c as f32 * col_w;
+        canvas.line(lx, t.y, lx, t.y + table_h, RULE);
     }
 
-    for r in 0..rows {
-        for c in 0..cols {
-            let Some(text) = cells.get((r * cols + c) as usize) else {
+    for r in 0..t.rows {
+        for c in 0..t.cols {
+            let Some(text) = t.cells.get((r * t.cols + c) as usize) else {
                 continue;
             };
             if text.trim().is_empty() {
                 continue;
             }
-            let cell_x = x + c as f32 * col_w + 4.0;
-            let cell_y = y + r as f32 * row_h + row_h * 0.35;
+            let cell_x = t.x + c as f32 * col_w + 4.0;
+            let cell_y = t.y + r as f32 * row_h + row_h * 0.35;
             let ink_w = greek_lines(text, 10.0, col_w)
                 .first()
                 .copied()
                 .unwrap_or(0.0)
                 .min(col_w - 8.0);
             if ink_w > 0.0 {
-                fill_rect(
-                    pixels, width, height, cell_x, cell_y,
-                    cell_x + ink_w, cell_y + 4.0, GREEK, scale,
-                );
+                canvas.fill_rect(cell_x, cell_y, cell_x + ink_w, cell_y + 4.0, GREEK);
             }
         }
     }
 }
 
-#[allow(clippy::too_many_arguments)]
-fn draw_image_block(
-    pixels: &mut [u8],
-    width: u32,
-    height: u32,
-    blobs: Option<&BlobStore>,
-    blob: &str,
+/// 一張圖片區塊的位置與大小。
+struct ImagePlacement {
     x: f32,
     y: f32,
-    w: f32,
-    h: f32,
-    scale: f32,
+    width: f32,
+    height: f32,
+}
+
+fn draw_image_block(
+    canvas: &mut Canvas,
+    blobs: Option<&BlobStore>,
+    blob: &str,
+    place: &ImagePlacement,
 ) {
-    let (w, h) = (if w > 0.0 { w } else { 240.0 }, if h > 0.0 { h } else { 180.0 });
+    let w = if place.width > 0.0 {
+        place.width
+    } else {
+        240.0
+    };
+    let h = if place.height > 0.0 {
+        place.height
+    } else {
+        180.0
+    };
 
     // 有 blob 就真的畫出來；讀不到（或不是 PNG）就畫一個外框，
     // 讓使用者至少看得出「這裡有一張圖」。
@@ -538,27 +536,28 @@ fn draw_image_block(
         .and_then(|(store, id)| store.get(id).ok())
         .and_then(|bytes| decode_png_rgba(&bytes));
 
-    if let Some((src, sw, sh)) = decoded {
-        let dst_w = (w * scale).round().max(1.0) as u32;
-        let dst_h = (h * scale).round().max(1.0) as u32;
-        let ox = (x * scale).round() as i32;
-        let oy = (y * scale).round() as i32;
-        for dy in 0..dst_h {
-            // 最近鄰取樣。縮圖只要看得出是什麼，雙線性在這個尺度上
-            // 看不出差別，卻要多走一輪浮點運算。
-            let sy = (dy as u64 * sh as u64 / dst_h.max(1) as u64) as u32;
-            for dx in 0..dst_w {
-                let sx = (dx as u64 * sw as u64 / dst_w.max(1) as u64) as u32;
-                let idx = ((sy.min(sh - 1) * sw + sx.min(sw - 1)) * 4) as usize;
-                if idx + 3 >= src.len() {
-                    continue;
-                }
-                let color = [src[idx], src[idx + 1], src[idx + 2], src[idx + 3]];
-                set_pixel_blend(pixels, width, height, ox + dx as i32, oy + dy as i32, color);
+    let Some((src, sw, sh)) = decoded else {
+        canvas.stroke_rect(place.x, place.y, place.x + w, place.y + h, RULE);
+        return;
+    };
+
+    let dst_w = (w * canvas.scale).round().max(1.0) as u32;
+    let dst_h = (h * canvas.scale).round().max(1.0) as u32;
+    let ox = (place.x * canvas.scale).round() as i32;
+    let oy = (place.y * canvas.scale).round() as i32;
+    for dy in 0..dst_h {
+        // 最近鄰取樣。縮圖只要看得出是什麼，雙線性在這個尺度上
+        // 看不出差別，卻要多走一輪浮點運算。
+        let sy = (u64::from(dy) * u64::from(sh) / u64::from(dst_h.max(1))) as u32;
+        for dx in 0..dst_w {
+            let sx = (u64::from(dx) * u64::from(sw) / u64::from(dst_w.max(1))) as u32;
+            let idx = ((sy.min(sh - 1) * sw + sx.min(sw - 1)) * 4) as usize;
+            if idx + 3 >= src.len() {
+                continue;
             }
+            let color = [src[idx], src[idx + 1], src[idx + 2], src[idx + 3]];
+            canvas.dot(ox + dx as i32, oy + dy as i32, color);
         }
-    } else {
-        stroke_rect(pixels, width, height, x, y, x + w, y + h, RULE, scale);
     }
 }
 
@@ -574,7 +573,9 @@ fn decode_png_rgba(bytes: &[u8]) -> Option<(Vec<u8>, u32, u32)> {
     let rgba = match info.color_type {
         png::ColorType::Rgba => buf[..frame_len].to_vec(),
         png::ColorType::Rgb => buf[..frame_len]
-            .chunks_exact(3)
+            .as_chunks::<3>()
+            .0
+            .iter()
             .flat_map(|p| [p[0], p[1], p[2], 255])
             .collect(),
         png::ColorType::Grayscale => buf[..frame_len]
@@ -582,7 +583,9 @@ fn decode_png_rgba(bytes: &[u8]) -> Option<(Vec<u8>, u32, u32)> {
             .flat_map(|&g| [g, g, g, 255])
             .collect(),
         png::ColorType::GrayscaleAlpha => buf[..frame_len]
-            .chunks_exact(2)
+            .as_chunks::<2>()
+            .0
+            .iter()
             .flat_map(|p| [p[0], p[0], p[0], p[1]])
             .collect(),
         // 調色盤要另外查表，縮圖上不值得 —— 退回畫外框。
@@ -593,37 +596,21 @@ fn decode_png_rgba(bytes: &[u8]) -> Option<(Vec<u8>, u32, u32)> {
 
 /// 形狀與連接線。幾何走 `padnote-shapes`，與畫布用的是同一份 ——
 /// 自己再算一次的話，縮圖上的菱形與畫面上的會差一點點。
-fn draw_objects(
-    pixels: &mut [u8],
-    width: u32,
-    height: u32,
-    tree: &ObjectTree,
-    scale: f32,
-) {
+fn draw_objects(canvas: &mut Canvas, tree: &ObjectTree) {
     for root in tree.roots() {
         for (id, world) in tree.flatten(*root) {
             let Some(node) = tree.get(id) else { continue };
-            match &node.kind {
-                ObjectKind::Shape(shape) => draw_shape(pixels, width, height, shape, &world, scale),
-                ObjectKind::Connection(_) => {
-                    // 連接線的路徑要兩端的形狀才算得出來，而 flatten 給的是
-                    // 單一節點。縮圖上少一條線的代價，遠小於為此把整棵樹
-                    // 再走一遍 —— 形狀本身畫出來就看得出結構了。
-                }
-                _ => {}
+            if let ObjectKind::Shape(shape) = &node.kind {
+                draw_shape(canvas, shape, &world);
             }
+            // 連接線的路徑要兩端的形狀才算得出來，而 flatten 給的是單一
+            // 節點。縮圖上少一條線的代價，遠小於為此把整棵樹再走一遍 ——
+            // 形狀本身畫出來就看得出結構了。
         }
     }
 }
 
-fn draw_shape(
-    pixels: &mut [u8],
-    width: u32,
-    height: u32,
-    shape: &ShapeObject,
-    world: &Affine2,
-    scale: f32,
-) {
+fn draw_shape(canvas: &mut Canvas, shape: &ShapeObject, world: &Affine2) {
     let kind = geom_kind(shape.kind);
     let b = shape.bounds;
     let geom = GeomShape {
@@ -643,17 +630,13 @@ fn draw_shape(
     }
     let mapped: Vec<(f32, f32)> = points.iter().map(|&(x, y)| world.apply(x, y)).collect();
     for pair in mapped.windows(2) {
-        stroke_line(
-            pixels, width, height, pair[0].0, pair[0].1, pair[1].0, pair[1].1, INK, scale,
-        );
+        canvas.line(pair[0].0, pair[0].1, pair[1].0, pair[1].1, INK);
     }
     // 線狀形狀不收尾 —— 收了會多出一條回到起點的邊。
     if !kind.is_linear()
         && let (Some(first), Some(last)) = (mapped.first(), mapped.last())
     {
-        stroke_line(
-            pixels, width, height, last.0, last.1, first.0, first.1, INK, scale,
-        );
+        canvas.line(last.0, last.1, first.0, first.1, INK);
     }
 }
 
@@ -722,6 +705,7 @@ fn geom_kind(kind: DocShapeKind) -> GeomShapeKind {
     }
 }
 
+/// 將 RGBA 像素串流編碼為 PNG 格式。
 pub fn encode_png(pixels: &[u8], width: u32, height: u32) -> Result<Vec<u8>, ExportError> {
     let mut out = Vec::new();
     {

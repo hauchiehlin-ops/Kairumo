@@ -433,7 +433,10 @@ pub fn shape_arrow_heads(shape: FfiShape, size: f32) -> FfiArrowHeads {
     }
     let (a, b) = (points[0], points[points.len() - 1]);
     let head = |tip: (f32, f32), from: (f32, f32)| -> Vec<FfiPoint> {
-        arrow_head(tip, from, size).into_iter().map(Into::into).collect()
+        arrow_head(tip, from, size)
+            .into_iter()
+            .map(Into::into)
+            .collect()
     };
     match kind {
         ShapeKind::Arrow => FfiArrowHeads {
@@ -716,8 +719,18 @@ mod tests {
         // FFI 這一層只是換個型別，但換錯邊（把 max 當成寬）會讓所有東西
         // 對齊到錯的地方，而那在單元測試裡看不出來 —— 那些測的是核心。
         let rects = vec![
-            FfiRect { min_x: 30.0, min_y: 0.0, max_x: 40.0, max_y: 10.0 },
-            FfiRect { min_x: 10.0, min_y: 50.0, max_x: 30.0, max_y: 60.0 },
+            FfiRect {
+                min_x: 30.0,
+                min_y: 0.0,
+                max_x: 40.0,
+                max_y: 10.0,
+            },
+            FfiRect {
+                min_x: 10.0,
+                min_y: 50.0,
+                max_x: 30.0,
+                max_y: 60.0,
+            },
         ];
         let out = align_rects(rects, FfiAlignMode::Left);
         assert_eq!(out[0].x, 10.0);
@@ -730,8 +743,18 @@ mod tests {
     #[test]
     fn align_rects_preserves_width_when_aligning_right() {
         let rects = vec![
-            FfiRect { min_x: 0.0, min_y: 0.0, max_x: 10.0, max_y: 10.0 },
-            FfiRect { min_x: 0.0, min_y: 50.0, max_x: 40.0, max_y: 60.0 },
+            FfiRect {
+                min_x: 0.0,
+                min_y: 0.0,
+                max_x: 10.0,
+                max_y: 10.0,
+            },
+            FfiRect {
+                min_x: 0.0,
+                min_y: 50.0,
+                max_x: 40.0,
+                max_y: 60.0,
+            },
         ];
         let out = align_rects(rects, FfiAlignMode::Right);
         // 右緣都要落在 40：窄的那個左上角要退到 30。
@@ -758,7 +781,10 @@ mod tests {
     #[test]
     fn arrow_heads_match_the_kind() {
         let heads = shape_arrow_heads(shape(FfiShapeKind::Line), 10.0);
-        assert!(heads.start.is_empty() && heads.end.is_empty(), "線不該有箭頭");
+        assert!(
+            heads.start.is_empty() && heads.end.is_empty(),
+            "線不該有箭頭"
+        );
 
         let heads = shape_arrow_heads(shape(FfiShapeKind::Arrow), 10.0);
         assert!(heads.start.is_empty(), "單箭頭的起點端不該有箭頭");

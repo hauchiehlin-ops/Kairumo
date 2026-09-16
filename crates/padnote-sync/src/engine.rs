@@ -334,7 +334,10 @@ mod tests {
             Err(SyncError::Backend("不支援 append".into()))
         }
         fn put(&self, path: &str, data: &[u8]) -> Result<(), SyncError> {
-            self.files.lock().unwrap().insert(path.to_string(), data.to_vec());
+            self.files
+                .lock()
+                .unwrap()
+                .insert(path.to_string(), data.to_vec());
             Ok(())
         }
         fn supports_native_append(&self) -> bool {
@@ -378,7 +381,10 @@ mod tests {
 
         let mut b = SyncEngine::new(cloud.clone(), DeviceId(2), None);
         let payloads: Vec<Vec<u8>> = b.pull().unwrap().into_iter().map(|p| p.payload).collect();
-        assert!(payloads.contains(&b"before-restart".to_vec()), "重啟前的內容不見了");
+        assert!(
+            payloads.contains(&b"before-restart".to_vec()),
+            "重啟前的內容不見了"
+        );
         assert!(payloads.contains(&b"after-restart".to_vec()));
     }
 

@@ -54,13 +54,17 @@ pub fn group_by_pause(strokes: &[StrokeTiming], gap_ms: u64) -> Vec<StrokeGroup>
             // 用 saturating_sub：時間戳偶爾會倒退（時鐘調整、不同來源的
             // 事件交錯）。相減溢位會變成一個天文數字，於是每一筆都自成一組。
             if stroke.started_at_ms.saturating_sub(previous_end) > gap_ms && !current.is_empty() {
-                out.push(StrokeGroup { stroke_ids: std::mem::take(&mut current) });
+                out.push(StrokeGroup {
+                    stroke_ids: std::mem::take(&mut current),
+                });
             }
         }
         current.push(stroke.id.clone());
     }
     if !current.is_empty() {
-        out.push(StrokeGroup { stroke_ids: current });
+        out.push(StrokeGroup {
+            stroke_ids: current,
+        });
     }
     out
 }
@@ -146,7 +150,12 @@ mod tests {
     fn grouping_preserves_writing_order() {
         // 順序錯掉的話，辨識出來的字序也會錯。
         let groups = group_by_pause(
-            &[s("1", 0, 10), s("2", 20, 10), s("3", 5000, 10), s("4", 5020, 10)],
+            &[
+                s("1", 0, 10),
+                s("2", 20, 10),
+                s("3", 5000, 10),
+                s("4", 5020, 10),
+            ],
             DEFAULT_GAP_MS,
         );
         assert_eq!(groups.len(), 2);

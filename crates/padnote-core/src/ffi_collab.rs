@@ -72,7 +72,10 @@ pub fn collab_encrypt(key_base64: String, plaintext: String) -> String {
     let nonce = Nonce::from_slice(&nonce_bytes);
     match cipher.encrypt(
         nonce,
-        Payload { msg: plaintext.as_bytes(), aad: &[] },
+        Payload {
+            msg: plaintext.as_bytes(),
+            aad: &[],
+        },
     ) {
         Ok(sealed) => {
             let mut combined = Vec::with_capacity(NONCE_LEN + sealed.len());
@@ -103,7 +106,10 @@ pub fn collab_decrypt(key_base64: String, ciphertext_base64: String) -> String {
     let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
     match cipher.decrypt(
         Nonce::from_slice(nonce_bytes),
-        Payload { msg: sealed, aad: &[] },
+        Payload {
+            msg: sealed,
+            aad: &[],
+        },
     ) {
         Ok(plain) => String::from_utf8(plain).unwrap_or_default(),
         Err(_) => String::new(),
@@ -160,7 +166,11 @@ pub fn collab_parse_invite(text: String) -> FfiCollabInvite {
         .trim_start_matches("kairumo://collab?room=")
         .trim()
         .to_string();
-    let key_base64 = key_part.trim().trim_start_matches("key=").trim().to_string();
+    let key_base64 = key_part
+        .trim()
+        .trim_start_matches("key=")
+        .trim()
+        .to_string();
     // 金鑰長度不對就當成沒有：拿一把壞金鑰連進去，會連上但每則訊息都解不開，
     // 那比明確地不加密更難查。
     let key_base64 = if decode_key(&key_base64).is_some() {
@@ -168,7 +178,10 @@ pub fn collab_parse_invite(text: String) -> FfiCollabInvite {
     } else {
         String::new()
     };
-    FfiCollabInvite { room_id, key_base64 }
+    FfiCollabInvite {
+        room_id,
+        key_base64,
+    }
 }
 
 /// 位址是否指向本機（含沒填主機名的情況）。
@@ -179,7 +192,11 @@ pub fn collab_parse_invite(text: String) -> FfiCollabInvite {
 #[uniffi::export]
 pub fn collab_is_loopback_host(host: String) -> bool {
     let host = host.trim().to_lowercase();
-    host.is_empty() || host == "127.0.0.1" || host == "localhost" || host == "::1" || host == "0.0.0.0"
+    host.is_empty()
+        || host == "127.0.0.1"
+        || host == "localhost"
+        || host == "::1"
+        || host == "0.0.0.0"
 }
 
 /// 中繼位址檢查的結果。
@@ -211,16 +228,25 @@ pub struct FfiServerCheck {
 #[uniffi::export]
 pub fn collab_check_server(url: String) -> FfiServerCheck {
     let url = url.trim();
-    let ok = |_: ()| FfiServerCheck { ok: true, reason_key: String::new() };
+    let ok = |_: ()| FfiServerCheck {
+        ok: true,
+        reason_key: String::new(),
+    };
 
     if url.is_empty() {
-        return FfiServerCheck { ok: false, reason_key: "relay_url_empty".into() };
+        return FfiServerCheck {
+            ok: false,
+            reason_key: "relay_url_empty".into(),
+        };
     }
     if url.starts_with("wss://") {
         return ok(());
     }
     let Some(rest) = url.strip_prefix("ws://") else {
-        return FfiServerCheck { ok: false, reason_key: "relay_url_scheme".into() };
+        return FfiServerCheck {
+            ok: false,
+            reason_key: "relay_url_scheme".into(),
+        };
     };
 
     // 取出主機名：切掉路徑、查詢字串與連接埠。
@@ -237,7 +263,10 @@ pub fn collab_check_server(url: String) -> FfiServerCheck {
     if is_private_host(&host) {
         ok(())
     } else {
-        FfiServerCheck { ok: false, reason_key: "relay_needs_tls".into() }
+        FfiServerCheck {
+            ok: false,
+            reason_key: "relay_needs_tls".into(),
+        }
     }
 }
 
@@ -253,7 +282,9 @@ fn is_private_host(host: &str) -> bool {
     if let Ok(v6) = host.parse::<std::net::Ipv6Addr>() {
         // fc00::/7 唯一本地、fe80::/10 連結本地。
         let first = v6.octets()[0];
-        return v6.is_loopback() || (first & 0xfe) == 0xfc || (first == 0xfe && (v6.octets()[1] & 0xc0) == 0x80);
+        return v6.is_loopback()
+            || (first & 0xfe) == 0xfc
+            || (first == 0xfe && (v6.octets()[1] & 0xc0) == 0x80);
     }
     let Ok(v4) = host.parse::<std::net::Ipv4Addr>() else {
         // 不是 IP 也不是 .local：那是一個公開網域名稱。
