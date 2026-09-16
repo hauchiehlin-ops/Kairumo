@@ -102,7 +102,14 @@
   但其模型權重授權尚未確認（H3）
 
 ### H4. Apple Pencil 實機行為驗證
-- 壓感曲線調校、懸停（hover）
+- 壓感曲線調校
+- **懸停（hover）：程式已完成（S-69）**，筆尖靠近時畫出筆頭預覽並照筆桿角度
+  傾斜。要驗的是實體筆真的發得出懸停事件（模擬器發不出來）
+- **擠壓（Pencil Pro，S-40）：程式已完成**，照 `preferredSqueezeAction` 走，
+  只認 `.ended`
+- **滾動角（barrel roll）：只到診斷列。** `PKStrokePoint` 沒有這個欄位，
+  PencilKit 這條路上存不進筆畫 —— 格式那一層已備好（核心 `EXT_ROLL`），
+  要存得下來的前提是不再用 PencilKit 收筆畫。診斷列可確認手上那支筆有沒有回報
 - **雙擊切換工具：程式已完成（S-67）**，照 `UIPencilInteraction.preferredTapAction`
   走。要驗的只剩「實體二代筆敲下去真的會收到事件」—— 對應規則本身已有
   單元測試（`PencilDoubleTapTests`）。模擬器發不出這個事件
@@ -186,7 +193,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | ~~S-15~~ ✅ | WP5 | whisper.cpp 實作 `AsrEngine` | `padnote-asr-whisper` 已實作；品質實測仍列 H9 |
 | ~~S-23~~ ✅ | — | 文字 op 寫入 `doc/ops/` 持久化 | `NotebookSession::record` 會寫 `doc/ops/<lamport>-<device>.oplog`；重開 replay 已有測試 |
 | ~~S-19~~ ✅ | WP20 | iCloud `CloudProvider` 實作 | **不需要另一個 provider** —— ubiquity container 就是一個檔案系統路徑，核心的 `LocalFolderProvider` 直接能用。真正的差別只有「檔案可能還沒下載」：iCloud 用 `.原檔名.icloud` 佔位檔。核心已認得佔位檔（列舉時還原成邏輯檔名、讀取時回 `NotMaterialized` 而不是 `NotFound`），Apple 端 `ICloudSyncFolder.swift` 負責觸發下載並等它完成。實機行為仍列 H5 |
-| ~~S-20~~ ✅ | WP23 | llama.cpp 整合（摘要、待辦抽取） | `padnote-llm`（切塊 + 提示詞 + **解析**，18 項測試）＋ `padnote-llm-llama`（llama.cpp 後端）＋ `ffi_llm`（平台介面，4 項測試）。**llama.cpp 不是 `padnote-core` 的相依** —— 連進去會讓行動端每個使用者都下載好幾十 MB，不管他用不用得到摘要（與 reqwest 那次同一個判斷）。行動端由平台提供後端。仍待做：兩邊的 UI 入口、實際跑一份 2.4 GB 的 Qwen3-4B 驗真實輸出 |
+| ~~S-20~~ ✅ | WP23 | llama.cpp 整合（摘要、待辦抽取） | `padnote-llm`（切塊 + 提示詞 + **解析**，18 項測試）＋ `padnote-llm-llama`（llama.cpp 後端）＋ `ffi_llm`（平台介面，4 項測試）。**llama.cpp 不是 `padnote-core` 的相依** —— 連進去會讓行動端每個使用者都下載好幾十 MB，不管他用不用得到摘要（與 reqwest 那次同一個判斷）。行動端由平台提供後端。**UI 入口已完成（2026-09-17）**：兩端都有「摘要與待辦」，餵給模型的文字與首頁搜尋同一組來源。後端 Apple 接系統內建語言模型（零下載、零體積），**Android 目前沒有裝置端後端**並誠實回報 —— aicore 是實驗版且會帶進 Guava 與 play-services，llama.cpp + 2.4 GB 模型要使用者下載比 App 大幾十倍的檔案，兩條都違反「平台裝得下不代表使用者該下載它」。仍待做：Android 的裝置端後端、以及實際跑一份模型驗真實輸出 |
 | ~~S-21~~ ✅ | WP7 | PDFium 綁定（`pdfium-render`）| `padnote-pdf-pdfium` 已實作；執行期庫與大型 PDF 實測仍列 H8/H6 |
 | ~~S-22~~ ✅ | WP12 | Apple Vision / ML Kit 的 `HwrEngine` 實作 | Android 的 ML Kit 本來就有；**Apple 端原本完全沒有手寫辨識**（iPad 上寫的字搜不到）。新增 `HandwritingRecognizer.swift`：把每一組筆畫算繪成白底黑字的圖再送 `VNRecognizeTextRequest`。分組規則下沉核心（`padnote-recognize::grouping`），兩邊同一份 —— 切法不同會讓同一頁在兩台裝置上搜到不一樣的東西。辨識率需實機以真實筆跡驗（A-09）|
 
@@ -207,7 +214,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | ~~S-37~~ ✅ | UI/UX 設計 | 🔴 完全未開始。可與 M0 並行，不依賴 S1 |
 | ~~S-38~~ ✅ | 物件模型：群組／對齊／吸附／變換 | 需 ADR —— 會影響 `.padnote` 格式。目前 `Stroke` 沒有「物件」概念 |
 | ~~S-39~~ ✅ | Markdown 匯入、JSON 匯入匯出 | 容易，可立即做 |
-| S-40 | 各平台數位板協定與藍牙筆按鈕 | **需要實體硬體才驗得了**（Wacom/XP-Pen 數位板、有按鈕的藍牙筆）。程式面已備妥的部分：核心的 `InkArbiter` 已區分 `Pen`/`Eraser`/`Mouse`，Android 的 `InkInput` 已對應 `TOOL_TYPE_ERASER`。缺的是按鈕事件的對應與實機校準 |
+| S-40 | 各平台數位板協定與藍牙筆按鈕 | **程式面已完成（2026-09-17）**：`padnote-input::pen` 有一張可設定的對應表（雙擊／擠壓／主鍵／次鍵／反向筆頭 → 橡皮擦／上一支筆／筆刷設定／套索／復原／重做／尺規），兩端共用，11 條測試。Android 接 `BUTTON_STYLUS_PRIMARY`/`SECONDARY` 與 `TOOL_TYPE_ERASER`，Apple 接雙擊與擠壓。**缺的只剩實機校準** —— 側鍵事件要實體筆才發得出來（模擬器沒有、`adb input` 送不出 `buttonState`），數位板要接上才知道它把哪顆鍵送成哪個位元。見 A-14 / A-15 |
 
 ## 🆕 畫布與介面需求（2026-09-12）
 
@@ -247,6 +254,8 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | A-10 | 分組門檻 | 正常書寫節奏下，一個詞不會被切成兩組 | 停頓門檻 700ms 是起點值 |
 | A-13 | 跨 App 拖放圖片 | 平板分割畫面下，從相簿拖一張圖到畫布：圖落在放開的位置、比例正確 | 程式已完成（`Modifier.dragAndDropTarget` + `requestDragAndDropPermissions`），落點規則有測試。**手上只有 320×640dp 的手機 AVD**，分割畫面拖放不是那個尺寸的真實情境，所以沒在模擬器上驅動過。Apple 端同一套流程已在 iPad 模擬器驗過 |
 | A-14 | 觸控筆側鍵切橡皮擦 | 按著側鍵畫過筆跡會擦掉，放開回到原本那支筆；把筆倒過來同樣會擦 | 規則有測試（`StylusButtonTest`）。`buttonState` 要實體觸控筆才發得出來，`adb input` 送不出來。與 S-40 同一批硬體 |
+| A-15 | 筆桿次鍵與數位板 | 兩顆鍵的筆：主鍵擦、次鍵套索；接上 Wacom/XP-Pen 數位板，確認它把哪顆鍵送成哪個位元 | 對應表已下沉核心（`padnote-input::pen`，11 條測試），兩端共用。缺的只有實機校準 |
+| A-16 | 懸停預覽 | 筆尖靠近但未接觸時，畫布上出現筆頭預覽；碰到螢幕後預覽消失 | 程式已完成。**Android 的預覽沒有畫傾角**（Compose 的懸停事件拿不到 tilt），Apple 有 |
 
 **測試方式**：`cd android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :app:installDebug`，
 寫字時截圖那條診斷列即可，它會顯示平台回報的工具類型、接觸半徑、壓感、密度與仲裁結果。
