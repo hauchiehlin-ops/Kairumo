@@ -4,17 +4,17 @@ import android.content.Context
 import android.graphics.BitmapFactory
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import com.kairumo.padnote.platform.PageImageRenderer
 import uniffi.padnote_core.PadnoteSession
 import java.io.File
 
 /**
  * 筆記本第一頁的縮圖（Android）。
  *
- * # 為什麼算繪交給核心
+ * # 為什麼算繪不自己在 Compose 上做
  *
- * 用的是核心既有的 `export_page_png` —— 匯出走的是同一條路。自己在
- * Compose 上再畫一次的話，縮圖與匯出的結果會慢慢分岔，而使用者看到的是
- * 「預覽跟印出來的不一樣」。
+ * 走的是 [PageImageRenderer]，與 PNG 匯出同一條路。自己在 Compose 上再畫一次
+ * 的話，縮圖與匯出的結果會慢慢分岔，而使用者看到的是「預覽跟印出來的不一樣」。
  *
  * # 為什麼要有快取
  *
@@ -24,11 +24,11 @@ import java.io.File
  * 快取的鍵帶上**修改時間**：內容變了就是一個新檔名，不必另外做失效判斷。
  * 舊的那些在同一次產生時順手刪掉。
  *
- * # 縮圖裡沒有的東西
+ * # 文字是真的字（工作項 S-60）
  *
- * `export_page_png` 畫的是**底紋與筆畫**，不含文字方塊、表格、圖表與圖片
- * 那些畫布物件。所以一本只打字沒手寫的筆記，縮圖會是一張空白頁 ——
- * 那不是壞掉。要補的話得等核心的物件算繪也走同一條路。
+ * 這裡曾經直接呼叫核心的 `export_page_png`，而那條路把文字畫成灰色行條 ——
+ * 一本只打字沒手寫的筆記，縮圖上看不到半個字。現在交給 [PageImageRenderer]，
+ * 由系統的 PDF 算繪器畫，字形是真的。核心那條仍然是失敗時的後備。
  */
 object NotebookThumbnails {
 
@@ -43,7 +43,7 @@ object NotebookThumbnails {
     fun load(context: Context, entry: NotebookLibrary.Entry): ImageBitmap? {
         val cached = cacheFile(context, entry)
         if (!cached.exists()) {
-            val bytes = render(entry) ?: return null
+            val bytes = render(context, entry) ?: return null
             runCatching {
                 cached.parentFile?.mkdirs()
                 // 先寫暫存檔再改名：中途被砍掉的話，留下的是一個半截的
@@ -59,10 +59,10 @@ object NotebookThumbnails {
         }.getOrNull()
     }
 
-    private fun render(entry: NotebookLibrary.Entry): ByteArray? = runCatching {
+    private fun render(context: Context, entry: NotebookLibrary.Entry): ByteArray? = runCatching {
         val session = PadnoteSession.openExisting(entry.path.absolutePath, 0u)
         val pageId = session.pageIdAt(0u) ?: session.firstPageId() ?: return null
-        session.exportPagePng(pageId, SCALE)
+        PageImageRenderer.renderPng(session, pageId, SCALE, context.cacheDir)
     }.getOrNull()
 
     private fun dir(context: Context) = File(context.cacheDir, "thumbnails")

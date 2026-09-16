@@ -30,10 +30,13 @@ public final class ExportPrintManager {
     }
 
     /// 匯出指定頁面為 PNG 圖片資料。
+    ///
+    /// 走 `PageImageRenderer` 而不是核心的 `exportPagePng`：後者把文字畫成
+    /// 灰條，匯出的圖上看不到字（工作項 S-60）。
     /// - Parameters:
     ///   - scale: 縮放倍率（例如 2.0 代表 @2x Retina 高解析度）。
     public func exportPagePng(session: PadnoteSession, pageId: String, scale: Float = 2.0) throws -> Data {
-        return try session.exportPagePng(pageId: pageId, scale: scale)
+        return try PageImageRenderer.renderPng(session: session, pageId: pageId, scale: scale)
     }
 
     // MARK: - 系統分享面板 (Share Sheet)

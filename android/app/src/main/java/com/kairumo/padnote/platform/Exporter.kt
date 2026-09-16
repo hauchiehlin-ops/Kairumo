@@ -54,7 +54,9 @@ object Exporter {
                 val page = pageId ?: session.firstPageId()
                     ?: error("這本筆記沒有任何頁面")
                 // @2x：螢幕截圖級的解析度，列印或再編輯都還堪用。
-                session.exportPagePng(page, 2f)
+                // 走 PageImageRenderer 而不是核心的 export_page_png：
+                // 後者把文字畫成灰條，匯出的圖上會看不到字（工作項 S-60）。
+                PageImageRenderer.renderPng(session, page, 2f, context.cacheDir)
             }
             Format.MARKDOWN -> session.exportMarkdown().toByteArray()
         }

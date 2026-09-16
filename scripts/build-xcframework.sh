@@ -81,9 +81,13 @@ for t in "${TARGETS[@]}"; do
   # 去自建 PDFium，不如讓 Apple 走系統的那一套：少 6 MB × 2 的二進位、
   # 少一個第三方供應鏈、少一個會隨系統更新壞掉的東西。
   #
-  # 核心裡 pdf feature 唯一的用途是 `export_page_png` 的一段**最佳化**，
-  # 而它本來就有純 Rust 的 fallback（Android 一直走那一條）。關掉它
-  # 只是讓 Apple 也走同一條路，功能不會少。
+  # 核心裡 pdf feature 唯一的用途是 `export_page_png` 的一段最佳化，
+  # 而它本來就有純 Rust 的 fallback（Android 一直走那一條）。
+  #
+  # ⚠️ 「關掉它功能不會少」這句話當初寫錯了：純 Rust 那條把文字畫成灰條，
+  #    所以匯出的 PNG 上看不到字（工作項 S-60）。兩個平台現在都改走
+  #    `PageImageRenderer`（核心產 PDF、系統算繪），與 pdf feature 無關 ——
+  #    Apple 不帶 PDFium 的判斷仍然成立，但理由要算在那裡，不是算在這裡。
   ORT_LIB_LOCATION="$STUB_DIR" OPUS_LIB_DIR="$STUB_DIR" \
     cargo rustc -p padnote-core --lib --release --target "$t" \
     --no-default-features --features asr --crate-type staticlib

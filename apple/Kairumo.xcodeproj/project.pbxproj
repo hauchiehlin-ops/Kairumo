@@ -42,6 +42,7 @@
 		60DD6270EBD20EC1C9DE009F /* StrokeDelta.swift in Sources */ = {isa = PBXBuildFile; fileRef = 554BBC1A7380B5D3506557DF /* StrokeDelta.swift */; };
 		613D0C4337E03D7899725FA7 /* SmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC6D1F547D3EA6FBF9266760 /* SmokeUITests.swift */; };
 		6142C12FB584E6D8D7B38221 /* CollaborationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF2EC412BA37683FBBE2FC1 /* CollaborationSheet.swift */; };
+		63CF92B9165F66506D660059 /* PageImageRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9016EACE65CDA75A37567CE /* PageImageRendererTests.swift */; };
 		643674D7CEE546261D15F308 /* ExportPrintManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */; };
 		67CF9DE54436AC7DD3FF5065 /* NotebookMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C19329463E6F6E313A0F1DB /* NotebookMigration.swift */; };
 		68C1811CB88877353FF14D31 /* CStubs.c in Sources */ = {isa = PBXBuildFile; fileRef = 26F09C378F9F1B6835D9ECB2 /* CStubs.c */; };
@@ -51,6 +52,7 @@
 		778281F00A39E42DC02254A7 /* TableStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61C6C10FAD15645C91E246C0 /* TableStudioView.swift */; };
 		7B6B71CF69CE9F1C2CB2E953 /* DocumentViewerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E46CD750DA486212251DC0 /* DocumentViewerSheet.swift */; };
 		7BF616F79113EDEF36132B11 /* WordTextStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30959766B1D00F248AD7D2D /* WordTextStudioView.swift */; };
+		7D6DE78DB8869CDC8006E534 /* PageImageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE6B5FAD884A88C837DD9BF2 /* PageImageRenderer.swift */; };
 		7DB76F0C390DA40B48AC10F9 /* AudioRecorderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FEF2B249C62AD4AE2E3C246 /* AudioRecorderManager.swift */; };
 		8677E2062758DE5EA2EEE87F /* TextBoxAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7418A9EE9E549FC11AB793EF /* TextBoxAppearance.swift */; };
 		880DCFF8C76BF936EADB63DF /* NotebookEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9E0D4938AD7ED09F531105A2 /* NotebookEditorView.swift */; };
@@ -218,10 +220,12 @@
 		DC2F0D7F265BF495CF6D7B79 /* ThemeSpecificToolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSpecificToolsView.swift; sourceTree = "<group>"; };
 		DC6D1F547D3EA6FBF9266760 /* SmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeUITests.swift; sourceTree = "<group>"; };
 		DC7046379C24B0D590B6F0E8 /* ToolbarSeparator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarSeparator.swift; sourceTree = "<group>"; };
+		DE6B5FAD884A88C837DD9BF2 /* PageImageRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageImageRenderer.swift; sourceTree = "<group>"; };
 		DFB782C4FBD863E4DD9CC1D7 /* TextBoxEditingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextBoxEditingTests.swift; sourceTree = "<group>"; };
 		DFCDD31E1D415BEFE8FB47D5 /* ImageAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageAppearance.swift; sourceTree = "<group>"; };
 		E6A2A119D757D992BD181DEE /* BackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupManager.swift; sourceTree = "<group>"; };
 		E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPrintManager.swift; sourceTree = "<group>"; };
+		E9016EACE65CDA75A37567CE /* PageImageRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageImageRendererTests.swift; sourceTree = "<group>"; };
 		EE084F883D6D8A652CD86063 /* SeedContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedContent.swift; sourceTree = "<group>"; };
 		EE3F4D9B18C940D7D37A888E /* KairumoTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KairumoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F30959766B1D00F248AD7D2D /* WordTextStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordTextStudioView.swift; sourceTree = "<group>"; };
@@ -280,6 +284,7 @@
 				9A6E8DF2429CC830E9AF5BB6 /* ObjectFrameStyleTests.swift */,
 				6C2FF9AF4DA70CC155EC6704 /* ObjectLayerTests.swift */,
 				5E0D07EB41098C2C0F9A8E37 /* PackageRoundTripTests.swift */,
+				E9016EACE65CDA75A37567CE /* PageImageRendererTests.swift */,
 				7D2A6B1E41A4693B543BEDCB /* PageRepaginationTests.swift */,
 				F85F010611BBEED2B2DF9AC3 /* PalmRejectionTests.swift */,
 				3A1525CF56EBBE47CE94BDBD /* PdfAnnotationInteropTests.swift */,
@@ -386,6 +391,7 @@
 				BFC2EC4F24CB728264AB91A5 /* ObjectRotationControls.swift */,
 				DA14AB7B6F3436E39B58DAA1 /* ObjectStacking.swift */,
 				4F6548BCB85682AC49CE9184 /* PageGeometry.swift */,
+				DE6B5FAD884A88C837DD9BF2 /* PageImageRenderer.swift */,
 				74C26B5B3A37A7FBDAABA8A7 /* PageRepagination.swift */,
 				02895D54063C3AA4B5D30463 /* PageThumbnailRenderer.swift */,
 				1064607D4E02AABFD6A63F53 /* PalmRejection.swift */,
@@ -540,6 +546,7 @@
 				15EF2E5BABD94BB93C76CC00 /* ObjectFrameStyleTests.swift in Sources */,
 				11EC21E67ADCC9E01F0DFF69 /* ObjectLayerTests.swift in Sources */,
 				55B00291EB5DC3259C49B3E9 /* PackageRoundTripTests.swift in Sources */,
+				63CF92B9165F66506D660059 /* PageImageRendererTests.swift in Sources */,
 				8B7009124FD56264BEA6268D /* PageRepaginationTests.swift in Sources */,
 				99B29892A3970C9ADBADEB7E /* PalmRejectionTests.swift in Sources */,
 				F91E0C4A0E48E4695D0337C6 /* PdfAnnotationInteropTests.swift in Sources */,
@@ -616,6 +623,7 @@
 				0D7E2AFBD2E9D88478C4DC9B /* ObjectRotationControls.swift in Sources */,
 				718C3BE123192CC4792EB80C /* ObjectStacking.swift in Sources */,
 				1DD235EF0430767F0F67610E /* PageGeometry.swift in Sources */,
+				7D6DE78DB8869CDC8006E534 /* PageImageRenderer.swift in Sources */,
 				E77C6702EE266A8D0B24EA19 /* PageRepagination.swift in Sources */,
 				2823612B8F3A376A45042712 /* PageThumbnailRenderer.swift in Sources */,
 				512B7389435793F9304B338D /* PalmRejection.swift in Sources */,
