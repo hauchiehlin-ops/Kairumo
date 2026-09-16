@@ -47,6 +47,7 @@
 		60DD6270EBD20EC1C9DE009F /* StrokeDelta.swift in Sources */ = {isa = PBXBuildFile; fileRef = 554BBC1A7380B5D3506557DF /* StrokeDelta.swift */; };
 		613D0C4337E03D7899725FA7 /* SmokeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC6D1F547D3EA6FBF9266760 /* SmokeUITests.swift */; };
 		6142C12FB584E6D8D7B38221 /* CollaborationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FF2EC412BA37683FBBE2FC1 /* CollaborationSheet.swift */; };
+		633B552A6948F3E66E5C7DCD /* ImageDropPlacement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 52BB9EE17D04DDC7ACA3D7C2 /* ImageDropPlacement.swift */; };
 		63CF92B9165F66506D660059 /* PageImageRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E9016EACE65CDA75A37567CE /* PageImageRendererTests.swift */; };
 		643674D7CEE546261D15F308 /* ExportPrintManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */; };
 		67CF9DE54436AC7DD3FF5065 /* NotebookMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C19329463E6F6E313A0F1DB /* NotebookMigration.swift */; };
@@ -91,6 +92,7 @@
 		C1A7C585E17B35EF60632C65 /* AccountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76577BBB3DC564A4B287380C /* AccountManager.swift */; };
 		C36BFAF3FE04CD8474F55984 /* MacReleaseConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 621C052FCB25E32FBB633BE3 /* MacReleaseConfigTests.swift */; };
 		C54CB75E7D13D0F98B966CC0 /* ChartStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86EC0F8038D34C787D2A729D /* ChartStudioView.swift */; };
+		C5671A19EAB4341D97B24DED /* ImageDropPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D92F2373941302ED5F5C66CD /* ImageDropPlacementTests.swift */; };
 		C5C788E40414F0CEBD323695 /* ObjectFrameStyleMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29C630A29EC3E773EF130E2D /* ObjectFrameStyleMenu.swift */; };
 		C6ED27B0A6A534EF825F6F5A /* DocumentTemplateCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A934F46156BC32DC1149F62 /* DocumentTemplateCatalog.swift */; };
 		C9792F66F734F3441E471BE4 /* InkInteropTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 691C8F15D077838E27650DFC /* InkInteropTests.swift */; };
@@ -179,6 +181,7 @@
 		4BA1621FF70166498E5FC736 /* AudioAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioAttachment.swift; sourceTree = "<group>"; };
 		4F6548BCB85682AC49CE9184 /* PageGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageGeometry.swift; sourceTree = "<group>"; };
 		51E8541179F28A49C13A1967 /* MaterialEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialEngine.swift; sourceTree = "<group>"; };
+		52BB9EE17D04DDC7ACA3D7C2 /* ImageDropPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDropPlacement.swift; sourceTree = "<group>"; };
 		554BBC1A7380B5D3506557DF /* StrokeDelta.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StrokeDelta.swift; sourceTree = "<group>"; };
 		58A59801CFFFC6CE7230C128 /* AppCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCommands.swift; sourceTree = "<group>"; };
 		59E46CD750DA486212251DC0 /* DocumentViewerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentViewerSheet.swift; sourceTree = "<group>"; };
@@ -242,6 +245,7 @@
 		CCBD6EB2E871A9532370A15B /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
 		D059ACC4F96D906F5A18970D /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
 		D76C7E92895F6C4334996D92 /* NotebookSyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookSyncCoordinator.swift; sourceTree = "<group>"; };
+		D92F2373941302ED5F5C66CD /* ImageDropPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDropPlacementTests.swift; sourceTree = "<group>"; };
 		DA14AB7B6F3436E39B58DAA1 /* ObjectStacking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectStacking.swift; sourceTree = "<group>"; };
 		DA24513DE1A6A5996FB190AC /* AssetLibraryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetLibraryManager.swift; sourceTree = "<group>"; };
 		DBEA4CFB130D285D67B343EC /* NoteShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteShape.swift; sourceTree = "<group>"; };
@@ -304,6 +308,7 @@
 				731CDDC574A6D78F0621BA61 /* CloudSyncFolderTests.swift */,
 				B8F51C245CED14D4079BC5B4 /* DocumentTemplateTests.swift */,
 				3A779F6ADCC3B71D4D84A687 /* ExportFidelityTests.swift */,
+				D92F2373941302ED5F5C66CD /* ImageDropPlacementTests.swift */,
 				691C8F15D077838E27650DFC /* InkInteropTests.swift */,
 				3CF52FA26FE1FF9A388527D6 /* InkLatencyMeterTests.swift */,
 				621C052FCB25E32FBB633BE3 /* MacReleaseConfigTests.swift */,
@@ -404,6 +409,7 @@
 				405C79E461A1D1A0AC7BE206 /* HoverHighlight.swift */,
 				35D8819970FB01956E474387 /* ICloudSyncFolder.swift */,
 				DFCDD31E1D415BEFE8FB47D5 /* ImageAppearance.swift */,
+				52BB9EE17D04DDC7ACA3D7C2 /* ImageDropPlacement.swift */,
 				29BFE1D24D00A1328C62BA89 /* ImageEditControls.swift */,
 				893FBBAA69ABDE7B5D03BDA9 /* InkInterop.swift */,
 				00CDBBB784601FDFB342136D /* InkLatencyMeter.swift */,
@@ -581,6 +587,7 @@
 				1946E25FC27F2BD84C08F133 /* CloudSyncFolderTests.swift in Sources */,
 				978CADAB7182E4DCAB4F9372 /* DocumentTemplateTests.swift in Sources */,
 				9C2756ABBB3E04433C88F83B /* ExportFidelityTests.swift in Sources */,
+				C5671A19EAB4341D97B24DED /* ImageDropPlacementTests.swift in Sources */,
 				C9792F66F734F3441E471BE4 /* InkInteropTests.swift in Sources */,
 				E9221BA20E33E8501513541A /* InkLatencyMeterTests.swift in Sources */,
 				C36BFAF3FE04CD8474F55984 /* MacReleaseConfigTests.swift in Sources */,
@@ -650,6 +657,7 @@
 				D4DC7A6656276B57938A4F09 /* HoverHighlight.swift in Sources */,
 				20C4A906FABED733ED590D60 /* ICloudSyncFolder.swift in Sources */,
 				C1263F774996D8A32718A1FF /* ImageAppearance.swift in Sources */,
+				633B552A6948F3E66E5C7DCD /* ImageDropPlacement.swift in Sources */,
 				9BCE1D88DD79DE3FD381D46D /* ImageEditControls.swift in Sources */,
 				04A2C2BA6EE78D99402F87AD /* InkInterop.swift in Sources */,
 				AC68B6EC6A6BA0BF03560351 /* InkLatencyMeter.swift in Sources */,

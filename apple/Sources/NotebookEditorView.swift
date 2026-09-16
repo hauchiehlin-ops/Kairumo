@@ -11,6 +11,7 @@ import SwiftUI
 import PencilKit
 import AVFoundation
 import PhotosUI
+import UniformTypeIdentifiers
 
 #if canImport(PadnoteCore)
 import PadnoteCore
@@ -1151,6 +1152,12 @@ public struct NotebookEditorView: View {
 
     // 實體工具列狀態
     @State private var selectedTool: EditorToolType = .pen
+
+    /// 有東西正懸在畫布上等著放下（工作項 S-68）。
+    ///
+    /// 一定要有這個回饋：拖放看不見目標的話，使用者不知道放開會發生什麼事，
+    /// 也分不出「這裡不能放」與「放了但沒反應」。
+    @State private var isCanvasDropTargeted: Bool = false
 
     /// 最後用過的**筆刷**。Apple Pencil 雙擊要切回來的就是它（工作項 S-67）。
     ///
@@ -2386,7 +2393,10 @@ public struct NotebookEditorView: View {
                             onSelectionChanged: { hasLassoSelection = $0 },
                             onReachedPageBottom: { ensureNextPageExists() },
                             canvasRef: { canvasView = $0 },
-                            onPencilTap: applyPencilTap
+                            onPencilTap: applyPencilTap,
+                            onImageDropped: { page, providers, location in
+                                acceptImageDrop(providers, at: location, page: page)
+                            }
                         )
                         .scaleEffect(scale, anchor: .top)
                         // 縮放後的實際高度要讓出來，否則每一頁之間會留下
@@ -2748,6 +2758,14 @@ ZStack(alignment: .topTrailing) {
                 },
                 onPencilTap: applyPencilTap
             )
+            // 從別的 App 把圖拖進來（工作項 S-68）。
+            //
+            // 掛在畫布上而不是整個編輯器：落點要能換算成頁面座標，
+            // 掛在外層的話拖到工具列上也會插進去，而且位置會偏掉。
+            .onDrop(of: [.image], isTargeted: $isCanvasDropTargeted) { providers, location in
+                acceptImageDrop(providers, at: location, page: currentPageIndex)
+            }
+            .overlay { canvasDropHighlight(isCanvasDropTargeted) }
             .background(
                 GeometryReader { geo in
                     Color.clear
@@ -4938,6 +4956,38 @@ ZStack(alignment: .topTrailing) {
     ///
     /// 打字模式下不理會：那時候畫布根本不收筆畫，換工具只會讓使用者回到
     /// 手寫模式時發現筆莫名其妙變了。
+    /// 接住拖進畫布的圖片（工作項 S-68）。
+    ///
+    /// 回傳值是**同步**的「我要不要接這一批」—— 圖片是非同步載進來的，
+    /// 等載完再回答的話系統早就把拖放取消掉了。所以這裡看的是「有沒有
+    /// 任何一個來源給得出圖」，真正的插入在回呼裡做。
+    private func acceptImageDrop(
+        _ providers: [NSItemProvider], at location: CGPoint, page: Int
+    ) -> Bool {
+        guard providers.contains(where: { $0.canLoadObject(ofClass: UIImage.self) }) else {
+            return false
+        }
+        ImageDropLoader.firstImage(from: providers) { image in
+            guard let image else { return }
+            insertImageAttachment(image, at: location, page: page)
+            // 插進來之後切到打字模式：手寫模式下物件不吃觸控，使用者剛拖
+            // 進來的圖會拖不動，看起來像插壞了。Android 端也是這樣做。
+            editorMode = .type
+        }
+        return true
+    }
+
+    /// 拖放時的落點提示。
+    @ViewBuilder
+    private func canvasDropHighlight(_ targeted: Bool) -> some View {
+        if targeted {
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 3, dash: [8, 6]))
+                .background(Color.accentColor.opacity(0.08))
+                .allowsHitTesting(false)
+        }
+    }
+
     private func applyPencilTap(_ action: UIPencilPreferredAction) {
         guard editorMode == .draw else { return }
         switch PencilDoubleTap.outcome(
@@ -5267,16 +5317,32 @@ ZStack(alignment: .topTrailing) {
     }
 
     // MARK: - 附件管理核心
-    private func insertImageAttachment(_ image: UIImage, chartSpecJSON: String? = nil) {
+    /// 把一張圖插到頁面上。
+    ///
+    /// - Parameters:
+    ///   - at: 拖放的落點（頁面座標）。`nil` 表示從選單插入 —— 沿用固定位置。
+    ///   - page: 落在哪一頁。連續模式下拖到哪一頁就是哪一頁，`nil` 用焦點頁。
+    private func insertImageAttachment(
+        _ image: UIImage,
+        chartSpecJSON: String? = nil,
+        at dropPoint: CGPoint? = nil,
+        page: Int? = nil
+    ) {
         guard let fileName = store.saveAttachmentImage(image) else { return }
         let aspect = image.size.width / max(1, image.size.height)
-        let w: CGFloat = 280
-        let h: CGFloat = max(80, w / aspect)
+        let placed = dropPoint.map {
+            ImageDropPlacement.frame(
+                dropPoint: $0,
+                imageSize: image.size,
+                pageSize: CGSize(width: PageGeometry.width, height: PageGeometry.height))
+        }
+        let w: CGFloat = placed?.width ?? 280
+        let h: CGFloat = placed?.height ?? max(80, 280 / aspect)
         let newAttachment = NoteImageAttachment(
             fileName: fileName,
-            pageIndex: currentPageIndex,
-            x: 80,
-            y: 120,
+            pageIndex: page ?? currentPageIndex,
+            x: placed?.minX ?? 80,
+            y: placed?.minY ?? 120,
             width: w,
             height: h,
             rotationDegrees: 0,

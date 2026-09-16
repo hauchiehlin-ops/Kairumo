@@ -128,6 +128,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.kairumo.padnote.ink.InkEngine
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.ui.draganddrop.DragAndDropEvent
+import androidx.compose.ui.draganddrop.DragAndDropTarget
+import androidx.compose.ui.draganddrop.mimeTypes
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
+import com.kairumo.padnote.image.ImageDropPlacement
+import com.kairumo.padnote.ink.PageGeometry
 import com.kairumo.padnote.ink.SketchRefineBar
 import com.kairumo.padnote.ink.StylusButton
 import com.kairumo.padnote.asset.AssetLibrarySheet
@@ -668,7 +678,7 @@ private fun NotebookHome(
  * 主體是畫布 —— 這是一個筆記 App，開起來就該能寫字。核心狀態那些數字移進
  * 對話框：它們是驗證用的憑據，不是使用者每天要看的東西。
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) {
     val activity = LocalContext.current as ComponentActivity
@@ -1128,6 +1138,9 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     // 現在的橡皮擦是**側鍵按出來的**，不是使用者自己在工具列上選的。
     // 這個分別很重要：使用者自己選的橡皮擦，不能因為他放開側鍵就被換掉。
     var stylusHeldEraser by remember { mutableStateOf(false) }
+    // 有東西正懸在畫布上等著放下（工作項 S-68）。一定要有這個回饋：
+    // 拖放看不見目標的話，使用者分不出「這裡不能放」與「放了但沒反應」。
+    var isImageDropTargeted by remember { mutableStateOf(false) }
     LaunchedEffect(inkTool) { if (inkTool.kind != null) lastBrushTool = inkTool }
 
     // 觸控筆側鍵（或把筆倒過來）→ 橡皮擦，放開回到原本那支筆。
@@ -1782,7 +1795,84 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             return@Column
         }
 
-        Box(modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)) {
+        // 從別的 App 把圖拖進來（工作項 S-68）。
+        //
+        // 掛在畫布這個 Box 上而不是整個畫面：落點要能換算成頁面座標，
+        // 掛在外層的話拖到工具列上也會插進去，而且位置會偏掉。
+        //
+        // 落點與尺寸的計算走 `ImageDropPlacement`，與 Apple 端同一份規則 ——
+        // 同一張圖拖到同一個位置，兩台裝置上要落在同一個地方。
+        val imageDropTarget = remember(pageId, canvasDensity) {
+            object : DragAndDropTarget {
+                override fun onEntered(event: DragAndDropEvent) { isImageDropTargeted = true }
+                override fun onExited(event: DragAndDropEvent) { isImageDropTargeted = false }
+                override fun onEnded(event: DragAndDropEvent) { isImageDropTargeted = false }
+
+                override fun onDrop(event: DragAndDropEvent): Boolean {
+                    isImageDropTargeted = false
+                    val drag = event.toAndroidDragEvent()
+                    val uri = drag.clipData?.takeIf { it.itemCount > 0 }
+                        ?.getItemAt(0)?.uri ?: return false
+
+                    // **這一行不能少。** 跨 App 拖進來的 URI 預設讀不到 ——
+                    // 少了它 `openInputStream` 會丟 SecurityException，症狀是
+                    // 「從相簿拖過來什麼也沒發生」，而且沒有任何畫面提示。
+                    val grant = runCatching {
+                        activity.requestDragAndDropPermissions(drag)
+                    }.getOrNull()
+                    try {
+                        val bytes = runCatching {
+                            activity.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                        }.getOrNull()
+                        if (bytes == null) {
+                            message = l10n("err_image_read_failed")
+                            return false
+                        }
+                        val name = uri.lastPathSegment?.substringAfterLast('/') ?: "image.png"
+                        val inserted = imageStore.insert(bytes, name) ?: run {
+                            message = l10n("err_image_read_failed")
+                            return false
+                        }
+                        val bounds = android.graphics.BitmapFactory.Options().apply {
+                            inJustDecodeBounds = true
+                        }
+                        android.graphics.BitmapFactory.decodeByteArray(
+                            bytes, 0, bytes.size, bounds)
+                        val placed = ImageDropPlacement.frame(
+                            dropX = drag.x / canvasDensity,
+                            dropY = drag.y / canvasDensity,
+                            imageWidth = bounds.outWidth.toFloat(),
+                            imageHeight = bounds.outHeight.toFloat(),
+                            pageWidth = PageGeometry.width,
+                            pageHeight = PageGeometry.height
+                        )
+                        inserted.x = placed.x
+                        inserted.y = placed.y
+                        inserted.width = placed.width
+                        inserted.height = placed.height
+                        imageStore.persist(inserted)
+                        imageRevision++
+                        selectedImageId = inserted.id
+                        // 插進來之後切到打字模式：手寫模式下物件不吃觸控，
+                        // 使用者剛拖進來的圖會拖不動，看起來像插壞了。
+                        editorMode = EditorMode.TYPE
+                        return true
+                    } finally {
+                        grant?.release()
+                    }
+                }
+            }
+        }
+
+        Box(
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)
+                .dragAndDropTarget(
+                    shouldStartDragAndDrop = { start ->
+                        start.mimeTypes().any { it.startsWith("image/") }
+                    },
+                    target = imageDropTarget
+                )
+        ) {
             if (lowLatency && !lowLatencyUnavailable) {
                 LowLatencyInkCanvas(
                     engine = engine,
@@ -1801,6 +1891,19 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     contentVersion = revision,
                     // 打字模式下筆也不會畫線 —— 這個模式只處理文字與物件。
                     acceptsInk = editorMode == EditorMode.DRAW
+                )
+            }
+
+            // 拖放的落點提示。與 Apple 端一樣是一圈虛線。
+            if (isImageDropTargeted) {
+                Box(
+                    modifier = Modifier.fillMaxSize()
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.08f))
+                        .border(
+                            3.dp,
+                            MaterialTheme.colorScheme.primary,
+                            RoundedCornerShape(8.dp)
+                        )
                 )
             }
 

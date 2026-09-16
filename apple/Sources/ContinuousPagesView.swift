@@ -19,6 +19,7 @@
 //
 
 import PencilKit
+import UniformTypeIdentifiers
 import SwiftUI
 
 /// 頁面顯示模式。
@@ -62,9 +63,12 @@ struct ContinuousPageView<ObjectLayer: View>: View {
     /// Apple Pencil 雙擊筆桿（工作項 S-67）。只有焦點頁回報 —— 每一頁都報的話，
     /// 一次雙擊會被當成好幾次，工具在筆與橡皮擦之間跳回原地。
     var onPencilTap: ((UIPencilPreferredAction) -> Void)? = nil
+    /// 有圖片拖到這一頁上（工作項 S-68）。落點是**這一頁的**座標。
+    var onImageDropped: ((Int, [NSItemProvider], CGPoint) -> Bool)? = nil
 
     @State private var drawing = PKDrawing()
     @State private var loaded = false
+    @State private var isDropTargeted = false
 
     var body: some View {
         ZStack(alignment: .topLeading) {
@@ -91,6 +95,19 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 palmRejection: palmRejection,
                 onPencilTap: { action in if isFocused { onPencilTap?(action) } }
             )
+            // 拖到哪一頁就插到哪一頁 —— 連續模式下每一頁都是自己的落點。
+            .onDrop(of: [.image], isTargeted: $isDropTargeted) { providers, location in
+                onImageDropped?(pageIndex, providers, location) ?? false
+            }
+            .overlay {
+                if isDropTargeted {
+                    RoundedRectangle(cornerRadius: 8)
+                        .strokeBorder(
+                            Color.accentColor, style: StrokeStyle(lineWidth: 3, dash: [8, 6]))
+                        .background(Color.accentColor.opacity(0.08))
+                        .allowsHitTesting(false)
+                }
+            }
 
             objectLayer()
         }
