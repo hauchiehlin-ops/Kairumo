@@ -33,29 +33,15 @@ public struct WordTextStudioView: View {
     @State private var activeTab: Int = 0
 
     // 四大特殊元件庫
-    private let specialSymbols = [
-        "★", "☆", "✓", "✗", "▲", "▼", "◆", "◇",
-        "●", "○", "→", "←", "↑", "↓", "⇄", "⇒",
-        "※", "§", "¶", "©", "®", "™", "℃", "℉", "♥", "♦"
-    ]
-
-    private let punctuationMarks = [
-        "「", "」", "『", "』", "《", "》", "〈", "〉",
-        "【", "】", "〔", "〕", "——", "……", "～", "·",
-        "；", "：", "？！", "“", "”", "‘", "’"
-    ]
-
-    private let mathSymbols = [
-        "±", "×", "÷", "≠", "≈", "≤", "≥", "∑",
-        "∏", "√", "∫", "∂", "∞", "∈", "∉", "⊂",
-        "⊆", "∪", "∩", "α", "β", "γ", "θ", "λ",
-        "π", "σ", "ω", "Δ", "Ω", "°"
-    ]
-
-    private let romanNumerals = [
-        "Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ", "Ⅺ", "Ⅻ",
-        "ⅰ", "ⅱ", "ⅲ", "ⅳ", "ⅴ", "ⅵ", "ⅶ", "ⅷ", "ⅸ", "ⅹ"
-    ]
+    // 符號盤的內容來自核心（`symbolPalette`，工作項 S-63）。
+    //
+    // 原本這四個陣列寫在這個檔案裡，Android 端沒有。兩邊各寫一份的結果是
+    // 慢慢分岔 —— 症狀會是「iPad 上插得到的符號在 Android 上找不到」，
+    // 而且兩邊各自看起來都很完整，沒有人會發現。
+    private let specialSymbols = symbolPalette(category: .special)
+    private let punctuationMarks = symbolPalette(category: .punctuation)
+    private let mathSymbols = symbolPalette(category: .math)
+    private let romanNumerals = symbolPalette(category: .roman)
 
     // 便簽底色選項。
     //

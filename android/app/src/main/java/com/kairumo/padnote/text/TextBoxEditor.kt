@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.LocalizationStrings
 import com.kairumo.padnote.canvas.CanvasRotation
+import uniffi.padnote_core.symbolCategories
+import uniffi.padnote_core.symbolPalette
 
 /**
  * 文字方塊的編輯面板（Android）。
@@ -286,10 +288,6 @@ fun TextBoxEditor(
 }
 
 /**
- * 符號表。與 Apple 端 `WordTextStudioView` 的四組**逐字相同** ——
- * 兩邊不一樣的話，同一份筆記在另一個平台就插不出同樣的符號。
- */
-/**
  * 卡片底色與邊框顏色。
  *
  * **來源是核心的 `cardPalette()` / `borderPalette()`，不在這裡寫死。**
@@ -304,16 +302,16 @@ private fun cardColors(): List<Pair<String, String>> =
 private fun borderColors(): List<String> =
     uniffi.padnote_core.borderPalette().map { it.hex }
 
-private val SYMBOL_SETS: List<List<String>> = listOf(
-    listOf("★","☆","✓","✗","▲","▼","◆","◇","●","○","→","←","↑","↓","⇄","⇒",
-           "※","§","¶","©","®","™","℃","℉","♥","♦"),
-    listOf("「","」","『","』","《","》","〈","〉","【","】","〔","〕","——","……","～","·",
-           "；","：","？！","“","”","‘","’"),
-    listOf("±","×","÷","≠","≈","≤","≥","∑","∏","√","∫","∂","∞","∈","∉","⊂",
-           "⊆","∪","∩","α","β","γ","θ","λ","π","σ","ω","Δ","Ω","°"),
-    listOf("Ⅰ","Ⅱ","Ⅲ","Ⅳ","Ⅴ","Ⅵ","Ⅶ","Ⅷ","Ⅸ","Ⅹ","Ⅺ","Ⅻ",
-           "ⅰ","ⅱ","ⅲ","ⅳ","ⅴ","ⅵ","ⅶ","ⅷ","ⅸ","ⅹ")
-)
+/**
+ * 符號表。**來源是核心的 `symbolPalette()`，不在這裡寫死**（工作項 S-63）。
+ *
+ * 原本兩個平台各寫一份，靠一句「與 Apple 端逐字相同」的註解維持一致 ——
+ * 註解攔不住任何東西。加一個符號時只改一邊，症狀會是「iPad 上插得到的
+ * 符號在 Android 上找不到」，而且兩邊各自看起來都很完整，沒有人會發現。
+ */
+private val SYMBOL_SETS: List<List<String>> by lazy {
+    symbolCategories().map { symbolPalette(it) }
+}
 
 private data class ChipSpec(val label: String, val selected: Boolean, val onClick: () -> Unit)
 

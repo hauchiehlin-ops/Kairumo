@@ -48,6 +48,8 @@ import com.kairumo.padnote.text.TextBoxLayer
 import com.kairumo.padnote.text.TextBoxStore
 import uniffi.padnote_core.PadnoteSession
 import uniffi.padnote_core.ToolKind
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 
 /**
  * 頁面顯示模式。與 Apple 的 `PageDisplayMode` 是同一組值 ——
@@ -146,6 +148,7 @@ fun ContinuousPagesView(
 ) {
     val listState = rememberLazyListState()
     val density = LocalDensity.current.density
+    val scope = rememberCoroutineScope()
 
 
     // 畫面中央最近的那一頁 = 焦點頁。用 layoutInfo 而不是
@@ -205,6 +208,31 @@ fun ContinuousPagesView(
                         )
                     }
                 }
+            }
+        }
+
+        // 可拖曳的捲軸（工作項 S-63）。與 Apple 端同一個理由：系統的捲動
+        // 指示器是純顯示的，接鍵鼠的平板／Chromebook／DeX 上拖不動；
+        // 而且長筆記需要一個「還有多長」的位置感。
+        val info = listState.layoutInfo
+        val viewport = (info.viewportEndOffset - info.viewportStartOffset).toFloat()
+        val itemSpan = info.visibleItemsInfo.firstOrNull()?.size?.toFloat() ?: 0f
+        val total = itemSpan * maxOf(1, pageCount)
+        if (total > 0f && viewport > 0f) {
+            val scrolled = listState.firstVisibleItemIndex * itemSpan +
+                listState.firstVisibleItemScrollOffset
+            val scrollable = (total - viewport).coerceAtLeast(1f)
+            CanvasScrollbar(
+                visibleFraction = (viewport / total).coerceIn(0f, 1f),
+                scrollFraction = (scrolled / scrollable).coerceIn(0f, 1f),
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 4.dp, top = 10.dp, bottom = 10.dp)
+            ) { fraction ->
+                val targetPx = fraction * scrollable
+                val index = (targetPx / itemSpan).toInt().coerceIn(0, maxOf(0, pageCount - 1))
+                val offset = (targetPx - index * itemSpan).toInt().coerceAtLeast(0)
+                scope.launch { listState.scrollToItem(index, offset) }
             }
         }
     }
