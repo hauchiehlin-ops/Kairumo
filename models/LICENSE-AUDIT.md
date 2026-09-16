@@ -10,11 +10,11 @@
 | 模型 | 權重授權 | 可用於 Padnote？ |
 |---|---|---|
 | `silero-vad-v4` | MIT | ✅ **已採用**（S-26） |
-| `whisper-large-v3-turbo` | MIT | ✅ 可用 |
+| `whisper-large-v3-turbo` | MIT | ✅ **預設的語音辨識模型**（ADR-0013） |
 | `ppocr-v5` | Apache-2.0 | ✅ 可用 |
 | `qwen3-4b-instruct` | Apache-2.0 | ✅ 可用 |
-| `paraformer-zh-streaming` | Apache-2.0（**repo 內含完整授權原文**） | ✅ **已自行匯出**（D-07 選 C） |
-| `ct-punc`（中文標點） | Apache-2.0（**僅 model card 標籤**） | ⚠️ 證據較弱，且**體積不可行**（見 §6） |
+| `paraformer-zh-streaming` | Apache-2.0（**repo 內含完整授權原文**） | ⚪ 選用（已自行匯出）—— 預設改為 Whisper，見 ADR-0013 |
+| `ct-punc`（中文標點） | Apache-2.0（**僅 model card 標籤**） | ⚪ **已退出預設路徑**（2026-09-17，ADR-0013）—— Whisper 自己就會標點 |
 | `sensevoice-small` | ❌ FunASR Model License v1.1 | ❌ **不採用** |
 | speaker-diarization | 未確認 | ⏸️ 延後（P2） |
 
@@ -161,7 +161,29 @@ logits 相關係數: 1.0000
 **工程上的建議：C**。官方 repo 的 Apache-2.0 LICENSE 檔是最強的授權依據，
 自行匯出讓整條鏈都落在那份授權底下。但這是**帶法律性質的判斷，應由專案擁有者決定**。
 
-### ✅ 已決議（2026-09-12）：選擇 C
+### ✅ 已定案（2026-09-17）：改用 Whisper 為預設，ct-punc 退出預設路徑
+
+見 [`docs/adr/0013-whisper-as-the-default-asr.md`](../docs/adr/0013-whisper-as-the-default-asr.md)。
+
+選 C 解決的是 provenance（來源可追），**沒有解決條款衝突本身** —— 那不是
+匯出流程能解的，同一份權重仍然同時掛著 Apache-2.0 與「僅供參考與學習」。
+而 ct-punc 那一邊連 repo 內的授權原文都沒有，是整份清單裡最弱的一項。
+
+改用 Whisper（MIT、單一通路）之後：
+
+- 條款衝突整個不存在了；
+- **Whisper 自己就會標點**，所以 C5 不再需要 ct-punc —— 293 MB 的下載與
+  那條最弱的鏈一起消失；
+- 一個模型覆蓋六個語系（Paraformer 只做中文，另外五種本來就得找 Whisper）。
+
+Paraformer 與 ct-punc **沒有被移除**，只是標成 `optional`：清單裡找得到、
+想用的人挑得到，但第一次開錄音的人不會被要求下載條款衝突的權重。
+`padnote_models::DEFAULT_ASR_MODEL` 是唯一的來源，並由
+`the_default_asr_model_is_the_one_with_a_clean_licence` 釘住。
+
+#### 下面是 2026-09-12 當時的決議（保留紀錄）
+
+原決議：選擇 C
 
 見 `docs/adr/0006-self-export-funasr-onnx.md`。匯出流程為
 `scripts/export-funasr-onnx.py`，產出的 `PROVENANCE.json` 記錄：

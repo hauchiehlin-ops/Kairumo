@@ -292,6 +292,8 @@ mod tests {
             size_bytes: data.len() as u64,
             license: "MIT".into(),
             required_for: vec!["asr.zh".into()],
+            optional: false,
+            notes: String::new(),
         }
     }
 

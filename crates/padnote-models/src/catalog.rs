@@ -14,6 +14,16 @@ pub struct ModelEntry {
     /// 哪些能力需要它，例如 `["asr.zh"]`。
     #[serde(default)]
     pub required_for: Vec<String>,
+    /// 選用。使用者不會被要求下載它，除非他自己挑了這個引擎。
+    ///
+    /// 用來把**授權有爭議**的模型擋在預設路徑之外（決策 D-07）：
+    /// 它仍然留在清單裡（想用的人挑得到），但第一次開錄音的人不會被
+    /// 要求下載一個條款互相衝突的權重。
+    #[serde(default)]
+    pub optional: bool,
+    /// 給人看的說明。不影響任何判斷。
+    #[serde(default)]
+    pub notes: String,
 }
 
 impl ModelEntry {
@@ -137,6 +147,8 @@ mod tests {
             size_bytes: 1,
             license: "MIT".into(),
             required_for: vec![],
+            optional: false,
+            notes: String::new(),
         };
         assert!(!m.is_well_formed());
     }

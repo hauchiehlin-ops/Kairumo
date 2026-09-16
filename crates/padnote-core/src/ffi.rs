@@ -1604,7 +1604,7 @@ impl PadnoteSession {
     fn wrap(session: NotebookSession) -> Self {
         Self {
             inner: Mutex::new(session),
-            setup: Mutex::new(SetupCenter::new("paraformer-zh", "qwen3-4b-instruct-q4")),
+            setup: Mutex::new(SetupCenter::new(DEFAULT_ASR_MODEL, DEFAULT_LLM_MODEL)),
         }
     }
 
@@ -1966,13 +1966,16 @@ fn feature_name(f: Feature) -> &'static str {
     }
 }
 
+// 預設模型的定義在 `padnote_models` —— 清單的擁有者就該是那個名字的
+// 唯一來源。在這裡再寫一份的話，改了清單卻沒改這裡就會靜默不一致。
+use padnote_models::{DEFAULT_ASR_MODEL, DEFAULT_LLM_MODEL};
 fn parse_capability(s: &str) -> Option<Capability> {
     Some(match s {
         "microphone" => Capability::Microphone,
         "speech" => Capability::SpeechPermission,
         "handwriting" => Capability::Handwriting,
-        "asr_model" => Capability::AsrModel("paraformer-zh".into()),
-        "llm_model" => Capability::LlmModel("qwen3-4b-instruct-q4".into()),
+        "asr_model" => Capability::AsrModel(DEFAULT_ASR_MODEL.into()),
+        "llm_model" => Capability::LlmModel(DEFAULT_LLM_MODEL.into()),
         "local_folder" => Capability::LocalSyncFolder,
         "icloud" => Capability::ICloudDrive,
         "google_drive" => Capability::GoogleDrive,

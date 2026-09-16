@@ -102,3 +102,37 @@ fn capabilities_referenced_by_the_app_are_covered() {
         );
     }
 }
+
+#[test]
+fn the_default_asr_model_is_the_one_with_a_clean_licence() {
+    // 決策 D-07：預設走 Whisper（MIT、單一通路），不是 Paraformer + ct-punc。
+    //
+    // 這條測試釘住的不是「哪個模型比較好」，而是**預設不會悄悄漂回去**。
+    // `ffi.rs` 裡那個常數改掉、或清單裡的 `optional` 被拿掉，都會在這裡紅。
+    let c = manifest();
+    let default_id = padnote_models::DEFAULT_ASR_MODEL;
+
+    let entry = c
+        .get(default_id)
+        .unwrap_or_else(|| panic!("預設的語音辨識模型 {default_id} 不在清單裡"));
+
+    assert!(
+        entry.license.contains("MIT"),
+        "預設模型 {default_id} 的授權是「{}」—— D-07 要的是單一通路、沒有爭議的授權",
+        entry.license
+    );
+    assert!(
+        entry.required_for.iter().any(|c| c == "asr.zh"),
+        "預設模型要能做中文，否則中文使用者還是會被導去 Paraformer"
+    );
+
+    // 授權有爭議的那兩個必須是選用的 —— 不是選用的話，
+    // 使用者第一次開錄音就會被要求下載它們。
+    for id in ["paraformer-zh", "ct-punct-zh"] {
+        let e = c.get(id).unwrap_or_else(|| panic!("{id} 不在清單裡"));
+        assert!(
+            e.optional,
+            "{id} 的授權有雙通路衝突（見 models/LICENSE-AUDIT.md），不能是預設要下載的"
+        );
+    }
+}

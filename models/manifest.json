@@ -21,20 +21,24 @@
       "url": "https://huggingface.co/csukuangfj/sherpa-onnx-streaming-paraformer-bilingual-zh-en/resolve/main/model.onnx",
       "sha256": "pending",
       "size_bytes": 230686720,
-      "license": "apache-2.0 (HF funasr/*) / 與 GitHub MODEL_LICENSE v1.1 衝突 — 見 models/LICENSE-AUDIT.md，待決策 D-07",
+      "license": "Apache-2.0（HuggingFace funasr/paraformer-zh-streaming，repo 內含授權全文）",
       "required_for": [
         "asr.zh"
-      ]
+      ],
+      "optional": true,
+      "notes": "可選。D-07 已改採 Whisper 為預設；這一項的授權證據是 FunASR 那一對裡最強的（repo 內含 Apache-2.0 全文），保留給想用串流中文模型的人自行選用。"
     },
     {
       "id": "ct-punct-zh",
       "url": "https://huggingface.co/csukuangfj/sherpa-onnx-punct-ct-transformer/resolve/main/model.onnx",
       "sha256": "pending",
       "size_bytes": 293601280,
-      "license": "apache-2.0 (HF funasr/*) / 與 GitHub MODEL_LICENSE v1.1 衝突 — 見 models/LICENSE-AUDIT.md，待決策 D-07",
+      "license": "apache-2.0（僅 HuggingFace model card 標籤，repo 內無授權原文）與 FunASR MODEL_LICENSE v1.1 衝突",
       "required_for": [
         "asr.zh"
-      ]
+      ],
+      "optional": true,
+      "notes": "**已退出預設路徑（D-07）。** 授權證據是全清單裡最弱的一項，而 Whisper 自己就會標點，所以預設流程不再需要它。只有選用 Paraformer 的人才會用到。"
     },
     {
       "id": "whisper-large-v3-turbo-q5",
@@ -43,9 +47,11 @@
       "size_bytes": 574041600,
       "license": "MIT",
       "required_for": [
+        "asr.zh",
         "asr.multilingual",
         "asr.codeswitch"
-      ]
+      ],
+      "notes": "預設的語音辨識模型（D-07）。MIT 權重、單一通路，而且自己就會標點 —— 中文不必再接 ct-punc。"
     },
     {
       "id": "ppocr-v5",
