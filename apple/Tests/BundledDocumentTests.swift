@@ -82,15 +82,23 @@ final class BundledDocumentTests: XCTestCase {
 
     func testDocumentsDoNotNameOperatingSystems() throws {
         // 同一份手冊要給所有平台的使用者看。列出某個平台的名字，
-        // 會讓其他平台的使用者以為那些功能自己沒有。
+        // 會讓其他平台的使用者以為那些功能自己沒有。而且那種句子**遲早
+        // 會變成謊話** —— 平台補上那個功能時，沒有人會記得回來改手冊。
+        //
+        // **`manual.js` 也要驗。** 手冊的內容在那裡，不在 HTML 裡 ——
+        // 這份測試原本只看兩個 HTML，所以漏掉了寫在 manual.js 裡的
+        // 「Android 版沒有轉錄」，一路到 Android 的 instrumented 測試
+        // 才被擋下來（那邊三個檔案都驗）。兩邊要驗同一組東西。
         let forbidden = ["iPad", "iPhone", "iOS", "macOS", "Android", "Apple Pencil", "iCloud"]
+        var sources: [(String, String)] = []
         for document in [BundledDocument.manual, .privacy] {
-            let html = try contents(of: document)
+            sources.append((document.rawValue, try contents(of: document)))
+        }
+        sources.append(("manual.js", try manualScript()))
+
+        for (name, text) in sources {
             for word in forbidden {
-                XCTAssertFalse(
-                    html.contains(word),
-                    "\(document.rawValue) 裡出現了「\(word)」"
-                )
+                XCTAssertFalse(text.contains(word), "\(name) 裡出現了「\(word)」")
             }
         }
     }

@@ -85,6 +85,19 @@ class DocsAssetTest {
         // 使用者問過「備份的功能在哪裡」—— 手冊裡沒有這一段，
         // 那本身就是問題的一部分。六個語系都要有。
         val manual = assets.open("manual/manual.js").bufferedReader().use { it.readText() }
-        assertEquals(6, manual.split("id: \"data\"").size - 1)
+        assertEquals(6, sectionCount("data", manual))
     }
+
+    /**
+     * 手冊裡有幾個語系宣告了這個 section id。
+     *
+     * **兩種寫法都要算。** `manual.js` 是手寫的 JS，但重新產生時會走
+     * `JSON.stringify`，鍵名會從 `id: "data"` 變成 `"id":"data"` ——
+     * 只比對其中一種的話，內容明明還在，測試卻會紅，而看到的人會以為
+     * 是手冊掉了一節。這裡要驗的是**內容**，不是排版。
+     * （Apple 端的 `BundledDocumentTests` 有一份等價的實作。）
+     */
+    private fun sectionCount(id: String, manual: String): Int =
+        listOf("id: \"$id\"", "\"id\":\"$id\"", "\"id\": \"$id\"")
+            .sumOf { manual.split(it).size - 1 }
 }

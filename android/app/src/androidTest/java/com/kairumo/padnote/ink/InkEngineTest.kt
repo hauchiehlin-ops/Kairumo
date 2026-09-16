@@ -286,12 +286,19 @@ class InkToolbarTest {
 
     @Test
     fun everyBrushMapsToACoreToolExceptTheEraser() {
-        // 擦除不是一種筆刷 —— 核心的 ToolKind 只有筆刷種類，擦除走 erase_stroke。
+        // 擦除與套索**都不是筆刷** —— 核心的 ToolKind 只有筆刷種類。
+        // 擦除走 erase_stroke，套索是選取工具（L-06），兩個都畫不出線。
+        //
+        // 套索是後來加的，而這條測試當時沒跟著改 —— 加一個非筆刷的工具
+        // 就要在這裡列出來，否則這條測試會把「新工具」誤判成「漏接核心」。
         for (tool in InkTool.entries) {
-            if (tool == InkTool.ERASER) {
-                assertTrue("橡皮擦不該對到某一種筆刷", tool.isEraser)
-            } else {
-                assertTrue("${tool.name} 沒有對到核心的筆刷", tool.kind != null)
+            when {
+                tool == InkTool.ERASER ->
+                    assertTrue("橡皮擦不該對到某一種筆刷", tool.isEraser)
+                tool.isLasso ->
+                    assertTrue("套索不該對到某一種筆刷", tool.kind == null)
+                else ->
+                    assertTrue("${tool.name} 沒有對到核心的筆刷", tool.kind != null)
             }
         }
     }

@@ -96,6 +96,10 @@ Kairumo —— 手寫、打字、錄音轉文字三合一的筆記 App。
   警告在那裡就是錯誤。本機要跑
   `RUSTFLAGS="-D warnings" cargo clippy --workspace --all-targets`
 - ❌ 用 `grep -E "^error"` 過濾建置輸出 —— 會把警告濾掉，而 CI 不會
+- ❌ 在共用手冊裡寫「某某平台沒有某功能」—— 六個語系所有平台共用一份，
+  而且那句話在該平台補上功能的那天就變成謊話。改寫成「你這台裝置有沒有」
+- ❌ 加了不是筆刷的新工具（套索）卻沒更新 `everyBrushMapsToACoreTool...`
+  —— 那條測試會把新工具誤判成「漏接核心」
 - ❌ 以為 `page.blocks()` 就是一頁的全部 —— 形狀與連接線住在**物件樹**裡，
   只走 blocks 的算繪會少掉整張流程圖
 - ❌ 以為 Paraformer 的串流是靠 encoder cache —— 官方匯出本來就沒有 cache 輸入，
