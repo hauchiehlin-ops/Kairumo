@@ -102,7 +102,10 @@
   但其模型權重授權尚未確認（H3）
 
 ### H4. Apple Pencil 實機行為驗證
-- 壓感曲線調校、懸停（hover）、雙擊切換工具
+- 壓感曲線調校、懸停（hover）
+- **雙擊切換工具：程式已完成（S-67）**，照 `UIPencilInteraction.preferredTapAction`
+  走。要驗的只剩「實體二代筆敲下去真的會收到事件」—— 對應規則本身已有
+  單元測試（`PencilDoubleTapTests`）。模擬器發不出這個事件
 - `coalescedTouches` 在 120Hz 下的實際取樣數
 - 熱節流與長時間書寫的延遲漂移
 
@@ -170,6 +173,12 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | S-43 | WP7 | `padnote-pdf-pdfium`：以 PDFium 寫入真實標註（`create_annotated_pdf` 實作與回讀驗證）|
 | S-55 | — | 列印流程：`print_data` + Apple (UIPrintInteractionController/NSPrintOperation) 與 Android (PrintManager) 整合 |
 
+| ~~S-65~~ ✅ | 鍵盤快捷鍵 | **Android 原本完全沒有這一層**（grep 不到任何 `onKeyEvent`／`KeyShortcut`），接鍵盤的平板因此少一整組功能。補上 `AppCommands` 命令匯流排 + `Activity.onKeyDown`：Ctrl+Shift+N 新筆記、Ctrl+F 搜尋、Ctrl+E 切手寫／打字、Ctrl+1–6 選工具。用 `onKeyDown` 而不是 `dispatchKeyEvent` —— 後者會把 Ctrl+A 從文字框手上搶走。adb 端到端驗過 |
+| ~~S-66~~ ✅ | 首次啟動引導與權限 | iOS／Android 都不可能「安裝時要權限」，系統對話框一輩子只跳一次。改成第一次打開時把話講清楚（要哪個權限、為什麼、不給會少什麼），當場給按鈕；已被拒絕過就改成送進設定頁。兩端同一套流程。順手移除 Android 沒人用的 `ACCESS_WIFI_STATE` 與 `NEARBY_WIFI_DEVICES` |
+| ~~S-67~~ ✅ | 觸控筆快速切橡皮擦 | Apple Pencil 雙擊筆桿（照系統 `preferredTapAction` 走）／Android 筆桿側鍵與反向筆頭。硬體事件不同，「切到哪去、再切回哪裡」同一套規則。實機行為列 H4／A-14 |
+| ~~S-68~~ ✅ | 跨 App 拖放圖片 | 分割畫面下把相簿的圖直接拖進畫布。落點與尺寸走共用的 `ImageDropPlacement`（縮到 280pt、不放大小圖、以落點為中心並夾回頁內）。Apple 端已在 iPad 模擬器分割畫面實地驗過；Android 列 A-13 |
+| ~~多視窗並排~~ ✅ | — | iPad 分割畫面實測：首頁與編輯器在窄欄下都正常重排，兩個 App 並排運作正常。`UIApplicationSupportsMultipleScenes` 早已開啟（Catalyst 的獨立視窗要用）。Android 的 `MainActivity` 沒有 `singleTask`、`configChanges` already 含 `screenSize\|screenLayout`，分割畫面本來就成立 |
+
 ### 待做
 | ID | 工作包 | 內容 | 備註 |
 |---|---|---|---|
@@ -236,6 +245,8 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | A-11 | 雲端同步端到端 | 兩台真實裝置指到同一個雲端資料夾，A 寫的字在 B 上打得開 | 檔案層級的邏輯已測；雲端傳輸是 OS 與服務的事 |
 | A-12 | 同步資料夾權限存活 | 重啟 App 後仍有存取權，不需重選資料夾 | Apple 用 security-scoped bookmark、Android 用 persistable URI permission |
 | A-10 | 分組門檻 | 正常書寫節奏下，一個詞不會被切成兩組 | 停頓門檻 700ms 是起點值 |
+| A-13 | 跨 App 拖放圖片 | 平板分割畫面下，從相簿拖一張圖到畫布：圖落在放開的位置、比例正確 | 程式已完成（`Modifier.dragAndDropTarget` + `requestDragAndDropPermissions`），落點規則有測試。**手上只有 320×640dp 的手機 AVD**，分割畫面拖放不是那個尺寸的真實情境，所以沒在模擬器上驅動過。Apple 端同一套流程已在 iPad 模擬器驗過 |
+| A-14 | 觸控筆側鍵切橡皮擦 | 按著側鍵畫過筆跡會擦掉，放開回到原本那支筆；把筆倒過來同樣會擦 | 規則有測試（`StylusButtonTest`）。`buttonState` 要實體觸控筆才發得出來，`adb input` 送不出來。與 S-40 同一批硬體 |
 
 **測試方式**：`cd android && ANDROID_HOME="$HOME/Library/Android/sdk" ./gradlew :app:installDebug`，
 寫字時截圖那條診斷列即可，它會顯示平台回報的工具類型、接觸半徑、壓感、密度與仲裁結果。

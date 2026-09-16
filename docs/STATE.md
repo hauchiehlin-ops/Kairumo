@@ -147,6 +147,21 @@ Kairumo —— 手寫、打字、錄音轉文字三合一的筆記 App。
   只走 blocks 的算繪會少掉整張流程圖
 - ❌ 以為 Paraformer 的串流是靠 encoder cache —— 官方匯出本來就沒有 cache 輸入，
   分塊狀態封在圖內，目前只能段級串流
+- ❌ 以為「安裝時就能要到權限」—— iOS 與 Android 13+ 都不會在安裝時跳任何
+  對話框，而系統的權限對話框**一個 App 一輩子只跳一次**。能做的是第一次
+  打開時把話講清楚並當場給按鈕；已被拒絕過的話唯一還走得通的路是設定頁
+- ❌ 在 Catalyst 上想用截圖或 AX 驗畫面 —— AX 樹是空的，截圖會抓到別的視窗。
+  **改用 iOS 模擬器**：`xcrun simctl io <udid> screenshot` 拍的一定是那台
+  模擬器，不跟視窗管理員打架，而且同一份程式碼跑的是同一套 SwiftUI
+- ❌ 把 `didSet` 掛在 `@State` 上 —— 透過 binding（`$foo`）改值時不會觸發，
+  結果是「用某些 UI 改會記到、用另一些不會」。要用 `.onChange(of:)`
+- ✅ 硬體事件驗不到時，把**規則**抽成純函式來驗。Apple Pencil 雙擊要實體
+  二代筆、觸控筆側鍵要實體筆（`adb input` 送不出 `buttonState`）。不抽出來
+  的話那段邏輯就是完全沒驗過 —— 而「切過去」容易寫對，「切回哪裡」才是
+  會錯的地方
+- ❌ Android 跨 App 拖放忘了 `requestDragAndDropPermissions` —— 拖進來的 URI
+  預設讀不到，`openInputStream` 丟 SecurityException，症狀是「從相簿拖過來
+  什麼也沒發生」，畫面上沒有任何提示指向這裡
 
 ## 文件地圖
 
