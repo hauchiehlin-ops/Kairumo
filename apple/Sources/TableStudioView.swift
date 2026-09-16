@@ -161,7 +161,9 @@ public struct TableStudioView: View {
     /// 時會塌成一格：使用者看到的是一個文字框，其餘的行列完全不見 ——
     /// 而控制列（合併、刪除欄列）仍然是正常的，所以看起來像「表格壞了」。
     /// VStack + HStack 在兩個平台上的行為一致。
-    private var grid: some View {
+    // internal（而不是 private）是為了讓測試能單獨把它算繪出來量尺寸 ——
+    // 整個面板包在 `NavigationStack` 裡，`ImageRenderer` 對它回 nil。
+    var grid: some View {
         VStack(alignment: .leading, spacing: 4) {
             ForEach(0..<table.rows, id: \.self) { row in
                 HStack(spacing: 4) {
