@@ -16,6 +16,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.kairumo.padnote.LocalizationStrings
+import com.kairumo.padnote.ui.LocalAppLanguage
 import androidx.compose.ui.unit.dp
 
 /**
@@ -37,6 +41,7 @@ fun ResizeHandle(
     onCommit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val handleLabel = LocalizationStrings.localized("resize_handle", LocalAppLanguage.current)
     Box(
         modifier = modifier.size((widthDp + HANDLE_DP).dp, (heightDp + HANDLE_DP).dp)
     ) {
@@ -55,6 +60,10 @@ fun ResizeHandle(
                         onDragEnd = { onCommit() }
                     )
                 }
+                // 標籤放在**可拖曳的容器**上，不是裡面那顆圖示 —— 圖示是
+                // 裝飾（所以維持 null），真正能操作的是這個 Box。
+                // 沒有它的話，TalkBack 掃過畫布上的把手時什麼也不會念。
+                .semantics { contentDescription = handleLabel }
         ) {
             Icon(
                 imageVector = Icons.Filled.Add,

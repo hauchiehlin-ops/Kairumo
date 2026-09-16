@@ -1284,10 +1284,16 @@ public struct NotebookEditorView: View {
     // （核心有測試釘住格式），但用 `map` 會得到 `[Color?]` 而編不過。
     private let colorPalette: [Color] = inkPalette().compactMap { Color(hex: $0.hex) }
 
-    /// 墨色的語系名稱，給無障礙標籤用 —— 純色點沒有文字，
-    /// VoiceOver 念出來只會是「按鈕」。
-    private var inkColorNames: [String] {
-        inkPalette().map { localizationManager.localized($0.key) }
+    /// 某個墨色的語系名稱，給無障礙標籤用。
+    ///
+    /// 用 hex 反查而不是靠索引：色票的順序將來可能會變，靠索引對的話
+    /// 名字會悄悄錯位 —— 而那種錯誤只有開著 VoiceOver 才聽得出來。
+    private func inkColorName(for color: Color) -> String {
+        let target = inkPalette().first { Color(hex: $0.hex) == color }
+        guard let key = target?.key else {
+            return localizationManager.localized("custom_color")
+        }
+        return localizationManager.localized(key)
     }
 
     /// 要求外層改綁到另一則筆記。
@@ -1646,6 +1652,7 @@ public struct NotebookEditorView: View {
                 .shadow(color: Color.accentColor.opacity(0.3), radius: 3, y: 1)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("home"))
             .help(localizationManager.localized("home"))
 
             // 筆記結構側邊欄切換鈕
@@ -1667,6 +1674,7 @@ public struct NotebookEditorView: View {
                 .cornerRadius(8)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("structure_sidebar"))
             .help(localizationManager.localized("structure_sidebar"))
 
             Spacer()
@@ -1729,6 +1737,7 @@ public struct NotebookEditorView: View {
                     Image(systemName: "plus.square.dashed")
                         .foregroundColor(.accentColor)
                 }
+                .accessibilityLabel(localizationManager.localized("add_page"))
                 .help(localizationManager.localized("add_page"))
             }
 
@@ -1745,6 +1754,7 @@ public struct NotebookEditorView: View {
                     .background(isRulerActive ? Color.accentColor.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
                     .cornerRadius(6)
             }
+            .accessibilityLabel(localizationManager.localized("ruler"))
             .help(localizationManager.localized("ruler"))
 
             // 復原與重做 (Undo / Redo)
@@ -1759,6 +1769,7 @@ public struct NotebookEditorView: View {
                         .background(Color(uiColor: .tertiarySystemGroupedBackground))
                         .cornerRadius(6)
                 }
+                .accessibilityLabel(localizationManager.localized("undo"))
                 .help(localizationManager.localized("undo"))
 
                 Button {
@@ -1771,6 +1782,7 @@ public struct NotebookEditorView: View {
                         .background(Color(uiColor: .tertiarySystemGroupedBackground))
                         .cornerRadius(6)
                 }
+                .accessibilityLabel(localizationManager.localized("redo"))
                 .help(localizationManager.localized("redo"))
             }
 
@@ -1791,6 +1803,7 @@ public struct NotebookEditorView: View {
                 .cornerRadius(7)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("asset_library"))
             .help(localizationManager.localized("asset_library"))
 
             // ➕ 插入物件下拉選單（整合圖片、算式、圖表、3D、主題工具）
@@ -1894,6 +1907,7 @@ public struct NotebookEditorView: View {
                 .cornerRadius(7)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("insert_object"))
             .help(localizationManager.localized("insert_object"))
 
             // 💬 畫布討論圖釘快捷按鈕
@@ -1928,6 +1942,7 @@ public struct NotebookEditorView: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("comment_pin"))
             .help(localizationManager.localized("comment_pin"))
 
             // 👥 線上多人即時協同按鈕
@@ -1959,6 +1974,7 @@ public struct NotebookEditorView: View {
                 )
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("collaborate"))
             .help(localizationManager.localized("collaborate"))
 
             // 錄音按鈕
@@ -2044,6 +2060,7 @@ public struct NotebookEditorView: View {
                 .shadow(color: Color.accentColor.opacity(0.3), radius: 2, y: 1)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("export_print"))
             .help(localizationManager.localized("export_print"))
         }
     }
@@ -2070,6 +2087,7 @@ public struct NotebookEditorView: View {
             .cornerRadius(7)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(localizationManager.localized("home"))
         .help(localizationManager.localized("home"))
 
         // 筆記結構側邊欄切換
@@ -2200,6 +2218,7 @@ public struct NotebookEditorView: View {
                 .cornerRadius(6)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(localizationManager.localized("more_tools"))
         .help(localizationManager.localized("more_tools"))
 
         // 錄音
@@ -2908,6 +2927,7 @@ ZStack(alignment: .topTrailing) {
                         .shadow(color: Color.black.opacity(0.12), radius: 4, y: 2)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("add_next_page"))
                     .help(localizationManager.localized("add_next_page"))
 
                     // 「延長本頁」已移除：頁面高度固定（PageGeometry），
@@ -3047,6 +3067,8 @@ ZStack(alignment: .topTrailing) {
             .cornerRadius(6)
         }
         .buttonStyle(.plain)
+        // help 是補充說明（hint），標籤要用按鈕本身的名字。
+        .accessibilityLabel(localizationManager.localized(titleKey))
         .help(localizationManager.localized(hintKey))
     }
 
@@ -3109,6 +3131,9 @@ ZStack(alignment: .topTrailing) {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // compact 時這顆只有圖示，沒有文字可念。
+        .accessibilityLabel(localizationManager.localized(titleKey))
+        .accessibilityAddTraits(isActive ? [.isSelected] : [])
         .help(localizationManager.localized(titleKey))
     }
 
@@ -3142,6 +3167,7 @@ ZStack(alignment: .topTrailing) {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(localizationManager.localized("add_page"))
                         .help(localizationManager.localized("add_page"))
                     } else {
                         Button {
@@ -3156,6 +3182,7 @@ ZStack(alignment: .topTrailing) {
                                 .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(localizationManager.localized("new_subfolder"))
                         .help(localizationManager.localized("new_subfolder"))
                     }
 
@@ -3365,6 +3392,7 @@ ZStack(alignment: .topTrailing) {
                         .foregroundColor(.secondary)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(localizationManager.localized("edit_root_folder"))
                 .help(localizationManager.localized("edit_root_folder"))
             }
             .padding(8)
@@ -3720,6 +3748,10 @@ ZStack(alignment: .topTrailing) {
                         .cornerRadius(8)
                     }
                     .buttonStyle(.plain)
+                    // 工具列在窄螢幕上不顯示文字標籤（showToolLabels = false），
+                    // 那時整排都是純圖示。
+                    .accessibilityLabel(localizationManager.localized(tool.localizationKey))
+                    .accessibilityAddTraits(selectedTool == tool ? [.isSelected] : [])
                 }
 
                 ToolbarSeparator()
@@ -3745,6 +3777,8 @@ ZStack(alignment: .topTrailing) {
                         .cornerRadius(DS.Radius.s)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized(tool.localizationKey))
+                    .accessibilityAddTraits(selectedTool == tool ? [.isSelected] : [])
                 }
 
                 ToolbarSeparator()
@@ -3804,6 +3838,10 @@ ZStack(alignment: .topTrailing) {
                                 )
                         }
                         .buttonStyle(.plain)
+                        // 純色圓點沒有任何文字 —— VoiceOver 念出來只會是
+                        // 「按鈕」，使用者無從知道自己選的是哪一支筆。
+                        .accessibilityLabel(inkColorName(for: color))
+                        .accessibilityAddTraits(selectedColor == color ? [.isSelected] : [])
                     }
 
                     // 任意色只留一個入口（工作項 S-62）。
@@ -3820,6 +3858,7 @@ ZStack(alignment: .topTrailing) {
                             .frame(width: DS.Icon.medium, height: DS.Icon.medium)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("pro_color"))
                     .help(localizationManager.localized("pro_color"))
                 }
 
@@ -3852,6 +3891,7 @@ ZStack(alignment: .topTrailing) {
                             .cornerRadius(6)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(localizationManager.localized("delete_selected"))
                         .help(localizationManager.localized("delete_selected"))
                     }
                 }
@@ -3890,6 +3930,7 @@ ZStack(alignment: .topTrailing) {
                     .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(localizationManager.localized("more_tools"))
                 .help(localizationManager.localized("more_tools"))
 
                 ToolbarSeparator()
@@ -3904,6 +3945,7 @@ ZStack(alignment: .topTrailing) {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
+                    .accessibilityLabel(localizationManager.localized("undo"))
                     .help(localizationManager.localized("undo"))
 
                     Button {
@@ -3913,6 +3955,7 @@ ZStack(alignment: .topTrailing) {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
+                    .accessibilityLabel(localizationManager.localized("redo"))
                     .help(localizationManager.localized("redo"))
 
                     // 「清空整頁」與復原／重做之間要有分隔（工作項 S-62）。
@@ -3932,6 +3975,7 @@ ZStack(alignment: .topTrailing) {
                             .font(.subheadline)
                             .foregroundStyle(DS.Color.destructive)
                     }
+                    .accessibilityLabel(localizationManager.localized("clear_page"))
                     .help(localizationManager.localized("clear_page"))
                 }
     }
@@ -3988,6 +4032,7 @@ ZStack(alignment: .topTrailing) {
                     .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(localizationManager.localized("word_studio"))
                 .help(localizationManager.localized("word_studio"))
 
                 Divider().frame(height: 22)
@@ -4053,6 +4098,7 @@ ZStack(alignment: .topTrailing) {
                     .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(localizationManager.localized("marquee_hint"))
                 .help(localizationManager.localized("marquee_hint"))
 
                 // 插入連結
@@ -4072,6 +4118,7 @@ ZStack(alignment: .topTrailing) {
                     .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(localizationManager.localized("insert_link"))
                 .help(localizationManager.localized("insert_link"))
 
                 // ⋯ 更多：次要插入工具
@@ -4101,6 +4148,7 @@ ZStack(alignment: .topTrailing) {
                     .cornerRadius(8)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(localizationManager.localized("more_tools"))
                 .help(localizationManager.localized("more_tools"))
 
                 // 「延長本頁」已移除：頁面高度固定（PageGeometry），
@@ -4117,6 +4165,7 @@ ZStack(alignment: .topTrailing) {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
+                    .accessibilityLabel(localizationManager.localized("undo"))
                     .help(localizationManager.localized("undo"))
 
                     Button {
@@ -4126,6 +4175,7 @@ ZStack(alignment: .topTrailing) {
                             .font(.subheadline)
                             .foregroundColor(.secondary)
                     }
+                    .accessibilityLabel(localizationManager.localized("redo"))
                     .help(localizationManager.localized("redo"))
                 }
     }
@@ -4294,6 +4344,7 @@ ZStack(alignment: .topTrailing) {
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
+            .accessibilityLabel(localizationManager.localized("open_folder"))
             .help(localizationManager.localized("open_folder"))
         }
         .padding(.horizontal, 10)
@@ -4353,6 +4404,7 @@ ZStack(alignment: .topTrailing) {
                 .cornerRadius(6)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("copy_selected_hint"))
             .help(localizationManager.localized("copy_selected_hint"))
 
             Button {
@@ -4370,6 +4422,7 @@ ZStack(alignment: .topTrailing) {
                 .cornerRadius(6)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("duplicate_selected_hint"))
             .help(localizationManager.localized("duplicate_selected_hint"))
 
             Button {
@@ -4387,6 +4440,7 @@ ZStack(alignment: .topTrailing) {
                 .cornerRadius(6)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("paste_strokes_hint"))
             .help(localizationManager.localized("paste_strokes_hint"))
 
             Button {
@@ -6125,6 +6179,7 @@ struct TextAttachmentItemView: View {
             .cornerRadius(7)
         }
         .buttonStyle(.plain)
+        .accessibilityLabel(localizationManager.localized(titleKey))
         .help(localizationManager.localized(titleKey))
     }
 
@@ -6229,6 +6284,7 @@ struct TextAttachmentItemView: View {
                         .clipShape(Circle())
                         .contentShape(Circle())
                         .offset(x: 10, y: 10)
+                        .accessibilityLabel(localizationManager.localized("resize_text_box"))
                         .help(localizationManager.localized("resize_text_box"))
                         .highPriorityGesture(
                             DragGesture(minimumDistance: 1,
@@ -6473,6 +6529,7 @@ struct LinkAttachmentItemView: View {
                     .buttonStyle(.plain)
                     .contentShape(Circle())
                     .offset(x: -10, y: 10)
+                    .accessibilityLabel(localizationManager.localized("link_edit"))
                     .help(localizationManager.localized("link_edit"))
                 }
             }
@@ -6568,6 +6625,7 @@ struct LinkAttachmentItemView: View {
             .clipShape(Circle())
             .contentShape(Circle())
             .offset(x: 10, y: 10)
+            .accessibilityLabel(localizationManager.localized("resize_link"))
             .help(localizationManager.localized("resize_link"))
             .highPriorityGesture(
                 DragGesture(minimumDistance: 1,

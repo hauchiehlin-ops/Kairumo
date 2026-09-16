@@ -211,6 +211,7 @@ public struct ThemeSpecificToolsView: View {
                                     }
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityLabel(localizationManager.localized("palette_tip"))
                                 .help(localizationManager.localized("palette_tip"))
                             }
                         }

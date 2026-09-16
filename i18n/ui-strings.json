@@ -5367,6 +5367,14 @@
     "zhHans": "调整录音卡片大小",
     "zhHant": "調整錄音卡片大小"
   },
+  "resize_handle": {
+    "en": "Resize handle",
+    "ja": "サイズ変更ハンドル",
+    "ko": "크기 조절 핸들",
+    "th": "ที่จับปรับขนาด",
+    "zhHans": "调整大小把手",
+    "zhHant": "調整大小把手"
+  },
   "resize_link": {
     "en": "Resize link card",
     "ja": "リンクカードのサイズを変更",
@@ -5502,6 +5510,14 @@
     "th": "โฟลเดอร์ระดับบนสุด",
     "zhHans": "最上层文件夹",
     "zhHant": "最上層資料夾"
+  },
+  "rotate_handle": {
+    "en": "Rotate handle",
+    "ja": "回転ハンドル",
+    "ko": "회전 핸들",
+    "th": "ที่จับหมุน",
+    "zhHans": "旋转把手",
+    "zhHant": "旋轉把手"
   },
   "rotate_hint": {
     "en": "Drag to Rotate",

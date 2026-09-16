@@ -5419,6 +5419,14 @@ object LocalizationStrings {
             "ko" to "녹음 카드 크기 조정",
             "th" to "ปรับขนาดการ์ดเสียง"
         ),
+        "resize_handle" to mapOf(
+            "zh-Hant" to "調整大小把手",
+            "en" to "Resize handle",
+            "zh-Hans" to "调整大小把手",
+            "ja" to "サイズ変更ハンドル",
+            "ko" to "크기 조절 핸들",
+            "th" to "ที่จับปรับขนาด"
+        ),
         "resize_link" to mapOf(
             "zh-Hant" to "調整連結卡片大小",
             "en" to "Resize link card",
@@ -5554,6 +5562,14 @@ object LocalizationStrings {
             "ja" to "ルートフォルダ",
             "ko" to "최상위 폴더",
             "th" to "โฟลเดอร์ระดับบนสุด"
+        ),
+        "rotate_handle" to mapOf(
+            "zh-Hant" to "旋轉把手",
+            "en" to "Rotate handle",
+            "zh-Hans" to "旋转把手",
+            "ja" to "回転ハンドル",
+            "ko" to "회전 핸들",
+            "th" to "ที่จับหมุน"
         ),
         "rotate_hint" to mapOf(
             "zh-Hant" to "拖曳旋轉3D視角",
@@ -5794,7 +5810,10 @@ object LocalizationStrings {
             "ja" to "録音",
             "ko" to "녹음",
             "th" to "บันทึกเสียง"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "sample_welcome_pill_type" to mapOf(
             "zh-Hant" to "打字",
             "en" to "Typing",
@@ -5810,10 +5829,7 @@ object LocalizationStrings {
             "ja" to "手書き",
             "ko" to "필기",
             "th" to "ลายมือ"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_welcome_tools_table" to mapOf(
             "zh-Hant" to "工具|它做什麼\n筆與螢光筆|粗細與顏色各自記住，換回來還是原本那一支\n橡皮擦|整筆擦或局部擦，擦掉的筆畫留有墓碑，同步得回去\n套索|圈起來就能整組搬、縮放、旋轉\n插入|圖片、表格、圖表、形狀、連結、3D、錄音\n更多|次要工具收在這裡：圖層、算式、素材庫、主題工具",
             "en" to "Tool|What it does\nPen & highlighter|Each remembers its own width and colour\nEraser|Whole-stroke or partial; erased strokes leave tombstones so they sync\nLasso|Circle a group to move, scale and rotate it together\nInsert|Image, table, chart, shape, link, 3D, recording\nMore|Secondary tools live here: layers, formulas, asset library, theme tools",
@@ -6437,7 +6453,10 @@ object LocalizationStrings {
             "ja" to "線の色",
             "ko" to "선 색상",
             "th" to "สีเส้น"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "shape_studio" to mapOf(
             "zh-Hant" to "形狀與流程圖",
             "en" to "Shapes & Flowcharts",
@@ -6453,10 +6472,7 @@ object LocalizationStrings {
             "ja" to "図形スタイル",
             "ko" to "도형 스타일",
             "th" to "สไตล์รูปทรง"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "share_invite_link" to mapOf(
             "zh-Hant" to "分享邀請連結",
             "en" to "Share Invite Link",
@@ -7080,7 +7096,10 @@ object LocalizationStrings {
             "ja" to "スタイル",
             "ko" to "스타일",
             "th" to "สไตล์"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "text_tab_symbols" to mapOf(
             "zh-Hant" to "符號",
             "en" to "Symbols",
@@ -7096,10 +7115,7 @@ object LocalizationStrings {
             "ja" to "美的・視覚デザイン",
             "ko" to "미학 및 시각 디자인",
             "th" to "สุนทรียศาสตร์และการมองเห็น"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "theme_category" to mapOf(
             "zh-Hant" to "主題分類",
             "en" to "Theme",

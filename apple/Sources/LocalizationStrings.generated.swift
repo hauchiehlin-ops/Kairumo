@@ -5383,6 +5383,14 @@ extension LocalizationManager {
             .ko: "녹음 카드 크기 조정",
             .th: "ปรับขนาดการ์ดเสียง"
         ],
+        "resize_handle": [
+            .zhHant: "調整大小把手",
+            .en: "Resize handle",
+            .zhHans: "调整大小把手",
+            .ja: "サイズ変更ハンドル",
+            .ko: "크기 조절 핸들",
+            .th: "ที่จับปรับขนาด"
+        ],
         "resize_link": [
             .zhHant: "調整連結卡片大小",
             .en: "Resize link card",
@@ -5518,6 +5526,14 @@ extension LocalizationManager {
             .ja: "ルートフォルダ",
             .ko: "최상위 폴더",
             .th: "โฟลเดอร์ระดับบนสุด"
+        ],
+        "rotate_handle": [
+            .zhHant: "旋轉把手",
+            .en: "Rotate handle",
+            .zhHans: "旋转把手",
+            .ja: "回転ハンドル",
+            .ko: "회전 핸들",
+            .th: "ที่จับหมุน"
         ],
         "rotate_hint": [
             .zhHant: "拖曳旋轉3D視角",

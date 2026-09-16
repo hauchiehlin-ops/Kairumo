@@ -107,6 +107,7 @@ struct AudioAttachmentItemView: View {
                     .buttonStyle(.plain)
                     .contentShape(Circle())
                     .offset(x: -10, y: 10)
+                    .accessibilityLabel(localizationManager.localized("rename_audio_card"))
                     .help(localizationManager.localized("rename_audio_card"))
                 }
             }
@@ -215,6 +216,7 @@ struct AudioAttachmentItemView: View {
             .clipShape(Circle())
             .contentShape(Circle())
             .offset(x: 10, y: 10)
+            .accessibilityLabel(localizationManager.localized("resize_audio_card"))
             .help(localizationManager.localized("resize_audio_card"))
             .highPriorityGesture(
                 DragGesture(minimumDistance: 1,

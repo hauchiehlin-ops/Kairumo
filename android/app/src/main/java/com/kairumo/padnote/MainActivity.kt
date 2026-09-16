@@ -83,6 +83,8 @@ import com.kairumo.padnote.canvas.EditorMode
 import com.kairumo.padnote.account.IdentityDialog
 import com.kairumo.padnote.library.HomeScreen
 import com.kairumo.padnote.library.DocumentTemplateCatalog
+import androidx.compose.runtime.CompositionLocalProvider
+import com.kairumo.padnote.ui.LocalAppLanguage
 import com.kairumo.padnote.ui.KairumoTheme
 import com.kairumo.padnote.library.NewNotebookDialog
 import com.kairumo.padnote.library.RenameNotebookDialog
@@ -171,10 +173,15 @@ class MainActivity : ComponentActivity() {
             // 用自己的主題，不用 MaterialTheme 的預設值（工作項 S-62）。
             // 預設值是 Material 的基準紫，而且**不跟隨深色模式** ——
             // 使用者把系統切成深色，App 仍然一片白。見 ui/Theme.kt。
+            // 介面語言在最外層提供一次（見 ui/LocalAppLanguage.kt）——
+            // 畫布上的把手那種葉節點才不必為了兩個無障礙標籤，
+            // 把 languageTag 一路串過六個檔案。
+            CompositionLocalProvider(LocalAppLanguage provides deviceLanguageTag()) {
             KairumoTheme {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     KairumoApp()
                 }
+            }
             }
         }
     }
@@ -371,6 +378,7 @@ private fun NotebookHome(
 
         HomeScreen(
             entries = entries,
+            deviceId = device,
             allEntries = allEntries,
             folders = folders,
             breadcrumb = breadcrumb,

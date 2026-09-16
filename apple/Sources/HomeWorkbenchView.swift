@@ -115,20 +115,50 @@ public struct HomeWorkbenchView: View {
     }
 
     /// 依搜尋關鍵字與排序選項過濾真實筆記清單
+    /// 這本筆記有沒有命中搜尋字（工作項 S-64）。
+    ///
+    /// # 原本只搜得到標題與摘要
+    ///
+    /// 使用者**打在筆記裡的字一個都搜不到**。S-61 加了 39 種文件範本之後
+    /// 這件事變得很明顯：整份租賃契約的條文都在筆記裡，搜「押金」卻是零結果。
+    ///
+    /// 所以把畫布上真正有文字的東西都納進來：文字方塊、表格儲存格、
+    /// 形狀標籤。Android 端走的是核心的 bigram 索引（它的筆記本來就是
+    /// `.padnote` 套件），Apple 這邊的內容就在記憶體裡的附件上，
+    /// 直接比對即可 —— 同樣的使用者可見行為，兩種合適的做法。
+    private func matchesSearch(_ doc: NotebookDocument) -> Bool {
+        func hit(_ text: String?) -> Bool {
+            guard let text, !text.isEmpty else { return false }
+            return text.localizedCaseInsensitiveContains(searchText)
+        }
+
+        if hit(doc.displayTitle()) || hit(doc.previewSnippet) { return true }
+
+        // 手寫辨識的結果也要搜得到 —— 不然辨識完了卻找不到，
+        // 使用者會以為辨識沒有作用。
+        if doc.recognizedText?.values.contains(where: { hit($0) }) == true { return true }
+
+        // 打字內容。
+        if doc.textAttachments?.contains(where: { hit($0.text) }) == true { return true }
+
+        // 表格。整張表逐格看 —— 使用者記得的往往是某一格裡的字，
+        // 而不是標題。
+        if doc.tableAttachments?.contains(where: { table in
+            table.cells.contains { hit($0) }
+        }) == true { return true }
+
+        // 形狀上的標籤（流程圖的節點名稱）。
+        if doc.shapeAttachments?.contains(where: { hit($0.label) }) == true { return true }
+
+        return false
+    }
+
     private var filteredNotebooks: [NotebookDocument] {
         // `visibleNotebooks` 而不是 `notebooks`：另一台裝置刪掉的要跟著消失。
         var list = notebookStore.visibleNotebooks
 
         if !searchText.isEmpty {
-            list = list.filter {
-                $0.displayTitle().localizedCaseInsensitiveContains(searchText) ||
-                ($0.previewSnippet?.localizedCaseInsensitiveContains(searchText) ?? false) ||
-                // 手寫辨識的結果也要搜得到 —— 不然辨識完了卻找不到，
-                // 使用者會以為辨識沒有作用。
-                ($0.recognizedText?.values.contains {
-                    $0.localizedCaseInsensitiveContains(searchText)
-                } ?? false)
-            }
+            list = list.filter { matchesSearch($0) }
         }
 
         switch selectedSortOption {
@@ -226,6 +256,7 @@ public struct HomeWorkbenchView: View {
                         Image(systemName: "globe")
                             .font(.system(size: DS.Icon.small, weight: .medium))
                     }
+                    .accessibilityLabel(localizationManager.localized("select_language"))
                     .help(localizationManager.localized("select_language"))
                 }
 
@@ -833,6 +864,7 @@ public struct HomeWorkbenchView: View {
                         .dsChip()
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("open_record_folder"))
                     .help(localizationManager.localized("open_record_folder"))
                 }
 
@@ -1092,6 +1124,7 @@ public struct HomeWorkbenchView: View {
                             .foregroundColor(.secondary)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("edit_root_folder"))
                     .help(localizationManager.localized("edit_root_folder"))
 
                     Spacer()
@@ -1911,6 +1944,7 @@ struct QuickAudioRecorderModal: View {
                                 .font(.caption)
                         }
                     }
+                    .accessibilityLabel(localizationManager.localized("open_record_folder"))
                     .help(localizationManager.localized("open_record_folder"))
                 }
             }

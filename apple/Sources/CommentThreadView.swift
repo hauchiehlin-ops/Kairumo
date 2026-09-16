@@ -287,6 +287,7 @@ public struct CommentThreadDialog: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(localizationManager.localized("delete_comment"))
                 .help(localizationManager.localized("delete_comment"))
 
                 // 縮小按鈕（縮成標題列，仍可繼續拖曳移動）
@@ -301,6 +302,7 @@ public struct CommentThreadDialog: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel(localizationManager.localized("minimize_dialog"))
                 .help(localizationManager.localized("minimize_dialog"))
 
                 // 關閉按鈕
@@ -377,6 +379,7 @@ public struct CommentThreadDialog: View {
                                             .clipShape(Circle())
                                     }
                                     .buttonStyle(.plain)
+                                    .accessibilityLabel(localizationManager.localized("delete_message"))
                                     .help(localizationManager.localized("delete_message"))
                                 }
 

@@ -228,6 +228,8 @@ public struct WordTextStudioView: View {
         }
         .buttonStyle(.plain)
         .hoverHighlight()
+        // 28×28 的純圖示按鈕，沒有任何可念的文字。
+        .accessibilityLabel(localizationManager.localized(help))
         .help(localizationManager.localized(help))
     }
 
@@ -382,6 +384,7 @@ public struct WordTextStudioView: View {
             ColorPicker("", selection: $customBackground)
                 .labelsHidden()
                 .frame(width: 26)
+                .accessibilityLabel(localizationManager.localized("custom_color"))
                 .help(localizationManager.localized("custom_color"))
                 .onChange(of: customBackground) { newValue in
                     guard let hex = newValue.toHex() else { return }

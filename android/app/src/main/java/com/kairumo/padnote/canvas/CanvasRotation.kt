@@ -14,6 +14,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.kairumo.padnote.LocalizationStrings
+import com.kairumo.padnote.ui.LocalAppLanguage
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.atan2
@@ -93,6 +97,7 @@ fun RotationHandle(
     onCommit: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val handleLabel = LocalizationStrings.localized("rotate_handle", LocalAppLanguage.current)
     val radius = (maxOf(heightDp, 40f) / 2f) + 52f
     // 元件自己撐出容納軌道的空間，**不要**用負的 offset 把把手畫到父容器外面。
     // 負偏移看起來可行，但只要任何一層祖先有裁切，把手就整個消失 ——
@@ -133,6 +138,10 @@ fun RotationHandle(
                         onDragEnd = { onCommit() }
                     )
                 }
+                // 標籤放在**可拖曳的容器**上，不是裡面那顆圖示 —— 圖示是
+                // 裝飾（所以維持 null），真正能操作的是這個 Box。
+                // 沒有它的話，TalkBack 掃過畫布上的把手時什麼也不會念。
+                .semantics { contentDescription = handleLabel }
         ) {
             Icon(
                 imageVector = Icons.Filled.Refresh,

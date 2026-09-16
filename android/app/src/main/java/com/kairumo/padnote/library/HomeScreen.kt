@@ -39,6 +39,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.runtime.LaunchedEffect
+import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -83,6 +85,8 @@ import java.util.Date
 @Composable
 fun HomeScreen(
     entries: List<NotebookLibrary.Entry>,
+    /** 搜尋內容時要用它開每一本筆記（工作項 S-64）。 */
+    deviceId: UInt,
     /** **不分資料夾**的全部筆記本。搜尋要搜整個筆記庫，不是只搜眼前這一層。 */
     allEntries: List<NotebookLibrary.Entry>,
     folders: List<FolderTree.Folder>,
@@ -122,12 +126,34 @@ fun HomeScreen(
     onInsertRecording: (RecordingIndex.Recording) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
+    val searchContext = LocalContext.current
 
     // 搜尋時跨整個筆記庫，不是只搜眼前這一層 —— 人在資料夾裡搜尋卻只搜得到
     // 這一層的話，他會以為那本筆記不見了。
-    val filtered = remember(entries, allEntries, query) {
+    // 內容搜尋（工作項 S-64）。標題比對是即時的；內容要開每一本筆記，
+    // 所以丟到背景，結果回來再併進清單。
+    //
+    // 兩段式而不是等內容查完才顯示：使用者打字時看到的應該是「立刻有東西」，
+    // 而不是一片空白等半秒。標題命中先出現，內容命中隨後補上。
+    var contentHits by remember { mutableStateOf<Set<String>>(emptySet()) }
+    LaunchedEffect(query, allEntries.size) {
+        val q = query.trim()
+        if (q.length < NotebookSearch.MIN_QUERY_LENGTH) {
+            contentHits = emptySet()
+            return@LaunchedEffect
+        }
+        // 防抖：每一次按鍵都把整個筆記庫開一遍的話，打五個字就是五輪。
+        delay(280)
+        contentHits = withContext(Dispatchers.IO) {
+            NotebookSearch.matchingIds(searchContext, allEntries, q, deviceId)
+        }
+    }
+
+    val filtered = remember(entries, allEntries, query, contentHits) {
         if (query.isBlank()) entries
-        else allEntries.filter { it.title.contains(query.trim(), ignoreCase = true) }
+        else allEntries.filter {
+            it.title.contains(query.trim(), ignoreCase = true) || contentHits.contains(it.id)
+        }
     }
 
     // 內容置中並限制最大寬度（工作項 S-62）。

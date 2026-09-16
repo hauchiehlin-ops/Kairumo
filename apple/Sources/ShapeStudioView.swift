@@ -398,6 +398,7 @@ struct ShapeAttachmentItemView: View {
                         .clipShape(Circle())
                         .contentShape(Circle())
                         .offset(x: 10, y: 10)
+                        .accessibilityLabel(localizationManager.localized("resize_shape"))
                         .help(localizationManager.localized("resize_shape"))
                         .highPriorityGesture(
                             DragGesture(minimumDistance: 1,
@@ -437,6 +438,7 @@ struct ShapeAttachmentItemView: View {
                     .buttonStyle(.plain)
                     .contentShape(Circle())
                     .offset(x: -10, y: 10)
+                    .accessibilityLabel(localizationManager.localized("shape_style"))
                     .help(localizationManager.localized("shape_style"))
                 }
             }
@@ -582,6 +584,7 @@ struct ShapeStyleSheet: View {
                 // 命中區與文字排版面板同一套作法：26pt 的圓在手指下太小。
                 .frame(width: 38, height: 38)
                 .contentShape(Rectangle())
+                .accessibilityLabel(localizationManager.localized("color_transparent"))
                 .help(localizationManager.localized("color_transparent"))
             }
 
