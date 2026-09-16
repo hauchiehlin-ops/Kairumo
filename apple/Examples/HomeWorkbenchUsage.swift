@@ -56,6 +56,33 @@ struct KairumoApp: App {
                 .onAppear { applyMacWindowMinimumSize() }
                 #endif
         }
+        // ⌘N 與 ⌘F 只能走這裡，不能走 delegate 的 `buildMenu`。
+        //
+        // 「檔案」選單整個是 SwiftUI 的：新增視窗、複製、移動、重新命名、
+        // 輸出，都是它從 `WindowGroup` 產生的。delegate 的 `buildMenu` 先跑，
+        // SwiftUI 之後**重建整個選單**，於是插進去的兩個項目被無聲抹掉 ——
+        // 不當機、不警告，選單裡就是沒有。實測：`.file` 存在、`insertChild`
+        // 有跑，但選單列裡查不到那兩項。
+        //
+        // 其餘命令（⌘E、⌘1–⌘9）插在「顯示」選單，SwiftUI 不碰那裡，
+        // 所以留在 delegate 裡沒問題。
+        .commands {
+            CommandGroup(after: .newItem) {
+                Button(LocalizationManager.shared.localizedUnsafe("new_note")) {
+                    NotificationCenter.default.post(name: AppCommand.newNotebook, object: nil)
+                }
+                // ⇧⌘N 而不是 ⌘N：⌘N 是系統的「新增視窗」（`requestNewScene:`）。
+                // 搶同一組鍵時 UIKit 直接丟例外把 App 打掉，訊息明說
+                // 「Replacement elements contain duplicates」。
+                // Finder 的「新增檔案夾」也是 ⇧⌘N，使用者不會覺得陌生。
+                .keyboardShortcut("n", modifiers: [.command, .shift])
+
+                Button(LocalizationManager.shared.localizedUnsafe("search_placeholder")) {
+                    NotificationCenter.default.post(name: AppCommand.focusSearch, object: nil)
+                }
+                .keyboardShortcut("f", modifiers: .command)
+            }
+        }
 
         // 操作手冊與隱私權政策各自是一個**真正的視窗**，不是彈出的工作表。
         //

@@ -19,6 +19,17 @@ import UIKit
 /// 動作沿著鏈往上找不到人處理時，最後會落到 App delegate —— 而 delegate
 /// 永遠在。這也是 iPadOS 長按 ⌘ 那張表、以及 Mac 選單列的來源。
 ///
+/// # 「檔案」選單插不進去 —— 而且是無聲的
+///
+/// ⌘N 與 ⌘F 曾經也寫在這裡，插在 `.file` 的最前面。`.file` 查得到、
+/// `insertChild` 有跑、沒有例外 —— 選單列裡就是沒有那兩項。原因是
+/// 「檔案」整個是 SwiftUI 從 `WindowGroup` 產生的（新增視窗、複製、移動、
+/// 重新命名、輸出），delegate 的 `buildMenu` 先跑，SwiftUI 之後重建那個
+/// 選單，插進去的東西一起被蓋掉。
+///
+/// 所以那兩個命令改用 SwiftUI 的 `.commands`（見 `KairumoApp`）。
+/// 「顯示」選單 SwiftUI 不碰，⌘E 與 ⌘1–⌘9 留在這裡沒問題。
+///
 /// # 為什麼用通知而不是直接改狀態
 ///
 /// delegate 是 UIKit 的物件，SwiftUI 的狀態在 view 裡。用通知把兩邊接起來
@@ -45,26 +56,6 @@ final class KairumoAppDelegate: UIResponder, UIApplicationDelegate {
 
         func string(_ key: String) -> String {
             LocalizationManager.shared.localizedUnsafe(key)
-        }
-
-        let fileCommands = UIMenu(
-            title: "",
-            options: .displayInline,
-            children: [
-                UIKeyCommand(
-                    title: string("new_note"),
-                    action: #selector(commandNewNotebook),
-                    input: "n",
-                    modifierFlags: .command),
-                UIKeyCommand(
-                    title: string("search_placeholder"),
-                    action: #selector(commandFocusSearch),
-                    input: "f",
-                    modifierFlags: .command)
-            ])
-        // 目標選單不存在時不要硬插 —— `insertChild` 會丟例外。
-        if builder.menu(for: .file) != nil {
-            builder.insertChild(fileCommands, atStartOfMenu: .file)
         }
 
         // 編輯器：切換模式與選工具。
@@ -105,14 +96,6 @@ final class KairumoAppDelegate: UIResponder, UIApplicationDelegate {
     }
 
     // MARK: - 命令
-
-    @objc private func commandNewNotebook() {
-        NotificationCenter.default.post(name: AppCommand.newNotebook, object: nil)
-    }
-
-    @objc private func commandFocusSearch() {
-        NotificationCenter.default.post(name: AppCommand.focusSearch, object: nil)
-    }
 
     @objc private func commandToggleEditorMode() {
         NotificationCenter.default.post(name: AppCommand.toggleEditorMode, object: nil)

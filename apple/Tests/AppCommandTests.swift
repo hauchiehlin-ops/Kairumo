@@ -8,10 +8,10 @@ import XCTest
 ///
 /// 一個快捷鍵要能用，有兩段：
 ///
-/// 1. **⌘N 被系統送到 App 的選單命令上** —— 這一段是 `buildMenu(with:)`，
-///    UIKit 的標準機制，但只有在**真的有實體鍵盤**時才按得下去。模擬器預設
-///    沒有接鍵盤，XCUITest 的 `typeKey` 會走軟體鍵盤，送不出 ⌘ 組合鍵。
-///    所以這一段在這個環境裡驗不了。
+/// 1. **按鍵被系統送到 App 的命令上** —— 這一段是 `buildMenu(with:)` 與
+///    SwiftUI 的 `.commands`。模擬器沒有硬體鍵盤，XCUITest 送不出 ⌘ 組合鍵，
+///    所以**這一段是在 Mac Catalyst 上以選單列實測**的（選單項目存在、
+///    按下去處理常式真的被呼叫），不在這裡。
 /// 2. **命令被收到之後，畫面真的有反應** —— 這一段就是這裡測的。
 ///
 /// 把第二段釘住是有意義的：中間那條通知的名稱打錯、payload 型別改了、
@@ -38,12 +38,14 @@ final class AppCommandTests: XCTestCase {
         return received
     }
 
-    func testNewNotebookCommandPostsItsNotification() {
-        _ = expectNotification(AppCommand.newNotebook, whenPerforming: "commandNewNotebook")
-    }
-
-    func testFocusSearchCommandPostsItsNotification() {
-        _ = expectNotification(AppCommand.focusSearch, whenPerforming: "commandFocusSearch")
+    // ⇧⌘N 與 ⌘F 不在 delegate 上：「檔案」選單是 SwiftUI 從 `WindowGroup`
+    // 產生的，delegate 插進去的項目會被它重建時蓋掉，所以那兩個命令走
+    // `.commands`（見 `KairumoApp`）。它們送出的通知名稱在這裡釘住 ——
+    // 名稱打錯的話，選單按得下去但畫面不會有反應。
+    func testHomeCommandsHaveDistinctNotificationNames() {
+        XCTAssertNotEqual(AppCommand.newNotebook, AppCommand.focusSearch)
+        XCTAssertEqual(AppCommand.newNotebook.rawValue, "kairumo.command.newNotebook")
+        XCTAssertEqual(AppCommand.focusSearch.rawValue, "kairumo.command.focusSearch")
     }
 
     func testToggleModeCommandPostsItsNotification() {
