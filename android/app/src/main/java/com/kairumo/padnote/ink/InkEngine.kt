@@ -78,10 +78,10 @@ class InkEngine(
      * 是兩條繪製路徑，但都經過這裡。掛在 View 上會變成「只有其中一條路
      * 支援側鍵」，而使用者切不切得到低延遲取決於他的裝置。
      */
-    var onStylusEraserChanged: ((Boolean) -> Unit)? = null
+    var onPenControlChanged: ((uniffi.padnote_core.FfiPenControl?, Boolean) -> Unit)? = null
 
     /** 上一次看到的側鍵狀態。用來只在翻面時通知。 */
-    private var stylusErasing: Boolean = false
+    private var heldControl: uniffi.padnote_core.FfiPenControl? = null
 
     /**
      * 擦掉碰到的筆畫。
@@ -122,10 +122,13 @@ class InkEngine(
     fun onMotionEvent(event: MotionEvent, density: Float): Outcome {
         // 側鍵先看：它決定的是**這一段**要畫還是要擦，慢一個事件的話，
         // 按下去的第一個點會先畫出一小段墨再開始擦。
-        val erasing = StylusButton.isErasing(event)
-        if (erasing != stylusErasing) {
-            stylusErasing = erasing
-            onStylusEraserChanged?.invoke(erasing)
+        val control = PenHardware.control(event)
+        if (control != heldControl) {
+            // 先報放開、再報按下。反過來的話，從主鍵直接換到次鍵時，
+            // 上層會先切到新工具、再被「放開」還原回去 —— 看起來像次鍵沒作用。
+            heldControl?.let { onPenControlChanged?.invoke(it, false) }
+            heldControl = control
+            control?.let { onPenControlChanged?.invoke(it, true) }
         }
 
         var drawn = 0

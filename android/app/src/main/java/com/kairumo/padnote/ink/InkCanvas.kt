@@ -9,6 +9,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -58,9 +62,41 @@ fun InkCanvas(
     var revision by remember { mutableIntStateOf(0) }
     var liveVersion by remember { mutableStateOf(0L) }
 
+    // 懸停預覽（工作項 S-69）：筆尖靠近但還沒碰到時，先畫出會落在哪裡。
+    //
+    // 核心的仲裁器早就有 `Verdict.HOVER`，說明寫著「顯示落筆預覽」——
+    // 在這之前沒有任何地方真的畫過那個預覽，硬體回報了、判定分類了，
+    // 然後結果被丟掉。
+    //
+    // 不知道筆尖會落在哪，使用者只能先點一下看看 —— 而一筆下去才發現位置
+    // 不對，那一筆已經在紙上了。
+    var hoverPoint by remember { mutableStateOf<Offset?>(null) }
+
     Canvas(
         modifier = modifier
             .background(backgroundColor)
+            .pointerInput(acceptsInk) {
+                awaitPointerEventScope {
+                    while (true) {
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull()
+                        hoverPoint = when {
+                            !acceptsInk -> null
+                            // 只有筆才預覽。手指懸停在 Android 上是存在的事件
+                            // （某些裝置支援），但手指沒有「還沒碰到」的概念
+                            // —— 畫一個筆頭只會讓人以為畫布壞了。
+                            change?.type != PointerType.Stylus -> null
+                            event.type == PointerEventType.Exit -> null
+                            // 已經碰到螢幕了就不是懸停。此時預覽會疊在真正的
+                            // 筆跡上，變成一個跟著筆尖跑的灰圈。
+                            change.pressed -> null
+                            event.type == PointerEventType.Enter ||
+                                event.type == PointerEventType.Move -> change.position
+                            else -> hoverPoint
+                        }
+                    }
+                }
+            }
             .pointerInteropFilter { event ->
                 // 不收筆畫時把事件原樣讓出去，外層照常捲動與選取。
                 if (!acceptsInk) return@pointerInteropFilter false
@@ -88,7 +124,44 @@ fun InkCanvas(
             drawInkStroke(
                 InkInput.strokePoints(live), engine.tool, engine.baseWidth, inkColor, density)
         }
+
+        // 懸停預覽畫在最上層：被墨跡蓋住就失去意義了。
+        hoverPoint?.let { point ->
+            drawHoverPreview(point, engine.baseWidth, engine.isErasing, inkColor, density)
+        }
     }
+}
+
+/**
+ * 懸停時的筆頭預覽。
+ *
+ * **只描邊、不填滿**：填滿的預覽會把它自己要對齊的那個字蓋住，而對齊正是
+ * 使用者需要它的唯一原因。
+ *
+ * 橡皮擦畫得比筆粗：擦除半徑本來就比畫出來的粗細大（`baseWidth * 1.5`，
+ * 見 `InkEngine.eraseAt`），預覽照筆的粗細畫的話，使用者會擦掉比他預期
+ * 更多的東西。
+ *
+ * **沒有畫傾角。** Apple 那一側會照筆桿角度把筆頭壓扁，這裡沒有 ——
+ * Compose 的懸停事件拿不到 tilt，要拿得繞進內部 API。差別只在扁頭筆的
+ * 預覽是圓的而不是橢圓的，落點本身是一樣的。
+ */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHoverPreview(
+    point: Offset,
+    baseWidth: Float,
+    erasing: Boolean,
+    inkColor: Color,
+    density: Float
+) {
+    // 太小的筆頭在螢幕上看不見，太大的會擋住正要對齊的地方。
+    val radius = (if (erasing) baseWidth * 1.5f else baseWidth)
+        .coerceIn(4f, 40f) * density / 2f
+    drawCircle(
+        color = if (erasing) Color(0x88000000) else inkColor.copy(alpha = 0.55f),
+        radius = radius,
+        center = point,
+        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5f * density)
+    )
 }
 
 /**

@@ -139,7 +139,10 @@ import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import com.kairumo.padnote.image.ImageDropPlacement
 import com.kairumo.padnote.ink.PageGeometry
 import com.kairumo.padnote.ink.SketchRefineBar
-import com.kairumo.padnote.ink.StylusButton
+import android.view.HapticFeedbackConstants
+import androidx.compose.ui.platform.LocalView
+import com.kairumo.padnote.ink.PenHardware
+import uniffi.padnote_core.FfiPenOutcome
 import com.kairumo.padnote.asset.AssetLibrarySheet
 import com.kairumo.padnote.collab.CollaborationManager
 import com.kairumo.padnote.collab.CollaborationSheet
@@ -1152,35 +1155,79 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     // 最後用過的**筆刷**。觸控筆放開側鍵時要回到它（工作項 S-67）。
     // 記筆刷而不是「上一個工具」：後者在擦完之後可能回到套索。
     var lastBrushTool by remember { mutableStateOf(InkTool.FOUNTAIN_PEN) }
-    // 現在的橡皮擦是**側鍵按出來的**，不是使用者自己在工具列上選的。
-    // 這個分別很重要：使用者自己選的橡皮擦，不能因為他放開側鍵就被換掉。
-    var stylusHeldEraser by remember { mutableStateOf(false) }
+    // 按著側鍵之前選的是哪一支。放開時回到它。
+    //
+    // `null` 表示「這一次的橡皮擦不是側鍵切出來的」—— 使用者自己在工具列
+    // 選的橡皮擦，不能因為他碰了一下側鍵就被換掉。
+    var penHeldTool by remember { mutableStateOf<InkTool?>(null) }
     // 有東西正懸在畫布上等著放下（工作項 S-68）。一定要有這個回饋：
     // 拖放看不見目標的話，使用者分不出「這裡不能放」與「放了但沒反應」。
     var isImageDropTargeted by remember { mutableStateOf(false) }
     LaunchedEffect(inkTool) { if (inkTool.kind != null) lastBrushTool = inkTool }
 
-    // 觸控筆側鍵（或把筆倒過來）→ 橡皮擦，放開回到原本那支筆。
-    // 規則在 `StylusButton`，與 Apple Pencil 雙擊共用同一套「切到哪、回哪去」。
+    val view = LocalView.current
+
+    // 換工具。工具列與筆身控制項走同一條路 —— 各寫一份的話，用側鍵切到
+    // 橡皮擦時 `engine.isErasing` 會忘了跟著改，症狀是「側鍵選到橡皮擦了，
+    // 但畫下去還是墨跡」。
+    fun applyInkTool(picked: InkTool) {
+        inkTool = picked
+        engine.isErasing = picked.isEraser
+        picked.kind?.let { engine.tool = it }
+        // 離開套索就清掉選取。留著的話，畫面上會浮著一個虛線框與
+        // 一排按鈕，而它們作用的對象使用者早就看不出是什麼了。
+        if (!picked.isLasso) lasso.clear()
+    }
+
+    // 觸控筆側鍵（或把筆倒過來）。
+    //
+    // **規則不在這裡** —— 「這個動作要做什麼」整張表在核心
+    // （`padnote-input::pen`），與 Apple 共用同一份。這裡只把核心回的結果
+    // 換成 Android 這一側的工具。
+    val penControls = remember { PenHardware.controls(activity) }
     DisposableEffect(engine) {
-        engine.onStylusEraserChanged = { erasing ->
-            if (erasing) {
-                StylusButton.outcome(true, inkTool, lastBrushTool)?.let { picked ->
-                    stylusHeldEraser = true
-                    inkTool = picked
-                    engine.isErasing = true
-                }
-            } else if (stylusHeldEraser) {
-                // 只還原我們自己切過去的那一次。
-                stylusHeldEraser = false
-                StylusButton.outcome(false, inkTool, lastBrushTool)?.let { picked ->
-                    inkTool = picked
-                    engine.isErasing = picked.isEraser
-                    picked.kind?.let { engine.tool = it }
+        engine.onPenControlChanged = { control, pressed ->
+            if (control != null) {
+                val momentary = penControls.isMomentary(control)
+                // 按著的控制項放開時，只還原**我們自己切過去的那一次**。
+                // 使用者自己在工具列上選了橡皮擦、然後碰了一下側鍵，
+                // 放開時把他的橡皮擦換掉是錯的。
+                val shouldHandle = !momentary || pressed || penHeldTool != null
+                if (shouldHandle) {
+                    if (momentary && pressed) penHeldTool = inkTool
+
+                    when (penControls.outcome(
+                        control, pressed, inkTool.isEraser, inkTool.isLasso
+                    )) {
+                        FfiPenOutcome.NOTHING -> Unit
+                        FfiPenOutcome.USE_ERASER -> applyInkTool(InkTool.ERASER)
+                        // 放開時回到按下去之前那一支，而不是「最後用過的筆刷」
+                        // —— 兩者通常一樣，但使用者若在按著側鍵的期間又換過筆，
+                        // 他要的是回到他剛剛選的那一支。
+                        FfiPenOutcome.USE_LAST_BRUSH ->
+                            applyInkTool(penHeldTool ?: lastBrushTool)
+                        FfiPenOutcome.USE_LASSO -> applyInkTool(InkTool.LASSO)
+                        FfiPenOutcome.SHOW_INK_ATTRIBUTES -> showProColors = true
+                        // **復原、重做與尺規在 Android 的手寫畫布上還不存在**
+                        // （工具列沒有這三顆按鈕），所以指派到它們等於關掉。
+                        // 這樣比硬湊一個行為好：按了沒反應，使用者會去換一個
+                        // 指派；按了做出別的事，他會以為是壞的。
+                        //
+                        // 核心那張表是兩個平台共用的，有這三個選項是因為 Apple
+                        // 那邊做得到 —— 之後 Android 補上時，這裡改成真的呼叫即可。
+                        FfiPenOutcome.UNDO,
+                        FfiPenOutcome.REDO,
+                        FfiPenOutcome.TOGGLE_RULER -> Unit
+                    }
+
+                    if (momentary && !pressed) penHeldTool = null
+                    // 筆身的動作是看不見的 —— 使用者當下正看著筆尖，
+                    // 一下短回饋讓他知道剛剛那下有收到。
+                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                 }
             }
         }
-        onDispose { engine.onStylusEraserChanged = null }
+        onDispose { engine.onPenControlChanged = null }
     }
     // Ctrl+1–Ctrl+6 選工具。索引超過工具數就忽略 —— Apple 有九支、
     // Android 只有六支，按 Ctrl+7 不該讓 App 當掉。
@@ -1701,14 +1748,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             colorHex = inkColorHex,
             width = inkWidth,
             languageTag = deviceLanguageTag(),
-            onToolChange = { picked ->
-                inkTool = picked
-                engine.isErasing = picked.isEraser
-                picked.kind?.let { engine.tool = it }
-                // 離開套索就清掉選取。留著的話，畫面上會浮著一個虛線框與
-                // 一排按鈕，而它們作用的對象使用者早就看不出是什麼了。
-                if (!picked.isLasso) lasso.clear()
-            },
+            onToolChange = { picked -> applyInkTool(picked) },
             onColorChange = { hex ->
                 inkColorHex = hex
                 engine.colorRgba = hexToRgba(hex)

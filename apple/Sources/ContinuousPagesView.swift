@@ -62,7 +62,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
     let canvasRef: (PKCanvasView) -> Void
     /// Apple Pencil 雙擊筆桿（工作項 S-67）。只有焦點頁回報 —— 每一頁都報的話，
     /// 一次雙擊會被當成好幾次，工具在筆與橡皮擦之間跳回原地。
-    var onPencilTap: ((UIPencilPreferredAction) -> Void)? = nil
+    var onPenControl: ((FfiPenControl, Bool) -> Void)? = nil
     /// 有圖片拖到這一頁上（工作項 S-68）。落點是**這一頁的**座標。
     var onImageDropped: ((Int, [NSItemProvider], CGPoint) -> Bool)? = nil
 
@@ -93,7 +93,9 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 },
                 canvasRef: { canvas in if isFocused { canvasRef(canvas) } },
                 palmRejection: palmRejection,
-                onPencilTap: { action in if isFocused { onPencilTap?(action) } }
+                onPenControl: { control, pressed in
+                    if isFocused { onPenControl?(control, pressed) }
+                }
             )
             // 拖到哪一頁就插到哪一頁 —— 連續模式下每一頁都是自己的落點。
             .onDrop(of: [.image], isTargeted: $isDropTargeted) { providers, location in

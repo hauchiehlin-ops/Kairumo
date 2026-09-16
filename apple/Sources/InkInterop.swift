@@ -172,7 +172,14 @@ enum InkInterop {
                     // 核心的 tilt 是「偏離垂直的角度」。兩者是互補角，不是同一個東西。
                     tilt: Float(min(max(.pi / 2 - cp.altitude, 0), .pi / 2)),
                     azimuth: Float(normalizedAzimuth(cp.azimuth)),
-                    dtUs: dtUs
+                    dtUs: dtUs,
+                    // 滾動角（Pencil Pro）。PencilKit 的控制點在 iOS 17.5 起
+                    // 有 `rollAngle`；其他筆與更舊的系統回報不出來，一律是 0。
+                    //
+                    // 核心那邊 **0 就是「沒有這個維度」**，不是「角度剛好是零」
+                    // —— 扁頭筆的筆觸角度會退回只看傾角，而不是被硬轉成 0 度。
+                    // 見下面 `rollAngle(of:)`：PencilKit 這條路上拿不到，一律 0。
+                    roll: Float(Self.rollAngle(of: cp))
                 )
             )
         }
@@ -212,6 +219,8 @@ enum InkInterop {
                     altitude: CGFloat(.pi / 2 - min(max(p.tilt, 0), Float.pi / 2))
                 )
             )
+            // 滾動角**沒有還原回去**：`PKStrokePoint` 沒有這個欄位。
+            // 詳見下面 `rollAngle(of:)` 的說明。
         }
 
         let path = PKStrokePath(controlPoints: controlPoints, creationDate: creationDate)
@@ -225,6 +234,28 @@ enum InkInterop {
     }
 
     // MARK: - 私有
+
+    /// 這一筆畫的滾動角。**目前一律是 0。**
+    ///
+    /// # 為什麼不是「還沒做」而是「做不到」
+    ///
+    /// 滾動角在系統裡只出現在 `UITouch.rollAngle` 上。`PKStrokePoint`
+    /// **沒有這個欄位** —— PencilKit 自己把觸控收成筆畫，中間不經過我們，
+    /// 所以沒有任何地方能把 `UITouch` 的滾動角對應回某一個控制點。
+    ///
+    /// 硬做的話只能「記下最後看到的滾動角，整筆套用」，那是錯的：使用者
+    /// 寫一個字的過程中本來就會轉筆，整筆同一個角度比沒有還糟 —— 它會讓
+    /// 扁頭筆的筆觸方向在一筆之內完全不變，看起來像壞掉。
+    ///
+    /// 所以這條路上滾動角**只用在即時的地方**（懸停預覽的筆頭方向、
+    /// 診斷列），不寫進筆畫。格式那一層已經備好（見核心 `EXT_ROLL`），
+    /// Android 自己收觸控，寫得進去。
+    ///
+    /// 要在這一邊也存得下來，前提是不再用 PencilKit 收筆畫 —— 那是另一個
+    /// 量級的決定，不在這裡順手做。
+    private static func rollAngle(of cp: PKStrokePoint) -> CGFloat {
+        0
+    }
 
     /// 把方位角收進 0–2π。PencilKit 可能回傳負值，核心格式的範圍是 0–2π。
     private static func normalizedAzimuth(_ radians: CGFloat) -> CGFloat {

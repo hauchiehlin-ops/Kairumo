@@ -493,7 +493,24 @@ final class AdaptiveCanvasView: PKCanvasView {
         addInteraction(UIPointerInteraction(delegate: delegate))
     }
 
-    /// 掛上 Apple Pencil 的雙擊筆桿（工作項 S-67，規則見 `PencilDoubleTap`）。
+    /// 懸停預覽（工作項 S-69）。筆尖靠近但還沒碰到時，先畫出會落在哪裡。
+    private var hoverPreview: PenHoverPreviewView?
+
+    func installHoverPreviewIfNeeded(coordinator: PenHoverCoordinator) {
+        guard hoverPreview == nil else { return }
+        let preview = PenHoverPreviewView(frame: bounds)
+        preview.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        // 加在畫布的**最上層**：筆頭預覽被墨跡蓋住就失去意義了。
+        // 它 `isUserInteractionEnabled = false`，不會擋到書寫。
+        addSubview(preview)
+        hoverPreview = preview
+        coordinator.attach(to: self, preview: preview)
+    }
+
+    /// 掛上 Apple Pencil 的筆身互動（工作項 S-40 / S-67）。
+    ///
+    /// 雙擊與擠壓都由它來。對應規則在核心（`padnote-input::pen`），
+    /// 這裡只負責把事件送過去 —— 見 `PenHardware.swift`。
     ///
     /// 掛在畫布上而不是根視圖：雙擊只有在「正在寫字」的情境下才有意義，
     /// 掛在根視圖的話，在設定頁或檔案清單裡雙擊也會默默換掉工具。
@@ -579,8 +596,9 @@ struct CanvasRepresentable: UIViewRepresentable {
     var palmRejection: PalmRejectionCoordinator?
     /// 仲裁器要求收回筆畫時通知編輯器。
     var onRetractStrokes: ((Date) -> Void)?
-    /// Apple Pencil 雙擊筆桿（工作項 S-67）。參數是當下的系統偏好。
-    var onPencilTap: ((UIPencilPreferredAction) -> Void)?
+    /// 筆身上的動作（工作項 S-40 / S-67）。`pressed` 只對側鍵這類
+    /// 「按著」的控制項有意義。
+    var onPenControl: ((FfiPenControl, Bool) -> Void)?
 
     /// 目前該用哪個輸入政策。
     ///
@@ -629,6 +647,19 @@ struct CanvasRepresentable: UIViewRepresentable {
         canvas.accessibilityIdentifier = "kairumo.canvas"
         canvas.installPointerInteractionIfNeeded(delegate: context.coordinator)
         canvas.installPencilInteractionIfNeeded(delegate: context.coordinator.pencilTaps)
+        context.coordinator.penHover.currentPath = { [weak coordinator = context.coordinator] in
+            guard let coordinator else { return nil }
+            return BrushCursor.path(
+                for: coordinator.parent.selectedTool,
+                strokeWidth: coordinator.parent.strokeWidth)
+        }
+        context.coordinator.penHover.currentColor = { [weak coordinator = context.coordinator] in
+            UIColor(coordinator?.parent.selectedColor ?? .primary)
+        }
+        context.coordinator.penHover.isPreviewEnabled = { [weak coordinator = context.coordinator] in
+            coordinator?.parent.editorMode == .draw
+        }
+        canvas.installHoverPreviewIfNeeded(coordinator: context.coordinator.penHover)
         canvas.refreshPointer(BrushCursor.path(for: selectedTool, strokeWidth: strokeWidth))
         canvas.pageContentHeight = PageGeometry.height
         canvas.contentSize = CGSize(width: max(canvas.bounds.width, 1), height: canvas.pageContentHeight)
@@ -717,13 +748,17 @@ struct CanvasRepresentable: UIViewRepresentable {
         /// Apple Pencil 雙擊的接收端。**這個屬性要持有它** ——
         /// `UIPencilInteraction.delegate` 是 weak 的，不留一份強參考的話
         /// 它會在 `makeUIView` 回傳之後就被釋放，雙擊從此沒有反應。
-        let pencilTaps = PencilTapForwarder()
+        let pencilTaps = PencilInteractionForwarder()
+
+        /// 懸停預覽（工作項 S-69）。與 `pencilTaps` 一樣要由這裡持有 ——
+        /// 手勢辨識器只對 target 保持 weak 參考。
+        let penHover = PenHoverCoordinator()
 
         init(_ parent: CanvasRepresentable) {
             self.parent = parent
             super.init()
-            pencilTaps.onTap = { [weak self] action in
-                self?.parent.onPencilTap?(action)
+            pencilTaps.onControl = { [weak self] control, pressed in
+                self?.parent.onPenControl?(control, pressed)
             }
         }
 
@@ -1159,7 +1194,13 @@ public struct NotebookEditorView: View {
     /// 也分不出「這裡不能放」與「放了但沒反應」。
     @State private var isCanvasDropTargeted: Bool = false
 
-    /// 最後用過的**筆刷**。Apple Pencil 雙擊要切回來的就是它（工作項 S-67）。
+    /// 按著側鍵之前選的是哪一支。放開時回到它。
+    ///
+    /// `nil` 表示「這一次的橡皮擦不是側鍵切出來的」—— 使用者自己在工具列
+    /// 選的橡皮擦，不能因為他碰了一下側鍵就被換掉。
+    @State private var penHeldTool: EditorToolType? = nil
+
+    /// 最後用過的**筆刷**。筆身動作要切回來的就是它（工作項 S-67）。
     ///
     /// 由 `.onChange(of: selectedTool)` 維護，不是 `didSet` ——
     /// `@State` 的 `didSet` 在透過 binding（`$selectedTool`）改值時不會觸發，
@@ -2393,7 +2434,7 @@ public struct NotebookEditorView: View {
                             onSelectionChanged: { hasLassoSelection = $0 },
                             onReachedPageBottom: { ensureNextPageExists() },
                             canvasRef: { canvasView = $0 },
-                            onPencilTap: applyPencilTap,
+                            onPenControl: applyPenControl,
                             onImageDropped: { page, providers, location in
                                 acceptImageDrop(providers, at: location, page: page)
                             }
@@ -2756,7 +2797,7 @@ ZStack(alignment: .topTrailing) {
                     canvasView?.drawing = cleaned
                     saveCurrentPageDrawing()
                 },
-                onPencilTap: applyPencilTap
+                onPenControl: applyPenControl
             )
             // 從別的 App 把圖拖進來（工作項 S-68）。
             //
@@ -4948,14 +4989,6 @@ ZStack(alignment: .topTrailing) {
         }
     }
 
-    /// Apple Pencil 雙擊筆桿（工作項 S-67）。
-    ///
-    /// 對應規則整份在 `PencilDoubleTap.outcome` 裡，是純函式、有單元測試 ——
-    /// 雙擊事件本身要實體 Apple Pencil 二代以上才發得出來（模擬器沒有這個
-    /// 事件），規則不放在可測的地方就等於完全沒驗過。實機行為列 H4。
-    ///
-    /// 打字模式下不理會：那時候畫布根本不收筆畫，換工具只會讓使用者回到
-    /// 手寫模式時發現筆莫名其妙變了。
     /// 接住拖進畫布的圖片（工作項 S-68）。
     ///
     /// 回傳值是**同步**的「我要不要接這一批」—— 圖片是非同步載進來的，
@@ -4988,17 +5021,64 @@ ZStack(alignment: .topTrailing) {
         }
     }
 
-    private func applyPencilTap(_ action: UIPencilPreferredAction) {
+    /// 筆身上的動作（雙擊、擠壓、側鍵、反向筆頭）發生了。
+    ///
+    /// **規則不在這裡。** 「這個動作要做什麼」整張表在核心
+    /// （`padnote-input::pen`），與 Android 共用同一份 —— 各寫一套的話，
+    /// 同一支筆在兩台裝置上行為會不同。這裡只負責把核心回的結果換成
+    /// 這個 App 的工具。
+    ///
+    /// 打字模式下不理會：那時候畫布根本不收筆畫，換工具只會讓使用者切回
+    /// 手寫時發現筆莫名其妙變了。
+    private func applyPenControl(_ control: FfiPenControl, pressed: Bool) {
         guard editorMode == .draw else { return }
-        switch PencilDoubleTap.outcome(
-            action: action, current: selectedTool, lastBrush: lastBrushTool) {
-        case .none:
-            break
-        case .tool(let tool):
-            selectedTool = tool
+
+        let settings = PenHardwareSettings.shared
+        // 按著的控制項（側鍵、反向筆頭）放開時，只還原**我們自己切過去的
+        // 那一次**。使用者自己在工具列上選了橡皮擦、然後碰了一下側鍵，
+        // 放開時把他的橡皮擦換掉是錯的。
+        if settings.isMomentary(control) {
+            if pressed {
+                penHeldTool = selectedTool
+            } else if penHeldTool == nil {
+                return
+            }
+        }
+
+        let outcome = settings.controls.outcome(
+            control: control,
+            pressed: pressed,
+            erasing: selectedTool == .eraser,
+            lassoing: selectedTool == .lasso)
+
+        switch outcome {
+        case .nothing:
+            return
+        case .useEraser:
+            selectedTool = .eraser
+        case .useLastBrush:
+            // 放開時回到按下去之前那支，而不是「最後用過的筆刷」——
+            // 兩者通常一樣，但使用者若在按著側鍵的期間又換過筆，
+            // 他要的是回到他剛剛選的那一支。
+            selectedTool = penHeldTool ?? lastBrushTool
+        case .useLasso:
+            selectedTool = .lasso
         case .showInkAttributes:
             showProColorPicker = true
+        case .undo:
+            canvasView?.undoManager?.undo()
+        case .redo:
+            canvasView?.undoManager?.redo()
+        case .toggleRuler:
+            isRulerActive.toggle()
         }
+
+        if settings.isMomentary(control) && !pressed {
+            penHeldTool = nil
+        }
+        // 筆身的動作是看不見的 —— 使用者當下正看著筆尖，一下短回饋讓他
+        // 知道剛剛那下有收到，不必抬頭確認工具列。
+        PenHaptics.penControlFired(in: canvasView)
     }
 
     private func saveCurrentPageDrawing() {

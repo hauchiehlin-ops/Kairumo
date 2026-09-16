@@ -93,6 +93,12 @@ public final class InkInputDiagnostics {
         public var force: CGFloat = 0
         public var altitude: CGFloat = 0
         public var azimuth: CGFloat = 0
+        /// 筆桿沿自身軸線的旋轉角，0–2π。只有 Pencil Pro 回報得出來。
+        ///
+        /// **診斷列是這一邊唯一看得到滾動角的地方**：PencilKit 的控制點沒有
+        /// 這個欄位，所以它進不了筆畫（見 `InkInterop.rollAngle(of:)`）。
+        /// 要確認手上那支筆到底有沒有回報滾動角，只能看這裡。
+        public var roll: CGFloat = 0
         /// 這一次事件裡的聯合觸控點數（`coalescedTouches`）。
         ///
         /// 只拿到 1 就代表**沒有取到中間的取樣點** —— 快速書寫會變成折線，
@@ -122,6 +128,7 @@ public final class InkInputDiagnostics {
         next.force = touch.force
         next.altitude = touch.altitudeAngle
         next.azimuth = touch.azimuthAngle(in: view)
+        next.roll = touch.kairumoRollAngle
         next.coalescedCount = event?.coalescedTouches(for: touch)?.count ?? 0
         next.predictedCount = event?.predictedTouches(for: touch)?.count ?? 0
         next.activeTouches = event?.allTouches?.count ?? 0
@@ -147,6 +154,7 @@ public final class InkInputDiagnostics {
             ("壓力", snapshot.hasForce ? String(format: "%.2f", snapshot.force) : "不支援"),
             ("傾角", String(format: "%.2f", snapshot.altitude)),
             ("方位", String(format: "%.2f", snapshot.azimuth)),
+            ("滾動", String(format: "%.2f", snapshot.roll)),
             ("聯合取樣點", "\(snapshot.coalescedCount)"),
             ("預測取樣點", "\(snapshot.predictedCount)"),
             ("同時觸控", "\(snapshot.activeTouches)"),
