@@ -133,6 +133,12 @@ fun InkToolbar(
         // 擦除與套索都不需要顏色 —— 留著只會讓使用者以為可以擦成某個顏色，
         // 或是以為選取會被染色。
         if (!tool.isEraser && !tool.isLasso) {
+            // 六顆色票包成**一個** FlowRow 子項（工作項 S-64）。
+            //
+            // 原本它們是與筆刷晶片並列的獨立子項，於是 FlowRow 會把前幾顆
+            // 塞進上一排的空隙、剩下的換行 —— 同一組顏色被拆在兩排，
+            // 看起來不像一組。整組一起換行才讀得出「這是調色盤」。
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for ((hex, color, nameKey) in inkPalette) {
                 val selected = colorHex == hex
                 // 色票畫在「紙」上（工作項 S-64）。
@@ -167,6 +173,7 @@ fun InkToolbar(
                                 LocalizationStrings.localized("selected", languageTag)
                         }
                 )
+            }
             }
         }
 
