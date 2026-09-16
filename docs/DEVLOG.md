@@ -5,6 +5,55 @@
 
 ---
 
+## 2026-09-16（收尾）· CI 整排紅燈：一條 lint 讓五個工作一起倒
+
+### 看起來像五個問題，其實是一個
+
+CI 從 9/15 的 S-20 那次提交起就是紅的，而且**每一個工作都紅**：
+Android build、Android instrumented tests、FFI bindings、Format
+compatibility、三個平台的 Test。
+
+原因是 `.github/workflows/ci.yml` 設了 `RUSTFLAGS: -D warnings` ——
+任何一條 clippy lint 都會讓 `cargo` 失敗，而上面那五個工作**全都要先編
+核心**。所以它們不是五個獨立的故障，是同一個編譯步驟倒了五次。
+
+這一次真正擋住全部的是 `padnote-shapes` 裡一個不需要的 `mut`（我自己在
+`SpeechBubble` 寫下的閉包）。本機 `cargo check` 只把它當警告，而我當時
+用 `grep -E "^error"` 過濾輸出 —— **警告被我自己的 grep 濾掉了**。
+
+教訓寫進 STATE：本機要用 `RUSTFLAGS="-D warnings" cargo clippy
+--workspace --all-targets` 對齊 CI，不要只看 `cargo check` 的錯誤行。
+
+### 其餘的 clippy
+
+`padnote-llm` 的 `match` 改 `?`、`padnote-ink` 的索引迴圈改
+`iter().enumerate()`、`padnote-core` 的 `chunks_exact` 改 `as_chunks`、
+三處 `collapsible_if`、`_point_marker` 搬到 `mod tests` 之前。
+
+`padnote-llm-llama` 的 `n_cur` 是**模型上下文裡的絕對位置**，不是迴圈
+次數；clippy 建議的 `for n_cur in (start..).take(n)` 讀起來更難懂，
+所以在迴圈上標 `allow` 並寫明理由 —— 這種時候關掉 lint 是對的，
+但關掉之前要說得出為什麼。
+
+新加的縮圖繪圖函式參數過多（9/7）。把 `pixels/width/height/scale` 收成
+一個 `Canvas` 型別：那四個永遠一起出現，而且拆開來傳很容易把 `width`
+與 `height` 寫反 —— 那種錯畫出來是整張圖歪斜，不會有任何錯誤訊息。
+
+### rustfmt
+
+`cargo fmt --all`，34 個檔案。多數是這次之前就沒對齊的，最常見的一項是
+edition 2024 的 import 排序（小寫排在大寫之後）。
+
+### 這次是逐一跑過 CI 的每一個工作才推的
+
+`cargo fmt --all --check`、`cargo clippy --workspace --all-targets`
+（帶 `-D warnings`）、`cargo test --workspace`、`relay_ffi`、
+format-compat、`generate-bindings.sh` + swiftc 語法檢查、
+`build-android-libs.sh`、`gradlew assembleDebug`、
+`android-release.sh --unsigned`、`cargo deny check`。
+
+---
+
 ## 2026-09-16（深夜）· S-57 縮圖畫得出物件、S-59 Android 編輯器工具列分兩排
 
 ### S-57：縮圖不再是一張白紙

@@ -92,6 +92,10 @@ Kairumo —— 手寫、打字、錄音轉文字三合一的筆記 App。
   同一個 App 在兩台裝置上長得像兩個產品
 - ❌ 兩個模式的工具同時列著 —— 使用者在打字模式下看到一整排筆，
   點下去卻畫不出東西。第二排要跟著模式換
+- ❌ 只看 `cargo check` 的錯誤行就以為過了 —— CI 是 `RUSTFLAGS: -D warnings`，
+  警告在那裡就是錯誤。本機要跑
+  `RUSTFLAGS="-D warnings" cargo clippy --workspace --all-targets`
+- ❌ 用 `grep -E "^error"` 過濾建置輸出 —— 會把警告濾掉，而 CI 不會
 - ❌ 以為 `page.blocks()` 就是一頁的全部 —— 形狀與連接線住在**物件樹**裡，
   只走 blocks 的算繪會少掉整張流程圖
 - ❌ 以為 Paraformer 的串流是靠 encoder cache —— 官方匯出本來就沒有 cache 輸入，

@@ -190,3 +190,8 @@ jobs:
   # crash-safety:  J7 隨機殺行程 + 斷電模擬，驗證零資料遺失
   #
   # 目前 blocked on：實體 iPad 測試機、padnote-bench 中文測試集
+
+# 本機要與 CI 對齊的話跑這一行（`-D warnings` 是上面 env 設的，
+# 少了它本機看到的是警告、CI 看到的是錯誤）：
+#
+#   RUSTFLAGS="-D warnings" cargo clippy --workspace --all-targets
