@@ -1,6 +1,9 @@
 {
  "id": "business",
- "icon": { "apple": "briefcase.fill", "android": "Work" },
+ "icon": {
+  "apple": "briefcase.fill",
+  "android": "Work"
+ },
  "name": {
   "zhHant": "企業與商業行政",
   "en": "Business & Administration",
@@ -42,46 +45,106 @@
      },
      "variants": {
       "example": [
-       { "type": "title", "text": {
-        "zhHant": "詢價單",
-        "en": "Request for Quotation" } },
-       { "type": "body", "text": {
-        "zhHant": "文件編號：RFQ-2026-0118\n日期：2026 年 1 月 18 日\n受文者：長昇精密工業股份有限公司 業務部 陳素芬 經理\n發文者：明衡科技有限公司 採購部 林佳蓉",
-        "en": "Document No.: RFQ-2026-0118\nDate: 18 January 2026\nTo: Ms. S. F. Chen, Sales Manager, Changsheng Precision Co., Ltd.\nFrom: J. R. Lin, Procurement, Minghen Technology Ltd." } },
-       { "type": "body", "text": {
-        "zhHant": "陳經理您好：\n\n敝公司為 2026 年第二季新產線備料，擬採購下列品項。煩請貴公司就下表規格提供正式報價，並註明單價、稅別、最小訂購量與交貨期。",
-        "en": "Dear Ms. Chen,\n\nWe are sourcing materials for a new production line starting in Q2 2026 and would like to purchase the items listed below. Please provide a formal quotation covering unit price, tax treatment, minimum order quantity and lead time." } },
-       { "type": "table", "text": {
-        "zhHant": "項次|品名與規格|數量|單位|需求交期\n1|不鏽鋼軸承座 SUS304 φ32|500|件|2026/03/15\n2|精密齒輪 M1.5 Z=24|300|件|2026/03/15\n3|O 型環 NBR φ28×2.5|2,000|只|2026/02/28",
-        "en": "No.|Item & Specification|Qty|Unit|Required Date\n1|Stainless bearing housing SUS304 φ32|500|pcs|2026/03/15\n2|Precision gear M1.5 Z=24|300|pcs|2026/03/15\n3|O-ring NBR φ28×2.5|2,000|pcs|2026/02/28" } },
-       { "type": "heading", "text": {
-        "zhHant": "報價條件",
-        "en": "Quotation Terms" } },
-       { "type": "body", "text": {
-        "zhHant": "一、報價有效期請註明，並以新臺幣報價、含 5% 營業稅。\n二、交貨地點為本公司桃園廠（桃園市龜山區文明路 128 號）。\n三、付款條件為月結 60 天，開立即期支票。\n四、請於 2026 年 1 月 31 日前回覆，逾期恕不列入評選。\n五、如需樣品確認，請一併說明樣品費用與寄送時程。",
-        "en": "1. Please state the validity period. Quote in TWD, inclusive of 5% business tax.\n2. Delivery to our Taoyuan plant (No. 128, Wenming Rd., Guishan Dist., Taoyuan City).\n3. Payment terms: net 60 days from month end, by sight cheque.\n4. Please reply by 31 January 2026; late responses cannot be considered.\n5. If samples are required for approval, please state sample cost and lead time." } },
-       { "type": "signoff", "text": {
-        "zhHant": "順頌\n商祺\n\n明衡科技有限公司　採購部\n林佳蓉　敬上\n電話：(03) 328-7412 分機 215\n電子郵件：jrlin@minghen.example",
-        "en": "Yours sincerely,\n\nJ. R. Lin\nProcurement Department\nMinghen Technology Ltd.\nTel: +886 3 328-7412 ext. 215\nEmail: jrlin@minghen.example" } }
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "詢價單",
+         "en": "Request for Quotation"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "文件編號：RFQ-2026-0118\n日期：2026 年 1 月 18 日\n受文者：長昇精密工業股份有限公司 業務部 陳素芬 經理\n發文者：明衡科技有限公司 採購部 林佳蓉",
+         "en": "Document No.: RFQ-2026-0118\nDate: 18 January 2026\nTo: Ms. S. F. Chen, Sales Manager, Changsheng Precision Co., Ltd.\nFrom: J. R. Lin, Procurement, Minghen Technology Ltd."
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "陳經理您好：\n\n敝公司為 2026 年第二季新產線備料，擬採購下列品項。煩請貴公司就下表規格提供正式報價，並註明單價、稅別、最小訂購量與交貨期。",
+         "en": "Dear Ms. Chen,\n\nWe are sourcing materials for a new production line starting in Q2 2026 and would like to purchase the items listed below. Please provide a formal quotation covering unit price, tax treatment, minimum order quantity and lead time."
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項次|品名與規格|數量|單位|需求交期\n1|不鏽鋼軸承座 SUS304 φ32|500|件|2026/03/15\n2|精密齒輪 M1.5 Z=24|300|件|2026/03/15\n3|O 型環 NBR φ28×2.5|2,000|只|2026/02/28",
+         "en": "No.|Item & Specification|Qty|Unit|Required Date\n1|Stainless bearing housing SUS304 φ32|500|pcs|2026/03/15\n2|Precision gear M1.5 Z=24|300|pcs|2026/03/15\n3|O-ring NBR φ28×2.5|2,000|pcs|2026/02/28"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "報價條件",
+         "en": "Quotation Terms"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "一、報價有效期請註明，並以新臺幣報價、含 5% 營業稅。\n二、交貨地點為本公司桃園廠（桃園市龜山區文明路 128 號）。\n三、付款條件為月結 60 天，開立即期支票。\n四、請於 2026 年 1 月 31 日前回覆，逾期恕不列入評選。\n五、如需樣品確認，請一併說明樣品費用與寄送時程。",
+         "en": "1. Please state the validity period. Quote in TWD, inclusive of 5% business tax.\n2. Delivery to our Taoyuan plant (No. 128, Wenming Rd., Guishan Dist., Taoyuan City).\n3. Payment terms: net 60 days from month end, by sight cheque.\n4. Please reply by 31 January 2026; late responses cannot be considered.\n5. If samples are required for approval, please state sample cost and lead time."
+        }
+       },
+       {
+        "type": "signoff",
+        "text": {
+         "zhHant": "順頌\n商祺\n\n明衡科技有限公司　採購部\n林佳蓉　敬上\n電話：(03) 328-7412 分機 215\n電子郵件：jrlin@minghen.example",
+         "en": "Yours sincerely,\n\nJ. R. Lin\nProcurement Department\nMinghen Technology Ltd.\nTel: +886 3 328-7412 ext. 215\nEmail: jrlin@minghen.example"
+        }
+       }
       ],
       "blank": [
-       { "type": "title", "text": { "zhHant": "詢價單", "en": "Request for Quotation" } },
-       { "type": "body", "text": {
-        "zhHant": "文件編號：\n日期：\n受文者：\n發文者：",
-        "en": "Document No.:\nDate:\nTo:\nFrom:" } },
-       { "type": "body", "text": {
-        "zhHant": "（稱謂）您好：\n\n（說明詢價的緣由與用途）",
-        "en": "Dear （name）,\n\n（State the reason for the enquiry and intended use.）" } },
-       { "type": "table", "text": {
-        "zhHant": "項次|品名與規格|數量|單位|需求交期\n1||||\n2||||\n3||||\n4||||\n5||||",
-        "en": "No.|Item & Specification|Qty|Unit|Required Date\n1||||\n2||||\n3||||\n4||||\n5||||" } },
-       { "type": "heading", "text": { "zhHant": "報價條件", "en": "Quotation Terms" } },
-       { "type": "body", "text": {
-        "zhHant": "一、報價有效期：\n二、交貨地點：\n三、付款條件：\n四、回覆期限：\n五、其他要求：",
-        "en": "1. Validity period:\n2. Delivery location:\n3. Payment terms:\n4. Reply deadline:\n5. Other requirements:" } },
-       { "type": "signoff", "text": {
-        "zhHant": "順頌\n商祺\n\n（公司名稱）　（部門）\n（姓名）　敬上\n電話：\n電子郵件：",
-        "en": "Yours sincerely,\n\n（Name）\n（Department）\n（Company）\nTel:\nEmail:" } }
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "詢價單",
+         "en": "Request for Quotation"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "文件編號：\n日期：\n受文者：\n發文者：",
+         "en": "Document No.:\nDate:\nTo:\nFrom:"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（稱謂）您好：\n\n（說明詢價的緣由與用途）",
+         "en": "Dear （name）,\n\n（State the reason for the enquiry and intended use.）"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項次|品名與規格|數量|單位|需求交期\n1||||\n2||||\n3||||\n4||||\n5||||",
+         "en": "No.|Item & Specification|Qty|Unit|Required Date\n1||||\n2||||\n3||||\n4||||\n5||||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "報價條件",
+         "en": "Quotation Terms"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "一、報價有效期：\n二、交貨地點：\n三、付款條件：\n四、回覆期限：\n五、其他要求：",
+         "en": "1. Validity period:\n2. Delivery location:\n3. Payment terms:\n4. Reply deadline:\n5. Other requirements:"
+        }
+       },
+       {
+        "type": "signoff",
+        "text": {
+         "zhHant": "順頌\n商祺\n\n（公司名稱）　（部門）\n（姓名）　敬上\n電話：\n電子郵件：",
+         "en": "Yours sincerely,\n\n（Name）\n（Department）\n（Company）\nTel:\nEmail:"
+        }
+       }
       ]
      }
     },
@@ -106,36 +169,92 @@
      },
      "variants": {
       "example": [
-       { "type": "title", "text": { "zhHant": "報價單", "en": "Quotation" } },
-       { "type": "body", "text": {
-        "zhHant": "報價單號：QT-2026-0203\n報價日期：2026 年 2 月 3 日\n有效期限：本報價自報價日起 30 日內有效\n客戶：明衡科技有限公司 採購部 林佳蓉\n報價廠商：長昇精密工業股份有限公司",
-        "en": "Quotation No.: QT-2026-0203\nDate: 3 February 2026\nValid until: 30 days from the date of quotation\nCustomer: Minghen Technology Ltd. (Attn: J. R. Lin, Procurement)\nSupplier: Changsheng Precision Co., Ltd." } },
-       { "type": "table", "text": {
-        "zhHant": "項次|品名與規格|數量|單位|單價|小計\n1|不鏽鋼軸承座 SUS304 φ32|500|件|420|210,000\n2|精密齒輪 M1.5 Z=24|300|件|680|204,000\n3|O 型環 NBR φ28×2.5|2,000|只|12|24,000\n||||未稅合計||438,000\n||||營業稅 5%||21,900\n||||總計||459,900",
-        "en": "No.|Item & Specification|Qty|Unit|Unit Price|Amount\n1|Stainless bearing housing SUS304 φ32|500|pcs|420|210,000\n2|Precision gear M1.5 Z=24|300|pcs|680|204,000\n3|O-ring NBR φ28×2.5|2,000|pcs|12|24,000\n||||Subtotal||438,000\n||||Tax 5%||21,900\n||||Total||459,900" } },
-       { "type": "heading", "text": { "zhHant": "交易條件", "en": "Terms of Sale" } },
-       { "type": "body", "text": {
-        "zhHant": "一、幣別：新臺幣，含 5% 營業稅。\n二、交期：訂單確認並收到簽回後 30 個工作天。\n三、交貨方式：送達桃園廠，運費由本公司負擔。\n四、付款條件：月結 60 天。\n五、品質保證：自交貨日起一年，非人為因素故障免費更換。\n六、本報價未含模具開發費用，如需開模另行報價。",
-        "en": "1. Currency: TWD, inclusive of 5% business tax.\n2. Lead time: 30 working days after order confirmation and signed acceptance.\n3. Delivery: to the Taoyuan plant; freight borne by the supplier.\n4. Payment: net 60 days from month end.\n5. Warranty: one year from delivery; free replacement for non-man-made defects.\n6. Tooling development is not included; quoted separately if required." } },
-       { "type": "signoff", "text": {
-        "zhHant": "長昇精密工業股份有限公司\n業務部　陳素芬　經理\n電話：(02) 2712-9080\n統一編號：24681357",
-        "en": "Changsheng Precision Co., Ltd.\nS. F. Chen, Sales Manager\nTel: +886 2 2712-9080\nTax ID: 24681357" } }
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "報價單",
+         "en": "Quotation"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "報價單號：QT-2026-0203\n報價日期：2026 年 2 月 3 日\n有效期限：本報價自報價日起 30 日內有效\n客戶：明衡科技有限公司 採購部 林佳蓉\n報價廠商：長昇精密工業股份有限公司",
+         "en": "Quotation No.: QT-2026-0203\nDate: 3 February 2026\nValid until: 30 days from the date of quotation\nCustomer: Minghen Technology Ltd. (Attn: J. R. Lin, Procurement)\nSupplier: Changsheng Precision Co., Ltd."
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項次|品名與規格|數量|單位|單價|小計\n1|不鏽鋼軸承座 SUS304 φ32|500|件|420|210,000\n2|精密齒輪 M1.5 Z=24|300|件|680|204,000\n3|O 型環 NBR φ28×2.5|2,000|只|12|24,000\n||||未稅合計||438,000\n||||營業稅 5%||21,900\n||||總計||459,900",
+         "en": "No.|Item & Specification|Qty|Unit|Unit Price|Amount\n1|Stainless bearing housing SUS304 φ32|500|pcs|420|210,000\n2|Precision gear M1.5 Z=24|300|pcs|680|204,000\n3|O-ring NBR φ28×2.5|2,000|pcs|12|24,000\n||||Subtotal||438,000\n||||Tax 5%||21,900\n||||Total||459,900"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "交易條件",
+         "en": "Terms of Sale"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "一、幣別：新臺幣，含 5% 營業稅。\n二、交期：訂單確認並收到簽回後 30 個工作天。\n三、交貨方式：送達桃園廠，運費由本公司負擔。\n四、付款條件：月結 60 天。\n五、品質保證：自交貨日起一年，非人為因素故障免費更換。\n六、本報價未含模具開發費用，如需開模另行報價。",
+         "en": "1. Currency: TWD, inclusive of 5% business tax.\n2. Lead time: 30 working days after order confirmation and signed acceptance.\n3. Delivery: to the Taoyuan plant; freight borne by the supplier.\n4. Payment: net 60 days from month end.\n5. Warranty: one year from delivery; free replacement for non-man-made defects.\n6. Tooling development is not included; quoted separately if required."
+        }
+       },
+       {
+        "type": "signoff",
+        "text": {
+         "zhHant": "長昇精密工業股份有限公司\n業務部　陳素芬　經理\n電話：(02) 2712-9080\n統一編號：24681357",
+         "en": "Changsheng Precision Co., Ltd.\nS. F. Chen, Sales Manager\nTel: +886 2 2712-9080\nTax ID: 24681357"
+        }
+       }
       ],
       "blank": [
-       { "type": "title", "text": { "zhHant": "報價單", "en": "Quotation" } },
-       { "type": "body", "text": {
-        "zhHant": "報價單號：\n報價日期：\n有效期限：\n客戶：\n報價廠商：",
-        "en": "Quotation No.:\nDate:\nValid until:\nCustomer:\nSupplier:" } },
-       { "type": "table", "text": {
-        "zhHant": "項次|品名與規格|數量|單位|單價|小計\n1||||||\n2||||||\n3||||||\n4||||||\n5||||||\n||||未稅合計||\n||||營業稅 5%||\n||||總計||",
-        "en": "No.|Item & Specification|Qty|Unit|Unit Price|Amount\n1||||||\n2||||||\n3||||||\n4||||||\n5||||||\n||||Subtotal||\n||||Tax||\n||||Total||" } },
-       { "type": "heading", "text": { "zhHant": "交易條件", "en": "Terms of Sale" } },
-       { "type": "body", "text": {
-        "zhHant": "一、幣別：\n二、交期：\n三、交貨方式：\n四、付款條件：\n五、品質保證：\n六、其他：",
-        "en": "1. Currency:\n2. Lead time:\n3. Delivery:\n4. Payment:\n5. Warranty:\n6. Other:" } },
-       { "type": "signoff", "text": {
-        "zhHant": "（公司名稱）\n（部門）　（姓名）　（職稱）\n電話：\n統一編號：",
-        "en": "（Company）\n（Name）, （Title）\nTel:\nTax ID:" } }
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "報價單",
+         "en": "Quotation"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "報價單號：\n報價日期：\n有效期限：\n客戶：\n報價廠商：",
+         "en": "Quotation No.:\nDate:\nValid until:\nCustomer:\nSupplier:"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項次|品名與規格|數量|單位|單價|小計\n1||||||\n2||||||\n3||||||\n4||||||\n5||||||\n||||未稅合計||\n||||營業稅 5%||\n||||總計||",
+         "en": "No.|Item & Specification|Qty|Unit|Unit Price|Amount\n1||||||\n2||||||\n3||||||\n4||||||\n5||||||\n||||Subtotal||\n||||Tax||\n||||Total||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "交易條件",
+         "en": "Terms of Sale"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "一、幣別：\n二、交期：\n三、交貨方式：\n四、付款條件：\n五、品質保證：\n六、其他：",
+         "en": "1. Currency:\n2. Lead time:\n3. Delivery:\n4. Payment:\n5. Warranty:\n6. Other:"
+        }
+       },
+       {
+        "type": "signoff",
+        "text": {
+         "zhHant": "（公司名稱）\n（部門）　（姓名）　（職稱）\n電話：\n統一編號：",
+         "en": "（Company）\n（Name）, （Title）\nTel:\nTax ID:"
+        }
+       }
       ]
      }
     },
@@ -160,36 +279,92 @@
      },
      "variants": {
       "example": [
-       { "type": "title", "text": { "zhHant": "請款單", "en": "Payment Request" } },
-       { "type": "body", "text": {
-        "zhHant": "請款單號：PR-2026-0415\n請款日期：2026 年 4 月 15 日\n付款方：明衡科技有限公司\n受款方：長昇精密工業股份有限公司\n對應合約：採購合約 PO-2026-0210\n付款期限：2026 年 6 月 30 日",
-        "en": "Request No.: PR-2026-0415\nDate: 15 April 2026\nPayer: Minghen Technology Ltd.\nPayee: Changsheng Precision Co., Ltd.\nContract: Purchase Order PO-2026-0210\nDue date: 30 June 2026" } },
-       { "type": "table", "text": {
-        "zhHant": "項次|請款事由|驗收日期|金額（未稅）\n1|第一批軸承座 500 件交貨驗收|2026/03/18|210,000\n2|精密齒輪 300 件交貨驗收|2026/03/20|204,000\n||未稅合計|414,000\n||營業稅 5%|20,700\n||本次請款總額|434,700",
-        "en": "No.|Description|Acceptance Date|Amount (excl. tax)\n1|First batch: 500 bearing housings accepted|2026/03/18|210,000\n2|300 precision gears accepted|2026/03/20|204,000\n||Subtotal|414,000\n||Tax 5%|20,700\n||Total due|434,700" } },
-       { "type": "heading", "text": { "zhHant": "匯款資訊", "en": "Remittance Details" } },
-       { "type": "body", "text": {
-        "zhHant": "戶名：長昇精密工業股份有限公司\n銀行：第一商業銀行 城中分行（代號 007）\n帳號：123-45-678901\n發票號碼：AB-12345678（已隨貨寄出）\n\n檢附文件：交貨單影本二份、驗收單影本二份、統一發票正本一份。",
-        "en": "Account name: Changsheng Precision Co., Ltd.\nBank: First Commercial Bank, Chengzhong Branch (code 007)\nAccount: 123-45-678901\nInvoice No.: AB-12345678 (sent with the goods)\n\nAttachments: 2 copies of delivery notes, 2 copies of acceptance records, 1 original invoice." } },
-       { "type": "table", "text": {
-        "zhHant": "承辦|覆核|部門主管|財務|核准\n||||",
-        "en": "Prepared|Checked|Dept. Head|Finance|Approved\n||||" } }
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "請款單",
+         "en": "Payment Request"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "請款單號：PR-2026-0415\n請款日期：2026 年 4 月 15 日\n付款方：明衡科技有限公司\n受款方：長昇精密工業股份有限公司\n對應合約：採購合約 PO-2026-0210\n付款期限：2026 年 6 月 30 日",
+         "en": "Request No.: PR-2026-0415\nDate: 15 April 2026\nPayer: Minghen Technology Ltd.\nPayee: Changsheng Precision Co., Ltd.\nContract: Purchase Order PO-2026-0210\nDue date: 30 June 2026"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項次|請款事由|驗收日期|金額（未稅）\n1|第一批軸承座 500 件交貨驗收|2026/03/18|210,000\n2|精密齒輪 300 件交貨驗收|2026/03/20|204,000\n||未稅合計|414,000\n||營業稅 5%|20,700\n||本次請款總額|434,700",
+         "en": "No.|Description|Acceptance Date|Amount (excl. tax)\n1|First batch: 500 bearing housings accepted|2026/03/18|210,000\n2|300 precision gears accepted|2026/03/20|204,000\n||Subtotal|414,000\n||Tax 5%|20,700\n||Total due|434,700"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "匯款資訊",
+         "en": "Remittance Details"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "戶名：長昇精密工業股份有限公司\n銀行：第一商業銀行 城中分行（代號 007）\n帳號：123-45-678901\n發票號碼：AB-12345678（已隨貨寄出）\n\n檢附文件：交貨單影本二份、驗收單影本二份、統一發票正本一份。",
+         "en": "Account name: Changsheng Precision Co., Ltd.\nBank: First Commercial Bank, Chengzhong Branch (code 007)\nAccount: 123-45-678901\nInvoice No.: AB-12345678 (sent with the goods)\n\nAttachments: 2 copies of delivery notes, 2 copies of acceptance records, 1 original invoice."
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "承辦|覆核|部門主管|財務|核准\n||||",
+         "en": "Prepared|Checked|Dept. Head|Finance|Approved\n||||"
+        }
+       }
       ],
       "blank": [
-       { "type": "title", "text": { "zhHant": "請款單", "en": "Payment Request" } },
-       { "type": "body", "text": {
-        "zhHant": "請款單號：\n請款日期：\n付款方：\n受款方：\n對應合約：\n付款期限：",
-        "en": "Request No.:\nDate:\nPayer:\nPayee:\nContract:\nDue date:" } },
-       { "type": "table", "text": {
-        "zhHant": "項次|請款事由|驗收日期|金額（未稅）\n1|||\n2|||\n3|||\n||未稅合計|\n||營業稅|\n||本次請款總額|",
-        "en": "No.|Description|Acceptance Date|Amount (excl. tax)\n1|||\n2|||\n3|||\n||Subtotal|\n||Tax|\n||Total due|" } },
-       { "type": "heading", "text": { "zhHant": "匯款資訊", "en": "Remittance Details" } },
-       { "type": "body", "text": {
-        "zhHant": "戶名：\n銀行：\n帳號：\n發票號碼：\n\n檢附文件：",
-        "en": "Account name:\nBank:\nAccount:\nInvoice No.:\n\nAttachments:" } },
-       { "type": "table", "text": {
-        "zhHant": "承辦|覆核|部門主管|財務|核准\n||||",
-        "en": "Prepared|Checked|Dept. Head|Finance|Approved\n||||" } }
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "請款單",
+         "en": "Payment Request"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "請款單號：\n請款日期：\n付款方：\n受款方：\n對應合約：\n付款期限：",
+         "en": "Request No.:\nDate:\nPayer:\nPayee:\nContract:\nDue date:"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項次|請款事由|驗收日期|金額（未稅）\n1|||\n2|||\n3|||\n||未稅合計|\n||營業稅|\n||本次請款總額|",
+         "en": "No.|Description|Acceptance Date|Amount (excl. tax)\n1|||\n2|||\n3|||\n||Subtotal|\n||Tax|\n||Total due|"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "匯款資訊",
+         "en": "Remittance Details"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "戶名：\n銀行：\n帳號：\n發票號碼：\n\n檢附文件：",
+         "en": "Account name:\nBank:\nAccount:\nInvoice No.:\n\nAttachments:"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "承辦|覆核|部門主管|財務|核准\n||||",
+         "en": "Prepared|Checked|Dept. Head|Finance|Approved\n||||"
+        }
+       }
       ]
      }
     },
@@ -214,28 +389,64 @@
      },
      "variants": {
       "example": [
-       { "type": "title", "text": { "zhHant": "感謝信", "en": "Thank-You Letter" } },
-       { "type": "body", "text": {
-        "zhHant": "日期：2026 年 5 月 6 日\n受文者：長昇精密工業股份有限公司 陳素芬 經理",
-        "en": "Date: 6 May 2026\nTo: Ms. S. F. Chen, Changsheng Precision Co., Ltd." } },
-       { "type": "body", "text": {
-        "zhHant": "陳經理鈞鑒：\n\n敝公司新產線已於上月順利量產，謹代表全體同仁向貴公司致上最誠摯的謝意。\n\n三月初模具調校不如預期，交期一度面臨延宕。貴公司在接獲通知的當日即派員南下支援，連續三天協同我方工程團隊完成參數校正，使產線得以如期啟動。這份不推諉、不計較的協助，我們記在心裡。\n\n特別感謝貴公司品保部門主動提供的材質檢驗報告。那份資料讓我們在客戶稽核時免去一次可能的重工，價值遠超過報告本身。\n\n後續第二季的擴線計畫，仍盼能與貴公司繼續合作。專此函謝。",
-        "en": "Dear Ms. Chen,\n\nOur new production line entered volume production last month, and I am writing on behalf of the whole team to thank you sincerely.\n\nWhen tooling calibration fell behind in early March, the schedule was at real risk. Your company sent engineers to our site the same day we raised it, and worked alongside our team for three consecutive days to complete the parameter corrections. The line started on time because of that. We have not forgotten it.\n\nWe are especially grateful to your quality assurance team for providing the material inspection reports unprompted. That documentation spared us a likely rework during a customer audit — worth considerably more than the reports themselves.\n\nWe hope to continue working with you on the second-phase expansion this quarter. With sincere thanks." } },
-       { "type": "signoff", "text": {
-        "zhHant": "明衡科技有限公司\n總經理　王文彥　敬啟",
-        "en": "Yours sincerely,\n\nW. Y. Wang\nGeneral Manager\nMinghen Technology Ltd." } }
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "感謝信",
+         "en": "Thank-You Letter"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "日期：2026 年 5 月 6 日\n受文者：長昇精密工業股份有限公司 陳素芬 經理",
+         "en": "Date: 6 May 2026\nTo: Ms. S. F. Chen, Changsheng Precision Co., Ltd."
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "陳經理鈞鑒：\n\n敝公司新產線已於上月順利量產，謹代表全體同仁向貴公司致上最誠摯的謝意。\n\n三月初模具調校不如預期，交期一度面臨延宕。貴公司在接獲通知的當日即派員南下支援，連續三天協同我方工程團隊完成參數校正，使產線得以如期啟動。這份不推諉、不計較的協助，我們記在心裡。\n\n特別感謝貴公司品保部門主動提供的材質檢驗報告。那份資料讓我們在客戶稽核時免去一次可能的重工，價值遠超過報告本身。\n\n後續第二季的擴線計畫，仍盼能與貴公司繼續合作。專此函謝。",
+         "en": "Dear Ms. Chen,\n\nOur new production line entered volume production last month, and I am writing on behalf of the whole team to thank you sincerely.\n\nWhen tooling calibration fell behind in early March, the schedule was at real risk. Your company sent engineers to our site the same day we raised it, and worked alongside our team for three consecutive days to complete the parameter corrections. The line started on time because of that. We have not forgotten it.\n\nWe are especially grateful to your quality assurance team for providing the material inspection reports unprompted. That documentation spared us a likely rework during a customer audit — worth considerably more than the reports themselves.\n\nWe hope to continue working with you on the second-phase expansion this quarter. With sincere thanks."
+        }
+       },
+       {
+        "type": "signoff",
+        "text": {
+         "zhHant": "明衡科技有限公司\n總經理　王文彥　敬啟",
+         "en": "Yours sincerely,\n\nW. Y. Wang\nGeneral Manager\nMinghen Technology Ltd."
+        }
+       }
       ],
       "blank": [
-       { "type": "title", "text": { "zhHant": "感謝信", "en": "Thank-You Letter" } },
-       { "type": "body", "text": {
-        "zhHant": "日期：\n受文者：",
-        "en": "Date:\nTo:" } },
-       { "type": "body", "text": {
-        "zhHant": "（稱謂）鈞鑒：\n\n（開頭：說明為什麼寫這封信）\n\n（主體：寫出具體的一件事 —— 什麼時候、對方做了什麼、造成什麼結果。愈具體愈有份量，空泛的客套話讀起來像罐頭。）\n\n（補充：如果還有第二件值得一提的事）\n\n（結尾：後續合作或再次致謝）",
-        "en": "Dear （name）,\n\n（Opening: why you are writing.）\n\n（Body: name one specific thing — when it happened, what they did, what difference it made. Specifics carry weight; generic courtesies read like a form letter.）\n\n（Optional: a second thing worth mentioning.）\n\n（Closing: future cooperation or a final word of thanks.）" } },
-       { "type": "signoff", "text": {
-        "zhHant": "（公司名稱）\n（職稱）　（姓名）　敬啟",
-        "en": "Yours sincerely,\n\n（Name）\n（Title）\n（Company）" } }
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "感謝信",
+         "en": "Thank-You Letter"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "日期：\n受文者：",
+         "en": "Date:\nTo:"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（稱謂）鈞鑒：\n\n（開頭：說明為什麼寫這封信）\n\n（主體：寫出具體的一件事 —— 什麼時候、對方做了什麼、造成什麼結果。愈具體愈有份量，空泛的客套話讀起來像罐頭。）\n\n（補充：如果還有第二件值得一提的事）\n\n（結尾：後續合作或再次致謝）",
+         "en": "Dear （name）,\n\n（Opening: why you are writing.）\n\n（Body: name one specific thing — when it happened, what they did, what difference it made. Specifics carry weight; generic courtesies read like a form letter.）\n\n（Optional: a second thing worth mentioning.）\n\n（Closing: future cooperation or a final word of thanks.）"
+        }
+       },
+       {
+        "type": "signoff",
+        "text": {
+         "zhHant": "（公司名稱）\n（職稱）　（姓名）　敬啟",
+         "en": "Yours sincerely,\n\n（Name）\n（Title）\n（Company）"
+        }
+       }
       ]
      }
     }
@@ -273,48 +484,1280 @@
      },
      "variants": {
       "example": [
-       { "type": "title", "text": {
-        "zhHant": "第二季產線擴充檢討會議紀錄",
-        "en": "Q2 Line Expansion Review — Meeting Minutes" } },
-       { "type": "table", "text": {
-        "zhHant": "項目|內容\n會議名稱|第二季產線擴充檢討會議\n時間|2026 年 4 月 9 日（星期四）14:00–15:40\n地點|桃園廠 三樓第一會議室\n主持人|王文彥 總經理\n記錄|林佳蓉\n出席|王文彥、周明德（生產部）、林佳蓉（採購部）、蔡雅琳（財務部）、張建豪（品保部）\n列席|陳素芬（長昇精密，第三案列席）\n請假|吳志偉（工程部，出差）",
-        "en": "Item|Detail\nMeeting|Q2 Line Expansion Review\nTime|Thursday 9 April 2026, 14:00–15:40\nVenue|Meeting Room 1, 3F, Taoyuan Plant\nChair|W. Y. Wang, General Manager\nMinutes|J. R. Lin\nPresent|W. Y. Wang, M. D. Chou (Production), J. R. Lin (Procurement), Y. L. Tsai (Finance), C. H. Chang (QA)\nIn attendance|S. F. Chen (Changsheng Precision, item 3 only)\nApologies|C. W. Wu (Engineering, travelling)" } },
-       { "type": "heading", "text": { "zhHant": "一、報告事項", "en": "1. Reports" } },
-       { "type": "body", "text": {
-        "zhHant": "（一）生產部報告：第一條產線三月份稼動率 87%，較目標 85% 高出 2 個百分點；不良率 1.2%，主要集中在軸承座壓入工序。\n（二）採購部報告：長昇精密第一、二批交貨均如期完成，驗收無異常。第三批預計 4 月 28 日到貨。\n（三）財務部報告：擴線預算執行率 42%，尚在控制範圍。",
-        "en": "(1) Production: Line 1 ran at 87% utilisation in March against an 85% target. Defect rate 1.2%, concentrated in the bearing-housing press-fit step.\n(2) Procurement: Changsheng delivered batches 1 and 2 on schedule; acceptance found no issues. Batch 3 is due 28 April.\n(3) Finance: 42% of the expansion budget committed, within plan." } },
-       { "type": "heading", "text": { "zhHant": "二、討論與決議事項", "en": "2. Discussion and Resolutions" } },
-       { "type": "body", "text": {
-        "zhHant": "案由一：壓入工序不良率偏高。\n說明：張建豪提出三月不良品 62 件中有 51 件源自壓入力道設定。\n決議：由品保部於四月底前完成壓力參數重新驗證，並提出標準作業程序修訂草案。全體同意。\n\n案由二：第二條產線設備採購時程。\n說明：周明德說明設備商交期為下訂後 16 週，若五月底前未下訂，第三季量產將延後。\n決議：授權採購部於 4 月 30 日前完成比價並簽核，預算上限新臺幣 850 萬元。全體同意。\n\n案由三：與長昇精密的年度框架協議。\n說明：陳經理列席說明，雙方擬將現行逐案報價改為年度框架合約，價格按年度總量分級。\n決議：原則同意，細節由採購部與對方擬定草案，下次會議討論。保留一票（蔡雅琳，認為需先確認年度用量預估準確度）。",
-        "en": "Item 1 — High defect rate at the press-fit step.\nBackground: C. H. Chang reported 51 of 62 March defects traced to press-force settings.\nResolved: QA to re-validate the pressure parameters by end of April and draft a revised standard operating procedure. Agreed unanimously.\n\nItem 2 — Equipment procurement schedule for Line 2.\nBackground: M. D. Chou noted a 16-week lead time from order. Ordering after end of May would delay Q3 production.\nResolved: Procurement authorised to complete price comparison and sign off by 30 April, with a ceiling of NT$8.5 million. Agreed unanimously.\n\nItem 3 — Annual framework agreement with Changsheng Precision.\nBackground: Ms. Chen attended to propose replacing case-by-case quotations with an annual framework contract priced by volume tier.\nResolved: Agreed in principle. Procurement to draft terms with the supplier for discussion at the next meeting. One abstention (Y. L. Tsai, pending confidence in annual volume forecasts)." } },
-       { "type": "heading", "text": { "zhHant": "三、追蹤交辦事項", "en": "3. Action Items" } },
-       { "type": "table", "text": {
-        "zhHant": "編號|交辦事項|負責人|期限|狀態\n1|壓力參數重新驗證並提出 SOP 修訂草案|張建豪|2026/04/30|進行中\n2|第二條產線設備比價與簽核|林佳蓉|2026/04/30|未開始\n3|年度框架合約草案|林佳蓉、陳素芬|2026/05/07|未開始\n4|年度用量預估重新試算|蔡雅琳|2026/05/07|未開始\n5|上次會議第 3 案（倉儲動線調整）結案報告|周明德|2026/04/16|逾期",
-        "en": "No.|Action|Owner|Due|Status\n1|Re-validate press parameters; draft revised SOP|C. H. Chang|2026/04/30|In progress\n2|Line 2 equipment price comparison and sign-off|J. R. Lin|2026/04/30|Not started\n3|Draft annual framework agreement|J. R. Lin, S. F. Chen|2026/05/07|Not started\n4|Recalculate annual volume forecast|Y. L. Tsai|2026/05/07|Not started\n5|Closing report on item 3 of last meeting (warehouse flow)|M. D. Chou|2026/04/16|Overdue" } },
-       { "type": "body", "text": {
-        "zhHant": "四、臨時動議：無。\n五、下次會議：2026 年 5 月 7 日（星期四）14:00，同地點。\n六、散會時間：15:40。",
-        "en": "4. Any other business: none.\n5. Next meeting: Thursday 7 May 2026, 14:00, same venue.\n6. Closed: 15:40." } }
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "第二季產線擴充檢討會議紀錄",
+         "en": "Q2 Line Expansion Review — Meeting Minutes"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n會議名稱|第二季產線擴充檢討會議\n時間|2026 年 4 月 9 日（星期四）14:00–15:40\n地點|桃園廠 三樓第一會議室\n主持人|王文彥 總經理\n記錄|林佳蓉\n出席|王文彥、周明德（生產部）、林佳蓉（採購部）、蔡雅琳（財務部）、張建豪（品保部）\n列席|陳素芬（長昇精密，第三案列席）\n請假|吳志偉（工程部，出差）",
+         "en": "Item|Detail\nMeeting|Q2 Line Expansion Review\nTime|Thursday 9 April 2026, 14:00–15:40\nVenue|Meeting Room 1, 3F, Taoyuan Plant\nChair|W. Y. Wang, General Manager\nMinutes|J. R. Lin\nPresent|W. Y. Wang, M. D. Chou (Production), J. R. Lin (Procurement), Y. L. Tsai (Finance), C. H. Chang (QA)\nIn attendance|S. F. Chen (Changsheng Precision, item 3 only)\nApologies|C. W. Wu (Engineering, travelling)"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "一、報告事項",
+         "en": "1. Reports"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（一）生產部報告：第一條產線三月份稼動率 87%，較目標 85% 高出 2 個百分點；不良率 1.2%，主要集中在軸承座壓入工序。\n（二）採購部報告：長昇精密第一、二批交貨均如期完成，驗收無異常。第三批預計 4 月 28 日到貨。\n（三）財務部報告：擴線預算執行率 42%，尚在控制範圍。",
+         "en": "(1) Production: Line 1 ran at 87% utilisation in March against an 85% target. Defect rate 1.2%, concentrated in the bearing-housing press-fit step.\n(2) Procurement: Changsheng delivered batches 1 and 2 on schedule; acceptance found no issues. Batch 3 is due 28 April.\n(3) Finance: 42% of the expansion budget committed, within plan."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "二、討論與決議事項",
+         "en": "2. Discussion and Resolutions"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "案由一：壓入工序不良率偏高。\n說明：張建豪提出三月不良品 62 件中有 51 件源自壓入力道設定。\n決議：由品保部於四月底前完成壓力參數重新驗證，並提出標準作業程序修訂草案。全體同意。\n\n案由二：第二條產線設備採購時程。\n說明：周明德說明設備商交期為下訂後 16 週，若五月底前未下訂，第三季量產將延後。\n決議：授權採購部於 4 月 30 日前完成比價並簽核，預算上限新臺幣 850 萬元。全體同意。\n\n案由三：與長昇精密的年度框架協議。\n說明：陳經理列席說明，雙方擬將現行逐案報價改為年度框架合約，價格按年度總量分級。\n決議：原則同意，細節由採購部與對方擬定草案，下次會議討論。保留一票（蔡雅琳，認為需先確認年度用量預估準確度）。",
+         "en": "Item 1 — High defect rate at the press-fit step.\nBackground: C. H. Chang reported 51 of 62 March defects traced to press-force settings.\nResolved: QA to re-validate the pressure parameters by end of April and draft a revised standard operating procedure. Agreed unanimously.\n\nItem 2 — Equipment procurement schedule for Line 2.\nBackground: M. D. Chou noted a 16-week lead time from order. Ordering after end of May would delay Q3 production.\nResolved: Procurement authorised to complete price comparison and sign off by 30 April, with a ceiling of NT$8.5 million. Agreed unanimously.\n\nItem 3 — Annual framework agreement with Changsheng Precision.\nBackground: Ms. Chen attended to propose replacing case-by-case quotations with an annual framework contract priced by volume tier.\nResolved: Agreed in principle. Procurement to draft terms with the supplier for discussion at the next meeting. One abstention (Y. L. Tsai, pending confidence in annual volume forecasts)."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "三、追蹤交辦事項",
+         "en": "3. Action Items"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "編號|交辦事項|負責人|期限|狀態\n1|壓力參數重新驗證並提出 SOP 修訂草案|張建豪|2026/04/30|進行中\n2|第二條產線設備比價與簽核|林佳蓉|2026/04/30|未開始\n3|年度框架合約草案|林佳蓉、陳素芬|2026/05/07|未開始\n4|年度用量預估重新試算|蔡雅琳|2026/05/07|未開始\n5|上次會議第 3 案（倉儲動線調整）結案報告|周明德|2026/04/16|逾期",
+         "en": "No.|Action|Owner|Due|Status\n1|Re-validate press parameters; draft revised SOP|C. H. Chang|2026/04/30|In progress\n2|Line 2 equipment price comparison and sign-off|J. R. Lin|2026/04/30|Not started\n3|Draft annual framework agreement|J. R. Lin, S. F. Chen|2026/05/07|Not started\n4|Recalculate annual volume forecast|Y. L. Tsai|2026/05/07|Not started\n5|Closing report on item 3 of last meeting (warehouse flow)|M. D. Chou|2026/04/16|Overdue"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "四、臨時動議：無。\n五、下次會議：2026 年 5 月 7 日（星期四）14:00，同地點。\n六、散會時間：15:40。",
+         "en": "4. Any other business: none.\n5. Next meeting: Thursday 7 May 2026, 14:00, same venue.\n6. Closed: 15:40."
+        }
+       }
       ],
       "blank": [
-       { "type": "title", "text": { "zhHant": "會議紀錄", "en": "Meeting Minutes" } },
-       { "type": "table", "text": {
-        "zhHant": "項目|內容\n會議名稱|\n時間|\n地點|\n主持人|\n記錄|\n出席|\n列席|\n請假|",
-        "en": "Item|Detail\nMeeting|\nTime|\nVenue|\nChair|\nMinutes|\nPresent|\nIn attendance|\nApologies|" } },
-       { "type": "heading", "text": { "zhHant": "一、報告事項", "en": "1. Reports" } },
-       { "type": "body", "text": {
-        "zhHant": "（一）\n（二）\n（三）",
-        "en": "(1)\n(2)\n(3)" } },
-       { "type": "heading", "text": { "zhHant": "二、討論與決議事項", "en": "2. Discussion and Resolutions" } },
-       { "type": "body", "text": {
-        "zhHant": "案由一：\n說明：\n決議：\n\n案由二：\n說明：\n決議：\n\n案由三：\n說明：\n決議：",
-        "en": "Item 1 —\nBackground:\nResolved:\n\nItem 2 —\nBackground:\nResolved:\n\nItem 3 —\nBackground:\nResolved:" } },
-       { "type": "heading", "text": { "zhHant": "三、追蹤交辦事項", "en": "3. Action Items" } },
-       { "type": "table", "text": {
-        "zhHant": "編號|交辦事項|負責人|期限|狀態\n1||||\n2||||\n3||||\n4||||\n5||||",
-        "en": "No.|Action|Owner|Due|Status\n1||||\n2||||\n3||||\n4||||\n5||||" } },
-       { "type": "body", "text": {
-        "zhHant": "四、臨時動議：\n五、下次會議：\n六、散會時間：",
-        "en": "4. Any other business:\n5. Next meeting:\n6. Closed:" } }
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "會議紀錄",
+         "en": "Meeting Minutes"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n會議名稱|\n時間|\n地點|\n主持人|\n記錄|\n出席|\n列席|\n請假|",
+         "en": "Item|Detail\nMeeting|\nTime|\nVenue|\nChair|\nMinutes|\nPresent|\nIn attendance|\nApologies|"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "一、報告事項",
+         "en": "1. Reports"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（一）\n（二）\n（三）",
+         "en": "(1)\n(2)\n(3)"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "二、討論與決議事項",
+         "en": "2. Discussion and Resolutions"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "案由一：\n說明：\n決議：\n\n案由二：\n說明：\n決議：\n\n案由三：\n說明：\n決議：",
+         "en": "Item 1 —\nBackground:\nResolved:\n\nItem 2 —\nBackground:\nResolved:\n\nItem 3 —\nBackground:\nResolved:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "三、追蹤交辦事項",
+         "en": "3. Action Items"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "編號|交辦事項|負責人|期限|狀態\n1||||\n2||||\n3||||\n4||||\n5||||",
+         "en": "No.|Action|Owner|Due|Status\n1||||\n2||||\n3||||\n4||||\n5||||"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "四、臨時動議：\n五、下次會議：\n六、散會時間：",
+         "en": "4. Any other business:\n5. Next meeting:\n6. Closed:"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "hr",
+   "name": {
+    "zhHant": "人事行政",
+    "en": "Human Resources",
+    "zhHans": "人事行政",
+    "ja": "人事・総務",
+    "ko": "인사 행정",
+    "th": "งานบุคคล"
+   },
+   "templates": [
+    {
+     "id": "onboarding_form",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "入職申請書",
+      "en": "New Hire Form",
+      "zhHans": "入职申请书",
+      "ja": "入社申請書",
+      "ko": "입사 신청서",
+      "th": "แบบฟอร์มเข้าทำงาน"
+     },
+     "description": {
+      "zhHant": "到職報到時填寫的基本資料與文件檢核",
+      "en": "Personal details and document checklist for a new starter",
+      "zhHans": "到职报到时填写的基本资料与文件检核",
+      "ja": "入社時に記入する基本情報と書類チェック",
+      "ko": "입사 시 작성하는 기본 정보와 서류 점검",
+      "th": "ข้อมูลส่วนตัวและรายการเอกสารสำหรับพนักงานใหม่"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "入職申請書",
+         "en": "New Hire Form"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n姓名|周庭安\n身分證字號|A123456789\n出生日期|1996 年 7 月 12 日\n聯絡電話|0912-345-678\n電子郵件|tachou@example.com\n戶籍地址|新北市板橋區文化路一段 25 號 4 樓\n通訊地址|同戶籍地址\n緊急聯絡人|周志明（父）0933-221-100",
+         "en": "Item|Detail\nName|T. A. Chou\nID number|A123456789\nDate of birth|12 July 1996\nPhone|0912-345-678\nEmail|tachou@example.com\nRegistered address|4F, No. 25, Sec. 1, Wenhua Rd., Banqiao Dist., New Taipei City\nMailing address|As above\nEmergency contact|C. M. Chou (father) 0933-221-100"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "任用資料",
+         "en": "Appointment Details"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n到職日|2026 年 3 月 2 日\n部門|生產部 製程課\n職稱|製程工程師\n直屬主管|周明德\n僱用性質|正職\n試用期|三個月（至 2026/06/01）\n約定月薪|新臺幣 52,000 元\n工作地點|桃園廠",
+         "en": "Item|Detail\nStart date|2 March 2026\nDepartment|Production — Process Engineering\nTitle|Process Engineer\nReports to|M. D. Chou\nEmployment type|Full-time\nProbation|Three months (to 2026/06/01)\nMonthly salary|NT$52,000\nLocation|Taoyuan Plant"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "應繳文件",
+         "en": "Documents Required"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "□ 身分證正反面影本一份\n□ 最高學歷畢業證書影本\n□ 一吋照片兩張\n□ 勞保轉入資料\n□ 薪資轉帳存摺封面影本\n□ 體檢報告（三個月內）\n□ 前一份工作離職證明（如有）",
+         "en": "□ Copy of ID card (both sides)\n□ Copy of highest academic certificate\n□ Two passport photographs\n□ Labour insurance transfer details\n□ Copy of bank passbook cover for payroll\n□ Health check report (within three months)\n□ Previous employment separation certificate (if any)"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "本人聲明以上所填資料均屬實，如有不實願負一切責任並同意公司終止僱傭關係。\n\n申請人簽章：＿＿＿＿＿＿　　日期：2026 年 2 月 24 日",
+         "en": "I declare that the information above is true and complete. If any part is found to be false, I accept full responsibility and agree that the company may terminate the employment relationship.\n\nSignature: ＿＿＿＿＿＿　　Date: 24 February 2026"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "人資承辦|部門主管|人資主管|總經理\n|||",
+         "en": "HR Officer|Dept. Head|HR Manager|General Manager\n|||"
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "入職申請書",
+         "en": "New Hire Form"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n姓名|\n身分證字號|\n出生日期|\n聯絡電話|\n電子郵件|\n戶籍地址|\n通訊地址|\n緊急聯絡人|",
+         "en": "Item|Detail\nName|\nID number|\nDate of birth|\nPhone|\nEmail|\nRegistered address|\nMailing address|\nEmergency contact|"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "任用資料",
+         "en": "Appointment Details"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n到職日|\n部門|\n職稱|\n直屬主管|\n僱用性質|\n試用期|\n約定月薪|\n工作地點|",
+         "en": "Item|Detail\nStart date|\nDepartment|\nTitle|\nReports to|\nEmployment type|\nProbation|\nMonthly salary|\nLocation|"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "應繳文件",
+         "en": "Documents Required"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "□ 身分證正反面影本一份\n□ 最高學歷畢業證書影本\n□ 一吋照片兩張\n□ 勞保轉入資料\n□ 薪資轉帳存摺封面影本\n□ 體檢報告（三個月內）\n□ 前一份工作離職證明（如有）\n□ 其他：",
+         "en": "□ Copy of ID card (both sides)\n□ Copy of highest academic certificate\n□ Two passport photographs\n□ Labour insurance transfer details\n□ Copy of bank passbook cover for payroll\n□ Health check report (within three months)\n□ Previous separation certificate (if any)\n□ Other:"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "本人聲明以上所填資料均屬實，如有不實願負一切責任。\n\n申請人簽章：＿＿＿＿＿＿　　日期：　　年　　月　　日",
+         "en": "I declare that the information above is true and complete.\n\nSignature: ＿＿＿＿＿＿　　Date:"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "人資承辦|部門主管|人資主管|總經理\n|||",
+         "en": "HR Officer|Dept. Head|HR Manager|General Manager\n|||"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "resignation",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "離職申請書",
+      "en": "Resignation Form",
+      "zhHans": "离职申请书",
+      "ja": "退職申請書",
+      "ko": "퇴직 신청서",
+      "th": "แบบฟอร์มลาออก"
+     },
+     "description": {
+      "zhHant": "離職申請、交接安排與會簽流程",
+      "en": "Notice, handover arrangements and sign-off routing",
+      "zhHans": "离职申请、交接安排与会签流程",
+      "ja": "退職願・引継ぎ計画・回覧承認",
+      "ko": "퇴직 신청, 인수인계 및 결재 절차",
+      "th": "แจ้งลาออก แผนส่งมอบงาน และสายอนุมัติ"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "離職申請書",
+         "en": "Resignation Form"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n姓名|李冠廷\n員工編號|E-2103\n部門|工程部\n職稱|機構工程師\n到職日|2021 年 9 月 1 日\n申請日期|2026 年 4 月 10 日\n預定離職日|2026 年 5 月 10 日\n預告期間|30 日（年資 4 年 8 個月，依勞基法第 16 條）",
+         "en": "Item|Detail\nName|K. T. Lee\nEmployee No.|E-2103\nDepartment|Engineering\nTitle|Mechanical Engineer\nStart date|1 September 2021\nDate of notice|10 April 2026\nLast working day|10 May 2026\nNotice period|30 days (4 yrs 8 mths of service)"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "離職原因",
+         "en": "Reason for Leaving"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "生涯規劃調整，擬轉往學術研究領域進修。與工作內容及團隊無涉，在職期間承蒙照顧，謹此致謝。",
+         "en": "A change in career direction: I intend to move into academic research. This is unrelated to my duties or the team. I am grateful for the support I have received during my time here."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "工作交接",
+         "en": "Handover"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "交接事項|接手人|預定完成日|狀態\n治具設計圖檔與版本紀錄|吳志偉|2026/04/24|進行中\n供應商聯絡窗口清單|吳志偉|2026/04/18|已完成\n進行中專案 P-114 結案報告|張建豪|2026/05/02|未開始\n實驗室鑰匙、門禁卡、筆電|行政課|2026/05/10|未開始",
+         "en": "Item|Successor|Target Date|Status\nFixture drawings and version history|C. W. Wu|2026/04/24|In progress\nSupplier contact list|C. W. Wu|2026/04/18|Done\nClosing report for project P-114|C. H. Chang|2026/05/02|Not started\nLab keys, access card, laptop|Admin|2026/05/10|Not started"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "本人已知悉並同意：\n一、離職生效日前應完成上列交接事項。\n二、任職期間知悉之營業秘密，離職後仍負保密義務。\n三、公司財物應於最後工作日前歸還。\n\n申請人簽章：＿＿＿＿＿＿",
+         "en": "I acknowledge and agree that:\n1. All handover items above will be completed before the effective date.\n2. My confidentiality obligations regarding trade secrets continue after leaving.\n3. Company property will be returned on or before my last working day.\n\nSignature: ＿＿＿＿＿＿"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "直屬主管|部門主管|人資|財務（款項結清）|總經理\n||||",
+         "en": "Line Manager|Dept. Head|HR|Finance (settlement)|General Manager\n||||"
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "離職申請書",
+         "en": "Resignation Form"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n姓名|\n員工編號|\n部門|\n職稱|\n到職日|\n申請日期|\n預定離職日|\n預告期間|",
+         "en": "Item|Detail\nName|\nEmployee No.|\nDepartment|\nTitle|\nStart date|\nDate of notice|\nLast working day|\nNotice period|"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "離職原因",
+         "en": "Reason for Leaving"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（可簡述，不必詳列私人事由）",
+         "en": "（A brief statement is enough; personal details are not required.）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "工作交接",
+         "en": "Handover"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "交接事項|接手人|預定完成日|狀態\n|||\n|||\n|||\n|||\n|||",
+         "en": "Item|Successor|Target Date|Status\n|||\n|||\n|||\n|||\n|||"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "本人已知悉並同意：\n一、離職生效日前應完成上列交接事項。\n二、任職期間知悉之營業秘密，離職後仍負保密義務。\n三、公司財物應於最後工作日前歸還。\n\n申請人簽章：＿＿＿＿＿＿",
+         "en": "I acknowledge and agree that:\n1. All handover items above will be completed before the effective date.\n2. My confidentiality obligations continue after leaving.\n3. Company property will be returned on or before my last working day.\n\nSignature: ＿＿＿＿＿＿"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "直屬主管|部門主管|人資|財務（款項結清）|總經理\n||||",
+         "en": "Line Manager|Dept. Head|HR|Finance (settlement)|General Manager\n||||"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "leave_request",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "請假單",
+      "en": "Leave Request",
+      "zhHans": "请假单",
+      "ja": "休暇申請書",
+      "ko": "휴가 신청서",
+      "th": "ใบลา"
+     },
+     "description": {
+      "zhHant": "假別、起訖時間、代理人與核准欄",
+      "en": "Leave type, dates, cover arrangements and approvals",
+      "zhHans": "假别、起讫时间、代理人与核准栏",
+      "ja": "休暇種別・期間・代理者・承認欄",
+      "ko": "휴가 종류·기간·대직자·결재란",
+      "th": "ประเภทลา วันเวลา ผู้ปฏิบัติงานแทน และการอนุมัติ"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "請假單",
+         "en": "Leave Request"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n姓名|蔡雅琳\n員工編號|E-1876\n部門／職稱|財務部／會計專員\n填單日期|2026 年 6 月 1 日",
+         "en": "Item|Detail\nName|Y. L. Tsai\nEmployee No.|E-1876\nDept. / Title|Finance / Accounting Specialist\nDate of request|1 June 2026"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "假別|起始|結束|時數|事由\n特別休假|2026/06/15 09:00|2026/06/17 18:00|24|返鄉探親\n（可續填）||||",
+         "en": "Leave type|From|To|Hours|Reason\nAnnual leave|2026/06/15 09:00|2026/06/17 18:00|24|Family visit\n（continue as needed）||||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "職務代理",
+         "en": "Cover Arrangements"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "代理人：林淑惠（財務部）\n代理事項：日常請款單審核、月中應付帳款登打、銀行對帳單下載。\n已於 6 月 1 日完成交接說明，代理人同意。\n\n代理人簽章：＿＿＿＿＿＿",
+         "en": "Covering colleague: S. H. Lin (Finance)\nDuties covered: daily payment request review, mid-month accounts payable entry, bank statement downloads.\nHandover briefing completed on 1 June; the covering colleague has agreed.\n\nSignature: ＿＿＿＿＿＿"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "附註",
+         "en": "Notes"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "一、特休餘額：本年度 14 日，已用 3 日，本次 3 日，餘 8 日。\n二、請假三日以上應於七日前提出；本單符合。\n三、出國期間緊急聯絡方式：0912-888-777（漫遊）。",
+         "en": "1. Annual leave balance: 14 days this year, 3 taken, 3 requested, 8 remaining.\n2. Requests of three days or more require seven days' notice; this request complies.\n3. Contact while abroad: 0912-888-777 (roaming)."
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "申請人|職務代理人|直屬主管|人資|核准\n||||",
+         "en": "Applicant|Cover|Line Manager|HR|Approved\n||||"
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "請假單",
+         "en": "Leave Request"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n姓名|\n員工編號|\n部門／職稱|\n填單日期|",
+         "en": "Item|Detail\nName|\nEmployee No.|\nDept. / Title|\nDate of request|"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "假別|起始|結束|時數|事由\n||||\n||||\n||||",
+         "en": "Leave type|From|To|Hours|Reason\n||||\n||||\n||||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "職務代理",
+         "en": "Cover Arrangements"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "代理人：\n代理事項：\n\n代理人簽章：＿＿＿＿＿＿",
+         "en": "Covering colleague:\nDuties covered:\n\nSignature: ＿＿＿＿＿＿"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "附註",
+         "en": "Notes"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "一、假別餘額：\n二、提出時限是否符合：\n三、請假期間聯絡方式：",
+         "en": "1. Leave balance:\n2. Notice period met:\n3. Contact during leave:"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "申請人|職務代理人|直屬主管|人資|核准\n||||",
+         "en": "Applicant|Cover|Line Manager|HR|Approved\n||||"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "performance_review",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "績效考核表",
+      "en": "Performance Review",
+      "zhHans": "绩效考核表",
+      "ja": "人事評価表",
+      "ko": "성과 평가표",
+      "th": "แบบประเมินผลงาน"
+     },
+     "description": {
+      "zhHant": "目標達成、能力評核、自評與主管評語",
+      "en": "Goals, competencies, self-assessment and manager comments",
+      "zhHans": "目标达成、能力评核、自评与主管评语",
+      "ja": "目標達成度・能力評価・自己評価・上長所見",
+      "ko": "목표 달성·역량 평가·자기평가·상사 의견",
+      "th": "เป้าหมาย สมรรถนะ ประเมินตนเอง และความเห็นหัวหน้า"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "2025 年度績效考核表",
+         "en": "2025 Annual Performance Review"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n受評人|張建豪\n部門／職稱|品保部／品保工程師\n考核期間|2025/01/01 – 2025/12/31\n直屬主管|王文彥\n考核日期|2026 年 1 月 20 日",
+         "en": "Item|Detail\nEmployee|C. H. Chang\nDept. / Title|Quality Assurance / QA Engineer\nReview period|2025/01/01 – 2025/12/31\nManager|W. Y. Wang\nReview date|20 January 2026"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "一、目標達成度",
+         "en": "1. Goal Achievement"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "年度目標|權重|目標值|實際值|達成率|評分\n客訴件數下降|30%|≤ 12 件|9 件|133%|5\n進料檢驗週期縮短|25%|≤ 2 日|2.3 日|87%|3\n完成 ISO 9001 換版稽核|25%|通過|一次通過|100%|5\n培訓新進檢驗員|20%|3 人|2 人|67%|3\n加權總分|||||4.1",
+         "en": "Goal|Weight|Target|Actual|Attainment|Score\nReduce customer complaints|30%|≤ 12|9|133%|5\nShorten incoming inspection cycle|25%|≤ 2 days|2.3 days|87%|3\nPass ISO 9001 transition audit|25%|Pass|Passed first time|100%|5\nTrain new inspectors|20%|3|2|67%|3\nWeighted total|||||4.1"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "二、能力評核（1 待加強 – 5 優異）",
+         "en": "2. Competencies (1 = needs work, 5 = outstanding)"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "構面|自評|主管評|說明\n專業知識|4|5|量測系統分析導入得宜\n問題解決|4|4|壓入不良追查到根因\n溝通協調|3|3|跨部門會議偶有準備不足\n責任感|5|5|稽核前連續加班未曾推託\n學習發展|4|3|尚未完成統計製程管制進階課程",
+         "en": "Dimension|Self|Manager|Comment\nTechnical knowledge|4|5|Introduced MSA effectively\nProblem solving|4|4|Traced press-fit defects to root cause\nCommunication|3|3|Occasionally under-prepared for cross-team meetings\nAccountability|5|5|Worked consistently through the audit period\nLearning|4|3|Advanced SPC course not yet completed"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "三、自評",
+         "en": "3. Self-Assessment"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "今年最有把握的是把客訴從 15 件降到 9 件。做法不是加嚴檢驗，而是把前三大客訴型態逐一追到產線源頭，其中兩項改成治具防呆後就不再發生。\n\n做得不夠的是進料檢驗週期。年初設定 2 日，實際 2.3 日 —— 主因是我低估了新供應商的樣品審查量，排程沒有預留緩衝。明年會把供應商數量納入排程公式。",
+         "en": "The result I am most confident about is reducing customer complaints from 15 to 9. This did not come from tighter inspection but from tracing the top three complaint types back to their origin on the line; two of them stopped entirely once mistake-proofing fixtures were added.\n\nWhat fell short was the incoming inspection cycle: 2.3 days against a 2-day target. I under-estimated the sample review load from new suppliers and left no buffer in the schedule. Next year I will factor supplier count into the scheduling model."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "四、主管評語與發展建議",
+         "en": "4. Manager's Comments and Development Plan"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "建豪今年在根因分析上的進步明顯，ISO 換版稽核一次通過，功勞很大一部分在他。\n\n需要補強的是兩件事。第一是跨部門溝通 —— 他對技術細節掌握很好，但在會議上常直接講結論，其他部門跟不上推導過程。建議明年主持兩次跨部門檢討會，練習把技術語言轉成決策語言。第二是培訓進度落後，明年請優先完成統計製程管制進階課程。\n\n綜合評等：B+（超越期待）。建議調薪 4%，並列入次年儲備幹部名單。",
+         "en": "C. H. Chang has made clear progress in root-cause analysis this year, and a large share of the credit for passing the ISO transition audit first time belongs to him.\n\nTwo areas need work. First, cross-functional communication: he has an excellent grasp of technical detail but tends to state conclusions directly in meetings, leaving other departments unable to follow the reasoning. I suggest he chairs two cross-department reviews next year to practise translating technical language into decision language. Second, training is behind schedule; the advanced SPC course should be the priority next year.\n\nOverall rating: B+ (exceeds expectations). Recommended salary increase of 4%, and inclusion on next year's supervisory development list."
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "受評人簽章|直屬主管|部門主管|人資|核定\n||||",
+         "en": "Employee|Line Manager|Dept. Head|HR|Approved\n||||"
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "　　　年度績效考核表",
+         "en": "Annual Performance Review"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n受評人|\n部門／職稱|\n考核期間|\n直屬主管|\n考核日期|",
+         "en": "Item|Detail\nEmployee|\nDept. / Title|\nReview period|\nManager|\nReview date|"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "一、目標達成度",
+         "en": "1. Goal Achievement"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "年度目標|權重|目標值|實際值|達成率|評分\n||||||\n||||||\n||||||\n||||||\n加權總分|||||",
+         "en": "Goal|Weight|Target|Actual|Attainment|Score\n||||||\n||||||\n||||||\n||||||\nWeighted total|||||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "二、能力評核（1 待加強 – 5 優異）",
+         "en": "2. Competencies (1 = needs work, 5 = outstanding)"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "構面|自評|主管評|說明\n專業知識|||\n問題解決|||\n溝通協調|||\n責任感|||\n學習發展|||",
+         "en": "Dimension|Self|Manager|Comment\nTechnical knowledge|||\nProblem solving|||\nCommunication|||\nAccountability|||\nLearning|||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "三、自評",
+         "en": "3. Self-Assessment"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（做得好的一件事：寫出結果與做法，不要只寫「努力」）\n\n（做得不夠的一件事：寫出原因與明年的具體調整）",
+         "en": "（One thing that went well: state the result and how you achieved it, not just effort.）\n\n（One thing that fell short: state the cause and the specific change you will make.）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "四、主管評語與發展建議",
+         "en": "4. Manager's Comments and Development Plan"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（肯定：具體到事件，不要只寫「表現良好」）\n\n（待補強：指出行為而非個性，並給一個可執行的練習方式）\n\n綜合評等：　　　建議調薪：　　　發展建議：",
+         "en": "（Strengths: refer to specific events, not general praise.）\n\n（Development: describe behaviour rather than personality, and give one actionable practice.）\n\nOverall rating:　　Salary recommendation:　　Development plan:"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "受評人簽章|直屬主管|部門主管|人資|核定\n||||",
+         "en": "Employee|Line Manager|Dept. Head|HR|Approved\n||||"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "planning",
+   "name": {
+    "zhHant": "營運企劃",
+    "en": "Planning & Operations",
+    "zhHans": "营运企划",
+    "ja": "経営企画",
+    "ko": "경영 기획",
+    "th": "การวางแผนธุรกิจ"
+   },
+   "templates": [
+    {
+     "id": "business_proposal",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "商業企劃書",
+      "en": "Business Proposal",
+      "zhHans": "商业企划书",
+      "ja": "事業企画書",
+      "ko": "사업 기획서",
+      "th": "ข้อเสนอโครงการธุรกิจ"
+     },
+     "description": {
+      "zhHant": "市場機會、方案、財務預估與風險",
+      "en": "Opportunity, solution, financials and risks",
+      "zhHans": "市场机会、方案、财务预估与风险",
+      "ja": "市場機会・施策・収支見通し・リスク",
+      "ko": "시장 기회·방안·재무 추정·리스크",
+      "th": "โอกาสตลาด แนวทาง ประมาณการเงิน และความเสี่ยง"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "智慧巡檢服務導入企劃書",
+         "en": "Proposal: Smart Inspection Service"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "提案單位：明衡科技有限公司 營運企劃室\n提案人：黃郁婷\n日期：2026 年 3 月 5 日\n版本：v1.2（提報董事會用）",
+         "en": "Prepared by: Corporate Planning Office, Minghen Technology Ltd.\nAuthor: Y. T. Huang\nDate: 5 March 2026\nVersion: v1.2 (for board review)"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "一、摘要",
+         "en": "1. Executive Summary"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "本案建議投入新臺幣 1,200 萬元，於 2026 年第四季推出「智慧巡檢」訂閱服務，將現有的品保檢測能力包裝為對外服務。預估第三年營收 4,800 萬元、毛利率 46%，回收期 2.4 年。\n\n關鍵判斷是：我們手上已有設備與人力，邊際成本主要在軟體與客服，而非重資本支出。",
+         "en": "This proposal seeks NT$12 million to launch a \"Smart Inspection\" subscription service in Q4 2026, packaging our existing quality-inspection capability as an external offering. Year-three revenue is projected at NT$48 million with a 46% gross margin and a 2.4-year payback.\n\nThe central judgement is that the equipment and people already exist; the marginal cost lies in software and customer support rather than heavy capital expenditure."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "二、市場機會",
+         "en": "2. Market Opportunity"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "中小型精密加工廠普遍缺乏專職品保人力，但下游車廠稽核要求逐年提高。我們訪談了 18 家同業，其中 13 家表示「知道該做，但請不起專職人員」。\n\n現有替代方案是委外檢測所，單次費用高且排程常需兩週。訂閱制的價值不在單價便宜，而在可預期的排程與固定成本。",
+         "en": "Small and mid-sized precision machining shops generally lack dedicated quality staff, while audit requirements from downstream automotive customers rise every year. Of 18 peer companies interviewed, 13 said they know they should do it but cannot justify a full-time hire.\n\nThe current alternative is third-party testing laboratories: expensive per test, and typically two weeks to schedule. The value of a subscription is not a lower unit price but predictable scheduling and a fixed cost."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "三、服務方案",
+         "en": "3. The Offering"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "方案|月費|每月檢測件數|報告形式|適用對象\n基礎|18,000|20|標準 PDF|10 人以下工廠\n標準|35,000|60|PDF＋線上儀表板|10–50 人工廠\n進階|68,000|150|客製格式＋稽核陪同|供應車廠一階廠商",
+         "en": "Tier|Monthly fee|Tests/month|Reporting|Target\nBasic|18,000|20|Standard PDF|Under 10 staff\nStandard|35,000|60|PDF + online dashboard|10–50 staff\nAdvanced|68,000|150|Custom format + audit support|Tier-1 automotive suppliers"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "四、財務預估",
+         "en": "4. Financial Projection"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|2026 Q4|2027|2028|2029\n訂閱客戶數|6|28|52|75\n營收（千元）|1,260|14,800|31,200|48,000\n直接成本（千元）|820|8,400|17,100|25,900\n毛利率|35%|43%|45%|46%\n累計現金流（千元）|-10,900|-6,200|3,400|17,800",
+         "en": "Item|2026 Q4|2027|2028|2029\nSubscribers|6|28|52|75\nRevenue (NT$k)|1,260|14,800|31,200|48,000\nDirect cost (NT$k)|820|8,400|17,100|25,900\nGross margin|35%|43%|45%|46%\nCumulative cash (NT$k)|-10,900|-6,200|3,400|17,800"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "五、風險與因應",
+         "en": "5. Risks and Mitigation"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "風險|可能性|衝擊|因應\n客戶數成長不如預期|中|高|前兩季採保證退費，降低嘗試門檻\n本業產能被排擠|中|中|服務時段限定離峰，並設每月上限\n檢測所降價競爭|高|中|以排程確定性與稽核陪同做區隔，不打價格戰\n關鍵人員流失|低|高|檢測流程文件化，不綁單一工程師",
+         "en": "Risk|Likelihood|Impact|Mitigation\nSlower customer growth|Medium|High|Money-back guarantee for the first two quarters\nCannibalising core capacity|Medium|Medium|Off-peak slots only, with a monthly cap\nPrice competition from labs|High|Medium|Differentiate on scheduling certainty and audit support, not price\nLoss of key staff|Low|High|Document the inspection process; avoid single-person dependency"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "六、建議決議",
+         "en": "6. Recommendation"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "建議董事會核准第一階段預算新臺幣 480 萬元（軟體開發與試營運），並於 2026 年 9 月依前六家客戶的續約率決定是否投入後續 720 萬元。\n\n設分階段關卡的理由是：這個案子最大的不確定性是「客戶願不願意續約」，而那只有真的營運過才知道。",
+         "en": "The board is asked to approve a first tranche of NT$4.8 million for software development and a pilot, with the remaining NT$7.2 million released in September 2026 subject to the renewal rate among the first six customers.\n\nThe reason for staging is that the largest uncertainty in this proposal is whether customers renew, and that can only be learned by actually operating the service."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "　　　　企劃書",
+         "en": "Business Proposal"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "提案單位：\n提案人：\n日期：\n版本：",
+         "en": "Prepared by:\nAuthor:\nDate:\nVersion:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "一、摘要",
+         "en": "1. Executive Summary"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（投入多少、做什麼、預期回收多少、多久回本 —— 四句話講完）\n\n（關鍵判斷是什麼：這個案子成立的前提）",
+         "en": "（How much, to do what, expected return, payback period — four sentences.）\n\n（The central judgement: the premise on which this proposal rests.）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "二、市場機會",
+         "en": "2. Market Opportunity"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（問題是什麼、誰有這個問題、你怎麼知道的）\n\n（現有替代方案是什麼、為什麼不夠好）",
+         "en": "（What is the problem, who has it, and how do you know?）\n\n（What do they do today, and why is it not good enough?）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "三、服務／產品方案",
+         "en": "3. The Offering"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "方案|價格|內容|適用對象\n|||\n|||\n|||",
+         "en": "Tier|Price|Contents|Target\n|||\n|||\n|||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "四、財務預估",
+         "en": "4. Financial Projection"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|第 1 期|第 2 期|第 3 期|第 4 期\n營收|||| \n直接成本||||\n毛利率||||\n累計現金流||||",
+         "en": "Item|P1|P2|P3|P4\nRevenue||||\nDirect cost||||\nGross margin||||\nCumulative cash||||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "五、風險與因應",
+         "en": "5. Risks and Mitigation"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "風險|可能性|衝擊|因應\n|||\n|||\n|||\n|||",
+         "en": "Risk|Likelihood|Impact|Mitigation\n|||\n|||\n|||\n|||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "六、建議決議",
+         "en": "6. Recommendation"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（要核准什麼、金額多少）\n\n（如果分階段：關卡條件是什麼，為什麼設在那裡）",
+         "en": "（What is being approved, and for how much?）\n\n（If staged: what is the gate condition, and why there?）"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "annual_budget",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "年度預算表",
+      "en": "Annual Budget",
+      "zhHans": "年度预算表",
+      "ja": "年度予算表",
+      "ko": "연간 예산표",
+      "th": "งบประมาณประจำปี"
+     },
+     "description": {
+      "zhHant": "收入、各項費用、季度分配與差異說明",
+      "en": "Revenue, expense lines, quarterly split and variance notes",
+      "zhHans": "收入、各项费用、季度分配与差异说明",
+      "ja": "収入・費用科目・四半期配分・差異説明",
+      "ko": "수입·비용 항목·분기 배분·차이 설명",
+      "th": "รายรับ รายจ่าย การแบ่งรายไตรมาส และคำอธิบายส่วนต่าง"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "2026 年度部門預算表",
+         "en": "2026 Departmental Budget"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "部門：生產部\n編製人：周明德\n編製日期：2025 年 11 月 20 日\n幣別：新臺幣（千元）",
+         "en": "Department: Production\nPrepared by: M. D. Chou\nDate: 20 November 2025\nCurrency: NT$ thousands"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "科目|2025 實際|2026 預算|增減|Q1|Q2|Q3|Q4\n人事費用|18,400|21,200|+15%|5,100|5,300|5,300|5,500\n設備折舊|6,200|9,800|+58%|2,450|2,450|2,450|2,450\n原物料|42,000|51,000|+21%|11,000|13,000|13,500|13,500\n維修保養|3,100|3,400|+10%|850|850|850|850\n水電動力|5,600|6,300|+13%|1,500|1,700|1,700|1,400\n教育訓練|420|800|+90%|200|200|200|200\n其他|1,200|1,300|+8%|325|325|325|325\n合計|76,920|93,800|+22%|21,425|23,825|24,325|24,225",
+         "en": "Account|2025 Actual|2026 Budget|Change|Q1|Q2|Q3|Q4\nPersonnel|18,400|21,200|+15%|5,100|5,300|5,300|5,500\nDepreciation|6,200|9,800|+58%|2,450|2,450|2,450|2,450\nMaterials|42,000|51,000|+21%|11,000|13,000|13,500|13,500\nMaintenance|3,100|3,400|+10%|850|850|850|850\nUtilities|5,600|6,300|+13%|1,500|1,700|1,700|1,400\nTraining|420|800|+90%|200|200|200|200\nOther|1,200|1,300|+8%|325|325|325|325\nTotal|76,920|93,800|+22%|21,425|23,825|24,325|24,225"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "主要增減說明",
+         "en": "Notes on Major Changes"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "一、設備折舊增加 58%：第二條產線設備於 2026 年第一季驗收入帳，全年計提。這是本年度預算增幅最大的單一項目，但屬於已核決的資本支出，非新增決策。\n\n二、原物料增加 21%：對應產量目標由 32 萬件提高至 38 萬件（+19%），另加計鋼材報價年增約 2%。\n\n三、教育訓練增加 90%：金額基期低（42 萬元）。2026 年須完成 12 名作業員的堆高機與吊掛證照換發，屬法定要求，不可遞延。\n\n四、人事費用增加 15%：含新增 3 名製程人員（+9%）與全體調薪 3%，另有加班費節省約 2% 抵銷。",
+         "en": "1. Depreciation up 58%: Line 2 equipment is capitalised in Q1 2026 and depreciated for the full year. This is the largest single increase in the budget, but it follows from a capital decision already approved, not a new one.\n\n2. Materials up 21%: output target rises from 320k to 380k units (+19%), plus roughly 2% steel price inflation.\n\n3. Training up 90%: from a low base (NT$420k). Twelve operators must renew forklift and lifting certifications in 2026 — a statutory requirement that cannot be deferred.\n\n4. Personnel up 15%: three additional process staff (+9%) and a 3% across-the-board increase, partly offset by about 2% lower overtime."
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "編製|部門主管|財務審核|總經理核定\n|||",
+         "en": "Prepared|Dept. Head|Finance Review|Approved\n|||"
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "　　　年度預算表",
+         "en": "Annual Budget"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "部門：\n編製人：\n編製日期：\n幣別：",
+         "en": "Department:\nPrepared by:\nDate:\nCurrency:"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "科目|上年度實際|本年度預算|增減|Q1|Q2|Q3|Q4\n人事費用||||||| \n設備折舊|||||||\n原物料|||||||\n維修保養|||||||\n水電動力|||||||\n教育訓練|||||||\n其他|||||||\n合計|||||||",
+         "en": "Account|Last Year|This Year|Change|Q1|Q2|Q3|Q4\nPersonnel|||||||\nDepreciation|||||||\nMaterials|||||||\nMaintenance|||||||\nUtilities|||||||\nTraining|||||||\nOther|||||||\nTotal|||||||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "主要增減說明",
+         "en": "Notes on Major Changes"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（只說明變動較大的科目。每一條要回答：為什麼增加、是不是已核決的事、可不可以遞延）\n\n一、\n二、\n三、\n四、",
+         "en": "（Explain only the lines that moved materially. Each note should answer: why it rose, whether it follows an approved decision, and whether it can be deferred.）\n\n1.\n2.\n3.\n4."
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "編製|部門主管|財務審核|總經理核定\n|||",
+         "en": "Prepared|Dept. Head|Finance Review|Approved\n|||"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "market_research",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "市場調查報告",
+      "en": "Market Research Report",
+      "zhHans": "市场调查报告",
+      "ja": "市場調査報告書",
+      "ko": "시장 조사 보고서",
+      "th": "รายงานวิจัยตลาด"
+     },
+     "description": {
+      "zhHant": "調查方法、樣本、發現與可行建議",
+      "en": "Method, sample, findings and actionable recommendations",
+      "zhHans": "调查方法、样本、发现与可行建议",
+      "ja": "調査方法・標本・発見・提言",
+      "ko": "조사 방법·표본·발견·제언",
+      "th": "วิธีวิจัย กลุ่มตัวอย่าง ผลการศึกษา และข้อเสนอแนะ"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "中小型加工廠品保外包需求調查",
+         "en": "Outsourced QA Demand Among Small Machining Shops"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "調查單位：明衡科技 營運企劃室\n執行期間：2026 年 1 月 6 日 – 2 月 14 日\n報告日期：2026 年 2 月 27 日",
+         "en": "Conducted by: Corporate Planning Office, Minghen Technology\nFieldwork: 6 January – 14 February 2026\nReport date: 27 February 2026"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "一、調查目的",
+         "en": "1. Objective"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "確認「智慧巡檢」訂閱服務是否有真實需求，以及可接受的價格帶。這份調查要回答的是「會不會有人付錢」，不是「大家覺不覺得這個點子好」—— 後者問不出東西。",
+         "en": "To establish whether there is real demand for a subscription inspection service, and at what price. The question this study had to answer was whether anyone would pay, not whether people liked the idea; the latter tells you nothing."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "二、方法與樣本",
+         "en": "2. Method and Sample"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n方法|半結構式深度訪談（面訪 12 家、視訊 6 家）\n母體|北部及桃竹地區員工 5–50 人之精密加工廠\n抽樣|依產業公會名錄分層隨機抽取 40 家，18 家同意受訪\n回應率|45%\n訪談長度|平均 52 分鐘\n限制|樣本偏向已有車廠客戶者，可能高估稽核壓力",
+         "en": "Item|Detail\nMethod|Semi-structured interviews (12 in person, 6 by video)\nPopulation|Precision machining shops, 5–50 staff, northern Taiwan\nSampling|Stratified random selection of 40 from the trade association list; 18 agreed\nResponse rate|45%\nInterview length|52 minutes on average\nLimitation|Sample skews towards firms already supplying automotive customers, which may overstate audit pressure"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "三、主要發現",
+         "en": "3. Key Findings"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "發現|家數|佔比\n知道應設品保人力但請不起|13|72%\n目前委外檢測所|11|61%\n抱怨委外排程超過兩週|9|50%\n願意嘗試月費 3 萬元以內方案|10|56%\n願意嘗試月費 5 萬元以上方案|3|17%\n明確表示沒有需求|4|22%",
+         "en": "Finding|Count|Share\nKnow they need QA staff but cannot afford one|13|72%\nCurrently use third-party labs|11|61%\nComplain lab scheduling exceeds two weeks|9|50%\nWould try a plan under NT$30k/month|10|56%\nWould try a plan over NT$50k/month|3|17%\nStated no need at all|4|22%"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "四、值得注意的反面意見",
+         "en": "4. Dissenting Views Worth Noting"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "四家表示沒有需求的廠商，共同點不是規模小，而是客戶不要求報告。他們的下游是機械組裝而非車廠，稽核壓力低。這提醒我們：目標客戶的判準應該是「下游是誰」，不是「員工幾人」。\n\n另有兩家雖有需求但明確拒絕訂閱制，理由是訂單淡旺季差異大，固定月費在淡季是負擔。若要涵蓋這一群，需要設計可暫停的方案。",
+         "en": "The four firms reporting no need had one thing in common — not size, but that their customers do not ask for reports. They supply mechanical assembly rather than automotive, so audit pressure is low. This suggests the targeting criterion should be who the customer is, not how many staff the shop has.\n\nTwo further firms had the need but rejected subscription pricing outright: their order volume swings seasonally and a fixed monthly fee is a burden in slow months. Reaching this group would require a plan that can be paused."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "五、建議",
+         "en": "5. Recommendations"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "一、以「下游為車廠或醫材」作為目標客戶篩選條件，而非員工人數。\n二、主力方案定價落在月費 1.8 萬至 3.5 萬，與 56% 的接受帶重疊。\n三、增設「淡季暫停」選項（每年最多暫停三個月），以涵蓋季節性客戶。\n四、進階方案（6.8 萬）僅 17% 接受，建議先不投入行銷資源，改以個案議價。",
+         "en": "1. Target by customer industry (automotive or medical devices) rather than headcount.\n2. Price the core plans between NT$18k and NT$35k per month, matching the band 56% would try.\n3. Add a seasonal pause option (up to three months per year) to reach firms with volatile demand.\n4. Only 17% would consider the advanced tier at NT$68k; handle it case by case rather than funding marketing for it."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "　　　　市場調查報告",
+         "en": "Market Research Report"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "調查單位：\n執行期間：\n報告日期：",
+         "en": "Conducted by:\nFieldwork:\nReport date:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "一、調查目的",
+         "en": "1. Objective"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（要回答的是哪一個決策問題？寫成一句可以被證實或推翻的話）",
+         "en": "（Which decision does this inform? State it as one claim that could be proved or disproved.）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "二、方法與樣本",
+         "en": "2. Method and Sample"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n方法|\n母體|\n抽樣|\n回應率|\n訪談／問卷長度|\n限制|",
+         "en": "Item|Detail\nMethod|\nPopulation|\nSampling|\nResponse rate|\nLength|\nLimitation|"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "三、主要發現",
+         "en": "3. Key Findings"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "發現|數量|佔比\n||\n||\n||\n||\n||",
+         "en": "Finding|Count|Share\n||\n||\n||\n||\n||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "四、值得注意的反面意見",
+         "en": "4. Dissenting Views Worth Noting"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（不同意的人為什麼不同意？這一段通常比主要發現更有用 —— 它會告訴你目標客戶的真正判準）",
+         "en": "（Why did the dissenters dissent? This section is often more useful than the headline findings — it tends to reveal the real targeting criterion.）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "五、建議",
+         "en": "5. Recommendations"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（每一條建議要對得上前面的哪一項發現）\n\n一、\n二、\n三、\n四、",
+         "en": "（Each recommendation should trace back to a specific finding above.）\n\n1.\n2.\n3.\n4."
+        }
+       }
       ]
      }
     }

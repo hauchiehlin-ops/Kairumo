@@ -133,6 +133,7 @@
 ### ✅ 已完成
 | ID | 工作包 | 內容 |
 |---|---|---|
+| ~~S-61~~ ✅ | 文件範本 | **39 種文件範本 × 完整案例／空白範本 = 78 份。** 內容寫在 `templates/src/`，版面由 `scripts/doc_templates_tool.py` 算一次，兩平台載入同一份 JSON。Android 一併補上原本沒有的「新增筆記」挑選視窗。順帶修掉兩個先前就存在的資料遺失：PDF 匯出不換行、Apple 表格從未進過 `.padnote`。見 DEVLOG 2026-09-16 |
 | ~~S-60~~ ✅ | 縮圖／匯出的字形 | **真字形，而且內嵌 0 位元組字型。** 兩邊都改走「核心產 PDF → 系統算繪」（`PageImageRenderer`）：Apple 用 PDFKit、Android 用系統 `PdfRenderer`，都會替非內嵌字型代換系統字型 —— 原本以為必須做的字型授權決策因此不必做。見 DEVLOG 2026-09-16 |
 | S-01 | WP4 | `padnote-storage`：manifest、套件讀寫、內容定址 blob（去重/完整性/GC） |
 | S-02 | WP1 | `padnote-doc`：頁面樹、區塊模型、統一時間軸 |

@@ -164,6 +164,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev pkg-config
       - name: 編解碼往返、截斷偵測、版本拒絕
         run: cargo test -p padnote-ink -p padnote-core -- --nocapture
+      # S-61：文件範本目錄是**產物**。有人改了 templates/src 卻沒重跑 build，
+      # 或直接改了產物，兩個 App 打包進去的就是對不上來源的那一份 ——
+      # 而那不會有任何錯誤訊息，只是範本內容不對。
+      - name: 文件範本目錄與來源一致
+        run: python3 scripts/doc_templates_tool.py verify
 
   # S-12：FFI 綁定必須產得出來。core 的 API 改壞時在這裡就會爆，
   # 而不是等到 Xcode 編不過。

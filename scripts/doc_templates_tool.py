@@ -77,9 +77,13 @@ def visual_width(text: str, font_size: float) -> float:
     下一個區塊就會壓在它身上。0.55 這個比例與核心的 `greek_lines` 相同，
     兩邊對「一行放得下多少字」的判斷因此一致。
     """
+    # 一段文字只要有一個非 ASCII 字元，PDF 匯出就會整段走 CJK 複合字型，
+    # 裡面的數字與英文也照全形前進（見 padnote-export::pdf 的 glyph_width）。
+    # 這裡若仍按 0.55 估，帶數字的中文句子行數會少估，下一個區塊就會壓上來。
+    cjk_font = any(ord(ch) > 127 for ch in text)
     total = 0.0
     for ch in text:
-        if unicodedata.east_asian_width(ch) in ("W", "F"):
+        if cjk_font or unicodedata.east_asian_width(ch) in ("W", "F"):
             total += font_size
         else:
             total += font_size * 0.55

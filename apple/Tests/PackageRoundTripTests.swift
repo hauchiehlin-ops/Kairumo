@@ -343,6 +343,47 @@ final class PackageRoundTripTests: XCTestCase {
 
 extension PackageRoundTripTests {
 
+    func testATableSurvivesTheRoundTrip() throws {
+        // **這一條守的是一個真的掉過資料的地方。**
+        //
+        // `NotebookPackageBridge` 以前完全沒有處理表格 —— 一個字都沒有。
+        // 於是 Apple 端畫的表格：匯出 `.padnote` 時整張消失、匯出 PDF／PNG
+        // 與列印時整張消失、同步到 Android 打開也整張消失。而畫面上還在，
+        // 因為它活在 Apple 自己的 JSON 裡 —— 使用者不會發現東西掉了，
+        // 直到他在另一台裝置上打開。
+        //
+        // Android 端一直都有寫進核心（`TableStore.persist`），所以這不是
+        // 「兩邊都還沒做」，是只有 Apple 漏了。
+        var document = NotebookDocument(title: "表格", pageCount: 1)
+        document.tableAttachments = [
+            NoteTableAttachment(
+                pageIndex: 0, x: 40, y: 120, width: 520,
+                rows: 2, cols: 3,
+                cells: ["項目", "數量", "備註", "軸承座", "500", "三月交貨"],
+                headerRow: true, fontSize: 13,
+                headerBackgroundHex: "#E9EEFC")
+        ]
+        let path = workDir.appendingPathComponent("table.padnote")
+        try NotebookPackageBridge.export(
+            document: document, drawings: [PKDrawing()], to: path, deviceId: 0xE8)
+
+        let imported = try NotebookPackageBridge.importDocument(
+            fromPackageAt: path, deviceId: 0xE9)
+        let tables = try XCTUnwrap(imported.document.tableAttachments, "表格整張不見了")
+        XCTAssertEqual(tables.count, 1)
+        let table = try XCTUnwrap(tables.first)
+        XCTAssertEqual(table.rows, 2)
+        XCTAssertEqual(table.cols, 3)
+        XCTAssertEqual(table.cells, ["項目", "數量", "備註", "軸承座", "500", "三月交貨"])
+        XCTAssertTrue(table.headerRow)
+        // 位置與樣式走外觀 JSON。掉了的話，表格會跑回左上角變成預設樣式。
+        XCTAssertEqual(table.x, 40, accuracy: 0.5)
+        XCTAssertEqual(table.y, 120, accuracy: 0.5)
+        XCTAssertEqual(table.width, 520, accuracy: 0.5)
+        XCTAssertEqual(table.headerBackgroundHex, "#E9EEFC")
+    }
+
+
     func testALinkCardDoesNotAlsoComeBackAsAStrayImage() throws {
         // 連結卡片在套件裡是一張算繪出來的圖（PDF 裡才看得到），真身則跟著
         // 中繼資料走。兩邊都收的話，同一張卡片會變成兩份，而且每同步一趟

@@ -44,6 +44,8 @@ enum NotebookPackageBridge {
         var strokeCount: Int
         var textBlockCount: Int
         var imageCount: Int
+        /// 寫進核心表格區塊的表格數。
+        var tableCount: Int = 0
         /// 寫進核心物件樹的形狀數。
         var shapeCount: Int = 0
         /// 寫進核心物件樹的連接線數。
@@ -147,6 +149,31 @@ enum NotebookPackageBridge {
                     try session.setBlockAppearance(
                         blockId: blockId, json: TextBoxAppearance.encode(text))
                     summary.textBlockCount += 1
+                }
+
+                // 表格。**這一段以前完全不存在** —— Apple 端畫的表格因此從來
+                // 沒有進過 `.padnote`：匯出、列印、同步到 Android 全都是整張
+                // 消失，而畫面上還在（它活在 Apple 自己的 JSON 裡），
+                // 所以使用者不會發現，直到在另一台裝置上打開。
+                // Android 端一直都有寫（`TableStore.persist`），只有這裡漏了。
+                for table in document.tableAttachments?.filter({ $0.pageIndex == index }) ?? [] {
+                    let blockId = try session.insertTable(
+                        pageId: pageId,
+                        rows: UInt32(table.rows),
+                        cols: UInt32(table.cols),
+                        cells: table.cells,
+                        headerRow: table.headerRow)
+                    try session.setBlockPosition(
+                        blockId: blockId, x: Float(table.x), y: Float(table.y))
+                    try session.setBlockAppearance(
+                        blockId: blockId, json: TableAppearance.encode(table))
+                    for span in table.mergedCells {
+                        try? session.mergeTableCells(
+                            blockId: blockId,
+                            row: UInt32(span.row), col: UInt32(span.col),
+                            rowSpan: UInt32(span.rowSpan), colSpan: UInt32(span.colSpan))
+                    }
+                    summary.tableCount += 1
                 }
 
                 // 3D 模型與連結卡片：核心的文件模型沒有這兩種型別，直接跳過的話
@@ -489,6 +516,7 @@ enum NotebookPackageBridge {
         var drawings: [PKDrawing] = []
         var texts: [NoteTextAttachment] = []
         var images: [NoteImageAttachment] = []
+        var tables: [NoteTableAttachment] = []
         var imageData: [String: Data] = [:]
 
         for (index, pageId) in pageIds.enumerated() {
@@ -505,6 +533,35 @@ enum NotebookPackageBridge {
                     TextBoxAppearance.apply(appearance, to: &item)
                 }
                 texts.append(item)
+            }
+
+            for blockId in try session.tableBlockIds(pageId: pageId) {
+                guard let core = try session.table(blockId: blockId) else { continue }
+                // 內容一律以**核心的表格區塊**為準：那是別的裝置真正寫進去的
+                // 東西，外觀裡的那份可能是舊的。與 Android 的 `TableStore.load`
+                // 同一個判斷。
+                var item = NoteTableAttachment(
+                    id: blockId,
+                    pageIndex: index,
+                    rows: Int(core.rows),
+                    cols: Int(core.cols),
+                    cells: core.cells,
+                    headerRow: core.headerRow)
+                if let appearance = try session.blockAppearance(blockId: blockId) {
+                    TableAppearance.apply(appearance, to: &item)
+                }
+                if let position = try session.blockPosition(blockId: blockId),
+                   position.count >= 2 {
+                    item.x = CGFloat(position[0])
+                    item.y = CGFloat(position[1])
+                }
+                item.mergedCells = core.mergedCells.compactMap { span in
+                    guard span.count >= 4 else { return nil }
+                    return NoteTableSpan(
+                        row: Int(span[0]), col: Int(span[1]),
+                        rowSpan: Int(span[2]), colSpan: Int(span[3]))
+                }
+                tables.append(item)
             }
 
             for blockId in try session.imageBlockIds(pageId: pageId) {
@@ -611,6 +668,7 @@ enum NotebookPackageBridge {
             template: .blank
         )
         document.textAttachments = texts.isEmpty ? nil : texts
+        document.tableAttachments = tables.isEmpty ? nil : tables
         document.attachments = images.isEmpty ? nil : images
         document.shapeAttachments = shapes.isEmpty ? nil : shapes
         document.connectionAttachments = connections.isEmpty ? nil : connections

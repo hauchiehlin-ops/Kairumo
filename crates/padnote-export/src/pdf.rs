@@ -689,12 +689,26 @@ impl PdfWriter {
                     };
 
                     let formatted_text = format!("{prefix}{text}");
-                    let (font, literal) = format_pdf_text(&formatted_text, default_font);
 
-                    let _ = writeln!(
-                        content,
-                        "BT {font} {size:.1} Tf {r:.2} {g:.2} {b:.2} rg {bx:.2} {pdf_y:.2} Td {literal} Tj ET"
-                    );
+                    // **一個區塊可能不只一行。**
+                    //
+                    // 這裡以前是整段丟一個 `Tj`，於是：換行字元被吃掉（整段
+                    // 擠成一行），太長的段落直接衝出紙張右緣被裁掉。畫布上
+                    // 看起來好好的，一匯出或列印就少字 —— 而少掉的部分不會
+                    // 有任何提示。文件範本（S-61）裡到處都是多行段落，
+                    // 這個缺陷因此變得很明顯。
+                    let avail = (width - bx - left_margin).max(80.0);
+                    for (i, line) in wrap_pdf_lines(&formatted_text, size, avail)
+                        .iter()
+                        .enumerate()
+                    {
+                        let line_y = pdf_y - line_height * i as f32;
+                        let (font, literal) = format_pdf_text(line, default_font);
+                        let _ = writeln!(
+                            content,
+                            "BT {font} {size:.1} Tf {r:.2} {g:.2} {b:.2} rg {bx:.2} {line_y:.2} Td {literal} Tj ET"
+                        );
+                    }
 
                     if matches!(style, TextStyle::Quote) {
                         let _ = writeln!(
@@ -752,11 +766,29 @@ impl PdfWriter {
                                 let cell_x = bx + (c as f32 * col_w) + 4.0;
                                 let cell_y = pdf_y - (r as f32 * row_h) - 16.0;
                                 let def_font = if *header_row && r == 0 { "/F2" } else { "/F1" };
-                                let (font, literal) = format_pdf_text(cell_str, def_font);
-                                let _ = writeln!(
-                                    content,
-                                    "BT {font} 10 Tf 0.1 0.1 0.1 rg {cell_x:.2} {cell_y:.2} Td {literal} Tj ET"
-                                );
+
+                                // 儲存格文字也會超出欄寬 —— 以前是直接畫出去，
+                                // 於是長一點的內容會蓋到右邊那一格上，甚至衝出
+                                // 紙外。列高是固定的，所以放不下的行數寧可截斷
+                                // 並加上刪節號：**讓使用者看得出來有東西被截掉**，
+                                // 比悄悄蓋住鄰格好。
+                                let cell_avail = (col_w - 8.0).max(24.0);
+                                let max_lines = ((row_h - 6.0) / 12.0).floor().max(1.0) as usize;
+                                let mut lines = wrap_pdf_lines(cell_str, 10.0, cell_avail);
+                                if lines.len() > max_lines {
+                                    lines.truncate(max_lines);
+                                    if let Some(last) = lines.last_mut() {
+                                        last.push('…');
+                                    }
+                                }
+                                for (i, line) in lines.iter().enumerate() {
+                                    let ly = cell_y - 12.0 * i as f32;
+                                    let (font, literal) = format_pdf_text(line, def_font);
+                                    let _ = writeln!(
+                                        content,
+                                        "BT {font} 10 Tf 0.1 0.1 0.1 rg {cell_x:.2} {ly:.2} Td {literal} Tj ET"
+                                    );
+                                }
                             }
                         }
                     }
@@ -865,6 +897,92 @@ fn escape_pdf_string(s: &str) -> String {
             c if c.is_ascii() => out.push(c),
             c => out.push(c),
         }
+    }
+    out
+}
+
+/// 這個字本身是不是全形（用來決定能不能在它後面斷行）。
+fn is_wide_char(ch: char) -> bool {
+    matches!(ch as u32,
+        0x1100..=0x115F | 0x2E80..=0xA4CF | 0xAC00..=0xD7A3
+        | 0xF900..=0xFAFF | 0xFE30..=0xFE4F | 0xFF00..=0xFF60 | 0xFFE0..=0xFFE6)
+}
+
+/// 一個字畫出來大約多寬。
+///
+/// `cjk_font` 指這一行是不是會用 CJK 複合字型畫。**這件事會改變半形字的
+/// 寬度**：`format_pdf_text` 只要看到一個非 ASCII 字元，就把整串丟給
+/// STSong 以 UTF-16BE 輸出，於是裡面的數字與英文也是照全形前進 ——
+/// 仍然按 0.55 去估的話，帶數字的中文句子會被低估，換行換得太晚，
+/// 尾巴衝出紙外。這個誤差就是實際踩到的那一個。
+fn glyph_width(ch: char, font_size: f32, cjk_font: bool) -> f32 {
+    if is_wide_char(ch) || cjk_font {
+        font_size
+    } else {
+        font_size * 0.55
+    }
+}
+
+/// 把一段文字拆成畫得下 `max_width` 的多行。
+///
+/// 原文的換行是作者刻意分的段，一定要保留 —— 併成一行的話，條列式的
+/// 內容（「一、…二、…」）會擠成沒有斷句的一長串。
+///
+/// 中文可以在任何字之間斷；英文要在空白處斷，從單字中間切開會變成另一個
+/// 字。單一超長的詞（例如網址）沒有空白可斷時才允許硬切 —— 不硬切的話
+/// 它會整條衝出紙外，那比切開更糟。
+fn wrap_pdf_lines(text: &str, font_size: f32, max_width: f32) -> Vec<String> {
+    let mut out = Vec::new();
+    for paragraph in text.split('\n') {
+        if paragraph.is_empty() {
+            out.push(String::new());
+            continue;
+        }
+        // 整段只要有一個非 ASCII 字元，就會整段走 CJK 字型。見 glyph_width。
+        let cjk_font = !paragraph.is_ascii();
+        let mut line = String::new();
+        let mut line_w = 0.0f32;
+        let mut pending = String::new();
+        let mut pending_w = 0.0f32;
+
+        for ch in paragraph.chars() {
+            let w = glyph_width(ch, font_size, cjk_font);
+            let breakable = ch.is_whitespace() || is_wide_char(ch);
+
+            if breakable {
+                line.push_str(&pending);
+                line_w += pending_w;
+                pending.clear();
+                pending_w = 0.0;
+
+                if line_w + w > max_width && !line.is_empty() {
+                    out.push(std::mem::take(&mut line));
+                    line_w = 0.0;
+                    // 行首不留空白，否則每一行都會往右縮一格。
+                    if ch.is_whitespace() {
+                        continue;
+                    }
+                }
+                line.push(ch);
+                line_w += w;
+            } else {
+                // 拉丁單字先攢起來，確定放得下才落到行上。
+                if line_w + pending_w + w > max_width {
+                    if !line.is_empty() {
+                        out.push(std::mem::take(&mut line));
+                        line_w = 0.0;
+                    } else if pending_w + w > max_width {
+                        // 一整行都放不下的超長詞：只能硬切。
+                        out.push(std::mem::take(&mut pending));
+                        pending_w = 0.0;
+                    }
+                }
+                pending.push(ch);
+                pending_w += w;
+            }
+        }
+        line.push_str(&pending);
+        out.push(line);
     }
     out
 }
@@ -1077,5 +1195,62 @@ mod tests {
             pdf_str.contains("/Width 10 /Height 10"),
             "需解析出 PNG 真實 10x10 寬高"
         );
+    }
+}
+
+#[cfg(test)]
+mod wrap_tests {
+    use super::*;
+
+    #[test]
+    fn explicit_newlines_are_kept() {
+        // 條列式內容併成一行的話，「一、…二、…」會變成沒有斷句的一長串。
+        let lines = wrap_pdf_lines("一、甲\n二、乙\n三、丙", 12.0, 500.0);
+        assert_eq!(lines, vec!["一、甲", "二、乙", "三、丙"]);
+    }
+
+    #[test]
+    fn an_empty_line_survives() {
+        // 段落之間的空行是作者刻意留的，吃掉的話整段會黏在一起。
+        let lines = wrap_pdf_lines("甲\n\n乙", 12.0, 500.0);
+        assert_eq!(lines, vec!["甲", "", "乙"]);
+    }
+
+    #[test]
+    fn a_long_chinese_paragraph_wraps_instead_of_running_off_the_page() {
+        let text = "這是一段很長的中文段落".repeat(20);
+        let max = 300.0;
+        let lines = wrap_pdf_lines(&text, 12.0, max);
+        assert!(lines.len() > 1, "應該要換行，實得 {} 行", lines.len());
+        for line in &lines {
+            let w: f32 = line
+                .chars()
+                .map(|c| glyph_width(c, 12.0, !line.is_ascii()))
+                .sum();
+            assert!(w <= max + 12.0, "這一行超出可用寬度：{w} > {max}");
+        }
+    }
+
+    #[test]
+    fn english_breaks_at_spaces_not_inside_words() {
+        let lines = wrap_pdf_lines("alpha beta gamma delta epsilon zeta", 12.0, 100.0);
+        assert!(lines.len() > 1);
+        // 從單字中間切開會變成另一個字。把行重新接起來應該還原原文。
+        let rejoined: String = lines.iter().map(|l| l.trim()).collect::<Vec<_>>().join(" ");
+        assert_eq!(rejoined, "alpha beta gamma delta epsilon zeta");
+    }
+
+    #[test]
+    fn a_single_word_longer_than_the_line_is_hard_split() {
+        // 沒有空白可斷的超長字串（網址之類）。不硬切的話它會整條衝出紙外。
+        let lines = wrap_pdf_lines(&"x".repeat(400), 12.0, 200.0);
+        assert!(lines.len() > 1, "超長詞應該被硬切");
+        for line in &lines {
+            let w: f32 = line
+                .chars()
+                .map(|c| glyph_width(c, 12.0, !line.is_ascii()))
+                .sum();
+            assert!(w <= 200.0 + 12.0, "硬切後仍然超寬：{w}");
+        }
     }
 }

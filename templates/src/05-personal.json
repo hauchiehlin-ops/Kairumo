@@ -1,0 +1,1186 @@
+{
+ "id": "personal",
+ "icon": {
+  "apple": "person.crop.circle.fill",
+  "android": "Person"
+ },
+ "name": {
+  "zhHant": "個人與生活應用",
+  "en": "Personal & Everyday",
+  "zhHans": "个人与生活应用",
+  "ja": "個人・生活",
+  "ko": "개인 및 생활",
+  "th": "ส่วนตัวและชีวิตประจำวัน"
+ },
+ "categories": [
+  {
+   "id": "job_hunting",
+   "name": {
+    "zhHant": "求職",
+    "en": "Job Hunting",
+    "zhHans": "求职",
+    "ja": "就職活動",
+    "ko": "구직",
+    "th": "หางาน"
+   },
+   "templates": [
+    {
+     "id": "resume",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "個人履歷",
+      "en": "Résumé / CV",
+      "zhHans": "个人履历",
+      "ja": "履歴書",
+      "ko": "이력서",
+      "th": "เรซูเม่"
+     },
+     "description": {
+      "zhHant": "學經歷、技能與具體成果",
+      "en": "Education, experience, skills and concrete results",
+      "zhHans": "学经历、技能与具体成果",
+      "ja": "学歴・職歴・スキル・実績",
+      "ko": "학력·경력·역량·성과",
+      "th": "การศึกษา ประสบการณ์ ทักษะ และผลงาน"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "張建豪　Chien-Hao Chang",
+         "en": "Chien-Hao Chang"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "品保工程師｜桃園市\n電話：0912-345-678　電子郵件：chchang@example.com\nLinkedIn：linkedin.com/in/example　作品集：example.com/portfolio",
+         "en": "Quality Assurance Engineer | Taoyuan, Taiwan\nPhone: +886 912-345-678　Email: chchang@example.com\nLinkedIn: linkedin.com/in/example　Portfolio: example.com/portfolio"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "專業摘要",
+         "en": "Summary"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "六年精密製造品保經驗，專長於根因分析與統計製程管制。曾主導導入即時製程回饋機制，使不良率下降 40%；並帶領團隊一次通過 ISO 9001 換版稽核。熟悉 MSA、SPC、8D 與車廠稽核實務。",
+         "en": "Six years in precision manufacturing quality assurance, specialising in root-cause analysis and statistical process control. Led the introduction of real-time process feedback that cut the defect rate by 40%, and guided the team through an ISO 9001 transition audit, passed first time. Experienced with MSA, SPC, 8D and automotive customer audits."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "工作經歷",
+         "en": "Experience"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "明衡科技有限公司｜品保工程師｜2020 年 3 月 – 迄今\n・主導壓入工序根因分析，將客訴件數由年 15 件降至 9 件（-40%）。做法是追查前三大客訴型態至產線源頭，其中兩項改以治具防呆後不再發生。\n・建置即時製程參數監測，涵蓋 34 個感測點，全廠不良率由 1.87% 降至 1.12%。\n・擔任 ISO 9001:2015 換版專案窗口，一次通過外部稽核，無重大不符合事項。\n・訓練新進檢驗員 5 名，編寫檢驗標準作業程序 12 份。\n\n宏昌工業股份有限公司｜品管員｜2018 年 7 月 – 2020 年 2 月\n・負責進料檢驗與供應商評鑑，管理 28 家供應商。\n・導入抽樣計畫（MIL-STD-105E），將進料檢驗工時減少 30%。",
+         "en": "Minghen Technology Ltd. | QA Engineer | Mar 2020 – Present\n・Led root-cause analysis of the press-fit process, reducing annual customer complaints from 15 to 9 (-40%) by tracing the top three complaint types back to the line; two were eliminated entirely with mistake-proofing fixtures.\n・Built real-time process monitoring across 34 sensing points; plant defect rate fell from 1.87% to 1.12%.\n・Served as project lead for the ISO 9001:2015 transition; passed the external audit first time with no major non-conformities.\n・Trained five new inspectors and authored 12 inspection SOPs.\n\nHongchang Industrial Co., Ltd. | Quality Inspector | Jul 2018 – Feb 2020\n・Responsible for incoming inspection and supplier evaluation across 28 suppliers.\n・Introduced MIL-STD-105E sampling, cutting incoming inspection hours by 30%."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "學歷",
+         "en": "Education"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "國立○○科技大學　機械工程系　碩士　2016 – 2018\n　論文：製程參數回饋對精密加工不良率之影響\n國立○○科技大學　機械工程系　學士　2012 – 2016",
+         "en": "National ○○ University of Science and Technology — M.S., Mechanical Engineering, 2016–2018\n　Thesis: The Effect of Process Parameter Feedback on Defect Rates in Precision Machining\nNational ○○ University of Science and Technology — B.S., Mechanical Engineering, 2012–2016"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "技能與證照",
+         "en": "Skills and Certifications"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "類別|內容\n品質工具|SPC、MSA、FMEA、8D、QC 七大手法\n軟體|Minitab、SolidWorks、AutoCAD、Excel（樞紐分析、VBA）\n證照|ISO 9001:2015 主導稽核員、六標準差綠帶\n語言|中文（母語）、英文（多益 810）、日文（N3）",
+         "en": "Category|Detail\nQuality tools|SPC, MSA, FMEA, 8D, seven QC tools\nSoftware|Minitab, SolidWorks, AutoCAD, Excel (pivot tables, VBA)\nCertifications|ISO 9001:2015 Lead Auditor, Six Sigma Green Belt\nLanguages|Chinese (native), English (TOEIC 810), Japanese (JLPT N3)"
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "（姓名）",
+         "en": "（Name）"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（職稱｜所在地）\n電話：　　　電子郵件：\nLinkedIn：　　　作品集：",
+         "en": "（Title | Location）\nPhone:　　Email:\nLinkedIn:　　Portfolio:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "專業摘要",
+         "en": "Summary"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（三到四句。年資、專長領域，以及一兩個帶數字的成果。空泛的形容詞在這裡沒有用 —— 「積極負責」誰都會寫。）",
+         "en": "（Three or four sentences: years of experience, area of expertise, and one or two results with numbers. Adjectives such as \"hard-working\" carry no information — anyone can write them.）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "工作經歷",
+         "en": "Experience"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（公司｜職稱｜起訖年月）\n・（成果導向：做了什麼 → 造成什麼可衡量的改變。動詞開頭，帶數字）\n・\n・\n\n（公司｜職稱｜起訖年月）\n・\n・",
+         "en": "（Company | Title | Dates）\n・（Result-oriented: what you did → what measurable change followed. Start with a verb, include numbers.）\n・\n・\n\n（Company | Title | Dates）\n・\n・"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "學歷",
+         "en": "Education"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（學校　系所　學位　起訖年）\n（學校　系所　學位　起訖年）",
+         "en": "（Institution — Degree, Field, Years）\n（Institution — Degree, Field, Years）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "技能與證照",
+         "en": "Skills and Certifications"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "類別|內容\n專業技能|\n軟體|\n證照|\n語言|",
+         "en": "Category|Detail\nCore skills|\nSoftware|\nCertifications|\nLanguages|"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "autobiography",
+     "pageStyle": "lined",
+     "name": {
+      "zhHant": "自傳",
+      "en": "Personal Statement",
+      "zhHans": "自传",
+      "ja": "自己紹介書",
+      "ko": "자기소개서",
+      "th": "ประวัติส่วนตัว"
+     },
+     "description": {
+      "zhHant": "成長背景、求學、經歷與生涯規劃",
+      "en": "Background, education, experience and career goals",
+      "zhHans": "成长背景、求学、经历与生涯规划",
+      "ja": "生い立ち・学業・経験・将来設計",
+      "ko": "성장 배경·학업·경험·진로 계획",
+      "th": "ภูมิหลัง การศึกษา ประสบการณ์ และเป้าหมาย"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "自傳",
+         "en": "Personal Statement"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "一、關於我",
+         "en": "1. About Me"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "我是張建豪，桃園人，家中三代經營小型機械加工廠。從小在車床與銑床的聲音裡長大，也很早就看見父親為了一批退貨徹夜重工的樣子。那件事讓我對「品質」兩個字的理解，不是課本上的定義，而是一整個晚上的燈光。\n\n這也是我後來選擇機械工程、又走進品保領域的原因。",
+         "en": "My name is Chien-Hao Chang. I grew up in Taoyuan, in a family that has run a small machining workshop for three generations. I grew up with the sound of lathes and milling machines, and I was young when I first saw my father work through the night to rework a rejected batch. That night taught me what \"quality\" means in a way no textbook definition could.\n\nIt is also why I later chose mechanical engineering, and then quality assurance."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "二、求學歷程",
+         "en": "2. Education"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "大學就讀國立○○科技大學機械工程系。大二那年參加全國機械設計競賽，我們這組在初賽被淘汰 —— 原因不是設計不好，而是公差標註錯誤，零件根本組不起來。那次失敗讓我開始認真對待「精度」這件事，也是我後來選擇量測與品管作為研究方向的起點。\n\n碩士班師從李明哲教授，論文題目是製程參數回饋對不良率的影響。研究期間我在合作廠商的產線駐點三個月，那三個月學到的東西比實驗室兩年還多 —— 尤其是「資料乾淨與否，決定分析有沒有意義」這件事。",
+         "en": "I studied mechanical engineering at National ○○ University of Science and Technology. In my second year my team was eliminated in the first round of the national machine design competition — not because the design was poor, but because we had mislabelled a tolerance and the parts simply would not fit. That failure was where I began to take precision seriously, and it led me towards metrology and quality control.\n\nFor my master's I studied under Professor Ming-Che Lee, writing on the effect of process parameter feedback on defect rates. I spent three months stationed on a partner company's production line during that research, and learned more in those three months than in two years in the laboratory — above all that whether the data is clean decides whether the analysis means anything."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "三、工作經歷與收穫",
+         "en": "3. Work Experience"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "畢業後先進入宏昌工業擔任品管員，負責進料檢驗。那是一份重複性很高的工作，但我在其中找到可以改的地方：原本每一批都全檢，我導入抽樣計畫後，檢驗工時減少三成，而漏檢率沒有上升。\n\n2020 年轉職到明衡科技，開始接觸根因分析。最有成就感的一次，是把客訴從一年 15 件降到 9 件。做法其實不複雜 —— 不是把檢驗變嚴，而是把前三大客訴型態一路追回產線，找出真正的源頭。其中兩項改成治具防呆之後，就再也沒有發生過。\n\n這件事讓我確認了一個判斷：品保的價值不在攔截不良品，而在讓不良品不要產生。",
+         "en": "After graduating I joined Hongchang Industrial as a quality inspector, handling incoming inspection. It was repetitive work, but I found something worth changing: every batch had been inspected in full, and after I introduced a sampling plan, inspection hours fell by thirty per cent with no rise in escapes.\n\nIn 2020 I moved to Minghen Technology and began working on root-cause analysis. The result I am proudest of is reducing customer complaints from fifteen a year to nine. The method was not complicated — not stricter inspection, but tracing the top three complaint types back to their origin on the line. Two of them stopped entirely once mistake-proofing fixtures were fitted.\n\nThat confirmed a view I still hold: the value of quality assurance is not in catching defects but in preventing them."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "四、我的不足與正在做的事",
+         "en": "4. What I Am Working On"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "我最需要補強的是跨部門溝通。我對技術細節掌握得還可以，但在會議上常常直接講結論，忘了其他部門沒有跟著我一起推導。去年主管給我的回饋就是這一點，今年我開始主動主持跨部門檢討會，練習把技術語言換成決策語言。目前還在進步中，但已經有同事說「這次聽懂了」。",
+         "en": "The area I most need to strengthen is cross-functional communication. My grasp of technical detail is reasonable, but in meetings I tend to state conclusions directly, forgetting that other departments have not followed the reasoning with me. That was exactly the feedback my manager gave me last year. This year I began chairing cross-department reviews myself, practising how to turn technical language into decision language. I am still improving, but colleagues have started telling me they followed it this time."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "五、生涯規劃",
+         "en": "5. Career Goals"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "短期內我希望在現有基礎上，把即時回饋機制推廣到更多工序，並完成統計製程管制的進階認證。中期目標是成為能同時處理技術與跨部門協調的品保主管。\n\n更長遠一點，我希望回到家裡的工廠，把這些年學到的東西帶回去 —— 那間工廠現在還是用父親三十年前的做法。這不是懷舊，是我知道台灣有幾千家這樣的工廠，而它們缺的不是設備，是方法。",
+         "en": "In the short term I want to extend the real-time feedback mechanism to more operations and complete an advanced certification in statistical process control. In the medium term I hope to become a quality manager able to handle both the technical work and the cross-department coordination.\n\nFurther out, I would like to return to my family's workshop and bring back what I have learned. It still runs the way my father ran it thirty years ago. This is not nostalgia: I know there are thousands of workshops like it in Taiwan, and what they lack is not equipment but method."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "自傳",
+         "en": "Personal Statement"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "一、關於我",
+         "en": "1. About Me"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（從一個具體的場景或事件切入，不要從「我是一個○○的人」開始 —— 那種開頭讀者看過太多次了。）",
+         "en": "（Open with a specific scene or event rather than \"I am a ... person\" — readers have seen that opening too many times.）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "二、求學歷程",
+         "en": "2. Education"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（挑一兩件真正影響你方向的事來寫，包括失敗的。流水帳式的學歷回顧沒有人想看 —— 履歷上已經有了。）",
+         "en": "（Choose one or two things that genuinely shaped your direction, including failures. A chronological list adds nothing — it is already on your CV.）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "三、工作經歷與收穫",
+         "en": "3. Work Experience"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（做了什麼 → 結果如何 → 你從中確認了什麼判斷。第三段是關鍵，那才是別人看不出來的部分。）",
+         "en": "（What you did → what resulted → what conviction it left you with. The third part matters most; it is the part nobody can infer from your CV.）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "四、我的不足與正在做的事",
+         "en": "4. What I Am Working On"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（誠實寫一項真正的弱點，以及你正在怎麼處理。寫「我太追求完美」會被當成沒有自覺。）",
+         "en": "（Name one real weakness and what you are doing about it. \"I am too much of a perfectionist\" reads as a lack of self-awareness.）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "五、生涯規劃",
+         "en": "5. Career Goals"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（短期、中期、長期。最好能與應徵的這個職位接得上，但不必假裝這家公司是你唯一的夢想。）",
+         "en": "（Short, medium and long term. Ideally these connect to the role you are applying for — but you need not pretend this company is your only dream.）"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "cover_letter",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "求職自薦信",
+      "en": "Cover Letter",
+      "zhHans": "求职自荐信",
+      "ja": "添え状（カバーレター）",
+      "ko": "자기추천서",
+      "th": "จดหมายสมัครงาน"
+     },
+     "description": {
+      "zhHant": "針對特定職缺的簡短自我推薦",
+      "en": "A short, targeted pitch for one specific role",
+      "zhHans": "针对特定职缺的简短自我推荐",
+      "ja": "特定の求人に向けた簡潔な自己推薦",
+      "ko": "특정 채용 공고에 맞춘 간결한 자기추천",
+      "th": "แนะนำตัวสั้น ๆ เจาะจงตำแหน่งที่สมัคร"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "張建豪\n桃園市龜山區○○路 45 號 3 樓\n0912-345-678｜chchang@example.com\n\n2026 年 4 月 3 日\n\n和誠精密工業股份有限公司\n人力資源部　林經理　敬啟",
+         "en": "Chien-Hao Chang\n3F, No. 45, ○○ Rd., Guishan Dist., Taoyuan City\n+886 912-345-678 | chchang@example.com\n\n3 April 2026\n\nMs. Lin, Human Resources\nHecheng Precision Industrial Co., Ltd."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "敬啟者：",
+         "en": "Dear Ms. Lin,"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "我在貴公司官網看到「品保工程師（車用零組件）」職缺，謹此應徵。職缺說明中提到「需具備車廠稽核實務經驗並能主導改善專案」，這正好是我過去三年的主要工作內容。\n\n在明衡科技，我主導了一項製程回饋機制的導入，使全廠不良率由 1.87% 降至 1.12%。這個成果的關鍵不在加嚴檢驗，而在把偏移偵測的時間從「數百件之後」縮短到「當件」。我也擔任 ISO 9001 換版專案窗口，一次通過外部稽核，無重大不符合事項。\n\n我注意到貴公司去年通過 IATF 16949 認證，正在擴充車用產品線。這與我的經驗接得上，也是我特別想加入的原因 —— 車用件的品質要求比我目前處理的更嚴格，我想在那樣的標準下工作。\n\n隨函附上履歷一份。如蒙面談機會，我很樂意進一步說明上述專案的具體做法。感謝您撥冗閱讀。",
+         "en": "I am writing to apply for the Quality Assurance Engineer (Automotive Components) position advertised on your website. The listing asks for hands-on experience with automotive customer audits and the ability to lead improvement projects; that has been the substance of my work for the past three years.\n\nAt Minghen Technology I led the introduction of a process feedback mechanism that reduced the plant-wide defect rate from 1.87% to 1.12%. What made it work was not stricter inspection but shortening drift detection from several hundred parts to the current part. I also acted as project lead for our ISO 9001 transition, which passed external audit first time with no major non-conformities.\n\nI noticed that your company achieved IATF 16949 certification last year and is expanding its automotive line. That is where my experience fits, and it is the reason I am particularly interested: automotive quality requirements are more demanding than those I handle today, and I would like to work to that standard.\n\nMy CV is enclosed. I would welcome the chance to explain the approach behind those projects in more detail. Thank you for your time."
+        }
+       },
+       {
+        "type": "signoff",
+        "text": {
+         "zhHant": "敬祝\n鈞安\n\n張建豪　敬上",
+         "en": "Yours sincerely,\n\nChien-Hao Chang"
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（姓名）\n（地址）\n（電話）｜（電子郵件）\n\n（日期）\n\n（公司名稱）\n（部門）　（收件人）　敬啟",
+         "en": "（Name）\n（Address）\n（Phone） | （Email）\n\n（Date）\n\n（Recipient）\n（Department）\n（Company）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "敬啟者：",
+         "en": "Dear （name）,"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（第一段：應徵哪個職缺、從哪裡看到、以及你為什麼符合 —— 直接引用職缺說明裡的一句要求，並說明你怎麼符合。）\n\n（第二段：一個帶數字的具體成果，並說明關鍵做法。只寫成果不寫做法，讀起來像運氣好。）\n\n（第三段：你對這家公司的具體觀察，以及為什麼想加入。寫得出這一段，代表你真的做過功課 —— 這一段最常被省略，也最能拉開差距。）\n\n（第四段：附件說明與面談邀約。）",
+         "en": "（Paragraph 1: which role, where you saw it, and why you fit — quote one requirement from the listing and address it directly.）\n\n（Paragraph 2: one concrete result with a number, and the key to how you achieved it. A result without a method reads like luck.）\n\n（Paragraph 3: a specific observation about this company and why you want to join. This paragraph shows you did the work — it is the one most often left out, and the one that most separates candidates.）\n\n（Paragraph 4: enclosures and a request for interview.）"
+        }
+       },
+       {
+        "type": "signoff",
+        "text": {
+         "zhHant": "敬祝\n鈞安\n\n（姓名）　敬上",
+         "en": "Yours sincerely,\n\n（Name）"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "life_admin",
+   "name": {
+    "zhHant": "生活管理",
+    "en": "Life Admin",
+    "zhHans": "生活管理",
+    "ja": "生活管理",
+    "ko": "생활 관리",
+    "th": "จัดการชีวิต"
+   },
+   "templates": [
+    {
+     "id": "expense_tracker",
+     "pageStyle": "grid",
+     "name": {
+      "zhHant": "個人記帳表",
+      "en": "Personal Budget Tracker",
+      "zhHans": "个人记帐表",
+      "ja": "家計簿",
+      "ko": "가계부",
+      "th": "ตารางบันทึกรายรับรายจ่าย"
+     },
+     "description": {
+      "zhHant": "月收支、分類統計與結餘",
+      "en": "Monthly income, categorised spending and balance",
+      "zhHans": "月收支、分类统计与结余",
+      "ja": "月間収支・費目別集計・残高",
+      "ko": "월 수입·지출 분류·잔액",
+      "th": "รายรับรายจ่ายรายเดือน แยกหมวด และยอดคงเหลือ"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "2026 年 5 月 記帳表",
+         "en": "May 2026 — Budget Tracker"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "收入項目|金額\n本薪|52,000\n加班費|4,200\n兼職收入|6,000\n收入合計|62,200",
+         "en": "Income|Amount\nSalary|52,000\nOvertime|4,200\nSide income|6,000\nTotal income|62,200"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "日期|項目|分類|金額|付款方式\n05/01|房租|居住|18,000|轉帳\n05/02|悠遊卡加值|交通|1,000|現金\n05/03|超市採買|飲食|1,842|信用卡\n05/05|手機費|通訊|699|自動扣繳\n05/07|朋友聚餐|社交|860|信用卡\n05/09|水電費|居住|1,420|自動扣繳\n05/12|書籍|學習|1,180|信用卡\n05/15|醫療門診|醫療|350|現金\n05/18|超市採買|飲食|2,105|信用卡\n05/20|電影|娛樂|560|信用卡\n05/24|機車保養|交通|1,800|現金\n05/28|超市採買|飲食|1,760|信用卡",
+         "en": "Date|Item|Category|Amount|Method\n05/01|Rent|Housing|18,000|Transfer\n05/02|Transit card top-up|Transport|1,000|Cash\n05/03|Groceries|Food|1,842|Card\n05/05|Mobile bill|Utilities|699|Direct debit\n05/07|Dinner with friends|Social|860|Card\n05/09|Water and electricity|Housing|1,420|Direct debit\n05/12|Books|Learning|1,180|Card\n05/15|Clinic visit|Health|350|Cash\n05/18|Groceries|Food|2,105|Card\n05/20|Cinema|Leisure|560|Card\n05/24|Scooter service|Transport|1,800|Cash\n05/28|Groceries|Food|1,760|Card"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "分類|本月金額|佔支出|上月|增減\n居住|19,420|60%|19,420|0\n飲食|5,707|18%|6,240|-533\n交通|2,800|9%|1,650|+1,150\n學習|1,180|4%|0|+1,180\n社交娛樂|1,420|4%|2,310|-890\n通訊|699|2%|699|0\n醫療|350|1%|0|+350\n支出合計|31,576|100%|30,319|+1,257",
+         "en": "Category|This month|Share|Last month|Change\nHousing|19,420|60%|19,420|0\nFood|5,707|18%|6,240|-533\nTransport|2,800|9%|1,650|+1,150\nLearning|1,180|4%|0|+1,180\nSocial & leisure|1,420|4%|2,310|-890\nUtilities|699|2%|699|0\nHealth|350|1%|0|+350\nTotal spending|31,576|100%|30,319|+1,257"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "本月結餘與檢討",
+         "en": "Balance and Review"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "收入 62,200 − 支出 31,576 = 結餘 30,624 元，儲蓄率 49%。\n\n交通費較上月增加 1,150 元，主因是機車定期保養（1,800 元），屬一次性支出，非趨勢。\n\n居住費佔比 60% 偏高。租約至 117 年 7 月，短期內不易調整；可考慮到期後換租或找室友分攤。",
+         "en": "Income 62,200 − spending 31,576 = 30,624 saved, a 49% savings rate.\n\nTransport rose 1,150 on last month, mainly the scheduled scooter service (1,800) — a one-off, not a trend.\n\nHousing is 60% of spending, which is high. The lease runs to July 2028 so there is little room short term; worth considering a move or a flatmate at renewal."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "　　年　　月 記帳表",
+         "en": "Budget Tracker"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "收入項目|金額\n本薪|\n加班費|\n其他|\n收入合計|",
+         "en": "Income|Amount\nSalary|\nOvertime|\nOther|\nTotal income|"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "日期|項目|分類|金額|付款方式\n|||| \n||||\n||||\n||||\n||||\n||||\n||||\n||||\n||||\n||||\n||||\n||||",
+         "en": "Date|Item|Category|Amount|Method\n||||\n||||\n||||\n||||\n||||\n||||\n||||\n||||\n||||\n||||\n||||\n||||"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "分類|本月金額|佔支出|上月|增減\n居住||||\n飲食||||\n交通||||\n學習||||\n社交娛樂||||\n通訊||||\n醫療||||\n支出合計||||",
+         "en": "Category|This month|Share|Last month|Change\nHousing||||\nFood||||\nTransport||||\nLearning||||\nSocial & leisure||||\nUtilities||||\nHealth||||\nTotal spending||||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "本月結餘與檢討",
+         "en": "Balance and Review"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "收入　　　− 支出　　　= 結餘　　　元，儲蓄率　　%。\n\n（變動較大的科目是哪一項？是一次性支出還是趨勢？分不清楚的話，每個月都會重複同樣的檢討。）",
+         "en": "Income　　− spending　　= 　　saved, a 　% savings rate.\n\n（Which category moved most? Was it a one-off or a trend? Without that distinction you will repeat the same review every month.）"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "planner",
+     "pageStyle": "lined",
+     "name": {
+      "zhHant": "行事曆規劃表",
+      "en": "Weekly Planner",
+      "zhHans": "行事历规划表",
+      "ja": "週間スケジュール表",
+      "ko": "주간 계획표",
+      "th": "ตารางวางแผนรายสัปดาห์"
+     },
+     "description": {
+      "zhHant": "週行程、優先事項與每日時段安排",
+      "en": "Weekly schedule, priorities and daily time blocks",
+      "zhHans": "周行程、优先事项与每日时段安排",
+      "ja": "週間予定・優先事項・時間割",
+      "ko": "주간 일정·우선순위·시간 배분",
+      "th": "ตารางสัปดาห์ ลำดับความสำคัญ และช่วงเวลา"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "2026 年 5 月 11 日 – 5 月 17 日 週計畫",
+         "en": "Week of 11–17 May 2026"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "本週三件最重要的事",
+         "en": "Top Three This Week"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "一、完成壓力參數驗證報告初稿（週四前）—— 這是下週會議的前提，卡住的話整個專案順延。\n二、與吳志偉完成治具圖檔交接（週三前）。\n三、送出統計製程管制進階課程報名（週五前，額滿即止）。",
+         "en": "1. Finish the first draft of the pressure parameter validation report (by Thursday) — next week's meeting depends on it; if this slips, the whole project slips.\n2. Complete the fixture drawing handover with C. W. Wu (by Wednesday).\n3. Submit the advanced SPC course registration (by Friday; places are limited)."
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "時段|一 5/11|二 5/12|三 5/13|四 5/14|五 5/15|六 5/16|日 5/17\n上午|產線巡檢|報告撰寫|治具交接|報告定稿|週會|健身|休息\n下午|資料整理|報告撰寫|供應商來訪|主管審閱|客訴處理|採買|備課\n晚上|課程報名|—|家庭聚餐|—|朋友聚會|—|下週規劃",
+         "en": "Slot|Mon 11|Tue 12|Wed 13|Thu 14|Fri 15|Sat 16|Sun 17\nMorning|Line walk|Report writing|Fixture handover|Finalise report|Weekly meeting|Gym|Rest\nAfternoon|Data prep|Report writing|Supplier visit|Manager review|Complaint handling|Errands|Study prep\nEvening|Course signup|—|Family dinner|—|Friends|—|Plan next week"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "待辦與追蹤",
+         "en": "Tasks and Follow-ups"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "事項|期限|狀態|備註\n壓力參數驗證報告|5/14|進行中|已完成資料分析，待撰寫討論\n治具圖檔交接|5/13|未開始|需先整理版本紀錄\n課程報名|5/15|未開始|名額 30 人，已報 22\n回覆客戶 A 的稽核問卷|5/20|待對方補件|已去信詢問\n年度健檢預約|5/31|未開始|",
+         "en": "Task|Due|Status|Note\nPressure validation report|5/14|In progress|Analysis done; discussion section pending\nFixture drawing handover|5/13|Not started|Version history needs tidying first\nCourse registration|5/15|Not started|30 places, 22 taken\nReply to customer A audit questionnaire|5/20|Waiting on them|Follow-up email sent\nBook annual health check|5/31|Not started|"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "週末回顧",
+         "en": "Weekly Review"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "做完了：報告初稿、治具交接、課程報名。\n沒做完：健檢預約（又延一週了，下週排進週一早上，不要再放在「有空再說」）。\n這週學到：報告寫作排在上午效率明顯較好，下週開始把需要思考的工作固定排在上午。",
+         "en": "Done: report draft, fixture handover, course registration.\nNot done: health check booking (postponed again — schedule it for Monday morning rather than leaving it as \"when I have time\").\nLearned: writing goes noticeably better in the morning. From next week, put thinking work in the morning slot by default."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "　　年　　月　　日 – 　　月　　日 週計畫",
+         "en": "Weekly Planner"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "本週三件最重要的事",
+         "en": "Top Three This Week"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（只寫三件。寫十件等於沒有優先順序 —— 每一件都要註明期限，以及「沒做完會怎樣」）\n一、\n二、\n三、",
+         "en": "（Only three. Ten items means no priorities. For each, note the deadline and what happens if it slips.）\n1.\n2.\n3."
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "時段|一|二|三|四|五|六|日\n上午|||||||\n下午|||||||\n晚上|||||||",
+         "en": "Slot|Mon|Tue|Wed|Thu|Fri|Sat|Sun\nMorning|||||||\nAfternoon|||||||\nEvening|||||||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "待辦與追蹤",
+         "en": "Tasks and Follow-ups"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "事項|期限|狀態|備註\n||| \n|||\n|||\n|||\n|||",
+         "en": "Task|Due|Status|Note\n|||\n|||\n|||\n|||\n|||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "週末回顧",
+         "en": "Weekly Review"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "做完了：\n沒做完：（為什麼？是時間不夠，還是根本不想做？後者要換做法，不是換時段）\n這週學到：",
+         "en": "Done:\nNot done: （Why? Not enough time, or no real intention? The second needs a different approach, not a different slot.）\nLearned:"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "travel_itinerary",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "旅遊行程規劃表",
+      "en": "Travel Itinerary",
+      "zhHans": "旅游行程规划表",
+      "ja": "旅程表",
+      "ko": "여행 일정표",
+      "th": "ตารางการเดินทาง"
+     },
+     "description": {
+      "zhHant": "每日行程、交通住宿、預算與證件清單",
+      "en": "Daily plan, transport, lodging, budget and documents",
+      "zhHans": "每日行程、交通住宿、预算与证件清单",
+      "ja": "日程・交通・宿泊・予算・持ち物",
+      "ko": "일정·교통·숙소·예산·서류 목록",
+      "th": "แผนรายวัน การเดินทาง ที่พัก งบประมาณ และเอกสาร"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "京都・大阪 五日自由行",
+         "en": "Kyoto & Osaka — Five Days"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n旅遊日期|2026 年 11 月 3 日（二）– 11 月 7 日（六）\n人數|2 人\n去程|11/03 桃園 TPE 09:15 → 關西 KIX 12:45（BR132）\n回程|11/07 關西 KIX 14:20 → 桃園 TPE 16:05（BR131）\n總預算|每人新臺幣 38,000 元",
+         "en": "Item|Detail\nDates|Tue 3 – Sat 7 November 2026\nTravellers|2\nOutbound|11/03 TPE 09:15 → KIX 12:45 (BR132)\nReturn|11/07 KIX 14:20 → TPE 16:05 (BR131)\nBudget|NT$38,000 per person"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "日期|上午|下午|晚上|住宿\n11/03|抵達關西、搭 HARUKA 進京都|飯店寄放行李、清水寺|錦市場晚餐|京都四条 A 飯店\n11/04|伏見稻荷（建議 08:00 前到）|宇治平等院、抹茶|鴨川散步|京都四条 A 飯店\n11/05|嵐山竹林、渡月橋|天龍寺、嵯峨野小火車|京都車站周邊|京都四条 A 飯店\n11/06|移動至大阪、寄放行李|大阪城、黑門市場|道頓堀、心齋橋|大阪難波 B 飯店\n11/07|難波周邊採買|前往關西機場|—|—",
+         "en": "Date|Morning|Afternoon|Evening|Lodging\n11/03|Arrive KIX, HARUKA to Kyoto|Drop bags, Kiyomizu-dera|Dinner at Nishiki Market|Hotel A, Shijo Kyoto\n11/04|Fushimi Inari (arrive before 08:00)|Uji: Byodo-in, matcha|Walk along the Kamo River|Hotel A, Shijo Kyoto\n11/05|Arashiyama bamboo grove, Togetsukyo|Tenryu-ji, Sagano railway|Around Kyoto Station|Hotel A, Shijo Kyoto\n11/06|Transfer to Osaka, drop bags|Osaka Castle, Kuromon Market|Dotonbori, Shinsaibashi|Hotel B, Namba Osaka\n11/07|Shopping around Namba|Head to KIX|—|—"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "交通與票券",
+         "en": "Transport and Passes"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "・關西機場 → 京都：HARUKA 特急，約 80 分鐘。建議在台灣先購買 ICOCA & HARUKA 套票較划算。\n・京都市內：以公車為主，班次密集但塞車時不準時。清水寺、伏見稻荷尖峰時段建議改搭電車。\n・京都 → 大阪：JR 京都線新快速，約 30 分鐘。\n・大阪市內：地鐵一日券 800 日圓，跑三站以上就回本。",
+         "en": "・KIX → Kyoto: HARUKA limited express, about 80 minutes. The ICOCA & HARUKA package bought in advance is better value.\n・Within Kyoto: mostly buses — frequent, but unreliable in traffic. For Kiyomizu-dera and Fushimi Inari at peak times, take the train instead.\n・Kyoto → Osaka: JR Kyoto Line special rapid, about 30 minutes.\n・Within Osaka: subway day pass ¥800, worth it from three rides."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "預算概算（每人）",
+         "en": "Budget (per person)"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|預算(NT$)|備註\n機票|12,000|已開票\n住宿|9,600|4 晚，雙人房均分\n交通|3,200|含 HARUKA 套票與市內交通\n餐飲|7,500|每日約 1,500\n門票與體驗|2,200|寺院拜觀料、小火車\n購物與雜支|3,500|\n合計|38,000|",
+         "en": "Item|Budget (NT$)|Note\nFlights|12,000|Ticketed\nLodging|9,600|4 nights, twin shared\nTransport|3,200|Incl. HARUKA package and local travel\nFood|7,500|About 1,500 per day\nEntry and activities|2,200|Temple fees, Sagano railway\nShopping and misc.|3,500|\nTotal|38,000|"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "證件與行前確認",
+         "en": "Documents and Pre-Departure"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "□ 護照（效期至 2028/04，足夠）\n□ 電子簽證／入境 QR（Visit Japan Web 已填）\n□ 旅平險與不便險（已投保，保單號 ○○）\n□ 訂房確認信（已列印）\n□ 日幣現金 30,000 圓＋信用卡兩張\n□ 轉接插頭（日本 A 型，台灣通用免帶）\n□ 常備藥品\n□ 11 月京都日夜溫差大，早晚約 10°C，需帶外套",
+         "en": "□ Passport (valid to 2028/04 — sufficient)\n□ Entry QR code (Visit Japan Web completed)\n□ Travel and disruption insurance (policy ○○)\n□ Hotel confirmations (printed)\n□ ¥30,000 cash plus two credit cards\n□ Plug adapter (Japan type A — same as Taiwan, not needed)\n□ Regular medication\n□ Kyoto in November swings between day and night, around 10°C in the mornings — bring a jacket"
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "　　　　　　行程規劃表",
+         "en": "Travel Itinerary"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n旅遊日期|\n人數|\n去程|\n回程|\n總預算|",
+         "en": "Item|Detail\nDates|\nTravellers|\nOutbound|\nReturn|\nBudget|"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "日期|上午|下午|晚上|住宿\n|||| \n||||\n||||\n||||\n||||",
+         "en": "Date|Morning|Afternoon|Evening|Lodging\n||||\n||||\n||||\n||||\n||||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "交通與票券",
+         "en": "Transport and Passes"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "・（機場到市區的方式與時間）\n・（市內交通與票券是否划算）\n・（城市之間的移動）\n・",
+         "en": "・（Airport to city: method and time）\n・（Local transport and whether a pass pays off）\n・（Travel between cities）\n・"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "預算概算（每人）",
+         "en": "Budget (per person)"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|預算|備註\n機票||\n住宿||\n交通||\n餐飲||\n門票與體驗||\n購物與雜支||\n合計||",
+         "en": "Item|Budget|Note\nFlights||\nLodging||\nTransport||\nFood||\nEntry and activities||\nShopping and misc.||\nTotal||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "證件與行前確認",
+         "en": "Documents and Pre-Departure"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "□ 護照（效期是否足夠六個月）\n□ 簽證或入境登記\n□ 旅平險\n□ 訂房與訂票確認信\n□ 現金與信用卡\n□ 轉接插頭與電壓\n□ 常備藥品\n□ 當地氣溫與衣物",
+         "en": "□ Passport (six months' validity?)\n□ Visa or entry registration\n□ Travel insurance\n□ Booking confirmations\n□ Cash and cards\n□ Plug adapter and voltage\n□ Medication\n□ Local weather and clothing"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "etiquette",
+   "name": {
+    "zhHant": "社交禮儀",
+    "en": "Social Etiquette",
+    "zhHans": "社交礼仪",
+    "ja": "冠婚葬祭",
+    "ko": "경조사 예절",
+    "th": "มารยาททางสังคม"
+   },
+   "templates": [
+    {
+     "id": "wedding_invitation",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "喜帖邀請函",
+      "en": "Wedding Invitation",
+      "zhHans": "喜帖邀请函",
+      "ja": "結婚披露宴招待状",
+      "ko": "청첩장",
+      "th": "การ์ดเชิญงานแต่งงาน"
+     },
+     "description": {
+      "zhHant": "婚宴時間地點、席次與回覆方式",
+      "en": "Date, venue, seating and RSVP",
+      "zhHans": "婚宴时间地点、席次与回复方式",
+      "ja": "日時・会場・席次・出欠連絡",
+      "ko": "일시·장소·좌석·회신 방법",
+      "th": "วันเวลา สถานที่ ที่นั่ง และการตอบรับ"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "結婚喜宴　敬邀",
+         "en": "With Great Pleasure"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "謹訂於中華民國 116 年 3 月 8 日（星期日）\n為　小女　林思妤\n與　周庭安先生　舉行結婚典禮\n敬備喜筵　恭候\n光臨",
+         "en": "Mr. and Mrs. Lin\nrequest the pleasure of your company\nat the marriage of their daughter\n\nSzu-Yu Lin\nto\nTing-An Chou\n\nSunday, the eighth of March\ntwo thousand and twenty-seven"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n日期|中華民國 116 年 3 月 8 日（星期日）\n入席|下午 6 時整\n開席|下午 6 時 30 分\n地點|○○大飯店 三樓　瑞鳳廳\n地址|臺北市中山區民權東路二段 100 號\n停車|飯店地下停車場，憑券免費三小時\n捷運|中和新蘆線行天宮站 4 號出口步行 5 分鐘",
+         "en": "Item|Detail\nDate|Sunday, 8 March 2027\nReception|6:00 p.m.\nDinner|6:30 p.m.\nVenue|Ruifeng Hall, 3F, ○○ Hotel\nAddress|No. 100, Sec. 2, Minquan E. Rd., Zhongshan Dist., Taipei\nParking|Hotel basement, three hours free with validation\nMetro|Xingtian Temple Station, Exit 4, five minutes' walk"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "林正雄・吳淑芬　敬邀\n周世昌・許嘉玲　敬邀",
+         "en": "Together with their families"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "回覆",
+         "en": "RSVP"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "為利席次安排，敬請於 116 年 2 月 15 日前回覆出席人數。\n\n聯絡人：林思妤　0912-333-444\n回覆表單：example.com/rsvp\n\n如有素食、過敏或行動需求，請一併告知，我們會提前安排。",
+         "en": "To help us plan the seating, please let us know how many will attend by 15 February 2027.\n\nContact: Szu-Yu Lin, +886 912-333-444\nOnline reply: example.com/rsvp\n\nPlease also tell us about any dietary, allergy or accessibility needs, and we will arrange them in advance."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "結婚喜宴　敬邀",
+         "en": "Wedding Invitation"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "謹訂於中華民國　　年　　月　　日（星期　）\n為　　　　　　\n與　　　　　　　舉行結婚典禮\n敬備喜筵　恭候\n光臨",
+         "en": "（Hosts）\nrequest the pleasure of your company\nat the marriage of\n\n（Name）\nto\n（Name）\n\n（Date）"
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n日期|\n入席|\n開席|\n地點|\n地址|\n停車|\n交通|",
+         "en": "Item|Detail\nDate|\nReception|\nDinner|\nVenue|\nAddress|\nParking|\nTransport|"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（雙方家長或新人具名）",
+         "en": "（Hosts）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "回覆",
+         "en": "RSVP"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "敬請於　　年　　月　　日前回覆出席人數。\n\n聯絡人：\n回覆方式：\n\n（別忘了問素食、過敏與行動需求 —— 事後才知道就來不及安排了）",
+         "en": "Please reply by （date）.\n\nContact:\nHow to reply:\n\n（Remember to ask about dietary, allergy and accessibility needs — too late to arrange once the day arrives.）"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "thank_you_card",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "感謝卡",
+      "en": "Thank-You Card",
+      "zhHans": "感谢卡",
+      "ja": "お礼状",
+      "ko": "감사 카드",
+      "th": "การ์ดขอบคุณ"
+     },
+     "description": {
+      "zhHant": "婚禮、禮物或幫助後的簡短致謝",
+      "en": "A short note after a gift, a wedding or a kindness",
+      "zhHans": "婚礼、礼物或帮助后的简短致谢",
+      "ja": "贈り物・慶事・厚意への短い礼状",
+      "ko": "선물·경조사·도움에 대한 짧은 감사",
+      "th": "ขอบคุณสั้น ๆ หลังได้รับของขวัญหรือความช่วยเหลือ"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "謝卡",
+         "en": "Thank You"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "親愛的淑惠阿姨：\n\n謝謝您特地從台中北上參加我們的婚禮。那天實在太忙亂，只來得及跟您說幾句話，心裡一直過意不去。\n\n您送的那套餐具我們已經用上了，庭安說每次吃飯都想到您。更要謝謝您在婚禮前一週幫忙聯絡花店 —— 原本那家臨時說做不出來，是您託朋友找到替代的，我們才沒有開天窗。那件事我們會記很久。\n\n下次回台中一定去看您。\n\n祝　平安喜樂",
+         "en": "Dear Aunt Shu-Hui,\n\nThank you for making the trip up from Taichung for our wedding. The day was so hectic that we only managed a few words with you, and it has been on my mind ever since.\n\nWe are already using the dinner set you gave us — Ting-An says he thinks of you at every meal. I want to thank you especially for contacting the florist the week before. When the original shop pulled out at short notice, it was you who found a replacement through a friend, and that is the only reason we were not left with empty tables. We will remember it for a long time.\n\nWe will come and see you next time we are in Taichung.\n\nWith love,"
+        }
+       },
+       {
+        "type": "signoff",
+        "text": {
+         "zhHant": "思妤、庭安　敬上\n116 年 3 月 20 日",
+         "en": "Szu-Yu and Ting-An\n20 March 2027"
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "謝卡",
+         "en": "Thank You"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "親愛的（稱謂）：\n\n（開頭：謝謝對方做的那件事，寫清楚是哪一件）\n\n（主體：那件事對你造成什麼具體的差別。「謝謝你的幫忙」誰都會寫，寫出「如果沒有你，會發生什麼」才有份量。）\n\n（如果收到禮物：說出你怎麼用它，比說「很喜歡」真誠）\n\n（結尾：後續的聯繫或祝福）",
+         "en": "Dear （name）,\n\n（Opening: thank them for the specific thing they did.）\n\n（Body: what concrete difference it made. Anyone can write \"thank you for your help\"; what carries weight is saying what would have happened without them.）\n\n（If it was a gift: saying how you are using it is more sincere than saying you like it.）\n\n（Closing: staying in touch, or a good wish.）"
+        }
+       },
+       {
+        "type": "signoff",
+        "text": {
+         "zhHant": "（姓名）　敬上\n　　年　　月　　日",
+         "en": "（Name）\n（Date）"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "condolence_notice",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "訃聞與奠儀通知",
+      "en": "Funeral Notice",
+      "zhHans": "讣闻与奠仪通知",
+      "ja": "訃報・葬儀のご案内",
+      "ko": "부고 및 장례 안내",
+      "th": "หนังสือแจ้งข่าวงานศพ"
+     },
+     "description": {
+      "zhHant": "告別式時間地點、家屬具名與奠儀說明",
+      "en": "Service details, family names and offering arrangements",
+      "zhHans": "告别式时间地点、家属具名与奠仪说明",
+      "ja": "式次第・日時・遺族名・香典に関する案内",
+      "ko": "영결식 일시·장소·유족·부의 안내",
+      "th": "รายละเอียดพิธี ชื่อครอบครัว และการรับเงินช่วยงาน"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "訃　聞",
+         "en": "Funeral Notice"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "先父　林公　正雄　慟於中華民國 116 年 8 月 12 日（星期三）\n下午 3 時 40 分　壽終正寢　享壽八十有二\n\n不孝等隨侍在側　親視含殮　遵禮成服\n謹擇於中華民國 116 年 8 月 24 日（星期一）\n舉行告別式　隨即發引安葬於○○墓園\n\n叨在　親戚　世誼　寅誼　鄉學　哀此訃聞",
+         "en": "It is with sorrow that we announce the passing of\n\nMr. Cheng-Hsiung Lin\n\non Wednesday, 12 August 2027, at 3:40 p.m., aged 82.\n\nA funeral service will be held on Monday, 24 August 2027, followed by interment at ○○ Memorial Park."
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n家祭|116 年 8 月 24 日（星期一）上午 8 時 30 分\n公祭|同日上午 9 時 30 分\n地點|臺北市立第二殯儀館　景仰廳\n地址|臺北市信義區辛亥路四段 188 號\n發引|同日上午 11 時\n安葬|○○墓園\n交通|捷運文湖線麟光站步行 10 分鐘；備有接駁車於 8 時自○○站發車",
+         "en": "Item|Detail\nFamily service|Monday 24 August 2027, 8:30 a.m.\nPublic service|Same day, 9:30 a.m.\nVenue|Jingyang Hall, Taipei Second Funeral Parlour\nAddress|No. 188, Sec. 4, Xinhai Rd., Xinyi Dist., Taipei\nProcession|Same day, 11:00 a.m.\nInterment|○○ Memorial Park\nTransport|10 minutes' walk from Linguang Station; shuttle from ○○ Station at 8:00 a.m."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "家屬具名",
+         "en": "The Family"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "孤子　林建國\n　　　林建民\n孤女　林淑芬\n媳　　吳秀蘭\n女婿　陳文彬\n孫　　林思妤、林思齊\n　　　　　　　　泣血稽顙",
+         "en": "Sons: Chien-Kuo Lin, Chien-Min Lin\nDaughter: Shu-Fen Lin\nDaughter-in-law: Hsiu-Lan Wu\nSon-in-law: Wen-Pin Chen\nGrandchildren: Szu-Yu Lin, Szu-Chi Lin"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "敬告",
+         "en": "A Request"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "一、先父生前淡泊，遺言一切從簡。懇辭花圈、罐頭塔及輓額，謹心領厚意。\n二、奠儀懇辭。如蒙厚愛，敬請代為捐贈予「○○失智症關懷協會」，是所至禱。\n三、當日備有素食便當，敬請告知是否用餐，以利準備。\n四、聯絡人：林建國　0912-555-666",
+         "en": "1. Our father lived simply and asked that everything be kept modest. We respectfully decline flower wreaths and funeral banners, and are grateful for the thought.\n2. We also respectfully decline monetary offerings. If you wish to give, we would be grateful if you would donate to the ○○ Dementia Care Association instead.\n3. Vegetarian meals will be available; please let us know if you will be staying, so that we can prepare.\n4. Contact: Chien-Kuo Lin, +886 912-555-666"
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "訃　聞",
+         "en": "Funeral Notice"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（稱謂）　○公／○母　○○　慟於中華民國　　年　　月　　日（星期　）\n　　時　　分　　　　　　　享壽　　　\n\n（隨侍字句）\n謹擇於中華民國　　年　　月　　日（星期　）\n舉行告別式　隨即發引安葬於　　　　　\n\n叨在　親戚　世誼　寅誼　鄉學　哀此訃聞",
+         "en": "（Name）\npassed away on （date） at （time）, aged （age）.\n\nA funeral service will be held on （date）, followed by interment at （place）."
+        }
+       },
+       {
+        "type": "table",
+        "text": {
+         "zhHant": "項目|內容\n家祭|\n公祭|\n地點|\n地址|\n發引|\n安葬|\n交通|",
+         "en": "Item|Detail\nFamily service|\nPublic service|\nVenue|\nAddress|\nProcession|\nInterment|\nTransport|"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "家屬具名",
+         "en": "The Family"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（依輩分具名。稱謂用字各地習俗不同，建議與禮儀公司確認。）",
+         "en": "（Names of the immediate family.）"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "敬告",
+         "en": "A Request"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "一、（花圈、輓額是否懇辭）\n二、（奠儀：收受或懇辭；懇辭時可指定捐贈對象）\n三、（餐點與回覆方式）\n四、聯絡人：",
+         "en": "1. （Whether wreaths and banners are declined.）\n2. （Offerings: accepted or declined; if declined, a nominated charity may be named.）\n3. （Meals and how to reply.）\n4. Contact:"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}
