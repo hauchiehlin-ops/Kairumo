@@ -59,6 +59,9 @@ struct NotebookMeta: Codable, Hashable {
     /// 核心沒有對應區塊型別的物件，原樣保存。
     var linkAttachments: [NoteLinkAttachment]?
     var model3DAttachments: [Note3DAttachment]?
+    /// 頁面上的錄音卡片。核心沒有對應的區塊型別，與連結卡片同一條路：
+    /// 真身放在中繼資料，套件裡另外放一張算繪好的 PNG 當後備。
+    var audioAttachments: [NoteAudioAttachment]?
     var commentPins: [NoteCommentPin]?
 
     // MARK: - JSON
@@ -105,6 +108,7 @@ struct NotebookMeta: Codable, Hashable {
         recordingAudioPath = document.recordingAudioPath
         linkAttachments = document.linkAttachments
         model3DAttachments = document.model3DAttachments
+        audioAttachments = document.audioAttachments
         commentPins = document.commentPins
         objectOrderByPage = document.objectOrderByPage
     }
@@ -122,6 +126,7 @@ struct NotebookMeta: Codable, Hashable {
         if let recordingAudioPath { document.recordingAudioPath = recordingAudioPath }
         if let linkAttachments { document.linkAttachments = linkAttachments }
         if let model3DAttachments { document.model3DAttachments = model3DAttachments }
+        if let audioAttachments { document.audioAttachments = audioAttachments }
         if let commentPins { document.commentPins = commentPins }
         if let objectOrderByPage { document.objectOrderByPage = objectOrderByPage }
     }

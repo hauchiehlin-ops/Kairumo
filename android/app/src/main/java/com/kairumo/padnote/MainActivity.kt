@@ -87,6 +87,7 @@ import com.kairumo.padnote.library.DeleteNotebookDialog
 import com.kairumo.padnote.library.NotebookLibrary
 import com.kairumo.padnote.library.FolderTree
 import com.kairumo.padnote.library.RecordingIndex
+import com.kairumo.padnote.library.InsertRecordingDialog
 import com.kairumo.padnote.library.SeedNotebooks
 import com.kairumo.padnote.library.FolderNameDialog
 import com.kairumo.padnote.library.DeleteFolderDialog
@@ -237,6 +238,22 @@ private fun NotebookHome(
 
     var profile by remember {
         mutableStateOf(AccountManager.load(activity, l("default_user_name")))
+    }
+    // 首頁上的素材圖庫、說明文件與「插入至筆記本」。
+    // Apple 的首頁都有，Android 原本只有編輯器的「⋯」裡有 ——
+    // 使用者要先開一本筆記才找得到操作說明。
+    var homeAssets by remember { mutableStateOf(false) }
+    var homeDocs by remember { mutableStateOf<String?>(null) }
+    var insertingRecording by remember { mutableStateOf<RecordingIndex.Recording?>(null) }
+    val syncFolderPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri != null) {
+            // 走與編輯器同一條路（`FolderSync.setFolder`），不要另外記一份 ——
+            // 兩份設定遲早會指到不同的資料夾，而使用者只會看到「同步沒作用」。
+            FolderSync.setFolder(activity, uri)
+            message = l("sync_choose_folder")
+        }
     }
 
     // 第一次啟動時放兩本有內容的範例筆記。
@@ -404,7 +421,61 @@ private fun NotebookHome(
             onOpenFolder = onFolderChange,
             onCreateFolder = { creatingFolder = true },
             onRenameFolder = { renamingFolder = it },
-            onDeleteFolder = { deletingFolder = it }
+            onDeleteFolder = { deletingFolder = it },
+            onAssetLibrary = { homeAssets = true },
+            onChooseSyncFolder = { syncFolderPicker.launch(null) },
+            onOpenManual = { homeDocs = "manual/index.html" },
+            onOpenPrivacy = { homeDocs = "legal/privacy.html" },
+            onInsertRecording = { insertingRecording = it }
+        )
+    }
+
+    if (homeAssets) {
+        // 首頁的素材圖庫只負責瀏覽 —— 要插進畫布得先有一本打開的筆記，
+        // 所以這裡挑完之後直接開那一本。與 Apple 首頁的那張卡一致。
+        com.kairumo.padnote.asset.AssetLibrarySheet(
+            languageTag = lang,
+            onInsert = { _, _ ->
+                homeAssets = false
+                entries.firstOrNull()?.id?.let(onOpen)
+            },
+            onDismiss = { homeAssets = false }
+        )
+    }
+
+    homeDocs?.let { asset ->
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { homeDocs = null },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            Surface(modifier = Modifier.fillMaxSize()) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { homeDocs = null }) { Text(l("close")) }
+                    }
+                    DocsViewer(asset, modifier = Modifier.fillMaxSize())
+                }
+            }
+        }
+    }
+
+    insertingRecording?.let { rec ->
+        InsertRecordingDialog(
+            recording = rec,
+            entries = allEntries,
+            deviceId = device,
+            l = ::l,
+            onDismiss = { insertingRecording = null },
+            onDone = { error ->
+                insertingRecording = null
+                message = error ?: l("insert_to_notebook")
+                revision++
+            }
         )
     }
 
@@ -2022,7 +2093,11 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     recordingId = file.nameWithoutExtension,
                     fileName = file.name,
                     title = file.nameWithoutExtension,
-                    durationSeconds = 0,
+                    // 長度走核心算（S-42）。各平台問各自的系統 API 的話，
+                    // 同一段錄音在兩台裝置上會顯示不同的秒數。
+                    durationSeconds = runCatching {
+                        uniffi.padnote_core.audioDurationSeconds(file.readBytes()).toInt()
+                    }.getOrDefault(0),
                     x = 80f + offset, y = 120f + offset,
                     width = 260f, height = 76f
                 )

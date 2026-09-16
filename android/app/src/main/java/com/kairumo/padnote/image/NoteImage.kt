@@ -72,7 +72,9 @@ object ImageAppearance {
      * 它們的真身跟著筆記本中繼資料走，所以這些衍生圖片必須認得出來並跳過，
      * 否則同一張卡片會變成兩份（真的一份、圖片一份），而且每同步一趟就多一份。
      */
-    private val DERIVED = setOf("link", "model3d")
+    // 「由別種物件算繪出來」的圖片。真身在筆記本中繼資料裡 ——
+    // 不跳過的話同一個物件會出現兩份，各自能拖到不同的地方。
+    private val DERIVED = setOf("link", "model3d", "audio")
 
     /** 這個區塊是不是衍生圖片（載入時要跳過）。 */
     fun isDerived(json: String?): Boolean {

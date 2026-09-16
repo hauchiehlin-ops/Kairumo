@@ -277,3 +277,98 @@ mod tests {
         assert_eq!(w.out.len(), len, "重複 finish 不該再寫出資料");
     }
 }
+
+// MARK: - 讀取端：算長度
+
+/// 一段 Ogg-Opus 有多長（微秒）。認不出來時回 `None`。
+///
+/// # 為什麼只讀最後一頁
+///
+/// Ogg 的 granule position 是**累計**的樣本位置，所以最後一頁的 granule
+/// 就是總長度。把每個封包走一遍也能算，但那要解析整個檔案 —— 清單上
+/// 二十筆錄音就是二十次，而使用者要的只是「這段多長」。
+///
+/// # 為什麼要扣掉 pre-skip
+///
+/// Opus 編碼器在開頭會多出一段解碼暖機用的樣本，granule 把它算進去了。
+/// 不扣的話每一段錄音都會多出 80 ms —— 短錄音上看得出來，而且與播放器
+/// 顯示的長度對不起來。
+///
+/// granule 固定以 48 kHz 計數，即使實際取樣率是 16 kHz（Ogg-Opus 規格）。
+pub fn ogg_opus_duration_us(bytes: &[u8]) -> Option<u64> {
+    let mut last_granule: Option<u64> = None;
+    let mut pre_skip: u16 = PRE_SKIP;
+    let mut seen_head = false;
+
+    let mut offset = 0usize;
+    while offset + 27 <= bytes.len() {
+        if &bytes[offset..offset + 4] != OGG_CAPTURE_PATTERN {
+            // 不是頁首就往前找下一個 "OggS"。檔案前面可能有別的東西，
+            // 而硬性要求「檔案第一個位元組就是頁首」會讓那些檔案完全讀不出來。
+            offset += 1;
+            continue;
+        }
+        let granule = u64::from_le_bytes(bytes[offset + 6..offset + 14].try_into().ok()?);
+        let segments = bytes[offset + 26] as usize;
+        let table_end = offset + 27 + segments;
+        if table_end > bytes.len() {
+            break;
+        }
+        let payload_len: usize = bytes[offset + 27..table_end]
+            .iter()
+            .map(|&n| n as usize)
+            .sum();
+        let payload_end = table_end + payload_len;
+        if payload_end > bytes.len() {
+            break;
+        }
+
+        // 第一個封包是 OpusHead，裡面才有真正的 pre-skip。
+        if !seen_head && payload_len >= 12 && &bytes[table_end..table_end + 8] == b"OpusHead" {
+            pre_skip = u16::from_le_bytes([bytes[table_end + 10], bytes[table_end + 11]]);
+            seen_head = true;
+        }
+
+        // granule 為 -1（全 1）代表「這一頁沒有完整封包」，不能拿來當長度。
+        if granule != u64::MAX {
+            last_granule = Some(granule);
+        }
+        offset = payload_end;
+    }
+
+    let granule = last_granule?;
+    let samples = granule.saturating_sub(pre_skip as u64);
+    Some(samples * 1_000_000 / 48_000)
+}
+
+#[cfg(test)]
+mod duration_tests {
+    use super::*;
+    use crate::encoder::{FRAME_SAMPLES, SAMPLE_RATE_HZ};
+
+    /// 寫一段已知長度的檔案再讀回來，誤差要在一個封包（20 ms）之內。
+    #[test]
+    fn a_written_file_reports_the_length_it_was_written_with() {
+        let mut out = Vec::new();
+        {
+            let mut writer = OggOpusWriter::new(&mut out, 1).expect("writer");
+            // 假封包：長度不影響 granule，granule 是用封包數算的。
+            for _ in 0..100 {
+                writer.push(vec![0u8; 8]).expect("packet");
+            }
+            writer.finish().expect("finish");
+        }
+        let us = ogg_opus_duration_us(&out).expect("duration");
+        // 100 個封包 × 20 ms = 2 秒，扣掉 pre-skip 的 80 ms。
+        let expected = 100 * FRAME_SAMPLES as u64 * 1_000_000 / SAMPLE_RATE_HZ as u64
+            - PRE_SKIP as u64 * 1_000_000 / 48_000;
+        let diff = us.abs_diff(expected);
+        assert!(diff < 20_000, "算出 {us} µs，預期 {expected} µs");
+    }
+
+    #[test]
+    fn rubbish_is_not_mistaken_for_audio() {
+        assert_eq!(ogg_opus_duration_us(b"not an ogg file at all"), None);
+        assert_eq!(ogg_opus_duration_us(&[]), None);
+    }
+}

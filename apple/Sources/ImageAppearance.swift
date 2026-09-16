@@ -34,7 +34,10 @@ enum ImageAppearance {
     /// 但它們的**真身**跟著筆記本中繼資料走，匯入時會原樣還原 —— 所以這些
     /// 衍生圖片必須認得出來並跳過，否則同一張卡片會變成兩份（真的一份、
     /// 圖片一份），而且每同步一趟就再多一份。
-    static let derivedObjects: Set<String> = ["link", "model3d"]
+    /// 「由別種物件算繪出來」的圖片。匯入時要跳過它們 ——
+    /// 真身在筆記本中繼資料裡，不跳過的話同一個物件會變成兩份，
+    /// 而且各自能拖到不同的地方。
+    static let derivedObjects: Set<String> = ["link", "model3d", "audio"]
 
     /// 標記一個「由別種物件算繪出來」的圖片區塊。
     static func encodeDerived(objectKind: String, fileName: String) -> String {

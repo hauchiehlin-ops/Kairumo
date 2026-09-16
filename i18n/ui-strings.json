@@ -2367,6 +2367,14 @@
     "zhHans": "读不到这张图片",
     "zhHant": "讀不到這張圖片"
   },
+  "err_insert_recording_failed": {
+    "en": "Could not insert the recording — the audio file may have been removed",
+    "ja": "録音を挿入できませんでした。音声ファイルが削除されている可能性があります",
+    "ko": "녹음을 삽입하지 못했습니다. 오디오 파일이 삭제되었을 수 있습니다",
+    "th": "แทรกเสียงบันทึกไม่สำเร็จ ไฟล์เสียงอาจถูกลบไปแล้ว",
+    "zhHans": "插入录音失败，音档可能已被移除",
+    "zhHant": "插入錄音失敗，音檔可能已被移除"
+  },
   "err_mic_open_failed": {
     "en": "Could not open the microphone: %@",
     "ja": "マイクを開けませんでした：%@",
@@ -2630,6 +2638,14 @@
     "th": "ลักษณะอักษร",
     "zhHans": "字形",
     "zhHant": "字形"
+  },
+  "footer_tagline": {
+    "en": "Dual Ink & Audio Sync · Offline First · Open Source",
+    "ja": "筆跡と音声の同期 · オフライン優先 · オープンソース",
+    "ko": "필기·음성 동기화 · 오프라인 우선 · 오픈소스",
+    "th": "ซิงค์ลายมือกับเสียง · ออฟไลน์เป็นหลัก · โอเพนซอร์ส",
+    "zhHans": "笔迹与录音同步 · 本地优先 · 开放源码",
+    "zhHant": "筆跡與錄音同步 · 本地優先 · 開放原始碼"
   },
   "geom_preview": {
     "en": "3D Preview",
@@ -4287,6 +4303,14 @@
     "zhHans": "不需要账号，也没有我们的服务器",
     "zhHant": "不需要帳號，也沒有我們的伺服器"
   },
+  "no_account_no_server": {
+    "en": "No account, and no server of ours",
+    "ja": "アカウントも、当方のサーバーもありません",
+    "ko": "계정도 없고 저희 서버도 없습니다",
+    "th": "ไม่มีบัญชี และไม่มีเซิร์ฟเวอร์ของเรา",
+    "zhHans": "没有账号，也没有我们的服务器",
+    "zhHant": "沒有帳號，也沒有我們的伺服器"
+  },
   "no_assets_found": {
     "en": "No matching assets found",
     "ja": "一致するアセットが見つかりません",
@@ -4657,6 +4681,14 @@
   },
   "pages_count_suffix": {
     "en": "Pages",
+    "ja": "ページ",
+    "ko": "페이지",
+    "th": "หน้า",
+    "zhHans": "页",
+    "zhHant": "頁"
+  },
+  "pages_unit": {
+    "en": "pages",
     "ja": "ページ",
     "ko": "페이지",
     "th": "หน้า",

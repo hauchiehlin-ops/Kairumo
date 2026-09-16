@@ -186,6 +186,22 @@ enum NotebookPackageBridge {
                     summary.imageCount += 1
                 }
 
+                for audio in document.audioAttachments?.filter({ $0.pageIndex == index }) ?? [] {
+                    guard let png = PageThumbnailRenderer.renderObjectImage(audio)?.pngData()
+                    else { continue }
+                    let blob = try session.putBlob(bytes: png)
+                    let blockId = try session.addImage(
+                        pageId: pageId, blob: blob,
+                        width: Float(audio.width), height: Float(audio.height))
+                    try session.setBlockPosition(
+                        blockId: blockId, x: Float(audio.x), y: Float(audio.y))
+                    try session.setBlockAppearance(
+                        blockId: blockId,
+                        json: ImageAppearance.encodeDerived(
+                            objectKind: "audio", fileName: "\(audio.id).png"))
+                    summary.imageCount += 1
+                }
+
                 // 形狀與連接線寫成**核心的原生物件**，不是平台自己另存的 JSON。
                 //
                 // 差別在於：原生物件跨得過平台 —— Android 讀的是同一組物件。

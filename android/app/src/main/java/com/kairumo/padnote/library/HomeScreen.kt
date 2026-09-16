@@ -1,5 +1,6 @@
 package com.kairumo.padnote.library
 
+import com.kairumo.padnote.audio.AudioPlayback
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,12 +60,15 @@ import java.util.Date
  * 在此之前 Android **沒有首頁** —— App 一開就直接進一本筆記的一頁，沒有清單、
  * 沒有搜尋、沒有「新增一本」。使用者看到的是一個畫圖玩具，不是筆記本。
  *
- * # 區塊順序與 Apple 端一致
+ * # 版面與 Apple 端一致
  *
- * 身分 → 搜尋 → 主要動作 → 繼續 → 全部筆記 → 資料與同步 → 版本號。
- * 順序自己排一套的話，同一個人換裝置就要重新找每一樣東西在哪裡。
- * （Apple 端還有「最近錄音」與「素材圖庫」，Android 的底層還沒有，
- *   補上之後會插回原本的位置。）
+ * 標題 → 身分 → 搜尋 → 三張主要動作卡 → 繼續（橫向捲動）→ 最近錄音 →
+ * 全部筆記（資料夾列 + 縮圖格狀）→ 資料與同步（四列）→ 說明與條款 → 頁尾。
+ *
+ * **不只是順序一致，連版面也要。** 原本 Android 的主要動作是三顆 180dp 寬
+ * 的純文字卡，在手機上會疊成三顆佔半個螢幕的大按鈕，而 Apple 那邊是一排
+ * 帶圖示與副標的卡片 —— 同一個 App 在兩台裝置上長得像兩個產品。
+ * 三張卡改成等寬（`weight(1f)`），窄螢幕上一樣是一排，只是變窄。
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
@@ -96,7 +101,16 @@ fun HomeScreen(
     onOpenFolder: (String?) -> Unit,
     onCreateFolder: () -> Unit,
     onRenameFolder: (FolderTree.Folder) -> Unit,
-    onDeleteFolder: (FolderTree.Folder) -> Unit
+    onDeleteFolder: (FolderTree.Folder) -> Unit,
+    /** 素材圖庫。與 Apple 首頁的第三張動作卡對應。 */
+    onAssetLibrary: () -> Unit,
+    /** 選同步資料夾。原本只在編輯器的「⋯」裡，使用者要先開一本筆記才找得到。 */
+    onChooseSyncFolder: () -> Unit,
+    /** 操作說明與隱私權政策。Apple 首頁最下面有這兩張卡，Android 原本沒有。 */
+    onOpenManual: () -> Unit,
+    onOpenPrivacy: () -> Unit,
+    /** 把一段錄音插進某一本筆記的某一頁（工作項 S-41）。 */
+    onInsertRecording: (RecordingIndex.Recording) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
 
@@ -112,10 +126,22 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(14.dp),
         contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp)
     ) {
+        // ── 0. 畫面標題 ──────────────────────────────────────────
+        // Apple 那邊是一個大標。少了它，第一眼看到的是一張身分卡，
+        // 而使用者不知道自己在哪個畫面。
+        item {
+            Text(
+                profileName,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.Bold
+            )
+        }
+
         // ── 1. 身分 ──────────────────────────────────────────────
         item {
             Card(
                 modifier = Modifier.fillMaxWidth().clickable { onEditIdentity() },
+                shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
                 )
@@ -157,46 +183,78 @@ fun HomeScreen(
                 onValueChange = { query = it },
                 placeholder = { Text(l("search_placeholder"), maxLines = 1) },
                 singleLine = true,
+                shape = RoundedCornerShape(12.dp),
                 modifier = Modifier.fillMaxWidth()
             )
         }
 
-        // ── 3. 主要動作 ──────────────────────────────────────────
+        // ── 3. 三張主要動作卡 ────────────────────────────────────
+        //
+        // **等寬而不是固定寬度。** 固定 180dp 的話，窄螢幕上三張會疊成
+        // 三顆佔半個螢幕的大按鈕 —— 那正是「兩個平台長得像兩個產品」的
+        // 那一幕。等寬在任何寬度下都是一排。
         item {
-            FlowRow(
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                ActionCard(l("new_note"), primary = true, onClick = onCreate)
-                ActionCard(l("new_subfolder"), primary = false, onClick = onCreateFolder)
                 ActionCard(
-                    l(if (recording) "stop_recording" else "start_recording"),
+                    title = l("new_note"),
+                    subtitle = l("new_note_desc"),
+                    glyph = "＋",
+                    accent = MaterialTheme.colorScheme.primary,
+                    primary = true,
+                    modifier = Modifier.weight(1f),
+                    onClick = onCreate
+                )
+                ActionCard(
+                    title = l(if (recording) "stop_recording" else "start_recording"),
+                    subtitle = l("start_recording_desc"),
+                    glyph = "◉",
+                    accent = Color(0xFFD9453C),
                     primary = false,
+                    modifier = Modifier.weight(1f),
                     onClick = onToggleRecording
+                )
+                ActionCard(
+                    title = l("asset_library"),
+                    subtitle = l("asset_library_desc"),
+                    glyph = "◆",
+                    accent = Color(0xFF8A4FD8),
+                    primary = false,
+                    modifier = Modifier.weight(1f),
+                    onClick = onAssetLibrary
                 )
             }
         }
 
-        // ── 4. 繼續（最近三本）────────────────────────────────────
+        // ── 4. 繼續（橫向捲動，與 Apple 一致）─────────────────────
         if (filtered.isNotEmpty() && query.isBlank()) {
             item { SectionTitle(l("continue_working")) }
-            items(filtered.take(3), key = { "recent-${it.id}" }) { entry ->
-                NotebookRow(entry, l, onOpen, onRename, onDelete, onMove)
+            item {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(filtered.take(6), key = { "recent-${it.id}" }) { entry ->
+                        ContinueCard(entry, l, onOpen)
+                    }
+                }
             }
         }
 
-        // ── 5. 麵包屑（只有不在最上層時才出現）─────────────────────
+        // ── 5. 最近錄音 ──────────────────────────────────────────
+        // 位置與 Apple 端一致 —— 順序自己排一套的話，同一個人換裝置
+        // 就要重新找每一樣東西在哪裡。
+        item { SectionTitle(l("recent_recordings")) }
+        if (recordings.isEmpty()) {
+            item { EmptyHint(l("no_recordings_hint")) }
+        } else {
+            items(recordings, key = { "rec-${it.file.absolutePath}" }) { recording ->
+                RecordingRow(recording, l, onOpen, onInsertRecording)
+            }
+        }
+
+        // ── 6. 麵包屑（只有不在最上層時才出現）─────────────────────
         if (breadcrumb.isNotEmpty() && query.isBlank()) {
             item { Breadcrumb(breadcrumb, l, onOpenFolder) }
-        }
-
-        // ── 6. 資料夾 ────────────────────────────────────────────
-        if (folders.isNotEmpty() && query.isBlank()) {
-            item { SectionTitle(l("folders")) }
-            items(folders, key = { "folder-${it.id}" }) { folder ->
-                FolderRow(folder, l, onOpenFolder, onRenameFolder, onDeleteFolder)
-            }
         }
 
         // ── 7. 全部筆記 ──────────────────────────────────────────
@@ -210,62 +268,222 @@ fun HomeScreen(
             }
         }
 
+        // 資料夾列：目前這一層 + 新增子資料夾，與 Apple 的那一條一致。
+        item {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("🗂", fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp))
+                    Text(
+                        breadcrumb.lastOrNull()?.title ?: l("root_folder"),
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f)
+                    )
+                    TextButton(onClick = onCreateFolder) { Text(l("new_subfolder")) }
+                }
+            }
+        }
+
+        if (folders.isNotEmpty() && query.isBlank()) {
+            items(folders, key = { "folder-${it.id}" }) { folder ->
+                FolderRow(folder, l, onOpenFolder, onRenameFolder, onDeleteFolder)
+            }
+        }
+
         if (filtered.isEmpty()) {
             item {
-                Text(
-                    if (query.isBlank()) l("notebook_empty") else l("search_no_result"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 24.dp)
-                )
+                EmptyHint(if (query.isBlank()) l("notebook_empty") else l("search_no_result"))
             }
         } else {
-            items(filtered, key = { it.id }) { entry ->
-                NotebookRow(entry, l, onOpen, onRename, onDelete, onMove)
+            // 縮圖格狀而不是一列一本 —— 使用者認得的是那一頁長什麼樣子，
+            // 不是標題。與 Apple 的「全部筆記」一致。
+            //
+            // 用 chunked 自己排而不是 LazyVerticalGrid：格狀不能巢狀在
+            // LazyColumn 裡（高度無限），而整個畫面改成格狀又會讓其餘
+            // 區塊全部要跨欄。
+            items(filtered.chunked(2), key = { row -> "grid-" + row.first().id }) { row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    for (entry in row) {
+                        NotebookGridCard(
+                            entry, l, onOpen, onRename, onDelete, onMove,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    // 奇數本時補一個空位，最後一張才不會被拉成兩倍寬。
+                    if (row.size == 1) Box(Modifier.weight(1f))
+                }
             }
         }
 
-        // ── 8. 最近錄音 ──────────────────────────────────────────
-        // 位置與 Apple 端一致 —— 順序自己排一套的話，同一個人換裝置
-        // 就要重新找每一樣東西在哪裡。
-        if (recordings.isNotEmpty() && query.isBlank()) {
-            item { SectionTitle(l("recent_recordings")) }
-            items(recordings, key = { "rec-${it.file.absolutePath}" }) { recording ->
-                RecordingRow(recording, l, onOpen)
-            }
-        }
-
-        // ── 9. 雲端同步（Google 帳號）───────────────────────────
-        // 位置與 Apple 一致：在「資料與同步」之前，而且在**首頁**而不是
-        // 編輯器的選單裡。原本埋在編輯器的「⋯」底下，使用者要先開一本
-        // 筆記才找得到「登入」—— 那不是一個帳號設定該在的地方。
-        item { SectionTitle(l("cloud_sync")) }
-        item { CloudSyncCard(cloud, l) }
-
-        // ── 10. 資料與同步 ───────────────────────────────────────
+        // ── 8. 資料與同步 ────────────────────────────────────────
         item {
             HorizontalDivider()
-            SectionTitle(l("data_and_sync"))
+            Row(verticalAlignment = Alignment.Bottom) {
+                SectionTitle(l("data_and_sync"))
+                Text(
+                    l("no_account_no_server"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 8.dp, bottom = 3.dp)
+                )
+            }
         }
+        item { CloudSyncCard(cloud, l) }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                ActionCard(l("backup_create"), primary = false, onClick = onBackup)
-                ActionCard(l("backup_restore"), primary = false, onClick = onRestore)
+                SettingRow("💾", l("backup_create"), l("backup_explainer"), onBackup)
+                SettingRow("↺", l("backup_restore"), l("backup_restore_desc"), onRestore)
+                SettingRow("☁", l("sync_choose_folder"), l("sync_folder_desc"), onChooseSyncFolder)
+            }
+        }
+
+        // ── 9. 說明與條款 ────────────────────────────────────────
+        // Apple 首頁最下面有這兩張卡。Android 原本只有編輯器的「⋯」裡有，
+        // 使用者要先開一本筆記才找得到操作說明。
+        item {
+            HorizontalDivider()
+            SectionTitle(l("help_and_legal"))
+        }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                DocCard("📖", l("user_manual"), l("user_manual_desc"),
+                    Modifier.weight(1f), onOpenManual)
+                DocCard("🔒", l("privacy_policy"), l("privacy_policy_desc"),
+                    Modifier.weight(1f), onOpenPrivacy)
+            }
+        }
+
+        // ── 10. 頁尾 ─────────────────────────────────────────────
+        item {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                HorizontalDivider(Modifier.padding(bottom = 10.dp))
                 Text(
-                    l("backup_explainer"),
-                    style = MaterialTheme.typography.bodySmall,
+                    appVersion,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    l("footer_tagline"),
+                    style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
+    }
+}
 
-        // ── 11. 版本號 ───────────────────────────────────────────
-        item {
+@Composable
+private fun EmptyHint(text: String) {
+    Text(
+        text,
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 18.dp)
+    )
+}
+
+/** 「繼續」那一排的卡片。與 Apple 的同一組資訊：標題、摘要、頁數、時間。 */
+@Composable
+private fun ContinueCard(
+    entry: NotebookLibrary.Entry,
+    l: (String) -> String,
+    onOpen: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier.width(220.dp).clickable { onOpen(entry.id) },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text("📄", fontSize = 16.sp)
             Text(
-                appVersion,
+                entry.title,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                modifier = Modifier.padding(top = 6.dp)
+            )
+            Text(
+                "${entry.pageCount} ${l("pages_unit")} · ${formatDate(entry.modifiedAt)}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp)
+                modifier = Modifier.padding(top = 6.dp)
+            )
+        }
+    }
+}
+
+/** 「資料與同步」的一列：圖示 + 標題 + 說明 + 右箭頭。與 Apple 一致。 */
+@Composable
+private fun SettingRow(glyph: String, title: String, desc: String, onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(glyph, fontSize = 18.sp, modifier = Modifier.padding(end = 12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, fontWeight = FontWeight.SemiBold)
+                Text(
+                    desc,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2
+                )
+            }
+            Text("›", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** 說明文件的卡片。 */
+@Composable
+private fun DocCard(
+    glyph: String,
+    title: String,
+    desc: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier.clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text(glyph, fontSize = 18.sp)
+            Text(title, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp))
+            Text(
+                desc,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2
             )
         }
     }
@@ -273,6 +491,7 @@ fun HomeScreen(
 
 @Composable
 private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
+
     Text(
         text,
         style = MaterialTheme.typography.titleMedium,
@@ -281,74 +500,133 @@ private fun SectionTitle(text: String, modifier: Modifier = Modifier) {
     )
 }
 
+/**
+ * 首頁的主要動作卡。
+ *
+ * 圖示 + 標題 + 副標，與 Apple 的三張卡一樣 —— 只有一行標籤的話，
+ * 使用者要按下去才知道那個按鈕會做什麼。
+ */
 @Composable
-private fun ActionCard(label: String, primary: Boolean, onClick: () -> Unit) {
+private fun ActionCard(
+    title: String,
+    subtitle: String,
+    glyph: String,
+    accent: Color,
+    primary: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
     Card(
-        modifier = Modifier.width(180.dp).clickable { onClick() },
+        modifier = modifier.clickable { onClick() },
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = if (primary) MaterialTheme.colorScheme.primary
             else MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
-        Text(
-            label,
-            modifier = Modifier.padding(horizontal = 14.dp, vertical = 16.dp),
-            color = if (primary) MaterialTheme.colorScheme.onPrimary
-            else MaterialTheme.colorScheme.onSurfaceVariant,
-            fontWeight = FontWeight.SemiBold
-        )
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 12.dp)) {
+            Text(
+                glyph,
+                fontSize = 16.sp,
+                color = if (primary) MaterialTheme.colorScheme.onPrimary else accent
+            )
+            Text(
+                title,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 2,
+                color = if (primary) MaterialTheme.colorScheme.onPrimary
+                else MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.padding(top = 6.dp)
+            )
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.labelSmall,
+                maxLines = 2,
+                color = if (primary) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.85f)
+                else MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
     }
 }
 
+/**
+ * 「全部筆記」的格狀卡片。
+ *
+ * 顯示的是**那一頁長什麼樣子**，不是一行標題 —— 使用者記得的是畫面，
+ * 不是名字。與 Apple 的「全部筆記」一致。
+ */
 @Composable
-private fun NotebookRow(
+private fun NotebookGridCard(
     entry: NotebookLibrary.Entry,
     l: (String) -> String,
     onOpen: (String) -> Unit,
     onRename: (NotebookLibrary.Entry) -> Unit,
     onDelete: (NotebookLibrary.Entry) -> Unit,
-    onMove: (NotebookLibrary.Entry) -> Unit
+    onMove: (NotebookLibrary.Entry) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var menu by remember(entry.id) { mutableStateOf(false) }
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onOpen(entry.id) },
-        shape = RoundedCornerShape(12.dp)
+        modifier = modifier.clickable { onOpen(entry.id) },
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            NotebookThumbnail(entry)
-            Column(Modifier.weight(1f)) {
-                Text(entry.title, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
-                Text(
-                    "${entry.pageCount} ${l("pages")} · ${formatDate(entry.modifiedAt)}",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Box {
-                TextButton(onClick = { menu = true }) { Text("⋯") }
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    DropdownMenuItem(
-                        text = { Text(l("open_note")) },
-                        onClick = { menu = false; onOpen(entry.id) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(l("rename_note")) },
-                        onClick = { menu = false; onRename(entry) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(l("move_to_folder")) },
-                        onClick = { menu = false; onMove(entry) }
-                    )
-                    DropdownMenuItem(
-                        text = { Text(l("delete")) },
-                        onClick = { menu = false; onDelete(entry) }
-                    )
+        Column(Modifier.padding(10.dp)) {
+            Box(Modifier.fillMaxWidth()) {
+                // 有縮圖就用縮圖，沒有就退回「圖示 + 名字」的佔位 ——
+                // Android 的縮圖目前只畫得出筆畫與底紋（工作項 S-43），
+                // 一本只打字的筆記會是一張全白的圖，那看起來像壞掉。
+                NotebookThumbnail(entry, Modifier.fillMaxWidth().height(110.dp)) {
+                    Column(
+                        Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.Center,
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("📘", fontSize = 22.sp)
+                        Text(
+                            entry.title,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            modifier = Modifier.padding(top = 4.dp, start = 6.dp, end = 6.dp)
+                        )
+                    }
+                }
+                Box(Modifier.align(Alignment.TopEnd)) {
+                    TextButton(onClick = { menu = true }) { Text("⋯") }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        DropdownMenuItem(
+                            text = { Text(l("open_note")) },
+                            onClick = { menu = false; onOpen(entry.id) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(l("rename_note")) },
+                            onClick = { menu = false; onRename(entry) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(l("move_to_folder")) },
+                            onClick = { menu = false; onMove(entry) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(l("delete")) },
+                            onClick = { menu = false; onDelete(entry) }
+                        )
+                    }
                 }
             }
+            Text(
+                entry.title,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+            Text(
+                "${entry.pageCount} ${l("pages")} · ${formatDate(entry.modifiedAt)}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 }
@@ -617,7 +895,12 @@ fun MoveToFolderDialog(
  * 跳一下。
  */
 @Composable
-private fun NotebookThumbnail(entry: NotebookLibrary.Entry) {
+private fun NotebookThumbnail(
+    entry: NotebookLibrary.Entry,
+    modifier: Modifier = Modifier,
+    /** 縮圖還沒好、或那一頁根本沒有筆畫時要畫什麼。 */
+    placeholder: @Composable () -> Unit = {}
+) {
     val context = LocalContext.current
     // 鍵帶上修改時間：內容變了就重算，沒變就直接用快取。
     val bitmap by produceState<ImageBitmap?>(null, entry.id, entry.modifiedAt) {
@@ -627,20 +910,51 @@ private fun NotebookThumbnail(entry: NotebookLibrary.Entry) {
     }
 
     Box(
-        Modifier
-            .size(width = 34.dp, height = 46.dp)
-            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
-            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(4.dp))
+        modifier
+            .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(6.dp))
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(6.dp))
     ) {
-        bitmap?.let {
+        val image = bitmap
+        if (image == null || isBlank(image)) {
+            placeholder()
+        } else {
             Image(
-                bitmap = it,
+                bitmap = image,
                 contentDescription = null,
-                contentScale = ContentScale.Fit,
+                // 格狀卡片是**寬**的，縮圖是整頁的直式比例 —— 用 Fit 的話
+                // 會在兩側留下大片空白。Crop 取上緣：一頁的重點在上面。
+                contentScale = ContentScale.Crop,
+                alignment = Alignment.TopCenter,
                 modifier = Modifier.fillMaxSize().padding(1.dp)
             )
         }
     }
+}
+
+/**
+ * 這張縮圖是不是一片空白。
+ *
+ * Android 的 `export_page_png` 只畫底紋與筆畫（工作項 S-43），所以一本
+ * 只打字沒手寫的筆記會得到一張全白的圖。直接顯示的話，格狀清單上會是
+ * 一排白方塊 —— 看起來像縮圖壞了，而其實是還沒實作。
+ *
+ * 抽樣而不是掃全圖：一張縮圖幾萬個像素，每次重組都全掃會卡住捲動。
+ */
+private fun isBlank(image: ImageBitmap): Boolean {
+    val pixels = IntArray(image.width * image.height)
+    runCatching { image.readPixels(pixels) }.getOrElse { return false }
+    val step = maxOf(1, pixels.size / 512)
+    var i = 0
+    while (i < pixels.size) {
+        val p = pixels[i]
+        val r = (p shr 16) and 0xFF
+        val g = (p shr 8) and 0xFF
+        val b = p and 0xFF
+        // 底紋的線也很淡，所以門檻抓在「幾乎純白」之外一點。
+        if (r < 235 || g < 235 || b < 235) return false
+        i += step
+    }
+    return true
 }
 
 /**
@@ -652,21 +966,40 @@ private fun NotebookThumbnail(entry: NotebookLibrary.Entry) {
 private fun RecordingRow(
     recording: RecordingIndex.Recording,
     l: (String) -> String,
-    onOpen: (String) -> Unit
+    onOpen: (String) -> Unit,
+    onInsert: (RecordingIndex.Recording) -> Unit
 ) {
+    var menu by remember(recording.file.absolutePath) { mutableStateOf(false) }
+    val playing = AudioPlayback.playingId == recording.file.absolutePath
+    var tick by remember { mutableStateOf(0) }
+
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onOpen(recording.notebookId) },
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         )
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            modifier = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("🎙", fontSize = 18.sp)
+            // 播放鈕。與 Apple 的錄音列一致 —— 原本這裡只有一個麥克風符號，
+            // 要聽得先開那本筆記再找到它。
+            Box(
+                Modifier
+                    .size(38.dp)
+                    .background(Color(0x22D9453C), CircleShape)
+                    .clickable {
+                        AudioPlayback.toggle(recording.file.absolutePath, recording.file) { tick++ }
+                        tick++
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                @Suppress("UNUSED_EXPRESSION") tick
+                Text(if (playing) "⏸" else "▶", fontSize = 13.sp, color = Color(0xFFD9453C))
+            }
             Column(Modifier.weight(1f)) {
                 Text(recording.notebookTitle, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
                 Text(
@@ -674,6 +1007,19 @@ private fun RecordingRow(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+            Box {
+                TextButton(onClick = { menu = true }) { Text("⋯") }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(
+                        text = { Text(l("insert_to_notebook")) },
+                        onClick = { menu = false; onInsert(recording) }
+                    )
+                    DropdownMenuItem(
+                        text = { Text(l("open_note")) },
+                        onClick = { menu = false; onOpen(recording.notebookId) }
+                    )
+                }
             }
         }
     }

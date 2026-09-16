@@ -2428,6 +2428,14 @@ object LocalizationStrings {
             "ko" to "이미지를 읽을 수 없습니다",
             "th" to "อ่านรูปภาพนี้ไม่ได้"
         ),
+        "err_insert_recording_failed" to mapOf(
+            "zh-Hant" to "插入錄音失敗，音檔可能已被移除",
+            "en" to "Could not insert the recording — the audio file may have been removed",
+            "zh-Hans" to "插入录音失败，音档可能已被移除",
+            "ja" to "録音を挿入できませんでした。音声ファイルが削除されている可能性があります",
+            "ko" to "녹음을 삽입하지 못했습니다. 오디오 파일이 삭제되었을 수 있습니다",
+            "th" to "แทรกเสียงบันทึกไม่สำเร็จ ไฟล์เสียงอาจถูกลบไปแล้ว"
+        ),
         "err_mic_open_failed" to mapOf(
             "zh-Hant" to "無法開啟麥克風：%@",
             "en" to "Could not open the microphone: %@",
@@ -2587,7 +2595,10 @@ object LocalizationStrings {
             "ja" to "AI コンセプト",
             "ko" to "AI 개념 렌더",
             "th" to "คอนเซ็ปต์ AI"
-        ),
+        )
+    )
+
+    private fun part4(): Map<String, Map<String, String>> = mapOf(
         "filter_contrast" to mapOf(
             "zh-Hant" to "清晰",
             "en" to "Sharp",
@@ -2595,10 +2606,7 @@ object LocalizationStrings {
             "ja" to "シャープ",
             "ko" to "선명",
             "th" to "คมชัด"
-        )
-    )
-
-    private fun part4(): Map<String, Map<String, String>> = mapOf(
+        ),
         "filter_mono" to mapOf(
             "zh-Hant" to "黑白",
             "en" to "Mono",
@@ -2694,6 +2702,14 @@ object LocalizationStrings {
             "ja" to "文字スタイル",
             "ko" to "글자 스타일",
             "th" to "ลักษณะอักษร"
+        ),
+        "footer_tagline" to mapOf(
+            "zh-Hant" to "筆跡與錄音同步 · 本地優先 · 開放原始碼",
+            "en" to "Dual Ink & Audio Sync · Offline First · Open Source",
+            "zh-Hans" to "笔迹与录音同步 · 本地优先 · 开放源码",
+            "ja" to "筆跡と音声の同期 · オフライン優先 · オープンソース",
+            "ko" to "필기·음성 동기화 · 오프라인 우선 · 오픈소스",
+            "th" to "ซิงค์ลายมือกับเสียง · ออฟไลน์เป็นหลัก · โอเพนซอร์ส"
         ),
         "geom_preview" to mapOf(
             "zh-Hant" to "3D 預覽",
@@ -3222,7 +3238,10 @@ object LocalizationStrings {
             "ja" to "スタイルフィルター",
             "ko" to "스타일 필터",
             "th" to "ฟิลเตอร์สไตล์"
-        ),
+        )
+    )
+
+    private fun part5(): Map<String, Map<String, String>> = mapOf(
         "image_rotate" to mapOf(
             "zh-Hant" to "旋轉",
             "en" to "Rotate",
@@ -3238,10 +3257,7 @@ object LocalizationStrings {
             "ja" to "角丸加工",
             "ko" to "부드러운 곡률",
             "th" to "มุมโค้งมน"
-        )
-    )
-
-    private fun part5(): Map<String, Map<String, String>> = mapOf(
+        ),
         "image_shadow" to mapOf(
             "zh-Hant" to "立體陰影",
             "en" to "Drop Shadow",
@@ -3865,7 +3881,10 @@ object LocalizationStrings {
             "ja" to "シルバー",
             "ko" to "실버 (은)",
             "th" to "เงิน"
-        ),
+        )
+    )
+
+    private fun part6(): Map<String, Map<String, String>> = mapOf(
         "mat_wood" to mapOf(
             "zh-Hant" to "原木",
             "en" to "Wood",
@@ -3881,10 +3900,7 @@ object LocalizationStrings {
             "ja" to "引張強さ ≥290 MPa／硬質アルマイト 12μm",
             "ko" to "인장강도 ≥290 MPa / 경질 아노다이징 12 µm",
             "th" to "ความต้านแรงดึง ≥290 MPa / อโนไดซ์แข็ง 12 ไมครอน"
-        )
-    )
-
-    private fun part6(): Map<String, Map<String, String>> = mapOf(
+        ),
         "material_al6061_trait" to mapOf(
             "zh-Hant" to "航空高剛性",
             "en" to "Aerospace-grade stiffness",
@@ -4405,6 +4421,14 @@ object LocalizationStrings {
             "ko" to "계정이 필요 없고, 저희 서버도 없습니다",
             "th" to "ไม่ต้องมีบัญชี และไม่มีเซิร์ฟเวอร์ของเรา"
         ),
+        "no_account_no_server" to mapOf(
+            "zh-Hant" to "沒有帳號，也沒有我們的伺服器",
+            "en" to "No account, and no server of ours",
+            "zh-Hans" to "没有账号，也没有我们的服务器",
+            "ja" to "アカウントも、当方のサーバーもありません",
+            "ko" to "계정도 없고 저희 서버도 없습니다",
+            "th" to "ไม่มีบัญชี และไม่มีเซิร์ฟเวอร์ของเรา"
+        ),
         "no_assets_found" to mapOf(
             "zh-Hant" to "未找到符合條件的素材",
             "en" to "No matching assets found",
@@ -4500,7 +4524,10 @@ object LocalizationStrings {
             "ja" to "ノートのタイトル",
             "ko" to "노트 제목",
             "th" to "ชื่อบันทึก"
-        ),
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
         "notebook_empty" to mapOf(
             "zh-Hant" to "還沒有任何筆記。點「新增筆記」開始。",
             "en" to "No notes yet. Tap “New note” to start.",
@@ -4524,10 +4551,7 @@ object LocalizationStrings {
             "ja" to "番号付きリスト",
             "ko" to "번호 매기기 목록",
             "th" to "รายการลำดับเลข"
-        )
-    )
-
-    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        ),
         "object_background_color" to mapOf(
             "zh-Hant" to "底色",
             "en" to "Background",
@@ -4795,6 +4819,14 @@ object LocalizationStrings {
         "pages_count_suffix" to mapOf(
             "zh-Hant" to "頁",
             "en" to "Pages",
+            "zh-Hans" to "页",
+            "ja" to "ページ",
+            "ko" to "페이지",
+            "th" to "หน้า"
+        ),
+        "pages_unit" to mapOf(
+            "zh-Hant" to "頁",
+            "en" to "pages",
             "zh-Hans" to "页",
             "ja" to "ページ",
             "ko" to "페이지",
@@ -5135,7 +5167,10 @@ object LocalizationStrings {
             "ja" to "録音タイトル",
             "ko" to "녹음 제목",
             "th" to "ชื่อการบันทึก"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "redo" to mapOf(
             "zh-Hant" to "重做",
             "en" to "Redo",
@@ -5167,10 +5202,7 @@ object LocalizationStrings {
             "ja" to "補正強度",
             "ko" to "보정 강도",
             "th" to "ความเข้มข้น"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "relay_needs_tls" to mapOf(
             "zh-Hant" to "這個中繼在公開網路上，必須用 wss://（加密）。ws:// 只允許用在你自己的區域網路裡。",
             "en" to "This relay is on the public internet, so it must use wss:// (encrypted). Plain ws:// is only allowed on your own local network.",
@@ -5778,7 +5810,10 @@ object LocalizationStrings {
             "ja" to "テンプレートを選択",
             "ko" to "템플릿 선택",
             "th" to "เลือกเทมเพลต"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "shape_edit" to mapOf(
             "zh-Hant" to "編修形狀",
             "en" to "Edit Shape",
@@ -5810,10 +5845,7 @@ object LocalizationStrings {
             "ja" to "下矢印",
             "ko" to "아래쪽 화살표",
             "th" to "ลูกศรลง"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_arrowblockleft" to mapOf(
             "zh-Hant" to "左箭頭",
             "en" to "Left arrow",
@@ -6421,7 +6453,10 @@ object LocalizationStrings {
             "ja" to "録音付きノートのみ表示",
             "ko" to "녹음 포함 노트만 표시",
             "th" to "เฉพาะบันทึกที่มีเสียง"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "sort_title" to mapOf(
             "zh-Hant" to "依名稱排序",
             "en" to "Sort by Title",
@@ -6453,10 +6488,7 @@ object LocalizationStrings {
             "ja" to "材質・仕上げ：",
             "ko" to "소재 및 공정: ",
             "th" to "วัสดุและกระบวนการ: "
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "spec_specs" to mapOf(
             "zh-Hant" to "主要規格：",
             "en" to "Main Specs: ",
@@ -7064,7 +7096,10 @@ object LocalizationStrings {
             "ja" to "コーネル式",
             "ko" to "코넬 양식",
             "th" to "คอร์เนลล์"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "tmpl_cornell_desc" to mapOf(
             "zh-Hant" to "左側提綱摘要、右側主體筆記、底部總結",
             "en" to "Cues on left, notes on right, summary at bottom",
@@ -7096,10 +7131,7 @@ object LocalizationStrings {
             "ja" to "黄金比と三分分割構図",
             "ko" to "황금비 및 3분할 구도",
             "th" to "สัดส่วนทองคำและกฎสามส่วน"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_golden_ratio_desc" to mapOf(
             "zh-Hant" to "經典黃金分割線與九宮格參考輔助線",
             "en" to "Classical golden spiral & rule-of-thirds composition guides",

@@ -54,6 +54,7 @@ padnote-models = { path = "../padnote-models" }
 padnote-pdf = { path = "../padnote-pdf" }
 padnote-pdf-pdfium = { path = "../padnote-pdf-pdfium", optional = true }
 padnote-recorder = { path = "../padnote-recorder" }
+padnote-audio = { path = "../padnote-audio" }
 padnote-vad-silero = { path = "../padnote-vad-silero", optional = true }
 padnote-text = { path = "../padnote-text" }
 padnote-punct-ct = { path = "../padnote-punct-ct", optional = true }

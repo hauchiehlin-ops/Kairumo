@@ -2407,6 +2407,14 @@ extension LocalizationManager {
             .ko: "이미지를 읽을 수 없습니다",
             .th: "อ่านรูปภาพนี้ไม่ได้"
         ],
+        "err_insert_recording_failed": [
+            .zhHant: "插入錄音失敗，音檔可能已被移除",
+            .en: "Could not insert the recording — the audio file may have been removed",
+            .zhHans: "插入录音失败，音档可能已被移除",
+            .ja: "録音を挿入できませんでした。音声ファイルが削除されている可能性があります",
+            .ko: "녹음을 삽입하지 못했습니다. 오디오 파일이 삭제되었을 수 있습니다",
+            .th: "แทรกเสียงบันทึกไม่สำเร็จ ไฟล์เสียงอาจถูกลบไปแล้ว"
+        ],
         "err_mic_open_failed": [
             .zhHant: "無法開啟麥克風：%@",
             .en: "Could not open the microphone: %@",
@@ -2670,6 +2678,14 @@ extension LocalizationManager {
             .ja: "文字スタイル",
             .ko: "글자 스타일",
             .th: "ลักษณะอักษร"
+        ],
+        "footer_tagline": [
+            .zhHant: "筆跡與錄音同步 · 本地優先 · 開放原始碼",
+            .en: "Dual Ink & Audio Sync · Offline First · Open Source",
+            .zhHans: "笔迹与录音同步 · 本地优先 · 开放源码",
+            .ja: "筆跡と音声の同期 · オフライン優先 · オープンソース",
+            .ko: "필기·음성 동기화 · 오프라인 우선 · 오픈소스",
+            .th: "ซิงค์ลายมือกับเสียง · ออฟไลน์เป็นหลัก · โอเพนซอร์ส"
         ],
         "geom_preview": [
             .zhHant: "3D 預覽",
@@ -4375,6 +4391,14 @@ extension LocalizationManager {
             .ko: "계정이 필요 없고, 저희 서버도 없습니다",
             .th: "ไม่ต้องมีบัญชี และไม่มีเซิร์ฟเวอร์ของเรา"
         ],
+        "no_account_no_server": [
+            .zhHant: "沒有帳號，也沒有我們的伺服器",
+            .en: "No account, and no server of ours",
+            .zhHans: "没有账号，也没有我们的服务器",
+            .ja: "アカウントも、当方のサーバーもありません",
+            .ko: "계정도 없고 저희 서버도 없습니다",
+            .th: "ไม่มีบัญชี และไม่มีเซิร์ฟเวอร์ของเรา"
+        ],
         "no_assets_found": [
             .zhHant: "未找到符合條件的素材",
             .en: "No matching assets found",
@@ -4762,6 +4786,14 @@ extension LocalizationManager {
         "pages_count_suffix": [
             .zhHant: "頁",
             .en: "Pages",
+            .zhHans: "页",
+            .ja: "ページ",
+            .ko: "페이지",
+            .th: "หน้า"
+        ],
+        "pages_unit": [
+            .zhHant: "頁",
+            .en: "pages",
             .zhHans: "页",
             .ja: "ページ",
             .ko: "페이지",

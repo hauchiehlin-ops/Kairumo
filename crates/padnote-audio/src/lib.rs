@@ -10,4 +10,4 @@ pub mod encoder;
 pub mod ogg;
 
 pub use encoder::{AudioError, OpusEncoder, VOICE_BITRATE};
-pub use ogg::OggOpusWriter;
+pub use ogg::{ogg_opus_duration_us, OggOpusWriter};

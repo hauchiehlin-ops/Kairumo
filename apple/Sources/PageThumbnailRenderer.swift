@@ -215,6 +215,20 @@ public enum PageThumbnailRenderer {
         }
     }
 
+    /// 錄音卡片的靜態外觀，給匯出用。
+    ///
+    /// 匯出的 PDF 播不出聲音，但卡片**必須在那裡** —— 少畫一張，
+    /// 使用者看到的是自己的內容掉了。
+    static func renderObjectImage(_ item: NoteAudioAttachment) -> UIImage? {
+        let size = CGSize(width: max(item.width, 1), height: max(item.height, 1))
+        return UIGraphicsImageRenderer(size: size).image { _ in
+            var local = item
+            local.x = 0
+            local.y = 0
+            drawAudio(local)
+        }
+    }
+
     static func renderObjectImage(_ item: NoteLinkAttachment) -> UIImage? {
         let size = CGSize(width: max(item.width, 1), height: max(60, item.height))
         return UIGraphicsImageRenderer(size: size).image { _ in
