@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,6 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import com.kairumo.padnote.LocalizationStrings
 import uniffi.padnote_core.ToolKind
@@ -65,15 +69,23 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
     val isLasso: Boolean get() = this == LASSO
 }
 
-/** 一組夠用的顏色。選項太多的工具列比沒有工具列還難用。 */
-val inkPalette: List<Pair<String, Color>> = listOf(
-    "#000000" to Color(0xFF000000),
-    "#1E6FD9" to Color(0xFF1E6FD9),
-    "#D93025" to Color(0xFFD93025),
-    "#1E8E3E" to Color(0xFF1E8E3E),
-    "#E8710A" to Color(0xFFE8710A),
-    "#9334E6" to Color(0xFF9334E6)
-)
+/**
+ * 常用墨色。**來源是核心的 `ink_palette()`**（工作項 S-63）。
+ *
+ * 這一組原本寫死在這裡，Apple 端也寫死在 `NotebookEditorView`。S-62 把
+ * Apple 那邊換成六個「照真筆調」的墨色之後，這裡沒有跟著換 —— 同一支
+ * 「藍筆」在兩台裝置上是兩個顏色（`#1E6FD9` 對 `#214FAD`）。
+ *
+ * 筆畫顏色是**落盤的資料**：每一筆手寫都帶著 hex 存進筆記。使用者換裝置
+ * 繼續寫，同一頁上就會出現兩種藍。所以它下沉到核心，兩邊不可能再分岔。
+ *
+ * `key` 是語系鍵，用來當無障礙標籤 —— 純色點沒有文字，
+ * TalkBack 念出來只會是「按鈕」。
+ */
+val inkPalette: List<Triple<String, Color, String>> =
+    uniffi.padnote_core.inkPalette().map { entry ->
+        Triple(entry.hex, Color(android.graphics.Color.parseColor(entry.hex)), entry.key)
+    }
 
 /** 筆寬可選範圍。與 Apple 端的 `StrokeWidthSlider.range` 相同。 */
 val inkWidthRange: ClosedFloatingPointRange<Float> = 1f..30f
@@ -113,18 +125,28 @@ fun InkToolbar(
         // 擦除與套索都不需要顏色 —— 留著只會讓使用者以為可以擦成某個顏色，
         // 或是以為選取會被染色。
         if (!tool.isEraser && !tool.isLasso) {
-            for ((hex, color) in inkPalette) {
+            for ((hex, color, nameKey) in inkPalette) {
+                val selected = colorHex == hex
                 Box(
                     modifier = Modifier
                         .size(26.dp)
                         .clip(CircleShape)
                         .background(color)
                         .border(
-                            width = if (colorHex == hex) 3.dp else 1.dp,
-                            color = if (colorHex == hex) Color(0xFF1E6FD9) else Color(0x33000000),
+                            width = if (selected) 3.dp else 1.dp,
+                            // 主色來自主題，不要再寫死藍色 —— 寫死的那個值
+                            // 是舊調色盤的藍，深色模式下也不會跟著變。
+                            color = if (selected) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.outlineVariant,
                             shape = CircleShape
                         )
                         .clickable { onColorChange(hex) }
+                        // 純色點沒有文字，TalkBack 念出來只會是「按鈕」。
+                        .semantics {
+                            contentDescription = LocalizationStrings.localized(nameKey, languageTag)
+                            if (selected) stateDescription =
+                                LocalizationStrings.localized("selected", languageTag)
+                        }
                 )
             }
         }

@@ -394,6 +394,40 @@ pub fn border_palette() -> Vec<FfiPaletteEntry> {
     .collect()
 }
 
+/// 手寫墨色調色盤（工作項 S-63）。
+///
+/// # 為什麼也放核心
+///
+/// 與 [`card_palette`] 同一個理由，而且更嚴重：**筆畫顏色是落盤的資料**，
+/// 每一筆手寫都帶著它的 hex 存進筆記。
+///
+/// 兩個平台各寫一份的後果已經發生過：Apple 端把調色盤從八個純飽和原色
+/// 換成六個「照真筆調」的墨色之後，Android 仍然是自己那套
+/// （`#1E6FD9`、`#D93025`…）。同一支「藍筆」在兩台裝置上是兩個顏色，
+/// 而使用者換裝置繼續寫的時候，會在同一頁上看到兩種藍。
+///
+/// # 顏色怎麼挑的
+///
+/// 不是純原色。真的原子筆、鋼筆、螢光筆都不是純色，純色排成一列看起來
+/// 像小畫家的調色盤。墨黑刻意不是全黑 —— 全黑在紙上顯得死板。
+#[uniffi::export]
+pub fn ink_palette() -> Vec<FfiPaletteEntry> {
+    [
+        ("color_ink_black", "#1C1F24"),  // 墨黑
+        ("color_ink_blue", "#214FAD"),   // 鋼筆藍
+        ("color_ink_red", "#C23030"),    // 紅筆紅
+        ("color_ink_green", "#1A704A"),  // 森林綠
+        ("color_ink_yellow", "#E8AB21"), // 螢光黃
+        ("color_ink_gray", "#737882"),   // 鉛筆灰
+    ]
+    .into_iter()
+    .map(|(key, hex)| FfiPaletteEntry {
+        key: key.to_string(),
+        hex: hex.to_string(),
+    })
+    .collect()
+}
+
 /// 調色盤的一格。`key` 是語系鍵（沒有名字時為空字串）。
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct FfiPaletteEntry {
@@ -2761,5 +2795,48 @@ mod tests {
         let listed = s.image_block_ids(page).unwrap();
         assert_eq!(listed, vec![id.clone()]);
         assert_eq!(s.block_appearance(id).unwrap(), Some(spec));
+    }
+}
+
+#[cfg(test)]
+mod ink_palette_tests {
+    use super::*;
+
+    #[test]
+    fn the_ink_colours_are_not_pure_primaries() {
+        // 純原色（#FF0000 那種）排成一列看起來像小畫家。真的筆墨都帶灰。
+        for entry in ink_palette() {
+            let hex = entry.hex.trim_start_matches('#');
+            let r = u8::from_str_radix(&hex[0..2], 16).unwrap();
+            let g = u8::from_str_radix(&hex[2..4], 16).unwrap();
+            let b = u8::from_str_radix(&hex[4..6], 16).unwrap();
+            let pure = [(255u8, 0u8, 0u8), (0, 255, 0), (0, 0, 255), (255, 255, 0)];
+            assert!(
+                !pure.contains(&(r, g, b)),
+                "{} 是純原色，看起來不像筆墨",
+                entry.hex
+            );
+        }
+    }
+
+    #[test]
+    fn the_black_is_not_actually_black() {
+        // 全黑在紙上顯得死板，真的墨水都偏一點藍或灰。
+        let black = ink_palette()
+            .into_iter()
+            .find(|e| e.key == "color_ink_black")
+            .expect("缺墨黑");
+        assert_ne!(black.hex, "#000000", "墨黑不該是純黑");
+    }
+
+    #[test]
+    fn every_entry_has_a_name_key_and_a_valid_hex() {
+        // 沒有 key 就沒有無障礙標籤可念；hex 格式錯的話那一格是透明的。
+        for entry in ink_palette() {
+            assert!(!entry.key.is_empty(), "{} 少了語系鍵", entry.hex);
+            assert_eq!(entry.hex.len(), 7, "{} 不是 #RRGGBB", entry.hex);
+            assert!(entry.hex.starts_with('#'));
+            assert!(u32::from_str_radix(&entry.hex[1..], 16).is_ok());
+        }
     }
 }

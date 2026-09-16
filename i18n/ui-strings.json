@@ -1703,6 +1703,54 @@
     "zhHans": "淡绿",
     "zhHant": "淡綠"
   },
+  "color_ink_black": {
+    "en": "Ink Black",
+    "ja": "インクブラック",
+    "ko": "먹색",
+    "th": "ดำหมึก",
+    "zhHans": "墨黑",
+    "zhHant": "墨黑"
+  },
+  "color_ink_blue": {
+    "en": "Pen Blue",
+    "ja": "万年筆ブルー",
+    "ko": "만년필 블루",
+    "th": "น้ำเงินปากกา",
+    "zhHans": "钢笔蓝",
+    "zhHant": "鋼筆藍"
+  },
+  "color_ink_gray": {
+    "en": "Pencil Grey",
+    "ja": "ペンシルグレー",
+    "ko": "펜슬 그레이",
+    "th": "เทาดินสอ",
+    "zhHans": "铅笔灰",
+    "zhHant": "鉛筆灰"
+  },
+  "color_ink_green": {
+    "en": "Forest Green",
+    "ja": "フォレストグリーン",
+    "ko": "포레스트 그린",
+    "th": "เขียวป่า",
+    "zhHans": "森林绿",
+    "zhHant": "森林綠"
+  },
+  "color_ink_red": {
+    "en": "Pen Red",
+    "ja": "レッドペン",
+    "ko": "레드 펜",
+    "th": "แดงปากกา",
+    "zhHans": "红笔红",
+    "zhHant": "紅筆紅"
+  },
+  "color_ink_yellow": {
+    "en": "Highlighter Yellow",
+    "ja": "蛍光イエロー",
+    "ko": "형광 옐로",
+    "th": "เหลืองไฮไลต์",
+    "zhHans": "荧光黄",
+    "zhHant": "螢光黃"
+  },
   "color_mode": {
     "en": "Color Mode",
     "ja": "カラーモード",
@@ -5814,6 +5862,14 @@
     "th": "เลือกเทมเพลต",
     "zhHans": "选择模板",
     "zhHant": "選擇樣板"
+  },
+  "selected": {
+    "en": "Selected",
+    "ja": "選択中",
+    "ko": "선택됨",
+    "th": "เลือกอยู่",
+    "zhHans": "已选取",
+    "zhHant": "已選取"
   },
   "shape_edit": {
     "en": "Edit Shape",

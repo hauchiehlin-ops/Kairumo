@@ -1737,6 +1737,54 @@ object LocalizationStrings {
             "ko" to "연초록",
             "th" to "เขียวอ่อน"
         ),
+        "color_ink_black" to mapOf(
+            "zh-Hant" to "墨黑",
+            "en" to "Ink Black",
+            "zh-Hans" to "墨黑",
+            "ja" to "インクブラック",
+            "ko" to "먹색",
+            "th" to "ดำหมึก"
+        ),
+        "color_ink_blue" to mapOf(
+            "zh-Hant" to "鋼筆藍",
+            "en" to "Pen Blue",
+            "zh-Hans" to "钢笔蓝",
+            "ja" to "万年筆ブルー",
+            "ko" to "만년필 블루",
+            "th" to "น้ำเงินปากกา"
+        ),
+        "color_ink_gray" to mapOf(
+            "zh-Hant" to "鉛筆灰",
+            "en" to "Pencil Grey",
+            "zh-Hans" to "铅笔灰",
+            "ja" to "ペンシルグレー",
+            "ko" to "펜슬 그레이",
+            "th" to "เทาดินสอ"
+        ),
+        "color_ink_green" to mapOf(
+            "zh-Hant" to "森林綠",
+            "en" to "Forest Green",
+            "zh-Hans" to "森林绿",
+            "ja" to "フォレストグリーン",
+            "ko" to "포레스트 그린",
+            "th" to "เขียวป่า"
+        ),
+        "color_ink_red" to mapOf(
+            "zh-Hant" to "紅筆紅",
+            "en" to "Pen Red",
+            "zh-Hans" to "红笔红",
+            "ja" to "レッドペン",
+            "ko" to "레드 펜",
+            "th" to "แดงปากกา"
+        ),
+        "color_ink_yellow" to mapOf(
+            "zh-Hant" to "螢光黃",
+            "en" to "Highlighter Yellow",
+            "zh-Hans" to "荧光黄",
+            "ja" to "蛍光イエロー",
+            "ko" to "형광 옐로",
+            "th" to "เหลืองไฮไลต์"
+        ),
         "color_mode" to mapOf(
             "zh-Hant" to "調色模式",
             "en" to "Color Mode",
@@ -1904,7 +1952,10 @@ object LocalizationStrings {
             "ja" to "スナップショットを作成",
             "ko" to "스냅샷 생성",
             "th" to "สร้างสแนปช็อต"
-        ),
+        )
+    )
+
+    private fun part3(): Map<String, Map<String, String>> = mapOf(
         "current_user" to mapOf(
             "zh-Hant" to "目前使用者",
             "en" to "Current User",
@@ -1952,10 +2003,7 @@ object LocalizationStrings {
             "ja" to "データ一覧",
             "ko" to "데이터 목록",
             "th" to "รายการข้อมูล"
-        )
-    )
-
-    private fun part3(): Map<String, Map<String, String>> = mapOf(
+        ),
         "default_root_folder" to mapOf(
             "zh-Hant" to "我的筆記",
             "en" to "My Notes",
@@ -2547,7 +2595,10 @@ object LocalizationStrings {
             "ja" to "同期フォルダに %@ を作成できませんでした",
             "ko" to "동기화 폴더에 %@을(를) 만들 수 없습니다",
             "th" to "สร้าง %@ ในโฟลเดอร์ซิงก์ไม่ได้"
-        ),
+        )
+    )
+
+    private fun part4(): Map<String, Map<String, String>> = mapOf(
         "expand" to mapOf(
             "zh-Hant" to "展開",
             "en" to "Expand",
@@ -2595,10 +2646,7 @@ object LocalizationStrings {
             "ja" to "PDF を書き出す",
             "ko" to "PDF 내보내기",
             "th" to "ส่งออก PDF"
-        )
-    )
-
-    private fun part4(): Map<String, Map<String, String>> = mapOf(
+        ),
         "export_print" to mapOf(
             "zh-Hant" to "匯出與列印",
             "en" to "Export & Print",
@@ -3190,7 +3238,10 @@ object LocalizationStrings {
             "ja" to "スレートブルー",
             "ko" to "슬레이트 블루",
             "th" to "น้ำเงินหินชนวน"
-        ),
+        )
+    )
+
+    private fun part5(): Map<String, Map<String, String>> = mapOf(
         "hue_terracotta" to mapOf(
             "zh-Hant" to "陶土紅",
             "en" to "Terracotta",
@@ -3238,10 +3289,7 @@ object LocalizationStrings {
             "ja" to "この名前と色は共同編集中に「誰が編集しているか」を示すためだけに使われます。この端末内に保存され、アカウントではなく、登録も不要で、クラウドやシステムアカウントとは一切連携しません。",
             "ko" to "이 이름과 색상은 공동 작업 중 '누가 편집 중인지' 표시하는 데만 사용됩니다. 이 기기에만 저장되며 계정이 아니고 가입도 필요 없으며 클라우드나 시스템 계정과 연결되지 않습니다.",
             "th" to "ชื่อและสีนี้ใช้เพื่อแสดงว่าใครกำลังแก้ไขขณะทำงานร่วมกันเท่านั้น ข้อมูลอยู่ในเครื่องนี้ ไม่ใช่บัญชี ไม่ต้องสมัคร และไม่เชื่อมต่อกับคลาวด์หรือบัญชีระบบใด ๆ"
-        )
-    )
-
-    private fun part5(): Map<String, Map<String, String>> = mapOf(
+        ),
         "identity_desc_short" to mapOf(
             "zh-Hant" to "協作時顯示的身分 · 僅存於本機",
             "en" to "Shown while collaborating · stored on this device",
@@ -3833,7 +3881,10 @@ object LocalizationStrings {
             "ja" to "リンクを貼り付け",
             "ko" to "링크 붙여넣기",
             "th" to "วางลิงก์"
-        ),
+        )
+    )
+
+    private fun part6(): Map<String, Map<String, String>> = mapOf(
         "local_relay_hint" to mapOf(
             "zh-Hant" to "位址指向本機（127.0.0.1）時，App 會直接在這台裝置上開啟協同中繼；隊友請改填房主顯示的區域網路位址。",
             "en" to "When the address points at this device (127.0.0.1), Kairumo runs the relay locally. Teammates should enter the LAN address shown by the host instead.",
@@ -3881,10 +3932,7 @@ object LocalizationStrings {
             "ja" to "ゴールド",
             "ko" to "골드 (금)",
             "th" to "ทองคำ"
-        )
-    )
-
-    private fun part6(): Map<String, Map<String, String>> = mapOf(
+        ),
         "mat_granite" to mapOf(
             "zh-Hant" to "花崗岩",
             "en" to "Granite",
@@ -4476,7 +4524,10 @@ object LocalizationStrings {
             "ja" to "アカウント不要、当方のサーバーもありません",
             "ko" to "계정이 필요 없고, 저희 서버도 없습니다",
             "th" to "ไม่ต้องมีบัญชี และไม่มีเซิร์ฟเวอร์ของเรา"
-        ),
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
         "no_account_no_server" to mapOf(
             "zh-Hant" to "沒有帳號，也沒有我們的伺服器",
             "en" to "No account, and no server of ours",
@@ -4524,10 +4575,7 @@ object LocalizationStrings {
             "ja" to "一致するノートが見つかりません",
             "ko" to "일치하는 노트를 찾을 수 없습니다",
             "th" to "ไม่พบบันทึกที่ตรงกัน"
-        )
-    )
-
-    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        ),
         "no_recognition_result" to mapOf(
             "zh-Hant" to "這一頁沒有辨識出文字",
             "en" to "No text recognised on this page",
@@ -5119,7 +5167,10 @@ object LocalizationStrings {
             "ja" to "録音タイトル",
             "ko" to "녹음 제목",
             "th" to "ชื่อการบันทึก"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "recent_colors" to mapOf(
             "zh-Hant" to "最近使用",
             "en" to "Recent",
@@ -5167,10 +5218,7 @@ object LocalizationStrings {
             "ja" to "認識中…",
             "ko" to "인식 중…",
             "th" to "กำลังรู้จำ…"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "reconnect_now" to mapOf(
             "zh-Hant" to "立即重連",
             "en" to "Reconnect Now",
@@ -5762,7 +5810,10 @@ object LocalizationStrings {
             "ja" to "手書き",
             "ko" to "필기",
             "th" to "ลายมือ"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "sample_welcome_tools_table" to mapOf(
             "zh-Hant" to "工具|它做什麼\n筆與螢光筆|粗細與顏色各自記住，換回來還是原本那一支\n橡皮擦|整筆擦或局部擦，擦掉的筆畫留有墓碑，同步得回去\n套索|圈起來就能整組搬、縮放、旋轉\n插入|圖片、表格、圖表、形狀、連結、3D、錄音\n更多|次要工具收在這裡：圖層、算式、素材庫、主題工具",
             "en" to "Tool|What it does\nPen & highlighter|Each remembers its own width and colour\nEraser|Whole-stroke or partial; erased strokes leave tombstones so they sync\nLasso|Circle a group to move, scale and rotate it together\nInsert|Image, table, chart, shape, link, 3D, recording\nMore|Secondary tools live here: layers, formulas, asset library, theme tools",
@@ -5810,10 +5861,7 @@ object LocalizationStrings {
             "ja" to "アカウントとセキュリティ",
             "ko" to "계정 및 보안",
             "th" to "บัญชีและความปลอดภัย"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "seed_meeting_snippet" to mapOf(
             "zh-Hant" to "支援麥克風即時收音，聲音與筆跡精確對齊",
             "en" to "Live microphone capture with audio precisely aligned to your ink",
@@ -5869,6 +5917,14 @@ object LocalizationStrings {
             "ja" to "テンプレートを選択",
             "ko" to "템플릿 선택",
             "th" to "เลือกเทมเพลต"
+        ),
+        "selected" to mapOf(
+            "zh-Hant" to "已選取",
+            "en" to "Selected",
+            "zh-Hans" to "已选取",
+            "ja" to "選択中",
+            "ko" to "선택됨",
+            "th" to "เลือกอยู่"
         ),
         "shape_edit" to mapOf(
             "zh-Hant" to "編修形狀",
@@ -6397,7 +6453,10 @@ object LocalizationStrings {
             "ja" to "図形スタイル",
             "ko" to "도형 스타일",
             "th" to "สไตล์รูปทรง"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "share_invite_link" to mapOf(
             "zh-Hant" to "分享邀請連結",
             "en" to "Share Invite Link",
@@ -6453,10 +6512,7 @@ object LocalizationStrings {
             "ja" to "スナップショットが作成されました",
             "ko" to "스냅샷이 생성되었습니다",
             "th" to "สร้างสแนปช็อตเรียบร้อยแล้ว"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "snapshot_name" to mapOf(
             "zh-Hant" to "快照名稱或備註",
             "en" to "Snapshot Name",
@@ -7040,7 +7096,10 @@ object LocalizationStrings {
             "ja" to "美的・視覚デザイン",
             "ko" to "미학 및 시각 디자인",
             "th" to "สุนทรียศาสตร์และการมองเห็น"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "theme_category" to mapOf(
             "zh-Hant" to "主題分類",
             "en" to "Theme",
@@ -7096,10 +7155,7 @@ object LocalizationStrings {
             "ja" to "モランディ グレージュ",
             "ko" to "모란디 뮤트 톤",
             "th" to "โทนมอรันดี"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "theme_palette_trend" to mapOf(
             "zh-Hant" to "Pantone 季節潮流色",
             "en" to "Pantone Trend Palette",

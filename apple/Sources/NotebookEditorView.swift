@@ -1272,23 +1272,23 @@ public struct NotebookEditorView: View {
     @State private var showDeletePageAlert: Bool = false
 
     // 常用色彩盤
-    /// 常用墨色（工作項 S-62）。
+    /// 常用墨色。**來源是核心的 `inkPalette()`**（工作項 S-63）。
     ///
-    /// 原本這裡是八個**純飽和原色**（`.black`、`.blue`、`.red`、`.orange`、
-    /// `.purple`…）。那組顏色的問題不是難看，是**不像筆**：真的原子筆、
-    /// 鋼筆、螢光筆都不是純色，純色排成一列看起來像小畫家的調色盤。
+    /// 這一組原本寫死在這個檔案裡，Android 端也寫死在 `InkToolbar`。
+    /// S-62 把 Apple 這邊從八個純飽和原色換成六個「照真筆調」的墨色之後，
+    /// Android 仍然是它自己那套 —— 同一支「藍筆」在兩台裝置上是兩個顏色。
     ///
-    /// 改成照實際筆墨調的顏色：墨黑不是全黑（全黑在紙上會顯得死板）、
-    /// 藍是鋼筆藍、紅是紅筆紅、綠偏森林綠、黃是螢光筆的暖黃。
-    /// 數量也從八個減到六個 —— 常用色就是這幾個，其餘交給專業調色盤。
-    private let colorPalette: [Color] = [
-        Color(red: 0.11, green: 0.12, blue: 0.14),  // 墨黑
-        Color(red: 0.13, green: 0.31, blue: 0.68),  // 鋼筆藍
-        Color(red: 0.76, green: 0.19, blue: 0.19),  // 紅筆紅
-        Color(red: 0.10, green: 0.44, blue: 0.29),  // 森林綠
-        Color(red: 0.91, green: 0.67, blue: 0.13),  // 螢光黃
-        Color(red: 0.45, green: 0.47, blue: 0.51)   // 鉛筆灰
-    ]
+    /// 筆畫顏色是**落盤的資料**：每一筆手寫都帶著 hex 存進筆記。所以它和
+    /// 卡片底色一樣下沉到核心，兩邊不可能再分岔。
+    // compactMap：`Color(hex:)` 是可失敗的初始化。core 給的 hex 一定合法
+    // （核心有測試釘住格式），但用 `map` 會得到 `[Color?]` 而編不過。
+    private let colorPalette: [Color] = inkPalette().compactMap { Color(hex: $0.hex) }
+
+    /// 墨色的語系名稱，給無障礙標籤用 —— 純色點沒有文字，
+    /// VoiceOver 念出來只會是「按鈕」。
+    private var inkColorNames: [String] {
+        inkPalette().map { localizationManager.localized($0.key) }
+    }
 
     /// 要求外層改綁到另一則筆記。
     ///

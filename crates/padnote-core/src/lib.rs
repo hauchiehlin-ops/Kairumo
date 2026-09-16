@@ -26,13 +26,13 @@ pub mod ffi_interop;
 pub mod ffi_link;
 pub mod ffi_llm;
 pub mod ffi_math;
-pub mod ffi_symbols;
 pub mod ffi_model3d;
 pub mod ffi_oauth;
 #[cfg(feature = "relay")]
 pub mod ffi_relay;
 pub mod ffi_shapes;
 pub mod ffi_sketch;
+pub mod ffi_symbols;
 pub mod ffi_table;
 pub mod ffi_theme_tools;
 pub mod ffi_ui;

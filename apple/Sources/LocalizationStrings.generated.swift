@@ -1719,6 +1719,54 @@ extension LocalizationManager {
             .ko: "연초록",
             .th: "เขียวอ่อน"
         ],
+        "color_ink_black": [
+            .zhHant: "墨黑",
+            .en: "Ink Black",
+            .zhHans: "墨黑",
+            .ja: "インクブラック",
+            .ko: "먹색",
+            .th: "ดำหมึก"
+        ],
+        "color_ink_blue": [
+            .zhHant: "鋼筆藍",
+            .en: "Pen Blue",
+            .zhHans: "钢笔蓝",
+            .ja: "万年筆ブルー",
+            .ko: "만년필 블루",
+            .th: "น้ำเงินปากกา"
+        ],
+        "color_ink_gray": [
+            .zhHant: "鉛筆灰",
+            .en: "Pencil Grey",
+            .zhHans: "铅笔灰",
+            .ja: "ペンシルグレー",
+            .ko: "펜슬 그레이",
+            .th: "เทาดินสอ"
+        ],
+        "color_ink_green": [
+            .zhHant: "森林綠",
+            .en: "Forest Green",
+            .zhHans: "森林绿",
+            .ja: "フォレストグリーン",
+            .ko: "포레스트 그린",
+            .th: "เขียวป่า"
+        ],
+        "color_ink_red": [
+            .zhHant: "紅筆紅",
+            .en: "Pen Red",
+            .zhHans: "红笔红",
+            .ja: "レッドペン",
+            .ko: "레드 펜",
+            .th: "แดงปากกา"
+        ],
+        "color_ink_yellow": [
+            .zhHant: "螢光黃",
+            .en: "Highlighter Yellow",
+            .zhHans: "荧光黄",
+            .ja: "蛍光イエロー",
+            .ko: "형광 옐로",
+            .th: "เหลืองไฮไลต์"
+        ],
         "color_mode": [
             .zhHant: "調色模式",
             .en: "Color Mode",
@@ -5830,6 +5878,14 @@ extension LocalizationManager {
             .ja: "テンプレートを選択",
             .ko: "템플릿 선택",
             .th: "เลือกเทมเพลต"
+        ],
+        "selected": [
+            .zhHant: "已選取",
+            .en: "Selected",
+            .zhHans: "已选取",
+            .ja: "選択中",
+            .ko: "선택됨",
+            .th: "เลือกอยู่"
         ],
         "shape_edit": [
             .zhHant: "編修形狀",

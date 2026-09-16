@@ -96,6 +96,13 @@ Kairumo —— 手寫、打字、錄音轉文字三合一的筆記 App。
   警告在那裡就是錯誤。本機要跑
   `RUSTFLAGS="-D warnings" cargo clippy --workspace --all-targets`
 - ❌ 用 `grep -E "^error"` 過濾建置輸出 —— 會把警告濾掉，而 CI 不會
+- ❌ 用 `grep 'l("'` 之類的字面樣式盤點功能 —— 參數化的呼叫（`l(key)`）
+  會整段漏掉。S-63 就是這樣誤判 Android「少了四個符號盤」，其實一直都有
+- ❌ 相信 Gradle 說的 instrumented 測試失敗 —— 它的串流被截斷時會把當下
+  在跑的那一條記成 FAILED。先看裝置的 logcat（`run finished: N tests`）
+  與 crash buffer，再決定要不要改程式
+- ❌ 靠註解維持兩個平台的資料一致（「與 Apple 端逐字相同」）—— 註解攔不住
+  任何東西。要一致就下沉到核心
 - ❌ 只靠測試判斷版面對不對 —— 把成品**畫出來看**。S-61 的範本測試全綠，
   一算繪就看到不換行、表格整張不見、Markdown 星號原樣印出三個問題
 - ❌ 以為 `format_pdf_text` 的半形字是半形 —— 整段只要有一個非 ASCII 字元，
