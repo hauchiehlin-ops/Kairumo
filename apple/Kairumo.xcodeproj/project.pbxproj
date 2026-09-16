@@ -115,6 +115,7 @@
 		F74DE2184CA0735F2E086AE3 /* ObjectMarquee.swift in Sources */ = {isa = PBXBuildFile; fileRef = 07DF98DF756A573952CE9BA3 /* ObjectMarquee.swift */; };
 		F76FDF83828E35E26345DCF5 /* AssetLibraryManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA24513DE1A6A5996FB190AC /* AssetLibraryManager.swift */; };
 		F91E0C4A0E48E4695D0337C6 /* PdfAnnotationInteropTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3A1525CF56EBBE47CE94BDBD /* PdfAnnotationInteropTests.swift */; };
+		FB8410FC89F4FDB4429963C6 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 22CA9AD55E8EDA76ABA92C78 /* OnboardingView.swift */; };
 		FC1A97633808D861B89FE967 /* MathEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E642D648CC5479DA382CE35 /* MathEngine.swift */; };
 		FDBFCB97F11915C9DA8EA7A9 /* FloatingPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A94975999121E1FFF8139B6A /* FloatingPanel.swift */; };
 		FE7819F27B65DF1C258ED52E /* WrapLayout.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6EA2D926C0FD0991AE0BC01D /* WrapLayout.swift */; };
@@ -152,6 +153,7 @@
 		205572122F598A01BD07BC2A /* CommentThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentThreadView.swift; sourceTree = "<group>"; };
 		20B46B97CCF8127EEE4BD4ED /* ChartRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartRenderer.swift; sourceTree = "<group>"; };
 		227366C6382850438A5B6A79 /* LassoSelection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LassoSelection.swift; sourceTree = "<group>"; };
+		22CA9AD55E8EDA76ABA92C78 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeWorkbenchView.swift; sourceTree = "<group>"; };
 		26F09C378F9F1B6835D9ECB2 /* CStubs.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = CStubs.c; sourceTree = "<group>"; };
 		28A8E33C21E81EED174CEBA3 /* padnote_core.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = padnote_core.swift; sourceTree = "<group>"; };
@@ -422,6 +424,7 @@
 				07DF98DF756A573952CE9BA3 /* ObjectMarquee.swift */,
 				BFC2EC4F24CB728264AB91A5 /* ObjectRotationControls.swift */,
 				DA14AB7B6F3436E39B58DAA1 /* ObjectStacking.swift */,
+				22CA9AD55E8EDA76ABA92C78 /* OnboardingView.swift */,
 				4F6548BCB85682AC49CE9184 /* PageGeometry.swift */,
 				DE6B5FAD884A88C837DD9BF2 /* PageImageRenderer.swift */,
 				74C26B5B3A37A7FBDAABA8A7 /* PageRepagination.swift */,
@@ -665,6 +668,7 @@
 				F74DE2184CA0735F2E086AE3 /* ObjectMarquee.swift in Sources */,
 				0D7E2AFBD2E9D88478C4DC9B /* ObjectRotationControls.swift in Sources */,
 				718C3BE123192CC4792EB80C /* ObjectStacking.swift in Sources */,
+				FB8410FC89F4FDB4429963C6 /* OnboardingView.swift in Sources */,
 				1DD235EF0430767F0F67610E /* PageGeometry.swift in Sources */,
 				7D6DE78DB8869CDC8006E534 /* PageImageRenderer.swift in Sources */,
 				E77C6702EE266A8D0B24EA19 /* PageRepagination.swift in Sources */,

@@ -4199,6 +4199,14 @@ extension LocalizationManager {
             .ko: "값",
             .th: "ค่า"
         ],
+        "mic_permission_blocked": [
+            .zhHant: "麥克風權限被拒。要錄音的話，請到系統設定裡打開。",
+            .en: "Microphone permission is denied. To record, turn it on in system settings.",
+            .zhHans: "麦克风权限被拒。要录音的话，请到系统设置里打开。",
+            .ja: "マイクの権限が拒否されています。録音するには設定でオンにしてください。",
+            .ko: "마이크 권한이 거부되었습니다. 녹음하려면 시스템 설정에서 켜 주세요.",
+            .th: "สิทธิ์ไมโครโฟนถูกปฏิเสธ หากต้องการบันทึกเสียง โปรดเปิดในการตั้งค่าระบบ"
+        ],
         "mic_permission_denied": [
             .zhHant: "沒有麥克風權限，無法錄音",
             .en: "Microphone permission denied; cannot record",
@@ -4703,6 +4711,94 @@ extension LocalizationManager {
             .ko: "오프라인 상태입니다: %d개 작업 대기 중. 다시 연결되면 자동 동기화됩니다.",
             .th: "ออฟไลน์อยู่: รอคิว %d รายการ จะซิงค์อัตโนมัติเมื่อเชื่อมต่อใหม่"
         ],
+        "onboarding_allow_microphone": [
+            .zhHant: "允許麥克風",
+            .en: "Allow Microphone",
+            .zhHans: "允许麦克风",
+            .ja: "マイクを許可",
+            .ko: "마이크 허용",
+            .th: "อนุญาตไมโครโฟน"
+        ],
+        "onboarding_later": [
+            .zhHant: "之後再說",
+            .en: "Later",
+            .zhHans: "之后再说",
+            .ja: "あとで",
+            .ko: "나중에",
+            .th: "ไว้ภายหลัง"
+        ],
+        "onboarding_microphone_granted": [
+            .zhHant: "麥克風已允許",
+            .en: "Microphone allowed",
+            .zhHans: "麦克风已允许",
+            .ja: "マイクを許可しました",
+            .ko: "마이크가 허용되었습니다",
+            .th: "อนุญาตไมโครโฟนแล้ว"
+        ],
+        "onboarding_next": [
+            .zhHant: "下一步",
+            .en: "Next",
+            .zhHans: "下一步",
+            .ja: "次へ",
+            .ko: "다음",
+            .th: "ถัดไป"
+        ],
+        "onboarding_permission_body": [
+            .zhHant: "錄音需要麥克風。不錄音就用不到 —— 現在允許或之後再說都可以，其餘功能不受影響。",
+            .en: "Recording needs the microphone. Nothing else does — allow it now or later; everything else works either way.",
+            .zhHans: "录音需要麦克风。不录音就用不到 —— 现在允许或之后再说都可以，其余功能不受影响。",
+            .ja: "録音にはマイクが必要です。それ以外では使いません。今許可しても後でもかまいません。他の機能には影響しません。",
+            .ko: "녹음에는 마이크가 필요합니다. 그 외에는 쓰지 않습니다. 지금 허용하든 나중에 하든 다른 기능은 그대로 작동합니다.",
+            .th: "การบันทึกเสียงต้องใช้ไมโครโฟน นอกจากนี้ไม่ใช้เลย จะอนุญาตตอนนี้หรือภายหลังก็ได้ ฟังก์ชันอื่นไม่ได้รับผลกระทบ"
+        ],
+        "onboarding_permission_title": [
+            .zhHant: "只有一項權限",
+            .en: "Just one permission",
+            .zhHans: "只有一项权限",
+            .ja: "必要な権限はひとつだけ",
+            .ko: "필요한 권한은 하나뿐",
+            .th: "มีสิทธิ์เพียงอย่างเดียว"
+        ],
+        "onboarding_privacy_body": [
+            .zhHant: "不必註冊就能開始用。要跨裝置同步時，你指定自己的雲端資料夾，檔案不會經過我們。",
+            .en: "Start without signing up. To sync across devices you pick your own cloud folder — files never pass through us.",
+            .zhHans: "不必注册就能开始用。要跨设备同步时，你指定自己的云端文件夹，文件不会经过我们。",
+            .ja: "登録なしで始められます。端末間で同期するときは、ご自分のクラウドフォルダを指定します。ファイルが当方を経由することはありません。",
+            .ko: "가입 없이 바로 시작할 수 있습니다. 기기 간 동기화는 본인의 클라우드 폴더를 지정하며, 파일이 저희를 거치지 않습니다.",
+            .th: "เริ่มใช้ได้โดยไม่ต้องสมัคร หากต้องการซิงก์ข้ามอุปกรณ์ คุณเลือกโฟลเดอร์คลาวด์ของคุณเอง ไฟล์ไม่ผ่านเรา"
+        ],
+        "onboarding_privacy_title": [
+            .zhHant: "沒有帳號，也沒有我們的伺服器",
+            .en: "No account, and no server of ours",
+            .zhHans: "没有账号，也没有我们的服务器",
+            .ja: "アカウントも、当方のサーバーもありません",
+            .ko: "계정도, 저희 서버도 없습니다",
+            .th: "ไม่มีบัญชี และไม่มีเซิร์ฟเวอร์ของเรา"
+        ],
+        "onboarding_start": [
+            .zhHant: "開始使用",
+            .en: "Get Started",
+            .zhHans: "开始使用",
+            .ja: "はじめる",
+            .ko: "시작하기",
+            .th: "เริ่มใช้งาน"
+        ],
+        "onboarding_welcome_body": [
+            .zhHant: "手寫、打字與錄音在同一頁。離線可用，資料留在這台裝置上。",
+            .en: "Handwriting, typing and audio on one page. Works offline; your notes stay on this device.",
+            .zhHans: "手写、打字与录音在同一页。离线可用，数据留在这台设备上。",
+            .ja: "手書き・入力・録音を同じページに。オフラインで使え、データはこの端末に残ります。",
+            .ko: "손글씨, 입력, 녹음을 한 페이지에. 오프라인으로 작동하며 데이터는 이 기기에 남습니다.",
+            .th: "เขียนด้วยลายมือ พิมพ์ และบันทึกเสียงในหน้าเดียว ใช้ได้แบบออฟไลน์ และข้อมูลอยู่ในเครื่องนี้"
+        ],
+        "onboarding_welcome_title": [
+            .zhHant: "歡迎使用 Kairumo",
+            .en: "Welcome to Kairumo",
+            .zhHans: "欢迎使用 Kairumo",
+            .ja: "Kairumo へようこそ",
+            .ko: "Kairumo에 오신 것을 환영합니다",
+            .th: "ยินดีต้อนรับสู่ Kairumo"
+        ],
         "online": [
             .zhHant: "線上",
             .en: "Online",
@@ -5030,6 +5126,14 @@ extension LocalizationManager {
             .ja: "この PDF にはパスワードが必要です。",
             .ko: "이 PDF는 비밀번호가 필요합니다.",
             .th: "PDF นี้ต้องใช้รหัสผ่าน"
+        ],
+        "permission_open_settings": [
+            .zhHant: "開啟設定",
+            .en: "Open Settings",
+            .zhHans: "打开设置",
+            .ja: "設定を開く",
+            .ko: "설정 열기",
+            .th: "เปิดการตั้งค่า"
         ],
         "platform_desc": [
             .zhHant: "執行平台",

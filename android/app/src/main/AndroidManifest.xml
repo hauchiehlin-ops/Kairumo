@@ -3,12 +3,14 @@
 
     <!-- 錄音（第一版不含語音轉錄，但錄音本身仍可用） -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
-    <!-- 線上協同：同一個 Wi-Fi 下直接連線，不經任何外部伺服器 -->
+    <!-- 線上協同：連使用者自己輸入的 ws:// 位址，不經任何外部伺服器 -->
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
-    <uses-permission
-        android:name="android.permission.NEARBY_WIFI_DEVICES"
-        android:usesPermissionFlags="neverForLocation" />
+    <!--
+        這裡原本還有 ACCESS_WIFI_STATE 與 NEARBY_WIFI_DEVICES，**程式裡從來
+        沒有用過** —— 協同沒有做任何裝置探索（沒有 NsdManager、沒有多播），
+        只是連一個使用者貼進來的位址。宣告了卻不用的危險權限，換來的是
+        商店頁面上一條「附近的裝置」，以及 Play Console 要你解釋用途。
+    -->
 
     <uses-feature android:name="android.hardware.touchscreen.stylus" android:required="false" />
 

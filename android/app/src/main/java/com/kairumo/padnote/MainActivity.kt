@@ -89,6 +89,8 @@ import com.kairumo.padnote.ui.LocalAppLanguage
 import com.kairumo.padnote.ui.AppCommand
 import com.kairumo.padnote.ui.AppCommands
 import com.kairumo.padnote.ui.KairumoTheme
+import com.kairumo.padnote.ui.Onboarding
+import com.kairumo.padnote.ui.OnboardingScreen
 import com.kairumo.padnote.library.NewNotebookDialog
 import com.kairumo.padnote.library.RenameNotebookDialog
 import com.kairumo.padnote.library.DeleteNotebookDialog
@@ -230,6 +232,14 @@ private fun KairumoApp() {
     // 也就跟著沒了 —— 實測：從資料夾裡開一本筆記再返回，人會被丟回最上層。
     // 在巢狀資料夾裡工作時，每開一本筆記就要重新點進去一次。
     var folderId by remember { mutableStateOf<String?>(null) }
+
+    // 首次啟動引導（見 ui/Onboarding.kt）。放在這裡而不是 Activity：
+    // 它要能在看完之後就地換成首頁，不必再起一個畫面。
+    var onboarding by remember { mutableStateOf(!Onboarding.hasSeen(activity)) }
+    if (onboarding) {
+        OnboardingScreen(onDone = { onboarding = false })
+        return
+    }
 
     val id = openedId
     if (id == null) {
@@ -1062,6 +1072,8 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
         message = runFolderSync(activity, notebook?.first)
     }
 
+    // 被永久拒絕之後，畫面上要多一條「開啟設定」—— 那是唯一還走得通的路。
+    var micBlocked by remember { mutableStateOf(false) }
     val micPermission = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { granted ->
@@ -1070,7 +1082,10 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             message = audio.start(session, deviceLanguageTag()) { message = it }
             recording = audio.isRecording
         } else {
-            message = uiString("mic_permission_denied")
+            // 被拒之後再按同一顆按鈕，系統**不會再跳對話框** —— 只會直接回
+            // 拒絕。所以這裡要講的是「去設定裡開」，而不是重複同一句話。
+            micBlocked = true
+            message = uiString("mic_permission_blocked")
         }
     }
 
@@ -1664,6 +1679,12 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 12.dp)
         )
+
+        if (micBlocked) {
+            TextButton(onClick = { Onboarding.openAppSettings(activity) }) {
+                Text(l10n("permission_open_settings"))
+            }
+        }
 
         message?.let {
             Text(

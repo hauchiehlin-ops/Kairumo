@@ -12,6 +12,19 @@ import PadnoteCore
 #endif
 
 /// 應用程式主入口範例（支援 iOS、iPadOS 與 Mac Catalyst 通用）
+/// 第一次啟動先給引導，之後直接進首頁（見 `OnboardingView`）。
+private struct RootView: View {
+    @State private var showOnboarding = !OnboardingView.hasSeen
+
+    var body: some View {
+        if showOnboarding {
+            OnboardingView(onDone: { showOnboarding = false })
+        } else {
+            HomeWorkbenchView()
+        }
+    }
+}
+
 @main
 struct KairumoApp: App {
     /// 實體鍵盤快捷鍵靠它註冊（見 `AppCommands.swift`）。
@@ -40,7 +53,7 @@ struct KairumoApp: App {
 
     var body: some Scene {
         WindowGroup(appVersionTitle) {
-            HomeWorkbenchView()
+            RootView()
                 // 單參數的 onChange：新的兩參數版本要 iOS 17，而部署目標更低。
                 .onChange(of: scenePhase) { phase in
                     guard phase == .active else { return }

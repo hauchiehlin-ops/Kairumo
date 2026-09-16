@@ -1,0 +1,158 @@
+package com.kairumo.padnote.ui
+
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.net.Uri
+import android.provider.Settings
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
+import com.kairumo.padnote.LocalizationStrings
+
+/**
+ * 首次啟動引導與權限說明（工作項 S-66）。
+ *
+ * # 為什麼不是「安裝時就要到所有權限」
+ *
+ * 這件事在 Android 與 iOS 上都**做不到，也不該做**：
+ *
+ * - 安裝時不會有任何對話框。Android 6 之後危險權限一律在執行期要，
+ *   iOS 從來就是這樣。
+ * - 系統的權限對話框**只能由 App 主動觸發一次**。使用者按了拒絕之後，
+ *   再呼叫同一個 API 不會再跳 —— 只會直接回「被拒絕」。
+ *
+ * 所以這裡做的是**在使用者第一次打開 App 時把話講清楚**：要哪一個權限、
+ * 為什麼要、不給會少什麼，並且**當場提供那顆按鈕**。按下去才是系統對話框。
+ * 已經被永久拒絕時，改成把人送進系統設定頁 —— 那是那時候唯一還走得通的路。
+ *
+ * # 只有一項
+ *
+ * 這個 App 唯一的危險權限是麥克風，而且只有錄音用得到。清單裡原本還有
+ * `NEARBY_WIFI_DEVICES` 與 `ACCESS_WIFI_STATE`，但**程式裡從來沒有用過**
+ * （協同是連使用者自己輸入的 ws:// 位址，沒有做任何裝置探索）—— 宣告了
+ * 卻不用的危險權限，只會讓商店頁面上多一條嚇人的「附近的裝置」。已移除。
+ */
+object Onboarding {
+
+    private const val PREFS = "kairumo_onboarding"
+    private const val KEY_SEEN = "seen_v1"
+
+    fun hasSeen(context: Context): Boolean =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getBoolean(KEY_SEEN, false)
+
+    fun markSeen(context: Context) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+            .edit().putBoolean(KEY_SEEN, true).apply()
+    }
+
+    fun hasMicrophone(context: Context): Boolean =
+        ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) ==
+            PackageManager.PERMISSION_GRANTED
+
+    /** 把使用者送到這個 App 的系統設定頁 —— 權限被永久拒絕時唯一的路。 */
+    fun openAppSettings(context: Context) {
+        val intent = Intent(
+            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+            Uri.fromParts("package", context.packageName, null)
+        ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { context.startActivity(intent) }
+    }
+}
+
+@Composable
+fun OnboardingScreen(onDone: () -> Unit) {
+    val context = LocalContext.current
+    val lang = LocalAppLanguage.current
+    fun l(key: String) = LocalizationStrings.localized(key, lang)
+
+    var granted by remember { mutableStateOf(Onboarding.hasMicrophone(context)) }
+    // 按過一次而且沒拿到 —— 之後再按系統也不會再跳，要改走設定頁。
+    var asked by remember { mutableStateOf(false) }
+
+    val micPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { result ->
+        granted = result
+        asked = true
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(DS.Space.l),
+        verticalArrangement = Arrangement.spacedBy(DS.Space.m)
+    ) {
+        Spacer(Modifier.height(DS.Space.l))
+        Text(l("onboarding_welcome_title"), style = MaterialTheme.typography.headlineSmall)
+        Text(l("onboarding_welcome_body"), style = MaterialTheme.typography.bodyMedium)
+
+        Spacer(Modifier.height(DS.Space.s))
+        Text(l("onboarding_privacy_title"), style = MaterialTheme.typography.titleMedium)
+        Text(l("onboarding_privacy_body"), style = MaterialTheme.typography.bodyMedium)
+
+        Spacer(Modifier.height(DS.Space.s))
+        Text(l("onboarding_permission_title"), style = MaterialTheme.typography.titleMedium)
+        Text(l("onboarding_permission_body"), style = MaterialTheme.typography.bodyMedium)
+
+        if (granted) {
+            Text(
+                l("onboarding_microphone_granted"),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary
+            )
+        } else {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(DS.Space.s),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(onClick = {
+                    // 已經問過而且被拒 —— 再問一次系統不會有反應，送去設定頁。
+                    if (asked) Onboarding.openAppSettings(context)
+                    else micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                }) {
+                    Text(if (asked) l("permission_open_settings") else l("onboarding_allow_microphone"))
+                }
+                TextButton(onClick = onDone) { Text(l("onboarding_later")) }
+            }
+        }
+
+        Spacer(Modifier.height(DS.Space.m))
+        Button(
+            onClick = {
+                Onboarding.markSeen(context)
+                onDone()
+            },
+            modifier = Modifier.fillMaxWidth().widthIn(max = DS.Content.readableMaxWidth)
+        ) {
+            Text(l("onboarding_start"))
+        }
+        Spacer(Modifier.height(DS.Space.l))
+    }
+}

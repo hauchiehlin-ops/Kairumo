@@ -23,6 +23,7 @@ object LocalizationStrings {
             putAll(part9())
             putAll(part10())
             putAll(part11())
+            putAll(part12())
         }
     }
 
@@ -4229,6 +4230,14 @@ object LocalizationStrings {
             "ko" to "값",
             "th" to "ค่า"
         ),
+        "mic_permission_blocked" to mapOf(
+            "zh-Hant" to "麥克風權限被拒。要錄音的話，請到系統設定裡打開。",
+            "en" to "Microphone permission is denied. To record, turn it on in system settings.",
+            "zh-Hans" to "麦克风权限被拒。要录音的话，请到系统设置里打开。",
+            "ja" to "マイクの権限が拒否されています。録音するには設定でオンにしてください。",
+            "ko" to "마이크 권한이 거부되었습니다. 녹음하려면 시스템 설정에서 켜 주세요.",
+            "th" to "สิทธิ์ไมโครโฟนถูกปฏิเสธ หากต้องการบันทึกเสียง โปรดเปิดในการตั้งค่าระบบ"
+        ),
         "mic_permission_denied" to mapOf(
             "zh-Hant" to "沒有麥克風權限，無法錄音",
             "en" to "Microphone permission denied; cannot record",
@@ -4516,7 +4525,10 @@ object LocalizationStrings {
             "ja" to "次のページ",
             "ko" to "다음 페이지",
             "th" to "หน้าถัดไป"
-        ),
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
         "no_account_needed" to mapOf(
             "zh-Hant" to "不需要帳號，也沒有我們的伺服器",
             "en" to "No account, and no server of ours",
@@ -4524,10 +4536,7 @@ object LocalizationStrings {
             "ja" to "アカウント不要、当方のサーバーもありません",
             "ko" to "계정이 필요 없고, 저희 서버도 없습니다",
             "th" to "ไม่ต้องมีบัญชี และไม่มีเซิร์ฟเวอร์ของเรา"
-        )
-    )
-
-    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        ),
         "no_account_no_server" to mapOf(
             "zh-Hant" to "沒有帳號，也沒有我們的伺服器",
             "en" to "No account, and no server of ours",
@@ -4735,6 +4744,94 @@ object LocalizationStrings {
             "ja" to "オフラインです：%d 件の操作が保留中です。再接続時に自動同期されます。",
             "ko" to "오프라인 상태입니다: %d개 작업 대기 중. 다시 연결되면 자동 동기화됩니다.",
             "th" to "ออฟไลน์อยู่: รอคิว %d รายการ จะซิงค์อัตโนมัติเมื่อเชื่อมต่อใหม่"
+        ),
+        "onboarding_allow_microphone" to mapOf(
+            "zh-Hant" to "允許麥克風",
+            "en" to "Allow Microphone",
+            "zh-Hans" to "允许麦克风",
+            "ja" to "マイクを許可",
+            "ko" to "마이크 허용",
+            "th" to "อนุญาตไมโครโฟน"
+        ),
+        "onboarding_later" to mapOf(
+            "zh-Hant" to "之後再說",
+            "en" to "Later",
+            "zh-Hans" to "之后再说",
+            "ja" to "あとで",
+            "ko" to "나중에",
+            "th" to "ไว้ภายหลัง"
+        ),
+        "onboarding_microphone_granted" to mapOf(
+            "zh-Hant" to "麥克風已允許",
+            "en" to "Microphone allowed",
+            "zh-Hans" to "麦克风已允许",
+            "ja" to "マイクを許可しました",
+            "ko" to "마이크가 허용되었습니다",
+            "th" to "อนุญาตไมโครโฟนแล้ว"
+        ),
+        "onboarding_next" to mapOf(
+            "zh-Hant" to "下一步",
+            "en" to "Next",
+            "zh-Hans" to "下一步",
+            "ja" to "次へ",
+            "ko" to "다음",
+            "th" to "ถัดไป"
+        ),
+        "onboarding_permission_body" to mapOf(
+            "zh-Hant" to "錄音需要麥克風。不錄音就用不到 —— 現在允許或之後再說都可以，其餘功能不受影響。",
+            "en" to "Recording needs the microphone. Nothing else does — allow it now or later; everything else works either way.",
+            "zh-Hans" to "录音需要麦克风。不录音就用不到 —— 现在允许或之后再说都可以，其余功能不受影响。",
+            "ja" to "録音にはマイクが必要です。それ以外では使いません。今許可しても後でもかまいません。他の機能には影響しません。",
+            "ko" to "녹음에는 마이크가 필요합니다. 그 외에는 쓰지 않습니다. 지금 허용하든 나중에 하든 다른 기능은 그대로 작동합니다.",
+            "th" to "การบันทึกเสียงต้องใช้ไมโครโฟน นอกจากนี้ไม่ใช้เลย จะอนุญาตตอนนี้หรือภายหลังก็ได้ ฟังก์ชันอื่นไม่ได้รับผลกระทบ"
+        ),
+        "onboarding_permission_title" to mapOf(
+            "zh-Hant" to "只有一項權限",
+            "en" to "Just one permission",
+            "zh-Hans" to "只有一项权限",
+            "ja" to "必要な権限はひとつだけ",
+            "ko" to "필요한 권한은 하나뿐",
+            "th" to "มีสิทธิ์เพียงอย่างเดียว"
+        ),
+        "onboarding_privacy_body" to mapOf(
+            "zh-Hant" to "不必註冊就能開始用。要跨裝置同步時，你指定自己的雲端資料夾，檔案不會經過我們。",
+            "en" to "Start without signing up. To sync across devices you pick your own cloud folder — files never pass through us.",
+            "zh-Hans" to "不必注册就能开始用。要跨设备同步时，你指定自己的云端文件夹，文件不会经过我们。",
+            "ja" to "登録なしで始められます。端末間で同期するときは、ご自分のクラウドフォルダを指定します。ファイルが当方を経由することはありません。",
+            "ko" to "가입 없이 바로 시작할 수 있습니다. 기기 간 동기화는 본인의 클라우드 폴더를 지정하며, 파일이 저희를 거치지 않습니다.",
+            "th" to "เริ่มใช้ได้โดยไม่ต้องสมัคร หากต้องการซิงก์ข้ามอุปกรณ์ คุณเลือกโฟลเดอร์คลาวด์ของคุณเอง ไฟล์ไม่ผ่านเรา"
+        ),
+        "onboarding_privacy_title" to mapOf(
+            "zh-Hant" to "沒有帳號，也沒有我們的伺服器",
+            "en" to "No account, and no server of ours",
+            "zh-Hans" to "没有账号，也没有我们的服务器",
+            "ja" to "アカウントも、当方のサーバーもありません",
+            "ko" to "계정도, 저희 서버도 없습니다",
+            "th" to "ไม่มีบัญชี และไม่มีเซิร์ฟเวอร์ของเรา"
+        ),
+        "onboarding_start" to mapOf(
+            "zh-Hant" to "開始使用",
+            "en" to "Get Started",
+            "zh-Hans" to "开始使用",
+            "ja" to "はじめる",
+            "ko" to "시작하기",
+            "th" to "เริ่มใช้งาน"
+        ),
+        "onboarding_welcome_body" to mapOf(
+            "zh-Hant" to "手寫、打字與錄音在同一頁。離線可用，資料留在這台裝置上。",
+            "en" to "Handwriting, typing and audio on one page. Works offline; your notes stay on this device.",
+            "zh-Hans" to "手写、打字与录音在同一页。离线可用，数据留在这台设备上。",
+            "ja" to "手書き・入力・録音を同じページに。オフラインで使え、データはこの端末に残ります。",
+            "ko" to "손글씨, 입력, 녹음을 한 페이지에. 오프라인으로 작동하며 데이터는 이 기기에 남습니다.",
+            "th" to "เขียนด้วยลายมือ พิมพ์ และบันทึกเสียงในหน้าเดียว ใช้ได้แบบออฟไลน์ และข้อมูลอยู่ในเครื่องนี้"
+        ),
+        "onboarding_welcome_title" to mapOf(
+            "zh-Hant" to "歡迎使用 Kairumo",
+            "en" to "Welcome to Kairumo",
+            "zh-Hans" to "欢迎使用 Kairumo",
+            "ja" to "Kairumo へようこそ",
+            "ko" to "Kairumo에 오신 것을 환영합니다",
+            "th" to "ยินดีต้อนรับสู่ Kairumo"
         ),
         "online" to mapOf(
             "zh-Hant" to "線上",
@@ -5064,6 +5161,17 @@ object LocalizationStrings {
             "ko" to "이 PDF는 비밀번호가 필요합니다.",
             "th" to "PDF นี้ต้องใช้รหัสผ่าน"
         ),
+        "permission_open_settings" to mapOf(
+            "zh-Hant" to "開啟設定",
+            "en" to "Open Settings",
+            "zh-Hans" to "打开设置",
+            "ja" to "設定を開く",
+            "ko" to "설정 열기",
+            "th" to "เปิดการตั้งค่า"
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "platform_desc" to mapOf(
             "zh-Hant" to "執行平台",
             "en" to "Platform",
@@ -5167,10 +5275,7 @@ object LocalizationStrings {
             "ja" to "録音タイトル",
             "ko" to "녹음 제목",
             "th" to "ชื่อการบันทึก"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "recent_colors" to mapOf(
             "zh-Hant" to "最近使用",
             "en" to "Recent",
@@ -5706,7 +5811,10 @@ object LocalizationStrings {
             "ja" to "要点\n• iPad Pro で 11ms を計測、基準内。ミドルレンジ Android は未計測。\n• リリースは本番署名鍵待ちで、コードの問題ではない。\n• 来週：録音をページに挿入する手順をマニュアルに追記。\n\n（このページはサンプルです。すべて編集でき、ノートごと削除もできます。）",
             "ko" to "요점\n• iPad Pro에서 11ms 측정, 기준 내. 중급 안드로이드는 미측정.\n• 출시는 코드가 아니라 정식 서명 키 때문에 막혀 있음.\n• 다음 주: 녹음을 페이지에 삽입하는 절차를 설명서에 추가.\n\n(이 페이지는 예시입니다. 모두 수정할 수 있고 노트 전체를 삭제할 수도 있습니다.)",
             "th" to "ประเด็นสำคัญ\n• วัดได้ 11 ms บน iPad Pro อยู่ในเกณฑ์ ส่วน Android รุ่นกลางยังไม่ได้วัด\n• การปล่อยติดที่คีย์เซ็นชื่อจริง ไม่ใช่ปัญหาโค้ด\n• สัปดาห์หน้า: เขียนขั้นตอนแทรกเสียงลงในหน้าไว้ในคู่มือ\n\n(หน้านี้เป็นตัวอย่าง แก้ไขได้ทั้งหมด และลบทั้งเล่มได้)"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "sample_meeting_p1_title" to mapOf(
             "zh-Hant" to "產品週會 — 第 38 週",
             "en" to "Product weekly — week 38",
@@ -5810,10 +5918,7 @@ object LocalizationStrings {
             "ja" to "録音",
             "ko" to "녹음",
             "th" to "บันทึกเสียง"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_welcome_pill_type" to mapOf(
             "zh-Hant" to "打字",
             "en" to "Typing",
@@ -6349,7 +6454,10 @@ object LocalizationStrings {
             "ja" to "8光星",
             "ko" to "8각 별",
             "th" to "ดาวแปดแฉก"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_storeddata" to mapOf(
             "zh-Hant" to "已儲存資料",
             "en" to "Stored data",
@@ -6453,10 +6561,7 @@ object LocalizationStrings {
             "ja" to "線の色",
             "ko" to "선 색상",
             "th" to "สีเส้น"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_studio" to mapOf(
             "zh-Hant" to "形狀與流程圖",
             "en" to "Shapes & Flowcharts",
@@ -6992,7 +7097,10 @@ object LocalizationStrings {
             "ja" to "右へ結合",
             "ko" to "오른쪽 병합",
             "th" to "ผสานไปทางขวา"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "table_preview" to mapOf(
             "zh-Hant" to "預覽",
             "en" to "Preview",
@@ -7096,10 +7204,7 @@ object LocalizationStrings {
             "ja" to "スタイル",
             "ko" to "스타일",
             "th" to "สไตล์"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "text_tab_symbols" to mapOf(
             "zh-Hant" to "符號",
             "en" to "Symbols",
@@ -7635,7 +7740,10 @@ object LocalizationStrings {
             "ja" to "モバイル ナビゲーションバー",
             "ko" to "모바일 상단 내비게이션 바",
             "th" to "แถบนำทางด้านบนบนมือถือ"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "wireframe_tabbar" to mapOf(
             "zh-Hant" to "底部五分頁 TabBar",
             "en" to "Bottom tab bar (5 tabs)",
