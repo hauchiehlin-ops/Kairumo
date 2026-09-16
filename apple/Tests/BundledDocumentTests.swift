@@ -129,11 +129,91 @@ final class BundledDocumentTests: XCTestCase {
 
     func testEveryLocaleHasTheSameSections() throws {
         // 少一節就是某個語系的使用者看不到那個功能。
+        //
+        // **每一節都要數，不是只數其中一節。** 原本這裡只驗 `data`，所以
+        // 新增一節卻只翻了其中兩個語系的話，測試照樣全綠 —— 而那正是這份
+        // 手冊最容易出的錯：內容是六份，改的人只會改自己看得懂的那幾份。
         let manual = try manualScript()
-        XCTAssertEqual(
-            sectionCount(of: "data", in: manual), 6,
-            "六個語系都要有「資料備份與同步」一節")
+        for id in Self.manualSectionIDs {
+            XCTAssertEqual(
+                sectionCount(of: id, in: manual), 6,
+                "「\(id)」這一節不是六個語系都有")
+        }
     }
+
+    func testTheManualCoversThisReleasesFeatures() throws {
+        // 手冊沒寫的功能，對使用者而言就是沒做。
+        let manual = try manualScript()
+        for id in ["firstrun", "keys", "multi"] {
+            XCTAssertGreaterThan(
+                sectionCount(of: id, in: manual), 0, "手冊缺少「\(id)」一節")
+        }
+    }
+
+    func testNonEnglishManualsDoNotQuoteEnglishButtonNames() throws {
+        // 按鈕名是**使用者在畫面上看到的字**。App 在這些語系下是翻好的，
+        // 手冊卻寫「Start Recording」而畫面上寫「録音開始」—— 讀手冊的人
+        // 會在畫面上找一顆不存在的按鈕。那比沒寫更糟。
+        //
+        // 抓的是**引號裡的整串英文**，不是散在句子裡的英文字 ——
+        // Kairumo、PDF、3D 這類專有名詞本來就不該翻。
+        let manual = try manualScript()
+        for locale in ["zh-Hans", "ja", "ko", "th"] {
+            let block = Self.localeBlock(locale, in: manual)
+            XCTAssertFalse(block.isEmpty, "找不到 \(locale) 的手冊內容")
+            for quoted in Self.quotedRuns(in: block) {
+                XCTAssertFalse(
+                    Self.looksLikeUntranslatedUIName(quoted),
+                    "\(locale) 的手冊還在引用英文按鈕名「\(quoted)」")
+            }
+        }
+    }
+
+    /// 取出某個語系那一段內容（到下一個語系開始為止）。
+    private static func localeBlock(_ locale: String, in manual: String) -> String {
+        guard let start = manual.range(of: "\"\(locale)\": {") else { return "" }
+        let rest = manual[start.upperBound...]
+        // 語系鍵一律寫在第二層縮排，用它當結束標記。
+        if let next = rest.range(of: "\n  \"", options: []) {
+            return String(rest[..<next.lowerBound])
+        }
+        return String(rest)
+    }
+
+    /// 引號（「」與 “”）裡的內容。
+    private static func quotedRuns(in text: String) -> [String] {
+        var runs: [String] = []
+        for (open, close) in [(Character("\u{300C}"), Character("\u{300D}")),
+                              (Character("\u{201C}"), Character("\u{201D}"))] {
+            var current: String?
+            for ch in text {
+                if ch == open { current = ""; continue }
+                if ch == close, let value = current { runs.append(value); current = nil; continue }
+                if current != nil { current?.append(ch) }
+            }
+        }
+        return runs
+    }
+
+    /// 這串引號內容看起來是不是「忘了翻的按鈕名」。
+    ///
+    /// 專有名詞不算：Kairumo、PDF、3D 這些本來就不翻。純符號也不算 ——
+    /// ⌘F、⋯ 這類在每個語系裡都長一樣。
+    private static func looksLikeUntranslatedUIName(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespaces)
+        guard trimmed.count > 2 else { return false }   // 「OK」在日文版就是 OK
+        guard trimmed.allSatisfy({ $0.isASCII }) else { return false }
+        guard trimmed.contains(where: { $0.isLetter }) else { return false }
+        let proper = ["Kairumo", "PDF", "3D", "Wi-Fi", "ws://", "AES", "ok"]
+        return !proper.contains { trimmed.contains($0) }
+    }
+
+    /// 手冊應該有的每一節。新增一節時要一起加進來。
+    private static let manualSectionIDs = [
+        "start", "firstrun", "home", "newnote", "editor", "write", "type",
+        "pages", "insert", "data", "comment", "collab", "record", "export",
+        "keys", "multi", "language", "faq"
+    ]
 
     /// 手冊裡有幾個語系宣告了這個 section id。
     ///

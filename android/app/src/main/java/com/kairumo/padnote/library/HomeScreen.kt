@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -123,6 +124,13 @@ fun HomeScreen(
     onAssetLibrary: () -> Unit,
     /** 選同步資料夾。原本只在編輯器的「⋯」裡，使用者要先開一本筆記才找得到。 */
     onChooseSyncFolder: () -> Unit,
+    /**
+     * 換介面語系。
+     *
+     * Android 原本**只有編輯器的「⋯」選單裡**有這一項 —— 使用者得先開一本
+     * 筆記才找得到換語言的地方。Apple 首頁右上角一直都有。
+     */
+    onSelectLanguage: () -> Unit,
     /** 操作說明與隱私權政策。Apple 首頁最下面有這兩張卡，Android 原本沒有。 */
     onOpenManual: () -> Unit,
     onOpenPrivacy: () -> Unit,
@@ -194,11 +202,29 @@ fun HomeScreen(
         // Apple 那邊是一個大標。少了它，第一眼看到的是一張身分卡，
         // 而使用者不知道自己在哪個畫面。
         item {
-            Text(
-                profileName,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    profileName,
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                // 圖示旁一定要有字。地球圖示在這個 App 裡代表過三件事
+                // （語系、連結卡片、線上協同），光看圖示分不出按下去會發生
+                // 什麼 —— 而換介面語言是一個按錯了要摸索回來的動作。
+                TextButton(onClick = onSelectLanguage) {
+                    Icon(
+                        KairumoIcons.Globe,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(l("language"))
+                }
+            }
         }
 
         // ── 1. 身分 ──────────────────────────────────────────────

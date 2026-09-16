@@ -9,7 +9,7 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.unit.dp
 
 /**
- * 自己帶的兩個圖示（工作項 S-62）。
+ * 自己帶的幾個圖示（工作項 S-62）。
  *
  * # 為什麼不直接用 material-icons-extended
  *
@@ -112,6 +112,53 @@ object KairumoIcons {
             ) {
                 moveTo(12f, 12f)
                 verticalLineTo(21.4f)
+            }
+        }.build()
+    }
+
+    /**
+     * 地球。用於「介面語系」。
+     *
+     * 經線畫成一個窄橢圓、緯線畫成兩條水平弦 —— 只有一個圓加十字的話，
+     * 在 18dp 下讀起來像個時鐘或準星，不像地球。
+     */
+    val Globe: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "KairumoGlobe",
+            defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f
+        ).apply {
+            // 外圈
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.7f,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(12f, 3f)
+                arcToRelative(9f, 9f, 0f, true, true, -0.01f, 0f)
+                close()
+            }
+            // 經線（窄橢圓，用兩段弧接起來）
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.7f,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(12f, 3f)
+                arcTo(5.2f, 9f, 0f, false, true, 12f, 21f)
+                arcTo(5.2f, 9f, 0f, false, true, 12f, 3f)
+                close()
+            }
+            // 緯線
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.7f,
+                strokeLineCap = StrokeCap.Round
+            ) {
+                moveTo(3.4f, 9.2f)
+                horizontalLineTo(20.6f)
+                moveTo(3.4f, 14.8f)
+                horizontalLineTo(20.6f)
             }
         }.build()
     }

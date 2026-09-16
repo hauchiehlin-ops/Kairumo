@@ -286,6 +286,8 @@ private fun NotebookHome(
     var sort by remember { mutableStateOf(NotebookLibrary.Sort.MODIFIED) }
     var revision by remember { mutableIntStateOf(0) }
     var creatingNotebook by remember { mutableStateOf(false) }
+    // 換介面語系。原本只有編輯器的「⋯」裡有，使用者得先開一本筆記才找得到。
+    var homeLanguagePicker by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         AppCommands.events.collect { command ->
             if (command is AppCommand.NewNotebook) creatingNotebook = true
@@ -483,9 +485,24 @@ private fun NotebookHome(
             onDeleteFolder = { deletingFolder = it },
             onAssetLibrary = { homeAssets = true },
             onChooseSyncFolder = { syncFolderPicker.launch(null) },
+            onSelectLanguage = { homeLanguagePicker = true },
             onOpenManual = { homeDocs = "manual/index.html" },
             onOpenPrivacy = { homeDocs = "legal/privacy.html" },
             onInsertRecording = { insertingRecording = it }
+        )
+    }
+
+    if (homeLanguagePicker) {
+        LanguagePickerDialog(
+            current = deviceLanguageTag(),
+            onPick = { tag ->
+                setAppLanguage(activity, tag)
+                homeLanguagePicker = false
+                // 換語言要整個畫面重畫。重建 Activity 是最省事也最可靠的做法 ——
+                // 逐個字串狀態去追，一定會漏掉幾個沒有重組的地方。
+                activity.recreate()
+            },
+            onDismiss = { homeLanguagePicker = false }
         )
     }
 

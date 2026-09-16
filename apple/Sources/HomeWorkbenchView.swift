@@ -266,8 +266,18 @@ public struct HomeWorkbenchView: View {
                             }
                         }
                     } label: {
-                        Image(systemName: "globe")
-                            .font(.system(size: DS.Icon.small, weight: .medium))
+                        // 圖示旁一定要有字。地球圖示在這個 App 裡代表過三件事
+                        // （語系、連結卡片、線上協同），光看圖示分不出按下去
+                        // 會發生什麼 —— 而換介面語言是一個按錯了要摸索回來的動作。
+                        // 用 HStack 而不是 `Label` + `.labelStyle(.titleAndIcon)`：
+                        // 工具列會自己覆寫 Menu 標籤的 label style，那個修飾子
+                        // **編得過但沒有作用** —— 畫出來還是只有圖示（實測過）。
+                        HStack(spacing: DS.Space.xxs) {
+                            Image(systemName: "globe")
+                                .font(.system(size: DS.Icon.small, weight: .medium))
+                            Text(localizationManager.localized("language"))
+                                .font(.subheadline)
+                        }
                     }
                     .accessibilityLabel(localizationManager.localized("select_language"))
                     .help(localizationManager.localized("select_language"))
