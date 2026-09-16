@@ -37,11 +37,15 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.runtime.LaunchedEffect
 import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.LocalContext
+import com.kairumo.padnote.ui.AppCommand
+import com.kairumo.padnote.ui.AppCommands
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.runtime.getValue
@@ -126,6 +130,16 @@ fun HomeScreen(
     onInsertRecording: (RecordingIndex.Recording) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
+    // Ctrl+F 把游標送進搜尋框（見 ui/AppCommands.kt）。
+    val searchFocus = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        AppCommands.events.collect { command ->
+            if (command is AppCommand.FocusSearch) {
+                // 畫面還沒佈局完就請求焦點會丟例外（搜尋框此時還不存在）。
+                runCatching { searchFocus.requestFocus() }
+            }
+        }
+    }
     val searchContext = LocalContext.current
 
     // 搜尋時跨整個筆記庫，不是只搜眼前這一層 —— 人在資料夾裡搜尋卻只搜得到
@@ -234,7 +248,9 @@ fun HomeScreen(
                 placeholder = { Text(l("search_placeholder"), maxLines = 1) },
                 singleLine = true,
                 shape = RoundedCornerShape(12.dp),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(searchFocus)
             )
         }
 

@@ -1,6 +1,7 @@
 package com.kairumo.padnote
 
 import android.os.Bundle
+import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Arrangement
@@ -85,6 +86,8 @@ import com.kairumo.padnote.library.HomeScreen
 import com.kairumo.padnote.library.DocumentTemplateCatalog
 import androidx.compose.runtime.CompositionLocalProvider
 import com.kairumo.padnote.ui.LocalAppLanguage
+import com.kairumo.padnote.ui.AppCommand
+import com.kairumo.padnote.ui.AppCommands
 import com.kairumo.padnote.ui.KairumoTheme
 import com.kairumo.padnote.library.NewNotebookDialog
 import com.kairumo.padnote.library.RenameNotebookDialog
@@ -185,6 +188,26 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    /**
+     * 實體鍵盤快捷鍵（見 `ui/AppCommands.kt`）。
+     *
+     * 用 `onKeyDown` 而不是 `dispatchKeyEvent`：後者在畫面拿到按鍵**之前**
+     * 就攔截，文字框裡的 Ctrl+A（全選）之類會被我們吃掉。`onKeyDown` 是
+     * 沒有人處理時才輪到 Activity —— 正好是快捷鍵該有的位置。
+     */
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        val command = AppCommands.command(
+            keyCode = keyCode,
+            ctrlPressed = event?.isCtrlPressed == true,
+            shiftPressed = event?.isShiftPressed == true
+        )
+        if (command != null) {
+            AppCommands.send(command)
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
 }
 
 /**
@@ -237,9 +260,16 @@ private fun NotebookHome(
     fun l(key: String) = LocalizationStrings.localized(key, lang)
 
     val device = remember { deviceId(activity) }
+    // 鍵盤快捷鍵：Ctrl+Shift+N 新增筆記（見 ui/AppCommands.kt）。
+    // 搜尋的 Ctrl+F 在 HomeScreen 裡收 —— 焦點請求器在搜尋框旁邊。
     var sort by remember { mutableStateOf(NotebookLibrary.Sort.MODIFIED) }
     var revision by remember { mutableIntStateOf(0) }
     var creatingNotebook by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        AppCommands.events.collect { command ->
+            if (command is AppCommand.NewNotebook) creatingNotebook = true
+        }
+    }
     var renaming by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
     var deleting by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
     var moving by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
@@ -1075,6 +1105,26 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     // 筆刷、顏色、筆寬。在此之前 Android 只有一支固定的黑色鋼筆，
     // 連橡皮擦都選不到 —— 核心一直支援，缺的只是 UI。
     var inkTool by remember { mutableStateOf(InkTool.FOUNTAIN_PEN) }
+    // Ctrl+1–Ctrl+6 選工具。索引超過工具數就忽略 —— Apple 有九支、
+    // Android 只有六支，按 Ctrl+7 不該讓 App 當掉。
+    LaunchedEffect(Unit) {
+        AppCommands.events.collect { command ->
+            when (command) {
+                is AppCommand.SelectTool ->
+                    InkTool.entries.getOrNull(command.index)?.let { inkTool = it }
+                // 切回手寫時要清掉選取 —— 與工具列上那顆按鈕做的事一樣。
+                // 只翻模式不清的話，畫面上會浮著一組在手寫模式下按不動的把手。
+                is AppCommand.ToggleEditorMode ->
+                    if (editorMode == EditorMode.DRAW) {
+                        editorMode = EditorMode.TYPE
+                    } else {
+                        editorMode = EditorMode.DRAW
+                        selectedTextId = null
+                    }
+                else -> Unit
+            }
+        }
+    }
     var inkColorHex by remember { mutableStateOf("#000000") }
     var inkWidth by remember { mutableStateOf(3f) }
     var showStatus by remember { mutableStateOf(false) }
