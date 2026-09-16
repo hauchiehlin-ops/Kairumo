@@ -1366,6 +1366,18 @@ public struct NotebookEditorView: View {
                 .opacity(0)
                 .allowsHitTesting(false)
             }
+            // 實體鍵盤快捷鍵（見 AppCommands.swift）。
+            .onReceive(NotificationCenter.default.publisher(for: AppCommand.toggleEditorMode)) { _ in
+                let next: EditorMode = (editorMode == .draw) ? .type : .draw
+                saveCurrentPageDrawing()
+                withAnimation(.easeInOut(duration: 0.18)) { editorMode = next }
+                flashModeBadge()
+            }
+            .onReceive(NotificationCenter.default.publisher(for: AppCommand.selectTool)) { note in
+                guard let index = note.object as? Int,
+                      EditorToolType.allCases.indices.contains(index) else { return }
+                selectedTool = EditorToolType.allCases[index]
+            }
         }
         .background(Color(uiColor: .systemGroupedBackground))
         .navigationBarBackButtonHidden(true)

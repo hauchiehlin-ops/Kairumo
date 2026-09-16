@@ -14,6 +14,12 @@ import PadnoteCore
 /// 應用程式主入口範例（支援 iOS、iPadOS 與 Mac Catalyst 通用）
 @main
 struct KairumoApp: App {
+    /// 實體鍵盤快捷鍵靠它註冊（見 `AppCommands.swift`）。
+    ///
+    /// 純 SwiftUI 的 App 沒有 delegate，而 `buildMenu(with:)` 需要一個 ——
+    /// 命令沿著響應鏈往上找不到人處理時，最後會落到它身上。
+    @UIApplicationDelegateAdaptor(KairumoAppDelegate.self) private var appDelegate
+
     init() {
         // 啟動時確認 Rust Core 與版本狀態
         #if canImport(PadnoteCore)

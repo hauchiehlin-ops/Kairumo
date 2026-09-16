@@ -22,6 +22,8 @@ public struct HomeWorkbenchView: View {
     @StateObject private var localizationManager = LocalizationManager.shared
 
     @State private var searchText: String = ""
+    /// ⌘F 用來把游標送進搜尋框。
+    @FocusState private var searchFieldFocused: Bool
     @State private var viewingDocument: BundledDocument? = nil
     /// 正在挑「要插進哪一本筆記」的錄音。
     @State private var insertingRecording: AudioRecordingRecord? = nil
@@ -222,6 +224,17 @@ public struct HomeWorkbenchView: View {
                 }
             }
             .background(Color(uiColor: .systemGroupedBackground))
+            // 實體鍵盤快捷鍵（見 AppCommands.swift）。
+            .onReceive(NotificationCenter.default.publisher(for: AppCommand.newNotebook)) { _ in
+                newNoteTitle = "\(localizationManager.localized("untitled_note")) \(notebookStore.notebooks.count + 1)"
+                selectedTemplate = .blank
+                selectedDocTemplateId = nil
+                expandedDocTheme = nil
+                showNewNotebookSheet = true
+            }
+            .onReceive(NotificationCenter.default.publisher(for: AppCommand.focusSearch)) { _ in
+                searchFieldFocused = true
+            }
             // 標題改由內容欄自己畫（見上面）。導覽列只留一個 inline 標題，
             // 捲動時仍然看得到自己在哪一頁。
             // 標題由內容欄自己畫，導覽列就不要再寫一次 —— 兩個「You」
@@ -487,6 +500,7 @@ public struct HomeWorkbenchView: View {
                 .foregroundColor(.secondary)
             TextField(localizationManager.localized("search_placeholder"), text: $searchText)
                 .textFieldStyle(.plain)
+                .focused($searchFieldFocused)
             if !searchText.isEmpty {
                 Button {
                     searchText = ""
