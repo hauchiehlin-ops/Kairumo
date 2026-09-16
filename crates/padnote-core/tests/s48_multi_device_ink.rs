@@ -26,6 +26,7 @@ fn points(x: f32) -> Vec<StrokePoint> {
             tilt: 0.3,
             azimuth: 1.0,
             dt_us: if i == 0 { 0 } else { 8_333 },
+            roll: 0.0,
         })
         .collect()
 }

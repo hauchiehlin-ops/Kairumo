@@ -8,8 +8,8 @@
 //! 不處理的話掌拒只擋得住一半的情況。
 
 use padnote_input::{
-    ArbiterConfig, InputMode, Phase, PointerArbiter, PointerEvent, PointerKind, PressureAction,
-    PressureCurve, Verdict,
+    ArbiterConfig, InputMode, PenAction, PenControl, PenControlMap, PenOutcome, PenState, Phase,
+    PointerArbiter, PointerEvent, PointerKind, PressureAction, PressureCurve, Verdict,
 };
 use std::sync::Mutex;
 
@@ -386,5 +386,205 @@ mod tests {
         assert!(a.is_pen_down());
         a.reset();
         assert!(!a.is_pen_down());
+    }
+}
+
+// ── 筆身控制項（工作項 S-40 / S-67）─────────────────────────────
+
+/// 筆身上的一個實體動作。
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+pub enum FfiPenControl {
+    DoubleTap,
+    Squeeze,
+    BarrelPrimary,
+    BarrelSecondary,
+    Invert,
+}
+
+impl From<FfiPenControl> for PenControl {
+    fn from(c: FfiPenControl) -> Self {
+        match c {
+            FfiPenControl::DoubleTap => Self::DoubleTap,
+            FfiPenControl::Squeeze => Self::Squeeze,
+            FfiPenControl::BarrelPrimary => Self::BarrelPrimary,
+            FfiPenControl::BarrelSecondary => Self::BarrelSecondary,
+            FfiPenControl::Invert => Self::Invert,
+        }
+    }
+}
+
+/// 可以指派給筆身動作的行為。
+#[derive(Clone, Copy, Debug, uniffi::Enum)]
+pub enum FfiPenAction {
+    None,
+    Eraser,
+    LastBrush,
+    InkAttributes,
+    Lasso,
+    Undo,
+    Redo,
+    Ruler,
+}
+
+impl From<FfiPenAction> for PenAction {
+    fn from(a: FfiPenAction) -> Self {
+        match a {
+            FfiPenAction::None => Self::None,
+            FfiPenAction::Eraser => Self::Eraser,
+            FfiPenAction::LastBrush => Self::LastBrush,
+            FfiPenAction::InkAttributes => Self::InkAttributes,
+            FfiPenAction::Lasso => Self::Lasso,
+            FfiPenAction::Undo => Self::Undo,
+            FfiPenAction::Redo => Self::Redo,
+            FfiPenAction::Ruler => Self::Ruler,
+        }
+    }
+}
+
+impl From<PenAction> for FfiPenAction {
+    fn from(a: PenAction) -> Self {
+        match a {
+            PenAction::None => Self::None,
+            PenAction::Eraser => Self::Eraser,
+            PenAction::LastBrush => Self::LastBrush,
+            PenAction::InkAttributes => Self::InkAttributes,
+            PenAction::Lasso => Self::Lasso,
+            PenAction::Undo => Self::Undo,
+            PenAction::Redo => Self::Redo,
+            PenAction::Ruler => Self::Ruler,
+        }
+    }
+}
+
+/// 平台要執行的事。
+#[derive(Clone, Copy, Debug, PartialEq, Eq, uniffi::Enum)]
+pub enum FfiPenOutcome {
+    Nothing,
+    UseEraser,
+    UseLastBrush,
+    UseLasso,
+    ShowInkAttributes,
+    Undo,
+    Redo,
+    ToggleRuler,
+}
+
+impl From<PenOutcome> for FfiPenOutcome {
+    fn from(o: PenOutcome) -> Self {
+        match o {
+            PenOutcome::Nothing => Self::Nothing,
+            PenOutcome::UseEraser => Self::UseEraser,
+            PenOutcome::UseLastBrush => Self::UseLastBrush,
+            PenOutcome::UseLasso => Self::UseLasso,
+            PenOutcome::ShowInkAttributes => Self::ShowInkAttributes,
+            PenOutcome::Undo => Self::Undo,
+            PenOutcome::Redo => Self::Redo,
+            PenOutcome::ToggleRuler => Self::ToggleRuler,
+        }
+    }
+}
+
+/// 筆身動作的對應表。
+///
+/// 兩個平台共用這一份 —— 硬體事件各平台不同（雙擊、擠壓、側鍵位元、
+/// 反向筆頭），但「按下去要發生什麼」不該各寫一套。各寫一套的結果是
+/// 同一支筆在兩台裝置上行為不同，而使用者買的是同一支筆。
+#[derive(Debug, Default, uniffi::Object)]
+pub struct PenControls {
+    inner: Mutex<PenControlMap>,
+}
+
+#[uniffi::export]
+impl PenControls {
+    #[uniffi::constructor]
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// 從存下來的設定還原。壞掉的項目個別忽略，不是整份回預設。
+    #[uniffi::constructor]
+    pub fn decode(text: String) -> Self {
+        Self {
+            inner: Mutex::new(PenControlMap::decode(&text)),
+        }
+    }
+
+    /// 存起來。**不認得的指派會原樣帶著走**（D-04 的規則）。
+    pub fn encode(&self) -> String {
+        self.lock().encode()
+    }
+
+    pub fn action(&self, control: FfiPenControl) -> FfiPenAction {
+        self.lock().action(control.into()).into()
+    }
+
+    pub fn set_action(&self, control: FfiPenControl, action: FfiPenAction) {
+        self.lock().set(control.into(), action.into());
+    }
+
+    /// 這個動作現在要做什麼。
+    ///
+    /// `pressed` 只對「按著」的控制項（側鍵、反向筆頭）有意義；
+    /// 雙擊與擠壓一律傳 true。
+    pub fn outcome(
+        &self,
+        control: FfiPenControl,
+        pressed: bool,
+        erasing: bool,
+        lassoing: bool,
+    ) -> FfiPenOutcome {
+        self.lock()
+            .outcome(control.into(), pressed, PenState { erasing, lassoing })
+            .into()
+    }
+
+    /// 這個控制項是「按著」還是「切換」。設定畫面要用它決定怎麼說明。
+    pub fn is_momentary(&self, control: FfiPenControl) -> bool {
+        PenControl::from(control).is_momentary()
+    }
+}
+
+impl PenControls {
+    fn lock(&self) -> std::sync::MutexGuard<'_, PenControlMap> {
+        self.inner.lock().expect("筆身設定鎖中毒")
+    }
+}
+
+#[cfg(test)]
+mod pen_tests {
+    use super::*;
+
+    #[test]
+    fn the_ffi_layer_agrees_with_the_core() {
+        let c = PenControls::new();
+        assert_eq!(
+            c.outcome(FfiPenControl::BarrelPrimary, true, false, false),
+            FfiPenOutcome::UseEraser
+        );
+        assert_eq!(
+            c.outcome(FfiPenControl::BarrelPrimary, false, true, false),
+            FfiPenOutcome::UseLastBrush
+        );
+    }
+
+    #[test]
+    fn settings_survive_the_round_trip_through_the_ffi() {
+        let c = PenControls::new();
+        c.set_action(FfiPenControl::Squeeze, FfiPenAction::Undo);
+        let restored = PenControls::decode(c.encode());
+        assert!(matches!(
+            restored.action(FfiPenControl::Squeeze),
+            FfiPenAction::Undo
+        ));
+    }
+
+    #[test]
+    fn the_platforms_are_told_which_controls_are_held() {
+        // 平台拿這個決定要不要處理「放開」。分類錯的話，側鍵會變成切換，
+        // 使用者碰一下就永遠停在橡皮擦。
+        let c = PenControls::new();
+        assert!(c.is_momentary(FfiPenControl::BarrelPrimary));
+        assert!(!c.is_momentary(FfiPenControl::DoubleTap));
+        assert!(!c.is_momentary(FfiPenControl::Squeeze));
     }
 }

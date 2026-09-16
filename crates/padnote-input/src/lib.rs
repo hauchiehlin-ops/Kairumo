@@ -19,9 +19,11 @@
 //! 沒有這個機制，掌拒只能擋住「筆之後」的誤觸，擋不住最常見的那一種。
 
 pub mod arbiter;
+pub mod pen;
 pub mod pressure;
 
 pub use arbiter::{
     ArbiterConfig, Decision, InputMode, Phase, PointerArbiter, PointerEvent, PointerKind, Verdict,
 };
+pub use pen::{PenAction, PenControl, PenControlMap, PenOutcome, PenState};
 pub use pressure::{PressureAction, PressureCurve};

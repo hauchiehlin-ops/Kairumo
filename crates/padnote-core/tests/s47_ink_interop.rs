@@ -25,6 +25,7 @@ fn sample_points() -> Vec<StrokePoint> {
             tilt: 0.75,
             azimuth: 1.5,
             dt_us: 0,
+            roll: 0.0,
         },
         StrokePoint {
             x: 13.75,
@@ -33,6 +34,7 @@ fn sample_points() -> Vec<StrokePoint> {
             tilt: 0.8,
             azimuth: 1.75,
             dt_us: 8_333,
+            roll: 0.0,
         },
         StrokePoint {
             x: 60.0,
@@ -41,6 +43,7 @@ fn sample_points() -> Vec<StrokePoint> {
             tilt: 0.2,
             azimuth: 4.5,
             dt_us: 8_334,
+            roll: 0.0,
         },
     ]
 }
@@ -192,6 +195,7 @@ fn many_points_survive_the_ffi_boundary() {
             tilt: 0.3,
             azimuth: 2.0,
             dt_us: 8_333,
+            roll: 0.0,
         })
         .collect();
 

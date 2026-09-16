@@ -14,6 +14,25 @@ pub const POINT_LEN: usize = 16;
 const KIND_ADD: u8 = 1;
 const KIND_REMOVE: u8 = 2;
 
+/// 取樣點之後的**延伸區塊**識別碼（format-spec §5.4a）。
+///
+/// # 為什麼不是升版本號
+///
+/// 每一筆記錄前面都有自己的長度，而讀取器是「讀 `count` 個 16 bytes 的點，
+/// 然後照長度跳過去」。也就是說**點之後多出來的位元組，舊的讀取器本來就
+/// 會忽略**。所以加一個延伸區塊不需要動版本號，舊裝置照樣打得開檔案，
+/// 只是看不到滾動角 —— 而看不到滾動角的後果只是筆觸角度少一個維度。
+///
+/// 升版本號的代價是舊裝置直接拒絕整個檔案（`UnsupportedVersion`）。
+/// 為了一個只有某些筆才有的欄位，讓同步過去的筆記在另一台裝置上打不開，
+/// 划不來。
+///
+/// 區塊格式：`[u8 kind][u32 len][payload]`，可重複。
+const EXT_ROLL: u8 = 1;
+
+/// 延伸區塊的表頭長度：1 byte 類型 + 4 bytes 長度。
+const EXT_HEADER_LEN: usize = 5;
+
 #[derive(Debug)]
 pub enum CodecError {
     BadMagic,
@@ -92,6 +111,20 @@ impl StrokeWriter {
                     body.extend_from_slice(
                         &(p.dt_us.min(u32::from(u16::MAX)) as u16).to_le_bytes(),
                     );
+                }
+
+                // 滾動角只有少數筆回報得出來。**沒有就不寫** ——
+                // 無條件多寫 2 bytes/點會讓所有人的檔案大 12.5%，
+                // 而其中絕大多數的值都是 0。
+                if s.points.iter().any(|p| p.roll != 0.0) {
+                    let payload: Vec<u8> = s
+                        .points
+                        .iter()
+                        .flat_map(|p| enc_angle(p.roll, TAU).to_le_bytes())
+                        .collect();
+                    body.push(EXT_ROLL);
+                    body.extend_from_slice(&(payload.len() as u32).to_le_bytes());
+                    body.extend_from_slice(&payload);
                 }
             }
             InkRecord::Remove(id) => {
@@ -211,8 +244,27 @@ impl<'a> StrokeReader<'a> {
                         ),
                         azimuth: dec_angle(u16::from_le_bytes(c[12..14].try_into().unwrap()), TAU),
                         dt_us: u32::from(u16::from_le_bytes(c[14..16].try_into().unwrap())),
+                        roll: 0.0,
                     })
-                    .collect();
+                    .collect::<Vec<InkPoint>>();
+
+                // 點之後可能還有延伸區塊。不認得的**跳過**而不是報錯 ——
+                // 這裡的寬容正是舊裝置能打開新檔案的原因。
+                let mut points = points;
+                let mut tail = &pts[count * POINT_LEN..];
+                while tail.len() >= EXT_HEADER_LEN {
+                    let ext_kind = tail[0];
+                    let ext_len = u32::from_le_bytes(tail[1..5].try_into().unwrap()) as usize;
+                    let Some(payload) = tail.get(EXT_HEADER_LEN..EXT_HEADER_LEN + ext_len) else {
+                        break; // 截斷的延伸區塊：忽略，點本身已經讀到了
+                    };
+                    if ext_kind == EXT_ROLL {
+                        for (p, c) in points.iter_mut().zip(payload.as_chunks::<2>().0) {
+                            p.roll = dec_angle(u16::from_le_bytes(*c), TAU);
+                        }
+                    }
+                    tail = &tail[EXT_HEADER_LEN + ext_len..];
+                }
 
                 Ok(InkRecord::Add(Stroke {
                     id,
@@ -247,6 +299,7 @@ mod tests {
                     tilt: PI / 4.0,
                     azimuth: PI,
                     dt_us: 0,
+                    roll: 0.0,
                 },
                 InkPoint {
                     x: 100.0,
@@ -255,6 +308,7 @@ mod tests {
                     tilt: 0.0,
                     azimuth: 0.0,
                     dt_us: 8_333,
+                    roll: 0.0,
                 },
             ],
         }
@@ -365,5 +419,139 @@ mod tests {
         assert_eq!(&bytes[0..8], &MAGIC);
         assert_eq!(u16::from_le_bytes([bytes[8], bytes[9]]), VERSION);
         assert_eq!(&bytes[16..32], &[7u8; 16]);
+    }
+}
+
+#[cfg(test)]
+mod roll_tests {
+    use super::*;
+
+    fn stroke_with_roll(rolls: &[f32]) -> Stroke {
+        Stroke {
+            id: Uuid::now_v7(),
+            started_at: NotebookTime::from_micros(1),
+            tool: Tool::Highlighter,
+            color_rgba8: [0, 0, 0, 255],
+            base_width: 3.0,
+            points: rolls
+                .iter()
+                .enumerate()
+                .map(|(i, &roll)| InkPoint {
+                    x: i as f32,
+                    y: 0.0,
+                    pressure: 0.5,
+                    tilt: 0.0,
+                    azimuth: 0.0,
+                    dt_us: 8_000,
+                    roll,
+                })
+                .collect(),
+        }
+    }
+
+    fn roundtrip(s: &Stroke) -> Stroke {
+        let mut w = StrokeWriter::new(Uuid::now_v7());
+        w.push(&InkRecord::Add(s.clone()));
+        let bytes = w.into_bytes();
+        match StrokeReader::new(&bytes)
+            .unwrap()
+            .read_all()
+            .unwrap()
+            .remove(0)
+        {
+            InkRecord::Add(s) => s,
+            other => panic!("讀回來的不是 Add：{other:?}"),
+        }
+    }
+
+    #[test]
+    fn roll_survives_a_round_trip() {
+        let original = stroke_with_roll(&[0.0, 1.5, 3.0, TAU - 0.1]);
+        let back = roundtrip(&original);
+        for (a, b) in original.points.iter().zip(&back.points) {
+            assert!(
+                (a.roll - b.roll).abs() < 1e-3,
+                "滾動角走樣了：{} → {}",
+                a.roll,
+                b.roll
+            );
+        }
+    }
+
+    #[test]
+    fn a_stroke_without_roll_costs_nothing_extra() {
+        // 無條件多寫 2 bytes/點會讓所有人的檔案大 12.5%，
+        // 而其中絕大多數的值都是 0。
+        let plain = stroke_with_roll(&[0.0, 0.0, 0.0]);
+        let rolled = stroke_with_roll(&[0.0, 1.0, 2.0]);
+
+        let size = |s: &Stroke| {
+            let mut w = StrokeWriter::new(Uuid::now_v7());
+            w.push(&InkRecord::Add(s.clone()));
+            w.into_bytes().len()
+        };
+
+        assert_eq!(
+            size(&plain),
+            HEADER_LEN + 4 + 1 + 38 + 3 * POINT_LEN,
+            "沒有滾動角的筆畫不該多出任何位元組"
+        );
+        assert_eq!(size(&rolled), size(&plain) + EXT_HEADER_LEN + 3 * 2);
+    }
+
+    #[test]
+    fn an_older_reader_still_opens_a_file_that_has_roll() {
+        // **這是整個設計的重點。** 升版本號的話，舊裝置會直接拒絕整個檔案；
+        // 用延伸區塊的話，舊裝置讀得到每一個點，只是看不到滾動角。
+        //
+        // 這裡用「只讀 count 個 16 bytes 的點、其餘照長度跳過」模擬舊的讀取器
+        // —— 那正是本檔 v1 讀取器的行為。
+        let rolled = stroke_with_roll(&[0.5, 1.0]);
+        let mut w = StrokeWriter::new(Uuid::now_v7());
+        w.push(&InkRecord::Add(rolled.clone()));
+        let bytes = w.into_bytes();
+
+        // 版本號沒有動 —— 動了舊讀取器就會回 UnsupportedVersion。
+        assert_eq!(u16::from_le_bytes([bytes[8], bytes[9]]), VERSION);
+
+        let body_len = u32::from_le_bytes(bytes[32..36].try_into().unwrap()) as usize;
+        let body = &bytes[36..36 + body_len];
+        let count = u32::from_le_bytes(body[35..39].try_into().unwrap()) as usize;
+        assert_eq!(count, 2);
+
+        let pts = &body[39..];
+        assert!(
+            pts.len() > count * POINT_LEN,
+            "延伸區塊沒有被寫進去，這個測試就沒有在驗東西"
+        );
+        // 舊讀取器只取前 count 個點，剩下的位元組對它來說不存在。
+        let first_x = f32::from_le_bytes(pts[0..4].try_into().unwrap());
+        assert_eq!(first_x, 0.0);
+        let second_x = f32::from_le_bytes(pts[POINT_LEN..POINT_LEN + 4].try_into().unwrap());
+        assert_eq!(second_x, 1.0);
+    }
+
+    #[test]
+    fn an_unknown_extension_block_is_skipped_instead_of_breaking_the_file() {
+        // 反過來的相容性：**新讀取器遇到更新的延伸區塊**也不能壞掉，
+        // 否則下一次加欄位時，這一版又變成打不開新檔案的那一個。
+        let s = stroke_with_roll(&[0.0, 0.0]);
+        let mut w = StrokeWriter::new(Uuid::now_v7());
+        w.push(&InkRecord::Add(s.clone()));
+        let mut bytes = w.into_bytes();
+
+        // 手工在記錄尾端塞一個沒人認得的延伸區塊，並修正記錄長度。
+        let extra: Vec<u8> = vec![200, 3, 0, 0, 0, 0xAA, 0xBB, 0xCC];
+        let old_len = u32::from_le_bytes(bytes[32..36].try_into().unwrap()) as usize;
+        let new_len = (old_len + extra.len()) as u32;
+        bytes[32..36].copy_from_slice(&new_len.to_le_bytes());
+        bytes.extend_from_slice(&extra);
+
+        let back = StrokeReader::new(&bytes).unwrap().read_all().unwrap();
+        assert_eq!(back.len(), 1);
+        match &back[0] {
+            InkRecord::Add(s) => assert_eq!(s.points.len(), 2),
+            other => panic!("不認得的延伸區塊把記錄弄壞了：{other:?}"),
+        }
     }
 }

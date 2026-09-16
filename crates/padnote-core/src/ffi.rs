@@ -146,6 +146,12 @@ pub struct StrokePoint {
     pub azimuth: f32,
     /// 距前一點的微秒差。
     pub dt_us: u32,
+    /// 筆桿沿自身軸線的旋轉角，0–2π 弧度。**回報不出來時填 0。**
+    ///
+    /// 用得到它的是扁頭筆（書法筆、麥克筆）—— 轉動筆桿會改變筆觸的寬窄
+    /// 方向，那是壓感與傾角都表達不了的一個維度。
+    #[uniffi(default = 0.0)]
+    pub roll: f32,
 }
 
 #[derive(Clone, Debug, uniffi::Record)]
@@ -1682,6 +1688,7 @@ fn from_ink_point(p: InkPoint) -> StrokePoint {
         tilt: p.tilt,
         azimuth: p.azimuth,
         dt_us: p.dt_us,
+        roll: p.roll,
     }
 }
 
@@ -1693,6 +1700,7 @@ fn to_ink_point(p: StrokePoint) -> InkPoint {
         tilt: p.tilt,
         azimuth: p.azimuth,
         dt_us: p.dt_us,
+        roll: p.roll,
     }
 }
 
@@ -2066,6 +2074,7 @@ mod tests {
                 tilt: 0.0,
                 azimuth: 0.0,
                 dt_us: 0,
+                roll: 0.0,
             },
             StrokePoint {
                 x: 10.0,
@@ -2074,6 +2083,7 @@ mod tests {
                 tilt: 0.0,
                 azimuth: 0.0,
                 dt_us: 8_000,
+                roll: 0.0,
             },
         ]
     }
@@ -2122,6 +2132,7 @@ mod tests {
                     tilt: 0.0,
                     azimuth: 0.0,
                     dt_us: 0,
+                    roll: 0.0,
                 },
                 StrokePoint {
                     x: x + 5.0,
@@ -2130,6 +2141,7 @@ mod tests {
                     tilt: 0.0,
                     azimuth: 0.0,
                     dt_us: 8_000,
+                    roll: 0.0,
                 },
             ],
         )
