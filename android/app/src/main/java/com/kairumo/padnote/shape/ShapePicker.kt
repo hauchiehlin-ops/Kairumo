@@ -1,6 +1,7 @@
 package com.kairumo.padnote.shape
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -24,6 +25,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -64,13 +67,16 @@ fun ShapePicker(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(l("shape_section_basic"), style = MaterialTheme.typography.titleSmall)
-                KindGrid(allShapeKinds().filter { it !in flowchartShapeKinds() }) { kind ->
+                KindGrid(
+                    allShapeKinds().filter { it !in flowchartShapeKinds() },
+                    languageTag
+                ) { kind ->
                     onCommit(listOf(NoteShape(kindName = NoteShape.nameOf(kind))), emptyList())
                 }
 
                 HorizontalDivider()
                 Text(l("shape_section_flowchart"), style = MaterialTheme.typography.titleSmall)
-                KindGrid(flowchartShapeKinds()) { kind ->
+                KindGrid(flowchartShapeKinds(), languageTag) { kind ->
                     onCommit(listOf(NoteShape(kindName = NoteShape.nameOf(kind))), emptyList())
                 }
 
@@ -125,29 +131,51 @@ private fun insert(template: uniffi.padnote_core.FfiTemplate):
 }
 
 @Composable
-private fun KindGrid(kinds: List<FfiShapeKind>, onPick: (FfiShapeKind) -> Unit) {
+private fun KindGrid(
+    kinds: List<FfiShapeKind>,
+    languageTag: String,
+    onPick: (FfiShapeKind) -> Unit
+) {
+    // **格子刻意做小。** 這裡的圖只是「這是什麼形狀」的示意，不是預覽 ——
+    // 一格 84dp 的話，五十幾個形狀要捲好幾屏才看得完，而使用者在找的
+    // 那一個十之八九不在第一屏。插進畫布之後尺寸本來就要自己調。
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(84.dp),
-        modifier = Modifier.heightIn(max = 200.dp)
+        columns = GridCells.Adaptive(52.dp),
+        modifier = Modifier.heightIn(max = 220.dp)
     ) {
         items(kinds) { kind ->
-            TextButton(onClick = { onPick(kind) }) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    ShapeThumbnail(kind)
-                    Text(NoteShape.nameOf(kind), fontSize = 9.sp, maxLines = 1)
-                    // ISO 5807 的語意直接寫出來 —— 沒有人記得哪個符號代表什麼。
-                    shapeSemantic(kind)?.let {
-                        Text(
-                            it,
-                            fontSize = 8.sp,
-                            maxLines = 1,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                }
+            val label = shapeKindLabel(kind, languageTag)
+            val semantic = shapeSemantic(kind)
+            Box(
+                Modifier
+                    .padding(3.dp)
+                    .size(46.dp)
+                    .clickable { onPick(kind) }
+                    // 名稱與 ISO 5807 的語意進無障礙標籤，格子本身維持乾淨。
+                    .semantics {
+                        contentDescription = if (semantic != null) "$label（$semantic）" else label
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                // 名稱與 ISO 5807 的語意改走長按說明 —— 每格掛兩行字的話，
+                // 格子就小不下來。
+                ShapeThumbnail(kind)
             }
         }
     }
+}
+
+/**
+ * 形狀的顯示名稱。
+ *
+ * 走語系表而不是 [NoteShape.nameOf] —— 後者是**持久化用的識別字**
+ * （小寫的列舉名），拿來顯示的話中文介面裡會出現「arrowblockright」。
+ */
+internal fun shapeKindLabel(kind: FfiShapeKind, languageTag: String): String {
+    val id = NoteShape.nameOf(kind)
+    val localized = LocalizationStrings.localized("shape_kind_$id", languageTag)
+    // 語系表裡沒有的（核心加了形狀但字串還沒補）退回識別字，不要給空白。
+    return if (localized == "shape_kind_$id") id else localized
 }
 
 /** 形狀的縮圖。與畫布上畫的是同一組頂點。 */

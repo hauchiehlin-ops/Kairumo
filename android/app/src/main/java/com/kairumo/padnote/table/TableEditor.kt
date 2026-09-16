@@ -71,6 +71,20 @@ fun TableEditor(
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                // 即時預覽。沒有它的話，欄寬、字級、合併與表頭底色都要
+                // 「插進去才知道」—— 而那時候面板已經關了。與畫布走同一份算繪。
+                Text(l("table_preview"), style = MaterialTheme.typography.labelSmall)
+                Box(
+                    Modifier
+                        .heightIn(max = 160.dp)
+                        .horizontalScroll(rememberScrollState())
+                        .verticalScroll(rememberScrollState())
+                ) {
+                    TablePreview(table = draft, density = 1f)
+                }
+
+                HorizontalDivider()
+
                 // 格子
                 Column(
                     Modifier

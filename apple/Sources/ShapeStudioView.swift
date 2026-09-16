@@ -144,40 +144,59 @@ public struct ShapeStudioView: View {
         }
     }
 
+    /// 一格的邊長。
+    ///
+    /// **刻意做小。** 這裡的圖只是「這是什麼形狀」的示意，不是預覽 ——
+    /// 每格 88pt 的話，五十幾個形狀要捲四五個螢幕才看得完，而使用者在
+    /// 找的那一個十之八九不在第一屏。插進畫布之後尺寸本來就要自己調。
+    private static let cellSide: CGFloat = 56
+
     private func section(title: String, kinds: [FfiShapeKind]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(title).font(.headline)
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 88), spacing: 10)], spacing: 10) {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: Self.cellSide), spacing: 8)],
+                spacing: 8
+            ) {
                 ForEach(kinds, id: \.self) { kind in
                     Button {
                         insert(kind)
                     } label: {
-                        VStack(spacing: 6) {
-                            ShapeThumbnail(kind: kind)
-                                .frame(height: 40)
-                            Text(NoteShapeAttachment.name(of: kind))
-                                .font(.caption2)
-                                .lineLimit(1)
-                            // ISO 5807 的語意直接寫出來 —— 使用者不必記得
-                            // 哪個符號代表什麼。
-                            if let semantic = shapeSemantic(kind: kind) {
-                                Text(semantic)
-                                    .font(.system(size: 9))
-                                    .foregroundStyle(.secondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                        .frame(maxWidth: .infinity)
-                        .padding(8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(Color(uiColor: .secondarySystemBackground))
-                        )
+                        ShapeThumbnail(kind: kind)
+                            .frame(width: Self.cellSide - 18, height: Self.cellSide - 18)
+                            .frame(width: Self.cellSide, height: Self.cellSide)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(Color(uiColor: .secondarySystemBackground))
+                            )
                     }
                     .buttonStyle(.plain)
+                    // 名稱與 ISO 5807 的語意改走輔助說明與長按預覽 ——
+                    // 每一格都掛兩行字的話，格子就小不下來。
+                    .help(label(for: kind))
+                    .accessibilityLabel(label(for: kind))
+                    .contextMenu {
+                        Text(label(for: kind))
+                        if let semantic = shapeSemantic(kind: kind) {
+                            Text(semantic)
+                        }
+                    }
                 }
             }
         }
+    }
+
+    /// 形狀的顯示名稱。
+    ///
+    /// 走語系表而不是 `NoteShapeAttachment.name(of:)` —— 後者是**持久化用的
+    /// 識別字**（小寫的列舉名），拿來顯示的話，中文介面裡會出現
+    /// 「arrowblockright」。
+    private func label(for kind: FfiShapeKind) -> String {
+        let key = "shape_kind_\(NoteShapeAttachment.name(of: kind))"
+        let localized = localizationManager.localized(key)
+        // 語系表裡沒有的（核心新增了形狀但字串還沒補）退回識別字，
+        // 而不是顯示一個空白的格子。
+        return localized == key ? NoteShapeAttachment.name(of: kind) : localized
     }
 
     private var templates: some View {

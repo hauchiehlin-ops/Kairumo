@@ -36,6 +36,14 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.key
+import com.kairumo.padnote.audio.AudioCodec
+import com.kairumo.padnote.canvas.MarqueeHit
+import com.kairumo.padnote.canvas.MarqueeLayer
+import com.kairumo.padnote.canvas.ObjectMarquee
+import com.kairumo.padnote.audio.AudioInsertDialog
+import com.kairumo.padnote.audio.AudioLayer
+import com.kairumo.padnote.audio.AudioObject
+import com.kairumo.padnote.audio.AudioPlayback
 import com.kairumo.padnote.image.ImageEditor
 import com.kairumo.padnote.image.ImageLayer
 import com.kairumo.padnote.image.ImageStore
@@ -79,6 +87,7 @@ import com.kairumo.padnote.library.DeleteNotebookDialog
 import com.kairumo.padnote.library.NotebookLibrary
 import com.kairumo.padnote.library.FolderTree
 import com.kairumo.padnote.library.RecordingIndex
+import com.kairumo.padnote.library.SeedNotebooks
 import com.kairumo.padnote.library.FolderNameDialog
 import com.kairumo.padnote.library.DeleteFolderDialog
 import com.kairumo.padnote.library.MoveToFolderDialog
@@ -230,13 +239,22 @@ private fun NotebookHome(
         mutableStateOf(AccountManager.load(activity, l("default_user_name")))
     }
 
+    // 第一次啟動時放兩本有內容的範例筆記。
+    //
+    // 放在這裡而不是 `NotebookLibrary.currentOrCreate`：那條路只有「直接開一本」
+    // 才會走到，從首頁進來的使用者看到的會是空清單。已經有東西就什麼也不做 ——
+    // 見 `SeedNotebooks.seedIfEmpty`。
+    val seeded = remember { SeedNotebooks.seedIfEmpty(activity, device, lang) }
+
     // revision 是重讀的觸發器。清單來自檔案系統，沒有觀察者可以訂閱 ——
     // 新增或刪除之後不主動重讀的話，畫面會停在舊的內容。
-    val entries = remember(revision, sort, folderId) {
+    val entries = remember(revision, sort, folderId, seeded) {
         NotebookLibrary.all(activity, device, sort, folderId)
     }
     // 搜尋要搜整個筆記庫，不是只搜眼前這一層。
-    val allEntries = remember(revision, sort) { NotebookLibrary.all(activity, device, sort) }
+    val allEntries = remember(revision, sort, seeded) {
+        NotebookLibrary.all(activity, device, sort)
+    }
     val folders = remember(revision, folderId) { FolderTree.subfolders(activity, folderId) }
     val breadcrumb = remember(revision, folderId) { FolderTree.pathTo(activity, folderId) }
     // 搬移對話框要列出**全部**資料夾，不是只有這一層的。
@@ -616,6 +634,35 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     var linkRevision by remember { mutableIntStateOf(0) }
     var selectedLinkId by remember { mutableStateOf<String?>(null) }
     var insertingLink by remember { mutableStateOf(false) }
+    var editingLink by remember { mutableStateOf<LinkObject?>(null) }
+
+    // 頁面上的錄音卡片。與連結卡片一樣住在中繼資料（`audioAttachments`），
+    // 與 Apple 端同一個鍵 —— 在此之前 Android 讀不到，iPad 上貼在某一頁的
+    // 錄音同步過來就像不存在。
+    var audioCards by remember(notebook) { mutableStateOf(meta.audioCards()) }
+    var audioRevision by remember { mutableIntStateOf(0) }
+    var selectedAudioId by remember { mutableStateOf<String?>(null) }
+    var playingAudioId by remember { mutableStateOf<String?>(null) }
+    var insertingAudio by remember { mutableStateOf(false) }
+
+    // 框選。與 Apple 同一套規則 —— 見 canvas/ObjectMarquee.kt 的說明。
+    var marqueeActive by remember { mutableStateOf(false) }
+    var marqueeSelection by remember { mutableStateOf(setOf<String>()) }
+    var renamingAudio by remember { mutableStateOf<AudioObject?>(null) }
+    // 套件裡的錄音目錄。錄音檔就住在這裡（format-spec §5），
+    // 播放與「插入錄音」的清單都看它。
+    val audioDirectory = remember(notebook, notebookId) {
+        val id = notebookId ?: return@remember null
+        java.io.File(
+            java.io.File(NotebookLibrary.directory(activity), "$id.${NotebookLibrary.EXTENSION}"),
+            "media/audio"
+        )
+    }
+    // 離開編輯畫面要放掉播放器 —— 不放的話聲音會在使用者回到首頁之後
+    // 繼續播下去，而且畫面上沒有任何東西能停它。
+    androidx.compose.runtime.DisposableEffect(notebook) {
+        onDispose { AudioPlayback.stop() }
+    }
     var selectedModel3DId by remember { mutableStateOf<String?>(null) }
     var editingModel3D by remember { mutableStateOf<Model3DObject?>(null) }
     var insertingModel3D by remember { mutableStateOf(false) }
@@ -699,6 +746,153 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     it.text.trim().take(24).ifBlank { l10n("layer_kind_text") }))
             }
         }
+    }
+
+    // 框選要用的「每個物件在哪、多大」。與 stackItems 走同一批來源，
+    // 但這裡要的是幾何不是名字。
+    val marqueeCandidates = remember(
+        textRevision, shapeRevision, tableRevision, chartRevision, imageRevision,
+        model3DRevision, linkRevision, audioRevision, pageId
+    ) {
+        buildList {
+            imageStore.all.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
+            shapeStore.all.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
+            tableStore.all.forEach {
+                // 表格的高度由核心的版面決定，模型上沒有可信的 height。
+                val layout = it.layout()
+                add(MarqueeHit(it.id, it.x, it.y, it.width, layout.height.toFloat()))
+            }
+            chartStore.all.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
+            textStore.all.forEach { add(MarqueeHit(it.id, it.x, it.y, it.width, it.height)) }
+            links.filter { it.pageIndex == pageIndex }.forEach {
+                add(MarqueeHit(it.id, it.x, it.y, it.width, it.height))
+            }
+            models3D.filter { it.pageIndex == pageIndex }.forEach {
+                add(MarqueeHit(it.id, it.x, it.y, it.width, it.height))
+            }
+            audioCards.filter { it.pageIndex == pageIndex }.forEach {
+                add(MarqueeHit(it.id, it.x, it.y, it.width, it.height))
+            }
+        }
+    }
+
+    /** 把選取的物件整組位移。每一種型別各自寫回自己的 store。 */
+    fun moveMarqueeSelection(dx: Float, dy: Float) {
+        if (marqueeSelection.isEmpty() || (dx == 0f && dy == 0f)) return
+        imageStore.all.filter { it.id in marqueeSelection }.forEach {
+            it.x += dx; it.y += dy; imageStore.persist(it)
+        }
+        shapeStore.all.filter { it.id in marqueeSelection }.forEach {
+            shapeStore.persist(it.copyShape().apply { x = it.x + dx; y = it.y + dy })
+        }
+        tableStore.all.filter { it.id in marqueeSelection }.forEach {
+            tableStore.persist(it.copyTable().apply { x = it.x + dx; y = it.y + dy })
+        }
+        chartStore.all.filter { it.id in marqueeSelection }.forEach {
+            chartStore.persist(it.copy(x = it.x + dx, y = it.y + dy))
+        }
+        textStore.all.filter { it.id in marqueeSelection }.forEach {
+            it.x += dx; it.y += dy; textStore.persist(it)
+        }
+        var linksChanged = false
+        links = links.map {
+            if (it.id in marqueeSelection) {
+                linksChanged = true
+                it.copy(x = it.x + dx, y = it.y + dy)
+            } else it
+        }.toMutableList()
+        if (linksChanged) meta.setLinks(notebook?.first, links)
+
+        var modelsChanged = false
+        models3D = models3D.map {
+            if (it.id in marqueeSelection) {
+                modelsChanged = true
+                it.copy(x = it.x + dx, y = it.y + dy)
+            } else it
+        }.toMutableList()
+        if (modelsChanged) meta.setModels3D(notebook?.first, models3D)
+
+        var audioChanged = false
+        audioCards = audioCards.map {
+            if (it.id in marqueeSelection) {
+                audioChanged = true
+                it.copy(x = it.x + dx, y = it.y + dy)
+            } else it
+        }.toMutableList()
+        if (audioChanged) meta.setAudioCards(notebook?.first, audioCards)
+
+        imageRevision++; shapeRevision++; tableRevision++; chartRevision++
+        textRevision++; linkRevision++; model3DRevision++; audioRevision++
+    }
+
+    /** 刪掉選取的物件。形狀連同它的連接線一起刪 —— 只刪形狀的話，
+     *  線會留在畫布上，兩端各指著一個不存在的東西。 */
+    fun deleteMarqueeSelection() {
+        if (marqueeSelection.isEmpty()) return
+        imageStore.all.filter { it.id in marqueeSelection }.forEach { imageStore.remove(it) }
+        shapeStore.all.filter { it.id in marqueeSelection }.forEach { shapeStore.remove(it) }
+        tableStore.all.filter { it.id in marqueeSelection }.forEach { tableStore.remove(it) }
+        chartStore.all.filter { it.id in marqueeSelection }.forEach { chartStore.remove(it) }
+        textStore.all.filter { it.id in marqueeSelection }.forEach { textStore.remove(it) }
+        links = links.filter { it.id !in marqueeSelection }.toMutableList()
+        meta.setLinks(notebook?.first, links)
+        models3D = models3D.filter { it.id !in marqueeSelection }.toMutableList()
+        meta.setModels3D(notebook?.first, models3D)
+        audioCards = audioCards.filter { it.id !in marqueeSelection }.toMutableList()
+        meta.setAudioCards(notebook?.first, audioCards)
+        marqueeSelection = emptySet()
+        imageRevision++; shapeRevision++; tableRevision++; chartRevision++
+        textRevision++; linkRevision++; model3DRevision++; audioRevision++
+    }
+
+    /** 建立副本。位移一段距離，貼在原位的話使用者會以為沒成功。 */
+    fun duplicateMarqueeSelection() {
+        if (marqueeSelection.isEmpty()) return
+        val d = ObjectMarquee.PASTE_OFFSET
+        val created = mutableSetOf<String>()
+        shapeStore.all.filter { it.id in marqueeSelection }.forEach {
+            created += shapeStore.create(it.copyShape().apply { x = it.x + d; y = it.y + d }).id
+        }
+        tableStore.all.filter { it.id in marqueeSelection }.forEach {
+            created += tableStore.create(it.copyTable().apply { x = it.x + d; y = it.y + d }).id
+        }
+        chartStore.all.filter { it.id in marqueeSelection }.forEach {
+            created += chartStore.create(it.spec, it.x + d, it.y + d).id
+        }
+        textStore.all.filter { it.id in marqueeSelection }.forEach { source ->
+            val box = textStore.create(source.x + d, source.y + d)
+            box.text = source.text
+            box.width = source.width
+            box.height = source.height
+            box.fontSize = source.fontSize
+            box.bold = source.bold
+            box.italic = source.italic
+            box.textColorHex = source.textColorHex
+            box.backgroundColorHex = source.backgroundColorHex
+            box.hasBorder = source.hasBorder
+            textStore.persist(box)
+            created += box.id
+        }
+        // 連結、3D 與錄音卡片住在中繼資料裡，直接複製一份帶新 id。
+        val newLinks = links.filter { it.id in marqueeSelection }.map {
+            it.copy(id = java.util.UUID.randomUUID().toString(), x = it.x + d, y = it.y + d)
+        }
+        if (newLinks.isNotEmpty()) {
+            links = (links + newLinks).toMutableList()
+            meta.setLinks(notebook?.first, links)
+            created += newLinks.map { it.id }
+        }
+        val newAudio = audioCards.filter { it.id in marqueeSelection }.map {
+            it.copy(id = java.util.UUID.randomUUID().toString(), x = it.x + d, y = it.y + d)
+        }
+        if (newAudio.isNotEmpty()) {
+            audioCards = (audioCards + newAudio).toMutableList()
+            meta.setAudioCards(notebook?.first, audioCards)
+            created += newAudio.map { it.id }
+        }
+        marqueeSelection = created
+        imageRevision++; shapeRevision++; tableRevision++; chartRevision++
+        textRevision++; linkRevision++; model3DRevision++; audioRevision++
     }
 
     val stackOrder = remember(stackItems, stackRevision) {
@@ -862,6 +1056,44 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 onClick = { editorMode = EditorMode.TYPE },
                 label = { Text(l10n("mode_type")) }
             )
+
+            // 這個模式下筆會不會畫線、物件動不動得了。
+            //
+            // 兩個模式都要說 —— 只在打字模式掛提示的話，切回手寫時畫面上
+            // 沒有任何差別，而兩邊「同一個手勢會發生什麼事」完全不同。
+            Text(
+                l10n(if (editorMode == EditorMode.DRAW) "mode_draw_hint" else "mode_type_hint"),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 16.dp)
+            )
+
+            // 框選。與模式切換擺在一起 —— 它本身就是一個模式，
+            // 使用者要看得到自己現在在不在裡面。
+            FilterChip(
+                selected = marqueeActive,
+                onClick = {
+                    marqueeActive = !marqueeActive
+                    if (!marqueeActive) marqueeSelection = emptySet()
+                    if (marqueeActive) editorMode = EditorMode.TYPE
+                },
+                label = { Text(l10n("marquee_select")) }
+            )
+            if (marqueeActive) {
+                Text(
+                    l10n("marquee_selected").replace("%@", marqueeSelection.size.toString()),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+                TextButton(
+                    onClick = { duplicateMarqueeSelection() },
+                    enabled = marqueeSelection.isNotEmpty()
+                ) { Text(l10n("action_duplicate")) }
+                TextButton(
+                    onClick = { deleteMarqueeSelection() },
+                    enabled = marqueeSelection.isNotEmpty()
+                ) { Text(l10n("action_delete"), color = MaterialTheme.colorScheme.error) }
+            }
 
             // 分頁導覽。與 Apple 端同一組：上一頁 · 頁碼 · 下一頁 · 新增。
             TextButton(
@@ -1083,6 +1315,21 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     onClick = { showMenu = false; insertingLink = true }
                 )
                 DropdownMenuItem(
+                    text = { Text(l10n("insert_audio")) },
+                    onClick = { showMenu = false; insertingAudio = true }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("marquee_select")) },
+                    onClick = {
+                        showMenu = false
+                        marqueeActive = !marqueeActive
+                        if (!marqueeActive) marqueeSelection = emptySet()
+                        // 框選只在打字模式下有意義 —— 手繪模式下物件本來就
+                        // 不吃觸控，框了也動不了。
+                        if (marqueeActive) editorMode = EditorMode.TYPE
+                    }
+                )
+                DropdownMenuItem(
                     text = { Text(l10n("add_text_box")) },
                     onClick = {
                         showMenu = false
@@ -1300,14 +1547,17 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     modifier = Modifier.fillMaxSize(),
                     onInkChanged = { revision++ },
                     onUnavailable = { lowLatencyUnavailable = true },
-                    clearToken = clearToken
+                    clearToken = clearToken,
+                    acceptsInk = editorMode == EditorMode.DRAW
                 )
             } else {
                 InkCanvas(
                     engine = engine,
                     modifier = Modifier.fillMaxSize(),
                     onInkChanged = { revision++ },
-                    contentVersion = revision
+                    contentVersion = revision,
+                    // 打字模式下筆也不會畫線 —— 這個模式只處理文字與物件。
+                    acceptsInk = editorMode == EditorMode.DRAW
                 )
             }
 
@@ -1453,6 +1703,13 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                             )
                         }
                     },
+                    onEdit = { editingLink = it },
+                    onDelete = { target ->
+                        links = links.filter { it.id != target.id }.toMutableList()
+                        meta.setLinks(notebook?.first, links)
+                        selectedLinkId = null
+                        linkRevision++
+                    },
                     onChanged = { updated ->
                         links = links.map { if (it.id == updated.id) updated else it }
                             .toMutableList()
@@ -1460,6 +1717,53 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                         linkRevision++
                     },
                     zIndexOf = zIndexOf
+                )
+            }
+
+            // 錄音卡片。疊在連結卡片之上 —— 與 Apple 端的預設層級一致。
+            key(audioRevision) {
+                AudioLayer(
+                    interactive = editorMode == EditorMode.TYPE,
+                    items = audioCards.filter { it.pageIndex == pageIndex },
+                    density = canvasDensity,
+                    audioDirectory = audioDirectory,
+                    selectedId = selectedAudioId,
+                    playingId = playingAudioId,
+                    l = { key -> l10n(key) },
+                    onSelect = { selectedAudioId = it },
+                    onTogglePlay = { card ->
+                        val file = audioDirectory?.let { java.io.File(it, card.fileName) }
+                        playingAudioId = if (file == null) null else {
+                            AudioPlayback.toggle(card.id, file) { playingAudioId = null }
+                        }
+                    },
+                    onRename = { renamingAudio = it },
+                    onDelete = { card ->
+                        if (playingAudioId == card.id) { AudioPlayback.stop(); playingAudioId = null }
+                        audioCards = audioCards.filter { it.id != card.id }.toMutableList()
+                        meta.setAudioCards(notebook?.first, audioCards)
+                        selectedAudioId = null
+                        audioRevision++
+                    },
+                    onChanged = { updated ->
+                        audioCards = audioCards.map { if (it.id == updated.id) updated else it }
+                            .toMutableList()
+                        meta.setAudioCards(notebook?.first, audioCards)
+                        audioRevision++
+                    },
+                    zIndexOf = zIndexOf
+                )
+            }
+
+            // 框選層。只有在框選模式下才存在 —— 平常掛一層可命中的
+            // 透明視圖，底下的物件就全部點不到了。
+            if (marqueeActive && editorMode == EditorMode.TYPE) {
+                MarqueeLayer(
+                    candidates = marqueeCandidates,
+                    density = canvasDensity,
+                    selectedIds = marqueeSelection,
+                    onSelectionChange = { marqueeSelection = it },
+                    onCommitMove = { dx, dy -> moveMarqueeSelection(dx, dy) }
                 )
             }
 
@@ -1655,6 +1959,115 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 }
                 insertingLink = false
                 linkRevision++
+            }
+        )
+    }
+
+    editingLink?.let { target ->
+        // 網址、標題與說明一直都在模型裡、也一直跟著同步走，但在這一版
+        // 之前沒有任何介面改得到 —— 解析錯一次就只能刪掉重插。
+        var draftTitle by remember(target.id) { mutableStateOf(target.title) }
+        var draftDesc by remember(target.id) { mutableStateOf(target.descriptionText) }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { editingLink = null },
+            title = { Text(l10n("link_edit")) },
+            text = {
+                androidx.compose.foundation.layout.Column {
+                    androidx.compose.material3.OutlinedTextField(
+                        value = draftTitle,
+                        onValueChange = { draftTitle = it },
+                        label = { Text(l10n("link_title")) },
+                        singleLine = true
+                    )
+                    androidx.compose.material3.OutlinedTextField(
+                        value = draftDesc,
+                        onValueChange = { draftDesc = it },
+                        label = { Text(l10n("link_description")) },
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    val updated = target.copy(
+                        title = draftTitle, descriptionText = draftDesc
+                    )
+                    links = links.map { if (it.id == target.id) updated else it }.toMutableList()
+                    meta.setLinks(notebook?.first, links)
+                    linkRevision++
+                    editingLink = null
+                }) { Text(l10n("done")) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { editingLink = null }) {
+                    Text(l10n("cancel"))
+                }
+            }
+        )
+    }
+
+    if (insertingAudio) {
+        AudioInsertDialog(
+            l = { key -> l10n(key) },
+            audioDirectory = audioDirectory,
+            onDismiss = { insertingAudio = false },
+            onPick = { file ->
+                // 位置逐張往右下錯開。全部疊在同一點的話，插第二張時
+                // 使用者會以為沒插進去。
+                val existing = audioCards.count { it.pageIndex == pageIndex }
+                val offset = (existing % 6) * 18f
+                val card = AudioObject(
+                    id = java.util.UUID.randomUUID().toString(),
+                    pageIndex = pageIndex,
+                    recordingId = file.nameWithoutExtension,
+                    fileName = file.name,
+                    title = file.nameWithoutExtension,
+                    durationSeconds = 0,
+                    x = 80f + offset, y = 120f + offset,
+                    width = 260f, height = 76f
+                )
+                audioCards = (audioCards + card).toMutableList()
+                meta.setAudioCards(notebook?.first, audioCards)
+                insertingAudio = false
+                selectedAudioId = card.id
+                // 插入後切到打字模式 —— 手寫模式下物件不吃觸控，
+                // 剛插進來的卡片會拖不動，看起來像插壞了。
+                editorMode = EditorMode.TYPE
+                audioRevision++
+            }
+        )
+    }
+
+    renamingAudio?.let { target ->
+        var draft by remember(target.id) { mutableStateOf(target.title) }
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { renamingAudio = null },
+            title = { Text(l10n("rename_audio_card")) },
+            text = {
+                androidx.compose.material3.OutlinedTextField(
+                    value = draft,
+                    onValueChange = { draft = it },
+                    label = { Text(l10n("recording_title")) },
+                    singleLine = true
+                )
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    val trimmed = draft.trim()
+                    if (trimmed.isNotEmpty()) {
+                        target.title = trimmed
+                        audioCards = audioCards.map { if (it.id == target.id) target else it }
+                            .toMutableList()
+                        meta.setAudioCards(notebook?.first, audioCards)
+                        audioRevision++
+                    }
+                    renamingAudio = null
+                }) { Text(l10n("done")) }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { renamingAudio = null }) {
+                    Text(l10n("cancel"))
+                }
             }
         )
     }

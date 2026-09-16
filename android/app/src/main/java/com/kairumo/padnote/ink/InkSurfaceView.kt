@@ -125,8 +125,18 @@ class InkSurfaceView(
         lastPoint.clear()
     }
 
+    /**
+     * 這個模式下畫布接不接受筆畫。見 [InkCanvas] 的同名參數。
+     *
+     * 打字模式要的是「誰都不能畫」—— 掌拒的 pen-only 擋得掉手指，
+     * 擋不掉觸控筆。
+     */
+    var acceptsInk: Boolean = true
+
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        // 不收筆畫時把事件讓出去，外層照常捲動與選取。
+        if (!acceptsInk) return false
         val active = renderer ?: return false
         predictor?.record(event)
 

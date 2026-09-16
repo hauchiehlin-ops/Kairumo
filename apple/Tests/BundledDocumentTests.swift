@@ -99,7 +99,9 @@ final class BundledDocumentTests: XCTestCase {
         // 使用者問過「備份的功能在哪裡」「同步的功能在哪裡」——
         // 手冊裡完全沒有這一段，那本身就是問題的一部分。
         let manual = try manualScript()
-        XCTAssertTrue(manual.contains("id: \"data\""), "手冊缺少「資料備份與同步」一節")
+        XCTAssertGreaterThan(
+            sectionCount(of: "data", in: manual), 0,
+            "手冊缺少「資料備份與同步」一節")
     }
 
     func testTheManualDoesNotTeachRemovedFeatures() throws {
@@ -120,8 +122,22 @@ final class BundledDocumentTests: XCTestCase {
     func testEveryLocaleHasTheSameSections() throws {
         // 少一節就是某個語系的使用者看不到那個功能。
         let manual = try manualScript()
-        let counts = manual.components(separatedBy: "id: \"data\"").count - 1
-        XCTAssertEqual(counts, 6, "六個語系都要有「資料備份與同步」一節")
+        XCTAssertEqual(
+            sectionCount(of: "data", in: manual), 6,
+            "六個語系都要有「資料備份與同步」一節")
+    }
+
+    /// 手冊裡有幾個語系宣告了這個 section id。
+    ///
+    /// **兩種寫法都要算。** `manual.js` 是手寫的 JS，但重新產生時會走
+    /// `JSON.stringify`，鍵名會從 `id: "data"` 變成 `"id":"data"` ——
+    /// 只比對其中一種的話，內容明明還在，測試卻會紅，而看到的人會以為
+    /// 是手冊掉了一節。這裡要驗的是**內容**，不是排版。
+    private func sectionCount(of id: String, in manual: String) -> Int {
+        let spellings = ["id: \"\(id)\"", "\"id\":\"\(id)\"", "\"id\": \"\(id)\""]
+        return spellings.reduce(0) { total, spelling in
+            total + manual.components(separatedBy: spelling).count - 1
+        }
     }
 
     /// 手冊的內容在 `manual.js` 裡，不在 HTML 裡。

@@ -41,6 +41,53 @@ pub enum ShapeKind {
     ManualInput,
     /// 連接點（圓形）
     Connector,
+    // ---- 流程圖（ISO 5807 續）----
+    /// 人工作業（倒梯形）
+    ManualOperation,
+    /// 延遲（右側半圓）
+    Delay,
+    /// 已儲存資料（左側內凹的圓弧）
+    StoredData,
+    /// 彙整（向下三角）
+    Merge,
+    /// 抽取（向上三角）
+    Extract,
+    /// 跨頁連接（向下的五邊形）
+    OffPageConnector,
+    /// 顯示（左凹右凸）
+    Display,
+    /// 打孔紙帶（上下波浪）
+    PunchedTape,
+    /// 打孔卡（右上缺角）
+    PunchedCard,
+    /// 對照（蝴蝶結）
+    Collate,
+    // ---- 一般形狀（續）----
+    RightTriangle,
+    Parallelogram,
+    Trapezoid,
+    Heptagon,
+    Octagon,
+    Cross,
+    Chevron,
+    ArrowBlockRight,
+    ArrowBlockLeft,
+    ArrowBlockUp,
+    ArrowBlockDown,
+    Cloud,
+    Heart,
+    Bolt,
+    Moon,
+    Teardrop,
+    LShape,
+    Star4,
+    Star6,
+    Star8,
+    Sun,
+    Banner,
+    SpeechBubble,
+    Plaque,
+    Pie,
     // ---- 線與箭頭 ----
     Line,
     Arrow,
@@ -66,6 +113,16 @@ impl ShapeKind {
                 | Self::Preparation
                 | Self::ManualInput
                 | Self::Connector
+                | Self::ManualOperation
+                | Self::Delay
+                | Self::StoredData
+                | Self::Merge
+                | Self::Extract
+                | Self::OffPageConnector
+                | Self::Display
+                | Self::PunchedTape
+                | Self::PunchedCard
+                | Self::Collate
         )
     }
 
@@ -82,6 +139,16 @@ impl ShapeKind {
             Self::Preparation => "預備／初始化",
             Self::ManualInput => "人工輸入",
             Self::Connector => "連接點",
+            Self::ManualOperation => "人工作業",
+            Self::Delay => "延遲",
+            Self::StoredData => "已儲存資料",
+            Self::Merge => "彙整",
+            Self::Extract => "抽取",
+            Self::OffPageConnector => "跨頁連接",
+            Self::Display => "顯示",
+            Self::PunchedTape => "打孔紙帶",
+            Self::PunchedCard => "打孔卡",
+            Self::Collate => "對照",
             _ => return None,
         })
     }
@@ -297,6 +364,403 @@ impl Shape {
                 p
             }
 
+            // ---- 一般形狀（續）----
+            ShapeKind::RightTriangle => {
+                vec![(b.min_x, b.min_y), (b.max_x, b.max_y), (b.min_x, b.max_y)]
+            }
+
+            // 平行四邊形與 Data 的偏移量一致 —— 兩者在視覺上就是同一個形狀，
+            // 差別只在語意（一個是流程圖符號，一個是一般圖形）。
+            ShapeKind::Parallelogram => {
+                let d = w / 5.0;
+                vec![
+                    (b.min_x + d, b.min_y),
+                    (b.max_x, b.min_y),
+                    (b.max_x - d, b.max_y),
+                    (b.min_x, b.max_y),
+                ]
+            }
+
+            // 梯形（上窄下寬）。ManualInput 是流程圖裡的同形狀。
+            ShapeKind::Trapezoid => {
+                let d = w / 5.0;
+                vec![
+                    (b.min_x + d, b.min_y),
+                    (b.max_x - d, b.min_y),
+                    (b.max_x, b.max_y),
+                    (b.min_x, b.max_y),
+                ]
+            }
+
+            ShapeKind::Heptagon => regular_polygon(cx, cy, w / 2.0, h / 2.0, 7),
+            ShapeKind::Octagon => regular_polygon(cx, cy, w / 2.0, h / 2.0, 8),
+
+            // 十字：橫豎兩條各佔三分之一。
+            ShapeKind::Cross => {
+                let tx = w / 3.0;
+                let ty = h / 3.0;
+                vec![
+                    (b.min_x + tx, b.min_y),
+                    (b.max_x - tx, b.min_y),
+                    (b.max_x - tx, b.min_y + ty),
+                    (b.max_x, b.min_y + ty),
+                    (b.max_x, b.max_y - ty),
+                    (b.max_x - tx, b.max_y - ty),
+                    (b.max_x - tx, b.max_y),
+                    (b.min_x + tx, b.max_y),
+                    (b.min_x + tx, b.max_y - ty),
+                    (b.min_x, b.max_y - ty),
+                    (b.min_x, b.min_y + ty),
+                    (b.min_x + tx, b.min_y + ty),
+                ]
+            }
+
+            // V 形箭號（流程／階段圖常用）。
+            ShapeKind::Chevron => {
+                let d = w / 4.0;
+                vec![
+                    (b.min_x, b.min_y),
+                    (b.max_x - d, b.min_y),
+                    (b.max_x, cy),
+                    (b.max_x - d, b.max_y),
+                    (b.min_x, b.max_y),
+                    (b.min_x + d, cy),
+                ]
+            }
+
+            // 箭頭方塊：桿身佔一半高（或寬），頭部佔三分之一長。
+            ShapeKind::ArrowBlockRight => {
+                let head = w / 3.0;
+                let shaft = h / 4.0;
+                vec![
+                    (b.min_x, cy - shaft),
+                    (b.max_x - head, cy - shaft),
+                    (b.max_x - head, b.min_y),
+                    (b.max_x, cy),
+                    (b.max_x - head, b.max_y),
+                    (b.max_x - head, cy + shaft),
+                    (b.min_x, cy + shaft),
+                ]
+            }
+            ShapeKind::ArrowBlockLeft => {
+                let head = w / 3.0;
+                let shaft = h / 4.0;
+                vec![
+                    (b.max_x, cy - shaft),
+                    (b.min_x + head, cy - shaft),
+                    (b.min_x + head, b.min_y),
+                    (b.min_x, cy),
+                    (b.min_x + head, b.max_y),
+                    (b.min_x + head, cy + shaft),
+                    (b.max_x, cy + shaft),
+                ]
+            }
+            ShapeKind::ArrowBlockUp => {
+                let head = h / 3.0;
+                let shaft = w / 4.0;
+                vec![
+                    (cx - shaft, b.max_y),
+                    (cx - shaft, b.min_y + head),
+                    (b.min_x, b.min_y + head),
+                    (cx, b.min_y),
+                    (b.max_x, b.min_y + head),
+                    (cx + shaft, b.min_y + head),
+                    (cx + shaft, b.max_y),
+                ]
+            }
+            ShapeKind::ArrowBlockDown => {
+                let head = h / 3.0;
+                let shaft = w / 4.0;
+                vec![
+                    (cx - shaft, b.min_y),
+                    (cx - shaft, b.max_y - head),
+                    (b.min_x, b.max_y - head),
+                    (cx, b.max_y),
+                    (b.max_x, b.max_y - head),
+                    (cx + shaft, b.max_y - head),
+                    (cx + shaft, b.min_y),
+                ]
+            }
+
+            // 雲朵：沿著外框走一圈，半徑用正弦擾動做出圓弧的凹凸。
+            // 用擾動而不是接五個圓弧：接圓弧要處理相交，而相交點算錯時
+            // 雲會多出一條穿過中間的線。
+            ShapeKind::Cloud => (0..n * 2)
+                .map(|i| {
+                    let t = i as f32 / (n * 2) as f32 * std::f32::consts::TAU;
+                    let bumps = 1.0 + 0.12 * (t * 7.0).sin() + 0.06 * (t * 3.0).cos();
+                    (cx + w / 2.0 * 0.86 * bumps * t.cos(), cy + h / 2.0 * 0.82 * bumps * t.sin())
+                })
+                .collect(),
+
+            // 心形：標準參數式，再縮放到外框。
+            ShapeKind::Heart => (0..=n * 2)
+                .map(|i| {
+                    let t = i as f32 / (n * 2) as f32 * std::f32::consts::TAU;
+                    let x = 16.0 * t.sin().powi(3);
+                    let y = -(13.0 * t.cos() - 5.0 * (2.0 * t).cos()
+                        - 2.0 * (3.0 * t).cos()
+                        - (4.0 * t).cos());
+                    (cx + w / 2.0 * x / 17.0, cy + h / 2.0 * y / 17.0)
+                })
+                .collect(),
+
+            // 閃電。
+            ShapeKind::Bolt => vec![
+                (cx - w * 0.10, b.min_y),
+                (b.max_x - w * 0.15, b.min_y),
+                (cx + w * 0.02, cy - h * 0.05),
+                (b.max_x - w * 0.25, cy - h * 0.05),
+                (b.min_x + w * 0.20, b.max_y),
+                (cx - w * 0.02, cy + h * 0.10),
+                (b.min_x + w * 0.22, cy + h * 0.10),
+            ],
+
+            // 月牙：外圈半圓 + 內凹的弧，接成一條封閉折線。
+            ShapeKind::Moon => {
+                let mut p = Vec::with_capacity(n * 2 + 2);
+                for i in 0..=n {
+                    let t = -std::f32::consts::FRAC_PI_2
+                        + std::f32::consts::PI * i as f32 / n as f32;
+                    p.push((cx + w / 2.0 * t.cos(), cy + h / 2.0 * t.sin()));
+                }
+                for i in 0..=n {
+                    let t = std::f32::consts::FRAC_PI_2
+                        - std::f32::consts::PI * i as f32 / n as f32;
+                    p.push((cx + w / 2.0 * 0.45 * t.cos() - w * 0.08, cy + h / 2.0 * t.sin()));
+                }
+                p
+            }
+
+            // 水滴：上尖下圓。
+            //
+            // 圓弧要**跳過頂端那一段**，否則尖端會被圓自己蓋掉，
+            // 畫出來是一顆壓扁的橢圓（實測看過）。
+            ShapeKind::Teardrop => {
+                let ccy = b.min_y + h * 0.62;
+                let ry = h * 0.38;
+                let gap = 0.55_f32; // 頂端要讓出來的弧度
+                let start = -std::f32::consts::FRAC_PI_2 + gap;
+                let sweep = std::f32::consts::TAU - gap * 2.0;
+                let mut p = vec![(cx, b.min_y)];
+                for i in 0..=n {
+                    let t = start + sweep * i as f32 / n as f32;
+                    p.push((cx + w / 2.0 * t.cos(), ccy + ry * t.sin()));
+                }
+                p
+            }
+
+            // L 形。
+            ShapeKind::LShape => {
+                let tx = w / 3.0;
+                let ty = h / 3.0;
+                vec![
+                    (b.min_x, b.min_y),
+                    (b.min_x + tx, b.min_y),
+                    (b.min_x + tx, b.max_y - ty),
+                    (b.max_x, b.max_y - ty),
+                    (b.max_x, b.max_y),
+                    (b.min_x, b.max_y),
+                ]
+            }
+
+            ShapeKind::Star4 => star_points(cx, cy, w / 2.0, h / 2.0, 4, 0.38),
+            ShapeKind::Star6 => star_points(cx, cy, w / 2.0, h / 2.0, 6, 0.55),
+            ShapeKind::Star8 => star_points(cx, cy, w / 2.0, h / 2.0, 8, 0.62),
+            ShapeKind::Sun => star_points(cx, cy, w / 2.0, h / 2.0, 12, 0.68),
+
+            // 旗幟／緞帶：下緣中間有一個 V 形缺口。
+            ShapeKind::Banner => {
+                let notch = h / 4.0;
+                vec![
+                    (b.min_x, b.min_y),
+                    (b.max_x, b.min_y),
+                    (b.max_x, b.max_y),
+                    (cx, b.max_y - notch),
+                    (b.min_x, b.max_y),
+                ]
+            }
+
+            // 對話框：圓角本體 + 左下角的尾巴，一條折線走完。
+            //
+            // 不是「先做圓角矩形再把尾巴插進去」—— 那要猜插在折線的哪一段，
+            // 而猜錯的時候尾巴會長在右邊或直接穿過方框。順著邊走一圈最單純。
+            ShapeKind::SpeechBubble => {
+                let body_bottom = b.min_y + h * 0.76;
+                let body_h = body_bottom - b.min_y;
+                let r = (w.min(body_h) / 6.0).min(body_h / 2.0).min(w / 2.0);
+                let seg = (n / 4).max(3);
+                let mut p: Vec<(f32, f32)> = Vec::new();
+                let mut arc = |p: &mut Vec<(f32, f32)>, ox: f32, oy: f32, from: f32| {
+                    for i in 0..=seg {
+                        let t = from + std::f32::consts::FRAC_PI_2 * i as f32 / seg as f32;
+                        p.push((ox + r * t.cos(), oy + r * t.sin()));
+                    }
+                };
+                // 左上 → 右上 → 右下
+                arc(&mut p, b.min_x + r, b.min_y + r, std::f32::consts::PI);
+                arc(&mut p, b.max_x - r, b.min_y + r, std::f32::consts::FRAC_PI_2 * 3.0);
+                arc(&mut p, b.max_x - r, body_bottom - r, 0.0);
+                // 下緣往左走到尾巴的右腳
+                p.push((b.min_x + w * 0.38, body_bottom));
+                p.push((b.min_x + w * 0.20, b.max_y)); // 尾巴尖端
+                p.push((b.min_x + w * 0.26, body_bottom));
+                // 左下角
+                arc(&mut p, b.min_x + r, body_bottom - r, std::f32::consts::FRAC_PI_2);
+                p
+            }
+
+            // 匾額：四個角**向內凹**的圓弧。
+            //
+            // 圓心放在往內縮 d 的那個點上，弧朝外走 —— 圓心放在角上的話
+            // 凹口會反過來變成圓角，看起來就只是一個圓角矩形。
+            ShapeKind::Plaque => {
+                let d = w.min(h) / 5.0;
+                let seg = (n / 4).max(3);
+                // (圓心, 起始角)。順序是左上 → 右上 → 右下 → 左下，
+                // 每一段都逆著角走 90°，接起來才是一圈。
+                let arcs = [
+                    ((b.min_x + d, b.min_y + d), std::f32::consts::PI),
+                    ((b.max_x - d, b.min_y + d), std::f32::consts::FRAC_PI_2 * 3.0),
+                    ((b.max_x - d, b.max_y - d), 0.0),
+                    ((b.min_x + d, b.max_y - d), std::f32::consts::FRAC_PI_2),
+                ];
+                let mut p = Vec::with_capacity(seg * 4 + 4);
+                for ((ox, oy), start) in arcs {
+                    for i in 0..=seg {
+                        let t = start + std::f32::consts::FRAC_PI_2 * i as f32 / seg as f32;
+                        p.push((ox + d * t.cos(), oy + d * t.sin()));
+                    }
+                }
+                p
+            }
+
+            // 圓餅（四分之三圓）。
+            ShapeKind::Pie => {
+                let mut p = vec![(cx, cy)];
+                let sweep = std::f32::consts::TAU * 0.75;
+                for i in 0..=n {
+                    let t = -std::f32::consts::FRAC_PI_2 + sweep * i as f32 / n as f32;
+                    p.push((cx + w / 2.0 * t.cos(), cy + h / 2.0 * t.sin()));
+                }
+                p
+            }
+
+            // ---- 流程圖（續）----
+
+            // 人工作業：倒梯形（上寬下窄）。
+            ShapeKind::ManualOperation => {
+                let d = w / 5.0;
+                vec![
+                    (b.min_x, b.min_y),
+                    (b.max_x, b.min_y),
+                    (b.max_x - d, b.max_y),
+                    (b.min_x + d, b.max_y),
+                ]
+            }
+
+            // 延遲：右側半圓。
+            ShapeKind::Delay => {
+                let mut p = vec![(b.min_x, b.min_y), (cx, b.min_y)];
+                for i in 0..=n {
+                    let t = -std::f32::consts::FRAC_PI_2
+                        + std::f32::consts::PI * i as f32 / n as f32;
+                    p.push((cx + w / 2.0 * t.cos(), cy + h / 2.0 * t.sin()));
+                }
+                p.push((b.min_x, b.max_y));
+                p
+            }
+
+            // 已儲存資料：左側內凹的圓弧。
+            ShapeKind::StoredData => {
+                let rx = w / 8.0;
+                let mut p = vec![(b.min_x + rx, b.min_y), (b.max_x - rx, b.min_y)];
+                for i in 0..=n {
+                    let t = -std::f32::consts::FRAC_PI_2
+                        + std::f32::consts::PI * i as f32 / n as f32;
+                    p.push((b.max_x - rx + rx * t.cos(), cy + h / 2.0 * t.sin()));
+                }
+                p.push((b.min_x + rx, b.max_y));
+                for i in 0..=n {
+                    let t = std::f32::consts::FRAC_PI_2
+                        - std::f32::consts::PI * i as f32 / n as f32;
+                    p.push((b.min_x + rx + rx * t.cos(), cy - h / 2.0 * t.sin()));
+                }
+                p
+            }
+
+            ShapeKind::Merge => vec![(b.min_x, b.min_y), (b.max_x, b.min_y), (cx, b.max_y)],
+            ShapeKind::Extract => vec![(cx, b.min_y), (b.max_x, b.max_y), (b.min_x, b.max_y)],
+
+            // 跨頁連接：向下的五邊形。
+            ShapeKind::OffPageConnector => {
+                let d = h / 3.0;
+                vec![
+                    (b.min_x, b.min_y),
+                    (b.max_x, b.min_y),
+                    (b.max_x, b.max_y - d),
+                    (cx, b.max_y),
+                    (b.min_x, b.max_y - d),
+                ]
+            }
+
+            // 顯示：左凹右凸。
+            ShapeKind::Display => {
+                let d = w / 6.0;
+                let mut p = vec![(b.min_x + d, b.min_y), (b.max_x - d, b.min_y)];
+                for i in 0..=n {
+                    let t = -std::f32::consts::FRAC_PI_2
+                        + std::f32::consts::PI * i as f32 / n as f32;
+                    p.push((b.max_x - d + d * t.cos(), cy + h / 2.0 * t.sin()));
+                }
+                p.push((b.min_x + d, b.max_y));
+                p.push((b.min_x, cy));
+                p
+            }
+
+            // 打孔紙帶：上下都是波浪。
+            ShapeKind::PunchedTape => {
+                let wave = h / 8.0;
+                let mut p = Vec::with_capacity(n * 2 + 2);
+                for i in 0..=n {
+                    let t = i as f32 / n as f32;
+                    p.push((
+                        b.min_x + w * t,
+                        b.min_y + wave - wave * (t * std::f32::consts::TAU).sin(),
+                    ));
+                }
+                for i in 0..=n {
+                    let t = i as f32 / n as f32;
+                    p.push((
+                        b.max_x - w * t,
+                        b.max_y - wave + wave * (t * std::f32::consts::TAU).sin(),
+                    ));
+                }
+                p
+            }
+
+            // 打孔卡：右上缺一角。
+            ShapeKind::PunchedCard => {
+                let d = w.min(h) / 4.0;
+                vec![
+                    (b.min_x, b.min_y),
+                    (b.max_x - d, b.min_y),
+                    (b.max_x, b.min_y + d),
+                    (b.max_x, b.max_y),
+                    (b.min_x, b.max_y),
+                ]
+            }
+
+            // 對照：蝴蝶結（上下兩個三角形相接）。
+            ShapeKind::Collate => vec![
+                (b.min_x, b.min_y),
+                (b.max_x, b.min_y),
+                (cx, cy),
+                (b.max_x, b.max_y),
+                (b.min_x, b.max_y),
+                (cx, cy),
+            ],
+
             // 線狀：從左上到右下
             ShapeKind::Line | ShapeKind::Arrow | ShapeKind::DoubleArrow => {
                 vec![(b.min_x, b.min_y), (b.max_x, b.max_y)]
@@ -316,6 +780,19 @@ impl Shape {
         }
         point_in_polygon(x, y, &self.outline(32))
     }
+}
+
+/// 尖角星。`points` 是尖角數，`inner` 是內半徑相對外半徑的比例。
+fn star_points(cx: f32, cy: f32, rx: f32, ry: f32, points: usize, inner: f32) -> Vec<(f32, f32)> {
+    let total = points * 2;
+    (0..total)
+        .map(|i| {
+            let t = i as f32 / total as f32 * std::f32::consts::TAU
+                - std::f32::consts::FRAC_PI_2;
+            let r = if i % 2 == 0 { 1.0 } else { inner };
+            (cx + rx * r * t.cos(), cy + ry * r * t.sin())
+        })
+        .collect()
 }
 
 fn rect_points(b: Rect) -> Vec<(f32, f32)> {

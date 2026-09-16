@@ -37,6 +37,13 @@ targets:
         TARGETED_DEVICE_FAMILY: "1,2,6" # 1: iPhone, 2: iPad, 6: Mac Catalyst
         ENABLE_BITCODE: NO
         GENERATE_INFOPLIST_FILE: YES
+        # **這一行不能少。** 產生器不會自己認得 `Info.plist`：少了它，
+        # `xcodegen generate` 產出的 pbxproj 就沒有 `INFOPLIST_FILE`，
+        # 於是 `apple/Info.plist` 裡那兩個「產生器表達不了的鍵」會**靜默消失** ——
+        # OAuth 的 redirect scheme（回不到 App，畫面停在錯誤網址）與
+        # Catalyst 的多視窗支援（「操作說明」按下去什麼也不會發生）。
+        # 兩者都不會有任何編譯錯誤，只有在實際操作時才會發現。
+        INFOPLIST_FILE: Info.plist
         INFOPLIST_KEY_CFBundleDisplayName: "Kairumo"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"

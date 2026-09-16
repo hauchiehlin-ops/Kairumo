@@ -23,6 +23,8 @@ public struct HomeWorkbenchView: View {
 
     @State private var searchText: String = ""
     @State private var viewingDocument: BundledDocument? = nil
+    /// 正在挑「要插進哪一本筆記」的錄音。
+    @State private var insertingRecording: AudioRecordingRecord? = nil
     @Environment(\.openWindow) private var openWindow
     @State private var showInfoSheet: Bool = false
     @State private var showAccountSheet: Bool = false
@@ -287,6 +289,9 @@ public struct HomeWorkbenchView: View {
             } }
             .sheet(item: $viewingDocument) { doc in erasedView {
                 DocumentViewerSheet(document: doc)
+            } }
+            .sheet(item: $insertingRecording) { rec in erasedView {
+                RecordingToNotebookSheet(recording: rec)
             } }
             .sheet(isPresented: $showInfoSheet) { erasedView {
                 AppDiagnosticsSheet(versionString: appVersionString, platformDesc: platformArchitectureDescription)
@@ -993,8 +998,17 @@ public struct HomeWorkbenchView: View {
                                     .font(.title3)
                             }
 
-                            // 個別檔案功能選項（隱藏、開啟資料夾、刪除）
+                            // 個別檔案功能選項（插入筆記、隱藏、開啟資料夾、刪除）
                             Menu {
+                                // 錄音原本只能在首頁播 —— 它進不了任何一頁，
+                                // 也就沒辦法擺在它對應的那段筆記旁邊。
+                                Button {
+                                    insertingRecording = rec
+                                } label: {
+                                    Label(localizationManager.localized("insert_to_notebook"),
+                                          systemImage: "text.badge.plus")
+                                }
+                                Divider()
                                 Button {
                                     withAnimation {
                                         hiddenRecordingIds.insert(rec.id)

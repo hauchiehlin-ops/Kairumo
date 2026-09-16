@@ -18,7 +18,7 @@ import SwiftUI
 /// 畫布上的一個可堆疊物件（跨型別的共同視角）。
 public struct StackableObject: Identifiable, Hashable {
     public enum Kind: String, CaseIterable {
-        case image, text, table, chart, model3D, link, shape, pin
+        case image, text, table, chart, model3D, link, shape, pin, audio
 
         /// 沒有明確順序時的預設層級。
         ///
@@ -34,6 +34,9 @@ public struct StackableObject: Identifiable, Hashable {
             case .link: return 5
             case .text: return 6
             case .pin: return 7
+            // 錄音卡片是這一版才有的型別，排在最後 —— 既有筆記的疊放
+            // 順序因此完全不受影響。
+            case .audio: return 8
             }
         }
     }
@@ -300,6 +303,7 @@ public struct CanvasStackPanel: View {
         case .link: return "link"
         case .shape: return "square.on.circle"
         case .pin: return "bubble.left"
+        case .audio: return "waveform"
         }
     }
 

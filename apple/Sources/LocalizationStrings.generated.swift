@@ -31,6 +31,14 @@ extension LocalizationManager {
             .ko: "계정 및 설정",
             .th: "บัญชีและการตั้งค่า"
         ],
+        "action_copy": [
+            .zhHant: "複製",
+            .en: "Copy",
+            .zhHans: "复制",
+            .ja: "コピー",
+            .ko: "복사",
+            .th: "คัดลอก"
+        ],
         "action_delete": [
             .zhHant: "刪除",
             .en: "Delete",
@@ -54,6 +62,14 @@ extension LocalizationManager {
             .ja: "編集を開く",
             .ko: "편집 열기",
             .th: "เปิดตัวแก้ไข"
+        ],
+        "action_paste": [
+            .zhHant: "貼上",
+            .en: "Paste",
+            .zhHans: "粘贴",
+            .ja: "貼り付け",
+            .ko: "붙여넣기",
+            .th: "วาง"
         ],
         "action_rename": [
             .zhHant: "重新命名",
@@ -798,6 +814,14 @@ extension LocalizationManager {
             .ja: "ノート添付音声",
             .ko: "노트 첨부 오디오",
             .th: "เสียงที่แนบมากับบันทึก"
+        ],
+        "audio_file_missing": [
+            .zhHant: "找不到音訊檔",
+            .en: "Audio file not found",
+            .zhHans: "找不到音讯档",
+            .ja: "音声ファイルが見つかりません",
+            .ko: "오디오 파일을 찾을 수 없습니다",
+            .th: "ไม่พบไฟล์เสียง"
         ],
         "audio_hint": [
             .zhHant: "點擊播放 · 筆劃時間精確對齊",
@@ -3311,6 +3335,22 @@ extension LocalizationManager {
             .ko: "3D 모델 삽입",
             .th: "แทรกโมเดล 3 มิติ"
         ],
+        "insert_audio": [
+            .zhHant: "插入錄音",
+            .en: "Insert Recording",
+            .zhHans: "插入录音",
+            .ja: "録音を挿入",
+            .ko: "녹음 삽입",
+            .th: "แทรกเสียงที่บันทึก"
+        ],
+        "insert_audio_page": [
+            .zhHant: "插入到第幾頁",
+            .en: "Page to insert on",
+            .zhHans: "插入到第几页",
+            .ja: "挿入するページ",
+            .ko: "삽입할 페이지",
+            .th: "หน้าที่จะแทรก"
+        ],
         "insert_chart": [
             .zhHant: "插入圖表至筆記",
             .en: "Insert Chart to Note",
@@ -3382,6 +3422,14 @@ extension LocalizationManager {
             .ja: "キャンバスに挿入",
             .ko: "캔버스에 삽입",
             .th: "แทรกลงในผืนผ้าใบ"
+        ],
+        "insert_to_notebook": [
+            .zhHant: "插入至筆記本",
+            .en: "Insert into Notebook",
+            .zhHans: "插入至笔记本",
+            .ja: "ノートに挿入",
+            .ko: "노트에 삽입",
+            .th: "แทรกลงในสมุดบันทึก"
         ],
         "interaction_arrow": [
             .zhHant: "手勢流程跳轉",
@@ -3470,6 +3518,14 @@ extension LocalizationManager {
             .ja: "グループ（%@ 個）",
             .ko: "그룹(%@개)",
             .th: "กลุ่ม (%@ รายการ)"
+        ],
+        "layer_kind_audio": [
+            .zhHant: "錄音",
+            .en: "Recording",
+            .zhHans: "录音",
+            .ja: "録音",
+            .ko: "녹음",
+            .th: "เสียงที่บันทึก"
         ],
         "layer_kind_image": [
             .zhHant: "圖片",
@@ -3607,6 +3663,22 @@ extension LocalizationManager {
             .ko: "선 두께",
             .th: "ความหนาเส้น"
         ],
+        "link_description": [
+            .zhHant: "說明",
+            .en: "Description",
+            .zhHans: "说明",
+            .ja: "説明",
+            .ko: "설명",
+            .th: "คำอธิบาย"
+        ],
+        "link_edit": [
+            .zhHant: "編修連結",
+            .en: "Edit Link",
+            .zhHans: "编修链接",
+            .ja: "リンクを編集",
+            .ko: "링크 편집",
+            .th: "แก้ไขลิงก์"
+        ],
         "link_fetching": [
             .zhHant: "正在讀取網頁…",
             .en: "Reading the page…",
@@ -3639,6 +3711,22 @@ extension LocalizationManager {
             .ko: "링크 카드를 노트에 삽입",
             .th: "แทรกการ์ดลิงก์ลงในบันทึก"
         ],
+        "link_site_name": [
+            .zhHant: "站台名稱",
+            .en: "Site name",
+            .zhHans: "站点名称",
+            .ja: "サイト名",
+            .ko: "사이트 이름",
+            .th: "ชื่อเว็บไซต์"
+        ],
+        "link_title": [
+            .zhHant: "標題",
+            .en: "Title",
+            .zhHans: "标题",
+            .ja: "タイトル",
+            .ko: "제목",
+            .th: "ชื่อเรื่อง"
+        ],
         "link_url_hint": [
             .zhHant: "貼上網址",
             .en: "Paste a link",
@@ -3654,6 +3742,30 @@ extension LocalizationManager {
             .ja: "アドレスが端末自身 (127.0.0.1) の場合、この端末で中継を起動します。参加者はホストに表示された LAN アドレスを入力してください。",
             .ko: "주소가 이 기기(127.0.0.1)를 가리키면 앱이 직접 릴레이를 실행합니다. 참가자는 호스트에 표시된 LAN 주소를 입력하세요.",
             .th: "เมื่อที่อยู่ชี้มาที่อุปกรณ์นี้ (127.0.0.1) แอปจะเปิดรีเลย์บนเครื่องนี้ ผู้ร่วมงานให้กรอกที่อยู่ LAN ที่โฮสต์แสดงไว้"
+        ],
+        "marquee_hint": [
+            .zhHant: "拖曳拉框選取物件；在選取範圍內拖曳＝整組搬移",
+            .en: "Drag to select objects. Drag inside the selection to move them together.",
+            .zhHans: "拖曳拉框选取物件；在选取范围内拖曳＝整组搬移",
+            .ja: "ドラッグで範囲選択。選択範囲の中をドラッグするとまとめて移動できます。",
+            .ko: "끌어서 범위를 선택하세요. 선택 영역 안을 끌면 함께 이동합니다.",
+            .th: "ลากเพื่อเลือกวัตถุ ลากภายในพื้นที่ที่เลือกเพื่อย้ายพร้อมกัน"
+        ],
+        "marquee_select": [
+            .zhHant: "框選",
+            .en: "Select",
+            .zhHans: "框选",
+            .ja: "範囲選択",
+            .ko: "범위 선택",
+            .th: "เลือกพื้นที่"
+        ],
+        "marquee_selected": [
+            .zhHant: "已選 %@ 個",
+            .en: "%@ selected",
+            .zhHans: "已选 %@ 个",
+            .ja: "%@ 個選択中",
+            .ko: "%@개 선택됨",
+            .th: "เลือกแล้ว %@ รายการ"
         ],
         "mat_copper": [
             .zhHant: "紅銅",
@@ -4095,6 +4207,22 @@ extension LocalizationManager {
             .ko: "필기",
             .th: "เขียน"
         ],
+        "mode_draw_badge": [
+            .zhHant: "手寫模式",
+            .en: "Handwriting",
+            .zhHans: "手写模式",
+            .ja: "手書き",
+            .ko: "필기",
+            .th: "เขียนด้วยลายมือ"
+        ],
+        "mode_draw_hint": [
+            .zhHant: "可以寫字。物件已鎖定，不會被拖到。",
+            .en: "Pen writes. Objects are locked.",
+            .zhHans: "可以写字。物件已锁定，不会被拖到。",
+            .ja: "ペンで書けます。オブジェクトは固定されています。",
+            .ko: "펜으로 씁니다. 객체는 고정됩니다.",
+            .th: "เขียนด้วยปากกาได้ วัตถุถูกล็อก"
+        ],
         "mode_type": [
             .zhHant: "打字",
             .en: "Type",
@@ -4102,6 +4230,22 @@ extension LocalizationManager {
             .ja: "入力",
             .ko: "입력",
             .th: "พิมพ์"
+        ],
+        "mode_type_badge": [
+            .zhHant: "打字與物件",
+            .en: "Typing & objects",
+            .zhHans: "打字与物件",
+            .ja: "入力とオブジェクト",
+            .ko: "입력·객체",
+            .th: "พิมพ์และวัตถุ"
+        ],
+        "mode_type_hint": [
+            .zhHant: "筆不會畫線。點物件即可編輯，點兩下空白處新增文字方塊。",
+            .en: "Pen won't draw. Tap objects to edit; double-tap empty space for a text box.",
+            .zhHans: "笔不会画线。点物件即可编辑，双击空白处新增文字框。",
+            .ja: "ペンでは描けません。オブジェクトをタップして編集、空白をダブルタップでテキストボックス。",
+            .ko: "펜으로 그려지지 않습니다. 객체를 눌러 편집하고, 빈 곳을 두 번 눌러 텍스트 상자를 만드세요.",
+            .th: "ปากกาจะไม่วาด แตะวัตถุเพื่อแก้ไข แตะสองครั้งที่พื้นที่ว่างเพื่อสร้างกล่องข้อความ"
         ],
         "model3d_count": [
             .zhHant: "3D 模型",
@@ -4526,6 +4670,14 @@ extension LocalizationManager {
             .ja: "キャンバス長を延長しました (+800pt)",
             .ko: "캔버스 길이가 연장되었습니다 (+800pt)",
             .th: "ขยายความยาวของผืนผ้าใบแล้ว (+800pt)"
+        ],
+        "page_label": [
+            .zhHant: "頁次",
+            .en: "Page",
+            .zhHans: "页次",
+            .ja: "ページ",
+            .ko: "페이지",
+            .th: "หน้า"
         ],
         "page_mode": [
             .zhHant: "頁面模式",
@@ -5039,6 +5191,14 @@ extension LocalizationManager {
             .ko: "캔버스에서 제거",
             .th: "ลบออกจากผืนผ้าใบ"
         ],
+        "rename_audio_card": [
+            .zhHant: "重新命名錄音卡片",
+            .en: "Rename recording card",
+            .zhHans: "重新命名录音卡片",
+            .ja: "録音カードの名前を変更",
+            .ko: "녹음 카드 이름 바꾸기",
+            .th: "เปลี่ยนชื่อการ์ดเสียง"
+        ],
         "rename_folder": [
             .zhHant: "重新命名資料夾",
             .en: "Rename Folder",
@@ -5078,6 +5238,22 @@ extension LocalizationManager {
             .ja: "リセット",
             .ko: "초기화",
             .th: "รีเซ็ต"
+        ],
+        "resize_audio_card": [
+            .zhHant: "調整錄音卡片大小",
+            .en: "Resize recording card",
+            .zhHans: "调整录音卡片大小",
+            .ja: "録音カードのサイズを変更",
+            .ko: "녹음 카드 크기 조정",
+            .th: "ปรับขนาดการ์ดเสียง"
+        ],
+        "resize_link": [
+            .zhHant: "調整連結卡片大小",
+            .en: "Resize link card",
+            .zhHans: "调整链接卡片大小",
+            .ja: "リンクカードのサイズを変更",
+            .ko: "링크 카드 크기 조정",
+            .th: "ปรับขนาดการ์ดลิงก์"
         ],
         "resize_shape": [
             .zhHant: "調整形狀大小",
@@ -5279,6 +5455,198 @@ extension LocalizationManager {
             .ko: "샘플 불러오기",
             .th: "โหลดข้อมูลตัวอย่าง"
         ],
+        "sample_meeting_agenda_table": [
+            .zhHant: "時間|議題|負責\n10:00|上週進度回顧|文萱\n10:15|手寫延遲量測結果|建豪\n10:35|上架時程與待補項目|佩宜\n10:50|下週分工|全員",
+            .en: "Time|Topic|Owner\n10:00|Last week in review|Wen\n10:15|Ink latency measurements|Chien\n10:35|Release timeline and gaps|Pei\n10:50|Next week's split|Everyone",
+            .zhHans: "时间|议题|负责\n10:00|上周进度回顾|文萱\n10:15|手写延迟量测结果|建豪\n10:35|上架时程与待补项目|佩宜\n10:50|下周分工|全员",
+            .ja: "時間|議題|担当\n10:00|先週の振り返り|ウェン\n10:15|手書き遅延の計測結果|チェン\n10:35|リリース日程と未対応項目|ペイ\n10:50|来週の分担|全員",
+            .ko: "시간|주제|담당\n10:00|지난주 회고|원\n10:15|필기 지연 측정 결과|치엔\n10:35|출시 일정과 남은 항목|페이\n10:50|다음 주 분담|전원",
+            .th: "เวลา|หัวข้อ|ผู้รับผิดชอบ\n10:00|ทบทวนสัปดาห์ที่แล้ว|เหวิน\n10:15|ผลวัดความหน่วงลายมือ|เชียน\n10:35|กำหนดการปล่อยและสิ่งที่ยังขาด|เผย\n10:50|แบ่งงานสัปดาห์หน้า|ทุกคน"
+        ],
+        "sample_meeting_chart_categories": [
+            .zhHant: "第35週|第36週|第37週|第38週",
+            .en: "W35|W36|W37|W38",
+            .zhHans: "第35周|第36周|第37周|第38周",
+            .ja: "第35週|第36週|第37週|第38週",
+            .ko: "35주|36주|37주|38주",
+            .th: "สัปดาห์ 35|สัปดาห์ 36|สัปดาห์ 37|สัปดาห์ 38"
+        ],
+        "sample_meeting_chart_series": [
+            .zhHant: "已完成",
+            .en: "Completed",
+            .zhHans: "已完成",
+            .ja: "完了",
+            .ko: "완료",
+            .th: "เสร็จแล้ว"
+        ],
+        "sample_meeting_chart_title": [
+            .zhHant: "每週完成的工作項目",
+            .en: "Items completed per week",
+            .zhHans: "每周完成的工作项目",
+            .ja: "週ごとの完了項目",
+            .ko: "주별 완료 항목",
+            .th: "งานที่เสร็จต่อสัปดาห์"
+        ],
+        "sample_meeting_flow_decide": [
+            .zhHant: "能重現？",
+            .en: "Reproducible?",
+            .zhHans: "能重现？",
+            .ja: "再現する？",
+            .ko: "재현되나?",
+            .th: "ทำซ้ำได้ไหม"
+        ],
+        "sample_meeting_flow_end": [
+            .zhHant: "排進下一版",
+            .en: "Schedule for next release",
+            .zhHans: "排进下一版",
+            .ja: "次版に計上",
+            .ko: "다음 버전에 배정",
+            .th: "จัดลงรุ่นถัดไป"
+        ],
+        "sample_meeting_flow_start": [
+            .zhHant: "收到回報",
+            .en: "Report comes in",
+            .zhHans: "收到回报",
+            .ja: "報告を受領",
+            .ko: "보고 접수",
+            .th: "ได้รับรายงาน"
+        ],
+        "sample_meeting_p1_body": [
+            .zhHant: "重點\n• 延遲在 iPad Pro 上量到 11ms，符合門檻；Android 中階機還沒量。\n• 上架卡在正式簽章金鑰，不是程式問題。\n• 下週把錄音插入頁面的操作寫進手冊。\n\n（這一頁是範例。整頁內容都改得動，也可以整本刪掉。）",
+            .en: "Key points\n• 11 ms measured on iPad Pro — within threshold. Mid-range Android not measured yet.\n• Release is blocked on the production signing key, not on code.\n• Next week: document how to insert a recording into a page.\n\n(This page is a sample. Everything on it is editable, and the whole notebook can be deleted.)",
+            .zhHans: "重点\n• 延迟在 iPad Pro 上量到 11ms，符合门槛；Android 中阶机还没量。\n• 上架卡在正式签章金钥，不是程式问题。\n• 下周把录音插入页面的操作写进手册。\n\n（这一页是范例。整页内容都改得动，也可以整本删掉。）",
+            .ja: "要点\n• iPad Pro で 11ms を計測、基準内。ミドルレンジ Android は未計測。\n• リリースは本番署名鍵待ちで、コードの問題ではない。\n• 来週：録音をページに挿入する手順をマニュアルに追記。\n\n（このページはサンプルです。すべて編集でき、ノートごと削除もできます。）",
+            .ko: "요점\n• iPad Pro에서 11ms 측정, 기준 내. 중급 안드로이드는 미측정.\n• 출시는 코드가 아니라 정식 서명 키 때문에 막혀 있음.\n• 다음 주: 녹음을 페이지에 삽입하는 절차를 설명서에 추가.\n\n(이 페이지는 예시입니다. 모두 수정할 수 있고 노트 전체를 삭제할 수도 있습니다.)",
+            .th: "ประเด็นสำคัญ\n• วัดได้ 11 ms บน iPad Pro อยู่ในเกณฑ์ ส่วน Android รุ่นกลางยังไม่ได้วัด\n• การปล่อยติดที่คีย์เซ็นชื่อจริง ไม่ใช่ปัญหาโค้ด\n• สัปดาห์หน้า: เขียนขั้นตอนแทรกเสียงลงในหน้าไว้ในคู่มือ\n\n(หน้านี้เป็นตัวอย่าง แก้ไขได้ทั้งหมด และลบทั้งเล่มได้)"
+        ],
+        "sample_meeting_p1_title": [
+            .zhHant: "產品週會 — 第 38 週",
+            .en: "Product weekly — week 38",
+            .zhHans: "产品周会 — 第 38 周",
+            .ja: "プロダクト定例 — 第38週",
+            .ko: "제품 주간 회의 — 38주차",
+            .th: "ประชุมผลิตภัณฑ์ประจำสัปดาห์ — สัปดาห์ที่ 38"
+        ],
+        "sample_meeting_p2_body": [
+            .zhHant: "這張圖是「數字製圖」：點選後可以重新編修，看到的是當初輸入的數字，不是一張只能刪掉重做的點陣圖。",
+            .en: "This chart keeps its data. Select it and edit — you get the numbers you typed, not a bitmap you can only delete and redo.",
+            .zhHans: "这张图是「数字制图」：点选后可以重新编修，看到的是当初输入的数字，不是一张只能删掉重做的点阵图。",
+            .ja: "このグラフはデータを保持しています。選んで編集すれば、入力した数値がそのまま出てきます。消して作り直すしかないビットマップではありません。",
+            .ko: "이 차트는 데이터를 그대로 갖고 있습니다. 선택해 편집하면 입력한 숫자가 그대로 나옵니다. 지우고 다시 만들어야 하는 비트맵이 아닙니다.",
+            .th: "แผนภูมินี้เก็บข้อมูลไว้ เลือกแล้วแก้ไขได้ คุณจะเห็นตัวเลขที่พิมพ์ไว้ ไม่ใช่ภาพบิตแมปที่ต้องลบแล้วทำใหม่"
+        ],
+        "sample_meeting_p2_title": [
+            .zhHant: "四週進度對照",
+            .en: "Four-week progress",
+            .zhHans: "四周进度对照",
+            .ja: "4週間の進捗",
+            .ko: "4주간 진행 상황",
+            .th: "ความคืบหน้า 4 สัปดาห์"
+        ],
+        "sample_meeting_p3_body": [
+            .zhHant: "下面的流程圖是三個獨立的形狀加兩條連接線。拖動任一個，連接線會跟著重算 —— 它們是真的物件，不是一張圖。",
+            .en: "The flowchart below is three separate shapes and two connectors. Drag any of them and the connectors recompute — they are real objects, not a picture.",
+            .zhHans: "下面的流程图是三个独立的形状加两条连接线。拖动任一个，连接线会跟着重算 —— 它们是真的对象，不是一张图。",
+            .ja: "下のフローチャートは3つの独立した図形と2本の接続線です。どれかを動かすと接続線が計算し直されます。画像ではなく本物のオブジェクトです。",
+            .ko: "아래 순서도는 별개의 도형 세 개와 연결선 두 개입니다. 아무거나 끌면 연결선이 다시 계산됩니다. 그림이 아니라 진짜 객체입니다.",
+            .th: "ผังงานด้านล่างคือรูปทรงสามชิ้นกับเส้นเชื่อมสองเส้น ลากชิ้นใดก็ได้แล้วเส้นเชื่อมจะคำนวณใหม่ เพราะเป็นวัตถุจริง ไม่ใช่รูปภาพ"
+        ],
+        "sample_meeting_p3_title": [
+            .zhHant: "決議與後續",
+            .en: "Decisions and follow-ups",
+            .zhHans: "决议与后续",
+            .ja: "決定事項とフォロー",
+            .ko: "결정 사항과 후속 조치",
+            .th: "ข้อสรุปและงานต่อเนื่อง"
+        ],
+        "sample_meeting_todo_table": [
+            .zhHant: "待辦|負責|期限\n量測 Android 中階機延遲|建豪|9/22\n補手冊「插入錄音」章節|文萱|9/20\n申請正式簽章金鑰|佩宜|9/19",
+            .en: "To-do|Owner|Due\nMeasure latency on mid-range Android|Chien|Sep 22\nWrite the “insert recording” chapter|Wen|Sep 20\nRequest the production signing key|Pei|Sep 19",
+            .zhHans: "待办|负责|期限\n量测 Android 中阶机延迟|建豪|9/22\n补手册「插入录音」章节|文萱|9/20\n申请正式签章金钥|佩宜|9/19",
+            .ja: "タスク|担当|期限\nミドルレンジ Android の遅延計測|チェン|9/22\nマニュアルに「録音の挿入」章を追加|ウェン|9/20\n本番署名鍵の申請|ペイ|9/19",
+            .ko: "할 일|담당|기한\n중급 안드로이드 지연 측정|치엔|9/22\n설명서 “녹음 삽입” 장 추가|원|9/20\n정식 서명 키 신청|페이|9/19",
+            .th: "สิ่งที่ต้องทำ|ผู้รับผิดชอบ|กำหนด\nวัดความหน่วงบน Android รุ่นกลาง|เชียน|22 ก.ย.\nเขียนบท “แทรกเสียงบันทึก” ในคู่มือ|เหวิน|20 ก.ย.\nขอคีย์เซ็นชื่อจริง|เผย|19 ก.ย."
+        ],
+        "sample_welcome_p1_body": [
+            .zhHant: "這是一本可以直接改的說明筆記。\n\n• 手寫：用觸控筆、手指或滑鼠都寫得了，寫下的是原始取樣點。\n• 打字：插入文字方塊，字型、行距、對齊都調得動。\n• 錄音：錄下的聲音與筆跡在同一條時間軸上，點筆跡就跳到當時的聲音。\n\n這一頁上的每一個方塊、表格與圖形都可以搬、可以改、可以刪。試著拖一下看看。",
+            .en: "This is a help note you can edit directly.\n\n• Handwriting: pen, finger or mouse — raw sample points are what get stored.\n• Typing: insert a text box and adjust font, line spacing and alignment.\n• Recording: audio and ink share one timeline — tap a stroke to jump to that moment.\n\nEvery box, table and shape on this page can be moved, edited and deleted. Try dragging one.",
+            .zhHans: "这是一本可以直接改的说明笔记。\n\n• 手写：用触控笔、手指或鼠标都写得了，写下的是原始采样点。\n• 打字：插入文字框，字体、行距、对齐都调得动。\n• 录音：录下的声音与笔迹在同一条时间轴上，点笔迹就跳到当时的声音。\n\n这一页上的每一个方块、表格与图形都可以搬、可以改、可以删。试着拖一下看看。",
+            .ja: "これはそのまま編集できる説明ノートです。\n\n• 手書き：ペン・指・マウスのいずれでも書けます。保存されるのは生のサンプル点です。\n• 入力：テキストボックスを挿入し、フォント・行間・配置を調整できます。\n• 録音：音声と筆跡は同じタイムライン上にあり、筆跡をタップするとその瞬間の音声に飛びます。\n\nこのページのボックス・表・図形はすべて移動・編集・削除できます。ドラッグしてみてください。",
+            .ko: "바로 편집할 수 있는 설명 노트입니다.\n\n• 필기: 펜, 손가락, 마우스 모두 가능하며 원본 샘플 점이 저장됩니다.\n• 입력: 텍스트 상자를 넣고 글꼴·줄 간격·정렬을 조정할 수 있습니다.\n• 녹음: 음성과 필기가 같은 타임라인에 있어 획을 누르면 그 순간의 소리로 이동합니다.\n\n이 페이지의 상자·표·도형은 모두 옮기고 고치고 지울 수 있습니다. 한번 끌어보세요.",
+            .th: "นี่คือสมุดคำอธิบายที่แก้ไขได้ทันที\n\n• เขียนด้วยลายมือ: ใช้ปากกา นิ้ว หรือเมาส์ได้ ระบบเก็บจุดตัวอย่างดิบไว้\n• พิมพ์: แทรกกล่องข้อความแล้วปรับฟอนต์ ระยะบรรทัด และการจัดวาง\n• บันทึกเสียง: เสียงกับลายเส้นอยู่บนไทม์ไลน์เดียวกัน แตะเส้นเพื่อข้ามไปยังช่วงเสียงนั้น\n\nทุกกล่อง ตาราง และรูปทรงบนหน้านี้ ย้าย แก้ไข และลบได้ ลองลากดู"
+        ],
+        "sample_welcome_p1_title": [
+            .zhHant: "歡迎使用 Kairumo",
+            .en: "Welcome to Kairumo",
+            .zhHans: "欢迎使用 Kairumo",
+            .ja: "Kairumo へようこそ",
+            .ko: "Kairumo에 오신 것을 환영합니다",
+            .th: "ยินดีต้อนรับสู่ Kairumo"
+        ],
+        "sample_welcome_p2_body": [
+            .zhHant: "這張表是真的表格物件：點兩下任一格就能改字，拖右下角可以調大小。",
+            .en: "This is a real table object — double-tap any cell to edit it, drag the corner to resize.",
+            .zhHans: "这张表是真的表格对象：点两下任一格就能改字，拖右下角可以调大小。",
+            .ja: "これは実際の表オブジェクトです。セルをダブルタップで編集、角をドラッグでサイズ変更できます。",
+            .ko: "이것은 실제 표 객체입니다. 셀을 두 번 눌러 수정하고, 모서리를 끌어 크기를 조절하세요.",
+            .th: "นี่คือวัตถุตารางจริง แตะสองครั้งที่ช่องใดก็ได้เพื่อแก้ไข ลากมุมเพื่อปรับขนาด"
+        ],
+        "sample_welcome_p2_title": [
+            .zhHant: "工具列怎麼用",
+            .en: "Using the toolbar",
+            .zhHans: "工具栏怎么用",
+            .ja: "ツールバーの使い方",
+            .ko: "도구 모음 사용법",
+            .th: "วิธีใช้แถบเครื่องมือ"
+        ],
+        "sample_welcome_p3_body": [
+            .zhHant: "沒有伺服器，也沒有帳號。你的筆記存在這台裝置上。\n\n• 同步：登入你自己的 Google 雲端硬碟，資料放在應用程式專屬資料夾，檔案清單看不到它。\n• 備份：匯出成 .padnote、PDF、Markdown 或 SVG，放到任何你信得過的地方。\n• 隱私：沒有分析、沒有追蹤、沒有帳號可以連結到你。細節看首頁的「隱私權政策」。\n\n沒有帳號就沒有「忘記密碼」—— 但也代表裝置遺失時沒有雲端副本，請自己做備份。",
+            .en: "No server, no account. Your notes live on this device.\n\n• Sync: sign in to your own Google Drive; data goes to an app-private folder you won't see in your file list.\n• Backup: export to .padnote, PDF, Markdown or SVG and keep it anywhere you trust.\n• Privacy: no analytics, no tracking, no account to link back to you. See “Privacy Policy” on the home screen.\n\nNo account means no “forgot password” — but it also means no cloud copy if you lose the device. Make your own backups.",
+            .zhHans: "没有服务器，也没有账号。你的笔记存在这台装置上。\n\n• 同步：登录你自己的 Google 云端硬碟，资料放在应用程式专属资料夹，档案清单看不到它。\n• 备份：汇出成 .padnote、PDF、Markdown 或 SVG，放到任何你信得过的地方。\n• 隐私：没有分析、没有追踪、没有账号可以连结到你。细节看首页的「隐私权政策」。\n\n没有账号就没有「忘记密码」—— 但也代表装置遗失时没有云端副本，请自己做备份。",
+            .ja: "サーバーもアカウントもありません。ノートはこの端末の中にあります。\n\n• 同期：ご自身の Google ドライブにログインすると、アプリ専用フォルダに保存されます（ファイル一覧には表示されません）。\n• バックアップ：.padnote、PDF、Markdown、SVG に書き出して、信頼できる場所に保管できます。\n• プライバシー：解析も追跡もアカウントもありません。詳しくはホーム画面の「プライバシーポリシー」をご覧ください。\n\nアカウントがないので「パスワードを忘れた」はありません。ただし端末を失うとクラウドの控えもありません。必ずご自身でバックアップを。",
+            .ko: "서버도 계정도 없습니다. 노트는 이 기기에 저장됩니다.\n\n• 동기화: 본인의 Google 드라이브에 로그인하면 앱 전용 폴더에 저장되며 파일 목록에는 보이지 않습니다.\n• 백업: .padnote, PDF, Markdown, SVG로 내보내 믿을 수 있는 곳에 보관하세요.\n• 개인정보: 분석도 추적도 없고, 연결될 계정도 없습니다. 홈 화면의 “개인정보 처리방침”을 보세요.\n\n계정이 없으니 “비밀번호 찾기”도 없습니다. 대신 기기를 잃으면 클라우드 사본도 없으니 직접 백업하세요.",
+            .th: "ไม่มีเซิร์ฟเวอร์ ไม่มีบัญชี บันทึกของคุณอยู่ในเครื่องนี้\n\n• ซิงค์: ลงชื่อเข้าใช้ Google Drive ของคุณเอง ข้อมูลจะอยู่ในโฟลเดอร์เฉพาะแอปที่ไม่ปรากฏในรายการไฟล์\n• สำรองข้อมูล: ส่งออกเป็น .padnote, PDF, Markdown หรือ SVG แล้วเก็บไว้ที่ใดก็ได้ที่คุณไว้ใจ\n• ความเป็นส่วนตัว: ไม่มีการวิเคราะห์ ไม่มีการติดตาม ไม่มีบัญชีที่โยงถึงคุณ ดูรายละเอียดที่ “นโยบายความเป็นส่วนตัว” บนหน้าแรก\n\nไม่มีบัญชีก็ไม่มี “ลืมรหัสผ่าน” แต่ก็แปลว่าถ้าเครื่องหายก็ไม่มีสำเนาบนคลาวด์ กรุณาสำรองข้อมูลเอง"
+        ],
+        "sample_welcome_p3_title": [
+            .zhHant: "備份、同步與隱私",
+            .en: "Backup, sync and privacy",
+            .zhHans: "备份、同步与隐私",
+            .ja: "バックアップ・同期・プライバシー",
+            .ko: "백업, 동기화, 개인정보",
+            .th: "สำรองข้อมูล ซิงค์ และความเป็นส่วนตัว"
+        ],
+        "sample_welcome_pill_record": [
+            .zhHant: "錄音",
+            .en: "Recording",
+            .zhHans: "录音",
+            .ja: "録音",
+            .ko: "녹음",
+            .th: "บันทึกเสียง"
+        ],
+        "sample_welcome_pill_type": [
+            .zhHant: "打字",
+            .en: "Typing",
+            .zhHans: "打字",
+            .ja: "入力",
+            .ko: "입력",
+            .th: "พิมพ์"
+        ],
+        "sample_welcome_pill_write": [
+            .zhHant: "手寫",
+            .en: "Handwriting",
+            .zhHans: "手写",
+            .ja: "手書き",
+            .ko: "필기",
+            .th: "ลายมือ"
+        ],
+        "sample_welcome_tools_table": [
+            .zhHant: "工具|它做什麼\n筆與螢光筆|粗細與顏色各自記住，換回來還是原本那一支\n橡皮擦|整筆擦或局部擦，擦掉的筆畫留有墓碑，同步得回去\n套索|圈起來就能整組搬、縮放、旋轉\n插入|圖片、表格、圖表、形狀、連結、3D、錄音\n更多|次要工具收在這裡：圖層、算式、素材庫、主題工具",
+            .en: "Tool|What it does\nPen & highlighter|Each remembers its own width and colour\nEraser|Whole-stroke or partial; erased strokes leave tombstones so they sync\nLasso|Circle a group to move, scale and rotate it together\nInsert|Image, table, chart, shape, link, 3D, recording\nMore|Secondary tools live here: layers, formulas, asset library, theme tools",
+            .zhHans: "工具|它做什么\n笔与荧光笔|粗细与颜色各自记住，换回来还是原本那一支\n橡皮擦|整笔擦或局部擦，擦掉的笔画留有墓碑，同步得回去\n套索|圈起来就能整组搬、缩放、旋转\n插入|图片、表格、图表、形状、链接、3D、录音\n更多|次要工具收在这里：图层、算式、素材库、主题工具",
+            .ja: "ツール|はたらき\nペンと蛍光ペン|太さと色をそれぞれ記憶します\n消しゴム|一筆消しと部分消し。消した筆跡は墓標が残り同期されます\n投げ縄|囲めばまとめて移動・拡大縮小・回転できます\n挿入|画像・表・グラフ・図形・リンク・3D・録音\nその他|副次的なツール：レイヤー、数式、素材ライブラリ、テーマツール",
+            .ko: "도구|하는 일\n펜과 형광펜|각각 굵기와 색을 따로 기억합니다\n지우개|획 전체 또는 부분 지우기. 지운 획은 툼스톤이 남아 동기화됩니다\n올가미|묶어서 함께 옮기고 크기 조절하고 회전합니다\n삽입|이미지, 표, 차트, 도형, 링크, 3D, 녹음\n더 보기|보조 도구: 레이어, 수식, 소재 라이브러리, 테마 도구",
+            .th: "เครื่องมือ|ทำอะไร\nปากกาและปากกาเน้น|จำความหนาและสีของตัวเองแยกกัน\nยางลบ|ลบทั้งเส้นหรือบางส่วน เส้นที่ลบมีทูมสโตนจึงซิงค์ได้\nบ่วงบาศ|ล้อมไว้แล้วย้าย ย่อขยาย และหมุนพร้อมกัน\nแทรก|รูปภาพ ตาราง แผนภูมิ รูปทรง ลิงก์ 3D เสียงบันทึก\nเพิ่มเติม|เครื่องมือรอง: เลเยอร์ สูตรคำนวณ คลังวัสดุ เครื่องมือธีม"
+        ],
         "save": [
             .zhHant: "儲存",
             .en: "Save",
@@ -5390,6 +5758,446 @@ extension LocalizationManager {
             .ja: "塗りつぶし",
             .ko: "채우기",
             .th: "สีพื้น"
+        ],
+        "shape_kind_arrow": [
+            .zhHant: "箭頭",
+            .en: "Arrow",
+            .zhHans: "箭头",
+            .ja: "矢印",
+            .ko: "화살표",
+            .th: "ลูกศร"
+        ],
+        "shape_kind_arrowblockdown": [
+            .zhHant: "下箭頭",
+            .en: "Down arrow",
+            .zhHans: "下箭头",
+            .ja: "下矢印",
+            .ko: "아래쪽 화살표",
+            .th: "ลูกศรลง"
+        ],
+        "shape_kind_arrowblockleft": [
+            .zhHant: "左箭頭",
+            .en: "Left arrow",
+            .zhHans: "左箭头",
+            .ja: "左矢印",
+            .ko: "왼쪽 화살표",
+            .th: "ลูกศรซ้าย"
+        ],
+        "shape_kind_arrowblockright": [
+            .zhHant: "右箭頭",
+            .en: "Right arrow",
+            .zhHans: "右箭头",
+            .ja: "右矢印",
+            .ko: "오른쪽 화살표",
+            .th: "ลูกศรขวา"
+        ],
+        "shape_kind_arrowblockup": [
+            .zhHant: "上箭頭",
+            .en: "Up arrow",
+            .zhHans: "上箭头",
+            .ja: "上矢印",
+            .ko: "위쪽 화살표",
+            .th: "ลูกศรขึ้น"
+        ],
+        "shape_kind_banner": [
+            .zhHant: "旗幟",
+            .en: "Banner",
+            .zhHans: "旗帜",
+            .ja: "バナー",
+            .ko: "배너",
+            .th: "แบนเนอร์"
+        ],
+        "shape_kind_bolt": [
+            .zhHant: "閃電",
+            .en: "Lightning bolt",
+            .zhHans: "闪电",
+            .ja: "稲妻",
+            .ko: "번개",
+            .th: "สายฟ้า"
+        ],
+        "shape_kind_chevron": [
+            .zhHant: "箭號",
+            .en: "Chevron",
+            .zhHans: "箭号",
+            .ja: "山形",
+            .ko: "갈매기형",
+            .th: "ลูกศรเชฟรอน"
+        ],
+        "shape_kind_cloud": [
+            .zhHant: "雲朵",
+            .en: "Cloud",
+            .zhHans: "云朵",
+            .ja: "雲",
+            .ko: "구름",
+            .th: "เมฆ"
+        ],
+        "shape_kind_collate": [
+            .zhHant: "對照",
+            .en: "Collate",
+            .zhHans: "对照",
+            .ja: "照合",
+            .ko: "대조",
+            .th: "เรียงเทียบ"
+        ],
+        "shape_kind_connector": [
+            .zhHant: "連接點",
+            .en: "Connector",
+            .zhHans: "连接点",
+            .ja: "結合子",
+            .ko: "연결점",
+            .th: "จุดเชื่อม"
+        ],
+        "shape_kind_cross": [
+            .zhHant: "十字",
+            .en: "Cross",
+            .zhHans: "十字",
+            .ja: "十字",
+            .ko: "십자",
+            .th: "กากบาท"
+        ],
+        "shape_kind_data": [
+            .zhHant: "資料",
+            .en: "Data",
+            .zhHans: "资料",
+            .ja: "データ",
+            .ko: "데이터",
+            .th: "ข้อมูล"
+        ],
+        "shape_kind_database": [
+            .zhHant: "資料庫",
+            .en: "Database",
+            .zhHans: "数据库",
+            .ja: "データベース",
+            .ko: "데이터베이스",
+            .th: "ฐานข้อมูล"
+        ],
+        "shape_kind_decision": [
+            .zhHant: "判斷",
+            .en: "Decision",
+            .zhHans: "判断",
+            .ja: "判断",
+            .ko: "판단",
+            .th: "การตัดสินใจ"
+        ],
+        "shape_kind_delay": [
+            .zhHant: "延遲",
+            .en: "Delay",
+            .zhHans: "延迟",
+            .ja: "遅延",
+            .ko: "지연",
+            .th: "หน่วงเวลา"
+        ],
+        "shape_kind_diamond": [
+            .zhHant: "菱形",
+            .en: "Diamond",
+            .zhHans: "菱形",
+            .ja: "ひし形",
+            .ko: "마름모",
+            .th: "ข้าวหลามตัด"
+        ],
+        "shape_kind_display": [
+            .zhHant: "顯示",
+            .en: "Display",
+            .zhHans: "显示",
+            .ja: "表示",
+            .ko: "표시",
+            .th: "แสดงผล"
+        ],
+        "shape_kind_document": [
+            .zhHant: "文件",
+            .en: "Document",
+            .zhHans: "文件",
+            .ja: "文書",
+            .ko: "문서",
+            .th: "เอกสาร"
+        ],
+        "shape_kind_doublearrow": [
+            .zhHant: "雙箭頭",
+            .en: "Double arrow",
+            .zhHans: "双箭头",
+            .ja: "両矢印",
+            .ko: "양방향 화살표",
+            .th: "ลูกศรสองหัว"
+        ],
+        "shape_kind_ellipse": [
+            .zhHant: "橢圓",
+            .en: "Ellipse",
+            .zhHans: "椭圆",
+            .ja: "楕円",
+            .ko: "타원",
+            .th: "วงรี"
+        ],
+        "shape_kind_extract": [
+            .zhHant: "抽取",
+            .en: "Extract",
+            .zhHans: "抽取",
+            .ja: "抽出",
+            .ko: "추출",
+            .th: "แยก"
+        ],
+        "shape_kind_heart": [
+            .zhHant: "心形",
+            .en: "Heart",
+            .zhHans: "心形",
+            .ja: "ハート",
+            .ko: "하트",
+            .th: "หัวใจ"
+        ],
+        "shape_kind_heptagon": [
+            .zhHant: "七邊形",
+            .en: "Heptagon",
+            .zhHans: "七边形",
+            .ja: "七角形",
+            .ko: "칠각형",
+            .th: "เจ็ดเหลี่ยม"
+        ],
+        "shape_kind_hexagon": [
+            .zhHant: "六邊形",
+            .en: "Hexagon",
+            .zhHans: "六边形",
+            .ja: "六角形",
+            .ko: "육각형",
+            .th: "หกเหลี่ยม"
+        ],
+        "shape_kind_line": [
+            .zhHant: "直線",
+            .en: "Line",
+            .zhHans: "直线",
+            .ja: "直線",
+            .ko: "직선",
+            .th: "เส้นตรง"
+        ],
+        "shape_kind_lshape": [
+            .zhHant: "L 形",
+            .en: "L-shape",
+            .zhHans: "L 形",
+            .ja: "L字形",
+            .ko: "L자형",
+            .th: "รูปตัวแอล"
+        ],
+        "shape_kind_manualinput": [
+            .zhHant: "人工輸入",
+            .en: "Manual input",
+            .zhHans: "人工输入",
+            .ja: "手入力",
+            .ko: "수동 입력",
+            .th: "ป้อนด้วยมือ"
+        ],
+        "shape_kind_manualoperation": [
+            .zhHant: "人工作業",
+            .en: "Manual operation",
+            .zhHans: "人工作业",
+            .ja: "手作業",
+            .ko: "수동 작업",
+            .th: "งานที่ทำด้วยมือ"
+        ],
+        "shape_kind_merge": [
+            .zhHant: "彙整",
+            .en: "Merge",
+            .zhHans: "汇整",
+            .ja: "併合",
+            .ko: "병합",
+            .th: "รวม"
+        ],
+        "shape_kind_moon": [
+            .zhHant: "月牙",
+            .en: "Moon",
+            .zhHans: "月牙",
+            .ja: "月",
+            .ko: "달",
+            .th: "พระจันทร์เสี้ยว"
+        ],
+        "shape_kind_octagon": [
+            .zhHant: "八邊形",
+            .en: "Octagon",
+            .zhHans: "八边形",
+            .ja: "八角形",
+            .ko: "팔각형",
+            .th: "แปดเหลี่ยม"
+        ],
+        "shape_kind_offpageconnector": [
+            .zhHant: "跨頁連接",
+            .en: "Off-page connector",
+            .zhHans: "跨页连接",
+            .ja: "他ページ結合子",
+            .ko: "페이지 간 연결",
+            .th: "เชื่อมข้ามหน้า"
+        ],
+        "shape_kind_parallelogram": [
+            .zhHant: "平行四邊形",
+            .en: "Parallelogram",
+            .zhHans: "平行四边形",
+            .ja: "平行四辺形",
+            .ko: "평행사변형",
+            .th: "สี่เหลี่ยมด้านขนาน"
+        ],
+        "shape_kind_pentagon": [
+            .zhHant: "五邊形",
+            .en: "Pentagon",
+            .zhHans: "五边形",
+            .ja: "五角形",
+            .ko: "오각형",
+            .th: "ห้าเหลี่ยม"
+        ],
+        "shape_kind_pie": [
+            .zhHant: "扇形",
+            .en: "Pie",
+            .zhHans: "扇形",
+            .ja: "扇形",
+            .ko: "부채꼴",
+            .th: "รูปพาย"
+        ],
+        "shape_kind_plaque": [
+            .zhHant: "匾額",
+            .en: "Plaque",
+            .zhHans: "匾额",
+            .ja: "プレート",
+            .ko: "명판",
+            .th: "แผ่นป้าย"
+        ],
+        "shape_kind_preparation": [
+            .zhHant: "預備",
+            .en: "Preparation",
+            .zhHans: "预备",
+            .ja: "準備",
+            .ko: "준비",
+            .th: "การเตรียม"
+        ],
+        "shape_kind_process": [
+            .zhHant: "處理",
+            .en: "Process",
+            .zhHans: "处理",
+            .ja: "処理",
+            .ko: "처리",
+            .th: "กระบวนการ"
+        ],
+        "shape_kind_punchedcard": [
+            .zhHant: "打孔卡",
+            .en: "Punched card",
+            .zhHans: "打孔卡",
+            .ja: "パンチカード",
+            .ko: "천공 카드",
+            .th: "บัตรเจาะรู"
+        ],
+        "shape_kind_punchedtape": [
+            .zhHant: "打孔紙帶",
+            .en: "Punched tape",
+            .zhHans: "打孔纸带",
+            .ja: "紙テープ",
+            .ko: "천공 테이프",
+            .th: "เทปเจาะรู"
+        ],
+        "shape_kind_rectangle": [
+            .zhHant: "矩形",
+            .en: "Rectangle",
+            .zhHans: "矩形",
+            .ja: "長方形",
+            .ko: "직사각형",
+            .th: "สี่เหลี่ยมผืนผ้า"
+        ],
+        "shape_kind_righttriangle": [
+            .zhHant: "直角三角形",
+            .en: "Right triangle",
+            .zhHans: "直角三角形",
+            .ja: "直角三角形",
+            .ko: "직각삼각형",
+            .th: "สามเหลี่ยมมุมฉาก"
+        ],
+        "shape_kind_roundedrectangle": [
+            .zhHant: "圓角矩形",
+            .en: "Rounded rectangle",
+            .zhHans: "圆角矩形",
+            .ja: "角丸長方形",
+            .ko: "둥근 직사각형",
+            .th: "สี่เหลี่ยมมุมมน"
+        ],
+        "shape_kind_speechbubble": [
+            .zhHant: "對話框",
+            .en: "Speech bubble",
+            .zhHans: "对话框",
+            .ja: "吹き出し",
+            .ko: "말풍선",
+            .th: "กรอบคำพูด"
+        ],
+        "shape_kind_star": [
+            .zhHant: "五角星",
+            .en: "Star",
+            .zhHans: "五角星",
+            .ja: "星",
+            .ko: "별",
+            .th: "ดาว"
+        ],
+        "shape_kind_star4": [
+            .zhHant: "四角星",
+            .en: "4-point star",
+            .zhHans: "四角星",
+            .ja: "4光星",
+            .ko: "4각 별",
+            .th: "ดาวสี่แฉก"
+        ],
+        "shape_kind_star6": [
+            .zhHant: "六角星",
+            .en: "6-point star",
+            .zhHans: "六角星",
+            .ja: "6光星",
+            .ko: "6각 별",
+            .th: "ดาวหกแฉก"
+        ],
+        "shape_kind_star8": [
+            .zhHant: "八角星",
+            .en: "8-point star",
+            .zhHans: "八角星",
+            .ja: "8光星",
+            .ko: "8각 별",
+            .th: "ดาวแปดแฉก"
+        ],
+        "shape_kind_storeddata": [
+            .zhHant: "已儲存資料",
+            .en: "Stored data",
+            .zhHans: "已存储数据",
+            .ja: "保存データ",
+            .ko: "저장된 데이터",
+            .th: "ข้อมูลที่เก็บไว้"
+        ],
+        "shape_kind_sun": [
+            .zhHant: "太陽",
+            .en: "Sun",
+            .zhHans: "太阳",
+            .ja: "太陽",
+            .ko: "해",
+            .th: "ดวงอาทิตย์"
+        ],
+        "shape_kind_teardrop": [
+            .zhHant: "水滴",
+            .en: "Teardrop",
+            .zhHans: "水滴",
+            .ja: "しずく",
+            .ko: "물방울",
+            .th: "หยดน้ำ"
+        ],
+        "shape_kind_terminator": [
+            .zhHant: "起終點",
+            .en: "Terminator",
+            .zhHans: "起终点",
+            .ja: "開始／終了",
+            .ko: "시작·종료",
+            .th: "จุดเริ่ม/จบ"
+        ],
+        "shape_kind_trapezoid": [
+            .zhHant: "梯形",
+            .en: "Trapezoid",
+            .zhHans: "梯形",
+            .ja: "台形",
+            .ko: "사다리꼴",
+            .th: "สี่เหลี่ยมคางหมู"
+        ],
+        "shape_kind_triangle": [
+            .zhHant: "三角形",
+            .en: "Triangle",
+            .zhHans: "三角形",
+            .ja: "三角形",
+            .ko: "삼각형",
+            .th: "สามเหลี่ยม"
         ],
         "shape_label": [
             .zhHant: "標籤文字",
@@ -5974,6 +6782,14 @@ extension LocalizationManager {
             .ja: "右へ結合",
             .ko: "오른쪽 병합",
             .th: "ผสานไปทางขวา"
+        ],
+        "table_preview": [
+            .zhHant: "預覽",
+            .en: "Preview",
+            .zhHans: "预览",
+            .ja: "プレビュー",
+            .ko: "미리보기",
+            .th: "ตัวอย่าง"
         ],
         "table_studio": [
             .zhHant: "表格",

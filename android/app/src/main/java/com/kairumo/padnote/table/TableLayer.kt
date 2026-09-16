@@ -133,53 +133,7 @@ private fun TableObjectView(
                 }
             } }
     ) {
-        Canvas(Modifier.size(layout.width.toFloat().dp, layout.height.toFloat().dp)) {
-            // Canvas 內部是像素，版面是頁面點 —— 乘上 density。
-            val scale = density
-            // 表頭底色先畫，才會在格線與文字下面。
-            for (cell in layout.cells) {
-                if (!cell.isHeader) continue
-                drawRect(
-                    color = headerFill,
-                    topLeft = Offset((cell.x * scale).toFloat(), (cell.y * scale).toFloat()),
-                    size = Size((cell.width * scale).toFloat(), (cell.height * scale).toFloat())
-                )
-            }
-
-            drawIntoCanvas { canvas ->
-                val native = canvas.nativeCanvas
-                val stroke = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    style = android.graphics.Paint.Style.STROKE
-                    strokeWidth = 1f
-                    color = ruleColor.toArgb()
-                }
-                for (rule in layout.rules) {
-                    native.drawLine(
-                        (rule.x1 * scale).toFloat(), (rule.y1 * scale).toFloat(),
-                        (rule.x2 * scale).toFloat(), (rule.y2 * scale).toFloat(), stroke
-                    )
-                }
-
-                val text = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-                    color = foreground.toArgb()
-                    textSize = table.fontSize * scale
-                }
-                val lineHeight = table.fontSize * 1.35f * scale
-                for (cell in layout.cells) {
-                    text.isFakeBoldText = cell.isHeader
-                    var baseline = (cell.y * scale).toFloat() + lineHeight
-                    for (line in cell.lines) {
-                        native.drawText(
-                            line,
-                            (cell.x * scale).toFloat() + 6f * scale,
-                            baseline,
-                            text
-                        )
-                        baseline += lineHeight
-                    }
-                }
-            }
-        }
+        TablePreview(table = table, density = density)
     }
 
         if (isSelected) {
@@ -193,6 +147,81 @@ private fun TableObjectView(
                 },
                 onCommit = { onChanged(table) }
             )
+        }
+    }
+}
+
+/**
+ * 把一張表畫出來（不含選取、拖曳與旋轉）。
+ *
+ * 畫布上的表格物件與**編修面板的預覽**走同一份算繪 —— 各畫一份的話，
+ * 面板上看到的與插進去得到的會慢慢分岔，而那正是預覽最不該出現的事。
+ */
+@Composable
+fun TablePreview(
+    table: NoteTable,
+    density: Float,
+    modifier: Modifier = Modifier
+) {
+    val layout = table.layout()
+    val foreground = MaterialTheme.colorScheme.onSurface
+    val ruleColor = table.ruleColorHex
+        ?.let { hex -> ChartColorOrNull(hex) }
+        ?: foreground.copy(alpha = 0.35f)
+    val headerFill = when (val hex = table.headerBackgroundHex) {
+        // "clear" 是哨符不是顏色 —— 走顏色轉換會變成黑色。
+        "clear" -> Color.Transparent
+        null -> foreground.copy(alpha = 0.06f)
+        else -> ChartColorOrNull(hex) ?: foreground.copy(alpha = 0.06f)
+    }
+
+    Canvas(
+        modifier.size(layout.width.toFloat().dp, layout.height.toFloat().dp)
+    ) {
+        // Canvas 內部是像素，版面是頁面點 —— 乘上 density。
+        val scale = density
+        // 表頭底色先畫，才會在格線與文字下面。
+        for (cell in layout.cells) {
+            if (!cell.isHeader) continue
+            drawRect(
+                color = headerFill,
+                topLeft = Offset((cell.x * scale).toFloat(), (cell.y * scale).toFloat()),
+                size = Size((cell.width * scale).toFloat(), (cell.height * scale).toFloat())
+            )
+        }
+
+        drawIntoCanvas { canvas ->
+            val native = canvas.nativeCanvas
+            val stroke = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                style = android.graphics.Paint.Style.STROKE
+                strokeWidth = 1f
+                color = ruleColor.toArgb()
+            }
+            for (rule in layout.rules) {
+                native.drawLine(
+                    (rule.x1 * scale).toFloat(), (rule.y1 * scale).toFloat(),
+                    (rule.x2 * scale).toFloat(), (rule.y2 * scale).toFloat(), stroke
+                )
+            }
+
+            val text = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                color = foreground.toArgb()
+                textSize = table.fontSize * scale
+            }
+            val lineHeight = table.fontSize * 1.35f * scale
+            for (cell in layout.cells) {
+                text.isFakeBoldText = cell.isHeader
+                var baseline = (cell.y * scale).toFloat() + lineHeight
+                for (line in cell.lines) {
+                    native.drawText(
+                        line,
+                        (cell.x * scale).toFloat() + 6f * scale,
+                        baseline,
+                        text
+                    )
+                    baseline += lineHeight
+                }
+            }
         }
     }
 }

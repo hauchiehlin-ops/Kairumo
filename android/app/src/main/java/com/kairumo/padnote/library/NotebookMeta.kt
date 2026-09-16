@@ -37,6 +37,12 @@ class NotebookMeta private constructor(private val root: JSONObject) {
          */
         private const val KEY_LINKS = "linkAttachments"
 
+        /**
+         * 頁面上的錄音卡片。鍵名與 Apple 的 `NotebookDocument.audioAttachments`
+         * 一致 —— 這份中繼資料是同步的，鍵名不一樣等於兩邊各存各的。
+         */
+        private const val KEY_AUDIO = "audioAttachments"
+
         fun load(session: PadnoteSession?): NotebookMeta {
             val json = runCatching { session?.notebookMeta() }.getOrNull()
             val obj = runCatching { JSONObject(json ?: "{}") }.getOrNull() ?: JSONObject()
@@ -89,6 +95,18 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         items: List<com.kairumo.padnote.image.LinkObject>
     ) {
         root.put(KEY_LINKS, com.kairumo.padnote.image.LinkCodec.encodeAll(items))
+        runCatching { session?.setNotebookMeta(root.toString()) }
+    }
+
+    /** 這本筆記頁面上的錄音卡片。核心沒有對應的區塊型別，與連結卡片同一條路。 */
+    fun audioCards(): MutableList<com.kairumo.padnote.audio.AudioObject> =
+        com.kairumo.padnote.audio.AudioCodec.decodeAll(root.optJSONArray(KEY_AUDIO))
+
+    fun setAudioCards(
+        session: PadnoteSession?,
+        items: List<com.kairumo.padnote.audio.AudioObject>
+    ) {
+        root.put(KEY_AUDIO, com.kairumo.padnote.audio.AudioCodec.encodeAll(items))
         runCatching { session?.setNotebookMeta(root.toString()) }
     }
 

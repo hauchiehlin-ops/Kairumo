@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    自適應圖示（Android 8.0 以上）。
+
+    前景只有筆尖與波形，米色底板交給 background 那一層鋪滿 ——
+    把整張原圖當前景的話，系統遮罩（圓形、圓角方形、水滴…）會沿著
+    畫面裁一刀，而原圖自己的圓角底板會被切出一圈缺角。
+-->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_launcher_background" />
+    <foreground android:drawable="@mipmap/ic_launcher_foreground" />
+    <monochrome android:drawable="@mipmap/ic_launcher_foreground" />
+</adaptive-icon>

@@ -136,6 +136,22 @@ public enum PageThumbnailRenderer {
             for item in notebook.attachments ?? [] where item.pageIndex == pageIndex {
                 drawImage(item, store: store, ctx: ctx)
             }
+            // 形狀與連接線在圖片之上、表格之下 —— 與畫布的疊放順序一致
+            // （見 `StackableObject.Kind.defaultLayer`）。
+            //
+            // 這三種型別原本**完全沒有畫**：側邊欄的縮圖與匯出的圖片裡看不到
+            // 表格與流程圖，而畫布上看得到。使用者看到的是「預覽跟畫布不一樣」，
+            // 而且會以為自己的內容掉了。
+            let pageShapes = (notebook.shapeAttachments ?? []).filter { $0.pageIndex == pageIndex }
+            for item in pageShapes {
+                drawShape(item, ctx: ctx)
+            }
+            for item in notebook.connectionAttachments ?? [] where item.pageIndex == pageIndex {
+                drawConnection(item, shapes: pageShapes, ctx: ctx)
+            }
+            for item in notebook.tableAttachments ?? [] where item.pageIndex == pageIndex {
+                drawTable(item, ctx: ctx)
+            }
             for item in notebook.textAttachments ?? [] where item.pageIndex == pageIndex {
                 drawText(item, ctx: ctx)
             }
@@ -144,6 +160,9 @@ public enum PageThumbnailRenderer {
             }
             for item in notebook.model3DAttachments ?? [] where item.pageIndex == pageIndex {
                 drawModel3D(item, quality: quality, scale: scale)
+            }
+            for item in notebook.audioAttachments ?? [] where item.pageIndex == pageIndex {
+                drawAudio(item)
             }
             for pin in notebook.commentPins ?? [] where pin.pageIndex == pageIndex {
                 drawPin(pin)
@@ -225,6 +244,9 @@ public enum PageThumbnailRenderer {
         static let model3D = FrameDefaults(
             borderColor: .tintColor.withAlphaComponent(0.45), borderWidth: 1.5,
             background: .secondarySystemBackground)
+        static let audio = FrameDefaults(
+            borderColor: UIColor.systemRed.withAlphaComponent(0.35), borderWidth: 1.5,
+            background: .secondarySystemGroupedBackground)
     }
 
     /// 解析出實際要用的底色。`"clear"` 代表使用者選了透明。
@@ -418,6 +440,195 @@ public enum PageThumbnailRenderer {
                 .foregroundColor: UIColor.secondaryLabel
             ]
         ).draw(at: CGPoint(x: rect.minX + 10, y: rect.minY + 32))
+    }
+
+    // MARK: - 表格、形狀、連接線、錄音
+    //
+    // 這四種型別的幾何**一律走核心**（`layout()` / `outline()` /
+    // `ShapeGeometry.connection`），與畫布用的是同一份。自己再算一次的話，
+    // 匯出的表格高度或連接線落點會和畫面上差一點點 —— 而「差一點點」正是
+    // 使用者說不出哪裡怪、只覺得怪的那種 bug。
+
+    private static func drawTable(_ item: NoteTableAttachment, ctx: UIGraphicsImageRendererContext) {
+        let layout = item.layout()
+        let rect = CGRect(
+            x: item.x, y: item.y,
+            width: CGFloat(layout.width), height: CGFloat(layout.height)
+        )
+        let cg = ctx.cgContext
+        let rotated = abs(item.canvasRotation.truncatingRemainder(dividingBy: 360)) > 0.01
+        if rotated {
+            cg.saveGState()
+            cg.translateBy(x: rect.midX, y: rect.midY)
+            cg.rotate(by: CGFloat(item.canvasRotation) * .pi / 180)
+            cg.translateBy(x: -rect.midX, y: -rect.midY)
+        }
+        defer { if rotated { cg.restoreGState() } }
+
+        // 表頭底色先畫，才會在格線與文字下面。
+        let headerFill: UIColor = {
+            guard let hex = item.headerBackgroundHex else { return UIColor.label.withAlphaComponent(0.06) }
+            if hex == "clear" { return .clear }
+            return UIColor(hexString: hex) ?? UIColor.label.withAlphaComponent(0.06)
+        }()
+        headerFill.setFill()
+        for cell in layout.cells where cell.isHeader {
+            cg.fill(CGRect(x: rect.minX + CGFloat(cell.x), y: rect.minY + CGFloat(cell.y),
+                           width: CGFloat(cell.width), height: CGFloat(cell.height)))
+        }
+
+        let ruleColor = item.ruleColorHex.flatMap { UIColor(hexString: $0) }
+            ?? UIColor.label.withAlphaComponent(0.35)
+        ruleColor.setStroke()
+        let path = UIBezierPath()
+        for rule in layout.rules {
+            path.move(to: CGPoint(x: rect.minX + CGFloat(rule.x1), y: rect.minY + CGFloat(rule.y1)))
+            path.addLine(to: CGPoint(x: rect.minX + CGFloat(rule.x2), y: rect.minY + CGFloat(rule.y2)))
+        }
+        path.lineWidth = 1
+        path.stroke()
+
+        for cell in layout.cells {
+            let text = cell.lines.joined(separator: "\n")
+            guard !text.isEmpty else { continue }
+            NSAttributedString(
+                string: text,
+                attributes: [
+                    .font: UIFont.systemFont(
+                        ofSize: item.fontSize,
+                        weight: cell.isHeader ? .semibold : .regular),
+                    .foregroundColor: UIColor.label
+                ]
+            ).draw(
+                with: CGRect(
+                    x: rect.minX + CGFloat(cell.x) + 6, y: rect.minY + CGFloat(cell.y) + 4,
+                    width: max(1, CGFloat(cell.width) - 12), height: max(1, CGFloat(cell.height) - 8)),
+                options: [.usesLineFragmentOrigin, .usesFontLeading],
+                context: nil
+            )
+        }
+    }
+
+    private static func drawShape(_ item: NoteShapeAttachment, ctx: UIGraphicsImageRendererContext) {
+        let points = item.outline()
+        guard points.count >= 2 else { return }
+        let rect = CGRect(x: item.x, y: item.y, width: item.width, height: item.height)
+        let cg = ctx.cgContext
+        let rotated = abs(item.canvasRotation.truncatingRemainder(dividingBy: 360)) > 0.01
+        if rotated {
+            cg.saveGState()
+            cg.translateBy(x: rect.midX, y: rect.midY)
+            cg.rotate(by: CGFloat(item.canvasRotation) * .pi / 180)
+            cg.translateBy(x: -rect.midX, y: -rect.midY)
+        }
+        defer { if rotated { cg.restoreGState() } }
+
+        let path = UIBezierPath()
+        path.move(to: points[0])
+        for point in points.dropFirst() { path.addLine(to: point) }
+        // 線狀形狀（線／箭頭）不能收尾 —— 收了會多出一條回到起點的邊。
+        if !item.isLinear { path.close() }
+        path.lineWidth = item.lineWidth
+
+        if !item.isLinear {
+            let fill: UIColor = {
+                guard let hex = item.fillColorHex else { return .clear }
+                return hex == "clear" ? .clear : (UIColor(hexString: hex) ?? .clear)
+            }()
+            if fill != .clear {
+                fill.setFill()
+                path.fill()
+            }
+        }
+        (item.strokeColorHex.flatMap { UIColor(hexString: $0) } ?? UIColor.label).setStroke()
+        path.stroke()
+
+        // 箭頭頭部要填實，不然箭頭看起來只是一條線。
+        for head in item.arrowHeads() where head.count >= 3 {
+            let arrow = UIBezierPath()
+            arrow.move(to: head[0])
+            for point in head.dropFirst() { arrow.addLine(to: point) }
+            arrow.close()
+            (item.strokeColorHex.flatMap { UIColor(hexString: $0) } ?? UIColor.label).setFill()
+            arrow.fill()
+        }
+
+        guard !item.label.isEmpty, item.acceptsText else { return }
+        let attributes: [NSAttributedString.Key: Any] = [
+            .font: UIFont.systemFont(ofSize: 13),
+            .foregroundColor: UIColor.label
+        ]
+        let size = (item.label as NSString).size(withAttributes: attributes)
+        (item.label as NSString).draw(
+            at: CGPoint(x: rect.midX - size.width / 2, y: rect.midY - size.height / 2),
+            withAttributes: attributes
+        )
+    }
+
+    private static func drawConnection(
+        _ item: NoteConnectionAttachment,
+        shapes: [NoteShapeAttachment],
+        ctx: UIGraphicsImageRendererContext
+    ) {
+        guard let from = shapes.first(where: { $0.id == item.fromShapeId }),
+              let to = shapes.first(where: { $0.id == item.toShapeId }),
+              let geometry = ShapeGeometry.connection(item, from: from, to: to),
+              geometry.path.count >= 2 else { return }
+
+        let color = item.colorHex.flatMap { UIColor(hexString: $0) } ?? UIColor.label
+        let path = UIBezierPath()
+        path.move(to: geometry.path[0])
+        for point in geometry.path.dropFirst() { path.addLine(to: point) }
+        path.lineWidth = item.lineWidth
+        color.setStroke()
+        path.stroke()
+
+        if geometry.arrowHead.count >= 3 {
+            let head = UIBezierPath()
+            head.move(to: geometry.arrowHead[0])
+            for point in geometry.arrowHead.dropFirst() { head.addLine(to: point) }
+            head.close()
+            color.setFill()
+            head.fill()
+        }
+    }
+
+    /// 錄音卡片。匯出的檔案播不出聲音，但**它必須在那裡** ——
+    /// 少畫一張卡片，使用者看到的是自己的內容掉了。
+    private static func drawAudio(_ item: NoteAudioAttachment) {
+        let rect = CGRect(x: item.x, y: item.y, width: item.width, height: item.height)
+        fillFrame(item, in: rect, defaults: .audio)
+        strokeFrame(item, in: rect, defaults: .audio)
+
+        // 播放鈕的圓與三角。
+        let circle = CGRect(x: rect.minX + 12, y: rect.midY - 17, width: 34, height: 34)
+        UIColor.systemRed.withAlphaComponent(0.12).setFill()
+        UIBezierPath(ovalIn: circle).fill()
+        let triangle = UIBezierPath()
+        triangle.move(to: CGPoint(x: circle.midX - 5, y: circle.midY - 7))
+        triangle.addLine(to: CGPoint(x: circle.midX + 7, y: circle.midY))
+        triangle.addLine(to: CGPoint(x: circle.midX - 5, y: circle.midY + 7))
+        triangle.close()
+        UIColor.systemRed.setFill()
+        triangle.fill()
+
+        let textX = circle.maxX + 10
+        NSAttributedString(
+            string: item.title,
+            attributes: [
+                .font: UIFont.systemFont(ofSize: 13, weight: .semibold),
+                .foregroundColor: UIColor.label
+            ]
+        ).draw(in: CGRect(x: textX, y: rect.minY + 10,
+                          width: max(1, rect.maxX - textX - 12), height: 18))
+
+        NSAttributedString(
+            string: AudioAttachmentFormat.duration(item.durationSeconds),
+            attributes: [
+                .font: UIFont.monospacedDigitSystemFont(ofSize: 11, weight: .regular),
+                .foregroundColor: UIColor.secondaryLabel
+            ]
+        ).draw(at: CGPoint(x: textX, y: rect.minY + 30))
     }
 
     private static func drawModel3D(

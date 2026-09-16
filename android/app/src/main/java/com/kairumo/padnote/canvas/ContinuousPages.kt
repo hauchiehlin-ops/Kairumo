@@ -11,9 +11,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -113,26 +111,21 @@ data class InkSettings(
  * 不是他上次按過上一頁／下一頁的那一頁。焦點變動會回報給外層，
  * 外層的 `pageIndex` 跟著走，所以選單裡的插入動作自然落在對的頁。
  *
- * # 捲動與手寫的分工：一指畫、兩指捲，與 Apple 端一致
+ * # 捲動與手寫的分工：**這一點與 Apple 端不同**
  *
- * `LazyColumn` 自己的捲動手勢在滑動超過 touch slop 時就把事件攔走，
- * 底下的畫布只收得到前幾個點 —— 手指既畫不出東西、又只能捲動。
+ * Apple 的連續模式是「手指畫畫、兩指捲動」。Android 做不到同一套：
+ * `LazyColumn` 的捲動手勢在觸控滑動超過 touch slop 時就把事件攔走，
+ * 底下的畫布只收得到前幾個點 —— 結果是手指既畫不出東西、又只能捲動。
  *
- * 試過「偵測到筆就**動態**關掉 `userScrollEnabled`」：沒有用。重組要等到
- * 下一幀，而捲動手勢在那之前就已經接手了。
+ * 試過「偵測到筆就關掉 userScrollEnabled」：**沒有用**。重組要等到下一幀，
+ * 而捲動手勢在那之前就已經接手了；筆畫完全畫不出來。
  *
- * 現在是把 `userScrollEnabled` **靜態關掉**（不是動態切換，所以沒有差一幀
- * 的問題），捲動改由這裡自己驅動：
+ * 現在的做法是把判定交回核心的輸入仲裁器：連續模式下每一頁的引擎一律
+ * **pen-only**。筆 → 仲裁器判為墨跡，畫布吃掉事件；手指 → 判為手勢，
+ * 畫布回傳 false，`LazyColumn` 照常捲動。不需要跟捲動容器搶事件。
  *
- * - 一根手指或筆 → 事件先到畫布。畫布要就吃掉，這裡看不到。
- * - 兩根以上 → 畫布的仲裁器判為手勢而不消費，這裡接到之後
- *   `dispatchRawDelta` 推動清單。
- *
- * 之所以是「兩根以上」而不是「不是筆就捲動」：手指畫畫是整頁模式本來就
- * 支援的事，連續模式沒有理由不支援。
- *
- * **已知不足**：放開手指之後沒有慣性滑行（fling）。要補的話得接上
- * `VelocityTracker` 與 `listState.animateScrollBy`，那是另一件事。
+ * 代價寫清楚：**連續模式下手指畫不出東西**，沒有觸控筆的裝置要畫就切回
+ * 整頁模式（整頁模式的手指仍然可以畫，那條路一行都沒有改）。
  *
  * # 其他已知限制（與 Apple 端一致）
  *
@@ -192,11 +185,7 @@ fun ContinuousPagesView(
         val scale = minOf(1f, available / PageGeometry.width)
         LazyColumn(
             state = listState,
-            // **靜態**關掉內建捲動（不是動態切換，所以沒有差一幀的問題）。
-            // 開著的話它會在滑動超過 touch slop 時把事件整個攔走，
-            // 手指就永遠畫不出東西。
-            userScrollEnabled = false,
-            modifier = Modifier.fillMaxSize().twoFingerScroll(listState),
+            modifier = Modifier.fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(20.dp),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 20.dp)
@@ -221,41 +210,6 @@ fun ContinuousPagesView(
     }
 }
 
-
-/**
- * 兩指（以上）拖曳就捲動清單。
- *
- * 跑在 **Main pass**，所以子節點先看事件：一根手指或筆落在畫布上時，
- * 畫布會自己消費掉，這裡收到的 change 已經是 consumed，不會誤捲。
- * 兩根手指時畫布的仲裁器判為手勢而不消費，這裡才動。
- *
- * 用 `dispatchRawDelta` 而不是 `scrollBy`：後者是 suspend 的，
- * 每個事件開一個協程會落後好幾幀，捲動看起來像在拖泥。
- */
-private fun Modifier.twoFingerScroll(listState: LazyListState): Modifier =
-    pointerInput(listState) {
-        awaitPointerEventScope {
-            var lastY: Float? = null
-            while (true) {
-                val event = awaitPointerEvent()
-                val down = event.changes.filter { it.pressed && !it.isConsumed }
-                if (down.size < 2) {
-                    // 手指放開或只剩一根：下一次要重新取基準點，
-                    // 不然會把「兩指之間的位置跳動」當成一次大幅捲動。
-                    lastY = null
-                    continue
-                }
-                val y = down.map { it.position.y }.average().toFloat()
-                lastY?.let { previous ->
-                    val dy = y - previous
-                    // 手指往下 = 內容往上，所以要反號。
-                    if (dy != 0f) listState.dispatchRawDelta(-dy)
-                }
-                lastY = y
-                down.forEach { it.consume() }
-            }
-        }
-    }
 
 /**
  * 把固定 800 × 1132 的頁面縮進捲動列表的一格。
@@ -306,10 +260,10 @@ private fun ContinuousPage(
     engine.colorRgba = ink.colorRgba
     engine.baseWidth = ink.baseWidth
     engine.isErasing = ink.isErasing
-    // 跟著外層的設定走。**不再強制 pen-only** —— 捲動改由
-    // ContinuousPagesView 自己用兩指手勢驅動，手指不必再讓給 LazyColumn。
-    engine.setPenOnly(ink.penOnly)
+    // **一律 pen-only**，不理會外層的設定。理由見 ContinuousPagesView 的說明：
+    // 手指要留給捲動，否則畫布會跟 LazyColumn 搶事件，兩邊都做不成。
     LaunchedEffect(engine) {
+        engine.setPenOnly(true)
         // 讀回這一頁已經存在的筆畫。見 InkEngine.load() 的說明。
         engine.load()
     }
@@ -319,18 +273,7 @@ private fun ContinuousPage(
     val tableStore = remember(session, pageId) { TableStore(session, pageId) }
     val chartStore = remember(session, pageId) { ChartStore(session, pageId) }
     val imageStore = remember(session, pageId) { ImageStore(session, pageId) }
-    // **墨跡與物件要分開兩個計數器。**
-    //
-    // 原本共用一個：`InkCanvas` 的 `onInkChanged` 每收到一個觸控取樣就 +1，
-    // 而底下所有物件圖層都 `key(revision)` —— 於是寫一筆字（120Hz 下
-    // 每秒上百個取樣）就把圖片、形狀、表格、圖表、文字五個圖層整個丟掉
-    // 重建，一秒好幾百次。
-    //
-    // 在整頁模式看不出來：那邊本來就是分開的計數器（imageRevision、
-    // textRevision…）。連續模式抄過來時合成了一個，而且頁數越多越糟。
-    // 實測過一次輸入派送逾時的 ANR，很可能就是這個。
-    var objectRevision by remember(pageId) { mutableIntStateOf(0) }
-    var inkRevision by remember(pageId) { mutableIntStateOf(0) }
+    var revision by remember(pageId) { mutableIntStateOf(0) }
 
     // reloadToken 讓外層插入物件之後這一頁看得到新東西 ——
     // 不重讀的話，從選單插進去的文字方塊要等切換頁面才會出現。
@@ -340,11 +283,11 @@ private fun ContinuousPage(
         tableStore.load()
         chartStore.load()
         imageStore.load()
-        objectRevision++
+        revision++
     }
 
-    val order = remember(objectRevision, pageIndex) { meta.objectOrder(pageIndex) }
-    val kindOf = remember(objectRevision, pageIndex) {
+    val order = remember(revision, pageIndex) { meta.objectOrder(pageIndex) }
+    val kindOf = remember(revision, pageIndex) {
         buildMap {
             imageStore.all.forEach { put(it.id, ObjectStacking.Kind.IMAGE) }
             shapeStore.all.forEach { put(it.id, ObjectStacking.Kind.SHAPE) }
@@ -373,12 +316,11 @@ private fun ContinuousPage(
         InkCanvas(
             engine = engine,
             modifier = Modifier.fillMaxSize(),
-            // 只動墨跡那個計數器。物件圖層不重建 —— 見上面的說明。
-            onInkChanged = { inkRevision++ },
-            contentVersion = inkRevision
+            onInkChanged = { revision++ },
+            contentVersion = revision
         )
 
-        key(objectRevision) {
+        key(revision) {
             ImageLayer(
                 images = imageStore.all,
                 store = imageStore,
@@ -387,7 +329,7 @@ private fun ContinuousPage(
                 interactive = interactive,
                 onSelect = {},
                 onEditStyle = {},
-                onChanged = { imageStore.persist(it); objectRevision++ },
+                onChanged = { imageStore.persist(it); revision++ },
                 zIndexOf = zIndexOf,
                 modifier = Modifier.fillMaxSize()
             )
@@ -400,7 +342,7 @@ private fun ContinuousPage(
                 onSelect = {},
                 onEdit = {},
                 onEditStyle = {},
-                onChanged = { shapeStore.persist(it); objectRevision++ },
+                onChanged = { shapeStore.persist(it); revision++ },
                 zIndexOf = zIndexOf,
                 modifier = Modifier.fillMaxSize()
             )
@@ -411,7 +353,7 @@ private fun ContinuousPage(
                 selectedId = null,
                 onSelect = {},
                 onEdit = {},
-                onChanged = { tableStore.persist(it); objectRevision++ },
+                onChanged = { tableStore.persist(it); revision++ },
                 zIndexOf = zIndexOf,
                 modifier = Modifier.fillMaxSize()
             )
@@ -422,7 +364,7 @@ private fun ContinuousPage(
                 selectedId = null,
                 onSelect = {},
                 onEdit = {},
-                onChanged = { chartStore.persist(it); objectRevision++ },
+                onChanged = { chartStore.persist(it); revision++ },
                 zIndexOf = zIndexOf,
                 modifier = Modifier.fillMaxSize()
             )
@@ -433,7 +375,7 @@ private fun ContinuousPage(
                 selectedId = null,
                 onSelect = {},
                 onEditStyle = {},
-                onChanged = { textStore.persist(it); objectRevision++ },
+                onChanged = { textStore.persist(it); revision++ },
                 zIndexOf = zIndexOf,
                 modifier = Modifier.fillMaxSize()
             )

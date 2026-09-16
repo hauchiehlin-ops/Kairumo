@@ -271,6 +271,15 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     /// 舊檔沒有這個欄位，解碼後是 `nil` —— 升級上來的筆記不會有任何變化。
     public var tableAttachments: [NoteTableAttachment]?
 
+    /// 貼在頁面上的錄音檔清單。
+    ///
+    /// 與 `recordingAudioPath` 不同：那是「整本筆記配一段錄音」，
+    /// 位置在筆記本層級，畫布上看不到也移不動。這個是**頁面上的物件** ——
+    /// 可以放在任何一頁的任何位置、可以搬、可以縮放、可以刪。
+    ///
+    /// 必須是 Optional：舊檔沒有這個欄位（見 `canvasRotation` 的說明）。
+    public var audioAttachments: [NoteAudioAttachment]?
+
     /// 手寫辨識出來的文字，逐頁一份：`["頁次": "辨識結果"]`。
     ///
     /// **只用來搜尋，不會取代任何一筆畫。** 手寫筆記的價值就在那個手寫，
@@ -376,7 +385,8 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
         commentPins: [NoteCommentPin]? = [],
         tableAttachments: [NoteTableAttachment]? = [],
         shapeAttachments: [NoteShapeAttachment]? = [],
-        connectionAttachments: [NoteConnectionAttachment]? = []
+        connectionAttachments: [NoteConnectionAttachment]? = [],
+        audioAttachments: [NoteAudioAttachment]? = []
     ) {
         self.id = id
         self.title = title
@@ -397,6 +407,7 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
         self.linkAttachments = linkAttachments ?? []
         self.model3DAttachments = model3DAttachments ?? []
         self.commentPins = commentPins ?? []
+        self.audioAttachments = audioAttachments ?? []
         if pagesData.isEmpty {
             // 預設建立一頁空白筆劃
             let emptyDrawing = PKDrawing()
@@ -899,6 +910,81 @@ public struct AudioRecordingRecord: Identifiable, Codable, Hashable {
     }
 }
 
+/// 頁面上的錄音物件。
+///
+/// # 為什麼不沿用 `recordingAudioPath`
+///
+/// 那個欄位是「整本筆記一段錄音」，沒有座標也沒有頁次 —— 使用者在首頁錄完，
+/// 打開筆記本後那段錄音不在任何一頁上，也就無從擺放。要做到「插在第 3 頁
+/// 這一段筆記旁邊」，錄音必須是一個**有位置的物件**，和圖片、表格同一層級。
+///
+/// `recordingId` 指向 `AudioRecordingRecord`；`fileName` 同時存一份，
+/// 是為了錄音索引被刪掉時卡片還播得出來 —— 檔案還在，只是清單裡沒有了。
+public struct NoteAudioAttachment: Identifiable, Codable, Hashable, ObjectFrameStyled {
+    public let id: String
+    /// 畫布旋轉角度。**必須是 Optional** —— 見 `ObjectFrameStyled.canvasRotation`。
+    public var rotationDegrees: Double?
+    public var canvasRotation: Double {
+        get { rotationDegrees ?? 0 }
+        set { rotationDegrees = newValue }
+    }
+    public var pageIndex: Int
+    /// 對應的錄音索引 id。索引被刪掉時仍然保留，播放走 `fileName`。
+    public var recordingId: String
+    /// 音檔檔名（相對於 `AudioRecorderManager.recordingsDirectory`）。
+    public var fileName: String
+    public var title: String
+    public var durationSeconds: Int
+    public var x: CGFloat
+    public var y: CGFloat
+    public var width: CGFloat
+    public var height: CGFloat
+    public var hasBorder: Bool
+    public var cornerRadius: CGFloat
+    public var borderColorHex: String?
+    public var borderWidth: CGFloat?
+    /// `"clear"` 為透明。
+    public var backgroundColorHex: String?
+
+    public init(
+        id: String = UUID().uuidString,
+        pageIndex: Int = 0,
+        recordingId: String = "",
+        fileName: String,
+        title: String = "",
+        durationSeconds: Int = 0,
+        x: CGFloat = 80,
+        y: CGFloat = 120,
+        // 預設尺寸照卡片內容抓：一行標題 + 一行時間 + 播放鈕。
+        // 太大的話使用者拿到的第一件事是縮小它。
+        width: CGFloat = 260,
+        height: CGFloat = 76,
+        rotationDegrees: Double? = nil,
+        hasBorder: Bool = true,
+        cornerRadius: CGFloat = 12,
+        borderColorHex: String? = nil,
+        borderWidth: CGFloat? = nil,
+        backgroundColorHex: String? = nil
+    ) {
+        self.id = id
+        self.pageIndex = pageIndex
+        self.recordingId = recordingId
+        self.fileName = fileName
+        self.title = title
+        self.durationSeconds = durationSeconds
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+        self.rotationDegrees = rotationDegrees
+        self.hasBorder = hasBorder
+        self.cornerRadius = cornerRadius
+        self.borderColorHex = borderColorHex
+        self.borderWidth = borderWidth
+        self.backgroundColorHex = backgroundColorHex
+    }
+}
+
 /// 筆記資料持久化中樞
 @MainActor
 public final class NotebookStore: ObservableObject {
@@ -1147,7 +1233,7 @@ public final class NotebookStore: ObservableObject {
             title: "歡迎使用 Kairumo",
             createdAt: Date().addingTimeInterval(-86400 * 2),
             lastModifiedDate: Date().addingTimeInterval(-3600),
-            pageCount: 1,
+            pageCount: SeedContent.welcomePageCount,
             hasRecording: false,
             previewSnippet: "點擊進入畫布即可隨心手寫、繪製圖形、插入錄音並導出 PDF",
             template: .blank
@@ -1157,7 +1243,7 @@ public final class NotebookStore: ObservableObject {
             title: "課堂與會議記錄",
             createdAt: Date().addingTimeInterval(-86400),
             lastModifiedDate: Date().addingTimeInterval(-7200),
-            pageCount: 2,
+            pageCount: SeedContent.meetingPageCount,
             hasRecording: true,
             previewSnippet: "支援麥克風即時收音，聲音與筆跡精確對齊",
             template: .cornell
@@ -1167,6 +1253,12 @@ public final class NotebookStore: ObservableObject {
         n1.snippetKey = "seed_welcome_snippet"
         n2.titleKey = "seed_meeting_title"
         n2.snippetKey = "seed_meeting_snippet"
+
+        // 兩本範例筆記原本都只有空白頁。「示範」什麼都不示範的話，
+        // 使用者第一次打開看到的是一片白 —— 那比沒有範例還糟，
+        // 因為他會以為這個 App 只能手寫。
+        SeedContent.fillWelcome(&n1, store: self)
+        SeedContent.fillMeeting(&n2, store: self)
 
         self.notebooks = [n1, n2]
         persistData()

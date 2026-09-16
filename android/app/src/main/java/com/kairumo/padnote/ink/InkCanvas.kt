@@ -41,7 +41,16 @@ fun InkCanvas(
      * 畫布平常只在收到觸控事件時重畫 —— 沒有這個參數的話，
      * 「從檔案讀回來的筆畫」要等使用者下一次碰畫布才會出現。
      */
-    contentVersion: Int = 0
+    contentVersion: Int = 0,
+    /**
+     * 這個模式下畫布接不接受筆畫。
+     *
+     * 打字模式要的是「**誰都不能畫**」—— 掌拒的 pen-only 擋得掉手指，
+     * 擋不掉觸控筆。少了這道開關，使用者切到打字模式後拿筆一碰畫布
+     * 還是在畫線，而畫面上沒有任何東西告訴他模式換了。
+     * 與 Apple 端關掉 `drawingGestureRecognizer` 是同一件事。
+     */
+    acceptsInk: Boolean = true
 ) {
     val density = LocalDensity.current.density
     // 筆畫存在 engine 裡（它才是真相來源）。這個計數器只是用來觸發重繪 ——
@@ -53,6 +62,8 @@ fun InkCanvas(
         modifier = modifier
             .background(backgroundColor)
             .pointerInteropFilter { event ->
+                // 不收筆畫時把事件原樣讓出去，外層照常捲動與選取。
+                if (!acceptsInk) return@pointerInteropFilter false
                 val outcome = engine.onMotionEvent(event, density)
                 revision++
                 liveVersion = System.nanoTime()
@@ -159,17 +170,25 @@ fun LowLatencyInkCanvas(
     onInkChanged: () -> Unit = {},
     onUnavailable: () -> Unit = {},
     /// 外層改變這個值就會清空畫面（按下「清除」時遞增）。
-    clearToken: Int = 0
+    clearToken: Int = 0,
+    /// 見 [InkCanvas] 的同名參數。
+    acceptsInk: Boolean = true
 ) {
     val density = LocalDensity.current.density
     androidx.compose.ui.viewinterop.AndroidView(
         modifier = modifier,
         factory = { context ->
             InkSurfaceView(context, engine, latency, pxPerDp = density, onInkChanged = onInkChanged).also { view ->
+                view.acceptsInk = acceptsInk
                 if (!view.start()) onUnavailable()
             }
         },
-        update = { view -> if (clearToken > 0 && engine.strokes.isEmpty()) view.clearAll() },
+        update = { view ->
+            // 模式切換時要跟著改 —— 只在 factory 設的話，切過去之後
+            // 那個 view 會被重用，筆照樣畫得出來。
+            view.acceptsInk = acceptsInk
+            if (clearToken > 0 && engine.strokes.isEmpty()) view.clearAll()
+        },
         onRelease = { it.stop() }
     )
 }

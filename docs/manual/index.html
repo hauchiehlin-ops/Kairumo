@@ -334,6 +334,27 @@
   const pad = n => String(n).padStart(2, "0");
   const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
 
+  /**
+   * 把 `**重點**` 標成粗體，其餘原樣。
+   *
+   * 只認這一個標記，而且**不碰 innerHTML 以外的任何輸入** —— 文字全部
+   * 來自 manual.js（我們自己的檔案），切開之後每一段都走 textContent，
+   * 所以內容裡的 < 與 & 不會被當成標籤。
+   */
+  function richText(node, text) {
+    const parts = String(text == null ? "" : text).split("**");
+    parts.forEach((part, i) => {
+      if (!part) return;
+      if (i % 2 === 1) {
+        const b = el("strong");
+        b.textContent = part;
+        node.appendChild(b);
+      } else {
+        node.appendChild(document.createTextNode(part));
+      }
+    });
+  }
+
   function figure(figKey, caption, figset, note) {
     const f = el("figure");
     const img = el("img");
@@ -394,7 +415,7 @@
       h.innerHTML = '<span class="num">' + pad(i + 1) + "</span><span>" + s.title + "</span>";
       sec.appendChild(h);
 
-      if (s.lead) { const p = el("p", "lead"); p.textContent = s.lead; sec.appendChild(p); }
+      if (s.lead) { const p = el("p", "lead"); richText(p, s.lead); sec.appendChild(p); }
 
       if (s.buttons && s.buttons.length) {
         const chips = el("div", "chips");
@@ -408,7 +429,7 @@
         // 有明確先後順序的用編號，純說明用破折號
         const ordered = s.id !== "home" && s.id !== "start" && s.id !== "editor";
         const list = el(ordered ? "ol" : "ul", ordered ? "steps" : "plain");
-        s.steps.forEach(t => { const li = el("li"); const sp = el("span"); sp.textContent = t; li.appendChild(sp); list.appendChild(li); });
+        s.steps.forEach(t => { const li = el("li"); const sp = el("span"); richText(sp, t); li.appendChild(sp); list.appendChild(li); });
         sec.appendChild(list);
       }
 
@@ -418,7 +439,7 @@
       if (s.tip) {
         const t = el("div", "tip");
         const k = el("span", "k"); k.textContent = ui.tipLabel;
-        const p = el("p"); p.textContent = s.tip;
+        const p = el("p"); richText(p, s.tip);
         t.appendChild(k); t.appendChild(p);
         sec.appendChild(t);
       }
@@ -427,7 +448,7 @@
         const dl = el("dl", "faq");
         s.faq.forEach(([q, a]) => {
           const dt = el("dt"); dt.textContent = q;
-          const dd = el("dd"); dd.textContent = a;
+          const dd = el("dd"); richText(dd, a);
           dl.appendChild(dt); dl.appendChild(dd);
         });
         sec.appendChild(dl);

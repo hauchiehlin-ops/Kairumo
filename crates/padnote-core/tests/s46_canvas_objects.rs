@@ -193,8 +193,11 @@ fn table_structure_ops_round_trip_through_the_ffi() {
 
 #[test]
 fn every_shape_and_template_is_reachable() {
-    assert_eq!(all_shape_kinds().len(), 20);
-    assert_eq!(flowchart_shape_kinds().len(), 9, "ISO 5807 的九個符號");
+    // 數字寫死是刻意的：形狀是**持久化的列舉**，每一個都對應一個寫進
+    // .padnote 的號碼。不小心刪掉一個的話，使用者既有的圖形會解不開 ——
+    // 這一行就是那道防線，加形狀時一起改它。
+    assert_eq!(all_shape_kinds().len(), 55);
+    assert_eq!(flowchart_shape_kinds().len(), 19, "ISO 5807 的流程圖符號");
     for k in flowchart_shape_kinds() {
         assert!(
             shape_semantic(k).is_some(),

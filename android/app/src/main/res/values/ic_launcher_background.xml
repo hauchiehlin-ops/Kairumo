@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--
+        自適應圖示的底色。取自 assets/brand/kairumo-icon-v1.png 的紙色底板。
+
+        **是一個顏色不是一張圖**：自適應圖示的底層會被系統放大到 108dp 再裁，
+        用點陣圖的話邊緣會被拉糊，而這個底板本來就是純色。
+    -->
+    <color name="ic_launcher_background">#F5EFE4</color>
+</resources>

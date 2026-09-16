@@ -513,30 +513,9 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     func syncContentSize() {
-        // 內容寬度是**頁寬**，不是視窗寬度。
-        //
-        // 原本是拿 bounds.width 當內容寬，於是寬螢幕上畫布比頁面寬一大截，
-        // 而背景視圖把「頁面右邊多出來的部分」塗成灰色 —— 所有留白都堆在
-        // 右邊，看起來像版面壞掉而不像頁面的邊界。
-        // 實測 iPad Pro 13"：頁面 800pt，右側一整條 232pt 的灰。
-        //
-        // 螢幕比頁面窄時（iPhone）就用視窗寬度，讓內容自己捲。
-        let targetWidth = min(max(bounds.width, 1), PageGeometry.width)
+        let targetWidth = max(bounds.width, 1)
         let targetHeight = max(pageContentHeight, bounds.height)
         let target = CGSize(width: targetWidth, height: targetHeight)
-
-        // 多出來的空間左右各分一半。
-        //
-        // 用 `contentInset` 而不是把頁面畫在偏移的位置：inset 只移動**顯示**，
-        // 內容座標一點都沒有變。畫在偏移位置的話，筆跡座標、匯出、命中測試、
-        // 同步過去的 oplog 全部要跟著補那個偏移量，而漏掉任何一處就是
-        // 「同一則筆記在不同裝置上位置不一樣」。
-        let slack = max(0, bounds.width - targetWidth)
-        let sideInset = (slack / 2).rounded(.down)
-        if abs(contentInset.left - sideInset) > 0.5 {
-            contentInset = UIEdgeInsets(top: 0, left: sideInset, bottom: 0, right: sideInset)
-        }
-
         guard contentSize != target else { return }
         contentSize = target
         templateBackgroundView?.frame = CGRect(origin: .zero, size: target)
@@ -579,10 +558,18 @@ struct CanvasRepresentable: UIViewRepresentable {
     ///
     /// 打字模式一律只有筆能寫（手指要用來捲動與選取）。手寫模式交給掌拒
     /// 協調器決定 —— 沒有它時退回原本的 `.anyInput`，行為與以前相同。
+    ///
+    /// **`drawingPolicy` 只能表達「誰可以畫」，表達不了「誰都不能畫」。**
+    /// 打字模式下真正要的是後者，所以另外關掉 `drawingGestureRecognizer`
+    /// —— 只設 `.pencilOnly` 的話，拿 Apple Pencil 的人在「打字模式」裡
+    /// 照樣在畫畫，而畫面上沒有任何東西告訴他模式換了。
     private func resolvedPolicy(now: Date = Date()) -> PKCanvasViewDrawingPolicy {
         guard editorMode == .draw else { return .pencilOnly }
         return palmRejection?.drawingPolicy(now: now) ?? .anyInput
     }
+
+    /// 這個模式下畫布接不接受筆畫。
+    private var acceptsInk: Bool { editorMode == .draw }
 
     func makeUIView(context: Context) -> PKCanvasView {
         let canvas = AdaptiveCanvasView()
@@ -601,6 +588,7 @@ struct CanvasRepresentable: UIViewRepresentable {
             InkInputDiagnostics.shared.record(touch: touch, event: event, in: canvas)
         }
         canvas.delegate = context.coordinator
+        canvas.drawingGestureRecognizer.isEnabled = acceptsInk
         canvas.backgroundColor = .clear
         canvas.isOpaque = false
         canvas.isScrollEnabled = isScrollEnabled
@@ -642,6 +630,10 @@ struct CanvasRepresentable: UIViewRepresentable {
         let targetPolicy = resolvedPolicy()
         if uiView.drawingPolicy != targetPolicy {
             uiView.drawingPolicy = targetPolicy
+        }
+        // 見 `acceptsInk`：政策擋不掉 Pencil，手勢本身要關。
+        if uiView.drawingGestureRecognizer.isEnabled != acceptsInk {
+            uiView.drawingGestureRecognizer.isEnabled = acceptsInk
         }
         // 換筆刷或拉筆寬時，游標要跟著變 —— 不更新的話使用者得把滑鼠移出去
         // 再移回來才看得到新的筆頭。
@@ -692,6 +684,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         var parent: CanvasRepresentable
         weak var backgroundView: TemplateCanvasBackgroundView?
         var isProgrammaticUpdate: Bool = false
+
         init(_ parent: CanvasRepresentable) {
             self.parent = parent
         }
@@ -723,6 +716,11 @@ struct CanvasRepresentable: UIViewRepresentable {
                   let path = canvas.brushPointerPath else { return nil }
             // 不加 `constrainedAxes`：筆頭要能自由移動，限制軸是給滑桿用的。
             return UIPointerStyle(shape: .path(path), constrainedAxes: [])
+        }
+
+        func canvasViewSelectionDidChange(_ canvasView: PKCanvasView) {
+            let hasSel = parent.checkHasSelection(in: canvasView)
+            parent.onSelectionChanged?(hasSel)
         }
 
         func applyTool(to canvas: PKCanvasView) {
@@ -772,27 +770,26 @@ struct CanvasRepresentable: UIViewRepresentable {
                 canvas.tool = PKEraserTool(.vector)
 
             case .lasso:
-                // **不用 PKLassoTool。** 它的選取狀態沒有公開介面，
-                // 唯一讀得到的方式是私有選擇器 —— 見 LassoSelection.swift。
-                // 套索期間把畫布的輸入整個關掉，手勢交給上面那層自己的
-                // 覆蓋層；不關的話使用者圈一圈就真的畫了一條線出來。
-                canvas.tool = PKInkingTool(.pen, color: .clear, width: 1)
+                canvas.tool = PKLassoTool()
             }
-            let lassoMode = (parent.selectedTool == .lasso)
-            canvas.drawingGestureRecognizer.isEnabled = !lassoMode
-
-            // **一根手指要讓給套索。**
-            //
-            // PKCanvasView 是一個 UIScrollView，它自己的 pan 會吃掉單指拖曳去
-            // 捲動 —— 我們掛上去的套索手勢搶不贏它，症狀是圈了半天畫面只是
-            // 捲動，一條選取也做不出來。
-            //
-            // 套索期間把捲動改成**兩指**，與連續模式的手勢慣例一致；
-            // 離開套索就還原成一指，不然一般模式下就捲不動了。
-            canvas.panGestureRecognizer.minimumNumberOfTouches = lassoMode ? 2 : 1
         }
     }
 
+    func checkHasSelection(in canvas: PKCanvasView) -> Bool {
+        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
+            let hasSel = NSSelectorFromString("_hasSelection")
+            if sv.responds(to: hasSel) {
+                let hasSelectionFunc = unsafeBitCast(
+                    sv.method(for: hasSel),
+                    to: (@convention(c) (AnyObject, Selector) -> Bool).self
+                )
+                if hasSelectionFunc(sv, hasSel) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
 }
 
 /// 黃金螺旋構圖 HUD 疊層視圖 (Φ 1.618)
@@ -1112,8 +1109,7 @@ public struct NotebookEditorView: View {
     @State private var currentPageHeight: CGFloat = PageGeometry.height
     /// 掌拒（工作項 S-45）。判定規則走核心，與 Android 同一份。
     @State private var palmRejection = PalmRejectionCoordinator()
-    /// 套索選取。自己做的 —— 理由見 LassoSelection.swift。
-    @StateObject private var lasso = LassoSelection()
+    @State private var hasLassoSelection: Bool = false
     @State private var showExtendedBanner: Bool = false
 
     // 實體工具列狀態
@@ -1165,6 +1161,20 @@ public struct NotebookEditorView: View {
     // 三大主題專屬加速輔助工具與素材圖庫狀態
     @State private var showThemeToolsSheet: Bool = false
     @State private var showAssetLibrarySheet: Bool = false
+    /// 「插入錄音」的挑選面板。
+    @State private var showAudioPicker: Bool = false
+
+    // MARK: - 框選
+    //
+    // 見 ObjectMarquee 開頭的說明：框選是一個**明確的模式**，不是
+    // 「在空白處拖曳」—— 那會跟搬物件與捲畫布互相搶。
+    @State private var isMarqueeActive: Bool = false
+    @State private var marqueeStart: CGPoint? = nil
+    @State private var marqueeCurrent: CGPoint? = nil
+    @State private var selectedObjectIds: Set<String> = []
+    /// 整組拖曳時的即時位移。每一幀都寫回筆記的話，拖一次會存幾十次檔。
+    @State private var groupDragOffset: CGSize = .zero
+    @State private var objectClipboard: [ClipboardObject] = []
     /// 手寫辨識的結果或錯誤，顯示在浮動提示上。
     @State private var recognitionMessage: String?
     @State private var isGoldenSpiralOverlay: Bool = false
@@ -1430,7 +1440,12 @@ public struct NotebookEditorView: View {
                 if notebook.linkAttachments == nil {
                     notebook.linkAttachments = []
                 }
-                notebook.linkAttachments?.append(linkItem)
+                // 頁次要在這裡補。少了它，連結卡片一律落在第 1 頁 ——
+                // 在第 5 頁按「插入連結」，畫面上什麼也不會出現。
+                // 其他插入路徑（圖片、表格、形狀、3D）都有這一行，只有連結漏了。
+                var placed = linkItem
+                placed.pageIndex = currentPageIndex
+                notebook.linkAttachments?.append(placed)
                 store.updateNotebook(notebook)
             }
         } }
@@ -1451,6 +1466,11 @@ public struct NotebookEditorView: View {
         .sheet(isPresented: $showAssetLibrarySheet) { erasedView {
             AssetLibraryView { image, _ in
                 insertImageAttachment(image)
+            }
+        } }
+        .sheet(isPresented: $showAudioPicker) { erasedView {
+            AudioInsertPickerSheet { recording in
+                insertAudioAttachment(recording)
             }
         } }
         .sheet(isPresented: $showCollaborationSheet) { erasedView {
@@ -1747,9 +1767,88 @@ public struct NotebookEditorView: View {
             .buttonStyle(.plain)
             .help(localizationManager.localized("asset_library"))
 
-            // ➕ 插入物件下拉選單。內容與其他入口同一份（insertMenuContent）。
+            // ➕ 插入物件下拉選單（整合圖片、算式、圖表、3D、主題工具）
             Menu {
-                insertMenuContent
+                Button {
+                    showAssetLibrarySheet = true
+                } label: {
+                    Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill")
+                }
+
+                Button {
+                    showPhotoPicker = true
+                } label: {
+                    Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus")
+                }
+
+                Button {
+                    showMathCalculator = true
+                } label: {
+                    Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus")
+                }
+
+                Button {
+                    showChartStudio = true
+                } label: {
+                    Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis")
+                }
+
+                Button {
+                    show3DStudio = true
+                } label: {
+                    Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent")
+                }
+
+                // 表格、形狀、連結與錄音原本只在「更多」裡有。
+                // 這個選單叫「插入物件」，卻插不了其中四種 ——
+                // 使用者找不到就會以為功能不存在。
+                Button {
+                    showTableStudio = true
+                } label: {
+                    Label(localizationManager.localized("table_studio"), systemImage: "tablecells")
+                }
+
+                Button {
+                    showShapeStudio = true
+                } label: {
+                    Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle")
+                }
+
+                Button {
+                    showLinkPreviewSheet = true
+                } label: {
+                    Label(localizationManager.localized("insert_link"), systemImage: "link")
+                }
+
+                Button {
+                    showAudioPicker = true
+                } label: {
+                    Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus")
+                }
+
+                Button {
+                    showThemeToolsSheet = true
+                } label: {
+                    Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill")
+                }
+
+                Button {
+                    withAnimation {
+                        isPlacingCommentPin = true
+                    }
+                } label: {
+                    Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill")
+                }
+
+                ToolbarSeparator()
+
+                Button {
+                    withAnimation {
+                        showSketchRefineBar.toggle()
+                    }
+                } label: {
+                    Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars")
+                }
             } label: {
                 HStack(spacing: 4) {
                     Image(systemName: "plus.circle.fill")
@@ -2045,7 +2144,29 @@ public struct NotebookEditorView: View {
         // 主要動作（首頁、模式、頁碼、錄音、匯出）留在列上，其餘收進選單，
         // 位置固定、不會因為視窗寬度而消失。
         Menu {
-            insertMenuContent
+            Section {
+                Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
+                    Button { showAudioPicker = true } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
+                Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
+                Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
+                Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
+                Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
+                Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
+                Button { showLayerPanel.toggle() } label: { Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d") }
+                Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
+                Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
+            } header: {
+                Text(localizationManager.localized("insert_object"))
+            }
+
+            Section {
+                Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
+                Button { withAnimation { isPlacingCommentPin.toggle() } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
+                Button { showCollaborationSheet = true } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }
+                Button { recognizeHandwritingOnCurrentPage() } label: {
+                    Label(localizationManager.localized("recognize_handwriting"), systemImage: "text.viewfinder")
+                }
+            }
         } label: {
             Image(systemName: "ellipsis.circle.fill")
                 .font(.caption)
@@ -2167,9 +2288,7 @@ public struct NotebookEditorView: View {
                             onDrawingChanged: { page, updated in
                                 broadcastDrawingChange(page: page, drawing: updated)
                             },
-                            // 套索的選取狀態現在由 LassoSelection 自己管，
-                            // 不再靠 PencilKit 回報（它根本沒有公開介面）。
-                            onSelectionChanged: { _ in },
+                            onSelectionChanged: { hasLassoSelection = $0 },
                             onReachedPageBottom: { ensureNextPageExists() },
                             canvasRef: { canvasView = $0 }
                         )
@@ -2407,6 +2526,20 @@ public struct NotebookEditorView: View {
                     }
                 }
 
+                // 🌟 頁面上的錄音卡片（可播放、可搬移、可縮放、可旋轉、可改名）
+                ForEach(notebook.audioAttachments ?? []) { item in
+                    if item.pageIndex == page {
+                        AudioAttachmentItemView(
+                            item: binding(forAudioId: item.id),
+                            onDelete: {
+                                notebook.audioAttachments?.removeAll { $0.id == item.id }
+                                store.updateNotebook(notebook)
+                            }
+                        )
+                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .audio, order: notebook.objectOrder(forPage: page)))
+                    }
+                }
+
                 // 🌟 筆記內嵌 3D 幾何模型展示層（支援 360° 空間旋轉、9大材質 PBR 物理反射、縮放與文字標題）
                 ForEach(notebook.model3DAttachments ?? []) { item in
                     if item.pageIndex == page {
@@ -2452,16 +2585,7 @@ public struct NotebookEditorView: View {
     }
 
     private var canvasWorkAreaContent: some View {
-        // **這個 frame 不能省。**
-        //
-        // ZStack 沒有自己的尺寸，它照最大的子視圖走；而 `CanvasRepresentable`
-        // 是 UIViewRepresentable，SwiftUI 問不到它想要多大。結果是整個工作區
-        // 只長到「上一次版面給它的寬度」—— 側邊欄一關，畫布不會跟著長回來，
-        // 右邊留下一條灰帶，而使用者會問「為什麼畫布不佈滿視窗」。
-        //
-        // 明確要求佔滿之後，bounds 會變，`syncContentSize()` 在
-        // `layoutSubviews` 裡自然跟上。
-        ZStack(alignment: .topTrailing) {
+ZStack(alignment: .topTrailing) {
             CanvasRepresentable(
                 drawing: $currentDrawing,
                 selectedTool: selectedTool,
@@ -2506,7 +2630,9 @@ public struct NotebookEditorView: View {
                 onReachedPageBottom: {
                     ensureNextPageExists()
                 },
-                onSelectionChanged: { _ in },
+                onSelectionChanged: { hasSel in
+                    self.hasLassoSelection = hasSel
+                },
                 canvasRef: { ref in
                     self.canvasView = ref
                 },
@@ -2534,58 +2660,6 @@ public struct NotebookEditorView: View {
                         }
                 }
             )
-            // 套索層。**手勢與虛線都在這裡**，疊在畫布上面。
-            //
-            // # 為什麼不掛在 PKCanvasView 上
-            //
-            // 試過：在畫布上加一個 `UIPanGestureRecognizer`、把畫布的捲動改成
-            // 兩指、再讓辨識器可以同時成立 —— **三樣都做了還是不會觸發**，
-            // 而且沒有任何錯誤可以查。PencilKit 在畫布內部還有自己的觸控處理，
-            // 跟它搶事件是一場沒有把握的仗。
-            //
-            // 疊一層在上面就沒有這個問題：套索模式下這一層吃掉所有觸控，
-            // 畫布根本收不到；離開套索模式它就不存在，畫布的行為一行都沒變。
-            //
-            // # 座標
-            //
-            // 這一層用的是**視圖座標**，而 `PKDrawing` 的筆畫用的是**內容座標**。
-            // 兩者差一個 `contentOffset`。不換算的話，捲過一段之後圈選會整個
-            // 偏掉 —— 而且偏的量剛好是捲動距離，很容易被誤判成「選取不準」。
-            .overlay(alignment: .topLeading) {
-                if selectedTool == .lasso {
-                    let offset = canvasView?.contentOffset ?? .zero
-                    let shown = lasso.path.isEmpty ? lasso.committed : lasso.path
-                    ZStack(alignment: .topLeading) {
-                        // 透明但**可命中**：Color.clear 預設不接受觸控，
-                        // 要靠 contentShape 給它一個實際的命中區域。
-                        Color.clear
-                            .contentShape(Rectangle())
-                            .gesture(
-                                DragGesture(minimumDistance: 0)
-                                    .onChanged { value in
-                                        let point = CGPoint(
-                                            x: value.location.x + offset.x,
-                                            y: value.location.y + offset.y
-                                        )
-                                        if lasso.path.isEmpty {
-                                            lasso.begin(at: point)
-                                        } else {
-                                            lasso.extend(to: point)
-                                        }
-                                    }
-                                    .onEnded { _ in
-                                        lasso.finish(in: currentDrawing)
-                                    }
-                            )
-
-                        LassoPathOverlay(
-                            path: shown.map { CGPoint(x: $0.x - offset.x, y: $0.y - offset.y) },
-                            isCommitted: lasso.path.isEmpty
-                        )
-                        .allowsHitTesting(false)
-                    }
-                }
-            }
 
             // 🌟 打字模式畫布互動層：**點兩下**空白處才新增文字方塊。
             //
@@ -2607,23 +2681,17 @@ public struct NotebookEditorView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .allowsHitTesting(false)
 
-                // 打字模式頂部提示條
-                HStack(spacing: 6) {
-                    Image(systemName: "keyboard.fill")
-                        .foregroundColor(.accentColor)
-                    Text(localizationManager.localized("insert_text_box_hint"))
-                        .font(.caption)
-                        .fontWeight(.medium)
-                        .foregroundColor(.primary)
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(.ultraThinMaterial)
-                .cornerRadius(20)
-                .shadow(color: Color.black.opacity(0.12), radius: 5, y: 2)
+            }
+
+            // 模式徽章。
+            //
+            // **兩個模式都要顯示。** 只在打字模式掛一條提示的話，使用者切回
+            // 手寫時畫面上沒有任何差別 —— 而兩個模式下「同一個手勢會發生
+            // 什麼事」完全不同（筆會不會畫線、物件拖不拖得動）。看不出自己
+            // 在哪個模式，就只能一直試。
+            modeBadge
                 .padding(.top, 14)
                 .padding(.trailing, 20)
-            }
 
             // 🌟 插入物件層（圖片、文字方塊、3D 模型、連結卡片、討論圖釘）
             //
@@ -2636,6 +2704,12 @@ public struct NotebookEditorView: View {
             // 代價是手寫模式下不能直接拖動物件 —— 要搬動或編輯就切到打字模式。
             // 這個取捨是刻意的：手寫模式的主角是筆，物件操作有它自己的模式。
             objectLayer(forPage: currentPageIndex)
+
+            // 框選層。只有在框選模式下才存在 —— 平常掛一層可命中的
+            // 透明視圖，底下的物件就全部點不到了。
+            if isMarqueeActive && editorMode == .type {
+                marqueeLayer
+            }
 
             // 展開的討論圖釘詳細對話框
             if let pinId = selectedCommentPinId,
@@ -2752,12 +2826,8 @@ public struct NotebookEditorView: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
-            // 套索的浮動控制面板。
-            //
-            // **只在真的有東西可以做的時候出現。** 原本是「選了套索就出現」，
-            // 那時候還沒圈任何東西，每一顆按鈕都是空操作 —— 使用者按下去
-            // 什麼也不會發生，而畫面上也沒有任何提示說明為什麼。
-            if selectedTool == .lasso && (lasso.hasSelection || lasso.canPaste) {
+            // 🌟 套索選取浮動控制面板（當套索工具啟動時浮現：支援剪下、複製、刪除選取筆劃）
+            if selectedTool == .lasso {
                 VStack {
                     lassoFloatingActionBar
                         .padding(.top, 12)
@@ -2886,7 +2956,6 @@ public struct NotebookEditorView: View {
                 .transition(.scale(scale: 0.95).combined(with: .opacity))
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .overlay(alignment: .trailing) {
             // 可用游標拖曳的捲軸（iOS 原生指示器不接受互動）
             CanvasScrollbar(
@@ -2953,67 +3022,6 @@ public struct NotebookEditorView: View {
         }
         .buttonStyle(.plain)
         .help(localizationManager.localized(hintKey))
-    }
-
-    /// 「更多／插入」選單的**唯一**內容。
-    ///
-    /// # 為什麼要合成一份
-    ///
-    /// 這份清單原本在四個地方各寫了一次（緊湊工具列、寬工具列、打字模式
-    /// 工具列、手寫模式工具列），而且**內容已經各自漂移**：有的有草圖修飾、
-    /// 有的沒有；有的有討論圖釘與線上協同、有的沒有；表格與形狀只在其中
-    /// 兩份裡。使用者看到的是「同一個『更多』按鈕，在不同地方點開來不一樣」。
-    ///
-    /// 合成一份之後，新增一個功能只要改這裡 —— 而那正是四份會漂移的原因：
-    /// 改了一處，另外三處沒人記得。
-    @ViewBuilder
-    private var insertMenuContent: some View {
-        Section {
-            Button { showAssetLibrarySheet = true } label: {
-                Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill")
-            }
-            Button { showPhotoPicker = true } label: {
-                Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus")
-            }
-            Button { showMathCalculator = true } label: {
-                Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus")
-            }
-            Button { showChartStudio = true } label: {
-                Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis")
-            }
-            Button { showTableStudio = true } label: {
-                Label(localizationManager.localized("table_studio"), systemImage: "tablecells")
-            }
-            Button { showShapeStudio = true } label: {
-                Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle")
-            }
-            Button { showLayerPanel.toggle() } label: {
-                Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d")
-            }
-            Button { show3DStudio = true } label: {
-                Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent")
-            }
-            Button { showThemeToolsSheet = true } label: {
-                Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill")
-            }
-        } header: {
-            Text(localizationManager.localized("insert_object"))
-        }
-
-        Section {
-            Button { withAnimation { showSketchRefineBar.toggle() } } label: {
-                Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars")
-            }
-            Button { withAnimation { isPlacingCommentPin.toggle() } } label: {
-                Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill")
-            }
-            Button { showCollaborationSheet = true } label: {
-                Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill")
-            }
-            Button { recognizeHandwritingOnCurrentPage() } label: {
-                Label(localizationManager.localized("recognize_handwriting"), systemImage: "text.viewfinder")
-            }
-        }
     }
 
     /// 版本標示（v2.2.0 這種）。點一下可複製，回報問題時直接貼上。
@@ -3763,15 +3771,38 @@ public struct NotebookEditorView: View {
                     .help(localizationManager.localized("pro_color"))
                 }
 
-                // 套索的動作按鈕**不放在這裡**。
-                //
-                // 原本這裡有一整排（剪下／複製／再製／貼上／刪除），而畫布上
-                // 還有一個一模一樣的浮動列 —— 使用者看到的是「兩個重複的
-                // 工具列」。而且這一排在「選了套索但還沒圈任何東西」時就會
-                // 出現，那時候每一顆都是空操作。
-                //
-                // 現在只留畫布上那一個浮動列：它只在**真的有選取**時出現，
-                // 位置就在選取範圍旁邊，不必把視線拉回工具列。
+                // 若為套索選取工具，即時展開剪下、複製與刪除選取筆劃按鈕
+                if selectedTool == .lasso {
+                    ToolbarSeparator()
+                        .frame(height: 24)
+
+                    HStack(spacing: 6) {
+                        // 圖示配文字：純圖示看不出是「對選取的筆劃」做事
+                        lassoActionButton("scissors", "cut_selected", "cut_selected_hint") { cutSelectedStrokes() }
+                        lassoActionButton("doc.on.doc", "copy_selected", "copy_selected_hint") { copySelectedStrokes() }
+                        lassoActionButton("plus.square.on.square", "duplicate_selected", "duplicate_selected_hint") { duplicateSelectedStrokes() }
+                        lassoActionButton("doc.on.clipboard", "paste_strokes", "paste_strokes_hint") { pasteStrokes() }
+
+                        Button {
+                            deleteSelectedStrokes()
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "trash.fill")
+                                    .font(.caption)
+                                Text(localizationManager.localized("delete_selected"))
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
+                            }
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(Color.red)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                        .help(localizationManager.localized("delete_selected"))
+                    }
+                }
 
                 ToolbarSeparator()
                     .frame(height: 24)
@@ -3781,7 +3812,18 @@ public struct NotebookEditorView: View {
                 // 這些插入類工具原本全部攤在列上，視窗一窄就被擠出畫面外。
                 // 收進選單後位置固定，不會因為視窗寬度而消失。
                 Menu {
-                    insertMenuContent
+                    Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
+                    Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
+                    Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
+                Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
+                Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
+                Button { showLayerPanel.toggle() } label: { Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d") }
+                    Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
+                    Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
+                    Button { showAudioPicker = true } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
+                    Divider()
+                    Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
+                    Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "ellipsis.circle")
@@ -3838,18 +3880,29 @@ public struct NotebookEditorView: View {
     private var typingToolbar: AnyView { AnyView(typingToolbarContent) }
 
     private var typingToolbarContent: some View {
-        // 次要的插入工具收進「更多」選單；真的還是塞不下時才換行。
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: 12) {
-                typingToolbarItems
+        VStack(spacing: 0) {
+            // 次要的插入工具收進「更多」選單；真的還是塞不下時才換行。
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 12) {
+                    typingToolbarItems
+                }
+                WrapLayout(spacing: 12, lineSpacing: 8) {
+                    typingToolbarItems
+                }
             }
-            WrapLayout(spacing: 12, lineSpacing: 8) {
-                typingToolbarItems
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            // 框選的動作列。掛在工具列這一層而不是畫布上 ——
+            // 跟著畫布捲的話，選了下半頁的東西就得捲回去才按得到刪除。
+            if isMarqueeActive {
+                Divider()
+                ScrollView(.horizontal, showsIndicators: false) {
+                    marqueeToolbar
+                }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(uiColor: .tertiarySystemGroupedBackground))
     }
 
@@ -3919,6 +3972,27 @@ public struct NotebookEditorView: View {
                 }
                 .buttonStyle(.plain)
 
+                // 框選。與「插入」並列而不是收進「更多」——
+                // 它是一個**模式**，使用者要看得到自己現在在不在裡面。
+                Button {
+                    isMarqueeActive.toggle()
+                    if !isMarqueeActive { selectedObjectIds = [] }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "square.dashed")
+                            .font(.system(size: 14))
+                        Text(localizationManager.localized("marquee_select"))
+                            .font(.system(size: 11))
+                    }
+                    .foregroundColor(isMarqueeActive ? .white : .primary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(isMarqueeActive ? Color.accentColor : Color.secondary.opacity(0.12))
+                    .cornerRadius(8)
+                }
+                .buttonStyle(.plain)
+                .help(localizationManager.localized("marquee_hint"))
+
                 // 插入連結
                 Button {
                     showLinkPreviewSheet = true
@@ -3940,7 +4014,17 @@ public struct NotebookEditorView: View {
 
                 // ⋯ 更多：次要插入工具
                 Menu {
-                    insertMenuContent
+                    Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
+                    Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
+                    Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
+                Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
+                Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
+                Button { showLayerPanel.toggle() } label: { Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d") }
+                    Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
+                    Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
+                    Button { showAudioPicker = true } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
+                    Divider()
+                    Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
                 } label: {
                     HStack(spacing: 4) {
                         Image(systemName: "ellipsis.circle")
@@ -4448,9 +4532,7 @@ public struct NotebookEditorView: View {
         self.currentDrawing = loaded
         self.lastStrokeCount = loaded.strokes.count
         self.currentPageHeight = notebook.height(forPage: currentPageIndex, defaultHeight: 1800)
-        // 換頁就清掉選取：索引是對「這一頁的 strokes」講的，
-        // 留著會指到另一頁不相干的筆畫。
-        self.lasso.clear()
+        self.hasLassoSelection = false
         self.originalSketchBackup = nil
         self.refinedSketchCache = nil
     }
@@ -4700,45 +4782,74 @@ public struct NotebookEditorView: View {
         }
     }
 
-    // MARK: - 套索動作
-    //
-    // 五個動作全部只改 `PKDrawing.strokes`（公開 API），規則在
-    // LassoSelection.swift。原本的做法是把 `UIResponderStandardEditActions`
-    // 送給名稱裡含 `PKTiledView` 的私有子視圖，那在 Mac Catalyst 上
-    // **一顆都不會動** —— 使用者回報的「按鈕全部無效」就是這個。
-
-    /// 把改完的 drawing 寫回畫布並存檔。
-    ///
-    /// 三件事缺一不可：`currentDrawing` 是 SwiftUI 這一側的狀態、
-    /// `canvasView.drawing` 是畫面上真正顯示的那一份、存檔是落盤。
-    /// 少寫 `canvasView.drawing` 的話畫面不會變，使用者以為按鈕沒作用；
-    /// 少存檔的話重開筆記本就回到動作之前。
-    private func applyLassoResult(_ updated: PKDrawing?) {
-        guard let updated else { return }
-        currentDrawing = updated
-        canvasView?.drawing = updated
-        saveCurrentPageDrawing()
-    }
-
     private func deleteSelectedStrokes() {
-        applyLassoResult(lasso.deleteSelected(from: currentDrawing))
+        guard let canvas = canvasView else { return }
+        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
+            if sv.responds(to: #selector(UIResponderStandardEditActions.delete(_:))) {
+                sv.perform(#selector(UIResponderStandardEditActions.delete(_:)), with: nil)
+            }
+        }
+        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.delete(_:)), to: nil, from: nil, for: nil)
+        self.currentDrawing = canvas.drawing
+        self.saveCurrentPageDrawing()
+        hasLassoSelection = false
     }
 
     private func cutSelectedStrokes() {
-        applyLassoResult(lasso.cutSelected(from: currentDrawing))
+        guard let canvas = canvasView else { return }
+        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
+            if sv.responds(to: #selector(UIResponderStandardEditActions.cut(_:))) {
+                sv.perform(#selector(UIResponderStandardEditActions.cut(_:)), with: nil)
+            }
+        }
+        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.cut(_:)), to: nil, from: nil, for: nil)
+        self.currentDrawing = canvas.drawing
+        self.saveCurrentPageDrawing()
+        hasLassoSelection = false
+    }
+
+    /// 貼上剪貼簿中的筆劃。
+    ///
+    /// 為什麼需要自己做一顆：PencilKit 的內建選單（Cut / Copy / Duplicate…）只在
+    /// **有選取時**才出現，複製完取消選取後就沒有入口可以貼上了。
+    private func pasteStrokes() {
+        guard let canvas = canvasView else { return }
+        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
+            if sv.responds(to: #selector(UIResponderStandardEditActions.paste(_:))) {
+                sv.perform(#selector(UIResponderStandardEditActions.paste(_:)), with: nil)
+            }
+        }
+        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.paste(_:)), to: nil, from: nil, for: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            self.currentDrawing = canvas.drawing
+            self.saveCurrentPageDrawing()
+        }
+    }
+
+    /// 就地複製選取的筆劃並稍微偏移（不經過剪貼簿）—— 這就是「再製」與「複製」的差別：
+    /// 「複製」把東西放進剪貼簿等你貼上，「再製」直接在旁邊多一份。
+    private func duplicateSelectedStrokes() {
+        guard let canvas = canvasView else { return }
+        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
+            if sv.responds(to: #selector(UIResponderStandardEditActions.duplicate(_:))) {
+                sv.perform(#selector(UIResponderStandardEditActions.duplicate(_:)), with: nil)
+            }
+        }
+        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.duplicate(_:)), to: nil, from: nil, for: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            self.currentDrawing = canvas.drawing
+            self.saveCurrentPageDrawing()
+        }
     }
 
     private func copySelectedStrokes() {
-        // 複製不改內容，所以不必寫回畫布，也不必存檔。
-        lasso.copySelected(from: currentDrawing)
-    }
-
-    private func duplicateSelectedStrokes() {
-        applyLassoResult(lasso.duplicateSelected(in: currentDrawing))
-    }
-
-    private func pasteStrokes() {
-        applyLassoResult(lasso.paste(into: currentDrawing))
+        guard let canvas = canvasView else { return }
+        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
+            if sv.responds(to: #selector(UIResponderStandardEditActions.copy(_:))) {
+                sv.perform(#selector(UIResponderStandardEditActions.copy(_:)), with: nil)
+            }
+        }
+        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.copy(_:)), to: nil, from: nil, for: nil)
     }
 
     private func stopAndSaveRecording() {
@@ -4983,6 +5094,30 @@ public struct NotebookEditorView: View {
         store.updateNotebook(notebook)
     }
 
+    /// 把一段既有的錄音插到目前這一頁。
+    ///
+    /// 位置逐張往右下錯開。全部疊在同一點的話，插第二張時使用者會以為沒插進去。
+    private func insertAudioAttachment(_ recording: AudioRecordingRecord) {
+        let existing = (notebook.audioAttachments ?? []).filter { $0.pageIndex == currentPageIndex }.count
+        let offset = CGFloat(existing % 6) * 18
+        let attachment = NoteAudioAttachment(
+            pageIndex: currentPageIndex,
+            recordingId: recording.id,
+            fileName: recording.fileName,
+            title: recording.title,
+            durationSeconds: recording.durationSeconds,
+            x: 80 + offset,
+            y: 120 + offset
+        )
+        if notebook.audioAttachments == nil {
+            notebook.audioAttachments = []
+        }
+        notebook.audioAttachments?.append(attachment)
+        // 這本筆記從此「有錄音」—— 首頁的錄音篩選要看得到它。
+        notebook.hasRecording = true
+        store.updateNotebook(notebook)
+    }
+
     /// 用新算出來的圖表取代原本那一張。
     ///
     /// 位置、尺寸、邊框、濾鏡全部原地保留 —— 使用者只是改了裡面的數字，
@@ -5045,6 +5180,9 @@ public struct NotebookEditorView: View {
         if let i = notebook.model3DAttachments?.first(where: { $0.id == id }) {
             return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
         }
+        if let i = notebook.audioAttachments?.first(where: { $0.id == id }) {
+            return CGRect(x: i.x, y: i.y, width: i.width, height: i.height)
+        }
         return nil
     }
 
@@ -5078,7 +5216,337 @@ public struct NotebookEditorView: View {
         if let index = notebook.model3DAttachments?.firstIndex(where: { $0.id == id }) {
             notebook.model3DAttachments?[index].x = origin.x
             notebook.model3DAttachments?[index].y = origin.y
+            return
         }
+        if let index = notebook.audioAttachments?.firstIndex(where: { $0.id == id }) {
+            notebook.audioAttachments?[index].x = origin.x
+            notebook.audioAttachments?[index].y = origin.y
+        }
+    }
+
+    // MARK: - 框選
+
+    /// 這一頁上每一個物件的位置與大小，給框選判定用。
+    private var marqueeCandidates: [MarqueeHit] {
+        pageStackableObjects.compactMap { object in
+            guard let frame = frameOfObject(id: object.id) else { return nil }
+            return MarqueeHit(id: object.id, kind: object.kind, frame: frame)
+        }
+    }
+
+    /// 框選層：拉框、顯示選取外框、整組拖曳。
+    private var marqueeLayer: some View {
+        let candidates = marqueeCandidates
+        let selectionBounds = ObjectMarquee.bounds(of: selectedObjectIds, among: candidates)
+        return ZStack(alignment: .topLeading) {
+            // 這一層要吃掉觸控 —— 框選模式下畫布不捲、物件不動，
+            // 只剩框選這一件事（見 ObjectMarquee 開頭的說明）。
+            Color.black.opacity(0.001)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
+                .gesture(
+                    DragGesture(minimumDistance: 2,
+                                coordinateSpace: .named(CanvasCoordinateSpace.name))
+                        .onChanged { value in
+                            if let bounds = selectionBounds,
+                               bounds.contains(value.startLocation) {
+                                // 從選取範圍裡面開始拖＝搬整組。
+                                groupDragOffset = value.translation
+                            } else {
+                                if marqueeStart == nil { marqueeStart = value.startLocation }
+                                marqueeCurrent = value.location
+                            }
+                        }
+                        .onEnded { value in
+                            if groupDragOffset != .zero {
+                                moveSelection(by: groupDragOffset)
+                                groupDragOffset = .zero
+                            } else if let start = marqueeStart {
+                                let rect = ObjectMarquee.rect(from: start, to: value.location)
+                                selectedObjectIds = ObjectMarquee.hits(in: rect, among: candidates)
+                            }
+                            marqueeStart = nil
+                            marqueeCurrent = nil
+                        }
+                )
+                // 點空白處＝取消選取。與所有繪圖工具的慣例一致。
+                .onTapGesture { selectedObjectIds = [] }
+
+            // 每個被選中的物件畫一個外框。只畫一個大框的話，
+            // 使用者看不出「到底選到了哪幾個」。
+            ForEach(candidates.filter { selectedObjectIds.contains($0.id) }, id: \.id) { hit in
+                Rectangle()
+                    .stroke(Color.accentColor, lineWidth: 1.5)
+                    .frame(width: hit.frame.width, height: hit.frame.height)
+                    .offset(x: hit.frame.minX + groupDragOffset.width,
+                            y: hit.frame.minY + groupDragOffset.height)
+                    .allowsHitTesting(false)
+            }
+
+            // 拉框中的橡皮筋
+            if let start = marqueeStart, let current = marqueeCurrent {
+                let rect = ObjectMarquee.rect(from: start, to: current)
+                Rectangle()
+                    .fill(Color.accentColor.opacity(0.10))
+                    .overlay(Rectangle().stroke(Color.accentColor, style: StrokeStyle(
+                        lineWidth: 1, dash: [4, 3])))
+                    .frame(width: rect.width, height: rect.height)
+                    .offset(x: rect.minX, y: rect.minY)
+                    .allowsHitTesting(false)
+            }
+        }
+    }
+
+    /// 框選模式的工具列。掛在畫布外面（工具列那一層），不隨畫布捲動 ——
+    /// 跟著捲的話，選了下半頁的東西就得捲回去才按得到刪除。
+    private var marqueeToolbar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "square.dashed.inset.filled")
+                .foregroundColor(.accentColor)
+            Text(localizationManager.localized("marquee_selected")
+                .replacingOccurrences(of: "%@", with: "\(selectedObjectIds.count)"))
+                .font(.caption)
+                .monospacedDigit()
+
+            Divider().frame(height: 18)
+
+            Button {
+                copySelection()
+            } label: {
+                Label(localizationManager.localized("action_copy"), systemImage: "doc.on.doc")
+            }
+            .disabled(selectedObjectIds.isEmpty)
+
+            Button {
+                pasteClipboard()
+            } label: {
+                Label(localizationManager.localized("action_paste"), systemImage: "doc.on.clipboard")
+            }
+            .disabled(objectClipboard.isEmpty)
+
+            Button {
+                duplicateSelection()
+            } label: {
+                Label(localizationManager.localized("action_duplicate"), systemImage: "plus.square.on.square")
+            }
+            .disabled(selectedObjectIds.isEmpty)
+
+            Button(role: .destructive) {
+                deleteSelection()
+            } label: {
+                Label(localizationManager.localized("action_delete"), systemImage: "trash")
+            }
+            .disabled(selectedObjectIds.isEmpty)
+
+            Divider().frame(height: 18)
+
+            Button {
+                isMarqueeActive = false
+                selectedObjectIds = []
+            } label: {
+                Label(localizationManager.localized("done"), systemImage: "checkmark")
+            }
+        }
+        .font(.caption)
+        .labelStyle(.titleAndIcon)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 7)
+        .background(Color(uiColor: .tertiarySystemGroupedBackground))
+    }
+
+    // MARK: - 框選的批次操作
+
+    private func moveSelection(by delta: CGSize) {
+        guard !selectedObjectIds.isEmpty, delta != .zero else { return }
+        for id in selectedObjectIds {
+            guard let frame = frameOfObject(id: id) else { continue }
+            moveObject(id: id, to: CGPoint(x: frame.minX + delta.width,
+                                           y: frame.minY + delta.height))
+        }
+        store.updateNotebook(notebook)
+    }
+
+    private func copySelection() {
+        objectClipboard = selectedObjectIds.compactMap(clipboardObject(forId:))
+    }
+
+    private func duplicateSelection() {
+        let copies = selectedObjectIds.compactMap(clipboardObject(forId:))
+        paste(copies)
+    }
+
+    private func pasteClipboard() {
+        paste(objectClipboard)
+    }
+
+    /// 貼上一組物件。**每一個都給新的 id** —— 沿用原 id 的話，兩份物件
+    /// 會共用同一筆資料，拖其中一個另一個也會跟著動。
+    private func paste(_ objects: [ClipboardObject]) {
+        guard !objects.isEmpty else { return }
+        let offset = ObjectMarquee.pasteOffset
+        var pastedIds: Set<String> = []
+
+        for object in objects {
+            switch object {
+            case .image(let item):
+                var copy = NoteImageAttachment(
+                    fileName: item.fileName, pageIndex: currentPageIndex,
+                    x: item.x + offset.width, y: item.y + offset.height,
+                    width: item.width, height: item.height,
+                    rotationDegrees: item.rotationDegrees, cornerRadius: item.cornerRadius,
+                    hasShadow: item.hasShadow, hasBorder: item.hasBorder,
+                    filterStyle: item.filterStyle, materialType: item.materialType,
+                    borderColorHex: item.borderColorHex, borderWidth: item.borderWidth,
+                    backgroundColorHex: item.backgroundColorHex,
+                    chartSpecJSON: item.chartSpecJSON)
+                copy.pageIndex = currentPageIndex
+                notebook.attachments = (notebook.attachments ?? []) + [copy]
+                pastedIds.insert(copy.id)
+            case .text(let item):
+                var copy = item
+                copy = NoteTextAttachment(
+                    pageIndex: currentPageIndex, text: item.text, fontSize: item.fontSize,
+                    isBold: item.isBold, isItalic: item.isItalic, isUnderline: item.isUnderline,
+                    isStrikethrough: item.isStrikethrough, alignmentRaw: item.alignmentRaw,
+                    textColorHex: item.textColorHex,
+                    backgroundColorHex: item.backgroundColorHex ?? "#FFFFFF",
+                    hasBorder: item.hasBorder, cornerRadius: item.cornerRadius,
+                    borderColorHex: item.borderColorHex, borderWidth: item.borderWidth,
+                    x: item.x + offset.width, y: item.y + offset.height,
+                    width: item.width, height: item.height,
+                    lineSpacing: item.lineSpacing, paragraphSpacing: item.paragraphSpacing,
+                    firstLineIndent: item.firstLineIndent, paragraphIndent: item.paragraphIndent)
+                copy.rotationDegrees = item.rotationDegrees
+                notebook.textAttachments = (notebook.textAttachments ?? []) + [copy]
+                pastedIds.insert(copy.id)
+            case .table(let item):
+                var copy = NoteTableAttachment(
+                    pageIndex: currentPageIndex,
+                    x: item.x + offset.width, y: item.y + offset.height,
+                    width: item.width, rows: item.rows, cols: item.cols,
+                    cells: item.cells, headerRow: item.headerRow,
+                    mergedCells: item.mergedCells, fontSize: item.fontSize,
+                    ruleColorHex: item.ruleColorHex,
+                    headerBackgroundHex: item.headerBackgroundHex)
+                copy.rotationDegrees = item.rotationDegrees
+                notebook.tableAttachments = (notebook.tableAttachments ?? []) + [copy]
+                pastedIds.insert(copy.id)
+            case .shape(let item):
+                var copy = NoteShapeAttachment(
+                    pageIndex: currentPageIndex, kindName: item.kindName,
+                    x: item.x + offset.width, y: item.y + offset.height,
+                    width: item.width, height: item.height,
+                    cornerRadius: item.cornerRadius, label: item.label,
+                    strokeColorHex: item.strokeColorHex, fillColorHex: item.fillColorHex,
+                    lineWidth: item.lineWidth)
+                copy.rotationDegrees = item.rotationDegrees
+                notebook.shapeAttachments = (notebook.shapeAttachments ?? []) + [copy]
+                pastedIds.insert(copy.id)
+            case .link(let item):
+                var copy = NoteLinkAttachment(
+                    pageIndex: currentPageIndex, urlString: item.urlString,
+                    title: item.title, descriptionText: item.descriptionText,
+                    siteName: item.siteName,
+                    x: item.x + offset.width, y: item.y + offset.height,
+                    width: item.width, height: item.height)
+                copy.rotationDegrees = item.rotationDegrees
+                copy.hasBorder = item.hasBorder
+                copy.cornerRadius = item.cornerRadius
+                notebook.linkAttachments = (notebook.linkAttachments ?? []) + [copy]
+                pastedIds.insert(copy.id)
+            case .model3D(let item):
+                var copy = item
+                copy = Note3DAttachment()
+                copy.pageIndex = currentPageIndex
+                copy.x = item.x + offset.width
+                copy.y = item.y + offset.height
+                copy.width = item.width
+                copy.height = item.height
+                notebook.model3DAttachments = (notebook.model3DAttachments ?? []) + [copy]
+                pastedIds.insert(copy.id)
+            case .audio(let item):
+                let copy = NoteAudioAttachment(
+                    pageIndex: currentPageIndex, recordingId: item.recordingId,
+                    fileName: item.fileName, title: item.title,
+                    durationSeconds: item.durationSeconds,
+                    x: item.x + offset.width, y: item.y + offset.height,
+                    width: item.width, height: item.height,
+                    rotationDegrees: item.rotationDegrees,
+                    hasBorder: item.hasBorder, cornerRadius: item.cornerRadius,
+                    borderColorHex: item.borderColorHex, borderWidth: item.borderWidth,
+                    backgroundColorHex: item.backgroundColorHex)
+                notebook.audioAttachments = (notebook.audioAttachments ?? []) + [copy]
+                pastedIds.insert(copy.id)
+            }
+        }
+
+        store.updateNotebook(notebook)
+        // 貼上之後選取新的那一份，接著就能直接再拖一次。
+        selectedObjectIds = pastedIds
+    }
+
+    private func deleteSelection() {
+        guard !selectedObjectIds.isEmpty else { return }
+        let ids = selectedObjectIds
+        notebook.attachments?.removeAll { ids.contains($0.id) }
+        notebook.textAttachments?.removeAll { ids.contains($0.id) }
+        notebook.tableAttachments?.removeAll { ids.contains($0.id) }
+        notebook.linkAttachments?.removeAll { ids.contains($0.id) }
+        notebook.model3DAttachments?.removeAll { ids.contains($0.id) }
+        notebook.audioAttachments?.removeAll { ids.contains($0.id) }
+        notebook.commentPins?.removeAll { ids.contains($0.id) }
+        // 形狀連同它的連接線一起刪 —— 只刪形狀的話，線會留在畫布上，
+        // 兩端各指著一個不存在的東西。
+        notebook.shapeAttachments?.removeAll { ids.contains($0.id) }
+        notebook.connectionAttachments?.removeAll {
+            ids.contains($0.fromShapeId) || ids.contains($0.toShapeId)
+        }
+        selectedObjectIds = []
+        store.updateNotebook(notebook)
+    }
+
+    private func clipboardObject(forId id: String) -> ClipboardObject? {
+        if let item = notebook.attachments?.first(where: { $0.id == id }) { return .image(item) }
+        if let item = notebook.textAttachments?.first(where: { $0.id == id }) { return .text(item) }
+        if let item = notebook.tableAttachments?.first(where: { $0.id == id }) { return .table(item) }
+        if let item = notebook.shapeAttachments?.first(where: { $0.id == id }) { return .shape(item) }
+        if let item = notebook.linkAttachments?.first(where: { $0.id == id }) { return .link(item) }
+        if let item = notebook.model3DAttachments?.first(where: { $0.id == id }) { return .model3D(item) }
+        if let item = notebook.audioAttachments?.first(where: { $0.id == id }) { return .audio(item) }
+        return nil
+    }
+
+    /// 目前模式的徽章：這個模式下筆會不會畫線、物件拖不拖得動。
+    private var modeBadge: some View {
+        let isDraw = editorMode == .draw
+        return HStack(spacing: 7) {
+            Image(systemName: isDraw ? "pencil.tip" : "keyboard.fill")
+                .font(.caption)
+                .foregroundColor(isDraw ? .orange : .accentColor)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(localizationManager.localized(isDraw ? "mode_draw_badge" : "mode_type_badge"))
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundColor(.primary)
+                Text(localizationManager.localized(isDraw ? "mode_draw_hint" : "mode_type_hint"))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .frame(maxWidth: 330, alignment: .leading)
+        .background(.ultraThinMaterial)
+        .overlay(
+            RoundedRectangle(cornerRadius: 14)
+                .stroke((isDraw ? Color.orange : Color.accentColor).opacity(0.35), lineWidth: 1)
+        )
+        .cornerRadius(14)
+        .shadow(color: Color.black.opacity(0.12), radius: 5, y: 2)
+        // 徽章是狀態顯示，不是按鈕 —— 吃掉觸控的話，它蓋住的那塊畫布
+        // 就寫不了字，而使用者看不出是被什麼擋住的。
+        .allowsHitTesting(false)
     }
 
     /// 這一頁上所有可堆疊的物件，跨七種型別收成同一份清單。
@@ -5118,6 +5586,10 @@ public struct NotebookEditorView: View {
         for item in (notebook.model3DAttachments ?? []) where item.pageIndex == page {
             result.append(.init(id: item.id, kind: .model3D,
                                 title: localizationManager.localized("layer_kind_model3d")))
+        }
+        for item in (notebook.audioAttachments ?? []) where item.pageIndex == page {
+            result.append(.init(id: item.id, kind: .audio,
+                                title: title(item.title, "layer_kind_audio")))
         }
         for pin in (notebook.commentPins ?? []) where pin.pageIndex == page {
             result.append(.init(id: pin.id, kind: .pin,
@@ -5228,6 +5700,21 @@ public struct NotebookEditorView: View {
             set: { updated in
                 if let idx = notebook.linkAttachments?.firstIndex(where: { $0.id == id }) {
                     notebook.linkAttachments?[idx] = updated
+                    store.updateNotebook(notebook)
+                }
+            }
+        )
+    }
+
+    private func binding(forAudioId id: String) -> Binding<NoteAudioAttachment> {
+        Binding(
+            get: {
+                notebook.audioAttachments?.first(where: { $0.id == id })
+                    ?? NoteAudioAttachment(fileName: "")
+            },
+            set: { updated in
+                if let idx = notebook.audioAttachments?.firstIndex(where: { $0.id == id }) {
+                    notebook.audioAttachments?[idx] = updated
                     store.updateNotebook(notebook)
                 }
             }
@@ -5858,67 +6345,63 @@ struct LinkAttachmentItemView: View {
 
     @State private var dragOffset: CGSize = .zero
     @State private var isSelected: Bool = false
+    /// 縮放拖曳中的即時尺寸。直接改 linkItem.width 會每一幀都寫回筆記。
+    @State private var liveSize: CGSize? = nil
+    @State private var resizeBase: CGSize? = nil
+    @State private var isEditing: Bool = false
+
+    private var displayWidth: CGFloat { liveSize?.width ?? linkItem.width }
+    private var displayHeight: CGFloat { liveSize?.height ?? linkItem.height }
 
     var body: some View {
         let currentX = linkItem.x + dragOffset.width
         let currentY = linkItem.y + dragOffset.height
 
-        ZStack(alignment: .topTrailing) {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 6) {
-                    Image(systemName: "globe")
-                        .font(.caption)
-                        .foregroundColor(.accentColor)
-                    Text(linkItem.siteName.uppercased())
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundColor(.secondary)
-                    Spacer()
-
-                    // 開啟連結外鏈圖示
-                    Button {
-                        if let url = URL(string: linkItem.urlString) {
-                            UIApplication.shared.open(url)
-                        }
-                    } label: {
-                        HStack(spacing: 3) {
-                            Text(localizationManager.localized("open"))
-                                .font(.system(size: 10, weight: .medium))
-                            Image(systemName: "arrow.up.right.square")
-                                .font(.system(size: 11))
-                        }
-                        .foregroundColor(.accentColor)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.accentColor.opacity(0.1))
-                        .cornerRadius(4)
+        card
+            // 卡片本體跟著轉；把手掛在旋轉**外面**的 overlay ——
+            // 包進去的話拖曳算出的角度會疊加自身旋轉，卡片會失控加速。
+            .rotationEffect(.degrees(linkItem.canvasRotation))
+            .overlay {
+                if isSelected {
+                    GeometryReader { geo in
+                        ObjectRotationHandle(degrees: $linkItem.canvasRotation, size: geo.size)
                     }
-                    .buttonStyle(.plain)
-                }
-
-                Text(linkItem.title)
-                    .font(.system(size: 14, weight: .semibold))
-                    .lineLimit(2)
-                    .foregroundColor(.primary)
-
-                if !linkItem.descriptionText.isEmpty {
-                    Text(linkItem.descriptionText)
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
                 }
             }
-            .padding(12)
-            .frame(width: linkItem.width)
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(isSelected ? Color.accentColor : Color.secondary.opacity(0.2), lineWidth: isSelected ? 1.5 : 1)
-            )
-            .shadow(color: Color.black.opacity(0.08), radius: 6, y: 3)
-            .contentShape(Rectangle())
-            .onTapGesture {
-                isSelected.toggle()
+            .overlay(alignment: .topTrailing) {
+                if isSelected {
+                    Button(role: .destructive, action: onDelete) {
+                        Image(systemName: "trash.circle.fill")
+                            .font(.title3)
+                            .symbolRenderingMode(.palette)
+                            .foregroundStyle(.white, Color.red)
+                    }
+                    .buttonStyle(.plain)
+                    .offset(x: 10, y: -10)
+                    .accessibilityLabel(localizationManager.localized("action_delete"))
+                }
+            }
+            // 右下角縮放把手。卡片原本只能用插入時的寬度，標題長一點就被截掉。
+            .overlay(alignment: .bottomTrailing) {
+                if isSelected { resizeHandle }
+            }
+            // 左下角編修鈕：網址、標題與說明都存在模型裡，但在這一版之前
+            // 沒有任何介面改得到 —— 打錯一個字只能刪掉重插。
+            .overlay(alignment: .bottomLeading) {
+                if isSelected {
+                    Button { isEditing = true } label: {
+                        Image(systemName: "square.and.pencil")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                            .frame(width: 30, height: 30)
+                            .background(Color.accentColor)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(Circle())
+                    .offset(x: -10, y: 10)
+                    .help(localizationManager.localized("link_edit"))
+                }
             }
             .gesture(
                 DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
@@ -5931,24 +6414,149 @@ struct LinkAttachmentItemView: View {
                         dragOffset = .zero
                     }
             )
+            .onTapGesture { isSelected.toggle() }
+            .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
+            .sheet(isPresented: $isEditing) {
+                LinkAttachmentEditSheet(linkItem: $linkItem)
+            }
+    }
 
-            // 選取時刪除按鈕
-            if isSelected {
+    private var card: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "globe")
+                    .font(.caption)
+                    .foregroundColor(.accentColor)
+                Text(linkItem.siteName.uppercased())
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundColor(.secondary)
+                Spacer()
+
+                // 開啟連結外鏈圖示
                 Button {
-                    onDelete()
+                    if let url = URL(string: linkItem.urlString) {
+                        UIApplication.shared.open(url)
+                    }
                 } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 11, weight: .bold))
-                        .foregroundColor(.white)
-                        .padding(5)
-                        .background(Color.red)
-                        .clipShape(Circle())
+                    HStack(spacing: 3) {
+                        Text(localizationManager.localized("open"))
+                            .font(.system(size: 10, weight: .medium))
+                        Image(systemName: "arrow.up.right.square")
+                            .font(.system(size: 11))
+                    }
+                    .foregroundColor(.accentColor)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(Color.accentColor.opacity(0.1))
+                    .cornerRadius(4)
                 }
                 .buttonStyle(.plain)
-                .offset(x: 8, y: -8)
+            }
+
+            Text(linkItem.title)
+                .font(.system(size: 14, weight: .semibold))
+                .lineLimit(2)
+                .foregroundColor(.primary)
+
+            if !linkItem.descriptionText.isEmpty {
+                Text(linkItem.descriptionText)
+                    .font(.system(size: 11))
+                    .foregroundColor(.secondary)
+                    .lineLimit(3)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        // 高度也照模型走。原本只綁寬度、位置用寫死的 +50 推算中心 ——
+        // 卡片一變高，選取框、把手與實際內容就對不上。
+        .frame(width: displayWidth, height: displayHeight, alignment: .topLeading)
+        .background(ObjectFrameStyleResolver.background(linkItem, .link))
+        .cornerRadius(linkItem.cornerRadius)
+        .overlay(
+            RoundedRectangle(cornerRadius: linkItem.cornerRadius)
+                .stroke(
+                    isSelected ? Color.accentColor
+                               : ObjectFrameStyleResolver.borderColor(linkItem, .link),
+                    lineWidth: isSelected ? 1.5
+                                          : ObjectFrameStyleResolver.borderWidth(linkItem, .link)
+                )
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 6, y: 3)
+        .contentShape(Rectangle())
+    }
+
+    private var resizeHandle: some View {
+        Image(systemName: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
+            .font(.system(size: 10, weight: .bold))
+            .foregroundColor(.white)
+            .frame(width: 30, height: 30)
+            .background(Color.accentColor)
+            .clipShape(Circle())
+            .contentShape(Circle())
+            .offset(x: 10, y: 10)
+            .help(localizationManager.localized("resize_link"))
+            .highPriorityGesture(
+                DragGesture(minimumDistance: 1,
+                            coordinateSpace: .named(CanvasCoordinateSpace.name))
+                    .onChanged { value in
+                        let base = resizeBase ?? CGSize(width: linkItem.width, height: linkItem.height)
+                        if resizeBase == nil { resizeBase = base }
+                        // 下限取卡片還讀得出東西的尺寸：再小就只剩邊框。
+                        liveSize = CGSize(
+                            width: max(140, base.width + value.translation.width),
+                            height: max(64, base.height + value.translation.height)
+                        )
+                    }
+                    .onEnded { _ in
+                        if let size = liveSize {
+                            linkItem.width = size.width
+                            linkItem.height = size.height
+                        }
+                        resizeBase = nil
+                        liveSize = nil
+                    }
+            )
+    }
+}
+
+/// 連結卡片的編修表單。
+///
+/// 網址、標題、說明與站名四個欄位一直都在模型裡、也一直跟著同步走，
+/// 但在這一版之前沒有任何介面改得到它們 —— 解析錯一次就只能刪掉重插。
+struct LinkAttachmentEditSheet: View {
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+    @Environment(\.dismiss) private var dismiss
+    @Binding var linkItem: NoteLinkAttachment
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(localizationManager.localized("insert_link")) {
+                    TextField(localizationManager.localized("link_url_hint"), text: $linkItem.urlString)
+                        .textInputAutocapitalization(.never)
+                        .disableAutocorrection(true)
+                }
+                Section(localizationManager.localized("link_title")) {
+                    TextField(localizationManager.localized("link_title"), text: $linkItem.title)
+                }
+                Section(localizationManager.localized("link_description")) {
+                    TextField(localizationManager.localized("link_description"),
+                              text: $linkItem.descriptionText, axis: .vertical)
+                        .lineLimit(2...5)
+                }
+                Section(localizationManager.localized("link_site_name")) {
+                    TextField(localizationManager.localized("link_site_name"), text: $linkItem.siteName)
+                }
+            }
+            .navigationTitle(localizationManager.localized("link_edit"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(localizationManager.localized("done")) { dismiss() }
+                }
             }
         }
-        .position(x: currentX + linkItem.width / 2, y: currentY + 50)
     }
 }
 
@@ -5976,6 +6584,9 @@ enum ObjectFrameStyleResolver {
         static let model3D = Defaults(
             borderColor: .accentColor.opacity(0.45), borderWidth: 1.5,
             background: Color(UIColor.secondarySystemBackground))
+        static let audio = Defaults(
+            borderColor: .red.opacity(0.35), borderWidth: 1.5,
+            background: Color(UIColor.secondarySystemGroupedBackground))
     }
 
     /// 底色。`nil`（舊檔沒這欄位）回落預設；`"clear"` 是使用者選的透明。

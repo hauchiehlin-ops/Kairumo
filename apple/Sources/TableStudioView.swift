@@ -104,7 +104,12 @@ public struct TableStudioView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 ScrollView([.horizontal, .vertical]) {
-                    grid.padding(12)
+                    VStack(alignment: .leading, spacing: 14) {
+                        preview
+                        Divider()
+                        grid
+                    }
+                    .padding(12)
                 }
                 Divider()
                 controls
@@ -127,12 +132,39 @@ public struct TableStudioView: View {
         }
     }
 
+    // MARK: - 即時預覽
+
+    /// 這張表插進畫布之後的樣子。
+    ///
+    /// 沒有它的話，欄寬、字級、合併與表頭底色都要「插進去才知道」——
+    /// 而那時候面板已經關了，要改只能再打開一次。預覽與畫布走的是**同一個**
+    /// `NoteTableView`，所以看到的就是會得到的。
+    private var preview: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(localizationManager.localized("table_preview"))
+                .font(.caption2)
+                .foregroundColor(.secondary)
+            NoteTableView(table: $table, isSelected: false, onEdit: {})
+                // 預覽不接受點擊 —— 這裡點兩下會再開一層同樣的面板。
+                .allowsHitTesting(false)
+                .padding(8)
+                .background(Color(uiColor: .secondarySystemGroupedBackground))
+                .cornerRadius(8)
+        }
+    }
+
     // MARK: - 格子
 
+    /// 可編輯的儲存格。
+    ///
+    /// **刻意不用 `Grid`。** `Grid` 在 Mac Catalyst 上放進雙向 `ScrollView`
+    /// 時會塌成一格：使用者看到的是一個文字框，其餘的行列完全不見 ——
+    /// 而控制列（合併、刪除欄列）仍然是正常的，所以看起來像「表格壞了」。
+    /// VStack + HStack 在兩個平台上的行為一致。
     private var grid: some View {
-        Grid(alignment: .leading, horizontalSpacing: 4, verticalSpacing: 4) {
+        VStack(alignment: .leading, spacing: 4) {
             ForEach(0..<table.rows, id: \.self) { row in
-                GridRow {
+                HStack(spacing: 4) {
                     ForEach(0..<table.cols, id: \.self) { col in
                         if table.isCovered(row: row, col: col) {
                             // 被合併蓋住的格子不給編輯 —— 它的內容不會被顯示，

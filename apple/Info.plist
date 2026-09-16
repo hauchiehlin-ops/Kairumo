@@ -12,6 +12,19 @@
 	  CFBundleURLTypes 是巢狀的陣列包字典，INFOPLIST_KEY_* 表達不了，
 	  這就是這個檔案存在的唯一理由。
 	-->
+	<!--
+	  Mac Catalyst 上「操作說明」與「隱私權政策」要開成獨立視窗。
+
+	  `openWindow(id:)` 在 `UIApplicationSupportsMultipleScenes` 為 NO 時
+	  **靜默失效** —— 按下卡片什麼事也不會發生，Console 也不會有訊息。
+	  專案是 GENERATE_INFOPLIST_FILE，而產生器不會自己補上這個鍵；
+	  它是巢狀字典，INFOPLIST_KEY_* 表達不了，所以放在這裡。
+	-->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<true/>
+	</dict>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
