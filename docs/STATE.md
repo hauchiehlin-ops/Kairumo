@@ -115,6 +115,16 @@ Kairumo —— 手寫、打字、錄音轉文字三合一的筆記 App。
 - ❌ 用 delegate 的 `buildMenu` 往「檔案」選單插東西 —— 那個選單整個是
   SwiftUI 從 `WindowGroup` 產生的，delegate 先跑、它後重建，插進去的
   會被蓋掉。「顯示」選單它不碰，插得進去
+- ❌ 用整個 scheme 跑來做「反向驗證」（故意改壞、看測試有沒有抓到）——
+  Catalyst 上 UI 測試本來就會失敗，`TEST FAILED` 根本不是你的測試抓到的。
+  要用 `-only-testing:` 指到那一個類別
+- ❌ 加了新測試檔卻沒重跑 `xcodegen` —— 測試**不會被執行**，而整體是綠的
+  （`Executed 0 tests` 藏在幾十行輸出裡）
+- ✅ Catalyst 的無障礙樹只到外層：選單列讀得到、筆記卡片點得開，但面板
+  內容是空的。點不到也讀不到時，改用 `ImageRenderer` 把畫面**算繪出來量**
+- ✅ Android 的快捷鍵可以用 adb 實按驗完整段（`input keycombination
+  CTRL_LEFT KEYCODE_E`）—— 數字鍵要寫 `KEYCODE_3`，直接寫 `3` 會被系統
+  當成別的東西，App 會莫名其妙退到背景
 - ✅ 快捷鍵要驗**兩段**（系統有沒有送到、送到之後有沒有反應）。模擬器沒有
   硬體鍵盤，但 **Mac Catalyst 的選單列可以**：啟動就會建構選單，用
   AppleScript 讀得到項目與鍵位，也點得下去看處理常式有沒有被呼叫
