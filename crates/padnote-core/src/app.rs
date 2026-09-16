@@ -1848,7 +1848,15 @@ impl NotebookSession {
             scale,
             include_background: true,
         };
-        Ok(padnote_export::to_png(page, &strokes, Some(&blobs), &opt)?)
+        // 形狀與連接線住在物件樹裡，不在 page.blocks() 中 —— 不傳進去的話
+        // 縮圖上會少掉整張流程圖（工作項 S-57）。
+        Ok(padnote_export::to_png(
+            page,
+            &strokes,
+            Some(&blobs),
+            self.objects.get(&page_id),
+            &opt,
+        )?)
     }
 
     /// 產出列印專用資料（工作項 S-55）。`page_id` 為 `None` 時列印整份筆記本。

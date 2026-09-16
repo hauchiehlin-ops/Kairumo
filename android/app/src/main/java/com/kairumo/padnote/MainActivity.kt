@@ -1075,37 +1075,25 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     Column(modifier = Modifier.fillMaxSize()) {
         // 只有兩個切換留在工具列上，其餘進溢位選單。
         //
-        // 先前把全部動作排成一列再讓它水平捲動 —— 在 320dp 寬的螢幕上，
-        // 錄音、匯出、列印、手冊全都被推到畫面外，而且捲不太動。
-        // 功能點不到就等於沒做。
-        // FlowRow 而不是 Row：320dp 寬的螢幕上，返回鈕加兩個切換再加「...」
-        // 就擠不下，Row 會把最後一個壓成一欄一個字的直書（實機上看到的
-        // 就是「Stylus Only」被壓成一直條）。換行至少每個字都看得懂。
+        // 工具列分兩排，與 Apple 端一致（工作項 S-59）。
+        //
+        // **第一排是「這個畫面本身」，第二排是「目前模式的工具」。**
+        // 原本全部攤在同一個 FlowRow 裡，在 320dp 的手機上會換成四五行、
+        // 佔掉半個螢幕 —— 而且手寫工具在打字模式下照樣列著，使用者看不出
+        // 哪些按鈕現在有意義。Apple 那邊第二排是跟著模式換的。
+        //
+        // 仍然用 FlowRow 而不是 Row：窄螢幕上 Row 會把最後一個元素壓成
+        // 一欄一個字的直書（實機看過「Stylus Only」被壓成一直條）。
         FlowRow(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             // 回首頁。沒有這顆的話，進了筆記就出不來了 ——
             // Android 的系統返回鍵在單一 Compose 畫面裡不會有任何作用。
             if (onBack != null) {
                 TextButton(onClick = onBack) { Text("‹ ${l10n("back_to_home")}") }
             }
-            FilterChip(
-                selected = lowLatency && !lowLatencyUnavailable,
-                enabled = !lowLatencyUnavailable,
-                onClick = { lowLatency = !lowLatency; latency.clear() },
-                label = { Text(l10n("ink_low_latency")) }
-            )
-            FilterChip(
-                selected = penOnly,
-                onClick = {
-                    penOnly = !penOnly
-                    // 掌拒最可靠的模式：手指一律當手勢，只有筆能寫。
-                    engine.setPenOnly(penOnly)
-                },
-                label = { Text(l10n("ink_pen_only")) }
-            )
             // 手寫／打字切換。與 Apple 端一樣放在最前面 ——
             // 它決定了其餘每一個工具的意義。
             FilterChip(
@@ -1127,44 +1115,6 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 onClick = { editorMode = EditorMode.TYPE },
                 label = { Text(l10n("mode_type")) }
             )
-
-            // 這個模式下筆會不會畫線、物件動不動得了。
-            //
-            // 兩個模式都要說 —— 只在打字模式掛提示的話，切回手寫時畫面上
-            // 沒有任何差別，而兩邊「同一個手勢會發生什麼事」完全不同。
-            Text(
-                l10n(if (editorMode == EditorMode.DRAW) "mode_draw_hint" else "mode_type_hint"),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(top = 16.dp)
-            )
-
-            // 框選。與模式切換擺在一起 —— 它本身就是一個模式，
-            // 使用者要看得到自己現在在不在裡面。
-            FilterChip(
-                selected = marqueeActive,
-                onClick = {
-                    marqueeActive = !marqueeActive
-                    if (!marqueeActive) marqueeSelection = emptySet()
-                    if (marqueeActive) editorMode = EditorMode.TYPE
-                },
-                label = { Text(l10n("marquee_select")) }
-            )
-            if (marqueeActive) {
-                Text(
-                    l10n("marquee_selected").replace("%@", marqueeSelection.size.toString()),
-                    style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.padding(top = 16.dp)
-                )
-                TextButton(
-                    onClick = { duplicateMarqueeSelection() },
-                    enabled = marqueeSelection.isNotEmpty()
-                ) { Text(l10n("action_duplicate")) }
-                TextButton(
-                    onClick = { deleteMarqueeSelection() },
-                    enabled = marqueeSelection.isNotEmpty()
-                ) { Text(l10n("action_delete"), color = MaterialTheme.colorScheme.error) }
-            }
 
             // 分頁導覽。與 Apple 端同一組：上一頁 · 頁碼 · 下一頁 · 新增。
             TextButton(
@@ -1501,6 +1451,83 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             }
         }
 
+        // ── 第二排：目前模式的工具 ────────────────────────────────
+        //
+        // 與 Apple 一致：手寫模式顯示筆刷與顏色，打字模式顯示文字與物件的
+        // 工具。原本兩種工具同時列著 —— 使用者在打字模式下看到一整排筆，
+        // 點下去卻畫不出東西（因為 S-59 之前筆還畫得出來，之後就更怪了）。
+        FlowRow(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            if (editorMode == EditorMode.DRAW) {
+                // 低延遲與掌拒是**手寫的**設定。放在第一排的話，打字模式下
+                // 它們也一直在那裡，而那時候兩個都沒有意義。
+                FilterChip(
+                    selected = lowLatency && !lowLatencyUnavailable,
+                    enabled = !lowLatencyUnavailable,
+                    onClick = { lowLatency = !lowLatency; latency.clear() },
+                    label = { Text(l10n("ink_low_latency")) }
+                )
+                FilterChip(
+                    selected = penOnly,
+                    onClick = {
+                        penOnly = !penOnly
+                        // 掌拒最可靠的模式：手指一律當手勢，只有筆能寫。
+                        engine.setPenOnly(penOnly)
+                    },
+                    label = { Text(l10n("ink_pen_only")) }
+                )
+            } else {
+                FilterChip(
+                    selected = marqueeActive,
+                    onClick = {
+                        marqueeActive = !marqueeActive
+                        if (!marqueeActive) marqueeSelection = emptySet()
+                    },
+                    label = { Text(l10n("marquee_select")) }
+                )
+                if (marqueeActive) {
+                    Text(
+                        l10n("marquee_selected").replace("%@", marqueeSelection.size.toString()),
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                    TextButton(
+                        onClick = { duplicateMarqueeSelection() },
+                        enabled = marqueeSelection.isNotEmpty()
+                    ) { Text(l10n("action_duplicate")) }
+                    TextButton(
+                        onClick = { deleteMarqueeSelection() },
+                        enabled = marqueeSelection.isNotEmpty()
+                    ) { Text(l10n("action_delete"), color = MaterialTheme.colorScheme.error) }
+                }
+                // 兩個最常用的插入動作放在工具列上，其餘留在「⋯」裡 ——
+                // 與 Apple 打字工具列的「文字排版 / 插入連結 / 更多」一致。
+                TextButton(onClick = {
+                    // 位置與「⋯」裡那一條一致，不要兩條路放在不同地方。
+                    val box = textStore.create(x = 60f, y = 80f)
+                    textRevision++
+                    selectedTextId = box.id
+                    editingText = box
+                }) { Text(l10n("add_text_box")) }
+                TextButton(onClick = { insertingLink = true }) { Text(l10n("insert_link")) }
+            }
+        }
+
+        // 這個模式下筆會不會畫線、物件動不動得了。
+        //
+        // 兩個模式都要說 —— 只在打字模式掛提示的話，切回手寫時畫面上
+        // 沒有任何差別，而兩邊「同一個手勢會發生什麼事」完全不同。
+        Text(
+            l10n(if (editorMode == EditorMode.DRAW) "mode_draw_hint" else "mode_type_hint"),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
+        )
+
+        // 筆刷列只在手寫模式出現。
+        if (editorMode == EditorMode.DRAW) {
         InkToolbar(
             tool = inkTool,
             colorHex = inkColorHex,
@@ -1523,6 +1550,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 engine.baseWidth = value
             }
         )
+        }
 
         // 套索的動作列。只在真的有東西可以做的時候出現 —— 一選了套索就
         // 跳出來的話，那時候每一顆按鈕都是空操作。

@@ -11,6 +11,7 @@ publish = false
 padnote-doc = { path = "../padnote-doc" }
 padnote-ink = { path = "../padnote-ink" }
 padnote-pdf = { path = "../padnote-pdf" }
+padnote-shapes = { path = "../padnote-shapes" }
 padnote-storage = { path = "../padnote-storage" }
 
 png = { workspace = true }

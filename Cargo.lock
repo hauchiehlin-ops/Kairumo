@@ -2365,6 +2365,7 @@ dependencies = [
  "padnote-doc",
  "padnote-ink",
  "padnote-pdf",
+ "padnote-shapes",
  "padnote-storage",
  "png",
  "serde_json",
