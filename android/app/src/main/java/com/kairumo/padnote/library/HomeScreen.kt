@@ -6,10 +6,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -44,6 +46,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import com.kairumo.padnote.ui.DS
+import com.kairumo.padnote.ui.dsContentWidth
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -121,11 +125,26 @@ fun HomeScreen(
         else allEntries.filter { it.title.contains(query.trim(), ignoreCase = true) }
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 16.dp)
+    // 內容置中並限制最大寬度（工作項 S-62）。
+    //
+    // 在此之前內容會把整個視窗填滿。平板橫向時，一列設定的文字橫跨整個
+    // 螢幕，眼睛要掃過全寬才讀完一行，而右邊大半是空的 —— 那不是用到了
+    // 空間，是沒有版面。與 Apple 端同一組數字。
+    BoxWithConstraints(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
     ) {
+        val gutter = DS.Content.gutter(this.maxWidth)
+        // 卡片可以用的寬度（扣掉左右外距、且不超過內容上限）。
+        val contentWidth = minOf(this.maxWidth, DS.Content.maxWidth) - gutter * 2
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxHeight()
+                .dsContentWidth()
+                .padding(horizontal = gutter),
+            verticalArrangement = Arrangement.spacedBy(DS.Space.s),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = DS.Space.m)
+        ) {
         // ── 0. 畫面標題 ──────────────────────────────────────────
         // Apple 那邊是一個大標。少了它，第一眼看到的是一張身分卡，
         // 而使用者不知道自己在哪個畫面。
@@ -188,43 +207,50 @@ fun HomeScreen(
             )
         }
 
-        // ── 3. 三張主要動作卡 ────────────────────────────────────
+        // ── 3. 主要動作卡：依寬度決定一排幾張 ────────────────────
         //
-        // **等寬而不是固定寬度。** 固定 180dp 的話，窄螢幕上三張會疊成
-        // 三顆佔半個螢幕的大按鈕 —— 那正是「兩個平台長得像兩個產品」的
-        // 那一幕。等寬在任何寬度下都是一排。
+        // **不能固定三欄。** 之前這裡是 `Row` + `weight(1f)`，理由寫的是
+        // 「等寬在任何寬度下都是一排」—— 但在手機上那一排只有 340dp，
+        // 三張卡各得 110dp，於是標題變成「Start Recordi」、說明變成
+        // 「transcriptio」。Apple 端其實是**窄螢幕直接疊成一欄**的。
+        //
+        // 所以照可用寬度算欄數：一張卡至少 200dp，放不下就換行。
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ActionCard(
-                    title = l("new_note"),
-                    subtitle = l("new_note_desc"),
-                    glyph = "＋",
-                    accent = MaterialTheme.colorScheme.primary,
-                    primary = true,
-                    modifier = Modifier.weight(1f),
-                    onClick = onCreate
-                )
-                ActionCard(
-                    title = l(if (recording) "stop_recording" else "start_recording"),
-                    subtitle = l("start_recording_desc"),
-                    glyph = "◉",
-                    accent = Color(0xFFD9453C),
-                    primary = false,
-                    modifier = Modifier.weight(1f),
-                    onClick = onToggleRecording
-                )
-                ActionCard(
-                    title = l("asset_library"),
-                    subtitle = l("asset_library_desc"),
-                    glyph = "◆",
-                    accent = Color(0xFF8A4FD8),
-                    primary = false,
-                    modifier = Modifier.weight(1f),
-                    onClick = onAssetLibrary
-                )
+            val perRow = DS.columns(contentWidth, minItem = 200.dp, max = 3)
+            val actions = listOf<Triple<String, String, Pair<Color, Boolean>>>(
+                Triple(l("new_note"), l("new_note_desc"),
+                    MaterialTheme.colorScheme.primary to true),
+                Triple(l(if (recording) "stop_recording" else "start_recording"),
+                    l("start_recording_desc"), Color(0xFFD9453C) to false),
+                Triple(l("asset_library"), l("asset_library_desc"),
+                    MaterialTheme.colorScheme.primary to false)
+            )
+            val clicks = listOf(onCreate, onToggleRecording, onAssetLibrary)
+            val glyphs = listOf("＋", "◉", "◆")
+
+            Column(verticalArrangement = Arrangement.spacedBy(DS.Space.xs)) {
+                actions.indices.chunked(perRow).forEach { rowIndices ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(DS.Space.xs)
+                    ) {
+                        rowIndices.forEach { i ->
+                            ActionCard(
+                                title = actions[i].first,
+                                subtitle = actions[i].second,
+                                glyph = glyphs[i],
+                                accent = actions[i].third.first,
+                                primary = actions[i].third.second,
+                                modifier = Modifier.weight(1f),
+                                onClick = clicks[i]
+                            )
+                        }
+                        // 最後一排不足時補空位，卡片才不會被拉寬。
+                        repeat(perRow - rowIndices.size) {
+                            Box(modifier = Modifier.weight(1f))
+                        }
+                    }
+                }
             }
         }
 
@@ -385,6 +411,7 @@ fun HomeScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
         }
     }
 }

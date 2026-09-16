@@ -145,7 +145,16 @@ public struct HomeWorkbenchView: View {
         NavigationStack {
             GeometryReader { proxy in
                 ScrollView(.vertical, showsIndicators: true) {
-                    VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: DS.Space.l) {
+                        // 畫面標題。**放在內容欄裡，不用導覽列的大標題**
+                        // （工作項 S-62）：導覽列的大標題貼著視窗最左邊，
+                        // 內容欄卻是置中的，兩者在寬螢幕上會差到 300pt，
+                        // 看起來像標題掉在外面。
+                        Text(accountManager.profile.displayName)
+                            .font(DS.Font.screenTitle)
+                            .foregroundStyle(DS.Color.primaryText)
+                            .padding(.top, DS.Space.xs)
+
                         // 1. 頂部使用者帳號資訊條（自適應寬窄螢幕）
                         userAccountBanner
 
@@ -170,119 +179,99 @@ public struct HomeWorkbenchView: View {
 
                     footerVersionSection
                     }
-                    .padding(.horizontal, max(12, min(22, proxy.size.width * 0.035)))
-                    .padding(.vertical, 16)
-                    .frame(width: proxy.size.width, alignment: .topLeading)
+                    // 內容置中並限制最大寬度（工作項 S-62）。
+                    //
+                    // 在此之前這裡是 `.frame(width: proxy.size.width)` —— 內容
+                    // 把整個視窗填滿。13 吋 iPad 橫向是 1376pt，一列設定的文字
+                    // 因此橫跨 1300pt，眼睛要掃過整個螢幕才讀完一行，而右邊
+                    // 大半是空的。那不是用到了空間，是沒有版面。
+                    .padding(.horizontal, DS.Content.gutter(for: proxy.size.width))
+                    .padding(.vertical, DS.Space.m)
+                    .dsContentWidth()
+                    .frame(width: proxy.size.width, alignment: .top)
                 }
             }
             .background(Color(uiColor: .systemGroupedBackground))
-            // 將「今日工作台」標題改為「使用者登入帳號名稱」
-            .navigationTitle(accountManager.profile.displayName)
+            // 標題改由內容欄自己畫（見上面）。導覽列只留一個 inline 標題，
+            // 捲動時仍然看得到自己在哪一頁。
+            // 標題由內容欄自己畫，導覽列就不要再寫一次 —— 兩個「You」
+            // 上下相疊，看起來像畫面出錯。
+            .navigationTitle("")
+            .navigationBarTitleDisplayMode(.inline)
+            // 導覽列只放三件事，而且三件事長得一樣（工作項 S-62）。
+            //
+            // 在此之前這裡是三個各自為政的控制項：一個有邊框與陰影的語言膠囊、
+            // 一顆紫色的「素材圖庫」按鈕、一個藍紫漸層頭像加省略號的膠囊 ——
+            // 三種圓角、三種底色、三種字級擠在一起。單看每一個都說得過去，
+            // 放在同一列就是整個畫面最吵的地方。
+            //
+            // 「素材圖庫」從這裡拿掉：它下面就有一張主要動作卡片，
+            // 同一個入口出現兩次只是增加雜訊，能力一點都沒有少。
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    HStack(spacing: 8) {
-                        // 介面語系下拉式選單 (Prominent Language Dropdown)
-                        Menu {
-                            ForEach(AppLanguage.allCases) { lang in
-                                Button {
-                                    localizationManager.setLanguage(lang)
-                                } label: {
-                                    HStack {
-                                        Text(lang.endonym)
-                                        if localizationManager.currentLanguage == lang {
-                                            Image(systemName: "checkmark")
-                                        }
+                    Menu {
+                        ForEach(AppLanguage.allCases) { lang in
+                            Button {
+                                localizationManager.setLanguage(lang)
+                            } label: {
+                                HStack {
+                                    Text(lang.endonym)
+                                    if localizationManager.currentLanguage == lang {
+                                        Image(systemName: "checkmark")
                                     }
                                 }
                             }
-                        } label: {
-                            HStack(spacing: 5) {
-                                Image(systemName: "globe")
-                                    .font(.system(size: 13, weight: .bold))
-                                    .foregroundColor(.accentColor)
-                                Text(localizationManager.currentLanguage.endonym)
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .foregroundColor(.primary)
-                                Image(systemName: "chevron.down")
-                                    .font(.system(size: 9, weight: .bold))
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 6)
-                            .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 10)
-                                    .stroke(Color.accentColor.opacity(0.35), lineWidth: 1.2)
-                            )
-                            .cornerRadius(10)
-                            .shadow(color: Color.black.opacity(0.04), radius: 2, y: 1)
                         }
-                        .buttonStyle(.plain)
-                        .help(localizationManager.localized("select_language"))
+                    } label: {
+                        Image(systemName: "globe")
+                            .font(.system(size: DS.Icon.small, weight: .medium))
+                    }
+                    .help(localizationManager.localized("select_language"))
+                }
 
-                        // 📦 素材圖庫快捷鍵
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button {
+                            showAccountSheet = true
+                        } label: {
+                            Label(accountManager.profile.displayName, systemImage: "person.crop.circle")
+                        }
+
                         Button {
                             showAssetLibrarySheet = true
                         } label: {
-                            HStack(spacing: 4) {
-                                Image(systemName: "shippingbox.fill")
-                                    .foregroundColor(.purple)
-                                Text(localizationManager.localized("asset_library"))
-                                    .font(.caption2)
-                                    .fontWeight(.semibold)
-                            }
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 5)
-                            .background(Color.purple.opacity(0.12))
-                            .cornerRadius(12)
+                            Label(localizationManager.localized("asset_library"), systemImage: "shippingbox")
                         }
-                        .buttonStyle(.plain)
-                        .help(localizationManager.localized("asset_library"))
 
-                        // 快捷工作台選單（開啟資料夾、帳號設定、診斷）
-                        Menu {
-                            Button {
-                                showAccountSheet = true
-                            } label: {
-                                Label(accountManager.profile.displayName, systemImage: "person.crop.circle")
-                            }
-
-                            Button {
-                                audioManager.openRecordingsFolderInFinder()
-                            } label: {
-                                Label(localizationManager.localized("open_record_folder"), systemImage: "folder")
-                            }
-
-                            Divider()
-
-                            Button {
-                                showInfoSheet = true
-                            } label: {
-                                Label("\(localizationManager.localized("system_diagnostics")) (\(appVersionString))", systemImage: "info.circle")
-                            }
-                            .accessibilityIdentifier("home.diagnostics")
+                        Button {
+                            audioManager.openRecordingsFolderInFinder()
                         } label: {
-                            HStack(spacing: 4) {
-                                ZStack {
-                                    Circle()
-                                        .fill(LinearGradient(colors: [.blue, .purple], startPoint: .topLeading, endPoint: .bottomTrailing))
-                                        .frame(width: 22, height: 22)
-                                    Text(String(accountManager.profile.displayName.prefix(1)).uppercased())
-                                        .font(.system(size: 11, weight: .bold))
-                                        .foregroundColor(.white)
-                                }
-                                Image(systemName: "ellipsis.circle")
-                                    .font(.caption)
-                            }
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 4)
-                            .background(Color(uiColor: .secondarySystemGroupedBackground))
-                            .cornerRadius(12)
+                            Label(localizationManager.localized("open_record_folder"), systemImage: "folder")
                         }
-                        // UI 測試要能穩定點到這個選單。靠 "ellipsis" 這種系統圖示名稱
-                        // 去猜，會先命中筆記卡片上的那個「⋯」。
-                        .accessibilityIdentifier("home.workbenchMenu")
+
+                        Divider()
+
+                        Button {
+                            showInfoSheet = true
+                        } label: {
+                            Label("\(localizationManager.localized("system_diagnostics")) (\(appVersionString))", systemImage: "info.circle")
+                        }
+                        .accessibilityIdentifier("home.diagnostics")
+                    } label: {
+                        // 頭像用單色主色，不用漸層 —— 漸層在這個尺寸只會糊掉，
+                        // 而且它是畫面上唯一一處漸層。
+                        ZStack {
+                            Circle()
+                                .fill(DS.Color.accent)
+                                .frame(width: DS.Icon.medium, height: DS.Icon.medium)
+                            Text(String(accountManager.profile.displayName.prefix(1)).uppercased())
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.white)
+                        }
                     }
+                    // UI 測試要能穩定點到這個選單。靠 "ellipsis" 這種系統圖示名稱
+                    // 去猜，會先命中筆記卡片上的那個「⋯」。
+                    .accessibilityIdentifier("home.workbenchMenu")
                 }
             }
             .sheet(isPresented: $showAssetLibrarySheet) { erasedView {
@@ -488,93 +477,93 @@ public struct HomeWorkbenchView: View {
     private var primaryActionsSection: AnyView { AnyView(primaryActionsSectionContent) }
 
     private var primaryActionsSectionContent: some View {
-        LazyVGrid(columns: [GridItem(.adaptive(minimum: 190, maximum: 380), spacing: 12)], spacing: 12) {
-            // 真實動作 1：新增筆記（彈出範本選擇器）
-            Button {
+        LazyVGrid(
+            columns: [GridItem(.adaptive(minimum: 220, maximum: 360), spacing: DS.Space.s)],
+            spacing: DS.Space.s
+        ) {
+            // 一個主要動作、兩個次要動作（工作項 S-62）。
+            //
+            // 在此之前三張卡片有三種邊框顏色（主色漸層、紅、紫），看起來像
+            // 三個同等重要又互相搶眼的按鈕。實際上「新增筆記」才是這個畫面
+            // 的主要動作，另外兩個是次要的 —— 版面應該說出這件事。
+            //
+            // 圖示保留各自的語意色（錄音是紅的），但**邊框一律中性**：
+            // 彩色邊框會把整個畫面切成好幾塊互相競爭的色區。
+            actionCard(
+                icon: "plus.circle.fill",
+                title: localizationManager.localized("new_note"),
+                subtitle: localizationManager.localized("new_note_desc"),
+                tint: nil,
+                prominent: true
+            ) {
                 newNoteTitle = "\(localizationManager.localized("untitled_note")) \(notebookStore.notebooks.count + 1)"
                 selectedTemplate = .blank
                 selectedDocTemplateId = nil
                 expandedDocTheme = nil
                 showNewNotebookSheet = true
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "plus.circle.fill")
-                        .font(.title3)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(localizationManager.localized("new_note"))
-                            .font(.headline)
-                        Text(localizationManager.localized("new_note_desc"))
-                            .font(.caption2)
-                            .opacity(0.85)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 4)
-                }
-                .padding(14)
-                .foregroundColor(.white)
-                .background(LinearGradient(colors: [.accentColor, .accentColor.opacity(0.85)], startPoint: .topLeading, endPoint: .bottomTrailing))
-                .cornerRadius(14)
             }
-            .buttonStyle(.plain)
 
-            // 真實動作 2：開始麥克風錄音（彈出即時錄音器）
-            Button {
+            actionCard(
+                icon: "waveform.badge.mic",
+                title: localizationManager.localized("start_recording"),
+                subtitle: localizationManager.localized("start_recording_desc"),
+                tint: DS.Color.destructive,
+                prominent: false
+            ) {
                 showQuickRecordSheet = true
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "waveform.badge.mic")
-                        .font(.title3)
-                        .foregroundColor(.red)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(localizationManager.localized("start_recording"))
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        Text(localizationManager.localized("start_recording_desc"))
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 4)
-                }
-                .padding(14)
-                .background(Color(uiColor: .secondarySystemGroupedBackground))
-                .cornerRadius(14)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.red.opacity(0.25), lineWidth: 1)
-                )
             }
-            .buttonStyle(.plain)
 
-            // 真實動作 3：📦 素材圖庫（涵蓋三大主題、機構、3C、零件）
-            Button {
+            actionCard(
+                icon: "shippingbox.fill",
+                title: localizationManager.localized("asset_library"),
+                subtitle: localizationManager.localized("responsive_asset_desc"),
+                tint: DS.Color.accent,
+                prominent: false
+            ) {
                 showAssetLibrarySheet = true
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "shippingbox.fill")
-                        .font(.title3)
-                        .foregroundColor(.purple)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(localizationManager.localized("asset_library"))
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                        Text(localizationManager.localized("responsive_asset_desc"))
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                            .lineLimit(1)
-                    }
-                    Spacer(minLength: 4)
-                }
-                .padding(14)
-                .background(Color(uiColor: .secondarySystemGroupedBackground))
-                .cornerRadius(14)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .stroke(Color.purple.opacity(0.25), lineWidth: 1)
-                )
             }
-            .buttonStyle(.plain)
         }
+    }
+
+    /// 主要動作卡片。三張卡片共用同一個版型，差別只在主要／次要與圖示顏色。
+    private func actionCard(
+        icon: String,
+        title: String,
+        subtitle: String,
+        tint: Color?,
+        prominent: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: DS.Space.s) {
+                Image(systemName: icon)
+                    .font(.system(size: DS.Icon.large * 0.8, weight: .medium))
+                    .foregroundStyle(prominent ? AnyShapeStyle(.white) : AnyShapeStyle(tint ?? DS.Color.accent))
+                    .frame(width: DS.Icon.large)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(DS.Font.cardTitle)
+                        .foregroundStyle(prominent ? AnyShapeStyle(.white) : AnyShapeStyle(DS.Color.primaryText))
+                    Text(subtitle)
+                        .font(DS.Font.caption)
+                        .foregroundStyle(prominent ? AnyShapeStyle(Color.white.opacity(0.85))
+                                                   : AnyShapeStyle(DS.Color.secondaryText))
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: DS.Space.xxs)
+            }
+            .padding(DS.Space.m)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(prominent ? AnyShapeStyle(DS.Color.accent) : AnyShapeStyle(DS.Color.surface))
+            .clipShape(RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous)
+                    .stroke(prominent ? Color.clear : DS.Color.hairline, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - 4. 繼續 Working Section（真實筆記）

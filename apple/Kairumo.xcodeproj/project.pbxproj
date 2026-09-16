@@ -25,6 +25,7 @@
 		2823612B8F3A376A45042712 /* PageThumbnailRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 02895D54063C3AA4B5D30463 /* PageThumbnailRenderer.swift */; };
 		2CD22470357DA2E190D83DBF /* GoogleAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCBD6EB2E871A9532370A15B /* GoogleAuth.swift */; };
 		31303FA237927EC5B53EFE38 /* AssetLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A351D8EB2219ECF83FF78645 /* AssetLibraryView.swift */; };
+		33E29CFA00ABA9CB6DA8B104 /* ScratchLayoutAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ACFB42A7DA8228FAC87CE7F /* ScratchLayoutAudit.swift */; };
 		44F395EF97582BCF2480ECDD /* BackupManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 473B5EDC9DF95F4358F83CFB /* BackupManagerTests.swift */; };
 		4514902261D4A927D6FBC105 /* Templates in Resources */ = {isa = PBXBuildFile; fileRef = 2A2253FE74C35178B0F901C8 /* Templates */; };
 		4739A382D63316D061431753 /* BrushCursorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B36AD7F19677B4F27E94262B /* BrushCursorTests.swift */; };
@@ -70,6 +71,7 @@
 		9F604F0E1403CBF029FDB93A /* LocalRelayServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0FFA100928CD3224E43D7382 /* LocalRelayServer.swift */; };
 		9FC47E009EE588F6F00894D8 /* NoteShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = DBEA4CFB130D285D67B343EC /* NoteShape.swift */; };
 		A63608E6DD600F35CB565FE4 /* PadnoteCore.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7245DE41B9104E9F47F0C21B /* PadnoteCore.xcframework */; };
+		AAA8F61705854E2C0B7294DE /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4741BF2C2C92CDA117AEE5E /* DesignSystem.swift */; };
 		AC68B6EC6A6BA0BF03560351 /* InkLatencyMeter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 00CDBBB784601FDFB342136D /* InkLatencyMeter.swift */; };
 		AFE9F37C2A119458E52BA13C /* ChartSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8CDA20E9C287F58F4315EA3C /* ChartSpec.swift */; };
 		AFF32DB932FC4031A86B8F57 /* MaterialEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 51E8541179F28A49C13A1967 /* MaterialEngine.swift */; };
@@ -194,6 +196,7 @@
 		7617B23BC996C4B427F52EB4 /* LocalizationManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationManager.swift; sourceTree = "<group>"; };
 		76577BBB3DC564A4B287380C /* AccountManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountManager.swift; sourceTree = "<group>"; };
 		7A2F8130E223B0B02F303F80 /* BrushCursor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrushCursor.swift; sourceTree = "<group>"; };
+		7ACFB42A7DA8228FAC87CE7F /* ScratchLayoutAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScratchLayoutAudit.swift; sourceTree = "<group>"; };
 		7D2A6B1E41A4693B543BEDCB /* PageRepaginationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageRepaginationTests.swift; sourceTree = "<group>"; };
 		824AF14643DF914996543B0B /* ProColorPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProColorPickerSheet.swift; sourceTree = "<group>"; };
 		86EC0F8038D34C787D2A729D /* ChartStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartStudioView.swift; sourceTree = "<group>"; };
@@ -215,6 +218,7 @@
 		ADB3B259C241361F259FE9CD /* ChartStudioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartStudioTests.swift; sourceTree = "<group>"; };
 		B05DE382C8B7C4EE39BD076B /* NotebookPackageBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookPackageBridgeTests.swift; sourceTree = "<group>"; };
 		B36AD7F19677B4F27E94262B /* BrushCursorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrushCursorTests.swift; sourceTree = "<group>"; };
+		B4741BF2C2C92CDA117AEE5E /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		B7FE882F90D6ABA99E0820BF /* Docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Docs; path = Resources/Docs; sourceTree = SOURCE_ROOT; };
 		B8F51C245CED14D4079BC5B4 /* DocumentTemplateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTemplateTests.swift; sourceTree = "<group>"; };
 		BC0776567843FC6C74C2A9C0 /* NoteShapeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteShapeTests.swift; sourceTree = "<group>"; };
@@ -300,6 +304,7 @@
 				F85F010611BBEED2B2DF9AC3 /* PalmRejectionTests.swift */,
 				3A1525CF56EBBE47CE94BDBD /* PdfAnnotationInteropTests.swift */,
 				420CDB8E187D7BF4EB48CB2E /* PdfKitDocumentTests.swift */,
+				7ACFB42A7DA8228FAC87CE7F /* ScratchLayoutAudit.swift */,
 				DFB782C4FBD863E4DD9CC1D7 /* TextBoxEditingTests.swift */,
 			);
 			path = Tests;
@@ -367,6 +372,7 @@
 				205572122F598A01BD07BC2A /* CommentThreadView.swift */,
 				6A0C24F3FD1D464196490E2D /* ContinuousPagesView.swift */,
 				26F09C378F9F1B6835D9ECB2 /* CStubs.c */,
+				B4741BF2C2C92CDA117AEE5E /* DesignSystem.swift */,
 				6C5E7D8CE394BD3B16FD57B5 /* DocumentTemplateApply.swift */,
 				6A934F46156BC32DC1149F62 /* DocumentTemplateCatalog.swift */,
 				59E46CD750DA486212251DC0 /* DocumentViewerSheet.swift */,
@@ -568,6 +574,7 @@
 				99B29892A3970C9ADBADEB7E /* PalmRejectionTests.swift in Sources */,
 				F91E0C4A0E48E4695D0337C6 /* PdfAnnotationInteropTests.swift in Sources */,
 				4DF85F141ECE9CBA9B5E2105 /* PdfKitDocumentTests.swift in Sources */,
+				33E29CFA00ABA9CB6DA8B104 /* ScratchLayoutAudit.swift in Sources */,
 				F27FB2D126ECCD38DCCFE5CD /* TextBoxEditingTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -603,6 +610,7 @@
 				6142C12FB584E6D8D7B38221 /* CollaborationSheet.swift in Sources */,
 				95A26994BC9D5BCCF7291E2F /* CommentThreadView.swift in Sources */,
 				B0D47F59443CA7009A7EC043 /* ContinuousPagesView.swift in Sources */,
+				AAA8F61705854E2C0B7294DE /* DesignSystem.swift in Sources */,
 				D75487376DA755EFFAD879F0 /* DocumentTemplateApply.swift in Sources */,
 				C6ED27B0A6A534EF825F6F5A /* DocumentTemplateCatalog.swift in Sources */,
 				7B6B71CF69CE9F1C2CB2E953 /* DocumentViewerSheet.swift in Sources */,
