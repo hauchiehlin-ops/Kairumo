@@ -1639,6 +1639,22 @@
     "zhHans": "关闭标尺",
     "zhHant": "關閉尺規"
   },
+  "cloud_sync": {
+    "en": "Cloud sync",
+    "ja": "クラウド同期",
+    "ko": "클라우드 동기화",
+    "th": "ซิงค์บนคลาวด์",
+    "zhHans": "云端同步",
+    "zhHant": "雲端同步"
+  },
+  "cloud_sync_explainer": {
+    "en": "Sign in once and your notebooks, folders and settings stay in sync on every device. Data goes to a private app folder in your Google Drive — you won't see it among your files, and neither will we.",
+    "ja": "一度ログインすれば、ノート・フォルダ・設定がすべての端末で同期されます。データは Google ドライブのアプリ専用フォルダに保存されます —— ファイル一覧には表示されず、こちらからも見えません。",
+    "ko": "한 번 로그인하면 노트·폴더·설정이 모든 기기에서 동기화됩니다. 데이터는 Google 드라이브의 앱 전용 폴더에 저장됩니다 —— 파일 목록에는 보이지 않으며, 저희도 볼 수 없습니다.",
+    "th": "ลงชื่อเข้าใช้ครั้งเดียว สมุดบันทึก โฟลเดอร์ และการตั้งค่าจะซิงค์กันทุกอุปกรณ์ ข้อมูลถูกเก็บในโฟลเดอร์เฉพาะแอปใน Google Drive ของคุณ — ไม่ปรากฏในรายการไฟล์ และเราก็มองไม่เห็น",
+    "zhHans": "登录一次，笔记本、资料夹与设定就会在所有装置上保持一致。资料存在你 Google 云端硬碟的应用专属资料夹里——你在档案列表看不到它，我们也看不到。",
+    "zhHant": "登入一次，筆記本、資料夾與設定就會在所有裝置上保持一致。資料存在你 Google 雲端硬碟的應用程式專屬資料夾裡——你在檔案清單看不到它，我們也看不到。"
+  },
   "collaborate": {
     "en": "Collaborate",
     "ja": "共同編集",
@@ -1943,6 +1959,14 @@
     "zhHans": "删除文件夹",
     "zhHant": "刪除資料夾"
   },
+  "delete_folder_explainer": {
+    "en": "The notebooks inside are not deleted. They move back to the top level on every device.",
+    "ja": "中のノートは削除されません。すべての端末で最上位フォルダに戻ります。",
+    "ko": "안에 있는 노트는 삭제되지 않습니다. 모든 기기에서 최상위로 이동합니다.",
+    "th": "สมุดบันทึกข้างในจะไม่ถูกลบ แต่จะย้ายกลับไปที่ระดับบนสุดในทุกอุปกรณ์",
+    "zhHans": "里面的笔记本不会被删除，会在所有装置上回到最上层。",
+    "zhHant": "裡面的筆記本不會被刪除，會在所有裝置上回到最上層。"
+  },
   "delete_item": {
     "en": "Delete Item",
     "ja": "項目を削除",
@@ -2086,6 +2110,62 @@
     "th": "ชื่อที่แสดง",
     "zhHans": "显示名称",
     "zhHant": "顯示名稱"
+  },
+  "doc_template": {
+    "en": "Template in use",
+    "ja": "使用するテンプレート",
+    "ko": "적용할 서식",
+    "th": "แม่แบบที่ใช้",
+    "zhHans": "套用的范本",
+    "zhHant": "套用的範本"
+  },
+  "doc_template_clear": {
+    "en": "Clear",
+    "ja": "解除",
+    "ko": "해제",
+    "th": "ล้าง",
+    "zhHans": "取消",
+    "zhHant": "取消"
+  },
+  "doc_template_hint": {
+    "en": "Once applied, the content is yours — edit or delete any of it.",
+    "ja": "適用後の内容はあなたのものです。自由に編集・削除できます。",
+    "ko": "적용한 내용은 자유롭게 수정하거나 삭제할 수 있습니다.",
+    "th": "เมื่อใช้แล้ว เนื้อหาเป็นของคุณ แก้ไขหรือลบได้ทั้งหมด",
+    "zhHans": "套用后内容就是你的，改得动也删得掉。",
+    "zhHant": "套用後內容就是你的，改得動也刪得掉。"
+  },
+  "doc_template_none": {
+    "en": "None — just a blank page",
+    "ja": "使用しない（白紙のみ）",
+    "ko": "사용 안 함 (빈 페이지)",
+    "th": "ไม่ใช้ — หน้าว่างเท่านั้น",
+    "zhHans": "不套用，只要空白页",
+    "zhHant": "不套用，只要空白頁"
+  },
+  "doc_template_section": {
+    "en": "Document Template",
+    "ja": "文書テンプレート",
+    "ko": "문서 서식",
+    "th": "แม่แบบเอกสาร",
+    "zhHans": "文件范本",
+    "zhHant": "文件範本"
+  },
+  "doc_variant_blank": {
+    "en": "Blank form",
+    "ja": "白紙様式",
+    "ko": "빈 양식",
+    "th": "แบบฟอร์มเปล่า",
+    "zhHans": "空白范本",
+    "zhHant": "空白範本"
+  },
+  "doc_variant_example": {
+    "en": "Worked example",
+    "ja": "記入例",
+    "ko": "작성 예시",
+    "th": "ตัวอย่างที่กรอกแล้ว",
+    "zhHans": "完整案例",
+    "zhHant": "完整案例"
   },
   "document_missing": {
     "en": "The bundled document is missing. Please report this.",
@@ -3095,6 +3175,14 @@
     "zhHans": "暖杏色",
     "zhHant": "暖杏色"
   },
+  "hwr_no_model": {
+    "en": "Handwriting recognition does not support “%@”",
+    "ja": "手書き認識は「%@」に対応していません",
+    "ko": "필기 인식이 “%@”를 지원하지 않습니다",
+    "th": "การรู้จำลายมือไม่รองรับ “%@”",
+    "zhHans": "手写辨识不支持「%@」",
+    "zhHant": "手寫辨識不支援「%@」"
+  },
   "identity_color": {
     "en": "Identity Colour",
     "ja": "表示カラー",
@@ -3415,6 +3503,14 @@
     "zhHans": "标示用户点击与滑动流向",
     "zhHant": "標示使用者點擊與滑動流向"
   },
+  "invalid_server": {
+    "en": "That relay address can't be used.",
+    "ja": "その中継サーバーのアドレスは使えません。",
+    "ko": "그 중계 서버 주소는 사용할 수 없습니다.",
+    "th": "ใช้ที่อยู่รีเลย์นี้ไม่ได้",
+    "zhHans": "这个中继位址无法使用。",
+    "zhHant": "這個中繼位址無法使用。"
+  },
   "join_room": {
     "en": "Join Room",
     "ja": "ルームに参加",
@@ -3639,6 +3735,14 @@
     "zhHans": "编修链接",
     "zhHant": "編修連結"
   },
+  "link_fetching": {
+    "en": "Reading the page…",
+    "ja": "ページを読み込み中…",
+    "ko": "페이지를 읽는 중…",
+    "th": "กำลังอ่านหน้าเว็บ…",
+    "zhHans": "正在读取网页…",
+    "zhHant": "正在讀取網頁…"
+  },
   "link_preview": {
     "en": "Link Preview",
     "ja": "リンクプレビュー",
@@ -3678,6 +3782,14 @@
     "th": "ชื่อเรื่อง",
     "zhHans": "标题",
     "zhHant": "標題"
+  },
+  "link_url_hint": {
+    "en": "Paste a link",
+    "ja": "リンクを貼り付け",
+    "ko": "링크 붙여넣기",
+    "th": "วางลิงก์",
+    "zhHans": "粘贴网址",
+    "zhHant": "貼上網址"
   },
   "local_relay_hint": {
     "en": "When the address points at this device (127.0.0.1), Kairumo runs the relay locally. Teammates should enter the LAN address shown by the host instead.",
@@ -4247,6 +4359,22 @@
     "zhHans": "更多",
     "zhHant": "更多"
   },
+  "move_cycle_refused": {
+    "en": "Can't move a folder into itself.",
+    "ja": "フォルダを自身の中へは移動できません。",
+    "ko": "폴더를 자기 자신 안으로 옮길 수 없습니다.",
+    "th": "ย้ายโฟลเดอร์เข้าไปในตัวเองไม่ได้",
+    "zhHans": "不能把资料夹搬进它自己里面。",
+    "zhHant": "不能把資料夾搬進它自己裡面。"
+  },
+  "move_done": {
+    "en": "Moved",
+    "ja": "移動しました",
+    "ko": "이동했습니다",
+    "th": "ย้ายแล้ว",
+    "zhHans": "已移动",
+    "zhHant": "已移動"
+  },
   "move_to_folder": {
     "en": "Move to Folder",
     "ja": "フォルダへ移動",
@@ -4351,6 +4479,14 @@
     "zhHans": "未找到符合的笔记",
     "zhHant": "找不到符合的筆記"
   },
+  "no_recognition_result": {
+    "en": "No text recognised on this page",
+    "ja": "このページから文字を認識できませんでした",
+    "ko": "이 페이지에서 글자를 인식하지 못했습니다",
+    "th": "ไม่พบข้อความที่อ่านได้ในหน้านี้",
+    "zhHans": "这一页没有辨识出文字",
+    "zhHant": "這一頁沒有辨識出文字"
+  },
   "no_recordings_hint": {
     "en": "No audio recordings yet. Tap \"Start Recording\" to record audio.",
     "ja": "録音がありません。「録音開始」で音声を録音します",
@@ -4382,6 +4518,14 @@
     "th": "ตามต้องการ",
     "zhHans": "随需下载",
     "zhHant": "隨需下載"
+  },
+  "not_signed_in": {
+    "en": "Not signed in",
+    "ja": "未ログイン",
+    "ko": "로그인되지 않음",
+    "th": "ยังไม่ได้ลงชื่อเข้าใช้",
+    "zhHans": "未登录",
+    "zhHant": "未登入"
   },
   "note_title": {
     "en": "Notebook Title",
@@ -4799,6 +4943,30 @@
     "zhHans": "把剪贴板中的笔画粘贴到这一页",
     "zhHant": "把剪貼簿中的筆劃貼到這一頁"
   },
+  "pdf_not_a_pdf": {
+    "en": "This file isn't a PDF, or it's damaged.",
+    "ja": "このファイルは PDF ではないか、壊れています。",
+    "ko": "이 파일은 PDF가 아니거나 손상되었습니다.",
+    "th": "ไฟล์นี้ไม่ใช่ PDF หรือเสียหาย",
+    "zhHans": "这个文件不是 PDF，或者已经损坏。",
+    "zhHant": "這個檔案不是 PDF，或者已經損壞。"
+  },
+  "pdf_page_out_of_range": {
+    "en": "Page %1@ doesn't exist — this PDF has %2@ pages.",
+    "ja": "%1@ ページは存在しません。この PDF は %2@ ページです。",
+    "ko": "%1@ 페이지는 없습니다. 이 PDF는 %2@ 페이지입니다.",
+    "th": "ไม่มีหน้า %1@ — PDF นี้มี %2@ หน้า",
+    "zhHans": "第 %1@ 页不存在，这个 PDF 共 %2@ 页。",
+    "zhHant": "第 %1@ 頁不存在，這個 PDF 共 %2@ 頁。"
+  },
+  "pdf_password_required": {
+    "en": "This PDF needs a password.",
+    "ja": "この PDF にはパスワードが必要です。",
+    "ko": "이 PDF는 비밀번호가 필요합니다.",
+    "th": "PDF นี้ต้องใช้รหัสผ่าน",
+    "zhHans": "这个 PDF 需要密码。",
+    "zhHant": "這個 PDF 需要密碼。"
+  },
   "platform_desc": {
     "en": "Platform",
     "ja": "プラットフォーム",
@@ -5039,6 +5207,14 @@
     "zhHans": "修饰强度",
     "zhHant": "修飾強度"
   },
+  "relay_needs_tls": {
+    "en": "This relay is on the public internet, so it must use wss:// (encrypted). Plain ws:// is only allowed on your own local network.",
+    "ja": "この中継サーバーはインターネット上にあるため、wss://（暗号化）が必要です。ws:// はローカルネットワーク内でのみ使えます。",
+    "ko": "이 중계 서버는 인터넷에 있으므로 wss://(암호화)를 써야 합니다. ws://는 같은 로컬 네트워크에서만 허용됩니다.",
+    "th": "เซิร์ฟเวอร์รีเลย์นี้อยู่บนอินเทอร์เน็ต จึงต้องใช้ wss:// (เข้ารหัส) ส่วน ws:// ใช้ได้เฉพาะในเครือข่ายภายในเท่านั้น",
+    "zhHans": "这个中继在公开网络上，必须用 wss://（加密）。ws:// 只允许用在你自己的局域网里。",
+    "zhHant": "這個中繼在公開網路上，必須用 wss://（加密）。ws:// 只允許用在你自己的區域網路裡。"
+  },
   "relay_server_address": {
     "en": "Relay Server Address",
     "ja": "中継サーバーアドレス",
@@ -5046,6 +5222,22 @@
     "th": "ที่อยู่เซิร์ฟเวอร์รีเลย์",
     "zhHans": "协同服务器地址",
     "zhHant": "協同伺服器位址"
+  },
+  "relay_url_empty": {
+    "en": "Enter a relay address first.",
+    "ja": "先に中継サーバーのアドレスを入力してください。",
+    "ko": "먼저 중계 서버 주소를 입력하세요.",
+    "th": "กรุณาใส่ที่อยู่รีเลย์ก่อน",
+    "zhHans": "请先填入中继位址。",
+    "zhHant": "請先填入中繼位址。"
+  },
+  "relay_url_scheme": {
+    "en": "The relay address must start with ws:// or wss://.",
+    "ja": "中継サーバーのアドレスは ws:// または wss:// で始まる必要があります。",
+    "ko": "중계 서버 주소는 ws:// 또는 wss:// 로 시작해야 합니다.",
+    "th": "ที่อยู่รีเลย์ต้องขึ้นต้นด้วย ws:// หรือ wss://",
+    "zhHans": "中继位址必须以 ws:// 或 wss:// 开头。",
+    "zhHant": "中繼位址必須以 ws:// 或 wss:// 開頭。"
   },
   "remove_border": {
     "en": "Remove Border",
@@ -6183,6 +6375,22 @@
     "zhHans": "在文件夹中显示",
     "zhHant": "在資料夾中顯示"
   },
+  "sign_in_google": {
+    "en": "Sign in with Google",
+    "ja": "Google でログイン",
+    "ko": "Google 계정으로 로그인",
+    "th": "ลงชื่อเข้าใช้ด้วย Google",
+    "zhHans": "使用 Google 登录",
+    "zhHant": "使用 Google 登入"
+  },
+  "sign_out": {
+    "en": "Sign out",
+    "ja": "ログアウト",
+    "ko": "로그아웃",
+    "th": "ออกจากระบบ",
+    "zhHans": "登出",
+    "zhHant": "登出"
+  },
   "snapshot_created": {
     "en": "Snapshot Created",
     "ja": "スナップショットが作成されました",
@@ -6455,6 +6663,14 @@
     "zhHans": "选择同步文件夹",
     "zhHant": "選擇同步資料夾"
   },
+  "sync_done": {
+    "en": "Sync complete",
+    "ja": "同期が完了しました",
+    "ko": "동기화 완료",
+    "th": "ซิงค์เสร็จแล้ว",
+    "zhHans": "同步完成",
+    "zhHant": "同步完成"
+  },
   "sync_explainer": {
     "en": "Syncing is handled by your own cloud drive (iCloud Drive, Google Drive, Dropbox…). No account, no server of ours. Point two devices at the same folder and they stay in sync.",
     "ja": "同期はお使いのクラウドドライブ（iCloud Drive、Google Drive、Dropbox など）が行います。アカウントも当方のサーバーもありません。2 台の端末を同じフォルダに向けるだけで同期されます。",
@@ -6462,6 +6678,14 @@
     "th": "การซิงก์ทำโดยคลาวด์ไดรฟ์ของคุณเอง (iCloud Drive, Google Drive, Dropbox ฯลฯ) ไม่มีบัญชีและไม่มีเซิร์ฟเวอร์ของเรา ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์เดียวกันก็ซิงก์กันได้",
     "zhHans": "同步由你自己的云端硬盘负责（iCloud Drive、Google Drive、Dropbox…）。没有账号、没有我们的服务器。两台设备指到同一个文件夹就会互相同步。",
     "zhHant": "同步由你自己的雲端硬碟負責（iCloud Drive、Google Drive、Dropbox…）。沒有帳號、沒有我們的伺服器。兩台裝置指到同一個資料夾就會互相同步。"
+  },
+  "sync_failed": {
+    "en": "Sync failed: %@",
+    "ja": "同期に失敗しました：%@",
+    "ko": "동기화 실패: %@",
+    "th": "ซิงค์ไม่สำเร็จ: %@",
+    "zhHans": "同步失败：%@",
+    "zhHant": "同步失敗：%@"
   },
   "sync_folder_desc": {
     "en": "Point two devices at the same iCloud Drive or Google Drive folder",
@@ -6478,6 +6702,14 @@
     "th": "%@ ถูกแก้ไขบนทั้งสองอุปกรณ์ ระบบเก็บสำเนาบนคลาวด์ไว้ โปรดตรวจสอบ",
     "zhHans": "%@ 在两台设备上都被改过，已保留云端那份，请自行确认",
     "zhHant": "%@ 在兩台裝置上都被改過，已保留雲端那份，請自行確認"
+  },
+  "sync_needs_reauth": {
+    "en": "Session expired — please sign in again",
+    "ja": "セッションの有効期限が切れました。もう一度ログインしてください",
+    "ko": "세션이 만료되었습니다. 다시 로그인해 주세요",
+    "th": "เซสชันหมดอายุ โปรดลงชื่อเข้าใช้ใหม่",
+    "zhHans": "登录状态已过期，请重新登录",
+    "zhHant": "登入狀態已過期，請重新登入"
   },
   "sync_not_configured": {
     "en": "No folder chosen yet",
@@ -6526,6 +6758,14 @@
     "th": "เป็นเวอร์ชันล่าสุดแล้ว",
     "zhHans": "已是最新",
     "zhHant": "已是最新"
+  },
+  "syncing": {
+    "en": "Syncing…",
+    "ja": "同期中…",
+    "ko": "동기화 중…",
+    "th": "กำลังซิงค์…",
+    "zhHans": "同步中…",
+    "zhHant": "同步中…"
   },
   "system_diagnostics": {
     "en": "Diagnostics & Version Info",
@@ -7270,189 +7510,5 @@
     "th": "การแก้ไขข้อความ Word",
     "zhHans": "Word文字编修",
     "zhHant": "Word文字編修"
-  },
-  "no_recognition_result": {
-    "en": "No text recognised on this page",
-    "ja": "このページから文字を認識できませんでした",
-    "ko": "이 페이지에서 글자를 인식하지 못했습니다",
-    "th": "ไม่พบข้อความที่อ่านได้ในหน้านี้",
-    "zhHans": "这一页没有辨识出文字",
-    "zhHant": "這一頁沒有辨識出文字"
-  },
-  "hwr_no_model": {
-    "en": "Handwriting recognition does not support “%@”",
-    "ja": "手書き認識は「%@」に対応していません",
-    "ko": "필기 인식이 “%@”를 지원하지 않습니다",
-    "th": "การรู้จำลายมือไม่รองรับ “%@”",
-    "zhHans": "手写辨识不支持「%@」",
-    "zhHant": "手寫辨識不支援「%@」"
-  },
-  "sign_in_google": {
-    "en": "Sign in with Google",
-    "ja": "Google でログイン",
-    "ko": "Google 계정으로 로그인",
-    "th": "ลงชื่อเข้าใช้ด้วย Google",
-    "zhHans": "使用 Google 登录",
-    "zhHant": "使用 Google 登入"
-  },
-  "sign_out": {
-    "en": "Sign out",
-    "ja": "ログアウト",
-    "ko": "로그아웃",
-    "th": "ออกจากระบบ",
-    "zhHans": "登出",
-    "zhHant": "登出"
-  },
-  "cloud_sync": {
-    "en": "Cloud sync",
-    "ja": "クラウド同期",
-    "ko": "클라우드 동기화",
-    "th": "ซิงค์บนคลาวด์",
-    "zhHans": "云端同步",
-    "zhHant": "雲端同步"
-  },
-  "syncing": {
-    "en": "Syncing…",
-    "ja": "同期中…",
-    "ko": "동기화 중…",
-    "th": "กำลังซิงค์…",
-    "zhHans": "同步中…",
-    "zhHant": "同步中…"
-  },
-  "sync_done": {
-    "en": "Sync complete",
-    "ja": "同期が完了しました",
-    "ko": "동기화 완료",
-    "th": "ซิงค์เสร็จแล้ว",
-    "zhHans": "同步完成",
-    "zhHant": "同步完成"
-  },
-  "sync_failed": {
-    "en": "Sync failed: %@",
-    "ja": "同期に失敗しました：%@",
-    "ko": "동기화 실패: %@",
-    "th": "ซิงค์ไม่สำเร็จ: %@",
-    "zhHans": "同步失败：%@",
-    "zhHant": "同步失敗：%@"
-  },
-  "not_signed_in": {
-    "en": "Not signed in",
-    "ja": "未ログイン",
-    "ko": "로그인되지 않음",
-    "th": "ยังไม่ได้ลงชื่อเข้าใช้",
-    "zhHans": "未登录",
-    "zhHant": "未登入"
-  },
-  "sync_needs_reauth": {
-    "en": "Session expired — please sign in again",
-    "ja": "セッションの有効期限が切れました。もう一度ログインしてください",
-    "ko": "세션이 만료되었습니다. 다시 로그인해 주세요",
-    "th": "เซสชันหมดอายุ โปรดลงชื่อเข้าใช้ใหม่",
-    "zhHans": "登录状态已过期，请重新登录",
-    "zhHant": "登入狀態已過期，請重新登入"
-  },
-  "delete_folder_explainer": {
-    "en": "The notebooks inside are not deleted. They move back to the top level on every device.",
-    "ja": "中のノートは削除されません。すべての端末で最上位フォルダに戻ります。",
-    "ko": "안에 있는 노트는 삭제되지 않습니다. 모든 기기에서 최상위로 이동합니다.",
-    "th": "สมุดบันทึกข้างในจะไม่ถูกลบ แต่จะย้ายกลับไปที่ระดับบนสุดในทุกอุปกรณ์",
-    "zhHans": "里面的笔记本不会被删除，会在所有装置上回到最上层。",
-    "zhHant": "裡面的筆記本不會被刪除，會在所有裝置上回到最上層。"
-  },
-  "move_done": {
-    "en": "Moved",
-    "ja": "移動しました",
-    "ko": "이동했습니다",
-    "th": "ย้ายแล้ว",
-    "zhHans": "已移动",
-    "zhHant": "已移動"
-  },
-  "move_cycle_refused": {
-    "en": "Can't move a folder into itself.",
-    "ja": "フォルダを自身の中へは移動できません。",
-    "ko": "폴더를 자기 자신 안으로 옮길 수 없습니다.",
-    "th": "ย้ายโฟลเดอร์เข้าไปในตัวเองไม่ได้",
-    "zhHans": "不能把资料夹搬进它自己里面。",
-    "zhHant": "不能把資料夾搬進它自己裡面。"
-  },
-  "relay_needs_tls": {
-    "en": "This relay is on the public internet, so it must use wss:// (encrypted). Plain ws:// is only allowed on your own local network.",
-    "ja": "この中継サーバーはインターネット上にあるため、wss://（暗号化）が必要です。ws:// はローカルネットワーク内でのみ使えます。",
-    "ko": "이 중계 서버는 인터넷에 있으므로 wss://(암호화)를 써야 합니다. ws://는 같은 로컬 네트워크에서만 허용됩니다.",
-    "th": "เซิร์ฟเวอร์รีเลย์นี้อยู่บนอินเทอร์เน็ต จึงต้องใช้ wss:// (เข้ารหัส) ส่วน ws:// ใช้ได้เฉพาะในเครือข่ายภายในเท่านั้น",
-    "zhHans": "这个中继在公开网络上，必须用 wss://（加密）。ws:// 只允许用在你自己的局域网里。",
-    "zhHant": "這個中繼在公開網路上，必須用 wss://（加密）。ws:// 只允許用在你自己的區域網路裡。"
-  },
-  "relay_url_scheme": {
-    "en": "The relay address must start with ws:// or wss://.",
-    "ja": "中継サーバーのアドレスは ws:// または wss:// で始まる必要があります。",
-    "ko": "중계 서버 주소는 ws:// 또는 wss:// 로 시작해야 합니다.",
-    "th": "ที่อยู่รีเลย์ต้องขึ้นต้นด้วย ws:// หรือ wss://",
-    "zhHans": "中继位址必须以 ws:// 或 wss:// 开头。",
-    "zhHant": "中繼位址必須以 ws:// 或 wss:// 開頭。"
-  },
-  "relay_url_empty": {
-    "en": "Enter a relay address first.",
-    "ja": "先に中継サーバーのアドレスを入力してください。",
-    "ko": "먼저 중계 서버 주소를 입력하세요.",
-    "th": "กรุณาใส่ที่อยู่รีเลย์ก่อน",
-    "zhHans": "请先填入中继位址。",
-    "zhHant": "請先填入中繼位址。"
-  },
-  "invalid_server": {
-    "en": "That relay address can't be used.",
-    "ja": "その中継サーバーのアドレスは使えません。",
-    "ko": "그 중계 서버 주소는 사용할 수 없습니다.",
-    "th": "ใช้ที่อยู่รีเลย์นี้ไม่ได้",
-    "zhHans": "这个中继位址无法使用。",
-    "zhHant": "這個中繼位址無法使用。"
-  },
-  "pdf_not_a_pdf": {
-    "en": "This file isn't a PDF, or it's damaged.",
-    "ja": "このファイルは PDF ではないか、壊れています。",
-    "ko": "이 파일은 PDF가 아니거나 손상되었습니다.",
-    "th": "ไฟล์นี้ไม่ใช่ PDF หรือเสียหาย",
-    "zhHans": "这个文件不是 PDF，或者已经损坏。",
-    "zhHant": "這個檔案不是 PDF，或者已經損壞。"
-  },
-  "pdf_password_required": {
-    "en": "This PDF needs a password.",
-    "ja": "この PDF にはパスワードが必要です。",
-    "ko": "이 PDF는 비밀번호가 필요합니다.",
-    "th": "PDF นี้ต้องใช้รหัสผ่าน",
-    "zhHans": "这个 PDF 需要密码。",
-    "zhHant": "這個 PDF 需要密碼。"
-  },
-  "pdf_page_out_of_range": {
-    "en": "Page %1@ doesn't exist — this PDF has %2@ pages.",
-    "ja": "%1@ ページは存在しません。この PDF は %2@ ページです。",
-    "ko": "%1@ 페이지는 없습니다. 이 PDF는 %2@ 페이지입니다.",
-    "th": "ไม่มีหน้า %1@ — PDF นี้มี %2@ หน้า",
-    "zhHans": "第 %1@ 页不存在，这个 PDF 共 %2@ 页。",
-    "zhHant": "第 %1@ 頁不存在，這個 PDF 共 %2@ 頁。"
-  },
-  "link_url_hint": {
-    "en": "Paste a link",
-    "ja": "リンクを貼り付け",
-    "ko": "링크 붙여넣기",
-    "th": "วางลิงก์",
-    "zhHans": "粘贴网址",
-    "zhHant": "貼上網址"
-  },
-  "link_fetching": {
-    "en": "Reading the page…",
-    "ja": "ページを読み込み中…",
-    "ko": "페이지를 읽는 중…",
-    "th": "กำลังอ่านหน้าเว็บ…",
-    "zhHans": "正在读取网页…",
-    "zhHant": "正在讀取網頁…"
-  },
-  "cloud_sync_explainer": {
-    "en": "Sign in once and your notebooks, folders and settings stay in sync on every device. Data goes to a private app folder in your Google Drive — you won't see it among your files, and neither will we.",
-    "ja": "一度ログインすれば、ノート・フォルダ・設定がすべての端末で同期されます。データは Google ドライブのアプリ専用フォルダに保存されます —— ファイル一覧には表示されず、こちらからも見えません。",
-    "ko": "한 번 로그인하면 노트·폴더·설정이 모든 기기에서 동기화됩니다. 데이터는 Google 드라이브의 앱 전용 폴더에 저장됩니다 —— 파일 목록에는 보이지 않으며, 저희도 볼 수 없습니다.",
-    "th": "ลงชื่อเข้าใช้ครั้งเดียว สมุดบันทึก โฟลเดอร์ และการตั้งค่าจะซิงค์กันทุกอุปกรณ์ ข้อมูลถูกเก็บในโฟลเดอร์เฉพาะแอปใน Google Drive ของคุณ — ไม่ปรากฏในรายการไฟล์ และเราก็มองไม่เห็น",
-    "zhHans": "登录一次，笔记本、资料夹与设定就会在所有装置上保持一致。资料存在你 Google 云端硬碟的应用专属资料夹里——你在档案列表看不到它，我们也看不到。",
-    "zhHant": "登入一次，筆記本、資料夾與設定就會在所有裝置上保持一致。資料存在你 Google 雲端硬碟的應用程式專屬資料夾裡——你在檔案清單看不到它，我們也看不到。"
   }
 }

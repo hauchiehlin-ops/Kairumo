@@ -18,6 +18,10 @@ targets:
       # 子目錄結構要保留，HTML 裡的相對路徑（manual.js、img/）才找得到。
       - path: Resources/Docs
         type: folder
+      # 文件範本目錄（工作項 S-61）。同樣用資料夾參照，載入時才找得到
+      # `Templates/document-templates.json` 這個子路徑。
+      - path: Resources/Templates
+        type: folder
     dependencies:
       - framework: PadnoteCore.xcframework
         embed: false

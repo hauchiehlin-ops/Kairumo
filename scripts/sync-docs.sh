@@ -33,6 +33,13 @@ cp "$SRC_MANUAL/manual.js" "$DEST/manual.js"
 rm -rf "$DEST/img"
 cp -R "$SRC_MANUAL/img" "$DEST/img"
 
+echo "==> 同步文件範本目錄"
+# 範本目錄是**產物**（由 templates/src/ 排版而來），所以先重建再複製 ——
+# 只複製的話，改了 src 卻忘了跑 build，App 裡就是舊的範本。
+python3 "$ROOT/scripts/doc_templates_tool.py" build
+mkdir -p "$DEST/../Templates"
+cp "$ROOT/templates/document-templates.json" "$DEST/../Templates/document-templates.json"
+
 echo "==> 同步隱私權政策"
 cp "$SRC_LEGAL/privacy.html" "$DEST/privacy.html"
 

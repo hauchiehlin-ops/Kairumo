@@ -98,6 +98,9 @@ android {
 val copyUserDocs by tasks.registering(Copy::class) {
     from("$rootDir/../docs/manual") { into("manual") }
     from("$rootDir/../docs/legal") { into("legal") }
+    // 文件範本目錄（工作項 S-61）。與手冊走同一條路：repo 裡只有一份，
+    // 建置時複製進 assets，兩個平台載入的是同一個檔案。
+    from("$rootDir/../templates/document-templates.json") { into("templates") }
     into(layout.buildDirectory.dir("generated/docsAssets"))
 }
 

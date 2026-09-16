@@ -82,6 +82,8 @@ import com.kairumo.padnote.canvas.ProColorPicker
 import com.kairumo.padnote.canvas.EditorMode
 import com.kairumo.padnote.account.IdentityDialog
 import com.kairumo.padnote.library.HomeScreen
+import com.kairumo.padnote.library.DocumentTemplateCatalog
+import com.kairumo.padnote.library.NewNotebookDialog
 import com.kairumo.padnote.library.RenameNotebookDialog
 import com.kairumo.padnote.library.DeleteNotebookDialog
 import com.kairumo.padnote.library.NotebookLibrary
@@ -226,6 +228,7 @@ private fun NotebookHome(
     val device = remember { deviceId(activity) }
     var sort by remember { mutableStateOf(NotebookLibrary.Sort.MODIFIED) }
     var revision by remember { mutableIntStateOf(0) }
+    var creatingNotebook by remember { mutableStateOf(false) }
     var renaming by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
     var deleting by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
     var moving by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
@@ -374,14 +377,7 @@ private fun NotebookHome(
             recording = recording,
             l = ::l,
             onOpen = onOpen,
-            onCreate = {
-                // 建在使用者當下看著的那一層 —— 一律建在最上層的話，
-                // 人在某個資料夾裡按「新增」，東西卻出現在別的地方。
-                val id = NotebookLibrary.create(activity, l("new_note"), device, folderId)
-                revision++
-                // 新增之後直接開 —— 建了一本卻停在清單上，使用者還要再點一次。
-                if (id != null) onOpen(id)
-            },
+            onCreate = { creatingNotebook = true },
             onRename = { renaming = it },
             onDelete = { deleting = it },
             onMove = { moving = it },
@@ -536,6 +532,39 @@ private fun NotebookHome(
                 message = l(if (ok) "move_done" else "move_cycle_refused")
                 moving = null
                 revision++
+            }
+        )
+    }
+
+    if (creatingNotebook) {
+        NewNotebookDialog(
+            themes = DocumentTemplateCatalog.themes(activity),
+            lang = catalogLang(lang),
+            l = ::l,
+            onDismiss = { creatingNotebook = false },
+            onConfirm = { title, templateId, kind ->
+                creatingNotebook = false
+                // 建在使用者當下看著的那一層 —— 一律建在最上層的話，
+                // 人在某個資料夾裡按「新增」，東西卻出現在別的地方。
+                val name = title.ifBlank { l("new_note") }
+                val id = NotebookLibrary.create(activity, name, device, folderId)
+                if (id != null) {
+                    // 選了文件範本就把內容鋪進去。開檔失敗也不擋 ——
+                    // 使用者至少拿得到一本空白筆記，而不是什麼都沒有。
+                    val tmpl = templateId?.let { DocumentTemplateCatalog.template(activity, it) }
+                    if (tmpl != null) {
+                        NotebookLibrary.open(activity, id, device, name)?.let { (session, page) ->
+                            DocumentTemplateCatalog.apply(
+                                session, page, tmpl, kind, catalogLang(lang)
+                            )
+                        }
+                    }
+                    revision++
+                    // 新增之後直接開 —— 建了一本卻停在清單上，使用者還要再點一次。
+                    onOpen(id)
+                } else {
+                    revision++
+                }
             }
         )
     }
@@ -2634,6 +2663,23 @@ fun applySyncedLanguage(context: android.content.Context) {
 fun setAppLanguage(context: android.content.Context, tag: String) {
     com.kairumo.padnote.library.AccountSyncStore.setSyncedLanguage(context, tag)
     syncedLanguageOverride = tag
+}
+
+/**
+ * 介面語言標籤 → 文件範本目錄裡的語言鍵。
+ *
+ * 目錄用的是 `zhHant` 這種寫法，不是 BCP 47 的 `zh-Hant` —— 直接拿標籤去查
+ * 會每次落空，然後**靜靜地**退回繁體中文，英文使用者不會看到錯誤，
+ * 只會覺得範本沒有英文版。與 Apple 端 `AppLanguage.catalogKey` 同一組對應。
+ */
+private fun catalogLang(tag: String): String = when (tag) {
+    "zh-Hant" -> "zhHant"
+    "zh-Hans" -> "zhHans"
+    "en" -> "en"
+    "ja" -> "ja"
+    "ko" -> "ko"
+    "th" -> "th"
+    else -> "zhHant"
 }
 
 private fun deviceLanguageTag(): String {

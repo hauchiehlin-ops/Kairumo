@@ -20,6 +20,22 @@ public enum AppLanguage: String, CaseIterable, Identifiable {
 
     public var id: String { rawValue }
 
+    /// 文件範本目錄（`templates/document-templates.json`）裡的語言鍵。
+    ///
+    /// 那份 JSON 用的是 `zhHant` 這種寫法，不是 BCP 47 的 `zh-Hant` ——
+    /// 直接拿 `rawValue` 去查會每次都落空，然後**靜靜地**退回繁體中文，
+    /// 英文使用者不會看到錯誤，只會覺得範本沒有英文版。
+    public var catalogKey: String {
+        switch self {
+        case .zhHant: return "zhHant"
+        case .en: return "en"
+        case .zhHans: return "zhHans"
+        case .ja: return "ja"
+        case .ko: return "ko"
+        case .th: return "th"
+        }
+    }
+
     public var endonym: String {
         switch self {
         case .zhHant: return "繁體中文"

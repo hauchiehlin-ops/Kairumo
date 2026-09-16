@@ -37,6 +37,10 @@ public struct HomeWorkbenchView: View {
     @State private var newNoteTitle: String = ""
     @State private var selectedTemplate: NoteTemplate = .blank
     @State private var selectedNewNoteCategory: NoteThemeCategory = .general
+    // 文件範本（工作項 S-61）。`nil` 代表只要一張空紙，不鋪任何內容。
+    @State private var selectedDocTemplateId: String?
+    @State private var selectedDocVariant: DocumentTemplateCatalog.Variantkind = .example
+    @State private var expandedDocTheme: String?
     @State private var showAssetLibrarySheet: Bool = false
 
     // 重新命名彈窗
@@ -489,6 +493,8 @@ public struct HomeWorkbenchView: View {
             Button {
                 newNoteTitle = "\(localizationManager.localized("untitled_note")) \(notebookStore.notebooks.count + 1)"
                 selectedTemplate = .blank
+                selectedDocTemplateId = nil
+                expandedDocTheme = nil
                 showNewNotebookSheet = true
             } label: {
                 HStack(spacing: 10) {
@@ -1656,6 +1662,8 @@ public struct HomeWorkbenchView: View {
                     .padding(.vertical, 4)
                 }
 
+                documentTemplateSection
+
                 Section(localizationManager.localized("select_template")) {
                     ForEach(NoteTemplate.allCases.filter { $0.category == selectedNewNoteCategory }) { tmpl in
                         HStack(spacing: 12) {
@@ -1702,7 +1710,16 @@ public struct HomeWorkbenchView: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(localizationManager.localized("confirm")) {
                         let defaultTitle = newNoteTitle.isEmpty ? localizationManager.localized("new_notebook") : newNoteTitle
-                        let created = notebookStore.createNotebook(title: defaultTitle, template: selectedTemplate)
+                        var created = notebookStore.createNotebook(
+                            title: defaultTitle, template: selectedTemplate)
+                        // 選了文件範本就把內容鋪進去，再存一次。
+                        if let id = selectedDocTemplateId,
+                           let tmpl = DocumentTemplateCatalog.template(id: id) {
+                            DocumentTemplateCatalog.apply(
+                                tmpl, kind: selectedDocVariant,
+                                language: localizationManager.currentLanguage.catalogKey, to: &created)
+                            notebookStore.updateNotebook(created)
+                        }
                         showNewNotebookSheet = false
                         // 立即開啟該筆記畫布進行編輯
                         selectedNotebookForEditing = created
@@ -1711,6 +1728,102 @@ public struct HomeWorkbenchView: View {
                 }
             }
         }
+    }
+
+    // MARK: - 文件範本挑選（工作項 S-61）
+
+    /// 主題 → 分類 → 範本，三層收合。
+    ///
+    /// **預設整個收起來。** 39 種範本全部攤開的話，原本兩行就選得完的
+    /// 「新增一張空白紙」會被埋在幾十列底下 —— 最常用的動作不該變最難的。
+    private var documentTemplateSection: some View {
+        Section {
+            HStack {
+                Image(systemName: "doc.badge.plus")
+                    .foregroundColor(selectedDocTemplateId == nil ? .secondary : .accentColor)
+                    .frame(width: 32)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(localizationManager.localized("doc_template"))
+                        .font(.headline)
+                    Text(selectedDocTemplateName)
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+                Spacer()
+                if selectedDocTemplateId != nil {
+                    Button(localizationManager.localized("doc_template_clear")) {
+                        selectedDocTemplateId = nil
+                    }
+                    .font(.caption)
+                    .buttonStyle(.borderless)
+                }
+            }
+
+            if selectedDocTemplateId != nil {
+                Picker("", selection: $selectedDocVariant) {
+                    ForEach(DocumentTemplateCatalog.Variantkind.allCases) { kind in
+                        Text(localizationManager.localized(kind.localizationKey)).tag(kind)
+                    }
+                }
+                .pickerStyle(.segmented)
+            }
+
+            ForEach(DocumentTemplateCatalog.themes) { theme in
+                DisclosureGroup(
+                    isExpanded: Binding(
+                        get: { expandedDocTheme == theme.id },
+                        set: { expandedDocTheme = $0 ? theme.id : nil })
+                ) {
+                    ForEach(theme.categories) { category in
+                        Text(catalogText(category.name))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.top, 4)
+                        ForEach(category.templates) { tmpl in
+                            documentTemplateRow(tmpl)
+                        }
+                    }
+                } label: {
+                    Label(catalogText(theme.name), systemImage: theme.iconName)
+                        .font(.subheadline)
+                }
+            }
+        } header: {
+            Text(localizationManager.localized("doc_template_section"))
+        } footer: {
+            Text(localizationManager.localized("doc_template_hint"))
+        }
+    }
+
+    private func documentTemplateRow(_ tmpl: DocumentTemplateCatalog.Template) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: selectedDocTemplateId == tmpl.id
+                ? "checkmark.circle.fill" : "circle")
+                .foregroundColor(selectedDocTemplateId == tmpl.id ? .accentColor : .secondary)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(catalogText(tmpl.name)).font(.subheadline)
+                Text(catalogText(tmpl.description))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            Spacer()
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            selectedDocTemplateId = selectedDocTemplateId == tmpl.id ? nil : tmpl.id
+        }
+    }
+
+    private var selectedDocTemplateName: String {
+        guard let id = selectedDocTemplateId,
+              let tmpl = DocumentTemplateCatalog.template(id: id)
+        else { return localizationManager.localized("doc_template_none") }
+        return catalogText(tmpl.name)
+    }
+
+    private func catalogText(_ table: [String: String]) -> String {
+        DocumentTemplateCatalog.localized(
+            table, language: localizationManager.currentLanguage.catalogKey)
     }
 
     private func formatDuration(seconds: Int) -> String {

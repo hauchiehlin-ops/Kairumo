@@ -2127,6 +2127,62 @@ extension LocalizationManager {
             .ko: "표시 이름",
             .th: "ชื่อที่แสดง"
         ],
+        "doc_template": [
+            .zhHant: "套用的範本",
+            .en: "Template in use",
+            .zhHans: "套用的范本",
+            .ja: "使用するテンプレート",
+            .ko: "적용할 서식",
+            .th: "แม่แบบที่ใช้"
+        ],
+        "doc_template_clear": [
+            .zhHant: "取消",
+            .en: "Clear",
+            .zhHans: "取消",
+            .ja: "解除",
+            .ko: "해제",
+            .th: "ล้าง"
+        ],
+        "doc_template_hint": [
+            .zhHant: "套用後內容就是你的，改得動也刪得掉。",
+            .en: "Once applied, the content is yours — edit or delete any of it.",
+            .zhHans: "套用后内容就是你的，改得动也删得掉。",
+            .ja: "適用後の内容はあなたのものです。自由に編集・削除できます。",
+            .ko: "적용한 내용은 자유롭게 수정하거나 삭제할 수 있습니다.",
+            .th: "เมื่อใช้แล้ว เนื้อหาเป็นของคุณ แก้ไขหรือลบได้ทั้งหมด"
+        ],
+        "doc_template_none": [
+            .zhHant: "不套用，只要空白頁",
+            .en: "None — just a blank page",
+            .zhHans: "不套用，只要空白页",
+            .ja: "使用しない（白紙のみ）",
+            .ko: "사용 안 함 (빈 페이지)",
+            .th: "ไม่ใช้ — หน้าว่างเท่านั้น"
+        ],
+        "doc_template_section": [
+            .zhHant: "文件範本",
+            .en: "Document Template",
+            .zhHans: "文件范本",
+            .ja: "文書テンプレート",
+            .ko: "문서 서식",
+            .th: "แม่แบบเอกสาร"
+        ],
+        "doc_variant_blank": [
+            .zhHant: "空白範本",
+            .en: "Blank form",
+            .zhHans: "空白范本",
+            .ja: "白紙様式",
+            .ko: "빈 양식",
+            .th: "แบบฟอร์มเปล่า"
+        ],
+        "doc_variant_example": [
+            .zhHant: "完整案例",
+            .en: "Worked example",
+            .zhHans: "完整案例",
+            .ja: "記入例",
+            .ko: "작성 예시",
+            .th: "ตัวอย่างที่กรอกแล้ว"
+        ],
         "document_missing": [
             .zhHant: "找不到打包的文件檔案，請回報這個問題。",
             .en: "The bundled document is missing. Please report this.",
