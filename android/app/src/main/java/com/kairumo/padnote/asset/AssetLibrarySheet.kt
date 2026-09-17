@@ -1,5 +1,7 @@
 package com.kairumo.padnote.asset
 
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -60,6 +62,8 @@ fun AssetLibrarySheet(
     onInsert: (FfiAssetItem, FfiAssetRenderStyle) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val height = rememberDialogHeight("assetLibrary", 560.dp)
+
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
     var query by remember { mutableStateOf("") }
@@ -86,7 +90,7 @@ fun AssetLibrarySheet(
         dismissButton = { TextButton(onClick = onDismiss) { Text(l("close")) } },
         text = {
             Column(
-                Modifier.heightIn(max = 560.dp),
+                Modifier.height(height.value),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 OutlinedTextField(
@@ -147,6 +151,9 @@ fun AssetLibrarySheet(
                     }
                 }
             }
+            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+            DialogResizeHandle(height, "assetLibrary")
         }
     )
 }

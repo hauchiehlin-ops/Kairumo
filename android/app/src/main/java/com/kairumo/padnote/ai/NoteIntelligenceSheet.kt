@@ -1,5 +1,8 @@
 package com.kairumo.padnote.ai
 
+import androidx.compose.foundation.layout.height
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -60,6 +63,8 @@ fun NoteIntelligenceSheet(
     onInsert: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val height = rememberDialogHeight("noteIntelligence", 420.dp)
+
     val scope = rememberCoroutineScope()
     var running by remember { mutableStateOf(false) }
     var summary by remember { mutableStateOf("") }
@@ -74,7 +79,7 @@ fun NoteIntelligenceSheet(
         title = { Text(l("ai_summary")) },
         text = {
             Column(
-                modifier = Modifier.verticalScroll(rememberScrollState()),
+                modifier = Modifier.height(height.value).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
@@ -160,6 +165,8 @@ fun NoteIntelligenceSheet(
                     }
                 }
             }
+            // 底部的拖曳把手：往下拖變高（S-72）。
+            DialogResizeHandle(height, "noteIntelligence")
         },
         confirmButton = {
             if (hasResult) {

@@ -1,5 +1,8 @@
 package com.kairumo.padnote.table
 
+import androidx.compose.foundation.layout.height
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,6 +49,8 @@ fun TableEditor(
     onDelete: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val height = rememberDialogHeight("tableEditor", 160.dp)
+
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
     var draft by remember(table.id) { mutableStateOf(table.copyTable()) }
@@ -75,8 +80,7 @@ fun TableEditor(
                 // 「插進去才知道」—— 而那時候面板已經關了。與畫布走同一份算繪。
                 Text(l("table_preview"), style = MaterialTheme.typography.labelSmall)
                 Box(
-                    Modifier
-                        .heightIn(max = 160.dp)
+                    Modifier.height(height.value)
                         .horizontalScroll(rememberScrollState())
                         .verticalScroll(rememberScrollState())
                 ) {
@@ -170,6 +174,9 @@ fun TableEditor(
                 HorizontalDivider()
                 TextButton(onClick = onDelete) { Text(l("action_delete")) }
             }
+            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+            DialogResizeHandle(height, "tableEditor")
         }
     )
 }

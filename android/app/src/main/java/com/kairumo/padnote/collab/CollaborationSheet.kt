@@ -1,5 +1,8 @@
 package com.kairumo.padnote.collab
 
+import androidx.compose.foundation.layout.height
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -54,6 +57,8 @@ fun CollaborationSheet(
     languageTag: String,
     onDismiss: () -> Unit
 ) {
+    val height = rememberDialogHeight("collaboration", 520.dp)
+
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
     val context = LocalContext.current
 
@@ -68,7 +73,7 @@ fun CollaborationSheet(
         dismissButton = { TextButton(onClick = onDismiss) { Text(l("done")) } },
         text = {
             Column(
-                Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState()),
+                Modifier.height(height.value).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 StatusLine(manager, ::l)
@@ -227,6 +232,9 @@ fun CollaborationSheet(
                     }
                 }
             }
+            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+            DialogResizeHandle(height, "collaboration")
         }
     )
 }

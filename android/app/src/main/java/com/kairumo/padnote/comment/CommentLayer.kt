@@ -1,5 +1,8 @@
 package com.kairumo.padnote.comment
 
+import androidx.compose.foundation.layout.height
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -124,6 +127,8 @@ fun CommentThreadDialog(
     onDelete: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val height = rememberDialogHeight("commentThread", 260.dp)
+
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
     var draft by remember(pin.id) { mutableStateOf("") }
@@ -151,8 +156,7 @@ fun CommentThreadDialog(
                         Text(l("comment_empty"), style = MaterialTheme.typography.bodySmall)
                     } else {
                         Column(
-                            modifier = Modifier
-                                .heightIn(max = 260.dp)
+                            modifier = Modifier.height(height.value)
                                 .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
@@ -206,6 +210,9 @@ fun CommentThreadDialog(
                                 }
                             }
                         }
+                        // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+                        // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+                        DialogResizeHandle(height, "commentThread")
                     }
                 }
 

@@ -1,5 +1,8 @@
 package com.kairumo.padnote.canvas
 
+import androidx.compose.foundation.layout.height
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -52,6 +55,8 @@ fun CanvasStackPanel(
     onAlign: (uniffi.padnote_core.FfiAlignMode, List<String>) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val height = rememberDialogHeight("layerPanel", 280.dp)
+
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
     var selection by remember { mutableStateOf(setOf<String>()) }
@@ -74,7 +79,7 @@ fun CanvasStackPanel(
                 } else {
                     Text(l("layers_hint"), style = MaterialTheme.typography.labelSmall)
                     Column(
-                        modifier = Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState()),
+                        modifier = Modifier.height(height.value).verticalScroll(rememberScrollState()),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         for (item in rows) {
@@ -106,6 +111,9 @@ fun CanvasStackPanel(
                             }
                         }
                     }
+                    // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+                    // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+                    DialogResizeHandle(height, "layerPanel")
 
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         TextButton(onClick = { apply(ObjectStacking::sendToBack) }) { Text("⤓") }

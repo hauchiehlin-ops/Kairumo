@@ -1,5 +1,8 @@
 package com.kairumo.padnote.text
 
+import androidx.compose.foundation.layout.height
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -60,6 +63,8 @@ fun TextBoxEditor(
     onDelete: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val height = rememberDialogHeight("textBoxEditor", 280.dp)
+
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
     var text by remember(box.id) { mutableStateOf(box.text) }
@@ -137,7 +142,7 @@ fun TextBoxEditor(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(max = 280.dp)
+                        .height(height.value)
                         .verticalScroll(rememberScrollState()),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
@@ -286,6 +291,8 @@ fun TextBoxEditor(
                         }
                     }
                 }
+                // 底部的拖曳把手：往下拖變高（S-72）。
+                DialogResizeHandle(height, "textBoxEditor")
             }
         }
     )

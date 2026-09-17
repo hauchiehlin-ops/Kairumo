@@ -1,5 +1,8 @@
 package com.kairumo.padnote.library
 
+import androidx.compose.foundation.layout.height
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,6 +51,8 @@ fun InsertRecordingDialog(
     onDismiss: () -> Unit,
     onDone: (String?) -> Unit
 ) {
+    val height = rememberDialogHeight("insertRecording", 380.dp)
+
     val context = androidx.compose.ui.platform.LocalContext.current
     var selected by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
     var page by remember { mutableIntStateOf(1) }
@@ -57,7 +62,7 @@ fun InsertRecordingDialog(
         title = { Text(l("insert_to_notebook")) },
         text = {
             Column(
-                Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState()),
+                Modifier.height(height.value).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(recording.file.name, fontWeight = FontWeight.SemiBold)
@@ -108,6 +113,9 @@ fun InsertRecordingDialog(
                     }
                 }
             }
+            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+            DialogResizeHandle(height, "insertRecording")
         },
         confirmButton = {
             TextButton(

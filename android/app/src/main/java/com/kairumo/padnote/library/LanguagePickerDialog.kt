@@ -1,5 +1,8 @@
 package com.kairumo.padnote.library
 
+import androidx.compose.foundation.layout.height
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -38,6 +41,8 @@ fun LanguagePickerDialog(
     onPick: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val height = rememberDialogHeight("languagePicker", 320.dp)
+
     val languages = listOf(
         "zh-Hant" to "繁體中文",
         "en" to "English",
@@ -58,7 +63,7 @@ fun LanguagePickerDialog(
         },
         text = {
             Column(
-                Modifier.verticalScroll(rememberScrollState()),
+                Modifier.height(height.value).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 for ((tag, endonym) in languages) {
@@ -73,6 +78,8 @@ fun LanguagePickerDialog(
                     }
                 }
             }
+            // 底部的拖曳把手：往下拖變高（S-72）。
+            DialogResizeHandle(height, "languagePicker")
         }
     )
 }

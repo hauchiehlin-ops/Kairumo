@@ -1,5 +1,8 @@
 package com.kairumo.padnote.image
 
+import androidx.compose.foundation.layout.height
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,6 +48,8 @@ fun ImageEditor(
     onDelete: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val height = rememberDialogHeight("imageEditor", 420.dp)
+
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
     var filter by remember(image.id) { mutableStateOf(image.filterStyle) }
@@ -60,7 +65,7 @@ fun ImageEditor(
         text = {
             Column(
                 verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.verticalScroll(rememberScrollState())
+                modifier = Modifier.height(height.value).verticalScroll(rememberScrollState())
             ) {
                 Text(l("image_filter"), style = MaterialTheme.typography.labelMedium)
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -132,6 +137,8 @@ fun ImageEditor(
                     modifier = Modifier.fillMaxWidth()
                 ) { Text(l("delete"), color = MaterialTheme.colorScheme.error) }
             }
+            // 底部的拖曳把手：往下拖變高（S-72）。
+            DialogResizeHandle(height, "imageEditor")
         },
         confirmButton = {
             TextButton(onClick = {

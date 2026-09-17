@@ -1,5 +1,8 @@
 package com.kairumo.padnote.audio
 
+import androidx.compose.foundation.layout.height
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -36,6 +39,8 @@ fun AudioInsertDialog(
     onDismiss: () -> Unit,
     onPick: (File) -> Unit
 ) {
+    val height = rememberDialogHeight("audioInsert", 320.dp)
+
     val files = (audioDirectory?.listFiles()
         ?.filter { it.isFile && it.length() > 0 }
         ?.sortedByDescending { it.lastModified() }
@@ -53,7 +58,7 @@ fun AudioInsertDialog(
                 )
             } else {
                 Column(
-                    Modifier.fillMaxWidth().heightIn(max = 320.dp)
+                    Modifier.fillMaxWidth().height(height.value)
                         .verticalScroll(rememberScrollState())
                 ) {
                     for (file in files) {
@@ -75,6 +80,8 @@ fun AudioInsertDialog(
                         }
                     }
                 }
+                // 底部的拖曳把手：往下拖變高（S-72）。
+                DialogResizeHandle(height, "audioInsert")
             }
         },
         confirmButton = {},

@@ -1,5 +1,7 @@
 package com.kairumo.padnote.shape
 
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -54,6 +56,8 @@ fun ShapePicker(
     onCommit: (List<NoteShape>, List<NoteConnection>) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val height = rememberDialogHeight("shapePicker", 420.dp)
+
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
     AlertDialog(
@@ -63,7 +67,7 @@ fun ShapePicker(
         dismissButton = { TextButton(onClick = onDismiss) { Text(l("cancel")) } },
         text = {
             Column(
-                Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                Modifier.height(height.value).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text(l("shape_section_basic"), style = MaterialTheme.typography.titleSmall)
@@ -98,6 +102,9 @@ fun ShapePicker(
                     }
                 }
             }
+            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+            DialogResizeHandle(height, "shapePicker")
         }
     )
 }

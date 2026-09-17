@@ -1,5 +1,7 @@
 package com.kairumo.padnote.theme
 
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -74,6 +76,8 @@ fun ThemeToolsSheet(
     onInsertText: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val height = rememberDialogHeight("themeTools", 520.dp)
+
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
     var tab by remember { mutableStateOf(FfiThemeTab.AESTHETIC) }
@@ -85,7 +89,7 @@ fun ThemeToolsSheet(
         dismissButton = { TextButton(onClick = onDismiss) { Text(l("close")) } },
         text = {
             Column(
-                Modifier.heightIn(max = 520.dp).verticalScroll(rememberScrollState()),
+                Modifier.height(height.value).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -108,6 +112,9 @@ fun ThemeToolsSheet(
                     FfiThemeTab.DIGITAL -> DigitalSection(::l, onInsertText, onDismiss)
                 }
             }
+            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+            DialogResizeHandle(height, "themeTools")
         }
     )
 }

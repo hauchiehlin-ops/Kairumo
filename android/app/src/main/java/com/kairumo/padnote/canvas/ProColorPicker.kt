@@ -1,5 +1,8 @@
 package com.kairumo.padnote.canvas
 
+import androidx.compose.foundation.layout.height
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -48,6 +51,8 @@ fun ProColorPicker(
     onPick: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val height = rememberDialogHeight("proColorPicker", 420.dp)
+
     fun l(key: String) = LocalizationStrings.localized(key, languageTag)
 
     var picked by remember { mutableStateOf(currentHex) }
@@ -58,7 +63,7 @@ fun ProColorPicker(
         title = { Text(l("pro_color")) },
         text = {
             Column(
-                modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState()),
+                modifier = Modifier.height(height.value).verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 for (group in groups) {
@@ -102,6 +107,9 @@ fun ProColorPicker(
                     )
                 }
             }
+            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+            DialogResizeHandle(height, "proColorPicker")
         },
         confirmButton = {
             TextButton(
