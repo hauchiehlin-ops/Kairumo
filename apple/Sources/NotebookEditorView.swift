@@ -435,7 +435,13 @@ struct CanvasRepresentable: UIViewRepresentable {
     /// 兩層都能捲的話，手指放在畫布上時捲到的是裡層那一頁 —— 捲不出去，
     /// 看起來像卡住。連續模式把裡層關掉，捲動交給外面那一層。
     var isScrollEnabled: Bool = true
-    var onDrawingChanged: ((PKDrawing) -> Void)?
+    /// 筆跡有變動。
+    ///
+    /// **回傳值是「修正過的筆跡」**：需要收回某幾筆時回傳收回後的版本，
+    /// 不需要修正就回 nil。畫布會把修正寫回去 —— 只改存檔不改畫布的話，
+    /// 使用者看得到那一筆、檔案裡卻沒有，而且它會在**每一次落筆**時再被
+    /// 檢查一次，提示就一直跳（實際回報過）。
+    var onDrawingChanged: ((PKDrawing) -> PKDrawing?)?
     /// 筆跡寫到接近頁尾時通知編輯器。
     ///
     /// 舊版是「把這一頁拉長」，於是同一本筆記裡每頁高度都不同，匯出與列印
@@ -649,8 +655,21 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
             guard !isProgrammaticUpdate else { return }
-            parent.drawing = canvasView.drawing
-            parent.onDrawingChanged?(canvasView.drawing)
+            var effective = canvasView.drawing
+            if let corrected = parent.onDrawingChanged?(effective),
+               corrected.strokes.count != effective.strokes.count {
+                // 收回的筆畫要真的從畫布上消失。
+                //
+                // 原本只有存檔那一份被拿掉：畫面上那一筆還在，使用者以為
+                // 寫成功了，而匯出的檔案裡沒有它；更糟的是它留在畫布上，
+                // 於是**下一筆、再下一筆**都會連它一起重新檢查，
+                // 「這一筆畫在可列印範圍之外」的提示就一直跳。
+                isProgrammaticUpdate = true
+                canvasView.drawing = corrected
+                isProgrammaticUpdate = false
+                effective = corrected
+            }
+            parent.drawing = effective
 
             // 寫到接近頁尾就先把下一頁準備好。
             //
@@ -923,6 +942,12 @@ public struct NotebookEditorView: View {
     @State private var showShareSheet: Bool = false
     @State private var showClearConfirmAlert: Bool = false
     @State private var exportPdfData: Data? = nil
+    /// 這一次匯出的副檔名。
+    ///
+    /// 原本分享表一律叫 `<標題>.pdf` —— 選「匯出圖片」拿到的是一個
+    /// **副檔名寫著 pdf、內容卻是 PNG** 的檔案，收到的人打不開，
+    /// 使用者看到的是「我選了圖片，它給我 PDF」（實機回報過）。
+    @State private var exportFileExtension: String = "pdf"
 
     // 圖片、算式、圖表、文字與連結狀態
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
@@ -1262,7 +1287,9 @@ public struct NotebookEditorView: View {
         }
         .sheet(isPresented: $showShareSheet) { erasedView {
             if let data = exportPdfData {
-                ShareActivityView(data: data, filename: "\(notebook.displayTitle()).pdf")
+                ShareActivityView(
+                    data: data,
+                    filename: "\(notebook.displayTitle()).\(exportFileExtension)")
             }
         } }
         .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
@@ -2241,20 +2268,39 @@ public struct NotebookEditorView: View {
     /// 只縮不放：放大到超過原尺寸會讓筆跡變糊（圖層是先算繪再變換的）。
     private var singlePageWorkArea: some View {
         GeometryReader { outer in
-            let available = max(outer.size.width - 32, 1)
-            let scale = min(1, available / PageGeometry.width)
+            // **寬與高都要算。**
+            //
+            // 原本只算寬度：`canvasWorkAreaContent` 沒有明確高度，於是它拿到
+            // 的是「剩下多少就多少」—— 在 iPhone 上工具列吃掉大半螢幕之後
+            // 只剩六百點，整張 A4 的版面（1132 點）就被壓進那六百點裡。
+            // 使用者看到的是一張被壓扁的紙，底下一大塊空白，而且畫布上那圈
+            // 虛線框與真正的可列印範圍對不起來 —— 寫在框裡的字有可能被判定
+            // 在範圍外（實機回報過）。
+            //
+            // 現在把頁面的真實高度給它，再用寬高兩個比例的**較小者**縮放：
+            // 整頁一定看得完，而且在可用空間裡盡可能大。
+            let availableWidth = max(outer.size.width - 32, 1)
+            let availableHeight = max(outer.size.height - 16, 1)
+            let scale = min(
+                1,
+                min(availableWidth / PageGeometry.width, availableHeight / PageGeometry.height)
+            )
             ZStack(alignment: .bottom) {
                 canvasWorkAreaContent
-                    .frame(width: PageGeometry.width)
-                    .scaleEffect(scale, anchor: .top)
-                    // 縮放之後實際佔的寬度要讓出來，否則置中會算錯。
-                    .frame(width: PageGeometry.width * scale)
-                    .frame(maxWidth: .infinity, alignment: .center)
+                    // 頁面用**它自己的尺寸**佈局，再整個縮到放得下 ——
+                    // 不給高度的話它會被壓成剩餘空間那麼扁（iPhone 上整張
+                    // A4 被壓進六百點，見上面的說明）。
+                    .frame(width: PageGeometry.width, height: PageGeometry.height)
+                    .scaleEffect(scale, anchor: .center)
+                    // 工作區**就是可用空間**，不會因為頁面而長高 ——
+                    // 長高的話外層 VStack 會把工具列擠出畫面（踩過）。
+                    .frame(width: outer.size.width, height: outer.size.height)
 
                 if let notice = canvasNotice {
                     canvasNoticeBanner(notice)
                 }
             }
+            .frame(width: outer.size.width, height: outer.size.height)
         }
     }
 
@@ -2628,7 +2674,7 @@ ZStack(alignment: .topTrailing) {
                 paletteId: notebook.guidePaletteId,
                 pageHeight: currentPageHeight,
                 editorMode: editorMode,
-                onDrawingChanged: { rawDrawing in
+                onDrawingChanged: { rawDrawing -> PKDrawing? in
                     // **頁面框線就是編輯區域。**
                     //
                     // 那一圈虛線的意思是「這裡面才會被印出來 / 匯出」，
@@ -2666,6 +2712,11 @@ ZStack(alignment: .topTrailing) {
                     } else if !isApplyingRemoteUpdate {
                         lastStrokeCount = newDrawing.strokes.count
                     }
+                    // 有筆畫被收回時，把修正後的版本交回畫布（見
+                    // `CanvasRepresentable.onDrawingChanged` 的說明）。
+                    return newDrawing.strokes.count == rawDrawing.strokes.count
+                        ? nil
+                        : newDrawing
                 },
                 onReachedPageBottom: {
                     ensureNextPageExists()
@@ -5729,6 +5780,7 @@ ZStack(alignment: .topTrailing) {
 
     private func exportAsPdf() {
         self.exportPdfData = buildNotebookPdf()
+        self.exportFileExtension = "pdf"
         self.showShareSheet = true
     }
 
@@ -5757,6 +5809,7 @@ ZStack(alignment: .topTrailing) {
         )
         if let pngData = img.pngData() {
             self.exportPdfData = pngData
+            self.exportFileExtension = "png"
             self.showShareSheet = true
         }
     }

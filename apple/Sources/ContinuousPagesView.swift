@@ -85,9 +85,12 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 editorMode: editorMode,
                 // 裡層不捲 —— 外面那個 ScrollView 才是捲動的主體。
                 isScrollEnabled: false,
-                onDrawingChanged: { updated in
+                onDrawingChanged: { updated -> PKDrawing? in
                     store.saveDrawing(notebookId: notebookId, pageIndex: pageIndex, drawing: updated)
                     onDrawingChanged(pageIndex, updated)
+                    // 連續模式不做可列印範圍的收回（整頁模式才做），
+                    // 所以沒有要修正的東西。
+                    return nil
                 },
                 onReachedPageBottom: { if isFocused { onReachedPageBottom() } },
                 onSelectionChanged: { hasSelection in
