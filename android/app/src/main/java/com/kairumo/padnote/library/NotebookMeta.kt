@@ -50,6 +50,13 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         private const val KEY_PALETTE = "guidePalette"
 
         /**
+         * 頁面規格（S-84）。**兩端同一個鍵**，而且它進的是同步的中繼資料 ——
+         * 同一本筆記在兩台裝置上的頁面尺寸不一樣的話，分頁位置、可列印範圍
+         * 與匯出的 PDF 全部會分家。
+         */
+        private const val KEY_PAGE_FORMAT = "pageFormat"
+
+        /**
          * 連結卡片。**鍵名與 Apple 的 `NotebookMeta.linkAttachments` 一致** ——
          * 這份中繼資料是同步的，鍵名不一樣等於兩邊各存各的。
          */
@@ -91,6 +98,14 @@ class NotebookMeta private constructor(private val root: JSONObject) {
 
     /** 版面配色。認不得或沒有時，核心會回第一組。 */
     fun paletteId(): String = root.optString(KEY_PALETTE, "")
+
+    /** 頁面規格 id（核心 `pageFormats()`）。空字串是預設的 A4 直式。 */
+    fun pageFormatId(): String = root.optString(KEY_PAGE_FORMAT, "")
+
+    fun setPageFormatId(session: PadnoteSession?, formatId: String) {
+        root.put(KEY_PAGE_FORMAT, formatId)
+        runCatching { session?.setNotebookMeta(root.toString()) }
+    }
 
     /** 建立筆記本時記下紙張，重開時版面才回得來。 */
     fun setPaperId(session: PadnoteSession?, paperId: String) {

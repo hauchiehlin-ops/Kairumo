@@ -34,6 +34,13 @@ struct NotebookMeta: Codable, Hashable {
     var pageTemplates: [String]?
     /// 版面配色的 id（核心 `guide_palettes()`）。
     var guidePalette: String?
+    /// 頁面規格 id（核心 `page_formats()`，S-84）。
+    ///
+    /// **鍵名與 Android 的 `NotebookMeta.pageFormat` 一致。**
+    /// 原本它只存在 Apple 自己的 JSON 裡 —— 於是同一本筆記在 iPad 上是
+    /// Letter 橫式、在 Android 上回到 A4 直式，分頁位置、可列印範圍與匯出的
+    /// PDF 全部分家，而使用者什麼也沒做。
+    var pageFormat: String?
     var folderId: String?
     /// 系統預設標題／摘要的語系鍵（見 `NotebookDocument.titleKey`）。
     var titleKey: String?
@@ -105,6 +112,7 @@ struct NotebookMeta: Codable, Hashable {
         template = document.template.rawValue
         pageTemplates = document.pagePaperIds
         guidePalette = document.guidePaletteId
+        pageFormat = document.pageFormatId
         folderId = document.folderId
         titleKey = document.titleKey
         snippetKey = document.snippetKey
@@ -125,6 +133,7 @@ struct NotebookMeta: Codable, Hashable {
         if let raw = template, let value = NoteTemplate(rawValue: raw) { document.template = value }
         if let pageTemplates { document.pagePaperIds = pageTemplates }
         if let guidePalette { document.guidePaletteId = guidePalette }
+        if let pageFormat { document.pageFormatId = pageFormat }
         if let folderId { document.folderId = folderId }
         if let titleKey { document.titleKey = titleKey }
         if let snippetKey { document.snippetKey = snippetKey }

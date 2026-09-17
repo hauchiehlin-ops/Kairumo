@@ -1605,6 +1605,78 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             }) { Text("+") }
 
             // FlowRow 裡沒有 weight 可以撐開，靠換行自然排就好。
+            // 頁面規格（S-84）。Apple 的頂列一直都有這一顆，Android 原本
+            // 連「這本筆記是什麼尺寸」都看不到。
+            Box {
+                var formatMenu by remember { mutableStateOf(false) }
+                val meta = remember(notebookId, revision) {
+                    com.kairumo.padnote.library.NotebookMeta.load(notebook?.first)
+                }
+                val currentFormat = remember(meta) {
+                    meta.pageFormatId().ifEmpty { uniffi.padnote_core.defaultPageFormatId() }
+                }
+                TextButton(
+                    onClick = { formatMenu = true },
+                    modifier = Modifier.testTag("editor.page_format")
+                ) {
+                    Text(
+                        l10n(uniffi.padnote_core.pageFormat(currentFormat).titleKey),
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+                DropdownMenu(expanded = formatMenu, onDismissRequest = { formatMenu = false }) {
+                    uniffi.padnote_core.pageFormats().forEach { format ->
+                        DropdownMenuItem(
+                            text = { Text(l10n(format.titleKey)) },
+                            trailingIcon = { if (format.id == currentFormat) Text("✓") },
+                            onClick = {
+                                formatMenu = false
+                                meta.setPageFormatId(notebook?.first, format.id)
+                                com.kairumo.padnote.ink.PageGeometry.use(format.id)
+                                revision++
+                            }
+                        )
+                    }
+                }
+            }
+
+            // 版面配色（S-93）。建立筆記時選過，之後也改得動 —— 與 Apple 一致。
+            Box {
+                var paletteMenu by remember { mutableStateOf(false) }
+                val meta = remember(notebookId, revision) {
+                    com.kairumo.padnote.library.NotebookMeta.load(notebook?.first)
+                }
+                val currentPalette = remember(meta) {
+                    meta.paletteId().ifEmpty { uniffi.padnote_core.guidePalettes().first().id }
+                }
+                TextButton(
+                    onClick = { paletteMenu = true },
+                    modifier = Modifier.testTag("editor.guide_palette")
+                ) {
+                    Text(
+                        l10n(
+                            uniffi.padnote_core.guidePalettes()
+                                .firstOrNull { it.id == currentPalette }?.nameKey
+                                ?: "guide_palette"
+                        ),
+                        style = MaterialTheme.typography.labelSmall
+                    )
+                }
+                DropdownMenu(expanded = paletteMenu, onDismissRequest = { paletteMenu = false }) {
+                    uniffi.padnote_core.guidePalettes().forEach { palette ->
+                        DropdownMenuItem(
+                            text = { Text(l10n(palette.nameKey)) },
+                            trailingIcon = { if (palette.id == currentPalette) Text("✓") },
+                            onClick = {
+                                paletteMenu = false
+                                meta.setPaletteId(notebook?.first, palette.id)
+                                revision++
+                            }
+                        )
+                    }
+                }
+            }
+
             TextButton(
                 onClick = { showMenu = true },
                 modifier = Modifier.testTag("editor.more")
@@ -2366,6 +2438,12 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             // 康乃爾與四象限的底紋都是 BLANK，差別全在版面上。
             val notebookMeta = remember(notebookId, revision) {
                 com.kairumo.padnote.library.NotebookMeta.load(notebook?.first)
+            }
+            // 這本筆記的頁面規格（S-84）。畫布、底紋、分頁與匯出五條路都讀
+            // `PageGeometry`，所以在這裡設一次就好 —— 與 Apple 的
+            // `PageGeometry.use(format:)` 同一個做法。
+            LaunchedEffect(notebookMeta) {
+                com.kairumo.padnote.ink.PageGeometry.use(notebookMeta.pageFormatId())
             }
             // **逐頁**：同一本筆記可以一頁四象限、一頁日程表。
             val paperId = remember(notebookMeta, pageIndex) { notebookMeta.paperId(pageIndex) }

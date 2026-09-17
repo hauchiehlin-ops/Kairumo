@@ -11,13 +11,40 @@ import uniffi.padnote_core.standardPageSize
  */
 object PageGeometry {
 
-    private val size: Pair<Float, Float> = runCatching {
+    private val defaultSize: Pair<Float, Float> = runCatching {
         val values = standardPageSize()
         values[0] to values[1]
     }.getOrDefault(800f to 1132f)
 
-    val width: Float get() = size.first
-    val height: Float get() = size.second
+    /**
+     * 目前這一本筆記的頁面尺寸（S-84）。
+     *
+     * # 為什麼是一個「目前」而不是參數
+     *
+     * 畫布、底紋、分頁計算、縮圖與匯出五條路都要拿到同一個尺寸，其中幾條
+     * 是純函式，手上沒有筆記本 —— 把筆記本一路傳進去要改十幾個簽名，
+     * 而漏掉其中一個的症狀是「這一頁的分頁位置跟別的地方算的不一樣」。
+     * Apple 端的 `PageGeometry.currentSize` 是同一個做法與同一個理由。
+     *
+     * **只在主執行緒動**，而且畫面上同時只會有一本筆記在編輯。
+     */
+    @Volatile
+    private var currentSize: Pair<Float, Float> = defaultSize
+
+    /** 換一本筆記或改了規格時呼叫。空字串或認不得的 id 回到預設（A4 直式）。 */
+    fun use(formatId: String?) {
+        currentSize = if (formatId.isNullOrEmpty()) {
+            defaultSize
+        } else {
+            runCatching {
+                val f = uniffi.padnote_core.pageFormat(formatId)
+                f.width to f.height
+            }.getOrDefault(defaultSize)
+        }
+    }
+
+    val width: Float get() = currentSize.first
+    val height: Float get() = currentSize.second
 
     /**
      * 可列印邊界的內縮。畫布上畫出來的界線與匯出的邊界就是這一圈。

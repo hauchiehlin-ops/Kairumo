@@ -2,13 +2,11 @@
   "apple": [],
   "android": [
     "editor.export.share",
-    "editor.guide_palette",
     "editor.ink.brush",
     "editor.ink.marker",
     "editor.ink.redo",
     "editor.ink.undo",
     "editor.ink.watercolor",
-    "editor.page_format",
     "editor.share",
     "editor.sidebar.tab.folders",
     "editor.sidebar.tab.pages",
