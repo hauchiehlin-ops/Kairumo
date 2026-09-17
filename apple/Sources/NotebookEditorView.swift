@@ -7046,7 +7046,9 @@ struct TextAttachmentItemView: View {
                         .foregroundColor(Color(hex: textItem.textColorHex) ?? .primary)
                         .scrollContentBackground(.hidden)
                         .background(Color.clear)
-                        .frame(minHeight: 60)
+                        // 不能硬給 60：方塊本身可能只有 24 高（週計畫的格子），
+                        // 那樣一點進去編輯，方塊就自己長高、蓋住隔壁的格子。
+                        .frame(minHeight: min(60, displayHeight))
                         .focused($inlineFocused)
                         .overlay(alignment: .bottomTrailing) {
                             Button {
@@ -7079,7 +7081,9 @@ struct TextAttachmentItemView: View {
                         .frame(maxWidth: .infinity, alignment: resolveFrameAlignment(textItem.alignmentRaw))
                 }
             }
-            .padding(14)
+            // 內距隨方塊大小縮（見 TextBoxMetrics）。小到一格週計畫的格子時，
+            // 固定 14 的內距會把可寫的空間吃光。
+            .padding(TextBoxMetrics.padding(width: displayWidth, height: displayHeight))
             // 高度也要套。原本只套寬度，於是方塊的高度由內容決定：
             //   1. 右下角的縮放把手往下拉完全沒有反應 —— 使用者說「只能調寬度」。
             //   2. 同一個方塊在 Android 上是 `size(width, height)`，兩邊高度不一樣。
@@ -7137,10 +7141,13 @@ struct TextAttachmentItemView: View {
                                     let base = resizeBaseSize
                                         ?? CGSize(width: textItem.width, height: textItem.height)
                                     if resizeBaseSize == nil { resizeBaseSize = base }
-                                    // 下限不是隨手取的：比一行字還窄的方框，
-                                    // 每個字都會自己換一行，看起來像壞掉。
-                                    liveWidth = max(120, base.width + value.translation.width)
-                                    liveHeight = max(60, base.height + value.translation.height)
+                                    // 下限的界線是「放得下一個字」，見 TextBoxMetrics。
+                                    // 原本是 120 × 60，比週計畫的格子還大 ——
+                                    // 方塊塞不進任何一格，一定會壓到隔壁欄。
+                                    liveWidth = max(TextBoxMetrics.minWidth,
+                                                    base.width + value.translation.width)
+                                    liveHeight = max(TextBoxMetrics.minHeight,
+                                                     base.height + value.translation.height)
                                 }
                                 .onEnded { _ in
                                     if let w = liveWidth { textItem.width = w }

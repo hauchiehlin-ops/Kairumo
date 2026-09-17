@@ -346,11 +346,14 @@ public enum PageThumbnailRenderer {
         }
     }
 
-    /// 畫布上的文字方塊內距。與 `TextBoxCanvasItemView` 的 `.padding(14)` 一致。
+    /// 畫布上的文字方塊內距。與 `TextBoxCanvasItemView` 共用 `TextBoxMetrics`。
     ///
     /// 這個數字必須跟畫布那邊同步。匯出原本用的是 8/6，於是同一段文字在兩邊
     /// 從不同的位置開始排，行數一不同，整塊版面就對不起來了。
-    static let textBoxPadding: CGFloat = 14
+    /// 小方塊的內距會縮，所以這裡也不能再用單一常數 —— 用同一個函式。
+    static func textBoxPadding(for item: NoteTextAttachment) -> CGFloat {
+        TextBoxMetrics.padding(width: item.width, height: item.height)
+    }
 
     /// 依內容算出文字方塊實際需要的高度。
     ///
@@ -358,13 +361,14 @@ public enum PageThumbnailRenderer {
     /// `item.height` 只是最後一次調整時的值。匯出時直接用存下來的高度，
     /// 文字一多就會被截掉或溢出框外壓到旁邊的東西 —— 那正是「方框重疊」的來源。
     static func measuredHeight(for item: NoteTextAttachment) -> CGFloat {
-        let inner = max(item.width - textBoxPadding * 2, 1)
+        let pad = textBoxPadding(for: item)
+        let inner = max(item.width - pad * 2, 1)
         let bounds = attributedText(for: item).boundingRect(
             with: CGSize(width: inner, height: .greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             context: nil
         )
-        return max(item.height, ceil(bounds.height) + textBoxPadding * 2)
+        return max(item.height, ceil(bounds.height) + pad * 2)
     }
 
     private static func attributedText(for item: NoteTextAttachment) -> NSAttributedString {
@@ -441,7 +445,7 @@ public enum PageThumbnailRenderer {
             ctx.cgContext.saveGState()
             UIBezierPath(roundedRect: rect, cornerRadius: item.cornerRadius).addClip()
             attributedText(for: item).draw(
-                with: rect.insetBy(dx: textBoxPadding, dy: textBoxPadding),
+                with: rect.insetBy(dx: textBoxPadding(for: item), dy: textBoxPadding(for: item)),
                 options: [.usesLineFragmentOrigin, .usesFontLeading],
                 context: nil
             )

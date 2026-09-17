@@ -28,8 +28,6 @@ import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.canvas.CanvasRotation
-import com.kairumo.padnote.canvas.MIN_OBJECT_HEIGHT_DP
-import com.kairumo.padnote.canvas.MIN_OBJECT_WIDTH_DP
 import com.kairumo.padnote.canvas.ResizeHandle
 import com.kairumo.padnote.canvas.RotationHandle
 import com.kairumo.padnote.canvas.StyleHandle
@@ -42,10 +40,36 @@ import com.kairumo.padnote.canvas.StyleHandle
  * - `null` 是「使用者沒設定」，套平台預設
  * - 段落設定（行距、縮排）要真的套上，不只是存著
  *
- * 內距 14 與 Apple 端的 `.padding(14)` 相同 —— 差幾點就會讓同一段文字
- * 在兩個平台換行位置不同，版面就分家了。
+ * 內距 14 與 Apple 端的 `TextBoxMetrics.padding` 相同 —— 差幾點就會讓同一段
+ * 文字在兩個平台換行位置不同，版面就分家了。
  */
 const val TEXT_BOX_PADDING = 14f
+
+/**
+ * 文字方塊的尺寸下限。與 Apple 端的 `TextBoxMetrics` 是同一組數字。
+ *
+ * 原本沿用一般物件的 120 × 60。週計畫、月計畫、待辦清單這些樣板的格子
+ * 大約是 100 × 45 —— **下限比格子還大，文字方塊放不進任何一格**：
+ * 想在「週二」那一欄填一件事，方塊一定會壓到隔壁兩欄。
+ * 界線應該是「放得下一個字」，不是 120 點。
+ */
+const val MIN_TEXT_BOX_WIDTH_DP = 32f
+const val MIN_TEXT_BOX_HEIGHT_DP = 24f
+
+/** 小於這個短邊的方塊，內距按比例縮。剛好是舊的高度下限，所以既有筆記一個字都不會重排。 */
+private const val FULL_PADDING_THRESHOLD_DP = 60f
+
+/**
+ * 這個尺寸的方塊該用多少內距。
+ *
+ * 小方塊仍然套 14 的話，內距就吃掉整個方塊：40 dp 高的格子扣掉上下各 14
+ * 只剩 12 dp，一行 16sp 的字放不下 —— 看起來像「打了字卻沒出現」。
+ */
+fun textBoxPadding(width: Float, height: Float): Float {
+    val shortSide = minOf(width, height)
+    return if (shortSide >= FULL_PADDING_THRESHOLD_DP) TEXT_BOX_PADDING
+    else maxOf(2f, shortSide / 6f)
+}
 
 @Composable
 fun TextBoxLayer(
@@ -155,7 +179,7 @@ private fun TextBoxView(
                     onDragEnd = { onChanged(box) }
                 )
             } }
-            .padding(TEXT_BOX_PADDING.dp)
+            .padding(textBoxPadding(box.width, box.height).dp)
     ) {
         Text(
             text = box.text,
@@ -189,8 +213,8 @@ private fun TextBoxView(
                 heightDp = box.height,
                 density = density,
                 onResize = { dw, dh ->
-                    box.width = maxOf(MIN_OBJECT_WIDTH_DP, box.width + dw)
-                    box.height = maxOf(MIN_OBJECT_HEIGHT_DP, box.height + dh)
+                    box.width = maxOf(MIN_TEXT_BOX_WIDTH_DP, box.width + dw)
+                    box.height = maxOf(MIN_TEXT_BOX_HEIGHT_DP, box.height + dh)
                 },
                 onCommit = { onChanged(box) }
             )

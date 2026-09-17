@@ -241,11 +241,15 @@ fun TextBoxEditor(
                                 }
                             })
 
+                            // 下限跟著縮放把手走。原本是 160 —— 比把手拉得到的
+                            // 還大，於是拉小到格子大小的方塊只要開一次這個面板，
+                            // 滑桿就把它彈回 160：使用者看到的是「我調好的寬度
+                            // 自己變回去了」。
                             label("${l("box_width")}　${box.width.toInt()}")
                             Slider(
-                                value = box.width.coerceIn(160f, 900f),
+                                value = box.width.coerceIn(MIN_TEXT_BOX_WIDTH_DP, 900f),
                                 onValueChange = { v -> mutate { it.width = v } },
-                                valueRange = 160f..900f
+                                valueRange = MIN_TEXT_BOX_WIDTH_DP..900f
                             )
 
                             Divider()

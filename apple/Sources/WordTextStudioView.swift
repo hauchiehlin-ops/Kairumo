@@ -312,9 +312,13 @@ public struct WordTextStudioView: View {
                 }
             }
 
+            // 下限跟著縮放把手走（TextBoxMetrics.minWidth）。原本是 160 ——
+            // 比把手拉得到的還大，於是拉小到格子大小的方塊只要開一次這個面板，
+            // 滑桿就把它彈回 160，使用者看到的是「我調好的寬度自己變回去了」。
             labeledRow(localizationManager.localized("box_width")) {
                 HStack(spacing: 8) {
-                    Slider(value: $attachment.width, in: 160...900, step: 10)
+                    Slider(value: $attachment.width,
+                           in: TextBoxMetrics.minWidth...900, step: 10)
                     Text("\(Int(attachment.width))")
                         .font(.system(size: 11, design: .monospaced))
                         .foregroundColor(.secondary)
