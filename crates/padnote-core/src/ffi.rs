@@ -91,6 +91,22 @@ pub enum PageStyle {
     MusicStaff,
 }
 
+impl From<PageTemplate> for PageStyle {
+    fn from(p: PageTemplate) -> Self {
+        match p {
+            PageTemplate::Blank => PageStyle::Blank,
+            PageTemplate::Lined => PageStyle::Lined,
+            PageTemplate::Grid => PageStyle::Grid,
+            PageTemplate::Dotted => PageStyle::Dotted,
+            PageTemplate::Cornell => PageStyle::Cornell,
+            PageTemplate::MusicStaff => PageStyle::MusicStaff,
+            // 核心的 PageTemplate 若之後多了種類，退回空白而不是 panic ——
+            // 一個沒見過的底紋不該讓整本筆記打不開。
+            _ => PageStyle::Blank,
+        }
+    }
+}
+
 impl From<PageStyle> for PageTemplate {
     fn from(p: PageStyle) -> Self {
         match p {
@@ -890,6 +906,22 @@ impl PadnoteSession {
             .notebook()
             .page(page)
             .map(|p| vec![p.size.0, p.size.1]))
+    }
+
+    /// 這一頁的紙張底紋。
+    ///
+    /// # 為什麼需要這個出口
+    ///
+    /// `add_page(style)` 把底紋寫進了 `.padnote`，但**沒有任何方法把它讀回來**
+    /// —— 平台層因此畫不出底紋。Android 的每一頁都是白紙，而使用者選的
+    /// 「方格點陣」「康乃爾」在畫面上完全看不出差別。
+    pub fn page_style(&self, page_id: String) -> Result<Option<PageStyle>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self
+            .lock()
+            .notebook()
+            .page(page)
+            .map(|p| PageStyle::from(p.template.clone())))
     }
 
     /// 這一頁所有文字區塊的 id，依加入順序。

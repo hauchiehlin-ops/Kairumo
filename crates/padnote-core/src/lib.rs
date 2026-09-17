@@ -19,6 +19,7 @@ pub mod ffi_chart;
 pub mod ffi_collab;
 pub mod ffi_folder_sync;
 pub mod ffi_gdrive;
+pub mod ffi_gesture;
 pub mod ffi_geometry;
 pub mod ffi_hwr;
 pub mod ffi_input;

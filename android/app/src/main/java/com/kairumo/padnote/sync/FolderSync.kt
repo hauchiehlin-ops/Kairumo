@@ -58,6 +58,32 @@ object FolderSync {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .getString(KEY_TREE_URI, null)?.let(Uri::parse)
 
+    /**
+     * 給使用者看的資料夾路徑。
+     *
+     * SAF 的 tree URI 長這樣：
+     * `content://com.android.externalstorage.documents/tree/primary%3ADocuments%2FKairumo`
+     * —— 直接顯示它等於沒說。抽出後面那一段並還原成 `Documents/Kairumo`。
+     *
+     * 只顯示最後一層資料夾名稱是不夠的：兩個都叫「Kairumo」的資料夾在
+     * 畫面上會一模一樣，使用者看不出同步指向哪一個。
+     */
+    fun displayPath(context: Context): String? {
+        val uri = folderUri(context) ?: return null
+        val docId = runCatching {
+            android.provider.DocumentsContract.getTreeDocumentId(uri)
+        }.getOrNull() ?: return uri.toString()
+        // `primary:Documents/Kairumo` → `Documents/Kairumo`
+        val path = docId.substringAfter(':', docId)
+        val volume = docId.substringBefore(':', "")
+        return when {
+            path.isEmpty() -> docId
+            volume == "primary" -> path
+            volume.isEmpty() -> path
+            else -> "$volume · $path"
+        }
+    }
+
     fun clearFolder(context: Context) {
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
             .edit().remove(KEY_TREE_URI).apply()

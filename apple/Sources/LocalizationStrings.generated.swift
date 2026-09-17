@@ -6999,6 +6999,14 @@ extension LocalizationManager {
             .ko: "실물",
             .th: "ภาพทึบ"
         ],
+        "sync_account": [
+            .zhHant: "帳號",
+            .en: "Account",
+            .zhHans: "账号",
+            .ja: "アカウント",
+            .ko: "계정",
+            .th: "บัญชี"
+        ],
         "sync_choose_folder": [
             .zhHant: "選擇同步資料夾",
             .en: "Choose Sync Folder",
@@ -7006,6 +7014,22 @@ extension LocalizationManager {
             .ja: "同期フォルダを選択",
             .ko: "동기화 폴더 선택",
             .th: "เลือกโฟลเดอร์ซิงก์"
+        ],
+        "sync_destination": [
+            .zhHant: "同步目的地",
+            .en: "Destination",
+            .zhHans: "同步目的地",
+            .ja: "保存先",
+            .ko: "저장 위치",
+            .th: "ปลายทาง"
+        ],
+        "sync_destination_appdata": [
+            .zhHant: "Google Drive · 應用程式資料夾（只有這個 App 看得到）",
+            .en: "Google Drive · app data folder (only this app can see it)",
+            .zhHans: "Google Drive · 应用数据文件夹（只有这个 App 看得到）",
+            .ja: "Google ドライブ · アプリデータフォルダ（このアプリだけが見えます）",
+            .ko: "Google 드라이브 · 앱 데이터 폴더(이 앱만 볼 수 있음)",
+            .th: "Google ไดรฟ์ · โฟลเดอร์ข้อมูลแอป (มีเพียงแอปนี้ที่เห็น)"
         ],
         "sync_done": [
             .zhHant: "同步完成",
@@ -7039,6 +7063,22 @@ extension LocalizationManager {
             .ko: "두 기기를 같은 iCloud Drive 또는 Google Drive 폴더로 지정",
             .th: "ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์ iCloud Drive หรือ Google Drive เดียวกัน"
         ],
+        "sync_folder_path": [
+            .zhHant: "資料夾路徑",
+            .en: "Folder",
+            .zhHans: "资料夹路径",
+            .ja: "フォルダ",
+            .ko: "폴더",
+            .th: "โฟลเดอร์"
+        ],
+        "sync_last_at": [
+            .zhHant: "上次同步",
+            .en: "Last synced",
+            .zhHans: "上次同步",
+            .ja: "最終同期",
+            .ko: "마지막 동기화",
+            .th: "ซิงค์ล่าสุด"
+        ],
         "sync_needs_attention": [
             .zhHant: "%@ 在兩台裝置上都被改過，已保留雲端那份，請自行確認",
             .en: "%@ was changed on both devices; the cloud copy was kept — please check",
@@ -7054,6 +7094,14 @@ extension LocalizationManager {
             .ja: "セッションの有効期限が切れました。もう一度ログインしてください",
             .ko: "세션이 만료되었습니다. 다시 로그인해 주세요",
             .th: "เซสชันหมดอายุ โปรดลงชื่อเข้าใช้ใหม่"
+        ],
+        "sync_never": [
+            .zhHant: "尚未同步過",
+            .en: "Not yet",
+            .zhHans: "尚未同步过",
+            .ja: "まだありません",
+            .ko: "아직 없음",
+            .th: "ยังไม่เคย"
         ],
         "sync_not_configured": [
             .zhHant: "尚未選擇資料夾",

@@ -28,6 +28,9 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -1146,6 +1149,14 @@ data class CloudSyncUiState(
     val busy: Boolean,
     /** 給使用者看的一行字（同步中／結果／錯誤）。沒有就不顯示那一行。 */
     val message: String?,
+    /** 正在同步到誰的 Drive。拿不到就是 null，那一行不顯示。 */
+    val account: String? = null,
+    /** 上次同步是什麼時候（已經格式化成「3 分鐘前」）。 */
+    val lastSync: String? = null,
+    /** 自選資料夾的完整路徑。沒設定就是 null。 */
+    val folderPath: String? = null,
+    /** 自選資料夾上次同步的時間。 */
+    val folderLastSync: String? = null,
     val onSignIn: () -> Unit,
     val onSyncNow: () -> Unit,
     val onSignOut: () -> Unit
@@ -1174,12 +1185,23 @@ private fun CloudSyncCard(state: CloudSyncUiState, l: (String) -> String) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Google Drive", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Text(
-                    // 已登入時顯示「同步」而不是帳號位址：我們沒有要求
-                    // email 範圍，手上根本沒有那個資訊，顯示一個假的更糟。
                     if (state.signedIn) l("sync_section") else l("not_signed_in"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
+
+            // **哪一個帳號、東西放在哪裡、上次什麼時候同步的。**
+            //
+            // 原本這一整區只有「已登入 / 尚未登入」兩種狀態 —— 使用者看不出
+            // 資料進了哪一個 Drive。一台裝置上有兩個 Google 帳號是常態，
+            // 而「同步好像沒作用」最常見的真正原因就是兩台連到不同帳號。
+            if (state.signedIn) {
+                state.account?.let { email ->
+                    SyncDetailRow(l("sync_account"), email)
+                }
+                SyncDetailRow(l("sync_destination"), l("sync_destination_appdata"))
+                state.lastSync?.let { SyncDetailRow(l("sync_last_at"), it) }
             }
 
             state.message?.let {
@@ -1212,6 +1234,46 @@ private fun CloudSyncCard(state: CloudSyncUiState, l: (String) -> String) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            // 自選資料夾那一條路的狀態。**顯示完整路徑**，不是只有最後一層 ——
+            // 兩個都叫「Kairumo」的資料夾在畫面上會一模一樣。
+            state.folderPath?.let { path ->
+                HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+                Text(
+                    l("sync_folder_path"),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    path,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                state.folderLastSync?.let { SyncDetailRow(l("sync_last_at"), it) }
+            }
         }
+    }
+}
+
+/** 同步卡片裡的一列「標籤：值」。 */
+@Composable
+private fun SyncDetailRow(label: String, value: String) {
+    Row(verticalAlignment = Alignment.Top) {
+        Text(
+            label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.width(8.dp))
+        Text(
+            value,
+            style = MaterialTheme.typography.bodySmall,
+            textAlign = TextAlign.End,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
     }
 }

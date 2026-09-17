@@ -75,7 +75,18 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.runtime.mutableFloatStateOf
 import com.kairumo.padnote.canvas.CanvasStackPanel
+import com.kairumo.padnote.canvas.PageBackground
 import com.kairumo.padnote.canvas.PageSidebar
 import com.kairumo.padnote.canvas.LassoSelection
 import com.kairumo.padnote.canvas.LassoOverlay
@@ -380,6 +391,19 @@ private fun NotebookHome(
             }
             val meta = result.meta
             cloudBusy = false
+            // 成功才記時間 —— 失敗也記的話，「上次同步」會變成
+            // 「上次按下按鈕」，那正好是使用者想分辨的兩件事。
+            if (meta != null && meta.ok && !meta.needsReauth) {
+                com.kairumo.padnote.library.SyncHistory.markGoogleSynced(activity)
+                // 順便問一次「這是誰的帳號」。不必新增授權範圍：
+                // Drive 的 about.get 在 drive.appdata 底下就讀得到。
+                withContext(Dispatchers.IO) {
+                    com.kairumo.padnote.library.SyncHistory.setAccount(
+                        activity,
+                        com.kairumo.padnote.library.CloudSync.accountEmail(activity)
+                    )
+                }
+            }
             cloudMessage = when {
                 meta == null -> l("not_signed_in")
                 meta.needsReauth -> l("sync_needs_reauth")
@@ -473,6 +497,14 @@ private fun NotebookHome(
                 signedIn = signedIn,
                 busy = cloudBusy,
                 message = cloudMessage,
+                // 哪一個帳號、上次什麼時候同步、自選資料夾在哪裡。
+                // 這三行是使用者判斷「同步到底有沒有在動」的唯一依據。
+                account = com.kairumo.padnote.library.SyncHistory.account(activity),
+                lastSync = com.kairumo.padnote.library.SyncHistory
+                    .lastGoogleSync(activity, l("sync_never")),
+                folderPath = com.kairumo.padnote.sync.FolderSync.displayPath(activity),
+                folderLastSync = com.kairumo.padnote.library.SyncHistory
+                    .lastFolderSync(activity, l("sync_never")),
                 onSignIn = {
                     // 授權會跳到系統瀏覽器，回來時由 OAuthRedirectActivity 接。
                     com.kairumo.padnote.oauth.GoogleAuth.startSignIn(activity)
@@ -629,11 +661,13 @@ private fun NotebookHome(
 
     if (creatingNotebook) {
         NewNotebookDialog(
-            themes = DocumentTemplateCatalog.themes(activity),
+            // **只列文件範本。** 紙張樣板那個主題掛在上面的紙張清單底下，
+            // 兩個地方都列的話同一份範本會有兩個入口。
+            themes = DocumentTemplateCatalog.documentThemes(activity),
             lang = catalogLang(lang),
             l = ::l,
             onDismiss = { creatingNotebook = false },
-            onConfirm = { title, templateId, kind ->
+            onConfirm = { title, templateId, kind, paperId, paperVariant ->
                 creatingNotebook = false
                 // 建在使用者當下看著的那一層 —— 一律建在最上層的話，
                 // 人在某個資料夾裡按「新增」，東西卻出現在別的地方。
@@ -642,7 +676,7 @@ private fun NotebookHome(
                 // 線框紙上 —— 本文底下壓著兩個手機外框。
                 val tmpl = templateId?.let { DocumentTemplateCatalog.template(activity, it) }
                 val paper = tmpl?.let { DocumentTemplateCatalog.paperOf(it) }
-                    ?: uniffi.padnote_core.PageStyle.BLANK
+                    ?: DocumentTemplateCatalog.paperStyle(paperId)
                 val id = NotebookLibrary.create(activity, name, device, folderId, style = paper)
                 if (id != null) {
                     // 選了文件範本就把內容鋪進去。開檔失敗也不擋 ——
@@ -652,6 +686,16 @@ private fun NotebookHome(
                             DocumentTemplateCatalog.apply(
                                 session, page, tmpl, kind, catalogLang(lang)
                             )
+                        }
+                    } else if (paperVariant != null) {
+                        // 沒選文件範本，但紙張自己帶了示範內容。
+                        DocumentTemplateCatalog.paperTemplate(activity, paperId)?.let { paperTmpl ->
+                            NotebookLibrary.open(activity, id, device, name)
+                                ?.let { (session, page) ->
+                                    DocumentTemplateCatalog.apply(
+                                        session, page, paperTmpl, paperVariant, catalogLang(lang)
+                                    )
+                                }
                         }
                     }
                     revision++
@@ -1336,6 +1380,11 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     var showMenu by remember { mutableStateOf(false) }
     // 頁面結構欄。與 Apple 端一樣預設收起來 —— 手機上它會吃掉大半個畫布。
     var showPageSidebar by remember { mutableStateOf(false) }
+    // 畫布的縮放與平移。換頁時歸位 —— 上一頁放大到 3 倍之後翻頁，
+    // 新的一頁還停在同一個放大位置，使用者會以為翻頁沒成功。
+    var canvasScale by remember(pageId) { mutableFloatStateOf(1f) }
+    var canvasOffset by remember(pageId) { mutableStateOf(Offset.Zero) }
+    var canvasViewport by remember { mutableStateOf(Size.Zero) }
     // 這一格畫面有多寬，決定側欄要並排還是覆蓋。**用實際寬度算**，
     // 不是查尺寸級別的表：摺疊機與分割視窗的寬度是連續變化的。
     val configuration = LocalConfiguration.current
@@ -1896,7 +1945,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             )
         }
 
-        val canvasDensity = LocalDensity.current.density
+
 
 
         // 兩條完全獨立的路。連續模式不碰整頁模式的任何一行 ——
@@ -1959,6 +2008,8 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
         //
         // 落點與尺寸的計算走 `ImageDropPlacement`，與 Apple 端同一份規則 ——
         // 同一張圖拖到同一個位置，兩台裝置上要落在同一個地方。
+        val canvasDensity = LocalDensity.current.density
+
         val imageDropTarget = remember(pageId, canvasDensity) {
             object : DragAndDropTarget {
                 override fun onEntered(event: DragAndDropEvent) { isImageDropTargeted = true }
@@ -2045,6 +2096,32 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 )
             }
         ) {
+        // **畫布的捲動與縮放。**
+        //
+        // 在此之前整頁模式的畫布是一個固定的 `Box` —— 既不捲動也不縮放。
+        // 使用者的回報是「在手機上手指沒辦法捲動，也沒辦法變更畫面大小」，
+        // 而那不是設定錯了，是根本沒做（連續模式只是剛好外面包了
+        // `LazyColumn` 才捲得動）。
+        //
+        // 規則走核心的 `canvasGesture`，兩端同一套：
+        //   手指能畫 → 一指畫線、兩指平移與縮放
+        //   只有筆能畫 / 打字模式 → 一指就平移
+        val gesture = remember(editorMode, penOnly) {
+            uniffi.padnote_core.canvasGesture(
+                if (editorMode == EditorMode.DRAW) {
+                    uniffi.padnote_core.FfiEditorMode.DRAW
+                } else {
+                    uniffi.padnote_core.FfiEditorMode.TYPE
+                },
+                if (penOnly) {
+                    uniffi.padnote_core.FfiInkPolicy.STYLUS_ONLY
+                } else {
+                    uniffi.padnote_core.FfiInkPolicy.ANY_INPUT
+                }
+            )
+        }
+        val onePanFinger = gesture.oneFinger == uniffi.padnote_core.FfiFingerAction.PAN
+
         Box(
             modifier = Modifier.weight(1f).fillMaxHeight().padding(8.dp)
                 .dragAndDropTarget(
@@ -2053,8 +2130,97 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     },
                     target = imageDropTarget
                 )
+                // 手勢攔在**外層**，而且只在該攔的時候攔。
+                //
+                // 全部攔下來的話筆就畫不了了；完全不攔的話，`InkCanvas` 的
+                // `pointerInteropFilter` 會把每一個觸控都吃掉。所以逐點判斷：
+                // 兩指以上一律是平移縮放，一指只有在「手指本來就不能畫」時才攔。
+                .pointerInput(onePanFinger, canvasViewport) {
+                    awaitPointerEventScope {
+                        while (true) {
+                            val first = awaitPointerEvent(PointerEventPass.Initial)
+                            val pointers = first.changes.count { it.pressed }
+                            val stylus = first.changes.any {
+                                it.type == PointerType.Stylus
+                            }
+                            // 一指平移**只在放大之後**才接管。
+                            //
+                            // 沒放大時頁面剛好是一個畫面寬，一指拖曳會把整頁
+                            // 拉出畫布範圍（實機上看到工具列被蓋掉），而且那
+                            // 不是使用者要的 —— 想看下面就用連續模式或翻頁。
+                            // 放大之後就不一樣了：畫面裝不下整頁，不給拖就
+                            // 永遠看不到右下角。
+                            val takeIt = pointers >= 2 ||
+                                (onePanFinger && !stylus && canvasScale > 1f)
+                            if (!takeIt) continue
+
+                            var event = first
+                            while (event.changes.any { it.pressed }) {
+                                val zoomChange = event.calculateZoom()
+                                val panChange = event.calculatePan()
+                                if (zoomChange != 1f || panChange != Offset.Zero) {
+                                    canvasScale = uniffi.padnote_core.clampZoom(
+                                        canvasScale * zoomChange
+                                    )
+                                    // **內容是「頁面」，不是「視窗」。**
+                                    //
+                                    // 一開始兩個參數都填了視窗尺寸，於是
+                                    // `scaled <= viewport` 永遠成立、可拖範圍
+                                    // 一律是 0 —— 畫面完全不動，看起來就像
+                                    // 手勢沒接上。頁面比視窗高的時候本來就
+                                    // 該拖得動。
+                                    val contentW = PageGeometry.width * canvasDensity
+                                    val contentH = PageGeometry.height * canvasDensity
+                                    val maxX = uniffi.padnote_core.maxPanOffset(
+                                        contentW, canvasViewport.width, canvasScale
+                                    )
+                                    val maxY = uniffi.padnote_core.maxPanOffset(
+                                        contentH, canvasViewport.height, canvasScale
+                                    )
+                                    canvasOffset = Offset(
+                                        (canvasOffset.x + panChange.x).coerceIn(-maxX, maxX),
+                                        (canvasOffset.y + panChange.y).coerceIn(-maxY, maxY)
+                                    )
+                                }
+                                event.changes.forEach { it.consume() }
+                                event = awaitPointerEvent(PointerEventPass.Initial)
+                            }
+                        }
+                    }
+                }
+                .onSizeChanged {
+                    canvasViewport = Size(it.width.toFloat(), it.height.toFloat())
+                }
         ) {
-            if (lowLatency && !lowLatencyUnavailable) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer(
+                    scaleX = canvasScale,
+                    scaleY = canvasScale,
+                    translationX = canvasOffset.x,
+                    translationY = canvasOffset.y,
+                    // **一定要裁切。** 不裁的話平移之後頁面會畫到畫布範圍
+                    // 外面，蓋在工具列上 —— 實機上看到的是「捲一下工具列
+                    // 就不見了」。
+                    clip = true
+                )
+        ) {
+            // 紙張底紋。畫在墨跡**底下**：先畫的先被蓋住。
+            //
+            // 底紋來自那一頁自己存的 `PageStyle`（`add_page` 寫進去的），
+            // 不是筆記層級的設定 —— 同一本筆記可以一頁方格、一頁康乃爾。
+            val pageStyle = remember(pageId, revision) {
+                runCatching {
+                    notebook?.first?.pageStyle(pageId ?: return@runCatching null)
+                }.getOrNull() ?: uniffi.padnote_core.PageStyle.BLANK
+            }
+            // 縮放時不能走低延遲路徑。
+            //
+            // `LowLatencyInkCanvas` 畫在 `SurfaceView` 上，而 SurfaceView 是
+            // 另一層合成的表面 —— `graphicsLayer` 的縮放**對它無效**，
+            // 結果是底下的頁面縮小了、筆跡還是原本大小，兩層對不起來。
+            if (lowLatency && !lowLatencyUnavailable && canvasScale == 1f) {
                 LowLatencyInkCanvas(
                     engine = engine,
                     latency = latency,
@@ -2070,6 +2236,10 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     modifier = Modifier.fillMaxSize(),
                     onInkChanged = { revision++ },
                     contentVersion = revision,
+                    // 底紋要畫在**畫布自己的白底之上、筆跡之下**。
+                    // 疊一層 Composable 在外面是不行的：`InkCanvas` 會用
+                    // `Color.White` 把整塊塗掉，底紋就消失了（實機看過）。
+                    pageStyle = pageStyle,
                     // 打字模式下筆也不會畫線 —— 這個模式只處理文字與物件。
                     acceptsInk = editorMode == EditorMode.DRAW
                 )
@@ -2356,6 +2526,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )
             }
+        }
         }
         }
     }

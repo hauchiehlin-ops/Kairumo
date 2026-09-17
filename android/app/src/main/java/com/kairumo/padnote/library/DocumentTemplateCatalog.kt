@@ -30,6 +30,14 @@ object DocumentTemplateCatalog {
 
     data class Theme(
         val id: String,
+        /**
+         * `"document"`（文件範本）或 `"paper"`（紙張樣板）。
+         *
+         * 兩者的資料與排版完全一樣，差別只在介面上掛在哪裡：文件範本在
+         * 收合的樹裡，紙張樣板掛在紙張清單底下。用 id 去猜的話，那張
+         * 對照表遲早會跟 `templates/src/` 分岔。
+         */
+        val kind: String,
         val icon: String,
         val name: Map<String, String>,
         val categories: List<Category>
@@ -90,6 +98,18 @@ object DocumentTemplateCatalog {
         cached = parsed
         return parsed
     }
+
+    /** 文件範本（簽、契約、會議紀錄…）。收合的那棵樹用這一份。 */
+    fun documentThemes(context: Context): List<Theme> =
+        themes(context).filter { it.kind != "paper" }
+
+    /** 紙張樣板自己的示範內容。用紙張的 id 就查得到。 */
+    fun paperTemplate(context: Context, paperId: String): Template? =
+        themes(context).asSequence()
+            .filter { it.kind == "paper" }
+            .flatMap { it.categories.asSequence() }
+            .flatMap { it.templates.asSequence() }
+            .firstOrNull { it.id == paperId }
 
     fun template(context: Context, id: String): Template? =
         themes(context).asSequence()
@@ -181,6 +201,13 @@ object DocumentTemplateCatalog {
      * 於是紙張與文件各選各的，實機上出現過一份公文「簽」鋪在行動端線框紙
      * 上：本文底下壓著兩個手機外框。對照表在核心，兩端才不會各給一個答案。
      */
+    /** 核心的紙張 id → 核心的 `PageStyle`。 */
+    fun paperStyle(paperId: String): uniffi.padnote_core.PageStyle =
+        uniffi.padnote_core.paperTemplates()
+            .firstOrNull { it.id == paperId }
+            ?.pageStyle
+            ?: uniffi.padnote_core.PageStyle.BLANK
+
     fun paperOf(template: Template): uniffi.padnote_core.PageStyle =
         when (uniffi.padnote_core.docTemplatePaperId(template.pageStyle)) {
             "lined" -> uniffi.padnote_core.PageStyle.LINED
@@ -242,6 +269,7 @@ object DocumentTemplateCatalog {
             themes.add(
                 Theme(
                     theme.optString("id"),
+                    theme.optString("kind", "document"),
                     theme.optJSONObject("icon")?.optString("android").orEmpty(),
                     strings(theme.optJSONObject("name")),
                     categories

@@ -2,6 +2,7 @@ package com.kairumo.padnote.ink
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import com.kairumo.padnote.canvas.drawPageBackground
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -36,6 +37,13 @@ fun InkCanvas(
     engine: InkEngine,
     modifier: Modifier = Modifier,
     backgroundColor: Color = Color.White,
+    /**
+     * 紙張底紋。畫在白底之上、筆跡之下。
+     *
+     * 疊一層 Composable 在 `InkCanvas` **外面**是行不通的 —— 這裡用
+     * `.background(Color.White)` 把整塊塗掉，外層畫的底紋會整個不見。
+     */
+    pageStyle: uniffi.padnote_core.PageStyle = uniffi.padnote_core.PageStyle.BLANK,
     inkColor: Color = Color.Black,
     /// 筆畫有變動時通知外層（例如更新「N 筆」的顯示）。
     onInkChanged: () -> Unit = {},
@@ -113,6 +121,9 @@ fun InkCanvas(
         @Suppress("UNUSED_EXPRESSION") revision
         @Suppress("UNUSED_EXPRESSION") contentVersion
         @Suppress("UNUSED_EXPRESSION") liveVersion
+
+        // 底紋先畫 —— 先畫的先被蓋住，筆跡要在它上面。
+        drawPageBackground(pageStyle, density)
 
         drawPageBoundary(density)
 

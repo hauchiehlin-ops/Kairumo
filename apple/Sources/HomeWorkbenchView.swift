@@ -2288,6 +2288,43 @@ extension AppDiagnosticsSheet {
                     .foregroundColor(.secondary)
             }
 
+            // **哪一個帳號、東西放在哪裡、上次什麼時候同步的。**
+            //
+            // 原本這一整區只有「已登入 / 尚未登入」兩種狀態，使用者看不出
+            // 資料進了哪一個 Drive。一台裝置上有兩個 Google 帳號是常態，
+            // 而「同步好像沒作用」最常見的真正原因就是兩台連到不同帳號。
+            if googleAuth.isSignedIn {
+                if let email = googleAuth.accountEmail {
+                    HStack {
+                        Text(localizationManager.localized("sync_account"))
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(email)
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    .font(.footnote)
+                }
+
+                HStack(alignment: .top) {
+                    Text(localizationManager.localized("sync_destination"))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(localizationManager.localized("sync_destination_appdata"))
+                        .multilineTextAlignment(.trailing)
+                }
+                .font(.footnote)
+
+                HStack {
+                    Text(localizationManager.localized("sync_last_at"))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(SyncHistory.lastGoogleSyncDescription(
+                        none: localizationManager.localized("sync_never")))
+                }
+                .font(.footnote)
+            }
+
             if let googleMessage {
                 Text(googleMessage)
                     .font(.footnote)
@@ -2346,6 +2383,9 @@ extension AppDiagnosticsSheet {
             googleMessage = localizationManager.localized("not_signed_in")
             return
         }
+        // 成功才記時間 —— 失敗也記的話，「上次同步」會變成
+        // 「上次按下按鈕」，那正好是使用者想分辨的兩件事。
+        if report.failures.isEmpty { SyncHistory.markGoogleSynced() }
         if let failure = report.failures.first {
             googleMessage = "\(failure.key)：\(failure.value)"
         } else if report.isNoOp {
@@ -2367,10 +2407,38 @@ extension AppDiagnosticsSheet {
             HStack {
                 Text(localizationManager.localized("migration_status"))
                 Spacer()
-                Text(CloudSyncFolder.resolveFolder()?.lastPathComponent
-                     ?? localizationManager.localized("sync_not_configured"))
+                Text(CloudSyncFolder.resolveFolder() == nil
+                     ? localizationManager.localized("sync_not_configured")
+                     : localizationManager.localized("sync_section"))
                     .foregroundColor(.secondary)
                     .lineLimit(1)
+            }
+
+            // **完整路徑，不是只有最後一層資料夾名稱。**
+            //
+            // 原本只顯示 `lastPathComponent` —— 使用者有兩個都叫
+            // 「Kairumo」的資料夾（一個在 iCloud、一個在本機）時，
+            // 畫面上兩者一模一樣，看不出同步到底指向哪一個。
+            if let folder = CloudSyncFolder.resolveFolder() {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(localizationManager.localized("sync_folder_path"))
+                        .foregroundColor(.secondary)
+                    Text(folder.path.replacingOccurrences(
+                        of: NSHomeDirectory(), with: "~"))
+                        .font(.system(.footnote, design: .monospaced))
+                        .lineLimit(2)
+                        .truncationMode(.middle)
+                }
+                .font(.footnote)
+
+                HStack {
+                    Text(localizationManager.localized("sync_last_at"))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(SyncHistory.lastFolderSyncDescription(
+                        none: localizationManager.localized("sync_never")))
+                }
+                .font(.footnote)
             }
 
             if let syncMessage {
@@ -2424,6 +2492,9 @@ extension AppDiagnosticsSheet {
         let report = NotebookSyncCoordinator.run(
             store: store, folder: folder, deviceId: NotebookMigration.deviceId)
 
+        if report.failures.isEmpty && report.needsAttention.isEmpty {
+            SyncHistory.markFolderSynced()
+        }
         if let first = report.needsAttention.first {
             syncMessage = localizationManager.localized("sync_needs_attention")
                 .replacingFirst("%@", with: first)

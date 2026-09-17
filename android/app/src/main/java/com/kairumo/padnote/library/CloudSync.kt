@@ -26,6 +26,32 @@ object CloudSync {
      *
      * 回傳 null 表示沒登入。
      */
+    /**
+     * 這些筆記正在同步到**誰的** Drive。
+     *
+     * 走 Drive 的 `about.get` —— 它在 `drive.appdata` 這個範圍底下就讀得到
+     * `user.emailAddress`，**不需要 `openid email`**，也就不必讓使用者
+     * 重新同意一次。多要一個範圍只為了顯示一行字，與這個 App 的定位相反。
+     *
+     * 拿不到就回 null：這是一行顯示用的字，不該讓同步失敗。
+     * **不要在主執行緒呼叫** —— 它打網路。
+     */
+    fun accountEmail(context: Context): String? = runCatching {
+        val token = com.kairumo.padnote.oauth.GoogleAuth.validAccessToken(context)
+            ?.takeIf { it.isNotEmpty() } ?: return null
+        val url = java.net.URL("https://www.googleapis.com/drive/v3/about?fields=user")
+        val conn = (url.openConnection() as java.net.HttpURLConnection).apply {
+            setRequestProperty("Authorization", "Bearer $token")
+            connectTimeout = 10_000
+            readTimeout = 10_000
+        }
+        val body = conn.inputStream.bufferedReader().use { it.readText() }
+        org.json.JSONObject(body)
+            .optJSONObject("user")
+            ?.optString("emailAddress")
+            ?.takeIf { it.isNotEmpty() }
+    }.getOrNull()
+
     fun runOnce(context: Context): FfiCloudSyncResult? {
         // 這裡面可能會先去更新權杖，所以也是網路 I/O。
         val token = GoogleAuth.validAccessToken(context) ?: return null

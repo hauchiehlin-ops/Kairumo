@@ -160,11 +160,24 @@ object NotebookLibrary {
                 path.absolutePath, title, System.currentTimeMillis().toULong(), deviceId
             )
         }
-        // 紙張只在**建立第一頁**時決定得了：核心沒有改既有頁面底紋的操作，
-        // 而那是一筆會進 oplog 的格式變更，不能為了這件事開這個口子。
+        // 紙張只在**沒有任何頁**時才由這裡決定。
+        //
+        // 不要在這裡「順便把第一頁換成指定的紙張」—— `open()` 在一次
+        // 新增筆記的流程裡會被呼叫三次，而其中兩次用的是預設的 BLANK。
+        // 那樣寫的結果是：第一次正確設成康乃爾，第二次又被換回空白。
+        // 換紙張是**建立**那一刻的事，所以它在 `create()` 裡。
         val page = session.firstPageId() ?: session.addPage(style)
         session to page
     }.getOrNull()
+
+    /** 這一頁是不是完全空的。換掉第一頁之前一定要確認。 */
+    private fun isPageEmpty(session: PadnoteSession, pageId: String): Boolean =
+        runCatching {
+            session.drawOrder(pageId).isEmpty() &&
+                session.textBlockIds(pageId).isEmpty() &&
+                session.tableBlockIds(pageId).isEmpty() &&
+                session.imageBlockIds(pageId).isEmpty()
+        }.getOrDefault(false)
 
     /**
      * 建立一本新筆記本，回傳它的 id。
@@ -181,7 +194,26 @@ object NotebookLibrary {
         style: uniffi.padnote_core.PageStyle = uniffi.padnote_core.PageStyle.BLANK
     ): String? {
         val id = java.util.UUID.randomUUID().toString()
-        if (open(context, id, deviceId, title, style = style) == null) return null
+        val opened = open(context, id, deviceId, title, style = style) ?: return null
+
+        // **核心建立筆記本時已經先放了一頁 `Lined`。**
+        //
+        // 所以 `open()` 裡的 `firstPageId() ?: addPage(style)` 永遠走前半段，
+        // 使用者挑的紙張被完全忽略 —— 每一本都是橫線紙。實機上看得出來：
+        // 選了康乃爾，畫面上卻是滿版的橫線。
+        //
+        // 核心沒有「改既有頁面底紋」的操作（那是一筆會進 oplog 的格式變更，
+        // 不為了這件事開這個口子），但**先加一頁、再刪掉原本那頁**用的是
+        // 既有的兩個操作，而且順序上不會出現零頁的中間狀態。
+        //
+        // 只在這裡做：這一刻筆記本必定是空的，不可能刪到使用者的內容。
+        val (session, firstPage) = opened
+        runCatching {
+            if (session.pageStyle(firstPage) != style && session.pageCount() == 1u) {
+                session.addPage(style)
+                session.removePage(firstPage)
+            }
+        }
         AccountSyncStore.record(context, id = id, title = title, parentId = folderId)
         return id
     }

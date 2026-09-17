@@ -57,7 +57,13 @@ fun NewNotebookDialog(
     lang: String,
     l: (String) -> String,
     onDismiss: () -> Unit,
-    onConfirm: (title: String, templateId: String?, kind: DocumentTemplateCatalog.VariantKind) -> Unit
+    onConfirm: (
+        title: String,
+        templateId: String?,
+        kind: DocumentTemplateCatalog.VariantKind,
+        paperId: String,
+        paperVariant: DocumentTemplateCatalog.VariantKind?
+    ) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
     var selectedId by remember { mutableStateOf<String?>(null) }
@@ -65,6 +71,19 @@ fun NewNotebookDialog(
         mutableStateOf(DocumentTemplateCatalog.VariantKind.EXAMPLE)
     }
     var expanded by remember { mutableStateOf<String?>(null) }
+
+    // 紙張。清單來自核心 `paperTemplates()` —— Apple 端讀的是同一份，
+    // 各寫一份的話兩邊的紙張種類與順序遲早會不一樣。
+    val paperThemes = remember { uniffi.padnote_core.paperThemes() }
+    var paperTheme by remember { mutableStateOf(paperThemes.first()) }
+    var paperId by remember { mutableStateOf("blank") }
+    // 紙張要不要順便鋪一份示範內容。預設不套用 —— 最常用的動作仍然是
+    // 「給我一張空白紙」，那件事不該因此多按一下。
+    var paperVariant by remember {
+        mutableStateOf<DocumentTemplateCatalog.VariantKind?>(null)
+    }
+    // 選了文件範本，紙張就跟著它走：公文「簽」不該鋪在行動端線框紙上。
+    val paperLocked = selectedId != null
     // 高度由使用者拉。固定 460dp 的話，範本樹一展開就得在一個小窗裡捲很久。
     val height = rememberDialogHeight("newNotebook")
 
@@ -72,7 +91,9 @@ fun NewNotebookDialog(
         onDismissRequest = onDismiss,
         title = { Text(l("new_notebook")) },
         confirmButton = {
-            TextButton(onClick = { onConfirm(title, selectedId, kind) }) { Text(l("confirm")) }
+            TextButton(onClick = {
+                onConfirm(title, selectedId, kind, paperId, paperVariant)
+            }) { Text(l("confirm")) }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(l("cancel")) } },
         text = {
@@ -89,6 +110,100 @@ fun NewNotebookDialog(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+
+                // ── 紙張（主題分類 + 清單 + 內容）───────────────────
+                //
+                // 在此之前 Android 的「新增筆記」**連紙張都不能選** ——
+                // 同一個 App，一邊能挑康乃爾格式，一邊只拿得到空白紙。
+                item {
+                    Text(
+                        l("select_template"),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
+                item {
+                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                        paperThemes.forEachIndexed { i, theme ->
+                            SegmentedButton(
+                                selected = paperTheme == theme,
+                                enabled = !paperLocked,
+                                onClick = {
+                                    paperTheme = theme
+                                    // 切主題就選那一組的第一張，否則清單換了、
+                                    // 勾選卻還留在上一組看不見的那一張。
+                                    paperId = uniffi.padnote_core
+                                        .paperTemplatesForTheme(theme).first().id
+                                },
+                                shape = SegmentedButtonDefaults.itemShape(i, paperThemes.size)
+                            ) {
+                                Text(
+                                    l(uniffi.padnote_core.paperThemeKey(theme)),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+                }
+                items(
+                    uniffi.padnote_core.paperTemplatesForTheme(paperTheme),
+                    key = { it.id }
+                ) { paper ->
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !paperLocked) { paperId = paper.id }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = paperId == paper.id,
+                            enabled = !paperLocked,
+                            onClick = { paperId = paper.id }
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(l(paper.titleKey), style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                l(paper.descKey),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+                item {
+                    if (paperLocked) {
+                        Text(
+                            l("paper_locked_by_doc"),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        // 這張紙要不要帶一份示範內容。
+                        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                            val options: List<DocumentTemplateCatalog.VariantKind?> =
+                                listOf(null) + DocumentTemplateCatalog.VariantKind.entries
+                            options.forEachIndexed { i, option ->
+                                SegmentedButton(
+                                    selected = paperVariant == option,
+                                    onClick = { paperVariant = option },
+                                    shape = SegmentedButtonDefaults.itemShape(i, options.size)
+                                ) {
+                                    Text(
+                                        l(option?.labelKey ?: "paper_content_none"),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
 
                 item {

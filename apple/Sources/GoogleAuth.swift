@@ -31,6 +31,23 @@ public final class GoogleAuth: NSObject, ObservableObject {
     /// 有沒有可用的長期授權。
     @Published public private(set) var isSignedIn: Bool = false
 
+    /// 這些筆記正在同步到**誰的** Drive。
+    ///
+    /// # 為什麼要顯示它
+    ///
+    /// 同步頁原本只有「已登入 / 尚未登入」兩種狀態 —— 使用者看不出來
+    /// 資料進了哪一個帳號。一台裝置上有兩個 Google 帳號是常態，
+    /// 而「同步好像沒作用」最常見的真正原因就是兩台連到了不同帳號。
+    ///
+    /// # 為什麼不必新增授權範圍
+    ///
+    /// Drive 的 `about.get` 在 `drive.appdata` 這個範圍底下就讀得到
+    /// `user.emailAddress` —— **不需要 `openid email`**，也就不必讓使用者
+    /// 重新同意一次。多要一個範圍只為了顯示一行字，與這個 App 的定位相反。
+    @Published public private(set) var accountEmail: String?
+
+    private let accountEmailKey = "kairumo.google.accountEmail"
+
     private var session: ASWebAuthenticationSession?
     /// 授權期間暫存的 PKCE。**不落盤** —— 它只在這一次授權裡有意義。
     private var pendingVerifier: String = ""
@@ -39,6 +56,28 @@ public final class GoogleAuth: NSObject, ObservableObject {
     private override init() {
         super.init()
         isSignedIn = !KeychainTokens.load().refreshToken.isEmpty
+        // 帳號只是顯示用的字串，放 UserDefaults 就好 —— 放 Keychain 的話
+        // 登出時忘了清會留下一個「已登出但還顯示著帳號」的狀態。
+        accountEmail = isSignedIn
+            ? UserDefaults.standard.string(forKey: accountEmailKey)
+            : nil
+    }
+
+    /// 向 Drive 問一次「這是誰的帳號」，並記下來。
+    ///
+    /// 失敗就靜靜放著：這是一行顯示用的字，拿不到不該讓同步失敗。
+    public func refreshAccountEmail() async {
+        guard isSignedIn, let token = await validAccessToken() else { return }
+        var request = URLRequest(
+            url: URL(string: "https://www.googleapis.com/drive/v3/about?fields=user")!)
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        guard let (data, _) = try? await URLSession.shared.data(for: request),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let user = json["user"] as? [String: Any],
+              let email = user["emailAddress"] as? String, !email.isEmpty
+        else { return }
+        accountEmail = email
+        UserDefaults.standard.set(email, forKey: accountEmailKey)
     }
 
     public enum Failure: LocalizedError {
@@ -113,6 +152,7 @@ public final class GoogleAuth: NSObject, ObservableObject {
             guard tokens.error.isEmpty else { return .failure(.server(tokens.error)) }
             KeychainTokens.save(tokens, previousRefresh: "")
             isSignedIn = !tokens.refreshToken.isEmpty
+            await refreshAccountEmail()
             return .success(())
         }
     }
@@ -180,6 +220,10 @@ public final class GoogleAuth: NSObject, ObservableObject {
         }
         KeychainTokens.clear()
         isSignedIn = false
+        // 登出要把顯示用的帳號一起清掉，否則畫面會停在
+        // 「尚未登入」＋一個還亮著的 email，看起來像登出失敗。
+        accountEmail = nil
+        UserDefaults.standard.removeObject(forKey: accountEmailKey)
     }
 
     private func post(_ body: String) async -> Result<String, Failure> {

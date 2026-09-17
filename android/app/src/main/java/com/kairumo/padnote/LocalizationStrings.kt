@@ -7042,6 +7042,14 @@ object LocalizationStrings {
             "ko" to "실물",
             "th" to "ภาพทึบ"
         ),
+        "sync_account" to mapOf(
+            "zh-Hant" to "帳號",
+            "en" to "Account",
+            "zh-Hans" to "账号",
+            "ja" to "アカウント",
+            "ko" to "계정",
+            "th" to "บัญชี"
+        ),
         "sync_choose_folder" to mapOf(
             "zh-Hant" to "選擇同步資料夾",
             "en" to "Choose Sync Folder",
@@ -7049,6 +7057,22 @@ object LocalizationStrings {
             "ja" to "同期フォルダを選択",
             "ko" to "동기화 폴더 선택",
             "th" to "เลือกโฟลเดอร์ซิงก์"
+        ),
+        "sync_destination" to mapOf(
+            "zh-Hant" to "同步目的地",
+            "en" to "Destination",
+            "zh-Hans" to "同步目的地",
+            "ja" to "保存先",
+            "ko" to "저장 위치",
+            "th" to "ปลายทาง"
+        ),
+        "sync_destination_appdata" to mapOf(
+            "zh-Hant" to "Google Drive · 應用程式資料夾（只有這個 App 看得到）",
+            "en" to "Google Drive · app data folder (only this app can see it)",
+            "zh-Hans" to "Google Drive · 应用数据文件夹（只有这个 App 看得到）",
+            "ja" to "Google ドライブ · アプリデータフォルダ（このアプリだけが見えます）",
+            "ko" to "Google 드라이브 · 앱 데이터 폴더(이 앱만 볼 수 있음)",
+            "th" to "Google ไดรฟ์ · โฟลเดอร์ข้อมูลแอป (มีเพียงแอปนี้ที่เห็น)"
         ),
         "sync_done" to mapOf(
             "zh-Hant" to "同步完成",
@@ -7073,7 +7097,10 @@ object LocalizationStrings {
             "ja" to "同期に失敗しました：%@",
             "ko" to "동기화 실패: %@",
             "th" to "ซิงค์ไม่สำเร็จ: %@"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "sync_folder_desc" to mapOf(
             "zh-Hant" to "指到 iCloud Drive 或 Google Drive 的資料夾，兩台裝置就會互相同步",
             "en" to "Point two devices at the same iCloud Drive or Google Drive folder",
@@ -7081,6 +7108,22 @@ object LocalizationStrings {
             "ja" to "iCloud Drive や Google Drive の同じフォルダを 2 台の端末に指定",
             "ko" to "두 기기를 같은 iCloud Drive 또는 Google Drive 폴더로 지정",
             "th" to "ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์ iCloud Drive หรือ Google Drive เดียวกัน"
+        ),
+        "sync_folder_path" to mapOf(
+            "zh-Hant" to "資料夾路徑",
+            "en" to "Folder",
+            "zh-Hans" to "资料夹路径",
+            "ja" to "フォルダ",
+            "ko" to "폴더",
+            "th" to "โฟลเดอร์"
+        ),
+        "sync_last_at" to mapOf(
+            "zh-Hant" to "上次同步",
+            "en" to "Last synced",
+            "zh-Hans" to "上次同步",
+            "ja" to "最終同期",
+            "ko" to "마지막 동기화",
+            "th" to "ซิงค์ล่าสุด"
         ),
         "sync_needs_attention" to mapOf(
             "zh-Hant" to "%@ 在兩台裝置上都被改過，已保留雲端那份，請自行確認",
@@ -7097,10 +7140,15 @@ object LocalizationStrings {
             "ja" to "セッションの有効期限が切れました。もう一度ログインしてください",
             "ko" to "세션이 만료되었습니다. 다시 로그인해 주세요",
             "th" to "เซสชันหมดอายุ โปรดลงชื่อเข้าใช้ใหม่"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
+        "sync_never" to mapOf(
+            "zh-Hant" to "尚未同步過",
+            "en" to "Not yet",
+            "zh-Hans" to "尚未同步过",
+            "ja" to "まだありません",
+            "ko" to "아직 없음",
+            "th" to "ยังไม่เคย"
+        ),
         "sync_not_configured" to mapOf(
             "zh-Hant" to "尚未選擇資料夾",
             "en" to "No folder chosen yet",
@@ -7692,7 +7740,10 @@ object LocalizationStrings {
             "ja" to "蛍光ペン",
             "ko" to "형광펜",
             "th" to "ปากกาเน้นข้อความ"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "tool_lasso" to mapOf(
             "zh-Hant" to "套索選取",
             "en" to "Lasso",
@@ -7740,10 +7791,7 @@ object LocalizationStrings {
             "ja" to "水彩筆",
             "ko" to "수채화 붓",
             "th" to "พู่กันสีน้ำ"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "txt_count" to mapOf(
             "zh-Hant" to "文字",
             "en" to "Text",

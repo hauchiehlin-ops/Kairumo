@@ -617,6 +617,14 @@ struct CanvasRepresentable: UIViewRepresentable {
     /// 這個模式下畫布接不接受筆畫。
     private var acceptsInk: Bool { editorMode == .draw }
 
+    /// 給核心看的模式。
+    private var ffiEditorMode: FfiEditorMode { editorMode == .draw ? .draw : .type }
+
+    /// 給核心看的輸入政策。`.anyInput` 才算「手指可以畫」。
+    private var ffiInkPolicy: FfiInkPolicy {
+        resolvedPolicy() == .anyInput ? .anyInput : .stylusOnly
+    }
+
     func makeUIView(context: Context) -> PKCanvasView {
         let canvas = AdaptiveCanvasView()
         canvas.drawingPolicy = resolvedPolicy()
@@ -641,6 +649,21 @@ struct CanvasRepresentable: UIViewRepresentable {
         canvas.alwaysBounceVertical = isScrollEnabled
         canvas.showsVerticalScrollIndicator = isScrollEnabled
         canvas.showsHorizontalScrollIndicator = false
+
+        // **捏合縮放。**
+        //
+        // `PKCanvasView` 是一個 `UIScrollView`，而 scroll view 的預設
+        // `minimumZoomScale` 與 `maximumZoomScale` **都是 1.0** —— 也就是
+        // 「不准縮放」。這兩行從來沒有被設定過，所以捏合手勢在任何裝置上
+        // 都不會有反應。使用者的回報是「手機上沒辦法變更畫面大小」，
+        // 而那不是設定錯了，是根本沒做。
+        //
+        // 範圍由核心給，兩端同一組數字。
+        let gesture = canvasGesture(mode: ffiEditorMode, ink: ffiInkPolicy)
+        canvas.minimumZoomScale = CGFloat(gesture.minZoom)
+        canvas.maximumZoomScale = CGFloat(gesture.maxZoom)
+        canvas.bouncesZoom = true
+
         canvas.drawing = drawing
 
         // 給自動化測試一個穩定的抓取點（畫面上有多個 scroll view）
@@ -690,6 +713,15 @@ struct CanvasRepresentable: UIViewRepresentable {
         let targetPolicy = resolvedPolicy()
         if uiView.drawingPolicy != targetPolicy {
             uiView.drawingPolicy = targetPolicy
+        }
+        // 模式切換時縮放範圍也要重設 —— 只在 makeUIView 設的話，
+        // SwiftUI 重用同一個 UIView 時會沿用舊值。
+        let gesture = canvasGesture(mode: ffiEditorMode, ink: ffiInkPolicy)
+        if uiView.minimumZoomScale != CGFloat(gesture.minZoom) {
+            uiView.minimumZoomScale = CGFloat(gesture.minZoom)
+        }
+        if uiView.maximumZoomScale != CGFloat(gesture.maxZoom) {
+            uiView.maximumZoomScale = CGFloat(gesture.maxZoom)
         }
         // 見 `acceptsInk`：政策擋不掉 Pencil，手勢本身要關。
         if uiView.drawingGestureRecognizer.isEnabled != acceptsInk {

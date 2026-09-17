@@ -6983,6 +6983,14 @@
     "zhHans": "实物",
     "zhHant": "實物"
   },
+  "sync_account": {
+    "en": "Account",
+    "ja": "アカウント",
+    "ko": "계정",
+    "th": "บัญชี",
+    "zhHans": "账号",
+    "zhHant": "帳號"
+  },
   "sync_choose_folder": {
     "en": "Choose Sync Folder",
     "ja": "同期フォルダを選択",
@@ -6990,6 +6998,22 @@
     "th": "เลือกโฟลเดอร์ซิงก์",
     "zhHans": "选择同步文件夹",
     "zhHant": "選擇同步資料夾"
+  },
+  "sync_destination": {
+    "en": "Destination",
+    "ja": "保存先",
+    "ko": "저장 위치",
+    "th": "ปลายทาง",
+    "zhHans": "同步目的地",
+    "zhHant": "同步目的地"
+  },
+  "sync_destination_appdata": {
+    "en": "Google Drive · app data folder (only this app can see it)",
+    "ja": "Google ドライブ · アプリデータフォルダ（このアプリだけが見えます）",
+    "ko": "Google 드라이브 · 앱 데이터 폴더(이 앱만 볼 수 있음)",
+    "th": "Google ไดรฟ์ · โฟลเดอร์ข้อมูลแอป (มีเพียงแอปนี้ที่เห็น)",
+    "zhHans": "Google Drive · 应用数据文件夹（只有这个 App 看得到）",
+    "zhHant": "Google Drive · 應用程式資料夾（只有這個 App 看得到）"
   },
   "sync_done": {
     "en": "Sync complete",
@@ -7023,6 +7047,22 @@
     "zhHans": "指到 iCloud Drive 或 Google Drive 的文件夹，两台设备就会互相同步",
     "zhHant": "指到 iCloud Drive 或 Google Drive 的資料夾，兩台裝置就會互相同步"
   },
+  "sync_folder_path": {
+    "en": "Folder",
+    "ja": "フォルダ",
+    "ko": "폴더",
+    "th": "โฟลเดอร์",
+    "zhHans": "资料夹路径",
+    "zhHant": "資料夾路徑"
+  },
+  "sync_last_at": {
+    "en": "Last synced",
+    "ja": "最終同期",
+    "ko": "마지막 동기화",
+    "th": "ซิงค์ล่าสุด",
+    "zhHans": "上次同步",
+    "zhHant": "上次同步"
+  },
   "sync_needs_attention": {
     "en": "%@ was changed on both devices; the cloud copy was kept — please check",
     "ja": "%@ は両方の端末で変更されています。クラウド側を残しました。ご確認ください",
@@ -7038,6 +7078,14 @@
     "th": "เซสชันหมดอายุ โปรดลงชื่อเข้าใช้ใหม่",
     "zhHans": "登录状态已过期，请重新登录",
     "zhHant": "登入狀態已過期，請重新登入"
+  },
+  "sync_never": {
+    "en": "Not yet",
+    "ja": "まだありません",
+    "ko": "아직 없음",
+    "th": "ยังไม่เคย",
+    "zhHans": "尚未同步过",
+    "zhHant": "尚未同步過"
   },
   "sync_not_configured": {
     "en": "No folder chosen yet",
