@@ -6154,12 +6154,12 @@ object LocalizationStrings {
             "th" to "ไม่มีบัญชี ไม่มีเซิร์ฟเวอร์ ไม่มีการติดตาม"
         ),
         "pro_color" to mapOf(
-            "zh-Hant" to "專業調色",
-            "en" to "Pro Color Studio",
-            "zh-Hans" to "专业调色",
-            "ja" to "プロ調色",
-            "ko" to "전문 조색",
-            "th" to "จานสีมืออาชีพ"
+            "zh-Hant" to "進階調色",
+            "en" to "Advanced Color Studio",
+            "zh-Hans" to "进阶调色",
+            "ja" to "高度な調色",
+            "ko" to "고급 색상 조색",
+            "th" to "สตูดิโอสีขั้นสูง"
         ),
         "punctuation_marks" to mapOf(
             "zh-Hant" to "標點符號",
@@ -7607,6 +7607,14 @@ object LocalizationStrings {
             "ko" to "로그아웃",
             "th" to "ออกจากระบบ"
         ),
+        "signed_in" to mapOf(
+            "zh-Hant" to "已登入",
+            "en" to "Signed in",
+            "zh-Hans" to "已登录",
+            "ja" to "ログイン済み",
+            "ko" to "로그인됨",
+            "th" to "ลงชื่อเข้าใช้แล้ว"
+        ),
         "snap_to_grid" to mapOf(
             "zh-Hant" to "吸附格線",
             "en" to "Snap to Grid",
@@ -7734,7 +7742,10 @@ object LocalizationStrings {
             "ja" to "特殊記号",
             "ko" to "특수 기호",
             "th" to "สัญลักษณ์พิเศษ"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "specs_info" to mapOf(
             "zh-Hant" to "實體規格與材料建議",
             "en" to "Specs & Material Suggestions",
@@ -7742,10 +7753,7 @@ object LocalizationStrings {
             "ja" to "仕様・材料の提案",
             "ko" to "사양 및 재료 권장사항",
             "th" to "ข้อมูลจำเพาะและคำแนะนำวัสดุ"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "standalone_recording" to mapOf(
             "zh-Hant" to "不附加（僅儲存為獨立錄音）",
             "en" to "Standalone (Save as separate audio file)",
@@ -8377,7 +8385,10 @@ object LocalizationStrings {
             "ja" to "計画・スケジュール",
             "ko" to "계획·일정",
             "th" to "วางแผนและตาราง"
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "theme_tools" to mapOf(
             "zh-Hant" to "主題工具",
             "en" to "Theme Tools",
@@ -8385,10 +8396,7 @@ object LocalizationStrings {
             "ja" to "テーマ別ツール",
             "ko" to "테마 도구",
             "th" to "เครื่องมือธีม"
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "theme_tracker" to mapOf(
             "zh-Hant" to "清單追蹤",
             "en" to "Lists & Trackers",
@@ -9020,7 +9028,10 @@ object LocalizationStrings {
             "ja" to "水彩筆",
             "ko" to "수채화 붓",
             "th" to "พู่กันสีน้ำ"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "transcribe_audio" to mapOf(
             "zh-Hant" to "音訊轉文字",
             "en" to "Audio to Text",
@@ -9028,10 +9039,7 @@ object LocalizationStrings {
             "ja" to "音声からテキストへ",
             "ko" to "음성을 텍스트로 변환",
             "th" to "แปลงเสียงเป็นข้อความ"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "transcribe_failed" to mapOf(
             "zh-Hant" to "轉錄失敗",
             "en" to "Transcription failed",

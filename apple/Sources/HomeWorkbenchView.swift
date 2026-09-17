@@ -1557,8 +1557,9 @@ public struct HomeWorkbenchView: View {
                             .foregroundStyle(Color.primary)
                         // 描述直接寫**目前狀態**而不是功能說明：使用者最想知道的是
                         // 「我到底登入了沒」，那一句比任何介紹都有用。
-                        Text(localizationManager.localized(
-                            homeGoogleAuth.isSignedIn ? "sync_section" : "not_signed_in"))
+                        Text(homeGoogleAuth.isSignedIn
+                             ? (homeGoogleAuth.accountEmail ?? localizationManager.localized("signed_in"))
+                             : localizationManager.localized("not_signed_in"))
                             .font(DS.Font.caption)
                             .foregroundStyle(DS.Color.secondaryText)
                     }
@@ -3181,7 +3182,7 @@ public struct CloudSyncDetailSheet: View {
                                 .foregroundColor(.primary)
 
                             Text(googleAuth.isSignedIn
-                                 ? localizationManager.localized("sync_section")
+                                 ? (googleAuth.accountEmail ?? localizationManager.localized("signed_in"))
                                  : localizationManager.localized("not_signed_in"))
                                 .font(DS.Font.cardTitle)
                                 .foregroundColor(googleAuth.isSignedIn ? .green : .secondary)

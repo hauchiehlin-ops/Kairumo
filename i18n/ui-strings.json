@@ -6096,12 +6096,12 @@
     "zhHant": "沒有帳號、沒有伺服器、沒有追蹤"
   },
   "pro_color": {
-    "en": "Pro Color Studio",
-    "ja": "プロ調色",
-    "ko": "전문 조색",
-    "th": "จานสีมืออาชีพ",
-    "zhHans": "专业调色",
-    "zhHant": "專業調色"
+    "en": "Advanced Color Studio",
+    "ja": "高度な調色",
+    "ko": "고급 색상 조색",
+    "th": "สตูดิโอสีขั้นสูง",
+    "zhHans": "进阶调色",
+    "zhHant": "進階調色"
   },
   "punctuation_marks": {
     "en": "Punctuation",
@@ -7534,6 +7534,14 @@
     "th": "ลงชื่อเข้าใช้ด้วย Google",
     "zhHans": "使用 Google 登录",
     "zhHant": "使用 Google 登入"
+  },
+  "signed_in": {
+    "en": "Signed in",
+    "ja": "ログイン済み",
+    "ko": "로그인됨",
+    "th": "ลงชื่อเข้าใช้แล้ว",
+    "zhHans": "已登录",
+    "zhHant": "已登入"
   },
   "sign_out": {
     "en": "Sign out",

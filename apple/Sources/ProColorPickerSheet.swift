@@ -2,7 +2,7 @@
 //  ProColorPickerSheet.swift
 //  Kairumo
 //
-//  專業級調色中樞 (Pro Color Studio)
+//  進階調色中樞 (Advanced Color Studio)
 //  支援 RGB、HSB、HEX 十六進位色碼精確輸入、不透明度調節與五大設計師色盤
 //
 

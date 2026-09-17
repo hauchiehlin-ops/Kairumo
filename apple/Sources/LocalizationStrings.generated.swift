@@ -6112,12 +6112,12 @@ extension LocalizationManager {
             .th: "ไม่มีบัญชี ไม่มีเซิร์ฟเวอร์ ไม่มีการติดตาม"
         ],
         "pro_color": [
-            .zhHant: "專業調色",
-            .en: "Pro Color Studio",
-            .zhHans: "专业调色",
-            .ja: "プロ調色",
-            .ko: "전문 조색",
-            .th: "จานสีมืออาชีพ"
+            .zhHant: "進階調色",
+            .en: "Advanced Color Studio",
+            .zhHans: "进阶调色",
+            .ja: "高度な調色",
+            .ko: "고급 색상 조색",
+            .th: "สตูดิโอสีขั้นสูง"
         ],
         "punctuation_marks": [
             .zhHant: "標點符號",
@@ -7558,6 +7558,14 @@ extension LocalizationManager {
             .ja: "ログアウト",
             .ko: "로그아웃",
             .th: "ออกจากระบบ"
+        ],
+        "signed_in": [
+            .zhHant: "已登入",
+            .en: "Signed in",
+            .zhHans: "已登录",
+            .ja: "ログイン済み",
+            .ko: "로그인됨",
+            .th: "ลงชื่อเข้าใช้แล้ว"
         ],
         "snap_to_grid": [
             .zhHant: "吸附格線",

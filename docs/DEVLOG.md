@@ -3,6 +3,27 @@
 > 反序排列（最新在上）。每個開發階段結束時追加一筆。
 > 記錄**為什麼**這樣做，而不只是做了什麼 —— 「做了什麼」看 git log 就好。
 
+## 2026-09-18 · Apple App Review 退件排除與全專案佔位符排查（App Completeness & IAP 誤判排除）
+
+### 一、App Icon 佔位符外觀排除（Guideline 2.1 - App Completeness）
+- **退件原因**：Apple Review 指出「Specifically, the icons contains placeholder content」。
+- **根本原因**：先前 `icon_1024.png` 與各尺寸圖示包含人工外框、陰影圓角卡片與純白色四周邊界（`RGB(255, 255, 255)`），在 iOS 系統自動套用 Squircle 遮罩裁切後，呈現在雙層圓角與外白邊內的卡片樣稿外觀，被機器與審查員識別為尚未完工的未完成設計稿（Placeholder）。
+- **解決方案**：
+  1. 提取品牌核心標誌（羽毛筆尖與錄音波形），將米色紙張質感背景垂直漸層與微妙雜訊延伸填滿整張 1024×1024 畫布。
+  2. 徹底消除四個角落純白留邊、人造陰影與假圓角，產出符合 Apple HIG 標準的 100% 滿版直角無 Alpha 正方形圖示。
+  3. 重新以高階 Lanczos 採樣生成 120、152、167、180 與 1024 完整規格圖示。
+
+### 二、消除 "Pro" 關鍵字以排除 IAP 審查誤判（Guideline 2.1(b)）
+- **退件原因**：Apple Review 指出「Specifically, the Upgrade to Pro button is unresponsive / references to Upgrade to Pro but associated IAP not submitted」。
+- **根本原因**：全 App 為 100% 免費開源軟體（Apache-2.0），專案中**完全沒有 StoreKit 模組或任何收費內購代碼**。然而，工具列調色盤原本設有 `pro_color`，英文翻譯為 `"Pro Color Studio"`（中文為「專業調色」）。審查員/自動掃描誤將 "Pro Color Studio" 認定為 "Upgrade to Pro" 的收費升級按鈕，因點擊後僅彈出調色盤而無 StoreKit 購買視窗，進而觸發「未提交 IAP」與「按鈕無反應」之罐頭拒絕訊息。
+- **解決方案**：
+  1. 在 `i18n/ui-strings.json` 中將 `pro_color` 全面正名為「進階調色」/ `"Advanced Color Studio"`（日文：`"高度な調色"`，韓文：`"고급 색상 조색"`，泰文：`"สตูดิโอสีขั้นสูง"`）。
+  2. 同步更新 Swift/Kotlin 代碼生成，修復所有相關註解與可及性標籤，徹底杜絕任何 "Pro" 敏感字引發的審查誤解。
+
+### 三、全專案佔位符排查與首頁重複字串修正
+- 排查全專案 `placeholder` 關鍵字，確認僅用於輸入框之正常引導提示文字（如搜尋提示、輸入文字提示），無任何未完成之假資料、Lorem ipsum 或未實作之 TODO 佔位符。
+- 修正 `HomeWorkbenchView.swift` 中首頁雲端同步卡片之副標題在已登入時重覆顯示「雲端同步」之問題，改為正確顯示使用者登入信箱帳號或「已登入」狀態（`signed_in`），消除副標題與主標題重疊之佔位感。
+
 ---
 
 ## 2026-09-18（早晨）· S-80 / S-85 / S-86 / S-93：手繪縮放座標反變換、側欄樣板插入與物件邊界約束全面實裝
