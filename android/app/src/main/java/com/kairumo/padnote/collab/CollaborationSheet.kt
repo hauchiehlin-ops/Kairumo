@@ -200,6 +200,19 @@ fun CollaborationSheet(
                             editingServer = false
                         }) { Text(l("cancel")) }
                     }
+                    Text(
+                        l("local_relay_hint"),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    // **協同不限於同一個網路。** 核心的位址檢查一直允許
+                    // `wss://` 連到任何主機，但介面上從頭到尾只講區網位址，
+                    // 於是使用者合理地以為只能在同一個 Wi-Fi 用。
+                    Text(
+                        l("relay_remote_hint"),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 } else {
                     Row(
                         Modifier.fillMaxWidth(),

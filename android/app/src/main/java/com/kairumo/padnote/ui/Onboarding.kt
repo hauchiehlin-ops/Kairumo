@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -102,9 +104,23 @@ fun OnboardingScreen(onDone: () -> Unit) {
         asked = true
     }
 
+    // 這一頁全是文字，所以用「可讀寬度」而不是一般的內容寬度。
+    //
+    // 在此之前是 `fillMaxSize()` —— 平板橫向 1280dp 時，「手寫、打字、
+    // 錄音同一頁…」那一行從最左邊拉到最右邊，眼睛要橫掃整個螢幕才讀完
+    // 一行。那是使用者看到的**第一個畫面**。
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
+    ) {
     Column(
+        // **順序有意義。** `fillMaxSize()` 會把最小寬度也設成父層的最大值，
+        // 後面再 `widthIn(max = 720)` 是沒有用的 —— 最小值贏。
+        // 要先夾住上限，再用 `fillMaxWidth()` 把寬度撐到那個上限。
         modifier = Modifier
-            .fillMaxSize()
+            .fillMaxHeight()
+            .widthIn(max = DS.Content.readableMaxWidth)
+            .fillMaxWidth()
             .verticalScroll(rememberScrollState())
             .padding(DS.Space.l),
         verticalArrangement = Arrangement.spacedBy(DS.Space.m)
@@ -154,5 +170,6 @@ fun OnboardingScreen(onDone: () -> Unit) {
             Text(l("onboarding_start"))
         }
         Spacer(Modifier.height(DS.Space.l))
+    }
     }
 }

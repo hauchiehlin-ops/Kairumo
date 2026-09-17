@@ -1425,16 +1425,32 @@ public struct NotebookEditorView: View {
             }
 
             // 6. 核心編輯工作區（包含左側筆記結構欄與右側畫布區）
-            HStack(spacing: 0) {
-                if showStructureSidebar {
-                    notebookStructureSidebar
-                        .frame(width: 280)
-                        .transition(.move(edge: .leading).combined(with: .opacity))
-                    ToolbarSeparator()
-                }
+            //
+            // **並排與否由核心的 `layoutMetrics` 決定，不是一律並排。**
+            //
+            // 原本只要 `showStructureSidebar` 就並排，於是在 iPhone 上
+            // 一條 280pt 的側欄配上 393pt 的螢幕 —— 畫布只剩 113pt，
+            // 比工具列還窄。使用者打開結構欄是為了「翻到第 9 頁」，
+            // 不是為了把畫布壓掉。塞不下就改用覆蓋（sheet）。
+            GeometryReader { geo in
+                let metrics = layoutMetrics(width: Float(geo.size.width))
+                HStack(spacing: 0) {
+                    if showStructureSidebar && metrics.sidebarIsInline {
+                        notebookStructureSidebar
+                            .frame(width: CGFloat(metrics.sidebarWidth))
+                            .transition(.move(edge: .leading).combined(with: .opacity))
+                        ToolbarSeparator()
+                    }
 
-                // 核心手寫/打字畫布區
-                canvasWorkArea
+                    // 核心手寫/打字畫布區
+                    canvasWorkArea
+                }
+                .sheet(isPresented: Binding(
+                    get: { showStructureSidebar && !metrics.sidebarIsInline },
+                    set: { if !$0 { showStructureSidebar = false } }
+                )) {
+                    resizableSheet { notebookStructureSidebar }
+                }
             }
             .background {
                 Group {

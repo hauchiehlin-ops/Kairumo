@@ -541,6 +541,24 @@ public struct CollaborationSheet: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+
+                Divider()
+
+                // **協同不限於同一個網路。**
+                //
+                // 核心的位址檢查一直是允許 `wss://` 連到任何主機的
+                // （見 `collab_check_server`），但介面上從頭到尾只講區網位址，
+                // 於是使用者合理地以為「這功能只能在同一個 Wi-Fi 用」。
+                // 能力一直在，只是沒有人講。
+                HStack(alignment: .top, spacing: 8) {
+                    Image(systemName: "globe")
+                        .font(.caption)
+                        .foregroundColor(.accentColor)
+                    Text(localizationManager.localized("relay_remote_hint"))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
             }
             .padding(.top, 8)
         } label: {

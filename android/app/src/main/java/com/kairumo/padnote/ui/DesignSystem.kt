@@ -92,6 +92,21 @@ object DS {
         return ((available + gap) / (minItem + gap)).toInt().coerceIn(1, max)
     }
 
+    /**
+     * 版面尺寸級別 —— **數字全部來自核心** `layoutMetrics`。
+     *
+     * 這裡只是把核心回傳的 `Float`（與密度無關的單位）包成 `Dp`。
+     * 自己再定一組門檻的話，Android 與 Apple 又會各有一套，
+     * 而那正是「同一本筆記在平板上長得不一樣」的來源。
+     */
+    object Layout {
+        val sidebarWidth: Dp = uniffi.padnote_core.layoutMetrics(1024f).sidebarWidth.dp
+
+        /** 這個寬度的版面數字。 */
+        fun metrics(width: Dp): uniffi.padnote_core.FfiLayoutMetrics =
+            uniffi.padnote_core.layoutMetrics(width.value)
+    }
+
     /** 圖示只有三種大小。四種以上就看得出來沒有系統。 */
     object Icon {
         val small: Dp = 16.dp

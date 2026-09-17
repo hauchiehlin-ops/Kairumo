@@ -3991,12 +3991,12 @@ object LocalizationStrings {
             "th" to "วางลิงก์"
         ),
         "local_relay_hint" to mapOf(
-            "zh-Hant" to "位址指向本機（127.0.0.1）時，App 會直接在這台裝置上開啟協同中繼；隊友請改填房主顯示的區域網路位址。",
-            "en" to "When the address points at this device (127.0.0.1), Kairumo runs the relay locally. Teammates should enter the LAN address shown by the host instead.",
-            "zh-Hans" to "地址指向本机（127.0.0.1）时，App 会直接在这台设备上开启协同中继；队友请改填房主显示的局域网地址。",
-            "ja" to "アドレスが端末自身 (127.0.0.1) の場合、この端末で中継を起動します。参加者はホストに表示された LAN アドレスを入力してください。",
-            "ko" to "주소가 이 기기(127.0.0.1)를 가리키면 앱이 직접 릴레이를 실행합니다. 참가자는 호스트에 표시된 LAN 주소를 입력하세요.",
-            "th" to "เมื่อที่อยู่ชี้มาที่อุปกรณ์นี้ (127.0.0.1) แอปจะเปิดรีเลย์บนเครื่องนี้ ผู้ร่วมงานให้กรอกที่อยู่ LAN ที่โฮสต์แสดงไว้"
+            "zh-Hant" to "位址指向 127.0.0.1 時，App 會直接在這台裝置上開啟協同中繼；同一網路的隊友請改填房主畫面顯示的區域網路位址。",
+            "en" to "Pointing at 127.0.0.1 makes this device host the relay; teammates on the same network enter the local address shown on the host's screen.",
+            "zh-Hans" to "地址指向 127.0.0.1 时，App 会直接在这台设备上开启协作中继；同一网络的队友请改填房主画面显示的局域网地址。",
+            "ja" to "127.0.0.1 を指している間はこの端末が中継を担当します。同じネットワークの参加者はホスト画面に表示されたローカルアドレスを入力してください。",
+            "ko" to "127.0.0.1 을 가리키는 동안에는 이 기기가 중계를 맡습니다. 같은 네트워크의 참여자는 호스트 화면에 표시된 로컬 주소를 입력하세요.",
+            "th" to "เมื่อชี้ไปที่ 127.0.0.1 เครื่องนี้จะทำหน้าที่รีเลย์เอง ผู้ร่วมงานในเครือข่ายเดียวกันให้กรอกที่อยู่ในเครือข่ายที่แสดงบนหน้าจอผู้เปิดห้อง"
         ),
         "marquee_hint" to mapOf(
             "zh-Hant" to "拖曳拉框選取物件；在選取範圍內拖曳＝整組搬移",
@@ -5556,6 +5556,14 @@ object LocalizationStrings {
             "ko" to "이 중계 서버는 인터넷에 있으므로 wss://(암호화)를 써야 합니다. ws://는 같은 로컬 네트워크에서만 허용됩니다.",
             "th" to "เซิร์ฟเวอร์รีเลย์นี้อยู่บนอินเทอร์เน็ต จึงต้องใช้ wss:// (เข้ารหัส) ส่วน ws:// ใช้ได้เฉพาะในเครือข่ายภายในเท่านั้น"
         ),
+        "relay_remote_hint" to mapOf(
+            "zh-Hant" to "不在同一個網路？協同並不限於單一網路。把你自己掌握的中繼填成 wss://…（TLS 位址），所有人就能從任何地方加入。明文 ws:// 只允許用在你自己的私有網路裡 —— 內容雖然已加密，房號與成員名單仍是明文。三種取得方式見操作手冊。",
+            "en" to "Not on the same network? Collaboration is not limited to one network. Enter any relay you control as wss://… (a TLS address) and everyone can join from anywhere. Plain ws:// is only accepted inside your own private network, because the room ID and membership travel in the clear even though the content does not. See the manual for three ways to get one.",
+            "zh-Hans" to "不在同一个网络？协作并不限于单一网络。把你自己掌握的中继填成 wss://…（TLS 地址），所有人就能从任何地方加入。明文 ws:// 只允许用在你自己的私有网络里 —— 内容虽然已加密，房号与成员名单仍是明文。三种取得方式见操作手册。",
+            "ja" to "同じネットワークでなくても使えます。共同編集は1つのネットワークに縛られません。自分で用意した中継を wss://…（TLS）で指定すれば、どこからでも参加できます。内容は暗号化されていてもルームIDや参加者は平文で流れるため、ws:// は自分のプライベートネットワーク内でのみ許可されます。入手方法は3通り、手引きを参照してください。",
+            "ko" to "같은 네트워크가 아니어도 됩니다. 협업은 한 네트워크에 묶여 있지 않습니다. 직접 운영하는 중계를 wss://…(TLS)로 입력하면 어디서든 참여할 수 있습니다. 내용은 암호화되지만 룸 ID와 참여자 정보는 평문으로 흐르므로 ws:// 는 자신의 사설 네트워크 안에서만 허용됩니다. 준비하는 세 가지 방법은 설명서를 참고하세요.",
+            "th" to "ไม่ได้อยู่เครือข่ายเดียวกันก็ใช้ได้ การทำงานร่วมกันไม่ได้ผูกกับเครือข่ายเดียว กรอกที่อยู่รีเลย์ที่คุณดูแลเองเป็น wss://… (TLS) แล้วทุกคนเข้าร่วมจากที่ไหนก็ได้ ws:// ธรรมดาอนุญาตเฉพาะในเครือข่ายส่วนตัวของคุณ เพราะ Room ID และรายชื่อผู้เข้าร่วมส่งแบบไม่เข้ารหัสแม้เนื้อหาจะเข้ารหัสแล้ว ดูสามวิธีได้ในคู่มือ"
+        ),
         "relay_server_address" to mapOf(
             "zh-Hant" to "協同伺服器位址",
             "en" to "Relay Server Address",
@@ -5803,7 +5811,10 @@ object LocalizationStrings {
             "ja" to "ルートフォルダ",
             "ko" to "최상위 폴더",
             "th" to "โฟลเดอร์ระดับบนสุด"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "rotate_handle" to mapOf(
             "zh-Hant" to "旋轉把手",
             "en" to "Rotate handle",
@@ -5811,10 +5822,7 @@ object LocalizationStrings {
             "ja" to "回転ハンドル",
             "ko" to "회전 핸들",
             "th" to "ที่จับหมุน"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "rotate_hint" to mapOf(
             "zh-Hant" to "拖曳旋轉3D視角",
             "en" to "Drag to Rotate",
@@ -6446,7 +6454,10 @@ object LocalizationStrings {
             "ja" to "月",
             "ko" to "달",
             "th" to "พระจันทร์เสี้ยว"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_octagon" to mapOf(
             "zh-Hant" to "八邊形",
             "en" to "Octagon",
@@ -6454,10 +6465,7 @@ object LocalizationStrings {
             "ja" to "八角形",
             "ko" to "팔각형",
             "th" to "แปดเหลี่ยม"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_offpageconnector" to mapOf(
             "zh-Hant" to "跨頁連接",
             "en" to "Off-page connector",
@@ -7089,7 +7097,10 @@ object LocalizationStrings {
             "ja" to "セッションの有効期限が切れました。もう一度ログインしてください",
             "ko" to "세션이 만료되었습니다. 다시 로그인해 주세요",
             "th" to "เซสชันหมดอายุ โปรดลงชื่อเข้าใช้ใหม่"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "sync_not_configured" to mapOf(
             "zh-Hant" to "尚未選擇資料夾",
             "en" to "No folder chosen yet",
@@ -7097,10 +7108,7 @@ object LocalizationStrings {
             "ja" to "フォルダ未選択",
             "ko" to "폴더를 아직 선택하지 않음",
             "th" to "ยังไม่ได้เลือกโฟลเดอร์"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_now" to mapOf(
             "zh-Hant" to "立即同步",
             "en" to "Sync Now",
@@ -7732,7 +7740,10 @@ object LocalizationStrings {
             "ja" to "水彩筆",
             "ko" to "수채화 붓",
             "th" to "พู่กันสีน้ำ"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "txt_count" to mapOf(
             "zh-Hant" to "文字",
             "en" to "Text",
@@ -7740,10 +7751,7 @@ object LocalizationStrings {
             "ja" to "テキスト",
             "ko" to "텍스트",
             "th" to "ข้อความ"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "type_mode_active" to mapOf(
             "zh-Hant" to "打字模式已就緒（畫筆已鎖定）",
             "en" to "Typing Mode Ready (Pen Locked)",

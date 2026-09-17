@@ -70,7 +70,13 @@ import com.kairumo.padnote.library.NotebookMeta
 import com.kairumo.padnote.comment.CommentLayer
 import com.kairumo.padnote.comment.CommentPin
 import com.kairumo.padnote.comment.CommentThreadDialog
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material3.VerticalDivider
+import androidx.compose.ui.platform.LocalConfiguration
 import com.kairumo.padnote.canvas.CanvasStackPanel
+import com.kairumo.padnote.canvas.PageSidebar
 import com.kairumo.padnote.canvas.LassoSelection
 import com.kairumo.padnote.canvas.LassoOverlay
 import com.kairumo.padnote.canvas.LassoActionBar
@@ -704,6 +710,30 @@ private fun NotebookHome(
  * 主體是畫布 —— 這是一個筆記 App，開起來就該能寫字。核心狀態那些數字移進
  * 對話框：它們是驗證用的憑據，不是使用者每天要看的東西。
  */
+/**
+ * 編輯器的工作區：左邊（可選）的頁面結構欄 + 右邊的畫布。
+ *
+ * 與 Apple 端的 `HStack { notebookStructureSidebar; canvasWorkArea }` 是同一個
+ * 版面 —— 側欄在工具列**下面**，不是蓋住整個畫面。
+ *
+ * 並排與否由核心的 `layoutMetrics(width).sidebarIsInline` 決定：塞不下兩欄
+ * 的寬度硬並排，畫布會只剩兩指寬，寫字的地方比工具列還窄。
+ */
+@Composable
+private fun ColumnScope.EditorWorkArea(
+    sidebarInline: Boolean,
+    sidebar: @Composable () -> Unit,
+    canvas: @Composable RowScope.() -> Unit
+) {
+    Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+        if (sidebarInline) {
+            sidebar()
+            VerticalDivider()
+        }
+        canvas()
+    }
+}
+
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
 private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) {
@@ -1304,6 +1334,14 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
         androidx.activity.compose.BackHandler { onBack() }
     }
     var showMenu by remember { mutableStateOf(false) }
+    // 頁面結構欄。與 Apple 端一樣預設收起來 —— 手機上它會吃掉大半個畫布。
+    var showPageSidebar by remember { mutableStateOf(false) }
+    // 這一格畫面有多寬，決定側欄要並排還是覆蓋。**用實際寬度算**，
+    // 不是查尺寸級別的表：摺疊機與分割視窗的寬度是連續變化的。
+    val configuration = LocalConfiguration.current
+    val layout = remember(configuration.screenWidthDp) {
+        uniffi.padnote_core.layoutMetrics(configuration.screenWidthDp.toFloat())
+    }
 
     Column(modifier = Modifier.fillMaxSize()) {
         // 只有兩個切換留在工具列上，其餘進溢位選單。
@@ -1348,6 +1386,19 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 onClick = { editorMode = EditorMode.TYPE },
                 label = { Text(l10n("mode_type")) }
             )
+
+            // 頁面結構欄的開關。Apple 端工具列上就有這一顆。
+            TextButton(onClick = { showPageSidebar = !showPageSidebar }) {
+                Text(
+                    l10n("structure_pages"),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = if (showPageSidebar) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    }
+                )
+            }
 
             // 分頁導覽。與 Apple 端同一組：上一頁 · 頁碼 · 下一頁 · 新增。
             TextButton(
@@ -1851,6 +1902,30 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
         // 兩條完全獨立的路。連續模式不碰整頁模式的任何一行 ——
         // 那一段綁著存檔、物件層、掌拒與模式切換，是最沒本錢壞掉的地方。
         if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
+            EditorWorkArea(
+                sidebarInline = showPageSidebar && layout.sidebarIsInline,
+                sidebar = {
+                    PageSidebar(
+                        session = notebook?.first,
+                        pageCount = pageCount,
+                        pageIndex = pageIndex,
+                        revision = textRevision + shapeRevision + tableRevision +
+                            chartRevision + imageRevision + model3DRevision,
+                        l = { key -> l10n(key) },
+                        onSelectPage = { pageIndex = it },
+                        onAddPage = {
+                            val s = notebook?.first
+                            if (s != null) {
+                                runCatching { s.addPage(uniffi.padnote_core.PageStyle.BLANK) }
+                                pageCount = runCatching { s.pageCount().toInt() }
+                                    .getOrDefault(pageCount + 1)
+                                pageIndex = pageCount - 1
+                            }
+                        },
+                        onClose = { showPageSidebar = false }
+                    )
+                }
+            ) {
             ContinuousPagesView(
                 session = notebook?.first,
                 meta = meta,
@@ -1871,8 +1946,9 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 // 之後新增一種物件很容易忘記接上，而症狀是「插進去看不到」。
                 reloadToken = textRevision + shapeRevision + tableRevision +
                     chartRevision + imageRevision + model3DRevision,
-                modifier = Modifier.weight(1f).fillMaxWidth()
+                modifier = Modifier.weight(1f).fillMaxHeight()
             )
+            }
             return@Column
         }
 
@@ -1945,8 +2021,32 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             }
         }
 
+        EditorWorkArea(
+            sidebarInline = showPageSidebar && layout.sidebarIsInline,
+            sidebar = {
+                PageSidebar(
+                    session = notebook?.first,
+                    pageCount = pageCount,
+                    pageIndex = pageIndex,
+                    revision = textRevision + shapeRevision + tableRevision +
+                        chartRevision + imageRevision + model3DRevision,
+                    l = { key -> l10n(key) },
+                    onSelectPage = { pageIndex = it },
+                    onAddPage = {
+                        val s = notebook?.first
+                        if (s != null) {
+                            runCatching { s.addPage(uniffi.padnote_core.PageStyle.BLANK) }
+                            pageCount = runCatching { s.pageCount().toInt() }
+                                .getOrDefault(pageCount + 1)
+                            pageIndex = pageCount - 1
+                        }
+                    },
+                    onClose = { showPageSidebar = false }
+                )
+            }
+        ) {
         Box(
-            modifier = Modifier.weight(1f).fillMaxWidth().padding(8.dp)
+            modifier = Modifier.weight(1f).fillMaxHeight().padding(8.dp)
                 .dragAndDropTarget(
                     shouldStartDragAndDrop = { start ->
                         start.mimeTypes().any { it.startsWith("image/") }
@@ -2254,6 +2354,43 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     },
                     onDismiss = { showRefineBar = false },
                     modifier = Modifier.align(Alignment.BottomCenter)
+                )
+            }
+        }
+        }
+    }
+
+    // 塞不下兩欄時，結構欄用覆蓋的方式出現。
+    //
+    // 硬並排的結果是畫布只剩兩指寬 —— 寫字的地方比工具列還窄，
+    // 而使用者打開結構欄是為了「翻到第 9 頁」，不是為了改變版面。
+    if (showPageSidebar && !layout.sidebarIsInline) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { showPageSidebar = false },
+            properties = androidx.compose.ui.window.DialogProperties(
+                usePlatformDefaultWidth = false
+            )
+        ) {
+            Surface(modifier = Modifier.fillMaxHeight()) {
+                PageSidebar(
+                    session = notebook?.first,
+                    pageCount = pageCount,
+                    pageIndex = pageIndex,
+                    revision = textRevision + shapeRevision + tableRevision +
+                        chartRevision + imageRevision + model3DRevision,
+                    l = { key -> l10n(key) },
+                    onSelectPage = { pageIndex = it; showPageSidebar = false },
+                    onAddPage = {
+                        val s = notebook?.first
+                        if (s != null) {
+                            runCatching { s.addPage(uniffi.padnote_core.PageStyle.BLANK) }
+                            pageCount = runCatching { s.pageCount().toInt() }
+                                .getOrDefault(pageCount + 1)
+                            pageIndex = pageCount - 1
+                        }
+                        showPageSidebar = false
+                    },
+                    onClose = { showPageSidebar = false }
                 )
             }
         }

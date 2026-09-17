@@ -23,6 +23,7 @@ pub mod ffi_geometry;
 pub mod ffi_hwr;
 pub mod ffi_input;
 pub mod ffi_interop;
+pub mod ffi_layout;
 pub mod ffi_link;
 pub mod ffi_llm;
 pub mod ffi_math;
