@@ -2383,6 +2383,14 @@
     "zhHans": "拖拽移动卡片",
     "zhHant": "拖曳移動卡片"
   },
+  "drop_here_to_unfile": {
+    "en": "Drag a note here to take it out of its folder",
+    "ja": "ノートをここにドラッグするとフォルダから出せます",
+    "ko": "노트를 여기로 끌어 놓으면 폴더에서 꺼냅니다",
+    "th": "ลากโน้ตมาที่นี่เพื่อนำออกจากโฟลเดอร์",
+    "zhHans": "把笔记拖到这里即可移出资料夹",
+    "zhHant": "把筆記拖到這裡即可移出資料夾"
+  },
   "duplicate_note": {
     "en": "Duplicate Note",
     "ja": "複製を作成",
@@ -4535,6 +4543,46 @@
     "zhHans": "已移动",
     "zhHant": "已移動"
   },
+  "move_out_of_folder": {
+    "en": "Move Out of Folder",
+    "ja": "フォルダから出す",
+    "ko": "폴더에서 꺼내기",
+    "th": "นำออกจากโฟลเดอร์",
+    "zhHans": "移出文件夹",
+    "zhHant": "移出資料夾"
+  },
+  "move_page_down": {
+    "en": "Move Page Down",
+    "ja": "ページを下へ",
+    "ko": "페이지 아래로",
+    "th": "เลื่อนหน้าลง",
+    "zhHans": "下移一页",
+    "zhHant": "下移一頁"
+  },
+  "move_page_to_bottom": {
+    "en": "Move to Last",
+    "ja": "末尾へ移動",
+    "ko": "맨 뒤로 이동",
+    "th": "ย้ายไปหน้าสุดท้าย",
+    "zhHans": "移到最后",
+    "zhHant": "移到最後"
+  },
+  "move_page_to_top": {
+    "en": "Move to First",
+    "ja": "先頭へ移動",
+    "ko": "맨 앞으로 이동",
+    "th": "ย้ายไปหน้าแรก",
+    "zhHans": "移到最前",
+    "zhHant": "移到最前"
+  },
+  "move_page_up": {
+    "en": "Move Page Up",
+    "ja": "ページを上へ",
+    "ko": "페이지 위로",
+    "th": "เลื่อนหน้าขึ้น",
+    "zhHans": "上移一页",
+    "zhHant": "上移一頁"
+  },
   "move_to_folder": {
     "en": "Move to Folder",
     "ja": "フォルダへ移動",
@@ -5742,6 +5790,14 @@
     "th": "ปรับขนาดรูปทรง",
     "zhHans": "调整形状大小",
     "zhHant": "調整形狀大小"
+  },
+  "resize_sidebar": {
+    "en": "Drag to Resize Sidebar",
+    "ja": "ドラッグでサイドバーの幅を変更",
+    "ko": "드래그하여 사이드바 너비 조절",
+    "th": "ลากเพื่อปรับความกว้างแถบข้าง",
+    "zhHans": "拖曳调整侧栏宽度",
+    "zhHant": "拖曳調整側欄寬度"
   },
   "resize_text_box": {
     "en": "Drag to resize the text box",
@@ -7534,6 +7590,22 @@
     "th": "การสนทนานี้ถูกทำเครื่องหมายว่าแก้ไขแล้ว",
     "zhHans": "此讨论已标记为已解决",
     "zhHant": "此討論已標記為已解決"
+  },
+  "thumbnail_larger": {
+    "en": "Larger Previews",
+    "ja": "プレビューを大きく",
+    "ko": "미리보기 확대",
+    "th": "ขยายภาพตัวอย่าง",
+    "zhHans": "放大预览",
+    "zhHant": "放大預覽"
+  },
+  "thumbnail_smaller": {
+    "en": "Smaller Previews",
+    "ja": "プレビューを小さく",
+    "ko": "미리보기 축소",
+    "th": "ย่อภาพตัวอย่าง",
+    "zhHans": "缩小预览",
+    "zhHant": "縮小預覽"
   },
   "tmpl_blank": {
     "en": "Blank Paper",

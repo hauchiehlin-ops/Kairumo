@@ -2399,6 +2399,14 @@ extension LocalizationManager {
             .ko: "드래그하여 이동",
             .th: "ลากเพื่อย้ายการ์ด"
         ],
+        "drop_here_to_unfile": [
+            .zhHant: "把筆記拖到這裡即可移出資料夾",
+            .en: "Drag a note here to take it out of its folder",
+            .zhHans: "把笔记拖到这里即可移出资料夹",
+            .ja: "ノートをここにドラッグするとフォルダから出せます",
+            .ko: "노트를 여기로 끌어 놓으면 폴더에서 꺼냅니다",
+            .th: "ลากโน้ตมาที่นี่เพื่อนำออกจากโฟลเดอร์"
+        ],
         "duplicate_note": [
             .zhHant: "建立副本",
             .en: "Duplicate Note",
@@ -4551,6 +4559,46 @@ extension LocalizationManager {
             .ko: "이동했습니다",
             .th: "ย้ายแล้ว"
         ],
+        "move_out_of_folder": [
+            .zhHant: "移出資料夾",
+            .en: "Move Out of Folder",
+            .zhHans: "移出文件夹",
+            .ja: "フォルダから出す",
+            .ko: "폴더에서 꺼내기",
+            .th: "นำออกจากโฟลเดอร์"
+        ],
+        "move_page_down": [
+            .zhHant: "下移一頁",
+            .en: "Move Page Down",
+            .zhHans: "下移一页",
+            .ja: "ページを下へ",
+            .ko: "페이지 아래로",
+            .th: "เลื่อนหน้าลง"
+        ],
+        "move_page_to_bottom": [
+            .zhHant: "移到最後",
+            .en: "Move to Last",
+            .zhHans: "移到最后",
+            .ja: "末尾へ移動",
+            .ko: "맨 뒤로 이동",
+            .th: "ย้ายไปหน้าสุดท้าย"
+        ],
+        "move_page_to_top": [
+            .zhHant: "移到最前",
+            .en: "Move to First",
+            .zhHans: "移到最前",
+            .ja: "先頭へ移動",
+            .ko: "맨 앞으로 이동",
+            .th: "ย้ายไปหน้าแรก"
+        ],
+        "move_page_up": [
+            .zhHant: "上移一頁",
+            .en: "Move Page Up",
+            .zhHans: "上移一页",
+            .ja: "ページを上へ",
+            .ko: "페이지 위로",
+            .th: "เลื่อนหน้าขึ้น"
+        ],
         "move_to_folder": [
             .zhHant: "移動至資料夾",
             .en: "Move to Folder",
@@ -5758,6 +5806,14 @@ extension LocalizationManager {
             .ja: "図形のサイズを変更",
             .ko: "도형 크기 조절",
             .th: "ปรับขนาดรูปทรง"
+        ],
+        "resize_sidebar": [
+            .zhHant: "拖曳調整側欄寬度",
+            .en: "Drag to Resize Sidebar",
+            .zhHans: "拖曳调整侧栏宽度",
+            .ja: "ドラッグでサイドバーの幅を変更",
+            .ko: "드래그하여 사이드바 너비 조절",
+            .th: "ลากเพื่อปรับความกว้างแถบข้าง"
         ],
         "resize_text_box": [
             .zhHant: "拖曳調整文字方塊大小",
@@ -7550,6 +7606,22 @@ extension LocalizationManager {
             .ja: "このスレッドは解決済みです",
             .ko: "이 스레드는 해결됨으로 표시되었습니다",
             .th: "การสนทนานี้ถูกทำเครื่องหมายว่าแก้ไขแล้ว"
+        ],
+        "thumbnail_larger": [
+            .zhHant: "放大預覽",
+            .en: "Larger Previews",
+            .zhHans: "放大预览",
+            .ja: "プレビューを大きく",
+            .ko: "미리보기 확대",
+            .th: "ขยายภาพตัวอย่าง"
+        ],
+        "thumbnail_smaller": [
+            .zhHant: "縮小預覽",
+            .en: "Smaller Previews",
+            .zhHans: "缩小预览",
+            .ja: "プレビューを小さく",
+            .ko: "미리보기 축소",
+            .th: "ย่อภาพตัวอย่าง"
         ],
         "tmpl_blank": [
             .zhHant: "空白紙張",

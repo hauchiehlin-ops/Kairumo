@@ -62,6 +62,13 @@ const READABLE_MAX_WIDTH: f32 = 720.0;
 const SIDEBAR_WIDTH: f32 = 280.0;
 /// 側欄並排之後，內容至少要留這麼寬才值得並排。
 const MIN_CONTENT_BESIDE_SIDEBAR: f32 = 480.0;
+/// 使用者拖動界線時，側欄能縮到多窄、拉到多寬。
+///
+/// 下限 200：再窄的話頁面縮圖小到看不出是哪一頁，而側欄存在的理由就是
+/// 「用看的翻到第 9 頁」。上限 520：側欄比一張 A4 縮圖還寬之後，多出來的
+/// 空間只是留白，而畫布被它吃掉了。
+const SIDEBAR_MIN_WIDTH: f32 = 200.0;
+const SIDEBAR_MAX_WIDTH: f32 = 520.0;
 
 /// 這個寬度屬於哪一級。
 #[uniffi::export]
@@ -126,6 +133,49 @@ pub fn layout_metrics(width: f32) -> FfiLayoutMetrics {
         sidebar_is_inline,
         note_columns,
     }
+}
+
+/// 使用者拖動界線之後的側欄寬度。
+///
+/// # 為什麼要夾
+///
+/// 拖曳沒有天然的終點：手指往左滑到底，側欄變成 0 寬，裡面的東西全部
+/// 不見，而使用者不會知道那是「拖過頭」還是「壞了」；往右滑到底，
+/// 畫布被擠成一條縫。兩端都要有停住的地方。
+///
+/// **內容那一側的下限優先於側欄的下限。** 視窗本來就窄的時候，寧可側欄
+/// 只有最小寬度，也不要讓畫布小於能寫字的寬度 —— 畫布才是這個畫面的主體。
+#[uniffi::export]
+pub fn sidebar_clamp_width(desired: f32, total: f32) -> f32 {
+    if !desired.is_finite() || !total.is_finite() {
+        return SIDEBAR_WIDTH;
+    }
+    let ceiling = (total - MIN_CONTENT_BESIDE_SIDEBAR).min(SIDEBAR_MAX_WIDTH);
+    if ceiling <= SIDEBAR_MIN_WIDTH {
+        return SIDEBAR_MIN_WIDTH;
+    }
+    desired.clamp(SIDEBAR_MIN_WIDTH, ceiling)
+}
+
+/// 側欄可拖動的範圍，給平台層畫拖曳把手用。
+#[uniffi::export]
+pub fn sidebar_width_bounds() -> Vec<f32> {
+    vec![SIDEBAR_MIN_WIDTH, SIDEBAR_MAX_WIDTH]
+}
+
+/// 側欄內文字要放大多少倍。
+///
+/// 側欄變寬時只有縮圖跟著變大、文字維持原樣的話，一條 500pt 寬的側欄上會
+/// 出現 9pt 的頁碼 —— 看起來不是「寬敞」，是「沒排版」。所以字跟著走。
+///
+/// 上下限比寬度的比例保守（0.9–1.3）：字級是可讀性，不是比例尺，
+/// 等比放大會讓最寬的時候變成大字報。
+#[uniffi::export]
+pub fn sidebar_content_scale(width: f32) -> f32 {
+    if !width.is_finite() || width <= 0.0 {
+        return 1.0;
+    }
+    (width / SIDEBAR_WIDTH).clamp(0.9, 1.3)
 }
 
 #[cfg(test)]
@@ -193,5 +243,48 @@ mod tests {
         let m = layout_metrics(1376.0);
         assert_eq!(m.content_max_width, 1040.0);
         assert!(m.readable_max_width < m.content_max_width);
+    }
+
+    #[test]
+    fn dragging_the_divider_stops_at_both_ends() {
+        let total = 1200.0;
+        assert_eq!(sidebar_clamp_width(0.0, total), 200.0);
+        assert_eq!(sidebar_clamp_width(-500.0, total), 200.0);
+        assert_eq!(sidebar_clamp_width(9999.0, total), 520.0);
+        assert_eq!(sidebar_clamp_width(360.0, total), 360.0);
+    }
+
+    #[test]
+    fn the_canvas_keeps_its_minimum_before_the_sidebar_does() {
+        // 820 寬：側欄拉到 520 的話畫布只剩 300，寫不了字。上限被壓到 340。
+        let w = sidebar_clamp_width(520.0, 820.0);
+        assert_eq!(w, 340.0);
+        assert!(820.0 - w >= 480.0);
+    }
+
+    #[test]
+    fn a_window_too_narrow_to_share_falls_back_to_the_minimum() {
+        // 這種寬度本來就不該並排（sidebar_is_inline 是 false），
+        // 但寬度仍然要是一個能用的數字，不能是 0 或負數。
+        for total in [320.0, 500.0, 600.0] {
+            assert_eq!(sidebar_clamp_width(400.0, total), 200.0);
+        }
+    }
+
+    #[test]
+    fn a_nonsense_width_never_leaks_out() {
+        assert_eq!(sidebar_clamp_width(f32::NAN, 1200.0), 280.0);
+        assert_eq!(sidebar_clamp_width(300.0, f32::NAN), 280.0);
+        assert_eq!(sidebar_content_scale(f32::NAN), 1.0);
+        assert_eq!(sidebar_content_scale(0.0), 1.0);
+    }
+
+    #[test]
+    fn the_text_grows_with_the_sidebar_but_not_without_limit() {
+        assert_eq!(sidebar_content_scale(280.0), 1.0);
+        assert!(sidebar_content_scale(200.0) < 1.0);
+        assert!(sidebar_content_scale(420.0) > 1.0);
+        // 520 是最寬的側欄，字級不該超過 1.3 倍。
+        assert_eq!(sidebar_content_scale(520.0), 1.3);
     }
 }

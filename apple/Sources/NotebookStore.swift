@@ -1658,41 +1658,37 @@ public final class NotebookStore: ObservableObject {
         heights.insert(1800.0, at: insertIndex)
         notebooks[idx].pageHeights = heights
 
-        // 平移各類附件之 pageIndex
-        if let atts = notebooks[idx].attachments {
-            notebooks[idx].attachments = atts.map { item in
-                var mod = item
-                if mod.pageIndex >= insertIndex { mod.pageIndex += 1 }
-                return mod
-            }
-        }
-        if let txts = notebooks[idx].textAttachments {
-            notebooks[idx].textAttachments = txts.map { item in
-                var mod = item
-                if mod.pageIndex >= insertIndex { mod.pageIndex += 1 }
-                return mod
-            }
-        }
-        if let lnks = notebooks[idx].linkAttachments {
-            notebooks[idx].linkAttachments = lnks.map { item in
-                var mod = item
-                if mod.pageIndex >= insertIndex { mod.pageIndex += 1 }
-                return mod
-            }
-        }
-        if let mods = notebooks[idx].model3DAttachments {
-            notebooks[idx].model3DAttachments = mods.map { item in
-                var mod = item
-                if mod.pageIndex >= insertIndex { mod.pageIndex += 1 }
-                return mod
-            }
-        }
-        if let pins = notebooks[idx].commentPins {
-            notebooks[idx].commentPins = pins.map { item in
-                var mod = item
-                if mod.pageIndex >= insertIndex { mod.pageIndex += 1 }
-                return mod
-            }
+        // 每一種附件都要重新對齊頁碼。
+        //
+        // **表格、形狀、連接線與錄音原本整組漏掉了** —— 與刪除頁面同一個
+        // 病灶：前面那幾種各自手寫一份「插入點之後的往後移一格」，新增型別
+        // 時沒有人回來補。症狀是「我在第 1 頁後面插了一頁，第 2 頁的表格
+        // 留在原地，現在它落在那張新的空白頁上」。
+        //
+        // 算術在核心（`pageIndexAfterInsert`），這裡只負責把每一種餵進去。
+        notebooks[idx].attachments = Self.shiftPages(
+            notebooks[idx].attachments, inserting: insertIndex)
+        notebooks[idx].textAttachments = Self.shiftPages(
+            notebooks[idx].textAttachments, inserting: insertIndex)
+        notebooks[idx].linkAttachments = Self.shiftPages(
+            notebooks[idx].linkAttachments, inserting: insertIndex)
+        notebooks[idx].model3DAttachments = Self.shiftPages(
+            notebooks[idx].model3DAttachments, inserting: insertIndex)
+        notebooks[idx].commentPins = Self.shiftPages(
+            notebooks[idx].commentPins, inserting: insertIndex)
+        notebooks[idx].tableAttachments = Self.shiftPages(
+            notebooks[idx].tableAttachments, inserting: insertIndex)
+        notebooks[idx].shapeAttachments = Self.shiftPages(
+            notebooks[idx].shapeAttachments, inserting: insertIndex)
+        notebooks[idx].connectionAttachments = Self.shiftPages(
+            notebooks[idx].connectionAttachments, inserting: insertIndex)
+        notebooks[idx].audioAttachments = Self.shiftPages(
+            notebooks[idx].audioAttachments, inserting: insertIndex)
+
+        // 內嵌筆跡陣列也要跟著長一頁，否則 pagesData 與 pageCount 會錯開，
+        // 而匯出是看前者的 —— 插入的那一頁在 PDF 裡不存在。
+        if insertIndex <= notebooks[idx].pagesData.count {
+            notebooks[idx].pagesData.insert(PKDrawing().dataRepresentation(), at: insertIndex)
         }
 
         notebooks[idx].pageCount = newPageCount
@@ -1793,6 +1789,102 @@ public final class NotebookStore: ObservableObject {
         }
     }
 
+    /// 插入一頁之後，把附件的 `pageIndex` 重新對齊。
+    ///
+    /// 算術在核心：插入、刪除、搬動三種情況的區間各不相同，各寫一份的人
+    /// 會在其中一個方向上差一格，而差一格的症狀（東西跑到隔壁頁）要等到
+    /// 使用者翻到那一頁才會發現。
+    static func shiftPages<T: PageIndexed>(_ items: [T]?, inserting insertIndex: Int) -> [T]? {
+        guard let items else { return nil }
+        guard insertIndex >= 0 else { return items }
+        return items.map { item in
+            var moved = item
+            moved.pageIndex = Int(pageIndexAfterInsert(index: UInt32(max(0, item.pageIndex)),
+                                                      at: UInt32(insertIndex)))
+            return moved
+        }
+    }
+
+    /// 搬動一頁之後，把附件的 `pageIndex` 重新對齊。
+    static func shiftPages<T: PageIndexed>(_ items: [T]?, movingFrom from: Int, to: Int) -> [T]? {
+        guard let items else { return nil }
+        guard from >= 0, to >= 0 else { return items }
+        return items.map { item in
+            var moved = item
+            moved.pageIndex = Int(pageIndexAfterMove(index: UInt32(max(0, item.pageIndex)),
+                                                    from: UInt32(from),
+                                                    to: UInt32(to)))
+            return moved
+        }
+    }
+
+    /// 把某一頁搬到另一個位置，回傳搬完之後應該停在哪一頁。
+    ///
+    /// # 為什麼不是「把陣列重排就好」
+    ///
+    /// 一頁不是一筆資料，是散在四個地方的東西：磁碟上的筆跡檔案
+    /// （`{id}_p{n}.drawing`，檔名就是頁碼）、`pageHeights`、`pagesData`，
+    /// 以及九種附件各自的 `pageIndex`。只重排其中一樣的結果不是「沒搬動」，
+    /// 是「筆跡搬了、上面的表格沒搬」—— 比不能搬還糟。
+    ///
+    /// 只重寫兩個端點之間那一段（`pageMoveTouchedRange`）：整本重寫在
+    /// 幾十頁的筆記上是看得到的卡頓，而搬一頁本來就只會動到那一段。
+    @discardableResult
+    public func movePage(notebookId: String, from: Int, to: Int) -> Int {
+        guard let idx = notebooks.firstIndex(where: { $0.id == notebookId }) else { return from }
+        let total = notebooks[idx].pageCount
+        guard from >= 0, to >= 0,
+              pageMoveIsValid(count: UInt32(max(0, total)),
+                              from: UInt32(from),
+                              to: UInt32(to)) else { return from }
+
+        // 1. 筆跡檔案。先把受影響那一段整段讀進來，再照新的順序寫回去 ——
+        //    邊讀邊寫會把還沒讀到的那一頁覆蓋掉。
+        let touched = pageMoveTouchedRange(from: UInt32(from), to: UInt32(to)).map { Int($0) }
+        let loaded = touched.map { loadDrawing(notebookId: notebookId, pageIndex: $0) }
+        for (offset, page) in touched.enumerated() {
+            let destination = Int(pageIndexAfterMove(index: UInt32(page),
+                                                     from: UInt32(from),
+                                                     to: UInt32(to)))
+            saveDrawing(notebookId: notebookId, pageIndex: destination, drawing: loaded[offset])
+        }
+
+        // 2. 高度與內嵌筆跡陣列：單純的搬一格。
+        if var heights = notebooks[idx].pageHeights, heights.count >= total {
+            let h = heights.remove(at: from)
+            heights.insert(h, at: min(to, heights.count))
+            notebooks[idx].pageHeights = heights
+        }
+        if from < notebooks[idx].pagesData.count, to < notebooks[idx].pagesData.count {
+            let d = notebooks[idx].pagesData.remove(at: from)
+            notebooks[idx].pagesData.insert(d, at: to)
+        }
+
+        // 3. 九種附件。
+        notebooks[idx].attachments = Self.shiftPages(
+            notebooks[idx].attachments, movingFrom: from, to: to)
+        notebooks[idx].textAttachments = Self.shiftPages(
+            notebooks[idx].textAttachments, movingFrom: from, to: to)
+        notebooks[idx].linkAttachments = Self.shiftPages(
+            notebooks[idx].linkAttachments, movingFrom: from, to: to)
+        notebooks[idx].model3DAttachments = Self.shiftPages(
+            notebooks[idx].model3DAttachments, movingFrom: from, to: to)
+        notebooks[idx].commentPins = Self.shiftPages(
+            notebooks[idx].commentPins, movingFrom: from, to: to)
+        notebooks[idx].tableAttachments = Self.shiftPages(
+            notebooks[idx].tableAttachments, movingFrom: from, to: to)
+        notebooks[idx].shapeAttachments = Self.shiftPages(
+            notebooks[idx].shapeAttachments, movingFrom: from, to: to)
+        notebooks[idx].connectionAttachments = Self.shiftPages(
+            notebooks[idx].connectionAttachments, movingFrom: from, to: to)
+        notebooks[idx].audioAttachments = Self.shiftPages(
+            notebooks[idx].audioAttachments, movingFrom: from, to: to)
+
+        notebooks[idx].lastModifiedDate = Date()
+        persistData()
+        return to
+    }
+
     /// 複製指定頁面並插入於其後，回傳新頁碼 index
     @discardableResult
     public func duplicatePage(notebookId: String, pageIndex: Int) -> Int {
@@ -1818,6 +1910,38 @@ public final class NotebookStore: ObservableObject {
         let copyHeight = heights[pageIndex]
         heights.insert(copyHeight, at: pageIndex + 1)
         notebooks[idx].pageHeights = heights
+
+        // 附件的頁碼也要讓出一格。
+        //
+        // 原本整段不存在：複製第 1 頁之後，第 2 頁以後的表格、圖片與文字
+        // 方塊全部留在原本的頁碼上，於是它們落在那張複本上，而原本的那一頁
+        // 空了。複製是為了留一份原稿，結果把原稿搬走了。
+        let insertIndex = pageIndex + 1
+        notebooks[idx].attachments = Self.shiftPages(
+            notebooks[idx].attachments, inserting: insertIndex)
+        notebooks[idx].textAttachments = Self.shiftPages(
+            notebooks[idx].textAttachments, inserting: insertIndex)
+        notebooks[idx].linkAttachments = Self.shiftPages(
+            notebooks[idx].linkAttachments, inserting: insertIndex)
+        notebooks[idx].model3DAttachments = Self.shiftPages(
+            notebooks[idx].model3DAttachments, inserting: insertIndex)
+        notebooks[idx].commentPins = Self.shiftPages(
+            notebooks[idx].commentPins, inserting: insertIndex)
+        notebooks[idx].tableAttachments = Self.shiftPages(
+            notebooks[idx].tableAttachments, inserting: insertIndex)
+        notebooks[idx].shapeAttachments = Self.shiftPages(
+            notebooks[idx].shapeAttachments, inserting: insertIndex)
+        notebooks[idx].connectionAttachments = Self.shiftPages(
+            notebooks[idx].connectionAttachments, inserting: insertIndex)
+        notebooks[idx].audioAttachments = Self.shiftPages(
+            notebooks[idx].audioAttachments, inserting: insertIndex)
+
+        if insertIndex <= notebooks[idx].pagesData.count {
+            let copied = insertIndex - 1 < notebooks[idx].pagesData.count
+                ? notebooks[idx].pagesData[insertIndex - 1]
+                : PKDrawing().dataRepresentation()
+            notebooks[idx].pagesData.insert(copied, at: insertIndex)
+        }
 
         notebooks[idx].pageCount = total + 1
         notebooks[idx].lastModifiedDate = Date()

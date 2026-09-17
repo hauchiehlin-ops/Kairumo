@@ -30,6 +30,7 @@ pub mod ffi_llm;
 pub mod ffi_math;
 pub mod ffi_model3d;
 pub mod ffi_oauth;
+pub mod ffi_pages;
 pub mod ffi_paper;
 #[cfg(feature = "relay")]
 pub mod ffi_relay;
