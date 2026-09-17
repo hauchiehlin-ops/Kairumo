@@ -42,8 +42,17 @@ object InkInput {
      * 把一個 `MotionEvent` 展開成所有取樣點（含歷史點）。
      *
      * @param density 螢幕密度（`resources.displayMetrics.density`）。px → dp 用。
+     * @param zoom 畫布縮放比例（S-80）。預設 1.0。
+     * @param offsetX 畫布水平位移（dp）。
+     * @param offsetY 畫布垂直位移（dp）。
      */
-    fun samples(event: MotionEvent, density: Float): List<Sample> {
+    fun samples(
+        event: MotionEvent,
+        density: Float,
+        zoom: Float = 1f,
+        offsetX: Float = 0f,
+        offsetY: Float = 0f
+    ): List<Sample> {
         val phase = phaseOf(event) ?: return emptyList()
         val scale = if (density > 0f) density else 1f
         val out = ArrayList<Sample>()
@@ -72,7 +81,10 @@ object InkInput {
                     tiltRad = event.getHistoricalAxisValue(MotionEvent.AXIS_TILT, i, h),
                     orientationRad = event.getHistoricalOrientation(i, h),
                     timeMs = event.getHistoricalEventTime(h),
-                    scale = scale
+                    scale = scale,
+                    zoom = zoom,
+                    offsetX = offsetX,
+                    offsetY = offsetY
                 )
             }
 
@@ -84,7 +96,10 @@ object InkInput {
                 tiltRad = event.getAxisValue(MotionEvent.AXIS_TILT, i),
                 orientationRad = event.getOrientation(i),
                 timeMs = event.eventTime,
-                scale = scale
+                scale = scale,
+                zoom = zoom,
+                offsetX = offsetX,
+                offsetY = offsetY
             )
         }
         return out
@@ -93,23 +108,32 @@ object InkInput {
     private fun sample(
         id: ULong, kind: FfiPointerKind, phase: FfiPhase,
         x: Float, y: Float, pressure: Float, touchMajor: Float,
-        tiltRad: Float, orientationRad: Float, timeMs: Long, scale: Float
-    ): Sample = Sample(
-        event = FfiPointerEvent(
-            id = id,
-            kind = kind,
-            phase = phase,
-            x = x / scale,
-            y = y / scale,
-            // 沒有壓感的裝置回傳 1.0；核心約定「沒有壓感時填 0.5」。
-            pressure = pressure.coerceIn(0f, 1f),
-            // touchMajor 是**直徑**，核心要的是長半徑；而且要換成 dp。
-            contactRadius = (touchMajor / 2f) / scale,
-            timestampUs = (timeMs * 1_000L).toULong()
-        ),
-        tilt = tiltRad.coerceIn(0f, (PI / 2).toFloat()),
-        azimuth = normalizeAzimuth(orientationRad)
-    )
+        tiltRad: Float, orientationRad: Float, timeMs: Long, scale: Float,
+        zoom: Float = 1f, offsetX: Float = 0f, offsetY: Float = 0f
+    ): Sample {
+        val dpX = x / scale
+        val dpY = y / scale
+        val z = if (zoom > 0f) zoom else 1f
+        val canvasX = (dpX - offsetX) / z
+        val canvasY = (dpY - offsetY) / z
+
+        return Sample(
+            event = FfiPointerEvent(
+                id = id,
+                kind = kind,
+                phase = phase,
+                x = canvasX,
+                y = canvasY,
+                // 沒有壓感的裝置回傳 1.0；核心約定「沒有壓感時填 0.5」。
+                pressure = pressure.coerceIn(0f, 1f),
+                // touchMajor 是**直徑**，核心要的是長半徑；而且要換成 dp。
+                contactRadius = (touchMajor / 2f) / scale / z,
+                timestampUs = (timeMs * 1_000L).toULong()
+            ),
+            tilt = tiltRad.coerceIn(0f, (PI / 2).toFloat()),
+            azimuth = normalizeAzimuth(orientationRad)
+        )
+    }
 
     /** `AXIS_ORIENTATION` 是 -π..π，核心的方位角是 0..2π。 */
     fun normalizeAzimuth(radians: Float): Float {

@@ -6543,8 +6543,18 @@ ZStack(alignment: .topTrailing) {
         return nil
     }
 
-    /// 把某個物件的左上角搬到指定座標。
-    private func moveObject(id: String, to origin: CGPoint) {
+    /// 把某個物件的左上角搬到指定座標（並夾回可列印區域，S-85）。
+    private func moveObject(id: String, to rawOrigin: CGPoint) {
+        let size = frameOfObject(id: id)?.size ?? .zero
+        let page = PageGeometry.size
+        let inset = Float(PageGeometry.printableInset)
+        let clamped = clampToPrintable(
+            rect: FfiRect(
+                minX: Float(rawOrigin.x), minY: Float(rawOrigin.y),
+                maxX: Float(rawOrigin.x + size.width), maxY: Float(rawOrigin.y + size.height)),
+            pageWidth: Float(page.width), pageHeight: Float(page.height), inset: inset)
+        let origin = CGPoint(x: CGFloat(clamped.minX), y: CGFloat(clamped.minY))
+
         if let index = notebook.attachments?.firstIndex(where: { $0.id == id }) {
             notebook.attachments?[index].x = origin.x
             notebook.attachments?[index].y = origin.y

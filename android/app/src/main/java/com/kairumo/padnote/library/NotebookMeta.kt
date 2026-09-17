@@ -123,6 +123,37 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         runCatching { session?.setNotebookMeta(root.toString()) }
     }
 
+    /** 插入某一頁的樣板（S-93）。 */
+    fun insertPageTemplate(session: PadnoteSession?, atIndex: Int, paperId: String, totalPages: Int) {
+        val currentTemplates = mutableListOf<String>()
+        val arr = root.optJSONArray(KEY_PAGE_TEMPLATES)
+        val defaultPaper = paperId()
+        for (i in 0 until totalPages) {
+            val p = if (arr != null && i < arr.length()) arr.optString(i, defaultPaper) else defaultPaper
+            currentTemplates.add(p)
+        }
+        val safeIndex = atIndex.coerceIn(0, currentTemplates.size)
+        currentTemplates.add(safeIndex, paperId)
+        root.put(KEY_PAGE_TEMPLATES, JSONArray(currentTemplates))
+        runCatching { session?.setNotebookMeta(root.toString()) }
+    }
+
+    /** 移除某一頁的樣板。 */
+    fun removePageTemplate(session: PadnoteSession?, atIndex: Int, totalPages: Int) {
+        val currentTemplates = mutableListOf<String>()
+        val arr = root.optJSONArray(KEY_PAGE_TEMPLATES)
+        val defaultPaper = paperId()
+        for (i in 0 until totalPages) {
+            val p = if (arr != null && i < arr.length()) arr.optString(i, defaultPaper) else defaultPaper
+            currentTemplates.add(p)
+        }
+        if (atIndex in currentTemplates.indices) {
+            currentTemplates.removeAt(atIndex)
+        }
+        root.put(KEY_PAGE_TEMPLATES, JSONArray(currentTemplates))
+        runCatching { session?.setNotebookMeta(root.toString()) }
+    }
+
     /**
      * 某一頁的物件堆疊順序（由後到前）。
      *

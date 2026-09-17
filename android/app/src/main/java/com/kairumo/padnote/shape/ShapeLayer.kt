@@ -157,15 +157,24 @@ private fun ShapeObjectView(
                 )
             } }
             .gesturesIf(interactive) { pointerInput(shape.id) {
-                detectDragGestures { change, drag ->
-                    change.consume()
-                    onChanged(
-                        shape.copyShape().apply {
-                            x = shape.x + drag.x / density
-                            y = shape.y + drag.y / density
-                        }
-                    )
-                }
+                detectDragGestures(
+                    onDrag = { change, drag ->
+                        change.consume()
+                        onChanged(
+                            shape.copyShape().apply {
+                                x = shape.x + drag.x / density
+                                y = shape.y + drag.y / density
+                            }
+                        )
+                    },
+                    onDragEnd = {
+                        val landed = com.kairumo.padnote.ink.PageGeometry
+                            .clampOrigin(shape.x, shape.y, shape.width, shape.height)
+                        shape.x = landed.first
+                        shape.y = landed.second
+                        onChanged(shape)
+                    }
+                )
             } },
         contentAlignment = Alignment.Center
     ) {

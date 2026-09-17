@@ -161,6 +161,13 @@ class InkEngine(
     var lastEventDebug: String = "—"
         private set
 
+    /** 畫布縮放比例（S-80）。預設 1.0。 */
+    var zoom: Float = 1f
+    /** 畫布水平位移（dp，S-80）。 */
+    var offsetX: Float = 0f
+    /** 畫布垂直位移（dp，S-80）。 */
+    var offsetY: Float = 0f
+
     fun onMotionEvent(event: MotionEvent, density: Float): Outcome {
         // 側鍵先看：它決定的是**這一段**要畫還是要擦，慢一個事件的話，
         // 按下去的第一個點會先畫出一小段墨再開始擦。
@@ -179,7 +186,7 @@ class InkEngine(
         val retractedAll = mutableListOf<ULong>()
         val completedNow = mutableListOf<CompletedStroke>()
 
-        for (sample in InkInput.samples(event, density)) {
+        for (sample in InkInput.samples(event, density, zoom, offsetX, offsetY)) {
             val decision = arbiter.handle(sample.event)
 
             // 先處理收回：被收回的筆畫不該再因為後續事件而復活。
@@ -211,7 +218,7 @@ class InkEngine(
             }
         }
 
-        val first = InkInput.samples(event, density).firstOrNull()
+        val first = InkInput.samples(event, density, zoom, offsetX, offsetY).firstOrNull()
         lastEventDebug = if (first == null) {
             "action=${event.actionMasked} 無取樣點"
         } else {

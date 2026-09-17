@@ -122,15 +122,24 @@ private fun TableObjectView(
                 )
             } }
             .gesturesIf(interactive) { pointerInput(table.id) {
-                detectDragGestures { change, drag ->
-                    change.consume()
-                    onChanged(
-                        table.copyTable().apply {
-                            x = table.x + drag.x / density
-                            y = table.y + drag.y / density
-                        }
-                    )
-                }
+                detectDragGestures(
+                    onDrag = { change, drag ->
+                        change.consume()
+                        onChanged(
+                            table.copyTable().apply {
+                                x = table.x + drag.x / density
+                                y = table.y + drag.y / density
+                            }
+                        )
+                    },
+                    onDragEnd = {
+                        val landed = com.kairumo.padnote.ink.PageGeometry
+                            .clampOrigin(table.x, table.y, layout.width.toFloat(), layout.height.toFloat())
+                        table.x = landed.first
+                        table.y = landed.second
+                        onChanged(table)
+                    }
+                )
             } }
     ) {
         TablePreview(table = table, density = density)

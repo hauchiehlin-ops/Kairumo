@@ -2,6 +2,7 @@ package com.kairumo.padnote.canvas
 
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.ui.platform.testTag
@@ -40,7 +41,15 @@ import androidx.compose.ui.graphics.painter.BitmapPainter
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.Image
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Tab
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.text.font.FontWeight
 import com.kairumo.padnote.platform.PageImageRenderer
 import com.kairumo.padnote.ui.DS
 import com.kairumo.padnote.ui.dsCard
@@ -78,6 +87,10 @@ fun PageSidebar(
     l: (String) -> String,
     onSelectPage: (Int) -> Unit,
     onAddPage: () -> Unit,
+    /** 在指定頁後插入新頁面（paperId 為 null 時走預設，非 null 時套用樣板，S-93）。 */
+    onInsertPageAfter: (Int, String?) -> Unit = { _, _ -> },
+    /** 刪除指定頁面。 */
+    onDeletePage: (Int) -> Unit = {},
     /** 把第 from 頁搬到 to（S-86／S-87）。核心的 `movePage` 會記進 oplog。 */
     onMovePage: (Int, Int) -> Unit = { _, _ -> },
     /** 把第幾頁複製（false）或搬移（true）到別本筆記（S-91）。 */
@@ -224,7 +237,9 @@ fun PageSidebar(
                     l = l,
                     onClick = { onSelectPage(index) },
                     onMovePage = onMovePage,
-                    onTransferPage = onTransferPage
+                    onTransferPage = onTransferPage,
+                    onInsertPageAfter = onInsertPageAfter,
+                    onDeletePage = onDeletePage
                 )
             }
         }
@@ -249,18 +264,14 @@ private fun PageSidebarRow(
     l: (String) -> String,
     onClick: () -> Unit,
     onMovePage: (Int, Int) -> Unit,
-    onTransferPage: (Int, Boolean) -> Unit
+    onTransferPage: (Int, Boolean) -> Unit,
+    onInsertPageAfter: (Int, String?) -> Unit,
+    onDeletePage: (Int) -> Unit
 ) {
     val context = LocalContext.current
     var thumb by remember(index, revision) { mutableStateOf<ImageBitmap?>(null) }
-    // 縮圖框的比例要跟著**那一頁實際的尺寸**走。
-    //
-    // 寫死 800:1132 的話，使用者把某一頁往下延長之後，側欄裡那一格
-    // 仍然是 A4 比例，縮圖縮在左上角、下面一大塊空白 —— 看起來像壞了。
     var ratio by remember(index, revision) { mutableFloatStateOf(800f / 1132f) }
 
-    // 縮圖在背景算。放在合成裡算的話，翻頁時整條側欄會卡住 ——
-    // 而使用者按的是「跳到第 9 頁」，不是「等一下」。
     LaunchedEffect(index, revision, session) {
         val s = session ?: return@LaunchedEffect
         thumb = withContext(Dispatchers.Default) {
@@ -279,11 +290,80 @@ private fun PageSidebarRow(
         }
     }
 
-    // 長按開選單：往前搬、往後搬、搬到最前、搬到最後。
-    //
-    // Apple 端是右鍵／長按快顯 + 拖曳換位；Android 這一版先做快顯 ——
-    // 拖曳換位要與 LazyColumn 的捲動搶手勢，那是另一件事（記在 TODO）。
     var menu by remember(index) { mutableStateOf(false) }
+    var showTemplatePicker by remember(index) { mutableStateOf(false) }
+
+    if (showTemplatePicker) {
+        val paperThemes = remember { uniffi.padnote_core.paperThemes() }
+        var selectedTheme by remember { mutableStateOf(paperThemes.first()) }
+        val allTemplates = remember { uniffi.padnote_core.paperTemplates() }
+        val filteredTemplates = remember(selectedTheme) {
+            allTemplates.filter { it.theme == selectedTheme }
+        }
+
+        AlertDialog(
+            onDismissRequest = { showTemplatePicker = false },
+            title = { Text(l("insert_page_with_template")) },
+            text = {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    ScrollableTabRow(
+                        selectedTabIndex = paperThemes.indexOf(selectedTheme).coerceAtLeast(0),
+                        edgePadding = 0.dp
+                    ) {
+                        paperThemes.forEach { theme ->
+                            Tab(
+                                selected = selectedTheme == theme,
+                                onClick = { selectedTheme = theme },
+                                text = { Text(l(uniffi.padnote_core.paperThemeKey(theme)), maxLines = 1) }
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 300.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(filteredTemplates) { tmpl ->
+                            Card(
+                                onClick = {
+                                    showTemplatePicker = false
+                                    onInsertPageAfter(index, tmpl.id)
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(12.dp)) {
+                                    Text(
+                                        l(tmpl.titleKey),
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    if (tmpl.descKey.isNotEmpty()) {
+                                        Text(
+                                            l(tmpl.descKey),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showTemplatePicker = false }) {
+                    Text(l("cancel"))
+                }
+            }
+        )
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -291,6 +371,15 @@ private fun PageSidebarRow(
             .combinedClickable(onClick = onClick, onLongClick = { menu = true })
     ) {
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(
+                text = { Text(l("insert_page_after")) },
+                onClick = { menu = false; onInsertPageAfter(index, null) }
+            )
+            DropdownMenuItem(
+                text = { Text(l("insert_page_with_template")) },
+                onClick = { menu = false; showTemplatePicker = true }
+            )
+            HorizontalDivider()
             DropdownMenuItem(
                 text = { Text(l("move_page_up")) },
                 enabled = index > 0,
@@ -312,17 +401,20 @@ private fun PageSidebarRow(
                 onClick = { menu = false; onMovePage(index, pageCount - 1) }
             )
             HorizontalDivider()
-            // 跨本複製／搬移（S-91）。Apple 端在頁面結構欄可以多選幾頁一起
-            // 搬，Android 這一版先做單頁 —— 多選要先有選取狀態，那是另一件事。
             DropdownMenuItem(
                 text = { Text(l("copy_pages_to_title")) },
                 onClick = { menu = false; onTransferPage(index, false) }
             )
             DropdownMenuItem(
                 text = { Text(l("move_pages_to_title")) },
-                // 一本筆記不能被搬空（核心的 `page_transfer_plan` 也會擋）。
                 enabled = pageCount > 1,
                 onClick = { menu = false; onTransferPage(index, true) }
+            )
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(l("delete_page"), color = MaterialTheme.colorScheme.error) },
+                enabled = pageCount > 1,
+                onClick = { menu = false; onDeletePage(index) }
             )
         }
         Text(

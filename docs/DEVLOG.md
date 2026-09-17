@@ -5,6 +5,24 @@
 
 ---
 
+## 2026-09-18（早晨）· S-80 / S-85 / S-86 / S-93：手繪縮放座標反變換、側欄樣板插入與物件邊界約束全面實裝
+
+### 一、S-80：Android 畫布縮放/平移與手寫座標反變換（Inverse Transform）
+- 過去 Android 整頁模式下縮放或位移畫布時，墨跡與手寫事件會脫位（因為 `InkEngine` 收到的是未經變換的螢幕像素座標）。
+- 現於 `InkInput.kt` / `InkEngine.kt` 實作 `zoom`、`offsetX`、`offsetY` 反向變換，在計算取樣點座標時自動還原回未縮放的邏輯畫布座標。
+- 在 `MainActivity.kt` 綁定 `canvasScale`、`canvasOffset` 與 `canvasDensity` 即時同步至 `engine`，徹底解決放大書寫時筆跡飄移的問題。
+
+### 二、S-85：跨平台畫布物件拖曳超出邊界自動夾回（Printable Bounds Clamping）
+- Apple 端 `NotebookEditorView.swift:moveObject` 補上 `clampToPrintable` 幾何約束，在拖曳文字、圖片、形狀、表格等物件結束時，自動推回頁面可列印範圍內。
+- Android 端在 `ShapeLayer.kt` 與 `TableLayer.kt` 補齊 `PageGeometry.clampOrigin`，與既有的文字、圖片、錄音卡片約束保持完全一致。
+
+### 三、S-86 & S-93：Android 側欄樣板插入、多頁管理與逐頁樣板配置
+- `NotebookMeta.kt` 擴充 `insertPageTemplate` 與 `removePageTemplate`，支援跨裝置同步 `pageTemplates` 陣列。
+- `PageSidebar.kt` 長按選單補齊「在後方插入新頁面」、「插入其他樣板頁面…」（含分類 Tab 與樣板選擇對話框）以及「刪除此頁」。
+- `MainActivity.kt` 實裝 `insertPageAfter` 與 `deletePageAt`，並完整接入連續模式、單頁模式及彈窗模式等三處側欄調用點。
+
+---
+
 ## 2026-09-18（深夜）· S-81 / S-77 / S-94～S-98：跨平台畫面規格 100% 對齊，差距歸零
 
 ### 一、棘輪 baseline 歸零（148 → 0）

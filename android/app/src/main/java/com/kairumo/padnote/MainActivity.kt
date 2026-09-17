@@ -1716,6 +1716,46 @@ private fun InkScreen(
             }
     }
 
+    /**
+     * 在指定頁面後插入新頁（S-93／S-86）。
+     * 若 paperId != null 則套用指定樣板，否則為空白頁。
+     */
+    fun insertPageAfter(afterIndex: Int, paperId: String?) {
+        val s = notebook?.first ?: return
+        val tmpl = if (paperId != null) {
+            uniffi.padnote_core.paperTemplates().firstOrNull { it.id == paperId }
+        } else null
+        val style = tmpl?.pageStyle ?: uniffi.padnote_core.PageStyle.BLANK
+        val newPageId = runCatching { s.addPage(style) }.getOrNull() ?: return
+        val newCount = runCatching { s.pageCount().toInt() }.getOrDefault(pageCount + 1)
+        val targetIndex = (afterIndex + 1).coerceAtMost(newCount - 1)
+        if (targetIndex < newCount - 1) {
+            runCatching { s.movePage(newPageId, targetIndex.toUInt()) }
+        }
+        if (paperId != null) {
+            meta.insertPageTemplate(s, targetIndex, paperId, newCount)
+        }
+        pageCount = newCount
+        pageIndex = targetIndex
+        revision++
+    }
+
+    /**
+     * 刪除指定頁面（S-86）。
+     */
+    fun deletePageAt(atIndex: Int) {
+        val s = notebook?.first ?: return
+        if (pageCount <= 1) return
+        val target = runCatching { s.pageIdAt(atIndex.toUInt()) }.getOrNull() ?: return
+        runCatching { s.removePage(target) }
+        meta.removePageTemplate(s, atIndex, pageCount)
+        pageCount = runCatching { s.pageCount().toInt() }.getOrDefault(pageCount - 1)
+        if (pageIndex >= pageCount) {
+            pageIndex = (pageCount - 1).coerceAtLeast(0)
+        }
+        revision++
+    }
+
     var clearToken by remember { mutableIntStateOf(0) }
     // 改名對話框（頂列的標題點一下就開）。
     var renamingCurrent by remember { mutableStateOf(false) }
@@ -2899,6 +2939,8 @@ private fun InkScreen(
                             }
                         },
                         onMovePage = { from, to -> movePage(from, to) },
+                        onInsertPageAfter = { idx, pid -> insertPageAfter(idx, pid) },
+                        onDeletePage = { idx -> deletePageAt(idx) },
                         onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
                         onOpenNotebook = { id -> showPageSidebar = false; onOpenNotebook?.invoke(id) },
                         deviceId = deviceId(activity),
@@ -3025,6 +3067,8 @@ private fun InkScreen(
                         }
                     },
                     onMovePage = { from, to -> movePage(from, to) },
+                    onInsertPageAfter = { idx, pid -> insertPageAfter(idx, pid) },
+                    onDeletePage = { idx -> deletePageAt(idx) },
                     onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
                     onOpenNotebook = { id -> showPageSidebar = false; onOpenNotebook?.invoke(id) },
                     deviceId = deviceId(activity),
@@ -3206,6 +3250,13 @@ private fun InkScreen(
             // **逐頁**：同一本筆記可以一頁四象限、一頁日程表。
             val paperId = remember(notebookMeta, pageIndex) { notebookMeta.paperId(pageIndex) }
             val guidePaletteId = remember(notebookMeta) { notebookMeta.paletteId() }
+            // 同步縮放與位移至筆跡引擎（S-80）。
+            // 縮放時座標反變換，避免墨跡因手勢位移脫位。
+            LaunchedEffect(canvasScale, canvasOffset, canvasDensity) {
+                engine.zoom = canvasScale
+                engine.offsetX = canvasOffset.x / canvasDensity
+                engine.offsetY = canvasOffset.y / canvasDensity
+            }
             val guideMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
             // 縮放時不能走低延遲路徑。
             //
@@ -3603,6 +3654,8 @@ private fun InkScreen(
                         showPageSidebar = false
                     },
                     onMovePage = { from, to -> movePage(from, to) },
+                    onInsertPageAfter = { idx, pid -> insertPageAfter(idx, pid) },
+                    onDeletePage = { idx -> deletePageAt(idx) },
                     onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
                     onOpenNotebook = { id -> showPageSidebar = false; onOpenNotebook?.invoke(id) },
                     deviceId = deviceId(activity),

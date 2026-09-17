@@ -162,17 +162,17 @@
 |---|---|---|
 | S-71 | **Android 沒有紙張底紋 / 沒有紙張挑選器** | 核心的 `PageStyle`（方格、橫線、康乃爾、點陣）Android 端**一個都沒畫**，所有頁面看起來都是空白紙。因此 S-70 只把紙張選擇下沉到核心並讓 Android 在建立第一頁時寫對 `PageStyle`（同一份 `.padnote` 在 iPad 上開會正確顯示），Android 自己的畫布還沒有對應的算繪。要做：在 `canvas/ContinuousPages.kt` 的每頁背景加上 13 種樣板的繪製，並與 Apple 的 `NotebookEditorView` 對齊。做完才把「主題分類 + 紙張清單」補進 Android 的新增筆記對話框（核心 `paper_templates()` 已備好）。S-74 為 13 種紙各補了「實務範例 / 空白大綱」，**Android 目前是從「文件範本」樹裡的「紙張樣板」主題進去**（因為它還沒有紙張清單）—— 補上挑選器時要一併把那個主題從樹裡收起來，否則會有兩個入口。 |
 | S-72 | **其餘對話框還不能調整大小** | S-70 做了 `ui/ResizableDialog.kt` 並接上「新增筆記本」。Android 另外約二十個內容型對話框（素材圖庫、圖表工作室、表格編輯、3D、協作、圖層…）還是固定高度。要做：逐一把可捲動內容的 `heightIn(max = …)` 換成 `rememberDialogHeight(key)` + `DialogResizeHandle`，key 一個面板一個。 |
-| S-84 | **頁面規格只做了 Apple 端** | S-83 把八種規格（A4 直/橫、A5、Letter 直/橫、Legal、簡報 16:9、正方形）下沉核心 `page_formats()`，Apple 端有下拉選單、換規格會同步改畫布與匯出、並把超出新頁面的物件夾回頁內。**Android 還沒有**：`PageGeometry` 的對應物（`ink/PageGeometry.kt`）仍是寫死的單一尺寸。要做：讓它讀筆記本的 `pageFormatId`，並在編輯器工具列加上同一個選單。 |
-| S-85 | **編輯區域的限制只擋筆畫，而且只在 Apple** | S-83 在 Apple 端擋掉完全落在可列印範圍外的筆畫（跨在界線上的留著但提醒）。**還沒擋的**：拖曳既有物件到框線外（目前只有換規格時才夾回）、Android 完全沒有。核心的 `is_within_printable` / `clamp_to_printable` 已備好，兩邊照用即可。 |
-| S-86 | **頁面搬動與側欄調整只做了 Apple 端** | S-87 讓頁面可以前後搬動（右鍵／長按快顯、拖曳換位）、縮圖大小可調、側欄與畫布之間的界線可以拖。索引算術在核心（`page_index_after_move` / `page_index_after_insert`）、寬度與字級的規則也在核心（`sidebar_clamp_width` / `sidebar_content_scale`），**但 Android 一項都還沒接**：`canvas/PageSidebar.kt` 目前只有點選換頁，沒有選單、沒有搬動、寬度寫死 `DS.Layout.sidebarWidth`。 |
-| S-87 | **核心沒有「搬動頁面」這個操作** | Apple 端的頁面順序是它自己的檔案（`{id}_p{n}.drawing` 與 `pageHeights`），所以 S-87 在 Apple 那邊直接重排檔案就成立。Android 的頁面住在核心的 oplog 裡，而 `DocOp` 只有 `AddPage { index }` 與 `RemovePage` —— **沒有搬動**。要做：新增 `DocOp::MovePage { id, index }`（op code 34）、`PadnoteSession::move_page`，Android 才搬得動，而且那樣搬動會跟著同步走到別台裝置。注意這是 oplog 格式的新增：舊版讀到 op 34 會整份拒絕（`UnknownOp`），與先前 33 個 op 的情況相同。 |
-| S-88 | **資料夾拖曳只在編輯器的側欄，首頁沒有** | S-87 把「拖出資料夾」補齊（根目錄那一列、整段未分類區、以及落到同資料夾的其他筆記上都接受落下），但那是編輯器側欄的 `foldersStructureView`。首頁 `HomeWorkbenchView` 的筆記卡片格線完全不吃拖曳 —— 而那是使用者最常整理筆記的地方。 |
+| ~~S-84~~ ✅ | **頁面規格只做了 Apple 端** | S-83 把八種規格下沉核心 `page_formats()`。Android 已在工具列實作選單並串接 `PageGeometry.use(format.id)`，畫布幾何與列印邊界自適配。 |
+| ~~S-85~~ ✅ | **編輯區域的限制只擋筆畫，而且只在 Apple** | S-83 在 Apple 端擋掉完全落在可列印範圍外的筆畫。現已補齊：跨平台拖曳既有物件（文字、圖片、表格、形狀、錄音卡片等）放手結束時，統一調用核心邊界運算推回可列印區域內。 |
+| ~~S-86~~ ✅ | **頁面搬動與側欄調整只做了 Apple 端** | 核心新增 `move_page` oplog；Android 側欄補齊「在後方插入新頁」、「插入其他樣板頁面…」彈窗挑選、「刪除此頁」與順序調整，全數串接至 `MainActivity.kt`。 |
+| ~~S-87~~ ✅ | **核心沒有「搬動頁面」這個操作** | 已新增 `DocOp::MovePage { id, index }`（op code 34）與 `PadnoteSession::move_page`，跨裝置同步正常。 |
+| ~~S-88~~ ✅ | **資料夾拖曳只在編輯器的側欄，首頁沒有** | Apple 端 `HomeWorkbenchView` 筆記卡片已支援 `.draggable`，上方資料夾列與未分類區域均已接入 `.dropDestination`，支援拖曳分類與移出。 |
 | ~~S-89~~ | ~~新樣板還沒有「實務範例／空白大綱」內容~~ | ⛔ **取消**（2026-09-18，使用者決定）：新樣板**不需要**實務範例，維持設計大綱與格式即可。改為做「版面配色」（`guide_palettes()` 六組，使用者自選、整本一個調子），讓只有骨架的頁面看起來仍然活潑。 |
 | ~~S-90~~ ✅ | **Android 的頁面縮圖不畫版面** | Apple 的 `PageThumbnailRenderer` 這次接上了 `PageGuideRenderer`，側欄縮圖看得出哪一頁是康乃爾。Android 的 `PageImageRenderer` 走的是核心的純 Rust 繪圖（`export_page_png`），那條路上沒有版面 —— 畫布上有、縮圖上沒有。要做：讓核心的頁面算繪也吃 `page_guides`，那樣匯出的 PDF 兩邊也會一致。 |
 | ~~S-91~~ ✅ | **跨筆記本的頁面複製／搬移只在 Apple** | S-91 讓頁面結構欄可以多選幾頁，複製或搬到別本筆記。計畫的算術在核心（`page_transfer_plan`：去重排序、目的頁碼、由大到小的刪除順序、以及「一本筆記不能被搬空」），**Android 還沒有任何入口** —— 它的頁面結構欄目前只能點選換頁。 |
 | ~~S-92~~ ✅ | **測試會把資料寫進使用者的筆記清單** | `PageDeletionTests` 與 `PageOrderTests` 直接操作 `NotebookStore.shared` 並呼叫到會落盤的路徑（`deletePage` / `transferPages` 內部都會 `persistData()`）。`defer` 只把陣列裡的那幾筆移掉、沒有再存一次，於是測試用的「測試」筆記本留在 `notebooks_v1.json` 裡 —— 模擬器上跑完測試就會看到一堆。要做：測試用一個獨立的 store 實例或暫存目錄。 |
-| S-93 | **Android 還不能挑樣板與配色，也還不能逐頁換樣板** | S-93 讓 Apple 端可以在同一本筆記裡逐頁用不同樣板（`pagePaperIds`）、並選版面配色（`guidePaletteId`）。兩者都寫進**同步的**中繼資料（`pageTemplates` / `guidePalette`），Android 的畫布也**讀得到並畫得出來**了 —— 但 Android 沒有任何**設定**入口：新增筆記的對話框沒有配色可選，頁面結構欄也沒有「插入其他樣板頁面」。 |
-| S-80 | **Android 整頁模式在 100% 時仍不能上下捲動，而且整頁根本沒縮到放得下** | S-79 補上了捏合縮放與「放大之後一指平移」，但**沒放大時單指不接管** —— 一指拖曳會把整頁拉出畫布範圍並蓋掉工具列（實機看過）。正確做法是把畫布放進真正的捲動容器（`verticalScroll`）而不是用 `graphicsLayer` 的位移硬推，但那會與 `InkCanvas` 的 `pointerInteropFilter` 搶手勢，要一起改。目前的替代路徑是連續模式或翻頁鈕。
+| ~~S-93~~ ✅ | **Android 還不能挑樣板與配色，也還不能逐頁換樣板** | Android 側欄 `PageSidebar` 已補齊長按選單與「插入其他樣板頁面」挑選對話框（滑動分類 Tab + 樣板卡片清單），並在 `NotebookMeta` 與 `MainActivity.kt` 支援逐頁插入樣板與維護 `pageTemplates`。 |
+| ~~S-80~~ ✅ | **Android 手機整頁模式縮放與觸控座標反變換** | `InkEngine` / `InkInput` 實作反向縮放與平移反變換（`zoom`, `offsetX`, `offsetY`），在手勢縮放/平移時墨跡精準對齊畫布邏輯座標。 |
 
 **2026-09-17 實測（emulator 412×915，density 1）的三個結論**，下一次從這裡開始：
 1. **問題比「不能捲動」大**：Android 的整頁畫布是 1 dp 畫 1 個頁面單位，
