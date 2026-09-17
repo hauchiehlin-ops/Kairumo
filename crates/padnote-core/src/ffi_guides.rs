@@ -332,11 +332,32 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
             s.hline(M, R, body_top, FfiGuideTone::Light, 1.0);
             s.hline(M, R, summary, FfiGuideTone::Accent, 1.5);
             s.label("guide_cue", M + 0.012, body_top + 0.026, 0.3, 0.022, LEFT);
-            s.label("guide_notes", split + 0.012, body_top + 0.026, 0.3, 0.022, LEFT);
-            s.label("guide_summary", M + 0.012, summary + 0.028, 0.3, 0.022, LEFT);
+            s.label(
+                "guide_notes",
+                split + 0.012,
+                body_top + 0.026,
+                0.3,
+                0.022,
+                LEFT,
+            );
+            s.label(
+                "guide_summary",
+                M + 0.012,
+                summary + 0.028,
+                0.3,
+                0.022,
+                LEFT,
+            );
             if paper_id == "cornell" {
                 // 主筆記欄鋪橫線；提示欄不鋪 —— 那一欄是關鍵字，不是句子。
-                s.rows(split + 0.01, R, body_top + 0.05, summary - 0.01, 22, FfiGuideTone::Hairline);
+                s.rows(
+                    split + 0.01,
+                    R,
+                    body_top + 0.05,
+                    summary - 0.01,
+                    22,
+                    FfiGuideTone::Hairline,
+                );
             }
         }
         "quadrant" => {
@@ -357,7 +378,10 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
             title_row(&mut s, "guide_topic");
             let top = TOP + 0.05;
             // 三層縮排的導引線。線本身很淡：它是尺，不是框。
-            for (i, key) in ["guide_main", "guide_sub", "guide_detail"].iter().enumerate() {
+            for (i, key) in ["guide_main", "guide_sub", "guide_detail"]
+                .iter()
+                .enumerate()
+            {
                 let x = M + 0.06 * i as f32;
                 s.vline(x, top, BOT, FfiGuideTone::Hairline, 1.0);
                 s.label(key, x + 0.008, top - 0.012, 0.2, 0.018, LEFT);
@@ -382,17 +406,34 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
                 s.label("guide_question", M, y + 0.022, 0.2, 0.022, LEFT);
                 s.hline(M + 0.06, R, y + 0.026, FfiGuideTone::Light, 1.0);
                 s.label("guide_answer", M, y + 0.058, 0.2, 0.022, LEFT);
-                s.rows(M + 0.06, R, y + 0.062, y + block - 0.014, 2, FfiGuideTone::Hairline);
+                s.rows(
+                    M + 0.06,
+                    R,
+                    y + 0.062,
+                    y + block - 0.014,
+                    2,
+                    FfiGuideTone::Hairline,
+                );
             }
         }
         "kwl" => {
             title_row(&mut s, "guide_topic");
             let top = TOP + 0.05;
             let w = (R - M) / 3.0;
-            for (i, key) in ["guide_know", "guide_want", "guide_learned"].iter().enumerate() {
+            for (i, key) in ["guide_know", "guide_want", "guide_learned"]
+                .iter()
+                .enumerate()
+            {
                 let x = M + w * i as f32;
                 s.header(key, x, top, w);
-                s.rows(x + 0.008, x + w - 0.008, top + 0.05, BOT, 22, FfiGuideTone::Hairline);
+                s.rows(
+                    x + 0.008,
+                    x + w - 0.008,
+                    top + 0.05,
+                    BOT,
+                    22,
+                    FfiGuideTone::Hairline,
+                );
                 s.vline(x, top, BOT, FfiGuideTone::Light, 1.0);
             }
             s.vline(R, top, BOT, FfiGuideTone::Light, 1.0);
@@ -406,8 +447,22 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
             s.label("guide_center_idea", cx, cy + 0.006, 0.28, 0.024, CENTER);
             // 四個方向的分支起點，只給很短的一段 —— 剩下的讓使用者自己長。
             for (dx, dy) in [(-0.2f32, -0.16f32), (0.2, -0.16), (-0.2, 0.16), (0.2, 0.16)] {
-                s.line(cx + dx * 0.4, cy + dy * 0.4, cx + dx, cy + dy, FfiGuideTone::Hairline, 1.2);
-                s.rect(cx + dx - 0.09, cy + dy - 0.025, 0.18, 0.05, FfiGuideTone::Hairline, 1.0);
+                s.line(
+                    cx + dx * 0.4,
+                    cy + dy * 0.4,
+                    cx + dx,
+                    cy + dy,
+                    FfiGuideTone::Hairline,
+                    1.2,
+                );
+                s.rect(
+                    cx + dx - 0.09,
+                    cy + dy - 0.025,
+                    0.18,
+                    0.05,
+                    FfiGuideTone::Hairline,
+                    1.0,
+                );
             }
         }
 
@@ -432,7 +487,12 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
             title_row(&mut s, "guide_week");
             let top = TOP + 0.05;
             let days = [
-                "guide_mon", "guide_tue", "guide_wed", "guide_thu", "guide_fri", "guide_sat",
+                "guide_mon",
+                "guide_tue",
+                "guide_wed",
+                "guide_thu",
+                "guide_fri",
+                "guide_sat",
                 "guide_sun",
             ];
             let w = (R - M) / 7.0;
@@ -486,10 +546,21 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
             s.vline(M, table, BOT - 0.12, FfiGuideTone::Light, 1.0);
             s.vline(R, table, BOT - 0.12, FfiGuideTone::Light, 1.0);
             let rows = 14;
-            s.rows(M, R, table + 0.034, BOT - 0.12, rows, FfiGuideTone::Hairline);
+            s.rows(
+                M,
+                R,
+                table + 0.034,
+                BOT - 0.12,
+                rows,
+                FfiGuideTone::Hairline,
+            );
             let step = (BOT - 0.12 - table - 0.034) / rows as f32;
             for i in 0..rows {
-                s.checkbox(R - 0.048, table + 0.034 + step * i as f32 + step * 0.28, 0.018);
+                s.checkbox(
+                    R - 0.048,
+                    table + 0.034 + step * i as f32 + step * 0.28,
+                    0.018,
+                );
             }
             s.header("guide_review", M, BOT - 0.09, R - M);
             s.rows(M, R, BOT - 0.056, BOT, 1, FfiGuideTone::Hairline);
@@ -528,7 +599,13 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
                 for i in 0..rows {
                     let y = top + step * i as f32;
                     s.checkbox(col_x, y + step * 0.2, 0.02);
-                    s.hline(col_x + 0.045, col_r, y + step * 0.78, FfiGuideTone::Hairline, 1.0);
+                    s.hline(
+                        col_x + 0.045,
+                        col_r,
+                        y + step * 0.78,
+                        FfiGuideTone::Hairline,
+                        1.0,
+                    );
                 }
             }
         }
@@ -539,7 +616,14 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
             let grid_left = M + label_w;
             let bottom = top + (BOT - top) * 0.62;
             s.label("guide_habit", M, top - 0.012, label_w, 0.02, LEFT);
-            s.label("guide_day", grid_left, top - 0.012, R - grid_left, 0.02, LEFT);
+            s.label(
+                "guide_day",
+                grid_left,
+                top - 0.012,
+                R - grid_left,
+                0.02,
+                LEFT,
+            );
             // 31 欄 × 14 列。
             s.cols(top, bottom, grid_left, R, 31, FfiGuideTone::Hairline);
             s.rows(M, R, top, bottom, 14, FfiGuideTone::Hairline);
@@ -577,7 +661,12 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
             let grid_left = M + task_w;
             s.header("guide_area", M, top, task_w);
             let days = [
-                "guide_mon", "guide_tue", "guide_wed", "guide_thu", "guide_fri", "guide_sat",
+                "guide_mon",
+                "guide_tue",
+                "guide_wed",
+                "guide_thu",
+                "guide_fri",
+                "guide_sat",
                 "guide_sun",
             ];
             let dw = (R - grid_left) / 7.0;
@@ -624,9 +713,23 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
             let top = TOP;
             let w = (R - M) / 5.0;
             for i in 0..5 {
-                s.rect(M + w * i as f32 + 0.008, top, w - 0.016, 0.06, FfiGuideTone::Light, 1.0);
+                s.rect(
+                    M + w * i as f32 + 0.008,
+                    top,
+                    w - 0.016,
+                    0.06,
+                    FfiGuideTone::Light,
+                    1.0,
+                );
             }
-            s.rect(M, top + 0.08, R - M, BOT - top - 0.08, FfiGuideTone::Hairline, 1.0);
+            s.rect(
+                M,
+                top + 0.08,
+                R - M,
+                BOT - top - 0.08,
+                FfiGuideTone::Hairline,
+                1.0,
+            );
         }
         "golden_ratio" => {
             for f in [0.382f32, 0.618] {
@@ -665,8 +768,20 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
                 let y = 0.1 + 0.44 * i as f32 * 0.0 + 0.06;
                 s.rect(cx - pw / 2.0, y, pw, ph, FfiGuideTone::Accent, 1.5);
                 // 狀態列與底部指示條。
-                s.hline(cx - pw / 2.0, cx + pw / 2.0, y + 0.028, FfiGuideTone::Hairline, 1.0);
-                s.hline(cx - pw / 2.0, cx + pw / 2.0, y + ph - 0.03, FfiGuideTone::Hairline, 1.0);
+                s.hline(
+                    cx - pw / 2.0,
+                    cx + pw / 2.0,
+                    y + 0.028,
+                    FfiGuideTone::Hairline,
+                    1.0,
+                );
+                s.hline(
+                    cx - pw / 2.0,
+                    cx + pw / 2.0,
+                    y + ph - 0.03,
+                    FfiGuideTone::Hairline,
+                    1.0,
+                );
             }
             s.label("guide_screen", 0.3, 0.06 - 0.012, 0.2, 0.018, CENTER);
             s.label("guide_screen", 0.7, 0.06 - 0.012, 0.2, 0.018, CENTER);
@@ -690,9 +805,22 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
                 // 五個節點。
                 for j in 0..5 {
                     let cx = M + 0.1 + (R - M - 0.2) / 4.0 * j as f32;
-                    s.rect(cx - 0.05, y + 0.04, 0.1, lh - 0.07, FfiGuideTone::Hairline, 1.0);
+                    s.rect(
+                        cx - 0.05,
+                        y + 0.04,
+                        0.1,
+                        lh - 0.07,
+                        FfiGuideTone::Hairline,
+                        1.0,
+                    );
                     if j < 4 {
-                        s.hline(cx + 0.05, cx + (R - M - 0.2) / 4.0 - 0.05, y + 0.04 + (lh - 0.07) / 2.0, FfiGuideTone::Hairline, 1.0);
+                        s.hline(
+                            cx + 0.05,
+                            cx + (R - M - 0.2) / 4.0 - 0.05,
+                            y + 0.04 + (lh - 0.07) / 2.0,
+                            FfiGuideTone::Hairline,
+                            1.0,
+                        );
                     }
                 }
             }
@@ -740,11 +868,27 @@ mod tests {
                 let inside = |v: f32, max: f32| v >= -0.6 && v <= max + 0.6;
                 // 文字的 x 是錨點、w 只是可用寬度，所以只檢查錨點本身。
                 if g.kind == FfiGuideKind::Label {
-                    assert!(inside(g.x, w) && inside(g.y, h), "{} 的文字錨點在頁面外", t.id);
+                    assert!(
+                        inside(g.x, w) && inside(g.y, h),
+                        "{} 的文字錨點在頁面外",
+                        t.id
+                    );
                     continue;
                 }
-                assert!(inside(g.x, w) && inside(x2, w), "{} 的 x 超出頁面：{} → {}", t.id, g.x, x2);
-                assert!(inside(g.y, h) && inside(y2, h), "{} 的 y 超出頁面：{} → {}", t.id, g.y, y2);
+                assert!(
+                    inside(g.x, w) && inside(x2, w),
+                    "{} 的 x 超出頁面：{} → {}",
+                    t.id,
+                    g.x,
+                    x2
+                );
+                assert!(
+                    inside(g.y, h) && inside(y2, h),
+                    "{} 的 y 超出頁面：{} → {}",
+                    t.id,
+                    g.y,
+                    y2
+                );
             }
         }
     }
@@ -754,7 +898,12 @@ mod tests {
         // 勾選框用寬度換算邊長，橫式頁面上仍然是正方形。
         for g in page_guides("todo_list".into(), 1132.0, 800.0) {
             if g.kind == FfiGuideKind::Checkbox {
-                assert!((g.w - g.h).abs() < 0.01, "勾選框被拉成長方形：{} x {}", g.w, g.h);
+                assert!(
+                    (g.w - g.h).abs() < 0.01,
+                    "勾選框被拉成長方形：{} x {}",
+                    g.w,
+                    g.h
+                );
             }
         }
     }
@@ -779,10 +928,25 @@ mod tests {
         // 這一條擋的是「新增了一種紙、忘了給它版面」—— 清單上看得到，
         // 選下去卻是一張白紙。
         for id in [
-            "cornell", "quadrant", "outline", "two_column", "qa", "kwl", "mind_map",
-            "monthly_grid", "weekly_columns", "daily_schedule", "timeline_24h", "study_planner",
-            "project_timeline", "todo_list", "checklist_two", "habit_month",
-            "assignment_tracker", "chore_roster", "challenge_21",
+            "cornell",
+            "quadrant",
+            "outline",
+            "two_column",
+            "qa",
+            "kwl",
+            "mind_map",
+            "monthly_grid",
+            "weekly_columns",
+            "daily_schedule",
+            "timeline_24h",
+            "study_planner",
+            "project_timeline",
+            "todo_list",
+            "checklist_two",
+            "habit_month",
+            "assignment_tracker",
+            "chore_roster",
+            "challenge_21",
         ] {
             assert!(guides(id).len() > 3, "{id} 幾乎沒有版面");
         }
@@ -802,7 +966,8 @@ mod tests {
                 assert_eq!(hex.len(), 6, "{} 的 {hex} 不是六位十六進位", p.id);
                 assert!(
                     hex.chars().all(|c| c.is_ascii_hexdigit()),
-                    "{} 的 {hex} 有非十六進位字元", p.id
+                    "{} 的 {hex} 有非十六進位字元",
+                    p.id
                 );
             }
             assert_eq!(p.name_key, format!("palette_{}", p.id));

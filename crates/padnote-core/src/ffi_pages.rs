@@ -17,11 +17,7 @@
 /// 插入點**之後**（含插入點本身）的往後移一格；之前的不動。
 #[uniffi::export]
 pub fn page_index_after_insert(index: u32, at: u32) -> u32 {
-    if index >= at {
-        index + 1
-    } else {
-        index
-    }
+    if index >= at { index + 1 } else { index }
 }
 
 /// 把第 `from` 頁搬到第 `to` 頁之後，原本在 `index` 的東西落在哪一頁。
@@ -113,14 +109,13 @@ pub fn page_transfer_plan(
     move_out: bool,
     same_notebook: bool,
 ) -> FfiPageTransferPlan {
-    let mut sources: Vec<u32> = selected
-        .into_iter()
-        .filter(|i| *i < source_count)
-        .collect();
+    let mut sources: Vec<u32> = selected.into_iter().filter(|i| *i < source_count).collect();
     sources.sort_unstable();
     sources.dedup();
 
-    let destinations: Vec<u32> = (0..sources.len() as u32).map(|i| target_count + i).collect();
+    let destinations: Vec<u32> = (0..sources.len() as u32)
+        .map(|i| target_count + i)
+        .collect();
     let removals: Vec<u32> = if move_out {
         sources.iter().rev().copied().collect()
     } else {
@@ -189,7 +184,8 @@ mod tests {
         let n = 6u32;
         for from in 0..n {
             for to in 0..n {
-                let mut seen: Vec<u32> = (0..n).map(|i| page_index_after_move(i, from, to)).collect();
+                let mut seen: Vec<u32> =
+                    (0..n).map(|i| page_index_after_move(i, from, to)).collect();
                 seen.sort_unstable();
                 let expected: Vec<u32> = (0..n).collect();
                 assert_eq!(seen, expected, "from={from} to={to} 不是重排");

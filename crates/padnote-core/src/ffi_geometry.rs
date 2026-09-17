@@ -233,17 +233,20 @@ pub fn is_outside_printable(rect: FfiRect, page_width: f32, page_height: f32, in
 /// 比區域還大的物件夾不進去 —— 那種情況只縮到區域大小，而不是讓它溢出去。
 /// 溢出的部分在匯出時會被裁掉，而使用者看不到自己丟了什麼。
 #[uniffi::export]
-pub fn clamp_to_printable(
-    rect: FfiRect,
-    page_width: f32,
-    page_height: f32,
-    inset: f32,
-) -> FfiRect {
+pub fn clamp_to_printable(rect: FfiRect, page_width: f32, page_height: f32, inset: f32) -> FfiRect {
     let area = printable_rect(page_width, page_height, inset);
-    let w = (rect.max_x - rect.min_x).min(area.max_x - area.min_x).max(0.0);
-    let h = (rect.max_y - rect.min_y).min(area.max_y - area.min_y).max(0.0);
-    let x = rect.min_x.clamp(area.min_x, (area.max_x - w).max(area.min_x));
-    let y = rect.min_y.clamp(area.min_y, (area.max_y - h).max(area.min_y));
+    let w = (rect.max_x - rect.min_x)
+        .min(area.max_x - area.min_x)
+        .max(0.0);
+    let h = (rect.max_y - rect.min_y)
+        .min(area.max_y - area.min_y)
+        .max(0.0);
+    let x = rect
+        .min_x
+        .clamp(area.min_x, (area.max_x - w).max(area.min_x));
+    let y = rect
+        .min_y
+        .clamp(area.min_y, (area.max_y - h).max(area.min_y));
     FfiRect {
         min_x: x,
         min_y: y,

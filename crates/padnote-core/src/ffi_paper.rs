@@ -133,123 +133,267 @@ pub fn paper_templates() -> Vec<FfiPaperTemplate> {
     use FfiPaperTheme::{Aesthetic, Digital, Engineering, General, Method, Planner, Tracker};
     vec![
         // 通用基礎
-        entry("blank", "tmpl_blank", "doc.plaintext", "Article", PageStyle::Blank, General),
-        entry("grid", "tmpl_grid", "circle.grid.3x3", "GridOn", PageStyle::Grid, General),
-        entry("lined", "tmpl_lined", "line.horizontal.3", "Notes", PageStyle::Lined, General),
         entry(
-            "dot_grid_fine", "tmpl_dot_grid_fine", "circle.dotted", "BlurOn",
-            PageStyle::Dotted, General,
+            "blank",
+            "tmpl_blank",
+            "doc.plaintext",
+            "Article",
+            PageStyle::Blank,
+            General,
+        ),
+        entry(
+            "grid",
+            "tmpl_grid",
+            "circle.grid.3x3",
+            "GridOn",
+            PageStyle::Grid,
+            General,
+        ),
+        entry(
+            "lined",
+            "tmpl_lined",
+            "line.horizontal.3",
+            "Notes",
+            PageStyle::Lined,
+            General,
+        ),
+        entry(
+            "dot_grid_fine",
+            "tmpl_dot_grid_fine",
+            "circle.dotted",
+            "BlurOn",
+            PageStyle::Dotted,
+            General,
         ),
         // 筆記方法
-        entry("cornell", "tmpl_cornell", "sidebar.left", "ViewSidebar", PageStyle::Cornell, Method),
         entry(
-            "cornell_grid", "tmpl_cornell_grid", "square.split.1x2", "ViewSidebar",
-            PageStyle::Grid, Method,
+            "cornell",
+            "tmpl_cornell",
+            "sidebar.left",
+            "ViewSidebar",
+            PageStyle::Cornell,
+            Method,
         ),
         entry(
-            "quadrant", "tmpl_quadrant", "square.split.2x2", "GridView",
-            PageStyle::Blank, Method,
+            "cornell_grid",
+            "tmpl_cornell_grid",
+            "square.split.1x2",
+            "ViewSidebar",
+            PageStyle::Grid,
+            Method,
         ),
         entry(
-            "outline", "tmpl_outline", "list.bullet.indent", "FormatIndentIncrease",
-            PageStyle::Blank, Method,
+            "quadrant",
+            "tmpl_quadrant",
+            "square.split.2x2",
+            "GridView",
+            PageStyle::Blank,
+            Method,
         ),
         entry(
-            "two_column", "tmpl_two_column", "rectangle.split.2x1", "VerticalSplit",
-            PageStyle::Blank, Method,
+            "outline",
+            "tmpl_outline",
+            "list.bullet.indent",
+            "FormatIndentIncrease",
+            PageStyle::Blank,
+            Method,
         ),
         entry(
-            "qa", "tmpl_qa", "questionmark.bubble", "QuestionAnswer",
-            PageStyle::Blank, Method,
+            "two_column",
+            "tmpl_two_column",
+            "rectangle.split.2x1",
+            "VerticalSplit",
+            PageStyle::Blank,
+            Method,
         ),
-        entry("kwl", "tmpl_kwl", "rectangle.split.3x1", "ViewColumn", PageStyle::Blank, Method),
         entry(
-            "mind_map", "tmpl_mind_map", "point.topleft.down.curvedto.point.bottomright.up",
-            "AccountTree", PageStyle::Dotted, Method,
+            "qa",
+            "tmpl_qa",
+            "questionmark.bubble",
+            "QuestionAnswer",
+            PageStyle::Blank,
+            Method,
+        ),
+        entry(
+            "kwl",
+            "tmpl_kwl",
+            "rectangle.split.3x1",
+            "ViewColumn",
+            PageStyle::Blank,
+            Method,
+        ),
+        entry(
+            "mind_map",
+            "tmpl_mind_map",
+            "point.topleft.down.curvedto.point.bottomright.up",
+            "AccountTree",
+            PageStyle::Dotted,
+            Method,
         ),
         // 規劃排程
         entry(
-            "monthly_grid", "tmpl_monthly_grid", "calendar", "CalendarMonth",
-            PageStyle::Blank, Planner,
+            "monthly_grid",
+            "tmpl_monthly_grid",
+            "calendar",
+            "CalendarMonth",
+            PageStyle::Blank,
+            Planner,
         ),
         entry(
-            "weekly_columns", "tmpl_weekly_columns", "calendar.day.timeline.left",
-            "ViewWeek", PageStyle::Blank, Planner,
+            "weekly_columns",
+            "tmpl_weekly_columns",
+            "calendar.day.timeline.left",
+            "ViewWeek",
+            PageStyle::Blank,
+            Planner,
         ),
         entry(
-            "daily_schedule", "tmpl_daily_schedule", "clock", "Schedule",
-            PageStyle::Blank, Planner,
+            "daily_schedule",
+            "tmpl_daily_schedule",
+            "clock",
+            "Schedule",
+            PageStyle::Blank,
+            Planner,
         ),
         entry(
-            "timeline_24h", "tmpl_timeline_24h", "clock.badge", "AccessTime",
-            PageStyle::Blank, Planner,
+            "timeline_24h",
+            "tmpl_timeline_24h",
+            "clock.badge",
+            "AccessTime",
+            PageStyle::Blank,
+            Planner,
         ),
         entry(
-            "study_planner", "tmpl_study_planner", "book", "MenuBook",
-            PageStyle::Blank, Planner,
+            "study_planner",
+            "tmpl_study_planner",
+            "book",
+            "MenuBook",
+            PageStyle::Blank,
+            Planner,
         ),
         entry(
-            "project_timeline", "tmpl_project_timeline", "chart.bar.doc.horizontal",
-            "Timeline", PageStyle::Blank, Planner,
+            "project_timeline",
+            "tmpl_project_timeline",
+            "chart.bar.doc.horizontal",
+            "Timeline",
+            PageStyle::Blank,
+            Planner,
         ),
         // 清單追蹤
         entry(
-            "todo_list", "tmpl_todo_list", "checklist", "Checklist",
-            PageStyle::Blank, Tracker,
+            "todo_list",
+            "tmpl_todo_list",
+            "checklist",
+            "Checklist",
+            PageStyle::Blank,
+            Tracker,
         ),
         entry(
-            "checklist_two", "tmpl_checklist_two", "checklist.checked", "FactCheck",
-            PageStyle::Blank, Tracker,
+            "checklist_two",
+            "tmpl_checklist_two",
+            "checklist.checked",
+            "FactCheck",
+            PageStyle::Blank,
+            Tracker,
         ),
         entry(
-            "habit_month", "tmpl_habit_month", "square.grid.4x3.fill", "EventRepeat",
-            PageStyle::Blank, Tracker,
+            "habit_month",
+            "tmpl_habit_month",
+            "square.grid.4x3.fill",
+            "EventRepeat",
+            PageStyle::Blank,
+            Tracker,
         ),
         entry(
-            "assignment_tracker", "tmpl_assignment_tracker", "tray.full", "Assignment",
-            PageStyle::Blank, Tracker,
+            "assignment_tracker",
+            "tmpl_assignment_tracker",
+            "tray.full",
+            "Assignment",
+            PageStyle::Blank,
+            Tracker,
         ),
         entry(
-            "chore_roster", "tmpl_chore_roster", "house", "CleaningServices",
-            PageStyle::Blank, Tracker,
+            "chore_roster",
+            "tmpl_chore_roster",
+            "house",
+            "CleaningServices",
+            PageStyle::Blank,
+            Tracker,
         ),
         entry(
-            "challenge_21", "tmpl_challenge_21", "flag.checkered", "EmojiEvents",
-            PageStyle::Blank, Tracker,
+            "challenge_21",
+            "tmpl_challenge_21",
+            "flag.checkered",
+            "EmojiEvents",
+            PageStyle::Blank,
+            Tracker,
         ),
         // 美學視覺
         entry(
-            "golden_ratio", "tmpl_golden_ratio", "camera.metering.center.weighted",
-            "CropFree", PageStyle::Blank, Aesthetic,
+            "golden_ratio",
+            "tmpl_golden_ratio",
+            "camera.metering.center.weighted",
+            "CropFree",
+            PageStyle::Blank,
+            Aesthetic,
         ),
         entry(
-            "moodboard", "tmpl_moodboard", "rectangle.split.2x2", "Dashboard",
-            PageStyle::Blank, Aesthetic,
+            "moodboard",
+            "tmpl_moodboard",
+            "rectangle.split.2x2",
+            "Dashboard",
+            PageStyle::Blank,
+            Aesthetic,
         ),
         // 工程製程
         entry(
-            "blueprint", "tmpl_blueprint", "square.grid.3x3.square", "Engineering",
-            PageStyle::Grid, Engineering,
+            "blueprint",
+            "tmpl_blueprint",
+            "square.grid.3x3.square",
+            "Engineering",
+            PageStyle::Grid,
+            Engineering,
         ),
         entry(
-            "isometric", "tmpl_isometric", "cube.transparent", "ViewInAr",
-            PageStyle::Grid, Engineering,
+            "isometric",
+            "tmpl_isometric",
+            "cube.transparent",
+            "ViewInAr",
+            PageStyle::Grid,
+            Engineering,
         ),
         entry(
-            "orthographic", "tmpl_orthographic", "square.split.2x2", "Window",
-            PageStyle::Blank, Engineering,
+            "orthographic",
+            "tmpl_orthographic",
+            "square.split.2x2",
+            "Window",
+            PageStyle::Blank,
+            Engineering,
         ),
         // 數位體驗
         entry(
-            "mobile_wireframe", "tmpl_mobile_wireframe", "iphone", "PhoneAndroid",
-            PageStyle::Blank, Digital,
+            "mobile_wireframe",
+            "tmpl_mobile_wireframe",
+            "iphone",
+            "PhoneAndroid",
+            PageStyle::Blank,
+            Digital,
         ),
         entry(
-            "web_grid", "tmpl_web_grid", "macwindow", "Laptop", PageStyle::Grid, Digital,
+            "web_grid",
+            "tmpl_web_grid",
+            "macwindow",
+            "Laptop",
+            PageStyle::Grid,
+            Digital,
         ),
         entry(
-            "user_journey", "tmpl_user_journey", "arrow.triangle.branch", "AccountTree",
-            PageStyle::Blank, Digital,
+            "user_journey",
+            "tmpl_user_journey",
+            "arrow.triangle.branch",
+            "AccountTree",
+            PageStyle::Blank,
+            Digital,
         ),
     ]
 }
@@ -332,8 +476,14 @@ mod tests {
         // 這十三個字串就在使用者的檔案裡。對不回來的話，那本筆記重開之後
         // 版面會變成空白紙 —— 而使用者沒有做過任何事。
         assert_eq!(paper_id_from_stored("康乃爾".into()), "cornell");
-        assert_eq!(paper_id_from_stored("30° 等角立體軸測網格".into()), "isometric");
-        assert_eq!(paper_id_from_stored("行動端線框 (8pt Grid)".into()), "mobile_wireframe");
+        assert_eq!(
+            paper_id_from_stored("30° 等角立體軸測網格".into()),
+            "isometric"
+        );
+        assert_eq!(
+            paper_id_from_stored("行動端線框 (8pt Grid)".into()),
+            "mobile_wireframe"
+        );
         // 新的樣板存的就是 id，原樣通過。
         assert_eq!(paper_id_from_stored("quadrant".into()), "quadrant");
         assert_eq!(paper_id_from_stored("habit_month".into()), "habit_month");
@@ -363,7 +513,10 @@ mod tests {
     fn every_theme_has_at_least_one_paper() {
         // 空的主題會讓分頁點下去一片空白，而使用者無從得知那是不是壞了。
         for t in paper_themes() {
-            assert!(!paper_templates_for_theme(t).is_empty(), "{t:?} 沒有任何紙張");
+            assert!(
+                !paper_templates_for_theme(t).is_empty(),
+                "{t:?} 沒有任何紙張"
+            );
         }
     }
 
@@ -517,7 +670,12 @@ pub fn page_formats() -> Vec<FfiPageFormat> {
         format("a5", "page_format_a5", 566.0, 800.0),
         // US Letter 8.5 × 11 吋。
         format("letter", "page_format_letter", 800.0, 1035.0),
-        format("letter_landscape", "page_format_letter_landscape", 1035.0, 800.0),
+        format(
+            "letter_landscape",
+            "page_format_letter_landscape",
+            1035.0,
+            800.0,
+        ),
         // US Legal 8.5 × 14 吋。
         format("legal", "page_format_legal", 800.0, 1318.0),
         // 簡報用的 16:9。
