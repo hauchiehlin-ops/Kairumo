@@ -221,8 +221,14 @@ public struct AssetLibraryView: View {
 
     // MARK: - 2. 三大主題主標籤篩選列
     private var themeFilterBar: some View {
-        // 只有四個主題，任何寬度都放得下，維持單行。
-        HStack(spacing: 8) {
+        // **不能維持單行。**
+        //
+        // 原本這裡寫著「只有四個主題，任何寬度都放得下」—— 在 iPad 上成立，
+        // 在 iPhone 上不成立：四顆帶文字的膠囊擠不進 390 點，SwiftUI 會把
+        // 每個 Text 壓到最小寬度，於是「All Themes」變成一欄一個字母的直排
+        // （實機看過）。換行版面（工具列與新增筆記本用的同一個 `WrapLayout`）
+        // 讓它在窄螢幕上折行，寬螢幕仍然是一行。
+        WrapLayout(spacing: 8, lineSpacing: 6) {
                 // 全部主題
                 themeChip(theme: nil, title: localizationManager.localized("all_themes"), icon: "square.grid.2x2")
 
@@ -234,8 +240,6 @@ public struct AssetLibraryView: View {
 
                 // 數位體驗
                 themeChip(theme: .digital, title: localizationManager.localized("theme_digital"), icon: "iphone.gen3")
-
-                Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
@@ -294,7 +298,8 @@ public struct AssetLibraryView: View {
 
     // MARK: - 2. 主題類別列（次要分類收進「更多」）
     private var categoryFilterScrollView: some View {
-        HStack(spacing: 8) {
+        // 同上：窄螢幕要折行，不然分類名稱會被壓成直排。
+        WrapLayout(spacing: 8, lineSpacing: 6) {
             ForEach(primaryCategories) { cat in
                 categoryChip(cat)
             }
@@ -323,11 +328,10 @@ public struct AssetLibraryView: View {
                 }
                 .buttonStyle(.plain)
             }
-
-            Spacer(minLength: 0)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.8))
     }
 
