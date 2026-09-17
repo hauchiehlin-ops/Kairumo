@@ -872,6 +872,95 @@ impl NotebookSession {
         self.record(vec![DocOp::RemovePage { id }])
     }
 
+    /// 這個 session 的裝置識別碼。跨本搬頁時要用它開目標筆記本 ——
+    /// 用別的 id 開會讓目標那本的 oplog 檔名換人寫，那是同步的不變式。
+    pub fn device(&self) -> u32 {
+        self.device
+    }
+
+    /// 這本筆記的套件根目錄。用來判斷「搬到自己身上」。
+    pub fn package_root(&self) -> &std::path::Path {
+        self.package.root()
+    }
+
+    /// 把一頁整個複製到另一本筆記（S-91）。
+    ///
+    /// # 為什麼要在核心做
+    ///
+    /// Apple 端的頁面內容住在它自己的 JSON 裡，所以那邊自己搬得動；
+    /// Android 的頁面住在核心裡 —— 平台層只拿得到 id，搬不動內容。
+    /// 而「複製一頁」要連**筆畫、區塊、區塊的位置與外觀、圖片的 blob**
+    /// 一起帶走：少帶一樣，使用者搬過去的就是一頁殘缺的東西。
+    ///
+    /// 圖片的 blob 要真的複製進目標套件。內容定址的 id 會一樣，但**檔案
+    /// 不在那個套件裡** —— 不複製的話，搬過去的那一頁在別台裝置上打開
+    /// 會是一個破圖。
+    ///
+    /// 回傳目標筆記本裡新那一頁的 id。
+    pub fn copy_page_into(
+        &self,
+        target: &mut NotebookSession,
+        page_id: Uuid,
+    ) -> Result<Uuid, AppError> {
+        let page = self
+            .notebook
+            .page(page_id)
+            .ok_or(AppError::PageNotFound(page_id))?;
+        let template = page.template.clone();
+        let blocks: Vec<padnote_doc::Block> = page.blocks().to_vec();
+
+        let new_page = target.add_page(template)?;
+
+        for block in blocks {
+            let new_id = match &block.kind {
+                padnote_doc::BlockKind::Text { content, style } => {
+                    Some(target.add_text_block(new_page, content, style.clone())?)
+                }
+                padnote_doc::BlockKind::Image {
+                    blob,
+                    width,
+                    height,
+                } => {
+                    // blob 先搬過去。內容定址，所以目標套件裡的 id 會一樣。
+                    if let Some(id) = padnote_storage::BlobId::from_hex(blob) {
+                        if let Ok(bytes) = self.package.blobs().get(id) {
+                            let _ = target.package.blobs().put(&bytes);
+                        }
+                    }
+                    Some(target.add_image_block(new_page, blob, *width, *height)?)
+                }
+                padnote_doc::BlockKind::Table {
+                    rows,
+                    cols,
+                    cells,
+                    header_row,
+                    ..
+                } => {
+                    Some(target.insert_table(new_page, *rows, *cols, cells.clone(), *header_row)?)
+                }
+                // 轉錄與 PDF 標註綁在來源筆記的錄音／附件上，跟著複製過去
+                // 會變成兩本筆記指向同一段錄音而其中一本沒有音檔 ——
+                // 那比少一個區塊更難解釋。其餘型別同理，先不帶。
+                _ => None,
+            };
+
+            if let Some(id) = new_id {
+                if let Some((x, y)) = block.position {
+                    target.set_block_position(id, x, y)?;
+                }
+                if let Some(appearance) = &block.appearance {
+                    target.set_block_appearance(id, appearance)?;
+                }
+            }
+        }
+
+        for stroke in self.visible_strokes(page_id)? {
+            target.add_stroke(new_page, stroke)?;
+        }
+
+        Ok(new_page)
+    }
+
     /// 把某一頁搬到 `index`（S-87）。
     ///
     /// 頁不存在就什麼也不做 —— 不記一筆搬動不存在的頁的操作，
@@ -1972,6 +2061,35 @@ mod tests {
     ///
     /// 症狀：在 Android 上新增討論圖釘，存檔回報成功、當下讀得回來，
     /// 離開再進來就不見了 —— 而磁碟上明明有那筆資料。
+    /// S-91：複製一頁要把**內容**帶過去，不是只多一張白紙。
+    #[test]
+    fn copy_page_into_carries_blocks_and_strokes() {
+        let dir = std::env::temp_dir().join(format!("padnote_copy_{}", Uuid::now_v7()));
+        let src_root = dir.join("a.padnote");
+        let dst_root = dir.join("b.padnote");
+        let mut src = NotebookSession::create(&src_root, "來源", 0, 1).unwrap();
+        let mut dst = NotebookSession::create(&dst_root, "目標", 0, 1).unwrap();
+
+        let page = src.add_page(PageTemplate::Blank).unwrap();
+        src.add_text_block(page, "帶得過去嗎", TextStyle::Body)
+            .unwrap();
+        src.add_stroke(page, stroke()).unwrap();
+
+        let before = dst.notebook().page_count();
+        let new_page = src.copy_page_into(&mut dst, page).unwrap();
+
+        assert_eq!(dst.notebook().page_count(), before + 1, "目標應該多一頁");
+        let copied = dst.notebook().page(new_page).expect("新頁面");
+        assert_eq!(copied.blocks().len(), 1, "區塊沒有被帶過去");
+        assert_eq!(
+            dst.visible_strokes(new_page).unwrap().len(),
+            1,
+            "筆畫沒有被帶過去"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
     #[test]
     fn edits_made_after_reopening_survive_the_next_reopen() {
         let dir = tmp("lamport-regression");

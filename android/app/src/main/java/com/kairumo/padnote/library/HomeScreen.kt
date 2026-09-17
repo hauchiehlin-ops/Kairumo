@@ -1114,6 +1114,41 @@ fun DeleteFolderDialog(
     )
 }
 
+/**
+ * 把頁面複製／搬移到哪一本筆記（S-91）。
+ *
+ * 只列**別本**筆記：搬到自己身上核心會擋（`page_transfer_plan` 的
+ * `transfer_same_notebook`），列出來只是讓人按下去才知道不行。
+ */
+@Composable
+fun TransferPagesDialog(
+    title: String,
+    notebooks: List<NotebookLibrary.Entry>,
+    l: (String) -> String,
+    onDismiss: () -> Unit,
+    onPick: (NotebookLibrary.Entry) -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(title) },
+        text = {
+            if (notebooks.isEmpty()) {
+                Text(l("transfer_failed"), style = MaterialTheme.typography.bodySmall)
+            } else {
+                LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    items(notebooks, key = { it.id }) { entry ->
+                        TextButton(onClick = { onPick(entry) }) {
+                            Text(entry.title, maxLines = 1)
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = { TextButton(onClick = onDismiss) { Text(l("cancel")) } }
+    )
+}
+
 /** 把一本筆記搬到哪個資料夾。列出全部資料夾加一個「最上層」。 */
 @Composable
 fun MoveToFolderDialog(

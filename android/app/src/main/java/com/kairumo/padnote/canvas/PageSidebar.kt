@@ -77,6 +77,8 @@ fun PageSidebar(
     onAddPage: () -> Unit,
     /** 把第 from 頁搬到 to（S-86／S-87）。核心的 `movePage` 會記進 oplog。 */
     onMovePage: (Int, Int) -> Unit = { _, _ -> },
+    /** 把第幾頁複製（false）或搬移（true）到別本筆記（S-91）。 */
+    onTransferPage: (Int, Boolean) -> Unit = { _, _ -> },
     onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
@@ -143,7 +145,8 @@ fun PageSidebar(
                     thumbWidth = thumbWidth,
                     l = l,
                     onClick = { onSelectPage(index) },
-                    onMovePage = onMovePage
+                    onMovePage = onMovePage,
+                    onTransferPage = onTransferPage
                 )
             }
         }
@@ -167,7 +170,8 @@ private fun PageSidebarRow(
     thumbWidth: Float,
     l: (String) -> String,
     onClick: () -> Unit,
-    onMovePage: (Int, Int) -> Unit
+    onMovePage: (Int, Int) -> Unit,
+    onTransferPage: (Int, Boolean) -> Unit
 ) {
     val context = LocalContext.current
     var thumb by remember(index, revision) { mutableStateOf<ImageBitmap?>(null) }
@@ -228,6 +232,19 @@ private fun PageSidebarRow(
                 text = { Text(l("move_page_to_bottom")) },
                 enabled = index < pageCount - 1,
                 onClick = { menu = false; onMovePage(index, pageCount - 1) }
+            )
+            HorizontalDivider()
+            // 跨本複製／搬移（S-91）。Apple 端在頁面結構欄可以多選幾頁一起
+            // 搬，Android 這一版先做單頁 —— 多選要先有選取狀態，那是另一件事。
+            DropdownMenuItem(
+                text = { Text(l("copy_pages_to_title")) },
+                onClick = { menu = false; onTransferPage(index, false) }
+            )
+            DropdownMenuItem(
+                text = { Text(l("move_pages_to_title")) },
+                // 一本筆記不能被搬空（核心的 `page_transfer_plan` 也會擋）。
+                enabled = pageCount > 1,
+                onClick = { menu = false; onTransferPage(index, true) }
             )
         }
         Text(

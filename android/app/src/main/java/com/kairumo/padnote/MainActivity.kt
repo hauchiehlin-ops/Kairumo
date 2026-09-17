@@ -1318,6 +1318,8 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     var clearToken by remember { mutableIntStateOf(0) }
     // 改名對話框（頂列的標題點一下就開）。
     var renamingCurrent by remember { mutableStateOf(false) }
+    // 跨本複製／搬移頁面（S-91）：(頁次, 是否為搬移)。
+    var transferringPage by remember { mutableStateOf<Pair<Int, Boolean>?>(null) }
 
     // 把這一頁已經存在檔案裡的筆畫讀回來。
     //
@@ -2227,6 +2229,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                             }
                         },
                         onMovePage = { from, to -> movePage(from, to) },
+                        onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
                         onClose = { showPageSidebar = false }
                     )
                 }
@@ -2349,6 +2352,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                         }
                     },
                     onMovePage = { from, to -> movePage(from, to) },
+                    onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
                     onClose = { showPageSidebar = false }
                 )
             }
@@ -2850,6 +2854,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                         showPageSidebar = false
                     },
                     onMovePage = { from, to -> movePage(from, to) },
+                    onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
                     onClose = { showPageSidebar = false }
                 )
             }
@@ -3414,6 +3419,45 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 }
             }
         }
+    }
+
+    transferringPage?.let { (pageIdx, moveOut) ->
+        val others = remember(revision, notebookId) {
+            NotebookLibrary.all(activity, deviceId(activity), folderId = NotebookLibrary.ANY_FOLDER)
+                .filter { it.id != notebookId }
+        }
+        com.kairumo.padnote.library.TransferPagesDialog(
+            title = l10n(if (moveOut) "move_pages_to_title" else "copy_pages_to_title"),
+            notebooks = others,
+            l = { key -> l10n(key) },
+            onDismiss = { transferringPage = null },
+            onPick = { target ->
+                val session = notebook?.first
+                val moved = if (session == null) {
+                    0u
+                } else {
+                    runCatching {
+                        session.transferPages(
+                            listOf(pageIdx.toUInt()),
+                            target.path.absolutePath,
+                            moveOut
+                        )
+                    }.getOrDefault(0u)
+                }
+                transferringPage = null
+                message = if (moved > 0u) {
+                    l10n(if (moveOut) "pages_moved" else "pages_copied")
+                        .replaceFirst("%@", moved.toString())
+                        .replaceFirst("%@", target.title)
+                } else {
+                    l10n("transfer_failed")
+                }
+                // 搬移會少一頁，頁碼要夾回範圍內。
+                pageCount = runCatching { session?.pageCount()?.toInt() }.getOrNull() ?: pageCount
+                pageIndex = pageIndex.coerceIn(0, maxOf(0, pageCount - 1))
+                revision++
+            }
+        )
     }
 
     if (renamingCurrent && notebookId != null) {

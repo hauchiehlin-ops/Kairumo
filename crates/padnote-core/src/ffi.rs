@@ -597,6 +597,60 @@ impl PadnoteSession {
         Ok(())
     }
 
+    /// 把幾頁複製或搬移到**另一本**筆記（S-91）。
+    ///
+    /// `target_path` 是目標筆記本套件的路徑。要不要刪掉來源那幾頁由
+    /// `move_out` 決定；計畫（去重排序、目的頁碼、由大到小的刪除順序、
+    /// 以及「一本筆記不能被搬空」）走核心的 `page_transfer_plan`，
+    /// 與 Apple 端同一份規則。
+    ///
+    /// 回傳實際處理了幾頁；不被允許時回 0。
+    pub fn transfer_pages(
+        &self,
+        page_indexes: Vec<u32>,
+        target_path: String,
+        move_out: bool,
+    ) -> Result<u32, FfiError> {
+        let mut app = self.lock();
+        let source_count = app.notebook().page_count() as u32;
+        let same_notebook = app.package_root() == std::path::Path::new(&target_path);
+
+        let device = app.device();
+        let mut target = NotebookSession::open(std::path::Path::new(&target_path), device)?;
+        let plan = crate::ffi_pages::page_transfer_plan(
+            source_count,
+            page_indexes,
+            target.notebook().page_count() as u32,
+            move_out,
+            same_notebook,
+        );
+        if !plan.allowed {
+            return Ok(0);
+        }
+
+        // 來源的頁 id 先取好 —— 搬移時會邊複製邊刪，索引會變。
+        let source_ids: Vec<padnote_doc::Uuid> = plan
+            .sources
+            .iter()
+            .filter_map(|i| app.notebook().pages().get(*i as usize).map(|p| p.id))
+            .collect();
+
+        let mut copied = 0u32;
+        for id in &source_ids {
+            app.copy_page_into(&mut target, *id)?;
+            copied += 1;
+        }
+
+        if move_out {
+            // 由大到小刪，否則刪掉前面那頁之後，後面的索引全部往前移一格。
+            for id in source_ids.iter().rev() {
+                app.remove_page(*id)?;
+            }
+        }
+
+        Ok(copied)
+    }
+
     /// 把某一頁搬到 `index`（S-87）。
     ///
     /// # 為什麼不是「刪掉再加回去」
