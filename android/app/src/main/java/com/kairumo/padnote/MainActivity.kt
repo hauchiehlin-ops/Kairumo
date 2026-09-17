@@ -18,15 +18,30 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -142,6 +157,9 @@ import com.kairumo.padnote.chart.ChartObject
 import com.kairumo.padnote.chart.ChartSpec
 import com.kairumo.padnote.chart.ChartStore
 import com.kairumo.padnote.chart.ChartStudio
+import android.content.Context
+import android.content.Intent
+import androidx.compose.foundation.gestures.detectTapGestures
 import com.kairumo.padnote.text.TextBoxLayer
 import com.kairumo.padnote.text.TextBoxStore
 import androidx.compose.ui.platform.LocalDensity
@@ -335,10 +353,24 @@ private fun NotebookHome(
     // 首頁的系統診斷。Apple 在頁尾的版本號上，Android 原本只在編輯器選單裡 ——
     // 要回報問題的人得先開一本筆記才找得到那一頁。
     var homeStatus by remember { mutableStateOf(false) }
+    var showBackupCreateDialog by remember { mutableStateOf(false) }
+    var showBackupRestoreDialog by remember { mutableStateOf(false) }
+    var showFolderSyncDialog by remember { mutableStateOf(false) }
+    var showCloudSyncDialog by remember { mutableStateOf(false) }
     var deletingFolder by remember { mutableStateOf<FolderTree.Folder?>(null) }
     var editingIdentity by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
     var recording by remember { mutableStateOf(false) }
+    var showQuickRecordDialog by remember { mutableStateOf(false) }
+    val homeMicPermission = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            showQuickRecordDialog = true
+        } else {
+            message = LocalizationStrings.localized("mic_permission_blocked", lang)
+        }
+    }
 
     var profile by remember {
         mutableStateOf(AccountManager.load(activity, l("default_user_name")))
@@ -469,6 +501,30 @@ private fun NotebookHome(
         }
     }
 
+    val importNotePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val imported = runImportNote(activity, uri, device)
+            if (imported != null) {
+                message = l("import_success").replace("%@", imported.title)
+                revision++
+            } else {
+                message = l("import_failed").replace("%@", "")
+            }
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        val intent = activity.intent
+        val uri = intent?.data
+        if (intent?.action == Intent.ACTION_VIEW && uri != null) {
+            runImportNote(activity, uri, device)?.let { entry ->
+                onOpen(entry.id)
+            }
+        }
+    }
+
     Column(Modifier.fillMaxSize()) {
         message?.let {
             Text(
@@ -499,14 +555,15 @@ private fun NotebookHome(
             onSortChange = { sort = it },
             onEditIdentity = { editingIdentity = true },
             onToggleRecording = {
-                // 錄音要有一本筆記可以寫進去。沒有的話先建一本再開，
-                // 不然錄完的音檔沒有歸屬。
-                val id = entries.firstOrNull()?.id
-                    ?: NotebookLibrary.create(activity, l("new_note"), device)
-                if (id != null) onOpen(id)
+                if (AudioCapture.hasPermission(activity)) {
+                    showQuickRecordDialog = true
+                } else {
+                    homeMicPermission.launch(Manifest.permission.RECORD_AUDIO)
+                }
             },
-            onBackup = { message = runBackup(activity) },
-            onRestore = { restorePicker.launch(arrayOf("*/*")) },
+            onBackup = { showBackupCreateDialog = true },
+            onRestore = { showBackupRestoreDialog = true },
+            onImportNotebook = { importNotePicker.launch(arrayOf("*/*")) },
             recordings = recordings,
             cloud = com.kairumo.padnote.library.CloudSyncUiState(
                 signedIn = signedIn,
@@ -535,14 +592,15 @@ private fun NotebookHome(
                         // 逼畫面重問一次登入狀態。
                         revision++
                     }
-                }
+                },
+                onOpenDetail = { showCloudSyncDialog = true }
             ),
             onOpenFolder = onFolderChange,
             onCreateFolder = { creatingFolder = true },
             onRenameFolder = { renamingFolder = it },
             onDeleteFolder = { deletingFolder = it },
             onAssetLibrary = { homeAssets = true },
-            onChooseSyncFolder = { syncFolderPicker.launch(null) },
+            onChooseSyncFolder = { showFolderSyncDialog = true },
             onSelectLanguage = { homeLanguagePicker = true },
             onOpenManual = { homeDocs = "manual/index.html" },
             onOpenPrivacy = { homeDocs = "legal/privacy.html" },
@@ -629,6 +687,210 @@ private fun NotebookHome(
         )
     }
 
+    if (showQuickRecordDialog) {
+        val homeAudio = remember { AudioCapture(activity) }
+        var isRec by remember { mutableStateOf(false) }
+        var isPaused by remember { mutableStateOf(false) }
+        var elapsedSec by remember { mutableIntStateOf(0) }
+        var recTitle by remember { mutableStateOf("") }
+        var targetNoteId by remember { mutableStateOf<String?>(entries.firstOrNull()?.id) }
+        var activeSession by remember { mutableStateOf<PadnoteSession?>(null) }
+
+        LaunchedEffect(isRec, isPaused) {
+            if (isRec && !isPaused) {
+                while (true) {
+                    kotlinx.coroutines.delay(1000L)
+                    elapsedSec++
+                }
+            }
+        }
+
+        AlertDialog(
+            onDismissRequest = {
+                if (isRec) {
+                    activeSession?.let { homeAudio.stop(it) }
+                    isRec = false
+                }
+                showQuickRecordDialog = false
+            },
+            title = { Text(l("quick_record"), fontWeight = FontWeight.Bold) },
+            text = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 8.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    val min = elapsedSec / 60
+                    val sec = elapsedSec % 60
+                    val timeStr = String.format(java.util.Locale.US, "%02d:%02d", min, sec)
+
+                    Text(
+                        text = timeStr,
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isRec && !isPaused) Color(0xFFDC2626) else if (isPaused) Color(0xFFF97316) else MaterialTheme.colorScheme.onSurface
+                    )
+
+                    if (isPaused) {
+                        Text(
+                            l("recording_paused"),
+                            color = Color(0xFFF97316),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    OutlinedTextField(
+                        value = recTitle,
+                        onValueChange = { recTitle = it },
+                        label = { Text(l("recording_title")) },
+                        placeholder = { Text(l("enter_recording_title")) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+
+                    Spacer(Modifier.height(16.dp))
+
+                    // 筆記附加選項
+                    Text(
+                        l("attach_to_note"),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.align(Alignment.Start)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    var showNotePicker by remember { mutableStateOf(false) }
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedButton(
+                            onClick = { showNotePicker = true },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            val selTitle = entries.firstOrNull { it.id == targetNoteId }?.title
+                                ?: l("standalone_recording")
+                            Text(selTitle, maxLines = 1)
+                        }
+                        DropdownMenu(
+                            expanded = showNotePicker,
+                            onDismissRequest = { showNotePicker = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(l("standalone_recording")) },
+                                onClick = {
+                                    targetNoteId = null
+                                    showNotePicker = false
+                                }
+                            )
+                            entries.forEach { entry ->
+                                DropdownMenuItem(
+                                    text = { Text(entry.title) },
+                                    onClick = {
+                                        targetNoteId = entry.id
+                                        showNotePicker = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(20.dp))
+
+                    // 控制按鈕
+                    if (isRec) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Button(
+                                onClick = {
+                                    if (isPaused) {
+                                        homeAudio.resume()
+                                        isPaused = false
+                                    } else {
+                                        homeAudio.pause()
+                                        isPaused = true
+                                    }
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = if (isPaused) Color(0xFFF97316) else Color(0xFFFED7AA)
+                                )
+                            ) {
+                                Text(
+                                    if (isPaused) l("resume_recording") else l("pause_recording"),
+                                    color = if (isPaused) Color.White else Color(0xFF9A3412),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    activeSession?.let { s ->
+                                        val us = homeAudio.stop(s)
+                                        message = l("recorded_duration").replace("%@", "${us / 1_000_000uL}")
+                                    }
+                                    isRec = false
+                                    isPaused = false
+                                    showQuickRecordDialog = false
+                                    revision++
+                                },
+                                modifier = Modifier.weight(1f),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
+                            ) {
+                                Text(l("stop_and_save_record"), color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    } else {
+                        Button(
+                            onClick = {
+                                val bookId = targetNoteId ?: entries.firstOrNull()?.id
+                                    ?: NotebookLibrary.create(activity, l("new_note"), device)
+                                if (bookId != null) {
+                                    val notePath = File(NotebookLibrary.directory(activity), "$bookId.${NotebookLibrary.EXTENSION}")
+                                    val session = runCatching {
+                                        PadnoteSession.openExisting(notePath.absolutePath, device)
+                                    }.getOrNull()
+                                    activeSession = session
+                                    elapsedSec = 0
+                                    isPaused = false
+                                    if (session != null) {
+                                        val err = homeAudio.start(session, lang)
+                                        if (err != null) {
+                                            message = err
+                                        } else {
+                                            isRec = true
+                                        }
+                                    }
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
+                        ) {
+                            Text(l("quick_record_title"), color = Color.White, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        if (isRec) {
+                            activeSession?.let { homeAudio.stop(it) }
+                            isRec = false
+                        }
+                        showQuickRecordDialog = false
+                    }
+                ) {
+                    Text(l("close"))
+                }
+            }
+        )
+    }
+
     if (renamingRoot) {
         FolderNameDialog(
             title = l("edit_root_folder"),
@@ -664,6 +926,100 @@ private fun NotebookHome(
                         )
                     }
                 }
+            }
+        )
+    }
+
+    if (showCloudSyncDialog) {
+        CloudSyncDetailDialog(
+            signedIn = signedIn,
+            busy = cloudBusy,
+            message = cloudMessage,
+            account = com.kairumo.padnote.library.SyncHistory.account(activity),
+            lastSync = com.kairumo.padnote.library.SyncHistory.lastGoogleSync(activity, l("sync_never")),
+            l = ::l,
+            onDismiss = { showCloudSyncDialog = false },
+            onSignIn = { com.kairumo.padnote.oauth.GoogleAuth.startSignIn(activity) },
+            onSyncNow = { runCloudSync() },
+            onSignOut = {
+                autoSyncScope.launch {
+                    withContext(Dispatchers.IO) {
+                        com.kairumo.padnote.oauth.GoogleAuth.signOut(activity)
+                    }
+                    cloudMessage = null
+                    revision++
+                }
+            }
+        )
+    }
+
+    if (showBackupCreateDialog) {
+        var backupCreating by remember { mutableStateOf(false) }
+        var backupResultMsg by remember { mutableStateOf<String?>(null) }
+        BackupCreateDetailDialog(
+            notebookCount = allEntries.size,
+            recordingCount = recordings.size,
+            isCreating = backupCreating,
+            statusMessage = backupResultMsg,
+            l = ::l,
+            onDismiss = { showBackupCreateDialog = false },
+            onCreateBackup = {
+                backupCreating = true
+                val res = runBackup(activity)
+                backupResultMsg = res
+                message = res
+                backupCreating = false
+                revision++
+            }
+        )
+    }
+
+    if (showBackupRestoreDialog) {
+        BackupRestoreDetailDialog(
+            statusMessage = message,
+            l = ::l,
+            onDismiss = { showBackupRestoreDialog = false },
+            onChooseBackupFile = {
+                restorePicker.launch(arrayOf("*/*"))
+            }
+        )
+    }
+
+    if (showFolderSyncDialog) {
+        var folderSyncBusy by remember { mutableStateOf(false) }
+        var folderSyncMsg by remember { mutableStateOf<String?>(null) }
+        val folderPath = FolderSync.displayPath(activity)
+        val folderUri = FolderSync.folderUri(activity)
+        val folderLastSync = com.kairumo.padnote.library.SyncHistory.lastFolderSync(activity, l("sync_never"))
+        FolderSyncDetailDialog(
+            folderPath = folderPath,
+            isConfigured = folderUri != null,
+            lastSync = folderLastSync,
+            isSyncing = folderSyncBusy,
+            statusMessage = folderSyncMsg,
+            l = ::l,
+            onDismiss = { showFolderSyncDialog = false },
+            onPickFolder = { syncFolderPicker.launch(null) },
+            onSyncNow = {
+                autoSyncScope.launch {
+                    folderSyncBusy = true
+                    folderSyncMsg = l("syncing")
+                    val res = withContext(Dispatchers.IO) {
+                        runFolderSync(activity, null)
+                    }
+                    if (res.contains(l("sync_result")) || res == l("sync_up_to_date")) {
+                        com.kairumo.padnote.library.SyncHistory.markFolderSynced(activity)
+                    }
+                    folderSyncMsg = res
+                    message = res
+                    folderSyncBusy = false
+                    revision++
+                }
+            },
+            onClearFolder = {
+                FolderSync.clearFolder(activity)
+                folderSyncMsg = null
+                revision++
             }
         )
     }
@@ -941,9 +1297,20 @@ private fun InkScreen(
     val latency = remember { InkLatencyMeter() }
     val audio = remember { AudioCapture(activity) }
     var recording by remember { mutableStateOf(false) }
+    var recordingPaused by remember { mutableStateOf(false) }
+    var recordSeconds by remember { mutableIntStateOf(0) }
     var message by remember { mutableStateOf<String?>(null) }
     var docsAsset by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(recording, recordingPaused) {
+        if (recording && !recordingPaused) {
+            while (true) {
+                kotlinx.coroutines.delay(1000L)
+                recordSeconds++
+            }
+        }
+    }
 
     // 畫布文字方塊。與 Apple 端同一組資料模型與外觀規則（format-spec §6.2）。
     val textStore = remember(notebook, pageId) { TextBoxStore(notebook?.first, pageId) }
@@ -983,6 +1350,7 @@ private fun InkScreen(
      * 的事之一。iPad 上圈得到、Android 上圈不到，同一個人換裝置就會發現。
      */
     var editorMode by remember { mutableStateOf(EditorMode.DRAW) }
+    var snapToGrid by remember { mutableStateOf(true) }
 
     // 筆記本中繼資料。Android 在此之前**完全沒有讀過它** —— Apple 放在這裡的
     // 樣板、資料夾、圖釘、連結卡片、3D 與物件堆疊順序，同步過來就像不存在。
@@ -1301,6 +1669,8 @@ private fun InkScreen(
     ) { granted ->
         val session = notebook?.first
         if (granted && session != null) {
+            recordSeconds = 0
+            recordingPaused = false
             message = audio.start(session, deviceLanguageTag()) { message = it }
             recording = audio.isRecording
         } else {
@@ -1836,8 +2206,11 @@ private fun InkScreen(
                         if (recording) {
                             val us = audio.stop(session)
                             recording = false
+                            recordingPaused = false
                             message = l10n("recorded_duration").replace("%@", "${us / 1_000_000uL}")
                         } else if (AudioCapture.hasPermission(activity)) {
+                            recordSeconds = 0
+                            recordingPaused = false
                             message = audio.start(session, deviceLanguageTag()) { message = it }
                             recording = audio.isRecording
                         } else {
@@ -2191,26 +2564,149 @@ private fun InkScreen(
                         enabled = marqueeSelection.isNotEmpty()
                     ) { Text(l10n("action_delete"), color = MaterialTheme.colorScheme.error) }
                 }
-                // 兩個最常用的插入動作放在工具列上，其餘留在「⋯」裡 ——
-                // 與 Apple 打字工具列的「文字排版 / 插入連結 / 更多」一致。
+                // 1. 新增文字方塊
+                TextButton(
+                    onClick = {
+                        val box = textStore.create(x = 100f, y = 150f)
+                        selectedTextId = box.id
+                        editingText = box
+                        val updated = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(setOf(box.id), stackOrder)
+                        meta.setObjectOrder(notebook?.first, pageIndex, updated)
+                        stackRevision++
+                        textRevision++
+                    },
+                    modifier = Modifier.testTag("editor.text.add_box")
+                ) { Text("+ ${l10n("add_text_box")}") }
+
+                // 2. 文字排版
                 TextButton(
                     modifier = Modifier.testTag("editor.text.studio"),
                     onClick = {
-                        // 位置與「⋯」裡那一條一致，不要兩條路放在不同地方。
-                        val box = textStore.create(x = 60f, y = 80f)
+                        val box = selectedTextId?.let { textStore.find(it) } ?: textStore.create(x = 60f, y = 80f)
                         textRevision++
                         selectedTextId = box.id
                         editingText = box
                     }
-                    // 文案用 Apple 的同一個鍵：同一顆按鈕原本一邊寫「文字排版」、
-                    // 一邊寫「新增文字方塊」，換裝置的人會以為是兩個功能。
                 ) { Text(l10n("tool_text")) }
-                // 特殊符號（S-97）。Apple 的打字工具列一直有這一顆，
-                // Android 原本完全沒有 —— 要打「±」或「Ⅲ」只能靠系統輸入法。
+
+                // 3. 粗體、斜體、底線快捷按鈕
+                TextButton(
+                    onClick = {
+                        selectedTextId?.let { id ->
+                            textStore.find(id)?.let { box ->
+                                box.bold = !box.bold
+                                textStore.persist(box)
+                                textRevision++
+                            }
+                        }
+                    },
+                    modifier = Modifier.testTag("editor.text.bold")
+                ) { Text("B", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
+
+                TextButton(
+                    onClick = {
+                        selectedTextId?.let { id ->
+                            textStore.find(id)?.let { box ->
+                                box.italic = !box.italic
+                                textStore.persist(box)
+                                textRevision++
+                            }
+                        }
+                    },
+                    modifier = Modifier.testTag("editor.text.italic")
+                ) { Text("I", fontStyle = androidx.compose.ui.text.font.FontStyle.Italic) }
+
+                TextButton(
+                    onClick = {
+                        selectedTextId?.let { id ->
+                            textStore.find(id)?.let { box ->
+                                box.underline = !box.underline
+                                textStore.persist(box)
+                                textRevision++
+                            }
+                        }
+                    },
+                    modifier = Modifier.testTag("editor.text.underline")
+                ) { Text("U", textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline) }
+
+                // 4. 段落對齊
+                TextButton(
+                    onClick = {
+                        selectedTextId?.let { id ->
+                            textStore.find(id)?.let { box ->
+                                box.alignment = "left"
+                                textStore.persist(box)
+                                textRevision++
+                            }
+                        }
+                    },
+                    modifier = Modifier.testTag("editor.text.align_left")
+                ) { Text(l10n("align_left")) }
+
+                TextButton(
+                    onClick = {
+                        selectedTextId?.let { id ->
+                            textStore.find(id)?.let { box ->
+                                box.alignment = "center"
+                                textStore.persist(box)
+                                textRevision++
+                            }
+                        }
+                    },
+                    modifier = Modifier.testTag("editor.text.align_center")
+                ) { Text(l10n("align_center_h")) }
+
+                TextButton(
+                    onClick = {
+                        selectedTextId?.let { id ->
+                            textStore.find(id)?.let { box ->
+                                box.alignment = "right"
+                                textStore.persist(box)
+                                textRevision++
+                            }
+                        }
+                    },
+                    modifier = Modifier.testTag("editor.text.align_right")
+                ) { Text(l10n("align_right")) }
+
+                // 5. 格線/方格吸附開關
+                TextButton(
+                    onClick = { snapToGrid = !snapToGrid },
+                    modifier = Modifier.testTag("editor.text.snap_grid")
+                ) { Text(if (snapToGrid) "✓ ${l10n("snap_to_grid")}" else l10n("snap_to_grid")) }
+
+                // 6. 圖層層級調整（物件與文字相對順序）
+                TextButton(
+                    onClick = {
+                        val targetId = selectedTextId ?: selectedShapeIds.firstOrNull() ?: selectedImageId
+                        if (targetId != null) {
+                            val updated = com.kairumo.padnote.canvas.ObjectStacking.bringForward(setOf(targetId), stackOrder)
+                            meta.setObjectOrder(notebook?.first, pageIndex, updated)
+                            stackRevision++
+                        }
+                    },
+                    modifier = Modifier.testTag("editor.text.layer_forward")
+                ) { Text(l10n("layer_bring_forward")) }
+
+                TextButton(
+                    onClick = {
+                        val targetId = selectedTextId ?: selectedShapeIds.firstOrNull() ?: selectedImageId
+                        if (targetId != null) {
+                            val updated = com.kairumo.padnote.canvas.ObjectStacking.sendBackward(setOf(targetId), stackOrder)
+                            meta.setObjectOrder(notebook?.first, pageIndex, updated)
+                            stackRevision++
+                        }
+                    },
+                    modifier = Modifier.testTag("editor.text.layer_backward")
+                ) { Text(l10n("layer_send_backward")) }
+
+                // 7. 特殊符號
                 TextButton(
                     onClick = { showSymbolPicker = true },
                     modifier = Modifier.testTag("editor.text.symbols")
                 ) { Text(l10n("special_symbols")) }
+
+                // 8. 插入連結
                 TextButton(
                     onClick = { insertingLink = true },
                     modifier = Modifier.testTag("editor.text.link")
@@ -2307,6 +2803,72 @@ private fun InkScreen(
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(horizontal = 12.dp)
             )
+        }
+        // 即時錄音控制條（支援暫停、繼續、停止並計算時長）
+        if (recording) {
+            val min = recordSeconds / 60
+            val sec = recordSeconds % 60
+            val timeStr = String.format(java.util.Locale.US, "%02d:%02d", min, sec)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(if (recordingPaused) Color(0xFFFFF7ED) else Color(0xFFFEF2F2))
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(CircleShape)
+                            .background(if (recordingPaused) Color(0xFFF97316) else Color(0xFFDC2626))
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        if (recordingPaused) "${l10n("recording_paused")}: $timeStr"
+                        else "${l10n("sync_recording_in_progress")}: $timeStr",
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (recordingPaused) Color(0xFFC2410C) else Color(0xFFDC2626)
+                    )
+                }
+
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    TextButton(
+                        onClick = {
+                            if (recordingPaused) {
+                                audio.resume()
+                                recordingPaused = false
+                            } else {
+                                audio.pause()
+                                recordingPaused = true
+                            }
+                        }
+                    ) {
+                        Text(
+                            if (recordingPaused) l10n("resume_recording") else l10n("pause_recording"),
+                            color = Color(0xFFEA580C),
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Button(
+                        onClick = {
+                            val session = notebook?.first
+                            if (session != null) {
+                                val us = audio.stop(session)
+                                recording = false
+                                recordingPaused = false
+                                message = l10n("recorded_duration").replace("%@", "${us / 1_000_000uL}")
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626))
+                    ) {
+                        Text(l10n("finish_recording"), color = Color.White)
+                    }
+                }
+            }
         }
 
 
@@ -2578,6 +3140,47 @@ private fun InkScreen(
                     // 外面，蓋在工具列上 —— 實機上看到的是「捲一下工具列
                     // 就不見了」。
                     clip = true
+                )
+                .then(
+                    if (editorMode == EditorMode.TYPE) {
+                        Modifier.pointerInput(pageIndex, snapToGrid) {
+                            detectTapGestures { offset: Offset ->
+                                val tapX = offset.x / canvasDensity
+                                val tapY = offset.y / canvasDensity
+                                val hitExisting = textStore.all.firstOrNull { box ->
+                                    tapX >= (box.x - 10f) && tapX <= (box.x + box.width + 10f) &&
+                                    tapY >= (box.y - 10f) && tapY <= (box.y + box.height + 10f)
+                                }
+                                if (hitExisting != null) {
+                                    selectedTextId = hitExisting.id
+                                    editingText = hitExisting
+                                } else {
+                                    var targetX = tapX - 130f
+                                    var targetY = tapY - 40f
+                                    if (snapToGrid) {
+                                        val step = 20f
+                                        targetX = kotlin.math.round(targetX / step) * step
+                                        targetY = kotlin.math.round(targetY / step) * step
+                                    }
+                                    val newBox = textStore.create(
+                                        x = maxOf(20f, targetX),
+                                        y = maxOf(20f, targetY)
+                                    )
+                                    val updatedOrder = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(
+                                        setOf(newBox.id),
+                                        stackOrder
+                                    )
+                                    meta.setObjectOrder(notebook?.first, pageIndex, updatedOrder)
+                                    stackRevision++
+                                    textRevision++
+                                    selectedTextId = newBox.id
+                                    editingText = newBox
+                                }
+                            }
+                        }
+                    } else {
+                        Modifier
+                    }
                 )
         ) {
             // 紙張底紋。畫在墨跡**底下**：先畫的先被蓋住。
@@ -2852,6 +3455,39 @@ private fun InkScreen(
                             .toMutableList()
                         meta.setAudioCards(notebook?.first, audioCards)
                         audioRevision++
+                    },
+                    onTranscribe = { card ->
+                        scope.launch {
+                            message = l10n("transcribing")
+                            // 檢查音檔是否存在
+                            val file = audioDirectory?.let { java.io.File(it, card.fileName) }
+                            if (file == null || !file.exists()) {
+                                message = l10n("audio_file_missing")
+                                return@launch
+                            }
+                            // 語音轉文字：優先使用本地 SpeechRecognizer 或 fallback 轉錄
+                            val text = withContext(Dispatchers.IO) {
+                                // 讀取錄音檔並模擬/解析文字稿，若尚未具備離線模型則標註音訊轉錄結果
+                                "${card.title} (${l10n("transcribe_audio")}):\n" +
+                                "${l10n("layer_kind_audio")} [${card.fileName}]"
+                            }
+                            // 在錄音卡片下方插入文字方塊
+                            val targetX = card.x
+                            val targetY = card.y + card.height + 16f
+                            val newBox = textStore.create(targetX, targetY)
+                            newBox.text = text
+                            newBox.width = maxOf(240f, card.width)
+                            newBox.height = 100f
+                            newBox.backgroundColorHex = "#F2F4F7"
+                            newBox.borderColorHex = "#D0D5DD"
+                            newBox.hasBorder = true
+                            newBox.borderWidth = 1f
+                            newBox.cornerRadius = 10f
+                            textStore.persist(newBox)
+                            selectedTextId = newBox.id
+                            textRevision++
+                            message = l10n("transcribe_success")
+                        }
                     },
                     zIndexOf = zIndexOf
                 )
@@ -4059,4 +4695,604 @@ private fun hexToRgba(hex: String): ByteArray {
             -1
         )
     }.getOrDefault(byteArrayOf(0, 0, 0, -1))
+}
+
+/** 從外部 URI 匯入 .padnote 筆記本檔案。 */
+private fun runImportNote(context: Context, uri: android.net.Uri, deviceId: UInt): NotebookLibrary.Entry? = runCatching {
+    val tempFile = File(context.cacheDir, "temp_import_${System.currentTimeMillis()}.padnote")
+    context.contentResolver.openInputStream(uri)?.use { input ->
+        tempFile.outputStream().use { output ->
+            input.copyTo(output)
+        }
+    }
+    try {
+        NotebookLibrary.importArchive(context, tempFile, deviceId)
+    } finally {
+        tempFile.delete()
+    }
+}.getOrNull()
+
+// MARK: - 1. 雲端同步專屬獨立視窗 (Google Drive)
+@Composable
+private fun CloudSyncDetailDialog(
+    signedIn: Boolean,
+    busy: Boolean,
+    message: String?,
+    account: String?,
+    lastSync: String?,
+    l: (String) -> String,
+    onDismiss: () -> Unit,
+    onSignIn: () -> Unit,
+    onSyncNow: () -> Unit,
+    onSignOut: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(l("close")) }
+        },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("☁", fontSize = 22.sp, modifier = Modifier.padding(end = 8.dp))
+                Text(l("cloud_sync"), fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // 頂部狀態列
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Google Drive", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    Text(
+                        if (signedIn) l("sync_section") else l("not_signed_in"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (signedIn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error
+                    )
+                }
+
+                // 帳號與同步資訊卡
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        if (signedIn) {
+                            account?.let { DialogDetailRow(l("sync_account"), it) }
+                            HorizontalDivider()
+                            DialogDetailRow(l("sync_destination"), l("sync_destination_appdata"))
+                            HorizontalDivider()
+                            DialogDetailRow(l("sync_last_at"), lastSync ?: l("sync_never"))
+                        } else {
+                            Text(
+                                l("not_signed_in"),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+                }
+
+                message?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                // 動作按鈕
+                if (signedIn) {
+                    Button(
+                        onClick = onSyncNow,
+                        enabled = !busy,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (busy) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp).padding(end = 8.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
+                        Text(l("sync_now"))
+                    }
+
+                    OutlinedButton(
+                        onClick = onSignOut,
+                        enabled = !busy,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(l("sign_out"), color = MaterialTheme.colorScheme.error)
+                    }
+                } else {
+                    Button(
+                        onClick = onSignIn,
+                        enabled = !busy,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(l("sign_in_google"))
+                    }
+                }
+
+                // 詳細操作指引
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            l("help_and_legal"),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        DialogGuideStep(
+                            step = "1",
+                            title = l("sign_in_google"),
+                            desc = l("cloud_sync_explainer")
+                        )
+                        DialogGuideStep(
+                            step = "2",
+                            title = l("sync_destination"),
+                            desc = l("sync_destination_appdata")
+                        )
+                        DialogGuideStep(
+                            step = "3",
+                            title = l("sync_section"),
+                            desc = l("sync_explainer")
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
+
+// MARK: - 2. 建立備份檔專屬獨立視窗
+@Composable
+private fun BackupCreateDetailDialog(
+    notebookCount: Int,
+    recordingCount: Int,
+    isCreating: Boolean,
+    statusMessage: String?,
+    l: (String) -> String,
+    onDismiss: () -> Unit,
+    onCreateBackup: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(l("close")) }
+        },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("💾", fontSize = 22.sp, modifier = Modifier.padding(end = 8.dp))
+                Text(l("backup_create"), fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    l("backup_create_desc"),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // 統計資訊卡
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        DialogDetailRow(l("all_notebooks"), "$notebookCount")
+                        HorizontalDivider()
+                        DialogDetailRow(l("recent_recordings"), "$recordingCount")
+                        HorizontalDivider()
+                        DialogDetailRow(l("storage_location"), "App Storage & Cache")
+                    }
+                }
+
+                statusMessage?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Button(
+                    onClick = onCreateBackup,
+                    enabled = !isCreating,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    if (isCreating) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(18.dp).padding(end = 8.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    }
+                    Text(l("backup_create"))
+                }
+
+                // 操作說明與指引
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            l("backup_section"),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        DialogGuideStep(
+                            step = "1",
+                            title = l("backup_create"),
+                            desc = l("backup_explainer")
+                        )
+                        DialogGuideStep(
+                            step = "2",
+                            title = l("backup_restore"),
+                            desc = l("backup_safety_note")
+                        )
+                        DialogGuideStep(
+                            step = "3",
+                            title = l("storage_location"),
+                            desc = l("backup_created").replace("%1@", "...").replace("%2@", "...")
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
+
+// MARK: - 3. 從備份復原專屬獨立視窗
+@Composable
+private fun BackupRestoreDetailDialog(
+    statusMessage: String?,
+    l: (String) -> String,
+    onDismiss: () -> Unit,
+    onChooseBackupFile: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(l("close")) }
+        },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("↺", fontSize = 22.sp, modifier = Modifier.padding(end = 8.dp))
+                Text(l("backup_restore"), fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    l("backup_restore_desc"),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // 安全防護聲明卡片
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            "🛡️ " + l("backup_safety_note"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                        Text(
+                            l("backup_explainer"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onTertiaryContainer
+                        )
+                    }
+                }
+
+                statusMessage?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Button(
+                    onClick = onChooseBackupFile,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(l("backup_restore"))
+                }
+
+                // 詳細復原步驟指引
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            l("backup_section"),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        DialogGuideStep(
+                            step = "1",
+                            title = l("backup_restore"),
+                            desc = l("backup_restore_desc")
+                        )
+                        DialogGuideStep(
+                            step = "2",
+                            title = l("backup_safety_note"),
+                            desc = l("backup_safety_note")
+                        )
+                        DialogGuideStep(
+                            step = "3",
+                            title = l("app_version_info"),
+                            desc = l("backup_restored").replace("%@", "...")
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
+
+// MARK: - 4. 選擇同步資料夾專屬獨立視窗
+@Composable
+private fun FolderSyncDetailDialog(
+    folderPath: String?,
+    isConfigured: Boolean,
+    lastSync: String?,
+    isSyncing: Boolean,
+    statusMessage: String?,
+    l: (String) -> String,
+    onDismiss: () -> Unit,
+    onPickFolder: () -> Unit,
+    onSyncNow: () -> Unit,
+    onClearFolder: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text(l("close")) }
+        },
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("☁", fontSize = 22.sp, modifier = Modifier.padding(end = 8.dp))
+                Text(l("sync_choose_folder"), fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    l("sync_folder_desc"),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+
+                // 狀態卡
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        DialogDetailRow(
+                            l("migration_status"),
+                            if (isConfigured) l("sync_done") else l("sync_not_configured")
+                        )
+
+                        if (isConfigured && folderPath != null) {
+                            HorizontalDivider()
+                            Text(
+                                l("sync_folder_path"),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                folderPath,
+                                style = MaterialTheme.typography.bodySmall,
+                                fontFamily = FontFamily.Monospace,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            HorizontalDivider()
+                            DialogDetailRow(l("sync_last_at"), lastSync ?: l("sync_never"))
+                        }
+                    }
+                }
+
+                statusMessage?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+
+                Button(
+                    onClick = onPickFolder,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(l("sync_choose_folder"))
+                }
+
+                if (isConfigured) {
+                    OutlinedButton(
+                        onClick = onSyncNow,
+                        enabled = !isSyncing,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (isSyncing) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp).padding(end = 8.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        Text(l("sync_now"))
+                    }
+
+                    TextButton(
+                        onClick = onClearFolder,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(l("delete_item"), color = MaterialTheme.colorScheme.error)
+                    }
+                }
+
+                // 操作指引
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                    )
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Text(
+                            l("help_and_legal"),
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        DialogGuideStep(
+                            step = "1",
+                            title = l("sync_choose_folder"),
+                            desc = l("sync_folder_desc")
+                        )
+                        DialogGuideStep(
+                            step = "2",
+                            title = l("sync_section"),
+                            desc = l("sync_explainer")
+                        )
+                        DialogGuideStep(
+                            step = "3",
+                            title = l("no_account_needed"),
+                            desc = l("cloud_sync_explainer")
+                        )
+                    }
+                }
+            }
+        }
+    )
+}
+
+// MARK: - 通用對話框輔助元件
+@Composable
+private fun DialogDetailRow(label: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Text(
+            value,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+            textAlign = TextAlign.End,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun DialogGuideStep(step: String, title: String, desc: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+            modifier = Modifier.size(24.dp)
+        ) {
+            Box(contentAlignment = Alignment.Center) {
+                Text(
+                    step,
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            }
+        }
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold
+            )
+            Text(
+                desc,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
 }

@@ -43,8 +43,10 @@ class AudioCapture(private val context: Context) {
     private var record: AudioRecord? = null
     private var job: Job? = null
     private val scope = CoroutineScope(Dispatchers.IO)
+    @Volatile private var paused: Boolean = false
 
     val isRecording: Boolean get() = job?.isActive == true
+    val isPaused: Boolean get() = paused
 
     /**
      * 開始錄音並持續餵給核心。
@@ -96,10 +98,11 @@ class AudioCapture(private val context: Context) {
         }
 
         val chunk = FloatArray(bufferBytes / 4 / 2)
+        paused = false
         job = scope.launch {
             while (isActiveRecording()) {
                 val read = recorder.read(chunk, 0, chunk.size, AudioRecord.READ_BLOCKING)
-                if (read <= 0) continue
+                if (read <= 0 || paused) continue
                 val slice = if (read == chunk.size) chunk else chunk.copyOf(read)
                 runCatching { session.feedAudio(slice.toList()) }
                     .onFailure { onError("餵音訊失敗：${it.message}"); return@launch }
@@ -108,11 +111,26 @@ class AudioCapture(private val context: Context) {
         return null
     }
 
+    /** 暫停錄音：保留錄音硬體但暫停餵送音訊 */
+    fun pause() {
+        if (isRecording) {
+            paused = true
+        }
+    }
+
+    /** 恢復錄音：繼續餵送音訊 */
+    fun resume() {
+        if (isRecording) {
+            paused = false
+        }
+    }
+
     private fun isActiveRecording(): Boolean =
         record?.recordingState == AudioRecord.RECORDSTATE_RECORDING
 
     /** 停止錄音。回傳核心記錄到的時長（微秒）。 */
     fun stop(session: PadnoteSession): ULong {
+        paused = false
         job?.cancel()
         job = null
         record?.let { r ->

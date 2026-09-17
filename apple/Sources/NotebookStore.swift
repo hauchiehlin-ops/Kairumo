@@ -9,6 +9,9 @@
 import SwiftUI
 import Combine
 import PencilKit
+#if canImport(PadnoteCore)
+import PadnoteCore
+#endif
 
 /// 插入物件共用的外框樣式。
 ///
@@ -1486,6 +1489,46 @@ public final class NotebookStore: ObservableObject {
             notebooks.append(doc)
         }
         markDirtyAndPersist()
+    }
+
+    /// 從外部 .padnote 封裝檔匯入整本筆記本
+    @discardableResult
+    public func importNotebookArchive(from archiveUrl: URL) throws -> NotebookDocument {
+        let isSecurityScoped = archiveUrl.startAccessingSecurityScopedResource()
+        defer {
+            if isSecurityScoped {
+                archiveUrl.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: tempDir) }
+
+        let pkgDir = tempDir.appendingPathComponent("notebook")
+        try extractNotebook(archiveFile: archiveUrl.path, outDir: pkgDir.path)
+        let imported = try NotebookPackageBridge.importDocument(
+            fromPackageAt: pkgDir,
+            deviceId: NotebookMigration.deviceId
+        )
+
+        // 儲存繪圖資料
+        for (pageIdx, drawing) in imported.drawings.enumerated() {
+            saveDrawing(notebookId: imported.document.id, pageIndex: pageIdx, drawing: drawing)
+        }
+
+        // 儲存圖片附件
+        let attachDir = attachmentsDirectory
+        if !FileManager.default.fileExists(atPath: attachDir.path) {
+            try? FileManager.default.createDirectory(at: attachDir, withIntermediateDirectories: true)
+        }
+        for (filename, data) in imported.imageData {
+            let fileUrl = attachDir.appendingPathComponent(filename)
+            try? data.write(to: fileUrl)
+        }
+
+        upsertNotebook(imported.document)
+        return imported.document
     }
 
     public func deleteNotebook(id: String) {

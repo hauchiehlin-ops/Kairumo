@@ -20,6 +20,8 @@ class TextBoxStore(
 
     val all: List<TextBox> get() = boxes.values.toList()
 
+    fun find(id: String): TextBox? = boxes[id]
+
     /** 從核心讀回這一頁的文字方塊。 */
     fun load() {
         val s = session ?: return

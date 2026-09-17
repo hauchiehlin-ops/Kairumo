@@ -179,6 +179,37 @@ object NotebookLibrary {
                 session.imageBlockIds(pageId).isEmpty()
         }.getOrDefault(false)
 
+    /** 從外部 .padnote 封裝壓縮檔匯入整本筆記本。 */
+    fun importArchive(context: Context, archiveFile: File, deviceId: UInt): Entry? = runCatching {
+        val tempDir = File(context.cacheDir, "import_${System.currentTimeMillis()}")
+        tempDir.mkdirs()
+        try {
+            uniffi.padnote_core.extractNotebook(archiveFile.absolutePath, tempDir.absolutePath)
+            val manifestFile = File(tempDir, "manifest.json")
+            val id = if (manifestFile.exists()) {
+                runCatching {
+                    org.json.JSONObject(manifestFile.readText()).getString("notebook_id")
+                }.getOrNull() ?: java.util.UUID.randomUUID().toString()
+            } else {
+                java.util.UUID.randomUUID().toString()
+            }
+
+            var targetDir = File(directory(context), "$id.$EXTENSION")
+            if (targetDir.exists()) {
+                val uniqueId = "$id-${java.util.UUID.randomUUID().toString().take(6)}"
+                targetDir = File(directory(context), "$uniqueId.$EXTENSION")
+            }
+            targetDir.mkdirs()
+            tempDir.copyRecursively(targetDir, overwrite = true)
+
+            describe(targetDir, deviceId)?.also { entry ->
+                AccountSyncStore.record(context, id = entry.id, title = entry.title, parentId = null)
+            }
+        } finally {
+            tempDir.deleteRecursively()
+        }
+    }.getOrNull()
+
     /**
      * 建立一本新筆記本，回傳它的 id。
      *

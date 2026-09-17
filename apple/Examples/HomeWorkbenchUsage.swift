@@ -59,6 +59,12 @@ struct KairumoApp: App {
                     guard phase == .active else { return }
                     Task { await AutoCloudSync.runIfSignedIn() }
                 }
+                .onOpenURL { url in
+                    let ext = url.pathExtension.lowercased()
+                    if ext == "padnote" || ext == "zip" {
+                        _ = try? NotebookStore.shared.importNotebookArchive(from: url)
+                    }
+                }
                 #if os(macOS) || targetEnvironment(macCatalyst)
                 .frame(minWidth: 800, minHeight: 600)
                 // `.frame(minWidth:)` **不會限制 Mac 上的視窗大小** ——

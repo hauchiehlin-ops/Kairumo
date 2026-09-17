@@ -59,6 +59,7 @@ fun AudioLayer(
     onRename: (AudioObject) -> Unit,
     onDelete: (AudioObject) -> Unit,
     onChanged: (AudioObject) -> Unit,
+    onTranscribe: ((AudioObject) -> Unit)? = null,
     zIndexOf: (String) -> Float
 ) {
     // 不包一層自己的 Box —— zIndex 只在同一個父容器的兄弟之間有效。
@@ -76,7 +77,8 @@ fun AudioLayer(
             onTogglePlay = onTogglePlay,
             onRename = onRename,
             onDelete = onDelete,
-            onChanged = onChanged
+            onChanged = onChanged,
+            onTranscribe = onTranscribe
         )
     }
 }
@@ -95,7 +97,8 @@ private fun AudioCardView(
     onTogglePlay: (AudioObject) -> Unit,
     onRename: (AudioObject) -> Unit,
     onDelete: (AudioObject) -> Unit,
-    onChanged: (AudioObject) -> Unit
+    onChanged: (AudioObject) -> Unit,
+    onTranscribe: ((AudioObject) -> Unit)? = null
 ) {
     Box(
         modifier = Modifier
@@ -209,6 +212,21 @@ private fun AudioCardView(
         }
 
         if (interactive && isSelected) {
+            // 語音轉文字（左上）。點擊後轉錄音訊並自動在卡片下方建立文字方塊。
+            if (onTranscribe != null && exists) {
+                Box(
+                    Modifier
+                        .offset {
+                            IntOffset((-12f * density).toInt(), (-12f * density).toInt())
+                        }
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF2563EB))
+                        .clickable { onTranscribe(item) },
+                    contentAlignment = Alignment.Center
+                ) { Text("📝", fontSize = 11.sp) }
+            }
+
             // 刪除（右上）。與其他圖層的把手位置一致。
             Box(
                 Modifier

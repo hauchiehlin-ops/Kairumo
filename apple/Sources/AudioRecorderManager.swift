@@ -161,9 +161,38 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         }
     }
 
+    /// 暫停當前錄音
+    public func pauseRecording() {
+        guard let recorder = audioRecorder, status == .recording else { return }
+        recorder.pause()
+        status = .paused
+        timer?.invalidate()
+        timer = nil
+    }
+
+    /// 恢復繼續錄音
+    public func resumeRecording() {
+        guard let recorder = audioRecorder, status == .paused else { return }
+        guard recorder.record() else { return }
+        status = .recording
+
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            guard let self = self, let rec = self.audioRecorder, rec.isRecording else { return }
+            rec.updateMeters()
+            self.elapsedSeconds = rec.currentTime
+            let power = rec.averagePower(forChannel: 0)
+            let normalized = max(0.12, CGFloat((power + 60.0) / 60.0))
+            var current = self.audioLevels
+            current.removeFirst()
+            current.append(normalized)
+            self.audioLevels = current
+        }
+    }
+
     /// 停止錄音並回傳儲存的檔案 URL 及總時長（秒）
     public func stopRecording() -> (url: URL, duration: TimeInterval)? {
-        guard let recorder = audioRecorder, status == .recording else { return nil }
+        guard let recorder = audioRecorder, status == .recording || status == .paused else { return nil }
         let duration = recorder.currentTime
         recorder.stop()
         timer?.invalidate()

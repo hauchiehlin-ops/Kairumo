@@ -53,7 +53,10 @@ impl Tool {
 
     /// 寬度是否隨壓感變化。
     pub fn is_pressure_sensitive(self) -> bool {
-        matches!(self, Self::FountainPen | Self::Pencil | Self::Brush | Self::Watercolor)
+        matches!(
+            self,
+            Self::FountainPen | Self::Pencil | Self::Brush | Self::Watercolor
+        )
     }
 }
 

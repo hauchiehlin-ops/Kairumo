@@ -29,9 +29,14 @@ public struct HomeWorkbenchView: View {
     @State private var insertingRecording: AudioRecordingRecord? = nil
     @Environment(\.openWindow) private var openWindow
     @State private var showInfoSheet: Bool = false
+    @State private var showCloudSyncSheet: Bool = false
+    @State private var showBackupCreateSheet: Bool = false
+    @State private var showBackupRestoreSheet: Bool = false
+    @State private var showFolderSyncSheet: Bool = false
     @State private var showAccountSheet: Bool = false
     @State private var showNewNotebookSheet: Bool = false
     @State private var showQuickRecordSheet: Bool = false
+    @State private var showImportPicker: Bool = false
     @State private var selectedSortOption: SortOption = .byDate
     @State private var selectedNotebookForEditing: NotebookDocument? = nil
 
@@ -324,12 +329,32 @@ public struct HomeWorkbenchView: View {
             .sheet(isPresented: $showInfoSheet) { resizableSheet {
                 AppDiagnosticsSheet(versionString: appVersionString, platformDesc: platformArchitectureDescription)
             } }
+            .sheet(isPresented: $showCloudSyncSheet) { resizableSheet {
+                CloudSyncDetailSheet()
+            } }
+            .sheet(isPresented: $showBackupCreateSheet) { resizableSheet {
+                BackupCreateDetailSheet()
+            } }
+            .sheet(isPresented: $showBackupRestoreSheet) { resizableSheet {
+                BackupRestoreDetailSheet()
+            } }
+            .sheet(isPresented: $showFolderSyncSheet) { resizableSheet {
+                FolderSyncDetailSheet()
+            } }
             .sheet(isPresented: $showNewNotebookSheet) { resizableSheet {
                 newNotebookModal
             } }
             .sheet(isPresented: $showQuickRecordSheet) { resizableSheet {
                 QuickAudioRecorderModal()
             } }
+            .fileImporter(
+                isPresented: $showImportPicker,
+                allowedContentTypes: [.init(filenameExtension: "padnote") ?? .data, .data, .archive],
+                allowsMultipleSelection: false
+            ) { result in
+                guard let urls = try? result.get(), let url = urls.first else { return }
+                _ = try? notebookStore.importNotebookArchive(from: url)
+            }
             .fullScreenCover(item: $selectedNotebookForEditing) { doc in erasedView {
                 NotebookEditorHost(store: notebookStore, initialNotebookId: doc.id)
             } }
@@ -564,6 +589,17 @@ public struct HomeWorkbenchView: View {
                 prominent: false
             ) {
                 showAssetLibrarySheet = true
+            }
+
+            actionCard(
+                icon: "square.and.arrow.down.fill",
+                title: localizationManager.localized("import_note"),
+                identifier: "home.action.import",
+                subtitle: localizationManager.localized("import_note_desc"),
+                tint: DS.Color.accent,
+                prominent: false
+            ) {
+                showImportPicker = true
             }
         }
     }
@@ -1479,20 +1515,20 @@ public struct HomeWorkbenchView: View {
                 HStack(spacing: 12) {
                     googleSyncCard
                     dataCard("externaldrive.badge.timemachine", "backup_create",
-                             "backup_create_desc", .blue) { showDiagnosticsForData() }
+                             "backup_create_desc", .blue) { showBackupCreateSheet = true }
                     dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
-                             "backup_restore_desc", .orange) { showDiagnosticsForData() }
+                             "backup_restore_desc", .orange) { showBackupRestoreSheet = true }
                     dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
-                             "sync_folder_desc", .teal) { showDiagnosticsForData() }
+                             "sync_folder_desc", .teal) { showFolderSyncSheet = true }
                 }
                 VStack(spacing: 12) {
                     googleSyncCard
                     dataCard("externaldrive.badge.timemachine", "backup_create",
-                             "backup_create_desc", .blue) { showDiagnosticsForData() }
+                             "backup_create_desc", .blue) { showBackupCreateSheet = true }
                     dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
-                             "backup_restore_desc", .orange) { showDiagnosticsForData() }
+                             "backup_restore_desc", .orange) { showBackupRestoreSheet = true }
                     dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
-                             "sync_folder_desc", .teal) { showDiagnosticsForData() }
+                             "sync_folder_desc", .teal) { showFolderSyncSheet = true }
                 }
             }
         }
@@ -1509,21 +1545,30 @@ public struct HomeWorkbenchView: View {
     /// 「我到底登入了沒」，那一句比任何介紹都有用。
     private var googleSyncCard: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Image(systemName: "arrow.triangle.2.circlepath.icloud.fill")
-                    .foregroundStyle(Color.indigo)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(localizationManager.localized("cloud_sync"))
-                        .font(DS.Font.cardTitle)
-                    // 描述直接寫**目前狀態**而不是功能說明：使用者最想知道的是
-                    // 「我到底登入了沒」，那一句比任何介紹都有用。
-                    Text(localizationManager.localized(
-                        homeGoogleAuth.isSignedIn ? "sync_section" : "not_signed_in"))
-                        .font(DS.Font.caption)
-                        .foregroundStyle(DS.Color.secondaryText)
+            Button {
+                showCloudSyncSheet = true
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: "arrow.triangle.2.circlepath.icloud.fill")
+                        .foregroundStyle(Color.indigo)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(localizationManager.localized("cloud_sync"))
+                            .font(DS.Font.cardTitle)
+                            .foregroundStyle(Color.primary)
+                        // 描述直接寫**目前狀態**而不是功能說明：使用者最想知道的是
+                        // 「我到底登入了沒」，那一句比任何介紹都有用。
+                        Text(localizationManager.localized(
+                            homeGoogleAuth.isSignedIn ? "sync_section" : "not_signed_in"))
+                            .font(DS.Font.caption)
+                            .foregroundStyle(DS.Color.secondaryText)
+                    }
+                    Spacer(minLength: 4)
+                    Image(systemName: "chevron.right")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
                 }
-                Spacer(minLength: 4)
             }
+            .buttonStyle(.plain)
 
             if let homeGoogleMessage {
                 Text(homeGoogleMessage)
@@ -2249,7 +2294,6 @@ public struct HomeWorkbenchView: View {
         return String(format: "%02d:%02d", m, s)
     }
 }
-
 /// 快速即時錄音彈窗視圖
 struct QuickAudioRecorderModal: View {
     @ObservedObject var audioManager = AudioRecorderManager.shared
@@ -2269,12 +2313,19 @@ struct QuickAudioRecorderModal: View {
                 VStack(spacing: 12) {
                     Text(formatTime(seconds: audioManager.elapsedSeconds))
                         .font(.system(size: 48, weight: .bold, design: .monospaced))
-                        .foregroundColor(audioManager.status == .recording ? .red : .primary)
+                        .foregroundColor(audioManager.status == .recording ? .red : (audioManager.status == .paused ? .orange : .primary))
+
+                    if audioManager.status == .paused {
+                        Text(localizationManager.localized("recording_paused"))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .foregroundColor(.orange)
+                    }
 
                     HStack(spacing: 3) {
                         ForEach(0..<audioManager.audioLevels.count, id: \.self) { i in
                             RoundedRectangle(cornerRadius: 2)
-                                .fill(audioManager.status == .recording ? Color.red : Color.secondary.opacity(0.3))
+                                .fill(audioManager.status == .recording ? Color.red : (audioManager.status == .paused ? Color.orange.opacity(0.6) : Color.secondary.opacity(0.3)))
                                 .frame(width: 4, height: max(6, audioManager.audioLevels[i] * 50))
                         }
                     }
@@ -2310,30 +2361,55 @@ struct QuickAudioRecorderModal: View {
                 }
                 .padding(.horizontal, 32)
 
-                // 錄音控制大按鈕
-                if audioManager.status == .recording {
-                    Button {
-                        if let res = audioManager.stopRecording() {
-                            let fileName = res.url.lastPathComponent
-                            notebookStore.addRecording(
-                                title: recordingTitle,
-                                durationSeconds: Int(res.duration),
-                                fileName: fileName,
-                                linkedNotebookId: targetNotebookId
-                            )
+                // 錄音控制大按鈕（支援暫停、繼續、停止並儲存）
+                if audioManager.status == .recording || audioManager.status == .paused {
+                    HStack(spacing: 16) {
+                        // 暫停 / 繼續按鈕
+                        Button {
+                            if audioManager.status == .recording {
+                                audioManager.pauseRecording()
+                            } else {
+                                audioManager.resumeRecording()
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: audioManager.status == .recording ? "pause.fill" : "play.fill")
+                                Text(audioManager.status == .recording
+                                     ? localizationManager.localized("pause_recording")
+                                     : localizationManager.localized("resume_recording"))
+                                    .fontWeight(.semibold)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.orange.opacity(0.15))
+                            .foregroundColor(.orange)
+                            .cornerRadius(12)
                         }
-                        dismiss()
-                    } label: {
-                        HStack(spacing: 8) {
-                            Image(systemName: "stop.fill")
-                            Text(localizationManager.localized("stop_and_save_record"))
-                                .fontWeight(.bold)
+
+                        // 停止並儲存按鈕
+                        Button {
+                            if let res = audioManager.stopRecording() {
+                                let fileName = res.url.lastPathComponent
+                                notebookStore.addRecording(
+                                    title: recordingTitle,
+                                    durationSeconds: Int(res.duration),
+                                    fileName: fileName,
+                                    linkedNotebookId: targetNotebookId
+                                )
+                            }
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: "stop.fill")
+                                Text(localizationManager.localized("stop_and_save_record"))
+                                    .fontWeight(.bold)
+                            }
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(Color.red)
+                            .foregroundColor(.white)
+                            .cornerRadius(12)
                         }
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(Color.red)
-                        .foregroundColor(.white)
-                        .cornerRadius(12)
                     }
                     .padding(.horizontal, 32)
                 } else {
@@ -3075,4 +3151,879 @@ private struct ShareSheet: UIViewControllerRepresentable {
     }
 
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+
+// MARK: - 1. 雲端同步專屬獨立視窗 (Google Drive)
+public struct CloudSyncDetailSheet: View {
+    @ObservedObject var localizationManager = LocalizationManager.shared
+    @ObservedObject private var googleAuth = GoogleAuth.shared
+    @ObservedObject private var notebookStore = NotebookStore.shared
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var statusMessage: String?
+    @State private var isSyncing = false
+
+    public init() {}
+
+    public var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.l) {
+                    // 頂部圖示與狀態卡
+                    HStack(spacing: DS.Space.m) {
+                        Image(systemName: "arrow.triangle.2.circlepath.icloud.fill")
+                            .font(.system(size: 44))
+                            .foregroundStyle(Color.indigo)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(localizationManager.localized("cloud_sync"))
+                                .font(DS.Font.screenTitle)
+                                .foregroundColor(.primary)
+
+                            Text(googleAuth.isSignedIn
+                                 ? localizationManager.localized("sync_section")
+                                 : localizationManager.localized("not_signed_in"))
+                                .font(DS.Font.cardTitle)
+                                .foregroundColor(googleAuth.isSignedIn ? .green : .secondary)
+                        }
+                    }
+                    .padding(.top, DS.Space.s)
+
+                    // 帳號與同步資訊
+                    VStack(spacing: 0) {
+                        if googleAuth.isSignedIn {
+                            if let email = googleAuth.accountEmail {
+                                detailRow(title: localizationManager.localized("sync_account"), value: email)
+                                Divider()
+                            }
+                            detailRow(
+                                title: localizationManager.localized("sync_destination"),
+                                value: localizationManager.localized("sync_destination_appdata")
+                            )
+                            Divider()
+                            detailRow(
+                                title: localizationManager.localized("sync_last_at"),
+                                value: SyncHistory.lastGoogleSyncDescription(none: localizationManager.localized("sync_never"))
+                            )
+                        } else {
+                            HStack {
+                                Image(systemName: "person.crop.circle.badge.exclamationmark")
+                                    .foregroundColor(.orange)
+                                Text(localizationManager.localized("not_signed_in"))
+                                    .font(DS.Font.body)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                            }
+                            .padding(DS.Space.m)
+                        }
+                    }
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .cornerRadius(DS.Radius.m)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DS.Radius.m)
+                            .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
+                    )
+
+                    if let statusMessage {
+                        Text(statusMessage)
+                            .font(DS.Font.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, DS.Space.xs)
+                    }
+
+                    // 主要操作按鈕
+                    VStack(spacing: DS.Space.s) {
+                        if googleAuth.isSignedIn {
+                            Button {
+                                Task { await runSync() }
+                            } label: {
+                                HStack {
+                                    if isSyncing {
+                                        ProgressView()
+                                            .padding(.trailing, 6)
+                                    } else {
+                                        Image(systemName: "arrow.clockwise")
+                                    }
+                                    Text(localizationManager.localized("sync_now"))
+                                        .fontWeight(.semibold)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.indigo)
+                            .disabled(isSyncing)
+
+                            Button(role: .destructive) {
+                                Task {
+                                    await GoogleAuth.shared.signOut()
+                                    statusMessage = nil
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: "rectangle.portrait.and.arrow.right")
+                                    Text(localizationManager.localized("sign_out"))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                            }
+                            .buttonStyle(.bordered)
+                        } else {
+                            Button {
+                                Task {
+                                    switch await GoogleAuth.shared.signIn() {
+                                    case .success:
+                                        await runSync()
+                                    case .failure(.cancelled):
+                                        break
+                                    case .failure(let error):
+                                        statusMessage = error.errorDescription
+                                    }
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: "arrow.up.circle.fill")
+                                    Text(localizationManager.localized("sign_in_google"))
+                                        .fontWeight(.semibold)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.indigo)
+                        }
+                    }
+
+                    // 詳細操作指引與安全性說明
+                    VStack(alignment: .leading, spacing: DS.Space.m) {
+                        Text(localizationManager.localized("help_and_legal"))
+                            .font(DS.Font.cardTitle)
+                            .foregroundColor(.primary)
+
+                        guideStep(
+                            number: "1",
+                            title: localizationManager.localized("sign_in_google"),
+                            desc: localizationManager.localized("cloud_sync_explainer")
+                        )
+
+                        guideStep(
+                            number: "2",
+                            title: localizationManager.localized("sync_destination"),
+                            desc: localizationManager.localized("sync_destination_appdata")
+                        )
+
+                        guideStep(
+                            number: "3",
+                            title: localizationManager.localized("sync_section"),
+                            desc: localizationManager.localized("sync_explainer")
+                        )
+                    }
+                    .padding(DS.Space.m)
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(DS.Radius.m)
+                }
+                .padding(DS.Space.m)
+            }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle(localizationManager.localized("cloud_sync"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(localizationManager.localized("close")) { dismiss() }
+                }
+            }
+        }
+    }
+
+    private func detailRow(title: String, value: String) -> some View {
+        HStack(alignment: .top) {
+            Text(title)
+                .font(DS.Font.body)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(value)
+                .font(DS.Font.body)
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.trailing)
+        }
+        .padding(DS.Space.m)
+    }
+
+    private func guideStep(number: String, title: String, desc: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.indigo.opacity(0.15))
+                    .frame(width: 26, height: 26)
+                Text(number)
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.indigo)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(DS.Font.body)
+                    .fontWeight(.semibold)
+                Text(desc)
+                    .font(DS.Font.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    @MainActor
+    private func runSync() async {
+        guard !isSyncing else { return }
+        isSyncing = true
+        defer { isSyncing = false }
+
+        statusMessage = localizationManager.localized("syncing")
+        guard let report = await NotebookSyncCoordinator.runDrive(
+            store: notebookStore, deviceId: NotebookMigration.deviceId)
+        else {
+            statusMessage = localizationManager.localized("not_signed_in")
+            return
+        }
+        if report.failures.isEmpty { SyncHistory.markGoogleSynced() }
+        if let failure = report.failures.first {
+            statusMessage = "\(failure.key)：\(failure.value)"
+        } else if report.isNoOp {
+            statusMessage = localizationManager.localized("sync_up_to_date")
+        } else {
+            statusMessage = localizationManager.localized("sync_result")
+                .replacingFirst("%1@", with: "\(report.uploaded)")
+                .replacingFirst("%2@", with: "\(report.downloaded)")
+        }
+    }
+}
+
+// MARK: - 2. 建立備份檔專屬獨立視窗
+public struct BackupCreateDetailSheet: View {
+    @ObservedObject var localizationManager = LocalizationManager.shared
+    @ObservedObject private var store = NotebookStore.shared
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var backupMessage: String?
+    @State private var shareBackupURL: URL?
+    @State private var isCreating = false
+
+    public init() {}
+
+    public var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.l) {
+                    // 頂部圖示與標題
+                    HStack(spacing: DS.Space.m) {
+                        Image(systemName: "externaldrive.badge.timemachine")
+                            .font(.system(size: 44))
+                            .foregroundStyle(Color.blue)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(localizationManager.localized("backup_create"))
+                                .font(DS.Font.screenTitle)
+                                .foregroundColor(.primary)
+
+                            Text(localizationManager.localized("backup_create_desc"))
+                                .font(DS.Font.cardTitle)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.top, DS.Space.s)
+
+                    // 統計資訊卡
+                    VStack(spacing: 0) {
+                        detailRow(
+                            title: localizationManager.localized("all_notebooks"),
+                            value: "\(store.notebooks.count)"
+                        )
+                        Divider()
+                        detailRow(
+                            title: localizationManager.localized("recent_recordings"),
+                            value: "\(store.recordings.count)"
+                        )
+                        Divider()
+                        detailRow(
+                            title: localizationManager.localized("storage_location"),
+                            value: "Documents & App Settings"
+                        )
+                    }
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .cornerRadius(DS.Radius.m)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DS.Radius.m)
+                            .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
+                    )
+
+                    if let backupMessage {
+                        HStack(spacing: 8) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                            Text(backupMessage)
+                                .font(DS.Font.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.horizontal, DS.Space.xs)
+                    }
+
+                    // 執行建立備份按鈕
+                    Button {
+                        createBackup()
+                    } label: {
+                        HStack {
+                            if isCreating {
+                                ProgressView()
+                                    .padding(.trailing, 6)
+                            } else {
+                                Image(systemName: "arrow.down.doc.fill")
+                            }
+                            Text(localizationManager.localized("backup_create"))
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.blue)
+                    .disabled(isCreating)
+
+                    // 詳細操作指引與備份內容說明
+                    VStack(alignment: .leading, spacing: DS.Space.m) {
+                        Text(localizationManager.localized("backup_section"))
+                            .font(DS.Font.cardTitle)
+                            .foregroundColor(.primary)
+
+                        guideBullet(
+                            icon: "doc.zipper",
+                            title: localizationManager.localized("backup_create"),
+                            desc: localizationManager.localized("backup_explainer")
+                        )
+
+                        guideBullet(
+                            icon: "shield.lefthalf.filled",
+                            title: localizationManager.localized("backup_restore"),
+                            desc: localizationManager.localized("backup_safety_note")
+                        )
+
+                        guideBullet(
+                            icon: "square.and.arrow.up",
+                            title: localizationManager.localized("storage_location"),
+                            desc: localizationManager.localized("backup_created")
+                                .replacingFirst("%1@", with: "...")
+                                .replacingFirst("%2@", with: "...")
+                        )
+                    }
+                    .padding(DS.Space.m)
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(DS.Radius.m)
+                }
+                .padding(DS.Space.m)
+            }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle(localizationManager.localized("backup_create"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(localizationManager.localized("close")) { dismiss() }
+                }
+            }
+            .sheet(item: Binding(
+                get: { shareBackupURL.map { IdentifiableURL(url: $0) } },
+                set: { shareBackupURL = $0?.url }
+            )) { item in
+                ShareSheet(items: [item.url])
+            }
+        }
+    }
+
+    private func detailRow(title: String, value: String) -> some View {
+        HStack {
+            Text(title)
+                .font(DS.Font.body)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(value)
+                .font(DS.Font.body)
+                .foregroundColor(.primary)
+                .fontWeight(.medium)
+        }
+        .padding(DS.Space.m)
+    }
+
+    private func guideBullet(icon: String, title: String, desc: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundColor(.blue)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(DS.Font.body)
+                    .fontWeight(.semibold)
+                Text(desc)
+                    .font(DS.Font.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func createBackup() {
+        guard !isCreating else { return }
+        isCreating = true
+        defer { isCreating = false }
+
+        do {
+            let (url, info) = try BackupManager.createBackup(
+                documentsDirectory: store.documentsDirectory)
+            backupMessage = localizationManager.localized("backup_created")
+                .replacingFirst("%1@", with: "\(info.fileCount)")
+                .replacingFirst("%2@", with: ByteCountFormatter.string(
+                    fromByteCount: Int64(info.totalBytes), countStyle: .file))
+            shareBackupURL = url
+        } catch {
+            backupMessage = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - 3. 從備份復原專屬獨立視窗
+public struct BackupRestoreDetailSheet: View {
+    @ObservedObject var localizationManager = LocalizationManager.shared
+    @ObservedObject private var store = NotebookStore.shared
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var restoreMessage: String?
+    @State private var showRestorePicker = false
+    @State private var isRestoring = false
+
+    public init() {}
+
+    public var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.l) {
+                    // 頂部圖示與標題
+                    HStack(spacing: DS.Space.m) {
+                        Image(systemName: "arrow.counterclockwise.circle.fill")
+                            .font(.system(size: 44))
+                            .foregroundStyle(Color.orange)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(localizationManager.localized("backup_restore"))
+                                .font(DS.Font.screenTitle)
+                                .foregroundColor(.primary)
+
+                            Text(localizationManager.localized("backup_restore_desc"))
+                                .font(DS.Font.cardTitle)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.top, DS.Space.s)
+
+                    // 安全性保障提示
+                    HStack(alignment: .top, spacing: 12) {
+                        Image(systemName: "lock.shield.fill")
+                            .font(.title2)
+                            .foregroundColor(.orange)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(localizationManager.localized("backup_safety_note"))
+                                .font(DS.Font.body)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                            Text(localizationManager.localized("backup_explainer"))
+                                .font(DS.Font.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(DS.Space.m)
+                    .background(Color.orange.opacity(0.1))
+                    .cornerRadius(DS.Radius.m)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DS.Radius.m)
+                            .stroke(Color.orange.opacity(0.25), lineWidth: 1)
+                    )
+
+                    if let restoreMessage {
+                        HStack(spacing: 8) {
+                            Image(systemName: "info.circle.fill")
+                                .foregroundColor(.orange)
+                            Text(restoreMessage)
+                                .font(DS.Font.caption)
+                                .foregroundColor(.primary)
+                        }
+                        .padding(.horizontal, DS.Space.xs)
+                    }
+
+                    // 選擇備份檔復原按鈕
+                    Button {
+                        showRestorePicker = true
+                    } label: {
+                        HStack {
+                            if isRestoring {
+                                ProgressView()
+                                    .padding(.trailing, 6)
+                            } else {
+                                Image(systemName: "arrow.triangle.2.circlepath")
+                            }
+                            Text(localizationManager.localized("backup_restore"))
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.orange)
+                    .disabled(isRestoring)
+
+                    // 詳細步驟說明
+                    VStack(alignment: .leading, spacing: DS.Space.m) {
+                        Text(localizationManager.localized("backup_section"))
+                            .font(DS.Font.cardTitle)
+                            .foregroundColor(.primary)
+
+                        stepRow(
+                            step: "1",
+                            title: localizationManager.localized("backup_restore"),
+                            desc: localizationManager.localized("backup_restore_desc")
+                        )
+
+                        stepRow(
+                            step: "2",
+                            title: localizationManager.localized("backup_safety_note"),
+                            desc: localizationManager.localized("backup_safety_note")
+                        )
+
+                        stepRow(
+                            step: "3",
+                            title: localizationManager.localized("app_version_info"),
+                            desc: localizationManager.localized("backup_restored")
+                                .replacingFirst("%@", with: "...")
+                        )
+                    }
+                    .padding(DS.Space.m)
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(DS.Radius.m)
+                }
+                .padding(DS.Space.m)
+            }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle(localizationManager.localized("backup_restore"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(localizationManager.localized("close")) { dismiss() }
+                }
+            }
+            .fileImporter(
+                isPresented: $showRestorePicker,
+                allowedContentTypes: [.data, .archive],
+                allowsMultipleSelection: false
+            ) { result in
+                guard case .success(let urls) = result, let url = urls.first else { return }
+                restore(from: url)
+            }
+        }
+    }
+
+    private func stepRow(step: String, title: String, desc: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            ZStack {
+                Circle()
+                    .fill(Color.orange.opacity(0.15))
+                    .frame(width: 26, height: 26)
+                Text(step)
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundColor(.orange)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(DS.Font.body)
+                    .fontWeight(.semibold)
+                Text(desc)
+                    .font(DS.Font.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func restore(from url: URL) {
+        guard !isRestoring else { return }
+        isRestoring = true
+        defer { isRestoring = false }
+
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+
+        do {
+            _ = try BackupManager.inspect(url)
+            let outcome = try BackupManager.restore(
+                from: url, into: store.documentsDirectory)
+            store.loadData()
+
+            var message = localizationManager.localized("backup_restored")
+                .replacingFirst("%@", with: "\(outcome.restored)")
+            if !outcome.corrupted.isEmpty {
+                message += "　" + localizationManager.localized("backup_corrupted")
+                    .replacingFirst("%@", with: "\(outcome.corrupted.count)")
+            }
+            restoreMessage = message
+        } catch {
+            restoreMessage = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - 4. 選擇同步資料夾專屬獨立視窗
+public struct FolderSyncDetailSheet: View {
+    @ObservedObject var localizationManager = LocalizationManager.shared
+    @ObservedObject private var store = NotebookStore.shared
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var syncMessage: String?
+    @State private var showFolderPicker = false
+    @State private var isSyncing = false
+
+    public init() {}
+
+    public var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.l) {
+                    // 頂部圖示與標題
+                    HStack(spacing: DS.Space.m) {
+                        Image(systemName: "icloud.and.arrow.up.fill")
+                            .font(.system(size: 44))
+                            .foregroundStyle(Color.teal)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(localizationManager.localized("sync_choose_folder"))
+                                .font(DS.Font.screenTitle)
+                                .foregroundColor(.primary)
+
+                            Text(localizationManager.localized("sync_folder_desc"))
+                                .font(DS.Font.cardTitle)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.top, DS.Space.s)
+
+                    // 目前設定資料夾狀態
+                    VStack(spacing: 0) {
+                        HStack {
+                            Text(localizationManager.localized("migration_status"))
+                                .font(DS.Font.body)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                            Text(CloudSyncFolder.resolveFolder() == nil
+                                 ? localizationManager.localized("sync_not_configured")
+                                 : localizationManager.localized("sync_done"))
+                                .font(DS.Font.body)
+                                .foregroundColor(CloudSyncFolder.resolveFolder() == nil ? .secondary : .green)
+                        }
+                        .padding(DS.Space.m)
+
+                        if let folder = CloudSyncFolder.resolveFolder() {
+                            Divider()
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(localizationManager.localized("sync_folder_path"))
+                                    .font(DS.Font.caption)
+                                    .foregroundColor(.secondary)
+                                Text(folder.path.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
+                                    .font(.system(.footnote, design: .monospaced))
+                                    .lineLimit(3)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(DS.Space.m)
+
+                            Divider()
+                            HStack {
+                                Text(localizationManager.localized("sync_last_at"))
+                                    .font(DS.Font.body)
+                                    .foregroundColor(.secondary)
+                                Spacer()
+                                Text(SyncHistory.lastFolderSyncDescription(none: localizationManager.localized("sync_never")))
+                                    .font(DS.Font.body)
+                                    .foregroundColor(.primary)
+                            }
+                            .padding(DS.Space.m)
+                        }
+                    }
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .cornerRadius(DS.Radius.m)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DS.Radius.m)
+                            .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
+                    )
+
+                    if let syncMessage {
+                        Text(syncMessage)
+                            .font(DS.Font.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.horizontal, DS.Space.xs)
+                    }
+
+                    // 動作按鈕
+                    VStack(spacing: DS.Space.s) {
+                        Button {
+                            showFolderPicker = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "folder.badge.gearshape")
+                                Text(localizationManager.localized("sync_choose_folder"))
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.teal)
+
+                        if CloudSyncFolder.resolveFolder() != nil {
+                            Button {
+                                runFolderSync()
+                            } label: {
+                                HStack {
+                                    if isSyncing {
+                                        ProgressView()
+                                            .padding(.trailing, 6)
+                                    } else {
+                                        Image(systemName: "arrow.clockwise")
+                                    }
+                                    Text(localizationManager.localized("sync_now"))
+                                        .fontWeight(.semibold)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(isSyncing)
+
+                            Button(role: .destructive) {
+                                CloudSyncFolder.clearFolder()
+                                syncMessage = nil
+                            } label: {
+                                HStack {
+                                    Image(systemName: "xmark.circle")
+                                    Text(localizationManager.localized("delete_item"))
+                                }
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 8)
+                            }
+                            .buttonStyle(.plain)
+                            .foregroundColor(.red)
+                        }
+                    }
+
+                    // 詳細教學與說明
+                    VStack(alignment: .leading, spacing: DS.Space.m) {
+                        Text(localizationManager.localized("help_and_legal"))
+                            .font(DS.Font.cardTitle)
+                            .foregroundColor(.primary)
+
+                        folderStep(
+                            icon: "folder.badge.plus",
+                            title: localizationManager.localized("sync_choose_folder"),
+                            desc: localizationManager.localized("sync_folder_desc")
+                        )
+
+                        folderStep(
+                            icon: "icloud.circle",
+                            title: localizationManager.localized("sync_section"),
+                            desc: localizationManager.localized("sync_explainer")
+                        )
+
+                        folderStep(
+                            icon: "person.2.badge.gearshape",
+                            title: localizationManager.localized("no_account_needed"),
+                            desc: localizationManager.localized("cloud_sync_explainer")
+                        )
+                    }
+                    .padding(DS.Space.m)
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(DS.Radius.m)
+                }
+                .padding(DS.Space.m)
+            }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle(localizationManager.localized("sync_choose_folder"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(localizationManager.localized("close")) { dismiss() }
+                }
+            }
+            .fileImporter(
+                isPresented: $showFolderPicker,
+                allowedContentTypes: [.folder],
+                allowsMultipleSelection: false
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    guard let url = urls.first else { return }
+                    let scoped = url.startAccessingSecurityScopedResource()
+                    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                    do {
+                        try CloudSyncFolder.setFolder(url)
+                        runFolderSync()
+                    } catch {
+                        syncMessage = error.localizedDescription
+                    }
+                case .failure(let error):
+                    syncMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    private func folderStep(icon: String, title: String, desc: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 20))
+                .foregroundColor(.teal)
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(DS.Font.body)
+                    .fontWeight(.semibold)
+                Text(desc)
+                    .font(DS.Font.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func runFolderSync() {
+        guard !isSyncing else { return }
+        guard let folder = CloudSyncFolder.resolveFolder() else { return }
+        isSyncing = true
+        defer { isSyncing = false }
+
+        let scoped = folder.startAccessingSecurityScopedResource()
+        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+
+        let report = NotebookSyncCoordinator.run(
+            store: store, folder: folder, deviceId: NotebookMigration.deviceId)
+
+        if report.failures.isEmpty && report.needsAttention.isEmpty {
+            SyncHistory.markFolderSynced()
+        }
+        if let first = report.needsAttention.first {
+            syncMessage = localizationManager.localized("sync_needs_attention")
+                .replacingFirst("%@", with: first)
+        } else if let failure = report.failures.first {
+            syncMessage = "\(failure.key)：\(failure.value)"
+        } else if report.isNoOp {
+            syncMessage = localizationManager.localized("sync_up_to_date")
+        } else {
+            syncMessage = localizationManager.localized("sync_result")
+                .replacingFirst("%1@", with: "\(report.uploaded)")
+                .replacingFirst("%2@", with: "\(report.downloaded)")
+        }
+    }
 }

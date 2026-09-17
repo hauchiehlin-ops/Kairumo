@@ -3967,6 +3967,38 @@ extension LocalizationManager {
             .ko: "이미지",
             .th: "รูปภาพ"
         ],
+        "import_failed": [
+            .zhHant: "匯入失敗：%@",
+            .en: "Import failed: %@",
+            .zhHans: "导入失败：%@",
+            .ja: "読み込みに失敗しました：%@",
+            .ko: "가져오기 실패: %@",
+            .th: "นำเข้าไม่สำเร็จ: %@"
+        ],
+        "import_note": [
+            .zhHant: "匯入筆記",
+            .en: "Import Note",
+            .zhHans: "导入笔记",
+            .ja: "ノートを読み込む",
+            .ko: "노트 가져오기",
+            .th: "นำเข้าสมุดบันทึก"
+        ],
+        "import_note_desc": [
+            .zhHant: "將 .padnote 筆記檔匯入至筆記清單",
+            .en: "Import a .padnote file into your library",
+            .zhHans: "将 .padnote 文件导入至笔记本列表",
+            .ja: ".padnote ファイルをライブラリに読み込みます",
+            .ko: ".padnote 파일을 보관함으로 가져옵니다",
+            .th: "นำเข้าไฟล์ .padnote เข้าสู่คลังบันทึก"
+        ],
+        "import_success": [
+            .zhHant: "已匯入：%@",
+            .en: "Imported: %@",
+            .zhHans: "已导入：%@",
+            .ja: "読み込みました：%@",
+            .ko: "가져왔습니다: %@",
+            .th: "นำเข้าแล้ว: %@"
+        ],
         "ink_clear": [
             .zhHant: "清除",
             .en: "Clear",
@@ -5983,6 +6015,14 @@ extension LocalizationManager {
             .ko: "클립보드의 필기를 이 페이지에 붙여넣습니다",
             .th: "วางเส้นจากคลิปบอร์ดลงในหน้านี้"
         ],
+        "pause_recording": [
+            .zhHant: "暫停錄音",
+            .en: "Pause Recording",
+            .zhHans: "暂停录音",
+            .ja: "録音を一時停止",
+            .ko: "녹음 일시정지",
+            .th: "หยุดการบันทึกชั่วคราว"
+        ],
         "pdf_not_a_pdf": [
             .zhHant: "這個檔案不是 PDF，或者已經損壞。",
             .en: "This file isn't a PDF, or it's damaged.",
@@ -6214,6 +6254,14 @@ extension LocalizationManager {
             .ja: "%@ 秒録音",
             .ko: "%@초 녹음됨",
             .th: "บันทึกแล้ว %@ วินาที"
+        ],
+        "recording_paused": [
+            .zhHant: "錄音已暫停",
+            .en: "Recording Paused",
+            .zhHans: "录音已暂停",
+            .ja: "録音一時停止中",
+            .ko: "녹음 일시정지됨",
+            .th: "หยุดการบันทึกชั่วคราวแล้ว"
         ],
         "recording_suffix": [
             .zhHant: "錄音",
@@ -6470,6 +6518,14 @@ extension LocalizationManager {
             .ja: "ノートをこのスナップショットにロールバックしますか？現在の未保存内容は置換されます。",
             .ko: "노트를 이 스냅샷으로 롤백하시겠습니까? 저장되지 않은 변경 사항은 대체됩니다.",
             .th: "ย้อนกลับสมุดบันทึกเป็นสแนปช็อตนี้หรือไม่? การเปลี่ยนแปลงปัจจุบันจะถูกแทนที่"
+        ],
+        "resume_recording": [
+            .zhHant: "繼續錄音",
+            .en: "Resume Recording",
+            .zhHans: "继续录音",
+            .ja: "録音を再開",
+            .ko: "녹음 재개",
+            .th: "บันทึกต่อ"
         ],
         "role_editor": [
             .zhHant: "編輯者",
@@ -7503,6 +7559,22 @@ extension LocalizationManager {
             .ko: "로그아웃",
             .th: "ออกจากระบบ"
         ],
+        "snap_to_grid": [
+            .zhHant: "吸附格線",
+            .en: "Snap to Grid",
+            .zhHans: "吸附格线",
+            .ja: "グリッドに吸着",
+            .ko: "격자에 맞춤",
+            .th: "จัดชิดเส้นตาราง"
+        ],
+        "snap_to_grid_desc": [
+            .zhHant: "隨點隨寫時自動對齊頁面行線或方格",
+            .en: "Snap click-to-type text to page grid or lines",
+            .zhHans: "随点随写时自动对齐页面行线或方格",
+            .ja: "随時入力をページの罫線や方眼に自動吸着します",
+            .ko: "페이지의 격자나 줄에 맞춰 텍스트를 정렬합니다",
+            .th: "จัดตำแหน่งข้อความให้ชิดเส้นหรือตารางในหน้ากระดาษโดยอัตโนมัติ"
+        ],
         "snapshot_created": [
             .zhHant: "快照已成功建立",
             .en: "Snapshot Created",
@@ -8079,6 +8151,14 @@ extension LocalizationManager {
             .ko: "캔버스를 탭하여 텍스트 입력",
             .th: "แตะที่ใดก็ได้บนผืนผ้าใบเพื่อพิมพ์"
         ],
+        "text_bold": [
+            .zhHant: "粗體",
+            .en: "Bold",
+            .zhHans: "粗体",
+            .ja: "太字",
+            .ko: "굵게",
+            .th: "ตัวหนา"
+        ],
         "text_color": [
             .zhHant: "文字顏色",
             .en: "Text color",
@@ -8087,6 +8167,14 @@ extension LocalizationManager {
             .ko: "글자 색",
             .th: "สีข้อความ"
         ],
+        "text_italic": [
+            .zhHant: "斜體",
+            .en: "Italic",
+            .zhHans: "斜体",
+            .ja: "斜体",
+            .ko: "기울임꼴",
+            .th: "ตัวเอียง"
+        ],
         "text_placeholder": [
             .zhHant: "在此輸入文字…",
             .en: "Type your text here…",
@@ -8094,6 +8182,14 @@ extension LocalizationManager {
             .ja: "ここにテキストを入力…",
             .ko: "여기에 텍스트를 입력…",
             .th: "พิมพ์ข้อความที่นี่…"
+        ],
+        "text_strikethrough": [
+            .zhHant: "刪除線",
+            .en: "Strikethrough",
+            .zhHans: "删除线",
+            .ja: "取り消し線",
+            .ko: "취소선",
+            .th: "ขีดทับ"
         ],
         "text_studio": [
             .zhHant: "文字排版",
@@ -8134,6 +8230,14 @@ extension LocalizationManager {
             .ja: "記号",
             .ko: "기호",
             .th: "สัญลักษณ์"
+        ],
+        "text_underline": [
+            .zhHant: "底線",
+            .en: "Underline",
+            .zhHans: "下划线",
+            .ja: "下線",
+            .ko: "밑줄",
+            .th: "ขีดเส้นใต้"
         ],
         "theme_aesthetic": [
             .zhHant: "美學視覺",
@@ -8862,6 +8966,46 @@ extension LocalizationManager {
             .ja: "水彩筆",
             .ko: "수채화 붓",
             .th: "พู่กันสีน้ำ"
+        ],
+        "transcribe_audio": [
+            .zhHant: "音訊轉文字",
+            .en: "Audio to Text",
+            .zhHans: "音频转文字",
+            .ja: "音声からテキストへ",
+            .ko: "음성을 텍스트로 변환",
+            .th: "แปลงเสียงเป็นข้อความ"
+        ],
+        "transcribe_failed": [
+            .zhHant: "轉錄失敗",
+            .en: "Transcription failed",
+            .zhHans: "转录失败",
+            .ja: "文字起こしに失敗しました",
+            .ko: "변환 실패",
+            .th: "การแปลงเสียงล้มเหลว"
+        ],
+        "transcribe_no_speech": [
+            .zhHant: "未偵測到清晰人聲語音",
+            .en: "No clear speech detected",
+            .zhHans: "未检测到清晰人声语音",
+            .ja: "明瞭な音声が検出されませんでした",
+            .ko: "선명한 음성이 감지되지 않았습니다",
+            .th: "ตรวจไม่พบเสียงพูดที่ชัดเจน"
+        ],
+        "transcribe_success": [
+            .zhHant: "轉錄完成，已插入文字方塊",
+            .en: "Transcription complete, text box added",
+            .zhHans: "转录完成，已插入文本框",
+            .ja: "文字起こし完了、テキストボックスを追加しました",
+            .ko: "변환 완료, 텍스트 상자가 추가되었습니다",
+            .th: "แปลงข้อความเสร็จสิ้น เพิ่มกล่องข้อความแล้ว"
+        ],
+        "transcribing": [
+            .zhHant: "正在轉錄文字…",
+            .en: "Transcribing audio…",
+            .zhHans: "正在转录文字…",
+            .ja: "文字起こし中…",
+            .ko: "텍스트 변환 중…",
+            .th: "กำลังแปลงเสียง…"
         ],
         "transfer_failed": [
             .zhHant: "沒有任何頁面被轉移",

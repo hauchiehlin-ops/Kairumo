@@ -150,7 +150,9 @@ fun HomeScreen(
     /** 系統診斷頁。Apple 在首頁頁尾的版本號上，Android 原本只在編輯器選單裡。 */
     onOpenDiagnostics: () -> Unit,
     /** 把一本筆記搬進某個資料夾（拖放，S-88）。`folderId` 為 null 表示移出資料夾。 */
-    onMoveNotebookToFolder: (String, String?) -> Unit
+    onMoveNotebookToFolder: (String, String?) -> Unit,
+    /** 匯入外部 .padnote 檔案至筆記庫。 */
+    onImportNotebook: () -> Unit = {}
 ) {
     var query by remember { mutableStateOf("") }
     // 兩個區塊各自的「顯示全部」。與 Apple 的 showAllContinue /
@@ -323,12 +325,14 @@ fun HomeScreen(
                 Triple(l(if (recording) "stop_recording" else "start_recording"),
                     l("start_recording_desc"), MaterialTheme.colorScheme.error to false),
                 Triple(l("asset_library"), l("asset_library_desc"),
+                    MaterialTheme.colorScheme.primary to false),
+                Triple(l("import_note"), l("import_note_desc"),
                     MaterialTheme.colorScheme.primary to false)
             )
-            val clicks = listOf(onCreate, onToggleRecording, onAssetLibrary)
-            // 對照閘門的識別字，順序與 Apple 首頁那三張卡一致。
-            val tags = listOf("home.action.new_note", "home.action.record", "home.action.assets")
-            val icons = listOf(Icons.Filled.Add, KairumoIcons.Mic, KairumoIcons.Cube)
+            val clicks = listOf(onCreate, onToggleRecording, onAssetLibrary, onImportNotebook)
+            // 對照閘門的識別字，順序與 Apple 首頁那四張卡一致。
+            val tags = listOf("home.action.new_note", "home.action.record", "home.action.assets", "home.action.import")
+            val icons = listOf(Icons.Filled.Add, KairumoIcons.Mic, KairumoIcons.Cube, KairumoIcons.Import)
 
             Column(verticalArrangement = Arrangement.spacedBy(DS.Space.xs)) {
                 actions.indices.chunked(perRow).forEach { rowIndices ->
@@ -1346,7 +1350,8 @@ data class CloudSyncUiState(
     val folderLastSync: String? = null,
     val onSignIn: () -> Unit,
     val onSyncNow: () -> Unit,
-    val onSignOut: () -> Unit
+    val onSignOut: () -> Unit,
+    val onOpenDetail: (() -> Unit)? = null
 )
 
 /**
@@ -1369,13 +1374,26 @@ private fun CloudSyncCard(state: CloudSyncUiState, l: (String) -> String) {
             modifier = Modifier.fillMaxWidth().padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (state.onOpenDetail != null) {
+                            Modifier.clickable { state.onOpenDetail.invoke() }
+                        } else Modifier
+                    )
+            ) {
                 Text("Google Drive", fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Text(
                     if (state.signedIn) l("sync_section") else l("not_signed_in"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                if (state.onOpenDetail != null) {
+                    Spacer(Modifier.width(4.dp))
+                    Text("›", fontSize = 18.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
 
             // **哪一個帳號、東西放在哪裡、上次什麼時候同步的。**

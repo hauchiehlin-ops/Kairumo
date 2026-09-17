@@ -162,4 +162,39 @@ object KairumoIcons {
             }
         }.build()
     }
+
+    /** 匯入筆記（向下箭頭與托盤）。用於「匯入筆記」。 */
+    val Import: ImageVector by lazy {
+        ImageVector.Builder(
+            name = "KairumoImport",
+            defaultWidth = 24.dp, defaultHeight = 24.dp,
+            viewportWidth = 24f, viewportHeight = 24f
+        ).apply {
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.8f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(12f, 3f)
+                verticalLineTo(15f)
+                moveTo(7.5f, 10.5f)
+                lineTo(12f, 15f)
+                lineTo(16.5f, 10.5f)
+            }
+            path(
+                stroke = SolidColor(Color.Black),
+                strokeLineWidth = 1.8f,
+                strokeLineCap = StrokeCap.Round,
+                strokeLineJoin = StrokeJoin.Round
+            ) {
+                moveTo(4f, 14f)
+                verticalLineTo(19f)
+                curveTo(4f, 20.1f, 4.9f, 21f, 6f, 21f)
+                horizontalLineTo(18f)
+                curveTo(19.1f, 21f, 20f, 20.1f, 20f, 19f)
+                verticalLineTo(14f)
+            }
+        }.build()
+    }
 }

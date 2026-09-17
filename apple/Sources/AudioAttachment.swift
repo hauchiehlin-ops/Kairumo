@@ -34,6 +34,7 @@ struct AudioAttachmentItemView: View {
     @ObservedObject private var audioManager = AudioRecorderManager.shared
     @Binding var item: NoteAudioAttachment
     let onDelete: () -> Void
+    var onTranscribe: ((String) -> Void)? = nil
 
     @State private var dragOffset: CGSize = .zero
     @State private var isSelected: Bool = false
@@ -42,6 +43,8 @@ struct AudioAttachmentItemView: View {
     @State private var resizeBase: CGSize? = nil
     @State private var isRenaming: Bool = false
     @State private var renameText: String = ""
+    @State private var isTranscribing: Bool = false
+    @State private var transcribeAlertMessage: String? = nil
 
     private var displayWidth: CGFloat { liveSize?.width ?? item.width }
     private var displayHeight: CGFloat { liveSize?.height ?? item.height }
@@ -88,6 +91,35 @@ struct AudioAttachmentItemView: View {
                     .accessibilityLabel(localizationManager.localized("action_delete"))
                 }
             }
+            .overlay(alignment: .topLeading) {
+                if isSelected {
+                    Button {
+                        performTranscribe()
+                    } label: {
+                        ZStack {
+                            Circle()
+                                .fill(Color.blue)
+                                .frame(width: 30, height: 30)
+                            if isTranscribing {
+                                ProgressView()
+                                    .progressViewStyle(.circular)
+                                    .tint(.white)
+                                    .scaleEffect(0.7)
+                            } else {
+                                Image(systemName: "waveform.badge.magnifyingglass")
+                                    .font(.system(size: 12, weight: .bold))
+                                    .foregroundColor(.white)
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .contentShape(Circle())
+                    .offset(x: -10, y: -10)
+                    .disabled(isTranscribing || !fileExists)
+                    .accessibilityLabel(localizationManager.localized("transcribe_audio"))
+                    .help(localizationManager.localized("transcribe_audio"))
+                }
+            }
             .overlay(alignment: .bottomTrailing) {
                 if isSelected { resizeHandle }
             }
@@ -130,6 +162,16 @@ struct AudioAttachmentItemView: View {
                     if !trimmed.isEmpty { item.title = trimmed }
                 }
                 Button(localizationManager.localized("cancel"), role: .cancel) {}
+            }
+            .alert(isPresented: Binding(
+                get: { transcribeAlertMessage != nil },
+                set: { if !$0 { transcribeAlertMessage = nil } }
+            )) {
+                Alert(
+                    title: Text(localizationManager.localized("transcribe_audio")),
+                    message: Text(transcribeAlertMessage ?? ""),
+                    dismissButton: .default(Text(localizationManager.localized("done")))
+                )
             }
     }
 
@@ -247,6 +289,30 @@ struct AudioAttachmentItemView: View {
             audioManager.pauseAudio()
         } else {
             audioManager.playAudio(url: fileUrl, recordingId: item.id)
+        }
+    }
+
+    private func performTranscribe() {
+        guard fileExists, !isTranscribing else { return }
+        isTranscribing = true
+        Task {
+            do {
+                let text = try await AudioTranscriber.shared.transcribe(url: fileUrl)
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                await MainActor.run {
+                    self.isTranscribing = false
+                    if trimmed.isEmpty {
+                        self.transcribeAlertMessage = localizationManager.localized("transcribe_no_speech")
+                    } else {
+                        self.onTranscribe?(trimmed)
+                    }
+                }
+            } catch {
+                await MainActor.run {
+                    self.isTranscribing = false
+                    self.transcribeAlertMessage = "\(localizationManager.localized("transcribe_failed")): \(error.localizedDescription)"
+                }
+            }
         }
     }
 }

@@ -224,6 +224,7 @@ fn home_spec() -> FfiScreenSpec {
                     c("home.action.new_note", Card, "new_note"),
                     c("home.action.record", Card, "start_recording"),
                     c("home.action.assets", Card, "asset_library"),
+                    c("home.action.import", Card, "import_note"),
                 ],
             ),
             section(
@@ -386,12 +387,22 @@ fn editor_spec() -> FfiScreenSpec {
                     c("editor.ink.clear", Button, "clear_page"),
                 ],
             ),
-            // 第二排：打字模式。
+            // 第二排：打字模式（Word 風格工具列 Ribbon）。
             section(
                 "editor.texttools",
                 "",
                 vec![
+                    c("editor.text.add_box", Button, "add_text_box"),
                     c("editor.text.studio", Button, "tool_text"),
+                    c("editor.text.bold", Button, "text_bold"),
+                    c("editor.text.italic", Button, "text_italic"),
+                    c("editor.text.underline", Button, "text_underline"),
+                    c("editor.text.align_left", Button, "align_left"),
+                    c("editor.text.align_center", Button, "align_center_h"),
+                    c("editor.text.align_right", Button, "align_right"),
+                    c("editor.text.snap_grid", Button, "snap_to_grid"),
+                    c("editor.text.layer_forward", Button, "layer_bring_forward"),
+                    c("editor.text.layer_backward", Button, "layer_send_backward"),
                     c("editor.text.symbols", Button, "special_symbols"),
                     c("editor.text.select", Button, "marquee_select"),
                     c("editor.text.link", Button, "insert_link"),

@@ -3951,6 +3951,38 @@
     "zhHans": "图片",
     "zhHant": "圖片"
   },
+  "import_failed": {
+    "en": "Import failed: %@",
+    "ja": "読み込みに失敗しました：%@",
+    "ko": "가져오기 실패: %@",
+    "th": "นำเข้าไม่สำเร็จ: %@",
+    "zhHans": "导入失败：%@",
+    "zhHant": "匯入失敗：%@"
+  },
+  "import_note": {
+    "en": "Import Note",
+    "ja": "ノートを読み込む",
+    "ko": "노트 가져오기",
+    "th": "นำเข้าสมุดบันทึก",
+    "zhHans": "导入笔记",
+    "zhHant": "匯入筆記"
+  },
+  "import_note_desc": {
+    "en": "Import a .padnote file into your library",
+    "ja": ".padnote ファイルをライブラリに読み込みます",
+    "ko": ".padnote 파일을 보관함으로 가져옵니다",
+    "th": "นำเข้าไฟล์ .padnote เข้าสู่คลังบันทึก",
+    "zhHans": "将 .padnote 文件导入至笔记本列表",
+    "zhHant": "將 .padnote 筆記檔匯入至筆記清單"
+  },
+  "import_success": {
+    "en": "Imported: %@",
+    "ja": "読み込みました：%@",
+    "ko": "가져왔습니다: %@",
+    "th": "นำเข้าแล้ว: %@",
+    "zhHans": "已导入：%@",
+    "zhHant": "已匯入：%@"
+  },
   "ink_clear": {
     "en": "Clear",
     "ja": "消去",
@@ -5967,6 +5999,14 @@
     "zhHans": "把剪贴板中的笔画粘贴到这一页",
     "zhHant": "把剪貼簿中的筆劃貼到這一頁"
   },
+  "pause_recording": {
+    "en": "Pause Recording",
+    "ja": "録音を一時停止",
+    "ko": "녹음 일시정지",
+    "th": "หยุดการบันทึกชั่วคราว",
+    "zhHans": "暂停录音",
+    "zhHant": "暫停錄音"
+  },
   "pdf_not_a_pdf": {
     "en": "This file isn't a PDF, or it's damaged.",
     "ja": "このファイルは PDF ではないか、壊れています。",
@@ -6198,6 +6238,14 @@
     "th": "บันทึกแล้ว %@ วินาที",
     "zhHans": "已录 %@ 秒",
     "zhHant": "已錄 %@ 秒"
+  },
+  "recording_paused": {
+    "en": "Recording Paused",
+    "ja": "録音一時停止中",
+    "ko": "녹음 일시정지됨",
+    "th": "หยุดการบันทึกชั่วคราวแล้ว",
+    "zhHans": "录音已暂停",
+    "zhHant": "錄音已暫停"
   },
   "recording_suffix": {
     "en": "Recording",
@@ -6454,6 +6502,14 @@
     "th": "ย้อนกลับสมุดบันทึกเป็นสแนปช็อตนี้หรือไม่? การเปลี่ยนแปลงปัจจุบันจะถูกแทนที่",
     "zhHans": "确认要将笔记回滚至此快照？当前未保存的内容将被替换。",
     "zhHant": "確認要將筆記回滾至此快照？當前未保存的內容將被取代。"
+  },
+  "resume_recording": {
+    "en": "Resume Recording",
+    "ja": "録音を再開",
+    "ko": "녹음 재개",
+    "th": "บันทึกต่อ",
+    "zhHans": "继续录音",
+    "zhHant": "繼續錄音"
   },
   "role_editor": {
     "en": "Editor",
@@ -7487,6 +7543,22 @@
     "zhHans": "登出",
     "zhHant": "登出"
   },
+  "snap_to_grid": {
+    "en": "Snap to Grid",
+    "ja": "グリッドに吸着",
+    "ko": "격자에 맞춤",
+    "th": "จัดชิดเส้นตาราง",
+    "zhHans": "吸附格线",
+    "zhHant": "吸附格線"
+  },
+  "snap_to_grid_desc": {
+    "en": "Snap click-to-type text to page grid or lines",
+    "ja": "随時入力をページの罫線や方眼に自動吸着します",
+    "ko": "페이지의 격자나 줄에 맞춰 텍스트를 정렬합니다",
+    "th": "จัดตำแหน่งข้อความให้ชิดเส้นหรือตารางในหน้ากระดาษโดยอัตโนมัติ",
+    "zhHans": "随点随写时自动对齐页面行线或方格",
+    "zhHant": "隨點隨寫時自動對齊頁面行線或方格"
+  },
   "snapshot_created": {
     "en": "Snapshot Created",
     "ja": "スナップショットが作成されました",
@@ -8063,6 +8135,14 @@
     "zhHans": "点击画布任意处即可开始打字输入",
     "zhHant": "點選畫布任意處即可開始打字輸入"
   },
+  "text_bold": {
+    "en": "Bold",
+    "ja": "太字",
+    "ko": "굵게",
+    "th": "ตัวหนา",
+    "zhHans": "粗体",
+    "zhHant": "粗體"
+  },
   "text_color": {
     "en": "Text color",
     "ja": "文字色",
@@ -8071,6 +8151,14 @@
     "zhHans": "文字颜色",
     "zhHant": "文字顏色"
   },
+  "text_italic": {
+    "en": "Italic",
+    "ja": "斜体",
+    "ko": "기울임꼴",
+    "th": "ตัวเอียง",
+    "zhHans": "斜体",
+    "zhHant": "斜體"
+  },
   "text_placeholder": {
     "en": "Type your text here…",
     "ja": "ここにテキストを入力…",
@@ -8078,6 +8166,14 @@
     "th": "พิมพ์ข้อความที่นี่…",
     "zhHans": "在此输入文字…",
     "zhHant": "在此輸入文字…"
+  },
+  "text_strikethrough": {
+    "en": "Strikethrough",
+    "ja": "取り消し線",
+    "ko": "취소선",
+    "th": "ขีดทับ",
+    "zhHans": "删除线",
+    "zhHant": "刪除線"
   },
   "text_studio": {
     "en": "Text Studio",
@@ -8118,6 +8214,14 @@
     "th": "สัญลักษณ์",
     "zhHans": "符号",
     "zhHant": "符號"
+  },
+  "text_underline": {
+    "en": "Underline",
+    "ja": "下線",
+    "ko": "밑줄",
+    "th": "ขีดเส้นใต้",
+    "zhHans": "下划线",
+    "zhHant": "底線"
   },
   "theme_aesthetic": {
     "en": "Aesthetic & Visual",
@@ -8846,6 +8950,46 @@
     "th": "พู่กันสีน้ำ",
     "zhHans": "水彩笔",
     "zhHant": "水彩筆"
+  },
+  "transcribe_audio": {
+    "en": "Audio to Text",
+    "ja": "音声からテキストへ",
+    "ko": "음성을 텍스트로 변환",
+    "th": "แปลงเสียงเป็นข้อความ",
+    "zhHans": "音频转文字",
+    "zhHant": "音訊轉文字"
+  },
+  "transcribe_failed": {
+    "en": "Transcription failed",
+    "ja": "文字起こしに失敗しました",
+    "ko": "변환 실패",
+    "th": "การแปลงเสียงล้มเหลว",
+    "zhHans": "转录失败",
+    "zhHant": "轉錄失敗"
+  },
+  "transcribe_no_speech": {
+    "en": "No clear speech detected",
+    "ja": "明瞭な音声が検出されませんでした",
+    "ko": "선명한 음성이 감지되지 않았습니다",
+    "th": "ตรวจไม่พบเสียงพูดที่ชัดเจน",
+    "zhHans": "未检测到清晰人声语音",
+    "zhHant": "未偵測到清晰人聲語音"
+  },
+  "transcribe_success": {
+    "en": "Transcription complete, text box added",
+    "ja": "文字起こし完了、テキストボックスを追加しました",
+    "ko": "변환 완료, 텍스트 상자가 추가되었습니다",
+    "th": "แปลงข้อความเสร็จสิ้น เพิ่มกล่องข้อความแล้ว",
+    "zhHans": "转录完成，已插入文本框",
+    "zhHant": "轉錄完成，已插入文字方塊"
+  },
+  "transcribing": {
+    "en": "Transcribing audio…",
+    "ja": "文字起こし中…",
+    "ko": "텍스트 변환 중…",
+    "th": "กำลังแปลงเสียง…",
+    "zhHans": "正在转录文字…",
+    "zhHant": "正在轉錄文字…"
   },
   "transfer_failed": {
     "en": "Nothing was transferred",

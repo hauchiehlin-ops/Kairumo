@@ -531,7 +531,8 @@ pub fn archive_package(package_dir: &Path, out_file: &Path) -> Result<(), Storag
         }
 
         add_dir_to_zip(&mut zip, options, package_dir, package_dir)?;
-        zip.finish().map_err(|e| StorageError::Archive(e.to_string()))?;
+        zip.finish()
+            .map_err(|e| StorageError::Archive(e.to_string()))?;
     }
 
     fs::rename(&tmp_out, out_file)?;

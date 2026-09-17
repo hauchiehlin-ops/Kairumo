@@ -883,6 +883,7 @@ public struct NotebookEditorView: View {
     /// 摘要與待辦（工作項 S-20）。
     @State private var showNoteIntelligence: Bool = false
     @State private var editingTextId: String? = nil
+    @State private var snapToGrid: Bool = true
     @State private var newTextDraft: NoteTextAttachment = NoteTextAttachment()
     @State private var showLinkPreviewSheet: Bool = false
     @State private var showProColorPicker: Bool = false
@@ -1105,8 +1106,8 @@ public struct NotebookEditorView: View {
                 audioPlaybackBar(fileName: audioPath)
             }
 
-            // 5. 若目前正在進行錄音，顯示即時錄音波形橫條
-            if audioManager.status == .recording {
+            // 5. 若目前正在進行或暫停錄音，顯示即時錄音波形橫條
+            if audioManager.status == .recording || audioManager.status == .paused {
                 liveRecordingBar
             }
 
@@ -1808,21 +1809,21 @@ public struct NotebookEditorView: View {
             .help(localizationManager.localized("collaborate"))
 
             // 錄音按鈕
-            if audioManager.status == .recording {
+            if audioManager.status == .recording || audioManager.status == .paused {
                 Button {
                     stopAndSaveRecording()
                 } label: {
                     HStack(spacing: 5) {
                         Circle()
-                            .fill(Color.red)
+                            .fill(audioManager.status == .recording ? Color.red : Color.orange)
                             .frame(width: 7, height: 7)
                         Text(localizationManager.localized("stop_recording"))
                             .font(.caption2)
-                            .foregroundColor(.red)
+                            .foregroundColor(audioManager.status == .recording ? .red : .orange)
                     }
                     .padding(.horizontal, 7)
                     .padding(.vertical, 4)
-                    .background(Color.red.opacity(0.12))
+                    .background((audioManager.status == .recording ? Color.red : Color.orange).opacity(0.12))
                     .cornerRadius(6)
                 }
             } else {
@@ -2086,15 +2087,15 @@ public struct NotebookEditorView: View {
         .accessibilityIdentifier("editor.more")
 
         // 錄音
-        if audioManager.status == .recording {
+        if audioManager.status == .recording || audioManager.status == .paused {
             Button {
                 stopAndSaveRecording()
             } label: {
                 Circle()
-                    .fill(Color.red)
+                    .fill(audioManager.status == .recording ? Color.red : Color.orange)
                     .frame(width: 12, height: 12)
                     .padding(5)
-                    .background(Color.red.opacity(0.15))
+                    .background((audioManager.status == .recording ? Color.red : Color.orange).opacity(0.15))
                     .cornerRadius(6)
             }
             .accessibilityIdentifier("editor.record")
@@ -2524,7 +2525,7 @@ public struct NotebookEditorView: View {
                     }
                 }
 
-                // 🌟 頁面上的錄音卡片（可播放、可搬移、可縮放、可旋轉、可改名）
+                // 🌟 頁面上的錄音卡片（可播放、可搬移、可縮放、可旋轉、可改名、音訊轉文字）
                 ForEach(notebook.audioAttachments ?? []) { item in
                     if item.pageIndex == page {
                         AudioAttachmentItemView(
@@ -2532,6 +2533,9 @@ public struct NotebookEditorView: View {
                             onDelete: {
                                 notebook.audioAttachments?.removeAll { $0.id == item.id }
                                 store.updateNotebook(notebook)
+                            },
+                            onTranscribe: { transcribedText in
+                                insertTranscriptText(transcribedText, for: item)
                             }
                         )
                         .zIndex(ObjectStacking.zIndex(for: item.id, kind: .audio, order: notebook.objectOrder(forPage: page)))
@@ -3002,9 +3006,9 @@ ZStack(alignment: .topTrailing) {
         // 手勢與底下的畫布、物件各自獨立辨識 —— 單擊照常穿透。
         .simultaneousGesture(
             editorMode == .type
-                ? SpatialTapGesture(count: 2, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                ? SpatialTapGesture(count: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onEnded { value in
-                        insertTextBox(at: value.location)
+                        handleCanvasTapInTypeMode(at: value.location)
                     }
                 : nil
         )
@@ -4590,139 +4594,294 @@ ZStack(alignment: .topTrailing) {
 
     @ViewBuilder
     private var typingToolbarItems: some View {
-                // 插入文字方塊
-                Button {
-                    newTextDraft = NoteTextAttachment(pageIndex: currentPageIndex)
-                    showWordStudio = true
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "character.textbox")
-                            .font(.system(size: 14, weight: .semibold))
-                        Text(localizationManager.localized("tool_text"))
-                            .font(.system(size: 12, weight: .semibold))
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.accentColor)
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(localizationManager.localized("word_studio"))
-                .help(localizationManager.localized("word_studio"))
-                .accessibilityIdentifier("editor.text.studio")
+        // 1. 新增文字方塊按鈕
+        Button {
+            _ = insertTextBox(at: CGPoint(x: 200, y: 200))
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: "plus.bubble")
+                    .font(.system(size: 13, weight: .semibold))
+                Text(localizationManager.localized("add_text_box"))
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundColor(.white)
+            .padding(.horizontal, 9)
+            .padding(.vertical, 5)
+            .background(Color.accentColor)
+            .cornerRadius(7)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(localizationManager.localized("add_text_box"))
+        .help(localizationManager.localized("add_text_box"))
+        .accessibilityIdentifier("editor.text.add_box")
 
-                Divider().frame(height: 22)
+        // 2. 文字排版 / 樣式面板
+        Button {
+            newTextDraft = activeTextAttachment ?? NoteTextAttachment(pageIndex: currentPageIndex)
+            showWordStudio = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "character.textbox")
+                    .font(.system(size: 13))
+                Text(localizationManager.localized("tool_text"))
+                    .font(.system(size: 11))
+            }
+            .foregroundColor(.primary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .background(Color.secondary.opacity(0.12))
+            .cornerRadius(7)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(localizationManager.localized("word_studio"))
+        .help(localizationManager.localized("word_studio"))
+        .accessibilityIdentifier("editor.text.studio")
 
-                // 快速插入常用符號群組
-                Menu {
-                    // 符號表**來自核心**（`symbol_palette`）。
-                    //
-                    // 這四組原本寫死在這裡，而核心早就有同樣的東西 ——
-                    // 於是同一個「數學符號」選單，兩個平台給的符號不一樣
-                    // （Android 這一版補上面板時才發現）。而符號是使用者會
-                    // 記住位置的東西：「星號在左上角第一個」。
-                    ForEach(symbolCategories(), id: \.self) { category in
-                        Menu(localizationManager.localized(symbolCategoryKey(category))) {
-                            ForEach(symbolPalette(category: category), id: \.self) { sym in
-                                Button(sym) {
-                                    insertQuickTextSnippet(sym)
-                                }
-                            }
+        Divider().frame(height: 20)
+
+        // 3. 粗體、斜體、底線快捷按鈕
+        HStack(spacing: 2) {
+            Button {
+                toggleActiveTextBold()
+            } label: {
+                Image(systemName: "bold")
+                    .font(.system(size: 12, weight: .bold))
+                    .frame(width: 26, height: 26)
+                    .background(isCurrentTextBold ? Color.accentColor.opacity(0.2) : Color.clear)
+                    .cornerRadius(4)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("text_bold"))
+            .accessibilityIdentifier("editor.text.bold")
+
+            Button {
+                toggleActiveTextItalic()
+            } label: {
+                Image(systemName: "italic")
+                    .font(.system(size: 12))
+                    .frame(width: 26, height: 26)
+                    .background(isCurrentTextItalic ? Color.accentColor.opacity(0.2) : Color.clear)
+                    .cornerRadius(4)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("text_italic"))
+            .accessibilityIdentifier("editor.text.italic")
+
+            Button {
+                toggleActiveTextUnderline()
+            } label: {
+                Image(systemName: "underline")
+                    .font(.system(size: 12))
+                    .frame(width: 26, height: 26)
+                    .background(isCurrentTextUnderline ? Color.accentColor.opacity(0.2) : Color.clear)
+                    .cornerRadius(4)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("text_underline"))
+            .accessibilityIdentifier("editor.text.underline")
+        }
+        .padding(2)
+        .background(Color.secondary.opacity(0.08))
+        .cornerRadius(6)
+
+        // 4. 段落對齊
+        HStack(spacing: 2) {
+            Button {
+                setActiveTextAlignment("left")
+            } label: {
+                Image(systemName: "text.alignleft")
+                    .font(.system(size: 12))
+                    .frame(width: 26, height: 26)
+                    .background(currentTextAlignment == "left" ? Color.accentColor.opacity(0.2) : Color.clear)
+                    .cornerRadius(4)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("align_left"))
+            .accessibilityIdentifier("editor.text.align_left")
+
+            Button {
+                setActiveTextAlignment("center")
+            } label: {
+                Image(systemName: "text.aligncenter")
+                    .font(.system(size: 12))
+                    .frame(width: 26, height: 26)
+                    .background(currentTextAlignment == "center" ? Color.accentColor.opacity(0.2) : Color.clear)
+                    .cornerRadius(4)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("align_center_h"))
+            .accessibilityIdentifier("editor.text.align_center")
+
+            Button {
+                setActiveTextAlignment("right")
+            } label: {
+                Image(systemName: "text.alignright")
+                    .font(.system(size: 12))
+                    .frame(width: 26, height: 26)
+                    .background(currentTextAlignment == "right" ? Color.accentColor.opacity(0.2) : Color.clear)
+                    .cornerRadius(4)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("align_right"))
+            .accessibilityIdentifier("editor.text.align_right")
+        }
+        .padding(2)
+        .background(Color.secondary.opacity(0.08))
+        .cornerRadius(6)
+
+        Divider().frame(height: 20)
+
+        // 5. 格線/方格吸附開關
+        Button {
+            snapToGrid.toggle()
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: snapToGrid ? "squareshape.split.3x3" : "squareshape.dashed.squareshape")
+                    .font(.system(size: 13))
+                Text(localizationManager.localized("snap_to_grid"))
+                    .font(.system(size: 11))
+            }
+            .foregroundColor(snapToGrid ? .white : .primary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .background(snapToGrid ? Color.accentColor : Color.secondary.opacity(0.12))
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(localizationManager.localized("snap_to_grid"))
+        .help(localizationManager.localized("snap_to_grid_desc"))
+        .accessibilityIdentifier("editor.text.snap_grid")
+
+        // 6. 圖層層級調整（物件與文字相對順序）
+        HStack(spacing: 2) {
+            Button {
+                bringActiveObjectForward()
+            } label: {
+                Image(systemName: "square.2.layers.3d.top.filled")
+                    .font(.system(size: 12))
+                    .frame(width: 26, height: 26)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("layer_bring_forward"))
+            .help(localizationManager.localized("layer_bring_forward"))
+            .accessibilityIdentifier("editor.text.layer_forward")
+
+            Button {
+                sendActiveObjectBackward()
+            } label: {
+                Image(systemName: "square.2.layers.3d.bottom.filled")
+                    .font(.system(size: 12))
+                    .frame(width: 26, height: 26)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(localizationManager.localized("layer_send_backward"))
+            .help(localizationManager.localized("layer_send_backward"))
+            .accessibilityIdentifier("editor.text.layer_backward")
+        }
+        .padding(2)
+        .background(Color.secondary.opacity(0.08))
+        .cornerRadius(6)
+
+        Divider().frame(height: 20)
+
+        // 7. 特殊符號選單
+        Menu {
+            ForEach(symbolCategories(), id: \.self) { category in
+                Menu(localizationManager.localized(symbolCategoryKey(category))) {
+                    ForEach(symbolPalette(category: category), id: \.self) { sym in
+                        Button(sym) {
+                            insertQuickTextSnippet(sym)
                         }
                     }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "star.bubble")
-                            .font(.system(size: 14))
-                        Text(localizationManager.localized("special_symbols"))
-                            .accessibilityIdentifier("editor.text.symbols")
-                            .font(.system(size: 11))
-                        Image(systemName: "chevron.down")
-                            .font(.system(size: 9))
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.secondary.opacity(0.12))
-                    .cornerRadius(8)
                 }
-                .buttonStyle(.plain)
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "star.bubble")
+                    .font(.system(size: 14))
+                Text(localizationManager.localized("special_symbols"))
+                    .accessibilityIdentifier("editor.text.symbols")
+                    .font(.system(size: 11))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 9))
+            }
+            .foregroundColor(.primary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .background(Color.secondary.opacity(0.12))
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
 
-                // 框選。與「插入」並列而不是收進「更多」——
-                // 它是一個**模式**，使用者要看得到自己現在在不在裡面。
-                Button {
-                    isMarqueeActive.toggle()
-                    if !isMarqueeActive { selectedObjectIds = [] }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "square.dashed")
-                            .font(.system(size: 14))
-                        Text(localizationManager.localized("marquee_select"))
-                            .accessibilityIdentifier("editor.text.select")
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(isMarqueeActive ? .white : .primary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(isMarqueeActive ? Color.accentColor : Color.secondary.opacity(0.12))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(localizationManager.localized("marquee_hint"))
-                .help(localizationManager.localized("marquee_hint"))
+        // 8. 框選模式
+        Button {
+            isMarqueeActive.toggle()
+            if !isMarqueeActive { selectedObjectIds = [] }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "square.dashed")
+                    .font(.system(size: 14))
+                Text(localizationManager.localized("marquee_select"))
+                    .accessibilityIdentifier("editor.text.select")
+                    .font(.system(size: 11))
+            }
+            .foregroundColor(isMarqueeActive ? .white : .primary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .background(isMarqueeActive ? Color.accentColor : Color.secondary.opacity(0.12))
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(localizationManager.localized("marquee_hint"))
+        .help(localizationManager.localized("marquee_hint"))
 
-                // 插入連結
-                Button {
-                    showLinkPreviewSheet = true
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "link")
-                            .font(.system(size: 14))
-                        Text(localizationManager.localized("insert_link"))
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(.primary)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.secondary.opacity(0.12))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(localizationManager.localized("insert_link"))
-                .help(localizationManager.localized("insert_link"))
-                .accessibilityIdentifier("editor.text.link")
+        // 9. 插入連結
+        Button {
+            showLinkPreviewSheet = true
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "link")
+                    .font(.system(size: 14))
+                Text(localizationManager.localized("insert_link"))
+                    .font(.system(size: 11))
+            }
+            .foregroundColor(.primary)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 5)
+            .background(Color.secondary.opacity(0.12))
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(localizationManager.localized("insert_link"))
+        .help(localizationManager.localized("insert_link"))
+        .accessibilityIdentifier("editor.text.link")
 
+        Spacer()
 
-                // 「延長本頁」已移除：頁面高度固定（PageGeometry），
-                // 寫到頁尾會自動準備下一頁。
+        // 10. 復原與重做
+        HStack(spacing: 8) {
+            Button {
+                performUndo()
+            } label: {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .accessibilityLabel(localizationManager.localized("undo"))
+            .help(localizationManager.localized("undo"))
+            .accessibilityIdentifier("editor.text.undo")
 
-                Spacer()
-
-                // 復原與重做
-                HStack(spacing: 8) {
-                    Button {
-                        performUndo()
-                    } label: {
-                        Image(systemName: "arrow.uturn.backward")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    .accessibilityLabel(localizationManager.localized("undo"))
-                    .help(localizationManager.localized("undo"))
-                    .accessibilityIdentifier("editor.text.undo")
-
-                    Button {
-                        canvasView?.undoManager?.redo()
-                    } label: {
-                        Image(systemName: "arrow.uturn.forward")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                    }
-                    .accessibilityLabel(localizationManager.localized("redo"))
-                    .help(localizationManager.localized("redo"))
-                    .accessibilityIdentifier("editor.text.redo")
-                }
+            Button {
+                canvasView?.undoManager?.redo()
+            } label: {
+                Image(systemName: "arrow.uturn.forward")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .accessibilityLabel(localizationManager.localized("redo"))
+            .help(localizationManager.localized("redo"))
+            .accessibilityIdentifier("editor.text.redo")
+        }
     }
 
     // MARK: - 3. 尺規旋轉與量測輔助列
@@ -4804,21 +4963,24 @@ ZStack(alignment: .topTrailing) {
     private var liveRecordingBar: AnyView { AnyView(liveRecordingBarContent) }
 
     private var liveRecordingBarContent: some View {
-        HStack(spacing: 12) {
+        let isPaused = audioManager.status == .paused
+        return HStack(spacing: 12) {
             HStack(spacing: 6) {
                 Circle()
-                    .fill(Color.red)
+                    .fill(isPaused ? Color.orange : Color.red)
                     .frame(width: 10, height: 10)
-                Text("\(localizationManager.localized("sync_recording_in_progress")): \(formatTime(seconds: audioManager.elapsedSeconds))")
+                Text(isPaused
+                     ? "\(localizationManager.localized("recording_paused")): \(formatTime(seconds: audioManager.elapsedSeconds))"
+                     : "\(localizationManager.localized("sync_recording_in_progress")): \(formatTime(seconds: audioManager.elapsedSeconds))")
                     .font(.caption)
                     .fontWeight(.semibold)
-                    .foregroundColor(.red)
+                    .foregroundColor(isPaused ? .orange : .red)
             }
 
             HStack(spacing: 2) {
                 ForEach(0..<audioManager.audioLevels.count, id: \.self) { i in
                     RoundedRectangle(cornerRadius: 1)
-                        .fill(Color.red)
+                        .fill(isPaused ? Color.orange.opacity(0.6) : Color.red)
                         .frame(width: 3, height: max(4, audioManager.audioLevels[i] * 24))
                 }
             }
@@ -4826,6 +4988,30 @@ ZStack(alignment: .topTrailing) {
 
             Spacer()
 
+            // 暫停 / 繼續按鈕
+            Button {
+                if isPaused {
+                    audioManager.resumeRecording()
+                } else {
+                    audioManager.pauseRecording()
+                }
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: isPaused ? "play.fill" : "pause.fill")
+                    Text(isPaused
+                         ? localizationManager.localized("resume_recording")
+                         : localizationManager.localized("pause_recording"))
+                }
+                .font(.caption2)
+                .fontWeight(.bold)
+                .foregroundColor(isPaused ? .white : .orange)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 4)
+                .background(isPaused ? Color.orange : Color.orange.opacity(0.15))
+                .cornerRadius(6)
+            }
+
+            // 完成錄音按鈕
             Button(localizationManager.localized("finish_recording")) {
                 stopAndSaveRecording()
             }
@@ -4839,7 +5025,7 @@ ZStack(alignment: .topTrailing) {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Color.red.opacity(0.08))
+        .background((isPaused ? Color.orange : Color.red).opacity(0.08))
     }
 
     // MARK: - 6. 畫布上之即時浮動錄音圖示徽章
@@ -6038,24 +6224,114 @@ ZStack(alignment: .topTrailing) {
         }
     }
 
+    private var activeTextAttachment: NoteTextAttachment? {
+        if let id = editingTextId {
+            return notebook.textAttachments?.first(where: { $0.id == id })
+        }
+        return notebook.textAttachments?.first(where: { $0.pageIndex == currentPageIndex })
+    }
+
+    private var isCurrentTextBold: Bool {
+        activeTextAttachment?.isBold ?? false
+    }
+
+    private var isCurrentTextItalic: Bool {
+        activeTextAttachment?.isItalic ?? false
+    }
+
+    private var isCurrentTextUnderline: Bool {
+        activeTextAttachment?.isUnderline ?? false
+    }
+
+    private var currentTextAlignment: String {
+        activeTextAttachment?.alignmentRaw ?? "left"
+    }
+
+    private func toggleActiveTextBold() {
+        guard let id = activeTextAttachment?.id,
+              let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
+        notebook.textAttachments?[index].isBold.toggle()
+        store.updateNotebook(notebook)
+    }
+
+    private func toggleActiveTextItalic() {
+        guard let id = activeTextAttachment?.id,
+              let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
+        notebook.textAttachments?[index].isItalic.toggle()
+        store.updateNotebook(notebook)
+    }
+
+    private func toggleActiveTextUnderline() {
+        guard let id = activeTextAttachment?.id,
+              let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
+        notebook.textAttachments?[index].isUnderline.toggle()
+        store.updateNotebook(notebook)
+    }
+
+    private func setActiveTextAlignment(_ align: String) {
+        guard let id = activeTextAttachment?.id,
+              let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
+        notebook.textAttachments?[index].alignmentRaw = align
+        store.updateNotebook(notebook)
+    }
+
+    private func bringActiveObjectForward() {
+        let order = ObjectStacking.normalized(objects: pageStackableObjects, order: notebook.objectOrder(forPage: currentPageIndex))
+        let targetId = editingTextId ?? selectedShapeIds.first ?? selectedObjectIds.first ?? (notebook.textAttachments?.last(where: { $0.pageIndex == currentPageIndex })?.id)
+        guard let id = targetId else { return }
+        let newOrder = ObjectStacking.bringForward([id], in: order)
+        notebook.setObjectOrder(newOrder, forPage: currentPageIndex)
+        store.updateNotebook(notebook)
+    }
+
+    private func sendActiveObjectBackward() {
+        let order = ObjectStacking.normalized(objects: pageStackableObjects, order: notebook.objectOrder(forPage: currentPageIndex))
+        let targetId = editingTextId ?? selectedShapeIds.first ?? selectedObjectIds.first ?? (notebook.textAttachments?.last(where: { $0.pageIndex == currentPageIndex })?.id)
+        guard let id = targetId else { return }
+        let newOrder = ObjectStacking.sendBackward([id], in: order)
+        notebook.setObjectOrder(newOrder, forPage: currentPageIndex)
+        store.updateNotebook(notebook)
+    }
+
+    private func handleCanvasTapInTypeMode(at location: CGPoint) {
+        if let existing = notebook.textAttachments?.first(where: { item in
+            item.pageIndex == currentPageIndex &&
+            CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -10, dy: -10).contains(location)
+        }) {
+            editingTextId = existing.id
+            return
+        }
+        _ = insertTextBox(at: location)
+    }
+
     /// 在畫布的指定位置新增一個空文字方塊並直接進入編輯。
-    ///
-    /// 位置往左上各退一點，讓方塊的**中心**落在手指點的地方 ——
-    /// 以點擊處當左上角的話，方塊會整個長在手指的右下方。
-    private func insertTextBox(at location: CGPoint) {
+    @discardableResult
+    private func insertTextBox(at location: CGPoint) -> NoteTextAttachment {
+        var targetX = location.x - 130
+        var targetY = location.y - 40
+        if snapToGrid {
+            let step: CGFloat = 20.0
+            targetX = round(targetX / step) * step
+            targetY = round(targetY / step) * step
+        }
         let draft = NoteTextAttachment(
             id: UUID().uuidString,
             pageIndex: currentPageIndex,
             text: "",
-            x: max(20, location.x - 130),
-            y: max(20, location.y - 40)
+            x: max(20, targetX),
+            y: max(20, targetY)
         )
         if notebook.textAttachments == nil {
             notebook.textAttachments = []
         }
         notebook.textAttachments?.append(draft)
+        var order = ObjectStacking.normalized(objects: pageStackableObjects, order: notebook.objectOrder(forPage: currentPageIndex))
+        order = ObjectStacking.bringToFront([draft.id], in: order)
+        notebook.setObjectOrder(order, forPage: currentPageIndex)
+
         store.updateNotebook(notebook)
         editingTextId = draft.id
+        return draft
     }
 
     /// 符號分類的語系鍵。與 Android 的 `categoryKey` 同一組。
@@ -6087,6 +6363,43 @@ ZStack(alignment: .topTrailing) {
         }
         notebook.textAttachments?.append(newBox)
         store.updateNotebook(notebook)
+    }
+
+    /// 將語音辨識/轉錄出的文字稿作為文字方塊插入在該錄音卡片下方
+    private func insertTranscriptText(_ text: String, for audio: NoteAudioAttachment) {
+        let boxWidth: CGFloat = max(240, audio.width)
+        let boxHeight: CGFloat = max(80, CGFloat(min(240, 40 + (text.count / 20) * 24)))
+        let targetX = audio.x
+        let targetY = audio.y + audio.height + 16
+
+        let transcriptBox = NoteTextAttachment(
+            id: UUID().uuidString,
+            pageIndex: audio.pageIndex,
+            text: text,
+            fontSize: 16,
+            isBold: false,
+            backgroundColorHex: "#F2F4F7",
+            hasBorder: true,
+            cornerRadius: 10,
+            borderColorHex: "#D0D5DD",
+            borderWidth: 1.0,
+            x: targetX,
+            y: targetY,
+            width: boxWidth,
+            height: boxHeight
+        )
+
+        if notebook.textAttachments == nil {
+            notebook.textAttachments = []
+        }
+        notebook.textAttachments?.append(transcriptBox)
+
+        var order = ObjectStacking.normalized(objects: pageStackableObjects, order: notebook.objectOrder(forPage: audio.pageIndex))
+        order = ObjectStacking.bringToFront([transcriptBox.id], in: order)
+        notebook.setObjectOrder(order, forPage: audio.pageIndex)
+
+        store.updateNotebook(notebook)
+        editingTextId = transcriptBox.id
     }
 
     private func formatTime(seconds: TimeInterval) -> String {

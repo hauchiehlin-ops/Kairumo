@@ -93,6 +93,7 @@
 		B461E05D52232C76413B2DB2 /* Docs in Resources */ = {isa = PBXBuildFile; fileRef = B7FE882F90D6ABA99E0820BF /* Docs */; };
 		BBA19BDEFC495AD7A5BDD2F4 /* BundledDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0A240F9E5D8ED4900468913 /* BundledDocumentTests.swift */; };
 		BBA43DAF3585326259C48FE6 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D059ACC4F96D906F5A18970D /* AppVersion.swift */; };
+		BCF67AEC6E3360B45CBC8631 /* AudioTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 186DAB55422E783F9C99DE02 /* AudioTranscriber.swift */; };
 		C05676D24779BAF45BAC8F55 /* NotebookMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D5E17BFDAA4C24704903AF0 /* NotebookMigrationTests.swift */; };
 		C1263F774996D8A32718A1FF /* ImageAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = DFCDD31E1D415BEFE8FB47D5 /* ImageAppearance.swift */; };
 		C16EE73071EAB3F1FE89B776 /* NotebookPlainText.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3BD868328B64B9FB88406FB9 /* NotebookPlainText.swift */; };
@@ -169,6 +170,7 @@
 		0FFA100928CD3224E43D7382 /* LocalRelayServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalRelayServer.swift; sourceTree = "<group>"; };
 		1064607D4E02AABFD6A63F53 /* PalmRejection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalmRejection.swift; sourceTree = "<group>"; };
 		16799A63AE107AAA8CCA34B4 /* ResizableSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResizableSheet.swift; sourceTree = "<group>"; };
+		186DAB55422E783F9C99DE02 /* AudioTranscriber.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTranscriber.swift; sourceTree = "<group>"; };
 		1C02304CC3521585A1142449 /* AccessibilityLabelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccessibilityLabelTests.swift; sourceTree = "<group>"; };
 		1C19329463E6F6E313A0F1DB /* NotebookMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookMigration.swift; sourceTree = "<group>"; };
 		205572122F598A01BD07BC2A /* CommentThreadView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentThreadView.swift; sourceTree = "<group>"; };
@@ -416,6 +418,7 @@
 				A351D8EB2219ECF83FF78645 /* AssetLibraryView.swift */,
 				4BA1621FF70166498E5FC736 /* AudioAttachment.swift */,
 				8FEF2B249C62AD4AE2E3C246 /* AudioRecorderManager.swift */,
+				186DAB55422E783F9C99DE02 /* AudioTranscriber.swift */,
 				E6A2A119D757D992BD181DEE /* BackupManager.swift */,
 				7A2F8130E223B0B02F303F80 /* BrushCursor.swift */,
 				5B72B2C88A99AD52C89B0787 /* CanvasScrollbar.swift */,
@@ -677,6 +680,7 @@
 				31303FA237927EC5B53EFE38 /* AssetLibraryView.swift in Sources */,
 				D325D948BEE1CAF365D97515 /* AudioAttachment.swift in Sources */,
 				7DB76F0C390DA40B48AC10F9 /* AudioRecorderManager.swift in Sources */,
+				BCF67AEC6E3360B45CBC8631 /* AudioTranscriber.swift in Sources */,
 				FEE111DF10D0F0623F16BEB0 /* BackupManager.swift in Sources */,
 				B281348DEEE6A0978642DF8D /* BrushCursor.swift in Sources */,
 				68C1811CB88877353FF14D31 /* CStubs.c in Sources */,
@@ -958,6 +962,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Kairumo 需要語音辨識權限以將錄音檔轉錄為文字稿，並直接插入筆記畫布。";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
@@ -1035,6 +1040,7 @@
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo 需要麥克風權限以進行課堂與會議錄音，並與手寫筆記同步對齊。";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Kairumo 需要語音辨識權限以將錄音檔轉錄為文字稿，並直接插入筆記畫布。";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
