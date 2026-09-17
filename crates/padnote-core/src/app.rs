@@ -1789,6 +1789,69 @@ impl NotebookSession {
         ))
     }
 
+    /// 把一頁的版面（`page_guides`）解析成匯出器畫得出來的圖元（S-90）。
+    ///
+    /// 顏色來自使用者選的配色、文字要照使用者的語系翻譯 —— 兩者都不在
+    /// `padnote-export` 手上（它連 i18n 都沒有相依），所以在這裡解析完
+    /// 再交過去。標籤的翻譯由平台提供：版面的語系鍵住在兩端共用的
+    /// `ui-strings` 表裡，核心的 catalog 沒有那一份。
+    pub fn resolve_page_guides(
+        paper_id: &str,
+        width: f32,
+        height: f32,
+        palette_id: &str,
+        labels: &std::collections::HashMap<String, String>,
+    ) -> Vec<padnote_export::GuideItem> {
+        use crate::ffi_guides::{FfiGuideKind, FfiGuideTone};
+        if paper_id.is_empty() {
+            return Vec::new();
+        }
+        let palette = crate::ffi_guides::guide_palette(palette_id.to_string());
+        let rgb = |hex: &str| -> (f32, f32, f32) {
+            let h = hex.trim_start_matches('#');
+            if h.len() != 6 {
+                return (0.6, 0.6, 0.65);
+            }
+            let v = |i: usize| u8::from_str_radix(&h[i..i + 2], 16).unwrap_or(150) as f32 / 255.0;
+            (v(0), v(2), v(4))
+        };
+        crate::ffi_guides::page_guides(paper_id.to_string(), width, height)
+            .into_iter()
+            .map(|g| {
+                let color = match g.kind {
+                    // 標題底色條用的是「底色」，不是線色 —— 用線色畫出來
+                    // 會是一條深灰的實心條，蓋掉它底下的標題。
+                    FfiGuideKind::FillRect => rgb(&palette.band_hex),
+                    _ => match g.tone {
+                        FfiGuideTone::Accent => rgb(&palette.accent_hex),
+                        FfiGuideTone::Muted => rgb(&palette.text_hex),
+                        _ => rgb(&palette.line_hex),
+                    },
+                };
+                padnote_export::GuideItem {
+                    kind: match g.kind {
+                        FfiGuideKind::Line => padnote_export::GuideKind::Line,
+                        FfiGuideKind::Rect => padnote_export::GuideKind::Rect,
+                        FfiGuideKind::FillRect => padnote_export::GuideKind::FillRect,
+                        FfiGuideKind::Label => padnote_export::GuideKind::Label,
+                        FfiGuideKind::Checkbox => padnote_export::GuideKind::Checkbox,
+                        FfiGuideKind::Dot => padnote_export::GuideKind::Dot,
+                    },
+                    x: g.x,
+                    y: g.y,
+                    w: g.w,
+                    h: g.h,
+                    weight: g.weight,
+                    color,
+                    // 平台沒給翻譯就留空 —— 印一個語系鍵出來比不印更糟。
+                    text: labels.get(&g.text_key).cloned().unwrap_or_default(),
+                    size: g.size,
+                    align: g.align as u8,
+                }
+            })
+            .collect()
+    }
+
     /// 匯出整份筆記本為 PDF 位元組流（工作項 S-18 / S-43）。
     pub fn export_pdf(
         &self,
@@ -1837,6 +1900,7 @@ impl NotebookSession {
             include_annotations: false,
             page_range: None,
             compress_streams: false,
+            ..Default::default()
         };
         if let Ok(_pdf_bytes) =
             padnote_export::page_to_pdf(&self.notebook, page_id, &strokes, Some(&blobs), &pdf_opt)

@@ -91,6 +91,19 @@ public final class LocalizationManager: ObservableObject {
         return dict[language] ?? dict[.en] ?? dict[.zhHant] ?? key
     }
 
+    /// 版面標籤的整張表（S-90）。
+    ///
+    /// 匯出 PDF 時交給核心：版面的幾何在核心，**文字不在** —— 語系鍵住在
+    /// 兩端共用的 `ui-strings` 表裡，核心的 catalog 沒有那一份。一次交整組
+    /// `guide_` 開頭的鍵，核心用得到哪幾個由那張紙決定。
+    public nonisolated func guideLabelsUnsafe() -> [String: String] {
+        var out: [String: String] = [:]
+        for (key, _) in Self.generatedStrings where key.hasPrefix("guide_") {
+            out[key] = localizedUnsafe(key)
+        }
+        return out
+    }
+
     /// 目前語言的快照，供背景執行緒查表用。
     ///
     /// 用 `nonisolated(unsafe)` 是刻意的：它只被寫入一次（切換語言時），

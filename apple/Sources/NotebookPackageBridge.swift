@@ -335,7 +335,19 @@ enum NotebookPackageBridge {
             to: staging, deviceId: deviceId)
 
         let session = try PadnoteSession.openExisting(path: staging.path, deviceId: deviceId)
-        return try session.exportPdf()
+        // **把版面一起畫進去**（S-90）。
+        //
+        // 底紋只有六種，而使用者看到的版面有三十幾種 —— 康乃爾的三區、
+        // 四象限的十字、週計畫的七欄都來自 `page_guides`。在此之前匯出的
+        // PDF 完全沒有它們：畫布上是一張康乃爾，匯出來是一張空白紙。
+        //
+        // 顏色與文字核心拿不到（配色是使用者選的、語系鍵住在兩端共用的
+        // 字串表裡），所以這裡一起交過去。
+        let paperIds = (0..<max(document.pageCount, 1)).map { document.paperId(forPage: $0) }
+        return try session.exportPdfWithLayout(
+            paperIds: paperIds,
+            paletteId: document.guidePaletteId ?? "",
+            labels: LocalizationManager.shared.guideLabelsUnsafe())
     }
 
     // MARK: - 讀回（驗證用）

@@ -1,5 +1,6 @@
 package com.kairumo.padnote.platform
 
+import com.kairumo.padnote.LocalizationStrings
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
@@ -41,15 +42,52 @@ object Exporter {
      *
      * @param pageId 只匯出某一頁；`null` 代表整本。
      */
+    /// 這一頁是第幾頁。版面是逐頁的，所以匯出單頁時要知道它的索引。
+    private fun pageIndexOf(session: PadnoteSession, pageId: String): Int {
+        val count = runCatching { session.pageCount().toInt() }.getOrDefault(1)
+        for (i in 0 until count) {
+            if (runCatching { session.pageIdAt(i.toUInt()) }.getOrNull() == pageId) return i
+        }
+        return 0
+    }
+
     fun export(
         context: Context,
         session: PadnoteSession,
         format: Format,
         pageId: String? = null,
-        baseName: String = "kairumo"
+        baseName: String = "kairumo",
+        /** 版面標籤要照使用者的語系翻譯（S-90）。 */
+        languageTag: String = "zh-Hant"
     ): Result<File> = runCatching {
         val bytes: ByteArray = when (format) {
-            Format.PDF -> if (pageId == null) session.exportPdf() else session.exportPagePdf(pageId)
+            Format.PDF -> {
+                // **把版面一起畫進去**（S-90）。
+                //
+                // 底紋只有六種，而使用者看到的版面有三十幾種 —— 康乃爾的三區、
+                // 四象限的十字、週計畫的七欄都來自核心的 `pageGuides`。
+                // 在此之前匯出的 PDF 完全沒有它們：畫布上是一張康乃爾，
+                // 匯出來是一張空白紙。
+                //
+                // 顏色與文字核心拿不到（配色是使用者選的、語系鍵住在兩端共用
+                // 的字串表裡），所以這裡一起交過去。
+                val meta = com.kairumo.padnote.library.NotebookMeta.load(session)
+                val pageCount = runCatching { session.pageCount().toInt() }.getOrDefault(1)
+                val paperIds = (0 until maxOf(1, pageCount)).map { meta.paperId(it) }
+                val labels = LocalizationStrings.table
+                    .filterKeys { it.startsWith("guide_") }
+                    .mapValues { (key, _) -> LocalizationStrings.localized(key, languageTag) }
+                if (pageId == null) {
+                    session.exportPdfWithLayout(paperIds, meta.paletteId(), labels)
+                } else {
+                    session.exportPagePdfWithLayout(
+                        pageId,
+                        meta.paperId(pageIndexOf(session, pageId)),
+                        meta.paletteId(),
+                        labels
+                    )
+                }
+            }
             Format.PNG -> {
                 val page = pageId ?: session.firstPageId()
                     ?: error("這本筆記沒有任何頁面")

@@ -3697,7 +3697,11 @@ private fun exportAndShare(
     format: Exporter.Format
 ): String {
     if (session == null) return LocalizationStrings.localized("err_core_not_ready", deviceLanguageTag())
-    return Exporter.export(activity, session, format).fold(
+    // 版面標籤要照使用者目前的語系（S-90）—— 不傳的話匯出的康乃爾
+    // 會寫著繁體中文的「提示／筆記／摘要」，而 App 是英文介面。
+    return Exporter.export(
+        activity, session, format, languageTag = deviceLanguageTag()
+    ).fold(
         onSuccess = { file ->
             runCatching {
                 activity.startActivity(

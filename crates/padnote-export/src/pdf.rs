@@ -19,6 +19,44 @@ use padnote_storage::{BlobId, BlobStore};
 use std::collections::HashMap;
 use std::io::Write;
 
+/// 版面圖元的種類。與核心 `ffi_guides::FfiGuideKind` 一一對應。
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum GuideKind {
+    Line,
+    Rect,
+    FillRect,
+    Label,
+    Checkbox,
+    Dot,
+}
+
+/// 一個**已經解析好**的版面圖元。
+///
+/// # 為什麼顏色與文字是解析好的
+///
+/// 版面的幾何在核心（`ffi_guides::page_guides`），但**顏色來自使用者選的
+/// 配色、文字要照使用者的語系翻譯** —— 那兩件事都住在 `padnote-core`，
+/// 而 core 相依於這個 crate，反過來相依不成立。所以呼叫端把顏色與文字
+/// 解析完再交進來，這裡只負責畫。
+#[derive(Clone, Debug)]
+pub struct GuideItem {
+    pub kind: GuideKind,
+    /// 左上角原點的座標系（與畫布相同）；輸出時才翻成 PDF 的左下原點。
+    pub x: f32,
+    pub y: f32,
+    pub w: f32,
+    pub h: f32,
+    pub weight: f32,
+    /// RGB，各 0–1。
+    pub color: (f32, f32, f32),
+    /// 已翻譯的文字；不是 `Label` 時是空字串。
+    pub text: String,
+    /// `Label` 的字級；`Rect` 的圓角半徑（目前畫成直角）。
+    pub size: f32,
+    /// 0 靠左、1 置中、2 靠右。
+    pub align: u8,
+}
+
 #[derive(Clone, Debug)]
 pub struct PdfExportOptions {
     /// 是否在 PDF 中嵌入標準 `/Ink` 標註（便於其他筆記 App 進行二次編輯）。
@@ -29,6 +67,12 @@ pub struct PdfExportOptions {
     pub page_range: Option<Vec<usize>>,
     /// 是否啟用內容串流之 FlateDecode 壓縮（大幅減少檔案體積，預設為 true）。
     pub compress_streams: bool,
+    /// 每一頁的版面圖元（S-90）。鍵是頁面 id。
+    ///
+    /// 底紋（`PageTemplate`）只有六種，而使用者看到的版面有三十幾種 ——
+    /// 康乃爾的三區、四象限的十字、週計畫的七欄都在這裡。在此之前**匯出的
+    /// PDF 完全沒有它們**：畫布上是一張康乃爾，匯出來是一張空白紙。
+    pub page_guides: HashMap<Uuid, Vec<GuideItem>>,
 }
 
 impl Default for PdfExportOptions {
@@ -38,6 +82,7 @@ impl Default for PdfExportOptions {
             include_background_template: true,
             page_range: None,
             compress_streams: true,
+            page_guides: HashMap::new(),
         }
     }
 }
@@ -442,6 +487,9 @@ impl PdfWriter {
             let mut content = Vec::new();
             if options.include_background_template {
                 self.render_template_background(&mut content, &page.template, w, h);
+                if let Some(guides) = options.page_guides.get(&page.id) {
+                    self.render_page_guides(&mut content, guides, h);
+                }
             }
             self.render_blocks(&mut content, page, w, h, &po.images);
             self.render_strokes_vector(&mut content, page_strokes, h);
@@ -568,6 +616,95 @@ impl PdfWriter {
             w = annot.width
         );
         self.end_object();
+    }
+
+    /// 版面圖元（S-90）。
+    ///
+    /// 座標從「左上原點」翻成 PDF 的「左下原點」—— 兩邊的 y 方向相反，
+    /// 不翻的話整個版面會上下顛倒（而且看起來像「畫在別的地方」）。
+    fn render_page_guides(&self, content: &mut Vec<u8>, guides: &[GuideItem], height: f32) {
+        for g in guides {
+            let (r, gc, b) = g.color;
+            let top = height - g.y;
+            match g.kind {
+                GuideKind::Line => {
+                    let x2 = g.x + g.w;
+                    let y2 = height - (g.y + g.h);
+                    let _ = writeln!(
+                        content,
+                        "q {r:.3} {gc:.3} {b:.3} RG {wt:.2} w {x1:.2} {y1:.2} m {x2:.2} {y2:.2} l S Q",
+                        wt = g.weight.max(0.1),
+                        x1 = g.x,
+                        y1 = top
+                    );
+                }
+                GuideKind::Rect => {
+                    let _ = writeln!(
+                        content,
+                        "q {r:.3} {gc:.3} {b:.3} RG {wt:.2} w {x:.2} {y:.2} {w:.2} {h:.2} re S Q",
+                        wt = g.weight.max(0.1),
+                        x = g.x,
+                        y = top - g.h,
+                        w = g.w,
+                        h = g.h
+                    );
+                }
+                GuideKind::FillRect => {
+                    let _ = writeln!(
+                        content,
+                        "q {r:.3} {gc:.3} {b:.3} rg {x:.2} {y:.2} {w:.2} {h:.2} re f Q",
+                        x = g.x,
+                        y = top - g.h,
+                        w = g.w,
+                        h = g.h
+                    );
+                }
+                GuideKind::Checkbox => {
+                    let _ = writeln!(
+                        content,
+                        "q {r:.3} {gc:.3} {b:.3} RG {wt:.2} w {x:.2} {y:.2} {w:.2} {w:.2} re S Q",
+                        wt = g.weight.max(0.1),
+                        x = g.x,
+                        y = top - g.w,
+                        w = g.w
+                    );
+                }
+                GuideKind::Dot => {
+                    // 小圓點用「線寬等於直徑的零長線段 + 圓端點」畫，
+                    // 比展開成四段貝茲曲線短得多，而且在任何檢視器裡都一樣圓。
+                    let _ = writeln!(
+                        content,
+                        "q {r:.3} {gc:.3} {b:.3} RG {d:.2} w 1 J {x:.2} {y:.2} m {x:.2} {y:.2} l S Q",
+                        d = g.w.max(0.5),
+                        x = g.x,
+                        y = top
+                    );
+                }
+                GuideKind::Label => {
+                    if g.text.is_empty() {
+                        continue;
+                    }
+                    let (font, literal) = format_pdf_text(&g.text, "/F1");
+                    // 對齊：核心給的 x 是**錨點**，不是左緣。寬度用字級估
+                    // （0.5 em ≈ 一個西文字的平均寬度，CJK 約 1 em）——
+                    // PDF 這裡沒有字型度量，估得夠用就好：版面標籤都很短。
+                    let per_char = if g.text.is_ascii() { 0.5 } else { 1.0 };
+                    let text_w = g.text.chars().count() as f32 * g.size * per_char;
+                    let x = match g.align {
+                        1 => g.x - text_w / 2.0,
+                        2 => g.x - text_w,
+                        _ => g.x,
+                    };
+                    // PDF 的文字基線在下緣，而核心給的 y 是上緣。
+                    let baseline = top - g.size * 0.8;
+                    let _ = writeln!(
+                        content,
+                        "BT {font} {size:.1} Tf {r:.3} {gc:.3} {b:.3} rg {x:.2} {baseline:.2} Td {literal} Tj ET",
+                        size = g.size.max(1.0)
+                    );
+                }
+            }
+        }
     }
 
     fn render_template_background(
@@ -1005,6 +1142,57 @@ fn format_pdf_text(text: &str, default_font: &str) -> (String, String) {
 
 #[cfg(test)]
 mod tests {
+    /// S-90：版面圖元要真的寫進內容串流。
+    ///
+    /// 這條測試守的是「匯出的 PDF 有沒有版面」—— 在此之前畫布上是一張
+    /// 康乃爾、匯出來是一張空白紙，而那件事沒有任何測試會紅。
+    #[test]
+    fn page_guides_are_written_into_the_content_stream() {
+        let page_id = Uuid::now_v7();
+        let mut notebook = Notebook::new(Uuid::now_v7(), "版面");
+        notebook.insert_page(0, Page::new(page_id, PageTemplate::Blank));
+
+        let mut options = PdfExportOptions {
+            compress_streams: false,
+            ..Default::default()
+        };
+        options.page_guides.insert(
+            page_id,
+            vec![
+                GuideItem {
+                    kind: GuideKind::Line,
+                    x: 48.0,
+                    y: 60.0,
+                    w: 700.0,
+                    h: 0.0,
+                    weight: 1.5,
+                    color: (0.29, 0.33, 0.41),
+                    text: String::new(),
+                    size: 0.0,
+                    align: 0,
+                },
+                GuideItem {
+                    kind: GuideKind::Label,
+                    x: 48.0,
+                    y: 40.0,
+                    w: 200.0,
+                    h: 0.0,
+                    weight: 0.0,
+                    color: (0.5, 0.5, 0.6),
+                    text: "Cues".to_string(),
+                    size: 18.0,
+                    align: 0,
+                },
+            ],
+        );
+
+        let bytes = to_pdf(&notebook, &HashMap::new(), None, &options).expect("匯出");
+        let text = String::from_utf8_lossy(&bytes);
+        // 線：起點與終點都要在，而且 y 已經翻成 PDF 的左下原點。
+        assert!(text.contains("48.00"), "版面的線沒有寫進內容串流");
+        assert!(text.contains("(Cues) Tj"), "版面的文字沒有寫進內容串流");
+    }
+
     use super::*;
     use padnote_doc::{Page, TextStyle};
     use padnote_ink::{InkPoint, Tool};

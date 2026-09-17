@@ -13,5 +13,5 @@ pub mod svg;
 pub use image::{ImageExportOptions, encode_png, to_png};
 pub use import::{ImportedBlock, ImportedDocument, from_json, from_markdown};
 pub use markdown::{MarkdownOptions, to_markdown};
-pub use pdf::{ExportError, PdfExportOptions, page_to_pdf, to_pdf};
+pub use pdf::{ExportError, GuideItem, GuideKind, PdfExportOptions, page_to_pdf, to_pdf};
 pub use svg::stroke_to_svg_path;

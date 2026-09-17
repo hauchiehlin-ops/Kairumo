@@ -21,6 +21,7 @@ use padnote_doc::{
     ShapeKind, ShapeObject, TextStyle, TranscriptWord, Uuid,
 };
 use padnote_ink::{InkPoint, Stroke, Tool};
+use std::collections::HashMap;
 use std::sync::Mutex;
 
 // ---- 錯誤 ----
@@ -1576,6 +1577,73 @@ impl PadnoteSession {
         Ok(self
             .lock()
             .export_pdf(&padnote_export::PdfExportOptions::default())?)
+    }
+
+    /// 匯出整份筆記本為 PDF，**而且把版面畫進去**（S-90）。
+    ///
+    /// # 為什麼要傳這三個東西進來
+    ///
+    /// 版面的幾何在核心（`page_guides`），但另外兩件事不在：
+    /// - **顏色**來自使用者選的配色（`palette_id`）；
+    /// - **文字**要照使用者的語系翻譯，而版面的語系鍵住在兩端共用的
+    ///   `ui-strings` 表裡，核心的 catalog 沒有那一份。
+    ///
+    /// 所以平台把「每一頁用哪張紙」「哪一組配色」「`guide_` 開頭的字串表」
+    /// 一起交進來。沒有這些的話，匯出的 PDF 就是在此之前的樣子：
+    /// 畫布上是一張康乃爾，匯出來是一張空白紙。
+    ///
+    /// `paper_ids` 依頁次；長度不足或該格為空字串的頁面不畫版面。
+    pub fn export_pdf_with_layout(
+        &self,
+        paper_ids: Vec<String>,
+        palette_id: String,
+        labels: HashMap<String, String>,
+    ) -> Result<Vec<u8>, FfiError> {
+        let app = self.lock();
+        let mut options = padnote_export::PdfExportOptions::default();
+        for (index, page) in app.notebook().pages().iter().enumerate() {
+            let Some(paper) = paper_ids.get(index) else {
+                continue;
+            };
+            let (w, h) = page.size;
+            let guides =
+                crate::app::NotebookSession::resolve_page_guides(paper, w, h, &palette_id, &labels);
+            if !guides.is_empty() {
+                options.page_guides.insert(page.id, guides);
+            }
+        }
+        Ok(app.export_pdf(&options)?)
+    }
+
+    /// 匯出指定頁面為單頁 PDF，並畫上版面（S-90）。
+    pub fn export_page_pdf_with_layout(
+        &self,
+        page_id: String,
+        paper_id: String,
+        palette_id: String,
+        labels: HashMap<String, String>,
+    ) -> Result<Vec<u8>, FfiError> {
+        let page_uuid = parse_uuid(&page_id)?;
+        let app = self.lock();
+        let page = app
+            .notebook()
+            .page(page_uuid)
+            .ok_or_else(|| FfiError::Failed(format!("找不到指定頁面：{page_id}")))?;
+        let (w, h) = page.size;
+        let guides =
+            crate::app::NotebookSession::resolve_page_guides(&paper_id, w, h, &palette_id, &labels);
+        let mut options = padnote_export::PdfExportOptions::default();
+        if !guides.is_empty() {
+            options.page_guides.insert(page_uuid, guides);
+        }
+        options.page_range = Some(vec![
+            app.notebook()
+                .pages()
+                .iter()
+                .position(|p| p.id == page_uuid)
+                .unwrap_or(0),
+        ]);
+        Ok(app.export_pdf(&options)?)
     }
 
     /// 匯出指定頁面為單頁 PDF 位元組流。
