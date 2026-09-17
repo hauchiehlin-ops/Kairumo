@@ -1040,6 +1040,14 @@ public struct NotebookEditorView: View {
     // MARK: - 頁面結構欄的拖曳與縮放
     /// 拖曳懸停中的頁碼（畫插入指示線用）。
     @State private var dropTargetPageIndex: Int? = nil
+    /// 多選模式下已選取的頁碼。
+    ///
+    /// 空集合**不等於**沒有進入多選模式 —— 進了模式還沒選是正常狀態，
+    /// 用集合是否為空判斷的話，取消勾選最後一頁時整排操作會突然消失。
+    @State private var pageSelection: Set<Int> = []
+    @State private var isSelectingPages: Bool = false
+    /// 目的筆記本選擇器：nil 代表沒開；true 是複製、false 是搬移。
+    @State private var transferIsCopy: Bool? = nil
     /// 使用者要的縮圖寬度（pt）。落盤。
     ///
     /// 存絕對寬度而不是倍率：倍率的基準是側欄寬度，而側欄寬度也是使用者
@@ -3146,6 +3154,23 @@ ZStack(alignment: .topTrailing) {
 
                     if sidebarTab == .pages {
                         Button {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                isSelectingPages.toggle()
+                                if !isSelectingPages { pageSelection.removeAll() }
+                            }
+                        } label: {
+                            Image(systemName: isSelectingPages
+                                ? "checkmark.circle.fill" : "checkmark.circle")
+                                .font(.system(size: 17))
+                                .foregroundColor(.accentColor)
+                                .frame(width: 30, height: 30)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(localizationManager.localized("select_pages"))
+                        .help(localizationManager.localized("select_pages"))
+
+                        Button {
                             addNewPage()
                         } label: {
                             Image(systemName: "plus.circle.fill")
@@ -3250,9 +3275,196 @@ ZStack(alignment: .topTrailing) {
 
             Divider()
 
+            if isSelectingPages {
+                pageSelectionBar
+                Divider()
+            }
+
             // 結構摘要統計與縮圖大小
             pagesStructureFooter
         }
+        .sheet(isPresented: Binding(
+            get: { transferIsCopy != nil },
+            set: { if !$0 { transferIsCopy = nil } }
+        )) {
+            transferDestinationSheet
+        }
+    }
+
+    /// 多選模式下的那一排操作。
+    ///
+    /// 放在清單底下而不是最上面：勾選是從上往下做的，手指停在下半部，
+    /// 而「做完了要按的那顆」不該在滑到看不見的地方。
+    private var pageSelectionBar: some View {
+        VStack(spacing: 6) {
+            HStack {
+                Text(
+                    String(
+                        format: localizationManager.localized("pages_selected"),
+                        String(pageSelection.count))
+                )
+                .font(.system(size: 12 * sidebarScale))
+                .foregroundColor(.secondary)
+
+                Spacer()
+
+                Button {
+                    if pageSelection.count == notebook.pageCount {
+                        pageSelection.removeAll()
+                    } else {
+                        pageSelection = Set(0..<max(1, notebook.pageCount))
+                    }
+                } label: {
+                    Text(localizationManager.localized(
+                        pageSelection.count == notebook.pageCount
+                            ? "deselect_all" : "select_all"))
+                        .font(.system(size: 12))
+                        .padding(.vertical, 4)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundColor(.accentColor)
+            }
+
+            HStack(spacing: 8) {
+                Button {
+                    transferIsCopy = true
+                } label: {
+                    Label(
+                        localizationManager.localized("copy_to"),
+                        systemImage: "doc.on.doc")
+                        .font(.system(size: 12, weight: .medium))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 7)
+                        .background(Color.accentColor.opacity(0.12))
+                        .cornerRadius(8)
+                        // **`.buttonStyle(.plain)` 的命中範圍是標籤自己的形狀。**
+                        // 沒有這一行的話，可以按的只有「文字與圖示的筆畫」，
+                        // 那一圈底色是純裝飾 —— 實機上按下去完全沒有反應，
+                        // 而畫面上它看起來就是一顆按鈕。
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(pageSelection.isEmpty)
+
+                Button {
+                    transferIsCopy = false
+                } label: {
+                    Label(
+                        localizationManager.localized("move_to"),
+                        systemImage: "arrow.right.doc.on.clipboard")
+                        .font(.system(size: 12, weight: .medium))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 7)
+                        .background(Color.accentColor.opacity(0.12))
+                        .cornerRadius(8)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                // 整本搬空是不允許的（核心的 `pageTransferPlan` 會擋），
+                // 但按鈕直接停用比按下去才被拒絕清楚。
+                .disabled(pageSelection.isEmpty || pageSelection.count >= notebook.pageCount)
+            }
+            .foregroundColor(.accentColor)
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(Color(uiColor: .secondarySystemGroupedBackground))
+    }
+
+    /// 目的筆記本選擇器。
+    ///
+    /// 列出全部筆記本（含目前這一本）—— 複製到同一本是合理的動作
+    /// （把某一頁再來一份接在最後）。搬移到同一本沒有意義，那一項會被擋下。
+    private var transferDestinationSheet: some View {
+        let isCopy = (transferIsCopy ?? true)
+        return NavigationView {
+            List {
+                Section {
+                    ForEach(store.visibleNotebooks) { target in
+                        let isSelf = (target.id == notebook.id)
+                        Button {
+                            performTransfer(to: target, copy: isCopy)
+                        } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: isSelf ? "doc.fill" : "doc.plaintext")
+                                    .foregroundColor(isSelf ? .accentColor : .secondary)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(target.displayTitle())
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                    Text("\(target.pageCount) \(localizationManager.localized("pages_count_suffix"))")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                                Spacer()
+                                if isSelf {
+                                    Text(localizationManager.localized("current_notebook"))
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        // 搬到自己身上要的是換順序，不是轉移 —— 那件事在
+                        // 同一份選單裡有「上移／下移／移到最前」。
+                        .disabled(!isCopy && isSelf)
+                        .opacity(!isCopy && isSelf ? 0.4 : 1)
+                    }
+                } header: {
+                    Text(localizationManager.localized(
+                        isCopy ? "copy_pages_to_title" : "move_pages_to_title"))
+                } footer: {
+                    Text(
+                        String(
+                            format: localizationManager.localized("pages_selected"),
+                            String(pageSelection.count))
+                    )
+                }
+            }
+            .navigationTitle(localizationManager.localized("choose_destination_notebook"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(localizationManager.localized("cancel")) { transferIsCopy = nil }
+                }
+            }
+        }
+        .navigationViewStyle(.stack)
+    }
+
+    /// 執行轉移，然後把畫面收拾乾淨。
+    private func performTransfer(to target: NotebookDocument, copy: Bool) {
+        // 目前這一頁的筆跡還在記憶體裡，先落盤 —— 不落盤的話複製過去的是
+        // 磁碟上的舊版本，剛剛寫的那幾筆不會跟著走。
+        saveCurrentPageDrawing()
+
+        let pages = pageSelection.sorted()
+        let moved = store.transferPages(
+            from: notebook.id, pageIndexes: pages, to: target.id, move: !copy)
+
+        transferIsCopy = nil
+        isSelectingPages = false
+        pageSelection.removeAll()
+
+        guard moved > 0 else {
+            showCanvasNotice(localizationManager.localized("transfer_failed"))
+            return
+        }
+
+        if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
+            notebook = updated
+        }
+        // 搬走之後目前的頁碼可能已經不存在。
+        currentPageIndex = min(currentPageIndex, max(0, notebook.pageCount - 1))
+        loadCurrentPage()
+
+        showCanvasNotice(
+            String(
+                format: localizationManager.localized(copy ? "pages_copied" : "pages_moved"),
+                String(moved), target.displayTitle())
+        )
     }
 
     /// 單一頁面卡片。
@@ -3267,6 +3479,13 @@ ZStack(alignment: .topTrailing) {
         let isDropTarget = (dropTargetPageIndex == idx)
         return VStack(spacing: 4) {
             HStack {
+                if isSelectingPages {
+                    Image(systemName: pageSelection.contains(idx)
+                        ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 14))
+                        .foregroundColor(pageSelection.contains(idx) ? .accentColor : .secondary)
+                }
+
                 Text("P.\(idx + 1)")
                     .font(.system(size: 12 * sidebarScale))
                     .fontWeight(isSelected ? .bold : .medium)
@@ -3288,6 +3507,16 @@ ZStack(alignment: .topTrailing) {
 
             // 縮圖預覽卡片
             Button {
+                // 多選模式下，點縮圖是「勾選／取消」而不是跳頁 ——
+                // 要勾選卻跳走一頁，等於每勾一次就換一次畫面。
+                if isSelectingPages {
+                    if pageSelection.contains(idx) {
+                        pageSelection.remove(idx)
+                    } else {
+                        pageSelection.insert(idx)
+                    }
+                    return
+                }
                 if currentPageIndex != idx {
                     saveCurrentPageDrawing()
                     currentPageIndex = idx
@@ -3371,6 +3600,30 @@ ZStack(alignment: .topTrailing) {
             duplicatePage(at: idx)
         } label: {
             Label(localizationManager.localized("duplicate_page"), systemImage: "plus.square.on.square")
+        }
+
+        ToolbarSeparator()
+
+        // 單頁的快路徑。多選那一排在下面的工具列裡，但「就這一頁」是最常見的
+        // 情況，不該為了它先進多選模式再勾一格。
+        Button {
+            pageSelection = [idx]
+            isSelectingPages = true
+            transferIsCopy = true
+        } label: {
+            Label(localizationManager.localized("copy_to_notebook"), systemImage: "doc.on.doc")
+        }
+
+        if notebook.pageCount > 1 {
+            Button {
+                pageSelection = [idx]
+                isSelectingPages = true
+                transferIsCopy = false
+            } label: {
+                Label(
+                    localizationManager.localized("move_to_notebook"),
+                    systemImage: "arrow.right.doc.on.clipboard")
+            }
         }
 
         if notebook.pageCount > 1 {

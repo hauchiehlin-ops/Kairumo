@@ -25,6 +25,7 @@ object LocalizationStrings {
             putAll(part11())
             putAll(part12())
             putAll(part13())
+            putAll(part14())
         }
     }
 
@@ -1715,6 +1716,14 @@ object LocalizationStrings {
             "ko" to "세로 축 제목",
             "th" to "ชื่อแกนตั้ง"
         ),
+        "choose_destination_notebook" to mapOf(
+            "zh-Hant" to "目的筆記本",
+            "en" to "Destination",
+            "zh-Hans" to "目的笔记本",
+            "ja" to "移動先のノート",
+            "ko" to "대상 노트",
+            "th" to "สมุดปลายทาง"
+        ),
         "clear_cache" to mapOf(
             "zh-Hant" to "清除快取",
             "en" to "Clear Cache",
@@ -1946,7 +1955,10 @@ object LocalizationStrings {
             "ja" to "コメントピン",
             "ko" to "댓글 핀",
             "th" to "หมุดความคิดเห็น"
-        ),
+        )
+    )
+
+    private fun part3(): Map<String, Map<String, String>> = mapOf(
         "comment_placeholder" to mapOf(
             "zh-Hant" to "輸入留言或回覆...",
             "en" to "Type a comment or reply...",
@@ -1954,10 +1966,7 @@ object LocalizationStrings {
             "ja" to "コメントまたは返信を入力...",
             "ko" to "댓글이나 답글을 입력하세요...",
             "th" to "พิมพ์ความคิดเห็นหรือตอบกลับ..."
-        )
-    )
-
-    private fun part3(): Map<String, Map<String, String>> = mapOf(
+        ),
         "comment_send" to mapOf(
             "zh-Hant" to "送出",
             "en" to "Send",
@@ -2014,6 +2023,14 @@ object LocalizationStrings {
             "ko" to "암호화된 초대 링크 복사",
             "th" to "คัดลอกลิงก์คำเชิญที่เข้ารหัส"
         ),
+        "copy_pages_to_title" to mapOf(
+            "zh-Hant" to "把選取的頁面複製到",
+            "en" to "Copy the selected pages into",
+            "zh-Hans" to "把选取的页面复制到",
+            "ja" to "選択したページのコピー先",
+            "ko" to "선택한 페이지를 복사할 곳",
+            "th" to "คัดลอกหน้าที่เลือกไปยัง"
+        ),
         "copy_room_id" to mapOf(
             "zh-Hant" to "複製房間碼",
             "en" to "Copy Room ID",
@@ -2038,6 +2055,22 @@ object LocalizationStrings {
             "ko" to "클립보드로 복사합니다. “붙여넣기”로 원하는 위치에 놓으세요",
             "th" to "คัดลอกไปยังคลิปบอร์ด แล้วใช้ “วาง” เพื่อวางในตำแหน่งที่ต้องการ"
         ),
+        "copy_to" to mapOf(
+            "zh-Hant" to "複製到…",
+            "en" to "Copy to…",
+            "zh-Hans" to "复制到…",
+            "ja" to "コピー先…",
+            "ko" to "복사 위치…",
+            "th" to "คัดลอกไปยัง…"
+        ),
+        "copy_to_notebook" to mapOf(
+            "zh-Hant" to "複製到其他筆記本…",
+            "en" to "Copy to Another Notebook…",
+            "zh-Hans" to "复制到其他笔记本…",
+            "ja" to "別のノートへコピー…",
+            "ko" to "다른 노트로 복사…",
+            "th" to "คัดลอกไปยังสมุดอื่น…"
+        ),
         "core_engine" to mapOf(
             "zh-Hant" to "Rust Core 引擎",
             "en" to "Rust Core Engine",
@@ -2061,6 +2094,14 @@ object LocalizationStrings {
             "ja" to "スナップショットを作成",
             "ko" to "스냅샷 생성",
             "th" to "สร้างสแนปช็อต"
+        ),
+        "current_notebook" to mapOf(
+            "zh-Hant" to "目前這本",
+            "en" to "Current",
+            "zh-Hans" to "目前这本",
+            "ja" to "このノート",
+            "ko" to "현재 노트",
+            "th" to "สมุดปัจจุบัน"
         ),
         "current_user" to mapOf(
             "zh-Hant" to "目前使用者",
@@ -2221,6 +2262,14 @@ object LocalizationStrings {
             "ja" to "選択ストロークを削除",
             "ko" to "선택된 획 삭제",
             "th" to "ลบลายเส้นที่เลือก"
+        ),
+        "deselect_all" to mapOf(
+            "zh-Hant" to "取消全選",
+            "en" to "Deselect All",
+            "zh-Hans" to "取消全选",
+            "ja" to "選択を解除",
+            "ko" to "선택 해제",
+            "th" to "ยกเลิกเลือกทั้งหมด"
         ),
         "designer_palette" to mapOf(
             "zh-Hant" to "設計師色系",
@@ -2549,7 +2598,10 @@ object LocalizationStrings {
             "ja" to "タップで部品の横に寸法を挿入",
             "ko" to "탭하여 부품 옆에 치수 삽입",
             "th" to "แตะเพื่อแทรกขนาดข้างชิ้นส่วน"
-        ),
+        )
+    )
+
+    private fun part4(): Map<String, Map<String, String>> = mapOf(
         "enter_recording_title" to mapOf(
             "zh-Hant" to "輸入錄音標題",
             "en" to "Enter recording title",
@@ -2597,10 +2649,7 @@ object LocalizationStrings {
             "ja" to "%1@ ページ目 %2@ 本目のストロークの座標が一致しません",
             "ko" to "%1@쪽 %2@번째 획의 좌표가 맞지 않습니다",
             "th" to "พิกัดของเส้นที่ %2@ บนหน้า %1@ ไม่ตรงกัน"
-        )
-    )
-
-    private fun part4(): Map<String, Map<String, String>> = mapOf(
+        ),
         "err_core_not_ready" to mapOf(
             "zh-Hant" to "核心未就緒",
             "en" to "The core engine is not ready",
@@ -3192,7 +3241,10 @@ object LocalizationStrings {
             "ja" to "学んだ",
             "ko" to "배웠다",
             "th" to "ได้เรียนรู้"
-        ),
+        )
+    )
+
+    private fun part5(): Map<String, Map<String, String>> = mapOf(
         "guide_main" to mapOf(
             "zh-Hant" to "主標題",
             "en" to "Main",
@@ -3240,10 +3292,7 @@ object LocalizationStrings {
             "ja" to "ノート",
             "ko" to "노트",
             "th" to "บันทึก"
-        )
-    )
-
-    private fun part5(): Map<String, Map<String, String>> = mapOf(
+        ),
         "guide_owner" to mapOf(
             "zh-Hant" to "負責人",
             "en" to "Owner",
@@ -3835,7 +3884,10 @@ object LocalizationStrings {
             "ja" to "この名前と色は共同編集中に「誰が編集しているか」を示すためだけに使われます。この端末内に保存され、アカウントではなく、登録も不要で、クラウドやシステムアカウントとは一切連携しません。",
             "ko" to "이 이름과 색상은 공동 작업 중 '누가 편집 중인지' 표시하는 데만 사용됩니다. 이 기기에만 저장되며 계정이 아니고 가입도 필요 없으며 클라우드나 시스템 계정과 연결되지 않습니다.",
             "th" to "ชื่อและสีนี้ใช้เพื่อแสดงว่าใครกำลังแก้ไขขณะทำงานร่วมกันเท่านั้น ข้อมูลอยู่ในเครื่องนี้ ไม่ใช่บัญชี ไม่ต้องสมัคร และไม่เชื่อมต่อกับคลาวด์หรือบัญชีระบบใด ๆ"
-        ),
+        )
+    )
+
+    private fun part6(): Map<String, Map<String, String>> = mapOf(
         "identity_desc_short" to mapOf(
             "zh-Hant" to "協作時顯示的身分 · 僅存於本機",
             "en" to "Shown while collaborating · stored on this device",
@@ -3883,10 +3935,7 @@ object LocalizationStrings {
             "ja" to "角の丸み",
             "ko" to "모서리 둥글기",
             "th" to "ความมนมุม"
-        )
-    )
-
-    private fun part6(): Map<String, Map<String, String>> = mapOf(
+        ),
         "image_filter" to mapOf(
             "zh-Hant" to "風格濾鏡",
             "en" to "Style Filter",
@@ -4478,7 +4527,10 @@ object LocalizationStrings {
             "ja" to "ゴールド",
             "ko" to "골드 (금)",
             "th" to "ทองคำ"
-        ),
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
         "mat_granite" to mapOf(
             "zh-Hant" to "花崗岩",
             "en" to "Granite",
@@ -4526,10 +4578,7 @@ object LocalizationStrings {
             "ja" to "プラスチック",
             "ko" to "플라스틱",
             "th" to "พาสติก"
-        )
-    )
-
-    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        ),
         "mat_silver" to mapOf(
             "zh-Hant" to "白銀",
             "en" to "Silver",
@@ -5066,6 +5115,22 @@ object LocalizationStrings {
             "ko" to "페이지 위로",
             "th" to "เลื่อนหน้าขึ้น"
         ),
+        "move_pages_to_title" to mapOf(
+            "zh-Hant" to "把選取的頁面移動到",
+            "en" to "Move the selected pages into",
+            "zh-Hans" to "把选取的页面移动到",
+            "ja" to "選択したページの移動先",
+            "ko" to "선택한 페이지를 이동할 곳",
+            "th" to "ย้ายหน้าที่เลือกไปยัง"
+        ),
+        "move_to" to mapOf(
+            "zh-Hant" to "移動到…",
+            "en" to "Move to…",
+            "zh-Hans" to "移动到…",
+            "ja" to "移動先…",
+            "ko" to "이동 위치…",
+            "th" to "ย้ายไปยัง…"
+        ),
         "move_to_folder" to mapOf(
             "zh-Hant" to "移動至資料夾",
             "en" to "Move to Folder",
@@ -5073,6 +5138,14 @@ object LocalizationStrings {
             "ja" to "フォルダへ移動",
             "ko" to "폴더로 이동",
             "th" to "ย้ายไปยังโฟลเดอร์"
+        ),
+        "move_to_notebook" to mapOf(
+            "zh-Hant" to "移動到其他筆記本…",
+            "en" to "Move to Another Notebook…",
+            "zh-Hans" to "移动到其他笔记本…",
+            "ja" to "別のノートへ移動…",
+            "ko" to "다른 노트로 이동…",
+            "th" to "ย้ายไปยังสมุดอื่น…"
         ),
         "new_note" to mapOf(
             "zh-Hant" to "新增筆記",
@@ -5097,7 +5170,10 @@ object LocalizationStrings {
             "ja" to "新規ノートブック",
             "ko" to "새 노트북",
             "th" to "สมุดบันทึกใหม่"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "new_subfolder" to mapOf(
             "zh-Hant" to "新增子資料夾",
             "en" to "New Subfolder",
@@ -5169,10 +5245,7 @@ object LocalizationStrings {
             "ja" to "一致するノートが見つかりません",
             "ko" to "일치하는 노트를 찾을 수 없습니다",
             "th" to "ไม่พบบันทึกที่ตรงกัน"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "no_recognition_result" to mapOf(
             "zh-Hant" to "這一頁沒有辨識出文字",
             "en" to "No text recognised on this page",
@@ -5701,6 +5774,14 @@ object LocalizationStrings {
             "ko" to "페이지",
             "th" to "หน้า"
         ),
+        "pages_copied" to mapOf(
+            "zh-Hant" to "已複製 %@ 頁到「%@」",
+            "en" to "Copied %@ pages to “%@”",
+            "zh-Hans" to "已复制 %@ 页到「%@」",
+            "ja" to "%@ ページを「%@」にコピーしました",
+            "ko" to "%@페이지를 ‘%@’(으)로 복사했습니다",
+            "th" to "คัดลอก %@ หน้าไปยัง “%@” แล้ว"
+        ),
         "pages_count_suffix" to mapOf(
             "zh-Hant" to "頁",
             "en" to "Pages",
@@ -5709,6 +5790,22 @@ object LocalizationStrings {
             "ko" to "페이지",
             "th" to "หน้า"
         ),
+        "pages_moved" to mapOf(
+            "zh-Hant" to "已移動 %@ 頁到「%@」",
+            "en" to "Moved %@ pages to “%@”",
+            "zh-Hans" to "已移动 %@ 页到「%@」",
+            "ja" to "%@ ページを「%@」に移動しました",
+            "ko" to "%@페이지를 ‘%@’(으)로 이동했습니다",
+            "th" to "ย้าย %@ หน้าไปยัง “%@” แล้ว"
+        ),
+        "pages_selected" to mapOf(
+            "zh-Hant" to "已選取 %@ 頁",
+            "en" to "%@ pages selected",
+            "zh-Hans" to "已选取 %@ 页",
+            "ja" to "%@ ページを選択中",
+            "ko" to "%@페이지 선택됨",
+            "th" to "เลือกไว้ %@ หน้า"
+        ),
         "pages_unit" to mapOf(
             "zh-Hant" to "頁",
             "en" to "pages",
@@ -5716,7 +5813,10 @@ object LocalizationStrings {
             "ja" to "ページ",
             "ko" to "페이지",
             "th" to "หน้า"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "palette_business" to mapOf(
             "zh-Hant" to "經典商務",
             "en" to "Business",
@@ -5812,10 +5912,7 @@ object LocalizationStrings {
             "ja" to "段落の配置",
             "ko" to "단락 정렬",
             "th" to "การจัดแนวข้อความ"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "paragraph_indent" to mapOf(
             "zh-Hant" to "縮排",
             "en" to "Indent",
@@ -6359,7 +6456,10 @@ object LocalizationStrings {
             "ja" to "ホスト (所有者)",
             "ko" to "방장 (소유자)",
             "th" to "เจ้าของห้อง"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "role_viewer" to mapOf(
             "zh-Hant" to "檢視者",
             "en" to "Viewer",
@@ -6455,10 +6555,7 @@ object LocalizationStrings {
             "ja" to "三分割構図ガイド",
             "ko" to "3등분 법칙 격자",
             "th" to "ตารางกฎสามส่วน"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "ruler" to mapOf(
             "zh-Hant" to "尺規輔助線",
             "en" to "Ruler Guide",
@@ -6755,6 +6852,14 @@ object LocalizationStrings {
             "ko" to "Kairumo에 오신 것을 환영합니다",
             "th" to "ยินดีต้อนรับสู่ Kairumo"
         ),
+        "select_all" to mapOf(
+            "zh-Hant" to "全選",
+            "en" to "Select All",
+            "zh-Hans" to "全选",
+            "ja" to "すべて選択",
+            "ko" to "전체 선택",
+            "th" to "เลือกทั้งหมด"
+        ),
         "select_destination_folder" to mapOf(
             "zh-Hant" to "選擇目標資料夾",
             "en" to "Select Target Folder",
@@ -6770,6 +6875,14 @@ object LocalizationStrings {
             "ja" to "言語を選択",
             "ko" to "언어 선택",
             "th" to "เลือกภาษา"
+        ),
+        "select_pages" to mapOf(
+            "zh-Hant" to "選取頁面",
+            "en" to "Select Pages",
+            "zh-Hans" to "选取页面",
+            "ja" to "ページを選択",
+            "ko" to "페이지 선택",
+            "th" to "เลือกหน้า"
         ),
         "select_template" to mapOf(
             "zh-Hant" to "筆記頁樣板",
@@ -6986,7 +7099,10 @@ object LocalizationStrings {
             "ja" to "ハート",
             "ko" to "하트",
             "th" to "หัวใจ"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_heptagon" to mapOf(
             "zh-Hant" to "七邊形",
             "en" to "Heptagon",
@@ -7098,10 +7214,7 @@ object LocalizationStrings {
             "ja" to "プレート",
             "ko" to "명판",
             "th" to "แผ่นป้าย"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_preparation" to mapOf(
             "zh-Hant" to "預備",
             "en" to "Preparation",
@@ -7629,7 +7742,10 @@ object LocalizationStrings {
             "ja" to "線画",
             "ko" to "선화",
             "th" to "ภาพลายเส้น"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "style_solid" to mapOf(
             "zh-Hant" to "實物",
             "en" to "Solid",
@@ -7741,10 +7857,7 @@ object LocalizationStrings {
             "ja" to "まだありません",
             "ko" to "아직 없음",
             "th" to "ยังไม่เคย"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_not_configured" to mapOf(
             "zh-Hant" to "尚未選擇資料夾",
             "en" to "No folder chosen yet",
@@ -8272,7 +8385,10 @@ object LocalizationStrings {
             "ja" to "朝から夜まで30分刻み＋予定欄",
             "ko" to "아침부터 밤까지 30분 간격 + 일정 칸",
             "th" to "ช่วงครึ่งชั่วโมงตลอดวัน"
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "tmpl_dot_grid_fine" to mapOf(
             "zh-Hant" to "極細點陣 (5mm)",
             "en" to "Fine Dot Grid (5mm)",
@@ -8384,10 +8500,7 @@ object LocalizationStrings {
             "ja" to "講義ノート、議事録、文章作成",
             "ko" to "강의 노트, 회의록 및 글쓰기",
             "th" to "บันทึกการบรรยาย รายงานการประชุม และการเขียน"
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_mind_map" to mapOf(
             "zh-Hant" to "心智圖",
             "en" to "Mind Map",
@@ -8732,6 +8845,38 @@ object LocalizationStrings {
             "ko" to "수채화 붓",
             "th" to "พู่กันสีน้ำ"
         ),
+        "transfer_failed" to mapOf(
+            "zh-Hant" to "沒有任何頁面被轉移",
+            "en" to "Nothing was transferred",
+            "zh-Hans" to "没有任何页面被转移",
+            "ja" to "何も移動しませんでした",
+            "ko" to "아무것도 옮기지 않았습니다",
+            "th" to "ไม่มีอะไรถูกย้าย"
+        ),
+        "transfer_no_pages" to mapOf(
+            "zh-Hant" to "請先選取至少一頁",
+            "en" to "Select at least one page first",
+            "zh-Hans" to "请先选取至少一页",
+            "ja" to "ページを1つ以上選んでください",
+            "ko" to "페이지를 하나 이상 선택하세요",
+            "th" to "เลือกอย่างน้อยหนึ่งหน้า"
+        ),
+        "transfer_same_notebook" to mapOf(
+            "zh-Hant" to "同一本筆記內換順序請用「上移／下移一頁」",
+            "en" to "Use Move Page Up/Down to reorder within a notebook",
+            "zh-Hans" to "同一本笔记内换顺序请用「上移／下移一页」",
+            "ja" to "同じノート内での並べ替えは「ページを上へ／下へ」",
+            "ko" to "같은 노트 안에서는 ‘페이지 위로/아래로’를 쓰세요",
+            "th" to "จัดลำดับในสมุดเดียวกันให้ใช้เลื่อนหน้าขึ้น/ลง"
+        ),
+        "transfer_would_empty_source" to mapOf(
+            "zh-Hant" to "一本筆記至少要留一頁",
+            "en" to "A notebook must keep at least one page",
+            "zh-Hans" to "一本笔记至少要留一页",
+            "ja" to "ノートには最低1ページ必要です",
+            "ko" to "노트에는 최소 한 페이지가 있어야 합니다",
+            "th" to "สมุดต้องเหลืออย่างน้อยหนึ่งหน้า"
+        ),
         "txt_count" to mapOf(
             "zh-Hant" to "文字",
             "en" to "Text",
@@ -8883,7 +9028,10 @@ object LocalizationStrings {
             "ja" to "ボトムタブバー（5 タブ）",
             "ko" to "하단 탭 바 (5개 탭)",
             "th" to "แถบแท็บด้านล่าง (5 แท็บ)"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "word_studio" to mapOf(
             "zh-Hant" to "Word文字編修",
             "en" to "Word Text Studio",

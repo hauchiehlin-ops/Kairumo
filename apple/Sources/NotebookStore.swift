@@ -1878,6 +1878,150 @@ public final class NotebookStore: ObservableObject {
         return to
     }
 
+    /// 把幾頁複製（或搬）到另一本筆記本，回傳實際處理的頁數。
+    ///
+    /// # 一頁不是一筆資料
+    ///
+    /// 它是散在四個地方的東西：磁碟上的筆跡檔案（檔名就是頁碼）、
+    /// `pageHeights`、`pagesData`，以及九種附件各自的 `pageIndex`。
+    /// 只搬其中一樣的結果不是「沒搬」，是「筆跡到了、上面的表格沒到」。
+    ///
+    /// # 計畫先算好
+    ///
+    /// 「複製到哪幾頁、要刪哪幾頁、准不准做」由核心的 `pageTransferPlan`
+    /// 一次算清楚。邊走邊算的話會出現「複製成功、刪的時候刪錯頁」——
+    /// 而那時原本那幾頁已經不在了。
+    ///
+    /// 搬動時**由大到小**刪：由小到大刪的話，刪掉第 1 頁之後第 3 頁已經
+    /// 變成第 2 頁，接著刪「第 3 頁」就刪到了別人。
+    @discardableResult
+    public func transferPages(
+        from sourceId: String,
+        pageIndexes: [Int],
+        to targetId: String,
+        move: Bool
+    ) -> Int {
+        guard let sourceIdx = notebooks.firstIndex(where: { $0.id == sourceId }),
+              let targetIdx = notebooks.firstIndex(where: { $0.id == targetId })
+        else { return 0 }
+
+        let plan = pageTransferPlan(
+            sourceCount: UInt32(max(0, notebooks[sourceIdx].pageCount)),
+            selected: pageIndexes.filter { $0 >= 0 }.map { UInt32($0) },
+            targetCount: UInt32(max(0, notebooks[targetIdx].pageCount)),
+            moveOut: move,
+            sameNotebook: sourceId == targetId
+        )
+        guard plan.allowed else { return 0 }
+
+        for (offset, source) in plan.sources.enumerated() {
+            let from = Int(source)
+            let to = Int(plan.destinations[offset])
+
+            // 1. 筆跡。整頁複製，不是只複製看得見的那一段。
+            let drawing = loadDrawing(notebookId: sourceId, pageIndex: from)
+            saveDrawing(notebookId: targetId, pageIndex: to, drawing: drawing)
+
+            // 2. 頁高與內嵌筆跡陣列。
+            let sourceHeights = notebooks[sourceIdx].pageHeights
+            var heights = notebooks[targetIdx].pageHeights
+                ?? Array(repeating: 1800.0, count: max(0, notebooks[targetIdx].pageCount))
+            while heights.count < to { heights.append(1800.0) }
+            heights.append(
+                (from < (sourceHeights?.count ?? 0)) ? sourceHeights![from] : 1800.0)
+            notebooks[targetIdx].pageHeights = heights
+
+            if from < notebooks[sourceIdx].pagesData.count {
+                notebooks[targetIdx].pagesData.append(notebooks[sourceIdx].pagesData[from])
+            } else {
+                notebooks[targetIdx].pagesData.append(PKDrawing().dataRepresentation())
+            }
+
+            // 3. 九種附件。
+            notebooks[targetIdx].attachments = Self.appendCopies(
+                of: notebooks[sourceIdx].attachments, page: from,
+                into: notebooks[targetIdx].attachments, newPage: to)
+            notebooks[targetIdx].textAttachments = Self.appendCopies(
+                of: notebooks[sourceIdx].textAttachments, page: from,
+                into: notebooks[targetIdx].textAttachments, newPage: to)
+            notebooks[targetIdx].linkAttachments = Self.appendCopies(
+                of: notebooks[sourceIdx].linkAttachments, page: from,
+                into: notebooks[targetIdx].linkAttachments, newPage: to)
+            notebooks[targetIdx].model3DAttachments = Self.appendCopies(
+                of: notebooks[sourceIdx].model3DAttachments, page: from,
+                into: notebooks[targetIdx].model3DAttachments, newPage: to)
+            notebooks[targetIdx].commentPins = Self.appendCopies(
+                of: notebooks[sourceIdx].commentPins, page: from,
+                into: notebooks[targetIdx].commentPins, newPage: to)
+            notebooks[targetIdx].tableAttachments = Self.appendCopies(
+                of: notebooks[sourceIdx].tableAttachments, page: from,
+                into: notebooks[targetIdx].tableAttachments, newPage: to)
+            notebooks[targetIdx].shapeAttachments = Self.appendCopies(
+                of: notebooks[sourceIdx].shapeAttachments, page: from,
+                into: notebooks[targetIdx].shapeAttachments, newPage: to)
+            notebooks[targetIdx].connectionAttachments = Self.appendCopies(
+                of: notebooks[sourceIdx].connectionAttachments, page: from,
+                into: notebooks[targetIdx].connectionAttachments, newPage: to)
+            notebooks[targetIdx].audioAttachments = Self.appendCopies(
+                of: notebooks[sourceIdx].audioAttachments, page: from,
+                into: notebooks[targetIdx].audioAttachments, newPage: to)
+
+            notebooks[targetIdx].pageCount = to + 1
+        }
+
+        notebooks[targetIdx].lastModifiedDate = Date()
+        persistData()
+
+        // 4. 搬動才刪來源。刪除本身沿用 `deletePage` —— 那一支已經處理過
+        //    九種附件與 `pagesData`，在這裡另寫一份只會漏掉其中幾種。
+        if move {
+            for index in plan.removals {
+                _ = deletePage(notebookId: sourceId, pageIndex: Int(index), currentIndex: 0)
+            }
+        }
+        return plan.sources.count
+    }
+
+    /// 把某一頁上的附件複製一份到另一本筆記本的某一頁。
+    ///
+    /// # 為什麼要換一個 id
+    ///
+    /// `id` 是**同一本筆記裡**的身分。複製到別本時沿用原本的 id 看起來沒事，
+    /// 直到使用者把那一頁再複製回來 —— 這時同一本筆記裡有兩個相同 id 的
+    /// 物件，而選取、刪除、堆疊順序全部是照 id 找的：點其中一個，
+    /// 另一個跟著動。
+    ///
+    /// 換 id 走 JSON 來回而不是替每一種型別各寫一個複製建構子：那九個
+    /// 建構子加起來是上百個欄位，漏抄一個的症狀是「複製過去的表格少了一欄」。
+    /// 換不動時保留原本的 —— 少一個新 id 也比掉一個物件好。
+    static func appendCopies<T: PageIndexed & Codable>(
+        of items: [T]?,
+        page: Int,
+        into existing: [T]?,
+        newPage: Int
+    ) -> [T]? {
+        let onPage = (items ?? []).filter { $0.pageIndex == page }
+        guard !onPage.isEmpty else { return existing }
+        var out = existing ?? []
+        for item in onPage {
+            var copy = reIdentified(item) ?? item
+            copy.pageIndex = newPage
+            out.append(copy)
+        }
+        return out
+    }
+
+    /// 換一個 id 的複本。認不得的結構（沒有 `id` 欄位）回 nil。
+    static func reIdentified<T: Codable>(_ item: T) -> T? {
+        guard let data = try? JSONEncoder().encode(item),
+              var dict = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
+              dict["id"] != nil
+        else { return nil }
+        dict["id"] = UUID().uuidString
+        guard let patched = try? JSONSerialization.data(withJSONObject: dict) else { return nil }
+        return try? JSONDecoder().decode(T.self, from: patched)
+    }
+
     /// 複製指定頁面並插入於其後，回傳新頁碼 index
     @discardableResult
     public func duplicatePage(notebookId: String, pageIndex: Int) -> Int {

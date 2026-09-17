@@ -124,6 +124,112 @@ final class PageOrderTests: XCTestCase {
         XCTAssertEqual(updated?.pageCount, 3)
     }
 
+    // MARK: - 跨筆記本的複製與搬移
+
+    private func makePair() -> (NotebookDocument, NotebookDocument) {
+        let source = makeNotebook(pages: 3)
+        var target = makeNotebook(pages: 2)
+        target.tableAttachments = (0..<2).map {
+            NoteTableAttachment(pageIndex: $0, x: 0, y: 0, width: 100, rows: 1, cols: 1,
+                                cells: ["t\($0)"])
+        }
+        target.shapeAttachments = []
+        target.textAttachments = []
+        return (source, target)
+    }
+
+    /// 複製：來源不動，目的接在最後面，而且附件要跟著走。
+    func testCopyingPagesLeavesTheSourceAloneAndAppendsToTheTarget() {
+        let store = NotebookStore.shared
+        let (source, target) = makePair()
+        store.notebooks.insert(source, at: 0)
+        store.notebooks.insert(target, at: 0)
+        defer { store.notebooks.removeAll { $0.id == source.id || $0.id == target.id } }
+
+        let moved = store.transferPages(
+            from: source.id, pageIndexes: [0, 2], to: target.id, move: false)
+        XCTAssertEqual(moved, 2)
+
+        let src = store.notebooks.first { $0.id == source.id }
+        let dst = store.notebooks.first { $0.id == target.id }
+        XCTAssertEqual(src?.pageCount, 3, "複製不該動到來源")
+        XCTAssertEqual(dst?.pageCount, 4, "兩頁接在原本的兩頁後面")
+
+        // 附件跟著走，而且落在新的頁碼上。
+        let cells = (dst?.tableAttachments ?? []).map { ($0.cells.first ?? "", $0.pageIndex) }
+        XCTAssertTrue(cells.contains { $0 == ("p0", 2) }, "第 0 頁的表格要落在第 2 頁")
+        XCTAssertTrue(cells.contains { $0 == ("p2", 3) })
+        XCTAssertTrue(cells.contains { $0 == ("t0", 0) }, "目的原本的東西不該被動到")
+    }
+
+    /// 複製過去的物件必須換一個 id。
+    ///
+    /// 沿用原本的 id 看起來沒事，直到使用者把那一頁再複製回來 —— 這時同一本
+    /// 筆記裡有兩個相同 id 的物件，而選取、刪除、堆疊順序全部是照 id 找的。
+    func testCopiedObjectsGetFreshIdentifiers() {
+        let store = NotebookStore.shared
+        let (source, target) = makePair()
+        store.notebooks.insert(source, at: 0)
+        store.notebooks.insert(target, at: 0)
+        defer { store.notebooks.removeAll { $0.id == source.id || $0.id == target.id } }
+
+        _ = store.transferPages(from: source.id, pageIndexes: [0], to: target.id, move: false)
+
+        let sourceIds = Set((store.notebooks.first { $0.id == source.id }?
+            .tableAttachments ?? []).map(\.id))
+        let copied = (store.notebooks.first { $0.id == target.id }?
+            .tableAttachments ?? []).filter { $0.cells.first == "p0" }
+        XCTAssertEqual(copied.count, 1)
+        XCTAssertFalse(sourceIds.contains(copied[0].id), "複本沿用了來源的 id")
+        // 內容本身必須一模一樣 —— 換 id 是走 JSON 來回，欄位漏掉的話
+        // 症狀是「複製過去的表格少了一欄」。
+        XCTAssertEqual(copied[0].cells, ["p0"])
+    }
+
+    /// 搬移：來源那幾頁要消失，而且由大到小刪才不會刪錯。
+    func testMovingPagesRemovesThemFromTheSource() {
+        let store = NotebookStore.shared
+        let (source, target) = makePair()
+        store.notebooks.insert(source, at: 0)
+        store.notebooks.insert(target, at: 0)
+        defer { store.notebooks.removeAll { $0.id == source.id || $0.id == target.id } }
+
+        let moved = store.transferPages(
+            from: source.id, pageIndexes: [0, 2], to: target.id, move: true)
+        XCTAssertEqual(moved, 2)
+
+        let src = store.notebooks.first { $0.id == source.id }
+        XCTAssertEqual(src?.pageCount, 1)
+        // 留下來的必須是原本的第 1 頁，而且它現在是第 0 頁。
+        XCTAssertEqual(src?.tableAttachments?.count, 1)
+        XCTAssertEqual(src?.tableAttachments?.first?.cells.first, "p1")
+        XCTAssertEqual(src?.tableAttachments?.first?.pageIndex, 0)
+    }
+
+    /// 一本筆記不能被搬空，也不能搬到自己身上。
+    func testARefusedTransferChangesNothing() {
+        let store = NotebookStore.shared
+        let (source, target) = makePair()
+        store.notebooks.insert(source, at: 0)
+        store.notebooks.insert(target, at: 0)
+        defer { store.notebooks.removeAll { $0.id == source.id || $0.id == target.id } }
+
+        XCTAssertEqual(
+            store.transferPages(
+                from: source.id, pageIndexes: [0, 1, 2], to: target.id, move: true),
+            0, "整本搬空應該被擋下")
+        XCTAssertEqual(
+            store.transferPages(
+                from: source.id, pageIndexes: [0], to: source.id, move: true),
+            0, "搬到自己身上應該被擋下")
+        XCTAssertEqual(
+            store.transferPages(from: source.id, pageIndexes: [], to: target.id, move: false),
+            0)
+
+        XCTAssertEqual(store.notebooks.first { $0.id == source.id }?.pageCount, 3)
+        XCTAssertEqual(store.notebooks.first { $0.id == target.id }?.pageCount, 2)
+    }
+
     /// 插入一頁時，**九種**附件都要讓出位置。
     func testInsertingAPageShiftsTheLateArrivingAttachmentKinds() {
         let store = NotebookStore.shared

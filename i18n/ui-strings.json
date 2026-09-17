@@ -1679,6 +1679,14 @@
     "zhHans": "垂直轴标题",
     "zhHant": "垂直軸標題"
   },
+  "choose_destination_notebook": {
+    "en": "Destination",
+    "ja": "移動先のノート",
+    "ko": "대상 노트",
+    "th": "สมุดปลายทาง",
+    "zhHans": "目的笔记本",
+    "zhHant": "目的筆記本"
+  },
   "clear_cache": {
     "en": "Clear Cache",
     "ja": "キャッシュ削除",
@@ -1975,6 +1983,14 @@
     "zhHans": "复制加密邀请链接",
     "zhHant": "複製加密邀請連結"
   },
+  "copy_pages_to_title": {
+    "en": "Copy the selected pages into",
+    "ja": "選択したページのコピー先",
+    "ko": "선택한 페이지를 복사할 곳",
+    "th": "คัดลอกหน้าที่เลือกไปยัง",
+    "zhHans": "把选取的页面复制到",
+    "zhHant": "把選取的頁面複製到"
+  },
   "copy_room_id": {
     "en": "Copy Room ID",
     "ja": "ルームIDをコピー",
@@ -1999,6 +2015,22 @@
     "zhHans": "复制到剪贴板，之后用“粘贴”放到想要的位置",
     "zhHant": "複製到剪貼簿，之後用「貼上」放到想要的位置"
   },
+  "copy_to": {
+    "en": "Copy to…",
+    "ja": "コピー先…",
+    "ko": "복사 위치…",
+    "th": "คัดลอกไปยัง…",
+    "zhHans": "复制到…",
+    "zhHant": "複製到…"
+  },
+  "copy_to_notebook": {
+    "en": "Copy to Another Notebook…",
+    "ja": "別のノートへコピー…",
+    "ko": "다른 노트로 복사…",
+    "th": "คัดลอกไปยังสมุดอื่น…",
+    "zhHans": "复制到其他笔记本…",
+    "zhHant": "複製到其他筆記本…"
+  },
   "core_engine": {
     "en": "Rust Core Engine",
     "ja": "Rust Core エンジン",
@@ -2022,6 +2054,14 @@
     "th": "สร้างสแนปช็อต",
     "zhHans": "创建协同快照",
     "zhHant": "建立協同快照"
+  },
+  "current_notebook": {
+    "en": "Current",
+    "ja": "このノート",
+    "ko": "현재 노트",
+    "th": "สมุดปัจจุบัน",
+    "zhHans": "目前这本",
+    "zhHant": "目前這本"
   },
   "current_user": {
     "en": "Current User",
@@ -2182,6 +2222,14 @@
     "th": "ลบลายเส้นที่เลือก",
     "zhHans": "删除选中笔画",
     "zhHant": "刪除選取筆劃"
+  },
+  "deselect_all": {
+    "en": "Deselect All",
+    "ja": "選択を解除",
+    "ko": "선택 해제",
+    "th": "ยกเลิกเลือกทั้งหมด",
+    "zhHans": "取消全选",
+    "zhHant": "取消全選"
   },
   "designer_palette": {
     "en": "Designer Palette",
@@ -5015,6 +5063,22 @@
     "zhHans": "上移一页",
     "zhHant": "上移一頁"
   },
+  "move_pages_to_title": {
+    "en": "Move the selected pages into",
+    "ja": "選択したページの移動先",
+    "ko": "선택한 페이지를 이동할 곳",
+    "th": "ย้ายหน้าที่เลือกไปยัง",
+    "zhHans": "把选取的页面移动到",
+    "zhHant": "把選取的頁面移動到"
+  },
+  "move_to": {
+    "en": "Move to…",
+    "ja": "移動先…",
+    "ko": "이동 위치…",
+    "th": "ย้ายไปยัง…",
+    "zhHans": "移动到…",
+    "zhHant": "移動到…"
+  },
   "move_to_folder": {
     "en": "Move to Folder",
     "ja": "フォルダへ移動",
@@ -5022,6 +5086,14 @@
     "th": "ย้ายไปยังโฟลเดอร์",
     "zhHans": "移动至文件夹",
     "zhHant": "移動至資料夾"
+  },
+  "move_to_notebook": {
+    "en": "Move to Another Notebook…",
+    "ja": "別のノートへ移動…",
+    "ko": "다른 노트로 이동…",
+    "th": "ย้ายไปยังสมุดอื่น…",
+    "zhHans": "移动到其他笔记本…",
+    "zhHant": "移動到其他筆記本…"
   },
   "new_note": {
     "en": "New Note",
@@ -5647,6 +5719,14 @@
     "zhHans": "页",
     "zhHant": "頁"
   },
+  "pages_copied": {
+    "en": "Copied %@ pages to “%@”",
+    "ja": "%@ ページを「%@」にコピーしました",
+    "ko": "%@페이지를 ‘%@’(으)로 복사했습니다",
+    "th": "คัดลอก %@ หน้าไปยัง “%@” แล้ว",
+    "zhHans": "已复制 %@ 页到「%@」",
+    "zhHant": "已複製 %@ 頁到「%@」"
+  },
   "pages_count_suffix": {
     "en": "Pages",
     "ja": "ページ",
@@ -5654,6 +5734,22 @@
     "th": "หน้า",
     "zhHans": "页",
     "zhHant": "頁"
+  },
+  "pages_moved": {
+    "en": "Moved %@ pages to “%@”",
+    "ja": "%@ ページを「%@」に移動しました",
+    "ko": "%@페이지를 ‘%@’(으)로 이동했습니다",
+    "th": "ย้าย %@ หน้าไปยัง “%@” แล้ว",
+    "zhHans": "已移动 %@ 页到「%@」",
+    "zhHant": "已移動 %@ 頁到「%@」"
+  },
+  "pages_selected": {
+    "en": "%@ pages selected",
+    "ja": "%@ ページを選択中",
+    "ko": "%@페이지 선택됨",
+    "th": "เลือกไว้ %@ หน้า",
+    "zhHans": "已选取 %@ 页",
+    "zhHant": "已選取 %@ 頁"
   },
   "pages_unit": {
     "en": "pages",
@@ -6695,6 +6791,14 @@
     "zhHans": "欢迎使用 Kairumo",
     "zhHant": "歡迎使用 Kairumo"
   },
+  "select_all": {
+    "en": "Select All",
+    "ja": "すべて選択",
+    "ko": "전체 선택",
+    "th": "เลือกทั้งหมด",
+    "zhHans": "全选",
+    "zhHant": "全選"
+  },
   "select_destination_folder": {
     "en": "Select Target Folder",
     "ja": "移動先フォルダを選択",
@@ -6710,6 +6814,14 @@
     "th": "เลือกภาษา",
     "zhHans": "选择界面语言",
     "zhHant": "選擇介面語言"
+  },
+  "select_pages": {
+    "en": "Select Pages",
+    "ja": "ページを選択",
+    "ko": "페이지 선택",
+    "th": "เลือกหน้า",
+    "zhHans": "选取页面",
+    "zhHant": "選取頁面"
   },
   "select_template": {
     "en": "Page Templates",
@@ -8662,6 +8774,38 @@
     "th": "พู่กันสีน้ำ",
     "zhHans": "水彩笔",
     "zhHant": "水彩筆"
+  },
+  "transfer_failed": {
+    "en": "Nothing was transferred",
+    "ja": "何も移動しませんでした",
+    "ko": "아무것도 옮기지 않았습니다",
+    "th": "ไม่มีอะไรถูกย้าย",
+    "zhHans": "没有任何页面被转移",
+    "zhHant": "沒有任何頁面被轉移"
+  },
+  "transfer_no_pages": {
+    "en": "Select at least one page first",
+    "ja": "ページを1つ以上選んでください",
+    "ko": "페이지를 하나 이상 선택하세요",
+    "th": "เลือกอย่างน้อยหนึ่งหน้า",
+    "zhHans": "请先选取至少一页",
+    "zhHant": "請先選取至少一頁"
+  },
+  "transfer_same_notebook": {
+    "en": "Use Move Page Up/Down to reorder within a notebook",
+    "ja": "同じノート内での並べ替えは「ページを上へ／下へ」",
+    "ko": "같은 노트 안에서는 ‘페이지 위로/아래로’를 쓰세요",
+    "th": "จัดลำดับในสมุดเดียวกันให้ใช้เลื่อนหน้าขึ้น/ลง",
+    "zhHans": "同一本笔记内换顺序请用「上移／下移一页」",
+    "zhHant": "同一本筆記內換順序請用「上移／下移一頁」"
+  },
+  "transfer_would_empty_source": {
+    "en": "A notebook must keep at least one page",
+    "ja": "ノートには最低1ページ必要です",
+    "ko": "노트에는 최소 한 페이지가 있어야 합니다",
+    "th": "สมุดต้องเหลืออย่างน้อยหนึ่งหน้า",
+    "zhHans": "一本笔记至少要留一页",
+    "zhHant": "一本筆記至少要留一頁"
   },
   "txt_count": {
     "en": "Text",

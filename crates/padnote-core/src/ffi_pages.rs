@@ -77,6 +77,79 @@ pub fn page_move_touched_range(from: u32, to: u32) -> Vec<u32> {
     (lo..=hi).collect()
 }
 
+/// 把幾頁搬（或複製）到另一本筆記本的計畫。
+///
+/// # 為什麼要先算一份計畫
+///
+/// 這件事要動三個地方：來源的頁、目的的頁、以及九種附件的頁碼。平台層自己
+/// 邊走邊算的結果是「複製成功、刪除的時候刪錯頁」—— 而那時原始的那幾頁
+/// 已經不在了。先把「複製到哪幾頁、要刪哪幾頁、准不准做」算清楚，
+/// 執行那一段就沒有判斷。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiPageTransferPlan {
+    /// 去重、排序後的來源頁碼。
+    pub sources: Vec<u32>,
+    /// 每一頁在目的筆記本裡的新頁碼（與 `sources` 一一對應，接在最後面）。
+    pub destinations: Vec<u32>,
+    /// 搬動時要刪掉的來源頁碼，**由大到小**。
+    ///
+    /// 由小到大刪的話，刪掉第 1 頁之後第 3 頁已經變成第 2 頁 —— 接著刪
+    /// 「第 3 頁」就刪到了別人。這個順序不是偏好，是正確性。
+    pub removals: Vec<u32>,
+    /// 這件事准不准做。
+    pub allowed: bool,
+    /// 不准的理由（語系鍵）；准的時候是空字串。
+    pub reason_key: String,
+}
+
+/// 算一份轉移計畫。
+///
+/// `move_out` 為 false 時是複製：來源不動，`removals` 是空的。
+#[uniffi::export]
+pub fn page_transfer_plan(
+    source_count: u32,
+    selected: Vec<u32>,
+    target_count: u32,
+    move_out: bool,
+    same_notebook: bool,
+) -> FfiPageTransferPlan {
+    let mut sources: Vec<u32> = selected
+        .into_iter()
+        .filter(|i| *i < source_count)
+        .collect();
+    sources.sort_unstable();
+    sources.dedup();
+
+    let destinations: Vec<u32> = (0..sources.len() as u32).map(|i| target_count + i).collect();
+    let removals: Vec<u32> = if move_out {
+        sources.iter().rev().copied().collect()
+    } else {
+        Vec::new()
+    };
+
+    let (allowed, reason_key) = if sources.is_empty() {
+        (false, "transfer_no_pages")
+    } else if move_out && same_notebook {
+        // 搬到自己身上沒有意義，而且中途會出現「先加到最後、再刪掉原本那幾頁」
+        // 的錯位。要在同一本裡換順序，用的是搬動頁面（S-87），不是這個。
+        (false, "transfer_same_notebook")
+    } else if move_out && sources.len() as u32 >= source_count {
+        // 一本筆記不能一頁都不剩 —— 那樣它會變成一本打得開、但什麼都沒有、
+        // 也加不了頁的筆記。
+        (false, "transfer_would_empty_source")
+    } else {
+        (true, "")
+    };
+
+    FfiPageTransferPlan {
+        sources,
+        destinations,
+        removals,
+        allowed,
+        reason_key: reason_key.to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -145,5 +218,45 @@ mod tests {
         assert_eq!(page_move_touched_range(1, 3), vec![1, 2, 3]);
         assert_eq!(page_move_touched_range(3, 1), vec![1, 2, 3]);
         assert_eq!(page_move_touched_range(2, 2), vec![2]);
+    }
+
+    #[test]
+    fn copying_appends_to_the_end_of_the_target() {
+        let p = page_transfer_plan(5, vec![3, 1, 1], 2, false, false);
+        assert_eq!(p.sources, vec![1, 3], "要去重並排序");
+        assert_eq!(p.destinations, vec![2, 3], "接在目的筆記本原有的兩頁後面");
+        assert!(p.removals.is_empty(), "複製不動來源");
+        assert!(p.allowed);
+    }
+
+    #[test]
+    fn moving_deletes_from_the_back() {
+        // 由小到大刪的話，刪掉第 1 頁之後第 3 頁已經變成第 2 頁。
+        let p = page_transfer_plan(5, vec![1, 3, 4], 0, true, false);
+        assert_eq!(p.removals, vec![4, 3, 1]);
+    }
+
+    #[test]
+    fn a_notebook_may_not_be_emptied_by_a_move() {
+        let p = page_transfer_plan(3, vec![0, 1, 2], 1, true, false);
+        assert!(!p.allowed);
+        assert_eq!(p.reason_key, "transfer_would_empty_source");
+        // 留一頁就可以。
+        assert!(page_transfer_plan(3, vec![0, 1], 1, true, false).allowed);
+    }
+
+    #[test]
+    fn moving_into_the_same_notebook_is_refused_but_copying_is_not() {
+        assert!(!page_transfer_plan(3, vec![0], 3, true, true).allowed);
+        assert!(page_transfer_plan(3, vec![0], 3, false, true).allowed);
+    }
+
+    #[test]
+    fn out_of_range_and_empty_selections_are_refused_not_fatal() {
+        let p = page_transfer_plan(3, vec![7, 9], 0, false, false);
+        assert!(p.sources.is_empty());
+        assert!(!p.allowed);
+        assert_eq!(p.reason_key, "transfer_no_pages");
+        assert!(!page_transfer_plan(3, vec![], 0, false, false).allowed);
     }
 }

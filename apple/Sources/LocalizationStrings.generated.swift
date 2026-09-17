@@ -1695,6 +1695,14 @@ extension LocalizationManager {
             .ko: "세로 축 제목",
             .th: "ชื่อแกนตั้ง"
         ],
+        "choose_destination_notebook": [
+            .zhHant: "目的筆記本",
+            .en: "Destination",
+            .zhHans: "目的笔记本",
+            .ja: "移動先のノート",
+            .ko: "대상 노트",
+            .th: "สมุดปลายทาง"
+        ],
         "clear_cache": [
             .zhHant: "清除快取",
             .en: "Clear Cache",
@@ -1991,6 +1999,14 @@ extension LocalizationManager {
             .ko: "암호화된 초대 링크 복사",
             .th: "คัดลอกลิงก์คำเชิญที่เข้ารหัส"
         ],
+        "copy_pages_to_title": [
+            .zhHant: "把選取的頁面複製到",
+            .en: "Copy the selected pages into",
+            .zhHans: "把选取的页面复制到",
+            .ja: "選択したページのコピー先",
+            .ko: "선택한 페이지를 복사할 곳",
+            .th: "คัดลอกหน้าที่เลือกไปยัง"
+        ],
         "copy_room_id": [
             .zhHant: "複製房間碼",
             .en: "Copy Room ID",
@@ -2015,6 +2031,22 @@ extension LocalizationManager {
             .ko: "클립보드로 복사합니다. “붙여넣기”로 원하는 위치에 놓으세요",
             .th: "คัดลอกไปยังคลิปบอร์ด แล้วใช้ “วาง” เพื่อวางในตำแหน่งที่ต้องการ"
         ],
+        "copy_to": [
+            .zhHant: "複製到…",
+            .en: "Copy to…",
+            .zhHans: "复制到…",
+            .ja: "コピー先…",
+            .ko: "복사 위치…",
+            .th: "คัดลอกไปยัง…"
+        ],
+        "copy_to_notebook": [
+            .zhHant: "複製到其他筆記本…",
+            .en: "Copy to Another Notebook…",
+            .zhHans: "复制到其他笔记本…",
+            .ja: "別のノートへコピー…",
+            .ko: "다른 노트로 복사…",
+            .th: "คัดลอกไปยังสมุดอื่น…"
+        ],
         "core_engine": [
             .zhHant: "Rust Core 引擎",
             .en: "Rust Core Engine",
@@ -2038,6 +2070,14 @@ extension LocalizationManager {
             .ja: "スナップショットを作成",
             .ko: "스냅샷 생성",
             .th: "สร้างสแนปช็อต"
+        ],
+        "current_notebook": [
+            .zhHant: "目前這本",
+            .en: "Current",
+            .zhHans: "目前这本",
+            .ja: "このノート",
+            .ko: "현재 노트",
+            .th: "สมุดปัจจุบัน"
         ],
         "current_user": [
             .zhHant: "目前使用者",
@@ -2198,6 +2238,14 @@ extension LocalizationManager {
             .ja: "選択ストロークを削除",
             .ko: "선택된 획 삭제",
             .th: "ลบลายเส้นที่เลือก"
+        ],
+        "deselect_all": [
+            .zhHant: "取消全選",
+            .en: "Deselect All",
+            .zhHans: "取消全选",
+            .ja: "選択を解除",
+            .ko: "선택 해제",
+            .th: "ยกเลิกเลือกทั้งหมด"
         ],
         "designer_palette": [
             .zhHant: "設計師色系",
@@ -5031,6 +5079,22 @@ extension LocalizationManager {
             .ko: "페이지 위로",
             .th: "เลื่อนหน้าขึ้น"
         ],
+        "move_pages_to_title": [
+            .zhHant: "把選取的頁面移動到",
+            .en: "Move the selected pages into",
+            .zhHans: "把选取的页面移动到",
+            .ja: "選択したページの移動先",
+            .ko: "선택한 페이지를 이동할 곳",
+            .th: "ย้ายหน้าที่เลือกไปยัง"
+        ],
+        "move_to": [
+            .zhHant: "移動到…",
+            .en: "Move to…",
+            .zhHans: "移动到…",
+            .ja: "移動先…",
+            .ko: "이동 위치…",
+            .th: "ย้ายไปยัง…"
+        ],
         "move_to_folder": [
             .zhHant: "移動至資料夾",
             .en: "Move to Folder",
@@ -5038,6 +5102,14 @@ extension LocalizationManager {
             .ja: "フォルダへ移動",
             .ko: "폴더로 이동",
             .th: "ย้ายไปยังโฟลเดอร์"
+        ],
+        "move_to_notebook": [
+            .zhHant: "移動到其他筆記本…",
+            .en: "Move to Another Notebook…",
+            .zhHans: "移动到其他笔记本…",
+            .ja: "別のノートへ移動…",
+            .ko: "다른 노트로 이동…",
+            .th: "ย้ายไปยังสมุดอื่น…"
         ],
         "new_note": [
             .zhHant: "新增筆記",
@@ -5663,6 +5735,14 @@ extension LocalizationManager {
             .ko: "페이지",
             .th: "หน้า"
         ],
+        "pages_copied": [
+            .zhHant: "已複製 %@ 頁到「%@」",
+            .en: "Copied %@ pages to “%@”",
+            .zhHans: "已复制 %@ 页到「%@」",
+            .ja: "%@ ページを「%@」にコピーしました",
+            .ko: "%@페이지를 ‘%@’(으)로 복사했습니다",
+            .th: "คัดลอก %@ หน้าไปยัง “%@” แล้ว"
+        ],
         "pages_count_suffix": [
             .zhHant: "頁",
             .en: "Pages",
@@ -5670,6 +5750,22 @@ extension LocalizationManager {
             .ja: "ページ",
             .ko: "페이지",
             .th: "หน้า"
+        ],
+        "pages_moved": [
+            .zhHant: "已移動 %@ 頁到「%@」",
+            .en: "Moved %@ pages to “%@”",
+            .zhHans: "已移动 %@ 页到「%@」",
+            .ja: "%@ ページを「%@」に移動しました",
+            .ko: "%@페이지를 ‘%@’(으)로 이동했습니다",
+            .th: "ย้าย %@ หน้าไปยัง “%@” แล้ว"
+        ],
+        "pages_selected": [
+            .zhHant: "已選取 %@ 頁",
+            .en: "%@ pages selected",
+            .zhHans: "已选取 %@ 页",
+            .ja: "%@ ページを選択中",
+            .ko: "%@페이지 선택됨",
+            .th: "เลือกไว้ %@ หน้า"
         ],
         "pages_unit": [
             .zhHant: "頁",
@@ -6711,6 +6807,14 @@ extension LocalizationManager {
             .ko: "Kairumo에 오신 것을 환영합니다",
             .th: "ยินดีต้อนรับสู่ Kairumo"
         ],
+        "select_all": [
+            .zhHant: "全選",
+            .en: "Select All",
+            .zhHans: "全选",
+            .ja: "すべて選択",
+            .ko: "전체 선택",
+            .th: "เลือกทั้งหมด"
+        ],
         "select_destination_folder": [
             .zhHant: "選擇目標資料夾",
             .en: "Select Target Folder",
@@ -6726,6 +6830,14 @@ extension LocalizationManager {
             .ja: "言語を選択",
             .ko: "언어 선택",
             .th: "เลือกภาษา"
+        ],
+        "select_pages": [
+            .zhHant: "選取頁面",
+            .en: "Select Pages",
+            .zhHans: "选取页面",
+            .ja: "ページを選択",
+            .ko: "페이지 선택",
+            .th: "เลือกหน้า"
         ],
         "select_template": [
             .zhHant: "筆記頁樣板",
@@ -8678,6 +8790,38 @@ extension LocalizationManager {
             .ja: "水彩筆",
             .ko: "수채화 붓",
             .th: "พู่กันสีน้ำ"
+        ],
+        "transfer_failed": [
+            .zhHant: "沒有任何頁面被轉移",
+            .en: "Nothing was transferred",
+            .zhHans: "没有任何页面被转移",
+            .ja: "何も移動しませんでした",
+            .ko: "아무것도 옮기지 않았습니다",
+            .th: "ไม่มีอะไรถูกย้าย"
+        ],
+        "transfer_no_pages": [
+            .zhHant: "請先選取至少一頁",
+            .en: "Select at least one page first",
+            .zhHans: "请先选取至少一页",
+            .ja: "ページを1つ以上選んでください",
+            .ko: "페이지를 하나 이상 선택하세요",
+            .th: "เลือกอย่างน้อยหนึ่งหน้า"
+        ],
+        "transfer_same_notebook": [
+            .zhHant: "同一本筆記內換順序請用「上移／下移一頁」",
+            .en: "Use Move Page Up/Down to reorder within a notebook",
+            .zhHans: "同一本笔记内换顺序请用「上移／下移一页」",
+            .ja: "同じノート内での並べ替えは「ページを上へ／下へ」",
+            .ko: "같은 노트 안에서는 ‘페이지 위로/아래로’를 쓰세요",
+            .th: "จัดลำดับในสมุดเดียวกันให้ใช้เลื่อนหน้าขึ้น/ลง"
+        ],
+        "transfer_would_empty_source": [
+            .zhHant: "一本筆記至少要留一頁",
+            .en: "A notebook must keep at least one page",
+            .zhHans: "一本笔记至少要留一页",
+            .ja: "ノートには最低1ページ必要です",
+            .ko: "노트에는 최소 한 페이지가 있어야 합니다",
+            .th: "สมุดต้องเหลืออย่างน้อยหนึ่งหน้า"
         ],
         "txt_count": [
             .zhHant: "文字",
