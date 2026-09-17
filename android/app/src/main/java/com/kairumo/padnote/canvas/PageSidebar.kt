@@ -65,6 +65,9 @@ import uniffi.padnote_core.PadnoteSession
  * 尺寸級別的表。840 寬的摺疊機並排之後畫布還有 560，可以；但使用者把
  * 視窗拉到 700 時級別還是 Medium，畫布卻只剩 420，那時就該改用覆蓋。
  */
+/** 結構欄的兩個分頁。與 Apple 的 `SidebarTabMode` 對應。 */
+private enum class SidebarTab { PAGES, FOLDERS }
+
 @Composable
 fun PageSidebar(
     session: PadnoteSession?,
@@ -79,12 +82,17 @@ fun PageSidebar(
     onMovePage: (Int, Int) -> Unit = { _, _ -> },
     /** 把第幾頁複製（false）或搬移（true）到別本筆記（S-91）。 */
     onTransferPage: (Int, Boolean) -> Unit = { _, _ -> },
+    /** 從「資料夾目錄」分頁切到另一本筆記（S-96）。 */
+    onOpenNotebook: (String) -> Unit = {},
+    /** 這台裝置的識別碼。資料夾分頁要用它列出筆記。 */
+    deviceId: UInt = 0u,
     onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     // 縮圖大小。與 Apple 的側欄一樣可調 —— 十二頁的筆記在小縮圖下看不出
     // 哪一頁是哪一頁，而放大之後一次又只看得到兩頁。讓使用者自己決定。
     val context = LocalContext.current
+    var tab by remember { mutableStateOf(SidebarTab.PAGES) }
     var thumbWidth by remember {
         mutableFloatStateOf(
             context.getSharedPreferences("kairumo_editor", android.content.Context.MODE_PRIVATE)
@@ -104,6 +112,47 @@ fun PageSidebar(
             .fillMaxHeight()
             .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f))
     ) {
+        // 頁面／資料夾兩個分頁（S-96）。
+        //
+        // Apple 的結構欄一直有這兩個分頁，Android 只有頁面 —— 於是「這則
+        // 筆記放在哪裡、隔壁還有哪幾本」在編輯器裡完全看不到，要回首頁才知道。
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = DS.Space.m, vertical = DS.Space.xs),
+            horizontalArrangement = Arrangement.spacedBy(DS.Space.xs)
+        ) {
+            TextButton(
+                onClick = { tab = SidebarTab.PAGES },
+                modifier = Modifier.weight(1f).testTag("editor.sidebar.tab.pages")
+            ) {
+                Text(
+                    l("structure_pages"),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (tab == SidebarTab.PAGES) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+            TextButton(
+                onClick = { tab = SidebarTab.FOLDERS },
+                modifier = Modifier.weight(1f).testTag("editor.sidebar.tab.folders")
+            ) {
+                Text(
+                    l("structure_folders"),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (tab == SidebarTab.FOLDERS) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    }
+                )
+            }
+        }
+        HorizontalDivider()
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -111,7 +160,7 @@ fun PageSidebar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                l("structure_pages"),
+                l(if (tab == SidebarTab.PAGES) "structure_pages" else "structure_folders"),
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f)
             )
@@ -129,6 +178,35 @@ fun PageSidebar(
             }
         }
         HorizontalDivider()
+
+        if (tab == SidebarTab.FOLDERS) {
+            // 資料夾目錄：這則筆記在哪一層、同一層還有哪幾本。
+            // 點一下換筆記，與首頁的清單是同一份資料（AccountSyncStore）。
+            val entries = remember(revision) {
+                com.kairumo.padnote.library.NotebookLibrary.all(
+                    context,
+                    deviceId,
+                    folderId = com.kairumo.padnote.library.NotebookLibrary.ANY_FOLDER
+                )
+            }
+            LazyColumn(
+                modifier = Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(DS.Space.m),
+                verticalArrangement = Arrangement.spacedBy(DS.Space.xs)
+            ) {
+                items(entries, key = { it.id }) { entry ->
+                    Text(
+                        entry.title,
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onOpenNotebook(entry.id) }
+                            .padding(vertical = DS.Space.xs)
+                    )
+                }
+            }
+            return@Column
+        }
 
         LazyColumn(
             modifier = Modifier.weight(1f).fillMaxWidth().testTag("editor.sidebar.list"),

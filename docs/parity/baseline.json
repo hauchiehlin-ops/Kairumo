@@ -5,9 +5,6 @@
     "editor.ink.brush",
     "editor.ink.marker",
     "editor.ink.watercolor",
-    "editor.share",
-    "editor.sidebar.tab.folders",
-    "editor.sidebar.tab.pages",
-    "editor.text.symbols"
+    "editor.share"
   ]
 }

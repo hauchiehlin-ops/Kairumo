@@ -283,7 +283,11 @@ private fun KairumoApp() {
             onOpen = { openedId = it }
         )
     } else {
-        InkScreen(notebookId = id, onBack = { openedId = null })
+        InkScreen(
+            notebookId = id,
+            onBack = { openedId = null },
+            onOpenNotebook = { openedId = it }
+        )
     }
 }
 
@@ -860,7 +864,12 @@ private fun ColumnScope.EditorWorkArea(
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
 @Composable
-private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) {
+private fun InkScreen(
+    notebookId: String? = null,
+    onBack: (() -> Unit)? = null,
+    /** 從結構欄的「資料夾目錄」分頁切到另一本筆記（S-96）。 */
+    onOpenNotebook: ((String) -> Unit)? = null
+) {
     val activity = LocalContext.current as ComponentActivity
     val l10n = { key: String -> uiString(key) }
     // 真的開一本筆記本：沒有 session 的話，匯出與錄音都沒有東西可寫，
@@ -1320,6 +1329,8 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     var renamingCurrent by remember { mutableStateOf(false) }
     // 跨本複製／搬移頁面（S-91）：(頁次, 是否為搬移)。
     var transferringPage by remember { mutableStateOf<Pair<Int, Boolean>?>(null) }
+    // 特殊符號面板（S-97）。
+    var showSymbolPicker by remember { mutableStateOf(false) }
 
     // 把這一頁已經存在檔案裡的筆畫讀回來。
     //
@@ -2104,6 +2115,12 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     // 文案用 Apple 的同一個鍵：同一顆按鈕原本一邊寫「文字排版」、
                     // 一邊寫「新增文字方塊」，換裝置的人會以為是兩個功能。
                 ) { Text(l10n("tool_text")) }
+                // 特殊符號（S-97）。Apple 的打字工具列一直有這一顆，
+                // Android 原本完全沒有 —— 要打「±」或「Ⅲ」只能靠系統輸入法。
+                TextButton(
+                    onClick = { showSymbolPicker = true },
+                    modifier = Modifier.testTag("editor.text.symbols")
+                ) { Text(l10n("special_symbols")) }
                 TextButton(
                     onClick = { insertingLink = true },
                     modifier = Modifier.testTag("editor.text.link")
@@ -2230,6 +2247,8 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                         },
                         onMovePage = { from, to -> movePage(from, to) },
                         onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
+                        onOpenNotebook = { id -> showPageSidebar = false; onOpenNotebook?.invoke(id) },
+                        deviceId = deviceId(activity),
                         onClose = { showPageSidebar = false }
                     )
                 }
@@ -2353,6 +2372,8 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     },
                     onMovePage = { from, to -> movePage(from, to) },
                     onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
+                    onOpenNotebook = { id -> showPageSidebar = false; onOpenNotebook?.invoke(id) },
+                    deviceId = deviceId(activity),
                     onClose = { showPageSidebar = false }
                 )
             }
@@ -2855,6 +2876,8 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     },
                     onMovePage = { from, to -> movePage(from, to) },
                     onTransferPage = { index, moveOut -> transferringPage = index to moveOut },
+                    onOpenNotebook = { id -> showPageSidebar = false; onOpenNotebook?.invoke(id) },
+                    deviceId = deviceId(activity),
                     onClose = { showPageSidebar = false }
                 )
             }
@@ -3419,6 +3442,29 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 }
             }
         }
+    }
+
+    if (showSymbolPicker) {
+        com.kairumo.padnote.text.SymbolPickerDialog(
+            l = { key -> l10n(key) },
+            onDismiss = { showSymbolPicker = false },
+            onPick = { symbol ->
+                showSymbolPicker = false
+                // 與 Apple 的 `insertQuickTextSnippet` 一樣：插進一個**新的**
+                // 文字方塊，而不是塞進目前選取的那一個 —— 使用者按符號時
+                // 通常正在標註，不是在編輯某一段文字。
+                val box = textStore.create(x = 100f, y = 120f)
+                box.text = symbol
+                box.fontSize = 20f
+                box.bold = true
+                box.width = 260f
+                box.height = 64f
+                textStore.persist(box)
+                textRevision++
+                selectedTextId = box.id
+                editorMode = EditorMode.TYPE
+            }
+        )
     }
 
     transferringPage?.let { (pageIdx, moveOut) ->

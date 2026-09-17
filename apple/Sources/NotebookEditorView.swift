@@ -4696,26 +4696,18 @@ ZStack(alignment: .topTrailing) {
 
                 // 快速插入常用符號群組
                 Menu {
-                    Menu(localizationManager.localized("math_symbols")) {
-                        ForEach(["π", "∑", "√", "±", "≠", "≤", "≥", "∞", "∫", "∂", "≈", "÷", "×", "∆", "θ"], id: \.self) { sym in
-                            Button(sym) {
-                                insertQuickTextSnippet(sym)
-                            }
-                        }
-                    }
-
-                    Menu(localizationManager.localized("punctuation_symbols")) {
-                        ForEach(["「", "」", "『", "』", "【", "】", "—", "…", "《", "》", "•", "※", "§"], id: \.self) { sym in
-                            Button(sym) {
-                                insertQuickTextSnippet(sym)
-                            }
-                        }
-                    }
-
-                    Menu(localizationManager.localized("roman_symbols")) {
-                        ForEach(["Ⅰ", "Ⅱ", "Ⅲ", "Ⅳ", "Ⅴ", "Ⅵ", "Ⅶ", "Ⅷ", "Ⅸ", "Ⅹ", "Ⅺ", "Ⅻ"], id: \.self) { sym in
-                            Button(sym) {
-                                insertQuickTextSnippet(sym)
+                    // 符號表**來自核心**（`symbol_palette`）。
+                    //
+                    // 這四組原本寫死在這裡，而核心早就有同樣的東西 ——
+                    // 於是同一個「數學符號」選單，兩個平台給的符號不一樣
+                    // （Android 這一版補上面板時才發現）。而符號是使用者會
+                    // 記住位置的東西：「星號在左上角第一個」。
+                    ForEach(symbolCategories(), id: \.self) { category in
+                        Menu(localizationManager.localized(symbolCategoryKey(category))) {
+                            ForEach(symbolPalette(category: category), id: \.self) { sym in
+                                Button(sym) {
+                                    insertQuickTextSnippet(sym)
+                                }
                             }
                         }
                     }
@@ -6110,6 +6102,16 @@ ZStack(alignment: .topTrailing) {
         notebook.textAttachments?.append(draft)
         store.updateNotebook(notebook)
         editingTextId = draft.id
+    }
+
+    /// 符號分類的語系鍵。與 Android 的 `categoryKey` 同一組。
+    private func symbolCategoryKey(_ category: FfiSymbolCategory) -> String {
+        switch category {
+        case .special: return "special_symbols"
+        case .punctuation: return "punctuation_symbols"
+        case .math: return "math_symbols"
+        case .roman: return "roman_symbols"
+        }
     }
 
     private func insertQuickTextSnippet(_ text: String) {
