@@ -77,6 +77,59 @@ public enum PageGuideRenderer {
         }
     }
 
+    /// 把某一張紙的**底紋**畫進 `ctx`。
+    ///
+    /// # 為什麼底紋也走核心了
+    ///
+    /// 這一層本來兩端各寫一次，理由是量（5mm 點陣是兩千多個點，
+    /// 一顆顆送過 FFI 只是浪費）。理由對、結論錯：實際量過之後，方格
+    /// 間距 Apple 28／Android 24、點陣 20／16、五線譜行距 9／10 ——
+    /// 同一本方格筆記在兩台裝置上「寫在第幾格」對不起來，而那是使用者
+    /// 拿方格紙的唯一理由。
+    ///
+    /// 核心現在送的是**格子的描述**（`page_texture`）而不是格子本身：
+    /// 一族圖元 ＝ 第一個 ＋ 兩個位移向量 ＋ 兩個次數。下面這個雙層迴圈
+    /// 就是全部的畫法，Android 端是同一份。
+    public static func drawTexture(
+        paperId: String,
+        style: PageStyle,
+        paletteId: String?,
+        in ctx: CGContext,
+        size: CGSize
+    ) {
+        guard size.width > 0, size.height > 0 else { return }
+        let colors = Palette(id: paletteId)
+        let bands = pageTexture(
+            paperId: paperId,
+            style: style,
+            width: Float(size.width),
+            height: Float(size.height)
+        )
+        for b in bands {
+            let color = colors.color(b.tone)
+            ctx.setStrokeColor(color.cgColor)
+            ctx.setFillColor(color.cgColor)
+            ctx.setLineWidth(CGFloat(b.weight))
+            for i in 0..<Int(b.count) {
+                for j in 0..<Int(b.count2) {
+                    let fi = Float(i)
+                    let fj = Float(j)
+                    let px: CGFloat = CGFloat(b.x + b.stepX * fi + b.step2X * fj)
+                    let py: CGFloat = CGFloat(b.y + b.stepY * fi + b.step2Y * fj)
+                    switch b.kind {
+                    case .line:
+                        ctx.move(to: CGPoint(x: px, y: py))
+                        ctx.addLine(to: CGPoint(x: px + CGFloat(b.w), y: py + CGFloat(b.h)))
+                    case .dot:
+                        let d = CGFloat(b.w)
+                        ctx.fillEllipse(in: CGRect(x: px - d / 2, y: py - d / 2, width: d, height: d))
+                    }
+                }
+            }
+            if b.kind == .line { ctx.strokePath() }
+        }
+    }
+
     private static func rounded(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat, _ r: CGFloat) -> CGPath {
         UIBezierPath(
             roundedRect: CGRect(x: x, y: y, width: w, height: h),

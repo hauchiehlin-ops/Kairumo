@@ -112,8 +112,12 @@ final class SmokeUITests: XCTestCase {
         card.tap()
         sleep(3)
 
-        let canvas = app.scrollViews["kairumo.canvas"].firstMatch
-        XCTAssertTrue(canvas.waitForExistence(timeout: 8), "找不到畫布")
+        // **不指定型別。** 原本查的是 `scrollViews` —— 畫布確實是
+        // `PKCanvasView`（UIScrollView 的子類），但整頁模式把它套上縮放
+        // 之後，XCUITest 樹裡它就不再以 ScrollView 出現，測試於是說
+        // 「找不到畫布」而畫面上明明有。識別字才是我們保證的東西。
+        let canvas = app.descendants(matching: .any)["kairumo.canvas"].firstMatch
+        XCTAssertTrue(canvas.waitForExistence(timeout: 8), "找不到畫布：\n\(app.debugDescription)")
         let windowWidth = app.windows.firstMatch.frame.width
 
         // 側欄可能預設展開（iPad）或收合（iPhone）—— 先確保它是收合的

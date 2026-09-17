@@ -164,112 +164,25 @@ final class TemplateCanvasBackgroundView: UIView {
 
     // MARK: - 底紋
 
-    /// 重複的材質：方格、點陣、橫線。
+    /// 重複的材質：方格、點陣、橫線、五線譜、等角軸測。
     ///
-    /// 這一層留在平台端而不是由核心送圖元過來，理由是量：5mm 點陣在 A4 上
-    /// 是兩千多個點，一顆顆送過 FFI 只是浪費。**底紋是材質，版面才是結構。**
+    /// # 為什麼這裡只剩四行
+    ///
+    /// 原本是一段 `switch` 加上一段等角軸測的手寫 CoreGraphics，而 Android
+    /// 那邊有另一段 —— 兩段的數字不一樣（方格 28／24、點陣 20／16、五線譜
+    /// 行距 9／10），於是同一本方格筆記在兩台裝置上「寫在第幾格」對不起來。
+    /// 底紋現在也是核心送來的資料（`page_texture`），畫法在 `PageGuideRenderer`。
+    ///
+    /// **用頁面高度，不是畫布高度**：畫布比頁面高（它要捲動），拿
+    /// `bounds.height` 鋪的話格線會一路畫到紙的下面 —— 看得到、印不出來。
     private func drawBaseTexture(_ ctx: CGContext) {
-        let w = PageGeometry.width
-        let h = bounds.height
-
-        switch template.pageStyle {
-        case .blank:
-            break
-
-        case .grid:
-            ctx.setStrokeColor(UIColor.secondaryLabel.withAlphaComponent(0.12).cgColor)
-            ctx.setLineWidth(1.0)
-            let step: CGFloat = 28
-            var x: CGFloat = step
-            while x < w {
-                ctx.move(to: CGPoint(x: x, y: 0))
-                ctx.addLine(to: CGPoint(x: x, y: h))
-                x += step
-            }
-            var y: CGFloat = step
-            while y < h {
-                ctx.move(to: CGPoint(x: 0, y: y))
-                ctx.addLine(to: CGPoint(x: w, y: y))
-                y += step
-            }
-            ctx.strokePath()
-
-        case .lined:
-            ctx.setStrokeColor(UIColor.systemBlue.withAlphaComponent(0.15).cgColor)
-            ctx.setLineWidth(1.0)
-            let step: CGFloat = 32
-            var y: CGFloat = 60
-            while y < h {
-                ctx.move(to: CGPoint(x: 30, y: y))
-                ctx.addLine(to: CGPoint(x: w - 30, y: y))
-                y += step
-            }
-            ctx.strokePath()
-
-        case .dotted:
-            ctx.setFillColor(UIColor(red: 0.65, green: 0.63, blue: 0.60, alpha: 0.45).cgColor)
-            let step: CGFloat = 20
-            var x: CGFloat = step
-            while x < w {
-                var y: CGFloat = step
-                while y < h {
-                    ctx.fill(CGRect(x: x - 1, y: y - 1, width: 2, height: 2))
-                    y += step
-                }
-                x += step
-            }
-
-        case .cornell:
-            // 康乃爾的三條分區線由 `page_guides` 畫，這裡只鋪主筆記欄的橫線。
-            break
-
-        case .musicStaff:
-            ctx.setStrokeColor(UIColor.label.withAlphaComponent(0.35).cgColor)
-            ctx.setLineWidth(1.0)
-            var top: CGFloat = 90
-            while top < h - 40 {
-                for i in 0..<5 {
-                    let y = top + CGFloat(i) * 9
-                    ctx.move(to: CGPoint(x: 40, y: y))
-                    ctx.addLine(to: CGPoint(x: w - 40, y: y))
-                }
-                top += 96
-            }
-            ctx.strokePath()
-        }
-
-        // 等角軸測是一種材質，但不是核心 `PageStyle` 的成員 —— 它的 30°
-        // 斜線用圖元表達會是幾百條線，同樣留在這裡鋪。
-        if template.paperId == "isometric" {
-            drawIsometric(ctx, w: w, h: h)
-        }
-    }
-
-    private func drawIsometric(_ ctx: CGContext, w: CGFloat, h: CGFloat) {
-        ctx.setStrokeColor(UIColor.systemTeal.withAlphaComponent(0.22).cgColor)
-        ctx.setLineWidth(0.8)
-        let step: CGFloat = 36
-        let slope: CGFloat = 0.57735 // tan(30°)
-
-        var vx: CGFloat = 0
-        while vx < w {
-            ctx.move(to: CGPoint(x: vx, y: 0))
-            ctx.addLine(to: CGPoint(x: vx, y: h))
-            vx += step
-        }
-        var sy: CGFloat = -w * slope
-        while sy < h {
-            ctx.move(to: CGPoint(x: 0, y: sy))
-            ctx.addLine(to: CGPoint(x: w, y: sy + w * slope))
-            sy += step * slope * 2
-        }
-        var ry: CGFloat = 0
-        while ry < h + w * slope {
-            ctx.move(to: CGPoint(x: 0, y: ry))
-            ctx.addLine(to: CGPoint(x: w, y: ry - w * slope))
-            ry += step * slope * 2
-        }
-        ctx.strokePath()
+        PageGuideRenderer.drawTexture(
+            paperId: paperId,
+            style: template.pageStyle,
+            paletteId: paletteId,
+            in: ctx,
+            size: PageGeometry.size
+        )
     }
 
     // MARK: - 版面引導線

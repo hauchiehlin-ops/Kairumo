@@ -18,9 +18,11 @@ import com.kairumo.padnote.ink.PageGeometry
 import uniffi.padnote_core.FfiGuideKind
 import uniffi.padnote_core.FfiGuidePalette
 import uniffi.padnote_core.FfiGuideTone
+import uniffi.padnote_core.FfiTextureKind
 import uniffi.padnote_core.PageStyle
 import uniffi.padnote_core.guidePalette
 import uniffi.padnote_core.pageGuides
+import uniffi.padnote_core.pageTexture
 
 /**
  * 紙張底紋。
@@ -87,7 +89,14 @@ fun DrawScope.drawPageBackground(
     /** 版面配色（核心 `guidePalettes()` 的 id）。空字串是預設那一組。 */
     paletteId: String = ""
 ) {
-    drawPageStyle(style, density, pageWidth, pageHeight)
+    drawPageStyle(
+        style,
+        density,
+        pageWidth,
+        pageHeight,
+        paperId,
+        runCatching { guidePalette(paletteId) }.getOrNull()
+    )
     if (paperId.isNotEmpty()) {
         drawPageGuides(paperId, density, pageWidth, pageHeight, localize, textMeasurer, paletteId)
     }
@@ -220,86 +229,55 @@ private fun hexColor(hex: String, alpha: Float): Color {
     )
 }
 
-/** 與 Apple 端 `NotebookEditorView` 的底紋繪製對應的六種。 */
+/**
+ * 紙張底紋。
+ *
+ * # 為什麼這裡只剩一個迴圈
+ *
+ * 原本是一段六個分支的 `when`，Apple 端有另一段 —— 兩段的數字不一樣：
+ * 方格間距 28 對 24、點陣 20 對 16、五線譜行距 9 對 10、橫線一邊從 y=60
+ * 起算並左右留白、另一邊貼著紙邊從 y=32 起算。同一本方格筆記在兩台裝置上
+ * 「寫在第幾格」對不起來，而那是使用者拿方格紙的唯一理由。康乃爾更糟：
+ * 分區線在 Apple 上由版面畫、Android 又自己畫了一次，於是變成兩條。
+ *
+ * 底紋現在跟版面一樣是核心送來的資料（`pageTexture`）。送的是**格子的
+ * 描述**而不是格子本身：一族圖元 ＝ 第一個 ＋ 兩個位移向量 ＋ 兩個次數，
+ * 所以兩千顆點只是一筆資料。下面這個雙層迴圈就是全部的畫法，Apple 端
+ * （`PageGuideRenderer.drawTexture`）是同一份。
+ */
 private fun DrawScope.drawPageStyle(
     style: PageStyle,
     scale: Float,
     pageWidth: Float,
-    pageHeight: Float
+    pageHeight: Float,
+    paperId: String,
+    palette: FfiGuidePalette?
 ) {
     val w = pageWidth * scale
     val h = pageHeight * scale
-    val line = Color(0x1A000000)
-    val accent = Color(0x33448AFF)
+    val bands = runCatching { pageTexture(paperId, style, pageWidth, pageHeight) }
+        .getOrNull() ?: emptyList()
 
-    when (style) {
-        PageStyle.BLANK -> Unit
+    for (b in bands) {
+        val color = guideColor(b.tone, palette)
+        for (i in 0 until b.count.toInt()) {
+            for (j in 0 until b.count2.toInt()) {
+                val px = (b.x + b.stepX * i + b.step2X * j) * scale
+                val py = (b.y + b.stepY * i + b.step2Y * j) * scale
+                when (b.kind) {
+                    FfiTextureKind.LINE -> drawLine(
+                        color,
+                        Offset(px, py),
+                        Offset(px + b.w * scale, py + b.h * scale),
+                        strokeWidth = b.weight
+                    )
 
-        PageStyle.LINED -> {
-            // 行高 32pt，與 Apple 端相同 —— 兩邊不同的話，同一本筆記
-            // 在兩台裝置上「寫在第幾行」會對不起來。
-            val step = 32f * scale
-            var y = step
-            while (y < h) {
-                drawLine(line, Offset(0f, y), Offset(w, y), strokeWidth = 1f)
-                y += step
-            }
-        }
-
-        PageStyle.GRID -> {
-            val step = 24f * scale
-            var x = step
-            while (x < w) {
-                drawLine(line, Offset(x, 0f), Offset(x, h), strokeWidth = 1f)
-                x += step
-            }
-            var y = step
-            while (y < h) {
-                drawLine(line, Offset(0f, y), Offset(w, y), strokeWidth = 1f)
-                y += step
-            }
-        }
-
-        PageStyle.DOTTED -> {
-            val step = 16f * scale
-            val radius = 1.2f
-            var x = step
-            while (x < w) {
-                var y = step
-                while (y < h) {
-                    drawCircle(line, radius = radius, center = Offset(x, y))
-                    y += step
+                    FfiTextureKind.DOT -> drawCircle(
+                        color,
+                        radius = b.w * scale / 2f,
+                        center = Offset(px, py)
+                    )
                 }
-                x += step
-            }
-        }
-
-        PageStyle.CORNELL -> {
-            // 左側提綱欄、底部總結欄。比例與 Apple 端相同。
-            val cueX = w * 0.3f
-            val summaryY = h * 0.8f
-            drawLine(accent, Offset(cueX, 0f), Offset(cueX, summaryY), strokeWidth = 2f)
-            drawLine(accent, Offset(0f, summaryY), Offset(w, summaryY), strokeWidth = 2f)
-            // 主體區的橫線只畫在右邊那一欄裡。
-            val step = 32f * scale
-            var y = step
-            while (y < summaryY) {
-                drawLine(line, Offset(cueX, y), Offset(w, y), strokeWidth = 1f)
-                y += step
-            }
-        }
-
-        PageStyle.MUSIC_STAFF -> {
-            // 五線譜：五條一組，組間留白。
-            val lineGap = 10f * scale
-            val groupGap = 48f * scale
-            var top = groupGap
-            while (top + lineGap * 4 < h) {
-                for (i in 0..4) {
-                    val y = top + lineGap * i
-                    drawLine(line, Offset(0f, y), Offset(w, y), strokeWidth = 1f)
-                }
-                top += lineGap * 4 + groupGap
             }
         }
     }

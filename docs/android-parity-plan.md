@@ -69,7 +69,7 @@ Android 有系統返回鍵、Material 的觸控回饋與對話框行為、不同
 | S-73 | sheet 只能調高度 | Apple 平台限制，已列入白名單，不做 | ⚪ 不做 |
 | S-77 | Android 大螢幕只做了三處 | 折疊機姿態、第二排工具列分組、對話框在平板的寬度、結構欄缺「資料夾目錄」分頁 | ✅ 階段 1、2、5 |
 | S-80 | 整頁模式 100% 時不能上下捲動 | 未做。要把畫布放進真正的捲動容器，與 `InkCanvas` 的手勢一起改 | ✅ 階段 3 |
-| S-81 | Android 只畫得出六種底紋的「裝飾」 | 工程藍圖標題欄、等角網格、行動端線框等**額外裝飾**仍只在 Apple；要下沉成核心的線段／矩形描述 | ✅ 階段 4 |
+| S-81 | Android 只畫得出六種底紋的「裝飾」 | 裝飾隨 `page_guides` 下沉，底紋本身隨 `page_texture` 下沉；量過才發現兩端的間距本來就不一樣 | ✅ 已完成 |
 | S-84 | 頁面規格（八種）只做了 Apple 端 | 確認 Android **完全沒有**（grep 不到 `pageFormat`） | ✅ 階段 4 |
 | S-85 | 編輯區域限制只擋筆畫、且只在 Apple | 拖曳既有物件出界兩端都沒擋；Android 連筆畫都沒擋。核心 `is_within_printable` / `clamp_to_printable` 已就緒 | ✅ 階段 3 |
 | S-86 | 頁面搬動與側欄調整只做了 Apple | Android `canvas/PageSidebar.kt` 只有點選換頁 | ✅ 階段 4 |
@@ -234,14 +234,14 @@ Android 補上顯示全部／收合、編輯最上層資料夾、系統診斷、
 **S-80（Android 整頁模式的捲動）與 P-04（旋轉吸附）未做** |
 | 4 功能 | 🔶 | 核心 `DocOp::MovePage`（op 34）、Android 側欄搬頁與縮圖大小、
 S-84 頁面規格（連帶修掉「pageFormatId 沒有同步」）、編輯器的配色選單、
-復原／重做。**S-90（縮圖與匯出的版面）、S-91（跨本搬頁）、S-81（裝飾下沉）未做** |
-| 5 收尾 | ⬜ | S-92、折疊機、手冊同步 |
+復原／重做、S-90（縮圖與匯出的版面）、S-91（跨本搬頁）、
+S-81（裝飾與底紋下沉 `page_texture`）、S-96（側欄資料夾分頁）、S-97（特殊符號）。
+階段 4 完成 |
+| 5 收尾 | 🔶 | S-92 完成。**折疊機（S-77）、分享筆記檔（S-94）、三支筆刷（S-95）、手冊同步未做** |
 
-### 還欠的八項（都是 Android 還沒有的功能，不是漏掛識別字）
+### 還欠的五項（都是 Android 還沒有的功能，不是漏掛識別字）
 
 | 控制項 | 為什麼還沒有 |
 |---|---|
 | `editor.ink.brush` / `marker` / `watercolor` | Apple 的毛筆、麥克筆、水彩是 PencilKit 的墨水類型；核心 `ToolKind` 只有四種筆刷，Android 畫不出那三種。要嘛核心加筆刷模型，要嘛在 Android 端自己算筆跡 —— 那是一件獨立的工作 |
 | `editor.export.share` / `editor.share` | Android 的匯出選單有 PDF／圖片／列印，沒有「分享筆記檔」。**而且 Apple 那一項目前是假的** —— `shareNotebookFile()` 實際上呼叫 `exportAsPdf()`，按鈕寫著「分享筆記」，送出去的是 PDF。真正的修法是把 `.padnote` 套件（一個目錄）打包成單一檔案再分享，兩端都要做 —— 那是一件獨立的工作，不是掛個識別字的事 |
-| `editor.sidebar.tab.pages` / `tab.folders` | Android 的側欄只有頁面，沒有 Apple 的「資料夾目錄」分頁 |
-| `editor.text.symbols` | 特殊符號面板 |
