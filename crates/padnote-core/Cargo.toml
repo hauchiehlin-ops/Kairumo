@@ -11,6 +11,11 @@ publish = false
 name = "uniffi-bindgen"
 path = "src/bin/uniffi-bindgen.rs"
 
+# 畫面規格倒 JSON，給跨平台對照閘門用（scripts/check-screen-parity.py）。
+[[bin]]
+name = "screen-spec"
+path = "src/bin/screen-spec.rs"
+
 [lints]
 workspace = true
 

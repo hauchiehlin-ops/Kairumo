@@ -170,6 +170,28 @@ jobs:
       - name: 文件範本目錄與來源一致
         run: python3 scripts/doc_templates_tool.py verify
 
+  # 跨平台畫面對照（android-parity-plan.md 階段 0）。
+  #
+  # 「Android 版面跟 Apple 差太多」修過兩次，兩次都是補完就漂回去 ——
+  # 因為沒有東西守著它。這道閘門守的就是那件事：核心 `ffi_screens` 裡的
+  # 控制項，兩端程式碼都要找得到對應的識別字。
+  #
+  # 已知缺口寫在 docs/parity/baseline.json（棘輪，只縮不長），
+  # 所以這個 job 今天是綠的，但**新增**的缺口一定會紅。
+  screen-parity:
+    name: Screen parity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: 系統相依（cpal → ALSA、audiopus → Opus）
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libopus-dev pkg-config
+      - name: 畫面規格自身的測試
+        run: cargo test -p padnote-core --lib ffi_screens
+      - name: 兩端控制項對照
+        run: python3 scripts/check-screen-parity.py
+
   # S-12：FFI 綁定必須產得出來。core 的 API 改壞時在這裡就會爆，
   # 而不是等到 Xcode 編不過。
   bindings:

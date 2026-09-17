@@ -35,6 +35,7 @@ pub mod ffi_pages;
 pub mod ffi_paper;
 #[cfg(feature = "relay")]
 pub mod ffi_relay;
+pub mod ffi_screens;
 pub mod ffi_shapes;
 pub mod ffi_sketch;
 pub mod ffi_symbols;
