@@ -2,7 +2,8 @@ package com.kairumo.padnote.library
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -53,6 +54,8 @@ import com.kairumo.padnote.ui.rememberDialogHeight
  * 底下。最常用的動作不該變成最難的那一個，所以主題預設收合，
  * 不選範本直接按確定就是一張空白頁。
  */
+// FlowRow 在這個 Compose 版本仍標著實驗性（主題膠囊用它換行，見下面的說明）。
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun NewNotebookDialog(
     themes: List<DocumentTemplateCatalog.Theme>,
@@ -182,13 +185,18 @@ fun NewNotebookDialog(
                 }
                 // 主題切換器。**不是分段控制項**：主題從四個長到七個，
                 // 七個中文標籤擠在同一列就是先前回報過的「文字被擠壓」。
-                // 橫向捲動的膠囊列放得下任意數量，而且每一個都看得清楚。
+                //
+                // 也**不是橫向捲動的單列**（原本是）。對話框寬度只放得下三個半，
+                // 第四個被切在邊緣、後面三組完全不在畫面上 —— 使用者回報的
+                // 「看不到全部」就是這個：捲動條不明顯，一列膠囊看起來就像
+                // 「總共只有這幾組」。換行排版讓七組一次全部看得到。
                 item {
-                    LazyRow(
+                    FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp),
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        items(paperThemes, key = { it.name }) { theme ->
+                        paperThemes.forEach { theme ->
                             val active = paperTheme == theme
                             FilterChip(
                                 selected = active,

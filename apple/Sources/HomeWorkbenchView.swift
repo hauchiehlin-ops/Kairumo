@@ -1725,16 +1725,24 @@ public struct HomeWorkbenchView: View {
     /// 主題從四個長到七個。`.segmented` 會把七個中文標籤擠進同一列 ——
     /// 那正是先前回報過的「文字被擠壓、功能鈕被遮掩」。橫向捲動的膠囊列
     /// 放得下任意數量，而且每一個都看得清楚。
+    /// 七組主題的膠囊列。
+    ///
+    /// 原本是橫向捲動的單列。主題有七組，表單寬度只放得下三個半 ——
+    /// 第四個被切在邊緣，後面三組完全不在畫面上。使用者回報的是
+    /// 「看不到全部」：捲動條在 sheet 邊緣不明顯，一列膠囊看起來就像
+    /// 「總共只有這幾組」，而右邊那半個被切掉的膠囊更像是版面壞了。
+    ///
+    /// 改用換行版面（工具列已經在用的那個 `WrapLayout`）：七組一次全部
+    /// 看得到，也不必猜還有沒有別的。膠囊本身高度固定，換成兩三列
+    /// 只多幾十點，換不到需要捲動的程度。
     private var themeChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(Array(paperThemes().enumerated()), id: \.offset) { _, theme in
-                    themeChip(theme)
-                }
+        WrapLayout(spacing: 8, lineSpacing: 8) {
+            ForEach(Array(paperThemes().enumerated()), id: \.offset) { _, theme in
+                themeChip(theme)
             }
-            .padding(.vertical, 4)
-            .padding(.horizontal, 2)
         }
+        .padding(.vertical, 4)
+        .padding(.horizontal, 2)
         .disabled(paperIsLockedByDocument)
     }
 
