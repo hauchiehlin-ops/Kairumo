@@ -245,32 +245,59 @@ public struct TableStudioView: View {
 
                 Divider()
 
-                HStack {
-                    Button {
-                        table.merge(row: selectedRow, col: selectedCol, rowSpan: 1, colSpan: 2)
-                    } label: {
-                        Label(localizationManager.localized("table_merge_right"),
-                              systemImage: "arrow.right.to.line")
+                ViewThatFits(in: .horizontal) {
+                    HStack {
+                        Button {
+                            table.merge(row: selectedRow, col: selectedCol, rowSpan: 1, colSpan: 2)
+                        } label: {
+                            Label(localizationManager.localized("table_merge_right"),
+                                  systemImage: "arrow.right.to.line")
+                        }
+                        .disabled(selectedCol + 1 >= table.cols)
+
+                        Spacer()
+
+                        Button {
+                            table.merge(row: selectedRow, col: selectedCol, rowSpan: 2, colSpan: 1)
+                        } label: {
+                            Label(localizationManager.localized("table_merge_down"),
+                                  systemImage: "arrow.down.to.line")
+                        }
+                        .disabled(selectedRow + 1 >= table.rows)
+
+                        Spacer()
+
+                        Button {
+                            table.unmerge(row: selectedRow, col: selectedCol)
+                        } label: {
+                            Label(localizationManager.localized("table_unmerge"),
+                                  systemImage: "rectangle.split.2x1")
+                        }
                     }
-                    .disabled(selectedCol + 1 >= table.cols)
 
-                    Spacer()
+                    VStack(alignment: .leading, spacing: 8) {
+                        Button {
+                            table.merge(row: selectedRow, col: selectedCol, rowSpan: 1, colSpan: 2)
+                        } label: {
+                            Label(localizationManager.localized("table_merge_right"),
+                                  systemImage: "arrow.right.to.line")
+                        }
+                        .disabled(selectedCol + 1 >= table.cols)
 
-                    Button {
-                        table.merge(row: selectedRow, col: selectedCol, rowSpan: 2, colSpan: 1)
-                    } label: {
-                        Label(localizationManager.localized("table_merge_down"),
-                              systemImage: "arrow.down.to.line")
-                    }
-                    .disabled(selectedRow + 1 >= table.rows)
+                        Button {
+                            table.merge(row: selectedRow, col: selectedCol, rowSpan: 2, colSpan: 1)
+                        } label: {
+                            Label(localizationManager.localized("table_merge_down"),
+                                  systemImage: "arrow.down.to.line")
+                        }
+                        .disabled(selectedRow + 1 >= table.rows)
 
-                    Spacer()
-
-                    Button {
-                        table.unmerge(row: selectedRow, col: selectedCol)
-                    } label: {
-                        Label(localizationManager.localized("table_unmerge"),
-                              systemImage: "rectangle.split.2x1")
+                        Button {
+                            table.unmerge(row: selectedRow, col: selectedCol)
+                        } label: {
+                            Label(localizationManager.localized("table_unmerge"),
+                                  systemImage: "rectangle.split.2x1")
+                        }
                     }
                 }
 

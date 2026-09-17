@@ -127,6 +127,7 @@ public struct Model3DStudioView: View {
     @State private var selectedMaterial: MaterialType = .gold
     @State private var title: String = "3D 幾何模型"
     @State private var previewRotationY: Float = 0.5
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var previewRotationX: Float = 0.3
 
     public init(onInsert: @escaping (Note3DAttachment) -> Void) {
@@ -135,120 +136,21 @@ public struct Model3DStudioView: View {
 
     public var body: some View {
         NavigationStack {
-            HStack(spacing: 0) {
-                // 左側：3D 即時動態預覽
-                VStack(spacing: 12) {
-                    Text(title.isEmpty ? localizationManager.localized("geom_preview") : title)
-                        .font(.headline)
-                        .padding(.top, 16)
-
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 16)
-                            .fill(Color(UIColor.secondarySystemBackground))
-                            .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 4)
-
-                        SceneView(
-                            scene: SceneKitHelper.makeScene(
-                                modelTypeRaw: selectedModelType.rawValue,
-                                material: selectedMaterial,
-                                rotationX: previewRotationX,
-                                rotationY: previewRotationY,
-                                rotationZ: 0,
-                                scale: 1.0
-                            ),
-                            options: [.allowsCameraControl, .autoenablesDefaultLighting]
-                        )
-                        .clipShape(RoundedRectangle(cornerRadius: 16))
-
-                        // 旋轉指示文字
-                        VStack {
-                            Spacer()
-                            HStack {
-                                Image(systemName: "hand.draw")
-                                Text(localizationManager.localized("rotate_hint"))
-                                    .font(.caption2)
-                            }
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(.ultraThinMaterial)
-                            .cornerRadius(10)
-                            .padding(.bottom, 12)
-                        }
+            Group {
+                if horizontalSizeClass == .compact {
+                    VStack(spacing: 0) {
+                        previewView
+                            .frame(height: 250)
+                        Divider()
+                        formView
                     }
-                    .frame(minWidth: 260, minHeight: 280)
-                    .padding()
-                }
-                .frame(maxWidth: .infinity)
-
-                Divider()
-
-                // 右側：參數配置
-                Form {
-                    Section(header: Text(localizationManager.localized("model_title"))) {
-                        TextField(localizationManager.localized("model_title"), text: $title)
-                    }
-
-                    Section(header: Text(localizationManager.localized("geom_shape"))) {
-                        Picker(localizationManager.localized("geom_shape"), selection: $selectedModelType) {
-                            ForEach(Model3DType.allCases) { type in
-                                HStack {
-                                    Image(systemName: type.iconName)
-                                    Text(type.displayName)
-                                }
-                                .tag(type)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                    }
-
-                    Section(header: Text(localizationManager.localized("material_style"))) {
-                        Picker(localizationManager.localized("material_style"), selection: $selectedMaterial) {
-                            ForEach(MaterialType.allCases) { mat in
-                                Text(localizationManager.localized(mat.localizationKey))
-                                    .tag(mat)
-                            }
-                        }
-                        .pickerStyle(.menu)
-
-                        // 材質特性簡介
-                        Text(materialDescription(selectedMaterial))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-
-                    Section {
-                        Button {
-                            let newAttachment = Note3DAttachment(
-                                id: UUID().uuidString,
-                                pageIndex: 0,
-                                title: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localizationManager.localized("model3d_title") : title,
-                                modelTypeRaw: selectedModelType.rawValue,
-                                materialType: selectedMaterial,
-                                rotationX: previewRotationX,
-                                rotationY: previewRotationY,
-                                rotationZ: 0,
-                                scale: 1.0,
-                                x: 100,
-                                y: 150,
-                                width: 280,
-                                height: 260
-                            )
-                            onInsert(newAttachment)
-                            dismiss()
-                        } label: {
-                            HStack {
-                                Spacer()
-                                Image(systemName: "plus.circle.fill")
-                                Text(localizationManager.localized("insert_to_canvas"))
-                                    .fontWeight(.bold)
-                                Spacer()
-                            }
-                            .padding(.vertical, 4)
-                        }
-                        .buttonStyle(.borderedProminent)
+                } else {
+                    HStack(spacing: 0) {
+                        previewView
+                        Divider()
+                        formView.frame(width: 320)
                     }
                 }
-                .frame(width: 300)
             }
             .navigationTitle(localizationManager.localized("model3d_studio"))
             .navigationBarTitleDisplayMode(.inline)
@@ -258,6 +160,119 @@ public struct Model3DStudioView: View {
                         dismiss()
                     }
                 }
+            }
+        }
+    }
+
+    private var previewView: some View {
+        VStack(spacing: 12) {
+            Text(title.isEmpty ? localizationManager.localized("geom_preview") : title)
+                .font(.headline)
+                .padding(.top, 16)
+
+            ZStack {
+                RoundedRectangle(cornerRadius: 16)
+                    .fill(Color(UIColor.secondarySystemBackground))
+                    .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 4)
+
+                SceneView(
+                    scene: SceneKitHelper.makeScene(
+                        modelTypeRaw: selectedModelType.rawValue,
+                        material: selectedMaterial,
+                        rotationX: previewRotationX,
+                        rotationY: previewRotationY,
+                        rotationZ: 0,
+                        scale: 1.0
+                    ),
+                    options: [.allowsCameraControl, .autoenablesDefaultLighting]
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+
+                // 旋轉指示文字
+                VStack {
+                    Spacer()
+                    HStack {
+                        Image(systemName: "hand.draw")
+                        Text(localizationManager.localized("rotate_hint"))
+                            .font(.caption2)
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(.ultraThinMaterial)
+                    .cornerRadius(10)
+                    .padding(.bottom, 12)
+                }
+            }
+            .frame(minWidth: 260, minHeight: 200)
+            .padding()
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var formView: some View {
+        Form {
+            Section(header: Text(localizationManager.localized("model_title"))) {
+                TextField(localizationManager.localized("model_title"), text: $title)
+            }
+
+            Section(header: Text(localizationManager.localized("geom_shape"))) {
+                Picker(localizationManager.localized("geom_shape"), selection: $selectedModelType) {
+                    ForEach(Model3DType.allCases) { type in
+                        HStack {
+                            Image(systemName: type.iconName)
+                            Text(type.displayName)
+                        }
+                        .tag(type)
+                    }
+                }
+                .pickerStyle(.menu)
+            }
+
+            Section(header: Text(localizationManager.localized("material_style"))) {
+                Picker(localizationManager.localized("material_style"), selection: $selectedMaterial) {
+                    ForEach(MaterialType.allCases) { mat in
+                        Text(localizationManager.localized(mat.localizationKey))
+                            .tag(mat)
+                    }
+                }
+                .pickerStyle(.menu)
+
+                // 材質特性簡介
+                Text(materialDescription(selectedMaterial))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+
+            Section {
+                Button {
+                    let newAttachment = Note3DAttachment(
+                        id: UUID().uuidString,
+                        pageIndex: 0,
+                        title: title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? localizationManager.localized("model3d_title") : title,
+                        modelTypeRaw: selectedModelType.rawValue,
+                        materialType: selectedMaterial,
+                        rotationX: previewRotationX,
+                        rotationY: previewRotationY,
+                        rotationZ: 0,
+                        scale: 1.0,
+                        x: 100,
+                        y: 150,
+                        width: 280,
+                        height: 260
+                    )
+                    onInsert(newAttachment)
+                    dismiss()
+                } label: {
+                    HStack {
+                        Spacer()
+                        Image(systemName: "plus.circle.fill")
+                        Text(localizationManager.localized("insert_to_canvas"))
+                            .fontWeight(.bold)
+                        Spacer()
+                    }
+                    .padding(.vertical, 4)
+                }
+                .buttonStyle(.borderedProminent)
             }
         }
     }

@@ -19,6 +19,7 @@ pub enum StorageError {
     MalformedManifest(String),
     DocOps(String),
     Ink(CodecError),
+    Archive(String),
     Io(std::io::Error),
 }
 
@@ -36,6 +37,7 @@ impl fmt::Display for StorageError {
             Self::MalformedManifest(m) => write!(f, "manifest 解析失敗：{m}"),
             Self::DocOps(m) => write!(f, "文件操作日誌損毀：{m}"),
             Self::Ink(e) => write!(f, "筆畫檔錯誤：{e}"),
+            Self::Archive(m) => write!(f, "封裝壓縮錯誤：{m}"),
             Self::Io(e) => write!(f, "IO 錯誤：{e}"),
         }
     }
@@ -470,6 +472,108 @@ fn parse_uuid(s: &str) -> Option<Uuid> {
     Some(Uuid::from_bytes(out))
 }
 
+/// 把一個 `.padnote` 套件目錄壓縮打包成單一檔案（format-spec §2、工作項 S-94）。
+///
+/// 格式為標準 ZIP 容器：包含 `manifest.json`、`doc/`、`ink/`、`media/` 等。
+/// 本機衍生的 `index/` 目錄不打包（可安全重建）。
+pub fn archive_package(package_dir: &Path, out_file: &Path) -> Result<(), StorageError> {
+    if !package_dir.is_dir() {
+        return Err(StorageError::NotAPackage(package_dir.to_path_buf()));
+    }
+    if !package_dir.join("manifest.json").is_file() {
+        return Err(StorageError::NotAPackage(package_dir.to_path_buf()));
+    }
+
+    if let Some(parent) = out_file.parent() {
+        fs::create_dir_all(parent)?;
+    }
+
+    let tmp_out = out_file.with_extension("tmp_zip");
+    {
+        let file = fs::File::create(&tmp_out)?;
+        let mut zip = zip::ZipWriter::new(file);
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+
+        fn add_dir_to_zip<W: std::io::Write + std::io::Seek>(
+            zip: &mut zip::ZipWriter<W>,
+            options: zip::write::SimpleFileOptions,
+            root: &Path,
+            dir: &Path,
+        ) -> Result<(), StorageError> {
+            for entry in fs::read_dir(dir)? {
+                let entry = entry?;
+                let path = entry.path();
+                let file_name = entry.file_name();
+                let name_str = file_name.to_string_lossy();
+
+                if name_str.starts_with('.') || (dir == root && name_str == "index") {
+                    continue;
+                }
+
+                let rel_path = path
+                    .strip_prefix(root)
+                    .map_err(|e| StorageError::Archive(e.to_string()))?;
+                let rel_str = rel_path.to_string_lossy().replace('\\', "/");
+
+                if path.is_dir() {
+                    zip.add_directory(&rel_str, options)
+                        .map_err(|e| StorageError::Archive(e.to_string()))?;
+                    add_dir_to_zip(zip, options, root, &path)?;
+                } else if path.is_file() {
+                    zip.start_file(&rel_str, options)
+                        .map_err(|e| StorageError::Archive(e.to_string()))?;
+                    let mut f = fs::File::open(&path)?;
+                    std::io::copy(&mut f, zip)?;
+                }
+            }
+            Ok(())
+        }
+
+        add_dir_to_zip(&mut zip, options, package_dir, package_dir)?;
+        zip.finish().map_err(|e| StorageError::Archive(e.to_string()))?;
+    }
+
+    fs::rename(&tmp_out, out_file)?;
+    Ok(())
+}
+
+/// 將單一打包檔案解壓縮還原為 `.padnote` 目錄套件。
+pub fn extract_package(archive_file: &Path, out_dir: &Path) -> Result<(), StorageError> {
+    let file = fs::File::open(archive_file)?;
+    let mut archive =
+        zip::ZipArchive::new(file).map_err(|e| StorageError::Archive(e.to_string()))?;
+
+    fs::create_dir_all(out_dir)?;
+
+    for i in 0..archive.len() {
+        let mut file = archive
+            .by_index(i)
+            .map_err(|e| StorageError::Archive(e.to_string()))?;
+        let enclosed_name = file
+            .enclosed_name()
+            .ok_or_else(|| StorageError::Archive("路徑包含非法穿越".into()))?
+            .to_path_buf();
+        let out_path = out_dir.join(enclosed_name);
+
+        if file.is_dir() {
+            fs::create_dir_all(&out_path)?;
+        } else {
+            if let Some(parent) = out_path.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            let mut out_file = fs::File::create(&out_path)?;
+            std::io::copy(&mut file, &mut out_file)?;
+        }
+    }
+
+    if !out_dir.join("manifest.json").is_file() {
+        return Err(StorageError::NotAPackage(out_dir.to_path_buf()));
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -810,5 +914,27 @@ mod tests {
             NotebookPackage::open(&root).unwrap().manifest().title,
             "新標題"
         );
+    }
+
+    #[test]
+    fn package_archive_and_extract_roundtrips() {
+        let root = tmp("archive-src");
+        let pkg = NotebookPackage::create(&root, "封裝筆記", 1).unwrap();
+        let page = Uuid::from_bytes([0x12; 16]);
+        pkg.append_ink(page, &[InkRecord::Add(stroke(1))]).unwrap();
+        drop(pkg);
+
+        let zip_file = root.parent().unwrap().join("test_note.padnote");
+        archive_package(&root, &zip_file).unwrap();
+        assert!(zip_file.is_file());
+
+        let extract_dir = tmp("archive-dst");
+        extract_package(&zip_file, &extract_dir).unwrap();
+
+        let reopened = NotebookPackage::open(&extract_dir).unwrap();
+        assert_eq!(reopened.manifest().title, "封裝筆記");
+        assert_eq!(reopened.read_ink(page).unwrap().len(), 1);
+
+        let _ = fs::remove_file(zip_file);
     }
 }

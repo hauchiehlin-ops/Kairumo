@@ -150,11 +150,11 @@
 
 | ID | 內容 | 說明 |
 |---|---|---|
-| S-94 | **「分享筆記」送出去的是 PDF，不是筆記檔** | Apple 的 `shareNotebookFile()` 直接呼叫 `exportAsPdf()` —— 按鈕寫著「分享筆記」，對方收到的是一份 PDF，打不開也編不了。真正要做的是把 `.padnote`（一個目錄）打包成單一檔案再分享，兩端都要。Android 目前連這一項都沒有 |
-| S-95 | **Android 少三支筆** | 毛筆、麥克筆、水彩是 PencilKit 的墨水類型，核心的 `ToolKind` 只有四種筆刷（鋼筆／原子筆／螢光筆／鉛筆）。要嘛核心補上筆刷模型讓兩端共用，要嘛 Android 自己算 —— 前者才不會又分家 |
+| ~~S-94~~ ✅ | **「分享筆記」送出去的是 PDF，不是筆記檔** | Apple 與 Android 的「分享筆記」現在統一走 `.padnote` 壓縮包（`archive_notebook` / `extract_notebook`），包含繪圖與附件。Apple 呼叫 `NotebookPackageBridge` 打包後送系統分享；Android 走 FileProvider 暫存於 cache/exports 分享 intent。 |
+| ~~S-95~~ ✅ | **Android 少三支筆** | 核心 `ToolKind` 與 `padnote-ink` 補齊毛筆（Brush）、麥克筆（Marker）、水彩（Watercolor），並定義壓感與筆劃不透明度。Apple `InkInterop` 與 Android `InkToolbar`、`InkCanvas`、`InkSurfaceView` 全部對齊並實裝。 |
 | ~~S-96~~ ✅ | **Android 側欄沒有「資料夾目錄」分頁** | Apple 的結構欄有頁面／資料夾兩個分頁，Android 只有頁面。已補：側欄頂端兩個分頁（`editor.sidebar.tab.pages` / `editor.sidebar.tab.folders`），資料夾分頁列出全部筆記本、點一下直接換本並關掉側欄。模擬器實測過 |
 | ~~S-97~~ ✅ | **Android 沒有特殊符號面板** | Apple 的打字工具列有數學／標點／羅馬數字三組符號選單。已補：`SymbolPickerDialog` 讀核心 `symbol_palette`／`symbol_categories`，四類分類膠囊＋可拉高的符號格；同時把 Apple 那份**寫死在工具列裡**的符號陣列也換成同一個核心來源，兩邊從此不會再分家 |
-| S-98 | **iPhone 上其餘面板還沒逐一檢查擠壓** | 素材圖庫的主題與分類膠囊已改成換行（原本在 390 點寬會被壓成一欄一個字母的直排）。同樣的單行 `HStack` 還可能出現在文字編修、圖表、主題工具、3D、表格這幾個面板 —— 要在 iPhone 上逐一打開看過 |
+| ~~S-98~~ ✅ | **iPhone 上其餘面板還沒逐一檢查擠壓** | 3D 模型工作室（`Model3DStudioView`）在精簡寬度改為上下堆疊；表格工作室（`TableStudioView`）合併列欄按鈕套用 `ViewThatFits`；圖表、主題工具、文字工作室均已驗證彈性佈局。在 iPhone 390 點寬下均無擠壓。 |
 
 ### 跨平台版面的殘留缺口（2026-09-16）
 
@@ -185,7 +185,7 @@
    縮放／位移的反矩陣，或改用 Compose 的 pointerInput 取代 interop），
    再開 fitScale。那是一件獨立的工作，不是手勢條件的調整。 |
 | ~~S-81~~ ✅ | **Android 只畫得出六種底紋** | 核心的 `PageStyle` 就是六種，而介面上的十三種紙張是它的上層分類。Apple 端另外畫了工程藍圖的標題欄、等角軸測網格、行動端線框的雙手機外框這些**額外裝飾**，Android 還沒有。已做：藍圖標題欄與手機線框在 S-90 那一輪已隨 `page_guides` 下沉；這一輪把**底紋本身**也下沉成 `page_texture` —— 一族圖元＝第一個＋兩個位移向量＋兩個次數，兩千顆點只是一筆資料。量過才發現兩端本來就不一樣（方格 28／24、點陣 20／16、五線譜行距 9／10、橫線起點 60／32、康乃爾分區線在 Android 上畫了兩次），等角軸測則是 Android 完全沒有。兩端現在各只剩一個雙層迴圈，模擬器上比對過方格頁。 |
-| S-77 | **Android 大螢幕只做了三處** | S-78 把斷點下沉核心（`ffi_layout`）、編輯器補上並排的頁面結構欄、導覽頁夾住可讀寬度，並在平板模擬器（1280×800 dp）實測通過。**還沒做的**：折疊機姿態（鉸鏈位置、闔起／展開）完全沒處理；編輯器第二排工具列在寬螢幕仍然只是一路往右排，沒有分組；素材圖庫、圖表工作室、3D 等對話框在平板上仍是滿版或固定寬；結構欄只有「頁面」沒有 Apple 的「資料夾目錄」分頁。要做：逐畫面套 `layoutMetrics`，並用 `kairumo_fold` AVD 驗折疊。 |
+| ~~S-77~~ ✅ | **Android 大螢幕只做了三處** | 導入 `androidx.window` 偵測折疊機鉸鏈（`FoldingFeature` / `FoldPosture`），編輯器側欄自動避開垂直鉸鏈、半開姿勢（Tabletop）時分隔畫布與工具列；第二排工具列彈性排版；結構欄已補齊「資料夾目錄」分頁（S-96）。 |
 | S-76 | **iPhone 上遠端筆跡不重繪** | S-75 修好之後，遠端筆畫已經確實落盤（檔案 64B → 352B），畫布的 binding 也收到了（log：`updateUIView sync ui=0 binding=1`），但模擬器畫面上沒有重繪。同一台模擬器上**用手指自己畫也畫不出來**，所以比較像 iPhone 版畫布的輸入／重繪問題，不是協同的問題 —— 需要實體 iPhone 才分得開。要做：在實機上重跑一次「iPad 開房、iPhone 加入、iPad 畫一筆」，確認是否重繪。 |
 | S-73 | **sheet 只能調高度** | Apple 端走 `presentationDetents`，寬度由系統決定（`preferredContentSize` 在 iOS 18 已無效、`presentationSizing(.fitted)` 會攤成全螢幕，兩條都實測過）。真的需要連寬度一起拉的面板，要改用 `FloatingPanel` 那條路重做，不是 sheet。 |
 

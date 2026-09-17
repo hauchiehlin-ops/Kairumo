@@ -118,6 +118,26 @@ object Exporter {
         }
     }
 
+    /** 封裝整個 .padnote 套件目錄為單一壓縮檔並回傳。 */
+    fun sharePackage(context: Context, notebookDir: File, title: String): Result<File> = runCatching {
+        val safeTitle = title.replace(Regex("[/\\\\:*?\"<>|]"), "_").ifBlank { "kairumo" }
+        val stamp = System.currentTimeMillis()
+        val file = File(exportsDir(context), "$safeTitle-$stamp.padnote")
+        uniffi.padnote_core.archiveNotebook(notebookDir.absolutePath, file.absolutePath)
+        file
+    }
+
+    fun sharePackageIntent(context: Context, file: File): Intent {
+        val uri = FileProvider.getUriForFile(
+            context, "${context.packageName}.fileprovider", file
+        )
+        return Intent(Intent.ACTION_SEND).apply {
+            type = "application/octet-stream"
+            putExtra(Intent.EXTRA_STREAM, uri)
+            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        }
+    }
+
     /**
      * 交給系統列印面板。
      *

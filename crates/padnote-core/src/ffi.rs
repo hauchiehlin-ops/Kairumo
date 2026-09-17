@@ -57,6 +57,9 @@ pub enum ToolKind {
     BallPoint,
     Highlighter,
     Pencil,
+    Brush,
+    Marker,
+    Watercolor,
 }
 
 impl From<ToolKind> for Tool {
@@ -66,6 +69,9 @@ impl From<ToolKind> for Tool {
             ToolKind::BallPoint => Tool::BallPoint,
             ToolKind::Highlighter => Tool::Highlighter,
             ToolKind::Pencil => Tool::Pencil,
+            ToolKind::Brush => Tool::Brush,
+            ToolKind::Marker => Tool::Marker,
+            ToolKind::Watercolor => Tool::Watercolor,
         }
     }
 }
@@ -78,8 +84,31 @@ impl From<Tool> for ToolKind {
             Tool::BallPoint => ToolKind::BallPoint,
             Tool::Highlighter => ToolKind::Highlighter,
             Tool::Pencil => ToolKind::Pencil,
+            Tool::Brush => ToolKind::Brush,
+            Tool::Marker => ToolKind::Marker,
+            Tool::Watercolor => ToolKind::Watercolor,
         }
     }
+}
+
+/// 將 .padnote 套件打包壓縮成單一分享檔案（工作項 S-94）。
+#[uniffi::export]
+pub fn archive_notebook(package_dir: String, out_file: String) -> Result<(), FfiError> {
+    padnote_storage::archive_package(
+        std::path::Path::new(&package_dir),
+        std::path::Path::new(&out_file),
+    )
+    .map_err(|e| FfiError::Failed(e.to_string()))
+}
+
+/// 將分享檔案解壓縮還原為 .padnote 套件目錄。
+#[uniffi::export]
+pub fn extract_notebook(archive_file: String, out_dir: String) -> Result<(), FfiError> {
+    padnote_storage::extract_package(
+        std::path::Path::new(&archive_file),
+        std::path::Path::new(&out_dir),
+    )
+    .map_err(|e| FfiError::Failed(e.to_string()))
 }
 
 #[derive(Clone, Copy, Debug, uniffi::Enum)]

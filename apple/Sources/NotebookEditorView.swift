@@ -2208,6 +2208,13 @@ public struct NotebookEditorView: View {
                     // 工作區**就是可用空間**，不會因為頁面而長高 ——
                     // 長高的話外層 VStack 會把工具列擠出畫面（踩過）。
                     .frame(width: outer.size.width, height: outer.size.height)
+                    // 識別字也掛在 SwiftUI 這一層。
+                    //
+                    // `PKCanvasView` 自己設了 `accessibilityIdentifier`，但整頁
+                    // 模式把它套上 `scaleEffect` 之後，它就不再出現在 XCUITest
+                    // 的樹裡 —— 測試說「找不到畫布」而畫面上明明有，VoiceOver
+                    // 也就同樣找不到。掛在外層這一個，縮放不會把它吃掉。
+                    .accessibilityIdentifier("kairumo.canvas")
 
                 if let notice = canvasNotice {
                     canvasNoticeBanner(notice)
@@ -5720,7 +5727,41 @@ ZStack(alignment: .topTrailing) {
     }
 
     private func shareNotebookFile() {
-        exportAsPdf()
+        saveCurrentPageDrawing()
+        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("share_\(UUID().uuidString)")
+        let pkgDir = tempDir.appendingPathComponent("\(notebook.id).padnote")
+        let zipUrl = tempDir.appendingPathComponent("\(notebook.displayTitle()).padnote")
+
+        do {
+            try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
+            var drawings: [PKDrawing] = []
+            for p in 0..<notebook.pageCount {
+                drawings.append(store.loadDrawing(notebookId: notebook.id, pageIndex: p))
+            }
+            var imageMap: [String: Data] = [:]
+            for att in notebook.attachments ?? [] {
+                let fileUrl = store.attachmentsDirectory.appendingPathComponent(att.fileName)
+                if let data = try? Data(contentsOf: fileUrl) {
+                    imageMap[att.fileName] = data
+                }
+            }
+            try NotebookPackageBridge.export(
+                document: notebook,
+                drawings: drawings,
+                imageData: imageMap,
+                to: pkgDir,
+                deviceId: 0x4150
+            )
+            try archiveNotebook(packageDir: pkgDir.path, outFile: zipUrl.path)
+            let zipData = try Data(contentsOf: zipUrl)
+            self.exportPdfData = zipData
+            self.exportFileExtension = "padnote"
+            self.showShareSheet = true
+            try? FileManager.default.removeItem(at: tempDir)
+        } catch {
+            print("[ShareNotebook] Failed to package notebook: \(error)")
+            exportAsPdf()
+        }
     }
 
     private func addNewPage() {

@@ -1,6 +1,7 @@
 package com.kairumo.padnote
 
 import android.os.Bundle
+import java.io.File
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -17,6 +18,8 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
@@ -103,6 +106,8 @@ import com.kairumo.padnote.account.IdentityDialog
 import com.kairumo.padnote.library.HomeScreen
 import com.kairumo.padnote.library.DocumentTemplateCatalog
 import androidx.compose.runtime.CompositionLocalProvider
+import com.kairumo.padnote.ui.FoldPosture
+import com.kairumo.padnote.ui.rememberFoldPosture
 import com.kairumo.padnote.ui.LocalAppLanguage
 import com.kairumo.padnote.ui.AppCommand
 import com.kairumo.padnote.ui.AppCommands
@@ -850,12 +855,29 @@ private fun NotebookHome(
 @Composable
 private fun ColumnScope.EditorWorkArea(
     sidebarInline: Boolean,
+    /**
+     * 折疊機的姿態（S-77）。
+     *
+     * 攤開的折疊機中間有一道實體摺痕 —— 並排的側欄剛好跨在上面的話，
+     * 縮圖會被摺痕切成兩半，畫布的左緣也壓在凹槽裡。鉸鏈是分欄的天然
+     * 位置：側欄靠左半邊、畫布靠右半邊，中間把鉸鏈本身讓出來。
+     *
+     * 非折疊機時是一個空姿態，什麼都不會變。
+     */
+    posture: FoldPosture = FoldPosture(),
     sidebar: @Composable () -> Unit,
     canvas: @Composable RowScope.() -> Unit
 ) {
     Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
         if (sidebarInline) {
-            sidebar()
+            val snapToHinge = posture.separatingVertically && posture.hingeStart > 120.dp
+            Box(modifier = if (snapToHinge) Modifier.width(posture.hingeStart) else Modifier) {
+                sidebar()
+            }
+            if (snapToHinge) {
+                // 鉸鏈本身讓出來。摺痕型（無縫）的機器回 0，那就跟原本一樣。
+                Spacer(modifier = Modifier.width(posture.hingeSize))
+            }
             VerticalDivider()
         }
         canvas()
@@ -1510,6 +1532,9 @@ private fun InkScreen(
     val layout = remember(configuration.screenWidthDp) {
         uniffi.padnote_core.layoutMetrics(configuration.screenWidthDp.toFloat())
     }
+    // 折疊機的鉸鏈在哪（S-77）。Configuration 給得出寬度，給不出「畫面
+    // 中間橫著一條摺痕」—— 而內容壓在摺痕上是折疊機最明顯的毛病。
+    val posture = rememberFoldPosture(activity)
 
     Column(modifier = Modifier.fillMaxSize()) {
         // 只有兩個切換留在工具列上，其餘進溢位選單。
@@ -1728,6 +1753,62 @@ private fun InkScreen(
                 )
             ) { Text("↷") }
 
+            var showShareMenu by remember { mutableStateOf(false) }
+            TextButton(
+                onClick = { showShareMenu = true },
+                modifier = Modifier.testTag("editor.share")
+            ) { Text("↗") }
+
+            DropdownMenu(expanded = showShareMenu, onDismissRequest = { showShareMenu = false }) {
+                DropdownMenuItem(
+                    text = { Text(l10n("export_pdf")) },
+                    modifier = Modifier.testTag("editor.export.pdf"),
+                    onClick = {
+                        showShareMenu = false
+                        message = exportAndShare(activity, notebook?.first, Exporter.Format.PDF)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("export_image")) },
+                    modifier = Modifier.testTag("editor.export.image"),
+                    onClick = {
+                        showShareMenu = false
+                        message = exportAndShare(activity, notebook?.first, Exporter.Format.PNG)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("export_markdown")) },
+                    onClick = {
+                        showShareMenu = false
+                        message = exportAndShare(activity, notebook?.first, Exporter.Format.MARKDOWN)
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("print_note")) },
+                    modifier = Modifier.testTag("editor.export.print"),
+                    onClick = {
+                        showShareMenu = false
+                        val session = notebook?.first ?: return@DropdownMenuItem
+                        runCatching { Exporter.print(activity, session) }
+                            .onFailure { message = it.message }
+                    }
+                )
+                Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n("share_note")) },
+                    modifier = Modifier.testTag("editor.export.share"),
+                    onClick = {
+                        showShareMenu = false
+                        val id = notebook?.second ?: notebookId
+                        if (id != null) {
+                            val dir = File(NotebookLibrary.directory(activity), "$id.${NotebookLibrary.EXTENSION}")
+                            val title = FolderTree.titleOf(activity, id) ?: "Notebook"
+                            message = shareNotebookPackage(activity, dir, title)
+                        }
+                    }
+                )
+            }
+
             TextButton(
                 onClick = { showMenu = true },
                 modifier = Modifier.testTag("editor.more")
@@ -1767,7 +1848,6 @@ private fun InkScreen(
                 Divider()
                 DropdownMenuItem(
                     text = { Text(l10n("export_pdf")) },
-                    modifier = Modifier.testTag("editor.export.pdf"),
                     onClick = {
                         showMenu = false
                         message = exportAndShare(activity, notebook?.first, Exporter.Format.PDF)
@@ -1775,7 +1855,6 @@ private fun InkScreen(
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("export_image")) },
-                    modifier = Modifier.testTag("editor.export.image"),
                     onClick = {
                         showMenu = false
                         message = exportAndShare(activity, notebook?.first, Exporter.Format.PNG)
@@ -1790,12 +1869,23 @@ private fun InkScreen(
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("print_note")) },
-                    modifier = Modifier.testTag("editor.export.print"),
                     onClick = {
                         showMenu = false
                         val session = notebook?.first ?: return@DropdownMenuItem
                         runCatching { Exporter.print(activity, session) }
                             .onFailure { message = it.message }
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("share_note")) },
+                    onClick = {
+                        showMenu = false
+                        val id = notebook?.second ?: notebookId
+                        if (id != null) {
+                            val dir = File(NotebookLibrary.directory(activity), "$id.${NotebookLibrary.EXTENSION}")
+                            val title = FolderTree.titleOf(activity, id) ?: "Notebook"
+                            message = shareNotebookPackage(activity, dir, title)
+                        }
                     }
                 )
                 Divider()
@@ -2227,6 +2317,7 @@ private fun InkScreen(
         if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
             EditorWorkArea(
                 sidebarInline = showPageSidebar && layout.sidebarIsInline,
+                posture = posture,
                 sidebar = {
                     PageSidebar(
                         session = notebook?.first,
@@ -2352,6 +2443,7 @@ private fun InkScreen(
 
         EditorWorkArea(
             sidebarInline = showPageSidebar && layout.sidebarIsInline,
+            posture = posture,
             sidebar = {
                 PageSidebar(
                     session = notebook?.first,
@@ -3797,6 +3889,31 @@ private fun exportAndShare(
                 activity.startActivity(
                     android.content.Intent.createChooser(
                         Exporter.shareIntent(activity, file, format), null
+                    )
+                )
+            }
+            LocalizationStrings.localized("export_done", deviceLanguageTag())
+                .replace("%@", file.name)
+        },
+        onFailure = { t ->
+            LocalizationStrings.localized("export_failed", deviceLanguageTag())
+                .replace("%@", t.message ?: t.toString())
+        }
+    )
+}
+
+/** 分享 .padnote 筆記套件檔。 */
+private fun shareNotebookPackage(
+    activity: ComponentActivity,
+    notebookDir: File,
+    title: String
+): String {
+    return Exporter.sharePackage(activity, notebookDir, title).fold(
+        onSuccess = { file ->
+            runCatching {
+                activity.startActivity(
+                    android.content.Intent.createChooser(
+                        Exporter.sharePackageIntent(activity, file), null
                     )
                 )
             }

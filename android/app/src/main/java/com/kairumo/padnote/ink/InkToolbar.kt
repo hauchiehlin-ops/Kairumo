@@ -49,8 +49,11 @@ import uniffi.padnote_core.ToolKind
 enum class InkTool(val kind: ToolKind?, val labelKey: String) {
     FOUNTAIN_PEN(ToolKind.FOUNTAIN_PEN, "tool_pen"),
     BALLPOINT(ToolKind.BALL_POINT, "tool_ballpoint"),
+    BRUSH(ToolKind.BRUSH, "tool_brush"),
+    MARKER(ToolKind.MARKER, "tool_marker"),
     HIGHLIGHTER(ToolKind.HIGHLIGHTER, "tool_highlighter"),
     PENCIL(ToolKind.PENCIL, "tool_pencil"),
+    WATERCOLOR(ToolKind.WATERCOLOR, "tool_watercolor"),
 
     /** 擦除。`kind` 為 null —— 它不是一種筆刷。 */
     ERASER(null, "tool_eraser"),
@@ -67,17 +70,17 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
     /**
      * 跨平台對照閘門用的識別字（核心 `ffi_screens` 的 `editor.inktools`）。
      *
-     * **少的三支是真的少**：Apple 端還有毛筆、麥克筆與水彩（PencilKit 的
-     * 墨水類型），核心的 `ToolKind` 只有四種筆刷，Android 畫不出那三種。
-     * 那不是漏掉識別字，是功能還沒有 —— 所以它們留在閘門的 baseline 裡，
-     * 見 docs/android-parity-plan.md 階段 3。
+     * 九支工具與 Apple 端完全對齊（鋼筆、原子筆、毛筆、麥克筆、螢光筆、鉛筆、水彩、橡皮擦、套索）。
      */
     val parityIdentifier: String
         get() = when (this) {
             FOUNTAIN_PEN -> "editor.ink.pen"
             BALLPOINT -> "editor.ink.ballpoint"
+            BRUSH -> "editor.ink.brush"
+            MARKER -> "editor.ink.marker"
             HIGHLIGHTER -> "editor.ink.highlighter"
             PENCIL -> "editor.ink.pencil"
+            WATERCOLOR -> "editor.ink.watercolor"
             ERASER -> "editor.ink.eraser"
             LASSO -> "editor.ink.lasso"
         }
@@ -239,9 +242,13 @@ fun InkToolbar(
  */
 internal fun previewDiameter(tool: InkTool, width: Float): Float {
     val scale = when (tool) {
-        InkTool.BALLPOINT, InkTool.PENCIL -> 0.65f
+        InkTool.BALLPOINT -> 0.65f
+        InkTool.PENCIL -> 1.3f
         InkTool.FOUNTAIN_PEN -> 1.1f
+        InkTool.BRUSH -> 2.2f
+        InkTool.MARKER -> 2.8f
         InkTool.HIGHLIGHTER -> 3.8f
+        InkTool.WATERCOLOR -> 2.4f
         InkTool.ERASER -> 3.0f
         // 套索不畫東西，預覽點沒有意義；給 1.0 讓它顯示成一個中性的點。
         InkTool.LASSO -> 1.0f

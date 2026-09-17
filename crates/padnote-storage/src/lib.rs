@@ -9,4 +9,4 @@ pub mod package;
 
 pub use blob::{BlobId, BlobStore};
 pub use manifest::{Encryption, Manifest};
-pub use package::{NotebookPackage, StorageError};
+pub use package::{NotebookPackage, StorageError, archive_package, extract_package};

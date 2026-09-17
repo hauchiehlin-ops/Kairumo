@@ -29,6 +29,12 @@ pub enum Tool {
     Highlighter = 3,
     /// 紋理
     Pencil = 4,
+    /// 毛筆（彈性筆頭、強烈壓感）
+    Brush = 5,
+    /// 麥克筆（固定筆寬、色料飽和）
+    Marker = 6,
+    /// 水彩筆（半透擴散、隨壓感混色）
+    Watercolor = 7,
 }
 
 impl Tool {
@@ -38,13 +44,16 @@ impl Tool {
             2 => Self::BallPoint,
             3 => Self::Highlighter,
             4 => Self::Pencil,
+            5 => Self::Brush,
+            6 => Self::Marker,
+            7 => Self::Watercolor,
             _ => return None,
         })
     }
 
     /// 寬度是否隨壓感變化。
     pub fn is_pressure_sensitive(self) -> bool {
-        matches!(self, Self::FountainPen | Self::Pencil)
+        matches!(self, Self::FountainPen | Self::Pencil | Self::Brush | Self::Watercolor)
     }
 }
 

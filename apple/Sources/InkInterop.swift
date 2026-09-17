@@ -70,8 +70,8 @@ enum InkInterop {
     /// 與核心 `Tool::is_pressure_sensitive()` 一致。
     static func isPressureSensitive(_ tool: ToolKind) -> Bool {
         switch tool {
-        case .fountainPen, .pencil: return true
-        case .ballPoint, .highlighter: return false
+        case .fountainPen, .pencil, .brush, .watercolor: return true
+        case .ballPoint, .highlighter, .marker: return false
         }
     }
 
@@ -81,14 +81,14 @@ enum InkInterop {
         switch inkType {
         case .pen: return .fountainPen
         case .pencil: return .pencil
-        case .marker: return .highlighter
+        case .marker: return .marker
         default:
             // iOS 17 之後多出來的筆種。用 rawValue 比對，才不會為了幾個
             // 列舉值把整個檔案綁死在新版 SDK 上。
             switch inkType.rawValue {
             case "com.apple.ink.monoline": return .ballPoint
-            case "com.apple.ink.fountainpen": return .fountainPen
-            case "com.apple.ink.watercolor": return .highlighter
+            case "com.apple.ink.fountainpen": return .brush
+            case "com.apple.ink.watercolor": return .watercolor
             case "com.apple.ink.crayon": return .pencil
             default: return .fountainPen
             }
@@ -101,6 +101,19 @@ enum InkInterop {
         case .ballPoint: return .pen      // 固定寬度由壓感恆為 1 表現
         case .highlighter: return .marker
         case .pencil: return .pencil
+        case .brush:
+            if #available(iOS 17.0, *) {
+                return .fountainPen
+            } else {
+                return .pen
+            }
+        case .marker: return .marker
+        case .watercolor:
+            if #available(iOS 17.0, *) {
+                return .watercolor
+            } else {
+                return .marker
+            }
         }
     }
 

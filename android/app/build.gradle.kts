@@ -146,6 +146,10 @@ dependencies {
     // 也沒有 URLSession 的對應品 —— OkHttp 是這裡唯一實務上的選擇。
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // 折疊機的姿態（鉸鏈在哪、闔起還是攤開）。Configuration 只給得出寬度，
+    // 給不出「畫面中間橫著一條鉸鏈」—— 內容壓在鉸鏈上是折疊機最明顯的毛病。
+    implementation("androidx.window:window:1.3.0")
+
     // UniFFI 產生的 Kotlin 綁定透過 JNA 呼叫 libpadnote_core.so
     implementation("net.java.dev.jna:jna:5.15.0@aar")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")

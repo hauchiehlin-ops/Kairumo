@@ -236,16 +236,36 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawInkStroke(
     density: Float
 ) {
     if (points.size < 2) return
-    val pressureSensitive = tool == ToolKind.FOUNTAIN_PEN || tool == ToolKind.PENCIL
+    val pressureSensitive = when (tool) {
+        ToolKind.FOUNTAIN_PEN, ToolKind.PENCIL, ToolKind.BRUSH, ToolKind.WATERCOLOR -> true
+        ToolKind.BALL_POINT, ToolKind.HIGHLIGHTER, ToolKind.MARKER -> false
+    }
+    val toolColor = when (tool) {
+        ToolKind.HIGHLIGHTER -> color.copy(alpha = 0.35f)
+        ToolKind.WATERCOLOR -> color.copy(alpha = 0.55f)
+        ToolKind.MARKER -> color.copy(alpha = 0.85f)
+        ToolKind.PENCIL -> color.copy(alpha = 0.85f)
+        else -> color
+    }
+    val toolWidthMultiplier = when (tool) {
+        ToolKind.BRUSH -> 2.2f
+        ToolKind.MARKER -> 2.8f
+        ToolKind.HIGHLIGHTER -> 3.8f
+        ToolKind.PENCIL -> 1.3f
+        ToolKind.WATERCOLOR -> 2.4f
+        ToolKind.BALL_POINT -> 0.65f
+        ToolKind.FOUNTAIN_PEN -> 1.1f
+    }
+    val effectiveBaseWidth = baseWidth * toolWidthMultiplier
 
     // 逐段畫而不是一條 Path：寬度沿著筆畫變化，單一 Path 只能有一個寬度。
     for (i in 1 until points.size) {
         val a = points[i - 1]
         val b = points[i]
         val pressure = if (pressureSensitive) b.pressure.coerceIn(0f, 1f) else 1f
-        val width = baseWidth * (if (pressureSensitive) 0.35f + 0.65f * pressure else 1f)
+        val width = effectiveBaseWidth * (if (pressureSensitive) 0.35f + 0.65f * pressure else 1f)
         drawLine(
-            color = color,
+            color = toolColor,
             start = Offset(a.x * density, a.y * density),
             end = Offset(b.x * density, b.y * density),
             strokeWidth = width * density,

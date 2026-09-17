@@ -5,6 +5,47 @@
 
 ---
 
+## 2026-09-18（深夜）· S-81 / S-77 / S-94～S-98：跨平台畫面規格 100% 對齊，差距歸零
+
+### 一、棘輪 baseline 歸零（148 → 0）
+
+`docs/parity/baseline.json` 的 Apple 與 Android 陣列正式清空為 `[]`。
+這意味著 `crates/padnote-core/src/ffi_screens.rs` 中定義的全部畫面資訊架構、區塊順序與所有識別控制項，在 Apple（iOS / macOS）與 Android 雙端完全 1:1 實裝對齊。
+
+### 二、S-94：真正的 .padnote 筆記分享，不再是「掛名分享、實為 PDF」
+
+先前 Apple 的「分享筆記」實際上直接轉呼叫 `exportAsPdf()`，而 Android 根本沒有分享按鈕。
+現在：
+1. **核心**：`crates/padnote-storage/src/package.rs` 提供 `archive_package` 與 `extract_package`（透過 zip crate），在 UniFFI 暴露 `archive_notebook` / `extract_notebook`。
+2. **Apple**：`NotebookEditorView.swift` 透過 `NotebookPackageBridge.export` 封裝繪圖與附件至暫存目錄，以 `archiveNotebook` 壓縮成 `.padnote`，再呼叫系統 `ShareActivityView`。
+3. **Android**：`Exporter.kt` 封裝 `sharePackage` 與 `sharePackageIntent`，經由 FileProvider 輸出至 `cache/exports`，在 `MainActivity.kt` 接上 `editor.export.share` 與頂列 `editor.share` 按鈕。
+
+### 三、S-95：毛筆、麥克筆、水彩（Brush, Marker, Watercolor）跨平台實裝
+
+1. **核心**：`padnote-ink` 擴充 `Tool::Brush`（毛筆，壓感敏感）、`Tool::Marker`（麥克筆）、`Tool::Watercolor`（水彩，半透明塗層），`ToolKind` 同步擴充。
+2. **Apple**：`InkInterop.swift` 完整對齊七種筆刷，iOS 17+ 支援直接使用原生 `.fountainPen` / `.watercolor`。
+3. **Android**：`InkToolbar.kt` 擴充至七種筆刷，`InkCanvas.kt` 與 `InkSurfaceView.kt` 分別實作毛筆粗細壓感加權、麥克筆平整筆觸以及水彩 42% Alpha 混合效果。
+
+### 四、S-77：Android 折疊機（Foldable）姿態與鉸鏈避讓
+
+導入 `androidx.window:window:1.3.0`，在 `ui/FoldPosture.kt` 監聽 `FoldingFeature`：
+1. 分辨直立鉸鏈（Book Posture）與水平鉸鏈（Tabletop Posture）。
+2. 在 `MainActivity.kt:EditorWorkArea` 中，側欄可自動避開中線鉸鏈，或在鉸鏈分離模式下自動加入安全間距，避免折痕切斷畫布與工具。
+
+### 五、S-98：iPhone 小螢幕防擠壓全面收斂
+
+1. 3D 模型工作室（`Model3DStudioView`）針對 `compact` 寬度自動將固定寬度橫排改為上下堆疊（預覽高度固定 250pt + 下方控制項滑動）。
+2. 表格工作室（`TableStudioView`）將合併單元格按鈕群包裝在 `ViewThatFits` 內，在 390pt iPhone 上自動換行不破版。
+3. 驗證圖表、主題工具、文字工作室在窄版上的彈性佈局。
+
+### 六、手冊六語系同步與驗證
+
+1. 六國語系手冊全面對齊：7 支筆、折疊機適配、.padnote 筆記分享、資料夾側欄分頁。
+2. 執行 `scripts/sync-docs.sh`，更新 `apple/Resources/Docs` 與範本目錄。
+3. 執行全專案 Rust `cargo test --workspace`、Android `./gradlew testDebugUnitTest`、Apple `xcodebuild` 全部 100% 通過。
+
+---
+
 ## 2026-09-18（傍晚）· S-93：一本筆記裡可以有很多種頁，而且顏色是自己挑的
 
 ### 一、樣板原本是「開筆記本時選一次，整本就定了」
