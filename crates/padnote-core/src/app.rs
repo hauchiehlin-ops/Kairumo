@@ -252,6 +252,11 @@ impl NotebookSession {
                 self.index
                     .remove_page(&self.notebook.id.to_string(), &id.to_string());
             }
+            DocOp::MovePage { id, index } => {
+                // 頁不在（別台裝置刪掉了）就什麼也不做 —— 重播別人的
+                // oplog 時這是正常情況，不是錯誤。
+                self.notebook.move_page(*id, *index as usize);
+            }
 
             DocOp::AddTextBlock {
                 page,
@@ -865,6 +870,17 @@ impl NotebookSession {
 
     pub fn remove_page(&mut self, id: Uuid) -> Result<(), AppError> {
         self.record(vec![DocOp::RemovePage { id }])
+    }
+
+    /// 把某一頁搬到 `index`（S-87）。
+    ///
+    /// 頁不存在就什麼也不做 —— 不記一筆搬動不存在的頁的操作，
+    /// 那只會讓別台裝置重播時多做一次無效的工作。
+    pub fn move_page(&mut self, id: Uuid, index: u32) -> Result<(), AppError> {
+        if self.notebook.page(id).is_none() {
+            return Ok(());
+        }
+        self.record(vec![DocOp::MovePage { id, index }])
     }
 
     pub fn set_title(&mut self, title: &str) -> Result<(), AppError> {

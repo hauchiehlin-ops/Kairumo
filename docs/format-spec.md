@@ -174,9 +174,15 @@ C1（筆跡↔錄音跳轉）、C4（詞級時間戳）、A10（筆跡重播）�
 [1B 操作類型][操作內容…]
 ```
 
-32 種操作：
+34 種操作：
 
-**文件結構**：`SetTitle` / `AddPage` / `RemovePage` / `SetPageSize`
+**文件結構**：`SetTitle` / `AddPage` / `RemovePage` / `MovePage`（op 34，S-87）/
+`SetPageSize`
+
+> `MovePage` 只改頁面順序，內容原封不動。**舊版讀到 op 34 會整份拒絕**
+> （`UnknownOp`）—— 與先前每一次新增 op 相同，兩端要同版本發布。
+> 不用「刪掉再加回去」表示搬動：那樣會連同那一頁的區塊一起丟掉，
+> 而且在協同時會與別人的編輯打架。
 **內容區塊**：`AddTextBlock` / `AddTranscriptBlock` / `AddImageBlock` /
 `RemoveBlock` / `SetBlockStyle` / `SetBlockPosition` / `SetBlockAppearance` / `TextEdit`
 **錄音**：`StartAudio` / `EndAudio` / `AddWord`

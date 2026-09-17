@@ -28,6 +28,20 @@ pub enum DocOp {
     RemovePage {
         id: Uuid,
     },
+    /// 把某一頁搬到新的位置（S-87）。
+    ///
+    /// # 為什麼需要一個獨立的操作
+    ///
+    /// 「刪掉再加回去」看起來等價，實際上會丟掉那一頁的**內容**
+    /// （區塊住在頁面底下），而且在協同時會與別人的編輯打架。
+    /// 搬動只改順序，內容原封不動。
+    ///
+    /// 超出範圍的 `index` 一律夾到最後一頁 —— 兩台裝置對「最後」的
+    /// 認知可能差一頁（其中一台剛好多加了一頁），夾住才不會失敗。
+    MovePage {
+        id: Uuid,
+        index: u32,
+    },
     /// 文字區塊。內容本身由後續的 `TextEdit` 操作構成（CRDT）。
     AddTextBlock {
         page: Uuid,
@@ -264,6 +278,9 @@ const OP_SET_PAGE_SIZE: u8 = 30;
 const OP_SET_BLOCK_POSITION: u8 = 31;
 const OP_SET_BLOCK_APPEARANCE: u8 = 32;
 const OP_SET_NOTEBOOK_META: u8 = 33;
+/// S-87。**新增 op 代表舊版讀到它會整份拒絕**（`UnknownOp`），
+/// 與先前三十三個 op 的情況相同 —— 兩端要同版本發布。
+const OP_MOVE_PAGE: u8 = 34;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DocCodecError {
@@ -741,6 +758,9 @@ pub fn encode(ops: &[DocOp]) -> Vec<u8> {
             DocOp::RemovePage { id } => {
                 w.u8(OP_REMOVE_PAGE).uuid(*id);
             }
+            DocOp::MovePage { id, index } => {
+                w.u8(OP_MOVE_PAGE).uuid(*id).u32(*index);
+            }
             DocOp::AddTextBlock {
                 page,
                 id,
@@ -986,6 +1006,10 @@ pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
                 index: r.u32()?,
             },
             OP_REMOVE_PAGE => DocOp::RemovePage { id: r.uuid()? },
+            OP_MOVE_PAGE => DocOp::MovePage {
+                id: r.uuid()?,
+                index: r.u32()?,
+            },
             OP_ADD_TEXT_BLOCK => DocOp::AddTextBlock {
                 page: r.uuid()?,
                 id: r.uuid()?,
@@ -1205,6 +1229,11 @@ mod tests {
                 index: 1,
             },
             DocOp::RemovePage { id: uid(2) },
+            // S-87：搬動頁面也要能編解碼往返。
+            DocOp::MovePage {
+                id: uid(3),
+                index: 2,
+            },
             DocOp::AddTextBlock {
                 page: uid(1),
                 id: uid(10),

@@ -596,6 +596,19 @@ impl PadnoteSession {
         Ok(())
     }
 
+    /// 把某一頁搬到 `index`（S-87）。
+    ///
+    /// # 為什麼不是「刪掉再加回去」
+    ///
+    /// 那樣會連同那一頁的區塊一起丟掉，而且在協同時會與別人的編輯打架。
+    /// 搬動只改順序，內容原封不動 —— 而且這一筆會進 oplog，跟著同步走到
+    /// 別台裝置。Apple 端的頁面順序住在自己的檔案裡（`{id}_p{n}.drawing`），
+    /// 所以它不必用這一支；Android 的頁面住在核心裡，沒有它就搬不動。
+    pub fn move_page(&self, page_id: String, index: u32) -> Result<(), FfiError> {
+        self.lock().move_page(parse_uuid(&page_id)?, index)?;
+        Ok(())
+    }
+
     /// 用指定的 id 新增一頁；已經有同 id 的頁時什麼也不做。
     ///
     /// 頁面身分必須跟著筆記走，不是跟著某一次匯出走 —— 每次重建都隨機生一批

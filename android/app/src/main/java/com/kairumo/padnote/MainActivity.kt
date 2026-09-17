@@ -1294,6 +1294,27 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     var lowLatency by remember { mutableStateOf(false) }
     var lowLatencyUnavailable by remember { mutableStateOf(false) }
     var revision by remember { mutableIntStateOf(0) }
+
+    /**
+     * 把第 `from` 頁搬到 `to`（S-86／S-87）。
+     *
+     * 走核心的 `movePage` —— 它會記進 oplog，所以這個順序**跟著同步走到
+     * 別台裝置**。Apple 端的頁面順序住在它自己的檔案裡，所以那邊不必用
+     * 這一支；Android 的頁面住在核心裡，沒有它就搬不動。
+     */
+    fun movePage(from: Int, to: Int) {
+        val session = notebook?.first ?: return
+        if (from == to) return
+        val pageId = runCatching { session.pageIdAt(from.toUInt()) }.getOrNull() ?: return
+        runCatching { session.movePage(pageId, to.toUInt()) }
+            .onSuccess {
+                // 跟著搬過去 —— 停在原本的索引會變成「我搬了一頁，
+                // 畫面卻跳到別頁」。
+                pageIndex = to.coerceIn(0, maxOf(0, pageCount - 1))
+                revision++
+            }
+    }
+
     var clearToken by remember { mutableIntStateOf(0) }
 
     // 把這一頁已經存在檔案裡的筆畫讀回來。
@@ -2095,6 +2116,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                                 pageIndex = pageCount - 1
                             }
                         },
+                        onMovePage = { from, to -> movePage(from, to) },
                         onClose = { showPageSidebar = false }
                     )
                 }
@@ -2216,6 +2238,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                             pageIndex = pageCount - 1
                         }
                     },
+                    onMovePage = { from, to -> movePage(from, to) },
                     onClose = { showPageSidebar = false }
                 )
             }
@@ -2710,6 +2733,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                         }
                         showPageSidebar = false
                     },
+                    onMovePage = { from, to -> movePage(from, to) },
                     onClose = { showPageSidebar = false }
                 )
             }

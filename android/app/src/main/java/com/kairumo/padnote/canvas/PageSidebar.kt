@@ -1,5 +1,10 @@
 package com.kairumo.padnote.canvas
 
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -70,9 +75,27 @@ fun PageSidebar(
     l: (String) -> String,
     onSelectPage: (Int) -> Unit,
     onAddPage: () -> Unit,
+    /** 把第 from 頁搬到 to（S-86／S-87）。核心的 `movePage` 會記進 oplog。 */
+    onMovePage: (Int, Int) -> Unit = { _, _ -> },
     onClose: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
+    // 縮圖大小。與 Apple 的側欄一樣可調 —— 十二頁的筆記在小縮圖下看不出
+    // 哪一頁是哪一頁，而放大之後一次又只看得到兩頁。讓使用者自己決定。
+    val context = LocalContext.current
+    var thumbWidth by remember {
+        mutableFloatStateOf(
+            context.getSharedPreferences("kairumo_editor", android.content.Context.MODE_PRIVATE)
+                .getFloat("sidebarThumbWidth", 160f)
+        )
+    }
+
+    fun saveThumbWidth(value: Float) {
+        thumbWidth = value
+        context.getSharedPreferences("kairumo_editor", android.content.Context.MODE_PRIVATE)
+            .edit().putFloat("sidebarThumbWidth", value).apply()
+    }
+
     Column(
         modifier = modifier
             .width(DS.Layout.sidebarWidth)
@@ -90,6 +113,15 @@ fun PageSidebar(
                 style = MaterialTheme.typography.titleSmall,
                 modifier = Modifier.weight(1f)
             )
+            // 縮圖大小。與 Apple 的 thumb_smaller / thumb_larger 對應。
+            TextButton(
+                onClick = { saveThumbWidth((thumbWidth - 40f).coerceAtLeast(120f)) },
+                modifier = Modifier.testTag("editor.sidebar.thumb_smaller")
+            ) { Text("−", style = MaterialTheme.typography.titleSmall) }
+            TextButton(
+                onClick = { saveThumbWidth((thumbWidth + 40f).coerceAtMost(320f)) },
+                modifier = Modifier.testTag("editor.sidebar.thumb_larger")
+            ) { Text("+", style = MaterialTheme.typography.titleSmall) }
             if (onClose != null) {
                 TextButton(onClick = onClose) { Text(l("close")) }
             }
@@ -97,7 +129,7 @@ fun PageSidebar(
         HorizontalDivider()
 
         LazyColumn(
-            modifier = Modifier.weight(1f).fillMaxWidth(),
+            modifier = Modifier.weight(1f).fillMaxWidth().testTag("editor.sidebar.list"),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(DS.Space.m),
             verticalArrangement = Arrangement.spacedBy(DS.Space.m)
         ) {
@@ -107,7 +139,11 @@ fun PageSidebar(
                     index = index,
                     isCurrent = index == pageIndex,
                     revision = revision,
-                    onClick = { onSelectPage(index) }
+                    pageCount = maxOf(1, pageCount),
+                    thumbWidth = thumbWidth,
+                    l = l,
+                    onClick = { onSelectPage(index) },
+                    onMovePage = onMovePage
                 )
             }
         }
@@ -120,13 +156,18 @@ fun PageSidebar(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PageSidebarRow(
     session: PadnoteSession?,
     index: Int,
     isCurrent: Boolean,
     revision: Int,
-    onClick: () -> Unit
+    pageCount: Int,
+    thumbWidth: Float,
+    l: (String) -> String,
+    onClick: () -> Unit,
+    onMovePage: (Int, Int) -> Unit
 ) {
     val context = LocalContext.current
     var thumb by remember(index, revision) { mutableStateOf<ImageBitmap?>(null) }
@@ -156,11 +197,39 @@ private fun PageSidebarRow(
         }
     }
 
+    // 長按開選單：往前搬、往後搬、搬到最前、搬到最後。
+    //
+    // Apple 端是右鍵／長按快顯 + 拖曳換位；Android 這一版先做快顯 ——
+    // 拖曳換位要與 LazyColumn 的捲動搶手勢，那是另一件事（記在 TODO）。
+    var menu by remember(index) { mutableStateOf(false) }
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .width(thumbWidth.dp)
+            .combinedClickable(onClick = onClick, onLongClick = { menu = true })
     ) {
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(
+                text = { Text(l("move_page_up")) },
+                enabled = index > 0,
+                onClick = { menu = false; onMovePage(index, index - 1) }
+            )
+            DropdownMenuItem(
+                text = { Text(l("move_page_down")) },
+                enabled = index < pageCount - 1,
+                onClick = { menu = false; onMovePage(index, index + 1) }
+            )
+            DropdownMenuItem(
+                text = { Text(l("move_page_to_top")) },
+                enabled = index > 0,
+                onClick = { menu = false; onMovePage(index, 0) }
+            )
+            DropdownMenuItem(
+                text = { Text(l("move_page_to_bottom")) },
+                enabled = index < pageCount - 1,
+                onClick = { menu = false; onMovePage(index, pageCount - 1) }
+            )
+        }
         Text(
             "P.${index + 1}",
             style = MaterialTheme.typography.labelSmall,
