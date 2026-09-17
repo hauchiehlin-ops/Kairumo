@@ -914,7 +914,7 @@ impl NotebookSession {
         for block in blocks {
             let new_id = match &block.kind {
                 padnote_doc::BlockKind::Text { content, style } => {
-                    Some(target.add_text_block(new_page, content, style.clone())?)
+                    Some(target.add_text_block(new_page, content, *style)?)
                 }
                 padnote_doc::BlockKind::Image {
                     blob,
@@ -922,10 +922,10 @@ impl NotebookSession {
                     height,
                 } => {
                     // blob 先搬過去。內容定址，所以目標套件裡的 id 會一樣。
-                    if let Some(id) = padnote_storage::BlobId::from_hex(blob) {
-                        if let Ok(bytes) = self.package.blobs().get(id) {
-                            let _ = target.package.blobs().put(&bytes);
-                        }
+                    if let Some(id) = padnote_storage::BlobId::from_hex(blob)
+                        && let Ok(bytes) = self.package.blobs().get(id)
+                    {
+                        let _ = target.package.blobs().put(&bytes);
                     }
                     Some(target.add_image_block(new_page, blob, *width, *height)?)
                 }
