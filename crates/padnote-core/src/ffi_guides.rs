@@ -82,6 +82,68 @@ pub struct FfiGuide {
     pub align: u32,
 }
 
+/// 一組版面配色。
+///
+/// # 為什麼顏色要出現在核心
+///
+/// 前一版說的是「核心只說輕重，不說顏色」—— 那是對的，當顏色只有「淡一點、
+/// 深一點」的時候。使用者現在要**選**配色，而一組配色是六個平台都要拿到
+/// 同一份的資料：兩邊各挑各的色票，同一本筆記在兩台裝置上會是兩個顏色。
+///
+/// 深淺仍然是平台的事：這裡給的是**色相**，平台自己決定在深色模式下要
+/// 用多少不透明度。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiGuidePalette {
+    pub id: String,
+    /// 顯示名稱的語系鍵。
+    pub name_key: String,
+    /// 主色（區塊界線、標題底線）。`RRGGBB`。
+    pub accent_hex: String,
+    /// 標題底色條。
+    pub band_hex: String,
+    /// 格線與欄線。
+    pub line_hex: String,
+    /// 欄位標題的文字。
+    pub text_hex: String,
+}
+
+fn palette(id: &str, accent: &str, band: &str, line: &str, text: &str) -> FfiGuidePalette {
+    FfiGuidePalette {
+        id: id.to_string(),
+        name_key: format!("palette_{id}"),
+        accent_hex: accent.to_string(),
+        band_hex: band.to_string(),
+        line_hex: line.to_string(),
+        text_hex: text.to_string(),
+    }
+}
+
+/// 全部配色，順序即顯示順序。第一個是預設。
+///
+/// 六組都刻意選了**低彩度的線條色 + 更低彩度的底色條**：版面是拿來對齊的
+/// 參考，不是內容。一組飽和的橘線畫在紙上，寫上去的字會變成第二顯眼的東西。
+#[uniffi::export]
+pub fn guide_palettes() -> Vec<FfiGuidePalette> {
+    vec![
+        // 石墨：中性，跟任何墨色都不打架。
+        palette("graphite", "4A5568", "EDF0F4", "8A94A6", "3D4658"),
+        palette("indigo", "4C51BF", "EEF0FB", "8890D8", "3C4191"),
+        palette("teal", "2C7A7B", "E6F4F4", "6FB0B1", "225C5D"),
+        palette("rose", "B83280", "FBEDF5", "D98CBB", "8C2662"),
+        palette("amber", "B7791F", "FBF3E4", "D9AE6B", "8A5B17"),
+        palette("forest", "2F855A", "E9F5EE", "76B394", "236443"),
+    ]
+}
+
+/// 依識別字取配色。認不得的回第一組 —— 未知的顏色不該讓版面消失。
+#[uniffi::export]
+pub fn guide_palette(id: String) -> FfiGuidePalette {
+    guide_palettes()
+        .into_iter()
+        .find(|p| p.id == id)
+        .unwrap_or_else(|| guide_palettes().remove(0))
+}
+
 // ---- 內部：用 0–1 的比例寫版面 ----
 
 const LEFT: u32 = 0;
@@ -724,5 +786,33 @@ mod tests {
         ] {
             assert!(guides(id).len() > 3, "{id} 幾乎沒有版面");
         }
+    }
+
+    #[test]
+    fn every_palette_is_a_six_digit_hex_and_the_ids_are_unique() {
+        let all = guide_palettes();
+        assert!(all.len() >= 4);
+        let mut ids: Vec<String> = all.iter().map(|p| p.id.clone()).collect();
+        ids.sort();
+        let before = ids.len();
+        ids.dedup();
+        assert_eq!(ids.len(), before, "配色的識別字重複了");
+        for p in &all {
+            for hex in [&p.accent_hex, &p.band_hex, &p.line_hex, &p.text_hex] {
+                assert_eq!(hex.len(), 6, "{} 的 {hex} 不是六位十六進位", p.id);
+                assert!(
+                    hex.chars().all(|c| c.is_ascii_hexdigit()),
+                    "{} 的 {hex} 有非十六進位字元", p.id
+                );
+            }
+            assert_eq!(p.name_key, format!("palette_{}", p.id));
+        }
+    }
+
+    #[test]
+    fn an_unknown_palette_falls_back_instead_of_vanishing() {
+        assert_eq!(guide_palette("no_such".into()).id, guide_palettes()[0].id);
+        assert_eq!(guide_palette(String::new()).id, guide_palettes()[0].id);
+        assert_eq!(guide_palette("rose".into()).id, "rose");
     }
 }

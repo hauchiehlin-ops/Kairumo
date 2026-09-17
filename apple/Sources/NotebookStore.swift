@@ -183,11 +183,11 @@ public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
     ]
 
     /// 與語言無關的識別字，對應核心 `paperTemplates()` 的 `id`。
-    public var paperId: String { Self.legacyPaperId[self] ?? rawValue }
+    nonisolated public var paperId: String { Self.legacyPaperId[self] ?? rawValue }
 
     /// 從核心的識別字還原。認不得就是 nil —— 悄悄退回空白紙的話，
     /// 核心新增一種紙、平台忘了跟上時不會有人發現。
-    public init?(paperId: String) {
+    public nonisolated init?(paperId: String) {
         guard let match = NoteTemplate.allCases.first(where: { $0.paperId == paperId })
         else { return nil }
         self = match
@@ -201,9 +201,9 @@ public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
     ///
     /// 查表而不是再寫一份 switch：圖示、主題、底紋三件事各寫一份 switch 的
     /// 結果，是核心改了其中一項而平台沒跟上 —— 而那只會在那一種紙上看得到。
-    private var entry: FfiPaperTemplate? { NoteTemplate.catalog[paperId] }
+    nonisolated private var entry: FfiPaperTemplate? { NoteTemplate.catalog[paperId] }
 
-    public var ffiTheme: FfiPaperTheme { entry?.theme ?? .general }
+    nonisolated public var ffiTheme: FfiPaperTheme { entry?.theme ?? .general }
 
     /// 素材庫那一組分類只對得上其中三個主題，對不上的回 nil。
     public var category: NoteThemeCategory? {
@@ -215,14 +215,14 @@ public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    public var iconName: String { entry?.iconApple ?? "doc.plaintext" }
+    nonisolated public var iconName: String { entry?.iconApple ?? "doc.plaintext" }
 
-    public var localizationKey: String { entry?.titleKey ?? "tmpl_blank" }
+    nonisolated public var localizationKey: String { entry?.titleKey ?? "tmpl_blank" }
 
-    public var descriptionLocalizationKey: String { entry?.descKey ?? "tmpl_blank_desc" }
+    nonisolated public var descriptionLocalizationKey: String { entry?.descKey ?? "tmpl_blank_desc" }
 
     /// 這張紙的底紋。畫布與縮圖都照它鋪材質。
-    public var pageStyle: PageStyle { entry?.pageStyle ?? .blank }
+    nonisolated public var pageStyle: PageStyle { entry?.pageStyle ?? .blank }
 
     /// 顯示用的說明。**跟著語系走** —— 原本這裡是一串中文字面值，
     /// 於是介面切到英文時，樣板名稱翻了、說明沒翻。
@@ -305,6 +305,22 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     /// 必須是 Optional：舊檔沒有這個欄位（見 `canvasRotation` 的說明）。
     public var audioAttachments: [NoteAudioAttachment]?
 
+    /// 每一頁各自的紙張樣板 id。
+    ///
+    /// # 為什麼需要逐頁
+    ///
+    /// `template` 是**整本**的選擇，而一本會議紀錄的第一頁想用四象限、
+    /// 後面幾頁想用橫線，這件事原本做不到 —— 選完樣板進去之後，整本就定了。
+    ///
+    /// 陣列長度可以短於頁數（舊筆記根本沒有這個欄位），取不到的那幾頁
+    /// 退回整本的 `template` —— 那正是它們原本的樣子。
+    public var pagePaperIds: [String]?
+
+    /// 版面的配色。nil 是預設那一組。
+    ///
+    /// 整本一個而不是逐頁：同一本筆記裡每頁不同顏色不是「豐富」，是雜亂。
+    public var guidePaletteId: String?
+
     /// 手寫辨識出來的文字，逐頁一份：`["頁次": "辨識結果"]`。
     ///
     /// **只用來搜尋，不會取代任何一筆畫。** 手寫筆記的價值就在那個手寫，
@@ -358,6 +374,29 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     public var titleKey: String?
     /// 系統預設摘要的語系鍵，語意同 `titleKey`。
     public var snippetKey: String?
+
+    /// 某一頁用的紙張樣板 id。取不到就是整本的那一個。
+    public nonisolated func paperId(forPage index: Int) -> String {
+        if let ids = pagePaperIds, index >= 0, index < ids.count, !ids[index].isEmpty {
+            return ids[index]
+        }
+        return template.paperId
+    }
+
+    /// 某一頁的底紋。認不得的 id 退回整本的樣板 —— 未知的底紋比沒有底紋難解釋。
+    public nonisolated func pageStyle(forPage index: Int) -> PageStyle {
+        NoteTemplate(paperId: paperId(forPage: index))?.pageStyle ?? template.pageStyle
+    }
+
+    /// 把逐頁樣板陣列補到指定長度。
+    ///
+    /// 補的是整本的樣板，不是空字串：長度不足時取不到的那幾頁本來就是照
+    /// 整本的樣板畫的，補一個空字串會讓它在某些路徑上變成「認不得的紙」。
+    public nonisolated mutating func padPagePaperIds(to count: Int) {
+        var ids = pagePaperIds ?? []
+        while ids.count < count { ids.append(template.paperId) }
+        pagePaperIds = ids
+    }
 
     /// 顯示用標題：系統預設標題會跟著介面語言走。
     @MainActor
@@ -1616,6 +1655,10 @@ public final class NotebookStore: ObservableObject {
             heights.append(1800.0)
         }
         notebooks[idx].pageHeights = heights
+        // 逐頁樣板也要跟著長一格，否則新頁在陣列裡取不到、退回整本的樣板 ——
+        // 那在「這一頁想用別的格式」之後就是錯的。
+        notebooks[idx].padPagePaperIds(to: oldPageCount)
+        notebooks[idx].pagePaperIds?.append(notebooks[idx].template.paperId)
         notebooks[idx].lastModifiedDate = Date()
 
         let newPageIndex = newPageCount - 1
@@ -1627,7 +1670,7 @@ public final class NotebookStore: ObservableObject {
 
     /// 在指定頁面後方插入新頁面，平移後續頁面並回傳新插入頁面之 pageIndex
     @discardableResult
-    public func insertPage(notebookId: String, afterIndex: Int) -> Int {
+    public func insertPage(notebookId: String, afterIndex: Int, paperId: String? = nil) -> Int {
         guard let idx = notebooks.firstIndex(where: { $0.id == notebookId }) else { return 0 }
         let oldPageCount = max(1, notebooks[idx].pageCount)
         let newPageCount = oldPageCount + 1
@@ -1650,6 +1693,11 @@ public final class NotebookStore: ObservableObject {
         }
         heights.insert(1800.0, at: insertIndex)
         notebooks[idx].pageHeights = heights
+
+        notebooks[idx].padPagePaperIds(to: oldPageCount)
+        notebooks[idx].pagePaperIds?.insert(
+            paperId ?? notebooks[idx].template.paperId,
+            at: min(insertIndex, notebooks[idx].pagePaperIds?.count ?? 0))
 
         // 每一種附件都要重新對齊頁碼。
         //
@@ -1754,6 +1802,10 @@ public final class NotebookStore: ObservableObject {
         if pageIndex < notebooks[idx].pagesData.count {
             notebooks[idx].pagesData.remove(at: pageIndex)
         }
+        if var ids = notebooks[idx].pagePaperIds, pageIndex < ids.count {
+            ids.remove(at: pageIndex)
+            notebooks[idx].pagePaperIds = ids
+        }
 
         let newPageCount = total - 1
         notebooks[idx].pageCount = newPageCount
@@ -1852,6 +1904,12 @@ public final class NotebookStore: ObservableObject {
             let d = notebooks[idx].pagesData.remove(at: from)
             notebooks[idx].pagesData.insert(d, at: to)
         }
+        notebooks[idx].padPagePaperIds(to: total)
+        if var ids = notebooks[idx].pagePaperIds, from < ids.count, to < ids.count {
+            let moved = ids.remove(at: from)
+            ids.insert(moved, at: to)
+            notebooks[idx].pagePaperIds = ids
+        }
 
         // 3. 九種附件。
         notebooks[idx].attachments = Self.shiftPages(
@@ -1936,6 +1994,12 @@ public final class NotebookStore: ObservableObject {
             } else {
                 notebooks[targetIdx].pagesData.append(PKDrawing().dataRepresentation())
             }
+
+            // 紙張跟著頁走。不帶的話，一張四象限搬到別本之後會變成那本的
+            // 預設紙 —— 使用者搬的是「那一頁」，不是「那一頁上的字」。
+            let carried = notebooks[sourceIdx].paperId(forPage: from)
+            notebooks[targetIdx].padPagePaperIds(to: to)
+            notebooks[targetIdx].pagePaperIds?.append(carried)
 
             // 3. 九種附件。
             notebooks[targetIdx].attachments = Self.appendCopies(
@@ -2047,6 +2111,13 @@ public final class NotebookStore: ObservableObject {
         let copyHeight = heights[pageIndex]
         heights.insert(copyHeight, at: pageIndex + 1)
         notebooks[idx].pageHeights = heights
+
+        // 複本要跟原本那一頁同一種紙 —— 不然「建立此頁副本」會得到一張
+        // 版面不一樣的頁。
+        let sourcePaper = notebooks[idx].paperId(forPage: pageIndex)
+        notebooks[idx].padPagePaperIds(to: total)
+        notebooks[idx].pagePaperIds?.insert(
+            sourcePaper, at: min(pageIndex + 1, notebooks[idx].pagePaperIds?.count ?? 0))
 
         // 附件的頁碼也要讓出一格。
         //

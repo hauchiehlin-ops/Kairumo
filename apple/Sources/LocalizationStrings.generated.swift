@@ -3271,6 +3271,14 @@ extension LocalizationManager {
             .ko: "담당",
             .th: "ผู้รับผิดชอบ"
         ],
+        "guide_palette": [
+            .zhHant: "版面色彩",
+            .en: "Guide Colour",
+            .zhHans: "版面色彩",
+            .ja: "罫線の色",
+            .ko: "안내선 색",
+            .th: "สีเส้นนำ"
+        ],
         "guide_pm": [
             .zhHant: "下午",
             .en: "PM",
@@ -4102,6 +4110,14 @@ extension LocalizationManager {
             .ja: "後ろに新規ページを挿入",
             .ko: "뒤에 새 페이지 삽입",
             .th: "แทรกหน้าใหม่หลังจากนี้"
+        ],
+        "insert_page_with_template": [
+            .zhHant: "插入其他樣板頁面…",
+            .en: "Insert Page with Template…",
+            .zhHans: "插入其他样板页面…",
+            .ja: "テンプレートを選んでページを挿入…",
+            .ko: "템플릿을 골라 페이지 삽입…",
+            .th: "แทรกหน้าด้วยเทมเพลต…"
         ],
         "insert_swatch": [
             .zhHant: "插入色票卡",
@@ -5775,6 +5791,14 @@ extension LocalizationManager {
             .ko: "페이지",
             .th: "หน้า"
         ],
+        "palette_amber": [
+            .zhHant: "琥珀",
+            .en: "Amber",
+            .zhHans: "琥珀",
+            .ja: "アンバー",
+            .ko: "앰버",
+            .th: "อำพัน"
+        ],
         "palette_business": [
             .zhHant: "經典商務",
             .en: "Business",
@@ -5782,6 +5806,30 @@ extension LocalizationManager {
             .ja: "ビジネス",
             .ko: "비즈니스",
             .th: "ธุรกิจ"
+        ],
+        "palette_forest": [
+            .zhHant: "森綠",
+            .en: "Forest",
+            .zhHans: "森绿",
+            .ja: "フォレスト",
+            .ko: "포레스트",
+            .th: "เขียวป่า"
+        ],
+        "palette_graphite": [
+            .zhHant: "石墨",
+            .en: "Graphite",
+            .zhHans: "石墨",
+            .ja: "グラファイト",
+            .ko: "그래파이트",
+            .th: "กราไฟต์"
+        ],
+        "palette_indigo": [
+            .zhHant: "靛藍",
+            .en: "Indigo",
+            .zhHans: "靛蓝",
+            .ja: "インディゴ",
+            .ko: "인디고",
+            .th: "คราม"
         ],
         "palette_morandi": [
             .zhHant: "莫蘭迪系",
@@ -5807,6 +5855,14 @@ extension LocalizationManager {
             .ko: "파스텔",
             .th: "พาสเทล"
         ],
+        "palette_rose": [
+            .zhHant: "玫瑰",
+            .en: "Rose",
+            .zhHans: "玫瑰",
+            .ja: "ローズ",
+            .ko: "로즈",
+            .th: "กุหลาบ"
+        ],
         "palette_swatches": [
             .zhHant: "經典色卡庫",
             .en: "Color Palettes",
@@ -5814,6 +5870,14 @@ extension LocalizationManager {
             .ja: "配色パレット",
             .ko: "색상 팔레트",
             .th: "จานสีคลาสสิก"
+        ],
+        "palette_teal": [
+            .zhHant: "青綠",
+            .en: "Teal",
+            .zhHans: "青绿",
+            .ja: "ティール",
+            .ko: "틸",
+            .th: "เขียวน้ำทะเล"
         ],
         "palette_tip": [
             .zhHant: "點選色彩可吸取 / 點「插入」貼至畫布",

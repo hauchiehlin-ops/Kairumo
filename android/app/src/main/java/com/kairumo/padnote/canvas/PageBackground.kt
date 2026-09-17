@@ -16,8 +16,10 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.ink.PageGeometry
 import uniffi.padnote_core.FfiGuideKind
+import uniffi.padnote_core.FfiGuidePalette
 import uniffi.padnote_core.FfiGuideTone
 import uniffi.padnote_core.PageStyle
+import uniffi.padnote_core.guidePalette
 import uniffi.padnote_core.pageGuides
 
 /**
@@ -81,11 +83,13 @@ fun DrawScope.drawPageBackground(
     paperId: String = "",
     /** 版面上的文字要翻譯。沒有它的話欄位標題會是一串語系鍵。 */
     localize: (String) -> String = { it },
-    textMeasurer: TextMeasurer? = null
+    textMeasurer: TextMeasurer? = null,
+    /** 版面配色（核心 `guidePalettes()` 的 id）。空字串是預設那一組。 */
+    paletteId: String = ""
 ) {
     drawPageStyle(style, density, pageWidth, pageHeight)
     if (paperId.isNotEmpty()) {
-        drawPageGuides(paperId, density, pageWidth, pageHeight, localize, textMeasurer)
+        drawPageGuides(paperId, density, pageWidth, pageHeight, localize, textMeasurer, paletteId)
     }
 }
 
@@ -109,9 +113,14 @@ private fun DrawScope.drawPageGuides(
     pageWidth: Float,
     pageHeight: Float,
     localize: (String) -> String,
-    textMeasurer: TextMeasurer?
+    textMeasurer: TextMeasurer?,
+    paletteId: String
 ) {
     val guides = runCatching { pageGuides(paperId, pageWidth, pageHeight) }.getOrNull() ?: return
+    val palette = runCatching { guidePalette(paletteId) }.getOrNull()
+    // 色相來自核心（使用者選的那一組），深淺留在這裡 —— 同一個色相在深色
+    // 模式下要淡得多，而那是平台的事。
+    val tone = { t: FfiGuideTone -> guideColor(t, palette) }
     for (g in guides) {
         val x = g.x * scale
         val y = g.y * scale
@@ -119,14 +128,14 @@ private fun DrawScope.drawPageGuides(
         val h = g.h * scale
         when (g.kind) {
             FfiGuideKind.LINE -> drawLine(
-                guideColor(g.tone),
+                tone(g.tone),
                 Offset(x, y),
                 Offset(x + w, y + h),
                 strokeWidth = g.weight
             )
 
             FfiGuideKind.RECT -> drawRoundRect(
-                color = guideColor(g.tone),
+                color = tone(g.tone),
                 topLeft = Offset(x, y),
                 size = Size(w, h),
                 cornerRadius = CornerRadius(g.size * scale),
@@ -135,14 +144,14 @@ private fun DrawScope.drawPageGuides(
 
             FfiGuideKind.FILL_RECT -> drawRoundRect(
                 // 標題底色條。比最淡的線還淡 —— 它是背景，不是內容。
-                color = Color(0x0F000000),
+                color = palette?.let { hexColor(it.bandHex, 0.55f) } ?: Color(0x0F000000),
                 topLeft = Offset(x, y),
                 size = Size(w, h),
                 cornerRadius = CornerRadius(g.size * scale)
             )
 
             FfiGuideKind.CHECKBOX -> drawRoundRect(
-                color = guideColor(FfiGuideTone.LIGHT),
+                color = tone(FfiGuideTone.LIGHT),
                 topLeft = Offset(x, y),
                 size = Size(w, h),
                 cornerRadius = CornerRadius(minOf(3f * scale, w * 0.25f)),
@@ -150,7 +159,7 @@ private fun DrawScope.drawPageGuides(
             )
 
             FfiGuideKind.DOT -> drawCircle(
-                guideColor(g.tone),
+                tone(g.tone),
                 radius = w / 2f,
                 center = Offset(x + w / 2f, y + w / 2f)
             )
@@ -174,7 +183,7 @@ private fun DrawScope.drawPageGuides(
                 }
                 drawText(
                     textLayoutResult = layout,
-                    color = guideColor(FfiGuideTone.MUTED),
+                    color = tone(FfiGuideTone.MUTED),
                     topLeft = Offset(originX, y - layout.size.height)
                 )
             }
@@ -182,11 +191,33 @@ private fun DrawScope.drawPageGuides(
     }
 }
 
-private fun guideColor(tone: FfiGuideTone): Color = when (tone) {
-    FfiGuideTone.HAIRLINE -> Color(0x24000000)
-    FfiGuideTone.LIGHT -> Color(0x47000000)
-    FfiGuideTone.ACCENT -> Color(0x733F51B5)
-    FfiGuideTone.MUTED -> Color(0xA6000000)
+private fun guideColor(tone: FfiGuideTone, palette: FfiGuidePalette?): Color {
+    if (palette == null) {
+        return when (tone) {
+            FfiGuideTone.HAIRLINE -> Color(0x24000000)
+            FfiGuideTone.LIGHT -> Color(0x47000000)
+            FfiGuideTone.ACCENT -> Color(0x733F51B5)
+            FfiGuideTone.MUTED -> Color(0xA6000000)
+        }
+    }
+    return when (tone) {
+        FfiGuideTone.HAIRLINE -> hexColor(palette.lineHex, 0.30f)
+        FfiGuideTone.LIGHT -> hexColor(palette.lineHex, 0.55f)
+        FfiGuideTone.ACCENT -> hexColor(palette.accentHex, 0.75f)
+        FfiGuideTone.MUTED -> hexColor(palette.textHex, 0.85f)
+    }
+}
+
+/** `RRGGBB` + 不透明度。解析不出來時回一個看得見的灰，不是透明 —— 
+ *  透明的版面等於沒有版面，而使用者會以為樣板壞了。 */
+private fun hexColor(hex: String, alpha: Float): Color {
+    val value = hex.toLongOrNull(16) ?: return Color(0x47000000)
+    return Color(
+        red = ((value shr 16) and 0xFF) / 255f,
+        green = ((value shr 8) and 0xFF) / 255f,
+        blue = (value and 0xFF) / 255f,
+        alpha = alpha
+    )
 }
 
 /** 與 Apple 端 `NotebookEditorView` 的底紋繪製對應的六種。 */

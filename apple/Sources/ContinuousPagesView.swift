@@ -37,7 +37,8 @@ public enum PageDisplayMode: String, CaseIterable {
 struct ContinuousPageView<ObjectLayer: View>: View {
     let pageIndex: Int
     let notebookId: String
-    let template: NoteTemplate
+    let paperId: String
+    let paletteId: String?
     let store: NotebookStore
 
     let selectedTool: EditorToolType
@@ -78,7 +79,8 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 selectedColor: selectedColor,
                 strokeWidth: strokeWidth,
                 isRulerActive: isRulerActive,
-                template: template,
+                paperId: paperId,
+                paletteId: paletteId,
                 pageHeight: PageGeometry.height,
                 editorMode: editorMode,
                 // 裡層不捲 —— 外面那個 ScrollView 才是捲動的主體。

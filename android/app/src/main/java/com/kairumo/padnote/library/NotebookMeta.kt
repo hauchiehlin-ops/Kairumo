@@ -42,6 +42,14 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         private const val KEY_TEMPLATE = "template"
 
         /**
+         * 逐頁的紙張樣板 id 與版面配色。鍵名與 Apple 的
+         * `NotebookMeta.pageTemplates` / `guidePalette` 一致 —— 這份中繼資料
+         * 是同步的，鍵名不一樣等於兩邊各存各的。
+         */
+        private const val KEY_PAGE_TEMPLATES = "pageTemplates"
+        private const val KEY_PALETTE = "guidePalette"
+
+        /**
          * 連結卡片。**鍵名與 Apple 的 `NotebookMeta.linkAttachments` 一致** ——
          * 這份中繼資料是同步的，鍵名不一樣等於兩邊各存各的。
          */
@@ -65,6 +73,24 @@ class NotebookMeta private constructor(private val root: JSONObject) {
      */
     fun paperId(): String =
         uniffi.padnote_core.paperIdFromStored(root.optString(KEY_TEMPLATE, ""))
+
+    /**
+     * 某一頁用的紙張。取不到就是整本的那一張 —— 舊筆記沒有逐頁欄位，
+     * 而它們每一頁本來就是照整本的樣板畫的。
+     */
+    fun paperId(pageIndex: Int): String {
+        val arr = root.optJSONArray(KEY_PAGE_TEMPLATES)
+        val raw = if (arr != null && pageIndex >= 0 && pageIndex < arr.length()) {
+            arr.optString(pageIndex, "")
+        } else {
+            ""
+        }
+        if (raw.isNotEmpty()) return uniffi.padnote_core.paperIdFromStored(raw)
+        return paperId()
+    }
+
+    /** 版面配色。認不得或沒有時，核心會回第一組。 */
+    fun paletteId(): String = root.optString(KEY_PALETTE, "")
 
     /** 建立筆記本時記下紙張，重開時版面才回得來。 */
     fun setPaperId(session: PadnoteSession?, paperId: String) {

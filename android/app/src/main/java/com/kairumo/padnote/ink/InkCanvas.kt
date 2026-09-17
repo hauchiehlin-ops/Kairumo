@@ -52,6 +52,8 @@ fun InkCanvas(
     /** 版面上的欄位標題要翻譯；沒有它的話畫出來的是一串語系鍵。 */
     localizeGuide: (String) -> String = { it },
     guideMeasurer: androidx.compose.ui.text.TextMeasurer? = null,
+    /** 版面配色。整本一個。 */
+    guidePaletteId: String = "",
     inkColor: Color = Color.Black,
     /// 筆畫有變動時通知外層（例如更新「N 筆」的顯示）。
     onInkChanged: () -> Unit = {},
@@ -135,7 +137,8 @@ fun InkCanvas(
             pageStyle, density,
             paperId = paperId,
             localize = localizeGuide,
-            textMeasurer = guideMeasurer
+            textMeasurer = guideMeasurer,
+            paletteId = guidePaletteId
         )
 
         drawPageBoundary(density)

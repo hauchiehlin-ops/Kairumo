@@ -82,9 +82,17 @@ public enum EditorMode: String, CaseIterable, Identifiable {
 
 /// 向量樣板背景繪製視圖（內嵌於 PKCanvasView 最底層，隨畫布長度無限延伸與同步滾動）
 final class TemplateCanvasBackgroundView: UIView {
-    var template: NoteTemplate = .blank {
-        didSet { setNeedsDisplay() }
+    /// 這一頁用的紙張。**逐頁**，不是整本 —— 同一本筆記可以一頁四象限、
+    /// 一頁橫線（見 `NotebookDocument.pagePaperIds`）。
+    var paperId: String = "blank" {
+        didSet { if oldValue != paperId { setNeedsDisplay() } }
     }
+    /// 版面的配色。整本一個。
+    var paletteId: String? {
+        didSet { if oldValue != paletteId { setNeedsDisplay() } }
+    }
+
+    private var template: NoteTemplate { NoteTemplate(paperId: paperId) ?? .blank }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -261,7 +269,8 @@ final class TemplateCanvasBackgroundView: UIView {
     /// `PageGuideRenderer` —— 縮圖用的是同一份。
     private func drawGuides(_ ctx: CGContext) {
         PageGuideRenderer.draw(
-            paperId: template.paperId,
+            paperId: paperId,
+            paletteId: paletteId,
             in: ctx,
             // **頁面高度，不是畫布高度。** 畫布比頁面高（它要捲動），
             // 用 `bounds.height` 算的話四象限的十字會落在頁面下緣之外 ——
@@ -397,7 +406,9 @@ struct CanvasRepresentable: UIViewRepresentable {
     var selectedColor: Color
     var strokeWidth: CGFloat
     var isRulerActive: Bool
-    var template: NoteTemplate
+    /// 這一頁的紙張 id（逐頁）與整本的配色。
+    var paperId: String
+    var paletteId: String?
     var pageHeight: CGFloat
     var editorMode: EditorMode = .draw
     /// 這個畫布要不要自己捲動。
@@ -513,7 +524,8 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         // 嵌入底層背景樣板視圖（隨畫布滾動）
         let bgView = TemplateCanvasBackgroundView(frame: CGRect(origin: .zero, size: canvas.contentSize))
-        bgView.template = template
+        bgView.paperId = paperId
+        bgView.paletteId = paletteId
         canvas.insertSubview(bgView, at: 0)
         canvas.templateBackgroundView = bgView
         context.coordinator.backgroundView = bgView
@@ -571,9 +583,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             adaptive.pageContentHeight = PageGeometry.height
             adaptive.syncContentSize()
         }
-        if context.coordinator.backgroundView?.template != template {
-            context.coordinator.backgroundView?.template = template
-        }
+        context.coordinator.backgroundView?.paperId = paperId
+        context.coordinator.backgroundView?.paletteId = paletteId
 
         context.coordinator.applyTool(to: uiView)
     }
@@ -2048,6 +2059,8 @@ public struct NotebookEditorView: View {
         // 位置固定、不會因為視窗寬度而消失。
         pageFormatMenu
 
+        guidePaletteMenu
+
         Menu {
             Section {
                 Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
@@ -2237,7 +2250,8 @@ public struct NotebookEditorView: View {
                         ContinuousPageView(
                             pageIndex: index,
                             notebookId: notebook.id,
-                            template: notebook.template,
+                            paperId: notebook.paperId(forPage: index),
+                            paletteId: notebook.guidePaletteId,
                             store: store,
                             selectedTool: selectedTool,
                             selectedColor: selectedColor,
@@ -2558,7 +2572,8 @@ ZStack(alignment: .topTrailing) {
                 selectedColor: selectedColor,
                 strokeWidth: strokeWidth,
                 isRulerActive: isRulerActive,
-                template: notebook.template,
+                paperId: notebook.paperId(forPage: currentPageIndex),
+                paletteId: notebook.guidePaletteId,
                 pageHeight: currentPageHeight,
                 editorMode: editorMode,
                 onDrawingChanged: { rawDrawing in
@@ -3594,6 +3609,37 @@ ZStack(alignment: .topTrailing) {
             insertPageAfter(idx)
         } label: {
             Label(localizationManager.localized("insert_page_after"), systemImage: "plus.square")
+        }
+
+        // 插入**別種格式**的一頁。
+        //
+        // # 為什麼需要這個
+        //
+        // 樣板原本是「開筆記本時選一次，整本就定了」。而一本會議紀錄的
+        // 第一頁想用四象限、後面幾頁想用橫線 —— 那件事以前做不到，
+        // 使用者只能為了一頁不同的格式另外開一本筆記。
+        Menu {
+            ForEach(Array(paperThemes().enumerated()), id: \.offset) { _, theme in
+                Menu {
+                    ForEach(paperTemplatesForTheme(theme: theme), id: \.id) { paper in
+                        Button {
+                            insertPageAfter(idx, paperId: paper.id)
+                        } label: {
+                            Label(
+                                localizationManager.localized(paper.titleKey),
+                                systemImage: paper.iconApple)
+                        }
+                    }
+                } label: {
+                    Label(
+                        localizationManager.localized(paperThemeKey(theme: theme)),
+                        systemImage: paperThemeIcons(theme: theme).first ?? "doc.text")
+                }
+            }
+        } label: {
+            Label(
+                localizationManager.localized("insert_page_with_template"),
+                systemImage: "rectangle.stack.badge.plus")
         }
 
         Button {
@@ -5654,14 +5700,22 @@ ZStack(alignment: .topTrailing) {
         self.loadCurrentPage()
     }
 
-    private func insertPageAfter(_ index: Int) {
+    /// 在某一頁後面插入新的一頁。
+    ///
+    /// `paperId` 為 nil 時沿用整本的樣板；指定時這一頁自己用那一種
+    /// （見 `NotebookDocument.pagePaperIds`）。
+    private func insertPageAfter(_ index: Int, paperId: String? = nil) {
         saveCurrentPageDrawing()
-        let newIndex = store.insertPage(notebookId: notebook.id, afterIndex: index)
+        let newIndex = store.insertPage(
+            notebookId: notebook.id, afterIndex: index, paperId: paperId)
         if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
             self.notebook = updated
         }
         self.currentPageIndex = newIndex
         self.loadCurrentPage()
+        if let paperId, let paper = NoteTemplate(paperId: paperId) {
+            showCanvasNotice(localizationManager.localized(paper.localizationKey))
+        }
     }
 
     private func duplicatePage(at index: Int) {
@@ -5729,6 +5783,58 @@ ZStack(alignment: .topTrailing) {
         .buttonStyle(.plain)
         .accessibilityLabel(localizationManager.localized("page_format"))
         .help(localizationManager.localized("page_format"))
+    }
+
+    /// 版面配色。
+    ///
+    /// # 為什麼是整本一個
+    ///
+    /// 每一頁各挑一個顏色不是「豐富」，是雜亂 —— 翻頁時整份筆記在閃。
+    /// 一本筆記一個調子，而那個調子是使用者選的。
+    private var guidePaletteMenu: some View {
+        let current = notebook.guidePaletteId ?? guidePalettes().first?.id ?? "graphite"
+        return Menu {
+            ForEach(guidePalettes(), id: \.id) { palette in
+                Button {
+                    applyGuidePalette(palette.id)
+                } label: {
+                    HStack {
+                        Text(localizationManager.localized(palette.nameKey))
+                        if current == palette.id {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                // 直接畫出那個顏色。名字旁邊放一個色點，比只寫「靛藍」清楚 ——
+                // 使用者要挑的是顏色，不是詞。
+                Circle()
+                    .fill(Color(uiColor: UIColor(hexString: guidePalette(id: current).accentHex) ?? .systemIndigo))
+                    .frame(width: 11, height: 11)
+                Text(localizationManager.localized(guidePalette(id: current).nameKey))
+                    .font(.system(size: 11))
+            }
+            .foregroundColor(.accentColor)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(Color(uiColor: .tertiarySystemGroupedBackground))
+            .cornerRadius(6)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(localizationManager.localized("guide_palette"))
+        .help(localizationManager.localized("guide_palette"))
+    }
+
+    private func applyGuidePalette(_ id: String) {
+        guard notebook.guidePaletteId != id else { return }
+        notebook.guidePaletteId = id
+        store.updateNotebook(notebook)
+        // 縮圖的快取鍵含配色，所以側欄會跟著換 —— 但畫布要自己重畫一次。
+        PageThumbnailRenderer.invalidateAll()
+        showCanvasNotice(localizationManager.localized(guidePalette(id: id).nameKey))
     }
 
     /// 換一種紙。

@@ -43,7 +43,9 @@ public enum PageThumbnailRenderer {
         drawing: PKDrawing,
         canvasWidth: CGFloat
     ) -> NSString {
-        "\(notebook.id)|\(pageIndex)|\(notebook.lastModifiedDate.timeIntervalSince1970)|\(drawing.strokes.count)|\(Int(canvasWidth))" as NSString
+        // 紙張與配色也要進快取鍵：改的是「這一頁用哪張紙」時，筆跡沒動、
+        // 物件沒動，只有版面變了 —— 沒有這兩個欄位的話側欄縮圖不會更新。
+        "\(notebook.id)|\(pageIndex)|\(notebook.lastModifiedDate.timeIntervalSince1970)|\(drawing.strokes.count)|\(Int(canvasWidth))|\(notebook.paperId(forPage: pageIndex))|\(notebook.guidePaletteId ?? "-")" as NSString
     }
 
     /// 清空快取（例如切換筆記本時）。
@@ -137,7 +139,8 @@ public enum PageThumbnailRenderer {
             // 哪一頁是康乃爾、哪一頁是四象限，而畫布上是看得到的。
             // 匯出也走這裡：列印出來要跟畫布上看到的一樣。
             PageGuideRenderer.draw(
-                paperId: notebook.template.paperId,
+                paperId: notebook.paperId(forPage: pageIndex),
+                paletteId: notebook.guidePaletteId,
                 in: ctx.cgContext,
                 size: fullPageRect.size
             )

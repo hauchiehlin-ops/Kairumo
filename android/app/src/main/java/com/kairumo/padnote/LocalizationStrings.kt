@@ -3301,6 +3301,14 @@ object LocalizationStrings {
             "ko" to "담당",
             "th" to "ผู้รับผิดชอบ"
         ),
+        "guide_palette" to mapOf(
+            "zh-Hant" to "版面色彩",
+            "en" to "Guide Colour",
+            "zh-Hans" to "版面色彩",
+            "ja" to "罫線の色",
+            "ko" to "안내선 색",
+            "th" to "สีเส้นนำ"
+        ),
         "guide_pm" to mapOf(
             "zh-Hant" to "下午",
             "en" to "PM",
@@ -3876,7 +3884,10 @@ object LocalizationStrings {
             "ja" to "表示カラー",
             "ko" to "표시 색상",
             "th" to "สีประจำตัว"
-        ),
+        )
+    )
+
+    private fun part6(): Map<String, Map<String, String>> = mapOf(
         "identity_desc" to mapOf(
             "zh-Hant" to "這個名稱與顏色只用於多人協作時顯示「誰在編輯」。它存在這台裝置上，不是帳號，不需要註冊，也不會連到任何雲端或系統帳號。",
             "en" to "This name and colour are only used to show who is editing during collaboration. They live on this device — not an account, no sign-up, and never linked to any cloud or system account.",
@@ -3884,10 +3895,7 @@ object LocalizationStrings {
             "ja" to "この名前と色は共同編集中に「誰が編集しているか」を示すためだけに使われます。この端末内に保存され、アカウントではなく、登録も不要で、クラウドやシステムアカウントとは一切連携しません。",
             "ko" to "이 이름과 색상은 공동 작업 중 '누가 편집 중인지' 표시하는 데만 사용됩니다. 이 기기에만 저장되며 계정이 아니고 가입도 필요 없으며 클라우드나 시스템 계정과 연결되지 않습니다.",
             "th" to "ชื่อและสีนี้ใช้เพื่อแสดงว่าใครกำลังแก้ไขขณะทำงานร่วมกันเท่านั้น ข้อมูลอยู่ในเครื่องนี้ ไม่ใช่บัญชี ไม่ต้องสมัคร และไม่เชื่อมต่อกับคลาวด์หรือบัญชีระบบใด ๆ"
-        )
-    )
-
-    private fun part6(): Map<String, Map<String, String>> = mapOf(
+        ),
         "identity_desc_short" to mapOf(
             "zh-Hant" to "協作時顯示的身分 · 僅存於本機",
             "en" to "Shown while collaborating · stored on this device",
@@ -4135,6 +4143,14 @@ object LocalizationStrings {
             "ja" to "後ろに新規ページを挿入",
             "ko" to "뒤에 새 페이지 삽입",
             "th" to "แทรกหน้าใหม่หลังจากนี้"
+        ),
+        "insert_page_with_template" to mapOf(
+            "zh-Hant" to "插入其他樣板頁面…",
+            "en" to "Insert Page with Template…",
+            "zh-Hans" to "插入其他样板页面…",
+            "ja" to "テンプレートを選んでページを挿入…",
+            "ko" to "템플릿을 골라 페이지 삽입…",
+            "th" to "แทรกหน้าด้วยเทมเพลต…"
         ),
         "insert_swatch" to mapOf(
             "zh-Hant" to "插入色票卡",
@@ -4511,7 +4527,10 @@ object LocalizationStrings {
             "ja" to "%@ 個選択中",
             "ko" to "%@개 선택됨",
             "th" to "เลือกแล้ว %@ รายการ"
-        ),
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
         "mat_copper" to mapOf(
             "zh-Hant" to "紅銅",
             "en" to "Copper",
@@ -4527,10 +4546,7 @@ object LocalizationStrings {
             "ja" to "ゴールド",
             "ko" to "골드 (금)",
             "th" to "ทองคำ"
-        )
-    )
-
-    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        ),
         "mat_granite" to mapOf(
             "zh-Hant" to "花崗岩",
             "en" to "Granite",
@@ -5154,7 +5170,10 @@ object LocalizationStrings {
             "ja" to "新規ノート",
             "ko" to "새 노트",
             "th" to "สร้างบันทึกใหม่"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "new_note_desc" to mapOf(
             "zh-Hant" to "空白紙張、網格、康乃爾",
             "en" to "Blank, Grid, Cornell",
@@ -5170,10 +5189,7 @@ object LocalizationStrings {
             "ja" to "新規ノートブック",
             "ko" to "새 노트북",
             "th" to "สมุดบันทึกใหม่"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "new_subfolder" to mapOf(
             "zh-Hant" to "新增子資料夾",
             "en" to "New Subfolder",
@@ -5797,7 +5813,10 @@ object LocalizationStrings {
             "ja" to "%@ ページを「%@」に移動しました",
             "ko" to "%@페이지를 ‘%@’(으)로 이동했습니다",
             "th" to "ย้าย %@ หน้าไปยัง “%@” แล้ว"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "pages_selected" to mapOf(
             "zh-Hant" to "已選取 %@ 頁",
             "en" to "%@ pages selected",
@@ -5813,10 +5832,15 @@ object LocalizationStrings {
             "ja" to "ページ",
             "ko" to "페이지",
             "th" to "หน้า"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
+        "palette_amber" to mapOf(
+            "zh-Hant" to "琥珀",
+            "en" to "Amber",
+            "zh-Hans" to "琥珀",
+            "ja" to "アンバー",
+            "ko" to "앰버",
+            "th" to "อำพัน"
+        ),
         "palette_business" to mapOf(
             "zh-Hant" to "經典商務",
             "en" to "Business",
@@ -5824,6 +5848,30 @@ object LocalizationStrings {
             "ja" to "ビジネス",
             "ko" to "비즈니스",
             "th" to "ธุรกิจ"
+        ),
+        "palette_forest" to mapOf(
+            "zh-Hant" to "森綠",
+            "en" to "Forest",
+            "zh-Hans" to "森绿",
+            "ja" to "フォレスト",
+            "ko" to "포레스트",
+            "th" to "เขียวป่า"
+        ),
+        "palette_graphite" to mapOf(
+            "zh-Hant" to "石墨",
+            "en" to "Graphite",
+            "zh-Hans" to "石墨",
+            "ja" to "グラファイト",
+            "ko" to "그래파이트",
+            "th" to "กราไฟต์"
+        ),
+        "palette_indigo" to mapOf(
+            "zh-Hant" to "靛藍",
+            "en" to "Indigo",
+            "zh-Hans" to "靛蓝",
+            "ja" to "インディゴ",
+            "ko" to "인디고",
+            "th" to "คราม"
         ),
         "palette_morandi" to mapOf(
             "zh-Hant" to "莫蘭迪系",
@@ -5849,6 +5897,14 @@ object LocalizationStrings {
             "ko" to "파스텔",
             "th" to "พาสเทล"
         ),
+        "palette_rose" to mapOf(
+            "zh-Hant" to "玫瑰",
+            "en" to "Rose",
+            "zh-Hans" to "玫瑰",
+            "ja" to "ローズ",
+            "ko" to "로즈",
+            "th" to "กุหลาบ"
+        ),
         "palette_swatches" to mapOf(
             "zh-Hant" to "經典色卡庫",
             "en" to "Color Palettes",
@@ -5856,6 +5912,14 @@ object LocalizationStrings {
             "ja" to "配色パレット",
             "ko" to "색상 팔레트",
             "th" to "จานสีคลาสสิก"
+        ),
+        "palette_teal" to mapOf(
+            "zh-Hant" to "青綠",
+            "en" to "Teal",
+            "zh-Hans" to "青绿",
+            "ja" to "ティール",
+            "ko" to "틸",
+            "th" to "เขียวน้ำทะเล"
         ),
         "palette_tip" to mapOf(
             "zh-Hant" to "點選色彩可吸取 / 點「插入」貼至畫布",
@@ -6392,7 +6456,10 @@ object LocalizationStrings {
             "ja" to "ドラッグしてテキストボックスのサイズを変更",
             "ko" to "끌어서 텍스트 상자 크기 조절",
             "th" to "ลากเพื่อปรับขนาดกล่องข้อความ"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "resolve" to mapOf(
             "zh-Hant" to "標記為已解決",
             "en" to "Resolve",
@@ -6456,10 +6523,7 @@ object LocalizationStrings {
             "ja" to "ホスト (所有者)",
             "ko" to "방장 (소유자)",
             "th" to "เจ้าของห้อง"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "role_viewer" to mapOf(
             "zh-Hant" to "檢視者",
             "en" to "Viewer",
@@ -7035,7 +7099,10 @@ object LocalizationStrings {
             "ja" to "判断",
             "ko" to "판단",
             "th" to "การตัดสินใจ"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_delay" to mapOf(
             "zh-Hant" to "延遲",
             "en" to "Delay",
@@ -7099,10 +7166,7 @@ object LocalizationStrings {
             "ja" to "ハート",
             "ko" to "하트",
             "th" to "หัวใจ"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_heptagon" to mapOf(
             "zh-Hant" to "七邊形",
             "en" to "Heptagon",
@@ -7678,7 +7742,10 @@ object LocalizationStrings {
             "ja" to "録音停止",
             "ko" to "녹음 중지",
             "th" to "หยุดบันทึก"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "storage_location" to mapOf(
             "zh-Hant" to "資料儲存位置",
             "en" to "Data Storage Location",
@@ -7742,10 +7809,7 @@ object LocalizationStrings {
             "ja" to "線画",
             "ko" to "선화",
             "th" to "ภาพลายเส้น"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "style_solid" to mapOf(
             "zh-Hant" to "實物",
             "en" to "Solid",
@@ -8321,7 +8385,10 @@ object LocalizationStrings {
             "ja" to "1ページに40項目、2列に分割",
             "ko" to "한 페이지 40항목, 2열",
             "th" to "สี่สิบรายการในหน้าเดียว"
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "tmpl_chore_roster" to mapOf(
             "zh-Hant" to "家事分工表",
             "en" to "Chore Roster",
@@ -8385,10 +8452,7 @@ object LocalizationStrings {
             "ja" to "朝から夜まで30分刻み＋予定欄",
             "ko" to "아침부터 밤까지 30분 간격 + 일정 칸",
             "th" to "ช่วงครึ่งชั่วโมงตลอดวัน"
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_dot_grid_fine" to mapOf(
             "zh-Hant" to "極細點陣 (5mm)",
             "en" to "Fine Dot Grid (5mm)",
@@ -8964,7 +9028,10 @@ object LocalizationStrings {
             "ja" to "プロフィール情報",
             "ko" to "프로필 정보",
             "th" to "ข้อมูลส่วนตัว"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "version_number" to mapOf(
             "zh-Hant" to "版本號",
             "en" to "Version",
@@ -9028,10 +9095,7 @@ object LocalizationStrings {
             "ja" to "ボトムタブバー（5 タブ）",
             "ko" to "하단 탭 바 (5개 탭)",
             "th" to "แถบแท็บด้านล่าง (5 แท็บ)"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "word_studio" to mapOf(
             "zh-Hant" to "Word文字編修",
             "en" to "Word Text Studio",

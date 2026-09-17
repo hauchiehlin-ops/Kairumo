@@ -48,6 +48,9 @@ public struct HomeWorkbenchView: View {
     /// 主題從四個長到七個，而 `NoteThemeCategory` 另外被素材庫用著（它的分類
     /// 只對得上其中三個）。兩邊共用一個列舉的話，素材庫會憑空多出三個
     /// 篩不到任何東西的分頁。
+    /// 新筆記要用哪一組版面配色。**落盤** —— 使用者通常有固定的偏好，
+    /// 每建一本都要重挑一次的設定不算設定。
+    @AppStorage("kairumo_guide_palette") private var newNotePaletteId: String = "graphite"
     @State private var selectedNewNoteCategory: FfiPaperTheme = .general
     // 文件範本（工作項 S-61）。`nil` 代表只要一張空紙，不鋪任何內容。
     @State private var selectedDocTemplateId: String?
@@ -1653,6 +1656,8 @@ public struct HomeWorkbenchView: View {
                         let defaultTitle = newNoteTitle.isEmpty ? localizationManager.localized("new_notebook") : newNoteTitle
                         var created = notebookStore.createNotebook(
                             title: defaultTitle, template: selectedTemplate)
+                        created.guidePaletteId = newNotePaletteId
+                        notebookStore.updateNotebook(created)
                         // 選了文件範本就把內容鋪進去，再存一次。
                         if let id = selectedDocTemplateId,
                            let tmpl = DocumentTemplateCatalog.template(id: id) {
@@ -1767,6 +1772,8 @@ public struct HomeWorkbenchView: View {
             }
 
             paperContentPicker
+
+            paletteRow
         } header: {
             Text(localizationManager.localized("select_template"))
         } footer: {
@@ -1806,6 +1813,44 @@ public struct HomeWorkbenchView: View {
             .pickerStyle(.segmented)
             .padding(.vertical, 2)
         }
+    }
+
+    /// 版面配色。
+    ///
+    /// 直接畫出顏色本身，名字寫在下面 —— 使用者要挑的是顏色，不是「靛藍」
+    /// 這兩個字。整本一個調子，不是逐頁。
+    private var paletteRow: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(localizationManager.localized("guide_palette"))
+                .font(.caption)
+                .foregroundColor(.secondary)
+            HStack(spacing: 10) {
+                ForEach(guidePalettes(), id: \.id) { palette in
+                    let isActive = (newNotePaletteId == palette.id)
+                    Button {
+                        newNotePaletteId = palette.id
+                    } label: {
+                        VStack(spacing: 3) {
+                            Circle()
+                                .fill(Color(uiColor: UIColor(hexString: palette.accentHex) ?? .systemIndigo))
+                                .frame(width: 22, height: 22)
+                                .overlay(
+                                    Circle().stroke(Color.accentColor, lineWidth: isActive ? 2.5 : 0)
+                                        .padding(-3)
+                                )
+                            Text(localizationManager.localized(palette.nameKey))
+                                .font(.system(size: 9))
+                                .foregroundColor(isActive ? .accentColor : .secondary)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.vertical, 4)
     }
 
     private func paperRow(_ paper: FfiPaperTemplate) -> some View {

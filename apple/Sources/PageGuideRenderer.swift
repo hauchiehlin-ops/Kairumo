@@ -23,8 +23,14 @@ public enum PageGuideRenderer {
     ///
     /// `size` 是頁面尺寸（不是畫布尺寸）—— 畫布在寬螢幕上比頁面寬，
     /// 用畫布尺寸算的話引導線會一路畫到紙的外面。
-    public static func draw(paperId: String, in ctx: CGContext, size: CGSize) {
+    public static func draw(
+        paperId: String,
+        paletteId: String?,
+        in ctx: CGContext,
+        size: CGSize
+    ) {
         guard size.width > 0, size.height > 0 else { return }
+        let colors = Palette(id: paletteId)
         let guides = pageGuides(
             paperId: paperId,
             width: Float(size.width),
@@ -37,36 +43,36 @@ public enum PageGuideRenderer {
             let w = CGFloat(g.w), h = CGFloat(g.h)
             switch g.kind {
             case .line:
-                ctx.setStrokeColor(color(g.tone).cgColor)
+                ctx.setStrokeColor(colors.color(g.tone).cgColor)
                 ctx.setLineWidth(CGFloat(g.weight))
                 ctx.move(to: CGPoint(x: x, y: y))
                 ctx.addLine(to: CGPoint(x: x + w, y: y + h))
                 ctx.strokePath()
 
             case .rect:
-                ctx.setStrokeColor(color(g.tone).cgColor)
+                ctx.setStrokeColor(colors.color(g.tone).cgColor)
                 ctx.setLineWidth(CGFloat(g.weight))
                 ctx.addPath(rounded(x, y, w, h, CGFloat(g.size)))
                 ctx.strokePath()
 
             case .fillRect:
-                // 標題底色條。比最淡的線還淡 —— 它是背景，不是內容。
-                ctx.setFillColor(UIColor.secondaryLabel.withAlphaComponent(0.06).cgColor)
+                // 標題底色條。它是背景，不是內容 —— 所以是配色裡最淡的那一個。
+                ctx.setFillColor(colors.band.cgColor)
                 ctx.addPath(rounded(x, y, w, h, CGFloat(g.size)))
                 ctx.fillPath()
 
             case .checkbox:
-                ctx.setStrokeColor(color(.light).cgColor)
+                ctx.setStrokeColor(colors.color(.light).cgColor)
                 ctx.setLineWidth(1.0)
                 ctx.addPath(rounded(x, y, w, h, min(3, w * 0.25)))
                 ctx.strokePath()
 
             case .dot:
-                ctx.setFillColor(color(g.tone).cgColor)
+                ctx.setFillColor(colors.color(g.tone).cgColor)
                 ctx.fillEllipse(in: CGRect(x: x, y: y, width: w, height: w))
 
             case .label:
-                label(g, at: CGPoint(x: x, y: y), pageWidth: size.width)
+                label(g, at: CGPoint(x: x, y: y), colors: colors)
             }
         }
     }
@@ -78,7 +84,7 @@ public enum PageGuideRenderer {
         ).cgPath
     }
 
-    private static func label(_ g: FfiGuide, at point: CGPoint, pageWidth: CGFloat) {
+    private static func label(_ g: FfiGuide, at point: CGPoint, colors: Palette) {
         let text = MainActor.assumeIsolated { LocalizationManager.shared.localized(g.textKey) }
         guard !text.isEmpty else { return }
         // 縮圖上的頁面只有兩百多點寬，字級照比例縮下去會小於一個像素。
@@ -86,7 +92,7 @@ public enum PageGuideRenderer {
         let size = max(6, CGFloat(g.size))
         let attrs: [NSAttributedString.Key: Any] = [
             .font: UIFont.systemFont(ofSize: size, weight: .medium),
-            .foregroundColor: color(.muted)
+            .foregroundColor: colors.color(.muted)
         ]
         let measured = (text as NSString).size(withAttributes: attrs)
         // `x` 是錨點，不是左上角 —— 置中的欄位標題要以中心對齊。
@@ -102,12 +108,32 @@ public enum PageGuideRenderer {
         )
     }
 
-    private static func color(_ tone: FfiGuideTone) -> UIColor {
-        switch tone {
-        case .hairline: return UIColor.secondaryLabel.withAlphaComponent(0.14)
-        case .light: return UIColor.secondaryLabel.withAlphaComponent(0.28)
-        case .accent: return UIColor.systemIndigo.withAlphaComponent(0.45)
-        case .muted: return UIColor.secondaryLabel.withAlphaComponent(0.75)
+    /// 一組配色。
+    ///
+    /// **色相來自核心**（使用者選的那一組），**深淺留在這裡** ——
+    /// 同一個色相在深色模式下要淡得多，而那是平台的事，核心不需要知道
+    /// 現在是不是深色。
+    struct Palette {
+        let accent: UIColor
+        let band: UIColor
+        let line: UIColor
+        let text: UIColor
+
+        init(id: String?) {
+            let p = guidePalette(id: id ?? "")
+            accent = UIColor(hexString: p.accentHex) ?? .systemIndigo
+            band = UIColor(hexString: p.bandHex) ?? UIColor.secondarySystemFill
+            line = UIColor(hexString: p.lineHex) ?? .secondaryLabel
+            text = UIColor(hexString: p.textHex) ?? .secondaryLabel
+        }
+
+        func color(_ tone: FfiGuideTone) -> UIColor {
+            switch tone {
+            case .hairline: return line.withAlphaComponent(0.30)
+            case .light: return line.withAlphaComponent(0.55)
+            case .accent: return accent.withAlphaComponent(0.75)
+            case .muted: return text.withAlphaComponent(0.85)
+            }
         }
     }
 }

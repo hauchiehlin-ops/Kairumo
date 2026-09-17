@@ -2235,9 +2235,12 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             }
             // 這張紙的**版面**。底紋只有六種，紙張有三十幾種 ——
             // 康乃爾與四象限的底紋都是 BLANK，差別全在版面上。
-            val paperId = remember(notebookId, revision) {
-                com.kairumo.padnote.library.NotebookMeta.load(notebook?.first).paperId()
+            val notebookMeta = remember(notebookId, revision) {
+                com.kairumo.padnote.library.NotebookMeta.load(notebook?.first)
             }
+            // **逐頁**：同一本筆記可以一頁四象限、一頁日程表。
+            val paperId = remember(notebookMeta, pageIndex) { notebookMeta.paperId(pageIndex) }
+            val guidePaletteId = remember(notebookMeta) { notebookMeta.paletteId() }
             val guideMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
             // 縮放時不能走低延遲路徑。
             //
@@ -2267,6 +2270,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     paperId = paperId,
                     localizeGuide = l10n,
                     guideMeasurer = guideMeasurer,
+                    guidePaletteId = guidePaletteId,
                     // 打字模式下筆也不會畫線 —— 這個模式只處理文字與物件。
                     acceptsInk = editorMode == EditorMode.DRAW
                 )

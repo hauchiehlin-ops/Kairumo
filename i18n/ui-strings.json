@@ -3255,6 +3255,14 @@
     "zhHans": "负责人",
     "zhHant": "負責人"
   },
+  "guide_palette": {
+    "en": "Guide Colour",
+    "ja": "罫線の色",
+    "ko": "안내선 색",
+    "th": "สีเส้นนำ",
+    "zhHans": "版面色彩",
+    "zhHant": "版面色彩"
+  },
   "guide_pm": {
     "en": "PM",
     "ja": "午後",
@@ -4086,6 +4094,14 @@
     "th": "แทรกหน้าใหม่หลังจากนี้",
     "zhHans": "在后方插入新页面",
     "zhHant": "在後方插入新頁面"
+  },
+  "insert_page_with_template": {
+    "en": "Insert Page with Template…",
+    "ja": "テンプレートを選んでページを挿入…",
+    "ko": "템플릿을 골라 페이지 삽입…",
+    "th": "แทรกหน้าด้วยเทมเพลต…",
+    "zhHans": "插入其他样板页面…",
+    "zhHant": "插入其他樣板頁面…"
   },
   "insert_swatch": {
     "en": "Insert Color Swatch",
@@ -5759,6 +5775,14 @@
     "zhHans": "页",
     "zhHant": "頁"
   },
+  "palette_amber": {
+    "en": "Amber",
+    "ja": "アンバー",
+    "ko": "앰버",
+    "th": "อำพัน",
+    "zhHans": "琥珀",
+    "zhHant": "琥珀"
+  },
   "palette_business": {
     "en": "Business",
     "ja": "ビジネス",
@@ -5766,6 +5790,30 @@
     "th": "ธุรกิจ",
     "zhHans": "经典商务",
     "zhHant": "經典商務"
+  },
+  "palette_forest": {
+    "en": "Forest",
+    "ja": "フォレスト",
+    "ko": "포레스트",
+    "th": "เขียวป่า",
+    "zhHans": "森绿",
+    "zhHant": "森綠"
+  },
+  "palette_graphite": {
+    "en": "Graphite",
+    "ja": "グラファイト",
+    "ko": "그래파이트",
+    "th": "กราไฟต์",
+    "zhHans": "石墨",
+    "zhHant": "石墨"
+  },
+  "palette_indigo": {
+    "en": "Indigo",
+    "ja": "インディゴ",
+    "ko": "인디고",
+    "th": "คราม",
+    "zhHans": "靛蓝",
+    "zhHant": "靛藍"
   },
   "palette_morandi": {
     "en": "Morandi",
@@ -5791,6 +5839,14 @@
     "zhHans": "柔和粉彩",
     "zhHant": "柔和粉彩"
   },
+  "palette_rose": {
+    "en": "Rose",
+    "ja": "ローズ",
+    "ko": "로즈",
+    "th": "กุหลาบ",
+    "zhHans": "玫瑰",
+    "zhHant": "玫瑰"
+  },
   "palette_swatches": {
     "en": "Color Palettes",
     "ja": "配色パレット",
@@ -5798,6 +5854,14 @@
     "th": "จานสีคลาสสิก",
     "zhHans": "经典色卡库",
     "zhHant": "經典色卡庫"
+  },
+  "palette_teal": {
+    "en": "Teal",
+    "ja": "ティール",
+    "ko": "틸",
+    "th": "เขียวน้ำทะเล",
+    "zhHans": "青绿",
+    "zhHant": "青綠"
   },
   "palette_tip": {
     "en": "Tap color to sample / Tap insert to paste swatch",
