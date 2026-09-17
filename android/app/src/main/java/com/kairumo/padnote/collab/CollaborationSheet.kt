@@ -114,6 +114,17 @@ fun CollaborationSheet(
                             }
                         }
 
+                        // 只貼房號、沒帶金鑰就加入的話，連得上、也看得到成員，
+                        // **但對方寫的每一個字都解不開** —— 畫面上什麼都不會
+                        // 發生，而使用者會以為是同步壞了。連上之後就講明白。
+                        if (!manager.isHost && manager.roomKeyBase64 == null) {
+                            Text(
+                                l("collab_key_missing"),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+
                         if (manager.queuedOplogCount > 0) {
                             Text(
                                 "${l("offline_queue_hint")}：${manager.queuedOplogCount}",

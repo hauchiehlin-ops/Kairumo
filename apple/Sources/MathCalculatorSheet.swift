@@ -33,101 +33,113 @@ public struct MathCalculatorSheet: View {
 
     public var body: some View {
         NavigationStack {
-            VStack(spacing: 20) {
-                // 1. 算式輸入框
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(localizationManager.localized("math_expression"))
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.secondary)
-
-                    HStack {
-                        TextField(localizationManager.localized("math_placeholder"), text: $formulaInput)
-                            .textFieldStyle(.roundedBorder)
-                            .font(.system(.body, design: .monospaced))
-                            .onSubmit {
-                                evaluateFormula()
-                            }
-
-                        Button(localizationManager.localized("math_calculate")) {
-                            evaluateFormula()
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                }
-                .padding(.horizontal)
-
-                // 2. 常用算式範本
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(quickFormulas, id: \.self) { sample in
-                            Button(sample) {
-                                formulaInput = sample
-                                evaluateFormula()
-                            }
+            // 內容要能捲。
+            //
+            // 原本是一個固定高度的 `VStack` + `Spacer()` + 底部按鈕，
+            // 外面再套 `.frame(minHeight: 420)`。視窗一矮（或 sheet 開在
+            // 半高），**被切掉的正好是最下面那顆「貼入畫布」** ——
+            // 這張表存在的理由就是那顆按鈕。
+            //
+            // 現在主要動作固定在底部安全區，上面的內容自己捲。
+            ScrollView {
+                VStack(spacing: 20) {
+                    // 1. 算式輸入框
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(localizationManager.localized("math_expression"))
                             .font(.caption)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(Color.secondary.opacity(0.12))
-                            .cornerRadius(8)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+
+                        HStack {
+                            TextField(localizationManager.localized("math_placeholder"), text: $formulaInput)
+                                .textFieldStyle(.roundedBorder)
+                                .font(.system(.body, design: .monospaced))
+                                .onSubmit {
+                                    evaluateFormula()
+                                }
+
+                            Button(localizationManager.localized("math_calculate")) {
+                                evaluateFormula()
+                            }
+                            .buttonStyle(.borderedProminent)
                         }
                     }
                     .padding(.horizontal)
-                }
 
-                // 3. 計算結果呈現卡片
-                ZStack {
-                    RoundedRectangle(cornerRadius: 16)
-                        .fill(Color(uiColor: .secondarySystemGroupedBackground))
-                        .shadow(color: Color.black.opacity(0.06), radius: 6, y: 3)
-
-                    if let res = currentResult {
-                        VStack(spacing: 12) {
-                            Text(res.displayText)
-                                .font(.system(size: 26, weight: .bold, design: .rounded))
-                                .foregroundColor(.primary)
-
-                            Text("\(localizationManager.localized("math_value_prefix")): \(res.formattedResult)")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
+                    // 2. 常用算式範本
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(quickFormulas, id: \.self) { sample in
+                                Button(sample) {
+                                    formulaInput = sample
+                                    evaluateFormula()
+                                }
+                                .font(.caption)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Color.secondary.opacity(0.12))
+                                .cornerRadius(8)
+                            }
                         }
-                        .padding(24)
-                    } else if let err = errorMessage {
-                        VStack(spacing: 8) {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .font(.title)
-                                .foregroundColor(.orange)
-                            Text(err)
+                        .padding(.horizontal)
+                    }
+
+                    // 3. 計算結果呈現卡片
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 16)
+                            .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                            .shadow(color: Color.black.opacity(0.06), radius: 6, y: 3)
+
+                        if let res = currentResult {
+                            VStack(spacing: 12) {
+                                Text(res.displayText)
+                                    .font(.system(size: 26, weight: .bold, design: .rounded))
+                                    .foregroundColor(.primary)
+
+                                Text("\(localizationManager.localized("math_value_prefix")): \(res.formattedResult)")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(24)
+                        } else if let err = errorMessage {
+                            VStack(spacing: 8) {
+                                Image(systemName: "exclamationmark.triangle.fill")
+                                    .font(.title)
+                                    .foregroundColor(.orange)
+                                Text(err)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(24)
+                        } else {
+                            Text(localizationManager.localized("math_input_hint"))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                        }
-                        .padding(24)
-                    } else {
-                        Text(localizationManager.localized("math_input_hint"))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(24)
-                    }
-                }
-                .frame(maxHeight: 180)
-                .padding(.horizontal)
-
-                // 3.5 邊框選項
-                if currentResult != nil {
-                    Toggle(isOn: $keepCardBorder) {
-                        HStack(spacing: 6) {
-                            Image(systemName: keepCardBorder ? "rectangle.inset.filled" : "rectangle")
-                                .foregroundColor(.accentColor)
-                            Text(localizationManager.localized("math_card_border"))
-                                .font(.subheadline)
+                                .padding(24)
                         }
                     }
+                    .frame(maxHeight: 180)
                     .padding(.horizontal)
+
+                    // 3.5 邊框選項
+                    if currentResult != nil {
+                        Toggle(isOn: $keepCardBorder) {
+                            HStack(spacing: 6) {
+                                Image(systemName: keepCardBorder ? "rectangle.inset.filled" : "rectangle")
+                                    .foregroundColor(.accentColor)
+                                Text(localizationManager.localized("math_card_border"))
+                                    .font(.subheadline)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+
                 }
-
-                Spacer()
-
-                // 4. 貼入畫布按鈕
+                .padding(.top)
+                .padding(.bottom, 12)
+            }
+            .safeAreaInset(edge: .bottom) {
+                // 4. 貼入畫布按鈕 —— 釘在底部，永遠看得到也點得到。
                 if let res = currentResult {
                     Button {
                         if let cardImg = renderResultCardToImage(res) {
@@ -148,11 +160,14 @@ public struct MathCalculatorSheet: View {
                     }
                     .buttonStyle(.plain)
                     .padding(.horizontal)
-                    .padding(.bottom)
+                    .padding(.vertical, 10)
+                    .background(.bar)
                 }
             }
-            .padding(.top)
             .navigationTitle(localizationManager.localized("math_calc"))
+            // 大標題在這裡只是把「取消」擠到標題上面、又把輸入框推到摺線下 ——
+            // 這張表沒有長到需要標題隨捲動縮小。
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(localizationManager.localized("cancel")) {
@@ -164,7 +179,6 @@ public struct MathCalculatorSheet: View {
                 evaluateFormula()
             }
         }
-        .frame(minWidth: 480, minHeight: 420)
     }
 
     private func evaluateFormula() {

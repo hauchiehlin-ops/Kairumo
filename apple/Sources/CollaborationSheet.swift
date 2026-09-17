@@ -104,9 +104,6 @@ public struct CollaborationSheet: View {
                 Text(localizationManager.localized("restore_snapshot_confirm"))
             }
         }
-        #if os(macOS) || targetEnvironment(macCatalyst)
-        .frame(minWidth: 440, minHeight: 520)
-        #endif
     }
 
     // MARK: - 狀態橫幅卡片
@@ -264,6 +261,24 @@ public struct CollaborationSheet: View {
                 .padding(12)
                 .background(Color(uiColor: .tertiarySystemGroupedBackground))
                 .cornerRadius(10)
+
+                // 只貼房號、沒帶金鑰就加入的話，連得上、也看得到成員，
+                // **但對方寫的每一個字都解不開** —— 畫面上什麼都不會發生，
+                // 而使用者會以為是同步壞了。這是這個功能最容易踩的一個坑，
+                // 所以連上之後就把它講明白。
+                if !collaborationManager.isHost && collaborationManager.roomKeyBase64 == nil {
+                    HStack(alignment: .top, spacing: 8) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundColor(.orange)
+                        Text(localizationManager.localized("collab_key_missing"))
+                            .font(.caption)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.orange.opacity(0.12))
+                    .cornerRadius(10)
+                }
 
                 // 本機正在當中繼點時，把隊友要輸入的區域網路位址直接顯示出來，
                 // 否則對方只拿到房號，還是不知道要連到哪一台。

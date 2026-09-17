@@ -148,18 +148,16 @@ extension SmokeUITests {
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
 
-        // 用 accessibility identifier 而不是圖示名稱：靠 "ellipsis" 去猜會先
-        // 命中筆記卡片上的那個「⋯」。
-        let menu = app.buttons["home.workbenchMenu"]
-        guard menu.waitForExistence(timeout: 10) else {
-            return XCTFail("找不到首頁的快捷選單按鈕")
-        }
-        menu.tap()
-        sleep(1)
-
+        // 診斷頁的入口在首頁頁尾的版本號上（S-74 把頭像選單整個拿掉了 ——
+        // 它底下四個項目在首頁都已經有自己的入口）。
         let diagnostics = app.buttons["home.diagnostics"]
-        guard diagnostics.waitForExistence(timeout: 5) else {
-            return XCTFail("快捷選單裡找不到診斷")
+        guard diagnostics.waitForExistence(timeout: 10) else {
+            return XCTFail("首頁找不到診斷入口（頁尾的版本號）")
+        }
+        // 頁尾在畫面外，要先捲到底才點得到。
+        if !diagnostics.isHittable {
+            app.swipeUp()
+            app.swipeUp()
         }
         diagnostics.tap()
         sleep(2)

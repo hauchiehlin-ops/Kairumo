@@ -99,6 +99,16 @@ public enum NoteThemeCategory: String, Codable, CaseIterable, Identifiable {
         case .digital: return "theme_digital"
         }
     }
+
+    /// 核心的對應分類。紙張清單由核心供應，兩個平台才會是同一份。
+    public var ffiTheme: FfiPaperTheme {
+        switch self {
+        case .general: return .general
+        case .aesthetic: return .aesthetic
+        case .engineering: return .engineering
+        case .digital: return .digital
+        }
+    }
 }
 
 /// 筆記樣板種類（涵蓋三大主題與通用基礎）
@@ -173,6 +183,23 @@ public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
         case .webResponsiveGrid: return "tmpl_web_grid"
         case .userJourneyFlow: return "tmpl_user_journey"
         }
+    }
+
+    /// 與語言無關的識別字，對應核心 `paperTemplates()` 的 `id`。
+    ///
+    /// rawValue 是中文字面值、而且**已經寫進使用者的 `notebooks_v1.json`**，
+    /// 動不得；所以跨平台的識別另外走這一組。它就是語系鍵去掉 `tmpl_` 前綴，
+    /// 手寫第二份對照表只會多一個會漂移的地方。
+    public var paperId: String {
+        String(localizationKey.dropFirst("tmpl_".count))
+    }
+
+    /// 從核心的識別字還原。認不得就是 nil —— 悄悄退回空白紙的話，
+    /// 核心新增一種紙、平台忘了跟上時不會有人發現。
+    public init?(paperId: String) {
+        guard let match = NoteTemplate.allCases.first(where: { $0.paperId == paperId })
+        else { return nil }
+        self = match
     }
 
     public var descriptionLocalizationKey: String {
@@ -1036,6 +1063,8 @@ public final class NotebookStore: ObservableObject {
         loadData()
         if notebooks.isEmpty {
             seedDefaultNotebooks()
+        } else {
+            backfillEmptySeedNotebooks()
         }
     }
 
@@ -1115,6 +1144,67 @@ public final class NotebookStore: ObservableObject {
         migrated.titleKey = keys.title
         migrated.snippetKey = keys.snippet
         return migrated
+    }
+
+    /// 把「有名字、沒內容」的範例筆記補上內容。
+    ///
+    /// # 為什麼需要這一步
+    ///
+    /// `seedDefaultNotebooks()` 只在筆記庫**空的時候**跑。而範例筆記的內容
+    /// （`SeedContent`）是後來才加的 —— 在那之前裝過這個 App 的人，庫裡早就
+    /// 有兩本只有標題與頁數的空殼，而空殼不是空的，所以那個補內容的分支
+    /// 一輩子不會執行。實機上看到的就是：「歡迎使用 Kairumo」打開來一片白，
+    /// 而它的名字承諾的是說明。
+    ///
+    /// # 為什麼只補「完全空白」的那幾本
+    ///
+    /// 種子跑完，那些字就是**使用者自己的內容**了。他可能已經在上面寫了東西、
+    /// 刪掉了幾段、加了頁。只要有任何一筆筆跡或物件，就一個字都不碰 ——
+    /// 補內容補掉使用者的筆記，比一片空白嚴重得多。
+    private func backfillEmptySeedNotebooks() {
+        var changed = false
+        for index in notebooks.indices {
+            guard let key = notebooks[index].titleKey,
+                  key == "seed_welcome_title" || key == "seed_meeting_title",
+                  Self.isBlank(notebooks[index])
+            else { continue }
+
+            // 先把空白頁收回到範例本來的頁數。舊版的種子曾經一口氣建了
+            // 二十幾頁空白頁，補完內容之後那些頁還在 —— 一本三頁的說明
+            // 後面拖著二十頁空白，看起來像沒載完。整本已經驗證是空的，
+            // 收掉不會動到任何內容。
+            notebooks[index].pagesData = []
+            notebooks[index].pageHeights = nil
+            notebooks[index].pageCount = 0
+
+            if key == "seed_welcome_title" {
+                SeedContent.fillWelcome(&notebooks[index], store: self)
+            } else {
+                SeedContent.fillMeeting(&notebooks[index], store: self)
+            }
+            changed = true
+        }
+        if changed { persistData() }
+    }
+
+    /// 這本筆記有沒有任何內容 —— 筆跡、物件都算。
+    static func isBlank(_ doc: NotebookDocument) -> Bool {
+        let objectCount = (doc.textAttachments?.count ?? 0)
+            + (doc.attachments?.count ?? 0)
+            + (doc.tableAttachments?.count ?? 0)
+            + (doc.shapeAttachments?.count ?? 0)
+            + (doc.connectionAttachments?.count ?? 0)
+            + (doc.linkAttachments?.count ?? 0)
+            + (doc.model3DAttachments?.count ?? 0)
+            + (doc.audioAttachments?.count ?? 0)
+            + (doc.commentPins?.count ?? 0)
+        guard objectCount == 0 else { return false }
+
+        // 解不開的筆跡資料當成「有東西」。判斷不出來就不要動它。
+        return doc.pagesData.allSatisfy { data in
+            guard let drawing = try? PKDrawing(data: data) else { return false }
+            return drawing.strokes.isEmpty
+        }
     }
 
     public func persistData() {

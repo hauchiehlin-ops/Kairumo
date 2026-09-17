@@ -1751,6 +1751,14 @@
     "zhHans": "登录一次，笔记本、资料夹与设定就会在所有装置上保持一致。资料存在你 Google 云端硬碟的应用专属资料夹里——你在档案列表看不到它，我们也看不到。",
     "zhHant": "登入一次，筆記本、資料夾與設定就會在所有裝置上保持一致。資料存在你 Google 雲端硬碟的應用程式專屬資料夾裡——你在檔案清單看不到它，我們也看不到。"
   },
+  "collab_key_missing": {
+    "en": "You joined with the room code only. Without the key in the invite link, everything the others write stays unreadable here. Ask the host for the full invite link and join again.",
+    "ja": "ルームコードだけで参加しています。招待リンクに含まれる鍵がないと、ほかの人が書いた内容はここでは読めません。ホストに招待リンク全体をもらい、入り直してください。",
+    "ko": "방 코드만으로 참여했습니다. 초대 링크에 들어 있는 키가 없으면 다른 사람이 쓴 내용을 여기서 읽을 수 없습니다. 호스트에게 전체 초대 링크를 받아 다시 참여하세요。",
+    "th": "คุณเข้าร่วมด้วยรหัสห้องเท่านั้น หากไม่มีกุญแจในลิงก์เชิญ สิ่งที่คนอื่นเขียนจะอ่านไม่ได้ที่นี่ ขอลิงก์เชิญฉบับเต็มจากผู้เปิดห้องแล้วเข้าร่วมใหม่",
+    "zhHans": "你只用房号加入。少了邀请连结里的金钥，别人写的内容在这里一个字都解不开。请向房主要完整的邀请连结再加入一次。",
+    "zhHant": "你只用房號加入。少了邀請連結裡的金鑰，別人寫的內容在這裡一個字都解不開。請向房主要完整的邀請連結再加入一次。"
+  },
   "collaborate": {
     "en": "Collaborate",
     "ja": "共同編集",
@@ -2504,12 +2512,12 @@
     "zhHant": "輸入錄音標題"
   },
   "enter_room_id": {
-    "en": "Enter Room ID",
-    "ja": "ルームIDを入力してください",
-    "ko": "방 ID를 입력하세요",
-    "th": "ใส่รหัสห้อง",
-    "zhHans": "请输入房间识别代码",
-    "zhHant": "請輸入房間識別代碼"
+    "en": "Paste the invite link (or room code)",
+    "ja": "招待リンク（またはルームコード）を貼り付け",
+    "ko": "초대 링크(또는 방 코드)를 붙여넣기",
+    "th": "วางลิงก์เชิญ (หรือรหัสห้อง)",
+    "zhHans": "贴上邀请连结（或房号）",
+    "zhHant": "貼上邀請連結（或房號）"
   },
   "enter_title": {
     "en": "Enter New Title",
@@ -5134,6 +5142,38 @@
     "th": "วินเทจ",
     "zhHans": "复古手帐",
     "zhHant": "復古手帳"
+  },
+  "paper_content": {
+    "en": "Content on this paper",
+    "ja": "この用紙の内容",
+    "ko": "이 용지의 내용",
+    "th": "เนื้อหาบนกระดาษนี้",
+    "zhHans": "这张纸的内容",
+    "zhHant": "這張紙的內容"
+  },
+  "paper_content_none": {
+    "en": "Empty page",
+    "ja": "白紙のまま",
+    "ko": "빈 페이지",
+    "th": "หน้าว่าง",
+    "zhHans": "不套用，只要空白页",
+    "zhHant": "不套用，只要空白頁"
+  },
+  "paper_locked_by_doc": {
+    "en": "Paper is set by the document template.",
+    "ja": "用紙は文書テンプレートに従います。",
+    "ko": "용지는 문서 서식이 결정합니다.",
+    "th": "กระดาษกำหนดโดยเทมเพลตเอกสาร",
+    "zhHans": "纸张由文件范本决定。",
+    "zhHant": "紙張由文件範本決定。"
+  },
+  "paper_templates_section": {
+    "en": "Paper Templates",
+    "ja": "用紙テンプレート",
+    "ko": "용지 서식",
+    "th": "เทมเพลตกระดาษ",
+    "zhHans": "纸张样板",
+    "zhHant": "紙張樣板"
   },
   "paragraph_align": {
     "en": "Paragraph Alignment",

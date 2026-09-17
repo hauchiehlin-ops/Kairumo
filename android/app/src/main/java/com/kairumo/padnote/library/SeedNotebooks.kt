@@ -45,14 +45,76 @@ object SeedNotebooks {
      * @return 建立的筆記本數（0 表示本來就有東西）。
      */
     fun seedIfEmpty(context: Context, deviceId: UInt, languageTag: String): Int {
-        if (NotebookLibrary.all(context, deviceId).isNotEmpty()) return 0
         fun l(key: String) = LocalizationStrings.localized(key, languageTag)
+
+        val existing = NotebookLibrary.all(context, deviceId)
+        if (existing.isNotEmpty()) return backfill(context, deviceId, existing, ::l)
 
         var created = 0
         if (buildWelcome(context, deviceId, ::l)) created++
         if (buildMeeting(context, deviceId, ::l)) created++
         return created
     }
+
+    /**
+     * 補上「有名字、沒內容」的範例筆記。
+     *
+     * # 為什麼需要這一步
+     *
+     * 上面那段只在筆記庫**空的時候**跑。而範例筆記的內容是後來才加的 ——
+     * 在那之前裝過這個 App 的人，庫裡早就有東西（Android 舊版會自動建一本
+     * 叫 Kairumo 的空白筆記），於是那個補內容的分支一輩子不會執行。
+     * 使用者看到的是：範例筆記打開來一片白，而它的名字承諾的是說明。
+     *
+     * # 為什麼不直接重建
+     *
+     * 種子跑完，那些字就是**使用者自己的內容**了。所以只在「整個筆記庫
+     * 沒有任何一筆內容」時才補 —— 只要他寫過一個字、畫過一筆，就一律不動。
+     * 補內容補掉使用者的筆記，比一片空白嚴重得多。
+     *
+     * 補過就記一個旗標。沒有它的話，使用者把範例刪掉（庫裡剩下的仍然是
+     * 空的），下次開 App 它們就自己長回來。
+     */
+    private fun backfill(
+        context: Context,
+        deviceId: UInt,
+        existing: List<NotebookLibrary.Entry>,
+        l: (String) -> String
+    ): Int {
+        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+        if (prefs.getBoolean(KEY_BACKFILLED, false)) return 0
+
+        val welcomeTitle = l("seed_welcome_title")
+        val meetingTitle = l("seed_meeting_title")
+        val hasSamples = existing.any { it.title == welcomeTitle || it.title == meetingTitle }
+        if (hasSamples) return 0
+        if (!existing.all { isBlank(context, it.id, deviceId) }) return 0
+
+        var created = 0
+        if (buildWelcome(context, deviceId, l)) created++
+        if (buildMeeting(context, deviceId, l)) created++
+        prefs.edit().putBoolean(KEY_BACKFILLED, true).apply()
+        return created
+    }
+
+    /** 這本筆記有沒有任何內容 —— 筆跡與插入的物件都算。 */
+    private fun isBlank(context: Context, id: String, deviceId: UInt): Boolean {
+        val session = NotebookLibrary.open(context, id, deviceId)?.first ?: return false
+        val pages = runCatching { session.pageCount().toInt() }.getOrDefault(0)
+        for (index in 0 until pages) {
+            val page = runCatching { session.pageIdAt(index.toUInt()) }.getOrNull() ?: continue
+            val empty = runCatching { session.drawOrder(page).isEmpty() }.getOrDefault(false) &&
+                runCatching { session.textBlockIds(page).isEmpty() }.getOrDefault(false) &&
+                runCatching { session.tableBlockIds(page).isEmpty() }.getOrDefault(false) &&
+                runCatching { session.imageBlockIds(page).isEmpty() }.getOrDefault(false)
+            // 讀不出來就當成「有東西」。判斷不出來就不要動它。
+            if (!empty) return false
+        }
+        return true
+    }
+
+    private const val PREFS = "kairumo.seed"
+    private const val KEY_BACKFILLED = "samples_backfilled"
 
     // MARK: - 歡迎使用 Kairumo
 

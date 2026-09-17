@@ -28,6 +28,12 @@ public enum DocumentTemplateCatalog {
 
     public struct Theme: Identifiable, Hashable {
         public let id: String
+        /// `"document"`（文件範本）或 `"paper"`（紙張樣板）。
+        ///
+        /// 兩者的資料與排版完全一樣，差別只在介面上掛在哪裡：文件範本在
+        /// 收合的樹裡，紙張樣板掛在紙張清單底下。用 id 去猜的話，那張
+        /// 對照表遲早會跟 `templates/src/` 分岔。
+        public let kind: String
         public let iconName: String
         public let name: [String: String]
         public let categories: [Category]
@@ -90,6 +96,21 @@ public enum DocumentTemplateCatalog {
     /// 目錄內容。載入失敗回空陣列 —— 範本是加分功能，不該讓首頁開不起來。
     public static let themes: [Theme] = load()
 
+    /// 文件範本（簽、契約、會議紀錄…）。收合的那棵樹用這一份。
+    public static var documentThemes: [Theme] { themes.filter { $0.kind != "paper" } }
+
+    /// 紙張樣板自己的示範內容。用紙張的 id 就查得到。
+    public static func paperTemplate(paperId: String) -> Template? {
+        for theme in themes where theme.kind == "paper" {
+            for category in theme.categories {
+                if let found = category.templates.first(where: { $0.id == paperId }) {
+                    return found
+                }
+            }
+        }
+        return nil
+    }
+
     private static func load() -> [Theme] {
         guard let url = Bundle.main.url(
             forResource: "document-templates", withExtension: "json", subdirectory: "Templates")
@@ -102,6 +123,7 @@ public enum DocumentTemplateCatalog {
         return rawThemes.map { theme in
             Theme(
                 id: theme["id"] as? String ?? "",
+                kind: theme["kind"] as? String ?? "document",
                 iconName: ((theme["icon"] as? [String: Any])?["apple"] as? String) ?? "doc.text",
                 name: stringMap(theme["name"]),
                 categories: (theme["categories"] as? [[String: Any]] ?? []).map { category in

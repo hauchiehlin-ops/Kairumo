@@ -1767,6 +1767,14 @@ extension LocalizationManager {
             .ko: "한 번 로그인하면 노트·폴더·설정이 모든 기기에서 동기화됩니다. 데이터는 Google 드라이브의 앱 전용 폴더에 저장됩니다 —— 파일 목록에는 보이지 않으며, 저희도 볼 수 없습니다.",
             .th: "ลงชื่อเข้าใช้ครั้งเดียว สมุดบันทึก โฟลเดอร์ และการตั้งค่าจะซิงค์กันทุกอุปกรณ์ ข้อมูลถูกเก็บในโฟลเดอร์เฉพาะแอปใน Google Drive ของคุณ — ไม่ปรากฏในรายการไฟล์ และเราก็มองไม่เห็น"
         ],
+        "collab_key_missing": [
+            .zhHant: "你只用房號加入。少了邀請連結裡的金鑰，別人寫的內容在這裡一個字都解不開。請向房主要完整的邀請連結再加入一次。",
+            .en: "You joined with the room code only. Without the key in the invite link, everything the others write stays unreadable here. Ask the host for the full invite link and join again.",
+            .zhHans: "你只用房号加入。少了邀请连结里的金钥，别人写的内容在这里一个字都解不开。请向房主要完整的邀请连结再加入一次。",
+            .ja: "ルームコードだけで参加しています。招待リンクに含まれる鍵がないと、ほかの人が書いた内容はここでは読めません。ホストに招待リンク全体をもらい、入り直してください。",
+            .ko: "방 코드만으로 참여했습니다. 초대 링크에 들어 있는 키가 없으면 다른 사람이 쓴 내용을 여기서 읽을 수 없습니다. 호스트에게 전체 초대 링크를 받아 다시 참여하세요。",
+            .th: "คุณเข้าร่วมด้วยรหัสห้องเท่านั้น หากไม่มีกุญแจในลิงก์เชิญ สิ่งที่คนอื่นเขียนจะอ่านไม่ได้ที่นี่ ขอลิงก์เชิญฉบับเต็มจากผู้เปิดห้องแล้วเข้าร่วมใหม่"
+        ],
         "collaborate": [
             .zhHant: "線上協同",
             .en: "Collaborate",
@@ -2520,12 +2528,12 @@ extension LocalizationManager {
             .th: "ใส่ชื่อการบันทึก"
         ],
         "enter_room_id": [
-            .zhHant: "請輸入房間識別代碼",
-            .en: "Enter Room ID",
-            .zhHans: "请输入房间识别代码",
-            .ja: "ルームIDを入力してください",
-            .ko: "방 ID를 입력하세요",
-            .th: "ใส่รหัสห้อง"
+            .zhHant: "貼上邀請連結（或房號）",
+            .en: "Paste the invite link (or room code)",
+            .zhHans: "贴上邀请连结（或房号）",
+            .ja: "招待リンク（またはルームコード）を貼り付け",
+            .ko: "초대 링크(또는 방 코드)를 붙여넣기",
+            .th: "วางลิงก์เชิญ (หรือรหัสห้อง)"
         ],
         "enter_title": [
             .zhHant: "輸入新標題",
@@ -5150,6 +5158,38 @@ extension LocalizationManager {
             .ja: "ヴィンテージ",
             .ko: "빈티지",
             .th: "วินเทจ"
+        ],
+        "paper_content": [
+            .zhHant: "這張紙的內容",
+            .en: "Content on this paper",
+            .zhHans: "这张纸的内容",
+            .ja: "この用紙の内容",
+            .ko: "이 용지의 내용",
+            .th: "เนื้อหาบนกระดาษนี้"
+        ],
+        "paper_content_none": [
+            .zhHant: "不套用，只要空白頁",
+            .en: "Empty page",
+            .zhHans: "不套用，只要空白页",
+            .ja: "白紙のまま",
+            .ko: "빈 페이지",
+            .th: "หน้าว่าง"
+        ],
+        "paper_locked_by_doc": [
+            .zhHant: "紙張由文件範本決定。",
+            .en: "Paper is set by the document template.",
+            .zhHans: "纸张由文件范本决定。",
+            .ja: "用紙は文書テンプレートに従います。",
+            .ko: "용지는 문서 서식이 결정합니다.",
+            .th: "กระดาษกำหนดโดยเทมเพลตเอกสาร"
+        ],
+        "paper_templates_section": [
+            .zhHant: "紙張樣板",
+            .en: "Paper Templates",
+            .zhHans: "纸张样板",
+            .ja: "用紙テンプレート",
+            .ko: "용지 서식",
+            .th: "เทมเพลตกระดาษ"
         ],
         "paragraph_align": [
             .zhHant: "段落對齊",

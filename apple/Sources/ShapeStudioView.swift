@@ -454,9 +454,9 @@ struct ShapeAttachmentItemView: View {
             )
             .onTapGesture(perform: onSelect)
             .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
-            .sheet(isPresented: $isEditingStyle) {
+            .sheet(isPresented: $isEditingStyle) { resizableSheet {
                 ShapeStyleSheet(shape: $shape)
-            }
+            } }
             .alert(
                 localizationManager.localized("shape_label"),
                 isPresented: $isEditingLabel

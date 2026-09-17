@@ -82,6 +82,10 @@ if [[ -n "$EXTRA_FEATURES" ]]; then
     echo "==> 額外 features: $EXTRA_FEATURES"
 fi
 
+# debug 時這個陣列是空的，而 macOS 內建的 bash 3.2 在 `set -u` 下會把
+# `"${PROFILE_ARGS[@]}"` 當成未設定的變數直接中止（`unbound variable`）——
+# 所以下面用到它的地方一律寫成 `${PROFILE_ARGS[@]+"${PROFILE_ARGS[@]}"}`。
+# release 路徑不會踩到，所以這個坑可以活很久。
 PROFILE_ARGS=()
 [[ "$PROFILE" == "release" ]] && PROFILE_ARGS+=(--release)
 
@@ -125,7 +129,8 @@ for abi in "${ABIS[@]}"; do
     # 用 `${RUSTFLAGS:-}` 前綴保留呼叫端原本的旗標（例如 CI 的 -D warnings），
     # 不要整個蓋掉。
     RUSTFLAGS="${RUSTFLAGS:-} -C link-arg=-lc++_shared" \
-        cargo ndk -t "$abi" -o "$OUT_DIR" build -p padnote-core "${FEATURE_ARGS[@]}" "${PROFILE_ARGS[@]}"
+        cargo ndk -t "$abi" -o "$OUT_DIR" build -p padnote-core "${FEATURE_ARGS[@]}" \
+            ${PROFILE_ARGS[@]+"${PROFILE_ARGS[@]}"}
 done
 
 # 相依 crate 順帶產生的 cdylib 不是我們的執行期相依，留著只會讓 APK 變大。

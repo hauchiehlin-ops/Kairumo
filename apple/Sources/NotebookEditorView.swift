@@ -1509,12 +1509,12 @@ public struct NotebookEditorView: View {
                 }
             }
         }
-        .sheet(isPresented: $showMathCalculator) { erasedView {
+        .sheet(isPresented: $showMathCalculator) { resizableSheet {
             MathCalculatorSheet { exprText, cardImage in
                 insertImageAttachment(cardImage)
             }
         } }
-        .sheet(isPresented: $showShapeStudio) { erasedView {
+        .sheet(isPresented: $showShapeStudio) { resizableSheet {
             ShapeStudioView { shapes, connections in
                 if notebook.shapeAttachments == nil { notebook.shapeAttachments = [] }
                 if notebook.connectionAttachments == nil { notebook.connectionAttachments = [] }
@@ -1531,7 +1531,7 @@ public struct NotebookEditorView: View {
                 store.updateNotebook(notebook)
             }
         } }
-        .sheet(isPresented: $showTableStudio) { erasedView {
+        .sheet(isPresented: $showTableStudio) { resizableSheet {
             TableStudioView { created in
                 var table = created
                 table.pageIndex = currentPageIndex
@@ -1540,7 +1540,7 @@ public struct NotebookEditorView: View {
                 store.updateNotebook(notebook)
             }
         } }
-        .sheet(item: $editingTable) { target in erasedView {
+        .sheet(item: $editingTable) { target in resizableSheet {
             TableStudioView(editing: target) { updated in
                 guard let index = notebook.tableAttachments?
                     .firstIndex(where: { $0.id == updated.id }) else { return }
@@ -1552,19 +1552,19 @@ public struct NotebookEditorView: View {
                 store.updateNotebook(notebook)
             }
         } }
-        .sheet(isPresented: $showChartStudio) { erasedView {
+        .sheet(isPresented: $showChartStudio) { resizableSheet {
             ChartStudioView { chartSpec, chartImage in
                 insertImageAttachment(chartImage, chartSpecJSON: chartSpec.encodedJSON())
             }
         } }
         // 重新編修既有的圖表。帶著原本的規格進去，使用者看到的是自己當初
         // 輸入的數字 —— 而不是一張只能刪掉重做的圖。
-        .sheet(item: $editingChartAttachmentId) { identifier in erasedView {
+        .sheet(item: $editingChartAttachmentId) { identifier in resizableSheet {
             ChartStudioView(editing: identifier.spec) { updatedSpec, updatedImage in
                 replaceChartAttachment(id: identifier.id, spec: updatedSpec, image: updatedImage)
             }
         } }
-        .sheet(isPresented: $showNoteIntelligence) { erasedView {
+        .sheet(isPresented: $showNoteIntelligence) { resizableSheet {
             NoteIntelligenceSheet(
                 // 走核心的 markdown 匯出：打字內容、表格、轉錄文字都在裡面，
                 // 而且與匯出看到的是同一份文字 —— 另外湊一份「給模型看的」
@@ -1573,7 +1573,7 @@ public struct NotebookEditorView: View {
                 onInsert: { text in insertQuickTextSnippet(text) }
             )
         } }
-        .sheet(isPresented: $showWordStudio) { erasedView {
+        .sheet(isPresented: $showWordStudio) { resizableSheet {
             WordTextStudioView(attachment: $newTextDraft) { created in
                 if notebook.textAttachments == nil {
                     notebook.textAttachments = []
@@ -1582,7 +1582,7 @@ public struct NotebookEditorView: View {
                 store.updateNotebook(notebook)
             }
         } }
-        .sheet(isPresented: $showLinkPreviewSheet) { erasedView {
+        .sheet(isPresented: $showLinkPreviewSheet) { resizableSheet {
             LinkPreviewSheet { linkItem in
                 if notebook.linkAttachments == nil {
                     notebook.linkAttachments = []
@@ -1596,10 +1596,10 @@ public struct NotebookEditorView: View {
                 store.updateNotebook(notebook)
             }
         } }
-        .sheet(isPresented: $showProColorPicker) { erasedView {
+        .sheet(isPresented: $showProColorPicker) { resizableSheet {
             ProColorPickerSheet(selectedColor: $selectedColor)
         } }
-        .sheet(isPresented: $show3DStudio) { erasedView {
+        .sheet(isPresented: $show3DStudio) { resizableSheet {
             Model3DStudioView { new3DAttachment in
                 if notebook.model3DAttachments == nil {
                     notebook.model3DAttachments = []
@@ -1610,23 +1610,23 @@ public struct NotebookEditorView: View {
                 store.updateNotebook(notebook)
             }
         } }
-        .sheet(isPresented: $showAssetLibrarySheet) { erasedView {
+        .sheet(isPresented: $showAssetLibrarySheet) { resizableSheet {
             AssetLibraryView { image, _ in
                 insertImageAttachment(image)
             }
         } }
-        .sheet(isPresented: $showAudioPicker) { erasedView {
+        .sheet(isPresented: $showAudioPicker) { resizableSheet {
             AudioInsertPickerSheet { recording in
                 insertAudioAttachment(recording)
             }
         } }
-        .sheet(isPresented: $showCollaborationSheet) { erasedView {
+        .sheet(isPresented: $showCollaborationSheet) { resizableSheet {
             CollaborationSheet(notebookId: notebook.id)
         } }
         .onReceive(collaborationManager.oplogReceived) { event in
             handleRemoteOplog(event)
         }
-        .sheet(isPresented: $showThemeToolsSheet) { erasedView {
+        .sheet(isPresented: $showThemeToolsSheet) { resizableSheet {
             ThemeSpecificToolsView(
                 currentBrushColor: $selectedColor,
                 isGoldenSpiralActive: $isGoldenSpiralOverlay,
@@ -1710,7 +1710,7 @@ public struct NotebookEditorView: View {
                 folderToRename = nil
             }
         }
-        .sheet(isPresented: $showMoveNotebookSheet) { erasedView {
+        .sheet(isPresented: $showMoveNotebookSheet) { resizableSheet {
             MoveNotebookSheet(notebookId: notebookToMoveId ?? notebook.id)
         } }
     }
@@ -4799,6 +4799,36 @@ ZStack(alignment: .topTrailing) {
         self.refinedSketchCache = nil
     }
 
+    /// 把對方傳來的筆跡落到本機。
+    ///
+    /// # 為什麼不是「有畫布才做」
+    ///
+    /// 這裡原本整段包在 `if let canvas = canvasView` 裡：畫布還沒建立的那
+    /// 一瞬間（剛進編輯器、剛換頁、連續模式下那一頁還沒捲到），對方的筆畫
+    /// **連存都不會存** —— 訊息收到了、解密成功了、然後靜靜地被丟掉。
+    /// 實機上看到的就是「兩台都顯示已連線，畫下去對面什麼都沒有」，
+    /// 而且完全沒有任何錯誤可查。
+    ///
+    /// 落盤與畫面是兩件事：先無條件落盤，畫布有沒有在都不影響資料。
+    private func applyRemoteDrawing(page: Int, remote: PKDrawing, replace: Bool) {
+        let isCurrent = (page == currentPageIndex)
+        let base: PKDrawing = isCurrent
+            ? (canvasView?.drawing ?? currentDrawing)
+            : store.loadDrawing(notebookId: notebook.id, pageIndex: page)
+        let merged = replace ? remote : base.appending(remote)
+
+        store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: merged)
+        guard isCurrent else { return }
+
+        isApplyingRemoteUpdate = true
+        currentDrawing = merged
+        canvasView?.drawing = merged
+        lastStrokeCount = merged.strokes.count
+        DispatchQueue.main.async {
+            isApplyingRemoteUpdate = false
+        }
+    }
+
     /// 處理協同遠端廣播操作（CRDT Oplog 合併）
     private func handleRemoteOplog(_ event: RemoteOplogEvent) {
         switch event.kind {
@@ -4807,45 +4837,14 @@ ZStack(alignment: .topTrailing) {
                   let b64 = event.payload["drawing_base64"] as? String,
                   let data = Data(base64Encoded: b64),
                   let remoteDrawing = try? PKDrawing(data: data) else { return }
-
-            if pageIdx == currentPageIndex {
-                if let canvas = canvasView {
-                    isApplyingRemoteUpdate = true
-                    let merged = canvas.drawing.appending(remoteDrawing)
-                    canvas.drawing = merged
-                    currentDrawing = merged
-                    lastStrokeCount = merged.strokes.count
-                    store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: merged)
-                    DispatchQueue.main.async {
-                        isApplyingRemoteUpdate = false
-                    }
-                }
-            } else {
-                let existing = store.loadDrawing(notebookId: notebook.id, pageIndex: pageIdx)
-                let merged = existing.appending(remoteDrawing)
-                store.saveDrawing(notebookId: notebook.id, pageIndex: pageIdx, drawing: merged)
-            }
+            applyRemoteDrawing(page: pageIdx, remote: remoteDrawing, replace: false)
 
         case "drawing_replace":
             guard let pageIdx = event.payload["page_index"] as? Int,
                   let b64 = event.payload["drawing_base64"] as? String,
                   let data = Data(base64Encoded: b64),
                   let remoteDrawing = try? PKDrawing(data: data) else { return }
-
-            if pageIdx == currentPageIndex {
-                if let canvas = canvasView {
-                    isApplyingRemoteUpdate = true
-                    canvas.drawing = remoteDrawing
-                    currentDrawing = remoteDrawing
-                    lastStrokeCount = remoteDrawing.strokes.count
-                    store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: remoteDrawing)
-                    DispatchQueue.main.async {
-                        isApplyingRemoteUpdate = false
-                    }
-                }
-            } else {
-                store.saveDrawing(notebookId: notebook.id, pageIndex: pageIdx, drawing: remoteDrawing)
-            }
+            applyRemoteDrawing(page: pageIdx, remote: remoteDrawing, replace: true)
 
         case "attachment_upsert":
             guard let attType = event.payload["attachment_type"] as? String,
@@ -6800,9 +6799,9 @@ struct LinkAttachmentItemView: View {
             )
             .onTapGesture { isSelected.toggle() }
             .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
-            .sheet(isPresented: $isEditing) {
+            .sheet(isPresented: $isEditing) { resizableSheet {
                 LinkAttachmentEditSheet(linkItem: $linkItem)
-            }
+            } }
     }
 
     private var card: some View {

@@ -132,7 +132,7 @@ object DocumentTemplateCatalog {
         lang: String
     ): Boolean {
         val variant = variant(template, kind, lang) ?: return false
-        val pages = ensurePages(session, firstPageId, variant.pageCount)
+        val pages = ensurePages(session, firstPageId, variant.pageCount, paperOf(template))
         if (pages.isEmpty()) return false
 
         for (block in variant.blocks) {
@@ -174,16 +174,31 @@ object DocumentTemplateCatalog {
         return true
     }
 
+    /**
+     * 這份文件範本要鋪在哪一種紙上。
+     *
+     * `pageStyle` 一直在 JSON 裡、兩端也都解析了，卻**沒有人用它** ——
+     * 於是紙張與文件各選各的，實機上出現過一份公文「簽」鋪在行動端線框紙
+     * 上：本文底下壓著兩個手機外框。對照表在核心，兩端才不會各給一個答案。
+     */
+    fun paperOf(template: Template): uniffi.padnote_core.PageStyle =
+        when (uniffi.padnote_core.docTemplatePaperId(template.pageStyle)) {
+            "lined" -> uniffi.padnote_core.PageStyle.LINED
+            "grid" -> uniffi.padnote_core.PageStyle.GRID
+            "dot_grid_fine" -> uniffi.padnote_core.PageStyle.DOTTED
+            "cornell" -> uniffi.padnote_core.PageStyle.CORNELL
+            else -> uniffi.padnote_core.PageStyle.BLANK
+        }
+
     private fun ensurePages(
         session: PadnoteSession,
         firstPageId: String,
-        count: Int
+        count: Int,
+        style: uniffi.padnote_core.PageStyle
     ): List<String> {
         val pages = mutableListOf(firstPageId)
         while (pages.size < count) {
-            val next = runCatching {
-                session.addPage(uniffi.padnote_core.PageStyle.BLANK)
-            }.getOrNull() ?: break
+            val next = runCatching { session.addPage(style) }.getOrNull() ?: break
             pages.add(next)
         }
         return pages

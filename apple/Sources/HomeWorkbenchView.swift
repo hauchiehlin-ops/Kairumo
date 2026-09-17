@@ -38,6 +38,8 @@ public struct HomeWorkbenchView: View {
     // 新增筆記暫存狀態
     @State private var newNoteTitle: String = ""
     @State private var selectedTemplate: NoteTemplate = .blank
+    /// 紙張要不要順便鋪一份示範內容。nil = 不套用（預設）。
+    @State private var selectedPaperVariant: DocumentTemplateCatalog.Variantkind? = nil
     @State private var selectedNewNoteCategory: NoteThemeCategory = .general
     // 文件範本（工作項 S-61）。`nil` 代表只要一張空紙，不鋪任何內容。
     @State private var selectedDocTemplateId: String?
@@ -241,15 +243,19 @@ public struct HomeWorkbenchView: View {
             // 上下相疊，看起來像畫面出錯。
             .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
-            // 導覽列只放三件事，而且三件事長得一樣（工作項 S-62）。
+            // 導覽列只放**換介面語言**一件事（工作項 S-62、S-74）。
             //
-            // 在此之前這裡是三個各自為政的控制項：一個有邊框與陰影的語言膠囊、
-            // 一顆紫色的「素材圖庫」按鈕、一個藍紫漸層頭像加省略號的膠囊 ——
-            // 三種圓角、三種底色、三種字級擠在一起。單看每一個都說得過去，
-            // 放在同一列就是整個畫面最吵的地方。
+            // 這裡曾經是三個各自為政的控制項（語言膠囊、素材圖庫按鈕、
+            // 頭像選單），三種圓角、三種底色、三種字級擠在一起。後來拿掉
+            // 素材圖庫，最後連頭像選單也拿掉 —— 它底下四個項目**全部**在
+            // 首頁上已經有自己的入口：
             //
-            // 「素材圖庫」從這裡拿掉：它下面就有一張主要動作卡片，
-            // 同一個入口出現兩次只是增加雜訊，能力一點都沒有少。
+            //   身分   → 身分卡片上的「編輯身分」
+            //   素材圖庫 → 主要動作卡片
+            //   錄音資料夾 → 「最近錄音與轉錄」區塊的按鈕
+            //   系統診斷 → 頁尾的版本號，以及「資料與同步」裡的卡片
+            //
+            // 同一個入口出現兩次不會增加能力，只會讓使用者多一個地方要找。
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Menu {
@@ -282,71 +288,26 @@ public struct HomeWorkbenchView: View {
                     .accessibilityLabel(localizationManager.localized("select_language"))
                     .help(localizationManager.localized("select_language"))
                 }
-
-                ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        Button {
-                            showAccountSheet = true
-                        } label: {
-                            Label(accountManager.profile.displayName, systemImage: "person.crop.circle")
-                        }
-
-                        Button {
-                            showAssetLibrarySheet = true
-                        } label: {
-                            Label(localizationManager.localized("asset_library"), systemImage: "shippingbox")
-                        }
-
-                        Button {
-                            audioManager.openRecordingsFolderInFinder()
-                        } label: {
-                            Label(localizationManager.localized("open_record_folder"), systemImage: "folder")
-                        }
-
-                        Divider()
-
-                        Button {
-                            showInfoSheet = true
-                        } label: {
-                            Label("\(localizationManager.localized("system_diagnostics")) (\(appVersionString))", systemImage: "info.circle")
-                        }
-                        .accessibilityIdentifier("home.diagnostics")
-                    } label: {
-                        // 頭像用單色主色，不用漸層 —— 漸層在這個尺寸只會糊掉，
-                        // 而且它是畫面上唯一一處漸層。
-                        ZStack {
-                            Circle()
-                                .fill(DS.Color.accent)
-                                .frame(width: DS.Icon.medium, height: DS.Icon.medium)
-                            Text(String(accountManager.profile.displayName.prefix(1)).uppercased())
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(.white)
-                        }
-                    }
-                    // UI 測試要能穩定點到這個選單。靠 "ellipsis" 這種系統圖示名稱
-                    // 去猜，會先命中筆記卡片上的那個「⋯」。
-                    .accessibilityIdentifier("home.workbenchMenu")
-                }
             }
-            .sheet(isPresented: $showAssetLibrarySheet) { erasedView {
+            .sheet(isPresented: $showAssetLibrarySheet) { resizableSheet {
                 AssetLibraryView()
             } }
-            .sheet(isPresented: $showAccountSheet) { erasedView {
+            .sheet(isPresented: $showAccountSheet) { resizableSheet {
                 AccountProfileSheet()
             } }
-            .sheet(item: $viewingDocument) { doc in erasedView {
+            .sheet(item: $viewingDocument) { doc in resizableSheet {
                 DocumentViewerSheet(document: doc)
             } }
-            .sheet(item: $insertingRecording) { rec in erasedView {
+            .sheet(item: $insertingRecording) { rec in resizableSheet {
                 RecordingToNotebookSheet(recording: rec)
             } }
-            .sheet(isPresented: $showInfoSheet) { erasedView {
+            .sheet(isPresented: $showInfoSheet) { resizableSheet {
                 AppDiagnosticsSheet(versionString: appVersionString, platformDesc: platformArchitectureDescription)
             } }
-            .sheet(isPresented: $showNewNotebookSheet) { erasedView {
+            .sheet(isPresented: $showNewNotebookSheet) { resizableSheet {
                 newNotebookModal
             } }
-            .sheet(isPresented: $showQuickRecordSheet) { erasedView {
+            .sheet(isPresented: $showQuickRecordSheet) { resizableSheet {
                 QuickAudioRecorderModal()
             } }
             .fullScreenCover(item: $selectedNotebookForEditing) { doc in erasedView {
@@ -393,7 +354,7 @@ public struct HomeWorkbenchView: View {
                     folderToRename = nil
                 }
             }
-            .sheet(isPresented: $showMoveNotebookSheet) { erasedView {
+            .sheet(isPresented: $showMoveNotebookSheet) { resizableSheet {
                 if let id = notebookToMoveId {
                     MoveNotebookSheet(notebookId: id)
                 }
@@ -1624,6 +1585,9 @@ public struct HomeWorkbenchView: View {
                     }
                 }
                 .buttonStyle(.plain)
+                // 診斷頁原本要先開頭像選單才點得到，選單拿掉之後這裡是
+                // 首頁上最穩定的入口，UI 測試改指這一顆。
+                .accessibilityIdentifier("home.diagnostics")
 
                 Text("•")
                     .font(.footnote)
@@ -1654,51 +1618,9 @@ public struct HomeWorkbenchView: View {
                     TextField(localizationManager.localized("note_title"), text: $newNoteTitle)
                 }
 
-                Section(localizationManager.localized("theme_category")) {
-                    Picker("", selection: $selectedNewNoteCategory) {
-                        ForEach(NoteThemeCategory.allCases) { cat in
-                            HStack(spacing: 4) {
-                                Image(systemName: cat.iconName)
-                                Text(localizationManager.localized(cat.localizationKey))
-                            }
-                            .tag(cat)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .padding(.vertical, 4)
-                }
+                paperSection
 
                 documentTemplateSection
-
-                Section(localizationManager.localized("select_template")) {
-                    ForEach(NoteTemplate.allCases.filter { $0.category == selectedNewNoteCategory }) { tmpl in
-                        HStack(spacing: 12) {
-                            Image(systemName: tmpl.iconName)
-                                .font(.title3)
-                                .foregroundColor(selectedTemplate == tmpl ? .accentColor : .secondary)
-                                .frame(width: 32)
-
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(localizationManager.localized(tmpl.localizationKey))
-                                    .font(.headline)
-                                Text(localizationManager.localized(tmpl.descriptionLocalizationKey))
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                            }
-
-                            Spacer()
-
-                            if selectedTemplate == tmpl {
-                                Image(systemName: "checkmark.circle.fill")
-                                    .foregroundColor(.accentColor)
-                            }
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            selectedTemplate = tmpl
-                        }
-                    }
-                }
             }
             .navigationTitle(localizationManager.localized("new_notebook"))
             .navigationBarTitleDisplayMode(.inline)
@@ -1706,6 +1628,9 @@ public struct HomeWorkbenchView: View {
                 if let first = NoteTemplate.allCases.first(where: { $0.category == newCat }) {
                     selectedTemplate = first
                 }
+            }
+            .onChange(of: selectedDocTemplateId) { _ in
+                applyDocumentTemplatePaper()
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -1725,6 +1650,14 @@ public struct HomeWorkbenchView: View {
                                 tmpl, kind: selectedDocVariant,
                                 language: localizationManager.currentLanguage.catalogKey, to: &created)
                             notebookStore.updateNotebook(created)
+                        } else if let variant = selectedPaperVariant,
+                                  let paper = DocumentTemplateCatalog.paperTemplate(
+                                    paperId: selectedTemplate.paperId) {
+                            // 沒選文件範本，但紙張自己帶了示範內容。
+                            DocumentTemplateCatalog.apply(
+                                paper, kind: variant,
+                                language: localizationManager.currentLanguage.catalogKey, to: &created)
+                            notebookStore.updateNotebook(created)
                         }
                         showNewNotebookSheet = false
                         // 立即開啟該筆記畫布進行編輯
@@ -1733,6 +1666,125 @@ public struct HomeWorkbenchView: View {
                     .fontWeight(.bold)
                 }
             }
+        }
+    }
+
+    // MARK: - 紙張挑選
+
+    /// 選了文件範本，紙張就跟著它走。
+    ///
+    /// 這兩件事原本各選各的，於是實機上出現過一份公文「簽」鋪在
+    /// **行動端線框**紙上 —— 本文底下壓著兩個手機外框。文件範本的 JSON
+    /// 本來就帶著它要的 `pageStyle`，兩端卻都只解析、不使用。
+    private func applyDocumentTemplatePaper() {
+        guard let id = selectedDocTemplateId,
+              let tmpl = DocumentTemplateCatalog.template(id: id),
+              let paper = NoteTemplate(paperId: docTemplatePaperId(pageStyle: tmpl.pageStyle))
+        else { return }
+        selectedTemplate = paper
+        selectedNewNoteCategory = paper.category
+    }
+
+    /// 紙張是由文件範本決定的嗎？是的話清單只能看，不能改。
+    private var paperIsLockedByDocument: Bool { selectedDocTemplateId != nil }
+
+    /// 主題分類 + 該主題底下的紙張，**同一個區塊**。
+    ///
+    /// 這兩件事原本分成兩個 Section，中間還隔著一整棵可展開的文件範本樹。
+    /// 於是切換主題時，會變的那份清單在螢幕外 —— 使用者按下去看不到任何
+    /// 反應，合理的結論就是「這個東西壞了」。清單就放在切換器正下方。
+    ///
+    /// 清單本身來自核心 `paperTemplatesForTheme`：Android 端原本連紙張都
+    /// 不能選，各寫一份只會讓兩邊繼續分岔。
+    private var paperSection: some View {
+        Section {
+            Picker("", selection: $selectedNewNoteCategory) {
+                ForEach(NoteThemeCategory.allCases) { cat in
+                    HStack(spacing: 4) {
+                        Image(systemName: cat.iconName)
+                        Text(localizationManager.localized(cat.localizationKey))
+                    }
+                    .tag(cat)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.vertical, 4)
+            .disabled(paperIsLockedByDocument)
+
+            ForEach(paperTemplatesForTheme(theme: selectedNewNoteCategory.ffiTheme), id: \.id) { paper in
+                paperRow(paper)
+            }
+
+            paperContentPicker
+        } header: {
+            Text(localizationManager.localized("select_template"))
+        } footer: {
+            if paperIsLockedByDocument {
+                Text(localizationManager.localized("paper_locked_by_doc"))
+            }
+        }
+    }
+
+    /// 這張紙要不要帶一份示範內容。
+    ///
+    /// # 為什麼紙張也需要內容
+    ///
+    /// 紙張本來只有底紋 —— 選了「行動端線框」拿到的是兩個空的手機外框，
+    /// 使用者要自己想那兩個框該放什麼。十三種紙裡有一半都有這個問題
+    /// （黃金比例、情緒板、工程藍圖、三視圖、使用者旅程…）：
+    /// **會用的人不需要它，不會用的人看不懂它。**
+    ///
+    /// 所以每一種紙各配一份「實務範例」（照著改就能用的真實內容）與一份
+    /// 「空白大綱」（只留標題與欄位）。預設**不套用** —— 最常用的動作
+    /// 仍然是「給我一張空白紙」，那件事不該因此多按一下。
+    @ViewBuilder
+    private var paperContentPicker: some View {
+        if !paperIsLockedByDocument,
+           DocumentTemplateCatalog.paperTemplate(paperId: selectedTemplate.paperId) != nil {
+            Picker(
+                localizationManager.localized("paper_content"),
+                selection: $selectedPaperVariant
+            ) {
+                Text(localizationManager.localized("paper_content_none"))
+                    .tag(nil as DocumentTemplateCatalog.Variantkind?)
+                ForEach(DocumentTemplateCatalog.Variantkind.allCases) { kind in
+                    Text(localizationManager.localized(kind.localizationKey))
+                        .tag(kind as DocumentTemplateCatalog.Variantkind?)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.vertical, 2)
+        }
+    }
+
+    private func paperRow(_ paper: FfiPaperTemplate) -> some View {
+        let isSelected = selectedTemplate.paperId == paper.id
+        return HStack(spacing: 12) {
+            Image(systemName: paper.iconApple)
+                .font(.title3)
+                .foregroundColor(isSelected ? .accentColor : .secondary)
+                .frame(width: 32)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(localizationManager.localized(paper.titleKey))
+                    .font(.headline)
+                Text(localizationManager.localized(paper.descKey))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+
+            Spacer()
+
+            if isSelected {
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.accentColor)
+            }
+        }
+        .opacity(paperIsLockedByDocument && !isSelected ? 0.4 : 1)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard !paperIsLockedByDocument, let match = NoteTemplate(paperId: paper.id) else { return }
+            selectedTemplate = match
         }
     }
 
@@ -1774,7 +1826,7 @@ public struct HomeWorkbenchView: View {
                 .pickerStyle(.segmented)
             }
 
-            ForEach(DocumentTemplateCatalog.themes) { theme in
+            ForEach(DocumentTemplateCatalog.documentThemes) { theme in
                 DisclosureGroup(
                     isExpanded: Binding(
                         get: { expandedDocTheme == theme.id },
@@ -2137,6 +2189,8 @@ extension AppDiagnosticsSheet {
             get: { shareBackupURL.map { IdentifiableURL(url: $0) } },
             set: { shareBackupURL = $0?.url }
         )) { item in
+            // 系統分享表是 UIActivityViewController，大小由系統決定 ——
+            // 硬塞 preferredContentSize 只會讓它的版面錯位。
             ShareSheet(items: [item.url])
         }
     }

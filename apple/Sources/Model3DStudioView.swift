@@ -260,7 +260,6 @@ public struct Model3DStudioView: View {
                 }
             }
         }
-        .frame(minWidth: 620, minHeight: 460)
     }
 
     private func materialDescription(_ mat: MaterialType) -> String {

@@ -145,8 +145,13 @@ object NotebookLibrary {
         }.getOrDefault(false)
 
     /** 開啟（或建立）一本筆記本，回傳 session 與第一頁。 */
-    fun open(context: Context, id: String, deviceId: UInt, title: String = "Kairumo"):
-        Pair<PadnoteSession, String>? = runCatching {
+    fun open(
+        context: Context,
+        id: String,
+        deviceId: UInt,
+        title: String = "Kairumo",
+        style: uniffi.padnote_core.PageStyle = uniffi.padnote_core.PageStyle.BLANK
+    ): Pair<PadnoteSession, String>? = runCatching {
         val path = File(directory(context), "$id.$EXTENSION")
         val session = if (path.exists()) {
             PadnoteSession.openExisting(path.absolutePath, deviceId)
@@ -155,8 +160,9 @@ object NotebookLibrary {
                 path.absolutePath, title, System.currentTimeMillis().toULong(), deviceId
             )
         }
-        val page = session.firstPageId()
-            ?: session.addPage(uniffi.padnote_core.PageStyle.BLANK)
+        // 紙張只在**建立第一頁**時決定得了：核心沒有改既有頁面底紋的操作，
+        // 而那是一筆會進 oplog 的格式變更，不能為了這件事開這個口子。
+        val page = session.firstPageId() ?: session.addPage(style)
         session to page
     }.getOrNull()
 
@@ -167,9 +173,15 @@ object NotebookLibrary {
      * 看著的那一層 —— 一律建在最上層的話，人在某個資料夾裡按「新增」，
      * 東西卻出現在別的地方。
      */
-    fun create(context: Context, title: String, deviceId: UInt, folderId: String? = null): String? {
+    fun create(
+        context: Context,
+        title: String,
+        deviceId: UInt,
+        folderId: String? = null,
+        style: uniffi.padnote_core.PageStyle = uniffi.padnote_core.PageStyle.BLANK
+    ): String? {
         val id = java.util.UUID.randomUUID().toString()
-        if (open(context, id, deviceId, title) == null) return null
+        if (open(context, id, deviceId, title, style = style) == null) return null
         AccountSyncStore.record(context, id = id, title = title, parentId = folderId)
         return id
     }

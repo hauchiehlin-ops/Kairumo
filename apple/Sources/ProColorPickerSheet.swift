@@ -104,6 +104,7 @@ public struct ProColorPickerSheet: View {
                 Spacer()
             }
             .navigationTitle(localizationManager.localized("pro_color"))
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(localizationManager.localized("confirm")) {
@@ -117,7 +118,6 @@ public struct ProColorPickerSheet: View {
                 initFromCurrentColor()
             }
         }
-        .frame(minWidth: 460, minHeight: 520)
     }
 
     // MARK: - 1. 預覽頭部

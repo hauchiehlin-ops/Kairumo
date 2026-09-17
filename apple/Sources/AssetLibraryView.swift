@@ -136,9 +136,9 @@ public struct AssetLibraryView: View {
             } message: {
                 Text(localizationManager.localized("clear_cache_confirm"))
             }
-            .sheet(item: $viewingDetailItem) { item in
+            .sheet(item: $viewingDetailItem) { item in resizableSheet {
                 assetDetailSheet(item: item)
-            }
+            } }
         }
     }
 

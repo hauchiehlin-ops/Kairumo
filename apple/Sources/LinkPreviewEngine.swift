@@ -216,6 +216,7 @@ public struct LinkPreviewSheet: View {
             }
             .padding(.top)
             .navigationTitle(localizationManager.localized("link_preview"))
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(localizationManager.localized("cancel")) {
@@ -227,7 +228,6 @@ public struct LinkPreviewSheet: View {
                 loadPreview()
             }
         }
-        .frame(minWidth: 460, minHeight: 450)
     }
 
     private func loadPreview() {

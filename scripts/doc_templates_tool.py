@@ -69,6 +69,25 @@ STYLE = {
 TABLE_ROW_H = 34.0
 TABLE_GAP = 20.0
 
+# 一個字實際畫出來大約是字級的幾倍寬。
+#
+# **寧可高估。** 估寬了只是那一段多佔一行的高度；估窄了是**行數算少**，
+# 而文字方塊的高度是照行數算的 —— 高度不夠時，平台不會把框撐大，
+# 它會把最後一行截掉並補上刪節號。使用者看到的是一份句子沒寫完的範本，
+# 而且看不出來是被裁掉還是原本就這樣寫（實機上逐字比對出來的）。
+#
+# 1.0 / 0.55 是「理想字面寬」，實際字型還有字距與標點的留白，所以往上抓。
+CJK_ADVANCE = 1.15
+LATIN_ADVANCE = 0.62
+
+# 一行實際佔的高度是字級的幾倍，以及文字方塊自己的上下留白。
+#
+# 同樣**寧可高估**。這兩個數字原本是 1.35 與 10 —— 在模擬器上逐字比對過，
+# 那組值算出來的框只放得下一行，第二段整段不見並在第一行尾巴補上刪節號。
+# 症狀很難認：看起來像「範本本來就只寫這麼多」。
+LINE_FACTOR = 1.5
+BOX_PADDING = 28.0
+
 
 def visual_width(text: str, font_size: float) -> float:
     """一段文字畫出來大約多寬。
@@ -84,23 +103,41 @@ def visual_width(text: str, font_size: float) -> float:
     total = 0.0
     for ch in text:
         if cjk_font or unicodedata.east_asian_width(ch) in ("W", "F"):
-            total += font_size
+            total += font_size * CJK_ADVANCE
         else:
-            total += font_size * 0.55
+            total += font_size * LATIN_ADVANCE
     return total
 
 
+# 兩個平台在畫文字方塊時，段與段之間還會再加這麼多。
+# Apple 是 `NoteTextAttachment(paragraphSpacing: 6)`、Android 是
+# `TextBox.paragraphSpacing = 6f`，兩邊同一個值。
+PARAGRAPH_SPACING = 6.0
+
+
 def text_height(text: str, font_size: float, line_spacing: float, width: float) -> float:
-    """一段文字排進 `width` 寬之後大約多高。"""
-    line_h = font_size * 1.35 + line_spacing
+    """一段文字排進 `width` 寬之後大約多高。
+
+    # 段落間距一定要算進去
+
+    原本只算「行數 × 行高 + 10」，漏掉了平台在段與段之間加的 6pt。
+    一個五行的清單就短算 24pt —— 而短算的下場不是「擠一點」，是
+    **最後一行被裁掉並補上刪節號**：使用者看到的是一份句子沒寫完的範本，
+    而且看不出來是被裁掉還是原本就這樣寫。
+
+    估高一點沒有代價（下一個區塊往下挪一點而已），估矮了就是內容不見。
+    """
+    line_h = font_size * LINE_FACTOR + line_spacing
+    paragraphs = text.split("\n")
     lines = 0
     # 原文的換行是作者刻意分的段，不能併成一行算。
-    for para in text.split("\n"):
+    for para in paragraphs:
         if not para.strip():
             lines += 1
             continue
         lines += max(1, math.ceil(visual_width(para, font_size) / width))
-    return lines * line_h + 10.0
+    gaps = max(0, len(paragraphs) - 1) * PARAGRAPH_SPACING
+    return lines * line_h + gaps + BOX_PADDING
 
 
 def parse_table(raw: str):
@@ -194,7 +231,14 @@ def build():
 
     seen_ids = set()
     for theme in themes:
-        out_theme = {"id": theme["id"], "name": theme["name"],
+        # `kind` 區分「文件範本」與「紙張樣板」。
+        #
+        # 兩者走同一條排版與打包路徑（座標只算一次、兩個平台載同一份檔案），
+        # 但在介面上是兩個地方：文件範本在收合的樹裡，紙張樣板掛在紙張清單
+        # 底下。沒有這個欄位的話，平台層只能用 id 字串去猜，而那種對照表
+        # 正是會漂移的東西。舊資料沒有這個欄位 → 一律當文件範本。
+        out_theme = {"id": theme["id"], "kind": theme.get("kind", "document"),
+                     "name": theme["name"],
                      "icon": theme["icon"], "categories": []}
         for category in theme["categories"]:
             out_cat = {"id": category["id"], "name": category["name"], "templates": []}

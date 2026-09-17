@@ -5,7 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,6 +33,8 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.kairumo.padnote.ui.DialogResizeHandle
+import com.kairumo.padnote.ui.rememberDialogHeight
 
 /**
  * 「新增筆記」對話框（工作項 S-61）。
@@ -62,6 +65,8 @@ fun NewNotebookDialog(
         mutableStateOf(DocumentTemplateCatalog.VariantKind.EXAMPLE)
     }
     var expanded by remember { mutableStateOf<String?>(null) }
+    // 高度由使用者拉。固定 460dp 的話，範本樹一展開就得在一個小窗裡捲很久。
+    val height = rememberDialogHeight("newNotebook")
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -71,8 +76,9 @@ fun NewNotebookDialog(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(l("cancel")) } },
         text = {
+            Column {
             LazyColumn(
-                modifier = Modifier.heightIn(max = 460.dp),
+                modifier = Modifier.height(height.value),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 item {
@@ -128,6 +134,9 @@ fun NewNotebookDialog(
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
+            }
+            // 把手在捲動區外面：放進 LazyColumn 會跟著內容捲走。
+            DialogResizeHandle(state = height, key = "newNotebook")
             }
         }
     )

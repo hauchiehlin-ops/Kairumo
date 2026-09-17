@@ -188,9 +188,18 @@ public class CollaborationManager: ObservableObject {
     /// 解密接收到的遠端 Payload。解不開時回 nil，呼叫端丟掉那則訊息。
     public func decryptPayload(_ payload: [String: Any], isEncrypted: Bool) -> [String: Any]? {
         if !isEncrypted { return payload }
+        // **加密的訊息、手上沒金鑰 → 丟掉，不要把信封當內容傳下去。**
+        //
+        // 這裡原本回傳 `payload` 本身，而加密訊息的 payload 是
+        // `{"ciphertext": "..."}` —— 沒有 `page_index`、沒有 `item`。
+        // 於是下游每一個 `guard let ... else { return }` 都靜靜地失敗：
+        // 訊息收到了、也「處理」了，畫面上什麼都沒發生，log 裡也沒有錯誤。
+        // 實機症狀是「兩台都顯示已連線，對方畫的東西永遠不會出現」。
+        // 回 nil 才會落到呼叫端的丟棄分支，也才對得上介面上那則
+        // 「你只用房號加入」的警告。
         guard let key = roomKeyBase64,
               let cipherBase64 = payload["ciphertext"] as? String else {
-            return payload
+            return nil
         }
         let plain = collabDecrypt(keyBase64: key, ciphertextBase64: cipherBase64)
         guard !plain.isEmpty,

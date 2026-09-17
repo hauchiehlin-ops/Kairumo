@@ -632,11 +632,15 @@ private fun NotebookHome(
                 // 建在使用者當下看著的那一層 —— 一律建在最上層的話，
                 // 人在某個資料夾裡按「新增」，東西卻出現在別的地方。
                 val name = title.ifBlank { l("new_note") }
-                val id = NotebookLibrary.create(activity, name, device, folderId)
+                // 紙張跟著文件範本走。各選各的話，公文「簽」會鋪在行動端
+                // 線框紙上 —— 本文底下壓著兩個手機外框。
+                val tmpl = templateId?.let { DocumentTemplateCatalog.template(activity, it) }
+                val paper = tmpl?.let { DocumentTemplateCatalog.paperOf(it) }
+                    ?: uniffi.padnote_core.PageStyle.BLANK
+                val id = NotebookLibrary.create(activity, name, device, folderId, style = paper)
                 if (id != null) {
                     // 選了文件範本就把內容鋪進去。開檔失敗也不擋 ——
                     // 使用者至少拿得到一本空白筆記，而不是什麼都沒有。
-                    val tmpl = templateId?.let { DocumentTemplateCatalog.template(activity, it) }
                     if (tmpl != null) {
                         NotebookLibrary.open(activity, id, device, name)?.let { (session, page) ->
                             DocumentTemplateCatalog.apply(

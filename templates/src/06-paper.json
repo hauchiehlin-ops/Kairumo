@@ -1,0 +1,1793 @@
+{
+ "id": "paper",
+ "kind": "paper",
+ "icon": {
+  "apple": "doc.richtext",
+  "android": "Description"
+ },
+ "name": {
+  "zhHant": "紙張樣板",
+  "en": "Paper Templates",
+  "zhHans": "纸张样板",
+  "ja": "用紙テンプレート",
+  "ko": "용지 서식",
+  "th": "เทมเพลตกระดาษ"
+ },
+ "categories": [
+  {
+   "id": "paper_general",
+   "name": {
+    "zhHant": "通用基礎",
+    "en": "General",
+    "zhHans": "通用基础",
+    "ja": "基本スタイル",
+    "ko": "기본 스타일",
+    "th": "ทั่วไป"
+   },
+   "templates": [
+    {
+     "id": "blank",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "空白紙張",
+      "en": "Blank Paper",
+      "zhHans": "空白纸张",
+      "ja": "白紙",
+      "ko": "빈 용지",
+      "th": "กระดาษเปล่า"
+     },
+     "description": {
+      "zhHant": "適合自由手繪、心智圖與草稿",
+      "en": "Best for sketching, mind maps & free drafting",
+      "zhHans": "适合自由手绘、思维导图与草稿",
+      "ja": "自由な手描き、マインドマップ、スケッチに最適",
+      "ko": "자유 스케치, 마인드맵, 초안 작성에 최적",
+      "th": "เหมาะสำหรับการวาดภาพ แผนผังความคิด และร่างแบบอิสระ"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "產品構想速記",
+         "en": "Idea Capture"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "日期：2026 年 3 月 4 日　　記錄：林佳蓉\n主題：讓新進同事第一週就能自己找到資料",
+         "en": "Date: 4 March 2026    By: J. R. Lin\nTopic: Let new hires find things on their own in week one"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "問題",
+         "en": "Problem"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "新人平均要問 11 次才找得到報價單範本。問的人耗時，被問的人被打斷，\n而且每個人被教到的版本都不一樣。",
+         "en": "New hires ask around 11 times before they find the quotation template.\nIt costs them time, it interrupts everyone else, and each of them ends up\nwith a slightly different version."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "三個可能的做法",
+         "en": "Three possible moves"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "一、把範本收進共用資料夾，並在入職清單上寫明路徑。\n二、錄一段 5 分鐘的螢幕操作，放進新人信裡。\n三、改讓範本從 App 內直接建立，不必找檔案。",
+         "en": "1. Put the templates in one shared folder and name the path in the checklist.\n2. Record a five-minute screen walkthrough and attach it to the welcome mail.\n3. Create the templates from inside the app so nobody has to find a file."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "下一步",
+         "en": "Next"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "先做第三個 —— 前兩個都還是要人記得去找，第三個不必。\n負責：佳蓉　　回報：3 月 11 日週會",
+         "en": "Start with (3): the first two still rely on someone remembering to look.\nOwner: J. R. Lin    Review: team meeting, 11 March"
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "（主題）",
+         "en": "(Topic)"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "日期：\n記錄：\n主題：",
+         "en": "Date:\nBy:\nTopic:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "問題",
+         "en": "Problem"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（現在是什麼情況？誰因此受影響？）",
+         "en": "(What is happening now, and who does it affect?)"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "三個可能的做法",
+         "en": "Three possible moves"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "一、\n二、\n三、",
+         "en": "1.\n2.\n3."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "下一步",
+         "en": "Next"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "決定：\n負責：\n回報：",
+         "en": "Decision:\nOwner:\nReview:"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "grid",
+     "pageStyle": "grid",
+     "name": {
+      "zhHant": "方格點陣",
+      "en": "Grid & Dots",
+      "zhHans": "方格点阵",
+      "ja": "グリッド・ドット",
+      "ko": "모눈 점선",
+      "th": "ตารางจุด"
+     },
+     "description": {
+      "zhHant": "幾何繪圖、公式推導與圖表繪製",
+      "en": "Geometry, formulas & precise diagrams",
+      "zhHans": "几何绘图、公式推导与图表绘制",
+      "ja": "幾何学、数式展開、精密図形描画",
+      "ko": "기하학, 공식 유도 및 정밀 도표 작성",
+      "th": "เรขาคณิต สูตร และแผนภาพที่แม่นยำ"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "受力分析與公式推導",
+         "en": "Force Analysis and Derivation"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "題目：質量 m = 12 kg 的箱子放在傾角 θ = 25° 的斜面上，\n靜摩擦係數 μs = 0.35。問：箱子會不會自己滑下來？",
+         "en": "Problem: a 12 kg box rests on a 25° incline with a static friction\ncoefficient of 0.35. Will it start to slide on its own?"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "一、列出各方向的分量",
+         "en": "1. Resolve the components"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "沿斜面向下：F∥ = m·g·sinθ = 12 × 9.81 × sin25° = 49.75 N\n垂直斜面：N = m·g·cosθ = 12 × 9.81 × cos25° = 106.69 N",
+         "en": "Along the slope: F∥ = m·g·sinθ = 12 × 9.81 × sin25° = 49.75 N\nNormal to the slope: N = m·g·cosθ = 12 × 9.81 × cos25° = 106.69 N"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "二、比較最大靜摩擦力",
+         "en": "2. Compare with maximum static friction"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "f_max = μs·N = 0.35 × 106.69 = 37.34 N\nF∥ = 49.75 N > f_max = 37.34 N　⇒　會滑動",
+         "en": "f_max = μs·N = 0.35 × 106.69 = 37.34 N\nF∥ = 49.75 N > f_max = 37.34 N  ⇒  it slides"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "三、檢查",
+         "en": "3. Sanity check"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "臨界角 θc = arctan(μs) = arctan(0.35) = 19.3°。\n題目的 25° 大於臨界角，與上面的結論一致。",
+         "en": "Critical angle θc = arctan(μs) = arctan(0.35) = 19.3°.\n25° exceeds it, which agrees with the result above."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "（題目名稱）",
+         "en": "(Problem title)"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "題目：\n已知：\n求：",
+         "en": "Problem:\nGiven:\nFind:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "一、列出各方向的分量",
+         "en": "1. Resolve the components"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "",
+         "en": ""
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "二、代入與計算",
+         "en": "2. Substitute and solve"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "",
+         "en": ""
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "三、檢查",
+         "en": "3. Sanity check"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（用另一個方法或極端值驗算一次）",
+         "en": "(Verify with a second method or an extreme case)"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "lined",
+     "pageStyle": "lined",
+     "name": {
+      "zhHant": "橫線筆記",
+      "en": "Ruled Lines",
+      "zhHans": "横线笔记",
+      "ja": "罫線ノート",
+      "ko": "줄 노트",
+      "th": "เส้นบรรทัด"
+     },
+     "description": {
+      "zhHant": "課堂筆記、會議逐字與行文撰寫",
+      "en": "Lectures, meeting transcripts & writing",
+      "zhHans": "课堂笔记、会议逐字与文稿撰写",
+      "ja": "講義ノート、議事録、文章作成",
+      "ko": "강의 노트, 회의록 및 글쓰기",
+      "th": "บันทึกการบรรยาย รายงานการประชุม และการเขียน"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "課堂筆記：現金流量表怎麼讀",
+         "en": "Class Notes: Reading a Cash Flow Statement"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "課程：財務報表分析（三）　　講者：黃振庭 教授\n日期：2026 年 3 月 12 日　　第 5 週",
+         "en": "Course: Financial Statement Analysis III    Lecturer: Prof. C. T. Huang\nDate: 12 March 2026    Week 5"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "重點一：三張表要一起看",
+         "en": "Key 1: the three statements only make sense together"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "損益表講的是「賺不賺錢」，現金流量表講的是「收不收得到錢」。\n帳上有獲利卻倒閉的公司，問題幾乎都出在後者。",
+         "en": "The income statement says whether a company is profitable; the cash flow\nstatement says whether the money actually arrives. Companies that fail\nwhile showing a profit almost always fail on the second one."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "重點二：營業活動現金流是體質",
+         "en": "Key 2: operating cash flow is the health check"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "連續兩年營業活動現金流小於淨利，要去看應收帳款與存貨 ——\n通常是東西賣出去了但錢還沒收回來，或根本還堆在倉庫。",
+         "en": "If operating cash flow trails net income for two years running, look at\nreceivables and inventory: the goods left the shelf but the cash did not\narrive, or they never left at all."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "老師提到會考",
+         "en": "Flagged for the exam"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "・自由現金流 = 營業活動現金流 − 資本支出\n・間接法的調整項要會自己推一次\n・期末作業用真實公司的年報，不能用課本範例",
+         "en": "- Free cash flow = operating cash flow - capital expenditure\n- Be able to derive the indirect-method adjustments unaided\n- Final assignment must use a real annual report, not a textbook case"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "我還沒搞懂的",
+         "en": "Still unclear to me"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "利息支出為什麼放在營業活動而不是籌資活動？下週問或查 IFRS。",
+         "en": "Why does interest paid sit under operating rather than financing?\nAsk next week, or look it up in IFRS."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "課堂筆記：（主題）",
+         "en": "Class Notes: (topic)"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "課程：\n講者：\n日期：",
+         "en": "Course:\nLecturer:\nDate:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "重點一",
+         "en": "Key 1"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "",
+         "en": ""
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "重點二",
+         "en": "Key 2"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "",
+         "en": ""
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "老師提到會考",
+         "en": "Flagged for the exam"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "・\n・",
+         "en": "- \n- "
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "我還沒搞懂的",
+         "en": "Still unclear to me"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "",
+         "en": ""
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "cornell",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "康乃爾樣板",
+      "en": "Cornell Notes",
+      "zhHans": "康奈尔模板",
+      "ja": "コーネル式",
+      "ko": "코넬 양식",
+      "th": "คอร์เนลล์"
+     },
+     "description": {
+      "zhHant": "左側提綱摘要、右側主體筆記、底部總結",
+      "en": "Cues on left, notes on right, summary at bottom",
+      "zhHans": "左侧提纲摘要、右侧主体笔记、底部总结",
+      "ja": "左にキーワード、右にノート本文、下にまとめ",
+      "ko": "왼쪽 핵심 요약, 오른쪽 본문, 하단 총괄 요약",
+      "th": "ประเด็นหลักด้านซ้าย โน้ตด้านขวา และสรุปด้านล่าง"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "康乃爾筆記：注意力機制",
+         "en": "Cornell Notes: Attention"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "主題：Transformer 的注意力機制　　日期：2026 年 3 月 18 日",
+         "en": "Topic: attention in the Transformer    Date: 18 March 2026"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "提示欄（左）：之後用這些問題自我測驗",
+         "en": "Cue column: questions to self-test with later"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "・Q、K、V 各自代表什麼？\n・為什麼要除以 √d_k？\n・多頭注意力比單頭多了什麼？",
+         "en": "- What do Q, K and V each stand for?\n- Why divide by the square root of d_k?\n- What does multi-head attention add over a single head?"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "筆記欄（右）：上課當下記的內容",
+         "en": "Note column: what was said in class"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "注意力就是「用一個查詢去問一整排鍵，算出每一個值該佔多少權重」。\n除以 √d_k 是為了讓內積的變異數不隨維度長大，否則 softmax 會飽和、\n梯度趨近於零。多頭是把同一段輸入投影到多組子空間各算一次，\n讓不同的頭去抓不同的關係（語法、指代、距離）。",
+         "en": "Attention asks one query against a row of keys and works out how much\nweight each value should carry. The square-root term keeps the variance\nof the dot product from growing with dimension; without it softmax\nsaturates and the gradient vanishes. Multiple heads project the same\ninput into several subspaces so different heads can pick up different\nrelations - syntax, coreference, distance."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "總結欄（下）：用自己的話寫兩句",
+         "en": "Summary: two sentences in your own words"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "注意力讓每個位置自己決定要看誰，而不是照固定的順序讀。\n縮放與多頭都是為了讓這件事在深層網路裡還算得穩。",
+         "en": "Attention lets every position choose what to look at instead of reading\nin a fixed order. Scaling and multiple heads are what keep that stable\nonce the network gets deep."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "康乃爾筆記：（主題）",
+         "en": "Cornell Notes: (topic)"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "主題：\n日期：",
+         "en": "Topic:\nDate:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "提示欄（左）：之後用這些問題自我測驗",
+         "en": "Cue column: questions to self-test with later"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "・\n・\n・",
+         "en": "- \n- \n- "
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "筆記欄（右）：上課當下記的內容",
+         "en": "Note column: what was said in class"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "",
+         "en": ""
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "總結欄（下）：用自己的話寫兩句",
+         "en": "Summary: two sentences in your own words"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "",
+         "en": ""
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "paper_aesthetic",
+   "name": {
+    "zhHant": "美學視覺",
+    "en": "Aesthetic & Visual",
+    "zhHans": "美学视觉",
+    "ja": "美的・視覚デザイン",
+    "ko": "미학 및 시각 디자인",
+    "th": "สุนทรียศาสตร์และการมองเห็น"
+   },
+   "templates": [
+    {
+     "id": "dot_grid_fine",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "極細點陣 (5mm)",
+      "en": "Fine Dot Grid (5mm)",
+      "zhHans": "极细点阵 (5mm)",
+      "ja": "極細ドット方眼 (5mm)",
+      "ko": "극세 도트 방안 (5mm)",
+      "th": "ดอทกริดละเอียด (5 มม.)"
+     },
+     "description": {
+      "zhHant": "視覺藝術與版面設計師專用暖灰精密點陣",
+      "en": "Warm gray precision dots for visual & layout designers",
+      "zhHans": "视觉艺术与版面设计师专用暖灰精密点阵",
+      "ja": "視覚・レイアウトデザイナー向け精密ドット",
+      "ko": "시각 및 레이아웃 디자이너를 위한 온회색 정밀 도트",
+      "th": "ดอทกริดสีเทาอบอุ่นสำหรับนักออกแบบ"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "版面規格：季刊內頁",
+         "en": "Layout Spec: Quarterly Inside Pages"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "刊物：《工事》季刊 2026 春季號　　開本：210 × 260 mm　　裝訂：騎馬釘",
+         "en": "Publication: Gongshi Quarterly, Spring 2026    Trim: 210 x 260 mm    Saddle-stitched"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "版心與邊界",
+         "en": "Type area and margins"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "項目|尺寸|備註\n上邊界|20 mm|頁碼不進版心\n下邊界|24 mm|留給頁碼與書眉\n內邊界|22 mm|騎馬釘，內側要多留\n外邊界|16 mm|裁切公差 ±1.5 mm",
+         "en": "Item|Size|Note\nTop|20 mm|Folio sits outside the type area\nBottom|24 mm|Folio and running head\nInner|22 mm|Extra allowance for saddle stitch\nOuter|16 mm|Trim tolerance +/-1.5 mm"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "文字級數",
+         "en": "Type scale"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "用途|字級|行距|字體\n內文|9.5 pt|15 pt|源流明體\n引文|11 pt|18 pt|源流明體 斜\n小標|13 pt|18 pt|思源黑體 Medium\n圖說|8 pt|12 pt|思源黑體 Light",
+         "en": "Use|Size|Leading|Face\nBody|9.5 pt|15 pt|Source Han Serif\nPull quote|11 pt|18 pt|Source Han Serif Italic\nSubhead|13 pt|18 pt|Source Han Sans Medium\nCaption|8 pt|12 pt|Source Han Sans Light"
+        }
+       },
+       {
+        "type": "notice",
+        "text": {
+         "zhHant": "跨頁圖要出血 3 mm，且**不要**把主體壓在中縫左右各 8 mm 內 —— 騎馬釘翻開時那一帶看不到。",
+         "en": "Spreads bleed 3 mm, and keep the subject out of the 8 mm either side of the gutter: a saddle-stitched book hides that strip when it is open."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "版面規格：（刊物名）",
+         "en": "Layout Spec: (publication)"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "刊物：\n開本：\n裝訂：",
+         "en": "Publication:\nTrim:\nBinding:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "版心與邊界",
+         "en": "Type area and margins"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "項目|尺寸|備註\n上邊界|||\n下邊界|||\n內邊界|||\n外邊界|||",
+         "en": "Item|Size|Note\nTop|||\nBottom|||\nInner|||\nOuter|||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "文字級數",
+         "en": "Type scale"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "用途|字級|行距|字體\n內文||||\n引文||||\n小標||||\n圖說||||",
+         "en": "Use|Size|Leading|Face\nBody||||\nPull quote||||\nSubhead||||\nCaption||||"
+        }
+       },
+       {
+        "type": "notice",
+        "text": {
+         "zhHant": "（印製注意事項：出血、中縫、特別色…）",
+         "en": "(Print notes: bleed, gutter, spot colours...)"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "golden_ratio",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "黃金比例與三分構圖",
+      "en": "Golden Ratio & Thirds",
+      "zhHans": "黄金比例与三分构图",
+      "ja": "黄金比と三分分割構図",
+      "ko": "황금비 및 3분할 구도",
+      "th": "สัดส่วนทองคำและกฎสามส่วน"
+     },
+     "description": {
+      "zhHant": "經典黃金分割線與九宮格參考輔助線",
+      "en": "Classical golden spiral & rule-of-thirds composition guides",
+      "zhHans": "经典黄金分割线与九宫格参考辅助线",
+      "ja": "黄金比螺旋と三分割構図ガイドライン",
+      "ko": "황금비 나선 및 3분할 가이드라인",
+      "th": "เส้นนำเกลียวทองคำและกฎสามส่วน"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "構圖分析：港邊清晨",
+         "en": "Composition Study: Harbour at Dawn"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "拍攝：2026 年 2 月 9 日 05:52　　35 mm f/8 1/125s ISO 200",
+         "en": "Shot: 9 February 2026, 05:52    35 mm, f/8, 1/125 s, ISO 200"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "主體落在哪裡",
+         "en": "Where the subject sits"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "漁船放在右上交點，船頭朝畫面左側 —— 視線進來之後往左走，\n剛好被左下的纜繩接住，不會直接滑出畫面。",
+         "en": "The boat sits on the upper-right intersection with its bow facing left, so\nthe eye enters and travels left, where the mooring line in the lower-left\ncatches it before it slides out of frame."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "線條",
+         "en": "Lines"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "・防波堤：由左下往右上，與黃金螺旋的收斂方向一致\n・桅杆：唯一的垂直線，用來斷開整片水平的海面\n・雲的縫隙：把光帶到船身上，構成第二個亮點",
+         "en": "- Breakwater: lower-left to upper-right, following the spiral's convergence\n- Mast: the only vertical, breaking an otherwise horizontal sea\n- Gap in the cloud: carries light onto the hull, the second bright point"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "下次要改的",
+         "en": "What to change next time"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "地平線壓在正中間了，少了 1/3 的張力。下次往下壓一格，\n讓天空占 2/3，雲的層次才吃得到。",
+         "en": "The horizon ended up dead centre, which costs the frame its tension.\nNext time drop it one step so the sky takes two thirds and the cloud\nstructure has room to read."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "構圖分析：（作品名）",
+         "en": "Composition Study: (title)"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "拍攝：\n參數：",
+         "en": "Shot:\nSettings:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "主體落在哪裡",
+         "en": "Where the subject sits"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（對到哪一個交點？視線怎麼走？）",
+         "en": "(Which intersection does it land on? How does the eye travel?)"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "線條",
+         "en": "Lines"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "・\n・\n・",
+         "en": "- \n- \n- "
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "下次要改的",
+         "en": "What to change next time"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "",
+         "en": ""
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "moodboard",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "情緒板與色卡矩陣",
+      "en": "Moodboard & Palette",
+      "zhHans": "情绪板与色卡矩阵",
+      "ja": "ムードボードと配色",
+      "ko": "무드보드 및 색상 매트릭스",
+      "th": "มู้ดบอร์ดและตารางจานสี"
+     },
+     "description": {
+      "zhHant": "頂部 5 格代表色票位，中央大尺寸靈感畫布",
+      "en": "Top 5-color swatch strip with central inspiration canvas",
+      "zhHans": "顶部5格代表色票位，中央大尺寸灵感画布",
+      "ja": "上部に5色のカラースウォッチ、中央にインスピレーション空間",
+      "ko": "상단 5색 스와치 및 중앙 영감 캔버스",
+      "th": "แถบสี 5 สีด้านบนพร้อมผืนผ้าใบสร้างแรงบันดาลใจ"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "情緒板：城南麵包店品牌更新",
+         "en": "Mood Board: Chengnan Bakery Rebrand"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "客戶：城南麵包店（開業 32 年）　　提案日：2026 年 4 月 2 日\n一句話定位：老師傅的手藝，年輕人也想拍照的店。",
+         "en": "Client: Chengnan Bakery (32 years in business)    Presented: 2 April 2026\nIn one line: an old baker's craft in a shop young people want to photograph."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "色票（上方五格）",
+         "en": "Palette (the five swatches above)"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "位置|色碼|來源|用途\n1|#3E2A20|烤模的深褐|主色、招牌\n2|#C9A227|麥穗的金|強調、價目牌\n3|#F2E8DA|麵粉的米白|底色、包裝紙\n4|#7D8471|門口那棵橄欖樹|輔助、標籤\n5|#B5463C|紅豆餡的紅|限定商品",
+         "en": "Slot|Hex|Where it came from|Use\n1|#3E2A20|Dark brown of the baking tin|Primary, signage\n2|#C9A227|Gold of ripe wheat|Accent, price cards\n3|#F2E8DA|Off-white of flour|Ground, wrapping\n4|#7D8471|The olive tree by the door|Secondary, labels\n5|#B5463C|Red bean filling|Limited items"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "要有的感覺 / 不要有的感覺",
+         "en": "What it should feel like / what it must not"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "要：手做的痕跡、暖、耐看、看得出年份\n不要：工業感、冷灰、過度極簡到看不出是麵包店",
+         "en": "Yes: the mark of the hand, warm, wears well, shows its age\nNo: industrial, cold grey, so minimal it stops reading as a bakery"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "參考方向",
+         "en": "References"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "・日本町屋的招牌：木頭、手寫、直式\n・北歐烘焙包裝的留白，但底色換成米白不用純白\n・字體：標題用書法感的黑體，內文用高可讀性的黑體",
+         "en": "- Japanese machiya signage: wood, hand lettering, vertical\n- Nordic bakery packaging's white space, but off-white rather than pure white\n- Type: a calligraphic sans for headings, a highly legible sans for body"
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "情緒板：（專案名）",
+         "en": "Mood Board: (project)"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "客戶：\n提案日：\n一句話定位：",
+         "en": "Client:\nPresented:\nIn one line:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "色票（上方五格）",
+         "en": "Palette (the five swatches above)"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "位置|色碼|來源|用途\n1|||\n2|||\n3|||\n4|||\n5|||",
+         "en": "Slot|Hex|Where it came from|Use\n1|||\n2|||\n3|||\n4|||\n5|||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "要有的感覺 / 不要有的感覺",
+         "en": "What it should feel like / what it must not"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "要：\n不要：",
+         "en": "Yes:\nNo:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "參考方向",
+         "en": "References"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "・\n・\n・",
+         "en": "- \n- \n- "
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "paper_engineering",
+   "name": {
+    "zhHant": "工程製程",
+    "en": "Engineering & Process",
+    "zhHans": "工程制程",
+    "ja": "工学・製造設計",
+    "ko": "엔지니어링 및 공정",
+    "th": "วิศวกรรมและกระบวนการผลิต"
+   },
+   "templates": [
+    {
+     "id": "blueprint",
+     "pageStyle": "grid",
+     "name": {
+      "zhHant": "工程藍圖坐標紙",
+      "en": "Engineering Metric Blueprint",
+      "zhHans": "工程蓝图坐标纸",
+      "ja": "工学製図ブループリント",
+      "ko": "엔지니어링 청사진",
+      "th": "พิมพ์เขียววิศวกรรม"
+     },
+     "description": {
+      "zhHant": "青藍精密毫米網格，含右下角標準 Title Block 標題欄",
+      "en": "Cyan metric millimeter grid with standard Title Block",
+      "zhHans": "青蓝精密毫米网格，含右下角标准 Title Block 标题栏",
+      "ja": "シアン系ミリ方眼と標準図面表題欄",
+      "ko": "시안 밀리미터 방안 및 표준 표제란",
+      "th": "กริดมิลลิเมตรสีฟ้าครามพร้อมบล็อกชื่อมาตรฐาน"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "零件圖：軸承座 BR-204",
+         "en": "Part Drawing: Bearing Housing BR-204"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "標題欄（右下角）",
+         "en": "Title block (lower right)"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "欄位|內容\n件號|BR-204-A3\n名稱|軸承座\n材質|FC250 鑄鐵\n數量|4\n比例|1:2\n單位|mm\n繪製|陳彥廷　2026-03-20\n審核|王敏惠　2026-03-22\n版次|B（修正 φ52 公差）",
+         "en": "Field|Value\nPart no.|BR-204-A3\nName|Bearing housing\nMaterial|FC250 cast iron\nQty|4\nScale|1:2\nUnits|mm\nDrawn|Y. T. Chen  2026-03-20\nChecked|M. H. Wang  2026-03-22\nRev|B (phi 52 tolerance corrected)"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "關鍵尺寸與公差",
+         "en": "Critical dimensions and tolerances"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "尺寸|標稱|公差|配合\nφ 軸承孔|52.000|H7 (+0.030/0)|與 6205 外環過渡配合\n底面到孔心|45.000|±0.05|影響同軸度\n螺栓孔中心距|88.000|±0.10|M8 通孔 ×4\n總高|72.000|±0.30|非配合面",
+         "en": "Dim|Nominal|Tolerance|Fit\nBore|52.000|H7 (+0.030/0)|Transition fit with 6205 outer race\nBase to bore centre|45.000|+/-0.05|Drives coaxiality\nBolt hole pitch|88.000|+/-0.10|4x M8 through\nOverall height|72.000|+/-0.30|Non-mating face"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "表面與熱處理",
+         "en": "Surface and heat treatment"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "軸承孔內壁 Ra 1.6，其餘加工面 Ra 6.3；鑄件退火後再精加工。\n未註明之圓角 R3，未註明之倒角 C1。",
+         "en": "Bore Ra 1.6, other machined faces Ra 6.3; anneal the casting before finishing.\nUnspecified fillets R3, unspecified chamfers C1."
+        }
+       },
+       {
+        "type": "notice",
+        "text": {
+         "zhHant": "公差只標在**會配合**的尺寸上。整張圖每個尺寸都標公差，加工廠會全部照最嚴的做，成本上去而精度沒有用在刀口上。",
+         "en": "Only put tolerances on dimensions that actually mate. Tolerance everything and the shop will work to the tightest one throughout - cost goes up and the precision lands nowhere useful."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "零件圖：（品名與件號）",
+         "en": "Part Drawing: (name and number)"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "標題欄（右下角）",
+         "en": "Title block (lower right)"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "欄位|內容\n件號||\n名稱||\n材質||\n數量||\n比例||\n單位||\n繪製||\n審核||\n版次||",
+         "en": "Field|Value\nPart no.||\nName||\nMaterial||\nQty||\nScale||\nUnits||\nDrawn||\nChecked||\nRev||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "關鍵尺寸與公差",
+         "en": "Critical dimensions and tolerances"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "尺寸|標稱|公差|配合\n||||\n||||\n||||",
+         "en": "Dim|Nominal|Tolerance|Fit\n||||\n||||\n||||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "表面與熱處理",
+         "en": "Surface and heat treatment"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "未註明之圓角：\n未註明之倒角：",
+         "en": "Unspecified fillets:\nUnspecified chamfers:"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "isometric",
+     "pageStyle": "grid",
+     "name": {
+      "zhHant": "30° 等角立體軸測網格",
+      "en": "30° Isometric 3D Grid",
+      "zhHans": "30° 等角立体轴测网格",
+      "ja": "30° 等角投影立体グリッド",
+      "ko": "30° 등각 투영 그리드",
+      "th": "กริดไอโซเมตริก 30°"
+     },
+     "description": {
+      "zhHant": "機械構件、三維產品外觀與爆炸透視專用",
+      "en": "Dedicated for mechanism components, 3D products & exploded views",
+      "zhHans": "机械构件、三维产品外观与爆炸透视专用",
+      "ja": "機構部品、3D製品外観、分解斜視図専用",
+      "ko": "기구 부품, 3D 제품 외관 및 분해 투시도 전용",
+      "th": "สำหรับชิ้นส่วนกลไก ผลิตภัณฑ์ 3 มิติ และภาพระเบิด"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "爆炸圖：手持吸塵器 V2 集塵組",
+         "en": "Exploded View: Handheld Vacuum V2, Dust Assembly"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "組件：DC-V2-020 集塵組　　爆炸方向：沿軸線由前往後 15 mm 間距",
+         "en": "Assembly: DC-V2-020 dust unit    Explode: 15 mm steps along the axis, front to back"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "零件清單",
+         "en": "Parts list"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "項次|件號|名稱|數量|材質\n1|DC-V2-021|前蓋|1|ABS\n2|DC-V2-022|濾網固定環|1|PP\n3|DC-V2-023|HEPA 濾芯|1|玻纖濾材\n4|DC-V2-024|集塵桶|1|PC 透明\n5|DC-V2-025|矽膠密封圈|2|矽膠 60A\n6|DC-V2-026|釋放扣|1|POM",
+         "en": "Item|Part no.|Name|Qty|Material\n1|DC-V2-021|Front cover|1|ABS\n2|DC-V2-022|Filter retainer|1|PP\n3|DC-V2-023|HEPA element|1|Glass-fibre media\n4|DC-V2-024|Dust bin|1|Clear PC\n5|DC-V2-025|Silicone seal|2|Silicone 60A\n6|DC-V2-026|Release catch|1|POM"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "組裝順序",
+         "en": "Assembly order"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "4 → 5（下）→ 3 → 2 → 5（上）→ 1 → 6\n密封圈先套在集塵桶的溝槽裡再壓濾芯，反過來會把圈推歪而漏氣。",
+         "en": "4 -> 5 (lower) -> 3 -> 2 -> 5 (upper) -> 1 -> 6\nSeat the seals in the bin groove before the element goes in; the other way round pushes them out of the groove and the unit leaks."
+        }
+       },
+       {
+        "type": "notice",
+        "text": {
+         "zhHant": "爆炸圖的間距要一致（這裡是 15 mm），不然讀圖的人會以為間距大的那一段是「裝不進去」。",
+         "en": "Keep the explode spacing uniform (15 mm here). Uneven gaps read as \"this part does not fit\"."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "爆炸圖：（組件名）",
+         "en": "Exploded View: (assembly)"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "組件：\n爆炸方向：",
+         "en": "Assembly:\nExplode:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "零件清單",
+         "en": "Parts list"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "項次|件號|名稱|數量|材質\n1||||\n2||||\n3||||\n4||||",
+         "en": "Item|Part no.|Name|Qty|Material\n1||||\n2||||\n3||||\n4||||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "組裝順序",
+         "en": "Assembly order"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "",
+         "en": ""
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "orthographic",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "三視圖與剖面範本",
+      "en": "Orthographic Multi-View",
+      "zhHans": "三视图与剖面范本",
+      "ja": "三面図と断面図テンプレート",
+      "ko": "3면도 및 단면도 템플릿",
+      "th": "แม่แบบภาพฉายสามด้าน"
+     },
+     "description": {
+      "zhHant": "正視、俯視、側視與立體軸測四象限分區引導",
+      "en": "Front, Top, Side views & isometric quadrant guides",
+      "zhHans": "正视、俯视、侧视与立体轴测四象限分区引导",
+      "ja": "正面・平面・側面・立体の4象限分割ガイド",
+      "ko": "정면도, 평면도, 측면도 및 입체 4분면 가이드",
+      "th": "แบ่ง 4 ส่วน: ด้านหน้า ด้านบน ด้านข้าง และภาพสามมิติ"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "三視圖：導板托架 GB-118",
+         "en": "Three-View: Guide Bracket GB-118"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "投影法：第三角法　　比例 1:1　　單位 mm\n左上＝正視　右上＝側視　左下＝俯視　右下＝立體軸測",
+         "en": "Projection: third angle    Scale 1:1    Units mm\nUpper left = front, upper right = side, lower left = top, lower right = isometric"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "各視圖要交代的事",
+         "en": "What each view has to carry"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "視圖|負責的尺寸|不要重複標\n正視|總長 120、總高 60|寬度\n側視|總寬 40、肋板厚 6|長度\n俯視|孔位 2-φ9、中心距 96|高度\n軸測|只做形狀說明|所有尺寸",
+         "en": "View|Dimensions it owns|Do not repeat\nFront|Length 120, height 60|Width\nSide|Width 40, rib 6|Length\nTop|2x phi 9 holes, 96 pitch|Height\nIsometric|Shape only|All dimensions"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "剖面",
+         "en": "Section"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "A-A 取在孔中心線上，用來交代沉頭孔的深度（φ15 深 5）。\n剖面線 45°、間距 3 mm，同一零件全圖同方向。",
+         "en": "Section A-A on the hole centreline, to carry the counterbore depth (phi 15 x 5 deep).\nHatching at 45 degrees, 3 mm pitch, same direction everywhere for one part."
+        }
+       },
+       {
+        "type": "notice",
+        "text": {
+         "zhHant": "同一個尺寸只在一個視圖上標一次。標兩次的下場不是「比較清楚」，是改圖時只改到一處，而加工廠照另一處做。",
+         "en": "Dimension each feature in exactly one view. Twice is not clearer - it means a revision updates one of them and the shop works to the other."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "三視圖：（品名與件號）",
+         "en": "Three-View: (name and number)"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "投影法：\n比例：\n單位：",
+         "en": "Projection:\nScale:\nUnits:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "各視圖要交代的事",
+         "en": "What each view has to carry"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "視圖|負責的尺寸|不要重複標\n正視|||\n側視|||\n俯視|||\n軸測|||",
+         "en": "View|Dimensions it owns|Do not repeat\nFront|||\nSide|||\nTop|||\nIsometric|||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "剖面",
+         "en": "Section"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "剖切位置：\n用途：",
+         "en": "Cut at:\nPurpose:"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "paper_digital",
+   "name": {
+    "zhHant": "數位體驗",
+    "en": "Digital Experience",
+    "zhHans": "数字化体验",
+    "ja": "デジタル体験・UI",
+    "ko": "디지털 경험 및 UI",
+    "th": "ประสบการณ์ดิจิทัลและ UI"
+   },
+   "templates": [
+    {
+     "id": "mobile_wireframe",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "行動端線框 (8pt Grid)",
+      "en": "Mobile Wireframe (8pt)",
+      "zhHans": "移动端线框 (8pt Grid)",
+      "ja": "モバイルワイヤーフレーム (8pt)",
+      "ko": "모바일 와이어프레임 (8pt)",
+      "th": "ไวร์เฟรมมือถือ (กริด 8pt)"
+     },
+     "description": {
+      "zhHant": "內建雙手機螢幕輪廓框與 8pt 像素網格",
+      "en": "Dual phone frame outlines with 8pt pixel snap grid",
+      "zhHans": "内建双手机屏幕轮廓框与 8pt 像素网格",
+      "ja": "デュアルスマホ枠と8ptグリッド内蔵",
+      "ko": "듀얼 스마트폰 프레임 및 8pt 픽셀 그리드",
+      "th": "กรอบมือถือคู่พร้อมกริด 8pt"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "線框：登入與找回密碼",
+         "en": "Wireframe: Sign-in and Password Recovery"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "版本：v3 　平台：iOS / Android 　基準：8pt 網格、最小點擊區 44 × 44\n左框＝登入畫面　　右框＝找回密碼",
+         "en": "Version: v3    Platforms: iOS / Android    Basis: 8 pt grid, 44 x 44 minimum target\nLeft frame = sign-in, right frame = password recovery"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "左框：登入",
+         "en": "Left frame: sign-in"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "區塊|內容|規格\n① 標頭|標誌 + 一句話|上方留白 64\n② 輸入|Email、密碼|高 48、間距 16\n③ 主要動作|登入|高 52、滿版減邊界 20\n④ 次要|忘記密碼・用 Google 登入|文字鍵，高 44\n⑤ 錯誤|欄位下方紅字|13 pt，不用彈窗",
+         "en": "Block|Content|Spec\n1 Header|Mark + one line|64 top padding\n2 Inputs|Email, password|48 tall, 16 apart\n3 Primary|Sign in|52 tall, full width minus 20\n4 Secondary|Forgot password - Continue with Google|Text buttons, 44 tall\n5 Errors|Red text under the field|13 pt, never a dialog"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "右框：找回密碼",
+         "en": "Right frame: password recovery"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "只有一個輸入欄與一顆按鈕。送出後**留在原畫面**改成成功訊息，\n不要跳頁 —— 使用者需要看到自己剛才打的信箱有沒有打錯。",
+         "en": "One field and one button. On submit, stay on the screen and swap in the\nsuccess message rather than navigating away: the user needs to see whether\nthey typed their address correctly."
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "狀態與例外",
+         "en": "States and edge cases"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "・送出中：按鈕轉圈並停用，欄位不鎖（使用者可能想改）\n・帳號不存在：不要說「查無此帳號」，統一回「若存在就已寄出」\n・離線：頂部橫幅，不要吃掉已輸入的內容",
+         "en": "- Submitting: spinner on the button, button disabled, fields stay editable\n- Unknown account: never say \"no such account\"; always \"if it exists, we sent it\"\n- Offline: top banner, and do not discard what has been typed"
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "線框：（流程名稱）",
+         "en": "Wireframe: (flow)"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "版本：\n平台：\n基準：",
+         "en": "Version:\nPlatforms:\nBasis:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "左框：（畫面名）",
+         "en": "Left frame: (screen)"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "區塊|內容|規格\n①|||\n②|||\n③|||\n④|||",
+         "en": "Block|Content|Spec\n1|||\n2|||\n3|||\n4|||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "右框：（畫面名）",
+         "en": "Right frame: (screen)"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "",
+         "en": ""
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "狀態與例外",
+         "en": "States and edge cases"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "・送出中：\n・失敗：\n・離線：",
+         "en": "- Submitting:\n- Failure:\n- Offline:"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "web_grid",
+     "pageStyle": "grid",
+     "name": {
+      "zhHant": "響應式 Web 12 欄網格",
+      "en": "Responsive Web 12-Column",
+      "zhHans": "响应式 Web 12 栏网格",
+      "ja": "レスポンシブWeb 12カラム",
+      "ko": "반응형 웹 12컬럼",
+      "th": "กริดเว็บ 12 คอลัมน์"
+     },
+     "description": {
+      "zhHant": "標準 12 欄格線、間距 (Gutter) 與安全邊距引導",
+      "en": "Standard 12-column layout, gutters & safe margins",
+      "zhHans": "标准 12 栏格线、间距与安全边距引导",
+      "ja": "標準12カラム、ガター、マージンレイアウト",
+      "ko": "표준 12컬럼, 거터 및 안전 여백 가이드",
+      "th": "เลย์เอาต์ 12 คอลัมน์มาตรฐานพร้อมระยะขอบ"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "首頁區塊規劃：12 欄",
+         "en": "Home Page Blocks: 12 Columns"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "斷點：桌機 ≥1280（12 欄）／平板 768–1279（8 欄）／手機 <768（4 欄）\n欄距 24、外邊距 40（手機 16）",
+         "en": "Breakpoints: desktop >=1280 (12 cols) / tablet 768-1279 (8) / mobile <768 (4)\nGutter 24, page margin 40 (16 on mobile)"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "區塊配置",
+         "en": "Block layout"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "區塊|桌機|平板|手機|備註\n主視覺|12|8|4|文字占左 6 欄，圖右 6 欄\n三個賣點|4 + 4 + 4|4 + 4（第三個換行）|4（直排）|圖示在上、標題在下\n客戶名單|12|8|4|手機改成橫向捲動\n價格表|8（置中偏移 2）|8|4|手機一張卡一屏\n頁尾|12|8|4|手機把四欄收成手風琴",
+         "en": "Block|Desktop|Tablet|Mobile|Note\nHero|12|8|4|Text on the left 6, image on the right 6\nThree benefits|4 + 4 + 4|4 + 4 (third wraps)|4 (stacked)|Icon above, title below\nLogos|12|8|4|Horizontal scroll on mobile\nPricing|8 (offset 2)|8|4|One card per screen on mobile\nFooter|12|8|4|Collapse to an accordion on mobile"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "垂直節奏",
+         "en": "Vertical rhythm"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "區塊之間 96（手機 56）；標題到內文 16；卡片內距 24。\n所有數值都是 8 的倍數 —— 有人要塞 30 的時候，答案是 32。",
+         "en": "96 between blocks (56 on mobile); 16 from heading to body; 24 inside cards.\nEvery value is a multiple of 8 - when someone wants 30, the answer is 32."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "區塊規劃：（頁面名）",
+         "en": "Block Layout: (page)"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "斷點：\n欄距：\n外邊距：",
+         "en": "Breakpoints:\nGutter:\nPage margin:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "區塊配置",
+         "en": "Block layout"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "區塊|桌機|平板|手機|備註\n|||||\n|||||\n|||||",
+         "en": "Block|Desktop|Tablet|Mobile|Note\n|||||\n|||||\n|||||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "垂直節奏",
+         "en": "Vertical rhythm"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "區塊之間：\n標題到內文：\n卡片內距：",
+         "en": "Between blocks:\nHeading to body:\nCard padding:"
+        }
+       }
+      ]
+     }
+    },
+    {
+     "id": "user_journey",
+     "pageStyle": "blank",
+     "name": {
+      "zhHant": "使用者旅程與流程圖",
+      "en": "User Journey & Flow",
+      "zhHans": "用户旅程与流程图",
+      "ja": "ユーザージャーニーとフロー",
+      "ko": "사용자 여정 및 플로우",
+      "th": "แผนผังการเดินทางของผู้ใช้"
+     },
+     "description": {
+      "zhHant": "階段泳道、步驟節點與決策條件分支引導",
+      "en": "Swimlanes, step nodes & decision branch guides",
+      "zhHans": "阶段泳道、步骤节点与决策条件分支引导",
+      "ja": "スイムレーン、ステップノード、分岐条件ガイド",
+      "ko": "스윔레인, 단계 노드 및 의사결정 분기 가이드",
+      "th": "เลนว่ายน้ำ โหนดขั้นตอน และการแยกการตัดสินใจ"
+     },
+     "variants": {
+      "example": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "使用者旅程：第一次申請退款",
+         "en": "User Journey: First Refund Request"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "對象：買錯尺寸的一般消費者　　情境：收到商品後 2 天　　目標：退款成功並知道錢什麼時候回來",
+         "en": "Persona: a shopper who ordered the wrong size    Context: two days after delivery\nGoal: get the refund and know when the money comes back"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "階段與情緒",
+         "en": "Stages and sentiment"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "階段|使用者在做什麼|想什麼|情緒|痛點\n①察覺|試穿發現太小|「可以退嗎？」|中性|退貨條件寫在頁尾\n②尋找|在訂單頁找退貨入口|「按鈕在哪？」|↓ 挫折|入口藏在「更多」裡\n③申請|填原因、上傳照片|「要拍幾張？」|↓ 不確定|沒說最少幾張\n④等待|等審核通知|「到底過了沒？」|↓↓ 最低點|三天沒有任何通知\n⑤寄回|列印單子、交寄|「運費誰付？」|中性|運費說明在另一頁\n⑥退款|收到入帳簡訊|「終於」|↑ 回升|",
+         "en": "Stage|What they do|What they think|Mood|Pain\n1 Notice|Tries it on, too small|\"Can I return this?\"|Neutral|Policy is in the footer\n2 Find|Looks for returns in the order page|\"Where is the button?\"|Down|Buried under \"More\"\n3 Submit|Picks a reason, uploads photos|\"How many photos?\"|Down|Minimum never stated\n4 Wait|Waits for approval|\"Has it gone through?\"|Lowest|Three days, no word\n5 Ship back|Prints the label, drops it off|\"Who pays postage?\"|Neutral|Postage is on another page\n6 Refunded|Gets the credit notification|\"At last\"|Up|"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "最該先修的一段",
+         "en": "The one stage to fix first"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "第④段。它是情緒最低點，而且修起來最便宜 —— 一封「已收到，最慢 X 日前回覆」\n的通知信就能把它拉起來，不需要動到流程。",
+         "en": "Stage 4. It is the low point and it is the cheapest to fix: one \"received, you will\nhear from us by X\" message lifts it without touching the process at all."
+        }
+       }
+      ],
+      "blank": [
+       {
+        "type": "title",
+        "text": {
+         "zhHant": "使用者旅程：（流程名稱）",
+         "en": "User Journey: (flow)"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "對象：\n情境：\n目標：",
+         "en": "Persona:\nContext:\nGoal:"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "階段與情緒",
+         "en": "Stages and sentiment"
+        }
+       },
+       {
+        "type": "table",
+        "headerRow": true,
+        "text": {
+         "zhHant": "階段|使用者在做什麼|想什麼|情緒|痛點\n①|||||\n②|||||\n③|||||\n④|||||\n⑤|||||",
+         "en": "Stage|What they do|What they think|Mood|Pain\n1|||||\n2|||||\n3|||||\n4|||||\n5|||||"
+        }
+       },
+       {
+        "type": "heading",
+        "text": {
+         "zhHant": "最該先修的一段",
+         "en": "The one stage to fix first"
+        }
+       },
+       {
+        "type": "body",
+        "text": {
+         "zhHant": "（哪一段？為什麼先修它？）",
+         "en": "(Which one, and why that one first?)"
+        }
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

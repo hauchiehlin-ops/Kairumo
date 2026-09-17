@@ -535,6 +535,7 @@ public struct WordTextStudioView: View {
                 }
             }
             .navigationTitle(localizationManager.localized("word_studio"))
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(localizationManager.localized("cancel")) {
@@ -550,7 +551,6 @@ public struct WordTextStudioView: View {
                 }
             }
         }
-        .frame(minWidth: 540, minHeight: 600)
     }
 
     private func alignmentButton(icon: String, alignKey: String) -> some View {

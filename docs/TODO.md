@@ -138,6 +138,10 @@
 
 | ID | 內容 | 卡在什麼 / 要做什麼 |
 |---|---|---|
+| S-71 | **Android 沒有紙張底紋 / 沒有紙張挑選器** | 核心的 `PageStyle`（方格、橫線、康乃爾、點陣）Android 端**一個都沒畫**，所有頁面看起來都是空白紙。因此 S-70 只把紙張選擇下沉到核心並讓 Android 在建立第一頁時寫對 `PageStyle`（同一份 `.padnote` 在 iPad 上開會正確顯示），Android 自己的畫布還沒有對應的算繪。要做：在 `canvas/ContinuousPages.kt` 的每頁背景加上 13 種樣板的繪製，並與 Apple 的 `NotebookEditorView` 對齊。做完才把「主題分類 + 紙張清單」補進 Android 的新增筆記對話框（核心 `paper_templates()` 已備好）。S-74 為 13 種紙各補了「實務範例 / 空白大綱」，**Android 目前是從「文件範本」樹裡的「紙張樣板」主題進去**（因為它還沒有紙張清單）—— 補上挑選器時要一併把那個主題從樹裡收起來，否則會有兩個入口。 |
+| S-72 | **其餘對話框還不能調整大小** | S-70 做了 `ui/ResizableDialog.kt` 並接上「新增筆記本」。Android 另外約二十個內容型對話框（素材圖庫、圖表工作室、表格編輯、3D、協作、圖層…）還是固定高度。要做：逐一把可捲動內容的 `heightIn(max = …)` 換成 `rememberDialogHeight(key)` + `DialogResizeHandle`，key 一個面板一個。 |
+| S-76 | **iPhone 上遠端筆跡不重繪** | S-75 修好之後，遠端筆畫已經確實落盤（檔案 64B → 352B），畫布的 binding 也收到了（log：`updateUIView sync ui=0 binding=1`），但模擬器畫面上沒有重繪。同一台模擬器上**用手指自己畫也畫不出來**，所以比較像 iPhone 版畫布的輸入／重繪問題，不是協同的問題 —— 需要實體 iPhone 才分得開。要做：在實機上重跑一次「iPad 開房、iPhone 加入、iPad 畫一筆」，確認是否重繪。 |
+| S-73 | **sheet 只能調高度** | Apple 端走 `presentationDetents`，寬度由系統決定（`preferredContentSize` 在 iOS 18 已無效、`presentationSizing(.fitted)` 會攤成全螢幕，兩條都實測過）。真的需要連寬度一起拉的面板，要改用 `FloatingPanel` 那條路重做，不是 sheet。 |
 
 ### ✅ 已完成
 | ID | 工作包 | 內容 |
