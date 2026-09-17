@@ -242,6 +242,6 @@ S-84 頁面規格（連帶修掉「pageFormatId 沒有同步」）、編輯器�
 | 控制項 | 為什麼還沒有 |
 |---|---|
 | `editor.ink.brush` / `marker` / `watercolor` | Apple 的毛筆、麥克筆、水彩是 PencilKit 的墨水類型；核心 `ToolKind` 只有四種筆刷，Android 畫不出那三種。要嘛核心加筆刷模型，要嘛在 Android 端自己算筆跡 —— 那是一件獨立的工作 |
-| `editor.export.share` / `editor.share` | Android 的匯出選單有 PDF／圖片／列印，沒有「分享筆記檔」 |
+| `editor.export.share` / `editor.share` | Android 的匯出選單有 PDF／圖片／列印，沒有「分享筆記檔」。**而且 Apple 那一項目前是假的** —— `shareNotebookFile()` 實際上呼叫 `exportAsPdf()`，按鈕寫著「分享筆記」，送出去的是 PDF。真正的修法是把 `.padnote` 套件（一個目錄）打包成單一檔案再分享，兩端都要做 —— 那是一件獨立的工作，不是掛個識別字的事 |
 | `editor.sidebar.tab.pages` / `tab.folders` | Android 的側欄只有頁面，沒有 Apple 的「資料夾目錄」分頁 |
 | `editor.text.symbols` | 特殊符號面板 |
