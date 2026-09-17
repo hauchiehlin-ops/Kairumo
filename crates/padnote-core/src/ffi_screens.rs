@@ -391,7 +391,7 @@ fn editor_spec() -> FfiScreenSpec {
                 "editor.texttools",
                 "",
                 vec![
-                    c("editor.text.studio", Button, "text_studio"),
+                    c("editor.text.studio", Button, "tool_text"),
                     c("editor.text.symbols", Button, "special_symbols"),
                     c("editor.text.select", Button, "marquee_select"),
                     c("editor.text.link", Button, "insert_link"),

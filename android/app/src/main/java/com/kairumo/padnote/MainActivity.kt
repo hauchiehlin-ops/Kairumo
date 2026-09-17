@@ -1593,6 +1593,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 Divider()
                 DropdownMenuItem(
                     text = { Text(l10n(if (recording) "stop_recording" else "start_recording")) },
+                    modifier = Modifier.testTag("editor.record"),
                     onClick = {
                         showMenu = false
                         val session = notebook?.first ?: return@DropdownMenuItem
@@ -1928,7 +1929,8 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                         marqueeActive = !marqueeActive
                         if (!marqueeActive) marqueeSelection = emptySet()
                     },
-                    label = { Text(l10n("marquee_select")) }
+                    label = { Text(l10n("marquee_select")) },
+                    modifier = Modifier.testTag("editor.text.select")
                 )
                 if (marqueeActive) {
                     Text(
@@ -1946,14 +1948,22 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 }
                 // 兩個最常用的插入動作放在工具列上，其餘留在「⋯」裡 ——
                 // 與 Apple 打字工具列的「文字排版 / 插入連結 / 更多」一致。
-                TextButton(onClick = {
-                    // 位置與「⋯」裡那一條一致，不要兩條路放在不同地方。
-                    val box = textStore.create(x = 60f, y = 80f)
-                    textRevision++
-                    selectedTextId = box.id
-                    editingText = box
-                }) { Text(l10n("add_text_box")) }
-                TextButton(onClick = { insertingLink = true }) { Text(l10n("insert_link")) }
+                TextButton(
+                    modifier = Modifier.testTag("editor.text.studio"),
+                    onClick = {
+                        // 位置與「⋯」裡那一條一致，不要兩條路放在不同地方。
+                        val box = textStore.create(x = 60f, y = 80f)
+                        textRevision++
+                        selectedTextId = box.id
+                        editingText = box
+                    }
+                    // 文案用 Apple 的同一個鍵：同一顆按鈕原本一邊寫「文字排版」、
+                    // 一邊寫「新增文字方塊」，換裝置的人會以為是兩個功能。
+                ) { Text(l10n("tool_text")) }
+                TextButton(
+                    onClick = { insertingLink = true },
+                    modifier = Modifier.testTag("editor.text.link")
+                ) { Text(l10n("insert_link")) }
             }
         }
 
@@ -2336,7 +2346,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 LowLatencyInkCanvas(
                     engine = engine,
                     latency = latency,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testTag("editor.canvas"),
                     onInkChanged = { revision++ },
                     onUnavailable = { lowLatencyUnavailable = true },
                     clearToken = clearToken,
@@ -2345,7 +2355,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             } else {
                 InkCanvas(
                     engine = engine,
-                    modifier = Modifier.fillMaxSize(),
+                    modifier = Modifier.fillMaxSize().testTag("editor.canvas"),
                     onInkChanged = { revision++ },
                     contentVersion = revision,
                     // 底紋要畫在**畫布自己的白底之上、筆跡之下**。
