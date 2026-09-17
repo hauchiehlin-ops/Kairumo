@@ -31,6 +31,24 @@ DOC_PRIVACY="${REPO_ROOT}/docs/legal/privacy.html"
 BUMP_TYPE="${1:-patch}"
 EXPLICIT_BUNDLE="${2:-}"
 
+# build 號一路走到第 4 步才會被 `(( ... ))` 用到。到那時版本號已經改了一半，
+# 非數字的值會讓算式以 "invalid arithmetic operator" 收場，而錯誤訊息裡
+# 完全看不出問題出在參數上（實際踩過：`—apple-only` 被當成 build 號傳進來）。
+# 在動任何檔案之前就擋下來，訊息也才有機會講清楚。
+if [[ -n "$EXPLICIT_BUNDLE" && ! "$EXPLICIT_BUNDLE" =~ ^[0-9]+$ ]]; then
+    echo "❌ build 號必須是正整數，收到的是 '$EXPLICIT_BUNDLE'。" >&2
+    case "$EXPLICIT_BUNDLE" in
+        -*|—*|–*|−*)
+            echo "   看起來像是旗標而不是號碼。發版請用：./scripts/release.sh [apple|android|all|bump] [patch|minor|major|X.Y.Z] [build]" >&2 ;;
+    esac
+    exit 1
+fi
+
+if [[ $# -gt 2 ]]; then
+    echo "❌ 參數過多：只接受 [patch|minor|major|X.Y.Z] 與 [build]，多出來的是 '${*:3}'。" >&2
+    exit 1
+fi
+
 if [[ ! -f "$CARGO_TOML" ]]; then
     echo "❌ 找不到 Cargo.toml：$CARGO_TOML" >&2
     exit 1

@@ -39,7 +39,21 @@ DRY_RUN=0
 TARGET=""          # apple | android | all | bump
 BUMP_ARGS=()
 
-for arg in "$@"; do
+# macOS 的「智慧型破折號」會把打字輸入的 `--` 換成 `—`（em dash）。
+# 兩者在終端機裡幾乎看不出差別，但 `--apple-only` 變成 `—apple-only` 之後，
+# 下面的 `-*` 比不到，旗標就被當成位置參數一路傳進 bump-version.sh，
+# 最後在算 build 號的地方炸成 "invalid arithmetic operator"（實際踩過）。
+# 這裡先把開頭的 Unicode 破折號正規化成 ASCII 的 `--`，讓它走到正確的分支。
+for raw in "$@"; do
+    arg="$raw"
+    case "$arg" in
+        —*) arg="--${arg#—}" ;;   # em dash
+        –*) arg="--${arg#–}" ;;   # en dash
+        −*) arg="--${arg#−}" ;;   # minus sign
+    esac
+    if [[ "$arg" != "$raw" ]]; then
+        echo "⚠️  '$raw' 開頭是 Unicode 破折號（多半是輸入法自動替換），當成 '$arg' 處理。" >&2
+    fi
     case "$arg" in
         --dry-run) DRY_RUN=1 ;;
         -h|--help) sed -n '5,27p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
