@@ -18,6 +18,18 @@ import XCTest
 /// 別頁去了」。使用者看到的是「刪除只清掉了內容，頁面還在」。
 @MainActor
 final class PageDeletionTests: XCTestCase {
+    /// 每個測試各用一個暫存目錄的 store（S-92）。
+    ///
+    /// 用 `NotebookStore.shared` 的話，`deletePage` / `transferPages` 內部會
+    /// `persistData()` —— 跑完測試，模擬器上使用者的筆記清單裡就多幾本叫
+    /// 「測試」的筆記。`defer` 只把陣列裡那幾筆移掉，沒有再存一次。
+    @MainActor
+    static func isolatedStore() -> NotebookStore {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kairumo-tests-\(UUID().uuidString)")
+        return NotebookStore(testDocumentsRoot: dir)
+    }
+
 
     private func makeNotebook() -> NotebookDocument {
         var doc = NotebookDocument(
@@ -35,7 +47,7 @@ final class PageDeletionTests: XCTestCase {
 
     /// 每一種附件都要對齊：第 1 頁的丟掉、第 2 頁的變成第 1 頁。
     func testEveryAttachmentKindFollowsTheDeletedPage() {
-        let store = NotebookStore.shared
+        let store = Self.isolatedStore()
         var doc = makeNotebook()
 
         doc.tableAttachments = [
@@ -70,7 +82,7 @@ final class PageDeletionTests: XCTestCase {
 
     /// 內嵌的筆跡陣列也要縮短，否則刪掉的那一頁會在匯出時復活。
     func testTheInlineDrawingArrayShrinksToo() {
-        let store = NotebookStore.shared
+        let store = Self.isolatedStore()
         let doc = makeNotebook()
         store.notebooks.insert(doc, at: 0)
         defer { store.notebooks.removeAll { $0.id == doc.id } }
@@ -84,7 +96,7 @@ final class PageDeletionTests: XCTestCase {
     /// 只剩一頁時不給刪 —— 刪光了就沒有東西可以寫，而 UI 上也沒有
     /// 「建立第一頁」的入口。
     func testTheLastPageCannotBeDeleted() {
-        let store = NotebookStore.shared
+        let store = Self.isolatedStore()
         var doc = makeNotebook()
         doc.pageCount = 1
         doc.pagesData = [Data()]

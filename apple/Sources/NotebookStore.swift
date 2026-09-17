@@ -1092,8 +1092,17 @@ public final class NotebookStore: ObservableObject {
     /// 資料根目錄。備份與同步都要知道它在哪。
     public var documentsDirectory: URL { documentsDir }
 
+    /// 測試用的資料根目錄（S-92）。`nil` 時用真正的文件目錄。
+    ///
+    /// 測試原本直接操作 `NotebookStore.shared`，而 `deletePage` / `transferPages`
+    /// 內部都會 `persistData()` —— 於是**跑完測試，使用者的筆記清單裡就多
+    /// 幾本叫「測試」的筆記**（`defer` 只把陣列裡那幾筆移掉，沒有再存一次）。
+    /// 模擬器上看得很清楚。
+    private let documentsRootOverride: URL?
+
     private var documentsDir: URL {
-        FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        documentsRootOverride
+            ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
     }
 
     private var notebooksFile: URL {
@@ -1109,12 +1118,24 @@ public final class NotebookStore: ObservableObject {
     }
 
     private init() {
+        documentsRootOverride = nil
         loadData()
         if notebooks.isEmpty {
             seedDefaultNotebooks()
         } else {
             backfillEmptySeedNotebooks()
         }
+    }
+
+    /// 測試專用：把資料根目錄換成一個暫存目錄，而且**不放範例筆記**（S-92）。
+    ///
+    /// 用 `init` 而不是「測試完再清乾淨」：清理跑不到的情況太多（測試失敗、
+    /// 中途中斷、`persistData` 在別的執行緒），而每一次漏掉都是使用者的
+    /// 筆記清單裡多一本垃圾。
+    public init(testDocumentsRoot: URL) {
+        documentsRootOverride = testDocumentsRoot
+        try? FileManager.default.createDirectory(
+            at: testDocumentsRoot, withIntermediateDirectories: true)
     }
 
     // MARK: - 資料載入與持久化

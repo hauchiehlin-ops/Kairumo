@@ -30,9 +30,17 @@ final class ExportFidelityTests: XCTestCase {
     // MARK: - 內距
 
     func testExportPaddingMatchesTheCanvas() {
-        // 畫布上的文字方塊是 .padding(14)。匯出原本用 8/6，於是同一段文字
-        // 在兩邊從不同位置開始排，行數一不同整塊版面就對不起來。
-        XCTAssertEqual(PageThumbnailRenderer.textBoxPadding, 14)
+        // 畫布上的文字方塊與匯出用同一個內距函式（`TextBoxMetrics.padding`）。
+        // 匯出原本用 8/6，於是同一段文字在兩邊從不同位置開始排，
+        // 行數一不同整塊版面就對不起來。
+        let normal = NoteTextAttachment(pageIndex: 0, text: "一般大小", width: 300, height: 160)
+        XCTAssertEqual(PageThumbnailRenderer.textBoxPadding(for: normal), 14)
+
+        // 小到一格週計畫的方塊（S-93 之後的下限是 32 × 24）內距要縮 ——
+        // 固定 14 的話上下各 14 就把可寫的空間吃光了。
+        let tiny = NoteTextAttachment(pageIndex: 0, text: "小", width: 40, height: 24)
+        XCTAssertLessThan(PageThumbnailRenderer.textBoxPadding(for: tiny), 14)
+        XCTAssertGreaterThanOrEqual(PageThumbnailRenderer.textBoxPadding(for: tiny), 2)
     }
 
     // MARK: - 高度

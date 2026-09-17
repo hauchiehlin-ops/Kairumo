@@ -19,6 +19,18 @@ import XCTest
 /// 第 2 頁的表格留在原地，於是它落在那張新的空白頁上」。
 @MainActor
 final class PageOrderTests: XCTestCase {
+    /// 每個測試各用一個暫存目錄的 store（S-92）。
+    ///
+    /// 用 `NotebookStore.shared` 的話，`deletePage` / `transferPages` 內部會
+    /// `persistData()` —— 跑完測試，模擬器上使用者的筆記清單裡就多幾本叫
+    /// 「測試」的筆記。`defer` 只把陣列裡那幾筆移掉，沒有再存一次。
+    @MainActor
+    static func isolatedStore() -> NotebookStore {
+        let dir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kairumo-tests-\(UUID().uuidString)")
+        return NotebookStore(testDocumentsRoot: dir)
+    }
+
 
     private func makeNotebook(pages: Int) -> NotebookDocument {
         var doc = NotebookDocument(
@@ -45,7 +57,7 @@ final class PageOrderTests: XCTestCase {
 
     /// 把第 0 頁搬到第 2 頁：0→2、1→0、2→1，而且每一種附件都要一起走。
     func testMovingAPageCarriesEveryAttachmentKind() {
-        let store = NotebookStore.shared
+        let store = Self.isolatedStore()
         let doc = makeNotebook(pages: 3)
         store.notebooks.insert(doc, at: 0)
         defer { store.notebooks.removeAll { $0.id == doc.id } }
@@ -74,7 +86,7 @@ final class PageOrderTests: XCTestCase {
 
     /// 反方向搬：往前搬與往後搬的區間不對稱，兩邊都要驗。
     func testMovingAPageBackwardsIsNotTheMirrorImage() {
-        let store = NotebookStore.shared
+        let store = Self.isolatedStore()
         let doc = makeNotebook(pages: 4)
         store.notebooks.insert(doc, at: 0)
         defer { store.notebooks.removeAll { $0.id == doc.id } }
@@ -94,7 +106,7 @@ final class PageOrderTests: XCTestCase {
 
     /// 搬動永遠是重排：不能有兩個東西落在同一頁、也不能憑空多一頁。
     func testEveryMoveIsAPermutation() {
-        let store = NotebookStore.shared
+        let store = Self.isolatedStore()
         for from in 0..<4 {
             for to in 0..<4 where from != to {
                 let doc = makeNotebook(pages: 4)
@@ -110,7 +122,7 @@ final class PageOrderTests: XCTestCase {
 
     /// 搬到自己身上、搬到範圍外：什麼都不該發生。
     func testAnImpossibleMoveChangesNothing() {
-        let store = NotebookStore.shared
+        let store = Self.isolatedStore()
         let doc = makeNotebook(pages: 3)
         store.notebooks.insert(doc, at: 0)
         defer { store.notebooks.removeAll { $0.id == doc.id } }
@@ -140,7 +152,7 @@ final class PageOrderTests: XCTestCase {
 
     /// 複製：來源不動，目的接在最後面，而且附件要跟著走。
     func testCopyingPagesLeavesTheSourceAloneAndAppendsToTheTarget() {
-        let store = NotebookStore.shared
+        let store = Self.isolatedStore()
         let (source, target) = makePair()
         store.notebooks.insert(source, at: 0)
         store.notebooks.insert(target, at: 0)
@@ -167,7 +179,7 @@ final class PageOrderTests: XCTestCase {
     /// 沿用原本的 id 看起來沒事，直到使用者把那一頁再複製回來 —— 這時同一本
     /// 筆記裡有兩個相同 id 的物件，而選取、刪除、堆疊順序全部是照 id 找的。
     func testCopiedObjectsGetFreshIdentifiers() {
-        let store = NotebookStore.shared
+        let store = Self.isolatedStore()
         let (source, target) = makePair()
         store.notebooks.insert(source, at: 0)
         store.notebooks.insert(target, at: 0)
@@ -188,7 +200,7 @@ final class PageOrderTests: XCTestCase {
 
     /// 搬移：來源那幾頁要消失，而且由大到小刪才不會刪錯。
     func testMovingPagesRemovesThemFromTheSource() {
-        let store = NotebookStore.shared
+        let store = Self.isolatedStore()
         let (source, target) = makePair()
         store.notebooks.insert(source, at: 0)
         store.notebooks.insert(target, at: 0)
@@ -208,7 +220,7 @@ final class PageOrderTests: XCTestCase {
 
     /// 一本筆記不能被搬空，也不能搬到自己身上。
     func testARefusedTransferChangesNothing() {
-        let store = NotebookStore.shared
+        let store = Self.isolatedStore()
         let (source, target) = makePair()
         store.notebooks.insert(source, at: 0)
         store.notebooks.insert(target, at: 0)
@@ -232,7 +244,7 @@ final class PageOrderTests: XCTestCase {
 
     /// 插入一頁時，**九種**附件都要讓出位置。
     func testInsertingAPageShiftsTheLateArrivingAttachmentKinds() {
-        let store = NotebookStore.shared
+        let store = Self.isolatedStore()
         let doc = makeNotebook(pages: 3)
         store.notebooks.insert(doc, at: 0)
         defer { store.notebooks.removeAll { $0.id == doc.id } }
