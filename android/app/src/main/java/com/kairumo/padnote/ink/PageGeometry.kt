@@ -26,6 +26,27 @@ object PageGeometry {
      */
     const val PRINTABLE_INSET = 24f
 
+
+    /**
+     * 把一個物件推回可列印範圍，回傳新的左上角（S-85）。
+     *
+     * 規則在核心（`clampToPrintable`），與 Apple 的 `PrintableArea.clampOrigin`
+     * 是同一份 —— 各寫一套的話，同一個物件在兩台裝置上會停在不同的位置。
+     *
+     * 夾的是**位置**不是大小：把拖出去的物件推回邊界，而不是縮小它。
+     */
+    fun clampOrigin(x: Float, y: Float, width: Float, height: Float): Pair<Float, Float> {
+        val clamped = runCatching {
+            uniffi.padnote_core.clampToPrintable(
+                uniffi.padnote_core.FfiRect(x, y, x + width, y + height),
+                this.width,
+                this.height,
+                PRINTABLE_INSET
+            )
+        }.getOrNull() ?: return x to y
+        return clamped.minX to clamped.minY
+    }
+
     /** 某個 y 座標落在第幾頁（由 0 起算）。 */
     fun pageIndex(y: Float): Int = if (height <= 0f) 0 else maxOf(0, (y / height).toInt())
 

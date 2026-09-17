@@ -154,6 +154,15 @@ private fun AudioCardView(
                                     item.x += drag.x / density
                                     item.y += drag.y / density
                                     onChanged(item)
+                                },
+                                // 拖出可列印範圍的物件推回邊界（S-85）。規則在核心，
+                                // 與 Apple 的 PrintableArea.clampOrigin 同一份。
+                                onDragEnd = {
+                                    val landed = com.kairumo.padnote.ink.PageGeometry
+                                        .clampOrigin(item.x, item.y, item.width, item.height)
+                                    item.x = landed.first
+                                    item.y = landed.second
+                                    onChanged(item)
                                 }
                             )
                         }

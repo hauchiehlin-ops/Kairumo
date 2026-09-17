@@ -150,6 +150,15 @@ private fun LinkCardView(
                                     link.x += drag.x / density
                                     link.y += drag.y / density
                                     onChanged(link)
+                                },
+                                // 拖出可列印範圍的物件推回邊界（S-85）。規則在核心，
+                                // 與 Apple 的 PrintableArea.clampOrigin 同一份。
+                                onDragEnd = {
+                                    val landed = com.kairumo.padnote.ink.PageGeometry
+                                        .clampOrigin(link.x, link.y, link.width, link.height)
+                                    link.x = landed.first
+                                    link.y = landed.second
+                                    onChanged(link)
                                 }
                             )
                         }

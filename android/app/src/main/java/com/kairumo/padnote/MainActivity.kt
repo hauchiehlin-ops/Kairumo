@@ -2348,7 +2348,12 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     engine = engine,
                     latency = latency,
                     modifier = Modifier.fillMaxSize().testTag("editor.canvas"),
-                    onInkChanged = { revision++ },
+                    onInkChanged = {
+                        revision++
+                        if (engine.consumeOutsidePrintableArea()) {
+                            message = l10n("outside_printable_rejected")
+                        }
+                    },
                     onUnavailable = { lowLatencyUnavailable = true },
                     clearToken = clearToken,
                     acceptsInk = editorMode == EditorMode.DRAW
@@ -2357,7 +2362,14 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 InkCanvas(
                     engine = engine,
                     modifier = Modifier.fillMaxSize().testTag("editor.canvas"),
-                    onInkChanged = { revision++ },
+                    onInkChanged = {
+                        revision++
+                        // 整筆畫在框線外會被引擎收回（S-85）。使用者要知道
+                        // 那一筆去哪裡了 —— 沒有提示的話它就只是「消失了」。
+                        if (engine.consumeOutsidePrintableArea()) {
+                            message = l10n("outside_printable_rejected")
+                        }
+                    },
                     contentVersion = revision,
                     // 底紋要畫在**畫布自己的白底之上、筆跡之下**。
                     // 疊一層 Composable 在外面是不行的：`InkCanvas` 會用

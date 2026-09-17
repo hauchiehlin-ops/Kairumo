@@ -132,7 +132,14 @@ private fun ImageObjectView(
                                 image.x += drag.x / density
                                 image.y += drag.y / density
                             },
-                            onDragEnd = { onChanged(image) }
+                            onDragEnd = {
+                            // 拖出可列印範圍的物件推回邊界（S-85）。規則在核心，
+                            // 與 Apple 的 PrintableArea.clampOrigin 同一份。
+                            val landed = com.kairumo.padnote.ink.PageGeometry
+                                .clampOrigin(image.x, image.y, image.width, image.height)
+                            image.x = landed.first
+                            image.y = landed.second
+                            onChanged(image) }
                         )
                     }
                 }

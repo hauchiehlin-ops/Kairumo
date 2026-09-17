@@ -6913,8 +6913,13 @@ struct AttachmentItemView: View {
                         var transaction = Transaction()
                         transaction.animation = nil
                         withTransaction(transaction) {
-                            attachment.x += value.translation.width
-                            attachment.y += value.translation.height
+                            // 拖出可列印範圍的物件推回邊界（S-85）。
+                            let landed = PrintableArea.clampOrigin(
+                                x: attachment.x + value.translation.width,
+                                y: attachment.y + value.translation.height,
+                                width: attachment.width, height: attachment.height)
+                            attachment.x = landed.x
+                            attachment.y = landed.y
                             dragOffset = .zero
                             isDragging = false
                         }
@@ -7297,8 +7302,13 @@ struct TextAttachmentItemView: View {
                         var transaction = Transaction()
                         transaction.animation = nil
                         withTransaction(transaction) {
-                            textItem.x += value.translation.width
-                            textItem.y += value.translation.height
+                            // 拖出可列印範圍的物件推回邊界（S-85）。
+                            let landed = PrintableArea.clampOrigin(
+                                x: textItem.x + value.translation.width,
+                                y: textItem.y + value.translation.height,
+                                width: textItem.width, height: textItem.height)
+                            textItem.x = landed.x
+                            textItem.y = landed.y
                             dragOffset = .zero
                             isDragging = false
                         }
@@ -7465,8 +7475,13 @@ struct LinkAttachmentItemView: View {
                         dragOffset = value.translation
                     }
                     .onEnded { value in
-                        linkItem.x += value.translation.width
-                        linkItem.y += value.translation.height
+                        // 拖出可列印範圍的物件推回邊界（S-85）。
+                        let landed = PrintableArea.clampOrigin(
+                            x: linkItem.x + value.translation.width,
+                            y: linkItem.y + value.translation.height,
+                            width: linkItem.width, height: linkItem.height)
+                        linkItem.x = landed.x
+                        linkItem.y = landed.y
                         dragOffset = .zero
                     }
             )
@@ -7719,8 +7734,13 @@ struct Model3DCanvasItemView: View {
                     }
                     .onEnded { value in
                         guard lockedByPeer == nil else { return }
-                        item.x += value.translation.width
-                        item.y += value.translation.height
+                        // 拖出可列印範圍的物件推回邊界（S-85）。
+                        let landed = PrintableArea.clampOrigin(
+                            x: item.x + value.translation.width,
+                            y: item.y + value.translation.height,
+                            width: item.width, height: item.height)
+                        item.x = landed.x
+                        item.y = landed.y
                         dragOffset = .zero
                         if let data = try? JSONEncoder().encode(item),
                            let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {

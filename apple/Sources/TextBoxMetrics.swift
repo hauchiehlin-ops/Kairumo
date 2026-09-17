@@ -49,3 +49,31 @@ enum TextBoxMetrics {
         return max(2, shortSide / 6)
     }
 }
+
+
+/// 可列印範圍的夾取。**規則在核心**（`clamp_to_printable`），兩個平台同一份。
+///
+/// # 為什麼拖曳也要夾
+///
+/// S-83 擋掉了「畫在框線外的筆畫」，但**既有的物件仍然拖得出去** ——
+/// 拖出去的圖片在畫布上看得到，匯出的 PDF 裡被裁掉一半，而使用者
+/// 沒有收到任何提示。那與寫在框外是同一件事，只是入口不同。
+///
+/// 夾的是**位置**不是大小：把使用者拖出去的物件推回邊界，而不是縮小它。
+/// 縮小的話，他拖一次就發現物件變小了，那比溢出更難理解。
+enum PrintableArea {
+    /// 把 `(x, y, width, height)` 這個矩形推回目前頁面的可列印範圍，回傳新的左上角。
+    static func clampOrigin(
+        x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat
+    ) -> CGPoint {
+        let page = PageGeometry.size
+        let clamped = clampToPrintable(
+            rect: FfiRect(
+                minX: Float(x), minY: Float(y),
+                maxX: Float(x + width), maxY: Float(y + height)),
+            pageWidth: Float(page.width),
+            pageHeight: Float(page.height),
+            inset: Float(PageGeometry.printableInset))
+        return CGPoint(x: CGFloat(clamped.minX), y: CGFloat(clamped.minY))
+    }
+}

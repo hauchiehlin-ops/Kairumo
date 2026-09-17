@@ -219,6 +219,16 @@ class InkEngine(
         // 單點「筆畫」是點一下，不是書寫。留著只會在畫面上產生看不見的雜點。
         if (points.size < 2) return null
 
+        // 完全落在可列印範圍外的筆畫**不收**（S-85，與 Apple 同一條規則）。
+        //
+        // 那一筆印不出來也匯不出去，留著只會讓使用者以為它存在，
+        // 等到列印那天才發現不見了。跨在界線上的留著 —— 寫到一半被整筆
+        // 吃掉比溢出更難用，而且那一筆大半還看得見。
+        if (isEntirelyOutsidePrintableArea(points)) {
+            outsidePrintableArea = true
+            return null
+        }
+
         val target = session
         val page = pageId
         val coreId = if (target != null && page != null) {
@@ -239,6 +249,51 @@ class InkEngine(
         _strokes += stroke
         if (coreId != null) committed[id] = coreId
         return stroke
+    }
+
+    /**
+     * 使用者剛剛寫了一筆完全在可列印範圍外的東西。
+     *
+     * 畫面層讀完要自己清掉（`consumeOutsidePrintableArea`）—— 提醒只出現一次，
+     * 每一筆都跳一次的話，在框外連寫十筆會跳十次。
+     */
+    private var outsidePrintableArea = false
+
+    fun consumeOutsidePrintableArea(): Boolean {
+        val flagged = outsidePrintableArea
+        outsidePrintableArea = false
+        return flagged
+    }
+
+    /** 整筆都在可列印範圍外嗎。判斷用筆畫的外接矩形，與 Apple 同一種做法。 */
+    private fun isEntirelyOutsidePrintableArea(points: List<uniffi.padnote_core.StrokePoint>): Boolean {
+        if (points.isEmpty()) return false
+        var minX = Float.MAX_VALUE
+        var minY = Float.MAX_VALUE
+        var maxX = -Float.MAX_VALUE
+        var maxY = -Float.MAX_VALUE
+        for (p in points) {
+            // 座標是跨頁的，要先換算成這一頁裡的 y。
+            val y = PageGeometry.yWithinPage(p.y)
+            minX = minOf(minX, p.x); maxX = maxOf(maxX, p.x)
+            minY = minOf(minY, y); maxY = maxOf(maxY, y)
+        }
+        val within = runCatching {
+            uniffi.padnote_core.isWithinPrintable(
+                uniffi.padnote_core.FfiRect(minX, minY, maxX, maxY),
+                PageGeometry.width,
+                PageGeometry.height,
+                PageGeometry.PRINTABLE_INSET
+            )
+        }.getOrNull()
+        if (within == true) return false
+        val rect = runCatching {
+            uniffi.padnote_core.printableRect(
+                PageGeometry.width, PageGeometry.height, PageGeometry.PRINTABLE_INSET
+            )
+        }.getOrNull() ?: return false
+        // 完全在外面 = 外接矩形與可列印矩形沒有交集。
+        return maxX < rect.minX || minX > rect.maxX || maxY < rect.minY || minY > rect.maxY
     }
 
     /** 收回某根指標畫出來的東西。回傳是否真的收回了什麼。 */

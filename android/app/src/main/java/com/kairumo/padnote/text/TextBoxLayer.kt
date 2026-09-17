@@ -176,7 +176,14 @@ private fun TextBoxView(
                         box.x += drag.x / density
                         box.y += drag.y / density
                     },
-                    onDragEnd = { onChanged(box) }
+                    onDragEnd = {
+                            // 拖出可列印範圍的物件推回邊界（S-85）。規則在核心，
+                            // 與 Apple 的 PrintableArea.clampOrigin 同一份。
+                            val landed = com.kairumo.padnote.ink.PageGeometry
+                                .clampOrigin(box.x, box.y, box.width, box.height)
+                            box.x = landed.first
+                            box.y = landed.second
+                            onChanged(box) }
                 )
             } }
             .padding(textBoxPadding(box.width, box.height).dp)
