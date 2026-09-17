@@ -7,9 +7,18 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextMeasurer
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
+import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.ink.PageGeometry
+import uniffi.padnote_core.FfiGuideKind
+import uniffi.padnote_core.FfiGuideTone
 import uniffi.padnote_core.PageStyle
+import uniffi.padnote_core.pageGuides
 
 /**
  * 紙張底紋。
@@ -62,9 +71,122 @@ fun DrawScope.drawPageBackground(
      */
     density: Float,
     pageWidth: Float = PageGeometry.width,
-    pageHeight: Float = PageGeometry.height
+    pageHeight: Float = PageGeometry.height,
+    /**
+     * 這張紙的識別字（核心 `paperTemplates()` 的 id）。
+     *
+     * 底紋只有六種，而紙張有三十幾種 —— 「康乃爾」與「四象限」的 `PageStyle`
+     * 都是 BLANK，差別在**版面**。版面由核心的 `pageGuides` 供應。
+     */
+    paperId: String = "",
+    /** 版面上的文字要翻譯。沒有它的話欄位標題會是一串語系鍵。 */
+    localize: (String) -> String = { it },
+    textMeasurer: TextMeasurer? = null
 ) {
     drawPageStyle(style, density, pageWidth, pageHeight)
+    if (paperId.isNotEmpty()) {
+        drawPageGuides(paperId, density, pageWidth, pageHeight, localize, textMeasurer)
+    }
+}
+
+/**
+ * 版面引導線。
+ *
+ * # 為什麼是核心送資料過來
+ *
+ * Apple 端原本用一個 `switch template` 搭配 CoreGraphics，十三種紙就是十三段
+ * 手寫的繪圖程式碼；Android 這邊**只畫得出底紋**，藍圖標題欄、手機線框那一層
+ * 完全沒有 —— 同一本筆記在兩台裝置上長得不一樣。
+ *
+ * 現在核心回傳一串圖元（線、框、文字、勾選框、點），兩邊各自只認得這六種
+ * 怎麼畫。新增一種紙是改核心，兩邊同時就有。
+ *
+ * **核心只說輕重，不說顏色**：深色模式是平台的事。
+ */
+private fun DrawScope.drawPageGuides(
+    paperId: String,
+    scale: Float,
+    pageWidth: Float,
+    pageHeight: Float,
+    localize: (String) -> String,
+    textMeasurer: TextMeasurer?
+) {
+    val guides = runCatching { pageGuides(paperId, pageWidth, pageHeight) }.getOrNull() ?: return
+    for (g in guides) {
+        val x = g.x * scale
+        val y = g.y * scale
+        val w = g.w * scale
+        val h = g.h * scale
+        when (g.kind) {
+            FfiGuideKind.LINE -> drawLine(
+                guideColor(g.tone),
+                Offset(x, y),
+                Offset(x + w, y + h),
+                strokeWidth = g.weight
+            )
+
+            FfiGuideKind.RECT -> drawRoundRect(
+                color = guideColor(g.tone),
+                topLeft = Offset(x, y),
+                size = Size(w, h),
+                cornerRadius = CornerRadius(g.size * scale),
+                style = Stroke(width = g.weight)
+            )
+
+            FfiGuideKind.FILL_RECT -> drawRoundRect(
+                // 標題底色條。比最淡的線還淡 —— 它是背景，不是內容。
+                color = Color(0x0F000000),
+                topLeft = Offset(x, y),
+                size = Size(w, h),
+                cornerRadius = CornerRadius(g.size * scale)
+            )
+
+            FfiGuideKind.CHECKBOX -> drawRoundRect(
+                color = guideColor(FfiGuideTone.LIGHT),
+                topLeft = Offset(x, y),
+                size = Size(w, h),
+                cornerRadius = CornerRadius(minOf(3f * scale, w * 0.25f)),
+                style = Stroke(width = 1f)
+            )
+
+            FfiGuideKind.DOT -> drawCircle(
+                guideColor(g.tone),
+                radius = w / 2f,
+                center = Offset(x + w / 2f, y + w / 2f)
+            )
+
+            FfiGuideKind.LABEL -> {
+                val measurer = textMeasurer ?: continue
+                val text = localize(g.textKey)
+                if (text.isEmpty()) continue
+                // 縮圖上的頁面只有兩百多點寬，字級照比例縮下去會小於一個像素。
+                // 下限不是為了好看，是為了「畫了等於沒畫」。
+                val fontPx = maxOf(6f, g.size * scale)
+                val layout = measurer.measure(
+                    text = AnnotatedString(text),
+                    style = TextStyle(fontSize = (fontPx / density).sp)
+                )
+                // `x` 是錨點，不是左上角 —— 置中的欄位標題要以中心對齊。
+                val originX = when (g.align.toInt()) {
+                    1 -> x - layout.size.width / 2f
+                    2 -> x - layout.size.width
+                    else -> x
+                }
+                drawText(
+                    textLayoutResult = layout,
+                    color = guideColor(FfiGuideTone.MUTED),
+                    topLeft = Offset(originX, y - layout.size.height)
+                )
+            }
+        }
+    }
+}
+
+private fun guideColor(tone: FfiGuideTone): Color = when (tone) {
+    FfiGuideTone.HAIRLINE -> Color(0x24000000)
+    FfiGuideTone.LIGHT -> Color(0x47000000)
+    FfiGuideTone.ACCENT -> Color(0x733F51B5)
+    FfiGuideTone.MUTED -> Color(0xA6000000)
 }
 
 /** 與 Apple 端 `NotebookEditorView` 的底紋繪製對應的六種。 */

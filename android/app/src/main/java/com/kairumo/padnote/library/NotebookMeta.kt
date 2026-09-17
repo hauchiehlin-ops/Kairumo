@@ -32,6 +32,16 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         private const val KEY_MODELS_3D = "model3DAttachments"
 
         /**
+         * 紙張樣板。**鍵名與 Apple 的 `NotebookMeta.template` 一致。**
+         *
+         * 存的是 Apple 的 `NoteTemplate.rawValue`：舊的十三種是中文字面值
+         * （已經在使用者的檔案裡，動不得），新的是英文 id。換算成紙張 id 的
+         * 對照表在核心（`paperIdFromStored`）—— 在這裡再抄一份中文對照，
+         * 就是第二份會漂移的東西。
+         */
+        private const val KEY_TEMPLATE = "template"
+
+        /**
          * 連結卡片。**鍵名與 Apple 的 `NotebookMeta.linkAttachments` 一致** ——
          * 這份中繼資料是同步的，鍵名不一樣等於兩邊各存各的。
          */
@@ -48,6 +58,18 @@ class NotebookMeta private constructor(private val root: JSONObject) {
             val obj = runCatching { JSONObject(json ?: "{}") }.getOrNull() ?: JSONObject()
             return NotebookMeta(obj)
         }
+    }
+
+    /**
+     * 這本筆記用的是哪一張紙。認不得或沒有時是 `blank`。
+     */
+    fun paperId(): String =
+        uniffi.padnote_core.paperIdFromStored(root.optString(KEY_TEMPLATE, ""))
+
+    /** 建立筆記本時記下紙張，重開時版面才回得來。 */
+    fun setPaperId(session: PadnoteSession?, paperId: String) {
+        root.put(KEY_TEMPLATE, paperId)
+        runCatching { session?.setNotebookMeta(root.toString()) }
     }
 
     /**

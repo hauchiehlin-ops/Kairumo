@@ -24,6 +24,7 @@ object LocalizationStrings {
             putAll(part10())
             putAll(part11())
             putAll(part12())
+            putAll(part13())
         }
     }
 
@@ -3008,6 +3009,441 @@ object LocalizationStrings {
             "ko" to "황금 나선 가이드",
             "th" to "เส้นนำเกลียวทอง"
         ),
+        "guide_action" to mapOf(
+            "zh-Hant" to "行為",
+            "en" to "Action",
+            "zh-Hans" to "行为",
+            "ja" to "行動",
+            "ko" to "행동",
+            "th" to "การกระทำ"
+        ),
+        "guide_actions" to mapOf(
+            "zh-Hant" to "行動",
+            "en" to "Actions",
+            "zh-Hans" to "行动",
+            "ja" to "アクション",
+            "ko" to "실행 항목",
+            "th" to "สิ่งที่ต้องทำ"
+        ),
+        "guide_am" to mapOf(
+            "zh-Hant" to "上午",
+            "en" to "AM",
+            "zh-Hans" to "上午",
+            "ja" to "午前",
+            "ko" to "오전",
+            "th" to "ช่วงเช้า"
+        ),
+        "guide_answer" to mapOf(
+            "zh-Hant" to "答",
+            "en" to "A",
+            "zh-Hans" to "答",
+            "ja" to "答",
+            "ko" to "답",
+            "th" to "ตอบ"
+        ),
+        "guide_area" to mapOf(
+            "zh-Hant" to "區域",
+            "en" to "Area",
+            "zh-Hans" to "区域",
+            "ja" to "場所",
+            "ko" to "구역",
+            "th" to "พื้นที่"
+        ),
+        "guide_center_idea" to mapOf(
+            "zh-Hant" to "核心概念",
+            "en" to "Central Idea",
+            "zh-Hans" to "核心概念",
+            "ja" to "中心テーマ",
+            "ko" to "중심 생각",
+            "th" to "แนวคิดหลัก"
+        ),
+        "guide_content" to mapOf(
+            "zh-Hant" to "內容",
+            "en" to "Content",
+            "zh-Hans" to "内容",
+            "ja" to "内容",
+            "ko" to "내용",
+            "th" to "เนื้อหา"
+        ),
+        "guide_cue" to mapOf(
+            "zh-Hant" to "提示欄",
+            "en" to "Cues",
+            "zh-Hans" to "提示栏",
+            "ja" to "キーワード",
+            "ko" to "단서",
+            "th" to "คำใบ้"
+        ),
+        "guide_date" to mapOf(
+            "zh-Hant" to "日期",
+            "en" to "Date",
+            "zh-Hans" to "日期",
+            "ja" to "日付",
+            "ko" to "날짜",
+            "th" to "วันที่"
+        ),
+        "guide_day" to mapOf(
+            "zh-Hant" to "日",
+            "en" to "Day",
+            "zh-Hans" to "日",
+            "ja" to "日",
+            "ko" to "일",
+            "th" to "วัน"
+        ),
+        "guide_decisions" to mapOf(
+            "zh-Hant" to "決議",
+            "en" to "Decisions",
+            "zh-Hans" to "决议",
+            "ja" to "決定事項",
+            "ko" to "결정 사항",
+            "th" to "ข้อสรุป"
+        ),
+        "guide_detail" to mapOf(
+            "zh-Hant" to "細節",
+            "en" to "Detail",
+            "zh-Hans" to "细节",
+            "ja" to "詳細",
+            "ko" to "세부",
+            "th" to "รายละเอียด"
+        ),
+        "guide_done" to mapOf(
+            "zh-Hant" to "完成",
+            "en" to "Done",
+            "zh-Hans" to "完成",
+            "ja" to "完了",
+            "ko" to "완료",
+            "th" to "เสร็จ"
+        ),
+        "guide_due" to mapOf(
+            "zh-Hant" to "期限",
+            "en" to "Due",
+            "zh-Hans" to "期限",
+            "ja" to "期日",
+            "ko" to "기한",
+            "th" to "กำหนดส่ง"
+        ),
+        "guide_feeling" to mapOf(
+            "zh-Hant" to "感受",
+            "en" to "Feeling",
+            "zh-Hans" to "感受",
+            "ja" to "感情",
+            "ko" to "감정",
+            "th" to "ความรู้สึก"
+        ),
+        "guide_fri" to mapOf(
+            "zh-Hant" to "五",
+            "en" to "Fri",
+            "zh-Hans" to "五",
+            "ja" to "金",
+            "ko" to "금",
+            "th" to "ศ."
+        ),
+        "guide_front_view" to mapOf(
+            "zh-Hant" to "正視圖",
+            "en" to "Front",
+            "zh-Hans" to "正视图",
+            "ja" to "正面図",
+            "ko" to "정면도",
+            "th" to "ด้านหน้า"
+        ),
+        "guide_goals" to mapOf(
+            "zh-Hant" to "目標",
+            "en" to "Goals",
+            "zh-Hans" to "目标",
+            "ja" to "目標",
+            "ko" to "목표",
+            "th" to "เป้าหมาย"
+        ),
+        "guide_habit" to mapOf(
+            "zh-Hant" to "習慣",
+            "en" to "Habit",
+            "zh-Hans" to "习惯",
+            "ja" to "習慣",
+            "ko" to "습관",
+            "th" to "นิสัย"
+        ),
+        "guide_iso_view" to mapOf(
+            "zh-Hant" to "立體軸測",
+            "en" to "Isometric",
+            "zh-Hans" to "立体轴测",
+            "ja" to "等角図",
+            "ko" to "등각도",
+            "th" to "ไอโซเมตริก"
+        ),
+        "guide_key_points" to mapOf(
+            "zh-Hant" to "重點",
+            "en" to "Key Points",
+            "zh-Hans" to "重点",
+            "ja" to "要点",
+            "ko" to "핵심",
+            "th" to "ประเด็นหลัก"
+        ),
+        "guide_know" to mapOf(
+            "zh-Hant" to "已知",
+            "en" to "Know",
+            "zh-Hans" to "已知",
+            "ja" to "知っている",
+            "ko" to "안다",
+            "th" to "รู้แล้ว"
+        ),
+        "guide_learned" to mapOf(
+            "zh-Hant" to "學到了",
+            "en" to "Learned",
+            "zh-Hans" to "学到了",
+            "ja" to "学んだ",
+            "ko" to "배웠다",
+            "th" to "ได้เรียนรู้"
+        ),
+        "guide_main" to mapOf(
+            "zh-Hant" to "主標題",
+            "en" to "Main",
+            "zh-Hans" to "主标题",
+            "ja" to "大項目",
+            "ko" to "대항목",
+            "th" to "หลัก"
+        ),
+        "guide_milestone" to mapOf(
+            "zh-Hant" to "里程碑",
+            "en" to "Milestone",
+            "zh-Hans" to "里程碑",
+            "ja" to "マイルストーン",
+            "ko" to "마일스톤",
+            "th" to "หมุดหมาย"
+        ),
+        "guide_mon" to mapOf(
+            "zh-Hant" to "一",
+            "en" to "Mon",
+            "zh-Hans" to "一",
+            "ja" to "月",
+            "ko" to "월",
+            "th" to "จ."
+        ),
+        "guide_month" to mapOf(
+            "zh-Hant" to "月份",
+            "en" to "Month",
+            "zh-Hans" to "月份",
+            "ja" to "月",
+            "ko" to "월",
+            "th" to "เดือน"
+        ),
+        "guide_my_notes" to mapOf(
+            "zh-Hant" to "我的筆記",
+            "en" to "My Notes",
+            "zh-Hans" to "我的笔记",
+            "ja" to "自分の言葉",
+            "ko" to "내 메모",
+            "th" to "บันทึกของฉัน"
+        ),
+        "guide_notes" to mapOf(
+            "zh-Hant" to "筆記",
+            "en" to "Notes",
+            "zh-Hans" to "笔记",
+            "ja" to "ノート",
+            "ko" to "노트",
+            "th" to "บันทึก"
+        )
+    )
+
+    private fun part5(): Map<String, Map<String, String>> = mapOf(
+        "guide_owner" to mapOf(
+            "zh-Hant" to "負責人",
+            "en" to "Owner",
+            "zh-Hans" to "负责人",
+            "ja" to "担当",
+            "ko" to "담당",
+            "th" to "ผู้รับผิดชอบ"
+        ),
+        "guide_pm" to mapOf(
+            "zh-Hant" to "下午",
+            "en" to "PM",
+            "zh-Hans" to "下午",
+            "ja" to "午後",
+            "ko" to "오후",
+            "th" to "ช่วงบ่าย"
+        ),
+        "guide_project" to mapOf(
+            "zh-Hant" to "專案",
+            "en" to "Project",
+            "zh-Hans" to "专案",
+            "ja" to "プロジェクト",
+            "ko" to "프로젝트",
+            "th" to "โครงการ"
+        ),
+        "guide_question" to mapOf(
+            "zh-Hant" to "問",
+            "en" to "Q",
+            "zh-Hans" to "问",
+            "ja" to "問",
+            "ko" to "질문",
+            "th" to "ถาม"
+        ),
+        "guide_questions" to mapOf(
+            "zh-Hant" to "問題",
+            "en" to "Questions",
+            "zh-Hans" to "问题",
+            "ja" to "疑問",
+            "ko" to "질문",
+            "th" to "คำถาม"
+        ),
+        "guide_reflection" to mapOf(
+            "zh-Hant" to "回顧",
+            "en" to "Reflection",
+            "zh-Hans" to "回顾",
+            "ja" to "振り返り",
+            "ko" to "돌아보기",
+            "th" to "สะท้อนคิด"
+        ),
+        "guide_review" to mapOf(
+            "zh-Hant" to "回顧",
+            "en" to "Review",
+            "zh-Hans" to "回顾",
+            "ja" to "振り返り",
+            "ko" to "회고",
+            "th" to "ทบทวน"
+        ),
+        "guide_sat" to mapOf(
+            "zh-Hant" to "六",
+            "en" to "Sat",
+            "zh-Hans" to "六",
+            "ja" to "土",
+            "ko" to "토",
+            "th" to "ส."
+        ),
+        "guide_screen" to mapOf(
+            "zh-Hant" to "畫面",
+            "en" to "Screen",
+            "zh-Hans" to "画面",
+            "ja" to "画面",
+            "ko" to "화면",
+            "th" to "หน้าจอ"
+        ),
+        "guide_side_view" to mapOf(
+            "zh-Hant" to "側視圖",
+            "en" to "Side",
+            "zh-Hans" to "侧视图",
+            "ja" to "側面図",
+            "ko" to "측면도",
+            "th" to "ด้านข้าง"
+        ),
+        "guide_source" to mapOf(
+            "zh-Hant" to "原文",
+            "en" to "Source",
+            "zh-Hans" to "原文",
+            "ja" to "原文",
+            "ko" to "원문",
+            "th" to "ต้นฉบับ"
+        ),
+        "guide_stage" to mapOf(
+            "zh-Hant" to "階段",
+            "en" to "Stage",
+            "zh-Hans" to "阶段",
+            "ja" to "ステージ",
+            "ko" to "단계",
+            "th" to "ขั้น"
+        ),
+        "guide_sub" to mapOf(
+            "zh-Hant" to "次重點",
+            "en" to "Sub",
+            "zh-Hans" to "次重点",
+            "ja" to "中項目",
+            "ko" to "중항목",
+            "th" to "รอง"
+        ),
+        "guide_subject" to mapOf(
+            "zh-Hant" to "科目",
+            "en" to "Subject",
+            "zh-Hans" to "科目",
+            "ja" to "科目",
+            "ko" to "과목",
+            "th" to "วิชา"
+        ),
+        "guide_summary" to mapOf(
+            "zh-Hant" to "摘要",
+            "en" to "Summary",
+            "zh-Hans" to "摘要",
+            "ja" to "まとめ",
+            "ko" to "요약",
+            "th" to "สรุป"
+        ),
+        "guide_sun" to mapOf(
+            "zh-Hant" to "日",
+            "en" to "Sun",
+            "zh-Hans" to "日",
+            "ja" to "日",
+            "ko" to "일",
+            "th" to "อา."
+        ),
+        "guide_task" to mapOf(
+            "zh-Hant" to "事項",
+            "en" to "Task",
+            "zh-Hans" to "事项",
+            "ja" to "内容",
+            "ko" to "할 일",
+            "th" to "งาน"
+        ),
+        "guide_thu" to mapOf(
+            "zh-Hant" to "四",
+            "en" to "Thu",
+            "zh-Hans" to "四",
+            "ja" to "木",
+            "ko" to "목",
+            "th" to "พฤ."
+        ),
+        "guide_time" to mapOf(
+            "zh-Hant" to "時間",
+            "en" to "Time",
+            "zh-Hans" to "时间",
+            "ja" to "時間",
+            "ko" to "시간",
+            "th" to "เวลา"
+        ),
+        "guide_top_view" to mapOf(
+            "zh-Hant" to "俯視圖",
+            "en" to "Top",
+            "zh-Hans" to "俯视图",
+            "ja" to "平面図",
+            "ko" to "평면도",
+            "th" to "ด้านบน"
+        ),
+        "guide_topic" to mapOf(
+            "zh-Hant" to "主題",
+            "en" to "Topic",
+            "zh-Hans" to "主题",
+            "ja" to "テーマ",
+            "ko" to "주제",
+            "th" to "หัวข้อ"
+        ),
+        "guide_tue" to mapOf(
+            "zh-Hant" to "二",
+            "en" to "Tue",
+            "zh-Hans" to "二",
+            "ja" to "火",
+            "ko" to "화",
+            "th" to "อ."
+        ),
+        "guide_want" to mapOf(
+            "zh-Hant" to "想知道",
+            "en" to "Want to Know",
+            "zh-Hans" to "想知道",
+            "ja" to "知りたい",
+            "ko" to "알고 싶다",
+            "th" to "อยากรู้"
+        ),
+        "guide_wed" to mapOf(
+            "zh-Hant" to "三",
+            "en" to "Wed",
+            "zh-Hans" to "三",
+            "ja" to "水",
+            "ko" to "수",
+            "th" to "พ."
+        ),
+        "guide_week" to mapOf(
+            "zh-Hant" to "週次",
+            "en" to "Week",
+            "zh-Hans" to "週次",
+            "ja" to "週",
+            "ko" to "주",
+            "th" to "สัปดาห์"
+        ),
         "handwriting_mode" to mapOf(
             "zh-Hant" to "手繪模式",
             "en" to "Handwriting",
@@ -3239,10 +3675,7 @@ object LocalizationStrings {
             "ja" to "ミルクティー",
             "ko" to "밀크티",
             "th" to "ชานม"
-        )
-    )
-
-    private fun part5(): Map<String, Map<String, String>> = mapOf(
+        ),
         "hue_mint_green" to mapOf(
             "zh-Hant" to "薄荷綠",
             "en" to "Mint Green",
@@ -3450,7 +3883,10 @@ object LocalizationStrings {
             "ja" to "角の丸み",
             "ko" to "모서리 둥글기",
             "th" to "ความมนมุม"
-        ),
+        )
+    )
+
+    private fun part6(): Map<String, Map<String, String>> = mapOf(
         "image_filter" to mapOf(
             "zh-Hant" to "風格濾鏡",
             "en" to "Style Filter",
@@ -3882,10 +4318,7 @@ object LocalizationStrings {
             "ja" to "名称未設定の図形",
             "ko" to "이름 없는 도형",
             "th" to "รูปร่างไม่มีชื่อ"
-        )
-    )
-
-    private fun part6(): Map<String, Map<String, String>> = mapOf(
+        ),
         "layers_empty" to mapOf(
             "zh-Hant" to "這一頁還沒有形狀",
             "en" to "No shapes on this page yet",
@@ -4093,7 +4526,10 @@ object LocalizationStrings {
             "ja" to "プラスチック",
             "ko" to "플라스틱",
             "th" to "พาสติก"
-        ),
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
         "mat_silver" to mapOf(
             "zh-Hant" to "白銀",
             "en" to "Silver",
@@ -4525,10 +4961,7 @@ object LocalizationStrings {
             "ja" to "3D",
             "ko" to "3D",
             "th" to "3D"
-        )
-    )
-
-    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        ),
         "model3d_studio" to mapOf(
             "zh-Hant" to "3D 模型工作室",
             "en" to "3D Model Studio",
@@ -4736,7 +5169,10 @@ object LocalizationStrings {
             "ja" to "一致するノートが見つかりません",
             "ko" to "일치하는 노트를 찾을 수 없습니다",
             "th" to "ไม่พบบันทึกที่ตรงกัน"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "no_recognition_result" to mapOf(
             "zh-Hant" to "這一頁沒有辨識出文字",
             "en" to "No text recognised on this page",
@@ -5168,10 +5604,7 @@ object LocalizationStrings {
             "ja" to "スライド 16:9",
             "ko" to "슬라이드 16:9",
             "th" to "สไลด์ 16:9"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "page_format_square" to mapOf(
             "zh-Hant" to "正方形",
             "en" to "Square",
@@ -5379,7 +5812,10 @@ object LocalizationStrings {
             "ja" to "段落の配置",
             "ko" to "단락 정렬",
             "th" to "การจัดแนวข้อความ"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "paragraph_indent" to mapOf(
             "zh-Hant" to "縮排",
             "en" to "Indent",
@@ -5811,10 +6247,7 @@ object LocalizationStrings {
             "ja" to "リセット",
             "ko" to "초기화",
             "th" to "รีเซ็ต"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "resize_audio_card" to mapOf(
             "zh-Hant" to "調整錄音卡片大小",
             "en" to "Resize recording card",
@@ -6022,7 +6455,10 @@ object LocalizationStrings {
             "ja" to "三分割構図ガイド",
             "ko" to "3등분 법칙 격자",
             "th" to "ตารางกฎสามส่วน"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "ruler" to mapOf(
             "zh-Hant" to "尺規輔助線",
             "en" to "Ruler Guide",
@@ -6336,12 +6772,12 @@ object LocalizationStrings {
             "th" to "เลือกภาษา"
         ),
         "select_template" to mapOf(
-            "zh-Hant" to "選擇樣板",
-            "en" to "Choose Template",
-            "zh-Hans" to "选择模板",
-            "ja" to "テンプレートを選択",
-            "ko" to "템플릿 선택",
-            "th" to "เลือกเทมเพลต"
+            "zh-Hant" to "筆記頁樣板",
+            "en" to "Page Templates",
+            "zh-Hans" to "笔记页样板",
+            "ja" to "ページテンプレート",
+            "ko" to "페이지 템플릿",
+            "th" to "เทมเพลตหน้า"
         ),
         "selected" to mapOf(
             "zh-Hant" to "已選取",
@@ -6454,10 +6890,7 @@ object LocalizationStrings {
             "ja" to "結合子",
             "ko" to "연결점",
             "th" to "จุดเชื่อม"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_cross" to mapOf(
             "zh-Hant" to "十字",
             "en" to "Cross",
@@ -6665,7 +7098,10 @@ object LocalizationStrings {
             "ja" to "プレート",
             "ko" to "명판",
             "th" to "แผ่นป้าย"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_preparation" to mapOf(
             "zh-Hant" to "預備",
             "en" to "Preparation",
@@ -7097,10 +7533,7 @@ object LocalizationStrings {
             "ja" to "接続試行中...",
             "ko" to "연결 중...",
             "th" to "กำลังเชื่อมต่อ..."
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "status_disconnected" to mapOf(
             "zh-Hant" to "未連線",
             "en" to "Disconnected",
@@ -7308,7 +7741,10 @@ object LocalizationStrings {
             "ja" to "まだありません",
             "ko" to "아직 없음",
             "th" to "ยังไม่เคย"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "sync_not_configured" to mapOf(
             "zh-Hant" to "尚未選擇資料夾",
             "en" to "No folder chosen yet",
@@ -7605,6 +8041,14 @@ object LocalizationStrings {
             "ko" to "기본 스타일",
             "th" to "ทั่วไป"
         ),
+        "theme_method" to mapOf(
+            "zh-Hant" to "筆記方法",
+            "en" to "Note-taking Methods",
+            "zh-Hans" to "笔记方法",
+            "ja" to "ノート術",
+            "ko" to "노트 기법",
+            "th" to "วิธีจดบันทึก"
+        ),
         "theme_palette_bauhaus" to mapOf(
             "zh-Hant" to "包浩斯復古工業",
             "en" to "Bauhaus Industrial",
@@ -7637,6 +8081,14 @@ object LocalizationStrings {
             "ko" to "팬톤 트렌드 컬러",
             "th" to "พาเลตต์เทรนด์ Pantone"
         ),
+        "theme_planner" to mapOf(
+            "zh-Hant" to "規劃排程",
+            "en" to "Planning & Schedule",
+            "zh-Hans" to "规划排程",
+            "ja" to "計画・スケジュール",
+            "ko" to "계획·일정",
+            "th" to "วางแผนและตาราง"
+        ),
         "theme_tools" to mapOf(
             "zh-Hant" to "主題工具",
             "en" to "Theme Tools",
@@ -7644,6 +8096,14 @@ object LocalizationStrings {
             "ja" to "テーマ別ツール",
             "ko" to "테마 도구",
             "th" to "เครื่องมือธีม"
+        ),
+        "theme_tracker" to mapOf(
+            "zh-Hant" to "清單追蹤",
+            "en" to "Lists & Trackers",
+            "zh-Hans" to "清单追踪",
+            "ja" to "リスト・記録",
+            "ko" to "목록·기록",
+            "th" to "รายการและติดตาม"
         ),
         "thread_resolved" to mapOf(
             "zh-Hant" to "此討論已標記為已解決",
@@ -7668,6 +8128,22 @@ object LocalizationStrings {
             "ja" to "プレビューを小さく",
             "ko" to "미리보기 축소",
             "th" to "ย่อภาพตัวอย่าง"
+        ),
+        "tmpl_assignment_tracker" to mapOf(
+            "zh-Hant" to "作業追蹤表",
+            "en" to "Assignment Tracker",
+            "zh-Hans" to "作业追踪表",
+            "ja" to "課題トラッカー",
+            "ko" to "과제 추적",
+            "th" to "ติดตามงานที่ได้รับ"
+        ),
+        "tmpl_assignment_tracker_desc" to mapOf(
+            "zh-Hant" to "科目、任務、期限與勾選框",
+            "en" to "Subject, task, due date and a box to tick",
+            "zh-Hans" to "科目、任务、期限与勾选框",
+            "ja" to "科目・課題・期日・チェック欄",
+            "ko" to "과목·과제·기한·체크",
+            "th" to "วิชา งาน กำหนดส่ง และช่องติ๊ก"
         ),
         "tmpl_blank" to mapOf(
             "zh-Hant" to "空白紙張",
@@ -7701,6 +8177,54 @@ object LocalizationStrings {
             "ko" to "시안 밀리미터 방안 및 표준 표제란",
             "th" to "กริดมิลลิเมตรสีฟ้าครามพร้อมบล็อกชื่อมาตรฐาน"
         ),
+        "tmpl_challenge_21" to mapOf(
+            "zh-Hant" to "21 天挑戰",
+            "en" to "21-Day Challenge",
+            "zh-Hans" to "21 天挑战",
+            "ja" to "21日チャレンジ",
+            "ko" to "21일 챌린지",
+            "th" to "ชาเลนจ์ 21 วัน"
+        ),
+        "tmpl_challenge_21_desc" to mapOf(
+            "zh-Hant" to "二十二個編號格：一個習慣，三週",
+            "en" to "Twenty-two numbered boxes — one habit, three weeks",
+            "zh-Hans" to "二十二个编号格：一个习惯，三周",
+            "ja" to "番号つき22マス。ひとつの習慣を3週間",
+            "ko" to "번호 22칸. 한 가지 습관, 3주",
+            "th" to "ยี่สิบสองช่องมีเลขกำกับ"
+        ),
+        "tmpl_checklist_two" to mapOf(
+            "zh-Hant" to "雙欄勾選清單",
+            "en" to "Two-Column Checklist",
+            "zh-Hans" to "双栏勾选清单",
+            "ja" to "2列チェックリスト",
+            "ko" to "2열 체크리스트",
+            "th" to "เช็กลิสต์สองคอลัมน์"
+        ),
+        "tmpl_checklist_two_desc" to mapOf(
+            "zh-Hant" to "一頁四十項，分成兩欄",
+            "en" to "Forty items on one page, split into two columns",
+            "zh-Hans" to "一页四十项，分成两栏",
+            "ja" to "1ページに40項目、2列に分割",
+            "ko" to "한 페이지 40항목, 2열",
+            "th" to "สี่สิบรายการในหน้าเดียว"
+        ),
+        "tmpl_chore_roster" to mapOf(
+            "zh-Hant" to "家事分工表",
+            "en" to "Chore Roster",
+            "zh-Hans" to "家事分工表",
+            "ja" to "家事分担表",
+            "ko" to "집안일 분담표",
+            "th" to "ตารางงานบ้าน"
+        ),
+        "tmpl_chore_roster_desc" to mapOf(
+            "zh-Hant" to "左側區域、上方星期",
+            "en" to "Rooms down the side, days across the top",
+            "zh-Hans" to "左侧区域、上方星期",
+            "ja" to "左に場所、上に曜日",
+            "ko" to "왼쪽 구역, 위쪽 요일",
+            "th" to "พื้นที่ด้านซ้าย วันด้านบน"
+        ),
         "tmpl_cornell" to mapOf(
             "zh-Hant" to "康乃爾樣板",
             "en" to "Cornell Notes",
@@ -7716,6 +8240,38 @@ object LocalizationStrings {
             "ja" to "左にキーワード、右にノート本文、下にまとめ",
             "ko" to "왼쪽 핵심 요약, 오른쪽 본문, 하단 총괄 요약",
             "th" to "ประเด็นหลักด้านซ้าย โน้ตด้านขวา และสรุปด้านล่าง"
+        ),
+        "tmpl_cornell_grid" to mapOf(
+            "zh-Hant" to "康乃爾（方格）",
+            "en" to "Cornell (Grid)",
+            "zh-Hans" to "康乃尔（方格）",
+            "ja" to "コーネル（方眼）",
+            "ko" to "코넬(모눈)",
+            "th" to "คอร์เนล (ตาราง)"
+        ),
+        "tmpl_cornell_grid_desc" to mapOf(
+            "zh-Hant" to "方格底紋上的康乃爾三區，適合圖解與公式",
+            "en" to "Cornell zones over a grid, for diagrams and formulas",
+            "zh-Hans" to "方格底纹上的康乃尔三区，适合图解与公式",
+            "ja" to "方眼の上にコーネルの3区画。図や数式向き",
+            "ko" to "모눈 위 코넬 3구역. 도표·수식에 적합",
+            "th" to "โซนคอร์เนลบนตาราง เหมาะกับแผนภาพและสูตร"
+        ),
+        "tmpl_daily_schedule" to mapOf(
+            "zh-Hant" to "日程表",
+            "en" to "Daily Schedule",
+            "zh-Hans" to "日程表",
+            "ja" to "1日のスケジュール",
+            "ko" to "하루 일정",
+            "th" to "ตารางรายวัน"
+        ),
+        "tmpl_daily_schedule_desc" to mapOf(
+            "zh-Hant" to "早到晚每半小時一列，另有事項欄",
+            "en" to "Half-hour rows from morning to night, with a task column",
+            "zh-Hans" to "早到晚每半小时一列，另有事项栏",
+            "ja" to "朝から夜まで30分刻み＋予定欄",
+            "ko" to "아침부터 밤까지 30분 간격 + 일정 칸",
+            "th" to "ช่วงครึ่งชั่วโมงตลอดวัน"
         ),
         "tmpl_dot_grid_fine" to mapOf(
             "zh-Hant" to "極細點陣 (5mm)",
@@ -7740,10 +8296,7 @@ object LocalizationStrings {
             "ja" to "黄金比と三分分割構図",
             "ko" to "황금비 및 3분할 구도",
             "th" to "สัดส่วนทองคำและกฎสามส่วน"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_golden_ratio_desc" to mapOf(
             "zh-Hant" to "經典黃金分割線與九宮格參考輔助線",
             "en" to "Classical golden spiral & rule-of-thirds composition guides",
@@ -7768,6 +8321,22 @@ object LocalizationStrings {
             "ko" to "기하학, 공식 유도 및 정밀 도표 작성",
             "th" to "เรขาคณิต สูตร และแผนภาพที่แม่นยำ"
         ),
+        "tmpl_habit_month" to mapOf(
+            "zh-Hant" to "習慣追蹤",
+            "en" to "Habit Tracker",
+            "zh-Hans" to "习惯追踪",
+            "ja" to "習慣トラッカー",
+            "ko" to "습관 기록",
+            "th" to "ติดตามนิสัย"
+        ),
+        "tmpl_habit_month_desc" to mapOf(
+            "zh-Hant" to "31 天 × 14 項習慣格，另有回顧欄",
+            "en" to "31 day columns by 14 habit rows, with room to reflect",
+            "zh-Hans" to "31 天 × 14 项习惯格，另有回顾栏",
+            "ja" to "31日×14習慣の格子と振り返り欄",
+            "ko" to "31일 × 14습관 격자와 회고 칸",
+            "th" to "31 วัน × 14 นิสัย"
+        ),
         "tmpl_isometric" to mapOf(
             "zh-Hant" to "30° 等角立體軸測網格",
             "en" to "30° Isometric 3D Grid",
@@ -7784,6 +8353,22 @@ object LocalizationStrings {
             "ko" to "기구 부품, 3D 제품 외관 및 분해 투시도 전용",
             "th" to "สำหรับชิ้นส่วนกลไก ผลิตภัณฑ์ 3 มิติ และภาพระเบิด"
         ),
+        "tmpl_kwl" to mapOf(
+            "zh-Hant" to "KWL 表",
+            "en" to "K-W-L Chart",
+            "zh-Hans" to "KWL 表",
+            "ja" to "KWL表",
+            "ko" to "K-W-L 표",
+            "th" to "ตาราง K-W-L"
+        ),
+        "tmpl_kwl_desc" to mapOf(
+            "zh-Hant" to "已知／想知道／學到了，同一主題三欄",
+            "en" to "Know / Want to know / Learned — three columns across one topic",
+            "zh-Hans" to "已知／想知道／學到了，同一主題三栏",
+            "ja" to "知っている／知りたい／学んだ の3列",
+            "ko" to "안다/알고 싶다/배웠다 3열",
+            "th" to "รู้แล้ว/อยากรู้/ได้เรียนรู้"
+        ),
         "tmpl_lined" to mapOf(
             "zh-Hant" to "橫線筆記",
             "en" to "Ruled Lines",
@@ -7799,6 +8384,25 @@ object LocalizationStrings {
             "ja" to "講義ノート、議事録、文章作成",
             "ko" to "강의 노트, 회의록 및 글쓰기",
             "th" to "บันทึกการบรรยาย รายงานการประชุม และการเขียน"
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        "tmpl_mind_map" to mapOf(
+            "zh-Hant" to "心智圖",
+            "en" to "Mind Map",
+            "zh-Hans" to "心智图",
+            "ja" to "マインドマップ",
+            "ko" to "마인드맵",
+            "th" to "ผังความคิด"
+        ),
+        "tmpl_mind_map_desc" to mapOf(
+            "zh-Hant" to "中心方塊與四向分支起點，點陣底紋",
+            "en" to "A centre box and four branch stubs on a dot grid",
+            "zh-Hans" to "中心方块与四向分支起点，点阵底纹",
+            "ja" to "中心と4方向の枝の起点。点方眼つき",
+            "ko" to "중앙 상자와 네 갈래 시작점, 점 모눈",
+            "th" to "กล่องกลางและกิ่งสี่ทิศบนจุดตาราง"
         ),
         "tmpl_mobile_wireframe" to mapOf(
             "zh-Hant" to "行動端線框 (8pt Grid)",
@@ -7815,6 +8419,22 @@ object LocalizationStrings {
             "ja" to "デュアルスマホ枠と8ptグリッド内蔵",
             "ko" to "듀얼 스마트폰 프레임 및 8pt 픽셀 그리드",
             "th" to "กรอบมือถือคู่พร้อมกริด 8pt"
+        ),
+        "tmpl_monthly_grid" to mapOf(
+            "zh-Hant" to "月計畫",
+            "en" to "Month at a Glance",
+            "zh-Hans" to "月计划",
+            "ja" to "月間プランナー",
+            "ko" to "한 달 계획",
+            "th" to "แผนรายเดือน"
+        ),
+        "tmpl_monthly_grid_desc" to mapOf(
+            "zh-Hant" to "雙欄日期列，一個月一頁看完",
+            "en" to "Two columns of dated rows — a whole month on one page",
+            "zh-Hans" to "双栏日期列，一个月一页看完",
+            "ja" to "日付欄つき2列。1か月が1ページに収まる",
+            "ko" to "날짜 칸 2열. 한 달이 한 페이지에",
+            "th" to "สองคอลัมน์พร้อมช่องวันที่"
         ),
         "tmpl_moodboard" to mapOf(
             "zh-Hant" to "情緒板與色卡矩陣",
@@ -7848,6 +8468,134 @@ object LocalizationStrings {
             "ko" to "정면도, 평면도, 측면도 및 입체 4분면 가이드",
             "th" to "แบ่ง 4 ส่วน: ด้านหน้า ด้านบน ด้านข้าง และภาพสามมิติ"
         ),
+        "tmpl_outline" to mapOf(
+            "zh-Hant" to "大綱筆記",
+            "en" to "Outline Method",
+            "zh-Hans" to "大纲笔记",
+            "ja" to "アウトライン",
+            "ko" to "아웃라인",
+            "th" to "โครงร่าง"
+        ),
+        "tmpl_outline_desc" to mapOf(
+            "zh-Hant" to "三層縮排導引，不必先畫線就有層次",
+            "en" to "Three indent guides — structure without drawing lines first",
+            "zh-Hans" to "三层缩排导引，不必先画线就有层次",
+            "ja" to "3段のインデント目安。線を引かずに階層が見える",
+            "ko" to "3단 들여쓰기 안내선. 선을 긋지 않아도 구조가 보임",
+            "th" to "เส้นนำย่อหน้าสามระดับ"
+        ),
+        "tmpl_project_timeline" to mapOf(
+            "zh-Hant" to "專案時程",
+            "en" to "Project Milestones",
+            "zh-Hans" to "专案时程",
+            "ja" to "プロジェクト工程",
+            "ko" to "프로젝트 일정",
+            "th" to "หมุดหมายโครงการ"
+        ),
+        "tmpl_project_timeline_desc" to mapOf(
+            "zh-Hant" to "里程碑、負責人、期限三欄",
+            "en" to "Milestone, owner and due date in three columns",
+            "zh-Hans" to "里程碑、负责人、期限三栏",
+            "ja" to "マイルストーン・担当・期日の3列",
+            "ko" to "마일스톤·담당·기한 3열",
+            "th" to "หมุดหมาย ผู้รับผิดชอบ กำหนดส่ง"
+        ),
+        "tmpl_qa" to mapOf(
+            "zh-Hant" to "問答筆記",
+            "en" to "Question & Answer",
+            "zh-Hans" to "问答笔记",
+            "ja" to "一問一答",
+            "ko" to "질문과 답",
+            "th" to "ถาม–ตอบ"
+        ),
+        "tmpl_qa_desc" to mapOf(
+            "zh-Hant" to "六組問答：先寫問題，事後回想作答",
+            "en" to "Six Q&A blocks — write the question first, answer from memory later",
+            "zh-Hans" to "六组问答：先写问题，事后回想作答",
+            "ja" to "6組の問答。先に問い、あとで思い出して答える",
+            "ko" to "6개 문답 블록. 질문 먼저, 답은 나중에",
+            "th" to "หกบล็อกถามตอบ"
+        ),
+        "tmpl_quadrant" to mapOf(
+            "zh-Hant" to "四象限筆記",
+            "en" to "Quadrant Method",
+            "zh-Hans" to "四象限笔记",
+            "ja" to "4象限メモ",
+            "ko" to "4분면 노트",
+            "th" to "บันทึกสี่ช่อง"
+        ),
+        "tmpl_quadrant_desc" to mapOf(
+            "zh-Hant" to "重點、問題、決議、行動 —— 以下一步收尾的會議紀錄",
+            "en" to "Points, questions, decisions, actions — meeting notes that end in a next step",
+            "zh-Hans" to "重点、问题、决议、行动——以下一步收尾的会议纪录",
+            "ja" to "要点・疑問・決定・行動。次の一手で終わる議事録",
+            "ko" to "요점·질문·결정·실행. 다음 할 일로 끝나는 회의록",
+            "th" to "ประเด็น คำถาม ข้อสรุป การกระทำ"
+        ),
+        "tmpl_study_planner" to mapOf(
+            "zh-Hant" to "學習計畫",
+            "en" to "Study Planner",
+            "zh-Hans" to "学习计划",
+            "ja" to "学習プランナー",
+            "ko" to "학습 플래너",
+            "th" to "แผนการเรียน"
+        ),
+        "tmpl_study_planner_desc" to mapOf(
+            "zh-Hant" to "上方目標、科目列與勾選框、底部回顧",
+            "en" to "Goals on top, subject rows with checkboxes, review at the bottom",
+            "zh-Hans" to "上方目标、科目列与勾选框、底部回顾",
+            "ja" to "上に目標、科目ごとの行、下に振り返り",
+            "ko" to "위 목표, 과목별 행, 아래 회고",
+            "th" to "เป้าหมาย รายวิชา และทบทวน"
+        ),
+        "tmpl_timeline_24h" to mapOf(
+            "zh-Hant" to "24 小時時間軸",
+            "en" to "24-Hour Timeline",
+            "zh-Hans" to "24 小时时间轴",
+            "ja" to "24時間タイムライン",
+            "ko" to "24시간 타임라인",
+            "th" to "ไทม์ไลน์ 24 ชม."
+        ),
+        "tmpl_timeline_24h_desc" to mapOf(
+            "zh-Hant" to "上午下午並列，一整天一眼看完",
+            "en" to "AM and PM side by side — a full day without scrolling",
+            "zh-Hans" to "上午下午并列，一整天一眼看完",
+            "ja" to "午前と午後を左右に。1日を一望",
+            "ko" to "오전·오후를 좌우로. 하루 한눈에",
+            "th" to "เช้าและบ่ายเคียงกัน"
+        ),
+        "tmpl_todo_list" to mapOf(
+            "zh-Hant" to "待辦清單",
+            "en" to "To-Do List",
+            "zh-Hans" to "待办清单",
+            "ja" to "ToDoリスト",
+            "ko" to "할 일 목록",
+            "th" to "รายการสิ่งที่ต้องทำ"
+        ),
+        "tmpl_todo_list_desc" to mapOf(
+            "zh-Hant" to "二十行勾選框，沒有別的東西擋路",
+            "en" to "Twenty checkbox rows, nothing else in the way",
+            "zh-Hans" to "二十行勾选框，没有别的东西挡路",
+            "ja" to "チェックボックス20行だけ",
+            "ko" to "체크박스 20줄, 그뿐",
+            "th" to "ยี่สิบบรรทัดพร้อมช่องติ๊ก"
+        ),
+        "tmpl_two_column" to mapOf(
+            "zh-Hant" to "雙欄對照",
+            "en" to "Two-Column Compare",
+            "zh-Hans" to "双栏对照",
+            "ja" to "2カラム対照",
+            "ko" to "2단 대조",
+            "th" to "สองคอลัมน์เทียบ"
+        ),
+        "tmpl_two_column_desc" to mapOf(
+            "zh-Hant" to "左側原文、右側自己的話",
+            "en" to "Source on the left, your own words on the right",
+            "zh-Hans" to "左侧原文、右侧自己的话",
+            "ja" to "左に原文、右に自分の言葉",
+            "ko" to "왼쪽 원문, 오른쪽 내 말로",
+            "th" to "ต้นฉบับซ้าย ความคิดขวา"
+        ),
         "tmpl_user_journey" to mapOf(
             "zh-Hant" to "使用者旅程與流程圖",
             "en" to "User Journey & Flow",
@@ -7879,6 +8627,22 @@ object LocalizationStrings {
             "ja" to "標準12カラム、ガター、マージンレイアウト",
             "ko" to "표준 12컬럼, 거터 및 안전 여백 가이드",
             "th" to "เลย์เอาต์ 12 คอลัมน์มาตรฐานพร้อมระยะขอบ"
+        ),
+        "tmpl_weekly_columns" to mapOf(
+            "zh-Hant" to "週計畫七欄",
+            "en" to "Weekly Columns",
+            "zh-Hans" to "周计划七栏",
+            "ja" to "週間7列",
+            "ko" to "주간 7열",
+            "th" to "เจ็ดคอลัมน์รายสัปดาห์"
+        ),
+        "tmpl_weekly_columns_desc" to mapOf(
+            "zh-Hant" to "週一到週日七欄，含橫線",
+            "en" to "Seven day columns with ruled rows",
+            "zh-Hans" to "周一到周日七栏，含横线",
+            "ja" to "月曜から日曜までの7列と罫線",
+            "ko" to "월~일 7열과 괘선",
+            "th" to "เจ็ดคอลัมน์วันพร้อมเส้นบรรทัด"
         ),
         "toggle_border" to mapOf(
             "zh-Hant" to "邊框開關 (保留/刪除)",

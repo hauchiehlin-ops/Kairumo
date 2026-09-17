@@ -133,6 +133,15 @@ public enum PageThumbnailRenderer {
             UIColor.systemBackground.setFill()
             ctx.fill(pageRect)
 
+            // 紙張的版面。縮圖上原本**完全沒有** —— 使用者在側欄裡分不出
+            // 哪一頁是康乃爾、哪一頁是四象限，而畫布上是看得到的。
+            // 匯出也走這裡：列印出來要跟畫布上看到的一樣。
+            PageGuideRenderer.draw(
+                paperId: notebook.template.paperId,
+                in: ctx.cgContext,
+                size: fullPageRect.size
+            )
+
             // 疊放順序刻意對齊畫布：手繪在最底，圖釘在最上。
             drawing.image(from: fullPageRect, scale: scale)
                 .draw(in: fullPageRect)

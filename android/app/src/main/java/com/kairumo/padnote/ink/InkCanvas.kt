@@ -44,6 +44,14 @@ fun InkCanvas(
      * `.background(Color.White)` 把整塊塗掉，外層畫的底紋會整個不見。
      */
     pageStyle: uniffi.padnote_core.PageStyle = uniffi.padnote_core.PageStyle.BLANK,
+    /**
+     * 這張紙的識別字。版面（康乃爾的三區、四象限的十字）跟著它走 ——
+     * `pageStyle` 只有六種底紋，分不出三十幾種紙。
+     */
+    paperId: String = "",
+    /** 版面上的欄位標題要翻譯；沒有它的話畫出來的是一串語系鍵。 */
+    localizeGuide: (String) -> String = { it },
+    guideMeasurer: androidx.compose.ui.text.TextMeasurer? = null,
     inkColor: Color = Color.Black,
     /// 筆畫有變動時通知外層（例如更新「N 筆」的顯示）。
     onInkChanged: () -> Unit = {},
@@ -123,7 +131,12 @@ fun InkCanvas(
         @Suppress("UNUSED_EXPRESSION") liveVersion
 
         // 底紋先畫 —— 先畫的先被蓋住，筆跡要在它上面。
-        drawPageBackground(pageStyle, density)
+        drawPageBackground(
+            pageStyle, density,
+            paperId = paperId,
+            localize = localizeGuide,
+            textMeasurer = guideMeasurer
+        )
 
         drawPageBoundary(density)
 

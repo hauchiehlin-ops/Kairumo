@@ -42,7 +42,13 @@ public struct HomeWorkbenchView: View {
     @State private var selectedPaperVariant: DocumentTemplateCatalog.Variantkind? = nil
     /// 最近套用過的文件範本 id（最多三個，最近的在前）。
     @State private var recentTemplateIds: [String] = RecentTemplates.load()
-    @State private var selectedNewNoteCategory: NoteThemeCategory = .general
+    /// 目前選中的紙張主題。
+    ///
+    /// 型別是**核心的** `FfiPaperTheme`，不是 Apple 自己的 `NoteThemeCategory`：
+    /// 主題從四個長到七個，而 `NoteThemeCategory` 另外被素材庫用著（它的分類
+    /// 只對得上其中三個）。兩邊共用一個列舉的話，素材庫會憑空多出三個
+    /// 篩不到任何東西的分頁。
+    @State private var selectedNewNoteCategory: FfiPaperTheme = .general
     // 文件範本（工作項 S-61）。`nil` 代表只要一張空紙，不鋪任何內容。
     @State private var selectedDocTemplateId: String?
     @State private var selectedDocVariant: DocumentTemplateCatalog.Variantkind = .example
@@ -1629,7 +1635,7 @@ public struct HomeWorkbenchView: View {
             .navigationTitle(localizationManager.localized("new_notebook"))
             .navigationBarTitleDisplayMode(.inline)
             .onChange(of: selectedNewNoteCategory) { newCat in
-                if let first = NoteTemplate.allCases.first(where: { $0.category == newCat }) {
+                if let first = NoteTemplate.allCases.first(where: { $0.ffiTheme == newCat }) {
                     selectedTemplate = first
                 }
             }
@@ -1693,7 +1699,7 @@ public struct HomeWorkbenchView: View {
               let paper = NoteTemplate(paperId: docTemplatePaperId(pageStyle: tmpl.pageStyle))
         else { return }
         selectedTemplate = paper
-        selectedNewNoteCategory = paper.category
+        selectedNewNoteCategory = paper.ffiTheme
     }
 
     /// 紙張是由文件範本決定的嗎？是的話清單只能看，不能改。
@@ -1707,22 +1713,56 @@ public struct HomeWorkbenchView: View {
     ///
     /// 清單本身來自核心 `paperTemplatesForTheme`：Android 端原本連紙張都
     /// 不能選，各寫一份只會讓兩邊繼續分岔。
-    private var paperSection: some View {
-        Section {
-            Picker("", selection: $selectedNewNoteCategory) {
-                ForEach(NoteThemeCategory.allCases) { cat in
-                    HStack(spacing: 4) {
-                        Image(systemName: cat.iconName)
-                        Text(localizationManager.localized(cat.localizationKey))
-                    }
-                    .tag(cat)
+    /// 主題切換器。
+    ///
+    /// # 為什麼不是分段控制項
+    ///
+    /// 主題從四個長到七個。`.segmented` 會把七個中文標籤擠進同一列 ——
+    /// 那正是先前回報過的「文字被擠壓、功能鈕被遮掩」。橫向捲動的膠囊列
+    /// 放得下任意數量，而且每一個都看得清楚。
+    private var themeChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Array(paperThemes().enumerated()), id: \.offset) { _, theme in
+                    themeChip(theme)
                 }
             }
-            .pickerStyle(.segmented)
             .padding(.vertical, 4)
-            .disabled(paperIsLockedByDocument)
+            .padding(.horizontal, 2)
+        }
+        .disabled(paperIsLockedByDocument)
+    }
 
-            ForEach(paperTemplatesForTheme(theme: selectedNewNoteCategory.ffiTheme), id: \.id) { paper in
+    private func themeChip(_ theme: FfiPaperTheme) -> some View {
+        let isActive = (selectedNewNoteCategory == theme)
+        let icons = paperThemeIcons(theme: theme)
+        return Button {
+            selectedNewNoteCategory = theme
+        } label: {
+            HStack(spacing: 5) {
+                Image(systemName: icons.first ?? "doc.text")
+                    .font(.system(size: 12, weight: .semibold))
+                Text(localizationManager.localized(paperThemeKey(theme: theme)))
+                    .font(.system(size: 13, weight: isActive ? .semibold : .regular))
+                    .lineLimit(1)
+                    .fixedSize()
+            }
+            .foregroundColor(isActive ? .white : .accentColor)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(
+                Capsule().fill(isActive ? Color.accentColor : Color.accentColor.opacity(0.12))
+            )
+            .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var paperSection: some View {
+        Section {
+            themeChips
+
+            ForEach(paperTemplatesForTheme(theme: selectedNewNoteCategory), id: \.id) { paper in
                 paperRow(paper)
             }
 
@@ -1858,7 +1898,7 @@ public struct HomeWorkbenchView: View {
            let paper = NoteTemplate(paperId: tmpl.id) {
             selectedDocTemplateId = nil
             selectedTemplate = paper
-            selectedNewNoteCategory = paper.category
+            selectedNewNoteCategory = paper.ffiTheme
             selectedPaperVariant = .example
         } else {
             selectedDocTemplateId = tmpl.id

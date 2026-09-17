@@ -111,88 +111,79 @@ public enum NoteThemeCategory: String, Codable, CaseIterable, Identifiable {
     }
 }
 
-/// 筆記樣板種類（涵蓋三大主題與通用基礎）
+/// 筆記樣板種類。
+///
+/// # 這個列舉為什麼還在
+///
+/// 清單本身（有哪些紙、屬於哪個主題、什麼圖示、什麼底紋）**全部來自核心**
+/// 的 `paperTemplates()`，兩個平台才會是同一份。留著這個列舉的唯一理由是
+/// `rawValue`：前十三個是**中文字面值，而且已經寫進使用者的
+/// `notebooks_v1.json`**，動不得。
+///
+/// 所以新加的樣板一律用與核心相同的英文 `id` 當 rawValue —— 沒有歷史包袱的
+/// 東西不必背上歷史包袱。舊的十三個在 `legacyPaperId` 裡對照一次。
 public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
-    // 通用基礎
+    // ---- 既有的十三種：rawValue 是中文，已落盤，不可更動 ----
     case blank = "空白紙張"
     case grid = "方格點陣"
     case lined = "橫線筆記"
     case cornell = "康乃爾"
-
-    // 美學視覺
     case dotGridFine = "極細點陣 (5mm)"
     case goldenRatio = "黃金比例與三分構圖"
     case moodboardMatrix = "情緒板與色卡矩陣"
-
-    // 工程製程
     case blueprintMetric = "工程藍圖坐標紙"
     case isometricGrid = "30° 等角立體軸測網格"
     case orthographic3View = "三視圖與剖面範本"
-
-    // 數位體驗
     case mobileWireframe = "行動端線框 (8pt Grid)"
     case webResponsiveGrid = "響應式 Web 12 欄網格"
     case userJourneyFlow = "使用者旅程與流程圖"
 
+    // ---- 筆記方法 ----
+    case cornellGrid = "cornell_grid"
+    case quadrant = "quadrant"
+    case outline = "outline"
+    case twoColumn = "two_column"
+    case qa = "qa"
+    case kwl = "kwl"
+    case mindMap = "mind_map"
+
+    // ---- 規劃排程 ----
+    case monthlyGrid = "monthly_grid"
+    case weeklyColumns = "weekly_columns"
+    case dailySchedule = "daily_schedule"
+    case timeline24h = "timeline_24h"
+    case studyPlanner = "study_planner"
+    case projectTimeline = "project_timeline"
+
+    // ---- 清單追蹤 ----
+    case todoList = "todo_list"
+    case checklistTwo = "checklist_two"
+    case habitMonth = "habit_month"
+    case assignmentTracker = "assignment_tracker"
+    case choreRoster = "chore_roster"
+    case challenge21 = "challenge_21"
+
     public var id: String { rawValue }
 
-    public var category: NoteThemeCategory {
-        switch self {
-        case .blank, .grid, .lined, .cornell:
-            return .general
-        case .dotGridFine, .goldenRatio, .moodboardMatrix:
-            return .aesthetic
-        case .blueprintMetric, .isometricGrid, .orthographic3View:
-            return .engineering
-        case .mobileWireframe, .webResponsiveGrid, .userJourneyFlow:
-            return .digital
-        }
-    }
-
-    public var iconName: String {
-        switch self {
-        case .blank: return "doc.plaintext"
-        case .grid: return "circle.grid.3x3"
-        case .lined: return "line.horizontal.3"
-        case .cornell: return "sidebar.left"
-        case .dotGridFine: return "circle.dotted"
-        case .goldenRatio: return "camera.metering.center.weighted"
-        case .moodboardMatrix: return "rectangle.split.2x2"
-        case .blueprintMetric: return "square.grid.3x3.square"
-        case .isometricGrid: return "cube.transparent"
-        case .orthographic3View: return "square.split.2x2"
-        case .mobileWireframe: return "iphone"
-        case .webResponsiveGrid: return "macwindow"
-        case .userJourneyFlow: return "arrow.triangle.branch"
-        }
-    }
-
-    public var localizationKey: String {
-        switch self {
-        case .blank: return "tmpl_blank"
-        case .grid: return "tmpl_grid"
-        case .lined: return "tmpl_lined"
-        case .cornell: return "tmpl_cornell"
-        case .dotGridFine: return "tmpl_dot_grid_fine"
-        case .goldenRatio: return "tmpl_golden_ratio"
-        case .moodboardMatrix: return "tmpl_moodboard"
-        case .blueprintMetric: return "tmpl_blueprint"
-        case .isometricGrid: return "tmpl_isometric"
-        case .orthographic3View: return "tmpl_orthographic"
-        case .mobileWireframe: return "tmpl_mobile_wireframe"
-        case .webResponsiveGrid: return "tmpl_web_grid"
-        case .userJourneyFlow: return "tmpl_user_journey"
-        }
-    }
+    /// 舊的十三個：中文 rawValue → 核心的英文 id。
+    private static let legacyPaperId: [NoteTemplate: String] = [
+        .blank: "blank",
+        .grid: "grid",
+        .lined: "lined",
+        .cornell: "cornell",
+        .dotGridFine: "dot_grid_fine",
+        .goldenRatio: "golden_ratio",
+        .moodboardMatrix: "moodboard",
+        .blueprintMetric: "blueprint",
+        .isometricGrid: "isometric",
+        .orthographic3View: "orthographic",
+        .mobileWireframe: "mobile_wireframe",
+        .webResponsiveGrid: "web_grid",
+        .userJourneyFlow: "user_journey",
+    ]
 
     /// 與語言無關的識別字，對應核心 `paperTemplates()` 的 `id`。
-    ///
-    /// rawValue 是中文字面值、而且**已經寫進使用者的 `notebooks_v1.json`**，
-    /// 動不得；所以跨平台的識別另外走這一組。它就是語系鍵去掉 `tmpl_` 前綴，
-    /// 手寫第二份對照表只會多一個會漂移的地方。
-    public var paperId: String {
-        String(localizationKey.dropFirst("tmpl_".count))
-    }
+    public var paperId: String { Self.legacyPaperId[self] ?? rawValue }
 
     /// 從核心的識別字還原。認不得就是 nil —— 悄悄退回空白紙的話，
     /// 核心新增一種紙、平台忘了跟上時不會有人發現。
@@ -202,40 +193,42 @@ public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
         self = match
     }
 
-    public var descriptionLocalizationKey: String {
-        switch self {
-        case .blank: return "tmpl_blank_desc"
-        case .grid: return "tmpl_grid_desc"
-        case .lined: return "tmpl_lined_desc"
-        case .cornell: return "tmpl_cornell_desc"
-        case .dotGridFine: return "tmpl_dot_grid_fine_desc"
-        case .goldenRatio: return "tmpl_golden_ratio_desc"
-        case .moodboardMatrix: return "tmpl_moodboard_desc"
-        case .blueprintMetric: return "tmpl_blueprint_desc"
-        case .isometricGrid: return "tmpl_isometric_desc"
-        case .orthographic3View: return "tmpl_orthographic_desc"
-        case .mobileWireframe: return "tmpl_mobile_wireframe_desc"
-        case .webResponsiveGrid: return "tmpl_web_grid_desc"
-        case .userJourneyFlow: return "tmpl_user_journey_desc"
+    private static let catalog: [String: FfiPaperTemplate] = {
+        Dictionary(uniqueKeysWithValues: paperTemplates().map { ($0.id, $0) })
+    }()
+
+    /// 核心目錄裡的那一筆。
+    ///
+    /// 查表而不是再寫一份 switch：圖示、主題、底紋三件事各寫一份 switch 的
+    /// 結果，是核心改了其中一項而平台沒跟上 —— 而那只會在那一種紙上看得到。
+    private var entry: FfiPaperTemplate? { NoteTemplate.catalog[paperId] }
+
+    public var ffiTheme: FfiPaperTheme { entry?.theme ?? .general }
+
+    /// 素材庫那一組分類只對得上其中三個主題，對不上的回 nil。
+    public var category: NoteThemeCategory? {
+        switch ffiTheme {
+        case .general, .method, .planner, .tracker: return .general
+        case .aesthetic: return .aesthetic
+        case .engineering: return .engineering
+        case .digital: return .digital
         }
     }
 
+    public var iconName: String { entry?.iconApple ?? "doc.plaintext" }
+
+    public var localizationKey: String { entry?.titleKey ?? "tmpl_blank" }
+
+    public var descriptionLocalizationKey: String { entry?.descKey ?? "tmpl_blank_desc" }
+
+    /// 這張紙的底紋。畫布與縮圖都照它鋪材質。
+    public var pageStyle: PageStyle { entry?.pageStyle ?? .blank }
+
+    /// 顯示用的說明。**跟著語系走** —— 原本這裡是一串中文字面值，
+    /// 於是介面切到英文時，樣板名稱翻了、說明沒翻。
+    @MainActor
     public var description: String {
-        switch self {
-        case .blank: return "適合自由手繪、心智圖與草稿"
-        case .grid: return "幾何繪圖、公式推導與圖表繪製"
-        case .lined: return "課堂筆記、會議逐字與行文撰寫"
-        case .cornell: return "左側提綱摘要、右側主體筆記、底部總結"
-        case .dotGridFine: return "視覺藝術與版面設計師專用暖灰精密點陣"
-        case .goldenRatio: return "經典黃金分割線與九宮格參考輔助線"
-        case .moodboardMatrix: return "頂部 5 格代表色票位，中央大尺寸靈感畫布"
-        case .blueprintMetric: return "青藍精密毫米網格，含右下角標準 Title Block 標題欄"
-        case .isometricGrid: return "機械構件、三維產品外觀與爆炸透視專用"
-        case .orthographic3View: return "正視、俯視、側視與立體軸測四象限分區引導"
-        case .mobileWireframe: return "內建雙手機螢幕輪廓框與 8pt 像素網格"
-        case .webResponsiveGrid: return "標準 12 欄格線、間距與安全邊距引導"
-        case .userJourneyFlow: return "階段泳道、步驟節點與決策條件分支引導"
-        }
+        LocalizationManager.shared.localized(descriptionLocalizationKey)
     }
 }
 

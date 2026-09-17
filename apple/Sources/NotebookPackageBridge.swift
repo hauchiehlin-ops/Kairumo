@@ -726,19 +726,12 @@ enum NotebookPackageBridge {
         let height: CGFloat
     }
 
+    /// 這張紙的底紋。**來源是核心的目錄**（`NoteTemplate.pageStyle`）。
+    ///
+    /// 原本這裡是一份手寫的對照表，於是核心的紙張從十三種長到三十三種時，
+    /// 新的那二十種全部落在「switch 不完整」的編譯錯誤上 —— 那還算幸運的，
+    /// 真正危險的是有人順手補一個 `default: .blank`：新紙的底紋會靜靜消失。
     static func pageStyle(for template: NoteTemplate) -> PageStyle {
-        switch template {
-        case .blank, .moodboardMatrix, .goldenRatio, .orthographic3View,
-             .userJourneyFlow, .mobileWireframe:
-            return .blank
-        case .lined:
-            return .lined
-        case .grid, .blueprintMetric, .isometricGrid, .webResponsiveGrid:
-            return .grid
-        case .dotGridFine:
-            return .dotted
-        case .cornell:
-            return .cornell
-        }
+        template.pageStyle
     }
 }

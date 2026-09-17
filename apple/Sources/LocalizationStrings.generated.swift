@@ -2983,6 +2983,438 @@ extension LocalizationManager {
             .ko: "황금 나선 가이드",
             .th: "เส้นนำเกลียวทอง"
         ],
+        "guide_action": [
+            .zhHant: "行為",
+            .en: "Action",
+            .zhHans: "行为",
+            .ja: "行動",
+            .ko: "행동",
+            .th: "การกระทำ"
+        ],
+        "guide_actions": [
+            .zhHant: "行動",
+            .en: "Actions",
+            .zhHans: "行动",
+            .ja: "アクション",
+            .ko: "실행 항목",
+            .th: "สิ่งที่ต้องทำ"
+        ],
+        "guide_am": [
+            .zhHant: "上午",
+            .en: "AM",
+            .zhHans: "上午",
+            .ja: "午前",
+            .ko: "오전",
+            .th: "ช่วงเช้า"
+        ],
+        "guide_answer": [
+            .zhHant: "答",
+            .en: "A",
+            .zhHans: "答",
+            .ja: "答",
+            .ko: "답",
+            .th: "ตอบ"
+        ],
+        "guide_area": [
+            .zhHant: "區域",
+            .en: "Area",
+            .zhHans: "区域",
+            .ja: "場所",
+            .ko: "구역",
+            .th: "พื้นที่"
+        ],
+        "guide_center_idea": [
+            .zhHant: "核心概念",
+            .en: "Central Idea",
+            .zhHans: "核心概念",
+            .ja: "中心テーマ",
+            .ko: "중심 생각",
+            .th: "แนวคิดหลัก"
+        ],
+        "guide_content": [
+            .zhHant: "內容",
+            .en: "Content",
+            .zhHans: "内容",
+            .ja: "内容",
+            .ko: "내용",
+            .th: "เนื้อหา"
+        ],
+        "guide_cue": [
+            .zhHant: "提示欄",
+            .en: "Cues",
+            .zhHans: "提示栏",
+            .ja: "キーワード",
+            .ko: "단서",
+            .th: "คำใบ้"
+        ],
+        "guide_date": [
+            .zhHant: "日期",
+            .en: "Date",
+            .zhHans: "日期",
+            .ja: "日付",
+            .ko: "날짜",
+            .th: "วันที่"
+        ],
+        "guide_day": [
+            .zhHant: "日",
+            .en: "Day",
+            .zhHans: "日",
+            .ja: "日",
+            .ko: "일",
+            .th: "วัน"
+        ],
+        "guide_decisions": [
+            .zhHant: "決議",
+            .en: "Decisions",
+            .zhHans: "决议",
+            .ja: "決定事項",
+            .ko: "결정 사항",
+            .th: "ข้อสรุป"
+        ],
+        "guide_detail": [
+            .zhHant: "細節",
+            .en: "Detail",
+            .zhHans: "细节",
+            .ja: "詳細",
+            .ko: "세부",
+            .th: "รายละเอียด"
+        ],
+        "guide_done": [
+            .zhHant: "完成",
+            .en: "Done",
+            .zhHans: "完成",
+            .ja: "完了",
+            .ko: "완료",
+            .th: "เสร็จ"
+        ],
+        "guide_due": [
+            .zhHant: "期限",
+            .en: "Due",
+            .zhHans: "期限",
+            .ja: "期日",
+            .ko: "기한",
+            .th: "กำหนดส่ง"
+        ],
+        "guide_feeling": [
+            .zhHant: "感受",
+            .en: "Feeling",
+            .zhHans: "感受",
+            .ja: "感情",
+            .ko: "감정",
+            .th: "ความรู้สึก"
+        ],
+        "guide_fri": [
+            .zhHant: "五",
+            .en: "Fri",
+            .zhHans: "五",
+            .ja: "金",
+            .ko: "금",
+            .th: "ศ."
+        ],
+        "guide_front_view": [
+            .zhHant: "正視圖",
+            .en: "Front",
+            .zhHans: "正视图",
+            .ja: "正面図",
+            .ko: "정면도",
+            .th: "ด้านหน้า"
+        ],
+        "guide_goals": [
+            .zhHant: "目標",
+            .en: "Goals",
+            .zhHans: "目标",
+            .ja: "目標",
+            .ko: "목표",
+            .th: "เป้าหมาย"
+        ],
+        "guide_habit": [
+            .zhHant: "習慣",
+            .en: "Habit",
+            .zhHans: "习惯",
+            .ja: "習慣",
+            .ko: "습관",
+            .th: "นิสัย"
+        ],
+        "guide_iso_view": [
+            .zhHant: "立體軸測",
+            .en: "Isometric",
+            .zhHans: "立体轴测",
+            .ja: "等角図",
+            .ko: "등각도",
+            .th: "ไอโซเมตริก"
+        ],
+        "guide_key_points": [
+            .zhHant: "重點",
+            .en: "Key Points",
+            .zhHans: "重点",
+            .ja: "要点",
+            .ko: "핵심",
+            .th: "ประเด็นหลัก"
+        ],
+        "guide_know": [
+            .zhHant: "已知",
+            .en: "Know",
+            .zhHans: "已知",
+            .ja: "知っている",
+            .ko: "안다",
+            .th: "รู้แล้ว"
+        ],
+        "guide_learned": [
+            .zhHant: "學到了",
+            .en: "Learned",
+            .zhHans: "学到了",
+            .ja: "学んだ",
+            .ko: "배웠다",
+            .th: "ได้เรียนรู้"
+        ],
+        "guide_main": [
+            .zhHant: "主標題",
+            .en: "Main",
+            .zhHans: "主标题",
+            .ja: "大項目",
+            .ko: "대항목",
+            .th: "หลัก"
+        ],
+        "guide_milestone": [
+            .zhHant: "里程碑",
+            .en: "Milestone",
+            .zhHans: "里程碑",
+            .ja: "マイルストーン",
+            .ko: "마일스톤",
+            .th: "หมุดหมาย"
+        ],
+        "guide_mon": [
+            .zhHant: "一",
+            .en: "Mon",
+            .zhHans: "一",
+            .ja: "月",
+            .ko: "월",
+            .th: "จ."
+        ],
+        "guide_month": [
+            .zhHant: "月份",
+            .en: "Month",
+            .zhHans: "月份",
+            .ja: "月",
+            .ko: "월",
+            .th: "เดือน"
+        ],
+        "guide_my_notes": [
+            .zhHant: "我的筆記",
+            .en: "My Notes",
+            .zhHans: "我的笔记",
+            .ja: "自分の言葉",
+            .ko: "내 메모",
+            .th: "บันทึกของฉัน"
+        ],
+        "guide_notes": [
+            .zhHant: "筆記",
+            .en: "Notes",
+            .zhHans: "笔记",
+            .ja: "ノート",
+            .ko: "노트",
+            .th: "บันทึก"
+        ],
+        "guide_owner": [
+            .zhHant: "負責人",
+            .en: "Owner",
+            .zhHans: "负责人",
+            .ja: "担当",
+            .ko: "담당",
+            .th: "ผู้รับผิดชอบ"
+        ],
+        "guide_pm": [
+            .zhHant: "下午",
+            .en: "PM",
+            .zhHans: "下午",
+            .ja: "午後",
+            .ko: "오후",
+            .th: "ช่วงบ่าย"
+        ],
+        "guide_project": [
+            .zhHant: "專案",
+            .en: "Project",
+            .zhHans: "专案",
+            .ja: "プロジェクト",
+            .ko: "프로젝트",
+            .th: "โครงการ"
+        ],
+        "guide_question": [
+            .zhHant: "問",
+            .en: "Q",
+            .zhHans: "问",
+            .ja: "問",
+            .ko: "질문",
+            .th: "ถาม"
+        ],
+        "guide_questions": [
+            .zhHant: "問題",
+            .en: "Questions",
+            .zhHans: "问题",
+            .ja: "疑問",
+            .ko: "질문",
+            .th: "คำถาม"
+        ],
+        "guide_reflection": [
+            .zhHant: "回顧",
+            .en: "Reflection",
+            .zhHans: "回顾",
+            .ja: "振り返り",
+            .ko: "돌아보기",
+            .th: "สะท้อนคิด"
+        ],
+        "guide_review": [
+            .zhHant: "回顧",
+            .en: "Review",
+            .zhHans: "回顾",
+            .ja: "振り返り",
+            .ko: "회고",
+            .th: "ทบทวน"
+        ],
+        "guide_sat": [
+            .zhHant: "六",
+            .en: "Sat",
+            .zhHans: "六",
+            .ja: "土",
+            .ko: "토",
+            .th: "ส."
+        ],
+        "guide_screen": [
+            .zhHant: "畫面",
+            .en: "Screen",
+            .zhHans: "画面",
+            .ja: "画面",
+            .ko: "화면",
+            .th: "หน้าจอ"
+        ],
+        "guide_side_view": [
+            .zhHant: "側視圖",
+            .en: "Side",
+            .zhHans: "侧视图",
+            .ja: "側面図",
+            .ko: "측면도",
+            .th: "ด้านข้าง"
+        ],
+        "guide_source": [
+            .zhHant: "原文",
+            .en: "Source",
+            .zhHans: "原文",
+            .ja: "原文",
+            .ko: "원문",
+            .th: "ต้นฉบับ"
+        ],
+        "guide_stage": [
+            .zhHant: "階段",
+            .en: "Stage",
+            .zhHans: "阶段",
+            .ja: "ステージ",
+            .ko: "단계",
+            .th: "ขั้น"
+        ],
+        "guide_sub": [
+            .zhHant: "次重點",
+            .en: "Sub",
+            .zhHans: "次重点",
+            .ja: "中項目",
+            .ko: "중항목",
+            .th: "รอง"
+        ],
+        "guide_subject": [
+            .zhHant: "科目",
+            .en: "Subject",
+            .zhHans: "科目",
+            .ja: "科目",
+            .ko: "과목",
+            .th: "วิชา"
+        ],
+        "guide_summary": [
+            .zhHant: "摘要",
+            .en: "Summary",
+            .zhHans: "摘要",
+            .ja: "まとめ",
+            .ko: "요약",
+            .th: "สรุป"
+        ],
+        "guide_sun": [
+            .zhHant: "日",
+            .en: "Sun",
+            .zhHans: "日",
+            .ja: "日",
+            .ko: "일",
+            .th: "อา."
+        ],
+        "guide_task": [
+            .zhHant: "事項",
+            .en: "Task",
+            .zhHans: "事项",
+            .ja: "内容",
+            .ko: "할 일",
+            .th: "งาน"
+        ],
+        "guide_thu": [
+            .zhHant: "四",
+            .en: "Thu",
+            .zhHans: "四",
+            .ja: "木",
+            .ko: "목",
+            .th: "พฤ."
+        ],
+        "guide_time": [
+            .zhHant: "時間",
+            .en: "Time",
+            .zhHans: "时间",
+            .ja: "時間",
+            .ko: "시간",
+            .th: "เวลา"
+        ],
+        "guide_top_view": [
+            .zhHant: "俯視圖",
+            .en: "Top",
+            .zhHans: "俯视图",
+            .ja: "平面図",
+            .ko: "평면도",
+            .th: "ด้านบน"
+        ],
+        "guide_topic": [
+            .zhHant: "主題",
+            .en: "Topic",
+            .zhHans: "主题",
+            .ja: "テーマ",
+            .ko: "주제",
+            .th: "หัวข้อ"
+        ],
+        "guide_tue": [
+            .zhHant: "二",
+            .en: "Tue",
+            .zhHans: "二",
+            .ja: "火",
+            .ko: "화",
+            .th: "อ."
+        ],
+        "guide_want": [
+            .zhHant: "想知道",
+            .en: "Want to Know",
+            .zhHans: "想知道",
+            .ja: "知りたい",
+            .ko: "알고 싶다",
+            .th: "อยากรู้"
+        ],
+        "guide_wed": [
+            .zhHant: "三",
+            .en: "Wed",
+            .zhHans: "三",
+            .ja: "水",
+            .ko: "수",
+            .th: "พ."
+        ],
+        "guide_week": [
+            .zhHant: "週次",
+            .en: "Week",
+            .zhHans: "週次",
+            .ja: "週",
+            .ko: "주",
+            .th: "สัปดาห์"
+        ],
         "handwriting_mode": [
             .zhHant: "手繪模式",
             .en: "Handwriting",
@@ -6296,12 +6728,12 @@ extension LocalizationManager {
             .th: "เลือกภาษา"
         ],
         "select_template": [
-            .zhHant: "選擇樣板",
-            .en: "Choose Template",
-            .zhHans: "选择模板",
-            .ja: "テンプレートを選択",
-            .ko: "템플릿 선택",
-            .th: "เลือกเทมเพลต"
+            .zhHant: "筆記頁樣板",
+            .en: "Page Templates",
+            .zhHans: "笔记页样板",
+            .ja: "ページテンプレート",
+            .ko: "페이지 템플릿",
+            .th: "เทมเพลตหน้า"
         ],
         "selected": [
             .zhHant: "已選取",
@@ -7559,6 +7991,14 @@ extension LocalizationManager {
             .ko: "기본 스타일",
             .th: "ทั่วไป"
         ],
+        "theme_method": [
+            .zhHant: "筆記方法",
+            .en: "Note-taking Methods",
+            .zhHans: "笔记方法",
+            .ja: "ノート術",
+            .ko: "노트 기법",
+            .th: "วิธีจดบันทึก"
+        ],
         "theme_palette_bauhaus": [
             .zhHant: "包浩斯復古工業",
             .en: "Bauhaus Industrial",
@@ -7591,6 +8031,14 @@ extension LocalizationManager {
             .ko: "팬톤 트렌드 컬러",
             .th: "พาเลตต์เทรนด์ Pantone"
         ],
+        "theme_planner": [
+            .zhHant: "規劃排程",
+            .en: "Planning & Schedule",
+            .zhHans: "规划排程",
+            .ja: "計画・スケジュール",
+            .ko: "계획·일정",
+            .th: "วางแผนและตาราง"
+        ],
         "theme_tools": [
             .zhHant: "主題工具",
             .en: "Theme Tools",
@@ -7598,6 +8046,14 @@ extension LocalizationManager {
             .ja: "テーマ別ツール",
             .ko: "테마 도구",
             .th: "เครื่องมือธีม"
+        ],
+        "theme_tracker": [
+            .zhHant: "清單追蹤",
+            .en: "Lists & Trackers",
+            .zhHans: "清单追踪",
+            .ja: "リスト・記録",
+            .ko: "목록·기록",
+            .th: "รายการและติดตาม"
         ],
         "thread_resolved": [
             .zhHant: "此討論已標記為已解決",
@@ -7622,6 +8078,22 @@ extension LocalizationManager {
             .ja: "プレビューを小さく",
             .ko: "미리보기 축소",
             .th: "ย่อภาพตัวอย่าง"
+        ],
+        "tmpl_assignment_tracker": [
+            .zhHant: "作業追蹤表",
+            .en: "Assignment Tracker",
+            .zhHans: "作业追踪表",
+            .ja: "課題トラッカー",
+            .ko: "과제 추적",
+            .th: "ติดตามงานที่ได้รับ"
+        ],
+        "tmpl_assignment_tracker_desc": [
+            .zhHant: "科目、任務、期限與勾選框",
+            .en: "Subject, task, due date and a box to tick",
+            .zhHans: "科目、任务、期限与勾选框",
+            .ja: "科目・課題・期日・チェック欄",
+            .ko: "과목·과제·기한·체크",
+            .th: "วิชา งาน กำหนดส่ง และช่องติ๊ก"
         ],
         "tmpl_blank": [
             .zhHant: "空白紙張",
@@ -7655,6 +8127,54 @@ extension LocalizationManager {
             .ko: "시안 밀리미터 방안 및 표준 표제란",
             .th: "กริดมิลลิเมตรสีฟ้าครามพร้อมบล็อกชื่อมาตรฐาน"
         ],
+        "tmpl_challenge_21": [
+            .zhHant: "21 天挑戰",
+            .en: "21-Day Challenge",
+            .zhHans: "21 天挑战",
+            .ja: "21日チャレンジ",
+            .ko: "21일 챌린지",
+            .th: "ชาเลนจ์ 21 วัน"
+        ],
+        "tmpl_challenge_21_desc": [
+            .zhHant: "二十二個編號格：一個習慣，三週",
+            .en: "Twenty-two numbered boxes — one habit, three weeks",
+            .zhHans: "二十二个编号格：一个习惯，三周",
+            .ja: "番号つき22マス。ひとつの習慣を3週間",
+            .ko: "번호 22칸. 한 가지 습관, 3주",
+            .th: "ยี่สิบสองช่องมีเลขกำกับ"
+        ],
+        "tmpl_checklist_two": [
+            .zhHant: "雙欄勾選清單",
+            .en: "Two-Column Checklist",
+            .zhHans: "双栏勾选清单",
+            .ja: "2列チェックリスト",
+            .ko: "2열 체크리스트",
+            .th: "เช็กลิสต์สองคอลัมน์"
+        ],
+        "tmpl_checklist_two_desc": [
+            .zhHant: "一頁四十項，分成兩欄",
+            .en: "Forty items on one page, split into two columns",
+            .zhHans: "一页四十项，分成两栏",
+            .ja: "1ページに40項目、2列に分割",
+            .ko: "한 페이지 40항목, 2열",
+            .th: "สี่สิบรายการในหน้าเดียว"
+        ],
+        "tmpl_chore_roster": [
+            .zhHant: "家事分工表",
+            .en: "Chore Roster",
+            .zhHans: "家事分工表",
+            .ja: "家事分担表",
+            .ko: "집안일 분담표",
+            .th: "ตารางงานบ้าน"
+        ],
+        "tmpl_chore_roster_desc": [
+            .zhHant: "左側區域、上方星期",
+            .en: "Rooms down the side, days across the top",
+            .zhHans: "左侧区域、上方星期",
+            .ja: "左に場所、上に曜日",
+            .ko: "왼쪽 구역, 위쪽 요일",
+            .th: "พื้นที่ด้านซ้าย วันด้านบน"
+        ],
         "tmpl_cornell": [
             .zhHant: "康乃爾樣板",
             .en: "Cornell Notes",
@@ -7670,6 +8190,38 @@ extension LocalizationManager {
             .ja: "左にキーワード、右にノート本文、下にまとめ",
             .ko: "왼쪽 핵심 요약, 오른쪽 본문, 하단 총괄 요약",
             .th: "ประเด็นหลักด้านซ้าย โน้ตด้านขวา และสรุปด้านล่าง"
+        ],
+        "tmpl_cornell_grid": [
+            .zhHant: "康乃爾（方格）",
+            .en: "Cornell (Grid)",
+            .zhHans: "康乃尔（方格）",
+            .ja: "コーネル（方眼）",
+            .ko: "코넬(모눈)",
+            .th: "คอร์เนล (ตาราง)"
+        ],
+        "tmpl_cornell_grid_desc": [
+            .zhHant: "方格底紋上的康乃爾三區，適合圖解與公式",
+            .en: "Cornell zones over a grid, for diagrams and formulas",
+            .zhHans: "方格底纹上的康乃尔三区，适合图解与公式",
+            .ja: "方眼の上にコーネルの3区画。図や数式向き",
+            .ko: "모눈 위 코넬 3구역. 도표·수식에 적합",
+            .th: "โซนคอร์เนลบนตาราง เหมาะกับแผนภาพและสูตร"
+        ],
+        "tmpl_daily_schedule": [
+            .zhHant: "日程表",
+            .en: "Daily Schedule",
+            .zhHans: "日程表",
+            .ja: "1日のスケジュール",
+            .ko: "하루 일정",
+            .th: "ตารางรายวัน"
+        ],
+        "tmpl_daily_schedule_desc": [
+            .zhHant: "早到晚每半小時一列，另有事項欄",
+            .en: "Half-hour rows from morning to night, with a task column",
+            .zhHans: "早到晚每半小时一列，另有事项栏",
+            .ja: "朝から夜まで30分刻み＋予定欄",
+            .ko: "아침부터 밤까지 30분 간격 + 일정 칸",
+            .th: "ช่วงครึ่งชั่วโมงตลอดวัน"
         ],
         "tmpl_dot_grid_fine": [
             .zhHant: "極細點陣 (5mm)",
@@ -7719,6 +8271,22 @@ extension LocalizationManager {
             .ko: "기하학, 공식 유도 및 정밀 도표 작성",
             .th: "เรขาคณิต สูตร และแผนภาพที่แม่นยำ"
         ],
+        "tmpl_habit_month": [
+            .zhHant: "習慣追蹤",
+            .en: "Habit Tracker",
+            .zhHans: "习惯追踪",
+            .ja: "習慣トラッカー",
+            .ko: "습관 기록",
+            .th: "ติดตามนิสัย"
+        ],
+        "tmpl_habit_month_desc": [
+            .zhHant: "31 天 × 14 項習慣格，另有回顧欄",
+            .en: "31 day columns by 14 habit rows, with room to reflect",
+            .zhHans: "31 天 × 14 项习惯格，另有回顾栏",
+            .ja: "31日×14習慣の格子と振り返り欄",
+            .ko: "31일 × 14습관 격자와 회고 칸",
+            .th: "31 วัน × 14 นิสัย"
+        ],
         "tmpl_isometric": [
             .zhHant: "30° 等角立體軸測網格",
             .en: "30° Isometric 3D Grid",
@@ -7734,6 +8302,22 @@ extension LocalizationManager {
             .ja: "機構部品、3D製品外観、分解斜視図専用",
             .ko: "기구 부품, 3D 제품 외관 및 분해 투시도 전용",
             .th: "สำหรับชิ้นส่วนกลไก ผลิตภัณฑ์ 3 มิติ และภาพระเบิด"
+        ],
+        "tmpl_kwl": [
+            .zhHant: "KWL 表",
+            .en: "K-W-L Chart",
+            .zhHans: "KWL 表",
+            .ja: "KWL表",
+            .ko: "K-W-L 표",
+            .th: "ตาราง K-W-L"
+        ],
+        "tmpl_kwl_desc": [
+            .zhHant: "已知／想知道／學到了，同一主題三欄",
+            .en: "Know / Want to know / Learned — three columns across one topic",
+            .zhHans: "已知／想知道／學到了，同一主題三栏",
+            .ja: "知っている／知りたい／学んだ の3列",
+            .ko: "안다/알고 싶다/배웠다 3열",
+            .th: "รู้แล้ว/อยากรู้/ได้เรียนรู้"
         ],
         "tmpl_lined": [
             .zhHant: "橫線筆記",
@@ -7751,6 +8335,22 @@ extension LocalizationManager {
             .ko: "강의 노트, 회의록 및 글쓰기",
             .th: "บันทึกการบรรยาย รายงานการประชุม และการเขียน"
         ],
+        "tmpl_mind_map": [
+            .zhHant: "心智圖",
+            .en: "Mind Map",
+            .zhHans: "心智图",
+            .ja: "マインドマップ",
+            .ko: "마인드맵",
+            .th: "ผังความคิด"
+        ],
+        "tmpl_mind_map_desc": [
+            .zhHant: "中心方塊與四向分支起點，點陣底紋",
+            .en: "A centre box and four branch stubs on a dot grid",
+            .zhHans: "中心方块与四向分支起点，点阵底纹",
+            .ja: "中心と4方向の枝の起点。点方眼つき",
+            .ko: "중앙 상자와 네 갈래 시작점, 점 모눈",
+            .th: "กล่องกลางและกิ่งสี่ทิศบนจุดตาราง"
+        ],
         "tmpl_mobile_wireframe": [
             .zhHant: "行動端線框 (8pt Grid)",
             .en: "Mobile Wireframe (8pt)",
@@ -7766,6 +8366,22 @@ extension LocalizationManager {
             .ja: "デュアルスマホ枠と8ptグリッド内蔵",
             .ko: "듀얼 스마트폰 프레임 및 8pt 픽셀 그리드",
             .th: "กรอบมือถือคู่พร้อมกริด 8pt"
+        ],
+        "tmpl_monthly_grid": [
+            .zhHant: "月計畫",
+            .en: "Month at a Glance",
+            .zhHans: "月计划",
+            .ja: "月間プランナー",
+            .ko: "한 달 계획",
+            .th: "แผนรายเดือน"
+        ],
+        "tmpl_monthly_grid_desc": [
+            .zhHant: "雙欄日期列，一個月一頁看完",
+            .en: "Two columns of dated rows — a whole month on one page",
+            .zhHans: "双栏日期列，一个月一页看完",
+            .ja: "日付欄つき2列。1か月が1ページに収まる",
+            .ko: "날짜 칸 2열. 한 달이 한 페이지에",
+            .th: "สองคอลัมน์พร้อมช่องวันที่"
         ],
         "tmpl_moodboard": [
             .zhHant: "情緒板與色卡矩陣",
@@ -7799,6 +8415,134 @@ extension LocalizationManager {
             .ko: "정면도, 평면도, 측면도 및 입체 4분면 가이드",
             .th: "แบ่ง 4 ส่วน: ด้านหน้า ด้านบน ด้านข้าง และภาพสามมิติ"
         ],
+        "tmpl_outline": [
+            .zhHant: "大綱筆記",
+            .en: "Outline Method",
+            .zhHans: "大纲笔记",
+            .ja: "アウトライン",
+            .ko: "아웃라인",
+            .th: "โครงร่าง"
+        ],
+        "tmpl_outline_desc": [
+            .zhHant: "三層縮排導引，不必先畫線就有層次",
+            .en: "Three indent guides — structure without drawing lines first",
+            .zhHans: "三层缩排导引，不必先画线就有层次",
+            .ja: "3段のインデント目安。線を引かずに階層が見える",
+            .ko: "3단 들여쓰기 안내선. 선을 긋지 않아도 구조가 보임",
+            .th: "เส้นนำย่อหน้าสามระดับ"
+        ],
+        "tmpl_project_timeline": [
+            .zhHant: "專案時程",
+            .en: "Project Milestones",
+            .zhHans: "专案时程",
+            .ja: "プロジェクト工程",
+            .ko: "프로젝트 일정",
+            .th: "หมุดหมายโครงการ"
+        ],
+        "tmpl_project_timeline_desc": [
+            .zhHant: "里程碑、負責人、期限三欄",
+            .en: "Milestone, owner and due date in three columns",
+            .zhHans: "里程碑、负责人、期限三栏",
+            .ja: "マイルストーン・担当・期日の3列",
+            .ko: "마일스톤·담당·기한 3열",
+            .th: "หมุดหมาย ผู้รับผิดชอบ กำหนดส่ง"
+        ],
+        "tmpl_qa": [
+            .zhHant: "問答筆記",
+            .en: "Question & Answer",
+            .zhHans: "问答笔记",
+            .ja: "一問一答",
+            .ko: "질문과 답",
+            .th: "ถาม–ตอบ"
+        ],
+        "tmpl_qa_desc": [
+            .zhHant: "六組問答：先寫問題，事後回想作答",
+            .en: "Six Q&A blocks — write the question first, answer from memory later",
+            .zhHans: "六组问答：先写问题，事后回想作答",
+            .ja: "6組の問答。先に問い、あとで思い出して答える",
+            .ko: "6개 문답 블록. 질문 먼저, 답은 나중에",
+            .th: "หกบล็อกถามตอบ"
+        ],
+        "tmpl_quadrant": [
+            .zhHant: "四象限筆記",
+            .en: "Quadrant Method",
+            .zhHans: "四象限笔记",
+            .ja: "4象限メモ",
+            .ko: "4분면 노트",
+            .th: "บันทึกสี่ช่อง"
+        ],
+        "tmpl_quadrant_desc": [
+            .zhHant: "重點、問題、決議、行動 —— 以下一步收尾的會議紀錄",
+            .en: "Points, questions, decisions, actions — meeting notes that end in a next step",
+            .zhHans: "重点、问题、决议、行动——以下一步收尾的会议纪录",
+            .ja: "要点・疑問・決定・行動。次の一手で終わる議事録",
+            .ko: "요점·질문·결정·실행. 다음 할 일로 끝나는 회의록",
+            .th: "ประเด็น คำถาม ข้อสรุป การกระทำ"
+        ],
+        "tmpl_study_planner": [
+            .zhHant: "學習計畫",
+            .en: "Study Planner",
+            .zhHans: "学习计划",
+            .ja: "学習プランナー",
+            .ko: "학습 플래너",
+            .th: "แผนการเรียน"
+        ],
+        "tmpl_study_planner_desc": [
+            .zhHant: "上方目標、科目列與勾選框、底部回顧",
+            .en: "Goals on top, subject rows with checkboxes, review at the bottom",
+            .zhHans: "上方目标、科目列与勾选框、底部回顾",
+            .ja: "上に目標、科目ごとの行、下に振り返り",
+            .ko: "위 목표, 과목별 행, 아래 회고",
+            .th: "เป้าหมาย รายวิชา และทบทวน"
+        ],
+        "tmpl_timeline_24h": [
+            .zhHant: "24 小時時間軸",
+            .en: "24-Hour Timeline",
+            .zhHans: "24 小时时间轴",
+            .ja: "24時間タイムライン",
+            .ko: "24시간 타임라인",
+            .th: "ไทม์ไลน์ 24 ชม."
+        ],
+        "tmpl_timeline_24h_desc": [
+            .zhHant: "上午下午並列，一整天一眼看完",
+            .en: "AM and PM side by side — a full day without scrolling",
+            .zhHans: "上午下午并列，一整天一眼看完",
+            .ja: "午前と午後を左右に。1日を一望",
+            .ko: "오전·오후를 좌우로. 하루 한눈에",
+            .th: "เช้าและบ่ายเคียงกัน"
+        ],
+        "tmpl_todo_list": [
+            .zhHant: "待辦清單",
+            .en: "To-Do List",
+            .zhHans: "待办清单",
+            .ja: "ToDoリスト",
+            .ko: "할 일 목록",
+            .th: "รายการสิ่งที่ต้องทำ"
+        ],
+        "tmpl_todo_list_desc": [
+            .zhHant: "二十行勾選框，沒有別的東西擋路",
+            .en: "Twenty checkbox rows, nothing else in the way",
+            .zhHans: "二十行勾选框，没有别的东西挡路",
+            .ja: "チェックボックス20行だけ",
+            .ko: "체크박스 20줄, 그뿐",
+            .th: "ยี่สิบบรรทัดพร้อมช่องติ๊ก"
+        ],
+        "tmpl_two_column": [
+            .zhHant: "雙欄對照",
+            .en: "Two-Column Compare",
+            .zhHans: "双栏对照",
+            .ja: "2カラム対照",
+            .ko: "2단 대조",
+            .th: "สองคอลัมน์เทียบ"
+        ],
+        "tmpl_two_column_desc": [
+            .zhHant: "左側原文、右側自己的話",
+            .en: "Source on the left, your own words on the right",
+            .zhHans: "左侧原文、右侧自己的话",
+            .ja: "左に原文、右に自分の言葉",
+            .ko: "왼쪽 원문, 오른쪽 내 말로",
+            .th: "ต้นฉบับซ้าย ความคิดขวา"
+        ],
         "tmpl_user_journey": [
             .zhHant: "使用者旅程與流程圖",
             .en: "User Journey & Flow",
@@ -7830,6 +8574,22 @@ extension LocalizationManager {
             .ja: "標準12カラム、ガター、マージンレイアウト",
             .ko: "표준 12컬럼, 거터 및 안전 여백 가이드",
             .th: "เลย์เอาต์ 12 คอลัมน์มาตรฐานพร้อมระยะขอบ"
+        ],
+        "tmpl_weekly_columns": [
+            .zhHant: "週計畫七欄",
+            .en: "Weekly Columns",
+            .zhHans: "周计划七栏",
+            .ja: "週間7列",
+            .ko: "주간 7열",
+            .th: "เจ็ดคอลัมน์รายสัปดาห์"
+        ],
+        "tmpl_weekly_columns_desc": [
+            .zhHant: "週一到週日七欄，含橫線",
+            .en: "Seven day columns with ruled rows",
+            .zhHans: "周一到周日七栏，含横线",
+            .ja: "月曜から日曜までの7列と罫線",
+            .ko: "월~일 7열과 괘선",
+            .th: "เจ็ดคอลัมน์วันพร้อมเส้นบรรทัด"
         ],
         "toggle_border": [
             .zhHant: "邊框開關 (保留/刪除)",

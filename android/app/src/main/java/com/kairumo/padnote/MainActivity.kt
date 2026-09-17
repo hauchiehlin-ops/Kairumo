@@ -683,7 +683,14 @@ private fun NotebookHome(
                 val tmpl = templateId?.let { DocumentTemplateCatalog.template(activity, it) }
                 val paper = tmpl?.let { DocumentTemplateCatalog.paperOf(it) }
                     ?: DocumentTemplateCatalog.paperStyle(paperId)
-                val id = NotebookLibrary.create(activity, name, device, folderId, style = paper)
+                // 紙張 id 也要記下來：底紋只有六種，而版面（康乃爾的三區、
+                // 四象限的十字）跟著 id 走。不記的話重開這本筆記時版面會消失。
+                val chosenPaper = tmpl?.let {
+                    uniffi.padnote_core.docTemplatePaperId(it.pageStyle)
+                } ?: paperId
+                val id = NotebookLibrary.create(
+                    activity, name, device, folderId, style = paper, paperId = chosenPaper
+                )
                 if (id != null) {
                     // 選了文件範本就把內容鋪進去。開檔失敗也不擋 ——
                     // 使用者至少拿得到一本空白筆記，而不是什麼都沒有。
@@ -2226,6 +2233,12 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     notebook?.first?.pageStyle(pageId ?: return@runCatching null)
                 }.getOrNull() ?: uniffi.padnote_core.PageStyle.BLANK
             }
+            // 這張紙的**版面**。底紋只有六種，紙張有三十幾種 ——
+            // 康乃爾與四象限的底紋都是 BLANK，差別全在版面上。
+            val paperId = remember(notebookId, revision) {
+                com.kairumo.padnote.library.NotebookMeta.load(notebook?.first).paperId()
+            }
+            val guideMeasurer = androidx.compose.ui.text.rememberTextMeasurer()
             // 縮放時不能走低延遲路徑。
             //
             // `LowLatencyInkCanvas` 畫在 `SurfaceView` 上，而 SurfaceView 是
@@ -2251,6 +2264,9 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     // 疊一層 Composable 在外面是不行的：`InkCanvas` 會用
                     // `Color.White` 把整塊塗掉，底紋就消失了（實機看過）。
                     pageStyle = pageStyle,
+                    paperId = paperId,
+                    localizeGuide = l10n,
+                    guideMeasurer = guideMeasurer,
                     // 打字模式下筆也不會畫線 —— 這個模式只處理文字與物件。
                     acceptsInk = editorMode == EditorMode.DRAW
                 )

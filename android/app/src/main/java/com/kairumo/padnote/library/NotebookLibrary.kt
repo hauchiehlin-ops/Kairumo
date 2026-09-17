@@ -191,7 +191,15 @@ object NotebookLibrary {
         title: String,
         deviceId: UInt,
         folderId: String? = null,
-        style: uniffi.padnote_core.PageStyle = uniffi.padnote_core.PageStyle.BLANK
+        style: uniffi.padnote_core.PageStyle = uniffi.padnote_core.PageStyle.BLANK,
+        /**
+         * 這本筆記用的紙張 id。
+         *
+         * 底紋（`style`）只有六種，而紙張有三十幾種 —— 康乃爾與四象限的
+         * 底紋都是 BLANK，差別在**版面**。不記下 id 的話，重開這本筆記時
+         * 版面會消失，而使用者沒有做過任何事。
+         */
+        paperId: String = ""
     ): String? {
         val id = java.util.UUID.randomUUID().toString()
         val opened = open(context, id, deviceId, title, style = style) ?: return null
@@ -213,6 +221,9 @@ object NotebookLibrary {
                 session.addPage(style)
                 session.removePage(firstPage)
             }
+        }
+        if (paperId.isNotEmpty()) {
+            NotebookMeta.load(session).setPaperId(session, paperId)
         }
         AccountSyncStore.record(context, id = id, title = title, parentId = folderId)
         return id

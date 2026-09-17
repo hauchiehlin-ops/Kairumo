@@ -132,11 +132,21 @@ final class TemplateCanvasBackgroundView: UIView {
         guard let ctx = UIGraphicsGetCurrentContext() else { return }
 
         drawPageBoundary(ctx)
+        drawBaseTexture(ctx)
+        drawGuides(ctx)
+    }
 
-        let w = bounds.width
+    // MARK: - 底紋
+
+    /// 重複的材質：方格、點陣、橫線。
+    ///
+    /// 這一層留在平台端而不是由核心送圖元過來，理由是量：5mm 點陣在 A4 上
+    /// 是兩千多個點，一顆顆送過 FFI 只是浪費。**底紋是材質，版面才是結構。**
+    private func drawBaseTexture(_ ctx: CGContext) {
+        let w = PageGeometry.width
         let h = bounds.height
 
-        switch template {
+        switch template.pageStyle {
         case .blank:
             break
 
@@ -170,24 +180,7 @@ final class TemplateCanvasBackgroundView: UIView {
             }
             ctx.strokePath()
 
-        case .cornell:
-            ctx.setStrokeColor(UIColor.systemIndigo.withAlphaComponent(0.25).cgColor)
-            ctx.setLineWidth(1.5)
-            let cueX: CGFloat = min(220, w * 0.28)
-            ctx.move(to: CGPoint(x: cueX, y: 60))
-            ctx.addLine(to: CGPoint(x: cueX, y: h - 120))
-
-            ctx.move(to: CGPoint(x: 20, y: 60))
-            ctx.addLine(to: CGPoint(x: w - 20, y: 60))
-
-            let summaryY: CGFloat = h - 120
-            ctx.move(to: CGPoint(x: 20, y: summaryY))
-            ctx.addLine(to: CGPoint(x: w - 20, y: summaryY))
-            ctx.strokePath()
-
-        // 美學視覺 (Aesthetic & Visual)
-        case .dotGridFine:
-            // 暖灰 5mm 極細點陣
+        case .dotted:
             ctx.setFillColor(UIColor(red: 0.65, green: 0.63, blue: 0.60, alpha: 0.45).cgColor)
             let step: CGFloat = 20
             var x: CGFloat = step
@@ -200,250 +193,81 @@ final class TemplateCanvasBackgroundView: UIView {
                 x += step
             }
 
-        case .goldenRatio:
-            // 黃金比例 (0.382 / 0.618) 與三分線
-            ctx.setStrokeColor(UIColor(red: 0.85, green: 0.65, blue: 0.20, alpha: 0.35).cgColor)
-            ctx.setLineWidth(1.2)
-            let gx1 = w * 0.382
-            let gx2 = w * 0.618
-            let gy1 = min(h, 1800) * 0.382
-            let gy2 = min(h, 1800) * 0.618
-            ctx.move(to: CGPoint(x: gx1, y: 0))
-            ctx.addLine(to: CGPoint(x: gx1, y: h))
-            ctx.move(to: CGPoint(x: gx2, y: 0))
-            ctx.addLine(to: CGPoint(x: gx2, y: h))
-            ctx.move(to: CGPoint(x: 0, y: gy1))
-            ctx.addLine(to: CGPoint(x: w, y: gy1))
-            ctx.move(to: CGPoint(x: 0, y: gy2))
-            ctx.addLine(to: CGPoint(x: w, y: gy2))
-            ctx.strokePath()
+        case .cornell:
+            // 康乃爾的三條分區線由 `page_guides` 畫，這裡只鋪主筆記欄的橫線。
+            break
 
-            // 九宮三分線 (細線)
-            ctx.setStrokeColor(UIColor.systemBlue.withAlphaComponent(0.15).cgColor)
-            ctx.setLineWidth(0.8)
-            let tx1 = w / 3
-            let tx2 = 2 * w / 3
-            let ty1 = min(h, 1800) / 3
-            let ty2 = 2 * min(h, 1800) / 3
-            ctx.move(to: CGPoint(x: tx1, y: 0))
-            ctx.addLine(to: CGPoint(x: tx1, y: h))
-            ctx.move(to: CGPoint(x: tx2, y: 0))
-            ctx.addLine(to: CGPoint(x: tx2, y: h))
-            ctx.move(to: CGPoint(x: 0, y: ty1))
-            ctx.addLine(to: CGPoint(x: w, y: ty1))
-            ctx.move(to: CGPoint(x: 0, y: ty2))
-            ctx.addLine(to: CGPoint(x: w, y: ty2))
-            ctx.strokePath()
-
-        case .moodboardMatrix:
-            // 頂部 5 格色票定位卡位
-            let swatchW: CGFloat = 56
-            let swatchH: CGFloat = 48
-            let startX: CGFloat = max(20, (w - (swatchW * 5 + 16 * 4)) / 2)
-            ctx.setStrokeColor(UIColor.secondaryLabel.withAlphaComponent(0.3).cgColor)
-            ctx.setLineWidth(1.0)
-            for i in 0..<5 {
-                let sx = startX + CGFloat(i) * (swatchW + 16)
-                let r = CGRect(x: sx, y: 24, width: swatchW, height: swatchH)
-                let p = UIBezierPath(roundedRect: r, cornerRadius: 6)
-                ctx.addPath(p.cgPath)
-            }
-            ctx.strokePath()
-
-            ctx.setStrokeColor(UIColor.separator.cgColor)
-            ctx.move(to: CGPoint(x: 20, y: 90))
-            ctx.addLine(to: CGPoint(x: w - 20, y: 90))
-            ctx.strokePath()
-
-        // 工程製程 (Engineering & Process)
-        case .blueprintMetric:
-            // 經典工程青藍底色
-            ctx.setFillColor(UIColor(red: 0.08, green: 0.22, blue: 0.38, alpha: 1.0).cgColor)
-            ctx.fill(bounds)
-
-            // 毫米細網格 (10pt)
-            ctx.setStrokeColor(UIColor(red: 0.30, green: 0.60, blue: 0.90, alpha: 0.25).cgColor)
-            ctx.setLineWidth(0.6)
-            var x: CGFloat = 10
-            while x < w {
-                ctx.move(to: CGPoint(x: x, y: 0))
-                ctx.addLine(to: CGPoint(x: x, y: h))
-                x += 10
-            }
-            var y: CGFloat = 10
-            while y < h {
-                ctx.move(to: CGPoint(x: 0, y: y))
-                ctx.addLine(to: CGPoint(x: w, y: y))
-                y += 10
-            }
-            ctx.strokePath()
-
-            // 公分粗網格 (50pt)
-            ctx.setStrokeColor(UIColor(red: 0.45, green: 0.75, blue: 1.0, alpha: 0.55).cgColor)
-            ctx.setLineWidth(1.2)
-            x = 50
-            while x < w {
-                ctx.move(to: CGPoint(x: x, y: 0))
-                ctx.addLine(to: CGPoint(x: x, y: h))
-                x += 50
-            }
-            y = 50
-            while y < h {
-                ctx.move(to: CGPoint(x: 0, y: y))
-                ctx.addLine(to: CGPoint(x: w, y: y))
-                y += 50
-            }
-            ctx.strokePath()
-
-            // 右下角工程規格標題欄 (Title Block)
-            let tbRect = CGRect(x: w - 260, y: min(h, 1800) - 100, width: 240, height: 80)
-            ctx.setStrokeColor(UIColor(red: 0.7, green: 0.85, blue: 1.0, alpha: 0.8).cgColor)
-            ctx.setLineWidth(1.5)
-            ctx.stroke(tbRect)
-            ctx.move(to: CGPoint(x: tbRect.minX, y: tbRect.minY + 28))
-            ctx.addLine(to: CGPoint(x: tbRect.maxX, y: tbRect.minY + 28))
-            ctx.move(to: CGPoint(x: tbRect.minX, y: tbRect.minY + 54))
-            ctx.addLine(to: CGPoint(x: tbRect.maxX, y: tbRect.minY + 54))
-            ctx.strokePath()
-
-        case .isometricGrid:
-            // 30° 等角軸測立體網格
-            ctx.setStrokeColor(UIColor.systemTeal.withAlphaComponent(0.22).cgColor)
-            ctx.setLineWidth(0.8)
-            let step: CGFloat = 36
-            let slope: CGFloat = 0.57735 // tan(30°)
-
-            // 垂直線
-            var vx: CGFloat = 0
-            while vx < w {
-                ctx.move(to: CGPoint(x: vx, y: 0))
-                ctx.addLine(to: CGPoint(x: vx, y: h))
-                vx += step
-            }
-
-            // 30° 正斜線
-            var sy: CGFloat = -w * slope
-            while sy < h {
-                ctx.move(to: CGPoint(x: 0, y: sy))
-                ctx.addLine(to: CGPoint(x: w, y: sy + w * slope))
-                sy += step * slope * 2
-            }
-
-            // 150° 反斜線
-            var ry: CGFloat = 0
-            while ry < h + w * slope {
-                ctx.move(to: CGPoint(x: 0, y: ry))
-                ctx.addLine(to: CGPoint(x: w, y: ry - w * slope))
-                ry += step * slope * 2
-            }
-            ctx.strokePath()
-
-        case .orthographic3View:
-            // 四象限三視圖 (正視、俯視、側視、軸測)
-            let midX = w / 2
-            let midY = min(h, 1800) / 2
-            ctx.setStrokeColor(UIColor.systemIndigo.withAlphaComponent(0.4).cgColor)
-            ctx.setLineWidth(2.0)
-            ctx.move(to: CGPoint(x: midX, y: 20))
-            ctx.addLine(to: CGPoint(x: midX, y: h - 20))
-            ctx.move(to: CGPoint(x: 20, y: midY))
-            ctx.addLine(to: CGPoint(x: w - 20, y: midY))
-            ctx.strokePath()
-
-            // 基準 45° 投影導引線 (俯視對側視)
-            ctx.setStrokeColor(UIColor.systemOrange.withAlphaComponent(0.25).cgColor)
-            ctx.setLineWidth(1.0)
-            ctx.move(to: CGPoint(x: midX, y: midY))
-            ctx.addLine(to: CGPoint(x: w - 40, y: midY + (w - 40 - midX)))
-            ctx.strokePath()
-
-        // 數位體驗 (Digital Experience / UI/UX)
-        case .mobileWireframe:
-            // 8pt 網格背景
-            ctx.setFillColor(UIColor.systemGray.withAlphaComponent(0.12).cgColor)
-            let dotStep: CGFloat = 16
-            var x: CGFloat = dotStep
-            while x < w {
-                var y: CGFloat = dotStep
-                while y < h {
-                    ctx.fill(CGRect(x: x - 0.75, y: y - 0.75, width: 1.5, height: 1.5))
-                    y += dotStep
-                }
-                x += dotStep
-            }
-
-            // 雙手機線框輪廓
+        case .musicStaff:
             ctx.setStrokeColor(UIColor.label.withAlphaComponent(0.35).cgColor)
-            ctx.setLineWidth(2.5)
-            let phoneW: CGFloat = 280
-            let phoneH: CGFloat = 580
-            let gap: CGFloat = 40
-            let totalW = phoneW * 2 + gap
-            let px1 = max(30, (w - totalW) / 2)
-            let px2 = px1 + phoneW + gap
-            let py: CGFloat = 70
-
-            for px in [px1, px2] {
-                let r = CGRect(x: px, y: py, width: phoneW, height: phoneH)
-                let p = UIBezierPath(roundedRect: r, cornerRadius: 36)
-                ctx.addPath(p.cgPath)
-
-                // 動態島/瀏海
-                let notch = CGRect(x: px + phoneW/2 - 40, y: py + 14, width: 80, height: 22)
-                let np = UIBezierPath(roundedRect: notch, cornerRadius: 11)
-                ctx.addPath(np.cgPath)
-
-                // 底部 Home Indicator
-                let bar = CGRect(x: px + phoneW/2 - 50, y: py + phoneH - 18, width: 100, height: 4)
-                let bp = UIBezierPath(roundedRect: bar, cornerRadius: 2)
-                ctx.addPath(bp.cgPath)
-            }
-            ctx.strokePath()
-
-        case .webResponsiveGrid:
-            // 響應式 12 欄網格 (Column Guides)
-            let margin: CGFloat = max(30, w * 0.06)
-            let contentW = w - 2 * margin
-            let columns = 12
-            let gutter: CGFloat = 16
-            let colW = (contentW - CGFloat(columns - 1) * gutter) / CGFloat(columns)
-
-            ctx.setFillColor(UIColor.systemPurple.withAlphaComponent(0.06).cgColor)
-            for i in 0..<columns {
-                let cx = margin + CGFloat(i) * (colW + gutter)
-                ctx.fill(CGRect(x: cx, y: 0, width: colW, height: h))
-            }
-
-            // 邊界參考線
-            ctx.setStrokeColor(UIColor.systemPurple.withAlphaComponent(0.25).cgColor)
             ctx.setLineWidth(1.0)
-            ctx.move(to: CGPoint(x: margin, y: 0))
-            ctx.addLine(to: CGPoint(x: margin, y: h))
-            ctx.move(to: CGPoint(x: w - margin, y: 0))
-            ctx.addLine(to: CGPoint(x: w - margin, y: h))
-            ctx.strokePath()
-
-        case .userJourneyFlow:
-            // 泳道與步驟流程矩陣
-            ctx.setStrokeColor(UIColor.systemTeal.withAlphaComponent(0.3).cgColor)
-            ctx.setLineWidth(1.5)
-            let laneH: CGFloat = 220
-            var ly: CGFloat = 60
-            while ly < h {
-                ctx.move(to: CGPoint(x: 20, y: ly))
-                ctx.addLine(to: CGPoint(x: w - 20, y: ly))
-                ly += laneH
-            }
-
-            // 垂直階段分隔線 (4 階段)
-            let stepW = (w - 60) / 4
-            for i in 1...3 {
-                let sx = 30 + CGFloat(i) * stepW
-                ctx.move(to: CGPoint(x: sx, y: 40))
-                ctx.addLine(to: CGPoint(x: sx, y: h - 40))
+            var top: CGFloat = 90
+            while top < h - 40 {
+                for i in 0..<5 {
+                    let y = top + CGFloat(i) * 9
+                    ctx.move(to: CGPoint(x: 40, y: y))
+                    ctx.addLine(to: CGPoint(x: w - 40, y: y))
+                }
+                top += 96
             }
             ctx.strokePath()
         }
+
+        // 等角軸測是一種材質，但不是核心 `PageStyle` 的成員 —— 它的 30°
+        // 斜線用圖元表達會是幾百條線，同樣留在這裡鋪。
+        if template.paperId == "isometric" {
+            drawIsometric(ctx, w: w, h: h)
+        }
+    }
+
+    private func drawIsometric(_ ctx: CGContext, w: CGFloat, h: CGFloat) {
+        ctx.setStrokeColor(UIColor.systemTeal.withAlphaComponent(0.22).cgColor)
+        ctx.setLineWidth(0.8)
+        let step: CGFloat = 36
+        let slope: CGFloat = 0.57735 // tan(30°)
+
+        var vx: CGFloat = 0
+        while vx < w {
+            ctx.move(to: CGPoint(x: vx, y: 0))
+            ctx.addLine(to: CGPoint(x: vx, y: h))
+            vx += step
+        }
+        var sy: CGFloat = -w * slope
+        while sy < h {
+            ctx.move(to: CGPoint(x: 0, y: sy))
+            ctx.addLine(to: CGPoint(x: w, y: sy + w * slope))
+            sy += step * slope * 2
+        }
+        var ry: CGFloat = 0
+        while ry < h + w * slope {
+            ctx.move(to: CGPoint(x: 0, y: ry))
+            ctx.addLine(to: CGPoint(x: w, y: ry - w * slope))
+            ry += step * slope * 2
+        }
+        ctx.strokePath()
+    }
+
+    // MARK: - 版面引導線
+
+    /// 這張紙的**結構**：康乃爾的三個區塊、四象限的十字、時程表的欄列。
+    ///
+    /// # 為什麼不是繼續寫 switch
+    ///
+    /// 原本這裡是十三段手寫的 CoreGraphics，每一種紙一段；而 Android 端
+    /// 只畫得出底紋，藍圖標題欄、手機線框那一層完全沒有 —— 同一本筆記在
+    /// 兩台裝置上長得不一樣。紙張要長到三十幾種，沿著原路走就是這裡多二十段、
+    /// Android 繼續落後二十段。
+    ///
+    /// 現在版面是核心送來的資料（`page_guides`），畫法在
+    /// `PageGuideRenderer` —— 縮圖用的是同一份。
+    private func drawGuides(_ ctx: CGContext) {
+        PageGuideRenderer.draw(
+            paperId: template.paperId,
+            in: ctx,
+            // **頁面高度，不是畫布高度。** 畫布比頁面高（它要捲動），
+            // 用 `bounds.height` 算的話四象限的十字會落在頁面下緣之外 ——
+            // 畫面上看得到，列印出來卻不在紙上。
+            size: PageGeometry.size
+        )
     }
 }
 
@@ -1000,188 +824,6 @@ struct RuleOfThirdsOverlayView: View {
                 .background(.ultraThinMaterial)
                 .cornerRadius(12)
                 .padding(16)
-            }
-        }
-    }
-}
-
-/// 筆記樣板背景繪製器
-struct TemplateBackgroundView: View {
-    let template: NoteTemplate
-
-    var body: some View {
-        GeometryReader { proxy in
-            let w = proxy.size.width
-            let h = proxy.size.height
-
-            ZStack {
-                switch template {
-                case .blank:
-                    Color(uiColor: .systemBackground)
-
-                case .grid:
-                    Color(uiColor: .systemBackground)
-                    Path { path in
-                        let step: CGFloat = 28
-                        var x: CGFloat = step
-                        while x < w {
-                            path.move(to: CGPoint(x: x, y: 0))
-                            path.addLine(to: CGPoint(x: x, y: h))
-                            x += step
-                        }
-                        var y: CGFloat = step
-                        while y < h {
-                            path.move(to: CGPoint(x: 0, y: y))
-                            path.addLine(to: CGPoint(x: w, y: y))
-                            y += step
-                        }
-                    }
-                    .stroke(Color.secondary.opacity(0.12), lineWidth: 1)
-
-                case .lined:
-                    Color(uiColor: .systemBackground)
-                    Path { path in
-                        let step: CGFloat = 32
-                        var y: CGFloat = 60
-                        while y < h {
-                            path.move(to: CGPoint(x: 30, y: y))
-                            path.addLine(to: CGPoint(x: w - 30, y: y))
-                            y += step
-                        }
-                    }
-                    .stroke(Color.blue.opacity(0.15), lineWidth: 1)
-
-                case .cornell:
-                    Color(uiColor: .systemBackground)
-                    Path { path in
-                        let cueX: CGFloat = min(220, w * 0.28)
-                        path.move(to: CGPoint(x: cueX, y: 60))
-                        path.addLine(to: CGPoint(x: cueX, y: h - 120))
-
-                        path.move(to: CGPoint(x: 20, y: 60))
-                        path.addLine(to: CGPoint(x: w - 20, y: 60))
-
-                        let summaryY: CGFloat = h - 120
-                        path.move(to: CGPoint(x: 20, y: summaryY))
-                        path.addLine(to: CGPoint(x: w - 20, y: summaryY))
-                    }
-                    .stroke(Color.indigo.opacity(0.25), lineWidth: 1.5)
-
-                case .dotGridFine:
-                    Color(uiColor: .systemBackground)
-                    Canvas { ctx, size in
-                        let step: CGFloat = 16
-                        var y: CGFloat = 16
-                        while y < size.height {
-                            var x: CGFloat = 16
-                            while x < size.width {
-                                ctx.fill(
-                                    Path(ellipseIn: CGRect(x: x - 1, y: y - 1, width: 2, height: 2)),
-                                    with: .color(Color.primary.opacity(0.18))
-                                )
-                                x += step
-                            }
-                            y += step
-                        }
-                    }
-
-                case .goldenRatio:
-                    Color(uiColor: .systemBackground)
-                    GoldenSpiralOverlayView()
-
-                case .moodboardMatrix:
-                    Color(uiColor: .systemBackground)
-                    Path { path in
-                        let swatchW: CGFloat = min(70, (w - 100) / 5)
-                        for i in 0..<5 {
-                            let sx = 24 + CGFloat(i) * (swatchW + 12)
-                            path.addRoundedRect(in: CGRect(x: sx, y: 16, width: swatchW, height: 48), cornerSize: CGSize(width: 6, height: 6))
-                        }
-                        path.move(to: CGPoint(x: 20, y: 76))
-                        path.addLine(to: CGPoint(x: w - 20, y: 76))
-                    }
-                    .stroke(Color.pink.opacity(0.35), lineWidth: 1)
-
-                case .blueprintMetric:
-                    Color(red: 0.08, green: 0.22, blue: 0.38)
-                    Path { path in
-                        var x: CGFloat = 20
-                        while x < w {
-                            path.move(to: CGPoint(x: x, y: 0))
-                            path.addLine(to: CGPoint(x: x, y: h))
-                            x += 20
-                        }
-                        var y: CGFloat = 20
-                        while y < h {
-                            path.move(to: CGPoint(x: 0, y: y))
-                            path.addLine(to: CGPoint(x: w, y: y))
-                            y += 20
-                        }
-                    }
-                    .stroke(Color.cyan.opacity(0.3), lineWidth: 1)
-
-                case .isometricGrid:
-                    Color(uiColor: .systemBackground)
-                    Path { path in
-                        let step: CGFloat = 40
-                        var x: CGFloat = -h
-                        while x < w + h {
-                            path.move(to: CGPoint(x: x, y: 0))
-                            path.addLine(to: CGPoint(x: x + h * 1.732, y: h))
-                            path.move(to: CGPoint(x: x, y: 0))
-                            path.addLine(to: CGPoint(x: x - h * 1.732, y: h))
-                            x += step
-                        }
-                    }
-                    .stroke(Color.teal.opacity(0.25), lineWidth: 0.8)
-
-                case .orthographic3View:
-                    Color(uiColor: .systemBackground)
-                    Path { path in
-                        let midX = w / 2
-                        let midY = h / 2
-                        path.move(to: CGPoint(x: midX, y: 20))
-                        path.addLine(to: CGPoint(x: midX, y: h - 20))
-                        path.move(to: CGPoint(x: 20, y: midY))
-                        path.addLine(to: CGPoint(x: w - 20, y: midY))
-                    }
-                    .stroke(Color.orange.opacity(0.4), style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
-
-                case .mobileWireframe:
-                    Color(uiColor: .systemBackground)
-                    Path { path in
-                        let phoneW: CGFloat = 220
-                        let phoneH: CGFloat = 450
-                        let r1 = CGRect(x: max(20, (w / 2 - phoneW - 20)), y: 40, width: phoneW, height: phoneH)
-                        let r2 = CGRect(x: min(w - phoneW - 20, (w / 2 + 20)), y: 40, width: phoneW, height: phoneH)
-                        path.addRoundedRect(in: r1, cornerSize: CGSize(width: 24, height: 24))
-                        path.addRoundedRect(in: r2, cornerSize: CGSize(width: 24, height: 24))
-                    }
-                    .stroke(Color.purple.opacity(0.35), lineWidth: 1.5)
-
-                case .webResponsiveGrid:
-                    Color(uiColor: .systemBackground)
-                    Path { path in
-                        let colW = (w - 140) / 12
-                        for i in 0..<12 {
-                            let x = 60 + CGFloat(i) * (colW + 6)
-                            path.addRect(CGRect(x: x, y: 20, width: colW, height: h - 40))
-                        }
-                    }
-                    .stroke(Color.indigo.opacity(0.2), lineWidth: 1)
-
-                case .userJourneyFlow:
-                    Color(uiColor: .systemBackground)
-                    Path { path in
-                        let rowH: CGFloat = 100
-                        for i in 1...4 {
-                            let y = CGFloat(i) * rowH
-                            path.move(to: CGPoint(x: 20, y: y))
-                            path.addLine(to: CGPoint(x: w - 20, y: y))
-                        }
-                    }
-                    .stroke(Color.green.opacity(0.25), lineWidth: 1)
-                }
             }
         }
     }

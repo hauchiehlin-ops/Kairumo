@@ -2,6 +2,7 @@ package com.kairumo.padnote.library
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,6 +13,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
@@ -178,11 +180,18 @@ fun NewNotebookDialog(
                         modifier = Modifier.padding(top = 8.dp)
                     )
                 }
+                // 主題切換器。**不是分段控制項**：主題從四個長到七個，
+                // 七個中文標籤擠在同一列就是先前回報過的「文字被擠壓」。
+                // 橫向捲動的膠囊列放得下任意數量，而且每一個都看得清楚。
                 item {
-                    SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-                        paperThemes.forEachIndexed { i, theme ->
-                            SegmentedButton(
-                                selected = paperTheme == theme,
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(paperThemes, key = { it.name }) { theme ->
+                            val active = paperTheme == theme
+                            FilterChip(
+                                selected = active,
                                 enabled = !paperLocked,
                                 onClick = {
                                     paperTheme = theme
@@ -191,15 +200,14 @@ fun NewNotebookDialog(
                                     paperId = uniffi.padnote_core
                                         .paperTemplatesForTheme(theme).first().id
                                 },
-                                shape = SegmentedButtonDefaults.itemShape(i, paperThemes.size)
-                            ) {
-                                Text(
-                                    l(uniffi.padnote_core.paperThemeKey(theme)),
-                                    style = MaterialTheme.typography.labelSmall,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
+                                label = {
+                                    Text(
+                                        l(uniffi.padnote_core.paperThemeKey(theme)),
+                                        style = MaterialTheme.typography.labelMedium,
+                                        maxLines = 1
+                                    )
+                                }
+                            )
                         }
                     }
                 }

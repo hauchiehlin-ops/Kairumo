@@ -18,8 +18,17 @@ use crate::ffi::PageStyle;
 /// 紙張的主題分類。順序即顯示順序。
 #[derive(Clone, Copy, PartialEq, Eq, Debug, uniffi::Enum)]
 pub enum FfiPaperTheme {
-    /// 通用基礎
+    /// 通用基礎：只有底紋的那幾張。
     General,
+    /// 筆記方法：康乃爾、四象限、大綱這一類**有結構的記法**。
+    ///
+    /// 這些原本混在「通用基礎」裡（只有康乃爾一種），而使用者要找的其實是
+    /// 「我想用哪一種記法」—— 那是一個問題，不是十三張紙裡挑一張。
+    Method,
+    /// 規劃排程：月、週、日與時間軸。
+    Planner,
+    /// 清單追蹤：待辦、勾選、習慣與進度表。
+    Tracker,
     /// 美學視覺
     Aesthetic,
     /// 工程製程
@@ -52,6 +61,9 @@ pub struct FfiPaperTemplate {
 pub fn paper_themes() -> Vec<FfiPaperTheme> {
     vec![
         FfiPaperTheme::General,
+        FfiPaperTheme::Method,
+        FfiPaperTheme::Planner,
+        FfiPaperTheme::Tracker,
         FfiPaperTheme::Aesthetic,
         FfiPaperTheme::Engineering,
         FfiPaperTheme::Digital,
@@ -64,6 +76,9 @@ pub fn paper_themes() -> Vec<FfiPaperTheme> {
 pub fn paper_theme_key(theme: FfiPaperTheme) -> String {
     match theme {
         FfiPaperTheme::General => "theme_general",
+        FfiPaperTheme::Method => "theme_method",
+        FfiPaperTheme::Planner => "theme_planner",
+        FfiPaperTheme::Tracker => "theme_tracker",
         FfiPaperTheme::Aesthetic => "theme_aesthetic",
         FfiPaperTheme::Engineering => "theme_engineering",
         FfiPaperTheme::Digital => "theme_digital",
@@ -76,6 +91,9 @@ pub fn paper_theme_key(theme: FfiPaperTheme) -> String {
 pub fn paper_theme_icons(theme: FfiPaperTheme) -> Vec<String> {
     let (apple, android) = match theme {
         FfiPaperTheme::General => ("doc.text", "Description"),
+        FfiPaperTheme::Method => ("square.split.1x2", "ViewQuilt"),
+        FfiPaperTheme::Planner => ("calendar", "CalendarMonth"),
+        FfiPaperTheme::Tracker => ("checklist", "Checklist"),
         FfiPaperTheme::Aesthetic => ("paintpalette.fill", "Palette"),
         FfiPaperTheme::Engineering => ("ruler.fill", "Straighten"),
         FfiPaperTheme::Digital => ("macbook.and.iphone", "PhoneIphone"),
@@ -103,20 +121,103 @@ fn entry(
 }
 
 /// 全部紙張樣板，依主題順序排列。
+///
+/// # 為什麼一張紙只帶 `page_style`，版面卻在別的地方
+///
+/// `page_style` 是**底紋**（方格、點陣、橫線），會落盤、而且是重複的材質；
+/// 版面（康乃爾的三個區塊、四象限的十字）是**結構**，由
+/// [`crate::ffi_guides::page_guides`] 用同一個 `id` 供應。分開的理由是量：
+/// 5mm 點陣在 A4 上是兩千多個點，把它們一顆顆送過 FFI 只是浪費。
 #[uniffi::export]
 pub fn paper_templates() -> Vec<FfiPaperTemplate> {
-    use FfiPaperTheme::{Aesthetic, Digital, Engineering, General};
+    use FfiPaperTheme::{Aesthetic, Digital, Engineering, General, Method, Planner, Tracker};
     vec![
         // 通用基礎
         entry("blank", "tmpl_blank", "doc.plaintext", "Article", PageStyle::Blank, General),
         entry("grid", "tmpl_grid", "circle.grid.3x3", "GridOn", PageStyle::Grid, General),
         entry("lined", "tmpl_lined", "line.horizontal.3", "Notes", PageStyle::Lined, General),
-        entry("cornell", "tmpl_cornell", "sidebar.left", "ViewSidebar", PageStyle::Cornell, General),
-        // 美學視覺
         entry(
             "dot_grid_fine", "tmpl_dot_grid_fine", "circle.dotted", "BlurOn",
-            PageStyle::Dotted, Aesthetic,
+            PageStyle::Dotted, General,
         ),
+        // 筆記方法
+        entry("cornell", "tmpl_cornell", "sidebar.left", "ViewSidebar", PageStyle::Cornell, Method),
+        entry(
+            "cornell_grid", "tmpl_cornell_grid", "square.split.1x2", "ViewSidebar",
+            PageStyle::Grid, Method,
+        ),
+        entry(
+            "quadrant", "tmpl_quadrant", "square.split.2x2", "GridView",
+            PageStyle::Blank, Method,
+        ),
+        entry(
+            "outline", "tmpl_outline", "list.bullet.indent", "FormatIndentIncrease",
+            PageStyle::Blank, Method,
+        ),
+        entry(
+            "two_column", "tmpl_two_column", "rectangle.split.2x1", "VerticalSplit",
+            PageStyle::Blank, Method,
+        ),
+        entry(
+            "qa", "tmpl_qa", "questionmark.bubble", "QuestionAnswer",
+            PageStyle::Blank, Method,
+        ),
+        entry("kwl", "tmpl_kwl", "rectangle.split.3x1", "ViewColumn", PageStyle::Blank, Method),
+        entry(
+            "mind_map", "tmpl_mind_map", "point.topleft.down.curvedto.point.bottomright.up",
+            "AccountTree", PageStyle::Dotted, Method,
+        ),
+        // 規劃排程
+        entry(
+            "monthly_grid", "tmpl_monthly_grid", "calendar", "CalendarMonth",
+            PageStyle::Blank, Planner,
+        ),
+        entry(
+            "weekly_columns", "tmpl_weekly_columns", "calendar.day.timeline.left",
+            "ViewWeek", PageStyle::Blank, Planner,
+        ),
+        entry(
+            "daily_schedule", "tmpl_daily_schedule", "clock", "Schedule",
+            PageStyle::Blank, Planner,
+        ),
+        entry(
+            "timeline_24h", "tmpl_timeline_24h", "clock.badge", "AccessTime",
+            PageStyle::Blank, Planner,
+        ),
+        entry(
+            "study_planner", "tmpl_study_planner", "book", "MenuBook",
+            PageStyle::Blank, Planner,
+        ),
+        entry(
+            "project_timeline", "tmpl_project_timeline", "chart.bar.doc.horizontal",
+            "Timeline", PageStyle::Blank, Planner,
+        ),
+        // 清單追蹤
+        entry(
+            "todo_list", "tmpl_todo_list", "checklist", "Checklist",
+            PageStyle::Blank, Tracker,
+        ),
+        entry(
+            "checklist_two", "tmpl_checklist_two", "checklist.checked", "FactCheck",
+            PageStyle::Blank, Tracker,
+        ),
+        entry(
+            "habit_month", "tmpl_habit_month", "square.grid.4x3.fill", "EventRepeat",
+            PageStyle::Blank, Tracker,
+        ),
+        entry(
+            "assignment_tracker", "tmpl_assignment_tracker", "tray.full", "Assignment",
+            PageStyle::Blank, Tracker,
+        ),
+        entry(
+            "chore_roster", "tmpl_chore_roster", "house", "CleaningServices",
+            PageStyle::Blank, Tracker,
+        ),
+        entry(
+            "challenge_21", "tmpl_challenge_21", "flag.checkered", "EmojiEvents",
+            PageStyle::Blank, Tracker,
+        ),
+        // 美學視覺
         entry(
             "golden_ratio", "tmpl_golden_ratio", "camera.metering.center.weighted",
             "CropFree", PageStyle::Blank, Aesthetic,
@@ -162,6 +263,44 @@ pub fn paper_templates_for_theme(theme: FfiPaperTheme) -> Vec<FfiPaperTemplate> 
         .collect()
 }
 
+/// 筆記本中繼資料裡存的樣板值 → 紙張 id。
+///
+/// # 為什麼需要轉換
+///
+/// Apple 的 `NoteTemplate` rawValue 是**中文字面值**，而且已經寫進使用者的
+/// 檔案與同步中繼資料（`NotebookMeta.template`），動不得。Android 讀到那個
+/// 字串時要知道它是哪一張紙 —— 在 Android 那邊再手抄一份中文對照表，
+/// 就是第二份會漂移的東西。
+///
+/// 新加的樣板沒有這個包袱：它們的存檔值就是 id，原樣通過。
+/// 認不得的一律回 `blank` —— 未知的底紋比沒有底紋更難解釋。
+#[uniffi::export]
+pub fn paper_id_from_stored(raw: String) -> String {
+    let legacy = match raw.as_str() {
+        "空白紙張" => Some("blank"),
+        "方格點陣" => Some("grid"),
+        "橫線筆記" => Some("lined"),
+        "康乃爾" => Some("cornell"),
+        "極細點陣 (5mm)" => Some("dot_grid_fine"),
+        "黃金比例與三分構圖" => Some("golden_ratio"),
+        "情緒板與色卡矩陣" => Some("moodboard"),
+        "工程藍圖坐標紙" => Some("blueprint"),
+        "30° 等角立體軸測網格" => Some("isometric"),
+        "三視圖與剖面範本" => Some("orthographic"),
+        "行動端線框 (8pt Grid)" => Some("mobile_wireframe"),
+        "響應式 Web 12 欄網格" => Some("web_grid"),
+        "使用者旅程與流程圖" => Some("user_journey"),
+        _ => None,
+    };
+    if let Some(id) = legacy {
+        return id.to_string();
+    }
+    if paper_templates().iter().any(|t| t.id == raw) {
+        return raw;
+    }
+    "blank".to_string()
+}
+
 /// 文件範本的 `pageStyle` 欄位 → 該用哪一張紙。
 ///
 /// # 為什麼需要這個
@@ -187,6 +326,21 @@ pub fn doc_template_paper_id(page_style: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_chinese_legacy_values_still_resolve() {
+        // 這十三個字串就在使用者的檔案裡。對不回來的話，那本筆記重開之後
+        // 版面會變成空白紙 —— 而使用者沒有做過任何事。
+        assert_eq!(paper_id_from_stored("康乃爾".into()), "cornell");
+        assert_eq!(paper_id_from_stored("30° 等角立體軸測網格".into()), "isometric");
+        assert_eq!(paper_id_from_stored("行動端線框 (8pt Grid)".into()), "mobile_wireframe");
+        // 新的樣板存的就是 id，原樣通過。
+        assert_eq!(paper_id_from_stored("quadrant".into()), "quadrant");
+        assert_eq!(paper_id_from_stored("habit_month".into()), "habit_month");
+        // 認不得的回空白紙，不是 panic。
+        assert_eq!(paper_id_from_stored("".into()), "blank");
+        assert_eq!(paper_id_from_stored("no_such_thing".into()), "blank");
+    }
 
     #[test]
     fn every_template_belongs_to_a_listed_theme() {

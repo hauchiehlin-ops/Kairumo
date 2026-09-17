@@ -2967,6 +2967,438 @@
     "zhHans": "黄金螺旋参考线 (Golden Spiral)",
     "zhHant": "黃金螺旋參考線 (Golden Spiral)"
   },
+  "guide_action": {
+    "en": "Action",
+    "ja": "行動",
+    "ko": "행동",
+    "th": "การกระทำ",
+    "zhHans": "行为",
+    "zhHant": "行為"
+  },
+  "guide_actions": {
+    "en": "Actions",
+    "ja": "アクション",
+    "ko": "실행 항목",
+    "th": "สิ่งที่ต้องทำ",
+    "zhHans": "行动",
+    "zhHant": "行動"
+  },
+  "guide_am": {
+    "en": "AM",
+    "ja": "午前",
+    "ko": "오전",
+    "th": "ช่วงเช้า",
+    "zhHans": "上午",
+    "zhHant": "上午"
+  },
+  "guide_answer": {
+    "en": "A",
+    "ja": "答",
+    "ko": "답",
+    "th": "ตอบ",
+    "zhHans": "答",
+    "zhHant": "答"
+  },
+  "guide_area": {
+    "en": "Area",
+    "ja": "場所",
+    "ko": "구역",
+    "th": "พื้นที่",
+    "zhHans": "区域",
+    "zhHant": "區域"
+  },
+  "guide_center_idea": {
+    "en": "Central Idea",
+    "ja": "中心テーマ",
+    "ko": "중심 생각",
+    "th": "แนวคิดหลัก",
+    "zhHans": "核心概念",
+    "zhHant": "核心概念"
+  },
+  "guide_content": {
+    "en": "Content",
+    "ja": "内容",
+    "ko": "내용",
+    "th": "เนื้อหา",
+    "zhHans": "内容",
+    "zhHant": "內容"
+  },
+  "guide_cue": {
+    "en": "Cues",
+    "ja": "キーワード",
+    "ko": "단서",
+    "th": "คำใบ้",
+    "zhHans": "提示栏",
+    "zhHant": "提示欄"
+  },
+  "guide_date": {
+    "en": "Date",
+    "ja": "日付",
+    "ko": "날짜",
+    "th": "วันที่",
+    "zhHans": "日期",
+    "zhHant": "日期"
+  },
+  "guide_day": {
+    "en": "Day",
+    "ja": "日",
+    "ko": "일",
+    "th": "วัน",
+    "zhHans": "日",
+    "zhHant": "日"
+  },
+  "guide_decisions": {
+    "en": "Decisions",
+    "ja": "決定事項",
+    "ko": "결정 사항",
+    "th": "ข้อสรุป",
+    "zhHans": "决议",
+    "zhHant": "決議"
+  },
+  "guide_detail": {
+    "en": "Detail",
+    "ja": "詳細",
+    "ko": "세부",
+    "th": "รายละเอียด",
+    "zhHans": "细节",
+    "zhHant": "細節"
+  },
+  "guide_done": {
+    "en": "Done",
+    "ja": "完了",
+    "ko": "완료",
+    "th": "เสร็จ",
+    "zhHans": "完成",
+    "zhHant": "完成"
+  },
+  "guide_due": {
+    "en": "Due",
+    "ja": "期日",
+    "ko": "기한",
+    "th": "กำหนดส่ง",
+    "zhHans": "期限",
+    "zhHant": "期限"
+  },
+  "guide_feeling": {
+    "en": "Feeling",
+    "ja": "感情",
+    "ko": "감정",
+    "th": "ความรู้สึก",
+    "zhHans": "感受",
+    "zhHant": "感受"
+  },
+  "guide_fri": {
+    "en": "Fri",
+    "ja": "金",
+    "ko": "금",
+    "th": "ศ.",
+    "zhHans": "五",
+    "zhHant": "五"
+  },
+  "guide_front_view": {
+    "en": "Front",
+    "ja": "正面図",
+    "ko": "정면도",
+    "th": "ด้านหน้า",
+    "zhHans": "正视图",
+    "zhHant": "正視圖"
+  },
+  "guide_goals": {
+    "en": "Goals",
+    "ja": "目標",
+    "ko": "목표",
+    "th": "เป้าหมาย",
+    "zhHans": "目标",
+    "zhHant": "目標"
+  },
+  "guide_habit": {
+    "en": "Habit",
+    "ja": "習慣",
+    "ko": "습관",
+    "th": "นิสัย",
+    "zhHans": "习惯",
+    "zhHant": "習慣"
+  },
+  "guide_iso_view": {
+    "en": "Isometric",
+    "ja": "等角図",
+    "ko": "등각도",
+    "th": "ไอโซเมตริก",
+    "zhHans": "立体轴测",
+    "zhHant": "立體軸測"
+  },
+  "guide_key_points": {
+    "en": "Key Points",
+    "ja": "要点",
+    "ko": "핵심",
+    "th": "ประเด็นหลัก",
+    "zhHans": "重点",
+    "zhHant": "重點"
+  },
+  "guide_know": {
+    "en": "Know",
+    "ja": "知っている",
+    "ko": "안다",
+    "th": "รู้แล้ว",
+    "zhHans": "已知",
+    "zhHant": "已知"
+  },
+  "guide_learned": {
+    "en": "Learned",
+    "ja": "学んだ",
+    "ko": "배웠다",
+    "th": "ได้เรียนรู้",
+    "zhHans": "学到了",
+    "zhHant": "學到了"
+  },
+  "guide_main": {
+    "en": "Main",
+    "ja": "大項目",
+    "ko": "대항목",
+    "th": "หลัก",
+    "zhHans": "主标题",
+    "zhHant": "主標題"
+  },
+  "guide_milestone": {
+    "en": "Milestone",
+    "ja": "マイルストーン",
+    "ko": "마일스톤",
+    "th": "หมุดหมาย",
+    "zhHans": "里程碑",
+    "zhHant": "里程碑"
+  },
+  "guide_mon": {
+    "en": "Mon",
+    "ja": "月",
+    "ko": "월",
+    "th": "จ.",
+    "zhHans": "一",
+    "zhHant": "一"
+  },
+  "guide_month": {
+    "en": "Month",
+    "ja": "月",
+    "ko": "월",
+    "th": "เดือน",
+    "zhHans": "月份",
+    "zhHant": "月份"
+  },
+  "guide_my_notes": {
+    "en": "My Notes",
+    "ja": "自分の言葉",
+    "ko": "내 메모",
+    "th": "บันทึกของฉัน",
+    "zhHans": "我的笔记",
+    "zhHant": "我的筆記"
+  },
+  "guide_notes": {
+    "en": "Notes",
+    "ja": "ノート",
+    "ko": "노트",
+    "th": "บันทึก",
+    "zhHans": "笔记",
+    "zhHant": "筆記"
+  },
+  "guide_owner": {
+    "en": "Owner",
+    "ja": "担当",
+    "ko": "담당",
+    "th": "ผู้รับผิดชอบ",
+    "zhHans": "负责人",
+    "zhHant": "負責人"
+  },
+  "guide_pm": {
+    "en": "PM",
+    "ja": "午後",
+    "ko": "오후",
+    "th": "ช่วงบ่าย",
+    "zhHans": "下午",
+    "zhHant": "下午"
+  },
+  "guide_project": {
+    "en": "Project",
+    "ja": "プロジェクト",
+    "ko": "프로젝트",
+    "th": "โครงการ",
+    "zhHans": "专案",
+    "zhHant": "專案"
+  },
+  "guide_question": {
+    "en": "Q",
+    "ja": "問",
+    "ko": "질문",
+    "th": "ถาม",
+    "zhHans": "问",
+    "zhHant": "問"
+  },
+  "guide_questions": {
+    "en": "Questions",
+    "ja": "疑問",
+    "ko": "질문",
+    "th": "คำถาม",
+    "zhHans": "问题",
+    "zhHant": "問題"
+  },
+  "guide_reflection": {
+    "en": "Reflection",
+    "ja": "振り返り",
+    "ko": "돌아보기",
+    "th": "สะท้อนคิด",
+    "zhHans": "回顾",
+    "zhHant": "回顧"
+  },
+  "guide_review": {
+    "en": "Review",
+    "ja": "振り返り",
+    "ko": "회고",
+    "th": "ทบทวน",
+    "zhHans": "回顾",
+    "zhHant": "回顧"
+  },
+  "guide_sat": {
+    "en": "Sat",
+    "ja": "土",
+    "ko": "토",
+    "th": "ส.",
+    "zhHans": "六",
+    "zhHant": "六"
+  },
+  "guide_screen": {
+    "en": "Screen",
+    "ja": "画面",
+    "ko": "화면",
+    "th": "หน้าจอ",
+    "zhHans": "画面",
+    "zhHant": "畫面"
+  },
+  "guide_side_view": {
+    "en": "Side",
+    "ja": "側面図",
+    "ko": "측면도",
+    "th": "ด้านข้าง",
+    "zhHans": "侧视图",
+    "zhHant": "側視圖"
+  },
+  "guide_source": {
+    "en": "Source",
+    "ja": "原文",
+    "ko": "원문",
+    "th": "ต้นฉบับ",
+    "zhHans": "原文",
+    "zhHant": "原文"
+  },
+  "guide_stage": {
+    "en": "Stage",
+    "ja": "ステージ",
+    "ko": "단계",
+    "th": "ขั้น",
+    "zhHans": "阶段",
+    "zhHant": "階段"
+  },
+  "guide_sub": {
+    "en": "Sub",
+    "ja": "中項目",
+    "ko": "중항목",
+    "th": "รอง",
+    "zhHans": "次重点",
+    "zhHant": "次重點"
+  },
+  "guide_subject": {
+    "en": "Subject",
+    "ja": "科目",
+    "ko": "과목",
+    "th": "วิชา",
+    "zhHans": "科目",
+    "zhHant": "科目"
+  },
+  "guide_summary": {
+    "en": "Summary",
+    "ja": "まとめ",
+    "ko": "요약",
+    "th": "สรุป",
+    "zhHans": "摘要",
+    "zhHant": "摘要"
+  },
+  "guide_sun": {
+    "en": "Sun",
+    "ja": "日",
+    "ko": "일",
+    "th": "อา.",
+    "zhHans": "日",
+    "zhHant": "日"
+  },
+  "guide_task": {
+    "en": "Task",
+    "ja": "内容",
+    "ko": "할 일",
+    "th": "งาน",
+    "zhHans": "事项",
+    "zhHant": "事項"
+  },
+  "guide_thu": {
+    "en": "Thu",
+    "ja": "木",
+    "ko": "목",
+    "th": "พฤ.",
+    "zhHans": "四",
+    "zhHant": "四"
+  },
+  "guide_time": {
+    "en": "Time",
+    "ja": "時間",
+    "ko": "시간",
+    "th": "เวลา",
+    "zhHans": "时间",
+    "zhHant": "時間"
+  },
+  "guide_top_view": {
+    "en": "Top",
+    "ja": "平面図",
+    "ko": "평면도",
+    "th": "ด้านบน",
+    "zhHans": "俯视图",
+    "zhHant": "俯視圖"
+  },
+  "guide_topic": {
+    "en": "Topic",
+    "ja": "テーマ",
+    "ko": "주제",
+    "th": "หัวข้อ",
+    "zhHans": "主题",
+    "zhHant": "主題"
+  },
+  "guide_tue": {
+    "en": "Tue",
+    "ja": "火",
+    "ko": "화",
+    "th": "อ.",
+    "zhHans": "二",
+    "zhHant": "二"
+  },
+  "guide_want": {
+    "en": "Want to Know",
+    "ja": "知りたい",
+    "ko": "알고 싶다",
+    "th": "อยากรู้",
+    "zhHans": "想知道",
+    "zhHant": "想知道"
+  },
+  "guide_wed": {
+    "en": "Wed",
+    "ja": "水",
+    "ko": "수",
+    "th": "พ.",
+    "zhHans": "三",
+    "zhHant": "三"
+  },
+  "guide_week": {
+    "en": "Week",
+    "ja": "週",
+    "ko": "주",
+    "th": "สัปดาห์",
+    "zhHans": "週次",
+    "zhHant": "週次"
+  },
   "handwriting_mode": {
     "en": "Handwriting",
     "ja": "手描き",
@@ -6280,12 +6712,12 @@
     "zhHant": "選擇介面語言"
   },
   "select_template": {
-    "en": "Choose Template",
-    "ja": "テンプレートを選択",
-    "ko": "템플릿 선택",
-    "th": "เลือกเทมเพลต",
-    "zhHans": "选择模板",
-    "zhHant": "選擇樣板"
+    "en": "Page Templates",
+    "ja": "ページテンプレート",
+    "ko": "페이지 템플릿",
+    "th": "เทมเพลตหน้า",
+    "zhHans": "笔记页样板",
+    "zhHant": "筆記頁樣板"
   },
   "selected": {
     "en": "Selected",
@@ -7543,6 +7975,14 @@
     "zhHans": "通用基础",
     "zhHant": "通用基礎"
   },
+  "theme_method": {
+    "en": "Note-taking Methods",
+    "ja": "ノート術",
+    "ko": "노트 기법",
+    "th": "วิธีจดบันทึก",
+    "zhHans": "笔记方法",
+    "zhHant": "筆記方法"
+  },
   "theme_palette_bauhaus": {
     "en": "Bauhaus Industrial",
     "ja": "バウハウス インダストリアル",
@@ -7575,6 +8015,14 @@
     "zhHans": "Pantone 季节潮流色",
     "zhHant": "Pantone 季節潮流色"
   },
+  "theme_planner": {
+    "en": "Planning & Schedule",
+    "ja": "計画・スケジュール",
+    "ko": "계획·일정",
+    "th": "วางแผนและตาราง",
+    "zhHans": "规划排程",
+    "zhHant": "規劃排程"
+  },
   "theme_tools": {
     "en": "Theme Tools",
     "ja": "テーマ別ツール",
@@ -7582,6 +8030,14 @@
     "th": "เครื่องมือธีม",
     "zhHans": "主题工具",
     "zhHant": "主題工具"
+  },
+  "theme_tracker": {
+    "en": "Lists & Trackers",
+    "ja": "リスト・記録",
+    "ko": "목록·기록",
+    "th": "รายการและติดตาม",
+    "zhHans": "清单追踪",
+    "zhHant": "清單追蹤"
   },
   "thread_resolved": {
     "en": "This thread is resolved",
@@ -7606,6 +8062,22 @@
     "th": "ย่อภาพตัวอย่าง",
     "zhHans": "缩小预览",
     "zhHant": "縮小預覽"
+  },
+  "tmpl_assignment_tracker": {
+    "en": "Assignment Tracker",
+    "ja": "課題トラッカー",
+    "ko": "과제 추적",
+    "th": "ติดตามงานที่ได้รับ",
+    "zhHans": "作业追踪表",
+    "zhHant": "作業追蹤表"
+  },
+  "tmpl_assignment_tracker_desc": {
+    "en": "Subject, task, due date and a box to tick",
+    "ja": "科目・課題・期日・チェック欄",
+    "ko": "과목·과제·기한·체크",
+    "th": "วิชา งาน กำหนดส่ง และช่องติ๊ก",
+    "zhHans": "科目、任务、期限与勾选框",
+    "zhHant": "科目、任務、期限與勾選框"
   },
   "tmpl_blank": {
     "en": "Blank Paper",
@@ -7639,6 +8111,54 @@
     "zhHans": "青蓝精密毫米网格，含右下角标准 Title Block 标题栏",
     "zhHant": "青藍精密毫米網格，含右下角標準 Title Block 標題欄"
   },
+  "tmpl_challenge_21": {
+    "en": "21-Day Challenge",
+    "ja": "21日チャレンジ",
+    "ko": "21일 챌린지",
+    "th": "ชาเลนจ์ 21 วัน",
+    "zhHans": "21 天挑战",
+    "zhHant": "21 天挑戰"
+  },
+  "tmpl_challenge_21_desc": {
+    "en": "Twenty-two numbered boxes — one habit, three weeks",
+    "ja": "番号つき22マス。ひとつの習慣を3週間",
+    "ko": "번호 22칸. 한 가지 습관, 3주",
+    "th": "ยี่สิบสองช่องมีเลขกำกับ",
+    "zhHans": "二十二个编号格：一个习惯，三周",
+    "zhHant": "二十二個編號格：一個習慣，三週"
+  },
+  "tmpl_checklist_two": {
+    "en": "Two-Column Checklist",
+    "ja": "2列チェックリスト",
+    "ko": "2열 체크리스트",
+    "th": "เช็กลิสต์สองคอลัมน์",
+    "zhHans": "双栏勾选清单",
+    "zhHant": "雙欄勾選清單"
+  },
+  "tmpl_checklist_two_desc": {
+    "en": "Forty items on one page, split into two columns",
+    "ja": "1ページに40項目、2列に分割",
+    "ko": "한 페이지 40항목, 2열",
+    "th": "สี่สิบรายการในหน้าเดียว",
+    "zhHans": "一页四十项，分成两栏",
+    "zhHant": "一頁四十項，分成兩欄"
+  },
+  "tmpl_chore_roster": {
+    "en": "Chore Roster",
+    "ja": "家事分担表",
+    "ko": "집안일 분담표",
+    "th": "ตารางงานบ้าน",
+    "zhHans": "家事分工表",
+    "zhHant": "家事分工表"
+  },
+  "tmpl_chore_roster_desc": {
+    "en": "Rooms down the side, days across the top",
+    "ja": "左に場所、上に曜日",
+    "ko": "왼쪽 구역, 위쪽 요일",
+    "th": "พื้นที่ด้านซ้าย วันด้านบน",
+    "zhHans": "左侧区域、上方星期",
+    "zhHant": "左側區域、上方星期"
+  },
   "tmpl_cornell": {
     "en": "Cornell Notes",
     "ja": "コーネル式",
@@ -7654,6 +8174,38 @@
     "th": "ประเด็นหลักด้านซ้าย โน้ตด้านขวา และสรุปด้านล่าง",
     "zhHans": "左侧提纲摘要、右侧主体笔记、底部总结",
     "zhHant": "左側提綱摘要、右側主體筆記、底部總結"
+  },
+  "tmpl_cornell_grid": {
+    "en": "Cornell (Grid)",
+    "ja": "コーネル（方眼）",
+    "ko": "코넬(모눈)",
+    "th": "คอร์เนล (ตาราง)",
+    "zhHans": "康乃尔（方格）",
+    "zhHant": "康乃爾（方格）"
+  },
+  "tmpl_cornell_grid_desc": {
+    "en": "Cornell zones over a grid, for diagrams and formulas",
+    "ja": "方眼の上にコーネルの3区画。図や数式向き",
+    "ko": "모눈 위 코넬 3구역. 도표·수식에 적합",
+    "th": "โซนคอร์เนลบนตาราง เหมาะกับแผนภาพและสูตร",
+    "zhHans": "方格底纹上的康乃尔三区，适合图解与公式",
+    "zhHant": "方格底紋上的康乃爾三區，適合圖解與公式"
+  },
+  "tmpl_daily_schedule": {
+    "en": "Daily Schedule",
+    "ja": "1日のスケジュール",
+    "ko": "하루 일정",
+    "th": "ตารางรายวัน",
+    "zhHans": "日程表",
+    "zhHant": "日程表"
+  },
+  "tmpl_daily_schedule_desc": {
+    "en": "Half-hour rows from morning to night, with a task column",
+    "ja": "朝から夜まで30分刻み＋予定欄",
+    "ko": "아침부터 밤까지 30분 간격 + 일정 칸",
+    "th": "ช่วงครึ่งชั่วโมงตลอดวัน",
+    "zhHans": "早到晚每半小时一列，另有事项栏",
+    "zhHant": "早到晚每半小時一列，另有事項欄"
   },
   "tmpl_dot_grid_fine": {
     "en": "Fine Dot Grid (5mm)",
@@ -7703,6 +8255,22 @@
     "zhHans": "几何绘图、公式推导与图表绘制",
     "zhHant": "幾何繪圖、公式推導與圖表繪製"
   },
+  "tmpl_habit_month": {
+    "en": "Habit Tracker",
+    "ja": "習慣トラッカー",
+    "ko": "습관 기록",
+    "th": "ติดตามนิสัย",
+    "zhHans": "习惯追踪",
+    "zhHant": "習慣追蹤"
+  },
+  "tmpl_habit_month_desc": {
+    "en": "31 day columns by 14 habit rows, with room to reflect",
+    "ja": "31日×14習慣の格子と振り返り欄",
+    "ko": "31일 × 14습관 격자와 회고 칸",
+    "th": "31 วัน × 14 นิสัย",
+    "zhHans": "31 天 × 14 项习惯格，另有回顾栏",
+    "zhHant": "31 天 × 14 項習慣格，另有回顧欄"
+  },
   "tmpl_isometric": {
     "en": "30° Isometric 3D Grid",
     "ja": "30° 等角投影立体グリッド",
@@ -7718,6 +8286,22 @@
     "th": "สำหรับชิ้นส่วนกลไก ผลิตภัณฑ์ 3 มิติ และภาพระเบิด",
     "zhHans": "机械构件、三维产品外观与爆炸透视专用",
     "zhHant": "機械構件、三維產品外觀與爆炸透視專用"
+  },
+  "tmpl_kwl": {
+    "en": "K-W-L Chart",
+    "ja": "KWL表",
+    "ko": "K-W-L 표",
+    "th": "ตาราง K-W-L",
+    "zhHans": "KWL 表",
+    "zhHant": "KWL 表"
+  },
+  "tmpl_kwl_desc": {
+    "en": "Know / Want to know / Learned — three columns across one topic",
+    "ja": "知っている／知りたい／学んだ の3列",
+    "ko": "안다/알고 싶다/배웠다 3열",
+    "th": "รู้แล้ว/อยากรู้/ได้เรียนรู้",
+    "zhHans": "已知／想知道／學到了，同一主題三栏",
+    "zhHant": "已知／想知道／學到了，同一主題三欄"
   },
   "tmpl_lined": {
     "en": "Ruled Lines",
@@ -7735,6 +8319,22 @@
     "zhHans": "课堂笔记、会议逐字与文稿撰写",
     "zhHant": "課堂筆記、會議逐字與行文撰寫"
   },
+  "tmpl_mind_map": {
+    "en": "Mind Map",
+    "ja": "マインドマップ",
+    "ko": "마인드맵",
+    "th": "ผังความคิด",
+    "zhHans": "心智图",
+    "zhHant": "心智圖"
+  },
+  "tmpl_mind_map_desc": {
+    "en": "A centre box and four branch stubs on a dot grid",
+    "ja": "中心と4方向の枝の起点。点方眼つき",
+    "ko": "중앙 상자와 네 갈래 시작점, 점 모눈",
+    "th": "กล่องกลางและกิ่งสี่ทิศบนจุดตาราง",
+    "zhHans": "中心方块与四向分支起点，点阵底纹",
+    "zhHant": "中心方塊與四向分支起點，點陣底紋"
+  },
   "tmpl_mobile_wireframe": {
     "en": "Mobile Wireframe (8pt)",
     "ja": "モバイルワイヤーフレーム (8pt)",
@@ -7750,6 +8350,22 @@
     "th": "กรอบมือถือคู่พร้อมกริด 8pt",
     "zhHans": "内建双手机屏幕轮廓框与 8pt 像素网格",
     "zhHant": "內建雙手機螢幕輪廓框與 8pt 像素網格"
+  },
+  "tmpl_monthly_grid": {
+    "en": "Month at a Glance",
+    "ja": "月間プランナー",
+    "ko": "한 달 계획",
+    "th": "แผนรายเดือน",
+    "zhHans": "月计划",
+    "zhHant": "月計畫"
+  },
+  "tmpl_monthly_grid_desc": {
+    "en": "Two columns of dated rows — a whole month on one page",
+    "ja": "日付欄つき2列。1か月が1ページに収まる",
+    "ko": "날짜 칸 2열. 한 달이 한 페이지에",
+    "th": "สองคอลัมน์พร้อมช่องวันที่",
+    "zhHans": "双栏日期列，一个月一页看完",
+    "zhHant": "雙欄日期列，一個月一頁看完"
   },
   "tmpl_moodboard": {
     "en": "Moodboard & Palette",
@@ -7783,6 +8399,134 @@
     "zhHans": "正视、俯视、侧视与立体轴测四象限分区引导",
     "zhHant": "正視、俯視、側視與立體軸測四象限分區引導"
   },
+  "tmpl_outline": {
+    "en": "Outline Method",
+    "ja": "アウトライン",
+    "ko": "아웃라인",
+    "th": "โครงร่าง",
+    "zhHans": "大纲笔记",
+    "zhHant": "大綱筆記"
+  },
+  "tmpl_outline_desc": {
+    "en": "Three indent guides — structure without drawing lines first",
+    "ja": "3段のインデント目安。線を引かずに階層が見える",
+    "ko": "3단 들여쓰기 안내선. 선을 긋지 않아도 구조가 보임",
+    "th": "เส้นนำย่อหน้าสามระดับ",
+    "zhHans": "三层缩排导引，不必先画线就有层次",
+    "zhHant": "三層縮排導引，不必先畫線就有層次"
+  },
+  "tmpl_project_timeline": {
+    "en": "Project Milestones",
+    "ja": "プロジェクト工程",
+    "ko": "프로젝트 일정",
+    "th": "หมุดหมายโครงการ",
+    "zhHans": "专案时程",
+    "zhHant": "專案時程"
+  },
+  "tmpl_project_timeline_desc": {
+    "en": "Milestone, owner and due date in three columns",
+    "ja": "マイルストーン・担当・期日の3列",
+    "ko": "마일스톤·담당·기한 3열",
+    "th": "หมุดหมาย ผู้รับผิดชอบ กำหนดส่ง",
+    "zhHans": "里程碑、负责人、期限三栏",
+    "zhHant": "里程碑、負責人、期限三欄"
+  },
+  "tmpl_qa": {
+    "en": "Question & Answer",
+    "ja": "一問一答",
+    "ko": "질문과 답",
+    "th": "ถาม–ตอบ",
+    "zhHans": "问答笔记",
+    "zhHant": "問答筆記"
+  },
+  "tmpl_qa_desc": {
+    "en": "Six Q&A blocks — write the question first, answer from memory later",
+    "ja": "6組の問答。先に問い、あとで思い出して答える",
+    "ko": "6개 문답 블록. 질문 먼저, 답은 나중에",
+    "th": "หกบล็อกถามตอบ",
+    "zhHans": "六组问答：先写问题，事后回想作答",
+    "zhHant": "六組問答：先寫問題，事後回想作答"
+  },
+  "tmpl_quadrant": {
+    "en": "Quadrant Method",
+    "ja": "4象限メモ",
+    "ko": "4분면 노트",
+    "th": "บันทึกสี่ช่อง",
+    "zhHans": "四象限笔记",
+    "zhHant": "四象限筆記"
+  },
+  "tmpl_quadrant_desc": {
+    "en": "Points, questions, decisions, actions — meeting notes that end in a next step",
+    "ja": "要点・疑問・決定・行動。次の一手で終わる議事録",
+    "ko": "요점·질문·결정·실행. 다음 할 일로 끝나는 회의록",
+    "th": "ประเด็น คำถาม ข้อสรุป การกระทำ",
+    "zhHans": "重点、问题、决议、行动——以下一步收尾的会议纪录",
+    "zhHant": "重點、問題、決議、行動 —— 以下一步收尾的會議紀錄"
+  },
+  "tmpl_study_planner": {
+    "en": "Study Planner",
+    "ja": "学習プランナー",
+    "ko": "학습 플래너",
+    "th": "แผนการเรียน",
+    "zhHans": "学习计划",
+    "zhHant": "學習計畫"
+  },
+  "tmpl_study_planner_desc": {
+    "en": "Goals on top, subject rows with checkboxes, review at the bottom",
+    "ja": "上に目標、科目ごとの行、下に振り返り",
+    "ko": "위 목표, 과목별 행, 아래 회고",
+    "th": "เป้าหมาย รายวิชา และทบทวน",
+    "zhHans": "上方目标、科目列与勾选框、底部回顾",
+    "zhHant": "上方目標、科目列與勾選框、底部回顧"
+  },
+  "tmpl_timeline_24h": {
+    "en": "24-Hour Timeline",
+    "ja": "24時間タイムライン",
+    "ko": "24시간 타임라인",
+    "th": "ไทม์ไลน์ 24 ชม.",
+    "zhHans": "24 小时时间轴",
+    "zhHant": "24 小時時間軸"
+  },
+  "tmpl_timeline_24h_desc": {
+    "en": "AM and PM side by side — a full day without scrolling",
+    "ja": "午前と午後を左右に。1日を一望",
+    "ko": "오전·오후를 좌우로. 하루 한눈에",
+    "th": "เช้าและบ่ายเคียงกัน",
+    "zhHans": "上午下午并列，一整天一眼看完",
+    "zhHant": "上午下午並列，一整天一眼看完"
+  },
+  "tmpl_todo_list": {
+    "en": "To-Do List",
+    "ja": "ToDoリスト",
+    "ko": "할 일 목록",
+    "th": "รายการสิ่งที่ต้องทำ",
+    "zhHans": "待办清单",
+    "zhHant": "待辦清單"
+  },
+  "tmpl_todo_list_desc": {
+    "en": "Twenty checkbox rows, nothing else in the way",
+    "ja": "チェックボックス20行だけ",
+    "ko": "체크박스 20줄, 그뿐",
+    "th": "ยี่สิบบรรทัดพร้อมช่องติ๊ก",
+    "zhHans": "二十行勾选框，没有别的东西挡路",
+    "zhHant": "二十行勾選框，沒有別的東西擋路"
+  },
+  "tmpl_two_column": {
+    "en": "Two-Column Compare",
+    "ja": "2カラム対照",
+    "ko": "2단 대조",
+    "th": "สองคอลัมน์เทียบ",
+    "zhHans": "双栏对照",
+    "zhHant": "雙欄對照"
+  },
+  "tmpl_two_column_desc": {
+    "en": "Source on the left, your own words on the right",
+    "ja": "左に原文、右に自分の言葉",
+    "ko": "왼쪽 원문, 오른쪽 내 말로",
+    "th": "ต้นฉบับซ้าย ความคิดขวา",
+    "zhHans": "左侧原文、右侧自己的话",
+    "zhHant": "左側原文、右側自己的話"
+  },
   "tmpl_user_journey": {
     "en": "User Journey & Flow",
     "ja": "ユーザージャーニーとフロー",
@@ -7814,6 +8558,22 @@
     "th": "เลย์เอาต์ 12 คอลัมน์มาตรฐานพร้อมระยะขอบ",
     "zhHans": "标准 12 栏格线、间距与安全边距引导",
     "zhHant": "標準 12 欄格線、間距 (Gutter) 與安全邊距引導"
+  },
+  "tmpl_weekly_columns": {
+    "en": "Weekly Columns",
+    "ja": "週間7列",
+    "ko": "주간 7열",
+    "th": "เจ็ดคอลัมน์รายสัปดาห์",
+    "zhHans": "周计划七栏",
+    "zhHant": "週計畫七欄"
+  },
+  "tmpl_weekly_columns_desc": {
+    "en": "Seven day columns with ruled rows",
+    "ja": "月曜から日曜までの7列と罫線",
+    "ko": "월~일 7열과 괘선",
+    "th": "เจ็ดคอลัมน์วันพร้อมเส้นบรรทัด",
+    "zhHans": "周一到周日七栏，含横线",
+    "zhHant": "週一到週日七欄，含橫線"
   },
   "toggle_border": {
     "en": "Toggle Border (Keep/Remove)",
