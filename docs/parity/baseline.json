@@ -4,15 +4,10 @@
     "editor.export.share",
     "editor.ink.brush",
     "editor.ink.marker",
-    "editor.ink.redo",
-    "editor.ink.undo",
     "editor.ink.watercolor",
     "editor.share",
     "editor.sidebar.tab.folders",
     "editor.sidebar.tab.pages",
-    "editor.text.redo",
-    "editor.text.symbols",
-    "editor.text.undo",
-    "editor.title"
+    "editor.text.symbols"
   ]
 }

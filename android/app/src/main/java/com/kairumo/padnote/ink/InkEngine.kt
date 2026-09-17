@@ -83,6 +83,48 @@ class InkEngine(
     /** 上一次看到的側鍵狀態。用來只在翻面時通知。 */
     private var heldControl: uniffi.padnote_core.FfiPenControl? = null
 
+    // ── 復原／重做（S-64 的缺口：Android 完全沒有這一層）────────────
+    //
+    // Apple 端的畫布交給 PencilKit 的 `undoManager`，Android 自己畫，
+    // 所以要自己記。記的是**被拿掉的筆畫本身**，不是「一個動作」——
+    // 重做時把同一筆原樣加回核心（新的 id），畫面與落盤一起回來。
+    //
+    // 只管筆畫。文字、圖片與表格是另一層物件，它們的復原走各自的資料流，
+    // 混在同一個堆疊裡的話，「復原」會變成使用者猜不到的東西。
+    private val undoStack = mutableListOf<CompletedStroke>()
+    private val redoStack = mutableListOf<CompletedStroke>()
+
+    val canUndo: Boolean get() = _strokes.isNotEmpty()
+    val canRedo: Boolean get() = redoStack.isNotEmpty()
+
+    /** 收回最後一筆。回傳是否真的收回了東西。 */
+    fun undo(): Boolean {
+        val last = _strokes.removeLastOrNull() ?: return false
+        last.coreStrokeId?.let { id ->
+            val target = session
+            val page = pageId
+            if (target != null && page != null) runCatching { target.eraseStroke(page, id) }
+        }
+        redoStack += last
+        return true
+    }
+
+    /** 把最後一次收回的筆畫放回去。 */
+    fun redo(): Boolean {
+        val stroke = redoStack.removeLastOrNull() ?: return false
+        val target = session
+        val page = pageId
+        val newId = if (target != null && page != null) {
+            runCatching {
+                target.addStroke(page, stroke.tool, colorRgba, baseWidth, stroke.points)
+            }.getOrNull()
+        } else {
+            null
+        }
+        _strokes += stroke.copy(coreStrokeId = newId)
+        return true
+    }
+
     /**
      * 擦掉碰到的筆畫。
      *
@@ -247,6 +289,9 @@ class InkEngine(
             startedAtMs = (samples.first().event.timestampUs / 1_000uL).toLong()
         )
         _strokes += stroke
+        // 畫了新的東西就沒有「重做」可言了 —— 留著的話，按下重做會把
+        // 一筆與現在的畫面毫無關係的筆畫放回來。
+        redoStack.clear()
         if (coreId != null) committed[id] = coreId
         return stroke
     }

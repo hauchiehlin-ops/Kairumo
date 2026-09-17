@@ -1316,6 +1316,8 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     }
 
     var clearToken by remember { mutableIntStateOf(0) }
+    // 改名對話框（頂列的標題點一下就開）。
+    var renamingCurrent by remember { mutableStateOf(false) }
 
     // 把這一頁已經存在檔案裡的筆畫讀回來。
     //
@@ -1544,6 +1546,25 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 label = { Text(l10n("mode_type")) }
             )
 
+            // 筆記標題。Apple 的頂列一直有，點一下就能改名；Android 原本
+            // **完全沒有顯示筆記名稱** —— 開了三本筆記之後分不出自己在哪一本。
+            run {
+                val title = remember(notebookId, revision) {
+                    notebookId?.let { FolderTree.titleOf(activity, it) }
+                        ?: l10n("untitled_note")
+                }
+                TextButton(
+                    onClick = { renamingCurrent = true },
+                    modifier = Modifier.testTag("editor.title")
+                ) {
+                    Text(
+                        title.ifBlank { l10n("untitled_note") },
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1
+                    )
+                }
+            }
+
             // 頁面結構欄的開關。Apple 端工具列上就有這一顆。
             TextButton(
                 onClick = { showPageSidebar = !showPageSidebar },
@@ -1676,6 +1697,23 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     }
                 }
             }
+
+            // 復原／重做（S-64 的缺口）。Apple 的兩個工具列上都有，
+            // Android 原本**完全沒有** —— 寫錯一筆只能用橡皮擦擦掉。
+            TextButton(
+                onClick = { if (engine.undo()) { revision++; clearToken++ } },
+                enabled = engine.canUndo,
+                modifier = Modifier.testTag(
+                    if (editorMode == EditorMode.DRAW) "editor.ink.undo" else "editor.text.undo"
+                )
+            ) { Text("↶") }
+            TextButton(
+                onClick = { if (engine.redo()) { revision++; clearToken++ } },
+                enabled = engine.canRedo,
+                modifier = Modifier.testTag(
+                    if (editorMode == EditorMode.DRAW) "editor.ink.redo" else "editor.text.redo"
+                )
+            ) { Text("↷") }
 
             TextButton(
                 onClick = { showMenu = true },
@@ -3376,6 +3414,25 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 }
             }
         }
+    }
+
+    if (renamingCurrent && notebookId != null) {
+        // 用 FolderNameDialog 這個通用的「一個標題欄位」對話框 ——
+        // RenameNotebookDialog 要一個 NotebookLibrary.Entry，而編輯器手上
+        // 只有 id，為了它去掃整個筆記庫只是白做工。
+        FolderNameDialog(
+            title = l10n("rename_note"),
+            initial = FolderTree.titleOf(activity, notebookId) ?: "",
+            l = { key -> l10n(key) },
+            onDismiss = { renamingCurrent = false },
+            onConfirm = { newTitle ->
+                if (newTitle.isNotBlank()) {
+                    NotebookLibrary.rename(activity, notebookId, newTitle, deviceId(activity))
+                    revision++
+                }
+                renamingCurrent = false
+            }
+        )
     }
 
     if (showStatus) {
