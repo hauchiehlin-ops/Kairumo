@@ -1191,6 +1191,14 @@ public struct HomeWorkbenchView: View {
                             .cornerRadius(8)
                         }
                         .buttonStyle(.plain)
+                        // 「全部檔案」也是落點：拖到這裡＝移出資料夾（S-88）。
+                        // 只有資料夾接受落下的話，拖得進去、拖不出來 ——
+                        // 編輯器側欄踩過同一個坑。
+                        .dropDestination(for: String.self) { items, _ in
+                            guard let noteId = items.first else { return false }
+                            notebookStore.moveNotebook(id: noteId, toFolderId: nil)
+                            return true
+                        }
 
                         // 各資料夾
                         // 過濾即可，**不要改成 `subfolders(of: nil)`** ——
@@ -1237,6 +1245,12 @@ public struct HomeWorkbenchView: View {
                                 selectedFolderId = folder.id
                             }
                             .buttonStyle(.plain)
+                            // 筆記卡片拖到這裡就移進這個資料夾（S-88）。
+                            .dropDestination(for: String.self) { items, _ in
+                                guard let noteId = items.first else { return false }
+                                notebookStore.moveNotebook(id: noteId, toFolderId: folder.id)
+                                return true
+                            }
                         }
                     }
                 }
@@ -1336,6 +1350,21 @@ public struct HomeWorkbenchView: View {
                         .shadow(color: Color.black.opacity(0.03), radius: 4, y: 2)
                     }
                     .buttonStyle(.plain)
+                    // 拖到上面的資料夾膠囊上就分類完成（S-88）。
+                    //
+                    // 編輯器的側欄早就能這樣拖，首頁卻不行 —— 而首頁才是
+                    // 使用者整理筆記的地方。要整理一本筆記得先打開它，
+                    // 那個順序是反的。
+                    .draggable(note.id) {
+                        HStack(spacing: 6) {
+                            Image(systemName: "doc.fill")
+                            Text(note.displayTitle()).lineLimit(1)
+                        }
+                        .font(.caption)
+                        .padding(8)
+                        .background(Color(uiColor: .secondarySystemGroupedBackground))
+                        .cornerRadius(8)
+                    }
                 }
             }
         }

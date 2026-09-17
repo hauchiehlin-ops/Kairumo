@@ -543,7 +543,17 @@ private fun NotebookHome(
                 val here = breadcrumb.lastOrNull()
                 if (here != null) renamingFolder = here else renamingRoot = true
             },
-            onOpenDiagnostics = { homeStatus = true }
+            onOpenDiagnostics = { homeStatus = true },
+            onMoveNotebookToFolder = { noteId, targetFolder ->
+                // 與「移動到資料夾」選單走同一條路（同一個索引、同一套環狀保護），
+                // 不要為了拖放另寫一份 —— 兩份規則遲早會分岔。
+                val title = FolderTree.titleOf(activity, noteId) ?: ""
+                val ok = FolderTree.move(
+                    activity, noteId, title, isFolder = false, toParent = targetFolder
+                )
+                message = l(if (ok) "move_done" else "move_cycle_refused")
+                revision++
+            }
         )
     }
 

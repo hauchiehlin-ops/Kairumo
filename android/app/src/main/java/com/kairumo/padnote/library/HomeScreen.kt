@@ -1,5 +1,10 @@
 package com.kairumo.padnote.library
 
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.ui.draganddrop.toAndroidDragEvent
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.draganddrop.dragAndDropTarget
+import androidx.compose.foundation.draganddrop.dragAndDropSource
 import com.kairumo.padnote.audio.AudioPlayback
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -143,7 +148,9 @@ fun HomeScreen(
     /** 重新命名目前所在的資料夾（最上層也算）。與 Apple 的 `edit_root_folder` 對應。 */
     onRenameRootFolder: () -> Unit,
     /** 系統診斷頁。Apple 在首頁頁尾的版本號上，Android 原本只在編輯器選單裡。 */
-    onOpenDiagnostics: () -> Unit
+    onOpenDiagnostics: () -> Unit,
+    /** 把一本筆記搬進某個資料夾（拖放，S-88）。`folderId` 為 null 表示移出資料夾。 */
+    onMoveNotebookToFolder: (String, String?) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
     // 兩個區塊各自的「顯示全部」。與 Apple 的 showAllContinue /
@@ -471,7 +478,10 @@ fun HomeScreen(
         // LazyColumn 的 items 沒有一個共同的容器可以掛。
         if (folders.isNotEmpty() && query.isBlank()) {
             items(folders, key = { "folder-${it.id}" }) { folder ->
-                FolderRow(folder, l, onOpenFolder, onRenameFolder, onDeleteFolder)
+                FolderRow(
+                    folder, l, onOpenFolder, onRenameFolder, onDeleteFolder,
+                    onDropNotebook = { noteId -> onMoveNotebookToFolder(noteId, folder.id) }
+                )
             }
         }
 
@@ -756,6 +766,7 @@ private fun ActionCard(
  * 顯示的是**那一頁長什麼樣子**，不是一行標題 —— 使用者記得的是畫面，
  * 不是名字。與 Apple 的「全部筆記」一致。
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun NotebookGridCard(
     entry: NotebookLibrary.Entry,
@@ -768,7 +779,23 @@ private fun NotebookGridCard(
 ) {
     var menu by remember(entry.id) { mutableStateOf(false) }
     Card(
-        modifier = modifier.clickable { onOpen(entry.id) },
+        modifier = modifier
+            // 長按拖到資料夾列上就分類完成（S-88）。與 Apple 的
+            // `.draggable(note.id)` 同一件事；拖的是筆記本 id，落點那邊
+            // 從 clipData 讀回來。
+            .dragAndDropSource {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = {
+                        startTransfer(
+                            androidx.compose.ui.draganddrop.DragAndDropTransferData(
+                                android.content.ClipData.newPlainText("kairumo.notebook", entry.id)
+                            )
+                        )
+                    },
+                    onDrag = { _, _ -> }
+                )
+            }
+            .clickable { onOpen(entry.id) },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -952,17 +979,49 @@ private fun Breadcrumb(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun FolderRow(
     folder: FolderTree.Folder,
     l: (String) -> String,
     onOpen: (String?) -> Unit,
     onRename: (FolderTree.Folder) -> Unit,
-    onDelete: (FolderTree.Folder) -> Unit
+    onDelete: (FolderTree.Folder) -> Unit,
+    /** 把一本筆記拖進這個資料夾（S-88）。 */
+    onDropNotebook: (String) -> Unit = {}
 ) {
     var menu by remember(folder.id) { mutableStateOf(false) }
+    var targeted by remember(folder.id) { mutableStateOf(false) }
+    // 筆記卡片長按拖曳過來時的落點。Apple 端首頁的資料夾膠囊是同一件事。
+    val dropTarget = remember(folder.id) {
+        object : androidx.compose.ui.draganddrop.DragAndDropTarget {
+            override fun onEntered(event: androidx.compose.ui.draganddrop.DragAndDropEvent) {
+                targeted = true
+            }
+
+            override fun onExited(event: androidx.compose.ui.draganddrop.DragAndDropEvent) {
+                targeted = false
+            }
+
+            override fun onDrop(event: androidx.compose.ui.draganddrop.DragAndDropEvent): Boolean {
+                targeted = false
+                val data = event.toAndroidDragEvent().clipData
+                val id = data?.takeIf { it.itemCount > 0 }
+                    ?.getItemAt(0)?.text?.toString()
+                    ?: return false
+                onDropNotebook(id)
+                return true
+            }
+        }
+    }
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onOpen(folder.id) },
+        modifier = Modifier
+            .fillMaxWidth()
+            .dragAndDropTarget(
+                shouldStartDragAndDrop = { true },
+                target = dropTarget
+            )
+            .clickable { onOpen(folder.id) },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
