@@ -178,3 +178,143 @@ mod tests {
         assert!(distribute_objects(vec![], true).is_empty());
     }
 }
+
+// MARK: - 編輯區域
+
+/// 可列印區域（頁面往內縮一圈）。
+///
+/// # 為什麼這個判斷要在核心
+///
+/// 頁面上畫出來的那一圈虛線，意思是「這裡面才會被印出來 / 匯出」。
+/// 在此之前那條線**只是畫出來好看** —— Apple 端的 `fitsInPage` 與 `clamp`
+/// 寫好了卻從來沒有人呼叫，Android 端根本沒有。使用者把東西放到框線外，
+/// 畫布上看得到、匯出的 PDF 裡卻不見了，而且沒有任何提示。
+///
+/// 判斷放在核心，兩端才會用同一條界線 —— 各寫一份的結果是同一個物件在
+/// 一邊被擋下、在另一邊被放行。
+#[uniffi::export]
+pub fn printable_rect(page_width: f32, page_height: f32, inset: f32) -> FfiRect {
+    // 內縮大到把頁面吃光時退回整頁：回傳一個負寬高的矩形會讓所有判斷都錯。
+    let safe = inset.max(0.0).min(page_width / 2.0).min(page_height / 2.0);
+    FfiRect {
+        min_x: safe,
+        min_y: safe,
+        max_x: (page_width - safe).max(safe),
+        max_y: (page_height - safe).max(safe),
+    }
+}
+
+/// 這個矩形是不是整個落在可列印區域裡。
+#[uniffi::export]
+pub fn is_within_printable(rect: FfiRect, page_width: f32, page_height: f32, inset: f32) -> bool {
+    let area = printable_rect(page_width, page_height, inset);
+    rect.min_x >= area.min_x
+        && rect.min_y >= area.min_y
+        && rect.max_x <= area.max_x
+        && rect.max_y <= area.max_y
+}
+
+/// 這個矩形是不是**整個**在可列印區域之外。
+///
+/// 與 [`is_within_printable`] 不是互補的：跨在界線上的矩形兩者都是 false。
+/// 分成兩個問題是因為處理方式不同 —— 完全在外面的東西印不出來也匯不出去，
+/// 留著只會讓使用者以為它存在；跨在界線上的還看得見大半，直接刪掉太粗暴。
+#[uniffi::export]
+pub fn is_outside_printable(rect: FfiRect, page_width: f32, page_height: f32, inset: f32) -> bool {
+    let area = printable_rect(page_width, page_height, inset);
+    rect.max_x <= area.min_x
+        || rect.min_x >= area.max_x
+        || rect.max_y <= area.min_y
+        || rect.min_y >= area.max_y
+}
+
+/// 把矩形夾進可列印區域。
+///
+/// 比區域還大的物件夾不進去 —— 那種情況只縮到區域大小，而不是讓它溢出去。
+/// 溢出的部分在匯出時會被裁掉，而使用者看不到自己丟了什麼。
+#[uniffi::export]
+pub fn clamp_to_printable(
+    rect: FfiRect,
+    page_width: f32,
+    page_height: f32,
+    inset: f32,
+) -> FfiRect {
+    let area = printable_rect(page_width, page_height, inset);
+    let w = (rect.max_x - rect.min_x).min(area.max_x - area.min_x).max(0.0);
+    let h = (rect.max_y - rect.min_y).min(area.max_y - area.min_y).max(0.0);
+    let x = rect.min_x.clamp(area.min_x, (area.max_x - w).max(area.min_x));
+    let y = rect.min_y.clamp(area.min_y, (area.max_y - h).max(area.min_y));
+    FfiRect {
+        min_x: x,
+        min_y: y,
+        max_x: x + w,
+        max_y: y + h,
+    }
+}
+
+#[cfg(test)]
+mod printable_tests {
+    use super::*;
+
+    const W: f32 = 800.0;
+    const H: f32 = 1132.0;
+    const INSET: f32 = 24.0;
+
+    fn rect(x: f32, y: f32, w: f32, h: f32) -> FfiRect {
+        FfiRect {
+            min_x: x,
+            min_y: y,
+            max_x: x + w,
+            max_y: y + h,
+        }
+    }
+
+    #[test]
+    fn the_area_is_the_page_minus_one_inset_on_each_side() {
+        let area = printable_rect(W, H, INSET);
+        assert_eq!(area.min_x, 24.0);
+        assert_eq!(area.max_x, 776.0);
+        assert_eq!(area.max_y, 1108.0);
+    }
+
+    #[test]
+    fn a_silly_inset_does_not_produce_a_negative_area() {
+        // 負寬高的矩形會讓後面每一個判斷都反過來。
+        let area = printable_rect(W, H, 9_999.0);
+        assert!(area.max_x >= area.min_x);
+        assert!(area.max_y >= area.min_y);
+    }
+
+    #[test]
+    fn inside_outside_and_straddling_are_three_different_answers() {
+        let inside = rect(100.0, 100.0, 200.0, 200.0);
+        let outside = rect(790.0, 100.0, 50.0, 50.0);
+        let straddling = rect(760.0, 100.0, 50.0, 50.0);
+
+        assert!(is_within_printable(inside, W, H, INSET));
+        assert!(!is_outside_printable(inside, W, H, INSET));
+
+        assert!(!is_within_printable(outside, W, H, INSET));
+        assert!(is_outside_printable(outside, W, H, INSET));
+
+        // 跨在界線上：兩個問題的答案都是「不是」。
+        assert!(!is_within_printable(straddling, W, H, INSET));
+        assert!(!is_outside_printable(straddling, W, H, INSET));
+    }
+
+    #[test]
+    fn clamping_moves_it_back_without_changing_its_size() {
+        let clamped = clamp_to_printable(rect(790.0, 1120.0, 100.0, 100.0), W, H, INSET);
+        assert_eq!(clamped.max_x - clamped.min_x, 100.0);
+        assert_eq!(clamped.max_y - clamped.min_y, 100.0);
+        assert!(is_within_printable(clamped, W, H, INSET));
+    }
+
+    #[test]
+    fn something_bigger_than_the_page_shrinks_instead_of_overflowing() {
+        let clamped = clamp_to_printable(rect(-500.0, -500.0, 5_000.0, 5_000.0), W, H, INSET);
+        assert!(is_within_printable(clamped, W, H, INSET));
+        assert_eq!(clamped.min_x, 24.0);
+        assert_eq!(clamped.max_x, 776.0);
+    }
+}

@@ -40,6 +40,8 @@ public struct HomeWorkbenchView: View {
     @State private var selectedTemplate: NoteTemplate = .blank
     /// 紙張要不要順便鋪一份示範內容。nil = 不套用（預設）。
     @State private var selectedPaperVariant: DocumentTemplateCatalog.Variantkind? = nil
+    /// 最近套用過的文件範本 id（最多三個，最近的在前）。
+    @State private var recentTemplateIds: [String] = RecentTemplates.load()
     @State private var selectedNewNoteCategory: NoteThemeCategory = .general
     // 文件範本（工作項 S-61）。`nil` 代表只要一張空紙，不鋪任何內容。
     @State private var selectedDocTemplateId: String?
@@ -1620,6 +1622,8 @@ public struct HomeWorkbenchView: View {
 
                 paperSection
 
+                recentTemplatesSection
+
                 documentTemplateSection
             }
             .navigationTitle(localizationManager.localized("new_notebook"))
@@ -1659,6 +1663,13 @@ public struct HomeWorkbenchView: View {
                                 language: localizationManager.currentLanguage.catalogKey, to: &created)
                             notebookStore.updateNotebook(created)
                         }
+                        // 記下這一次用了哪個樣板，下次直接從「常用樣板」點。
+                        let usedId = selectedDocTemplateId
+                            ?? (selectedPaperVariant != nil ? selectedTemplate.paperId : nil)
+                        if let usedId {
+                            recentTemplateIds = RecentTemplates.record(usedId)
+                        }
+
                         showNewNotebookSheet = false
                         // 立即開啟該筆記畫布進行編輯
                         selectedNotebookForEditing = created
@@ -1785,6 +1796,73 @@ public struct HomeWorkbenchView: View {
         .onTapGesture {
             guard !paperIsLockedByDocument, let match = NoteTemplate(paperId: paper.id) else { return }
             selectedTemplate = match
+        }
+    }
+
+    // MARK: - 常用樣板
+
+    /// 最近套用過的三個樣板，一按就套用。
+    ///
+    /// # 為什麼需要它
+    ///
+    /// 39 種文件範本收在一棵三層的樹裡。實際上使用者絕大多數時候要的是
+    /// 「再來一份跟上次一樣的」—— 而那件事現在要展開主題、展開分類、
+    /// 再從清單裡認出那一個。清單本身沒有問題，問題是最常用的路徑最長。
+    ///
+    /// 沒用過任何樣板時整個區塊不出現：一張寫著「還沒有」的卡片只是佔位置。
+    @ViewBuilder
+    private var recentTemplatesSection: some View {
+        let recents = recentTemplateIds.compactMap { id -> DocumentTemplateCatalog.Template? in
+            DocumentTemplateCatalog.template(id: id)
+                ?? DocumentTemplateCatalog.paperTemplate(paperId: id)
+        }
+        if !recents.isEmpty {
+            Section(localizationManager.localized("recent_templates")) {
+                ForEach(recents) { tmpl in
+                    Button {
+                        applyRecentTemplate(tmpl)
+                    } label: {
+                        HStack(spacing: 10) {
+                            Image(systemName: "clock.arrow.circlepath")
+                                .foregroundColor(.accentColor)
+                                .frame(width: 24)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(catalogText(tmpl.name))
+                                    .font(.subheadline)
+                                    .foregroundColor(.primary)
+                                Text(catalogText(tmpl.description))
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            if selectedDocTemplateId == tmpl.id {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundColor(.accentColor)
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    /// 點了常用樣板。
+    ///
+    /// 紙張樣板與文件範本走的是兩條不同的套用路徑，所以要分辨它是哪一種 ——
+    /// 用文件範本的路徑去套紙張樣板的話，紙張那一欄會被鎖住而使用者改不動。
+    private func applyRecentTemplate(_ tmpl: DocumentTemplateCatalog.Template) {
+        if DocumentTemplateCatalog.paperTemplate(paperId: tmpl.id) != nil,
+           let paper = NoteTemplate(paperId: tmpl.id) {
+            selectedDocTemplateId = nil
+            selectedTemplate = paper
+            selectedNewNoteCategory = paper.category
+            selectedPaperVariant = .example
+        } else {
+            selectedDocTemplateId = tmpl.id
+            applyDocumentTemplatePaper()
         }
     }
 

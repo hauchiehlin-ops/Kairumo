@@ -5025,6 +5025,22 @@ object LocalizationStrings {
             "ko" to "설정 열기",
             "th" to "เปิดการตั้งค่า"
         ),
+        "outside_printable_clamped" to mapOf(
+            "zh-Hant" to "已移回可列印範圍內。虛線框以外的內容不會被列印，也不會進入匯出檔。",
+            "en" to "Moved back inside the printable area. Anything beyond the dashed frame is not printed or exported.",
+            "zh-Hans" to "已移回可打印范围内。虚线框以外的内容不会被打印，也不会进入导出档。",
+            "ja" to "印刷範囲の内側に戻しました。破線の枠の外は印刷にも書き出しにも含まれません。",
+            "ko" to "인쇄 영역 안으로 되돌렸습니다. 점선 테두리 바깥은 인쇄와 내보내기에 포함되지 않습니다.",
+            "th" to "ย้ายกลับเข้ามาในพื้นที่พิมพ์แล้ว สิ่งที่อยู่นอกกรอบเส้นประจะไม่ถูกพิมพ์หรือส่งออก"
+        ),
+        "outside_printable_rejected" to mapOf(
+            "zh-Hant" to "這一筆畫在可列印範圍之外，已經撤銷。虛線框以外的內容不會被列印，也不會進入匯出檔。",
+            "en" to "That stroke landed outside the printable area, so it was removed. Anything beyond the dashed frame is not printed or exported.",
+            "zh-Hans" to "这一笔画在可打印范围之外，已经撤销。虚线框以外的内容不会被打印，也不会进入导出档。",
+            "ja" to "印刷範囲の外に書かれたため取り消しました。破線の枠の外は印刷にも書き出しにも含まれません。",
+            "ko" to "인쇄 영역 밖에 그려져 취소했습니다. 점선 테두리 바깥은 인쇄와 내보내기에 포함되지 않습니다.",
+            "th" to "เส้นนี้อยู่นอกพื้นที่พิมพ์จึงถูกลบออก สิ่งที่อยู่นอกกรอบเส้นประจะไม่ถูกพิมพ์หรือส่งออก"
+        ),
         "page_extended_hint" to mapOf(
             "zh-Hant" to "已向下延長畫布長度 (+800pt)",
             "en" to "Page length extended (+800pt)",
@@ -5032,6 +5048,86 @@ object LocalizationStrings {
             "ja" to "キャンバス長を延長しました (+800pt)",
             "ko" to "캔버스 길이가 연장되었습니다 (+800pt)",
             "th" to "ขยายความยาวของผืนผ้าใบแล้ว (+800pt)"
+        ),
+        "page_format" to mapOf(
+            "zh-Hant" to "頁面規格",
+            "en" to "Page format",
+            "zh-Hans" to "页面规格",
+            "ja" to "用紙サイズ",
+            "ko" to "용지 크기",
+            "th" to "ขนาดหน้ากระดาษ"
+        ),
+        "page_format_a4" to mapOf(
+            "zh-Hant" to "A4 直式",
+            "en" to "A4",
+            "zh-Hans" to "A4 直式",
+            "ja" to "A4",
+            "ko" to "A4",
+            "th" to "A4"
+        ),
+        "page_format_a4_landscape" to mapOf(
+            "zh-Hant" to "A4 橫式",
+            "en" to "A4 landscape",
+            "zh-Hans" to "A4 横式",
+            "ja" to "A4 横",
+            "ko" to "A4 가로",
+            "th" to "A4 แนวนอน"
+        ),
+        "page_format_a5" to mapOf(
+            "zh-Hant" to "A5 直式",
+            "en" to "A5",
+            "zh-Hans" to "A5 直式",
+            "ja" to "A5",
+            "ko" to "A5",
+            "th" to "A5"
+        ),
+        "page_format_change_warning" to mapOf(
+            "zh-Hant" to "更改規格會同時改變畫布與匯出檔。超出新頁面的內容會被移回頁內。",
+            "en" to "Changing the format resizes the canvas and the export. Content already outside the new page is moved back inside.",
+            "zh-Hans" to "更改规格会同时改变画布与导出档。超出新页面的内容会被移回页内。",
+            "ja" to "用紙サイズを変えるとキャンバスと書き出しの両方が変わります。新しい紙からはみ出した内容は内側に戻します。",
+            "ko" to "용지 크기를 바꾸면 캔버스와 내보내기가 함께 바뀝니다. 새 페이지를 벗어난 내용은 안쪽으로 되돌립니다.",
+            "th" to "การเปลี่ยนขนาดจะเปลี่ยนทั้งผืนผ้าใบและไฟล์ที่ส่งออก เนื้อหาที่เลยขอบหน้าใหม่จะถูกย้ายกลับเข้ามา"
+        ),
+        "page_format_legal" to mapOf(
+            "zh-Hant" to "Legal 直式",
+            "en" to "Legal",
+            "zh-Hans" to "Legal 直式",
+            "ja" to "リーガル",
+            "ko" to "리걸",
+            "th" to "Legal"
+        ),
+        "page_format_letter" to mapOf(
+            "zh-Hant" to "Letter 直式",
+            "en" to "Letter",
+            "zh-Hans" to "Letter 直式",
+            "ja" to "レター",
+            "ko" to "레터",
+            "th" to "Letter"
+        ),
+        "page_format_letter_landscape" to mapOf(
+            "zh-Hant" to "Letter 橫式",
+            "en" to "Letter landscape",
+            "zh-Hans" to "Letter 横式",
+            "ja" to "レター 横",
+            "ko" to "레터 가로",
+            "th" to "Letter แนวนอน"
+        ),
+        "page_format_slide" to mapOf(
+            "zh-Hant" to "簡報 16:9",
+            "en" to "Slide 16:9",
+            "zh-Hans" to "简报 16:9",
+            "ja" to "スライド 16:9",
+            "ko" to "슬라이드 16:9",
+            "th" to "สไลด์ 16:9"
+        ),
+        "page_format_square" to mapOf(
+            "zh-Hant" to "正方形",
+            "en" to "Square",
+            "zh-Hans" to "正方形",
+            "ja" to "正方形",
+            "ko" to "정사각형",
+            "th" to "สี่เหลี่ยมจัตุรัส"
         ),
         "page_label" to mapOf(
             "zh-Hant" to "頁次",
@@ -5072,7 +5168,10 @@ object LocalizationStrings {
             "ja" to "%@ 冊を再分割しました",
             "ko" to "%@권을 다시 나눴습니다",
             "th" to "แบ่งหน้าใหม่แล้ว %@ เล่ม"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "page_model_explainer" to mapOf(
             "zh-Hant" to "每一頁改成固定高度，畫布上會畫出頁面與可列印區界線。內容寫到頁尾會自動準備下一頁。原始資料已備份。",
             "en" to "Every page becomes a fixed height, and the canvas shows the page and printable-area boundaries. Writing to the bottom prepares the next page. Your original data is backed up.",
@@ -5168,10 +5267,7 @@ object LocalizationStrings {
             "ja" to "パステル",
             "ko" to "파스텔",
             "th" to "พาสเทล"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "palette_swatches" to mapOf(
             "zh-Hant" to "經典色卡庫",
             "en" to "Color Palettes",
@@ -5435,6 +5531,14 @@ object LocalizationStrings {
             "ja" to "最近の録音と文字起こし",
             "ko" to "최근 녹음 및 필사",
             "th" to "การบันทึกและการถอดเสียงล่าสุด"
+        ),
+        "recent_templates" to mapOf(
+            "zh-Hant" to "常用樣板",
+            "en" to "Recently used",
+            "zh-Hans" to "常用样板",
+            "ja" to "最近使った",
+            "ko" to "최근 사용",
+            "th" to "ใช้ล่าสุด"
         ),
         "recognize_handwriting" to mapOf(
             "zh-Hant" to "辨識手寫",
@@ -5707,7 +5811,10 @@ object LocalizationStrings {
             "ja" to "解決済みにする",
             "ko" to "해결됨으로 표시",
             "th" to "ทำเครื่องหมายว่าแก้ไขแล้ว"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "resolved" to mapOf(
             "zh-Hant" to "已解決",
             "en" to "Resolved",
@@ -5811,10 +5918,7 @@ object LocalizationStrings {
             "ja" to "ルートフォルダ",
             "ko" to "최상위 폴더",
             "th" to "โฟลเดอร์ระดับบนสุด"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "rotate_handle" to mapOf(
             "zh-Hant" to "旋轉把手",
             "en" to "Rotate handle",
@@ -6350,7 +6454,10 @@ object LocalizationStrings {
             "ja" to "表示",
             "ko" to "표시",
             "th" to "แสดงผล"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_document" to mapOf(
             "zh-Hant" to "文件",
             "en" to "Document",
@@ -6454,10 +6561,7 @@ object LocalizationStrings {
             "ja" to "月",
             "ko" to "달",
             "th" to "พระจันทร์เสี้ยว"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_octagon" to mapOf(
             "zh-Hant" to "八邊形",
             "en" to "Octagon",
@@ -6993,7 +7097,10 @@ object LocalizationStrings {
             "ja" to "線の太さ",
             "ko" to "선 굵기",
             "th" to "ความหนาของเส้น"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "structure_folders" to mapOf(
             "zh-Hant" to "資料夾目錄",
             "en" to "Folders",
@@ -7097,10 +7204,7 @@ object LocalizationStrings {
             "ja" to "同期に失敗しました：%@",
             "ko" to "동기화 실패: %@",
             "th" to "ซิงค์ไม่สำเร็จ: %@"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_folder_desc" to mapOf(
             "zh-Hant" to "指到 iCloud Drive 或 Google Drive 的資料夾，兩台裝置就會互相同步",
             "en" to "Point two devices at the same iCloud Drive or Google Drive folder",
@@ -7636,7 +7740,10 @@ object LocalizationStrings {
             "ja" to "デュアルスマホ枠と8ptグリッド内蔵",
             "ko" to "듀얼 스마트폰 프레임 및 8pt 픽셀 그리드",
             "th" to "กรอบมือถือคู่พร้อมกริด 8pt"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "tmpl_moodboard" to mapOf(
             "zh-Hant" to "情緒板與色卡矩陣",
             "en" to "Moodboard & Palette",
@@ -7740,10 +7847,7 @@ object LocalizationStrings {
             "ja" to "蛍光ペン",
             "ko" to "형광펜",
             "th" to "ปากกาเน้นข้อความ"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tool_lasso" to mapOf(
             "zh-Hant" to "套索選取",
             "en" to "Lasso",

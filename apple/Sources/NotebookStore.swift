@@ -279,6 +279,11 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     public var pagesData: [Data]
     /// 各頁面之客製化畫布長度（以 pt 為單位，預設 1800pt，支援自由向下延長）
     public var pageHeights: [CGFloat]?
+    /// 頁面規格的識別字（核心 `page_formats()` 的 id）。
+    ///
+    /// nil = A4 直式。**舊筆記沒有這個欄位，而它們全部是用 A4 的座標寫的** ——
+    /// 所以預設值不能挑別的，否則每一本舊筆記的內容位置都會跟著跑掉。
+    public var pageFormatId: String?
     /// 筆記內嵌圖片與圖表附件清單
     public var attachments: [NoteImageAttachment]?
     /// 筆記內嵌 Word 級文字方塊清單
@@ -380,6 +385,9 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     /// 舊版可以任意延長頁面，於是同一本筆記裡每頁高度都不同，匯出與列印無從
     /// 對齊紙張。現在高度由 `PageGeometry` 決定；`pageHeights` 這個欄位只為了
     /// 舊檔解碼而保留，遷移時用來判斷哪些頁需要重新分頁（見 `PageRepagination`）。
+    /// 這一本筆記的頁面尺寸。
+    public var pageSize: CGSize { PageGeometry.size(forFormat: pageFormatId) }
+
     public func height(forPage pageIndex: Int, defaultHeight: CGFloat = PageGeometry.height) -> CGFloat {
         PageGeometry.height
     }
@@ -498,6 +506,15 @@ public enum MaterialType: String, Codable, CaseIterable, Identifiable {
 }
 
 /// 筆記內嵌圖片與圖表附件模型
+/// 附著在某一頁上的東西。
+///
+/// 刪除或插入頁面時要把 `pageIndex` 重新對齊，而那段邏輯每個型別各寫一份
+/// 的結果是新增型別時漏掉其中一種 —— 使用者會在別的頁上看到一張不該在
+/// 那裡的表格。有了這個協定，共用的那份程式碼只要寫一次。
+public protocol PageIndexed {
+    var pageIndex: Int { get set }
+}
+
 public struct NoteImageAttachment: Identifiable, Codable, Hashable, ObjectFrameStyled {
     public let id: String
     /// 協定橋接。圖片的旋轉欄位早就存在且是非 Optional，沿用即可。
@@ -1709,45 +1726,44 @@ public final class NotebookStore: ObservableObject {
         }
 
         // 平移附件之 pageIndex
-        notebooks[idx].attachments?.removeAll { $0.pageIndex == pageIndex }
-        if let atts = notebooks[idx].attachments {
-            notebooks[idx].attachments = atts.map { item in
-                var mod = item
-                if mod.pageIndex > pageIndex { mod.pageIndex -= 1 }
-                return mod
-            }
-        }
-        notebooks[idx].textAttachments?.removeAll { $0.pageIndex == pageIndex }
-        if let txts = notebooks[idx].textAttachments {
-            notebooks[idx].textAttachments = txts.map { item in
-                var mod = item
-                if mod.pageIndex > pageIndex { mod.pageIndex -= 1 }
-                return mod
-            }
-        }
-        notebooks[idx].linkAttachments?.removeAll { $0.pageIndex == pageIndex }
-        if let lnks = notebooks[idx].linkAttachments {
-            notebooks[idx].linkAttachments = lnks.map { item in
-                var mod = item
-                if mod.pageIndex > pageIndex { mod.pageIndex -= 1 }
-                return mod
-            }
-        }
-        notebooks[idx].model3DAttachments?.removeAll { $0.pageIndex == pageIndex }
-        if let mods = notebooks[idx].model3DAttachments {
-            notebooks[idx].model3DAttachments = mods.map { item in
-                var mod = item
-                if mod.pageIndex > pageIndex { mod.pageIndex -= 1 }
-                return mod
-            }
-        }
-        notebooks[idx].commentPins?.removeAll { $0.pageIndex == pageIndex }
-        if let pins = notebooks[idx].commentPins {
-            notebooks[idx].commentPins = pins.map { item in
-                var mod = item
-                if mod.pageIndex > pageIndex { mod.pageIndex -= 1 }
-                return mod
-            }
+        notebooks[idx].attachments = Self.shiftPages(
+            notebooks[idx].attachments, removing: pageIndex)
+        notebooks[idx].textAttachments = Self.shiftPages(
+            notebooks[idx].textAttachments, removing: pageIndex)
+        notebooks[idx].linkAttachments = Self.shiftPages(
+            notebooks[idx].linkAttachments, removing: pageIndex)
+        notebooks[idx].model3DAttachments = Self.shiftPages(
+            notebooks[idx].model3DAttachments, removing: pageIndex)
+        notebooks[idx].commentPins = Self.shiftPages(
+            notebooks[idx].commentPins, removing: pageIndex)
+
+        // 每一種附件都要重新對齊頁碼。
+        //
+        // **表格、形狀、連接線與錄音原本整組漏掉了。**
+        //
+        // 前面那幾種各自寫了一份幾乎一樣的「刪掉這一頁的、後面的往前移」，
+        // 而新增型別時沒有人記得回來加 —— 症狀是：按了刪除頁面，頁數確實
+        // 少了一頁，但那一頁上的表格與圖形**還在**，而且跑到別頁去了。
+        // 使用者看到的就是「刪不掉，只是把內容清掉」。
+        //
+        // 改成一個泛型函式：之後新增型別時，漏掉會是編譯期的事，
+        // 不是使用者在某一頁上發現多了一張表。
+        notebooks[idx].tableAttachments = Self.shiftPages(
+            notebooks[idx].tableAttachments, removing: pageIndex)
+        notebooks[idx].shapeAttachments = Self.shiftPages(
+            notebooks[idx].shapeAttachments, removing: pageIndex)
+        notebooks[idx].connectionAttachments = Self.shiftPages(
+            notebooks[idx].connectionAttachments, removing: pageIndex)
+        notebooks[idx].audioAttachments = Self.shiftPages(
+            notebooks[idx].audioAttachments, removing: pageIndex)
+
+        // 內嵌的筆跡陣列也要跟著縮短。
+        //
+        // 不縮的話 `pagesData.count` 會永遠比 `pageCount` 多，而
+        // 「這本筆記是不是空的」「匯出幾頁」都在看前者 —— 刪掉的那一頁
+        // 會在匯出的 PDF 裡復活。
+        if pageIndex < notebooks[idx].pagesData.count {
+            notebooks[idx].pagesData.remove(at: pageIndex)
         }
 
         let newPageCount = total - 1
@@ -1760,6 +1776,21 @@ public final class NotebookStore: ObservableObject {
             safeCurrent = max(0, newPageCount - 1)
         }
         return safeCurrent
+    }
+
+    /// 刪掉某一頁之後，把附件的 `pageIndex` 重新對齊。
+    ///
+    /// 這一頁上的整個丟掉，後面每一頁往前移一格。所有附件型別共用這一份 ——
+    /// 各寫一份的結果是新增型別時漏掉其中一種，而那要等到使用者在別的頁上
+    /// 看到一張不該在那裡的表格才會被發現。
+    static func shiftPages<T: PageIndexed>(_ items: [T]?, removing pageIndex: Int) -> [T]? {
+        guard let items else { return nil }
+        return items.compactMap { item in
+            if item.pageIndex == pageIndex { return nil }
+            var moved = item
+            if moved.pageIndex > pageIndex { moved.pageIndex -= 1 }
+            return moved
+        }
     }
 
     /// 複製指定頁面並插入於其後，回傳新頁碼 index
@@ -1983,3 +2014,17 @@ public final class NotebookStore: ObservableObject {
         return true
     }
 }
+
+// MARK: - 頁面歸屬
+//
+// 全部用 extension 宣告符合，而不是改動每個 struct 的宣告行 ——
+// 那些宣告行同時掛著 Codable 與 ObjectFrameStyled，動它們容易改錯。
+extension NoteImageAttachment: PageIndexed {}
+extension Note3DAttachment: PageIndexed {}
+extension NoteTextAttachment: PageIndexed {}
+extension NoteLinkAttachment: PageIndexed {}
+extension NoteCommentPin: PageIndexed {}
+extension NoteAudioAttachment: PageIndexed {}
+extension NoteTableAttachment: PageIndexed {}
+extension NoteShapeAttachment: PageIndexed {}
+extension NoteConnectionAttachment: PageIndexed {}

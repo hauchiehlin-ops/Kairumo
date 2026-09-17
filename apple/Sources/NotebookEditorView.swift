@@ -1338,6 +1338,10 @@ public struct NotebookEditorView: View {
     /// 第二次剛亮起的徽章關掉。
     @State private var modeBadgeToken: Int = 0
 
+    /// 畫布上的提示（例如「超出可列印範圍」）。nil 代表沒有要說的話。
+    @State private var canvasNotice: String?
+    @State private var canvasNoticeToken: Int = 0
+
     public enum SidebarTabMode: String, CaseIterable, Identifiable {
         case pages = "pages"
         case folders = "folders"
@@ -2354,6 +2358,8 @@ public struct NotebookEditorView: View {
         // 緊湊模式下不再把每個功能都攤在工具列上 —— 視窗一窄就會互相擠掉。
         // 主要動作（首頁、模式、頁碼、錄音、匯出）留在列上，其餘收進選單，
         // 位置固定、不會因為視窗寬度而消失。
+        pageFormatMenu
+
         Menu {
             Section {
                 Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
@@ -2462,9 +2468,62 @@ public struct NotebookEditorView: View {
         // 兩條完全獨立的路。連續模式不碰整頁模式的任何一行 ——
         // 那一段綁著存檔、協同、掌拒與套索，是最沒本錢壞掉的地方。
         switch pageDisplayMode {
-        case .single:     return AnyView(canvasWorkAreaContent)
+        case .single:     return AnyView(singlePageWorkArea)
         case .continuous: return AnyView(continuousPagesContent)
         }
+    }
+
+    /// 整頁模式：**一頁完整顯示，而且置中。**
+    ///
+    /// # 原本是什麼樣子
+    ///
+    /// 畫布直接把可用寬度吃滿（`AdaptiveCanvasView.syncContentSize` 用的是
+    /// `bounds.width`），而頁面本身只有 800pt。於是右邊多出一塊空白 ——
+    /// 那塊空白**在頁面框線之外**，寫上去的東西不會出現在列印結果裡。
+    /// 把左側資料夾欄收起來之後那塊空白更大，看起來像畫布破了一個洞。
+    ///
+    /// 連續模式一直是「縮到剛好放得下」，整頁模式沒跟上。現在兩邊同一套：
+    /// 放不下就等比縮小，放得下就維持原尺寸並置中。
+    ///
+    /// 只縮不放：放大到超過原尺寸會讓筆跡變糊（圖層是先算繪再變換的）。
+    private var singlePageWorkArea: some View {
+        GeometryReader { outer in
+            let available = max(outer.size.width - 32, 1)
+            let scale = min(1, available / PageGeometry.width)
+            ZStack(alignment: .bottom) {
+                canvasWorkAreaContent
+                    .frame(width: PageGeometry.width)
+                    .scaleEffect(scale, anchor: .top)
+                    // 縮放之後實際佔的寬度要讓出來，否則置中會算錯。
+                    .frame(width: PageGeometry.width * scale)
+                    .frame(maxWidth: .infinity, alignment: .center)
+
+                if let notice = canvasNotice {
+                    canvasNoticeBanner(notice)
+                }
+            }
+        }
+    }
+
+    /// 畫布底部的提示條。
+    ///
+    /// 用浮動提示而不是 alert：使用者正在寫字，跳一個要按確定的對話框
+    /// 會把筆打斷，而這件事沒有嚴重到值得打斷。
+    private func canvasNoticeBanner(_ text: String) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.orange)
+            Text(text)
+                .font(.footnote)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(12)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10))
+        .shadow(color: .black.opacity(0.12), radius: 8, y: 2)
+        .padding(.horizontal, 24)
+        .padding(.bottom, 20)
+        .transition(.move(edge: .bottom).combined(with: .opacity))
+        .allowsHitTesting(false)
     }
 
     /// 連續頁面模式的工作區。
@@ -2814,7 +2873,14 @@ ZStack(alignment: .topTrailing) {
                 template: notebook.template,
                 pageHeight: currentPageHeight,
                 editorMode: editorMode,
-                onDrawingChanged: { newDrawing in
+                onDrawingChanged: { rawDrawing in
+                    // **頁面框線就是編輯區域。**
+                    //
+                    // 那一圈虛線的意思是「這裡面才會被印出來 / 匯出」，
+                    // 但在此之前它**只是畫出來好看** —— 使用者可以在框線外
+                    // 一路寫下去，畫布上看得到、匯出的 PDF 裡卻整段不見，
+                    // 而且沒有任何提示。
+                    let newDrawing = enforcePrintableArea(rawDrawing)
                     // 即時自動儲存至專屬二進位檔案（不觸發 Struct 重新賦值以防競態覆蓋）
                     store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: newDrawing)
 
@@ -4089,43 +4155,6 @@ ZStack(alignment: .topTrailing) {
                     }
                 }
 
-                ToolbarSeparator()
-                    .frame(height: 24)
-
-                // ⋯ 更多：次要工具收在這裡
-                //
-                // 這些插入類工具原本全部攤在列上，視窗一窄就被擠出畫面外。
-                // 收進選單後位置固定，不會因為視窗寬度而消失。
-                Menu {
-                    Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
-                    Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
-                    Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
-                Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
-                Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
-                Button { showLayerPanel.toggle() } label: { Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d") }
-                    Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
-                    Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
-                    Button { showAudioPicker = true } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
-                    Divider()
-                    Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
-                    Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
-                    Button { showNoteIntelligence = true } label: { Label(localizationManager.localized("ai_summary"), systemImage: "sparkles") }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 15, weight: .semibold))
-                        Text(localizationManager.localized("more_tools"))
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(.accentColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.accentColor.opacity(0.10))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(localizationManager.localized("more_tools"))
-                .help(localizationManager.localized("more_tools"))
 
                 ToolbarSeparator()
                     .frame(height: 24)
@@ -4315,35 +4344,6 @@ ZStack(alignment: .topTrailing) {
                 .accessibilityLabel(localizationManager.localized("insert_link"))
                 .help(localizationManager.localized("insert_link"))
 
-                // ⋯ 更多：次要插入工具
-                Menu {
-                    Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
-                    Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
-                    Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
-                Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
-                Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
-                Button { showLayerPanel.toggle() } label: { Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d") }
-                    Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
-                    Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
-                    Button { showAudioPicker = true } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
-                    Divider()
-                    Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
-                } label: {
-                    HStack(spacing: 4) {
-                        Image(systemName: "ellipsis.circle")
-                            .font(.system(size: 15, weight: .semibold))
-                        Text(localizationManager.localized("more_tools"))
-                            .font(.system(size: 11))
-                    }
-                    .foregroundColor(.accentColor)
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 5)
-                    .background(Color.accentColor.opacity(0.10))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(localizationManager.localized("more_tools"))
-                .help(localizationManager.localized("more_tools"))
 
                 // 「延長本頁」已移除：頁面高度固定（PageGeometry），
                 // 寫到頁尾會自動準備下一頁。
@@ -4838,6 +4838,9 @@ ZStack(alignment: .topTrailing) {
         if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
             self.notebook = updated
         }
+        // 這一本用的是哪一種紙。畫布、分頁、縮圖與匯出都讀這個值 ——
+        // 忘了設的話，換到另一本不同規格的筆記時會沿用上一本的尺寸。
+        PageGeometry.use(format: notebook.pageFormatId)
         let loaded = store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
         self.currentDrawing = loaded
         self.lastStrokeCount = loaded.strokes.count
@@ -5419,6 +5422,173 @@ ZStack(alignment: .topTrailing) {
         saveCurrentPageDrawing()
         // 由外層換掉 Binding 指向的索引；這裡自己寫會覆蓋掉目前這則筆記。
         onRequestSwitch?(target)
+    }
+
+    /// 頁面規格選單。
+    ///
+    /// # 為什麼它在工具列上，而不是收進設定
+    ///
+    /// 規格同時決定三件事：畫布多大、分頁在哪裡斷、匯出的 PDF 多大。
+    /// 它是**編輯當下**會想改的東西（「這份要印成 A5」），不是設定一次
+    /// 就不動的偏好。收進設定的話，使用者要先離開筆記才改得到。
+    private var pageFormatMenu: some View {
+        Menu {
+            ForEach(pageFormats(), id: \.id) { format in
+                Button {
+                    applyPageFormat(format.id)
+                } label: {
+                    HStack {
+                        Text(localizationManager.localized(format.titleKey))
+                        if (notebook.pageFormatId ?? defaultPageFormatId()) == format.id {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: "doc.on.doc")
+                    .font(.caption)
+                Text(localizationManager.localized(
+                    pageFormat(id: notebook.pageFormatId ?? defaultPageFormatId()).titleKey))
+                    .font(.system(size: 11))
+            }
+            .foregroundColor(.accentColor)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 4)
+            .background(Color(uiColor: .tertiarySystemGroupedBackground))
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(localizationManager.localized("page_format"))
+        .help(localizationManager.localized("page_format"))
+    }
+
+    /// 換一種紙。
+    ///
+    /// 換完之後**既有的內容要跟著進來**：A4 直式換成 A5 之後，原本靠右
+    /// 那一欄的東西會落在新頁面外面 —— 畫布上看得到、匯出時整欄不見。
+    /// 所以一併把每個物件夾回新的可列印範圍，並講清楚發生了什麼事。
+    private func applyPageFormat(_ id: String) {
+        guard notebook.pageFormatId != id else { return }
+        notebook.pageFormatId = id
+        PageGeometry.use(format: id)
+        clampAttachmentsIntoPage()
+        store.updateNotebook(notebook)
+        showCanvasNotice(localizationManager.localized("page_format_change_warning"))
+    }
+
+    /// 把所有附件夾回目前頁面的可列印範圍。
+    private func clampAttachmentsIntoPage() {
+        let page = PageGeometry.size
+        let inset = Float(PageGeometry.printableInset)
+
+        func fit(_ x: CGFloat, _ y: CGFloat, _ w: CGFloat, _ h: CGFloat) -> CGRect {
+            let clamped = clampToPrintable(
+                rect: FfiRect(
+                    minX: Float(x), minY: Float(y),
+                    maxX: Float(x + w), maxY: Float(y + h)),
+                pageWidth: Float(page.width), pageHeight: Float(page.height), inset: inset)
+            return CGRect(
+                x: CGFloat(clamped.minX), y: CGFloat(clamped.minY),
+                width: CGFloat(clamped.maxX - clamped.minX),
+                height: CGFloat(clamped.maxY - clamped.minY))
+        }
+
+        notebook.attachments = notebook.attachments?.map { item in
+            var moved = item
+            let r = fit(item.x, item.y, item.width, item.height)
+            moved.x = r.minX; moved.y = r.minY
+            moved.width = r.width; moved.height = r.height
+            return moved
+        }
+        notebook.textAttachments = notebook.textAttachments?.map { item in
+            var moved = item
+            let r = fit(item.x, item.y, item.width, item.height)
+            moved.x = r.minX; moved.y = r.minY
+            moved.width = r.width; moved.height = r.height
+            return moved
+        }
+        notebook.tableAttachments = notebook.tableAttachments?.map { item in
+            var moved = item
+            let r = fit(item.x, item.y, item.width, 0)
+            moved.x = r.minX; moved.y = r.minY
+            return moved
+        }
+        notebook.shapeAttachments = notebook.shapeAttachments?.map { item in
+            var moved = item
+            let r = fit(item.x, item.y, item.width, item.height)
+            moved.x = r.minX; moved.y = r.minY
+            return moved
+        }
+    }
+
+    /// 把落在可列印範圍**之外**的筆畫收回。
+    ///
+    /// # 為什麼是「完全在外面才收回」
+    ///
+    /// 界線判斷分三種答案（見核心 `is_within_printable` / `is_outside_printable`）：
+    /// 整個在裡面、整個在外面、跨在界線上。三種要分開處理：
+    ///
+    /// - **整個在外面** → 收回。那一筆印不出來也匯不出去，留著只會讓使用者
+    ///   以為它存在，等到列印那天才發現不見了。
+    /// - **跨在界線上** → 留著，但提醒一次。寫到一半被整筆吃掉比溢出更難用，
+    ///   而且那一筆大半還看得見。
+    ///
+    /// 要改成「碰到界線就擋」的話，把下面的 `isOutside` 換成 `!isWithin` 即可。
+    private func enforcePrintableArea(_ drawing: PKDrawing) -> PKDrawing {
+        guard drawing.strokes.count > lastStrokeCount else { return drawing }
+
+        let page = PageGeometry.size
+        let inset = Float(PageGeometry.printableInset)
+        var kept: [PKStroke] = []
+        var rejected = false
+        var straddled = false
+
+        for (index, stroke) in drawing.strokes.enumerated() {
+            // 只檢查這一次新加的那幾筆 —— 既有的筆畫可能是別的裝置或別的
+            // 頁面尺寸下寫的，回頭去刪它們等於幫使用者做了他沒要求的決定。
+            guard index >= lastStrokeCount else {
+                kept.append(stroke)
+                continue
+            }
+            let bounds = stroke.renderBounds
+            let rect = FfiRect(
+                minX: Float(bounds.minX), minY: Float(bounds.minY),
+                maxX: Float(bounds.maxX), maxY: Float(bounds.maxY))
+            if isOutsidePrintable(
+                rect: rect, pageWidth: Float(page.width),
+                pageHeight: Float(page.height), inset: inset) {
+                rejected = true
+                continue
+            }
+            if !isWithinPrintable(
+                rect: rect, pageWidth: Float(page.width),
+                pageHeight: Float(page.height), inset: inset) {
+                straddled = true
+            }
+            kept.append(stroke)
+        }
+
+        if rejected {
+            showCanvasNotice(localizationManager.localized("outside_printable_rejected"))
+            return PKDrawing(strokes: kept)
+        }
+        if straddled {
+            showCanvasNotice(localizationManager.localized("outside_printable_clamped"))
+        }
+        return drawing
+    }
+
+    /// 在畫布上顯示一則提示，幾秒後自己淡掉。
+    private func showCanvasNotice(_ text: String) {
+        canvasNoticeToken += 1
+        let token = canvasNoticeToken
+        withAnimation(.easeInOut(duration: 0.2)) { canvasNotice = text }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+            guard canvasNoticeToken == token else { return }
+            withAnimation(.easeInOut(duration: 0.3)) { canvasNotice = nil }
+        }
     }
 
     /// 在畫布的指定位置新增一個空文字方塊並直接進入編輯。

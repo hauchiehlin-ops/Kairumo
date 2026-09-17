@@ -666,6 +666,12 @@ private fun NotebookHome(
             themes = DocumentTemplateCatalog.documentThemes(activity),
             lang = catalogLang(lang),
             l = ::l,
+            recentTemplates = com.kairumo.padnote.library.RecentTemplates
+                .load(activity)
+                .mapNotNull { id ->
+                    DocumentTemplateCatalog.template(activity, id)
+                        ?: DocumentTemplateCatalog.paperTemplate(activity, id)
+                },
             onDismiss = { creatingNotebook = false },
             onConfirm = { title, templateId, kind, paperId, paperVariant ->
                 creatingNotebook = false
@@ -697,6 +703,11 @@ private fun NotebookHome(
                                     )
                                 }
                         }
+                    }
+                    // 記下這一次用了哪個樣板，下次直接從「常用樣板」點。
+                    val usedId = templateId ?: paperId.takeIf { paperVariant != null }
+                    if (usedId != null) {
+                        com.kairumo.padnote.library.RecentTemplates.record(activity, usedId)
                     }
                     revision++
                     // 新增之後直接開 —— 建了一本卻停在清單上，使用者還要再點一次。

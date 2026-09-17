@@ -4991,6 +4991,22 @@ extension LocalizationManager {
             .ko: "설정 열기",
             .th: "เปิดการตั้งค่า"
         ],
+        "outside_printable_clamped": [
+            .zhHant: "已移回可列印範圍內。虛線框以外的內容不會被列印，也不會進入匯出檔。",
+            .en: "Moved back inside the printable area. Anything beyond the dashed frame is not printed or exported.",
+            .zhHans: "已移回可打印范围内。虚线框以外的内容不会被打印，也不会进入导出档。",
+            .ja: "印刷範囲の内側に戻しました。破線の枠の外は印刷にも書き出しにも含まれません。",
+            .ko: "인쇄 영역 안으로 되돌렸습니다. 점선 테두리 바깥은 인쇄와 내보내기에 포함되지 않습니다.",
+            .th: "ย้ายกลับเข้ามาในพื้นที่พิมพ์แล้ว สิ่งที่อยู่นอกกรอบเส้นประจะไม่ถูกพิมพ์หรือส่งออก"
+        ],
+        "outside_printable_rejected": [
+            .zhHant: "這一筆畫在可列印範圍之外，已經撤銷。虛線框以外的內容不會被列印，也不會進入匯出檔。",
+            .en: "That stroke landed outside the printable area, so it was removed. Anything beyond the dashed frame is not printed or exported.",
+            .zhHans: "这一笔画在可打印范围之外，已经撤销。虚线框以外的内容不会被打印，也不会进入导出档。",
+            .ja: "印刷範囲の外に書かれたため取り消しました。破線の枠の外は印刷にも書き出しにも含まれません。",
+            .ko: "인쇄 영역 밖에 그려져 취소했습니다. 점선 테두리 바깥은 인쇄와 내보내기에 포함되지 않습니다.",
+            .th: "เส้นนี้อยู่นอกพื้นที่พิมพ์จึงถูกลบออก สิ่งที่อยู่นอกกรอบเส้นประจะไม่ถูกพิมพ์หรือส่งออก"
+        ],
         "page_extended_hint": [
             .zhHant: "已向下延長畫布長度 (+800pt)",
             .en: "Page length extended (+800pt)",
@@ -4998,6 +5014,86 @@ extension LocalizationManager {
             .ja: "キャンバス長を延長しました (+800pt)",
             .ko: "캔버스 길이가 연장되었습니다 (+800pt)",
             .th: "ขยายความยาวของผืนผ้าใบแล้ว (+800pt)"
+        ],
+        "page_format": [
+            .zhHant: "頁面規格",
+            .en: "Page format",
+            .zhHans: "页面规格",
+            .ja: "用紙サイズ",
+            .ko: "용지 크기",
+            .th: "ขนาดหน้ากระดาษ"
+        ],
+        "page_format_a4": [
+            .zhHant: "A4 直式",
+            .en: "A4",
+            .zhHans: "A4 直式",
+            .ja: "A4",
+            .ko: "A4",
+            .th: "A4"
+        ],
+        "page_format_a4_landscape": [
+            .zhHant: "A4 橫式",
+            .en: "A4 landscape",
+            .zhHans: "A4 横式",
+            .ja: "A4 横",
+            .ko: "A4 가로",
+            .th: "A4 แนวนอน"
+        ],
+        "page_format_a5": [
+            .zhHant: "A5 直式",
+            .en: "A5",
+            .zhHans: "A5 直式",
+            .ja: "A5",
+            .ko: "A5",
+            .th: "A5"
+        ],
+        "page_format_change_warning": [
+            .zhHant: "更改規格會同時改變畫布與匯出檔。超出新頁面的內容會被移回頁內。",
+            .en: "Changing the format resizes the canvas and the export. Content already outside the new page is moved back inside.",
+            .zhHans: "更改规格会同时改变画布与导出档。超出新页面的内容会被移回页内。",
+            .ja: "用紙サイズを変えるとキャンバスと書き出しの両方が変わります。新しい紙からはみ出した内容は内側に戻します。",
+            .ko: "용지 크기를 바꾸면 캔버스와 내보내기가 함께 바뀝니다. 새 페이지를 벗어난 내용은 안쪽으로 되돌립니다.",
+            .th: "การเปลี่ยนขนาดจะเปลี่ยนทั้งผืนผ้าใบและไฟล์ที่ส่งออก เนื้อหาที่เลยขอบหน้าใหม่จะถูกย้ายกลับเข้ามา"
+        ],
+        "page_format_legal": [
+            .zhHant: "Legal 直式",
+            .en: "Legal",
+            .zhHans: "Legal 直式",
+            .ja: "リーガル",
+            .ko: "리걸",
+            .th: "Legal"
+        ],
+        "page_format_letter": [
+            .zhHant: "Letter 直式",
+            .en: "Letter",
+            .zhHans: "Letter 直式",
+            .ja: "レター",
+            .ko: "레터",
+            .th: "Letter"
+        ],
+        "page_format_letter_landscape": [
+            .zhHant: "Letter 橫式",
+            .en: "Letter landscape",
+            .zhHans: "Letter 横式",
+            .ja: "レター 横",
+            .ko: "레터 가로",
+            .th: "Letter แนวนอน"
+        ],
+        "page_format_slide": [
+            .zhHant: "簡報 16:9",
+            .en: "Slide 16:9",
+            .zhHans: "简报 16:9",
+            .ja: "スライド 16:9",
+            .ko: "슬라이드 16:9",
+            .th: "สไลด์ 16:9"
+        ],
+        "page_format_square": [
+            .zhHant: "正方形",
+            .en: "Square",
+            .zhHans: "正方形",
+            .ja: "正方形",
+            .ko: "정사각형",
+            .th: "สี่เหลี่ยมจัตุรัส"
         ],
         "page_label": [
             .zhHant: "頁次",
@@ -5398,6 +5494,14 @@ extension LocalizationManager {
             .ja: "最近の録音と文字起こし",
             .ko: "최근 녹음 및 필사",
             .th: "การบันทึกและการถอดเสียงล่าสุด"
+        ],
+        "recent_templates": [
+            .zhHant: "常用樣板",
+            .en: "Recently used",
+            .zhHans: "常用样板",
+            .ja: "最近使った",
+            .ko: "최근 사용",
+            .th: "ใช้ล่าสุด"
         ],
         "recognize_handwriting": [
             .zhHant: "辨識手寫",

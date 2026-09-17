@@ -56,6 +56,14 @@ fun NewNotebookDialog(
     themes: List<DocumentTemplateCatalog.Theme>,
     lang: String,
     l: (String) -> String,
+    /**
+     * 最近套用過的樣板（最多三個，最近的在前）。
+     *
+     * 傳解析好的樣板而不是 id：常用清單裡可能是**紙張樣板**，而
+     * `themes` 這一份已經把紙張主題濾掉了（它掛在上面的紙張清單底下）——
+     * 只傳 id 的話，紙張樣板會在常用清單裡查不到而靜靜地消失。
+     */
+    recentTemplates: List<DocumentTemplateCatalog.Template> = emptyList(),
     onDismiss: () -> Unit,
     onConfirm: (
         title: String,
@@ -84,6 +92,7 @@ fun NewNotebookDialog(
     }
     // 選了文件範本，紙張就跟著它走：公文「簽」不該鋪在行動端線框紙上。
     val paperLocked = selectedId != null
+
     // 高度由使用者拉。固定 460dp 的話，範本樹一展開就得在一個小窗裡捲很久。
     val height = rememberDialogHeight("newNotebook")
 
@@ -110,6 +119,52 @@ fun NewNotebookDialog(
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth()
                     )
+                }
+
+                // ── 常用樣板 ──────────────────────────────────────
+                //
+                // 39 種文件範本收在一棵三層的樹裡，而使用者絕大多數時候要的
+                // 是「再來一份跟上次一樣的」—— 那件事原本要展開主題、展開
+                // 分類、再認出那一個。最常用的路徑不該是最長的。
+                //
+                // 沒用過任何樣板時整個區塊不出現：一張寫著「還沒有」的卡片
+                // 只是佔位置。
+                val recents = recentTemplates
+                if (recents.isNotEmpty()) {
+                    item {
+                        Text(
+                            l("recent_templates"),
+                            style = MaterialTheme.typography.labelLarge,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                    items(recents, key = { "recent-" + it.id }) { tmpl ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { selectedId = tmpl.id }
+                                .padding(vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = selectedId == tmpl.id,
+                                onClick = { selectedId = tmpl.id }
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    DocumentTemplateCatalog.localized(tmpl.name, lang),
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                                Text(
+                                    DocumentTemplateCatalog.localized(tmpl.description, lang),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
                 }
 
                 // ── 紙張（主題分類 + 清單 + 內容）───────────────────

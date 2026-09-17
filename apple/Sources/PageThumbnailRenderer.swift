@@ -19,8 +19,12 @@ import Metal
 /// 座標系與 `CanvasRepresentable` 一致：寬 `pageWidth`、高為該頁的實際高度。
 public enum PageThumbnailRenderer {
 
-    /// 畫布寬度的下限，與 `CanvasRepresentable.contentSize` 的 `max(bounds.width, 800)` 一致。
-    public static let minPageWidth: CGFloat = 800
+    /// 畫布寬度。
+    ///
+    /// **跟著目前這一本筆記的頁面規格走**，不是寫死的 800。
+    /// 寫死的話，A4 橫式或簡報 16:9 的筆記匯出與縮圖仍然按直式 A4 取樣 ——
+    /// 畫布上看到的是橫的，匯出的 PDF 卻是直的，而且右半邊被裁掉。
+    public static var minPageWidth: CGFloat { PageGeometry.width }
 
     /// 縮圖最多畫到「寬度的幾倍高」。頁面預設 1800pt 高，若整頁塞進側邊欄，
     /// 卡片不是變成細長一條、就是要縮到物件看不清 —— 超過的部分裁掉，

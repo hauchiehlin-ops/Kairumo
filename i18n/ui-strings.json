@@ -4975,6 +4975,22 @@
     "zhHans": "前往系统设置开启",
     "zhHant": "前往系統設定開啟"
   },
+  "outside_printable_clamped": {
+    "en": "Moved back inside the printable area. Anything beyond the dashed frame is not printed or exported.",
+    "ja": "印刷範囲の内側に戻しました。破線の枠の外は印刷にも書き出しにも含まれません。",
+    "ko": "인쇄 영역 안으로 되돌렸습니다. 점선 테두리 바깥은 인쇄와 내보내기에 포함되지 않습니다.",
+    "th": "ย้ายกลับเข้ามาในพื้นที่พิมพ์แล้ว สิ่งที่อยู่นอกกรอบเส้นประจะไม่ถูกพิมพ์หรือส่งออก",
+    "zhHans": "已移回可打印范围内。虚线框以外的内容不会被打印，也不会进入导出档。",
+    "zhHant": "已移回可列印範圍內。虛線框以外的內容不會被列印，也不會進入匯出檔。"
+  },
+  "outside_printable_rejected": {
+    "en": "That stroke landed outside the printable area, so it was removed. Anything beyond the dashed frame is not printed or exported.",
+    "ja": "印刷範囲の外に書かれたため取り消しました。破線の枠の外は印刷にも書き出しにも含まれません。",
+    "ko": "인쇄 영역 밖에 그려져 취소했습니다. 점선 테두리 바깥은 인쇄와 내보내기에 포함되지 않습니다.",
+    "th": "เส้นนี้อยู่นอกพื้นที่พิมพ์จึงถูกลบออก สิ่งที่อยู่นอกกรอบเส้นประจะไม่ถูกพิมพ์หรือส่งออก",
+    "zhHans": "这一笔画在可打印范围之外，已经撤销。虚线框以外的内容不会被打印，也不会进入导出档。",
+    "zhHant": "這一筆畫在可列印範圍之外，已經撤銷。虛線框以外的內容不會被列印，也不會進入匯出檔。"
+  },
   "page_extended_hint": {
     "en": "Page length extended (+800pt)",
     "ja": "キャンバス長を延長しました (+800pt)",
@@ -4982,6 +4998,86 @@
     "th": "ขยายความยาวของผืนผ้าใบแล้ว (+800pt)",
     "zhHans": "已向下延长画布长度 (+800pt)",
     "zhHant": "已向下延長畫布長度 (+800pt)"
+  },
+  "page_format": {
+    "en": "Page format",
+    "ja": "用紙サイズ",
+    "ko": "용지 크기",
+    "th": "ขนาดหน้ากระดาษ",
+    "zhHans": "页面规格",
+    "zhHant": "頁面規格"
+  },
+  "page_format_a4": {
+    "en": "A4",
+    "ja": "A4",
+    "ko": "A4",
+    "th": "A4",
+    "zhHans": "A4 直式",
+    "zhHant": "A4 直式"
+  },
+  "page_format_a4_landscape": {
+    "en": "A4 landscape",
+    "ja": "A4 横",
+    "ko": "A4 가로",
+    "th": "A4 แนวนอน",
+    "zhHans": "A4 横式",
+    "zhHant": "A4 橫式"
+  },
+  "page_format_a5": {
+    "en": "A5",
+    "ja": "A5",
+    "ko": "A5",
+    "th": "A5",
+    "zhHans": "A5 直式",
+    "zhHant": "A5 直式"
+  },
+  "page_format_change_warning": {
+    "en": "Changing the format resizes the canvas and the export. Content already outside the new page is moved back inside.",
+    "ja": "用紙サイズを変えるとキャンバスと書き出しの両方が変わります。新しい紙からはみ出した内容は内側に戻します。",
+    "ko": "용지 크기를 바꾸면 캔버스와 내보내기가 함께 바뀝니다. 새 페이지를 벗어난 내용은 안쪽으로 되돌립니다.",
+    "th": "การเปลี่ยนขนาดจะเปลี่ยนทั้งผืนผ้าใบและไฟล์ที่ส่งออก เนื้อหาที่เลยขอบหน้าใหม่จะถูกย้ายกลับเข้ามา",
+    "zhHans": "更改规格会同时改变画布与导出档。超出新页面的内容会被移回页内。",
+    "zhHant": "更改規格會同時改變畫布與匯出檔。超出新頁面的內容會被移回頁內。"
+  },
+  "page_format_legal": {
+    "en": "Legal",
+    "ja": "リーガル",
+    "ko": "리걸",
+    "th": "Legal",
+    "zhHans": "Legal 直式",
+    "zhHant": "Legal 直式"
+  },
+  "page_format_letter": {
+    "en": "Letter",
+    "ja": "レター",
+    "ko": "레터",
+    "th": "Letter",
+    "zhHans": "Letter 直式",
+    "zhHant": "Letter 直式"
+  },
+  "page_format_letter_landscape": {
+    "en": "Letter landscape",
+    "ja": "レター 横",
+    "ko": "레터 가로",
+    "th": "Letter แนวนอน",
+    "zhHans": "Letter 横式",
+    "zhHant": "Letter 橫式"
+  },
+  "page_format_slide": {
+    "en": "Slide 16:9",
+    "ja": "スライド 16:9",
+    "ko": "슬라이드 16:9",
+    "th": "สไลด์ 16:9",
+    "zhHans": "简报 16:9",
+    "zhHant": "簡報 16:9"
+  },
+  "page_format_square": {
+    "en": "Square",
+    "ja": "正方形",
+    "ko": "정사각형",
+    "th": "สี่เหลี่ยมจัตุรัส",
+    "zhHans": "正方形",
+    "zhHant": "正方形"
   },
   "page_label": {
     "en": "Page",
@@ -5382,6 +5478,14 @@
     "th": "การบันทึกและการถอดเสียงล่าสุด",
     "zhHans": "最近录音与转录",
     "zhHant": "最近錄音與轉錄"
+  },
+  "recent_templates": {
+    "en": "Recently used",
+    "ja": "最近使った",
+    "ko": "최근 사용",
+    "th": "ใช้ล่าสุด",
+    "zhHans": "常用样板",
+    "zhHant": "常用樣板"
   },
   "recognize_handwriting": {
     "en": "Recognize Handwriting",

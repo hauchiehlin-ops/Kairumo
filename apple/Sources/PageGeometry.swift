@@ -25,12 +25,46 @@ import Foundation
 
 public enum PageGeometry {
 
-    /// 頁面尺寸（點）。來源是核心，不要在這裡寫死數字。
-    public static let size: CGSize = {
+    /// 預設尺寸（A4 直式）。來源是核心，不要在這裡寫死數字。
+    public static let defaultSize: CGSize = {
         let values = standardPageSize()
         guard values.count == 2 else { return CGSize(width: 800, height: 1132) }
         return CGSize(width: CGFloat(values[0]), height: CGFloat(values[1]))
     }()
+
+    /// 某個規格的尺寸。
+    ///
+    /// 認不得的識別字（包含 nil）回 A4 —— 舊筆記沒有這個欄位，而它們全部
+    /// 都是用 A4 的座標寫的。回一個零尺寸的頁面會讓畫布整個消失。
+    public static func size(forFormat id: String?) -> CGSize {
+        guard let id, !id.isEmpty else { return defaultSize }
+        let format = pageFormat(id: id)
+        return CGSize(width: CGFloat(format.width), height: CGFloat(format.height))
+    }
+
+    /// 目前螢幕上這一本筆記的頁面尺寸。
+    ///
+    /// # 為什麼需要一個「目前」
+    ///
+    /// 頁面尺寸變成**每本筆記各自的設定**之後，畫布、分頁計算、縮圖與匯出
+    /// 這四條路都要拿到同一個值。其中分頁計算（`PageRepagination`）與縮圖
+    /// 是純函式，手上沒有筆記本 —— 把筆記本一路傳進去要改十幾個簽名，
+    /// 而漏掉其中一個的症狀是「這一頁的分頁位置跟別的地方算的不一樣」。
+    ///
+    /// 所以由編輯器在開啟筆記與變更規格時設定一次。**只在主執行緒動**，
+    /// 而且畫面上同時只會有一本筆記在編輯。
+    @MainActor
+    public private(set) static var currentSize: CGSize = defaultSize
+
+    /// 換一本筆記或改了規格時呼叫。
+    @MainActor
+    public static func use(format id: String?) {
+        currentSize = size(forFormat: id)
+    }
+
+    public static var size: CGSize {
+        MainActor.assumeIsolated { currentSize }
+    }
 
     public static var width: CGFloat { size.width }
     public static var height: CGFloat { size.height }
