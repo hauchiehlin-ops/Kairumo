@@ -57,6 +57,24 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         }
     }
 
+    /// 跨平台對照閘門用的識別字（核心 `ffi_screens` 的 `editor.inktools`）。
+    ///
+    /// 寫成 switch 而不是 `"editor.ink.\(rawValue)"`：閘門掃的是原始碼裡的
+    /// 字串字面值，插值組出來的識別字它看不見 —— 那樣工具少一個也不會紅。
+    public var parityIdentifier: String {
+        switch self {
+        case .pen: return "editor.ink.pen"
+        case .ballpoint: return "editor.ink.ballpoint"
+        case .brush: return "editor.ink.brush"
+        case .marker: return "editor.ink.marker"
+        case .highlighter: return "editor.ink.highlighter"
+        case .pencil: return "editor.ink.pencil"
+        case .watercolor: return "editor.ink.watercolor"
+        case .eraser: return "editor.ink.eraser"
+        case .lasso: return "editor.ink.lasso"
+        }
+    }
+
     public var localizationKey: String {
         switch self {
         case .pen: return "tool_pen"
@@ -1961,6 +1979,7 @@ public struct NotebookEditorView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(localizationManager.localized("home"))
         .help(localizationManager.localized("home"))
+        .accessibilityIdentifier("editor.home")
 
         // 筆記結構側邊欄切換
         Button {
@@ -1976,9 +1995,11 @@ public struct NotebookEditorView: View {
                 .cornerRadius(7)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("editor.sidebar_toggle")
 
         // 模式切換（緊湊圖標）
         editorModeSwitcher(compact: true)
+            .accessibilityIdentifier("editor.mode")
 
         // 筆記標題（彈性縮寫）
         Button {
@@ -1991,6 +2012,7 @@ public struct NotebookEditorView: View {
                 .lineLimit(1)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("editor.title")
 
         Spacer(minLength: 2)
 
@@ -2006,10 +2028,12 @@ public struct NotebookEditorView: View {
                 Image(systemName: "chevron.left.circle")
             }
             .disabled(currentPageIndex <= 0)
+            .accessibilityIdentifier("editor.page.prev")
 
             Text("\(currentPageIndex + 1)/\(max(1, notebook.pageCount))")
                 .font(.system(size: 11, weight: .medium))
                 .foregroundColor(.secondary)
+                .accessibilityIdentifier("editor.page.indicator")
 
             Button {
                 if currentPageIndex < notebook.pageCount - 1 {
@@ -2021,6 +2045,7 @@ public struct NotebookEditorView: View {
                 Image(systemName: "chevron.right.circle")
             }
             .disabled(currentPageIndex >= notebook.pageCount - 1)
+            .accessibilityIdentifier("editor.page.next")
 
             Button {
                 addNewPage()
@@ -2028,6 +2053,7 @@ public struct NotebookEditorView: View {
                 Image(systemName: "plus.square.dashed")
                     .foregroundColor(.accentColor)
             }
+            .accessibilityIdentifier("editor.page.add")
 
             // 整頁／連續切換。放在頁碼旁邊 —— 它改的就是這一組按鈕的意義：
             // 連續模式下上一頁／下一頁變成捲到那一頁，而不是換掉整個畫布。
@@ -2050,6 +2076,7 @@ public struct NotebookEditorView: View {
             .help(localizationManager.localized(
                 pageDisplayMode == .continuous ? "page_mode_continuous" : "page_mode_single"))
             .accessibilityLabel(localizationManager.localized("page_mode"))
+            .accessibilityIdentifier("editor.page.display_mode")
         }
 
         // ⋯ 更多（次要功能收在這裡）
@@ -2058,35 +2085,52 @@ public struct NotebookEditorView: View {
         // 主要動作（首頁、模式、頁碼、錄音、匯出）留在列上，其餘收進選單，
         // 位置固定、不會因為視窗寬度而消失。
         pageFormatMenu
+            .accessibilityIdentifier("editor.page_format")
 
         guidePaletteMenu
+            .accessibilityIdentifier("editor.guide_palette")
 
         Menu {
             Section {
                 Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
+                    .accessibilityIdentifier("editor.insert.assets")
                     Button { showAudioPicker = true } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
+                        .accessibilityIdentifier("editor.insert.audio")
                 Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
+                    .accessibilityIdentifier("editor.insert.image")
                 Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
+                    .accessibilityIdentifier("editor.insert.math")
                 Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
+                    .accessibilityIdentifier("editor.insert.chart")
                 Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
+                    .accessibilityIdentifier("editor.insert.table")
                 Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
+                    .accessibilityIdentifier("editor.insert.shape")
                 Button { showLayerPanel.toggle() } label: { Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d") }
+                    .accessibilityIdentifier("editor.insert.layers")
                 Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
+                    .accessibilityIdentifier("editor.insert.model3d")
                 Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
+                    .accessibilityIdentifier("editor.insert.theme_tools")
             } header: {
                 Text(localizationManager.localized("insert_object"))
             }
 
             Section {
                 Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
+                    .accessibilityIdentifier("editor.insert.refine_sketch")
                 Button { withAnimation { isPlacingCommentPin.toggle() } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
+                    .accessibilityIdentifier("editor.insert.comment_pin")
                 Button { showCollaborationSheet = true } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }
+                    .accessibilityIdentifier("editor.insert.collaborate")
                 Button { recognizeHandwritingOnCurrentPage() } label: {
                     Label(localizationManager.localized("recognize_handwriting"), systemImage: "text.viewfinder")
                 }
+                .accessibilityIdentifier("editor.insert.recognize")
                 Button { showNoteIntelligence = true } label: {
                     Label(localizationManager.localized("ai_summary"), systemImage: "sparkles")
                 }
+                .accessibilityIdentifier("editor.insert.ai_summary")
             }
         } label: {
             Image(systemName: "ellipsis.circle.fill")
@@ -2099,6 +2143,7 @@ public struct NotebookEditorView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(localizationManager.localized("more_tools"))
         .help(localizationManager.localized("more_tools"))
+        .accessibilityIdentifier("editor.more")
 
         // 錄音
         if audioManager.status == .recording {
@@ -2112,6 +2157,7 @@ public struct NotebookEditorView: View {
                     .background(Color.red.opacity(0.15))
                     .cornerRadius(6)
             }
+            .accessibilityIdentifier("editor.record")
         } else {
             Button {
                 Task {
@@ -2125,15 +2171,20 @@ public struct NotebookEditorView: View {
                     .background(Color(uiColor: .tertiarySystemGroupedBackground))
                     .cornerRadius(6)
             }
+            .accessibilityIdentifier("editor.record")
         }
 
         // 匯出功能選單
         Menu {
             Button { exportAsPdf() } label: { Label(localizationManager.localized("export_pdf"), systemImage: "doc.text.fill") }
+                .accessibilityIdentifier("editor.export.pdf")
             Button { exportAsPngImage() } label: { Label(localizationManager.localized("export_image"), systemImage: "photo") }
+                .accessibilityIdentifier("editor.export.image")
             Button { printCurrentNotebook() } label: { Label(localizationManager.localized("print_note"), systemImage: "printer.fill") }
+                .accessibilityIdentifier("editor.export.print")
             Divider()
             Button { shareNotebookFile() } label: { Label(localizationManager.localized("share_note"), systemImage: "square.and.arrow.up") }
+                .accessibilityIdentifier("editor.export.share")
         } label: {
             Image(systemName: "square.and.arrow.up")
                 .font(.system(size: 12, weight: .semibold))
@@ -2143,6 +2194,7 @@ public struct NotebookEditorView: View {
                 .cornerRadius(6)
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("editor.share")
     }
 
     /// 寬度足夠時自動展開結構欄（只做一次，之後尊重使用者自己的開關）。
@@ -2640,6 +2692,7 @@ ZStack(alignment: .topTrailing) {
                 },
                 onPenControl: applyPenControl
             )
+            .accessibilityIdentifier("editor.canvas")
             // 從別的 App 把圖拖進來（工作項 S-68）。
             //
             // 掛在畫布上而不是整個編輯器：落點要能換算成頁面座標，
@@ -3226,8 +3279,12 @@ ZStack(alignment: .topTrailing) {
                 }
 
                 Picker("", selection: sidebarTabBinding) {
-                    Text(localizationManager.localized("structure_pages")).tag(SidebarTabMode.pages)
-                    Text(localizationManager.localized("structure_folders")).tag(SidebarTabMode.folders)
+                    Text(localizationManager.localized("structure_pages"))
+                        .tag(SidebarTabMode.pages)
+                        .accessibilityIdentifier("editor.sidebar.tab.pages")
+                    Text(localizationManager.localized("structure_folders"))
+                        .tag(SidebarTabMode.folders)
+                        .accessibilityIdentifier("editor.sidebar.tab.folders")
                 }
                 .pickerStyle(.segmented)
             }
@@ -3239,8 +3296,10 @@ ZStack(alignment: .topTrailing) {
 
             if sidebarTab == .pages {
                 pagesStructureView
+                    .accessibilityIdentifier("editor.sidebar.list")
             } else {
                 foldersStructureView
+                    .accessibilityIdentifier("editor.sidebar.list")
             }
         }
         .background(Color(uiColor: .secondarySystemGroupedBackground))
@@ -3737,6 +3796,7 @@ ZStack(alignment: .topTrailing) {
             .disabled(pageThumbnailWidth <= 120)
             .accessibilityLabel(localizationManager.localized("thumbnail_smaller"))
             .help(localizationManager.localized("thumbnail_smaller"))
+            .accessibilityIdentifier("editor.sidebar.thumb_smaller")
 
             Text("\(Int(effectiveThumbnailWidth))")
                 .font(.system(size: 10))
@@ -3765,6 +3825,7 @@ ZStack(alignment: .topTrailing) {
             .disabled(pageThumbnailWidth >= 480)
             .accessibilityLabel(localizationManager.localized("thumbnail_larger"))
             .help(localizationManager.localized("thumbnail_larger"))
+            .accessibilityIdentifier("editor.sidebar.thumb_larger")
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
@@ -4316,6 +4377,7 @@ ZStack(alignment: .topTrailing) {
                     // 那時整排都是純圖示。
                     .accessibilityLabel(localizationManager.localized(tool.localizationKey))
                     .accessibilityAddTraits(selectedTool == tool ? [.isSelected] : [])
+                    .accessibilityIdentifier(tool.parityIdentifier)
                 }
 
                 ToolbarSeparator()
@@ -4343,6 +4405,7 @@ ZStack(alignment: .topTrailing) {
                     .buttonStyle(.plain)
                     .accessibilityLabel(localizationManager.localized(tool.localizationKey))
                     .accessibilityAddTraits(selectedTool == tool ? [.isSelected] : [])
+                    .accessibilityIdentifier(tool.parityIdentifier)
                 }
 
                 ToolbarSeparator()
@@ -4374,6 +4437,7 @@ ZStack(alignment: .topTrailing) {
                         tool: selectedTool,
                         color: selectedColor
                     )
+                    .accessibilityIdentifier("editor.ink.width")
                 }
 
                 ToolbarSeparator()
@@ -4433,6 +4497,8 @@ ZStack(alignment: .topTrailing) {
                     .accessibilityLabel(localizationManager.localized("pro_color"))
                     .help(localizationManager.localized("pro_color"))
                 }
+                // 整組色票 + 進階色盤是同一個控制項（選顏色），識別字掛在群組上。
+                .accessibilityIdentifier("editor.ink.palette")
 
                 // 若為套索選取工具，即時展開剪下、複製與刪除選取筆劃按鈕
                 if selectedTool == .lasso {
@@ -4483,6 +4549,7 @@ ZStack(alignment: .topTrailing) {
                     }
                     .accessibilityLabel(localizationManager.localized("undo"))
                     .help(localizationManager.localized("undo"))
+                    .accessibilityIdentifier("editor.ink.undo")
 
                     Button {
                         canvasView?.undoManager?.redo()
@@ -4493,6 +4560,7 @@ ZStack(alignment: .topTrailing) {
                     }
                     .accessibilityLabel(localizationManager.localized("redo"))
                     .help(localizationManager.localized("redo"))
+                    .accessibilityIdentifier("editor.ink.redo")
 
                     // 「清空整頁」與復原／重做之間要有分隔（工作項 S-62）。
                     //
@@ -4513,6 +4581,7 @@ ZStack(alignment: .topTrailing) {
                     }
                     .accessibilityLabel(localizationManager.localized("clear_page"))
                     .help(localizationManager.localized("clear_page"))
+                    .accessibilityIdentifier("editor.ink.clear")
                 }
     }
 
@@ -4570,6 +4639,7 @@ ZStack(alignment: .topTrailing) {
                 .buttonStyle(.plain)
                 .accessibilityLabel(localizationManager.localized("word_studio"))
                 .help(localizationManager.localized("word_studio"))
+                .accessibilityIdentifier("editor.text.studio")
 
                 Divider().frame(height: 22)
 
@@ -4603,6 +4673,7 @@ ZStack(alignment: .topTrailing) {
                         Image(systemName: "star.bubble")
                             .font(.system(size: 14))
                         Text(localizationManager.localized("special_symbols"))
+                            .accessibilityIdentifier("editor.text.symbols")
                             .font(.system(size: 11))
                         Image(systemName: "chevron.down")
                             .font(.system(size: 9))
@@ -4625,6 +4696,7 @@ ZStack(alignment: .topTrailing) {
                         Image(systemName: "square.dashed")
                             .font(.system(size: 14))
                         Text(localizationManager.localized("marquee_select"))
+                            .accessibilityIdentifier("editor.text.select")
                             .font(.system(size: 11))
                     }
                     .foregroundColor(isMarqueeActive ? .white : .primary)
@@ -4656,6 +4728,7 @@ ZStack(alignment: .topTrailing) {
                 .buttonStyle(.plain)
                 .accessibilityLabel(localizationManager.localized("insert_link"))
                 .help(localizationManager.localized("insert_link"))
+                .accessibilityIdentifier("editor.text.link")
 
 
                 // 「延長本頁」已移除：頁面高度固定（PageGeometry），
@@ -4674,6 +4747,7 @@ ZStack(alignment: .topTrailing) {
                     }
                     .accessibilityLabel(localizationManager.localized("undo"))
                     .help(localizationManager.localized("undo"))
+                    .accessibilityIdentifier("editor.text.undo")
 
                     Button {
                         canvasView?.undoManager?.redo()
@@ -4684,6 +4758,7 @@ ZStack(alignment: .topTrailing) {
                     }
                     .accessibilityLabel(localizationManager.localized("redo"))
                     .help(localizationManager.localized("redo"))
+                    .accessibilityIdentifier("editor.text.redo")
                 }
     }
 

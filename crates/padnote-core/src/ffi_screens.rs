@@ -304,7 +304,8 @@ fn editor_spec() -> FfiScreenSpec {
         id: "editor".to_string(),
         title_key: "notebook".to_string(),
         sections: vec![
-            // 頂列：左到右。
+            // 頂列：左到右，照 Apple 緊湊模式的實際順序。
+            // （寬螢幕是同一組項目攤開，不是另一組功能。）
             section(
                 "editor.topbar",
                 "",
@@ -315,31 +316,64 @@ fn editor_spec() -> FfiScreenSpec {
                         c("editor.system_back", Button, "back"),
                         FfiPlatforms::AndroidOnly,
                     ),
-                    c("editor.back", Button, "back"),
                     c("editor.home", Button, "home"),
                     c("editor.sidebar_toggle", Button, "page_structure"),
-                    c("editor.mode.draw", Button, "handwriting_mode"),
-                    c("editor.mode.type", Button, "typing_mode"),
-                    c("editor.title", Field, "note_title"),
+                    c("editor.mode", Picker, "editor_mode"),
+                    c("editor.title", Button, "note_title"),
                     c("editor.page.prev", Button, "previous_page"),
                     c("editor.page.indicator", Label, ""),
                     c("editor.page.next", Button, "next_page"),
-                    c("editor.insert", Button, "insert"),
+                    c("editor.page.add", Button, "add_page"),
+                    c("editor.page.display_mode", Button, "page_mode"),
                     c("editor.page_format", Picker, "page_format"),
                     c("editor.guide_palette", Picker, "guide_palette"),
-                    c("editor.more", Button, "more"),
+                    c("editor.more", Button, "more_tools"),
                     c("editor.record", Button, "start_recording"),
                     c("editor.share", Button, "export_and_print"),
                 ],
             ),
-            // 第二排：手寫模式。
+            // 插入選單。十三項在 TODO 的落差盤點裡已記為「兩端都有」，
+            // 這裡把它固定下來，之後誰多加一項都逃不過閘門。
+            section(
+                "editor.insert",
+                "insert_object",
+                vec![
+                    c("editor.insert.assets", Button, "asset_library"),
+                    c("editor.insert.audio", Button, "insert_audio"),
+                    c("editor.insert.image", Button, "insert_image"),
+                    c("editor.insert.math", Button, "math_calc"),
+                    c("editor.insert.chart", Button, "chart_studio"),
+                    c("editor.insert.table", Button, "table_studio"),
+                    c("editor.insert.shape", Button, "shape_studio"),
+                    c("editor.insert.layers", Button, "layers_panel"),
+                    c("editor.insert.model3d", Button, "insert_3d"),
+                    c("editor.insert.theme_tools", Button, "theme_tools"),
+                    c("editor.insert.refine_sketch", Button, "refine_sketch"),
+                    c("editor.insert.comment_pin", Button, "add_comment_pin"),
+                    c("editor.insert.collaborate", Button, "collaborate"),
+                    c("editor.insert.recognize", Button, "recognize_handwriting"),
+                    c("editor.insert.ai_summary", Button, "ai_summary"),
+                ],
+            ),
+            section(
+                "editor.export",
+                "export_and_print",
+                vec![
+                    c("editor.export.pdf", Button, "export_pdf"),
+                    c("editor.export.image", Button, "export_image"),
+                    c("editor.export.print", Button, "print_note"),
+                    c("editor.export.share", Button, "share_note"),
+                ],
+            ),
+            // 第二排：手寫模式。九個工具的順序與 `EditorToolType` 一致。
             section(
                 "editor.inktools",
                 "",
                 vec![
                     c("editor.ink.pen", Button, "tool_pen"),
+                    c("editor.ink.ballpoint", Button, "tool_ballpoint"),
                     c("editor.ink.brush", Button, "tool_brush"),
-                    c("editor.ink.fountain", Button, "tool_fountain_pen"),
+                    c("editor.ink.marker", Button, "tool_marker"),
                     c("editor.ink.highlighter", Button, "tool_highlighter"),
                     c("editor.ink.pencil", Button, "tool_pencil"),
                     c("editor.ink.watercolor", Button, "tool_watercolor"),
@@ -369,10 +403,9 @@ fn editor_spec() -> FfiScreenSpec {
                 "editor.sidebar",
                 "page_structure",
                 vec![
-                    c("editor.sidebar.tab.pages", Button, "pages"),
-                    c("editor.sidebar.tab.folders", Button, "folders"),
+                    c("editor.sidebar.tab.pages", Button, "structure_pages"),
+                    c("editor.sidebar.tab.folders", Button, "structure_folders"),
                     c("editor.sidebar.list", List, ""),
-                    c("editor.sidebar.add_page", Button, "add_page"),
                     c("editor.sidebar.thumb_smaller", Button, "thumbnail_smaller"),
                     c("editor.sidebar.thumb_larger", Button, "thumbnail_larger"),
                 ],

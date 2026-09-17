@@ -26,6 +26,9 @@ Android 沒有跟上**。
 用法：
     python3 scripts/check-screen-parity.py             # 檢查
     python3 scripts/check-screen-parity.py --update-baseline   # 只允許縮小
+    python3 scripts/check-screen-parity.py --update-baseline --accept-new
+                                    # 規格自己長大時（把 Apple 既有的控制項
+                                    # 補進規格），明講一聲才准變長
 """
 
 from __future__ import annotations
@@ -68,10 +71,29 @@ def identifiers(root: Path, patterns: list[str], suffix: str) -> set[str]:
     return found
 
 
+# 有些控制項不是視圖，掛不上識別字 —— Android 的系統返回鍵
+# （`BackHandler`）就是。那種情況用一行 `// parity: <id>` 註解宣告，
+# 它一樣進得了對照，而且在原始碼裡看得見「這一項是刻意對到規格的哪一條」。
+PARITY_COMMENT = r'//\s*parity:\s*([\w.]+)'
+
+# 用 ForEach / for 迴圈畫出來的一整組控制項（九支筆、六個配色…）不會有
+# 十五行 `testTag("…")`，而是一張對照表：Swift 的 `case .pen: return "…"`、
+# Kotlin 的 `Tool.PEN -> "…"`。那些字面值也算數 —— 不算的話，
+# 為了通過閘門就得把迴圈拆成十五段複製貼上的程式碼。
+# 識別字不一定寫在 `accessibilityIdentifier(...)` 裡：一整組控制項常常是
+# 一張對照表（Swift 的 `case .pen: return "…"`、Kotlin 的 `PEN -> "…"`），
+# 或是傳給共用版型的一個參數（`identifier: "home.action.record"`）。
+# 那些都算數 —— 不算的話，為了通過閘門就得把迴圈拆成十五段複製貼上。
+#
+# 這一條掃的是**任何長得像規格 id 的字串字面值**，再與規格取交集。
+# 交集之外的字面值（`kairumo.app.language` 之類）不會有任何作用。
+IDENTIFIER_TABLE = [r'"([a-z][A-Za-z0-9_]*(?:\.[a-z][A-Za-z0-9_]*)+)"']
+
+
 def apple_ids() -> set[str]:
     return identifiers(
         APPLE_SOURCES,
-        [r'accessibilityIdentifier\(\s*"([^"]+)"\s*\)'],
+        [r'accessibilityIdentifier\(\s*"([^"]+)"\s*\)', PARITY_COMMENT, *IDENTIFIER_TABLE],
         ".swift",
     )
 
@@ -79,7 +101,7 @@ def apple_ids() -> set[str]:
 def android_ids() -> set[str]:
     return identifiers(
         ANDROID_SOURCES,
-        [r'testTag\(\s*"([^"]+)"\s*\)'],
+        [r'testTag\(\s*"([^"]+)"\s*\)', PARITY_COMMENT, *IDENTIFIER_TABLE],
         ".kt",
     )
 
@@ -105,6 +127,9 @@ def load_baseline() -> dict[str, list[str]]:
 
 def main() -> int:
     update = "--update-baseline" in sys.argv
+    # 規格**本身**長大時（把 Apple 既有但還沒寫進規格的控制項補進來），
+    # 缺口清單當然會變長。那不是退步，但也不該悄悄發生 —— 要明講。
+    accept_new = "--accept-new" in sys.argv
     screens = spec()
     present = {"apple": apple_ids(), "android": android_ids()}
     base = load_baseline()
@@ -123,11 +148,15 @@ def main() -> int:
         for platform in ("apple", "android"):
             new = [m for m in missing[platform] if m not in base.get(platform, [])]
             grew.extend(f"{platform}: {m}" for m in new)
-        if grew and not seeding:
+        if grew and not seeding and not accept_new:
             print("❌ baseline 只能縮小。這些是新出現的缺口，請補上而不是寫進 baseline：")
             for line in grew:
                 print(f"   {line}")
             return 1
+        if grew and accept_new:
+            print(f"⚠️  規格新增了 {len(grew)} 項尚未實作的控制項（--accept-new）：")
+            for line in grew[:20]:
+                print(f"   {line}")
         BASELINE.parent.mkdir(parents=True, exist_ok=True)
         BASELINE.write_text(
             json.dumps(missing, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

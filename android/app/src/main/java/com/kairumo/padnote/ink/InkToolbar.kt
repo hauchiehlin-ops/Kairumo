@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.semantics.contentDescription
@@ -62,6 +63,24 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
      * Apple 端也是放在同一列工具裡。
      */
     LASSO(null, "tool_lasso");
+
+    /**
+     * 跨平台對照閘門用的識別字（核心 `ffi_screens` 的 `editor.inktools`）。
+     *
+     * **少的三支是真的少**：Apple 端還有毛筆、麥克筆與水彩（PencilKit 的
+     * 墨水類型），核心的 `ToolKind` 只有四種筆刷，Android 畫不出那三種。
+     * 那不是漏掉識別字，是功能還沒有 —— 所以它們留在閘門的 baseline 裡，
+     * 見 docs/android-parity-plan.md 階段 3。
+     */
+    val parityIdentifier: String
+        get() = when (this) {
+            FOUNTAIN_PEN -> "editor.ink.pen"
+            BALLPOINT -> "editor.ink.ballpoint"
+            HIGHLIGHTER -> "editor.ink.highlighter"
+            PENCIL -> "editor.ink.pencil"
+            ERASER -> "editor.ink.eraser"
+            LASSO -> "editor.ink.lasso"
+        }
 
     /** 擦除模式。**套索不算** —— 兩者都沒有 `kind`，但行為完全不同。 */
     val isEraser: Boolean get() = this == ERASER
@@ -126,7 +145,8 @@ fun InkToolbar(
             FilterChip(
                 selected = tool == option,
                 onClick = { onToolChange(option) },
-                label = { Text(LocalizationStrings.localized(option.labelKey, languageTag)) }
+                label = { Text(LocalizationStrings.localized(option.labelKey, languageTag)) },
+                modifier = Modifier.testTag(option.parityIdentifier)
             )
         }
 
@@ -138,7 +158,10 @@ fun InkToolbar(
             // 原本它們是與筆刷晶片並列的獨立子項，於是 FlowRow 會把前幾顆
             // 塞進上一排的空隙、剩下的換行 —— 同一組顏色被拆在兩排，
             // 看起來不像一組。整組一起換行才讀得出「這是調色盤」。
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.testTag("editor.ink.palette")
+            ) {
             for ((hex, color, nameKey) in inkPalette) {
                 val selected = colorHex == hex
                 // 色票畫在「紙」上（工作項 S-64）。
@@ -181,7 +204,7 @@ fun InkToolbar(
             value = width,
             onValueChange = onWidthChange,
             valueRange = inkWidthRange,
-            modifier = Modifier.size(width = 120.dp, height = 32.dp)
+            modifier = Modifier.size(width = 120.dp, height = 32.dp).testTag("editor.ink.width")
         )
         // 預覽點：數字不會告訴使用者「8pt 有多粗」。
         Box(

@@ -75,6 +75,7 @@ import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.testTag
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.ui.geometry.Offset
@@ -1443,6 +1444,9 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
     // 系統返回鍵＝回首頁。Android 使用者按的第一個東西就是它，
     // 不接的話按下去會直接把 App 關掉 —— 看起來像當掉。
     if (onBack != null) {
+        // 系統返回鍵。Android 專有（規格裡標成 AndroidOnly）——
+        // 沒有它的話，使用者按下返回鍵會直接離開 App 而不是回到首頁。
+        // parity: editor.system_back
         androidx.activity.compose.BackHandler { onBack() }
     }
     var showMenu by remember { mutableStateOf(false) }
@@ -1480,11 +1484,15 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             // 回首頁。沒有這顆的話，進了筆記就出不來了 ——
             // Android 的系統返回鍵在單一 Compose 畫面裡不會有任何作用。
             if (onBack != null) {
-                TextButton(onClick = onBack) { Text("‹ ${l10n("back_to_home")}") }
+                TextButton(
+                    onClick = onBack,
+                    modifier = Modifier.testTag("editor.home")
+                ) { Text("‹ ${l10n("back_to_home")}") }
             }
             // 手寫／打字切換。與 Apple 端一樣放在最前面 ——
             // 它決定了其餘每一個工具的意義。
             FilterChip(
+                modifier = Modifier.testTag("editor.mode"),
                 selected = editorMode == EditorMode.DRAW,
                 onClick = {
                     editorMode = EditorMode.DRAW
@@ -1505,7 +1513,10 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             )
 
             // 頁面結構欄的開關。Apple 端工具列上就有這一顆。
-            TextButton(onClick = { showPageSidebar = !showPageSidebar }) {
+            TextButton(
+                onClick = { showPageSidebar = !showPageSidebar },
+                modifier = Modifier.testTag("editor.sidebar_toggle")
+            ) {
                 Text(
                     l10n("structure_pages"),
                     style = MaterialTheme.typography.labelSmall,
@@ -1520,18 +1531,20 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             // 分頁導覽。與 Apple 端同一組：上一頁 · 頁碼 · 下一頁 · 新增。
             TextButton(
                 onClick = { if (pageIndex > 0) pageIndex-- },
-                enabled = pageIndex > 0
+                enabled = pageIndex > 0,
+                modifier = Modifier.testTag("editor.page.prev")
             ) { Text("‹") }
             Text(
                 "${pageIndex + 1}/${maxOf(1, pageCount)}",
                 style = MaterialTheme.typography.labelMedium,
-                modifier = Modifier.padding(top = 14.dp)
+                modifier = Modifier.padding(top = 14.dp).testTag("editor.page.indicator")
             )
             TextButton(
                 onClick = { if (pageIndex < pageCount - 1) pageIndex++ },
-                enabled = pageIndex < pageCount - 1
+                enabled = pageIndex < pageCount - 1,
+                modifier = Modifier.testTag("editor.page.next")
             ) { Text("›") }
-            TextButton(onClick = {
+            TextButton(modifier = Modifier.testTag("editor.page.display_mode"), onClick = {
                 pageDisplayMode = if (pageDisplayMode == PageDisplayMode.CONTINUOUS) {
                     PageDisplayMode.SINGLE
                 } else {
@@ -1548,7 +1561,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                     style = MaterialTheme.typography.labelSmall
                 )
             }
-            TextButton(onClick = {
+            TextButton(modifier = Modifier.testTag("editor.page.add"), onClick = {
                 val session = notebook?.first
                 if (session != null) {
                     runCatching { session.addPage(uniffi.padnote_core.PageStyle.BLANK) }
@@ -1560,11 +1573,15 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
             }) { Text("+") }
 
             // FlowRow 裡沒有 weight 可以撐開，靠換行自然排就好。
-            TextButton(onClick = { showMenu = true }) { Text("⋯") }
+            TextButton(
+                onClick = { showMenu = true },
+                modifier = Modifier.testTag("editor.more")
+            ) { Text("⋯") }
 
             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                 DropdownMenuItem(
                     text = { Text(l10n("ink_clear")) },
+                    modifier = Modifier.testTag("editor.ink.clear"),
                     onClick = {
                         showMenu = false
                         engine.reset()
@@ -1594,6 +1611,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 Divider()
                 DropdownMenuItem(
                     text = { Text(l10n("export_pdf")) },
+                    modifier = Modifier.testTag("editor.export.pdf"),
                     onClick = {
                         showMenu = false
                         message = exportAndShare(activity, notebook?.first, Exporter.Format.PDF)
@@ -1601,6 +1619,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("export_image")) },
+                    modifier = Modifier.testTag("editor.export.image"),
                     onClick = {
                         showMenu = false
                         message = exportAndShare(activity, notebook?.first, Exporter.Format.PNG)
@@ -1615,6 +1634,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("print_note")) },
+                    modifier = Modifier.testTag("editor.export.print"),
                     onClick = {
                         showMenu = false
                         val session = notebook?.first ?: return@DropdownMenuItem
@@ -1625,6 +1645,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 Divider()
                 DropdownMenuItem(
                     text = { Text(l10n("add_comment_pin")) },
+                    modifier = Modifier.testTag("editor.insert.comment_pin"),
                     onClick = {
                         showMenu = false
                         val profile = AccountManager.load(activity, l10n("default_user_name"))
@@ -1652,36 +1673,44 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("math_calc")) },
+                    modifier = Modifier.testTag("editor.insert.math"),
                     onClick = { showMenu = false; showCalculator = true }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("layers_panel")) },
+                    modifier = Modifier.testTag("editor.insert.layers"),
                     onClick = { showMenu = false; showStackPanel = true }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("refine_sketch")) },
+                    modifier = Modifier.testTag("editor.insert.refine_sketch"),
                     onClick = { showMenu = false; showRefineBar = true }
                 )
                 // 摘要與待辦（工作項 S-20）。核心的 `llm_summarize` 早就在
                 // FFI 上，缺的一直是這一顆按鈕。
                 DropdownMenuItem(
                     text = { Text(l10n("ai_summary")) },
+                    modifier = Modifier.testTag("editor.insert.ai_summary"),
                     onClick = { showMenu = false; showNoteIntelligence = true }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("theme_tools")) },
+                    modifier = Modifier.testTag("editor.insert.theme_tools"),
                     onClick = { showMenu = false; showThemeTools = true }
                 )
                 DropdownMenuItem(
-                    text = { Text(l10n("model3d_studio")) },
+                    text = { Text(l10n("insert_3d")) },
+                    modifier = Modifier.testTag("editor.insert.model3d"),
                     onClick = { showMenu = false; insertingModel3D = true }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("asset_library")) },
+                    modifier = Modifier.testTag("editor.insert.assets"),
                     onClick = { showMenu = false; showAssetLibrary = true }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("collaborate")) },
+                    modifier = Modifier.testTag("editor.insert.collaborate"),
                     onClick = { showMenu = false; showCollaboration = true }
                 )
                 DropdownMenuItem(
@@ -1736,6 +1765,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("insert_image")) },
+                    modifier = Modifier.testTag("editor.insert.image"),
                     onClick = { showMenu = false; imagePicker.launch(arrayOf("image/*")) }
                 )
                 DropdownMenuItem(
@@ -1744,6 +1774,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("insert_audio")) },
+                    modifier = Modifier.testTag("editor.insert.audio"),
                     onClick = { showMenu = false; insertingAudio = true }
                 )
                 DropdownMenuItem(
@@ -1771,14 +1802,17 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("chart_studio")) },
+                    modifier = Modifier.testTag("editor.insert.chart"),
                     onClick = { showMenu = false; insertingChart = true }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("table_studio")) },
+                    modifier = Modifier.testTag("editor.insert.table"),
                     onClick = { showMenu = false; insertingTable = true }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("shape_studio")) },
+                    modifier = Modifier.testTag("editor.insert.shape"),
                     onClick = { showMenu = false; insertingShape = true }
                 )
                 DropdownMenuItem(
@@ -1814,6 +1848,7 @@ private fun InkScreen(notebookId: String? = null, onBack: (() -> Unit)? = null) 
                 Divider()
                 DropdownMenuItem(
                     text = { Text(l10n("recognize_handwriting")) },
+                    modifier = Modifier.testTag("editor.insert.recognize"),
                     onClick = {
                         showMenu = false
                         val session = notebook?.first
