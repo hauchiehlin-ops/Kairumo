@@ -27,7 +27,9 @@ git -C "$REPO_ROOT" add -- \
     "${REPO_ROOT}/android/app/build.gradle.kts" \
     "${REPO_ROOT}/docs/manual/manual.js" \
     "${REPO_ROOT}/docs/legal/privacy.html" \
-    "${REPO_ROOT}/apple/Resources/Docs"
+    "${REPO_ROOT}/apple/Resources/Docs" \
+    "${REPO_ROOT}/apple/Resources/Templates" \
+    "${REPO_ROOT}/templates/document-templates.json"
 
 if git -C "$REPO_ROOT" diff --cached --quiet; then
     echo "   （版本相關檔案沒有改動，不建立 commit）"

@@ -391,7 +391,17 @@ if problems:
 print("✅ 版本號已在 Cargo.toml / project.yml / project.pbxproj / build.gradle.kts / 使用者文件 全數對齊")
 ' "$CARGO_TOML" "$APPLE_PROJECT_YML" "$APPLE_PBXPROJ" "$ANDROID_GRADLE" "$DOC_MANUAL" "$DOC_PRIVACY" "$NEW_VERSION" "$NEW_BUNDLE_VERSION"
 
-# 7. 同步更新 Cargo.lock
+# 7. 把更新後的使用者文件同步進 App 的資源目錄
+#
+# docs/ 底下的手冊與隱私權政策剛剛被寫進了新版本號，但 App 打包用的是
+# apple/Resources/Docs 的副本。不在這裡一起同步的話，副本要等到打包時才被
+# 覆寫，於是那兩個檔案以「未提交的改動」留在工作目錄裡 —— 發版 commit 少了
+# 它們，而下一次發版的「工作目錄必須乾淨」閘門會被自己上一次的發版擋下來
+# （v3.10.0 實際踩過）。release-commit.sh 本來就會把這個目錄一起提交。
+echo "📄 同步使用者文件至 App 資源目錄..."
+"${SCRIPT_DIR}/sync-docs.sh" >/dev/null
+
+# 8. 同步更新 Cargo.lock
 echo "🔄 同步 Cargo.lock..."
 (cd "$REPO_ROOT" && cargo check --workspace --quiet 2>/dev/null || true)
 
