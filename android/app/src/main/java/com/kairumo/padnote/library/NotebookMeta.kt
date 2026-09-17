@@ -99,6 +99,16 @@ class NotebookMeta private constructor(private val root: JSONObject) {
     }
 
     /**
+     * 版面配色（S-93）。整本一個調子，與 Apple 的 `guidePaletteId` 同一個欄位。
+     *
+     * 這份中繼資料會跟著同步走，所以鍵名不能自己取一個。
+     */
+    fun setPaletteId(session: PadnoteSession?, paletteId: String) {
+        root.put(KEY_PALETTE, paletteId)
+        runCatching { session?.setNotebookMeta(root.toString()) }
+    }
+
+    /**
      * 某一頁的物件堆疊順序（由後到前）。
      *
      * 沒有逐頁資料時退回 v3.8.0 的舊欄位 —— 與 Apple 端同一條規則。

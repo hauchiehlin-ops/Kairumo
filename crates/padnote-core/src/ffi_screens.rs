@@ -455,7 +455,7 @@ fn new_notebook_spec() -> FfiScreenSpec {
                 "new_notebook.document",
                 "document_template",
                 vec![
-                    c("new_notebook.document.current", Label, "template_in_use"),
+                    c("new_notebook.document.current", Label, "doc_template"),
                     c("new_notebook.document.tree", List, ""),
                 ],
             ),

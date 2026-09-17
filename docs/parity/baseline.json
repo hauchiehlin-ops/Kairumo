@@ -1,14 +1,5 @@
 {
-  "apple": [
-    "new_notebook.cancel",
-    "new_notebook.confirm",
-    "new_notebook.document.current",
-    "new_notebook.document.tree",
-    "new_notebook.palette",
-    "new_notebook.paper.list",
-    "new_notebook.paper.themes",
-    "new_notebook.title.field"
-  ],
+  "apple": [],
   "android": [
     "editor.export.share",
     "editor.guide_palette",
@@ -27,14 +18,6 @@
     "editor.text.redo",
     "editor.text.symbols",
     "editor.text.undo",
-    "editor.title",
-    "new_notebook.cancel",
-    "new_notebook.confirm",
-    "new_notebook.document.current",
-    "new_notebook.document.tree",
-    "new_notebook.palette",
-    "new_notebook.paper.list",
-    "new_notebook.paper.themes",
-    "new_notebook.title.field"
+    "editor.title"
   ]
 }

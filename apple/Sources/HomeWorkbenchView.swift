@@ -1778,6 +1778,7 @@ public struct HomeWorkbenchView: View {
             Form {
                 Section(localizationManager.localized("note_title")) {
                     TextField(localizationManager.localized("note_title"), text: $newNoteTitle)
+                        .accessibilityIdentifier("new_notebook.title.field")
                 }
 
                 paperSection
@@ -1801,6 +1802,7 @@ public struct HomeWorkbenchView: View {
                     Button(localizationManager.localized("cancel")) {
                         showNewNotebookSheet = false
                     }
+                    .accessibilityIdentifier("new_notebook.cancel")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(localizationManager.localized("confirm")) {
@@ -1837,6 +1839,7 @@ public struct HomeWorkbenchView: View {
                         selectedNotebookForEditing = created
                     }
                     .fontWeight(.bold)
+                    .accessibilityIdentifier("new_notebook.confirm")
                 }
             }
         }
@@ -1895,6 +1898,7 @@ public struct HomeWorkbenchView: View {
         .padding(.vertical, 4)
         .padding(.horizontal, 2)
         .disabled(paperIsLockedByDocument)
+        .accessibilityIdentifier("new_notebook.paper.themes")
     }
 
     private func themeChip(_ theme: FfiPaperTheme) -> some View {
@@ -1928,6 +1932,7 @@ public struct HomeWorkbenchView: View {
 
             ForEach(paperTemplatesForTheme(theme: selectedNewNoteCategory), id: \.id) { paper in
                 paperRow(paper)
+                    .accessibilityIdentifier("new_notebook.paper.list")
             }
 
             paperContentPicker
@@ -1983,6 +1988,7 @@ public struct HomeWorkbenchView: View {
             Text(localizationManager.localized("guide_palette"))
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .accessibilityIdentifier("new_notebook.palette")
             HStack(spacing: 10) {
                 ForEach(guidePalettes(), id: \.id) { palette in
                     let isActive = (newNotePaletteId == palette.id)
@@ -2125,6 +2131,7 @@ public struct HomeWorkbenchView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(localizationManager.localized("doc_template"))
                         .font(.headline)
+                        .accessibilityIdentifier("new_notebook.document.current")
                     Text(selectedDocTemplateName)
                         .font(.caption2)
                         .foregroundColor(.secondary)
@@ -2161,6 +2168,7 @@ public struct HomeWorkbenchView: View {
                             .padding(.top, 4)
                         ForEach(category.templates) { tmpl in
                             documentTemplateRow(tmpl)
+                                .accessibilityIdentifier("new_notebook.document.tree")
                         }
                     }
                 } label: {

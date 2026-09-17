@@ -724,7 +724,7 @@ private fun NotebookHome(
                         ?: DocumentTemplateCatalog.paperTemplate(activity, id)
                 },
             onDismiss = { creatingNotebook = false },
-            onConfirm = { title, templateId, kind, paperId, paperVariant ->
+            onConfirm = { title, templateId, kind, paperId, paperVariant, paletteId ->
                 creatingNotebook = false
                 // 建在使用者當下看著的那一層 —— 一律建在最上層的話，
                 // 人在某個資料夾裡按「新增」，東西卻出現在別的地方。
@@ -740,7 +740,8 @@ private fun NotebookHome(
                     uniffi.padnote_core.docTemplatePaperId(it.pageStyle)
                 } ?: paperId
                 val id = NotebookLibrary.create(
-                    activity, name, device, folderId, style = paper, paperId = chosenPaper
+                    activity, name, device, folderId, style = paper, paperId = chosenPaper,
+                    paletteId = paletteId
                 )
                 if (id != null) {
                     // 選了文件範本就把內容鋪進去。開檔失敗也不擋 ——

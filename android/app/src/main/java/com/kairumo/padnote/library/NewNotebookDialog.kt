@@ -1,6 +1,11 @@
 package com.kairumo.padnote.library
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -30,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
@@ -75,10 +81,14 @@ fun NewNotebookDialog(
         templateId: String?,
         kind: DocumentTemplateCatalog.VariantKind,
         paperId: String,
-        paperVariant: DocumentTemplateCatalog.VariantKind?
+        paperVariant: DocumentTemplateCatalog.VariantKind?,
+        /** 版面配色的 id（核心 `guidePalettes()`）。 */
+        paletteId: String
     ) -> Unit
 ) {
     var title by remember { mutableStateOf("") }
+    // 版面配色。預設是核心清單的第一組（石墨），與 Apple 的預設一致。
+    var paletteId by remember { mutableStateOf(uniffi.padnote_core.guidePalettes().first().id) }
     var selectedId by remember { mutableStateOf<String?>(null) }
     var kind by remember {
         mutableStateOf(DocumentTemplateCatalog.VariantKind.EXAMPLE)
@@ -105,11 +115,17 @@ fun NewNotebookDialog(
         onDismissRequest = onDismiss,
         title = { Text(l("new_notebook")) },
         confirmButton = {
-            TextButton(onClick = {
-                onConfirm(title, selectedId, kind, paperId, paperVariant)
-            }) { Text(l("confirm")) }
+            TextButton(
+                onClick = { onConfirm(title, selectedId, kind, paperId, paperVariant, paletteId) },
+                modifier = Modifier.testTag("new_notebook.confirm")
+            ) { Text(l("confirm")) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(l("cancel")) } },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                modifier = Modifier.testTag("new_notebook.cancel")
+            ) { Text(l("cancel")) }
+        },
         text = {
             Column {
             LazyColumn(
@@ -122,7 +138,7 @@ fun NewNotebookDialog(
                         onValueChange = { title = it },
                         label = { Text(l("note_title")) },
                         singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().testTag("new_notebook.title.field")
                     )
                 }
 
@@ -194,7 +210,7 @@ fun NewNotebookDialog(
                     FlowRow(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(4.dp),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth().testTag("new_notebook.paper.themes")
                     ) {
                         paperThemes.forEach { theme ->
                             val active = paperTheme == theme
@@ -226,6 +242,7 @@ fun NewNotebookDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .testTag("new_notebook.paper.list")
                             .clickable(enabled = !paperLocked) { paperId = paper.id }
                             .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -277,11 +294,74 @@ fun NewNotebookDialog(
                     }
                 }
 
+                // ── 版面配色（S-93）──────────────────────────────
+                //
+                // Android 的畫布早就讀得到也畫得出 `guidePalette`，缺的一直是
+                // 這一排色點 —— 於是 Apple 挑好的顏色同步過來看得到，
+                // 在 Android 上卻改不了。
+                //
+                // 畫顏色本身、名字寫在下面：使用者要挑的是顏色，不是「靛藍」
+                // 這兩個字。與 Apple 的 `paletteRow` 同一個版型。
+                item {
+                    Text(
+                        l("guide_palette"),
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(top = 8.dp).testTag("new_notebook.palette")
+                    )
+                }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        uniffi.padnote_core.guidePalettes().forEach { palette ->
+                            val active = paletteId == palette.id
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clickable { paletteId = palette.id },
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(22.dp)
+                                        .background(
+                                            com.kairumo.padnote.chart.ChartRenderer.parseColor(palette.accentHex)?.let { androidx.compose.ui.graphics.Color(it) }
+                                                ?: MaterialTheme.colorScheme.primary,
+                                            CircleShape
+                                        )
+                                        .then(
+                                            if (active) {
+                                                Modifier.border(
+                                                    2.dp,
+                                                    MaterialTheme.colorScheme.primary,
+                                                    CircleShape
+                                                )
+                                            } else {
+                                                Modifier
+                                            }
+                                        )
+                                )
+                                Text(
+                                    l(palette.nameKey),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = if (active) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurfaceVariant
+                                    },
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                }
+
                 item {
                     Text(
                         l("doc_template_section"),
                         style = MaterialTheme.typography.labelLarge,
-                        modifier = Modifier.padding(top = 8.dp)
+                        modifier = Modifier.padding(top = 8.dp).testTag("new_notebook.document.current")
                     )
                 }
 
@@ -302,6 +382,7 @@ fun NewNotebookDialog(
                 }
 
                 items(themes, key = { it.id }) { theme ->
+                    // parity: new_notebook.document.tree
                     ThemeRow(
                         theme = theme,
                         lang = lang,
