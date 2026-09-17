@@ -27,6 +27,30 @@ object FolderTree {
 
     data class Folder(val id: String, val title: String, val parentId: String?)
 
+    /**
+     * 最上層那一層的顯示名稱。
+     *
+     * **只存在這台裝置上**，與 Apple 的 `NotebookStore.rootFolderName` 同語意：
+     * 它不是一個真的資料夾（最上層沒有對應的索引項目），所以也沒有東西可以同步。
+     * 空的就用語系表裡的「最上層」。
+     */
+    private const val ROOT_NAME_PREF = "kairumo.root_folder_name"
+
+    fun rootName(context: Context, fallback: String): String =
+        context.getSharedPreferences("kairumo", Context.MODE_PRIVATE)
+            .getString(ROOT_NAME_PREF, null)
+            ?.takeIf { it.isNotBlank() }
+            ?: fallback
+
+    fun renameRoot(context: Context, name: String) {
+        val clean = name.trim()
+        if (clean.isEmpty()) return
+        context.getSharedPreferences("kairumo", Context.MODE_PRIVATE)
+            .edit()
+            .putString(ROOT_NAME_PREF, clean)
+            .apply()
+    }
+
     /** 某個資料夾底下的子資料夾。`parentId` 傳 null 表示最上層。 */
     fun subfolders(context: Context, parentId: String?): List<Folder> =
         syncChildrenOf(AccountSyncStore.indexJson(context), parentId ?: "")

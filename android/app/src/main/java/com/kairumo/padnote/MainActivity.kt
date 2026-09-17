@@ -320,6 +320,11 @@ private fun NotebookHome(
     var moving by remember { mutableStateOf<NotebookLibrary.Entry?>(null) }
     var creatingFolder by remember { mutableStateOf(false) }
     var renamingFolder by remember { mutableStateOf<FolderTree.Folder?>(null) }
+    // 最上層那一層沒有對應的資料夾物件，所以要一個自己的狀態。
+    var renamingRoot by remember { mutableStateOf(false) }
+    // 首頁的系統診斷。Apple 在頁尾的版本號上，Android 原本只在編輯器選單裡 ——
+    // 要回報問題的人得先開一本筆記才找得到那一頁。
+    var homeStatus by remember { mutableStateOf(false) }
     var deletingFolder by remember { mutableStateOf<FolderTree.Folder?>(null) }
     var editingIdentity by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
@@ -531,7 +536,13 @@ private fun NotebookHome(
             onSelectLanguage = { homeLanguagePicker = true },
             onOpenManual = { homeDocs = "manual/index.html" },
             onOpenPrivacy = { homeDocs = "legal/privacy.html" },
-            onInsertRecording = { insertingRecording = it }
+            onInsertRecording = { insertingRecording = it },
+            onRenameRootFolder = {
+                // 人在某個資料夾裡就是改那一個；在最上層就是改最上層的顯示名稱。
+                val here = breadcrumb.lastOrNull()
+                if (here != null) renamingFolder = here else renamingRoot = true
+            },
+            onOpenDiagnostics = { homeStatus = true }
         )
     }
 
@@ -594,6 +605,45 @@ private fun NotebookHome(
                 insertingRecording = null
                 message = error ?: l("insert_to_notebook")
                 revision++
+            }
+        )
+    }
+
+    if (renamingRoot) {
+        FolderNameDialog(
+            title = l("edit_root_folder"),
+            initial = FolderTree.rootName(activity, l("root_folder")),
+            l = ::l,
+            onDismiss = { renamingRoot = false },
+            onConfirm = { name ->
+                FolderTree.renameRoot(activity, name)
+                renamingRoot = false
+                revision++
+            }
+        )
+    }
+
+    if (homeStatus) {
+        val rows = remember { readCoreStatus(activity) }
+        AlertDialog(
+            onDismissRequest = { homeStatus = false },
+            confirmButton = {
+                TextButton(onClick = { homeStatus = false }) { Text(l("close")) }
+            },
+            title = { Text("Kairumo · ${l("system_diagnostics")}") },
+            text = {
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    rows.forEach { (label, value) ->
+                        Text(
+                            "$label：$value",
+                            style = MaterialTheme.typography.bodySmall,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                }
             }
         )
     }

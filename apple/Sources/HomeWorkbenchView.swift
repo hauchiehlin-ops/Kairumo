@@ -72,6 +72,13 @@ public struct HomeWorkbenchView: View {
     /// Google 帳號同步的狀態。首頁要直接看得到「登入了沒」——
     /// 藏在設定頁裡的話，使用者不會知道有這個功能。
     @ObservedObject private var homeGoogleAuth = GoogleAuth.shared
+    /// 首頁那張卡片自己的同步狀態。
+    ///
+    /// 原本首頁的卡片只是一個「開啟診斷頁」的入口，登入／同步／登出三顆按鈕
+    /// 都在診斷頁裡 —— 而 Android 是**直接在首頁卡片上**。同一個動作，一邊
+    /// 一下、一邊三下，這正是對齊計劃 L2 那一層要消掉的差異。
+    @State private var homeGoogleMessage: String?
+    @State private var homeGoogleSyncing = false
 
     @State private var selectedFolderId: String? = nil
     @State private var showRenameRootFolderAlert: Bool = false
@@ -199,6 +206,7 @@ public struct HomeWorkbenchView: View {
                             .font(DS.Font.screenTitle)
                             .foregroundStyle(DS.Color.primaryText)
                             .padding(.top, DS.Space.xs)
+                            .accessibilityIdentifier("home.title")
 
                         // 1. 頂部使用者帳號資訊條（自適應寬窄螢幕）
                         userAccountBanner
@@ -298,6 +306,7 @@ public struct HomeWorkbenchView: View {
                     }
                     .accessibilityLabel(localizationManager.localized("select_language"))
                     .help(localizationManager.localized("select_language"))
+                    .accessibilityIdentifier("home.language")
                 }
             }
             .sheet(isPresented: $showAssetLibrarySheet) { resizableSheet {
@@ -400,7 +409,9 @@ public struct HomeWorkbenchView: View {
 
     // MARK: - 1. 頂部使用者帳號橫幅（響應式自適應寬度）
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
-    private var userAccountBanner: AnyView { AnyView(userAccountBannerContent) }
+    private var userAccountBanner: AnyView {
+        AnyView(userAccountBannerContent.accessibilityIdentifier("home.identity.card"))
+    }
 
     private var userAccountBannerContent: some View {
         ViewThatFits(in: .horizontal) {
@@ -462,6 +473,7 @@ public struct HomeWorkbenchView: View {
             showAccountSheet = true
         } label: {
             Text(localizationManager.localized("edit_identity"))
+                .accessibilityIdentifier("home.identity.edit")
                 .font(.caption)
                 .fontWeight(.medium)
                 .padding(.horizontal, 10)
@@ -483,6 +495,7 @@ public struct HomeWorkbenchView: View {
             TextField(localizationManager.localized("search_placeholder"), text: $searchText)
                 .textFieldStyle(.plain)
                 .focused($searchFieldFocused)
+                .accessibilityIdentifier("home.search.field")
             if !searchText.isEmpty {
                 Button {
                     searchText = ""
@@ -519,6 +532,7 @@ public struct HomeWorkbenchView: View {
             actionCard(
                 icon: "plus.circle.fill",
                 title: localizationManager.localized("new_note"),
+                identifier: "home.action.new_note",
                 subtitle: localizationManager.localized("new_note_desc"),
                 tint: nil,
                 prominent: true
@@ -533,6 +547,7 @@ public struct HomeWorkbenchView: View {
             actionCard(
                 icon: "waveform.badge.mic",
                 title: localizationManager.localized("start_recording"),
+                identifier: "home.action.record",
                 subtitle: localizationManager.localized("start_recording_desc"),
                 tint: DS.Color.destructive,
                 prominent: false
@@ -543,6 +558,7 @@ public struct HomeWorkbenchView: View {
             actionCard(
                 icon: "shippingbox.fill",
                 title: localizationManager.localized("asset_library"),
+                identifier: "home.action.assets",
                 subtitle: localizationManager.localized("responsive_asset_desc"),
                 tint: DS.Color.accent,
                 prominent: false
@@ -556,6 +572,9 @@ public struct HomeWorkbenchView: View {
     private func actionCard(
         icon: String,
         title: String,
+        // 對照閘門用的識別字（見核心 `ffi_screens`）。有預設值是為了讓
+        // 既有呼叫端不必全部改，但首頁這三張一定要給。
+        identifier: String = "",
         subtitle: String,
         tint: Color?,
         prominent: Bool,
@@ -591,11 +610,14 @@ public struct HomeWorkbenchView: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier)
     }
 
     // MARK: - 4. 繼續 Working Section（真實筆記）
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
-    private var continueWorkingSection: AnyView { AnyView(continueWorkingSectionContent) }
+    private var continueWorkingSection: AnyView {
+        AnyView(continueWorkingSectionContent.accessibilityIdentifier("home.continue.list"))
+    }
 
     private var continueWorkingSectionContent: some View {
         let visibleList = filteredNotebooks.filter { !hiddenNoteIds.contains($0.id) }
@@ -632,6 +654,7 @@ public struct HomeWorkbenchView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Text(showAllContinue ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleList.count))")
+                                .accessibilityIdentifier("home.continue.show_all")
                             Image(systemName: showAllContinue ? "chevron.up" : "chevron.down")
                         }
                         .dsChip()
@@ -671,6 +694,7 @@ public struct HomeWorkbenchView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Text(showAllContinue ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleList.count))")
+                                .accessibilityIdentifier("home.continue.show_all")
                                 Image(systemName: showAllContinue ? "chevron.up" : "chevron.down")
                             }
                             .dsChip()
@@ -807,7 +831,9 @@ public struct HomeWorkbenchView: View {
 
     // MARK: - 5. 最近錄音（真實實體播放）
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
-    private var recentRecordingsSection: AnyView { AnyView(recentRecordingsSectionContent) }
+    private var recentRecordingsSection: AnyView {
+        AnyView(recentRecordingsSectionContent.accessibilityIdentifier("home.recordings.list"))
+    }
 
     private var recentRecordingsSectionContent: some View {
         let visibleRecordings = notebookStore.recordings.filter { !hiddenRecordingIds.contains($0.id) }
@@ -844,6 +870,7 @@ public struct HomeWorkbenchView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Text(showAllRecordings ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleRecordings.count))")
+                                .accessibilityIdentifier("home.recordings.show_all")
                             Image(systemName: showAllRecordings ? "chevron.up" : "chevron.down")
                         }
                         .dsChip()
@@ -856,6 +883,7 @@ public struct HomeWorkbenchView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "folder")
                             Text(localizationManager.localized("open_record_folder"))
+                                .accessibilityIdentifier("home.recordings.open_folder")
                         }
                         .dsChip()
                     }
@@ -896,6 +924,7 @@ public struct HomeWorkbenchView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Text(showAllRecordings ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleRecordings.count))")
+                                .accessibilityIdentifier("home.recordings.show_all")
                                 Image(systemName: showAllRecordings ? "chevron.up" : "chevron.down")
                             }
                             .dsChip()
@@ -1035,7 +1064,9 @@ public struct HomeWorkbenchView: View {
 
     // MARK: - 6. 全部筆記（真實多頁手繪文件）
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
-    private var allNotebooksSection: AnyView { AnyView(allNotebooksSectionContent) }
+    private var allNotebooksSection: AnyView {
+        AnyView(allNotebooksSectionContent.accessibilityIdentifier("home.notebooks.list"))
+    }
 
     private var allNotebooksSectionContent: some View {
         let baseList = filteredNotebooks.filter { !hiddenNoteIds.contains($0.id) }
@@ -1122,6 +1153,7 @@ public struct HomeWorkbenchView: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel(localizationManager.localized("edit_root_folder"))
                     .help(localizationManager.localized("edit_root_folder"))
+                    .accessibilityIdentifier("home.notebooks.rename_root")
 
                     Spacer()
 
@@ -1133,6 +1165,7 @@ public struct HomeWorkbenchView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "folder.badge.plus")
                             Text(localizationManager.localized("new_subfolder"))
+                                .accessibilityIdentifier("home.notebooks.new_folder")
                         }
                         .dsChip()
                     }
@@ -1309,7 +1342,9 @@ public struct HomeWorkbenchView: View {
     }
 
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
-    private var allNotebooksSortMenu: AnyView { AnyView(allNotebooksSortMenuContent) }
+    private var allNotebooksSortMenu: AnyView {
+        AnyView(allNotebooksSortMenuContent.accessibilityIdentifier("home.notebooks.sort"))
+    }
 
     private var allNotebooksSortMenuContent: some View {
         Menu {
@@ -1444,16 +1479,124 @@ public struct HomeWorkbenchView: View {
     /// 描述直接寫**目前狀態**而不是功能說明：使用者最想知道的是
     /// 「我到底登入了沒」，那一句比任何介紹都有用。
     private var googleSyncCard: some View {
-        dataCard(
-            "arrow.triangle.2.circlepath.icloud.fill",
-            "cloud_sync",
-            homeGoogleAuth.isSignedIn ? "sync_section" : "not_signed_in",
-            .indigo
-        ) { showDiagnosticsForData() }
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Image(systemName: "arrow.triangle.2.circlepath.icloud.fill")
+                    .foregroundStyle(Color.indigo)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(localizationManager.localized("cloud_sync"))
+                        .font(DS.Font.cardTitle)
+                    // 描述直接寫**目前狀態**而不是功能說明：使用者最想知道的是
+                    // 「我到底登入了沒」，那一句比任何介紹都有用。
+                    Text(localizationManager.localized(
+                        homeGoogleAuth.isSignedIn ? "sync_section" : "not_signed_in"))
+                        .font(DS.Font.caption)
+                        .foregroundStyle(DS.Color.secondaryText)
+                }
+                Spacer(minLength: 4)
+            }
+
+            if let homeGoogleMessage {
+                Text(homeGoogleMessage)
+                    .font(DS.Font.caption)
+                    .foregroundStyle(DS.Color.secondaryText)
+            }
+
+            HStack(spacing: 8) {
+                if homeGoogleAuth.isSignedIn {
+                    Button(localizationManager.localized("sync_now")) {
+                        Task { await runHomeGoogleSync() }
+                    }
+                    .disabled(homeGoogleSyncing)
+                    .accessibilityIdentifier("home.cloud.sync_now")
+
+                    Button(localizationManager.localized("sign_out"), role: .destructive) {
+                        Task {
+                            await GoogleAuth.shared.signOut()
+                            homeGoogleMessage = nil
+                        }
+                    }
+                    .accessibilityIdentifier("home.cloud.signout")
+                } else {
+                    Button(localizationManager.localized("sign_in_google")) {
+                        Task {
+                            switch await GoogleAuth.shared.signIn() {
+                            case .success:
+                                // 登入之後**馬上同步一次**。停在「已登入」而什麼
+                                // 都沒發生的話，使用者不知道這個功能有沒有用。
+                                await runHomeGoogleSync()
+                            case .failure(.cancelled):
+                                break
+                            case .failure(let error):
+                                homeGoogleMessage = error.errorDescription
+                            }
+                        }
+                    }
+                    .accessibilityIdentifier("home.cloud.signin")
+                }
+            }
+            .buttonStyle(.bordered)
+            .font(DS.Font.caption)
+
+            // 與 Android 同一個語系鍵 —— 兩邊讀到的是同一段話。
+            Text(localizationManager.localized("cloud_sync_explainer"))
+                .font(DS.Font.caption)
+                .foregroundStyle(DS.Color.secondaryText)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(DS.Space.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.Color.surface)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous)
+                .stroke(DS.Color.hairline, lineWidth: 1)
+        )
+        .accessibilityIdentifier("home.cloud.card")
+    }
+
+    /// 首頁卡片上的「立即同步」。與診斷頁那一顆走同一個協調器，
+    /// 訊息措辭也一致 —— 兩處講同一件事卻用不同句子的話，
+    /// 使用者會以為是兩個不同的功能。
+    @MainActor
+    private func runHomeGoogleSync() async {
+        guard !homeGoogleSyncing else { return }
+        homeGoogleSyncing = true
+        defer { homeGoogleSyncing = false }
+
+        homeGoogleMessage = localizationManager.localized("syncing")
+        guard let report = await NotebookSyncCoordinator.runDrive(
+            store: notebookStore, deviceId: NotebookMigration.deviceId)
+        else {
+            homeGoogleMessage = localizationManager.localized("not_signed_in")
+            return
+        }
+        if report.failures.isEmpty { SyncHistory.markGoogleSynced() }
+        if let failure = report.failures.first {
+            homeGoogleMessage = "\(failure.key)：\(failure.value)"
+        } else if report.isNoOp {
+            homeGoogleMessage = localizationManager.localized("sync_up_to_date")
+        } else {
+            homeGoogleMessage = localizationManager.localized("sync_result")
+                .replacingFirst("%1@", with: "\(report.uploaded)")
+                .replacingFirst("%2@", with: "\(report.downloaded)")
+        }
     }
 
     private func showDiagnosticsForData() {
         showInfoSheet = true
+    }
+
+    /// 「資料與同步」那三張卡。識別字由 `titleKey` 推出來
+    /// （`backup_create` → `home.data.backup`），對照閘門靠它認人 ——
+    /// 手寫一份對照表的話，加第四張卡時一定會忘記加進去。
+    private func dataCardIdentifier(_ titleKey: String) -> String {
+        switch titleKey {
+        case "backup_create": return "home.data.backup"
+        case "backup_restore": return "home.data.restore"
+        case "sync_choose_folder": return "home.data.folder"
+        default: return ""
+        }
     }
 
     private func dataCard(
@@ -1495,6 +1638,7 @@ public struct HomeWorkbenchView: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(dataCardIdentifier(titleKey))
     }
 
     /// 說明文件入口：操作手冊與隱私權政策（離線可讀，隨 App 打包）
@@ -1518,6 +1662,11 @@ public struct HomeWorkbenchView: View {
             }
         }
         .padding(.top, 6)
+    }
+
+    /// 說明文件卡片。識別字由文件本身推出來，與 `dataCard` 同一個道理。
+    private func documentCardIdentifier(_ doc: BundledDocument) -> String {
+        doc == .manual ? "home.docs.manual" : "home.docs.privacy"
     }
 
     private func documentCard(_ doc: BundledDocument) -> some View {
@@ -1564,6 +1713,7 @@ public struct HomeWorkbenchView: View {
             )
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(documentCardIdentifier(doc))
     }
 
     private var footerVersionSection: AnyView { AnyView(footerVersionSectionContent) }
@@ -1588,6 +1738,7 @@ public struct HomeWorkbenchView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Text("\(localizationManager.localized("version_number")): \(appVersionString)")
+                            .accessibilityIdentifier("home.version")
                             .font(.footnote)
                             .foregroundColor(.secondary)
                         Image(systemName: "chevron.right")

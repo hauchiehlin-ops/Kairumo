@@ -228,9 +228,10 @@ fn home_spec() -> FfiScreenSpec {
             ),
             section(
                 "home.continue",
-                "continue_working",
+                "continue",
                 vec![
-                    c("home.continue.filter", Picker, "all"),
+                    c("home.continue.show_all", Button, "show_all"),
+                    opt(c("home.continue.unhide", Button, "unhide_items")),
                     c("home.continue.list", List, ""),
                 ],
             ),
@@ -238,8 +239,16 @@ fn home_spec() -> FfiScreenSpec {
                 "home.recordings",
                 "recent_recordings",
                 vec![
-                    c("home.recordings.filter", Picker, "all"),
-                    c("home.recordings.open_folder", Button, "open_record_folder"),
+                    c("home.recordings.show_all", Button, "show_all"),
+                    opt(c("home.recordings.unhide", Button, "unhide_items")),
+                    // Apple 專有：它有**一個**共用的錄音資料夾可以在
+                    // Finder／檔案 App 裡打開。Android 的錄音住在每一本筆記的
+                    // `media/audio` 裡，沒有單一資料夾可開 —— 硬做一顆按鈕
+                    // 只會打開一個空目錄。
+                    only(
+                        c("home.recordings.open_folder", Button, "open_record_folder"),
+                        FfiPlatforms::AppleOnly,
+                    ),
                     c("home.recordings.list", List, ""),
                 ],
             ),
@@ -248,7 +257,9 @@ fn home_spec() -> FfiScreenSpec {
                 "all_notebooks",
                 vec![
                     c("home.notebooks.sort", Picker, "sort_by"),
+                    c("home.notebooks.rename_root", Button, "edit_root_folder"),
                     c("home.notebooks.new_folder", Button, "new_subfolder"),
+                    opt(c("home.notebooks.unhide", Button, "unhide_items")),
                     c("home.notebooks.list", List, ""),
                 ],
             ),

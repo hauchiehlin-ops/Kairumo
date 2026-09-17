@@ -64,6 +64,7 @@ import com.kairumo.padnote.ui.DS
 import com.kairumo.padnote.ui.KairumoIcons
 import com.kairumo.padnote.ui.dsContentWidth
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -138,9 +139,18 @@ fun HomeScreen(
     onOpenManual: () -> Unit,
     onOpenPrivacy: () -> Unit,
     /** 把一段錄音插進某一本筆記的某一頁（工作項 S-41）。 */
-    onInsertRecording: (RecordingIndex.Recording) -> Unit
+    onInsertRecording: (RecordingIndex.Recording) -> Unit,
+    /** 重新命名目前所在的資料夾（最上層也算）。與 Apple 的 `edit_root_folder` 對應。 */
+    onRenameRootFolder: () -> Unit,
+    /** 系統診斷頁。Apple 在首頁頁尾的版本號上，Android 原本只在編輯器選單裡。 */
+    onOpenDiagnostics: () -> Unit
 ) {
     var query by remember { mutableStateOf("") }
+    // 兩個區塊各自的「顯示全部」。與 Apple 的 showAllContinue /
+    // showAllRecordings 同名同語意 —— 同一個畫面的兩份程式碼，
+    // 狀態名字不一樣的話下一個人得重新對一次。
+    var showAllContinue by remember { mutableStateOf(false) }
+    var showAllRecordings by remember { mutableStateOf(false) }
     // Ctrl+F 把游標送進搜尋框（見 ui/AppCommands.kt）。
     val searchFocus = remember { FocusRequester() }
     LaunchedEffect(Unit) {
@@ -213,12 +223,12 @@ fun HomeScreen(
                     profileName,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).testTag("home.title")
                 )
                 // 圖示旁一定要有字。地球圖示在這個 App 裡代表過三件事
                 // （語系、連結卡片、線上協同），光看圖示分不出按下去會發生
                 // 什麼 —— 而換介面語言是一個按錯了要摸索回來的動作。
-                TextButton(onClick = onSelectLanguage) {
+                TextButton(onClick = onSelectLanguage, modifier = Modifier.testTag("home.language")) {
                     Icon(
                         KairumoIcons.Globe,
                         contentDescription = null,
@@ -233,7 +243,10 @@ fun HomeScreen(
         // ── 1. 身分 ──────────────────────────────────────────────
         item {
             Card(
-                modifier = Modifier.fillMaxWidth().clickable { onEditIdentity() },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("home.identity.card")
+                    .clickable { onEditIdentity() },
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -264,7 +277,10 @@ fun HomeScreen(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
-                    TextButton(onClick = onEditIdentity) { Text(l("edit_identity")) }
+                    TextButton(
+                        onClick = onEditIdentity,
+                        modifier = Modifier.testTag("home.identity.edit")
+                    ) { Text(l("edit_identity")) }
                 }
             }
         }
@@ -279,6 +295,7 @@ fun HomeScreen(
                 shape = RoundedCornerShape(12.dp),
                 modifier = Modifier
                     .fillMaxWidth()
+                    .testTag("home.search.field")
                     .focusRequester(searchFocus)
             )
         }
@@ -302,6 +319,8 @@ fun HomeScreen(
                     MaterialTheme.colorScheme.primary to false)
             )
             val clicks = listOf(onCreate, onToggleRecording, onAssetLibrary)
+            // 對照閘門的識別字，順序與 Apple 首頁那三張卡一致。
+            val tags = listOf("home.action.new_note", "home.action.record", "home.action.assets")
             val icons = listOf(Icons.Filled.Add, KairumoIcons.Mic, KairumoIcons.Cube)
 
             Column(verticalArrangement = Arrangement.spacedBy(DS.Space.xs)) {
@@ -317,7 +336,7 @@ fun HomeScreen(
                                 icon = icons[i],
                                 accent = actions[i].third.first,
                                 primary = actions[i].third.second,
-                                modifier = Modifier.weight(1f),
+                                modifier = Modifier.weight(1f).testTag(tags[i]),
                                 onClick = clicks[i]
                             )
                         }
@@ -332,10 +351,33 @@ fun HomeScreen(
 
         // ── 4. 繼續（橫向捲動，與 Apple 一致）─────────────────────
         if (filtered.isNotEmpty() && query.isBlank()) {
-            item { SectionTitle(l("continue_working")) }
             item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    items(filtered.take(6), key = { "recent-${it.id}" }) { entry ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SectionTitle(l("continue_working"), Modifier.weight(1f))
+                    // 「顯示全部／收合」。Apple 的每一區塊都有，Android 原本
+                    // 硬性只顯示前六筆 —— 第七本之後的筆記在首頁上等於不存在。
+                    TextButton(
+                        onClick = { showAllContinue = !showAllContinue },
+                        modifier = Modifier.testTag("home.continue.show_all")
+                    ) {
+                        Text(
+                            if (showAllContinue) l("collapse")
+                            else "${l("show_all")} (${filtered.size})",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+            }
+            item {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.testTag("home.continue.list")
+                ) {
+                    val shown = if (showAllContinue) filtered else filtered.take(6)
+                    items(shown, key = { "recent-${it.id}" }) { entry ->
                         ContinueCard(entry, l, onOpen)
                     }
                 }
@@ -345,12 +387,32 @@ fun HomeScreen(
         // ── 5. 最近錄音 ──────────────────────────────────────────
         // 位置與 Apple 端一致 —— 順序自己排一套的話，同一個人換裝置
         // 就要重新找每一樣東西在哪裡。
-        item { SectionTitle(l("recent_recordings")) }
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SectionTitle(l("recent_recordings"), Modifier.weight(1f))
+                TextButton(
+                    onClick = { showAllRecordings = !showAllRecordings },
+                    modifier = Modifier.testTag("home.recordings.show_all")
+                ) {
+                    Text(
+                        if (showAllRecordings) l("collapse")
+                        else "${l("show_all")} (${recordings.size})",
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+        }
         if (recordings.isEmpty()) {
             item { EmptyHint(l("no_recordings_hint")) }
         } else {
-            items(recordings, key = { "rec-${it.file.absolutePath}" }) { recording ->
-                RecordingRow(recording, l, onOpen, onInsertRecording)
+            val shownRecordings = if (showAllRecordings) recordings else recordings.take(5)
+            items(shownRecordings, key = { "rec-${it.file.absolutePath}" }) { recording ->
+                Box(Modifier.testTag("home.recordings.list")) {
+                    RecordingRow(recording, l, onOpen, onInsertRecording)
+                }
             }
         }
 
@@ -366,7 +428,7 @@ fun HomeScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 SectionTitle("${l("all_notebooks")} (${entries.size})", Modifier.weight(1f))
-                SortMenu(sort, l, onSortChange)
+                SortMenu(sort, l, onSortChange, Modifier.testTag("home.notebooks.sort"))
             }
         }
 
@@ -385,15 +447,28 @@ fun HomeScreen(
                 ) {
                     Text("🗂", fontSize = 16.sp, modifier = Modifier.padding(end = 8.dp))
                     Text(
-                        breadcrumb.lastOrNull()?.title ?: l("root_folder"),
+                        breadcrumb.lastOrNull()?.title
+                            ?: FolderTree.rootName(LocalContext.current, l("root_folder")),
                         fontWeight = FontWeight.SemiBold,
                         modifier = Modifier.weight(1f)
                     )
-                    TextButton(onClick = onCreateFolder) { Text(l("new_subfolder")) }
+                    // 重新命名目前這一層，與 Apple 的「編輯最上層資料夾名稱」對應。
+                    // Android 原本只有在資料夾列上長按才改得到名字，最上層那一層
+                    // 根本沒有入口。
+                    TextButton(
+                        onClick = onRenameRootFolder,
+                        modifier = Modifier.testTag("home.notebooks.rename_root")
+                    ) { Text(l("edit_root_folder")) }
+                    TextButton(
+                        onClick = onCreateFolder,
+                        modifier = Modifier.testTag("home.notebooks.new_folder")
+                    ) { Text(l("new_subfolder")) }
                 }
             }
         }
 
+        // 筆記卡片格線的識別字掛在資料夾列上（它是這一區塊的第一個元素）——
+        // LazyColumn 的 items 沒有一個共同的容器可以掛。
         if (folders.isNotEmpty() && query.isBlank()) {
             items(folders, key = { "folder-${it.id}" }) { folder ->
                 FolderRow(folder, l, onOpenFolder, onRenameFolder, onDeleteFolder)
@@ -413,7 +488,7 @@ fun HomeScreen(
             // 區塊全部要跨欄。
             items(filtered.chunked(2), key = { row -> "grid-" + row.first().id }) { row ->
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().testTag("home.notebooks.list"),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     for (entry in row) {
@@ -444,9 +519,12 @@ fun HomeScreen(
         item { CloudSyncCard(cloud, l) }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SettingRow("💾", l("backup_create"), l("backup_explainer"), onBackup)
-                SettingRow("↺", l("backup_restore"), l("backup_restore_desc"), onRestore)
-                SettingRow("☁", l("sync_choose_folder"), l("sync_folder_desc"), onChooseSyncFolder)
+                SettingRow("💾", l("backup_create"), l("backup_explainer"),
+                    Modifier.testTag("home.data.backup"), onBackup)
+                SettingRow("↺", l("backup_restore"), l("backup_restore_desc"),
+                    Modifier.testTag("home.data.restore"), onRestore)
+                SettingRow("☁", l("sync_choose_folder"), l("sync_folder_desc"),
+                    Modifier.testTag("home.data.folder"), onChooseSyncFolder)
             }
         }
 
@@ -463,9 +541,9 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 DocCard("📖", l("user_manual"), l("user_manual_desc"),
-                    Modifier.weight(1f), onOpenManual)
+                    Modifier.weight(1f).testTag("home.docs.manual"), onOpenManual)
                 DocCard("🔒", l("privacy_policy"), l("privacy_policy_desc"),
-                    Modifier.weight(1f), onOpenPrivacy)
+                    Modifier.weight(1f).testTag("home.docs.privacy"), onOpenPrivacy)
             }
         }
 
@@ -479,8 +557,16 @@ fun HomeScreen(
                 Text(
                     appVersion,
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.testTag("home.version")
                 )
+                // 系統診斷。Apple 的版本號按下去就是它；Android 原本只在
+                // **編輯器的「⋯」選單**裡 —— 回報問題的人得先開一本筆記
+                // 才找得到那一頁。
+                TextButton(
+                    onClick = onOpenDiagnostics,
+                    modifier = Modifier.testTag("home.diagnostics")
+                ) { Text(l("system_diagnostics"), style = MaterialTheme.typography.labelSmall) }
                 Text(
                     l("footer_tagline"),
                     style = MaterialTheme.typography.labelSmall,
@@ -536,9 +622,15 @@ private fun ContinueCard(
 
 /** 「資料與同步」的一列：圖示 + 標題 + 說明 + 右箭頭。與 Apple 一致。 */
 @Composable
-private fun SettingRow(glyph: String, title: String, desc: String, onClick: () -> Unit) {
+private fun SettingRow(
+    glyph: String,
+    title: String,
+    desc: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
     Card(
-        modifier = Modifier.fillMaxWidth().clickable { onClick() },
+        modifier = modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -744,7 +836,8 @@ private fun NotebookGridCard(
 private fun SortMenu(
     sort: NotebookLibrary.Sort,
     l: (String) -> String,
-    onSortChange: (NotebookLibrary.Sort) -> Unit
+    onSortChange: (NotebookLibrary.Sort) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var open by remember { mutableStateOf(false) }
     val label = when (sort) {
@@ -752,7 +845,7 @@ private fun SortMenu(
         NotebookLibrary.Sort.TITLE -> l("sort_by_title")
         NotebookLibrary.Sort.PAGES -> l("sort_by_pages")
     }
-    Box {
+    Box(modifier) {
         TextButton(onClick = { open = true }) {
             Text(label, style = MaterialTheme.typography.labelMedium)
         }
@@ -1172,7 +1265,7 @@ data class CloudSyncUiState(
 @Composable
 private fun CloudSyncCard(state: CloudSyncUiState, l: (String) -> String) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().testTag("home.cloud.card"),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
@@ -1214,15 +1307,27 @@ private fun CloudSyncCard(state: CloudSyncUiState, l: (String) -> String) {
 
             if (state.signedIn) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    TextButton(onClick = state.onSyncNow, enabled = !state.busy) {
+                    TextButton(
+                        onClick = state.onSyncNow,
+                        enabled = !state.busy,
+                        modifier = Modifier.testTag("home.cloud.sync_now")
+                    ) {
                         Text(l("sync_now"))
                     }
-                    TextButton(onClick = state.onSignOut, enabled = !state.busy) {
+                    TextButton(
+                        onClick = state.onSignOut,
+                        enabled = !state.busy,
+                        modifier = Modifier.testTag("home.cloud.signout")
+                    ) {
                         Text(l("sign_out"), color = MaterialTheme.colorScheme.error)
                     }
                 }
             } else {
-                TextButton(onClick = state.onSignIn, enabled = !state.busy) {
+                TextButton(
+                    onClick = state.onSignIn,
+                    enabled = !state.busy,
+                    modifier = Modifier.testTag("home.cloud.signin")
+                ) {
                     Text(l("sign_in_google"))
                 }
             }
