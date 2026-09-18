@@ -883,6 +883,8 @@ public struct NotebookEditorView: View {
     /// 摘要與待辦（工作項 S-20）。
     @State private var showNoteIntelligence: Bool = false
     @State private var editingTextId: String? = nil
+    /// 隨點隨打就地輸入狀態（連動 TextAttachmentItemView 的焦點與鍵盤）
+    @State private var inlineEditingTextId: String? = nil
     @State private var snapToGrid: Bool = true
     @State private var newTextDraft: NoteTextAttachment = NoteTextAttachment()
     @State private var showLinkPreviewSheet: Bool = false
@@ -1194,6 +1196,7 @@ public struct NotebookEditorView: View {
             }
         )
         .onAppear {
+            sanitizeTextAttachments()
             loadCurrentPage()
             MacWindowTitle.apply()
             // 進到編輯器時也亮一次：第一次開的人要知道自己在哪個模式。
@@ -1288,8 +1291,13 @@ public struct NotebookEditorView: View {
                 if notebook.textAttachments == nil {
                     notebook.textAttachments = []
                 }
-                notebook.textAttachments?.append(created)
+                if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == created.id }) {
+                    notebook.textAttachments?[idx] = created
+                } else {
+                    notebook.textAttachments?.append(created)
+                }
                 store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
             }
         } }
         .sheet(isPresented: $showLinkPreviewSheet) { resizableSheet {
@@ -2496,15 +2504,28 @@ public struct NotebookEditorView: View {
                     if item.pageIndex == page {
                         TextAttachmentItemView(
                             textItem: binding(forTextId: item.id),
+                            isEditingInline: Binding(
+                                get: { inlineEditingTextId == item.id },
+                                set: { editing in
+                                    if editing {
+                                        inlineEditingTextId = item.id
+                                    } else if inlineEditingTextId == item.id {
+                                        inlineEditingTextId = nil
+                                    }
+                                }
+                            ),
+                            isTypeMode: editorMode == .type,
                             onEdit: {
                                 self.editingTextId = item.id
                             },
                             onDelete: {
+                                if inlineEditingTextId == item.id { inlineEditingTextId = nil }
                                 deletedAttachmentBackup = (type: "text", data: item)
                                 collaborationManager.broadcastAttachmentDelete(id: item.id, type: "text")
                                 notebook.textAttachments?.removeAll { $0.id == item.id }
                                 store.updateNotebook(notebook)
                                 collaborationManager.broadcastSelection(selectedId: nil)
+                                PageThumbnailRenderer.invalidateAll()
                             }
                         )
                         .zIndex(ObjectStacking.zIndex(for: item.id, kind: .text, order: notebook.objectOrder(forPage: page)))
@@ -4639,6 +4660,57 @@ ZStack(alignment: .topTrailing) {
 
         Divider().frame(height: 20)
 
+        // 🌟 字級調節 (A- / 字號 / A+)
+        HStack(spacing: 2) {
+            Button {
+                changeActiveTextFontSize(delta: -2)
+            } label: {
+                Text("A-")
+                    .font(.system(size: 11, weight: .semibold))
+                    .frame(width: 26, height: 26)
+            }
+            .buttonStyle(.plain)
+
+            Text("\(Int(activeTextAttachment?.fontSize ?? 16))")
+                .font(.system(size: 11, weight: .bold))
+                .frame(width: 22)
+
+            Button {
+                changeActiveTextFontSize(delta: 2)
+            } label: {
+                Text("A+")
+                    .font(.system(size: 11, weight: .semibold))
+                    .frame(width: 26, height: 26)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(2)
+        .background(Color.secondary.opacity(0.08))
+        .cornerRadius(6)
+
+        // 🌟 常用字色快捷色盤 (黑、深灰、藍、紅、綠、橙)
+        HStack(spacing: 4) {
+            ForEach(["#000000", "#555555", "#007AFF", "#FF3B30", "#34C759", "#FF9500"], id: \.self) { colorHex in
+                Circle()
+                    .fill(Color(hex: colorHex) ?? .black)
+                    .frame(width: 15, height: 15)
+                    .overlay(
+                        Circle()
+                            .stroke(
+                                (activeTextAttachment?.textColorHex ?? "#000000").caseInsensitiveCompare(colorHex) == .orderedSame ? Color.accentColor : Color.secondary.opacity(0.25),
+                                lineWidth: (activeTextAttachment?.textColorHex ?? "#000000").caseInsensitiveCompare(colorHex) == .orderedSame ? 2.5 : 1
+                            )
+                    )
+                    .onTapGesture {
+                        setActiveTextColor(colorHex)
+                    }
+            }
+        }
+        .padding(.horizontal, 5)
+        .frame(height: 30)
+        .background(Color.secondary.opacity(0.08))
+        .cornerRadius(6)
+
         // 3. 粗體、斜體、底線快捷按鈕
         HStack(spacing: 2) {
             Button {
@@ -5580,8 +5652,13 @@ ZStack(alignment: .topTrailing) {
                 }
             } else if backup.type == "text", let item = backup.data as? NoteTextAttachment {
                 if notebook.textAttachments == nil { notebook.textAttachments = [] }
-                notebook.textAttachments?.append(item)
+                if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == item.id }) {
+                    notebook.textAttachments?[idx] = item
+                } else {
+                    notebook.textAttachments?.append(item)
+                }
                 store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
                 if let data = try? JSONEncoder().encode(item),
                    let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
                     collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
@@ -6224,7 +6301,40 @@ ZStack(alignment: .topTrailing) {
         }
     }
 
+    /// 自動清理重複 ID 與未完成的幽靈空白文字方塊
+    private func sanitizeTextAttachments() {
+        guard let attachments = notebook.textAttachments, !attachments.isEmpty else { return }
+        var seenIds = Set<String>()
+        var cleaned: [NoteTextAttachment] = []
+        for item in attachments {
+            if seenIds.contains(item.id) {
+                // 重複 ID：若已存入的是空的但目前這筆有內容，以有內容的替換
+                if !item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    if let existingIdx = cleaned.firstIndex(where: { $0.id == item.id }),
+                       cleaned[existingIdx].text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        cleaned[existingIdx] = item
+                    }
+                }
+                continue
+            }
+            // 清理幽靈空方塊（若文字為空且非當前正在輸入的項目，自動清除）
+            if item.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && item.id != inlineEditingTextId {
+                continue
+            }
+            seenIds.insert(item.id)
+            cleaned.append(item)
+        }
+        if cleaned.count != attachments.count {
+            notebook.textAttachments = cleaned
+            store.updateNotebook(notebook)
+            PageThumbnailRenderer.invalidateAll()
+        }
+    }
+
     private var activeTextAttachment: NoteTextAttachment? {
+        if let id = inlineEditingTextId {
+            return notebook.textAttachments?.first(where: { $0.id == id })
+        }
         if let id = editingTextId {
             return notebook.textAttachments?.first(where: { $0.id == id })
         }
@@ -6252,6 +6362,7 @@ ZStack(alignment: .topTrailing) {
               let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
         notebook.textAttachments?[index].isBold.toggle()
         store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
     }
 
     private func toggleActiveTextItalic() {
@@ -6259,6 +6370,7 @@ ZStack(alignment: .topTrailing) {
               let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
         notebook.textAttachments?[index].isItalic.toggle()
         store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
     }
 
     private func toggleActiveTextUnderline() {
@@ -6266,6 +6378,7 @@ ZStack(alignment: .topTrailing) {
               let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
         notebook.textAttachments?[index].isUnderline.toggle()
         store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
     }
 
     private func setActiveTextAlignment(_ align: String) {
@@ -6273,11 +6386,29 @@ ZStack(alignment: .topTrailing) {
               let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
         notebook.textAttachments?[index].alignmentRaw = align
         store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
+    }
+
+    private func changeActiveTextFontSize(delta: CGFloat) {
+        guard let id = activeTextAttachment?.id,
+              let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
+        let current = notebook.textAttachments?[index].fontSize ?? 16
+        notebook.textAttachments?[index].fontSize = max(10, min(72, current + delta))
+        store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
+    }
+
+    private func setActiveTextColor(_ hex: String) {
+        guard let id = activeTextAttachment?.id,
+              let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
+        notebook.textAttachments?[index].textColorHex = hex
+        store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
     }
 
     private func bringActiveObjectForward() {
         let order = ObjectStacking.normalized(objects: pageStackableObjects, order: notebook.objectOrder(forPage: currentPageIndex))
-        let targetId = editingTextId ?? selectedShapeIds.first ?? selectedObjectIds.first ?? (notebook.textAttachments?.last(where: { $0.pageIndex == currentPageIndex })?.id)
+        let targetId = inlineEditingTextId ?? editingTextId ?? selectedShapeIds.first ?? selectedObjectIds.first ?? (notebook.textAttachments?.last(where: { $0.pageIndex == currentPageIndex })?.id)
         guard let id = targetId else { return }
         let newOrder = ObjectStacking.bringForward([id], in: order)
         notebook.setObjectOrder(newOrder, forPage: currentPageIndex)
@@ -6286,7 +6417,7 @@ ZStack(alignment: .topTrailing) {
 
     private func sendActiveObjectBackward() {
         let order = ObjectStacking.normalized(objects: pageStackableObjects, order: notebook.objectOrder(forPage: currentPageIndex))
-        let targetId = editingTextId ?? selectedShapeIds.first ?? selectedObjectIds.first ?? (notebook.textAttachments?.last(where: { $0.pageIndex == currentPageIndex })?.id)
+        let targetId = inlineEditingTextId ?? editingTextId ?? selectedShapeIds.first ?? selectedObjectIds.first ?? (notebook.textAttachments?.last(where: { $0.pageIndex == currentPageIndex })?.id)
         guard let id = targetId else { return }
         let newOrder = ObjectStacking.sendBackward([id], in: order)
         notebook.setObjectOrder(newOrder, forPage: currentPageIndex)
@@ -6294,21 +6425,38 @@ ZStack(alignment: .topTrailing) {
     }
 
     private func handleCanvasTapInTypeMode(at location: CGPoint) {
+        // 1. 若先前有就地編輯但未打任何字的空方塊，先自動清理
+        if let activeId = inlineEditingTextId,
+           let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
+           activeItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            notebook.textAttachments?.removeAll { $0.id == activeId }
+            store.updateNotebook(notebook)
+            inlineEditingTextId = nil
+            PageThumbnailRenderer.invalidateAll()
+        }
+
+        // 2. 檢查是否點擊在既有文字方塊範圍內
         if let existing = notebook.textAttachments?.first(where: { item in
             item.pageIndex == currentPageIndex &&
-            CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -10, dy: -10).contains(location)
+            CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -8, dy: -8).contains(location)
         }) {
-            editingTextId = existing.id
+            // 直接就地聚焦編輯既有文字方塊，絕不彈出浮動面板
+            inlineEditingTextId = existing.id
+            editingTextId = nil
             return
         }
-        _ = insertTextBox(at: location)
+
+        // 3. 點擊空白處：隨點隨打，就地建立新文字方塊
+        let draft = insertTextBox(at: location)
+        inlineEditingTextId = draft.id
+        editingTextId = nil
     }
 
-    /// 在畫布的指定位置新增一個空文字方塊並直接進入編輯。
+    /// 在畫布的指定位置新增一個空文字方塊並直接進入隨點隨打。
     @discardableResult
     private func insertTextBox(at location: CGPoint) -> NoteTextAttachment {
-        var targetX = location.x - 130
-        var targetY = location.y - 40
+        var targetX = location.x
+        var targetY = location.y
         if snapToGrid {
             let step: CGFloat = 20.0
             targetX = round(targetX / step) * step
@@ -6318,19 +6466,28 @@ ZStack(alignment: .topTrailing) {
             id: UUID().uuidString,
             pageIndex: currentPageIndex,
             text: "",
-            x: max(20, targetX),
-            y: max(20, targetY)
+            fontSize: activeTextAttachment?.fontSize ?? 18,
+            textColorHex: activeTextAttachment?.textColorHex ?? "#000000",
+            backgroundColorHex: "clear",
+            hasBorder: false,
+            x: max(10, targetX),
+            y: max(10, targetY),
+            width: 240,
+            height: 48
         )
         if notebook.textAttachments == nil {
             notebook.textAttachments = []
         }
-        notebook.textAttachments?.append(draft)
+        if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == draft.id }) {
+            notebook.textAttachments?[idx] = draft
+        } else {
+            notebook.textAttachments?.append(draft)
+        }
         var order = ObjectStacking.normalized(objects: pageStackableObjects, order: notebook.objectOrder(forPage: currentPageIndex))
         order = ObjectStacking.bringToFront([draft.id], in: order)
         notebook.setObjectOrder(order, forPage: currentPageIndex)
 
         store.updateNotebook(notebook)
-        editingTextId = draft.id
         return draft
     }
 
@@ -6361,8 +6518,13 @@ ZStack(alignment: .topTrailing) {
         if notebook.textAttachments == nil {
             notebook.textAttachments = []
         }
-        notebook.textAttachments?.append(newBox)
+        if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == newBox.id }) {
+            notebook.textAttachments?[idx] = newBox
+        } else {
+            notebook.textAttachments?.append(newBox)
+        }
         store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
     }
 
     /// 將語音辨識/轉錄出的文字稿作為文字方塊插入在該錄音卡片下方
@@ -6392,14 +6554,19 @@ ZStack(alignment: .topTrailing) {
         if notebook.textAttachments == nil {
             notebook.textAttachments = []
         }
-        notebook.textAttachments?.append(transcriptBox)
+        if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == transcriptBox.id }) {
+            notebook.textAttachments?[idx] = transcriptBox
+        } else {
+            notebook.textAttachments?.append(transcriptBox)
+        }
 
         var order = ObjectStacking.normalized(objects: pageStackableObjects, order: notebook.objectOrder(forPage: audio.pageIndex))
         order = ObjectStacking.bringToFront([transcriptBox.id], in: order)
         notebook.setObjectOrder(order, forPage: audio.pageIndex)
 
         store.updateNotebook(notebook)
-        editingTextId = transcriptBox.id
+        PageThumbnailRenderer.invalidateAll()
+        inlineEditingTextId = transcriptBox.id
     }
 
     private func formatTime(seconds: TimeInterval) -> String {
@@ -7399,6 +7566,8 @@ struct ImageFilterModifier: ViewModifier {
 /// 畫布內嵌 Word 文字卡片視圖
 struct TextAttachmentItemView: View {
     @Binding var textItem: NoteTextAttachment
+    @Binding var isEditingInline: Bool
+    var isTypeMode: Bool = false
     let onEdit: () -> Void
     let onDelete: () -> Void
 
@@ -7410,8 +7579,6 @@ struct TextAttachmentItemView: View {
     @State private var resizeBaseWidth: CGFloat? = nil
     @State private var isSelected: Bool = false
     @State private var isDragging: Bool = false
-    /// 就地編輯：直接在畫布上改字，不必先開面板
-    @State private var isEditingInline: Bool = false
     @FocusState private var inlineFocused: Bool
 
     private var lockedByPeer: CollaboratorPeer? {
@@ -7452,33 +7619,45 @@ struct TextAttachmentItemView: View {
         ZStack(alignment: .topTrailing) {
             VStack(alignment: resolveAlignment(textItem.alignmentRaw), spacing: 4) {
                 if isEditingInline {
-                    // 就地編輯：點兩下就能直接改字，不必先開面板
-                    TextEditor(text: $textItem.text)
-                        .font(.system(size: textItem.fontSize, weight: textItem.isBold ? .bold : .regular))
-                        .foregroundColor(Color(hex: textItem.textColorHex) ?? .primary)
-                        .scrollContentBackground(.hidden)
-                        .background(Color.clear)
-                        // 不能硬給 60：方塊本身可能只有 24 高（週計畫的格子），
-                        // 那樣一點進去編輯，方塊就自己長高、蓋住隔壁的格子。
-                        .frame(minHeight: min(60, displayHeight))
-                        .focused($inlineFocused)
-                        .overlay(alignment: .bottomTrailing) {
-                            Button {
-                                isEditingInline = false
-                                inlineFocused = false
-                                broadcastTextChange()
-                            } label: {
-                                Text(localizationManager.localized("done"))
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundColor(.white)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 5)
-                                    .background(Color.accentColor)
-                                    .cornerRadius(6)
-                            }
-                            .buttonStyle(.plain)
-                            .offset(x: 4, y: 22)
+                    // 就地編輯：隨點隨打，鍵盤自動升起，不必開面板
+                    ZStack(alignment: .topLeading) {
+                        if textItem.text.isEmpty {
+                            Text(localizationManager.localized("text_placeholder"))
+                                .font(.system(size: textItem.fontSize, weight: textItem.isBold ? .bold : .regular))
+                                .italic(textItem.isItalic)
+                                .foregroundColor(Color.secondary.opacity(0.45))
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 8)
+                                .allowsHitTesting(false)
+                                .frame(maxWidth: .infinity, alignment: resolveFrameAlignment(textItem.alignmentRaw))
                         }
+
+                        TextEditor(text: $textItem.text)
+                            .font(.system(size: textItem.fontSize, weight: textItem.isBold ? .bold : .regular))
+                            .foregroundColor(Color(hex: textItem.textColorHex) ?? .primary)
+                            .multilineTextAlignment(resolveMultilineAlignment(textItem.alignmentRaw))
+                            .scrollContentBackground(.hidden)
+                            .background(Color.clear)
+                            .frame(minWidth: displayWidth, minHeight: max(36, displayHeight))
+                            .focused($inlineFocused)
+                    }
+                    .overlay(alignment: .bottomTrailing) {
+                        Button {
+                            isEditingInline = false
+                            inlineFocused = false
+                            finishEditing()
+                        } label: {
+                            Text(localizationManager.localized("done"))
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundColor(.white)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(Color.accentColor)
+                                .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                        .offset(x: 4, y: 22)
+                    }
                 } else {
                     Text(textItem.text)
                         .font(.system(size: textItem.fontSize, weight: textItem.isBold ? .bold : .regular))
@@ -7496,10 +7675,6 @@ struct TextAttachmentItemView: View {
             // 內距隨方塊大小縮（見 TextBoxMetrics）。小到一格週計畫的格子時，
             // 固定 14 的內距會把可寫的空間吃光。
             .padding(TextBoxMetrics.padding(width: displayWidth, height: displayHeight))
-            // 高度也要套。原本只套寬度，於是方塊的高度由內容決定：
-            //   1. 右下角的縮放把手往下拉完全沒有反應 —— 使用者說「只能調寬度」。
-            //   2. 同一個方塊在 Android 上是 `size(width, height)`，兩邊高度不一樣。
-            // `height` 這個欄位一直都在，也一直跟著同步走，只有 Apple 沒有用它。
             .frame(width: displayWidth, height: displayHeight, alignment: .top)
             .background(resolveBackground(textItem.backgroundColorHex))
             .clipShape(RoundedRectangle(cornerRadius: textItem.cornerRadius))
@@ -7508,6 +7683,9 @@ struct TextAttachmentItemView: View {
                     if let peer = lockedByPeer {
                         RoundedRectangle(cornerRadius: textItem.cornerRadius)
                             .stroke(Color(hex: peer.userColor) ?? .blue, lineWidth: 3)
+                    } else if isEditingInline {
+                        RoundedRectangle(cornerRadius: textItem.cornerRadius)
+                            .stroke(Color.accentColor.opacity(0.85), lineWidth: 1.5)
                     } else {
                         RoundedRectangle(cornerRadius: textItem.cornerRadius)
                             .stroke(
@@ -7522,18 +7700,6 @@ struct TextAttachmentItemView: View {
             .shadow(color: isDragging ? Color.clear : Color.black.opacity(0.08), radius: 6, y: 3)
             .contentShape(Rectangle())
             .rotationEffect(.degrees(textItem.canvasRotation))
-            // 右下角的縮放把手。
-            //
-            // 原本只能進到「Word 文字編修」面板拉「方塊寬度」滑桿 ——
-            // 要改一個方框的大小卻得先開一個蓋住它的面板，而且只能改寬度。
-            // 圖片早就有這個把手了，文字方塊沒有。
-            //
-            // **必須掛在 .contentShape(Rectangle()) 之後。** 掛在前面的話，
-            // 那個 contentShape 會把整個組合視圖的命中形狀壓成方塊本身的矩形，
-            // 而把手是 offset 到矩形外面的 —— 於是它看得到、點得到一半、
-            // 拖曳完全沒有反應（實機上就是這樣，看起來像「只能調寬度」）。
-            // 用 highPriorityGesture 是同一個道理：外層有兩個 onTapGesture，
-            // 普通 gesture 會被它們先吃掉。
             .overlay(alignment: .bottomTrailing) {
                 if isSelected && lockedByPeer == nil && !isEditingInline {
                     Image(systemName: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
@@ -7553,9 +7719,6 @@ struct TextAttachmentItemView: View {
                                     let base = resizeBaseSize
                                         ?? CGSize(width: textItem.width, height: textItem.height)
                                     if resizeBaseSize == nil { resizeBaseSize = base }
-                                    // 下限的界線是「放得下一個字」，見 TextBoxMetrics。
-                                    // 原本是 120 × 60，比週計畫的格子還大 ——
-                                    // 方塊塞不進任何一格，一定會壓到隔壁欄。
                                     liveWidth = max(TextBoxMetrics.minWidth,
                                                     base.width + value.translation.width)
                                     liveHeight = max(TextBoxMetrics.minHeight,
@@ -7574,8 +7737,6 @@ struct TextAttachmentItemView: View {
             }
             .overlay {
                 if isSelected && !isEditingInline && lockedByPeer == nil {
-                    // 尺寸取實際版面框。現在版面框就是 displayWidth × displayHeight，
-                    // 兩者一致 —— 但仍然用量到的值，把手的位置沒有猜測的餘地。
                     GeometryReader { geo in
                         ObjectRotationHandle(
                             degrees: $textItem.canvasRotation,
@@ -7586,7 +7747,7 @@ struct TextAttachmentItemView: View {
                 }
             }
             .onTapGesture(count: 2) {
-                // 點兩下＝就地編輯（最直覺的路徑）
+                // 點兩下＝就地編輯
                 guard lockedByPeer == nil else { return }
                 isSelected = true
                 isEditingInline = true
@@ -7594,9 +7755,16 @@ struct TextAttachmentItemView: View {
             }
             .onTapGesture {
                 guard lockedByPeer == nil else { return }
-                if isEditingInline { return }
-                isSelected.toggle()
-                collaborationManager.broadcastSelection(selectedId: isSelected ? textItem.id : nil)
+                if isTypeMode {
+                    // 打字模式下，單擊文字方塊直接就地編輯
+                    isSelected = true
+                    isEditingInline = true
+                    inlineFocused = true
+                } else {
+                    if isEditingInline { return }
+                    isSelected.toggle()
+                    collaborationManager.broadcastSelection(selectedId: isSelected ? textItem.id : nil)
+                }
             }
             // 右鍵／長按也要能刪除 —— 這是大家最先嘗試的操作
             .contextMenu {
@@ -7688,10 +7856,36 @@ struct TextAttachmentItemView: View {
                 // 畫布上只保留編輯／邊框／刪除三個明確的動作。
             }
         }
-        // y 是方塊的**上緣**，與 x 的語意一致，也與 Android 的
-        // `offset(x, y)` 一致。原本這裡寫死 60（等於假設方塊高 120），
-        // 高度一改就錯位，而且同一份筆記在兩個平台的落點本來就不同。
         .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
+        .onChange(of: isEditingInline) { editing in
+            if editing {
+                inlineFocused = true
+            } else {
+                inlineFocused = false
+                finishEditing()
+            }
+        }
+        .onChange(of: inlineFocused) { focused in
+            if !focused && isEditingInline {
+                isEditingInline = false
+                finishEditing()
+            }
+        }
+        .onAppear {
+            if isEditingInline {
+                DispatchQueue.main.async {
+                    inlineFocused = true
+                }
+            }
+        }
+    }
+
+    private func finishEditing() {
+        if textItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            onDelete()
+        } else {
+            broadcastTextChange()
+        }
     }
 
     private func broadcastTextChange() {
