@@ -395,6 +395,22 @@ pub fn paper_templates() -> Vec<FfiPaperTemplate> {
             PageStyle::Blank,
             Digital,
         ),
+        entry(
+            "english_3line",
+            "paper_english_3line",
+            "textformat.abc",
+            "Abc",
+            PageStyle::Blank,
+            General,
+        ),
+        entry(
+            "error_book",
+            "paper_error_book",
+            "exclamationmark.triangle",
+            "ReportProblem",
+            PageStyle::Blank,
+            Method,
+        ),
     ]
 }
 

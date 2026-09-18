@@ -554,6 +554,8 @@ struct CanvasRepresentable: UIViewRepresentable {
         var parent: CanvasRepresentable
         weak var backgroundView: TemplateCanvasBackgroundView?
         var isProgrammaticUpdate: Bool = false
+        var shapeRefineTimer: DispatchWorkItem? = nil
+        var lastStrokeCountBeforeRefine: Int = 0
 
         /// Apple Pencil 雙擊的接收端。**這個屬性要持有它** ——
         /// `UIPencilInteraction.delegate` 是 weak 的，不留一份強參考的話
@@ -589,6 +591,38 @@ struct CanvasRepresentable: UIViewRepresentable {
                 effective = corrected
             }
             parent.drawing = effective
+
+            // ── 長按圖形辨識 ────────────────────────────────────
+            // 新增筆劃時啟動 0.5 秒計時器；期間若再下筆就取消。
+            // 計時器到了表示使用者停住了，嘗試美化最後一筆。
+            self.shapeRefineTimer?.cancel()
+            let count = effective.strokes.count
+            if count > self.lastStrokeCountBeforeRefine, parent.selectedTool.isBrush {
+                let work = DispatchWorkItem { [weak canvasView, weak self] in
+                    guard let canvas = canvasView else { return }
+                    let drawing = canvas.drawing
+                    guard let lastStroke = drawing.strokes.last else { return }
+                    guard let (refined, kind) = SketchRefineEngine.refineSingleStroke(lastStroke) else { return }
+                    // 只有辨識出幾何圖形才替換
+                    guard kind != .freehand else { return }
+                    
+                    var strokes = drawing.strokes
+                    strokes[strokes.count - 1] = refined
+                    
+                    DispatchQueue.main.async {
+                        self?.isProgrammaticUpdate = true
+                        canvas.drawing = PKDrawing(strokes: strokes)
+                        self?.isProgrammaticUpdate = false
+                        self?.parent.drawing = canvas.drawing
+                        // Haptic 回饋
+                        let generator = UIImpactFeedbackGenerator(style: .medium)
+                        generator.impactOccurred()
+                    }
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
+                self.shapeRefineTimer = work
+            }
+            self.lastStrokeCountBeforeRefine = count
 
             // 寫到接近頁尾就先把下一頁準備好。
             //

@@ -3288,12 +3288,12 @@
     "zhHant": "專案"
   },
   "guide_question": {
-    "en": "Q",
-    "ja": "問",
-    "ko": "질문",
-    "th": "ถาม",
-    "zhHans": "问",
-    "zhHant": "問"
+    "en": "Question",
+    "ja": "問題",
+    "ko": "문제",
+    "th": "คำถาม",
+    "zhHans": "题目",
+    "zhHant": "題目"
   },
   "guide_questions": {
     "en": "Questions",
@@ -3342,6 +3342,14 @@
     "th": "ด้านข้าง",
     "zhHans": "侧视图",
     "zhHant": "側視圖"
+  },
+  "guide_solution": {
+    "en": "Correct Solution",
+    "ja": "正しい解法",
+    "ko": "올바른 풀이",
+    "th": "วิธีแก้ที่ถูกต้อง",
+    "zhHans": "正确解法",
+    "zhHant": "正確解法"
   },
   "guide_source": {
     "en": "Source",
@@ -3470,6 +3478,30 @@
     "th": "วาดเขียน",
     "zhHans": "手绘模式",
     "zhHant": "手繪模式"
+  },
+  "heading_1": {
+    "en": "Heading 1",
+    "ja": "見出し 1",
+    "ko": "제목 1",
+    "th": "หัวเรื่อง 1",
+    "zhHans": "标题 1",
+    "zhHant": "標題 1"
+  },
+  "heading_2": {
+    "en": "Heading 2",
+    "ja": "見出し 2",
+    "ko": "제목 2",
+    "th": "หัวเรื่อง 2",
+    "zhHans": "标题 2",
+    "zhHant": "標題 2"
+  },
+  "heading_3": {
+    "en": "Heading 3",
+    "ja": "見出し 3",
+    "ko": "제목 3",
+    "th": "หัวเรื่อง 3",
+    "zhHans": "标题 3",
+    "zhHant": "標題 3"
   },
   "help_and_legal": {
     "en": "Help & Legal",
@@ -3878,6 +3910,14 @@
     "th": "ตัวตนสำหรับทำงานร่วมกัน",
     "zhHans": "协作身份",
     "zhHant": "協作身分"
+  },
+  "image": {
+    "en": "Image",
+    "ja": "画像",
+    "ko": "이미지",
+    "th": "รูปภาพ",
+    "zhHans": "图片",
+    "zhHant": "圖片"
   },
   "image_beautify": {
     "en": "Beautify Image",
@@ -5279,6 +5319,14 @@
     "zhHans": "这一页还没有手写内容",
     "zhHant": "這一頁還沒有手寫內容"
   },
+  "normal_text": {
+    "en": "Normal text",
+    "ja": "標準テキスト",
+    "ko": "일반 텍스트",
+    "th": "ข้อความปกติ",
+    "zhHans": "正文",
+    "zhHant": "內文"
+  },
   "not_downloaded": {
     "en": "On Demand",
     "ja": "未DL",
@@ -5934,6 +5982,38 @@
     "th": "หน้าว่าง",
     "zhHans": "不套用，只要空白页",
     "zhHant": "不套用，只要空白頁"
+  },
+  "paper_english_3line": {
+    "en": "English Ruled (3-Line)",
+    "ja": "英語罫線（3本線）",
+    "ko": "영어 줄 노트 (3선)",
+    "th": "บรรทัดภาษาอังกฤษ (3 เส้น)",
+    "zhHans": "英文三线格",
+    "zhHant": "英文三線格"
+  },
+  "paper_english_3line_desc": {
+    "en": "English handwriting practice paper with ascender, x-height, baseline, descender lines",
+    "ja": "アセンダー、xハイト、ベースライン、ディセンダーの線が引かれた英語の手書き練習用紙",
+    "ko": "어센더, x-높이, 베이스라인, 디센더 선이 있는 영어 필기 연습지",
+    "th": "กระดาษฝึกเขียนภาษาอังกฤษ มีเส้น ascender, x-height, baseline, descender",
+    "zhHans": "带有四线三格的英文手写练习纸",
+    "zhHant": "帶有四線三格的英文手寫練習紙"
+  },
+  "paper_error_book": {
+    "en": "Error Correction Book",
+    "ja": "間違い直しノート",
+    "ko": "오답 노트",
+    "th": "สมุดบันทึกข้อผิดพลาด",
+    "zhHans": "错题本",
+    "zhHant": "錯題本"
+  },
+  "paper_error_book_desc": {
+    "en": "Split layout for recording mistakes and correct solutions",
+    "ja": "間違いと正しい解決策を記録するための分割レイアウト",
+    "ko": "실수와 올바른 풀이를 기록하는 분할 레이아웃",
+    "th": "เลย์เอาต์แบ่งส่วนสำหรับบันทึกข้อผิดพลาดและวิธีแก้ที่ถูกต้อง",
+    "zhHans": "用于记录错题和正确解法的分隔排版",
+    "zhHant": "用於記錄錯題與正確解法的分隔排版"
   },
   "paper_locked_by_doc": {
     "en": "Paper is set by the document template.",
@@ -7535,14 +7615,6 @@
     "zhHans": "使用 Google 登录",
     "zhHant": "使用 Google 登入"
   },
-  "signed_in": {
-    "en": "Signed in",
-    "ja": "ログイン済み",
-    "ko": "로그인됨",
-    "th": "ลงชื่อเข้าใช้แล้ว",
-    "zhHans": "已登录",
-    "zhHant": "已登入"
-  },
   "sign_out": {
     "en": "Sign out",
     "ja": "ログアウト",
@@ -7550,6 +7622,14 @@
     "th": "ออกจากระบบ",
     "zhHans": "登出",
     "zhHant": "登出"
+  },
+  "signed_in": {
+    "en": "Signed in",
+    "ja": "ログイン済み",
+    "ko": "로그인됨",
+    "th": "ลงชื่อเข้าใช้แล้ว",
+    "zhHans": "已登录",
+    "zhHant": "已登入"
   },
   "snap_to_grid": {
     "en": "Snap to Grid",
@@ -8006,6 +8086,14 @@
     "th": "ข้อมูลการวินิจฉัยและเวอร์ชัน",
     "zhHans": "系统诊断与版本信息",
     "zhHant": "系統診斷與版本資訊"
+  },
+  "table": {
+    "en": "Table",
+    "ja": "テーブル",
+    "ko": "표",
+    "th": "ตาราง",
+    "zhHans": "表格",
+    "zhHant": "表格"
   },
   "table_add_column": {
     "en": "Add Column",
@@ -8871,6 +8959,14 @@
     "zhHans": "周一到周日七栏，含横线",
     "zhHant": "週一到週日七欄，含橫線"
   },
+  "todo_list": {
+    "en": "To-do list",
+    "ja": "To-Do リスト",
+    "ko": "할 일 목록",
+    "th": "รายการที่ต้องทำ",
+    "zhHans": "待办列表",
+    "zhHant": "待辦事項清單"
+  },
   "toggle_border": {
     "en": "Toggle Border (Keep/Remove)",
     "ja": "枠線の切替 (維持/削除)",
@@ -9190,61 +9286,5 @@
     "th": "การแก้ไขข้อความ Word",
     "zhHans": "Word文字编修",
     "zhHant": "Word文字編修"
-  },
-  "heading_1": {
-    "en": "Heading 1",
-    "ja": "見出し 1",
-    "ko": "제목 1",
-    "th": "หัวเรื่อง 1",
-    "zhHans": "标题 1",
-    "zhHant": "標題 1"
-  },
-  "heading_2": {
-    "en": "Heading 2",
-    "ja": "見出し 2",
-    "ko": "제목 2",
-    "th": "หัวเรื่อง 2",
-    "zhHans": "标题 2",
-    "zhHant": "標題 2"
-  },
-  "heading_3": {
-    "en": "Heading 3",
-    "ja": "見出し 3",
-    "ko": "제목 3",
-    "th": "หัวเรื่อง 3",
-    "zhHans": "标题 3",
-    "zhHant": "標題 3"
-  },
-  "image": {
-    "en": "Image",
-    "ja": "画像",
-    "ko": "이미지",
-    "th": "รูปภาพ",
-    "zhHans": "图片",
-    "zhHant": "圖片"
-  },
-  "normal_text": {
-    "en": "Normal text",
-    "ja": "標準テキスト",
-    "ko": "일반 텍스트",
-    "th": "ข้อความปกติ",
-    "zhHans": "正文",
-    "zhHant": "內文"
-  },
-  "table": {
-    "en": "Table",
-    "ja": "テーブル",
-    "ko": "표",
-    "th": "ตาราง",
-    "zhHans": "表格",
-    "zhHant": "表格"
-  },
-  "todo_list": {
-    "en": "To-do list",
-    "ja": "To-Do リスト",
-    "ko": "할 일 목록",
-    "th": "รายการที่ต้องทำ",
-    "zhHans": "待办列表",
-    "zhHant": "待辦事項清單"
   }
 }

@@ -48,11 +48,24 @@ public enum SketchRefineEngine {
         return PKDrawing(strokes: refinedStrokes)
     }
 
+    /// 美化單一筆劃並回傳辨識結果。
+    /// - Returns: `(refinedStroke, kind)` — `kind` 為 `.freehand` 表示未辨識出圖形。
+    public static func refineSingleStroke(_ stroke: PKStroke, intensity: CGFloat = 0.85) -> (PKStroke, FfiRefinedKind)? {
+        let path = stroke.path
+        guard path.count >= 3 else { return nil }
+        let input = (0..<path.count).map { i in
+            FfiPoint(x: Float(path[i].location.x), y: Float(path[i].location.y))
+        }
+        let result = sketchRefineStroke(points: input, intensity: Float(intensity))
+        guard let newStroke = rebuild(stroke, at: result.points) else { return nil }
+        return (newStroke, result.kind)
+    }
+
     /// 把新座標套回原筆畫。
     ///
     /// 壓感、時間戳、方位角、傾角全部沿用原本的取樣點 —— 核心保證輸出點數
     /// 與輸入相同，所以索引可以直接對應；只換位置，筆觸的手感不變。
-    private static func rebuild(_ stroke: PKStroke, at points: [FfiPoint]) -> PKStroke? {
+    fileprivate static func rebuild(_ stroke: PKStroke, at points: [FfiPoint]) -> PKStroke? {
         guard points.count >= 2 else { return nil }
         let origPath = stroke.path
         let strokePoints = points.enumerated().map { (i, pt) -> PKStrokePoint in

@@ -3304,12 +3304,12 @@ extension LocalizationManager {
             .th: "โครงการ"
         ],
         "guide_question": [
-            .zhHant: "問",
-            .en: "Q",
-            .zhHans: "问",
-            .ja: "問",
-            .ko: "질문",
-            .th: "ถาม"
+            .zhHant: "題目",
+            .en: "Question",
+            .zhHans: "题目",
+            .ja: "問題",
+            .ko: "문제",
+            .th: "คำถาม"
         ],
         "guide_questions": [
             .zhHant: "問題",
@@ -3358,6 +3358,14 @@ extension LocalizationManager {
             .ja: "側面図",
             .ko: "측면도",
             .th: "ด้านข้าง"
+        ],
+        "guide_solution": [
+            .zhHant: "正確解法",
+            .en: "Correct Solution",
+            .zhHans: "正确解法",
+            .ja: "正しい解法",
+            .ko: "올바른 풀이",
+            .th: "วิธีแก้ที่ถูกต้อง"
         ],
         "guide_source": [
             .zhHant: "原文",
@@ -5990,6 +5998,38 @@ extension LocalizationManager {
             .ja: "白紙のまま",
             .ko: "빈 페이지",
             .th: "หน้าว่าง"
+        ],
+        "paper_english_3line": [
+            .zhHant: "英文三線格",
+            .en: "English Ruled (3-Line)",
+            .zhHans: "英文三线格",
+            .ja: "英語罫線（3本線）",
+            .ko: "영어 줄 노트 (3선)",
+            .th: "บรรทัดภาษาอังกฤษ (3 เส้น)"
+        ],
+        "paper_english_3line_desc": [
+            .zhHant: "帶有四線三格的英文手寫練習紙",
+            .en: "English handwriting practice paper with ascender, x-height, baseline, descender lines",
+            .zhHans: "带有四线三格的英文手写练习纸",
+            .ja: "アセンダー、xハイト、ベースライン、ディセンダーの線が引かれた英語の手書き練習用紙",
+            .ko: "어센더, x-높이, 베이스라인, 디센더 선이 있는 영어 필기 연습지",
+            .th: "กระดาษฝึกเขียนภาษาอังกฤษ มีเส้น ascender, x-height, baseline, descender"
+        ],
+        "paper_error_book": [
+            .zhHant: "錯題本",
+            .en: "Error Correction Book",
+            .zhHans: "错题本",
+            .ja: "間違い直しノート",
+            .ko: "오답 노트",
+            .th: "สมุดบันทึกข้อผิดพลาด"
+        ],
+        "paper_error_book_desc": [
+            .zhHant: "用於記錄錯題與正確解法的分隔排版",
+            .en: "Split layout for recording mistakes and correct solutions",
+            .zhHans: "用于记录错题和正确解法的分隔排版",
+            .ja: "間違いと正しい解決策を記録するための分割レイアウト",
+            .ko: "실수와 올바른 풀이를 기록하는 분할 레이아웃",
+            .th: "เลย์เอาต์แบ่งส่วนสำหรับบันทึกข้อผิดพลาดและวิธีแก้ที่ถูกต้อง"
         ],
         "paper_locked_by_doc": [
             .zhHant: "紙張由文件範本決定。",

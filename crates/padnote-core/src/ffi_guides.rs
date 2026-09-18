@@ -826,6 +826,50 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
             }
             s.hline(M, R, BOT, FfiGuideTone::Accent, 1.2);
         }
+        "english_3line" => {
+            let margin_x = 60.0 / width;
+            s.vline(margin_x, 0.0, 1.0, FfiGuideTone::Accent, 1.5);
+
+            let group_h = 40.0 / height;
+            let spacing = 8.0 / height;
+            let mut y = TOP;
+            for _ in 0..24 {
+                if y + group_h > BOT + 0.02 {
+                    break;
+                }
+                let ascender = y;
+                let x_height = y + group_h * 0.4;
+                let baseline = y + group_h * 0.7;
+                let descender = y + group_h;
+
+                s.hline(0.0, 1.0, ascender, FfiGuideTone::Hairline, 1.0);
+                s.hline(0.0, 1.0, x_height, FfiGuideTone::Accent, 1.2);
+                s.hline(0.0, 1.0, baseline, FfiGuideTone::Light, 1.0);
+                s.hline(0.0, 1.0, descender, FfiGuideTone::Hairline, 1.0);
+
+                y += group_h + spacing;
+            }
+        }
+        "error_book" => {
+            let split_y = 0.55;
+            
+            s.band(0.0, 0.0, 1.0, split_y);
+            
+            s.label("guide_question", M, TOP, 0.3, 0.026, LEFT);
+            
+            s.label("guide_date", R - 0.22, TOP, 0.1, 0.02, LEFT);
+            s.hline(R - 0.15, R, TOP + 0.012, FfiGuideTone::Hairline, 1.0);
+            
+            s.label("guide_subject", R - 0.22, TOP + 0.035, 0.1, 0.02, LEFT);
+            s.hline(R - 0.15, R, TOP + 0.047, FfiGuideTone::Hairline, 1.0);
+            
+            s.rows(M, R, TOP + 0.08, split_y - 0.04, 9, FfiGuideTone::Hairline);
+            
+            s.hline(0.0, 1.0, split_y, FfiGuideTone::Accent, 2.0);
+            
+            s.label("guide_solution", M, split_y + 0.03, 0.3, 0.026, LEFT);
+            s.rows(M, R, split_y + 0.09, BOT, 7, FfiGuideTone::Hairline);
+        }
         // blank / grid / lined / dot_grid_fine / isometric：只有底紋，沒有結構。
         _ => {}
     }
