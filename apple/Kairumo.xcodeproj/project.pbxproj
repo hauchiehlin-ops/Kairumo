@@ -60,6 +60,7 @@
 		778281F00A39E42DC02254A7 /* TableStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 61C6C10FAD15645C91E246C0 /* TableStudioView.swift */; };
 		7B6B71CF69CE9F1C2CB2E953 /* DocumentViewerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 59E46CD750DA486212251DC0 /* DocumentViewerSheet.swift */; };
 		7BF616F79113EDEF36132B11 /* WordTextStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30959766B1D00F248AD7D2D /* WordTextStudioView.swift */; };
+		B18281F00A39E42DC02254A8 /* WordDocumentEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C6C10FAD15645C91E246C1 /* WordDocumentEditorView.swift */; };
 		7D6DE78DB8869CDC8006E534 /* PageImageRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE6B5FAD884A88C837DD9BF2 /* PageImageRenderer.swift */; };
 		7DB76F0C390DA40B48AC10F9 /* AudioRecorderManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FEF2B249C62AD4AE2E3C246 /* AudioRecorderManager.swift */; };
 		8677E2062758DE5EA2EEE87F /* TextBoxAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7418A9EE9E549FC11AB793EF /* TextBoxAppearance.swift */; };
@@ -213,6 +214,7 @@
 		5DEEDC3EBFC3C910FFC5735C /* MathCalculatorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathCalculatorSheet.swift; sourceTree = "<group>"; };
 		5E0D07EB41098C2C0F9A8E37 /* PackageRoundTripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackageRoundTripTests.swift; sourceTree = "<group>"; };
 		61C6C10FAD15645C91E246C0 /* TableStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableStudioView.swift; sourceTree = "<group>"; };
+		A1C6C10FAD15645C91E246C1 /* WordDocumentEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordDocumentEditorView.swift; sourceTree = "<group>"; };
 		61D0BC500318C879D185099E /* Model3DStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model3DStudioView.swift; sourceTree = "<group>"; };
 		621C052FCB25E32FBB633BE3 /* MacReleaseConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacReleaseConfigTests.swift; sourceTree = "<group>"; };
 		625C3383D7E7C3F1B7A6D1F1 /* Kairumo.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Kairumo.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -500,6 +502,7 @@
 				DC2F0D7F265BF495CF6D7B79 /* ThemeSpecificToolsView.swift */,
 				DC7046379C24B0D590B6F0E8 /* ToolbarSeparator.swift */,
 				F30959766B1D00F248AD7D2D /* WordTextStudioView.swift */,
+				A1C6C10FAD15645C91E246C1 /* WordDocumentEditorView.swift */,
 				6EA2D926C0FD0991AE0BC01D /* WrapLayout.swift */,
 			);
 			path = Sources;
@@ -763,6 +766,7 @@
 				DA9086448B1E257FEC002D07 /* ThemeSpecificToolsView.swift in Sources */,
 				D259D790432BD38F30537209 /* ToolbarSeparator.swift in Sources */,
 				7BF616F79113EDEF36132B11 /* WordTextStudioView.swift in Sources */,
+				B18281F00A39E42DC02254A8 /* WordDocumentEditorView.swift in Sources */,
 				FE7819F27B65DF1C258ED52E /* WrapLayout.swift in Sources */,
 				4778715DC0B3FB2B8CAB004B /* padnote_core.swift in Sources */,
 			);

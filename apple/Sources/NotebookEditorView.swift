@@ -1091,11 +1091,11 @@ public struct NotebookEditorView: View {
             // 1. 頂部自訂主工作列（返回首頁、筆記結構、打字/手繪切換、標題、頁面切換、匯出與列印）
             editorTopBar
 
-            // 2. 🌟 實體模式專屬工具列（手繪模式 vs 打字排版模式）
+            // 2. 🌟 實體模式專屬工具列（手繪模式 vs 打字文書處理模式）
             if editorMode == .draw {
                 drawingToolbar
             } else {
-                typingToolbar
+                wordModeToolbar
             }
 
             // 3. 尺規旋轉與量測輔助列（若尺規開啟時顯示）
@@ -1114,13 +1114,6 @@ public struct NotebookEditorView: View {
             }
 
             // 6. 核心編輯工作區（包含左側筆記結構欄與右側畫布區）
-            //
-            // **並排與否由核心的 `layoutMetrics` 決定，不是一律並排。**
-            //
-            // 原本只要 `showStructureSidebar` 就並排，於是在 iPhone 上
-            // 一條 280pt 的側欄配上 393pt 的螢幕 —— 畫布只剩 113pt，
-            // 比工具列還窄。使用者打開結構欄是為了「翻到第 9 頁」，
-            // 不是為了把畫布壓掉。塞不下就改用覆蓋（sheet）。
             GeometryReader { geo in
                 let metrics = layoutMetrics(width: Float(geo.size.width))
                 HStack(spacing: 0) {
@@ -1132,8 +1125,12 @@ public struct NotebookEditorView: View {
                         sidebarResizeHandle(total: geo.size.width, current: width)
                     }
 
-                    // 核心手寫/打字畫布區
-                    canvasWorkArea
+                    // 核心手寫（支援全品牌手寫筆） vs Google Docs / Word 標準居中文檔紙張編輯區
+                    if editorMode == .draw {
+                        canvasWorkArea
+                    } else {
+                        wordDocumentArea
+                    }
                 }
                 .onAppear { editorAvailableWidth = geo.size.width }
                 .onChange(of: geo.size.width) { newValue in
@@ -2162,6 +2159,43 @@ public struct NotebookEditorView: View {
         let width = max(viewWidth, 320)
         guard abs(width - canvasContentWidth) > 0.5 else { return }
         canvasContentWidth = width
+    }
+
+    // MARK: - 3-1. 🌟 Office Word / Google Docs 居中標準文件紙張編輯區
+    private var wordDocumentArea: AnyView {
+        AnyView(wordDocumentAreaContent)
+    }
+
+    private var wordDocumentAreaContent: some View {
+        WordDocumentEditorView(
+            notebook: $notebook,
+            pageIndex: currentPageIndex,
+            activeTextDraft: Binding(
+                get: { activeTextAttachment ?? NoteTextAttachment(pageIndex: currentPageIndex) },
+                set: { updated in
+                    if notebook.textAttachments == nil { notebook.textAttachments = [] }
+                    if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == updated.id }) {
+                        notebook.textAttachments?[idx] = updated
+                    } else {
+                        notebook.textAttachments?.append(updated)
+                    }
+                    store.updateNotebook(notebook)
+                    PageThumbnailRenderer.invalidateAll()
+                }
+            ),
+            onCommit: {
+                store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+            },
+            onInsertTable: {
+                let table = NoteTableAttachment(pageIndex: currentPageIndex, x: 40, y: 120, rows: 3, cols: 3)
+                if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
+                notebook.tableAttachments?.append(table)
+                store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+            },
+            onInsertImage: { showPhotoPicker = true }
+        )
     }
 
     /// 畫布工作區。抽出來並加上 AnyView 邊界 —— 這一塊（畫布 + 附件圖層 +
@@ -4312,6 +4346,65 @@ ZStack(alignment: .topTrailing) {
             .background(Color(uiColor: .secondarySystemGroupedBackground))
             .cornerRadius(8)
         }
+    }
+
+    // MARK: - 2-1. 🌟 Office Word / Google Docs 專屬打字排版工具列
+    private var wordModeToolbar: AnyView {
+        AnyView(wordModeToolbarContent)
+    }
+
+    private var wordModeToolbarContent: some View {
+        WordToolbarView(
+            activeText: Binding(
+                get: { activeTextAttachment ?? NoteTextAttachment(pageIndex: currentPageIndex) },
+                set: { updated in
+                    if notebook.textAttachments == nil { notebook.textAttachments = [] }
+                    if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == updated.id }) {
+                        notebook.textAttachments?[idx] = updated
+                    } else {
+                        notebook.textAttachments?.append(updated)
+                    }
+                    store.updateNotebook(notebook)
+                    PageThumbnailRenderer.invalidateAll()
+                }
+            ),
+            canUndo: canvasView?.undoManager?.canUndo ?? true,
+            canRedo: canvasView?.undoManager?.canRedo ?? false,
+            onUndo: { performUndo() },
+            onRedo: { canvasView?.undoManager?.redo() },
+            onInsertTable: { rows, cols in
+                let table = NoteTableAttachment(pageIndex: currentPageIndex, x: 40, y: 120, rows: rows, cols: cols)
+                if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
+                notebook.tableAttachments?.append(table)
+                store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+            },
+            onInsertImage: { showPhotoPicker = true },
+            onInsertLink: { showLinkPreviewSheet = true },
+            onInsertDivider: { insertQuickTextSnippet("────────────────────────────────────────") },
+            onInsertTodo: { insertQuickTextSnippet("☐ ") },
+            onInsertBullet: { insertQuickTextSnippet("• ") },
+            onInsertNumbered: { insertQuickTextSnippet("1. ") },
+            onClearFormat: {
+                if let id = activeTextAttachment?.id,
+                   let idx = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
+                    notebook.textAttachments?[idx].fontSize = 15
+                    notebook.textAttachments?[idx].isBold = false
+                    notebook.textAttachments?[idx].isItalic = false
+                    notebook.textAttachments?[idx].isUnderline = false
+                    notebook.textAttachments?[idx].isStrikethrough = false
+                    notebook.textAttachments?[idx].textColorHex = "#000000"
+                    notebook.textAttachments?[idx].backgroundColorHex = "clear"
+                    notebook.textAttachments?[idx].alignmentRaw = "left"
+                    store.updateNotebook(notebook)
+                    PageThumbnailRenderer.invalidateAll()
+                }
+            },
+            onCommitChange: {
+                store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+            }
+        )
     }
 
     // MARK: - 2. 🌟 實體手繪工具列（水平滑動包裹、免擠壓、隨點隨用）

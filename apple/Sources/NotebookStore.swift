@@ -720,6 +720,7 @@ public struct NoteTextAttachment: Identifiable, Codable, Hashable, ObjectFrameSt
     public var isItalic: Bool
     public var isUnderline: Bool
     public var isStrikethrough: Bool
+    public var fontFamily: String?
     public var alignmentRaw: String // "left", "center", "right", "justified"
     public var textColorHex: String // e.g. "#000000"
     /// e.g. "#FFFFFF"、"#FFF9C4"、"clear"（透明）
