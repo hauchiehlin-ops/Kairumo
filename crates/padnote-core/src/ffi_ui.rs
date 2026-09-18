@@ -125,6 +125,8 @@ pub enum FfiTool {
     ZoomWrite,
     LaserPointer,
     Record,
+    StickerLibrary,
+    MaskingTape,
 }
 
 impl From<FfiTool> for Tool {
@@ -148,6 +150,8 @@ impl From<FfiTool> for Tool {
             FfiTool::ZoomWrite => Self::ZoomWrite,
             FfiTool::LaserPointer => Self::LaserPointer,
             FfiTool::Record => Self::Record,
+            FfiTool::StickerLibrary => Self::StickerLibrary,
+            FfiTool::MaskingTape => Self::MaskingTape,
         }
     }
 }
@@ -173,6 +177,8 @@ impl From<Tool> for FfiTool {
             Tool::ZoomWrite => Self::ZoomWrite,
             Tool::LaserPointer => Self::LaserPointer,
             Tool::Record => Self::Record,
+            Tool::StickerLibrary => Self::StickerLibrary,
+            Tool::MaskingTape => Self::MaskingTape,
         }
     }
 }

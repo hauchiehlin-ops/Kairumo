@@ -211,7 +211,7 @@ mod tests {
     fn tool_order_is_stable() {
         // 順序改變會讓使用者的肌肉記憶失效。
         assert_eq!(all_tools()[0], Tool::FountainPen);
-        assert_eq!(all_tools().len(), 18);
+        assert_eq!(all_tools().len(), 20);
     }
 
     #[test]
