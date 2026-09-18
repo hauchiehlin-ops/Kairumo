@@ -9190,5 +9190,61 @@
     "th": "การแก้ไขข้อความ Word",
     "zhHans": "Word文字编修",
     "zhHant": "Word文字編修"
+  },
+  "heading_1": {
+    "en": "Heading 1",
+    "ja": "見出し 1",
+    "ko": "제목 1",
+    "th": "หัวเรื่อง 1",
+    "zhHans": "标题 1",
+    "zhHant": "標題 1"
+  },
+  "heading_2": {
+    "en": "Heading 2",
+    "ja": "見出し 2",
+    "ko": "제목 2",
+    "th": "หัวเรื่อง 2",
+    "zhHans": "标题 2",
+    "zhHant": "標題 2"
+  },
+  "heading_3": {
+    "en": "Heading 3",
+    "ja": "見出し 3",
+    "ko": "제목 3",
+    "th": "หัวเรื่อง 3",
+    "zhHans": "标题 3",
+    "zhHant": "標題 3"
+  },
+  "image": {
+    "en": "Image",
+    "ja": "画像",
+    "ko": "이미지",
+    "th": "รูปภาพ",
+    "zhHans": "图片",
+    "zhHant": "圖片"
+  },
+  "normal_text": {
+    "en": "Normal text",
+    "ja": "標準テキスト",
+    "ko": "일반 텍스트",
+    "th": "ข้อความปกติ",
+    "zhHans": "正文",
+    "zhHant": "內文"
+  },
+  "table": {
+    "en": "Table",
+    "ja": "テーブル",
+    "ko": "표",
+    "th": "ตาราง",
+    "zhHans": "表格",
+    "zhHant": "表格"
+  },
+  "todo_list": {
+    "en": "To-do list",
+    "ja": "To-Do リスト",
+    "ko": "할 일 목록",
+    "th": "รายการที่ต้องทำ",
+    "zhHans": "待办列表",
+    "zhHant": "待辦事項清單"
   }
 }

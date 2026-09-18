@@ -3487,6 +3487,30 @@ extension LocalizationManager {
             .ko: "손글씨",
             .th: "วาดเขียน"
         ],
+        "heading_1": [
+            .zhHant: "標題 1",
+            .en: "Heading 1",
+            .zhHans: "标题 1",
+            .ja: "見出し 1",
+            .ko: "제목 1",
+            .th: "หัวเรื่อง 1"
+        ],
+        "heading_2": [
+            .zhHant: "標題 2",
+            .en: "Heading 2",
+            .zhHans: "标题 2",
+            .ja: "見出し 2",
+            .ko: "제목 2",
+            .th: "หัวเรื่อง 2"
+        ],
+        "heading_3": [
+            .zhHant: "標題 3",
+            .en: "Heading 3",
+            .zhHans: "标题 3",
+            .ja: "見出し 3",
+            .ko: "제목 3",
+            .th: "หัวเรื่อง 3"
+        ],
         "help_and_legal": [
             .zhHant: "說明與條款",
             .en: "Help & Legal",
@@ -3894,6 +3918,14 @@ extension LocalizationManager {
             .ja: "共同編集の表示名",
             .ko: "공동 작업 표시 정보",
             .th: "ตัวตนสำหรับทำงานร่วมกัน"
+        ],
+        "image": [
+            .zhHant: "圖片",
+            .en: "Image",
+            .zhHans: "图片",
+            .ja: "画像",
+            .ko: "이미지",
+            .th: "รูปภาพ"
         ],
         "image_beautify": [
             .zhHant: "美化圖片",
@@ -5294,6 +5326,14 @@ extension LocalizationManager {
             .ja: "このページにはまだ手書きがありません",
             .ko: "이 페이지에는 아직 손글씨가 없습니다",
             .th: "หน้านี้ยังไม่มีลายมือ"
+        ],
+        "normal_text": [
+            .zhHant: "內文",
+            .en: "Normal text",
+            .zhHans: "正文",
+            .ja: "標準テキスト",
+            .ko: "일반 텍스트",
+            .th: "ข้อความปกติ"
         ],
         "not_downloaded": [
             .zhHant: "隨需下載",
@@ -8023,6 +8063,14 @@ extension LocalizationManager {
             .ko: "시스템 진단 및 버전 정보",
             .th: "ข้อมูลการวินิจฉัยและเวอร์ชัน"
         ],
+        "table": [
+            .zhHant: "表格",
+            .en: "Table",
+            .zhHans: "表格",
+            .ja: "テーブル",
+            .ko: "표",
+            .th: "ตาราง"
+        ],
         "table_add_column": [
             .zhHant: "新增欄",
             .en: "Add Column",
@@ -8886,6 +8934,14 @@ extension LocalizationManager {
             .ja: "月曜から日曜までの7列と罫線",
             .ko: "월~일 7열과 괘선",
             .th: "เจ็ดคอลัมน์วันพร้อมเส้นบรรทัด"
+        ],
+        "todo_list": [
+            .zhHant: "待辦事項清單",
+            .en: "To-do list",
+            .zhHans: "待办列表",
+            .ja: "To-Do リスト",
+            .ko: "할 일 목록",
+            .th: "รายการที่ต้องทำ"
         ],
         "toggle_border": [
             .zhHant: "邊框開關 (保留/刪除)",
