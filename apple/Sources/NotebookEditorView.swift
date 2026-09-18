@@ -330,12 +330,18 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 }
 
+//
+/// 橡皮擦雙模式：筆劃橡皮擦（一碰擦整條線）vs 像素橡皮擦（局部擦除）
+enum EraserMode: String { case stroke, pixel }
+
 /// PencilKit 畫布之 SwiftUI 封裝（跨 iOS / iPadOS / Mac Catalyst，支援無限高度延長、背景同步滾動與套索選取監聽）
 struct CanvasRepresentable: UIViewRepresentable {
     @Binding var drawing: PKDrawing
     var selectedTool: EditorToolType
     var selectedColor: Color
     var strokeWidth: CGFloat
+    var eraserMode: EraserMode = .stroke
+    var pixelEraserWidth: CGFloat = 20.0
     var isRulerActive: Bool
     /// 這一頁的紙張 id（逐頁）與整本的配色。
     var paperId: String
@@ -657,7 +663,16 @@ struct CanvasRepresentable: UIViewRepresentable {
                 }
 
             case .eraser:
-                canvas.tool = PKEraserTool(.vector)
+                switch parent.eraserMode {
+                case .stroke:
+                    canvas.tool = PKEraserTool(.vector)
+                case .pixel:
+                    if #available(iOS 16.4, *) {
+                        canvas.tool = PKEraserTool(.bitmap, width: parent.pixelEraserWidth)
+                    } else {
+                        canvas.tool = PKEraserTool(.bitmap)
+                    }
+                }
 
             case .lasso:
                 canvas.tool = PKLassoTool()
@@ -848,6 +863,11 @@ public struct NotebookEditorView: View {
     @State private var strokeWidth: CGFloat = 3.5
     @State private var isRulerActive: Bool = false
     @State private var rulerAngleGuide: Double = 0.0
+    
+    @State private var eraserMode: EraserMode = .stroke
+    @State private var pixelEraserWidth: CGFloat = 20.0
+    
+    @State private var showLassoColorPicker: Bool = false
 
     // 彈窗與輔助狀態
     @State private var showRenameAlert: Bool = false
@@ -2319,6 +2339,8 @@ public struct NotebookEditorView: View {
                             strokeWidth: strokeWidth,
                             isRulerActive: isRulerActive,
                             editorMode: editorMode,
+                            eraserMode: eraserMode,
+                            pixelEraserWidth: pixelEraserWidth,
                             palmRejection: palmRejection,
                             isFocused: index == currentPageIndex,
                             objectLayer: { objectLayer(forPage: index) },
@@ -2648,6 +2670,8 @@ ZStack(alignment: .topTrailing) {
                 selectedTool: selectedTool,
                 selectedColor: selectedColor,
                 strokeWidth: strokeWidth,
+                eraserMode: eraserMode,
+                pixelEraserWidth: pixelEraserWidth,
                 isRulerActive: isRulerActive,
                 paperId: notebook.paperId(forPage: currentPageIndex),
                 paletteId: notebook.guidePaletteId,
@@ -4412,6 +4436,142 @@ ZStack(alignment: .topTrailing) {
     /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
     private var drawingToolbar: AnyView { AnyView(drawingToolbarContent) }
 
+    @ViewBuilder
+    private var eraserModeControls: some View {
+        if selectedTool == .eraser {
+            ToolbarSeparator().frame(height: 24)
+            HStack(spacing: 4) {
+                Button {
+                    eraserMode = .stroke
+                    canvasView?.tool = PKEraserTool(.vector)
+                } label: {
+                    Image(systemName: "eraser.line.dashed")
+                        .font(.system(size: 16, weight: eraserMode == .stroke ? .bold : .regular))
+                        .foregroundColor(eraserMode == .stroke ? .accentColor : .secondary)
+                        .padding(.horizontal, DS.Space.xs)
+                        .padding(.vertical, 5)
+                        .background(Color.secondary.opacity(eraserMode == .stroke ? 0.25 : 0.08))
+                        .cornerRadius(DS.Radius.s)
+                }
+                .buttonStyle(.plain)
+
+                Button {
+                    eraserMode = .pixel
+                    if #available(iOS 16.4, *) {
+                        canvasView?.tool = PKEraserTool(.bitmap, width: pixelEraserWidth)
+                    } else {
+                        canvasView?.tool = PKEraserTool(.bitmap)
+                    }
+                } label: {
+                    Image(systemName: "eraser.fill")
+                        .font(.system(size: 16, weight: eraserMode == .pixel ? .bold : .regular))
+                        .foregroundColor(eraserMode == .pixel ? .accentColor : .secondary)
+                        .padding(.horizontal, DS.Space.xs)
+                        .padding(.vertical, 5)
+                        .background(Color.secondary.opacity(eraserMode == .pixel ? 0.25 : 0.08))
+                        .cornerRadius(DS.Radius.s)
+                }
+                .buttonStyle(.plain)
+                
+                if eraserMode == .pixel {
+                    Slider(value: $pixelEraserWidth, in: 10...60, step: 1) { _ in
+                        if #available(iOS 16.4, *) {
+                            canvasView?.tool = PKEraserTool(.bitmap, width: pixelEraserWidth)
+                        }
+                    }
+                    .frame(width: 80)
+                    .tint(.accentColor)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var lassoRecolorButton: some View {
+        Button {
+            showLassoColorPicker.toggle()
+        } label: {
+            Image(systemName: "paintbrush.fill")
+                .font(.system(size: 14))
+                .frame(width: 28, height: 28)
+                .background(Color.secondary.opacity(0.12))
+                .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+        .help("換色")
+        .popover(isPresented: $showLassoColorPicker) {
+            HStack(spacing: 12) {
+                ForEach(colorPalette, id: \.self) { color in
+                    Button {
+                        recolorSelectedStrokes(to: color)
+                        showLassoColorPicker = false
+                    } label: {
+                        Circle()
+                            .fill(color)
+                            .frame(width: 28, height: 28)
+                            .overlay(Circle().stroke(Color.gray.opacity(0.3), lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding()
+            .modifier(PopoverCompactAdaptation())
+        }
+    }
+
+    /// iOS 16.4+ 限定修飾器，低版本直接略過。
+    private struct PopoverCompactAdaptation: ViewModifier {
+        func body(content: Content) -> some View {
+            if #available(iOS 16.4, *) {
+                content.presentationCompactAdaptation(.popover)
+            } else {
+                content
+            }
+        }
+    }
+
+    /// 將 PKLassoTool 圈選的筆劃換色。
+    ///
+    /// PencilKit 不開放「哪些筆劃被選取」的 API，但選取狀態下刪除
+    /// 只會移除被選的筆劃。利用「刪除前後的差集」辨識被選取的筆劃索引，
+    /// 再將它們換色並復原。
+    private func recolorSelectedStrokes(to newColor: Color) {
+        guard let canvas = canvasView else { return }
+        let before = canvas.drawing.strokes
+        // 1. 記錄原始筆劃 ID 集
+        let beforeIds = Set(before.map { $0.path.creationDate })
+
+        // 2. 送出 cut（剪下選取的筆劃）
+        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
+            if sv.responds(to: #selector(UIResponderStandardEditActions.cut(_:))) {
+                sv.perform(#selector(UIResponderStandardEditActions.cut(_:)), with: nil)
+            }
+        }
+        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.cut(_:)), to: nil, from: nil, for: nil)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak canvas] in
+            guard let canvas = canvas else { return }
+            let after = canvas.drawing.strokes
+            let afterIds = Set(after.map { $0.path.creationDate })
+            // 3. 差集 = 被 cut 掉的（即被選取的）
+            let removedIds = beforeIds.subtracting(afterIds)
+            guard !removedIds.isEmpty else { return }
+
+            // 4. 以新顏色重建被剪的筆劃並加回
+            let uiColor = UIColor(newColor)
+            var restored = after
+            for original in before where removedIds.contains(original.path.creationDate) {
+                let newInk = PKInk(original.ink.inkType, color: uiColor)
+                let recolored = PKStroke(ink: newInk, path: original.path, transform: original.transform, mask: original.mask)
+                restored.append(recolored)
+            }
+            canvas.drawing = PKDrawing(strokes: restored)
+            self.currentDrawing = canvas.drawing
+            self.saveCurrentPageDrawing()
+            self.hasLassoSelection = false
+        }
+    }
+
     private var drawingToolbarContent: some View {
         // 放不下時分三步退讓：先收掉筆刷底下的文字標籤，
         // 再不夠就由「更多」選單承接次要工具，最後才換行 ——
@@ -4589,6 +4749,8 @@ ZStack(alignment: .topTrailing) {
                 // 整組色票 + 進階色盤是同一個控制項（選顏色），識別字掛在群組上。
                 .accessibilityIdentifier("editor.ink.palette")
 
+                eraserModeControls
+
                 // 若為套索選取工具，即時展開剪下、複製與刪除選取筆劃按鈕
                 if selectedTool == .lasso {
                     ToolbarSeparator()
@@ -4600,6 +4762,8 @@ ZStack(alignment: .topTrailing) {
                         lassoActionButton("doc.on.doc", "copy_selected", "copy_selected_hint") { copySelectedStrokes() }
                         lassoActionButton("plus.square.on.square", "duplicate_selected", "duplicate_selected_hint") { duplicateSelectedStrokes() }
                         lassoActionButton("doc.on.clipboard", "paste_strokes", "paste_strokes_hint") { pasteStrokes() }
+                        
+                        lassoRecolorButton
 
                         Button {
                             deleteSelectedStrokes()

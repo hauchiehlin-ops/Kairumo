@@ -190,6 +190,18 @@ final class LassoSelection: ObservableObject {
         return PKDrawing(strokes: strokes)
     }
 
+    /// 將圈選範圍內的筆劃統一換色
+    func recolorSelected(in drawing: inout PKDrawing, to newColor: UIColor) {
+        guard !selected.isEmpty else { return }
+        var strokes = drawing.strokes
+        for idx in selected where strokes.indices.contains(idx) {
+            let oldStroke = strokes[idx]
+            let newInk = PKInk(oldStroke.ink.inkType, color: newColor)
+            strokes[idx] = PKStroke(ink: newInk, path: oldStroke.path, transform: oldStroke.transform, mask: oldStroke.mask)
+        }
+        drawing.strokes = strokes
+    }
+
     /// 再製與貼上的偏移量。夠大到看得出是兩份，夠小到還在視野裡。
     private static let duplicateOffset = CGSize(width: 24, height: 24)
 

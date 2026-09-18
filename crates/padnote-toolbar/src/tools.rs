@@ -62,7 +62,8 @@ impl Tool {
     pub fn shown_by_default(self) -> bool {
         !matches!(
             self,
-            Self::Ruler
+            Self::Pencil
+                | Self::Ruler
                 | Self::ShapeRecognition
                 | Self::ZoomWrite
                 | Self::LaserPointer

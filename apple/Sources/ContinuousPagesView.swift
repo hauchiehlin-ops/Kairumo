@@ -46,6 +46,8 @@ struct ContinuousPageView<ObjectLayer: View>: View {
     let strokeWidth: CGFloat
     let isRulerActive: Bool
     let editorMode: EditorMode
+    var eraserMode: EraserMode = .stroke
+    var pixelEraserWidth: CGFloat = 20.0
     let palmRejection: PalmRejectionCoordinator?
 
     /// 這一頁是不是目前的焦點頁。插入物件、工具列動作都以焦點頁為準。
@@ -78,6 +80,8 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 selectedTool: selectedTool,
                 selectedColor: selectedColor,
                 strokeWidth: strokeWidth,
+                eraserMode: eraserMode,
+                pixelEraserWidth: pixelEraserWidth,
                 isRulerActive: isRulerActive,
                 paperId: paperId,
                 paletteId: paletteId,
