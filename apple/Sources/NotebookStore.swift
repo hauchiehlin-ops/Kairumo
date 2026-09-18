@@ -307,6 +307,7 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     ///
     /// 必須是 Optional：舊檔沒有這個欄位（見 `canvasRotation` 的說明）。
     public var audioAttachments: [NoteAudioAttachment]?
+    public var tapeAttachments: [NoteTapeAttachment]?
 
     /// 每一頁各自的紙張樣板 id。
     ///
@@ -2425,3 +2426,17 @@ extension NoteAudioAttachment: PageIndexed {}
 extension NoteTableAttachment: PageIndexed {}
 extension NoteShapeAttachment: PageIndexed {}
 extension NoteConnectionAttachment: PageIndexed {}
+
+public struct NoteTapeAttachment: Identifiable, Codable, Hashable {
+    public let id: String
+    public var pageIndex: Int
+    public var rect: CGRect
+    public var isRevealed: Bool
+    
+    public init(id: String = UUID().uuidString, pageIndex: Int, rect: CGRect, isRevealed: Bool = false) {
+        self.id = id
+        self.pageIndex = pageIndex
+        self.rect = rect
+        self.isRevealed = isRevealed
+    }
+}

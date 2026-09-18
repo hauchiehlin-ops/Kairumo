@@ -76,7 +76,7 @@ enum BrushCursor {
         case .marker: return 2.8
         case .highlighter: return 3.8
         case .eraser: return 3.0
-        case .lasso: return 1
+        case .lasso, .maskingTape: return 1
         }
     }
 

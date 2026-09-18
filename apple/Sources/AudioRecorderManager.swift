@@ -245,6 +245,12 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         isPlaying = false
     }
 
+    public func seek(to time: TimeInterval) {
+        guard let player = audioPlayer else { return }
+        player.currentTime = max(0, min(time, player.duration))
+        playbackProgress = player.currentTime / player.duration
+    }
+
     public func stopPlayback() {
         audioPlayer?.stop()
         audioPlayer = nil

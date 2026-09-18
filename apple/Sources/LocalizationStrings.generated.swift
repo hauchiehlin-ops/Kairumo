@@ -5327,6 +5327,22 @@ extension LocalizationManager {
             .ko: "\"%@\"에 일치하는 노트가 없습니다",
             .th: "ไม่พบบันทึกที่ตรงกับ \"%@\""
         ],
+        "no_stickers": [
+            .zhHant: "還沒有貼紙",
+            .en: "No Stickers Yet",
+            .zhHans: "还没有贴纸",
+            .ja: "ステッカーがありません",
+            .ko: "아직 스티커가 없습니다",
+            .th: "ยังไม่มีสติกเกอร์"
+        ],
+        "no_stickers_hint": [
+            .zhHant: "用套索圈選筆劃，即可儲存為自訂貼紙。",
+            .en: "Select strokes with lasso tool to save custom stickers.",
+            .zhHans: "用套索圈选笔画，即可保存为自定义贴纸。",
+            .ja: "なげなわツールでストロークを選択し、カスタムステッカーを保存します。",
+            .ko: "올가미 도구로 스트로크를 선택하여 사용자 정의 스티커를 저장합니다.",
+            .th: "เลือกจังหวะด้วยเครื่องมือบ่วงบาศเพื่อบันทึกสติกเกอร์แบบกำหนดเอง"
+        ],
         "no_strokes": [
             .zhHant: "這一頁還沒有手寫內容",
             .en: "Nothing handwritten on this page yet",
@@ -6951,6 +6967,14 @@ extension LocalizationManager {
             .ko: "저장",
             .th: "บันทึก"
         ],
+        "save_as_sticker": [
+            .zhHant: "儲存為貼紙",
+            .en: "Save as Sticker",
+            .zhHans: "保存为贴纸",
+            .ja: "ステッカーとして保存",
+            .ko: "스티커로 저장",
+            .th: "บันทึกเป็นสติกเกอร์"
+        ],
         "search_assets_placeholder": [
             .zhHant: "搜尋機構、3C、零件、規格、色彩...",
             .en: "Search mechanisms, 3C, components, specs, colors...",
@@ -7838,6 +7862,14 @@ extension LocalizationManager {
             .ja: "未接続",
             .ko: "연결 끊김",
             .th: "ไม่ได้เชื่อมต่อ"
+        ],
+        "sticker_library": [
+            .zhHant: "貼紙庫",
+            .en: "Sticker Library",
+            .zhHans: "贴纸库",
+            .ja: "ステッカーライブラリ",
+            .ko: "스티커 라이브러리",
+            .th: "คลังสติกเกอร์"
         ],
         "stop_and_save_record": [
             .zhHant: "停止並儲存至 Kairumo Record",
@@ -9038,6 +9070,14 @@ extension LocalizationManager {
             .ja: "マーカー",
             .ko: "마커펜",
             .th: "ปากกามาร์กเกอร์"
+        ],
+        "tool_masking_tape": [
+            .zhHant: "膠帶",
+            .en: "Masking Tape",
+            .zhHans: "胶带",
+            .ja: "マスキングテープ",
+            .ko: "마스킹 테이프",
+            .th: "กระดาษกาว"
         ],
         "tool_pen": [
             .zhHant: "鋼筆",

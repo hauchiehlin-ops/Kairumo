@@ -28,6 +28,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
     case watercolor = "watercolor"
     case eraser = "eraser"
     case lasso = "lasso"
+    case maskingTape = "masking_tape"
 
     public var id: String { rawValue }
 
@@ -38,7 +39,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
     /// 記圖案來分辨 —— 分組之後，形狀就說明了用途（工作項 S-62）。
     public var isBrush: Bool {
         switch self {
-        case .eraser, .lasso: return false
+        case .eraser, .lasso, .maskingTape: return false
         default: return true
         }
     }
@@ -54,6 +55,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .watercolor: return "paintbrush.fill"
         case .eraser: return "eraser"
         case .lasso: return "lasso"
+        case .maskingTape: return "bandage.fill"
         }
     }
 
@@ -72,6 +74,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .watercolor: return "editor.ink.watercolor"
         case .eraser: return "editor.ink.eraser"
         case .lasso: return "editor.ink.lasso"
+        case .maskingTape: return "editor.ink.maskingTape"
         }
     }
 
@@ -86,6 +89,7 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         case .watercolor: return "tool_watercolor"
         case .eraser: return "tool_eraser"
         case .lasso: return "tool_lasso"
+        case .maskingTape: return "tool_masking_tape"
         }
     }
 }
@@ -708,7 +712,7 @@ struct CanvasRepresentable: UIViewRepresentable {
                     }
                 }
 
-            case .lasso:
+            case .lasso, .maskingTape:
                 canvas.tool = PKLassoTool()
             }
         }
@@ -919,6 +923,7 @@ public struct NotebookEditorView: View {
     // 圖片、算式、圖表、文字與連結狀態
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var showPhotoPicker: Bool = false
+    @State private var showStickerLibrary: Bool = false
     @State private var showMathCalculator: Bool = false
     @State private var showChartStudio: Bool = false
     @State private var showTableStudio: Bool = false
@@ -1258,6 +1263,23 @@ public struct NotebookEditorView: View {
                 ShareActivityView(
                     data: data,
                     filename: "\(notebook.displayTitle()).\(exportFileExtension)")
+            }
+        } }
+        .sheet(isPresented: $showStickerLibrary) { resizableSheet {
+            StickerLibraryView { drawing in
+                guard let canvas = canvasView else { return }
+                let visibleRect = canvas.bounds
+                let drawingCenter = CGPoint(x: drawing.bounds.midX, y: drawing.bounds.midY)
+                let targetCenter = CGPoint(x: visibleRect.midX, y: visibleRect.midY)
+                let transform = CGAffineTransform(translationX: targetCenter.x - drawingCenter.x, y: targetCenter.y - drawingCenter.y)
+                let translatedStrokes = drawing.strokes.map {
+                    PKStroke(ink: $0.ink, path: $0.path, transform: $0.transform.concatenating(transform), mask: $0.mask)
+                }
+                var newDrawing = canvas.drawing
+                newDrawing.strokes.append(contentsOf: translatedStrokes)
+                canvas.drawing = newDrawing
+                self.currentDrawing = newDrawing
+                self.saveCurrentPageDrawing()
             }
         } }
         .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
@@ -2094,6 +2116,8 @@ public struct NotebookEditorView: View {
             Section {
                 Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
                     .accessibilityIdentifier("editor.insert.assets")
+                Button { showStickerLibrary = true } label: { Label(localizationManager.localized("sticker_library"), systemImage: "photo.on.rectangle") }
+                    .accessibilityIdentifier("editor.insert.stickers")
                     Button { showAudioPicker = true } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
                         .accessibilityIdentifier("editor.insert.audio")
                 Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
@@ -2844,6 +2868,13 @@ ZStack(alignment: .topTrailing) {
             // 代價是手寫模式下不能直接拖動物件 —— 要搬動或編輯就切到打字模式。
             // 這個取捨是刻意的：手寫模式的主角是筆，物件操作有它自己的模式。
             objectLayer(forPage: currentPageIndex)
+            MaskingTapeOverlayView(
+                notebook: $notebook,
+                pageIndex: currentPageIndex,
+                isActive: selectedTool == .maskingTape,
+                selectedColor: selectedColor,
+                onTapesChanged: { store.updateNotebook(notebook) }
+            )
 
             // 框選層。只有在框選模式下才存在 —— 平常掛一層可命中的
             // 透明視圖，底下的物件就全部點不到了。
@@ -4796,6 +4827,7 @@ ZStack(alignment: .topTrailing) {
                         lassoActionButton("doc.on.doc", "copy_selected", "copy_selected_hint") { copySelectedStrokes() }
                         lassoActionButton("plus.square.on.square", "duplicate_selected", "duplicate_selected_hint") { duplicateSelectedStrokes() }
                         lassoActionButton("doc.on.clipboard", "paste_strokes", "paste_strokes_hint") { pasteStrokes() }
+                        lassoActionButton("photo.on.rectangle", "save_as_sticker", "save_as_sticker_hint") { saveSelectedAsSticker() }
                         
                         lassoRecolorButton
 
@@ -5498,6 +5530,22 @@ ZStack(alignment: .topTrailing) {
                 .cornerRadius(6)
             }
             .buttonStyle(.plain)
+
+            Button {
+                saveSelectedAsSticker()
+            } label: {
+                HStack(spacing: 4) {
+                    Image(systemName: "photo.on.rectangle")
+                    Text(localizationManager.localized("save_as_sticker"))
+                }
+                .font(.caption2)
+                .foregroundColor(.primary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.secondary.opacity(0.15))
+                .cornerRadius(6)
+            }
+            .buttonStyle(.plain)
             .accessibilityLabel(localizationManager.localized("copy_selected_hint"))
             .help(localizationManager.localized("copy_selected_hint"))
 
@@ -6148,6 +6196,48 @@ ZStack(alignment: .topTrailing) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             self.currentDrawing = canvas.drawing
             self.saveCurrentPageDrawing()
+        }
+    }
+
+
+    private func saveSelectedAsSticker() {
+        guard let canvas = canvasView, hasLassoSelection else { return }
+        let originalStrokes = canvas.drawing.strokes
+        for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
+            if sv.responds(to: #selector(UIResponderStandardEditActions.cut(_:))) {
+                sv.perform(#selector(UIResponderStandardEditActions.cut(_:)), with: nil)
+            }
+        }
+        UIApplication.shared.sendAction(#selector(UIResponderStandardEditActions.cut(_:)), to: nil, from: nil, for: nil)
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            let cutDrawing = canvas.drawing
+            let originalDict = Dictionary(uniqueKeysWithValues: originalStrokes.map { ($0.path.creationDate, $0) })
+            let cutDict = Dictionary(uniqueKeysWithValues: cutDrawing.strokes.map { ($0.path.creationDate, $0) })
+            
+            var extractedStrokes: [PKStroke] = []
+            for (date, stroke) in originalDict {
+                if cutDict[date] == nil {
+                    extractedStrokes.append(stroke)
+                }
+            }
+            guard !extractedStrokes.isEmpty else {
+                canvas.drawing = PKDrawing(strokes: originalStrokes)
+                return
+            }
+            let tempDrawing = PKDrawing(strokes: extractedStrokes)
+            let bounds = tempDrawing.bounds
+            let center = CGPoint(x: bounds.midX, y: bounds.midY)
+            let transform = CGAffineTransform(translationX: -center.x, y: -center.y)
+            let centeredStrokes = extractedStrokes.map {
+                PKStroke(ink: $0.ink, path: $0.path, transform: $0.transform.concatenating(transform), mask: $0.mask)
+            }
+            let stickerDrawing = PKDrawing(strokes: centeredStrokes)
+            StickerManager.shared.saveSticker(stickerDrawing)
+            
+            canvas.drawing = PKDrawing(strokes: originalStrokes)
+            self.hasLassoSelection = false
+            self.selectedTool = .pen
         }
     }
 
@@ -8718,3 +8808,225 @@ struct RemoteCursorsOverlay: View {
 }
 
 
+
+
+public struct Sticker: Identifiable, Codable {
+    public let id: UUID
+    public let drawingData: Data
+    
+    public init(id: UUID = UUID(), drawingData: Data) {
+        self.id = id
+        self.drawingData = drawingData
+    }
+}
+
+public class StickerManager: ObservableObject {
+    public static let shared = StickerManager()
+    private let storageKey = "user_saved_stickers"
+    
+    @Published public var stickers: [Sticker] = []
+    
+    private init() {
+        loadStickers()
+    }
+    
+    public func saveSticker(_ drawing: PKDrawing) {
+        let sticker = Sticker(drawingData: drawing.dataRepresentation())
+        stickers.append(sticker)
+        persist()
+    }
+    
+    public func removeSticker(withId id: UUID) {
+        stickers.removeAll { $0.id == id }
+        persist()
+    }
+    
+    private func persist() {
+        if let data = try? JSONEncoder().encode(stickers) {
+            UserDefaults.standard.set(data, forKey: storageKey)
+        }
+    }
+    
+    private func loadStickers() {
+        guard let data = UserDefaults.standard.data(forKey: storageKey),
+              let loaded = try? JSONDecoder().decode([Sticker].self, from: data) else {
+            return
+        }
+        self.stickers = loaded
+    }
+}
+
+public struct StickerLibraryView: View {
+    @Environment(\.dismiss) var dismiss
+    @ObservedObject private var manager = StickerManager.shared
+    public var onSelect: ((PKDrawing) -> Void)?
+    
+    public init(onSelect: ((PKDrawing) -> Void)? = nil) {
+        self.onSelect = onSelect
+    }
+    
+    public var body: some View {
+        NavigationStack {
+            ScrollView {
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120, maximum: 160), spacing: 16)], spacing: 16) {
+                    ForEach(manager.stickers) { sticker in
+                        if let drawing = try? PKDrawing(data: sticker.drawingData) {
+                            StickerCell(drawing: drawing) {
+                                onSelect?(drawing)
+                                dismiss()
+                            } onRemove: {
+                                manager.removeSticker(withId: sticker.id)
+                            }
+                        }
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle(LocalizationManager.shared.localized("sticker_library"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(LocalizationManager.shared.localized("cancel")) {
+                        dismiss()
+                    }
+                }
+            }
+            .overlay {
+                if manager.stickers.isEmpty {
+                    VStack(spacing: 12) {
+                        Image(systemName: "photo.on.rectangle")
+                            .font(.system(size: 48))
+                            .foregroundColor(.secondary)
+                        Text(LocalizationManager.shared.localized("no_stickers"))
+                            .font(.headline)
+                        Text(LocalizationManager.shared.localized("no_stickers_hint"))
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .padding()
+                }
+            }
+        }
+    }
+}
+
+private struct StickerCell: View {
+    let drawing: PKDrawing
+    let onSelect: () -> Void
+    let onRemove: () -> Void
+    
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            Button(action: onSelect) {
+                Image(uiImage: drawing.image(from: drawing.bounds, scale: 2.0))
+                    .resizable()
+                    .scaledToFit()
+                    .padding()
+                    .frame(height: 120)
+                    .frame(maxWidth: .infinity)
+                    .background(Color(uiColor: .secondarySystemBackground))
+                    .cornerRadius(12)
+            }
+            .buttonStyle(.plain)
+            
+            Button(action: onRemove) {
+                Image(systemName: "minus.circle.fill")
+                    .foregroundColor(.red)
+                    .background(Circle().fill(.white))
+            }
+            .padding(8)
+        }
+    }
+}
+
+public struct MaskingTapeOverlayView: View {
+    @Binding var notebook: NotebookDocument
+    let pageIndex: Int
+    let isActive: Bool
+    let selectedColor: Color
+    let onTapesChanged: () -> Void
+    
+    @State private var currentDragTape: NoteTapeAttachment? = nil
+    @State private var dragStartPoint: CGPoint = .zero
+    
+    public var body: some View {
+        ZStack {
+            let tapes = notebook.tapeAttachments?.filter { $0.pageIndex == pageIndex } ?? []
+            ForEach(tapes) { tape in
+                TapeView(
+                    tape: tape,
+                    isActive: isActive,
+                    onToggleReveal: {
+                        if let idx = notebook.tapeAttachments?.firstIndex(where: { $0.id == tape.id }) {
+                            notebook.tapeAttachments?[idx].isRevealed.toggle()
+                            onTapesChanged()
+                        }
+                    },
+                    onRemove: {
+                        notebook.tapeAttachments?.removeAll { $0.id == tape.id }
+                        onTapesChanged()
+                    }
+                )
+            }
+            
+            if let dragTape = currentDragTape {
+                Rectangle()
+                    .fill(selectedColor)
+                    .frame(width: dragTape.rect.width, height: dragTape.rect.height)
+                    .position(x: dragTape.rect.midX, y: dragTape.rect.midY)
+                    .opacity(0.8)
+            }
+        }
+        .background(
+            Color.white.opacity(0.001)
+                .allowsHitTesting(isActive)
+                .gesture(
+                    DragGesture(minimumDistance: 5)
+                        .onChanged { value in
+                            guard isActive else { return }
+                            if currentDragTape == nil {
+                                dragStartPoint = value.startLocation
+                            }
+                            let x = min(dragStartPoint.x, value.location.x)
+                            let y = min(dragStartPoint.y, value.location.y)
+                            let width = abs(value.location.x - dragStartPoint.x)
+                            let height: CGFloat = 24.0
+                            let rect = CGRect(x: x, y: dragStartPoint.y - height / 2, width: max(width, 10), height: height)
+                            
+                            currentDragTape = NoteTapeAttachment(pageIndex: pageIndex, rect: rect)
+                        }
+                        .onEnded { value in
+                            guard isActive, let dragTape = currentDragTape else { return }
+                            if notebook.tapeAttachments == nil {
+                                notebook.tapeAttachments = []
+                            }
+                            notebook.tapeAttachments?.append(dragTape)
+                            currentDragTape = nil
+                            onTapesChanged()
+                        }
+                )
+        )
+    }
+}
+
+private struct TapeView: View {
+    let tape: NoteTapeAttachment
+    let isActive: Bool
+    let onToggleReveal: () -> Void
+    let onRemove: () -> Void
+    
+    var body: some View {
+        Rectangle()
+            .fill(tape.isRevealed ? Color.gray.opacity(0.3) : Color.gray)
+            .frame(width: tape.rect.width, height: tape.rect.height)
+            .position(x: tape.rect.midX, y: tape.rect.midY)
+            .onTapGesture {
+                if isActive {
+                    onRemove()
+                } else {
+                    onToggleReveal()
+                }
+            }
+    }
+}

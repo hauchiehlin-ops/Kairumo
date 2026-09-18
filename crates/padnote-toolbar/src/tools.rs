@@ -23,11 +23,13 @@ pub enum Tool {
     Shape,
     Table,
     Embed,
+    StickerLibrary,
     // 歷程
     Undo,
     Redo,
     // 進階（預設隱藏）
     Ruler,
+    MaskingTape,
     ShapeRecognition,
     ZoomWrite,
     LaserPointer,
@@ -48,6 +50,8 @@ impl Tool {
             Self::Image => Key::ToolImage,
             Self::Shape | Self::ShapeRecognition => Key::ToolShape,
             Self::Table | Self::Embed => Key::Import,
+            Self::StickerLibrary => Key::ToolImage, // Reuse Image key or add new one
+            Self::MaskingTape => Key::ToolHighlighter, // Reuse Highlighter key or add new one
             Self::Undo => Key::ToolUndo,
             Self::Redo => Key::ToolRedo,
             Self::Ruler | Self::ZoomWrite | Self::LaserPointer => Key::ToolShape,
@@ -69,19 +73,21 @@ impl Tool {
                 | Self::LaserPointer
                 | Self::Table
                 | Self::Embed
+                | Self::StickerLibrary
+                | Self::MaskingTape
         )
     }
 
     /// 所屬分組。
     pub fn group(self) -> ToolGroup {
         match self {
-            Self::FountainPen | Self::BallPoint | Self::Highlighter | Self::Pencil => {
+            Self::FountainPen | Self::BallPoint | Self::Highlighter | Self::Pencil | Self::MaskingTape => {
                 ToolGroup::Pens
             }
             Self::Eraser | Self::Lasso | Self::Ruler | Self::ShapeRecognition | Self::ZoomWrite => {
                 ToolGroup::Edit
             }
-            Self::Text | Self::Image | Self::Shape | Self::Table | Self::Embed => ToolGroup::Insert,
+            Self::Text | Self::Image | Self::Shape | Self::Table | Self::Embed | Self::StickerLibrary => ToolGroup::Insert,
             Self::Undo | Self::Redo => ToolGroup::History,
             Self::LaserPointer | Self::Record => ToolGroup::Extras,
         }
@@ -134,6 +140,7 @@ pub fn all_tools() -> Vec<Tool> {
         Tool::BallPoint,
         Tool::Highlighter,
         Tool::Pencil,
+        Tool::MaskingTape,
         Tool::Eraser,
         Tool::Lasso,
         Tool::Ruler,
@@ -144,6 +151,7 @@ pub fn all_tools() -> Vec<Tool> {
         Tool::Shape,
         Tool::Table,
         Tool::Embed,
+        Tool::StickerLibrary,
         Tool::Undo,
         Tool::Redo,
         Tool::LaserPointer,
