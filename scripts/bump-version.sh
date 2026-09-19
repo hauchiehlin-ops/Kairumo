@@ -303,19 +303,23 @@ if os.path.isfile(gradle_file):
 # 手冊與隱私權政策上都印著「適用版本」。沒被納進來的後果已經發生過：
 # 英文版停在 2.1.1、其他語言停在 2.3.0，而程式是 2.3.4 —— 使用者拿到的
 # 說明書標示的版本跟手上的 App 對不起來。
-python3 -c '
+python3 - "$NEW_VERSION" "$NEW_BUNDLE_VERSION" "$REPO_ROOT" <<'PY'
 import re, sys, os
-manual, privacy, new_ver, new_bundle = sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4]
+new_ver, new_bundle, repo_root = sys.argv[1], sys.argv[2], sys.argv[3]
 
-def bump(path):
+docs = [
+    "docs/manual/manual.js", "docs/manual/manual-apple.js", "docs/manual/manual-android.js",
+    "docs/legal/privacy.html", "docs/legal/privacy-apple.html", "docs/legal/privacy-android.html"
+]
+
+def bump(rel_path):
+    path = os.path.join(repo_root, rel_path)
     if not os.path.isfile(path):
         return
     with open(path, "r", encoding="utf-8") as f:
         lines = f.readlines()
     out = []
     for line in lines:
-        # 只動「適用版本」那幾行與行文中明確寫出的 "Kairumo vX.Y.Z" 範例，
-        # 不要全檔盲目替換數字 —— 文件裡還有日期、尺寸、快捷鍵之類的數字。
         if re.search(r"[\"']?(version|appver)[\"']?\s*:", line):
             line = re.sub(r"\d+\.\d+\.\d+", new_ver, line)
             line = re.sub(r"((?:bundle|build)\s*)\d+", r"\g<1>" + new_bundle, line)
@@ -324,13 +328,13 @@ def bump(path):
     with open(path, "w", encoding="utf-8") as f:
         f.writelines(out)
 
-bump(manual)
-bump(privacy)
-' "$DOC_MANUAL" "$DOC_PRIVACY" "$NEW_VERSION" "$NEW_BUNDLE_VERSION"
+for d in docs:
+    bump(d)
+PY
 
 # 6.5 寫入後驗證：確認每個檔案都真的帶上新版本號。
 # 沒有這一步的話，任何一個正則沒對上都會靜默跳過，接著又是一次版本漂移。
-python3 -c '
+python3 - "$CARGO_TOML" "$APPLE_PROJECT_YML" "$APPLE_PBXPROJ" "$ANDROID_GRADLE" "$NEW_VERSION" "$NEW_BUNDLE_VERSION" <<'PY'
 import re, sys, os
 
 cargo, yml, pbx, gradle, new_ver, new_bundle = sys.argv[1:7]
@@ -374,23 +378,28 @@ if os.path.isfile(gradle):
     if not m or m.group(1) != new_bundle:
         problems.append(f"android/app/build.gradle.kts 的 versionCode 沒有更新成 {new_bundle}")
 
-for doc, label in ((manual, "docs/manual/manual.js"), (privacy, "docs/legal/privacy.html")):
-    if not os.path.isfile(doc):
+docs = [
+    "docs/manual/manual.js", "docs/manual/manual-apple.js", "docs/manual/manual-android.js",
+    "docs/legal/privacy.html", "docs/legal/privacy-apple.html", "docs/legal/privacy-android.html"
+]
+for doc in docs:
+    path = os.path.join(repo_root, doc)
+    if not os.path.isfile(path):
         continue
-    text = read(doc)
+    text = read(path)
     stale = set()
     for line in text.splitlines():
         if re.search(r"[\"']?(version|appver)[\"']?\s*:", line):
             stale.update(v for v in re.findall(r"\d+\.\d+\.\d+", line) if v != new_ver)
     if stale:
-        problems.append(f"{label} 還有沒更新的版本號：{sorted(stale)}")
+        problems.append(f"{doc} 還有沒更新的版本號：{sorted(stale)}")
 
 if problems:
     for p in problems:
         print("❌ " + p, file=sys.stderr)
     sys.exit(1)
 print("✅ 版本號已在 Cargo.toml / project.yml / project.pbxproj / build.gradle.kts / 使用者文件 全數對齊")
-' "$CARGO_TOML" "$APPLE_PROJECT_YML" "$APPLE_PBXPROJ" "$ANDROID_GRADLE" "$DOC_MANUAL" "$DOC_PRIVACY" "$NEW_VERSION" "$NEW_BUNDLE_VERSION"
+PY
 
 # 7. 把更新後的使用者文件同步進 App 的資源目錄
 #
