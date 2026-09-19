@@ -228,10 +228,10 @@ final class BundledDocumentTests: XCTestCase {
         }
     }
 
-    /// 手冊的內容在 `manual.js` 裡，不在 HTML 裡。
+    /// 手冊的內容在 `manual-apple.js` 裡，不在 HTML 裡。
     private func manualScript() throws -> String {
         let html = try XCTUnwrap(BundledDocument.manual.url)
-        let script = html.deletingLastPathComponent().appendingPathComponent("manual.js")
+        let script = html.deletingLastPathComponent().appendingPathComponent("manual-apple.js")
         return try String(contentsOf: script, encoding: .utf8)
     }
 }

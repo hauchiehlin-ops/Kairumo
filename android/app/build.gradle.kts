@@ -106,7 +106,7 @@ val copyUserDocs by tasks.registering(Copy::class) {
     }
     from("$rootDir/../docs/manual/manual-android.js") {
         into("manual")
-        
+        rename("manual-android.js", "manual.js")
     }
     from("$rootDir/../docs/legal/privacy-android.html") {
         into("legal")

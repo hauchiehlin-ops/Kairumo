@@ -44,7 +44,10 @@ final class DriveHttpClient: FfiDriveHttp {
         } else {
             let q = OperationQueue()
             q.name = "DriveHttpClientQueue"
-            self.session = URLSession(configuration: .ephemeral, delegate: nil, delegateQueue: q)
+            let config = URLSessionConfiguration.ephemeral
+            config.timeoutIntervalForRequest = 30
+            config.timeoutIntervalForResource = 60
+            self.session = URLSession(configuration: config, delegate: nil, delegateQueue: q)
             self.ownsSession = true
         }
     }
@@ -151,13 +154,18 @@ final class DriveHttpClient: FfiDriveHttp {
         var response: HTTPURLResponse?
         var transportError: Error?
 
-        session.dataTask(with: request) { data, urlResponse, error in
+        let task = session.dataTask(with: request) { data, urlResponse, error in
             payload = data ?? Data()
             response = urlResponse as? HTTPURLResponse
             transportError = error
             semaphore.signal()
-        }.resume()
-        semaphore.wait()
+        }
+        task.resume()
+        let waitResult = semaphore.wait(timeout: .now() + 35)
+        if waitResult == .timedOut {
+            task.cancel()
+            throw FfiDriveError.Backend(detail: "request_timeout")
+        }
 
         if let transportError {
             // 連不上：網路問題，重試會好。
