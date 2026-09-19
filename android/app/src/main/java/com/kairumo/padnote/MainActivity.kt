@@ -2857,6 +2857,43 @@ private fun InkScreen(
                 engine = engine,
                 l = { key -> l10n(key) },
                 onChanged = { revision++ },
+                onRecognizeToText = {
+                    val selIds = lasso.selected
+                    val strokes = engine.strokes.filter { it.coreStrokeId in selIds }
+                    if (strokes.isNotEmpty()) {
+                        message = l10n("recognizing")
+                        scope.launch {
+                            val recognized = StringBuilder()
+                            val groups = Handwriting.group(
+                                strokeIds = strokes.map { it.coreStrokeId ?: "" },
+                                strokes = strokes.map { it.points },
+                                strokeTimesMs = strokes.map { it.startedAtMs }
+                            )
+                            for (group in groups) {
+                                val res = Handwriting.recognize(group.strokes, deviceLanguageTag())
+                                val txt = res.getOrNull().orEmpty()
+                                if (txt.isNotBlank()) recognized.append(txt).append("\n")
+                            }
+                            val finalStr = recognized.toString().trim()
+                            if (finalStr.isNotEmpty()) {
+                                val minX = strokes.flatMap { it.points }.minOfOrNull { it.x } ?: 100f
+                                val maxY = strokes.flatMap { it.points }.maxOfOrNull { it.y } ?: 200f
+                                val box = textStore.create(minX, maxY + 20f)
+                                box.text = finalStr
+                                box.width = 320f
+                                box.height = 120f
+                                box.backgroundColorHex = "#FFFFFF"
+                                box.hasBorder = true
+                                textStore.persist(box)
+                                selectedTextId = box.id
+                                textRevision++
+                                message = l10n("recognized_result").replace("%1@", "${strokes.size}").replace("%2@", finalStr.take(20))
+                            } else {
+                                message = l10n("no_recognition_result")
+                            }
+                        }
+                    }
+                },
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
             )
         }
@@ -3658,6 +3695,23 @@ private fun InkScreen(
                 ruleOfThirds = ruleOfThirds,
                 modifier = Modifier.fillMaxSize().zIndex(9_000f)
             )
+
+            // 🌟 專業鏡像對稱尺規視覺參考線（與 Apple 端對稱軸對齊）
+            if (showSymmetryGuide && editorMode == EditorMode.DRAW) {
+                androidx.compose.foundation.Canvas(
+                    modifier = Modifier.fillMaxSize().zIndex(9_001f)
+                ) {
+                    val axisX = (PageGeometry.width * canvasDensity) / 2f
+                    val strokeDash = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(12f, 12f))
+                    drawLine(
+                        color = Color(0xFF6366F1).copy(alpha = 0.65f),
+                        start = Offset(axisX, 0f),
+                        end = Offset(axisX, size.height),
+                        strokeWidth = 2.dp.toPx(),
+                        pathEffect = strokeDash
+                    )
+                }
+            }
 
             if (showRefineBar) {
                 // 讀一下 revision，按鈕的 enabled 才會跟著美化結果更新。

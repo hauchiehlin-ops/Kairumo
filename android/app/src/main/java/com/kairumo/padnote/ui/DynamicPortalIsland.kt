@@ -74,6 +74,7 @@ fun DynamicPortalIsland(
                     icon = "✏️",
                     isSelected = currentMode == EditorMode.DRAW,
                     activeColor = MaterialTheme.colorScheme.primary,
+                    testTag = "portal.draw",
                     onClick = {
                         if (currentMode != EditorMode.DRAW) {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -88,6 +89,7 @@ fun DynamicPortalIsland(
                     icon = "📑",
                     isSelected = currentMode == EditorMode.TYPE,
                     activeColor = Color(0xFF6366F1), // 智庫經典靛藍
+                    testTag = "portal.type",
                     onClick = {
                         if (currentMode != EditorMode.TYPE) {
                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
@@ -144,7 +146,8 @@ private fun ModePillButton(
     icon: String,
     isSelected: Boolean,
     activeColor: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    testTag: String = ""
 ) {
     val backgroundColor by animateColorAsState(
         targetValue = if (isSelected) activeColor else Color.Transparent,
@@ -157,6 +160,7 @@ private fun ModePillButton(
 
     Box(
         modifier = Modifier
+            .then(if (testTag.isNotEmpty()) Modifier.testTag(testTag) else Modifier)
             .clip(CircleShape)
             .background(backgroundColor)
             .clickable(onClick = onClick)

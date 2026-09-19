@@ -110,6 +110,7 @@ fun LassoActionBar(
     engine: InkEngine,
     l: (String) -> String,
     onChanged: () -> Unit,
+    onRecognizeToText: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     if (!lasso.hasSelection && !lasso.canPaste) return
@@ -140,6 +141,11 @@ fun LassoActionBar(
                 }
                 TextButton(onClick = { if (lasso.duplicate(engine)) onChanged() }) {
                     Text(l("duplicate_selected"), fontSize = 12.sp)
+                }
+                if (onRecognizeToText != null) {
+                    TextButton(onClick = { onRecognizeToText() }) {
+                        Text(l("recognize_handwriting"), fontSize = 12.sp)
+                    }
                 }
             }
             if (lasso.canPaste) {
