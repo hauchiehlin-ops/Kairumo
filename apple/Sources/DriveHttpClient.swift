@@ -34,18 +34,26 @@ final class DriveHttpClient: FfiDriveHttp {
 
     private let accessToken: String
     private let session: URLSession
+    private let ownsSession: Bool
 
     init(accessToken: String, session: URLSession? = nil) {
         self.accessToken = accessToken
         if let s = session {
             self.session = s
+            self.ownsSession = false
         } else {
             let q = OperationQueue()
             q.name = "DriveHttpClientQueue"
             self.session = URLSession(configuration: .ephemeral, delegate: nil, delegateQueue: q)
+            self.ownsSession = true
         }
     }
 
+    deinit {
+        if ownsSession {
+            session.finishTasksAndInvalidate()
+        }
+    }
     func getJson(url: String, query: [FfiQueryParam]) throws -> String {
         guard var components = URLComponents(string: url) else {
             throw FfiDriveError.Backend(detail: "bad_url")

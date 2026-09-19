@@ -29,7 +29,7 @@ mkdir -p "$DEST"
 
 echo "==> 同步操作手冊"
 cp "$SRC_MANUAL/index-apple.html" "$DEST/manual.html"
-cp "$SRC_MANUAL/manual-apple.js" "$DEST/manual.js"
+cp "$SRC_MANUAL/manual-apple.js" "$DEST/manual-apple.js"
 rm -rf "$DEST/img"
 cp -R "$SRC_MANUAL/img" "$DEST/img"
 
