@@ -101,11 +101,21 @@ enum CloudSyncFolder {
         guard let walker = fm.enumerator(
             at: packageURL,
             includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey],
-            options: [.skipsHiddenFiles]
+            options: []
         ) else { return [] }
 
         var out: [SyncFileEntry] = []
         for case let url as URL in walker {
+            let last = url.lastPathComponent
+            if ICloudSyncFolder.isPlaceholder(url) {
+                let logical = ICloudSyncFolder.logicalURL(of: url)
+                try? fm.startDownloadingUbiquitousItem(at: logical)
+                let relative = logical.path.replacingOccurrences(of: packageURL.path + "/", with: "")
+                out.append(SyncFileEntry(path: relative, size: 0))
+                continue
+            }
+            if last.hasPrefix(".") { continue }
+
             let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
             guard values?.isRegularFile == true else { continue }
             let relative = url.path.replacingOccurrences(
@@ -170,6 +180,17 @@ enum CloudSyncFolder {
         let fm = FileManager.default
         let src = source.appendingPathComponent(relative)
         let dst = destination.appendingPathComponent(relative)
+
+        // 若來源尚未自 iCloud 下載，觸發下載並短暫等待
+        let placeholder = src.deletingLastPathComponent().appendingPathComponent(".\(src.lastPathComponent).icloud")
+        if fm.fileExists(atPath: placeholder.path) && !fm.fileExists(atPath: src.path) {
+            try? fm.startDownloadingUbiquitousItem(at: src)
+            for _ in 0..<6 {
+                if fm.fileExists(atPath: src.path) { break }
+                Thread.sleep(forTimeInterval: 0.2)
+            }
+        }
+
         do {
             try fm.createDirectory(
                 at: dst.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -179,7 +200,11 @@ enum CloudSyncFolder {
             try bytes.write(to: dst, options: .atomic)
             if uploading { result.uploaded.append(relative) } else { result.downloaded.append(relative) }
         } catch {
-            result.failures[relative] = error.localizedDescription
+            if fm.fileExists(atPath: placeholder.path) {
+                result.failures[relative] = "檔案正在從 iCloud 雲端下載中，請稍候重試"
+            } else {
+                result.failures[relative] = error.localizedDescription
+            }
         }
     }
 }

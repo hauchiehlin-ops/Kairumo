@@ -84,6 +84,7 @@ public struct HomeWorkbenchView: View {
     /// 一下、一邊三下，這正是對齊計劃 L2 那一層要消掉的差異。
     @State private var homeGoogleMessage: String?
     @State private var homeGoogleSyncing = false
+    @State private var homeFolderSyncing = false
 
     @State private var selectedFolderId: String? = nil
     @State private var showRenameRootFolderAlert: Bool = false
@@ -1454,37 +1455,26 @@ public struct HomeWorkbenchView: View {
 
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
-                    googleSyncCard
+                    unifiedSyncCard
                     dataCard("externaldrive.badge.timemachine", "backup_create",
                              "backup_create_desc", .blue) { showBackupCreateSheet = true }
                     dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
                              "backup_restore_desc", .orange) { showBackupRestoreSheet = true }
-                    dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
-                             "sync_folder_desc", .teal) { showFolderSyncSheet = true }
                 }
                 VStack(spacing: 12) {
-                    googleSyncCard
+                    unifiedSyncCard
                     dataCard("externaldrive.badge.timemachine", "backup_create",
                              "backup_create_desc", .blue) { showBackupCreateSheet = true }
                     dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
                              "backup_restore_desc", .orange) { showBackupRestoreSheet = true }
-                    dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
-                             "sync_folder_desc", .teal) { showFolderSyncSheet = true }
                 }
             }
         }
         .padding(.top, 6)
     }
 
-    /// Google 帳號同步。**放在首頁**，與 Android 一致。
-    ///
-    /// 原本這條路只在設定頁的「Google Drive」區塊裡，而首頁的「資料與同步」
-    /// 三張卡片講的全是另一條路（自選資料夾）—— 使用者在首頁找不到「登入」，
-    /// 只會認為這個 App 沒有帳號同步。
-    ///
-    /// 描述直接寫**目前狀態**而不是功能說明：使用者最想知道的是
-    /// 「我到底登入了沒」，那一句比任何介紹都有用。
-    private var googleSyncCard: some View {
+    /// 統一雲端同步卡片。結合 Google Drive 與 iCloud / 本機資料夾同步。
+    private var unifiedSyncCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Button {
                 showCloudSyncSheet = true
@@ -1496,11 +1486,7 @@ public struct HomeWorkbenchView: View {
                         Text(localizationManager.localized("cloud_sync"))
                             .font(DS.Font.cardTitle)
                             .foregroundStyle(Color.primary)
-                        // 描述直接寫**目前狀態**而不是功能說明：使用者最想知道的是
-                        // 「我到底登入了沒」，那一句比任何介紹都有用。
-                        Text(homeGoogleAuth.isSignedIn
-                             ? (homeGoogleAuth.accountEmail ?? localizationManager.localized("signed_in"))
-                             : localizationManager.localized("not_signed_in"))
+                        Text(unifiedSyncSubtitle)
                             .font(DS.Font.caption)
                             .foregroundStyle(DS.Color.secondaryText)
                     }
@@ -1533,20 +1519,20 @@ public struct HomeWorkbenchView: View {
                         }
                     }
                     .accessibilityIdentifier("home.cloud.signout")
+                } else if CloudSyncFolder.resolveFolder() != nil {
+                    Button(localizationManager.localized("sync_now")) {
+                        runHomeFolderSync()
+                    }
+                    .disabled(homeFolderSyncing)
+                    .accessibilityIdentifier("home.folder.sync_now")
+
+                    Button(localizationManager.localized("settings")) {
+                        showCloudSyncSheet = true
+                    }
+                    .accessibilityIdentifier("home.cloud.settings")
                 } else {
-                    Button(localizationManager.localized("sign_in_google")) {
-                        Task {
-                            switch await GoogleAuth.shared.signIn() {
-                            case .success:
-                                // 登入之後**馬上同步一次**。停在「已登入」而什麼
-                                // 都沒發生的話，使用者不知道這個功能有沒有用。
-                                await runHomeGoogleSync()
-                            case .failure(.cancelled):
-                                break
-                            case .failure(let error):
-                                homeGoogleMessage = error.errorDescription
-                            }
-                        }
+                    Button(localizationManager.localized("settings")) {
+                        showCloudSyncSheet = true
                     }
                     .accessibilityIdentifier("home.cloud.signin")
                 }
@@ -1554,8 +1540,7 @@ public struct HomeWorkbenchView: View {
             .buttonStyle(.bordered)
             .font(DS.Font.caption)
 
-            // 與 Android 同一個語系鍵 —— 兩邊讀到的是同一段話。
-            Text(localizationManager.localized("cloud_sync_explainer"))
+            Text(unifiedSyncExplainer)
                 .font(DS.Font.caption)
                 .foregroundStyle(DS.Color.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1571,9 +1556,27 @@ public struct HomeWorkbenchView: View {
         .accessibilityIdentifier("home.cloud.card")
     }
 
-    /// 首頁卡片上的「立即同步」。與診斷頁那一顆走同一個協調器，
-    /// 訊息措辭也一致 —— 兩處講同一件事卻用不同句子的話，
-    /// 使用者會以為是兩個不同的功能。
+    private var unifiedSyncSubtitle: String {
+        if homeGoogleAuth.isSignedIn {
+            return "Google Drive · " + (homeGoogleAuth.accountEmail ?? localizationManager.localized("signed_in"))
+        } else if let folder = CloudSyncFolder.resolveFolder() {
+            return "iCloud / 資料夾 · " + folder.lastPathComponent
+        } else {
+            return "尚未設定同步（點擊進入設定）"
+        }
+    }
+
+    private var unifiedSyncExplainer: String {
+        if homeGoogleAuth.isSignedIn {
+            return localizationManager.localized("cloud_sync_explainer")
+        } else if CloudSyncFolder.resolveFolder() != nil {
+            return "透過指定的 iCloud 或本機資料夾雙向同步筆記與手繪，完全保護隱私。"
+        } else {
+            return "支援 Google Drive 跨平台同步，或 iCloud Drive 資料夾免帳號同步。"
+        }
+    }
+
+    /// 首頁卡片上的 Google Drive「立即同步」。
     @MainActor
     private func runHomeGoogleSync() async {
         guard !homeGoogleSyncing else { return }
@@ -1589,6 +1592,38 @@ public struct HomeWorkbenchView: View {
         }
         if report.failures.isEmpty { SyncHistory.markGoogleSynced() }
         if let failure = report.failures.first {
+            homeGoogleMessage = "\(failure.key)：\(failure.value)"
+        } else if report.isNoOp {
+            homeGoogleMessage = localizationManager.localized("sync_up_to_date")
+        } else {
+            homeGoogleMessage = localizationManager.localized("sync_result")
+                .replacingFirst("%1@", with: "\(report.uploaded)")
+                .replacingFirst("%2@", with: "\(report.downloaded)")
+        }
+    }
+
+    /// 首頁卡片上的資料夾「立即同步」。
+    @MainActor
+    private func runHomeFolderSync() {
+        guard !homeFolderSyncing else { return }
+        guard let folder = CloudSyncFolder.resolveFolder() else { return }
+        homeFolderSyncing = true
+        defer { homeFolderSyncing = false }
+
+        homeGoogleMessage = localizationManager.localized("syncing")
+        let scoped = folder.startAccessingSecurityScopedResource()
+        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+
+        let report = NotebookSyncCoordinator.run(
+            store: notebookStore, folder: folder, deviceId: NotebookMigration.deviceId)
+
+        if report.failures.isEmpty && report.needsAttention.isEmpty {
+            SyncHistory.markFolderSynced()
+        }
+        if let first = report.needsAttention.first {
+            homeGoogleMessage = localizationManager.localized("sync_needs_attention")
+                .replacingFirst("%@", with: first)
+        } else if let failure = report.failures.first {
             homeGoogleMessage = "\(failure.key)：\(failure.value)"
         } else if report.isNoOp {
             homeGoogleMessage = localizationManager.localized("sync_up_to_date")
@@ -2434,6 +2469,7 @@ public struct AppDiagnosticsSheet: View {
     @State private var rollbackMessage: String?
 
     /// 雲端同步（決策 D3 選項 A）。
+    @State private var showCloudSyncHub = false
     @State private var showFolderPicker = false
     @State private var syncMessage: String?
 
@@ -2490,8 +2526,7 @@ public struct AppDiagnosticsSheet: View {
                 }
 
                 migrationSection
-                cloudSyncSection
-                googleAccountSection
+                unifiedSyncSection
                 pageModelSection
                 backupSection
                 inputDiagnosticsSection
@@ -2647,51 +2682,37 @@ extension AppDiagnosticsSheet {
 
     /// Google 帳號同步（G-01 ～ G-05，ADR-0011）。
     ///
-    /// 與上面那一節是**兩條不同的路**：`cloudSyncSection` 是使用者自己挑一個
-    /// 資料夾（iCloud Drive / Dropbox 都行），這一節是用 Google 帳號直接把
-    /// 資料放進 Drive 的 appDataFolder，不必挑資料夾、也不必兩台裝置各挑一次。
-    ///
-    /// 在此之前這整條路**在 Apple 上沒有任何入口** —— `GoogleAuth` 與
-    /// `CloudSync` 都寫好了，但沒有一個地方呼叫得到它們。
+    /// 統一雲端同步中心（整合 Google Drive 與 iCloud / 自選資料夾）
     @ViewBuilder
-    var googleAccountSection: some View {
-        Section("Google Drive") {
+    var unifiedSyncSection: some View {
+        Section(localizationManager.localized("cloud_sync")) {
             HStack {
-                Text(localizationManager.localized("cloud_sync"))
-                Spacer()
-                Text(googleAuth.isSignedIn
-                     ? localizationManager.localized("sync_section")
-                     : localizationManager.localized("not_signed_in"))
-                    .foregroundColor(.secondary)
-            }
-
-            // **哪一個帳號、東西放在哪裡、上次什麼時候同步的。**
-            //
-            // 原本這一整區只有「已登入 / 尚未登入」兩種狀態，使用者看不出
-            // 資料進了哪一個 Drive。一台裝置上有兩個 Google 帳號是常態，
-            // 而「同步好像沒作用」最常見的真正原因就是兩台連到不同帳號。
-            if googleAuth.isSignedIn {
-                if let email = googleAuth.accountEmail {
-                    HStack {
-                        Text(localizationManager.localized("sync_account"))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(localizationManager.localized("cloud_sync"))
+                        .font(.body)
+                        .fontWeight(.medium)
+                    if googleAuth.isSignedIn {
+                        Text("Google Drive: \(googleAuth.accountEmail ?? "")")
+                            .font(.caption)
                             .foregroundColor(.secondary)
-                        Spacer()
-                        Text(email)
-                            .lineLimit(1)
-                            .truncationMode(.middle)
+                    } else if let folder = CloudSyncFolder.resolveFolder() {
+                        Text("iCloud / 資料夾: \(folder.lastPathComponent)")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text(localizationManager.localized("sync_not_configured"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
-                    .font(.footnote)
                 }
-
-                HStack(alignment: .top) {
-                    Text(localizationManager.localized("sync_destination"))
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text(localizationManager.localized("sync_destination_appdata"))
-                        .multilineTextAlignment(.trailing)
+                Spacer()
+                Button(localizationManager.localized("settings")) {
+                    showCloudSyncHub = true
                 }
                 .font(.footnote)
+            }
 
+            if googleAuth.isSignedIn {
                 HStack {
                     Text(localizationManager.localized("sync_last_at"))
                         .foregroundColor(.secondary)
@@ -2700,15 +2721,7 @@ extension AppDiagnosticsSheet {
                         none: localizationManager.localized("sync_never")))
                 }
                 .font(.footnote)
-            }
 
-            if let googleMessage {
-                Text(googleMessage)
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-            }
-
-            if googleAuth.isSignedIn {
                 Button(localizationManager.localized("sync_now")) {
                     Task { await runGoogleSync() }
                 }
@@ -2720,30 +2733,38 @@ extension AppDiagnosticsSheet {
                         googleMessage = nil
                     }
                 }
-            } else {
-                Button(localizationManager.localized("sign_in_google")) {
-                    Task {
-                        switch await GoogleAuth.shared.signIn() {
-                        case .success:
-                            // 登入之後**馬上同步一次**。停在「已登入」而什麼都
-                            // 沒發生的話，使用者不知道這個功能到底有沒有用。
-                            await runGoogleSync()
-                        case .failure(.cancelled):
-                            // 自己按取消不是錯誤，不要跳訊息。
-                            break
-                        case .failure(let error):
-                            googleMessage = error.errorDescription
-                        }
-                    }
+            } else if CloudSyncFolder.resolveFolder() != nil {
+                HStack {
+                    Text(localizationManager.localized("sync_last_at"))
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(SyncHistory.lastFolderSyncDescription(
+                        none: localizationManager.localized("sync_never")))
+                }
+                .font(.footnote)
+
+                Button(localizationManager.localized("sync_now")) {
+                    runSync()
                 }
             }
 
-            // 這一段講的是**Google 帳號**這條路，不是上面「自選資料夾」那一條。
-            // 兩條路的說明混用的話，使用者會照著去找一個這裡根本沒有的資料夾設定。
-            // 與 Android 同一個語系鍵 —— 兩邊讀到的是同一段話。
+            if let googleMessage {
+                Text(googleMessage)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+            if let syncMessage {
+                Text(syncMessage)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+            }
+
             Text(localizationManager.localized("cloud_sync_explainer"))
                 .font(.caption)
                 .foregroundColor(.secondary)
+        }
+        .sheet(isPresented: $showCloudSyncHub) {
+            CloudSyncDetailSheet()
         }
     }
 
@@ -2760,8 +2781,6 @@ extension AppDiagnosticsSheet {
             googleMessage = localizationManager.localized("not_signed_in")
             return
         }
-        // 成功才記時間 —— 失敗也記的話，「上次同步」會變成
-        // 「上次按下按鈕」，那正好是使用者想分辨的兩件事。
         if report.failures.isEmpty { SyncHistory.markGoogleSynced() }
         if let failure = report.failures.first {
             googleMessage = "\(failure.key)：\(failure.value)"
@@ -2771,91 +2790,6 @@ extension AppDiagnosticsSheet {
             googleMessage = localizationManager.localized("sync_result")
                 .replacingFirst("%1@", with: "\(report.uploaded)")
                 .replacingFirst("%2@", with: "\(report.downloaded)")
-        }
-    }
-
-    /// 雲端同步 —— 使用者自己的雲端硬碟（決策 D3 選項 A）。
-    ///
-    /// 沒有帳號、沒有我們的伺服器。同步由 iCloud Drive / Google Drive / Dropbox
-    /// 負責，我們只是把 `.padnote` 套件放進使用者挑的資料夾。
-    @ViewBuilder
-    var cloudSyncSection: some View {
-        Section(localizationManager.localized("sync_section")) {
-            HStack {
-                Text(localizationManager.localized("migration_status"))
-                Spacer()
-                Text(CloudSyncFolder.resolveFolder() == nil
-                     ? localizationManager.localized("sync_not_configured")
-                     : localizationManager.localized("sync_section"))
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-            }
-
-            // **完整路徑，不是只有最後一層資料夾名稱。**
-            //
-            // 原本只顯示 `lastPathComponent` —— 使用者有兩個都叫
-            // 「Kairumo」的資料夾（一個在 iCloud、一個在本機）時，
-            // 畫面上兩者一模一樣，看不出同步到底指向哪一個。
-            if let folder = CloudSyncFolder.resolveFolder() {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(localizationManager.localized("sync_folder_path"))
-                        .foregroundColor(.secondary)
-                    Text(folder.path.replacingOccurrences(
-                        of: NSHomeDirectory(), with: "~"))
-                        .font(.system(.footnote, design: .monospaced))
-                        .lineLimit(2)
-                        .truncationMode(.middle)
-                }
-                .font(.footnote)
-
-                HStack {
-                    Text(localizationManager.localized("sync_last_at"))
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Text(SyncHistory.lastFolderSyncDescription(
-                        none: localizationManager.localized("sync_never")))
-                }
-                .font(.footnote)
-            }
-
-            if let syncMessage {
-                Text(syncMessage)
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-            }
-
-            Button(localizationManager.localized("sync_choose_folder")) {
-                showFolderPicker = true
-            }
-
-            if CloudSyncFolder.resolveFolder() != nil {
-                Button(localizationManager.localized("sync_now")) { runSync() }
-            }
-
-            Text(localizationManager.localized("sync_explainer"))
-                .font(.caption)
-                .foregroundColor(.secondary)
-        }
-        .fileImporter(
-            isPresented: $showFolderPicker,
-            allowedContentTypes: [.folder],
-            allowsMultipleSelection: false
-        ) { result in
-            switch result {
-            case .success(let urls):
-                guard let url = urls.first else { return }
-                // 使用者選的資料夾在 App 沙箱之外，必須先取得存取權才能存書籤。
-                let scoped = url.startAccessingSecurityScopedResource()
-                defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-                do {
-                    try CloudSyncFolder.setFolder(url)
-                    runSync()
-                } catch {
-                    syncMessage = error.localizedDescription
-                }
-            case .failure(let error):
-                syncMessage = error.localizedDescription
-            }
         }
     }
 
@@ -3095,174 +3029,57 @@ private struct ShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
-// MARK: - 1. 雲端同步專屬獨立視窗 (Google Drive)
+// MARK: - 1. 雲端同步中心專屬獨立視窗 (整合 Google Drive 與 iCloud / 資料夾同步)
+public enum CloudSyncProvider: String, CaseIterable, Identifiable {
+    case googleDrive = "google"
+    case folderOrICloud = "folder"
+    case disabled = "disabled"
+
+    public var id: String { rawValue }
+}
+
 public struct CloudSyncDetailSheet: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject private var googleAuth = GoogleAuth.shared
     @ObservedObject private var notebookStore = NotebookStore.shared
     @Environment(\.dismiss) private var dismiss
 
+    @State private var selectedProvider: CloudSyncProvider = .googleDrive
     @State private var statusMessage: String?
     @State private var isSyncing = false
+    @State private var showFolderPicker = false
 
-    public init() {}
+    private let initialProvider: CloudSyncProvider?
+
+    public init(initialProvider: CloudSyncProvider? = nil) {
+        self.initialProvider = initialProvider
+    }
 
     public var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: DS.Space.l) {
-                    // 頂部圖示與狀態卡
-                    HStack(spacing: DS.Space.m) {
-                        Image(systemName: "arrow.triangle.2.circlepath.icloud.fill")
-                            .font(.system(size: 44))
-                            .foregroundStyle(Color.indigo)
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(localizationManager.localized("cloud_sync"))
-                                .font(DS.Font.screenTitle)
-                                .foregroundColor(.primary)
-
-                            Text(googleAuth.isSignedIn
-                                 ? (googleAuth.accountEmail ?? localizationManager.localized("signed_in"))
-                                 : localizationManager.localized("not_signed_in"))
-                                .font(DS.Font.cardTitle)
-                                .foregroundColor(googleAuth.isSignedIn ? .green : .secondary)
-                        }
-                    }
-                    .padding(.top, DS.Space.s)
-
-                    // 帳號與同步資訊
-                    VStack(spacing: 0) {
-                        if googleAuth.isSignedIn {
-                            if let email = googleAuth.accountEmail {
-                                detailRow(title: localizationManager.localized("sync_account"), value: email)
-                                Divider()
-                            }
-                            detailRow(
-                                title: localizationManager.localized("sync_destination"),
-                                value: localizationManager.localized("sync_destination_appdata")
-                            )
-                            Divider()
-                            detailRow(
-                                title: localizationManager.localized("sync_last_at"),
-                                value: SyncHistory.lastGoogleSyncDescription(none: localizationManager.localized("sync_never"))
-                            )
-                        } else {
-                            HStack {
-                                Image(systemName: "person.crop.circle.badge.exclamationmark")
-                                    .foregroundColor(.orange)
-                                Text(localizationManager.localized("not_signed_in"))
-                                    .font(DS.Font.body)
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                            }
-                            .padding(DS.Space.m)
-                        }
-                    }
-                    .background(Color(uiColor: .secondarySystemGroupedBackground))
-                    .cornerRadius(DS.Radius.m)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: DS.Radius.m)
-                            .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
-                    )
-
-                    if let statusMessage {
-                        Text(statusMessage)
+                    // 同步服務切換分頁
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("選擇同步服務")
                             .font(DS.Font.caption)
                             .foregroundColor(.secondary)
-                            .padding(.horizontal, DS.Space.xs)
-                    }
-
-                    // 主要操作按鈕
-                    VStack(spacing: DS.Space.s) {
-                        if googleAuth.isSignedIn {
-                            Button {
-                                Task { await runSync() }
-                            } label: {
-                                HStack {
-                                    if isSyncing {
-                                        ProgressView()
-                                            .padding(.trailing, 6)
-                                    } else {
-                                        Image(systemName: "arrow.clockwise")
-                                    }
-                                    Text(localizationManager.localized("sync_now"))
-                                        .fontWeight(.semibold)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.indigo)
-                            .disabled(isSyncing)
-
-                            Button(role: .destructive) {
-                                Task {
-                                    await GoogleAuth.shared.signOut()
-                                    statusMessage = nil
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: "rectangle.portrait.and.arrow.right")
-                                    Text(localizationManager.localized("sign_out"))
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 10)
-                            }
-                            .buttonStyle(.bordered)
-                        } else {
-                            Button {
-                                Task {
-                                    switch await GoogleAuth.shared.signIn() {
-                                    case .success:
-                                        await runSync()
-                                    case .failure(.cancelled):
-                                        break
-                                    case .failure(let error):
-                                        statusMessage = error.errorDescription
-                                    }
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: "arrow.up.circle.fill")
-                                    Text(localizationManager.localized("sign_in_google"))
-                                        .fontWeight(.semibold)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .tint(.indigo)
+                        Picker("", selection: $selectedProvider) {
+                            Text("Google Drive (跨平台)").tag(CloudSyncProvider.googleDrive)
+                            Text("iCloud / 資料夾").tag(CloudSyncProvider.folderOrICloud)
+                            Text("關閉同步").tag(CloudSyncProvider.disabled)
                         }
+                        .pickerStyle(.segmented)
                     }
+                    .padding(.top, DS.Space.xs)
 
-                    // 詳細操作指引與安全性說明
-                    VStack(alignment: .leading, spacing: DS.Space.m) {
-                        Text(localizationManager.localized("help_and_legal"))
-                            .font(DS.Font.cardTitle)
-                            .foregroundColor(.primary)
-
-                        guideStep(
-                            number: "1",
-                            title: localizationManager.localized("sign_in_google"),
-                            desc: localizationManager.localized("cloud_sync_explainer")
-                        )
-
-                        guideStep(
-                            number: "2",
-                            title: localizationManager.localized("sync_destination"),
-                            desc: localizationManager.localized("sync_destination_appdata")
-                        )
-
-                        guideStep(
-                            number: "3",
-                            title: localizationManager.localized("sync_section"),
-                            desc: localizationManager.localized("sync_explainer")
-                        )
+                    if selectedProvider == .googleDrive {
+                        googleDriveSection
+                    } else if selectedProvider == .folderOrICloud {
+                        folderSyncSection
+                    } else {
+                        disabledSyncSection
                     }
-                    .padding(DS.Space.m)
-                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                    .cornerRadius(DS.Radius.m)
                 }
                 .padding(DS.Space.m)
             }
@@ -3274,6 +3091,437 @@ public struct CloudSyncDetailSheet: View {
                     Button(localizationManager.localized("close")) { dismiss() }
                 }
             }
+            .onAppear {
+                if let initial = initialProvider {
+                    selectedProvider = initial
+                } else if googleAuth.isSignedIn {
+                    selectedProvider = .googleDrive
+                } else if CloudSyncFolder.resolveFolder() != nil {
+                    selectedProvider = .folderOrICloud
+                } else {
+                    selectedProvider = .googleDrive
+                }
+            }
+            .fileImporter(
+                isPresented: $showFolderPicker,
+                allowedContentTypes: [.folder],
+                allowsMultipleSelection: false
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    guard let url = urls.first else { return }
+                    let scoped = url.startAccessingSecurityScopedResource()
+                    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                    do {
+                        try CloudSyncFolder.setFolder(url)
+                        runFolderSync()
+                    } catch {
+                        statusMessage = error.localizedDescription
+                    }
+                case .failure(let error):
+                    statusMessage = error.localizedDescription
+                }
+            }
+        }
+    }
+
+    // MARK: - Google Drive 視圖
+    private var googleDriveSection: some View {
+        VStack(alignment: .leading, spacing: DS.Space.l) {
+            HStack(spacing: DS.Space.m) {
+                Image(systemName: "arrow.triangle.2.circlepath.icloud.fill")
+                    .font(.system(size: 44))
+                    .foregroundStyle(Color.indigo)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(localizationManager.localized("sync_section"))
+                        .font(DS.Font.screenTitle)
+                        .foregroundColor(.primary)
+
+                    Text(googleAuth.isSignedIn
+                         ? (googleAuth.accountEmail ?? localizationManager.localized("signed_in"))
+                         : localizationManager.localized("not_signed_in"))
+                        .font(DS.Font.cardTitle)
+                        .foregroundColor(googleAuth.isSignedIn ? .green : .secondary)
+                }
+            }
+
+            VStack(spacing: 0) {
+                if googleAuth.isSignedIn {
+                    if let email = googleAuth.accountEmail {
+                        detailRow(title: localizationManager.localized("sync_account"), value: email)
+                        Divider()
+                    }
+                    detailRow(
+                        title: localizationManager.localized("sync_destination"),
+                        value: localizationManager.localized("sync_destination_appdata")
+                    )
+                    Divider()
+                    detailRow(
+                        title: localizationManager.localized("sync_last_at"),
+                        value: SyncHistory.lastGoogleSyncDescription(none: localizationManager.localized("sync_never"))
+                    )
+                } else {
+                    HStack {
+                        Image(systemName: "person.crop.circle.badge.exclamationmark")
+                            .foregroundColor(.orange)
+                        Text(localizationManager.localized("not_signed_in"))
+                            .font(DS.Font.body)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                    .padding(DS.Space.m)
+                }
+            }
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(DS.Radius.m)
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.m)
+                    .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
+            )
+
+            if let statusMessage {
+                Text(statusMessage)
+                    .font(DS.Font.caption)
+                    .foregroundColor(statusMessage.contains("失敗") || statusMessage.contains("過期") ? .red : .secondary)
+                    .padding(.horizontal, DS.Space.xs)
+            }
+
+            VStack(spacing: DS.Space.s) {
+                if googleAuth.isSignedIn {
+                    Button {
+                        Task { await runGoogleSync() }
+                    } label: {
+                        HStack {
+                            if isSyncing {
+                                ProgressView()
+                                    .padding(.trailing, 6)
+                            } else {
+                                Image(systemName: "arrow.clockwise")
+                            }
+                            Text(localizationManager.localized("sync_now"))
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.indigo)
+                    .disabled(isSyncing)
+
+                    Button(role: .destructive) {
+                        Task {
+                            await GoogleAuth.shared.signOut()
+                            statusMessage = nil
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "rectangle.portrait.and.arrow.right")
+                            Text(localizationManager.localized("sign_out"))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.bordered)
+                } else {
+                    Button {
+                        Task {
+                            switch await GoogleAuth.shared.signIn() {
+                            case .success:
+                                await runGoogleSync()
+                            case .failure(.cancelled):
+                                break
+                            case .failure(let error):
+                                statusMessage = error.errorDescription
+                            }
+                        }
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.up.circle.fill")
+                            Text(localizationManager.localized("sign_in_google"))
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.indigo)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: DS.Space.m) {
+                Text(localizationManager.localized("help_and_legal"))
+                    .font(DS.Font.cardTitle)
+                    .foregroundColor(.primary)
+
+                guideStep(
+                    number: "1",
+                    title: localizationManager.localized("sign_in_google"),
+                    desc: localizationManager.localized("cloud_sync_explainer")
+                )
+                guideStep(
+                    number: "2",
+                    title: localizationManager.localized("sync_destination"),
+                    desc: localizationManager.localized("sync_destination_appdata")
+                )
+                guideStep(
+                    number: "3",
+                    title: "跨平台同步支援",
+                    desc: "支援 Android、iPadOS 與 macOS 雙向增量筆跡與圖表合併，各平台均可無縫協同編輯。"
+                )
+            }
+            .padding(DS.Space.m)
+            .background(Color(uiColor: .tertiarySystemGroupedBackground))
+            .cornerRadius(DS.Radius.m)
+        }
+    }
+
+    // MARK: - iCloud / 資料夾同步視圖
+    private var folderSyncSection: some View {
+        VStack(alignment: .leading, spacing: DS.Space.l) {
+            HStack(spacing: DS.Space.m) {
+                Image(systemName: "icloud.and.arrow.up.fill")
+                    .font(.system(size: 44))
+                    .foregroundStyle(Color.teal)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(localizationManager.localized("sync_choose_folder"))
+                        .font(DS.Font.screenTitle)
+                        .foregroundColor(.primary)
+
+                    Text(folderStatusTitle)
+                        .font(DS.Font.cardTitle)
+                        .foregroundColor(folderStatusColor)
+                }
+            }
+
+            VStack(spacing: 0) {
+                HStack {
+                    Text(localizationManager.localized("migration_status"))
+                        .font(DS.Font.body)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Text(folderStatusText)
+                        .font(DS.Font.body)
+                        .foregroundColor(folderStatusColor)
+                }
+                .padding(DS.Space.m)
+
+                if let folder = CloudSyncFolder.resolveFolder() {
+                    Divider()
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(localizationManager.localized("sync_folder_path"))
+                            .font(DS.Font.caption)
+                            .foregroundColor(.secondary)
+                        Text(folder.path.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
+                            .font(.system(.footnote, design: .monospaced))
+                            .lineLimit(3)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(DS.Space.m)
+
+                    Divider()
+                    HStack {
+                        Text(localizationManager.localized("sync_last_at"))
+                            .font(DS.Font.body)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                        Text(SyncHistory.lastFolderSyncDescription(none: localizationManager.localized("sync_never")))
+                            .font(DS.Font.body)
+                            .foregroundColor(.primary)
+                    }
+                    .padding(DS.Space.m)
+                }
+            }
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(DS.Radius.m)
+            .overlay(
+                RoundedRectangle(cornerRadius: DS.Radius.m)
+                    .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
+            )
+
+            if let statusMessage {
+                Text(statusMessage)
+                    .font(DS.Font.caption)
+                    .foregroundColor(statusMessage.contains("失敗") || statusMessage.contains("錯誤") ? .red : .secondary)
+                    .padding(.horizontal, DS.Space.xs)
+            }
+
+            VStack(spacing: DS.Space.s) {
+                Button {
+                    showFolderPicker = true
+                } label: {
+                    HStack {
+                        Image(systemName: "folder.badge.gearshape")
+                        Text(localizationManager.localized("sync_choose_folder"))
+                            .fontWeight(.semibold)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.teal)
+
+                if CloudSyncFolder.resolveFolder() != nil {
+                    Button {
+                        runFolderSync()
+                    } label: {
+                        HStack {
+                            if isSyncing {
+                                ProgressView()
+                                    .padding(.trailing, 6)
+                            } else {
+                                Image(systemName: "arrow.clockwise")
+                            }
+                            Text(localizationManager.localized("sync_now"))
+                                .fontWeight(.semibold)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.bordered)
+                    .disabled(isSyncing)
+
+                    Button(role: .destructive) {
+                        CloudSyncFolder.clearFolder()
+                        statusMessage = nil
+                    } label: {
+                        HStack {
+                            Image(systemName: "xmark.circle")
+                            Text(localizationManager.localized("delete_item"))
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.red)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: DS.Space.m) {
+                Text("功能運作與跨裝置連動說明")
+                    .font(DS.Font.cardTitle)
+                    .foregroundColor(.primary)
+
+                guideStep(
+                    number: "1",
+                    title: "這個功能在同步什麼？",
+                    desc: "本功能採用去中心化的無伺服器架構。設定 iCloud Drive 或自選資料夾後，App 會將筆記本以標準 .padnote 套件封裝（內含每一頁的手繪向量筆畫與文字附件）自動輸出至該資料夾。"
+                )
+                guideStep(
+                    number: "2",
+                    title: "如何與其他裝置雙向連動？",
+                    desc: "在您的其他 iPad 或 Mac 上，只要在「雲端同步」指定同一個 iCloud 資料夾，點選「立即同步」，App 即會自動偵測雲端更新並雙向合併回本機，兩台裝置的筆記即刻保持一致。"
+                )
+                guideStep(
+                    number: "3",
+                    title: "完全隱私，無須註冊帳號",
+                    desc: "沒有第三方伺服器儲存您的手繪或筆記，同步直接由 Apple 系統的 iCloud 傳輸，確保 100% 隱私與資料主權。"
+                )
+            }
+            .padding(DS.Space.m)
+            .background(Color(uiColor: .tertiarySystemGroupedBackground))
+            .cornerRadius(DS.Radius.m)
+        }
+    }
+
+    private var folderStatusTitle: String {
+        if CloudSyncFolder.resolveFolder() == nil {
+            return localizationManager.localized("sync_not_configured")
+        }
+        if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") {
+            return "同步發生錯誤"
+        }
+        let history = SyncHistory.lastFolderSyncDescription(none: "never")
+        if history != "never" {
+            return localizationManager.localized("sync_done")
+        }
+        return "已設定資料夾 (待同步)"
+    }
+
+    private var folderStatusText: String {
+        if CloudSyncFolder.resolveFolder() == nil {
+            return localizationManager.localized("sync_not_configured")
+        }
+        if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") {
+            return "同步失敗"
+        }
+        let history = SyncHistory.lastFolderSyncDescription(none: "never")
+        if history != "never" {
+            return localizationManager.localized("sync_done")
+        }
+        return "已設定 (待同步)"
+    }
+
+    private var folderStatusColor: Color {
+        if CloudSyncFolder.resolveFolder() == nil {
+            return .secondary
+        }
+        if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") {
+            return .red
+        }
+        let history = SyncHistory.lastFolderSyncDescription(none: "never")
+        if history != "never" {
+            return .green
+        }
+        return .blue
+    }
+
+    // MARK: - 關閉同步視圖
+    private var disabledSyncSection: some View {
+        VStack(alignment: .leading, spacing: DS.Space.l) {
+            HStack(spacing: DS.Space.m) {
+                Image(systemName: "internaldrive.fill")
+                    .font(.system(size: 44))
+                    .foregroundStyle(Color.gray)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("本機模式")
+                        .font(DS.Font.screenTitle)
+                        .foregroundColor(.primary)
+
+                    Text("僅保存在此裝置（未啟用雲端同步）")
+                        .font(DS.Font.cardTitle)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 12) {
+                Text("在此模式下，您的所有筆記、手繪筆跡與錄音均僅存放在目前裝置的沙箱內部，完全不進行任何網路或雲端傳輸。")
+                    .font(DS.Font.body)
+                    .foregroundColor(.secondary)
+
+                if googleAuth.isSignedIn {
+                    HStack {
+                        Text("Google 帳號目前仍處於登入狀態：")
+                            .font(.footnote)
+                        Spacer()
+                        Button("登出 Google") {
+                            Task { await googleAuth.signOut() }
+                        }
+                        .font(.footnote)
+                    }
+                    .padding(.top, 4)
+                }
+
+                if CloudSyncFolder.resolveFolder() != nil {
+                    HStack {
+                        Text("目前仍連結了同步資料夾：")
+                            .font(.footnote)
+                        Spacer()
+                        Button("解除連結") {
+                            CloudSyncFolder.clearFolder()
+                        }
+                        .font(.footnote)
+                        .foregroundColor(.red)
+                    }
+                    .padding(.top, 4)
+                }
+            }
+            .padding(DS.Space.m)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(DS.Radius.m)
         }
     }
 
@@ -3315,7 +3563,7 @@ public struct CloudSyncDetailSheet: View {
     }
 
     @MainActor
-    private func runSync() async {
+    private func runGoogleSync() async {
         guard !isSyncing else { return }
         isSyncing = true
         defer { isSyncing = false }
@@ -3329,6 +3577,37 @@ public struct CloudSyncDetailSheet: View {
         }
         if report.failures.isEmpty { SyncHistory.markGoogleSynced() }
         if let failure = report.failures.first {
+            statusMessage = "\(failure.key)：\(failure.value)"
+        } else if report.isNoOp {
+            statusMessage = localizationManager.localized("sync_up_to_date")
+        } else {
+            statusMessage = localizationManager.localized("sync_result")
+                .replacingFirst("%1@", with: "\(report.uploaded)")
+                .replacingFirst("%2@", with: "\(report.downloaded)")
+        }
+    }
+
+    @MainActor
+    private func runFolderSync() {
+        guard !isSyncing else { return }
+        guard let folder = CloudSyncFolder.resolveFolder() else { return }
+        isSyncing = true
+        defer { isSyncing = false }
+
+        let scoped = folder.startAccessingSecurityScopedResource()
+        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+
+        statusMessage = localizationManager.localized("syncing")
+        let report = NotebookSyncCoordinator.run(
+            store: notebookStore, folder: folder, deviceId: NotebookMigration.deviceId)
+
+        if report.failures.isEmpty && report.needsAttention.isEmpty {
+            SyncHistory.markFolderSynced()
+        }
+        if let first = report.needsAttention.first {
+            statusMessage = localizationManager.localized("sync_needs_attention")
+                .replacingFirst("%@", with: first)
+        } else if let failure = report.failures.first {
             statusMessage = "\(failure.key)：\(failure.value)"
         } else if report.isNoOp {
             statusMessage = localizationManager.localized("sync_up_to_date")
@@ -3722,250 +4001,9 @@ public struct BackupRestoreDetailSheet: View {
 
 // MARK: - 4. 選擇同步資料夾專屬獨立視窗
 public struct FolderSyncDetailSheet: View {
-    @ObservedObject var localizationManager = LocalizationManager.shared
-    @ObservedObject private var store = NotebookStore.shared
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var syncMessage: String?
-    @State private var showFolderPicker = false
-    @State private var isSyncing = false
-
     public init() {}
 
     public var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: DS.Space.l) {
-                    // 頂部圖示與標題
-                    HStack(spacing: DS.Space.m) {
-                        Image(systemName: "icloud.and.arrow.up.fill")
-                            .font(.system(size: 44))
-                            .foregroundStyle(Color.teal)
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text(localizationManager.localized("sync_choose_folder"))
-                                .font(DS.Font.screenTitle)
-                                .foregroundColor(.primary)
-
-                            Text(localizationManager.localized("sync_folder_desc"))
-                                .font(DS.Font.cardTitle)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .padding(.top, DS.Space.s)
-
-                    // 目前設定資料夾狀態
-                    VStack(spacing: 0) {
-                        HStack {
-                            Text(localizationManager.localized("migration_status"))
-                                .font(DS.Font.body)
-                                .foregroundColor(.secondary)
-                            Spacer()
-                            Text(CloudSyncFolder.resolveFolder() == nil
-                                 ? localizationManager.localized("sync_not_configured")
-                                 : localizationManager.localized("sync_done"))
-                                .font(DS.Font.body)
-                                .foregroundColor(CloudSyncFolder.resolveFolder() == nil ? .secondary : .green)
-                        }
-                        .padding(DS.Space.m)
-
-                        if let folder = CloudSyncFolder.resolveFolder() {
-                            Divider()
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(localizationManager.localized("sync_folder_path"))
-                                    .font(DS.Font.caption)
-                                    .foregroundColor(.secondary)
-                                Text(folder.path.replacingOccurrences(of: NSHomeDirectory(), with: "~"))
-                                    .font(.system(.footnote, design: .monospaced))
-                                    .lineLimit(3)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(DS.Space.m)
-
-                            Divider()
-                            HStack {
-                                Text(localizationManager.localized("sync_last_at"))
-                                    .font(DS.Font.body)
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                                Text(SyncHistory.lastFolderSyncDescription(none: localizationManager.localized("sync_never")))
-                                    .font(DS.Font.body)
-                                    .foregroundColor(.primary)
-                            }
-                            .padding(DS.Space.m)
-                        }
-                    }
-                    .background(Color(uiColor: .secondarySystemGroupedBackground))
-                    .cornerRadius(DS.Radius.m)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: DS.Radius.m)
-                            .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
-                    )
-
-                    if let syncMessage {
-                        Text(syncMessage)
-                            .font(DS.Font.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.horizontal, DS.Space.xs)
-                    }
-
-                    // 動作按鈕
-                    VStack(spacing: DS.Space.s) {
-                        Button {
-                            showFolderPicker = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "folder.badge.gearshape")
-                                Text(localizationManager.localized("sync_choose_folder"))
-                                    .fontWeight(.semibold)
-                            }
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                        }
-                        .buttonStyle(.borderedProminent)
-                        .tint(.teal)
-
-                        if CloudSyncFolder.resolveFolder() != nil {
-                            Button {
-                                runFolderSync()
-                            } label: {
-                                HStack {
-                                    if isSyncing {
-                                        ProgressView()
-                                            .padding(.trailing, 6)
-                                    } else {
-                                        Image(systemName: "arrow.clockwise")
-                                    }
-                                    Text(localizationManager.localized("sync_now"))
-                                        .fontWeight(.semibold)
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 12)
-                            }
-                            .buttonStyle(.bordered)
-                            .disabled(isSyncing)
-
-                            Button(role: .destructive) {
-                                CloudSyncFolder.clearFolder()
-                                syncMessage = nil
-                            } label: {
-                                HStack {
-                                    Image(systemName: "xmark.circle")
-                                    Text(localizationManager.localized("delete_item"))
-                                }
-                                .frame(maxWidth: .infinity)
-                                .padding(.vertical, 8)
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundColor(.red)
-                        }
-                    }
-
-                    // 詳細教學與說明
-                    VStack(alignment: .leading, spacing: DS.Space.m) {
-                        Text(localizationManager.localized("help_and_legal"))
-                            .font(DS.Font.cardTitle)
-                            .foregroundColor(.primary)
-
-                        folderStep(
-                            icon: "folder.badge.plus",
-                            title: localizationManager.localized("sync_choose_folder"),
-                            desc: localizationManager.localized("sync_folder_desc")
-                        )
-
-                        folderStep(
-                            icon: "icloud.circle",
-                            title: localizationManager.localized("sync_section"),
-                            desc: localizationManager.localized("sync_explainer")
-                        )
-
-                        folderStep(
-                            icon: "person.2.badge.gearshape",
-                            title: localizationManager.localized("no_account_needed"),
-                            desc: localizationManager.localized("cloud_sync_explainer")
-                        )
-                    }
-                    .padding(DS.Space.m)
-                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                    .cornerRadius(DS.Radius.m)
-                }
-                .padding(DS.Space.m)
-            }
-            .background(Color(uiColor: .systemGroupedBackground))
-            .navigationTitle(localizationManager.localized("sync_choose_folder"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(localizationManager.localized("close")) { dismiss() }
-                }
-            }
-            .fileImporter(
-                isPresented: $showFolderPicker,
-                allowedContentTypes: [.folder],
-                allowsMultipleSelection: false
-            ) { result in
-                switch result {
-                case .success(let urls):
-                    guard let url = urls.first else { return }
-                    let scoped = url.startAccessingSecurityScopedResource()
-                    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-                    do {
-                        try CloudSyncFolder.setFolder(url)
-                        runFolderSync()
-                    } catch {
-                        syncMessage = error.localizedDescription
-                    }
-                case .failure(let error):
-                    syncMessage = error.localizedDescription
-                }
-            }
-        }
-    }
-
-    private func folderStep(icon: String, title: String, desc: String) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            Image(systemName: icon)
-                .font(.system(size: 20))
-                .foregroundColor(.teal)
-                .frame(width: 28)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(DS.Font.body)
-                    .fontWeight(.semibold)
-                Text(desc)
-                    .font(DS.Font.caption)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-    }
-
-    private func runFolderSync() {
-        guard !isSyncing else { return }
-        guard let folder = CloudSyncFolder.resolveFolder() else { return }
-        isSyncing = true
-        defer { isSyncing = false }
-
-        let scoped = folder.startAccessingSecurityScopedResource()
-        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
-
-        let report = NotebookSyncCoordinator.run(
-            store: store, folder: folder, deviceId: NotebookMigration.deviceId)
-
-        if report.failures.isEmpty && report.needsAttention.isEmpty {
-            SyncHistory.markFolderSynced()
-        }
-        if let first = report.needsAttention.first {
-            syncMessage = localizationManager.localized("sync_needs_attention")
-                .replacingFirst("%@", with: first)
-        } else if let failure = report.failures.first {
-            syncMessage = "\(failure.key)：\(failure.value)"
-        } else if report.isNoOp {
-            syncMessage = localizationManager.localized("sync_up_to_date")
-        } else {
-            syncMessage = localizationManager.localized("sync_result")
-                .replacingFirst("%1@", with: "\(report.uploaded)")
-                .replacingFirst("%2@", with: "\(report.downloaded)")
-        }
+        CloudSyncDetailSheet(initialProvider: .folderOrICloud)
     }
 }

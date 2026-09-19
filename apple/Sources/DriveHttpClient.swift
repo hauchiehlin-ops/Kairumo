@@ -32,7 +32,7 @@ import Foundation
 /// 而且畫面完全沒有反應 —— 看起來像 App 當掉而不是網路慢。
 final class DriveHttpClient: FfiDriveHttp {
 
-    private let accessToken: String
+    private var accessToken: String
     private let session: URLSession
     private let ownsSession: Bool
 
@@ -56,6 +56,10 @@ final class DriveHttpClient: FfiDriveHttp {
         if ownsSession {
             session.finishTasksAndInvalidate()
         }
+    }
+
+    func updateAccessToken(_ token: String) {
+        self.accessToken = token
     }
     func getJson(url: String, query: [FfiQueryParam]) throws -> String {
         guard var components = URLComponents(string: url) else {
@@ -171,11 +175,40 @@ final class DriveHttpClient: FfiDriveHttp {
             // 連不上：網路問題，重試會好。
             throw FfiDriveError.Backend(detail: transportError.localizedDescription)
         }
+        if let response {
+            if (200..<300).contains(response.statusCode) {
+                return (payload, response.allHeaderFields)
+            }
+            if response.statusCode == 401 {
+                // 嘗試自動換證並重試一次
+                if let newToken = GoogleAuth.shared.refreshTokenSync() {
+                    self.accessToken = newToken
+                    var retryRequest = base
+                    retryRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
+
+                    let retrySem = DispatchSemaphore(value: 0)
+                    var retryPayload = Data()
+                    var retryResponse: HTTPURLResponse?
+                    var retryErr: Error?
+                    let retryTask = session.dataTask(with: retryRequest) { d, r, e in
+                        retryPayload = d ?? Data()
+                        retryResponse = r as? HTTPURLResponse
+                        retryErr = e
+                        retrySem.signal()
+                    }
+                    retryTask.resume()
+                    let retryWait = retrySem.wait(timeout: .now() + 35)
+                    if retryWait != .timedOut, retryErr == nil, let resp = retryResponse, (200..<300).contains(resp.statusCode) {
+                        return (retryPayload, resp.allHeaderFields)
+                    }
+                }
+                GoogleAuth.shared.markNeedsReauthSync()
+                throw FfiDriveError.PermissionDenied(detail: "Google 帳號憑證已失效或過期，請重新登入 (HTTP 401)")
+            }
+        }
+
         guard let response else {
             throw FfiDriveError.Backend(detail: "no_response")
-        }
-        if (200..<300).contains(response.statusCode) {
-            return (payload, response.allHeaderFields)
         }
         throw Self.classify(
             status: response.statusCode,
@@ -186,7 +219,8 @@ final class DriveHttpClient: FfiDriveHttp {
 
     private static func classify(status: Int, path: String, detail: String) -> FfiDriveError {
         switch status {
-        case 401, 403: return .PermissionDenied(detail: "HTTP \(status) \(detail)")
+        case 401: return .PermissionDenied(detail: "Google 帳號憑證已失效或過期，請重新登入 (HTTP 401)")
+        case 403: return .PermissionDenied(detail: "Google 帳號權限不足 (HTTP 403)")
         case 404: return .NotFound(path: path)
         default: return .Backend(detail: "HTTP \(status) \(detail)")
         }
@@ -244,7 +278,7 @@ public enum CloudSync {
     ) async -> FfiNotebookSyncResult? {
         guard let token = await GoogleAuth.shared.validAccessToken() else { return nil }
         let now = UInt64(max(0, Date().timeIntervalSince1970 * 1000))
-        return await Task.detached(priority: .utility) {
+        let result = await Task.detached(priority: .utility) {
             gdriveCloneNotebook(
                 http: DriveHttpClient(accessToken: token),
                 packagePath: packagePath,
@@ -253,6 +287,11 @@ public enum CloudSync {
                 nowUnixMs: now
             )
         }.value
+
+        if result.needsReauth {
+            await GoogleAuth.shared.signOut()
+        }
+        return result
     }
 
     /// 同步一本筆記本的內容。
@@ -265,7 +304,7 @@ public enum CloudSync {
         notebookId: String
     ) async -> FfiNotebookSyncResult? {
         guard let token = await GoogleAuth.shared.validAccessToken() else { return nil }
-        return await Task.detached(priority: .utility) {
+        let result = await Task.detached(priority: .utility) {
             let http = DriveHttpClient(accessToken: token)
             let ops = gdriveSyncNotebook(
                 http: http,
@@ -290,5 +329,10 @@ public enum CloudSync {
                 needsReauth: media.needsReauth
             )
         }.value
+
+        if result.needsReauth {
+            await GoogleAuth.shared.signOut()
+        }
+        return result
     }
 }

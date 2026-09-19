@@ -129,16 +129,7 @@ enum NotebookSyncCoordinator {
         report.newNotebooks += pullUnknownPackages(into: packagesDir, from: folder, report: &report)
 
         // ── 3. 匯入回筆記 ─────────────────────────────────
-        let allPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
-            .filter { $0.pathExtension == "padnote" } ?? []
-        for package in allPackages {
-            do {
-                try importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
-                report.imported += 1
-            } catch {
-                report.failures[package.lastPathComponent] = error.localizedDescription
-            }
-        }
+        importPackages(from: packagesDir, into: store, deviceId: deviceId, ownStrokes: ownStrokes, report: &report)
 
         return report
     }
@@ -177,6 +168,9 @@ enum NotebookSyncCoordinator {
         guard let meta = await CloudSync.runOnce() else { return nil }
         guard meta.ok else {
             report.failures["cloud"] = meta.error
+            if meta.needsReauth {
+                await GoogleAuth.shared.signOut()
+            }
             return report
         }
 
@@ -191,6 +185,10 @@ enum NotebookSyncCoordinator {
                 report.downloaded += Int(result.downloaded)
             } else {
                 report.failures[id] = result.error
+                if result.needsReauth {
+                    await GoogleAuth.shared.signOut()
+                    break
+                }
             }
         }
 
@@ -199,16 +197,7 @@ enum NotebookSyncCoordinator {
             into: packagesDir, index: meta.indexJson, report: &report)
 
         // ── 3. 匯入回筆記 ─────────────────────────────────
-        let allPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
-            .filter { $0.pathExtension == "padnote" } ?? []
-        for package in allPackages {
-            do {
-                try importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
-                report.imported += 1
-            } catch {
-                report.failures[package.lastPathComponent] = error.localizedDescription
-            }
-        }
+        importPackages(from: packagesDir, into: store, deviceId: deviceId, ownStrokes: ownStrokes, report: &report)
 
         return report
     }
@@ -334,6 +323,61 @@ enum NotebookSyncCoordinator {
             options: .atomic)
     }
 
+    /// 匯入套件目錄下的所有筆記本，具備破損目錄防禦與 iCloud 佔位檔處理。
+    private static func importPackages(
+        from packagesDir: URL,
+        into store: SyncableNotebookStore,
+        deviceId: UInt32,
+        ownStrokes: OwnStrokes,
+        report: inout Report
+    ) {
+        let fm = FileManager.default
+        let allPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
+            .filter { $0.pathExtension == "padnote" } ?? []
+        for package in allPackages {
+            var isDir: ObjCBool = false
+            if fm.fileExists(atPath: package.path, isDirectory: &isDir), !isDir.boolValue {
+                // 如果是 .padnote 單檔封裝（ZIP），先解壓縮成套件目錄
+                let tempDir = fm.temporaryDirectory.appendingPathComponent("import-\(UUID().uuidString)")
+                do {
+                    try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
+                    try extractNotebook(archiveFile: package.path, outDir: tempDir.path)
+                    try? fm.removeItem(at: package)
+                    try fm.moveItem(at: tempDir, to: package)
+                } catch {
+                    try? fm.removeItem(at: tempDir)
+                    report.failures[package.lastPathComponent] = "解開套件失敗：\(error.localizedDescription)"
+                    continue
+                }
+            }
+
+            // 檢查目錄內是否有 manifest.json
+            let manifest = package.appendingPathComponent("manifest.json")
+            if !fm.fileExists(atPath: manifest.path) {
+                let manifestPlaceholder = package.appendingPathComponent(".manifest.json.icloud")
+                if fm.fileExists(atPath: manifestPlaceholder.path) {
+                    try? fm.startDownloadingUbiquitousItem(at: manifest)
+                    report.failures[package.lastPathComponent] = "iCloud 雲端檔案下載中，請稍候重試"
+                    continue
+                }
+                // 損毀的空目錄或非套件檔案，清理避免日後每次同步都重複報「不是 .padnote 套件」
+                try? fm.removeItem(at: package)
+                report.failures[package.lastPathComponent] = "套件缺少 manifest.json，已清理無效殘留目錄"
+                continue
+            }
+
+            do {
+                try importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
+                report.imported += 1
+            } catch {
+                report.failures[package.lastPathComponent] = error.localizedDescription
+                if error.localizedDescription.contains("不是 .padnote 套件") {
+                    try? fm.removeItem(at: package)
+                }
+            }
+        }
+    }
+
     /// 把雲端資料夾裡本機還沒有的套件整包抓下來。
     ///
     /// `CloudSyncFolder.sync` 只處理「本機已經有這個套件目錄」的情況 ——
@@ -342,13 +386,41 @@ enum NotebookSyncCoordinator {
         into packagesDir: URL, from folder: URL, report: inout Report
     ) -> Int {
         let fm = FileManager.default
-        let remote = (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil))?
-            .filter { $0.pathExtension == "padnote" } ?? []
+        let remoteItems = (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil, options: []))?
+            .filter { $0.pathExtension == "padnote" || $0.lastPathComponent.hasSuffix(".padnote.icloud") } ?? []
 
         var pulled = 0
-        for remotePackage in remote {
-            let local = packagesDir.appendingPathComponent(remotePackage.lastPathComponent)
+        for remoteItem in remoteItems {
+            let actualName: String
+            if ICloudSyncFolder.isPlaceholder(remoteItem) {
+                let logical = ICloudSyncFolder.logicalURL(of: remoteItem)
+                try? fm.startDownloadingUbiquitousItem(at: logical)
+                actualName = logical.lastPathComponent
+            } else {
+                actualName = remoteItem.lastPathComponent
+            }
+            guard actualName.hasSuffix(".padnote") else { continue }
+
+            let local = packagesDir.appendingPathComponent(actualName)
             guard !fm.fileExists(atPath: local.path) else { continue }
+
+            var isDir: ObjCBool = false
+            if fm.fileExists(atPath: remoteItem.path, isDirectory: &isDir), !isDir.boolValue {
+                // 是單一 .padnote 壓縮檔，直接解壓至本機套件目錄
+                let tempDir = fm.temporaryDirectory.appendingPathComponent("pull-\(UUID().uuidString)")
+                do {
+                    try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
+                    try extractNotebook(archiveFile: remoteItem.path, outDir: tempDir.path)
+                    try fm.moveItem(at: tempDir, to: local)
+                    pulled += 1
+                    report.downloaded += 1
+                } catch {
+                    try? fm.removeItem(at: tempDir)
+                    report.failures[actualName] = "解開雲端 .padnote 失敗：\(error.localizedDescription)"
+                }
+                continue
+            }
+
             let result = CloudSyncFolder.sync(localPackage: local, into: folder)
             report.downloaded += result.downloaded.count
             report.failures.merge(result.failures) { first, _ in first }

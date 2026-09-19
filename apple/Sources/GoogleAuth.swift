@@ -183,9 +183,9 @@ public final class GoogleAuth: NSObject, ObservableObject {
     /// 回 nil 代表**要請使用者重新登入**，不是「等一下再試」——
     /// 兩者混在一起會變成無限重試的背景迴圈，而使用者只看到「同步失敗」
     /// 卻不知道該去登入。專案還在 Testing 狀態時，refresh token 七天就會到這裡。
-    public func validAccessToken() async -> String? {
+    public func validAccessToken(forceRefresh: Bool = false) async -> String? {
         let current = KeychainTokens.load()
-        if oauthIsAccessValid(tokens: current, nowS: nowSeconds()) {
+        if !forceRefresh && oauthIsAccessValid(tokens: current, nowS: nowSeconds()) {
             return current.accessToken
         }
         guard !current.refreshToken.isEmpty else { return nil }
@@ -195,9 +195,8 @@ public final class GoogleAuth: NSObject, ObservableObject {
 
         let refreshed = oauthParseTokenResponse(json: json, nowS: nowSeconds())
         if !refreshed.error.isEmpty {
-            if oauthNeedsReauth(error: refreshed.error) {
-                KeychainTokens.clear()
-                isSignedIn = false
+            if oauthNeedsReauth(error: refreshed.error) || refreshed.error.contains("invalid_grant") {
+                await markNeedsReauth()
             }
             return nil
         }
@@ -205,6 +204,63 @@ public final class GoogleAuth: NSObject, ObservableObject {
         // 覆蓋成空字串的話下一次就再也更新不了。
         KeychainTokens.save(refreshed, previousRefresh: current.refreshToken)
         return refreshed.accessToken
+    }
+
+    /// 同步更新權杖（供背景 HTTP 執行緒在遇到 401 時自動重試換證）。
+    public nonisolated func refreshTokenSync() -> String? {
+        let current = KeychainTokens.load()
+        guard !current.refreshToken.isEmpty else { return nil }
+
+        let body = oauthRefreshBody(platform: .apple, refreshToken: current.refreshToken)
+        guard let url = URL(string: oauthTokenEndpoint()) else { return nil }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+        request.httpBody = body.data(using: .utf8)
+
+        let semaphore = DispatchSemaphore(value: 0)
+        var responseData: Data?
+        let task = URLSession.shared.dataTask(with: request) { data, _, _ in
+            responseData = data
+            semaphore.signal()
+        }
+        task.resume()
+        _ = semaphore.wait(timeout: .now() + 15)
+
+        guard let data = responseData, let json = String(data: data, encoding: .utf8) else {
+            return nil
+        }
+
+        let nowS = UInt64(max(0, Date().timeIntervalSince1970))
+        let refreshed = oauthParseTokenResponse(json: json, nowS: nowS)
+        if !refreshed.error.isEmpty {
+            if oauthNeedsReauth(error: refreshed.error) || refreshed.error.contains("invalid_grant") {
+                markNeedsReauthSync()
+            }
+            return nil
+        }
+
+        KeychainTokens.save(refreshed, previousRefresh: current.refreshToken)
+        return refreshed.accessToken
+    }
+
+    /// 標記為需要重新授權，清除死掉的憑證。
+    @MainActor
+    public func markNeedsReauth() {
+        KeychainTokens.clear()
+        isSignedIn = false
+        accountEmail = nil
+        UserDefaults.standard.removeObject(forKey: accountEmailKey)
+    }
+
+    public nonisolated func markNeedsReauthSync() {
+        KeychainTokens.clear()
+        UserDefaults.standard.removeObject(forKey: "kairumo.account.googleEmail")
+        DispatchQueue.main.async {
+            GoogleAuth.shared.isSignedIn = false
+            GoogleAuth.shared.accountEmail = nil
+        }
     }
 
     /// 登出並**撤銷**授權。
@@ -219,11 +275,11 @@ public final class GoogleAuth: NSObject, ObservableObject {
             _ = try? await URLSession.shared.data(for: request)
         }
         KeychainTokens.clear()
-        isSignedIn = false
-        // 登出要把顯示用的帳號一起清掉，否則畫面會停在
-        // 「尚未登入」＋一個還亮著的 email，看起來像登出失敗。
-        accountEmail = nil
-        UserDefaults.standard.removeObject(forKey: accountEmailKey)
+        await MainActor.run {
+            isSignedIn = false
+            accountEmail = nil
+            UserDefaults.standard.removeObject(forKey: accountEmailKey)
+        }
     }
 
     private func post(_ body: String) async -> Result<String, Failure> {
