@@ -1837,6 +1837,16 @@ private fun InkScreen(
     var isTabletopManual by remember { mutableStateOf(false) }
     // 次世代 UI/UX Phase 4: 筆跡磁吸對齊與幾何角度引導 (Smart Magnetic Snap)
     var isMagneticSnapActive by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isMagneticSnapActive) {
+        engine.isMagneticSnapActive = isMagneticSnapActive
+    }
+    LaunchedEffect(magneticGuideActive) {
+        if (magneticGuideActive) {
+            kotlinx.coroutines.delay(1200)
+            magneticGuideActive = false
+        }
+    }
     LaunchedEffect(inkTool) { if (inkTool.kind != null) lastBrushTool = inkTool }
 
     val view = LocalView.current
@@ -1901,7 +1911,16 @@ private fun InkScreen(
                 }
             }
         }
-        onDispose { engine.onPenControlChanged = null }
+        engine.onMagneticSnap = { start, end ->
+            magneticGuideStart = start
+            magneticGuideEnd = end
+            magneticGuideActive = true
+            view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        }
+        onDispose {
+            engine.onPenControlChanged = null
+            engine.onMagneticSnap = null
+        }
     }
     // Ctrl+1–Ctrl+6 選工具。索引超過工具數就忽略 —— Apple 有九支、
     // Android 只有六支，按 Ctrl+7 不該讓 App 當掉。
@@ -2049,7 +2068,10 @@ private fun InkScreen(
             // 徑向飛輪快捷工具盤 (Radial Pie Menu) 手動喚醒按鈕
             IconButton(
                 onClick = {
-                    radialMenuCenter = Offset(240f, 240f)
+                    radialMenuCenter = Offset(
+                        if (canvasViewport.width > 0) canvasViewport.width / 2f else 300f,
+                        if (canvasViewport.height > 0) canvasViewport.height / 2f else 300f
+                    )
                     showRadialMenu = !showRadialMenu
                 },
                 modifier = Modifier.size(36.dp).testTag("editor.radialMenuToggle")
@@ -2947,12 +2969,23 @@ private fun InkScreen(
                     }
                 },
                 onAnchorToText = {
-                    val selIds = lasso.selected
-                    if (selIds.isNotEmpty()) {
-                        val pageBoxes = textStore.all.filter { it.pageIndex == pageIndex }
-                        val targetBox = pageBoxes.firstOrNull()
-                        if (targetBox != null) {
-                            val session = notebook?.first
+                    val session = notebook?.first
+                    val handles = engine.coreHandles()
+                    val pageBoxes = textStore.all.filter { it.pageIndex == pageIndex }
+                    val targetBox = pageBoxes.firstOrNull()
+                    if (session != null && handles != null && targetBox != null) {
+                        val (_, pageId) = handles
+                        var selIds = lasso.selected
+                        if (selIds.isEmpty()) {
+                            val poly = listOf(
+                                targetBox.x - 10f, targetBox.y - 10f,
+                                targetBox.x + targetBox.width + 10f, targetBox.y - 10f,
+                                targetBox.x + targetBox.width + 10f, targetBox.y + targetBox.height + 10f,
+                                targetBox.x - 10f, targetBox.y + targetBox.height + 10f
+                            )
+                            selIds = runCatching { session.lassoSelect(pageId, poly) }.getOrDefault(emptyList())
+                        }
+                        if (selIds.isNotEmpty()) {
                             val meta = NotebookMeta.load(session)
                             val anchors = meta.stickyAnchors()
                             anchors.removeAll { it.targetId == targetBox.id }
@@ -2970,6 +3003,8 @@ private fun InkScreen(
                             revision++
                             clearToken++
                             message = l10n("sticky_anchored_hint")
+                        } else {
+                            message = l10n("sticky_anchor_ink")
                         }
                     }
                 },
@@ -3817,6 +3852,7 @@ private fun InkScreen(
             // 🌟 聲筆動態同步與波形卡拉 OK 高亮 (Audio-Ink Karaoke Sync)
             val audioPlaying = remember(revision) { AudioPlayback.playingId != null }
             if (audioPlaying && engine.strokes.isNotEmpty()) {
+                val karaokePath = remember { androidx.compose.ui.graphics.Path() }
                 androidx.compose.foundation.Canvas(
                     modifier = Modifier.fillMaxSize().zIndex(8_999f)
                 ) {
@@ -3830,13 +3866,13 @@ private fun InkScreen(
                         val stroke = engine.strokes[i]
                         val pts = stroke.points
                         if (pts.size >= 2) {
-                            val path = androidx.compose.ui.graphics.Path()
-                            path.moveTo(pts.first().x * canvasDensity, pts.first().y * canvasDensity)
+                            karaokePath.reset()
+                            karaokePath.moveTo(pts.first().x * canvasDensity, pts.first().y * canvasDensity)
                             for (p in pts.drop(1)) {
-                                path.lineTo(p.x * canvasDensity, p.y * canvasDensity)
+                                karaokePath.lineTo(p.x * canvasDensity, p.y * canvasDensity)
                             }
                             drawPath(
-                                path = path,
+                                path = karaokePath,
                                 color = Color(0xFFFBBF24).copy(alpha = 0.55f),
                                 style = androidx.compose.ui.graphics.drawscope.Stroke(width = 6.dp.toPx())
                             )
@@ -3871,15 +3907,15 @@ private fun InkScreen(
             }
 
             // 🌟 筆跡磁吸對齊與幾何角度引導 (Smart Magnetic Snap Laser Guide)
-            if (snapToGrid && editorMode == EditorMode.DRAW && magneticGuideActive) {
+            if ((snapToGrid || isMagneticSnapActive) && editorMode == EditorMode.DRAW && magneticGuideActive) {
                 androidx.compose.foundation.Canvas(
                     modifier = Modifier.fillMaxSize().zIndex(9_002f)
                 ) {
                     val strokeDash = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(8f, 6f))
                     drawLine(
                         color = Color(0xFF06B6D4).copy(alpha = 0.85f),
-                        start = magneticGuideStart,
-                        end = magneticGuideEnd,
+                        start = Offset(magneticGuideStart.x * canvasDensity, magneticGuideStart.y * canvasDensity),
+                        end = Offset(magneticGuideEnd.x * canvasDensity, magneticGuideEnd.y * canvasDensity),
                         strokeWidth = 1.5.dp.toPx(),
                         pathEffect = strokeDash
                     )
@@ -3995,18 +4031,33 @@ private fun InkScreen(
                 isMagneticSnapActive = isMagneticSnapActive,
                 onToggleMagneticSnap = { isMagneticSnapActive = !isMagneticSnapActive },
                 onOpenRadial = {
-                    radialMenuCenter = Offset(300f, 300f)
+                    radialMenuCenter = Offset(
+                        if (canvasViewport.width > 0) canvasViewport.width / 2f else 300f,
+                        if (canvasViewport.height > 0) canvasViewport.height / 2f else 300f
+                    )
                     showRadialMenu = true
                 },
                 onAnchorSticky = {
                     val session = notebook?.first
                     val handles = engine.coreHandles()
-                    val target = textStore.all.firstOrNull()
+                    val pageBoxes = textStore.all.filter { it.pageIndex == pageIndex }
+                    val target = pageBoxes.firstOrNull()
                     if (session != null && handles != null && target != null) {
-                        val strokeIds: List<String> = lasso.selected
+                        val (_, pageId) = handles
+                        var strokeIds: List<String> = lasso.selected
+                        if (strokeIds.isEmpty()) {
+                            val poly = listOf(
+                                target.x - 10f, target.y - 10f,
+                                target.x + target.width + 10f, target.y - 10f,
+                                target.x + target.width + 10f, target.y + target.height + 10f,
+                                target.x - 10f, target.y + target.height + 10f
+                            )
+                            strokeIds = runCatching { session.lassoSelect(pageId, poly) }.getOrDefault(emptyList())
+                        }
                         if (strokeIds.isNotEmpty()) {
                             val meta = NotebookMeta.load(session)
                             val anchors = meta.stickyAnchors().toMutableList()
+                            anchors.removeAll { it.targetId == target.id }
                             anchors.add(
                                 StickyAnnotationAnchor(
                                     pageIndex = pageIndex,
@@ -4017,6 +4068,9 @@ private fun InkScreen(
                                 )
                             )
                             meta.setStickyAnchors(session, anchors)
+                            lasso.clear()
+                            revision++
+                            clearToken++
                             message = l10n("sticky_anchored_hint")
                         } else {
                             message = l10n("sticky_anchor_ink")

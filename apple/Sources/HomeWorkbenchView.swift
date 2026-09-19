@@ -417,17 +417,6 @@ public struct HomeWorkbenchView: View {
             .onAppear {
                 // 不限定 macCatalyst：使用者在 Mac 上跑的是 iOS 版（Designed for iPad）
                 MacWindowTitle.apply()
-                if ProcessInfo.processInfo.environment["KAIRUMO_EXPORT_AUDIT"] != nil {
-                    runExportAudit()
-                }
-                if ProcessInfo.processInfo.environment["KAIRUMO_TYPE_AUDIT"] != nil {
-                    let n = _typeName(NotebookEditorView.Body.self, qualified: true).count
-                    let h = _typeName(HomeWorkbenchView.Body.self, qualified: true).count
-                    let d = _typeName(AppDiagnosticsSheet.Body.self, qualified: true).count
-                    print("🔎TYPE editor.body name length = \(n)")
-                    print("🔎TYPE home.body   name length = \(h)")
-                    print("🔎TYPE diag.body   name length = \(d)")
-                }
             }
         }
     }
@@ -1442,55 +1431,7 @@ public struct HomeWorkbenchView: View {
 
     // MARK: - 7. 底部工作台品牌與版本號
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
-    /// 匯出內容稽核（只在 KAIRUMO_EXPORT_AUDIT=1 時執行）。
-    ///
-    /// 造一份帶手繪筆劃、文字方塊與討論圖釘的頁面，走**匯出用的整頁算繪路徑**
-    /// 輸出 PNG 到 Documents，用來確認匯出不是空白 —— 這是唯一能在模擬器上
-    /// 客觀檢查匯出內容的方法。
-    private func runExportAudit() {
-        let width: CGFloat = 1200
-        var doc = notebookStore.createNotebook(title: "Export Audit", template: .blank)
-        doc.textAttachments = [
-            NoteTextAttachment(
-                pageIndex: 0,
-                text: "匯出稽核用文字方塊 / Export audit text box",
-                fontSize: 28,
-                backgroundColorHex: "#FFF9C4",
-                hasBorder: true,
-                borderColorHex: "#FF3B30",
-                borderWidth: 3,
-                x: 120, y: 700, width: 620, height: 160
-            )
-        ]
-        doc.commentPins = [
-            NoteCommentPin(pageIndex: 0, x: 900, y: 500, authorId: "audit", authorName: "Audit", authorColor: "#34C759", messages: [])
-        ]
-        notebookStore.updateNotebook(doc)
 
-        // 一條橫跨頁面的筆劃：位置刻意放在舊版 612x792 取圖框「之外」
-        var points: [PKStrokePoint] = []
-        for i in 0...60 {
-            let t = CGFloat(i) / 60
-            let p = CGPoint(x: 100 + t * (width - 200), y: 1000 + sin(t * 6) * 180)
-            points.append(PKStrokePoint(location: p, timeOffset: TimeInterval(i) * 0.01,
-                                        size: CGSize(width: 8, height: 8), opacity: 1, force: 1, azimuth: 0, altitude: 0))
-        }
-        let stroke = PKStroke(ink: PKInk(.pen, color: .black), path: PKStrokePath(controlPoints: points, creationDate: Date()))
-        let drawing = PKDrawing(strokes: [stroke])
-        notebookStore.saveDrawing(notebookId: doc.id, pageIndex: 0, drawing: drawing)
-
-        let image = PageThumbnailRenderer.renderFullPage(
-            notebook: doc, pageIndex: 0, drawing: drawing, store: notebookStore,
-            canvasWidth: width, scale: 1.0
-        )
-        if let data = image.pngData() {
-            let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("export_audit.png")
-            try? data.write(to: url)
-            print("🔎EXPORT audit written: \(url.path) size=\(image.size)")
-        }
-        notebookStore.deleteNotebook(id: doc.id)
-    }
 
     /// 資料與同步入口。
     ///

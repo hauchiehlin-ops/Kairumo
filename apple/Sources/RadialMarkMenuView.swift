@@ -70,6 +70,7 @@ public struct RadialMarkMenuView: View {
                             .stroke(Color.accentColor.opacity(0.5), lineWidth: 2)
                     )
                     .shadow(color: Color.black.opacity(0.15), radius: 6, y: 2)
+                    .position(centerPoint)
 
                 // 環形分佈之快捷按鈕
                 ForEach(0..<items.count, id: \.self) { index in

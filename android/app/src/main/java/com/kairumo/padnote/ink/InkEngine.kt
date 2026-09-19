@@ -80,6 +80,11 @@ class InkEngine(
      */
     var onPenControlChanged: ((uniffi.padnote_core.FfiPenControl?, Boolean) -> Unit)? = null
 
+    /** 筆跡磁吸對齊開關 (Smart Magnetic Snap) */
+    var isMagneticSnapActive: Boolean = false
+    /** 磁吸吸附觸發回呼 (起點, 吸附終點) */
+    var onMagneticSnap: ((androidx.compose.ui.geometry.Offset, androidx.compose.ui.geometry.Offset) -> Unit)? = null
+
     /** 上一次看到的側鍵狀態。用來只在翻面時通知。 */
     private var heldControl: uniffi.padnote_core.FfiPenControl? = null
 
@@ -278,11 +283,30 @@ class InkEngine(
             return null
         }
 
+        var finalPoints = points
+        if (isMagneticSnapActive && points.size >= 2) {
+            val start = androidx.compose.ui.geometry.Offset(points.first().x, points.first().y)
+            val end = androidx.compose.ui.geometry.Offset(points.last().x, points.last().y)
+            val snapRes = com.kairumo.padnote.canvas.SmartMagneticSnap.snap(start, end, enableGrid = true)
+            if (snapRes.didSnap) {
+                val lastPt = points.last()
+                finalPoints = points.dropLast(1) + StrokePoint(
+                    x = snapRes.snappedPoint.x,
+                    y = snapRes.snappedPoint.y,
+                    pressure = lastPt.pressure,
+                    tilt = lastPt.tilt,
+                    azimuth = lastPt.azimuth,
+                    dtUs = lastPt.dtUs
+                )
+                onMagneticSnap?.invoke(start, snapRes.snappedPoint)
+            }
+        }
+
         val target = session
         val page = pageId
         val coreId = if (target != null && page != null) {
             runCatching {
-                target.addStroke(page, tool, colorRgba, baseWidth, points)
+                target.addStroke(page, tool, colorRgba, baseWidth, finalPoints)
             }.getOrNull()
         } else {
             null
@@ -291,7 +315,7 @@ class InkEngine(
         val stroke = CompletedStroke(
             pointerId = id,
             coreStrokeId = coreId,
-            points = points,
+            points = finalPoints,
             tool = tool,
             startedAtMs = (samples.first().event.timestampUs / 1_000uL).toLong()
         )

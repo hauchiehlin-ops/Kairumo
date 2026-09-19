@@ -386,6 +386,7 @@ struct CanvasRepresentable: UIViewRepresentable {
     var onNextPage: (() -> Void)?
     var onUndo: (() -> Void)?
     var onRedo: (() -> Void)?
+    var onMagneticSnap: ((CGPoint, CGPoint) -> Void)?
 
     /// 目前該用哪個輸入政策。
     ///
@@ -675,6 +676,19 @@ struct CanvasRepresentable: UIViewRepresentable {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5, execute: work)
                 self.shapeRefineTimer = work
             }
+
+            // ── 智慧磁吸對齊與幾何角度引導 (Smart Magnetic Snap) ─────────────────
+            if parent.onMagneticSnap != nil, parent.selectedTool.isBrush, count > self.lastStrokeCountBeforeRefine, let lastStroke = effective.strokes.last {
+                let strokeCount = lastStroke.path.count
+                if strokeCount >= 2 {
+                    let startPoint = lastStroke.path[0].location
+                    let endPoint = lastStroke.path[strokeCount - 1].location
+                    let snapResult = SmartMagneticSnap.snap(start: startPoint, current: endPoint, enableGrid: true)
+                    if snapResult.didSnap {
+                        parent.onMagneticSnap?(startPoint, snapResult.snappedPoint)
+                    }
+                }
+            }
             self.lastStrokeCountBeforeRefine = count
 
             // 寫到接近頁尾就先把下一頁準備好。
@@ -896,6 +910,7 @@ struct RuleOfThirdsOverlayView: View {
 public struct NotebookEditorView: View {
     @Binding var notebook: NotebookDocument
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.scenePhase) private var scenePhase
 
     @ObservedObject var store = NotebookStore.shared
     @ObservedObject var audioManager = AudioRecorderManager.shared
@@ -1361,6 +1376,14 @@ public struct NotebookEditorView: View {
             MacWindowTitle.apply()
             // 進到編輯器時也亮一次：第一次開的人要知道自己在哪個模式。
             flashModeBadge()
+        }
+        .onDisappear {
+            saveCurrentPageDrawing()
+        }
+        .onChange(of: scenePhase) { phase in
+            if phase == .background || phase == .inactive {
+                saveCurrentPageDrawing()
+            }
         }
         .sheet(isPresented: $showShareSheet) { erasedView {
             if let data = exportPdfData {
@@ -3169,7 +3192,18 @@ ZStack(alignment: .topTrailing) {
                     }
                 },
                 onUndo: { performUndo() },
-                onRedo: { canvasView?.undoManager?.redo() }
+                onRedo: { canvasView?.undoManager?.redo() },
+                onMagneticSnap: { start, end in
+                    magneticGuideStart = start
+                    magneticGuideEnd = end
+                    magneticGuideActive = true
+                    #if os(iOS)
+                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    #endif
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+                        magneticGuideActive = false
+                    }
+                }
             )
             .accessibilityIdentifier("editor.canvas")
             // 從別的 App 把圖拖進來（工作項 S-68）。

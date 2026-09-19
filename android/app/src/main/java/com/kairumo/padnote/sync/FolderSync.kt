@@ -176,10 +176,27 @@ object FolderSync {
     private fun download(context: Context, remoteRoot: DocumentFile, localRoot: File, path: String) {
         val source = findRemoteFile(remoteRoot, path) ?: error("同步資料夾裡找不到 $path")
         val target = File(localRoot, path)
-        target.parentFile?.mkdirs()
-        context.contentResolver.openInputStream(source.uri).use { input ->
-            requireNotNull(input) { "無法讀取 $path" }
-            target.outputStream().use { input.copyTo(it) }
+        val parent = target.parentFile ?: localRoot
+        parent.mkdirs()
+        val tempFile = File.createTempFile("sync_", ".tmp", parent)
+        try {
+            context.contentResolver.openInputStream(source.uri).use { input ->
+                requireNotNull(input) { "無法讀取 $path" }
+                tempFile.outputStream().use { out ->
+                    input.copyTo(out)
+                    out.fd.sync()
+                }
+            }
+            if (!tempFile.renameTo(target)) {
+                target.delete()
+                if (!tempFile.renameTo(target)) {
+                    tempFile.copyTo(target, overwrite = true)
+                    tempFile.delete()
+                }
+            }
+        } catch (e: Exception) {
+            tempFile.delete()
+            throw e
         }
     }
 

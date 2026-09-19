@@ -1560,7 +1560,7 @@ public final class NotebookStore: ObservableObject {
         }
         for (filename, data) in imported.imageData {
             let fileUrl = attachDir.appendingPathComponent(filename)
-            try? data.write(to: fileUrl)
+            try? data.write(to: fileUrl, options: .atomic)
         }
 
         upsertNotebook(imported.document)

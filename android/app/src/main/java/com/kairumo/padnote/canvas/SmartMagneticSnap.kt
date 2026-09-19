@@ -17,7 +17,7 @@ data class MagneticSnapResult(
  * 當筆畫接近水平、垂直、45° 或紙張格線時，自動磁吸吸附並給予觸覺反饋與光導引。
  */
 object SmartMagneticSnap {
-    private val canonicalAngles = listOf(0.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0)
+    private val canonicalAngles = doubleArrayOf(0.0, 45.0, 90.0, 135.0, 180.0, 225.0, 270.0, 315.0)
     private const val angleToleranceDegrees = 6.0
     private const val gridStep = 20f
 
@@ -43,7 +43,7 @@ object SmartMagneticSnap {
         }
 
         if (bestAngle != null) {
-            val rad = Math.toRadians(bestAngle)
+            val rad = bestAngle * (Math.PI / 180.0)
             var snappedX = (start.x + cos(rad) * distance).toFloat()
             var snappedY = (start.y + sin(rad) * distance).toFloat()
             if (enableGrid) {
