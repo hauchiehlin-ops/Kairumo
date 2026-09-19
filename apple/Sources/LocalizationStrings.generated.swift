@@ -7696,12 +7696,12 @@ extension LocalizationManager {
             .th: "แสดงในโฟลเดอร์"
         ],
         "sign_in_google": [
-            .zhHant: "使用 Google 登入",
-            .en: "Sign in with Google",
-            .zhHans: "使用 Google 登录",
-            .ja: "Google でログイン",
-            .ko: "Google 계정으로 로그인",
-            .th: "ลงชื่อเข้าใช้ด้วย Google"
+            .zhHant: "連結 Google 雲端硬碟",
+            .en: "Connect Google Drive",
+            .zhHans: "关联 Google 云端硬盘",
+            .ja: "Google ドライブを接続",
+            .ko: "Google 드라이브 연결",
+            .th: "เชื่อมต่อ Google ไดรฟ์"
         ],
         "sign_out": [
             .zhHant: "登出",

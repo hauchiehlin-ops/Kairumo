@@ -44,6 +44,16 @@ public enum BundledDocument: String, Identifiable {
         return Bundle.main.url(forResource: fileName.replacingOccurrences(of: ".html", with: ""),
                                withExtension: "html")
     }
+
+    /// 公開網頁版網址（符合 App Store 審核對公開隱私權政策與手冊網址之要求）
+    public var onlineURL: URL? {
+        switch self {
+        case .manual:
+            return URL(string: "https://hauchiehlin-ops.github.io/Kairumo/manual/")
+        case .privacy:
+            return URL(string: "https://hauchiehlin-ops.github.io/Kairumo/legal/privacy.html")
+        }
+    }
 }
 
 /// 以 WKWebView 呈現本機 HTML 文件
@@ -150,6 +160,15 @@ public struct DocumentViewerSheet: View {
             .presentationDetents([.large, .medium])
             .presentationDragIndicator(.visible)
             .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    if let onlineURL = document.onlineURL {
+                        Link(destination: onlineURL) {
+                            Image(systemName: "safari")
+                        }
+                        .help("Open in Browser")
+                        .accessibilityLabel("Open in Browser")
+                    }
+                }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(localizationManager.localized("done")) { dismiss() }
                 }

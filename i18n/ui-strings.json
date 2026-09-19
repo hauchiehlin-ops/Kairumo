@@ -7680,12 +7680,12 @@
     "zhHant": "在資料夾中顯示"
   },
   "sign_in_google": {
-    "en": "Sign in with Google",
-    "ja": "Google でログイン",
-    "ko": "Google 계정으로 로그인",
-    "th": "ลงชื่อเข้าใช้ด้วย Google",
-    "zhHans": "使用 Google 登录",
-    "zhHant": "使用 Google 登入"
+    "en": "Connect Google Drive",
+    "ja": "Google ドライブを接続",
+    "ko": "Google 드라이브 연결",
+    "th": "เชื่อมต่อ Google ไดรฟ์",
+    "zhHans": "关联 Google 云端硬盘",
+    "zhHant": "連結 Google 雲端硬碟"
   },
   "sign_out": {
     "en": "Sign out",

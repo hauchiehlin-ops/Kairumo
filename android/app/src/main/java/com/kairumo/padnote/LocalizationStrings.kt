@@ -7747,12 +7747,12 @@ object LocalizationStrings {
 
     private fun part12(): Map<String, Map<String, String>> = mapOf(
         "sign_in_google" to mapOf(
-            "zh-Hant" to "使用 Google 登入",
-            "en" to "Sign in with Google",
-            "zh-Hans" to "使用 Google 登录",
-            "ja" to "Google でログイン",
-            "ko" to "Google 계정으로 로그인",
-            "th" to "ลงชื่อเข้าใช้ด้วย Google"
+            "zh-Hant" to "連結 Google 雲端硬碟",
+            "en" to "Connect Google Drive",
+            "zh-Hans" to "关联 Google 云端硬盘",
+            "ja" to "Google ドライブを接続",
+            "ko" to "Google 드라이브 연결",
+            "th" to "เชื่อมต่อ Google ไดรฟ์"
         ),
         "sign_out" to mapOf(
             "zh-Hant" to "登出",

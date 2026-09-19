@@ -97,7 +97,15 @@
 			<dict/>
 		</dict>
 	</array>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Kairumo 需要使用麥克風，以便在課堂或會議中錄製語音筆記，並讓手寫筆劃與錄音時間軸即時動態對齊。</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
-	<string>Kairumo 需要語音辨識權限以將錄音檔轉錄為文字稿，並直接插入筆記畫布。</string>
+	<string>Kairumo 需要語音辨識權限，以便在您的裝置端將錄音語音即時轉錄為文字稿，並直接插入筆記畫布。</string>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Kairumo 需要區域網路權限，以便在同一個 Wi-Fi 網路下直接與協同夥伴連線共同編輯筆記，所有傳輸均經端對端加密且不經外部伺服器。</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Kairumo 需要存取您的相片圖庫，以便您挑選圖片插入筆記頁面進行批註與繪製。</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Kairumo 需要儲存圖片權限，以便將您導出的筆記頁面或繪圖成果儲存至相片圖庫。</string>
 </dict>
 </plist>
