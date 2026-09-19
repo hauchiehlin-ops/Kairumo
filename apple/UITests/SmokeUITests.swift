@@ -222,7 +222,8 @@ final class AppStoreMacScreenshotsUITests: XCTestCase {
 
     private func capture(_ name: String, app: XCUIApplication) throws {
         sleep(1)
-        let screenshot = app.screenshot()
+        let window = app.windows.firstMatch
+        let screenshot = window.exists ? window.screenshot() : app.screenshot()
         let url = outputDirectory.appendingPathComponent(name)
         try screenshot.pngRepresentation.write(to: url, options: .atomic)
 
@@ -238,29 +239,30 @@ final class AppStoreMacScreenshotsUITests: XCTestCase {
 
         try capture("01-home.png", app: app)
 
-        let newNote = app.descendants(matching: .any)["home.action.new_note"].firstMatch
-        XCTAssertTrue(newNote.waitForExistence(timeout: 10), "找不到首頁新增筆記按鈕")
-        newNote.tap()
-        XCTAssertTrue(app.textFields["new_notebook.title.field"].waitForExistence(timeout: 10), "新增筆記頁沒有出現")
-        try capture("02-new-notebook.png", app: app)
+        let record = app.descendants(matching: .any)["home.action.record"].firstMatch
+        XCTAssertTrue(record.waitForExistence(timeout: 10), "找不到首頁錄音按鈕")
+        record.tap()
+        try capture("02-recording.png", app: app)
+        app.typeKey(.escape, modifierFlags: [])
+        sleep(1)
 
-        let confirm = app.descendants(matching: .any)["new_notebook.confirm"].firstMatch
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "找不到新增筆記確認按鈕")
-        confirm.tap()
+        let assets = app.descendants(matching: .any)["home.action.assets"].firstMatch
+        XCTAssertTrue(assets.waitForExistence(timeout: 10), "找不到首頁素材圖庫按鈕")
+        assets.tap()
+        try capture("03-assets.png", app: app)
+        app.typeKey(.escape, modifierFlags: [])
+        sleep(1)
+
+        let welcome = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'Kairumo'")).firstMatch
+        XCTAssertTrue(welcome.waitForExistence(timeout: 10), "找不到範例筆記卡片")
+        welcome.tap()
         XCTAssertTrue(app.descendants(matching: .any)["kairumo.canvas"].waitForExistence(timeout: 15), "找不到畫布")
-        try capture("03-editor-pen.png", app: app)
+        try capture("04-editor-pen.png", app: app)
 
         let typeMode = app.staticTexts["打字模式"].firstMatch
         XCTAssertTrue(typeMode.waitForExistence(timeout: 8), "找不到打字模式切換")
         typeMode.tap()
-        try capture("04-editor-typing.png", app: app)
+        try capture("05-editor-typing.png", app: app)
 
-        let drawMode = app.staticTexts["手繪模式"].firstMatch
-        XCTAssertTrue(drawMode.waitForExistence(timeout: 8), "找不到手寫模式切換")
-        drawMode.tap()
-        let brush = app.descendants(matching: .any)["editor.ink.brush"].firstMatch
-        XCTAssertTrue(brush.waitForExistence(timeout: 8), "找不到毛筆工具")
-        brush.tap()
-        try capture("05-editor-brush.png", app: app)
     }
 }
