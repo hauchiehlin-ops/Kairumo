@@ -1760,7 +1760,7 @@ extension LocalizationManager {
             .th: "ปิดไม้บรรทัด"
         ],
         "cloud_sync": [
-            .zhHant: "雲端同步",
+            .zhHant: "Google Drive (跨平台同步)",
             .en: "Cloud sync",
             .zhHans: "云端同步",
             .ja: "クラウド同期",
@@ -7976,7 +7976,7 @@ extension LocalizationManager {
             .th: "บัญชี"
         ],
         "sync_choose_folder": [
-            .zhHant: "選擇同步資料夾",
+            .zhHant: "iCloud 或本機資料夾同步",
             .en: "Choose Sync Folder",
             .zhHans: "选择同步文件夹",
             .ja: "同期フォルダを選択",
@@ -8104,7 +8104,7 @@ extension LocalizationManager {
             .th: "อัปโหลด %1@ ดาวน์โหลด %2@"
         ],
         "sync_section": [
-            .zhHant: "雲端同步",
+            .zhHant: "Google Drive (跨平台同步)",
             .en: "Cloud Sync",
             .zhHans: "云端同步",
             .ja: "クラウド同期",

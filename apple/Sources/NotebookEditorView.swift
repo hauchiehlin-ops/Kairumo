@@ -382,6 +382,9 @@ struct CanvasRepresentable: UIViewRepresentable {
     /// 「按著」的控制項有意義。
     var onPenControl: ((FfiPenControl, Bool) -> Void)?
 
+    var onPrevPage: (() -> Void)?
+    var onNextPage: (() -> Void)?
+
     /// 目前該用哪個輸入政策。
     ///
     /// 打字模式一律只有筆能寫（手指要用來捲動與選取）。手寫模式交給掌拒
@@ -470,6 +473,26 @@ struct CanvasRepresentable: UIViewRepresentable {
         canvas.contentSize = CGSize(width: max(canvas.bounds.width, 1), height: canvas.pageContentHeight)
 
         // 嵌入底層背景樣板視圖（隨畫布滾動）
+        
+        // 🌟 新增手勢：雙指點擊復原、三指點擊重做、三指上下滑動換頁
+        let twoFingerTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handleTwoFingerTap(_:)))
+        twoFingerTap.numberOfTouchesRequired = 2
+        canvas.addGestureRecognizer(twoFingerTap)
+        
+        let threeFingerTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handleThreeFingerTap(_:)))
+        threeFingerTap.numberOfTouchesRequired = 3
+        canvas.addGestureRecognizer(threeFingerTap)
+        
+        let swipeUp = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handleThreeFingerSwipeUp(_:)))
+        swipeUp.numberOfTouchesRequired = 3
+        swipeUp.direction = .up
+        canvas.addGestureRecognizer(swipeUp)
+        
+        let swipeDown = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handleThreeFingerSwipeDown(_:)))
+        swipeDown.numberOfTouchesRequired = 3
+        swipeDown.direction = .down
+        canvas.addGestureRecognizer(swipeDown)
+
         let bgView = TemplateCanvasBackgroundView(frame: CGRect(origin: .zero, size: canvas.contentSize))
         bgView.paperId = paperId
         bgView.paletteId = paletteId
@@ -2733,6 +2756,20 @@ ZStack(alignment: .topTrailing) {
                 paletteId: notebook.guidePaletteId,
                 pageHeight: currentPageHeight,
                 editorMode: editorMode,
+                onPrevPage: {
+                    if currentPageIndex > 0 {
+                        saveCurrentPageDrawing()
+                        currentPageIndex -= 1
+                        loadCurrentPage()
+                    }
+                },
+                onNextPage: {
+                    if currentPageIndex < notebook.pageCount - 1 {
+                        saveCurrentPageDrawing()
+                        currentPageIndex += 1
+                        loadCurrentPage()
+                    }
+                },
                 onDrawingChanged: { rawDrawing -> PKDrawing? in
                     // **頁面框線就是編輯區域。**
                     //

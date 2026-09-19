@@ -1781,7 +1781,7 @@ object LocalizationStrings {
             "th" to "ปิดไม้บรรทัด"
         ),
         "cloud_sync" to mapOf(
-            "zh-Hant" to "雲端同步",
+            "zh-Hant" to "Google Drive (跨平台同步)",
             "en" to "Cloud sync",
             "zh-Hans" to "云端同步",
             "ja" to "クラウド同期",
@@ -8027,7 +8027,7 @@ object LocalizationStrings {
             "th" to "บัญชี"
         ),
         "sync_choose_folder" to mapOf(
-            "zh-Hant" to "選擇同步資料夾",
+            "zh-Hant" to "iCloud 或本機資料夾同步",
             "en" to "Choose Sync Folder",
             "zh-Hans" to "选择同步文件夹",
             "ja" to "同期フォルダを選択",
@@ -8155,7 +8155,7 @@ object LocalizationStrings {
             "th" to "อัปโหลด %1@ ดาวน์โหลด %2@"
         ),
         "sync_section" to mapOf(
-            "zh-Hant" to "雲端同步",
+            "zh-Hant" to "Google Drive (跨平台同步)",
             "en" to "Cloud Sync",
             "zh-Hans" to "云端同步",
             "ja" to "クラウド同期",
