@@ -1240,7 +1240,7 @@ public struct NotebookEditorView: View {
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
             } else {
-                wordModeToolbar
+                typingToolbar
             }
 
             // 3. 尺規旋轉與量測輔助列（若尺規開啟時顯示）
@@ -1302,12 +1302,8 @@ public struct NotebookEditorView: View {
                             sidebarResizeHandle(total: geo.size.width, current: width)
                         }
 
-                        // 核心手寫（支援全品牌手寫筆） vs Google Docs / Word 標準居中文檔紙張編輯區
-                        if editorMode == .draw {
-                            canvasWorkArea
-                        } else {
-                            wordDocumentArea
-                        }
+                        // 核心手寫（支援全品牌手寫筆） vs 打字排版模式（共用畫布，維持樣板與置中）
+                        canvasWorkArea
                     }
                     .onAppear { editorAvailableWidth = geo.size.width }
                     .onChange(of: geo.size.width) { newValue in
