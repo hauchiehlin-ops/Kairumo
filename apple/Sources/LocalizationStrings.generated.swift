@@ -7135,6 +7135,14 @@ extension LocalizationManager {
             .ko: "선택됨",
             .th: "เลือกอยู่"
         ],
+        "settings": [
+            .zhHant: "設定",
+            .en: "Settings",
+            .zhHans: "设置",
+            .ja: "設定",
+            .ko: "설정",
+            .th: "การตั้งค่า"
+        ],
         "shape_edit": [
             .zhHant: "編修形狀",
             .en: "Edit Shape",

@@ -7183,6 +7183,14 @@ object LocalizationStrings {
             "ko" to "선택됨",
             "th" to "เลือกอยู่"
         ),
+        "settings" to mapOf(
+            "zh-Hant" to "設定",
+            "en" to "Settings",
+            "zh-Hans" to "设置",
+            "ja" to "設定",
+            "ko" to "설정",
+            "th" to "การตั้งค่า"
+        ),
         "shape_edit" to mapOf(
             "zh-Hant" to "編修形狀",
             "en" to "Edit Shape",
@@ -7734,7 +7742,10 @@ object LocalizationStrings {
             "ja" to "すべて",
             "ko" to "전체",
             "th" to "ทั้งหมด"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "show_in_folder" to mapOf(
             "zh-Hant" to "在資料夾中顯示",
             "en" to "Show in Folder",
@@ -7742,10 +7753,7 @@ object LocalizationStrings {
             "ja" to "フォルダで表示",
             "ko" to "폴더에서 보기",
             "th" to "แสดงในโฟลเดอร์"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sign_in_google" to mapOf(
             "zh-Hant" to "連結 Google 雲端硬碟",
             "en" to "Connect Google Drive",
@@ -8377,7 +8385,10 @@ object LocalizationStrings {
             "ja" to "表を更新",
             "ko" to "표 업데이트",
             "th" to "อัปเดตตาราง"
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "table_width" to mapOf(
             "zh-Hant" to "表格寬度",
             "en" to "Table Width",
@@ -8385,10 +8396,7 @@ object LocalizationStrings {
             "ja" to "表の幅",
             "ko" to "표 너비",
             "th" to "ความกว้างตาราง"
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tap_to_place_pin" to mapOf(
             "zh-Hant" to "請在畫布上輕點以放置圖釘",
             "en" to "Tap on canvas to place pin",
@@ -9020,7 +9028,10 @@ object LocalizationStrings {
             "ja" to "要点・疑問・決定・行動。次の一手で終わる議事録",
             "ko" to "요점·질문·결정·실행. 다음 할 일로 끝나는 회의록",
             "th" to "ประเด็น คำถาม ข้อสรุป การกระทำ"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "tmpl_study_planner" to mapOf(
             "zh-Hant" to "學習計畫",
             "en" to "Study Planner",
@@ -9028,10 +9039,7 @@ object LocalizationStrings {
             "ja" to "学習プランナー",
             "ko" to "학습 플래너",
             "th" to "แผนการเรียน"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_study_planner_desc" to mapOf(
             "zh-Hant" to "上方目標、科目列與勾選框、底部回顧",
             "en" to "Goals on top, subject rows with checkboxes, review at the bottom",

@@ -7119,6 +7119,14 @@
     "zhHans": "已选取",
     "zhHant": "已選取"
   },
+  "settings": {
+    "en": "Settings",
+    "ja": "設定",
+    "ko": "설정",
+    "th": "การตั้งค่า",
+    "zhHans": "设置",
+    "zhHant": "設定"
+  },
   "shape_edit": {
     "en": "Edit Shape",
     "ja": "図形を編集",
