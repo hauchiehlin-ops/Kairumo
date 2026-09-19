@@ -112,11 +112,11 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 }
             )
             .allowsHitTesting(editorMode == .draw)
-            .zIndex(editorMode == .draw && selectedTool != .lasso ? 2 : 1)
+            .zIndex(1)
 
             objectLayer()
-                .allowsHitTesting(editorMode == .type || selectedTool == .lasso)
-                .zIndex(editorMode == .draw && selectedTool != .lasso ? 1 : 2)
+                .allowsHitTesting(true)
+                .zIndex(2)
         }
         .simultaneousGesture(
             SpatialTapGesture(count: 1).onEnded { value in

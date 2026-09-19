@@ -149,7 +149,7 @@ final class InkInteropTests: XCTestCase {
     func testToolMappingCoversEveryCoreTool() {
         XCTAssertEqual(InkInterop.toolKind(for: .pen), .fountainPen)
         XCTAssertEqual(InkInterop.toolKind(for: .pencil), .pencil)
-        XCTAssertEqual(InkInterop.toolKind(for: .marker), .highlighter)
+        XCTAssertEqual(InkInterop.toolKind(for: .marker), .marker)
     }
 
     // MARK: - 核心 → PKDrawing

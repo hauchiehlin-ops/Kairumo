@@ -362,27 +362,44 @@ struct TableAttachmentItemView: View {
             }
             .overlay(alignment: .topTrailing) {
                 if isSelected {
-                    Button(role: .destructive, action: onDelete) {
-                        Image(systemName: "trash.circle.fill")
-                            .font(.title3)
-                            .symbolRenderingMode(.palette)
-                            .foregroundStyle(.white, Color.red)
+                    HStack(spacing: 6) {
+                        Button(action: onEdit) {
+                            Image(systemName: "slider.horizontal.3")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(5)
+                                .background(Color.blue)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(localizationManager.localized("edit"))
+
+                        Button(role: .destructive, action: onDelete) {
+                            Image(systemName: "trash.circle.fill")
+                                .font(.title3)
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(.white, Color.red)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(localizationManager.localized("action_delete"))
                     }
-                    .buttonStyle(.plain)
                     .offset(x: 10, y: -10)
-                    .accessibilityLabel(localizationManager.localized("action_delete"))
                 }
             }
             .gesture(
-                DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         isDragging = true
                         isSelected = true
                         dragOffset = value.translation
                     }
-                    .onEnded { _ in
-                        table.x += dragOffset.width
-                        table.y += dragOffset.height
+                    .onEnded { value in
+                        if hypot(value.translation.width, value.translation.height) < 4 {
+                            isSelected.toggle()
+                        } else {
+                            table.x += dragOffset.width
+                            table.y += dragOffset.height
+                        }
                         dragOffset = .zero
                         isDragging = false
                     }

@@ -443,12 +443,16 @@ struct ShapeAttachmentItemView: View {
                 }
             }
             .gesture(
-                DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         dragOffset = value.translation
                     }
-                    .onEnded { _ in
-                        onMove(dragOffset)
+                    .onEnded { value in
+                        if hypot(value.translation.width, value.translation.height) < 4 {
+                            onSelect()
+                        } else {
+                            onMove(dragOffset)
+                        }
                         dragOffset = .zero
                     }
             )

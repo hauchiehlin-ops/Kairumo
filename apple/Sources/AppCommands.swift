@@ -77,15 +77,17 @@ final class KairumoAppDelegate: UIResponder, UIApplicationDelegate {
         let toolSelectors: [Selector] = [
             #selector(commandTool1), #selector(commandTool2), #selector(commandTool3),
             #selector(commandTool4), #selector(commandTool5), #selector(commandTool6),
-            #selector(commandTool7), #selector(commandTool8), #selector(commandTool9)
+            #selector(commandTool7), #selector(commandTool8), #selector(commandTool9),
+            #selector(commandTool10)
         ]
         for (index, tool) in EditorToolType.allCases.enumerated()
         where index < toolSelectors.count {
+            let key = index < 9 ? "\(index + 1)" : "0"
             editorChildren.append(
                 UIKeyCommand(
                     title: string(tool.localizationKey),
                     action: toolSelectors[index],
-                    input: "\(index + 1)",
+                    input: key,
                     modifierFlags: .command))
         }
         if builder.menu(for: .view) != nil {
@@ -114,4 +116,5 @@ final class KairumoAppDelegate: UIResponder, UIApplicationDelegate {
     @objc private func commandTool7() { postTool(6) }
     @objc private func commandTool8() { postTool(7) }
     @objc private func commandTool9() { postTool(8) }
+    @objc private func commandTool10() { postTool(9) }
 }

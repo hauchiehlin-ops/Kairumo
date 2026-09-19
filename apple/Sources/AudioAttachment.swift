@@ -144,13 +144,17 @@ struct AudioAttachmentItemView: View {
                 }
             }
             .gesture(
-                DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         dragOffset = value.translation
                     }
                     .onEnded { value in
-                        item.x += value.translation.width
-                        item.y += value.translation.height
+                        if hypot(value.translation.width, value.translation.height) < 4 {
+                            isSelected.toggle()
+                        } else {
+                            item.x += value.translation.width
+                            item.y += value.translation.height
+                        }
                         dragOffset = .zero
                     }
             )

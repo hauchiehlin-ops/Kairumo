@@ -241,6 +241,7 @@ public struct WordToolbarView: View {
                             .frame(width: 28, height: 28)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("bullet_list"))
                     .help(localizationManager.localized("bullet_list"))
 
                     Button(action: onInsertNumbered) {
@@ -249,6 +250,7 @@ public struct WordToolbarView: View {
                             .frame(width: 28, height: 28)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("numbered_list"))
                     .help(localizationManager.localized("numbered_list"))
 
                     Button(action: onInsertTodo) {
@@ -257,6 +259,7 @@ public struct WordToolbarView: View {
                             .frame(width: 28, height: 28)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("todo_list"))
                     .help(localizationManager.localized("todo_list"))
                 }
                 .padding(2)
@@ -321,6 +324,7 @@ public struct WordToolbarView: View {
                             .cornerRadius(6)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("手繪區塊")
                         .help("插入局部手繪畫布區塊")
                     }
 
@@ -333,6 +337,7 @@ public struct WordToolbarView: View {
                             .cornerRadius(6)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("insert_link"))
 
                     // 插入水平分隔線
                     Button(action: onInsertDivider) {
@@ -343,6 +348,7 @@ public struct WordToolbarView: View {
                             .cornerRadius(6)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel("插入分隔線")
                     .help("插入分隔線")
                 }
 
@@ -357,6 +363,7 @@ public struct WordToolbarView: View {
                         .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
+                .accessibilityLabel("清除格式")
                 .help("清除格式")
             }
             .padding(.horizontal, 16)

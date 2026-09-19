@@ -1234,7 +1234,7 @@ public struct NotebookEditorView: View {
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
             } else {
-                typingToolbar
+                wordModeToolbar
             }
 
             // 3. 尺規旋轉與量測輔助列（若尺規開啟時顯示）
@@ -3099,6 +3099,7 @@ public struct NotebookEditorView: View {
                 paperId: notebook.paperId(forPage: currentPageIndex),
                 paletteId: notebook.guidePaletteId,
                 pageHeight: currentPageHeight,
+                editorMode: editorMode,
                 onDrawingChanged: { rawDrawing -> PKDrawing? in
                     // **頁面框線就是編輯區域。**
                     var processedDrawing = enforcePrintableArea(rawDrawing)
@@ -3213,11 +3214,11 @@ public struct NotebookEditorView: View {
                 }
             )
             .allowsHitTesting(editorMode == .draw)
-            .zIndex(editorMode == .draw && selectedTool != .lasso ? 2 : 1)
+            .zIndex(1)
 
             objectLayer(forPage: currentPageIndex)
-                .allowsHitTesting(editorMode == .type || selectedTool == .lasso)
-                .zIndex(editorMode == .draw && selectedTool != .lasso ? 1 : 2)
+                .allowsHitTesting(true)
+                .zIndex(2)
 
             modeBadge
                 .padding(.top, DS.Space.s)
@@ -7706,24 +7707,24 @@ public struct NotebookEditorView: View {
             PageThumbnailRenderer.invalidateAll()
         }
 
-        // 2. 檢查是否點擊在既有文字方塊範圍內
+        // 2. 檢查是否點擊在既有文字範圍內
         if let existing = notebook.textAttachments?.first(where: { item in
             item.pageIndex == currentPageIndex &&
-            CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -8, dy: -8).contains(location)
+            CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -12, dy: -12).contains(location)
         }) {
-            // 直接就地聚焦編輯既有文字方塊，絕不彈出浮動面板
+            // 直接就地聚焦編輯既有文字，絕不彈出浮動面板
             inlineEditingTextId = existing.id
             editingTextId = nil
             return
         }
 
-        // 3. 若點擊在其他畫布物件（圖片、表格、形狀、錄音卡片、3D等）上，不新增文字方塊
+        // 3. 若點擊在其他畫布物件（圖片、表格、形狀、錄音卡片、3D等）上，不新增文字，讓該物件處理選取
         if isLocationInsideAnyObject(at: location, page: currentPageIndex) {
             inlineEditingTextId = nil
             return
         }
 
-        // 4. 點擊空白處：隨點隨打，就地建立新文字方塊
+        // 4. 點擊空白處：隨點隨打，像 Word 即點即書，建立自然排版文字
         let draft = insertTextBox(at: location)
         inlineEditingTextId = draft.id
         editingTextId = nil
@@ -7751,27 +7752,27 @@ public struct NotebookEditorView: View {
             targetX = round(targetX / step) * step
             targetY = round(targetY / step) * step
         }
+        let printable = PageGeometry.printableRect
+        // 隨點隨打：若點在邊界附近自動靠齊版面左側，寬度延展至版面右邊緣（如同 Word 文件自然排版，不拘泥於狹窄小方塊）
+        let startX = targetX < printable.minX + 60 ? printable.minX : max(printable.minX, targetX)
+        let availWidth = max(280, printable.maxX - startX)
         let draft = NoteTextAttachment(
             id: UUID().uuidString,
             pageIndex: currentPageIndex,
             text: "",
-            fontSize: activeTextAttachment?.fontSize ?? 18,
+            fontSize: activeTextAttachment?.fontSize ?? 16,
             textColorHex: activeTextAttachment?.textColorHex ?? "#000000",
             backgroundColorHex: "clear",
             hasBorder: false,
-            x: max(10, targetX),
-            y: max(10, targetY),
-            width: 240,
-            height: 48
+            x: startX,
+            y: max(printable.minY, targetY),
+            width: availWidth,
+            height: 40
         )
         if notebook.textAttachments == nil {
             notebook.textAttachments = []
         }
-        if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == draft.id }) {
-            notebook.textAttachments?[idx] = draft
-        } else {
-            notebook.textAttachments?.append(draft)
-        }
+        notebook.textAttachments?.append(draft)
         var order = ObjectStacking.normalized(objects: pageStackableObjects, order: notebook.objectOrder(forPage: currentPageIndex))
         order = ObjectStacking.bringToFront([draft.id], in: order)
         notebook.setObjectOrder(order, forPage: currentPageIndex)
@@ -8686,7 +8687,7 @@ struct AttachmentItemView: View {
                 collaborationManager.broadcastSelection(selectedId: isSelected ? attachment.id : nil)
             }
             .gesture(
-                DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
                         isDragging = true
@@ -8698,23 +8699,30 @@ struct AttachmentItemView: View {
                     }
                     .onEnded { value in
                         guard lockedByPeer == nil else { return }
-                        var transaction = Transaction()
-                        transaction.animation = nil
-                        withTransaction(transaction) {
-                            // 拖出可列印範圍的物件推回邊界（S-85）。
-                            let landed = PrintableArea.clampOrigin(
-                                x: attachment.x + value.translation.width,
-                                y: attachment.y + value.translation.height,
-                                width: attachment.width, height: attachment.height)
-                            attachment.x = landed.x
-                            attachment.y = landed.y
-                            dragOffset = .zero
-                            isDragging = false
+                        if hypot(value.translation.width, value.translation.height) < 4 {
+                            isSelected.toggle()
+                            collaborationManager.broadcastSelection(selectedId: isSelected ? attachment.id : nil)
+                        } else {
+                            var transaction = Transaction()
+                            transaction.animation = nil
+                            withTransaction(transaction) {
+                                // 拖出可列印範圍的物件推回邊界（S-85）。
+                                let landed = PrintableArea.clampOrigin(
+                                    x: attachment.x + value.translation.width,
+                                    y: attachment.y + value.translation.height,
+                                    width: attachment.width, height: attachment.height)
+                                attachment.x = landed.x
+                                attachment.y = landed.y
+                                dragOffset = .zero
+                                isDragging = false
+                            }
+                            if let data = try? JSONEncoder().encode(attachment),
+                               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                                collaborationManager.broadcastAttachmentUpsert(type: "image", itemDict: dict)
+                            }
                         }
-                        if let data = try? JSONEncoder().encode(attachment),
-                           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                            collaborationManager.broadcastAttachmentUpsert(type: "image", itemDict: dict)
-                        }
+                        dragOffset = .zero
+                        isDragging = false
                     }
             )
 
@@ -8912,7 +8920,7 @@ struct TextAttachmentItemView: View {
                 if isEditingInline {
                     // 就地編輯：隨點隨打，鍵盤自動升起，不必開面板
                     ZStack(alignment: .topLeading) {
-                        if textItem.text.isEmpty {
+                        if textItem.text.isEmpty && !isTypeMode {
                             Text(localizationManager.localized("text_placeholder"))
                                 .font(.system(size: textItem.fontSize, weight: textItem.isBold ? .bold : .regular))
                                 .italic(textItem.isItalic)
@@ -8933,21 +8941,23 @@ struct TextAttachmentItemView: View {
                             .focused($inlineFocused)
                     }
                     .overlay(alignment: .bottomTrailing) {
-                        Button {
-                            isEditingInline = false
-                            inlineFocused = false
-                            finishEditing()
-                        } label: {
-                            Text(localizationManager.localized("done"))
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundColor(.white)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .background(Color.accentColor)
-                                .cornerRadius(6)
+                        if !isTypeMode {
+                            Button {
+                                isEditingInline = false
+                                inlineFocused = false
+                                finishEditing()
+                            } label: {
+                                Text(localizationManager.localized("done"))
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(.white)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 5)
+                                    .background(Color.accentColor)
+                                    .cornerRadius(6)
+                            }
+                            .buttonStyle(.plain)
+                            .offset(x: 4, y: 22)
                         }
-                        .buttonStyle(.plain)
-                        .offset(x: 4, y: 22)
                     }
                 } else {
                     Text(textItem.text)
@@ -8975,8 +8985,12 @@ struct TextAttachmentItemView: View {
                         RoundedRectangle(cornerRadius: textItem.cornerRadius)
                             .stroke(Color(hex: peer.userColor) ?? .blue, lineWidth: 3)
                     } else if isEditingInline {
-                        RoundedRectangle(cornerRadius: textItem.cornerRadius)
-                            .stroke(Color.accentColor.opacity(0.85), lineWidth: 1.5)
+                        if isTypeMode && !textItem.hasBorder {
+                            Color.clear
+                        } else {
+                            RoundedRectangle(cornerRadius: textItem.cornerRadius)
+                                .stroke(Color.accentColor.opacity(0.85), lineWidth: 1.5)
+                        }
                     } else {
                         RoundedRectangle(cornerRadius: textItem.cornerRadius)
                             .stroke(
@@ -8988,7 +9002,7 @@ struct TextAttachmentItemView: View {
                     }
                 }
             )
-            .shadow(color: isDragging ? Color.clear : Color.black.opacity(0.08), radius: 6, y: 3)
+            .shadow(color: (isTypeMode || isDragging || !textItem.hasBorder) ? Color.clear : Color.black.opacity(0.08), radius: 6, y: 3)
             .contentShape(Rectangle())
             .rotationEffect(.degrees(textItem.canvasRotation))
             .overlay(alignment: .bottomTrailing) {
@@ -9084,7 +9098,7 @@ struct TextAttachmentItemView: View {
                 } label: { Label(localizationManager.localized("delete"), systemImage: "trash") }
             }
             .gesture(
-                DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
                         isDragging = true
@@ -9096,30 +9110,43 @@ struct TextAttachmentItemView: View {
                     }
                     .onEnded { value in
                         guard lockedByPeer == nil else { return }
-                        let oldX = textItem.x
-                        let oldY = textItem.y
-                        var transaction = Transaction()
-                        transaction.animation = nil
-                        withTransaction(transaction) {
-                            // 拖出可列印範圍的物件推回邊界（S-85）。
-                            let landed = PrintableArea.clampOrigin(
-                                x: textItem.x + value.translation.width,
-                                y: textItem.y + value.translation.height,
-                                width: textItem.width, height: textItem.height)
-                            textItem.x = landed.x
-                            textItem.y = landed.y
-                            dragOffset = .zero
-                            isDragging = false
+                        if hypot(value.translation.width, value.translation.height) < 4 {
+                            if isTypeMode {
+                                isSelected = true
+                                isEditingInline = true
+                                inlineFocused = true
+                            } else {
+                                isSelected.toggle()
+                                collaborationManager.broadcastSelection(selectedId: isSelected ? textItem.id : nil)
+                            }
+                        } else {
+                            let oldX = textItem.x
+                            let oldY = textItem.y
+                            var transaction = Transaction()
+                            transaction.animation = nil
+                            withTransaction(transaction) {
+                                // 拖出可列印範圍的物件推回邊界（S-85）。
+                                let landed = PrintableArea.clampOrigin(
+                                    x: textItem.x + value.translation.width,
+                                    y: textItem.y + value.translation.height,
+                                    width: textItem.width, height: textItem.height)
+                                textItem.x = landed.x
+                                textItem.y = landed.y
+                                dragOffset = .zero
+                                isDragging = false
+                            }
+                            let deltaX = textItem.x - oldX
+                            let deltaY = textItem.y - oldY
+                            if deltaX != 0 || deltaY != 0 {
+                                onMoved?(CGSize(width: deltaX, height: deltaY))
+                            }
+                            if let data = try? JSONEncoder().encode(textItem),
+                               let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                                collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
+                            }
                         }
-                        let deltaX = textItem.x - oldX
-                        let deltaY = textItem.y - oldY
-                        if deltaX != 0 || deltaY != 0 {
-                            onMoved?(CGSize(width: deltaX, height: deltaY))
-                        }
-                        if let data = try? JSONEncoder().encode(textItem),
-                           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
-                            collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
-                        }
+                        dragOffset = .zero
+                        isDragging = false
                     }
             )
 
@@ -9300,18 +9327,22 @@ struct LinkAttachmentItemView: View {
                 }
             }
             .gesture(
-                DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         dragOffset = value.translation
                     }
                     .onEnded { value in
-                        // 拖出可列印範圍的物件推回邊界（S-85）。
-                        let landed = PrintableArea.clampOrigin(
-                            x: linkItem.x + value.translation.width,
-                            y: linkItem.y + value.translation.height,
-                            width: linkItem.width, height: linkItem.height)
-                        linkItem.x = landed.x
-                        linkItem.y = landed.y
+                        if hypot(value.translation.width, value.translation.height) < 4 {
+                            isSelected.toggle()
+                        } else {
+                            // 拖出可列印範圍的物件推回邊界（S-85）。
+                            let landed = PrintableArea.clampOrigin(
+                                x: linkItem.x + value.translation.width,
+                                y: linkItem.y + value.translation.height,
+                                width: linkItem.width, height: linkItem.height)
+                            linkItem.x = landed.x
+                            linkItem.y = landed.y
+                        }
                         dragOffset = .zero
                     }
             )
@@ -9557,7 +9588,7 @@ struct Model3DCanvasItemView: View {
             .cornerRadius(8)
             .contentShape(Rectangle())
             .gesture(
-                DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
                         dragOffset = value.translation
