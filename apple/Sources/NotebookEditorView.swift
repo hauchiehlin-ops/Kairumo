@@ -2126,12 +2126,10 @@ public struct NotebookEditorView: View {
                     .accessibilityIdentifier("editor.insert.math")
                 Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
                     .accessibilityIdentifier("editor.insert.chart")
-                Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
+                Button { insertDefaultTable() } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
                     .accessibilityIdentifier("editor.insert.table")
-                Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
+                Button { insertDefaultShape() } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
                     .accessibilityIdentifier("editor.insert.shape")
-                Button { showLayerPanel.toggle() } label: { Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d") }
-                    .accessibilityIdentifier("editor.insert.layers")
                 Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
                     .accessibilityIdentifier("editor.insert.model3d")
                 Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
@@ -4722,6 +4720,27 @@ ZStack(alignment: .topTrailing) {
                     .accessibilityIdentifier(tool.parityIdentifier)
                 }
 
+                Button {
+                    _ = insertTextBox(at: CGPoint(x: 200, y: 200))
+                } label: {
+                    VStack(spacing: 3) {
+                        Image(systemName: "plus.bubble")
+                            .font(.system(size: 16, weight: .regular))
+                        if showToolLabels {
+                            Text(localizationManager.localized("add_text_box"))
+                                .font(.system(size: 10))
+                        }
+                    }
+                    .foregroundColor(.secondary)
+                    .padding(.horizontal, DS.Space.xs)
+                    .padding(.vertical, 5)
+                    .background(Color.clear)
+                    .cornerRadius(DS.Radius.s)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(localizationManager.localized("add_text_box"))
+                .help(localizationManager.localized("add_text_box"))
+
                 ToolbarSeparator()
                     .frame(height: 24)
 
@@ -6410,7 +6429,7 @@ ZStack(alignment: .topTrailing) {
 
     private func addNewPage() {
         saveCurrentPageDrawing()
-        let newIndex = store.addPage(notebookId: notebook.id)
+        let newIndex = store.addPage(notebookId: notebook.id, paperId: notebook.paperId(forPage: currentPageIndex))
         if let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
             self.notebook = updated
         }
@@ -6835,6 +6854,18 @@ ZStack(alignment: .topTrailing) {
 
     /// 在畫布的指定位置新增一個空文字方塊並直接進入隨點隨打。
     @discardableResult
+    private func insertDefaultTable() {
+        if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
+        notebook.tableAttachments?.append(NoteTableAttachment(pageIndex: currentPageIndex, x: 200, y: 200, rows: 3, cols: 3))
+        store.updateNotebook(notebook)
+    }
+
+    private func insertDefaultShape() {
+        if notebook.shapeAttachments == nil { notebook.shapeAttachments = [] }
+        notebook.shapeAttachments?.append(NoteShapeAttachment(pageIndex: currentPageIndex, kindName: "rectangle", x: 200, y: 200, width: 120, height: 80, cornerRadius: 8, strokeColorHex: "#000000", fillColorHex: "#FFFFFF", lineWidth: 2))
+        store.updateNotebook(notebook)
+    }
+
     private func insertTextBox(at location: CGPoint) -> NoteTextAttachment {
         var targetX = location.x
         var targetY = location.y

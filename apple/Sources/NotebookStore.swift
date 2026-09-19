@@ -1709,7 +1709,7 @@ public final class NotebookStore: ObservableObject {
 
     /// 為指定筆記安全原子新增下一頁，回傳新頁碼 index
     @discardableResult
-    public func addPage(notebookId: String) -> Int {
+    public func addPage(notebookId: String, paperId: String? = nil) -> Int {
         guard let idx = notebooks.firstIndex(where: { $0.id == notebookId }) else { return 0 }
         let oldPageCount = max(1, notebooks[idx].pageCount)
         let newPageCount = oldPageCount + 1
@@ -1724,7 +1724,7 @@ public final class NotebookStore: ObservableObject {
         // 逐頁樣板也要跟著長一格，否則新頁在陣列裡取不到、退回整本的樣板 ——
         // 那在「這一頁想用別的格式」之後就是錯的。
         notebooks[idx].padPagePaperIds(to: oldPageCount)
-        notebooks[idx].pagePaperIds?.append(notebooks[idx].template.paperId)
+        notebooks[idx].pagePaperIds?.append(paperId ?? notebooks[idx].template.paperId)
         notebooks[idx].lastModifiedDate = Date()
 
         let newPageIndex = newPageCount - 1
