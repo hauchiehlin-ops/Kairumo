@@ -78,8 +78,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
         ZStack(alignment: .topLeading) {
             PageBackgroundRepresentable(paperId: paperId, paletteId: paletteId)
                 .allowsHitTesting(false)
-
-            objectLayer()
+                .zIndex(0)
 
             CanvasRepresentable(
                 drawing: $drawing,
@@ -112,6 +111,12 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                     if isFocused { onPenControl?(control, pressed) }
                 }
             )
+            .allowsHitTesting(editorMode == .draw)
+            .zIndex(editorMode == .draw && selectedTool != .lasso ? 2 : 1)
+
+            objectLayer()
+                .allowsHitTesting(editorMode == .type || selectedTool == .lasso)
+                .zIndex(editorMode == .draw && selectedTool != .lasso ? 1 : 2)
         }
         .simultaneousGesture(
             SpatialTapGesture(count: 1).onEnded { value in

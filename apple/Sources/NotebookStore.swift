@@ -2260,7 +2260,8 @@ public final class NotebookStore: ObservableObject {
 
     // MARK: - 錄音操作 CRUD
 
-    public func addRecording(title: String, durationSeconds: Int, fileName: String, linkedNotebookId: String? = nil) {
+    @discardableResult
+    public func addRecording(title: String, durationSeconds: Int, fileName: String, linkedNotebookId: String? = nil) -> AudioRecordingRecord {
         let safeTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "語音錄音" : title
         let rec = AudioRecordingRecord(
             title: safeTitle,
@@ -2278,6 +2279,7 @@ public final class NotebookStore: ObservableObject {
             notebooks[idx].recordingAudioPath = fileName
         }
         persistData()
+        return rec
     }
 
     public func deleteRecording(id: String) {

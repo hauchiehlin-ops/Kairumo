@@ -3080,15 +3080,13 @@ public struct NotebookEditorView: View {
                 }
 
         }
-        .allowsHitTesting(editorMode != .draw)
     }
 
     private var canvasWorkAreaContent: some View {
-ZStack(alignment: .topTrailing) {
+        ZStack(alignment: .topTrailing) {
             PageBackgroundRepresentable(paperId: notebook.paperId(forPage: currentPageIndex), paletteId: notebook.guidePaletteId)
                 .allowsHitTesting(false)
-
-            objectLayer(forPage: currentPageIndex)
+                .zIndex(0)
 
             CanvasRepresentable(
                 drawing: $currentDrawing,
@@ -3214,12 +3212,12 @@ ZStack(alignment: .topTrailing) {
                         }
                 }
             )
+            .allowsHitTesting(editorMode == .draw)
+            .zIndex(editorMode == .draw && selectedTool != .lasso ? 2 : 1)
 
-            if editorMode == .type {
-                Color.clear
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .allowsHitTesting(false)
-            }
+            objectLayer(forPage: currentPageIndex)
+                .allowsHitTesting(editorMode == .type || selectedTool == .lasso)
+                .zIndex(editorMode == .draw && selectedTool != .lasso ? 1 : 2)
 
             modeBadge
                 .padding(.top, DS.Space.s)
@@ -7101,12 +7099,13 @@ ZStack(alignment: .topTrailing) {
             notebook.hasRecording = true
             notebook.recordingAudioPath = fileName
             store.updateNotebook(notebook)
-            store.addRecording(
+            let rec = store.addRecording(
                 title: "\(notebook.title) \(localizationManager.localized("recording_suffix"))",
                 durationSeconds: Int(result.duration),
                 fileName: fileName,
                 linkedNotebookId: notebook.id
             )
+            insertAudioAttachment(rec)
         }
     }
 
@@ -7649,6 +7648,53 @@ ZStack(alignment: .topTrailing) {
         store.updateNotebook(notebook)
     }
 
+    private func isLocationInsideAnyObject(at location: CGPoint, page: Int) -> Bool {
+        if let items = notebook.attachments {
+            for item in items where item.pageIndex == page {
+                if CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4).contains(location) {
+                    return true
+                }
+            }
+        }
+        if let items = notebook.shapeAttachments {
+            for item in items where item.pageIndex == page {
+                if CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4).contains(location) {
+                    return true
+                }
+            }
+        }
+        if let items = notebook.tableAttachments {
+            for item in items where item.pageIndex == page {
+                let layout = item.layout()
+                if CGRect(x: item.x, y: item.y, width: CGFloat(layout.width), height: CGFloat(layout.height)).insetBy(dx: -4, dy: -4).contains(location) {
+                    return true
+                }
+            }
+        }
+        if let items = notebook.audioAttachments {
+            for item in items where item.pageIndex == page {
+                if CGRect(x: item.x, y: item.y, width: 220, height: 70).insetBy(dx: -4, dy: -4).contains(location) {
+                    return true
+                }
+            }
+        }
+        if let items = notebook.linkAttachments {
+            for item in items where item.pageIndex == page {
+                if CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4).contains(location) {
+                    return true
+                }
+            }
+        }
+        if let items = notebook.model3DAttachments {
+            for item in items where item.pageIndex == page {
+                if CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4).contains(location) {
+                    return true
+                }
+            }
+        }
+        return false
+    }
+
     private func handleCanvasTapInTypeMode(at location: CGPoint) {
         // 1. 若先前有就地編輯但未打任何字的空方塊，先自動清理
         if let activeId = inlineEditingTextId,
@@ -7671,7 +7717,13 @@ ZStack(alignment: .topTrailing) {
             return
         }
 
-        // 3. 點擊空白處：隨點隨打，就地建立新文字方塊
+        // 3. 若點擊在其他畫布物件（圖片、表格、形狀、錄音卡片、3D等）上，不新增文字方塊
+        if isLocationInsideAnyObject(at: location, page: currentPageIndex) {
+            inlineEditingTextId = nil
+            return
+        }
+
+        // 4. 點擊空白處：隨點隨打，就地建立新文字方塊
         let draft = insertTextBox(at: location)
         inlineEditingTextId = draft.id
         editingTextId = nil

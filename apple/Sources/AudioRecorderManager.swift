@@ -94,21 +94,30 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
     /// 請求麥克風權限並啟動錄音
     public func startRecording(title: String? = nil) async -> Bool {
-        #if os(macOS)
+        #if targetEnvironment(macCatalyst)
+        let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)
         let permissionGranted: Bool
-        if #available(macOS 10.14, *) {
+        if authStatus == .authorized {
+            permissionGranted = true
+        } else if authStatus == .notDetermined {
             permissionGranted = await AVCaptureDevice.requestAccess(for: .audio)
         } else {
-            permissionGranted = true
+            permissionGranted = false
         }
         guard permissionGranted else {
-            print("[AudioRecorderManager] macOS 麥克風權限被拒絕")
+            print("[AudioRecorderManager] Mac Catalyst 麥克風權限被拒絕")
             self.showPermissionAlert = true
             return false
         }
-        #endif
 
-        #if os(iOS) || targetEnvironment(macCatalyst)
+        let session = AVAudioSession.sharedInstance()
+        do {
+            try session.setCategory(.playAndRecord, mode: .default)
+            try session.setActive(true)
+        } catch {
+            print("[AudioRecorderManager] Mac Catalyst 音訊 Session 設定警告: \(error)")
+        }
+        #elseif os(iOS)
         let session = AVAudioSession.sharedInstance()
         let permissionGranted: Bool
         if #available(iOS 17.0, *) {
@@ -133,6 +142,18 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         } catch {
             print("[AudioRecorderManager] 音訊 Session 設定失敗: \(error)")
         }
+        #elseif os(macOS)
+        let permissionGranted: Bool
+        if #available(macOS 10.14, *) {
+            permissionGranted = await AVCaptureDevice.requestAccess(for: .audio)
+        } else {
+            permissionGranted = true
+        }
+        guard permissionGranted else {
+            print("[AudioRecorderManager] macOS 麥克風權限被拒絕")
+            self.showPermissionAlert = true
+            return false
+        }
         #endif
 
         let fileId = UUID().uuidString
@@ -150,7 +171,12 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
             let recorder = try AVAudioRecorder(url: fileUrl, settings: settings)
             recorder.delegate = self
             recorder.isMeteringEnabled = true
-            guard recorder.record() else { return false }
+            let prepared = recorder.prepareToRecord()
+            print("[AudioRecorderManager] prepareToRecord: \(prepared)")
+            guard recorder.record() else {
+                print("[AudioRecorderManager] recorder.record() 回傳 false")
+                return false
+            }
 
             self.audioRecorder = recorder
             self.status = .recording
@@ -229,20 +255,6 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         stopPlayback()
 
         do {
-        #if os(macOS)
-        let permissionGranted: Bool
-        if #available(macOS 10.14, *) {
-            permissionGranted = await AVCaptureDevice.requestAccess(for: .audio)
-        } else {
-            permissionGranted = true
-        }
-        guard permissionGranted else {
-            print("[AudioRecorderManager] macOS 麥克風權限被拒絕")
-            self.showPermissionAlert = true
-            return false
-        }
-        #endif
-
             #if os(iOS) || targetEnvironment(macCatalyst)
             try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
             try AVAudioSession.sharedInstance().setActive(true)
