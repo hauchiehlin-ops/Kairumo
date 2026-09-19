@@ -900,6 +900,7 @@ public struct NotebookEditorView: View {
     @ObservedObject var store = NotebookStore.shared
     @ObservedObject var audioManager = AudioRecorderManager.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
+    private func L(_ key: String) -> String { localizationManager.localized(key) }
 
     // 頁面狀態
     @State private var currentPageIndex: Int = 0
@@ -999,12 +1000,17 @@ public struct NotebookEditorView: View {
     @State private var showProColorPicker: Bool = false
     @State private var showProColorWheel: Bool = false
 
-    // 🌟 次世代雙模核心狀態（動態傳送門、防抖修正、對稱尺規、極簡收折、局部畫布）
+    // 🌟 次世代雙模核心狀態（動態傳送門、防抖修正、對稱尺規、極簡收折、局部畫布、徑向飛輪）
     @State private var activeInlineInkBlockId: String? = nil
     @State private var strokeStabilizer: Double = 0.0
     @State private var isSymmetryActive: Bool = false
     @State private var isMinimalistCanvasActive: Bool = false
     @State private var isFloatingPillExpanded: Bool = false
+    @State private var showRadialMenu: Bool = false
+    @State private var radialMenuCenter: CGPoint = CGPoint(x: 200, y: 200)
+    @State private var magneticGuideActive: Bool = false
+    @State private var magneticGuideStart: CGPoint = .zero
+    @State private var magneticGuideEnd: CGPoint = .zero
 
     // 草圖智慧修飾狀態 (幾何識別、平滑化、一鍵修飾/重做/恢復)
     @State private var showSketchRefineBar: Bool = false
@@ -1157,6 +1163,11 @@ public struct NotebookEditorView: View {
     /// 會在拖動時卡頓。
     @State private var draggingSidebarWidth: CGFloat? = nil
 
+    // 次世代 UI/UX Phase 5: 折疊立起雙屏模式 (Tabletop Mode / Stage Manager Posture)
+    @State private var isTabletopMode: Bool = false
+    // 次世代 UI/UX Phase 4: 筆跡磁吸對齊與幾何角度引導 (Smart Magnetic Snap)
+    @State private var isMagneticSnapActive: Bool = false
+
     // 頁面刪除警告
     @State private var pageToDeleteIndex: Int? = nil
     @State private var showDeletePageAlert: Bool = false
@@ -1235,31 +1246,64 @@ public struct NotebookEditorView: View {
             // 6. 核心編輯工作區（包含左側筆記結構欄與右側畫布區）
             GeometryReader { geo in
                 let metrics = layoutMetrics(width: Float(geo.size.width))
-                HStack(spacing: 0) {
-                    if showStructureSidebar && metrics.sidebarIsInline {
-                        let width = resolvedSidebarWidth(total: geo.size.width)
-                        notebookStructureSidebar
-                            .frame(width: width)
-                            .transition(.move(edge: .leading).combined(with: .opacity))
-                        sidebarResizeHandle(total: geo.size.width, current: width)
-                    }
+                if isTabletopMode {
+                    // 立起雙屏模式：上方顯示主要畫布／預覽區，下方為沉浸式觸控工具盤
+                    VStack(spacing: 0) {
+                        ZStack(alignment: .topLeading) {
+                            if editorMode == .draw {
+                                canvasWorkArea
+                            } else {
+                                wordDocumentArea
+                            }
 
-                    // 核心手寫（支援全品牌手寫筆） vs Google Docs / Word 標準居中文檔紙張編輯區
-                    if editorMode == .draw {
-                        canvasWorkArea
-                    } else {
-                        wordDocumentArea
+                            HStack(spacing: 6) {
+                                Image(systemName: "laptopcomputer.and.ipad")
+                                    .font(.system(size: 11, weight: .bold))
+                                Text(L("posture_tabletop_mode"))
+                                    .font(.system(size: 11, weight: .bold))
+                            }
+                            .foregroundColor(.accentColor)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 5)
+                            .background(Color(uiColor: .systemBackground).opacity(0.85))
+                            .cornerRadius(12)
+                            .padding(8)
+                        }
+                        .frame(height: max(geo.size.height * 0.55, 180))
+
+                        Divider()
+
+                        tabletopControlDeck
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .background(Color(uiColor: .secondarySystemBackground))
                     }
-                }
-                .onAppear { editorAvailableWidth = geo.size.width }
-                .onChange(of: geo.size.width) { newValue in
-                    editorAvailableWidth = newValue
-                }
-                .sheet(isPresented: Binding(
-                    get: { showStructureSidebar && !metrics.sidebarIsInline },
-                    set: { if !$0 { showStructureSidebar = false } }
-                )) {
-                    resizableSheet { notebookStructureSidebar }
+                } else {
+                    HStack(spacing: 0) {
+                        if showStructureSidebar && metrics.sidebarIsInline {
+                            let width = resolvedSidebarWidth(total: geo.size.width)
+                            notebookStructureSidebar
+                                .frame(width: width)
+                                .transition(.move(edge: .leading).combined(with: .opacity))
+                            sidebarResizeHandle(total: geo.size.width, current: width)
+                        }
+
+                        // 核心手寫（支援全品牌手寫筆） vs Google Docs / Word 標準居中文檔紙張編輯區
+                        if editorMode == .draw {
+                            canvasWorkArea
+                        } else {
+                            wordDocumentArea
+                        }
+                    }
+                    .onAppear { editorAvailableWidth = geo.size.width }
+                    .onChange(of: geo.size.width) { newValue in
+                        editorAvailableWidth = newValue
+                    }
+                    .sheet(isPresented: Binding(
+                        get: { showStructureSidebar && !metrics.sidebarIsInline },
+                        set: { if !$0 { showStructureSidebar = false } }
+                    )) {
+                        resizableSheet { notebookStructureSidebar }
+                    }
                 }
             }
             .background {
@@ -1718,6 +1762,21 @@ public struct NotebookEditorView: View {
             }
             .accessibilityLabel(localizationManager.localized("ruler"))
             .help(localizationManager.localized("ruler"))
+
+            // 次世代 UI/UX Phase 5: 立起雙屏模式 (Tabletop Mode)
+            Button {
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                    isTabletopMode.toggle()
+                }
+            } label: {
+                Image(systemName: isTabletopMode ? "laptopcomputer.and.ipad" : "ipad.landscape")
+                    .foregroundColor(isTabletopMode ? .accentColor : .secondary)
+                    .padding(5)
+                    .background(isTabletopMode ? Color.accentColor.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(6)
+            }
+            .accessibilityLabel(L("posture_tabletop_mode"))
+            .help(L("posture_tabletop_mode"))
 
             // 復原與重做 (Undo / Redo)
             HStack(spacing: 3) {
@@ -2213,6 +2272,15 @@ public struct NotebookEditorView: View {
                     Label(localizationManager.localized("ai_summary"), systemImage: "sparkles")
                 }
                 .accessibilityIdentifier("editor.insert.ai_summary")
+
+                Button {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        isTabletopMode.toggle()
+                    }
+                } label: {
+                    Label(L("posture_tabletop_mode"), systemImage: "laptopcomputer.and.ipad")
+                }
+                .accessibilityIdentifier("editor.tabletop_mode")
             }
         } label: {
             Image(systemName: "ellipsis.circle.fill")
@@ -2401,6 +2469,226 @@ public struct NotebookEditorView: View {
                 }
             }
             .frame(width: outer.size.width, height: outer.size.height)
+        }
+    }
+
+    // 次世代 UI/UX Phase 5: 立起模式觸控工作盤 (Tabletop Studio Control Deck)
+    private var tabletopControlDeck: some View {
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(spacing: 14) {
+                // 1. 頂部狀態標題與收折按鈕
+                HStack {
+                    HStack(spacing: 6) {
+                        Image(systemName: "laptopcomputer.and.ipad")
+                            .foregroundColor(.accentColor)
+                        Text(L("posture_tabletop_mode"))
+                            .font(.headline)
+                            .foregroundColor(.primary)
+                    }
+                    Spacer()
+                    Button {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            isTabletopMode = false
+                        }
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                            .foregroundColor(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 16)
+                .padding(.top, 10)
+
+                // 2. 常用工具快速點選盤 (Pen / Highlighter / Eraser / Lasso / Radial / Magnetic / Sticky)
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 72))], spacing: 10) {
+                    // 鋼筆
+                    Button {
+                        selectedTool = .pen
+                    } label: {
+                        VStack(spacing: 3) {
+                            Image(systemName: "pencil.tip")
+                                .font(.system(size: 20))
+                            Text(L("tool_pen"))
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(selectedTool == .pen ? Color.accentColor.opacity(0.18) : Color(uiColor: .tertiarySystemGroupedBackground))
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(selectedTool == .pen ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    // 螢光筆
+                    Button {
+                        selectedTool = .highlighter
+                    } label: {
+                        VStack(spacing: 3) {
+                            Image(systemName: "highlighter")
+                                .font(.system(size: 20))
+                            Text(L("tool_highlighter"))
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(selectedTool == .highlighter ? Color.accentColor.opacity(0.18) : Color(uiColor: .tertiarySystemGroupedBackground))
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(selectedTool == .highlighter ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    // 橡皮擦
+                    Button {
+                        selectedTool = .eraser
+                    } label: {
+                        VStack(spacing: 3) {
+                            Image(systemName: "eraser")
+                                .font(.system(size: 20))
+                            Text(L("tool_eraser"))
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(selectedTool == .eraser ? Color.accentColor.opacity(0.18) : Color(uiColor: .tertiarySystemGroupedBackground))
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(selectedTool == .eraser ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    // 套索工具
+                    Button {
+                        selectedTool = .lasso
+                    } label: {
+                        VStack(spacing: 3) {
+                            Image(systemName: "lasso")
+                                .font(.system(size: 20))
+                            Text(L("tool_lasso"))
+                                .font(.caption2)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(selectedTool == .lasso ? Color.accentColor.opacity(0.18) : Color(uiColor: .tertiarySystemGroupedBackground))
+                        .cornerRadius(10)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 10)
+                                .stroke(selectedTool == .lasso ? Color.accentColor : Color.clear, lineWidth: 1.5)
+                        )
+                    }
+                    .buttonStyle(.plain)
+
+                    // 徑向飛輪工具盤喚醒 (Radial Menu)
+                    Button {
+                        radialMenuCenter = CGPoint(x: 200, y: 300)
+                        showRadialMenu = true
+                    } label: {
+                        VStack(spacing: 3) {
+                            Image(systemName: "circle.grid.cross")
+                                .font(.system(size: 20))
+                                .foregroundColor(.purple)
+                            Text("Radial")
+                                .font(.caption2)
+                                .foregroundColor(.purple)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(Color.purple.opacity(0.12))
+                        .cornerRadius(10)
+                    }
+                    .buttonStyle(.plain)
+
+                    // 幾何角度磁吸開關 (Magnetic Snap)
+                    Button {
+                        isMagneticSnapActive.toggle()
+                    } label: {
+                        VStack(spacing: 3) {
+                            Image(systemName: isMagneticSnapActive ? "magnet.fill" : "magnet")
+                                .font(.system(size: 20))
+                                .foregroundColor(isMagneticSnapActive ? .blue : .secondary)
+                            Text(L("magnetic_snap_ruler"))
+                                .font(.caption2)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(isMagneticSnapActive ? Color.blue.opacity(0.18) : Color(uiColor: .tertiarySystemGroupedBackground))
+                        .cornerRadius(10)
+                    }
+                    .buttonStyle(.plain)
+
+                    // 筆跡文字流式錨定 (Sticky Anchor)
+                    Button {
+                        anchorSelectedStrokesToNearestText()
+                    } label: {
+                        VStack(spacing: 3) {
+                            Image(systemName: "link.badge.plus")
+                                .font(.system(size: 20))
+                                .foregroundColor(.orange)
+                            Text(L("sticky_anchor_ink"))
+                                .font(.caption2)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(Color.orange.opacity(0.12))
+                        .cornerRadius(10)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 16)
+
+                // 3. 常用顏色調色板與復原/重做/翻頁
+                HStack(spacing: 12) {
+                    HStack(spacing: 8) {
+                        ForEach([Color.black, Color.blue, Color.red, Color.green, Color.orange, Color.purple], id: \.self) { color in
+                            Circle()
+                                .fill(color)
+                                .frame(width: 28, height: 28)
+                                .overlay(
+                                    Circle()
+                                        .stroke(selectedColor == color ? Color.primary : Color.clear, lineWidth: 2)
+                                )
+                                .onTapGesture {
+                                    selectedColor = color
+                                }
+                        }
+                    }
+                    Spacer()
+                    HStack(spacing: 6) {
+                        Button { performUndo() } label: {
+                            Image(systemName: "arrow.uturn.backward")
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(width: 36, height: 36)
+                                .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button { canvasView?.undoManager?.redo() } label: {
+                            Image(systemName: "arrow.uturn.forward")
+                                .font(.system(size: 15, weight: .semibold))
+                                .frame(width: 36, height: 36)
+                                .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+
+                        Button { addNewPage() } label: {
+                            Image(systemName: "plus.square.dashed")
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.accentColor)
+                                .frame(width: 36, height: 36)
+                                .background(Color.accentColor.opacity(0.15))
+                                .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 16)
+            }
+            .padding(.bottom, 20)
         }
     }
 
@@ -2699,6 +2987,12 @@ public struct NotebookEditorView: View {
                                 store.updateNotebook(notebook)
                                 collaborationManager.broadcastSelection(selectedId: nil)
                                 PageThumbnailRenderer.invalidateAll()
+                            },
+                            onMoved: { delta in
+                                moveAnchoredStrokes(forTextId: item.id, delta: delta)
+                            },
+                            onAnchorInk: {
+                                anchorOverlappingInkToText(textItem: item)
                             }
                         )
                         .zIndex(ObjectStacking.zIndex(for: item.id, kind: .text, order: notebook.objectOrder(forPage: page)))
@@ -3230,9 +3524,82 @@ ZStack(alignment: .topTrailing) {
                         }
                     }
                 }
-                .padding(.top, 24)
-                .padding(.trailing, 24)
-                .transition(.scale(scale: 0.95).combined(with: .opacity))
+            }
+
+            // 🌟 聲筆動態同步與波形卡拉 OK 高亮 (Audio-Ink Karaoke Sync)
+            if audioManager.isPlaying && !currentDrawing.strokes.isEmpty {
+                Canvas { context, size in
+                    let total = currentDrawing.strokes.count
+                    if total > 0 {
+                        let activeIdx = min(total - 1, max(0, Int(Double(total) * audioManager.playbackProgress)))
+                        let start = max(0, activeIdx - 1)
+                        let end = min(total - 1, activeIdx + 1)
+                        for i in start...end {
+                            let rect = currentDrawing.strokes[i].renderBounds
+                            context.fill(
+                                Path(roundedRect: rect.insetBy(dx: -6, dy: -6), cornerRadius: 8),
+                                with: .color(Color.yellow.opacity(0.35))
+                            )
+                            context.stroke(
+                                Path(roundedRect: rect.insetBy(dx: -4, dy: -4), cornerRadius: 6),
+                                with: .color(Color.orange.opacity(0.8)),
+                                lineWidth: 2.5
+                            )
+                        }
+                    }
+                }
+                .allowsHitTesting(false)
+                .transition(.opacity)
+            }
+
+            // 🌟 筆跡磁吸對齊與幾何角度引導 (Smart Magnetic Snap Laser Guide)
+            if snapToGrid && editorMode == .draw && magneticGuideActive {
+                Canvas { context, size in
+                    var path = Path()
+                    path.move(to: magneticGuideStart)
+                    path.addLine(to: magneticGuideEnd)
+                    context.stroke(
+                        path,
+                        with: .color(Color.cyan.opacity(0.85)),
+                        style: StrokeStyle(lineWidth: 1.5, dash: [6, 4])
+                    )
+                }
+                .allowsHitTesting(false)
+                .transition(.opacity)
+            }
+
+            // 🌟 徑向飛輪快捷工具盤 (Radial Pie Menu)
+            if showRadialMenu {
+                RadialMarkMenuView(
+                    isPresented: $showRadialMenu,
+                    centerPoint: radialMenuCenter,
+                    items: [
+                        RadialMenuItem(id: "pen", icon: "pencil.tip", labelKey: "tool_pen", color: .accentColor) {
+                            selectedTool = .pen
+                        },
+                        RadialMenuItem(id: "highlighter", icon: "highlighter", labelKey: "tool_highlighter", color: .orange) {
+                            selectedTool = .highlighter
+                        },
+                        RadialMenuItem(id: "eraser", icon: "eraser", labelKey: "tool_eraser", color: .red) {
+                            selectedTool = .eraser
+                        },
+                        RadialMenuItem(id: "lasso", icon: "lasso", labelKey: "tool_lasso", color: .purple) {
+                            selectedTool = .lasso
+                        },
+                        RadialMenuItem(id: "undo", icon: "arrow.uturn.backward", labelKey: "undo", color: .blue) {
+                            canvasView?.undoManager?.undo()
+                        },
+                        RadialMenuItem(id: "redo", icon: "arrow.uturn.forward", labelKey: "redo", color: .blue) {
+                            canvasView?.undoManager?.redo()
+                        },
+                        RadialMenuItem(id: "color", icon: "paintpalette.fill", labelKey: "pro_color", color: .pink) {
+                            showProColorWheel = true
+                        },
+                        RadialMenuItem(id: "stabilizer", icon: "waveform.path.ecg", labelKey: "refine_sketch", color: .green) {
+                            strokeStabilizer = (strokeStabilizer > 0) ? 0.0 : 0.5
+                        }
+                    ]
+                )
             }
         }
         .overlay(alignment: .trailing) {
@@ -5061,6 +5428,23 @@ ZStack(alignment: .topTrailing) {
                 .buttonStyle(.plain)
                 .help("切換畫布極致極簡模式 (收折為懸浮點)")
 
+                // 🌟 徑向飛輪快捷工具盤 (Radial Pie Menu) 手動喚醒按鈕
+                Button {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.76)) {
+                        radialMenuCenter = CGPoint(x: 200, y: 180)
+                        showRadialMenu.toggle()
+                    }
+                } label: {
+                    Image(systemName: showRadialMenu ? "circle.circle.fill" : "circle.circle")
+                        .font(.system(size: 14, weight: showRadialMenu ? .bold : .regular))
+                        .foregroundColor(showRadialMenu ? .accentColor : .secondary)
+                        .padding(4)
+                        .background(showRadialMenu ? Color.accentColor.opacity(0.15) : Color.clear)
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .help("徑向飛輪快捷工具盤 (Radial Menu)")
+
                 eraserModeControls
 
                 // 若為套索選取工具，即時展開剪下、複製、轉文字與刪除選取筆劃按鈕
@@ -5078,6 +5462,11 @@ ZStack(alignment: .topTrailing) {
                         // 🌟 套索轉化傳送門：手寫直接轉為文字方塊
                         lassoActionButton("text.viewfinder", "recognize_handwriting", "recognize_handwriting") {
                             recognizeHandwritingToTextBox()
+                        }
+
+                        // 🌟 動態流式錨定：手寫筆劃錨定至文字方塊
+                        lassoActionButton("link.badge.plus", "sticky_anchor_text", "sticky_anchored_hint") {
+                            anchorSelectedStrokesToNearestText()
                         }
                         
                         lassoRecolorButton
@@ -6293,10 +6682,24 @@ ZStack(alignment: .topTrailing) {
     @ViewBuilder
     private func canvasDropHighlight(_ targeted: Bool) -> some View {
         if targeted {
-            RoundedRectangle(cornerRadius: 8)
-                .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 3, dash: [8, 6]))
-                .background(Color.accentColor.opacity(0.08))
-                .allowsHitTesting(false)
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 3, dash: [8, 6]))
+                    .background(Color.accentColor.opacity(0.08))
+
+                HStack(spacing: 8) {
+                    Image(systemName: "square.and.arrow.down.fill")
+                    Text(L("multi_window_drop_hint"))
+                        .font(.system(size: 15, weight: .semibold))
+                }
+                .foregroundColor(.white)
+                .padding(.horizontal, 18)
+                .padding(.vertical, 10)
+                .background(Color.accentColor)
+                .cornerRadius(20)
+                .shadow(radius: 6)
+            }
+            .allowsHitTesting(false)
         }
     }
 
@@ -6448,6 +6851,110 @@ ZStack(alignment: .topTrailing) {
                 break
             }
         }
+    }
+
+    // MARK: - 🌟 文字與手寫動態流式錨定系統 (Fluid Sticky Annotations)
+    private func moveAnchoredStrokes(forTextId textId: String, delta: CGSize) {
+        guard let anchors = notebook.stickyAnchors, !anchors.isEmpty else { return }
+        let matched = anchors.filter { $0.targetId == textId && $0.pageIndex == currentPageIndex }
+        guard !matched.isEmpty else { return }
+
+        let drawing = currentDrawing
+        var strokes = drawing.strokes
+        var modified = false
+
+        for anchor in matched {
+            if let indices = anchor.strokeIndices {
+                for idx in indices where strokes.indices.contains(idx) {
+                    var copy = strokes[idx]
+                    copy.transform = copy.transform.translatedBy(x: delta.width, y: delta.height)
+                    strokes[idx] = copy
+                    modified = true
+                }
+            }
+        }
+
+        if modified {
+            let newDrawing = PKDrawing(strokes: strokes)
+            self.currentDrawing = newDrawing
+            self.canvasView?.drawing = newDrawing
+            self.saveCurrentPageDrawing()
+            for i in 0..<(notebook.stickyAnchors?.count ?? 0) {
+                if notebook.stickyAnchors?[i].targetId == textId {
+                    notebook.stickyAnchors?[i].anchorOriginX += Float(delta.width)
+                    notebook.stickyAnchors?[i].anchorOriginY += Float(delta.height)
+                }
+            }
+            store.updateNotebook(notebook)
+        }
+    }
+
+    private func anchorSelectedStrokesToNearestText() {
+        let drawing = currentDrawing
+        guard !drawing.strokes.isEmpty else { return }
+
+        let pageTexts = (notebook.textAttachments ?? []).filter { $0.pageIndex == currentPageIndex }
+        guard !pageTexts.isEmpty else { return }
+
+        for target in pageTexts {
+            let textRect = CGRect(x: target.x, y: target.y, width: target.width, height: target.height)
+            var matchedIndices: [Int] = []
+            for (idx, stroke) in drawing.strokes.enumerated() {
+                if textRect.intersects(stroke.renderBounds) {
+                    matchedIndices.append(idx)
+                }
+            }
+            if !matchedIndices.isEmpty {
+                let anchor = StickyAnnotationAnchor(
+                    pageIndex: currentPageIndex,
+                    targetId: target.id,
+                    strokeIndices: matchedIndices,
+                    anchorOriginX: Float(target.x),
+                    anchorOriginY: Float(target.y)
+                )
+                if notebook.stickyAnchors == nil { notebook.stickyAnchors = [] }
+                notebook.stickyAnchors?.removeAll { $0.targetId == target.id }
+                notebook.stickyAnchors?.append(anchor)
+                store.updateNotebook(notebook)
+                hasLassoSelection = false
+                #if os(iOS)
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                #endif
+                return
+            }
+        }
+        if let firstText = pageTexts.first {
+            anchorOverlappingInkToText(textItem: firstText)
+        }
+    }
+
+    private func anchorOverlappingInkToText(textItem: NoteTextAttachment) {
+        let drawing = currentDrawing
+        guard !drawing.strokes.isEmpty else { return }
+        let textRect = CGRect(x: textItem.x, y: textItem.y, width: textItem.width, height: textItem.height)
+
+        var matchedIndices: [Int] = []
+        for (idx, stroke) in drawing.strokes.enumerated() {
+            if textRect.intersects(stroke.renderBounds) {
+                matchedIndices.append(idx)
+            }
+        }
+
+        guard !matchedIndices.isEmpty else { return }
+        let anchor = StickyAnnotationAnchor(
+            pageIndex: currentPageIndex,
+            targetId: textItem.id,
+            strokeIndices: matchedIndices,
+            anchorOriginX: Float(textItem.x),
+            anchorOriginY: Float(textItem.y)
+        )
+        if notebook.stickyAnchors == nil { notebook.stickyAnchors = [] }
+        notebook.stickyAnchors?.removeAll { $0.targetId == textItem.id }
+        notebook.stickyAnchors?.append(anchor)
+        store.updateNotebook(notebook)
+        #if os(iOS)
+        UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+        #endif
     }
 
     private func applyStabilizer(to drawing: PKDrawing) -> PKDrawing {
@@ -8309,6 +8816,8 @@ struct TextAttachmentItemView: View {
     var isTypeMode: Bool = false
     let onEdit: () -> Void
     let onDelete: () -> Void
+    var onMoved: ((CGSize) -> Void)? = nil
+    var onAnchorInk: (() -> Void)? = nil
 
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject var collaborationManager = CollaborationManager.shared
@@ -8517,6 +9026,12 @@ struct TextAttachmentItemView: View {
                     onEdit()
                 } label: { Label(localizationManager.localized("text_studio"), systemImage: "textformat") }
 
+                if let onAnchorInk {
+                    Button {
+                        onAnchorInk()
+                    } label: { Label(localizationManager.localized("sticky_anchor_ink"), systemImage: "link.badge.plus") }
+                }
+
                 ObjectFrameStyleMenu(style: $textItem, onChange: broadcastTextChange)
 
                 Divider()
@@ -8538,6 +9053,8 @@ struct TextAttachmentItemView: View {
                     }
                     .onEnded { value in
                         guard lockedByPeer == nil else { return }
+                        let oldX = textItem.x
+                        let oldY = textItem.y
                         var transaction = Transaction()
                         transaction.animation = nil
                         withTransaction(transaction) {
@@ -8550,6 +9067,11 @@ struct TextAttachmentItemView: View {
                             textItem.y = landed.y
                             dragOffset = .zero
                             isDragging = false
+                        }
+                        let deltaX = textItem.x - oldX
+                        let deltaY = textItem.y - oldY
+                        if deltaX != 0 || deltaY != 0 {
+                            onMoved?(CGSize(width: deltaX, height: deltaY))
                         }
                         if let data = try? JSONEncoder().encode(textItem),
                            let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
@@ -9347,7 +9869,6 @@ public struct MaskingTapeOverlayView: View {
                                 dragStartPoint = value.startLocation
                             }
                             let x = min(dragStartPoint.x, value.location.x)
-                            let y = min(dragStartPoint.y, value.location.y)
                             let width = abs(value.location.x - dragStartPoint.x)
                             let height: CGFloat = 24.0
                             let rect = CGRect(x: x, y: dragStartPoint.y - height / 2, width: max(width, 10), height: height)

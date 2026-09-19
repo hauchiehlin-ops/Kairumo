@@ -68,6 +68,12 @@ class NotebookMeta private constructor(private val root: JSONObject) {
          */
         private const val KEY_AUDIO = "audioAttachments"
 
+        /**
+         * 手寫與文字動態流式錨定 (Fluid Sticky Annotations)。
+         * 鍵名與 Apple 的 `NotebookMeta.stickyAnchors` 一致。
+         */
+        private const val KEY_STICKY_ANCHORS = "stickyAnchors"
+
         fun load(session: PadnoteSession?): NotebookMeta {
             val json = runCatching { session?.notebookMeta() }.getOrNull()
             val obj = runCatching { JSONObject(json ?: "{}") }.getOrNull() ?: JSONObject()
@@ -226,6 +232,67 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         runCatching { session?.setNotebookMeta(root.toString()) }
     }
 
+    /** 手寫與文字動態流式錨定清單 (Fluid Sticky Annotations) */
+    fun stickyAnchors(): MutableList<StickyAnnotationAnchor> {
+        val arr = root.optJSONArray(KEY_STICKY_ANCHORS) ?: return mutableListOf()
+        val list = mutableListOf<StickyAnnotationAnchor>()
+        for (i in 0 until arr.length()) {
+            val obj = arr.optJSONObject(i) ?: continue
+            StickyAnnotationAnchor.fromJsonObject(obj)?.let { list.add(it) }
+        }
+        return list
+    }
+
+    fun setStickyAnchors(session: PadnoteSession?, anchors: List<StickyAnnotationAnchor>) {
+        val arr = JSONArray()
+        anchors.forEach { arr.put(it.toJsonObject()) }
+        root.put(KEY_STICKY_ANCHORS, arr)
+        runCatching { session?.setNotebookMeta(root.toString()) }
+    }
+
     private fun JSONArray.toStringList(): List<String> =
         (0 until length()).mapNotNull { optString(it).takeIf { s -> s.isNotEmpty() } }
+}
+
+/**
+ * 手寫與文字動態流式錨定資料結構 (Fluid Sticky Annotations)。
+ *
+ * 記錄哪些筆劃綁定在特定的文字方塊上。當文字方塊被拖曳或重新排版時，
+ * 關聯的手寫筆跡自動同步平移，徹底解決打字造成手寫跑位的痛點。
+ */
+data class StickyAnnotationAnchor(
+    val id: String = java.util.UUID.randomUUID().toString(),
+    val pageIndex: Int = 0,
+    val targetId: String,
+    var strokeIds: List<String> = emptyList(),
+    var anchorOriginX: Float = 0f,
+    var anchorOriginY: Float = 0f,
+    val createdAtMs: Long = System.currentTimeMillis()
+) {
+    fun toJsonObject(): JSONObject = JSONObject().apply {
+        put("id", id)
+        put("pageIndex", pageIndex)
+        put("targetId", targetId)
+        put("strokeIds", JSONArray(strokeIds))
+        put("anchorOriginX", anchorOriginX.toDouble())
+        put("anchorOriginY", anchorOriginY.toDouble())
+        put("createdAtMs", createdAtMs)
+    }
+
+    companion object {
+        fun fromJsonObject(obj: JSONObject): StickyAnnotationAnchor? {
+            val id = obj.optString("id", "")
+            val targetId = obj.optString("targetId", "")
+            if (id.isEmpty() || targetId.isEmpty()) return null
+            val pageIndex = obj.optInt("pageIndex", 0)
+            val arr = obj.optJSONArray("strokeIds")
+            val strokeIds = if (arr != null) {
+                (0 until arr.length()).mapNotNull { arr.optString(it) }
+            } else emptyList()
+            val anchorOriginX = obj.optDouble("anchorOriginX", 0.0).toFloat()
+            val anchorOriginY = obj.optDouble("anchorOriginY", 0.0).toFloat()
+            val createdAtMs = obj.optLong("createdAtMs", System.currentTimeMillis())
+            return StickyAnnotationAnchor(id, pageIndex, targetId, strokeIds, anchorOriginX, anchorOriginY, createdAtMs)
+        }
+    }
 }

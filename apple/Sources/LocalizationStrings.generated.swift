@@ -927,6 +927,14 @@ extension LocalizationManager {
             .ko: "탭하여 재생 · 필기와 오디오 정밀 동기화",
             .th: "แตะเพื่อเล่น · การเขียนและเสียงตรงกันอย่างแม่นยำ"
         ],
+        "audio_karaoke_sync": [
+            .zhHant: "聲筆動態同步",
+            .en: "Audio-Ink Sync",
+            .zhHans: "声笔动态同步",
+            .ja: "音声・手書き同期",
+            .ko: "음성-필기 동기화",
+            .th: "การซิงค์เสียงกับลายมือ"
+        ],
         "audio_playback_align": [
             .zhHant: "真實音訊播放與對齊",
             .en: "Real Audio Playback & Alignment",
@@ -950,6 +958,14 @@ extension LocalizationManager {
             .ja: "音声録音と同期",
             .ko: "오디오 녹음 및 동기화",
             .th: "การบันทึกเสียงและการจัดตำแหน่ง"
+        ],
+        "audio_seek_ink": [
+            .zhHant: "點擊筆跡跳轉錄音時間",
+            .en: "Tap ink to jump audio timestamp",
+            .zhHans: "点击笔迹跳转录音时间",
+            .ja: "手書きをタップして音声をシーク",
+            .ko: "필기를 탭하여 오디오 탐색",
+            .th: "แตะลายมือเพื่อไปยังเวลาเสียง"
         ],
         "back_to_home": [
             .zhHant: "回到首頁",
@@ -4551,6 +4567,22 @@ extension LocalizationManager {
             .ko: "127.0.0.1 을 가리키는 동안에는 이 기기가 중계를 맡습니다. 같은 네트워크의 참여자는 호스트 화면에 표시된 로컬 주소를 입력하세요.",
             .th: "เมื่อชี้ไปที่ 127.0.0.1 เครื่องนี้จะทำหน้าที่รีเลย์เอง ผู้ร่วมงานในเครือข่ายเดียวกันให้กรอกที่อยู่ในเครือข่ายที่แสดงบนหน้าจอผู้เปิดห้อง"
         ],
+        "magnetic_snap_active": [
+            .zhHant: "幾何角度與格線磁吸對齊中",
+            .en: "Snapping to geometric angles and grid",
+            .zhHans: "几何角度与网格磁吸对齐中",
+            .ja: "角度とグリッドにスナップ中",
+            .ko: "각도 및 격자에 스냅 중",
+            .th: "กำลังสแน็ปกับมุมเรขาคณิตและเส้นตาราง"
+        ],
+        "magnetic_snap_ruler": [
+            .zhHant: "筆跡磁吸對齊與尺規",
+            .en: "Magnetic Snap & Ruler",
+            .zhHans: "笔迹磁吸对齐与尺规",
+            .ja: "磁気スナップと定規",
+            .ko: "자석 스냅 및 눈금자",
+            .th: "สแน็ปแม่เหล็กและไม้บรรทัด"
+        ],
         "marquee_hint": [
             .zhHant: "拖曳拉框選取物件；在選取範圍內拖曳＝整組搬移",
             .en: "Drag to select objects. Drag inside the selection to move them together.",
@@ -5206,6 +5238,14 @@ extension LocalizationManager {
             .ja: "別のノートへ移動…",
             .ko: "다른 노트로 이동…",
             .th: "ย้ายไปยังสมุดอื่น…"
+        ],
+        "multi_window_drop_hint": [
+            .zhHant: "拖曳至側邊以分頁或多視窗開啟",
+            .en: "Drag to side to open in split view",
+            .zhHans: "拖拽至侧边以分屏或多窗口打开",
+            .ja: "サイドにドラッグして分割表示で開く",
+            .ko: "측면으로 드래그하여 분할 화면으로 열기",
+            .th: "ลากไปด้านข้างเพื่อเปิดแบบแบ่งหน้าจอ"
         ],
         "new_note": [
             .zhHant: "新增筆記",
@@ -6158,6 +6198,14 @@ extension LocalizationManager {
             .ja: "プラットフォーム",
             .ko: "플랫폼",
             .th: "แพลตฟอร์ม"
+        ],
+        "posture_tabletop_mode": [
+            .zhHant: "立起懸停模式 (上觀看下創作)",
+            .en: "Tabletop / Flex Mode",
+            .zhHans: "立起悬停模式 (上观看下创作)",
+            .ja: "テーブルトップ／フレックスモード",
+            .ko: "테이블탑 / 플렉스 모드",
+            .th: "โหมดตั้งโต๊ะ / เฟล็กซ์"
         ],
         "preferences_lang": [
             .zhHant: "偏好設定與介面語言",
@@ -7870,6 +7918,30 @@ extension LocalizationManager {
             .ja: "ステッカーライブラリ",
             .ko: "스티커 라이브러리",
             .th: "คลังสติกเกอร์"
+        ],
+        "sticky_anchor_ink": [
+            .zhHant: "錨定重疊筆跡",
+            .en: "Anchor Overlapping Ink",
+            .zhHans: "锚定重叠笔迹",
+            .ja: "重なる手書きを固定",
+            .ko: "겹치는 필기 고정",
+            .th: "ตรึงลายมือที่ซ้อนทับ"
+        ],
+        "sticky_anchor_text": [
+            .zhHant: "錨定至文字",
+            .en: "Anchor to Text",
+            .zhHans: "锚定至文本",
+            .ja: "テキストに固定",
+            .ko: "텍스트에 고정",
+            .th: "ตรึงกับข้อความ"
+        ],
+        "sticky_anchored_hint": [
+            .zhHant: "手寫筆跡已錨定至文字方塊，將隨文字移動同步平移",
+            .en: "Handwriting anchored to text box and will follow its movement.",
+            .zhHans: "手写笔迹已锚定至文本框，将随文本移动同步平移",
+            .ja: "手書きがテキストボックスに固定され、連動して移動します",
+            .ko: "필기가 텍스트 상자에 고정되어 함께 이동합니다",
+            .th: "ลายมือถูกตรึงกับกล่องข้อความแล้วและจะเคลื่อนที่ตาม"
         ],
         "stop_and_save_record": [
             .zhHant: "停止並儲存至 Kairumo Record",

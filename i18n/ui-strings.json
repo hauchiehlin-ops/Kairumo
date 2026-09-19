@@ -911,6 +911,14 @@
     "zhHans": "点击播放 · 笔划时间精确对齐",
     "zhHant": "點擊播放 · 筆劃時間精確對齊"
   },
+  "audio_karaoke_sync": {
+    "en": "Audio-Ink Sync",
+    "ja": "音声・手書き同期",
+    "ko": "음성-필기 동기화",
+    "th": "การซิงค์เสียงกับลายมือ",
+    "zhHans": "声笔动态同步",
+    "zhHant": "聲筆動態同步"
+  },
   "audio_playback_align": {
     "en": "Real Audio Playback & Alignment",
     "ja": "リアル音声再生と同期",
@@ -934,6 +942,14 @@
     "th": "การบันทึกเสียงและการจัดตำแหน่ง",
     "zhHans": "语音录音与对齐",
     "zhHant": "語音錄音與對齊"
+  },
+  "audio_seek_ink": {
+    "en": "Tap ink to jump audio timestamp",
+    "ja": "手書きをタップして音声をシーク",
+    "ko": "필기를 탭하여 오디오 탐색",
+    "th": "แตะลายมือเพื่อไปยังเวลาเสียง",
+    "zhHans": "点击笔迹跳转录音时间",
+    "zhHant": "點擊筆跡跳轉錄音時間"
   },
   "back_to_home": {
     "en": "Back to home",
@@ -4535,6 +4551,22 @@
     "zhHans": "地址指向 127.0.0.1 时，App 会直接在这台设备上开启协作中继；同一网络的队友请改填房主画面显示的局域网地址。",
     "zhHant": "位址指向 127.0.0.1 時，App 會直接在這台裝置上開啟協同中繼；同一網路的隊友請改填房主畫面顯示的區域網路位址。"
   },
+  "magnetic_snap_active": {
+    "en": "Snapping to geometric angles and grid",
+    "ja": "角度とグリッドにスナップ中",
+    "ko": "각도 및 격자에 스냅 중",
+    "th": "กำลังสแน็ปกับมุมเรขาคณิตและเส้นตาราง",
+    "zhHans": "几何角度与网格磁吸对齐中",
+    "zhHant": "幾何角度與格線磁吸對齊中"
+  },
+  "magnetic_snap_ruler": {
+    "en": "Magnetic Snap & Ruler",
+    "ja": "磁気スナップと定規",
+    "ko": "자석 스냅 및 눈금자",
+    "th": "สแน็ปแม่เหล็กและไม้บรรทัด",
+    "zhHans": "笔迹磁吸对齐与尺规",
+    "zhHant": "筆跡磁吸對齊與尺規"
+  },
   "marquee_hint": {
     "en": "Drag to select objects. Drag inside the selection to move them together.",
     "ja": "ドラッグで範囲選択。選択範囲の中をドラッグするとまとめて移動できます。",
@@ -5191,6 +5223,14 @@
     "zhHans": "移动到其他笔记本…",
     "zhHant": "移動到其他筆記本…"
   },
+  "multi_window_drop_hint": {
+    "en": "Drag to side to open in split view",
+    "ja": "サイドにドラッグして分割表示で開く",
+    "ko": "측면으로 드래그하여 분할 화면으로 열기",
+    "th": "ลากไปด้านข้างเพื่อเปิดแบบแบ่งหน้าจอ",
+    "zhHans": "拖拽至侧边以分屏或多窗口打开",
+    "zhHant": "拖曳至側邊以分頁或多視窗開啟"
+  },
   "new_note": {
     "en": "New Note",
     "ja": "新規ノート",
@@ -5310,6 +5350,22 @@
     "th": "ไม่พบบันทึกที่ตรงกับ \"%@\"",
     "zhHans": "未找到匹配“%@”的笔记",
     "zhHant": "找不到符合「%@」的筆記"
+  },
+  "no_stickers": {
+    "en": "No Stickers Yet",
+    "ja": "ステッカーがありません",
+    "ko": "아직 스티커가 없습니다",
+    "th": "ยังไม่มีสติกเกอร์",
+    "zhHans": "还没有贴纸",
+    "zhHant": "還沒有貼紙"
+  },
+  "no_stickers_hint": {
+    "en": "Select strokes with lasso tool to save custom stickers.",
+    "ja": "なげなわツールでストロークを選択し、カスタムステッカーを保存します。",
+    "ko": "올가미 도구로 스트로크를 선택하여 사용자 정의 스티커를 저장합니다.",
+    "th": "เลือกจังหวะด้วยเครื่องมือบ่วงบาศเพื่อบันทึกสติกเกอร์แบบกำหนดเอง",
+    "zhHans": "用套索圈选笔画，即可保存为自定义贴纸。",
+    "zhHant": "用套索圈選筆劃，即可儲存為自訂貼紙。"
   },
   "no_strokes": {
     "en": "Nothing handwritten on this page yet",
@@ -6127,6 +6183,14 @@
     "zhHans": "运行平台",
     "zhHant": "執行平台"
   },
+  "posture_tabletop_mode": {
+    "en": "Tabletop / Flex Mode",
+    "ja": "テーブルトップ／フレックスモード",
+    "ko": "테이블탑 / 플렉스 모드",
+    "th": "โหมดตั้งโต๊ะ / เฟล็กซ์",
+    "zhHans": "立起悬停模式 (上观看下创作)",
+    "zhHant": "立起懸停模式 (上觀看下創作)"
+  },
   "preferences_lang": {
     "en": "Preferences & Language",
     "ja": "環境設定と表示言語",
@@ -6934,6 +6998,14 @@
     "th": "บันทึก",
     "zhHans": "保存",
     "zhHant": "儲存"
+  },
+  "save_as_sticker": {
+    "en": "Save as Sticker",
+    "ja": "ステッカーとして保存",
+    "ko": "스티커로 저장",
+    "th": "บันทึกเป็นสติกเกอร์",
+    "zhHans": "保存为贴纸",
+    "zhHant": "儲存為貼紙"
   },
   "search_assets_placeholder": {
     "en": "Search mechanisms, 3C, components, specs, colors...",
@@ -7822,6 +7894,38 @@
     "th": "ไม่ได้เชื่อมต่อ",
     "zhHans": "未连接",
     "zhHant": "未連線"
+  },
+  "sticker_library": {
+    "en": "Sticker Library",
+    "ja": "ステッカーライブラリ",
+    "ko": "스티커 라이브러리",
+    "th": "คลังสติกเกอร์",
+    "zhHans": "贴纸库",
+    "zhHant": "貼紙庫"
+  },
+  "sticky_anchor_ink": {
+    "en": "Anchor Overlapping Ink",
+    "ja": "重なる手書きを固定",
+    "ko": "겹치는 필기 고정",
+    "th": "ตรึงลายมือที่ซ้อนทับ",
+    "zhHans": "锚定重叠笔迹",
+    "zhHant": "錨定重疊筆跡"
+  },
+  "sticky_anchor_text": {
+    "en": "Anchor to Text",
+    "ja": "テキストに固定",
+    "ko": "텍스트에 고정",
+    "th": "ตรึงกับข้อความ",
+    "zhHans": "锚定至文本",
+    "zhHant": "錨定至文字"
+  },
+  "sticky_anchored_hint": {
+    "en": "Handwriting anchored to text box and will follow its movement.",
+    "ja": "手書きがテキストボックスに固定され、連動して移動します",
+    "ko": "필기가 텍스트 상자에 고정되어 함께 이동합니다",
+    "th": "ลายมือถูกตรึงกับกล่องข้อความแล้วและจะเคลื่อนที่ตาม",
+    "zhHans": "手写笔迹已锚定至文本框，将随文本移动同步平移",
+    "zhHant": "手寫筆跡已錨定至文字方塊，將隨文字移動同步平移"
   },
   "stop_and_save_record": {
     "en": "Stop & Save to Kairumo Record",
@@ -9023,6 +9127,14 @@
     "zhHans": "马克笔",
     "zhHant": "麥克筆"
   },
+  "tool_masking_tape": {
+    "en": "Masking Tape",
+    "ja": "マスキングテープ",
+    "ko": "마스킹 테이프",
+    "th": "กระดาษกาว",
+    "zhHans": "胶带",
+    "zhHant": "膠帶"
+  },
   "tool_pen": {
     "en": "Pen",
     "ja": "ペン",
@@ -9286,45 +9398,5 @@
     "th": "การแก้ไขข้อความ Word",
     "zhHans": "Word文字编修",
     "zhHant": "Word文字編修"
-  },
-  "sticker_library": {
-    "en": "Sticker Library",
-    "ja": "ステッカーライブラリ",
-    "ko": "스티커 라이브러리",
-    "th": "คลังสติกเกอร์",
-    "zhHans": "贴纸库",
-    "zhHant": "貼紙庫"
-  },
-  "save_as_sticker": {
-    "en": "Save as Sticker",
-    "ja": "ステッカーとして保存",
-    "ko": "스티커로 저장",
-    "th": "บันทึกเป็นสติกเกอร์",
-    "zhHans": "保存为贴纸",
-    "zhHant": "儲存為貼紙"
-  },
-  "no_stickers": {
-    "en": "No Stickers Yet",
-    "ja": "ステッカーがありません",
-    "ko": "아직 스티커가 없습니다",
-    "th": "ยังไม่มีสติกเกอร์",
-    "zhHans": "还没有贴纸",
-    "zhHant": "還沒有貼紙"
-  },
-  "no_stickers_hint": {
-    "en": "Select strokes with lasso tool to save custom stickers.",
-    "ja": "なげなわツールでストロークを選択し、カスタムステッカーを保存します。",
-    "ko": "올가미 도구로 스트로크를 선택하여 사용자 정의 스티커를 저장합니다.",
-    "th": "เลือกจังหวะด้วยเครื่องมือบ่วงบาศเพื่อบันทึกสติกเกอร์แบบกำหนดเอง",
-    "zhHans": "用套索圈选笔画，即可保存为自定义贴纸。",
-    "zhHant": "用套索圈選筆劃，即可儲存為自訂貼紙。"
-  },
-  "tool_masking_tape": {
-    "en": "Masking Tape",
-    "ja": "マスキングテープ",
-    "ko": "마스킹 테이프",
-    "th": "กระดาษกาว",
-    "zhHans": "胶带",
-    "zhHant": "膠帶"
   }
 }

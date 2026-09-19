@@ -75,6 +75,8 @@ struct NotebookMeta: Codable, Hashable {
     /// 真身放在中繼資料，套件裡另外放一張算繪好的 PNG 當後備。
     var audioAttachments: [NoteAudioAttachment]?
     var commentPins: [NoteCommentPin]?
+    /// 手寫與文字動態流式錨定 (Fluid Sticky Annotations)
+    var stickyAnchors: [StickyAnnotationAnchor]?
 
     // MARK: - JSON
 
@@ -126,6 +128,7 @@ struct NotebookMeta: Codable, Hashable {
         audioAttachments = document.audioAttachments
         commentPins = document.commentPins
         objectOrderByPage = document.objectOrderByPage
+        stickyAnchors = document.stickyAnchors
     }
 
     /// 把中繼資料套回文件。缺的欄位一律保留文件原本的值。
@@ -147,5 +150,6 @@ struct NotebookMeta: Codable, Hashable {
         if let audioAttachments { document.audioAttachments = audioAttachments }
         if let commentPins { document.commentPins = commentPins }
         if let objectOrderByPage { document.objectOrderByPage = objectOrderByPage }
+        if let stickyAnchors { document.stickyAnchors = stickyAnchors }
     }
 }

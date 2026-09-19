@@ -21,6 +21,13 @@ object AudioPlayback {
 
     val playingId: String? get() = if (player?.isPlaying == true) currentId else null
 
+    val currentPositionMs: Int get() = runCatching { player?.currentPosition ?: 0 }.getOrDefault(0)
+    val durationMs: Int get() = runCatching { player?.duration ?: 0 }.getOrDefault(0)
+
+    fun seekTo(positionMs: Int) {
+        runCatching { player?.seekTo(positionMs) }
+    }
+
     /**
      * 切換播放／暫停。回傳現在正在播的卡片 id（沒有就 null）——
      * 呼叫端拿它更新畫面。

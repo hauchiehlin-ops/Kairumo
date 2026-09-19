@@ -12,6 +12,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Modifier
 import com.kairumo.padnote.canvas.gesturesIf
 import androidx.compose.ui.draw.clip
@@ -94,6 +98,7 @@ fun TextBoxLayer(
      */
     onEditStyle: (TextBox) -> Unit,
     onChanged: (TextBox) -> Unit,
+    onMoved: ((box: TextBox, dx: Float, dy: Float) -> Unit)? = null,
     /**
      * 這個物件的堆疊 z 值。跨型別共用同一份順序（見 ObjectStacking）。
      */
@@ -115,7 +120,8 @@ fun TextBoxLayer(
                 isSelected = box.id == selectedId,
                 onSelect = { onSelect(box.id) },
                 onEditStyle = { onEditStyle(box) },
-                onChanged = onChanged
+                onChanged = onChanged,
+                onMoved = onMoved
             )
         }
 }
@@ -131,10 +137,13 @@ private fun TextBoxView(
     isSelected: Boolean,
     onSelect: () -> Unit,
     onEditStyle: () -> Unit,
-    onChanged: (TextBox) -> Unit
+    onChanged: (TextBox) -> Unit,
+    onMoved: ((box: TextBox, dx: Float, dy: Float) -> Unit)? = null
 ) {
     val shape = RoundedCornerShape(box.cornerRadius.dp)
     val rotation = CanvasRotation.normalized(box.rotationDegrees ?: 0f)
+    var startX by remember { mutableFloatStateOf(box.x) }
+    var startY by remember { mutableFloatStateOf(box.y) }
 
     // 外層只負責定位，**不旋轉** —— 旋轉把手要掛在這一層，
     // 放進旋轉裡的話拖曳算出的角度會疊加自身旋轉，物件會失控加速。
@@ -169,7 +178,11 @@ private fun TextBoxView(
             } }
             .gesturesIf(interactive) { pointerInput(box.id) {
                 detectDragGestures(
-                    onDragStart = { onSelect() },
+                    onDragStart = {
+                        startX = box.x
+                        startY = box.y
+                        onSelect()
+                    },
                     onDrag = { change, drag ->
                         change.consume()
                         // 位移要換回 dp：座標存的是與螢幕密度無關的頁面座標。
@@ -177,13 +190,19 @@ private fun TextBoxView(
                         box.y += drag.y / density
                     },
                     onDragEnd = {
-                            // 拖出可列印範圍的物件推回邊界（S-85）。規則在核心，
-                            // 與 Apple 的 PrintableArea.clampOrigin 同一份。
-                            val landed = com.kairumo.padnote.ink.PageGeometry
-                                .clampOrigin(box.x, box.y, box.width, box.height)
-                            box.x = landed.first
-                            box.y = landed.second
-                            onChanged(box) }
+                        // 拖出可列印範圍的物件推回邊界（S-85）。規則在核心，
+                        // 與 Apple 的 PrintableArea.clampOrigin 同一份。
+                        val landed = com.kairumo.padnote.ink.PageGeometry
+                            .clampOrigin(box.x, box.y, box.width, box.height)
+                        box.x = landed.first
+                        box.y = landed.second
+                        val dx = box.x - startX
+                        val dy = box.y - startY
+                        if (dx != 0f || dy != 0f) {
+                            onMoved?.invoke(box, dx, dy)
+                        }
+                        onChanged(box)
+                    }
                 )
             } }
             .padding(textBoxPadding(box.width, box.height).dp)

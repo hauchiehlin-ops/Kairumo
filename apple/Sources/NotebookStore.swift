@@ -308,6 +308,8 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     /// 必須是 Optional：舊檔沒有這個欄位（見 `canvasRotation` 的說明）。
     public var audioAttachments: [NoteAudioAttachment]?
     public var tapeAttachments: [NoteTapeAttachment]?
+    /// 手寫與文字動態流式錨定 (Fluid Sticky Annotations)
+    public var stickyAnchors: [StickyAnnotationAnchor]?
 
     /// 每一頁各自的紙張樣板 id。
     ///
@@ -799,6 +801,38 @@ public struct NoteTextAttachment: Identifiable, Codable, Hashable, ObjectFrameSt
         self.paragraphSpacing = paragraphSpacing
         self.firstLineIndent = firstLineIndent
         self.paragraphIndent = paragraphIndent
+    }
+}
+
+/// 手寫筆劃與文字方塊動態流式錨定 (Fluid Sticky Annotations)
+public struct StickyAnnotationAnchor: Identifiable, Codable, Hashable {
+    public let id: String
+    public var pageIndex: Int
+    public var targetId: String
+    public var strokeIndices: [Int]?
+    public var strokeIds: [String]?
+    public var anchorOriginX: Float
+    public var anchorOriginY: Float
+    public var createdAtMs: Int64
+
+    public init(
+        id: String = UUID().uuidString,
+        pageIndex: Int = 0,
+        targetId: String,
+        strokeIndices: [Int]? = nil,
+        strokeIds: [String]? = nil,
+        anchorOriginX: Float = 0,
+        anchorOriginY: Float = 0,
+        createdAtMs: Int64 = Int64(Date().timeIntervalSince1970 * 1000)
+    ) {
+        self.id = id
+        self.pageIndex = pageIndex
+        self.targetId = targetId
+        self.strokeIndices = strokeIndices
+        self.strokeIds = strokeIds
+        self.anchorOriginX = anchorOriginX
+        self.anchorOriginY = anchorOriginY
+        self.createdAtMs = createdAtMs
     }
 }
 

@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5A12C3DE81745E619EBD1201 /* SmartMagneticSnap.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A12C3DE81745E619EBD1200 /* SmartMagneticSnap.swift */; };
+		5A12C3DE81745E619EBD1101 /* RadialMarkMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A12C3DE81745E619EBD1100 /* RadialMarkMenuView.swift */; };
 		3DE3E497C654E5195B86C58A /* TableFormulaEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC32CEA06390E4704C4C259 /* TableFormulaEvaluator.swift */; };
 		743B6B9EFCC57E60970530EB /* ProColorWheelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B326FC264A291A713500462 /* ProColorWheelView.swift */; };
 		467F9CD2E23558348534B771 /* FloatingToolPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88CA83E33754B6A1EE45206D /* FloatingToolPill.swift */; };
@@ -164,6 +166,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		5A12C3DE81745E619EBD1200 /* SmartMagneticSnap.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmartMagneticSnap.swift; sourceTree = "<group>"; };
+		5A12C3DE81745E619EBD1100 /* RadialMarkMenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RadialMarkMenuView.swift; sourceTree = "<group>"; };
 		3DC32CEA06390E4704C4C259 /* TableFormulaEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableFormulaEvaluator.swift; sourceTree = "<group>"; };
 		9B326FC264A291A713500462 /* ProColorWheelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProColorWheelView.swift; sourceTree = "<group>"; };
 		88CA83E33754B6A1EE45206D /* FloatingToolPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingToolPill.swift; sourceTree = "<group>"; };
@@ -511,6 +515,8 @@
 				DC7046379C24B0D590B6F0E8 /* ToolbarSeparator.swift */,
 				F30959766B1D00F248AD7D2D /* WordTextStudioView.swift */,
 				A1C6C10FAD15645C91E246C1 /* WordDocumentEditorView.swift */,
+				5A12C3DE81745E619EBD1200 /* SmartMagneticSnap.swift */,
+				5A12C3DE81745E619EBD1100 /* RadialMarkMenuView.swift */,
 				3DC32CEA06390E4704C4C259 /* TableFormulaEvaluator.swift */,
 				9B326FC264A291A713500462 /* ProColorWheelView.swift */,
 				88CA83E33754B6A1EE45206D /* FloatingToolPill.swift */,
@@ -779,6 +785,8 @@
 				D259D790432BD38F30537209 /* ToolbarSeparator.swift in Sources */,
 				7BF616F79113EDEF36132B11 /* WordTextStudioView.swift in Sources */,
 				B18281F00A39E42DC02254A8 /* WordDocumentEditorView.swift in Sources */,
+				5A12C3DE81745E619EBD1201 /* SmartMagneticSnap.swift in Sources */,
+				5A12C3DE81745E619EBD1101 /* RadialMarkMenuView.swift in Sources */,
 				3DE3E497C654E5195B86C58A /* TableFormulaEvaluator.swift in Sources */,
 				743B6B9EFCC57E60970530EB /* ProColorWheelView.swift in Sources */,
 				467F9CD2E23558348534B771 /* FloatingToolPill.swift in Sources */,

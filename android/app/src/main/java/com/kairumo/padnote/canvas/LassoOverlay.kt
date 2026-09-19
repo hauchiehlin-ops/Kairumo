@@ -111,6 +111,7 @@ fun LassoActionBar(
     l: (String) -> String,
     onChanged: () -> Unit,
     onRecognizeToText: (() -> Unit)? = null,
+    onAnchorToText: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     if (!lasso.hasSelection && !lasso.canPaste) return
@@ -145,6 +146,11 @@ fun LassoActionBar(
                 if (onRecognizeToText != null) {
                     TextButton(onClick = { onRecognizeToText() }) {
                         Text(l("recognize_handwriting"), fontSize = 12.sp)
+                    }
+                }
+                if (onAnchorToText != null) {
+                    TextButton(onClick = { onAnchorToText() }) {
+                        Text(l("sticky_anchor_text"), fontSize = 12.sp)
                     }
                 }
             }

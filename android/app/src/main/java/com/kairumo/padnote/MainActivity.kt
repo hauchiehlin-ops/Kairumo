@@ -5,14 +5,18 @@ import java.io.File
 import android.view.KeyEvent
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
+import com.kairumo.padnote.canvas.SmartMagneticSnap
+import com.kairumo.padnote.library.StickyAnnotationAnchor
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
@@ -123,6 +127,8 @@ import com.kairumo.padnote.canvas.EditorMode
 import com.kairumo.padnote.ui.DynamicPortalIsland
 import com.kairumo.padnote.ui.ContextualPortalState
 import com.kairumo.padnote.ui.FloatingToolPill
+import com.kairumo.padnote.ui.RadialMarkMenu
+import com.kairumo.padnote.ui.RadialMenuItem
 import com.kairumo.padnote.account.IdentityDialog
 import com.kairumo.padnote.library.HomeScreen
 import com.kairumo.padnote.library.DocumentTemplateCatalog
@@ -1227,10 +1233,11 @@ private fun ColumnScope.EditorWorkArea(
      * 非折疊機時是一個空姿態，什麼都不會變。
      */
     posture: FoldPosture = FoldPosture(),
+    modifier: Modifier = Modifier.weight(1f),
     sidebar: @Composable () -> Unit,
     canvas: @Composable RowScope.() -> Unit
 ) {
-    Row(modifier = Modifier.weight(1f).fillMaxWidth()) {
+    Row(modifier = modifier.fillMaxWidth()) {
         if (sidebarInline) {
             val snapToHinge = posture.separatingVertically && posture.hingeStart > 120.dp
             Box(modifier = if (snapToHinge) Modifier.width(posture.hingeStart) else Modifier) {
@@ -1363,6 +1370,11 @@ private fun InkScreen(
     var floatingPillExpanded by remember { mutableStateOf(false) }
     var strokeStabilizer by remember { mutableFloatStateOf(0f) }
     var showSymmetryGuide by remember { mutableStateOf(false) }
+    var showRadialMenu by remember { mutableStateOf(false) }
+    var radialMenuCenter by remember { mutableStateOf(Offset(300f, 300f)) }
+    var magneticGuideActive by remember { mutableStateOf(false) }
+    var magneticGuideStart by remember { mutableStateOf(Offset.Zero) }
+    var magneticGuideEnd by remember { mutableStateOf(Offset.Zero) }
 
     val contextualState = remember(editorMode, editingText, selectedTextId) {
         if (editorMode == EditorMode.DRAW && (editingText != null || selectedTextId != null)) {
@@ -1821,6 +1833,10 @@ private fun InkScreen(
     // 有東西正懸在畫布上等著放下（工作項 S-68）。一定要有這個回饋：
     // 拖放看不見目標的話，使用者分不出「這裡不能放」與「放了但沒反應」。
     var isImageDropTargeted by remember { mutableStateOf(false) }
+    // 次世代 UI/UX Phase 5: 折疊立起雙屏模式 (Tabletop Mode / Stage Manager Posture)
+    var isTabletopManual by remember { mutableStateOf(false) }
+    // 次世代 UI/UX Phase 4: 筆跡磁吸對齊與幾何角度引導 (Smart Magnetic Snap)
+    var isMagneticSnapActive by remember { mutableStateOf(false) }
     LaunchedEffect(inkTool) { if (inkTool.kind != null) lastBrushTool = inkTool }
 
     val view = LocalView.current
@@ -1975,6 +1991,7 @@ private fun InkScreen(
     // 折疊機的鉸鏈在哪（S-77）。Configuration 給得出寬度，給不出「畫面
     // 中間橫著一條摺痕」—— 而內容壓在摺痕上是折疊機最明顯的毛病。
     val posture = rememberFoldPosture(activity)
+    val isTabletopActive = posture.separatingHorizontally || isTabletopManual
 
     Column(modifier = Modifier.fillMaxSize()) {
         // 只有兩個切換留在工具列上，其餘進溢位選單。
@@ -2027,6 +2044,33 @@ private fun InkScreen(
                 modifier = Modifier.size(36.dp)
             ) {
                 Text(if (minimalistCanvasMode) "⤢" else "⤡", fontSize = 14.sp)
+            }
+
+            // 徑向飛輪快捷工具盤 (Radial Pie Menu) 手動喚醒按鈕
+            IconButton(
+                onClick = {
+                    radialMenuCenter = Offset(240f, 240f)
+                    showRadialMenu = !showRadialMenu
+                },
+                modifier = Modifier.size(36.dp).testTag("editor.radialMenuToggle")
+            ) {
+                Text(
+                    text = if (showRadialMenu) "◎" else "○",
+                    fontSize = 15.sp,
+                    color = if (showRadialMenu) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            // 立起雙屏模式切換 (Tabletop Mode)
+            IconButton(
+                onClick = { isTabletopManual = !isTabletopManual },
+                modifier = Modifier.size(36.dp).testTag("editor.tabletop_mode")
+            ) {
+                Text(
+                    text = if (isTabletopActive) "⧉" else "⬚",
+                    fontSize = 15.sp,
+                    color = if (isTabletopActive) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                )
             }
 
             // 筆記標題。Apple 的頂列一直有，點一下就能改名；Android 原本
@@ -2386,6 +2430,14 @@ private fun InkScreen(
                     text = { Text(l10n("ai_summary")) },
                     modifier = Modifier.testTag("editor.insert.ai_summary"),
                     onClick = { showMenu = false; showNoteIntelligence = true }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("posture_tabletop_mode")) },
+                    modifier = Modifier.testTag("editor.tabletop_mode_menu"),
+                    onClick = {
+                        showMenu = false
+                        isTabletopManual = !isTabletopManual
+                    }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("theme_tools")) },
@@ -2894,6 +2946,33 @@ private fun InkScreen(
                         }
                     }
                 },
+                onAnchorToText = {
+                    val selIds = lasso.selected
+                    if (selIds.isNotEmpty()) {
+                        val pageBoxes = textStore.all.filter { it.pageIndex == pageIndex }
+                        val targetBox = pageBoxes.firstOrNull()
+                        if (targetBox != null) {
+                            val session = notebook?.first
+                            val meta = NotebookMeta.load(session)
+                            val anchors = meta.stickyAnchors()
+                            anchors.removeAll { it.targetId == targetBox.id }
+                            anchors.add(
+                                com.kairumo.padnote.library.StickyAnnotationAnchor(
+                                    pageIndex = pageIndex,
+                                    targetId = targetBox.id,
+                                    strokeIds = selIds,
+                                    anchorOriginX = targetBox.x,
+                                    anchorOriginY = targetBox.y
+                                )
+                            )
+                            meta.setStickyAnchors(session, anchors)
+                            lasso.clear()
+                            revision++
+                            clearToken++
+                            message = l10n("sticky_anchored_hint")
+                        }
+                    }
+                },
                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
             )
         }
@@ -3150,6 +3229,7 @@ private fun InkScreen(
         EditorWorkArea(
             sidebarInline = showPageSidebar && layout.sidebarIsInline,
             posture = posture,
+            modifier = Modifier.weight(if (isTabletopActive) 0.58f else 1f),
             sidebar = {
                 PageSidebar(
                     session = notebook?.first,
@@ -3415,8 +3495,22 @@ private fun InkScreen(
                             3.dp,
                             MaterialTheme.colorScheme.primary,
                             RoundedCornerShape(8.dp)
+                        ),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(20.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        shadowElevation = 6.dp
+                    ) {
+                        Text(
+                            text = l10n("multi_window_drop_hint"),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
                         )
-                )
+                    }
+                }
             }
 
             // 套索層疊在畫布上面。套索模式下它吃掉所有觸控，畫布完全收不到 ——
@@ -3459,6 +3553,38 @@ private fun InkScreen(
                     onSelect = { selectedTextId = it },
                     onEditStyle = { editingText = it },
                     onChanged = { box -> textStore.persist(box); textRevision++ },
+                    onMoved = { box, dx, dy ->
+                        val session = notebook?.first
+                        val handles = engine.coreHandles()
+                        if (session != null && handles != null) {
+                            val (_, pageId) = handles
+                            val meta = NotebookMeta.load(session)
+                            val anchors = meta.stickyAnchors()
+                            val matched = anchors.filter { it.targetId == box.id && it.pageIndex == pageIndex }
+                            if (matched.isNotEmpty()) {
+                                var changedAny = false
+                                for (anchor in matched) {
+                                    if (anchor.strokeIds.isNotEmpty()) {
+                                        val newIds = runCatching {
+                                            session.lassoTranslate(pageId, anchor.strokeIds, dx, dy)
+                                        }.getOrNull()
+                                        if (newIds != null) {
+                                            anchor.strokeIds = newIds
+                                            anchor.anchorOriginX += dx
+                                            anchor.anchorOriginY += dy
+                                            changedAny = true
+                                        }
+                                    }
+                                }
+                                if (changedAny) {
+                                    meta.setStickyAnchors(session, anchors)
+                                    engine.load()
+                                    revision++
+                                    clearToken++
+                                }
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -3688,6 +3814,37 @@ private fun InkScreen(
                 )
             }
 
+            // 🌟 聲筆動態同步與波形卡拉 OK 高亮 (Audio-Ink Karaoke Sync)
+            val audioPlaying = remember(revision) { AudioPlayback.playingId != null }
+            if (audioPlaying && engine.strokes.isNotEmpty()) {
+                androidx.compose.foundation.Canvas(
+                    modifier = Modifier.fillMaxSize().zIndex(8_999f)
+                ) {
+                    val currentPos = AudioPlayback.currentPositionMs
+                    val duration = maxOf(1, AudioPlayback.durationMs)
+                    val progressRatio = (currentPos.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+                    val activeIdx = ((engine.strokes.size - 1) * progressRatio).toInt().coerceIn(0, engine.strokes.size - 1)
+                    val startIdx = maxOf(0, activeIdx - 1)
+                    val endIdx = minOf(engine.strokes.size - 1, activeIdx + 1)
+                    for (i in startIdx..endIdx) {
+                        val stroke = engine.strokes[i]
+                        val pts = stroke.points
+                        if (pts.size >= 2) {
+                            val path = androidx.compose.ui.graphics.Path()
+                            path.moveTo(pts.first().x * canvasDensity, pts.first().y * canvasDensity)
+                            for (p in pts.drop(1)) {
+                                path.lineTo(p.x * canvasDensity, p.y * canvasDensity)
+                            }
+                            drawPath(
+                                path = path,
+                                color = Color(0xFFFBBF24).copy(alpha = 0.55f),
+                                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 6.dp.toPx())
+                            )
+                        }
+                    }
+                }
+            }
+
             // 構圖輔助線。畫在所有內容之上但**不吃觸控** —— 它是參考線，
             // 擋住筆的話等於把畫布鎖住。
             CompositionOverlay(
@@ -3708,6 +3865,22 @@ private fun InkScreen(
                         start = Offset(axisX, 0f),
                         end = Offset(axisX, size.height),
                         strokeWidth = 2.dp.toPx(),
+                        pathEffect = strokeDash
+                    )
+                }
+            }
+
+            // 🌟 筆跡磁吸對齊與幾何角度引導 (Smart Magnetic Snap Laser Guide)
+            if (snapToGrid && editorMode == EditorMode.DRAW && magneticGuideActive) {
+                androidx.compose.foundation.Canvas(
+                    modifier = Modifier.fillMaxSize().zIndex(9_002f)
+                ) {
+                    val strokeDash = androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(8f, 6f))
+                    drawLine(
+                        color = Color(0xFF06B6D4).copy(alpha = 0.85f),
+                        start = magneticGuideStart,
+                        end = magneticGuideEnd,
+                        strokeWidth = 1.5.dp.toPx(),
                         pathEffect = strokeDash
                     )
                 }
@@ -3773,8 +3946,97 @@ private fun InkScreen(
                     }
                 }
             }
+
+            // 🌟 徑向飛輪快捷工具盤 (Radial Pie / Mark Menu)
+            if (showRadialMenu) {
+                RadialMarkMenu(
+                    visible = showRadialMenu,
+                    centerOffset = radialMenuCenter,
+                    items = listOf(
+                        RadialMenuItem(id = "pen", icon = "✏️", label = l10n("tool_pen"), color = MaterialTheme.colorScheme.primary) {
+                            applyInkTool(InkTool.FOUNTAIN_PEN)
+                        },
+                        RadialMenuItem(id = "highlighter", icon = "🖍️", label = l10n("tool_highlighter"), color = Color(0xFFF59E0B)) {
+                            applyInkTool(InkTool.HIGHLIGHTER)
+                        },
+                        RadialMenuItem(id = "eraser", icon = "🧹", label = l10n("tool_eraser"), color = Color(0xFFEF4444)) {
+                            applyInkTool(InkTool.ERASER)
+                        },
+                        RadialMenuItem(id = "lasso", icon = "➰", label = l10n("tool_lasso"), color = Color(0xFF8B5CF6)) {
+                            applyInkTool(InkTool.LASSO)
+                        },
+                        RadialMenuItem(id = "undo", icon = "↩️", label = l10n("undo"), color = Color(0xFF3B82F6)) {
+                            if (engine.undo()) { revision++; clearToken++ }
+                        },
+                        RadialMenuItem(id = "redo", icon = "↪️", label = l10n("redo"), color = Color(0xFF3B82F6)) {
+                            if (engine.redo()) { revision++; clearToken++ }
+                        },
+                        RadialMenuItem(id = "color", icon = "🎨", label = l10n("pro_color"), color = Color(0xFFEC4899)) {
+                            showProColorWheel = true
+                        },
+                        RadialMenuItem(id = "stabilizer", icon = "〰️", label = l10n("refine_sketch"), color = Color(0xFF10B981)) {
+                            strokeStabilizer = if (strokeStabilizer > 0f) 0f else 50f
+                        }
+                    ),
+                    onDismiss = { showRadialMenu = false }
+                )
+            }
         }
         }
+        }
+
+        // 次世代 UI/UX Phase 5: 折疊立起雙屏創作工作盤 (Tabletop Studio Control Deck)
+        if (isTabletopActive) {
+            HorizontalDivider()
+            TabletopControlDeck(
+                l10n = { key -> l10n(key) },
+                currentTool = inkTool,
+                onPickTool = { applyInkTool(it) },
+                isMagneticSnapActive = isMagneticSnapActive,
+                onToggleMagneticSnap = { isMagneticSnapActive = !isMagneticSnapActive },
+                onOpenRadial = {
+                    radialMenuCenter = Offset(300f, 300f)
+                    showRadialMenu = true
+                },
+                onAnchorSticky = {
+                    val session = notebook?.first
+                    val handles = engine.coreHandles()
+                    val target = textStore.all.firstOrNull()
+                    if (session != null && handles != null && target != null) {
+                        val strokeIds: List<String> = lasso.selected
+                        if (strokeIds.isNotEmpty()) {
+                            val meta = NotebookMeta.load(session)
+                            val anchors = meta.stickyAnchors().toMutableList()
+                            anchors.add(
+                                StickyAnnotationAnchor(
+                                    pageIndex = pageIndex,
+                                    targetId = target.id,
+                                    strokeIds = strokeIds,
+                                    anchorOriginX = target.x,
+                                    anchorOriginY = target.y
+                                )
+                            )
+                            meta.setStickyAnchors(session, anchors)
+                            message = l10n("sticky_anchored_hint")
+                        } else {
+                            message = l10n("sticky_anchor_ink")
+                        }
+                    }
+                },
+                onUndo = { if (engine.undo()) { revision++; clearToken++ } },
+                onRedo = { if (engine.redo()) { revision++; clearToken++ } },
+                onAddPage = {
+                    val s = notebook?.first
+                    if (s != null) {
+                        runCatching { s.addPage(uniffi.padnote_core.PageStyle.BLANK) }
+                        pageCount = runCatching { s.pageCount().toInt() }.getOrDefault(pageCount + 1)
+                        pageIndex = pageCount - 1
+                    }
+                },
+                onColorPick = { hex -> engine.colorRgba = hexToRgba(hex) },
+                onExitTabletop = { isTabletopManual = false },
+                modifier = Modifier.fillMaxWidth().weight(0.42f)
+            )
         }
     }
 
@@ -4502,6 +4764,159 @@ private fun InkScreen(
                 }
             }
         )
+    }
+}
+
+/**
+ * 次世代 UI/UX Phase 5: 折疊立起雙屏創作工作盤 (Tabletop Studio Control Deck)。
+ *
+ * 當折疊機處於半折立起 (Tabletop / Flex Mode) 或使用者手動開啟雙視窗時，
+ * 上半部為完整畫布與文件預覽區，下半部為高效率觸控創作工作盤。
+ */
+@Composable
+private fun TabletopControlDeck(
+    l10n: (String) -> String,
+    currentTool: InkTool,
+    onPickTool: (InkTool) -> Unit,
+    isMagneticSnapActive: Boolean,
+    onToggleMagneticSnap: () -> Unit,
+    onOpenRadial: () -> Unit,
+    onAnchorSticky: () -> Unit,
+    onUndo: () -> Unit,
+    onRedo: () -> Unit,
+    onAddPage: () -> Unit,
+    onColorPick: (String) -> Unit,
+    onExitTabletop: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        modifier = modifier,
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize().padding(horizontal = 14.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // 頂部狀態列與功能按鈕
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "⧉ ${l10n("posture_tabletop_mode")}",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    IconButton(onClick = onUndo, modifier = Modifier.size(32.dp)) {
+                        Text("↶", fontSize = 16.sp)
+                    }
+                    IconButton(onClick = onRedo, modifier = Modifier.size(32.dp)) {
+                        Text("↷", fontSize = 16.sp)
+                    }
+                    IconButton(onClick = onAddPage, modifier = Modifier.size(32.dp)) {
+                        Text("+", fontSize = 18.sp, color = MaterialTheme.colorScheme.primary)
+                    }
+                    IconButton(onClick = onExitTabletop, modifier = Modifier.size(32.dp)) {
+                        Text("✕", fontSize = 13.sp)
+                    }
+                }
+            }
+
+            // 常用筆刷工具組
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                FilterChip(
+                    selected = currentTool == InkTool.FOUNTAIN_PEN,
+                    onClick = { onPickTool(InkTool.FOUNTAIN_PEN) },
+                    label = { Text(l10n("tool_pen"), maxLines = 1) },
+                    modifier = Modifier.weight(1f)
+                )
+                FilterChip(
+                    selected = currentTool == InkTool.HIGHLIGHTER,
+                    onClick = { onPickTool(InkTool.HIGHLIGHTER) },
+                    label = { Text(l10n("tool_highlighter"), maxLines = 1) },
+                    modifier = Modifier.weight(1f)
+                )
+                FilterChip(
+                    selected = currentTool == InkTool.ERASER,
+                    onClick = { onPickTool(InkTool.ERASER) },
+                    label = { Text(l10n("tool_eraser"), maxLines = 1) },
+                    modifier = Modifier.weight(1f)
+                )
+                FilterChip(
+                    selected = currentTool == InkTool.LASSO,
+                    onClick = { onPickTool(InkTool.LASSO) },
+                    label = { Text(l10n("tool_lasso"), maxLines = 1) },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // 次世代功能輔助鍵：Radial Menu / 磁吸 / 錨定
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onOpenRadial,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    Text("◎ Radial", fontSize = 11.sp, maxLines = 1)
+                }
+
+                OutlinedButton(
+                    onClick = onToggleMagneticSnap,
+                    modifier = Modifier.weight(1.2f),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = if (isMagneticSnapActive) "🧲 Snap ON" else "🧲 Snap",
+                        fontSize = 11.sp,
+                        color = if (isMagneticSnapActive) MaterialTheme.colorScheme.primary else Color.Unspecified,
+                        maxLines = 1
+                    )
+                }
+
+                OutlinedButton(
+                    onClick = onAnchorSticky,
+                    modifier = Modifier.weight(1f),
+                    contentPadding = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+                ) {
+                    Text("🔗 Anchor", fontSize = 11.sp, maxLines = 1)
+                }
+            }
+
+            // 常用色彩圓點
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                val colorList = listOf(
+                    "#000000" to Color.Black,
+                    "#1E40AF" to Color(0xFF1E40AF),
+                    "#DC2626" to Color(0xFFDC2626),
+                    "#16A34A" to Color(0xFF16A34A),
+                    "#D97706" to Color(0xFFD97706),
+                    "#7C3AED" to Color(0xFF7C3AED)
+                )
+                colorList.forEach { (hex, color) ->
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(color)
+                            .border(1.dp, Color.White.copy(alpha = 0.5f), CircleShape)
+                            .clickable { onColorPick(hex) }
+                    )
+                }
+            }
+        }
     }
 }
 
