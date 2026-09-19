@@ -76,6 +76,11 @@ struct ContinuousPageView<ObjectLayer: View>: View {
 
     var body: some View {
         ZStack(alignment: .topLeading) {
+            PageBackgroundRepresentable(paperId: paperId, paletteId: paletteId)
+                .allowsHitTesting(false)
+
+            objectLayer()
+
             CanvasRepresentable(
                 drawing: $drawing,
                 selectedTool: selectedTool,
@@ -107,26 +112,24 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                     if isFocused { onPenControl?(control, pressed) }
                 }
             )
-            .simultaneousGesture(
-                SpatialTapGesture(count: 1).onEnded { value in
-                    onCanvasTap?(value.location)
-                }
-            )
-            // 拖到哪一頁就插到哪一頁 —— 連續模式下每一頁都是自己的落點。
-            .onDrop(of: [.image], isTargeted: $isDropTargeted) { providers, location in
-                onImageDropped?(pageIndex, providers, location) ?? false
+        }
+        .simultaneousGesture(
+            SpatialTapGesture(count: 1).onEnded { value in
+                onCanvasTap?(value.location)
             }
-            .overlay {
-                if isDropTargeted {
-                    RoundedRectangle(cornerRadius: 8)
-                        .strokeBorder(
-                            Color.accentColor, style: StrokeStyle(lineWidth: 3, dash: [8, 6]))
-                        .background(Color.accentColor.opacity(0.08))
-                        .allowsHitTesting(false)
-                }
+        )
+        // 拖到哪一頁就插到哪一頁 —— 連續模式下每一頁都是自己的落點。
+        .onDrop(of: [.image], isTargeted: $isDropTargeted) { providers, location in
+            onImageDropped?(pageIndex, providers, location) ?? false
+        }
+        .overlay {
+            if isDropTargeted {
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(
+                        Color.accentColor, style: StrokeStyle(lineWidth: 3, dash: [8, 6]))
+                    .background(Color.accentColor.opacity(0.08))
+                    .allowsHitTesting(false)
             }
-
-            objectLayer()
         }
         .frame(width: PageGeometry.width, height: PageGeometry.height)
         .background(Color(uiColor: .systemBackground))

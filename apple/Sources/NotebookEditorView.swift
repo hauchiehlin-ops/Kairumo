@@ -431,6 +431,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         }
         canvas.delegate = context.coordinator
         canvas.drawingGestureRecognizer.isEnabled = acceptsInk
+        canvas.isUserInteractionEnabled = acceptsInk
         canvas.backgroundColor = .clear
         canvas.isOpaque = false
         canvas.isScrollEnabled = isScrollEnabled
@@ -496,12 +497,6 @@ struct CanvasRepresentable: UIViewRepresentable {
         swipeDown.direction = .down
         canvas.addGestureRecognizer(swipeDown)
 
-        let bgView = TemplateCanvasBackgroundView(frame: CGRect(origin: .zero, size: canvas.contentSize))
-        bgView.paperId = paperId
-        bgView.paletteId = paletteId
-        canvas.insertSubview(bgView, at: 0)
-        canvas.templateBackgroundView = bgView
-        context.coordinator.backgroundView = bgView
 
         context.coordinator.parent = self
         context.coordinator.applyTool(to: canvas)
@@ -535,6 +530,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         // 見 `acceptsInk`：政策擋不掉 Pencil，手勢本身要關。
         if uiView.drawingGestureRecognizer.isEnabled != acceptsInk {
             uiView.drawingGestureRecognizer.isEnabled = acceptsInk
+            uiView.isUserInteractionEnabled = acceptsInk
         }
         // 換筆刷或拉筆寬時，游標要跟著變 —— 不更新的話使用者得把滑鼠移出去
         // 再移回來才看得到新的筆頭。
@@ -556,8 +552,6 @@ struct CanvasRepresentable: UIViewRepresentable {
             adaptive.pageContentHeight = PageGeometry.height
             adaptive.syncContentSize()
         }
-        context.coordinator.backgroundView?.paperId = paperId
-        context.coordinator.backgroundView?.paletteId = paletteId
 
         context.coordinator.applyTool(to: uiView)
     }
@@ -3091,6 +3085,11 @@ public struct NotebookEditorView: View {
 
     private var canvasWorkAreaContent: some View {
 ZStack(alignment: .topTrailing) {
+            PageBackgroundRepresentable(paperId: notebook.paperId(forPage: currentPageIndex), paletteId: notebook.guidePaletteId)
+                .allowsHitTesting(false)
+
+            objectLayer(forPage: currentPageIndex)
+
             CanvasRepresentable(
                 drawing: $currentDrawing,
                 selectedTool: selectedTool,
@@ -3216,51 +3215,17 @@ ZStack(alignment: .topTrailing) {
                 }
             )
 
-            // 🌟 打字模式畫布互動層：**點兩下**空白處才新增文字方塊。
-            //
-            // 原本是單擊就新增，而且這一層鋪滿整個畫布、吃掉所有觸控 ——
-            // 於是打字模式下想捲動畫布、想點選既有的方塊或圖片，得到的
-            // 都是一個新的空方塊。使用者最常做的兩件事各生一個垃圾物件。
-            //
-            // 單擊留給底下的畫布與物件（捲動、選取），新增改用點兩下：
-            // 仍然能指定位置，而且不會跟任何既有手勢搶。
             if editorMode == .type {
-                // 這一層**不攔截任何觸控**。
-                //
-                // 舊寫法是鋪一層 Color.black.opacity(0.001) 加 onTapGesture 接手勢。
-                // 那層只要可命中，單擊就到不了底下 —— 改成點兩下也一樣，單擊
-                // 依然被它吃掉，結果是「點了完全沒反應」，比原本更糟。
-                // 所以必須 allowsHitTesting(false)，新增的手勢掛在下面那個
-                // simultaneousGesture 上，與畫布的捲動、物件的選取並存。
                 Color.clear
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .allowsHitTesting(false)
-
             }
 
-            // 模式徽章。
-            //
-            // **兩個模式都要顯示。** 只在打字模式掛一條提示的話，使用者切回
-            // 手寫時畫面上沒有任何差別 —— 而兩個模式下「同一個手勢會發生
-            // 什麼事」完全不同（筆會不會畫線、物件拖不拖得動）。看不出自己
-            // 在哪個模式，就只能一直試。
             modeBadge
                 .padding(.top, DS.Space.s)
                 .padding(.trailing, DS.Space.m)
                 .opacity(modeBadgeVisible ? 1 : 0)
                 .animation(.easeInOut(duration: 0.22), value: modeBadgeVisible)
-
-            // 🌟 插入物件層（圖片、文字方塊、3D 模型、連結卡片、討論圖釘）
-            //
-            // **手寫模式下這一整層不攔截觸控。**
-            //
-            // 這些物件是疊在 PKCanvasView 之上的 SwiftUI 視圖，預設會吃掉觸控 ——
-            // 於是使用者拿筆想在一張圖上圈重點，筆畫根本到不了畫布，看起來就是
-            // 「筆刷在物件上沒作用」。在一個手寫筆記 App 裡，那是最該能做的事之一。
-            //
-            // 代價是手寫模式下不能直接拖動物件 —— 要搬動或編輯就切到打字模式。
-            // 這個取捨是刻意的：手寫模式的主角是筆，物件操作有它自己的模式。
-            objectLayer(forPage: currentPageIndex)
             MaskingTapeOverlayView(
                 notebook: $notebook,
                 pageIndex: currentPageIndex,
