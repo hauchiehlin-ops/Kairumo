@@ -852,21 +852,21 @@ pub fn page_guides(paper_id: String, width: f32, height: f32) -> Vec<FfiGuide> {
         }
         "error_book" => {
             let split_y = 0.55;
-            
+
             s.band(0.0, 0.0, 1.0, split_y);
-            
+
             s.label("guide_question", M, TOP, 0.3, 0.026, LEFT);
-            
+
             s.label("guide_date", R - 0.22, TOP, 0.1, 0.02, LEFT);
             s.hline(R - 0.15, R, TOP + 0.012, FfiGuideTone::Hairline, 1.0);
-            
+
             s.label("guide_subject", R - 0.22, TOP + 0.035, 0.1, 0.02, LEFT);
             s.hline(R - 0.15, R, TOP + 0.047, FfiGuideTone::Hairline, 1.0);
-            
+
             s.rows(M, R, TOP + 0.08, split_y - 0.04, 9, FfiGuideTone::Hairline);
-            
+
             s.hline(0.0, 1.0, split_y, FfiGuideTone::Accent, 2.0);
-            
+
             s.label("guide_solution", M, split_y + 0.03, 0.3, 0.026, LEFT);
             s.rows(M, R, split_y + 0.09, BOT, 7, FfiGuideTone::Hairline);
         }

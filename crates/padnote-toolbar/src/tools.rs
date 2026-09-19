@@ -81,13 +81,20 @@ impl Tool {
     /// 所屬分組。
     pub fn group(self) -> ToolGroup {
         match self {
-            Self::FountainPen | Self::BallPoint | Self::Highlighter | Self::Pencil | Self::MaskingTape => {
-                ToolGroup::Pens
-            }
+            Self::FountainPen
+            | Self::BallPoint
+            | Self::Highlighter
+            | Self::Pencil
+            | Self::MaskingTape => ToolGroup::Pens,
             Self::Eraser | Self::Lasso | Self::Ruler | Self::ShapeRecognition | Self::ZoomWrite => {
                 ToolGroup::Edit
             }
-            Self::Text | Self::Image | Self::Shape | Self::Table | Self::Embed | Self::StickerLibrary => ToolGroup::Insert,
+            Self::Text
+            | Self::Image
+            | Self::Shape
+            | Self::Table
+            | Self::Embed
+            | Self::StickerLibrary => ToolGroup::Insert,
             Self::Undo | Self::Redo => ToolGroup::History,
             Self::LaserPointer | Self::Record => ToolGroup::Extras,
         }
