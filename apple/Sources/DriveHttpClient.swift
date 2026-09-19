@@ -35,9 +35,15 @@ final class DriveHttpClient: FfiDriveHttp {
     private let accessToken: String
     private let session: URLSession
 
-    init(accessToken: String, session: URLSession = .shared) {
+    init(accessToken: String, session: URLSession? = nil) {
         self.accessToken = accessToken
-        self.session = session
+        if let s = session {
+            self.session = s
+        } else {
+            let q = OperationQueue()
+            q.name = "DriveHttpClientQueue"
+            self.session = URLSession(configuration: .ephemeral, delegate: nil, delegateQueue: q)
+        }
     }
 
     func getJson(url: String, query: [FfiQueryParam]) throws -> String {

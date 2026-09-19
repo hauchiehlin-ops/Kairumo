@@ -384,6 +384,10 @@ struct CanvasRepresentable: UIViewRepresentable {
 
     var onPrevPage: (() -> Void)?
     var onNextPage: (() -> Void)?
+    var onUndo: (() -> Void)?
+    var onRedo: (() -> Void)?
+    var onUndo: (() -> Void)?
+    var onRedo: (() -> Void)?
 
     /// 目前該用哪個輸入政策。
     ///
@@ -475,20 +479,20 @@ struct CanvasRepresentable: UIViewRepresentable {
         // 嵌入底層背景樣板視圖（隨畫布滾動）
         
         // 🌟 新增手勢：雙指點擊復原、三指點擊重做、三指上下滑動換頁
-        let twoFingerTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handleTwoFingerTap(_:)))
+        let twoFingerTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTwoFingerTap(_:)))
         twoFingerTap.numberOfTouchesRequired = 2
         canvas.addGestureRecognizer(twoFingerTap)
         
-        let threeFingerTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handleThreeFingerTap(_:)))
+        let threeFingerTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleThreeFingerTap(_:)))
         threeFingerTap.numberOfTouchesRequired = 3
         canvas.addGestureRecognizer(threeFingerTap)
         
-        let swipeUp = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handleThreeFingerSwipeUp(_:)))
+        let swipeUp = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleThreeFingerSwipeUp(_:)))
         swipeUp.numberOfTouchesRequired = 3
         swipeUp.direction = .up
         canvas.addGestureRecognizer(swipeUp)
         
-        let swipeDown = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(context.coordinator.handleThreeFingerSwipeDown(_:)))
+        let swipeDown = UISwipeGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleThreeFingerSwipeDown(_:)))
         swipeDown.numberOfTouchesRequired = 3
         swipeDown.direction = .down
         canvas.addGestureRecognizer(swipeDown)
@@ -592,6 +596,30 @@ struct CanvasRepresentable: UIViewRepresentable {
         /// 懸停預覽（工作項 S-69）。與 `pencilTaps` 一樣要由這裡持有 ——
         /// 手勢辨識器只對 target 保持 weak 參考。
         let penHover = PenHoverCoordinator()
+
+        @objc func handleTwoFingerTap(_ sender: UITapGestureRecognizer) {
+            if sender.state == .ended {
+                parent.onUndo?()
+            }
+        }
+
+        @objc func handleThreeFingerTap(_ sender: UITapGestureRecognizer) {
+            if sender.state == .ended {
+                parent.onRedo?()
+            }
+        }
+
+        @objc func handleThreeFingerSwipeUp(_ sender: UISwipeGestureRecognizer) {
+            if sender.state == .ended {
+                parent.onNextPage?()
+            }
+        }
+
+        @objc func handleThreeFingerSwipeDown(_ sender: UISwipeGestureRecognizer) {
+            if sender.state == .ended {
+                parent.onPrevPage?()
+            }
+        }
 
         init(_ parent: CanvasRepresentable) {
             self.parent = parent
