@@ -1265,11 +1265,7 @@ public struct NotebookEditorView: View {
                     // 立起雙屏模式：上方顯示主要畫布／預覽區，下方為沉浸式觸控工具盤
                     VStack(spacing: 0) {
                         ZStack(alignment: .topLeading) {
-                            if editorMode == .draw {
-                                canvasWorkArea
-                            } else {
-                                wordDocumentArea
-                            }
+                            canvasWorkArea
 
                             HStack(spacing: 6) {
                                 Image(systemName: "laptopcomputer.and.ipad")
