@@ -195,3 +195,72 @@ extension SmokeUITests {
         }
     }
 }
+
+final class AppStoreMacScreenshotsUITests: XCTestCase {
+    private let outputDirectory = URL(fileURLWithPath: "/Users/barretlin/GitProjects/Padnote/asc-macos-screenshots/raw")
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true)
+        for item in try FileManager.default.contentsOfDirectory(at: outputDirectory, includingPropertiesForKeys: nil) where item.pathExtension == "png" {
+            try? FileManager.default.removeItem(at: item)
+        }
+    }
+
+    private func launchApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launchArguments += [
+            "-AppleLanguages", "(zh-Hant)",
+            "-AppleLocale", "zh_TW",
+            "-kairumo.app.language", "zh-Hant",
+            "-kairumo.onboarding.seen.v1", "YES"
+        ]
+        app.launch()
+        return app
+    }
+
+    private func capture(_ name: String, app: XCUIApplication) throws {
+        sleep(1)
+        let screenshot = app.screenshot()
+        let url = outputDirectory.appendingPathComponent(name)
+        try screenshot.pngRepresentation.write(to: url, options: .atomic)
+
+        let attachment = XCTAttachment(screenshot: screenshot)
+        attachment.name = name
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    func testCaptureFiveMainMacScreenshots() throws {
+        let app = launchApp()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+
+        try capture("01-home.png", app: app)
+
+        let newNote = app.descendants(matching: .any)["home.action.new_note"].firstMatch
+        XCTAssertTrue(newNote.waitForExistence(timeout: 10), "找不到首頁新增筆記按鈕")
+        newNote.tap()
+        XCTAssertTrue(app.textFields["new_notebook.title.field"].waitForExistence(timeout: 10), "新增筆記頁沒有出現")
+        try capture("02-new-notebook.png", app: app)
+
+        let confirm = app.descendants(matching: .any)["new_notebook.confirm"].firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "找不到新增筆記確認按鈕")
+        confirm.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["kairumo.canvas"].waitForExistence(timeout: 15), "找不到畫布")
+        try capture("03-editor-pen.png", app: app)
+
+        let typeMode = app.staticTexts["打字模式"].firstMatch
+        XCTAssertTrue(typeMode.waitForExistence(timeout: 8), "找不到打字模式切換")
+        typeMode.tap()
+        try capture("04-editor-typing.png", app: app)
+
+        let drawMode = app.staticTexts["手繪模式"].firstMatch
+        XCTAssertTrue(drawMode.waitForExistence(timeout: 8), "找不到手寫模式切換")
+        drawMode.tap()
+        let brush = app.descendants(matching: .any)["editor.ink.brush"].firstMatch
+        XCTAssertTrue(brush.waitForExistence(timeout: 8), "找不到毛筆工具")
+        brush.tap()
+        try capture("05-editor-brush.png", app: app)
+    }
+}
