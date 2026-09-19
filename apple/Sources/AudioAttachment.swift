@@ -242,10 +242,31 @@ struct AudioAttachmentItemView: View {
         )
         .shadow(color: Color.black.opacity(0.08), radius: 6, y: 3)
         .contentShape(Rectangle())
-        // 選取用長按，不用點擊 —— 點擊要留給卡片裡的播放鈕，
-        // 兩者都掛 onTapGesture 的話，按播放會先被外層吃掉。
-        .onLongPressGesture(minimumDuration: 0.35) {
+        .onTapGesture {
             isSelected.toggle()
+        }
+        .contextMenu {
+            Button {
+                performTranscribe()
+            } label: {
+                Label(localizationManager.localized("transcribe_audio"), systemImage: "waveform.badge.magnifyingglass")
+            }
+            .disabled(isTranscribing || !fileExists)
+            
+            Button {
+                renameText = item.title
+                isRenaming = true
+            } label: {
+                Label(localizationManager.localized("rename_audio_card"), systemImage: "pencil")
+            }
+            
+            Divider()
+            
+            Button(role: .destructive) {
+                onDelete()
+            } label: {
+                Label(localizationManager.localized("action_delete"), systemImage: "trash")
+            }
         }
     }
 

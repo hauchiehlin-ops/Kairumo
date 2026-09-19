@@ -752,7 +752,7 @@ public struct HomeWorkbenchView: View {
                 .background(Color(uiColor: .secondarySystemGroupedBackground))
                 .cornerRadius(14)
             } else {
-                ScrollView(.horizontal, showsIndicators: false) {
+                ScrollView(.horizontal, showsIndicators: true) {
                     HStack(spacing: 14) {
                         ForEach(displayedList) { note in
                             Button {
@@ -1208,7 +1208,7 @@ public struct HomeWorkbenchView: View {
                     .buttonStyle(.plain)
                 }
 
-                ScrollView(.horizontal, showsIndicators: false) {
+                ScrollView(.horizontal, showsIndicators: true) {
                     HStack(spacing: 8) {
                         // 全部檔案
                         Button {
