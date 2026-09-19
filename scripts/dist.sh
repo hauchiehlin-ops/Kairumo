@@ -145,11 +145,18 @@ if [[ "$DO_ANDROID" -eq 1 ]]; then
     echo "   ✅ Android SDK 與 apksigner"
 fi
 
-# 公證要 Apple 帳號與 App 專用密碼。少了它，DMG 照樣做得出來，
-# 但別人下載後 macOS 會說「Apple 無法驗證」—— 而那要等打包完才知道。
+# 公證要 Apple 帳號與 App 專用密碼，或 App Store Connect API Key。多了它，
+# 別人下載後 macOS 才能直接開啟，不會被 Gatekeeper 阻擋。
 if [[ "$DO_MAC" -eq 1 && "$NOTARIZE" -eq 1 ]]; then
-    if [[ -z "${APPLE_ID:-}" || -z "${APP_SPECIFIC_PASSWORD:-}" ]]; then
-        echo "❌ apple/ExportConfig.env 缺 APPLE_ID / APP_SPECIFIC_PASSWORD，無法公證。" >&2
+    HAS_NOTARY_CREDS=0
+    if [[ -n "${APP_STORE_CONNECT_KEY_PATH:-}" && -f "${APP_STORE_CONNECT_KEY_PATH:-}" && -n "${APP_STORE_CONNECT_API_KEY_ID:-}" && -n "${APP_STORE_CONNECT_ISSUER_ID:-}" ]]; then
+        HAS_NOTARY_CREDS=1
+    elif [[ -n "${APPLE_ID:-}" && -n "${APP_SPECIFIC_PASSWORD:-}" ]]; then
+        HAS_NOTARY_CREDS=1
+    fi
+
+    if [[ "$HAS_NOTARY_CREDS" -eq 0 ]]; then
+        echo "❌ apple/ExportConfig.env 缺 App Store Connect API Key 或 APPLE_ID / APP_SPECIFIC_PASSWORD，無法公證。" >&2
         echo "   只給自己用的話：加上 --no-notarize。" >&2
         exit 1
     fi
@@ -270,11 +277,16 @@ if [[ "$DO_MAC" -eq 1 ]]; then
                 # 沒有公證，別人下載後 macOS 會直接說「無法打開，Apple 無法驗證」。
                 # 自己的機器感覺不到，因為開發機的 Gatekeeper 認得本機簽章 —— 
                 # 「我這裡可以開」在這件事上完全不構成證據。
-                if [[ -n "${APPLE_ID:-}" && -n "${APP_SPECIFIC_PASSWORD:-}" ]]; then
+                NOTARY_CMD=()
+                if [[ -n "${APP_STORE_CONNECT_KEY_PATH:-}" && -f "${APP_STORE_CONNECT_KEY_PATH:-}" && -n "${APP_STORE_CONNECT_API_KEY_ID:-}" && -n "${APP_STORE_CONNECT_ISSUER_ID:-}" ]]; then
+                    NOTARY_CMD=(xcrun notarytool submit "$DMG" --key "$APP_STORE_CONNECT_KEY_PATH" --key-id "$APP_STORE_CONNECT_API_KEY_ID" --issuer "$APP_STORE_CONNECT_ISSUER_ID" --wait)
+                elif [[ -n "${APPLE_ID:-}" && -n "${APP_SPECIFIC_PASSWORD:-}" && -n "${APPLE_TEAM_ID:-}" ]]; then
+                    NOTARY_CMD=(xcrun notarytool submit "$DMG" --apple-id "$APPLE_ID" --password "$APP_SPECIFIC_PASSWORD" --team-id "$APPLE_TEAM_ID" --wait)
+                fi
+
+                if [[ ${#NOTARY_CMD[@]} -gt 0 ]]; then
                     echo "🔏 送交 Apple 公證（通常 1–5 分鐘）…"
-                    if xcrun notarytool submit "$DMG" \
-                        --apple-id "$APPLE_ID" --password "$APP_SPECIFIC_PASSWORD" \
-                        --team-id "$APPLE_TEAM_ID" --wait; then
+                    if "${NOTARY_CMD[@]}"; then
                         # 釘選之後，對方的電腦離線也能通過驗證。
                         xcrun stapler staple "$DMG"
                         echo "   ✅ 公證與釘選完成"
@@ -282,7 +294,7 @@ if [[ "$DO_MAC" -eq 1 ]]; then
                         FAILED+=("macOS：公證失敗（DMG 已產出但別人開會被 Gatekeeper 擋）")
                     fi
                 else
-                    FAILED+=("macOS：ExportConfig.env 缺 APPLE_ID / APP_SPECIFIC_PASSWORD，未公證")
+                    FAILED+=("macOS：ExportConfig.env 缺 App Store Connect API Key 或 Apple ID 憑證，未公證")
                 fi
             else
                 echo "   ⏩ --no-notarize：未公證，只能自己用。"
