@@ -17,8 +17,8 @@ android {
         minSdk = 29
         targetSdk = 35
         // 版本號由 scripts/bump-version.sh 與 Apple 端一起更新，不要手改
-        versionCode = 45
-        versionName = "4.3.4"
+        versionCode = 46
+        versionName = "4.3.5"
         // 筆跡引擎的正確性只有在真的 Android runtime 上才驗得出來
         // （MotionEvent、密度換算、JNA 載入 .so 都不是純 JVM 模擬得了的）。
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
