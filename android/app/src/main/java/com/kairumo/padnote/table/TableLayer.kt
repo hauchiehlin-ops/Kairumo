@@ -222,8 +222,13 @@ fun TablePreview(
                 text.isFakeBoldText = cell.isHeader
                 var baseline = (cell.y * scale).toFloat() + lineHeight
                 for (line in cell.lines) {
+                    val displayText = if (line.trim().startsWith("=")) {
+                        TableFormulaEvaluator.evaluateCell(line, table.cells, table.rows, table.cols)
+                    } else {
+                        line
+                    }
                     native.drawText(
-                        line,
+                        displayText,
                         (cell.x * scale).toFloat() + 6f * scale,
                         baseline,
                         text

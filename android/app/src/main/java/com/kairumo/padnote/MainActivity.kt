@@ -29,8 +29,10 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Slider
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
@@ -116,7 +118,11 @@ import com.kairumo.padnote.canvas.PageDisplayMode
 import com.kairumo.padnote.math.MathCalculatorDialog
 import com.kairumo.padnote.canvas.ObjectGeometry
 import com.kairumo.padnote.canvas.ProColorPicker
+import com.kairumo.padnote.canvas.ProColorWheelDialog
 import com.kairumo.padnote.canvas.EditorMode
+import com.kairumo.padnote.ui.DynamicPortalIsland
+import com.kairumo.padnote.ui.ContextualPortalState
+import com.kairumo.padnote.ui.FloatingToolPill
 import com.kairumo.padnote.account.IdentityDialog
 import com.kairumo.padnote.library.HomeScreen
 import com.kairumo.padnote.library.DocumentTemplateCatalog
@@ -1352,6 +1358,30 @@ private fun InkScreen(
     var editorMode by remember { mutableStateOf(EditorMode.DRAW) }
     var snapToGrid by remember { mutableStateOf(true) }
 
+    var showProColorWheel by remember { mutableStateOf(false) }
+    var minimalistCanvasMode by remember { mutableStateOf(false) }
+    var floatingPillExpanded by remember { mutableStateOf(false) }
+    var strokeStabilizer by remember { mutableFloatStateOf(0f) }
+    var showSymmetryGuide by remember { mutableStateOf(false) }
+
+    val contextualState = remember(editorMode, editingText, selectedTextId) {
+        if (editorMode == EditorMode.DRAW && (editingText != null || selectedTextId != null)) {
+            ContextualPortalState.EditingTextInDrawMode(
+                "${l10n("tool_text")} • ${l10n("edit")}"
+            )
+        } else {
+            null
+        }
+    }
+
+    val effectiveToolbarMode = remember(editorMode, editingText, selectedTextId) {
+        if (editorMode == EditorMode.DRAW && (editingText != null || selectedTextId != null)) {
+            EditorMode.TYPE
+        } else {
+            editorMode
+        }
+    }
+
     // 筆記本中繼資料。Android 在此之前**完全沒有讀過它** —— Apple 放在這裡的
     // 樣板、資料夾、圖釘、連結卡片、3D 與物件堆疊順序，同步過來就像不存在。
     val meta = remember(notebook) { NotebookMeta.load(notebook?.first) }
@@ -1971,28 +2001,33 @@ private fun InkScreen(
                     modifier = Modifier.testTag("editor.home")
                 ) { Text("‹ ${l10n("back_to_home")}") }
             }
-            // 手寫／打字切換。與 Apple 端一樣放在最前面 ——
-            // 它決定了其餘每一個工具的意義。
-            FilterChip(
-                modifier = Modifier.testTag("editor.mode"),
-                selected = editorMode == EditorMode.DRAW,
+            // 流體動態傳送門 (Dynamic Portal Island)。
+            // 決定畫布模式並支援即時情境展開（如手繪模式中編輯文字方塊）。
+            DynamicPortalIsland(
+                currentMode = editorMode,
+                contextualState = contextualState,
+                languageTag = deviceLanguageTag(),
+                onModeChange = { newMode ->
+                    editorMode = newMode
+                    if (newMode == EditorMode.DRAW) {
+                        selectedTextId = null
+                        selectedShapeIds = emptySet()
+                        selectedTableId = null
+                        selectedChartId = null
+                    }
+                }
+            )
+
+            // 極簡畫布切換（收折工具列為懸浮膠囊）
+            IconButton(
                 onClick = {
-                    editorMode = EditorMode.DRAW
-                    // 切回手寫時要清掉選取。留著的話，畫面上會浮著一組
-                    // 旋轉／樣式／縮放把手，而它們在手寫模式下完全按不動
-                    // —— 看得到、點不到的控制項比沒有更糟。
-                    selectedTextId = null
-                    selectedShapeIds = emptySet()
-                    selectedTableId = null
-                    selectedChartId = null
+                    minimalistCanvasMode = !minimalistCanvasMode
+                    if (minimalistCanvasMode) floatingPillExpanded = false
                 },
-                label = { Text(l10n("mode_draw")) }
-            )
-            FilterChip(
-                selected = editorMode == EditorMode.TYPE,
-                onClick = { editorMode = EditorMode.TYPE },
-                label = { Text(l10n("mode_type")) }
-            )
+                modifier = Modifier.size(36.dp)
+            ) {
+                Text(if (minimalistCanvasMode) "⤢" else "⤡", fontSize = 14.sp)
+            }
 
             // 筆記標題。Apple 的頂列一直有，點一下就能改名；Android 原本
             // **完全沒有顯示筆記名稱** —— 開了三本筆記之後分不出自己在哪一本。
@@ -2562,9 +2597,10 @@ private fun InkScreen(
             horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
-            if (editorMode == EditorMode.DRAW) {
-                // 低延遲與掌拒是**手寫的**設定。放在第一排的話，打字模式下
-                // 它們也一直在那裡，而那時候兩個都沒有意義。
+            // 雙向情境工具列：effectiveToolbarMode 在「手繪模式中編輯文字方塊」時
+            // 自動切為 TYPE，讓使用者在不切換全域模式的情況下使用文字工具。
+            if (effectiveToolbarMode == EditorMode.DRAW) {
+                // 低延遲與掌拒是**手寫的**設定。
                 FilterChip(
                     selected = lowLatency && !lowLatencyUnavailable,
                     enabled = !lowLatencyUnavailable,
@@ -2575,10 +2611,21 @@ private fun InkScreen(
                     selected = penOnly,
                     onClick = {
                         penOnly = !penOnly
-                        // 掌拒最可靠的模式：手指一律當手勢，只有筆能寫。
                         engine.setPenOnly(penOnly)
                     },
                     label = { Text(l10n("ink_pen_only")) }
+                )
+                // 防手震滑桿（Stroke Stabilizer）
+                FilterChip(
+                    selected = strokeStabilizer > 0f,
+                    onClick = { strokeStabilizer = if (strokeStabilizer > 0f) 0f else 50f },
+                    label = { Text(l10n("refine_sketch")) }
+                )
+                // 對稱繪圖輔助線（使用現有構圖輔助線 i18n key）
+                FilterChip(
+                    selected = showSymmetryGuide,
+                    onClick = { showSymmetryGuide = !showSymmetryGuide },
+                    label = { Text("⟺ " + l10n("composition_overlay")) }
                 )
             } else {
                 FilterChip(
@@ -2765,23 +2812,41 @@ private fun InkScreen(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp)
         )
 
-        // 筆刷列只在手寫模式出現。
-        if (editorMode == EditorMode.DRAW) {
-        InkToolbar(
-            tool = inkTool,
-            colorHex = inkColorHex,
-            width = inkWidth,
-            languageTag = deviceLanguageTag(),
-            onToolChange = { picked -> applyInkTool(picked) },
-            onColorChange = { hex ->
-                inkColorHex = hex
-                engine.colorRgba = hexToRgba(hex)
-            },
-            onWidthChange = { value ->
-                inkWidth = value
-                engine.baseWidth = value
+        // 筆刷列只在手寫模式出現（雙向情境切換：effectiveToolbarMode）。
+        if (effectiveToolbarMode == EditorMode.DRAW) {
+            InkToolbar(
+                tool = inkTool,
+                colorHex = inkColorHex,
+                width = inkWidth,
+                languageTag = deviceLanguageTag(),
+                onToolChange = { picked -> applyInkTool(picked) },
+                onColorChange = { hex ->
+                    inkColorHex = hex
+                    engine.colorRgba = hexToRgba(hex)
+                },
+                onWidthChange = { value ->
+                    inkWidth = value
+                    engine.baseWidth = value
+                },
+                onOpenColorWheel = { showProColorWheel = true }
+            )
+            // 防手震強度滑桿（只在滑桿開啟時顯示）
+            if (strokeStabilizer > 0f) {
+                androidx.compose.foundation.layout.Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
+                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(l10n("refine_sketch"), style = MaterialTheme.typography.labelSmall)
+                    Slider(
+                        value = strokeStabilizer,
+                        onValueChange = { strokeStabilizer = it },
+                        valueRange = 0f..100f,
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text("${strokeStabilizer.toInt()}%", style = MaterialTheme.typography.labelSmall)
+                }
             }
-        )
         }
 
         // 套索的動作列。只在真的有東西可以做的時候出現 —— 一選了套索就
@@ -3618,6 +3683,42 @@ private fun InkScreen(
                     modifier = Modifier.align(Alignment.BottomCenter)
                 )
             }
+
+            // 極簡懸浮點 (Floating Tool Pill) — 極簡畫布模式下顯示
+            if (minimalistCanvasMode) {
+                FloatingToolPill(
+                    isExpanded = floatingPillExpanded,
+                    currentToolName = l10n(inkTool.labelKey),
+                    currentColorHex = inkColorHex,
+                    languageTag = deviceLanguageTag(),
+                    onToggleExpand = { floatingPillExpanded = !floatingPillExpanded },
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(start = 8.dp, top = 8.dp)
+                ) {
+                    // 展開後的快速工具槽
+                    androidx.compose.foundation.layout.Column(
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        InkToolbar(
+                            tool = inkTool,
+                            colorHex = inkColorHex,
+                            width = inkWidth,
+                            languageTag = deviceLanguageTag(),
+                            onToolChange = { picked -> applyInkTool(picked) },
+                            onColorChange = { hex ->
+                                inkColorHex = hex
+                                engine.colorRgba = hexToRgba(hex)
+                            },
+                            onWidthChange = { value ->
+                                inkWidth = value
+                                engine.baseWidth = value
+                            },
+                            onOpenColorWheel = { showProColorWheel = true }
+                        )
+                    }
+                }
+            }
         }
         }
         }
@@ -3743,6 +3844,20 @@ private fun InkScreen(
             // 挑完直接套到目前的筆 —— 專業色盤最常見的用途就是換筆色。
             onPick = { inkColorHex = it },
             onDismiss = { showProColors = false }
+        )
+    }
+
+    // 專業 HSV 色相環（Studio Drawing 進階色輪）
+    if (showProColorWheel) {
+        ProColorWheelDialog(
+            languageTag = deviceLanguageTag(),
+            initialHex = inkColorHex,
+            onPick = { hex ->
+                inkColorHex = hex
+                engine.colorRgba = hexToRgba(hex)
+                showProColorWheel = false
+            },
+            onDismiss = { showProColorWheel = false }
         )
     }
 

@@ -28,6 +28,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.LocalizationStrings
 import uniffi.padnote_core.ToolKind
 
@@ -130,7 +131,8 @@ fun InkToolbar(
     onToolChange: (InkTool) -> Unit,
     onColorChange: (String) -> Unit,
     onWidthChange: (Float) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onOpenColorWheel: (() -> Unit)? = null
 ) {
     // FlowRow 而不是水平捲動的 Row。
     //
@@ -199,6 +201,22 @@ fun InkToolbar(
                                 LocalizationStrings.localized("selected", languageTag)
                         }
                 )
+            }
+            if (onOpenColorWheel != null) {
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(INK_SWATCH_PAPER)
+                        .padding(2.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surfaceVariant)
+                        .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
+                        .clickable { onOpenColorWheel() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("🎨", fontSize = 12.sp)
+                }
             }
             }
         }
