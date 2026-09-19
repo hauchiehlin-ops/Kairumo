@@ -23,10 +23,10 @@
 
 use crate::provider::{CloudProvider, RemoteEntry, SyncError};
 use serde_json::{Value, json};
+use std::collections::HashMap;
 use std::fmt::Debug;
 use std::ops::Range;
 use std::sync::Mutex;
-use std::collections::HashMap;
 
 const FILES_URL: &str = "https://www.googleapis.com/drive/v3/files";
 const UPLOAD_URL: &str = "https://www.googleapis.com/upload/drive/v3/files";
@@ -128,7 +128,10 @@ pub struct GDriveProvider<H: DriveHttp> {
 
 impl<H: DriveHttp> GDriveProvider<H> {
     pub fn new(http: H) -> Self {
-        Self { http, id_cache: Mutex::new(HashMap::new()) }
+        Self {
+            http,
+            id_cache: Mutex::new(HashMap::new()),
+        }
     }
 
     /// 逐頁把某個查詢的所有結果收齊。
@@ -210,19 +213,22 @@ impl<H: DriveHttp> GDriveProvider<H> {
 impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
     fn list(&self, prefix: &str) -> Result<Vec<RemoteEntry>, SyncError> {
         let pages = self.list_all(&list_query(prefix), "id, name, size")?;
-        
+
         // Populate cache
         let mut cache = self.id_cache.lock().unwrap();
         for page in &pages {
             if let Some(files) = page.get("files").and_then(Value::as_array) {
                 for f in files {
-                    if let (Some(id), Some(name)) = (f.get("id").and_then(Value::as_str), f.get("name").and_then(Value::as_str)) {
+                    if let (Some(id), Some(name)) = (
+                        f.get("id").and_then(Value::as_str),
+                        f.get("name").and_then(Value::as_str),
+                    ) {
                         cache.insert(name.to_string(), id.to_string());
                     }
                 }
             }
         }
-        
+
         Ok(pages
             .iter()
             .flat_map(|page| entries_from(page, prefix))

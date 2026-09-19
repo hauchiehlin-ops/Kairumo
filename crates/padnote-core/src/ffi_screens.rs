@@ -346,7 +346,6 @@ fn editor_spec() -> FfiScreenSpec {
                     c("editor.insert.chart", Button, "chart_studio"),
                     c("editor.insert.table", Button, "table_studio"),
                     c("editor.insert.shape", Button, "shape_studio"),
-                    c("editor.insert.layers", Button, "layers_panel"),
                     c("editor.insert.model3d", Button, "insert_3d"),
                     c("editor.insert.theme_tools", Button, "theme_tools"),
                     c("editor.insert.refine_sketch", Button, "refine_sketch"),
