@@ -197,7 +197,7 @@ extension SmokeUITests {
 }
 
 final class AppStoreMacScreenshotsUITests: XCTestCase {
-    private let outputDirectory = URL(fileURLWithPath: "/Users/barretlin/GitProjects/Padnote/asc-macos-screenshots/raw")
+    private let outputDirectory = FileManager.default.temporaryDirectory.appendingPathComponent("kairumo-mac-asc-raw")
 
     override func setUpWithError() throws {
         continueAfterFailure = false
