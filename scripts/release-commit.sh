@@ -26,7 +26,11 @@ git -C "$REPO_ROOT" add -- \
     "${REPO_ROOT}/apple/Kairumo.xcodeproj/project.pbxproj" \
     "${REPO_ROOT}/android/app/build.gradle.kts" \
     "${REPO_ROOT}/docs/manual/manual.js" \
+    "${REPO_ROOT}/docs/manual/manual-apple.js" \
+    "${REPO_ROOT}/docs/manual/manual-android.js" \
     "${REPO_ROOT}/docs/legal/privacy.html" \
+    "${REPO_ROOT}/docs/legal/privacy-apple.html" \
+    "${REPO_ROOT}/docs/legal/privacy-android.html" \
     "${REPO_ROOT}/apple/Resources/Docs" \
     "${REPO_ROOT}/apple/Resources/Templates" \
     "${REPO_ROOT}/templates/document-templates.json"
