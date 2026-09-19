@@ -55,7 +55,7 @@ if m: versions["android/app/build.gradle.kts"] = m.group(1)
 m = re.search(r"versionCode\s*=\s*(\d+)", g)
 if m: bundles["android/app/build.gradle.kts"] = m.group(1)
 
-for doc in ("docs/manual/manual.js", "docs/legal/privacy.html"):
+for doc in ("docs/manual/manual.js", "docs/manual/manual-apple.js", "docs/manual/manual-android.js", "docs/legal/privacy.html", "docs/legal/privacy-apple.html", "docs/legal/privacy-android.html"):
     for line in read(doc).splitlines():
         if re.search(r"[\"']?(version|appver)[\"']?\s*:", line):
             for v in re.findall(r"\d+\.\d+\.\d+", line):

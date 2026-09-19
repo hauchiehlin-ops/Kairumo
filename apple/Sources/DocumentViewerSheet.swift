@@ -49,9 +49,9 @@ public enum BundledDocument: String, Identifiable {
     public var onlineURL: URL? {
         switch self {
         case .manual:
-            return URL(string: "https://hauchiehlin-ops.github.io/Kairumo/manual/")
+            return URL(string: "https://hauchiehlin-ops.github.io/Kairumo/manual/index-apple.html")
         case .privacy:
-            return URL(string: "https://hauchiehlin-ops.github.io/Kairumo/legal/privacy.html")
+            return URL(string: "https://hauchiehlin-ops.github.io/Kairumo/legal/privacy-apple.html")
         }
     }
 }

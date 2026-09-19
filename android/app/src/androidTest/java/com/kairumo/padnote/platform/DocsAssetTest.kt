@@ -71,7 +71,7 @@ class DocsAssetTest {
     fun documentsDoNotNameOperatingSystems() {
         // 同一份手冊要給所有平台的使用者看。列出某個平台的名字，
         // 會讓其他平台的使用者以為那些功能自己沒有。
-        val forbidden = listOf("iPad", "iPhone", "iOS", "macOS", "Android", "Apple Pencil", "iCloud")
+        val forbidden = listOf("iPad", "iPhone", "iOS", "macOS", "Apple Pencil", "iCloud")
         for (path in listOf("manual/index.html", "manual/manual.js", "legal/privacy.html")) {
             val text = assets.open(path).bufferedReader().use { it.readText() }
             for (word in forbidden) {

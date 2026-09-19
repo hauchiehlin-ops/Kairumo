@@ -28,8 +28,8 @@ DEST="$ROOT/apple/Resources/Docs"
 mkdir -p "$DEST"
 
 echo "==> 同步操作手冊"
-cp "$SRC_MANUAL/index.html" "$DEST/manual.html"
-cp "$SRC_MANUAL/manual.js" "$DEST/manual.js"
+cp "$SRC_MANUAL/index-apple.html" "$DEST/manual.html"
+cp "$SRC_MANUAL/manual-apple.js" "$DEST/manual.js"
 rm -rf "$DEST/img"
 cp -R "$SRC_MANUAL/img" "$DEST/img"
 
@@ -41,7 +41,7 @@ mkdir -p "$DEST/../Templates"
 cp "$ROOT/templates/document-templates.json" "$DEST/../Templates/document-templates.json"
 
 echo "==> 同步隱私權政策"
-cp "$SRC_LEGAL/privacy.html" "$DEST/privacy.html"
+cp "$SRC_LEGAL/privacy-apple.html" "$DEST/privacy.html"
 
 # 沒有 charset 宣告的話，WKWebView 載入本機檔案時只能猜編碼，
 # UTF-8 的中文就會變成一堆亂碼 —— 使用者實際回報過這件事。

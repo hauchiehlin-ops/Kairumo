@@ -96,8 +96,22 @@ android {
 
 /** 只把要給使用者看的文件複製進 assets。 */
 val copyUserDocs by tasks.registering(Copy::class) {
-    from("$rootDir/../docs/manual") { into("manual") }
-    from("$rootDir/../docs/legal") { into("legal") }
+    from("$rootDir/../docs/manual") {
+        into("manual")
+        include("img/**")
+    }
+    from("$rootDir/../docs/manual/index-android.html") {
+        into("manual")
+        rename("index-android.html", "index.html")
+    }
+    from("$rootDir/../docs/manual/manual-android.js") {
+        into("manual")
+        rename("manual-android.js", "manual.js")
+    }
+    from("$rootDir/../docs/legal/privacy-android.html") {
+        into("legal")
+        rename("privacy-android.html", "privacy.html")
+    }
     // 文件範本目錄（工作項 S-61）。與手冊走同一條路：repo 裡只有一份，
     // 建置時複製進 assets，兩個平台載入的是同一個檔案。
     from("$rootDir/../templates/document-templates.json") { into("templates") }

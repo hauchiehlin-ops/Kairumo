@@ -333,7 +333,8 @@ bump(privacy)
 python3 -c '
 import re, sys, os
 
-cargo, yml, pbx, gradle, manual, privacy, new_ver, new_bundle = sys.argv[1:9]
+cargo, yml, pbx, gradle, new_ver, new_bundle = sys.argv[1:7]
+repo_root = os.path.dirname(os.path.dirname(cargo))
 problems = []
 
 def read(path):

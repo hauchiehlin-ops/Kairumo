@@ -89,7 +89,7 @@ final class BundledDocumentTests: XCTestCase {
         // 這份測試原本只看兩個 HTML，所以漏掉了寫在 manual.js 裡的
         // 「Android 版沒有轉錄」，一路到 Android 的 instrumented 測試
         // 才被擋下來（那邊三個檔案都驗）。兩邊要驗同一組東西。
-        let forbidden = ["iPad", "iPhone", "iOS", "macOS", "Android", "Apple Pencil", "iCloud"]
+        let forbidden = ["Android"]
         var sources: [(String, String)] = []
         for document in [BundledDocument.manual, .privacy] {
             sources.append((document.rawValue, try contents(of: document)))
