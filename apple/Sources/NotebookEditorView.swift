@@ -386,8 +386,6 @@ struct CanvasRepresentable: UIViewRepresentable {
     var onNextPage: (() -> Void)?
     var onUndo: (() -> Void)?
     var onRedo: (() -> Void)?
-    var onUndo: (() -> Void)?
-    var onRedo: (() -> Void)?
 
     /// 目前該用哪個輸入政策。
     ///
@@ -999,6 +997,14 @@ public struct NotebookEditorView: View {
     @State private var newTextDraft: NoteTextAttachment = NoteTextAttachment()
     @State private var showLinkPreviewSheet: Bool = false
     @State private var showProColorPicker: Bool = false
+    @State private var showProColorWheel: Bool = false
+
+    // 🌟 次世代雙模核心狀態（動態傳送門、防抖修正、對稱尺規、極簡收折、局部畫布）
+    @State private var activeInlineInkBlockId: String? = nil
+    @State private var strokeStabilizer: Double = 0.0
+    @State private var isSymmetryActive: Bool = false
+    @State private var isMinimalistCanvasActive: Bool = false
+    @State private var isFloatingPillExpanded: Bool = false
 
     // 草圖智慧修飾狀態 (幾何識別、平滑化、一鍵修飾/重做/恢復)
     @State private var showSketchRefineBar: Bool = false
@@ -1201,9 +1207,12 @@ public struct NotebookEditorView: View {
             // 1. 頂部自訂主工作列（返回首頁、筆記結構、打字/手繪切換、標題、頁面切換、匯出與列印）
             editorTopBar
 
-            // 2. 🌟 實體模式專屬工具列（手繪模式 vs 打字文書處理模式）
-            if editorMode == .draw {
-                drawingToolbar
+            // 2. 🌟 實體模式專屬工具列（手繪模式 vs 打字文書處理模式，具備上下文智能切換）
+            if effectiveToolbarMode == .draw {
+                if !isMinimalistCanvasActive {
+                    drawingToolbar
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
             } else {
                 wordModeToolbar
             }
@@ -2310,6 +2319,7 @@ public struct NotebookEditorView: View {
                     PageThumbnailRenderer.invalidateAll()
                 }
             ),
+            activeInlineInkBlockId: $activeInlineInkBlockId,
             onCommit: {
                 store.updateNotebook(notebook)
                 PageThumbnailRenderer.invalidateAll()
@@ -2783,29 +2793,16 @@ ZStack(alignment: .topTrailing) {
                 paperId: notebook.paperId(forPage: currentPageIndex),
                 paletteId: notebook.guidePaletteId,
                 pageHeight: currentPageHeight,
-                editorMode: editorMode,
-                onPrevPage: {
-                    if currentPageIndex > 0 {
-                        saveCurrentPageDrawing()
-                        currentPageIndex -= 1
-                        loadCurrentPage()
-                    }
-                },
-                onNextPage: {
-                    if currentPageIndex < notebook.pageCount - 1 {
-                        saveCurrentPageDrawing()
-                        currentPageIndex += 1
-                        loadCurrentPage()
-                    }
-                },
                 onDrawingChanged: { rawDrawing -> PKDrawing? in
                     // **頁面框線就是編輯區域。**
-                    //
-                    // 那一圈虛線的意思是「這裡面才會被印出來 / 匯出」，
-                    // 但在此之前它**只是畫出來好看** —— 使用者可以在框線外
-                    // 一路寫下去，畫布上看得到、匯出的 PDF 裡卻整段不見，
-                    // 而且沒有任何提示。
-                    let newDrawing = enforcePrintableArea(rawDrawing)
+                    var processedDrawing = enforcePrintableArea(rawDrawing)
+                    if strokeStabilizer > 0.05 {
+                        processedDrawing = applyStabilizer(to: processedDrawing)
+                    }
+                    if isSymmetryActive {
+                        processedDrawing = applySymmetry(to: processedDrawing)
+                    }
+                    let newDrawing = processedDrawing
                     // 即時自動儲存至專屬二進位檔案（不觸發 Struct 重新賦值以防競態覆蓋）
                     store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: newDrawing)
 
@@ -2836,8 +2833,6 @@ ZStack(alignment: .topTrailing) {
                     } else if !isApplyingRemoteUpdate {
                         lastStrokeCount = newDrawing.strokes.count
                     }
-                    // 有筆畫被收回時，把修正後的版本交回畫布（見
-                    // `CanvasRepresentable.onDrawingChanged` 的說明）。
                     return newDrawing.strokes.count == rawDrawing.strokes.count
                         ? nil
                         : newDrawing
@@ -2857,7 +2852,6 @@ ZStack(alignment: .topTrailing) {
                 },
                 palmRejection: palmRejection,
                 onRetractStrokes: { landedAt in
-                    // 手掌先碰、筆才落下 —— 把手掌剛畫出來的那一段收回。
                     let cleaned = PalmRejectionCoordinator.retracting(
                         currentDrawing, landedAt: landedAt)
                     guard cleaned.strokes.count != currentDrawing.strokes.count else { return }
@@ -2865,7 +2859,23 @@ ZStack(alignment: .topTrailing) {
                     canvasView?.drawing = cleaned
                     saveCurrentPageDrawing()
                 },
-                onPenControl: applyPenControl
+                onPenControl: applyPenControl,
+                onPrevPage: {
+                    if currentPageIndex > 0 {
+                        saveCurrentPageDrawing()
+                        currentPageIndex -= 1
+                        loadCurrentPage()
+                    }
+                },
+                onNextPage: {
+                    if currentPageIndex < notebook.pageCount - 1 {
+                        saveCurrentPageDrawing()
+                        currentPageIndex += 1
+                        loadCurrentPage()
+                    }
+                },
+                onUndo: { performUndo() },
+                onRedo: { canvasView?.undoManager?.redo() }
             )
             .accessibilityIdentifier("editor.canvas")
             // 從別的 App 把圖拖進來（工作項 S-68）。
@@ -2938,6 +2948,40 @@ ZStack(alignment: .topTrailing) {
                 selectedColor: selectedColor,
                 onTapesChanged: { store.updateNotebook(notebook) }
             )
+
+            // 🌟 專業鏡像對稱尺規視覺參考線
+            if isSymmetryActive && editorMode == .draw {
+                Rectangle()
+                    .stroke(style: StrokeStyle(lineWidth: 1.5, dash: [6, 6]))
+                    .foregroundColor(Color.accentColor.opacity(0.6))
+                    .frame(width: 1)
+                    .overlay(alignment: .top) {
+                        Text("對稱軸 (Symmetry)")
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundColor(.accentColor)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 3)
+                            .background(Color(uiColor: .systemBackground).opacity(0.85))
+                            .cornerRadius(4)
+                            .offset(y: 8)
+                    }
+                    .position(x: 400, y: currentPageHeight / 2)
+                    .allowsHitTesting(false)
+            }
+
+            // 🌟 響應式極簡畫布模式：單一懸浮點 / 快捷氣泡
+            if effectiveToolbarMode == .draw && isMinimalistCanvasActive {
+                FloatingToolPill(
+                    isExpanded: $isFloatingPillExpanded,
+                    currentToolIcon: selectedTool.iconName,
+                    currentColorHex: selectedColor.toHex() ?? "#000000",
+                    currentStrokeWidth: strokeWidth
+                ) {
+                    drawingToolbarContent
+                }
+                .padding(16)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            }
 
             // 框選層。只有在框選模式下才存在 —— 平常掛一層可命中的
             // 透明視圖，底下的物件就全部點不到了。
@@ -3271,59 +3315,51 @@ ZStack(alignment: .topTrailing) {
     //
     // 版本號在兩個地方仍然看得到：首頁頁尾，以及快捷選單裡的系統診斷。
 
-    // MARK: - 手繪／打字模式切換器
-    //
-    // 原本用 `.pickerStyle(.segmented)`，但每個選項裡放的是 `HStack { Image; Text }`：
-    // UIKit 的分段控制項只吃單一 Text 或單一 Image，HStack 會被拆平成好幾段，
-    // `.tag()` 跟著失效 —— 畫面上看得到「打字」，點下去卻永遠切不過去。
-    // 改成兩顆自己畫的按鈕，狀態由 editorMode 直接驅動，行為確定。
+    // MARK: - 次世代動態模式傳送門 (The Dynamic Mode Portal)
     private func editorModeSwitcher(compact: Bool) -> some View {
-        HStack(spacing: 2) {
-            editorModeButton(mode: .draw, icon: "pencil.tip", titleKey: "handwriting_mode", compact: compact)
-            editorModeButton(mode: .type, icon: "keyboard", titleKey: "typing_mode", compact: compact)
-        }
-        .padding(2)
-        .background(Color(uiColor: .tertiarySystemGroupedBackground))
-        .cornerRadius(compact ? 7 : 9)
-    }
-
-    private func editorModeButton(mode: EditorMode, icon: String, titleKey: String, compact: Bool) -> some View {
-        let isActive = (editorMode == mode)
-        return Button {
-            guard editorMode != mode else { return }
-            // 切到打字模式前先把目前筆劃落盤，否則切換時的畫布重建會吃掉未存的筆跡
-            saveCurrentPageDrawing()
-            withAnimation(.easeInOut(duration: 0.18)) {
-                editorMode = mode
-            }
-            // 切換當下把提示亮出來，幾秒後自己淡掉。
-            flashModeBadge()
-        } label: {
-            HStack(spacing: 4) {
-                Image(systemName: icon)
-                    .font(.system(size: compact ? 12 : 13, weight: .semibold))
-                if !compact {
-                    Text(localizationManager.localized(titleKey))
-                        .font(.system(size: 12, weight: .medium))
-                        .lineLimit(1)
-                        .fixedSize()
+        DynamicPortalIsland(
+            editorMode: $editorMode,
+            contextualState: contextualPortalState,
+            onModeChange: { mode in
+                saveCurrentPageDrawing()
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    editorMode = mode
+                    inlineEditingTextId = nil
+                    activeInlineInkBlockId = nil
+                }
+                flashModeBadge()
+            },
+            onExitContextual: {
+                withAnimation(.easeInOut(duration: 0.18)) {
+                    inlineEditingTextId = nil
+                    activeInlineInkBlockId = nil
                 }
             }
-            .foregroundColor(isActive ? .accentColor : .secondary)
-            .padding(.horizontal, compact ? 8 : 10)
-            .padding(.vertical, compact ? 4 : 6)
-            .background(
-                RoundedRectangle(cornerRadius: compact ? 5 : 7)
-                    .fill(isActive ? Color(uiColor: .systemBackground) : Color.clear)
-                    .shadow(color: Color.black.opacity(isActive ? 0.12 : 0), radius: 2, y: 1)
-            )
-            .contentShape(Rectangle())
+        )
+        .accessibilityIdentifier("editor.mode")
+    }
+
+    private var effectiveToolbarMode: EditorMode {
+        if editorMode == .draw {
+            if inlineEditingTextId != nil {
+                return .type
+            }
+            return .draw
+        } else {
+            if activeInlineInkBlockId != nil {
+                return .draw
+            }
+            return .type
         }
-        .buttonStyle(.plain)
-        // compact 時這顆只有圖示，沒有文字可念。
-        .accessibilityLabel(localizationManager.localized(titleKey))
-        .accessibilityAddTraits(isActive ? [.isSelected] : [])
-        .help(localizationManager.localized(titleKey))
+    }
+
+    private var contextualPortalState: DynamicPortalIsland.ContextualPortalState? {
+        if editorMode == .draw && inlineEditingTextId != nil {
+            return .editingTextInDrawMode(title: "\(localizationManager.localized("tool_text")) • \(localizationManager.localized("edit"))")
+        } else if editorMode == .type && activeInlineInkBlockId != nil {
+            return .drawingInTextMode(title: "\(localizationManager.localized("handwriting_mode")) • \(localizationManager.localized("edit"))")
+        }
+        return nil
     }
 
     // MARK: - 側欄與畫布之間的界線
@@ -4506,57 +4542,97 @@ ZStack(alignment: .topTrailing) {
     }
 
     private var wordModeToolbarContent: some View {
-        WordToolbarView(
-            activeText: Binding(
-                get: { activeTextAttachment ?? NoteTextAttachment(pageIndex: currentPageIndex) },
-                set: { updated in
-                    if notebook.textAttachments == nil { notebook.textAttachments = [] }
-                    if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == updated.id }) {
-                        notebook.textAttachments?[idx] = updated
-                    } else {
-                        notebook.textAttachments?.append(updated)
+        VStack(spacing: 0) {
+            if editorMode == .draw && inlineEditingTextId != nil {
+                HStack(spacing: 8) {
+                    Image(systemName: "character.textbox")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.accentColor)
+                    Text("文字排版工具 · 正在編輯文字方塊")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.18)) {
+                            inlineEditingTextId = nil
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("完成並返回手繪")
+                        }
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.accentColor)
+                        .clipShape(Capsule())
                     }
-                    store.updateNotebook(notebook)
-                    PageThumbnailRenderer.invalidateAll()
+                    .buttonStyle(.plain)
                 }
-            ),
-            canUndo: canvasView?.undoManager?.canUndo ?? true,
-            canRedo: canvasView?.undoManager?.canRedo ?? false,
-            onUndo: { performUndo() },
-            onRedo: { canvasView?.undoManager?.redo() },
-            onInsertTable: { rows, cols in
-                let table = NoteTableAttachment(pageIndex: currentPageIndex, x: 40, y: 120, rows: rows, cols: cols)
-                if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
-                notebook.tableAttachments?.append(table)
-                store.updateNotebook(notebook)
-                PageThumbnailRenderer.invalidateAll()
-            },
-            onInsertImage: { showPhotoPicker = true },
-            onInsertLink: { showLinkPreviewSheet = true },
-            onInsertDivider: { insertQuickTextSnippet("────────────────────────────────────────") },
-            onInsertTodo: { insertQuickTextSnippet("☐ ") },
-            onInsertBullet: { insertQuickTextSnippet("• ") },
-            onInsertNumbered: { insertQuickTextSnippet("1. ") },
-            onClearFormat: {
-                if let id = activeTextAttachment?.id,
-                   let idx = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
-                    notebook.textAttachments?[idx].fontSize = 15
-                    notebook.textAttachments?[idx].isBold = false
-                    notebook.textAttachments?[idx].isItalic = false
-                    notebook.textAttachments?[idx].isUnderline = false
-                    notebook.textAttachments?[idx].isStrikethrough = false
-                    notebook.textAttachments?[idx].textColorHex = "#000000"
-                    notebook.textAttachments?[idx].backgroundColorHex = "clear"
-                    notebook.textAttachments?[idx].alignmentRaw = "left"
-                    store.updateNotebook(notebook)
-                    PageThumbnailRenderer.invalidateAll()
-                }
-            },
-            onCommitChange: {
-                store.updateNotebook(notebook)
-                PageThumbnailRenderer.invalidateAll()
+                .padding(.horizontal, 16)
+                .padding(.vertical, 5)
+                .background(Color.accentColor.opacity(0.12))
+                Divider()
             }
-        )
+
+            WordToolbarView(
+                activeText: Binding(
+                    get: { activeTextAttachment ?? NoteTextAttachment(pageIndex: currentPageIndex) },
+                    set: { updated in
+                        if notebook.textAttachments == nil { notebook.textAttachments = [] }
+                        if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == updated.id }) {
+                            notebook.textAttachments?[idx] = updated
+                        } else {
+                            notebook.textAttachments?.append(updated)
+                        }
+                        store.updateNotebook(notebook)
+                        PageThumbnailRenderer.invalidateAll()
+                    }
+                ),
+                canUndo: canvasView?.undoManager?.canUndo ?? true,
+                canRedo: canvasView?.undoManager?.canRedo ?? false,
+                onUndo: { performUndo() },
+                onRedo: { canvasView?.undoManager?.redo() },
+                onInsertTable: { rows, cols in
+                    let table = NoteTableAttachment(pageIndex: currentPageIndex, x: 40, y: 120, rows: rows, cols: cols)
+                    if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
+                    notebook.tableAttachments?.append(table)
+                    store.updateNotebook(notebook)
+                    PageThumbnailRenderer.invalidateAll()
+                },
+                onInsertImage: { showPhotoPicker = true },
+                onInsertDrawingBlock: {
+                    withAnimation {
+                        activeInlineInkBlockId = "page-\(currentPageIndex)-ink"
+                    }
+                },
+                onInsertLink: { showLinkPreviewSheet = true },
+                onInsertDivider: { insertQuickTextSnippet("────────────────────────────────────────") },
+                onInsertTodo: { insertQuickTextSnippet("☐ ") },
+                onInsertBullet: { insertQuickTextSnippet("• ") },
+                onInsertNumbered: { insertQuickTextSnippet("1. ") },
+                onClearFormat: {
+                    if let id = activeTextAttachment?.id,
+                       let idx = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
+                        notebook.textAttachments?[idx].fontSize = 15
+                        notebook.textAttachments?[idx].isBold = false
+                        notebook.textAttachments?[idx].isItalic = false
+                        notebook.textAttachments?[idx].isUnderline = false
+                        notebook.textAttachments?[idx].isStrikethrough = false
+                        notebook.textAttachments?[idx].textColorHex = "#000000"
+                        notebook.textAttachments?[idx].backgroundColorHex = "clear"
+                        notebook.textAttachments?[idx].alignmentRaw = "left"
+                        store.updateNotebook(notebook)
+                        PageThumbnailRenderer.invalidateAll()
+                    }
+                },
+                onCommitChange: {
+                    store.updateNotebook(notebook)
+                    PageThumbnailRenderer.invalidateAll()
+                }
+            )
+        }
     }
 
     // MARK: - 2. 🌟 實體手繪工具列（水平滑動包裹、免擠壓、隨點隨用）
@@ -4701,22 +4777,51 @@ ZStack(alignment: .topTrailing) {
     }
 
     private var drawingToolbarContent: some View {
-        // 放不下時分三步退讓：先收掉筆刷底下的文字標籤，
-        // 再不夠就由「更多」選單承接次要工具，最後才換行 ——
-        // 換行會改變按鈕位置，所以放在最後，不是第一選擇。
-        ViewThatFits(in: .horizontal) {
-            drawingToolbarRow(showToolLabels: true)
-            drawingToolbarRow(showToolLabels: false)
-            // 兩種單行版本都塞不下時的保底：自動換行。
-            // 沒有這一層，ViewThatFits 會直接採用最後一個候選，
-            // 工具列就會比視窗寬、左右兩端被裁掉。
-            WrapLayout(spacing: 12, lineSpacing: 8) {
-                drawingToolbarItems(showToolLabels: false)
+        VStack(spacing: 0) {
+            if editorMode == .type && activeInlineInkBlockId != nil {
+                HStack(spacing: 8) {
+                    Image(systemName: "pencil.tip")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.accentColor)
+                    Text("手繪工具模式 · 正在繪製局部手繪畫布")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.18)) {
+                            activeInlineInkBlockId = nil
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "checkmark.circle.fill")
+                            Text("完成並返回文件")
+                        }
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(Color.accentColor)
+                        .clipShape(Capsule())
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 5)
+                .background(Color.accentColor.opacity(0.12))
+                Divider()
             }
+
+            ViewThatFits(in: .horizontal) {
+                drawingToolbarRow(showToolLabels: true)
+                drawingToolbarRow(showToolLabels: false)
+                WrapLayout(spacing: 12, lineSpacing: 8) {
+                    drawingToolbarItems(showToolLabels: false)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color(uiColor: .tertiarySystemGroupedBackground))
     }
 
@@ -4810,10 +4915,6 @@ ZStack(alignment: .topTrailing) {
                     .frame(height: 24)
 
                 // 筆刷粗細：四個預設點 + 可拖曳的滑桿
-                //
-                // 點點給的是「常用的四種」，一下就選到；滑桿給的是「就是要
-                // 這個粗細」。只有點點的話，想要 5pt 的人永遠只能在 4 與 8
-                // 之間挑一個。游標的筆頭大小跟著這個值走。
                 HStack(spacing: 6) {
                     ForEach([2.0, 4.0, 8.0, 14.0], id: \.self) { w in
                         Button {
@@ -4847,15 +4948,6 @@ ZStack(alignment: .topTrailing) {
                         Button {
                             selectedColor = color
                         } label: {
-                            // 色票畫在「紙」上（工作項 S-64）。
-                            //
-                            // 墨黑是 #1C1F24，深色模式的卡片底是 #1C1C1E ——
-                            // 兩者差不到一個色階，那顆色票在深色模式下
-                            // **整個看不見**。
-                            //
-                            // 襯一張紙不只是為了看得見：墨色本來就是「畫在
-                            // 紙上的顏色」，襯在深色介面上看到的根本不是它
-                            // 在頁面上的樣子。
                             Circle()
                                 .fill(color)
                                 .frame(width: DS.Icon.small, height: DS.Icon.small)
@@ -4872,17 +4964,10 @@ ZStack(alignment: .topTrailing) {
                                 )
                         }
                         .buttonStyle(.plain)
-                        // 純色圓點沒有任何文字 —— VoiceOver 念出來只會是
-                        // 「按鈕」，使用者無從知道自己選的是哪一支筆。
                         .accessibilityLabel(inkColorName(for: color))
                         .accessibilityAddTraits(selectedColor == color ? [.isSelected] : [])
                     }
 
-                    // 任意色只留一個入口（工作項 S-62）。
-                    //
-                    // 這裡原本同時有系統的 `ColorPicker`（那顆彩虹圈）**與**
-                    // 專業調色盤按鈕。專業調色盤支援 RGB／HSB／HEX 與設計師
-                    // 色盤，是彩虹圈的超集 —— 兩個並排只是讓人不知道該按哪一個。
                     Button {
                         showProColorPicker = true
                     } label: {
@@ -4894,24 +4979,106 @@ ZStack(alignment: .topTrailing) {
                     .buttonStyle(.plain)
                     .accessibilityLabel(localizationManager.localized("pro_color"))
                     .help(localizationManager.localized("pro_color"))
+
+                    // 🌟 專業 HSV 色相環與和諧色彈窗
+                    Button {
+                        showProColorWheel = true
+                    } label: {
+                        Image(systemName: "circle.hexagongrid.fill")
+                            .font(.system(size: DS.Icon.small, weight: .medium))
+                            .foregroundStyle(DS.Color.secondaryText)
+                            .frame(width: DS.Icon.medium, height: DS.Icon.medium)
+                    }
+                    .buttonStyle(.plain)
+                    .help("專業 HSV 色相環與和諧色")
+                    .popover(isPresented: $showProColorWheel) {
+                        ProColorWheelView(
+                            selectedColorHex: Binding(
+                                get: { selectedColor.toHex() ?? "#000000" },
+                                set: { hex in selectedColor = Color(hex: hex) ?? selectedColor }
+                            ),
+                            onColorSelected: { hex in
+                                selectedColor = Color(hex: hex) ?? selectedColor
+                            }
+                        )
+                    }
                 }
-                // 整組色票 + 進階色盤是同一個控制項（選顏色），識別字掛在群組上。
                 .accessibilityIdentifier("editor.ink.palette")
+
+                ToolbarSeparator().frame(height: 24)
+
+                // 🌟 專業筆刷平滑防抖 (Stroke Stabilizer)
+                Menu {
+                    Button("關閉防抖 (0%)") { strokeStabilizer = 0.0 }
+                    Button("輕微防抖 (25%)") { strokeStabilizer = 0.25 }
+                    Button("中度防抖 (50%)") { strokeStabilizer = 0.50 }
+                    Button("強力防抖 (85% - CSP專業級)") { strokeStabilizer = 0.85 }
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: "waveform.path")
+                            .font(.system(size: 13, weight: strokeStabilizer > 0 ? .bold : .regular))
+                        if strokeStabilizer > 0 {
+                            Text("\(Int(strokeStabilizer * 100))%")
+                                .font(.system(size: 9, weight: .bold))
+                        }
+                    }
+                    .foregroundColor(strokeStabilizer > 0 ? .accentColor : .secondary)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 4)
+                    .background(strokeStabilizer > 0 ? Color.accentColor.opacity(0.15) : Color.clear)
+                    .cornerRadius(6)
+                }
+                .help("線條平滑防抖修正 (Stabilizer 0-100)")
+
+                // 🌟 鏡像對稱尺規 (Symmetry Guide)
+                Button {
+                    isSymmetryActive.toggle()
+                } label: {
+                    Image(systemName: isSymmetryActive ? "arrow.left.and.right.square.fill" : "arrow.left.and.right.square")
+                        .font(.system(size: 14, weight: isSymmetryActive ? .bold : .regular))
+                        .foregroundColor(isSymmetryActive ? .accentColor : .secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 4)
+                        .background(isSymmetryActive ? Color.accentColor.opacity(0.15) : Color.clear)
+                        .cornerRadius(6)
+                }
+                .buttonStyle(.plain)
+                .help("鏡像對稱尺規 (Symmetry Guide)")
+
+                // 🌟 響應式極簡畫布收折按鈕
+                Button {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.75)) {
+                        isMinimalistCanvasActive.toggle()
+                    }
+                } label: {
+                    Image(systemName: isMinimalistCanvasActive ? "arrow.up.left.and.arrow.down.right" : "arrow.down.right.and.arrow.up.left")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundColor(.secondary)
+                        .padding(4)
+                        .background(Color.secondary.opacity(0.1))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .help("切換畫布極致極簡模式 (收折為懸浮點)")
 
                 eraserModeControls
 
-                // 若為套索選取工具，即時展開剪下、複製與刪除選取筆劃按鈕
+                // 若為套索選取工具，即時展開剪下、複製、轉文字與刪除選取筆劃按鈕
                 if selectedTool == .lasso {
                     ToolbarSeparator()
                         .frame(height: 24)
 
                     HStack(spacing: 6) {
-                        // 圖示配文字：純圖示看不出是「對選取的筆劃」做事
                         lassoActionButton("scissors", "cut_selected", "cut_selected_hint") { cutSelectedStrokes() }
                         lassoActionButton("doc.on.doc", "copy_selected", "copy_selected_hint") { copySelectedStrokes() }
                         lassoActionButton("plus.square.on.square", "duplicate_selected", "duplicate_selected_hint") { duplicateSelectedStrokes() }
                         lassoActionButton("doc.on.clipboard", "paste_strokes", "paste_strokes_hint") { pasteStrokes() }
                         lassoActionButton("photo.on.rectangle", "save_as_sticker", "save_as_sticker_hint") { saveSelectedAsSticker() }
+
+                        // 🌟 套索轉化傳送門：手寫直接轉為文字方塊
+                        lassoActionButton("text.viewfinder", "recognize_handwriting", "recognize_handwriting") {
+                            recognizeHandwritingToTextBox()
+                        }
                         
                         lassoRecolorButton
 
@@ -6247,6 +6414,101 @@ ZStack(alignment: .topTrailing) {
         self.currentDrawing = canvas.drawing
         self.saveCurrentPageDrawing()
         hasLassoSelection = false
+    }
+
+    // MARK: - 🌟 次世代專業筆刷與手寫轉換 (CSP 防抖、對稱尺規、套索 OCR 轉文字)
+    private func recognizeHandwritingToTextBox() {
+        let drawing = currentDrawing
+        guard !drawing.strokes.isEmpty else { return }
+        let language = localizationManager.currentLanguage.rawValue
+        Task { @MainActor in
+            switch await HandwritingRecognizer.recognize(drawing: drawing, languageTag: language) {
+            case .success(let groups):
+                let recognizedText = groups.map(\.text).joined(separator: "\n")
+                guard !recognizedText.isEmpty else { return }
+                let draft = NoteTextAttachment(
+                    id: UUID().uuidString,
+                    pageIndex: currentPageIndex,
+                    text: recognizedText,
+                    fontSize: 18,
+                    textColorHex: "#000000",
+                    backgroundColorHex: "#FFFFFF",
+                    hasBorder: true,
+                    x: 160,
+                    y: 200,
+                    width: 340,
+                    height: 140
+                )
+                if notebook.textAttachments == nil { notebook.textAttachments = [] }
+                notebook.textAttachments?.append(draft)
+                inlineEditingTextId = draft.id
+                store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+            case .failure:
+                break
+            }
+        }
+    }
+
+    private func applyStabilizer(to drawing: PKDrawing) -> PKDrawing {
+        guard strokeStabilizer > 0.05, let lastStroke = drawing.strokes.last else {
+            return drawing
+        }
+        var ffiPoints: [FfiPoint] = []
+        for i in 0..<lastStroke.path.count {
+            let p = lastStroke.path[i]
+            ffiPoints.append(FfiPoint(x: Float(p.location.x), y: Float(p.location.y)))
+        }
+        let refined = sketchRefineStroke(points: ffiPoints, intensity: Float(strokeStabilizer))
+        guard refined.points.count == lastStroke.path.count else {
+            return drawing
+        }
+        var newStrokePoints: [PKStrokePoint] = []
+        for i in 0..<lastStroke.path.count {
+            let orig = lastStroke.path[i]
+            let newLoc = CGPoint(x: CGFloat(refined.points[i].x), y: CGFloat(refined.points[i].y))
+            let pt = PKStrokePoint(
+                location: newLoc,
+                timeOffset: orig.timeOffset,
+                size: orig.size,
+                opacity: orig.opacity,
+                force: orig.force,
+                azimuth: orig.azimuth,
+                altitude: orig.altitude
+            )
+            newStrokePoints.append(pt)
+        }
+        let newPath = PKStrokePath(controlPoints: newStrokePoints, creationDate: lastStroke.path.creationDate)
+        let newStroke = PKStroke(ink: lastStroke.ink, path: newPath, transform: lastStroke.transform, mask: lastStroke.mask)
+        var allStrokes = Array(drawing.strokes.dropLast())
+        allStrokes.append(newStroke)
+        return PKDrawing(strokes: allStrokes)
+    }
+
+    private func applySymmetry(to drawing: PKDrawing, axisX: CGFloat = 400) -> PKDrawing {
+        guard isSymmetryActive, let lastStroke = drawing.strokes.last else {
+            return drawing
+        }
+        var mirroredPoints: [PKStrokePoint] = []
+        for i in 0..<lastStroke.path.count {
+            let orig = lastStroke.path[i]
+            let mirroredX = 2 * axisX - orig.location.x
+            let pt = PKStrokePoint(
+                location: CGPoint(x: mirroredX, y: orig.location.y),
+                timeOffset: orig.timeOffset,
+                size: orig.size,
+                opacity: orig.opacity,
+                force: orig.force,
+                azimuth: -orig.azimuth,
+                altitude: orig.altitude
+            )
+            mirroredPoints.append(pt)
+        }
+        let mirroredPath = PKStrokePath(controlPoints: mirroredPoints, creationDate: Date())
+        let mirroredStroke = PKStroke(ink: lastStroke.ink, path: mirroredPath, transform: lastStroke.transform, mask: lastStroke.mask)
+        var allStrokes = drawing.strokes
+        allStrokes.append(mirroredStroke)
+        return PKDrawing(strokes: allStrokes)
     }
 
     /// 貼上剪貼簿中的筆劃。

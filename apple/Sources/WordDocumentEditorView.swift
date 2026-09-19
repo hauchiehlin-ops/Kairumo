@@ -20,6 +20,7 @@ public struct WordToolbarView: View {
     let onRedo: () -> Void
     let onInsertTable: (Int, Int) -> Void
     let onInsertImage: () -> Void
+    var onInsertDrawingBlock: (() -> Void)? = nil
     let onInsertLink: () -> Void
     let onInsertDivider: () -> Void
     let onInsertTodo: () -> Void
@@ -304,6 +305,25 @@ public struct WordToolbarView: View {
                     }
                     .buttonStyle(.plain)
 
+                    // 插入手繪區塊
+                    if let onDraw = onInsertDrawingBlock {
+                        Button(action: onDraw) {
+                            HStack(spacing: 3) {
+                                Image(systemName: "pencil.and.outline")
+                                    .font(.system(size: 12))
+                                Text("手繪區塊")
+                                    .font(.system(size: 11))
+                            }
+                            .padding(.horizontal, 7)
+                            .frame(height: 28)
+                            .background(Color.accentColor.opacity(0.15))
+                            .foregroundColor(.accentColor)
+                            .cornerRadius(6)
+                        }
+                        .buttonStyle(.plain)
+                        .help("插入局部手繪畫布區塊")
+                    }
+
                     // 插入連結
                     Button(action: onInsertLink) {
                         Image(systemName: "link")
@@ -427,12 +447,31 @@ public struct WordDocumentEditorView: View {
     @Binding var notebook: NotebookDocument
     let pageIndex: Int
     @Binding var activeTextDraft: NoteTextAttachment
+    @Binding var activeInlineInkBlockId: String?
     let onCommit: () -> Void
     let onInsertTable: () -> Void
     let onInsertImage: () -> Void
 
     @FocusState private var isDocumentBodyFocused: Bool
     @ObservedObject var localizationManager = LocalizationManager.shared
+
+    public init(
+        notebook: Binding<NotebookDocument>,
+        pageIndex: Int,
+        activeTextDraft: Binding<NoteTextAttachment>,
+        activeInlineInkBlockId: Binding<String?>? = nil,
+        onCommit: @escaping () -> Void,
+        onInsertTable: @escaping () -> Void,
+        onInsertImage: @escaping () -> Void
+    ) {
+        self._notebook = notebook
+        self.pageIndex = pageIndex
+        self._activeTextDraft = activeTextDraft
+        self._activeInlineInkBlockId = activeInlineInkBlockId ?? .constant(nil)
+        self.onCommit = onCommit
+        self.onInsertTable = onInsertTable
+        self.onInsertImage = onInsertImage
+    }
 
     // 取得當前頁面的主要文字物件（若無則自動在點擊時建立）
     private var pageMainTextBinding: Binding<NoteTextAttachment> {
@@ -463,6 +502,11 @@ public struct WordDocumentEditorView: View {
                 VStack(alignment: .leading, spacing: 16) {
                     // 文件主要流式文字輸入區域
                     documentBodyTextEditor
+
+                    // 嵌入本頁面的局部手繪畫布塊（若有啟用或已繪製）
+                    if activeInlineInkBlockId != nil || (notebook.recognizedText?[String(pageIndex)] != nil) {
+                        documentEmbeddedDrawingBlock
+                    }
 
                     // 嵌入本頁面的表格物件
                     ForEach(notebook.tableAttachments ?? []) { table in
@@ -522,6 +566,66 @@ public struct WordDocumentEditorView: View {
                     onCommit()
                 }
         }
+    }
+
+    @ViewBuilder
+    private var documentEmbeddedDrawingBlock: some View {
+        let isFocused = (activeInlineInkBlockId == "page-\(pageIndex)-ink")
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                Image(systemName: "pencil.and.outline")
+                    .foregroundColor(.accentColor)
+                    .font(.system(size: 13))
+                Text("局部手繪畫布區塊")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.secondary)
+                if isFocused {
+                    Text("• 編輯中（工具列已切換為手繪模式）")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundColor(.accentColor)
+                }
+                Spacer()
+                Button(role: .destructive) {
+                    withAnimation {
+                        activeInlineInkBlockId = nil
+                    }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.horizontal, 4)
+
+            // 局部繪圖卡片
+            ZStack(alignment: .topTrailing) {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(uiColor: .tertiarySystemGroupedBackground).opacity(0.6))
+                    .frame(height: 280)
+
+                VStack(spacing: 8) {
+                    Image(systemName: "hand.draw")
+                        .font(.system(size: 28))
+                        .foregroundColor(.accentColor.opacity(0.8))
+                    Text("點擊此處或使用觸控筆開始在文件內手繪推導")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity, maxHeight: 280)
+            }
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isFocused ? Color.accentColor : Color.secondary.opacity(0.25), lineWidth: isFocused ? 2 : 1)
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                withAnimation {
+                    activeInlineInkBlockId = "page-\(pageIndex)-ink"
+                }
+            }
+        }
+        .padding(.vertical, 8)
     }
 
     @ViewBuilder

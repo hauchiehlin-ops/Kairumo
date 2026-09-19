@@ -46,7 +46,14 @@ public struct NoteTableView: View {
             .frame(width: CGFloat(layout.width), height: CGFloat(layout.height))
 
             ForEach(Array(layout.cells.enumerated()), id: \.offset) { _, cell in
-                Text(cell.lines.joined(separator: "\n"))
+                let rawText = table.cell(row: Int(cell.row), col: Int(cell.col))
+                let displayText = TableFormulaEvaluator.evaluateCell(
+                    content: rawText,
+                    allCells: table.cells,
+                    rows: table.rows,
+                    cols: table.cols
+                )
+                Text(displayText.isEmpty ? cell.lines.joined(separator: "\n") : displayText)
                     .font(.system(size: table.fontSize, weight: cell.isHeader ? .semibold : .regular))
                     .frame(width: cell.width - 12, alignment: .leading)
                     .padding(6)

@@ -7,6 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3DE3E497C654E5195B86C58A /* TableFormulaEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3DC32CEA06390E4704C4C259 /* TableFormulaEvaluator.swift */; };
+		743B6B9EFCC57E60970530EB /* ProColorWheelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9B326FC264A291A713500462 /* ProColorWheelView.swift */; };
+		467F9CD2E23558348534B771 /* FloatingToolPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 88CA83E33754B6A1EE45206D /* FloatingToolPill.swift */; };
+		3DFA5223DE5D3CC0DEEDE160 /* DynamicPortalIsland.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37F56B1BC0A164BF9EAD5444 /* DynamicPortalIsland.swift */; };
 		023C029A763DC77377F7804E /* HomeWorkbenchUsage.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB04C4FA3426304F705E5046 /* HomeWorkbenchUsage.swift */; };
 		039E98A3BC24169C1031EC94 /* SeedContent.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE084F883D6D8A652CD86063 /* SeedContent.swift */; };
 		04A2C2BA6EE78D99402F87AD /* InkInterop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 893FBBAA69ABDE7B5D03BDA9 /* InkInterop.swift */; };
@@ -160,6 +164,10 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		3DC32CEA06390E4704C4C259 /* TableFormulaEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableFormulaEvaluator.swift; sourceTree = "<group>"; };
+		9B326FC264A291A713500462 /* ProColorWheelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProColorWheelView.swift; sourceTree = "<group>"; };
+		88CA83E33754B6A1EE45206D /* FloatingToolPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingToolPill.swift; sourceTree = "<group>"; };
+		37F56B1BC0A164BF9EAD5444 /* DynamicPortalIsland.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DynamicPortalIsland.swift; sourceTree = "<group>"; };
 		0013D28CD49B4181F40017F3 /* PenHoverPreview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PenHoverPreview.swift; sourceTree = "<group>"; };
 		00CDBBB784601FDFB342136D /* InkLatencyMeter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InkLatencyMeter.swift; sourceTree = "<group>"; };
 		02895D54063C3AA4B5D30463 /* PageThumbnailRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageThumbnailRenderer.swift; sourceTree = "<group>"; };
@@ -503,6 +511,10 @@
 				DC7046379C24B0D590B6F0E8 /* ToolbarSeparator.swift */,
 				F30959766B1D00F248AD7D2D /* WordTextStudioView.swift */,
 				A1C6C10FAD15645C91E246C1 /* WordDocumentEditorView.swift */,
+				3DC32CEA06390E4704C4C259 /* TableFormulaEvaluator.swift */,
+				9B326FC264A291A713500462 /* ProColorWheelView.swift */,
+				88CA83E33754B6A1EE45206D /* FloatingToolPill.swift */,
+				37F56B1BC0A164BF9EAD5444 /* DynamicPortalIsland.swift */,
 				6EA2D926C0FD0991AE0BC01D /* WrapLayout.swift */,
 			);
 			path = Sources;
@@ -767,6 +779,10 @@
 				D259D790432BD38F30537209 /* ToolbarSeparator.swift in Sources */,
 				7BF616F79113EDEF36132B11 /* WordTextStudioView.swift in Sources */,
 				B18281F00A39E42DC02254A8 /* WordDocumentEditorView.swift in Sources */,
+				3DE3E497C654E5195B86C58A /* TableFormulaEvaluator.swift in Sources */,
+				743B6B9EFCC57E60970530EB /* ProColorWheelView.swift in Sources */,
+				467F9CD2E23558348534B771 /* FloatingToolPill.swift in Sources */,
+				3DFA5223DE5D3CC0DEEDE160 /* DynamicPortalIsland.swift in Sources */,
 				FE7819F27B65DF1C258ED52E /* WrapLayout.swift in Sources */,
 				4778715DC0B3FB2B8CAB004B /* padnote_core.swift in Sources */,
 			);
