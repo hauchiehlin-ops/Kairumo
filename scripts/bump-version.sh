@@ -316,9 +316,9 @@ def bump(path):
     for line in lines:
         # 只動「適用版本」那幾行與行文中明確寫出的 "Kairumo vX.Y.Z" 範例，
         # 不要全檔盲目替換數字 —— 文件裡還有日期、尺寸、快捷鍵之類的數字。
-        if re.search(r"\b(version|appver)\s*:", line):
+        if re.search(r"[\"']?(version|appver)[\"']?\s*:", line):
             line = re.sub(r"\d+\.\d+\.\d+", new_ver, line)
-            line = re.sub(r"(bundle\s*)\d+", r"\g<1>" + new_bundle, line)
+            line = re.sub(r"((?:bundle|build)\s*)\d+", r"\g<1>" + new_bundle, line)
         line = re.sub(r"(Kairumo\s+v)\d+\.\d+\.\d+", r"\g<1>" + new_ver, line)
         out.append(line)
     with open(path, "w", encoding="utf-8") as f:
@@ -379,7 +379,7 @@ for doc, label in ((manual, "docs/manual/manual.js"), (privacy, "docs/legal/priv
     text = read(doc)
     stale = set()
     for line in text.splitlines():
-        if re.search(r"\b(version|appver)\s*:", line):
+        if re.search(r"[\"']?(version|appver)[\"']?\s*:", line):
             stale.update(v for v in re.findall(r"\d+\.\d+\.\d+", line) if v != new_ver)
     if stale:
         problems.append(f"{label} 還有沒更新的版本號：{sorted(stale)}")
