@@ -2,14 +2,120 @@
 //  AudioTranscriber.swift
 //  Kairumo
 //
-//  基於 Apple Speech 框架的本機語音辨識與轉錄引擎
-//  提供端側神經網路加速、離線優先、噪音與標點自動還原
+//  本機語音辨識與轉錄引擎（工作項 S-95）
+//  支援 Rust Core Whisper 端側神經網路加速、多國語言自動偵測與標點還原，
+//  並無縫相容 Apple Speech 系統聽寫平滑降級機制。
 //
 
 import Foundation
 import Speech
-
+import AVFoundation
 import UIKit
+
+// MARK: - 音訊 PCM 解碼器 (硬體加速轉換為 16kHz 單聲道 Float32)
+
+public enum AudioPCMDecoder {
+    /// 將本地音訊檔（.m4a, .wav, .caf 等）解碼並重採樣為 16,000 Hz 單聲道 Float32 PCM
+    public static func decodeTo16kMono(url: URL) throws -> [Float] {
+        let file = try AVAudioFile(forReading: url)
+        guard let targetFormat = AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: 16000,
+            channels: 1,
+            interleaved: false
+        ) else {
+            throw NSError(domain: "AudioPCMDecoder", code: 1, userInfo: [NSLocalizedDescriptionKey: "無法初始化 16kHz 目標格式"])
+        }
+
+        let sourceFormat = file.processingFormat
+        guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
+            throw NSError(domain: "AudioPCMDecoder", code: 2, userInfo: [NSLocalizedDescriptionKey: "無法建立音訊格式轉換器"])
+        }
+
+        let ratio = 16000.0 / sourceFormat.sampleRate
+        let targetFrameCapacity = AVAudioFrameCount(Double(file.length) * ratio + 4096)
+        guard let outputBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: targetFrameCapacity) else {
+            throw NSError(domain: "AudioPCMDecoder", code: 3, userInfo: [NSLocalizedDescriptionKey: "無法配置輸出音訊緩衝區"])
+        }
+
+        var error: NSError? = nil
+        var allRead = false
+        converter.convert(to: outputBuffer, error: &error) { inNumPackets, outStatus in
+            if allRead {
+                outStatus.pointee = .endOfStream
+                return nil
+            }
+            guard let readBuffer = AVAudioPCMBuffer(pcmFormat: sourceFormat, frameCapacity: inNumPackets) else {
+                outStatus.pointee = .noDataNow
+                return nil
+            }
+            do {
+                try file.read(into: readBuffer)
+                if readBuffer.frameLength == 0 {
+                    allRead = true
+                    outStatus.pointee = .endOfStream
+                    return nil
+                }
+                outStatus.pointee = .haveData
+                return readBuffer
+            } catch {
+                outStatus.pointee = .endOfStream
+                return nil
+            }
+        }
+
+        if let error = error {
+            throw error
+        }
+
+        guard let channelData = outputBuffer.floatChannelData?[0] else {
+            return []
+        }
+
+        let count = Int(outputBuffer.frameLength)
+        return Array(UnsafeBufferPointer(start: channelData, count: count))
+    }
+}
+
+// MARK: - 模型下載委派
+
+private final class ModelDownloadDelegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
+    let onProgress: @Sendable (Double) -> Void
+    let onComplete: @Sendable (Result<URL, Error>) -> Void
+
+    init(
+        onProgress: @escaping @Sendable (Double) -> Void,
+        onComplete: @escaping @Sendable (Result<URL, Error>) -> Void
+    ) {
+        self.onProgress = onProgress
+        self.onComplete = onComplete
+    }
+
+    func urlSession(
+        _ session: URLSession,
+        downloadTask: URLSessionDownloadTask,
+        didWriteData bytesWritten: Int64,
+        totalBytesWritten: Int64,
+        totalBytesExpectedToWrite: Int64
+    ) {
+        if totalBytesExpectedToWrite > 0 {
+            let progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
+            onProgress(progress)
+        }
+    }
+
+    func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
+        onComplete(.success(location))
+    }
+
+    func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        if let error = error {
+            onComplete(.failure(error))
+        }
+    }
+}
+
+// MARK: - 音訊轉錄核心管理員
 
 @MainActor
 public final class AudioTranscriber: ObservableObject {
@@ -18,20 +124,52 @@ public final class AudioTranscriber: ObservableObject {
     @Published public var isTranscribing: Bool = false
     @Published public var lastError: String? = nil
     @Published public var lastUsedOnDevice: Bool = false
+    @Published public var lastEngineUsed: String = "Whisper"
+
+    // 模型下載狀態
+    @Published public var isDownloadingModel: Bool = false
+    @Published public var downloadProgress: Double = 0.0
+    @Published public var downloadError: String? = nil
+
+    private var activeDownloadSession: URLSession?
+    private var activeDownloadTask: URLSessionDownloadTask?
 
     public enum OfflineStatus: Equatable {
-        /// 本地神經網路離線語音模型已就緒
+        /// 本地離線語音模型已就緒
         case ready
-        /// 系統支援但本地尚未下載離線模型（或需開啟聽寫）
+        /// 本地 Whisper 端側神經模型已就緒（支援多語自動偵測）
+        case whisperReady
+        /// Apple 系統內建聽寫模型已就緒
+        case appleSpeechReady
+        /// 尚未下載離線模型
         case needsDownload
-        /// 當前語言或系統不支援離線辨識
+        /// 當前環境不支援
         case unsupported
     }
 
     private init() {}
 
+    /// 本地 Whisper 模型檔案路徑
+    public var whisperModelPath: String {
+        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        let modelsDir = docs.appendingPathComponent("models", isDirectory: true)
+        if !FileManager.default.fileExists(atPath: modelsDir.path) {
+            try? FileManager.default.createDirectory(at: modelsDir, withIntermediateDirectories: true)
+        }
+        return modelsDir.appendingPathComponent("whisper-large-v3-turbo-q5.bin").path
+    }
+
+    /// 本地 Whisper 模型是否可用
+    public var isWhisperAvailable: Bool {
+        whisperIsModelAvailable(modelPath: whisperModelPath)
+    }
+
     /// 檢查當前指定語言之本機離線辨識支援與模型狀態
     public func checkOfflineStatus(languageCode: String? = nil) -> OfflineStatus {
+        if isWhisperAvailable {
+            return .whisperReady
+        }
+
         let locale: Locale
         if let languageCode = languageCode, !languageCode.isEmpty {
             locale = Locale(identifier: languageCode)
@@ -69,6 +207,65 @@ public final class AudioTranscriber: ObservableObject {
         #endif
     }
 
+    /// 一鍵非同步下載 Whisper 離線模型權重 (574 MB, Hugging Face 鏡像)
+    public func downloadWhisperModel() {
+        guard !isDownloadingModel, !isWhisperAvailable else { return }
+        guard let url = URL(string: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin") else { return }
+
+        isDownloadingModel = true
+        downloadProgress = 0.0
+        downloadError = nil
+
+        let destPath = whisperModelPath
+
+        let delegate = ModelDownloadDelegate(
+            onProgress: { [weak self] p in
+                Task { @MainActor [weak self] in
+                    self?.downloadProgress = p
+                }
+            },
+            onComplete: { [weak self] result in
+                Task { @MainActor [weak self] in
+                    guard let self = self else { return }
+                    self.isDownloadingModel = false
+                    switch result {
+                    case .success(let tempUrl):
+                        do {
+                            let destUrl = URL(fileURLWithPath: destPath)
+                            if FileManager.default.fileExists(atPath: destPath) {
+                                try FileManager.default.removeItem(at: destUrl)
+                            }
+                            try FileManager.default.moveItem(at: tempUrl, to: destUrl)
+                            StartupLogger.log("✅ Whisper 離線模型下載並就緒: \(destPath)")
+                            self.objectWillChange.send()
+                        } catch {
+                            self.downloadError = error.localizedDescription
+                            StartupLogger.log("❌ 移動模型檔案失敗: \(error.localizedDescription)")
+                        }
+                    case .failure(let error):
+                        self.downloadError = error.localizedDescription
+                        StartupLogger.log("❌ Whisper 模型下載失敗: \(error.localizedDescription)")
+                    }
+                }
+            }
+        )
+
+        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+        activeDownloadSession = session
+        let task = session.downloadTask(with: url)
+        activeDownloadTask = task
+        task.resume()
+        StartupLogger.log("🚀 開始下載 Whisper 模型 (574 MB)...")
+    }
+
+    /// 取消模型下載
+    public func cancelModelDownload() {
+        activeDownloadTask?.cancel()
+        activeDownloadTask = nil
+        isDownloadingModel = false
+        downloadProgress = 0.0
+    }
+
     /// 檢查並請求語音辨識權限
     public func requestPermission() async -> Bool {
         await withCheckedContinuation { continuation in
@@ -81,9 +278,40 @@ public final class AudioTranscriber: ObservableObject {
     /// 將音訊檔案轉錄為文字稿
     /// - Parameters:
     ///   - url: 音訊檔案的本地路徑
-    ///   - languageCode: 語言代碼（如 "zh-Hant", "zh-Hans", "en", "ja"）
+    ///   - languageCode: 語言代碼（若為 nil 則啟用自動語言偵測）
     /// - Returns: 辨識出的文字稿字串
     public func transcribe(url: URL, languageCode: String? = nil) async throws -> String {
+        isTranscribing = true
+        defer { isTranscribing = false }
+
+        // 1. 優先路徑：若已下載端側 Whisper 模型，走 Rust 核心 ASR 管線（支援多語言自動偵測與標點還原）
+        if isWhisperAvailable {
+            do {
+                StartupLogger.log("🎙️ 開始使用端側 Whisper 模型轉錄（自動語言偵測）...")
+                let result = try await Task.detached(priority: .userInitiated) { [path = whisperModelPath] () -> FfiTranscribeResult in
+                    let pcm = try AudioPCMDecoder.decodeTo16kMono(url: url)
+                    return try whisperTranscribePcm(modelPath: path, pcm16kMono: pcm, language: languageCode)
+                }.value
+
+                lastUsedOnDevice = true
+                lastEngineUsed = "Whisper (\(result.language))"
+                StartupLogger.log("🎙️ Whisper 轉錄完成（語言: \(result.language), 片段數: \(result.segments.count)）")
+                let trimmed = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.isEmpty {
+                    return trimmed
+                }
+            } catch {
+                StartupLogger.log("⚠️ Whisper 轉錄異常: \(error.localizedDescription)，平滑降級至 Apple Speech...")
+            }
+        }
+
+        // 2. 降級備援路徑：走 Apple 系統聽寫框架
+        lastEngineUsed = "Apple Speech"
+        StartupLogger.log("🎙️ 使用 Apple Speech 系統聽寫進行轉錄...")
+        return try await transcribeWithAppleSpeech(url: url, languageCode: languageCode)
+    }
+
+    private func transcribeWithAppleSpeech(url: URL, languageCode: String? = nil) async throws -> String {
         let granted = await requestPermission()
         guard granted else {
             throw NSError(
@@ -97,11 +325,9 @@ public final class AudioTranscriber: ObservableObject {
         if let languageCode = languageCode, !languageCode.isEmpty {
             locale = Locale(identifier: languageCode)
         } else {
-            // 輸出語言以介面語系設定的語言為主
             locale = Locale(identifier: LocalizationManager.shared.currentLanguage.rawValue)
         }
 
-        // 嘗試以指定 locale 建立識別器，若不支援則以預設/系統 locale 備援
         guard let recognizer = SFSpeechRecognizer(locale: locale) ?? SFSpeechRecognizer() else {
             throw NSError(
                 domain: "AudioTranscriber",
@@ -118,11 +344,6 @@ public final class AudioTranscriber: ObservableObject {
             )
         }
 
-        isTranscribing = true
-        defer { isTranscribing = false }
-
-        // 優先嘗試使用裝置端（On-Device）離線神經網路引擎；
-        // 若系統本機尚未下載該語言之離線語音模型（常拋出 error 216 "Retry"），自動平滑降級為標準辨識
         if recognizer.supportsOnDeviceRecognition {
             do {
                 let res = try await performRecognitionTask(recognizer: recognizer, url: url, requiresOnDevice: true)

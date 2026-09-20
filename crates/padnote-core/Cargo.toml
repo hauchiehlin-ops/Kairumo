@@ -30,7 +30,7 @@ default = ["asr", "pdf"]
 # 語音相關（Silero VAD + 中文標點還原）。依賴 ONNX Runtime，
 # 而 ort 目前沒有 aarch64-linux-android 的預編譯二進位 ——
 # Android 第一版不含語音轉錄，就用 --no-default-features 關掉這一組。
-asr = ["dep:padnote-vad-silero", "dep:padnote-punct-ct"]
+asr = ["dep:padnote-vad-silero", "dep:padnote-punct-ct", "dep:padnote-asr-whisper"]
 
 # PDF 匯入／算繪。需要各 ABI 的 libpdfium 系統函式庫。
 pdf = ["dep:padnote-pdf-pdfium"]
@@ -61,6 +61,7 @@ padnote-pdf-pdfium = { path = "../padnote-pdf-pdfium", optional = true }
 padnote-recorder = { path = "../padnote-recorder" }
 padnote-audio = { path = "../padnote-audio" }
 padnote-vad-silero = { path = "../padnote-vad-silero", optional = true }
+padnote-asr-whisper = { path = "../padnote-asr-whisper", optional = true }
 padnote-text = { path = "../padnote-text" }
 padnote-punct-ct = { path = "../padnote-punct-ct", optional = true }
 padnote-embed = { path = "../padnote-embed" }

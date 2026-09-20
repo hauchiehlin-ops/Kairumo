@@ -28,6 +28,7 @@ targets:
     settings:
       base:
         ARCHS: arm64
+        OTHER_LDFLAGS: ["$(inherited)", "-lc++"]
         PRODUCT_NAME: Kairumo
         PRODUCT_BUNDLE_IDENTIFIER: com.kairumo.padnote
         DEVELOPMENT_TEAM: 6UJ8GS752W

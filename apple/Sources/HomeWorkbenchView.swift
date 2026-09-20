@@ -2793,8 +2793,12 @@ extension AppDiagnosticsSheet {
                 Text("本機神經離線辨識")
                 Spacer()
                 switch status {
-                case .ready:
-                    Label("已就緒 (免聯網)", systemImage: "checkmark.circle.fill")
+                case .whisperReady:
+                    Label("Whisper 就緒 (自動語言偵測)", systemImage: "checkmark.seal.fill")
+                        .foregroundColor(.green)
+                        .font(.footnote)
+                case .ready, .appleSpeechReady:
+                    Label("系統聽寫就緒 (免聯網)", systemImage: "checkmark.circle.fill")
                         .foregroundColor(.green)
                         .font(.footnote)
                 case .needsDownload:
@@ -2808,17 +2812,44 @@ extension AppDiagnosticsSheet {
                 }
             }
 
+            if !AudioTranscriber.shared.isWhisperAvailable {
+                if AudioTranscriber.shared.isDownloadingModel {
+                    HStack {
+                        ProgressView(value: AudioTranscriber.shared.downloadProgress)
+                            .progressViewStyle(.linear)
+                        Button("取消") {
+                            AudioTranscriber.shared.cancelModelDownload()
+                        }
+                        .font(.caption)
+                        .foregroundColor(.red)
+                    }
+                    Text("Whisper 模型下載中：\(Int(AudioTranscriber.shared.downloadProgress * 100))%")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                } else {
+                    Button {
+                        AudioTranscriber.shared.downloadWhisperModel()
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.down.circle.fill")
+                            Text("下載 Whisper 端側模型 (574 MB，支援多語自動偵測)")
+                        }
+                    }
+                    .font(.footnote)
+                }
+            }
+
             Button {
                 AudioTranscriber.shared.openSystemDictationSettings()
             } label: {
                 HStack {
-                    Image(systemName: "arrow.down.circle")
+                    Image(systemName: "gearshape")
                     Text("前往系統設定開啟「聽寫」下載離線語音包")
                 }
             }
             .font(.footnote)
 
-            Text("Apple 語音神經網路模型由 iOS / macOS 系統受保護託管。開啟系統「設定 > 鍵盤 > 聽寫」後，系統會自動在本地下載離線語音模型包，轉錄全程無需聯網、極速辨識並保障隱私。若尚未下載，App 亦會自動平滑降級為標準辨識，絕不中斷。")
+            Text("優先使用端側 Whisper 神經網絡模型（支援 99 種語言自動偵測與智慧標點還原，100% 離線運算）。若尚未下載模型，將自動平滑降級為 Apple 系統聽寫服務。")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }

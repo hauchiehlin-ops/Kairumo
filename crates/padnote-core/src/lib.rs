@@ -11,6 +11,7 @@ uniffi::setup_scaffolding!();
 pub mod app;
 pub mod ffi;
 pub mod ffi_account_sync;
+pub mod ffi_asr;
 pub mod ffi_asset_art;
 pub mod ffi_assets;
 mod ffi_audio;

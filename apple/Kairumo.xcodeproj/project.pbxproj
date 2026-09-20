@@ -1010,6 +1010,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 4.3.11;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lc++",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.kairumo.padnote;
 				PRODUCT_NAME = Kairumo;
 				SDKROOT = iphoneos;
@@ -1090,6 +1094,10 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 4.3.11;
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lc++",
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.kairumo.padnote;
 				PRODUCT_NAME = Kairumo;
 				SDKROOT = iphoneos;

@@ -32,6 +32,7 @@ enum AudioAttachmentFormat {
 struct AudioAttachmentItemView: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
     @ObservedObject private var audioManager = AudioRecorderManager.shared
+    @ObservedObject private var transcriber = AudioTranscriber.shared
     @Binding var item: NoteAudioAttachment
     let onDelete: () -> Void
     var onTranscribe: ((String) -> Void)? = nil
@@ -186,20 +187,40 @@ struct AudioAttachmentItemView: View {
                     dismissButton: .default(Text(localizationManager.localized("done")))
                 )
             }
-            .alert("離線語音辨識狀態", isPresented: $showOfflineInfo) {
-                Button("前往系統設定下載模型") {
-                    AudioTranscriber.shared.openSystemDictationSettings()
+            .alert("語音轉文字與離線模型狀態", isPresented: $showOfflineInfo) {
+                if !transcriber.isWhisperAvailable {
+                    if transcriber.isDownloadingModel {
+                        Button("取消下載 Whisper 模型", role: .destructive) {
+                            transcriber.cancelModelDownload()
+                        }
+                    } else {
+                        Button("下載 Whisper 離線神經模型 (574 MB)") {
+                            transcriber.downloadWhisperModel()
+                        }
+                    }
+                }
+                Button("前往系統設定下載聽寫模型") {
+                    transcriber.openSystemDictationSettings()
                 }
                 Button(localizationManager.localized("cancel"), role: .cancel) {}
             } message: {
-                let status = AudioTranscriber.shared.checkOfflineStatus()
-                switch status {
-                case .ready:
-                    Text("🟢 您的裝置已支援並就緒本機離線語音辨識。\n轉錄時全程端側運算，免網路且 100% 保障隱私。")
-                case .needsDownload:
-                    Text("🟡 您的裝置支援端側神經辨識，但系統尚未下載離線語音模型。\n\n目前轉錄會自動平滑降級為線上辨識；若需完全離線使用，請點擊「前往系統設定下載模型」，開啟聽寫即可由系統自動在本地完成下載。")
-                case .unsupported:
-                    Text("⚪ 目前系統或語言環境不支援本機離線辨識，轉錄時將使用標準語音辨識服務。")
+                if transcriber.isWhisperAvailable {
+                    Text("🟢 Whisper 端側神經模型已就緒！\n\n支援 99 種語言自動偵測與語義智慧標點還原，轉錄全程 100% 離線端側運算，保障最高隱私。")
+                } else if transcriber.isDownloadingModel {
+                    let pct = Int(transcriber.downloadProgress * 100)
+                    Text("⏳ Whisper 模型下載中：\(pct)%\n完成後將自動啟用端側多語言自動偵測與標點還原。")
+                } else {
+                    let status = transcriber.checkOfflineStatus()
+                    switch status {
+                    case .whisperReady:
+                        Text("🟢 Whisper 端側神經模型已就緒。")
+                    case .ready, .appleSpeechReady:
+                        Text("🟡 Apple 系統聽寫已就緒（依介面語系轉錄）。\n若需全自動語言偵測與標點還原，建議點擊「下載 Whisper 離線神經模型」。")
+                    case .needsDownload:
+                        Text("⚪ 尚未下載 Whisper 離線模型，目前轉錄會平滑降級為系統聽寫服務。\n可點擊「下載 Whisper 離線神經模型」取得最佳辨識體驗。")
+                    case .unsupported:
+                        Text("⚪ 目前系統環境使用標準語音服務進行轉錄。")
+                    }
                 }
             }
     }
