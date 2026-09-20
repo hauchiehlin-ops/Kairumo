@@ -67,6 +67,13 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
             _ = shared.perform(NSSelectorFromString("openURL:"), with: folderUrl)
             return
         }
+        #else
+        var components = URLComponents(url: folderUrl, resolvingAgainstBaseURL: false)
+        components?.scheme = "shareddocuments"
+        if let filesAppUrl = components?.url {
+            UIApplication.shared.open(filesAppUrl, options: [:], completionHandler: nil)
+            return
+        }
         #endif
         UIApplication.shared.open(folderUrl, options: [:], completionHandler: nil)
     }
