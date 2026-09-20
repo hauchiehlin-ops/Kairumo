@@ -146,27 +146,48 @@ public final class AudioTranscriber: ObservableObject {
         request.shouldReportPartialResults = false
         request.requiresOnDeviceRecognition = requiresOnDevice
 
-        return try await withCheckedThrowingContinuation { continuation in
-            var hasResumed = false
-            let task = recognizer.recognitionTask(with: request) { result, error in
-                if let error = error {
-                    if !hasResumed {
-                        hasResumed = true
-                        continuation.resume(throwing: error)
-                    }
-                    return
-                }
+        return try await withThrowingTaskGroup(of: String.self) { group in
+            group.addTask {
+                try await withCheckedThrowingContinuation { continuation in
+                    let lock = NSLock()
+                    var hasResumed = false
+                    let task = recognizer.recognitionTask(with: request) { result, error in
+                        lock.lock()
+                        defer { lock.unlock() }
+                        if let error = error {
+                            if !hasResumed {
+                                hasResumed = true
+                                continuation.resume(throwing: error)
+                            }
+                            return
+                        }
 
-                if let result = result, result.isFinal {
-                    if !hasResumed {
-                        hasResumed = true
-                        let formattedText = result.bestTranscription.formattedString
-                        continuation.resume(returning: formattedText)
+                        if let result = result, result.isFinal {
+                            if !hasResumed {
+                                hasResumed = true
+                                let formattedText = result.bestTranscription.formattedString
+                                continuation.resume(returning: formattedText)
+                            }
+                        }
                     }
+                    _ = task
                 }
             }
 
-            _ = task
+            group.addTask {
+                try await Task.sleep(nanoseconds: 15_000_000_000)
+                throw NSError(
+                    domain: "AudioTranscriber",
+                    code: 4,
+                    userInfo: [NSLocalizedDescriptionKey: "語音辨識超時（15秒）。請檢查網路連線或系統聽寫模型。"]
+                )
+            }
+
+            guard let result = try await group.next() else {
+                throw NSError(domain: "AudioTranscriber", code: 5, userInfo: [NSLocalizedDescriptionKey: "轉錄無結果"])
+            }
+            group.cancelAll()
+            return result
         }
     }
 }

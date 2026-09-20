@@ -138,6 +138,68 @@ final class SmokeUITests: XCTestCase {
         )
         assertAlive(app, "收合側欄")
     }
+
+    /// 驗證手繪工具鍵操作與文字模式下點擊方格打字
+    func testDrawingToolsAndTypeModeGridTap() {
+        let app = launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+
+        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 10))
+        card.tap()
+        sleep(2)
+        assertAlive(app, "進入筆記編輯器")
+
+        let canvas = app.descendants(matching: .any)["kairumo.canvas"].firstMatch
+        XCTAssertTrue(canvas.waitForExistence(timeout: 10), "找不到畫布")
+
+        // 1. 測試各手繪工具鍵點擊響應
+        let penTool = app.descendants(matching: .any)["editor.tool.pen"].firstMatch
+        if penTool.waitForExistence(timeout: 5) {
+            penTool.tap()
+            assertAlive(app, "點選鋼筆工具")
+        }
+
+        let highlighterTool = app.descendants(matching: .any)["editor.tool.highlighter"].firstMatch
+        if highlighterTool.exists {
+            highlighterTool.tap()
+            assertAlive(app, "點選螢光筆工具")
+        }
+
+        let eraserTool = app.descendants(matching: .any)["editor.tool.eraser"].firstMatch
+        if eraserTool.exists {
+            eraserTool.tap()
+            assertAlive(app, "點選橡皮擦工具")
+        }
+
+        let lassoTool = app.descendants(matching: .any)["editor.tool.lasso"].firstMatch
+        if lassoTool.exists {
+            lassoTool.tap()
+            assertAlive(app, "點選套索工具")
+        }
+
+        // 2. 切換至文字模式
+        let modeSwitch = app.descendants(matching: .any)["editor.mode"].firstMatch
+        if modeSwitch.waitForExistence(timeout: 5) {
+            modeSwitch.tap()
+            sleep(1)
+            assertAlive(app, "切換模式")
+        }
+
+        // 3. 在畫布方格區域點擊
+        let coordinate = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+        coordinate.tap()
+        sleep(1)
+        assertAlive(app, "點擊畫布方格區域建立文字方塊")
+
+        // 4. 回首頁
+        let home = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'home' OR label CONTAINS[c] 'house'")).firstMatch
+        if home.exists {
+            home.tap()
+            sleep(2)
+            assertAlive(app, "回首頁")
+        }
+    }
 }
 
 extension SmokeUITests {

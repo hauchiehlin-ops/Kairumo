@@ -80,6 +80,15 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 .allowsHitTesting(false)
                 .zIndex(0)
 
+            if editorMode == .type {
+                Color.black.opacity(0.0001)
+                    .contentShape(Rectangle())
+                    .onTapGesture { location in
+                        onCanvasTap?(location)
+                    }
+                    .zIndex(0.5)
+            }
+
             CanvasRepresentable(
                 drawing: $drawing,
                 selectedTool: selectedTool,

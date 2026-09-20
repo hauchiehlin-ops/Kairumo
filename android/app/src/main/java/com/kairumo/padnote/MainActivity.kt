@@ -3416,16 +3416,16 @@ private fun InkScreen(
                                     selectedTextId = hitExisting.id
                                     editingText = hitExisting
                                 } else {
-                                    var targetX = tapX - 130f
-                                    var targetY = tapY - 40f
+                                    var targetX = tapX
+                                    var targetY = tapY
                                     if (snapToGrid) {
                                         val step = 20f
                                         targetX = kotlin.math.round(targetX / step) * step
                                         targetY = kotlin.math.round(targetY / step) * step
                                     }
                                     val newBox = textStore.create(
-                                        x = maxOf(20f, targetX),
-                                        y = maxOf(20f, targetY)
+                                        x = maxOf(20f, minOf(targetX, 700f)),
+                                        y = maxOf(20f, minOf(targetY, 1000f))
                                     )
                                     val updatedOrder = com.kairumo.padnote.canvas.ObjectStacking.bringToFront(
                                         setOf(newBox.id),
@@ -3742,7 +3742,7 @@ private fun InkScreen(
             // 錄音卡片。疊在連結卡片之上 —— 與 Apple 端的預設層級一致。
             key(audioRevision) {
                 AudioLayer(
-                    interactive = editorMode == EditorMode.TYPE,
+                    interactive = true,
                     items = audioCards.filter { it.pageIndex == pageIndex },
                     density = canvasDensity,
                     audioDirectory = audioDirectory,
@@ -3772,10 +3772,8 @@ private fun InkScreen(
                     },
                     onTranscribe = { card ->
                         scope.launch {
-                            message = l10n("transcribing")
-                            // 檢查音檔是否存在
                             val file = audioDirectory?.let { java.io.File(it, card.fileName) }
-                            if (file == null || !file.exists()) {
+                            if (file == null || !file.isFile) {
                                 message = l10n("audio_file_missing")
                                 return@launch
                             }
@@ -3799,6 +3797,8 @@ private fun InkScreen(
                             newBox.cornerRadius = 10f
                             textStore.persist(newBox)
                             selectedTextId = newBox.id
+                            editingText = newBox
+                            editorMode = EditorMode.TYPE
                             textRevision++
                             message = l10n("transcribe_success")
                         }

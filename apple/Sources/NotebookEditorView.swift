@@ -2764,6 +2764,10 @@ public struct NotebookEditorView: View {
                             onSelectionChanged: { hasLassoSelection = $0 },
                             onReachedPageBottom: { ensureNextPageExists() },
                             canvasRef: { canvasView = $0 },
+                            onCanvasTap: { location in
+                                currentPageIndex = index
+                                handleCanvasTapInTypeMode(at: location)
+                            },
                             onPenControl: applyPenControl,
                             onImageDropped: { page, providers, location in
                                 acceptImageDrop(providers, at: location, page: page)
@@ -3087,6 +3091,15 @@ public struct NotebookEditorView: View {
             PageBackgroundRepresentable(paperId: notebook.paperId(forPage: currentPageIndex), paletteId: notebook.guidePaletteId)
                 .allowsHitTesting(false)
                 .zIndex(0)
+
+            if editorMode == .type {
+                Color.black.opacity(0.0001)
+                    .contentShape(Rectangle())
+                    .onTapGesture { location in
+                        handleCanvasTapInTypeMode(at: location)
+                    }
+                    .zIndex(0.5)
+            }
 
             CanvasRepresentable(
                 drawing: $currentDrawing,
@@ -5248,7 +5261,11 @@ public struct NotebookEditorView: View {
                 }
 
                 Button {
-                    _ = insertTextBox(at: CGPoint(x: 200, y: 200))
+                    let draft = insertTextBox(at: CGPoint(x: 200, y: 200))
+                    withAnimation(.easeInOut(duration: 0.18)) {
+                        editorMode = .type
+                        inlineEditingTextId = draft.id
+                    }
                 } label: {
                     VStack(spacing: 3) {
                         Image(systemName: "plus.bubble")
@@ -7881,7 +7898,10 @@ public struct NotebookEditorView: View {
 
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
-        inlineEditingTextId = transcriptBox.id
+        withAnimation(.easeInOut(duration: 0.18)) {
+            editorMode = .type
+            inlineEditingTextId = transcriptBox.id
+        }
     }
 
     private func formatTime(seconds: TimeInterval) -> String {

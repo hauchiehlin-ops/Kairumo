@@ -69,18 +69,17 @@ struct AudioAttachmentItemView: View {
         let currentY = item.y + dragOffset.height
 
         card
-            .gesture(
-                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
+            .onTapGesture {
+                isSelected.toggle()
+            }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 8, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         dragOffset = value.translation
                     }
                     .onEnded { value in
-                        if hypot(value.translation.width, value.translation.height) < 4 {
-                            isSelected.toggle()
-                        } else {
-                            item.x += value.translation.width
-                            item.y += value.translation.height
-                        }
+                        item.x += value.translation.width
+                        item.y += value.translation.height
                         dragOffset = .zero
                     }
             )

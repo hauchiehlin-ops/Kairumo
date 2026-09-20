@@ -134,19 +134,13 @@ private fun AudioCardView(
                         Modifier
                     }
                 )
-                .then(
-                    if (interactive) {
-                        // 選取用長按，點擊留給播放鈕。掛在卡片本體上而不是
-                        // 蓋一層全尺寸的透明 Box —— 那層會把播放鈕整個擋掉。
-                        Modifier.pointerInput(item.id, isSelected) {
-                            detectTapGestures(
-                                onLongPress = { onSelect(if (isSelected) null else item.id) }
-                            )
-                        }
-                    } else {
-                        Modifier
-                    }
-                )
+                .pointerInput(item.id, isSelected) {
+                    // 點擊卡片本體直接選取/取消選取，長按亦可選取
+                    detectTapGestures(
+                        onTap = { onSelect(if (isSelected) null else item.id) },
+                        onLongPress = { onSelect(if (isSelected) null else item.id) }
+                    )
+                }
                 .then(
                     if (interactive) {
                         Modifier.pointerInput(item.id) {
@@ -211,7 +205,7 @@ private fun AudioCardView(
             Text("〰", fontSize = 14.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
 
-        if (interactive && isSelected) {
+        if (isSelected) {
             // 語音轉文字（左上）。點擊後轉錄音訊並自動在卡片下方建立文字方塊。
             if (onTranscribe != null && exists) {
                 Box(
