@@ -3,6 +3,12 @@ package com.kairumo.padnote.library
 import android.content.Context
 import com.kairumo.padnote.oauth.DriveHttpClient
 import com.kairumo.padnote.oauth.GoogleAuth
+import com.kairumo.padnote.sync.SyncLogger
+import com.kairumo.padnote.sync.SyncSource
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.runBlocking
 import java.io.File
 import uniffi.padnote_core.FfiCloudSyncResult
 import uniffi.padnote_core.gdriveSyncMetadata
@@ -124,24 +130,128 @@ object CloudSync {
         val changed: List<String>
     )
 
-    fun runFull(context: Context, deviceId: UInt): FullResult {
+    fun runFull(context: Context, deviceId: UInt, activeNotebookId: String? = null): FullResult {
+        SyncLogger.log("【Google Drive 同步】開始執行", SyncSource.GOOGLE_DRIVE)
+        SyncLogger.log("步驟 1：同步中繼資料與索引 (連線中)...", SyncSource.GOOGLE_DRIVE)
+
         val meta = runOnce(context)
-        if (meta == null || !meta.ok) return FullResult(meta, 0, 0, emptyList())
+        if (meta == null) {
+            SyncLogger.log("無法取得有效權杖，Google Drive 同步中止", SyncSource.GOOGLE_DRIVE)
+            return FullResult(null, 0, 0, emptyList())
+        }
+        if (!meta.ok) {
+            SyncLogger.log("中繼資料同步失敗：${meta.error}", SyncSource.GOOGLE_DRIVE)
+            return FullResult(meta, 0, 0, emptyList())
+        }
+
+        // ── 同步前即時核實：本機現存 vs. 雲端索引差異樣態 ──────────────
+        val dir = NotebookLibrary.directory(context)
+        val allLocalEntries = NotebookLibrary.all(context, deviceId)
+        val activeLocalIds = allLocalEntries.map { it.id }.toSet()
+        val deletedNotebookIds = AccountSyncStore.deletedNotebookIds(context).toMutableSet()
+        val cloudLiveIds = uniffi.padnote_core.syncLiveNotebooks(meta.indexJson).map { it.id }.toSet()
+
+        val allDiskPackages = dir.listFiles { file -> file.name.endsWith(".padnote") } ?: emptyArray()
+
+        val validPackages = mutableListOf<File>()
+        var cleanedCount = 0
+
+        for (pkg in allDiskPackages) {
+            val id = pkg.name.removeSuffix(".padnote")
+            // 判定 1：若為明確已刪除的筆記本（本機墓碑中），立即清理實體磁碟殘留套件
+            if (deletedNotebookIds.contains(id)) {
+                pkg.deleteRecursively()
+                cleanedCount++
+                continue
+            }
+            // 判定 2：若不在本機現存筆記中（使用者介面已無此筆記）
+            if (!activeLocalIds.contains(id)) {
+                // 如果雲端也不再活躍，這屬於孤立過期套件，清理並排除
+                if (!cloudLiveIds.contains(id)) {
+                    pkg.deleteRecursively()
+                    AccountSyncStore.recordDeletion(context, id)
+                    deletedNotebookIds.add(id)
+                    cleanedCount++
+                    continue
+                }
+            }
+            // 判定 3：只有本機現存活躍的筆記本，才納入雙軌同步排程
+            if (activeLocalIds.contains(id)) {
+                validPackages.add(pkg)
+            }
+        }
+
+        SyncLogger.log("📊【同步前核實】本機現存: ${activeLocalIds.size} 本，清理/排除無效套件: $cleanedCount 本，待同步活躍筆記: ${validPackages.size} 本", SyncSource.GOOGLE_DRIVE)
+        SyncLogger.log("雲端元資料同步完成，開始逐本比對套件檔案...", SyncSource.GOOGLE_DRIVE)
+
         var uploaded = 0
         var downloaded = 0
         val changed = mutableListOf<String>()
-        for (entry in NotebookLibrary.all(context, deviceId)) {
-            val result = syncNotebook(context, entry.id) ?: continue
-            if (!result.ok) continue
-            uploaded += result.uploaded.toInt()
-            downloaded += result.downloaded.toInt()
-            if (result.downloaded > 0u) changed += entry.id
+
+        // ── 雙軌排程：前台極速軌 + 背景並行佇列 ──────────────
+        val foreground = validPackages.filter { it.name.removeSuffix(".padnote") == activeNotebookId }
+        val background = validPackages.filter { it.name.removeSuffix(".padnote") != activeNotebookId }
+
+        // 前台極速軌：優先、立即執行
+        for (pkg in foreground) {
+            val id = pkg.name.removeSuffix(".padnote")
+            SyncLogger.log("⚡ 前台極速同步：$id", SyncSource.GOOGLE_DRIVE)
+            val result = syncNotebook(context, id)
+            if (result != null && result.ok) {
+                uploaded += result.uploaded.toInt()
+                downloaded += result.downloaded.toInt()
+                if (result.downloaded > 0u) changed += id
+            } else if (result != null) {
+                SyncLogger.log("筆記本 $id 同步失敗：${result.error}", SyncSource.GOOGLE_DRIVE)
+                if (result.needsReauth) {
+                    GoogleAuth.signOutLocally(context)
+                    break
+                }
+            }
         }
-        // 別台裝置**新建**的筆記本在本機連套件目錄都沒有，上面那一圈看不到它們。
-        // 少了這一步，症狀是：索引同步成功、清單上出現了標題，點進去卻是空的。
-        val pulled = pullNewNotebooks(context, meta.indexJson)
+
+        // 背景並行佇列：分批（最多 4 路並發）執行
+        val concurrencyLimit = 4
+        var backgroundQueue = background
+        while (backgroundQueue.isNotEmpty()) {
+            val batch = backgroundQueue.take(concurrencyLimit)
+            backgroundQueue = backgroundQueue.drop(batch.size)
+
+            val batchResults = runBlocking(Dispatchers.IO) {
+                batch.map { pkg ->
+                    async {
+                        val id = pkg.name.removeSuffix(".padnote")
+                        val res = syncNotebook(context, id)
+                        Triple(id, res, res?.error)
+                    }
+                }.awaitAll()
+            }
+
+            var shouldBreak = false
+            for ((id, res, err) in batchResults) {
+                if (res != null && res.ok) {
+                    uploaded += res.uploaded.toInt()
+                    downloaded += res.downloaded.toInt()
+                    if (res.downloaded > 0u) changed += id
+                } else if (err != null) {
+                    SyncLogger.log("筆記本 $id 背景同步失敗：$err", SyncSource.GOOGLE_DRIVE)
+                    if (res?.needsReauth == true) {
+                        GoogleAuth.signOutLocally(context)
+                        shouldBreak = true
+                    }
+                }
+            }
+            if (shouldBreak) break
+        }
+
+        // 別台裝置新建的筆記本整本抓下來（排除已被刪除的筆記本）
+        val pulled = pullNewNotebooks(context, meta.indexJson, deletedNotebookIds)
         changed += pulled
         downloaded += pulled.size
+
+        SyncLogger.log("步驟 2 完成。上傳: $uploaded, 下載: $downloaded, 新增: ${pulled.size}", SyncSource.GOOGLE_DRIVE)
+        SyncLogger.log("【Google Drive 同步】全部完成。", SyncSource.GOOGLE_DRIVE)
+
         return FullResult(meta, uploaded, downloaded, changed)
     }
 
@@ -151,10 +261,15 @@ object CloudSync {
      * 清單來自**合併後的索引**，不是本機那一份 —— 用本機的話，剛從雲端
      * 收斂進來的那幾本還不在裡面，永遠差一輪。
      */
-    private fun pullNewNotebooks(context: Context, mergedIndexJson: String): List<String> {
+    private fun pullNewNotebooks(
+        context: Context,
+        mergedIndexJson: String,
+        deletedNotebookIds: Set<String> = emptySet()
+    ): List<String> {
         val dir = NotebookLibrary.directory(context)
         val pulled = mutableListOf<String>()
         for (item in uniffi.padnote_core.syncLiveNotebooks(mergedIndexJson)) {
+            if (deletedNotebookIds.contains(item.id)) continue
             val path = File(dir, "${item.id}.padnote")
             if (path.exists()) continue
             // 權杖每一本都重新取一次：整批抓下來可能跨過存取權杖的有效期，

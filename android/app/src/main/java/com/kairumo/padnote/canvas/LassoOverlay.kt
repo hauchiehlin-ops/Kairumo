@@ -168,6 +168,16 @@ fun LassoActionBar(
                     )
                 }
             }
+            TextButton(onClick = {
+                lasso.clear()
+                onChanged()
+            }) {
+                Text(
+                    "✕ " + l("cancel"),
+                    fontSize = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }

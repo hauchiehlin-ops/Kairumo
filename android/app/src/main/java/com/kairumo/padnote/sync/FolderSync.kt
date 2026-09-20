@@ -132,6 +132,7 @@ object FolderSync {
         languageTag: String = "zh-Hant"
     ): Result {
         val packageName = localPackage.name
+        SyncLogger.log("【資料夾同步】開始執行，目標：$packageName", SyncSource.FOLDER)
         val remotePackage = remoteRoot.findFile(packageName)?.takeIf { it.isDirectory }
             ?: remoteRoot.createDirectory(packageName)
             ?: return Result(
@@ -140,7 +141,9 @@ object FolderSync {
                         .localized("err_sync_folder_failed", languageTag)
                         .replace("%@", packageName)
                 )
-            )
+            ).also {
+                SyncLogger.log("【資料夾同步】失敗：無法在遠端建立套件目錄 $packageName", SyncSource.FOLDER)
+            }
 
         val plan = planFolderSync(localEntries(localPackage), remoteEntries(remotePackage))
 
@@ -158,6 +161,7 @@ object FolderSync {
                 .onSuccess { downloaded += path }
                 .onFailure { failures[path] = it.message ?: it.toString() }
         }
+        SyncLogger.log("【資料夾同步】$packageName 完成。上傳: ${uploaded.size}, 下載: ${downloaded.size}, 失敗: ${failures.size}", SyncSource.FOLDER)
         return Result(uploaded, downloaded, plan.needsAttention, failures)
     }
 

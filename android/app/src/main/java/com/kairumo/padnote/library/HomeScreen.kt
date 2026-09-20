@@ -38,10 +38,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import com.kairumo.padnote.ui.InstantTooltip
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -245,6 +247,17 @@ fun HomeScreen(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(l("language"))
+                }
+
+                Spacer(Modifier.width(4.dp))
+
+                InstantTooltip(text = l("system_diagnostics")) {
+                    IconButton(
+                        onClick = onOpenDiagnostics,
+                        modifier = Modifier.testTag("home.diagnostics_button")
+                    ) {
+                        Text("🔧", fontSize = 16.sp)
+                    }
                 }
             }
         }

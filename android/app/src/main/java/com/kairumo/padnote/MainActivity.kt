@@ -43,6 +43,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import androidx.compose.material3.FilledTonalButton
+import com.kairumo.padnote.ui.InstantTooltip
+import com.kairumo.padnote.ui.AppDiagnosticsDialog
+import com.kairumo.padnote.sync.SyncLogger
+import com.kairumo.padnote.sync.SyncSource
+import com.kairumo.padnote.ui.LogExportUtility
+import com.kairumo.padnote.ui.SyncLogCard
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.text.style.TextAlign
@@ -240,9 +247,11 @@ import java.util.Locale
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        com.kairumo.padnote.platform.StartupLogger.log("MainActivity.onCreate 啟動")
         // 跨裝置語言要在畫出任何東西**之前**讀進來，不然第一幀會是舊語言，
         // 使用者會看到介面閃一下才變過去。
         applySyncedLanguage(this)
+        com.kairumo.padnote.platform.StartupLogger.log("語言套用完成: ${deviceLanguageTag()}")
         setContent {
             // 用自己的主題，不用 MaterialTheme 的預設值（工作項 S-62）。
             // 預設值是 Material 的基準紫，而且**不跟隨深色模式** ——
@@ -919,26 +928,18 @@ private fun NotebookHome(
 
     if (homeStatus) {
         val rows = remember { readCoreStatus(activity) }
-        AlertDialog(
-            onDismissRequest = { homeStatus = false },
-            confirmButton = {
-                TextButton(onClick = { homeStatus = false }) { Text(l("close")) }
-            },
-            title = { Text("Kairumo · ${l("system_diagnostics")}") },
-            text = {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    rows.forEach { (label, value) ->
-                        Text(
-                            "$label：$value",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace
-                        )
-                    }
-                }
-            }
+        val packageInfo = remember {
+            runCatching {
+                activity.packageManager.getPackageInfo(activity.packageName, 0)
+            }.getOrNull()
+        }
+        val ver = packageInfo?.versionName ?: "1.0.0"
+        AppDiagnosticsDialog(
+            versionString = ver,
+            coreStatusRows = rows,
+            latencySummary = null,
+            l = ::l,
+            onDismiss = { homeStatus = false }
         )
     }
 
@@ -1987,7 +1988,12 @@ private fun InkScreen(
 
     // 系統返回鍵＝回首頁。Android 使用者按的第一個東西就是它，
     // 不接的話按下去會直接把 App 關掉 —— 看起來像當掉。
-    if (onBack != null) {
+    if (minimalistCanvasMode) {
+        androidx.activity.compose.BackHandler {
+            minimalistCanvasMode = false
+            floatingPillExpanded = false
+        }
+    } else if (onBack != null) {
         // 系統返回鍵。Android 專有（規格裡標成 AndroidOnly）——
         // 沒有它的話，使用者按下返回鍵會直接離開 App 而不是回到首頁。
         // parity: editor.system_back
@@ -2037,33 +2043,67 @@ private fun InkScreen(
                     modifier = Modifier.testTag("editor.home")
                 ) { Text("‹ ${l10n("back_to_home")}") }
             }
-            // 流體動態傳送門 (Dynamic Portal Island)。
-            // 決定畫布模式並支援即時情境展開（如手繪模式中編輯文字方塊）。
-            DynamicPortalIsland(
-                currentMode = editorMode,
-                contextualState = contextualState,
-                languageTag = deviceLanguageTag(),
-                onModeChange = { newMode ->
-                    editorMode = newMode
-                    if (newMode == EditorMode.DRAW) {
-                        selectedTextId = null
-                        selectedShapeIds = emptySet()
-                        selectedTableId = null
-                        selectedChartId = null
+            if (minimalistCanvasMode) {
+                // 🌟 畫布極簡模式恢復按鈕（讓使用者一秒找到退出鍵）
+                FilledTonalButton(
+                    onClick = {
+                        minimalistCanvasMode = false
+                        floatingPillExpanded = false
+                    },
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                    modifier = Modifier.height(36.dp).testTag("editor.exit_minimalist")
+                ) {
+                    Text("⤢ ", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                    Text(l10n("exit_canvas_minimal_mode"), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                }
+
+                // 筆記標題（極簡模式下保留以辨識當前筆記）
+                run {
+                    val title = remember(notebookId, revision) {
+                        notebookId?.let { FolderTree.titleOf(activity, it) }
+                            ?: l10n("untitled_note")
+                    }
+                    TextButton(
+                        onClick = { renamingCurrent = true },
+                        modifier = Modifier.testTag("editor.title")
+                    ) {
+                        Text(
+                            title.ifBlank { l10n("untitled_note") },
+                            style = MaterialTheme.typography.labelLarge,
+                            maxLines = 1
+                        )
                     }
                 }
-            )
+            } else {
+                // 流體動態傳送門 (Dynamic Portal Island)。
+                // 決定畫布模式並支援即時情境展開（如手繪模式中編輯文字方塊）。
+                DynamicPortalIsland(
+                    currentMode = editorMode,
+                    contextualState = contextualState,
+                    languageTag = deviceLanguageTag(),
+                    onModeChange = { newMode ->
+                        editorMode = newMode
+                        if (newMode == EditorMode.DRAW) {
+                            selectedTextId = null
+                            selectedShapeIds = emptySet()
+                            selectedTableId = null
+                            selectedChartId = null
+                        }
+                    }
+                )
 
-            // 極簡畫布切換（收折工具列為懸浮膠囊）
-            IconButton(
-                onClick = {
-                    minimalistCanvasMode = !minimalistCanvasMode
-                    if (minimalistCanvasMode) floatingPillExpanded = false
-                },
-                modifier = Modifier.size(36.dp)
-            ) {
-                Text(if (minimalistCanvasMode) "⤢" else "⤡", fontSize = 14.sp)
-            }
+                // 極簡畫布切換（收折工具列為懸浮膠囊）
+                InstantTooltip(text = l10n("enter_canvas_minimal_mode")) {
+                    IconButton(
+                        onClick = {
+                            minimalistCanvasMode = true
+                            floatingPillExpanded = false
+                        },
+                        modifier = Modifier.size(36.dp)
+                    ) {
+                        Text("⤡", fontSize = 14.sp)
+                    }
+                }
 
             // 徑向飛輪快捷工具盤 (Radial Pie Menu) 手動喚醒按鈕
             IconButton(
@@ -2510,7 +2550,7 @@ private fun InkScreen(
                                 // 中繼資料 → 再逐本同步內容。順序不能反：
                                 // 先收斂索引才知道哪些筆記本還活著，不然會把
                                 // 另一台已經刪掉的筆記本內容又推上去。
-                                com.kairumo.padnote.library.CloudSync.runFull(activity, deviceId(activity))
+                                com.kairumo.padnote.library.CloudSync.runFull(activity, deviceId(activity), notebookId)
                             }
                             val meta = result.meta
                             message = when {
@@ -2660,7 +2700,9 @@ private fun InkScreen(
                 )
             }
         }
+    }
 
+    if (!minimalistCanvasMode) {
         // ── 第二排：目前模式的工具 ────────────────────────────────
         //
         // 與 Apple 一致：手寫模式顯示筆刷與顏色，打字模式顯示文字與物件的
@@ -2922,6 +2964,7 @@ private fun InkScreen(
                 }
             }
         }
+    }
 
         // 套索的動作列。只在真的有東西可以做的時候出現 —— 一選了套索就
         // 跳出來的話，那時候每一顆按鈕都是空操作。
@@ -3777,19 +3820,21 @@ private fun InkScreen(
                                 message = l10n("audio_file_missing")
                                 return@launch
                             }
-                            // 語音轉文字：優先使用本地 SpeechRecognizer 或 fallback 轉錄
+                            message = l10n("recognizing")
                             val text = withContext(Dispatchers.IO) {
-                                // 讀取錄音檔並模擬/解析文字稿，若尚未具備離線模型則標註音訊轉錄結果
-                                "${card.title} (${l10n("transcribe_audio")}):\n" +
-                                "${l10n("layer_kind_audio")} [${card.fileName}]"
+                                com.kairumo.padnote.audio.AudioTranscriber.transcribe(activity, file, card.title)
                             }
-                            // 在錄音卡片下方插入文字方塊
+                            if (text.isBlank()) {
+                                message = l10n("transcribe_no_speech")
+                                return@launch
+                            }
+                            // 在錄音卡片下方插入文字方塊（與 Apple 端 insertTranscriptText 規格一致）
                             val targetX = card.x
                             val targetY = card.y + card.height + 16f
                             val newBox = textStore.create(targetX, targetY)
                             newBox.text = text
                             newBox.width = maxOf(240f, card.width)
-                            newBox.height = 100f
+                            newBox.height = maxOf(80f, minOf(240f, 40f + (text.length / 20) * 24f))
                             newBox.backgroundColorHex = "#F2F4F7"
                             newBox.borderColorHex = "#D0D5DD"
                             newBox.hasBorder = true
@@ -3955,6 +4000,10 @@ private fun InkScreen(
                     currentColorHex = inkColorHex,
                     languageTag = deviceLanguageTag(),
                     onToggleExpand = { floatingPillExpanded = !floatingPillExpanded },
+                    onExitMinimalMode = {
+                        minimalistCanvasMode = false
+                        floatingPillExpanded = false
+                    },
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(start = 8.dp, top = 8.dp)
@@ -4793,30 +4842,18 @@ private fun InkScreen(
 
     if (showStatus) {
         val rows = remember { readCoreStatus(activity) }
-        AlertDialog(
-            onDismissRequest = { showStatus = false },
-            confirmButton = {
-                TextButton(onClick = { showStatus = false }) { Text(l10n("close")) }
-            },
-            title = { Text("Kairumo · WP5") },
-            text = {
-                Column(
-                    modifier = Modifier.verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    // 延遲要即時反映，所以不進 remember 的那份快照。
-                    Text(
-                        "${l10n("ink_latency_label")}：${latency.summaryMs()}",
-                        style = MaterialTheme.typography.bodySmall,
-                        fontFamily = FontFamily.Monospace
-                    )
-                    rows.forEach { (label, value) ->
-                        Text("$label：$value",
-                            style = MaterialTheme.typography.bodySmall,
-                            fontFamily = FontFamily.Monospace)
-                    }
-                }
-            }
+        val packageInfo = remember {
+            runCatching {
+                activity.packageManager.getPackageInfo(activity.packageName, 0)
+            }.getOrNull()
+        }
+        val ver = packageInfo?.versionName ?: "1.0.0"
+        AppDiagnosticsDialog(
+            versionString = ver,
+            coreStatusRows = rows,
+            latencySummary = latency.summaryMs(),
+            l = { k -> l10n(k) },
+            onDismiss = { showStatus = false }
         )
     }
 }
@@ -5514,6 +5551,12 @@ private fun CloudSyncDetailDialog(
                     }
                 }
 
+                // 即時雲端同步日誌（含複製、匯出、清理）
+                SyncLogCard(
+                    filterSource = SyncSource.GOOGLE_DRIVE,
+                    l = l
+                )
+
                 // 詳細操作指引
                 Card(
                     modifier = Modifier.fillMaxWidth(),
@@ -5885,6 +5928,12 @@ private fun FolderSyncDetailDialog(
                         Text(l("delete_item"), color = MaterialTheme.colorScheme.error)
                     }
                 }
+
+                // 即時資料夾同步日誌（含複製、匯出、清理）
+                SyncLogCard(
+                    filterSource = SyncSource.FOLDER,
+                    l = l
+                )
 
                 // 操作指引
                 Card(

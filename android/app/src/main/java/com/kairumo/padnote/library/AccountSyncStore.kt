@@ -103,6 +103,29 @@ object AccountSyncStore {
         syncIsDeleted(indexJson(context), id)
 
     /**
+     * 所有標記為已刪除的項目 ID 集合。
+     * 掃描索引 JSON 中的項目，避免已刪除筆記在同步時被再次拉取或殘留。
+     */
+    fun deletedNotebookIds(context: Context): Set<String> {
+        val json = indexJson(context)
+        if (json.isBlank()) return emptySet()
+        return runCatching {
+            val root = org.json.JSONObject(json)
+            val items = root.optJSONObject("items") ?: return emptySet()
+            val result = mutableSetOf<String>()
+            val keys = items.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                val obj = items.optJSONObject(key)
+                if (obj != null && obj.optBoolean("deleted", false)) {
+                    result.add(obj.optString("id", key))
+                }
+            }
+            result
+        }.getOrDefault(emptySet())
+    }
+
+    /**
      * 這一筆該不該因為刪除而**從清單上消失**。
      *
      * 清單要用這個而不是 [isDeleted]：後者只看自己那一筆，刪掉一個資料夾
