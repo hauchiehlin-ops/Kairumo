@@ -90,13 +90,23 @@ public final class AccountSyncStore: ObservableObject {
         )
     }
 
+    private var isDeletedCache = [String: Bool]()
+    private var lastIndexJSONForCache: String = ""
+
     /// 這個 id 是不是已經被（可能是另一台裝置）刪除了。
     ///
     /// 從雲端合併回來之後，本機要據此把對應的筆記本收掉。
     /// 索引裡沒看過的一律回 false —— 「沒看過」不是「被刪了」，
     /// 混在一起的話，剛同步過來的新筆記本會被當成已刪除而收掉。
     public func isDeleted(id: String) -> Bool {
-        syncIsDeleted(indexJson: indexJSON, itemId: id)
+        if indexJSON != lastIndexJSONForCache {
+            isDeletedCache.removeAll(keepingCapacity: true)
+            lastIndexJSONForCache = indexJSON
+        }
+        if let cached = isDeletedCache[id] { return cached }
+        let result = syncIsDeleted(indexJson: indexJSON, itemId: id)
+        isDeletedCache[id] = result
+        return result
     }
 
     /// 某個資料夾底下還活著的項目。`parentId` 傳 nil 表示根目錄。

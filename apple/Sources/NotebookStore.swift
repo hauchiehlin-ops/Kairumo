@@ -1721,8 +1721,19 @@ public final class NotebookStore: ObservableObject {
     ///
     /// **索引裡沒看過的一律不藏。** 「沒看過」不是「被刪了」：剛建好還沒
     /// 同步過的筆記本會落在這個狀態，藏起來的話它在使用者眼前憑空消失。
+    private var isHiddenCache = [String: Bool]()
+    private var lastIndexJSONForHidden: String = ""
+
     public func isHiddenBySync(_ id: String) -> Bool {
-        syncIsHidden(indexJson: AccountSyncStore.shared.indexJSON, itemId: id)
+        let indexJSON = AccountSyncStore.shared.indexJSON
+        if indexJSON != lastIndexJSONForHidden {
+            isHiddenCache.removeAll(keepingCapacity: true)
+            lastIndexJSONForHidden = indexJSON
+        }
+        if let cached = isHiddenCache[id] { return cached }
+        let result = syncIsHidden(indexJson: indexJSON, itemId: id)
+        isHiddenCache[id] = result
+        return result
     }
 
     public func subfolders(of parentId: String?) -> [FolderItem] {

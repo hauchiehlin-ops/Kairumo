@@ -566,6 +566,13 @@ struct CanvasRepresentable: UIViewRepresentable {
             reportScrollMetrics(scrollView)
         }
 
+        func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+            // PKCanvasView 的縮放必須透過 delegate 指定目標視圖。
+            // 因為我們接管了 delegate，內建的處理被覆蓋了，縮放手勢會完全失效。
+            // 官方文件規定：接管 delegate 時必須回傳它的第一個子視圖。
+            scrollView.subviews.first
+        }
+
         func reportScrollMetrics(_ scrollView: UIScrollView) {
             let contentH = max(scrollView.contentSize.height, 1)
             let viewportH = scrollView.bounds.height
@@ -4563,7 +4570,7 @@ public struct NotebookEditorView: View {
                     // 落點，而原本的寫法是 `if !rootNotes.isEmpty` —— 於是
                     // 把所有筆記都歸檔之後，落點跟著消失，使用者再也拖不出來。
                     // 空的時候顯示一句提示，順便告訴他這裡可以放東西。
-                    let rootNotes = store.notebooks.filter { $0.folderId == nil }
+                    let rootNotes = store.notebooks(in: nil)
                     Group {
                         VStack(alignment: .leading, spacing: 3) {
                             HStack {
@@ -4635,7 +4642,7 @@ public struct NotebookEditorView: View {
             Text(
                 String(
                     format: localizationManager.localized("structure_summary"),
-                    String(store.folders.count), String(store.notebooks.count))
+                    String(store.folders.count), String(store.visibleNotebooks.count))
             )
             .font(DS.Font.caption)
             .foregroundStyle(DS.Color.tertiaryText)
