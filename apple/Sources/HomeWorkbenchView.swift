@@ -1584,9 +1584,17 @@ public struct HomeWorkbenchView: View {
         defer { homeGoogleSyncing = false }
 
         homeGoogleMessage = localizationManager.localized("syncing")
-        guard let report = await NotebookSyncCoordinator.runDrive(
-            store: notebookStore, deviceId: NotebookMigration.deviceId)
-        else {
+        let report: NotebookSyncCoordinator.Report?
+        do {
+            report = try await withSyncTimeout(seconds: 180) {
+                await NotebookSyncCoordinator.runDrive(
+                    store: notebookStore, deviceId: NotebookMigration.deviceId)
+            }
+        } catch {
+            homeGoogleMessage = "同步逾時，請確認網路連線後重試"
+            return
+        }
+        guard let report else {
             homeGoogleMessage = localizationManager.localized("not_signed_in")
             return
         }
@@ -2816,9 +2824,17 @@ extension AppDiagnosticsSheet {
         defer { isGoogleSyncing = false }
 
         googleMessage = localizationManager.localized("syncing")
-        guard let report = await NotebookSyncCoordinator.runDrive(
-            store: store, deviceId: NotebookMigration.deviceId)
-        else {
+        let report: NotebookSyncCoordinator.Report?
+        do {
+            report = try await withSyncTimeout(seconds: 180) {
+                await NotebookSyncCoordinator.runDrive(
+                    store: store, deviceId: NotebookMigration.deviceId)
+            }
+        } catch {
+            googleMessage = "同步逾時，請確認網路連線後重試"
+            return
+        }
+        guard let report else {
             googleMessage = localizationManager.localized("not_signed_in")
             return
         }
@@ -3619,9 +3635,19 @@ public struct CloudSyncDetailSheet: View {
         defer { isSyncing = false }
 
         statusMessage = localizationManager.localized("syncing")
-        guard let report = await NotebookSyncCoordinator.runDrive(
-            store: notebookStore, deviceId: NotebookMigration.deviceId)
-        else {
+        // 整體 180 秒上限保護：即使底層個別呼叫的超時全部失敗，
+        // 3 分鐘後也一定能解除 isSyncing，讓按鈕回到可按狀態。
+        let report: NotebookSyncCoordinator.Report?
+        do {
+            report = try await withSyncTimeout(seconds: 180) {
+                await NotebookSyncCoordinator.runDrive(
+                    store: notebookStore, deviceId: NotebookMigration.deviceId)
+            }
+        } catch {
+            statusMessage = "同步逾時，請確認網路連線後重試"
+            return
+        }
+        guard let report else {
             statusMessage = localizationManager.localized("not_signed_in")
             return
         }
@@ -4046,6 +4072,24 @@ public struct BackupRestoreDetailSheet: View {
         } catch {
             restoreMessage = error.localizedDescription
         }
+    }
+}
+
+/// 同步逾時保護。指定秒數內未完成就拋出 `CancellationError`。
+/// 用於保護所有 Google Drive 同步的入口，確保 isSyncing 一定能回到 false。
+private func withSyncTimeout<T: Sendable>(
+    seconds: Double,
+    operation: @escaping @Sendable () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        group.addTask { try await operation() }
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw CancellationError()
+        }
+        let result = try await group.next()!
+        group.cancelAll()
+        return result
     }
 }
 

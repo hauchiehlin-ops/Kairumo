@@ -246,13 +246,28 @@ public enum CloudSync {
         let index = await AccountSyncStore.shared.indexJSON
 
         // 核心會同步地等 HTTP，所以整段丟到背景執行緒。在主執行緒跑會卡死 UI。
-        let result = await Task.detached(priority: .utility) {
+        // 整體加 120 秒上限：Rust 端若進入重試迴圈（每次 HTTP 最多 35s），
+        // 沒有這一層的話，整個同步會永遠掛著，UI 卡在「同步中…」。
+        let detached = Task.detached(priority: .utility) {
             gdriveSyncMetadata(
                 http: DriveHttpClient(accessToken: token),
                 localSettingsJson: settings,
                 localIndexJson: index
             )
-        }.value
+        }
+        let result: FfiCloudSyncResult
+        do {
+            result = try await withTimeout(seconds: 120) { await detached.value }
+        } catch {
+            detached.cancel()
+            return FfiCloudSyncResult(
+                ok: false,
+                settingsJson: settings,
+                indexJson: index,
+                error: "同步逾時（超過 120 秒），請檢查網路連線後重試",
+                needsReauth: false
+            )
+        }
 
         if result.ok {
             // 合併結果要落地。只更新畫面不寫檔的話，重開 App 就回到同步前。
@@ -278,7 +293,7 @@ public enum CloudSync {
     ) async -> FfiNotebookSyncResult? {
         guard let token = await GoogleAuth.shared.validAccessToken() else { return nil }
         let now = UInt64(max(0, Date().timeIntervalSince1970 * 1000))
-        let result = await Task.detached(priority: .utility) {
+        let detached = Task.detached(priority: .utility) {
             gdriveCloneNotebook(
                 http: DriveHttpClient(accessToken: token),
                 packagePath: packagePath,
@@ -286,7 +301,15 @@ public enum CloudSync {
                 title: title,
                 nowUnixMs: now
             )
-        }.value
+        }
+        let result: FfiNotebookSyncResult
+        do {
+            result = try await withTimeout(seconds: 90) { await detached.value }
+        } catch {
+            detached.cancel()
+            return FfiNotebookSyncResult(ok: false, uploaded: 0, downloaded: 0,
+                error: "下載逾時（超過 90 秒）", needsReauth: false)
+        }
 
         if result.needsReauth {
             await GoogleAuth.shared.signOut()
@@ -304,7 +327,7 @@ public enum CloudSync {
         notebookId: String
     ) async -> FfiNotebookSyncResult? {
         guard let token = await GoogleAuth.shared.validAccessToken() else { return nil }
-        let result = await Task.detached(priority: .utility) {
+        let detached = Task.detached(priority: .utility) {
             let http = DriveHttpClient(accessToken: token)
             let ops = gdriveSyncNotebook(
                 http: http,
@@ -328,11 +351,36 @@ public enum CloudSync {
                 error: media.error,
                 needsReauth: media.needsReauth
             )
-        }.value
+        }
+        let result: FfiNotebookSyncResult
+        do {
+            result = try await withTimeout(seconds: 90) { await detached.value }
+        } catch {
+            detached.cancel()
+            return FfiNotebookSyncResult(ok: false, uploaded: 0, downloaded: 0,
+                error: "同步逾時（超過 90 秒）", needsReauth: false)
+        }
 
         if result.needsReauth {
             await GoogleAuth.shared.signOut()
         }
+        return result
+    }
+}
+
+/// 指定秒數內未完成就拋出 `CancellationError`。
+private func withTimeout<T: Sendable>(
+    seconds: Double,
+    operation: @escaping @Sendable () async throws -> T
+) async throws -> T {
+    try await withThrowingTaskGroup(of: T.self) { group in
+        group.addTask { try await operation() }
+        group.addTask {
+            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
+            throw CancellationError()
+        }
+        let result = try await group.next()!
+        group.cancelAll()
         return result
     }
 }

@@ -350,6 +350,9 @@ public final class GoogleAuth: NSObject, ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = body.data(using: .utf8)
+        // 30 秒上限：OAuth token 刷新若無限等待，會導致 validAccessToken() 永遠不回，
+        // 進而讓所有同步請求一起卡死。
+        request.timeoutInterval = 30
         do {
             let (data, _) = try await URLSession.shared.data(for: request)
             // **錯誤回應的內容也要交給核心**：Google 把 `invalid_grant`
