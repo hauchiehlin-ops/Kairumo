@@ -4271,6 +4271,14 @@ extension LocalizationManager {
             .ko: "사용자 탭 및 인터랙션 흐름 표시",
             .th: "ระบุทิศทางการแตะและการโต้ตอบของผู้ใช้"
         ],
+        "invalid_folder_padnote": [
+            .zhHant: "請選擇同步目錄的根資料夾，不可選擇單本 .padnote 筆記包。",
+            .en: "Please choose a root folder, not a .padnote file.",
+            .zhHans: "请选择同步目录的根文件夹，不可选择单本 .padnote 笔记包。",
+            .ja: "ルートフォルダを選択してください。.padnote ファイルではありません。",
+            .ko: ".padnote 파일이 아닌 루트 폴더를 선택하십시오.",
+            .th: "โปรดเลือกโฟลเดอร์หลัก ไม่ใช่ไฟล์ .padnote"
+        ],
         "invalid_server": [
             .zhHant: "這個中繼位址無法使用。",
             .en: "That relay address can't be used.",

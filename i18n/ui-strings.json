@@ -4255,6 +4255,14 @@
     "zhHans": "标示用户点击与滑动流向",
     "zhHant": "標示使用者點擊與滑動流向"
   },
+  "invalid_folder_padnote": {
+    "en": "Please choose a root folder, not a .padnote file.",
+    "ja": "ルートフォルダを選択してください。.padnote ファイルではありません。",
+    "ko": ".padnote 파일이 아닌 루트 폴더를 선택하십시오.",
+    "th": "โปรดเลือกโฟลเดอร์หลัก ไม่ใช่ไฟล์ .padnote",
+    "zhHans": "请选择同步目录的根文件夹，不可选择单本 .padnote 笔记包。",
+    "zhHant": "請選擇同步目錄的根資料夾，不可選擇單本 .padnote 筆記包。"
+  },
   "invalid_server": {
     "en": "That relay address can't be used.",
     "ja": "その中継サーバーのアドレスは使えません。",
