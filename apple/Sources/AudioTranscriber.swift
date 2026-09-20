@@ -35,10 +35,8 @@ public final class AudioTranscriber: ObservableObject {
         let locale: Locale
         if let languageCode = languageCode, !languageCode.isEmpty {
             locale = Locale(identifier: languageCode)
-        } else if let preferred = Locale.preferredLanguages.first {
-            locale = Locale(identifier: preferred)
         } else {
-            locale = Locale(identifier: "zh-TW")
+            locale = Locale(identifier: LocalizationManager.shared.currentLanguage.rawValue)
         }
         guard let recognizer = SFSpeechRecognizer(locale: locale) ?? SFSpeechRecognizer() else {
             return .unsupported
@@ -98,10 +96,9 @@ public final class AudioTranscriber: ObservableObject {
         let locale: Locale
         if let languageCode = languageCode, !languageCode.isEmpty {
             locale = Locale(identifier: languageCode)
-        } else if let preferred = Locale.preferredLanguages.first {
-            locale = Locale(identifier: preferred)
         } else {
-            locale = Locale(identifier: "zh-TW")
+            // 輸出語言以介面語系設定的語言為主
+            locale = Locale(identifier: LocalizationManager.shared.currentLanguage.rawValue)
         }
 
         // 嘗試以指定 locale 建立識別器，若不支援則以預設/系統 locale 備援
