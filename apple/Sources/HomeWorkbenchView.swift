@@ -3204,24 +3204,9 @@ public struct CloudSyncDetailSheet: View {
                         .font(DS.Font.screenTitle)
                         .foregroundColor(.primary)
 
-                    let gStatusText: String
-                    let gStatusColor: Color
-                    if !googleAuth.isSignedIn {
-                        gStatusText = localizationManager.localized("not_signed_in")
-                        gStatusColor = .secondary
-                    } else if isSyncing {
-                        gStatusText = localizationManager.localized("syncing")
-                        gStatusColor = .teal
-                    } else if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") || msg.contains("過期") {
-                        gStatusText = "同步發生錯誤"
-                        gStatusColor = .red
-                    } else {
-                        gStatusText = localizationManager.localized("sync_done")
-                        gStatusColor = .green
-                    }
-                    Text(gStatusText)
+                    Text(googleStatusText)
                         .font(DS.Font.cardTitle)
-                        .foregroundColor(gStatusColor)
+                        .foregroundColor(googleStatusColor)
                 }
             }
 
@@ -3545,6 +3530,32 @@ public struct CloudSyncDetailSheet: View {
             return localizationManager.localized("sync_done")
         }
         return "已設定 (待同步)"
+    }
+
+    private var googleStatusText: String {
+        if !googleAuth.isSignedIn {
+            return localizationManager.localized("not_signed_in")
+        }
+        if isSyncing {
+            return localizationManager.localized("syncing")
+        }
+        if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") || msg.contains("過期") {
+            return "同步發生錯誤"
+        }
+        return localizationManager.localized("sync_done")
+    }
+
+    private var googleStatusColor: Color {
+        if !googleAuth.isSignedIn {
+            return .secondary
+        }
+        if isSyncing {
+            return .teal
+        }
+        if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") || msg.contains("過期") {
+            return .red
+        }
+        return .green
     }
 
     private var folderStatusColor: Color {
