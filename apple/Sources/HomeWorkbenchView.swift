@@ -4000,7 +4000,7 @@ public struct CloudSyncDetailSheet: View {
     }
 
     @ViewBuilder
-    private func sourceBadge(_ source: SyncLogger.SyncSource) -> some View {
+    private func sourceBadge(_ source: SyncSource) -> some View {
         switch source {
         case .googleDrive:
             Text("Drive")

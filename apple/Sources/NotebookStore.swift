@@ -1110,6 +1110,8 @@ public final class NotebookStore: ObservableObject {
     @Published public var folders: [FolderItem] = []
     /// 根資料夾名稱。空字串代表「使用者沒有自訂」，顯示時走語系預設值。
     @Published public var rootFolderName: String = ""
+    /// 目前正在檢視／編輯的作用中筆記本 ID（供雙軌同步優先排程使用）
+    @Published public var activeNotebookId: String? = nil
 
     /// 顯示用根資料夾名稱。
     public var displayRootFolderName: String {

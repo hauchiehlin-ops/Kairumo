@@ -327,6 +327,12 @@ public enum CloudSync {
         notebookId: String
     ) async -> FfiNotebookSyncResult? {
         guard let token = await GoogleAuth.shared.validAccessToken() else { return nil }
+
+        // 動態計算逾時時間：根據套件內待同步的 oplog 數量自適應調整，避免巨量歷史筆跡或弱網時超時
+        let opsDir = (packagePath as NSString).appendingPathComponent("doc/ops")
+        let opsCount = (try? FileManager.default.contentsOfDirectory(atPath: opsDir).count) ?? 0
+        let timeoutSeconds = max(120.0, min(600.0, 60.0 + Double(opsCount) * 1.5))
+
         let detached = Task.detached(priority: .utility) {
             let http = DriveHttpClient(accessToken: token)
             let ops = gdriveSyncNotebook(
@@ -354,11 +360,11 @@ public enum CloudSync {
         }
         let result: FfiNotebookSyncResult
         do {
-            result = try await withTimeout(seconds: 90) { await detached.value }
+            result = try await withTimeout(seconds: timeoutSeconds) { await detached.value }
         } catch {
             detached.cancel()
             return FfiNotebookSyncResult(ok: false, uploaded: 0, downloaded: 0,
-                error: "同步逾時（超過 90 秒）", needsReauth: false)
+                error: "同步逾時（超過 \(Int(timeoutSeconds)) 秒）", needsReauth: false)
         }
 
         if result.needsReauth {

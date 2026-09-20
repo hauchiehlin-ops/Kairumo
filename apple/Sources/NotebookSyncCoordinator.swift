@@ -38,16 +38,23 @@ protocol SyncableNotebookStore: AnyObject {
     var syncAttachmentsDirectory: URL { get }
     /// **別台裝置**寫的那些筆畫。匯出時要扣掉它們，才不會複製一份掛在自己名下。
     var syncBaselineDirectory: URL { get }
+    /// 目前正在編輯／檢視的作用中筆記本 ID（nil 表示在首頁或未指定）
+    var activeNotebookId: String? { get }
 
     func syncLoadDrawing(notebookId: String, pageIndex: Int) -> PKDrawing
     func syncSaveDrawing(notebookId: String, pageIndex: Int, drawing: PKDrawing)
     func syncUpsert(_ document: NotebookDocument)
 }
 
+extension SyncableNotebookStore {
+    var activeNotebookId: String? { nil }
+}
+
 extension NotebookStore: SyncableNotebookStore {
     var syncNotebooks: [NotebookDocument] { notebooks }
     var syncPackagesDirectory: URL { corePackagesDirectory }
     var syncAttachmentsDirectory: URL { attachmentsDirectory }
+    // activeNotebookId 由 NotebookStore 本身的 @Published var 直接滿足協定，不需要在此重新宣告
 
     var syncBaselineDirectory: URL {
         let dir = documentsDirectory.appendingPathComponent("SyncBaseline", isDirectory: true)
@@ -118,23 +125,42 @@ enum NotebookSyncCoordinator {
         }
         SyncLogger.logAsync("步驟 1 完成，成功匯出 \(report.exported) 本", source: .folder)
 
-        // ── 2. 搬檔 (Heavy I/O, moved to background) ──────────────────────
-        SyncLogger.logAsync("步驟 2：搬移雲端檔案 (背景執行)...", source: .folder)
-        let (syncUploaded, syncDownloaded, syncNeedsAttention, syncFailures, newNotebooks) = await Task.detached(priority: .utility) {
+        // ── 2. 搬檔 (雙軌並行排程) ──────────────────────
+        SyncLogger.logAsync("步驟 2：搬移雲端檔案 (雙軌並行排程)...", source: .folder)
+        let activeId = store.activeNotebookId ?? store.syncNotebooks.sorted { $0.lastModifiedDate > $1.lastModifiedDate }.first?.id
+        let (syncUploaded, syncDownloaded, syncNeedsAttention, syncFailures, newNotebooks, pendingLogs) = await Task.detached(priority: .utility) {
             var up = 0
             var down = 0
             var attention = [String]()
             var fails = [String: String]()
             var newBooks = 0
+            // 收集需在 MainActor 上記錄的日誌（避免跨 actor 呼叫）
+            var logs = [(String, SyncSource)]()
             
-            let packages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
+            var packages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
                 .filter { $0.pathExtension == "padnote" } ?? []
-            for package in packages {
-                let result = CloudSyncFolder.sync(localPackage: package, into: folder)
-                up += result.uploaded.count
-                down += result.downloaded.count
-                attention.append(contentsOf: result.needsAttention)
-                fails.merge(result.failures) { first, _ in first }
+
+            // 軌道一：前台作用中筆記優先極速同步
+            if let activeId, let activeIdx = packages.firstIndex(where: { $0.deletingPathExtension().lastPathComponent == activeId }) {
+                let activePkg = packages.remove(at: activeIdx)
+                logs.append(("【前台極速軌】優先同步當前作用中筆記 (\(activeId.prefix(8))...)...", .folder))
+                let res = CloudSyncFolder.sync(localPackage: activePkg, into: folder)
+                up += res.uploaded.count
+                down += res.downloaded.count
+                attention.append(contentsOf: res.needsAttention)
+                fails.merge(res.failures) { first, _ in first }
+            }
+
+            // 軌道二：非作用中筆記背景佇列
+            if !packages.isEmpty {
+                logs.append(("【背景佇列】開始同步其餘 \(packages.count) 本非作用中筆記...", .folder))
+                for package in packages {
+                    let result = CloudSyncFolder.sync(localPackage: package, into: folder)
+                    up += result.uploaded.count
+                    down += result.downloaded.count
+                    attention.append(contentsOf: result.needsAttention)
+                    fails.merge(result.failures) { first, _ in first }
+                }
             }
 
             // 另一台裝置建立的筆記本，本機還沒有對應的套件目錄 —— 要先整包抓下來。
@@ -143,7 +169,7 @@ enum NotebookSyncCoordinator {
             attention.append(contentsOf: tempReport.needsAttention)
             fails.merge(tempReport.failures) { first, _ in first }
             
-            return (up, down, attention, fails, newBooks)
+            return (up, down, attention, fails, newBooks, logs)
         }.value
 
         report.uploaded += syncUploaded
@@ -151,6 +177,8 @@ enum NotebookSyncCoordinator {
         report.needsAttention.append(contentsOf: syncNeedsAttention)
         report.failures.merge(syncFailures) { first, _ in first }
         report.newNotebooks += newNotebooks
+        // 將 detached task 內收集的日誌統一在 MainActor 上記錄
+        for (msg, src) in pendingLogs { SyncLogger.logAsync(msg, source: src) }
         SyncLogger.logAsync("步驟 2 完成。上傳: \(syncUploaded), 下載: \(syncDownloaded), 新增: \(newNotebooks), 失敗: \(syncFailures.count)", source: .folder)
 
         // ── 3. 匯入回筆記 ─────────────────────────────────
@@ -212,8 +240,19 @@ enum NotebookSyncCoordinator {
         let packages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
             .filter { $0.pathExtension == "padnote" } ?? []
         SyncLogger.logAsync("雲端元資料同步完成，開始逐本比對套件檔案...", source: .googleDrive)
-        for package in packages {
+
+        // ── 雙軌排程：前台極速軌 + 背景並行佇列 ──────────────
+        // 取出作用中筆記本 ID（必須在 @MainActor 上下文讀取，此函式本身已標記 @MainActor）
+        let activeId = store.activeNotebookId
+
+        // 先分類：前台（正在編輯）vs 背景（其餘）
+        let foreground = packages.filter { $0.deletingPathExtension().lastPathComponent == activeId }
+        let background = packages.filter { $0.deletingPathExtension().lastPathComponent != activeId }
+
+        // 前台極速軌：優先、立即執行
+        for package in foreground {
             let id = package.deletingPathExtension().lastPathComponent
+            SyncLogger.logAsync("⚡ 前台極速同步：\(id)", source: .googleDrive)
             guard let result = await CloudSync.syncNotebook(
                 packagePath: package.path, notebookId: id) else { continue }
             if result.ok {
@@ -227,6 +266,54 @@ enum NotebookSyncCoordinator {
                     break
                 }
             }
+        }
+
+        // 背景並行佇列：最多 4 路並發，避免占滿頻寬
+        let concurrencyLimit = 4
+        var backgroundQueue = background
+        while !backgroundQueue.isEmpty {
+            let batch = Array(backgroundQueue.prefix(concurrencyLimit))
+            backgroundQueue.removeFirst(min(concurrencyLimit, backgroundQueue.count))
+
+            let batchResults: [(uploaded: Int, downloaded: Int, id: String, error: String?, needsReauth: Bool)] =
+                await withTaskGroup(
+                    of: (uploaded: Int, downloaded: Int, id: String, error: String?, needsReauth: Bool).self
+                ) { group in
+                    for package in batch {
+                        let id = package.deletingPathExtension().lastPathComponent
+                        let path = package.path
+                        group.addTask {
+                            guard let result = await CloudSync.syncNotebook(
+                                packagePath: path, notebookId: id) else {
+                                return (0, 0, id, nil, false)
+                            }
+                            if result.ok {
+                                return (Int(result.uploaded), Int(result.downloaded), id, nil, false)
+                            } else {
+                                return (0, 0, id, result.error, result.needsReauth)
+                            }
+                        }
+                    }
+                    var collected: [(Int, Int, String, String?, Bool)] = []
+                    for await r in group { collected.append(r) }
+                    return collected
+                }
+
+            var shouldBreak = false
+            for r in batchResults {
+                if let err = r.error {
+                    SyncLogger.logAsync("筆記本 \(r.id) 背景同步失敗：\(err)", source: .googleDrive)
+                    report.failures[r.id] = err
+                    if r.needsReauth {
+                        await GoogleAuth.shared.signOut()
+                        shouldBreak = true
+                    }
+                } else {
+                    report.uploaded += r.uploaded
+                    report.downloaded += r.downloaded
+                }
+            }
+            if shouldBreak { break }
         }
 
         // 別台裝置**新建**的筆記本在本機連套件目錄都沒有，上面那一圈看不到它們。
@@ -472,15 +559,16 @@ enum NotebookSyncCoordinator {
 }
 import Foundation
 
+/// 同步來源識別（頂層型別，nonisolated 上下文可安全引用）
+public enum SyncSource: String, Sendable, CaseIterable {
+    case general = "系統"
+    case googleDrive = "Google Drive"
+    case folder = "iCloud / 資料夾"
+}
+
 @MainActor
 public final class SyncLogger: ObservableObject {
     public static let shared = SyncLogger()
-    
-    public enum SyncSource: String, Sendable, CaseIterable {
-        case general = "系統"
-        case googleDrive = "Google Drive"
-        case folder = "iCloud / 資料夾"
-    }
 
     public struct LogEntry: Identifiable, Sendable {
         public let id = UUID()
@@ -509,7 +597,7 @@ public final class SyncLogger: ObservableObject {
 }
 
 extension SyncLogger {
-    public static func logAsync(_ message: String, source: SyncLogger.SyncSource = .general) {
+    public static func logAsync(_ message: String, source: SyncSource = .general) {
         Task { @MainActor in
             SyncLogger.shared.log(message, source: source)
         }

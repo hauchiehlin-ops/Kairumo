@@ -1364,6 +1364,7 @@ public struct NotebookEditorView: View {
             }
         )
         .onAppear {
+            store.activeNotebookId = notebook.id
             sanitizeTextAttachments()
             loadCurrentPage()
             MacWindowTitle.apply()
@@ -1371,6 +1372,9 @@ public struct NotebookEditorView: View {
             flashModeBadge()
         }
         .onDisappear {
+            if store.activeNotebookId == notebook.id {
+                store.activeNotebookId = nil
+            }
             saveCurrentPageDrawing()
         }
         .onChange(of: scenePhase) { phase in
