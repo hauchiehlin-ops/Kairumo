@@ -3306,7 +3306,11 @@ public struct CloudSyncDetailSheet: View {
                             statusMessage = nil
                             switch await GoogleAuth.shared.signIn() {
                             case .success:
-                                await runGoogleSync()
+                                if !isSyncing {
+                                    await runGoogleSync()
+                                } else {
+                                    statusMessage = "已登入成功（目前正有其他同步執行中）"
+                                }
                             case .failure(.cancelled):
                                 break
                             case .failure(let error):
@@ -3331,7 +3335,7 @@ public struct CloudSyncDetailSheet: View {
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.indigo)
-                    .disabled(googleAuth.isSigningIn || isSyncing)
+                    .disabled(googleAuth.isSigningIn)
                 }
             }
 
@@ -3689,7 +3693,7 @@ public struct CloudSyncDetailSheet: View {
         isSyncing = true
         defer { isSyncing = false }
 
-        statusMessage = localizationManager.localized("syncing")
+        statusMessage = "Google Drive 同步中..."
         // 整體 180 秒上限保護：即使底層個別呼叫的超時全部失敗，
         // 3 分鐘後也一定能解除 isSyncing，讓按鈕回到可按狀態。
         let report: NotebookSyncCoordinator.Report?
@@ -3730,7 +3734,7 @@ public struct CloudSyncDetailSheet: View {
             let scoped = folder.startAccessingSecurityScopedResource()
             defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
 
-            statusMessage = localizationManager.localized("syncing")
+            statusMessage = "iCloud / 資料夾同步中..."
             let report: NotebookSyncCoordinator.Report
             do {
                 report = try await withSyncTimeout(seconds: 180) {
