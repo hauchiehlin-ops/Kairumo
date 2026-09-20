@@ -3110,6 +3110,7 @@ public struct CloudSyncDetailSheet: View {
     @State private var selectedProvider: CloudSyncProvider = .googleDrive
     @State private var statusMessage: String?
     @State private var isSyncing = false
+    @State private var syncTask: Task<Void, Never>?
     @State private var showFolderPicker = false
 
     private static let logDateFormatter: DateFormatter = {
@@ -3193,7 +3194,7 @@ public struct CloudSyncDetailSheet: View {
                     defer { if scoped { url.stopAccessingSecurityScopedResource() } }
                     do {
                         try CloudSyncFolder.setFolder(url)
-                        runFolderSync()
+                        syncTask = Task { await runFolderSync() }
                     } catch {
                         statusMessage = error.localizedDescription
                     }
@@ -3266,25 +3267,36 @@ public struct CloudSyncDetailSheet: View {
 
             VStack(spacing: DS.Space.s) {
                 if googleAuth.isSignedIn {
-                    Button {
-                        Task { await runGoogleSync() }
-                    } label: {
-                        HStack {
-                            if isSyncing {
+                    if isSyncing {
+                        Button(role: .destructive) {
+                            syncTask?.cancel()
+                        } label: {
+                            HStack {
                                 ProgressView()
                                     .padding(.trailing, 6)
-                            } else {
-                                Image(systemName: "arrow.clockwise")
+                                Text("中斷同步")
+                                    .fontWeight(.semibold)
                             }
-                            Text(localizationManager.localized("sync_now"))
-                                .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.red)
+                    } else {
+                        Button {
+                            syncTask = Task { await runGoogleSync() }
+                        } label: {
+                            HStack {
+                                Image(systemName: "arrow.clockwise")
+                                Text(localizationManager.localized("sync_now"))
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .tint(.indigo)
                     }
-                    .buttonStyle(.borderedProminent)
-                    .tint(.indigo)
-                    .disabled(isSyncing)
 
                     Button(role: .destructive) {
                         Task {
@@ -3453,24 +3465,36 @@ public struct CloudSyncDetailSheet: View {
                 .tint(.teal)
 
                 if CloudSyncFolder.resolveFolder() != nil {
-                    Button {
-                        runFolderSync()
-                    } label: {
-                        HStack {
-                            if isSyncing {
+                    if isSyncing {
+                        Button(role: .destructive) {
+                            syncTask?.cancel()
+                        } label: {
+                            HStack {
                                 ProgressView()
                                     .padding(.trailing, 6)
-                            } else {
-                                Image(systemName: "arrow.clockwise")
+                                Text("中斷同步")
+                                    .fontWeight(.semibold)
                             }
-                            Text(localizationManager.localized("sync_now"))
-                                .fontWeight(.semibold)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
                         }
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
+                        .buttonStyle(.bordered)
+                        .tint(.red)
+                    } else {
+                        Button {
+                            syncTask = Task { await runFolderSync() }
+                        } label: {
+                            HStack {
+                                Image(systemName: "arrow.clockwise")
+                                Text(localizationManager.localized("sync_now"))
+                                    .fontWeight(.semibold)
+                            }
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.teal)
                     }
-                    .buttonStyle(.bordered)
-                    .disabled(isSyncing)
 
                     Button(role: .destructive) {
                         CloudSyncFolder.clearFolder()
@@ -3723,13 +3747,12 @@ public struct CloudSyncDetailSheet: View {
     }
 
     @MainActor
-    private func runFolderSync() {
+    private func runFolderSync() async {
         guard !isSyncing else { return }
         guard let folder = CloudSyncFolder.resolveFolder() else { return }
         isSyncing = true
         
-        Task {
-            defer { isSyncing = false }
+        defer { isSyncing = false }
 
             let scoped = folder.startAccessingSecurityScopedResource()
             defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
@@ -3760,7 +3783,6 @@ public struct CloudSyncDetailSheet: View {
                     .replacingFirst("%1@", with: "\(report.uploaded)")
                     .replacingFirst("%2@", with: "\(report.downloaded)")
             }
-        }
     }
 
     private var logSection: some View {

@@ -531,9 +531,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         if uiView.drawingGestureRecognizer.isEnabled != acceptsInk {
             uiView.drawingGestureRecognizer.isEnabled = acceptsInk
         }
-        if uiView.isUserInteractionEnabled != acceptsInk {
-            uiView.isUserInteractionEnabled = acceptsInk
-        }
+
         // 換筆刷或拉筆寬時，游標要跟著變 —— 不更新的話使用者得把滑鼠移出去
         // 再移回來才看得到新的筆頭。
         if let adaptive = uiView as? AdaptiveCanvasView {
