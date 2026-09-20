@@ -48,7 +48,7 @@ pub fn whisper_transcribe_pcm(
     {
         use padnote_asr::AsrEngine;
         let lang = language.unwrap_or_else(|| "auto".to_string());
-        
+
         let mut engine = padnote_asr_whisper::WhisperEngine::load(&model_path, &lang)
             .map_err(|e| FfiAsrError::ModelNotLoaded(e.to_string()))?;
 
@@ -56,7 +56,7 @@ pub fn whisper_transcribe_pcm(
         let mut segments = engine
             .feed(&pcm_16k_mono)
             .map_err(|e| FfiAsrError::Backend(e.to_string()))?;
-        
+
         let finish_segments = engine
             .finish()
             .map_err(|e| FfiAsrError::Backend(e.to_string()))?;
@@ -89,6 +89,8 @@ pub fn whisper_transcribe_pcm(
     {
         let _ = model_path;
         let _ = language;
-        Err(FfiAsrError::Backend("此平台版本未啟用 ASR 語音引擎".to_string()))
+        Err(FfiAsrError::Backend(
+            "此平台版本未啟用 ASR 語音引擎".to_string(),
+        ))
     }
 }
