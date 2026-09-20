@@ -338,12 +338,7 @@ pub fn gdrive_sync_notebook(
         Err(e) => return notebook_failed(format!("開不了套件：{e}")),
     };
     // 上傳前先做 oplog 壓實：當本機碎檔超過 50 個時，合併以大幅減少 HTTP PUT 次數
-    if let Ok(compact) = package.compact_doc_ops(50) {
-        if compact.merged_files > 0 {
-            // 壓實成功，後續 doc_op_files() 只會看到 1 個合併檔
-            let _ = compact.merged_files;
-        }
-    }
+    let _ = package.compact_doc_ops(50);
     let local = match package.doc_op_files() {
         Ok(files) => files,
         Err(e) => return notebook_failed(format!("讀不到本機 oplog：{e}")),
