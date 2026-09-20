@@ -104,22 +104,25 @@ enum CloudSyncFolder {
             options: []
         ) else { return [] }
 
+        let baseStandardized = packageURL.resolvingSymlinksInPath().standardizedFileURL.path
+        let prefix = baseStandardized.hasSuffix("/") ? baseStandardized : baseStandardized + "/"
+
         var out: [SyncFileEntry] = []
         for case let url as URL in walker {
-            let last = url.lastPathComponent
+            let resolvedUrl = url.resolvingSymlinksInPath().standardizedFileURL
+            let last = resolvedUrl.lastPathComponent
             if ICloudSyncFolder.isPlaceholder(url) {
-                let logical = ICloudSyncFolder.logicalURL(of: url)
+                let logical = ICloudSyncFolder.logicalURL(of: url).resolvingSymlinksInPath().standardizedFileURL
                 try? fm.startDownloadingUbiquitousItem(at: logical)
-                let relative = logical.path.replacingOccurrences(of: packageURL.path + "/", with: "")
+                let relative = logical.path.replacingOccurrences(of: prefix, with: "")
                 out.append(SyncFileEntry(path: relative, size: 0))
                 continue
             }
             if last.hasPrefix(".") { continue }
 
-            let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
+            let values = try? resolvedUrl.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
             guard values?.isRegularFile == true else { continue }
-            let relative = url.path.replacingOccurrences(
-                of: packageURL.path + "/", with: "")
+            let relative = resolvedUrl.path.replacingOccurrences(of: prefix, with: "")
             out.append(SyncFileEntry(path: relative, size: UInt64(values?.fileSize ?? 0)))
         }
         return out

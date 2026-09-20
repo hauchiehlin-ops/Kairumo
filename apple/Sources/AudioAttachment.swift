@@ -45,6 +45,7 @@ struct AudioAttachmentItemView: View {
     @State private var renameText: String = ""
     @State private var isTranscribing: Bool = false
     @State private var transcribeAlertMessage: String? = nil
+    @State private var showOfflineInfo: Bool = false
 
     private var displayWidth: CGFloat { liveSize?.width ?? item.width }
     private var displayHeight: CGFloat { liveSize?.height ?? item.height }
@@ -186,6 +187,22 @@ struct AudioAttachmentItemView: View {
                     dismissButton: .default(Text(localizationManager.localized("done")))
                 )
             }
+            .alert("離線語音辨識狀態", isPresented: $showOfflineInfo) {
+                Button("前往系統設定下載模型") {
+                    AudioTranscriber.shared.openSystemDictationSettings()
+                }
+                Button(localizationManager.localized("cancel"), role: .cancel) {}
+            } message: {
+                let status = AudioTranscriber.shared.checkOfflineStatus()
+                switch status {
+                case .ready:
+                    Text("🟢 您的裝置已支援並就緒本機離線語音辨識。\n轉錄時全程端側運算，免網路且 100% 保障隱私。")
+                case .needsDownload:
+                    Text("🟡 您的裝置支援端側神經辨識，但系統尚未下載離線語音模型。\n\n目前轉錄會自動平滑降級為線上辨識；若需完全離線使用，請點擊「前往系統設定下載模型」，開啟聽寫即可由系統自動在本地完成下載。")
+                case .unsupported:
+                    Text("⚪ 目前系統或語言環境不支援本機離線辨識，轉錄時將使用標準語音辨識服務。")
+                }
+            }
     }
 
     private var card: some View {
@@ -265,14 +282,20 @@ struct AudioAttachmentItemView: View {
                 Label(localizationManager.localized("transcribe_audio"), systemImage: "waveform.badge.magnifyingglass")
             }
             .disabled(isTranscribing || !fileExists)
-            
+
+            Button {
+                showOfflineInfo = true
+            } label: {
+                Label("離線語音模型狀態", systemImage: "arrow.down.circle")
+            }
+
             Button {
                 renameText = item.title
                 isRenaming = true
             } label: {
                 Label(localizationManager.localized("rename_audio_card"), systemImage: "pencil")
             }
-            
+
             Divider()
             
             Button(role: .destructive) {

@@ -70,6 +70,7 @@ final class NotebookSyncCoordinatorTests: XCTestCase {
 
     override func setUpWithError() throws {
         workDir = FileManager.default.temporaryDirectory
+            .resolvingSymlinksInPath()
             .appendingPathComponent("kairumo-sync-\(UUID().uuidString)", isDirectory: true)
         cloud = workDir.appendingPathComponent("Cloud", isDirectory: true)
         try FileManager.default.createDirectory(at: cloud, withIntermediateDirectories: true)

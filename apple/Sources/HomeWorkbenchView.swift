@@ -2527,6 +2527,7 @@ public struct AppDiagnosticsSheet: View {
 
                 migrationSection
                 unifiedSyncSection
+                speechTranscriptionSection
                 pageModelSection
                 backupSection
                 inputDiagnosticsSection
@@ -2765,6 +2766,46 @@ extension AppDiagnosticsSheet {
         }
         .sheet(isPresented: $showCloudSyncHub) {
             CloudSyncDetailSheet()
+        }
+    }
+
+    /// 語音轉錄與離線模型狀態（提供離線模型檢測與系統下載指引）
+    @ViewBuilder
+    var speechTranscriptionSection: some View {
+        Section("語音轉錄與離線模型") {
+            let status = AudioTranscriber.shared.checkOfflineStatus()
+            HStack {
+                Text("本機神經離線辨識")
+                Spacer()
+                switch status {
+                case .ready:
+                    Label("已就緒 (免聯網)", systemImage: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                        .font(.footnote)
+                case .needsDownload:
+                    Label("未下載模型 (使用線上)", systemImage: "exclamationmark.triangle.fill")
+                        .foregroundColor(.orange)
+                        .font(.footnote)
+                case .unsupported:
+                    Label("系統不支援", systemImage: "info.circle")
+                        .foregroundColor(.secondary)
+                        .font(.footnote)
+                }
+            }
+
+            Button {
+                AudioTranscriber.shared.openSystemDictationSettings()
+            } label: {
+                HStack {
+                    Image(systemName: "arrow.down.circle")
+                    Text("前往系統設定開啟「聽寫」下載離線語音包")
+                }
+            }
+            .font(.footnote)
+
+            Text("Apple 語音神經網路模型由 iOS / macOS 系統受保護託管。開啟系統「設定 > 鍵盤 > 聽寫」後，系統會自動在本地下載離線語音模型包，轉錄全程無需聯網、極速辨識並保障隱私。若尚未下載，App 亦會自動平滑降級為標準辨識，絕不中斷。")
+                .font(.caption)
+                .foregroundColor(.secondary)
         }
     }
 
@@ -3226,26 +3267,35 @@ public struct CloudSyncDetailSheet: View {
                 } else {
                     Button {
                         Task {
+                            statusMessage = nil
                             switch await GoogleAuth.shared.signIn() {
                             case .success:
                                 await runGoogleSync()
                             case .failure(.cancelled):
                                 break
                             case .failure(let error):
-                                statusMessage = error.errorDescription
+                                statusMessage = error.errorDescription ?? error.localizedDescription
                             }
                         }
                     } label: {
                         HStack {
-                            Image(systemName: "arrow.up.circle.fill")
-                            Text(localizationManager.localized("sign_in_google"))
-                                .fontWeight(.semibold)
+                            if googleAuth.isSigningIn {
+                                ProgressView()
+                                    .padding(.trailing, 6)
+                                Text("登入中…")
+                                    .fontWeight(.semibold)
+                            } else {
+                                Image(systemName: "arrow.up.circle.fill")
+                                Text(localizationManager.localized("sign_in_google"))
+                                    .fontWeight(.semibold)
+                            }
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                     }
                     .buttonStyle(.borderedProminent)
                     .tint(.indigo)
+                    .disabled(googleAuth.isSigningIn || isSyncing)
                 }
             }
 

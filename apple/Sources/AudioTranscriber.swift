@@ -9,14 +9,65 @@
 import Foundation
 import Speech
 
+import UIKit
+
 @MainActor
 public final class AudioTranscriber: ObservableObject {
     public static let shared = AudioTranscriber()
 
     @Published public var isTranscribing: Bool = false
     @Published public var lastError: String? = nil
+    @Published public var lastUsedOnDevice: Bool = false
+
+    public enum OfflineStatus: Equatable {
+        /// 本地神經網路離線語音模型已就緒
+        case ready
+        /// 系統支援但本地尚未下載離線模型（或需開啟聽寫）
+        case needsDownload
+        /// 當前語言或系統不支援離線辨識
+        case unsupported
+    }
 
     private init() {}
+
+    /// 檢查當前指定語言之本機離線辨識支援與模型狀態
+    public func checkOfflineStatus(languageCode: String? = nil) -> OfflineStatus {
+        let locale: Locale
+        if let languageCode = languageCode, !languageCode.isEmpty {
+            locale = Locale(identifier: languageCode)
+        } else {
+            locale = Locale.current
+        }
+        guard let recognizer = SFSpeechRecognizer(locale: locale) ?? SFSpeechRecognizer() else {
+            return .unsupported
+        }
+        if recognizer.supportsOnDeviceRecognition {
+            return .ready
+        } else {
+            return .needsDownload
+        }
+    }
+
+    /// 開啟系統設定中的「聽寫 / 鍵盤」頁面，指引使用者由系統下載離線語音包
+    public func openSystemDictationSettings() {
+        #if targetEnvironment(macCatalyst) || os(macOS)
+        if let url = URL(string: "x-apple.systempreferences:com.apple.preference.keyboard?Dictation") {
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
+        } else if let generalUrl = URL(string: "x-apple.systempreferences:com.apple.preference.keyboard") {
+            UIApplication.shared.open(generalUrl, options: [:], completionHandler: nil)
+        }
+        #else
+        if let url = URL(string: "App-Prefs:root=General&path=Keyboard") {
+            UIApplication.shared.open(url, options: [:]) { success in
+                if !success, let appSettings = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(appSettings, options: [:], completionHandler: nil)
+                }
+            }
+        } else if let appSettings = URL(string: UIApplication.openSettingsURLString) {
+            UIApplication.shared.open(appSettings, options: [:], completionHandler: nil)
+        }
+        #endif
+    }
 
     /// 檢查並請求語音辨識權限
     public func requestPermission() async -> Bool {
@@ -73,11 +124,15 @@ public final class AudioTranscriber: ObservableObject {
         // 若系統本機尚未下載該語言之離線語音模型（常拋出 error 216 "Retry"），自動平滑降級為標準辨識
         if recognizer.supportsOnDeviceRecognition {
             do {
-                return try await performRecognitionTask(recognizer: recognizer, url: url, requiresOnDevice: true)
+                let res = try await performRecognitionTask(recognizer: recognizer, url: url, requiresOnDevice: true)
+                lastUsedOnDevice = true
+                return res
             } catch {
+                lastUsedOnDevice = false
                 return try await performRecognitionTask(recognizer: recognizer, url: url, requiresOnDevice: false)
             }
         } else {
+            lastUsedOnDevice = false
             return try await performRecognitionTask(recognizer: recognizer, url: url, requiresOnDevice: false)
         }
     }

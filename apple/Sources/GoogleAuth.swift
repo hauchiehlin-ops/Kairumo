@@ -31,6 +31,12 @@ public final class GoogleAuth: NSObject, ObservableObject {
     /// 有沒有可用的長期授權。
     @Published public private(set) var isSignedIn: Bool = false
 
+    /// 是否正在進行登入授權流程（避免重複發起與提供 UI 載入狀態）。
+    @Published public private(set) var isSigningIn: Bool = false
+
+    /// 授權回調 Handler（供 `present` 與外部 `onOpenURL` 共同調度）。
+    private var pendingAuthResume: ((Result<URL, Error>) -> Void)?
+
     /// 這些筆記正在同步到**誰的** Drive。
     ///
     /// # 為什麼要顯示它
@@ -101,6 +107,15 @@ public final class GoogleAuth: NSObject, ObservableObject {
     // MARK: - 登入
 
     public func signIn(loginHint: String = "") async -> Result<Void, Failure> {
+        guard !isSigningIn else {
+            return .failure(.server("登入處理中，請勿重複點擊"))
+        }
+        isSigningIn = true
+        defer {
+            isSigningIn = false
+            pendingAuthResume = nil
+        }
+
         let pkce = oauthNewPkce()
         guard !pkce.verifier.isEmpty else {
             return .failure(.server("random_unavailable"))
@@ -161,19 +176,64 @@ public final class GoogleAuth: NSObject, ObservableObject {
     private func present(url: URL) async throws -> URL {
         try await withCheckedThrowingContinuation { continuation in
             let scheme = oauthUrlScheme(platform: .apple)
+            var hasResumed = false
+            let lock = NSLock()
+
+            let safeResume: (Result<URL, Error>) -> Void = { [weak self] result in
+                lock.lock()
+                defer { lock.unlock() }
+                guard !hasResumed else { return }
+                hasResumed = true
+                self?.pendingAuthResume = nil
+                self?.session = nil
+                continuation.resume(with: result)
+            }
+
+            self.pendingAuthResume = safeResume
+
             let session = ASWebAuthenticationSession(url: url, callbackURLScheme: scheme) { callback, error in
                 if let callback {
-                    continuation.resume(returning: callback)
+                    safeResume(.success(callback))
                 } else {
-                    continuation.resume(throwing: error ?? Failure.cancelled)
+                    safeResume(.failure(error ?? Failure.cancelled))
                 }
             }
             session.presentationContextProvider = self
             // 不共用 Safari 的 cookie 的話，使用者每次都要重打 Google 密碼。
             session.prefersEphemeralWebBrowserSession = false
             self.session = session
-            session.start()
+            let started = session.start()
+            if !started {
+                safeResume(.failure(Failure.server("無法啟動系統登入視窗，請重試")))
+            }
+
+            // 180 秒超時保護，避免因系統彈窗未點擊或背景卡死無窮等待
+            DispatchQueue.main.asyncAfter(deadline: .now() + 180) { [weak self] in
+                lock.lock()
+                let alreadyDone = hasResumed
+                lock.unlock()
+                if !alreadyDone {
+                    self?.session?.cancel()
+                    safeResume(.failure(Failure.server("登入逾時，請重新嘗試")))
+                }
+            }
         }
+    }
+
+    /// 當系統或外部將回調 URL 跳回 App 時處理之（例如 through onOpenURL）。
+    @discardableResult
+    public func handleCallbackURL(_ url: URL) -> Bool {
+        let expectedScheme = oauthUrlScheme(platform: .apple).lowercased()
+        guard let urlScheme = url.scheme?.lowercased(), urlScheme == expectedScheme else {
+            return false
+        }
+        if let resume = pendingAuthResume {
+            resume(.success(url))
+            session?.cancel()
+            session = nil
+            return true
+        }
+        return false
     }
 
     // MARK: - 取用與更新
@@ -308,11 +368,15 @@ public final class GoogleAuth: NSObject, ObservableObject {
 
 extension GoogleAuth: ASWebAuthenticationPresentationContextProviding {
     public func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {
-        // Catalyst 與 iPad 都走這一條。拿不到 key window 時給一個空的 ——
-        // 系統會自己找，總比 crash 好。
-        UIApplication.shared.connectedScenes
-            .compactMap { ($0 as? UIWindowScene)?.keyWindow }
-            .first ?? ASPresentationAnchor()
+        // 優先從前景活躍場景獲取有效的主視窗，確保 macOS Catalyst 與 iOS/iPadOS
+        // 的認證視窗能正確附加在最頂層視窗上，避免因空視窗造成授權無效或永久卡死。
+        let scenes = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+        let activeScene = scenes.first(where: { $0.activationState == .foregroundActive }) ?? scenes.first
+        if let window = activeScene?.windows.first(where: { $0.isKeyWindow }) ?? activeScene?.windows.first {
+            return window
+        }
+        return ASPresentationAnchor()
     }
 }
 

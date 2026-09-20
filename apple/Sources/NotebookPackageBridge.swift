@@ -490,11 +490,14 @@ enum NotebookPackageBridge {
         guard let walker = fm.enumerator(
             at: root, includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles]
         ) else { return [] }
+        let baseStandardized = root.resolvingSymlinksInPath().standardizedFileURL.path
+        let prefix = baseStandardized.hasSuffix("/") ? baseStandardized : baseStandardized + "/"
         var out: [String] = []
         for case let url as URL in walker {
-            guard (try? url.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true
+            let resolved = url.resolvingSymlinksInPath().standardizedFileURL
+            guard (try? resolved.resourceValues(forKeys: [.isRegularFileKey]))?.isRegularFile == true
             else { continue }
-            out.append(url.path.replacingOccurrences(of: root.path + "/", with: ""))
+            out.append(resolved.path.replacingOccurrences(of: prefix, with: ""))
         }
         return out
     }
