@@ -68,6 +68,21 @@ struct AudioAttachmentItemView: View {
         let currentY = item.y + dragOffset.height
 
         card
+            .gesture(
+                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                    .onChanged { value in
+                        dragOffset = value.translation
+                    }
+                    .onEnded { value in
+                        if hypot(value.translation.width, value.translation.height) < 4 {
+                            isSelected.toggle()
+                        } else {
+                            item.x += value.translation.width
+                            item.y += value.translation.height
+                        }
+                        dragOffset = .zero
+                    }
+            )
             // 卡片本體跟著轉；把手掛在旋轉**外面**的 overlay ——
             // 包進去的話拖曳算出的角度會疊加自身旋轉，卡片會失控加速。
             .rotationEffect(.degrees(item.canvasRotation))
@@ -80,15 +95,22 @@ struct AudioAttachmentItemView: View {
             }
             .overlay(alignment: .topTrailing) {
                 if isSelected {
-                    Button(role: .destructive, action: onDelete) {
-                        Image(systemName: "trash.circle.fill")
-                            .font(.title3)
-                            .symbolRenderingMode(.palette)
-                            .foregroundStyle(.white, Color.red)
+                    Button(role: .destructive) {
+                        onDelete()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(6)
+                            .background(Color.red)
+                            .clipShape(Circle())
+                            .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 1)
                     }
                     .buttonStyle(.plain)
+                    .contentShape(Circle())
                     .offset(x: 10, y: -10)
                     .accessibilityLabel(localizationManager.localized("action_delete"))
+                    .help(localizationManager.localized("action_delete"))
                 }
             }
             .overlay(alignment: .topLeading) {
@@ -99,18 +121,19 @@ struct AudioAttachmentItemView: View {
                         ZStack {
                             Circle()
                                 .fill(Color.blue)
-                                .frame(width: 30, height: 30)
+                                .frame(width: 28, height: 28)
                             if isTranscribing {
                                 ProgressView()
                                     .progressViewStyle(.circular)
                                     .tint(.white)
-                                    .scaleEffect(0.7)
+                                    .scaleEffect(0.65)
                             } else {
                                 Image(systemName: "waveform.badge.magnifyingglass")
-                                    .font(.system(size: 12, weight: .bold))
+                                    .font(.system(size: 11, weight: .bold))
                                     .foregroundColor(.white)
                             }
                         }
+                        .shadow(color: Color.black.opacity(0.18), radius: 3, x: 0, y: 1)
                     }
                     .buttonStyle(.plain)
                     .contentShape(Circle())
@@ -132,9 +155,10 @@ struct AudioAttachmentItemView: View {
                         Image(systemName: "square.and.pencil")
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.white)
-                            .frame(width: 30, height: 30)
+                            .frame(width: 28, height: 28)
                             .background(Color.accentColor)
                             .clipShape(Circle())
+                            .shadow(color: Color.black.opacity(0.18), radius: 3, x: 0, y: 1)
                     }
                     .buttonStyle(.plain)
                     .contentShape(Circle())
@@ -143,21 +167,6 @@ struct AudioAttachmentItemView: View {
                     .help(localizationManager.localized("rename_audio_card"))
                 }
             }
-            .gesture(
-                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
-                    .onChanged { value in
-                        dragOffset = value.translation
-                    }
-                    .onEnded { value in
-                        if hypot(value.translation.width, value.translation.height) < 4 {
-                            isSelected.toggle()
-                        } else {
-                            item.x += value.translation.width
-                            item.y += value.translation.height
-                        }
-                        dragOffset = .zero
-                    }
-            )
             .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
             .alert(localizationManager.localized("rename_audio_card"), isPresented: $isRenaming) {
                 TextField(localizationManager.localized("recording_title"), text: $renameText)

@@ -66,15 +66,30 @@ public final class AudioTranscriber: ObservableObject {
             )
         }
 
-        let request = SFSpeechURLRecognitionRequest(url: url)
-        request.shouldReportPartialResults = false
-        // 優先使用裝置端（On-Device）離線神經網路引擎，保障隱私與無網環境運作
-        if recognizer.supportsOnDeviceRecognition {
-            request.requiresOnDeviceRecognition = true
-        }
-
         isTranscribing = true
         defer { isTranscribing = false }
+
+        // 優先嘗試使用裝置端（On-Device）離線神經網路引擎；
+        // 若系統本機尚未下載該語言之離線語音模型（常拋出 error 216 "Retry"），自動平滑降級為標準辨識
+        if recognizer.supportsOnDeviceRecognition {
+            do {
+                return try await performRecognitionTask(recognizer: recognizer, url: url, requiresOnDevice: true)
+            } catch {
+                return try await performRecognitionTask(recognizer: recognizer, url: url, requiresOnDevice: false)
+            }
+        } else {
+            return try await performRecognitionTask(recognizer: recognizer, url: url, requiresOnDevice: false)
+        }
+    }
+
+    private func performRecognitionTask(
+        recognizer: SFSpeechRecognizer,
+        url: URL,
+        requiresOnDevice: Bool
+    ) async throws -> String {
+        let request = SFSpeechURLRecognitionRequest(url: url)
+        request.shouldReportPartialResults = false
+        request.requiresOnDeviceRecognition = requiresOnDevice
 
         return try await withCheckedThrowingContinuation { continuation in
             var hasResumed = false

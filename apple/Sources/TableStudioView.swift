@@ -348,6 +348,24 @@ struct TableAttachmentItemView: View {
 
         NoteTableView(table: $table, isSelected: isSelected, onEdit: onEdit)
             .shadow(color: isDragging ? .clear : Color.black.opacity(0.08), radius: 6, y: 3)
+            .gesture(
+                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                    .onChanged { value in
+                        isDragging = true
+                        isSelected = true
+                        dragOffset = value.translation
+                    }
+                    .onEnded { value in
+                        if hypot(value.translation.width, value.translation.height) < 4 {
+                            isSelected.toggle()
+                        } else {
+                            table.x += dragOffset.width
+                            table.y += dragOffset.height
+                        }
+                        dragOffset = .zero
+                        isDragging = false
+                    }
+            )
             // 表格本體跟著轉；把手掛在旋轉**外面**的 overlay ——
             // 包進去的話拖曳算出的角度會疊加自身旋轉，表格會失控加速。
             .rotationEffect(.degrees(table.canvasRotation))
@@ -375,10 +393,12 @@ struct TableAttachmentItemView: View {
                         .accessibilityLabel(localizationManager.localized("edit"))
 
                         Button(role: .destructive, action: onDelete) {
-                            Image(systemName: "trash.circle.fill")
-                                .font(.title3)
-                                .symbolRenderingMode(.palette)
-                                .foregroundStyle(.white, Color.red)
+                            Image(systemName: "xmark")
+                                .font(.system(size: 11, weight: .bold))
+                                .foregroundColor(.white)
+                                .padding(5)
+                                .background(Color.red)
+                                .clipShape(Circle())
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(localizationManager.localized("action_delete"))
@@ -386,25 +406,6 @@ struct TableAttachmentItemView: View {
                     .offset(x: 10, y: -10)
                 }
             }
-            .gesture(
-                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
-                    .onChanged { value in
-                        isDragging = true
-                        isSelected = true
-                        dragOffset = value.translation
-                    }
-                    .onEnded { value in
-                        if hypot(value.translation.width, value.translation.height) < 4 {
-                            isSelected.toggle()
-                        } else {
-                            table.x += dragOffset.width
-                            table.y += dragOffset.height
-                        }
-                        dragOffset = .zero
-                        isDragging = false
-                    }
-            )
-            .onTapGesture { isSelected.toggle() }
             .position(
                 x: currentX + CGFloat(layout.width) / 2,
                 y: currentY + CGFloat(layout.height) / 2

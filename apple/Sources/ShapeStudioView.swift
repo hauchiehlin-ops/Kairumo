@@ -363,6 +363,20 @@ struct ShapeAttachmentItemView: View {
             overrideSize: liveSize,
             onEdit: { isEditingLabel = true }
         )
+            .gesture(
+                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                    .onChanged { value in
+                        dragOffset = value.translation
+                    }
+                    .onEnded { value in
+                        if hypot(value.translation.width, value.translation.height) < 4 {
+                            onSelect()
+                        } else {
+                            onMove(dragOffset)
+                        }
+                        dragOffset = .zero
+                    }
+            )
             // 圖形本體跟著轉；把手與刪除鈕掛在旋轉**外面**的 overlay，
             // 包進去的話拖曳算出的角度會疊加自身旋轉，圖形會失控加速。
             .rotationEffect(.degrees(shape.canvasRotation))
@@ -376,10 +390,13 @@ struct ShapeAttachmentItemView: View {
             .overlay(alignment: .topTrailing) {
                 if isSelected {
                     Button(role: .destructive, action: onDelete) {
-                        Image(systemName: "trash.circle.fill")
-                            .font(.title3)
-                            .symbolRenderingMode(.palette)
-                            .foregroundStyle(.white, Color.red)
+                        Image(systemName: "xmark")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundColor(.white)
+                            .padding(5)
+                            .background(Color.red)
+                            .clipShape(Circle())
+                            .shadow(color: Color.black.opacity(0.18), radius: 3, x: 0, y: 1)
                     }
                     .buttonStyle(.plain)
                     .offset(x: 10, y: -10)
@@ -442,21 +459,6 @@ struct ShapeAttachmentItemView: View {
                     .help(localizationManager.localized("shape_style"))
                 }
             }
-            .gesture(
-                DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
-                    .onChanged { value in
-                        dragOffset = value.translation
-                    }
-                    .onEnded { value in
-                        if hypot(value.translation.width, value.translation.height) < 4 {
-                            onSelect()
-                        } else {
-                            onMove(dragOffset)
-                        }
-                        dragOffset = .zero
-                    }
-            )
-            .onTapGesture(perform: onSelect)
             .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
             .sheet(isPresented: $isEditingStyle) { resizableSheet {
                 ShapeStyleSheet(shape: $shape)

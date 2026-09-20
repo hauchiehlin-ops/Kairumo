@@ -3388,8 +3388,8 @@ public struct NotebookEditorView: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
 
-            // 🌟 套索選取浮動控制面板（當套索工具啟動時浮現：支援剪下、複製、刪除選取筆劃）
-            if selectedTool == .lasso {
+            // 🌟 套索選取浮動控制面板（僅在手繪模式且套索工具啟動時浮現：支援剪下、複製、刪除選取筆劃）
+            if editorMode == .draw && selectedTool == .lasso {
                 VStack {
                     lassoFloatingActionBar
                         .padding(.top, 12)
@@ -3592,6 +3592,8 @@ public struct NotebookEditorView: View {
                 )
             }
         }
+        .frame(width: PageGeometry.width, height: currentPageHeight)
+        .contentShape(Rectangle())
         .overlay(alignment: .trailing) {
             // 可用游標拖曳的捲軸（iOS 原生指示器不接受互動）
             CanvasScrollbar(
@@ -3607,11 +3609,9 @@ public struct NotebookEditorView: View {
             .padding(.vertical, 10)
         }
         .coordinateSpace(name: CanvasCoordinateSpace.name)
-        // 打字模式下點兩下空白處＝在該處新增文字方塊。
+        // 打字模式下點擊空白處＝在該處新增文字方塊隨點隨打。
         //
-        // 用 simultaneousGesture 而不是 onTapGesture：後者會把單擊也一起
-        // 接管，於是捲動與選取又回到原本壞掉的狀態。simultaneous 讓這個
-        // 手勢與底下的畫布、物件各自獨立辨識 —— 單擊照常穿透。
+        // 用 simultaneousGesture 讓手勢與底下的物件各自獨立辨識。
         .simultaneousGesture(
             editorMode == .type
                 ? SpatialTapGesture(count: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
@@ -6785,6 +6785,10 @@ public struct NotebookEditorView: View {
 
     private func deleteSelectedStrokes() {
         guard let canvas = canvasView else { return }
+        guard !canvas.drawing.strokes.isEmpty else {
+            showCanvasNotice(localizationManager.localized("lasso_active_hint"))
+            return
+        }
         for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
             if sv.responds(to: #selector(UIResponderStandardEditActions.delete(_:))) {
                 sv.perform(#selector(UIResponderStandardEditActions.delete(_:)), with: nil)
@@ -6798,6 +6802,10 @@ public struct NotebookEditorView: View {
 
     private func cutSelectedStrokes() {
         guard let canvas = canvasView else { return }
+        guard !canvas.drawing.strokes.isEmpty else {
+            showCanvasNotice(localizationManager.localized("lasso_active_hint"))
+            return
+        }
         for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
             if sv.responds(to: #selector(UIResponderStandardEditActions.cut(_:))) {
                 sv.perform(#selector(UIResponderStandardEditActions.cut(_:)), with: nil)
@@ -6812,7 +6820,10 @@ public struct NotebookEditorView: View {
     // MARK: - 🌟 次世代專業筆刷與手寫轉換 (CSP 防抖、對稱尺規、套索 OCR 轉文字)
     private func recognizeHandwritingToTextBox() {
         let drawing = currentDrawing
-        guard !drawing.strokes.isEmpty else { return }
+        guard !drawing.strokes.isEmpty else {
+            showCanvasNotice(localizationManager.localized("lasso_active_hint"))
+            return
+        }
         let language = localizationManager.currentLanguage.rawValue
         Task { @MainActor in
             switch await HandwritingRecognizer.recognize(drawing: drawing, languageTag: language) {
@@ -7030,6 +7041,10 @@ public struct NotebookEditorView: View {
     /// 「複製」把東西放進剪貼簿等你貼上，「再製」直接在旁邊多一份。
     private func duplicateSelectedStrokes() {
         guard let canvas = canvasView else { return }
+        guard !canvas.drawing.strokes.isEmpty else {
+            showCanvasNotice(localizationManager.localized("lasso_active_hint"))
+            return
+        }
         for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
             if sv.responds(to: #selector(UIResponderStandardEditActions.duplicate(_:))) {
                 sv.perform(#selector(UIResponderStandardEditActions.duplicate(_:)), with: nil)
@@ -7086,6 +7101,10 @@ public struct NotebookEditorView: View {
 
     private func copySelectedStrokes() {
         guard let canvas = canvasView else { return }
+        guard !canvas.drawing.strokes.isEmpty else {
+            showCanvasNotice(localizationManager.localized("lasso_active_hint"))
+            return
+        }
         for sv in canvas.subviews where String(describing: type(of: sv)).contains("PKTiledView") {
             if sv.responds(to: #selector(UIResponderStandardEditActions.copy(_:))) {
                 sv.perform(#selector(UIResponderStandardEditActions.copy(_:)), with: nil)
@@ -7674,7 +7693,7 @@ public struct NotebookEditorView: View {
         }
         if let items = notebook.audioAttachments {
             for item in items where item.pageIndex == page {
-                if CGRect(x: item.x, y: item.y, width: 220, height: 70).insetBy(dx: -4, dy: -4).contains(location) {
+                if CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -4, dy: -4).contains(location) {
                     return true
                 }
             }
@@ -7753,9 +7772,15 @@ public struct NotebookEditorView: View {
             targetY = round(targetY / step) * step
         }
         let printable = PageGeometry.printableRect
-        // 隨點隨打：若點在邊界附近自動靠齊版面左側，寬度延展至版面右邊緣（如同 Word 文件自然排版，不拘泥於狹窄小方塊）
-        let startX = targetX < printable.minX + 60 ? printable.minX : max(printable.minX, targetX)
-        let availWidth = max(280, printable.maxX - startX)
+        let startX = max(printable.minX, targetX)
+        let midX = PageGeometry.width / 2
+        // 若在左右分欄或四象限結構的左半部，文字寬度以中線為界；否則延伸至右側可列印邊界
+        let availWidth: CGFloat
+        if startX < midX - 30 && printable.maxX > midX {
+            availWidth = max(180, midX - startX - 12)
+        } else {
+            availWidth = max(180, printable.maxX - startX)
+        }
         let draft = NoteTextAttachment(
             id: UUID().uuidString,
             pageIndex: currentPageIndex,
@@ -7765,7 +7790,7 @@ public struct NotebookEditorView: View {
             backgroundColorHex: "clear",
             hasBorder: false,
             x: startX,
-            y: max(printable.minY, targetY),
+            y: max(printable.minY, min(targetY, printable.maxY - 40)),
             width: availWidth,
             height: 40
         )
