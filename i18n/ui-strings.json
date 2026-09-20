@@ -1765,7 +1765,7 @@
     "ko": "클라우드 동기화",
     "th": "ซิงค์บนคลาวด์",
     "zhHans": "云端同步",
-    "zhHant": "Google Drive (跨平台同步)"
+    "zhHant": "雲端同步"
   },
   "cloud_sync_explainer": {
     "en": "Sign in once and your notebooks, folders and settings stay in sync on every device. Data goes to a private app folder in your Google Drive — you won't see it among your files, and neither will we.",
@@ -8181,7 +8181,7 @@
     "ko": "클라우드 동기화",
     "th": "ซิงก์คลาวด์",
     "zhHans": "云端同步",
-    "zhHant": "Google Drive (跨平台同步)"
+    "zhHant": "雲端同步"
   },
   "sync_up_to_date": {
     "en": "Already up to date",

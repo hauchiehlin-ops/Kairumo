@@ -1776,7 +1776,7 @@ extension LocalizationManager {
             .th: "ปิดไม้บรรทัด"
         ],
         "cloud_sync": [
-            .zhHant: "Google Drive (跨平台同步)",
+            .zhHant: "雲端同步",
             .en: "Cloud sync",
             .zhHans: "云端同步",
             .ja: "クラウド同期",
@@ -8192,7 +8192,7 @@ extension LocalizationManager {
             .th: "อัปโหลด %1@ ดาวน์โหลด %2@"
         ],
         "sync_section": [
-            .zhHant: "Google Drive (跨平台同步)",
+            .zhHant: "雲端同步",
             .en: "Cloud Sync",
             .zhHans: "云端同步",
             .ja: "クラウド同期",

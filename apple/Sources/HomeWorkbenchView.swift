@@ -3204,11 +3204,24 @@ public struct CloudSyncDetailSheet: View {
                         .font(DS.Font.screenTitle)
                         .foregroundColor(.primary)
 
-                    Text(googleAuth.isSignedIn
-                         ? (googleAuth.accountEmail ?? localizationManager.localized("signed_in"))
-                         : localizationManager.localized("not_signed_in"))
+                    let gStatusText: String
+                    let gStatusColor: Color
+                    if !googleAuth.isSignedIn {
+                        gStatusText = localizationManager.localized("not_signed_in")
+                        gStatusColor = .secondary
+                    } else if isSyncing {
+                        gStatusText = localizationManager.localized("syncing")
+                        gStatusColor = .teal
+                    } else if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") || msg.contains("過期") {
+                        gStatusText = "同步發生錯誤"
+                        gStatusColor = .red
+                    } else {
+                        gStatusText = localizationManager.localized("sync_done")
+                        gStatusColor = .green
+                    }
+                    Text(gStatusText)
                         .font(DS.Font.cardTitle)
-                        .foregroundColor(googleAuth.isSignedIn ? .green : .secondary)
+                        .foregroundColor(gStatusColor)
                 }
             }
 
@@ -3504,6 +3517,9 @@ public struct CloudSyncDetailSheet: View {
         if CloudSyncFolder.resolveFolder() == nil {
             return localizationManager.localized("sync_not_configured")
         }
+        if isSyncing {
+            return localizationManager.localized("syncing")
+        }
         if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") {
             return "同步發生錯誤"
         }
@@ -3518,6 +3534,9 @@ public struct CloudSyncDetailSheet: View {
         if CloudSyncFolder.resolveFolder() == nil {
             return localizationManager.localized("sync_not_configured")
         }
+        if isSyncing {
+            return localizationManager.localized("syncing")
+        }
         if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") {
             return "同步失敗"
         }
@@ -3531,6 +3550,9 @@ public struct CloudSyncDetailSheet: View {
     private var folderStatusColor: Color {
         if CloudSyncFolder.resolveFolder() == nil {
             return .secondary
+        }
+        if isSyncing {
+            return .teal
         }
         if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") {
             return .red
@@ -3685,9 +3707,16 @@ public struct CloudSyncDetailSheet: View {
             defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
 
             statusMessage = localizationManager.localized("syncing")
-            let report = await NotebookSyncCoordinator.run(
-                store: notebookStore, folder: folder, deviceId: NotebookMigration.deviceId)
-
+            let report: NotebookSyncCoordinator.Report
+            do {
+                report = try await withSyncTimeout(seconds: 180) {
+                    await NotebookSyncCoordinator.run(
+                        store: notebookStore, folder: folder, deviceId: NotebookMigration.deviceId)
+                }
+            } catch {
+                statusMessage = "同步逾時，請確認網路連線或 iCloud 狀態後重試"
+                return
+            }
             if report.failures.isEmpty && report.needsAttention.isEmpty {
                 SyncHistory.markFolderSynced()
             }

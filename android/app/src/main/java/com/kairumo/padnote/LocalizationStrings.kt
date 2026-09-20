@@ -1797,7 +1797,7 @@ object LocalizationStrings {
             "th" to "ปิดไม้บรรทัด"
         ),
         "cloud_sync" to mapOf(
-            "zh-Hant" to "Google Drive (跨平台同步)",
+            "zh-Hant" to "雲端同步",
             "en" to "Cloud sync",
             "zh-Hans" to "云端同步",
             "ja" to "クラウド同期",
@@ -8243,7 +8243,7 @@ object LocalizationStrings {
             "th" to "อัปโหลด %1@ ดาวน์โหลด %2@"
         ),
         "sync_section" to mapOf(
-            "zh-Hant" to "Google Drive (跨平台同步)",
+            "zh-Hant" to "雲端同步",
             "en" to "Cloud Sync",
             "zh-Hans" to "云端同步",
             "ja" to "クラウド同期",
