@@ -3104,12 +3104,19 @@ public struct CloudSyncDetailSheet: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject private var googleAuth = GoogleAuth.shared
     @ObservedObject private var notebookStore = NotebookStore.shared
+    @ObservedObject private var syncLogger = SyncLogger.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var selectedProvider: CloudSyncProvider = .googleDrive
     @State private var statusMessage: String?
     @State private var isSyncing = false
     @State private var showFolderPicker = false
+
+    private static let logDateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm:ss.SSS"
+        return f
+    }()
 
     private let initialProvider: CloudSyncProvider?
 
@@ -3144,6 +3151,12 @@ public struct CloudSyncDetailSheet: View {
                     }
                 }
                 .padding(DS.Space.m)
+
+                if selectedProvider != .disabled {
+                    logSection
+                        .padding(.horizontal, DS.Space.m)
+                        .padding(.bottom, DS.Space.m)
+                }
             }
             .background(Color(uiColor: .systemGroupedBackground))
             .navigationTitle(localizationManager.localized("cloud_sync"))
@@ -3742,6 +3755,64 @@ public struct CloudSyncDetailSheet: View {
                 statusMessage = localizationManager.localized("sync_result")
                     .replacingFirst("%1@", with: "\(report.uploaded)")
                     .replacingFirst("%2@", with: "\(report.downloaded)")
+            }
+        }
+    }
+
+    private var logSection: some View {
+        VStack(alignment: .leading, spacing: DS.Space.s) {
+            HStack {
+                Text("同步日誌 (工程診斷)")
+                    .font(DS.Font.caption)
+                    .foregroundColor(.secondary)
+                Spacer()
+                if !syncLogger.entries.isEmpty {
+                    Button("清除") {
+                        syncLogger.clear()
+                    }
+                    .font(DS.Font.caption)
+                    .foregroundColor(.indigo)
+                }
+            }
+            
+            if syncLogger.entries.isEmpty {
+                Text("尚無日誌記錄")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundColor(.secondary.opacity(0.5))
+                    .padding()
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(DS.Radius.s)
+            } else {
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 4) {
+                            ForEach(syncLogger.entries) { entry in
+                                HStack(alignment: .top, spacing: 6) {
+                                    Text(entry.timestamp, formatter: Self.logDateFormatter)
+                                        .foregroundColor(.secondary)
+                                    Text(entry.message)
+                                        .foregroundColor(.primary)
+                                }
+                                .font(.system(size: 11, design: .monospaced))
+                                .id(entry.id)
+                            }
+                        }
+                        .padding(DS.Space.s)
+                    }
+                    .frame(height: 150)
+                    .background(Color(uiColor: .tertiarySystemGroupedBackground))
+                    .cornerRadius(DS.Radius.s)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: DS.Radius.s)
+                            .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
+                    )
+                    .onChange(of: syncLogger.entries.count) { _ in
+                        if let last = syncLogger.entries.last {
+                            withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+                        }
+                    }
+                }
             }
         }
     }

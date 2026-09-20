@@ -96,12 +96,14 @@ enum NotebookSyncCoordinator {
     ///   - store: 筆記本的本機儲存。
     ///   - folder: 使用者選的雲端資料夾。呼叫端負責取得 security scope。
     static func run(store: SyncableNotebookStore, folder: URL, deviceId: UInt32) async -> Report {
+        SyncLogger.logAsync("【資料夾同步】開始執行，目標：\(folder.lastPathComponent)")
         var report = Report()
         let fm = FileManager.default
         let packagesDir = store.syncPackagesDirectory
         try? fm.createDirectory(at: packagesDir, withIntermediateDirectories: true)
 
         // ── 1. 匯出本機的筆記 ──────────────────────────────
+        SyncLogger.logAsync("步驟 1：匯出本機筆記 (\(store.syncNotebooks.count) 本)...")
         var ownStrokes: OwnStrokes = [:]
         for document in store.syncNotebooks {
             let package = packagesDir.appendingPathComponent("\(document.id).padnote")
@@ -110,11 +112,14 @@ enum NotebookSyncCoordinator {
                 ownStrokes.merge(own) { first, _ in first }
                 report.exported += 1
             } catch {
+                SyncLogger.logAsync("匯出失敗 (\(document.title))：\(error.localizedDescription)")
                 report.failures[document.title] = error.localizedDescription
             }
         }
+        SyncLogger.logAsync("步驟 1 完成，成功匯出 \(report.exported) 本")
 
         // ── 2. 搬檔 (Heavy I/O, moved to background) ──────────────────────
+        SyncLogger.logAsync("步驟 2：搬移雲端檔案 (背景執行)...")
         let (syncUploaded, syncDownloaded, syncNeedsAttention, syncFailures, newNotebooks) = await Task.detached(priority: .utility) {
             var up = 0
             var down = 0
@@ -146,9 +151,12 @@ enum NotebookSyncCoordinator {
         report.needsAttention.append(contentsOf: syncNeedsAttention)
         report.failures.merge(syncFailures) { first, _ in first }
         report.newNotebooks += newNotebooks
+        SyncLogger.logAsync("步驟 2 完成。上傳: \(syncUploaded), 下載: \(syncDownloaded), 新增: \(newNotebooks), 失敗: \(syncFailures.count)")
 
         // ── 3. 匯入回筆記 ─────────────────────────────────
+        SyncLogger.logAsync("步驟 3：匯入套件回本機筆記...")
         importPackages(from: packagesDir, into: store, deviceId: deviceId, ownStrokes: ownStrokes, report: &report)
+        SyncLogger.logAsync("【資料夾同步】全部完成。")
 
         return report
     }
@@ -162,13 +170,14 @@ enum NotebookSyncCoordinator {
     /// 回傳 nil 表示沒登入。
     static func runDrive(store: SyncableNotebookStore, deviceId: UInt32) async -> Report? {
         guard await GoogleAuth.shared.isSignedIn else { return nil }
-
+        SyncLogger.logAsync("【Google Drive 同步】開始執行")
         var report = Report()
         let fm = FileManager.default
         let packagesDir = store.syncPackagesDirectory
         try? fm.createDirectory(at: packagesDir, withIntermediateDirectories: true)
 
         // ── 1. 匯出本機的筆記 ──────────────────────────────
+        SyncLogger.logAsync("步驟 1：匯出本機筆記 (\(store.syncNotebooks.count) 本)...")
         var ownStrokes: OwnStrokes = [:]
         for document in store.syncNotebooks {
             let package = packagesDir.appendingPathComponent("\(document.id).padnote")
@@ -177,15 +186,22 @@ enum NotebookSyncCoordinator {
                 ownStrokes.merge(own) { first, _ in first }
                 report.exported += 1
             } catch {
+                SyncLogger.logAsync("匯出失敗 (\(document.title))：\(error.localizedDescription)")
                 report.failures[document.title] = error.localizedDescription
             }
         }
+        SyncLogger.logAsync("步驟 1 完成，成功匯出 \(report.exported) 本")
 
         // ── 2. 中繼資料，再逐本搬內容 ───────────────────────
         // 順序不能反：先收斂索引，才知道哪些筆記本還活著。先同步內容的話，
         // 會把另一台已經刪掉的筆記本內容又推上去。
-        guard let meta = await CloudSync.runOnce() else { return nil }
+        SyncLogger.logAsync("步驟 2：同步元資料與檔案 (連線中)...")
+        guard let meta = await CloudSync.runOnce() else {
+            SyncLogger.logAsync("無法取得 Google Drive 索引！")
+            return nil
+        }
         guard meta.ok else {
+            SyncLogger.logAsync("元資料同步失敗：\(meta.error)")
             report.failures["cloud"] = meta.error
             if meta.needsReauth {
                 await GoogleAuth.shared.signOut()
@@ -195,6 +211,7 @@ enum NotebookSyncCoordinator {
 
         let packages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
             .filter { $0.pathExtension == "padnote" } ?? []
+        SyncLogger.logAsync("雲端元資料同步完成，開始逐本比對套件檔案...")
         for package in packages {
             let id = package.deletingPathExtension().lastPathComponent
             guard let result = await CloudSync.syncNotebook(
@@ -203,6 +220,7 @@ enum NotebookSyncCoordinator {
                 report.uploaded += Int(result.uploaded)
                 report.downloaded += Int(result.downloaded)
             } else {
+                SyncLogger.logAsync("筆記本 \(id) 同步失敗：\(result.error)")
                 report.failures[id] = result.error
                 if result.needsReauth {
                     await GoogleAuth.shared.signOut()
@@ -212,11 +230,15 @@ enum NotebookSyncCoordinator {
         }
 
         // 別台裝置**新建**的筆記本在本機連套件目錄都沒有，上面那一圈看不到它們。
-        report.newNotebooks += await pullNewNotebooks(
+        let newBooks = await pullNewNotebooks(
             into: packagesDir, index: meta.indexJson, report: &report)
+        report.newNotebooks += newBooks
+        SyncLogger.logAsync("步驟 2 完成。上傳: \(report.uploaded), 下載: \(report.downloaded), 新增: \(report.newNotebooks)")
 
         // ── 3. 匯入回筆記 ─────────────────────────────────
+        SyncLogger.logAsync("步驟 3：匯入套件回本機筆記...")
         importPackages(from: packagesDir, into: store, deviceId: deviceId, ownStrokes: ownStrokes, report: &report)
+        SyncLogger.logAsync("【Google Drive 同步】全部完成。")
 
         return report
     }
@@ -446,5 +468,39 @@ enum NotebookSyncCoordinator {
             if !result.downloaded.isEmpty { pulled += 1 }
         }
         return pulled
+    }
+}
+import Foundation
+
+@MainActor
+public final class SyncLogger: ObservableObject {
+    public static let shared = SyncLogger()
+    
+    public struct LogEntry: Identifiable, Sendable {
+        public let id = UUID()
+        public let timestamp = Date()
+        public let message: String
+    }
+    
+    @Published public private(set) var entries: [LogEntry] = []
+    
+    public func log(_ message: String) {
+        let entry = LogEntry(message: message)
+        entries.append(entry)
+        if entries.count > 300 {
+            entries.removeFirst(entries.count - 300)
+        }
+    }
+    
+    public func clear() {
+        entries.removeAll()
+    }
+}
+
+extension SyncLogger {
+    public static func logAsync(_ message: String) {
+        Task { @MainActor in
+            SyncLogger.shared.log(message)
+        }
     }
 }
