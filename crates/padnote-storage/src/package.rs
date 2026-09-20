@@ -57,6 +57,13 @@ impl From<CodecError> for StorageError {
     }
 }
 
+/// Oplog 壓實的結果。
+#[derive(Debug)]
+pub struct CompactResult {
+    /// 被合併並刪除的舊碎檔數（0 表示未達門檻，未執行壓實）。
+    pub merged_files: usize,
+}
+
 /// 一份開啟中的筆記本。
 #[derive(Debug)]
 pub struct NotebookPackage {
@@ -372,6 +379,79 @@ impl NotebookPackage {
             .collect();
         out.sort();
         Ok(out)
+    }
+
+    /// 壓實本機 oplog 碎檔。
+    ///
+    /// 當**這台裝置**的碎檔數 `>= threshold` 時，把所有屬於此裝置的碎檔
+    /// 合併成一個大檔（使用最大 lamport 為新檔名），再刪除舊碎檔。
+    ///
+    /// # 設計原則
+    /// - **只壓實自己裝置的碎檔**（device == self.device）
+    /// - **原子性**：先寫臨時檔，成功後原子 rename，刪除舊檔
+    /// - **直接拼接原始位元組**（不 decode/re-encode），因為 oplog frame 是自洽的
+    /// - 壓實後的檔名：`<max_lamport:016x>-<device:08x>.oplog`
+    pub fn compact_doc_ops(&self, threshold: usize) -> Result<CompactResult, StorageError> {
+        let dir = self.root.join("doc/ops");
+        if !dir.exists() {
+            return Ok(CompactResult { merged_files: 0 });
+        }
+
+        let device_suffix = format!("-{:08x}.oplog", self.device);
+
+        // 找出屬於這台裝置的所有碎檔（按字典序 = 因果序）
+        let mut own_files: Vec<PathBuf> = fs::read_dir(&dir)?
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| {
+                p.file_name()
+                    .and_then(|n| n.to_str())
+                    .map(|n| n.ends_with(&device_suffix))
+                    .unwrap_or(false)
+            })
+            .collect();
+        own_files.sort();
+
+        if own_files.len() < threshold {
+            return Ok(CompactResult { merged_files: 0 });
+        }
+
+        // 取得最大 lamport（最後一個檔的檔名前綴）
+        let max_lamport_hex = own_files
+            .last()
+            .and_then(|p| p.file_stem())
+            .and_then(|s| s.to_str())
+            .and_then(|s| s.split('-').next())
+            .unwrap_or("0000000000000000");
+
+        let compacted_name = format!("{max_lamport_hex}{device_suffix}");
+        let compacted_path = dir.join(&compacted_name);
+        let tmp_path = dir.join(format!("{compacted_name}.tmp"));
+
+        // 將所有碎檔的原始位元組按因果序拼接
+        let mut merged = Vec::new();
+        for f in &own_files {
+            let bytes = fs::read(f)?;
+            merged.extend_from_slice(&bytes);
+        }
+
+        // 原子寫入：先寫臨時檔，再 rename
+        fs::write(&tmp_path, &merged)?;
+        fs::rename(&tmp_path, &compacted_path)?;
+
+        // 刪除所有舊碎檔（排除剛建立的合併檔）
+        let merged_count = own_files.len();
+        for f in &own_files {
+            // 合併目標檔可能與最後一個舊碎檔同名（若最大 lamport 的碎檔剛好就是唯一一個）
+            // 用路徑比較避免誤刪剛寫好的合併檔
+            if f != &compacted_path {
+                let _ = fs::remove_file(f); // 盡力刪除，失敗不中斷
+            }
+        }
+
+        Ok(CompactResult {
+            merged_files: merged_count,
+        })
     }
 
     /// 讀一個 oplog 檔的原始位元組。

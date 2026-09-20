@@ -45,8 +45,10 @@ final class DriveHttpClient: FfiDriveHttp {
             let q = OperationQueue()
             q.name = "DriveHttpClientQueue"
             let config = URLSessionConfiguration.ephemeral
-            config.timeoutIntervalForRequest = 30
-            config.timeoutIntervalForResource = 60
+            config.timeoutIntervalForRequest = 30       // URLSession 層先超時（比 semaphore wait 35s 短）
+            config.timeoutIntervalForResource = 300     // 單一資源最長 5 分鐘（大檔上傳不中斷）
+            config.httpMaximumConnectionsPerHost = 6    // 支援 withTaskGroup 最多 4 路並發 + 餘裕
+            config.waitsForConnectivity = true          // 短暫失去連線時自動等待，而非立刻失敗
             self.session = URLSession(configuration: config, delegate: nil, delegateQueue: q)
             self.ownsSession = true
         }
@@ -149,10 +151,18 @@ final class DriveHttpClient: FfiDriveHttp {
         try sendWithHeaders(base).0
     }
 
-    private func sendWithHeaders(_ base: URLRequest) throws -> (Data, [AnyHashable: Any]) {
-        var request = base
-        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+    /// Semaphore 等待的上限（比 URLSession timeoutIntervalForRequest 長 5s，作為最後防線）。
+    private static let requestTimeout: TimeInterval = 35
 
+    /// 同步等待一個 URLRequest 完成，回傳 `(body, HTTPURLResponse)` 或拋出錯誤。
+    ///
+    /// **為什麼仍用 DispatchSemaphore**：`FfiDriveHttp` 協定的方法必須是同步的
+    /// （Rust FFI 呼叫端是同步的），無法使用 `async/await`。
+    /// 這個模式在背景執行緒上是安全的 —— 不要從主執行緒呼叫。
+    private func syncDataTask(
+        _ request: URLRequest,
+        timeout: TimeInterval = DriveHttpClient.requestTimeout
+    ) throws -> (Data, HTTPURLResponse) {
         let semaphore = DispatchSemaphore(value: 0)
         var payload = Data()
         var response: HTTPURLResponse?
@@ -165,51 +175,43 @@ final class DriveHttpClient: FfiDriveHttp {
             semaphore.signal()
         }
         task.resume()
-        let waitResult = semaphore.wait(timeout: .now() + 35)
-        if waitResult == .timedOut {
+        if semaphore.wait(timeout: .now() + timeout) == .timedOut {
             task.cancel()
             throw FfiDriveError.Backend(detail: "request_timeout")
         }
-
-        if let transportError {
-            // 連不上：網路問題，重試會好。
-            throw FfiDriveError.Backend(detail: transportError.localizedDescription)
+        if let err = transportError {
+            throw FfiDriveError.Backend(detail: err.localizedDescription)
         }
-        if let response {
-            if (200..<300).contains(response.statusCode) {
-                return (payload, response.allHeaderFields)
-            }
-            if response.statusCode == 401 {
-                // 嘗試自動換證並重試一次
-                if let newToken = GoogleAuth.shared.refreshTokenSync() {
-                    self.accessToken = newToken
-                    var retryRequest = base
-                    retryRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
-
-                    let retrySem = DispatchSemaphore(value: 0)
-                    var retryPayload = Data()
-                    var retryResponse: HTTPURLResponse?
-                    var retryErr: Error?
-                    let retryTask = session.dataTask(with: retryRequest) { d, r, e in
-                        retryPayload = d ?? Data()
-                        retryResponse = r as? HTTPURLResponse
-                        retryErr = e
-                        retrySem.signal()
-                    }
-                    retryTask.resume()
-                    let retryWait = retrySem.wait(timeout: .now() + 35)
-                    if retryWait != .timedOut, retryErr == nil, let resp = retryResponse, (200..<300).contains(resp.statusCode) {
-                        return (retryPayload, resp.allHeaderFields)
-                    }
-                }
-                GoogleAuth.shared.markNeedsReauthSync()
-                throw FfiDriveError.PermissionDenied(detail: "Google 帳號憑證已失效或過期，請重新登入 (HTTP 401)")
-            }
-        }
-
-        guard let response else {
+        guard let resp = response else {
             throw FfiDriveError.Backend(detail: "no_response")
         }
+        return (payload, resp)
+    }
+
+    private func sendWithHeaders(_ base: URLRequest) throws -> (Data, [AnyHashable: Any]) {
+        var request = base
+        request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
+
+        let (payload, response) = try syncDataTask(request)
+
+        if (200..<300).contains(response.statusCode) {
+            return (payload, response.allHeaderFields)
+        }
+
+        // 401：嘗試自動換證並重試一次
+        if response.statusCode == 401, let newToken = GoogleAuth.shared.refreshTokenSync() {
+            self.accessToken = newToken
+            var retryRequest = base
+            retryRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
+            if let (retryPayload, retryResp) = try? syncDataTask(retryRequest),
+               (200..<300).contains(retryResp.statusCode) {
+                return (retryPayload, retryResp.allHeaderFields)
+            }
+            // 換新 token 後仍失敗 → 要求重新登入
+            GoogleAuth.shared.markNeedsReauthSync()
+            throw FfiDriveError.PermissionDenied(detail: "Google 帳號憑證已失效或過期，請重新登入 (HTTP 401)")
+        }
+
         throw Self.classify(
             status: response.statusCode,
             path: request.url?.path ?? "",
