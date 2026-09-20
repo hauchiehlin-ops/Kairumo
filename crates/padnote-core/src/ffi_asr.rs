@@ -31,7 +31,11 @@ pub enum FfiAsrError {
 #[uniffi::export]
 pub fn whisper_is_model_available(model_path: String) -> bool {
     let p = std::path::Path::new(&model_path);
-    p.exists() && p.is_file()
+    if let Ok(meta) = std::fs::metadata(p) {
+        meta.is_file() && meta.len() > 100_000_000
+    } else {
+        false
+    }
 }
 
 #[uniffi::export]

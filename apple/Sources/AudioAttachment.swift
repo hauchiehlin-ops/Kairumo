@@ -195,7 +195,10 @@ struct AudioAttachmentItemView: View {
                         }
                     } else {
                         Button("下載 Whisper 離線神經模型 (574 MB)") {
-                            transcriber.downloadWhisperModel()
+                            transcriber.downloadWhisperModel(useMirror: false)
+                        }
+                        Button("使用鏡像分流下載 (hf-mirror.com)") {
+                            transcriber.downloadWhisperModel(useMirror: true)
                         }
                     }
                 }
@@ -207,8 +210,10 @@ struct AudioAttachmentItemView: View {
                 if transcriber.isWhisperAvailable {
                     Text("🟢 Whisper 端側神經模型已就緒！\n\n支援 99 種語言自動偵測與語義智慧標點還原，轉錄全程 100% 離線端側運算，保障最高隱私。")
                 } else if transcriber.isDownloadingModel {
-                    let pct = Int(transcriber.downloadProgress * 100)
-                    Text("⏳ Whisper 模型下載中：\(pct)%\n完成後將自動啟用端側多語言自動偵測與標點還原。")
+                    let detail = transcriber.downloadStatusText.isEmpty ? "\(Int(transcriber.downloadProgress * 100))%" : transcriber.downloadStatusText
+                    Text("⏳ Whisper 模型下載中：\(detail)\n完成後將自動啟用端側多語言自動偵測與標點還原。")
+                } else if let error = transcriber.downloadError {
+                    Text("⚠️ 前次下載中斷：\(error)\n請確認網路連線正常，或嘗試使用「鏡像分流下載」。")
                 } else {
                     let status = transcriber.checkOfflineStatus()
                     switch status {

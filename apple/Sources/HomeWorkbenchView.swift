@@ -2523,6 +2523,11 @@ public struct AppDiagnosticsSheet: View {
     @State private var shareStartupLogsURL: URL?
     @State private var copiedStartupLogs = false
 
+    /// 語音與 Whisper 模型管理
+    @ObservedObject private var transcriber = AudioTranscriber.shared
+    @State private var showModelFileImporter = false
+    @State private var modelImportMessage: String?
+
     public var body: some View {
         NavigationStack {
             List {
@@ -2596,6 +2601,24 @@ public struct AppDiagnosticsSheet: View {
             set: { shareStartupLogsURL = $0?.url }
         )) { item in
             ShareSheet(items: [item.url])
+        }
+        .fileImporter(
+            isPresented: $showModelFileImporter,
+            allowedContentTypes: [.data, .item],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                do {
+                    try transcriber.importWhisperModel(from: url)
+                    modelImportMessage = "✅ 成功匯入 Whisper 離線模型！"
+                } catch {
+                    modelImportMessage = "❌ 匯入失敗: \(error.localizedDescription)"
+                }
+            case .failure(let error):
+                modelImportMessage = "❌ 選取檔案失敗: \(error.localizedDescription)"
+            }
         }
     }
 }
@@ -2808,11 +2831,11 @@ extension AppDiagnosticsSheet {
         }
     }
 
-    /// 語音轉錄與離線模型狀態（提供離線模型檢測與系統下載指引）
+    /// 語音轉錄與離線模型狀態（提供離線模型檢測、進度顯示、鏡像分流與手動匯入）
     @ViewBuilder
     var speechTranscriptionSection: some View {
         Section("語音轉錄與離線模型") {
-            let status = AudioTranscriber.shared.checkOfflineStatus()
+            let status = transcriber.checkOfflineStatus()
             HStack {
                 Text("本機神經離線辨識")
                 Spacer()
@@ -2836,35 +2859,105 @@ extension AppDiagnosticsSheet {
                 }
             }
 
-            if !AudioTranscriber.shared.isWhisperAvailable {
-                if AudioTranscriber.shared.isDownloadingModel {
+            if transcriber.isWhisperAvailable {
+                HStack {
+                    Label("本地神經模型已就緒 (574 MB)", systemImage: "internaldrive.fill")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                    Spacer()
+                    Button("移除釋放空間", role: .destructive) {
+                        try? transcriber.deleteWhisperModel()
+                    }
+                    .font(.caption)
+                    .foregroundColor(.red)
+                }
+            } else if transcriber.isDownloadingModel {
+                VStack(alignment: .leading, spacing: 6) {
                     HStack {
-                        ProgressView(value: AudioTranscriber.shared.downloadProgress)
+                        ProgressView(value: transcriber.downloadProgress)
                             .progressViewStyle(.linear)
                         Button("取消") {
-                            AudioTranscriber.shared.cancelModelDownload()
+                            transcriber.cancelModelDownload()
                         }
                         .font(.caption)
                         .foregroundColor(.red)
                     }
-                    Text("Whisper 模型下載中：\(Int(AudioTranscriber.shared.downloadProgress * 100))%")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                    HStack {
+                        Text(transcriber.downloadStatusText.isEmpty ? "下載中..." : "Whisper 模型下載中：\(transcriber.downloadStatusText)")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                        Spacer()
+                    }
+                }
+            } else {
+                if let error = transcriber.downloadError {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack(spacing: 4) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.red)
+                            Text("下載失敗: \(error)")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
+                        HStack(spacing: 12) {
+                            Button {
+                                transcriber.downloadWhisperModel(useMirror: false)
+                            } label: {
+                                Text("重試官方來源")
+                                    .font(.caption)
+                            }
+                            Button {
+                                transcriber.downloadWhisperModel(useMirror: true)
+                            } label: {
+                                Text("使用鏡像分流重試 (hf-mirror)")
+                                    .font(.caption)
+                            }
+                        }
+                    }
+                    .padding(.vertical, 2)
                 } else {
                     Button {
-                        AudioTranscriber.shared.downloadWhisperModel()
+                        transcriber.downloadWhisperModel(useMirror: false)
                     } label: {
                         HStack {
                             Image(systemName: "arrow.down.circle.fill")
-                            Text("下載 Whisper 端側模型 (574 MB，支援多語自動偵測)")
+                            Text("下載 Whisper 端側模型 (574 MB，官方來源)")
                         }
                     }
                     .font(.footnote)
+
+                    Button {
+                        transcriber.downloadWhisperModel(useMirror: true)
+                    } label: {
+                        HStack {
+                            Image(systemName: "arrow.triangle.2.circlepath.circle")
+                            Text("若官方連線較慢，使用鏡像分流下載 (hf-mirror.com)")
+                        }
+                    }
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                }
+
+                Button {
+                    showModelFileImporter = true
+                } label: {
+                    HStack {
+                        Image(systemName: "folder.badge.plus")
+                        Text("從「檔案」匯入離線模型 (.bin)")
+                    }
+                }
+                .font(.footnote)
+                .foregroundColor(.accentColor)
+
+                if let modelImportMessage {
+                    Text(modelImportMessage)
+                        .font(.caption)
+                        .foregroundColor(modelImportMessage.starts(with: "✅") ? .green : .red)
                 }
             }
 
             Button {
-                AudioTranscriber.shared.openSystemDictationSettings()
+                transcriber.openSystemDictationSettings()
             } label: {
                 HStack {
                     Image(systemName: "gearshape")

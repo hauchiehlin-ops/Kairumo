@@ -80,13 +80,17 @@ public enum AudioPCMDecoder {
 // MARK: - 模型下載委派
 
 private final class ModelDownloadDelegate: NSObject, URLSessionDownloadDelegate, @unchecked Sendable {
-    let onProgress: @Sendable (Double) -> Void
+    let destPath: String
+    let onProgress: @Sendable (Int64, Int64, Double) -> Void
     let onComplete: @Sendable (Result<URL, Error>) -> Void
+    private let fallbackTotalBytes: Int64 = 574_041_195
 
     init(
-        onProgress: @escaping @Sendable (Double) -> Void,
+        destPath: String,
+        onProgress: @escaping @Sendable (Int64, Int64, Double) -> Void,
         onComplete: @escaping @Sendable (Result<URL, Error>) -> Void
     ) {
+        self.destPath = destPath
         self.onProgress = onProgress
         self.onComplete = onComplete
     }
@@ -98,14 +102,44 @@ private final class ModelDownloadDelegate: NSObject, URLSessionDownloadDelegate,
         totalBytesWritten: Int64,
         totalBytesExpectedToWrite: Int64
     ) {
-        if totalBytesExpectedToWrite > 0 {
-            let progress = Double(totalBytesWritten) / Double(totalBytesExpectedToWrite)
-            onProgress(progress)
-        }
+        let total = totalBytesExpectedToWrite > 0 ? totalBytesExpectedToWrite : fallbackTotalBytes
+        let progress = min(max(Double(totalBytesWritten) / Double(total), 0.0), 1.0)
+        onProgress(totalBytesWritten, total, progress)
     }
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
-        onComplete(.success(location))
+        // 重要：必須在 didFinishDownloadingTo 返回前同步移轉暫存檔，否則 iOS/macOS 系統會在方法返回後立即刪除它
+        do {
+            let destUrl = URL(fileURLWithPath: destPath)
+            let parentDir = destUrl.deletingLastPathComponent()
+            if !FileManager.default.fileExists(atPath: parentDir.path) {
+                try FileManager.default.createDirectory(at: parentDir, withIntermediateDirectories: true)
+            }
+            let stagingUrl = parentDir.appendingPathComponent("whisper-downloading-\(UUID().uuidString).tmp")
+            if FileManager.default.fileExists(atPath: stagingUrl.path) {
+                try? FileManager.default.removeItem(at: stagingUrl)
+            }
+            try FileManager.default.moveItem(at: location, to: stagingUrl)
+
+            let attrs = try FileManager.default.attributesOfItem(atPath: stagingUrl.path)
+            let size = (attrs[.size] as? Int64) ?? 0
+            guard size > 500_000_000 else {
+                try? FileManager.default.removeItem(at: stagingUrl)
+                throw NSError(
+                    domain: "WhisperDownload",
+                    code: 1001,
+                    userInfo: [NSLocalizedDescriptionKey: "下載檔案不完整（大小僅 \(size / 1_000_000) MB，預期 ~574 MB），請切換鏡像分流重試"]
+                )
+            }
+
+            if FileManager.default.fileExists(atPath: destUrl.path) {
+                try FileManager.default.removeItem(at: destUrl)
+            }
+            try FileManager.default.moveItem(at: stagingUrl, to: destUrl)
+            onComplete(.success(destUrl))
+        } catch {
+            onComplete(.failure(error))
+        }
     }
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
@@ -129,10 +163,17 @@ public final class AudioTranscriber: ObservableObject {
     // 模型下載狀態
     @Published public var isDownloadingModel: Bool = false
     @Published public var downloadProgress: Double = 0.0
+    @Published public var downloadStatusText: String = ""
     @Published public var downloadError: String? = nil
+
+    public static let primaryModelUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin"
+    public static let mirrorModelUrl = "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin"
 
     private var activeDownloadSession: URLSession?
     private var activeDownloadTask: URLSessionDownloadTask?
+    private var lastLoggedProgressPct: Int = -1
+    private var lastProgressSampleTime: Date = Date()
+    private var lastProgressSampleBytes: Int64 = 0
 
     public enum OfflineStatus: Equatable {
         /// 本地離線語音模型已就緒
@@ -207,63 +248,158 @@ public final class AudioTranscriber: ObservableObject {
         #endif
     }
 
-    /// 一鍵非同步下載 Whisper 離線模型權重 (574 MB, Hugging Face 鏡像)
-    public func downloadWhisperModel() {
+    /// 一鍵非同步下載 Whisper 離線模型權重 (574 MB)
+    public func downloadWhisperModel(useMirror: Bool = false) {
         guard !isDownloadingModel, !isWhisperAvailable else { return }
-        guard let url = URL(string: "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin") else { return }
+        let urlString = useMirror ? Self.mirrorModelUrl : Self.primaryModelUrl
+        guard let url = URL(string: urlString) else { return }
+
+        // 清除先前懸浮的 Session
+        activeDownloadTask?.cancel()
+        activeDownloadTask = nil
+        activeDownloadSession?.invalidateAndCancel()
+        activeDownloadSession = nil
 
         isDownloadingModel = true
         downloadProgress = 0.0
+        downloadStatusText = "連線中..."
         downloadError = nil
+        lastLoggedProgressPct = -1
+        lastProgressSampleTime = Date()
+        lastProgressSampleBytes = 0
 
         let destPath = whisperModelPath
-
         let delegate = ModelDownloadDelegate(
-            onProgress: { [weak self] p in
+            destPath: destPath,
+            onProgress: { [weak self] written, total, progress in
                 Task { @MainActor [weak self] in
-                    self?.downloadProgress = p
+                    guard let self = self, self.isDownloadingModel else { return }
+                    self.downloadProgress = progress
+
+                    let writtenMB = Double(written) / 1_000_000.0
+                    let totalMB = Double(total) / 1_000_000.0
+                    let pct = Int(progress * 100)
+
+                    let now = Date()
+                    let elapsed = now.timeIntervalSince(self.lastProgressSampleTime)
+                    var speedStr = ""
+                    if elapsed >= 0.8 {
+                        let bytesDiff = written - self.lastProgressSampleBytes
+                        let speedMBps = Double(bytesDiff) / (elapsed * 1_000_000.0)
+                        if speedMBps > 0.01 {
+                            speedStr = String(format: " · %.1f MB/s", speedMBps)
+                        }
+                        self.lastProgressSampleTime = now
+                        self.lastProgressSampleBytes = written
+                    }
+
+                    self.downloadStatusText = String(format: "%.1f MB / %.1f MB (%d%%)%@", writtenMB, totalMB, pct, speedStr)
+
+                    if pct >= self.lastLoggedProgressPct + 10 {
+                        self.lastLoggedProgressPct = (pct / 10) * 10
+                        StartupLogger.log("📥 Whisper 下載進度: \(self.downloadStatusText)")
+                    }
                 }
             },
             onComplete: { [weak self] result in
                 Task { @MainActor [weak self] in
                     guard let self = self else { return }
                     self.isDownloadingModel = false
+                    self.activeDownloadSession?.finishTasksAndInvalidate()
+                    self.activeDownloadSession = nil
+                    self.activeDownloadTask = nil
+
                     switch result {
-                    case .success(let tempUrl):
-                        do {
-                            let destUrl = URL(fileURLWithPath: destPath)
-                            if FileManager.default.fileExists(atPath: destPath) {
-                                try FileManager.default.removeItem(at: destUrl)
-                            }
-                            try FileManager.default.moveItem(at: tempUrl, to: destUrl)
-                            StartupLogger.log("✅ Whisper 離線模型下載並就緒: \(destPath)")
-                            self.objectWillChange.send()
-                        } catch {
-                            self.downloadError = error.localizedDescription
-                            StartupLogger.log("❌ 移動模型檔案失敗: \(error.localizedDescription)")
-                        }
+                    case .success(let destUrl):
+                        StartupLogger.log("✅ Whisper 離線模型下載並就緒: \(destUrl.path)")
+                        self.downloadStatusText = "已完成"
+                        self.downloadError = nil
+                        self.objectWillChange.send()
                     case .failure(let error):
-                        self.downloadError = error.localizedDescription
-                        StartupLogger.log("❌ Whisper 模型下載失敗: \(error.localizedDescription)")
+                        let nsError = error as NSError
+                        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                            self.downloadStatusText = ""
+                            self.downloadError = nil
+                            StartupLogger.log("⏹️ 使用者取消了 Whisper 模型下載")
+                        } else {
+                            self.downloadError = error.localizedDescription
+                            self.downloadStatusText = "下載中斷"
+                            StartupLogger.log("❌ Whisper 模型下載失敗: \(error.localizedDescription)")
+                        }
                     }
                 }
             }
         )
 
-        let session = URLSession(configuration: .default, delegate: delegate, delegateQueue: nil)
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 60
+        config.timeoutIntervalForResource = 7200
+        config.waitsForConnectivity = true
+
+        let session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
         activeDownloadSession = session
-        let task = session.downloadTask(with: url)
+
+        var request = URLRequest(url: url)
+        request.setValue("Padnote/1.0 (iOS/macOS; WhisperModelDownload)", forHTTPHeaderField: "User-Agent")
+
+        let task = session.downloadTask(with: request)
         activeDownloadTask = task
         task.resume()
-        StartupLogger.log("🚀 開始下載 Whisper 模型 (574 MB)...")
+        StartupLogger.log("🚀 開始下載 Whisper 模型 (574 MB, \(useMirror ? "分流鏡像" : "官方節點"))...")
     }
 
     /// 取消模型下載
     public func cancelModelDownload() {
         activeDownloadTask?.cancel()
         activeDownloadTask = nil
+        activeDownloadSession?.invalidateAndCancel()
+        activeDownloadSession = nil
         isDownloadingModel = false
         downloadProgress = 0.0
+        downloadStatusText = ""
+    }
+
+    /// 從檔案或外部 URL 匯入離線模型
+    public func importWhisperModel(from sourceUrl: URL) throws {
+        let isAccessing = sourceUrl.startAccessingSecurityScopedResource()
+        defer {
+            if isAccessing {
+                sourceUrl.stopAccessingSecurityScopedResource()
+            }
+        }
+
+        let destUrl = URL(fileURLWithPath: whisperModelPath)
+        let parentDir = destUrl.deletingLastPathComponent()
+        if !FileManager.default.fileExists(atPath: parentDir.path) {
+            try FileManager.default.createDirectory(at: parentDir, withIntermediateDirectories: true)
+        }
+
+        let attrs = try FileManager.default.attributesOfItem(atPath: sourceUrl.path)
+        let size = (attrs[.size] as? Int64) ?? 0
+        guard size > 100_000_000 else {
+            throw NSError(
+                domain: "WhisperImport",
+                code: 1002,
+                userInfo: [NSLocalizedDescriptionKey: "模型檔案大小異常（僅 \(size / 1_000_000) MB），請確認選取的是完整的 Whisper ggml 權重檔"]
+            )
+        }
+
+        if FileManager.default.fileExists(atPath: destUrl.path) {
+            try FileManager.default.removeItem(at: destUrl)
+        }
+        try FileManager.default.copyItem(at: sourceUrl, to: destUrl)
+        StartupLogger.log("✅ 成功匯入 Whisper 離線模型 (\(size / 1_000_000) MB)")
+        objectWillChange.send()
+    }
+
+    /// 刪除本機 Whisper 模型以釋放空間
+    public func deleteWhisperModel() throws {
+        let destUrl = URL(fileURLWithPath: whisperModelPath)
+        if FileManager.default.fileExists(atPath: destUrl.path) {
+            try FileManager.default.removeItem(at: destUrl)
+            StartupLogger.log("🗑️ 已刪除本地 Whisper 模型以釋放空間")
+            objectWillChange.send()
+        }
     }
 
     /// 檢查並請求語音辨識權限
