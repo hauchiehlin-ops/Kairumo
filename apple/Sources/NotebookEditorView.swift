@@ -530,6 +530,8 @@ struct CanvasRepresentable: UIViewRepresentable {
         // 見 `acceptsInk`：政策擋不掉 Pencil，手勢本身要關。
         if uiView.drawingGestureRecognizer.isEnabled != acceptsInk {
             uiView.drawingGestureRecognizer.isEnabled = acceptsInk
+        }
+        if uiView.isUserInteractionEnabled != acceptsInk {
             uiView.isUserInteractionEnabled = acceptsInk
         }
         // 換筆刷或拉筆寬時，游標要跟著變 —— 不更新的話使用者得把滑鼠移出去
@@ -2785,7 +2787,8 @@ public struct NotebookEditorView: View {
                         // (1 - scale) × 1132 的空白，看起來像頁與頁之間破了一個洞。
                         .frame(
                             width: PageGeometry.width * scale,
-                            height: PageGeometry.height * scale
+                            height: PageGeometry.height * scale,
+                            alignment: .top
                         )
                         .id(index)
                         .background(
