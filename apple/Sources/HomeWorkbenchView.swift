@@ -3481,12 +3481,12 @@ public struct CloudSyncDetailSheet: View {
                 guideStep(
                     number: "1",
                     title: "這個功能在同步什麼？",
-                    desc: "本功能採用去中心化的無伺服器架構。設定 iCloud Drive 或自選資料夾後，App 會將筆記本以標準 .padnote 套件封裝（內含每一頁的手繪向量筆畫與文字附件）自動輸出至該資料夾。"
+                    desc: "本功能採用去中心化的架構。設定 iCloud Drive 或自選資料夾後，每一本筆記都會自動產生對應的 `.padnote` 專屬資料夾（內含手寫向量筆畫與錄音檔等）。這些多出來的 `.padnote` 是維持同步的正常結構，請勿隨意刪除。"
                 )
                 guideStep(
                     number: "2",
                     title: "如何與其他裝置雙向連動？",
-                    desc: "在您的其他 iPad 或 Mac 上，只要在「雲端同步」指定同一個 iCloud 資料夾，點選「立即同步」，App 即會自動偵測雲端更新並雙向合併回本機，兩台裝置的筆記即刻保持一致。"
+                    desc: "在您的其他 iPad 或 Mac 上，只要在「雲端同步」指定「同一個上層根目錄」（不要點進個別的 .padnote），App 即會自動掃描所有筆記並進行雙向合併更新。"
                 )
                 guideStep(
                     number: "3",
