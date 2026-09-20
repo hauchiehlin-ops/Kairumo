@@ -1555,7 +1555,7 @@ public struct NotebookEditorView: View {
                 }
             }
         }
-        .alert(localizationManager.localized("clear_page"), isPresented: $showClearConfirmAlert) {
+        .background(Color.clear.alert(localizationManager.localized("clear_page"), isPresented: $showClearConfirmAlert) {
             Button(localizationManager.localized("cancel"), role: .cancel) {}
             Button(localizationManager.localized("clear_confirm"), role: .destructive) {
                 currentDrawing = PKDrawing()
@@ -1563,8 +1563,8 @@ public struct NotebookEditorView: View {
             }
         } message: {
             Text(localizationManager.localized("clear_page_confirm"))
-        }
-        .alert(localizationManager.localized("mic_permission_title"), isPresented: $audioManager.showPermissionAlert) {
+        })
+        .background(Color.clear.alert(localizationManager.localized("mic_permission_title"), isPresented: $audioManager.showPermissionAlert) {
             Button(localizationManager.localized("cancel"), role: .cancel) {
                 audioManager.showPermissionAlert = false
             }
@@ -1573,8 +1573,8 @@ public struct NotebookEditorView: View {
             }
         } message: {
             Text(localizationManager.localized("mic_permission_msg"))
-        }
-        .alert(localizationManager.localized("delete_page"), isPresented: $showDeletePageAlert) {
+        })
+        .background(Color.clear.alert(localizationManager.localized("delete_page"), isPresented: $showDeletePageAlert) {
             Button(localizationManager.localized("cancel"), role: .cancel) {}
             Button(localizationManager.localized("delete_page"), role: .destructive) {
                 if let idx = pageToDeleteIndex {
@@ -1583,22 +1583,22 @@ public struct NotebookEditorView: View {
             }
         } message: {
             Text(String(format: localizationManager.localized("delete_page_confirm_msg"), (pageToDeleteIndex ?? 0) + 1))
-        }
-        .alert(localizationManager.localized("edit_root_folder"), isPresented: $showRenameRootFolderAlert) {
+        })
+        .background(Color.clear.alert(localizationManager.localized("edit_root_folder"), isPresented: $showRenameRootFolderAlert) {
             TextField(localizationManager.localized("root_folder"), text: $rootFolderRenameText)
             Button(localizationManager.localized("cancel"), role: .cancel) {}
             Button(localizationManager.localized("confirm")) {
                 store.renameRootFolder(newName: rootFolderRenameText)
             }
-        }
-        .alert(localizationManager.localized("new_subfolder"), isPresented: $showNewFolderAlert) {
+        })
+        .background(Color.clear.alert(localizationManager.localized("new_subfolder"), isPresented: $showNewFolderAlert) {
             TextField(localizationManager.localized("folder_name"), text: $newFolderNameText)
             Button(localizationManager.localized("cancel"), role: .cancel) {}
             Button(localizationManager.localized("confirm")) {
                 _ = store.createFolder(name: newFolderNameText, parentId: newFolderParentId)
                 newFolderNameText = ""
             }
-        }
+        })
         .alert(localizationManager.localized("rename_folder"), isPresented: Binding(
             get: { folderToRename != nil },
             set: { if !$0 { folderToRename = nil } }
@@ -3272,7 +3272,12 @@ public struct NotebookEditorView: View {
                     isExpanded: $isFloatingPillExpanded,
                     currentToolIcon: selectedTool.iconName,
                     currentColorHex: selectedColor.toHex() ?? "#000000",
-                    currentStrokeWidth: strokeWidth
+                    currentStrokeWidth: strokeWidth,
+                    onRestore: {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.75)) {
+                            isMinimalistCanvasActive = false
+                        }
+                    }
                 ) {
                     drawingToolbarContent
                 }

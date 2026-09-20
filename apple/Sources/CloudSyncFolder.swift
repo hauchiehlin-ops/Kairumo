@@ -56,15 +56,32 @@ enum CloudSyncFolder {
     ///
     /// 用書籤而不是路徑字串：使用者選的可能是雲端硬碟或別的 App 的容器，
     /// 路徑會變，而且下次啟動時沒有存取權。
+    private static var _cachedURL: URL? = nil
+    private static var _lastBookmarkData: Data? = nil
+
     static func resolveFolder() -> URL? {
-        guard let data = UserDefaults.standard.data(forKey: bookmarkKey) else { return nil }
+        guard let data = UserDefaults.standard.data(forKey: bookmarkKey) else { 
+            _cachedURL = nil
+            _lastBookmarkData = nil
+            return nil 
+        }
+        if data == _lastBookmarkData, let cached = _cachedURL {
+            return cached
+        }
         var stale = false
         guard let url = try? URL(
             resolvingBookmarkData: data,
             options: bookmarkResolutionOptions,
             relativeTo: nil,
             bookmarkDataIsStale: &stale
-        ) else { return nil }
+        ) else { 
+            _cachedURL = nil
+            _lastBookmarkData = nil
+            return nil 
+        }
+        
+        _cachedURL = url
+        _lastBookmarkData = data
 
         // 書籤過期（資料夾被搬過）時重存一份，否則下次啟動又要使用者重選。
         //

@@ -12,6 +12,7 @@ public struct FloatingToolPill<Content: View>: View {
     var currentToolIcon: String
     var currentColorHex: String
     var currentStrokeWidth: CGFloat
+    var onRestore: (() -> Void)? = nil
     @ViewBuilder var content: () -> Content
 
     @State private var dragOffset: CGSize = .zero
@@ -23,12 +24,14 @@ public struct FloatingToolPill<Content: View>: View {
         currentToolIcon: String,
         currentColorHex: String,
         currentStrokeWidth: CGFloat,
+        onRestore: (() -> Void)? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self._isExpanded = isExpanded
         self.currentToolIcon = currentToolIcon
         self.currentColorHex = currentColorHex
         self.currentStrokeWidth = currentStrokeWidth
+        self.onRestore = onRestore
         self.content = content
     }
 
@@ -45,6 +48,19 @@ public struct FloatingToolPill<Content: View>: View {
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(.secondary)
                         Spacer()
+                        
+                        if let onRestore = onRestore {
+                            Button {
+                                onRestore()
+                            } label: {
+                                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundColor(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .help("還原主工作列")
+                        }
+
                         Button {
                             withAnimation(.spring(response: 0.3, dampingFraction: 0.75)) {
                                 isExpanded = false

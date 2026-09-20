@@ -95,7 +95,7 @@ enum NotebookSyncCoordinator {
     /// - Parameters:
     ///   - store: 筆記本的本機儲存。
     ///   - folder: 使用者選的雲端資料夾。呼叫端負責取得 security scope。
-    static func run(store: SyncableNotebookStore, folder: URL, deviceId: UInt32) -> Report {
+    static func run(store: SyncableNotebookStore, folder: URL, deviceId: UInt32) async -> Report {
         var report = Report()
         let fm = FileManager.default
         let packagesDir = store.syncPackagesDirectory
@@ -114,19 +114,38 @@ enum NotebookSyncCoordinator {
             }
         }
 
-        // ── 2. 搬檔 ──────────────────────────────────────
-        let packages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
-            .filter { $0.pathExtension == "padnote" } ?? []
-        for package in packages {
-            let result = CloudSyncFolder.sync(localPackage: package, into: folder)
-            report.uploaded += result.uploaded.count
-            report.downloaded += result.downloaded.count
-            report.needsAttention.append(contentsOf: result.needsAttention)
-            report.failures.merge(result.failures) { first, _ in first }
-        }
+        // ── 2. 搬檔 (Heavy I/O, moved to background) ──────────────────────
+        let (syncUploaded, syncDownloaded, syncNeedsAttention, syncFailures, newNotebooks) = await Task.detached(priority: .utility) {
+            var up = 0
+            var down = 0
+            var attention = [String]()
+            var fails = [String: String]()
+            var newBooks = 0
+            
+            let packages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
+                .filter { $0.pathExtension == "padnote" } ?? []
+            for package in packages {
+                let result = CloudSyncFolder.sync(localPackage: package, into: folder)
+                up += result.uploaded.count
+                down += result.downloaded.count
+                attention.append(contentsOf: result.needsAttention)
+                fails.merge(result.failures) { first, _ in first }
+            }
 
-        // 另一台裝置建立的筆記本，本機還沒有對應的套件目錄 —— 要先整包抓下來。
-        report.newNotebooks += pullUnknownPackages(into: packagesDir, from: folder, report: &report)
+            // 另一台裝置建立的筆記本，本機還沒有對應的套件目錄 —— 要先整包抓下來。
+            var tempReport = Report()
+            newBooks = pullUnknownPackages(into: packagesDir, from: folder, report: &tempReport)
+            attention.append(contentsOf: tempReport.needsAttention)
+            fails.merge(tempReport.failures) { first, _ in first }
+            
+            return (up, down, attention, fails, newBooks)
+        }.value
+
+        report.uploaded += syncUploaded
+        report.downloaded += syncDownloaded
+        report.needsAttention.append(contentsOf: syncNeedsAttention)
+        report.failures.merge(syncFailures) { first, _ in first }
+        report.newNotebooks += newNotebooks
 
         // ── 3. 匯入回筆記 ─────────────────────────────────
         importPackages(from: packagesDir, into: store, deviceId: deviceId, ownStrokes: ownStrokes, report: &report)
@@ -382,7 +401,7 @@ enum NotebookSyncCoordinator {
     ///
     /// `CloudSyncFolder.sync` 只處理「本機已經有這個套件目錄」的情況 ——
     /// 另一台裝置**新建**的筆記本在本機連目錄都沒有，不另外抓的話永遠不會出現。
-    private static func pullUnknownPackages(
+    nonisolated private static func pullUnknownPackages(
         into packagesDir: URL, from folder: URL, report: inout Report
     ) -> Int {
         let fm = FileManager.default

@@ -1616,29 +1616,31 @@ public struct HomeWorkbenchView: View {
         guard !homeFolderSyncing else { return }
         guard let folder = CloudSyncFolder.resolveFolder() else { return }
         homeFolderSyncing = true
-        defer { homeFolderSyncing = false }
+        
+        Task {
+            defer { homeFolderSyncing = false }
+            homeGoogleMessage = localizationManager.localized("syncing")
+            let scoped = folder.startAccessingSecurityScopedResource()
+            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
 
-        homeGoogleMessage = localizationManager.localized("syncing")
-        let scoped = folder.startAccessingSecurityScopedResource()
-        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+            let report = await NotebookSyncCoordinator.run(
+                store: notebookStore, folder: folder, deviceId: NotebookMigration.deviceId)
 
-        let report = NotebookSyncCoordinator.run(
-            store: notebookStore, folder: folder, deviceId: NotebookMigration.deviceId)
-
-        if report.failures.isEmpty && report.needsAttention.isEmpty {
-            SyncHistory.markFolderSynced()
-        }
-        if let first = report.needsAttention.first {
-            homeGoogleMessage = localizationManager.localized("sync_needs_attention")
-                .replacingFirst("%@", with: first)
-        } else if let failure = report.failures.first {
-            homeGoogleMessage = "\(failure.key)：\(failure.value)"
-        } else if report.isNoOp {
-            homeGoogleMessage = localizationManager.localized("sync_up_to_date")
-        } else {
-            homeGoogleMessage = localizationManager.localized("sync_result")
-                .replacingFirst("%1@", with: "\(report.uploaded)")
-                .replacingFirst("%2@", with: "\(report.downloaded)")
+            if report.failures.isEmpty && report.needsAttention.isEmpty {
+                SyncHistory.markFolderSynced()
+            }
+            if let first = report.needsAttention.first {
+                homeGoogleMessage = localizationManager.localized("sync_needs_attention")
+                    .replacingFirst("%@", with: first)
+            } else if let failure = report.failures.first {
+                homeGoogleMessage = "\(failure.key)：\(failure.value)"
+            } else if report.isNoOp {
+                homeGoogleMessage = localizationManager.localized("sync_up_to_date")
+            } else {
+                homeGoogleMessage = localizationManager.localized("sync_result")
+                    .replacingFirst("%1@", with: "\(report.uploaded)")
+                    .replacingFirst("%2@", with: "\(report.downloaded)")
+            }
         }
     }
 
@@ -2852,28 +2854,31 @@ extension AppDiagnosticsSheet {
 
     private func runSync() {
         guard let folder = CloudSyncFolder.resolveFolder() else { return }
-        let scoped = folder.startAccessingSecurityScopedResource()
-        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+        
+        Task {
+            let scoped = folder.startAccessingSecurityScopedResource()
+            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
 
-        // 匯出 → 搬檔 → 匯入。順序不能顛倒：先搬檔的話上傳的是舊內容，
-        // 不匯入的話另一台裝置寫的東西永遠不會變成筆記。
-        let report = NotebookSyncCoordinator.run(
-            store: store, folder: folder, deviceId: NotebookMigration.deviceId)
+            // 匯出 → 搬檔 → 匯入。順序不能顛倒：先搬檔的話上傳的是舊內容，
+            // 不匯入的話另一台裝置寫的東西永遠不會變成筆記。
+            let report = await NotebookSyncCoordinator.run(
+                store: store, folder: folder, deviceId: NotebookMigration.deviceId)
 
-        if report.failures.isEmpty && report.needsAttention.isEmpty {
-            SyncHistory.markFolderSynced()
-        }
-        if let first = report.needsAttention.first {
-            syncMessage = localizationManager.localized("sync_needs_attention")
-                .replacingFirst("%@", with: first)
-        } else if let failure = report.failures.first {
-            syncMessage = "\(failure.key)：\(failure.value)"
-        } else if report.isNoOp {
-            syncMessage = localizationManager.localized("sync_up_to_date")
-        } else {
-            syncMessage = localizationManager.localized("sync_result")
-                .replacingFirst("%1@", with: "\(report.uploaded)")
-                .replacingFirst("%2@", with: "\(report.downloaded)")
+            if report.failures.isEmpty && report.needsAttention.isEmpty {
+                SyncHistory.markFolderSynced()
+            }
+            if let first = report.needsAttention.first {
+                syncMessage = localizationManager.localized("sync_needs_attention")
+                    .replacingFirst("%@", with: first)
+            } else if let failure = report.failures.first {
+                syncMessage = "\(failure.key)：\(failure.value)"
+            } else if report.isNoOp {
+                syncMessage = localizationManager.localized("sync_up_to_date")
+            } else {
+                syncMessage = localizationManager.localized("sync_result")
+                    .replacingFirst("%1@", with: "\(report.uploaded)")
+                    .replacingFirst("%2@", with: "\(report.downloaded)")
+            }
         }
     }
 
@@ -3167,6 +3172,10 @@ public struct CloudSyncDetailSheet: View {
                 switch result {
                 case .success(let urls):
                     guard let url = urls.first else { return }
+                    if url.pathExtension == "padnote" || url.lastPathComponent.hasSuffix(".padnote") {
+                        statusMessage = localizationManager.localized("invalid_folder_padnote")
+                        return
+                    }
                     let scoped = url.startAccessingSecurityScopedResource()
                     defer { if scoped { url.stopAccessingSecurityScopedResource() } }
                     do {
@@ -3668,29 +3677,32 @@ public struct CloudSyncDetailSheet: View {
         guard !isSyncing else { return }
         guard let folder = CloudSyncFolder.resolveFolder() else { return }
         isSyncing = true
-        defer { isSyncing = false }
+        
+        Task {
+            defer { isSyncing = false }
 
-        let scoped = folder.startAccessingSecurityScopedResource()
-        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+            let scoped = folder.startAccessingSecurityScopedResource()
+            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
 
-        statusMessage = localizationManager.localized("syncing")
-        let report = NotebookSyncCoordinator.run(
-            store: notebookStore, folder: folder, deviceId: NotebookMigration.deviceId)
+            statusMessage = localizationManager.localized("syncing")
+            let report = await NotebookSyncCoordinator.run(
+                store: notebookStore, folder: folder, deviceId: NotebookMigration.deviceId)
 
-        if report.failures.isEmpty && report.needsAttention.isEmpty {
-            SyncHistory.markFolderSynced()
-        }
-        if let first = report.needsAttention.first {
-            statusMessage = localizationManager.localized("sync_needs_attention")
-                .replacingFirst("%@", with: first)
-        } else if let failure = report.failures.first {
-            statusMessage = "\(failure.key)：\(failure.value)"
-        } else if report.isNoOp {
-            statusMessage = localizationManager.localized("sync_up_to_date")
-        } else {
-            statusMessage = localizationManager.localized("sync_result")
-                .replacingFirst("%1@", with: "\(report.uploaded)")
-                .replacingFirst("%2@", with: "\(report.downloaded)")
+            if report.failures.isEmpty && report.needsAttention.isEmpty {
+                SyncHistory.markFolderSynced()
+            }
+            if let first = report.needsAttention.first {
+                statusMessage = localizationManager.localized("sync_needs_attention")
+                    .replacingFirst("%@", with: first)
+            } else if let failure = report.failures.first {
+                statusMessage = "\(failure.key)：\(failure.value)"
+            } else if report.isNoOp {
+                statusMessage = localizationManager.localized("sync_up_to_date")
+            } else {
+                statusMessage = localizationManager.localized("sync_result")
+                    .replacingFirst("%1@", with: "\(report.uploaded)")
+                    .replacingFirst("%2@", with: "\(report.downloaded)")
+            }
         }
     }
 }
