@@ -134,15 +134,28 @@ object CloudSync {
         SyncLogger.log("【Google Drive 同步】開始執行", SyncSource.GOOGLE_DRIVE)
         SyncLogger.log("步驟 1：同步中繼資料與索引 (連線中)...", SyncSource.GOOGLE_DRIVE)
 
-        // 確保本機目前所有活躍呈現的筆記本，都登記於同步索引中且無誤植墓碑
+        // 【RC-5 根治版】復活迴圈：掃「所有本機條目 + 磁碟套件目錄」，
+        // 而非僅掃 activeLocalIds（它可能因 tombstone 而不含被誤刪的筆記本）。
         val allLocalEntries = NotebookLibrary.all(context, deviceId)
         val activeLocalIds = allLocalEntries.map { it.id }.toSet()
         val localLiveIds = uniffi.padnote_core.syncLiveNotebooks(AccountSyncStore.indexJson(context)).map { it.id }.toSet()
+        // (A) 從本機條目全集復活
         for (entry in allLocalEntries) {
             if (AccountSyncStore.isDeleted(context, entry.id) || !localLiveIds.contains(entry.id)) {
                 AccountSyncStore.record(context, entry.id, entry.title, null, false)
             }
         }
+        // (B) 從磁碟套件目錄再掃一遍：有套件但被 tombstone 的也要復活
+        val packagesDir = NotebookLibrary.directory(context)
+        val diskPackageIds = packagesDir.listFiles { f -> f.name.endsWith(".padnote") }
+            ?.map { it.name.removeSuffix(".padnote") }?.toSet() ?: emptySet()
+        for (diskId in diskPackageIds) {
+            if (AccountSyncStore.isDeleted(context, diskId) || !localLiveIds.contains(diskId)) {
+                val title = allLocalEntries.firstOrNull { it.id == diskId }?.title ?: diskId
+                AccountSyncStore.record(context, diskId, title, null, false)
+            }
+        }
+
 
         val meta = runOnce(context)
         if (meta == null) {

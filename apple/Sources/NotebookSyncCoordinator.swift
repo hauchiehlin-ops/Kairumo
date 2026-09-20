@@ -34,6 +34,7 @@ import PencilKit
 @MainActor
 protocol SyncableNotebookStore: AnyObject {
     var syncNotebooks: [NotebookDocument] { get }
+    var allNotebooks: [NotebookDocument] { get }
     var syncPackagesDirectory: URL { get }
     var syncAttachmentsDirectory: URL { get }
     /// **別台裝置**寫的那些筆畫。匯出時要扣掉它們，才不會複製一份掛在自己名下。
@@ -54,9 +55,11 @@ extension SyncableNotebookStore {
 
 extension NotebookStore: SyncableNotebookStore {
     var syncNotebooks: [NotebookDocument] { visibleNotebooks }
+    var allNotebooks: [NotebookDocument] { notebooks }
     var syncPackagesDirectory: URL { corePackagesDirectory }
     var syncAttachmentsDirectory: URL { attachmentsDirectory }
     // activeNotebookId 由 NotebookStore 本身的 @Published var 直接滿足協定，不需要在此重新宣告
+
 
     var syncBaselineDirectory: URL {
         let dir = documentsDirectory.appendingPathComponent("SyncBaseline", isDirectory: true)
@@ -234,10 +237,23 @@ enum NotebookSyncCoordinator {
         try? fm.createDirectory(at: packagesDir, withIntermediateDirectories: true)
 
         // ── 1. 匯出本機的筆記 ──────────────────────────────
-        SyncLogger.logAsync("步驟 1：匯出本機筆記 (\(store.syncNotebooks.count) 本)...", source: .googleDrive)
-        // 確保本機目前所有活躍呈現的筆記本，都登記於同步索引中且無誤植墓碑
-        let localLiveSet = Set(syncLiveNotebooks(indexJson: AccountSyncStore.shared.indexJSON).map { $0.id })
-        for document in store.syncNotebooks {
+        // 【RC-5 根治版】復活迴圈改用「磁碟掃描 + store.notebooks 全集」，
+        // 而非 syncNotebooks（= visibleNotebooks）。
+        //
+        // 原本的問題（雞生蛋死鎖）：
+        //   visibleNotebooks = notebooks.filter { !isHiddenBySync(id) }
+        //   isHiddenBySync 依賴 index.json → 被 tombstone 的筆記本被排除
+        //   → resurrection loop 掃不到它們 → 永遠無法復活
+        //   → pullNewNotebooks 只看 live_notebooks() → 也看不到它們
+        //   → 新增: 0，對方裝置的筆記本永遠不出現
+        //
+        // 解法：直接掃 packagesDir 磁碟，有套件 = 這台設備認為它是活的，強制復活。
+        //       同時也用 store.notebooks（全集，含被 tombstone 過濾掉的）兜底。
+        let localIndexJson = AccountSyncStore.shared.indexJSON
+        let localLiveSet = Set(syncLiveNotebooks(indexJson: localIndexJson).map { $0.id })
+
+        // (A) 從 store.allNotebooks 全集復活被誤標的筆記本
+        for document in store.allNotebooks {
             if AccountSyncStore.shared.isDeleted(id: document.id) || !localLiveSet.contains(document.id) {
                 AccountSyncStore.shared.record(
                     id: document.id,
@@ -247,6 +263,27 @@ enum NotebookSyncCoordinator {
                 )
             }
         }
+        // (B) 從磁碟套件目錄再掃一遍：有 .padnote 套件但被 tombstone 的也要復活。
+        //     這補上「筆記本已從 store.allNotebooks 移除但套件仍在磁碟」的情況。
+        let diskPackageIds: Set<String> = Set(
+            ((try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil)) ?? [])
+                .filter { $0.pathExtension == "padnote" }
+                .map { packageId(for: $0) }
+        )
+        for diskId in diskPackageIds {
+            if AccountSyncStore.shared.isDeleted(id: diskId) || !localLiveSet.contains(diskId) {
+                // 磁碟有套件但 index 說已刪除 → 強制復活（保守地用 id 做 title）
+                let title = store.allNotebooks.first(where: { $0.id == diskId })?.title ?? diskId
+                AccountSyncStore.shared.record(
+                    id: diskId,
+                    title: title,
+                    parentId: nil,
+                    isFolder: false
+                )
+            }
+        }
+
+        SyncLogger.logAsync("步驟 1：匯出本機筆記 (\(store.syncNotebooks.count) 本)...", source: .googleDrive)
         var ownStrokes: OwnStrokes = [:]
         for document in store.syncNotebooks {
             let package = packagesDir.appendingPathComponent("\(document.id).padnote")
@@ -260,6 +297,7 @@ enum NotebookSyncCoordinator {
             }
         }
         SyncLogger.logAsync("步驟 1 完成，成功匯出 \(report.exported) 本", source: .googleDrive)
+
 
         // ── 2. 中繼資料，再逐本搬內容 ───────────────────────
         // 順序不能反：先收斂索引，才知道哪些筆記本還活著。先同步內容的話，
