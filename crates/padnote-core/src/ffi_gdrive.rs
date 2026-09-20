@@ -582,8 +582,26 @@ pub fn gdrive_clone_notebook(
 
     let ops = gdrive_sync_notebook(http.clone(), package_path.clone(), notebook_id.clone());
     if !ops.ok {
+        let _ = std::fs::remove_dir_all(root);
         return ops;
     }
+
+    // 檢查 clone 下來的套件是否真正擁有 ops 操作記錄。
+    // 如果雲端尚無任何 ops 檔（例如來源端設備尚未上傳完成），絕不能留下只有 manifest 的空殼目錄，
+    // 否則後續匯入會因「沒有任何頁面」失敗，且下次同步會因目錄已存在而跳過重抓。
+    let package = match padnote_storage::NotebookPackage::open(root) {
+        Ok(p) => p,
+        Err(e) => {
+            let _ = std::fs::remove_dir_all(root);
+            return notebook_failed(format!("開不了套件：{e}"));
+        }
+    };
+    let op_files = package.doc_op_files().unwrap_or_default();
+    if op_files.is_empty() {
+        let _ = std::fs::remove_dir_all(root);
+        return notebook_failed("雲端尚無此筆記本之操作記錄，已清理暫存等待來源端上傳".to_string());
+    }
+
     // 媒體接在 oplog 之後，理由與平台那一側相同：oplog 裡的 AddImage 會指向
     // 一個 blob id，媒體還沒到的話那一頁是一個指向不存在檔案的圖片區塊。
     let media = gdrive_sync_media(http, package_path, notebook_id);
@@ -893,6 +911,24 @@ mod tests {
         assert!(again.ok, "{}", again.error);
         assert_eq!(again.downloaded, 0);
         assert_eq!(again.uploaded, 0);
+    }
+
+    #[test]
+    fn cloning_empty_cloud_notebook_cleans_up_and_fails() {
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
+        let root = tmp_package("empty-cloud", 0xBB);
+        let _ = std::fs::remove_dir_all(&root);
+
+        // 雲端只有資料夾或完全無 ops 檔案，clone 不應留下空目錄，且應回傳錯誤
+        let cloned = gdrive_clone_notebook(
+            cloud,
+            root.to_string_lossy().into(),
+            "empty-nb".into(),
+            "空筆記".into(),
+            1_700_000_000_000,
+        );
+        assert!(!cloned.ok, "雲端沒有任何 ops 時不應成功");
+        assert!(!root.exists(), "失敗時必須清理建立的臨時套件目錄");
     }
 
     #[test]

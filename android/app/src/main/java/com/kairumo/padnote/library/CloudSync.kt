@@ -134,6 +134,16 @@ object CloudSync {
         SyncLogger.log("【Google Drive 同步】開始執行", SyncSource.GOOGLE_DRIVE)
         SyncLogger.log("步驟 1：同步中繼資料與索引 (連線中)...", SyncSource.GOOGLE_DRIVE)
 
+        // 確保本機目前所有活躍呈現的筆記本，都登記於同步索引中且無誤植墓碑
+        val allLocalEntries = NotebookLibrary.all(context, deviceId)
+        val activeLocalIds = allLocalEntries.map { it.id }.toSet()
+        val localLiveIds = uniffi.padnote_core.syncLiveNotebooks(AccountSyncStore.indexJson(context)).map { it.id }.toSet()
+        for (entry in allLocalEntries) {
+            if (AccountSyncStore.isDeleted(context, entry.id) || !localLiveIds.contains(entry.id)) {
+                AccountSyncStore.record(context, entry.id, entry.title, null, false)
+            }
+        }
+
         val meta = runOnce(context)
         if (meta == null) {
             SyncLogger.log("無法取得有效權杖，Google Drive 同步中止", SyncSource.GOOGLE_DRIVE)
@@ -146,8 +156,6 @@ object CloudSync {
 
         // ── 同步前即時核實：本機現存 vs. 雲端索引差異樣態 ──────────────
         val dir = NotebookLibrary.directory(context)
-        val allLocalEntries = NotebookLibrary.all(context, deviceId)
-        val activeLocalIds = allLocalEntries.map { it.id }.toSet()
         val deletedNotebookIds = AccountSyncStore.deletedNotebookIds(context).toMutableSet()
         val cloudLiveIds = uniffi.padnote_core.syncLiveNotebooks(meta.indexJson).map { it.id }.toSet()
 
@@ -158,26 +166,24 @@ object CloudSync {
 
         for (pkg in allDiskPackages) {
             val id = pkg.name.removeSuffix(".padnote")
-            // 判定 1：若為明確已刪除的筆記本（本機墓碑中），立即清理實體磁碟殘留套件
+            // 判定 1：本機現存活躍的筆記本擁有最高本機權威，納入雙軌同步排程（絕不刪除）
+            if (activeLocalIds.contains(id)) {
+                deletedNotebookIds.remove(id)
+                validPackages.add(pkg)
+                continue
+            }
+            // 判定 2：若為明確已刪除的筆記本（本機墓碑中），立即清理實體磁碟殘留套件
             if (deletedNotebookIds.contains(id)) {
                 pkg.deleteRecursively()
                 cleanedCount++
                 continue
             }
-            // 判定 2：若不在本機現存筆記中（使用者介面已無此筆記）
-            if (!activeLocalIds.contains(id)) {
-                // 如果雲端也不再活躍，這屬於孤立過期套件，清理並排除
-                if (!cloudLiveIds.contains(id)) {
-                    pkg.deleteRecursively()
-                    AccountSyncStore.recordDeletion(context, id)
-                    deletedNotebookIds.add(id)
-                    cleanedCount++
-                    continue
-                }
-            }
-            // 判定 3：只有本機現存活躍的筆記本，才納入雙軌同步排程
-            if (activeLocalIds.contains(id)) {
-                validPackages.add(pkg)
+            // 判定 3：若不在本機現存筆記中，且雲端也不再活躍，屬於孤立過期套件，清理實體檔案
+            // 注意：絕不在此呼叫 recordDeletion 產生虛假雲端墓碑！磁碟清理僅為本地快取回收。
+            if (!cloudLiveIds.contains(id)) {
+                pkg.deleteRecursively()
+                cleanedCount++
+                continue
             }
         }
 
@@ -245,7 +251,7 @@ object CloudSync {
         }
 
         // 別台裝置新建的筆記本整本抓下來（排除已被刪除的筆記本）
-        val pulled = pullNewNotebooks(context, meta.indexJson, deletedNotebookIds)
+        val pulled = pullNewNotebooks(context, meta.indexJson, activeLocalIds, deletedNotebookIds)
         changed += pulled
         downloaded += pulled.size
 
@@ -264,6 +270,7 @@ object CloudSync {
     private fun pullNewNotebooks(
         context: Context,
         mergedIndexJson: String,
+        activeLocalIds: Set<String> = emptySet(),
         deletedNotebookIds: Set<String> = emptySet()
     ): List<String> {
         val dir = NotebookLibrary.directory(context)
@@ -271,6 +278,14 @@ object CloudSync {
         for (item in uniffi.padnote_core.syncLiveNotebooks(mergedIndexJson)) {
             if (deletedNotebookIds.contains(item.id)) continue
             val path = File(dir, "${item.id}.padnote")
+            // 防禦性檢查：若本地存在該目錄，但本機尚未載入該筆記本，檢查是否為無 ops 的空殼目錄
+            if (path.exists() && !activeLocalIds.contains(item.id)) {
+                val opsDir = File(path, "doc/ops")
+                val opFiles = opsDir.listFiles { f -> f.name.endsWith(".oplog") }
+                if (opFiles == null || opFiles.isEmpty()) {
+                    path.deleteRecursively()
+                }
+            }
             if (path.exists()) continue
             // 權杖每一本都重新取一次：整批抓下來可能跨過存取權杖的有效期，
             // 用同一個舊的會在中途開始 401。

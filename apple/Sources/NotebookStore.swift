@@ -1587,6 +1587,16 @@ public final class NotebookStore: ObservableObject {
         persistData()
     }
 
+    /// 依據同步收斂後的刪除墓碑名單，清理本機中已在其他裝置被刪除的筆記本實體。
+    public func syncPurgeDeletedNotebooks(_ deletedIds: Set<String>) {
+        guard !deletedIds.isEmpty else { return }
+        let beforeCount = notebooks.count
+        notebooks.removeAll { deletedIds.contains($0.id) }
+        if notebooks.count != beforeCount {
+            persistData()
+        }
+    }
+
     public func duplicateNotebook(id: String) {
         guard let original = notebooks.first(where: { $0.id == id }) else { return }
         var copy = original

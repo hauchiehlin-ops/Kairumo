@@ -44,14 +44,16 @@ protocol SyncableNotebookStore: AnyObject {
     func syncLoadDrawing(notebookId: String, pageIndex: Int) -> PKDrawing
     func syncSaveDrawing(notebookId: String, pageIndex: Int, drawing: PKDrawing)
     func syncUpsert(_ document: NotebookDocument)
+    func syncPurgeDeletedNotebooks(_ deletedIds: Set<String>)
 }
 
 extension SyncableNotebookStore {
     var activeNotebookId: String? { nil }
+    func syncPurgeDeletedNotebooks(_ deletedIds: Set<String>) {}
 }
 
 extension NotebookStore: SyncableNotebookStore {
-    var syncNotebooks: [NotebookDocument] { notebooks }
+    var syncNotebooks: [NotebookDocument] { visibleNotebooks }
     var syncPackagesDirectory: URL { corePackagesDirectory }
     var syncAttachmentsDirectory: URL { attachmentsDirectory }
     // activeNotebookId 由 NotebookStore 本身的 @Published var 直接滿足協定，不需要在此重新宣告
@@ -146,12 +148,17 @@ enum NotebookSyncCoordinator {
             var cleanedCount = 0
             for pkg in allDiskPackages {
                 let id = packageId(for: pkg)
+                // 判定 1：本機現存活躍的筆記本擁有最高權威（絕不刪除）
+                if activeLocalIds.contains(id) {
+                    packages.append(pkg)
+                    continue
+                }
+                // 判定 2：若為已刪除或不在活躍名單中，清理本地實體套件
                 if deletedNotebookIds.contains(id) || !activeLocalIds.contains(id) {
                     try? fm.removeItem(at: pkg)
                     cleanedCount += 1
                     continue
                 }
-                packages.append(pkg)
             }
             logs.append(("📊【同步前核實】本機現存: \(activeLocalIds.count) 本，清理/排除無效套件: \(cleanedCount) 本，待同步活躍筆記: \(packages.count) 本", .folder))
 
@@ -208,9 +215,12 @@ enum NotebookSyncCoordinator {
             into: store,
             deviceId: deviceId,
             ownStrokes: ownStrokes,
+            activeLocalIds: activeLocalIds,
             deletedNotebookIds: deletedNotebookIds,
             report: &report
         )
+        // ── 4. 清理已被遠端刪除的本地殭屍筆記 ─────────────────
+        store.syncPurgeDeletedNotebooks(deletedNotebookIds)
         SyncLogger.logAsync("【資料夾同步】全部完成。", source: .folder)
 
         return report
@@ -233,6 +243,18 @@ enum NotebookSyncCoordinator {
 
         // ── 1. 匯出本機的筆記 ──────────────────────────────
         SyncLogger.logAsync("步驟 1：匯出本機筆記 (\(store.syncNotebooks.count) 本)...", source: .googleDrive)
+        // 確保本機目前所有活躍呈現的筆記本，都登記於同步索引中且無誤植墓碑
+        let localLiveSet = Set(syncLiveNotebooks(indexJson: AccountSyncStore.shared.indexJSON).map { $0.id })
+        for document in store.syncNotebooks {
+            if AccountSyncStore.shared.isDeleted(id: document.id) || !localLiveSet.contains(document.id) {
+                AccountSyncStore.shared.record(
+                    id: document.id,
+                    title: document.title,
+                    parentId: document.folderId,
+                    isFolder: false
+                )
+            }
+        }
         var ownStrokes: OwnStrokes = [:]
         for document in store.syncNotebooks {
             let package = packagesDir.appendingPathComponent("\(document.id).padnote")
@@ -277,26 +299,24 @@ enum NotebookSyncCoordinator {
 
         for pkg in allDiskPackages {
             let id = packageId(for: pkg)
-            // 判定 1：若為明確已刪除的筆記本（本機墓碑中），立即清理實體磁碟殘留套件
+            // 判定 1：本機現存活躍的筆記本擁有最高本機權威，納入雙軌同步排程（絕不刪除）
+            if activeLocalIds.contains(id) {
+                deletedNotebookIds.remove(id)
+                packages.append(pkg)
+                continue
+            }
+            // 判定 2：若為明確已刪除的筆記本（本機墓碑中），立即清理實體磁碟殘留套件
             if deletedNotebookIds.contains(id) {
                 try? fm.removeItem(at: pkg)
                 cleanedCount += 1
                 continue
             }
-            // 判定 2：若不在本機現存筆記中（使用者介面已無此筆記）
-            if !activeLocalIds.contains(id) {
-                // 如果雲端也不再活躍，這屬於孤立過期套件，清理並排除
-                if !cloudLiveIds.contains(id) {
-                    try? fm.removeItem(at: pkg)
-                    AccountSyncStore.shared.recordDeletion(id: id)
-                    deletedNotebookIds.insert(id)
-                    cleanedCount += 1
-                    continue
-                }
-            }
-            // 判定 3：只有本機現存活躍的筆記本，才納入雙軌同步排程
-            if activeLocalIds.contains(id) {
-                packages.append(pkg)
+            // 判定 3：若不在本機現存筆記中，且雲端也不再活躍，屬於孤立過期套件，清理實體檔案
+            // 注意：絕不在此呼叫 recordDeletion 產生虛假雲端墓碑！磁碟清理僅為本地快取回收。
+            if !cloudLiveIds.contains(id) {
+                try? fm.removeItem(at: pkg)
+                cleanedCount += 1
+                continue
             }
         }
 
@@ -382,6 +402,7 @@ enum NotebookSyncCoordinator {
         let newBooks = await pullNewNotebooks(
             into: packagesDir,
             index: meta.indexJson,
+            activeLocalIds: activeLocalIds,
             deletedNotebookIds: deletedNotebookIds,
             report: &report
         )
@@ -395,9 +416,12 @@ enum NotebookSyncCoordinator {
             into: store,
             deviceId: deviceId,
             ownStrokes: ownStrokes,
+            activeLocalIds: activeLocalIds,
             deletedNotebookIds: deletedNotebookIds,
             report: &report
         )
+        // ── 4. 清理已被遠端刪除的本地殭屍筆記 ─────────────────
+        store.syncPurgeDeletedNotebooks(deletedNotebookIds)
         SyncLogger.logAsync("【Google Drive 同步】全部完成。", source: .googleDrive)
 
         return report
@@ -410,6 +434,7 @@ enum NotebookSyncCoordinator {
     private static func pullNewNotebooks(
         into packagesDir: URL,
         index: String,
+        activeLocalIds: Set<String>,
         deletedNotebookIds: Set<String>,
         report: inout Report
     ) async -> Int {
@@ -418,6 +443,16 @@ enum NotebookSyncCoordinator {
         for item in syncLiveNotebooks(indexJson: index) {
             guard !deletedNotebookIds.contains(item.id) else { continue }
             let package = packagesDir.appendingPathComponent("\(item.id).padnote")
+            // 防禦性檢查：若本地存在該目錄，但本機 store 尚未載入該筆記本，
+            // 檢查是否為無 ops 檔案的殘留空殼；若為空殼則移除，以便重新 clone
+            if fm.fileExists(atPath: package.path) && !activeLocalIds.contains(item.id) {
+                let opsDir = package.appendingPathComponent("doc/ops")
+                let opFiles = (try? fm.contentsOfDirectory(at: opsDir, includingPropertiesForKeys: nil))?
+                    .filter { $0.pathExtension == "oplog" } ?? []
+                if opFiles.isEmpty {
+                    try? fm.removeItem(at: package)
+                }
+            }
             guard !fm.fileExists(atPath: package.path) else { continue }
             guard let result = await CloudSync.cloneNotebook(
                 packagePath: package.path, notebookId: item.id, title: item.title)
@@ -534,6 +569,7 @@ enum NotebookSyncCoordinator {
         into store: SyncableNotebookStore,
         deviceId: UInt32,
         ownStrokes: OwnStrokes,
+        activeLocalIds: Set<String>,
         deletedNotebookIds: Set<String>,
         report: inout Report
     ) {
@@ -584,7 +620,11 @@ enum NotebookSyncCoordinator {
                 report.imported += 1
             } catch {
                 report.failures[package.lastPathComponent] = error.localizedDescription
-                if error.localizedDescription.contains("不是 .padnote 套件") {
+                // 匯入失敗（無論是沒有頁面、非套件、或是壞檔）：
+                // 若這本筆記本尚未成功載入本機 store，必須把磁碟上的破損/空套件刪除。
+                // 否則下次 pullNewNotebooks 會因為 fileExists(atPath:) 為真而跳過，
+                // 導致筆記本永遠卡在無法匯入的死鎖狀態。
+                if !activeLocalIds.contains(notebookId) {
                     try? fm.removeItem(at: package)
                 }
             }
