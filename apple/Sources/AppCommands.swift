@@ -49,6 +49,30 @@ enum AppCommand {
 /// App delegate。存在的唯一理由就是註冊上面那些命令。
 final class KairumoAppDelegate: UIResponder, UIApplicationDelegate {
 
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
+    ) -> Bool {
+        Self.configureInstantToolTips()
+        return true
+    }
+
+    /// 設定 macOS / Catalyst 的 Tooltip 為即時響應（游標指向立刻浮現提示文字）
+    static func configureInstantToolTips() {
+        UserDefaults.standard.register(defaults: [
+            "NSInitialToolTipDelay": 0,
+            "NSToolTipDelay": 0
+        ])
+        UserDefaults.standard.set(0, forKey: "NSInitialToolTipDelay")
+        UserDefaults.standard.set(0, forKey: "NSToolTipDelay")
+
+        // 若為 Mac (Catalyst) 環境，直接調整 AppKit NSToolTipManager 的延遲時間
+        if let managerClass = NSClassFromString("NSToolTipManager") as? NSObject.Type,
+           let sharedManager = managerClass.value(forKey: "sharedToolTipManager") as? NSObject {
+            sharedManager.setValue(0.01, forKey: "initialToolTipDelay")
+        }
+    }
+
     override func buildMenu(with builder: UIMenuBuilder) {
         super.buildMenu(with: builder)
         // 只動主選單，不要碰 context menu。

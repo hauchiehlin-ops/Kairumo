@@ -1579,6 +1579,11 @@ public final class NotebookStore: ObservableObject {
         // **留墓碑。** 不留的話，等雲端接上，另一台還沒同步到刪除的裝置
         // 會把這本筆記原封不動傳回來 —— 刪除永遠刪不掉。
         AccountSyncStore.shared.recordDeletion(id: id)
+        // 同步清理本機實體套件目錄與基準目錄，避免殘留檔案被後台同步佇列誤抓
+        let pkgDir = corePackagesDirectory.appendingPathComponent("\(id).padnote")
+        try? FileManager.default.removeItem(at: pkgDir)
+        let baseDir = documentsDirectory.appendingPathComponent("SyncBaseline/\(id).padnote")
+        try? FileManager.default.removeItem(at: baseDir)
         persistData()
     }
 

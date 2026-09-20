@@ -12,6 +12,10 @@ public struct FloatingToolPill<Content: View>: View {
     var currentToolIcon: String
     var currentColorHex: String
     var currentStrokeWidth: CGFloat
+    var toolboxTitle: String
+    var expandLabel: String
+    var collapseLabel: String
+    var exitMinimalLabel: String
     var onRestore: (() -> Void)? = nil
     @ViewBuilder var content: () -> Content
 
@@ -24,6 +28,10 @@ public struct FloatingToolPill<Content: View>: View {
         currentToolIcon: String,
         currentColorHex: String,
         currentStrokeWidth: CGFloat,
+        toolboxTitle: String,
+        expandLabel: String,
+        collapseLabel: String,
+        exitMinimalLabel: String,
         onRestore: (() -> Void)? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) {
@@ -31,6 +39,10 @@ public struct FloatingToolPill<Content: View>: View {
         self.currentToolIcon = currentToolIcon
         self.currentColorHex = currentColorHex
         self.currentStrokeWidth = currentStrokeWidth
+        self.toolboxTitle = toolboxTitle
+        self.expandLabel = expandLabel
+        self.collapseLabel = collapseLabel
+        self.exitMinimalLabel = exitMinimalLabel
         self.onRestore = onRestore
         self.content = content
     }
@@ -44,7 +56,7 @@ public struct FloatingToolPill<Content: View>: View {
                         Image(systemName: currentToolIcon)
                             .font(.system(size: 13, weight: .bold))
                             .foregroundColor(.accentColor)
-                        Text("工具箱")
+                        Text(toolboxTitle)
                             .font(.system(size: 11, weight: .semibold))
                             .foregroundColor(.secondary)
                         Spacer()
@@ -53,12 +65,17 @@ public struct FloatingToolPill<Content: View>: View {
                             Button {
                                 onRestore()
                             } label: {
-                                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                                    .font(.system(size: 15, weight: .semibold))
-                                    .foregroundColor(.secondary)
+                                Label(exitMinimalLabel, systemImage: "arrow.up.left.and.arrow.down.right")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundColor(.accentColor)
+                                    .labelStyle(.titleAndIcon)
+                                    .padding(.horizontal, 8)
+                                    .padding(.vertical, 5)
+                                    .background(Color.accentColor.opacity(0.12), in: Capsule())
                             }
                             .buttonStyle(.plain)
-                            .help("還原主工作列")
+                            .help(exitMinimalLabel)
+                            .accessibilityLabel(exitMinimalLabel)
                         }
 
                         Button {
@@ -71,6 +88,8 @@ public struct FloatingToolPill<Content: View>: View {
                                 .foregroundColor(.secondary)
                         }
                         .buttonStyle(.plain)
+                        .help(collapseLabel)
+                        .accessibilityLabel(collapseLabel)
                     }
                     .padding(.horizontal, 10)
                     .padding(.top, 8)
@@ -94,35 +113,59 @@ public struct FloatingToolPill<Content: View>: View {
                 ))
             } else {
                 // 極簡單一懸浮點 (Floating Action Bubble)
-                Button {
-                    #if os(iOS)
-                    UIImpactFeedbackGenerator(style: .light).impactOccurred()
-                    #endif
-                    withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
-                        isExpanded = true
-                    }
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: currentToolIcon)
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundColor(.primary)
+                HStack(spacing: 8) {
+                    Button {
+                        #if os(iOS)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                        #endif
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
+                            isExpanded = true
+                        }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: currentToolIcon)
+                                .font(.system(size: 15, weight: .semibold))
+                                .foregroundColor(.primary)
 
-                        // 顏色指示點
-                        Circle()
-                            .fill(Color(hex: currentColorHex) ?? .primary)
-                            .frame(width: 8, height: 8)
-                            .overlay(Circle().stroke(Color.white.opacity(0.8), lineWidth: 1))
+                            // 顏色指示點
+                            Circle()
+                                .fill(Color(hex: currentColorHex) ?? .primary)
+                                .frame(width: 8, height: 8)
+                                .overlay(Circle().stroke(Color.white.opacity(0.8), lineWidth: 1))
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 8)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .overlay {
+                            Capsule().stroke(Color.accentColor.opacity(0.4), lineWidth: 1.2)
+                        }
+                        .shadow(color: Color.black.opacity(0.18), radius: 8, y: 3)
                     }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                    .background(.ultraThinMaterial, in: Capsule())
-                    .overlay {
-                        Capsule().stroke(Color.accentColor.opacity(0.4), lineWidth: 1.2)
+                    .buttonStyle(.plain)
+                    .contentShape(Capsule())
+                    .help(expandLabel)
+                    .accessibilityLabel(expandLabel)
+
+                    if let onRestore = onRestore {
+                        Button {
+                            onRestore()
+                        } label: {
+                            Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                .font(.system(size: 15, weight: .bold))
+                                .foregroundColor(.accentColor)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 8)
+                                .background(.ultraThinMaterial, in: Capsule())
+                                .overlay {
+                                    Capsule().stroke(Color.accentColor.opacity(0.45), lineWidth: 1.2)
+                                }
+                                .shadow(color: Color.black.opacity(0.18), radius: 8, y: 3)
+                        }
+                        .buttonStyle(.plain)
+                        .help(exitMinimalLabel)
+                        .accessibilityLabel(exitMinimalLabel)
                     }
-                    .shadow(color: Color.black.opacity(0.18), radius: 8, y: 3)
                 }
-                .buttonStyle(.plain)
-                .contentShape(Capsule())
             }
         }
     }

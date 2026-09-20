@@ -941,6 +941,8 @@ public struct NotebookEditorView: View {
 
     // 實體工具列狀態
     @State private var selectedTool: EditorToolType = .pen
+    @State private var previousTool: EditorToolType?
+    @State private var lastObservedTool: EditorToolType = .pen
 
     /// 有東西正懸在畫布上等著放下（工作項 S-68）。
     ///
@@ -1339,7 +1341,46 @@ public struct NotebookEditorView: View {
             .onReceive(NotificationCenter.default.publisher(for: AppCommand.selectTool)) { note in
                 guard let index = note.object as? Int,
                       EditorToolType.allCases.indices.contains(index) else { return }
-                selectedTool = EditorToolType.allCases[index]
+                selectEditorTool(EditorToolType.allCases[index])
+            }
+        }
+        .overlay(alignment: .bottomLeading) {
+            // 🌟 響應式極簡畫布模式：單一懸浮點 / 快捷氣泡（掛在最外層視窗，不受畫布縮放與單頁/連續模式影響）
+            if effectiveToolbarMode == .draw && isMinimalistCanvasActive {
+                FloatingToolPill(
+                    isExpanded: $isFloatingPillExpanded,
+                    currentToolIcon: selectedTool.iconName,
+                    currentColorHex: selectedColor.toHex() ?? "#000000",
+                    currentStrokeWidth: strokeWidth,
+                    toolboxTitle: localizationManager.localized("minimal_toolbox"),
+                    expandLabel: localizationManager.localized("expand_minimal_toolbox"),
+                    collapseLabel: localizationManager.localized("collapse_minimal_toolbox"),
+                    exitMinimalLabel: localizationManager.localized("exit_canvas_minimal_mode"),
+                    onRestore: {
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.75)) {
+                            isMinimalistCanvasActive = false
+                            isFloatingPillExpanded = true
+                        }
+                    }
+                ) {
+                    drawingToolbarContent
+                }
+                .padding(20)
+                .shadow(color: Color.black.opacity(0.2), radius: 10, y: 4)
+                .transition(.scale(scale: 0.85).combined(with: .opacity))
+            }
+        }
+        .background {
+            // 實體鍵盤 Esc 鍵支援一鍵退出畫布極簡模式
+            if isMinimalistCanvasActive {
+                Button("") {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.75)) {
+                        isMinimalistCanvasActive = false
+                    }
+                }
+                .keyboardShortcut(.escape, modifiers: [])
+                .opacity(0)
+                .allowsHitTesting(false)
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
@@ -1347,7 +1388,11 @@ public struct NotebookEditorView: View {
         // Apple Pencil 雙擊要切回「最後用過的筆刷」（工作項 S-67），
         // 所以每次換工具都要把筆刷記下來。橡皮擦與套索不算筆刷。
         .onChange(of: selectedTool) { tool in
+            if tool == .lasso, lastObservedTool != .lasso {
+                previousTool = lastObservedTool
+            }
             if tool.isBrush { lastBrushTool = tool }
+            lastObservedTool = tool
         }
         .onChange(of: notebook.id) { _ in
             // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
@@ -1707,6 +1752,30 @@ public struct NotebookEditorView: View {
 
             // 手繪與打字模式切換器
             editorModeSwitcher(compact: false)
+
+            // 🌟 畫布極簡模式恢復按鈕（讓使用者一秒找到退出鍵）
+            if isMinimalistCanvasActive {
+                Button {
+                    withAnimation(.spring(response: 0.32, dampingFraction: 0.75)) {
+                        isMinimalistCanvasActive = false
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 12, weight: .bold))
+                        Text(localizationManager.localized("exit_canvas_minimal_mode"))
+                            .font(.system(size: 12, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.accentColor, in: Capsule())
+                    .shadow(color: Color.accentColor.opacity(0.35), radius: 4, y: 1)
+                }
+                .buttonStyle(.plain)
+                .help(localizationManager.localized("exit_canvas_minimal_mode"))
+                .accessibilityLabel(localizationManager.localized("exit_canvas_minimal_mode"))
+            }
 
             // 筆記標題（點擊可修改）
             Button {
@@ -2162,6 +2231,24 @@ public struct NotebookEditorView: View {
         editorModeSwitcher(compact: true)
             .accessibilityIdentifier("editor.mode")
 
+        if isMinimalistCanvasActive {
+            Button {
+                withAnimation(.spring(response: 0.32, dampingFraction: 0.75)) {
+                    isMinimalistCanvasActive = false
+                }
+            } label: {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 12, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(5)
+                    .background(Color.accentColor, in: Circle())
+                    .shadow(color: Color.accentColor.opacity(0.35), radius: 3, y: 1)
+            }
+            .buttonStyle(.plain)
+            .help(localizationManager.localized("exit_canvas_minimal_mode"))
+            .accessibilityLabel(localizationManager.localized("exit_canvas_minimal_mode"))
+        }
+
         // 筆記標題（彈性縮寫）
         Button {
             renameText = notebook.displayTitle()
@@ -2524,7 +2611,7 @@ public struct NotebookEditorView: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 72))], spacing: 10) {
                     // 鋼筆
                     Button {
-                        selectedTool = .pen
+                        selectEditorTool(.pen)
                     } label: {
                         VStack(spacing: 3) {
                             Image(systemName: "pencil.tip")
@@ -2544,7 +2631,7 @@ public struct NotebookEditorView: View {
 
                     // 螢光筆
                     Button {
-                        selectedTool = .highlighter
+                        selectEditorTool(.highlighter)
                     } label: {
                         VStack(spacing: 3) {
                             Image(systemName: "highlighter")
@@ -2564,7 +2651,7 @@ public struct NotebookEditorView: View {
 
                     // 橡皮擦
                     Button {
-                        selectedTool = .eraser
+                        selectEditorTool(.eraser)
                     } label: {
                         VStack(spacing: 3) {
                             Image(systemName: "eraser")
@@ -2584,10 +2671,10 @@ public struct NotebookEditorView: View {
 
                     // 套索工具
                     Button {
-                        selectedTool = .lasso
+                        selectEditorTool(.lasso)
                     } label: {
                         VStack(spacing: 3) {
-                            Image(systemName: "lasso")
+                            Image(systemName: selectedTool == .lasso ? "xmark.circle.fill" : "lasso")
                                 .font(.system(size: 20))
                             Text(L("tool_lasso"))
                                 .font(.caption2)
@@ -3278,24 +3365,6 @@ public struct NotebookEditorView: View {
                     .allowsHitTesting(false)
             }
 
-            // 🌟 響應式極簡畫布模式：單一懸浮點 / 快捷氣泡
-            if effectiveToolbarMode == .draw && isMinimalistCanvasActive {
-                FloatingToolPill(
-                    isExpanded: $isFloatingPillExpanded,
-                    currentToolIcon: selectedTool.iconName,
-                    currentColorHex: selectedColor.toHex() ?? "#000000",
-                    currentStrokeWidth: strokeWidth,
-                    onRestore: {
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.75)) {
-                            isMinimalistCanvasActive = false
-                        }
-                    }
-                ) {
-                    drawingToolbarContent
-                }
-                .padding(16)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-            }
 
             // 框選層。只有在框選模式下才存在 —— 平常掛一層可命中的
             // 透明視圖，底下的物件就全部點不到了。
@@ -5027,6 +5096,19 @@ public struct NotebookEditorView: View {
     /// 名稱一長，裝置端（主執行緒只有 1MB 堆疊）解析時就會遞迴爆堆疊。
     private var drawingToolbar: AnyView { AnyView(drawingToolbarContent) }
 
+    private func selectEditorTool(_ tool: EditorToolType) {
+        if tool == .lasso, selectedTool == .lasso {
+            exitLassoMode()
+        } else {
+            selectedTool = tool
+        }
+    }
+
+    private func exitLassoMode() {
+        selectedTool = previousTool ?? lastBrushTool
+        previousTool = nil
+    }
+
     @ViewBuilder
     private var eraserModeControls: some View {
         if selectedTool == .eraser {
@@ -5225,7 +5307,7 @@ public struct NotebookEditorView: View {
                 // 筆刷群組。橡皮擦與套索另成一組（見 EditorToolType.isBrush）。
                 ForEach(EditorToolType.allCases.filter(\.isBrush)) { tool in
                     Button {
-                        selectedTool = tool
+                        selectEditorTool(tool)
                     } label: {
                         VStack(spacing: 3) {
                             Image(systemName: tool.iconName)
@@ -5247,6 +5329,7 @@ public struct NotebookEditorView: View {
                     .accessibilityLabel(localizationManager.localized(tool.localizationKey))
                     .accessibilityAddTraits(selectedTool == tool ? [.isSelected] : [])
                     .accessibilityIdentifier(tool.parityIdentifier)
+                    .help(localizationManager.localized(tool.localizationKey))
                 }
 
                 ToolbarSeparator()
@@ -5255,10 +5338,10 @@ public struct NotebookEditorView: View {
                 // 擦除與選取。與筆刷分開，因為它們不沾墨，也不吃顏色與粗細。
                 ForEach(EditorToolType.allCases.filter { !$0.isBrush }) { tool in
                     Button {
-                        selectedTool = tool
+                        selectEditorTool(tool)
                     } label: {
                         VStack(spacing: 3) {
-                            Image(systemName: tool.iconName)
+                            Image(systemName: selectedTool == .lasso && tool == .lasso ? "xmark.circle.fill" : tool.iconName)
                                 .font(.system(size: 16, weight: selectedTool == tool ? .bold : .regular))
                             if showToolLabels {
                                 Text(localizationManager.localized(tool.localizationKey))
@@ -5275,6 +5358,7 @@ public struct NotebookEditorView: View {
                     .accessibilityLabel(localizationManager.localized(tool.localizationKey))
                     .accessibilityAddTraits(selectedTool == tool ? [.isSelected] : [])
                     .accessibilityIdentifier(tool.parityIdentifier)
+                    .help(tool == .lasso ? "套索框選 (Lasso) - 再按一次可取消框選模式" : localizationManager.localized(tool.localizationKey))
                 }
 
                 Button {
@@ -5450,7 +5534,12 @@ public struct NotebookEditorView: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .help("切換畫布極致極簡模式 (收折為懸浮點)")
+                .help(localizationManager.localized(
+                    isMinimalistCanvasActive ? "exit_canvas_minimal_mode" : "enter_canvas_minimal_mode"
+                ))
+                .accessibilityLabel(localizationManager.localized(
+                    isMinimalistCanvasActive ? "exit_canvas_minimal_mode" : "enter_canvas_minimal_mode"
+                ))
 
                 // 🌟 徑向飛輪快捷工具盤 (Radial Pie Menu) 手動喚醒按鈕
                 Button {
@@ -6265,6 +6354,23 @@ public struct NotebookEditorView: View {
                 .cornerRadius(6)
             }
             .buttonStyle(.plain)
+
+            Divider()
+                .frame(height: 16)
+
+            Button {
+                exitLassoMode()
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 4)
+            }
+            .buttonStyle(.plain)
+            .keyboardShortcut(.escape, modifiers: [])
+            .accessibilityLabel("取消框選")
+            .help("取消框選模式，回到上一個工具")
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)

@@ -2520,6 +2520,8 @@ public struct AppDiagnosticsSheet: View {
     @State private var backupMessage: String?
     @State private var showRestorePicker = false
     @State private var shareBackupURL: URL?
+    @State private var shareStartupLogsURL: URL?
+    @State private var copiedStartupLogs = false
 
     public var body: some View {
         NavigationStack {
@@ -2588,6 +2590,12 @@ public struct AppDiagnosticsSheet: View {
                     }
                 }
             }
+        }
+        .sheet(item: Binding(
+            get: { shareStartupLogsURL.map { IdentifiableURL(url: $0) } },
+            set: { shareStartupLogsURL = $0?.url }
+        )) { item in
+            ShareSheet(items: [item.url])
         }
     }
 }
@@ -2965,11 +2973,35 @@ extension AppDiagnosticsSheet {
     var startupDiagnosticsSection: some View {
         Section {
             HStack {
-                Text("啟動與效能日誌 (工程除錯)")
+                Text(localizationManager.localized("startup_logs_title"))
                     .font(.headline)
                 Spacer()
                 if !startupLogger.entries.isEmpty {
-                    Button("清除") {
+                    Button {
+                        copyStartupLogs()
+                        copiedStartupLogs = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            copiedStartupLogs = false
+                        }
+                    } label: {
+                        Label(
+                            copiedStartupLogs ? localizationManager.localized("log_copied") : localizationManager.localized("log_copy"),
+                            systemImage: copiedStartupLogs ? "checkmark" : "doc.on.doc"
+                        )
+                    }
+                    .font(.caption)
+                    .foregroundColor(copiedStartupLogs ? .green : .indigo)
+                    .animation(.easeInOut(duration: 0.2), value: copiedStartupLogs)
+
+                    Button {
+                        exportStartupLogs()
+                    } label: {
+                        Label(localizationManager.localized("log_export"), systemImage: "square.and.arrow.up")
+                    }
+                    .font(.caption)
+                    .foregroundColor(.indigo)
+
+                    Button(localizationManager.localized("log_clear")) {
                         startupLogger.clear()
                     }
                     .font(.caption)
@@ -2977,7 +3009,7 @@ extension AppDiagnosticsSheet {
                 }
             }
             if startupLogger.entries.isEmpty {
-                Text("尚無啟動日誌紀錄")
+                Text(localizationManager.localized("log_empty"))
                     .font(.caption)
                     .foregroundColor(.secondary)
             } else {
@@ -3005,6 +3037,32 @@ extension AppDiagnosticsSheet {
                 .frame(maxHeight: 220)
             }
         }
+    }
+
+    private func copyStartupLogs() {
+        LogExportUtility.copy(startupLogText(includeTimestamp: false))
+    }
+
+    private func exportStartupLogs() {
+        do {
+            shareStartupLogsURL = try LogExportUtility.writeTextFile(
+                startupLogText(includeTimestamp: true),
+                filename: "kairumo-startup-logs.txt"
+            )
+        } catch {
+            StartupLogger.log("啟動日誌匯出失敗：\(error.localizedDescription)")
+        }
+    }
+
+    private func startupLogText(includeTimestamp: Bool) -> String {
+        startupLogger.entries.map { entry in
+            if includeTimestamp {
+                return "[\(LogExportUtility.timestamp(entry.timestamp))] [\(entry.thread)] \(entry.message)"
+            } else {
+                return entry.message
+            }
+        }
+        .joined(separator: "\n")
     }
 
     /// 跨平台格式轉換。
@@ -3190,6 +3248,29 @@ private struct ShareSheet: UIViewControllerRepresentable {
     func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
 }
 
+private enum LogExportUtility {
+    private static let dateFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss.SSS"
+        return f
+    }()
+
+    static func timestamp(_ date: Date) -> String {
+        dateFormatter.string(from: date)
+    }
+
+    static func copy(_ text: String) {
+        UIPasteboard.general.string = text
+    }
+
+    static func writeTextFile(_ text: String, filename: String) throws -> URL {
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent(filename)
+        try text.write(to: url, atomically: true, encoding: .utf8)
+        return url
+    }
+}
+
 // MARK: - 1. 雲端同步中心專屬獨立視窗 (整合 Google Drive 與 iCloud / 資料夾同步)
 public enum CloudSyncProvider: String, CaseIterable, Identifiable {
     case googleDrive = "google"
@@ -3221,6 +3302,8 @@ public struct CloudSyncDetailSheet: View {
     @State private var isSyncing = false
     @State private var syncTask: Task<Void, Never>?
     @State private var showFolderPicker = false
+    @State private var shareSyncLogsURL: URL?
+    @State private var copiedSyncLogs = false
 
     private static let logDateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -3310,6 +3393,12 @@ public struct CloudSyncDetailSheet: View {
                 case .failure(let error):
                     statusMessage = error.localizedDescription
                 }
+            }
+            .sheet(item: Binding(
+                get: { shareSyncLogsURL.map { IdentifiableURL(url: $0) } },
+                set: { shareSyncLogsURL = $0?.url }
+            )) { item in
+                ShareSheet(items: [item.url])
             }
         }
     }
@@ -3915,25 +4004,85 @@ public struct CloudSyncDetailSheet: View {
         }
     }
 
+    private func copySyncLogs() {
+        LogExportUtility.copy(syncLogText(includeTimestamp: false))
+    }
+
+    private func exportSyncLogs() {
+        do {
+            shareSyncLogsURL = try LogExportUtility.writeTextFile(
+                syncLogText(includeTimestamp: true),
+                filename: "kairumo-sync-logs.txt"
+            )
+        } catch {
+            statusMessage = error.localizedDescription
+        }
+    }
+
+    private func syncLogText(includeTimestamp: Bool) -> String {
+        filteredLogEntries.map { entry in
+            if includeTimestamp {
+                return "[\(LogExportUtility.timestamp(entry.timestamp))] [\(entry.source.rawValue)] \(entry.message)"
+            } else {
+                return entry.message
+            }
+        }
+        .joined(separator: "\n")
+    }
+
     private var logSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.s) {
             HStack(spacing: 8) {
-                Text("同步日誌 (工程診斷)")
+                Text(localizationManager.localized("sync_logs_title"))
                     .font(DS.Font.caption)
                     .foregroundColor(.secondary)
 
                 Spacer()
 
-                Picker("日誌篩選", selection: $logFilter) {
-                    ForEach(LogFilter.allCases) { filter in
-                        Text(filter.rawValue).tag(filter)
-                    }
+                Picker(localizationManager.localized("log_filter"), selection: $logFilter) {
+                    Text(localizationManager.localized("log_filter_current")).tag(LogFilter.currentTab)
+                    Text(localizationManager.localized("log_filter_all")).tag(LogFilter.all)
+                    Text("Google Drive").tag(LogFilter.googleDrive)
+                    Text("iCloud / " + localizationManager.localized("folder_name")).tag(LogFilter.folder)
                 }
                 .pickerStyle(.segmented)
-                .frame(maxWidth: 260)
+                .frame(maxWidth: 290)
 
                 if !filteredLogEntries.isEmpty {
-                    Button("清除") {
+                    Button {
+                        copySyncLogs()
+                        copiedSyncLogs = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            copiedSyncLogs = false
+                        }
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: copiedSyncLogs ? "checkmark" : "doc.on.doc")
+                            Text(copiedSyncLogs ? localizationManager.localized("log_copied") : localizationManager.localized("log_copy"))
+                        }
+                        .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(copiedSyncLogs ? .green : .indigo)
+                    .animation(.easeInOut(duration: 0.2), value: copiedSyncLogs)
+                    .help(localizationManager.localized("log_copy"))
+                    .accessibilityLabel(localizationManager.localized("log_copy"))
+
+                    Button {
+                        exportSyncLogs()
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "square.and.arrow.up")
+                            Text(localizationManager.localized("log_export"))
+                        }
+                        .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.indigo)
+                    .help(localizationManager.localized("log_export"))
+                    .accessibilityLabel(localizationManager.localized("log_export"))
+
+                    Button(localizationManager.localized("log_clear")) {
                         switch logFilter {
                         case .currentTab:
                             if selectedProvider == .googleDrive {
@@ -3955,7 +4104,7 @@ public struct CloudSyncDetailSheet: View {
             }
             
             if filteredLogEntries.isEmpty {
-                Text("尚無日誌記錄")
+                Text(localizationManager.localized("log_empty"))
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary.opacity(0.5))
                     .padding()

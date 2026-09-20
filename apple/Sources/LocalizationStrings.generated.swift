@@ -1815,6 +1815,14 @@ extension LocalizationManager {
             .ko: "접기",
             .th: "ยุบ"
         ],
+        "collapse_minimal_toolbox": [
+            .zhHant: "收合迷你工具列",
+            .en: "Collapse mini toolbar",
+            .zhHans: "收合迷你工具栏",
+            .ja: "ミニツールバーを折りたたむ",
+            .ko: "미니 도구 막대 접기",
+            .th: "ยุบแถบเครื่องมือย่อ"
+        ],
         "color_black": [
             .zhHant: "深黑",
             .en: "Near Black",
@@ -2599,6 +2607,14 @@ extension LocalizationManager {
             .ko: "탭하여 부품 옆에 치수 삽입",
             .th: "แตะเพื่อแทรกขนาดข้างชิ้นส่วน"
         ],
+        "enter_canvas_minimal_mode": [
+            .zhHant: "進入畫布極簡模式",
+            .en: "Enter minimal canvas mode",
+            .zhHans: "进入画布极简模式",
+            .ja: "キャンバス最小モードに切り替え",
+            .ko: "캔버스 미니멀 모드로 전환",
+            .th: "เข้าสู่โหมดผืนผ้าใบแบบย่อ"
+        ],
         "enter_recording_title": [
             .zhHant: "輸入錄音標題",
             .en: "Enter recording title",
@@ -2759,6 +2775,14 @@ extension LocalizationManager {
             .ko: "동기화 폴더에 %@을(를) 만들 수 없습니다",
             .th: "สร้าง %@ ในโฟลเดอร์ซิงก์ไม่ได้"
         ],
+        "exit_canvas_minimal_mode": [
+            .zhHant: "退出畫布極簡模式",
+            .en: "Exit minimal canvas mode",
+            .zhHans: "退出画布极简模式",
+            .ja: "キャンバス最小モードを終了",
+            .ko: "캔버스 미니멀 모드 종료",
+            .th: "ออกจากโหมดผืนผ้าใบแบบย่อ"
+        ],
         "expand": [
             .zhHant: "展開",
             .en: "Expand",
@@ -2766,6 +2790,14 @@ extension LocalizationManager {
             .ja: "展開",
             .ko: "펼치기",
             .th: "ขยาย"
+        ],
+        "expand_minimal_toolbox": [
+            .zhHant: "展開迷你工具列",
+            .en: "Open mini toolbar",
+            .zhHans: "展开迷你工具栏",
+            .ja: "ミニツールバーを開く",
+            .ko: "미니 도구 막대 열기",
+            .th: "เปิดแถบเครื่องมือย่อ"
         ],
         "export_done": [
             .zhHant: "已匯出：%@",
@@ -4575,6 +4607,70 @@ extension LocalizationManager {
             .ko: "127.0.0.1 을 가리키는 동안에는 이 기기가 중계를 맡습니다. 같은 네트워크의 참여자는 호스트 화면에 표시된 로컬 주소를 입력하세요.",
             .th: "เมื่อชี้ไปที่ 127.0.0.1 เครื่องนี้จะทำหน้าที่รีเลย์เอง ผู้ร่วมงานในเครือข่ายเดียวกันให้กรอกที่อยู่ในเครือข่ายที่แสดงบนหน้าจอผู้เปิดห้อง"
         ],
+        "log_clear": [
+            .zhHant: "清除",
+            .en: "Clear",
+            .zhHans: "清除",
+            .ja: "消去",
+            .ko: "지우기",
+            .th: "ล้าง"
+        ],
+        "log_copied": [
+            .zhHant: "已複製",
+            .en: "Copied",
+            .zhHans: "已复制",
+            .ja: "コピーしました",
+            .ko: "복사됨",
+            .th: "คัดลอกแล้ว"
+        ],
+        "log_copy": [
+            .zhHant: "複製日誌",
+            .en: "Copy Logs",
+            .zhHans: "复制日志",
+            .ja: "ログをコピー",
+            .ko: "로그 복사",
+            .th: "คัดลอกบันทึก"
+        ],
+        "log_empty": [
+            .zhHant: "尚無日誌紀錄",
+            .en: "No logs recorded",
+            .zhHans: "尚无日志记录",
+            .ja: "ログの記録はありません",
+            .ko: "기록된 로그가 없습니다",
+            .th: "ไม่มีบันทึกข้อมูล"
+        ],
+        "log_export": [
+            .zhHant: "匯出日誌",
+            .en: "Export Logs",
+            .zhHans: "导出日志",
+            .ja: "ログをエクスポート",
+            .ko: "로그 내보내기",
+            .th: "ส่งออกบันทึก"
+        ],
+        "log_filter": [
+            .zhHant: "日誌篩選",
+            .en: "Filter Logs",
+            .zhHans: "日志筛选",
+            .ja: "ログの絞り込み",
+            .ko: "로그 필터",
+            .th: "ตัวกรองบันทึก"
+        ],
+        "log_filter_all": [
+            .zhHant: "全部",
+            .en: "All",
+            .zhHans: "全部",
+            .ja: "すべて",
+            .ko: "전체",
+            .th: "ทั้งหมด"
+        ],
+        "log_filter_current": [
+            .zhHant: "當前分頁",
+            .en: "Current Tab",
+            .zhHans: "当前标签",
+            .ja: "現在のタブ",
+            .ko: "현재 탭",
+            .th: "แท็บปัจจุบัน"
+        ],
         "magnetic_snap_active": [
             .zhHant: "幾何角度與格線磁吸對齊中",
             .en: "Snapping to geometric angles and grid",
@@ -5046,6 +5142,14 @@ extension LocalizationManager {
             .ja: "マイルストーンスナップショット",
             .ko: "마일스톤 스냅샷",
             .th: "สแนปช็อตเหตุการณ์สำคัญ"
+        ],
+        "minimal_toolbox": [
+            .zhHant: "迷你工具列",
+            .en: "Mini toolbar",
+            .zhHans: "迷你工具栏",
+            .ja: "ミニツールバー",
+            .ko: "미니 도구 막대",
+            .th: "แถบเครื่องมือย่อ"
         ],
         "minimize_dialog": [
             .zhHant: "縮小視窗",
@@ -7903,6 +8007,14 @@ extension LocalizationManager {
             .ko: "음성 필사 및 필기 동기화",
             .th: "การถอดเสียงและการจัดตำแหน่งการเขียน"
         ],
+        "startup_logs_title": [
+            .zhHant: "啟動與效能日誌 (工程除錯)",
+            .en: "Startup & Performance Logs (Engineering)",
+            .zhHans: "启动与性能日志 (工程调试)",
+            .ja: "起動とパフォーマンスログ（エンジニアリング）",
+            .ko: "시작 및 성능 로그 (엔지니어링)",
+            .th: "บันทึกการเริ่มต้นและประสิทธิภาพ (วิศวกรรม)"
+        ],
         "status_connected": [
             .zhHant: "已連線",
             .en: "Connected",
@@ -8134,6 +8246,14 @@ extension LocalizationManager {
             .ja: "最終同期",
             .ko: "마지막 동기화",
             .th: "ซิงค์ล่าสุด"
+        ],
+        "sync_logs_title": [
+            .zhHant: "同步日誌 (工程診斷)",
+            .en: "Sync Logs (Diagnostics)",
+            .zhHans: "同步日志 (工程诊断)",
+            .ja: "同期ログ（診断）",
+            .ko: "동기화 로그 (진단)",
+            .th: "บันทึกการซิงค์ (การวินิจฉัย)"
         ],
         "sync_needs_attention": [
             .zhHant: "%@ 在兩台裝置上都被改過，已保留雲端那份，請自行確認",

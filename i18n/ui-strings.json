@@ -9095,6 +9095,46 @@
     "zhHans": "边框开关 (保留/删除)",
     "zhHant": "邊框開關 (保留/刪除)"
   },
+  "minimal_toolbox": {
+    "en": "Mini toolbar",
+    "ja": "ミニツールバー",
+    "ko": "미니 도구 막대",
+    "th": "แถบเครื่องมือย่อ",
+    "zhHans": "迷你工具栏",
+    "zhHant": "迷你工具列"
+  },
+  "enter_canvas_minimal_mode": {
+    "en": "Enter minimal canvas mode",
+    "ja": "キャンバス最小モードに切り替え",
+    "ko": "캔버스 미니멀 모드로 전환",
+    "th": "เข้าสู่โหมดผืนผ้าใบแบบย่อ",
+    "zhHans": "进入画布极简模式",
+    "zhHant": "進入畫布極簡模式"
+  },
+  "exit_canvas_minimal_mode": {
+    "en": "Exit minimal canvas mode",
+    "ja": "キャンバス最小モードを終了",
+    "ko": "캔버스 미니멀 모드 종료",
+    "th": "ออกจากโหมดผืนผ้าใบแบบย่อ",
+    "zhHans": "退出画布极简模式",
+    "zhHant": "退出畫布極簡模式"
+  },
+  "expand_minimal_toolbox": {
+    "en": "Open mini toolbar",
+    "ja": "ミニツールバーを開く",
+    "ko": "미니 도구 막대 열기",
+    "th": "เปิดแถบเครื่องมือย่อ",
+    "zhHans": "展开迷你工具栏",
+    "zhHant": "展開迷你工具列"
+  },
+  "collapse_minimal_toolbox": {
+    "en": "Collapse mini toolbar",
+    "ja": "ミニツールバーを折りたたむ",
+    "ko": "미니 도구 막대 접기",
+    "th": "ยุบแถบเครื่องมือย่อ",
+    "zhHans": "收合迷你工具栏",
+    "zhHant": "收合迷你工具列"
+  },
   "tool_ballpoint": {
     "en": "Ballpoint",
     "ja": "ボールペン",
@@ -9414,5 +9454,85 @@
     "th": "การแก้ไขข้อความ Word",
     "zhHans": "Word文字编修",
     "zhHant": "Word文字編修"
+  },
+  "log_copy": {
+    "en": "Copy Logs",
+    "ja": "ログをコピー",
+    "ko": "로그 복사",
+    "th": "คัดลอกบันทึก",
+    "zhHans": "复制日志",
+    "zhHant": "複製日誌"
+  },
+  "log_copied": {
+    "en": "Copied",
+    "ja": "コピーしました",
+    "ko": "복사됨",
+    "th": "คัดลอกแล้ว",
+    "zhHans": "已复制",
+    "zhHant": "已複製"
+  },
+  "log_export": {
+    "en": "Export Logs",
+    "ja": "ログをエクスポート",
+    "ko": "로그 내보내기",
+    "th": "ส่งออกบันทึก",
+    "zhHans": "导出日志",
+    "zhHant": "匯出日誌"
+  },
+  "log_clear": {
+    "en": "Clear",
+    "ja": "消去",
+    "ko": "지우기",
+    "th": "ล้าง",
+    "zhHans": "清除",
+    "zhHant": "清除"
+  },
+  "log_filter": {
+    "en": "Filter Logs",
+    "ja": "ログの絞り込み",
+    "ko": "로그 필터",
+    "th": "ตัวกรองบันทึก",
+    "zhHans": "日志筛选",
+    "zhHant": "日誌篩選"
+  },
+  "log_filter_all": {
+    "en": "All",
+    "ja": "すべて",
+    "ko": "전체",
+    "th": "ทั้งหมด",
+    "zhHans": "全部",
+    "zhHant": "全部"
+  },
+  "log_filter_current": {
+    "en": "Current Tab",
+    "ja": "現在のタブ",
+    "ko": "현재 탭",
+    "th": "แท็บปัจจุบัน",
+    "zhHans": "当前标签",
+    "zhHant": "當前分頁"
+  },
+  "startup_logs_title": {
+    "en": "Startup & Performance Logs (Engineering)",
+    "ja": "起動とパフォーマンスログ（エンジニアリング）",
+    "ko": "시작 및 성능 로그 (엔지니어링)",
+    "th": "บันทึกการเริ่มต้นและประสิทธิภาพ (วิศวกรรม)",
+    "zhHans": "启动与性能日志 (工程调试)",
+    "zhHant": "啟動與效能日誌 (工程除錯)"
+  },
+  "sync_logs_title": {
+    "en": "Sync Logs (Diagnostics)",
+    "ja": "同期ログ（診断）",
+    "ko": "동기화 로그 (진단)",
+    "th": "บันทึกการซิงค์ (การวินิจฉัย)",
+    "zhHans": "同步日志 (工程诊断)",
+    "zhHant": "同步日誌 (工程診斷)"
+  },
+  "log_empty": {
+    "en": "No logs recorded",
+    "ja": "ログの記録はありません",
+    "ko": "기록된 로그가 없습니다",
+    "th": "ไม่มีบันทึกข้อมูล",
+    "zhHans": "尚无日志记录",
+    "zhHant": "尚無日誌紀錄"
   }
 }

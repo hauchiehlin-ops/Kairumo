@@ -109,6 +109,20 @@ public final class AccountSyncStore: ObservableObject {
         return result
     }
 
+    /// 目前索引裡所有已刪除的 id。
+    ///
+    /// 同步套件檔案時用它擋掉殘留的 `.padnote` 目錄。核心 FFI 已經負責
+    /// 合併與判斷單一 id；這裡只做一個保守 JSON 掃描，失敗時回空集合，
+    /// 避免診斷或同步流程因索引格式異常而中斷。
+    public var deletedNotebookIds: Set<String> {
+        guard let data = indexJSON.data(using: .utf8),
+              let index = try? JSONDecoder().decode(DecodedLibraryIndex.self, from: data)
+        else { return [] }
+        return Set(index.items.compactMap { key, item in
+            item.deleted == true ? (item.id ?? key) : nil
+        })
+    }
+
     /// 某個資料夾底下還活著的項目。`parentId` 傳 nil 表示根目錄。
     public func children(of parentId: String?) -> [FfiLibraryItem] {
         syncChildrenOf(indexJson: indexJSON, parentId: parentId ?? "")
@@ -191,5 +205,14 @@ public final class AccountSyncStore: ObservableObject {
     private func setSettings(_ json: String) {
         settingsJSON = json
         UserDefaults.standard.set(json, forKey: settingsKey)
+    }
+
+    private struct DecodedLibraryIndex: Decodable {
+        var items: [String: DecodedLibraryItem]
+    }
+
+    private struct DecodedLibraryItem: Decodable {
+        var id: String?
+        var deleted: Bool?
     }
 }

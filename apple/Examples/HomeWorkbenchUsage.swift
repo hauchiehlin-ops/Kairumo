@@ -35,6 +35,7 @@ struct KairumoApp: App {
 
     init() {
         StartupLogger.log("KairumoApp.init: 應用程式啟動初始化")
+        KairumoAppDelegate.configureInstantToolTips()
         // 啟動時確認 Rust Core 與版本狀態
         #if canImport(PadnoteCore)
         let coreVer = coreVersion()
