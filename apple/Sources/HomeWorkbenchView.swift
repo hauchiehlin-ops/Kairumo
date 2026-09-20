@@ -3338,15 +3338,15 @@ private struct IdentifiableURL: Identifiable {
     var id: String { url.path }
 }
 
-/// 系統分享面板。備份檔留在 tmp 裡等於沒有備份 —— 一定要讓使用者把它帶走。
-private struct ShareSheet: UIViewControllerRepresentable {
-    let items: [Any]
+/// 系統檔案儲存面板（取代 ShareSheet，直接開啟 Files 選擇儲存位置）。
+private struct DocumentExporter: UIViewControllerRepresentable {
+    let url: URL
 
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        UIDocumentPickerViewController(forExporting: [url], asCopy: true)
     }
 
-    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+    func updateUIViewController(_ controller: UIDocumentPickerViewController, context: Context) {}
 }
 
 private enum LogExportUtility {
@@ -4414,7 +4414,7 @@ public struct BackupCreateDetailSheet: View {
                 get: { shareBackupURL.map { IdentifiableURL(url: $0) } },
                 set: { shareBackupURL = $0?.url }
             )) { item in
-                ShareSheet(items: [item.url])
+                DocumentExporter(url: item.url)
             }
         }
     }

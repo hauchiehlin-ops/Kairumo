@@ -522,6 +522,15 @@ private fun NotebookHome(
         }
     }
 
+    val createBackupPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        if (uri != null) {
+            message = runBackupToUri(activity, uri)
+            revision++
+        }
+    }
+
     val importNotePicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -977,12 +986,10 @@ private fun NotebookHome(
             l = ::l,
             onDismiss = { showBackupCreateDialog = false },
             onCreateBackup = {
-                backupCreating = true
-                val res = runBackup(activity)
-                backupResultMsg = res
-                message = res
-                backupCreating = false
-                revision++
+                val stamp = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss", java.util.Locale.US).format(java.util.Date())
+                val unique = java.util.UUID.randomUUID().toString().take(6)
+                createBackupPicker.launch("Kairumo-$stamp-$unique.kairumobackup")
+                showBackupCreateDialog = false
             }
         )
     }
@@ -1695,6 +1702,13 @@ private fun InkScreen(
     ) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         message = runRestore(activity, uri)
+    }
+
+    val editorBackupCreatePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        message = runBackupToUri(activity, uri)
     }
 
     val folderPicker = rememberLauncherForActivityResult(
@@ -2633,7 +2647,12 @@ private fun InkScreen(
                 Divider()
                 DropdownMenuItem(
                     text = { Text(l10n("backup_create")) },
-                    onClick = { showMenu = false; message = runBackup(activity) }
+                    onClick = { 
+                        showMenu = false
+                        val stamp = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH-mm-ss", java.util.Locale.US).format(java.util.Date())
+                        val unique = java.util.UUID.randomUUID().toString().take(6)
+                        editorBackupCreatePicker.launch("Kairumo-$stamp-$unique.kairumobackup")
+                    }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("backup_restore")) },
@@ -5363,25 +5382,18 @@ private fun runFolderSync(activity: ComponentActivity, session: PadnoteSession?)
 }
 
 /**
- * 建立備份檔並叫出分享面板。
- *
- * 一定要讓使用者把它帶走：留在 cache 裡的備份檔，在 App 被清除資料時
- * 會跟著消失 —— 那正是他最需要它的時候。
+ * 建立備份檔並寫入使用者選擇的位置。
  */
-private fun runBackup(activity: ComponentActivity): String {
+private fun runBackupToUri(activity: ComponentActivity, uri: android.net.Uri): String {
     val lang = deviceLanguageTag()
     return runCatching {
         val (file, info) = BackupManager.create(activity, BuildConfig.VERSION_NAME)
-        runCatching {
-            activity.startActivity(
-                android.content.Intent.createChooser(
-                    Exporter.shareIntent(activity, file, Exporter.Format.PDF).apply {
-                        type = "application/octet-stream"
-                    },
-                    null
-                )
-            )
+        activity.contentResolver.openOutputStream(uri)?.use { out ->
+            file.inputStream().use { input ->
+                input.copyTo(out)
+            }
         }
+        file.delete()
         LocalizationStrings.localized("backup_created", lang)
             .replace("%1@", "${info.fileCount}")
             .replace("%2@", android.text.format.Formatter.formatShortFileSize(
