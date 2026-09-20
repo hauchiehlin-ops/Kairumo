@@ -51,6 +51,12 @@ public enum MacWindowTitle {
     /// 設定（並持續維持）Mac 視窗標題。
     @MainActor
     public static func apply(_ title: String = AppVersion.windowTitle) {
+        #if targetEnvironment(macCatalyst) || os(macOS)
+        // Mac 原生或 Catalyst 支援
+        #else
+        // 在純 iOS / iPadOS 實體裝置上不需要視窗標題列維護（只有在 Mac 上跑 iPad 版才需要）
+        guard ProcessInfo.processInfo.isiOSAppOnMac else { return }
+        #endif
         desiredTitle = title
         installObserversIfNeeded()
         assign(retriesLeft: 8)

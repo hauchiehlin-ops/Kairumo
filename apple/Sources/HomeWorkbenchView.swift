@@ -114,7 +114,9 @@ public struct HomeWorkbenchView: View {
         }
     }
 
-    public init() {}
+    public init() {
+        StartupLogger.log("HomeWorkbenchView.init 實例化完成")
+    }
 
     /// 取得核心版本資訊
     public var appVersionString: String {
@@ -416,6 +418,7 @@ public struct HomeWorkbenchView: View {
                 Text(localizationManager.localized("mic_permission_msg"))
             }
             .onAppear {
+                StartupLogger.log("HomeWorkbenchView.onAppear: 首頁畫面載入就緒")
                 // 不限定 macCatalyst：使用者在 Mac 上跑的是 iOS 版（Designed for iPad）
                 MacWindowTitle.apply()
             }
@@ -2470,6 +2473,7 @@ public struct AppDiagnosticsSheet: View {
     let platformDesc: String
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject private var store = NotebookStore.shared
+    @ObservedObject private var startupLogger = StartupLogger.shared
     @Environment(\.dismiss) private var dismiss
 
     /// 遷移是明確的動作，不在啟動時自動跑 —— 所以要有一個按鈕，
@@ -2541,6 +2545,7 @@ public struct AppDiagnosticsSheet: View {
                 pageModelSection
                 backupSection
                 inputDiagnosticsSection
+                startupDiagnosticsSection
 
                 Section(localizationManager.localized("about_app")) {
                     HStack {
@@ -2905,6 +2910,35 @@ extension AppDiagnosticsSheet {
             Text(localizationManager.localized("input_diagnostics_explainer"))
                 .font(.caption)
                 .foregroundColor(.secondary)
+        }
+    }
+
+    /// 啟動與效能診斷日誌（毫秒時間戳與執行緒標記）。
+    @ViewBuilder
+    var startupDiagnosticsSection: some View {
+        Section("啟動與效能日誌 (工程除錯)") {
+            if startupLogger.entries.isEmpty {
+                Text("尚無啟動日誌紀錄")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            } else {
+                ForEach(startupLogger.entries) { entry in
+                    HStack(alignment: .top, spacing: 6) {
+                        Text(entry.thread)
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1)
+                            .background(entry.thread == "Main" ? Color.orange.opacity(0.18) : Color.blue.opacity(0.18))
+                            .foregroundColor(entry.thread == "Main" ? .orange : .blue)
+                            .clipShape(RoundedRectangle(cornerRadius: 3))
+
+                        Text(entry.message)
+                            .font(.system(size: 11, design: .monospaced))
+                            .foregroundColor(.primary)
+                    }
+                    .padding(.vertical, 1)
+                }
+            }
         }
     }
 

@@ -1157,13 +1157,17 @@ public final class NotebookStore: ObservableObject {
     }
 
     private init() {
+        StartupLogger.log("NotebookStore.init 開始載入資料")
         documentsRootOverride = nil
         loadData()
         if notebooks.isEmpty {
+            StartupLogger.log("NotebookStore: 建立預設種子筆記")
             seedDefaultNotebooks()
         } else {
+            StartupLogger.log("NotebookStore: 檢查/回填種子筆記")
             backfillEmptySeedNotebooks()
         }
+        StartupLogger.log("NotebookStore.init 初始化完成")
     }
 
     /// 測試專用：把資料根目錄換成一個暫存目錄，而且**不放範例筆記**（S-92）。
@@ -1225,6 +1229,7 @@ public final class NotebookStore: ObservableObject {
            !Self.legacyDefaultRootNames.contains(savedRoot) {
             self.rootFolderName = savedRoot
         }
+        StartupLogger.log("NotebookStore.loadData 完成: \(self.notebooks.count) 本筆記, \(self.recordings.count) 則錄音, \(self.folders.count) 個資料夾")
     }
 
     /// 背景序列寫檔佇列。

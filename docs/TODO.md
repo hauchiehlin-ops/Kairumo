@@ -246,6 +246,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | ~~S-20~~ ✅ | WP23 | llama.cpp 整合（摘要、待辦抽取） | `padnote-llm`（切塊 + 提示詞 + **解析**，18 項測試）＋ `padnote-llm-llama`（llama.cpp 後端）＋ `ffi_llm`（平台介面，4 項測試）。**llama.cpp 不是 `padnote-core` 的相依** —— 連進去會讓行動端每個使用者都下載好幾十 MB，不管他用不用得到摘要（與 reqwest 那次同一個判斷）。行動端由平台提供後端。**UI 入口已完成（2026-09-17）**：兩端都有「摘要與待辦」，餵給模型的文字與首頁搜尋同一組來源。後端 Apple 接系統內建語言模型（零下載、零體積），**Android 目前沒有裝置端後端**並誠實回報 —— aicore 是實驗版且會帶進 Guava 與 play-services，llama.cpp + 2.4 GB 模型要使用者下載比 App 大幾十倍的檔案，兩條都違反「平台裝得下不代表使用者該下載它」。仍待做：Android 的裝置端後端、以及實際跑一份模型驗真實輸出 |
 | ~~S-21~~ ✅ | WP7 | PDFium 綁定（`pdfium-render`）| `padnote-pdf-pdfium` 已實作；執行期庫與大型 PDF 實測仍列 H8/H6 |
 | ~~S-22~~ ✅ | WP12 | Apple Vision / ML Kit 的 `HwrEngine` 實作 | Android 的 ML Kit 本來就有；**Apple 端原本完全沒有手寫辨識**（iPad 上寫的字搜不到）。新增 `HandwritingRecognizer.swift`：把每一組筆畫算繪成白底黑字的圖再送 `VNRecognizeTextRequest`。分組規則下沉核心（`padnote-recognize::grouping`），兩邊同一份 —— 切法不同會讓同一頁在兩台裝置上搜到不一樣的東西。辨識率需實機以真實筆跡驗（A-09）|
+| S-95 🟡 | WP5/6 | **現有錄音檔的 Whisper ASR 轉錄管線 (Rust Core FFI 轉發)** | 現有錄音卡片（AudioAttachment）目前走 Apple Speech（不支援自動語言偵測）。需在 `padnote-core` 新增檔案轉錄 FFI 介面，將音檔轉送給 `padnote-asr-whisper`，提供自動語言偵測、標點還原與跨平台一致性（模型未就緒時平滑降級為系統聽寫）|
 
 ## 🆕 需求檢視新增項目（2026-09-12）
 

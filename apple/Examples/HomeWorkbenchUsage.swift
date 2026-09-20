@@ -34,10 +34,12 @@ struct KairumoApp: App {
     @UIApplicationDelegateAdaptor(KairumoAppDelegate.self) private var appDelegate
 
     init() {
+        StartupLogger.log("KairumoApp.init: 應用程式啟動初始化")
         // 啟動時確認 Rust Core 與版本狀態
         #if canImport(PadnoteCore)
         let coreVer = coreVersion()
         let info = appInfo()
+        StartupLogger.log("核心引擎版本: \(coreVer), 平台目標: \(info.targetOs)/\(info.targetArch)")
         print("🚀 Kairumo 啟動完成 - 核心引擎版本: \(coreVer), 平台目標: \(info.targetOs)/\(info.targetArch)")
         #endif
     }
@@ -56,8 +58,13 @@ struct KairumoApp: App {
             RootView()
                 // 單參數的 onChange：新的兩參數版本要 iOS 17，而部署目標更低。
                 .onChange(of: scenePhase) { phase in
+                    StartupLogger.log("ScenePhase 切換為: \(phase)")
                     guard phase == .active else { return }
-                    Task { await AutoCloudSync.runIfSignedIn() }
+                    // 啟動時先給予 1 秒寬限期讓 UI 算繪完畢，避免阻塞主執行緒造成卡頓感
+                    Task.detached(priority: .utility) {
+                        try? await Task.sleep(nanoseconds: 1_000_000_000)
+                        await AutoCloudSync.runIfSignedIn()
+                    }
                 }
                 .onOpenURL { url in
                     let ext = url.pathExtension.lowercased()
@@ -145,10 +152,15 @@ enum AutoCloudSync {
     private static var running = false
 
     static func runIfSignedIn() async {
-        guard !running, GoogleAuth.shared.isSignedIn else { return }
+        guard !running, GoogleAuth.shared.isSignedIn else {
+            StartupLogger.log("AutoCloudSync: 略過（未登入 Google 或正在執行中: running=\(running)）")
+            return
+        }
         running = true
         defer { running = false }
-        _ = await NotebookSyncCoordinator.runDrive(
+        StartupLogger.log("AutoCloudSync: 開始背景自動同步...")
+        let report = await NotebookSyncCoordinator.runDrive(
             store: NotebookStore.shared, deviceId: NotebookMigration.deviceId)
+        StartupLogger.log("AutoCloudSync: 背景自動同步完成 (上傳: \(report?.uploaded ?? 0), 下載: \(report?.downloaded ?? 0))")
     }
 }
