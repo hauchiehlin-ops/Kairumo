@@ -3338,6 +3338,17 @@ private struct IdentifiableURL: Identifiable {
     var id: String { url.path }
 }
 
+/// 系統分享面板。備份檔留在 tmp 裡等於沒有備份 —— 一定要讓使用者把它帶走。
+private struct ShareSheet: UIViewControllerRepresentable {
+    let items: [Any]
+
+    func makeUIViewController(context: Context) -> UIActivityViewController {
+        UIActivityViewController(activityItems: items, applicationActivities: nil)
+    }
+
+    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+}
+
 /// 系統檔案儲存面板（取代 ShareSheet，直接開啟 Files 選擇儲存位置）。
 private struct DocumentExporter: UIViewControllerRepresentable {
     let url: URL
