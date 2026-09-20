@@ -285,6 +285,22 @@ public struct HomeWorkbenchView: View {
             // 同一個入口出現兩次不會增加能力，只會讓使用者多一個地方要找。
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        showInfoSheet = true
+                    } label: {
+                        HStack(spacing: DS.Space.xxs) {
+                            Image(systemName: "wrench.and.screwdriver")
+                                .font(.system(size: DS.Icon.small, weight: .medium))
+                            Text("診斷")
+                                .font(.subheadline)
+                        }
+                    }
+                    .accessibilityLabel("系統診斷與日誌")
+                    .help("系統診斷與日誌")
+                    .accessibilityIdentifier("home.diagnostics_button")
+                }
+
+                ToolbarItem(placement: .primaryAction) {
                     Menu {
                         ForEach(AppLanguage.allCases) { lang in
                             Button {
@@ -2539,13 +2555,13 @@ public struct AppDiagnosticsSheet: View {
                     }
                 }
 
+                startupDiagnosticsSection
+                speechTranscriptionSection
                 migrationSection
                 unifiedSyncSection
-                speechTranscriptionSection
                 pageModelSection
                 backupSection
                 inputDiagnosticsSection
-                startupDiagnosticsSection
 
                 Section(localizationManager.localized("about_app")) {
                     HStack {
@@ -2947,28 +2963,46 @@ extension AppDiagnosticsSheet {
     /// 啟動與效能診斷日誌（毫秒時間戳與執行緒標記）。
     @ViewBuilder
     var startupDiagnosticsSection: some View {
-        Section("啟動與效能日誌 (工程除錯)") {
+        Section {
+            HStack {
+                Text("啟動與效能日誌 (工程除錯)")
+                    .font(.headline)
+                Spacer()
+                if !startupLogger.entries.isEmpty {
+                    Button("清除") {
+                        startupLogger.clear()
+                    }
+                    .font(.caption)
+                    .foregroundColor(.indigo)
+                }
+            }
             if startupLogger.entries.isEmpty {
                 Text("尚無啟動日誌紀錄")
                     .font(.caption)
                     .foregroundColor(.secondary)
             } else {
-                ForEach(startupLogger.entries) { entry in
-                    HStack(alignment: .top, spacing: 6) {
-                        Text(entry.thread)
-                            .font(.system(size: 9, weight: .bold, design: .monospaced))
-                            .padding(.horizontal, 4)
-                            .padding(.vertical, 1)
-                            .background(entry.thread == "Main" ? Color.orange.opacity(0.18) : Color.blue.opacity(0.18))
-                            .foregroundColor(entry.thread == "Main" ? .orange : .blue)
-                            .clipShape(RoundedRectangle(cornerRadius: 3))
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 4) {
+                        ForEach(startupLogger.entries) { entry in
+                            HStack(alignment: .top, spacing: 6) {
+                                Text(entry.thread)
+                                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                                    .padding(.horizontal, 4)
+                                    .padding(.vertical, 1)
+                                    .background(entry.thread == "Main" ? Color.orange.opacity(0.18) : Color.blue.opacity(0.18))
+                                    .foregroundColor(entry.thread == "Main" ? .orange : .blue)
+                                    .clipShape(RoundedRectangle(cornerRadius: 3))
 
-                        Text(entry.message)
-                            .font(.system(size: 11, design: .monospaced))
-                            .foregroundColor(.primary)
+                                Text(entry.message)
+                                    .font(.system(size: 11, design: .monospaced))
+                                    .foregroundColor(.primary)
+                            }
+                            .padding(.vertical, 1)
+                        }
                     }
-                    .padding(.vertical, 1)
+                    .padding(4)
                 }
+                .frame(maxHeight: 220)
             }
         }
     }
@@ -3172,6 +3206,16 @@ public struct CloudSyncDetailSheet: View {
     @ObservedObject private var syncLogger = SyncLogger.shared
     @Environment(\.dismiss) private var dismiss
 
+    public enum LogFilter: String, CaseIterable, Identifiable {
+        case currentTab = "當前分頁"
+        case all = "全部"
+        case googleDrive = "Google Drive"
+        case folder = "iCloud / 資料夾"
+
+        public var id: String { rawValue }
+    }
+
+    @State private var logFilter: LogFilter = .currentTab
     @State private var selectedProvider: CloudSyncProvider = .googleDrive
     @State private var statusMessage: String?
     @State private var isSyncing = false
@@ -3850,23 +3894,67 @@ public struct CloudSyncDetailSheet: View {
             }
     }
 
+    private var filteredLogEntries: [SyncLogger.LogEntry] {
+        syncLogger.entries.filter { entry in
+            switch logFilter {
+            case .currentTab:
+                if selectedProvider == .googleDrive {
+                    return entry.source == .googleDrive || entry.source == .general
+                } else if selectedProvider == .folderOrICloud {
+                    return entry.source == .folder || entry.source == .general
+                } else {
+                    return true
+                }
+            case .all:
+                return true
+            case .googleDrive:
+                return entry.source == .googleDrive
+            case .folder:
+                return entry.source == .folder
+            }
+        }
+    }
+
     private var logSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.s) {
-            HStack {
+            HStack(spacing: 8) {
                 Text("同步日誌 (工程診斷)")
                     .font(DS.Font.caption)
                     .foregroundColor(.secondary)
+
                 Spacer()
-                if !syncLogger.entries.isEmpty {
+
+                Picker("日誌篩選", selection: $logFilter) {
+                    ForEach(LogFilter.allCases) { filter in
+                        Text(filter.rawValue).tag(filter)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .frame(maxWidth: 260)
+
+                if !filteredLogEntries.isEmpty {
                     Button("清除") {
-                        syncLogger.clear()
+                        switch logFilter {
+                        case .currentTab:
+                            if selectedProvider == .googleDrive {
+                                syncLogger.clear(for: .googleDrive)
+                            } else {
+                                syncLogger.clear(for: .folder)
+                            }
+                        case .all:
+                            syncLogger.clear()
+                        case .googleDrive:
+                            syncLogger.clear(for: .googleDrive)
+                        case .folder:
+                            syncLogger.clear(for: .folder)
+                        }
                     }
                     .font(DS.Font.caption)
                     .foregroundColor(.indigo)
                 }
             }
             
-            if syncLogger.entries.isEmpty {
+            if filteredLogEntries.isEmpty {
                 Text("尚無日誌記錄")
                     .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(.secondary.opacity(0.5))
@@ -3878,10 +3966,13 @@ public struct CloudSyncDetailSheet: View {
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 4) {
-                            ForEach(syncLogger.entries) { entry in
+                            ForEach(filteredLogEntries) { entry in
                                 HStack(alignment: .top, spacing: 6) {
                                     Text(entry.timestamp, formatter: Self.logDateFormatter)
                                         .foregroundColor(.secondary)
+
+                                    sourceBadge(entry.source)
+
                                     Text(entry.message)
                                         .foregroundColor(.primary)
                                 }
@@ -3898,13 +3989,43 @@ public struct CloudSyncDetailSheet: View {
                         RoundedRectangle(cornerRadius: DS.Radius.s)
                             .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
                     )
-                    .onChange(of: syncLogger.entries.count) { _ in
-                        if let last = syncLogger.entries.last {
+                    .onChange(of: filteredLogEntries.count) { _ in
+                        if let last = filteredLogEntries.last {
                             withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
                         }
                     }
                 }
             }
+        }
+    }
+
+    @ViewBuilder
+    private func sourceBadge(_ source: SyncLogger.SyncSource) -> some View {
+        switch source {
+        case .googleDrive:
+            Text("Drive")
+                .font(.system(size: 9, weight: .bold))
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(Color.indigo.opacity(0.15))
+                .foregroundColor(.indigo)
+                .cornerRadius(3)
+        case .folder:
+            Text("iCloud")
+                .font(.system(size: 9, weight: .bold))
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(Color.teal.opacity(0.15))
+                .foregroundColor(.teal)
+                .cornerRadius(3)
+        case .general:
+            Text("系統")
+                .font(.system(size: 9, weight: .bold))
+                .padding(.horizontal, 4)
+                .padding(.vertical, 1)
+                .background(Color.secondary.opacity(0.15))
+                .foregroundColor(.secondary)
+                .cornerRadius(3)
         }
     }
 }
