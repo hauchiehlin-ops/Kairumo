@@ -641,7 +641,10 @@ public struct HomeWorkbenchView: View {
                                                    : AnyShapeStyle(DS.Color.secondaryText))
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
-                        .fixedSize(horizontal: false, vertical: true)
+                        // fixedSize 會觸發無上界 sizeThatFits，
+                        // 導致 CoreText 在 main thread 載入斷字字典（0x8BADF00D）。
+                        // 改用明確高度上限取代。
+                        .frame(maxHeight: 32, alignment: .topLeading)
                 }
                 Spacer(minLength: DS.Space.xxs)
             }
@@ -845,6 +848,11 @@ public struct HomeWorkbenchView: View {
                                             .font(.caption)
                                             .foregroundColor(.secondary)
                                             .lineLimit(2)
+                                            .truncationMode(.tail)
+                                            // 停用連字斷字：避免 CoreText 在 main thread
+                                            // 同步載入斷字字典（CFBurstTrieCreateFromFile），
+                                            // 防止 0x8BADF00D watchdog 終止。
+                                            .environment(\.layoutDirection, .leftToRight)
                                     }
 
                                     Spacer(minLength: 0)
@@ -1562,7 +1570,7 @@ public struct HomeWorkbenchView: View {
             Text(unifiedSyncExplainer)
                 .font(DS.Font.caption)
                 .foregroundStyle(DS.Color.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(5)  // 替換 fixedSize：避免 CoreText 斷字字典 I/O (0x8BADF00D)
         }
         .padding(DS.Space.m)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -3997,7 +4005,7 @@ public struct CloudSyncDetailSheet: View {
                 Text(desc)
                     .font(DS.Font.caption)
                     .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(5)  // 替換 fixedSize：避免 CoreText 斷字字典 I/O (0x8BADF00D)
             }
         }
     }
@@ -4438,7 +4446,7 @@ public struct BackupCreateDetailSheet: View {
                 Text(desc)
                     .font(DS.Font.caption)
                     .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(5)  // 替換 fixedSize：避免 CoreText 斷字字典 I/O (0x8BADF00D)
             }
         }
     }
@@ -4620,7 +4628,7 @@ public struct BackupRestoreDetailSheet: View {
                 Text(desc)
                     .font(DS.Font.caption)
                     .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(5)  // 替換 fixedSize：避免 CoreText 斷字字典 I/O (0x8BADF00D)
             }
         }
     }
