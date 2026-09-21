@@ -15,9 +15,9 @@
 量一下：Android 130 個 Kotlin 檔、30,836 行（不含 9,894 行產生的字串表），
 對上 Apple 105 個 Swift 檔、43,386 行（不含 9,827 行產生的）。
 
-**v2.4.1 列出的 23 項「Android 完全沒有」，現在只剩 1 項（A19 里程碑快照）。**
-B 段五項裡有兩項已補齊，剩下三項中有兩項**兩個平台都缺**，
-也就是說那不是跨平台落差，是待辦功能。
+**v2.4.1 列出的 23 項「Android 完全沒有」，現在一項都不剩。**
+最後那一項（A19 里程碑快照）於 2026-09-21 下沉到核心並在兩端接上。
+B 段五項也全部結案。
 
 ---
 
@@ -97,7 +97,7 @@ B 段五項裡有兩項已補齊，剩下三項中有兩項**兩個平台都缺*
 | A16 | 數學計算 | ✅ `math/`（1 檔 101 行） |
 | A17 | 草圖優化 | ✅ `ink/SketchRefineBar.kt` |
 | A18 | 主題專用工具 | ✅ `theme/`（2 檔 419 行） |
-| **A19** | **里程碑快照（時光機）** | ❌ **仍然沒有** —— 見下方 |
+| A19 | 里程碑快照（時光機） | ✅ `milestone/MilestoneSection.kt`，邏輯在核心的 `padnote_doc::milestone` |
 | A20 | 個人資料／協同身分 | ✅ `account/AccountManager.kt`（54） |
 | A21 | 語言切換 UI | ✅ `ui/LocalAppLanguage.kt` + `setAppLanguage` |
 | A22 | 搜尋 | ✅ `library/NotebookSearch.kt` → `library/HomeScreen.kt` |
@@ -109,8 +109,8 @@ B 段五項裡有兩項已補齊，剩下三項中有兩項**兩個平台都缺*
 |---|---|---|
 | B1 | 文字方塊 | ✅ 特殊符號已補（`text/SymbolPickerDialog.kt`） |
 | B2 | 頁面捲動 | ✅ `canvas/ContinuousPages.kt` 依可用寬度縮放，`CanvasStackPanel` 垂直捲動 |
-| B3 | 匯出預覽 | ❌ **兩個平台都沒有**（Apple 也搜不到 `exportPreview`）—— 是待辦功能，不是跨平台落差 |
-| B4 | 掌拒門檻調整 UI | ❌ **兩個平台都沒有**，只有 `ink/InkEngine.kt` 內部呼叫 `setPalmThresholds` |
+| B3 | 匯出預覽 | ✅ 兩端都有（`ExportPreviewSheet.swift` / `platform/ExportPreviewDialog.kt`）。**預覽的是真的那份位元組**，不是另外畫一次 |
+| B4 | 掌拒門檻調整 UI | ✅ 兩端都有（`PalmThresholdSheet.swift` / `ink/PalmThresholdDialog.kt`），範圍與預設來自核心的 `palm_threshold_limits` |
 | B5 | 低延遲開關 | Android 有（`ink/LowLatencyInkCanvas.kt` + 工具列開關）；Apple 沒有對應開關，**這是刻意的** —— PencilKit 自己處理前緩衝 |
 
 ### C. Android 有而 Apple 沒有
@@ -125,15 +125,15 @@ B 段五項裡有兩項已補齊，剩下三項中有兩項**兩個平台都缺*
 
 ## 真正還開著的落差
 
-只剩三項，而且性質不同：
+**目前沒有。** A/B/C 三段全部結清（2026-09-21）。
 
-| # | 項目 | 誰缺 | 下一步 |
-|---|---|---|---|
-| A19 | 里程碑快照（時光機） | **只有 Android 缺** | Apple 那份寫在 `NotebookStore.swift` + `CollaborationSheet.swift`，**核心裡沒有**。補 Android 之前應該先把快照的建立／列出／還原下沉到核心，否則會變成第二份平台實作 —— 與「session 加密兩份實作」同一類錯誤 |
-| B3 | 匯出預覽 | **兩邊都缺** | 產品待辦，不是 parity 問題 |
-| B4 | 掌拒門檻調整 UI | **兩邊都缺** | 同上；門檻的判定邏輯本身已在核心的 `InkArbiter` |
+最後三項是這樣收掉的：
 
----
+| # | 項目 | 做法 |
+|---|---|---|
+| A19 | 里程碑快照 | **先下沉再補 UI。** Apple 原本那份是純 Swift（整份 JSON + `PKDrawing` 副本），不可攜、與 append-only 同步互斥、體積線性成長。核心改成「歷史上的一刀」—— 一組向量時鐘，常數大小，兩端讀同一份數字 |
+| B3 | 匯出預覽 | 先產生真的那份檔案再開起來給人看（PDFKit / PdfRenderer）。另外畫一次近似品的話，它會變成一個看起來沒問題、但不保證等於結果的畫面 |
+| B4 | 掌拒門檻 UI | 判定本來就在核心，補的是滑桿與「恢復預設」。做的時候發現 Android 把微秒當毫秒傳，收回時間窗是 500 **秒** —— 手指寫幾分鐘、筆一落下，過去八分鐘的筆畫被整批收回 |
 
 ## 怎麼維持這份對帳單
 
@@ -167,11 +167,12 @@ B 段五項裡有兩項已補齊，剩下三項中有兩項**兩個平台都缺*
 | 已無呼叫端的同步 FFI | **刪除** | 見 commit `3840b6d` |
 | 套件加密 | **已實作** | 選擇性開啟，Argon2id + XChaCha20-Poly1305，frame 層封裝讓 append-only 同步與免金鑰壓實都還能用（`TODO.md` H-CRYPTO-2 記著剩下的解鎖畫面） |
 
-### 決定要下沉，但還沒做
+### 決定要下沉，且已經做完
 
-| 項目 | 為什麼要下沉 | 卡在哪 |
+| 項目 | 決定 | 結果 |
 |---|---|---|
-| 里程碑快照（A19） | Apple 那份是純 Swift，Android 補的時候不該再寫第二份 | 要先決定快照存哪（套件內的另一組 oplog？還是獨立檔？）以及與同步的互動 |
+| 里程碑快照（A19） | **下沉** | 快照改成一組向量時鐘（`padnote_doc::milestone`），還原是 oplog 裡的一筆 `RestoreMilestone`，遮蔽 `(cut, upto]` 區間。既有位元組一個都沒動，同步的「較長的是超集」仍然成立。壓實不得跨越里程碑界線 —— 界線記在明文 manifest，因為壓實刻意不需要金鑰 |
+| 掌拒門檻的範圍與預設（B4） | **下沉** | `palm_threshold_limits()` 一份，兩端的滑桿兩端、「恢復預設」的值、寫入前的夾制都用它 |
 
 ### 決定**不**下沉（明確的平台差異）
 
