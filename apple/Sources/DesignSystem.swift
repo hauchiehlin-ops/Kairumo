@@ -59,16 +59,23 @@ enum DS {
     // 上限之後，寬螢幕多出來的寬度變成兩側留白，內容維持可讀的行長。
     // 這是所有成熟的桌面／平板 App 都在做的事。
     enum Content {
-        /// 一般內容的最大寬度。超過就置中並留白。
-        static let maxWidth: CGFloat = 1040
+        /// 這些數字**由核心給**（`padnote-core` 的 `ffi_layout`），不是手抄的。
+        ///
+        /// 同一組數字原本在核心、這裡與 Android 的 `DesignSystem.kt`
+        /// 各存一份 —— 核心那個模組的註解自己就寫著「兩份手抄的常數
+        /// 會一樣多久，沒有人知道」。改了其中一份而忘了另外兩份，
+        /// 症狀是同一台平板上兩個平台的版面對不齊，而且不會有任何錯誤。
+        ///
+        /// 用一個很大的寬度去問，拿到的就是上限本身。
+        static var maxWidth: CGFloat { CGFloat(layoutMetrics(width: 10_000).contentMaxWidth) }
         /// 以文字為主的內容（說明、長段落）的最大寬度，比一般更窄。
-        static let readableMaxWidth: CGFloat = 720
+        static var readableMaxWidth: CGFloat {
+            CGFloat(layoutMetrics(width: 10_000).readableMaxWidth)
+        }
 
         /// 依可用寬度決定左右外距。窄螢幕留少一點，寬螢幕留多一點。
         static func gutter(for width: CGFloat) -> CGFloat {
-            if width < 420 { return Space.m }
-            if width < 900 { return Space.l }
-            return Space.xl
+            CGFloat(layoutGutter(width: Float(width)))
         }
     }
 

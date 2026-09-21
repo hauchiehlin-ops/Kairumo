@@ -69,15 +69,20 @@ object DS {
      * 上限之後，多出來的寬度變成兩側留白，內容維持可讀的行長。
      */
     object Content {
-        val maxWidth: Dp = 1040.dp
-        val readableMaxWidth: Dp = 720.dp
+        /**
+         * 這些數字**由核心給**（`padnote-core` 的 `ffi_layout`），不是手抄的。
+         *
+         * 同一組數字原本在核心、Apple 的 `DesignSystem.swift` 與這裡
+         * 各存一份 —— 核心那個模組的註解自己就寫著「兩份手抄的常數
+         * 會一樣多久，沒有人知道」。改了其中一份而忘了另外兩份，
+         * 症狀是同一台平板上兩個平台的版面對不齊，而不會有任何錯誤。
+         */
+        val maxWidth: Dp get() = uniffi.padnote_core.layoutMetrics(10_000f).contentMaxWidth.dp
+        val readableMaxWidth: Dp get() =
+            uniffi.padnote_core.layoutMetrics(10_000f).readableMaxWidth.dp
 
         /** 依可用寬度決定左右外距。 */
-        fun gutter(width: Dp): Dp = when {
-            width < 420.dp -> Space.m
-            width < 900.dp -> Space.l
-            else -> Space.xl
-        }
+        fun gutter(width: Dp): Dp = uniffi.padnote_core.layoutGutter(width.value).dp
     }
 
     /**
@@ -87,10 +92,10 @@ object DS {
      * 「Start Recordi」，而那種錯誤只有把畫面叫出來才看得見。
      * 與 Apple 端 `GridItem(.adaptive(minimum:))` 是同一個意思。
      */
-    fun columns(available: Dp, minItem: Dp, max: Int = 3, gap: Dp = Space.xs): Int {
-        if (available <= 0.dp || minItem <= 0.dp) return 1
-        return ((available + gap) / (minItem + gap)).toInt().coerceIn(1, max)
-    }
+    fun columns(available: Dp, minItem: Dp, max: Int = 3, gap: Dp = Space.xs): Int =
+        uniffi.padnote_core.layoutColumns(
+            available.value, minItem.value, max.toUInt(), gap.value
+        ).toInt()
 
     /**
      * 版面尺寸級別 —— **數字全部來自核心** `layoutMetrics`。

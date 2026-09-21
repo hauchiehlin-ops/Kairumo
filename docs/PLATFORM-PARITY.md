@@ -174,6 +174,7 @@ Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對�
 | session 加密兩份實作 | **下沉** | `collab_encrypt` 改呼叫 `padnote_crypto::session`，重複的 FFI 門面刪掉 |
 | Apple 搜尋搜不到轉錄／PDF／OCR | **下沉** | 新增 `NotebookSearchIndex`，與 Android 同一組規則（兩字才查、快取、跳過壞的） |
 | 壓感曲線的常數（Apple 手抄 0.35 / 0.65 與「哪些筆吃壓感」） | **下沉** | 改呼叫 `ink_width_scale` / `ink_pressure_for_width_scale` / `ink_tool_is_pressure_sensitive`，核心加測試釘住那兩個數字 |
+| 版面常數（1040 / 420 / 900 在三個地方各存一份） | **下沉** | 兩平台的 `DesignSystem` 改呼叫 `layout_metrics` / `layout_gutter` / `layout_columns` |
 | 頁面搬移時的逐頁資料（Android 沒有搬） | **下沉** | `NotebookMeta.movePageData` 逐頁問核心的 `page_index_after_move`。**這是一個真的 bug**：搬完之後紙張樣板與物件堆疊順序留在原地 |
 | 已無呼叫端的同步 FFI | **刪除** | 見 commit `3840b6d` |
 | 套件加密的文案 | **先改文案** | 加密本身列為 `TODO.md` 的 H-CRYPTO，要先回答五個產品問題 |
@@ -182,7 +183,7 @@ Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對�
 
 | 項目 | 為什麼要下沉 | 卡在哪 |
 |---|---|---|
-| 版面尺寸級別（`layout_columns` / `layout_size_class`） | Android 的編輯器沒有雙欄工作區，同一本筆記在平板上兩邊長得不一樣 | 這是 Android 編輯器的版面重做，與 S-71/S-72 同一批 UI 工作，見 `TODO.md` |
+| Android 編輯器的雙欄工作區 | 同一本筆記在平板上兩邊長得不一樣 | 這是 Android 編輯器的版面重做，與 S-71/S-72 同一批 UI 工作。**版面的數字已經下沉**（見上表），缺的是 Android 編輯器本身的版面 |
 
 ### 決定**不**下沉（明確的平台差異）
 
