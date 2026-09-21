@@ -168,6 +168,11 @@ public final class GoogleAuth: NSObject, ObservableObject {
             KeychainTokens.save(tokens, previousRefresh: "")
             isSignedIn = !tokens.refreshToken.isEmpty
             await refreshAccountEmail()
+            if isSignedIn {
+                // 登入完成就立刻同步一輪。使用者剛設定好卻什麼也沒發生，
+                // 他會以為設定沒生效。
+                AutoSyncController.shared.request(.signedIn)
+            }
             return .success(())
         }
     }

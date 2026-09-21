@@ -40,6 +40,24 @@ pub struct SyncPlan {
 }
 
 /// 整份覆寫、不適用 append-only 推論的檔案。
+///
+/// # 為什麼它不需要「兩邊仲裁」
+///
+/// `manifest.json` 裡只有三類欄位：
+///
+/// - **不可變**：`notebook_id`、`created_at_unix_ms`、`time_origin_unix_us`、
+///   `format`、`spec_version`。改了就是換一本筆記，不是同步衝突。
+/// - **權威在別處**：`title`。跨裝置的標題由 `notebooks/index.json`
+///   （逐項 Lamport）與 oplog 的 `SetTitle`（CRDT）決定，畫面上顯示的
+///   從來不是 manifest 裡那一份。
+/// - **本機的**：`encryption` 的金鑰包裝參數。**絕對不能被對面覆蓋** ——
+///   蓋掉就等於把這台裝置的解密資訊換成另一台的。
+///
+/// 所以正確的規則是「本機沒有就拉、雲端沒有就推，兩邊都有就各留各的」，
+/// 而不是丟給使用者一個他沒有辦法回答的「需要注意」。
+///
+/// 舊版把它列進 `needs_attention`，症狀是每次同步都跳一句
+/// 「manifest.json 需要注意」，而使用者無論做什麼都不會消失。
 const NOT_APPEND_ONLY: &[&str] = &["manifest.json"];
 
 // # 為什麼這裡不再「推論某個遠端碎檔已經被壓實涵蓋」
@@ -73,7 +91,7 @@ pub fn plan_folder_sync(local: Vec<SyncFileEntry>, remote: Vec<SyncFileEntry>) -
             Some(&remote_size) if remote_size == entry.size => {}
             Some(&remote_size) => {
                 if NOT_APPEND_ONLY.contains(&entry.path.as_str()) {
-                    plan.needs_attention.push(entry.path.clone());
+                    // 兩邊都有 ⇒ 各留各的。見上面的常數說明。
                 } else if entry.size > remote_size {
                     // 本機較長 ⇒ 本機是超集（append-only）
                     plan.upload.push(entry.path.clone());
@@ -145,13 +163,30 @@ mod tests {
     }
 
     #[test]
-    fn the_manifest_is_never_silently_overwritten() {
-        // manifest.json 是整份覆寫的，不是 append-only —— 「比較長的是超集」
-        // 對它不成立。默默挑一個的後果是另一台裝置改的標題無聲消失。
+    fn the_manifest_is_never_overwritten_in_either_direction() {
+        // 「比較長的是超集」對它不成立，所以兩邊都有時各留各的。
+        // 蓋過去會把這台裝置的金鑰包裝參數換成另一台的。
         let plan = plan_folder_sync(vec![e("manifest.json", 300)], vec![e("manifest.json", 200)]);
         assert!(plan.upload.is_empty());
         assert!(plan.download.is_empty());
-        assert_eq!(plan.needs_attention, vec!["manifest.json"]);
+    }
+
+    #[test]
+    fn the_manifest_does_not_nag_the_user() {
+        // 舊版把它列進 needs_attention，於是每次同步都跳一句
+        // 「manifest.json 需要注意」，而使用者無論做什麼都不會消失 ——
+        // 因為那本來就不是他能回答的問題。
+        let plan = plan_folder_sync(vec![e("manifest.json", 300)], vec![e("manifest.json", 200)]);
+        assert!(plan.needs_attention.is_empty(), "不該要使用者處理");
+    }
+
+    #[test]
+    fn a_manifest_missing_on_one_side_still_travels() {
+        // 新裝置第一次接上同步資料夾：它需要那份 manifest 才打得開套件。
+        let to_cloud = plan_folder_sync(vec![e("manifest.json", 300)], vec![]);
+        assert_eq!(to_cloud.upload, vec!["manifest.json"]);
+        let from_cloud = plan_folder_sync(vec![], vec![e("manifest.json", 300)]);
+        assert_eq!(from_cloud.download, vec!["manifest.json"]);
     }
 
     #[test]

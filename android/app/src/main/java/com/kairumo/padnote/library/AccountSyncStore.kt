@@ -36,6 +36,7 @@ object AccountSyncStore {
     private const val PREFS = "kairumo_account_sync"
     private const val KEY_INDEX = "index.v1"
     private const val KEY_SETTINGS = "settings.v1"
+    private const val KEY_LAST_ACCOUNT = "kairumo.sync.lastAccount.v1"
     private const val KEY_DEVICE = "deviceId.v1"
 
     private fun prefs(context: Context) =
@@ -57,6 +58,55 @@ object AccountSyncStore {
     fun indexJson(context: Context): String = prefs(context).getString(KEY_INDEX, "") ?: ""
 
     fun settingsJson(context: Context): String = prefs(context).getString(KEY_SETTINGS, "") ?: ""
+
+    /**
+     * 上一次看到的 Google 帳號。
+     *
+     * 只用來把雲端快照綁在帳號上 —— 換帳號之後舊的游標與 file id 全部失效，
+     * 而失效的游標**不會報錯**，症狀是「同步成功，但什麼也沒發生」。
+     */
+    fun lastAccount(context: Context): String =
+        prefs(context).getString(KEY_LAST_ACCOUNT, "") ?: ""
+
+    fun setLastAccount(context: Context, account: String) {
+        val previous = lastAccount(context)
+        if (previous == account) return
+        // 換帳號 ⇒ 舊快照整份作廢。留著只會讓下一輪拿到一堆對不上的變更。
+        if (previous.isNotEmpty()) discardRemoteIndex(context, previous)
+        prefs(context).edit().putString(KEY_LAST_ACCOUNT, account).apply()
+    }
+
+    // ── 雲端快照（P1）────────────────────────────────────────────
+    //
+    // 存檔案不存 SharedPreferences：它會長到幾百 KB（每個雲端檔案一筆），
+    // 而 SharedPreferences 是啟動時整份讀進記憶體的 XML。
+    //
+    // 綁帳號：快照裡有 Drive 的變更游標與 file id，換一個 Google 帳號之後
+    // 全部失效 —— 而失效的游標**不會報錯**，它只會回一堆對不上的變更，
+    // 症狀是「同步成功，但什麼也沒發生」。
+
+    fun remoteIndexJson(context: Context, account: String): String =
+        runCatching { remoteIndexFile(context, account).readText() }.getOrDefault("")
+
+    fun saveRemoteIndexJson(context: Context, json: String, account: String) {
+        runCatching {
+            val file = remoteIndexFile(context, account)
+            file.parentFile?.mkdirs()
+            file.writeText(json)
+        }
+    }
+
+    fun discardRemoteIndex(context: Context, account: String) {
+        runCatching { remoteIndexFile(context, account).delete() }
+    }
+
+    private fun remoteIndexFile(context: Context, account: String): java.io.File {
+        val safe = account.ifEmpty { "default" }
+            .lowercase()
+            .map { if (it.isLetterOrDigit()) it else '-' }
+            .joinToString("")
+        return java.io.File(java.io.File(context.filesDir, "sync"), "remote-index-$safe.json")
+    }
 
     // ── 筆記本與資料夾（G-05）──────────────────────────────────
 

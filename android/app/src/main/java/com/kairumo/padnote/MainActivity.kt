@@ -493,35 +493,51 @@ private fun NotebookHome(
     LaunchedEffect(authRevision) {
         if (authRevision > 0 && com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) {
             cloudMessage = "Google 帳號授權成功，正在同步..."
+            com.kairumo.padnote.sync.AutoSync.request(
+                activity, uniffi.padnote_core.FfiSyncTrigger.SIGNED_IN)
             runCloudSync()
         }
     }
 
-    // 回到首頁就自動同步一輪。
+    // 自動同步（P2）。
     //
     // **這一段是「跨裝置感覺得到」的全部差別。** 機制本身早就寫好了，
-    // 但在此之前只有選單裡那一個按鈕會觸發它 —— 使用者在 A 上寫完，
-    // 走到 B 前面打開 App，什麼也不會發生，除非他知道要去點那一項。
+    // 但在此之前只有「回到首頁」與選單裡那一個按鈕會觸發它 ——
+    // 使用者在編輯器裡寫完一段、切到別台打開，什麼也不會發生。
     //
-    // 放在首頁而不是編輯器裡：同步可能把別台的 oplog 寫進套件，
-    // 而開著的那本在記憶體裡還是舊的。在首頁做的話沒有這個問題，
-    // 重讀清單就夠了，不必 recreate 整個畫面。
+    // 節奏（去抖動、週期、退避）由核心的排程器決定，Apple 端同一套：
+    // 兩邊各寫一份的話，使用者看到的不是「排程策略不同」，是「Android 比較慢」。
+    //
+    // 失敗時**不出訊息**。自動同步是背景行為，網路不通就下次再說；
+    // 每次回到首頁都跳一次「同步失敗」只會讓人關掉這個功能。
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
+        com.kairumo.padnote.sync.AutoSync.start(activity, device)
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event != androidx.lifecycle.Lifecycle.Event.ON_RESUME) return@LifecycleEventObserver
-            if (!com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) return@LifecycleEventObserver
-            autoSyncScope.launch {
-                val result = withContext(Dispatchers.IO) {
-                    com.kairumo.padnote.library.CloudSync.runFull(activity, device)
-                }
-                // 失敗時**不出訊息**。自動同步是背景行為，網路不通就下次再說；
-                // 每次回到首頁都跳一次「同步失敗」只會讓人關掉這個功能。
-                if (result.meta?.ok == true && result.changed.isNotEmpty()) revision++
+            when (event) {
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME ->
+                    com.kairumo.padnote.sync.AutoSync.request(
+                        activity, uniffi.padnote_core.FfiSyncTrigger.FOREGROUND)
+                // 進背景前推一次：系統隨時可能把行程收掉，
+                // 沒推出去的內容要等下次開啟才會走。
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE ->
+                    com.kairumo.padnote.sync.AutoSync.request(
+                        activity, uniffi.padnote_core.FfiSyncTrigger.BACKGROUND)
+                else -> Unit
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    // 同步把別台的 oplog 寫進套件之後，清單要重讀 —— 不重讀的話，
+    // 畫面上還是同步前的樣子，使用者會以為同步沒作用。
+    val changedNotebooks by com.kairumo.padnote.sync.AutoSync.changedNotebooks.collectAsState()
+    LaunchedEffect(changedNotebooks) {
+        if (changedNotebooks.isNotEmpty()) {
+            revision++
+            com.kairumo.padnote.sync.AutoSync.consumeChanged()
+        }
     }
 
     val restorePicker = rememberLauncherForActivityResult(
@@ -1321,7 +1337,11 @@ private fun InkScreen(
     }
 
     val engine = remember(notebook, pageId) {
-        InkEngine(session = notebook?.first, pageId = pageId)
+        InkEngine(session = notebook?.first, pageId = pageId).apply {
+            // 一筆畫完就通知同步。**會去抖動** —— 使用者還在寫字時
+            // 每一筆都推只是浪費電，而且會拖慢正在編輯的這一本。
+            onContentCommitted = { com.kairumo.padnote.sync.AutoSync.noteLocalEdit(activity) }
+        }
     }
     // 套索選取。換頁就換一個 —— 選取的是「這一頁的筆畫 id」，
     // 留著會指到另一頁不相干的東西。
@@ -5592,6 +5612,12 @@ private fun CloudSyncDetailDialog(
                     ) {
                         Text(l("sign_in_google"))
                     }
+                }
+
+                // 同步醫生：日誌答得出「發生過什麼」，答不出「現在是什麼狀態」。
+                val doctorActivity = LocalContext.current as? ComponentActivity
+                if (doctorActivity != null) {
+                    com.kairumo.padnote.ui.SyncDoctorCard(deviceId = deviceId(doctorActivity))
                 }
 
                 // 即時雲端同步日誌（含複製、匯出、清理）

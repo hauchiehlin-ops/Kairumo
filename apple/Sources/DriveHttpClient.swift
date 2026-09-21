@@ -312,23 +312,57 @@ final class DriveHttpClient: FfiDriveHttp {
 /// （每一本筆記的 oplog 檔）。
 public enum CloudSync {
 
-    /// 同步一輪。回傳 nil 表示沒登入。
-    @discardableResult
-    public static func runOnce() async -> FfiCloudSyncResult? {
-        guard let token = await GoogleAuth.shared.validAccessToken() else { return nil }
+    // ── P1：帶著雲端快照的工作階段 ────────────────────────────────
+    //
+    // 舊流程每同步一本筆記本就打一次 `files.list`，不管有沒有變動。
+    // 工作階段握著一份 `RemoteIndex`，一次 `changes.list` 更新它，
+    // 之後「這本要不要碰」完全在本機算。
 
+    /// 開一輪同步。回傳 nil 表示沒登入。
+    ///
+    /// 快照綁帳號：換 Google 帳號之後舊游標與 file id 全部失效，
+    /// 而失效的游標**不會報錯** —— 它只會回一堆對不上的變更，
+    /// 症狀是「同步成功，但什麼也沒發生」。
+    public static func makeSession() async -> FfiSyncSession? {
+        guard let token = await GoogleAuth.shared.validAccessToken() else { return nil }
+        let account = await GoogleAuth.shared.accountEmail ?? ""
+        let saved = await AccountSyncStore.shared.remoteIndexJSON(account: account)
+        return FfiSyncSession.create(
+            http: DriveHttpClient(accessToken: token), remoteIndexJson: saved)
+    }
+
+    /// 把工作階段的快照存回磁碟。**每輪同步結束都要做**，否則下次開 App
+    /// 又要全量重建一次。
+    public static func persist(_ session: FfiSyncSession) async {
+        let account = await GoogleAuth.shared.accountEmail ?? ""
+        let json = session.indexJson()
+        await AccountSyncStore.shared.saveRemoteIndexJSON(json, account: account)
+    }
+
+    /// 一次 `changes.list`（或第一次的全量重建）。
+    public static func refresh(_ session: FfiSyncSession) async -> FfiRefreshResult? {
+        // 全量重建要列完整個 appDataFolder，給它寬一點；
+        // 一般的 changes.list 幾百毫秒就回來了。
+        let seconds: Double = session.needsRebuild() ? 180 : 60
+        let detached = Task.detached(priority: .utility) { session.refresh() }
+        do {
+            return try await withTimeout(seconds: seconds) { await detached.value }
+        } catch {
+            detached.cancel()
+            return FfiRefreshResult(
+                ok: false, changed: 0, fullRebuild: false, trackedFiles: 0,
+                error: "更新雲端快照逾時（超過 \(Int(seconds)) 秒）", needsReauth: false)
+        }
+    }
+
+    /// 中繼資料（設定、筆記本清單、刪除墓碑）。
+    public static func syncMetadata(_ session: FfiSyncSession) async -> FfiCloudSyncResult? {
         let settings = await AccountSyncStore.shared.settingsJSON
         let index = await AccountSyncStore.shared.indexJSON
 
         // 核心會同步地等 HTTP，所以整段丟到背景執行緒。在主執行緒跑會卡死 UI。
-        // 整體加 120 秒上限：Rust 端若進入重試迴圈（每次 HTTP 最多 35s），
-        // 沒有這一層的話，整個同步會永遠掛著，UI 卡在「同步中…」。
         let detached = Task.detached(priority: .utility) {
-            gdriveSyncMetadata(
-                http: DriveHttpClient(accessToken: token),
-                localSettingsJson: settings,
-                localIndexJson: index
-            )
+            session.syncMetadata(localSettingsJson: settings, localIndexJson: index)
         }
         let result: FfiCloudSyncResult
         do {
@@ -336,12 +370,8 @@ public enum CloudSync {
         } catch {
             detached.cancel()
             return FfiCloudSyncResult(
-                ok: false,
-                settingsJson: settings,
-                indexJson: index,
-                error: "同步逾時（超過 120 秒），請檢查網路連線後重試",
-                needsReauth: false
-            )
+                ok: false, settingsJson: settings, indexJson: index,
+                error: "同步逾時（超過 120 秒），請檢查網路連線後重試", needsReauth: false)
         }
 
         if result.ok {
@@ -349,89 +379,30 @@ public enum CloudSync {
             await AccountSyncStore.shared.mergeSettings(result.settingsJson)
             await AccountSyncStore.shared.mergeIndex(result.indexJson)
         } else if result.needsReauth {
-            // 權杖救不回來了 —— 留著一個死權杖的話，背景會一直重試，
-            // 而使用者不知道要去登入。
             await GoogleAuth.shared.signOut()
         }
         return result
     }
 
-    /// 把一本**只存在於雲端**的筆記本整本抓下來。
-    ///
-    /// 另一台裝置新建的筆記本在本機連套件目錄都沒有，`syncNotebook` 會以
-    /// 「開不了套件」失敗。少了這條路，症狀是：索引同步成功、清單上出現了
-    /// 標題，點進去卻是空的，而且每一輪都重複同樣的失敗。
-    public static func cloneNotebook(
-        packagePath: String,
-        notebookId: String,
-        title: String
-    ) async -> FfiNotebookSyncResult? {
-        guard let token = await GoogleAuth.shared.validAccessToken() else { return nil }
-        let now = UInt64(max(0, Date().timeIntervalSince1970 * 1000))
-        let detached = Task.detached(priority: .utility) {
-            gdriveCloneNotebook(
-                http: DriveHttpClient(accessToken: token),
-                packagePath: packagePath,
-                notebookId: notebookId,
-                title: title,
-                nowUnixMs: now
-            )
-        }
-        let result: FfiNotebookSyncResult
-        do {
-            result = try await withTimeout(seconds: 300) { await detached.value }
-        } catch {
-            detached.cancel()
-            return FfiNotebookSyncResult(ok: false, uploaded: 0, downloaded: 0,
-                error: "下載逾時（超過 300 秒）", needsReauth: false)
-        }
-
-        if result.needsReauth {
-            await GoogleAuth.shared.signOut()
-        }
-        return result
-    }
-
-    /// 同步一本筆記本的內容。
+    /// 同步一本筆記本的內容與媒體。
     ///
     /// 回傳 `downloaded > 0` 時，**呼叫端必須重新載入這本筆記** ——
     /// oplog 檔已經寫進套件，但記憶體裡那份還是同步前的狀態，
     /// 畫面上看不到任何變化，使用者會以為同步沒作用。
     public static func syncNotebook(
+        _ session: FfiSyncSession,
         packagePath: String,
-        notebookId: String
+        notebookId: String,
+        deviceId: UInt32
     ) async -> FfiNotebookSyncResult? {
-        guard let token = await GoogleAuth.shared.validAccessToken() else { return nil }
-
-        // 動態計算逾時時間：根據套件內待同步的 oplog 數量自適應調整，避免巨量歷史筆跡或弱網時超時
+        // 逾時隨待同步的 oplog 數量調整：巨量歷史筆跡或弱網時別太早放棄。
         let opsDir = (packagePath as NSString).appendingPathComponent("doc/ops")
         let opsCount = (try? FileManager.default.contentsOfDirectory(atPath: opsDir).count) ?? 0
         let timeoutSeconds = max(60.0, min(180.0, 30.0 + Double(opsCount) * 0.5))
 
         let detached = Task.detached(priority: .utility) {
-            let http = DriveHttpClient(accessToken: token)
-            let ops = gdriveSyncNotebook(
-                http: http,
-                packagePath: packagePath,
-                notebookId: notebookId
-            )
-            guard ops.ok else { return ops }
-
-            // 媒體接在 oplog 之後。順序很重要：oplog 裡的 AddImage 會指向一個
-            // blob id，媒體還沒到的話，那一頁會有一個指向不存在檔案的圖片區塊。
-            // 反過來先傳媒體只是多佔一點空間，不會讓畫面壞掉。
-            let media = gdriveSyncMedia(
-                http: http,
-                packagePath: packagePath,
-                notebookId: notebookId
-            )
-            return FfiNotebookSyncResult(
-                ok: media.ok,
-                uploaded: ops.uploaded + media.uploaded,
-                downloaded: ops.downloaded + media.downloaded,
-                error: media.error,
-                needsReauth: media.needsReauth
-            )
+            session.syncNotebook(
+                packagePath: packagePath, notebookId: notebookId, deviceId: deviceId)
         }
         let result: FfiNotebookSyncResult
         do {
@@ -441,7 +412,35 @@ public enum CloudSync {
             return FfiNotebookSyncResult(ok: false, uploaded: 0, downloaded: 0,
                 error: "同步逾時（超過 \(Int(timeoutSeconds)) 秒）", needsReauth: false)
         }
+        if result.needsReauth {
+            await GoogleAuth.shared.signOut()
+        }
+        return result
+    }
 
+    /// 把一本**只存在於雲端**的筆記本整本抓下來。
+    ///
+    /// 少了這條路，症狀是：索引同步成功、清單上出現了標題，
+    /// 點進去卻是空的，而且每一輪都重複同樣的失敗。
+    public static func cloneNotebook(
+        _ session: FfiSyncSession,
+        packagePath: String,
+        notebookId: String,
+        title: String
+    ) async -> FfiNotebookSyncResult? {
+        let now = UInt64(max(0, Date().timeIntervalSince1970 * 1000))
+        let detached = Task.detached(priority: .utility) {
+            session.cloneNotebook(
+                packagePath: packagePath, notebookId: notebookId, title: title, nowUnixMs: now)
+        }
+        let result: FfiNotebookSyncResult
+        do {
+            result = try await withTimeout(seconds: 300) { await detached.value }
+        } catch {
+            detached.cancel()
+            return FfiNotebookSyncResult(ok: false, uploaded: 0, downloaded: 0,
+                error: "下載逾時（超過 300 秒）", needsReauth: false)
+        }
         if result.needsReauth {
             await GoogleAuth.shared.signOut()
         }

@@ -52,6 +52,9 @@ struct KairumoApp: App {
     /// **這一段是「跨裝置感覺得到」的全部差別。** 機制本身早就寫好了，
     /// 但在此之前只有設定頁裡那一個按鈕會觸發它 —— 使用者在 iPad 上寫完，
     /// 打開 Mac，什麼也不會發生，除非他知道要去設定頁點一下。
+    ///
+    /// P2 之後這裡只負責「叫醒」：真正的節奏（去抖動、週期、退避）由
+    /// `AutoSyncController` 交給核心的排程器決定，Android 用的是同一套。
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
@@ -62,9 +65,11 @@ struct KairumoApp: App {
                     StartupLogger.log("ScenePhase 切換為: \(phase)")
                     guard phase == .active else { return }
                     // 啟動時先給予 1 秒寬限期讓 UI 算繪完畢，避免阻塞主執行緒造成卡頓感
-                    Task.detached(priority: .utility) {
+                    Task { @MainActor in
                         try? await Task.sleep(nanoseconds: 1_000_000_000)
-                        await AutoCloudSync.runIfSignedIn()
+                        AutoSyncController.shared.start(
+                            store: NotebookStore.shared, deviceId: NotebookMigration.deviceId)
+                        AutoSyncController.shared.request(.foreground)
                     }
                 }
                 .onOpenURL { url in
@@ -163,5 +168,11 @@ enum AutoCloudSync {
         let report = await NotebookSyncCoordinator.runDrive(
             store: NotebookStore.shared, deviceId: NotebookMigration.deviceId)
         StartupLogger.log("AutoCloudSync: 背景自動同步完成 (上傳: \(report?.uploaded ?? 0), 下載: \(report?.downloaded ?? 0))")
+    }
+
+    /// 走排程器的觸發。新的呼叫點一律用這個 —— 直接跑一輪會繞過
+    /// 去抖動與「同一時間只跑一輪」，而那兩件事正是穩定性的來源。
+    static func request(_ trigger: FfiSyncTrigger) {
+        AutoSyncController.shared.request(trigger)
     }
 }

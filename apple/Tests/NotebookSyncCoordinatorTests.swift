@@ -37,6 +37,8 @@ final class FakeStore: SyncableNotebookStore {
     }
 
     var syncNotebooks: [NotebookDocument] { documents }
+    /// 全集（含被隱藏的）。測試裡沒有隱藏的概念，兩者相同。
+    var allNotebooks: [NotebookDocument] { documents }
     var syncPackagesDirectory: URL { root.appendingPathComponent("Packages") }
     var syncAttachmentsDirectory: URL { root.appendingPathComponent("Attachments") }
     var syncBaselineDirectory: URL { root.appendingPathComponent("SyncBaseline") }
@@ -97,13 +99,13 @@ final class NotebookSyncCoordinatorTests: XCTestCase {
     }
 
     @discardableResult
-    private func sync(_ store: FakeStore, _ deviceId: UInt32) -> NotebookSyncCoordinator.Report {
-        NotebookSyncCoordinator.run(store: store, folder: cloud, deviceId: deviceId)
+    private func sync(_ store: FakeStore, _ deviceId: UInt32) async -> NotebookSyncCoordinator.Report {
+        await NotebookSyncCoordinator.run(store: store, folder: cloud, deviceId: deviceId)
     }
 
     // MARK: - 使用者要的那件事
 
-    func testANotebookWrittenOnOneDeviceAppearsOnTheOther() throws {
+    func testANotebookWrittenOnOneDeviceAppearsOnTheOther() async throws {
         // 這條測試就是需求本身。
         var note = NotebookDocument(title: "會議記錄", pageCount: 1)
         note.textAttachments = [NoteTextAttachment(pageIndex: 0, text: "下週交報告")]
@@ -111,8 +113,8 @@ final class NotebookSyncCoordinatorTests: XCTestCase {
         alice.syncSaveDrawing(notebookId: note.id, pageIndex: 0,
                               drawing: PKDrawing(strokes: [stroke(at: 20)]))
 
-        sync(alice, aliceId)
-        sync(bob, bobId)
+        await sync(alice, aliceId)
+        await sync(bob, bobId)
 
         XCTAssertEqual(bob.documents.count, 1, "另一台裝置上什麼也沒出現")
         XCTAssertEqual(bob.documents.first?.title, "會議記錄")
@@ -121,29 +123,29 @@ final class NotebookSyncCoordinatorTests: XCTestCase {
         XCTAssertEqual(bob.syncLoadDrawing(notebookId: note.id, pageIndex: 0).strokes.count, 1)
     }
 
-    func testEditsFromBothDevicesSurvive() throws {
+    func testEditsFromBothDevicesSurvive() async throws {
         // 雙方各寫一筆，同步之後兩筆都要在 —— 而且在同一頁上。
         let note = NotebookDocument(title: "共筆", pageCount: 1)
         alice.documents = [note]
         alice.syncSaveDrawing(notebookId: note.id, pageIndex: 0,
                               drawing: PKDrawing(strokes: [stroke(at: 10)]))
-        sync(alice, aliceId)
-        sync(bob, bobId)
+        await sync(alice, aliceId)
+        await sync(bob, bobId)
 
         // Bob 在自己這邊加一筆。
         let bobDrawing = PKDrawing(strokes: [
             stroke(at: 10), stroke(at: 200)
         ])
         bob.syncSaveDrawing(notebookId: note.id, pageIndex: 0, drawing: bobDrawing)
-        sync(bob, bobId)
-        sync(alice, aliceId)
+        await sync(bob, bobId)
+        await sync(alice, aliceId)
 
         let merged = alice.syncLoadDrawing(notebookId: note.id, pageIndex: 0)
         XCTAssertEqual(merged.strokes.count, 2, "有一邊的筆畫被洗掉了")
         XCTAssertEqual(alice.documents.first?.pageCount, 1, "頁數變多了")
     }
 
-    func testRepeatedSyncsDoNotGrowTheNotebook() throws {
+    func testRepeatedSyncsDoNotGrowTheNotebook() async throws {
         // 同步會來回很多次。每一趟讓內容長一點的話，幾趟之後筆記就走樣了。
         let note = NotebookDocument(title: "來回很多次", pageCount: 1)
         alice.documents = [note]
@@ -151,8 +153,8 @@ final class NotebookSyncCoordinatorTests: XCTestCase {
                               drawing: PKDrawing(strokes: [stroke(at: 10)]))
 
         for _ in 0..<4 {
-            sync(alice, aliceId)
-            sync(bob, bobId)
+            await sync(alice, aliceId)
+            await sync(bob, bobId)
         }
 
         XCTAssertEqual(alice.documents.count, 1)
@@ -166,7 +168,7 @@ final class NotebookSyncCoordinatorTests: XCTestCase {
 
     // MARK: - 內容的完整性
 
-    func testImagesArriveAsRealFiles() throws {
+    func testImagesArriveAsRealFiles() async throws {
         // 筆記本指到一個不存在的檔名時，畫面上會是一格空白 —— 而且不會報錯。
         let png = try XCTUnwrap(
             UIGraphicsImageRenderer(size: CGSize(width: 8, height: 8))
@@ -178,8 +180,8 @@ final class NotebookSyncCoordinatorTests: XCTestCase {
         try png.write(to: alice.syncAttachmentsDirectory.appendingPathComponent("pic.png"))
         alice.documents = [note]
 
-        sync(alice, aliceId)
-        sync(bob, bobId)
+        await sync(alice, aliceId)
+        await sync(bob, bobId)
 
         let arrived = bob.syncAttachmentsDirectory.appendingPathComponent("pic.png")
         XCTAssertTrue(FileManager.default.fileExists(atPath: arrived.path), "圖檔沒有落地")
@@ -187,19 +189,19 @@ final class NotebookSyncCoordinatorTests: XCTestCase {
         XCTAssertEqual(bob.documents.first?.attachments?.first?.fileName, "pic.png")
     }
 
-    func testTheTemplateAndFolderSurviveTheTrip() throws {
+    func testTheTemplateAndFolderSurviveTheTrip() async throws {
         var note = NotebookDocument(title: "有樣板", pageCount: 1, template: .cornell)
         note.folderId = "study"
         alice.documents = [note]
 
-        sync(alice, aliceId)
-        sync(bob, bobId)
+        await sync(alice, aliceId)
+        await sync(bob, bobId)
 
         XCTAssertEqual(bob.documents.first?.template, .cornell)
         XCTAssertEqual(bob.documents.first?.folderId, "study")
     }
 
-    func testAChartArrivesStillEditable() throws {
+    func testAChartArrivesStillEditable() async throws {
         var spec = ChartSpec()
         spec.title = "營收"
         spec.categories = ["Q1", "Q2"]
@@ -216,8 +218,8 @@ final class NotebookSyncCoordinatorTests: XCTestCase {
         ]
         alice.documents = [note]
 
-        sync(alice, aliceId)
-        sync(bob, bobId)
+        await sync(alice, aliceId)
+        await sync(bob, bobId)
 
         let arrived = try XCTUnwrap(bob.documents.first?.attachments?.first?.chartSpec)
         XCTAssertEqual(arrived.title, "營收")
@@ -226,35 +228,35 @@ final class NotebookSyncCoordinatorTests: XCTestCase {
 
     // MARK: - 多本與邊界
 
-    func testEveryNotebookMakesTheTrip() throws {
+    func testEveryNotebookMakesTheTrip() async throws {
         alice.documents = (1...3).map { NotebookDocument(title: "第 \($0) 本", pageCount: 1) }
-        sync(alice, aliceId)
-        sync(bob, bobId)
+        await sync(alice, aliceId)
+        await sync(bob, bobId)
 
         XCTAssertEqual(Set(bob.documents.map(\.title)), ["第 1 本", "第 2 本", "第 3 本"])
     }
 
-    func testSyncingWithNothingToDoReportsItAsSuch() throws {
+    func testSyncingWithNothingToDoReportsItAsSuch() async throws {
         // 「已是最新」與「同步失敗」對使用者是完全不同的訊息。
-        sync(alice, aliceId)
-        let second = sync(alice, aliceId)
+        await sync(alice, aliceId)
+        let second = await sync(alice, aliceId)
         XCTAssertTrue(second.isNoOp)
         XCTAssertTrue(second.failures.isEmpty)
     }
 
-    func testAnEmptyCloudFolderIsNotAnError() throws {
-        let report = sync(bob, bobId)
+    func testAnEmptyCloudFolderIsNotAnError() async throws {
+        let report = await sync(bob, bobId)
         XCTAssertTrue(report.failures.isEmpty)
         XCTAssertTrue(bob.documents.isEmpty)
     }
 
-    func testABrokenPackageDoesNotStopTheOthers() throws {
+    func testABrokenPackageDoesNotStopTheOthers() async throws {
         // 一本壞掉，跟整輪同步失敗，對使用者是完全不同等級的損失。
         alice.documents = [NotebookDocument(title: "好的", pageCount: 1)]
-        sync(alice, aliceId)
+        await sync(alice, aliceId)
         try Data("壞掉".utf8).write(to: cloud.appendingPathComponent("broken.padnote"))
 
-        let report = sync(bob, bobId)
+        let report = await sync(bob, bobId)
         XCTAssertEqual(bob.documents.count, 1, "好的那一本要照樣進來")
         XCTAssertFalse(report.failures.isEmpty, "壞掉的那一本要被回報，不是靜靜跳過")
     }

@@ -3460,6 +3460,12 @@ public struct CloudSyncDetailSheet: View {
                 }
                 .padding(DS.Space.m)
 
+                if selectedProvider == .googleDrive {
+                    syncDoctorSection
+                        .padding(.horizontal, DS.Space.m)
+                        .padding(.bottom, DS.Space.s)
+                }
+
                 if selectedProvider != .disabled {
                     logSection
                         .padding(.horizontal, DS.Space.m)
@@ -4194,6 +4200,73 @@ public struct CloudSyncDetailSheet: View {
             }
         }
         .joined(separator: "\n")
+    }
+
+    /// 同步醫生（P4）。
+    ///
+    /// # 為什麼日誌不夠
+    ///
+    /// 出問題時畫面上只有一串日誌。日誌答得出「發生過什麼」，答不出
+    /// **「現在是什麼狀態」**：游標建立了沒？快照裡有幾個檔案？
+    /// 哪幾本還沒推上去？而那才是下一步要根據的東西。
+    ///
+    /// 這一段**不打網路、也不需要權杖** —— 診斷畫面在網路不通的時候
+    /// 最需要，依賴一個要先去換權杖的工作階段就等於在最需要時失效。
+    private var syncDoctorSection: some View {
+        let diagnostics = currentDiagnostics
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("同步狀態")
+                .font(DS.Font.caption)
+                .foregroundColor(.secondary)
+            VStack(alignment: .leading, spacing: 6) {
+                doctorRow(
+                    "雲端快照",
+                    diagnostics.hasCursor
+                        ? "已建立（追蹤 \(diagnostics.trackedFiles) 個檔案）"
+                        : "尚未建立，下次同步會重新盤點一次")
+                doctorRow(
+                    "待同步筆記",
+                    diagnostics.pendingNotebooks.isEmpty
+                        ? "無（已檢查 \(diagnostics.checkedNotebooks) 本）"
+                        : "\(diagnostics.pendingNotebooks.count) / \(diagnostics.checkedNotebooks) 本")
+                doctorRow(
+                    "自動同步",
+                    AutoSyncController.shared.needsSignIn
+                        ? "已暫停，請重新登入"
+                        : (AutoSyncController.shared.isSyncing ? "進行中" : "待命"))
+                if !AutoSyncController.shared.lastMessage.isEmpty {
+                    doctorRow("最後結果", AutoSyncController.shared.lastMessage)
+                }
+            }
+            .font(DS.Font.caption)
+            .padding(DS.Space.s)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous)
+                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
+            )
+        }
+    }
+
+    private func doctorRow(_ label: String, _ value: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text(label).foregroundColor(.secondary).frame(width: 84, alignment: .leading)
+            Text(value).foregroundColor(.primary)
+            Spacer(minLength: 0)
+        }
+    }
+
+    private var currentDiagnostics: FfiSyncDiagnostics {
+        let store = notebookStore
+        let packagesDir = store.syncPackagesDirectory
+        let books = store.syncNotebooks
+        return syncDiagnose(
+            remoteIndexJson: AccountSyncStore.shared.remoteIndexJSON(
+                account: googleAuth.accountEmail ?? ""),
+            packagePaths: books.map {
+                packagesDir.appendingPathComponent("\($0.id).padnote").path
+            },
+            notebookIds: books.map { $0.id })
     }
 
     private var logSection: some View {

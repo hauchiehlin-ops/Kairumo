@@ -42,6 +42,7 @@
 		55B00291EB5DC3259C49B3E9 /* PackageRoundTripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0D07EB41098C2C0F9A8E37 /* PackageRoundTripTests.swift */; };
 		57C009B329081703B31BB1EE /* CanvasScrollbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5B72B2C88A99AD52C89B0787 /* CanvasScrollbar.swift */; };
 		582629D6ADA3FCAEA7E65830 /* PdfKitDocument.swift in Sources */ = {isa = PBXBuildFile; fileRef = 43B5E732D6E01F9549B1147D /* PdfKitDocument.swift */; };
+		5CAB796342EDFFC2A302A2A5 /* AutoSyncController.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC38A8D206CF6F7CDF0CEEDE /* AutoSyncController.swift */; };
 		5D1C65B2E7840C00F8861C94 /* ChartRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 20B46B97CCF8127EEE4BD4ED /* ChartRenderer.swift */; };
 		5DB9A9B4DBCC7AABAB0B76CC /* ChartStudioTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADB3B259C241361F259FE9CD /* ChartStudioTests.swift */; };
 		5E462BD80D8FEADB96FA1CAE /* CloudSyncFolder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D92ABBF09268BEEA4DD694D /* CloudSyncFolder.swift */; };
@@ -288,6 +289,7 @@
 		BFC2EC4F24CB728264AB91A5 /* ObjectRotationControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectRotationControls.swift; sourceTree = "<group>"; };
 		C1C81A31EBC2D3D1F020B0BF /* NoteTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteTable.swift; sourceTree = "<group>"; };
 		C72410287ED6D6BF9B550D5B /* NotebookStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookStore.swift; sourceTree = "<group>"; };
+		CC38A8D206CF6F7CDF0CEEDE /* AutoSyncController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoSyncController.swift; sourceTree = "<group>"; };
 		CCBD6EB2E871A9532370A15B /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
 		D059ACC4F96D906F5A18970D /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
 		D76C7E92895F6C4334996D92 /* NotebookSyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookSyncCoordinator.swift; sourceTree = "<group>"; };
@@ -437,6 +439,7 @@
 				4BA1621FF70166498E5FC736 /* AudioAttachment.swift */,
 				8FEF2B249C62AD4AE2E3C246 /* AudioRecorderManager.swift */,
 				186DAB55422E783F9C99DE02 /* AudioTranscriber.swift */,
+				CC38A8D206CF6F7CDF0CEEDE /* AutoSyncController.swift */,
 				E6A2A119D757D992BD181DEE /* BackupManager.swift */,
 				7A2F8130E223B0B02F303F80 /* BrushCursor.swift */,
 				5B72B2C88A99AD52C89B0787 /* CanvasScrollbar.swift */,
@@ -708,6 +711,7 @@
 				D325D948BEE1CAF365D97515 /* AudioAttachment.swift in Sources */,
 				7DB76F0C390DA40B48AC10F9 /* AudioRecorderManager.swift in Sources */,
 				BCF67AEC6E3360B45CBC8631 /* AudioTranscriber.swift in Sources */,
+				5CAB796342EDFFC2A302A2A5 /* AutoSyncController.swift in Sources */,
 				FEE111DF10D0F0623F16BEB0 /* BackupManager.swift in Sources */,
 				B281348DEEE6A0978642DF8D /* BrushCursor.swift in Sources */,
 				68C1811CB88877353FF14D31 /* CStubs.c in Sources */,

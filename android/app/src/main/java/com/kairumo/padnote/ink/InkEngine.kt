@@ -87,6 +87,16 @@ class InkEngine(
      */
     var onPenControlChanged: ((uniffi.padnote_core.FfiPenControl?, Boolean) -> Unit)? = null
 
+    /**
+     * 有內容寫進核心了（一筆畫完、或擦掉一筆）。
+     *
+     * 給自動同步用：使用者停手之後推一次。**掛在引擎上而不是各個 View**，
+     * 理由與 `onPenControlChanged` 相同 —— 低延遲畫布與一般畫布是兩條
+     * 繪製路徑，掛在 View 上會變成「只有其中一條路會觸發同步」，
+     * 而使用者切不切得到低延遲取決於他的裝置。
+     */
+    var onContentCommitted: (() -> Unit)? = null
+
     /** 筆跡磁吸對齊開關 (Smart Magnetic Snap) */
     var isMagneticSnapActive: Boolean = false
     /** 磁吸吸附觸發回呼 (起點, 吸附終點) */
@@ -318,6 +328,7 @@ class InkEngine(
         } else {
             null
         }
+        if (coreId != null) onContentCommitted?.invoke()
 
         val stroke = CompletedStroke(
             pointerId = id,

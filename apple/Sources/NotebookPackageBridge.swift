@@ -675,7 +675,9 @@ enum NotebookPackageBridge {
 
         let targetId = documentId ?? path.deletingPathExtension().lastPathComponent
         var initialTitle = session.title()
-        let storeItems = syncLiveNotebooks(indexJson: AccountSyncStore.shared.indexJSON)
+        // 這個函式是 nonisolated 的（讀套件不該在主執行緒做），
+        // 所以走非隔離的快照而不是 @MainActor 的發布狀態。
+        let storeItems = syncLiveNotebooks(indexJson: AccountSyncStore.indexJSONSnapshot())
         if let syncItem = storeItems.first(where: { $0.id.caseInsensitiveCompare(targetId) == .orderedSame }),
            !syncItem.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             initialTitle = syncItem.title

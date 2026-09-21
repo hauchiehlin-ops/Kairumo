@@ -588,9 +588,23 @@ pub fn gdrive_sync_notebook(
 ///   只看存在與否的話，一段還在錄的音永遠只會同步到第一次的長度。
 ///
 /// **這個函式會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
+/// 錄音上傳的節流門檻。
+///
+/// 錄音檔在**錄製中會一直變長**，而每次上傳都是整檔重傳。P2 之後前景每 12 秒
+/// 拉一次，不節流的話，一段 30 MB 的錄音會在錄製期間被整檔重傳好幾十次。
+///
+/// 規則：長度還在成長時，成長不到這個量就先不傳；**長度穩定下來（錄完了）
+/// 就一定傳**。只看門檻的話，最後那一小段永遠傳不出去，而雲端上那份會
+/// 少掉結尾 —— 使用者會說「同步過去的錄音被截斷了」。
+const AUDIO_GROWTH_THRESHOLD: u64 = 1024 * 1024;
+
+/// 上一輪看到的本機檔案長度，用來判斷「還在成長」還是「已經穩定」。
+type SeenSizes = std::collections::BTreeMap<String, u64>;
+
 fn sync_notebook_media(
     drive: &GDriveProvider<ForeignHttp>,
     index: &mut RemoteIndex,
+    seen: &mut SeenSizes,
     package_path: &str,
     notebook_id: &str,
 ) -> FfiNotebookSyncResult {
@@ -680,7 +694,17 @@ fn sync_notebook_media(
     for (name, size) in &local_audio {
         let key = padnote_sync::paths::canonical_name(name);
         let existing = remote_audio.get(&key);
-        if *size <= existing.map_or(0, |f| f.size) {
+        let remote_size = existing.map_or(0, |f| f.size);
+        if *size <= remote_size {
+            continue;
+        }
+        // 還在錄的那一段：成長不到門檻就先不傳，等它穩定或長夠多。
+        // 「穩定」＝這一輪看到的長度與上一輪相同 ⇒ 錄完了，一定要傳。
+        let previous = seen.insert(key.clone(), *size);
+        // **第一次看到不算「還在成長」。** 不知道就傳 —— 反過來假設的話，
+        // 一段錄完很久的短錄音會在重開 App 之後永遠不上傳。
+        let still_growing = matches!(previous, Some(p) if p != *size);
+        if still_growing && size.saturating_sub(remote_size) < AUDIO_GROWTH_THRESHOLD {
             continue;
         }
         let bytes = match package.read_audio_file(name) {
@@ -743,7 +767,8 @@ pub fn gdrive_sync_media(
 ) -> FfiNotebookSyncResult {
     let drive = GDriveProvider::new(ForeignHttp(http));
     let mut index = RemoteIndex::default();
-    sync_notebook_media(&drive, &mut index, &package_path, &notebook_id)
+    let mut seen = SeenSizes::new();
+    sync_notebook_media(&drive, &mut index, &mut seen, &package_path, &notebook_id)
 }
 
 /// 把一本**只存在於雲端**的筆記本抓下來。
@@ -802,7 +827,8 @@ pub fn gdrive_clone_notebook(
 
     // 媒體接在 oplog 之後，理由與平台那一側相同：oplog 裡的 AddImage 會指向
     // 一個 blob id，媒體還沒到的話那一頁是一個指向不存在檔案的圖片區塊。
-    let media = sync_notebook_media(&drive, &mut index, &package_path, &notebook_id);
+    let mut seen = SeenSizes::new();
+    let media = sync_notebook_media(&drive, &mut index, &mut seen, &package_path, &notebook_id);
     FfiNotebookSyncResult {
         ok: media.ok,
         uploaded: ops.uploaded + media.uploaded,
@@ -829,6 +855,28 @@ pub struct FfiRefreshResult {
     pub needs_reauth: bool,
 }
 
+/// 同步狀態的一份快照，給「同步醫生」畫面用（P4）。
+///
+/// # 為什麼需要它
+///
+/// 出問題時使用者（與我們）能看到的只有一串日誌。日誌回答得了
+/// 「發生過什麼」，回答不了**「現在是什麼狀態」**：游標建立了沒？
+/// 快照裡有幾個檔案？哪幾本還沒推上去？卡在哪一步？
+///
+/// 這些欄位由核心算，所以兩個平台顯示的是同一組數字 ——
+/// 各自湊一份的話，比對兩台裝置的畫面時會得到互相矛盾的結論。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiSyncDiagnostics {
+    /// 變更游標已建立。false 表示下一輪會走全量重建（唯一的慢路徑）。
+    pub has_cursor: bool,
+    /// 雲端快照裡追蹤了幾個檔案。
+    pub tracked_files: u32,
+    /// 還有差異、下一輪要碰的筆記本 id。**完全在本機算，零 HTTP。**
+    pub pending_notebooks: Vec<String>,
+    /// 檢查了幾本。`tracked - pending` 就是這一輪會被跳過的數量。
+    pub checked_notebooks: u32,
+}
+
 /// 帶著雲端快照的同步工作階段。
 ///
 /// # 為什麼要有這個物件
@@ -846,6 +894,10 @@ pub struct FfiRefreshResult {
 pub struct FfiSyncSession {
     drive: GDriveProvider<ForeignHttp>,
     index: std::sync::Mutex<RemoteIndex>,
+    /// 上一輪看到的本機錄音長度。用來分辨「還在錄」與「錄完了」，
+    /// 見 [`AUDIO_GROWTH_THRESHOLD`]。**不持久化** —— 重開 App 之後
+    /// 多傳一次而已，沒有正確性問題。
+    seen_sizes: std::sync::Mutex<SeenSizes>,
 }
 
 #[uniffi::export]
@@ -856,6 +908,7 @@ impl FfiSyncSession {
         Arc::new(Self {
             drive: GDriveProvider::new(ForeignHttp(http)),
             index: std::sync::Mutex::new(RemoteIndex::from_json(&remote_index_json)),
+            seen_sizes: std::sync::Mutex::new(SeenSizes::new()),
         })
     }
 
@@ -923,42 +976,7 @@ impl FfiSyncSession {
     /// 快照還沒建立時一律回 true（不知道就別跳過）。
     pub fn notebook_needs_sync(&self, package_path: String, notebook_id: String) -> bool {
         let index = self.index.lock().unwrap();
-        if index.needs_rebuild() {
-            return true;
-        }
-        let Ok(package) = padnote_storage::NotebookPackage::open(std::path::Path::new(
-            &package_path,
-        )) else {
-            return true;
-        };
-        let ops_diff = differs(
-            &package.doc_op_files().unwrap_or_default(),
-            &index.entries_under(&notebook_ops_prefix(&notebook_id)),
-        );
-        if ops_diff {
-            return true;
-        }
-        let audio_diff = differs(
-            &package.audio_files().unwrap_or_default(),
-            &index.entries_under(&padnote_sync::paths::notebook_audio_prefix(&notebook_id)),
-        );
-        if audio_diff {
-            return true;
-        }
-        // blob 是內容定址的，只看名字在不在。
-        let local_blobs: std::collections::BTreeSet<String> = package
-            .blobs()
-            .list()
-            .unwrap_or_default()
-            .iter()
-            .map(|id| padnote_sync::paths::canonical_name(&id.to_string()))
-            .collect();
-        let remote_blobs = index.entries_under(&padnote_sync::paths::notebook_blobs_prefix(
-            &notebook_id,
-        ));
-        let remote_blob_names: std::collections::BTreeSet<String> =
-            remote_blobs.keys().cloned().collect();
-        local_blobs != remote_blob_names
+        notebook_differs(&index, &package_path, &notebook_id)
     }
 
     /// 同步一本筆記本的 oplog 與媒體。
@@ -985,7 +1003,14 @@ impl FfiSyncSession {
         }
         // 媒體接在 oplog 之後。順序很重要：oplog 裡的 AddImage 會指向一個
         // blob id，媒體還沒到的話，那一頁會有一個指向不存在檔案的圖片區塊。
-        let media = sync_notebook_media(&self.drive, &mut index, &package_path, &notebook_id);
+        let mut seen = self.seen_sizes.lock().unwrap();
+        let media = sync_notebook_media(
+            &self.drive,
+            &mut index,
+            &mut seen,
+            &package_path,
+            &notebook_id,
+        );
         FfiNotebookSyncResult {
             ok: media.ok,
             uploaded: ops.uploaded + media.uploaded,
@@ -1030,7 +1055,14 @@ impl FfiSyncSession {
         }
         let media = {
             let mut index = self.index.lock().unwrap();
-            sync_notebook_media(&self.drive, &mut index, &package_path, &notebook_id)
+            let mut seen = self.seen_sizes.lock().unwrap();
+            sync_notebook_media(
+                &self.drive,
+                &mut index,
+                &mut seen,
+                &package_path,
+                &notebook_id,
+            )
         };
         FfiNotebookSyncResult {
             ok: media.ok,
@@ -1039,6 +1071,16 @@ impl FfiSyncSession {
             error: media.error,
             needs_reauth: media.needs_reauth,
         }
+    }
+
+    /// 同步狀態快照（P4「同步醫生」）。**零 HTTP。**
+    pub fn diagnose(
+        &self,
+        package_paths: Vec<String>,
+        notebook_ids: Vec<String>,
+    ) -> FfiSyncDiagnostics {
+        let index = self.index.lock().unwrap();
+        diagnose_index(&index, package_paths, notebook_ids)
     }
 
     /// 中繼資料（設定 + 筆記本索引）。
@@ -1078,6 +1120,81 @@ impl FfiSyncSession {
             needs_reauth: false,
         }
     }
+}
+
+/// 同步狀態快照（P4「同步醫生」）。**零 HTTP、也不需要權杖。**
+///
+/// 診斷畫面在**網路不通的時候最需要**，所以它不能依賴一個要先去換權杖
+/// 的工作階段。這裡吃的是平台存下來的快照 JSON。
+///
+/// `package_paths` 與 `notebook_ids` 一一對應。長度不同時以較短的為準 ——
+/// 診斷畫面不該因為呼叫端少傳一個而整個掛掉。
+#[uniffi::export]
+pub fn sync_diagnose(
+    remote_index_json: String,
+    package_paths: Vec<String>,
+    notebook_ids: Vec<String>,
+) -> FfiSyncDiagnostics {
+    let index = RemoteIndex::from_json(&remote_index_json);
+    diagnose_index(&index, package_paths, notebook_ids)
+}
+
+fn diagnose_index(
+    index: &RemoteIndex,
+    package_paths: Vec<String>,
+    notebook_ids: Vec<String>,
+) -> FfiSyncDiagnostics {
+    let pairs: Vec<(String, String)> = package_paths.into_iter().zip(notebook_ids).collect();
+    let checked = pairs.len() as u32;
+    let pending: Vec<String> = pairs
+        .into_iter()
+        .filter(|(path, id)| notebook_differs(index, path, id))
+        .map(|(_, id)| id)
+        .collect();
+    FfiSyncDiagnostics {
+        has_cursor: !index.needs_rebuild(),
+        tracked_files: index.len() as u32,
+        pending_notebooks: pending,
+        checked_notebooks: checked,
+    }
+}
+
+/// 這本筆記本與雲端快照有沒有差異。**完全在本機算。**
+///
+/// 快照還沒建立時一律回 true —— 不知道就別跳過。
+fn notebook_differs(index: &RemoteIndex, package_path: &str, notebook_id: &str) -> bool {
+    if index.needs_rebuild() {
+        return true;
+    }
+    let Ok(package) = padnote_storage::NotebookPackage::open(std::path::Path::new(package_path))
+    else {
+        return true;
+    };
+    if differs(
+        &package.doc_op_files().unwrap_or_default(),
+        &index.entries_under(&notebook_ops_prefix(notebook_id)),
+    ) {
+        return true;
+    }
+    if differs(
+        &package.audio_files().unwrap_or_default(),
+        &index.entries_under(&padnote_sync::paths::notebook_audio_prefix(notebook_id)),
+    ) {
+        return true;
+    }
+    // blob 是內容定址的，只看名字在不在。
+    let local_blobs: std::collections::BTreeSet<String> = package
+        .blobs()
+        .list()
+        .unwrap_or_default()
+        .iter()
+        .map(|id| padnote_sync::paths::canonical_name(&id.to_string()))
+        .collect();
+    let remote_blobs: std::collections::BTreeSet<String> = index
+        .entries_under(&padnote_sync::paths::notebook_blobs_prefix(notebook_id))
+        .into_keys()
+        .collect();
+    local_blobs != remote_blobs
 }
 
 fn refresh_failed(error: SyncError) -> FfiRefreshResult {
@@ -1406,6 +1523,49 @@ mod tests {
                 (id, root)
             })
             .collect()
+    }
+
+    #[test]
+    fn the_doctor_reports_which_notebooks_still_have_work() {
+        // 出問題時能看到的只有一串日誌。日誌答得出「發生過什麼」，
+        // 答不出「現在是什麼狀態」—— 而那才是下一步要根據的東西。
+        use padnote_doc::ops::DocOp;
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+        let books = many_packages("doctor", 3);
+
+        let session = FfiSyncSession::create(http, String::new());
+        let before = session.diagnose(
+            books.iter().map(|(_, r)| r.to_string_lossy().into()).collect(),
+            books.iter().map(|(id, _)| id.clone()).collect(),
+        );
+        assert!(!before.has_cursor, "還沒 refresh 就不該宣稱有游標");
+        assert_eq!(before.pending_notebooks.len(), 3, "不知道狀態時一律當成要同步");
+
+        assert!(session.refresh().ok);
+        for (id, root) in &books {
+            assert!(session.sync_notebook(root.to_string_lossy().into(), id.clone(), 0xAA).ok);
+        }
+        session.refresh();
+
+        let after = session.diagnose(
+            books.iter().map(|(_, r)| r.to_string_lossy().into()).collect(),
+            books.iter().map(|(id, _)| id.clone()).collect(),
+        );
+        assert!(after.has_cursor);
+        assert!(after.tracked_files > 0);
+        assert_eq!(after.checked_notebooks, 3);
+        assert!(after.pending_notebooks.is_empty(), "全部同步過了還說有待辦");
+
+        // 再改一本，它就該單獨出現在待辦裡。
+        let pkg = padnote_storage::NotebookPackage::open(&books[1].1).unwrap();
+        pkg.append_doc_ops(5, 0xAA, &[DocOp::SetTitle { title: "改過".into() }])
+            .unwrap();
+        let changed = session.diagnose(
+            books.iter().map(|(_, r)| r.to_string_lossy().into()).collect(),
+            books.iter().map(|(id, _)| id.clone()).collect(),
+        );
+        assert_eq!(changed.pending_notebooks, vec![books[1].0.clone()]);
     }
 
     #[test]
@@ -2076,6 +2236,47 @@ mod tests {
         assert!(again.ok);
         assert_eq!(again.uploaded, 0, "沒有變動就不該重傳");
         assert_eq!(again.downloaded, 0, "自己剛傳的不該再抓回來");
+    }
+
+    #[test]
+    fn a_recording_still_being_written_is_not_re_uploaded_every_round() {
+        // 錄音檔在錄製中會一直變長，而每次上傳都是整檔重傳。
+        // P2 之後前景每 12 秒拉一次 —— 不節流的話，一段 30 MB 的錄音
+        // 會在錄製期間被整檔重傳好幾十次。
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+        let root = tmp_package("media-throttle", 0xAA);
+        let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        let name = "33333333-3333-3333-3333-333333333333.opus";
+        let path: String = root.to_string_lossy().into();
+
+        let session = FfiSyncSession::create(http, String::new());
+        assert!(session.refresh().ok);
+
+        pkg.write_audio_file(name, &vec![0u8; 1000]).unwrap();
+        assert_eq!(
+            session.sync_notebook(path.clone(), "nb1".into(), 0xAA).uploaded,
+            1,
+            "第一次一定要傳"
+        );
+
+        // 還在錄：每一輪都長一點點，但都不到門檻。
+        for extra in 1..=3usize {
+            pkg.write_audio_file(name, &vec![0u8; 1000 + extra * 100]).unwrap();
+            assert_eq!(
+                session.sync_notebook(path.clone(), "nb1".into(), 0xAA).uploaded,
+                0,
+                "錄製中的小幅成長不該整檔重傳"
+            );
+        }
+
+        // 錄完了：長度穩定下來，這一輪一定要傳 ——
+        // 只看門檻的話，最後那一小段永遠傳不出去，雲端那份會少掉結尾。
+        assert_eq!(
+            session.sync_notebook(path.clone(), "nb1".into(), 0xAA).uploaded,
+            1,
+            "長度穩定＝錄完了，一定要傳"
+        );
     }
 
     #[test]

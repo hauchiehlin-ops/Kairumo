@@ -37,9 +37,20 @@ public final class AccountSyncStore: ObservableObject {
     /// 它不是機密，也不需要跨安裝存活。
     public let deviceId: String
 
-    private let indexKey = "kairumo.sync.index.v1"
+    private static let indexKey = "kairumo.sync.index.v1"
+    private let indexKey = AccountSyncStore.indexKey
     private let settingsKey = "kairumo.sync.settings.v1"
     private let deviceKey = "kairumo.sync.deviceId.v1"
+
+    /// 索引 JSON 的**非隔離**快照。
+    ///
+    /// `indexJSON` 是 `@MainActor` 的發布狀態，背景執行緒讀不到它 ——
+    /// 而讀套件、算縮圖這些事本來就不該在主執行緒做。
+    /// 落盤的那一份永遠與記憶體同步（`setIndex` 兩個一起寫），
+    /// 所以從 UserDefaults 讀是安全的。
+    public nonisolated static func indexJSONSnapshot() -> String {
+        UserDefaults.standard.string(forKey: indexKey) ?? ""
+    }
 
     private init() {
         let defaults = UserDefaults.standard
@@ -183,6 +194,46 @@ public final class AccountSyncStore: ObservableObject {
     /// 合併另一台裝置（或雲端）的設定。
     public func mergeSettings(_ remoteJSON: String) {
         setSettings(syncMergeSettings(mineJson: settingsJSON, theirsJson: remoteJSON))
+    }
+
+    // MARK: - 雲端快照（P1）
+
+    /// 雲端內容的本機快照（`RemoteIndex` 的 JSON）。
+    ///
+    /// # 為什麼不放 UserDefaults
+    ///
+    /// 它會長到幾百 KB（每個雲端檔案一筆）。UserDefaults 是每次啟動整份
+    /// 讀進記憶體的 plist，塞大東西進去會拖慢冷啟動。
+    ///
+    /// # 為什麼要綁帳號
+    ///
+    /// 快照裡有 Drive 的變更游標與 file id。換一個 Google 帳號之後那些
+    /// 全部失效，而失效的游標不會報錯 —— 它只會回一堆對不上的變更，
+    /// 症狀是「同步成功，但什麼也沒發生」。
+    public func remoteIndexJSON(account: String) -> String {
+        (try? String(contentsOf: remoteIndexURL(account: account), encoding: .utf8)) ?? ""
+    }
+
+    public func saveRemoteIndexJSON(_ json: String, account: String) {
+        let url = remoteIndexURL(account: account)
+        try? FileManager.default.createDirectory(
+            at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? json.write(to: url, atomically: true, encoding: .utf8)
+    }
+
+    /// 快照壞掉或帳號換了就丟掉。下一輪會自己重建 —— 那是唯一的慢路徑，
+    /// 而且自我修復。
+    public func discardRemoteIndex(account: String) {
+        try? FileManager.default.removeItem(at: remoteIndexURL(account: account))
+    }
+
+    private func remoteIndexURL(account: String) -> URL {
+        let safe = account.isEmpty
+            ? "default"
+            : account.lowercased().map { $0.isLetter || $0.isNumber ? String($0) : "-" }.joined()
+        let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Kairumo/sync", isDirectory: true)
+        return base.appendingPathComponent("remote-index-\(safe).json")
     }
 
     // MARK: - 內部

@@ -7,6 +7,29 @@
 
 ## 🔴 被硬體或資料卡住（程式已就緒）
 
+### H-SYNC. 雲端同步大修的實機驗證（P0–P4 已全部實作）
+- **卡在**：需要**兩台真實裝置**（至少一台 Apple + 一台 Android）登入同一個
+  Google 帳號，而且要在真實網路上跑。模擬器與假 Drive 測不出配額、
+  背景喚醒與弱網行為。
+- **已就緒**：
+  - 核心：`padnote_sync::paths` / `atomic` / `RemoteIndex` / `SyncScheduler`，
+    `FfiSyncSession`（changes.list 增量）、`sync_diagnose()`。
+  - Apple：`AutoSyncController`（前景/背景/網路/登入/存檔去抖動觸發）、
+    同步狀態卡。
+  - Android：`AutoSync`（同一組觸發）、`SyncDoctorCard`。
+  - 回歸測試：20 本筆記無變動的一輪 = **1 次 HTTP**（`ffi_gdrive` 測試）。
+- **要做（依序）**：
+  1. A 裝置寫一筆 → 停手 → 量 B 裝置看到它的秒數。目標 ≤15 秒。
+  2. 首次登入的全量重建耗時（筆記本數 × 檔案數），確認不會撞 120/180 秒逾時。
+  3. 錄一段 10 分鐘的音，確認錄製期間沒有整檔重傳（看同步日誌的上傳次數），
+     且停止後**完整**同步過去。
+  4. 飛航模式開關一次，確認網路恢復會自己補一輪。
+  5. 兩台同時編輯同一本，確認收斂且沒有重複筆畫。
+  6. Android 進 Doze 之後的行為（目前只有前景週期，**尚未接 WorkManager**）。
+- **判定**：1 通過且 3、5 沒有資料異常 = 這次大修達到「即時、迅速、正確」。
+- **已知未完成**：iOS 的 `BGProcessingTask` 與 Android 的 `WorkManager`
+  背景排程**還沒接**。目前 App 在背景時不會同步，只在進前景與進背景那一刻各推一次。
+
 ### H0. iOS 實機驗證（`--ios-install` 那條路尚未實測）
 - **卡在**：目前沒有任何實體 iPhone / iPad 連著這台 Mac。
   帳號裡也只登錄了一支 iPhone 16 Pro Max，**沒有任何 iPad**。

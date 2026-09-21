@@ -15,6 +15,7 @@ pub mod oplog;
 pub mod paths;
 pub mod provider;
 pub mod remote_index;
+pub mod scheduler;
 pub mod settings;
 
 pub use engine::{PulledBatch, SyncCursors, SyncEngine};
@@ -29,4 +30,5 @@ pub use paths::{
 };
 pub use provider::{CloudProvider, RemoteEntry, SyncError};
 pub use remote_index::{RemoteFile, RemoteIndex};
+pub use scheduler::{SyncOutcome, SyncScheduler, SyncTrigger};
 pub use settings::{DefaultPen, DeviceSettings, Identity, SETTINGS_PATH, Stamped, SyncedSettings};

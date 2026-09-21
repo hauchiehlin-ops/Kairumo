@@ -5,15 +5,8 @@ import com.kairumo.padnote.oauth.DriveHttpClient
 import com.kairumo.padnote.oauth.GoogleAuth
 import com.kairumo.padnote.sync.SyncLogger
 import com.kairumo.padnote.sync.SyncSource
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
-import kotlinx.coroutines.runBlocking
 import java.io.File
 import uniffi.padnote_core.FfiCloudSyncResult
-import uniffi.padnote_core.gdriveSyncMetadata
-import uniffi.padnote_core.gdriveSyncMedia
-import uniffi.padnote_core.gdriveSyncNotebook
 
 /**
  * 跑一輪雲端同步（Android）。
@@ -56,18 +49,46 @@ object CloudSync {
             .optJSONObject("user")
             ?.optString("emailAddress")
             ?.takeIf { it.isNotEmpty() }
+            ?.also { AccountSyncStore.setLastAccount(context, it) }
     }.getOrNull()
 
-    fun runOnce(context: Context): FfiCloudSyncResult? {
-        // 這裡面可能會先去更新權杖，所以也是網路 I/O。
-        val token = GoogleAuth.validAccessToken(context) ?: return null
+    // ── P1：帶著雲端快照的工作階段 ────────────────────────────────
 
-        val result = gdriveSyncMetadata(
-            DriveHttpClient(token),
+    /**
+     * 開一輪同步。回傳 null 表示沒登入。
+     *
+     * 工作階段握著一份 `RemoteIndex`：一次 `changes.list` 更新它，
+     * 之後「這本要不要碰」完全在本機算，一個位元組都不傳。
+     *
+     * **會阻塞網路 I/O（取權杖），要在背景執行緒呼叫。**
+     */
+    fun makeSession(context: Context): uniffi.padnote_core.FfiSyncSession? {
+        val token = GoogleAuth.validAccessToken(context) ?: return null
+        val account = AccountSyncStore.lastAccount(context)
+        val saved = AccountSyncStore.remoteIndexJson(context, account)
+        return uniffi.padnote_core.FfiSyncSession.create(DriveHttpClient(token), saved)
+    }
+
+    /** 把工作階段的快照存回磁碟。**每輪同步結束都要做。** */
+    fun persist(context: Context, session: uniffi.padnote_core.FfiSyncSession) {
+        AccountSyncStore.saveRemoteIndexJson(
+            context, session.indexJson(), AccountSyncStore.lastAccount(context)
+        )
+    }
+
+    /**
+     * 中繼資料（設定、筆記本清單、刪除墓碑）。
+     *
+     * **會阻塞網路 I/O，要在背景執行緒呼叫。**
+     */
+    fun syncMetadata(
+        context: Context,
+        session: uniffi.padnote_core.FfiSyncSession
+    ): FfiCloudSyncResult? {
+        val result = session.syncMetadata(
             AccountSyncStore.settingsJson(context),
             AccountSyncStore.indexJson(context)
         )
-
         if (result.ok) {
             // 合併結果要落地。只更新畫面不寫檔的話，重開 App 就回到同步前。
             AccountSyncStore.mergeSettings(context, result.settingsJson)
@@ -81,31 +102,35 @@ object CloudSync {
     }
 
     /**
-     * 同步一本筆記本的內容。**會阻塞網路 I/O，要在背景執行緒呼叫。**
+     * 只同步中繼資料的一輪（給不需要碰內容的呼叫端）。
+     *
+     * **會阻塞網路 I/O，要在背景執行緒呼叫。** 回傳 null 表示沒登入。
+     */
+    fun runOnce(context: Context): FfiCloudSyncResult? {
+        val session = makeSession(context) ?: return null
+        val result = syncMetadata(context, session)
+        persist(context, session)
+        return result
+    }
+
+    /**
+     * 同步一本筆記本的內容與媒體。**會阻塞網路 I/O，要在背景執行緒呼叫。**
      *
      * 回傳 `downloaded > 0` 時，**呼叫端必須重開這本筆記的 session** ——
      * oplog 檔已經寫進套件，但記憶體裡那份還是同步前的狀態，
      * 畫面上看不到任何變化，使用者會以為同步沒作用。
      */
-    fun syncNotebook(context: Context, notebookId: String): uniffi.padnote_core.FfiNotebookSyncResult? {
-        val token = GoogleAuth.validAccessToken(context) ?: return null
+    fun syncNotebook(
+        context: Context,
+        notebookId: String,
+        deviceId: UInt = 0u
+    ): uniffi.padnote_core.FfiNotebookSyncResult? {
         val path = File(NotebookLibrary.directory(context), "$notebookId.padnote")
         if (!path.exists()) return null
-        val http = com.kairumo.padnote.oauth.DriveHttpClient(token)
-        val ops = gdriveSyncNotebook(http, path.absolutePath, notebookId)
-        if (!ops.ok) return ops
-
-        // 媒體接在 oplog 之後。順序很重要：oplog 裡的 AddImage 會指向一個
-        // blob id，媒體還沒到的話，那一頁會有一個指向不存在檔案的圖片區塊。
-        // 反過來先傳媒體只是多佔一點空間，不會讓畫面壞掉。
-        val media = gdriveSyncMedia(http, path.absolutePath, notebookId)
-        return uniffi.padnote_core.FfiNotebookSyncResult(
-            ok = media.ok,
-            uploaded = ops.uploaded + media.uploaded,
-            downloaded = ops.downloaded + media.downloaded,
-            error = media.error,
-            needsReauth = media.needsReauth
-        )
+        val session = makeSession(context) ?: return null
+        val result = session.syncNotebook(path.absolutePath, notebookId, deviceId)
+        persist(context, session)
+        return result
     }
 
     /**
@@ -157,13 +182,41 @@ object CloudSync {
         }
 
 
-        val meta = runOnce(context)
+        // ── 一次 changes.list，然後只碰真的有差異的筆記本 ──────────
+        //
+        // 舊流程是「每一本筆記都打一次 files.list」——20 本筆記 20 次往返，
+        // 而其中 19 次的答案是「沒事」。使用者要的「沒變動的就不要花時間
+        // 去動它」在那個結構下做不到：要知道有沒有變動就得先問，
+        // 而問本身就是主要成本。
+        val session = makeSession(context)
+        if (session == null) {
+            SyncLogger.log("無法取得有效權杖，Google Drive 同步中止", SyncSource.GOOGLE_DRIVE)
+            return FullResult(null, 0, 0, emptyList())
+        }
+        val refreshed = session.refresh()
+        if (!refreshed.ok) {
+            SyncLogger.log("雲端快照更新失敗：${refreshed.error}", SyncSource.GOOGLE_DRIVE)
+            if (refreshed.needsReauth) GoogleAuth.signOutLocally(context)
+            return FullResult(null, 0, 0, emptyList())
+        }
+        SyncLogger.log(
+            if (refreshed.fullRebuild) {
+                "雲端快照重建完成（${refreshed.trackedFiles} 個檔案）"
+            } else {
+                "雲端變動 ${refreshed.changed} 筆，快照共 ${refreshed.trackedFiles} 個檔案"
+            },
+            SyncSource.GOOGLE_DRIVE
+        )
+
+        val meta = syncMetadata(context, session)
         if (meta == null) {
             SyncLogger.log("無法取得有效權杖，Google Drive 同步中止", SyncSource.GOOGLE_DRIVE)
+            persist(context, session)
             return FullResult(null, 0, 0, emptyList())
         }
         if (!meta.ok) {
             SyncLogger.log("中繼資料同步失敗：${meta.error}", SyncSource.GOOGLE_DRIVE)
+            persist(context, session)
             return FullResult(meta, 0, 0, emptyList())
         }
 
@@ -179,48 +232,52 @@ object CloudSync {
 
         for (pkg in allDiskPackages) {
             val id = pkg.name.removeSuffix(".padnote")
-            // 判定 1：本機現存活躍的筆記本擁有最高本機權威，納入雙軌同步排程（絕不刪除）
+            // 判定 1：本機現存活躍的筆記本擁有最高本機權威（絕不刪除）
             if (activeLocalIds.contains(id)) {
                 deletedNotebookIds.remove(id)
                 validPackages.add(pkg)
                 continue
             }
-            // 判定 2：若為明確已刪除的筆記本（本機墓碑中），立即清理實體磁碟殘留套件
-            if (deletedNotebookIds.contains(id)) {
+            // 判定 2：明確已刪除（本機墓碑中）⇒ 清理磁碟殘留
+            // 判定 3：本機沒有、雲端也不再活躍 ⇒ 孤立過期套件
+            // 注意：絕不在此呼叫 recordDeletion 產生虛假雲端墓碑！
+            if (deletedNotebookIds.contains(id) || !cloudLiveIds.contains(id)) {
                 pkg.deleteRecursively()
                 cleanedCount++
-                continue
-            }
-            // 判定 3：若不在本機現存筆記中，且雲端也不再活躍，屬於孤立過期套件，清理實體檔案
-            // 注意：絕不在此呼叫 recordDeletion 產生虛假雲端墓碑！磁碟清理僅為本地快取回收。
-            if (!cloudLiveIds.contains(id)) {
-                pkg.deleteRecursively()
-                cleanedCount++
-                continue
             }
         }
 
-        SyncLogger.log("📊【同步前核實】本機現存: ${activeLocalIds.size} 本，清理/排除無效套件: $cleanedCount 本，待同步活躍筆記: ${validPackages.size} 本", SyncSource.GOOGLE_DRIVE)
-        SyncLogger.log("雲端元資料同步完成，開始逐本比對套件檔案...", SyncSource.GOOGLE_DRIVE)
+        // 只碰真的有差異的那幾本。**這一行是整個改善的重點。**
+        val pending = validPackages.filter {
+            session.notebookNeedsSync(it.absolutePath, it.name.removeSuffix(".padnote"))
+        }
+        SyncLogger.log(
+            "📊【同步前核實】本機 ${activeLocalIds.size} 本，清理 $cleanedCount 本，" +
+                "有差異待同步 ${pending.size} 本（跳過 ${validPackages.size - pending.size} 本）",
+            SyncSource.GOOGLE_DRIVE
+        )
 
         var uploaded = 0
         var downloaded = 0
         val changed = mutableListOf<String>()
 
-        // ── 雙軌排程：前台極速軌 + 背景並行佇列 ──────────────
-        val foreground = validPackages.filter { it.name.removeSuffix(".padnote") == activeNotebookId }
-        val background = validPackages.filter { it.name.removeSuffix(".padnote") != activeNotebookId }
+        // 前台作用中的那一本排最前面：使用者正在看的內容要先到。
+        val ordered = pending.sortedBy { it.name.removeSuffix(".padnote") != activeNotebookId }
 
-        // 前台極速軌：優先、立即執行
-        for (pkg in foreground) {
+        for (pkg in ordered) {
             val id = pkg.name.removeSuffix(".padnote")
-            SyncLogger.log("⚡ 前台極速同步：$id", SyncSource.GOOGLE_DRIVE)
-            val result = syncNotebook(context, id)
-            if (result != null && result.ok) {
+            val result = runCatching {
+                session.syncNotebook(pkg.absolutePath, id, deviceId)
+            }.getOrNull()
+            if (result == null) {
+                SyncLogger.log("筆記本 $id 同步中斷", SyncSource.GOOGLE_DRIVE)
+                continue
+            }
+            if (result.ok) {
                 uploaded += result.uploaded.toInt()
                 downloaded += result.downloaded.toInt()
                 if (result.downloaded > 0u) changed += id
-            } else if (result != null) {
+            } else {
                 SyncLogger.log("筆記本 $id 同步失敗：${result.error}", SyncSource.GOOGLE_DRIVE)
                 if (result.needsReauth) {
                     GoogleAuth.signOutLocally(context)
@@ -229,47 +286,14 @@ object CloudSync {
             }
         }
 
-        // 背景並行佇列：分批（2 路並發，兼顧速度與連線穩定度）執行
-        val concurrencyLimit = 2
-        var backgroundQueue = background
-        while (backgroundQueue.isNotEmpty()) {
-            val batch = backgroundQueue.take(concurrencyLimit)
-            backgroundQueue = backgroundQueue.drop(batch.size)
-
-            val batchResults = runBlocking(Dispatchers.IO) {
-                batch.map { pkg ->
-                    async {
-                        val id = pkg.name.removeSuffix(".padnote")
-                        val res = syncNotebook(context, id)
-                        Triple(id, res, res?.error)
-                    }
-                }.awaitAll()
-            }
-
-            var shouldBreak = false
-            for ((id, res, err) in batchResults) {
-                if (err != null) {
-                    SyncLogger.log("筆記本 $id 背景同步失敗：$err", SyncSource.GOOGLE_DRIVE)
-                }
-                if (res != null) {
-                    uploaded += res.uploaded.toInt()
-                    downloaded += res.downloaded.toInt()
-                    if (res.downloaded > 0u) changed += id
-                    if (res.needsReauth) {
-                        GoogleAuth.signOutLocally(context)
-                        shouldBreak = true
-                        break
-                    }
-                }
-            }
-            if (shouldBreak) break
-        }
-
         // 別台裝置新建的筆記本整本抓下來（排除已被刪除的筆記本）
-        val pulled = pullNewNotebooks(context, meta.indexJson, activeLocalIds, deletedNotebookIds)
+        val pulled = pullNewNotebooks(context, session, meta.indexJson, activeLocalIds, deletedNotebookIds)
         changed += pulled
         downloaded += pulled.size
 
+        // 快照要落地。不存的話，下次開 App 又要全量重建一次 ——
+        // 那是唯一的慢路徑，不該每次啟動都走。
+        persist(context, session)
         SyncLogger.log("步驟 2 完成。上傳: $uploaded, 下載: $downloaded, 新增: ${pulled.size}", SyncSource.GOOGLE_DRIVE)
         SyncLogger.log("【Google Drive 同步】全部完成。", SyncSource.GOOGLE_DRIVE)
 
@@ -284,6 +308,7 @@ object CloudSync {
      */
     private fun pullNewNotebooks(
         context: Context,
+        session: uniffi.padnote_core.FfiSyncSession,
         mergedIndexJson: String,
         activeLocalIds: Set<String> = emptySet(),
         deletedNotebookIds: Set<String> = emptySet()
@@ -304,10 +329,8 @@ object CloudSync {
             if (path.exists()) continue
             // 權杖每一本都重新取一次：整批抓下來可能跨過存取權杖的有效期，
             // 用同一個舊的會在中途開始 401。
-            val token = GoogleAuth.validAccessToken(context) ?: break
             SyncLogger.log("發現新筆記「${item.title}」(${item.id})，開始自雲端下載...", SyncSource.GOOGLE_DRIVE)
-            val result = uniffi.padnote_core.gdriveCloneNotebook(
-                DriveHttpClient(token),
+            val result = session.cloneNotebook(
                 path.absolutePath,
                 item.id,
                 item.title,

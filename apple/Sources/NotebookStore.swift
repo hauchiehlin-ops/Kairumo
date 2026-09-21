@@ -1389,7 +1389,14 @@ public final class NotebookStore: ObservableObject {
                 if self.needsAnotherWrite {
                     self.needsAnotherWrite = false
                     self.persistData()
+                    return
                 }
+                // 落盤完成才通知同步。**順序不能顛倒**：先通知的話，
+                // 同步可能讀到還沒寫完的檔案。
+                //
+                // 這是去抖動的觸發 —— 使用者還在寫字時每一筆都推只是浪費電，
+                // 排程器會等他停手 1.5 秒。
+                AutoSyncController.shared.noteLocalEdit()
             }
         }
     }
@@ -1573,7 +1580,20 @@ public final class NotebookStore: ObservableObject {
         markDirtyAndPersist()
     }
 
-    /// 從外部 .padnote 封裝檔匯入整本筆記本
+    /// 從外部 `.padnote` 封裝檔匯入整本筆記本。
+    ///
+    /// # 解壓縮走核心，不走 ZIPFoundation
+    ///
+    /// 套件的壓縮格式是**檔案格式的一部分**（`format-spec.md` §2），
+    /// 兩個平台必須解得出一模一樣的東西。各自用平台的 zip 函式庫的話，
+    /// 路徑分隔符、大小寫與 Unicode 正規化的處理都不一樣 ——
+    /// 而症狀是「在 Android 匯出的筆記，在 iPad 上打開少了幾頁」。
+    /// 核心的 `extract_notebook` 兩邊共用，Android 走的是同一支。
+    ///
+    /// # 內容從套件本身讀，不從另一份中繼資料
+    ///
+    /// 標題、頁數、筆畫全部在套件裡（manifest + oplog）。另外維護一份
+    /// `meta.json` 只會多一個會漂移的真相來源。
     @discardableResult
     public func importNotebookArchive(from archiveUrl: URL) throws -> NotebookDocument {
         let isSecurityScoped = archiveUrl.startAccessingSecurityScopedResource()
@@ -1583,60 +1603,33 @@ public final class NotebookStore: ObservableObject {
             }
         }
 
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
-        try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
-        defer { try? FileManager.default.removeItem(at: tempDir) }
+        let fm = FileManager.default
+        let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
+        defer { try? fm.removeItem(at: tempDir) }
 
-        let pkgDir = tempDir.appendingPathComponent("notebook")
-        try FileManager.default.createDirectory(at: pkgDir, withIntermediateDirectories: true)
-        try FileManager.default.unzipItem(at: archiveUrl, to: pkgDir)
+        let pkgDir = tempDir.appendingPathComponent("notebook.padnote")
+        try extractNotebook(archiveFile: archiveUrl.path, outDir: pkgDir.path)
 
-        let metaUrl = pkgDir.appendingPathComponent("meta.json")
-        guard FileManager.default.fileExists(atPath: metaUrl.path) else {
-            throw NSError(domain: "NotebookStore", code: 1, userInfo: [NSLocalizedDescriptionKey: "無效的筆記本封裝：缺少 meta.json"])
-        }
-        let metaData = try Data(contentsOf: metaUrl)
-        let meta = try JSONDecoder().decode(NotebookMeta.self, from: metaData)
-        let id = meta.id
+        // 匯入一律給新的 id。沿用檔案裡那個的話，把自己匯出的檔再匯入
+        // 就會蓋掉原本那一本 —— 使用者以為多一份副本，實際是少一本。
+        let newId = UUID().uuidString.lowercased()
+        let imported = try NotebookPackageBridge.importDocument(
+            fromPackageAt: pkgDir, deviceId: NotebookMigration.deviceId, documentId: newId)
 
-        // 讀取繪圖向量資料
-        var drawings: [Data] = []
-        let drawingsDir = pkgDir.appendingPathComponent("Drawings")
-        if FileManager.default.fileExists(atPath: drawingsDir.path) {
-            let files = (try? FileManager.default.contentsOfDirectory(atPath: drawingsDir.path)) ?? []
-            for file in files.sorted() where file.hasSuffix(".drawing") {
-                if let d = try? Data(contentsOf: drawingsDir.appendingPathComponent(file)) {
-                    drawings.append(d)
-                }
-            }
-        }
+        // 套件要留下來，否則這本筆記下次開啟是空的 —— 內容在套件裡，
+        // `NotebookDocument` 只是畫面用的投影。
+        let destination = corePackagesDirectory.appendingPathComponent("\(newId).padnote")
+        try? fm.createDirectory(at: corePackagesDirectory, withIntermediateDirectories: true)
+        try? fm.removeItem(at: destination)
+        try fm.moveItem(at: pkgDir, to: destination)
 
-        // 讀取附件
-        var attachments: [NoteImageAttachment] = []
-        let attachmentsDir = pkgDir.appendingPathComponent("Attachments")
-        if FileManager.default.fileExists(atPath: attachmentsDir.path) {
-            let files = (try? FileManager.default.contentsOfDirectory(atPath: attachmentsDir.path)) ?? []
-            for file in files {
-                let src = attachmentsDir.appendingPathComponent(file)
-                let dst = syncAttachmentsDirectory.appendingPathComponent(file)
-                if !FileManager.default.fileExists(atPath: dst.path) {
-                    try? FileManager.default.copyItem(at: src, to: dst)
-                }
-                attachments.append(NoteImageAttachment(fileName: file))
-            }
-        }
-
-        let doc = NotebookDocument(
-            id: id,
-            title: meta.title,
-            createdAt: meta.createdAt,
-            lastModifiedDate: meta.lastModifiedDate,
-            pageCount: max(1, drawings.count),
-            pagesData: drawings,
-            attachments: attachments
-        )
-        upsertNotebook(doc)
-        return doc
+        // `importDocument` 已經用 `documentId` 建好文件，id 是常數。
+        let document = imported.document
+        upsertNotebook(document)
+        AccountSyncStore.shared.record(
+            id: newId, title: document.title, parentId: document.folderId, isFolder: false)
+        return document
     }
 
     public func deleteNotebook(id: String) {

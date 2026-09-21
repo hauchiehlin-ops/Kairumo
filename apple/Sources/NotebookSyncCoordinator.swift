@@ -328,10 +328,41 @@ enum NotebookSyncCoordinator {
             return report
         }
 
-        // ── 2. 中繼資料，再逐本搬內容 ───────────────────────
-        SyncLogger.logAsync("步驟 2：同步元資料與檔案 (連線中)...", source: .googleDrive)
-        guard let meta = await CloudSync.runOnce() else {
+        // ── 2. 一次 changes.list，然後只碰真的有差異的筆記本 ──────
+        //
+        // 舊流程是「每一本筆記都打一次 files.list」——20 本筆記 20 次往返，
+        // 而其中 19 次的答案是「沒事」。使用者要的「沒變動的就不要花時間
+        // 去動它」在那個結構下做不到：要知道有沒有變動就得先問，
+        // 而問本身就是主要成本。
+        //
+        // 現在：一次 refresh() 把雲端變動拉進本機快照，之後
+        // notebookNeedsSync() 完全在本機算，一個位元組都不傳。
+        SyncLogger.logAsync("步驟 2：更新雲端快照（changes.list）...", source: .googleDrive)
+        guard let session = await CloudSync.makeSession() else {
+            SyncLogger.logAsync("無法取得 Google Drive 工作階段！", source: .googleDrive)
+            return nil
+        }
+
+        let refreshed = await CloudSync.refresh(session)
+        guard let refreshed, refreshed.ok else {
+            let message = refreshed?.error ?? "雲端快照更新逾時"
+            SyncLogger.logAsync("雲端快照更新失敗：\(message)", source: .googleDrive)
+            report.failures["cloud"] = message
+            if refreshed?.needsReauth == true {
+                await GoogleAuth.shared.signOut()
+            }
+            return report
+        }
+        SyncLogger.logAsync(
+            refreshed.fullRebuild
+                ? "雲端快照重建完成（\(refreshed.trackedFiles) 個檔案）"
+                : "雲端變動 \(refreshed.changed) 筆，快照共 \(refreshed.trackedFiles) 個檔案",
+            source: .googleDrive)
+
+        // 中繼資料（設定、筆記本清單、刪除墓碑）。
+        guard let meta = await CloudSync.syncMetadata(session) else {
             SyncLogger.logAsync("無法取得 Google Drive 索引！", source: .googleDrive)
+            await CloudSync.persist(session)
             return nil
         }
         guard meta.ok else {
@@ -344,69 +375,68 @@ enum NotebookSyncCoordinator {
             if meta.needsReauth {
                 await GoogleAuth.shared.signOut()
             }
+            await CloudSync.persist(session)
             return report
         }
 
         if isCancelled || Task.isCancelled {
+            await CloudSync.persist(session)
             SyncLogger.logAsync("【Google Drive 同步】已手動中斷。", source: .googleDrive)
             return report
         }
 
         // ── 同步前即時核實：本機現存 vs. 雲端索引差異樣態 ──────────────
-        let deletedNotebookIds = Set(AccountSyncStore.shared.deletedNotebookIds.map { $0.lowercased() })
-        store.syncPurgeDeletedNotebooks(deletedNotebookIds)
-
         let activeLocalIds = Set(store.syncNotebooks.map { $0.id.lowercased() })
+        var deletedNotebookIds = Set(AccountSyncStore.shared.deletedNotebookIds.map { $0.lowercased() })
         let cloudLiveIds = Set(syncLiveNotebooks(indexJson: meta.indexJson).map { $0.id.lowercased() })
-        
+
         let allDiskPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
             .filter { $0.pathExtension == "padnote" } ?? []
-        
+
         var packages: [URL] = []
         var cleanedCount = 0
 
         for pkg in allDiskPackages {
             let id = packageId(for: pkg).lowercased()
-            if deletedNotebookIds.contains(id) {
-                try? fm.removeItem(at: pkg)
-                cleanedCount += 1
-                continue
-            }
             if activeLocalIds.contains(id) {
+                deletedNotebookIds.remove(id)
                 packages.append(pkg)
                 continue
             }
-            if !cloudLiveIds.contains(id) {
+            if deletedNotebookIds.contains(id) || !cloudLiveIds.contains(id) {
                 try? fm.removeItem(at: pkg)
                 cleanedCount += 1
-                continue
             }
         }
 
-        SyncLogger.logAsync("📊【同步前核實】本機現存: \(activeLocalIds.count) 本，清理/排除無效套件: \(cleanedCount) 本，待同步活躍筆記: \(packages.count) 本", source: .googleDrive)
-        SyncLogger.logAsync("雲端元資料同步完成，開始逐本比對套件檔案...", source: .googleDrive)
-
-        // ── 雙軌排程：前台極速軌 + 背景並行佇列 ──────────────
+        // 只碰真的有差異的那幾本。**這一行是整個改善的重點。**
         let activeId = store.activeNotebookId
+        let pending = packages.filter {
+            session.notebookNeedsSync(packagePath: $0.path, notebookId: packageId(for: $0))
+        }
+        SyncLogger.logAsync(
+            "📊【同步前核實】本機 \(activeLocalIds.count) 本，清理 \(cleanedCount) 本，"
+                + "有差異待同步 \(pending.count) 本（跳過 \(packages.count - pending.count) 本）",
+            source: .googleDrive)
 
-        let foreground = packages.filter { $0.deletingPathExtension().lastPathComponent == activeId }
-        let background = packages.filter { $0.deletingPathExtension().lastPathComponent != activeId }
+        // 前台作用中的那一本排最前面：使用者正在看的內容要先到。
+        let ordered = pending.sorted { a, _ in packageId(for: a) == activeId }
 
-        // 前台極速軌：優先、立即執行
-        for package in foreground {
+        for package in ordered {
             if isCancelled || Task.isCancelled { break }
-            let id = package.deletingPathExtension().lastPathComponent
-            SyncLogger.logAsync("⚡ 前台極速同步：\(id.prefix(8))...", source: .googleDrive)
+            let id = packageId(for: package)
             guard let result = await CloudSync.syncNotebook(
-                packagePath: package.path, notebookId: id) else { continue }
+                session, packagePath: package.path, notebookId: id, deviceId: deviceId)
+            else { continue }
             if result.ok {
-                SyncLogger.logAsync("筆記本 \(id.prefix(8))... 同步完成（上傳: \(result.uploaded), 下載: \(result.downloaded)）", source: .googleDrive)
+                SyncLogger.logAsync(
+                    "筆記本 \(id.prefix(8))… 完成（上傳 \(result.uploaded)、下載 \(result.downloaded)）",
+                    source: .googleDrive)
                 report.uploaded += Int(result.uploaded)
                 report.downloaded += Int(result.downloaded)
             } else {
-                let err = result.error
-                SyncLogger.logAsync("筆記本 \(id.prefix(8))... 同步失敗：\(err)", source: .googleDrive)
-                report.failures[id] = err
+                SyncLogger.logAsync("筆記本 \(id.prefix(8))… 同步失敗：\(result.error)", source: .googleDrive)
+                report.failures[id] = result.error
                 if result.needsReauth {
                     await GoogleAuth.shared.signOut()
                     break
@@ -414,71 +444,15 @@ enum NotebookSyncCoordinator {
             }
         }
 
-        // 背景並行佇列：2 路並發，兼顧速度與連線穩定度（防 Google 限流）
-        let concurrencyLimit = 2
-        var backgroundQueue = background
-        while !backgroundQueue.isEmpty {
-            if isCancelled || Task.isCancelled { break }
-            let batch = Array(backgroundQueue.prefix(concurrencyLimit))
-            backgroundQueue.removeFirst(min(concurrencyLimit, backgroundQueue.count))
-
-            for package in batch {
-                let id = package.deletingPathExtension().lastPathComponent
-                SyncLogger.logAsync("開始同步筆記本 \(id.prefix(8))...", source: .googleDrive)
-            }
-
-            let batchResults: [(uploaded: Int, downloaded: Int, id: String, error: String?, needsReauth: Bool)] =
-                await withTaskGroup(
-                    of: (uploaded: Int, downloaded: Int, id: String, error: String?, needsReauth: Bool).self
-                ) { group in
-                    for package in batch {
-                        let id = package.deletingPathExtension().lastPathComponent
-                        let path = package.path
-                        group.addTask {
-                            if Task.isCancelled || NotebookSyncCoordinator.isCancelled {
-                                return (0, 0, id, "已中斷同步", false)
-                            }
-                            guard let result = await CloudSync.syncNotebook(
-                                packagePath: path, notebookId: id) else {
-                                return (0, 0, id, nil, false)
-                            }
-                            if result.ok {
-                                return (Int(result.uploaded), Int(result.downloaded), id, nil, false)
-                            } else {
-                                return (0, 0, id, result.error, result.needsReauth)
-                            }
-                        }
-                    }
-                    var collected: [(Int, Int, String, String?, Bool)] = []
-                    for await r in group { collected.append(r) }
-                    return collected
-                }
-
-            var shouldBreak = false
-            for r in batchResults {
-                if let err = r.error {
-                    SyncLogger.logAsync("筆記本 \(r.id.prefix(8))... 背景同步失敗：\(err)", source: .googleDrive)
-                    report.failures[r.id] = err
-                    if r.needsReauth {
-                        await GoogleAuth.shared.signOut()
-                        shouldBreak = true
-                    }
-                } else {
-                    SyncLogger.logAsync("筆記本 \(r.id.prefix(8))... 背景同步完成（上傳: \(r.uploaded), 下載: \(r.downloaded)）", source: .googleDrive)
-                    report.uploaded += r.uploaded
-                    report.downloaded += r.downloaded
-                }
-            }
-            if shouldBreak { break }
-        }
-
         if isCancelled || Task.isCancelled {
+            await CloudSync.persist(session)
             SyncLogger.logAsync("【Google Drive 同步】已手動中斷。", source: .googleDrive)
             return report
         }
 
         // 別台裝置新建的筆記本
         let newBooks = await pullNewNotebooks(
+            session,
             into: packagesDir,
             index: meta.indexJson,
             activeLocalIds: activeLocalIds,
@@ -486,6 +460,10 @@ enum NotebookSyncCoordinator {
             report: &report
         )
         report.newNotebooks += newBooks
+
+        // 快照要落地。不存的話，下次開 App 又要全量重建一次 ——
+        // 那是唯一的慢路徑，不該每次啟動都走。
+        await CloudSync.persist(session)
         SyncLogger.logAsync("步驟 2 完成。上傳: \(report.uploaded), 下載: \(report.downloaded), 新增: \(report.newNotebooks)", source: .googleDrive)
 
         if isCancelled || Task.isCancelled {
@@ -516,6 +494,7 @@ enum NotebookSyncCoordinator {
     /// 清單來自**合併後的索引**，不是本機那一份 —— 用本機的話，剛從雲端
     /// 收斂進來的那幾本還不在裡面，永遠差一輪。
     private static func pullNewNotebooks(
+        _ session: FfiSyncSession,
         into packagesDir: URL,
         index: String,
         activeLocalIds: Set<String>,
@@ -543,7 +522,7 @@ enum NotebookSyncCoordinator {
             }
             guard !fm.fileExists(atPath: targetPackage.path) else { continue }
             guard let result = await CloudSync.cloneNotebook(
-                packagePath: targetPackage.path, notebookId: item.id, title: item.title)
+                session, packagePath: targetPackage.path, notebookId: item.id, title: item.title)
             else { break }
             if result.ok {
                 report.downloaded += Int(result.downloaded)
