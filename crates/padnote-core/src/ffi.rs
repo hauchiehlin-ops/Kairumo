@@ -1837,31 +1837,14 @@ pub fn can_open(spec_version: u32, min_reader_version: u32) -> bool {
 // 這裡讓所有新平台共用同一份實作，格式與已上線的 Apple 版完全相同
 // （由 padnote-crypto 的 cryptokit_interop 測試把關）。
 
-/// 產生新的協同房間金鑰，回傳 base64（就是邀請連結裡帶的那一段）。
-#[uniffi::export]
-pub fn session_key_generate() -> Result<String, FfiError> {
-    padnote_crypto::session::SessionKey::generate()
-        .map(|k| k.to_base64())
-        .map_err(|e| FfiError::Failed(e.to_string()))
-}
-
-/// 用房間金鑰加密一段訊息，回傳 base64 密文。
-#[uniffi::export]
-pub fn session_seal(key_base64: String, plaintext: Vec<u8>) -> Result<String, FfiError> {
-    let key = padnote_crypto::session::SessionKey::from_base64(&key_base64)
-        .map_err(|e| FfiError::Failed(e.to_string()))?;
-    key.seal_to_base64(&plaintext)
-        .map_err(|e| FfiError::Failed(e.to_string()))
-}
-
-/// 解開 base64 密文。金鑰不符或內容被竄改都會失敗，不會回傳可疑內容。
-#[uniffi::export]
-pub fn session_open(key_base64: String, sealed_base64: String) -> Result<Vec<u8>, FfiError> {
-    let key = padnote_crypto::session::SessionKey::from_base64(&key_base64)
-        .map_err(|e| FfiError::Failed(e.to_string()))?;
-    key.open_from_base64(&sealed_base64)
-        .map_err(|e| FfiError::Failed(e.to_string()))
-}
+// `session_key_generate` / `session_seal` / `session_open` 原本開在這裡，
+// 作為 `padnote_crypto::session` 的門面。**平台從來沒有用它們做過真的事**
+// —— Android 只在一個診斷自我測試裡呼叫，而真正的協同加解密走
+// `ffi_collab` 的 `collab_encrypt` / `collab_decrypt`（兩個平台都是）。
+//
+// 現在 `collab_encrypt` 已經改成直接呼叫 `padnote_crypto::session`，
+// 兩份實作合成一份，這層門面就沒有存在的理由了。
+// 留著的話，下一個人會以為協同有兩套金鑰機制。
 
 // ---- 轉換輔助 ----
 

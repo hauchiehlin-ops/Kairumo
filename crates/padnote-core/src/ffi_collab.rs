@@ -18,13 +18,8 @@
 //! 換一種排列（例如把 tag 放前面）不會有任何編譯錯誤，
 //! 只會讓已經在 TestFlight 上的版本跟新版互相解不開。
 
-use aes_gcm::aead::{Aead, KeyInit, Payload};
-use aes_gcm::{Aes256Gcm, Key, Nonce};
 use base64::Engine as _;
 use base64::engine::general_purpose::STANDARD as B64;
-
-/// `AES.GCM` 的 nonce 長度（位元組）。CryptoKit 用 12，換掉就不相容。
-const NONCE_LEN: usize = 12;
 
 /// 產生一把新的房間金鑰，回傳 base64。
 ///
@@ -59,32 +54,23 @@ fn decode_key(key_base64: &str) -> Option<[u8; 32]> {
 ///
 /// 金鑰不合法或加密失敗時回**空字串**，呼叫端據此改送明文
 /// （與 Apple 端 `encryptPayload` 回傳 `isEncrypted = false` 的行為一致）。
+///
+/// # 實作在 `padnote_crypto::session`，不在這裡
+///
+/// 這兩個函式原本各自內嵌了一份 AES-256-GCM —— 與
+/// `padnote_crypto::session::SessionKey` 是**同一套演算法、同一個位元組佈局**，
+/// 只是複製了一份。而**跨語言互通測試（`tests/cryptokit_interop.rs`）
+/// 釘的是 `padnote_crypto` 那一份**，不是實際在用的這一份。
+///
+/// 也就是說：有測試的那份沒人用，在用的那份沒有測試。兩份現在一樣，
+/// 但沒有任何東西擋著它們分岔 —— 而分岔的症狀是「iOS 與 Android
+/// 連得上、成員清單也對，但對方畫的東西永遠不出現」。
 #[uniffi::export]
 pub fn collab_encrypt(key_base64: String, plaintext: String) -> String {
-    let Some(key) = decode_key(&key_base64) else {
+    let Some(key) = session_key(&key_base64) else {
         return String::new();
     };
-    let mut nonce_bytes = [0u8; NONCE_LEN];
-    if getrandom::getrandom(&mut nonce_bytes).is_err() {
-        return String::new();
-    }
-    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
-    let nonce = Nonce::from_slice(&nonce_bytes);
-    match cipher.encrypt(
-        nonce,
-        Payload {
-            msg: plaintext.as_bytes(),
-            aad: &[],
-        },
-    ) {
-        Ok(sealed) => {
-            let mut combined = Vec::with_capacity(NONCE_LEN + sealed.len());
-            combined.extend_from_slice(&nonce_bytes);
-            combined.extend_from_slice(&sealed);
-            B64.encode(combined)
-        }
-        Err(_) => String::new(),
-    }
+    key.seal_to_base64(plaintext.as_bytes()).unwrap_or_default()
 }
 
 /// 解密。金鑰不符、密文被改過或格式不對時回空字串。
@@ -93,27 +79,18 @@ pub fn collab_encrypt(key_base64: String, plaintext: String) -> String {
 /// 呼叫端應該丟掉那則訊息，不要把密文當成內容寫進筆記。
 #[uniffi::export]
 pub fn collab_decrypt(key_base64: String, ciphertext_base64: String) -> String {
-    let Some(key) = decode_key(&key_base64) else {
+    let Some(key) = session_key(&key_base64) else {
         return String::new();
     };
-    let Ok(combined) = B64.decode(ciphertext_base64.trim()) else {
-        return String::new();
-    };
-    if combined.len() <= NONCE_LEN {
-        return String::new();
-    }
-    let (nonce_bytes, sealed) = combined.split_at(NONCE_LEN);
-    let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&key));
-    match cipher.decrypt(
-        Nonce::from_slice(nonce_bytes),
-        Payload {
-            msg: sealed,
-            aad: &[],
-        },
-    ) {
+    match key.open_from_base64(ciphertext_base64.trim()) {
         Ok(plain) => String::from_utf8(plain).unwrap_or_default(),
         Err(_) => String::new(),
     }
+}
+
+/// base64 金鑰 → `SessionKey`。長度不對或不是合法 base64 都回 `None`。
+fn session_key(key_base64: &str) -> Option<padnote_crypto::session::SessionKey> {
+    padnote_crypto::session::SessionKey::from_base64(key_base64.trim()).ok()
 }
 
 /// 產生新房號，形如 `kairumo-3f9a21`。

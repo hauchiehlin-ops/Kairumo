@@ -1,5 +1,10 @@
 # Apple 與 Android 的功能落差清查
 
+> **2026-09-21 補：見文末「第 0 層：核心開好但沒人用 / 只有一邊用」。**
+> 那一節是 `docs/plans/unrealised-features-audit.md` 的決議版 ——
+> 盤點只負責指出「中間狀態」，這裡負責把每一項變成一個決定。
+
+
 > 對應規則：**對應用程式所有的修改都應該要同時滿足不同平台的需求。**
 > 這份清查是那條規則的對帳單 —— 從核心到應用層逐項比對，不用印象。
 > 清查於 2026-09-13（v2.4.1）。
@@ -150,3 +155,51 @@ Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對�
 新增功能時，在 `docs/DEVLOG.md` 的驗證段落**逐平台交代**。某個平台沒做到就
 明講並回到這裡加一列 —— 不要略過。這份文件過期的那一天，
 「跨平台一致」就退回成一句口號。
+
+---
+
+## 第 0 層：核心開好但沒人用 / 只有一邊用（2026-09-21 決議）
+
+盤點見 `docs/plans/unrealised-features-audit.md`。這裡只記**決定**：
+每一項要嘛「下沉」（兩邊都改走核心），要嘛「明確是平台差異」，
+不留在中間狀態 —— 中間狀態的代價是下一個人得重新推導一次。
+
+### 已經處理掉的
+
+| 項目 | 決定 | 結果 |
+|---|---|---|
+| Android 假轉錄 | **下沉** | 走核心 `whisperTranscribePcm`，四種失敗各有明確訊息 |
+| 模型下載 | **下沉** | 兩平台走 `padnote-models`（SHA-256 + 續傳），Apple 原本那條沒驗證沒續傳的路已移除 |
+| session 加密兩份實作 | **下沉** | `collab_encrypt` 改呼叫 `padnote_crypto::session`，重複的 FFI 門面刪掉 |
+| Apple 搜尋搜不到轉錄／PDF／OCR | **下沉** | 新增 `NotebookSearchIndex`，與 Android 同一組規則（兩字才查、快取、跳過壞的） |
+| 已無呼叫端的同步 FFI | **刪除** | 見 commit `3840b6d` |
+| 套件加密的文案 | **先改文案** | 加密本身列為 `TODO.md` 的 H-CRYPTO，要先回答五個產品問題 |
+
+### 決定要下沉，但還沒做（已排進 TODO）
+
+| 項目 | 為什麼要下沉 | 卡在哪 |
+|---|---|---|
+| Android 的 Whisper 引擎 | 轉錄的行為必須兩邊一樣 | `whisper-rs-sys` 的 Android cmake 設定，見 `TODO.md` H-ASR-ANDROID |
+| 壓感曲線（`width_scale` / `opacity_scale` / `FfiPressureAction`） | 同一支筆在兩台裝置上該畫出同樣的粗細。**Apple 現在在 `InkInterop.swift` 寫死一條曲線**，核心那條可設定的沒人用 | 要動兩邊的算繪路徑；而且「壓感影響線寬還是濃度」目前**沒有任何設定介面**，先補介面還是先下沉要一起決定 |
+| 版面尺寸級別（`layout_columns` / `layout_size_class`） | Android 的編輯器沒有雙欄工作區，同一本筆記在平板上兩邊長得不一樣 | 這是 Android 編輯器的版面重做，與 S-71/S-72 同一批 |
+| 頁面搬移運算（Apple 走核心、Android 自己算） | 搬移的**正確性**規則（由大到小刪、附件頁碼平移）不該有兩份 | Android 端要改接 `page_index_after_*` / `page_transfer_plan` |
+
+### 決定**不**下沉（明確的平台差異）
+
+| 項目 | 為什麼 |
+|---|---|
+| 文字編輯、表格儲存格、套索 | Apple 走 PencilKit / SwiftUI 的原生編輯，Android 走核心 op。兩邊的**結果**（存進 oplog 的內容）已經一致，而編輯手感本來就該用各自平台的慣例。下沉會讓 Apple 失去原生的選字與撤銷行為 |
+| 縮放平移夾制、掌拒門檻 | 手勢的物理量（DPI、觸控取樣率、系統手勢邊界）本來就不一樣。核心那份留給 Android，Apple 用 `PKCanvasView` 自己的 |
+| 語系清單 | Apple 用系統的 `Locale`，Android 用產生的字串表 —— 兩邊都由 `i18n/ui-strings.json` 生成，真相來源已經是同一個 |
+| AI 摘要後端 | Apple 有系統語言模型，Android 沒有對等的東西且不值得為它多背幾 MB 或要使用者下載 2.4 GB。Android **誠實回報沒有**（`NoteIntelligence.kt` 有完整的取捨說明） |
+| PDF 匯出走不同函式 | Apple 需要 `/Ink` 標註（讓 Goodnotes 能繼續編輯），Android 走版面算繪。**輸出的 PDF 兩邊都打得開**，差別在附加能力 |
+
+### 還沒決定（不要假裝已經決定）
+
+- 觸控筆懸停（`is_pen_hovering` / `hover_position`）：核心有，**兩邊都沒有任何介面用得到它**。
+  要嘛做出懸停預覽，要嘛把它從 FFI 拿掉。
+- PDF 座標互通（`page_point_to_pdf` / `highlight_quad_points`）：PDF 標註功能本身還沒有完整的入口。
+- 匯入（`import_json` / `import_markdown` / `import_embedded`）：兩邊都沒有匯入入口。
+- 轉錄進度（`transcription_backlog_us`）與 VAD 切換（`set_vad_model`）：
+  串流轉錄還沒有畫面，等 H-ASR-ANDROID 之後一起決定。
+

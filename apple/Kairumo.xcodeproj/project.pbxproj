@@ -111,6 +111,7 @@
 		C1A7C585E17B35EF60632C65 /* AccountManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 76577BBB3DC564A4B287380C /* AccountManager.swift */; };
 		C36BFAF3FE04CD8474F55984 /* MacReleaseConfigTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 621C052FCB25E32FBB633BE3 /* MacReleaseConfigTests.swift */; };
 		C54CB75E7D13D0F98B966CC0 /* ChartStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86EC0F8038D34C787D2A729D /* ChartStudioView.swift */; };
+		C55F400179E7174C52F3821F /* NotebookSearchIndex.swift in Sources */ = {isa = PBXBuildFile; fileRef = CB1466C3AB0C78C44ED34AB8 /* NotebookSearchIndex.swift */; };
 		C5671A19EAB4341D97B24DED /* ImageDropPlacementTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D92F2373941302ED5F5C66CD /* ImageDropPlacementTests.swift */; };
 		C5C788E40414F0CEBD323695 /* ObjectFrameStyleMenu.swift in Sources */ = {isa = PBXBuildFile; fileRef = 29C630A29EC3E773EF130E2D /* ObjectFrameStyleMenu.swift */; };
 		C6ED27B0A6A534EF825F6F5A /* DocumentTemplateCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A934F46156BC32DC1149F62 /* DocumentTemplateCatalog.swift */; };
@@ -297,6 +298,7 @@
 		BFC2EC4F24CB728264AB91A5 /* ObjectRotationControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectRotationControls.swift; sourceTree = "<group>"; };
 		C1C81A31EBC2D3D1F020B0BF /* NoteTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteTable.swift; sourceTree = "<group>"; };
 		C72410287ED6D6BF9B550D5B /* NotebookStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookStore.swift; sourceTree = "<group>"; };
+		CB1466C3AB0C78C44ED34AB8 /* NotebookSearchIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookSearchIndex.swift; sourceTree = "<group>"; };
 		CC38A8D206CF6F7CDF0CEEDE /* AutoSyncController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoSyncController.swift; sourceTree = "<group>"; };
 		CCBD6EB2E871A9532370A15B /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
 		D059ACC4F96D906F5A18970D /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
@@ -495,6 +497,7 @@
 				1C19329463E6F6E313A0F1DB /* NotebookMigration.swift */,
 				A09B19AED1DC70D31503F82C /* NotebookPackageBridge.swift */,
 				3BD868328B64B9FB88406FB9 /* NotebookPlainText.swift */,
+				CB1466C3AB0C78C44ED34AB8 /* NotebookSearchIndex.swift */,
 				C72410287ED6D6BF9B550D5B /* NotebookStore.swift */,
 				D76C7E92895F6C4334996D92 /* NotebookSyncCoordinator.swift */,
 				56D3BCE203ED4099F1E71EFB /* NoteIntelligence.swift */,
@@ -776,6 +779,7 @@
 				67CF9DE54436AC7DD3FF5065 /* NotebookMigration.swift in Sources */,
 				B0A3045EEDEA33E102E52D82 /* NotebookPackageBridge.swift in Sources */,
 				C16EE73071EAB3F1FE89B776 /* NotebookPlainText.swift in Sources */,
+				C55F400179E7174C52F3821F /* NotebookSearchIndex.swift in Sources */,
 				F582ACE682ECDB8D43C78140 /* NotebookStore.swift in Sources */,
 				9F2B0BAAA1DE545936528DA8 /* NotebookSyncCoordinator.swift in Sources */,
 				C5C788E40414F0CEBD323695 /* ObjectFrameStyleMenu.swift in Sources */,

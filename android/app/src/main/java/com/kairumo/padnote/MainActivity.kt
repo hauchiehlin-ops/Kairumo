@@ -233,10 +233,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import uniffi.padnote_core.appInfo
+import uniffi.padnote_core.collabDecrypt
+import uniffi.padnote_core.collabEncrypt
+import uniffi.padnote_core.collabGenerateRoomKey
 import uniffi.padnote_core.coreVersion
-import uniffi.padnote_core.sessionKeyGenerate
-import uniffi.padnote_core.sessionOpen
-import uniffi.padnote_core.sessionSeal
 import uniffi.padnote_core.PadnoteSession
 import uniffi.padnote_core.RelayServer
 import java.util.Locale
@@ -5281,12 +5281,24 @@ private fun deviceLanguageTag(): String {
     }
 }
 
+/**
+ * 協同加密的自我測試。
+ *
+ * **戳的必須是真的在用的那條路。** 舊版呼叫 `sessionSeal`/`sessionOpen`，
+ * 而協同實際上走的是 `collabEncrypt`/`collabDecrypt` —— 於是這個診斷
+ * 永遠是綠的，就算真正在用的那份壞了也一樣。
+ * （兩份實作現在已經合成一份，但測試仍然該戳呼叫端走的那個入口。）
+ */
 private fun checkSessionCrypto(): String = try {
-    val key = sessionKeyGenerate()
+    val key = collabGenerateRoomKey()
     val message = "Kairumo 協同訊息"
-    val sealed = sessionSeal(key, message.toByteArray())
-    val opened = String(sessionOpen(key, sealed))
-    if (opened == message) "AES-256-GCM round-trip 通過" else "內容不符"
+    val sealed = collabEncrypt(key, message)
+    val opened = collabDecrypt(key, sealed)
+    when {
+        sealed.isEmpty() -> "加密回傳空字串"
+        opened == message -> "AES-256-GCM round-trip 通過"
+        else -> "內容不符"
+    }
 } catch (t: Throwable) {
     "失敗：${t.message}"
 }

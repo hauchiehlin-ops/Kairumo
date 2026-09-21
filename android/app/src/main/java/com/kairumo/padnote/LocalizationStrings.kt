@@ -2593,23 +2593,23 @@ object LocalizationStrings {
             "th" to "อีเมล"
         ),
         "encryption" to mapOf(
-            "zh-Hant" to "資料加密",
-            "en" to "Data Encryption",
-            "zh-Hans" to "数据加密",
-            "ja" to "データ暗号化",
-            "ko" to "데이터 암호화",
-            "th" to "การเข้ารหัสข้อมูล"
+            "zh-Hant" to "資料去了哪裡",
+            "en" to "Where your data goes",
+            "zh-Hans" to "资料去了哪里",
+            "ja" to "データの行き先",
+            "ko" to "데이터가 가는 곳",
+            "th" to "ข้อมูลของคุณไปที่ไหน"
         )
     )
 
     private fun part4(): Map<String, Map<String, String>> = mapOf(
         "encryption_desc" to mapOf(
-            "zh-Hant" to "端對端本地隔離",
-            "en" to "End-to-End Local Isolation",
-            "zh-Hans" to "端对端本地隔离",
-            "ja" to "エンドツーエンド ローカル隔離",
-            "ko" to "엔드투엔드 로컬 격리",
-            "th" to "การแยกพื้นที่จัดเก็บเฉพาะเครื่องแบบ End-to-End"
+            "zh-Hant" to "只在這台裝置與你自己的雲端，不經過我們的伺服器",
+            "en" to "This device and your own cloud only — never our servers",
+            "zh-Hans" to "只在这台设备与你自己的云端，不经过我们的服务器",
+            "ja" to "この端末とあなた自身のクラウドのみ。当社のサーバーは経由しません",
+            "ko" to "이 기기와 사용자 본인의 클라우드에만 저장되며, 당사 서버를 거치지 않습니다",
+            "th" to "เฉพาะอุปกรณ์นี้และคลาวด์ของคุณเอง ไม่ผ่านเซิร์ฟเวอร์ของเรา"
         ),
         "end_collaboration" to mapOf(
             "zh-Hant" to "結束協同會議",

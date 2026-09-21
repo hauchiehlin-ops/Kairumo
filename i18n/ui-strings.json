@@ -2552,20 +2552,20 @@
     "zhHant": "電子郵件"
   },
   "encryption": {
-    "en": "Data Encryption",
-    "ja": "データ暗号化",
-    "ko": "데이터 암호화",
-    "th": "การเข้ารหัสข้อมูล",
-    "zhHans": "数据加密",
-    "zhHant": "資料加密"
+    "en": "Where your data goes",
+    "ja": "データの行き先",
+    "ko": "데이터가 가는 곳",
+    "th": "ข้อมูลของคุณไปที่ไหน",
+    "zhHans": "资料去了哪里",
+    "zhHant": "資料去了哪裡"
   },
   "encryption_desc": {
-    "en": "End-to-End Local Isolation",
-    "ja": "エンドツーエンド ローカル隔離",
-    "ko": "엔드투엔드 로컬 격리",
-    "th": "การแยกพื้นที่จัดเก็บเฉพาะเครื่องแบบ End-to-End",
-    "zhHans": "端对端本地隔离",
-    "zhHant": "端對端本地隔離"
+    "en": "This device and your own cloud only — never our servers",
+    "ja": "この端末とあなた自身のクラウドのみ。当社のサーバーは経由しません",
+    "ko": "이 기기와 사용자 본인의 클라우드에만 저장되며, 당사 서버를 거치지 않습니다",
+    "th": "เฉพาะอุปกรณ์นี้และคลาวด์ของคุณเอง ไม่ผ่านเซิร์ฟเวอร์ของเรา",
+    "zhHans": "只在这台设备与你自己的云端，不经过我们的服务器",
+    "zhHant": "只在這台裝置與你自己的雲端，不經過我們的伺服器"
   },
   "end_collaboration": {
     "en": "End Collaboration",

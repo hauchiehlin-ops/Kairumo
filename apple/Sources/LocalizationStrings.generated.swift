@@ -2568,20 +2568,20 @@ extension LocalizationManager {
             .th: "อีเมล"
         ],
         "encryption": [
-            .zhHant: "資料加密",
-            .en: "Data Encryption",
-            .zhHans: "数据加密",
-            .ja: "データ暗号化",
-            .ko: "데이터 암호화",
-            .th: "การเข้ารหัสข้อมูล"
+            .zhHant: "資料去了哪裡",
+            .en: "Where your data goes",
+            .zhHans: "资料去了哪里",
+            .ja: "データの行き先",
+            .ko: "데이터가 가는 곳",
+            .th: "ข้อมูลของคุณไปที่ไหน"
         ],
         "encryption_desc": [
-            .zhHant: "端對端本地隔離",
-            .en: "End-to-End Local Isolation",
-            .zhHans: "端对端本地隔离",
-            .ja: "エンドツーエンド ローカル隔離",
-            .ko: "엔드투엔드 로컬 격리",
-            .th: "การแยกพื้นที่จัดเก็บเฉพาะเครื่องแบบ End-to-End"
+            .zhHant: "只在這台裝置與你自己的雲端，不經過我們的伺服器",
+            .en: "This device and your own cloud only — never our servers",
+            .zhHans: "只在这台设备与你自己的云端，不经过我们的服务器",
+            .ja: "この端末とあなた自身のクラウドのみ。当社のサーバーは経由しません",
+            .ko: "이 기기와 사용자 본인의 클라우드에만 저장되며, 당사 서버를 거치지 않습니다",
+            .th: "เฉพาะอุปกรณ์นี้และคลาวด์ของคุณเอง ไม่ผ่านเซิร์ฟเวอร์ของเรา"
         ],
         "end_collaboration": [
             .zhHant: "結束協同會議",

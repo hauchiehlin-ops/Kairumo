@@ -7,6 +7,28 @@
 
 ## 🔴 被硬體或資料卡住（程式已就緒）
 
+### H-CRYPTO. 套件加密：核心寫好了，但完全沒有出口
+- **卡在**：這不是「被硬體卡住」，是**一個還沒有人決定要怎麼做的產品問題**。
+  接上加密會帶出一整串設計決策，每一個都不是工程可以自己決定的：
+  1. 密碼從哪裡來？每本一個、還是全域一個？
+  2. 忘記密碼怎麼辦？`padnote-crypto` 有 BIP39 復原碼，但**要有畫面讓
+     使用者抄下來**，而且要擋住「還沒抄就開始用」。
+  3. 既有的筆記要不要重新加密？那是一次會動到使用者全部資料的遷移。
+  4. 同步怎麼辦？加密之後雲端上的 oplog 是密文，
+     `plan_folder_sync` 的「較長的是超集」仍然成立，但**壓實與去重都會失效**。
+  5. 協同編輯怎麼辦？房間金鑰與套件金鑰是兩套東西。
+- **已就緒**：`padnote-crypto` 的信封加密（Argon2id + XChaCha20-Poly1305 +
+  BIP39 復原碼，S-07）、`manifest.json` 的 `encryption` 欄位、
+  `SyncEngine` 的 `Dek` 封裝路徑（有測試）。
+- **現況**：`Manifest::new()` 一律寫 `Encryption::None`，沒有任何程式碼會改它；
+  `padnote_crypto` 的 envelope API **沒有任何 `#[uniffi::export]`**。
+  所以整套加密在上線的 App 裡**一行都沒有被執行過**。
+- **已做的止血**：身分頁原本有一列「資料加密 / 端對端本地隔離」，
+  容易被讀成「內容有加密」。已改成講真的那件事（「資料去了哪裡：
+  只在這台裝置與你自己的雲端」）。**一行會被誤讀的字比沒有那一行更糟** ——
+  使用者會據此決定要不要把敏感內容寫進來。
+- **判定**：上面五個問題各有一個寫下來的答案，才開始寫程式。
+
 ### H-REC. 錄音納入同步的實機驗證（R1–R6 已全部實作）
 - **卡在**：需要兩台真實裝置（Apple + Android）＋ 真的用耳朵聽。
   模擬器可以確認「有解出樣本」，確認不了「聽起來對不對」。
@@ -61,6 +83,22 @@
   兩者都是**保底**，系統決定什麼時候給時間；真正的「即時」靠前景觸發。
   **背景那條路只有實機測得出來** —— 模擬器要用 Xcode 的
   `_simulateLaunchForTaskWithIdentifier` 才會觸發，那不等於真實行為。
+
+### H-ASR-ANDROID. Android 的 Whisper 還編不出來
+- **卡在**：`whisper-rs-sys` 在 Android 上的 cmake 設定。已經確認的事：
+  - **ONNX 不是原因。** `padnote-asr-whisper` 只依賴 `whisper-rs`（whisper.cpp，
+    C++），完全不碰 `ort`。擋住 Android 的是 Silero VAD 與中文標點。
+    feature 已經拆成 `asr-whisper` / `asr-onnx`，架構上的障礙沒有了。
+  - NDK 的 clang 跑得起來（28.2.13676358，darwin-x86_64 走 Rosetta）。
+  - `cargo ndk -t arm64-v8a build --features asr-whisper` 目前停在
+    cmake 的 `Check for working C compiler: … - broken`。
+    需要給 cmake `ANDROID_ABI` / `ANDROID_PLATFORM`，而 `cmake-rs` 沒有
+    對應的環境變數 —— 要嘛在 `build-android-libs.sh` 裡包一層，
+    要嘛換一個對 Android 友善的 whisper 綁定。
+- **已就緒**：Android 端的呼叫路徑全部接好了
+  （`AudioPcmDecoder` → `whisperTranscribePcm`），模型下載也接好了。
+  引擎沒編進來時會**明確回報**「此版本未包含語音引擎」，不再產生假文字。
+- **判定**：`cargo ndk` 編得出含 `asr-whisper` 的 `.so`，且實機轉錄得出中文。
 
 ### H0. iOS 實機驗證（`--ios-install` 那條路尚未實測）
 - **卡在**：目前沒有任何實體 iPhone / iPad 連著這台 Mac。

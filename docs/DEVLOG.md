@@ -3,6 +3,91 @@
 > 反序排列（最新在上）。每個開發階段結束時追加一筆。
 > 記錄**為什麼**這樣做，而不只是做了什麼 —— 「做了什麼」看 git log 就好。
 
+## 2026-09-22（凌晨）· 虛位盤點的修正：假轉錄、模型下載、重複的加密
+
+盤點見 `docs/plans/unrealised-features-audit.md`，決議見
+`docs/PLATFORM-PARITY.md` 的「第 0 層」。這一批處理的是盤點裡
+**A 類（介面宣稱有、實際是空殼）與 B-bis（死碼）**。
+
+### 刪掉沒有呼叫端的 FFI（62 → 52）
+
+`gdrive_sync_notebook` 那四個自由函式在 P1 之後就沒人用了（我自己留的
+legacy wrapper），`FfiSyncSession.diagnose`、`sync_settings_path` 等同理。
+**留著死碼的代價不是磁碟空間，是下一個人會以為它是活的。**
+
+### Android 的假轉錄
+
+舊的 `transcribe()` 沒有做任何語音辨識 —— 它回傳「標頭 + 檔名」，
+而畫面顯示「轉錄成功」。現在走與 Apple 同一條路（MediaCodec 解成
+16 kHz 單聲道 → 核心 `whisperTranscribePcm`），並把四種拿不到結果的原因
+分開講：引擎沒編進來／模型沒下載／音檔讀不了／沒有語音。
+混成一句「轉錄失敗」的話，使用者會一直按重試，而其中兩種重試一百次也一樣。
+
+順帶拆開 `asr` feature。**擋住 Android 的從來只有 ONNX Runtime**
+（Silero VAD + 中文標點），而 Whisper 走 whisper.cpp 完全不碰它 ——
+綁在同一個 feature 的代價是 Android 為了一個用不到的相依失去整個語音轉錄，
+於是那一側長出了一個假轉錄。現在是 `asr-whisper` / `asr-onnx` 兩個。
+（引擎本身還編不出來，卡在 `whisper-rs-sys` 的 Android cmake 設定，
+見 `TODO.md` 的 H-ASR-ANDROID。）
+
+### 模型下載
+
+`padnote-models`（清單、SHA-256、續傳、刪除）寫好很久了，**零呼叫端**。
+Apple 實際走的是 `AudioTranscriber` 自己寫的一段 `URLSession.downloadTask`：
+**沒有雜湊驗證，也沒有續傳**。這次盤點時我自己下載那個模型驗證雜湊，
+就在 63 MB 處逾時斷掉 —— 574 MB 沒有續傳在行動網路上幾乎一定會失敗。
+
+現在兩平台都走核心。模型也從 `Documents/` 移到 Application Support 並
+標記不備份：一個 574 MB 的模型會把使用者的免費 iCloud 空間吃掉。
+
+**順帶發現清單本身有四筆是假的。** 逐一實際請求六個網址：
+paraformer 404、ct-punct / ppocr / qwen3 全部 401，其中 ppocr 的
+`huggingface.co/example/rapidocr` 的 `example` 就是佔位字串。
+宣告的大小全是整數（16 MiB、2621440000…）—— 估的，不是量的；
+whisper 的也錯了（574041600 → 574041195）。已修正 whisper、
+四個假網址改成空字串並記下實測結果，測試跟著改成
+「有雜湊就必須有來源，沒有來源就必須寫清楚查證結果」。
+
+### 套件加密：先改文案
+
+`padnote-crypto` 的信封加密（S-07 標成完成）**沒有任何 FFI 出口**，
+`Manifest::new()` 一律寫 `Encryption::None`。而身分頁上有一列
+「資料加密 / 端對端本地隔離」—— 很容易被讀成「內容有加密」，
+而使用者會據此決定要不要把敏感內容寫進來。
+
+改成講真的那件事（「資料去了哪裡：只在這台裝置與你自己的雲端」）。
+加密本身列為 `TODO.md` 的 H-CRYPTO，**要先回答五個產品問題**
+（密碼從哪來、忘記怎麼辦、既有筆記要不要重新加密、同步的壓實與去重
+會失效、房間金鑰與套件金鑰是兩套）才開始寫程式。
+
+### 協同加密有兩份實作，而有測試的那份沒人用
+
+`padnote_crypto::session`（有跨語言互通測試 `cryptokit_interop.rs`）與
+`ffi_collab` 內嵌的一份是**同一套演算法、同一個位元組佈局**，只是複製了一份。
+在用的是後者，有測試的是前者。兩份現在一樣，但沒有任何東西擋著它們分岔 ——
+而分岔的症狀是「兩台都顯示已連線，對方畫的東西永遠不出現」。
+
+`collab_encrypt` 改成直接呼叫 `padnote_crypto::session`，重複的 FFI 門面刪掉。
+Android 的加密自我測試原本戳的是**沒人用的那條路**（永遠是綠的），
+改成戳真正在用的入口。
+
+### Apple 的搜尋補上核心索引
+
+Apple 原本是對記憶體裡的附件比對（標題、文字方塊、表格、形狀、手寫辨識），
+**搜不到錄音轉錄、PDF 內容與 OCR 文字** —— 而那三樣正是
+「我記得我錄過／掃描過這件事」時最需要搜到的。新增 `NotebookSearchIndex`
+接上核心的 bigram 索引，規則與 Android 的 `NotebookSearch` 逐條對齊
+（兩個字才查、照 query 快取、開不起來的那一本略過）。
+
+### 驗證
+- Rust：`cargo test --workspace` 1362 條全過、clippy 與 fmt 乾淨。
+- Apple：374 條單元測試全過、iOS Simulator BUILD SUCCEEDED。
+- Android：`compileDebugKotlin` 與 `compileDebugAndroidTestKotlin` 都通過。
+- **尚未實機驗證**：Apple 的模型下載與續傳、Android 的轉錄（引擎還編不出來）、
+  Apple 搜尋在大量筆記下的反應時間。
+
+---
+
 ## 2026-09-21（深夜）· 錄音納入同步：Apple 改走核心的錄音管線（R1–R6）
 
 起點是一個問題：「錄音檔是否屬於同步範圍？」查下去的答案是

@@ -192,6 +192,15 @@ public struct AccountProfileSheet: View {
                             .font(.caption)
                     }
 
+                    // **這一列講的是「資料去了哪裡」，不是「資料有加密」。**
+                    //
+                    // 原本的字是「資料加密 / 端對端本地隔離」，而套件實際上
+                    // 一律是 `Encryption::None` —— `padnote-crypto` 的信封加密
+                    // 寫好了，但**沒有任何 FFI 出口**，平台根本呼叫不到。
+                    //
+                    // 一行會被讀成「內容有加密」的字，比沒有這一行更糟：
+                    // 使用者會據此決定要不要把敏感內容寫進來。
+                    // 等加密真的接上（見 docs/TODO.md 的 H-CRYPTO）再改回去。
                     HStack {
                         Text(localizationManager.localized("encryption"))
                         Spacer()

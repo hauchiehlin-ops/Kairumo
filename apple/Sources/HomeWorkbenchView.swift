@@ -22,6 +22,8 @@ public struct HomeWorkbenchView: View {
     @StateObject private var localizationManager = LocalizationManager.shared
 
     @State private var searchText: String = ""
+    /// 核心索引的搜尋結果（轉錄、PDF、OCR）。見 `NotebookSearchIndex`。
+    @ObservedObject private var searchIndex = NotebookSearchIndex.shared
     /// ⌘F 用來把游標送進搜尋框。
     @FocusState private var searchFieldFocused: Bool
     @State private var viewingDocument: BundledDocument? = nil
@@ -180,7 +182,10 @@ public struct HomeWorkbenchView: View {
         // 形狀上的標籤（流程圖的節點名稱）。
         if doc.shapeAttachments?.contains(where: { hit($0.label) }) == true { return true }
 
-        return false
+        // 記憶體裡的附件到此為止。**錄音轉錄、PDF 內容與 OCR 文字不在裡面**
+        // —— 那三樣要問核心的索引（`NotebookSearchIndex`，與 Android 同一組
+        // 規則）。少了這一段，使用者搜「押金」找不到自己掃進來的那份合約。
+        return searchIndex.contains(doc.id)
     }
 
     private var filteredNotebooks: [NotebookDocument] {
@@ -530,6 +535,15 @@ public struct HomeWorkbenchView: View {
                 .textFieldStyle(.plain)
                 .focused($searchFieldFocused)
                 .accessibilityIdentifier("home.search.field")
+                // 記憶體裡的附件是同步比對的；轉錄、PDF 與 OCR 要問核心的
+                // 索引，而那要逐本開套件 —— 在計算屬性裡同步做的話，
+                // 每打一個字就把整個筆記庫重開一遍。
+                .onChange(of: searchText) { value in
+                    searchIndex.update(
+                        query: value,
+                        notebooks: notebookStore.visibleNotebooks,
+                        deviceId: NotebookMigration.deviceId)
+                }
             if !searchText.isEmpty {
                 Button {
                     searchText = ""
