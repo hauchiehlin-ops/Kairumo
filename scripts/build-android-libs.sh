@@ -9,8 +9,9 @@
 #   KAIRUMO_ANDROID_FEATURES="asr" ./scripts/build-android-libs.sh   # 額外開啟 feature
 #
 # 預設用 `--no-default-features`：
-#   - asr（Silero VAD + 中文標點）需要 ONNX Runtime，而 `ort` 目前沒有
-#     aarch64-linux-android 的預編譯二進位（第一版不含語音轉錄）。
+#   - asr-onnx（Silero VAD + 中文標點）需要 ONNX Runtime，而 `ort` 目前沒有
+#     aarch64-linux-android 的預編譯二進位。**這不影響語音轉錄** ——
+#     Whisper 走 whisper.cpp，由 asr-whisper 提供，預設開啟。
 #   - pdf（PDFium）需要各 ABI 的 libpdfium.so，尚未納入打包。
 # 預設額外開啟 relay：Android 走核心的協同中繼。
 # Apple 版不受影響 —— 它走 padnote-core 的預設 features（asr + pdf 全開）。
@@ -28,7 +29,14 @@ PROFILE="${1:-release}"
 ABIS=(arm64-v8a x86_64)
 OUT_DIR="android/app/src/main/jniLibs"
 # relay：Android 用核心的中繼實作（Apple 版維持自己的 Swift 實作，不受影響）
-EXTRA_FEATURES="${KAIRUMO_ANDROID_FEATURES:-relay}"
+# 預設額外開啟 relay 與 asr-whisper。
+#
+# **擋住 Android 的從來只有 ONNX Runtime**（Silero VAD 與中文標點用的 `ort`
+# 沒有 aarch64-linux-android 的預編譯二進位），而 Whisper 走 whisper.cpp，
+# 完全不碰 ONNX。兩者原本綁在同一個 `asr` feature 裡，代價是 Android 為了
+# 一個用不到的相依失去整個語音轉錄 —— 而那一側就長出了一個會回報成功的
+# 假轉錄（見 docs/DEVLOG.md 2026-09-22）。
+EXTRA_FEATURES="${KAIRUMO_ANDROID_FEATURES:-relay,asr-whisper}"
 
 # --- NDK 位置 ------------------------------------------------------------
 #
@@ -128,7 +136,53 @@ for abi in "${ABIS[@]}"; do
     #
     # 用 `${RUSTFLAGS:-}` 前綴保留呼叫端原本的旗標（例如 CI 的 -D warnings），
     # 不要整個蓋掉。
-    RUSTFLAGS="${RUSTFLAGS:-} -C link-arg=-lc++_shared" \
+    # --- whisper.cpp 的兩個 Android 專屬前置 -----------------------------
+    #
+    # 1) cmake 工具鏈的包裝：`whisper-rs-sys` 用 cmake-rs 建 whisper.cpp，
+    #    而 cmake-rs 只從環境變數讀 `CMAKE_TOOLCHAIN_FILE`，**沒辦法傳
+    #    任意的 `-D`**。NDK 的工具鏈需要 `ANDROID_ABI` 才知道要編哪個架構，
+    #    少了它會拿預設的 armeabi-v7a 去測編譯器，然後回報
+    #    `Check for working C compiler - broken`——錯誤訊息完全不提 ABI。
+    #
+    # 2) `libggml-blas.a` 的空殼：`whisper-rs-sys` 的 build script 用
+    #    `cfg!(target_os = "macos")` 決定要不要連 BLAS 後端。**build script
+    #    是跑在 host 上的**，所以從 Mac 交叉編譯到 Android 時那個條件為真，
+    #    於是它要求連一個從來沒有被建出來的 `ggml-blas`。
+    #    （正確的寫法是 `CARGO_CFG_TARGET_OS`——這是上游的 bug。）
+    #    Android 本來就沒有 BLAS，所以一個空的靜態庫正是「這裡沒有 BLAS」
+    #    的正確答案。
+    # **只套在這一次 cargo ndk 上，不要 export。**
+    # 這支腳本最後還會跑一次 host 的 `cargo build` 來產生 Kotlin 綁定；
+    # `CMAKE_TOOLCHAIN_FILE` 漏到那一次的話，host 版的 whisper.cpp 會拿
+    # Android 的工具鏈去編，然後以同一個 `compiler broken` 失敗 ——
+    # 而錯誤訊息指向 `target/debug/`，看起來完全不像是這裡的問題。
+    ANDROID_API="${KAIRUMO_ANDROID_API:-24}"
+
+    BLAS_STUB_DIR="$REPO_ROOT/target/android-blas-stub/$abi"
+    if [[ ! -f "$BLAS_STUB_DIR/libggml-blas.a" ]]; then
+        mkdir -p "$BLAS_STUB_DIR"
+        NDK_BIN=""
+        for host in darwin-x86_64 darwin-arm64 linux-x86_64; do
+            if [[ -d "$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/$host/bin" ]]; then
+                NDK_BIN="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/$host/bin"
+                break
+            fi
+        done
+        if [[ -z "$NDK_BIN" ]]; then
+            echo "❌ 找不到 NDK 的 llvm 工具鏈目錄" >&2
+            exit 1
+        fi
+        : > "$BLAS_STUB_DIR/empty.c"
+        "$NDK_BIN/clang" --target="${RUST_TARGET}${ANDROID_API}" \
+            -c "$BLAS_STUB_DIR/empty.c" -o "$BLAS_STUB_DIR/empty.o"
+        "$NDK_BIN/llvm-ar" rcs "$BLAS_STUB_DIR/libggml-blas.a" "$BLAS_STUB_DIR/empty.o"
+    fi
+
+    RUSTFLAGS="${RUSTFLAGS:-} -C link-arg=-lc++_shared -L native=$BLAS_STUB_DIR" \
+    KAIRUMO_ANDROID_ABI="$abi" \
+    KAIRUMO_ANDROID_API="$ANDROID_API" \
+    CMAKE_TOOLCHAIN_FILE="$REPO_ROOT/scripts/android-cmake-toolchain.cmake" \
+    CMAKE_MAKE_PROGRAM="${CMAKE_MAKE_PROGRAM:-$(command -v make)}" \
         cargo ndk -t "$abi" -o "$OUT_DIR" build -p padnote-core "${FEATURE_ARGS[@]}" \
             ${PROFILE_ARGS[@]+"${PROFILE_ARGS[@]}"}
 done

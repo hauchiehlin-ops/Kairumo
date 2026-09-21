@@ -84,21 +84,29 @@
   **背景那條路只有實機測得出來** —— 模擬器要用 Xcode 的
   `_simulateLaunchForTaskWithIdentifier` 才會觸發，那不等於真實行為。
 
-### H-ASR-ANDROID. Android 的 Whisper 還編不出來
-- **卡在**：`whisper-rs-sys` 在 Android 上的 cmake 設定。已經確認的事：
-  - **ONNX 不是原因。** `padnote-asr-whisper` 只依賴 `whisper-rs`（whisper.cpp，
-    C++），完全不碰 `ort`。擋住 Android 的是 Silero VAD 與中文標點。
-    feature 已經拆成 `asr-whisper` / `asr-onnx`，架構上的障礙沒有了。
-  - NDK 的 clang 跑得起來（28.2.13676358，darwin-x86_64 走 Rosetta）。
-  - `cargo ndk -t arm64-v8a build --features asr-whisper` 目前停在
-    cmake 的 `Check for working C compiler: … - broken`。
-    需要給 cmake `ANDROID_ABI` / `ANDROID_PLATFORM`，而 `cmake-rs` 沒有
-    對應的環境變數 —— 要嘛在 `build-android-libs.sh` 裡包一層，
-    要嘛換一個對 Android 友善的 whisper 綁定。
-- **已就緒**：Android 端的呼叫路徑全部接好了
-  （`AudioPcmDecoder` → `whisperTranscribePcm`），模型下載也接好了。
-  引擎沒編進來時會**明確回報**「此版本未包含語音引擎」，不再產生假文字。
-- **判定**：`cargo ndk` 編得出含 `asr-whisper` 的 `.so`，且實機轉錄得出中文。
+### H-ASR-ANDROID-VERIFY. Android 的 Whisper 已經編出來，待實機驗證
+- **已完成**：`cargo ndk` 現在編得出含 `asr-whisper` 的 `.so`
+  （arm64-v8a 與 x86_64，release 各 12 MB，原本約 8 MB）。
+  兩個卡點都解掉了，都寫進了 `scripts/build-android-libs.sh` 的註解：
+  1. **cmake 工具鏈**：`cmake-rs` 只從環境變數讀 `CMAKE_TOOLCHAIN_FILE`，
+     沒辦法傳 `-DANDROID_ABI`。加了一層包裝
+     （`scripts/android-cmake-toolchain.cmake`）先設 ABI 再 include NDK 那份。
+     沒有它時 cmake 會拿預設的 armeabi-v7a 去測編譯器，回報
+     `Check for working C compiler - broken`，而訊息完全不提 ABI。
+  2. **`libggml-blas.a` 不存在**：`whisper-rs-sys` 的 build script 用
+     `cfg!(target_os = "macos")` 決定要不要連 BLAS，而 **build script 跑在
+     host 上** —— 從 Mac 交叉編譯時那個條件為真，於是要求連一個從來沒建過的
+     函式庫。（正確寫法是 `CARGO_CFG_TARGET_OS`，這是上游的 bug。）
+     Android 本來就沒有 BLAS，所以建一個空的靜態庫正是正確答案。
+- **要做（實機）**：
+  1. 下載 Whisper 模型（設定裡的模型清單），確認續傳與 SHA-256 驗證會動。
+  2. 錄一段中文，按轉錄，確認**真的轉得出中文**而不是任何佔位文字。
+  3. 與 Apple 端同一段錄音比對結果差異。
+  4. 量一次記憶體峰值與耗時（574 MB 模型 + 一段 5 分鐘錄音）。
+  5. 確認低階機型上不會 OOM —— 不行的話要在 UI 上先擋，而不是讓它閃退。
+- **已知**：`asr-onnx`（Silero VAD + 中文標點）仍然關閉，因為 `ort` 沒有
+  aarch64-linux-android 的預編譯二進位。影響是**分段較粗、沒有標點還原**，
+  不影響轉錄本身。
 
 ### H0. iOS 實機驗證（`--ios-install` 那條路尚未實測）
 - **卡在**：目前沒有任何實體 iPhone / iPad 連著這台 Mac。

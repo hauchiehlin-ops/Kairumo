@@ -308,8 +308,23 @@ mod tests {
     #[test]
     fn a_failed_encode_leaves_no_half_file_behind() {
         // 半個檔會被同步當成「比較舊的版本」推上雲端。
-        let bad = "/no/such/dir/x.opus".to_string();
-        assert!(audio_encode_pcm_to_opus(vec![0.0; 320], bad).is_none());
+        //
+        // 用「父路徑是一個**檔案**」來製造失敗，不是用一個看起來不存在的
+        // 絕對路徑 —— `/no/such/dir` 在 Windows 上會被當成目前磁碟機的
+        // 相對路徑，`create_dir_all` 真的建得起來，於是編碼成功、測試在
+        // Windows 上紅掉（實際發生過）。父路徑是檔案這件事在三個平台上
+        // 都一定失敗。
+        let dir = std::env::temp_dir().join(format!("padnote-encfail-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).expect("建暫存目錄");
+        let blocker = dir.join("not-a-directory");
+        std::fs::write(&blocker, b"x").expect("建阻擋用的檔案");
+
+        let target = blocker.join("x.opus");
+        assert!(
+            audio_encode_pcm_to_opus(vec![0.0; 320], target.to_string_lossy().into()).is_none()
+        );
+        assert!(!target.exists(), "失敗之後不該留下任何東西");
     }
 
     #[test]

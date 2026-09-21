@@ -169,6 +169,7 @@ Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對�
 | 項目 | 決定 | 結果 |
 |---|---|---|
 | Android 假轉錄 | **下沉** | 走核心 `whisperTranscribePcm`，四種失敗各有明確訊息 |
+| Android 的 Whisper 引擎 | **下沉** | `asr-whisper` 已經編得出 Android 的 `.so`（見 `TODO.md` H-ASR-ANDROID-VERIFY）。擋住的從來只有 ONNX，而 Whisper 不碰它 |
 | 模型下載 | **下沉** | 兩平台走 `padnote-models`（SHA-256 + 續傳），Apple 原本那條沒驗證沒續傳的路已移除 |
 | session 加密兩份實作 | **下沉** | `collab_encrypt` 改呼叫 `padnote_crypto::session`，重複的 FFI 門面刪掉 |
 | Apple 搜尋搜不到轉錄／PDF／OCR | **下沉** | 新增 `NotebookSearchIndex`，與 Android 同一組規則（兩字才查、快取、跳過壞的） |
@@ -179,7 +180,6 @@ Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對�
 
 | 項目 | 為什麼要下沉 | 卡在哪 |
 |---|---|---|
-| Android 的 Whisper 引擎 | 轉錄的行為必須兩邊一樣 | `whisper-rs-sys` 的 Android cmake 設定，見 `TODO.md` H-ASR-ANDROID |
 | 壓感曲線（`width_scale` / `opacity_scale` / `FfiPressureAction`） | 同一支筆在兩台裝置上該畫出同樣的粗細。**Apple 現在在 `InkInterop.swift` 寫死一條曲線**，核心那條可設定的沒人用 | 要動兩邊的算繪路徑；而且「壓感影響線寬還是濃度」目前**沒有任何設定介面**，先補介面還是先下沉要一起決定 |
 | 版面尺寸級別（`layout_columns` / `layout_size_class`） | Android 的編輯器沒有雙欄工作區，同一本筆記在平板上兩邊長得不一樣 | 這是 Android 編輯器的版面重做，與 S-71/S-72 同一批 |
 | 頁面搬移運算（Apple 走核心、Android 自己算） | 搬移的**正確性**規則（由大到小刪、附件頁碼平移）不該有兩份 | Android 端要改接 `page_index_after_*` / `page_transfer_plan` |
