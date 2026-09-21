@@ -6,7 +6,7 @@
 
 | # | 需求 | 狀態 |
 |---|---|---|
-| 1 | 跨平台（iOS / macOS / iPadOS / Windows / Android） | 🟡 **部分** |
+| 1 | 跨平台（iOS / iPadOS / macOS / Android） | 🟡 **部分** |
 | 2 | 觸控筆／手指／滑鼠的準確度與壓感觸發 | ✅ **已完成**（S-36，33 測試 + FFI） |
 | 3 | 檔案工具列：快速儲存、另存不同格式 | 🟡 **部分**（無 UI） |
 | 4 | UI/UX 簡潔（參考 GoodNotes） | 🔴 **未涵蓋** |
@@ -23,7 +23,7 @@
 架構上是保證的，不是靠紀律維持：業務邏輯全在 `padnote-core`（Rust），
 UniFFI 已能產生 **Swift 與 Kotlin 綁定**（實際產出並通過 iOS SDK 語法檢查）。
 
-`roadmap.md` M4 已含 Android（WP28）與 Windows/Linux Desktop（WP30）。
+`roadmap.md` M4 已含 Android（WP28）。**Windows / Linux 不在支援範圍內**（見 ADR-0012）。
 
 ### 缺口
 **Windows 的低延遲墨跡沒有設計。** Apple 走 CAMetalLayer、Android 走

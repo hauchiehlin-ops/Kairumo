@@ -133,7 +133,6 @@ t=200ms  筆落下    → 判 Draw，同時回收 { retract: [手掌的 id] }
 | iOS / iPadOS | `UITouch` | `type == .pencil` ✅ | `majorRadius` ✅ |
 | macOS | `NSEvent` | 觸控板／滑鼠 | 部分 |
 | Android | `MotionEvent` | `TOOL_TYPE_STYLUS` ✅ | `getSize()` / `TOUCH_MAJOR` ✅ |
-| Windows | `PointerRoutedEventArgs` | `PointerDeviceType.Pen` ✅ | `ContactRect` ✅ |
 
 四個平台都提供筆的分類與接觸面積 —— 這是判準能跨平台成立的前提。
 

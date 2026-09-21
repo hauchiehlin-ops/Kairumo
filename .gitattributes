@@ -18,9 +18,10 @@
 # cmd.exe 對只有 LF 的 .bat 會出怪事（尤其是含 label/goto 的），
 # 而 android/gradlew.bat 正好是那種。這一條是加上面那行之後才發現的：
 # `git add --renormalize .` 當場就把它改寫了。
+# repo 裡只有 android/gradlew.bat 這一個（Gradle 產生的）。
+# 產品不出 Windows，但**開發**可能在 Windows 上做 Android，
+# 所以這個檔要留著而且要是 CRLF。
 *.bat text eol=crlf
-*.cmd text eol=crlf
-*.ps1 text eol=crlf
 
 # 這些是二進位，不准碰。
 *.png binary

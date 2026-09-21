@@ -16,7 +16,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        # **沒有 Windows。** 這個 App 只出 iOS / iPadOS / macOS / Android，
+        # 核心也不為 Windows 編。跑一個不出貨的平台，代價是每次提交多等
+        # 四分鐘，而換到的資訊沒有人會拿來做決定。
+        #
+        # 留 ubuntu 的理由不同：Android 的核心就是在 Linux 上交叉編出來的。
+        os: [macos-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable

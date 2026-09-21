@@ -145,7 +145,6 @@ M0 技術驗證 ──▶ M1 可用核心 ──▶ M2 公開 Beta ──▶ M3 
 | WP27 `padnote-render` | wgpu 渲染管線（Apple 以外平台） | 5 |
 | WP28 Android 外殼 | Compose MP、S Pen、`androidx.graphics.lowlatency` 前緩衝 | 6 |
 | WP29 ML Kit HWR | Android 的 `HwrEngine` 實作（D1） | 2 |
-| WP30 Desktop（Windows/Linux） | Compose MP Desktop | 5 |
 | WP31 **Google Drive provider** | OAuth PKCE、`drive.appdata`、appDataFolder、分塊 append 模擬（G2） | 4 |
 | WP32 匯入競品備份 | Goodnotes/Notability 遷移（H5） | 4 |
 

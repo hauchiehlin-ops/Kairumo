@@ -463,7 +463,7 @@ EnergyVad 誤判 100/100、Silero 0/100**。模型缺失時降級不失敗 |
 | ~~S-43~~ ✅ | 把標註寫進真實 PDF（PDFium 的 annotation API） | `create_annotated_pdf` 實作完成，經測試驗證 |
 | ~~S-44b~~ ✅ | 匯出真正的 PDF `/Ink` 標註 | **兩平台皆已達成**。Apple 的匯出改走核心的匯出器（原本是點陣合成）；核心同時輸出向量筆畫與 `/Subtype /Ink` + `/InkList` + `/BS`。3D 模型與連結卡片核心沒有那兩種型別，改以算繪後的圖片帶進去，內容不會掉 |
 | S-44 | 用其他 App 實測 | **需要你來測**（我裝不了那些 App）。已產出範例 PDF（兩頁、三筆畫、三個獨立 Ink 標註）。判準：那三條線能不能在 Goodnotes / Notability / PDF Expert 裡被**選取、搬動、刪除** |
-| ~~S-35~~ ➡️ | **Windows 低延遲墨跡** | **已轉成 [ADR-0012](adr/0012-windows-low-latency-ink.md)，不再排期。** 它不是待辦：目前沒有 Windows 版，這一條在有 Windows 版之前不成立。結論（Compose MP Desktop 走 Skia/JVM 做不到 9ms，要原生 Windows Ink / DirectComposition）連同重新評估的時機都記在那份 ADR |
+| ~~S-35~~ ➡️ | **Windows 低延遲墨跡** | **已轉成 [ADR-0012](adr/0012-windows-low-latency-ink.md)，並於 2026-09-22 永久關閉。** Windows 正式排除在支援範圍外（只出 iOS / iPadOS / macOS / Android），所以「等有 Windows 版再回頭看」那個時機不會來。結論（Compose MP Desktop 走 Skia/JVM 做不到 9ms，要原生 Windows Ink / DirectComposition）連同重新評估的時機都記在那份 ADR |
 | ~~S-36~~ ✅ | **掌拒與輸入分流** | 🔴 完全未設計。**手寫 App 的生死線**：手掌靠螢幕會畫出大片塗鴉 |
 | ~~S-37~~ ✅ | UI/UX 設計 | 🔴 完全未開始。可與 M0 並行，不依賴 S1 |
 | ~~S-38~~ ✅ | 物件模型：群組／對齊／吸附／變換 | 需 ADR —— 會影響 `.padnote` 格式。目前 `Stroke` 沒有「物件」概念 |
