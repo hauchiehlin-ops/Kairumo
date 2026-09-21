@@ -266,6 +266,16 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     public var lastModifiedDate: Date
     public var pageCount: Int
     public var hasRecording: Bool
+    /// 這本筆記的套件加密了嗎。
+    ///
+    /// **必須是 Optional**：舊的 `notebooks.json` 沒有這個欄位，
+    /// 不給預設值的話整份清單都解不開，而症狀是「所有筆記都不見了」。
+    public var isEncryptedFlag: Bool?
+    /// 加密狀態。真相在套件的 `manifest.json`，這個欄位只是清單顯示用的快取。
+    public var isEncrypted: Bool {
+        get { isEncryptedFlag ?? false }
+        set { isEncryptedFlag = newValue }
+    }
     public var previewSnippet: String?
     public var template: NoteTemplate
     public var recordingAudioPath: String?

@@ -2567,6 +2567,110 @@ extension LocalizationManager {
             .ko: "이메일",
             .th: "อีเมล"
         ],
+        "encrypt_covers_images": [
+            .zhHant: "圖片",
+            .en: "Images",
+            .zhHans: "图片",
+            .ja: "画像",
+            .ko: "이미지",
+            .th: "รูปภาพ"
+        ],
+        "encrypt_covers_notes": [
+            .zhHant: "筆記內容（文字、手寫、表格、圖形）",
+            .en: "Note content (text, ink, tables, shapes)",
+            .zhHans: "笔记内容（文字、手写、表格、图形）",
+            .ja: "ノートの内容（文字・手書き・表・図形）",
+            .ko: "노트 내용(텍스트, 필기, 표, 도형)",
+            .th: "เนื้อหาโน้ต (ข้อความ ลายมือ ตาราง รูปทรง)"
+        ],
+        "encrypt_enabled": [
+            .zhHant: "已加密",
+            .en: "Encrypted",
+            .zhHans: "已加密",
+            .ja: "暗号化済み",
+            .ko: "암호화됨",
+            .th: "เข้ารหัสแล้ว"
+        ],
+        "encrypt_not_recordings": [
+            .zhHant: "錄音尚未加密",
+            .en: "Recordings are NOT encrypted yet",
+            .zhHans: "录音尚未加密",
+            .ja: "録音はまだ暗号化されません",
+            .ko: "녹음은 아직 암호화되지 않습니다",
+            .th: "การบันทึกเสียงยังไม่ถูกเข้ารหัส"
+        ],
+        "encrypt_notebook": [
+            .zhHant: "加密這本筆記",
+            .en: "Encrypt this notebook",
+            .zhHans: "加密这本笔记",
+            .ja: "このノートを暗号化",
+            .ko: "이 노트 암호화",
+            .th: "เข้ารหัสสมุดบันทึกนี้"
+        ],
+        "encrypt_only_new": [
+            .zhHant: "只有新建的筆記本可以加密，既有的筆記本維持原樣。",
+            .en: "Only new notebooks can be encrypted. Existing notebooks stay as they are.",
+            .zhHans: "只有新建的笔记本可以加密，既有的笔记本维持原样。",
+            .ja: "暗号化できるのは新しいノートだけです。既存のノートはそのままです。",
+            .ko: "새 노트만 암호화할 수 있습니다. 기존 노트는 그대로 유지됩니다.",
+            .th: "เข้ารหัสได้เฉพาะสมุดใหม่ สมุดเดิมจะคงเดิม"
+        ],
+        "encrypt_passphrase": [
+            .zhHant: "密碼",
+            .en: "Passphrase",
+            .zhHans: "密码",
+            .ja: "パスフレーズ",
+            .ko: "암호",
+            .th: "รหัสผ่าน"
+        ],
+        "encrypt_passphrase_again": [
+            .zhHant: "再輸入一次密碼",
+            .en: "Repeat passphrase",
+            .zhHans: "再输入一次密码",
+            .ja: "パスフレーズを再入力",
+            .ko: "암호 다시 입력",
+            .th: "ยืนยันรหัสผ่าน"
+        ],
+        "encrypt_passphrase_mismatch": [
+            .zhHant: "兩次輸入不一致",
+            .en: "The two entries do not match",
+            .zhHans: "两次输入不一致",
+            .ja: "入力が一致しません",
+            .ko: "입력이 일치하지 않습니다",
+            .th: "สองรายการไม่ตรงกัน"
+        ],
+        "encrypt_passphrase_too_short": [
+            .zhHant: "至少 8 個字元",
+            .en: "Use at least 8 characters",
+            .zhHans: "至少 8 个字元",
+            .ja: "8 文字以上にしてください",
+            .ko: "8자 이상 입력하세요",
+            .th: "ใช้อย่างน้อย 8 ตัวอักษร"
+        ],
+        "encrypt_scope_title": [
+            .zhHant: "加密涵蓋的範圍",
+            .en: "What encryption covers",
+            .zhHans: "加密涵盖的范围",
+            .ja: "暗号化の対象",
+            .ko: "암호화 범위",
+            .th: "สิ่งที่การเข้ารหัสครอบคลุม"
+        ],
+        "encrypt_unlock": [
+            .zhHant: "解鎖",
+            .en: "Unlock",
+            .zhHans: "解锁",
+            .ja: "ロック解除",
+            .ko: "잠금 해제",
+            .th: "ปลดล็อก"
+        ],
+        "encrypt_wrong_passphrase": [
+            .zhHant: "密碼錯誤",
+            .en: "Wrong passphrase",
+            .zhHans: "密码错误",
+            .ja: "パスフレーズが違います",
+            .ko: "암호가 올바르지 않습니다",
+            .th: "รหัสผ่านไม่ถูกต้อง"
+        ],
         "encryption": [
             .zhHant: "資料去了哪裡",
             .en: "Where your data goes",
@@ -5471,6 +5575,14 @@ extension LocalizationManager {
             .ko: "다음 페이지",
             .th: "หน้าถัดไป"
         ],
+        "next_step": [
+            .zhHant: "下一步",
+            .en: "Next",
+            .zhHans: "下一步",
+            .ja: "次へ",
+            .ko: "다음",
+            .th: "ถัดไป"
+        ],
         "no_account_needed": [
             .zhHant: "不需要帳號，也沒有我們的伺服器",
             .en: "No account, and no server of ours",
@@ -5614,6 +5726,14 @@ extension LocalizationManager {
             .ja: "まだノートがありません。「新規ノート」から始めましょう。",
             .ko: "아직 노트가 없습니다. ‘새 노트’로 시작하세요.",
             .th: "ยังไม่มีโน้ต แตะ “โน้ตใหม่” เพื่อเริ่ม"
+        ],
+        "notebook_title_label": [
+            .zhHant: "筆記本名稱",
+            .en: "Notebook name",
+            .zhHans: "笔记本名称",
+            .ja: "ノート名",
+            .ko: "노트 이름",
+            .th: "ชื่อสมุดบันทึก"
         ],
         "nothing_to_refine": [
             .zhHant: "沒有可修飾的筆跡 —— 請先寫點東西",
@@ -6614,6 +6734,46 @@ extension LocalizationManager {
             .ja: "録音タイトル",
             .ko: "녹음 제목",
             .th: "ชื่อการบันทึก"
+        ],
+        "recovery_confirm_prompt": [
+            .zhHant: "請把復原碼輸入一次，確認你真的抄下來了",
+            .en: "Type the recovery code back to confirm you wrote it down",
+            .zhHans: "请把复原码输入一次，确认你真的抄下来了",
+            .ja: "書き留めたことを確認するため、リカバリーコードを入力してください",
+            .ko: "적어 두었는지 확인하기 위해 복구 코드를 입력하세요",
+            .th: "พิมพ์รหัสกู้คืนอีกครั้งเพื่อยืนยันว่าคุณจดไว้แล้ว"
+        ],
+        "recovery_copy": [
+            .zhHant: "複製",
+            .en: "Copy",
+            .zhHans: "复制",
+            .ja: "コピー",
+            .ko: "복사",
+            .th: "คัดลอก"
+        ],
+        "recovery_mismatch": [
+            .zhHant: "與剛才顯示的不一致",
+            .en: "That does not match the code shown",
+            .zhHans: "與剛才顯示的不一致",
+            .ja: "表示されたコードと一致しません",
+            .ko: "표시된 코드와 일치하지 않습니다",
+            .th: "ไม่ตรงกับรหัสที่แสดง"
+        ],
+        "recovery_title": [
+            .zhHant: "請抄下你的復原碼",
+            .en: "Write down your recovery code",
+            .zhHans: "请抄下你的复原码",
+            .ja: "リカバリーコードを書き留めてください",
+            .ko: "복구 코드를 적어 두세요",
+            .th: "จดรหัสกู้คืนของคุณไว้"
+        ],
+        "recovery_warning": [
+            .zhHant: "沒有「忘記密碼」這回事。忘了密碼時，這組碼是唯一的後路，而且只顯示這一次。",
+            .en: "There is no password reset. If you forget your passphrase, this code is the ONLY way back. It is shown once.",
+            .zhHans: "没有「忘记密码」这回事。忘了密码时，这组码是唯一的后路，而且只显示这一次。",
+            .ja: "パスワードの再設定はできません。パスフレーズを忘れた場合、このコードだけが唯一の手段です。表示は一度きりです。",
+            .ko: "비밀번호 재설정이 없습니다. 암호를 잊으면 이 코드가 유일한 방법입니다. 한 번만 표시됩니다.",
+            .th: "ไม่มีการรีเซ็ตรหัสผ่าน หากลืมรหัส โค้ดนี้คือทางเดียว และแสดงเพียงครั้งเดียว"
         ],
         "redo": [
             .zhHant: "重做",

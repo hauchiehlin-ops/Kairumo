@@ -2551,6 +2551,110 @@
     "zhHans": "电子邮件",
     "zhHant": "電子郵件"
   },
+  "encrypt_covers_images": {
+    "en": "Images",
+    "ja": "画像",
+    "ko": "이미지",
+    "th": "รูปภาพ",
+    "zhHans": "图片",
+    "zhHant": "圖片"
+  },
+  "encrypt_covers_notes": {
+    "en": "Note content (text, ink, tables, shapes)",
+    "ja": "ノートの内容（文字・手書き・表・図形）",
+    "ko": "노트 내용(텍스트, 필기, 표, 도형)",
+    "th": "เนื้อหาโน้ต (ข้อความ ลายมือ ตาราง รูปทรง)",
+    "zhHans": "笔记内容（文字、手写、表格、图形）",
+    "zhHant": "筆記內容（文字、手寫、表格、圖形）"
+  },
+  "encrypt_enabled": {
+    "en": "Encrypted",
+    "ja": "暗号化済み",
+    "ko": "암호화됨",
+    "th": "เข้ารหัสแล้ว",
+    "zhHans": "已加密",
+    "zhHant": "已加密"
+  },
+  "encrypt_not_recordings": {
+    "en": "Recordings are NOT encrypted yet",
+    "ja": "録音はまだ暗号化されません",
+    "ko": "녹음은 아직 암호화되지 않습니다",
+    "th": "การบันทึกเสียงยังไม่ถูกเข้ารหัส",
+    "zhHans": "录音尚未加密",
+    "zhHant": "錄音尚未加密"
+  },
+  "encrypt_notebook": {
+    "en": "Encrypt this notebook",
+    "ja": "このノートを暗号化",
+    "ko": "이 노트 암호화",
+    "th": "เข้ารหัสสมุดบันทึกนี้",
+    "zhHans": "加密这本笔记",
+    "zhHant": "加密這本筆記"
+  },
+  "encrypt_only_new": {
+    "en": "Only new notebooks can be encrypted. Existing notebooks stay as they are.",
+    "ja": "暗号化できるのは新しいノートだけです。既存のノートはそのままです。",
+    "ko": "새 노트만 암호화할 수 있습니다. 기존 노트는 그대로 유지됩니다.",
+    "th": "เข้ารหัสได้เฉพาะสมุดใหม่ สมุดเดิมจะคงเดิม",
+    "zhHans": "只有新建的笔记本可以加密，既有的笔记本维持原样。",
+    "zhHant": "只有新建的筆記本可以加密，既有的筆記本維持原樣。"
+  },
+  "encrypt_passphrase": {
+    "en": "Passphrase",
+    "ja": "パスフレーズ",
+    "ko": "암호",
+    "th": "รหัสผ่าน",
+    "zhHans": "密码",
+    "zhHant": "密碼"
+  },
+  "encrypt_passphrase_again": {
+    "en": "Repeat passphrase",
+    "ja": "パスフレーズを再入力",
+    "ko": "암호 다시 입력",
+    "th": "ยืนยันรหัสผ่าน",
+    "zhHans": "再输入一次密码",
+    "zhHant": "再輸入一次密碼"
+  },
+  "encrypt_passphrase_mismatch": {
+    "en": "The two entries do not match",
+    "ja": "入力が一致しません",
+    "ko": "입력이 일치하지 않습니다",
+    "th": "สองรายการไม่ตรงกัน",
+    "zhHans": "两次输入不一致",
+    "zhHant": "兩次輸入不一致"
+  },
+  "encrypt_passphrase_too_short": {
+    "en": "Use at least 8 characters",
+    "ja": "8 文字以上にしてください",
+    "ko": "8자 이상 입력하세요",
+    "th": "ใช้อย่างน้อย 8 ตัวอักษร",
+    "zhHans": "至少 8 个字元",
+    "zhHant": "至少 8 個字元"
+  },
+  "encrypt_scope_title": {
+    "en": "What encryption covers",
+    "ja": "暗号化の対象",
+    "ko": "암호화 범위",
+    "th": "สิ่งที่การเข้ารหัสครอบคลุม",
+    "zhHans": "加密涵盖的范围",
+    "zhHant": "加密涵蓋的範圍"
+  },
+  "encrypt_unlock": {
+    "en": "Unlock",
+    "ja": "ロック解除",
+    "ko": "잠금 해제",
+    "th": "ปลดล็อก",
+    "zhHans": "解锁",
+    "zhHant": "解鎖"
+  },
+  "encrypt_wrong_passphrase": {
+    "en": "Wrong passphrase",
+    "ja": "パスフレーズが違います",
+    "ko": "암호가 올바르지 않습니다",
+    "th": "รหัสผ่านไม่ถูกต้อง",
+    "zhHans": "密码错误",
+    "zhHant": "密碼錯誤"
+  },
   "encryption": {
     "en": "Where your data goes",
     "ja": "データの行き先",
@@ -5455,6 +5559,14 @@
     "zhHans": "下一页",
     "zhHant": "下一頁"
   },
+  "next_step": {
+    "en": "Next",
+    "ja": "次へ",
+    "ko": "다음",
+    "th": "ถัดไป",
+    "zhHans": "下一步",
+    "zhHant": "下一步"
+  },
   "no_account_needed": {
     "en": "No account, and no server of ours",
     "ja": "アカウント不要、当方のサーバーもありません",
@@ -5598,6 +5710,14 @@
     "th": "ยังไม่มีโน้ต แตะ “โน้ตใหม่” เพื่อเริ่ม",
     "zhHans": "还没有任何笔记。点「新增笔记」开始。",
     "zhHant": "還沒有任何筆記。點「新增筆記」開始。"
+  },
+  "notebook_title_label": {
+    "en": "Notebook name",
+    "ja": "ノート名",
+    "ko": "노트 이름",
+    "th": "ชื่อสมุดบันทึก",
+    "zhHans": "笔记本名称",
+    "zhHant": "筆記本名稱"
   },
   "nothing_to_refine": {
     "en": "Nothing to refine — draw something first",
@@ -6598,6 +6718,46 @@
     "th": "ชื่อการบันทึก",
     "zhHans": "录音标题",
     "zhHant": "錄音標題"
+  },
+  "recovery_confirm_prompt": {
+    "en": "Type the recovery code back to confirm you wrote it down",
+    "ja": "書き留めたことを確認するため、リカバリーコードを入力してください",
+    "ko": "적어 두었는지 확인하기 위해 복구 코드를 입력하세요",
+    "th": "พิมพ์รหัสกู้คืนอีกครั้งเพื่อยืนยันว่าคุณจดไว้แล้ว",
+    "zhHans": "请把复原码输入一次，确认你真的抄下来了",
+    "zhHant": "請把復原碼輸入一次，確認你真的抄下來了"
+  },
+  "recovery_copy": {
+    "en": "Copy",
+    "ja": "コピー",
+    "ko": "복사",
+    "th": "คัดลอก",
+    "zhHans": "复制",
+    "zhHant": "複製"
+  },
+  "recovery_mismatch": {
+    "en": "That does not match the code shown",
+    "ja": "表示されたコードと一致しません",
+    "ko": "표시된 코드와 일치하지 않습니다",
+    "th": "ไม่ตรงกับรหัสที่แสดง",
+    "zhHans": "與剛才顯示的不一致",
+    "zhHant": "與剛才顯示的不一致"
+  },
+  "recovery_title": {
+    "en": "Write down your recovery code",
+    "ja": "リカバリーコードを書き留めてください",
+    "ko": "복구 코드를 적어 두세요",
+    "th": "จดรหัสกู้คืนของคุณไว้",
+    "zhHans": "请抄下你的复原码",
+    "zhHant": "請抄下你的復原碼"
+  },
+  "recovery_warning": {
+    "en": "There is no password reset. If you forget your passphrase, this code is the ONLY way back. It is shown once.",
+    "ja": "パスワードの再設定はできません。パスフレーズを忘れた場合、このコードだけが唯一の手段です。表示は一度きりです。",
+    "ko": "비밀번호 재설정이 없습니다. 암호를 잊으면 이 코드가 유일한 방법입니다. 한 번만 표시됩니다.",
+    "th": "ไม่มีการรีเซ็ตรหัสผ่าน หากลืมรหัส โค้ดนี้คือทางเดียว และแสดงเพียงครั้งเดียว",
+    "zhHans": "没有「忘记密码」这回事。忘了密码时，这组码是唯一的后路，而且只显示这一次。",
+    "zhHant": "沒有「忘記密碼」這回事。忘了密碼時，這組碼是唯一的後路，而且只顯示這一次。"
   },
   "redo": {
     "en": "Redo",

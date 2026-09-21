@@ -134,6 +134,7 @@
 		E0D45411D9DA6F64C164070A /* AccessibilityLabelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C02304CC3521585A1142449 /* AccessibilityLabelTests.swift */; };
 		E26B4411597679C8486D535D /* RecentTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2929D89A7985F84100FDB68 /* RecentTemplates.swift */; };
 		E3842272FC4874968EB1DD2C /* NotebookSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 843458EEF60FCF8BD686B73F /* NotebookSearchTests.swift */; };
+		E3A9312FAEBA705BEA9FA720 /* NotebookEncryptionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 299963A100092694C08E3978 /* NotebookEncryptionSheet.swift */; };
 		E4B93CFE05CF96BF2F488812 /* AppCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A59801CFFFC6CE7230C128 /* AppCommands.swift */; };
 		E77C6702EE266A8D0B24EA19 /* PageRepagination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C26B5B3A37A7FBDAABA8A7 /* PageRepagination.swift */; };
 		E8F3A38363417DE23F896842 /* PageGuideRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9DFE7E365BA2170726481B9 /* PageGuideRenderer.swift */; };
@@ -196,6 +197,7 @@
 		236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeWorkbenchView.swift; sourceTree = "<group>"; };
 		26F09C378F9F1B6835D9ECB2 /* CStubs.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = CStubs.c; sourceTree = "<group>"; };
 		28A8E33C21E81EED174CEBA3 /* padnote_core.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = padnote_core.swift; sourceTree = "<group>"; };
+		299963A100092694C08E3978 /* NotebookEncryptionSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookEncryptionSheet.swift; sourceTree = "<group>"; };
 		29BFE1D24D00A1328C62BA89 /* ImageEditControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageEditControls.swift; sourceTree = "<group>"; };
 		29C630A29EC3E773EF130E2D /* ObjectFrameStyleMenu.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectFrameStyleMenu.swift; sourceTree = "<group>"; };
 		2A2253FE74C35178B0F901C8 /* Templates */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Templates; path = Resources/Templates; sourceTree = SOURCE_ROOT; };
@@ -493,6 +495,7 @@
 				61D0BC500318C879D185099E /* Model3DStudioView.swift */,
 				3CD7D7A2AF99E159697538C0 /* ModelDownloadManager.swift */,
 				9E0D4938AD7ED09F531105A2 /* NotebookEditorView.swift */,
+				299963A100092694C08E3978 /* NotebookEncryptionSheet.swift */,
 				7187AC2B18533F28DABBB98A /* NotebookMeta.swift */,
 				1C19329463E6F6E313A0F1DB /* NotebookMigration.swift */,
 				A09B19AED1DC70D31503F82C /* NotebookPackageBridge.swift */,
@@ -775,6 +778,7 @@
 				9FC47E009EE588F6F00894D8 /* NoteShape.swift in Sources */,
 				8CBE67FB1F6A87103F12949F /* NoteTable.swift in Sources */,
 				880DCFF8C76BF936EADB63DF /* NotebookEditorView.swift in Sources */,
+				E3A9312FAEBA705BEA9FA720 /* NotebookEncryptionSheet.swift in Sources */,
 				D88846691483243AC43A8668 /* NotebookMeta.swift in Sources */,
 				67CF9DE54436AC7DD3FF5065 /* NotebookMigration.swift in Sources */,
 				B0A3045EEDEA33E102E52D82 /* NotebookPackageBridge.swift in Sources */,

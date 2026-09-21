@@ -37,6 +37,9 @@ public struct HomeWorkbenchView: View {
     @State private var showFolderSyncSheet: Bool = false
     @State private var showAccountSheet: Bool = false
     @State private var showNewNotebookSheet: Bool = false
+    /// 建立**加密**筆記本的流程（H-CRYPTO）。與一般新增分開：
+    /// 它有三步而且不能跳（設密碼 → 抄復原碼 → 把復原碼輸回來）。
+    @State private var showEncryptedNotebookSheet: Bool = false
     @State private var showQuickRecordSheet: Bool = false
     @State private var showImportPicker: Bool = false
     @State private var selectedSortOption: SortOption = .byDate
@@ -370,6 +373,21 @@ public struct HomeWorkbenchView: View {
             } }
             .sheet(isPresented: $showQuickRecordSheet) { resizableSheet {
                 QuickAudioRecorderModal()
+            } }
+            .sheet(isPresented: $showEncryptedNotebookSheet) { resizableSheet {
+                NotebookEncryptionSheet { id, title in
+                    // 套件已經由核心建好了（含加密），這裡只補上清單那一筆。
+                    var doc = NotebookDocument(
+                        id: id,
+                        title: title.isEmpty
+                            ? localizationManager.localized("new_note") : title,
+                        pageCount: 1,
+                        template: .blank)
+                    doc.isEncrypted = true
+                    notebookStore.upsertNotebook(doc)
+                    AccountSyncStore.shared.record(
+                        id: id, title: doc.title, parentId: nil, isFolder: false)
+                }
             } }
             .fileImporter(
                 isPresented: $showImportPicker,
@@ -1888,6 +1906,25 @@ public struct HomeWorkbenchView: View {
                 recentTemplatesSection
 
                 documentTemplateSection
+
+                // 加密是**另一條路**，不是這裡的一個開關。
+                //
+                // 它有三步而且不能跳（設密碼 → 抄復原碼 → 把復原碼輸回來），
+                // 塞進這張表單只會讓人以為那是一個可以之後再說的選項 ——
+                // 而「之後再說」的使用者就是後來會失去全部筆記的那一個。
+                Section {
+                    Button {
+                        showNewNotebookSheet = false
+                        // 等這張 sheet 收完再開下一張，否則兩張會打架。
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            showEncryptedNotebookSheet = true
+                        }
+                    } label: {
+                        Label(localizationManager.localized("encrypt_notebook"),
+                              systemImage: "lock.fill")
+                    }
+                    .accessibilityIdentifier("new_notebook.encrypted")
+                }
             }
             .navigationTitle(localizationManager.localized("new_notebook"))
             .navigationBarTitleDisplayMode(.inline)
