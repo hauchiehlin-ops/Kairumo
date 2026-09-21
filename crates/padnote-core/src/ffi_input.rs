@@ -691,3 +691,53 @@ mod palm_limit_tests {
         );
     }
 }
+
+// ---- 墨跡延遲預算（一致性閘門 4）----
+//
+// 這兩個數字原本只寫在 `docs/TODO.md` 的 H1 裡：
+// 「中位數 ≤9ms 且 p95 ≤12ms = Go；>12ms = 改用 PencilKit」。
+//
+// 寫在文件裡的數字沒有人會被它擋下來。放進核心之後，兩端的延遲量測
+// （`InkLatencyMeter`）比對的是同一組值，而且值一改，一致性向量就會紅 ——
+// 那正是「我們把承諾放寬了」該被看見的那一刻。
+
+/// 墨跡延遲的預算（微秒）。
+#[derive(Clone, Copy, Debug, uniffi::Record)]
+pub struct FfiInkLatencyBudget {
+    /// 中位數上限。
+    pub median_us: u64,
+    /// 第 95 百分位上限。**超過它代表自建墨跡引擎不成立**（見 TODO 的 H1）。
+    pub p95_us: u64,
+}
+
+#[uniffi::export]
+pub fn ink_latency_budget() -> FfiInkLatencyBudget {
+    FfiInkLatencyBudget {
+        median_us: 9_000,
+        p95_us: 12_000,
+    }
+}
+
+/// 一組量測結果是否符合預算。
+///
+/// 兩端各自判斷的話，遲早有一邊寫成 `<` 另一邊寫成 `<=`，
+/// 然後同一支筆在兩台裝置上得到不同的結論。
+#[uniffi::export]
+pub fn ink_latency_meets_budget(median_us: u64, p95_us: u64) -> bool {
+    let b = ink_latency_budget();
+    median_us <= b.median_us && p95_us <= b.p95_us
+}
+
+#[cfg(test)]
+mod ink_budget_tests {
+    use super::*;
+
+    #[test]
+    fn the_boundary_is_inclusive() {
+        // 邊界值算通過。寫成 `<` 的話，剛好打在 9.0/12.0 的裝置會被判失敗，
+        // 而那個差別會讓兩個平台對同一支筆得到不同結論。
+        assert!(ink_latency_meets_budget(9_000, 12_000));
+        assert!(!ink_latency_meets_budget(9_001, 12_000));
+        assert!(!ink_latency_meets_budget(9_000, 12_001));
+    }
+}

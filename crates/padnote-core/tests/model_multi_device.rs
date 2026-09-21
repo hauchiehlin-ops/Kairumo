@@ -408,12 +408,12 @@ fn run_inner(actions: &[Action], dir: PathBuf, verbose: bool) -> Result<(), Stri
 
         // ---- P2 單調：還沒有任何還原之前，內容只增不減 ----
         if !w.restored {
-            for i in 0..w.devices.len().min(before.len()) {
-                if !w.devices[i].alive {
+            for (i, was) in before.iter().enumerate() {
+                if i >= w.devices.len() || !w.devices[i].alive {
                     continue;
                 }
                 let now = w.seen(i);
-                let lost: Vec<&String> = before[i].difference(&now).collect();
+                let lost: Vec<&String> = was.difference(&now).collect();
                 if !lost.is_empty() {
                     return Err(format!(
                         "P2 單調被破壞：第 {step} 步（{action:?}）之後，\

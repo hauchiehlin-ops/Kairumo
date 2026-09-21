@@ -1,0 +1,21 @@
+{
+  "cases": [
+    {
+      "median_us": 9000,
+      "ok": true,
+      "p95_us": 12000
+    },
+    {
+      "median_us": 9001,
+      "ok": false,
+      "p95_us": 12000
+    },
+    {
+      "median_us": 9000,
+      "ok": false,
+      "p95_us": 12001
+    }
+  ],
+  "median_us": 9000,
+  "p95_us": 12000
+}

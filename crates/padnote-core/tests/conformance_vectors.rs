@@ -106,6 +106,22 @@ fn palm() -> Value {
     })
 }
 
+/// 墨跡延遲預算（一致性閘門 4）。
+///
+/// 這兩個數字原本只寫在 `docs/TODO.md` 裡 —— 寫在文件裡的數字擋不住任何人。
+fn ink_latency_budget() -> Value {
+    let b = padnote_core::ffi_input::ink_latency_budget();
+    json!({
+        "median_us": b.median_us,
+        "p95_us": b.p95_us,
+        "cases": [
+            { "median_us": 9000, "p95_us": 12000, "ok": true },
+            { "median_us": 9001, "p95_us": 12000, "ok": false },
+            { "median_us": 9000, "p95_us": 12001, "ok": false },
+        ],
+    })
+}
+
 /// 符號面板。Apple 曾經把陣列寫死在工具列裡。
 fn symbols() -> Value {
     let cases: Vec<Value> = padnote_core::ffi_symbols::symbol_categories()
@@ -157,6 +173,7 @@ fn all() -> Vec<(&'static str, Value)> {
         ("layout.json", layout()),
         ("ink-curve.json", ink_curve()),
         ("palm.json", palm()),
+        ("ink-latency.json", ink_latency_budget()),
         ("symbols.json", symbols()),
         ("page-guides.json", page_guides()),
         ("page-geometry.json", page_geometry()),
@@ -189,7 +206,7 @@ fn conformance_vectors_are_up_to_date() {
         stale.is_empty(),
         "這幾組向量與核心目前的行為不一致：{stale:?}\n\
          如果核心的改動是故意的，重新產生並**連同兩端的測試一起檢視**：\n\
-         　　UPDATE_CONFORMANCE=1 cargo test -p padnote-core --test conformance_vectors\n\
+             UPDATE_CONFORMANCE=1 cargo test -p padnote-core --test conformance_vectors\n\
          向量改了就代表兩個平台的行為都會跟著改 —— 那正是要被看見的那一刻。"
     );
 }

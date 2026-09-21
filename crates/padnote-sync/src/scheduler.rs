@@ -70,6 +70,29 @@ pub const DEBOUNCE_MS: u64 = 1_500;
 /// 所以 12 秒不貴。舊結構下這個頻率會把 Drive 的配額打爆。
 pub const PERIODIC_MS: u64 = 12_000;
 
+/// **對使用者的承諾**：一邊寫完，另一邊最久多久看得到（毫秒）。
+///
+/// # 為什麼要有一個獨立的數字
+///
+/// `DEBOUNCE_MS` 與 `PERIODIC_MS` 是實作參數 —— 它們可以為了省電、
+/// 省配額被調整，而每一次調整都會改變使用者實際感受到的「即時」。
+/// 在此之前沒有任何東西盯著那個總和：把 `PERIODIC_MS` 從 12 秒改成 60 秒
+/// 是一行改動，CI 全綠，而「即時同步」就這樣悄悄變成「一分鐘後同步」。
+///
+/// 這個常數把承諾寫成數字，[`worst_case_visible_latency_ms`] 算出實際的
+/// 最壞情況，測試比對兩者。放寬承諾**仍然做得到**，但要改這一行 ——
+/// 那正是它該被看見的時候。
+pub const VISIBLE_LATENCY_BUDGET_MS: u64 = 15_000;
+
+/// 最壞情況下，A 寫完到 B 看得見要多久。
+///
+/// A 端去抖動之後才推（`DEBOUNCE_MS`），B 端最久要等一輪定期拉取
+/// （`PERIODIC_MS`）。兩段相加就是上界 ——
+/// 中間的網路時間不算在內，那不是排程器決定得了的。
+pub const fn worst_case_visible_latency_ms() -> u64 {
+    DEBOUNCE_MS + PERIODIC_MS
+}
+
 /// 失敗退避的起點與上限。
 pub const BACKOFF_MIN_MS: u64 = 1_000;
 pub const BACKOFF_MAX_MS: u64 = 60_000;
@@ -221,6 +244,70 @@ impl SyncScheduler {
 
 #[cfg(test)]
 mod tests {
+
+    /// **「即時」要是一個數字，不是一個形容詞。**
+    ///
+    /// 這一項模擬兩台裝置：A 在 t=0 寫完，B 在背景定期拉。
+    /// 量出「A 寫完 → B 真的拉到」的最壞時間，比對承諾。
+    ///
+    /// 沒有這一項的話，把 `PERIODIC_MS` 從 12 秒改成 60 秒是一行改動、
+    /// CI 全綠，而「即時同步」悄悄變成「一分鐘後同步」。
+    #[test]
+    fn an_edit_reaches_the_other_device_inside_the_promised_budget() {
+        let mut a = SyncScheduler::new();
+        let mut b = SyncScheduler::new();
+
+        // B 從 t=0 就在跑定期拉取。**要先讓它把開機那一次拉完**，
+        // 否則它手上一直有一筆待辦，迴圈第一次問就說「現在就拉」——
+        // 那樣量到的是 0，不管 PERIODIC_MS 設成多少都會過。
+        b.tick(0);
+        assert!(b.should_start(0), "開機第一次應該立刻拉");
+        b.finish(SyncOutcome::Success, 0);
+
+        // A 在 t=0 寫完。
+        a.request(SyncTrigger::LocalEdit, 0);
+
+        // A 什麼時候開始推？
+        let mut push_at = None;
+        for t in 0..=DEBOUNCE_MS {
+            if a.should_start(t) {
+                push_at = Some(t);
+                break;
+            }
+        }
+        let push_at = push_at.expect("去抖動之後一定要推出去");
+        a.finish(SyncOutcome::Success, push_at);
+
+        // B 什麼時候拉到？從 A 推上去之後算起的下一次定期拉取。
+        let mut pull_at = None;
+        for t in push_at..=(push_at + PERIODIC_MS + 1) {
+            b.tick(t);
+            if b.should_start(t) {
+                pull_at = Some(t);
+                break;
+            }
+        }
+        let pull_at = pull_at.expect("定期拉取一定要發生");
+
+        assert!(
+            pull_at <= VISIBLE_LATENCY_BUDGET_MS,
+            "A 寫完到 B 看得見花了 {pull_at} ms，超過承諾的 \
+             {VISIBLE_LATENCY_BUDGET_MS} ms。\
+             如果是刻意放寬，改 VISIBLE_LATENCY_BUDGET_MS —— \
+             那一行改動就是「我們把即時的定義放寬了」。"
+        );
+    }
+
+    /// 承諾與實作參數要對得起來。
+    #[test]
+    fn the_promise_covers_the_implementation() {
+        assert!(
+            worst_case_visible_latency_ms() <= VISIBLE_LATENCY_BUDGET_MS,
+            "去抖動 {DEBOUNCE_MS} + 定期拉取 {PERIODIC_MS} = {} ms，\
+             已經超出承諾的 {VISIBLE_LATENCY_BUDGET_MS} ms",
+            worst_case_visible_latency_ms()
+        );
+    }
     use super::*;
 
     #[test]

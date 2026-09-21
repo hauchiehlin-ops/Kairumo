@@ -6,6 +6,8 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import uniffi.padnote_core.ToolKind
 import uniffi.padnote_core.inkToolIsPressureSensitive
+import uniffi.padnote_core.inkLatencyBudget
+import uniffi.padnote_core.inkLatencyMeetsBudget
 import uniffi.padnote_core.inkWidthScale
 import uniffi.padnote_core.layoutMetrics
 import uniffi.padnote_core.pageGuides
@@ -116,6 +118,33 @@ class ConformanceVectorTest {
             assertEquals(
                 "夾制 ${c.getInt("in")}",
                 c.getInt("out"), palmRetractMsClamped(c.getInt("in").toUInt()).toInt()
+            )
+        }
+    }
+
+    /**
+     * 墨跡延遲預算（閘門 4）。
+     *
+     * 這兩個數字原本只寫在 `docs/TODO.md` 裡 —— 寫在文件裡的數字擋不住任何人。
+     * 實際的延遲要在實機上量（模擬器的數字沒有意義），但**判定的門檻**
+     * 兩端必須一致，否則同一支筆在兩台裝置上會得到不同結論。
+     */
+    @Test
+    fun inkLatencyBudgetMatchesTheVector() {
+        val v = vector("ink-latency.json")
+        val b = inkLatencyBudget()
+        assertEquals(v.getLong("median_us"), b.medianUs.toLong())
+        assertEquals(v.getLong("p95_us"), b.p95Us.toLong())
+
+        val cases = v.getJSONArray("cases")
+        for (i in 0 until cases.length()) {
+            val c = cases.getJSONObject(i)
+            assertEquals(
+                "中位數 ${c.getLong("median_us")} / p95 ${c.getLong("p95_us")}",
+                c.getBoolean("ok"),
+                inkLatencyMeetsBudget(
+                    c.getLong("median_us").toULong(), c.getLong("p95_us").toULong()
+                )
             )
         }
     }

@@ -112,6 +112,26 @@ final class ConformanceVectorTests: XCTestCase {
         }
     }
 
+    /// 墨跡延遲預算（閘門 4）。
+    ///
+    /// 這兩個數字原本只寫在 `docs/TODO.md` 裡 —— 寫在文件裡的數字擋不住任何人。
+    /// 實際的延遲要在實機上量（模擬器的數字沒有意義），但**判定的門檻**
+    /// 兩端必須一致，否則同一支筆在兩台裝置上會得到不同結論。
+    func testInkLatencyBudgetMatchesTheVector() throws {
+        let v = try vector("ink-latency.json")
+        let b = inkLatencyBudget()
+        XCTAssertEqual(Int(b.medianUs), v["median_us"] as! Int)
+        XCTAssertEqual(Int(b.p95Us), v["p95_us"] as! Int)
+
+        for c in v["cases"] as! [[String: Any]] {
+            let median = UInt64(c["median_us"] as! Int)
+            let p95 = UInt64(c["p95_us"] as! Int)
+            XCTAssertEqual(
+                inkLatencyMeetsBudget(medianUs: median, p95Us: p95), c["ok"] as! Bool,
+                "中位數 \(median) / p95 \(p95)")
+        }
+    }
+
     func testSymbolPalettesMatchTheVector() throws {
         let expected = try cases("symbols.json")
         let categories = symbolCategories()
