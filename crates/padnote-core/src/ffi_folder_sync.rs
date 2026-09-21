@@ -43,7 +43,7 @@ pub struct SyncPlan {
 ///
 /// # 為什麼它不需要「兩邊仲裁」
 ///
-/// `manifest.json` 裡只有三類欄位：
+/// `manifest.json` 裡只有四類欄位：
 ///
 /// - **不可變**：`notebook_id`、`created_at_unix_ms`、`time_origin_unix_us`、
 ///   `format`、`spec_version`。改了就是換一本筆記，不是同步衝突。
@@ -52,6 +52,10 @@ pub struct SyncPlan {
 ///   從來不是 manifest 裡那一份。
 /// - **本機的**：`encryption` 的金鑰包裝參數。**絕對不能被對面覆蓋** ——
 ///   蓋掉就等於把這台裝置的解密資訊換成另一台的。
+/// - **本機推導得出的**：`milestone_barriers`（工作項 S-99）。它是這台裝置
+///   壓實時不能跨越的 lamport 界線，開套件時由
+///   `absorb_milestone_barriers` 從 oplog 重新算出來。**不同步是對的** ——
+///   兩台裝置各自算各自的，答案一樣，覆蓋反而可能把還沒下載到的那段蓋掉。
 ///
 /// 所以正確的規則是「本機沒有就拉、雲端沒有就推，兩邊都有就各留各的」，
 /// 而不是丟給使用者一個他沒有辦法回答的「需要注意」。

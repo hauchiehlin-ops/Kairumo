@@ -4651,6 +4651,13 @@ private fun InkScreen(
         CollaborationSheet(
             manager = collaboration,
             languageTag = deviceLanguageTag(),
+            notebookId = notebookId,
+            deviceId = deviceId(activity),
+            creatorName = AccountManager.load(activity, l10n("default_user_name")).displayName,
+            // 還原改的是磁碟上的套件，記憶體裡那份還是還原前的 ——
+            // 跟同步下載完之後一樣，重開這一本的 session 就好，
+            // 不要 recreate 整個 Activity（那會把捲動位置與開著的面板全打掉）。
+            onRestored = { sessionRevision++ },
             onDismiss = { showCollaboration = false }
         )
     }

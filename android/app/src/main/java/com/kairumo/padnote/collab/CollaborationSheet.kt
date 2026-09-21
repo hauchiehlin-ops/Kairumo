@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.kairumo.padnote.LocalizationStrings
+import com.kairumo.padnote.milestone.MilestoneSection
 
 /**
  * 協同編輯面板（Android）。
@@ -55,6 +56,12 @@ import com.kairumo.padnote.LocalizationStrings
 fun CollaborationSheet(
     manager: CollaborationManager,
     languageTag: String,
+    /** 目前開著的筆記本。null 時不顯示里程碑那一段 —— 它是逐本的。 */
+    notebookId: String? = null,
+    deviceId: UInt = 0u,
+    creatorName: String = "",
+    /** 還原完成後呼叫，呼叫端要重新開啟筆記本。 */
+    onRestored: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val height = rememberDialogHeight("collaboration", 520.dp)
@@ -230,6 +237,21 @@ fun CollaborationSheet(
                         )
                         TextButton(onClick = { editingServer = true }) { Text(l("reset")) }
                     }
+                }
+
+                // 里程碑快照（S-99）。位置與 Apple 的協同面板一致 ——
+                // 另開一個入口只會讓兩個平台的操作路徑分家。
+                if (notebookId != null) {
+                    MilestoneSection(
+                        notebookId = notebookId,
+                        deviceId = deviceId,
+                        creatorName = creatorName,
+                        languageTag = languageTag,
+                        onRestored = {
+                            onRestored()
+                            onDismiss()
+                        }
+                    )
                 }
             }
             // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——

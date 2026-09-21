@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.documentfile.provider.DocumentFile
 import com.kairumo.padnote.sync.FolderSync
 import java.io.File
+import uniffi.padnote_core.FfiMilestone
 import uniffi.padnote_core.PadnoteSession
 
 /**
@@ -128,6 +129,42 @@ object NotebookLibrary {
             )
             true
         }.getOrDefault(false)
+
+    // ---- 里程碑快照（時光機，工作項 S-99）----
+    //
+    // 三支都只是把 session 的取得集中在一處。Android 的套件就是**唯一**的
+    // 真相來源，所以還原一步到位 —— 不像 Apple 還要先把工作副本鏡進套件。
+
+    /** 這本筆記的全部里程碑，新的在前。開不了套件時回空清單。 */
+    fun milestones(context: Context, id: String, deviceId: UInt): List<FfiMilestone> =
+        runCatching {
+            val path = File(directory(context), "$id.$EXTENSION")
+            PadnoteSession.openExisting(path.absolutePath, deviceId).milestones()
+        }.getOrDefault(emptyList())
+
+    /** 在現在這一刻插一個名字。 */
+    fun createMilestone(
+        context: Context, id: String, deviceId: UInt, title: String, creator: String
+    ): FfiMilestone? = runCatching {
+        val path = File(directory(context), "$id.$EXTENSION")
+        PadnoteSession.openExisting(path.absolutePath, deviceId)
+            .createMilestone(title, creator, System.currentTimeMillis().toULong())
+    }.getOrNull()
+
+    /**
+     * 還原到某個里程碑，回傳「還原之前」那一刻的自動里程碑。
+     *
+     * `safetyTitle` 由呼叫端給（要在地化）。回傳的那一個一定要顯示出來 ——
+     * 還原到它就等於取消這次還原，使用者不知道有這條路的話，會以為
+     * 剛才那半小時的東西沒了。
+     */
+    fun restoreMilestone(
+        context: Context, id: String, deviceId: UInt, milestoneId: String, safetyTitle: String
+    ): FfiMilestone? = runCatching {
+        val path = File(directory(context), "$id.$EXTENSION")
+        PadnoteSession.openExisting(path.absolutePath, deviceId)
+            .restoreMilestone(milestoneId, System.currentTimeMillis().toULong(), safetyTitle)
+    }.getOrNull()
 
     /**
      * 刪除一本筆記本。
