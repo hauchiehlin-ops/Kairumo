@@ -144,6 +144,68 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         runCatching { session?.setNotebookMeta(root.toString()) }
     }
 
+    /**
+     * 把第 `from` 頁搬到第 `to` 頁之後，逐頁的資料跟著搬。
+     *
+     * # 為什麼一定要有這一支
+     *
+     * `session.movePage()` 搬的是**核心裡的頁面順序**，動不到平台這一層
+     * 按頁碼存的東西 —— 紙張樣板與物件堆疊順序都是用頁碼當鍵的。
+     * 少了它，症狀是「我搬了一頁，它的版面留在原地」（`STATE.md` 已列）。
+     *
+     * # 為什麼用核心算新頁碼，而不是自己 `removeAt` + `add`
+     *
+     * 往後搬與往前搬的區間不對稱，自己寫很容易只對其中一個方向。
+     * `pageIndexAfterMove` 是兩個平台共用的那一份規則 ——
+     * 這裡逐頁問它「你會落在哪」，就不可能與 Apple 端分岔。
+     */
+    fun movePageData(session: PadnoteSession?, from: Int, to: Int, totalPages: Int) {
+        if (from == to || totalPages <= 1) return
+        if (!uniffi.padnote_core.pageMoveIsValid(
+                totalPages.toUInt(), from.toUInt(), to.toUInt()
+            )
+        ) {
+            return
+        }
+
+        // 紙張樣板
+        val defaultPaper = paperId()
+        val arr = root.optJSONArray(KEY_PAGE_TEMPLATES)
+        val current = MutableList(totalPages) { i ->
+            if (arr != null && i < arr.length()) arr.optString(i, defaultPaper) else defaultPaper
+        }
+        val movedTemplates = arrayOfNulls<String>(totalPages)
+        for (i in 0 until totalPages) {
+            val dest = uniffi.padnote_core.pageIndexAfterMove(
+                i.toUInt(), from.toUInt(), to.toUInt()
+            ).toInt()
+            if (dest in 0 until totalPages) movedTemplates[dest] = current[i]
+        }
+        root.put(KEY_PAGE_TEMPLATES, JSONArray(movedTemplates.map { it ?: defaultPaper }))
+
+        // 物件堆疊順序（鍵就是頁碼）
+        val order = root.optJSONObject(KEY_ORDER_BY_PAGE)
+        if (order != null) {
+            val remapped = JSONObject()
+            val keys = order.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                val index = key.toIntOrNull()
+                if (index == null || index >= totalPages) {
+                    remapped.put(key, order.get(key))
+                    continue
+                }
+                val dest = uniffi.padnote_core.pageIndexAfterMove(
+                    index.toUInt(), from.toUInt(), to.toUInt()
+                ).toInt()
+                remapped.put(dest.toString(), order.get(key))
+            }
+            root.put(KEY_ORDER_BY_PAGE, remapped)
+        }
+
+        runCatching { session?.setNotebookMeta(root.toString()) }
+    }
+
     /** 移除某一頁的樣板。 */
     fun removePageTemplate(session: PadnoteSession?, atIndex: Int, totalPages: Int) {
         val currentTemplates = mutableListOf<String>()

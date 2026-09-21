@@ -173,6 +173,8 @@ Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對�
 | 模型下載 | **下沉** | 兩平台走 `padnote-models`（SHA-256 + 續傳），Apple 原本那條沒驗證沒續傳的路已移除 |
 | session 加密兩份實作 | **下沉** | `collab_encrypt` 改呼叫 `padnote_crypto::session`，重複的 FFI 門面刪掉 |
 | Apple 搜尋搜不到轉錄／PDF／OCR | **下沉** | 新增 `NotebookSearchIndex`，與 Android 同一組規則（兩字才查、快取、跳過壞的） |
+| 壓感曲線的常數（Apple 手抄 0.35 / 0.65 與「哪些筆吃壓感」） | **下沉** | 改呼叫 `ink_width_scale` / `ink_pressure_for_width_scale` / `ink_tool_is_pressure_sensitive`，核心加測試釘住那兩個數字 |
+| 頁面搬移時的逐頁資料（Android 沒有搬） | **下沉** | `NotebookMeta.movePageData` 逐頁問核心的 `page_index_after_move`。**這是一個真的 bug**：搬完之後紙張樣板與物件堆疊順序留在原地 |
 | 已無呼叫端的同步 FFI | **刪除** | 見 commit `3840b6d` |
 | 套件加密的文案 | **先改文案** | 加密本身列為 `TODO.md` 的 H-CRYPTO，要先回答五個產品問題 |
 
@@ -180,9 +182,7 @@ Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對�
 
 | 項目 | 為什麼要下沉 | 卡在哪 |
 |---|---|---|
-| 壓感曲線（`width_scale` / `opacity_scale` / `FfiPressureAction`） | 同一支筆在兩台裝置上該畫出同樣的粗細。**Apple 現在在 `InkInterop.swift` 寫死一條曲線**，核心那條可設定的沒人用 | 要動兩邊的算繪路徑；而且「壓感影響線寬還是濃度」目前**沒有任何設定介面**，先補介面還是先下沉要一起決定 |
-| 版面尺寸級別（`layout_columns` / `layout_size_class`） | Android 的編輯器沒有雙欄工作區，同一本筆記在平板上兩邊長得不一樣 | 這是 Android 編輯器的版面重做，與 S-71/S-72 同一批 |
-| 頁面搬移運算（Apple 走核心、Android 自己算） | 搬移的**正確性**規則（由大到小刪、附件頁碼平移）不該有兩份 | Android 端要改接 `page_index_after_*` / `page_transfer_plan` |
+| 版面尺寸級別（`layout_columns` / `layout_size_class`） | Android 的編輯器沒有雙欄工作區，同一本筆記在平板上兩邊長得不一樣 | 這是 Android 編輯器的版面重做，與 S-71/S-72 同一批 UI 工作，見 `TODO.md` |
 
 ### 決定**不**下沉（明確的平台差異）
 
@@ -198,6 +198,9 @@ Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對�
 
 - 觸控筆懸停（`is_pen_hovering` / `hover_position`）：核心有，**兩邊都沒有任何介面用得到它**。
   要嘛做出懸停預覽，要嘛把它從 FFI 拿掉。
+- 可設定的壓感曲線（`set_pressure_curve` / `FfiPressureAction` 的
+  「影響線寬還是濃度」）：**曲線的常數已經下沉**（見上表），但「讓使用者調整」
+  這件事還沒有任何介面。要先決定它該不該是一個設定，再決定要不要接。
 - PDF 座標互通（`page_point_to_pdf` / `highlight_quad_points`）：PDF 標註功能本身還沒有完整的入口。
 - 匯入（`import_json` / `import_markdown` / `import_embedded`）：兩邊都沒有匯入入口。
 - 轉錄進度（`transcription_backlog_us`）與 VAD 切換（`set_vad_model`）：

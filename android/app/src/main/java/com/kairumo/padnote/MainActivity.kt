@@ -1802,6 +1802,11 @@ private fun InkScreen(
         val pageId = runCatching { session.pageIdAt(from.toUInt()) }.getOrNull() ?: return
         runCatching { session.movePage(pageId, to.toUInt()) }
             .onSuccess {
+                // **平台這一層按頁碼存的東西也要跟著搬。**
+                // `movePage` 只動核心裡的頁面順序，紙張樣板與物件堆疊順序
+                // 都是用頁碼當鍵的 —— 少了這一行，症狀是
+                // 「我搬了一頁，它的版面留在原地」。
+                meta.movePageData(session, from, to, pageCount)
                 // 跟著搬過去 —— 停在原本的索引會變成「我搬了一頁，
                 // 畫面卻跳到別頁」。
                 pageIndex = to.coerceIn(0, maxOf(0, pageCount - 1))

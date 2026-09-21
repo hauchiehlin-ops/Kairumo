@@ -91,6 +91,52 @@ impl From<Tool> for ToolKind {
     }
 }
 
+// ---- 壓感曲線（兩個平台共用同一條）----
+//
+// # 為什麼要開成 FFI
+//
+// `padnote-ink` 的 `half_width()` 是**唯一**那條曲線：
+// `width = base × (0.35 + 0.65 × pressure)`。
+//
+// Apple 端原本把那兩個常數與「哪些筆刷吃壓感」的清單**手抄了一份**
+// 在 `InkInterop.swift` 裡（註解也老實寫著「這兩個常數不是隨手取的」）。
+// 手抄的東西不會自己跟著改 —— 改了核心那一條而忘了 Swift 這一份，
+// 症狀是同一筆畫在兩台裝置上粗細不一樣，而且不會有任何錯誤。
+
+/// 這個筆刷吃不吃壓感。
+#[uniffi::export]
+pub fn ink_tool_is_pressure_sensitive(tool: ToolKind) -> bool {
+    Tool::from(tool).is_pressure_sensitive()
+}
+
+/// 壓感 → 線寬比例（相對於基準寬度）。
+///
+/// 不吃壓感的筆刷一律回 1.0。
+#[uniffi::export]
+pub fn ink_width_scale(tool: ToolKind, pressure: f32) -> f32 {
+    // `half_width` 回的是半寬，所以乘回去才是比例。
+    padnote_ink::geometry::half_width(Tool::from(tool), 2.0, pressure)
+}
+
+/// 線寬比例 → 壓感（上面那條的反向）。
+///
+/// PencilKit 沒有公開 force 的數值範圍，所以 Apple 端是拿**實際畫出來的
+/// 寬度**回推壓感的 —— 反向轉換必須與正向用同一組常數，
+/// 否則往返一次粗細就會跑掉。
+#[uniffi::export]
+pub fn ink_pressure_for_width_scale(tool: ToolKind, scale: f32) -> f32 {
+    if !Tool::from(tool).is_pressure_sensitive() {
+        return 1.0;
+    }
+    // scale = floor + span × p  ⇒  p = (scale − floor) / span
+    let floor = ink_width_scale(tool, 0.0);
+    let span = ink_width_scale(tool, 1.0) - floor;
+    if span.abs() < f32::EPSILON {
+        return 1.0;
+    }
+    ((scale - floor) / span).clamp(0.0, 1.0)
+}
+
 /// 將 .padnote 套件打包壓縮成單一分享檔案（工作項 S-94）。
 #[uniffi::export]
 pub fn archive_notebook(package_dir: String, out_file: String) -> Result<(), FfiError> {
@@ -2642,6 +2688,40 @@ mod tests {
         let blob = s.put_blob(b"png bytes".to_vec()).unwrap();
         let img = s.add_image(page, blob, 640.0, 480.0).unwrap();
         assert!(!img.is_empty());
+    }
+
+    #[test]
+    fn the_pressure_curve_is_the_one_apple_used_to_hand_copy() {
+        // Apple 的 `InkInterop.swift` 原本寫死 0.35 / 0.65。
+        // 這條測試把那兩個數字釘在核心這一側 —— 改了核心而忘了改
+        // Swift 那份手抄，症狀是同一筆畫在兩台裝置上粗細不一樣，
+        // 而且不會有任何錯誤。
+        let scale_min = ink_width_scale(ToolKind::FountainPen, 0.0);
+        let scale_max = ink_width_scale(ToolKind::FountainPen, 1.0);
+        assert!((scale_min - 0.35).abs() < 1e-5, "下限變了：{scale_min}");
+        assert!((scale_max - 1.0).abs() < 1e-5, "上限變了：{scale_max}");
+    }
+
+    #[test]
+    fn a_pressure_round_trip_comes_back_to_the_same_value() {
+        // Apple 是拿**實際畫出來的寬度**回推壓感的，所以正反向必須
+        // 用同一組常數 —— 不然往返一次粗細就跑掉。
+        for p in [0.0f32, 0.25, 0.5, 0.75, 1.0] {
+            let scale = ink_width_scale(ToolKind::FountainPen, p);
+            let back = ink_pressure_for_width_scale(ToolKind::FountainPen, scale);
+            assert!((back - p).abs() < 1e-4, "壓感 {p} 往返變成 {back}");
+        }
+    }
+
+    #[test]
+    fn tools_without_pressure_report_a_flat_scale() {
+        // 原子筆與螢光筆是固定寬度。回 0.35 的話，同一支筆在
+        // 輕觸時會突然變細三分之二。
+        for tool in [ToolKind::BallPoint, ToolKind::Highlighter, ToolKind::Marker] {
+            assert!(!ink_tool_is_pressure_sensitive(tool));
+            assert!((ink_width_scale(tool, 0.0) - 1.0).abs() < 1e-5);
+            assert!((ink_width_scale(tool, 1.0) - 1.0).abs() < 1e-5);
+        }
     }
 
     #[test]

@@ -39,13 +39,14 @@ enum InkInterop {
 
     // MARK: - 寬度與壓感的對應
 
-    /// 核心 `half_width()` 的壓感曲線：`width = base × (0.35 + 0.65 × pressure)`。
+    /// 壓感曲線**由核心給**，不再手抄。
     ///
-    /// 這兩個常數不是隨手取的，是 `padnote-ink/src/geometry.rs` 裡真正在用的值。
-    /// 轉換時必須照著它反推壓感，Android 畫出來的粗細才會跟 iPad 上一樣；
-    /// 若改用「壓感 = 寬度比例」這種直覺寫法，同一筆畫在 Android 會偏細。
-    static let widthFloorRatio: Float = 0.35
-    static let widthPressureSpan: Float = 0.65
+    /// 這裡原本寫著 `0.35` 與 `0.65` 兩個常數，並且在註解裡老實說
+    /// 「不是隨手取的，是 `padnote-ink/src/geometry.rs` 裡真正在用的值」。
+    ///
+    /// 問題是**手抄的東西不會自己跟著改**：動了核心那一條而忘了這一份，
+    /// 同一筆畫在兩台裝置上就會粗細不一樣，而且不會有任何錯誤 ——
+    /// 註解攔不住任何東西，只有呼叫同一支函式才攔得住。
 
     /// PencilKit 的每點寬度 → 核心壓感。
     ///
@@ -55,24 +56,17 @@ enum InkInterop {
     /// 拿它回推壓感，往返後粗細才對得起來。
     static func pressure(forWidth width: Float, baseWidth: Float) -> Float {
         guard baseWidth > 0 else { return 1 }
-        let ratio = width / baseWidth
-        let p = (ratio - widthFloorRatio) / widthPressureSpan
-        return min(max(p, 0), 1)
+        return inkPressureForWidthScale(tool: .fountainPen, scale: width / baseWidth)
     }
 
     /// 核心壓感 → 寬度（上面那條式子的反向）。
     static func width(forPressure pressure: Float, baseWidth: Float, tool: ToolKind) -> Float {
-        guard isPressureSensitive(tool) else { return baseWidth }
-        let p = min(max(pressure, 0), 1)
-        return baseWidth * (widthFloorRatio + widthPressureSpan * p)
+        baseWidth * inkWidthScale(tool: tool, pressure: pressure)
     }
 
-    /// 與核心 `Tool::is_pressure_sensitive()` 一致。
+    /// 與核心 `Tool::is_pressure_sensitive()` 一致 —— 因為問的就是它。
     static func isPressureSensitive(_ tool: ToolKind) -> Bool {
-        switch tool {
-        case .fountainPen, .pencil, .brush, .watercolor: return true
-        case .ballPoint, .highlighter, .marker: return false
-        }
+        inkToolIsPressureSensitive(tool: tool)
     }
 
     // MARK: - 筆刷對應
