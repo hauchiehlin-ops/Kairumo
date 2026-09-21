@@ -385,7 +385,13 @@ pub fn gdrive_sync_notebook(
     }
 
     // 清理雲端已被本機壓實檔完整涵蓋的舊碎檔（避免雲端無限積累歷史碎檔導致下載幾百個檔案逾時）
+    let mut deleted_files = std::collections::HashSet::new();
+    const MAX_DELETIONS_PER_SYNC: usize = 20;
+
     for name in remote_by_name.keys() {
+        if deleted_files.len() >= MAX_DELETIONS_PER_SYNC {
+            break;
+        }
         if let Some(pos) = name.rfind('-') {
             let dev_suffix = &name[pos..];
             let lamport_hex = &name[..pos];
@@ -393,6 +399,7 @@ pub fn gdrive_sync_notebook(
                 && let Some(&max_l) = local_max_lamport_by_device.get(dev_suffix)
                 && l < max_l
             {
+                deleted_files.insert(name.clone());
                 let _ = drive.delete(&format!("{prefix}/{name}"));
             }
         }
@@ -418,7 +425,13 @@ pub fn gdrive_sync_notebook(
             }
             Err(e) => return notebook_failed(format!("讀不到 {name}：{e}")),
         };
-        if let Err(e) = drive.put(&format!("{prefix}/{name}"), &bytes) {
+        let is_new = !remote_by_name.contains_key(name);
+        let res = if is_new {
+            drive.put_new(&format!("{prefix}/{name}"), &bytes)
+        } else {
+            drive.put(&format!("{prefix}/{name}"), &bytes)
+        };
+        if let Err(e) = res {
             return from_sync_error(e);
         }
         uploaded += 1;
@@ -442,7 +455,9 @@ pub fn gdrive_sync_notebook(
                 .zip(local_max_lamport_by_device.get(dev_suffix).copied())
                 .is_some_and(|(l, max_l)| l < max_l);
             if is_shadowed {
-                let _ = drive.delete(&format!("{prefix}/{name}"));
+                if deleted_files.len() < MAX_DELETIONS_PER_SYNC && deleted_files.insert(name.clone()) {
+                    let _ = drive.delete(&format!("{prefix}/{name}"));
+                }
                 continue;
             }
         }
@@ -479,6 +494,9 @@ pub fn gdrive_sync_notebook(
                 }
             }
             for name in remote_by_name.keys() {
+                if deleted_files.contains(name) || deleted_files.len() >= MAX_DELETIONS_PER_SYNC {
+                    continue;
+                }
                 if let Some(pos) = name.rfind('-') {
                     let dev_suffix = &name[pos..];
                     let lamport_hex = &name[..pos];
@@ -486,6 +504,7 @@ pub fn gdrive_sync_notebook(
                         && let Some(&max_l) = post_max_lamport_by_device.get(dev_suffix)
                         && l < max_l
                     {
+                        deleted_files.insert(name.clone());
                         let _ = drive.delete(&format!("{prefix}/{name}"));
                     }
                 }
@@ -555,7 +574,7 @@ pub fn gdrive_sync_media(
             // 其他裝置也會跟著壞。
             Err(e) => return notebook_failed(format!("blob {name} 損毀：{e}")),
         };
-        if let Err(e) = drive.put(&format!("{blob_prefix}/{name}"), &bytes) {
+        if let Err(e) = drive.put_new(&format!("{blob_prefix}/{name}"), &bytes) {
             return from_sync_error(e);
         }
         uploaded += 1;
@@ -616,7 +635,13 @@ pub fn gdrive_sync_media(
             }
             Err(e) => return notebook_failed(format!("讀不到錄音 {name}：{e}")),
         };
-        if let Err(e) = drive.put(&format!("{audio_prefix}/{name}"), &bytes) {
+        let is_new = !remote_audio.contains_key(name);
+        let res = if is_new {
+            drive.put_new(&format!("{audio_prefix}/{name}"), &bytes)
+        } else {
+            drive.put(&format!("{audio_prefix}/{name}"), &bytes)
+        };
+        if let Err(e) = res {
             return from_sync_error(e);
         }
         uploaded += 1;

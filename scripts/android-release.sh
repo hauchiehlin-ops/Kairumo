@@ -48,9 +48,17 @@ echo "==> 檢查版本一致性"
 "$SCRIPT_DIR/check-version-consistency.sh"
 
 # --- 2. 原生函式庫 -------------------------------------------------------
-if [[ ! -f app/src/main/jniLibs/arm64-v8a/libpadnote_core.so ]]; then
-    echo "==> 缺少 libpadnote_core.so，先建置原生函式庫"
-    "$REPO_ROOT/scripts/build-android-libs.sh"
+NEED_BUILD_SO=0
+SO_PATH="app/src/main/jniLibs/arm64-v8a/libpadnote_core.so"
+if [[ ! -f "$SO_PATH" ]]; then
+    NEED_BUILD_SO=1
+elif [[ $(find "$REPO_ROOT/crates" -type f -name "*.rs" -newer "$SO_PATH" 2>/dev/null | head -n 1) ]]; then
+    NEED_BUILD_SO=1
+fi
+
+if [[ "$NEED_BUILD_SO" -eq 1 ]]; then
+    echo "==> 偵測到核心原始碼異動或缺少 .so，建置 Android 原生函式庫 (release)"
+    "$REPO_ROOT/scripts/build-android-libs.sh" release
 fi
 
 # --- 3. 簽章 -------------------------------------------------------------

@@ -353,9 +353,9 @@ enum NotebookSyncCoordinator {
         }
 
         // ── 同步前即時核實：本機現存 vs. 雲端索引差異樣態 ──────────────
-        let activeLocalIds = Set(store.syncNotebooks.map { $0.id })
-        var deletedNotebookIds = AccountSyncStore.shared.deletedNotebookIds
-        let cloudLiveIds = Set(syncLiveNotebooks(indexJson: meta.indexJson).map { $0.id })
+        let activeLocalIds = Set(store.syncNotebooks.map { $0.id.lowercased() })
+        var deletedNotebookIds = Set(AccountSyncStore.shared.deletedNotebookIds.map { $0.lowercased() })
+        let cloudLiveIds = Set(syncLiveNotebooks(indexJson: meta.indexJson).map { $0.id.lowercased() })
         
         let allDiskPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
             .filter { $0.pathExtension == "padnote" } ?? []
@@ -364,7 +364,7 @@ enum NotebookSyncCoordinator {
         var cleanedCount = 0
 
         for pkg in allDiskPackages {
-            let id = packageId(for: pkg)
+            let id = packageId(for: pkg).lowercased()
             if activeLocalIds.contains(id) {
                 deletedNotebookIds.remove(id)
                 packages.append(pkg)
@@ -524,21 +524,25 @@ enum NotebookSyncCoordinator {
         let fm = FileManager.default
         var pulled = 0
         for item in syncLiveNotebooks(indexJson: index) {
-            guard !deletedNotebookIds.contains(item.id) else { continue }
+            let normId = item.id.lowercased()
+            guard !deletedNotebookIds.contains(normId) else { continue }
             let package = packagesDir.appendingPathComponent("\(item.id).padnote")
+            let lowerPackage = packagesDir.appendingPathComponent("\(normId).padnote")
+            let targetPackage = fm.fileExists(atPath: package.path) ? package : lowerPackage
+
             // 防禦性檢查：若本地存在該目錄，但本機 store 尚未載入該筆記本，
             // 檢查是否為無 ops 檔案的殘留空殼；若為空殼則移除，以便重新 clone
-            if fm.fileExists(atPath: package.path) && !activeLocalIds.contains(item.id) {
-                let opsDir = package.appendingPathComponent("doc/ops")
+            if fm.fileExists(atPath: targetPackage.path) && !activeLocalIds.contains(normId) {
+                let opsDir = targetPackage.appendingPathComponent("doc/ops")
                 let opFiles = (try? fm.contentsOfDirectory(at: opsDir, includingPropertiesForKeys: nil))?
                     .filter { $0.pathExtension == "oplog" } ?? []
                 if opFiles.isEmpty {
-                    try? fm.removeItem(at: package)
+                    try? fm.removeItem(at: targetPackage)
                 }
             }
-            guard !fm.fileExists(atPath: package.path) else { continue }
+            guard !fm.fileExists(atPath: targetPackage.path) else { continue }
             guard let result = await CloudSync.cloneNotebook(
-                packagePath: package.path, notebookId: item.id, title: item.title)
+                packagePath: targetPackage.path, notebookId: item.id, title: item.title)
             else { break }
             if result.ok {
                 report.downloaded += Int(result.downloaded)
@@ -546,7 +550,7 @@ enum NotebookSyncCoordinator {
             } else {
                 // 抓失敗時把空殼刪掉。留著的話，下一輪 `fileExists` 為真，
                 // 這本就再也不會被重抓 —— 使用者會看到一本永遠打不開的空筆記。
-                try? fm.removeItem(at: package)
+                try? fm.removeItem(at: targetPackage)
                 report.failures[item.title] = result.error
                 if result.needsReauth { break }
             }

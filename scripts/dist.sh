@@ -453,9 +453,17 @@ fi
 if [[ "$DO_ANDROID" -eq 1 ]]; then
     step "Android（正式簽章的 universal APK）"
     export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
-    if [[ ! -f "${REPO_ROOT}/android/app/src/main/jniLibs/arm64-v8a/libpadnote_core.so" ]]; then
-        echo "   缺少 libpadnote_core.so，先建置原生函式庫"
-        "${SCRIPT_DIR}/build-android-libs.sh"
+    NEED_BUILD_SO=0
+    SO_PATH="${REPO_ROOT}/android/app/src/main/jniLibs/arm64-v8a/libpadnote_core.so"
+    if [[ ! -f "$SO_PATH" ]]; then
+        NEED_BUILD_SO=1
+    elif [[ $(find "${REPO_ROOT}/crates" -type f -name "*.rs" -newer "$SO_PATH" 2>/dev/null | head -n 1) ]]; then
+        NEED_BUILD_SO=1
+    fi
+
+    if [[ "$NEED_BUILD_SO" -eq 1 ]]; then
+        echo "   偵測到核心原始碼異動或缺少 .so，先建置 Android 原生函式庫 (release)"
+        "${SCRIPT_DIR}/build-android-libs.sh" release
     fi
 
     CLEANUP_KS=0

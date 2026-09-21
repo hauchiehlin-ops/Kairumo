@@ -244,7 +244,7 @@ public struct FolderItem: Identifiable, Codable, Hashable {
     public var colorHex: String?
 
     public init(
-        id: String = UUID().uuidString,
+        id: String = UUID().uuidString.lowercased(),
         name: String,
         parentId: String? = nil,
         createdAt: Date = Date(),
@@ -439,7 +439,7 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     }
 
     public init(
-        id: String = UUID().uuidString,
+        id: String = UUID().uuidString.lowercased(),
         title: String,
         createdAt: Date = Date(),
         lastModifiedDate: Date = Date(),
@@ -1565,7 +1565,7 @@ public final class NotebookStore: ObservableObject {
     ///
     /// 也不更新 `lastModifiedDate`：這份內容是從檔案讀回來的，不是使用者剛改的。
     public func upsertNotebook(_ doc: NotebookDocument) {
-        if let index = notebooks.firstIndex(where: { $0.id == doc.id }) {
+        if let index = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(doc.id) == .orderedSame }) {
             notebooks[index] = doc
         } else {
             notebooks.append(doc)
@@ -1588,68 +1588,102 @@ public final class NotebookStore: ObservableObject {
         defer { try? FileManager.default.removeItem(at: tempDir) }
 
         let pkgDir = tempDir.appendingPathComponent("notebook")
-        try extractNotebook(archiveFile: archiveUrl.path, outDir: pkgDir.path)
-        let imported = try NotebookPackageBridge.importDocument(
-            fromPackageAt: pkgDir,
-            deviceId: NotebookMigration.deviceId
+        try FileManager.default.createDirectory(at: pkgDir, withIntermediateDirectories: true)
+        try FileManager.default.unzipItem(at: archiveUrl, to: pkgDir)
+
+        let metaUrl = pkgDir.appendingPathComponent("meta.json")
+        guard FileManager.default.fileExists(atPath: metaUrl.path) else {
+            throw NSError(domain: "NotebookStore", code: 1, userInfo: [NSLocalizedDescriptionKey: "無效的筆記本封裝：缺少 meta.json"])
+        }
+        let metaData = try Data(contentsOf: metaUrl)
+        let meta = try JSONDecoder().decode(NotebookMeta.self, from: metaData)
+        let id = meta.id
+
+        // 讀取繪圖向量資料
+        var drawings: [Data] = []
+        let drawingsDir = pkgDir.appendingPathComponent("Drawings")
+        if FileManager.default.fileExists(atPath: drawingsDir.path) {
+            let files = (try? FileManager.default.contentsOfDirectory(atPath: drawingsDir.path)) ?? []
+            for file in files.sorted() where file.hasSuffix(".drawing") {
+                if let d = try? Data(contentsOf: drawingsDir.appendingPathComponent(file)) {
+                    drawings.append(d)
+                }
+            }
+        }
+
+        // 讀取附件
+        var attachments: [NoteImageAttachment] = []
+        let attachmentsDir = pkgDir.appendingPathComponent("Attachments")
+        if FileManager.default.fileExists(atPath: attachmentsDir.path) {
+            let files = (try? FileManager.default.contentsOfDirectory(atPath: attachmentsDir.path)) ?? []
+            for file in files {
+                let src = attachmentsDir.appendingPathComponent(file)
+                let dst = syncAttachmentsDirectory.appendingPathComponent(file)
+                if !FileManager.default.fileExists(atPath: dst.path) {
+                    try? FileManager.default.copyItem(at: src, to: dst)
+                }
+                attachments.append(NoteImageAttachment(fileName: file))
+            }
+        }
+
+        let doc = NotebookDocument(
+            id: id,
+            title: meta.title,
+            createdAt: meta.createdAt,
+            lastModifiedDate: meta.lastModifiedDate,
+            pageCount: max(1, drawings.count),
+            pagesData: drawings,
+            attachments: attachments
         )
-
-        // 儲存繪圖資料
-        for (pageIdx, drawing) in imported.drawings.enumerated() {
-            saveDrawing(notebookId: imported.document.id, pageIndex: pageIdx, drawing: drawing)
-        }
-
-        // 儲存圖片附件
-        let attachDir = attachmentsDirectory
-        if !FileManager.default.fileExists(atPath: attachDir.path) {
-            try? FileManager.default.createDirectory(at: attachDir, withIntermediateDirectories: true)
-        }
-        for (filename, data) in imported.imageData {
-            let fileUrl = attachDir.appendingPathComponent(filename)
-            try? data.write(to: fileUrl, options: .atomic)
-        }
-
-        upsertNotebook(imported.document)
-        return imported.document
+        upsertNotebook(doc)
+        return doc
     }
 
     public func deleteNotebook(id: String) {
-        notebooks.removeAll { $0.id == id }
-        // **留墓碑。** 不留的話，等雲端接上，另一台還沒同步到刪除的裝置
-        // 會把這本筆記原封不動傳回來 —— 刪除永遠刪不掉。
+        notebooks.removeAll { $0.id.caseInsensitiveCompare(id) == .orderedSame }
         AccountSyncStore.shared.recordDeletion(id: id)
-        // 同步清理本機實體套件目錄與基準目錄，避免殘留檔案被後台同步佇列誤抓
         let pkgDir = corePackagesDirectory.appendingPathComponent("\(id).padnote")
         try? FileManager.default.removeItem(at: pkgDir)
+        let lowerPkgDir = corePackagesDirectory.appendingPathComponent("\(id.lowercased()).padnote")
+        try? FileManager.default.removeItem(at: lowerPkgDir)
         let baseDir = documentsDirectory.appendingPathComponent("SyncBaseline/\(id).padnote")
         try? FileManager.default.removeItem(at: baseDir)
-
-        // 同步清理已配置的雲端資料夾殘留套件，避免再次同步時被當成「新筆記」重新拉回
+        let lowerBaseDir = documentsDirectory.appendingPathComponent("SyncBaseline/\(id.lowercased()).padnote")
+        try? FileManager.default.removeItem(at: lowerBaseDir)
         if let cloudFolder = CloudSyncFolder.resolveFolder() {
             let scoped = cloudFolder.startAccessingSecurityScopedResource()
             defer { if scoped { cloudFolder.stopAccessingSecurityScopedResource() } }
             let remotePkg = cloudFolder.appendingPathComponent("\(id).padnote")
             try? FileManager.default.removeItem(at: remotePkg)
+            let lowerRemotePkg = cloudFolder.appendingPathComponent("\(id.lowercased()).padnote")
+            try? FileManager.default.removeItem(at: lowerRemotePkg)
         }
-
         persistData()
     }
 
     /// 依據同步收斂後的刪除墓碑名單，清理本機中已在其他裝置被刪除的筆記本實體。
     public func syncPurgeDeletedNotebooks(_ deletedIds: Set<String>) {
         guard !deletedIds.isEmpty else { return }
+        let lowercasedDeleted = Set(deletedIds.map { $0.lowercased() })
         let beforeCount = notebooks.count
-        notebooks.removeAll { deletedIds.contains($0.id) }
+        notebooks.removeAll { lowercasedDeleted.contains($0.id.lowercased()) }
         for id in deletedIds {
-            let pkgDir = corePackagesDirectory.appendingPathComponent("\(id).padnote")
+            let lowerId = id.lowercased()
+            let pkgDir = corePackagesDirectory.appendingPathComponent("\(lowerId).padnote")
             try? FileManager.default.removeItem(at: pkgDir)
-            let baseDir = documentsDirectory.appendingPathComponent("SyncBaseline/\(id).padnote")
+            let origPkgDir = corePackagesDirectory.appendingPathComponent("\(id).padnote")
+            try? FileManager.default.removeItem(at: origPkgDir)
+            let baseDir = documentsDirectory.appendingPathComponent("SyncBaseline/\(lowerId).padnote")
             try? FileManager.default.removeItem(at: baseDir)
+            let origBaseDir = documentsDirectory.appendingPathComponent("SyncBaseline/\(id).padnote")
+            try? FileManager.default.removeItem(at: origBaseDir)
             if let cloudFolder = CloudSyncFolder.resolveFolder() {
                 let scoped = cloudFolder.startAccessingSecurityScopedResource()
                 defer { if scoped { cloudFolder.stopAccessingSecurityScopedResource() } }
-                let remotePkg = cloudFolder.appendingPathComponent("\(id).padnote")
+                let remotePkg = cloudFolder.appendingPathComponent("\(lowerId).padnote")
                 try? FileManager.default.removeItem(at: remotePkg)
+                let origRemotePkg = cloudFolder.appendingPathComponent("\(id).padnote")
+                try? FileManager.default.removeItem(at: origRemotePkg)
             }
         }
         if notebooks.count != beforeCount {

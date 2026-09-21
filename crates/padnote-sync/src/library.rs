@@ -75,7 +75,11 @@ pub struct LibraryIndex {
 }
 
 impl LibraryIndex {
-    pub fn upsert(&mut self, item: LibraryItem) {
+    pub fn upsert(&mut self, mut item: LibraryItem) {
+        item.id = item.id.to_lowercase();
+        if let Some(ref mut parent) = item.parent_id {
+            *parent = parent.to_lowercase();
+        }
         match self.items.get(&item.id) {
             Some(existing) if existing.wins_over(&item) => {}
             _ => {
@@ -86,9 +90,10 @@ impl LibraryIndex {
 
     /// 標記刪除。**留下墓碑而不是移除**，理由見模組說明。
     pub fn tombstone(&mut self, id: &str, lamport: u64, device: &str) {
-        let base = self.items.get(id).cloned();
+        let norm_id = id.to_lowercase();
+        let base = self.items.get(&norm_id).cloned();
         let item = LibraryItem {
-            id: id.to_string(),
+            id: norm_id,
             kind: base.as_ref().map_or(ItemKind::Notebook, |i| i.kind),
             title: base.as_ref().map_or(String::new(), |i| i.title.clone()),
             parent_id: base.and_then(|i| i.parent_id),
@@ -140,11 +145,12 @@ impl LibraryIndex {
     /// 資料夾被刪掉之後，裡面的筆記本要一起消失，否則它們會變成
     /// 「存在但打不開、也刪不掉」的幽靈。
     pub fn children_of(&self, parent: Option<&str>) -> Vec<&LibraryItem> {
+        let norm_parent = parent.map(str::to_lowercase);
         let mut out: Vec<&LibraryItem> = self
             .items
             .values()
             .filter(|i| !i.deleted)
-            .filter(|i| i.parent_id.as_deref() == parent)
+            .filter(|i| i.parent_id.as_deref() == norm_parent.as_deref())
             .filter(|i| !self.has_deleted_ancestor(i))
             .collect();
         out.sort_by(|a, b| a.title.cmp(&b.title).then(a.id.cmp(&b.id)));
@@ -165,14 +171,15 @@ impl LibraryIndex {
     ///
     /// 所以只有**明確的墓碑**才算：自己被刪，或祖先鏈上任何一層被刪。
     pub fn is_hidden_by_deletion(&self, id: &str) -> bool {
-        let Some(item) = self.items.get(id) else {
+        let norm_id = id.to_lowercase();
+        let Some(item) = self.items.get(&norm_id) else {
             // 沒看過。那是「還不知道」，不是「被刪了」。
             return false;
         };
         if item.deleted {
             return true;
         }
-        let mut seen = vec![id.to_string()];
+        let mut seen = vec![norm_id.clone()];
         let mut cursor = item.parent_id.clone();
         while let Some(parent_id) = cursor {
             // 迴圈保護：兩台裝置各自把 A 搬進 B、把 B 搬進 A 就會接成環，
@@ -218,10 +225,11 @@ impl LibraryIndex {
     /// UI 要在**動手之前**問這個：把一個資料夾搬進自己的子孫裡，
     /// 那棵子樹就會從樹上整個斷開，而且刪不掉也救不回來。
     pub fn would_create_cycle(&self, item_id: &str, new_parent: Option<&str>) -> bool {
-        let mut cursor = new_parent.map(str::to_string);
+        let norm_item = item_id.to_lowercase();
+        let mut cursor = new_parent.map(|p| p.to_lowercase());
         let mut seen = Vec::new();
         while let Some(id) = cursor {
-            if id == item_id {
+            if id == norm_item {
                 return true;
             }
             if seen.contains(&id) {
@@ -237,10 +245,20 @@ impl LibraryIndex {
         serde_json::to_string_pretty(self).unwrap_or_else(|_| "{}".into())
     }
 
+    /// 將索引中的所有項目以小寫 ID 正規化，並自動合併因平台大小寫差異產生的重複條目
+    pub fn canonicalize(&mut self) {
+        let old = std::mem::take(&mut self.items);
+        for (_, item) in old {
+            self.upsert(item);
+        }
+    }
+
     /// 壞掉的 JSON 回空索引而不是錯誤 —— 雲端上一份壞檔案不該讓使用者
     /// 整個筆記庫打不開；本機還有自己的那一份。
     pub fn from_json(text: &str) -> Self {
-        serde_json::from_str(text).unwrap_or_default()
+        let mut idx: Self = serde_json::from_str(text).unwrap_or_default();
+        idx.canonicalize();
+        idx
     }
 }
 
@@ -551,5 +569,29 @@ mod tests {
         assert_eq!(ab.items["n1"].title, "週會", "較新的改名要留下");
         assert_eq!(ab.items["n1"].parent_id.as_deref(), Some("f1"));
         assert_eq!(ab.live().len(), 4); // f1, f2, n1, n3
+    }
+
+    #[test]
+    fn cross_platform_uuid_case_insensitivity_converges() {
+        // Apple 端產生大寫 UUID，Android 產生小寫 UUID。兩端同步時不得重複，且墓碑必須正確套用
+        let mut idx = LibraryIndex::default();
+        let upper_id = "B62B0B1F-ADF4-4FF7-AE54-6B9C0513DB36";
+        let lower_id = "b62b0b1f-adf4-4ff7-ae54-6b9c0513db36";
+
+        idx.upsert(item(upper_id, "Apple 筆記", None, 1, "apple-dev"));
+        assert_eq!(idx.live_notebooks().len(), 1);
+        assert_eq!(idx.items[lower_id].title, "Apple 筆記");
+
+        // Android 以較新時戳改名，使用小寫 ID
+        idx.upsert(item(lower_id, "Android 更新", None, 2, "android-dev"));
+        assert_eq!(idx.live_notebooks().len(), 1, "不得產生重複筆記本");
+        assert_eq!(idx.items[lower_id].title, "Android 更新");
+
+        // Apple 端以大寫 ID 標記墓碑刪除
+        idx.tombstone(upper_id, 3, "apple-dev");
+        assert_eq!(idx.live_notebooks().len(), 0, "墓碑必須生效");
+        assert!(idx.items[lower_id].deleted);
+        assert!(idx.is_hidden_by_deletion(upper_id));
+        assert!(idx.is_hidden_by_deletion(lower_id));
     }
 }

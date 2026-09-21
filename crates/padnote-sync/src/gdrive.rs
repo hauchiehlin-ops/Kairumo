@@ -23,7 +23,7 @@
 
 use crate::provider::{CloudProvider, RemoteEntry, SyncError};
 use serde_json::{Value, json};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::ops::Range;
 use std::sync::Mutex;
@@ -96,6 +96,7 @@ pub fn exact_query(path: &str) -> String {
 /// `name contains` 是**子字串**比對，不是前綴：查 `sync` 也會撈到
 /// `notebooks/x/resync.bin`。所以拿回來之後還要自己用 `starts_with` 再濾一次。
 fn entries_from(page: &Value, prefix: &str) -> Vec<RemoteEntry> {
+    let prefix_lower = prefix.to_lowercase();
     page.get("files")
         .and_then(Value::as_array)
         .map(|files| {
@@ -103,7 +104,7 @@ fn entries_from(page: &Value, prefix: &str) -> Vec<RemoteEntry> {
                 .iter()
                 .filter_map(|f| {
                     let name = f.get("name")?.as_str()?.to_string();
-                    if !name.starts_with(prefix) {
+                    if !name.to_lowercase().starts_with(&prefix_lower) {
                         return None;
                     }
                     // size 在 Drive 是字串（JSON 的數字精度不夠放 64 位元）。
@@ -125,6 +126,7 @@ fn entries_from(page: &Value, prefix: &str) -> Vec<RemoteEntry> {
 pub struct GDriveProvider<H: DriveHttp> {
     http: H,
     id_cache: Mutex<HashMap<String, String>>,
+    deleted_paths: Mutex<HashSet<String>>,
 }
 
 impl<H: DriveHttp> GDriveProvider<H> {
@@ -132,6 +134,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
         Self {
             http,
             id_cache: Mutex::new(HashMap::new()),
+            deleted_paths: Mutex::new(HashSet::new()),
         }
     }
 
@@ -168,8 +171,17 @@ impl<H: DriveHttp> GDriveProvider<H> {
 
     /// 路徑 → 檔案 id。同名多份時取最後修改的那一個。
     fn find_file_id(&self, path: &str) -> Result<String, SyncError> {
-        if let Some(id) = self.id_cache.lock().unwrap().get(path) {
-            return Ok(id.clone());
+        let lower = path.to_lowercase();
+        if self.deleted_paths.lock().unwrap().contains(path)
+            || self.deleted_paths.lock().unwrap().contains(&lower)
+        {
+            return Err(SyncError::NotFound(path.to_string()));
+        }
+        {
+            let cache = self.id_cache.lock().unwrap();
+            if let Some(id) = cache.get(path).or_else(|| cache.get(&lower)) {
+                return Ok(id.clone());
+            }
         }
         let pages = self.list_all(&exact_query(path), "id, modifiedTime")?;
         let mut best: Option<(String, String)> = None;
@@ -195,8 +207,17 @@ impl<H: DriveHttp> GDriveProvider<H> {
                 }
             }
         }
-        best.map(|(id, _)| id)
-            .ok_or_else(|| SyncError::NotFound(path.to_string()))
+        if let Some((ref id, _)) = best {
+            let mut cache = self.id_cache.lock().unwrap();
+            cache.insert(path.to_string(), id.clone());
+            cache.insert(lower.clone(), id.clone());
+        }
+        best.map(|(id, _)| id).ok_or_else(|| {
+            let mut del = self.deleted_paths.lock().unwrap();
+            del.insert(path.to_string());
+            del.insert(lower);
+            SyncError::NotFound(path.to_string())
+        })
     }
 
     /// 整個檔案的內容。
@@ -212,13 +233,33 @@ impl<H: DriveHttp> GDriveProvider<H> {
 
     /// 刪除雲端檔案。
     pub fn delete(&self, path: &str) -> Result<(), SyncError> {
+        let lower = path.to_lowercase();
+        if self.deleted_paths.lock().unwrap().contains(path)
+            || self.deleted_paths.lock().unwrap().contains(&lower)
+        {
+            return Ok(());
+        }
         let file_id = match self.find_file_id(path) {
             Ok(id) => id,
-            Err(SyncError::NotFound(_)) => return Ok(()),
+            Err(SyncError::NotFound(_)) => {
+                let mut del = self.deleted_paths.lock().unwrap();
+                del.insert(path.to_string());
+                del.insert(lower);
+                return Ok(());
+            }
             Err(e) => return Err(e),
         };
         self.delete_by_id(&file_id)?;
-        self.id_cache.lock().unwrap().remove(path);
+        {
+            let mut cache = self.id_cache.lock().unwrap();
+            cache.remove(path);
+            cache.remove(&lower);
+        }
+        {
+            let mut del = self.deleted_paths.lock().unwrap();
+            del.insert(path.to_string());
+            del.insert(lower);
+        }
         Ok(())
     }
 
@@ -226,6 +267,41 @@ impl<H: DriveHttp> GDriveProvider<H> {
     pub fn delete_by_id(&self, file_id: &str) -> Result<(), SyncError> {
         let url = format!("{FILES_URL}/{file_id}");
         self.http.delete(&url)
+    }
+
+    /// 直接建立並上傳全新檔案（已知遠端不存在），省去每次上傳前 find_file_id 的 HTTP GET 查詢。
+    pub fn put_new(&self, path: &str, data: &[u8]) -> Result<(), SyncError> {
+        let lower = path.to_lowercase();
+        let created = self.http.post_json(
+            FILES_URL,
+            &json!({ "name": path, "parents": ["appDataFolder"] }),
+        )?;
+        let file_id = created
+            .get("id")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| {
+                SyncError::Backend(format!("建立 {path} 之後 Drive 沒有回傳 id"))
+            })?;
+        {
+            let mut cache = self.id_cache.lock().unwrap();
+            cache.insert(path.to_string(), file_id.clone());
+            cache.insert(lower.clone(), file_id.clone());
+        }
+        {
+            let mut del = self.deleted_paths.lock().unwrap();
+            del.remove(path);
+            del.remove(&lower);
+        }
+        if data.len() <= SIMPLE_UPLOAD_LIMIT {
+            let url = format!("{UPLOAD_URL}/{file_id}?uploadType=media");
+            return self.http.patch_bytes(&url, data);
+        }
+        let session = self.http.start_resumable(
+            &format!("{UPLOAD_URL}/{file_id}?uploadType=resumable"),
+            &json!({}),
+        )?;
+        self.http.put_bytes(&session, data)
     }
 }
 
@@ -246,6 +322,7 @@ impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
                         f.get("name").and_then(Value::as_str),
                     ) {
                         cache.insert(name.to_string(), id.to_string());
+                        cache.insert(name.to_lowercase(), id.to_string());
                     }
                 }
             }
@@ -274,6 +351,7 @@ impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
     }
 
     fn put(&self, path: &str, data: &[u8]) -> Result<(), SyncError> {
+        let lower = path.to_lowercase();
         let file_id = match self.find_file_id(path) {
             Ok(id) => id,
             Err(SyncError::NotFound(_)) => {
@@ -281,13 +359,24 @@ impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
                     FILES_URL,
                     &json!({ "name": path, "parents": ["appDataFolder"] }),
                 )?;
-                created
+                let id = created
                     .get("id")
                     .and_then(Value::as_str)
                     .map(str::to_string)
                     .ok_or_else(|| {
                         SyncError::Backend(format!("建立 {path} 之後 Drive 沒有回傳 id"))
-                    })?
+                    })?;
+                {
+                    let mut cache = self.id_cache.lock().unwrap();
+                    cache.insert(path.to_string(), id.clone());
+                    cache.insert(lower.clone(), id.clone());
+                }
+                {
+                    let mut del = self.deleted_paths.lock().unwrap();
+                    del.remove(path);
+                    del.remove(&lower);
+                }
+                id
             }
             // 找不到以外的錯誤（權限、網路）不該被當成「那就新建一個」——
             // 那會在每次暫時失敗時多產生一個重複檔。
@@ -304,6 +393,10 @@ impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
             &json!({}),
         )?;
         self.http.put_bytes(&session, data)
+    }
+
+    fn put_new(&self, path: &str, data: &[u8]) -> Result<(), SyncError> {
+        GDriveProvider::put_new(self, path, data)
     }
 
     fn supports_native_append(&self) -> bool {
@@ -507,7 +600,9 @@ mod tests {
             }
             if let Some(rest) = q.split("name contains '").nth(1) {
                 let needle = rest.trim_end_matches('\'');
-                return name.contains(&needle.replace("\\'", "'").replace("\\\\", "\\"));
+                return name
+                    .to_lowercase()
+                    .contains(&needle.replace("\\'", "'").replace("\\\\", "\\").to_lowercase());
             }
             true
         }
@@ -580,6 +675,14 @@ mod tests {
                 .lock()
                 .unwrap()
                 .push((url.to_string(), data.to_vec()));
+            if let Some(id_str) = url.split("files/id-").nth(1)
+                && let Ok(idx) = id_str.split('?').next().unwrap_or("").parse::<usize>()
+            {
+                let mut files = self.files.lock().unwrap();
+                if idx < files.len() {
+                    files[idx].1 = data.to_vec();
+                }
+            }
             Ok(())
         }
 
@@ -779,7 +882,35 @@ mod tests {
             100,
         ));
         assert!(drive.delete("notebooks/nb1/doc/ops/0001-dev.oplog").is_ok());
-        // 刪除後快取被清除
+        // 刪除後快取被清除，且記錄在 deleted_paths
         assert!(drive.id_cache.lock().unwrap().is_empty());
+        assert!(drive.deleted_paths.lock().unwrap().contains("notebooks/nb1/doc/ops/0001-dev.oplog"));
+        // 再次刪除或查詢該路徑直接命中快取 NotFound，不再次發起任何網路請求
+        assert!(drive.delete("notebooks/nb1/doc/ops/0001-dev.oplog").is_ok());
+        assert!(matches!(drive.get_all("notebooks/nb1/doc/ops/0001-dev.oplog"), Err(SyncError::NotFound(_))));
+    }
+
+    #[test]
+    fn put_new_directly_creates_without_searching() {
+        let fake = FakeDrive::with(&[], 100);
+        let drive = GDriveProvider::new(fake);
+        let path = "notebooks/nb1/media/blobs/abcdef.png";
+        assert!(drive.put_new(path, b"image-data").is_ok());
+        // 建立了新檔案並加入快取，且 deleted_paths 中被移除
+        assert!(drive.id_cache.lock().unwrap().contains_key(path));
+        assert_eq!(drive.get_all(path).unwrap(), b"image-data");
+    }
+
+    #[test]
+    fn listing_is_case_insensitive_for_notebook_uuids() {
+        let fake = FakeDrive::with(
+            &[("notebooks/B62B0B1F-ADF4-4FF7/doc/ops/0001-dev.oplog", b"op")],
+            100,
+        );
+        let drive = GDriveProvider::new(fake);
+        // 以小寫 prefix 查詢，應能成功列出大寫 UUID 的遠端檔案
+        let entries = drive.list("notebooks/b62b0b1f-adf4-4ff7/doc/ops").unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].path, "notebooks/B62B0B1F-ADF4-4FF7/doc/ops/0001-dev.oplog");
     }
 }

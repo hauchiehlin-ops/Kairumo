@@ -406,7 +406,7 @@ public enum CloudSync {
         // 動態計算逾時時間：根據套件內待同步的 oplog 數量自適應調整，避免巨量歷史筆跡或弱網時超時
         let opsDir = (packagePath as NSString).appendingPathComponent("doc/ops")
         let opsCount = (try? FileManager.default.contentsOfDirectory(atPath: opsDir).count) ?? 0
-        let timeoutSeconds = max(120.0, min(600.0, 60.0 + Double(opsCount) * 1.5))
+        let timeoutSeconds = max(60.0, min(180.0, 30.0 + Double(opsCount) * 0.5))
 
         let detached = Task.detached(priority: .utility) {
             let http = DriveHttpClient(accessToken: token)

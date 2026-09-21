@@ -58,6 +58,12 @@ pub trait CloudProvider: Send + Sync + Debug {
 
     fn put(&self, path: &str, data: &[u8]) -> Result<(), SyncError>;
 
+    /// 寫入一個已知在遠端不存在的新檔案（例如內容定址的 blob 或新 oplog 碎檔）。
+    /// Provider 可藉此跳過存在性檢查與搜尋，直接建立並上傳。預設退回 `put`。
+    fn put_new(&self, path: &str, data: &[u8]) -> Result<(), SyncError> {
+        self.put(path, data)
+    }
+
     /// 刪除雲端檔案。預設為空實作。
     fn delete(&self, _path: &str) -> Result<(), SyncError> {
         Ok(())
