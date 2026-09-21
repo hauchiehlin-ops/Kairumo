@@ -12,8 +12,16 @@ const OGG_CAPTURE_PATTERN: &[u8; 4] = b"OggS";
 const HEADER_TYPE_BOS: u8 = 0x02; // beginning of stream
 const HEADER_TYPE_EOS: u8 = 0x04; // end of stream
 
-/// Opus 解碼器需要的前置樣本數（規格建議值，48 kHz 基準）。
-const PRE_SKIP: u16 = 3_840;
+/// pre-skip 的保底值（48 kHz 基準）。
+///
+/// 只在呼叫端拿不到編碼器的實際前視延遲時才用。**正確的做法是問編碼器**
+/// （`OpusEncoder::lookahead_48k()`）—— 這個欄位告訴解碼器「開頭這幾個
+/// 樣本是暖機用的，丟掉」，填得比實際大就會把使用者真正錄到的聲音剪掉，
+/// 而且是任何照規格實作的播放器都會剪，不只我們自己。
+///
+/// 舊版寫死 3840（80 ms），那不是 libopus 的前視延遲，是憑空來的 ——
+/// 於是每一段錄音的前 80 ms 都被丟掉，而顯示的長度也跟著短 80 ms。
+const DEFAULT_PRE_SKIP: u16 = 312;
 
 /// 寫出 Ogg-Opus 檔案。
 ///
@@ -28,6 +36,8 @@ pub struct OggOpusWriter<W: Write> {
     granule: u64,
     packets: Vec<Vec<u8>>,
     finished: bool,
+    /// 寫進 `OpusHead` 的 pre-skip（48 kHz 基準）。
+    pre_skip: u16,
 }
 
 impl<W: Write> std::fmt::Debug for OggOpusWriter<W> {
@@ -42,7 +52,17 @@ impl<W: Write> std::fmt::Debug for OggOpusWriter<W> {
 
 impl<W: Write> OggOpusWriter<W> {
     /// `serial` 用來區分同一個 Ogg 檔內的多條串流；單一錄音給任意值即可。
+    ///
+    /// pre-skip 用保底值。**有編碼器在手上就該用
+    /// [`Self::with_pre_skip`]** 並傳 `OpusEncoder::lookahead_48k()`。
     pub fn new(out: W, serial: u32) -> Result<Self, AudioError> {
+        Self::with_pre_skip(out, serial, DEFAULT_PRE_SKIP)
+    }
+
+    /// 指定 pre-skip（48 kHz 基準）建立寫入器。
+    ///
+    /// 這個值必須等於編碼器的前視延遲，理由見 [`DEFAULT_PRE_SKIP`]。
+    pub fn with_pre_skip(out: W, serial: u32, pre_skip: u16) -> Result<Self, AudioError> {
         let mut w = Self {
             out,
             serial,
@@ -50,9 +70,11 @@ impl<W: Write> OggOpusWriter<W> {
             granule: 0,
             packets: Vec::new(),
             finished: false,
+            pre_skip,
         };
         // OpusHead 與 OpusTags 各自獨立成頁，這是 Ogg-Opus 規格的要求。
-        w.write_page(&[&opus_head()], HEADER_TYPE_BOS, 0)?;
+        let head = opus_head(pre_skip);
+        w.write_page(&[&head], HEADER_TYPE_BOS, 0)?;
         w.write_page(&[&opus_tags()], 0, 0)?;
         Ok(w)
     }
@@ -60,6 +82,11 @@ impl<W: Write> OggOpusWriter<W> {
     /// 取得底層輸出目標的參照。
     pub fn inner(&self) -> &W {
         &self.out
+    }
+
+    /// 這份檔案宣告的 pre-skip（48 kHz 基準）。
+    pub fn pre_skip(&self) -> u16 {
+        self.pre_skip
     }
 
     /// 加入一個編碼好的 Opus 封包（20 ms）。
@@ -135,12 +162,12 @@ impl<W: Write> OggOpusWriter<W> {
     }
 }
 
-fn opus_head() -> Vec<u8> {
+fn opus_head(pre_skip: u16) -> Vec<u8> {
     let mut h = Vec::with_capacity(19);
     h.extend_from_slice(b"OpusHead");
     h.push(1); // 版本
     h.push(1); // 聲道數
-    h.extend_from_slice(&PRE_SKIP.to_le_bytes());
+    h.extend_from_slice(&pre_skip.to_le_bytes());
     h.extend_from_slice(&SAMPLE_RATE_HZ.to_le_bytes()); // 原始取樣率（僅供參考）
     h.extend_from_slice(&0i16.to_le_bytes()); // 輸出增益
     h.push(0); // 聲道映射family
@@ -297,7 +324,7 @@ mod tests {
 /// granule 固定以 48 kHz 計數，即使實際取樣率是 16 kHz（Ogg-Opus 規格）。
 pub fn ogg_opus_duration_us(bytes: &[u8]) -> Option<u64> {
     let mut last_granule: Option<u64> = None;
-    let mut pre_skip: u16 = PRE_SKIP;
+    let mut pre_skip: u16 = DEFAULT_PRE_SKIP;
     let mut seen_head = false;
 
     let mut offset = 0usize;
@@ -361,7 +388,7 @@ mod duration_tests {
         let us = ogg_opus_duration_us(&out).expect("duration");
         // 100 個封包 × 20 ms = 2 秒，扣掉 pre-skip 的 80 ms。
         let expected = 100 * FRAME_SAMPLES as u64 * 1_000_000 / SAMPLE_RATE_HZ as u64
-            - PRE_SKIP as u64 * 1_000_000 / 48_000;
+            - DEFAULT_PRE_SKIP as u64 * 1_000_000 / 48_000;
         let diff = us.abs_diff(expected);
         assert!(diff < 20_000, "算出 {us} µs，預期 {expected} µs");
     }

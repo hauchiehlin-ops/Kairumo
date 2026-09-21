@@ -81,6 +81,25 @@ impl OpusEncoder {
         })
     }
 
+    /// 編碼器的前視延遲，換算成 **48 kHz 的樣本數**。
+    ///
+    /// 這個值要原封不動寫進 `OpusHead` 的 pre-skip 欄位。
+    ///
+    /// # 為什麼不能亂填一個數字
+    ///
+    /// pre-skip 告訴解碼器「開頭這幾個樣本是暖機用的，丟掉」。
+    /// 填得比實際大，**每一段錄音的開頭就會被剪掉**一段真正的聲音 ——
+    /// 而且是任何一個照規格實作的播放器（VLC、ffmpeg）都會剪，
+    /// 不只我們自己。填得比實際小則會留下一小段雜音。
+    ///
+    /// Ogg-Opus 規格規定這個欄位固定以 48 kHz 計數，即使實際取樣率是
+    /// 16 kHz —— 所以要乘 3。
+    pub fn lookahead_48k(&self) -> u16 {
+        let samples = self.inner.lookahead().unwrap_or(0);
+        let at_48k = samples * 48_000 / SAMPLE_RATE_HZ;
+        u16::try_from(at_48k).unwrap_or(u16::MAX)
+    }
+
     pub fn frames_encoded(&self) -> u64 {
         self.frames_encoded
     }

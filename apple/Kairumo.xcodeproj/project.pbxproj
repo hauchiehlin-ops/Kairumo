@@ -58,6 +58,7 @@
 		67CF9DE54436AC7DD3FF5065 /* NotebookMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C19329463E6F6E313A0F1DB /* NotebookMigration.swift */; };
 		68C1811CB88877353FF14D31 /* CStubs.c in Sources */ = {isa = PBXBuildFile; fileRef = 26F09C378F9F1B6835D9ECB2 /* CStubs.c */; };
 		6EB543F097562AD8E0751343 /* StrokeWidthSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3111941E411F546450CCE85 /* StrokeWidthSlider.swift */; };
+		6F06E6527CA4B83E42449AE8 /* OpusAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3CEDDA81C7A0784D31A451C /* OpusAudioPlayer.swift */; };
 		718C3BE123192CC4792EB80C /* ObjectStacking.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA14AB7B6F3436E39B58DAA1 /* ObjectStacking.swift */; };
 		723A25DA76A24DB5650DCDAA /* LinkPreviewEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B829DBCA4D5374715A49087 /* LinkPreviewEngine.swift */; };
 		7538D1239BB959B0B15C6C66 /* PageBackgroundRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FF4AA82DF5A02A09AE79B7E /* PageBackgroundRepresentable.swift */; };
@@ -280,6 +281,7 @@
 		B05DE382C8B7C4EE39BD076B /* NotebookPackageBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookPackageBridgeTests.swift; sourceTree = "<group>"; };
 		B2929D89A7985F84100FDB68 /* RecentTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTemplates.swift; sourceTree = "<group>"; };
 		B36AD7F19677B4F27E94262B /* BrushCursorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrushCursorTests.swift; sourceTree = "<group>"; };
+		B3CEDDA81C7A0784D31A451C /* OpusAudioPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpusAudioPlayer.swift; sourceTree = "<group>"; };
 		B4741BF2C2C92CDA117AEE5E /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 		B7FE882F90D6ABA99E0820BF /* Docs */ = {isa = PBXFileReference; lastKnownFileType = folder; name = Docs; path = Resources/Docs; sourceTree = SOURCE_ROOT; };
 		B8F51C245CED14D4079BC5B4 /* DocumentTemplateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTemplateTests.swift; sourceTree = "<group>"; };
@@ -497,6 +499,7 @@
 				BFC2EC4F24CB728264AB91A5 /* ObjectRotationControls.swift */,
 				DA14AB7B6F3436E39B58DAA1 /* ObjectStacking.swift */,
 				22CA9AD55E8EDA76ABA92C78 /* OnboardingView.swift */,
+				B3CEDDA81C7A0784D31A451C /* OpusAudioPlayer.swift */,
 				6FF4AA82DF5A02A09AE79B7E /* PageBackgroundRepresentable.swift */,
 				4F6548BCB85682AC49CE9184 /* PageGeometry.swift */,
 				B9DFE7E365BA2170726481B9 /* PageGuideRenderer.swift */,
@@ -770,6 +773,7 @@
 				0D7E2AFBD2E9D88478C4DC9B /* ObjectRotationControls.swift in Sources */,
 				718C3BE123192CC4792EB80C /* ObjectStacking.swift in Sources */,
 				FB8410FC89F4FDB4429963C6 /* OnboardingView.swift in Sources */,
+				6F06E6527CA4B83E42449AE8 /* OpusAudioPlayer.swift in Sources */,
 				7538D1239BB959B0B15C6C66 /* PageBackgroundRepresentable.swift in Sources */,
 				1DD235EF0430767F0F67610E /* PageGeometry.swift in Sources */,
 				E8F3A38363417DE23F896842 /* PageGuideRenderer.swift in Sources */,

@@ -105,9 +105,13 @@ impl<W: Write> RecordingPipeline<W> {
         // serial 取 session id 前 4 bytes，讓 Ogg 串流在檔案層級可辨識。
         let serial = u32::from_le_bytes(session_id.as_bytes()[0..4].try_into().unwrap());
 
+        // **編碼器先建立，因為 pre-skip 要問它。** 寫死一個數字的話，
+        // 每一段錄音的開頭都會被播放器剪掉一段真正的聲音（見
+        // `OpusEncoder::lookahead_48k`）。
+        let encoder = OpusEncoder::new()?;
         Ok(Self {
-            ogg: OggOpusWriter::new(sink, serial)?,
-            encoder: OpusEncoder::new()?,
+            ogg: OggOpusWriter::with_pre_skip(sink, serial, encoder.lookahead_48k())?,
+            encoder,
             segmenter: Segmenter::new(vad, SAMPLE_RATE_HZ, FRAME_MS, HANGOVER_MS, MAX_SEGMENT_MS),
             queue: SegmentQueue::new(QUEUE_CAPACITY),
             session_id,

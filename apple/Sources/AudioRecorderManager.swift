@@ -33,6 +33,8 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
     private var audioRecorder: AVAudioRecorder?
     private var audioPlayer: AVAudioPlayer?
+    /// Ogg-Opus 的播放器。`AVAudioPlayer` 播不動這個格式，見 `OpusAudioPlayer`。
+    private var opusPlayer: OpusAudioPlayer?
     private var timer: Timer?
     private var playbackTimer: Timer?
     private var currentAudioUrl: URL?
@@ -279,6 +281,10 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
     // MARK: - 播放控制
 
+    /// 播放一段錄音。
+    ///
+    /// `.opus` 走核心解碼（`AVAudioPlayer` 播不動 Ogg-Opus），
+    /// 其餘（遷移完成前殘留的 `.m4a`）走 AVFoundation。
     public func playAudio(url: URL, recordingId: String) {
         if playingRecordingId == recordingId && isPlaying {
             pauseAudio()
@@ -286,6 +292,11 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         }
 
         stopPlayback()
+
+        if url.pathExtension.lowercased() == "opus" {
+            playOpus(url: url, recordingId: recordingId)
+            return
+        }
 
         do {
             #if os(iOS) || targetEnvironment(macCatalyst)
@@ -313,12 +324,42 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         }
     }
 
+    /// Ogg-Opus 的播放路徑（R3）。
+    private func playOpus(url: URL, recordingId: String) {
+        guard let player = opusPlayer ?? OpusAudioPlayer() else {
+            print("[AudioRecorderManager] 建不出 Opus 播放器")
+            return
+        }
+        opusPlayer = player
+        player.onFinished = { [weak self] in
+            self?.stopPlayback()
+        }
+        guard player.play(url: url) else {
+            print("[AudioRecorderManager] 打不開錄音：\(url.lastPathComponent)")
+            return
+        }
+        isPlaying = true
+        playingRecordingId = recordingId
+        playbackTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, let p = self.opusPlayer else { return }
+                self.playbackProgress = p.progress
+            }
+        }
+    }
+
     public func pauseAudio() {
         audioPlayer?.pause()
+        opusPlayer?.pause()
         isPlaying = false
     }
 
     public func seek(to time: TimeInterval) {
+        if let opus = opusPlayer, opus.duration > 0 {
+            opus.seek(to: time)
+            playbackProgress = opus.progress
+            return
+        }
         guard let player = audioPlayer else { return }
         player.currentTime = max(0, min(time, player.duration))
         playbackProgress = player.currentTime / player.duration
@@ -327,6 +368,8 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     public func stopPlayback() {
         audioPlayer?.stop()
         audioPlayer = nil
+        opusPlayer?.stop()
+        opusPlayer = nil
         playbackTimer?.invalidate()
         playbackTimer = nil
         isPlaying = false

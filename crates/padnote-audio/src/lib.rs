@@ -6,8 +6,10 @@
 //! 編碼用 **libopus（BSD-3）**。語音在 24–32 kbps 就有很好的品質：
 //! 一小時錄音約 14 MB，而同樣長度的未壓縮 16kHz PCM 是 115 MB。
 
+pub mod decoder;
 pub mod encoder;
 pub mod ogg;
 
+pub use decoder::{OggOpusDecoder, decode_ogg_opus};
 pub use encoder::{AudioError, OpusEncoder, VOICE_BITRATE};
 pub use ogg::{OggOpusWriter, ogg_opus_duration_us};
