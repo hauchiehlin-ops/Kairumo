@@ -270,7 +270,7 @@
 
 | ID | 內容 | 卡在什麼 / 要做什麼 |
 |---|---|---|
-| S-71 | **Android 沒有紙張底紋 / 沒有紙張挑選器** | 核心的 `PageStyle`（方格、橫線、康乃爾、點陣）Android 端**一個都沒畫**，所有頁面看起來都是空白紙。因此 S-70 只把紙張選擇下沉到核心並讓 Android 在建立第一頁時寫對 `PageStyle`（同一份 `.padnote` 在 iPad 上開會正確顯示），Android 自己的畫布還沒有對應的算繪。要做：在 `canvas/ContinuousPages.kt` 的每頁背景加上 13 種樣板的繪製，並與 Apple 的 `NotebookEditorView` 對齊。做完才把「主題分類 + 紙張清單」補進 Android 的新增筆記對話框（核心 `paper_templates()` 已備好）。S-74 為 13 種紙各補了「實務範例 / 空白大綱」，**Android 目前是從「文件範本」樹裡的「紙張樣板」主題進去**（因為它還沒有紙張清單）—— 補上挑選器時要一併把那個主題從樹裡收起來，否則會有兩個入口。 |
+| ~~S-71~~ ✅ | **Android 的紙張底紋與挑選器** | 2026-09-22 查證：兩者都已經完成。底紋走 `canvas/PageBackground.kt`（核心的 `pageGuides` / `pageTexture` / `guidePalette`），挑選器在 `NewNotebookDialog` 裡讀核心的 `paperTemplates()`。這一列在完成之後沒有被關掉，於是盤點文件一路把它當成未完成 —— 連帶讓 `PLATFORM-PARITY.md` 也寫錯。 |
 | S-72 | **其餘對話框還不能調整大小** | S-70 做了 `ui/ResizableDialog.kt` 並接上「新增筆記本」。Android 另外約二十個內容型對話框（素材圖庫、圖表工作室、表格編輯、3D、協作、圖層…）還是固定高度。要做：逐一把可捲動內容的 `heightIn(max = …)` 換成 `rememberDialogHeight(key)` + `DialogResizeHandle`，key 一個面板一個。 |
 | ~~S-84~~ ✅ | **頁面規格只做了 Apple 端** | S-83 把八種規格下沉核心 `page_formats()`。Android 已在工具列實作選單並串接 `PageGeometry.use(format.id)`，畫布幾何與列印邊界自適配。 |
 | ~~S-85~~ ✅ | **編輯區域的限制只擋筆畫，而且只在 Apple** | S-83 在 Apple 端擋掉完全落在可列印範圍外的筆畫。現已補齊：跨平台拖曳既有物件（文字、圖片、表格、形狀、錄音卡片等）放手結束時，統一調用核心邊界運算推回可列印區域內。 |

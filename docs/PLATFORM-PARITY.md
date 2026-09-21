@@ -183,7 +183,7 @@ Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對�
 
 | 項目 | 為什麼要下沉 | 卡在哪 |
 |---|---|---|
-| Android 編輯器的雙欄工作區 | 同一本筆記在平板上兩邊長得不一樣 | 這是 Android 編輯器的版面重做，與 S-71/S-72 同一批 UI 工作。**版面的數字已經下沉**（見上表），缺的是 Android 編輯器本身的版面 |
+| ~~Android 編輯器的雙欄工作區~~ | — | **這一列是過期的，2026-09-22 查證後移除。** Android 早就有 `EditorWorkArea`（並排與否由核心的 `sidebarIsInline` 決定，還處理了折疊機的鉸鏈），紙張底紋也早就畫得出來（`canvas/PageBackground.kt` 走核心的 `pageGuides` / `pageTexture`）。盤點文件沒有跟上 |
 
 ### 決定**不**下沉（明確的平台差異）
 
