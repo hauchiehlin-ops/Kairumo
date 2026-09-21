@@ -952,6 +952,8 @@ public struct NotebookEditorView: View {
     /// 掌拒（工作項 S-45）。判定規則走核心，與 Android 同一份。
     @State private var palmRejection = PalmRejectionCoordinator()
     @State private var showPalmThresholdSheet = false
+    @State private var showExportPreview = false
+    @State private var wantsShareAfterPreview = false
     @State private var hasLassoSelection: Bool = false
     @State private var showExtendedBanner: Bool = false
 
@@ -1599,6 +1601,25 @@ public struct NotebookEditorView: View {
         .sheet(isPresented: $showCollaborationSheet) { resizableSheet {
             CollaborationSheet(notebookId: notebook.id)
         } }
+        // 分享面板要等預覽**收乾淨之後**再開。
+        //
+        // 在預覽還在收起的時候直接 `showShareSheet = true`，SwiftUI 會把
+        // 第二個 sheet 吞掉 —— 使用者按了「匯出」，畫面關掉，然後什麼都沒發生。
+        // 所以預覽只留下一個意願旗標，真正的呈現放在 `onDismiss`。
+        .sheet(
+            isPresented: $showExportPreview,
+            onDismiss: {
+                if wantsShareAfterPreview {
+                    wantsShareAfterPreview = false
+                    showShareSheet = true
+                }
+            }
+        ) {
+            ExportPreviewSheet(
+                data: exportPdfData ?? Data(),
+                fileExtension: exportFileExtension,
+                onExport: { wantsShareAfterPreview = true })
+        }
         .sheet(isPresented: $showPalmThresholdSheet) {
             // 改完立刻套進仲裁器。存了卻要重開筆記本才生效的話，
             // 使用者會以為設定沒有存到，然後再調一次。
@@ -7404,7 +7425,9 @@ public struct NotebookEditorView: View {
     private func exportAsPdf() {
         self.exportPdfData = buildNotebookPdf()
         self.exportFileExtension = "pdf"
-        self.showShareSheet = true
+        // 先給預覽（S-100）。分享面板由預覽上的「匯出」再叫出來 ——
+        // 使用者要確認的是「版面對不對」，而那件事只有看到結果才答得出來。
+        self.showExportPreview = true
     }
 
     private func printCurrentNotebook() {
@@ -7433,7 +7456,7 @@ public struct NotebookEditorView: View {
         if let pngData = img.pngData() {
             self.exportPdfData = pngData
             self.exportFileExtension = "png"
-            self.showShareSheet = true
+            self.showExportPreview = true
         }
     }
 

@@ -91,6 +91,7 @@ import com.kairumo.padnote.image.NoteImage
 import com.kairumo.padnote.ink.InkCanvas
 import com.kairumo.padnote.platform.AudioCapture
 import com.kairumo.padnote.platform.DocsViewer
+import com.kairumo.padnote.platform.ExportPreviewDialog
 import com.kairumo.padnote.platform.Exporter
 import com.kairumo.padnote.platform.Handwriting
 import com.kairumo.padnote.sync.FolderSync
@@ -1821,6 +1822,10 @@ private fun InkScreen(
     // 已經驗過會動的那條路才該是預設值。
     var lowLatency by remember { mutableStateOf(false) }
     var showPalmThresholds by remember { mutableStateOf(false) }
+    /// 已經產生、正在等使用者確認的匯出檔（S-100）。
+    var pendingExport by remember {
+        mutableStateOf<Pair<java.io.File, Exporter.Format>?>(null)
+    }
     /// 使用者是否調過掌拒門檻 —— 晶片要亮起來，不然沒有人知道自己改過。
     var palmTuned by remember {
         mutableStateOf(PalmThresholdStore.radius(activity) != null)
@@ -2411,7 +2416,10 @@ private fun InkScreen(
                     modifier = Modifier.testTag("editor.export.pdf"),
                     onClick = {
                         showShareMenu = false
-                        message = exportAndShare(activity, notebook?.first, Exporter.Format.PDF)
+                        exportToFile(activity, notebook?.first, Exporter.Format.PDF).fold(
+                            onSuccess = { pendingExport = it to Exporter.Format.PDF },
+                            onFailure = { message = exportFailureMessage(it) }
+                        )
                     }
                 )
                 DropdownMenuItem(
@@ -2419,14 +2427,20 @@ private fun InkScreen(
                     modifier = Modifier.testTag("editor.export.image"),
                     onClick = {
                         showShareMenu = false
-                        message = exportAndShare(activity, notebook?.first, Exporter.Format.PNG)
+                        exportToFile(activity, notebook?.first, Exporter.Format.PNG).fold(
+                            onSuccess = { pendingExport = it to Exporter.Format.PNG },
+                            onFailure = { message = exportFailureMessage(it) }
+                        )
                     }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("export_markdown")) },
                     onClick = {
                         showShareMenu = false
-                        message = exportAndShare(activity, notebook?.first, Exporter.Format.MARKDOWN)
+                        exportToFile(activity, notebook?.first, Exporter.Format.MARKDOWN).fold(
+                            onSuccess = { pendingExport = it to Exporter.Format.MARKDOWN },
+                            onFailure = { message = exportFailureMessage(it) }
+                        )
                     }
                 )
                 DropdownMenuItem(
@@ -2499,21 +2513,30 @@ private fun InkScreen(
                     text = { Text(l10n("export_pdf")) },
                     onClick = {
                         showMenu = false
-                        message = exportAndShare(activity, notebook?.first, Exporter.Format.PDF)
+                        exportToFile(activity, notebook?.first, Exporter.Format.PDF).fold(
+                            onSuccess = { pendingExport = it to Exporter.Format.PDF },
+                            onFailure = { message = exportFailureMessage(it) }
+                        )
                     }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("export_image")) },
                     onClick = {
                         showMenu = false
-                        message = exportAndShare(activity, notebook?.first, Exporter.Format.PNG)
+                        exportToFile(activity, notebook?.first, Exporter.Format.PNG).fold(
+                            onSuccess = { pendingExport = it to Exporter.Format.PNG },
+                            onFailure = { message = exportFailureMessage(it) }
+                        )
                     }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("export_markdown")) },
                     onClick = {
                         showMenu = false
-                        message = exportAndShare(activity, notebook?.first, Exporter.Format.MARKDOWN)
+                        exportToFile(activity, notebook?.first, Exporter.Format.MARKDOWN).fold(
+                            onSuccess = { pendingExport = it to Exporter.Format.MARKDOWN },
+                            onFailure = { message = exportFailureMessage(it) }
+                        )
                     }
                 )
                 DropdownMenuItem(
@@ -4669,6 +4692,24 @@ private fun InkScreen(
         )
     }
 
+    pendingExport?.let { (file, format) ->
+        ExportPreviewDialog(
+            file = file,
+            format = format,
+            languageTag = deviceLanguageTag(),
+            onExport = {
+                message = shareExported(activity, file, format)
+                pendingExport = null
+            },
+            onDismiss = {
+                // 取消就把檔案刪掉 —— 它在預覽之前就已經落在 cache/exports，
+                // 留著的話下次分享清單裡會冒出使用者以為沒匯出過的東西。
+                runCatching { file.delete() }
+                pendingExport = null
+            }
+        )
+    }
+
     if (showPalmThresholds) {
         PalmThresholdDialog(
             languageTag = deviceLanguageTag(),
@@ -5416,35 +5457,47 @@ private fun deviceId(activity: ComponentActivity): UInt {
     return hash
 }
 
-/** 匯出後直接叫出分享面板，並回報給使用者看的一句話。 */
-private fun exportAndShare(
+/**
+ * 產生匯出檔。**先產生、再預覽、最後才分享**（S-100）——
+ * 預覽看到的必須是真的那個檔，不是另外畫一次的近似品。
+ */
+private fun exportToFile(
     activity: ComponentActivity,
     session: PadnoteSession?,
     format: Exporter.Format
-): String {
-    if (session == null) return LocalizationStrings.localized("err_core_not_ready", deviceLanguageTag())
+): Result<java.io.File> {
+    if (session == null) {
+        return Result.failure(
+            IllegalStateException(
+                LocalizationStrings.localized("err_core_not_ready", deviceLanguageTag())
+            )
+        )
+    }
     // 版面標籤要照使用者目前的語系（S-90）—— 不傳的話匯出的康乃爾
     // 會寫著繁體中文的「提示／筆記／摘要」，而 App 是英文介面。
-    return Exporter.export(
-        activity, session, format, languageTag = deviceLanguageTag()
-    ).fold(
-        onSuccess = { file ->
-            runCatching {
-                activity.startActivity(
-                    android.content.Intent.createChooser(
-                        Exporter.shareIntent(activity, file, format), null
-                    )
-                )
-            }
-            LocalizationStrings.localized("export_done", deviceLanguageTag())
-                .replace("%@", file.name)
-        },
-        onFailure = { t ->
-            LocalizationStrings.localized("export_failed", deviceLanguageTag())
-                .replace("%@", t.message ?: t.toString())
-        }
-    )
+    return Exporter.export(activity, session, format, languageTag = deviceLanguageTag())
 }
+
+/** 叫出系統分享面板，並回報給使用者看的一句話。 */
+private fun shareExported(
+    activity: ComponentActivity,
+    file: java.io.File,
+    format: Exporter.Format
+): String {
+    runCatching {
+        activity.startActivity(
+            android.content.Intent.createChooser(
+                Exporter.shareIntent(activity, file, format), null
+            )
+        )
+    }
+    return LocalizationStrings.localized("export_done", deviceLanguageTag())
+        .replace("%@", file.name)
+}
+
+private fun exportFailureMessage(t: Throwable): String =
+    LocalizationStrings.localized("export_failed", deviceLanguageTag())
+        .replace("%@", t.message ?: t.toString())
 
 /** 分享 .padnote 筆記套件檔。 */
 private fun shareNotebookPackage(

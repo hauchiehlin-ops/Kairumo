@@ -101,6 +101,7 @@
 		B0D47F59443CA7009A7EC043 /* ContinuousPagesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A0C24F3FD1D464196490E2D /* ContinuousPagesView.swift */; };
 		B281348DEEE6A0978642DF8D /* BrushCursor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A2F8130E223B0B02F303F80 /* BrushCursor.swift */; };
 		B3DFF4CFC65E91FEEA6AA7B4 /* HomeWorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */; };
+		B427747146A395C471480C6C /* ExportPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0957AAFF21A2EF4C121E63E /* ExportPreviewSheet.swift */; };
 		B461E05D52232C76413B2DB2 /* Docs in Resources */ = {isa = PBXBuildFile; fileRef = B7FE882F90D6ABA99E0820BF /* Docs */; };
 		BBA19BDEFC495AD7A5BDD2F4 /* BundledDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0A240F9E5D8ED4900468913 /* BundledDocumentTests.swift */; };
 		BBA43DAF3585326259C48FE6 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D059ACC4F96D906F5A18970D /* AppVersion.swift */; };
@@ -299,6 +300,7 @@
 		B9DFE7E365BA2170726481B9 /* PageGuideRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageGuideRenderer.swift; sourceTree = "<group>"; };
 		BC0776567843FC6C74C2A9C0 /* NoteShapeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteShapeTests.swift; sourceTree = "<group>"; };
 		BFC2EC4F24CB728264AB91A5 /* ObjectRotationControls.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectRotationControls.swift; sourceTree = "<group>"; };
+		C0957AAFF21A2EF4C121E63E /* ExportPreviewSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPreviewSheet.swift; sourceTree = "<group>"; };
 		C1C81A31EBC2D3D1F020B0BF /* NoteTable.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteTable.swift; sourceTree = "<group>"; };
 		C72410287ED6D6BF9B550D5B /* NotebookStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookStore.swift; sourceTree = "<group>"; };
 		CB1466C3AB0C78C44ED34AB8 /* NotebookSearchIndex.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookSearchIndex.swift; sourceTree = "<group>"; };
@@ -473,6 +475,7 @@
 				59E46CD750DA486212251DC0 /* DocumentViewerSheet.swift */,
 				5B73641F0EA64C1F1B559616 /* DriveHttpClient.swift */,
 				5A7C268EF0A001760D3A7C02 /* DynamicPortalIsland.swift */,
+				C0957AAFF21A2EF4C121E63E /* ExportPreviewSheet.swift */,
 				E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */,
 				A94975999121E1FFF8139B6A /* FloatingPanel.swift */,
 				49C432411765C8C4D7362EA7 /* FloatingToolPill.swift */,
@@ -752,6 +755,7 @@
 				7B6B71CF69CE9F1C2CB2E953 /* DocumentViewerSheet.swift in Sources */,
 				1DDFAAA370E83E55EEE5AF28 /* DriveHttpClient.swift in Sources */,
 				D6CF28F060E9D4456754E70D /* DynamicPortalIsland.swift in Sources */,
+				B427747146A395C471480C6C /* ExportPreviewSheet.swift in Sources */,
 				643674D7CEE546261D15F308 /* ExportPrintManager.swift in Sources */,
 				FDBFCB97F11915C9DA8EA7A9 /* FloatingPanel.swift in Sources */,
 				3054D36A50503BD7EC24C84C /* FloatingToolPill.swift in Sources */,
