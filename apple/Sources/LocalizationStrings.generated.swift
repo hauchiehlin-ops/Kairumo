@@ -6463,14 +6463,6 @@ extension LocalizationManager {
             .ko: "손바닥 인식 차단",
             .th: "การปฏิเสธฝ่ามือ"
         ],
-        "palm_threshold_area": [
-            .zhHant: "接觸面積門檻",
-            .en: "Touch area threshold",
-            .zhHans: "接触面积阈值",
-            .ja: "接触面積のしきい値",
-            .ko: "접촉 면적 임계값",
-            .th: "เกณฑ์พื้นที่การสัมผัส"
-        ],
         "palm_threshold_hint": [
             .zhHant: "調高比較不會被手掌誤觸，但細的筆尖也可能被當成手掌。改壞了按「恢復預設」。",
             .en: "Higher values reject palms more aggressively, but a fine nib may also be rejected. Use “Restore defaults” if it goes wrong.",
@@ -6494,6 +6486,22 @@ extension LocalizationManager {
             .ja: "既定に戻す",
             .ko: "기본값 복원",
             .th: "คืนค่าเริ่มต้น"
+        ],
+        "palm_threshold_retract": [
+            .zhHant: "筆落下時的收回時間窗",
+            .en: "Retract window when the pen lands",
+            .zhHans: "笔落下时的收回时间窗",
+            .ja: "ペンが触れたときの取り消し時間",
+            .ko: "펜이 닿을 때 되돌릴 시간",
+            .th: "ช่วงเวลาย้อนกลับเมื่อปากกาแตะ"
+        ],
+        "palm_threshold_retract_hint": [
+            .zhHant: "手掌常常比筆先碰到螢幕。這段時間內畫出來的手掌筆畫會在筆落下時收回。",
+            .en: "Your palm usually lands before the pen. Palm marks drawn within this window are taken back when the pen touches down.",
+            .zhHans: "手掌常常比笔先碰到屏幕。这段时间内画出来的手掌笔画会在笔落下时收回。",
+            .ja: "手のひらはペンより先に触れがちです。この時間内に描かれた手のひらの線は、ペンが触れた時点で取り消されます。",
+            .ko: "보통 펜보다 손바닥이 먼저 닿습니다. 이 시간 안에 그려진 손바닥 자국은 펜이 닿을 때 되돌립니다.",
+            .th: "ฝ่ามือมักแตะก่อนปากกา รอยที่เกิดในช่วงเวลานี้จะถูกย้อนกลับเมื่อปากกาแตะ"
         ],
         "paper_content": [
             .zhHant: "這張紙的內容",

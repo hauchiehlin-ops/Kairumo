@@ -32,6 +32,7 @@
 		2CD22470357DA2E190D83DBF /* GoogleAuth.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCBD6EB2E871A9532370A15B /* GoogleAuth.swift */; };
 		3054D36A50503BD7EC24C84C /* FloatingToolPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C432411765C8C4D7362EA7 /* FloatingToolPill.swift */; };
 		31303FA237927EC5B53EFE38 /* AssetLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A351D8EB2219ECF83FF78645 /* AssetLibraryView.swift */; };
+		33C06FCCD5F5DF767E8DCA25 /* PalmThresholdSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD3609DAFC6CD0A448F250C1 /* PalmThresholdSheet.swift */; };
 		44F395EF97582BCF2480ECDD /* BackupManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 473B5EDC9DF95F4358F83CFB /* BackupManagerTests.swift */; };
 		4514902261D4A927D6FBC105 /* Templates in Resources */ = {isa = PBXBuildFile; fileRef = 2A2253FE74C35178B0F901C8 /* Templates */; };
 		4739A382D63316D061431753 /* BrushCursorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B36AD7F19677B4F27E94262B /* BrushCursorTests.swift */; };
@@ -326,6 +327,7 @@
 		F65D4DD5D5DF9A56132D032E /* LocalizationStrings.generated.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalizationStrings.generated.swift; sourceTree = "<group>"; };
 		F85F010611BBEED2B2DF9AC3 /* PalmRejectionTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalmRejectionTests.swift; sourceTree = "<group>"; };
 		F9BA3DC03F5BD38348D5D9DE /* PenHardware.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PenHardware.swift; sourceTree = "<group>"; };
+		FD3609DAFC6CD0A448F250C1 /* PalmThresholdSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PalmThresholdSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -521,6 +523,7 @@
 				74C26B5B3A37A7FBDAABA8A7 /* PageRepagination.swift */,
 				02895D54063C3AA4B5D30463 /* PageThumbnailRenderer.swift */,
 				1064607D4E02AABFD6A63F53 /* PalmRejection.swift */,
+				FD3609DAFC6CD0A448F250C1 /* PalmThresholdSheet.swift */,
 				43B5E732D6E01F9549B1147D /* PdfKitDocument.swift */,
 				F9BA3DC03F5BD38348D5D9DE /* PenHardware.swift */,
 				0013D28CD49B4181F40017F3 /* PenHoverPreview.swift */,
@@ -800,6 +803,7 @@
 				E77C6702EE266A8D0B24EA19 /* PageRepagination.swift in Sources */,
 				2823612B8F3A376A45042712 /* PageThumbnailRenderer.swift in Sources */,
 				512B7389435793F9304B338D /* PalmRejection.swift in Sources */,
+				33C06FCCD5F5DF767E8DCA25 /* PalmThresholdSheet.swift in Sources */,
 				582629D6ADA3FCAEA7E65830 /* PdfKitDocument.swift in Sources */,
 				D22176F0157CE8624CA7590B /* PenHardware.swift in Sources */,
 				65B2ADC8B553B1BE9708540A /* PenHoverPreview.swift in Sources */,

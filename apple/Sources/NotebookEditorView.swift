@@ -951,6 +951,7 @@ public struct NotebookEditorView: View {
     @State private var currentPageHeight: CGFloat = PageGeometry.height
     /// 掌拒（工作項 S-45）。判定規則走核心，與 Android 同一份。
     @State private var palmRejection = PalmRejectionCoordinator()
+    @State private var showPalmThresholdSheet = false
     @State private var hasLassoSelection: Bool = false
     @State private var showExtendedBanner: Bool = false
 
@@ -1598,6 +1599,11 @@ public struct NotebookEditorView: View {
         .sheet(isPresented: $showCollaborationSheet) { resizableSheet {
             CollaborationSheet(notebookId: notebook.id)
         } }
+        .sheet(isPresented: $showPalmThresholdSheet) {
+            // 改完立刻套進仲裁器。存了卻要重開筆記本才生效的話，
+            // 使用者會以為設定沒有存到，然後再調一次。
+            PalmThresholdSheet { palmRejection.applyStoredThresholds() }
+        }
         .onReceive(collaborationManager.oplogReceived) { event in
             handleRemoteOplog(event)
         }
@@ -2385,6 +2391,13 @@ public struct NotebookEditorView: View {
             Section {
                 Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
                     .accessibilityIdentifier("editor.insert.refine_sketch")
+                // 掌拒門檻（S-101）。判定一直都在核心，缺的只是「讓使用者調」——
+                // 握筆姿勢比較特別的人，手掌一放上去就是一道線，
+                // 而在此之前他完全沒有辦法處理。
+                Button { showPalmThresholdSheet = true } label: {
+                    Label(localizationManager.localized("palm_rejection_settings"), systemImage: "hand.raised.slash")
+                }
+                .accessibilityIdentifier("editor.insert.palm_thresholds")
                 Button { withAnimation { isPlacingCommentPin.toggle() } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
                     .accessibilityIdentifier("editor.insert.comment_pin")
                 Button { showCollaborationSheet = true } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }

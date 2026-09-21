@@ -201,6 +201,8 @@ import androidx.compose.ui.draganddrop.mimeTypes
 import androidx.compose.ui.draganddrop.toAndroidDragEvent
 import com.kairumo.padnote.image.ImageDropPlacement
 import com.kairumo.padnote.ink.PageGeometry
+import com.kairumo.padnote.ink.PalmThresholdDialog
+import com.kairumo.padnote.ink.PalmThresholdStore
 import com.kairumo.padnote.ink.SketchRefineBar
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalView
@@ -1370,6 +1372,13 @@ private fun InkScreen(
             // 一筆畫完就通知同步。**會去抖動** —— 使用者還在寫字時
             // 每一筆都推只是浪費電，而且會拖慢正在編輯的這一本。
             onContentCommitted = { com.kairumo.padnote.sync.AutoSync.noteLocalEdit(activity) }
+            // 使用者調過的掌拒門檻要在**每次開新引擎時**套回去。
+            // 只在設定當下套的話，換一頁就變回預設值，而使用者會以為
+            // 設定沒有存到。
+            setPalmThresholds(
+                PalmThresholdStore.radius(activity),
+                PalmThresholdStore.retractMs(activity)
+            )
         }
     }
     // 套索選取。換頁就換一個 —— 選取的是「這一頁的筆畫 id」，
@@ -1811,6 +1820,11 @@ private fun InkScreen(
     // 還沒在實機上驗過，不能讓它擋在使用者與「能不能寫字」之間 ——
     // 已經驗過會動的那條路才該是預設值。
     var lowLatency by remember { mutableStateOf(false) }
+    var showPalmThresholds by remember { mutableStateOf(false) }
+    /// 使用者是否調過掌拒門檻 —— 晶片要亮起來，不然沒有人知道自己改過。
+    var palmTuned by remember {
+        mutableStateOf(PalmThresholdStore.radius(activity) != null)
+    }
     var lowLatencyUnavailable by remember { mutableStateOf(false) }
     var revision by remember { mutableIntStateOf(0) }
 
@@ -2816,6 +2830,14 @@ private fun InkScreen(
                         engine.setPenOnly(penOnly)
                     },
                     label = { Text(l10n("ink_pen_only")) }
+                )
+                // 掌拒門檻（S-101）。判定一直都在核心，缺的只是「讓使用者調」——
+                // 握筆姿勢比較特別的人，手掌一放上去就是一道線，
+                // 而在此之前他完全沒有辦法處理。
+                FilterChip(
+                    selected = palmTuned,
+                    onClick = { showPalmThresholds = true },
+                    label = { Text(l10n("palm_rejection_settings")) }
                 )
                 // 防手震滑桿（Stroke Stabilizer）
                 FilterChip(
@@ -4644,6 +4666,17 @@ private fun InkScreen(
                 activity.recreate()
             },
             onDismiss = { showLanguagePicker = false }
+        )
+    }
+
+    if (showPalmThresholds) {
+        PalmThresholdDialog(
+            languageTag = deviceLanguageTag(),
+            onApply = { radius, retractMs ->
+                engine.setPalmThresholds(radius, retractMs)
+                palmTuned = radius != null
+            },
+            onDismiss = { showPalmThresholds = false }
         )
     }
 

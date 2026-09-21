@@ -6509,14 +6509,6 @@ object LocalizationStrings {
             "ko" to "손바닥 인식 차단",
             "th" to "การปฏิเสธฝ่ามือ"
         ),
-        "palm_threshold_area" to mapOf(
-            "zh-Hant" to "接觸面積門檻",
-            "en" to "Touch area threshold",
-            "zh-Hans" to "接触面积阈值",
-            "ja" to "接触面積のしきい値",
-            "ko" to "접촉 면적 임계값",
-            "th" to "เกณฑ์พื้นที่การสัมผัส"
-        ),
         "palm_threshold_hint" to mapOf(
             "zh-Hant" to "調高比較不會被手掌誤觸，但細的筆尖也可能被當成手掌。改壞了按「恢復預設」。",
             "en" to "Higher values reject palms more aggressively, but a fine nib may also be rejected. Use “Restore defaults” if it goes wrong.",
@@ -6540,6 +6532,22 @@ object LocalizationStrings {
             "ja" to "既定に戻す",
             "ko" to "기본값 복원",
             "th" to "คืนค่าเริ่มต้น"
+        ),
+        "palm_threshold_retract" to mapOf(
+            "zh-Hant" to "筆落下時的收回時間窗",
+            "en" to "Retract window when the pen lands",
+            "zh-Hans" to "笔落下时的收回时间窗",
+            "ja" to "ペンが触れたときの取り消し時間",
+            "ko" to "펜이 닿을 때 되돌릴 시간",
+            "th" to "ช่วงเวลาย้อนกลับเมื่อปากกาแตะ"
+        ),
+        "palm_threshold_retract_hint" to mapOf(
+            "zh-Hant" to "手掌常常比筆先碰到螢幕。這段時間內畫出來的手掌筆畫會在筆落下時收回。",
+            "en" to "Your palm usually lands before the pen. Palm marks drawn within this window are taken back when the pen touches down.",
+            "zh-Hans" to "手掌常常比笔先碰到屏幕。这段时间内画出来的手掌笔画会在笔落下时收回。",
+            "ja" to "手のひらはペンより先に触れがちです。この時間内に描かれた手のひらの線は、ペンが触れた時点で取り消されます。",
+            "ko" to "보통 펜보다 손바닥이 먼저 닿습니다. 이 시간 안에 그려진 손바닥 자국은 펜이 닿을 때 되돌립니다.",
+            "th" to "ฝ่ามือมักแตะก่อนปากกา รอยที่เกิดในช่วงเวลานี้จะถูกย้อนกลับเมื่อปากกาแตะ"
         ),
         "paper_content" to mapOf(
             "zh-Hant" to "這張紙的內容",
@@ -7092,7 +7100,10 @@ object LocalizationStrings {
             "ja" to "ノートの名前を変更",
             "ko" to "노트 이름 바꾸기",
             "th" to "เปลี่ยนชื่อสมุดบันทึก"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "reopen" to mapOf(
             "zh-Hant" to "重新開啟",
             "en" to "Reopen",
@@ -7100,10 +7111,7 @@ object LocalizationStrings {
             "ja" to "再オープン",
             "ko" to "다시 열기",
             "th" to "เปิดใหม่"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "reply" to mapOf(
             "zh-Hant" to "回覆",
             "en" to "Reply",
@@ -7735,7 +7743,10 @@ object LocalizationStrings {
             "ja" to "左矢印",
             "ko" to "왼쪽 화살표",
             "th" to "ลูกศรซ้าย"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_arrowblockright" to mapOf(
             "zh-Hant" to "右箭頭",
             "en" to "Right arrow",
@@ -7743,10 +7754,7 @@ object LocalizationStrings {
             "ja" to "右矢印",
             "ko" to "오른쪽 화살표",
             "th" to "ลูกศรขวา"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_arrowblockup" to mapOf(
             "zh-Hant" to "上箭頭",
             "en" to "Up arrow",
@@ -8378,7 +8386,10 @@ object LocalizationStrings {
             "ja" to "参考寸法：",
             "ko" to "참고 치수: ",
             "th" to "ขนาดอ้างอิง: "
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "spec_filesize" to mapOf(
             "zh-Hant" to "檔案大小：",
             "en" to "File Size: ",
@@ -8386,10 +8397,7 @@ object LocalizationStrings {
             "ja" to "ファイルサイズ：",
             "ko" to "파일 크기: ",
             "th" to "ขนาดไฟล์: "
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "spec_materials" to mapOf(
             "zh-Hant" to "材質工藝：",
             "en" to "Material & Finish: ",
@@ -9021,7 +9029,10 @@ object LocalizationStrings {
             "ja" to "下線",
             "ko" to "밑줄",
             "th" to "ขีดเส้นใต้"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "theme_aesthetic" to mapOf(
             "zh-Hant" to "美學視覺",
             "en" to "Aesthetic & Visual",
@@ -9029,10 +9040,7 @@ object LocalizationStrings {
             "ja" to "美的・視覚デザイン",
             "ko" to "미학 및 시각 디자인",
             "th" to "สุนทรียศาสตร์และการมองเห็น"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "theme_category" to mapOf(
             "zh-Hant" to "主題分類",
             "en" to "Theme",
@@ -9664,7 +9672,10 @@ object LocalizationStrings {
             "ja" to "月曜から日曜までの7列と罫線",
             "ko" to "월~일 7열과 괘선",
             "th" to "เจ็ดคอลัมน์วันพร้อมเส้นบรรทัด"
-        ),
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
         "todo_list" to mapOf(
             "zh-Hant" to "待辦事項清單",
             "en" to "To-do list",
@@ -9672,10 +9683,7 @@ object LocalizationStrings {
             "ja" to "To-Do リスト",
             "ko" to "할 일 목록",
             "th" to "รายการที่ต้องทำ"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "toggle_border" to mapOf(
             "zh-Hant" to "邊框開關 (保留/刪除)",
             "en" to "Toggle Border (Keep/Remove)",

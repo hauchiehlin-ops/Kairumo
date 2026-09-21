@@ -6447,14 +6447,6 @@
     "zhHans": "掌拒灵敏度",
     "zhHant": "掌拒靈敏度"
   },
-  "palm_threshold_area": {
-    "en": "Touch area threshold",
-    "ja": "接触面積のしきい値",
-    "ko": "접촉 면적 임계값",
-    "th": "เกณฑ์พื้นที่การสัมผัส",
-    "zhHans": "接触面积阈值",
-    "zhHant": "接觸面積門檻"
-  },
   "palm_threshold_hint": {
     "en": "Higher values reject palms more aggressively, but a fine nib may also be rejected. Use “Restore defaults” if it goes wrong.",
     "ja": "高くすると手のひらを弾きやすくなりますが、細いペン先も弾かれることがあります。おかしくなったら「既定に戻す」を押してください。",
@@ -6478,6 +6470,22 @@
     "th": "คืนค่าเริ่มต้น",
     "zhHans": "恢复默认",
     "zhHant": "恢復預設"
+  },
+  "palm_threshold_retract": {
+    "en": "Retract window when the pen lands",
+    "ja": "ペンが触れたときの取り消し時間",
+    "ko": "펜이 닿을 때 되돌릴 시간",
+    "th": "ช่วงเวลาย้อนกลับเมื่อปากกาแตะ",
+    "zhHans": "笔落下时的收回时间窗",
+    "zhHant": "筆落下時的收回時間窗"
+  },
+  "palm_threshold_retract_hint": {
+    "en": "Your palm usually lands before the pen. Palm marks drawn within this window are taken back when the pen touches down.",
+    "ja": "手のひらはペンより先に触れがちです。この時間内に描かれた手のひらの線は、ペンが触れた時点で取り消されます。",
+    "ko": "보통 펜보다 손바닥이 먼저 닿습니다. 이 시간 안에 그려진 손바닥 자국은 펜이 닿을 때 되돌립니다.",
+    "th": "ฝ่ามือมักแตะก่อนปากกา รอยที่เกิดในช่วงเวลานี้จะถูกย้อนกลับเมื่อปากกาแตะ",
+    "zhHans": "手掌常常比笔先碰到屏幕。这段时间内画出来的手掌笔画会在笔落下时收回。",
+    "zhHant": "手掌常常比筆先碰到螢幕。這段時間內畫出來的手掌筆畫會在筆落下時收回。"
   },
   "paper_content": {
     "en": "Content on this paper",

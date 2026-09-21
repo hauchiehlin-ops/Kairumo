@@ -178,17 +178,27 @@ impl InkArbiter {
         });
     }
 
-    /// 調整掌拒門檻。
+    /// 調整掌拒門檻。**兩個值都會被夾制到 [`palm_threshold_limits`] 的範圍內。**
     ///
     /// `palm_radius`：超過此接觸半徑視為手掌（預設 22 點）。
-    /// `retract_window_ms`：筆落下時回溯撤銷的時間窗（預設 500 ms）。
+    /// `retract_window_ms`：筆落下時回溯撤銷的時間窗（預設 500 **毫秒**）。
+    ///
+    /// # 為什麼要夾制
+    ///
+    /// 這裡的單位是毫秒，而核心內部的欄位叫 `retract_window_us`（微秒）。
+    /// Android 的呼叫端照著核心的預設值抄，傳了 `500_000` —— 那是 500 **秒**。
+    /// 後果不是「設定沒生效」，而是使用者用手指寫了幾分鐘、筆一落下，
+    /// **過去八分鐘的手指筆畫被整批收回**，而且沒有任何錯誤訊息。
+    ///
+    /// 夾制擋不住寫錯單位，但擋得住寫錯單位的**代價**：最壞情況從
+    /// 「八分鐘的東西沒了」變成「收回窗比預期長一點」。
     ///
     /// ⚠️ 預設值都是**起點值**，需在實機以真實書寫姿勢調整。
     pub fn set_palm_thresholds(&self, palm_radius: f32, retract_window_ms: u32) {
         let mut a = self.lock();
         let config = ArbiterConfig {
-            palm_radius,
-            retract_window_us: u64::from(retract_window_ms) * 1_000,
+            palm_radius: palm_radius_clamped(palm_radius),
+            retract_window_us: u64::from(palm_retract_ms_clamped(retract_window_ms)) * 1_000,
             ..*a.config()
         };
         *a = PointerArbiter::new(config);
@@ -586,5 +596,98 @@ mod pen_tests {
         assert!(c.is_momentary(FfiPenControl::BarrelPrimary));
         assert!(!c.is_momentary(FfiPenControl::DoubleTap));
         assert!(!c.is_momentary(FfiPenControl::Squeeze));
+    }
+}
+
+// ---- 掌拒門檻的範圍與預設（工作項 S-101）----
+//
+// 這些數字放在核心，是因為兩個平台的設定畫面都要用到它們：滑桿的兩端、
+// 「恢復預設」的值、以及寫進 `DeviceSettings` 之前的夾制。
+// 各抄一份的話，兩邊的滑桿範圍遲早不一樣，而使用者不會知道為什麼
+// 同一個數字在另一台裝置上效果不同。
+
+/// 掌拒門檻的可調範圍與預設值。
+#[derive(Clone, Copy, Debug, uniffi::Record)]
+pub struct FfiPalmLimits {
+    pub default_radius_dp: f32,
+    /// 手指也能書寫時的預設半徑。比僅限筆時鬆 ——
+    /// 手指的接觸半徑本來就比筆尖大，用同一個門檻會把正常的手寫當成手掌。
+    pub finger_mode_radius_dp: f32,
+    pub min_radius_dp: f32,
+    pub max_radius_dp: f32,
+    pub default_retract_ms: u32,
+    pub min_retract_ms: u32,
+    pub max_retract_ms: u32,
+}
+
+/// 範圍的由來：
+///
+/// - **半徑 8–60 dp。** 低於 8 連筆尖都會被當成手掌（S Pen 的接觸半徑約
+///   3–6 dp，但手指最小也有 8 以上）；高於 60 等於整隻手掌都放行。
+/// - **收回窗 100–3000 ms。** 低於 100 收不到「手掌先碰、筆才落下」那一瞬間
+///   （那正是它存在的理由）；高於 3 秒就會開始吃掉使用者真的想留下的東西。
+#[uniffi::export]
+pub fn palm_threshold_limits() -> FfiPalmLimits {
+    FfiPalmLimits {
+        default_radius_dp: 22.0,
+        finger_mode_radius_dp: 40.0,
+        min_radius_dp: 8.0,
+        max_radius_dp: 60.0,
+        default_retract_ms: 500,
+        min_retract_ms: 100,
+        max_retract_ms: 3_000,
+    }
+}
+
+#[uniffi::export]
+pub fn palm_radius_clamped(dp: f32) -> f32 {
+    let l = palm_threshold_limits();
+    if dp.is_nan() {
+        return l.default_radius_dp;
+    }
+    dp.clamp(l.min_radius_dp, l.max_radius_dp)
+}
+
+#[uniffi::export]
+pub fn palm_retract_ms_clamped(ms: u32) -> u32 {
+    let l = palm_threshold_limits();
+    ms.clamp(l.min_retract_ms, l.max_retract_ms)
+}
+
+#[cfg(test)]
+mod palm_limit_tests {
+    use super::*;
+
+    /// **這一項釘住的是一次真的資料遺失。**
+    ///
+    /// Android 照著核心內部的 `retract_window_us: 500_000` 抄，把 500_000
+    /// 傳給一個以毫秒為單位的參數 —— 500 秒。使用者用手指寫了幾分鐘、
+    /// 筆一落下，過去八分鐘的筆畫被當成手掌整批收回。
+    #[test]
+    fn a_microsecond_value_passed_as_milliseconds_cannot_eat_the_users_work() {
+        assert_eq!(palm_retract_ms_clamped(500_000), 3_000);
+    }
+
+    #[test]
+    fn the_defaults_are_inside_the_range() {
+        let l = palm_threshold_limits();
+        assert_eq!(
+            palm_radius_clamped(l.default_radius_dp),
+            l.default_radius_dp
+        );
+        assert_eq!(
+            palm_retract_ms_clamped(l.default_retract_ms),
+            l.default_retract_ms
+        );
+    }
+
+    /// NaN 夾制的結果是 NaN，所以要特別擋 —— 一個 NaN 半徑會讓
+    /// 每一次比較都是 false，掌拒就整個失效而沒有人會發現。
+    #[test]
+    fn a_nan_radius_falls_back_to_the_default() {
+        assert_eq!(
+            palm_radius_clamped(f32::NAN),
+            palm_threshold_limits().default_radius_dp
+        );
     }
 }

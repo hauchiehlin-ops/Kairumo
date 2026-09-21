@@ -43,6 +43,23 @@ final class PalmRejectionCoordinator {
     var mode: Mode = .automatic
 
     private let arbiter = InkArbiter()
+
+    init() {
+        applyStoredThresholds()
+    }
+
+    /// 把使用者調過的掌拒門檻套進仲裁器（工作項 S-101）。
+    ///
+    /// 沒有自訂過時用核心的預設值 —— 範圍與預設都來自
+    /// `palmThresholdLimits()`，兩個平台同一組數字。各抄一份的話，
+    /// 兩邊的滑桿範圍遲早不一樣，而使用者不會知道為什麼同一個數字在
+    /// 另一台裝置上效果不同。
+    func applyStoredThresholds() {
+        let limits = palmThresholdLimits()
+        arbiter.setPalmThresholds(
+            palmRadius: PalmThresholdStore.radius ?? limits.defaultRadiusDp,
+            retractWindowMs: PalmThresholdStore.retractMs ?? limits.defaultRetractMs)
+    }
     /// 最後一次看到觸控筆的時間。
     private var lastPencilAt: Date?
 

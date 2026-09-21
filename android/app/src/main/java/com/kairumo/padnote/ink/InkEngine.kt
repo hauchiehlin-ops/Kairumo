@@ -38,9 +38,21 @@ class InkEngine(
     private val _strokes = mutableListOf<CompletedStroke>()
     val strokes: List<CompletedStroke> get() = _strokes
 
+    /**
+     * 使用者自訂的掌拒門檻。`null` 表示沒有自訂，跟著模式走預設值。
+     *
+     * 自訂之後**兩種模式都用同一個數字** —— 「我設了門檻，那就是門檻」
+     * 比「你設的值在某些模式下會被換掉」好解釋得多。
+     */
+    private var overrideRadiusDp: Float? = null
+    private var overrideRetractMs: UInt? = null
+
+    private var lastPenOnly = false
+
     init {
-        // 預設筆與手指皆可書寫，設定 40dp 門檻避免手指觸控被誤判為手掌
-        arbiter.setPalmThresholds(40f, 500_000u)
+        // 預設筆與手指皆可書寫，用比較鬆的門檻 ——
+        // 手指的接觸半徑本來就比筆尖大，用僅限筆的門檻會把正常手寫當成手掌。
+        applyPalmThresholds(penOnly = false)
     }
 
     data class CompletedStroke(
@@ -581,16 +593,26 @@ class InkEngine(
             if (penOnly) uniffi.padnote_core.FfiInputMode.PEN_ONLY
             else uniffi.padnote_core.FfiInputMode.PEN_AND_FINGER
         )
-        if (!penOnly) {
-            // 放寬掌拒半徑，避免手指書寫時因接觸面積稍大被誤判手掌而丟棄筆畫
-            arbiter.setPalmThresholds(40f, 500_000u)
-        } else {
-            // 僅限觸控筆模式下恢復標準嚴格掌拒
-            arbiter.setPalmThresholds(22f, 500_000u)
-        }
+        applyPalmThresholds(penOnly)
     }
 
-    fun setPalmThresholds(palmRadiusDp: Float, retractWindowMs: UInt) {
-        arbiter.setPalmThresholds(palmRadiusDp, retractWindowMs)
+    private fun applyPalmThresholds(penOnly: Boolean) {
+        lastPenOnly = penOnly
+        val limits = uniffi.padnote_core.palmThresholdLimits()
+        val radius = overrideRadiusDp
+            ?: if (penOnly) limits.defaultRadiusDp else limits.fingerModeRadiusDp
+        // **單位是毫秒。** 這裡曾經傳 500_000 —— 那是核心內部 `_us` 欄位的
+        // 預設值，當成毫秒就是 500 秒：手指寫了幾分鐘、筆一落下，
+        // 過去八分鐘的筆畫會被當成手掌整批收回。核心現在會夾制，
+        // 但正確的值還是要從這裡傳出去。
+        val retractMs = overrideRetractMs ?: limits.defaultRetractMs
+        arbiter.setPalmThresholds(radius, retractMs)
+    }
+
+    /** 套用使用者在設定裡調的門檻。傳 `null` 表示恢復預設。 */
+    fun setPalmThresholds(palmRadiusDp: Float?, retractWindowMs: UInt?) {
+        overrideRadiusDp = palmRadiusDp
+        overrideRetractMs = retractWindowMs
+        applyPalmThresholds(lastPenOnly)
     }
 }
