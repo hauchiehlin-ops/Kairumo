@@ -1,0 +1,19 @@
+{
+  "clamped": [
+    {
+      "in": 500000,
+      "out": 3000
+    },
+    {
+      "in": 50,
+      "out": 100
+    }
+  ],
+  "default_radius_dp": 22.0,
+  "default_retract_ms": 500,
+  "finger_mode_radius_dp": 40.0,
+  "max_radius_dp": 60.0,
+  "max_retract_ms": 3000,
+  "min_radius_dp": 8.0,
+  "min_retract_ms": 100
+}

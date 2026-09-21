@@ -1,0 +1,84 @@
+{
+  "cases": [
+    {
+      "content_max_width": 1040.0,
+      "gutter": 12.0,
+      "note_columns": 1,
+      "readable_max_width": 720.0,
+      "sidebar_is_inline": false,
+      "sidebar_width": 280.0,
+      "size_class": "Compact",
+      "width": 320.0
+    },
+    {
+      "content_max_width": 1040.0,
+      "gutter": 12.0,
+      "note_columns": 1,
+      "readable_max_width": 720.0,
+      "sidebar_is_inline": false,
+      "sidebar_width": 280.0,
+      "size_class": "Compact",
+      "width": 375.0
+    },
+    {
+      "content_max_width": 1040.0,
+      "gutter": 16.0,
+      "note_columns": 1,
+      "readable_max_width": 720.0,
+      "sidebar_is_inline": false,
+      "sidebar_width": 280.0,
+      "size_class": "Compact",
+      "width": 428.0
+    },
+    {
+      "content_max_width": 1040.0,
+      "gutter": 16.0,
+      "note_columns": 2,
+      "readable_max_width": 720.0,
+      "sidebar_is_inline": false,
+      "sidebar_width": 280.0,
+      "size_class": "Medium",
+      "width": 600.0
+    },
+    {
+      "content_max_width": 1040.0,
+      "gutter": 16.0,
+      "note_columns": 3,
+      "readable_max_width": 720.0,
+      "sidebar_is_inline": false,
+      "sidebar_width": 280.0,
+      "size_class": "Medium",
+      "width": 744.0
+    },
+    {
+      "content_max_width": 1040.0,
+      "gutter": 16.0,
+      "note_columns": 3,
+      "readable_max_width": 720.0,
+      "sidebar_is_inline": true,
+      "sidebar_width": 280.0,
+      "size_class": "Expanded",
+      "width": 840.0
+    },
+    {
+      "content_max_width": 1040.0,
+      "gutter": 24.0,
+      "note_columns": 4,
+      "readable_max_width": 720.0,
+      "sidebar_is_inline": true,
+      "sidebar_width": 280.0,
+      "size_class": "Expanded",
+      "width": 1024.0
+    },
+    {
+      "content_max_width": 1040.0,
+      "gutter": 24.0,
+      "note_columns": 4,
+      "readable_max_width": 720.0,
+      "sidebar_is_inline": true,
+      "sidebar_width": 280.0,
+      "size_class": "Expanded",
+      "width": 1366.0
+    }
+  ]
+}

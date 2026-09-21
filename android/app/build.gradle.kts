@@ -89,6 +89,10 @@ android {
     // DEVLOG、TODO、ADR、內部計畫全都會隨 APK 出貨給使用者。
     sourceSets["main"].assets.srcDirs(layout.buildDirectory.dir("generated/docsAssets"))
 
+    // 一致性向量（閘門 1）**只掛在測試上**，不進 APK ——
+    // 它是給測試比對用的期望值，使用者的手機上一個位元組都不該有。
+    sourceSets["androidTest"].assets.srcDirs(layout.buildDirectory.dir("generated/conformance"))
+
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
     }
@@ -118,12 +122,18 @@ val copyUserDocs by tasks.registering(Copy::class) {
     into(layout.buildDirectory.dir("generated/docsAssets"))
 }
 
+/** 一致性向量（由核心產生，見 crates/padnote-core/tests/conformance_vectors.rs）。 */
+val copyConformanceVectors by tasks.registering(Copy::class) {
+    from("$rootDir/../docs/conformance") { into("conformance") }
+    into(layout.buildDirectory.dir("generated/conformance"))
+}
+
 // 任何會讀到 assets 的工作都要等複製完成。只掛 merge*Assets 的話，
 // lint 與打包流程會在檔案還沒到位時就去讀那個目錄，Gradle 會直接擋下來。
 tasks.matching {
     it.name.contains("Assets") || it.name.startsWith("lint") ||
         it.name.startsWith("generate") && it.name.contains("Lint")
-}.configureEach { dependsOn(copyUserDocs) }
+}.configureEach { dependsOn(copyUserDocs, copyConformanceVectors) }
 
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")

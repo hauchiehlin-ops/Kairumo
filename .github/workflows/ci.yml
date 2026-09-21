@@ -182,6 +182,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
       - name: 隨機歷史與回歸種子
         run: cargo test -p padnote-core --no-default-features --test model_multi_device
+      # 一致性閘門 1：向量必須與核心目前的行為一致。
+      # 兩端各有一支測試讀同一份向量（Apple 在 Test (macOS)，
+      # Android 在 android-instrumented），所以向量一動，兩邊都會跟著動。
+      - name: 一致性向量與核心一致
+        run: cargo test -p padnote-core --no-default-features --test conformance_vectors
 
   licenses:
     name: License audit
