@@ -1,58 +1,61 @@
 # Apple 與 Android 的功能落差清查
 
-> **2026-09-21 補：見文末「第 0 層：核心開好但沒人用 / 只有一邊用」。**
-> 那一節是 `docs/plans/unrealised-features-audit.md` 的決議版 ——
-> 盤點只負責指出「中間狀態」，這裡負責把每一項變成一個決定。
-
-
 > 對應規則：**對應用程式所有的修改都應該要同時滿足不同平台的需求。**
 > 這份清查是那條規則的對帳單 —— 從核心到應用層逐項比對，不用印象。
-> 清查於 2026-09-13（v2.4.1）。
+>
+> **最後查證：2026-09-21（v4.8.1），逐項對著 Android 原始碼點名。**
+> 上一版寫於 2026-09-13（v2.4.1），此後的十幾個版本補上了幾乎整個第 3 層，
+> 但這份文件沒有跟著改 —— 下面的「這一版改了什麼」記錄了落差有多大。
 
 ---
 
 ## 一句話結論
 
-**Android 目前是「一本筆記、一頁、一支筆」的殼。** 核心開出 104 個 FFI 方法，
-Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對上 Android 的
-18 個 Kotlin 檔（約 2,900 行，其中 4,200 行是產生的字串表）。
+**Android 已經不是「一本筆記、一頁、一支筆」的殼了。**
+量一下：Android 130 個 Kotlin 檔、30,836 行（不含 9,894 行產生的字串表），
+對上 Apple 105 個 Swift 檔、43,386 行（不含 9,827 行產生的）。
 
-落差**不是散在各處的小洞，而是整層都還沒蓋** —— 多筆記本、資料夾、多頁、
-以及所有「筆跡以外的物件」。
+**v2.4.1 列出的 23 項「Android 完全沒有」，現在只剩 1 項（A19 里程碑快照）。**
+B 段五項裡有兩項已補齊，剩下三項中有兩項**兩個平台都缺**，
+也就是說那不是跨平台落差，是待辦功能。
+
+---
+
+## 這一版改了什麼（2026-09-21）
+
+| 上一版寫的 | 查證結果 |
+|---|---|
+| 「18 個 Kotlin 檔、約 2,900 行」 | **130 個檔、30,836 行**（相差十倍） |
+| 「核心 104 個 FFI，Android 只用 29 個」 | 核心現在是 199 個 `#[uniffi::export`；使用量已不是瓶頸 |
+| A1–A14、A16–A18、A20–A23「完全沒有」 | **全部有了**，逐項位置見下表 |
+| B1「不能拖曳縮放、沒有特殊符號」 | 特殊符號有了（`text/SymbolPickerDialog.kt`） |
+| B2「不能捲動到整頁」 | 有了（`canvas/ContinuousPages.kt` 依可用寬度縮放 + `CanvasStackPanel` 捲動） |
+
+**這種規模的失準本身就是一個教訓：**清單型文件如果沒有跟著 commit 更新，
+它下一次被讀到的時候，會讓人去重做一次已經存在的功能 —— 那比不做更糟，
+會蓋掉現有實作，而且沒有人會發現是怎麼壞的。這一週已經發生兩次
+（S-71 的 Android 雙欄編輯器、紙張底紋）。
 
 ---
 
 ## 第 1 層：核心（Rust）—— **沒有落差**
 
-兩個平台走同一個 `padnote-core`，同一組 FFI。以下能力核心**都已具備**，
-是平台層還沒接上：
+兩個平台走同一個 `padnote-core`，同一組 FFI。
 
-| 核心能力 | Apple 用了 | Android 用了 |
+| 核心能力 | Apple | Android |
 |---|---|---|
 | 筆畫（新增／擦除／讀回） | ✅ | ✅ |
-| 多頁（`add_page` / `page_id_at` / `page_size`） | ✅ | ⚠️ 只用 `firstPageId` |
-| 文字區塊（內容／位置／外觀） | ✅ | ✅ |
-| 圖片區塊（`add_image` / `put_blob`） | ✅ | ❌ |
-| 表格（新增／改格／插刪列欄／合併） | ✅ | ✅ |
-| 形狀與連接線（ISO 5807 九符號 + 流程圖範本） | ✅ | ✅ |
+| 多頁（`add_page` / `page_id_at` / `page_size`） | ✅ | ✅ `canvas/PageSidebar.kt` |
+| 文字區塊（內容／位置／外觀） | ✅ | ✅ `text/`（5 檔 1,037 行） |
+| 圖片區塊（`add_image` / `put_blob`） | ✅ | ✅ `image/`（9 檔 1,339 行） |
+| 表格（新增／改格／插刪列欄／合併） | ✅ | ✅ `table/`（5 檔 1,005 行） |
+| 形狀與連接線（ISO 5807 九符號 + 流程圖範本） | ✅ | ✅ `shape/`（7 檔 1,358 行） |
 | 物件堆疊順序、群組、變換 | ✅ 圖層面板 | ✅ 圖層面板 |
-| 錄音與轉錄 | ✅ | ⚠️ 錄音有、轉錄關閉 |
-| 搜尋索引 | ✅ | ⚠️ 只有手寫辨識回填 |
+| 錄音與轉錄 | ✅ | ✅ `audio/AudioTranscriber.kt`（走核心 whisper） |
+| 搜尋索引 | ✅ `NotebookSearchIndex` | ✅ `library/NotebookSearch.kt` |
 | 匯出（PDF／PNG／Markdown／列印） | ✅ | ✅ |
-| 協同中繼（`RelayServer`） | ⚠️ Swift 另寫一份 | ⚠️ 只在診斷頁測試啟動 |
-| 工具列設定、六國語系 | ✅ | ⚠️ 字串有、切換 UI 無 |
-
-**表格與形狀／流程圖在 v2.7.0 補上了，兩個平台都接了同一組核心出口。**
-
-當時卡住的原因不是「沒開 FFI」—— 寫入操作一直都在。缺的是**讀取**：
-平台拿不到「這一頁有哪些表格、有哪些物件、形狀長什麼樣、線連到哪裡」。
-少了讀取，功能就是單向的 —— 寫得進檔案，畫面上卻列不出來，也就選不到、
-編不了。這與圖片區塊、筆記本中繼資料是同一類漏洞，而且在單機測試時
-完全看不出來。
-
-堆疊順序與群組的圖層面板在 v2.7.x 補上了，兩個平台同一組規則。
-核心也補了絕對索引的 `set_object_z_index`（相對操作在併發下會疊加）與
-`object_node`（群組後成員不是根物件，只看根層整組形狀會從畫面消失）。
+| 協同中繼（`RelayServer`） | ✅ | ✅ `collab/CollaborationManager.kt`（415 行，含自動重連與自建中繼） |
+| 工具列設定、六國語系 | ✅ | ✅ `ui/LocalAppLanguage.kt` + `setAppLanguage` |
 
 ---
 
@@ -60,101 +63,86 @@ Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對�
 
 | 項目 | Apple | Android | 說明 |
 |---|---|---|---|
-| `.padnote` 讀寫 | ✅（匯出用） | ✅（主要儲存） | |
+| `.padnote` 讀寫 | ✅（匯出／同步用） | ✅（主要儲存） | |
 | 文字方塊外觀跨平台 | ✅ | ✅ | `SetBlockAppearance`，鍵名共用 |
 | 雲端資料夾同步 | ✅ | ✅ | 策略在核心，I/O 各自實作 |
 | 備份與一鍵復原 | ✅ | ✅ | 容器格式在核心，互通 |
 | 頁面幾何 800×1132 | ✅ | ✅ | 尺寸來源在核心 |
 | 掌拒判定 | ✅ | ✅ | 同一個 `InkArbiter` |
-| **主要儲存格式** | JSON + `.drawing` | `.padnote` | ⚠️ **兩邊不同**。Apple 的讀取路徑還沒切到 `.padnote`（WP4c 只做了遷移） |
+| **主要儲存格式** | JSON + `.drawing` | `.padnote` | ⚠️ **仍然兩邊不同。** Apple 的工作副本在 `Documents/notebooks_v1.json` 與 `Drawings/*.drawing`，`.padnote` 只在同步與匯出時產生。**這件事有後果**：套件加密在 Apple 端保護的是同步出去的套件，不是本機工作副本（見 `TODO.md` H-CRYPTO-2） |
 
 ---
 
-## 第 3 層：應用層 —— **落差就在這裡**
+## 第 3 層：應用層
 
-### A. 完全沒有的（Android 從零開始）
+### A. v2.4.1 說「Android 完全沒有」的 23 項 —— 現況
 
-| # | 功能 | Apple 的實作 | 影響 |
-|---|---|---|---|
-| A1 | **多筆記本** | `HomeWorkbenchView` + `NotebookStore` | Android 只有一本 `notebook.padnote` |
-| A2 | **資料夾與子資料夾、拖曳分類** | 同上 | 完全沒有 |
-| A3 | **多頁 UI**（新增／複製／刪除頁、頁面結構側欄） | `NotebookEditorView` | Android 只看得到第一頁 |
-| A4 | **頁面縮圖** | `PageThumbnailRenderer` | 沒有側欄就沒有縮圖 |
-| A5 | **13 種頁面樣板** | `NoteTemplate` | Android 一律空白頁 |
-| A6 | **筆刷選擇**（8 種 + 橡皮擦 + 套索） | 工具列 | **Android 只有一支固定的鋼筆**，連橡皮擦都選不到 |
-| A7 | **顏色選擇** | 色票 + `ProColorPickerSheet` | Android 一律黑色 |
-| A8 | **筆寬選擇** | 點點 + 滑桿 | Android 固定 3pt |
-| A9 | **圖片附件**（濾鏡、材質、旋轉、圓角、陰影） | `AttachmentItemView` / `ImageEditControls` | 完全沒有 |
-| A10 | **3D 模型** | `Model3DStudioView`（9 種材質） | 完全沒有 |
-| A11 | **連結預覽卡片** | `LinkPreviewEngine` | 完全沒有 |
-| A12 | **討論圖釘與留言串** | `CommentThreadView` | 完全沒有 |
-| A13 | **即時協同** | `CollaborationManager` + `LocalRelayServer` | Android 只在診斷頁「啟動再關閉」測試過 |
-| A14 | **素材庫**（2,401 行） | `AssetLibraryManager` / `View` | 完全沒有 |
-| ~~A15~~ | ~~**數字製圖**~~ | `ChartStudioView`（11 種圖型、可重新編修） | ✅ **已對等**：`chart/ChartStudio.kt`，同一份 `ChartSpec`、同一個核心版面引擎 |
-| A16 | **數學計算** | `MathCalculatorSheet` / `MathEngine` | 完全沒有 |
-| A17 | **草圖優化** | `SketchRefineEngine` | 完全沒有 |
-| A18 | **主題專用工具** | `ThemeSpecificToolsView` | 完全沒有 |
-| A19 | **里程碑快照**（時光機） | `NotebookStore` | 完全沒有 |
-| A20 | **個人資料／協同身分** | `AccountManager` | 完全沒有 |
-| A21 | **語言切換 UI** | 下拉選單 | Android 只跟系統語系，**使用者改不了** |
-| A22 | **搜尋** | 首頁搜尋列 | 完全沒有 |
-| A23 | **語音轉錄** | ✅ | ⚠️ 刻意關閉（`asr` feature，ONNX 沒有 Android 預編譯檔） |
+| # | 功能 | Android 現況 |
+|---|---|---|
+| A1 | 多筆記本 | ✅ `library/NotebookLibrary.kt`（339） |
+| A2 | 資料夾與子資料夾 | ✅ `library/FolderTree.kt`（148） |
+| A3 | 多頁 UI | ✅ `canvas/PageSidebar.kt`（452） |
+| A4 | 頁面縮圖 | ✅ `PageSidebar` 走 `platform/PageImageRenderer` |
+| A5 | 頁面樣板 | ✅ `canvas/PageBackground.kt`（292），十三種紙走核心 `paper_templates` |
+| A6 | 筆刷選擇 | ✅ `MainActivity.kt` 工具列 + `ink/InkEngine.kt` |
+| A7 | 顏色選擇 | ✅ 同上 + `canvas/ProColorPicker.kt`（125） |
+| A8 | 筆寬選擇 | ✅ 同上 |
+| A9 | 圖片附件 | ✅ `image/`（9 檔 1,339 行） |
+| A10 | 3D 模型 | ✅ `model3d/`（4 檔 564 行） |
+| A11 | 連結預覽卡片 | ✅ `MainActivity.kt` + `library/NotebookMeta.kt` |
+| A12 | 討論圖釘與留言串 | ✅ `comment/`（2 檔 414 行） |
+| A13 | 即時協同 | ✅ `collab/CollaborationManager.kt`：建房／加入／自動重連／必要時自建中繼 |
+| A14 | 素材庫 | ✅ `asset/`（2 檔 368 行） |
+| A15 | 數字製圖 | ✅ `chart/ChartStudio.kt`（434），同一份 `ChartSpec` |
+| A16 | 數學計算 | ✅ `math/`（1 檔 101 行） |
+| A17 | 草圖優化 | ✅ `ink/SketchRefineBar.kt` |
+| A18 | 主題專用工具 | ✅ `theme/`（2 檔 419 行） |
+| **A19** | **里程碑快照（時光機）** | ❌ **仍然沒有** —— 見下方 |
+| A20 | 個人資料／協同身分 | ✅ `account/AccountManager.kt`（54） |
+| A21 | 語言切換 UI | ✅ `ui/LocalAppLanguage.kt` + `setAppLanguage` |
+| A22 | 搜尋 | ✅ `library/NotebookSearch.kt` → `library/HomeScreen.kt` |
+| A23 | 語音轉錄 | ✅ 走核心 `whisperTranscribePcm`；`asr-whisper` 編得出 Android 的 `.so`（實機驗證見 `TODO.md` H-ASR-ANDROID-VERIFY） |
 
 ### B. 有但不完整
 
-| # | 功能 | 差在哪 |
+| # | 功能 | 現況 |
 |---|---|---|
-| B1 | 文字方塊 | Android 有了，但**不能拖曳縮放**、沒有特殊符號插入、沒有清單樣式 |
-| B2 | 頁面界線 | 兩邊都畫了，但 Android **不能捲動到整頁**（手機螢幕比 800dp 窄，右半邊看不到） |
-| B3 | 匯出 | 功能一致，但 Android **沒有匯出前的預覽** |
-| B4 | 掌拒 | 判定一致，但 Android **沒有門檻調整 UI**（Apple 也沒有，兩邊都缺） |
-| B5 | 低延遲 | Android 有前緩衝與預測；**Apple 沒有對應的開關**（PencilKit 自己處理） |
+| B1 | 文字方塊 | ✅ 特殊符號已補（`text/SymbolPickerDialog.kt`） |
+| B2 | 頁面捲動 | ✅ `canvas/ContinuousPages.kt` 依可用寬度縮放，`CanvasStackPanel` 垂直捲動 |
+| B3 | 匯出預覽 | ❌ **兩個平台都沒有**（Apple 也搜不到 `exportPreview`）—— 是待辦功能，不是跨平台落差 |
+| B4 | 掌拒門檻調整 UI | ❌ **兩個平台都沒有**，只有 `ink/InkEngine.kt` 內部呼叫 `setPalmThresholds` |
+| B5 | 低延遲開關 | Android 有（`ink/LowLatencyInkCanvas.kt` + 工具列開關）；Apple 沒有對應開關，**這是刻意的** —— PencilKit 自己處理前緩衝 |
 
 ### C. Android 有而 Apple 沒有
 
 | # | 功能 | 說明 |
 |---|---|---|
-| C1 | 輸入診斷列 | 顯示工具類型／接觸半徑／壓感／密度／仲裁結果。**Apple 端沒有** —— 遠端除錯時很有用 |
-| C2 | 延遲量測 | `InkLatencyMeter`。Apple 沒有對應的東西 |
-| C3 | 低延遲開關 | 見 B5 |
+| C1 | ~~輸入診斷列~~ | v2.7.0 起 Apple 也有，演算法與格式一致 |
+| C2 | 延遲量測 | `InkLatencyMeter`。Apple 沒有對應的東西（PencilKit 不給原始時間戳） |
+| C3 | 低延遲開關 | 見 B5，刻意的平台差異 |
 
 ---
 
-## 建議的補齊順序
+## 真正還開著的落差
 
-不是照清單由上而下做，而是**照「少了它就不算筆記 App」排**：
+只剩三項，而且性質不同：
 
-### 第一批 —— 沒有這些，Android 版不能算能用
-1. **A6 筆刷與橡皮擦選擇**（只有一支筆的筆記 App 不成立）
-2. **A7 顏色、A8 筆寬**（核心已支援，只差 UI）
-3. **A3 多頁 UI**（核心已有 `add_page` / `page_id_at`）
-4. **A1 多筆記本 + A2 資料夾**（要先有 Android 版的首頁）
-
-### 第二批 —— 內容型物件
-5. **A9 圖片附件**（核心已有 `add_image` / `put_blob`）
-6. **B1 文字方塊補完**（拖曳縮放、特殊符號）
-7. **A22 搜尋**（核心的 `search` 已就緒）
-8. **A5 頁面樣板**（核心的 `PageStyle` 已就緒）
-
-### 第三批 —— 協同與進階
-9. **A13 即時協同**（核心的 relay 已可用，Apple 端另有一份 Swift 實作待統一）
-10. **A12 討論圖釘**
-11. **A19 里程碑快照**
-12. **A21 語言切換 UI**
-
-### 兩邊都要補（不只 Android）
-- ~~表格、形狀與流程圖~~ —— v2.7.0 完成，兩平台接同一組核心出口。
-- ~~物件堆疊與群組的 UI~~ —— 已完成，兩平台各有圖層面板。
-- **掌拒門檻調整 UI**（B4）
-- ~~Apple 端的輸入診斷列~~（C1）—— v2.7.0 完成，演算法與格式與 Android 一致。
+| # | 項目 | 誰缺 | 下一步 |
+|---|---|---|---|
+| A19 | 里程碑快照（時光機） | **只有 Android 缺** | Apple 那份寫在 `NotebookStore.swift` + `CollaborationSheet.swift`，**核心裡沒有**。補 Android 之前應該先把快照的建立／列出／還原下沉到核心，否則會變成第二份平台實作 —— 與「session 加密兩份實作」同一類錯誤 |
+| B3 | 匯出預覽 | **兩邊都缺** | 產品待辦，不是 parity 問題 |
+| B4 | 掌拒門檻調整 UI | **兩邊都缺** | 同上；門檻的判定邏輯本身已在核心的 `InkArbiter` |
 
 ---
 
 ## 怎麼維持這份對帳單
 
 新增功能時，在 `docs/DEVLOG.md` 的驗證段落**逐平台交代**。某個平台沒做到就
-明講並回到這裡加一列 —— 不要略過。這份文件過期的那一天，
-「跨平台一致」就退回成一句口號。
+明講並回到這裡加一列 —— 不要略過。
+
+**反過來也一樣重要：做完了就把這裡的 ❌ 改掉。**
+這份文件過期了十幾個版本，代價是有人差點照著它重做一次已經能用的功能。
+清單型文件的錯誤不是中性的 —— 它會主動誤導。
 
 ---
 
@@ -177,13 +165,13 @@ Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對�
 | 版面常數（1040 / 420 / 900 在三個地方各存一份） | **下沉** | 兩平台的 `DesignSystem` 改呼叫 `layout_metrics` / `layout_gutter` / `layout_columns` |
 | 頁面搬移時的逐頁資料（Android 沒有搬） | **下沉** | `NotebookMeta.movePageData` 逐頁問核心的 `page_index_after_move`。**這是一個真的 bug**：搬完之後紙張樣板與物件堆疊順序留在原地 |
 | 已無呼叫端的同步 FFI | **刪除** | 見 commit `3840b6d` |
-| 套件加密的文案 | **先改文案** | 加密本身列為 `TODO.md` 的 H-CRYPTO，要先回答五個產品問題 |
+| 套件加密 | **已實作** | 選擇性開啟，Argon2id + XChaCha20-Poly1305，frame 層封裝讓 append-only 同步與免金鑰壓實都還能用（`TODO.md` H-CRYPTO-2 記著剩下的解鎖畫面） |
 
-### 決定要下沉，但還沒做（已排進 TODO）
+### 決定要下沉，但還沒做
 
 | 項目 | 為什麼要下沉 | 卡在哪 |
 |---|---|---|
-| ~~Android 編輯器的雙欄工作區~~ | — | **這一列是過期的，2026-09-22 查證後移除。** Android 早就有 `EditorWorkArea`（並排與否由核心的 `sidebarIsInline` 決定，還處理了折疊機的鉸鏈），紙張底紋也早就畫得出來（`canvas/PageBackground.kt` 走核心的 `pageGuides` / `pageTexture`）。盤點文件沒有跟上 |
+| 里程碑快照（A19） | Apple 那份是純 Swift，Android 補的時候不該再寫第二份 | 要先決定快照存哪（套件內的另一組 oplog？還是獨立檔？）以及與同步的互動 |
 
 ### 決定**不**下沉（明確的平台差異）
 
@@ -194,6 +182,7 @@ Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對�
 | 語系清單 | Apple 用系統的 `Locale`，Android 用產生的字串表 —— 兩邊都由 `i18n/ui-strings.json` 生成，真相來源已經是同一個 |
 | AI 摘要後端 | Apple 有系統語言模型，Android 沒有對等的東西且不值得為它多背幾 MB 或要使用者下載 2.4 GB。Android **誠實回報沒有**（`NoteIntelligence.kt` 有完整的取捨說明） |
 | PDF 匯出走不同函式 | Apple 需要 `/Ink` 標註（讓 Goodnotes 能繼續編輯），Android 走版面算繪。**輸出的 PDF 兩邊都打得開**，差別在附加能力 |
+| 低延遲開關（B5） | Android 需要明確的前緩衝與預測；PencilKit 自己就做了，多一個開關只會讓人以為關掉會變快 |
 
 ### 還沒決定（不要假裝已經決定）
 
@@ -205,5 +194,4 @@ Android 只用了 **29** 個；Apple 端 43 個 Swift 檔（約 2 萬行）對�
 - PDF 座標互通（`page_point_to_pdf` / `highlight_quad_points`）：PDF 標註功能本身還沒有完整的入口。
 - 匯入（`import_json` / `import_markdown` / `import_embedded`）：兩邊都沒有匯入入口。
 - 轉錄進度（`transcription_backlog_us`）與 VAD 切換（`set_vad_model`）：
-  串流轉錄還沒有畫面，等 H-ASR-ANDROID 之後一起決定。
-
+  串流轉錄還沒有畫面，等 H-ASR-ANDROID-VERIFY 之後一起決定。

@@ -266,6 +266,17 @@
 | ~~S-97~~ ✅ | **Android 沒有特殊符號面板** | Apple 的打字工具列有數學／標點／羅馬數字三組符號選單。已補：`SymbolPickerDialog` 讀核心 `symbol_palette`／`symbol_categories`，四類分類膠囊＋可拉高的符號格；同時把 Apple 那份**寫死在工具列裡**的符號陣列也換成同一個核心來源，兩邊從此不會再分家 |
 | ~~S-98~~ ✅ | **iPhone 上其餘面板還沒逐一檢查擠壓** | 3D 模型工作室（`Model3DStudioView`）在精簡寬度改為上下堆疊；表格工作室（`TableStudioView`）合併列欄按鈕套用 `ViewThatFits`；圖表、主題工具、文字工作室均已驗證彈性佈局。在 iPhone 390 點寬下均無擠壓。 |
 
+### 新發現（2026-09-21，PLATFORM-PARITY 逐項查證後）
+
+> `docs/PLATFORM-PARITY.md` 過期了十幾個版本：它列的 23 項「Android 完全沒有」
+> 實際上只剩 1 項。查證後那份文件已改寫，剩下的真缺口記在這裡。
+
+| ID | 內容 | 卡在什麼 / 要做什麼 |
+|---|---|---|
+| S-99 | **里程碑快照只有 Apple 有**（PARITY A19） | Apple 那份寫在 `NotebookStore.swift`（建立／列出／還原）與 `CollaborationSheet.swift`（UI），**核心裡沒有**。<br>**不要直接補一份 Kotlin 版** —— 那會變成第二份平台實作，和已經修掉的「session 加密兩份實作」同一類錯誤。<br>**先決定**：快照存哪（套件內另一組 oplog？獨立檔？）、還原時怎麼與 append-only 同步相處（還原等於產生新的 op，不是刪舊的）。<br>**驗收**：核心出 `create/list/restore` 三個 FFI + 測試；兩端 UI 都接同一組；跨平台建立的快照互相看得到 |
+| S-100 | **匯出前沒有預覽**（PARITY B3） | **兩個平台都沒有**（Apple 也搜不到 `exportPreview`），所以這是產品待辦不是 parity 缺口。要做的話版面算繪已在核心，缺的是一個「送出前看一眼」的畫面 |
+| S-101 | **掌拒門檻沒有調整 UI**（PARITY B4） | **兩個平台都沒有。** 判定邏輯在核心 `InkArbiter`，`setPalmThresholds` 只被 `ink/InkEngine.kt` 內部呼叫。<br>**先決定它該不該是使用者設定** —— 門檻調錯會讓筆完全畫不出來，若要開放就需要一個「恢復預設」與明確的即時回饋（C1 輸入診斷列已經有現成的顯示） |
+
 ### 跨平台版面的殘留缺口（2026-09-16）
 
 | ID | 內容 | 卡在什麼 / 要做什麼 |
