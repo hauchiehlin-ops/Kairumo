@@ -1314,9 +1314,9 @@ public final class NotebookStore: ObservableObject {
     /// 切語言時檔名不會變。認出來就補上 `titleKey`；使用者若已改過名，
     /// 字串對不上就不會被動到。
     private static let legacySeedTitles: [String: (title: String, snippet: String)] = [
-        "歡迎使用 Kairumo": ("seed_welcome_title", "seed_welcome_snippet"),
+        LocalizationManager.shared.localized("sample_welcome"): ("seed_welcome_title", "seed_welcome_snippet"),
         "课堂与会议记录": ("seed_meeting_title", "seed_meeting_snippet"),
-        "課堂與會議記錄": ("seed_meeting_title", "seed_meeting_snippet")
+        LocalizationManager.shared.localized("sample_lectures"): ("seed_meeting_title", "seed_meeting_snippet")
     ]
 
     private func migrateSeedTitles(_ doc: NotebookDocument) -> NotebookDocument {
@@ -1552,7 +1552,7 @@ public final class NotebookStore: ObservableObject {
         // 但顯示一律走 titleKey/snippetKey。
         var n1 = NotebookDocument(
             id: "seed-welcome-notebook-v1",
-            title: "歡迎使用 Kairumo",
+            title: LocalizationManager.shared.localized("sample_welcome"),
             createdAt: Date().addingTimeInterval(-86400 * 2),
             lastModifiedDate: Date().addingTimeInterval(-3600),
             pageCount: SeedContent.welcomePageCount,
@@ -1563,7 +1563,7 @@ public final class NotebookStore: ObservableObject {
 
         var n2 = NotebookDocument(
             id: "seed-meeting-notebook-v1",
-            title: "課堂與會議記錄",
+            title: LocalizationManager.shared.localized("sample_lectures"),
             createdAt: Date().addingTimeInterval(-86400),
             lastModifiedDate: Date().addingTimeInterval(-7200),
             pageCount: SeedContent.meetingPageCount,
@@ -1591,14 +1591,17 @@ public final class NotebookStore: ObservableObject {
 
     @discardableResult
     public func createNotebook(title: String, template: NoteTemplate, folderId: String? = nil) -> NotebookDocument {
-        let safeTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "未命名筆記" : title
+        let safeTitle = title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            ? LocalizationManager.shared.localized("untitled_note") : title
         let newDoc = NotebookDocument(
             title: safeTitle,
             createdAt: Date(),
             lastModifiedDate: Date(),
             pageCount: 1,
             hasRecording: false,
-            previewSnippet: "建立於 \(Date().formatted(date: .abbreviated, time: .shortened))",
+            previewSnippet: String(
+                format: LocalizationManager.shared.localized("created_on"),
+                Date().formatted(date: .abbreviated, time: .shortened)),
             template: template,
             folderId: folderId
         )
@@ -1759,7 +1762,7 @@ public final class NotebookStore: ObservableObject {
         guard let original = notebooks.first(where: { $0.id == id }) else { return }
         var copy = original
         copy = NotebookDocument(
-            title: "\(original.title) (副本)",
+            title: String(format: LocalizationManager.shared.localized("copy_suffix"), original.title),
             createdAt: Date(),
             lastModifiedDate: Date(),
             pageCount: original.pageCount,

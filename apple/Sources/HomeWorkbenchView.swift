@@ -3771,7 +3771,7 @@ public struct CloudSyncDetailSheet: View {
                 )
                 guideStep(
                     number: "3",
-                    title: "跨平台同步支援",
+                    title: localizationManager.localized("sync_x_platform_title"),
                     desc: "支援 Android、iPadOS 與 macOS 雙向增量筆跡與圖表合併，各平台均可無縫協同編輯。"
                 )
             }
@@ -3936,17 +3936,17 @@ public struct CloudSyncDetailSheet: View {
 
                 guideStep(
                     number: "1",
-                    title: "這個功能在同步什麼？",
+                    title: localizationManager.localized("sync_q_what"),
                     desc: "本功能採用去中心化的架構。設定 iCloud Drive 或自選資料夾後，每一本筆記都會自動產生對應的 `.padnote` 專屬資料夾（內含手寫向量筆畫與錄音檔等）。這些多出來的 `.padnote` 是維持同步的正常結構，請勿隨意刪除。"
                 )
                 guideStep(
                     number: "2",
-                    title: "如何與其他裝置雙向連動？",
+                    title: localizationManager.localized("sync_q_how"),
                     desc: "在您的其他 iPad 或 Mac 上，只要在「雲端同步」指定「同一個上層根目錄」（不要點進個別的 .padnote），App 即會自動掃描所有筆記並進行雙向合併更新。"
                 )
                 guideStep(
                     number: "3",
-                    title: "完全隱私，無須註冊帳號",
+                    title: localizationManager.localized("sync_q_privacy"),
                     desc: "沒有第三方伺服器儲存您的手繪或筆記，同步直接由 Apple 系統的 iCloud 傳輸，確保 100% 隱私與資料主權。"
                 )
             }

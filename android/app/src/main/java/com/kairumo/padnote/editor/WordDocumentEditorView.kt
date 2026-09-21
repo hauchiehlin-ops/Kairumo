@@ -318,7 +318,7 @@ fun WordDocumentEditorView(
                         decorationBox = { innerTextField ->
                             if (documentText.isEmpty()) {
                                 Text(
-                                    text = "在此輸入文件內容...",
+                                    text = l("wd_placeholder"),
                                     style = TextStyle(
                                         fontSize = selectedFontSize,
                                         color = Color.LightGray
@@ -357,12 +357,12 @@ fun WordDocumentEditorView(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "字數統計：${documentText.length} 字元",
+                            text = l("wd_char_count").replace("%@", "${documentText.length}"),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.Gray
                         )
                         Text(
-                            text = "A4 標準版面 · 100%",
+                            text = l("wd_a4_layout"),
                             style = MaterialTheme.typography.labelSmall,
                             color = Color.LightGray
                         )

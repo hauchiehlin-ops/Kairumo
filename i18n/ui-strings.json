@@ -383,6 +383,14 @@
     "zhHans": "架构模式",
     "zhHant": "架構模式"
   },
+  "asr_model_not_listed": {
+    "en": "%@ is not in the list",
+    "ja": "%@ は一覧にありません",
+    "ko": "목록에 %@이(가) 없습니다",
+    "th": "ไม่มี %@ ในรายการ",
+    "zhHans": "清单里没有 %@",
+    "zhHant": "清單裡沒有 %@"
+  },
   "asr_state_downloading": {
     "en": "Downloading the Whisper model: %@\nLanguage detection and punctuation turn on automatically when it finishes.",
     "ja": "Whisper モデルをダウンロード中：%@\n完了すると多言語判定と句読点付与が自動で有効になります。",
@@ -1847,6 +1855,14 @@
     "zhHans": "你只用房号加入。少了邀请连结里的金钥，别人写的内容在这里一个字都解不开。请向房主要完整的邀请连结再加入一次。",
     "zhHant": "你只用房號加入。少了邀請連結裡的金鑰，別人寫的內容在這裡一個字都解不開。請向房主要完整的邀請連結再加入一次。"
   },
+  "collab_notification_title": {
+    "en": "Kairumo collaboration",
+    "ja": "Kairumo の共同編集",
+    "ko": "Kairumo 공동 편집",
+    "th": "การทำงานร่วมกันของ Kairumo",
+    "zhHans": "Kairumo 协同消息",
+    "zhHant": "Kairumo 協同訊息"
+  },
   "collab_snapshot": {
     "en": "Shared snapshot",
     "ja": "共同スナップショット",
@@ -2111,6 +2127,14 @@
     "zhHans": "复制到剪贴板，之后用“粘贴”放到想要的位置",
     "zhHant": "複製到剪貼簿，之後用「貼上」放到想要的位置"
   },
+  "copy_suffix": {
+    "en": "%@ (copy)",
+    "ja": "%@（コピー）",
+    "ko": "%@(사본)",
+    "th": "%@ (สำเนา)",
+    "zhHans": "%@（副本）",
+    "zhHant": "%@（副本）"
+  },
   "copy_to": {
     "en": "Copy to…",
     "ja": "コピー先…",
@@ -2143,6 +2167,54 @@
     "zhHans": "圆角",
     "zhHant": "圓角"
   },
+  "cp_blue": {
+    "en": "B (blue)",
+    "ja": "B（青）",
+    "ko": "B(파랑)",
+    "th": "B (น้ำเงิน)",
+    "zhHans": "B（蓝）",
+    "zhHant": "B（藍）"
+  },
+  "cp_brightness2": {
+    "en": "Brightness",
+    "ja": "明度",
+    "ko": "명도",
+    "th": "ความสว่าง",
+    "zhHans": "明度",
+    "zhHant": "明度"
+  },
+  "cp_green": {
+    "en": "G (green)",
+    "ja": "G（緑）",
+    "ko": "G(초록)",
+    "th": "G (เขียว)",
+    "zhHans": "G（绿）",
+    "zhHant": "G（綠）"
+  },
+  "cp_hue": {
+    "en": "Hue",
+    "ja": "色相",
+    "ko": "색상",
+    "th": "เฉดสี",
+    "zhHans": "色相",
+    "zhHant": "色相"
+  },
+  "cp_red": {
+    "en": "R (red)",
+    "ja": "R（赤）",
+    "ko": "R(빨강)",
+    "th": "R (แดง)",
+    "zhHans": "R（红）",
+    "zhHant": "R（紅）"
+  },
+  "cp_saturation2": {
+    "en": "Saturation",
+    "ja": "彩度",
+    "ko": "채도",
+    "th": "ความอิ่มตัว",
+    "zhHans": "饱和度",
+    "zhHant": "飽和度"
+  },
   "create_snapshot": {
     "en": "Create Snapshot",
     "ja": "スナップショットを作成",
@@ -2150,6 +2222,14 @@
     "th": "สร้างสแนปช็อต",
     "zhHans": "创建协同快照",
     "zhHant": "建立協同快照"
+  },
+  "created_on": {
+    "en": "Created %@",
+    "ja": "作成：%@",
+    "ko": "만든 날짜: %@",
+    "th": "สร้างเมื่อ %@",
+    "zhHans": "创建于 %@",
+    "zhHant": "建立於 %@"
   },
   "current_notebook": {
     "en": "Current",
@@ -2191,6 +2271,30 @@
     "zhHans": "把选取的笔画剪切到剪贴板（原处移除）",
     "zhHant": "把選取的筆劃剪下放進剪貼簿（原處移除）"
   },
+  "cw_analogous": {
+    "en": "Analogous",
+    "ja": "類似色",
+    "ko": "유사색",
+    "th": "สีใกล้เคียง",
+    "zhHans": "类似色",
+    "zhHant": "類似色"
+  },
+  "cw_analogous_1": {
+    "en": "Analogous 1",
+    "ja": "類似色 1",
+    "ko": "유사색 1",
+    "th": "สีใกล้เคียง 1",
+    "zhHans": "类似色 1",
+    "zhHant": "類似色 1"
+  },
+  "cw_analogous_2": {
+    "en": "Analogous 2",
+    "ja": "類似色 2",
+    "ko": "유사색 2",
+    "th": "สีใกล้เคียง 2",
+    "zhHans": "类似色 2",
+    "zhHant": "類似色 2"
+  },
   "cw_brightness": {
     "en": "Brightness",
     "ja": "明度",
@@ -2198,6 +2302,14 @@
     "th": "ความสว่าง",
     "zhHans": "明度",
     "zhHant": "明度"
+  },
+  "cw_complement": {
+    "en": "Complementary",
+    "ja": "補色",
+    "ko": "보색",
+    "th": "สีตรงข้าม",
+    "zhHans": "互补色",
+    "zhHant": "互補色"
   },
   "cw_harmonies": {
     "en": "Colour harmonies",
@@ -2207,6 +2319,14 @@
     "zhHans": "配色建议",
     "zhHant": "配色建議"
   },
+  "cw_primary": {
+    "en": "Base",
+    "ja": "ベース",
+    "ko": "기본색",
+    "th": "สีหลัก",
+    "zhHans": "主色",
+    "zhHant": "主色"
+  },
   "cw_saturation": {
     "en": "Saturation",
     "ja": "彩度",
@@ -2214,6 +2334,14 @@
     "th": "ความอิ่มตัว",
     "zhHans": "彩度",
     "zhHant": "彩度"
+  },
+  "cw_triadic": {
+    "en": "Triadic",
+    "ja": "三色配色",
+    "ko": "3색 배색",
+    "th": "สามสีเท่ากัน",
+    "zhHans": "三等分",
+    "zhHant": "三等分"
   },
   "data_and_sync": {
     "en": "Data & Sync",
@@ -2558,6 +2686,38 @@
     "th": "ลากเพื่อย้ายการ์ด",
     "zhHans": "拖拽移动卡片",
     "zhHant": "拖曳移動卡片"
+  },
+  "drive_timeout_download": {
+    "en": "Download timed out (over 300 s)",
+    "ja": "ダウンロードがタイムアウトしました（300 秒超過）",
+    "ko": "다운로드 시간 초과(300초 초과)",
+    "th": "การดาวน์โหลดหมดเวลา (เกิน 300 วินาที)",
+    "zhHans": "下载超时（超过 300 秒）",
+    "zhHant": "下載逾時（超過 300 秒）"
+  },
+  "drive_timeout_generic": {
+    "en": "Sync timed out (over %@ s)",
+    "ja": "同期がタイムアウトしました（%@ 秒超過）",
+    "ko": "동기화 시간 초과(%@초 초과)",
+    "th": "การซิงก์หมดเวลา (เกิน %@ วินาที)",
+    "zhHans": "同步超时（超过 %@ 秒）",
+    "zhHant": "同步逾時（超過 %@ 秒）"
+  },
+  "drive_timeout_snapshot": {
+    "en": "Timed out updating the cloud snapshot (over %@ s)",
+    "ja": "クラウドのスナップショット更新がタイムアウトしました（%@ 秒超過）",
+    "ko": "클라우드 스냅샷 업데이트 시간 초과(%@초 초과)",
+    "th": "อัปเดตสแนปช็อตคลาวด์หมดเวลา (เกิน %@ วินาที)",
+    "zhHans": "更新云端快照超时（超过 %@ 秒）",
+    "zhHant": "更新雲端快照逾時（超過 %@ 秒）"
+  },
+  "drive_timeout_sync": {
+    "en": "Sync timed out (over 120 s). Check your connection and try again.",
+    "ja": "同期がタイムアウトしました（120 秒超過）。接続を確認して再試行してください。",
+    "ko": "동기화 시간 초과(120초 초과). 연결을 확인한 뒤 다시 시도하세요.",
+    "th": "การซิงก์หมดเวลา (เกิน 120 วินาที) โปรดตรวจสอบการเชื่อมต่อแล้วลองใหม่",
+    "zhHans": "同步超时（超过 120 秒），请检查网络后重试",
+    "zhHant": "同步逾時（超過 120 秒），請檢查網路後重試"
   },
   "drop_here_to_unfile": {
     "en": "Drag a note here to take it out of its folder",
@@ -7023,6 +7183,14 @@
     "zhHans": "这个 PDF 需要密码。",
     "zhHant": "這個 PDF 需要密碼。"
   },
+  "pen_only_toast": {
+    "en": "“Pen only” is on, so finger touches are ignored. Turn it off to write with your finger.",
+    "ja": "「ペンのみ」がオンです。指のタッチは無視されます。指で書くにはオフにしてください。",
+    "ko": "“펜 전용”이 켜져 있어 손가락 터치는 무시됩니다. 손가락으로 쓰려면 끄세요.",
+    "th": "เปิด “ปากกาเท่านั้น” อยู่ การแตะด้วยนิ้วจะถูกละเว้น หากต้องการเขียนด้วยนิ้วให้ปิดตัวเลือกนี้",
+    "zhHans": "已开启「仅限触控笔」，手指触控会被忽略。要用手指写字请把它关掉。",
+    "zhHant": "已開啟「僅限觸控筆」，手指觸控會被忽略。要用手指寫字請把它關掉。"
+  },
   "permission_open_settings": {
     "en": "Open Settings",
     "ja": "設定を開く",
@@ -7703,6 +7871,14 @@
     "zhHans": "载入范例数据",
     "zhHant": "載入範例數據"
   },
+  "sample_lectures": {
+    "en": "Lectures & Meetings",
+    "ja": "講義と会議のノート",
+    "ko": "강의 및 회의",
+    "th": "การบรรยายและการประชุม",
+    "zhHans": "课堂与会议记录",
+    "zhHant": "課堂與會議記錄"
+  },
   "sample_meeting_agenda_table": {
     "en": "Time|Topic|Owner\n10:00|Last week in review|Wen\n10:15|Ink latency measurements|Chien\n10:35|Release timeline and gaps|Pei\n10:50|Next week's split|Everyone",
     "ja": "時間|議題|担当\n10:00|先週の振り返り|ウェン\n10:15|手書き遅延の計測結果|チェン\n10:35|リリース日程と未対応項目|ペイ\n10:50|来週の分担|全員",
@@ -7814,6 +7990,14 @@
     "th": "สิ่งที่ต้องทำ|ผู้รับผิดชอบ|กำหนด\nวัดความหน่วงบน Android รุ่นกลาง|เชียน|22 ก.ย.\nเขียนบท “แทรกเสียงบันทึก” ในคู่มือ|เหวิน|20 ก.ย.\nขอคีย์เซ็นชื่อจริง|เผย|19 ก.ย.",
     "zhHans": "待办|负责|期限\n量测 Android 中阶机延迟|建豪|9/22\n补手册「插入录音」章节|文萱|9/20\n申请正式签章金钥|佩宜|9/19",
     "zhHant": "待辦|負責|期限\n量測 Android 中階機延遲|建豪|9/22\n補手冊「插入錄音」章節|文萱|9/20\n申請正式簽章金鑰|佩宜|9/19"
+  },
+  "sample_welcome": {
+    "en": "Welcome to Kairumo",
+    "ja": "Kairumo へようこそ",
+    "ko": "Kairumo에 오신 것을 환영합니다",
+    "th": "ยินดีต้อนรับสู่ Kairumo",
+    "zhHans": "欢迎使用 Kairumo",
+    "zhHant": "歡迎使用 Kairumo"
   },
   "sample_welcome_p1_body": {
     "en": "This is a help note you can edit directly.\n\n• Handwriting: pen, finger or mouse — raw sample points are what get stored.\n• Typing: insert a text box and adjust font, line spacing and alignment.\n• Recording: audio and ink share one timeline — tap a stroke to jump to that moment.\n\nEvery box, table and shape on this page can be moved, edited and deleted. Try dragging one.",
@@ -9111,6 +9295,30 @@
     "zhHans": "立即同步",
     "zhHant": "立即同步"
   },
+  "sync_q_how": {
+    "en": "How does it link my devices together?",
+    "ja": "他の端末とどのように連携しますか？",
+    "ko": "다른 기기와 어떻게 연동되나요?",
+    "th": "เชื่อมกับอุปกรณ์อื่นอย่างไร",
+    "zhHans": "如何与其他设备双向联动？",
+    "zhHant": "如何與其他裝置雙向連動？"
+  },
+  "sync_q_privacy": {
+    "en": "Fully private, no account needed",
+    "ja": "完全にプライベート、アカウント不要",
+    "ko": "완전한 프라이버시, 계정 불필요",
+    "th": "เป็นส่วนตัวทั้งหมด ไม่ต้องสมัครบัญชี",
+    "zhHans": "完全隐私，无须注册账号",
+    "zhHant": "完全隱私，無須註冊帳號"
+  },
+  "sync_q_what": {
+    "en": "What does this sync?",
+    "ja": "何が同期されますか？",
+    "ko": "무엇이 동기화되나요?",
+    "th": "ฟังก์ชันนี้ซิงก์อะไรบ้าง",
+    "zhHans": "这个功能在同步什么？",
+    "zhHant": "這個功能在同步什麼？"
+  },
   "sync_recording_in_progress": {
     "en": "Sync Recording",
     "ja": "同期録音中",
@@ -9142,6 +9350,14 @@
     "th": "เป็นเวอร์ชันล่าสุดแล้ว",
     "zhHans": "已是最新",
     "zhHant": "已是最新"
+  },
+  "sync_x_platform_title": {
+    "en": "Cross-platform sync",
+    "ja": "クロスプラットフォーム同期",
+    "ko": "플랫폼 간 동기화",
+    "th": "การซิงก์ข้ามแพลตฟอร์ม",
+    "zhHans": "跨平台同步支持",
+    "zhHant": "跨平台同步支援"
   },
   "syncing": {
     "en": "Syncing…",
@@ -10327,6 +10543,14 @@
     "zhHans": "版本号",
     "zhHant": "版本號"
   },
+  "wd_a4_layout": {
+    "en": "A4 layout · 100%",
+    "ja": "A4 レイアウト · 100%",
+    "ko": "A4 레이아웃 · 100%",
+    "th": "เลย์เอาต์ A4 · 100%",
+    "zhHans": "A4 标准版面 · 100%",
+    "zhHant": "A4 標準版面 · 100%"
+  },
   "wd_add_table": {
     "en": "+ Table",
     "ja": "＋表",
@@ -10334,6 +10558,14 @@
     "th": "＋ตาราง",
     "zhHans": "＋表格",
     "zhHant": "＋表格"
+  },
+  "wd_char_count": {
+    "en": "%@ characters",
+    "ja": "文字数：%@ 文字",
+    "ko": "글자 수: %@자",
+    "th": "จำนวนอักขระ: %@",
+    "zhHans": "字数：%@ 字符",
+    "zhHant": "字數：%@ 字元"
   },
   "wd_clear_format": {
     "en": "Clear formatting",
@@ -10382,6 +10614,14 @@
     "th": "แทรกเส้นคั่น",
     "zhHans": "插入分隔线",
     "zhHant": "插入分隔線"
+  },
+  "wd_placeholder": {
+    "en": "Type the document here…",
+    "ja": "ここに書類の内容を入力…",
+    "ko": "여기에 문서 내용을 입력하세요…",
+    "th": "พิมพ์เนื้อหาเอกสารที่นี่…",
+    "zhHans": "在这里输入文档内容…",
+    "zhHant": "在這裡輸入文件內容…"
   },
   "wd_tap_to_draw": {
     "en": "Tap here, or use a stylus, to write directly inside the document",

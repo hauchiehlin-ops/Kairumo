@@ -3686,7 +3686,7 @@ private fun InkScreen(
                     },
                     onFingerIgnored = {
                         if (penOnly) {
-                            message = "已開啟「僅限觸控筆」，手指觸控已忽略。如需手指書寫請關閉此開關。"
+                            message = l10n("pen_only_toast")
                         }
                     },
                     contentVersion = revision,
@@ -5402,7 +5402,7 @@ private fun deviceLanguageTag(): String {
  */
 private fun checkSessionCrypto(): String = try {
     val key = collabGenerateRoomKey()
-    val message = "Kairumo 協同訊息"
+    val message = LocalizationStrings.localized("collab_notification_title", deviceLanguageTag())
     val sealed = collabEncrypt(key, message)
     val opened = collabDecrypt(key, sealed)
     when {

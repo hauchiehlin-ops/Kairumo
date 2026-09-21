@@ -251,7 +251,7 @@ fun ProColorWheelDialog(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "色彩和諧推薦 (Harmonies)",
+                        text = l("cw_harmonies"),
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -260,10 +260,10 @@ fun ProColorWheelDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        HarmonyColorChip(title = "主色", hex = currentHex(hue)) { h -> hue = h }
-                        HarmonyColorChip(title = "互補色", hex = currentHex(hue + 180f)) { h -> hue = (hue + 180f) % 360f }
-                        HarmonyColorChip(title = "類似色", hex = currentHex(hue + 30f)) { h -> hue = (hue + 30f) % 360f }
-                        HarmonyColorChip(title = "三等角", hex = currentHex(hue + 120f)) { h -> hue = (hue + 120f) % 360f }
+                        HarmonyColorChip(title = l("cw_primary"), hex = currentHex(hue)) { h -> hue = h }
+                        HarmonyColorChip(title = l("cw_complement"), hex = currentHex(hue + 180f)) { h -> hue = (hue + 180f) % 360f }
+                        HarmonyColorChip(title = l("cw_analogous"), hex = currentHex(hue + 30f)) { h -> hue = (hue + 30f) % 360f }
+                        HarmonyColorChip(title = l("cw_triadic"), hex = currentHex(hue + 120f)) { h -> hue = (hue + 120f) % 360f }
                     }
                 }
             }

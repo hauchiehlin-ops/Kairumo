@@ -278,7 +278,7 @@ public final class AudioTranscriber: ObservableObject {
         let manager = ModelDownloadManager.shared
         manager.refresh()
         guard let entry = manager.models.first(where: { $0.id == Self.whisperModelId }) else {
-            finishDownload(error: "清單裡沒有 \(Self.whisperModelId)")
+            finishDownload(error: String(format: LocalizationManager.shared.localized("asr_model_not_listed"), Self.whisperModelId))
             return
         }
         guard entry.downloadable else {

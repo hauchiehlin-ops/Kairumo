@@ -351,7 +351,7 @@ public enum CloudSync {
             detached.cancel()
             return FfiRefreshResult(
                 ok: false, changed: 0, fullRebuild: false, trackedFiles: 0,
-                error: "更新雲端快照逾時（超過 \(Int(seconds)) 秒）", needsReauth: false)
+                error: String(format: LocalizationManager.shared.localizedUnsafe("drive_timeout_snapshot"), "\(Int(seconds))"), needsReauth: false)
         }
     }
 
@@ -371,7 +371,7 @@ public enum CloudSync {
             detached.cancel()
             return FfiCloudSyncResult(
                 ok: false, settingsJson: settings, indexJson: index,
-                error: "同步逾時（超過 120 秒），請檢查網路連線後重試", needsReauth: false)
+                error: LocalizationManager.shared.localizedUnsafe("drive_timeout_sync"), needsReauth: false)
         }
 
         if result.ok {
@@ -410,7 +410,7 @@ public enum CloudSync {
         } catch {
             detached.cancel()
             return FfiNotebookSyncResult(ok: false, uploaded: 0, downloaded: 0,
-                error: "同步逾時（超過 \(Int(timeoutSeconds)) 秒）", needsReauth: false)
+                error: String(format: LocalizationManager.shared.localizedUnsafe("drive_timeout_generic"), "\(Int(timeoutSeconds))"), needsReauth: false)
         }
         if result.needsReauth {
             await GoogleAuth.shared.signOut()
@@ -439,7 +439,7 @@ public enum CloudSync {
         } catch {
             detached.cancel()
             return FfiNotebookSyncResult(ok: false, uploaded: 0, downloaded: 0,
-                error: "下載逾時（超過 300 秒）", needsReauth: false)
+                error: LocalizationManager.shared.localizedUnsafe("drive_timeout_download"), needsReauth: false)
         }
         if result.needsReauth {
             await GoogleAuth.shared.signOut()

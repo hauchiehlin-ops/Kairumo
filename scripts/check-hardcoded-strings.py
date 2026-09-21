@@ -17,7 +17,13 @@
 
 # 它擋什麼
 
-`Text("…")`、`Label("…")`、`.accessibilityLabel("…")` 裡出現 CJK 字元。
+兩條規則：
+
+1. `Text("…")`、`Label("…")`、`.accessibilityLabel("…")` 裡出現 CJK。
+2. CJK 字面值被指派給看起來是給人看的欄位（title、message、snippet…）。
+
+第二條是必要的：`previewSnippet: "建立於 …"` 是一個資料欄位，第一條看不到它，
+而它就顯示在首頁的每一張筆記卡片上。
 只看 CJK 是刻意的：純英文的字面值有可能是識別字、格式字串或除錯用的東西，
 一律禁止會有大量誤報，而誤報多的閘門會被關掉。CJK 幾乎一定是給人看的字。
 
@@ -33,6 +39,18 @@ ROOT = Path(__file__).resolve().parent.parent
 CJK = re.compile(r"[一-鿿぀-ヿ가-힯฀-๿]")
 CALL = re.compile(r'(?:Text|Label|\.accessibilityLabel)\(\s*"((?:[^"\\]|\\.)*)"')
 
+# 第二條規則：CJK 字面值被指派給「看起來是給人看的」欄位或變數。
+#
+# 只看 `Text("…")` 是不夠的 —— 2026-09-22 拍截圖時看到筆記卡片上寫著
+# 「建立於 Sep 22, 2026」，那是 `previewSnippet: "建立於 …"`，一個**資料欄位**，
+# 第一條規則完全看不到它。同一天用這條規則又翻出 33 處：調色盤的標籤、
+# 同步說明頁、範例筆記標題、逾時訊息、Android 的 toast。
+#
+# 欄位名單刻意挑得保守：太寬會把日誌訊息與內部識別字一起擋掉，
+# 而誤報多的閘門會被關掉。
+UI_FIELD = r"(?:title|subtitle|label|message|snippet|caption|placeholder|description|hint|text|name|summary|tip|note|prompt|error|status)"
+ASSIGN = re.compile(rf'\b{UI_FIELD}\w*\s*[:=]\s*"((?:[^"\\]|\\.)*)"', re.I)
+
 TARGETS = [
     (ROOT / "apple/Sources", "*.swift", {"LocalizationStrings.generated.swift", "padnote_core.swift"}),
     (ROOT / "android/app/src/main/java/com/kairumo/padnote", "*.kt", {"LocalizationStrings.kt"}),
@@ -46,10 +64,13 @@ def main() -> int:
             if path.name in skip:
                 continue
             for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
-                for m in CALL.finditer(line):
-                    if CJK.search(m.group(1)):
-                        rel = path.relative_to(ROOT)
-                        hits.append(f"{rel}:{n}  {m.group(1)[:60]}")
+                if line.strip().startswith(("//", "*", "///")):
+                    continue  # 這個 repo 的註解本來就是中文的
+                for rule in (CALL, ASSIGN):
+                    for m in rule.finditer(line):
+                        if CJK.search(m.group(1)):
+                            rel = path.relative_to(ROOT)
+                            hits.append(f"{rel}:{n}  {m.group(1)[:60]}")
 
     if hits:
         print(f"❌ 介面上有 {len(hits)} 處硬寫死的文字：", file=sys.stderr)

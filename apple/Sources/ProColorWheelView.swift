@@ -94,11 +94,11 @@ public struct ProColorWheelView: View {
                     .foregroundColor(.secondary)
 
                 HStack(spacing: 8) {
-                    harmonyChip(title: "主色", h: hue)
-                    harmonyChip(title: "互補色", h: fmod(hue + 0.5, 1.0))
-                    harmonyChip(title: "類似色 1", h: fmod(hue + 0.08, 1.0))
-                    harmonyChip(title: "類似色 2", h: fmod(hue + 0.92, 1.0))
-                    harmonyChip(title: "三等分", h: fmod(hue + 0.33, 1.0))
+                    harmonyChip(title: LocalizationManager.shared.localized("cw_primary"), h: hue)
+                    harmonyChip(title: LocalizationManager.shared.localized("cw_complement"), h: fmod(hue + 0.5, 1.0))
+                    harmonyChip(title: LocalizationManager.shared.localized("cw_analogous_1"), h: fmod(hue + 0.08, 1.0))
+                    harmonyChip(title: LocalizationManager.shared.localized("cw_analogous_2"), h: fmod(hue + 0.92, 1.0))
+                    harmonyChip(title: LocalizationManager.shared.localized("cw_triadic"), h: fmod(hue + 0.33, 1.0))
                 }
             }
         }

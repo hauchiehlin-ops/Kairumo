@@ -399,6 +399,14 @@ extension LocalizationManager {
             .ko: "아키텍처 모드",
             .th: "โหมดสถาปัตยกรรม"
         ],
+        "asr_model_not_listed": [
+            .zhHant: "清單裡沒有 %@",
+            .en: "%@ is not in the list",
+            .zhHans: "清单里没有 %@",
+            .ja: "%@ は一覧にありません",
+            .ko: "목록에 %@이(가) 없습니다",
+            .th: "ไม่มี %@ ในรายการ"
+        ],
         "asr_state_downloading": [
             .zhHant: "Whisper 模型下載中：%@\n下載完成後會自動啟用多語言偵測與標點。",
             .en: "Downloading the Whisper model: %@\nLanguage detection and punctuation turn on automatically when it finishes.",
@@ -1863,6 +1871,14 @@ extension LocalizationManager {
             .ko: "방 코드만으로 참여했습니다. 초대 링크에 들어 있는 키가 없으면 다른 사람이 쓴 내용을 여기서 읽을 수 없습니다. 호스트에게 전체 초대 링크를 받아 다시 참여하세요。",
             .th: "คุณเข้าร่วมด้วยรหัสห้องเท่านั้น หากไม่มีกุญแจในลิงก์เชิญ สิ่งที่คนอื่นเขียนจะอ่านไม่ได้ที่นี่ ขอลิงก์เชิญฉบับเต็มจากผู้เปิดห้องแล้วเข้าร่วมใหม่"
         ],
+        "collab_notification_title": [
+            .zhHant: "Kairumo 協同訊息",
+            .en: "Kairumo collaboration",
+            .zhHans: "Kairumo 协同消息",
+            .ja: "Kairumo の共同編集",
+            .ko: "Kairumo 공동 편집",
+            .th: "การทำงานร่วมกันของ Kairumo"
+        ],
         "collab_snapshot": [
             .zhHant: "協同快照",
             .en: "Shared snapshot",
@@ -2127,6 +2143,14 @@ extension LocalizationManager {
             .ko: "클립보드로 복사합니다. “붙여넣기”로 원하는 위치에 놓으세요",
             .th: "คัดลอกไปยังคลิปบอร์ด แล้วใช้ “วาง” เพื่อวางในตำแหน่งที่ต้องการ"
         ],
+        "copy_suffix": [
+            .zhHant: "%@（副本）",
+            .en: "%@ (copy)",
+            .zhHans: "%@（副本）",
+            .ja: "%@（コピー）",
+            .ko: "%@(사본)",
+            .th: "%@ (สำเนา)"
+        ],
         "copy_to": [
             .zhHant: "複製到…",
             .en: "Copy to…",
@@ -2159,6 +2183,54 @@ extension LocalizationManager {
             .ko: "모서리",
             .th: "มุมโค้ง"
         ],
+        "cp_blue": [
+            .zhHant: "B（藍）",
+            .en: "B (blue)",
+            .zhHans: "B（蓝）",
+            .ja: "B（青）",
+            .ko: "B(파랑)",
+            .th: "B (น้ำเงิน)"
+        ],
+        "cp_brightness2": [
+            .zhHant: "明度",
+            .en: "Brightness",
+            .zhHans: "明度",
+            .ja: "明度",
+            .ko: "명도",
+            .th: "ความสว่าง"
+        ],
+        "cp_green": [
+            .zhHant: "G（綠）",
+            .en: "G (green)",
+            .zhHans: "G（绿）",
+            .ja: "G（緑）",
+            .ko: "G(초록)",
+            .th: "G (เขียว)"
+        ],
+        "cp_hue": [
+            .zhHant: "色相",
+            .en: "Hue",
+            .zhHans: "色相",
+            .ja: "色相",
+            .ko: "색상",
+            .th: "เฉดสี"
+        ],
+        "cp_red": [
+            .zhHant: "R（紅）",
+            .en: "R (red)",
+            .zhHans: "R（红）",
+            .ja: "R（赤）",
+            .ko: "R(빨강)",
+            .th: "R (แดง)"
+        ],
+        "cp_saturation2": [
+            .zhHant: "飽和度",
+            .en: "Saturation",
+            .zhHans: "饱和度",
+            .ja: "彩度",
+            .ko: "채도",
+            .th: "ความอิ่มตัว"
+        ],
         "create_snapshot": [
             .zhHant: "建立協同快照",
             .en: "Create Snapshot",
@@ -2166,6 +2238,14 @@ extension LocalizationManager {
             .ja: "スナップショットを作成",
             .ko: "스냅샷 생성",
             .th: "สร้างสแนปช็อต"
+        ],
+        "created_on": [
+            .zhHant: "建立於 %@",
+            .en: "Created %@",
+            .zhHans: "创建于 %@",
+            .ja: "作成：%@",
+            .ko: "만든 날짜: %@",
+            .th: "สร้างเมื่อ %@"
         ],
         "current_notebook": [
             .zhHant: "目前這本",
@@ -2207,6 +2287,30 @@ extension LocalizationManager {
             .ko: "선택한 필기를 잘라 클립보드에 넣습니다(원래 위치에서 삭제)",
             .th: "ตัดเส้นที่เลือกไปยังคลิปบอร์ด (ลบออกจากหน้า)"
         ],
+        "cw_analogous": [
+            .zhHant: "類似色",
+            .en: "Analogous",
+            .zhHans: "类似色",
+            .ja: "類似色",
+            .ko: "유사색",
+            .th: "สีใกล้เคียง"
+        ],
+        "cw_analogous_1": [
+            .zhHant: "類似色 1",
+            .en: "Analogous 1",
+            .zhHans: "类似色 1",
+            .ja: "類似色 1",
+            .ko: "유사색 1",
+            .th: "สีใกล้เคียง 1"
+        ],
+        "cw_analogous_2": [
+            .zhHant: "類似色 2",
+            .en: "Analogous 2",
+            .zhHans: "类似色 2",
+            .ja: "類似色 2",
+            .ko: "유사색 2",
+            .th: "สีใกล้เคียง 2"
+        ],
         "cw_brightness": [
             .zhHant: "明度",
             .en: "Brightness",
@@ -2214,6 +2318,14 @@ extension LocalizationManager {
             .ja: "明度",
             .ko: "명도",
             .th: "ความสว่าง"
+        ],
+        "cw_complement": [
+            .zhHant: "互補色",
+            .en: "Complementary",
+            .zhHans: "互补色",
+            .ja: "補色",
+            .ko: "보색",
+            .th: "สีตรงข้าม"
         ],
         "cw_harmonies": [
             .zhHant: "配色建議",
@@ -2223,6 +2335,14 @@ extension LocalizationManager {
             .ko: "색 조화 추천",
             .th: "ชุดสีที่เข้ากัน"
         ],
+        "cw_primary": [
+            .zhHant: "主色",
+            .en: "Base",
+            .zhHans: "主色",
+            .ja: "ベース",
+            .ko: "기본색",
+            .th: "สีหลัก"
+        ],
         "cw_saturation": [
             .zhHant: "彩度",
             .en: "Saturation",
@@ -2230,6 +2350,14 @@ extension LocalizationManager {
             .ja: "彩度",
             .ko: "채도",
             .th: "ความอิ่มตัว"
+        ],
+        "cw_triadic": [
+            .zhHant: "三等分",
+            .en: "Triadic",
+            .zhHans: "三等分",
+            .ja: "三色配色",
+            .ko: "3색 배색",
+            .th: "สามสีเท่ากัน"
         ],
         "data_and_sync": [
             .zhHant: "資料與同步",
@@ -2574,6 +2702,38 @@ extension LocalizationManager {
             .ja: "ドラッグして移動",
             .ko: "드래그하여 이동",
             .th: "ลากเพื่อย้ายการ์ด"
+        ],
+        "drive_timeout_download": [
+            .zhHant: "下載逾時（超過 300 秒）",
+            .en: "Download timed out (over 300 s)",
+            .zhHans: "下载超时（超过 300 秒）",
+            .ja: "ダウンロードがタイムアウトしました（300 秒超過）",
+            .ko: "다운로드 시간 초과(300초 초과)",
+            .th: "การดาวน์โหลดหมดเวลา (เกิน 300 วินาที)"
+        ],
+        "drive_timeout_generic": [
+            .zhHant: "同步逾時（超過 %@ 秒）",
+            .en: "Sync timed out (over %@ s)",
+            .zhHans: "同步超时（超过 %@ 秒）",
+            .ja: "同期がタイムアウトしました（%@ 秒超過）",
+            .ko: "동기화 시간 초과(%@초 초과)",
+            .th: "การซิงก์หมดเวลา (เกิน %@ วินาที)"
+        ],
+        "drive_timeout_snapshot": [
+            .zhHant: "更新雲端快照逾時（超過 %@ 秒）",
+            .en: "Timed out updating the cloud snapshot (over %@ s)",
+            .zhHans: "更新云端快照超时（超过 %@ 秒）",
+            .ja: "クラウドのスナップショット更新がタイムアウトしました（%@ 秒超過）",
+            .ko: "클라우드 스냅샷 업데이트 시간 초과(%@초 초과)",
+            .th: "อัปเดตสแนปช็อตคลาวด์หมดเวลา (เกิน %@ วินาที)"
+        ],
+        "drive_timeout_sync": [
+            .zhHant: "同步逾時（超過 120 秒），請檢查網路後重試",
+            .en: "Sync timed out (over 120 s). Check your connection and try again.",
+            .zhHans: "同步超时（超过 120 秒），请检查网络后重试",
+            .ja: "同期がタイムアウトしました（120 秒超過）。接続を確認して再試行してください。",
+            .ko: "동기화 시간 초과(120초 초과). 연결을 확인한 뒤 다시 시도하세요.",
+            .th: "การซิงก์หมดเวลา (เกิน 120 วินาที) โปรดตรวจสอบการเชื่อมต่อแล้วลองใหม่"
         ],
         "drop_here_to_unfile": [
             .zhHant: "把筆記拖到這裡即可移出資料夾",
@@ -7039,6 +7199,14 @@ extension LocalizationManager {
             .ko: "이 PDF는 비밀번호가 필요합니다.",
             .th: "PDF นี้ต้องใช้รหัสผ่าน"
         ],
+        "pen_only_toast": [
+            .zhHant: "已開啟「僅限觸控筆」，手指觸控會被忽略。要用手指寫字請把它關掉。",
+            .en: "“Pen only” is on, so finger touches are ignored. Turn it off to write with your finger.",
+            .zhHans: "已开启「仅限触控笔」，手指触控会被忽略。要用手指写字请把它关掉。",
+            .ja: "「ペンのみ」がオンです。指のタッチは無視されます。指で書くにはオフにしてください。",
+            .ko: "“펜 전용”이 켜져 있어 손가락 터치는 무시됩니다. 손가락으로 쓰려면 끄세요.",
+            .th: "เปิด “ปากกาเท่านั้น” อยู่ การแตะด้วยนิ้วจะถูกละเว้น หากต้องการเขียนด้วยนิ้วให้ปิดตัวเลือกนี้"
+        ],
         "permission_open_settings": [
             .zhHant: "開啟設定",
             .en: "Open Settings",
@@ -7719,6 +7887,14 @@ extension LocalizationManager {
             .ko: "샘플 불러오기",
             .th: "โหลดข้อมูลตัวอย่าง"
         ],
+        "sample_lectures": [
+            .zhHant: "課堂與會議記錄",
+            .en: "Lectures & Meetings",
+            .zhHans: "课堂与会议记录",
+            .ja: "講義と会議のノート",
+            .ko: "강의 및 회의",
+            .th: "การบรรยายและการประชุม"
+        ],
         "sample_meeting_agenda_table": [
             .zhHant: "時間|議題|負責\n10:00|上週進度回顧|文萱\n10:15|手寫延遲量測結果|建豪\n10:35|上架時程與待補項目|佩宜\n10:50|下週分工|全員",
             .en: "Time|Topic|Owner\n10:00|Last week in review|Wen\n10:15|Ink latency measurements|Chien\n10:35|Release timeline and gaps|Pei\n10:50|Next week's split|Everyone",
@@ -7830,6 +8006,14 @@ extension LocalizationManager {
             .ja: "タスク|担当|期限\nミドルレンジ Android の遅延計測|チェン|9/22\nマニュアルに「録音の挿入」章を追加|ウェン|9/20\n本番署名鍵の申請|ペイ|9/19",
             .ko: "할 일|담당|기한\n중급 안드로이드 지연 측정|치엔|9/22\n설명서 “녹음 삽입” 장 추가|원|9/20\n정식 서명 키 신청|페이|9/19",
             .th: "สิ่งที่ต้องทำ|ผู้รับผิดชอบ|กำหนด\nวัดความหน่วงบน Android รุ่นกลาง|เชียน|22 ก.ย.\nเขียนบท “แทรกเสียงบันทึก” ในคู่มือ|เหวิน|20 ก.ย.\nขอคีย์เซ็นชื่อจริง|เผย|19 ก.ย."
+        ],
+        "sample_welcome": [
+            .zhHant: "歡迎使用 Kairumo",
+            .en: "Welcome to Kairumo",
+            .zhHans: "欢迎使用 Kairumo",
+            .ja: "Kairumo へようこそ",
+            .ko: "Kairumo에 오신 것을 환영합니다",
+            .th: "ยินดีต้อนรับสู่ Kairumo"
         ],
         "sample_welcome_p1_body": [
             .zhHant: "這是一本可以直接改的說明筆記。\n\n• 手寫：用觸控筆、手指或滑鼠都寫得了，寫下的是原始取樣點。\n• 打字：插入文字方塊，字型、行距、對齊都調得動。\n• 錄音：錄下的聲音與筆跡在同一條時間軸上，點筆跡就跳到當時的聲音。\n\n這一頁上的每一個方塊、表格與圖形都可以搬、可以改、可以刪。試著拖一下看看。",
@@ -9127,6 +9311,30 @@ extension LocalizationManager {
             .ko: "지금 동기화",
             .th: "ซิงก์เดี๋ยวนี้"
         ],
+        "sync_q_how": [
+            .zhHant: "如何與其他裝置雙向連動？",
+            .en: "How does it link my devices together?",
+            .zhHans: "如何与其他设备双向联动？",
+            .ja: "他の端末とどのように連携しますか？",
+            .ko: "다른 기기와 어떻게 연동되나요?",
+            .th: "เชื่อมกับอุปกรณ์อื่นอย่างไร"
+        ],
+        "sync_q_privacy": [
+            .zhHant: "完全隱私，無須註冊帳號",
+            .en: "Fully private, no account needed",
+            .zhHans: "完全隐私，无须注册账号",
+            .ja: "完全にプライベート、アカウント不要",
+            .ko: "완전한 프라이버시, 계정 불필요",
+            .th: "เป็นส่วนตัวทั้งหมด ไม่ต้องสมัครบัญชี"
+        ],
+        "sync_q_what": [
+            .zhHant: "這個功能在同步什麼？",
+            .en: "What does this sync?",
+            .zhHans: "这个功能在同步什么？",
+            .ja: "何が同期されますか？",
+            .ko: "무엇이 동기화되나요?",
+            .th: "ฟังก์ชันนี้ซิงก์อะไรบ้าง"
+        ],
         "sync_recording_in_progress": [
             .zhHant: "同步錄音中",
             .en: "Sync Recording",
@@ -9158,6 +9366,14 @@ extension LocalizationManager {
             .ja: "最新の状態です",
             .ko: "이미 최신 상태",
             .th: "เป็นเวอร์ชันล่าสุดแล้ว"
+        ],
+        "sync_x_platform_title": [
+            .zhHant: "跨平台同步支援",
+            .en: "Cross-platform sync",
+            .zhHans: "跨平台同步支持",
+            .ja: "クロスプラットフォーム同期",
+            .ko: "플랫폼 간 동기화",
+            .th: "การซิงก์ข้ามแพลตฟอร์ม"
         ],
         "syncing": [
             .zhHant: "同步中…",
@@ -10343,6 +10559,14 @@ extension LocalizationManager {
             .ko: "버전",
             .th: "เวอร์ชัน"
         ],
+        "wd_a4_layout": [
+            .zhHant: "A4 標準版面 · 100%",
+            .en: "A4 layout · 100%",
+            .zhHans: "A4 标准版面 · 100%",
+            .ja: "A4 レイアウト · 100%",
+            .ko: "A4 레이아웃 · 100%",
+            .th: "เลย์เอาต์ A4 · 100%"
+        ],
         "wd_add_table": [
             .zhHant: "＋表格",
             .en: "+ Table",
@@ -10350,6 +10574,14 @@ extension LocalizationManager {
             .ja: "＋表",
             .ko: "＋표",
             .th: "＋ตาราง"
+        ],
+        "wd_char_count": [
+            .zhHant: "字數：%@ 字元",
+            .en: "%@ characters",
+            .zhHans: "字数：%@ 字符",
+            .ja: "文字数：%@ 文字",
+            .ko: "글자 수: %@자",
+            .th: "จำนวนอักขระ: %@"
         ],
         "wd_clear_format": [
             .zhHant: "清除格式",
@@ -10398,6 +10630,14 @@ extension LocalizationManager {
             .ja: "区切り線を挿入",
             .ko: "구분선 삽입",
             .th: "แทรกเส้นคั่น"
+        ],
+        "wd_placeholder": [
+            .zhHant: "在這裡輸入文件內容…",
+            .en: "Type the document here…",
+            .zhHans: "在这里输入文档内容…",
+            .ja: "ここに書類の内容を入力…",
+            .ko: "여기에 문서 내용을 입력하세요…",
+            .th: "พิมพ์เนื้อหาเอกสารที่นี่…"
         ],
         "wd_tap_to_draw": [
             .zhHant: "點這裡或用觸控筆，直接在文件裡手寫推導",

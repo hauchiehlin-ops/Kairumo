@@ -167,13 +167,13 @@ public struct ProColorPickerSheet: View {
     // MARK: - 2. RGB 滑桿
     private var rgbSlidersView: some View {
         VStack(spacing: 14) {
-            sliderRow(title: "R (紅)", value: $redValue, range: 0...255, accentColor: .red) {
+            sliderRow(title: LocalizationManager.shared.localized("cp_red"), value: $redValue, range: 0...255, accentColor: .red) {
                 syncFromRgb()
             }
-            sliderRow(title: "G (綠)", value: $greenValue, range: 0...255, accentColor: .green) {
+            sliderRow(title: LocalizationManager.shared.localized("cp_green"), value: $greenValue, range: 0...255, accentColor: .green) {
                 syncFromRgb()
             }
-            sliderRow(title: "B (藍)", value: $blueValue, range: 0...255, accentColor: .blue) {
+            sliderRow(title: LocalizationManager.shared.localized("cp_blue"), value: $blueValue, range: 0...255, accentColor: .blue) {
                 syncFromRgb()
             }
         }
@@ -182,13 +182,13 @@ public struct ProColorPickerSheet: View {
     // MARK: - 3. HSB 滑桿
     private var hsbSlidersView: some View {
         VStack(spacing: 14) {
-            sliderRow(title: "色相 (H)", value: $hueValue, range: 0...360, accentColor: .purple) {
+            sliderRow(title: LocalizationManager.shared.localized("cp_hue"), value: $hueValue, range: 0...360, accentColor: .purple) {
                 syncFromHsb()
             }
-            sliderRow(title: "飽和度 (S)", value: $satValue, range: 0...100, accentColor: .orange) {
+            sliderRow(title: LocalizationManager.shared.localized("cp_saturation2"), value: $satValue, range: 0...100, accentColor: .orange) {
                 syncFromHsb()
             }
-            sliderRow(title: "明度 (B)", value: $briValue, range: 0...100, accentColor: .yellow) {
+            sliderRow(title: LocalizationManager.shared.localized("cp_brightness2"), value: $briValue, range: 0...100, accentColor: .yellow) {
                 syncFromHsb()
             }
         }
