@@ -5223,6 +5223,54 @@
     "zhHans": "3D模型",
     "zhHant": "3D模型"
   },
+  "model_download": {
+    "en": "Download",
+    "ja": "ダウンロード",
+    "ko": "다운로드",
+    "th": "ดาวน์โหลด",
+    "zhHans": "下载",
+    "zhHant": "下載"
+  },
+  "model_download_paused": {
+    "en": "Download paused — tap again to resume",
+    "ja": "ダウンロードを中断しました。もう一度タップで再開",
+    "ko": "다운로드가 중단되었습니다. 다시 누르면 이어받습니다",
+    "th": "การดาวน์โหลดหยุดชั่วคราว แตะอีกครั้งเพื่อดำเนินต่อ",
+    "zhHans": "下载已中断，再按一次可续传",
+    "zhHant": "下載已中斷，再按一次可續傳"
+  },
+  "model_downloading": {
+    "en": "Downloading…",
+    "ja": "ダウンロード中…",
+    "ko": "다운로드 중…",
+    "th": "กำลังดาวน์โหลด…",
+    "zhHans": "下载中…",
+    "zhHant": "下載中…"
+  },
+  "model_optional": {
+    "en": "Optional",
+    "ja": "任意",
+    "ko": "선택",
+    "th": "ไม่บังคับ",
+    "zhHans": "可选",
+    "zhHant": "可選"
+  },
+  "model_ready": {
+    "en": "Ready",
+    "ja": "利用可能",
+    "ko": "사용 가능",
+    "th": "พร้อมใช้งาน",
+    "zhHans": "已就绪",
+    "zhHant": "已就緒"
+  },
+  "model_remove": {
+    "en": "Remove",
+    "ja": "削除",
+    "ko": "삭제",
+    "th": "ลบ",
+    "zhHans": "删除",
+    "zhHant": "刪除"
+  },
   "model_scale": {
     "en": "Scale",
     "ja": "スケール",
@@ -5238,6 +5286,30 @@
     "th": "ชื่อวัตถุ",
     "zhHans": "物体名称",
     "zhHant": "物件名稱"
+  },
+  "model_unavailable": {
+    "en": "No download source yet",
+    "ja": "入手先が未確定",
+    "ko": "다운로드 경로 미정",
+    "th": "ยังไม่มีแหล่งดาวน์โหลด",
+    "zhHans": "尚未提供下载来源",
+    "zhHant": "尚未提供下載來源"
+  },
+  "models_desc": {
+    "en": "Download models to enable on-device transcription and OCR. Everything stays on this device.",
+    "ja": "モデルをダウンロードすると、端末内で文字起こしと OCR が使えます。データは端末から出ません。",
+    "ko": "다운로드하면 기기에서 음성 인식과 OCR을 사용할 수 있습니다. 데이터는 기기를 벗어나지 않습니다.",
+    "th": "ดาวน์โหลดโมเดลเพื่อใช้การถอดเสียงและ OCR บนอุปกรณ์ ข้อมูลไม่ออกจากเครื่อง",
+    "zhHans": "下载后即可在本机使用语音转录与 OCR，资料不离开这台设备。",
+    "zhHant": "下載後即可在本機使用語音轉錄與 OCR，資料不離開這台裝置。"
+  },
+  "models_title": {
+    "en": "On-Device Models",
+    "ja": "端末モデル",
+    "ko": "온디바이스 모델",
+    "th": "โมเดลบนอุปกรณ์",
+    "zhHans": "端侧模型",
+    "zhHant": "端側模型"
   },
   "more_tools": {
     "en": "More",
@@ -9319,6 +9391,22 @@
     "zhHans": "音频转文字",
     "zhHant": "音訊轉文字"
   },
+  "transcribe_audio_unreadable": {
+    "en": "Could not read this recording (unsupported format or too long).",
+    "ja": "この録音を読み取れません（非対応の形式、または長すぎます）。",
+    "ko": "이 녹음을 읽을 수 없습니다(지원되지 않는 형식이거나 너무 깁니다).",
+    "th": "อ่านไฟล์บันทึกนี้ไม่ได้ (รูปแบบไม่รองรับหรือยาวเกินไป)",
+    "zhHans": "无法读取这段录音（格式不支持或太长）。",
+    "zhHant": "無法讀取這段錄音（格式不支援或太長）。"
+  },
+  "transcribe_engine_unavailable": {
+    "en": "This build does not include the speech engine.",
+    "ja": "このビルドには音声エンジンが含まれていません。",
+    "ko": "이 빌드에는 음성 엔진이 포함되어 있지 않습니다.",
+    "th": "บิลด์นี้ไม่มีเครื่องมือถอดเสียง",
+    "zhHans": "此版本未包含语音引擎。",
+    "zhHant": "此版本未包含語音引擎。"
+  },
   "transcribe_failed": {
     "en": "Transcription failed",
     "ja": "文字起こしに失敗しました",
@@ -9326,6 +9414,14 @@
     "th": "การแปลงเสียงล้มเหลว",
     "zhHans": "转录失败",
     "zhHant": "轉錄失敗"
+  },
+  "transcribe_needs_model": {
+    "en": "On-device transcription needs a model. Download it in Settings.",
+    "ja": "端末内の文字起こしにはモデルが必要です。設定からダウンロードしてください。",
+    "ko": "기기 내 음성 인식에는 모델이 필요합니다. 설정에서 다운로드하세요.",
+    "th": "การถอดเสียงบนอุปกรณ์ต้องใช้โมเดล ดาวน์โหลดได้ในการตั้งค่า",
+    "zhHans": "端侧转录需要先下载模型，请到设定下载。",
+    "zhHant": "端側轉錄需要先下載模型，請到設定下載。"
   },
   "transcribe_no_speech": {
     "en": "No clear speech detected",

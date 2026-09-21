@@ -116,8 +116,11 @@ pub fn plan_folder_sync(local: Vec<SyncFileEntry>, remote: Vec<SyncFileEntry>) -
 }
 
 /// 這份計畫是否什麼都不用做。
-#[uniffi::export]
-pub fn sync_plan_is_empty(plan: SyncPlan) -> bool {
+///
+/// **只有測試在用。** 平台層拿到 `SyncPlan` 之後自己看 `upload`/`download`
+/// 是不是空的就夠了，不值得為一個 `is_empty()` 跨一次 FFI。
+#[cfg(test)]
+fn sync_plan_is_empty(plan: SyncPlan) -> bool {
     plan.upload.is_empty() && plan.download.is_empty()
 }
 

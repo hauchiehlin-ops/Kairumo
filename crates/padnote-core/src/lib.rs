@@ -31,6 +31,7 @@ pub mod ffi_link;
 pub mod ffi_llm;
 pub mod ffi_math;
 pub mod ffi_model3d;
+pub mod ffi_models;
 pub mod ffi_oauth;
 pub mod ffi_pages;
 pub mod ffi_paper;
@@ -59,7 +60,7 @@ pub use padnote_ink as ink;
 pub use padnote_input as input;
 pub use padnote_models as models;
 pub use padnote_pdf as pdf;
-#[cfg(feature = "asr")]
+#[cfg(feature = "asr-onnx")]
 pub use padnote_punct_ct as punct_ct;
 pub use padnote_recognize as recognize;
 pub use padnote_recorder as recorder;
@@ -70,7 +71,7 @@ pub use padnote_sync as sync;
 pub use padnote_table as table;
 pub use padnote_text as text;
 pub use padnote_toolbar as toolbar;
-#[cfg(feature = "asr")]
+#[cfg(feature = "asr-onnx")]
 pub use padnote_vad_silero as vad;
 
 pub use app::{AppError, NotebookSession, RecordingState};

@@ -3895,12 +3895,36 @@ private fun InkScreen(
                                 return@launch
                             }
                             message = l10n("recognizing")
-                            val text = withContext(Dispatchers.IO) {
-                                com.kairumo.padnote.audio.AudioTranscriber.transcribe(activity, file, card.title)
+                            val outcome = withContext(Dispatchers.IO) {
+                                com.kairumo.padnote.audio.AudioTranscriber.transcribe(
+                                    activity, file, deviceLanguageTag())
                             }
-                            if (text.isBlank()) {
-                                message = l10n("transcribe_no_speech")
-                                return@launch
+                            // **每一種拿不到都要講清楚原因。** 混成一句
+                            // 「轉錄失敗」的話，使用者會一直按重試，
+                            // 而其中兩種重試一百次也一樣。
+                            val text = when (outcome) {
+                                is com.kairumo.padnote.audio.AudioTranscriber.Outcome.Text ->
+                                    outcome.value
+                                com.kairumo.padnote.audio.AudioTranscriber.Outcome.ModelMissing -> {
+                                    message = l10n("transcribe_needs_model")
+                                    return@launch
+                                }
+                                com.kairumo.padnote.audio.AudioTranscriber.Outcome.EngineUnavailable -> {
+                                    message = l10n("transcribe_engine_unavailable")
+                                    return@launch
+                                }
+                                com.kairumo.padnote.audio.AudioTranscriber.Outcome.AudioUnreadable -> {
+                                    message = l10n("transcribe_audio_unreadable")
+                                    return@launch
+                                }
+                                com.kairumo.padnote.audio.AudioTranscriber.Outcome.NoSpeech -> {
+                                    message = l10n("transcribe_no_speech")
+                                    return@launch
+                                }
+                                is com.kairumo.padnote.audio.AudioTranscriber.Outcome.Failed -> {
+                                    message = l10n("transcribe_failed").replace("%@", outcome.detail)
+                                    return@launch
+                                }
                             }
                             // 在錄音卡片下方插入文字方塊（與 Apple 端 insertTranscriptText 規格一致）
                             val targetX = card.x

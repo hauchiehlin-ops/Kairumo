@@ -48,7 +48,7 @@ pub fn whisper_transcribe_pcm(
         return Err(FfiAsrError::InvalidAudio("音訊資料長度為零".to_string()));
     }
 
-    #[cfg(feature = "asr")]
+    #[cfg(feature = "asr-whisper")]
     {
         use padnote_asr::AsrEngine;
         let lang = language.unwrap_or_else(|| "auto".to_string());
@@ -89,12 +89,12 @@ pub fn whisper_transcribe_pcm(
         })
     }
 
-    #[cfg(not(feature = "asr"))]
+    #[cfg(not(feature = "asr-whisper"))]
     {
         let _ = model_path;
         let _ = language;
         Err(FfiAsrError::Backend(
-            "此平台版本未啟用 ASR 語音引擎".to_string(),
+            "此平台版本未啟用 Whisper 語音引擎".to_string(),
         ))
     }
 }

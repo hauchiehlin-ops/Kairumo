@@ -191,13 +191,15 @@ public final class AudioTranscriber: ObservableObject {
     private init() {}
 
     /// 本地 Whisper 模型檔案路徑
+    /// 模型檔在哪裡。**由核心決定**（`padnote-models` 的 `Downloader`），
+    /// 平台不要自己拼 —— 拼錯的話下載器寫在 A 處、載入器讀 B 處，
+    /// 而症狀是「下載完成了，但還是說沒有模型」。
+    ///
+    /// 舊的位置在 `Documents/models/`：那會出現在使用者的「檔案」App 裡，
+    /// 而且會被備份上 iCloud —— 一個 574 MB 的模型會把免費空間吃掉。
+    /// 新的位置在 Application Support 並標記為不備份。
     public var whisperModelPath: String {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
-        let modelsDir = docs.appendingPathComponent("models", isDirectory: true)
-        if !FileManager.default.fileExists(atPath: modelsDir.path) {
-            try? FileManager.default.createDirectory(at: modelsDir, withIntermediateDirectories: true)
-        }
-        return modelsDir.appendingPathComponent("whisper-large-v3-turbo-q5.bin").path
+        ModelDownloadManager.shared.path(of: Self.whisperModelId)
     }
 
     /// 本地 Whisper 模型是否可用
@@ -249,103 +251,88 @@ public final class AudioTranscriber: ObservableObject {
     }
 
     /// 一鍵非同步下載 Whisper 離線模型權重 (574 MB)
+    /// 下載 Whisper 模型。**走核心的 `padnote-models`。**
+    ///
+    /// # 為什麼改掉原本那條路
+    ///
+    /// 原本是這個檔案自己用 `URLSession.downloadTask` 抓一個寫死在 Swift 裡的
+    /// 網址，**沒有 SHA-256 驗證、也沒有續傳**。決策 D4 明講要有這兩樣，
+    /// 而核心的 `padnote-models` 早就實作好了（驗證、續傳、大小比對、
+    /// 失敗刪檔），只是沒有人接。
+    ///
+    /// 少了那兩樣的實際後果：
+    ///
+    /// - **沒有續傳**：574 MB 在行動網路上斷一次就從頭來。
+    /// - **沒有驗證**：傳輸損毀或被替換不會被發現，使用者只會覺得
+    ///   「轉錄出來的東西很奇怪」，而不會想到是模型壞了。
+    ///
+    /// `useMirror` 暫時保留給呼叫端相容；鏡像節點要回到清單裡才有意義
+    /// （清單是兩個平台共用的，寫死在單一平台等於 Android 拿不到）。
     public func downloadWhisperModel(useMirror: Bool = false) {
         guard !isDownloadingModel, !isWhisperAvailable else { return }
-        let urlString = useMirror ? Self.mirrorModelUrl : Self.primaryModelUrl
-        guard let url = URL(string: urlString) else { return }
-
-        // 清除先前懸浮的 Session
-        activeDownloadTask?.cancel()
-        activeDownloadTask = nil
-        activeDownloadSession?.invalidateAndCancel()
-        activeDownloadSession = nil
-
         isDownloadingModel = true
-        downloadProgress = 0.0
-        downloadStatusText = "連線中..."
+        downloadProgress = 0
         downloadError = nil
-        lastLoggedProgressPct = -1
-        lastProgressSampleTime = Date()
-        lastProgressSampleBytes = 0
+        downloadStatusText = LocalizationManager.shared.localized("model_downloading")
 
-        let destPath = whisperModelPath
-        let delegate = ModelDownloadDelegate(
-            destPath: destPath,
-            onProgress: { [weak self] written, total, progress in
-                Task { @MainActor [weak self] in
-                    guard let self = self, self.isDownloadingModel else { return }
-                    self.downloadProgress = progress
+        let manager = ModelDownloadManager.shared
+        manager.refresh()
+        guard let entry = manager.models.first(where: { $0.id == Self.whisperModelId }) else {
+            finishDownload(error: "清單裡沒有 \(Self.whisperModelId)")
+            return
+        }
+        guard entry.downloadable else {
+            // 雜湊還是 pending、或沒有下載來源 —— 在按下去之前就該講，
+            // 但保險起見這裡再擋一次。
+            finishDownload(error: LocalizationManager.shared.localized("model_unavailable"))
+            return
+        }
 
-                    let writtenMB = Double(written) / 1_000_000.0
-                    let totalMB = Double(total) / 1_000_000.0
-                    let pct = Int(progress * 100)
-
-                    let now = Date()
-                    let elapsed = now.timeIntervalSince(self.lastProgressSampleTime)
-                    var speedStr = ""
-                    if elapsed >= 0.8 {
-                        let bytesDiff = written - self.lastProgressSampleBytes
-                        let speedMBps = Double(bytesDiff) / (elapsed * 1_000_000.0)
-                        if speedMBps > 0.01 {
-                            speedStr = String(format: " · %.1f MB/s", speedMBps)
-                        }
-                        self.lastProgressSampleTime = now
-                        self.lastProgressSampleBytes = written
-                    }
-
-                    self.downloadStatusText = String(format: "%.1f MB / %.1f MB (%d%%)%@", writtenMB, totalMB, pct, speedStr)
-
-                    if pct >= self.lastLoggedProgressPct + 10 {
-                        self.lastLoggedProgressPct = (pct / 10) * 10
-                        StartupLogger.log("📥 Whisper 下載進度: \(self.downloadStatusText)")
+        Task { @MainActor in
+            let root = manager.modelsRoot.path
+            let total = entry.sizeBytes
+            let result = await Task.detached(priority: .utility) {
+                let fetcher = ModelRangeFetcher { done in
+                    guard total > 0 else { return }
+                    let fraction = min(1, Double(done) / Double(total))
+                    Task { @MainActor in
+                        AudioTranscriber.shared.downloadProgress = fraction
+                        AudioTranscriber.shared.downloadStatusText =
+                            String(format: "%.0f%% · %.0f/%.0f MB",
+                                   fraction * 100,
+                                   Double(done) / 1_000_000,
+                                   Double(total) / 1_000_000)
                     }
                 }
-            },
-            onComplete: { [weak self] result in
-                Task { @MainActor [weak self] in
-                    guard let self = self else { return }
-                    self.isDownloadingModel = false
-                    self.activeDownloadSession?.finishTasksAndInvalidate()
-                    self.activeDownloadSession = nil
-                    self.activeDownloadTask = nil
+                return modelDownload(root: root, id: Self.whisperModelId, fetcher: fetcher)
+            }.value
 
-                    switch result {
-                    case .success(let destUrl):
-                        StartupLogger.log("✅ Whisper 離線模型下載並就緒: \(destUrl.path)")
-                        self.downloadStatusText = "已完成"
-                        self.downloadError = nil
-                        self.objectWillChange.send()
-                    case .failure(let error):
-                        let nsError = error as NSError
-                        if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
-                            self.downloadStatusText = ""
-                            self.downloadError = nil
-                            StartupLogger.log("⏹️ 使用者取消了 Whisper 模型下載")
-                        } else {
-                            self.downloadError = error.localizedDescription
-                            self.downloadStatusText = "下載中斷"
-                            StartupLogger.log("❌ Whisper 模型下載失敗: \(error.localizedDescription)")
-                        }
-                    }
-                }
+            if result.ok {
+                self.finishDownload(error: nil)
+            } else if result.incomplete {
+                // 進度保住了，再按一次就從斷點接下去 —— 這正是續傳的重點。
+                self.finishDownload(
+                    error: LocalizationManager.shared.localized("model_download_paused"))
+            } else {
+                self.finishDownload(error: result.error)
             }
-        )
+        }
+    }
 
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 60
-        config.timeoutIntervalForResource = 7200
-        config.waitsForConnectivity = true
+    /// 核心清單裡的 id。與 `models/manifest.json` 一致。
+    static let whisperModelId = "whisper-large-v3-turbo-q5"
 
-        let session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
-        activeDownloadSession = session
-
-        var request = URLRequest(url: url)
-        request.setValue("Padnote/1.0 (iOS/macOS; WhisperModelDownload)", forHTTPHeaderField: "User-Agent")
-
-        let task = session.downloadTask(with: request)
-        activeDownloadTask = task
-        task.resume()
-        StartupLogger.log("🚀 開始下載 Whisper 模型 (574 MB, \(useMirror ? "分流鏡像" : "官方節點"))...")
+    private func finishDownload(error: String?) {
+        isDownloadingModel = false
+        downloadStatusText = ""
+        downloadError = error
+        if error == nil {
+            downloadProgress = 1
+            StartupLogger.log("✅ Whisper 模型下載完成並通過 SHA-256 驗證")
+        } else {
+            downloadProgress = 0
+            StartupLogger.log("⚠️ Whisper 模型下載未完成：\(error ?? "")")
+        }
     }
 
     /// 取消模型下載

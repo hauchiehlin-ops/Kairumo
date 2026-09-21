@@ -1197,9 +1197,10 @@ impl NotebookSession {
     /// 建立 VAD。模型缺失或載入失敗時**降級而非失敗** ——
     /// 錄音本身不該因為 VAD 用不了就停擺（S-25 的音檔優先原則）。
     fn build_vad(&self) -> Box<dyn padnote_asr::VoiceActivityDetector> {
-        // `asr` feature 關閉時（Android 第一版）沒有 Silero，
-        // 直接用內建的能量式 VAD —— 錄音本身照常運作，只是分段較粗。
-        #[cfg(feature = "asr")]
+        // `asr-onnx` 關閉時（Android：`ort` 沒有 aarch64-android 的預編譯二進位）
+        // 沒有 Silero，直接用內建的能量式 VAD —— 錄音本身照常運作，
+        // 只是分段較粗。**轉錄不受影響**，Whisper 走的是另一條路。
+        #[cfg(feature = "asr-onnx")]
         if let Some(path) = &self.vad_model
             && let Ok(vad) = padnote_vad_silero::SileroVad::load(path)
         {

@@ -5239,6 +5239,54 @@ extension LocalizationManager {
             .ko: "3D 모델",
             .th: "โมเดล 3 มิติ"
         ],
+        "model_download": [
+            .zhHant: "下載",
+            .en: "Download",
+            .zhHans: "下载",
+            .ja: "ダウンロード",
+            .ko: "다운로드",
+            .th: "ดาวน์โหลด"
+        ],
+        "model_download_paused": [
+            .zhHant: "下載已中斷，再按一次可續傳",
+            .en: "Download paused — tap again to resume",
+            .zhHans: "下载已中断，再按一次可续传",
+            .ja: "ダウンロードを中断しました。もう一度タップで再開",
+            .ko: "다운로드가 중단되었습니다. 다시 누르면 이어받습니다",
+            .th: "การดาวน์โหลดหยุดชั่วคราว แตะอีกครั้งเพื่อดำเนินต่อ"
+        ],
+        "model_downloading": [
+            .zhHant: "下載中…",
+            .en: "Downloading…",
+            .zhHans: "下载中…",
+            .ja: "ダウンロード中…",
+            .ko: "다운로드 중…",
+            .th: "กำลังดาวน์โหลด…"
+        ],
+        "model_optional": [
+            .zhHant: "可選",
+            .en: "Optional",
+            .zhHans: "可选",
+            .ja: "任意",
+            .ko: "선택",
+            .th: "ไม่บังคับ"
+        ],
+        "model_ready": [
+            .zhHant: "已就緒",
+            .en: "Ready",
+            .zhHans: "已就绪",
+            .ja: "利用可能",
+            .ko: "사용 가능",
+            .th: "พร้อมใช้งาน"
+        ],
+        "model_remove": [
+            .zhHant: "刪除",
+            .en: "Remove",
+            .zhHans: "删除",
+            .ja: "削除",
+            .ko: "삭제",
+            .th: "ลบ"
+        ],
         "model_scale": [
             .zhHant: "縮放",
             .en: "Scale",
@@ -5254,6 +5302,30 @@ extension LocalizationManager {
             .ja: "オブジェクト名",
             .ko: "개체 이름",
             .th: "ชื่อวัตถุ"
+        ],
+        "model_unavailable": [
+            .zhHant: "尚未提供下載來源",
+            .en: "No download source yet",
+            .zhHans: "尚未提供下载来源",
+            .ja: "入手先が未確定",
+            .ko: "다운로드 경로 미정",
+            .th: "ยังไม่มีแหล่งดาวน์โหลด"
+        ],
+        "models_desc": [
+            .zhHant: "下載後即可在本機使用語音轉錄與 OCR，資料不離開這台裝置。",
+            .en: "Download models to enable on-device transcription and OCR. Everything stays on this device.",
+            .zhHans: "下载后即可在本机使用语音转录与 OCR，资料不离开这台设备。",
+            .ja: "モデルをダウンロードすると、端末内で文字起こしと OCR が使えます。データは端末から出ません。",
+            .ko: "다운로드하면 기기에서 음성 인식과 OCR을 사용할 수 있습니다. 데이터는 기기를 벗어나지 않습니다.",
+            .th: "ดาวน์โหลดโมเดลเพื่อใช้การถอดเสียงและ OCR บนอุปกรณ์ ข้อมูลไม่ออกจากเครื่อง"
+        ],
+        "models_title": [
+            .zhHant: "端側模型",
+            .en: "On-Device Models",
+            .zhHans: "端侧模型",
+            .ja: "端末モデル",
+            .ko: "온디바이스 모델",
+            .th: "โมเดลบนอุปกรณ์"
         ],
         "more_tools": [
             .zhHant: "更多",
@@ -9335,6 +9407,22 @@ extension LocalizationManager {
             .ko: "음성을 텍스트로 변환",
             .th: "แปลงเสียงเป็นข้อความ"
         ],
+        "transcribe_audio_unreadable": [
+            .zhHant: "無法讀取這段錄音（格式不支援或太長）。",
+            .en: "Could not read this recording (unsupported format or too long).",
+            .zhHans: "无法读取这段录音（格式不支持或太长）。",
+            .ja: "この録音を読み取れません（非対応の形式、または長すぎます）。",
+            .ko: "이 녹음을 읽을 수 없습니다(지원되지 않는 형식이거나 너무 깁니다).",
+            .th: "อ่านไฟล์บันทึกนี้ไม่ได้ (รูปแบบไม่รองรับหรือยาวเกินไป)"
+        ],
+        "transcribe_engine_unavailable": [
+            .zhHant: "此版本未包含語音引擎。",
+            .en: "This build does not include the speech engine.",
+            .zhHans: "此版本未包含语音引擎。",
+            .ja: "このビルドには音声エンジンが含まれていません。",
+            .ko: "이 빌드에는 음성 엔진이 포함되어 있지 않습니다.",
+            .th: "บิลด์นี้ไม่มีเครื่องมือถอดเสียง"
+        ],
         "transcribe_failed": [
             .zhHant: "轉錄失敗",
             .en: "Transcription failed",
@@ -9342,6 +9430,14 @@ extension LocalizationManager {
             .ja: "文字起こしに失敗しました",
             .ko: "변환 실패",
             .th: "การแปลงเสียงล้มเหลว"
+        ],
+        "transcribe_needs_model": [
+            .zhHant: "端側轉錄需要先下載模型，請到設定下載。",
+            .en: "On-device transcription needs a model. Download it in Settings.",
+            .zhHans: "端侧转录需要先下载模型，请到设定下载。",
+            .ja: "端末内の文字起こしにはモデルが必要です。設定からダウンロードしてください。",
+            .ko: "기기 내 음성 인식에는 모델이 필요합니다. 설정에서 다운로드하세요.",
+            .th: "การถอดเสียงบนอุปกรณ์ต้องใช้โมเดล ดาวน์โหลดได้ในการตั้งค่า"
         ],
         "transcribe_no_speech": [
             .zhHant: "未偵測到清晰人聲語音",

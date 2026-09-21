@@ -26,6 +26,7 @@ object LocalizationStrings {
             putAll(part12())
             putAll(part13())
             putAll(part14())
+            putAll(part15())
         }
     }
 
@@ -5278,6 +5279,54 @@ object LocalizationStrings {
             "ko" to "3D 모델",
             "th" to "โมเดล 3 มิติ"
         ),
+        "model_download" to mapOf(
+            "zh-Hant" to "下載",
+            "en" to "Download",
+            "zh-Hans" to "下载",
+            "ja" to "ダウンロード",
+            "ko" to "다운로드",
+            "th" to "ดาวน์โหลด"
+        ),
+        "model_download_paused" to mapOf(
+            "zh-Hant" to "下載已中斷，再按一次可續傳",
+            "en" to "Download paused — tap again to resume",
+            "zh-Hans" to "下载已中断，再按一次可续传",
+            "ja" to "ダウンロードを中断しました。もう一度タップで再開",
+            "ko" to "다운로드가 중단되었습니다. 다시 누르면 이어받습니다",
+            "th" to "การดาวน์โหลดหยุดชั่วคราว แตะอีกครั้งเพื่อดำเนินต่อ"
+        ),
+        "model_downloading" to mapOf(
+            "zh-Hant" to "下載中…",
+            "en" to "Downloading…",
+            "zh-Hans" to "下载中…",
+            "ja" to "ダウンロード中…",
+            "ko" to "다운로드 중…",
+            "th" to "กำลังดาวน์โหลด…"
+        ),
+        "model_optional" to mapOf(
+            "zh-Hant" to "可選",
+            "en" to "Optional",
+            "zh-Hans" to "可选",
+            "ja" to "任意",
+            "ko" to "선택",
+            "th" to "ไม่บังคับ"
+        ),
+        "model_ready" to mapOf(
+            "zh-Hant" to "已就緒",
+            "en" to "Ready",
+            "zh-Hans" to "已就绪",
+            "ja" to "利用可能",
+            "ko" to "사용 가능",
+            "th" to "พร้อมใช้งาน"
+        ),
+        "model_remove" to mapOf(
+            "zh-Hant" to "刪除",
+            "en" to "Remove",
+            "zh-Hans" to "删除",
+            "ja" to "削除",
+            "ko" to "삭제",
+            "th" to "ลบ"
+        ),
         "model_scale" to mapOf(
             "zh-Hant" to "縮放",
             "en" to "Scale",
@@ -5293,6 +5342,30 @@ object LocalizationStrings {
             "ja" to "オブジェクト名",
             "ko" to "개체 이름",
             "th" to "ชื่อวัตถุ"
+        ),
+        "model_unavailable" to mapOf(
+            "zh-Hant" to "尚未提供下載來源",
+            "en" to "No download source yet",
+            "zh-Hans" to "尚未提供下载来源",
+            "ja" to "入手先が未確定",
+            "ko" to "다운로드 경로 미정",
+            "th" to "ยังไม่มีแหล่งดาวน์โหลด"
+        ),
+        "models_desc" to mapOf(
+            "zh-Hant" to "下載後即可在本機使用語音轉錄與 OCR，資料不離開這台裝置。",
+            "en" to "Download models to enable on-device transcription and OCR. Everything stays on this device.",
+            "zh-Hans" to "下载后即可在本机使用语音转录与 OCR，资料不离开这台设备。",
+            "ja" to "モデルをダウンロードすると、端末内で文字起こしと OCR が使えます。データは端末から出ません。",
+            "ko" to "다운로드하면 기기에서 음성 인식과 OCR을 사용할 수 있습니다. 데이터는 기기를 벗어나지 않습니다.",
+            "th" to "ดาวน์โหลดโมเดลเพื่อใช้การถอดเสียงและ OCR บนอุปกรณ์ ข้อมูลไม่ออกจากเครื่อง"
+        ),
+        "models_title" to mapOf(
+            "zh-Hant" to "端側模型",
+            "en" to "On-Device Models",
+            "zh-Hans" to "端侧模型",
+            "ja" to "端末モデル",
+            "ko" to "온디바이스 모델",
+            "th" to "โมเดลบนอุปกรณ์"
         ),
         "more_tools" to mapOf(
             "zh-Hant" to "更多",
@@ -5741,7 +5814,10 @@ object LocalizationStrings {
             "ja" to "アカウントも、当方のサーバーもありません",
             "ko" to "계정도, 저희 서버도 없습니다",
             "th" to "ไม่มีบัญชี และไม่มีเซิร์ฟเวอร์ของเรา"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "onboarding_start" to mapOf(
             "zh-Hant" to "開始使用",
             "en" to "Get Started",
@@ -5813,10 +5889,7 @@ object LocalizationStrings {
             "ja" to "編集を開く",
             "ko" to "편집 열기",
             "th" to "เปิดแก้ไข"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "open_folder" to mapOf(
             "zh-Hant" to "開啟 Kairumo Record 資料夾",
             "en" to "Open Kairumo Record Folder",
@@ -6384,7 +6457,10 @@ object LocalizationStrings {
             "ja" to "前のページ",
             "ko" to "이전 페이지",
             "th" to "หน้าก่อน"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "print_note" to mapOf(
             "zh-Hant" to "列印筆記",
             "en" to "Print Notebook",
@@ -6456,10 +6532,7 @@ object LocalizationStrings {
             "ja" to "録音タイトル",
             "ko" to "녹음 제목",
             "th" to "ชื่อการบันทึก"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "recent_colors" to mapOf(
             "zh-Hant" to "最近使用",
             "en" to "Recent",
@@ -7027,7 +7100,10 @@ object LocalizationStrings {
             "ja" to "次版に計上",
             "ko" to "다음 버전에 배정",
             "th" to "จัดลงรุ่นถัดไป"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "sample_meeting_flow_start" to mapOf(
             "zh-Hant" to "收到回報",
             "en" to "Report comes in",
@@ -7099,10 +7175,7 @@ object LocalizationStrings {
             "ja" to "これはそのまま編集できる説明ノートです。\n\n• 手書き：ペン・指・マウスのいずれでも書けます。保存されるのは生のサンプル点です。\n• 入力：テキストボックスを挿入し、フォント・行間・配置を調整できます。\n• 録音：音声と筆跡は同じタイムライン上にあり、筆跡をタップするとその瞬間の音声に飛びます。\n\nこのページのボックス・表・図形はすべて移動・編集・削除できます。ドラッグしてみてください。",
             "ko" to "바로 편집할 수 있는 설명 노트입니다.\n\n• 필기: 펜, 손가락, 마우스 모두 가능하며 원본 샘플 점이 저장됩니다.\n• 입력: 텍스트 상자를 넣고 글꼴·줄 간격·정렬을 조정할 수 있습니다.\n• 녹음: 음성과 필기가 같은 타임라인에 있어 획을 누르면 그 순간의 소리로 이동합니다.\n\n이 페이지의 상자·표·도형은 모두 옮기고 고치고 지울 수 있습니다. 한번 끌어보세요.",
             "th" to "นี่คือสมุดคำอธิบายที่แก้ไขได้ทันที\n\n• เขียนด้วยลายมือ: ใช้ปากกา นิ้ว หรือเมาส์ได้ ระบบเก็บจุดตัวอย่างดิบไว้\n• พิมพ์: แทรกกล่องข้อความแล้วปรับฟอนต์ ระยะบรรทัด และการจัดวาง\n• บันทึกเสียง: เสียงกับลายเส้นอยู่บนไทม์ไลน์เดียวกัน แตะเส้นเพื่อข้ามไปยังช่วงเสียงนั้น\n\nทุกกล่อง ตาราง และรูปทรงบนหน้านี้ ย้าย แก้ไข และลบได้ ลองลากดู"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_welcome_p1_title" to mapOf(
             "zh-Hant" to "歡迎使用 Kairumo",
             "en" to "Welcome to Kairumo",
@@ -7670,7 +7743,10 @@ object LocalizationStrings {
             "ja" to "直角三角形",
             "ko" to "직각삼각형",
             "th" to "สามเหลี่ยมมุมฉาก"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_roundedrectangle" to mapOf(
             "zh-Hant" to "圓角矩形",
             "en" to "Rounded rectangle",
@@ -7742,10 +7818,7 @@ object LocalizationStrings {
             "ja" to "しずく",
             "ko" to "물방울",
             "th" to "หยดน้ำ"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_terminator" to mapOf(
             "zh-Hant" to "起終點",
             "en" to "Terminator",
@@ -8313,7 +8386,10 @@ object LocalizationStrings {
             "ja" to "同期ログ（診断）",
             "ko" to "동기화 로그 (진단)",
             "th" to "บันทึกการซิงค์ (การวินิจฉัย)"
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "sync_needs_attention" to mapOf(
             "zh-Hant" to "%@ 在兩台裝置上都被改過，已保留雲端那份，請自行確認",
             "en" to "%@ was changed on both devices; the cloud copy was kept — please check",
@@ -8385,10 +8461,7 @@ object LocalizationStrings {
             "ja" to "最新の状態です",
             "ko" to "이미 최신 상태",
             "th" to "เป็นเวอร์ชันล่าสุดแล้ว"
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "syncing" to mapOf(
             "zh-Hant" to "同步中…",
             "en" to "Syncing…",
@@ -8956,7 +9029,10 @@ object LocalizationStrings {
             "ja" to "幾何学、数式展開、精密図形描画",
             "ko" to "기하학, 공식 유도 및 정밀 도표 작성",
             "th" to "เรขาคณิต สูตร และแผนภาพที่แม่นยำ"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "tmpl_habit_month" to mapOf(
             "zh-Hant" to "習慣追蹤",
             "en" to "Habit Tracker",
@@ -9028,10 +9104,7 @@ object LocalizationStrings {
             "ja" to "マインドマップ",
             "ko" to "마인드맵",
             "th" to "ผังความคิด"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_mind_map_desc" to mapOf(
             "zh-Hant" to "中心方塊與四向分支起點，點陣底紋",
             "en" to "A centre box and four branch stubs on a dot grid",
@@ -9392,6 +9465,22 @@ object LocalizationStrings {
             "ko" to "음성을 텍스트로 변환",
             "th" to "แปลงเสียงเป็นข้อความ"
         ),
+        "transcribe_audio_unreadable" to mapOf(
+            "zh-Hant" to "無法讀取這段錄音（格式不支援或太長）。",
+            "en" to "Could not read this recording (unsupported format or too long).",
+            "zh-Hans" to "无法读取这段录音（格式不支持或太长）。",
+            "ja" to "この録音を読み取れません（非対応の形式、または長すぎます）。",
+            "ko" to "이 녹음을 읽을 수 없습니다(지원되지 않는 형식이거나 너무 깁니다).",
+            "th" to "อ่านไฟล์บันทึกนี้ไม่ได้ (รูปแบบไม่รองรับหรือยาวเกินไป)"
+        ),
+        "transcribe_engine_unavailable" to mapOf(
+            "zh-Hant" to "此版本未包含語音引擎。",
+            "en" to "This build does not include the speech engine.",
+            "zh-Hans" to "此版本未包含语音引擎。",
+            "ja" to "このビルドには音声エンジンが含まれていません。",
+            "ko" to "이 빌드에는 음성 엔진이 포함되어 있지 않습니다.",
+            "th" to "บิลด์นี้ไม่มีเครื่องมือถอดเสียง"
+        ),
         "transcribe_failed" to mapOf(
             "zh-Hant" to "轉錄失敗",
             "en" to "Transcription failed",
@@ -9399,6 +9488,14 @@ object LocalizationStrings {
             "ja" to "文字起こしに失敗しました",
             "ko" to "변환 실패",
             "th" to "การแปลงเสียงล้มเหลว"
+        ),
+        "transcribe_needs_model" to mapOf(
+            "zh-Hant" to "端側轉錄需要先下載模型，請到設定下載。",
+            "en" to "On-device transcription needs a model. Download it in Settings.",
+            "zh-Hans" to "端侧转录需要先下载模型，请到设定下载。",
+            "ja" to "端末内の文字起こしにはモデルが必要です。設定からダウンロードしてください。",
+            "ko" to "기기 내 음성 인식에는 모델이 필요합니다. 설정에서 다운로드하세요.",
+            "th" to "การถอดเสียงบนอุปกรณ์ต้องใช้โมเดล ดาวน์โหลดได้ในการตั้งค่า"
         ),
         "transcribe_no_speech" to mapOf(
             "zh-Hant" to "未偵測到清晰人聲語音",
@@ -9575,7 +9672,10 @@ object LocalizationStrings {
             "ja" to "検索入力フィールド",
             "ko" to "검색 입력 필드",
             "th" to "ช่องค้นหา"
-        ),
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
         "wireframe_kit" to mapOf(
             "zh-Hant" to "UI 原型線框",
             "en" to "UI Wireframes",

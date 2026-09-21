@@ -33,16 +33,44 @@
 > 這是整份盤點裡最嚴重的一項：它不是「還沒做」，是**做了一個會回報成功的假東西**。
 > 使用者會以為轉錄壞掉（內容莫名其妙），而不是以為這個功能還沒有。
 
-### A2. 模型下載沒有任何入口
+### A2. 模型下載繞過了核心，缺了 D4 要求的驗證與續傳
+
+> **更正**：初版盤點寫成「兩個平台都沒有任何下載入口」，那是錯的 ——
+> Apple 有（`AudioTranscriber.downloadWhisperModel`）。錯在只比對了核心的
+> FFI 呼叫端，而 Apple 那條路根本沒有經過核心。這正是「只有一邊走核心」
+> 那一類問題最容易騙過盤點的地方。
 
 決策 D4 是「模型按需下載，HF / GitHub Releases + SHA-256 + 續傳」，
-`crates/padnote-models` 有完整的 `catalog.rs` / `download.rs` / `provenance.rs`。
+`crates/padnote-models` 有完整的 `catalog.rs` / `download.rs` / `provenance.rs`
+（驗證、續傳、大小比對、失敗刪檔、磁碟用量、移除）。**零呼叫端。**
 
-**兩個平台都沒有任何下載畫面或呼叫**（`pending_download_bytes` 等 FFI 零呼叫端）。
+Apple 實際走的是 `AudioTranscriber` 裡自己寫的一段 `URLSession.downloadTask`：
 
-後果：Apple 的 Whisper 路徑實際上永遠走不到 —— `isWhisperAvailable` 檢查的那個
-檔案沒有任何方式會出現（除非手動塞進去），所以轉錄一律降級到 Apple Speech。
-Android 則連降級都沒有（見 A1）。
+- **沒有 SHA-256 驗證**（整個檔案 grep 不到任何雜湊計算）
+- **沒有續傳**（沒有 Range、沒有 resumeData）
+- 網址寫死在 Swift 裡，與 `models/manifest.json` 各存一份
+
+實際後果：574 MB 在行動網路上斷一次就從頭來（這次盤點時我自己下載這個模型，
+就在 63 MB 處逾時斷掉）；而沒有驗證代表傳輸損毀或被替換不會被發現，
+使用者只會覺得「轉錄出來的東西很奇怪」。
+
+Android 則兩者都沒有（見 A1）。
+
+### A2-bis. 模型清單本身有四筆是假的
+
+順著 A2 逐一實際請求 `models/manifest.json` 裡的六個網址：
+
+| 模型 | 實測 | 清單宣告的大小 | 實際 |
+|---|---|---|---|
+| silero-vad-v4 | ✅ 200 | 1807522 | 1807522（且雜湊早已驗過） |
+| whisper-large-v3-turbo-q5 | ✅ 200 | 574041600 | **574041195** |
+| paraformer-zh | ❌ **404** | 230686720 | — |
+| ct-punct-zh | ❌ **401** | 293601280 | — |
+| ppocr-v5 | ❌ **401**（網址是 `huggingface.co/example/rapidocr/…`，`example` 是佔位字串） | 16777216（＝ 16 MiB 整） | — |
+| qwen3-4b-instruct-q4 | ❌ **401** | 2621440000 | — |
+
+那些大小全是整數（16 MiB、2621440000…）—— 是**估的，不是量的**。
+這正是 `STATE.md` 常犯錯誤清單裡「相信 manifest 裡沒下載驗證過的 URL」那一條。
 
 ### A3. 套件加密完全沒有出口
 

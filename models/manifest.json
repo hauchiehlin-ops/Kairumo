@@ -1,9 +1,11 @@
 {
   "_comment": [
     "模型清單的機器可讀版本，對應 models/MODELS.md。",
-    "sha256 為 'pending' 者尚未取得實際雜湊值，下載器會拒絕它們（不是靜默通過）。",
-    "上架前必須全部換成真實雜湊 —— 見 docs/TODO.md H3。",
-    "已確認的項目其 url 與 sha256 皆經實際下載驗證。"
+    "sha256 為 'pending' 者尚未取得實際雜湊值，下載器會拒絕它們（不是靜默通過），",
+    "介面上也會顯示為「尚未提供下載來源」而不是讓使用者按下去才失敗。",
+    "url 為空字串者代表**原本填的網址是假的或已失效**，已實測過（見每一筆的 notes）。",
+    "已確認的項目其 url、size_bytes 與 sha256 皆經實際請求驗證。",
+    "上架前必須全部補齊 —— 見 docs/TODO.md H3。"
   ],
   "models": [
     {
@@ -18,7 +20,7 @@
     },
     {
       "id": "paraformer-zh",
-      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-streaming-paraformer-bilingual-zh-en/resolve/main/model.onnx",
+      "url": "",
       "sha256": "pending",
       "size_bytes": 230686720,
       "license": "Apache-2.0（HuggingFace funasr/paraformer-zh-streaming，repo 內含授權全文）",
@@ -26,11 +28,11 @@
         "asr.zh"
       ],
       "optional": true,
-      "notes": "可選。D-07 已改採 Whisper 為預設；這一項的授權證據是 FunASR 那一對裡最強的（repo 內含 Apache-2.0 全文），保留給想用串流中文模型的人自行選用。"
+      "notes": "2026-09-21 實測 **HTTP 404** —— 原網址 csukuangfj/sherpa-onnx-streaming-paraformer-bilingual-zh-en/resolve/main/model.onnx 不存在。size_bytes 也是估的整數。要用這個模型必須先找到真實網址並重新量測。可選，不影響主要功能。"
     },
     {
       "id": "ct-punct-zh",
-      "url": "https://huggingface.co/csukuangfj/sherpa-onnx-punct-ct-transformer/resolve/main/model.onnx",
+      "url": "",
       "sha256": "pending",
       "size_bytes": 293601280,
       "license": "apache-2.0（僅 HuggingFace model card 標籤，repo 內無授權原文）與 FunASR MODEL_LICENSE v1.1 衝突",
@@ -38,41 +40,43 @@
         "asr.zh"
       ],
       "optional": true,
-      "notes": "**已退出預設路徑（D-07）。** 授權證據是全清單裡最弱的一項，而 Whisper 自己就會標點，所以預設流程不再需要它。只有選用 Paraformer 的人才會用到。"
+      "notes": "2026-09-21 實測 **HTTP 401**。授權本來就有疑慮（僅 model card 標籤、repo 內無原文，與 FunASR MODEL_LICENSE v1.1 衝突），在授權釐清之前不要補網址。可選。"
     },
     {
       "id": "whisper-large-v3-turbo-q5",
       "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
-      "sha256": "pending",
-      "size_bytes": 574041600,
+      "sha256": "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
+      "size_bytes": 574041195,
       "license": "MIT",
       "required_for": [
         "asr.zh",
         "asr.multilingual",
         "asr.codeswitch"
       ],
-      "notes": "預設的語音辨識模型（D-07）。MIT 權重、單一通路，而且自己就會標點 —— 中文不必再接 ct-punc。"
+      "notes": "2026-09-21 實測：HTTP 200，Content-Length 與 HuggingFace 的 x-linked-etag（LFS oid，即內容的 SHA-256）如上。原本清單寫 574041600（估的整數）與 sha256: pending。"
     },
     {
       "id": "ppocr-v5",
-      "url": "https://huggingface.co/example/rapidocr/resolve/main/ppocrv5.onnx",
+      "url": "",
       "sha256": "pending",
       "size_bytes": 16777216,
       "license": "Apache-2.0",
       "required_for": [
         "ocr",
         "hwr.fallback"
-      ]
+      ],
+      "notes": "2026-09-21 實測 **HTTP 401** —— 原網址 huggingface.co/example/rapidocr/... 的 `example` 是佔位字串，那個 repo 不存在。size_bytes 16777216 剛好是 16 MiB，也是估的。OCR 與手寫辨識備援要用它，得先找到真實來源。"
     },
     {
       "id": "qwen3-4b-instruct-q4",
-      "url": "https://huggingface.co/Qwen/Qwen3-4B-Instruct-GGUF/resolve/main/qwen3-4b-instruct-q4_k_m.gguf",
+      "url": "",
       "sha256": "pending",
       "size_bytes": 2621440000,
       "license": "Apache-2.0",
       "required_for": [
         "llm.summary"
-      ]
+      ],
+      "notes": "2026-09-21 實測 **HTTP 401** —— Qwen/Qwen3-4B-Instruct-GGUF 取不到。size_bytes 2621440000 也是估的整數。另見 android/.../ai/NoteIntelligence.kt：讓使用者下載一個比整個 App 大幾十倍的檔案，這個取捨本身還沒有被接受。"
     }
   ]
 }

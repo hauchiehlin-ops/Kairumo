@@ -30,7 +30,17 @@ default = ["asr", "pdf"]
 # 語音相關（Silero VAD + 中文標點還原）。依賴 ONNX Runtime，
 # 而 ort 目前沒有 aarch64-linux-android 的預編譯二進位 ——
 # Android 第一版不含語音轉錄，就用 --no-default-features 關掉這一組。
-asr = ["dep:padnote-vad-silero", "dep:padnote-punct-ct", "dep:padnote-asr-whisper"]
+# ASR 拆成兩塊，因為**擋住 Android 的只有其中一塊**。
+#
+# `asr-onnx`（Silero VAD + 中文標點）需要 ONNX Runtime，而 `ort` 至今沒有
+# aarch64-linux-android 的預編譯二進位 —— 這是 Android 版關掉 asr 的原因。
+# 但 Whisper 走的是 whisper.cpp（C++），**完全不碰 ONNX**。
+#
+# 綁在同一個 feature 的代價是：Android 為了一個它用不到的相依，
+# 連帶失去了整個語音轉錄，而那一側就長出了一個會回報成功的假轉錄。
+asr-whisper = ["dep:padnote-asr-whisper"]
+asr-onnx = ["dep:padnote-vad-silero", "dep:padnote-punct-ct"]
+asr = ["asr-whisper", "asr-onnx"]
 
 # PDF 匯入／算繪。需要各 ABI 的 libpdfium 系統函式庫。
 pdf = ["dep:padnote-pdf-pdfium"]

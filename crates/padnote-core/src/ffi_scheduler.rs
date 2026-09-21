@@ -122,10 +122,6 @@ impl FfiSyncScheduler {
     pub fn is_blocked_on_auth(&self) -> bool {
         self.inner.lock().unwrap().is_blocked_on_auth()
     }
-
-    pub fn has_pending(&self) -> bool {
-        self.inner.lock().unwrap().has_pending()
-    }
 }
 
 /// 前景心跳的建議間隔（毫秒）。平台層照這個值設計時器。
@@ -135,8 +131,11 @@ pub fn sync_periodic_interval_ms() -> u64 {
 }
 
 /// 本機存檔後的去抖動時間（毫秒）。
-#[uniffi::export]
-pub fn sync_debounce_ms() -> u64 {
+///
+/// 測試用它確認 FFI 這一層沒有把去抖動吃掉。平台層不需要它 ——
+/// 節奏是排程器的事，平台只負責「發生了什麼」與「現在該不該跑」。
+#[cfg(test)]
+fn sync_debounce_ms() -> u64 {
     padnote_sync::scheduler::DEBOUNCE_MS
 }
 

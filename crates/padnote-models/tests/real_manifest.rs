@@ -39,14 +39,41 @@ fn confirmed_entries_declare_a_real_hash_and_size() {
 }
 
 #[test]
-fn every_url_is_https() {
+fn every_url_is_https_or_explicitly_absent() {
+    // 空字串代表「還沒有可用的來源」——那是一個**經過查證**的狀態，
+    // 而且下載器會拒絕它（`is_well_formed` 要求 https）。
+    //
+    // 比起留著一個假網址（例如曾經寫過的 `huggingface.co/example/rapidocr`），
+    // 空字串誠實得多：假網址會讓人以為只是暫時連不上，而它根本不存在。
     for m in &manifest().models {
+        if m.url.is_empty() {
+            assert!(
+                !m.notes.is_empty(),
+                "{} 沒有來源，就必須在 notes 裡說明查證結果",
+                m.id
+            );
+            continue;
+        }
         assert!(
             m.url.starts_with("https://"),
             "{} 使用了非 HTTPS 的來源：{}",
             m.id,
             m.url
         );
+    }
+}
+
+#[test]
+fn an_entry_with_a_real_hash_also_has_a_real_url() {
+    // 有雜湊卻沒有來源 = 一個永遠下載不了、但看起來可以下載的項目。
+    for m in &manifest().models {
+        if m.sha256.len() == 64 {
+            assert!(
+                m.url.starts_with("https://"),
+                "{} 有雜湊卻沒有下載來源",
+                m.id
+            );
+        }
     }
 }
 

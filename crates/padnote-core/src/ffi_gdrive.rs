@@ -17,9 +17,9 @@
 //!
 //! # 兩層：中繼資料與內容
 //!
-//! - [`gdrive_sync_metadata`]：設定與筆記本清單（`settings/global.json`、
-//!   `notebooks/index.json`）。整包讀寫、逐欄位合併。
-//! - [`gdrive_sync_notebook`]：一本筆記本的**內容**，以 oplog 檔為單位。
+//! - [`FfiSyncSession::sync_metadata`]：設定與筆記本清單
+//!   （`settings/global.json`、`notebooks/index.json`）。整包讀寫、逐欄位合併。
+//! - [`FfiSyncSession::sync_notebook`]：一本筆記本的**內容**與媒體。
 //!
 //! # 內容為什麼用 oplog 檔當同步單位，而不是 chunk
 //!
@@ -268,20 +268,9 @@ fn read_or_empty<H: padnote_sync::gdrive::DriveHttp>(
 
 /// 把設定與筆記本索引與雲端同步一輪。
 ///
-/// `http` 由平台提供，裡面已經帶好 `GoogleAuth` 給的存取權杖
-/// （必要時它會自己先更新）。
-///
-/// **這個函式會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
-#[uniffi::export]
-pub fn gdrive_sync_metadata(
-    http: Arc<dyn FfiDriveHttp>,
-    local_settings_json: String,
-    local_index_json: String,
-) -> FfiCloudSyncResult {
-    let drive = GDriveProvider::new(ForeignHttp(http));
-    sync_metadata_with(&drive, local_settings_json, local_index_json)
-}
-
+/// 只有 [`FfiSyncSession::sync_metadata`] 會呼叫它 —— 分成兩層是因為
+/// session 那一層要拿著自己的 `GDriveProvider`（裡面有暖好的 file id 快取），
+/// 而合併規則不該知道那件事。
 fn sync_metadata_with(
     drive: &GDriveProvider<ForeignHttp>,
     local_settings_json: String,
@@ -559,15 +548,9 @@ fn sync_notebook_ops(
 
 /// 同步一本筆記本的內容。
 ///
-/// `package_path` 是本機 `.padnote` 套件的路徑。
-/// `device_id` 為 0 表示呼叫端沒提供 —— 那就不壓實也不刪雲端檔案。
-///
-/// 新的呼叫端請走 [`FfiSyncSession`]：它帶著 `RemoteIndex`，
-/// 逐本筆記的列舉整個消失。這個自由函式保留給還沒搬過去的路徑。
-///
-/// **這個函式會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
-#[uniffi::export]
-pub fn gdrive_sync_notebook(
+/// **只有測試在用。** 正式路徑走 [`FfiSyncSession::sync_notebook`]。
+#[cfg(test)]
+fn gdrive_sync_notebook(
     http: Arc<dyn FfiDriveHttp>,
     package_path: String,
     notebook_id: String,
@@ -756,11 +739,10 @@ fn sync_notebook_media(
     }
 }
 
-/// 同步一本筆記本的媒體檔（自由函式版本，保留給還沒搬到 [`FfiSyncSession`] 的路徑）。
-///
-/// **這個函式會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
-#[uniffi::export]
-pub fn gdrive_sync_media(
+/// 同步一本筆記本的媒體檔。**只有測試在用**，正式路徑走
+/// [`FfiSyncSession::sync_notebook`]（它會把 oplog 與媒體一起做完）。
+#[cfg(test)]
+fn gdrive_sync_media(
     http: Arc<dyn FfiDriveHttp>,
     package_path: String,
     notebook_id: String,
@@ -785,9 +767,9 @@ pub fn gdrive_sync_media(
 ///
 /// 已經存在時**不會覆蓋**，直接當成一般同步 —— 重跑這個函式是安全的。
 ///
-/// **這個函式會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
-#[uniffi::export]
-pub fn gdrive_clone_notebook(
+/// **只有測試在用。** 正式路徑走 [`FfiSyncSession::clone_notebook`]。
+#[cfg(test)]
+fn gdrive_clone_notebook(
     http: Arc<dyn FfiDriveHttp>,
     package_path: String,
     notebook_id: String,
@@ -1070,16 +1052,6 @@ impl FfiSyncSession {
             error: media.error,
             needs_reauth: media.needs_reauth,
         }
-    }
-
-    /// 同步狀態快照（P4「同步醫生」）。**零 HTTP。**
-    pub fn diagnose(
-        &self,
-        package_paths: Vec<String>,
-        notebook_ids: Vec<String>,
-    ) -> FfiSyncDiagnostics {
-        let index = self.index.lock().unwrap();
-        diagnose_index(&index, package_paths, notebook_ids)
     }
 
     /// 中繼資料（設定 + 筆記本索引）。
@@ -1532,7 +1504,8 @@ mod tests {
         let books = many_packages("doctor", 3);
 
         let session = FfiSyncSession::create(http, String::new());
-        let before = session.diagnose(
+        let before = sync_diagnose(
+            session.index_json(),
             books
                 .iter()
                 .map(|(_, r)| r.to_string_lossy().into())
@@ -1556,7 +1529,8 @@ mod tests {
         }
         session.refresh();
 
-        let after = session.diagnose(
+        let after = sync_diagnose(
+            session.index_json(),
             books
                 .iter()
                 .map(|(_, r)| r.to_string_lossy().into())
@@ -1578,7 +1552,8 @@ mod tests {
             }],
         )
         .unwrap();
-        let changed = session.diagnose(
+        let changed = sync_diagnose(
+            session.index_json(),
             books
                 .iter()
                 .map(|(_, r)| r.to_string_lossy().into())

@@ -13,17 +13,12 @@
 use padnote_sync::library::{ItemKind, LibraryIndex, LibraryItem};
 use padnote_sync::settings::{Stamped, SyncedSettings};
 
-/// 雲端上的固定路徑。平台層不要自己拼字串 —— 拼錯的話兩台裝置會寫到
-/// 不同的檔案，而且不會有任何錯誤，只是永遠同步不到。
-#[uniffi::export]
-pub fn sync_settings_path() -> String {
-    padnote_sync::settings::SETTINGS_PATH.to_string()
-}
-
-#[uniffi::export]
-pub fn sync_index_path() -> String {
-    padnote_sync::library::INDEX_PATH.to_string()
-}
+// 雲端上的固定路徑原本開在這裡（`sync_settings_path` / `sync_index_path`），
+// 給平台層用來避免自己拼字串。但**從來沒有平台呼叫過** —— 兩份 JSON 的
+// 讀寫一直都在核心裡（`gdrive` 那一側），平台只收合併後的字串。
+//
+// 留著一個沒人用的匯出，下一個人會以為平台需要自己組路徑，然後真的去組。
+// 需要時從 `padnote_sync::settings::SETTINGS_PATH` 直接拿。
 
 /// 下一個可用的 Lamport 時戳：這份文件裡看過的最大值加一。
 ///
@@ -431,9 +426,13 @@ mod tests {
 
     #[test]
     fn the_cloud_paths_are_the_ones_in_the_spec() {
-        // 平台層自己拼字串拼錯的話，兩台裝置會寫到不同檔案，
-        // 沒有任何錯誤，只是永遠同步不到。
-        assert_eq!(sync_settings_path(), "settings/global.json");
-        assert_eq!(sync_index_path(), "notebooks/index.json");
+        // 這兩個路徑寫在 `format-spec.md` §7.0，改了就是換一個雲端佈局 ——
+        // 舊版的裝置會繼續讀寫舊路徑，而兩邊永遠同步不到，
+        // 沒有任何錯誤訊息。
+        assert_eq!(
+            padnote_sync::settings::SETTINGS_PATH,
+            "settings/global.json"
+        );
+        assert_eq!(padnote_sync::library::INDEX_PATH, "notebooks/index.json");
     }
 }
