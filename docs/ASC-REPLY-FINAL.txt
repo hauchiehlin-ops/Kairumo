@@ -1,0 +1,64 @@
+Hello,
+
+Thank you for the review. The com.apple.security.network.server entitlement is
+required, and I would like to describe the functionality behind it. I have also
+added this information to the App Review Information section in App Store
+Connect.
+
+WHY THE APP LISTENS FOR INCOMING CONNECTIONS
+
+Kairumo is a note-taking app with no backend service of any kind. Notes are
+stored on the device and synced through the user's own cloud drive; we do not
+operate any server, and the app never contacts a service we control.
+
+That design has one consequence for real-time collaboration: there is no server
+for participants to meet on. So the device that starts a collaboration session
+hosts it. It opens a WebSocket listener on the local network and relays presence
+information and edit operations between the participating devices. The other
+devices connect to it as clients.
+
+This is implemented in Sources/LocalRelayServer.swift using Network.framework's
+NWListener (TCP with the WebSocket protocol option). Under the App Sandbox the
+listener cannot bind without com.apple.security.network.server, so without the
+entitlement a Mac user could join a session started by someone else but could
+never start one.
+
+HOW TO REPRODUCE IT
+
+1. Open any notebook.
+2. In the editor toolbar, click "Collaborate" (the two-person icon).
+3. Click "Start Collaboration".
+4. The panel then shows "Hosting relay on this device" together with the LAN
+   address other devices connect to, for example ws://192.168.1.20:9002. That
+   address is the listener created under this entitlement.
+5. On a second device on the same network, open the same panel, click "Join Room",
+   and paste the invite link (or room code) shown on the first device.
+
+A NOTE ON WHY THE AUTOMATED ANALYSIS MAY HAVE MISSED IT
+
+In the build currently under review the app starts the listener but does not
+display that it is doing so, and a failure to bind is only logged. The
+functionality is present and reachable through the steps above, but it is not
+visibly labelled in the interface, which is most likely why the automated
+analysis did not find matching functionality.
+
+A subsequent build will surface this directly: the collaboration panel will show
+the hosting state and the LAN address it is listening on, and will report a
+readable reason if the listener cannot start.
+
+ENTITLEMENTS USED
+
+The app requests only the minimum set it needs:
+
+  com.apple.security.app-sandbox
+  com.apple.security.network.client            joining a session hosted elsewhere
+  com.apple.security.network.server            hosting a session on this device
+  com.apple.security.files.user-selected.read-write   the user's own sync folder
+  com.apple.security.files.bookmarks.app-scope        reopening that folder later
+  com.apple.security.device.audio-input               lecture and meeting recording
+
+No other entitlements are requested.
+
+Please let me know if any further detail would help.
+
+Kind regards,

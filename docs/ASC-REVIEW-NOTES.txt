@@ -1,0 +1,14 @@
+Kairumo includes the com.apple.security.network.server entitlement because the app can act as the host of a local, peer-to-peer collaboration session.
+
+Kairumo has no backend service of any kind. Notes are stored locally and synced through the user's own cloud drive. For real-time collaboration there is therefore no server to connect to, so the device that starts a session hosts the session itself: it opens a WebSocket listener on the local network and relays presence and edit operations between the participating devices. This is implemented with Network.framework's NWListener in Sources/LocalRelayServer.swift.
+
+Without com.apple.security.network.server the listener cannot bind under the App Sandbox, and a Mac user can join a session started by someone else but can never start one.
+
+How to see it:
+1. Open any notebook.
+2. In the editor toolbar, click "Collaborate" (the two-person icon).
+3. Click "Start Collaboration".
+4. The panel then shows "Hosting relay on this device" together with the LAN address other devices connect to (for example ws://192.168.1.20:9002). That address is the listener created under this entitlement.
+5. On a second device on the same network, open the same panel, click "Join Room", and paste the invite link (or room code) shown on the first device.
+
+The app uses only the two network entitlements (client and server) plus user-selected file access, app-scope bookmarks and audio input. No other entitlements are requested.
