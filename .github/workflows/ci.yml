@@ -35,6 +35,29 @@ jobs:
       - run: cargo clippy --workspace --all-targets
       - run: cargo test --workspace
 
+      # ── Apple 的單元測試（一致性閘門 2）──────────────────────────
+      #
+      # 在此之前，CI 對 Apple 只做一件事：用 swiftc -parse 檢查兩個檔的語法。
+      # 34 個測試檔、374 項測試從來沒有在 CI 執行過 —— 它們只有在某個人
+      # 想起來在本機跑一次的時候才有意義。
+      #
+      # macOS runner 本來就已經在這個 job 裡跑了，所以多出來的成本只有
+      # 建 xcframework 與跑測試（本機實測 17 秒）。
+      #
+      # **只跑單元測試，不跑 UITests。** 介面測試會因為動畫與載入時序
+      # 間歇失敗，而間歇失敗的閘門會在第三次紅的時候被關掉 ——
+      # 這個教訓 scripts/check-screen-parity.py 的說明裡已經寫過一次。
+      - name: 核心的 xcframework（Apple 測試要連它）
+        if: runner.os == 'macOS'
+        run: ./scripts/build-xcframework.sh
+      - name: Apple 單元測試
+        if: runner.os == 'macOS'
+        # 模擬器由腳本挑（見它的說明：寫死名字會在 Xcode 升版時無故變紅）。
+        run: |
+          xcodebuild test -project apple/Kairumo.xcodeproj -scheme Kairumo \
+            -destination "id=$(python3 scripts/pick-ios-simulator.py)" \
+            -only-testing:KairumoTests -quiet
+
   # WP1/WP2：Android 產出必須跟著每次提交一起驗證，否則 Apple 端的改動會
   # 悄悄弄壞跨平台建置（例如把新的 ONNX 相依加進核心）。
   android:
