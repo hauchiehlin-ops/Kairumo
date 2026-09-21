@@ -7,6 +7,7 @@
 //! 目前狀態。刪除用墓碑而非移除記錄，保持記錄可交換（同步收斂的前提）。
 
 use crate::document::CellSpan;
+use crate::milestone::{DocClock, InkClock, MilestoneCut};
 use crate::object::{
     Anchor, ConnectionObject, EndCap, ObjectKind, ObjectRect, RouteStyle, ShapeKind, ShapeObject,
 };
@@ -241,6 +242,27 @@ pub enum DocOp {
         end: NotebookTime,
         confidence: f32,
     },
+    /// 建立一個具名的里程碑（工作項 S-99）。
+    ///
+    /// 它**不改變任何狀態** —— 只是把「歷史上的這一刀」連同名字記進 oplog，
+    /// 這樣每一台裝置都看得到同一份清單，不需要另一個會走散的側邊檔案。
+    MarkMilestone {
+        id: Uuid,
+        title: String,
+        creator: String,
+        created_unix_ms: u64,
+        cut: MilestoneCut,
+        automatic: bool,
+    },
+    /// 還原到某個里程碑：遮蔽 `(cut, upto]` 區間內的操作。
+    ///
+    /// `cut` 是要回到的那一刀，`upto` 是下手還原時的當下狀態。
+    /// 兩個都要，理由見 `milestone` 模組說明。
+    RestoreMilestone {
+        milestone: Uuid,
+        cut: MilestoneCut,
+        upto: MilestoneCut,
+    },
 }
 
 // ---- 編碼 ----
@@ -281,6 +303,8 @@ const OP_SET_NOTEBOOK_META: u8 = 33;
 /// S-87。**新增 op 代表舊版讀到它會整份拒絕**（`UnknownOp`），
 /// 與先前三十三個 op 的情況相同 —— 兩端要同版本發布。
 const OP_MOVE_PAGE: u8 = 34;
+const OP_MARK_MILESTONE: u8 = 35;
+const OP_RESTORE_MILESTONE: u8 = 36;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DocCodecError {
@@ -358,6 +382,18 @@ impl Writer {
         self.u32(items.len() as u32);
         for s in items {
             self.str(s);
+        }
+        self
+    }
+    /// 里程碑的向量時鐘。兩張表都以 `u32` 筆數開頭，長度可為 0。
+    fn cut(&mut self, c: &MilestoneCut) -> &mut Self {
+        self.u32(c.doc.len() as u32);
+        for (device, lamport) in &c.doc {
+            self.u32(*device).u64(*lamport);
+        }
+        self.u32(c.ink.len() as u32);
+        for ((page, device), count) in &c.ink {
+            self.uuid(*page).u32(*device).u32(*count);
         }
         self
     }
@@ -563,6 +599,20 @@ impl<'a> Reader<'a> {
     fn strings(&mut self) -> Result<Vec<String>, DocCodecError> {
         let n = self.u32()? as usize;
         (0..n).map(|_| self.str()).collect()
+    }
+    fn cut(&mut self) -> Result<MilestoneCut, DocCodecError> {
+        let mut doc = DocClock::new();
+        for _ in 0..self.u32()? {
+            let device = self.u32()?;
+            doc.insert(device, self.u64()?);
+        }
+        let mut ink = InkClock::new();
+        for _ in 0..self.u32()? {
+            let page = self.uuid()?;
+            let device = self.u32()?;
+            ink.insert((page, device), self.u32()?);
+        }
+        Ok(MilestoneCut { doc, ink })
     }
     fn uuids(&mut self) -> Result<Vec<Uuid>, DocCodecError> {
         let n = self.u32()? as usize;
@@ -988,6 +1038,32 @@ pub fn encode(ops: &[DocOp]) -> Vec<u8> {
             DocOp::Ungroup { id } => {
                 w.u8(OP_UNGROUP).uuid(*id);
             }
+            DocOp::MarkMilestone {
+                id,
+                title,
+                creator,
+                created_unix_ms,
+                cut,
+                automatic,
+            } => {
+                w.u8(OP_MARK_MILESTONE)
+                    .uuid(*id)
+                    .str(title)
+                    .str(creator)
+                    .u64(*created_unix_ms)
+                    .cut(cut)
+                    .u8(u8::from(*automatic));
+            }
+            DocOp::RestoreMilestone {
+                milestone,
+                cut,
+                upto,
+            } => {
+                w.u8(OP_RESTORE_MILESTONE)
+                    .uuid(*milestone)
+                    .cut(cut)
+                    .cut(upto);
+            }
         }
     }
     w.0
@@ -1168,6 +1244,19 @@ pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
                 members: r.uuids()?,
             },
             OP_UNGROUP => DocOp::Ungroup { id: r.uuid()? },
+            OP_MARK_MILESTONE => DocOp::MarkMilestone {
+                id: r.uuid()?,
+                title: r.str()?,
+                creator: r.str()?,
+                created_unix_ms: r.u64()?,
+                cut: r.cut()?,
+                automatic: r.u8()? != 0,
+            },
+            OP_RESTORE_MILESTONE => DocOp::RestoreMilestone {
+                milestone: r.uuid()?,
+                cut: r.cut()?,
+                upto: r.cut()?,
+            },
             k => return Err(DocCodecError::UnknownOp(k)),
         };
         out.push(op);

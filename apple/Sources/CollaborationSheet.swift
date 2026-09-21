@@ -25,6 +25,8 @@ public struct CollaborationSheet: View {
     @State private var showCreateSnapshotAlert: Bool = false
     @State private var newSnapshotTitle: String = ""
     @State private var targetRestoreSnapshot: NotebookMilestoneSnapshot? = nil
+    /// 還原之後給使用者的一句話（成功時說退路，失敗時說沒動到內容）。
+    @State private var restoreMessage: String? = nil
     @State private var showRestoreConfirmAlert: Bool = false
 
     public init(notebookId: String? = nil) {
@@ -101,7 +103,22 @@ public struct CollaborationSheet: View {
                     }
                 }
             } message: {
-                Text(localizationManager.localized("restore_snapshot_confirm"))
+                // 講清楚「不會消失」—— 舊版這裡只說「確定要還原？」，
+                // 而使用者真正在猶豫的是「我這半小時的東西會不會沒了」。
+                Text(
+                    String(
+                        format: localizationManager.localized("milestone_restore_confirm"),
+                        targetRestoreSnapshot?.title ?? ""))
+            }
+            .alert(
+                localizationManager.localized("milestone_snapshots"),
+                isPresented: Binding(
+                    get: { restoreMessage != nil },
+                    set: { if !$0 { restoreMessage = nil } })
+            ) {
+                Button(localizationManager.localized("done"), role: .cancel) {}
+            } message: {
+                Text(restoreMessage ?? "")
             }
         }
     }
@@ -617,9 +634,11 @@ public struct CollaborationSheet: View {
                         Image(systemName: "clock.arrow.circlepath")
                             .font(.system(size: 24))
                             .foregroundColor(.secondary.opacity(0.6))
-                        Text(localizationManager.localized("milestone_snapshots"))
+                        Text(localizationManager.localized("milestone_empty"))
                             .font(.caption2)
+                            .multilineTextAlignment(.center)
                             .foregroundColor(.secondary)
+                            .padding(.horizontal, 24)
                     }
                     .padding(.vertical, 16)
                     Spacer()
@@ -640,10 +659,20 @@ public struct CollaborationSheet: View {
                                 )
 
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(snap.title)
-                                    .font(.subheadline)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.primary)
+                                HStack(spacing: 5) {
+                                    Text(snap.title)
+                                        .font(.subheadline)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.primary)
+                                    // 自動快照與舊版檔要標出來 —— 按了幾次還原之後，
+                                    // 清單裡系統產生的項目會比使用者自己命名的還多。
+                                    if snap.automatic {
+                                        badge(localizationManager.localized("milestone_automatic"), .secondary)
+                                    }
+                                    if snap.isLegacy {
+                                        badge(localizationManager.localized("milestone_legacy"), .orange)
+                                    }
+                                }
 
                                 HStack(spacing: 6) {
                                     Text(snap.creatorName)
@@ -705,10 +734,29 @@ public struct CollaborationSheet: View {
 
     private func restoreSnapshot(_ snap: NotebookMilestoneSnapshot) {
         guard let nId = notebookId else { return }
-        if store.restoreMilestoneSnapshot(notebookId: nId, snapshot: snap) {
-            loadSnapshots()
-            dismiss()
+        guard store.restoreMilestoneSnapshot(notebookId: nId, snapshot: snap) else {
+            restoreMessage = localizationManager.localized("milestone_restore_failed")
+            return
         }
+        loadSnapshots()
+        // 還原前那一刻被自動存成一個里程碑。**一定要講出來** ——
+        // 不然使用者不知道剛剛那半小時的工作還回得來，會以為按錯了就沒了。
+        if let safety = snapshots.first(where: { $0.automatic }) {
+            restoreMessage = String(
+                format: localizationManager.localized("milestone_restored"), safety.title)
+        }
+        dismiss()
+    }
+
+    /// 清單上的小標記。
+    private func badge(_ text: String, _ color: Color) -> some View {
+        Text(text)
+            .font(.system(size: 9, weight: .semibold))
+            .padding(.horizontal, 5)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.15))
+            .foregroundColor(color)
+            .cornerRadius(4)
     }
 
     private func formatSnapshotDate(_ date: Date) -> String {

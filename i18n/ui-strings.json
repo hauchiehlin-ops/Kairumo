@@ -1783,6 +1783,14 @@
     "zhHans": "你只用房号加入。少了邀请连结里的金钥，别人写的内容在这里一个字都解不开。请向房主要完整的邀请连结再加入一次。",
     "zhHant": "你只用房號加入。少了邀請連結裡的金鑰，別人寫的內容在這裡一個字都解不開。請向房主要完整的邀請連結再加入一次。"
   },
+  "collab_snapshot": {
+    "en": "Shared snapshot",
+    "ja": "共同スナップショット",
+    "ko": "협업 스냅샷",
+    "th": "สแนปช็อตร่วม",
+    "zhHans": "协同快照",
+    "zhHant": "協同快照"
+  },
   "collaborate": {
     "en": "Collaborate",
     "ja": "共同編集",
@@ -2927,6 +2935,14 @@
     "zhHans": "导出 Markdown",
     "zhHant": "匯出 Markdown"
   },
+  "export_now": {
+    "en": "Export",
+    "ja": "書き出す",
+    "ko": "내보내기",
+    "th": "ส่งออก",
+    "zhHans": "导出",
+    "zhHant": "匯出"
+  },
   "export_pdf": {
     "en": "Export PDF",
     "ja": "PDF を書き出す",
@@ -2934,6 +2950,38 @@
     "th": "ส่งออก PDF",
     "zhHans": "导出 PDF",
     "zhHant": "匯出 PDF"
+  },
+  "export_preview": {
+    "en": "Export preview",
+    "ja": "書き出しプレビュー",
+    "ko": "내보내기 미리보기",
+    "th": "ตัวอย่างการส่งออก",
+    "zhHans": "导出预览",
+    "zhHant": "匯出預覽"
+  },
+  "export_preview_hint": {
+    "en": "This is what the export will look like. Swipe to see other pages.",
+    "ja": "書き出し後の見た目です。スワイプで他のページを確認できます。",
+    "ko": "내보낸 결과의 모습입니다. 넘겨서 다른 쪽을 볼 수 있습니다.",
+    "th": "นี่คือหน้าตาหลังส่งออก ปัดเพื่อดูหน้าอื่น",
+    "zhHans": "这就是导出后的样子。左右滑动看其他页。",
+    "zhHant": "這就是匯出後的樣子。左右滑動看其他頁。"
+  },
+  "export_preview_page": {
+    "en": "Page %@",
+    "ja": "%@ ページ",
+    "ko": "%@쪽",
+    "th": "หน้า %@",
+    "zhHans": "第 %@ 页",
+    "zhHant": "第 %@ 頁"
+  },
+  "export_preview_unavailable": {
+    "en": "Preview could not be rendered; the export itself still works",
+    "ja": "プレビューを生成できませんでしたが、書き出しは可能です",
+    "ko": "미리보기를 만들지 못했지만 내보내기는 정상 동작합니다",
+    "th": "สร้างตัวอย่างไม่ได้ แต่การส่งออกยังใช้งานได้",
+    "zhHans": "预览算不出来，但导出本身不受影响",
+    "zhHant": "預覽算不出來，但匯出本身不受影響"
   },
   "export_print": {
     "en": "Export & Print",
@@ -5231,6 +5279,62 @@
     "zhHans": "状态",
     "zhHant": "狀態"
   },
+  "milestone_automatic": {
+    "en": "Automatic",
+    "ja": "自動",
+    "ko": "자동",
+    "th": "อัตโนมัติ",
+    "zhHans": "自动",
+    "zhHant": "自動"
+  },
+  "milestone_before_restore": {
+    "en": "Before restoring “%@”",
+    "ja": "「%@」に戻す前",
+    "ko": "“%@” 복원 전",
+    "th": "ก่อนกู้คืน “%@”",
+    "zhHans": "还原「%@」之前",
+    "zhHant": "還原「%@」之前"
+  },
+  "milestone_empty": {
+    "en": "No milestones yet. Tap “Create snapshot” to mark this moment.",
+    "ja": "マイルストーンはまだありません。「スナップショットを作成」で今を記録できます。",
+    "ko": "아직 마일스톤이 없습니다. “스냅샷 만들기”로 지금을 기록하세요.",
+    "th": "ยังไม่มีเหตุการณ์สำคัญ แตะ “สร้างสแนปช็อต” เพื่อบันทึกช่วงเวลานี้",
+    "zhHans": "还没有里程碑。按「创建快照」记下现在这一刻。",
+    "zhHant": "還沒有里程碑。按「建立快照」記下現在這一刻。"
+  },
+  "milestone_legacy": {
+    "en": "Legacy",
+    "ja": "旧形式",
+    "ko": "이전 형식",
+    "th": "รูปแบบเดิม",
+    "zhHans": "旧版",
+    "zhHant": "舊版"
+  },
+  "milestone_restore_confirm": {
+    "en": "Restore to “%@”? Later changes are set aside, not deleted — an automatic “before restore” milestone lets you come back.",
+    "ja": "「%@」に戻しますか？以降の変更は削除されず、脇に置かれます。自動で「復元前」のマイルストーンが残るので戻せます。",
+    "ko": "“%@”(으)로 복원할까요? 이후 변경 사항은 삭제되지 않고 보관되며, 자동 “복원 전” 마일스톤으로 되돌아올 수 있습니다.",
+    "th": "กู้คืนไปยัง “%@” หรือไม่ การเปลี่ยนแปลงหลังจากนั้นจะถูกเก็บไว้ ไม่ได้ถูกลบ และมีเหตุการณ์สำคัญ “ก่อนกู้คืน” อัตโนมัติให้ย้อนกลับได้",
+    "zhHans": "还原到「%@」？之后的更改会被收起来，但不会消失 —— 系统会自动留一个「还原之前」的里程碑让你回来。",
+    "zhHant": "還原到「%@」？之後的變更會被收起來，但不會消失 —— 系統會自動留一個「還原之前」的里程碑讓你回來。"
+  },
+  "milestone_restore_failed": {
+    "en": "Restore failed; nothing was changed",
+    "ja": "復元に失敗しました。内容は変更されていません",
+    "ko": "복원하지 못했습니다. 내용은 그대로입니다",
+    "th": "กู้คืนไม่สำเร็จ เนื้อหาไม่ถูกเปลี่ยน",
+    "zhHans": "还原失败，内容没有被改动",
+    "zhHant": "還原失敗，內容沒有被改動"
+  },
+  "milestone_restored": {
+    "en": "Restored. To undo, choose “%@”",
+    "ja": "復元しました。元に戻すには「%@」を選択",
+    "ko": "복원했습니다. 되돌리려면 “%@”를 선택하세요",
+    "th": "กู้คืนแล้ว หากต้องการย้อนกลับ ให้เลือก “%@”",
+    "zhHans": "已还原。要回到还原前，选「%@」",
+    "zhHant": "已還原。要回到還原前，選「%@」"
+  },
   "milestone_snapshots": {
     "en": "Milestone Snapshots",
     "ja": "マイルストーンスナップショット",
@@ -6334,6 +6438,46 @@
     "th": "วินเทจ",
     "zhHans": "复古手帐",
     "zhHant": "復古手帳"
+  },
+  "palm_rejection_settings": {
+    "en": "Palm rejection",
+    "ja": "パームリジェクション",
+    "ko": "손바닥 인식 차단",
+    "th": "การปฏิเสธฝ่ามือ",
+    "zhHans": "掌拒灵敏度",
+    "zhHant": "掌拒靈敏度"
+  },
+  "palm_threshold_area": {
+    "en": "Touch area threshold",
+    "ja": "接触面積のしきい値",
+    "ko": "접촉 면적 임계값",
+    "th": "เกณฑ์พื้นที่การสัมผัส",
+    "zhHans": "接触面积阈值",
+    "zhHant": "接觸面積門檻"
+  },
+  "palm_threshold_hint": {
+    "en": "Higher values reject palms more aggressively, but a fine nib may also be rejected. Use “Restore defaults” if it goes wrong.",
+    "ja": "高くすると手のひらを弾きやすくなりますが、細いペン先も弾かれることがあります。おかしくなったら「既定に戻す」を押してください。",
+    "ko": "값을 높이면 손바닥을 더 잘 걸러내지만 가는 펜촉도 걸러질 수 있습니다. 잘못되면 “기본값 복원”을 누르세요.",
+    "th": "ค่าสูงขึ้นจะกันฝ่ามือได้ดีขึ้น แต่ปลายปากกาที่เล็กอาจถูกกันไปด้วย หากผิดพลาดให้กด “คืนค่าเริ่มต้น”",
+    "zhHans": "调高比较不会被手掌误触，但细的笔尖也可能被当成手掌。改坏了按「恢复默认」。",
+    "zhHant": "調高比較不會被手掌誤觸，但細的筆尖也可能被當成手掌。改壞了按「恢復預設」。"
+  },
+  "palm_threshold_radius": {
+    "en": "Touch radius threshold",
+    "ja": "接触半径のしきい値",
+    "ko": "접촉 반경 임계값",
+    "th": "เกณฑ์รัศมีการสัมผัส",
+    "zhHans": "接触半径阈值",
+    "zhHant": "接觸半徑門檻"
+  },
+  "palm_threshold_reset": {
+    "en": "Restore defaults",
+    "ja": "既定に戻す",
+    "ko": "기본값 복원",
+    "th": "คืนค่าเริ่มต้น",
+    "zhHans": "恢复默认",
+    "zhHant": "恢復預設"
   },
   "paper_content": {
     "en": "Content on this paper",

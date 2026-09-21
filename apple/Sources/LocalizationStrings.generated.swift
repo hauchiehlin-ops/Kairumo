@@ -1799,6 +1799,14 @@ extension LocalizationManager {
             .ko: "방 코드만으로 참여했습니다. 초대 링크에 들어 있는 키가 없으면 다른 사람이 쓴 내용을 여기서 읽을 수 없습니다. 호스트에게 전체 초대 링크를 받아 다시 참여하세요。",
             .th: "คุณเข้าร่วมด้วยรหัสห้องเท่านั้น หากไม่มีกุญแจในลิงก์เชิญ สิ่งที่คนอื่นเขียนจะอ่านไม่ได้ที่นี่ ขอลิงก์เชิญฉบับเต็มจากผู้เปิดห้องแล้วเข้าร่วมใหม่"
         ],
+        "collab_snapshot": [
+            .zhHant: "協同快照",
+            .en: "Shared snapshot",
+            .zhHans: "协同快照",
+            .ja: "共同スナップショット",
+            .ko: "협업 스냅샷",
+            .th: "สแนปช็อตร่วม"
+        ],
         "collaborate": [
             .zhHant: "線上協同",
             .en: "Collaborate",
@@ -2943,6 +2951,14 @@ extension LocalizationManager {
             .ko: "Markdown 내보내기",
             .th: "ส่งออก Markdown"
         ],
+        "export_now": [
+            .zhHant: "匯出",
+            .en: "Export",
+            .zhHans: "导出",
+            .ja: "書き出す",
+            .ko: "내보내기",
+            .th: "ส่งออก"
+        ],
         "export_pdf": [
             .zhHant: "匯出 PDF",
             .en: "Export PDF",
@@ -2950,6 +2966,38 @@ extension LocalizationManager {
             .ja: "PDF を書き出す",
             .ko: "PDF 내보내기",
             .th: "ส่งออก PDF"
+        ],
+        "export_preview": [
+            .zhHant: "匯出預覽",
+            .en: "Export preview",
+            .zhHans: "导出预览",
+            .ja: "書き出しプレビュー",
+            .ko: "내보내기 미리보기",
+            .th: "ตัวอย่างการส่งออก"
+        ],
+        "export_preview_hint": [
+            .zhHant: "這就是匯出後的樣子。左右滑動看其他頁。",
+            .en: "This is what the export will look like. Swipe to see other pages.",
+            .zhHans: "这就是导出后的样子。左右滑动看其他页。",
+            .ja: "書き出し後の見た目です。スワイプで他のページを確認できます。",
+            .ko: "내보낸 결과의 모습입니다. 넘겨서 다른 쪽을 볼 수 있습니다.",
+            .th: "นี่คือหน้าตาหลังส่งออก ปัดเพื่อดูหน้าอื่น"
+        ],
+        "export_preview_page": [
+            .zhHant: "第 %@ 頁",
+            .en: "Page %@",
+            .zhHans: "第 %@ 页",
+            .ja: "%@ ページ",
+            .ko: "%@쪽",
+            .th: "หน้า %@"
+        ],
+        "export_preview_unavailable": [
+            .zhHant: "預覽算不出來，但匯出本身不受影響",
+            .en: "Preview could not be rendered; the export itself still works",
+            .zhHans: "预览算不出来，但导出本身不受影响",
+            .ja: "プレビューを生成できませんでしたが、書き出しは可能です",
+            .ko: "미리보기를 만들지 못했지만 내보내기는 정상 동작합니다",
+            .th: "สร้างตัวอย่างไม่ได้ แต่การส่งออกยังใช้งานได้"
         ],
         "export_print": [
             .zhHant: "匯出與列印",
@@ -5247,6 +5295,62 @@ extension LocalizationManager {
             .ko: "상태",
             .th: "สถานะ"
         ],
+        "milestone_automatic": [
+            .zhHant: "自動",
+            .en: "Automatic",
+            .zhHans: "自动",
+            .ja: "自動",
+            .ko: "자동",
+            .th: "อัตโนมัติ"
+        ],
+        "milestone_before_restore": [
+            .zhHant: "還原「%@」之前",
+            .en: "Before restoring “%@”",
+            .zhHans: "还原「%@」之前",
+            .ja: "「%@」に戻す前",
+            .ko: "“%@” 복원 전",
+            .th: "ก่อนกู้คืน “%@”"
+        ],
+        "milestone_empty": [
+            .zhHant: "還沒有里程碑。按「建立快照」記下現在這一刻。",
+            .en: "No milestones yet. Tap “Create snapshot” to mark this moment.",
+            .zhHans: "还没有里程碑。按「创建快照」记下现在这一刻。",
+            .ja: "マイルストーンはまだありません。「スナップショットを作成」で今を記録できます。",
+            .ko: "아직 마일스톤이 없습니다. “스냅샷 만들기”로 지금을 기록하세요.",
+            .th: "ยังไม่มีเหตุการณ์สำคัญ แตะ “สร้างสแนปช็อต” เพื่อบันทึกช่วงเวลานี้"
+        ],
+        "milestone_legacy": [
+            .zhHant: "舊版",
+            .en: "Legacy",
+            .zhHans: "旧版",
+            .ja: "旧形式",
+            .ko: "이전 형식",
+            .th: "รูปแบบเดิม"
+        ],
+        "milestone_restore_confirm": [
+            .zhHant: "還原到「%@」？之後的變更會被收起來，但不會消失 —— 系統會自動留一個「還原之前」的里程碑讓你回來。",
+            .en: "Restore to “%@”? Later changes are set aside, not deleted — an automatic “before restore” milestone lets you come back.",
+            .zhHans: "还原到「%@」？之后的更改会被收起来，但不会消失 —— 系统会自动留一个「还原之前」的里程碑让你回来。",
+            .ja: "「%@」に戻しますか？以降の変更は削除されず、脇に置かれます。自動で「復元前」のマイルストーンが残るので戻せます。",
+            .ko: "“%@”(으)로 복원할까요? 이후 변경 사항은 삭제되지 않고 보관되며, 자동 “복원 전” 마일스톤으로 되돌아올 수 있습니다.",
+            .th: "กู้คืนไปยัง “%@” หรือไม่ การเปลี่ยนแปลงหลังจากนั้นจะถูกเก็บไว้ ไม่ได้ถูกลบ และมีเหตุการณ์สำคัญ “ก่อนกู้คืน” อัตโนมัติให้ย้อนกลับได้"
+        ],
+        "milestone_restore_failed": [
+            .zhHant: "還原失敗，內容沒有被改動",
+            .en: "Restore failed; nothing was changed",
+            .zhHans: "还原失败，内容没有被改动",
+            .ja: "復元に失敗しました。内容は変更されていません",
+            .ko: "복원하지 못했습니다. 내용은 그대로입니다",
+            .th: "กู้คืนไม่สำเร็จ เนื้อหาไม่ถูกเปลี่ยน"
+        ],
+        "milestone_restored": [
+            .zhHant: "已還原。要回到還原前，選「%@」",
+            .en: "Restored. To undo, choose “%@”",
+            .zhHans: "已还原。要回到还原前，选「%@」",
+            .ja: "復元しました。元に戻すには「%@」を選択",
+            .ko: "복원했습니다. 되돌리려면 “%@”를 선택하세요",
+            .th: "กู้คืนแล้ว หากต้องการย้อนกลับ ให้เลือก “%@”"
+        ],
         "milestone_snapshots": [
             .zhHant: "里程碑快照時光機",
             .en: "Milestone Snapshots",
@@ -6350,6 +6454,46 @@ extension LocalizationManager {
             .ja: "ヴィンテージ",
             .ko: "빈티지",
             .th: "วินเทจ"
+        ],
+        "palm_rejection_settings": [
+            .zhHant: "掌拒靈敏度",
+            .en: "Palm rejection",
+            .zhHans: "掌拒灵敏度",
+            .ja: "パームリジェクション",
+            .ko: "손바닥 인식 차단",
+            .th: "การปฏิเสธฝ่ามือ"
+        ],
+        "palm_threshold_area": [
+            .zhHant: "接觸面積門檻",
+            .en: "Touch area threshold",
+            .zhHans: "接触面积阈值",
+            .ja: "接触面積のしきい値",
+            .ko: "접촉 면적 임계값",
+            .th: "เกณฑ์พื้นที่การสัมผัส"
+        ],
+        "palm_threshold_hint": [
+            .zhHant: "調高比較不會被手掌誤觸，但細的筆尖也可能被當成手掌。改壞了按「恢復預設」。",
+            .en: "Higher values reject palms more aggressively, but a fine nib may also be rejected. Use “Restore defaults” if it goes wrong.",
+            .zhHans: "调高比较不会被手掌误触，但细的笔尖也可能被当成手掌。改坏了按「恢复默认」。",
+            .ja: "高くすると手のひらを弾きやすくなりますが、細いペン先も弾かれることがあります。おかしくなったら「既定に戻す」を押してください。",
+            .ko: "값을 높이면 손바닥을 더 잘 걸러내지만 가는 펜촉도 걸러질 수 있습니다. 잘못되면 “기본값 복원”을 누르세요.",
+            .th: "ค่าสูงขึ้นจะกันฝ่ามือได้ดีขึ้น แต่ปลายปากกาที่เล็กอาจถูกกันไปด้วย หากผิดพลาดให้กด “คืนค่าเริ่มต้น”"
+        ],
+        "palm_threshold_radius": [
+            .zhHant: "接觸半徑門檻",
+            .en: "Touch radius threshold",
+            .zhHans: "接触半径阈值",
+            .ja: "接触半径のしきい値",
+            .ko: "접촉 반경 임계값",
+            .th: "เกณฑ์รัศมีการสัมผัส"
+        ],
+        "palm_threshold_reset": [
+            .zhHant: "恢復預設",
+            .en: "Restore defaults",
+            .zhHans: "恢复默认",
+            .ja: "既定に戻す",
+            .ko: "기본값 복원",
+            .th: "คืนค่าเริ่มต้น"
         ],
         "paper_content": [
             .zhHant: "這張紙的內容",

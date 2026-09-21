@@ -1,6 +1,7 @@
 //! `manifest.json` —— 套件中**唯一的明文中繼資料**（format-spec §3）。
 
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 /// 本 build 支援的格式版本。
 pub const SPEC_VERSION: u32 = 1;
@@ -19,6 +20,22 @@ pub struct Manifest {
     pub min_reader_version: u32,
     #[serde(default)]
     pub encryption: Encryption,
+    /// 壓實**不得跨越**的 lamport 界線，逐裝置（工作項 S-99）。
+    ///
+    /// # 為什麼這件事非記在明文 manifest 不可
+    ///
+    /// 里程碑用檔名裡的 `(lamport, device)` 當座標。壓實會把
+    /// `0001..0010` 併成一個叫 `0010` 的檔 —— 併完之後，本來 lamport 為 3 的
+    /// 操作對外宣稱自己是 10，於是「回到 lamport 5 那一刻」這條線就跑到了
+    /// 錯的地方：還原**靜默地**失效，或者遮掉不該遮的東西。
+    ///
+    /// 所以壓實只能在界線**之內**合併。而界線必須是明文的：壓實刻意設計成
+    /// 不需要金鑰也能做（見 `compact_own_doc_ops`），若把界線藏在加密的
+    /// oplog 裡，鎖著的套件壓實時就會把它們踩掉。
+    ///
+    /// 這裡只有幾個整數，不洩漏內容 —— manifest 本來就有裝置與時間資訊。
+    #[serde(default)]
+    pub milestone_barriers: BTreeMap<u32, Vec<u64>>,
 }
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -60,6 +77,7 @@ impl Manifest {
             title,
             min_reader_version: SPEC_VERSION,
             encryption: Encryption::None,
+            milestone_barriers: BTreeMap::new(),
         }
     }
 
@@ -69,6 +87,21 @@ impl Manifest {
     /// 反之則拒絕 —— 猜測解析會造成靜默的資料損毀。
     pub fn can_be_opened(&self) -> bool {
         self.format == "padnote" && self.min_reader_version <= SPEC_VERSION
+    }
+
+    /// 記下一條界線。重複的不會重覆記。
+    pub fn add_milestone_barrier(&mut self, device: u32, lamport: u64) {
+        let list = self.milestone_barriers.entry(device).or_default();
+        if let Err(at) = list.binary_search(&lamport) {
+            list.insert(at, lamport);
+        }
+    }
+
+    /// 這台裝置的界線，由小到大。
+    pub fn barriers_for(&self, device: u32) -> &[u64] {
+        self.milestone_barriers
+            .get(&device)
+            .map_or(&[][..], Vec::as_slice)
     }
 
     pub fn is_encrypted(&self) -> bool {

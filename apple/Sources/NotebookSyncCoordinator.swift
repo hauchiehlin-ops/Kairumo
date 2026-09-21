@@ -538,6 +538,51 @@ enum NotebookSyncCoordinator {
         return pulled
     }
 
+    // MARK: - 里程碑（工作項 S-99）
+
+    /// 把一本筆記目前的工作副本寫進它的 `.padnote` 套件，再從套件讀回來。
+    ///
+    /// # 為什麼里程碑要借用同步的這條路
+    ///
+    /// Apple 端的**工作副本**是 `Documents/notebooks_v1.json` 與
+    /// `Drawings/*.drawing`，套件只是同步與匯出時才產生的衍生物
+    /// （見 `docs/PLATFORM-PARITY.md` 第 2 層）。里程碑住在核心、記的是套件
+    /// 歷史上的一刀 —— 所以建立之前必須先把工作副本推進套件，
+    /// 還原之後必須再把套件讀回工作副本，否則使用者會看到
+    /// 「按了還原，畫面沒變」。
+    ///
+    /// 這裡刻意重用 `exportOne` / `importOne` 而不是另寫一份：那兩個函式
+    /// 裡有筆畫基準線的扣除邏輯（少扣一次，同一條線就會被複製成兩份、四份，
+    /// 使用者看到的是筆跡愈來愈粗）。那段邏輯只該存在一處。
+    @MainActor
+    static func mirrorWorkingCopyIntoPackage(
+        _ document: NotebookDocument, store: SyncableNotebookStore, deviceId: UInt32
+    ) throws -> URL {
+        let package = packageURL(for: document.id, in: store)
+        _ = try exportOne(document, from: store, to: package, deviceId: deviceId)
+        return package
+    }
+
+    /// 把套件目前的內容寫回工作副本。還原之後一定要呼叫它。
+    @MainActor
+    static func applyPackageToWorkingCopy(
+        notebookId: String, store: SyncableNotebookStore, deviceId: UInt32
+    ) throws {
+        // 還原是整份取代，這台裝置沒有「自己新增的那些」要保留 ——
+        // 傳空的基準線，讓匯入把合併後的全部內容都算成別人的。
+        try importOne(
+            packageURL(for: notebookId, in: store), into: store, deviceId: deviceId,
+            ownStrokes: [:])
+    }
+
+    @MainActor
+    private static func packageURL(for notebookId: String, in store: SyncableNotebookStore) -> URL {
+        try? FileManager.default.createDirectory(
+            at: store.syncPackagesDirectory, withIntermediateDirectories: true)
+        return store.syncPackagesDirectory
+            .appendingPathComponent("\(notebookId.lowercased()).padnote")
+    }
+
     // MARK: - 單本
 
     /// 匯出一本，回傳這台裝置在各頁自己擁有的筆畫。

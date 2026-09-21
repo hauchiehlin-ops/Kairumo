@@ -974,32 +974,46 @@ public struct NoteCommentPin: Identifiable, Codable, Hashable {
     }
 }
 
-/// 筆記里程碑快照資料模型（時光機歷史版本）
-public struct NotebookMilestoneSnapshot: Identifiable, Codable {
+/// 一個里程碑快照（時光機）。
+///
+/// # 這裡為什麼沒有內容
+///
+/// 舊版把整份 `NotebookDocument` 與每一頁的 `PKDrawing` 編碼塞在這個結構裡 ——
+/// 一份完整副本。那個做法有三個問題：`PKDrawing` 是 Apple 私有格式，
+/// Android 讀不出來；還原是整份覆蓋，會默默吃掉另一台裝置同時寫進來的東西；
+/// 而且每建一次就多一份完整副本。
+///
+/// 現在快照住在核心（`padnote_doc::milestone`），記的是**歷史上的一刀**
+/// —— 一組向量時鐘，幾百個位元組，兩個平台讀的是同一份資料。
+public struct NotebookMilestoneSnapshot: Identifiable, Codable, Equatable {
     public let id: String
     public let notebookId: String
     public let title: String
     public let creatorName: String
     public let createdAt: Date
-    public let noteData: Data
-    public let pagesData: [Data]
+    /// 執行還原前自動建立的。UI 要跟使用者自己命名的分開，
+    /// 否則按幾次還原之後清單就被系統產生的項目淹沒。
+    public let automatic: Bool
+    /// 舊版 `.snapshot` 檔留下來的。**唯讀** ——
+    /// 舊檔是內容副本，換不成「一刀」，但也不該默默把使用者的東西丟掉。
+    public let isLegacy: Bool
 
     public init(
-        id: String = UUID().uuidString,
+        id: String,
         notebookId: String,
         title: String,
         creatorName: String,
-        createdAt: Date = Date(),
-        noteData: Data,
-        pagesData: [Data]
+        createdAt: Date,
+        automatic: Bool = false,
+        isLegacy: Bool = false
     ) {
         self.id = id
         self.notebookId = notebookId
         self.title = title
         self.creatorName = creatorName
         self.createdAt = createdAt
-        self.noteData = noteData
-        self.pagesData = pagesData
+        self.automatic = automatic
+        self.isLegacy = isLegacy
     }
 }
 
@@ -2673,84 +2687,154 @@ public final class NotebookStore: ObservableObject {
         NotebookMigration.packagesDirectory(in: documentsDir)
     }
 
-    // MARK: - 里程碑快照時光機 (Milestone Snapshots)
+    // MARK: - 里程碑快照時光機（工作項 S-99）
+    //
+    // 三支全部走核心。Apple 端的工作副本在套件外面，所以每一支的第一步
+    // 都是把工作副本鏡進套件（`mirrorWorkingCopyIntoPackage`），
+    // 還原之後再讀回來 —— 少了這兩步，使用者會看到「按了還原但畫面沒變」。
 
-    /// 里程碑快照目錄
+    /// 舊版 `.snapshot` 檔的位置。**只讀不寫**，見 `legacySnapshots`。
     public var snapshotsDirectory: URL {
-        let dir = documentsDir.appendingPathComponent("Snapshots", isDirectory: true)
-        if !FileManager.default.fileExists(atPath: dir.path) {
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        }
-        return dir
+        documentsDir.appendingPathComponent("Snapshots", isDirectory: true)
     }
 
-    /// 建立里程碑快照
+    /// 建立里程碑快照。
     @discardableResult
-    public func createMilestoneSnapshot(notebookId: String, title: String, creatorName: String) -> NotebookMilestoneSnapshot? {
+    public func createMilestoneSnapshot(notebookId: String, title: String, creatorName: String)
+        -> NotebookMilestoneSnapshot?
+    {
         guard let note = notebooks.first(where: { $0.id == notebookId }) else { return nil }
-        var drawingsData: [Data] = []
-        for p in 0..<note.pageCount {
-            let drawing = loadDrawing(notebookId: notebookId, pageIndex: p)
-            drawingsData.append(drawing.dataRepresentation())
+        let deviceId = NotebookMigration.deviceId
+        do {
+            let package = try NotebookSyncCoordinator.mirrorWorkingCopyIntoPackage(
+                note, store: self, deviceId: deviceId)
+            let session = try PadnoteSession.openExisting(path: package.path, deviceId: deviceId)
+            let created = try session.createMilestone(
+                title: title.isEmpty
+                    ? LocalizationManager.shared.localized("collab_snapshot") : title,
+                creator: creatorName,
+                nowUnixMs: UInt64(max(0, Date().timeIntervalSince1970 * 1000)))
+            return snapshot(from: created, notebookId: notebookId)
+        } catch {
+            return nil
         }
-
-        guard let noteData = try? JSONEncoder().encode(note) else { return nil }
-
-        let snapshot = NotebookMilestoneSnapshot(
-            id: UUID().uuidString,
-            notebookId: notebookId,
-            title: title.isEmpty ? "協同快照" : title,
-            creatorName: creatorName,
-            createdAt: Date(),
-            noteData: noteData,
-            pagesData: drawingsData
-        )
-
-        let noteSnapshotDir = snapshotsDirectory.appendingPathComponent(notebookId, isDirectory: true)
-        if !FileManager.default.fileExists(atPath: noteSnapshotDir.path) {
-            try? FileManager.default.createDirectory(at: noteSnapshotDir, withIntermediateDirectories: true)
-        }
-
-        let fileUrl = noteSnapshotDir.appendingPathComponent("\(snapshot.id).snapshot")
-        if let snapData = try? JSONEncoder().encode(snapshot) {
-            try? snapData.write(to: fileUrl, options: .atomic)
-            return snapshot
-        }
-        return nil
     }
 
-    /// 列出指定筆記之所有里程碑快照
+    /// 列出指定筆記的全部里程碑，新的在前。舊版 `.snapshot` 檔接在後面。
     public func listMilestoneSnapshots(notebookId: String) -> [NotebookMilestoneSnapshot] {
-        let noteSnapshotDir = snapshotsDirectory.appendingPathComponent(notebookId, isDirectory: true)
-        guard let files = try? FileManager.default.contentsOfDirectory(at: noteSnapshotDir, includingPropertiesForKeys: nil) else {
-            return []
-        }
-
         var list: [NotebookMilestoneSnapshot] = []
-        for file in files where file.pathExtension == "snapshot" {
-            if let data = try? Data(contentsOf: file),
-               let snap = try? JSONDecoder().decode(NotebookMilestoneSnapshot.self, from: data) {
-                list.append(snap)
-            }
+        let deviceId = NotebookMigration.deviceId
+        let package = corePackagesDirectory
+            .appendingPathComponent("\(notebookId.lowercased()).padnote")
+        if let session = try? PadnoteSession.openExisting(path: package.path, deviceId: deviceId),
+            let milestones = try? session.milestones()
+        {
+            list = milestones.map { snapshot(from: $0, notebookId: notebookId) }
         }
-        return list.sorted(by: { $0.createdAt > $1.createdAt })
+        return list + legacySnapshots(notebookId: notebookId)
     }
 
-    /// 回滾至指定快照
+    /// 回滾至指定快照。
     @discardableResult
-    public func restoreMilestoneSnapshot(notebookId: String, snapshot: NotebookMilestoneSnapshot) -> Bool {
-        guard let restoredNote = try? JSONDecoder().decode(NotebookDocument.self, from: snapshot.noteData) else {
+    public func restoreMilestoneSnapshot(notebookId: String, snapshot: NotebookMilestoneSnapshot)
+        -> Bool
+    {
+        if snapshot.isLegacy {
+            // 舊檔沒有辦法變成「一刀」——  它是一份內容副本。
+            // 這裡不假裝做得到，交給舊的還原路徑。
+            return restoreLegacySnapshot(notebookId: notebookId, id: snapshot.id)
+        }
+        guard let note = notebooks.first(where: { $0.id == notebookId }) else { return false }
+        let deviceId = NotebookMigration.deviceId
+        do {
+            // 先把「還原之前」的工作副本推進套件 —— 自動安全快照才照得到它。
+            let package = try NotebookSyncCoordinator.mirrorWorkingCopyIntoPackage(
+                note, store: self, deviceId: deviceId)
+            let session = try PadnoteSession.openExisting(path: package.path, deviceId: deviceId)
+            _ = try session.restoreMilestone(
+                milestoneId: snapshot.id,
+                nowUnixMs: UInt64(max(0, Date().timeIntervalSince1970 * 1000)),
+                safetyTitle: String(
+                    format: LocalizationManager.shared.localized("milestone_before_restore"),
+                    snapshot.title))
+            try NotebookSyncCoordinator.applyPackageToWorkingCopy(
+                notebookId: notebookId, store: self, deviceId: deviceId)
+            if let idx = notebooks.firstIndex(where: { $0.id == notebookId }) {
+                notebooks[idx].lastModifiedDate = Date()
+            }
+            persistData()
+            return true
+        } catch {
             return false
         }
-        guard let idx = notebooks.firstIndex(where: { $0.id == notebookId }) else { return false }
+    }
 
-        // 回滾各頁筆跡
-        for (pageIdx, data) in snapshot.pagesData.enumerated() {
-            if let drawing = try? PKDrawing(data: data) {
+    private func snapshot(from m: FfiMilestone, notebookId: String) -> NotebookMilestoneSnapshot {
+        NotebookMilestoneSnapshot(
+            id: m.id,
+            notebookId: notebookId,
+            title: m.title,
+            creatorName: m.creator,
+            createdAt: Date(timeIntervalSince1970: Double(m.createdUnixMs) / 1000),
+            automatic: m.automatic)
+    }
+
+    // MARK: 舊版 `.snapshot` 檔
+    //
+    // 4.8.x 以前的快照是整份內容副本。那些檔案換不成核心的「一刀」，
+    // 但使用者手上真的有，直接無視等於把他的東西丟掉。所以照樣列出來、
+    // 照樣還原得動，只是不再產生新的。
+
+    /// 舊檔的最小解碼形狀 —— 只取還原需要的欄位。
+    private struct LegacySnapshot: Codable {
+        let id: String
+        let title: String
+        let creatorName: String
+        let createdAt: Date
+        let noteData: Data
+        let pagesData: [Data]
+    }
+
+    private func legacySnapshots(notebookId: String) -> [NotebookMilestoneSnapshot] {
+        let dir = snapshotsDirectory.appendingPathComponent(notebookId, isDirectory: true)
+        guard
+            let files = try? FileManager.default.contentsOfDirectory(
+                at: dir, includingPropertiesForKeys: nil)
+        else { return [] }
+        return
+            files
+            .filter { $0.pathExtension == "snapshot" }
+            .compactMap { url -> NotebookMilestoneSnapshot? in
+                guard let data = try? Data(contentsOf: url),
+                    let old = try? JSONDecoder().decode(LegacySnapshot.self, from: data)
+                else { return nil }
+                return NotebookMilestoneSnapshot(
+                    id: old.id,
+                    notebookId: notebookId,
+                    title: old.title,
+                    creatorName: old.creatorName,
+                    createdAt: old.createdAt,
+                    isLegacy: true)
+            }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
+    private func restoreLegacySnapshot(notebookId: String, id: String) -> Bool {
+        let url = snapshotsDirectory
+            .appendingPathComponent(notebookId, isDirectory: true)
+            .appendingPathComponent("\(id).snapshot")
+        guard let data = try? Data(contentsOf: url),
+            let old = try? JSONDecoder().decode(LegacySnapshot.self, from: data),
+            let restoredNote = try? JSONDecoder().decode(
+                NotebookDocument.self, from: old.noteData),
+            let idx = notebooks.firstIndex(where: { $0.id == notebookId })
+        else { return false }
+
+        for (pageIdx, bytes) in old.pagesData.enumerated() {
+            if let drawing = try? PKDrawing(data: bytes) {
                 saveDrawing(notebookId: notebookId, pageIndex: pageIdx, drawing: drawing)
             }
         }
-
         notebooks[idx] = restoredNote
         notebooks[idx].lastModifiedDate = Date()
         persistData()

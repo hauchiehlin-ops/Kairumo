@@ -5,6 +5,7 @@
 //! C4（詞級時間戳）、A10（筆跡重播）、B6（版本回溯）都建立在這之上。
 
 pub mod document;
+pub mod milestone;
 pub mod object;
 pub mod ops;
 pub mod text;

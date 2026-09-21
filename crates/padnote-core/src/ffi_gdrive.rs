@@ -430,12 +430,14 @@ fn sync_notebook_ops(
 
     // 壓實只碰自己的檔。device_id 為 0 表示呼叫端沒給（舊 API），
     // 那就不壓實也不刪任何雲端檔案 —— 不確定擁有權時，寧可讓雲端多留幾個檔。
+    // 壓實可能切成好幾段（里程碑的界線不能跨 —— 見 `split_at_barriers`），
+    // 所以回來的是一份清單而不是單一結果。
     let compaction = if device_id != 0 {
         package
             .compact_own_doc_ops(COMPACT_THRESHOLD, device_id)
-            .unwrap_or(None)
+            .unwrap_or_default()
     } else {
-        None
+        Vec::new()
     };
 
     let local = match package.doc_op_files() {
@@ -481,7 +483,7 @@ fn sync_notebook_ops(
     }
 
     // ── 上傳成功之後，才刪雲端上被自己壓實掉的碎檔 ──────────────
-    if let Some(outcome) = &compaction {
+    for outcome in &compaction {
         let compacted_key = padnote_sync::paths::canonical_name(&outcome.compacted_name);
         let local_compacted_size = local
             .iter()

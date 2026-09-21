@@ -2,6 +2,7 @@
 
 use crate::blob::BlobStore;
 use crate::manifest::Manifest;
+use padnote_doc::milestone::{DocClock, InkClock, MilestoneCut, OpEntry, Resolved};
 use padnote_doc::{DocOp, Uuid};
 use padnote_ink::{InkRecord, StrokeReader, StrokeWriter, codec::CodecError};
 use std::fmt;
@@ -431,10 +432,33 @@ impl NotebookPackage {
     /// 串接的順序不影響結果：`materialize` 會先收齊墓碑再過濾，
     /// 所以「刪除」出現在「新增」之前也不會出錯。
     pub fn read_ink(&self, page: Uuid) -> Result<Vec<InkRecord>, StorageError> {
+        self.read_ink_with(page, &self.resolve_milestones()?)
+    }
+
+    /// 同上，但重用已經算好的里程碑解析結果。
+    ///
+    /// 一次載入整本筆記時會逐頁呼叫；每頁都重新掃一遍 oplog 的話，
+    /// 開啟時間會變成頁數乘以 oplog 長度。
+    pub fn read_ink_with(
+        &self,
+        page: Uuid,
+        resolved: &Resolved,
+    ) -> Result<Vec<InkRecord>, StorageError> {
         let mut out = Vec::new();
         for path in self.ink_read_paths(page) {
             let bytes = fs::read(&path)?;
-            out.extend(StrokeReader::new(&bytes)?.read_all()?);
+            let records = StrokeReader::new(&bytes)?.read_all()?;
+            if resolved.is_pristine() {
+                out.extend(records);
+                continue;
+            }
+            let device = ink_device_of(&path);
+            let visible = resolved.visible_ink_indices(page, device, records.len() as u32);
+            out.extend(
+                visible
+                    .into_iter()
+                    .filter_map(|i| records.get(i as usize).cloned()),
+            );
         }
         Ok(out)
     }
@@ -625,36 +649,44 @@ impl NotebookPackage {
         }
 
         let mut total_merged = 0;
-        for (device_suffix, mut own_files) in files_by_device {
+        for (device_suffix, own_files) in files_by_device {
             if own_files.len() < threshold {
                 continue;
             }
-            own_files.sort(); // 字典序 = 因果序
-
-            let max_lamport_hex = own_files
-                .last()
-                .and_then(|p| p.file_stem())
-                .and_then(|s| s.to_str())
-                .and_then(|s| s.split('-').next())
-                .unwrap_or("0000000000000000");
-
-            let compacted_name = format!("{max_lamport_hex}{device_suffix}");
-            let compacted_path = dir.join(&compacted_name);
-
-            let mut merged = Vec::new();
-            for f in &own_files {
-                let bytes = fs::read(f)?;
-                merged.extend_from_slice(&bytes);
-            }
-
-            crate::atomic::write_atomic(&compacted_path, &merged)?;
-
-            for f in &own_files {
-                if f != &compacted_path {
-                    let _ = fs::remove_file(f);
+            let device = device_suffix
+                .trim_start_matches('-')
+                .trim_end_matches(".oplog");
+            let device = u32::from_str_radix(device, 16).unwrap_or(0);
+            for mut run in self.split_at_barriers(own_files, device) {
+                if run.len() < 2 {
+                    continue;
                 }
+                run.sort(); // 字典序 = 因果序
+
+                let max_lamport_hex = run
+                    .last()
+                    .and_then(|p| p.file_stem())
+                    .and_then(|s| s.to_str())
+                    .and_then(|s| s.split('-').next())
+                    .unwrap_or("0000000000000000");
+
+                let compacted_name = format!("{max_lamport_hex}{device_suffix}");
+                let compacted_path = dir.join(&compacted_name);
+
+                let mut merged = Vec::new();
+                for f in &run {
+                    merged.extend_from_slice(&fs::read(f)?);
+                }
+
+                crate::atomic::write_atomic(&compacted_path, &merged)?;
+
+                for f in &run {
+                    if f != &compacted_path {
+                        let _ = fs::remove_file(f);
+                    }
+                }
+                total_merged += run.len();
             }
-            total_merged += own_files.len();
         }
 
         Ok(CompactResult {
@@ -682,47 +714,98 @@ impl NotebookPackage {
         &self,
         threshold: usize,
         device: u32,
-    ) -> Result<Option<CompactOutcome>, StorageError> {
+    ) -> Result<Vec<CompactOutcome>, StorageError> {
         let dir = self.root.join("doc/ops");
         if !dir.exists() {
-            return Ok(None);
+            return Ok(Vec::new());
         }
         let suffix = format!("-{device:08x}.oplog");
-        let mut own: Vec<String> = fs::read_dir(&dir)?
+        let own: Vec<PathBuf> = fs::read_dir(&dir)?
             .filter_map(Result::ok)
             .filter_map(|e| e.file_name().to_str().map(str::to_string))
             .filter(|name| name.ends_with(&suffix) && !crate::atomic::is_temp_name(name))
+            .map(|name| dir.join(name))
             .collect();
         if own.len() < threshold {
-            return Ok(None);
+            return Ok(Vec::new());
         }
-        own.sort(); // 字典序 = 因果序
 
-        let max_lamport_hex = own
-            .last()
-            .and_then(|n| n.split('-').next())
-            .unwrap_or("0000000000000000")
-            .to_string();
-        let compacted_name = format!("{max_lamport_hex}-{device:08x}.oplog");
-
-        let mut merged = Vec::new();
-        for name in &own {
-            merged.extend_from_slice(&fs::read(dir.join(name))?);
-        }
-        crate::atomic::write_atomic(&dir.join(&compacted_name), &merged)?;
-
-        let mut absorbed = Vec::new();
-        for name in &own {
-            if name == &compacted_name {
+        let mut outcomes = Vec::new();
+        for run in self.split_at_barriers(own, device) {
+            let mut names: Vec<String> = run
+                .iter()
+                .filter_map(|p| p.file_name().and_then(|n| n.to_str()).map(str::to_string))
+                .collect();
+            if names.len() < 2 {
                 continue;
             }
-            let _ = fs::remove_file(dir.join(name));
-            absorbed.push(name.clone());
+            names.sort(); // 字典序 = 因果序
+
+            let max_lamport_hex = names
+                .last()
+                .and_then(|n| n.split('-').next())
+                .unwrap_or("0000000000000000")
+                .to_string();
+            let compacted_name = format!("{max_lamport_hex}-{device:08x}.oplog");
+
+            let mut merged = Vec::new();
+            for name in &names {
+                merged.extend_from_slice(&fs::read(dir.join(name))?);
+            }
+            crate::atomic::write_atomic(&dir.join(&compacted_name), &merged)?;
+
+            let mut absorbed = Vec::new();
+            for name in &names {
+                if name == &compacted_name {
+                    continue;
+                }
+                let _ = fs::remove_file(dir.join(name));
+                absorbed.push(name.clone());
+            }
+            outcomes.push(CompactOutcome {
+                compacted_name,
+                absorbed,
+            });
         }
-        Ok(Some(CompactOutcome {
-            compacted_name,
-            absorbed,
-        }))
+        Ok(outcomes)
+    }
+
+    /// 把一台裝置的 oplog 檔切成幾段，**段與段之間隔著里程碑的界線**。
+    ///
+    /// # 為什麼壓實不能跨界線
+    ///
+    /// 壓實把 `0001..0010` 併成一個叫 `0010` 的檔，於是本來 lamport 為 3 的
+    /// 操作對外宣稱自己是 10。里程碑的座標就是那個數字 —— 併過頭之後，
+    /// 「回到 lamport 5 那一刻」會落在錯的地方：還原**靜默地**遮錯東西，
+    /// 或者什麼都不遮。使用者看到的是「按了還原但沒反應」。
+    ///
+    /// 同一段裡的檔案對任何一條界線的判定都相同（界線都在段外），
+    /// 所以把它們併成一個檔不會改變任何里程碑的答案。
+    ///
+    /// 界線讀自明文 manifest，不是 oplog —— 壓實刻意不需要金鑰。
+    fn split_at_barriers(&self, mut files: Vec<PathBuf>, device: u32) -> Vec<Vec<PathBuf>> {
+        let barriers = self.manifest.barriers_for(device);
+        if barriers.is_empty() {
+            return vec![files];
+        }
+        files.sort();
+        let mut runs: Vec<Vec<PathBuf>> = Vec::new();
+        let mut current_bucket = usize::MAX;
+        for f in files {
+            let lamport = f
+                .file_name()
+                .and_then(|n| n.to_str())
+                .and_then(parse_oplog_name)
+                .map_or(0, |(l, _)| l);
+            // 這個檔前面有幾條界線 —— 同一個答案的檔可以安全地併在一起。
+            let bucket = barriers.partition_point(|w| *w < lamport);
+            if bucket != current_bucket {
+                runs.push(Vec::new());
+                current_bucket = bucket;
+            }
+            runs.last_mut().expect("剛推進去").push(f);
+        }
+        runs
     }
 
     /// 讀一個 oplog 檔的原始位元組。
@@ -760,8 +843,11 @@ impl NotebookPackage {
         Ok(self.root.join("doc/ops").join(name))
     }
 
-    /// 依因果序讀出全部文件操作。
-    pub fn read_doc_ops(&self) -> Result<Vec<DocOp>, StorageError> {
+    /// oplog 全部內容，每一筆都帶著來源座標 `(lamport, device)`。
+    ///
+    /// 座標取自檔名（`append_doc_ops` 定的格式）。里程碑要靠它才能表示
+    /// 「歷史上的一刀」—— 見 `padnote_doc::milestone`。
+    pub fn read_doc_op_entries(&self) -> Result<Vec<OpEntry>, StorageError> {
         let dir = self.root.join("doc/ops");
         if !dir.exists() {
             return Ok(Vec::new());
@@ -785,10 +871,11 @@ impl NotebookPackage {
 
         let mut out = Vec::new();
         for f in files {
+            let name = f.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+            let (lamport, device) = parse_oplog_name(name).unwrap_or((0, 0));
             let raw = fs::read(&f)?;
             let bytes = match &self.dek {
                 Some(dek) => {
-                    let name = f.file_name().and_then(|n| n.to_str()).unwrap_or_default();
                     let aad = self.oplog_aad(name);
                     crate::sealed::open_frames(dek, &raw, aad.as_bytes())
                         .map_err(|e| StorageError::DocOps(e.to_string()))?
@@ -797,10 +884,116 @@ impl NotebookPackage {
             };
             out.extend(
                 padnote_doc::ops::decode(&bytes)
-                    .map_err(|e| StorageError::DocOps(e.to_string()))?,
+                    .map_err(|e| StorageError::DocOps(e.to_string()))?
+                    .into_iter()
+                    .map(|op| OpEntry {
+                        lamport,
+                        device,
+                        op,
+                    }),
             );
         }
         Ok(out)
+    }
+
+    /// 解析里程碑：算出還看得見哪些操作、有哪些里程碑。
+    pub fn resolve_milestones(&self) -> Result<Resolved, StorageError> {
+        Ok(padnote_doc::milestone::resolve(self.read_doc_op_entries()?))
+    }
+
+    /// 可直接重播的操作序列 —— **已經濾掉被里程碑還原遮蔽的那些**。
+    ///
+    /// 原本這裡只是把檔案串起來。改成走 `resolve` 之後，所有既有呼叫端
+    /// 都自動看到正確的結果；若留一個「未過濾」的版本給人挑，遲早有一條
+    /// 路徑會忘記過濾，然後在還原之後把被遮蔽的內容又寫回去。
+    pub fn read_doc_ops(&self) -> Result<Vec<DocOp>, StorageError> {
+        Ok(self.resolve_milestones()?.ops)
+    }
+
+    /// 目前的文件向量時鐘：`device -> 最大 lamport`，取自檔名。
+    pub fn doc_clock(&self) -> DocClock {
+        let dir = self.root.join("doc/ops");
+        let mut clock = DocClock::new();
+        let Ok(entries) = fs::read_dir(&dir) else {
+            return clock;
+        };
+        for e in entries.filter_map(Result::ok) {
+            let path = e.path();
+            if !path.extension().is_some_and(|x| x == "oplog") {
+                continue;
+            }
+            let Some(name) = path.file_name().and_then(|n| n.to_str()) else {
+                continue;
+            };
+            if let Some((lamport, device)) = parse_oplog_name(name) {
+                let slot = clock.entry(device).or_insert(0);
+                *slot = (*slot).max(lamport);
+            }
+        }
+        clock
+    }
+
+    /// 目前的筆畫向量時鐘：`(page, device) -> 已寫入的記錄筆數`。
+    ///
+    /// 需要真的把每個檔解碼一次才知道筆數 —— 記錄是變長的，
+    /// 檔案大小換算不出筆數。里程碑是使用者主動按下去的動作，
+    /// 這個代價可以接受；日常存檔路徑不會呼叫它。
+    pub fn ink_clock(&self) -> Result<InkClock, StorageError> {
+        let mut clock = InkClock::new();
+        for page in self.ink_pages()? {
+            for path in self.ink_read_paths(page) {
+                let device = ink_device_of(&path);
+                let bytes = fs::read(&path)?;
+                let count = StrokeReader::new(&bytes)?.read_all()?.len() as u32;
+                clock.insert((page, device), count);
+            }
+        }
+        Ok(clock)
+    }
+
+    /// 把 oplog 裡所有里程碑的界線抄進明文 manifest。回傳是否有新增。
+    ///
+    /// # 為什麼要抄
+    ///
+    /// 界線記在**本機**的 manifest 裡，但里程碑可能是別台裝置建的：
+    /// 裝置 A 建了一個涵蓋「裝置 B 寫到 lamport 7」的里程碑，
+    /// 這件事只寫在 A 的 manifest。B 同步下來之後照樣壓實自己的檔，
+    /// 就把 A 的還原點踩掉了 —— 而 B 完全不知道自己做了什麼。
+    ///
+    /// 所以每次開套件時抄一次：有金鑰的時候從 oplog 補齊界線，
+    /// 之後即使鎖著也壓實得安全。
+    pub fn absorb_milestone_barriers(&mut self) -> Result<bool, StorageError> {
+        let entries = self.read_doc_op_entries()?;
+        let mut added = false;
+        let mut note = |manifest: &mut Manifest, cut: &MilestoneCut| {
+            for (device, lamport) in &cut.doc {
+                let before = manifest.barriers_for(*device).len();
+                manifest.add_milestone_barrier(*device, *lamport);
+                added |= manifest.barriers_for(*device).len() != before;
+            }
+        };
+        for e in &entries {
+            match &e.op {
+                DocOp::MarkMilestone { cut, .. } => note(&mut self.manifest, cut),
+                DocOp::RestoreMilestone { cut, upto, .. } => {
+                    note(&mut self.manifest, cut);
+                    note(&mut self.manifest, upto);
+                }
+                _ => {}
+            }
+        }
+        if added {
+            self.write_manifest()?;
+        }
+        Ok(added)
+    }
+
+    /// 「現在」這一刀 —— 建立里程碑時要記的就是它。
+    pub fn current_cut(&self) -> Result<MilestoneCut, StorageError> {
+        Ok(MilestoneCut {
+            doc: self.doc_clock(),
+            ink: self.ink_clock()?,
+        })
     }
 
     /// 列出所有有筆畫的頁面。
@@ -838,6 +1031,34 @@ fn parse_uuid(s: &str) -> Option<Uuid> {
         out[i] = u8::from_str_radix(std::str::from_utf8(c).ok()?, 16).ok()?;
     }
     Some(Uuid::from_bytes(out))
+}
+
+/// 從 `<lamport:016x>-<device:08x>.oplog` 取回座標。
+///
+/// 檔名不合格式時回 `None`，呼叫端一律當成 `(0, 0)` ——
+/// 那種檔只可能是外部工具放進來的，把它排在最前面重播是最保守的選擇。
+fn parse_oplog_name(name: &str) -> Option<(u64, u32)> {
+    let stem = name.strip_suffix(".oplog")?;
+    let (l, d) = stem.split_once('-')?;
+    Some((
+        u64::from_str_radix(l, 16).ok()?,
+        u32::from_str_radix(d, 16).ok()?,
+    ))
+}
+
+/// 舊版 `ink/<page>.strokes` 沒有裝置欄位，用這個哨兵值代表它。
+///
+/// 選 `u32::MAX` 而不是 0：0 是一個**合法的裝置 id**，混在一起的話，
+/// 舊檔的記錄數會和 device 0 的記錄數互相覆蓋，里程碑就會把不相干的筆畫遮掉。
+pub const LEGACY_INK_DEVICE: u32 = u32::MAX;
+
+/// 從筆畫檔名取回裝置 id。
+fn ink_device_of(path: &Path) -> u32 {
+    path.file_stem()
+        .and_then(|s| s.to_str())
+        .and_then(|stem| stem.rsplit_once('-'))
+        .and_then(|(_, tail)| u32::from_str_radix(tail, 16).ok())
+        .unwrap_or(LEGACY_INK_DEVICE)
 }
 
 /// 把一個 `.padnote` 套件目錄壓縮打包成單一檔案（format-spec §2、工作項 S-94）。
@@ -945,6 +1166,74 @@ pub fn extract_package(archive_file: &Path, out_dir: &Path) -> Result<(), Storag
 
 #[cfg(test)]
 mod tests {
+
+    /// 里程碑最怕的是壓實：壓實會改寫檔名裡的 lamport，而 lamport 就是
+    /// 里程碑的座標。這一項確認界線真的擋住了它 ——
+    /// 沒有這個保護的話，使用者按下還原會**沒有任何反應**，也沒有錯誤訊息。
+    #[test]
+    fn compaction_does_not_move_a_milestone_cut() {
+        let root = tmp("milestone-compaction");
+        let mut pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        let dev = 0xAAu32;
+
+        pkg.append_doc_ops(
+            1,
+            dev,
+            &[DocOp::SetTitle {
+                title: "甲".into()
+            }],
+        )
+        .unwrap();
+        let cut = pkg.current_cut().unwrap();
+        pkg.append_doc_ops(
+            2,
+            dev,
+            &[DocOp::MarkMilestone {
+                id: Uuid::from_bytes([7; 16]),
+                title: "里程碑".into(),
+                creator: "測試".into(),
+                created_unix_ms: 100,
+                cut: cut.clone(),
+                automatic: false,
+            }],
+        )
+        .unwrap();
+        for (l, t) in [(3u64, "乙"), (4, "丙"), (5, "丁"), (6, "戊")] {
+            pkg.append_doc_ops(l, dev, &[DocOp::SetTitle { title: t.into() }])
+                .unwrap();
+        }
+        let upto = pkg.current_cut().unwrap();
+        pkg.absorb_milestone_barriers().unwrap();
+        pkg.append_doc_ops(
+            7,
+            dev,
+            &[DocOp::RestoreMilestone {
+                milestone: Uuid::from_bytes([7; 16]),
+                cut,
+                upto,
+            }],
+        )
+        .unwrap();
+        pkg.absorb_milestone_barriers().unwrap();
+
+        let before: Vec<String> = titles_of(&pkg);
+        assert_eq!(before, ["甲"], "還原之後只該剩下快照當時的標題");
+
+        // 門檻設 2 —— 一定會嘗試壓實。
+        pkg.compact_own_doc_ops(2, dev).unwrap();
+        assert_eq!(titles_of(&pkg), before, "壓實之後里程碑的還原必須仍然成立");
+    }
+
+    fn titles_of(pkg: &NotebookPackage) -> Vec<String> {
+        pkg.read_doc_ops()
+            .unwrap()
+            .into_iter()
+            .filter_map(|o| match o {
+                DocOp::SetTitle { title } => Some(title),
+                _ => None,
+            })
+            .collect()
+    }
 
     #[test]
     fn oplog_files_are_listed_in_causal_order() {
@@ -1416,7 +1705,7 @@ mod tests {
 
         // 用一個**沒有金鑰**的把手壓實。
         let locked = NotebookPackage::open(&root).unwrap();
-        let outcome = locked.compact_own_doc_ops(5, 0xAA).unwrap().unwrap();
+        let outcome = locked.compact_own_doc_ops(5, 0xAA).unwrap().remove(0);
         assert_eq!(outcome.absorbed.len(), 5);
 
         // 壓實之後內容還在。
@@ -1566,7 +1855,7 @@ mod tests {
                 .unwrap();
         }
 
-        let outcome = pkg.compact_own_doc_ops(5, 0xAA).unwrap().unwrap();
+        let outcome = pkg.compact_own_doc_ops(5, 0xAA).unwrap().remove(0);
         assert_eq!(outcome.compacted_name, "0000000000000006-000000aa.oplog");
         assert_eq!(outcome.absorbed.len(), 5, "自己的五個碎檔該被吃掉");
 
@@ -1602,7 +1891,7 @@ mod tests {
             pkg.append_doc_ops(lamport, 0xAA, &[DocOp::SetTitle { title: "a".into() }])
                 .unwrap();
         }
-        assert!(pkg.compact_own_doc_ops(5, 0xAA).unwrap().is_none());
+        assert!(pkg.compact_own_doc_ops(5, 0xAA).unwrap().is_empty());
         assert_eq!(pkg.doc_op_files().unwrap().len(), 3);
     }
 
@@ -1623,7 +1912,7 @@ mod tests {
             .unwrap();
         }
         let before = pkg.read_doc_ops().unwrap().len();
-        pkg.compact_own_doc_ops(5, 0xAA).unwrap().unwrap();
+        pkg.compact_own_doc_ops(5, 0xAA).unwrap();
         assert_eq!(pkg.read_doc_ops().unwrap().len(), before);
     }
 

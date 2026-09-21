@@ -4,6 +4,7 @@
 //! 再建立 session、最後才啟動轉錄 —— 順序錯了就會出現「轉錄成功但音檔沒了」
 //! 這種最糟的失敗模式（Notability 的教訓）。
 
+use padnote_doc::milestone::Milestone;
 use padnote_doc::{
     Affine2, AudioSession, Block, BlockKind, CellSpan, ConnectionObject, DocOp, Notebook,
     NotebookTime, ObjectNode, ObjectTree, Page, PageTemplate, ShapeObject, TextCrdt, TextEditor,
@@ -26,6 +27,7 @@ pub enum AppError {
     NotRecording,
     PageNotFound(Uuid),
     BlockNotFound(Uuid),
+    MilestoneNotFound(Uuid),
     Recorder(RecorderError),
     Export(padnote_export::ExportError),
 }
@@ -38,6 +40,7 @@ impl fmt::Display for AppError {
             Self::NotRecording => write!(f, "目前沒有錄音"),
             Self::PageNotFound(id) => write!(f, "找不到頁面：{id}"),
             Self::BlockNotFound(id) => write!(f, "找不到區塊：{id}"),
+            Self::MilestoneNotFound(id) => write!(f, "找不到里程碑：{id}"),
             Self::Recorder(e) => write!(f, "{e}"),
             Self::Export(e) => write!(f, "{e}"),
         }
@@ -195,6 +198,10 @@ impl NotebookSession {
         // 但對**整份取代**類（SetNotebookMeta / SetBlockAppearance /
         // SetBlockPosition）就是靜默的資料回退：使用者改了、也存了，重開卻變回去。
         session.lamport = session.package.max_doc_lamport();
+
+        // 把別台裝置建的里程碑界線抄進本機 manifest，否則本機壓實自己的
+        // oplog 時會把對方的還原點踩掉（見 `absorb_milestone_barriers`）。
+        session.package.absorb_milestone_barriers()?;
 
         let ops = session.package.read_doc_ops()?;
         session.replay(&ops);
@@ -563,6 +570,11 @@ impl NotebookSession {
                     let _ = tree.ungroup(*id);
                 }
             }
+            // 里程碑不改變狀態：標記只是歷史上的一個名字，
+            // 還原的效果由 `padnote_doc::milestone::resolve` 在讀取時完成
+            // （被遮蔽的操作根本不會走到這裡）。
+            DocOp::MarkMilestone { .. } | DocOp::RestoreMilestone { .. } => {}
+
             DocOp::AddWord {
                 text,
                 start,
@@ -983,6 +995,104 @@ impl NotebookSession {
     }
 
     // ---- 手寫 ----
+
+    // ---- 里程碑快照（時光機，工作項 S-99）----
+
+    /// 全部里程碑，新的在前。
+    pub fn milestones(&self) -> Result<Vec<Milestone>, AppError> {
+        Ok(self.package.resolve_milestones()?.milestones)
+    }
+
+    /// 在「現在」這一刻插一個名字。
+    ///
+    /// 不複製任何內容 —— 記下的是一組向量時鐘（見 `padnote_doc::milestone`），
+    /// 所以一百個里程碑也還是幾百個位元組。
+    pub fn create_milestone(
+        &mut self,
+        title: &str,
+        creator: &str,
+        now_unix_ms: u64,
+        automatic: bool,
+    ) -> Result<Milestone, AppError> {
+        let cut = self.package.current_cut()?;
+        let milestone = Milestone {
+            id: Uuid::now_v7(),
+            title: title.to_string(),
+            creator: creator.to_string(),
+            created_unix_ms: now_unix_ms,
+            cut: cut.clone(),
+            automatic,
+        };
+        self.record(vec![DocOp::MarkMilestone {
+            id: milestone.id,
+            title: milestone.title.clone(),
+            creator: milestone.creator.clone(),
+            created_unix_ms: now_unix_ms,
+            cut,
+            automatic,
+        }])?;
+        // 界線要在**寫完之後**記，壓實才不會把這一刀併掉。
+        self.package.absorb_milestone_barriers()?;
+        Ok(milestone)
+    }
+
+    /// 還原到某個里程碑。回傳它之前的樣子存成了哪一個自動里程碑。
+    ///
+    /// # 為什麼一定要先自動建一個
+    ///
+    /// 還原本身也是 oplog 裡的一筆，也會被後來的還原遮蔽 —— 所以
+    /// 「取消這次還原」的做法就是還原到**下手之前**的那一刀。
+    /// 可是那一刀如果沒有名字，使用者就指不到它，時光機就成了單向的：
+    /// 按下去之後半小時的工作再也回不來，而且沒有任何錯誤訊息。
+    ///
+    /// 所以這裡不給選擇，一律先自動建一個。它幾百個位元組，換掉的是
+    /// 一個不可逆的操作。
+    ///
+    /// `safety_title` 是那個自動里程碑的名字，由平台層給 ——
+    /// 核心不編使用者看得到的字串，那些字有六種語言，只能住在 `i18n/`。
+    pub fn restore_milestone(
+        &mut self,
+        id: Uuid,
+        now_unix_ms: u64,
+        safety_title: &str,
+    ) -> Result<Milestone, AppError> {
+        let resolved = self.package.resolve_milestones()?;
+        let target = resolved
+            .milestones
+            .iter()
+            .find(|m| m.id == id)
+            .cloned()
+            .ok_or(AppError::MilestoneNotFound(id))?;
+
+        let safety = self.create_milestone(safety_title, &target.creator, now_unix_ms, true)?;
+
+        let upto = self.package.current_cut()?;
+        self.record(vec![DocOp::RestoreMilestone {
+            milestone: target.id,
+            cut: target.cut.clone(),
+            upto,
+        }])?;
+        self.package.absorb_milestone_barriers()?;
+
+        // 記憶體裡那份文件是照還原前的操作建起來的，現在整份重建。
+        self.reload_from_disk()?;
+        Ok(safety)
+    }
+
+    /// 丟掉記憶體中的文件狀態，照磁碟上目前**看得見**的操作重建。
+    ///
+    /// 只有還原會用到：一般的編輯是增量套用的，重建整份沒有必要而且很慢。
+    fn reload_from_disk(&mut self) -> Result<(), AppError> {
+        let title = self.package.manifest().title.clone();
+        self.notebook = Notebook::new(Uuid::now_v7(), title);
+        self.timeline = Timeline::new();
+        self.index = SearchIndex::new();
+        self.texts = Default::default();
+        self.objects = Default::default();
+        let ops = self.package.read_doc_ops()?;
+        self.replay(&ops);
+        Ok(())
+    }
 
     /// 寫入一筆畫。**立即落盤** —— 使用者抬筆那一刻資料就已經安全。
     pub fn add_stroke(&mut self, page: Uuid, mut stroke: Stroke) -> Result<(), AppError> {
@@ -2178,6 +2288,126 @@ mod tests {
             },
         ]);
         assert_eq!(s.notebook().page_count(), before + 2);
+    }
+
+    // ---- 里程碑快照（工作項 S-99）----
+
+    /// 時光機的主線：建快照 → 繼續改 → 還原 → 文字與筆跡都回到當時。
+    #[test]
+    fn a_milestone_restores_both_text_and_ink() {
+        let mut s = session("milestone-roundtrip");
+        let page = s.first_page().unwrap();
+        s.add_text_block(page, "第一段", TextStyle::Body).unwrap();
+        s.add_stroke(page, stroke()).unwrap();
+
+        let m = s
+            .create_milestone("交稿前", "阿寬", 1_757_635_200_000, false)
+            .unwrap();
+
+        // 之後才寫的東西
+        s.add_text_block(page, "第二段", TextStyle::Body).unwrap();
+        s.add_stroke(page, stroke()).unwrap();
+        assert_eq!(s.notebook.page(page).unwrap().blocks().len(), 2);
+        assert_eq!(s.visible_strokes(page).unwrap().len(), 2);
+
+        s.restore_milestone(m.id, 1_757_635_300_000, "還原前")
+            .unwrap();
+
+        assert_eq!(
+            s.notebook.page(page).unwrap().blocks().len(),
+            1,
+            "還原之後只該剩下快照當時的區塊"
+        );
+        assert_eq!(
+            s.visible_strokes(page).unwrap().len(),
+            1,
+            "筆跡與文件走的是兩套儲存，兩邊都要回到同一刀"
+        );
+    }
+
+    /// **還原一定要能反悔。** 這是整個設計裡最容易掉資料的地方：
+    /// 按下還原之後半小時的工作如果回不來，就是一次沒有錯誤訊息的資料遺失。
+    #[test]
+    fn restoring_can_itself_be_undone() {
+        let mut s = session("milestone-undo");
+        let page = s.first_page().unwrap();
+        s.add_text_block(page, "第一段", TextStyle::Body).unwrap();
+        let m = s
+            .create_milestone("交稿前", "阿寬", 1_757_635_200_000, false)
+            .unwrap();
+        s.add_text_block(page, "第二段", TextStyle::Body).unwrap();
+
+        // 還原會自動先建一個「還原之前」的里程碑並回傳它。
+        let safety = s
+            .restore_milestone(m.id, 1_757_635_300_000, "還原前")
+            .unwrap();
+        assert!(safety.automatic, "自動建立的要標記出來，UI 才分得開");
+        assert_eq!(s.notebook.page(page).unwrap().blocks().len(), 1);
+
+        s.restore_milestone(safety.id, 1_757_635_400_000, "還原前")
+            .unwrap();
+        assert_eq!(
+            s.notebook.page(page).unwrap().blocks().len(),
+            2,
+            "還原到「還原之前」那一刀，第二段必須回來"
+        );
+    }
+
+    /// 還原之後**繼續寫**的東西不可以被吃掉。
+    ///
+    /// 遮蔽規則若只看下界（「lamport 比快照大就遮」），使用者還原完再打的字
+    /// 會當場消失 —— 而且畫面上完全看不出原因。
+    #[test]
+    fn work_done_after_a_restore_survives() {
+        let mut s = session("milestone-after");
+        let page = s.first_page().unwrap();
+        let m = s
+            .create_milestone("開始", "阿寬", 1_757_635_200_000, false)
+            .unwrap();
+        s.add_text_block(page, "要被還原掉的", TextStyle::Body)
+            .unwrap();
+        s.restore_milestone(m.id, 1_757_635_300_000, "還原前")
+            .unwrap();
+
+        s.add_text_block(page, "還原之後寫的", TextStyle::Body)
+            .unwrap();
+        s.add_stroke(page, stroke()).unwrap();
+        assert_eq!(s.notebook.page(page).unwrap().blocks().len(), 1);
+        assert_eq!(s.visible_strokes(page).unwrap().len(), 1);
+
+        // 重開一次：效果必須是持久的，不是只活在記憶體裡。
+        let root = s.package.root().to_path_buf();
+        drop(s);
+        let s2 = NotebookSession::open(root, 0xA1).unwrap();
+        assert_eq!(s2.notebook.page(page).unwrap().blocks().len(), 1);
+        assert_eq!(s2.visible_strokes(page).unwrap().len(), 1);
+    }
+
+    /// 里程碑清單在還原之後不可以縮短 —— 少了那些名字就走不回去。
+    #[test]
+    fn the_milestone_list_survives_a_restore() {
+        let mut s = session("milestone-list");
+        let page = s.first_page().unwrap();
+        let first = s
+            .create_milestone("一", "阿寬", 1_757_635_200_000, false)
+            .unwrap();
+        s.add_text_block(page, "中間", TextStyle::Body).unwrap();
+        s.create_milestone("二", "阿寬", 1_757_635_250_000, false)
+            .unwrap();
+
+        s.restore_milestone(first.id, 1_757_635_300_000, "還原前")
+            .unwrap();
+        let names: Vec<String> = s
+            .milestones()
+            .unwrap()
+            .into_iter()
+            .map(|m| m.title)
+            .collect();
+        assert!(names.contains(&"一".to_string()));
+        assert!(
+            names.contains(&"二".to_string()),
+            "被遮蔽的區間裡的里程碑也要留著"
+        );
     }
 
     fn stroke() -> Stroke {

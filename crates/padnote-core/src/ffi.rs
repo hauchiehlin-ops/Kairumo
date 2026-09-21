@@ -290,6 +290,22 @@ pub struct TranscriptWordInput {
     pub confidence: f32,
 }
 
+/// 一個里程碑快照（工作項 S-99）。
+///
+/// 只有中繼資料 —— 快照本身是歷史上的一刀，不是內容的副本，
+/// 所以這裡沒有「大小」可言（見 `padnote_doc::milestone`）。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiMilestone {
+    pub id: String,
+    pub title: String,
+    pub creator: String,
+    /// Unix epoch 毫秒 —— 給人看的掛鐘時間。
+    pub created_unix_ms: u64,
+    /// 執行還原前自動建立的。UI 應該把它與使用者自己命名的分開呈現，
+    /// 否則按幾次還原之後，清單就被系統產生的項目淹沒了。
+    pub automatic: bool,
+}
+
 /// 繪製順序中的一項。
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct DrawItem {
@@ -753,6 +769,55 @@ impl PadnoteSession {
     pub fn set_title(&self, title: String) -> Result<(), FfiError> {
         self.lock().set_title(&title)?;
         Ok(())
+    }
+
+    // ---- 里程碑快照（時光機，工作項 S-99）----
+
+    /// 全部里程碑，新的在前。
+    pub fn milestones(&self) -> Result<Vec<FfiMilestone>, FfiError> {
+        Ok(self
+            .lock()
+            .milestones()?
+            .into_iter()
+            .map(ffi_milestone)
+            .collect())
+    }
+
+    /// 在現在這一刻插一個名字，回傳它。
+    ///
+    /// `now_unix_ms` 由平台層給 —— 核心刻意不讀系統時鐘（測試要能重現）。
+    pub fn create_milestone(
+        &self,
+        title: String,
+        creator: String,
+        now_unix_ms: u64,
+    ) -> Result<FfiMilestone, FfiError> {
+        Ok(ffi_milestone(self.lock().create_milestone(
+            &title,
+            &creator,
+            now_unix_ms,
+            false,
+        )?))
+    }
+
+    /// 還原到某個里程碑。
+    ///
+    /// **回傳的是「還原前」那一刻的自動里程碑** —— 再還原到它就等於取消
+    /// 這次還原。UI 應該把它顯示出來（例如「已還原，可回到 X」），
+    /// 不然使用者不會知道有退路。
+    /// `safety_title` 是那個自動里程碑要叫什麼名字 —— 由平台層給，
+    /// 核心不編使用者看得到的字串（那些字有六種語言，住在 `i18n/`）。
+    pub fn restore_milestone(
+        &self,
+        milestone_id: String,
+        now_unix_ms: u64,
+        safety_title: String,
+    ) -> Result<FfiMilestone, FfiError> {
+        Ok(ffi_milestone(self.lock().restore_milestone(
+            parse_uuid(&milestone_id)?,
+            now_unix_ms,
+            &safety_title,
+        )?))
     }
 
     /// 取得核心引擎版本號。
@@ -3112,5 +3177,15 @@ mod ink_palette_tests {
             assert!(entry.hex.starts_with('#'));
             assert!(u32::from_str_radix(&entry.hex[1..], 16).is_ok());
         }
+    }
+}
+
+fn ffi_milestone(m: padnote_doc::milestone::Milestone) -> FfiMilestone {
+    FfiMilestone {
+        id: m.id.to_string(),
+        title: m.title,
+        creator: m.creator,
+        created_unix_ms: m.created_unix_ms,
+        automatic: m.automatic,
     }
 }
