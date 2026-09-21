@@ -125,41 +125,12 @@ enum RecordingMigration {
         return report
     }
 
-    /// 把任何 AVFoundation 讀得懂的音檔解成核心要的 16 kHz 單聲道 f32。
+    /// 把舊音檔解成核心要的 16 kHz 單聲道 f32。
     ///
-    /// 與 `AudioTranscriber` 做的是同一件事 —— 轉錄早就需要這個格式了。
+    /// 直接用 `AudioPCMDecoder` —— 轉錄早就需要同一個格式了，
+    /// 再寫一份只會多一個會漂移的實作（而且兩份對取樣率邊界的處理
+    /// 一旦分岔，症狀是「有些檔案轉完之後聲音怪怪的」）。
     private static func decodeToCorePcm(url: URL) -> [Float]? {
-        guard let file = try? AVAudioFile(forReading: url) else { return nil }
-        let sourceFormat = file.processingFormat
-        guard let targetFormat = AVAudioFormat(
-            commonFormat: .pcmFormatFloat32, sampleRate: 16_000, channels: 1, interleaved: false),
-            let converter = AVAudioConverter(from: sourceFormat, to: targetFormat)
-        else { return nil }
-
-        let frames = AVAudioFrameCount(file.length)
-        guard frames > 0,
-              let input = AVAudioPCMBuffer(pcmFormat: sourceFormat, frameCapacity: frames),
-              (try? file.read(into: input)) != nil
-        else { return nil }
-
-        let ratio = targetFormat.sampleRate / sourceFormat.sampleRate
-        let capacity = AVAudioFrameCount(Double(input.frameLength) * ratio) + 1024
-        guard let output = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: capacity)
-        else { return nil }
-
-        var consumed = false
-        var error: NSError?
-        converter.convert(to: output, error: &error) { _, status in
-            if consumed {
-                status.pointee = .endOfStream
-                return nil
-            }
-            consumed = true
-            status.pointee = .haveData
-            return input
-        }
-        if error != nil { return nil }
-        guard output.frameLength > 0, let channel = output.floatChannelData?[0] else { return nil }
-        return Array(UnsafeBufferPointer(start: channel, count: Int(output.frameLength)))
+        try? AudioPCMDecoder.decodeTo16kMono(url: url)
     }
 }
