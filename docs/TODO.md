@@ -5,6 +5,26 @@
 
 ---
 
+## 🟢 一致性閘門（2026-09-22 四道全部上線）
+
+見 [`plans/consistency-gates.md`](plans/consistency-gates.md)。
+
+| 閘門 | 跑在哪 | 守什麼 |
+|---|---|---|
+| 1 一致性向量 | `Test (macOS)` + `android-instrumented` + `model-check` | 兩端讀同一份期望值（`docs/conformance/*.json`），不再各寫一份 |
+| 2 Apple 單元測試 | `Test (macOS)` | 374 項終於會跑（在此之前只有 `swiftc -parse`） |
+| 3 多裝置模型檢查 | `model-check` | 收斂／單調／冪等／快照回得去。**第一天抓到三個掉資料的 bug** |
+| 4 承諾的數字 | `Test (*)` | 同步可見延遲 ≤15s、墨跡延遲預算兩端一致 |
+
+**改核心的行為時，如果向量紅了，那不是測試壞掉** —— 那是在說
+「兩個平台的行為都會跟著改」。要改就 `UPDATE_CONFORMANCE=1` 重新產生，
+並連同兩端的測試一起檢視。
+
+**夜間／手動**：`cargo test -p padnote-core --test model_multi_device -- --ignored`
+（300 種子 × 400 步，約 23 分鐘）。抓到的種子一定要加進 `REGRESSION_SEEDS`。
+
+---
+
 ## 🔴 被硬體或資料卡住（程式已就緒）
 
 ### H-OPLOG-COMPAT. 舊版讀取器開不了新版寫的 oplog —— **等你拍板**
