@@ -52,6 +52,7 @@ use std::sync::Arc;
 use padnote_sync::gdrive::{DriveHttp, GDriveProvider};
 use padnote_sync::library::{INDEX_PATH, LibraryIndex};
 use padnote_sync::provider::{CloudProvider, SyncError};
+use padnote_sync::remote_index::{RemoteFile, RemoteIndex};
 use padnote_sync::settings::{SETTINGS_PATH, SyncedSettings};
 
 /// 平台要實作的 HTTP。
@@ -278,12 +279,19 @@ pub fn gdrive_sync_metadata(
     local_index_json: String,
 ) -> FfiCloudSyncResult {
     let drive = GDriveProvider::new(ForeignHttp(http));
+    sync_metadata_with(&drive, local_settings_json, local_index_json)
+}
 
-    let remote_settings = match read_or_empty(&drive, SETTINGS_PATH) {
+fn sync_metadata_with(
+    drive: &GDriveProvider<ForeignHttp>,
+    local_settings_json: String,
+    local_index_json: String,
+) -> FfiCloudSyncResult {
+    let remote_settings = match read_or_empty(drive, SETTINGS_PATH) {
         Ok(v) => v,
         Err(e) => return FfiCloudSyncResult::failed(local_settings_json, local_index_json, e),
     };
-    let remote_index = match read_or_empty(&drive, INDEX_PATH) {
+    let remote_index = match read_or_empty(drive, INDEX_PATH) {
         Ok(v) => v,
         Err(e) => return FfiCloudSyncResult::failed(local_settings_json, local_index_json, e),
     };
@@ -309,9 +317,22 @@ pub fn gdrive_sync_metadata(
 
 // ── 筆記本內容（oplog 檔鏡像）────────────────────────────────────
 
+/// 本機碎檔累積到幾個就壓實一次。
+///
+/// 太大會讓雲端累積大量小檔（新裝置第一次同步要下載幾百個）；
+/// 太小則每寫幾筆就重寫一個大檔，浪費頻寬。
+const COMPACT_THRESHOLD: usize = 5;
+
+/// 一輪同步最多刪幾個雲端檔案。刪除也是 HTTP 往返，不設上限的話，
+/// 一本累積很久的筆記本會把整輪同步拖到逾時。
+const MAX_DELETIONS_PER_SYNC: usize = 20;
+
 /// 一本筆記本的雲端 oplog 目錄。
+///
+/// 路徑一律由 `padnote_sync::paths` 產生 —— 自己拼字串的話，大小寫或
+/// Unicode 正規化差一點點，兩台裝置就會寫到不同的檔案而且沒有任何錯誤。
 fn notebook_ops_prefix(notebook_id: &str) -> String {
-    format!("notebooks/{notebook_id}/doc/ops")
+    padnote_sync::paths::notebook_ops_prefix(notebook_id)
 }
 
 /// 一次筆記本同步的結果。
@@ -327,93 +348,126 @@ pub struct FfiNotebookSyncResult {
     pub needs_reauth: bool,
 }
 
-/// 同步一本筆記本的內容。
+/// 雲端某個前綴底下的檔案：`短檔名 → 檔案`。
 ///
-/// `package_path` 是本機 `.padnote` 套件的路徑。
+/// 索引已經建立好時**一次 HTTP 都不打** —— 這就是「沒變動的就不要花時間
+/// 去動它」真正成立的地方。索引還沒建立（舊流程、或剛重建失敗）時退回
+/// 逐前綴列舉，行為與以前一樣，只是慢。
+fn remote_entries(
+    drive: &GDriveProvider<ForeignHttp>,
+    index: &RemoteIndex,
+    prefix: &str,
+) -> Result<std::collections::BTreeMap<String, RemoteFile>, SyncError> {
+    if !index.needs_rebuild() {
+        return Ok(index.entries_under(prefix));
+    }
+    let entries = drive.list(prefix)?;
+    Ok(entries
+        .into_iter()
+        .filter_map(|e| {
+            let name = e.path.rsplit('/').next()?.to_string();
+            Some((
+                padnote_sync::paths::canonical_name(&name),
+                RemoteFile {
+                    // 走舊路徑時還不知道 file id；空字串表示「存取時要自己查」。
+                    id: String::new(),
+                    name: e.path.clone(),
+                    size: e.size,
+                },
+            ))
+        })
+        .collect())
+}
+
+/// 上傳一個檔案，回傳它的 file id。
 ///
-/// **這個函式會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
-#[uniffi::export]
-pub fn gdrive_sync_notebook(
-    http: Arc<dyn FfiDriveHttp>,
-    package_path: String,
-    notebook_id: String,
+/// 已經知道 id 就直接 PATCH 上去 —— 舊流程每次上傳前都要再 `files.list`
+/// 一次去找 id，那是同步時間裡最不值得的一段。
+fn upload_file(
+    drive: &GDriveProvider<ForeignHttp>,
+    existing: Option<&RemoteFile>,
+    path: &str,
+    bytes: &[u8],
+) -> Result<String, SyncError> {
+    match existing {
+        Some(file) if !file.id.is_empty() => {
+            drive.put_to_id(&file.id, bytes)?;
+            Ok(file.id.clone())
+        }
+        // 雲端已經有這個名字但 id 未知（舊路徑）：用路徑上傳，它會自己查。
+        Some(file) => {
+            drive.put(&file.name, bytes)?;
+            Ok(String::new())
+        }
+        None => drive.create_and_upload(path, bytes),
+    }
+}
+
+fn download_file(
+    drive: &GDriveProvider<ForeignHttp>,
+    file: &RemoteFile,
+) -> Result<Vec<u8>, SyncError> {
+    if file.id.is_empty() {
+        drive.get_all(&file.name)
+    } else {
+        drive.get_all_by_id(&file.id)
+    }
+}
+
+/// 同步一本筆記本的 oplog 檔。
+///
+/// # 刪除一定排在上傳之後
+///
+/// 壓實之後，雲端上被涵蓋的舊碎檔要刪掉，否則雲端會無限累積。
+/// 但**先刪再傳**的話，中間斷網、逾時或 App 被系統殺掉，那些操作就只剩
+/// 本機這一份 —— 雲端沒有、另一台裝置永遠拿不到。這是一個真的會掉資料的
+/// 順序錯誤，而且它不會有任何錯誤訊息。
+///
+/// 而且只刪**自己這台裝置**壓實掉的那幾個，名單由
+/// [`padnote_storage::NotebookPackage::compact_own_doc_ops`] 明確給出。
+/// 舊版是用「lamport 比本機最大值小」去推論的，那個推論在本機還沒下載到
+/// 中間某個碎檔時會錯，而錯的代價是刪掉一份本機從來沒有過的操作。
+fn sync_notebook_ops(
+    drive: &GDriveProvider<ForeignHttp>,
+    index: &mut RemoteIndex,
+    package_path: &str,
+    notebook_id: &str,
+    device_id: u32,
 ) -> FfiNotebookSyncResult {
-    let package = match padnote_storage::NotebookPackage::open(std::path::Path::new(&package_path))
-    {
+    let package = match padnote_storage::NotebookPackage::open(std::path::Path::new(package_path)) {
         Ok(p) => p,
         Err(e) => return notebook_failed(format!("開不了套件：{e}")),
     };
-    // 上傳前先做 oplog 壓實：當本機碎檔達到 5 個時，合併以大幅減少 HTTP PUT 次數
-    let _ = package.compact_doc_ops(5);
+
+    // 壓實只碰自己的檔。device_id 為 0 表示呼叫端沒給（舊 API），
+    // 那就不壓實也不刪任何雲端檔案 —— 不確定擁有權時，寧可讓雲端多留幾個檔。
+    let compaction = if device_id != 0 {
+        package
+            .compact_own_doc_ops(COMPACT_THRESHOLD, device_id)
+            .unwrap_or(None)
+    } else {
+        None
+    };
+
     let local = match package.doc_op_files() {
         Ok(files) => files,
         Err(e) => return notebook_failed(format!("讀不到本機 oplog：{e}")),
     };
-
-    let drive = GDriveProvider::new(ForeignHttp(http));
-    let prefix = notebook_ops_prefix(&notebook_id);
-
-    let remote = match drive.list(&prefix) {
+    let prefix = notebook_ops_prefix(notebook_id);
+    let remote = match remote_entries(drive, index, &prefix) {
         Ok(entries) => entries,
         Err(e) => return from_sync_error(e),
     };
-    let remote_by_name: std::collections::BTreeMap<String, u64> = remote
-        .into_iter()
-        .filter_map(|e| {
-            let name = e.path.rsplit('/').next()?.to_string();
-            Some((name, e.size))
-        })
-        .collect();
 
-    // 計算本機各裝置的最大 lamport。若本機已存在該裝置更大或相同 lamport 的檔（例如已壓實），
-    // 雲端較舊的碎檔（小於最大 lamport）就無需下載，因為其操作已完整包含在本機壓實檔中。
-    let mut local_max_lamport_by_device: std::collections::HashMap<String, u64> =
-        std::collections::HashMap::new();
-    for (name, _) in &local {
-        if let Some(pos) = name.rfind('-') {
-            let dev_suffix = &name[pos..];
-            let lamport_hex = &name[..pos];
-            if let Ok(l) = u64::from_str_radix(lamport_hex, 16) {
-                let entry = local_max_lamport_by_device
-                    .entry(dev_suffix.to_string())
-                    .or_insert(0);
-                if l > *entry {
-                    *entry = l;
-                }
-            }
-        }
-    }
-
-    // 清理雲端已被本機壓實檔完整涵蓋的舊碎檔（避免雲端無限積累歷史碎檔導致下載幾百個檔案逾時）
-    let mut deleted_files = std::collections::HashSet::new();
-    const MAX_DELETIONS_PER_SYNC: usize = 20;
-
-    for name in remote_by_name.keys() {
-        if deleted_files.len() >= MAX_DELETIONS_PER_SYNC {
-            break;
-        }
-        if let Some(pos) = name.rfind('-') {
-            let dev_suffix = &name[pos..];
-            let lamport_hex = &name[..pos];
-            if let Ok(l) = u64::from_str_radix(lamport_hex, 16)
-                && let Some(&max_l) = local_max_lamport_by_device.get(dev_suffix)
-                && l < max_l
-            {
-                deleted_files.insert(name.clone());
-                let _ = drive.delete(&format!("{prefix}/{name}"));
-            }
-        }
-    }
-
-    // 上傳：雲端沒有的，或者本機這一份比較長的。
+    // ── 上傳 ────────────────────────────────────────────────
     //
     // 比長度而不是只看「有沒有」：`append_doc_ops` 在同一個 lamport 上是
-    // **追加**，所以一個已經上傳過的檔仍然可能變長。只看存在與否的話，
-    // 後面追加的那幾筆操作永遠傳不出去。
+    // **追加**，所以一個已經上傳過的檔仍然可能變長。
     let mut uploaded = 0u32;
     for (name, size) in &local {
-        let remote_size = remote_by_name.get(name).copied().unwrap_or(0);
-        if *size <= remote_size {
+        let key = padnote_sync::paths::canonical_name(name);
+        let existing = remote.get(&key);
+        if *size <= existing.map_or(0, |f| f.size) {
             continue;
         }
         let bytes = match package.read_doc_op_file(name) {
@@ -425,44 +479,65 @@ pub fn gdrive_sync_notebook(
             }
             Err(e) => return notebook_failed(format!("讀不到 {name}：{e}")),
         };
-        let is_new = !remote_by_name.contains_key(name);
-        let res = if is_new {
-            drive.put_new(&format!("{prefix}/{name}"), &bytes)
-        } else {
-            drive.put(&format!("{prefix}/{name}"), &bytes)
-        };
-        if let Err(e) = res {
-            return from_sync_error(e);
+        let path = padnote_sync::paths::notebook_op_file(notebook_id, name);
+        match upload_file(drive, existing, &path, &bytes) {
+            Ok(id) => {
+                if !id.is_empty() {
+                    index.note_upload(&path, &id, bytes.len() as u64);
+                }
+            }
+            Err(e) => return from_sync_error(e),
         }
         uploaded += 1;
     }
 
-    // 下載：本機沒有的，或者雲端那一份比較長的。
-    let local_by_name: std::collections::BTreeMap<&str, u64> =
-        local.iter().map(|(n, s)| (n.as_str(), *s)).collect();
-    let mut downloaded = 0u32;
-    for (name, remote_size) in &remote_by_name {
-        let local_size = local_by_name.get(name.as_str()).copied().unwrap_or(0);
-        if *remote_size <= local_size {
-            continue;
-        }
-        // 若雲端檔的 lamport 嚴格小於本機已存在的該裝置最大 lamport，代表此碎檔已在壓實檔中，跳過下載並清理雲端舊檔
-        if let Some(pos) = name.rfind('-') {
-            let dev_suffix = &name[pos..];
-            let lamport_hex = &name[..pos];
-            let is_shadowed = u64::from_str_radix(lamport_hex, 16)
-                .ok()
-                .zip(local_max_lamport_by_device.get(dev_suffix).copied())
-                .is_some_and(|(l, max_l)| l < max_l);
-            if is_shadowed {
-                if deleted_files.len() < MAX_DELETIONS_PER_SYNC && deleted_files.insert(name.clone()) {
-                    let _ = drive.delete(&format!("{prefix}/{name}"));
+    // ── 上傳成功之後，才刪雲端上被自己壓實掉的碎檔 ──────────────
+    if let Some(outcome) = &compaction {
+        let compacted_key = padnote_sync::paths::canonical_name(&outcome.compacted_name);
+        let local_compacted_size = local
+            .iter()
+            .find(|(n, _)| padnote_sync::paths::canonical_name(n) == compacted_key)
+            .map(|(_, s)| *s)
+            .unwrap_or(0);
+        // 雲端那一份必須**確實涵蓋**本機的壓實檔，才准刪它吃掉的碎檔。
+        // 這一輪剛上傳過就一定成立；沒上傳（雲端本來就更長）也成立。
+        let covered = uploaded > 0
+            || remote
+                .get(&compacted_key)
+                .is_some_and(|f| f.size >= local_compacted_size);
+        if covered {
+            for name in outcome.absorbed.iter().take(MAX_DELETIONS_PER_SYNC) {
+                let path = padnote_sync::paths::notebook_op_file(notebook_id, name);
+                let key = padnote_sync::paths::canonical_name(name);
+                if let Some(file) = remote.get(&key) {
+                    let target = if file.id.is_empty() {
+                        path.clone()
+                    } else {
+                        file.name.clone()
+                    };
+                    let _ = CloudProvider::delete(drive, &target);
                 }
-                continue;
+                index.note_delete(&path);
             }
         }
-        let bytes = match drive.get_all(&format!("{prefix}/{name}")) {
+    }
+
+    // ── 下載 ────────────────────────────────────────────────
+    let local_by_key: std::collections::BTreeMap<String, u64> = local
+        .iter()
+        .map(|(n, s)| (padnote_sync::paths::canonical_name(n), *s))
+        .collect();
+    let mut downloaded = 0u32;
+    for (name, file) in &remote {
+        let local_size = local_by_key.get(name).copied().unwrap_or(0);
+        if file.size <= local_size {
+            continue;
+        }
+        let bytes = match download_file(drive, file) {
             Ok(b) => b,
+            // 對面剛好把它壓實掉了：這一輪拿不到不是錯誤，下一輪會拿到
+            // 涵蓋它的那個檔。當成失敗的話，整輪同步會停在這裡。
+            Err(SyncError::NotFound(_)) => continue,
             Err(e) => return from_sync_error(e),
         };
         // 檔名來自雲端，是不可信輸入 —— `write_doc_op_file` 會擋掉
@@ -473,45 +548,6 @@ pub fn gdrive_sync_notebook(
         downloaded += 1;
     }
 
-    // 若下載了新的碎檔，同步完成前再次壓實，保持套件精簡，並清理雲端已被壓實涵蓋的舊碎檔
-    if downloaded > 0 {
-        let _ = package.compact_doc_ops(5);
-        if let Ok(post_local) = package.doc_op_files() {
-            let mut post_max_lamport_by_device: std::collections::HashMap<String, u64> =
-                std::collections::HashMap::new();
-            for (name, _) in &post_local {
-                if let Some(pos) = name.rfind('-') {
-                    let dev_suffix = &name[pos..];
-                    let lamport_hex = &name[..pos];
-                    if let Ok(l) = u64::from_str_radix(lamport_hex, 16) {
-                        let entry = post_max_lamport_by_device
-                            .entry(dev_suffix.to_string())
-                            .or_insert(0);
-                        if l > *entry {
-                            *entry = l;
-                        }
-                    }
-                }
-            }
-            for name in remote_by_name.keys() {
-                if deleted_files.contains(name) || deleted_files.len() >= MAX_DELETIONS_PER_SYNC {
-                    continue;
-                }
-                if let Some(pos) = name.rfind('-') {
-                    let dev_suffix = &name[pos..];
-                    let lamport_hex = &name[..pos];
-                    if let Ok(l) = u64::from_str_radix(lamport_hex, 16)
-                        && let Some(&max_l) = post_max_lamport_by_device.get(dev_suffix)
-                        && l < max_l
-                    {
-                        deleted_files.insert(name.clone());
-                        let _ = drive.delete(&format!("{prefix}/{name}"));
-                    }
-                }
-            }
-        }
-    }
-
     FfiNotebookSyncResult {
         ok: true,
         uploaded,
@@ -519,6 +555,26 @@ pub fn gdrive_sync_notebook(
         error: String::new(),
         needs_reauth: false,
     }
+}
+
+/// 同步一本筆記本的內容。
+///
+/// `package_path` 是本機 `.padnote` 套件的路徑。
+/// `device_id` 為 0 表示呼叫端沒提供 —— 那就不壓實也不刪雲端檔案。
+///
+/// 新的呼叫端請走 [`FfiSyncSession`]：它帶著 `RemoteIndex`，
+/// 逐本筆記的列舉整個消失。這個自由函式保留給還沒搬過去的路徑。
+///
+/// **這個函式會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
+#[uniffi::export]
+pub fn gdrive_sync_notebook(
+    http: Arc<dyn FfiDriveHttp>,
+    package_path: String,
+    notebook_id: String,
+) -> FfiNotebookSyncResult {
+    let drive = GDriveProvider::new(ForeignHttp(http));
+    let mut index = RemoteIndex::default();
+    sync_notebook_ops(&drive, &mut index, &package_path, &notebook_id, 0)
 }
 
 /// 同步一本筆記本的**媒體檔**（圖片 blob 與錄音）。
@@ -532,18 +588,17 @@ pub fn gdrive_sync_notebook(
 ///   只看存在與否的話，一段還在錄的音永遠只會同步到第一次的長度。
 ///
 /// **這個函式會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
-#[uniffi::export]
-pub fn gdrive_sync_media(
-    http: Arc<dyn FfiDriveHttp>,
-    package_path: String,
-    notebook_id: String,
+fn sync_notebook_media(
+    drive: &GDriveProvider<ForeignHttp>,
+    index: &mut RemoteIndex,
+    package_path: &str,
+    notebook_id: &str,
 ) -> FfiNotebookSyncResult {
-    let root = std::path::Path::new(&package_path);
+    let root = std::path::Path::new(package_path);
     let package = match padnote_storage::NotebookPackage::open(root) {
         Ok(p) => p,
         Err(e) => return notebook_failed(format!("開不了套件：{e}")),
     };
-    let drive = GDriveProvider::new(ForeignHttp(http));
 
     let mut uploaded = 0u32;
     let mut downloaded = 0u32;
@@ -554,18 +609,16 @@ pub fn gdrive_sync_media(
         Ok(ids) => ids,
         Err(e) => return notebook_failed(format!("列不出 blob：{e}")),
     };
-    let blob_prefix = format!("notebooks/{notebook_id}/media/blobs");
-    let remote_blobs: std::collections::BTreeSet<String> = match drive.list(&blob_prefix) {
-        Ok(entries) => entries
-            .into_iter()
-            .filter_map(|e| Some(e.path.rsplit('/').next()?.to_string()))
-            .collect(),
+    let blob_prefix = padnote_sync::paths::notebook_blobs_prefix(notebook_id);
+    let remote_blobs = match remote_entries(drive, index, &blob_prefix) {
+        Ok(entries) => entries,
         Err(e) => return from_sync_error(e),
     };
 
     for id in &local_blobs {
         let name = id.to_string();
-        if remote_blobs.contains(&name) {
+        let key = padnote_sync::paths::canonical_name(&name);
+        if remote_blobs.contains_key(&key) {
             continue;
         }
         let bytes = match blobs.get(*id) {
@@ -574,20 +627,25 @@ pub fn gdrive_sync_media(
             // 其他裝置也會跟著壞。
             Err(e) => return notebook_failed(format!("blob {name} 損毀：{e}")),
         };
-        if let Err(e) = drive.put_new(&format!("{blob_prefix}/{name}"), &bytes) {
-            return from_sync_error(e);
+        let path = padnote_sync::paths::notebook_blob_file(notebook_id, &name);
+        match drive.create_and_upload(&path, &bytes) {
+            Ok(file_id) => index.note_upload(&path, &file_id, bytes.len() as u64),
+            Err(e) => return from_sync_error(e),
         }
         uploaded += 1;
     }
 
-    let local_blob_names: std::collections::BTreeSet<String> =
-        local_blobs.iter().map(|id| id.to_string()).collect();
-    for name in &remote_blobs {
+    let local_blob_names: std::collections::BTreeSet<String> = local_blobs
+        .iter()
+        .map(|id| padnote_sync::paths::canonical_name(&id.to_string()))
+        .collect();
+    for (name, file) in &remote_blobs {
         if local_blob_names.contains(name) {
             continue;
         }
-        let bytes = match drive.get_all(&format!("{blob_prefix}/{name}")) {
+        let bytes = match download_file(drive, file) {
             Ok(b) => b,
+            Err(SyncError::NotFound(_)) => continue,
             Err(e) => return from_sync_error(e),
         };
         // **驗雜湊。** blob 的檔名就是內容的雜湊，所以對不上就代表
@@ -613,17 +671,16 @@ pub fn gdrive_sync_media(
         Ok(files) => files,
         Err(e) => return notebook_failed(format!("列不出錄音：{e}")),
     };
-    let audio_prefix = format!("notebooks/{notebook_id}/media/audio");
-    let remote_audio: std::collections::BTreeMap<String, u64> = match drive.list(&audio_prefix) {
-        Ok(entries) => entries
-            .into_iter()
-            .filter_map(|e| Some((e.path.rsplit('/').next()?.to_string(), e.size)))
-            .collect(),
+    let audio_prefix = padnote_sync::paths::notebook_audio_prefix(notebook_id);
+    let remote_audio = match remote_entries(drive, index, &audio_prefix) {
+        Ok(entries) => entries,
         Err(e) => return from_sync_error(e),
     };
 
     for (name, size) in &local_audio {
-        if *size <= remote_audio.get(name).copied().unwrap_or(0) {
+        let key = padnote_sync::paths::canonical_name(name);
+        let existing = remote_audio.get(&key);
+        if *size <= existing.map_or(0, |f| f.size) {
             continue;
         }
         let bytes = match package.read_audio_file(name) {
@@ -635,26 +692,29 @@ pub fn gdrive_sync_media(
             }
             Err(e) => return notebook_failed(format!("讀不到錄音 {name}：{e}")),
         };
-        let is_new = !remote_audio.contains_key(name);
-        let res = if is_new {
-            drive.put_new(&format!("{audio_prefix}/{name}"), &bytes)
-        } else {
-            drive.put(&format!("{audio_prefix}/{name}"), &bytes)
-        };
-        if let Err(e) = res {
-            return from_sync_error(e);
+        let path = padnote_sync::paths::notebook_audio_file(notebook_id, name);
+        match upload_file(drive, existing, &path, &bytes) {
+            Ok(file_id) => {
+                if !file_id.is_empty() {
+                    index.note_upload(&path, &file_id, bytes.len() as u64);
+                }
+            }
+            Err(e) => return from_sync_error(e),
         }
         uploaded += 1;
     }
 
-    let local_audio_sizes: std::collections::BTreeMap<&str, u64> =
-        local_audio.iter().map(|(n, s)| (n.as_str(), *s)).collect();
-    for (name, remote_size) in &remote_audio {
-        if *remote_size <= local_audio_sizes.get(name.as_str()).copied().unwrap_or(0) {
+    let local_audio_sizes: std::collections::BTreeMap<String, u64> = local_audio
+        .iter()
+        .map(|(n, s)| (padnote_sync::paths::canonical_name(n), *s))
+        .collect();
+    for (name, file) in &remote_audio {
+        if file.size <= local_audio_sizes.get(name).copied().unwrap_or(0) {
             continue;
         }
-        let bytes = match drive.get_all(&format!("{audio_prefix}/{name}")) {
+        let bytes = match download_file(drive, file) {
             Ok(b) => b,
+            Err(SyncError::NotFound(_)) => continue,
             Err(e) => return from_sync_error(e),
         };
         if let Err(e) = package.write_audio_file(name, &bytes) {
@@ -670,6 +730,20 @@ pub fn gdrive_sync_media(
         error: String::new(),
         needs_reauth: false,
     }
+}
+
+/// 同步一本筆記本的媒體檔（自由函式版本，保留給還沒搬到 [`FfiSyncSession`] 的路徑）。
+///
+/// **這個函式會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
+#[uniffi::export]
+pub fn gdrive_sync_media(
+    http: Arc<dyn FfiDriveHttp>,
+    package_path: String,
+    notebook_id: String,
+) -> FfiNotebookSyncResult {
+    let drive = GDriveProvider::new(ForeignHttp(http));
+    let mut index = RemoteIndex::default();
+    sync_notebook_media(&drive, &mut index, &package_path, &notebook_id)
 }
 
 /// 把一本**只存在於雲端**的筆記本抓下來。
@@ -702,7 +776,9 @@ pub fn gdrive_clone_notebook(
         return notebook_failed(format!("建不了套件：{e}"));
     }
 
-    let ops = gdrive_sync_notebook(http.clone(), package_path.clone(), notebook_id.clone());
+    let drive = GDriveProvider::new(ForeignHttp(http));
+    let mut index = RemoteIndex::default();
+    let ops = sync_notebook_ops(&drive, &mut index, &package_path, &notebook_id, 0);
     if !ops.ok {
         let _ = std::fs::remove_dir_all(root);
         return ops;
@@ -726,7 +802,7 @@ pub fn gdrive_clone_notebook(
 
     // 媒體接在 oplog 之後，理由與平台那一側相同：oplog 裡的 AddImage 會指向
     // 一個 blob id，媒體還沒到的話那一頁是一個指向不存在檔案的圖片區塊。
-    let media = gdrive_sync_media(http, package_path, notebook_id);
+    let media = sync_notebook_media(&drive, &mut index, &package_path, &notebook_id);
     FfiNotebookSyncResult {
         ok: media.ok,
         uploaded: ops.uploaded + media.uploaded,
@@ -734,6 +810,310 @@ pub fn gdrive_clone_notebook(
         error: media.error,
         needs_reauth: media.needs_reauth,
     }
+}
+
+
+// ── 同步工作階段（P1）──────────────────────────────────────────────
+
+/// 一次重新整理雲端快照的結果。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiRefreshResult {
+    pub ok: bool,
+    /// 這一輪有幾筆變更。0 表示雲端完全沒動 —— 上層可以直接跳過整輪同步。
+    pub changed: u32,
+    /// 走了全量重建（第一次、或游標過期）。
+    pub full_rebuild: bool,
+    /// 目前快照裡有幾個檔案。給「同步醫生」畫面看的。
+    pub tracked_files: u32,
+    pub error: String,
+    pub needs_reauth: bool,
+}
+
+/// 帶著雲端快照的同步工作階段。
+///
+/// # 為什麼要有這個物件
+///
+/// 舊流程每同步一本筆記本就打一次 `files.list`，**不管有沒有變動**。
+/// 50 本筆記 = 50 次往返，而其中 49 次的答案是「沒事」。
+///
+/// 這個物件握著一份 [`RemoteIndex`]：一次 `changes.list` 更新它，
+/// 之後所有「要上傳什麼、要下載什麼、這本要不要碰」的判斷**全部在本機算，
+/// 零 HTTP**。這就是「沒變動的就不要再花時間去動它」真正成立的地方。
+///
+/// 快照要由平台層持久化（[`Self::index_json`]），否則每次開 App 都要
+/// 重建一次基準。
+#[derive(Debug, uniffi::Object)]
+pub struct FfiSyncSession {
+    drive: GDriveProvider<ForeignHttp>,
+    index: std::sync::Mutex<RemoteIndex>,
+}
+
+#[uniffi::export]
+impl FfiSyncSession {
+    /// `remote_index_json` 是上次存下來的快照；空字串表示還沒有。
+    #[uniffi::constructor]
+    pub fn create(http: Arc<dyn FfiDriveHttp>, remote_index_json: String) -> Arc<Self> {
+        Arc::new(Self {
+            drive: GDriveProvider::new(ForeignHttp(http)),
+            index: std::sync::Mutex::new(RemoteIndex::from_json(&remote_index_json)),
+        })
+    }
+
+    /// 目前的快照。**平台層每輪同步後都要存回去。**
+    pub fn index_json(&self) -> String {
+        self.index.lock().unwrap().to_json()
+    }
+
+    /// 快照裡有幾個檔案。
+    pub fn tracked_files(&self) -> u32 {
+        self.index.lock().unwrap().len() as u32
+    }
+
+    /// 快照還沒建立（下一次 refresh 會走全量列舉）。
+    pub fn needs_rebuild(&self) -> bool {
+        self.index.lock().unwrap().needs_rebuild()
+    }
+
+    /// 把雲端的變動拉進快照。**一輪同步只需要呼叫這一次。**
+    ///
+    /// 沒有游標時走全量列舉建立基準；有游標時走 `changes.list`，
+    /// 沒有變動就是一次空回應。游標過期（Drive 回 410）會自動退回重建。
+    ///
+    /// **這個方法會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
+    pub fn refresh(&self) -> FfiRefreshResult {
+        let needs_rebuild = self.index.lock().unwrap().needs_rebuild();
+        if needs_rebuild {
+            return self.rebuild();
+        }
+        let token = self.index.lock().unwrap().page_token.clone();
+        match self.drive.fetch_changes(&token) {
+            Ok(batch) => {
+                let mut index = self.index.lock().unwrap();
+                let changed = batch.changes.len() as u32;
+                for change in &batch.changes {
+                    index.apply(
+                        &change.file_id,
+                        change.name.as_deref(),
+                        change.size,
+                        change.gone,
+                    );
+                }
+                index.page_token = batch.new_token;
+                FfiRefreshResult {
+                    ok: true,
+                    changed,
+                    full_rebuild: false,
+                    tracked_files: index.len() as u32,
+                    error: String::new(),
+                    needs_reauth: false,
+                }
+            }
+            // 游標過期是正常的（Drive 大約保留數週）。退回重建一次，
+            // 那是唯一的慢路徑，而且自我修復。
+            Err(e) if padnote_sync::gdrive::is_cursor_expired(&e) => self.rebuild(),
+            Err(e) => refresh_failed(e),
+        }
+    }
+
+    /// 這本筆記本有沒有事要做。**完全在本機算，一次 HTTP 都不打。**
+    ///
+    /// 這是整個改善的重點：使用者要的「沒變動的就不要再花時間去動它」，
+    /// 在舊流程裡做不到 —— 要知道有沒有變動就得先問雲端，而問本身就是成本。
+    ///
+    /// 快照還沒建立時一律回 true（不知道就別跳過）。
+    pub fn notebook_needs_sync(&self, package_path: String, notebook_id: String) -> bool {
+        let index = self.index.lock().unwrap();
+        if index.needs_rebuild() {
+            return true;
+        }
+        let Ok(package) = padnote_storage::NotebookPackage::open(std::path::Path::new(
+            &package_path,
+        )) else {
+            return true;
+        };
+        let ops_diff = differs(
+            &package.doc_op_files().unwrap_or_default(),
+            &index.entries_under(&notebook_ops_prefix(&notebook_id)),
+        );
+        if ops_diff {
+            return true;
+        }
+        let audio_diff = differs(
+            &package.audio_files().unwrap_or_default(),
+            &index.entries_under(&padnote_sync::paths::notebook_audio_prefix(&notebook_id)),
+        );
+        if audio_diff {
+            return true;
+        }
+        // blob 是內容定址的，只看名字在不在。
+        let local_blobs: std::collections::BTreeSet<String> = package
+            .blobs()
+            .list()
+            .unwrap_or_default()
+            .iter()
+            .map(|id| padnote_sync::paths::canonical_name(&id.to_string()))
+            .collect();
+        let remote_blobs = index.entries_under(&padnote_sync::paths::notebook_blobs_prefix(
+            &notebook_id,
+        ));
+        let remote_blob_names: std::collections::BTreeSet<String> =
+            remote_blobs.keys().cloned().collect();
+        local_blobs != remote_blob_names
+    }
+
+    /// 同步一本筆記本的 oplog 與媒體。
+    ///
+    /// `device_id` 是這台裝置的 id：壓實與雲端清理**只碰自己的檔案**。
+    ///
+    /// **這個方法會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
+    pub fn sync_notebook(
+        &self,
+        package_path: String,
+        notebook_id: String,
+        device_id: u32,
+    ) -> FfiNotebookSyncResult {
+        let mut index = self.index.lock().unwrap();
+        let ops = sync_notebook_ops(
+            &self.drive,
+            &mut index,
+            &package_path,
+            &notebook_id,
+            device_id,
+        );
+        if !ops.ok {
+            return ops;
+        }
+        // 媒體接在 oplog 之後。順序很重要：oplog 裡的 AddImage 會指向一個
+        // blob id，媒體還沒到的話，那一頁會有一個指向不存在檔案的圖片區塊。
+        let media = sync_notebook_media(&self.drive, &mut index, &package_path, &notebook_id);
+        FfiNotebookSyncResult {
+            ok: media.ok,
+            uploaded: ops.uploaded + media.uploaded,
+            downloaded: ops.downloaded + media.downloaded,
+            error: media.error,
+            needs_reauth: media.needs_reauth,
+        }
+    }
+
+    /// 把一本只存在於雲端的筆記本整本抓下來。
+    pub fn clone_notebook(
+        &self,
+        package_path: String,
+        notebook_id: String,
+        title: String,
+        now_unix_ms: u64,
+    ) -> FfiNotebookSyncResult {
+        let root = std::path::Path::new(&package_path);
+        if padnote_storage::NotebookPackage::open(root).is_err()
+            && let Err(e) = padnote_storage::NotebookPackage::create(root, &title, now_unix_ms)
+        {
+            return notebook_failed(format!("建不了套件：{e}"));
+        }
+        let result = {
+            let mut index = self.index.lock().unwrap();
+            sync_notebook_ops(&self.drive, &mut index, &package_path, &notebook_id, 0)
+        };
+        if !result.ok {
+            let _ = std::fs::remove_dir_all(root);
+            return result;
+        }
+        // 只有 manifest 的空殼比沒有更糟：下一輪看到目錄存在就會跳過重抓，
+        // 使用者得到一本永遠打不開的筆記。
+        let has_ops = padnote_storage::NotebookPackage::open(root)
+            .map(|p| !p.doc_op_files().unwrap_or_default().is_empty())
+            .unwrap_or(false);
+        if !has_ops {
+            let _ = std::fs::remove_dir_all(root);
+            return notebook_failed(
+                "雲端尚無此筆記本之操作記錄，已清理暫存等待來源端上傳".to_string(),
+            );
+        }
+        let media = {
+            let mut index = self.index.lock().unwrap();
+            sync_notebook_media(&self.drive, &mut index, &package_path, &notebook_id)
+        };
+        FfiNotebookSyncResult {
+            ok: media.ok,
+            uploaded: result.uploaded + media.uploaded,
+            downloaded: result.downloaded + media.downloaded,
+            error: media.error,
+            needs_reauth: media.needs_reauth,
+        }
+    }
+
+    /// 中繼資料（設定 + 筆記本索引）。
+    ///
+    /// **這個方法會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
+    pub fn sync_metadata(
+        &self,
+        local_settings_json: String,
+        local_index_json: String,
+    ) -> FfiCloudSyncResult {
+        sync_metadata_with(&self.drive, local_settings_json, local_index_json)
+    }
+}
+
+impl FfiSyncSession {
+    /// 全量列舉重建基準。**先拿游標再列舉** —— 順序反過來的話，
+    /// 列舉期間發生的變動會落在游標之前，永遠補不回來。
+    fn rebuild(&self) -> FfiRefreshResult {
+        let token = match self.drive.start_page_token() {
+            Ok(t) => t,
+            Err(e) => return refresh_failed(e),
+        };
+        let files = match self.drive.list_all_remote() {
+            Ok(f) => f,
+            Err(e) => return refresh_failed(e),
+        };
+        let mut index = self.index.lock().unwrap();
+        let count = files.len() as u32;
+        index.replace_files(files);
+        index.page_token = token;
+        FfiRefreshResult {
+            ok: true,
+            changed: count,
+            full_rebuild: true,
+            tracked_files: index.len() as u32,
+            error: String::new(),
+            needs_reauth: false,
+        }
+    }
+}
+
+fn refresh_failed(error: SyncError) -> FfiRefreshResult {
+    let needs_reauth = matches!(error, SyncError::PermissionDenied(_));
+    FfiRefreshResult {
+        ok: false,
+        changed: 0,
+        full_rebuild: false,
+        tracked_files: 0,
+        error: error.to_string(),
+        needs_reauth,
+    }
+}
+
+/// 本機的一組 `(檔名, 長度)` 與雲端快照有沒有差異。
+///
+/// 兩個方向都要看：本機比較長要上傳，雲端比較長要下載。
+fn differs(
+    local: &[(String, u64)],
+    remote: &std::collections::BTreeMap<String, RemoteFile>,
+) -> bool {
+    let local_map: std::collections::BTreeMap<String, u64> = local
+        .iter()
+        .map(|(n, s)| (padnote_sync::paths::canonical_name(n), *s))
+        .collect();
+    for (name, size) in &local_map {
+        if *size > remote.get(name).map_or(0, |f| f.size) {
+            return true;
+        }
+    }
+    for (name, file) in remote {
+        if file.size > local_map.get(name).copied().unwrap_or(0) {
+            return true;
+        }
+    }
+    false
 }
 
 fn notebook_failed(error: String) -> FfiNotebookSyncResult {
@@ -785,9 +1165,63 @@ mod tests {
     struct FakeDrive {
         /// 檔名 → 內容。
         files: std::sync::Mutex<Vec<(String, Vec<u8>)>>,
+        /// 每一次寫入／刪除碰到的索引。`changes.list` 的游標就是這個
+        /// 序列的長度 —— 與真的 Drive 一樣，游標之後的變更才會回傳。
+        log: std::sync::Mutex<Vec<usize>>,
+        /// 打了幾次 HTTP。**同步的成本就是這個數字**，所以要測得到。
+        calls: std::sync::atomic::AtomicUsize,
     }
 
     impl FakeDrive {
+        fn hit(&self) {
+            self.calls
+                .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        }
+
+        fn call_count(&self) -> usize {
+            self.calls.load(std::sync::atomic::Ordering::Relaxed)
+        }
+
+        fn reset_calls(&self) {
+            self.calls.store(0, std::sync::atomic::Ordering::Relaxed);
+        }
+
+        fn note_change(&self, index: usize) {
+            self.log.lock().unwrap().push(index);
+        }
+
+        /// `changes.list` 的回應。
+        fn changes_since(&self, token: &str) -> String {
+            let from: usize = token.parse().unwrap_or(0);
+            let log = self.log.lock().unwrap();
+            let files = self.files.lock().unwrap();
+            let mut seen = std::collections::BTreeSet::new();
+            let mut out = Vec::new();
+            for index in log.iter().skip(from) {
+                if !seen.insert(*index) {
+                    continue;
+                }
+                let Some((name, data)) = files.get(*index) else {
+                    continue;
+                };
+                if name.is_empty() {
+                    out.push(format!(
+                        r#"{{"fileId":"id-{index}","removed":true}}"#
+                    ));
+                } else {
+                    out.push(format!(
+                        r#"{{"fileId":"id-{index}","removed":false,"file":{{"id":"id-{index}","name":"{name}","size":"{}","trashed":false}}}}"#,
+                        data.len()
+                    ));
+                }
+            }
+            format!(
+                r#"{{"changes":[{}],"newStartPageToken":"{}"}}"#,
+                out.join(","),
+                log.len()
+            )
+        }
+
         fn query<'a>(params: &'a [FfiQueryParam], key: &str) -> &'a str {
             params
                 .iter()
@@ -800,9 +1234,19 @@ mod tests {
     impl FfiDriveHttp for FakeDrive {
         fn get_json(
             &self,
-            _url: String,
+            url: String,
             query: Vec<FfiQueryParam>,
         ) -> Result<String, FfiDriveError> {
+            self.hit();
+            if url.ends_with("changes/startPageToken") {
+                return Ok(format!(
+                    r#"{{"startPageToken":"{}"}}"#,
+                    self.log.lock().unwrap().len()
+                ));
+            }
+            if url.ends_with("/changes") {
+                return Ok(self.changes_since(Self::query(&query, "pageToken")));
+            }
             let q = Self::query(&query, "q").to_string();
             let files = self.files.lock().unwrap();
             // **索引要用全域的**，不是過濾後的序號 —— 讀取那一側是照
@@ -839,6 +1283,7 @@ mod tests {
             url: String,
             _range: Option<FfiByteRange>,
         ) -> Result<Vec<u8>, FfiDriveError> {
+            self.hit();
             let index: usize = url
                 .split("files/id-")
                 .nth(1)
@@ -853,11 +1298,16 @@ mod tests {
         }
 
         fn post_json(&self, _url: String, body_json: String) -> Result<String, FfiDriveError> {
+            self.hit();
             let value: serde_json::Value = serde_json::from_str(&body_json).unwrap();
             let name = value["name"].as_str().unwrap().to_string();
-            let mut files = self.files.lock().unwrap();
-            files.push((name, Vec::new()));
-            Ok(format!(r#"{{"id":"id-{}"}}"#, files.len() - 1))
+            let index = {
+                let mut files = self.files.lock().unwrap();
+                files.push((name, Vec::new()));
+                files.len() - 1
+            };
+            self.note_change(index);
+            Ok(format!(r#"{{"id":"id-{index}"}}"#))
         }
 
         fn patch_bytes(&self, url: String, data: Vec<u8>) -> Result<(), FfiDriveError> {
@@ -865,21 +1315,26 @@ mod tests {
         }
 
         fn delete(&self, url: String) -> Result<(), FfiDriveError> {
+            self.hit();
             let index: usize = url
                 .split("files/id-")
                 .nth(1)
                 .and_then(|s| s.split('?').next())
                 .and_then(|s| s.parse().ok())
                 .ok_or(FfiDriveError::NotFound { path: url.clone() })?;
-            let mut files = self.files.lock().unwrap();
-            if let Some(slot) = files.get_mut(index) {
-                slot.0.clear();
-                slot.1.clear();
+            {
+                let mut files = self.files.lock().unwrap();
+                if let Some(slot) = files.get_mut(index) {
+                    slot.0.clear();
+                    slot.1.clear();
+                }
             }
+            self.note_change(index);
             Ok(())
         }
 
         fn start_resumable(&self, url: String, _body: String) -> Result<String, FfiDriveError> {
+            self.hit();
             // 真的 Drive 會回一個新的工作階段 URI；這裡把檔案 id 帶著就夠，
             // 後面的 put_bytes 才找得到要寫哪一個。
             Ok(format!("{url}&resumable-session=1"))
@@ -892,6 +1347,7 @@ mod tests {
 
     impl FakeDrive {
         fn write_at(&self, url: &str, data: Vec<u8>) -> Result<(), FfiDriveError> {
+            self.hit();
             let index: usize = url
                 .split("files/id-")
                 .nth(1)
@@ -900,9 +1356,18 @@ mod tests {
                 .ok_or(FfiDriveError::NotFound {
                     path: url.to_string(),
                 })?;
-            let mut files = self.files.lock().unwrap();
-            if let Some(slot) = files.get_mut(index) {
-                slot.1 = data;
+            let ok = {
+                let mut files = self.files.lock().unwrap();
+                match files.get_mut(index) {
+                    Some(slot) => {
+                        slot.1 = data;
+                        true
+                    }
+                    None => false,
+                }
+            };
+            if ok {
+                self.note_change(index);
                 Ok(())
             } else {
                 Err(FfiDriveError::NotFound {
@@ -918,6 +1383,452 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
         padnote_storage::NotebookPackage::create(&root, "t", device).unwrap();
         root
+    }
+
+    // ── P1：用變更游標取代全量列舉 ────────────────────────────────
+
+    /// 建 n 本筆記本，各寫一筆操作，回傳 `(id, 套件路徑)`。
+    fn many_packages(tag: &str, n: usize) -> Vec<(String, std::path::PathBuf)> {
+        use padnote_doc::ops::DocOp;
+        (0..n)
+            .map(|i| {
+                let id = format!("nb{i:04}");
+                let root = tmp_package(&format!("{tag}-{i}"), 0xAA);
+                let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+                pkg.append_doc_ops(
+                    1,
+                    0xAA,
+                    &[DocOp::SetTitle {
+                        title: format!("n{i}"),
+                    }],
+                )
+                .unwrap();
+                (id, root)
+            })
+            .collect()
+    }
+
+    #[test]
+    fn a_round_with_nothing_to_do_costs_exactly_one_http_call() {
+        // **這條測試就是 P1 的目的本身。**
+        //
+        // 舊流程每同步一本筆記本就打一次 `files.list`，不管有沒有變動 ——
+        // 20 本筆記 = 20 次往返，而其中 20 次的答案都是「沒事」。
+        // 使用者要的「沒變動的就不要花時間去動它」在那個結構下做不到。
+        //
+        // 現在：一次 `changes.list`，其餘全部在本機算。
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+        let books = many_packages("cheap", 20);
+
+        // 第一輪：建立基準 + 全部上傳。
+        let session = FfiSyncSession::create(http.clone(), String::new());
+        assert!(session.refresh().ok);
+        for (id, root) in &books {
+            let r = session.sync_notebook(root.to_string_lossy().into(), id.clone(), 0xAA);
+            assert!(r.ok, "{}", r.error);
+        }
+        let saved = session.index_json();
+
+        // 第二輪：全新的 session（模擬重開 App），帶著存下來的快照。
+        let session2 = FfiSyncSession::create(http.clone(), saved);
+        fake.reset_calls();
+        let refreshed = session2.refresh();
+        assert!(refreshed.ok, "{}", refreshed.error);
+        assert!(!refreshed.full_rebuild, "帶著游標就不該再全量重建");
+
+        for (id, root) in &books {
+            assert!(
+                !session2.notebook_needs_sync(root.to_string_lossy().into(), id.clone()),
+                "沒變動的筆記本 {id} 不該被判定為要同步"
+            );
+        }
+
+        assert_eq!(
+            fake.call_count(),
+            1,
+            "20 本筆記、什麼都沒變，整輪只該打一次 HTTP（changes.list）"
+        );
+    }
+
+    #[test]
+    fn only_the_notebook_that_changed_needs_work() {
+        // 另一台裝置改了一本，其餘 19 本一個位元組都不該碰。
+        use padnote_doc::ops::DocOp;
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+        let books = many_packages("onechanged", 20);
+
+        let session = FfiSyncSession::create(http.clone(), String::new());
+        assert!(session.refresh().ok);
+        for (id, root) in &books {
+            assert!(
+                session
+                    .sync_notebook(root.to_string_lossy().into(), id.clone(), 0xAA)
+                    .ok
+            );
+        }
+
+        // 另一台裝置（0xBB）改了第 7 本。
+        let other_root = tmp_package("onechanged-other", 0xBB);
+        let other = padnote_storage::NotebookPackage::open(&other_root).unwrap();
+        other
+            .append_doc_ops(
+                9,
+                0xBB,
+                &[DocOp::SetTitle {
+                    title: "來自另一台".into(),
+                }],
+            )
+            .unwrap();
+        let other_session = FfiSyncSession::create(http.clone(), String::new());
+        assert!(other_session.refresh().ok);
+        assert!(
+            other_session
+                .sync_notebook(other_root.to_string_lossy().into(), books[7].0.clone(), 0xBB)
+                .ok
+        );
+
+        // 回到第一台：refresh 之後只有第 7 本要動。
+        session.refresh();
+        let needs: Vec<&String> = books
+            .iter()
+            .filter(|(id, root)| session.notebook_needs_sync(root.to_string_lossy().into(), id.clone()))
+            .map(|(id, _)| id)
+            .collect();
+        assert_eq!(needs, vec![&books[7].0], "只有被改過的那一本該要同步");
+    }
+
+    #[test]
+    fn a_deleted_cloud_file_disappears_from_the_snapshot() {
+        // 刪除的變更只給 fileId。反查不到就會留下幽靈項目，
+        // 而幽靈項目會讓同步以為雲端還有那個檔、然後一直想下載它。
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+        let books = many_packages("deleted", 1);
+        let session = FfiSyncSession::create(http.clone(), String::new());
+        assert!(session.refresh().ok);
+        assert!(
+            session
+                .sync_notebook(books[0].1.to_string_lossy().into(), books[0].0.clone(), 0xAA)
+                .ok
+        );
+        session.refresh();
+        let before = session.tracked_files();
+        assert!(before > 0);
+
+        // 從雲端刪掉那個 oplog 檔。
+        fake.delete("https://x/files/id-0".into()).unwrap();
+        session.refresh();
+        assert_eq!(session.tracked_files(), before - 1, "刪除沒有反映到快照");
+    }
+
+    #[test]
+    fn an_expired_cursor_falls_back_to_a_full_rebuild() {
+        // Drive 的游標大約保留數週。過期是正常事件，不是錯誤 ——
+        // 當成錯誤的話，久沒開的裝置會永遠同步不了。
+        #[derive(Debug)]
+        struct ExpiredCursor(Arc<FakeDrive>);
+        impl FfiDriveHttp for ExpiredCursor {
+            fn get_json(
+                &self,
+                url: String,
+                query: Vec<FfiQueryParam>,
+            ) -> Result<String, FfiDriveError> {
+                if url.ends_with("/changes") {
+                    return Err(FfiDriveError::Backend {
+                        detail: "HTTP 410 pageToken expired".into(),
+                    });
+                }
+                self.0.get_json(url, query)
+            }
+            fn get_bytes(
+                &self,
+                url: String,
+                range: Option<FfiByteRange>,
+            ) -> Result<Vec<u8>, FfiDriveError> {
+                self.0.get_bytes(url, range)
+            }
+            fn post_json(&self, url: String, body: String) -> Result<String, FfiDriveError> {
+                self.0.post_json(url, body)
+            }
+            fn patch_bytes(&self, url: String, data: Vec<u8>) -> Result<(), FfiDriveError> {
+                self.0.patch_bytes(url, data)
+            }
+            fn delete(&self, url: String) -> Result<(), FfiDriveError> {
+                self.0.delete(url)
+            }
+            fn start_resumable(&self, url: String, b: String) -> Result<String, FfiDriveError> {
+                self.0.start_resumable(url, b)
+            }
+            fn put_bytes(&self, url: String, data: Vec<u8>) -> Result<(), FfiDriveError> {
+                self.0.put_bytes(url, data)
+            }
+        }
+
+        let fake = Arc::new(FakeDrive::default());
+        let books = many_packages("expired", 1);
+        let warm: Arc<dyn FfiDriveHttp> = fake.clone();
+        let session = FfiSyncSession::create(warm, String::new());
+        assert!(session.refresh().ok);
+        assert!(
+            session
+                .sync_notebook(books[0].1.to_string_lossy().into(), books[0].0.clone(), 0xAA)
+                .ok
+        );
+        let saved = session.index_json();
+
+        let expiring: Arc<dyn FfiDriveHttp> = Arc::new(ExpiredCursor(fake.clone()));
+        let session2 = FfiSyncSession::create(expiring, saved);
+        let result = session2.refresh();
+        assert!(result.ok, "游標過期不該讓整輪同步失敗：{}", result.error);
+        assert!(result.full_rebuild, "應該退回全量重建");
+        assert!(result.tracked_files > 0);
+    }
+
+    #[test]
+    fn a_broken_snapshot_rebuilds_instead_of_failing() {
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+        let session = FfiSyncSession::create(http, "{{{壞掉的 JSON".into());
+        assert!(session.needs_rebuild());
+        let result = session.refresh();
+        assert!(result.ok);
+        assert!(result.full_rebuild);
+    }
+
+    // ── P3：刪除一定排在上傳之後 ──────────────────────────────────
+
+    #[test]
+    fn compacted_fragments_are_only_deleted_after_the_compacted_file_is_uploaded() {
+        // **這是一個真的會掉資料的順序錯誤的回歸測試。**
+        //
+        // 舊流程是：壓實 → 列舉 → **刪掉雲端被涵蓋的舊碎檔** → 上傳。
+        // 中間斷網、逾時或被系統殺掉，那些操作就只剩本機這一份 ——
+        // 雲端沒有、另一台裝置永遠拿不到，而且沒有任何錯誤訊息。
+        use padnote_doc::ops::DocOp;
+
+        /// 上傳一律失敗的假 Drive：模擬「刪完之後、傳到一半斷線」。
+        #[derive(Debug)]
+        struct UploadFails(Arc<FakeDrive>);
+        impl FfiDriveHttp for UploadFails {
+            fn get_json(
+                &self,
+                url: String,
+                query: Vec<FfiQueryParam>,
+            ) -> Result<String, FfiDriveError> {
+                self.0.get_json(url, query)
+            }
+            fn get_bytes(
+                &self,
+                url: String,
+                range: Option<FfiByteRange>,
+            ) -> Result<Vec<u8>, FfiDriveError> {
+                self.0.get_bytes(url, range)
+            }
+            fn post_json(&self, url: String, body: String) -> Result<String, FfiDriveError> {
+                self.0.post_json(url, body)
+            }
+            fn patch_bytes(&self, _url: String, _data: Vec<u8>) -> Result<(), FfiDriveError> {
+                Err(FfiDriveError::Backend {
+                    detail: "斷線".into(),
+                })
+            }
+            fn delete(&self, url: String) -> Result<(), FfiDriveError> {
+                self.0.delete(url)
+            }
+            fn start_resumable(&self, url: String, b: String) -> Result<String, FfiDriveError> {
+                self.0.start_resumable(url, b)
+            }
+            fn put_bytes(&self, _url: String, _data: Vec<u8>) -> Result<(), FfiDriveError> {
+                Err(FfiDriveError::Backend {
+                    detail: "斷線".into(),
+                })
+            }
+        }
+
+        let fake = Arc::new(FakeDrive::default());
+        let root = tmp_package("delete-order", 0xAA);
+        let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        for lamport in 1..=6u64 {
+            pkg.append_doc_ops(
+                lamport,
+                0xAA,
+                &[DocOp::SetTitle {
+                    title: format!("t{lamport}"),
+                }],
+            )
+            .unwrap();
+        }
+
+        // 第一輪成功：六個碎檔都上了雲端。
+        let ok_http: Arc<dyn FfiDriveHttp> = fake.clone();
+        let session = FfiSyncSession::create(ok_http, String::new());
+        assert!(session.refresh().ok);
+        // device 0 ⇒ 不壓實，六個檔原樣上傳。
+        assert!(session.sync_notebook(root.to_string_lossy().into(), "nb1".into(), 0).ok);
+        let cloud_before = fake
+            .files
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(n, _)| n.ends_with(".oplog"))
+            .count();
+        assert_eq!(cloud_before, 6);
+
+        // 第二輪：壓實會發生，但上傳全部失敗。
+        let failing: Arc<dyn FfiDriveHttp> = Arc::new(UploadFails(fake.clone()));
+        let session2 = FfiSyncSession::create(failing, session.index_json());
+        let result = session2.sync_notebook(root.to_string_lossy().into(), "nb1".into(), 0xAA);
+        assert!(!result.ok, "上傳失敗就該回報失敗");
+
+        let cloud_after = fake
+            .files
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(n, _)| n.ends_with(".oplog"))
+            .count();
+        assert_eq!(
+            cloud_after, 6,
+            "上傳還沒成功就刪掉雲端的碎檔 = 那幾筆操作只剩本機一份"
+        );
+    }
+
+    #[test]
+    fn a_device_never_deletes_another_devices_fragments() {
+        // 只有寫那個檔的裝置知道自己壓實了哪幾個。舊版是用
+        // 「lamport 比本機最大值小」去推論的，而本機可能根本沒下載過
+        // 中間那個碎檔 —— 刪掉的是一份本機從來沒有過的操作。
+        use padnote_doc::ops::DocOp;
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+
+        // 另一台裝置（0xBB）在雲端留下幾個碎檔。
+        let other_root = tmp_package("foreign-frag-other", 0xBB);
+        let other = padnote_storage::NotebookPackage::open(&other_root).unwrap();
+        for lamport in 1..=3u64 {
+            other
+                .append_doc_ops(lamport, 0xBB, &[DocOp::SetTitle { title: "b".into() }])
+                .unwrap();
+        }
+        let s_other = FfiSyncSession::create(http.clone(), String::new());
+        assert!(s_other.refresh().ok);
+        assert!(
+            s_other
+                .sync_notebook(other_root.to_string_lossy().into(), "nb1".into(), 0xBB)
+                .ok
+        );
+
+        // 本機這一台（0xAA）寫很多自己的碎檔，然後同步。
+        let root = tmp_package("foreign-frag-mine", 0xAA);
+        let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        for lamport in 10..=16u64 {
+            pkg.append_doc_ops(lamport, 0xAA, &[DocOp::SetTitle { title: "a".into() }])
+                .unwrap();
+        }
+        let session = FfiSyncSession::create(http.clone(), String::new());
+        assert!(session.refresh().ok);
+        let r = session.sync_notebook(root.to_string_lossy().into(), "nb1".into(), 0xAA);
+        assert!(r.ok, "{}", r.error);
+
+        let remaining_foreign = fake
+            .files
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(n, _)| n.ends_with("-000000bb.oplog"))
+            .count();
+        assert_eq!(remaining_foreign, 3, "別台裝置的碎檔一個都不該被刪");
+    }
+
+    #[test]
+    fn a_device_cleans_up_its_own_compacted_fragments() {
+        // 反面：自己的碎檔壓實並上傳成功之後，雲端那幾個要清掉，
+        // 否則雲端無限累積，新裝置第一次同步要下載幾百個檔案。
+        use padnote_doc::ops::DocOp;
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+
+        let root = tmp_package("own-cleanup", 0xAA);
+        let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        for lamport in 1..=6u64 {
+            pkg.append_doc_ops(lamport, 0xAA, &[DocOp::SetTitle { title: "a".into() }])
+                .unwrap();
+        }
+        // 先把六個碎檔原樣推上雲端（device 0 ⇒ 不壓實）。
+        let s0 = FfiSyncSession::create(http.clone(), String::new());
+        assert!(s0.refresh().ok);
+        assert!(s0.sync_notebook(root.to_string_lossy().into(), "nb1".into(), 0).ok);
+
+        // 再以自己的 device id 同步一次：壓實 → 上傳 → 清掉自己的舊碎檔。
+        let s1 = FfiSyncSession::create(http.clone(), s0.index_json());
+        let r = s1.sync_notebook(root.to_string_lossy().into(), "nb1".into(), 0xAA);
+        assert!(r.ok, "{}", r.error);
+
+        let live: Vec<String> = fake
+            .files
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(n, _)| n.ends_with(".oplog"))
+            .map(|(n, _)| n.clone())
+            .collect();
+        assert_eq!(live.len(), 1, "壓實之後雲端只該留一個：{live:?}");
+        assert!(live[0].ends_with("0000000000000006-000000aa.oplog"));
+    }
+
+    #[test]
+    fn compaction_does_not_lose_operations_across_two_devices() {
+        // 壓實 + 清理之後，另一台裝置仍然要拿得到全部操作。
+        // 這是整組刪除規則的最終驗收。
+        use padnote_doc::ops::DocOp;
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+
+        let a_root = tmp_package("noloss-a", 0xAA);
+        let a = padnote_storage::NotebookPackage::open(&a_root).unwrap();
+        for lamport in 1..=6u64 {
+            a.append_doc_ops(
+                lamport,
+                0xAA,
+                &[DocOp::SetTitle {
+                    title: format!("a{lamport}"),
+                }],
+            )
+            .unwrap();
+        }
+        let sa = FfiSyncSession::create(http.clone(), String::new());
+        assert!(sa.refresh().ok);
+        assert!(sa.sync_notebook(a_root.to_string_lossy().into(), "nb1".into(), 0).ok);
+        // 第二輪壓實並清理雲端。
+        assert!(
+            sa.sync_notebook(a_root.to_string_lossy().into(), "nb1".into(), 0xAA)
+                .ok
+        );
+
+        let b_root = tmp_package("noloss-b", 0xBB);
+        let sb = FfiSyncSession::create(http.clone(), String::new());
+        assert!(sb.refresh().ok);
+        let r = sb.sync_notebook(b_root.to_string_lossy().into(), "nb1".into(), 0xBB);
+        assert!(r.ok, "{}", r.error);
+
+        let b = padnote_storage::NotebookPackage::open(&b_root).unwrap();
+        let titles: Vec<String> = b
+            .read_doc_ops()
+            .unwrap()
+            .into_iter()
+            .filter_map(|op| match op {
+                DocOp::SetTitle { title } => Some(title),
+                _ => None,
+            })
+            .collect();
+        for lamport in 1..=6u64 {
+            assert!(
+                titles.contains(&format!("a{lamport}")),
+                "壓實之後少了第 {lamport} 筆操作：{titles:?}"
+            );
+        }
     }
 
     #[test]

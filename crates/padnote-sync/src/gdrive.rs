@@ -30,6 +30,8 @@ use std::sync::Mutex;
 
 const FILES_URL: &str = "https://www.googleapis.com/drive/v3/files";
 const UPLOAD_URL: &str = "https://www.googleapis.com/upload/drive/v3/files";
+const CHANGES_URL: &str = "https://www.googleapis.com/drive/v3/changes";
+const CHANGES_START_TOKEN_URL: &str = "https://www.googleapis.com/drive/v3/changes/startPageToken";
 
 /// Drive 單次上傳（`uploadType=media`）的大小上限是 5 MB。
 ///
@@ -119,6 +121,33 @@ fn entries_from(page: &Value, prefix: &str) -> Vec<RemoteEntry> {
                 .collect()
         })
         .unwrap_or_default()
+}
+
+/// `changes.list` 回來的一筆變更。
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct DriveChange {
+    pub file_id: String,
+    /// 刪除的變更**沒有名字**，只有 id。
+    pub name: Option<String>,
+    pub size: u64,
+    /// 被刪除或丟進垃圾桶。
+    pub gone: bool,
+}
+
+/// 一次 `changes.list` 的結果。
+#[derive(Clone, Debug, Default)]
+pub struct DriveChangeBatch {
+    pub changes: Vec<DriveChange>,
+    /// 下一次要用的游標。
+    pub new_token: String,
+}
+
+/// 游標過期（Drive 回 410）。要退回一次全量列舉重建基準。
+///
+/// 只認 410：網路錯誤或 5xx 也當成過期的話，一次斷網就會觸發全量重建，
+/// 而那正是我們想避開的昂貴路徑。
+pub fn is_cursor_expired(error: &SyncError) -> bool {
+    matches!(error, SyncError::Backend(detail) if detail.contains("410"))
 }
 
 /// Google Drive Provider。
@@ -249,7 +278,10 @@ impl<H: DriveHttp> GDriveProvider<H> {
             }
             Err(e) => return Err(e),
         };
-        self.delete_by_id(&file_id)?;
+        match self.delete_by_id(&file_id) {
+            Ok(()) | Err(SyncError::NotFound(_)) => {}
+            Err(e) => return Err(e),
+        }
         {
             let mut cache = self.id_cache.lock().unwrap();
             cache.remove(path);
@@ -267,6 +299,199 @@ impl<H: DriveHttp> GDriveProvider<H> {
     pub fn delete_by_id(&self, file_id: &str) -> Result<(), SyncError> {
         let url = format!("{FILES_URL}/{file_id}");
         self.http.delete(&url)
+    }
+
+    // ── 變更游標（P1：用 changes.list 取代全量列舉）────────────────
+    //
+    // 舊流程每同步一本筆記本就打一次 `files.list`，**不管有沒有變動**。
+    // 「沒變動的就不要動它」在那個結構下做不到：要知道有沒有變動就得先問，
+    // 而問本身就是主要成本。Drive 的 changes API 把「問」變成一次請求。
+
+    /// 取得目前的變更游標。之後的 `changes.list` 從這裡開始往後看。
+    ///
+    /// **要先拿游標再做全量列舉**，順序反過來的話，列舉期間發生的變動
+    /// 會落在游標之前，永遠補不回來。
+    pub fn start_page_token(&self) -> Result<String, SyncError> {
+        let page = self.http.get_json(
+            CHANGES_START_TOKEN_URL,
+            &[("spaces".to_string(), "appDataFolder".to_string())],
+        )?;
+        page.get("startPageToken")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| SyncError::Backend("Drive 沒有回傳 startPageToken".into()))
+    }
+
+    /// 全量列出 `appDataFolder` 底下的所有檔案。**只在重建基準時用。**
+    pub fn list_all_remote(&self) -> Result<Vec<crate::remote_index::RemoteFile>, SyncError> {
+        let pages = self.list_all(
+            "'appDataFolder' in parents and trashed = false",
+            "id, name, size",
+        )?;
+        let mut out = Vec::new();
+        let mut cache = self.id_cache.lock().unwrap();
+        for page in &pages {
+            for f in page
+                .get("files")
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default()
+            {
+                let (Some(id), Some(name)) = (
+                    f.get("id").and_then(Value::as_str),
+                    f.get("name").and_then(Value::as_str),
+                ) else {
+                    continue;
+                };
+                let size = f
+                    .get("size")
+                    .and_then(Value::as_str)
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .unwrap_or(0);
+                cache.insert(name.to_string(), id.to_string());
+                cache.insert(name.to_lowercase(), id.to_string());
+                out.push(crate::remote_index::RemoteFile {
+                    id: id.to_string(),
+                    name: name.to_string(),
+                    size,
+                });
+            }
+        }
+        Ok(out)
+    }
+
+    /// 從 `token` 之後的所有變更，並回傳下一次要用的游標。
+    ///
+    /// 分頁一樣要跟到底；`newStartPageToken` 只會出現在最後一頁。
+    pub fn fetch_changes(&self, token: &str) -> Result<DriveChangeBatch, SyncError> {
+        let mut out = Vec::new();
+        let mut cursor = token.to_string();
+        loop {
+            let query = vec![
+                ("pageToken".to_string(), cursor.clone()),
+                ("spaces".to_string(), "appDataFolder".to_string()),
+                ("includeRemoved".to_string(), "true".to_string()),
+                ("pageSize".to_string(), "1000".to_string()),
+                (
+                    "fields".to_string(),
+                    "nextPageToken, newStartPageToken, changes(fileId, removed, file(id, name, size, trashed))"
+                        .to_string(),
+                ),
+            ];
+            let page = self.http.get_json(CHANGES_URL, &query)?;
+            for change in page
+                .get("changes")
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default()
+            {
+                let file_id = change
+                    .get("fileId")
+                    .and_then(Value::as_str)
+                    .unwrap_or_default()
+                    .to_string();
+                if file_id.is_empty() {
+                    continue;
+                }
+                let removed = change
+                    .get("removed")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+                let file = change.get("file");
+                let name = file
+                    .and_then(|f| f.get("name"))
+                    .and_then(Value::as_str)
+                    .map(str::to_string);
+                let size = file
+                    .and_then(|f| f.get("size"))
+                    .and_then(Value::as_str)
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .unwrap_or(0);
+                // 垃圾桶要當成刪除，理由與 `list_query` 加 `trashed = false` 相同。
+                let trashed = file
+                    .and_then(|f| f.get("trashed"))
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+                if let (Some(name), false) = (name.as_deref(), removed || trashed) {
+                    let mut cache = self.id_cache.lock().unwrap();
+                    cache.insert(name.to_string(), file_id.clone());
+                    cache.insert(name.to_lowercase(), file_id.clone());
+                }
+                out.push(DriveChange {
+                    file_id,
+                    name,
+                    size,
+                    gone: removed || trashed,
+                });
+            }
+            if let Some(next) = page.get("nextPageToken").and_then(Value::as_str)
+                && !next.is_empty()
+            {
+                cursor = next.to_string();
+                continue;
+            }
+            let new_token = page
+                .get("newStartPageToken")
+                .and_then(Value::as_str)
+                .unwrap_or(&cursor)
+                .to_string();
+            return Ok(DriveChangeBatch {
+                changes: out,
+                new_token,
+            });
+        }
+    }
+
+    /// 把已知的 `路徑 → file id` 先塞進快取。
+    ///
+    /// 有了它，上傳前那一次 `files.list` 就完全不必打 —— 舊流程每上傳一個
+    /// 檔案就多一次往返，而那是同步時間裡最不值得的一段。
+    pub fn prime_id(&self, path: &str, file_id: &str) {
+        let mut cache = self.id_cache.lock().unwrap();
+        cache.insert(path.to_string(), file_id.to_string());
+        cache.insert(path.to_lowercase(), file_id.to_string());
+        let mut del = self.deleted_paths.lock().unwrap();
+        del.remove(path);
+        del.remove(&path.to_lowercase());
+    }
+
+    /// 依 file id 直接讀整個檔案，不先查 id。
+    pub fn get_all_by_id(&self, file_id: &str) -> Result<Vec<u8>, SyncError> {
+        self.http
+            .get_bytes(&format!("{FILES_URL}/{file_id}?alt=media"), None)
+    }
+
+    /// 上傳到一個**已知的** file id。
+    pub fn put_to_id(&self, file_id: &str, data: &[u8]) -> Result<(), SyncError> {
+        if data.len() <= SIMPLE_UPLOAD_LIMIT {
+            return self
+                .http
+                .patch_bytes(&format!("{UPLOAD_URL}/{file_id}?uploadType=media"), data);
+        }
+        let session = self.http.start_resumable(
+            &format!("{UPLOAD_URL}/{file_id}?uploadType=resumable"),
+            &json!({}),
+        )?;
+        self.http.put_bytes(&session, data)
+    }
+
+    /// 建立一個新檔案並上傳，回傳它的 file id。
+    ///
+    /// 與 [`Self::put_new`] 的差別只在**回傳 id** —— 呼叫端要把它記進
+    /// `RemoteIndex`，否則下一輪又得去查一次。
+    pub fn create_and_upload(&self, path: &str, data: &[u8]) -> Result<String, SyncError> {
+        let created = self.http.post_json(
+            FILES_URL,
+            &json!({ "name": path, "parents": ["appDataFolder"] }),
+        )?;
+        let file_id = created
+            .get("id")
+            .and_then(Value::as_str)
+            .map(str::to_string)
+            .ok_or_else(|| SyncError::Backend(format!("建立 {path} 之後 Drive 沒有回傳 id")))?;
+        self.prime_id(path, &file_id);
+        self.put_to_id(&file_id, data)?;
+        Ok(file_id)
     }
 
     /// 直接建立並上傳全新檔案（已知遠端不存在），省去每次上傳前 find_file_id 的 HTTP GET 查詢。
@@ -384,7 +609,16 @@ impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
         };
         if data.len() <= SIMPLE_UPLOAD_LIMIT {
             let url = format!("{UPLOAD_URL}/{file_id}?uploadType=media");
-            return self.http.patch_bytes(&url, data);
+            match self.http.patch_bytes(&url, data) {
+                Ok(()) => return Ok(()),
+                Err(SyncError::NotFound(_)) => {
+                    let mut cache = self.id_cache.lock().unwrap();
+                    cache.remove(path);
+                    cache.remove(&lower);
+                    return self.put_new(path, data);
+                }
+                Err(other) => return Err(other),
+            }
         }
         // 大檔走可續傳。用單次上傳的話 Drive 直接回 413，
         // 而錯誤訊息不會說是「檔案太大」——看起來像權限或網路問題。

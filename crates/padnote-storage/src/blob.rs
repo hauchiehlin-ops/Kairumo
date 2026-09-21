@@ -114,14 +114,9 @@ impl BlobStore {
         if path.exists() {
             return Ok(id);
         }
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-
-        // 先寫暫存檔再 rename：避免中途當機留下半個 blob 卻頂著正確的檔名。
-        let tmp = path.with_extension("tmp");
-        fs::write(&tmp, data)?;
-        fs::rename(&tmp, &path)?;
+        // 先寫暫存檔、fsync、再 rename：避免中途當機留下半個 blob 卻頂著
+        // 正確的檔名。少了 fsync 的話，斷電後會得到一個名字對、內容是零的檔案。
+        crate::atomic::write_atomic(&path, data)?;
         Ok(id)
     }
 

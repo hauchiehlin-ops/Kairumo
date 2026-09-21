@@ -12,7 +12,9 @@ pub mod gdrive;
 pub mod library;
 pub mod local;
 pub mod oplog;
+pub mod paths;
 pub mod provider;
+pub mod remote_index;
 pub mod settings;
 
 pub use engine::{PulledBatch, SyncCursors, SyncEngine};
@@ -20,5 +22,11 @@ pub use gdrive::{DriveHttp, GDriveProvider, ReqwestDriveHttp};
 pub use library::{INDEX_PATH, ItemKind, LibraryIndex, LibraryItem};
 pub use local::LocalFolderProvider;
 pub use oplog::{DeviceId, OplogName};
+pub use paths::{
+    canonical_id, canonical_name, canonical_path, is_canonical, notebook_audio_file, notebook_audio_prefix,
+    notebook_blob_file, notebook_blobs_prefix, notebook_op_file, notebook_ops_prefix,
+    notebook_root,
+};
 pub use provider::{CloudProvider, RemoteEntry, SyncError};
+pub use remote_index::{RemoteFile, RemoteIndex};
 pub use settings::{DefaultPen, DeviceSettings, Identity, SETTINGS_PATH, Stamped, SyncedSettings};

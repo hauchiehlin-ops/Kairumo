@@ -353,8 +353,10 @@ enum NotebookSyncCoordinator {
         }
 
         // ── 同步前即時核實：本機現存 vs. 雲端索引差異樣態 ──────────────
+        let deletedNotebookIds = Set(AccountSyncStore.shared.deletedNotebookIds.map { $0.lowercased() })
+        store.syncPurgeDeletedNotebooks(deletedNotebookIds)
+
         let activeLocalIds = Set(store.syncNotebooks.map { $0.id.lowercased() })
-        var deletedNotebookIds = Set(AccountSyncStore.shared.deletedNotebookIds.map { $0.lowercased() })
         let cloudLiveIds = Set(syncLiveNotebooks(indexJson: meta.indexJson).map { $0.id.lowercased() })
         
         let allDiskPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
@@ -365,14 +367,13 @@ enum NotebookSyncCoordinator {
 
         for pkg in allDiskPackages {
             let id = packageId(for: pkg).lowercased()
-            if activeLocalIds.contains(id) {
-                deletedNotebookIds.remove(id)
-                packages.append(pkg)
-                continue
-            }
             if deletedNotebookIds.contains(id) {
                 try? fm.removeItem(at: pkg)
                 cleanedCount += 1
+                continue
+            }
+            if activeLocalIds.contains(id) {
+                packages.append(pkg)
                 continue
             }
             if !cloudLiveIds.contains(id) {

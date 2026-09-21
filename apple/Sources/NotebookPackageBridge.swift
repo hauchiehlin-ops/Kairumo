@@ -458,7 +458,7 @@ enum NotebookPackageBridge {
         for relative in relativeFiles(in: fresh) {
             let src = fresh.appendingPathComponent(relative)
             let dst = destination.appendingPathComponent(relative)
-            let isOwn = relative.contains(suffix)
+            let isOwn = relative.contains(suffix) || relative == "manifest.json"
             if !isOwn && fm.fileExists(atPath: dst.path) { continue }
             try? fm.createDirectory(
                 at: dst.deletingLastPathComponent(), withIntermediateDirectories: true)
@@ -508,11 +508,8 @@ enum NotebookPackageBridge {
     ///
     /// # 為什麼需要它
     ///
-    /// 沒有這一支，同步就是**單向**的：檔案下載得到，卻變不回一本筆記。
-    /// 使用者在 A 裝置寫、B 裝置打開什麼也沒有 —— 而那正是他要的那件事。
-    ///
-    /// - Returns: 文件本身、每一頁的手繪內容，以及圖片附件的檔名 → 位元組
-    ///   （呼叫端負責把它們存進自己的附件目錄）。
+    /// 只有這個函式會把核心裡的**手繪筆畫、文字區塊與中繼資料**還原成
+    /// App 看得懂的 `NotebookDocument`。
     static func importDocument(
         fromPackageAt path: URL,
         deviceId: UInt32,
@@ -676,9 +673,17 @@ enum NotebookPackageBridge {
             }
         }
 
+        let targetId = documentId ?? path.deletingPathExtension().lastPathComponent
+        var initialTitle = session.title()
+        let storeItems = syncLiveNotebooks(indexJson: AccountSyncStore.shared.indexJSON)
+        if let syncItem = storeItems.first(where: { $0.id.caseInsensitiveCompare(targetId) == .orderedSame }),
+           !syncItem.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            initialTitle = syncItem.title
+        }
+
         var document = NotebookDocument(
-            id: documentId ?? path.deletingPathExtension().lastPathComponent,
-            title: session.title(),
+            id: targetId,
+            title: initialTitle,
             pageCount: pageIds.count,
             template: .blank
         )

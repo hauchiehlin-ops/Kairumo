@@ -57,8 +57,18 @@ impl From<CodecError> for StorageError {
     }
 }
 
+/// 只壓實自己那幾個檔的結果，帶明確的涵蓋名單。
+#[derive(Clone, Debug)]
+pub struct CompactOutcome {
+    /// 壓實後的檔名。
+    pub compacted_name: String,
+    /// 被它吃掉、已經從本機刪除的碎檔名單。**雲端要刪的就是這幾個，
+    /// 不要自己推論。**
+    pub absorbed: Vec<String>,
+}
+
 /// Oplog 壓實的結果。
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct CompactResult {
     /// 被合併並刪除的舊碎檔數（0 表示未達門檻，未執行壓實）。
     pub merged_files: usize,
@@ -325,6 +335,9 @@ impl NotebookPackage {
             .filter(|e| e.path().extension().is_some_and(|x| x == "opus"))
             .filter_map(|e| {
                 let name = e.file_name().to_str()?.to_string();
+                if crate::atomic::is_temp_name(&name) {
+                    return None;
+                }
                 Some((name, e.metadata().ok()?.len()))
             })
             .collect();
@@ -338,10 +351,9 @@ impl NotebookPackage {
 
     pub fn write_audio_file(&self, name: &str, bytes: &[u8]) -> Result<(), StorageError> {
         let path = self.audio_path(name)?;
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        fs::write(path, bytes)?;
+        // 原子寫入：寫到一半的錄音在對面看起來是一個「比較短但合法」的檔案，
+        // 而同步的規則正是「較長的是超集」—— 它會被當成舊版本，不是壞檔。
+        crate::atomic::write_atomic(&path, bytes)?;
         Ok(())
     }
 
@@ -373,6 +385,11 @@ impl NotebookPackage {
             .filter(|e| e.path().extension().is_some_and(|x| x == "oplog"))
             .filter_map(|e| {
                 let name = e.file_name().to_str()?.to_string();
+                // 原子寫入的臨時檔不是同步單位 —— 算進去的話，對面會下載到
+                // 一個永遠不會完成的檔案。
+                if crate::atomic::is_temp_name(&name) {
+                    return None;
+                }
                 let size = e.metadata().ok()?.len();
                 Some((name, size))
             })
@@ -434,7 +451,6 @@ impl NotebookPackage {
 
             let compacted_name = format!("{max_lamport_hex}{device_suffix}");
             let compacted_path = dir.join(&compacted_name);
-            let tmp_path = dir.join(format!("{compacted_name}.tmp"));
 
             let mut merged = Vec::new();
             for f in &own_files {
@@ -442,8 +458,7 @@ impl NotebookPackage {
                 merged.extend_from_slice(&bytes);
             }
 
-            fs::write(&tmp_path, &merged)?;
-            fs::rename(&tmp_path, &compacted_path)?;
+            crate::atomic::write_atomic(&compacted_path, &merged)?;
 
             for f in &own_files {
                 if f != &compacted_path {
@@ -456,6 +471,69 @@ impl NotebookPackage {
         Ok(CompactResult {
             merged_files: total_merged,
         })
+    }
+
+    /// 只壓實**這台裝置自己**的 oplog 碎檔，並明確回報它吃掉了哪幾個。
+    ///
+    /// # 為什麼要有「只壓實自己的」這個版本
+    ///
+    /// 壓實之後，雲端上那些已經被涵蓋的舊碎檔就該刪掉，否則雲端會無限累積，
+    /// 新裝置第一次同步要下載幾百個檔案。問題是**怎麼確定某個雲端碎檔真的
+    /// 被涵蓋了**。
+    ///
+    /// 舊的做法是推論：「它的 lamport 小於本機該裝置的最大 lamport，
+    /// 所以一定已經在壓實檔裡」。那個推論會錯 —— 本機可能根本沒下載過那個
+    /// 碎檔（例如只拿到 0005 和 0010，中間的 0007 還在路上），於是刪掉的是
+    /// 一份**本機從來沒有過**的操作。刪完就再也回不來了。
+    ///
+    /// 正確的規則只有一條：**只有寫那個檔的裝置，才知道自己壓實了哪幾個**。
+    /// 所以這個函式回傳明確的名單，呼叫端照名單刪，不做任何推論。
+    /// 這同時維持了架構不變式 1（每台裝置只寫／只刪自己 `device_id` 的檔案）。
+    pub fn compact_own_doc_ops(
+        &self,
+        threshold: usize,
+        device: u32,
+    ) -> Result<Option<CompactOutcome>, StorageError> {
+        let dir = self.root.join("doc/ops");
+        if !dir.exists() {
+            return Ok(None);
+        }
+        let suffix = format!("-{device:08x}.oplog");
+        let mut own: Vec<String> = fs::read_dir(&dir)?
+            .filter_map(Result::ok)
+            .filter_map(|e| e.file_name().to_str().map(str::to_string))
+            .filter(|name| name.ends_with(&suffix) && !crate::atomic::is_temp_name(name))
+            .collect();
+        if own.len() < threshold {
+            return Ok(None);
+        }
+        own.sort(); // 字典序 = 因果序
+
+        let max_lamport_hex = own
+            .last()
+            .and_then(|n| n.split('-').next())
+            .unwrap_or("0000000000000000")
+            .to_string();
+        let compacted_name = format!("{max_lamport_hex}-{device:08x}.oplog");
+
+        let mut merged = Vec::new();
+        for name in &own {
+            merged.extend_from_slice(&fs::read(dir.join(name))?);
+        }
+        crate::atomic::write_atomic(&dir.join(&compacted_name), &merged)?;
+
+        let mut absorbed = Vec::new();
+        for name in &own {
+            if name == &compacted_name {
+                continue;
+            }
+            let _ = fs::remove_file(dir.join(name));
+            absorbed.push(name.clone());
+        }
+        Ok(Some(CompactOutcome {
+            compacted_name,
+            absorbed,
+        }))
     }
 
     /// 讀一個 oplog 檔的原始位元組。
@@ -471,10 +549,9 @@ impl NotebookPackage {
     /// append 反而會在重複同步時把內容寫兩次。
     pub fn write_doc_op_file(&self, name: &str, bytes: &[u8]) -> Result<(), StorageError> {
         let path = self.doc_op_path(name)?;
-        if let Some(parent) = path.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        fs::write(path, bytes)?;
+        // 原子寫入，理由見 `crate::atomic`：半個 oplog 檔是一個**合法的**
+        // append-only 前綴，對面不會察覺有問題，只會把它當成比較舊的版本。
+        crate::atomic::write_atomic(&path, bytes)?;
         Ok(())
     }
 
@@ -1021,6 +1098,71 @@ mod tests {
         assert_eq!(reopened.read_ink(page).unwrap().len(), 1);
 
         let _ = fs::remove_file(zip_file);
+    }
+
+    #[test]
+    fn compacting_only_touches_this_devices_own_fragments() {
+        // 壓實別台裝置的碎檔，等於代替它決定「這些可以刪了」——
+        // 而本機可能根本沒拿到它全部的碎檔。
+        use padnote_doc::ops::DocOp;
+        let root = tmp("compact-own");
+        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        for lamport in 1..=6u64 {
+            pkg.append_doc_ops(lamport, 0xAA, &[DocOp::SetTitle { title: "a".into() }])
+                .unwrap();
+        }
+        for lamport in 10..=13u64 {
+            pkg.append_doc_ops(lamport, 0xBB, &[DocOp::SetTitle { title: "b".into() }])
+                .unwrap();
+        }
+
+        let outcome = pkg.compact_own_doc_ops(5, 0xAA).unwrap().unwrap();
+        assert_eq!(outcome.compacted_name, "0000000000000006-000000aa.oplog");
+        assert_eq!(outcome.absorbed.len(), 5, "自己的五個碎檔該被吃掉");
+
+        let names: Vec<String> = pkg
+            .doc_op_files()
+            .unwrap()
+            .into_iter()
+            .map(|(n, _)| n)
+            .collect();
+        // 別台裝置的四個檔一個都不能少。
+        assert_eq!(names.iter().filter(|n| n.ends_with("-000000bb.oplog")).count(), 4);
+        assert_eq!(names.iter().filter(|n| n.ends_with("-000000aa.oplog")).count(), 1);
+    }
+
+    #[test]
+    fn compaction_below_the_threshold_does_nothing() {
+        use padnote_doc::ops::DocOp;
+        let root = tmp("compact-below");
+        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        for lamport in 1..=3u64 {
+            pkg.append_doc_ops(lamport, 0xAA, &[DocOp::SetTitle { title: "a".into() }])
+                .unwrap();
+        }
+        assert!(pkg.compact_own_doc_ops(5, 0xAA).unwrap().is_none());
+        assert_eq!(pkg.doc_op_files().unwrap().len(), 3);
+    }
+
+    #[test]
+    fn compaction_keeps_every_operation() {
+        // 壓實是位元組拼接。掉一個 frame 的症狀是「同步之後少了幾筆」。
+        use padnote_doc::ops::DocOp;
+        let root = tmp("compact-keeps");
+        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        for lamport in 1..=6u64 {
+            pkg.append_doc_ops(
+                lamport,
+                0xAA,
+                &[DocOp::SetTitle {
+                    title: format!("t{lamport}"),
+                }],
+            )
+            .unwrap();
+        }
+        let before = pkg.read_doc_ops().unwrap().len();
+        pkg.compact_own_doc_ops(5, 0xAA).unwrap().unwrap();
+        assert_eq!(pkg.read_doc_ops().unwrap().len(), before);
     }
 
     #[test]

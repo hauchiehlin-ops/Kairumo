@@ -42,6 +42,17 @@ pub struct SyncPlan {
 /// 整份覆寫、不適用 append-only 推論的檔案。
 const NOT_APPEND_ONLY: &[&str] = &["manifest.json"];
 
+// # 為什麼這裡不再「推論某個遠端碎檔已經被壓實涵蓋」
+//
+// 舊版會跳過「lamport 比本機同裝置最大值小」的遠端碎檔，理由是
+// 「它一定已經在本機的壓實檔裡」。那個推論會錯：本機可能根本沒下載過
+// 中間那個碎檔（只拿到 0005 與 0010，0007 還在路上），於是跳過的是
+// 一份**本機從來沒有過**的操作，而且不會有任何錯誤訊息。
+//
+// 現在的規則是：只有寫那個檔的裝置會刪自己的碎檔（壓實後、上傳成功後，
+// 依明確名單刪），所以雲端不會無限累積，而這裡也不需要猜。
+// 多下載一個已經涵蓋過的碎檔只是浪費幾 KB —— 套用是冪等的。
+
 /// 算出同步計畫。
 #[uniffi::export]
 pub fn plan_folder_sync(local: Vec<SyncFileEntry>, remote: Vec<SyncFileEntry>) -> SyncPlan {
@@ -49,27 +60,6 @@ pub fn plan_folder_sync(local: Vec<SyncFileEntry>, remote: Vec<SyncFileEntry>) -
 
     let local_map: HashMap<&str, u64> = local.iter().map(|e| (e.path.as_str(), e.size)).collect();
     let remote_map: HashMap<&str, u64> = remote.iter().map(|e| (e.path.as_str(), e.size)).collect();
-
-    // 計算本機各裝置的最大 lamport。若本機已存在該裝置更大或相同 lamport 的檔（例如已壓實），
-    // 遠端較舊的碎檔（小於最大 lamport）就無需下載，因為其操作已完整包含在本機壓實檔中。
-    let mut local_max_lamport_by_device: HashMap<String, u64> = HashMap::new();
-    for entry in &local {
-        if let Some(file_name) = entry.path.rsplit('/').next()
-            && file_name.ends_with(".oplog")
-            && let Some(pos) = file_name.rfind('-')
-        {
-            let dev_suffix = &file_name[pos..];
-            let lamport_hex = &file_name[..pos];
-            if let Ok(l) = u64::from_str_radix(lamport_hex, 16) {
-                let e = local_max_lamport_by_device
-                    .entry(dev_suffix.to_string())
-                    .or_insert(0);
-                if l > *e {
-                    *e = l;
-                }
-            }
-        }
-    }
 
     let mut plan = SyncPlan {
         upload: Vec::new(),
@@ -96,20 +86,6 @@ pub fn plan_folder_sync(local: Vec<SyncFileEntry>, remote: Vec<SyncFileEntry>) -
 
     for entry in &remote {
         if !local_map.contains_key(entry.path.as_str()) {
-            if let Some(file_name) = entry.path.rsplit('/').next()
-                && file_name.ends_with(".oplog")
-                && let Some(pos) = file_name.rfind('-')
-            {
-                let dev_suffix = &file_name[pos..];
-                let lamport_hex = &file_name[..pos];
-                if let Ok(l) = u64::from_str_radix(lamport_hex, 16)
-                    && let Some(&max_l) = local_max_lamport_by_device.get(dev_suffix)
-                    && l < max_l
-                {
-                    // 該舊碎檔已包含在本機壓實檔中，無需重新拉取
-                    continue;
-                }
-            }
             plan.download.push(entry.path.clone());
         }
     }
@@ -216,8 +192,10 @@ mod tests {
     }
 
     #[test]
-    fn shadowed_oplogs_are_not_downloaded() {
-        // 本機已有 0010 壓實檔，遠端的 0001~0009 舊碎檔不應被拉回
+    fn a_remote_fragment_is_never_skipped_by_guessing() {
+        // 舊版會跳過 0005（「它一定已經在本機的 0010 壓實檔裡」）。
+        // 那個推論在本機沒下載過 0005 的時候是錯的，而錯的代價是
+        // **永遠拿不到那幾筆操作**。寧可多下載幾 KB —— 套用是冪等的。
         let local = vec![e("doc/ops/0000000000000010-00000001.oplog", 1000)];
         let remote = vec![
             e("doc/ops/0000000000000005-00000001.oplog", 100),
@@ -225,10 +203,12 @@ mod tests {
             e("doc/ops/0000000000000015-00000001.oplog", 1500),
         ];
         let plan = plan_folder_sync(local, remote);
-        // 0005 被跳過，只拉取更新的 0015
         assert_eq!(
             plan.download,
-            vec!["doc/ops/0000000000000015-00000001.oplog"]
+            vec![
+                "doc/ops/0000000000000005-00000001.oplog",
+                "doc/ops/0000000000000015-00000001.oplog"
+            ]
         );
     }
 }

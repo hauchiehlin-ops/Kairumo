@@ -1723,13 +1723,19 @@ public final class NotebookStore: ObservableObject {
     }
 
     public func renameNotebook(id: String, newTitle: String) {
-        guard let idx = notebooks.firstIndex(where: { $0.id == id }) else { return }
+        guard let idx = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }) else { return }
         let clean = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
         if !clean.isEmpty {
             notebooks[idx].title = clean
             // 使用者親自命名之後就不再翻譯，否則改了名字又被語系蓋回去。
             notebooks[idx].titleKey = nil
             notebooks[idx].lastModifiedDate = Date()
+            AccountSyncStore.shared.record(
+                id: notebooks[idx].id,
+                title: notebooks[idx].title,
+                parentId: notebooks[idx].folderId,
+                isFolder: false
+            )
             persistData()
         }
     }
