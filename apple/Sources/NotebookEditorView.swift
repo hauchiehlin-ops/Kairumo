@@ -3411,7 +3411,7 @@ public struct NotebookEditorView: View {
                     .foregroundColor(Color.accentColor.opacity(0.6))
                     .frame(width: 1)
                     .overlay(alignment: .top) {
-                        Text("對稱軸 (Symmetry)")
+                        Text(localizationManager.localized("ed_symmetry_axis"))
                             .font(.system(size: 9, weight: .bold))
                             .foregroundColor(.accentColor)
                             .padding(.horizontal, 6)
@@ -5063,7 +5063,7 @@ public struct NotebookEditorView: View {
                     Image(systemName: "character.textbox")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.accentColor)
-                    Text("文字排版工具 · 正在編輯文字方塊")
+                    Text(localizationManager.localized("ed_text_toolbar_hint"))
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.primary)
                     Spacer()
@@ -5074,7 +5074,7 @@ public struct NotebookEditorView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "checkmark.circle.fill")
-                            Text("完成並返回手繪")
+                            Text(localizationManager.localized("ed_done_back_to_ink"))
                         }
                         .font(.system(size: 11, weight: .bold))
                         .foregroundColor(.white)
@@ -5311,7 +5311,7 @@ public struct NotebookEditorView: View {
                     Image(systemName: "pencil.tip")
                         .font(.system(size: 12, weight: .bold))
                         .foregroundColor(.accentColor)
-                    Text("手繪工具模式 · 正在繪製局部手繪畫布")
+                    Text(localizationManager.localized("ed_ink_toolbar_hint"))
                         .font(.system(size: 11, weight: .semibold))
                         .foregroundColor(.primary)
                     Spacer()
@@ -5322,7 +5322,7 @@ public struct NotebookEditorView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "checkmark.circle.fill")
-                            Text("完成並返回文件")
+                            Text(localizationManager.localized("ed_done_back_to_doc"))
                         }
                         .font(.system(size: 11, weight: .bold))
                         .foregroundColor(.white)
@@ -6432,7 +6432,7 @@ public struct NotebookEditorView: View {
             }
             .buttonStyle(.plain)
             .keyboardShortcut(.escape, modifiers: [])
-            .accessibilityLabel("取消框選")
+            .accessibilityLabel(localizationManager.localized("ed_cancel_selection"))
             .help("取消框選模式，回到上一個工具")
         }
         .padding(.horizontal, 12)

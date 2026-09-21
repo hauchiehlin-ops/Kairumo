@@ -66,7 +66,7 @@ public struct ProColorWheelView: View {
             // 2. 飽和度 & 明度滑桿
             VStack(spacing: 6) {
                 HStack(spacing: 8) {
-                    Text("彩度")
+                    Text(LocalizationManager.shared.localized("cw_saturation"))
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.secondary)
                         .frame(width: 24)
@@ -75,7 +75,7 @@ public struct ProColorWheelView: View {
                 }
 
                 HStack(spacing: 8) {
-                    Text("明度")
+                    Text(LocalizationManager.shared.localized("cw_brightness"))
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundColor(.secondary)
                         .frame(width: 24)
@@ -89,7 +89,7 @@ public struct ProColorWheelView: View {
 
             // 3. 專業色彩和諧推薦（互補色、對比色、相鄰色）
             VStack(alignment: .leading, spacing: 5) {
-                Text("色彩和諧推薦 (Harmonies)")
+                Text(LocalizationManager.shared.localized("cw_harmonies"))
                     .font(.system(size: 10, weight: .semibold))
                     .foregroundColor(.secondary)
 

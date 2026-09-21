@@ -399,6 +399,70 @@ extension LocalizationManager {
             .ko: "아키텍처 모드",
             .th: "โหมดสถาปัตยกรรม"
         ],
+        "asr_state_downloading": [
+            .zhHant: "Whisper 模型下載中：%@\n下載完成後會自動啟用多語言偵測與標點。",
+            .en: "Downloading the Whisper model: %@\nLanguage detection and punctuation turn on automatically when it finishes.",
+            .zhHans: "Whisper 模型下载中：%@\n下载完成后会自动启用多语言检测与标点。",
+            .ja: "Whisper モデルをダウンロード中：%@\n完了すると多言語判定と句読点付与が自動で有効になります。",
+            .ko: "Whisper 모델 다운로드 중: %@\n완료되면 다국어 감지와 문장 부호가 자동으로 켜집니다.",
+            .th: "กำลังดาวน์โหลดโมเดล Whisper: %@\nเมื่อเสร็จแล้วระบบจะเปิดการตรวจภาษาและวรรคตอนให้อัตโนมัติ"
+        ],
+        "asr_state_interrupted": [
+            .zhHant: "上次下載中斷：%@\n請確認網路，或改用「鏡像來源」下載。",
+            .en: "The last download was interrupted: %@\nCheck your connection, or download from the mirror instead.",
+            .zhHans: "上次下载中断：%@\n请确认网络，或改用「镜像来源」下载。",
+            .ja: "前回のダウンロードが中断されました：%@\n接続を確認するか、ミラーからダウンロードしてください。",
+            .ko: "지난 다운로드가 중단되었습니다: %@\n연결을 확인하거나 미러에서 내려받으세요.",
+            .th: "การดาวน์โหลดครั้งก่อนถูกขัดจังหวะ: %@\nโปรดตรวจสอบการเชื่อมต่อ หรือดาวน์โหลดจากมิเรอร์แทน"
+        ],
+        "asr_state_not_downloaded": [
+            .zhHant: "尚未下載 Whisper 離線模型，目前改用系統聽寫。\n下載之後辨識會更準。",
+            .en: "The offline Whisper model has not been downloaded, so system dictation is used instead.\nDownloading it improves accuracy.",
+            .zhHans: "尚未下载 Whisper 离线模型，目前改用系统听写。\n下载之后识别会更准。",
+            .ja: "オフラインの Whisper モデルが未ダウンロードのため、システムの音声入力を使用しています。\nダウンロードすると精度が上がります。",
+            .ko: "오프라인 Whisper 모델이 없어 시스템 받아쓰기를 사용합니다.\n내려받으면 정확도가 올라갑니다.",
+            .th: "ยังไม่ได้ดาวน์โหลดโมเดล Whisper แบบออฟไลน์ จึงใช้การพิมพ์ด้วยเสียงของระบบแทน\nดาวน์โหลดแล้วจะแม่นยำขึ้น"
+        ],
+        "asr_state_ready_long": [
+            .zhHant: "Whisper 端側模型已就緒。\n\n自動偵測 99 種語言、自動補標點，全程在這台裝置上運算，內容不離開裝置。",
+            .en: "The on-device Whisper model is ready.\n\nIt detects 99 languages automatically and restores punctuation. Everything runs on this device; nothing leaves it.",
+            .zhHans: "Whisper 端侧模型已就绪。\n\n自动检测 99 种语言、自动补标点，全程在这台设备上运算，内容不离开设备。",
+            .ja: "端末内 Whisper モデルの準備ができました。\n\n99 言語を自動判定し、句読点も自動で補います。すべてこの端末で処理され、外部には送信されません。",
+            .ko: "기기 내 Whisper 모델이 준비되었습니다.\n\n99개 언어를 자동 감지하고 문장 부호를 복원합니다. 모든 처리는 이 기기에서 이루어지며 외부로 나가지 않습니다.",
+            .th: "โมเดล Whisper ในเครื่องพร้อมใช้งานแล้ว\n\nตรวจจับได้ 99 ภาษาโดยอัตโนมัติและเติมวรรคตอนให้ ทุกอย่างประมวลผลบนอุปกรณ์นี้ ไม่มีข้อมูลออกไปข้างนอก"
+        ],
+        "asr_state_ready_short": [
+            .zhHant: "Whisper 端側模型已就緒。",
+            .en: "The on-device Whisper model is ready.",
+            .zhHans: "Whisper 端侧模型已就绪。",
+            .ja: "端末内 Whisper モデルの準備ができました。",
+            .ko: "기기 내 Whisper 모델이 준비되었습니다.",
+            .th: "โมเดล Whisper ในเครื่องพร้อมใช้งานแล้ว"
+        ],
+        "asr_state_standard": [
+            .zhHant: "目前使用系統的標準語音服務轉錄。",
+            .en: "Transcribing with the system's standard speech service.",
+            .zhHans: "目前使用系统的标准语音服务转录。",
+            .ja: "システム標準の音声サービスで文字起こししています。",
+            .ko: "시스템 표준 음성 서비스로 전사하고 있습니다.",
+            .th: "กำลังถอดเสียงด้วยบริการเสียงมาตรฐานของระบบ"
+        ],
+        "asr_state_system_only": [
+            .zhHant: "系統聽寫已就緒（依介面語言轉錄）。\n想要自動偵測語言與自動標點，請下載 Whisper 離線模型。",
+            .en: "System dictation is ready (it transcribes in the interface language).\nFor automatic language detection and punctuation, download the offline Whisper model.",
+            .zhHans: "系统听写已就绪（依界面语言转录）。\n想要自动检测语言与自动标点，请下载 Whisper 离线模型。",
+            .ja: "システムの音声入力が利用できます（インターフェイスの言語で文字起こし）。\n言語の自動判定と句読点が必要な場合は、オフラインの Whisper モデルをダウンロードしてください。",
+            .ko: "시스템 받아쓰기를 사용할 수 있습니다(인터페이스 언어로 전사). 언어 자동 감지와 문장 부호가 필요하면 오프라인 Whisper 모델을 내려받으세요.",
+            .th: "การพิมพ์ด้วยเสียงของระบบพร้อมใช้งาน (ถอดเสียงตามภาษาของอินเทอร์เฟซ)\nหากต้องการตรวจภาษาและวรรคตอนอัตโนมัติ ให้ดาวน์โหลดโมเดล Whisper แบบออฟไลน์"
+        ],
+        "asr_state_title": [
+            .zhHant: "離線語音模型狀態",
+            .en: "Offline speech model",
+            .zhHans: "离线语音模型状态",
+            .ja: "オフライン音声モデルの状態",
+            .ko: "오프라인 음성 모델 상태",
+            .th: "สถานะโมเดลเสียงออฟไลน์"
+        ],
         "asset_aes_comp_01_title": [
             .zhHant: "黃金螺旋對數構圖尺標",
             .en: "Golden-Spiral Logarithmic Composition Guide",
@@ -2143,6 +2207,30 @@ extension LocalizationManager {
             .ko: "선택한 필기를 잘라 클립보드에 넣습니다(원래 위치에서 삭제)",
             .th: "ตัดเส้นที่เลือกไปยังคลิปบอร์ด (ลบออกจากหน้า)"
         ],
+        "cw_brightness": [
+            .zhHant: "明度",
+            .en: "Brightness",
+            .zhHans: "明度",
+            .ja: "明度",
+            .ko: "명도",
+            .th: "ความสว่าง"
+        ],
+        "cw_harmonies": [
+            .zhHant: "配色建議",
+            .en: "Colour harmonies",
+            .zhHans: "配色建议",
+            .ja: "配色の候補",
+            .ko: "색 조화 추천",
+            .th: "ชุดสีที่เข้ากัน"
+        ],
+        "cw_saturation": [
+            .zhHant: "彩度",
+            .en: "Saturation",
+            .zhHans: "彩度",
+            .ja: "彩度",
+            .ko: "채도",
+            .th: "ความอิ่มตัว"
+        ],
         "data_and_sync": [
             .zhHant: "資料與同步",
             .en: "Data & Sync",
@@ -2542,6 +2630,54 @@ extension LocalizationManager {
             .ja: "ストローク、添付ファイル、コメントはローカルで暗号化され、リレーサーバーは内容を閲覧できません。",
             .ko: "획, 첨부 파일 및 댓글은 로컬에서 암호화되며 릴레이 서버는 내용을 볼 수 없습니다.",
             .th: "เส้นวาด ไฟล์แนบ และความคิดเห็นได้รับการเข้ารหัสบนเครื่อง เซิร์ฟเวอร์รีเลย์ไม่สามารถตรวจสอบเนื้อหาได้"
+        ],
+        "ed_cancel_selection": [
+            .zhHant: "取消框選",
+            .en: "Cancel selection",
+            .zhHans: "取消框选",
+            .ja: "選択を解除",
+            .ko: "선택 해제",
+            .th: "ยกเลิกการเลือก"
+        ],
+        "ed_done_back_to_doc": [
+            .zhHant: "完成，回到文件",
+            .en: "Done, back to the document",
+            .zhHans: "完成，回到文档",
+            .ja: "完了して書類に戻る",
+            .ko: "완료하고 문서로 돌아가기",
+            .th: "เสร็จแล้ว กลับไปที่เอกสาร"
+        ],
+        "ed_done_back_to_ink": [
+            .zhHant: "完成，回到手繪",
+            .en: "Done, back to handwriting",
+            .zhHans: "完成，回到手绘",
+            .ja: "完了して手書きに戻る",
+            .ko: "완료하고 필기로 돌아가기",
+            .th: "เสร็จแล้ว กลับไปที่ลายมือ"
+        ],
+        "ed_ink_toolbar_hint": [
+            .zhHant: "手繪工具 · 正在文件內的畫布上作畫",
+            .en: "Handwriting tools · drawing on the canvas inside the document",
+            .zhHans: "手绘工具 · 正在文档内的画布上作画",
+            .ja: "手書きツール · 書類内のキャンバスに描画中",
+            .ko: "필기 도구 · 문서 안 캔버스에 그리는 중",
+            .th: "เครื่องมือลายมือ · กำลังวาดบนผืนผ้าใบในเอกสาร"
+        ],
+        "ed_symmetry_axis": [
+            .zhHant: "對稱軸",
+            .en: "Symmetry axis",
+            .zhHans: "对称轴",
+            .ja: "対称軸",
+            .ko: "대칭축",
+            .th: "แกนสมมาตร"
+        ],
+        "ed_text_toolbar_hint": [
+            .zhHant: "文字排版工具 · 正在編輯文字方塊",
+            .en: "Text tools · editing a text box",
+            .zhHans: "文字排版工具 · 正在编辑文本框",
+            .ja: "テキストツール · テキストボックスを編集中",
+            .ko: "텍스트 도구 · 텍스트 상자 편집 중",
+            .th: "เครื่องมือข้อความ · กำลังแก้ไขกล่องข้อความ"
         ],
         "edit": [
             .zhHant: "編修",
@@ -7791,6 +7927,14 @@ extension LocalizationManager {
             .ko: "스티커로 저장",
             .th: "บันทึกเป็นสติกเกอร์"
         ],
+        "sd_loading": [
+            .zhHant: "讀取中…",
+            .en: "Loading…",
+            .zhHans: "读取中…",
+            .ja: "読み込み中…",
+            .ko: "불러오는 중…",
+            .th: "กำลังโหลด…"
+        ],
         "search_assets_placeholder": [
             .zhHant: "搜尋機構、3C、零件、規格、色彩...",
             .en: "Search mechanisms, 3C, components, specs, colors...",
@@ -10198,6 +10342,70 @@ extension LocalizationManager {
             .ja: "バージョン",
             .ko: "버전",
             .th: "เวอร์ชัน"
+        ],
+        "wd_add_table": [
+            .zhHant: "＋表格",
+            .en: "+ Table",
+            .zhHans: "＋表格",
+            .ja: "＋表",
+            .ko: "＋표",
+            .th: "＋ตาราง"
+        ],
+        "wd_clear_format": [
+            .zhHant: "清除格式",
+            .en: "Clear formatting",
+            .zhHans: "清除格式",
+            .ja: "書式をクリア",
+            .ko: "서식 지우기",
+            .th: "ล้างการจัดรูปแบบ"
+        ],
+        "wd_editing_ink_mode": [
+            .zhHant: "編輯中（工具列已切到手繪）",
+            .en: "Editing (the toolbar switched to handwriting)",
+            .zhHans: "编辑中（工具栏已切到手绘）",
+            .ja: "編集中（ツールバーは手書きに切り替わっています）",
+            .ko: "편집 중(도구 막대가 필기로 전환됨)",
+            .th: "กำลังแก้ไข (แถบเครื่องมือสลับเป็นลายมือแล้ว)"
+        ],
+        "wd_highlight_color": [
+            .zhHant: "螢光色",
+            .en: "Highlight colour",
+            .zhHans: "荧光色",
+            .ja: "蛍光色",
+            .ko: "형광색",
+            .th: "สีไฮไลต์"
+        ],
+        "wd_ink_block": [
+            .zhHant: "手繪區塊",
+            .en: "Handwriting block",
+            .zhHans: "手绘区块",
+            .ja: "手書きブロック",
+            .ko: "필기 블록",
+            .th: "บล็อกลายมือ"
+        ],
+        "wd_inline_canvas": [
+            .zhHant: "文件內的手繪畫布",
+            .en: "Handwriting canvas inside the document",
+            .zhHans: "文档内的手绘画布",
+            .ja: "書類内の手書きキャンバス",
+            .ko: "문서 안의 필기 캔버스",
+            .th: "ผืนผ้าใบลายมือในเอกสาร"
+        ],
+        "wd_insert_divider": [
+            .zhHant: "插入分隔線",
+            .en: "Insert divider",
+            .zhHans: "插入分隔线",
+            .ja: "区切り線を挿入",
+            .ko: "구분선 삽입",
+            .th: "แทรกเส้นคั่น"
+        ],
+        "wd_tap_to_draw": [
+            .zhHant: "點這裡或用觸控筆，直接在文件裡手寫推導",
+            .en: "Tap here, or use a stylus, to write directly inside the document",
+            .zhHans: "点这里或用触控笔，直接在文档里手写推导",
+            .ja: "ここをタップするか、スタイラスで書類に直接手書きできます",
+            .ko: "여기를 탭하거나 스타일러스로 문서 안에 바로 필기하세요",
+            .th: "แตะที่นี่หรือใช้ปากกาสไตลัสเพื่อเขียนในเอกสารได้ทันที"
         ],
         "wireframe_button": [
             .zhHant: "主要行動按鈕 (CTA)",

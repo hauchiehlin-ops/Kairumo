@@ -269,7 +269,7 @@ fun WordDocumentEditorView(
                     FilterChip(
                         selected = false,
                         onClick = onInsertTable,
-                        label = { Text("＋表格", fontSize = 12.sp) },
+                        label = { Text(l("wd_add_table"), fontSize = 12.sp) },
                         modifier = Modifier.height(32.dp)
                     )
                 }

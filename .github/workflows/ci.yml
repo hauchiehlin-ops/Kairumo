@@ -241,6 +241,11 @@ jobs:
         run: python3 scripts/build-platform-docs.py --check
       - name: 隱私權政策各平台版與來源一致
         run: python3 scripts/build-privacy-docs.py --check
+      # 字串表與它的驗證早就存在，問題從來不是「沒有機制」，
+      # 是沒有東西阻止你繞過它 —— 直接寫 Text("診斷") 一樣編得過、
+      # 一樣跑得動，只是別的語言看不懂。2026-09-22 盤點時 Apple 端有 59 處。
+      - name: 介面上沒有硬寫死的文字
+        run: python3 scripts/check-hardcoded-strings.py
 
   # 跨平台畫面對照（android-parity-plan.md 階段 0）。
   #

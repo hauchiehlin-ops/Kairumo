@@ -416,6 +416,70 @@ object LocalizationStrings {
             "ko" to "아키텍처 모드",
             "th" to "โหมดสถาปัตยกรรม"
         ),
+        "asr_state_downloading" to mapOf(
+            "zh-Hant" to "Whisper 模型下載中：%@\n下載完成後會自動啟用多語言偵測與標點。",
+            "en" to "Downloading the Whisper model: %@\nLanguage detection and punctuation turn on automatically when it finishes.",
+            "zh-Hans" to "Whisper 模型下载中：%@\n下载完成后会自动启用多语言检测与标点。",
+            "ja" to "Whisper モデルをダウンロード中：%@\n完了すると多言語判定と句読点付与が自動で有効になります。",
+            "ko" to "Whisper 모델 다운로드 중: %@\n완료되면 다국어 감지와 문장 부호가 자동으로 켜집니다.",
+            "th" to "กำลังดาวน์โหลดโมเดล Whisper: %@\nเมื่อเสร็จแล้วระบบจะเปิดการตรวจภาษาและวรรคตอนให้อัตโนมัติ"
+        ),
+        "asr_state_interrupted" to mapOf(
+            "zh-Hant" to "上次下載中斷：%@\n請確認網路，或改用「鏡像來源」下載。",
+            "en" to "The last download was interrupted: %@\nCheck your connection, or download from the mirror instead.",
+            "zh-Hans" to "上次下载中断：%@\n请确认网络，或改用「镜像来源」下载。",
+            "ja" to "前回のダウンロードが中断されました：%@\n接続を確認するか、ミラーからダウンロードしてください。",
+            "ko" to "지난 다운로드가 중단되었습니다: %@\n연결을 확인하거나 미러에서 내려받으세요.",
+            "th" to "การดาวน์โหลดครั้งก่อนถูกขัดจังหวะ: %@\nโปรดตรวจสอบการเชื่อมต่อ หรือดาวน์โหลดจากมิเรอร์แทน"
+        ),
+        "asr_state_not_downloaded" to mapOf(
+            "zh-Hant" to "尚未下載 Whisper 離線模型，目前改用系統聽寫。\n下載之後辨識會更準。",
+            "en" to "The offline Whisper model has not been downloaded, so system dictation is used instead.\nDownloading it improves accuracy.",
+            "zh-Hans" to "尚未下载 Whisper 离线模型，目前改用系统听写。\n下载之后识别会更准。",
+            "ja" to "オフラインの Whisper モデルが未ダウンロードのため、システムの音声入力を使用しています。\nダウンロードすると精度が上がります。",
+            "ko" to "오프라인 Whisper 모델이 없어 시스템 받아쓰기를 사용합니다.\n내려받으면 정확도가 올라갑니다.",
+            "th" to "ยังไม่ได้ดาวน์โหลดโมเดล Whisper แบบออฟไลน์ จึงใช้การพิมพ์ด้วยเสียงของระบบแทน\nดาวน์โหลดแล้วจะแม่นยำขึ้น"
+        ),
+        "asr_state_ready_long" to mapOf(
+            "zh-Hant" to "Whisper 端側模型已就緒。\n\n自動偵測 99 種語言、自動補標點，全程在這台裝置上運算，內容不離開裝置。",
+            "en" to "The on-device Whisper model is ready.\n\nIt detects 99 languages automatically and restores punctuation. Everything runs on this device; nothing leaves it.",
+            "zh-Hans" to "Whisper 端侧模型已就绪。\n\n自动检测 99 种语言、自动补标点，全程在这台设备上运算，内容不离开设备。",
+            "ja" to "端末内 Whisper モデルの準備ができました。\n\n99 言語を自動判定し、句読点も自動で補います。すべてこの端末で処理され、外部には送信されません。",
+            "ko" to "기기 내 Whisper 모델이 준비되었습니다.\n\n99개 언어를 자동 감지하고 문장 부호를 복원합니다. 모든 처리는 이 기기에서 이루어지며 외부로 나가지 않습니다.",
+            "th" to "โมเดล Whisper ในเครื่องพร้อมใช้งานแล้ว\n\nตรวจจับได้ 99 ภาษาโดยอัตโนมัติและเติมวรรคตอนให้ ทุกอย่างประมวลผลบนอุปกรณ์นี้ ไม่มีข้อมูลออกไปข้างนอก"
+        ),
+        "asr_state_ready_short" to mapOf(
+            "zh-Hant" to "Whisper 端側模型已就緒。",
+            "en" to "The on-device Whisper model is ready.",
+            "zh-Hans" to "Whisper 端侧模型已就绪。",
+            "ja" to "端末内 Whisper モデルの準備ができました。",
+            "ko" to "기기 내 Whisper 모델이 준비되었습니다.",
+            "th" to "โมเดล Whisper ในเครื่องพร้อมใช้งานแล้ว"
+        ),
+        "asr_state_standard" to mapOf(
+            "zh-Hant" to "目前使用系統的標準語音服務轉錄。",
+            "en" to "Transcribing with the system's standard speech service.",
+            "zh-Hans" to "目前使用系统的标准语音服务转录。",
+            "ja" to "システム標準の音声サービスで文字起こししています。",
+            "ko" to "시스템 표준 음성 서비스로 전사하고 있습니다.",
+            "th" to "กำลังถอดเสียงด้วยบริการเสียงมาตรฐานของระบบ"
+        ),
+        "asr_state_system_only" to mapOf(
+            "zh-Hant" to "系統聽寫已就緒（依介面語言轉錄）。\n想要自動偵測語言與自動標點，請下載 Whisper 離線模型。",
+            "en" to "System dictation is ready (it transcribes in the interface language).\nFor automatic language detection and punctuation, download the offline Whisper model.",
+            "zh-Hans" to "系统听写已就绪（依界面语言转录）。\n想要自动检测语言与自动标点，请下载 Whisper 离线模型。",
+            "ja" to "システムの音声入力が利用できます（インターフェイスの言語で文字起こし）。\n言語の自動判定と句読点が必要な場合は、オフラインの Whisper モデルをダウンロードしてください。",
+            "ko" to "시스템 받아쓰기를 사용할 수 있습니다(인터페이스 언어로 전사). 언어 자동 감지와 문장 부호가 필요하면 오프라인 Whisper 모델을 내려받으세요.",
+            "th" to "การพิมพ์ด้วยเสียงของระบบพร้อมใช้งาน (ถอดเสียงตามภาษาของอินเทอร์เฟซ)\nหากต้องการตรวจภาษาและวรรคตอนอัตโนมัติ ให้ดาวน์โหลดโมเดล Whisper แบบออฟไลน์"
+        ),
+        "asr_state_title" to mapOf(
+            "zh-Hant" to "離線語音模型狀態",
+            "en" to "Offline speech model",
+            "zh-Hans" to "离线语音模型状态",
+            "ja" to "オフライン音声モデルの状態",
+            "ko" to "오프라인 음성 모델 상태",
+            "th" to "สถานะโมเดลเสียงออฟไลน์"
+        ),
         "asset_aes_comp_01_title" to mapOf(
             "zh-Hant" to "黃金螺旋對數構圖尺標",
             "en" to "Golden-Spiral Logarithmic Composition Guide",
@@ -607,7 +671,10 @@ object LocalizationStrings {
             "ja" to "DIN 7991 六角穴付き皿ねじ",
             "ko" to "DIN 7991 육각 소켓 접시머리 나사",
             "th" to "สกรูหัวฝังหกเหลี่ยม DIN 7991"
-        ),
+        )
+    )
+
+    private fun part1(): Map<String, Map<String, String>> = mapOf(
         "asset_hard_03_title" to mapOf(
             "zh-Hant" to "六角法蘭面防鬆螺母",
             "en" to "Hex Flange Lock Nut",
@@ -671,10 +738,7 @@ object LocalizationStrings {
             "ja" to "機構設計、製品(3C、自動車、家具)、金物、デジタルUI部品",
             "ko" to "기구 설계, 실제 제품(3C, 자동차, 가구), 하드웨어 부품 및 디지털 와이어프레임",
             "th" to "ครอบคลุมการออกแบบกลไก, ผลิตภัณฑ์จริง (3C, รถยนต์, เฟอร์นิเจอร์), ฮาร์ดแวร์ และดิจิทัล"
-        )
-    )
-
-    private fun part1(): Map<String, Map<String, String>> = mapOf(
+        ),
         "asset_mech_01_title" to mapOf(
             "zh-Hant" to "漸開線正齒輪組",
             "en" to "Involute Spur Gear Set",
@@ -1250,7 +1314,10 @@ object LocalizationStrings {
             "ja" to "板金・CNC切削加工",
             "ko" to "판금 절곡 및 CNC 가공",
             "th" to "แผ่นโลหะและเครื่องซีเอ็นซี"
-        ),
+        )
+    )
+
+    private fun part2(): Map<String, Map<String, String>> = mapOf(
         "cat_surface_finishing" to mapOf(
             "zh-Hant" to "表面處理與材料工藝",
             "en" to "Surface Finishing",
@@ -1314,10 +1381,7 @@ object LocalizationStrings {
             "ja" to "最大値",
             "ko" to "최댓값",
             "th" to "ค่าสูงสุด"
-        )
-    )
-
-    private fun part2(): Map<String, Map<String, String>> = mapOf(
+        ),
         "chart_axis_min" to mapOf(
             "zh-Hant" to "最小值",
             "en" to "Minimum",
@@ -1893,7 +1957,10 @@ object LocalizationStrings {
             "ja" to "インクブラック",
             "ko" to "먹색",
             "th" to "ดำหมึก"
-        ),
+        )
+    )
+
+    private fun part3(): Map<String, Map<String, String>> = mapOf(
         "color_ink_blue" to mapOf(
             "zh-Hant" to "鋼筆藍",
             "en" to "Pen Blue",
@@ -1957,10 +2024,7 @@ object LocalizationStrings {
             "ja" to "透明",
             "ko" to "투명",
             "th" to "โปร่งใส"
-        )
-    )
-
-    private fun part3(): Map<String, Map<String, String>> = mapOf(
+        ),
         "color_white" to mapOf(
             "zh-Hant" to "白",
             "en" to "White",
@@ -2168,6 +2232,30 @@ object LocalizationStrings {
             "ja" to "選択した筆跡を切り取ってクリップボードへ（元の場所からは消えます）",
             "ko" to "선택한 필기를 잘라 클립보드에 넣습니다(원래 위치에서 삭제)",
             "th" to "ตัดเส้นที่เลือกไปยังคลิปบอร์ด (ลบออกจากหน้า)"
+        ),
+        "cw_brightness" to mapOf(
+            "zh-Hant" to "明度",
+            "en" to "Brightness",
+            "zh-Hans" to "明度",
+            "ja" to "明度",
+            "ko" to "명도",
+            "th" to "ความสว่าง"
+        ),
+        "cw_harmonies" to mapOf(
+            "zh-Hant" to "配色建議",
+            "en" to "Colour harmonies",
+            "zh-Hans" to "配色建议",
+            "ja" to "配色の候補",
+            "ko" to "색 조화 추천",
+            "th" to "ชุดสีที่เข้ากัน"
+        ),
+        "cw_saturation" to mapOf(
+            "zh-Hant" to "彩度",
+            "en" to "Saturation",
+            "zh-Hans" to "彩度",
+            "ja" to "彩度",
+            "ko" to "채도",
+            "th" to "ความอิ่มตัว"
         ),
         "data_and_sync" to mapOf(
             "zh-Hant" to "資料與同步",
@@ -2512,7 +2600,10 @@ object LocalizationStrings {
             "ja" to "ドラッグして移動",
             "ko" to "드래그하여 이동",
             "th" to "ลากเพื่อย้ายการ์ด"
-        ),
+        )
+    )
+
+    private fun part4(): Map<String, Map<String, String>> = mapOf(
         "drop_here_to_unfile" to mapOf(
             "zh-Hant" to "把筆記拖到這裡即可移出資料夾",
             "en" to "Drag a note here to take it out of its folder",
@@ -2569,6 +2660,54 @@ object LocalizationStrings {
             "ko" to "획, 첨부 파일 및 댓글은 로컬에서 암호화되며 릴레이 서버는 내용을 볼 수 없습니다.",
             "th" to "เส้นวาด ไฟล์แนบ และความคิดเห็นได้รับการเข้ารหัสบนเครื่อง เซิร์ฟเวอร์รีเลย์ไม่สามารถตรวจสอบเนื้อหาได้"
         ),
+        "ed_cancel_selection" to mapOf(
+            "zh-Hant" to "取消框選",
+            "en" to "Cancel selection",
+            "zh-Hans" to "取消框选",
+            "ja" to "選択を解除",
+            "ko" to "선택 해제",
+            "th" to "ยกเลิกการเลือก"
+        ),
+        "ed_done_back_to_doc" to mapOf(
+            "zh-Hant" to "完成，回到文件",
+            "en" to "Done, back to the document",
+            "zh-Hans" to "完成，回到文档",
+            "ja" to "完了して書類に戻る",
+            "ko" to "완료하고 문서로 돌아가기",
+            "th" to "เสร็จแล้ว กลับไปที่เอกสาร"
+        ),
+        "ed_done_back_to_ink" to mapOf(
+            "zh-Hant" to "完成，回到手繪",
+            "en" to "Done, back to handwriting",
+            "zh-Hans" to "完成，回到手绘",
+            "ja" to "完了して手書きに戻る",
+            "ko" to "완료하고 필기로 돌아가기",
+            "th" to "เสร็จแล้ว กลับไปที่ลายมือ"
+        ),
+        "ed_ink_toolbar_hint" to mapOf(
+            "zh-Hant" to "手繪工具 · 正在文件內的畫布上作畫",
+            "en" to "Handwriting tools · drawing on the canvas inside the document",
+            "zh-Hans" to "手绘工具 · 正在文档内的画布上作画",
+            "ja" to "手書きツール · 書類内のキャンバスに描画中",
+            "ko" to "필기 도구 · 문서 안 캔버스에 그리는 중",
+            "th" to "เครื่องมือลายมือ · กำลังวาดบนผืนผ้าใบในเอกสาร"
+        ),
+        "ed_symmetry_axis" to mapOf(
+            "zh-Hant" to "對稱軸",
+            "en" to "Symmetry axis",
+            "zh-Hans" to "对称轴",
+            "ja" to "対称軸",
+            "ko" to "대칭축",
+            "th" to "แกนสมมาตร"
+        ),
+        "ed_text_toolbar_hint" to mapOf(
+            "zh-Hant" to "文字排版工具 · 正在編輯文字方塊",
+            "en" to "Text tools · editing a text box",
+            "zh-Hans" to "文字排版工具 · 正在编辑文本框",
+            "ja" to "テキストツール · テキストボックスを編集中",
+            "ko" to "텍스트 도구 · 텍스트 상자 편집 중",
+            "th" to "เครื่องมือข้อความ · กำลังแก้ไขกล่องข้อความ"
+        ),
         "edit" to mapOf(
             "zh-Hant" to "編修",
             "en" to "Edit",
@@ -2600,10 +2739,7 @@ object LocalizationStrings {
             "ja" to "ルートフォルダ名を変更",
             "ko" to "최상위 폴더 이름 변경",
             "th" to "แก้ไขชื่อโฟลเดอร์ระดับบนสุด"
-        )
-    )
-
-    private fun part4(): Map<String, Map<String, String>> = mapOf(
+        ),
         "email" to mapOf(
             "zh-Hant" to "電子郵件",
             "en" to "Email",
@@ -3107,7 +3243,10 @@ object LocalizationStrings {
             "ja" to "モノクロ",
             "ko" to "흑백",
             "th" to "ขาวดำ"
-        ),
+        )
+    )
+
+    private fun part5(): Map<String, Map<String, String>> = mapOf(
         "filter_original" to mapOf(
             "zh-Hant" to "原圖",
             "en" to "Original",
@@ -3243,10 +3382,7 @@ object LocalizationStrings {
             "ja" to "長押しでメニュー",
             "ko" to "길게 눌러 메뉴",
             "th" to "กดค้างเพื่อเปิดเมนู"
-        )
-    )
-
-    private fun part5(): Map<String, Map<String, String>> = mapOf(
+        ),
         "gesture_success" to mapOf(
             "zh-Hant" to "成功驗證回饋",
             "en" to "Success feedback",
@@ -3750,7 +3886,10 @@ object LocalizationStrings {
             "ja" to "見出し 1",
             "ko" to "제목 1",
             "th" to "หัวเรื่อง 1"
-        ),
+        )
+    )
+
+    private fun part6(): Map<String, Map<String, String>> = mapOf(
         "heading_2" to mapOf(
             "zh-Hant" to "標題 2",
             "en" to "Heading 2",
@@ -3886,10 +4025,7 @@ object LocalizationStrings {
             "ja" to "フォールンリーフ",
             "ko" to "낙엽색",
             "th" to "ใบไม้ร่วง"
-        )
-    )
-
-    private fun part6(): Map<String, Map<String, String>> = mapOf(
+        ),
         "hue_fir_green" to mapOf(
             "zh-Hant" to "冷杉綠",
             "en" to "Fir Green",
@@ -4393,7 +4529,10 @@ object LocalizationStrings {
             "ja" to "この名前と色は共同編集中に「誰が編集しているか」を示すためだけに使われます。この端末内に保存され、アカウントではなく、登録も不要で、クラウドやシステムアカウントとは一切連携しません。",
             "ko" to "이 이름과 색상은 공동 작업 중 '누가 편집 중인지' 표시하는 데만 사용됩니다. 이 기기에만 저장되며 계정이 아니고 가입도 필요 없으며 클라우드나 시스템 계정과 연결되지 않습니다.",
             "th" to "ชื่อและสีนี้ใช้เพื่อแสดงว่าใครกำลังแก้ไขขณะทำงานร่วมกันเท่านั้น ข้อมูลอยู่ในเครื่องนี้ ไม่ใช่บัญชี ไม่ต้องสมัคร และไม่เชื่อมต่อกับคลาวด์หรือบัญชีระบบใด ๆ"
-        ),
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
         "identity_desc_short" to mapOf(
             "zh-Hant" to "協作時顯示的身分 · 僅存於本機",
             "en" to "Shown while collaborating · stored on this device",
@@ -4529,10 +4668,7 @@ object LocalizationStrings {
             "ja" to "読み込みました：%@",
             "ko" to "가져왔습니다: %@",
             "th" to "นำเข้าแล้ว: %@"
-        )
-    )
-
-    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        ),
         "ink_clear" to mapOf(
             "zh-Hant" to "清除",
             "en" to "Clear",
@@ -5036,7 +5172,10 @@ object LocalizationStrings {
             "ja" to "タイトル",
             "ko" to "제목",
             "th" to "ชื่อเรื่อง"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "link_url_hint" to mapOf(
             "zh-Hant" to "貼上網址",
             "en" to "Paste a link",
@@ -5172,10 +5311,7 @@ object LocalizationStrings {
             "ja" to "カッパー (銅)",
             "ko" to "구리 (동)",
             "th" to "ทองแดง"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "mat_gold" to mapOf(
             "zh-Hant" to "黃金",
             "en" to "Gold",
@@ -5679,7 +5815,10 @@ object LocalizationStrings {
             "ja" to "手書き",
             "ko" to "필기",
             "th" to "เขียน"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "mode_draw_badge" to mapOf(
             "zh-Hant" to "手寫模式",
             "en" to "Handwriting",
@@ -5815,10 +5954,7 @@ object LocalizationStrings {
             "ja" to "オブジェクト名",
             "ko" to "개체 이름",
             "th" to "ชื่อวัตถุ"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "model_unavailable" to mapOf(
             "zh-Hant" to "尚未提供下載來源",
             "en" to "No download source yet",
@@ -6322,7 +6458,10 @@ object LocalizationStrings {
             "ja" to "手書き・入力・録音を同じページに。オフラインで使え、データはこの端末に残ります。",
             "ko" to "손글씨, 입력, 녹음을 한 페이지에. 오프라인으로 작동하며 데이터는 이 기기에 남습니다.",
             "th" to "เขียนด้วยลายมือ พิมพ์ และบันทึกเสียงในหน้าเดียว ใช้ได้แบบออฟไลน์ และข้อมูลอยู่ในเครื่องนี้"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "onboarding_welcome_title" to mapOf(
             "zh-Hant" to "歡迎使用 Kairumo",
             "en" to "Welcome to Kairumo",
@@ -6458,10 +6597,7 @@ object LocalizationStrings {
             "ja" to "A4",
             "ko" to "A4",
             "th" to "A4"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "page_format_a4_landscape" to mapOf(
             "zh-Hant" to "A4 橫式",
             "en" to "A4 landscape",
@@ -6965,7 +7101,10 @@ object LocalizationStrings {
             "ja" to "プラットフォーム",
             "ko" to "플랫폼",
             "th" to "แพลตฟอร์ม"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "posture_tabletop_mode" to mapOf(
             "zh-Hant" to "立起懸停模式 (上觀看下創作)",
             "en" to "Tabletop / Flex Mode",
@@ -7101,10 +7240,7 @@ object LocalizationStrings {
             "ja" to "最近使った",
             "ko" to "최근 사용",
             "th" to "ใช้ล่าสุด"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "recognize_handwriting" to mapOf(
             "zh-Hant" to "辨識手寫",
             "en" to "Recognize Handwriting",
@@ -7608,7 +7744,10 @@ object LocalizationStrings {
             "ja" to "定規ガイド",
             "ko" to "자 가이드",
             "th" to "เส้นบรรทัดนำสายตา"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "ruler_hint" to mapOf(
             "zh-Hant" to "• 提示：觸控板兩指旋轉，或按住 Option 鍵滑動旋轉",
             "en" to "• Hint: Rotate with two fingers on trackpad or hold Option while dragging",
@@ -7744,10 +7883,7 @@ object LocalizationStrings {
             "ja" to "タスク|担当|期限\nミドルレンジ Android の遅延計測|チェン|9/22\nマニュアルに「録音の挿入」章を追加|ウェン|9/20\n本番署名鍵の申請|ペイ|9/19",
             "ko" to "할 일|담당|기한\n중급 안드로이드 지연 측정|치엔|9/22\n설명서 “녹음 삽입” 장 추가|원|9/20\n정식 서명 키 신청|페이|9/19",
             "th" to "สิ่งที่ต้องทำ|ผู้รับผิดชอบ|กำหนด\nวัดความหน่วงบน Android รุ่นกลาง|เชียน|22 ก.ย.\nเขียนบท “แทรกเสียงบันทึก” ในคู่มือ|เหวิน|20 ก.ย.\nขอคีย์เซ็นชื่อจริง|เผย|19 ก.ย."
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_welcome_p1_body" to mapOf(
             "zh-Hant" to "這是一本可以直接改的說明筆記。\n\n• 手寫：用觸控筆、手指或滑鼠都寫得了，寫下的是原始取樣點。\n• 打字：插入文字方塊，字型、行距、對齊都調得動。\n• 錄音：錄下的聲音與筆跡在同一條時間軸上，點筆跡就跳到當時的聲音。\n\n這一頁上的每一個方塊、表格與圖形都可以搬、可以改、可以刪。試著拖一下看看。",
             "en" to "This is a help note you can edit directly.\n\n• Handwriting: pen, finger or mouse — raw sample points are what get stored.\n• Typing: insert a text box and adjust font, line spacing and alignment.\n• Recording: audio and ink share one timeline — tap a stroke to jump to that moment.\n\nEvery box, table and shape on this page can be moved, edited and deleted. Try dragging one.",
@@ -7843,6 +7979,14 @@ object LocalizationStrings {
             "ja" to "ステッカーとして保存",
             "ko" to "스티커로 저장",
             "th" to "บันทึกเป็นสติกเกอร์"
+        ),
+        "sd_loading" to mapOf(
+            "zh-Hant" to "讀取中…",
+            "en" to "Loading…",
+            "zh-Hans" to "读取中…",
+            "ja" to "読み込み中…",
+            "ko" to "불러오는 중…",
+            "th" to "กำลังโหลด…"
         ),
         "search_assets_placeholder" to mapOf(
             "zh-Hant" to "搜尋機構、3C、零件、規格、色彩...",
@@ -8243,7 +8387,10 @@ object LocalizationStrings {
             "ja" to "他ページ結合子",
             "ko" to "페이지 간 연결",
             "th" to "เชื่อมข้ามหน้า"
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_parallelogram" to mapOf(
             "zh-Hant" to "平行四邊形",
             "en" to "Parallelogram",
@@ -8387,10 +8534,7 @@ object LocalizationStrings {
             "ja" to "太陽",
             "ko" to "해",
             "th" to "ดวงอาทิตย์"
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_teardrop" to mapOf(
             "zh-Hant" to "水滴",
             "en" to "Teardrop",
@@ -8886,7 +9030,10 @@ object LocalizationStrings {
             "ja" to "アカウント",
             "ko" to "계정",
             "th" to "บัญชี"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "sync_choose_folder" to mapOf(
             "zh-Hant" to "iCloud 或本機資料夾同步",
             "en" to "Choose Sync Folder",
@@ -9030,10 +9177,7 @@ object LocalizationStrings {
             "ja" to "同期は未設定です（タップして設定）",
             "ko" to "동기화가 아직 설정되지 않았습니다(탭하여 설정)",
             "th" to "ยังไม่ได้ตั้งค่าการซิงก์ (แตะเพื่อตั้งค่า)"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_now" to mapOf(
             "zh-Hant" to "立即同步",
             "en" to "Sync Now",
@@ -9529,7 +9673,10 @@ object LocalizationStrings {
             "ja" to "1ページに40項目、2列に分割",
             "ko" to "한 페이지 40항목, 2열",
             "th" to "สี่สิบรายการในหน้าเดียว"
-        ),
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
         "tmpl_chore_roster" to mapOf(
             "zh-Hant" to "家事分工表",
             "en" to "Chore Roster",
@@ -9673,10 +9820,7 @@ object LocalizationStrings {
             "ja" to "機構部品、3D製品外観、分解斜視図専用",
             "ko" to "기구 부품, 3D 제품 외관 및 분해 투시도 전용",
             "th" to "สำหรับชิ้นส่วนกลไก ผลิตภัณฑ์ 3 มิติ และภาพระเบิด"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_kwl" to mapOf(
             "zh-Hant" to "KWL 表",
             "en" to "K-W-L Chart",
@@ -10172,7 +10316,10 @@ object LocalizationStrings {
             "ja" to "テキスト",
             "ko" to "텍스트",
             "th" to "ข้อความ"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "type_mode_active" to mapOf(
             "zh-Hant" to "打字模式已就緒（畫筆已鎖定）",
             "en" to "Typing Mode Ready (Pen Locked)",
@@ -10261,6 +10408,70 @@ object LocalizationStrings {
             "ko" to "버전",
             "th" to "เวอร์ชัน"
         ),
+        "wd_add_table" to mapOf(
+            "zh-Hant" to "＋表格",
+            "en" to "+ Table",
+            "zh-Hans" to "＋表格",
+            "ja" to "＋表",
+            "ko" to "＋표",
+            "th" to "＋ตาราง"
+        ),
+        "wd_clear_format" to mapOf(
+            "zh-Hant" to "清除格式",
+            "en" to "Clear formatting",
+            "zh-Hans" to "清除格式",
+            "ja" to "書式をクリア",
+            "ko" to "서식 지우기",
+            "th" to "ล้างการจัดรูปแบบ"
+        ),
+        "wd_editing_ink_mode" to mapOf(
+            "zh-Hant" to "編輯中（工具列已切到手繪）",
+            "en" to "Editing (the toolbar switched to handwriting)",
+            "zh-Hans" to "编辑中（工具栏已切到手绘）",
+            "ja" to "編集中（ツールバーは手書きに切り替わっています）",
+            "ko" to "편집 중(도구 막대가 필기로 전환됨)",
+            "th" to "กำลังแก้ไข (แถบเครื่องมือสลับเป็นลายมือแล้ว)"
+        ),
+        "wd_highlight_color" to mapOf(
+            "zh-Hant" to "螢光色",
+            "en" to "Highlight colour",
+            "zh-Hans" to "荧光色",
+            "ja" to "蛍光色",
+            "ko" to "형광색",
+            "th" to "สีไฮไลต์"
+        ),
+        "wd_ink_block" to mapOf(
+            "zh-Hant" to "手繪區塊",
+            "en" to "Handwriting block",
+            "zh-Hans" to "手绘区块",
+            "ja" to "手書きブロック",
+            "ko" to "필기 블록",
+            "th" to "บล็อกลายมือ"
+        ),
+        "wd_inline_canvas" to mapOf(
+            "zh-Hant" to "文件內的手繪畫布",
+            "en" to "Handwriting canvas inside the document",
+            "zh-Hans" to "文档内的手绘画布",
+            "ja" to "書類内の手書きキャンバス",
+            "ko" to "문서 안의 필기 캔버스",
+            "th" to "ผืนผ้าใบลายมือในเอกสาร"
+        ),
+        "wd_insert_divider" to mapOf(
+            "zh-Hant" to "插入分隔線",
+            "en" to "Insert divider",
+            "zh-Hans" to "插入分隔线",
+            "ja" to "区切り線を挿入",
+            "ko" to "구분선 삽입",
+            "th" to "แทรกเส้นคั่น"
+        ),
+        "wd_tap_to_draw" to mapOf(
+            "zh-Hant" to "點這裡或用觸控筆，直接在文件裡手寫推導",
+            "en" to "Tap here, or use a stylus, to write directly inside the document",
+            "zh-Hans" to "点这里或用触控笔，直接在文档里手写推导",
+            "ja" to "ここをタップするか、スタイラスで書類に直接手書きできます",
+            "ko" to "여기를 탭하거나 스타일러스로 문서 안에 바로 필기하세요",
+            "th" to "แตะที่นี่หรือใช้ปากกาสไตลัสเพื่อเขียนในเอกสารได้ทันที"
+        ),
         "wireframe_button" to mapOf(
             "zh-Hant" to "主要行動按鈕 (CTA)",
             "en" to "Primary action button (CTA)",
@@ -10316,10 +10527,7 @@ object LocalizationStrings {
             "ja" to "ボトムタブバー（5 タブ）",
             "ko" to "하단 탭 바 (5개 탭)",
             "th" to "แถบแท็บด้านล่าง (5 แท็บ)"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "word_studio" to mapOf(
             "zh-Hant" to "Word文字編修",
             "en" to "Word Text Studio",

@@ -18,6 +18,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.kairumo.padnote.library.AccountSyncStore
 import com.kairumo.padnote.library.NotebookLibrary
+import com.kairumo.padnote.LocalizationStrings
 import com.kairumo.padnote.sync.AutoSync
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -41,6 +42,9 @@ import uniffi.padnote_core.syncDiagnose
  */
 @Composable
 fun SyncDoctorCard(deviceId: UInt, modifier: Modifier = Modifier) {
+    // 介面語言由最外層的 CompositionLocal 提供（見 ui/LocalAppLanguage.kt）。
+    val languageTag = LocalAppLanguage.current
+    fun l(key: String) = LocalizationStrings.localized(key, languageTag)
     val context = LocalContext.current
     val isSyncing by AutoSync.isSyncing.collectAsState()
     val needsSignIn by AutoSync.needsSignIn.collectAsState()
@@ -68,10 +72,10 @@ fun SyncDoctorCard(deviceId: UInt, modifier: Modifier = Modifier) {
         )
     ) {
         Column(Modifier.padding(12.dp)) {
-            Text("同步狀態", style = MaterialTheme.typography.labelMedium)
+            Text(l("hw_sync_status"), style = MaterialTheme.typography.labelMedium)
             val d = diagnostics
             if (d == null) {
-                Row(Modifier.padding(top = 6.dp)) { Text("讀取中…", style = MaterialTheme.typography.bodySmall) }
+                Row(Modifier.padding(top = 6.dp)) { Text(l("sd_loading"), style = MaterialTheme.typography.bodySmall) }
             } else {
                 DoctorRow(
                     "雲端快照",

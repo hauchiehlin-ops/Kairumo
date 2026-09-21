@@ -206,7 +206,7 @@ public struct WordToolbarView: View {
                             } label: {
                                 HStack {
                                     RoundedRectangle(cornerRadius: 3).fill(Color(hex: hex) ?? .yellow).frame(width: 14, height: 14)
-                                    Text("螢光色")
+                                    Text(localizationManager.localized("wd_highlight_color"))
                                 }
                             }
                         }
@@ -314,7 +314,7 @@ public struct WordToolbarView: View {
                             HStack(spacing: 3) {
                                 Image(systemName: "pencil.and.outline")
                                     .font(.system(size: 12))
-                                Text("手繪區塊")
+                                Text(localizationManager.localized("wd_ink_block"))
                                     .font(.system(size: 11))
                             }
                             .padding(.horizontal, 7)
@@ -324,7 +324,7 @@ public struct WordToolbarView: View {
                             .cornerRadius(6)
                         }
                         .buttonStyle(.plain)
-                        .accessibilityLabel("手繪區塊")
+                        .accessibilityLabel(localizationManager.localized("wd_ink_block"))
                         .help("插入局部手繪畫布區塊")
                     }
 
@@ -348,7 +348,7 @@ public struct WordToolbarView: View {
                             .cornerRadius(6)
                     }
                     .buttonStyle(.plain)
-                    .accessibilityLabel("插入分隔線")
+                    .accessibilityLabel(localizationManager.localized("wd_insert_divider"))
                     .help("插入分隔線")
                 }
 
@@ -363,7 +363,7 @@ public struct WordToolbarView: View {
                         .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
-                .accessibilityLabel("清除格式")
+                .accessibilityLabel(localizationManager.localized("wd_clear_format"))
                 .help("清除格式")
             }
             .padding(.horizontal, 16)
@@ -583,11 +583,11 @@ public struct WordDocumentEditorView: View {
                 Image(systemName: "pencil.and.outline")
                     .foregroundColor(.accentColor)
                     .font(.system(size: 13))
-                Text("局部手繪畫布區塊")
+                Text(localizationManager.localized("wd_inline_canvas"))
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(.secondary)
                 if isFocused {
-                    Text("• 編輯中（工具列已切換為手繪模式）")
+                    Text("• " + localizationManager.localized("wd_editing_ink_mode"))
                         .font(.system(size: 10, weight: .medium))
                         .foregroundColor(.accentColor)
                 }
@@ -615,7 +615,7 @@ public struct WordDocumentEditorView: View {
                     Image(systemName: "hand.draw")
                         .font(.system(size: 28))
                         .foregroundColor(.accentColor.opacity(0.8))
-                    Text("點擊此處或使用觸控筆開始在文件內手繪推導")
+                    Text(localizationManager.localized("wd_tap_to_draw"))
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.secondary)
                 }

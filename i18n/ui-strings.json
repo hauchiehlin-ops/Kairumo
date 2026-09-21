@@ -383,6 +383,70 @@
     "zhHans": "架构模式",
     "zhHant": "架構模式"
   },
+  "asr_state_downloading": {
+    "en": "Downloading the Whisper model: %@\nLanguage detection and punctuation turn on automatically when it finishes.",
+    "ja": "Whisper モデルをダウンロード中：%@\n完了すると多言語判定と句読点付与が自動で有効になります。",
+    "ko": "Whisper 모델 다운로드 중: %@\n완료되면 다국어 감지와 문장 부호가 자동으로 켜집니다.",
+    "th": "กำลังดาวน์โหลดโมเดล Whisper: %@\nเมื่อเสร็จแล้วระบบจะเปิดการตรวจภาษาและวรรคตอนให้อัตโนมัติ",
+    "zhHans": "Whisper 模型下载中：%@\n下载完成后会自动启用多语言检测与标点。",
+    "zhHant": "Whisper 模型下載中：%@\n下載完成後會自動啟用多語言偵測與標點。"
+  },
+  "asr_state_interrupted": {
+    "en": "The last download was interrupted: %@\nCheck your connection, or download from the mirror instead.",
+    "ja": "前回のダウンロードが中断されました：%@\n接続を確認するか、ミラーからダウンロードしてください。",
+    "ko": "지난 다운로드가 중단되었습니다: %@\n연결을 확인하거나 미러에서 내려받으세요.",
+    "th": "การดาวน์โหลดครั้งก่อนถูกขัดจังหวะ: %@\nโปรดตรวจสอบการเชื่อมต่อ หรือดาวน์โหลดจากมิเรอร์แทน",
+    "zhHans": "上次下载中断：%@\n请确认网络，或改用「镜像来源」下载。",
+    "zhHant": "上次下載中斷：%@\n請確認網路，或改用「鏡像來源」下載。"
+  },
+  "asr_state_not_downloaded": {
+    "en": "The offline Whisper model has not been downloaded, so system dictation is used instead.\nDownloading it improves accuracy.",
+    "ja": "オフラインの Whisper モデルが未ダウンロードのため、システムの音声入力を使用しています。\nダウンロードすると精度が上がります。",
+    "ko": "오프라인 Whisper 모델이 없어 시스템 받아쓰기를 사용합니다.\n내려받으면 정확도가 올라갑니다.",
+    "th": "ยังไม่ได้ดาวน์โหลดโมเดล Whisper แบบออฟไลน์ จึงใช้การพิมพ์ด้วยเสียงของระบบแทน\nดาวน์โหลดแล้วจะแม่นยำขึ้น",
+    "zhHans": "尚未下载 Whisper 离线模型，目前改用系统听写。\n下载之后识别会更准。",
+    "zhHant": "尚未下載 Whisper 離線模型，目前改用系統聽寫。\n下載之後辨識會更準。"
+  },
+  "asr_state_ready_long": {
+    "en": "The on-device Whisper model is ready.\n\nIt detects 99 languages automatically and restores punctuation. Everything runs on this device; nothing leaves it.",
+    "ja": "端末内 Whisper モデルの準備ができました。\n\n99 言語を自動判定し、句読点も自動で補います。すべてこの端末で処理され、外部には送信されません。",
+    "ko": "기기 내 Whisper 모델이 준비되었습니다.\n\n99개 언어를 자동 감지하고 문장 부호를 복원합니다. 모든 처리는 이 기기에서 이루어지며 외부로 나가지 않습니다.",
+    "th": "โมเดล Whisper ในเครื่องพร้อมใช้งานแล้ว\n\nตรวจจับได้ 99 ภาษาโดยอัตโนมัติและเติมวรรคตอนให้ ทุกอย่างประมวลผลบนอุปกรณ์นี้ ไม่มีข้อมูลออกไปข้างนอก",
+    "zhHans": "Whisper 端侧模型已就绪。\n\n自动检测 99 种语言、自动补标点，全程在这台设备上运算，内容不离开设备。",
+    "zhHant": "Whisper 端側模型已就緒。\n\n自動偵測 99 種語言、自動補標點，全程在這台裝置上運算，內容不離開裝置。"
+  },
+  "asr_state_ready_short": {
+    "en": "The on-device Whisper model is ready.",
+    "ja": "端末内 Whisper モデルの準備ができました。",
+    "ko": "기기 내 Whisper 모델이 준비되었습니다.",
+    "th": "โมเดล Whisper ในเครื่องพร้อมใช้งานแล้ว",
+    "zhHans": "Whisper 端侧模型已就绪。",
+    "zhHant": "Whisper 端側模型已就緒。"
+  },
+  "asr_state_standard": {
+    "en": "Transcribing with the system's standard speech service.",
+    "ja": "システム標準の音声サービスで文字起こししています。",
+    "ko": "시스템 표준 음성 서비스로 전사하고 있습니다.",
+    "th": "กำลังถอดเสียงด้วยบริการเสียงมาตรฐานของระบบ",
+    "zhHans": "目前使用系统的标准语音服务转录。",
+    "zhHant": "目前使用系統的標準語音服務轉錄。"
+  },
+  "asr_state_system_only": {
+    "en": "System dictation is ready (it transcribes in the interface language).\nFor automatic language detection and punctuation, download the offline Whisper model.",
+    "ja": "システムの音声入力が利用できます（インターフェイスの言語で文字起こし）。\n言語の自動判定と句読点が必要な場合は、オフラインの Whisper モデルをダウンロードしてください。",
+    "ko": "시스템 받아쓰기를 사용할 수 있습니다(인터페이스 언어로 전사). 언어 자동 감지와 문장 부호가 필요하면 오프라인 Whisper 모델을 내려받으세요.",
+    "th": "การพิมพ์ด้วยเสียงของระบบพร้อมใช้งาน (ถอดเสียงตามภาษาของอินเทอร์เฟซ)\nหากต้องการตรวจภาษาและวรรคตอนอัตโนมัติ ให้ดาวน์โหลดโมเดล Whisper แบบออฟไลน์",
+    "zhHans": "系统听写已就绪（依界面语言转录）。\n想要自动检测语言与自动标点，请下载 Whisper 离线模型。",
+    "zhHant": "系統聽寫已就緒（依介面語言轉錄）。\n想要自動偵測語言與自動標點，請下載 Whisper 離線模型。"
+  },
+  "asr_state_title": {
+    "en": "Offline speech model",
+    "ja": "オフライン音声モデルの状態",
+    "ko": "오프라인 음성 모델 상태",
+    "th": "สถานะโมเดลเสียงออฟไลน์",
+    "zhHans": "离线语音模型状态",
+    "zhHant": "離線語音模型狀態"
+  },
   "asset_aes_comp_01_title": {
     "en": "Golden-Spiral Logarithmic Composition Guide",
     "ja": "黄金螺旋の対数構図ガイド",
@@ -2127,6 +2191,30 @@
     "zhHans": "把选取的笔画剪切到剪贴板（原处移除）",
     "zhHant": "把選取的筆劃剪下放進剪貼簿（原處移除）"
   },
+  "cw_brightness": {
+    "en": "Brightness",
+    "ja": "明度",
+    "ko": "명도",
+    "th": "ความสว่าง",
+    "zhHans": "明度",
+    "zhHant": "明度"
+  },
+  "cw_harmonies": {
+    "en": "Colour harmonies",
+    "ja": "配色の候補",
+    "ko": "색 조화 추천",
+    "th": "ชุดสีที่เข้ากัน",
+    "zhHans": "配色建议",
+    "zhHant": "配色建議"
+  },
+  "cw_saturation": {
+    "en": "Saturation",
+    "ja": "彩度",
+    "ko": "채도",
+    "th": "ความอิ่มตัว",
+    "zhHans": "彩度",
+    "zhHant": "彩度"
+  },
   "data_and_sync": {
     "en": "Data & Sync",
     "ja": "データと同期",
@@ -2526,6 +2614,54 @@
     "th": "เส้นวาด ไฟล์แนบ และความคิดเห็นได้รับการเข้ารหัสบนเครื่อง เซิร์ฟเวอร์รีเลย์ไม่สามารถตรวจสอบเนื้อหาได้",
     "zhHans": "笔划、附件与讨论均在本地完成硬件加密，中继服务器无法窥探。",
     "zhHant": "筆劃、附件與討論皆在本地完成硬體加密，中繼伺服器無法窺探。"
+  },
+  "ed_cancel_selection": {
+    "en": "Cancel selection",
+    "ja": "選択を解除",
+    "ko": "선택 해제",
+    "th": "ยกเลิกการเลือก",
+    "zhHans": "取消框选",
+    "zhHant": "取消框選"
+  },
+  "ed_done_back_to_doc": {
+    "en": "Done, back to the document",
+    "ja": "完了して書類に戻る",
+    "ko": "완료하고 문서로 돌아가기",
+    "th": "เสร็จแล้ว กลับไปที่เอกสาร",
+    "zhHans": "完成，回到文档",
+    "zhHant": "完成，回到文件"
+  },
+  "ed_done_back_to_ink": {
+    "en": "Done, back to handwriting",
+    "ja": "完了して手書きに戻る",
+    "ko": "완료하고 필기로 돌아가기",
+    "th": "เสร็จแล้ว กลับไปที่ลายมือ",
+    "zhHans": "完成，回到手绘",
+    "zhHant": "完成，回到手繪"
+  },
+  "ed_ink_toolbar_hint": {
+    "en": "Handwriting tools · drawing on the canvas inside the document",
+    "ja": "手書きツール · 書類内のキャンバスに描画中",
+    "ko": "필기 도구 · 문서 안 캔버스에 그리는 중",
+    "th": "เครื่องมือลายมือ · กำลังวาดบนผืนผ้าใบในเอกสาร",
+    "zhHans": "手绘工具 · 正在文档内的画布上作画",
+    "zhHant": "手繪工具 · 正在文件內的畫布上作畫"
+  },
+  "ed_symmetry_axis": {
+    "en": "Symmetry axis",
+    "ja": "対称軸",
+    "ko": "대칭축",
+    "th": "แกนสมมาตร",
+    "zhHans": "对称轴",
+    "zhHant": "對稱軸"
+  },
+  "ed_text_toolbar_hint": {
+    "en": "Text tools · editing a text box",
+    "ja": "テキストツール · テキストボックスを編集中",
+    "ko": "텍스트 도구 · 텍스트 상자 편집 중",
+    "th": "เครื่องมือข้อความ · กำลังแก้ไขกล่องข้อความ",
+    "zhHans": "文字排版工具 · 正在编辑文本框",
+    "zhHant": "文字排版工具 · 正在編輯文字方塊"
   },
   "edit": {
     "en": "Edit",
@@ -7775,6 +7911,14 @@
     "zhHans": "保存为贴纸",
     "zhHant": "儲存為貼紙"
   },
+  "sd_loading": {
+    "en": "Loading…",
+    "ja": "読み込み中…",
+    "ko": "불러오는 중…",
+    "th": "กำลังโหลด…",
+    "zhHans": "读取中…",
+    "zhHant": "讀取中…"
+  },
   "search_assets_placeholder": {
     "en": "Search mechanisms, 3C, components, specs, colors...",
     "ja": "機構、3C、パーツ、仕様、カラーを検索...",
@@ -10182,6 +10326,70 @@
     "th": "เวอร์ชัน",
     "zhHans": "版本号",
     "zhHant": "版本號"
+  },
+  "wd_add_table": {
+    "en": "+ Table",
+    "ja": "＋表",
+    "ko": "＋표",
+    "th": "＋ตาราง",
+    "zhHans": "＋表格",
+    "zhHant": "＋表格"
+  },
+  "wd_clear_format": {
+    "en": "Clear formatting",
+    "ja": "書式をクリア",
+    "ko": "서식 지우기",
+    "th": "ล้างการจัดรูปแบบ",
+    "zhHans": "清除格式",
+    "zhHant": "清除格式"
+  },
+  "wd_editing_ink_mode": {
+    "en": "Editing (the toolbar switched to handwriting)",
+    "ja": "編集中（ツールバーは手書きに切り替わっています）",
+    "ko": "편집 중(도구 막대가 필기로 전환됨)",
+    "th": "กำลังแก้ไข (แถบเครื่องมือสลับเป็นลายมือแล้ว)",
+    "zhHans": "编辑中（工具栏已切到手绘）",
+    "zhHant": "編輯中（工具列已切到手繪）"
+  },
+  "wd_highlight_color": {
+    "en": "Highlight colour",
+    "ja": "蛍光色",
+    "ko": "형광색",
+    "th": "สีไฮไลต์",
+    "zhHans": "荧光色",
+    "zhHant": "螢光色"
+  },
+  "wd_ink_block": {
+    "en": "Handwriting block",
+    "ja": "手書きブロック",
+    "ko": "필기 블록",
+    "th": "บล็อกลายมือ",
+    "zhHans": "手绘区块",
+    "zhHant": "手繪區塊"
+  },
+  "wd_inline_canvas": {
+    "en": "Handwriting canvas inside the document",
+    "ja": "書類内の手書きキャンバス",
+    "ko": "문서 안의 필기 캔버스",
+    "th": "ผืนผ้าใบลายมือในเอกสาร",
+    "zhHans": "文档内的手绘画布",
+    "zhHant": "文件內的手繪畫布"
+  },
+  "wd_insert_divider": {
+    "en": "Insert divider",
+    "ja": "区切り線を挿入",
+    "ko": "구분선 삽입",
+    "th": "แทรกเส้นคั่น",
+    "zhHans": "插入分隔线",
+    "zhHant": "插入分隔線"
+  },
+  "wd_tap_to_draw": {
+    "en": "Tap here, or use a stylus, to write directly inside the document",
+    "ja": "ここをタップするか、スタイラスで書類に直接手書きできます",
+    "ko": "여기를 탭하거나 스타일러스로 문서 안에 바로 필기하세요",
+    "th": "แตะที่นี่หรือใช้ปากกาสไตลัสเพื่อเขียนในเอกสารได้ทันที",
+    "zhHans": "点这里或用触控笔，直接在文档里手写推导",
+    "zhHant": "點這裡或用觸控筆，直接在文件裡手寫推導"
   },
   "wireframe_button": {
     "en": "Primary action button (CTA)",

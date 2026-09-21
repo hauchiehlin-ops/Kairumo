@@ -213,23 +213,23 @@ struct AudioAttachmentItemView: View {
                 Button(localizationManager.localized("cancel"), role: .cancel) {}
             } message: {
                 if transcriber.isWhisperAvailable {
-                    Text("🟢 Whisper 端側神經模型已就緒！\n\n支援 99 種語言自動偵測與語義智慧標點還原，轉錄全程 100% 離線端側運算，保障最高隱私。")
+                    Text(localizationManager.localized("asr_state_ready_long"))
                 } else if transcriber.isDownloadingModel {
                     let detail = transcriber.downloadStatusText.isEmpty ? "\(Int(transcriber.downloadProgress * 100))%" : transcriber.downloadStatusText
-                    Text("⏳ Whisper 模型下載中：\(detail)\n完成後將自動啟用端側多語言自動偵測與標點還原。")
+                    Text(String(format: localizationManager.localized("asr_state_downloading"), detail))
                 } else if let error = transcriber.downloadError {
-                    Text("⚠️ 前次下載中斷：\(error)\n請確認網路連線正常，或嘗試使用「鏡像分流下載」。")
+                    Text(String(format: localizationManager.localized("asr_state_interrupted"), error))
                 } else {
                     let status = transcriber.checkOfflineStatus()
                     switch status {
                     case .whisperReady:
-                        Text("🟢 Whisper 端側神經模型已就緒。")
+                        Text(localizationManager.localized("asr_state_ready_short"))
                     case .ready, .appleSpeechReady:
-                        Text("🟡 Apple 系統聽寫已就緒（依介面語系轉錄）。\n若需全自動語言偵測與標點還原，建議點擊「下載 Whisper 離線神經模型」。")
+                        Text(localizationManager.localized("asr_state_system_only"))
                     case .needsDownload:
-                        Text("⚪ 尚未下載 Whisper 離線模型，目前轉錄會平滑降級為系統聽寫服務。\n可點擊「下載 Whisper 離線神經模型」取得最佳辨識體驗。")
+                        Text(localizationManager.localized("asr_state_not_downloaded"))
                     case .unsupported:
-                        Text("⚪ 目前系統環境使用標準語音服務進行轉錄。")
+                        Text(localizationManager.localized("asr_state_standard"))
                     }
                 }
             }
@@ -316,7 +316,7 @@ struct AudioAttachmentItemView: View {
             Button {
                 showOfflineInfo = true
             } label: {
-                Label("離線語音模型狀態", systemImage: "arrow.down.circle")
+                Label(localizationManager.localized("asr_state_title"), systemImage: "arrow.down.circle")
             }
 
             Button {
