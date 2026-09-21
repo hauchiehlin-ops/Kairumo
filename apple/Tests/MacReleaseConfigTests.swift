@@ -76,6 +76,32 @@ final class MacReleaseConfigTests: XCTestCase {
         XCTAssertTrue(entitlements.contains("com.apple.security.network.client"), "自己加入不了房間")
     }
 
+    /// **每一個權限都要指得出是誰在用它。**
+    ///
+    /// 2026-09-22 被 App Review 的自動分析退件：
+    /// 「包含 `com.apple.security.network.server` 但看不到對應功能」。
+    /// 那一次功能是真的有（`LocalRelayServer` 用 `NWListener` 監聽區網連入），
+    /// 只是**畫面上完全看不出來** —— 狀態只存在屬性裡，沒有顯示。
+    ///
+    /// 這一項把「權限 ↔ 實作」綁在一起：哪天有人把中繼拿掉卻忘了拿掉權限，
+    /// 它會紅；哪天有人為了過審把權限拿掉，協同的房主功能會先被這裡擋下來。
+    func testTheServerEntitlementHasCodeBehindIt() throws {
+        let entitlements = try read("Kairumo-Mac.entitlements")
+        guard entitlements.contains("com.apple.security.network.server") else {
+            return // 沒有宣告就沒有要對帳的東西
+        }
+        let relay = try read("Sources/LocalRelayServer.swift")
+        XCTAssertTrue(
+            relay.contains("NWListener"),
+            "宣告了 network.server，就必須真的有東西在監聽連入連線")
+
+        // 而且那個狀態要顯示得出來 —— 看不到的功能，審查員也看不到。
+        let sheet = try read("Sources/CollaborationSheet.swift")
+        XCTAssertTrue(
+            sheet.contains("isHostingLocalRelay"),
+            "正在擔任中繼這件事要顯示在協同面板上，否則沒有人（包含審查員）看得到它")
+    }
+
     // MARK: - 90242：類別
 
     func testTheAppDeclaresAStoreCategory() throws {

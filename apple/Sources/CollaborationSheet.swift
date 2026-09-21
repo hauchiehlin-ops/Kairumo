@@ -52,6 +52,26 @@ public struct CollaborationSheet: View {
                         disconnectedActionSection
                     }
 
+                    // 中繼起不來時**要講出來**，而且要在「還沒連上」的時候
+                    // 也看得到 —— 舊版只 print 一行就繼續，使用者看到的是
+                    // 「連線中斷，正在自動重新連線」無限轉圈，而真正的原因是
+                    // 這台裝置根本沒有開成房間。連上之後這個訊息會自己清掉
+                    // （埠被別的中繼佔著也照樣連得上，那不算問題）。
+                    if let failure = collaborationManager.localRelayFailure {
+                        HStack(spacing: 10) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .foregroundColor(.orange)
+                            Text(failure)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                            Spacer()
+                        }
+                        .padding(12)
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(10)
+                        .accessibilityIdentifier("collaboration.relay_failed")
+                    }
+
                     // 📸 里程碑快照時光機區塊
                     if notebookId != nil {
                         milestonesSection
@@ -240,6 +260,48 @@ public struct CollaborationSheet: View {
                 RoundedRectangle(cornerRadius: 10)
                     .stroke(Color.green.opacity(0.25), lineWidth: 1)
             )
+
+            // 這台裝置正在擔任中繼點（見 `LocalRelayServer`）。
+            //
+            // # 為什麼一定要顯示出來
+            //
+            // 在此之前這個狀態只存在 `CollaborationManager` 的屬性裡，
+            // 畫面上完全看不到 —— Android 早就在協同面板上顯示了，Apple 沒有。
+            //
+            // 兩個後果：使用者不知道邀請要用哪個位址（區網上的另一台裝置
+            // 連 `127.0.0.1` 是連不到的）；而在 macOS 上，**審查員也看不到
+            // 這個 App 真的在監聽連入連線** —— App Store 的自動分析因此
+            // 判定 `com.apple.security.network.server` 沒有對應功能。
+            if collaborationManager.isHostingLocalRelay {
+                HStack(spacing: 10) {
+                    Image(systemName: "antenna.radiowaves.left.and.right")
+                        .font(.system(size: 20))
+                        .foregroundColor(.blue)
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(localizationManager.localized("hosting_local_relay"))
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+
+                        // 區網位址是**別台裝置要連的那一個**。
+                        Text(
+                            collaborationManager.lanRelayAddress
+                                ?? localizationManager.localized("local_relay_hint")
+                        )
+                        .font(.caption2)
+                        .monospaced()
+                        .foregroundColor(.secondary)
+                        .textSelection(.enabled)
+                    }
+
+                    Spacer()
+                }
+                .padding(12)
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(10)
+                .accessibilityIdentifier("collaboration.hosting_relay")
+            }
 
             // 房間識別碼與快速複製
             VStack(alignment: .leading, spacing: 8) {

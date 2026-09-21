@@ -114,6 +114,13 @@ public class CollaborationManager: ObservableObject {
     /// 本機中繼服務在區域網路上的位址（給隊友輸入）
     @Published public var lanRelayAddress: String? = nil
 
+    /// 內建中繼起不來的原因。**要顯示給使用者看**，不要只 print。
+    ///
+    /// 起不來的症狀是「連線中斷，正在自動重新連線」無限轉圈，而真正的原因
+    /// 是這台裝置根本沒有開成房間。在 macOS 沙盒下，少了
+    /// `com.apple.security.network.server` 權限就是這個症狀。
+    @Published public var localRelayFailure: String? = nil
+
     // MARK: - 離線暫存佇列與自動斷線重連
     @Published public var queuedOplogCount: Int = 0
     private var offlineOplogQueue: [[String: Any]] = []
@@ -308,20 +315,38 @@ public class CollaborationManager: ObservableObject {
 
     /// 啟動內建中繼服務（冪等；已在執行中則直接沿用）
     private func startLocalRelayIfNeeded(port: UInt16) {
+        // **真正的狀態是非同步來的。** `start()` 回傳成功只代表 NWListener
+        // 建得起來；能不能聽要等 `stateUpdateHandler`。在此之前這裡樂觀地
+        // 設成 true 就不管了 —— 監聽其實失敗時，畫面照樣說「正在擔任中繼」。
+        LocalRelayServer.shared.onStateChange = { [weak self] state in
+            guard let self else { return }
+            switch state {
+            case .ready(let boundPort):
+                self.isHostingLocalRelay = true
+                self.localRelayFailure = nil
+                self.lanRelayAddress = LocalRelayServer.lanIPv4Address()
+                    .map { "ws://\($0):\(boundPort)" }
+            case .failed(let why):
+                self.isHostingLocalRelay = false
+                self.lanRelayAddress = nil
+                self.localRelayFailure = String(
+                    format: LocalizationManager.shared.localized("local_relay_failed"), why)
+            }
+        }
+
         switch LocalRelayServer.shared.start(port: port) {
         case .success:
-            isHostingLocalRelay = true
-            if let ip = LocalRelayServer.lanIPv4Address() {
-                lanRelayAddress = "ws://\(ip):\(port)"
-            } else {
-                lanRelayAddress = nil
-            }
+            // 這裡**先不宣稱在聽** —— 要等 `.ready` 回來才算。
+            break
         case .failure(let error):
-            // 埠被佔用通常代表已經有一個中繼（例如 cargo run -p padnote-relay）
-            // 在聽，那就照常連過去，不要把這當成致命錯誤。
-            print("⚠️ 內建中繼服務啟動失敗：\(error.localizedDescription)")
             isHostingLocalRelay = false
             lanRelayAddress = nil
+            // 埠被佔用通常代表已經有一個中繼（例如 `cargo run -p padnote-relay`）
+            // 在聽，那就照常連過去，不是致命錯誤 —— 連上之後這個訊息會自己
+            // 清掉。其餘的失敗（例如沙盒擋下監聽）則會一直留在畫面上。
+            localRelayFailure = String(
+                format: LocalizationManager.shared.localized("local_relay_failed"),
+                error.localizedDescription)
         }
     }
 
@@ -609,6 +634,10 @@ public class CollaborationManager: ObservableObject {
         case "joined":
             if let rid = json["room_id"] as? String {
                 self.status = .connected(roomId: rid)
+                // 連上了就沒有問題可報 —— 最常見的「監聽失敗」其實是埠被
+                // 另一個中繼佔著（例如 `cargo run -p padnote-relay`），
+                // 那種情況照樣連得上，不該對使用者跳警告。
+                self.localRelayFailure = nil
                 self.lastErrorMessage = nil
                 self.reconnectAttempt = 0
                 self.reconnectTimer?.invalidate()

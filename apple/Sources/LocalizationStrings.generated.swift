@@ -4759,6 +4759,14 @@ extension LocalizationManager {
             .ko: "링크 붙여넣기",
             .th: "วางลิงก์"
         ],
+        "local_relay_failed": [
+            .zhHant: "這台裝置開不成房間：%@。請改用別台裝置發起，或填入一個中繼位址。",
+            .en: "This device could not host the room: %@. Start the session from another device, or enter a relay address.",
+            .zhHans: "这台设备开不成房间：%@。请改用别台设备发起，或填入一个中继地址。",
+            .ja: "この端末ではルームを開けませんでした：%@。別の端末から開始するか、中継アドレスを入力してください。",
+            .ko: "이 기기에서는 방을 열지 못했습니다: %@. 다른 기기에서 시작하거나 중계 주소를 입력하세요.",
+            .th: "อุปกรณ์นี้เปิดห้องไม่ได้: %@ ให้เริ่มจากอุปกรณ์อื่น หรือกรอกที่อยู่รีเลย์"
+        ],
         "local_relay_hint": [
             .zhHant: "位址指向 127.0.0.1 時，App 會直接在這台裝置上開啟協同中繼；同一網路的隊友請改填房主畫面顯示的區域網路位址。",
             .en: "Pointing at 127.0.0.1 makes this device host the relay; teammates on the same network enter the local address shown on the host's screen.",

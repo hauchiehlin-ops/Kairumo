@@ -4743,6 +4743,14 @@
     "zhHans": "粘贴网址",
     "zhHant": "貼上網址"
   },
+  "local_relay_failed": {
+    "en": "This device could not host the room: %@. Start the session from another device, or enter a relay address.",
+    "ja": "この端末ではルームを開けませんでした：%@。別の端末から開始するか、中継アドレスを入力してください。",
+    "ko": "이 기기에서는 방을 열지 못했습니다: %@. 다른 기기에서 시작하거나 중계 주소를 입력하세요.",
+    "th": "อุปกรณ์นี้เปิดห้องไม่ได้: %@ ให้เริ่มจากอุปกรณ์อื่น หรือกรอกที่อยู่รีเลย์",
+    "zhHans": "这台设备开不成房间：%@。请改用别台设备发起，或填入一个中继地址。",
+    "zhHant": "這台裝置開不成房間：%@。請改用別台裝置發起，或填入一個中繼位址。"
+  },
   "local_relay_hint": {
     "en": "Pointing at 127.0.0.1 makes this device host the relay; teammates on the same network enter the local address shown on the host's screen.",
     "ja": "127.0.0.1 を指している間はこの端末が中継を担当します。同じネットワークの参加者はホスト画面に表示されたローカルアドレスを入力してください。",

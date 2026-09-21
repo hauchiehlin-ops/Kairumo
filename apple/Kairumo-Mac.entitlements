@@ -30,6 +30,19 @@
 	<!--
 	  線上協同：發起的那台裝置自己擔任中繼點，所以兩個方向都要。
 	  只開 client 的話，別人連不進來；只開 server 的話，自己加入不了別人的房間。
+
+	  實作在 `Sources/LocalRelayServer.swift`：用 Network.framework 的
+	  `NWListener`（TCP + WebSocket）在區網上接受連入連線，把 presence 與
+	  oplog 轉發給同一個房間的其他裝置。這是產品的硬性前提 ——
+	  本專案**不營運任何後端伺服器**（決策 D5），所以房間只能開在使用者
+	  自己的裝置上。
+
+	  2026-09-22 被 App Review 的自動分析退件過一次（「包含 network.server
+	  但看不到對應功能」）。功能當時是真的有，問題是**畫面上看不出來**：
+	  `isHostingLocalRelay` 只存在屬性裡，沒有顯示，而監聽失敗時也只 print
+	  一行。已補上協同面板的「正在擔任中繼 + 區網位址」與失敗提示。
+	  `MacReleaseConfigTests.testTheServerEntitlementHasCodeBehindIt`
+	  把這個權限與它的實作綁在一起，拿掉任何一邊都會紅。
 	-->
 	<key>com.apple.security.network.server</key>
 	<true/>

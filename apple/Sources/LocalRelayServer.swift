@@ -46,6 +46,28 @@ public final class LocalRelayServer {
         }
     }
 
+    /// 監聽器**真正**的狀態。
+    ///
+    /// `start()` 同步回傳的成功只代表「`NWListener` 建得起來」——
+    /// 真正能不能聽是**非同步**在 `stateUpdateHandler` 才知道的。
+    /// 少了這條回報，上層會樂觀地說「正在擔任中繼」，而其實什麼都沒聽到：
+    /// 使用者看到的是「連線中斷，正在自動重新連線」無限轉圈。
+    ///
+    /// 在 macOS 沙盒下，缺少 `com.apple.security.network.server` 權限
+    /// 就是走這條路失敗的。
+    public enum RelayState {
+        case ready(port: UInt16)
+        case failed(String)
+    }
+
+    /// 狀態變化的回報。**在主執行緒呼叫**，可以直接改 UI 狀態。
+    public var onStateChange: ((RelayState) -> Void)?
+
+    private func report(_ state: RelayState) {
+        let handler = onStateChange
+        DispatchQueue.main.async { handler?(state) }
+    }
+
     private let queue = DispatchQueue(label: "com.kairumo.relay", qos: .userInitiated)
     private var listener: NWListener?
     private var rooms: [String: Room] = [:]
@@ -99,13 +121,15 @@ public final class LocalRelayServer {
                 newListener.stateUpdateHandler = { [weak self] state in
                     switch state {
                     case .waiting(let error):
-                        print("⚠️ [Kairumo Relay] 監聽等待中：\(error.localizedDescription)")
+                        // `waiting` 多半是埠被佔用而且還在等它釋放。
+                        // 不當成失敗，但也**不能**讓上層繼續宣稱自己在聽。
+                        self?.report(.failed(error.localizedDescription))
                     case .failed(let error):
-                        print("⚠️ [Kairumo Relay] 監聽失敗：\(error.localizedDescription)")
                         // 這個 handler 已經在 queue 上執行，不能再 queue.sync 進去
                         self?.stopLocked()
+                        self?.report(.failed(error.localizedDescription))
                     case .ready:
-                        print("🚀 [Kairumo Relay] 本機中繼服務已啟動：ws://127.0.0.1:\(port)")
+                        self?.report(.ready(port: port))
                     default:
                         break
                     }
