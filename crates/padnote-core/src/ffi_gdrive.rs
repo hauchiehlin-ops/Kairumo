@@ -391,6 +391,11 @@ pub fn gdrive_sync_notebook(
         }
         let bytes = match package.read_doc_op_file(name) {
             Ok(b) => b,
+            Err(padnote_storage::StorageError::Io(ref e))
+                if e.kind() == std::io::ErrorKind::NotFound =>
+            {
+                continue;
+            }
             Err(e) => return notebook_failed(format!("讀不到 {name}：{e}")),
         };
         if let Err(e) = drive.put(&format!("{prefix}/{name}"), &bytes) {
@@ -553,6 +558,11 @@ pub fn gdrive_sync_media(
         }
         let bytes = match package.read_audio_file(name) {
             Ok(b) => b,
+            Err(padnote_storage::StorageError::Io(ref e))
+                if e.kind() == std::io::ErrorKind::NotFound =>
+            {
+                continue;
+            }
             Err(e) => return notebook_failed(format!("讀不到錄音 {name}：{e}")),
         };
         if let Err(e) = drive.put(&format!("{audio_prefix}/{name}"), &bytes) {

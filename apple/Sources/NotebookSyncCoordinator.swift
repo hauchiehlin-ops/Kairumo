@@ -155,12 +155,9 @@ enum NotebookSyncCoordinator {
         }
 
         // ── 2. 搬檔 (雙軌並行排程) ──────────────────────
-        // ⚠️ 資料夾同步的真相來源是「磁碟上有沒有套件檔案」，而非 CRDT index.json 的
-        // tombstone。index.json 可能來自另一台裝置，且可能含有歷史上被 RC-1 bug 偽造
-        // 的假刪除標記。若用 deletedNotebookIds 來決定刪除套件，會把好的筆記本刪掉。
-        // 資料夾同步路徑完全不使用 deletedNotebookIds。
         SyncLogger.logAsync("步驟 2：搬移雲端檔案 (雙軌並行排程)...", source: .folder)
         let activeLocalIds = Set(store.syncNotebooks.map { $0.id })
+        let deletedNotebookIds = AccountSyncStore.shared.deletedNotebookIds
         let activeId = store.activeNotebookId ?? store.syncNotebooks.sorted { $0.lastModifiedDate > $1.lastModifiedDate }.first?.id
         let (syncUploaded, syncDownloaded, syncNeedsAttention, syncFailures, newNotebooks) = await Task.detached(priority: .utility) {
             var up = 0
@@ -169,11 +166,31 @@ enum NotebookSyncCoordinator {
             var fails = [String: String]()
             var newBooks = 0
 
+            // (1) 先清理雲端資料夾中屬於已刪除（帶墓碑）的套件，阻斷死灰復燃
+            let remoteFolderItems = (try? fm.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil, options: [])) ?? []
+            for item in remoteFolderItems {
+                let actualName = ICloudSyncFolder.isPlaceholder(item) ? ICloudSyncFolder.logicalURL(of: item).lastPathComponent : item.lastPathComponent
+                if actualName.hasSuffix(".padnote") {
+                    let id = (actualName as NSString).deletingPathExtension
+                    if deletedNotebookIds.contains(id) {
+                        try? fm.removeItem(at: item)
+                    }
+                }
+            }
+
             let allDiskPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
                 .filter { $0.pathExtension == "padnote" } ?? []
 
-            // 只同步本機活躍的套件，其餘忽略（不刪除）。
-            let packages = allDiskPackages.filter { activeLocalIds.contains(packageId(for: $0)) }
+            // (2) 清理本機已刪除殘留套件
+            for diskPkg in allDiskPackages {
+                let id = packageId(for: diskPkg)
+                if deletedNotebookIds.contains(id) {
+                    try? fm.removeItem(at: diskPkg)
+                }
+            }
+
+            // 只同步本機活躍的套件
+            let packages = allDiskPackages.filter { activeLocalIds.contains(packageId(for: $0)) && !deletedNotebookIds.contains(packageId(for: $0)) }
             SyncLogger.logAsync("📊【同步前核實】本機現存: \(activeLocalIds.count) 本，待同步活躍筆記: \(packages.count) 本", source: .folder)
 
             // 軌道一：前台作用中筆記優先極速同步
@@ -205,13 +222,14 @@ enum NotebookSyncCoordinator {
                 }
             }
 
-            // 另一台裝置建立的筆記本，本機還沒有對應的套件目錄 —— 要先整包抓下來。
+            // 另一台裝置建立的筆記本，本機還沒有對應的套件目錄 —— 要先整包抓下來（排除已刪除名單）。
             if !Task.isCancelled && !DriveHttpClient.isCancellationRequested {
                 var tempReport = Report()
                 newBooks = pullUnknownPackages(
                     into: packagesDir,
                     from: folder,
                     activeLocalIds: activeLocalIds,
+                    deletedNotebookIds: deletedNotebookIds,
                     report: &tempReport
                 )
                 attention.append(contentsOf: tempReport.needsAttention)
@@ -241,8 +259,10 @@ enum NotebookSyncCoordinator {
             deviceId: deviceId,
             ownStrokes: ownStrokes,
             activeLocalIds: activeLocalIds,
+            deletedNotebookIds: deletedNotebookIds,
             report: &report
         )
+        store.syncPurgeDeletedNotebooks(deletedNotebookIds)
         SyncLogger.logAsync("【資料夾同步】全部完成。", source: .folder)
 
         return report
@@ -263,9 +283,9 @@ enum NotebookSyncCoordinator {
         let localIndexJson = AccountSyncStore.shared.indexJSON
         let localLiveSet = Set(syncLiveNotebooks(indexJson: localIndexJson).map { $0.id })
 
-        // (A) 從 store.allNotebooks 全集復活被誤標的筆記本
+        // (A) 從 store.allNotebooks 全集確認未刪除的筆記本存在於 localIndexJson
         for document in store.allNotebooks {
-            if AccountSyncStore.shared.isDeleted(id: document.id) || !localLiveSet.contains(document.id) {
+            if !AccountSyncStore.shared.isDeleted(id: document.id) && !localLiveSet.contains(document.id) {
                 AccountSyncStore.shared.record(
                     id: document.id,
                     title: document.title,
@@ -274,21 +294,13 @@ enum NotebookSyncCoordinator {
                 )
             }
         }
-        // (B) 從磁碟套件目錄再掃一遍：有 .padnote 套件但被 tombstone 的也要復活。
-        let diskPackageIds: Set<String> = Set(
-            ((try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil)) ?? [])
-                .filter { $0.pathExtension == "padnote" }
-                .map { packageId(for: $0) }
-        )
-        for diskId in diskPackageIds {
-            if AccountSyncStore.shared.isDeleted(id: diskId) || !localLiveSet.contains(diskId) {
-                let title = store.allNotebooks.first(where: { $0.id == diskId })?.title ?? diskId
-                AccountSyncStore.shared.record(
-                    id: diskId,
-                    title: title,
-                    parentId: nil,
-                    isFolder: false
-                )
+        // (B) 清理磁碟套件目錄殘留的已刪除套件（防止墓碑被死灰復燃）
+        let diskPackageUrls = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
+            .filter { $0.pathExtension == "padnote" } ?? []
+        for diskUrl in diskPackageUrls {
+            let diskId = packageId(for: diskUrl)
+            if AccountSyncStore.shared.isDeleted(id: diskId) {
+                try? fm.removeItem(at: diskUrl)
             }
         }
 
@@ -713,6 +725,7 @@ enum NotebookSyncCoordinator {
         deviceId: UInt32,
         ownStrokes: OwnStrokes,
         activeLocalIds: Set<String>,
+        deletedNotebookIds: Set<String>,
         report: inout Report
     ) {
         let fm = FileManager.default
@@ -721,7 +734,10 @@ enum NotebookSyncCoordinator {
         for package in allPackages {
             let notebookId = packageId(for: package)
 
-            // ⚠️ 刻意不檢查 deletedNotebookIds —— 資料夾同步的真相來源是磁碟有沒有套件。
+            if deletedNotebookIds.contains(notebookId) {
+                try? fm.removeItem(at: package)
+                continue
+            }
 
             var isDir: ObjCBool = false
             if fm.fileExists(atPath: package.path, isDirectory: &isDir), !isDir.boolValue {
@@ -770,13 +786,11 @@ enum NotebookSyncCoordinator {
     ///
     /// `CloudSyncFolder.sync` 只處理「本機已經有這個套件目錄」的情況 ——
     /// 另一台裝置**新建**的筆記本在本機連目錄都沒有，不另外抓的話永遠不會出現。
-    ///
-    /// 資料夾同步版本：用 activeLocalIds（而非 deletedNotebookIds）來判斷是否已有本機版本。
-    /// 在雲端資料夾存在的筆記本，一律拉下來，不依賴可能被汙染的 tombstone 來過濾。
     nonisolated private static func pullUnknownPackages(
         into packagesDir: URL,
         from folder: URL,
         activeLocalIds: Set<String>,
+        deletedNotebookIds: Set<String>,
         report: inout Report
     ) -> Int {
         let fm = FileManager.default
@@ -799,9 +813,12 @@ enum NotebookSyncCoordinator {
             let notebookId = packageId(for: local)
 
             // 若本機已有此筆記本（活躍），跳過——CloudSyncFolder.sync 已處理雙向同步。
-            // 若本機沒有（新筆記本），拉下來。
-            // ⚠️ 不依賴 deletedNotebookIds 過濾：tombstone 可能是歷史汙染資料。
             if activeLocalIds.contains(notebookId) { continue }
+            // 若為已刪除的筆記本（帶墓碑），跳過並從雲端清除殘留，絕不重新拉取
+            if deletedNotebookIds.contains(notebookId) {
+                try? fm.removeItem(at: remoteItem)
+                continue
+            }
             guard !fm.fileExists(atPath: local.path) else { continue }
 
             var isDir: ObjCBool = false

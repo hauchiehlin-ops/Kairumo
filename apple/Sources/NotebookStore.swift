@@ -1206,14 +1206,51 @@ public final class NotebookStore: ObservableObject {
                 result.append(item)
             }
         }
-        return result
+
+        // 範例筆記跨裝置同步去重：若存在多本預設範例筆記（例如各裝置初次啟動各建了一本），
+        // 保留修改時間最新的一本，避免畫面上重複出現「課堂與會議記錄」或「歡迎使用 Kairumo」。
+        var dedupedResult: [NotebookDocument] = []
+        var seedSeen: [String: Int] = [:]
+        for item in result {
+            if let key = item.titleKey, (key == "seed_welcome_title" || key == "seed_meeting_title") {
+                if let existingIdx = seedSeen[key] {
+                    if item.lastModifiedDate > dedupedResult[existingIdx].lastModifiedDate {
+                        dedupedResult[existingIdx] = item
+                    }
+                } else {
+                    seedSeen[key] = dedupedResult.count
+                    dedupedResult.append(item)
+                }
+            } else {
+                dedupedResult.append(item)
+            }
+        }
+        return dedupedResult
     }
 
 
     public func loadData() {
         if let data = try? Data(contentsOf: notebooksFile),
            let list = try? JSONDecoder().decode([NotebookDocument].self, from: data) {
-            self.notebooks = Self.deduplicateById(list.map(migrateSeedTitles))
+            let migrated = list.map(migrateSeedTitles)
+            let deduped = Self.deduplicateById(migrated)
+            self.notebooks = deduped
+
+            // 若有被去重清理掉的重複範例筆記，同步清理其套件並記錄刪除墓碑避免死灰復燃
+            let retainedIds = Set(deduped.map { $0.id })
+            for original in migrated {
+                if !retainedIds.contains(original.id) {
+                    AccountSyncStore.shared.recordDeletion(id: original.id)
+                    let pkgDir = corePackagesDirectory.appendingPathComponent("\(original.id).padnote")
+                    try? FileManager.default.removeItem(at: pkgDir)
+                    if let cloudFolder = CloudSyncFolder.resolveFolder() {
+                        let scoped = cloudFolder.startAccessingSecurityScopedResource()
+                        defer { if scoped { cloudFolder.stopAccessingSecurityScopedResource() } }
+                        let remotePkg = cloudFolder.appendingPathComponent("\(original.id).padnote")
+                        try? FileManager.default.removeItem(at: remotePkg)
+                    }
+                }
+            }
         }
 
         if let recData = try? Data(contentsOf: recordingsFile),
@@ -1436,6 +1473,7 @@ public final class NotebookStore: ObservableObject {
         // title/previewSnippet 仍然寫入（供未安裝語系或外部讀取時 fallback），
         // 但顯示一律走 titleKey/snippetKey。
         var n1 = NotebookDocument(
+            id: "seed-welcome-notebook-v1",
             title: "歡迎使用 Kairumo",
             createdAt: Date().addingTimeInterval(-86400 * 2),
             lastModifiedDate: Date().addingTimeInterval(-3600),
@@ -1446,6 +1484,7 @@ public final class NotebookStore: ObservableObject {
         )
 
         var n2 = NotebookDocument(
+            id: "seed-meeting-notebook-v1",
             title: "課堂與會議記錄",
             createdAt: Date().addingTimeInterval(-86400),
             lastModifiedDate: Date().addingTimeInterval(-7200),
@@ -1584,6 +1623,15 @@ public final class NotebookStore: ObservableObject {
         try? FileManager.default.removeItem(at: pkgDir)
         let baseDir = documentsDirectory.appendingPathComponent("SyncBaseline/\(id).padnote")
         try? FileManager.default.removeItem(at: baseDir)
+
+        // 同步清理已配置的雲端資料夾殘留套件，避免再次同步時被當成「新筆記」重新拉回
+        if let cloudFolder = CloudSyncFolder.resolveFolder() {
+            let scoped = cloudFolder.startAccessingSecurityScopedResource()
+            defer { if scoped { cloudFolder.stopAccessingSecurityScopedResource() } }
+            let remotePkg = cloudFolder.appendingPathComponent("\(id).padnote")
+            try? FileManager.default.removeItem(at: remotePkg)
+        }
+
         persistData()
     }
 
@@ -1592,6 +1640,18 @@ public final class NotebookStore: ObservableObject {
         guard !deletedIds.isEmpty else { return }
         let beforeCount = notebooks.count
         notebooks.removeAll { deletedIds.contains($0.id) }
+        for id in deletedIds {
+            let pkgDir = corePackagesDirectory.appendingPathComponent("\(id).padnote")
+            try? FileManager.default.removeItem(at: pkgDir)
+            let baseDir = documentsDirectory.appendingPathComponent("SyncBaseline/\(id).padnote")
+            try? FileManager.default.removeItem(at: baseDir)
+            if let cloudFolder = CloudSyncFolder.resolveFolder() {
+                let scoped = cloudFolder.startAccessingSecurityScopedResource()
+                defer { if scoped { cloudFolder.stopAccessingSecurityScopedResource() } }
+                let remotePkg = cloudFolder.appendingPathComponent("\(id).padnote")
+                try? FileManager.default.removeItem(at: remotePkg)
+            }
+        }
         if notebooks.count != beforeCount {
             persistData()
         }
