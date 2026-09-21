@@ -505,9 +505,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
             .get("id")
             .and_then(Value::as_str)
             .map(str::to_string)
-            .ok_or_else(|| {
-                SyncError::Backend(format!("建立 {path} 之後 Drive 沒有回傳 id"))
-            })?;
+            .ok_or_else(|| SyncError::Backend(format!("建立 {path} 之後 Drive 沒有回傳 id")))?;
         {
             let mut cache = self.id_cache.lock().unwrap();
             cache.insert(path.to_string(), file_id.clone());
@@ -834,9 +832,12 @@ mod tests {
             }
             if let Some(rest) = q.split("name contains '").nth(1) {
                 let needle = rest.trim_end_matches('\'');
-                return name
-                    .to_lowercase()
-                    .contains(&needle.replace("\\'", "'").replace("\\\\", "\\").to_lowercase());
+                return name.to_lowercase().contains(
+                    &needle
+                        .replace("\\'", "'")
+                        .replace("\\\\", "\\")
+                        .to_lowercase(),
+                );
             }
             true
         }
@@ -1118,10 +1119,19 @@ mod tests {
         assert!(drive.delete("notebooks/nb1/doc/ops/0001-dev.oplog").is_ok());
         // 刪除後快取被清除，且記錄在 deleted_paths
         assert!(drive.id_cache.lock().unwrap().is_empty());
-        assert!(drive.deleted_paths.lock().unwrap().contains("notebooks/nb1/doc/ops/0001-dev.oplog"));
+        assert!(
+            drive
+                .deleted_paths
+                .lock()
+                .unwrap()
+                .contains("notebooks/nb1/doc/ops/0001-dev.oplog")
+        );
         // 再次刪除或查詢該路徑直接命中快取 NotFound，不再次發起任何網路請求
         assert!(drive.delete("notebooks/nb1/doc/ops/0001-dev.oplog").is_ok());
-        assert!(matches!(drive.get_all("notebooks/nb1/doc/ops/0001-dev.oplog"), Err(SyncError::NotFound(_))));
+        assert!(matches!(
+            drive.get_all("notebooks/nb1/doc/ops/0001-dev.oplog"),
+            Err(SyncError::NotFound(_))
+        ));
     }
 
     #[test]
@@ -1145,6 +1155,9 @@ mod tests {
         // 以小寫 prefix 查詢，應能成功列出大寫 UUID 的遠端檔案
         let entries = drive.list("notebooks/b62b0b1f-adf4-4ff7/doc/ops").unwrap();
         assert_eq!(entries.len(), 1);
-        assert_eq!(entries[0].path, "notebooks/B62B0B1F-ADF4-4FF7/doc/ops/0001-dev.oplog");
+        assert_eq!(
+            entries[0].path,
+            "notebooks/B62B0B1F-ADF4-4FF7/doc/ops/0001-dev.oplog"
+        );
     }
 }

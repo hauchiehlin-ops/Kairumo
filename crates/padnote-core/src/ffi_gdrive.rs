@@ -838,7 +838,6 @@ pub fn gdrive_clone_notebook(
     }
 }
 
-
 // ── 同步工作階段（P1）──────────────────────────────────────────────
 
 /// 一次重新整理雲端快照的結果。
@@ -1322,9 +1321,7 @@ mod tests {
                     continue;
                 };
                 if name.is_empty() {
-                    out.push(format!(
-                        r#"{{"fileId":"id-{index}","removed":true}}"#
-                    ));
+                    out.push(format!(r#"{{"fileId":"id-{index}","removed":true}}"#));
                 } else {
                     out.push(format!(
                         r#"{{"fileId":"id-{index}","removed":false,"file":{{"id":"id-{index}","name":"{name}","size":"{}","trashed":false}}}}"#,
@@ -1536,20 +1533,34 @@ mod tests {
 
         let session = FfiSyncSession::create(http, String::new());
         let before = session.diagnose(
-            books.iter().map(|(_, r)| r.to_string_lossy().into()).collect(),
+            books
+                .iter()
+                .map(|(_, r)| r.to_string_lossy().into())
+                .collect(),
             books.iter().map(|(id, _)| id.clone()).collect(),
         );
         assert!(!before.has_cursor, "還沒 refresh 就不該宣稱有游標");
-        assert_eq!(before.pending_notebooks.len(), 3, "不知道狀態時一律當成要同步");
+        assert_eq!(
+            before.pending_notebooks.len(),
+            3,
+            "不知道狀態時一律當成要同步"
+        );
 
         assert!(session.refresh().ok);
         for (id, root) in &books {
-            assert!(session.sync_notebook(root.to_string_lossy().into(), id.clone(), 0xAA).ok);
+            assert!(
+                session
+                    .sync_notebook(root.to_string_lossy().into(), id.clone(), 0xAA)
+                    .ok
+            );
         }
         session.refresh();
 
         let after = session.diagnose(
-            books.iter().map(|(_, r)| r.to_string_lossy().into()).collect(),
+            books
+                .iter()
+                .map(|(_, r)| r.to_string_lossy().into())
+                .collect(),
             books.iter().map(|(id, _)| id.clone()).collect(),
         );
         assert!(after.has_cursor);
@@ -1559,10 +1570,19 @@ mod tests {
 
         // 再改一本，它就該單獨出現在待辦裡。
         let pkg = padnote_storage::NotebookPackage::open(&books[1].1).unwrap();
-        pkg.append_doc_ops(5, 0xAA, &[DocOp::SetTitle { title: "改過".into() }])
-            .unwrap();
+        pkg.append_doc_ops(
+            5,
+            0xAA,
+            &[DocOp::SetTitle {
+                title: "改過".into(),
+            }],
+        )
+        .unwrap();
         let changed = session.diagnose(
-            books.iter().map(|(_, r)| r.to_string_lossy().into()).collect(),
+            books
+                .iter()
+                .map(|(_, r)| r.to_string_lossy().into())
+                .collect(),
             books.iter().map(|(id, _)| id.clone()).collect(),
         );
         assert_eq!(changed.pending_notebooks, vec![books[1].0.clone()]);
@@ -1645,7 +1665,11 @@ mod tests {
         assert!(other_session.refresh().ok);
         assert!(
             other_session
-                .sync_notebook(other_root.to_string_lossy().into(), books[7].0.clone(), 0xBB)
+                .sync_notebook(
+                    other_root.to_string_lossy().into(),
+                    books[7].0.clone(),
+                    0xBB
+                )
                 .ok
         );
 
@@ -1653,7 +1677,9 @@ mod tests {
         session.refresh();
         let needs: Vec<&String> = books
             .iter()
-            .filter(|(id, root)| session.notebook_needs_sync(root.to_string_lossy().into(), id.clone()))
+            .filter(|(id, root)| {
+                session.notebook_needs_sync(root.to_string_lossy().into(), id.clone())
+            })
             .map(|(id, _)| id)
             .collect();
         assert_eq!(needs, vec![&books[7].0], "只有被改過的那一本該要同步");
@@ -1670,7 +1696,11 @@ mod tests {
         assert!(session.refresh().ok);
         assert!(
             session
-                .sync_notebook(books[0].1.to_string_lossy().into(), books[0].0.clone(), 0xAA)
+                .sync_notebook(
+                    books[0].1.to_string_lossy().into(),
+                    books[0].0.clone(),
+                    0xAA
+                )
                 .ok
         );
         session.refresh();
@@ -1733,7 +1763,11 @@ mod tests {
         assert!(session.refresh().ok);
         assert!(
             session
-                .sync_notebook(books[0].1.to_string_lossy().into(), books[0].0.clone(), 0xAA)
+                .sync_notebook(
+                    books[0].1.to_string_lossy().into(),
+                    books[0].0.clone(),
+                    0xAA
+                )
                 .ok
         );
         let saved = session.index_json();
@@ -1826,7 +1860,11 @@ mod tests {
         let session = FfiSyncSession::create(ok_http, String::new());
         assert!(session.refresh().ok);
         // device 0 ⇒ 不壓實，六個檔原樣上傳。
-        assert!(session.sync_notebook(root.to_string_lossy().into(), "nb1".into(), 0).ok);
+        assert!(
+            session
+                .sync_notebook(root.to_string_lossy().into(), "nb1".into(), 0)
+                .ok
+        );
         let cloud_before = fake
             .files
             .lock()
@@ -1919,7 +1957,10 @@ mod tests {
         // 先把六個碎檔原樣推上雲端（device 0 ⇒ 不壓實）。
         let s0 = FfiSyncSession::create(http.clone(), String::new());
         assert!(s0.refresh().ok);
-        assert!(s0.sync_notebook(root.to_string_lossy().into(), "nb1".into(), 0).ok);
+        assert!(
+            s0.sync_notebook(root.to_string_lossy().into(), "nb1".into(), 0)
+                .ok
+        );
 
         // 再以自己的 device id 同步一次：壓實 → 上傳 → 清掉自己的舊碎檔。
         let s1 = FfiSyncSession::create(http.clone(), s0.index_json());
@@ -1960,7 +2001,10 @@ mod tests {
         }
         let sa = FfiSyncSession::create(http.clone(), String::new());
         assert!(sa.refresh().ok);
-        assert!(sa.sync_notebook(a_root.to_string_lossy().into(), "nb1".into(), 0).ok);
+        assert!(
+            sa.sync_notebook(a_root.to_string_lossy().into(), "nb1".into(), 0)
+                .ok
+        );
         // 第二輪壓實並清理雲端。
         assert!(
             sa.sync_notebook(a_root.to_string_lossy().into(), "nb1".into(), 0xAA)
@@ -2255,16 +2299,21 @@ mod tests {
 
         pkg.write_audio_file(name, &vec![0u8; 1000]).unwrap();
         assert_eq!(
-            session.sync_notebook(path.clone(), "nb1".into(), 0xAA).uploaded,
+            session
+                .sync_notebook(path.clone(), "nb1".into(), 0xAA)
+                .uploaded,
             1,
             "第一次一定要傳"
         );
 
         // 還在錄：每一輪都長一點點，但都不到門檻。
         for extra in 1..=3usize {
-            pkg.write_audio_file(name, &vec![0u8; 1000 + extra * 100]).unwrap();
+            pkg.write_audio_file(name, &vec![0u8; 1000 + extra * 100])
+                .unwrap();
             assert_eq!(
-                session.sync_notebook(path.clone(), "nb1".into(), 0xAA).uploaded,
+                session
+                    .sync_notebook(path.clone(), "nb1".into(), 0xAA)
+                    .uploaded,
                 0,
                 "錄製中的小幅成長不該整檔重傳"
             );
@@ -2273,7 +2322,9 @@ mod tests {
         // 錄完了：長度穩定下來，這一輪一定要傳 ——
         // 只看門檻的話，最後那一小段永遠傳不出去，雲端那份會少掉結尾。
         assert_eq!(
-            session.sync_notebook(path.clone(), "nb1".into(), 0xAA).uploaded,
+            session
+                .sync_notebook(path.clone(), "nb1".into(), 0xAA)
+                .uploaded,
             1,
             "長度穩定＝錄完了，一定要傳"
         );

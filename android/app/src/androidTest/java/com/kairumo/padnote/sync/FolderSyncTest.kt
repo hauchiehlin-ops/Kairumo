@@ -147,12 +147,20 @@ class FolderSyncTest {
     // MARK: - 不該默默做的事
 
     @Test
-    fun divergingManifestIsReportedInsteadOfOverwritten() {
+    fun divergingManifestIsLeftAloneOnBothSides() {
+        // manifest 的欄位不是不可變（notebook_id、created_at）、就是權威在別處
+        // （標題由 notebooks/index.json 與 oplog 的 SetTitle 決定）、就是**本機專屬**
+        // （encryption 的金鑰包裝參數 —— 被對面蓋掉就等於把這台裝置的解密資訊
+        // 換成另一台的）。所以兩邊都有時各留各的。
+        //
+        // 舊版把它列進 needsAttention，症狀是每次同步都跳一句「需要注意」，
+        // 而使用者無論做什麼都不會消失 —— 因為那本來就不是他能回答的問題。
         write("manifest.json", "{\"title\":\"我改的\"}", localPackage)
         write("manifest.json", "{\"title\":\"另一台改的\"}", remotePackage)
 
         val result = sync()
-        assertEquals(listOf("manifest.json"), result.needsAttention)
+        assertEquals(emptyList<String>(), result.needsAttention)
+        assertEquals("{\"title\":\"我改的\"}", read("manifest.json", localPackage))
         assertEquals("{\"title\":\"另一台改的\"}", read("manifest.json", remotePackage))
     }
 

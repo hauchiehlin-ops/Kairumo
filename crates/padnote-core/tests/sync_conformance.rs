@@ -17,8 +17,8 @@
 //! 這個檔案把這些脾氣做進假的 Drive 裡，再用**隨機操作序列**跑兩台裝置，
 //! 斷言最後收斂。單元測試釘的是單一行為；這裡釘的是「湊在一起還對不對」。
 
-use std::sync::{Arc, Mutex};
 use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 
 use padnote_core::ffi_gdrive::{
     FfiByteRange, FfiDriveError, FfiDriveHttp, FfiQueryParam, FfiSyncSession,
@@ -323,10 +323,7 @@ fn settle(
     rounds: usize,
 ) {
     for _ in 0..rounds {
-        for (session, root, device) in [
-            (a, a_root, 0x0000_00aau32),
-            (b, b_root, 0x0000_00bbu32),
-        ] {
+        for (session, root, device) in [(a, a_root, 0x0000_00aau32), (b, b_root, 0x0000_00bbu32)] {
             let refreshed = session.refresh();
             assert!(refreshed.ok, "refresh 失敗：{}", refreshed.error);
             let path: String = root.to_string_lossy().into();
@@ -374,7 +371,11 @@ fn two_devices_converge_through_a_drive_that_misbehaves() {
             }
             // 雲端鬧脾氣
             _ => {
-                if let Some(name) = drive.live_names().into_iter().find(|n| n.ends_with(".oplog")) {
+                if let Some(name) = drive
+                    .live_names()
+                    .into_iter()
+                    .find(|n| n.ends_with(".oplog"))
+                {
                     // 同名重複檔：兩台裝置同時建立同一個名字時真的會發生。
                     drive.duplicate(&name);
                 }

@@ -1127,8 +1127,20 @@ mod tests {
             .map(|(n, _)| n)
             .collect();
         // 別台裝置的四個檔一個都不能少。
-        assert_eq!(names.iter().filter(|n| n.ends_with("-000000bb.oplog")).count(), 4);
-        assert_eq!(names.iter().filter(|n| n.ends_with("-000000aa.oplog")).count(), 1);
+        assert_eq!(
+            names
+                .iter()
+                .filter(|n| n.ends_with("-000000bb.oplog"))
+                .count(),
+            4
+        );
+        assert_eq!(
+            names
+                .iter()
+                .filter(|n| n.ends_with("-000000aa.oplog"))
+                .count(),
+            1
+        );
     }
 
     #[test]

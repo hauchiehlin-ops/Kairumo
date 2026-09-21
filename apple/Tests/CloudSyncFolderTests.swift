@@ -120,14 +120,24 @@ final class CloudSyncFolderTests: XCTestCase {
 
     // MARK: - 不該默默做的事
 
-    func testDivergingManifestIsReportedInsteadOfOverwritten() throws {
-        // manifest.json 是整份覆寫的，不是 append-only。默默挑一邊的後果是
-        // 另一台裝置改的標題無聲消失。
+    func testDivergingManifestIsLeftAloneOnBothSides() throws {
+        // manifest.json 是整份覆寫的，不是 append-only —— 「比較長的是超集」
+        // 對它不成立，所以兩邊都有時**各留各的**。
+        //
+        // 它的欄位只有三類：不可變（notebook_id、created_at）、權威在別處
+        // （標題由 notebooks/index.json 與 oplog 的 SetTitle 決定）、
+        // 以及本機專屬（encryption 的金鑰包裝參數 —— 被對面蓋掉就等於
+        // 把這台裝置的解密資訊換成另一台的）。
+        //
+        // 舊版把它列進 needsAttention，症狀是每次同步都跳一句「需要注意」，
+        // 而使用者無論做什麼都不會消失 —— 那本來就不是他能回答的問題。
         try write("manifest.json", "{\"title\":\"我改的\"}", in: localPackage)
         try write("manifest.json", "{\"title\":\"另一台改的\"}", in: remotePackage)
 
         let result = CloudSyncFolder.sync(localPackage: localPackage, into: cloud)
-        XCTAssertEqual(result.needsAttention, ["manifest.json"])
+        XCTAssertTrue(result.needsAttention.isEmpty, "不該要使用者處理")
+        XCTAssertEqual(read("manifest.json", in: localPackage), "{\"title\":\"我改的\"}",
+                       "本機那份不該被覆蓋")
         XCTAssertEqual(read("manifest.json", in: remotePackage), "{\"title\":\"另一台改的\"}",
                        "雲端那份不該被覆蓋")
     }

@@ -64,7 +64,10 @@ pub fn canonical_name(raw: &str) -> String {
 /// `notebooks/nb1/doc/ops` 被折成 `notebooks-nb1-doc-ops`，
 /// 於是索引裡什麼都查不到。
 pub fn canonical_path(raw: &str) -> String {
-    raw.split('/').map(canonical_name).collect::<Vec<_>>().join("/")
+    raw.split('/')
+        .map(canonical_name)
+        .collect::<Vec<_>>()
+        .join("/")
 }
 
 /// 筆記本 id 的正規化形式。與 [`canonical_name`] 相同規則，
@@ -169,7 +172,10 @@ mod tests {
     fn a_path_keeps_its_slashes_but_a_name_does_not() {
         // 混用過一次：`notebooks/nb1/doc/ops` 被折成
         // `notebooks-nb1-doc-ops`，索引裡於是什麼都查不到。
-        assert_eq!(canonical_path("Notebooks/NB1/doc/ops"), "notebooks/nb1/doc/ops");
+        assert_eq!(
+            canonical_path("Notebooks/NB1/doc/ops"),
+            "notebooks/nb1/doc/ops"
+        );
         assert_eq!(canonical_name("a/b"), "a-b");
     }
 

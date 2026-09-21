@@ -215,7 +215,10 @@ mod tests {
         idx.apply("1", Some("notebooks/NB1/media/audio/A1.opus"), 10, false);
         idx.apply("2", Some("notebooks/nb1/media/audio/a1.opus"), 20, false);
         assert_eq!(idx.len(), 1, "大小寫不同不該變成兩個項目");
-        assert_eq!(idx.get("notebooks/nb1/media/audio/a1.opus").unwrap().size, 20);
+        assert_eq!(
+            idx.get("notebooks/nb1/media/audio/a1.opus").unwrap().size,
+            20
+        );
     }
 
     #[test]
