@@ -337,8 +337,8 @@ pub fn gdrive_sync_notebook(
         Ok(p) => p,
         Err(e) => return notebook_failed(format!("開不了套件：{e}")),
     };
-    // 上傳前先做 oplog 壓實：當本機碎檔超過 50 個時，合併以大幅減少 HTTP PUT 次數
-    let _ = package.compact_doc_ops(50);
+    // 上傳前先做 oplog 壓實：當本機碎檔達到 5 個時，合併以大幅減少 HTTP PUT 次數
+    let _ = package.compact_doc_ops(5);
     let local = match package.doc_op_files() {
         Ok(files) => files,
         Err(e) => return notebook_failed(format!("讀不到本機 oplog：{e}")),
@@ -358,6 +358,25 @@ pub fn gdrive_sync_notebook(
             Some((name, e.size))
         })
         .collect();
+
+    // 計算本機各裝置的最大 lamport。若本機已存在該裝置更大或相同 lamport 的檔（例如已壓實），
+    // 雲端較舊的碎檔（小於最大 lamport）就無需下載，因為其操作已完整包含在本機壓實檔中。
+    let mut local_max_lamport_by_device: std::collections::HashMap<String, u64> =
+        std::collections::HashMap::new();
+    for (name, _) in &local {
+        if let Some(pos) = name.rfind('-') {
+            let dev_suffix = &name[pos..];
+            let lamport_hex = &name[..pos];
+            if let Ok(l) = u64::from_str_radix(lamport_hex, 16) {
+                let entry = local_max_lamport_by_device
+                    .entry(dev_suffix.to_string())
+                    .or_insert(0);
+                if l > *entry {
+                    *entry = l;
+                }
+            }
+        }
+    }
 
     // 上傳：雲端沒有的，或者本機這一份比較長的。
     //
@@ -389,6 +408,18 @@ pub fn gdrive_sync_notebook(
         if *remote_size <= local_size {
             continue;
         }
+        // 若雲端檔的 lamport 嚴格小於本機已存在的該裝置最大 lamport，代表此碎檔已在壓實檔中，跳過下載
+        if let Some(pos) = name.rfind('-') {
+            let dev_suffix = &name[pos..];
+            let lamport_hex = &name[..pos];
+            if let Ok(l) = u64::from_str_radix(lamport_hex, 16) {
+                if let Some(&max_l) = local_max_lamport_by_device.get(dev_suffix) {
+                    if l < max_l {
+                        continue;
+                    }
+                }
+            }
+        }
         let bytes = match drive.get_all(&format!("{prefix}/{name}")) {
             Ok(b) => b,
             Err(e) => return from_sync_error(e),
@@ -399,6 +430,11 @@ pub fn gdrive_sync_notebook(
             return notebook_failed(format!("寫不進 {name}：{e}"));
         }
         downloaded += 1;
+    }
+
+    // 若下載了新的碎檔，同步完成前再次壓實，保持套件精簡
+    if downloaded > 0 {
+        let _ = package.compact_doc_ops(5);
     }
 
     FfiNotebookSyncResult {

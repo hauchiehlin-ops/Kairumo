@@ -1,5 +1,6 @@
 package com.kairumo.padnote.ink
 
+import android.view.MotionEvent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import com.kairumo.padnote.canvas.drawPageBackground
@@ -57,6 +58,8 @@ fun InkCanvas(
     inkColor: Color = Color.Black,
     /// 筆畫有變動時通知外層（例如更新「N 筆」的顯示）。
     onInkChanged: () -> Unit = {},
+    /** 當處於「僅限觸控筆」等模式下手指被手勢或掌拒攔截時的回呼。 */
+    onFingerIgnored: () -> Unit = {},
     /**
      * 外部改動了 engine 裡的筆畫（讀檔、草圖美化、清除）時 +1。
      *
@@ -124,6 +127,9 @@ fun InkCanvas(
                 // 每個事件都通知：被「拒絕」的那些才是需要診斷的，
                 // 只在畫得出東西時回報，等於看不到問題發生的那一刻。
                 onInkChanged()
+                if (outcome.gestureSamples > 0 && event.getToolType(0) == MotionEvent.TOOL_TYPE_FINGER) {
+                    onFingerIgnored()
+                }
                 // 手勢判定的事件要讓給外層（捲動、縮放）；其餘由畫布消化。
                 outcome.gestureSamples == 0
             }
@@ -144,7 +150,15 @@ fun InkCanvas(
         drawPageBoundary(density)
 
         for (stroke in engine.strokes) {
-            drawInkStroke(stroke.points, stroke.tool, engine.baseWidth, inkColor, density)
+            val strokeColor = if (stroke.colorRgba.size >= 4) {
+                Color(
+                    (stroke.colorRgba[0].toInt() and 0xFF) / 255f,
+                    (stroke.colorRgba[1].toInt() and 0xFF) / 255f,
+                    (stroke.colorRgba[2].toInt() and 0xFF) / 255f,
+                    (stroke.colorRgba[3].toInt() and 0xFF) / 255f
+                )
+            } else inkColor
+            drawInkStroke(stroke.points, stroke.tool, stroke.baseWidth, strokeColor, density)
         }
         // 尚未抬筆的那一段也要即時畫出來，否則寫字時要等抬筆才看得到。
         for (live in engine.liveSamples()) {

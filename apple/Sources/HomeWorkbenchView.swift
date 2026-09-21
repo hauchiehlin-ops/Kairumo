@@ -3410,9 +3410,12 @@ public struct CloudSyncDetailSheet: View {
 
     @State private var logFilter: LogFilter = .currentTab
     @State private var selectedProvider: CloudSyncProvider = .googleDrive
-    @State private var statusMessage: String?
-    @State private var isSyncing = false
-    @State private var syncTask: Task<Void, Never>?
+    @State private var googleStatusMessage: String?
+    @State private var isGoogleSyncing = false
+    @State private var googleSyncTask: Task<Void, Never>?
+    @State private var folderStatusMessage: String?
+    @State private var isFolderSyncing = false
+    @State private var folderSyncTask: Task<Void, Never>?
     @State private var showFolderPicker = false
     @State private var shareSyncLogsURL: URL?
     @State private var copiedSyncLogs = false
@@ -3491,19 +3494,19 @@ public struct CloudSyncDetailSheet: View {
                 case .success(let urls):
                     guard let url = urls.first else { return }
                     if url.pathExtension == "padnote" || url.lastPathComponent.hasSuffix(".padnote") {
-                        statusMessage = localizationManager.localized("invalid_folder_padnote")
+                        folderStatusMessage = localizationManager.localized("invalid_folder_padnote")
                         return
                     }
                     let scoped = url.startAccessingSecurityScopedResource()
                     defer { if scoped { url.stopAccessingSecurityScopedResource() } }
                     do {
                         try CloudSyncFolder.setFolder(url)
-                        syncTask = Task { await runFolderSync() }
+                        folderSyncTask = Task { await runFolderSync() }
                     } catch {
-                        statusMessage = error.localizedDescription
+                        folderStatusMessage = error.localizedDescription
                     }
                 case .failure(let error):
-                    statusMessage = error.localizedDescription
+                    folderStatusMessage = error.localizedDescription
                 }
             }
             .sheet(item: Binding(
@@ -3568,18 +3571,32 @@ public struct CloudSyncDetailSheet: View {
                     .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
             )
 
-            if let statusMessage {
-                Text(statusMessage)
+            if isFolderSyncing {
+                HStack(spacing: 6) {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(.teal)
+                    Text("提示：iCloud / 資料夾同步正在背景執行中")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, DS.Space.xs)
+            }
+
+            if let googleStatusMessage {
+                Text(googleStatusMessage)
                     .font(DS.Font.caption)
-                    .foregroundColor(statusMessage.contains("失敗") || statusMessage.contains("過期") ? .red : .secondary)
+                    .foregroundColor(googleStatusMessage.contains("失敗") || googleStatusMessage.contains("過期") ? .red : .secondary)
                     .padding(.horizontal, DS.Space.xs)
             }
 
             VStack(spacing: DS.Space.s) {
                 if googleAuth.isSignedIn {
-                    if isSyncing {
+                    if isGoogleSyncing {
                         Button(role: .destructive) {
-                            syncTask?.cancel()
+                            googleSyncTask?.cancel()
+                            NotebookSyncCoordinator.cancelSync()
+                            isGoogleSyncing = false
+                            googleStatusMessage = "已中斷同步"
                         } label: {
                             HStack {
                                 ProgressView()
@@ -3594,7 +3611,7 @@ public struct CloudSyncDetailSheet: View {
                         .tint(.red)
                     } else {
                         Button {
-                            syncTask = Task { await runGoogleSync() }
+                            googleSyncTask = Task { await runGoogleSync() }
                         } label: {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
@@ -3611,7 +3628,7 @@ public struct CloudSyncDetailSheet: View {
                     Button(role: .destructive) {
                         Task {
                             await GoogleAuth.shared.signOut()
-                            statusMessage = nil
+                            googleStatusMessage = nil
                         }
                     } label: {
                         HStack {
@@ -3625,18 +3642,18 @@ public struct CloudSyncDetailSheet: View {
                 } else {
                     Button {
                         Task {
-                            statusMessage = nil
+                            googleStatusMessage = nil
                             switch await GoogleAuth.shared.signIn() {
                             case .success:
-                                if !isSyncing {
+                                if !isGoogleSyncing {
                                     await runGoogleSync()
                                 } else {
-                                    statusMessage = "已登入成功（目前正有其他同步執行中）"
+                                    googleStatusMessage = "已登入成功（目前正有其他同步執行中）"
                                 }
                             case .failure(.cancelled):
                                 break
                             case .failure(let error):
-                                statusMessage = error.errorDescription ?? error.localizedDescription
+                                googleStatusMessage = error.errorDescription ?? error.localizedDescription
                             }
                         }
                     } label: {
@@ -3752,10 +3769,21 @@ public struct CloudSyncDetailSheet: View {
                     .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
             )
 
-            if let statusMessage {
-                Text(statusMessage)
+            if isGoogleSyncing {
+                HStack(spacing: 6) {
+                    Image(systemName: "info.circle")
+                        .foregroundColor(.indigo)
+                    Text("提示：Google Drive 同步正在背景執行中")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .padding(.horizontal, DS.Space.xs)
+            }
+
+            if let folderStatusMessage {
+                Text(folderStatusMessage)
                     .font(DS.Font.caption)
-                    .foregroundColor(statusMessage.contains("失敗") || statusMessage.contains("錯誤") ? .red : .secondary)
+                    .foregroundColor(folderStatusMessage.contains("失敗") || folderStatusMessage.contains("錯誤") ? .red : .secondary)
                     .padding(.horizontal, DS.Space.xs)
             }
 
@@ -3775,9 +3803,12 @@ public struct CloudSyncDetailSheet: View {
                 .tint(.teal)
 
                 if CloudSyncFolder.resolveFolder() != nil {
-                    if isSyncing {
+                    if isFolderSyncing {
                         Button(role: .destructive) {
-                            syncTask?.cancel()
+                            folderSyncTask?.cancel()
+                            NotebookSyncCoordinator.cancelSync()
+                            isFolderSyncing = false
+                            folderStatusMessage = "已中斷同步"
                         } label: {
                             HStack {
                                 ProgressView()
@@ -3792,7 +3823,7 @@ public struct CloudSyncDetailSheet: View {
                         .tint(.red)
                     } else {
                         Button {
-                            syncTask = Task { await runFolderSync() }
+                            folderSyncTask = Task { await runFolderSync() }
                         } label: {
                             HStack {
                                 Image(systemName: "arrow.clockwise")
@@ -3808,7 +3839,7 @@ public struct CloudSyncDetailSheet: View {
 
                     Button(role: .destructive) {
                         CloudSyncFolder.clearFolder()
-                        statusMessage = nil
+                        folderStatusMessage = nil
                     } label: {
                         HStack {
                             Image(systemName: "xmark.circle")
@@ -3853,10 +3884,10 @@ public struct CloudSyncDetailSheet: View {
         if CloudSyncFolder.resolveFolder() == nil {
             return localizationManager.localized("sync_not_configured")
         }
-        if isSyncing {
+        if isFolderSyncing {
             return localizationManager.localized("syncing")
         }
-        if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") {
+        if let msg = folderStatusMessage, msg.contains("失敗") || msg.contains("錯誤") {
             return "同步發生錯誤"
         }
         let history = SyncHistory.lastFolderSyncDescription(none: "never")
@@ -3870,10 +3901,10 @@ public struct CloudSyncDetailSheet: View {
         if CloudSyncFolder.resolveFolder() == nil {
             return localizationManager.localized("sync_not_configured")
         }
-        if isSyncing {
-            return localizationManager.localized("syncing")
+        if isFolderSyncing {
+            return folderStatusMessage ?? localizationManager.localized("syncing")
         }
-        if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") {
+        if let msg = folderStatusMessage, msg.contains("失敗") || msg.contains("錯誤") {
             return "同步失敗"
         }
         let history = SyncHistory.lastFolderSyncDescription(none: "never")
@@ -3887,10 +3918,10 @@ public struct CloudSyncDetailSheet: View {
         if !googleAuth.isSignedIn {
             return localizationManager.localized("not_signed_in")
         }
-        if isSyncing {
+        if isGoogleSyncing {
             return localizationManager.localized("syncing")
         }
-        if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") || msg.contains("過期") {
+        if let msg = googleStatusMessage, msg.contains("失敗") || msg.contains("錯誤") || msg.contains("過期") {
             return "同步發生錯誤"
         }
         return localizationManager.localized("sync_done")
@@ -3900,10 +3931,10 @@ public struct CloudSyncDetailSheet: View {
         if !googleAuth.isSignedIn {
             return .secondary
         }
-        if isSyncing {
+        if isGoogleSyncing {
             return .teal
         }
-        if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") || msg.contains("過期") {
+        if let msg = googleStatusMessage, msg.contains("失敗") || msg.contains("錯誤") || msg.contains("過期") {
             return .red
         }
         return .green
@@ -3913,10 +3944,10 @@ public struct CloudSyncDetailSheet: View {
         if CloudSyncFolder.resolveFolder() == nil {
             return .secondary
         }
-        if isSyncing {
+        if isFolderSyncing {
             return .teal
         }
-        if let msg = statusMessage, msg.contains("失敗") || msg.contains("錯誤") {
+        if let msg = folderStatusMessage, msg.contains("失敗") || msg.contains("錯誤") {
             return .red
         }
         let history = SyncHistory.lastFolderSyncDescription(none: "never")
@@ -4023,34 +4054,43 @@ public struct CloudSyncDetailSheet: View {
 
     @MainActor
     private func runGoogleSync() async {
-        guard !isSyncing else { return }
-        isSyncing = true
-        defer { isSyncing = false }
+        guard !isGoogleSyncing else { return }
+        isGoogleSyncing = true
+        defer { isGoogleSyncing = false }
 
-        statusMessage = "Google Drive 同步中..."
-        // 整體 180 秒上限保護：即使底層個別呼叫的超時全部失敗，
-        // 3 分鐘後也一定能解除 isSyncing，讓按鈕回到可按狀態。
+        googleStatusMessage = "Google Drive 同步中..."
         let report: NotebookSyncCoordinator.Report?
         do {
             report = try await withSyncTimeout(seconds: 180) {
                 await NotebookSyncCoordinator.runDrive(
                     store: notebookStore, deviceId: NotebookMigration.deviceId)
             }
+        } catch is CancellationError {
+            googleStatusMessage = "已中斷同步"
+            return
         } catch {
-            statusMessage = "同步逾時，請確認網路連線後重試"
+            if Task.isCancelled || NotebookSyncCoordinator.isCancelled {
+                googleStatusMessage = "已中斷同步"
+            } else {
+                googleStatusMessage = "同步逾時，請確認網路連線後重試"
+            }
+            return
+        }
+        if Task.isCancelled || NotebookSyncCoordinator.isCancelled {
+            googleStatusMessage = "已中斷同步"
             return
         }
         guard let report else {
-            statusMessage = localizationManager.localized("not_signed_in")
+            googleStatusMessage = localizationManager.localized("not_signed_in")
             return
         }
         if report.failures.isEmpty { SyncHistory.markGoogleSynced() }
         if let failure = report.failures.first {
-            statusMessage = "\(failure.key)：\(failure.value)"
+            googleStatusMessage = "\(failure.key)：\(failure.value)"
         } else if report.isNoOp {
-            statusMessage = localizationManager.localized("sync_up_to_date")
+            googleStatusMessage = localizationManager.localized("sync_up_to_date")
         } else {
-            statusMessage = localizationManager.localized("sync_result")
+            googleStatusMessage = localizationManager.localized("sync_result")
                 .replacingFirst("%1@", with: "\(report.uploaded)")
                 .replacingFirst("%2@", with: "\(report.downloaded)")
         }
@@ -4058,41 +4098,51 @@ public struct CloudSyncDetailSheet: View {
 
     @MainActor
     private func runFolderSync() async {
-        guard !isSyncing else { return }
+        guard !isFolderSyncing else { return }
         guard let folder = CloudSyncFolder.resolveFolder() else { return }
-        isSyncing = true
-        
-        defer { isSyncing = false }
+        isFolderSyncing = true
+        defer { isFolderSyncing = false }
 
-            let scoped = folder.startAccessingSecurityScopedResource()
-            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+        let scoped = folder.startAccessingSecurityScopedResource()
+        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
 
-            statusMessage = "iCloud / 資料夾同步中..."
-            let report: NotebookSyncCoordinator.Report
-            do {
-                report = try await withSyncTimeout(seconds: 180) {
-                    await NotebookSyncCoordinator.run(
-                        store: notebookStore, folder: folder, deviceId: NotebookMigration.deviceId)
-                }
-            } catch {
-                statusMessage = "同步逾時，請確認網路連線或 iCloud 狀態後重試"
-                return
+        folderStatusMessage = "iCloud / 資料夾同步中..."
+        let report: NotebookSyncCoordinator.Report
+        do {
+            report = try await withSyncTimeout(seconds: 180) {
+                await NotebookSyncCoordinator.run(
+                    store: notebookStore, folder: folder, deviceId: NotebookMigration.deviceId)
             }
-            if report.failures.isEmpty && report.needsAttention.isEmpty {
-                SyncHistory.markFolderSynced()
-            }
-            if let first = report.needsAttention.first {
-                statusMessage = localizationManager.localized("sync_needs_attention")
-                    .replacingFirst("%@", with: first)
-            } else if let failure = report.failures.first {
-                statusMessage = "\(failure.key)：\(failure.value)"
-            } else if report.isNoOp {
-                statusMessage = localizationManager.localized("sync_up_to_date")
+        } catch is CancellationError {
+            folderStatusMessage = "已中斷同步"
+            return
+        } catch {
+            if Task.isCancelled || NotebookSyncCoordinator.isCancelled {
+                folderStatusMessage = "已中斷同步"
             } else {
-                statusMessage = localizationManager.localized("sync_result")
-                    .replacingFirst("%1@", with: "\(report.uploaded)")
-                    .replacingFirst("%2@", with: "\(report.downloaded)")
+                folderStatusMessage = "同步逾時，請確認網路連線或 iCloud 狀態後重試"
             }
+            return
+        }
+        if Task.isCancelled || NotebookSyncCoordinator.isCancelled {
+            folderStatusMessage = "已中斷同步"
+            return
+        }
+        if report.failures.isEmpty && report.needsAttention.isEmpty {
+            SyncHistory.markFolderSynced()
+        }
+        if let first = report.needsAttention.first {
+            folderStatusMessage = localizationManager.localized("sync_needs_attention")
+                .replacingFirst("%@", with: first)
+        } else if let failure = report.failures.first {
+            folderStatusMessage = "\(failure.key)：\(failure.value)"
+        } else if report.isNoOp {
+            folderStatusMessage = localizationManager.localized("sync_up_to_date")
+        } else {
+            folderStatusMessage = localizationManager.localized("sync_result")
+                .replacingFirst("%1@", with: "\(report.uploaded)")
+                .replacingFirst("%2@", with: "\(report.downloaded)")
+        }
     }
 
     private var filteredLogEntries: [SyncLogger.LogEntry] {
@@ -4127,7 +4177,11 @@ public struct CloudSyncDetailSheet: View {
                 filename: "kairumo-sync-logs.txt"
             )
         } catch {
-            statusMessage = error.localizedDescription
+            if selectedProvider == .googleDrive {
+                googleStatusMessage = error.localizedDescription
+            } else {
+                folderStatusMessage = error.localizedDescription
+            }
         }
     }
 

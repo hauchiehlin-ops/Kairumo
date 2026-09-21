@@ -32,6 +32,32 @@ import Foundation
 /// 而且畫面完全沒有反應 —— 看起來像 App 當掉而不是網路慢。
 final class DriveHttpClient: FfiDriveHttp {
 
+    private static let activeLock = NSLock()
+    private static var activeSessions = [URLSession]()
+    private static var isCancelled = false
+
+    public static func cancelAll() {
+        activeLock.lock()
+        isCancelled = true
+        let sessions = activeSessions
+        activeLock.unlock()
+        for s in sessions {
+            s.invalidateAndCancel()
+        }
+    }
+
+    public static func resetCancellation() {
+        activeLock.lock()
+        isCancelled = false
+        activeLock.unlock()
+    }
+
+    public static var isCancellationRequested: Bool {
+        activeLock.lock()
+        defer { activeLock.unlock() }
+        return isCancelled
+    }
+
     private var accessToken: String
     private let session: URLSession
     private let ownsSession: Bool
@@ -45,17 +71,25 @@ final class DriveHttpClient: FfiDriveHttp {
             let q = OperationQueue()
             q.name = "DriveHttpClientQueue"
             let config = URLSessionConfiguration.ephemeral
-            config.timeoutIntervalForRequest = 30       // URLSession 層先超時（比 semaphore wait 35s 短）
-            config.timeoutIntervalForResource = 300     // 單一資源最長 5 分鐘（大檔上傳不中斷）
-            config.httpMaximumConnectionsPerHost = 6    // 支援 withTaskGroup 最多 4 路並發 + 餘裕
-            config.waitsForConnectivity = true          // 短暫失去連線時自動等待，而非立刻失敗
-            self.session = URLSession(configuration: config, delegate: nil, delegateQueue: q)
+            config.timeoutIntervalForRequest = 45       // 45 秒請求超時
+            config.timeoutIntervalForResource = 300     // 單一資源最長 5 分鐘
+            config.httpMaximumConnectionsPerHost = 6    // 支援並發連線
+            config.waitsForConnectivity = true          // 短暫失去連線時等待
+            let newSession = URLSession(configuration: config, delegate: nil, delegateQueue: q)
+            self.session = newSession
             self.ownsSession = true
+
+            Self.activeLock.lock()
+            Self.activeSessions.append(newSession)
+            Self.activeLock.unlock()
         }
     }
 
     deinit {
         if ownsSession {
+            Self.activeLock.lock()
+            Self.activeSessions.removeAll { $0 === self.session }
+            Self.activeLock.unlock()
             session.finishTasksAndInvalidate()
         }
     }
@@ -151,18 +185,17 @@ final class DriveHttpClient: FfiDriveHttp {
         try sendWithHeaders(base).0
     }
 
-    /// Semaphore 等待的上限（比 URLSession timeoutIntervalForRequest 長 5s，作為最後防線）。
-    private static let requestTimeout: TimeInterval = 35
+    /// Semaphore 等待的上限（比 URLSession timeoutIntervalForRequest 略長，作為防線）。
+    private static let requestTimeout: TimeInterval = 60
 
     /// 同步等待一個 URLRequest 完成，回傳 `(body, HTTPURLResponse)` 或拋出錯誤。
-    ///
-    /// **為什麼仍用 DispatchSemaphore**：`FfiDriveHttp` 協定的方法必須是同步的
-    /// （Rust FFI 呼叫端是同步的），無法使用 `async/await`。
-    /// 這個模式在背景執行緒上是安全的 —— 不要從主執行緒呼叫。
     private func syncDataTask(
         _ request: URLRequest,
         timeout: TimeInterval = DriveHttpClient.requestTimeout
     ) throws -> (Data, HTTPURLResponse) {
+        if Self.isCancellationRequested {
+            throw FfiDriveError.Backend(detail: "使用者中斷同步")
+        }
         let semaphore = DispatchSemaphore(value: 0)
         var payload = Data()
         var response: HTTPURLResponse?
@@ -177,9 +210,15 @@ final class DriveHttpClient: FfiDriveHttp {
         task.resume()
         if semaphore.wait(timeout: .now() + timeout) == .timedOut {
             task.cancel()
+            if Self.isCancellationRequested {
+                throw FfiDriveError.Backend(detail: "使用者中斷同步")
+            }
             throw FfiDriveError.Backend(detail: "request_timeout")
         }
         if let err = transportError {
+            if Self.isCancellationRequested || (err as NSError).code == NSURLErrorCancelled {
+                throw FfiDriveError.Backend(detail: "使用者中斷同步")
+            }
             throw FfiDriveError.Backend(detail: err.localizedDescription)
         }
         guard let resp = response else {
@@ -188,11 +227,36 @@ final class DriveHttpClient: FfiDriveHttp {
         return (payload, resp)
     }
 
+    /// 帶有一回短暫退避重試的同步請求
+    private func syncDataTaskWithRetry(
+        _ request: URLRequest,
+        timeout: TimeInterval = DriveHttpClient.requestTimeout,
+        retriesLeft: Int = 1
+    ) throws -> (Data, HTTPURLResponse) {
+        do {
+            let (payload, response) = try syncDataTask(request, timeout: timeout)
+            if (response.statusCode == 429 || response.statusCode >= 500) && retriesLeft > 0 && !Self.isCancellationRequested {
+                Thread.sleep(forTimeInterval: 1.5)
+                return try syncDataTaskWithRetry(request, timeout: timeout, retriesLeft: retriesLeft - 1)
+            }
+            return (payload, response)
+        } catch {
+            if Self.isCancellationRequested {
+                throw error
+            }
+            if retriesLeft > 0 {
+                Thread.sleep(forTimeInterval: 1.5)
+                return try syncDataTaskWithRetry(request, timeout: timeout, retriesLeft: retriesLeft - 1)
+            }
+            throw error
+        }
+    }
+
     private func sendWithHeaders(_ base: URLRequest) throws -> (Data, [AnyHashable: Any]) {
         var request = base
         request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
 
-        let (payload, response) = try syncDataTask(request)
+        let (payload, response) = try syncDataTaskWithRetry(request)
 
         if (200..<300).contains(response.statusCode) {
             return (payload, response.allHeaderFields)
@@ -203,7 +267,7 @@ final class DriveHttpClient: FfiDriveHttp {
             self.accessToken = newToken
             var retryRequest = base
             retryRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
-            if let (retryPayload, retryResp) = try? syncDataTask(retryRequest),
+            if let (retryPayload, retryResp) = try? syncDataTaskWithRetry(retryRequest),
                (200..<300).contains(retryResp.statusCode) {
                 return (retryPayload, retryResp.allHeaderFields)
             }

@@ -329,6 +329,16 @@ private fun ContinuousPage(
     }
 
     val interactive = editorMode == EditorMode.TYPE
+    val currentInkColor = remember(ink.colorRgba) {
+        if (ink.colorRgba.size >= 4) {
+            Color(
+                (ink.colorRgba[0].toInt() and 0xFF) / 255f,
+                (ink.colorRgba[1].toInt() and 0xFF) / 255f,
+                (ink.colorRgba[2].toInt() and 0xFF) / 255f,
+                (ink.colorRgba[3].toInt() and 0xFF) / 255f
+            )
+        } else Color.Black
+    }
 
     Box(
         Modifier
@@ -344,6 +354,7 @@ private fun ContinuousPage(
         InkCanvas(
             engine = engine,
             modifier = Modifier.fillMaxSize(),
+            inkColor = currentInkColor,
             onInkChanged = { revision++ },
             contentVersion = revision
         )

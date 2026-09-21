@@ -55,9 +55,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
 import android.Manifest
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -443,9 +445,10 @@ private fun NotebookHome(
     // Google 帳號同步的畫面狀態。與 Apple 的 `googleAccountSection` 對應。
     var cloudBusy by remember { mutableStateOf(false) }
     var cloudMessage by remember { mutableStateOf<String?>(null) }
-    // `revision` 也當成重讀的觸發器：登入是跳出去系統瀏覽器再回來的，
+    val authRevision by com.kairumo.padnote.oauth.GoogleAuth.authRevision.collectAsState()
+    // `revision` 與 `authRevision` 也當成重讀的觸發器：登入是跳出去系統瀏覽器再回來的，
     // 回來時要重新問一次「現在登入了沒」。
-    val signedIn = remember(revision, cloudBusy) {
+    val signedIn = remember(revision, cloudBusy, authRevision) {
         com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)
     }
 
@@ -483,6 +486,13 @@ private fun NotebookHome(
                     .replace("%2@", result.downloaded.toString())
             }
             if (result.changed.isNotEmpty()) revision++
+        }
+    }
+
+    LaunchedEffect(authRevision) {
+        if (authRevision > 0 && com.kairumo.padnote.oauth.GoogleAuth.isSignedIn(activity)) {
+            cloudMessage = "Google 帳號授權成功，正在同步..."
+            runCloudSync()
         }
     }
 
@@ -1360,6 +1370,7 @@ private fun InkScreen(
     var editingShapeStyle by remember { mutableStateOf<NoteShape?>(null) }
     var insertingTable by remember { mutableStateOf(false) }
     LaunchedEffect(notebook, pageId) { tableStore.load(); tableRevision++ }
+    val maskingTapes = remember { mutableStateListOf<com.kairumo.padnote.canvas.NoteTape>() }
 
     // 形狀與流程圖。幾何全部來自核心，與 Apple 端是同一組頂點；
     // 形狀本身也是核心的原生物件，所以關掉 App 再打開它們還在。
@@ -1827,7 +1838,8 @@ private fun InkScreen(
     // `.padnote` 裡，只是沒有人去讀。物件（文字方塊、表格、形狀）都有各自的
     // `load()`，只有墨跡沒有，所以症狀是「圖還在、字不見了」，
     // 看起來像渲染壞掉而不是少讀一份資料。
-    LaunchedEffect(notebook, pageId) {
+    LaunchedEffect(notebook, pageId, penOnly) {
+        engine.setPenOnly(penOnly)
         engine.load()
         revision++
         clearToken++   // 低延遲路徑的前緩衝也要重畫，否則讀回來的筆畫不會出現
@@ -3561,12 +3573,20 @@ private fun InkScreen(
                 InkCanvas(
                     engine = engine,
                     modifier = Modifier.fillMaxSize().testTag("editor.canvas"),
+                    inkColor = runCatching {
+                        Color(android.graphics.Color.parseColor(inkColorHex))
+                    }.getOrDefault(Color.Black),
                     onInkChanged = {
                         revision++
                         // 整筆畫在框線外會被引擎收回（S-85）。使用者要知道
                         // 那一筆去哪裡了 —— 沒有提示的話它就只是「消失了」。
                         if (engine.consumeOutsidePrintableArea()) {
                             message = l10n("outside_printable_rejected")
+                        }
+                    },
+                    onFingerIgnored = {
+                        if (penOnly) {
+                            message = "已開啟「僅限觸控筆」，手指觸控已忽略。如需手指書寫請關閉此開關。"
                         }
                     },
                     contentVersion = revision,
@@ -3621,6 +3641,16 @@ private fun InkScreen(
                     modifier = Modifier.fillMaxSize()
                 )
             }
+
+            // 遮蔽膠帶覆蓋層（對齊 Apple MaskingTapeOverlayView）。
+            com.kairumo.padnote.canvas.MaskingTapeOverlay(
+                pageIndex = pageIndex,
+                isActive = inkTool.isMaskingTape,
+                tapeColor = runCatching { Color(android.graphics.Color.parseColor(inkColorHex)) }.getOrDefault(Color(0xFFFCEEAC)),
+                tapes = maskingTapes,
+                onTapesChanged = { revision++ },
+                modifier = Modifier.fillMaxSize()
+            )
 
             // 圖片疊在墨跡之上、文字方塊之下 —— 與 Apple 端的預設層級一致
             // （ObjectStacking.Kind.defaultLayer：image=0、text=6）。

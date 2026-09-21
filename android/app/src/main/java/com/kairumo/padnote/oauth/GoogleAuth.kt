@@ -55,14 +55,24 @@ object GoogleAuth {
     private val http = OkHttpClient()
     private val FORM_MEDIA_TYPE = "application/x-www-form-urlencoded".toMediaType()
 
+    private val _authRevision = kotlinx.coroutines.flow.MutableStateFlow(0)
+    val authRevision: kotlinx.coroutines.flow.StateFlow<Int> = _authRevision
+
+    private val _authState = kotlinx.coroutines.flow.MutableStateFlow(false)
+    val authState: kotlinx.coroutines.flow.StateFlow<Boolean> = _authState
+
+    fun notifyAuthChanged(context: Context) {
+        _authState.value = isSignedIn(context)
+        _authRevision.value += 1
+    }
+
     /**
      * 權杖存在**加密**的 SharedPreferences。
      *
      * refresh token 等同「不必再問密碼就能存取使用者雲端硬碟」的長期憑證。
      * 一般 SharedPreferences 是明文 XML，root 過的裝置或備份都讀得到。
      *
-     * 建不起來（極舊裝置、Keystore 損壞）時回 null，呼叫端退化成「不保存」——
-     * 使用者每次都要重新登入，但**不會**把長期憑證明文寫到硬碟上。
+     * 建不起來（極舊裝置、Keystore 損壞）時回退到一般偏好儲存或回 null。
      */
     private fun store(context: Context) = runCatching {
         val key = MasterKey.Builder(context)
@@ -75,7 +85,10 @@ object GoogleAuth {
             EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
             EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
         )
-    }.getOrNull()
+    }.getOrElse { err ->
+        android.util.Log.e("GoogleAuth", "Failed to create EncryptedSharedPreferences: ${err.message}", err)
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    }
 
     /** 目前存著的權杖。沒登入過時每個欄位都是空的。 */
     fun tokens(context: Context): FfiTokenSet {
@@ -111,7 +124,11 @@ object GoogleAuth {
             pkce.state,
             loginHint
         )
-        CustomTabsIntent.Builder().build().launchUrl(activity, Uri.parse(url))
+        val customTabsIntent = CustomTabsIntent.Builder()
+            .setShowTitle(true)
+            .build()
+        customTabsIntent.intent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY)
+        customTabsIntent.launchUrl(activity, Uri.parse(url))
     }
 
     /**
@@ -121,7 +138,11 @@ object GoogleAuth {
      * 授權碼，結果是資料同步到攻擊者的雲端硬碟。
      */
     fun handleRedirect(context: Context, intent: Intent): Result<Unit> {
-        val data = intent.data ?: return Result.failure(IllegalStateException("no_redirect_data"))
+        val data = intent.data
+        if (data == null) {
+            com.kairumo.padnote.sync.SyncLogger.log("授權失敗：未收到重導向資料", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)
+            return Result.failure(IllegalStateException("no_redirect_data"))
+        }
         val callback = oauthParseCallback(data.toString())
         val p = store(context)
 
@@ -131,21 +152,28 @@ object GoogleAuth {
         p?.edit()?.remove(KEY_STATE)?.remove(KEY_VERIFIER)?.apply()
 
         if (callback.error.isNotEmpty()) {
-            // 使用者按「取消」也走這裡，那不是當機。
+            com.kairumo.padnote.sync.SyncLogger.log("Google 授權取消或失敗：${callback.error}", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)
             return Result.failure(IllegalStateException(callback.error))
         }
         if (expectedState.isEmpty() || callback.state != expectedState) {
+            com.kairumo.padnote.sync.SyncLogger.log("Google 授權驗證失敗：State 不符合", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)
             return Result.failure(IllegalStateException("state_mismatch"))
         }
         if (callback.code.isEmpty() || verifier.isEmpty()) {
+            com.kairumo.padnote.sync.SyncLogger.log("Google 授權失敗：缺少 Code 或 Verifier", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)
             return Result.failure(IllegalStateException("missing_code"))
         }
 
+        com.kairumo.padnote.sync.SyncLogger.log("正在向 Google 交換授權憑證...", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)
         val body = oauthExchangeBody(FfiOAuthPlatform.ANDROID, callback.code, verifier)
         return post(body).mapCatching { json ->
             val tokens = oauthParseTokenResponse(json, nowSeconds())
             if (tokens.error.isNotEmpty()) throw IllegalStateException(tokens.error)
             save(context, tokens, previousRefresh = "")
+            notifyAuthChanged(context)
+            com.kairumo.padnote.sync.SyncLogger.log("Google 帳號授權成功！已儲存憑證。", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)
+        }.onFailure { err ->
+            com.kairumo.padnote.sync.SyncLogger.log("交換權杖失敗：${err.message}", com.kairumo.padnote.sync.SyncSource.GOOGLE_DRIVE)
         }
     }
 
@@ -200,6 +228,7 @@ object GoogleAuth {
      */
     fun signOutLocally(context: Context) {
         store(context)?.edit()?.clear()?.apply()
+        notifyAuthChanged(context)
     }
 
     private fun save(context: Context, tokens: FfiTokenSet, previousRefresh: String) {

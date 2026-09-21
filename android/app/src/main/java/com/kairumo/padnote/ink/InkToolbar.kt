@@ -66,12 +66,17 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
      * 只有一個答案，分成兩處會出現「套索開著又選了螢光筆」這種說不清的狀態。
      * Apple 端也是放在同一列工具裡。
      */
-    LASSO(null, "tool_lasso");
+    LASSO(null, "tool_lasso"),
+
+    /**
+     * 遮蔽膠帶。對齊 Apple 端的 `maskingTape`。
+     */
+    MASKING_TAPE(null, "tool_masking_tape");
 
     /**
      * 跨平台對照閘門用的識別字（核心 `ffi_screens` 的 `editor.inktools`）。
      *
-     * 九支工具與 Apple 端完全對齊（鋼筆、原子筆、毛筆、麥克筆、螢光筆、鉛筆、水彩、橡皮擦、套索）。
+     * 十支工具與 Apple 端完全對齊（鋼筆、原子筆、毛筆、麥克筆、螢光筆、鉛筆、水彩、橡皮擦、套索、遮蔽膠帶）。
      */
     val parityIdentifier: String
         get() = when (this) {
@@ -84,12 +89,15 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
             WATERCOLOR -> "editor.ink.watercolor"
             ERASER -> "editor.ink.eraser"
             LASSO -> "editor.ink.lasso"
+            MASKING_TAPE -> "editor.ink.maskingTape"
         }
 
-    /** 擦除模式。**套索不算** —— 兩者都沒有 `kind`，但行為完全不同。 */
+    /** 擦除模式。**套索與遮蔽膠帶不算** —— 行為完全不同。 */
     val isEraser: Boolean get() = this == ERASER
 
     val isLasso: Boolean get() = this == LASSO
+
+    val isMaskingTape: Boolean get() = this == MASKING_TAPE
 }
 
 /**
@@ -270,6 +278,7 @@ internal fun previewDiameter(tool: InkTool, width: Float): Float {
         InkTool.ERASER -> 3.0f
         // 套索不畫東西，預覽點沒有意義；給 1.0 讓它顯示成一個中性的點。
         InkTool.LASSO -> 1.0f
+        InkTool.MASKING_TAPE -> 3.5f
     }
     return (width * scale).coerceIn(6f, 22f)
 }

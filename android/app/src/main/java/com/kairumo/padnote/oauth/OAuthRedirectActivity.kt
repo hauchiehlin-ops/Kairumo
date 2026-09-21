@@ -37,12 +37,16 @@ class OAuthRedirectActivity : Activity() {
 
     private fun handle(intent: Intent) {
         val context = applicationContext
-        // 換權杖是網路請求，不能在主執行緒做。
+        // 換權杖是網路請求，在背景進行並即時發送狀態通知。
         CoroutineScope(Dispatchers.IO).launch {
             GoogleAuth.handleRedirect(context, intent)
         }
-        // 不等結果就關掉：使用者要的是回到原本的畫面，而不是盯著一個空白頁
-        // 等網路。結果由同步狀態自己反映出來。
+        // 將 MainActivity 喚回最上層並清空上方的 Custom Tab 任務堆疊，
+        // 避免瀏覽器以子母畫面（PiP overlay）形式殘留在畫面上。
+        val mainIntent = Intent(this, com.kairumo.padnote.MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        startActivity(mainIntent)
         finish()
     }
 }

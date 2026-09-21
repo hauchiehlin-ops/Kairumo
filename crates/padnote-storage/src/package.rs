@@ -387,7 +387,7 @@ impl NotebookPackage {
     /// 合併成一個大檔（使用最大 lamport 為新檔名），再刪除舊碎檔。
     ///
     /// # 設計原則
-    /// - **只壓實自己裝置的碎檔**（device == self.device）
+    /// - **依裝置後綴分組壓實碎檔**（支援所有裝置，包括 open 後 device 為 0 的情況）
     /// - **原子性**：先寫臨時檔，成功後原子 rename，刪除舊檔
     /// - **直接拼接原始位元組**（不 decode/re-encode），因為 oplog frame 是自洽的
     /// - 壓實後的檔名：`<max_lamport:016x>-<device:08x>.oplog`
@@ -397,60 +397,64 @@ impl NotebookPackage {
             return Ok(CompactResult { merged_files: 0 });
         }
 
-        let device_suffix = format!("-{:08x}.oplog", self.device);
+        // 收集所有 .oplog 碎檔，依裝置後綴（例如 "-00000001.oplog"）分組
+        let mut files_by_device: std::collections::BTreeMap<String, Vec<PathBuf>> =
+            std::collections::BTreeMap::new();
 
-        // 找出屬於這台裝置的所有碎檔（按字典序 = 因果序）
-        let mut own_files: Vec<PathBuf> = fs::read_dir(&dir)?
-            .filter_map(Result::ok)
-            .map(|e| e.path())
-            .filter(|p| {
-                p.file_name()
-                    .and_then(|n| n.to_str())
-                    .map(|n| n.ends_with(&device_suffix))
-                    .unwrap_or(false)
-            })
-            .collect();
-        own_files.sort();
-
-        if own_files.len() < threshold {
-            return Ok(CompactResult { merged_files: 0 });
-        }
-
-        // 取得最大 lamport（最後一個檔的檔名前綴）
-        let max_lamport_hex = own_files
-            .last()
-            .and_then(|p| p.file_stem())
-            .and_then(|s| s.to_str())
-            .and_then(|s| s.split('-').next())
-            .unwrap_or("0000000000000000");
-
-        let compacted_name = format!("{max_lamport_hex}{device_suffix}");
-        let compacted_path = dir.join(&compacted_name);
-        let tmp_path = dir.join(format!("{compacted_name}.tmp"));
-
-        // 將所有碎檔的原始位元組按因果序拼接
-        let mut merged = Vec::new();
-        for f in &own_files {
-            let bytes = fs::read(f)?;
-            merged.extend_from_slice(&bytes);
-        }
-
-        // 原子寫入：先寫臨時檔，再 rename
-        fs::write(&tmp_path, &merged)?;
-        fs::rename(&tmp_path, &compacted_path)?;
-
-        // 刪除所有舊碎檔（排除剛建立的合併檔）
-        let merged_count = own_files.len();
-        for f in &own_files {
-            // 合併目標檔可能與最後一個舊碎檔同名（若最大 lamport 的碎檔剛好就是唯一一個）
-            // 用路徑比較避免誤刪剛寫好的合併檔
-            if f != &compacted_path {
-                let _ = fs::remove_file(f); // 盡力刪除，失敗不中斷
+        if let Ok(entries) = fs::read_dir(&dir) {
+            for entry in entries.filter_map(Result::ok) {
+                let path = entry.path();
+                if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
+                    if file_name.ends_with(".oplog") && file_name.contains('-') {
+                        if let Some(pos) = file_name.rfind('-') {
+                            let suffix = &file_name[pos..];
+                            files_by_device
+                                .entry(suffix.to_string())
+                                .or_default()
+                                .push(path);
+                        }
+                    }
+                }
             }
         }
 
+        let mut total_merged = 0;
+        for (device_suffix, mut own_files) in files_by_device {
+            if own_files.len() < threshold {
+                continue;
+            }
+            own_files.sort(); // 字典序 = 因果序
+
+            let max_lamport_hex = own_files
+                .last()
+                .and_then(|p| p.file_stem())
+                .and_then(|s| s.to_str())
+                .and_then(|s| s.split('-').next())
+                .unwrap_or("0000000000000000");
+
+            let compacted_name = format!("{max_lamport_hex}{device_suffix}");
+            let compacted_path = dir.join(&compacted_name);
+            let tmp_path = dir.join(format!("{compacted_name}.tmp"));
+
+            let mut merged = Vec::new();
+            for f in &own_files {
+                let bytes = fs::read(f)?;
+                merged.extend_from_slice(&bytes);
+            }
+
+            fs::write(&tmp_path, &merged)?;
+            fs::rename(&tmp_path, &compacted_path)?;
+
+            for f in &own_files {
+                if f != &compacted_path {
+                    let _ = fs::remove_file(f);
+                }
+            }
+            total_merged += own_files.len();
+        }
+
         Ok(CompactResult {
-            merged_files: merged_count,
+            merged_files: total_merged,
         })
     }
 
@@ -1018,4 +1022,34 @@ mod tests {
 
         let _ = fs::remove_file(zip_file);
     }
+
+    #[test]
+    fn compact_doc_ops_groups_by_device_and_works_when_opened_with_device_zero() {
+        let root = tmp("compact-device-zero");
+        let pkg = NotebookPackage::create(&root, "壓實測試", 1).unwrap();
+        // 寫入 6 個 device 0x42 的 oplog 檔
+        for i in 1..=6 {
+            pkg.append_doc_ops(
+                i,
+                0x42,
+                &[padnote_doc::DocOp::SetTitle {
+                    title: format!("t{i}"),
+                }],
+            )
+            .unwrap();
+        }
+        drop(pkg);
+
+        // 使用 NotebookPackage::open 打開（此時 self.device 為 0）
+        let reopened = NotebookPackage::open(&root).unwrap();
+        assert_eq!(reopened.device(), 0);
+        let res = reopened.compact_doc_ops(5).unwrap();
+        assert_eq!(res.merged_files, 6);
+
+        // 檢查壓實後只剩 1 個 oplog 檔
+        let files = reopened.doc_op_files().unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].0, "0000000000000006-00000042.oplog");
+    }
 }
+

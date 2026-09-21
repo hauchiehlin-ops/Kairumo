@@ -49,6 +49,7 @@ __pycache__/
 
 # 第三方原始碼與中間產物（不要放進 target/，CI 的 rust-cache 會修剪它）
 /.build/
+/apple/.build/
 
 # Kotlin 編譯器的錯誤暫存（每次建置都會變，不是原始碼）
 /android/.kotlin/

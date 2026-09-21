@@ -38,13 +38,20 @@ class InkEngine(
     private val _strokes = mutableListOf<CompletedStroke>()
     val strokes: List<CompletedStroke> get() = _strokes
 
+    init {
+        // 預設筆與手指皆可書寫，設定 40dp 門檻避免手指觸控被誤判為手掌
+        arbiter.setPalmThresholds(40f, 500_000u)
+    }
+
     data class CompletedStroke(
         val pointerId: ULong,
         val coreStrokeId: String?,
         val points: List<StrokePoint>,
         val tool: ToolKind,
         /** 落筆時刻（毫秒）。手寫辨識靠它把筆畫依書寫停頓分組。 */
-        val startedAtMs: Long
+        val startedAtMs: Long,
+        val colorRgba: ByteArray = byteArrayOf(0, 0, 0, -1),
+        val baseWidth: Float = 3f
     )
 
     /** 一次事件處理的結果，供 UI 決定要不要重繪。 */
@@ -121,7 +128,7 @@ class InkEngine(
         val page = pageId
         val newId = if (target != null && page != null) {
             runCatching {
-                target.addStroke(page, stroke.tool, colorRgba, baseWidth, stroke.points)
+                target.addStroke(page, stroke.tool, stroke.colorRgba, stroke.baseWidth, stroke.points)
             }.getOrNull()
         } else {
             null
@@ -317,7 +324,9 @@ class InkEngine(
             coreStrokeId = coreId,
             points = finalPoints,
             tool = tool,
-            startedAtMs = (samples.first().event.timestampUs / 1_000uL).toLong()
+            startedAtMs = (samples.first().event.timestampUs / 1_000uL).toLong(),
+            colorRgba = colorRgba.copyOf(),
+            baseWidth = baseWidth
         )
         _strokes += stroke
         // 畫了新的東西就沒有「重做」可言了 —— 留著的話，按下重做會把
@@ -419,7 +428,9 @@ class InkEngine(
                 coreStrokeId = stroke.id,
                 points = stroke.points,
                 tool = stroke.tool,
-                startedAtMs = (stroke.startedAtUs / 1_000uL).toLong()
+                startedAtMs = (stroke.startedAtUs / 1_000uL).toLong(),
+                colorRgba = stroke.colorRgba.copyOf(),
+                baseWidth = stroke.baseWidth
             )
             syntheticId -= 1uL
         }
@@ -559,6 +570,13 @@ class InkEngine(
             if (penOnly) uniffi.padnote_core.FfiInputMode.PEN_ONLY
             else uniffi.padnote_core.FfiInputMode.PEN_AND_FINGER
         )
+        if (!penOnly) {
+            // 放寬掌拒半徑，避免手指書寫時因接觸面積稍大被誤判手掌而丟棄筆畫
+            arbiter.setPalmThresholds(40f, 500_000u)
+        } else {
+            // 僅限觸控筆模式下恢復標準嚴格掌拒
+            arbiter.setPalmThresholds(22f, 500_000u)
+        }
     }
 
     fun setPalmThresholds(palmRadiusDp: Float, retractWindowMs: UInt) {

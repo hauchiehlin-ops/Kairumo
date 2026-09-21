@@ -102,12 +102,27 @@ enum NotebookSyncCoordinator {
     /// `別人的 = 合併後的 − 自己的`。
     private typealias OwnStrokes = [String: PKDrawing]
 
+    public nonisolated static var isCancelled: Bool {
+        DriveHttpClient.isCancellationRequested
+    }
+
+    public nonisolated static func cancelSync() {
+        DriveHttpClient.cancelAll()
+        SyncLogger.logAsync("【同步中斷】已送出中斷要求，正在終止進行中的任務...", source: .general)
+    }
+
+    public nonisolated static func resetCancellation() {
+        DriveHttpClient.resetCancellation()
+    }
+
     /// 跑完一輪同步。
     ///
     /// - Parameters:
     ///   - store: 筆記本的本機儲存。
     ///   - folder: 使用者選的雲端資料夾。呼叫端負責取得 security scope。
     static func run(store: SyncableNotebookStore, folder: URL, deviceId: UInt32) async -> Report {
+        resetCancellation()
+        defer { resetCancellation() }
         SyncLogger.logAsync("【資料夾同步】開始執行，目標：\(folder.lastPathComponent)", source: .folder)
         var report = Report()
         let fm = FileManager.default
@@ -118,6 +133,10 @@ enum NotebookSyncCoordinator {
         SyncLogger.logAsync("步驟 1：匯出本機筆記 (\(store.syncNotebooks.count) 本)...", source: .folder)
         var ownStrokes: OwnStrokes = [:]
         for document in store.syncNotebooks {
+            if isCancelled || Task.isCancelled {
+                SyncLogger.logAsync("【資料夾同步】已手動中斷。", source: .folder)
+                return report
+            }
             let package = packagesDir.appendingPathComponent("\(document.id).padnote")
             do {
                 let own = try exportOne(document, from: store, to: package, deviceId: deviceId)
@@ -130,6 +149,11 @@ enum NotebookSyncCoordinator {
         }
         SyncLogger.logAsync("步驟 1 完成，成功匯出 \(report.exported) 本", source: .folder)
 
+        if isCancelled || Task.isCancelled {
+            SyncLogger.logAsync("【資料夾同步】已手動中斷。", source: .folder)
+            return report
+        }
+
         // ── 2. 搬檔 (雙軌並行排程) ──────────────────────
         // ⚠️ 資料夾同步的真相來源是「磁碟上有沒有套件檔案」，而非 CRDT index.json 的
         // tombstone。index.json 可能來自另一台裝置，且可能含有歷史上被 RC-1 bug 偽造
@@ -138,60 +162,63 @@ enum NotebookSyncCoordinator {
         SyncLogger.logAsync("步驟 2：搬移雲端檔案 (雙軌並行排程)...", source: .folder)
         let activeLocalIds = Set(store.syncNotebooks.map { $0.id })
         let activeId = store.activeNotebookId ?? store.syncNotebooks.sorted { $0.lastModifiedDate > $1.lastModifiedDate }.first?.id
-        let (syncUploaded, syncDownloaded, syncNeedsAttention, syncFailures, newNotebooks, pendingLogs) = await Task.detached(priority: .utility) {
+        let (syncUploaded, syncDownloaded, syncNeedsAttention, syncFailures, newNotebooks) = await Task.detached(priority: .utility) {
             var up = 0
             var down = 0
             var attention = [String]()
             var fails = [String: String]()
             var newBooks = 0
-            // 收集需在 MainActor 上記錄的日誌（避免跨 actor 呼叫）
-            var logs = [(String, SyncSource)]()
 
             let allDiskPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
                 .filter { $0.pathExtension == "padnote" } ?? []
 
             // 只同步本機活躍的套件，其餘忽略（不刪除）。
-            // 資料夾同步不主動刪除任何套件——刪除由使用者明確操作觸發，
-            // 而不是由某台裝置的 CRDT 狀態決定。
             let packages = allDiskPackages.filter { activeLocalIds.contains(packageId(for: $0)) }
-            logs.append(("📊【同步前核實】本機現存: \(activeLocalIds.count) 本，待同步活躍筆記: \(packages.count) 本", .folder))
+            SyncLogger.logAsync("📊【同步前核實】本機現存: \(activeLocalIds.count) 本，待同步活躍筆記: \(packages.count) 本", source: .folder)
 
             // 軌道一：前台作用中筆記優先極速同步
             var mutablePackages = packages
             if let activeId, let activeIdx = mutablePackages.firstIndex(where: { $0.deletingPathExtension().lastPathComponent == activeId }) {
                 let activePkg = mutablePackages.remove(at: activeIdx)
-                logs.append(("【前台極速軌】優先同步當前作用中筆記 (\(activeId.prefix(8))...)...", .folder))
+                SyncLogger.logAsync("【前台極速軌】優先同步當前作用中筆記 (\(activeId.prefix(8))...)...", source: .folder)
                 let res = CloudSyncFolder.sync(localPackage: activePkg, into: folder)
                 up += res.uploaded.count
                 down += res.downloaded.count
                 attention.append(contentsOf: res.needsAttention)
                 fails.merge(res.failures) { first, _ in first }
+                SyncLogger.logAsync("【前台極速軌】當前筆記 (\(activeId.prefix(8))...) 完成（上傳: \(res.uploaded.count), 下載: \(res.downloaded.count)）", source: .folder)
             }
 
             // 軌道二：非作用中筆記背景佇列
             if !mutablePackages.isEmpty {
-                logs.append(("【背景佇列】開始同步其餘 \(mutablePackages.count) 本非作用中筆記...", .folder))
+                SyncLogger.logAsync("【背景佇列】開始同步其餘 \(mutablePackages.count) 本非作用中筆記...", source: .folder)
                 for package in mutablePackages {
+                    if Task.isCancelled || DriveHttpClient.isCancellationRequested { break }
+                    let pkgId = packageId(for: package)
+                    SyncLogger.logAsync("【背景佇列】開始同步筆記本 (\(pkgId.prefix(8))...)...", source: .folder)
                     let result = CloudSyncFolder.sync(localPackage: package, into: folder)
                     up += result.uploaded.count
                     down += result.downloaded.count
                     attention.append(contentsOf: result.needsAttention)
                     fails.merge(result.failures) { first, _ in first }
+                    SyncLogger.logAsync("【背景佇列】筆記本 (\(pkgId.prefix(8))...) 完成（上傳: \(result.uploaded.count), 下載: \(result.downloaded.count)）", source: .folder)
                 }
             }
 
             // 另一台裝置建立的筆記本，本機還沒有對應的套件目錄 —— 要先整包抓下來。
-            var tempReport = Report()
-            newBooks = pullUnknownPackages(
-                into: packagesDir,
-                from: folder,
-                activeLocalIds: activeLocalIds,
-                report: &tempReport
-            )
-            attention.append(contentsOf: tempReport.needsAttention)
-            fails.merge(tempReport.failures) { first, _ in first }
+            if !Task.isCancelled && !DriveHttpClient.isCancellationRequested {
+                var tempReport = Report()
+                newBooks = pullUnknownPackages(
+                    into: packagesDir,
+                    from: folder,
+                    activeLocalIds: activeLocalIds,
+                    report: &tempReport
+                )
+                attention.append(contentsOf: tempReport.needsAttention)
+                fails.merge(tempReport.failures) { first, _ in first }
+            }
 
-            return (up, down, attention, fails, newBooks, logs)
+            return (up, down, attention, fails, newBooks)
         }.value
 
         report.uploaded += syncUploaded
@@ -199,9 +226,12 @@ enum NotebookSyncCoordinator {
         report.needsAttention.append(contentsOf: syncNeedsAttention)
         report.failures.merge(syncFailures) { first, _ in first }
         report.newNotebooks += newNotebooks
-        // 將 detached task 內收集的日誌統一在 MainActor 上記錄
-        for (msg, src) in pendingLogs { SyncLogger.logAsync(msg, source: src) }
         SyncLogger.logAsync("步驟 2 完成。上傳: \(syncUploaded), 下載: \(syncDownloaded), 新增: \(newNotebooks), 失敗: \(syncFailures.count)", source: .folder)
+
+        if isCancelled || Task.isCancelled {
+            SyncLogger.logAsync("【資料夾同步】已手動中斷。", source: .folder)
+            return report
+        }
 
         // ── 3. 匯入回筆記 ─────────────────────────────────
         SyncLogger.logAsync("步驟 3：匯入套件回本機筆記...", source: .folder)
@@ -213,8 +243,6 @@ enum NotebookSyncCoordinator {
             activeLocalIds: activeLocalIds,
             report: &report
         )
-        // ⚠️ 資料夾同步路徑不呼叫 syncPurgeDeletedNotebooks —— 原因同上，
-        // index.json tombstone 不可信，不能用來刪除本機筆記本。
         SyncLogger.logAsync("【資料夾同步】全部完成。", source: .folder)
 
         return report
@@ -222,33 +250,16 @@ enum NotebookSyncCoordinator {
 
 
     /// 跑完一輪**Google Drive** 的同步。
-    ///
-    /// 三步與資料夾同步完全一樣（匯出 → 搬檔 → 匯入），只有中間那一步換成
-    /// Drive。順序同樣不能顛倒 —— 先搬檔的話上傳的是上一輪的舊內容，
-    /// 不匯入的話另一台裝置寫的東西永遠不會變成筆記。
-    ///
-    /// 回傳 nil 表示沒登入。
     static func runDrive(store: SyncableNotebookStore, deviceId: UInt32) async -> Report? {
         guard await GoogleAuth.shared.isSignedIn else { return nil }
+        resetCancellation()
+        defer { resetCancellation() }
         SyncLogger.logAsync("【Google Drive 同步】開始執行", source: .googleDrive)
         var report = Report()
         let fm = FileManager.default
         let packagesDir = store.syncPackagesDirectory
         try? fm.createDirectory(at: packagesDir, withIntermediateDirectories: true)
 
-        // ── 1. 匯出本機的筆記 ──────────────────────────────
-        // 【RC-5 根治版】復活迴圈改用「磁碟掃描 + store.notebooks 全集」，
-        // 而非 syncNotebooks（= visibleNotebooks）。
-        //
-        // 原本的問題（雞生蛋死鎖）：
-        //   visibleNotebooks = notebooks.filter { !isHiddenBySync(id) }
-        //   isHiddenBySync 依賴 index.json → 被 tombstone 的筆記本被排除
-        //   → resurrection loop 掃不到它們 → 永遠無法復活
-        //   → pullNewNotebooks 只看 live_notebooks() → 也看不到它們
-        //   → 新增: 0，對方裝置的筆記本永遠不出現
-        //
-        // 解法：直接掃 packagesDir 磁碟，有套件 = 這台設備認為它是活的，強制復活。
-        //       同時也用 store.notebooks（全集，含被 tombstone 過濾掉的）兜底。
         let localIndexJson = AccountSyncStore.shared.indexJSON
         let localLiveSet = Set(syncLiveNotebooks(indexJson: localIndexJson).map { $0.id })
 
@@ -264,7 +275,6 @@ enum NotebookSyncCoordinator {
             }
         }
         // (B) 從磁碟套件目錄再掃一遍：有 .padnote 套件但被 tombstone 的也要復活。
-        //     這補上「筆記本已從 store.allNotebooks 移除但套件仍在磁碟」的情況。
         let diskPackageIds: Set<String> = Set(
             ((try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil)) ?? [])
                 .filter { $0.pathExtension == "padnote" }
@@ -272,7 +282,6 @@ enum NotebookSyncCoordinator {
         )
         for diskId in diskPackageIds {
             if AccountSyncStore.shared.isDeleted(id: diskId) || !localLiveSet.contains(diskId) {
-                // 磁碟有套件但 index 說已刪除 → 強制復活（保守地用 id 做 title）
                 let title = store.allNotebooks.first(where: { $0.id == diskId })?.title ?? diskId
                 AccountSyncStore.shared.record(
                     id: diskId,
@@ -286,6 +295,10 @@ enum NotebookSyncCoordinator {
         SyncLogger.logAsync("步驟 1：匯出本機筆記 (\(store.syncNotebooks.count) 本)...", source: .googleDrive)
         var ownStrokes: OwnStrokes = [:]
         for document in store.syncNotebooks {
+            if isCancelled || Task.isCancelled {
+                SyncLogger.logAsync("【Google Drive 同步】已手動中斷。", source: .googleDrive)
+                return report
+            }
             let package = packagesDir.appendingPathComponent("\(document.id).padnote")
             do {
                 let own = try exportOne(document, from: store, to: package, deviceId: deviceId)
@@ -298,21 +311,32 @@ enum NotebookSyncCoordinator {
         }
         SyncLogger.logAsync("步驟 1 完成，成功匯出 \(report.exported) 本", source: .googleDrive)
 
+        if isCancelled || Task.isCancelled {
+            SyncLogger.logAsync("【Google Drive 同步】已手動中斷。", source: .googleDrive)
+            return report
+        }
 
         // ── 2. 中繼資料，再逐本搬內容 ───────────────────────
-        // 順序不能反：先收斂索引，才知道哪些筆記本還活著。先同步內容的話，
-        // 會把另一台已經刪掉的筆記本內容又推上去。
         SyncLogger.logAsync("步驟 2：同步元資料與檔案 (連線中)...", source: .googleDrive)
         guard let meta = await CloudSync.runOnce() else {
             SyncLogger.logAsync("無法取得 Google Drive 索引！", source: .googleDrive)
             return nil
         }
         guard meta.ok else {
+            if isCancelled || Task.isCancelled {
+                SyncLogger.logAsync("【Google Drive 同步】已手動中斷。", source: .googleDrive)
+                return report
+            }
             SyncLogger.logAsync("元資料同步失敗：\(meta.error)", source: .googleDrive)
             report.failures["cloud"] = meta.error
             if meta.needsReauth {
                 await GoogleAuth.shared.signOut()
             }
+            return report
+        }
+
+        if isCancelled || Task.isCancelled {
+            SyncLogger.logAsync("【Google Drive 同步】已手動中斷。", source: .googleDrive)
             return report
         }
 
@@ -329,20 +353,16 @@ enum NotebookSyncCoordinator {
 
         for pkg in allDiskPackages {
             let id = packageId(for: pkg)
-            // 判定 1：本機現存活躍的筆記本擁有最高本機權威，納入雙軌同步排程（絕不刪除）
             if activeLocalIds.contains(id) {
                 deletedNotebookIds.remove(id)
                 packages.append(pkg)
                 continue
             }
-            // 判定 2：若為明確已刪除的筆記本（本機墓碑中），立即清理實體磁碟殘留套件
             if deletedNotebookIds.contains(id) {
                 try? fm.removeItem(at: pkg)
                 cleanedCount += 1
                 continue
             }
-            // 判定 3：若不在本機現存筆記中，且雲端也不再活躍，屬於孤立過期套件，清理實體檔案
-            // 注意：絕不在此呼叫 recordDeletion 產生虛假雲端墓碑！磁碟清理僅為本地快取回收。
             if !cloudLiveIds.contains(id) {
                 try? fm.removeItem(at: pkg)
                 cleanedCount += 1
@@ -354,25 +374,26 @@ enum NotebookSyncCoordinator {
         SyncLogger.logAsync("雲端元資料同步完成，開始逐本比對套件檔案...", source: .googleDrive)
 
         // ── 雙軌排程：前台極速軌 + 背景並行佇列 ──────────────
-        // 取出作用中筆記本 ID（必須在 @MainActor 上下文讀取，此函式本身已標記 @MainActor）
         let activeId = store.activeNotebookId
 
-        // 先分類：前台（正在編輯）vs 背景（其餘）
         let foreground = packages.filter { $0.deletingPathExtension().lastPathComponent == activeId }
         let background = packages.filter { $0.deletingPathExtension().lastPathComponent != activeId }
 
         // 前台極速軌：優先、立即執行
         for package in foreground {
+            if isCancelled || Task.isCancelled { break }
             let id = package.deletingPathExtension().lastPathComponent
-            SyncLogger.logAsync("⚡ 前台極速同步：\(id)", source: .googleDrive)
+            SyncLogger.logAsync("⚡ 前台極速同步：\(id.prefix(8))...", source: .googleDrive)
             guard let result = await CloudSync.syncNotebook(
                 packagePath: package.path, notebookId: id) else { continue }
             if result.ok {
+                SyncLogger.logAsync("筆記本 \(id.prefix(8))... 同步完成（上傳: \(result.uploaded), 下載: \(result.downloaded)）", source: .googleDrive)
                 report.uploaded += Int(result.uploaded)
                 report.downloaded += Int(result.downloaded)
             } else {
-                SyncLogger.logAsync("筆記本 \(id) 同步失敗：\(result.error)", source: .googleDrive)
-                report.failures[id] = result.error
+                let err = result.error
+                SyncLogger.logAsync("筆記本 \(id.prefix(8))... 同步失敗：\(err)", source: .googleDrive)
+                report.failures[id] = err
                 if result.needsReauth {
                     await GoogleAuth.shared.signOut()
                     break
@@ -380,12 +401,18 @@ enum NotebookSyncCoordinator {
             }
         }
 
-        // 背景並行佇列：最多 4 路並發，避免占滿頻寬
-        let concurrencyLimit = 4
+        // 背景並行佇列：2 路並發，兼顧速度與連線穩定度（防 Google 限流）
+        let concurrencyLimit = 2
         var backgroundQueue = background
         while !backgroundQueue.isEmpty {
+            if isCancelled || Task.isCancelled { break }
             let batch = Array(backgroundQueue.prefix(concurrencyLimit))
             backgroundQueue.removeFirst(min(concurrencyLimit, backgroundQueue.count))
+
+            for package in batch {
+                let id = package.deletingPathExtension().lastPathComponent
+                SyncLogger.logAsync("開始同步筆記本 \(id.prefix(8))...", source: .googleDrive)
+            }
 
             let batchResults: [(uploaded: Int, downloaded: Int, id: String, error: String?, needsReauth: Bool)] =
                 await withTaskGroup(
@@ -395,6 +422,9 @@ enum NotebookSyncCoordinator {
                         let id = package.deletingPathExtension().lastPathComponent
                         let path = package.path
                         group.addTask {
+                            if Task.isCancelled || NotebookSyncCoordinator.isCancelled {
+                                return (0, 0, id, "已中斷同步", false)
+                            }
                             guard let result = await CloudSync.syncNotebook(
                                 packagePath: path, notebookId: id) else {
                                 return (0, 0, id, nil, false)
@@ -414,13 +444,14 @@ enum NotebookSyncCoordinator {
             var shouldBreak = false
             for r in batchResults {
                 if let err = r.error {
-                    SyncLogger.logAsync("筆記本 \(r.id) 背景同步失敗：\(err)", source: .googleDrive)
+                    SyncLogger.logAsync("筆記本 \(r.id.prefix(8))... 背景同步失敗：\(err)", source: .googleDrive)
                     report.failures[r.id] = err
                     if r.needsReauth {
                         await GoogleAuth.shared.signOut()
                         shouldBreak = true
                     }
                 } else {
+                    SyncLogger.logAsync("筆記本 \(r.id.prefix(8))... 背景同步完成（上傳: \(r.uploaded), 下載: \(r.downloaded)）", source: .googleDrive)
                     report.uploaded += r.uploaded
                     report.downloaded += r.downloaded
                 }
@@ -428,7 +459,12 @@ enum NotebookSyncCoordinator {
             if shouldBreak { break }
         }
 
-        // 別台裝置**新建**的筆記本在本機連套件目錄都沒有，上面那一圈看不到它們。
+        if isCancelled || Task.isCancelled {
+            SyncLogger.logAsync("【Google Drive 同步】已手動中斷。", source: .googleDrive)
+            return report
+        }
+
+        // 別台裝置新建的筆記本
         let newBooks = await pullNewNotebooks(
             into: packagesDir,
             index: meta.indexJson,
@@ -438,6 +474,11 @@ enum NotebookSyncCoordinator {
         )
         report.newNotebooks += newBooks
         SyncLogger.logAsync("步驟 2 完成。上傳: \(report.uploaded), 下載: \(report.downloaded), 新增: \(report.newNotebooks)", source: .googleDrive)
+
+        if isCancelled || Task.isCancelled {
+            SyncLogger.logAsync("【Google Drive 同步】已手動中斷。", source: .googleDrive)
+            return report
+        }
 
         // ── 3. 匯入回筆記 ─────────────────────────────────
         SyncLogger.logAsync("步驟 3：匯入套件回本機筆記...", source: .googleDrive)
@@ -833,7 +874,7 @@ public final class SyncLogger: ObservableObject {
 }
 
 extension SyncLogger {
-    public static func logAsync(_ message: String, source: SyncSource = .general) {
+    public nonisolated static func logAsync(_ message: String, source: SyncSource = .general) {
         Task { @MainActor in
             SyncLogger.shared.log(message, source: source)
         }
