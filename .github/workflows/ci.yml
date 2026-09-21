@@ -222,6 +222,17 @@ jobs:
       # 而那不會有任何錯誤訊息，只是範本內容不對。
       - name: 文件範本目錄與來源一致
         run: python3 scripts/doc_templates_tool.py verify
+      # 手冊與隱私權政策同樣是**產物**：只維護 manual.js 與 privacy.html，
+      # 各平台的版本由腳本產生。有人改了來源卻沒重跑，或直接改了產物，
+      # 使用者讀到的說明就是錯的 —— 而那不會有任何錯誤訊息。
+      #
+      # 產生器順帶擋「平台用語洩漏」：Android 的手冊裡出現 iPad、
+      # 或 Apple 的手冊裡出現 Android，都會紅。那件事 2026-09-22 真的發生過
+      # （Android 手冊叫使用者去看「桌機版視窗左上角」）。
+      - name: 操作手冊各平台版與來源一致
+        run: python3 scripts/build-platform-docs.py --check
+      - name: 隱私權政策各平台版與來源一致
+        run: python3 scripts/build-privacy-docs.py --check
 
   # 跨平台畫面對照（android-parity-plan.md 階段 0）。
   #

@@ -24,11 +24,52 @@ scripts/build-platform-docs.py
 
 import copy, json, os, re, sys
 
+
+def swap(steps, orig, repl):
+    """把含有 `orig` 特徵的那一步換成 `repl`。
+
+    # 為什麼不是整句相等
+
+    舊版用 `step == orig`。而那幾句裡含著版本號（「例如 Kairumo v4.2.1」）——
+    版本一升，比對就失效，**改寫靜默地不再發生**，Android 的手冊從此叫
+    使用者去看「桌機版視窗左上角」。那是 2026-09-22 實際發生的事：
+    manual.js 裡已經是 v4.8.2，產生器裡還寫著 v4.2.1。
+
+    改成比對一段不含版本號的特徵字串，版本再怎麼跳都不會脫鉤。
+    真的脫鉤了也有第二道：`check_no_leak` 會擋下來。
+    """
+    if not orig or not repl:
+        return steps
+    key = re.sub(r"v\d+(\.\d+)*", "", orig)[:14].strip()
+    return [repl if key and key in st else st for st in steps]
+
 # ── 路徑 ──────────────────────────────────────────────────────────────
 REPO = os.path.join(os.path.dirname(__file__), "..")
 SRC  = os.path.join(REPO, "docs/manual/manual.js")
 DEST_APPLE   = os.path.join(REPO, "docs/manual/manual-apple.js")
 DEST_ANDROID = os.path.join(REPO, "docs/manual/manual-android.js")
+
+# ── 掌拒靈敏度：入口兩端不同 ──────────────────────────────────────
+#
+# Apple：插入／工具選單裡的一項。
+# Android：手繪模式工具列上的一顆晶片。
+ANDROID_PALM_ORIG = {
+ "zh-Hant": "手掌放在螢幕上會留下線條時，調「掌拒靈敏度」：在插入／工具選單裡找到它，用兩支滑桿調「接觸半徑門檻」與「筆落下時的收回時間窗」。**調壞了按「恢復預設」** —— 半徑調太低連筆尖都會被當成手掌，那時候畫布上什麼都畫不出來。",
+ "en": "If resting your palm leaves marks, adjust “Palm rejection”: find it in the insert/tools menu and use the two sliders, “Touch radius threshold” and “Retract window when the pen lands”. **If it goes wrong, press “Restore defaults”** — set the radius too low and even the pen tip is treated as a palm, and then nothing draws at all.",
+ "zh-Hans": "手掌放在屏幕上会留下线条时，调「掌拒灵敏度」：在插入／工具菜单里找到它，用两支滑杆调「接触半径阈值」与「笔落下时的收回时间窗」。**调坏了按「恢复默认」** —— 半径调太低连笔尖都会被当成手掌，那时候画布上什么都画不出来。",
+ "ja": "手のひらを置くと線が残る場合は「パームリジェクション」を調整します。挿入／ツールメニューから開き、「接触半径のしきい値」と「ペンが触れたときの取り消し時間」の 2 つのスライダーで調整してください。**おかしくなったら「既定に戻す」を押します** —— 半径を下げすぎるとペン先まで手のひらと判定され、何も描けなくなります。",
+ "ko": "손바닥을 올렸을 때 선이 남는다면 “손바닥 인식 차단”을 조정하세요. 삽입/도구 메뉴에서 열어 “접촉 반경 임계값”과 “펜이 닿을 때 되돌릴 시간” 두 슬라이더로 조정합니다. **잘못되면 “기본값 복원”을 누르세요** — 반경을 너무 낮추면 펜촉까지 손바닥으로 인식되어 아무것도 그려지지 않습니다.",
+ "th": "หากวางฝ่ามือแล้วเกิดรอยเส้น ให้ปรับ “การปฏิเสธฝ่ามือ” เปิดจากเมนูแทรก/เครื่องมือ แล้วปรับด้วยแถบเลื่อนสองอัน คือ “เกณฑ์รัศมีการสัมผัส” และ “ช่วงเวลาย้อนกลับเมื่อปากกาแตะ” **หากผิดพลาดให้กด “คืนค่าเริ่มต้น”** เพราะถ้าตั้งรัศมีต่ำเกินไป ปลายปากกาจะถูกมองว่าเป็นฝ่ามือ และจะวาดอะไรไม่ได้เลย",
+}
+
+ANDROID_PALM_REPL = {
+ "zh-Hant": "手掌放在螢幕上會留下線條時，調「掌拒靈敏度」：切到手繪模式，工具列上就有這顆按鈕（調過之後它會亮著）。用兩支滑桿調「接觸半徑門檻」與「筆落下時的收回時間窗」。**調壞了按「恢復預設」** —— 半徑調太低連筆尖都會被當成手掌，那時候畫布上什麼都畫不出來。",
+ "en": "If resting your palm leaves marks, adjust “Palm rejection”: switch to drawing mode and the button is right there on the toolbar (it stays highlighted once you have changed it). Use the two sliders, “Touch radius threshold” and “Retract window when the pen lands”. **If it goes wrong, press “Restore defaults”** — set the radius too low and even the pen tip is treated as a palm, and then nothing draws at all.",
+ "zh-Hans": "手掌放在屏幕上会留下线条时，调「掌拒灵敏度」：切到手绘模式，工具列上就有这颗按钮（调过之后它会亮着）。用两支滑杆调「接触半径阈值」与「笔落下时的收回时间窗」。**调坏了按「恢复默认」** —— 半径调太低连笔尖都会被当成手掌，那时候画布上什么都画不出来。",
+ "ja": "手のひらを置くと線が残る場合は「パームリジェクション」を調整します。手書きモードに切り替えると、ツールバーにそのボタンがあります（変更後はハイライト表示されます）。「接触半径のしきい値」と「ペンが触れたときの取り消し時間」の 2 つのスライダーで調整してください。**おかしくなったら「既定に戻す」を押します** —— 半径を下げすぎるとペン先まで手のひらと判定され、何も描けなくなります。",
+ "ko": "손바닥을 올렸을 때 선이 남는다면 “손바닥 인식 차단”을 조정하세요. 필기 모드로 전환하면 도구 막대에 해당 버튼이 있습니다(한 번 변경하면 계속 강조 표시됩니다). “접촉 반경 임계값”과 “펜이 닿을 때 되돌릴 시간” 두 슬라이더로 조정합니다. **잘못되면 “기본값 복원”을 누르세요** — 반경을 너무 낮추면 펜촉까지 손바닥으로 인식되어 아무것도 그려지지 않습니다.",
+ "th": "หากวางฝ่ามือแล้วเกิดรอยเส้น ให้ปรับ “การปฏิเสธฝ่ามือ” สลับไปโหมดวาดมือ แล้วปุ่มนี้จะอยู่บนแถบเครื่องมือ (จะสว่างค้างไว้เมื่อคุณปรับแล้ว) ปรับด้วยแถบเลื่อนสองอัน คือ “เกณฑ์รัศมีการสัมผัส” และ “ช่วงเวลาย้อนกลับเมื่อปากกาแตะ” **หากผิดพลาดให้กด “คืนค่าเริ่มต้น”** เพราะถ้าตั้งรัศมีต่ำเกินไป ปลายปากกาจะถูกมองว่าเป็นฝ่ามือ และจะวาดอะไรไม่ได้เลย",
+}
 
 # ── Android keys 節（觸控手勢與快速操作）六語系完整內容 ─────────────
 ANDROID_KEYS = {
@@ -170,7 +211,9 @@ ANDROID_START_TABLET_REPL = {
 ANDROID_FAQ_REPORT_ORIG = {
     "zh-Hant": "請附上桌機版視窗左上角顯示的版本號（例如 Kairumo v4.2.1）與操作步驟。",
     "en":      "Include the version shown in the desktop window title (for example Kairumo v4.2.1) and the steps you took.",
-    "zh-Hans": None,   # zh-Hans faq 無此題
+    # 這裡原本寫著「zh-Hans faq 無此題」—— 那個註解是過期的，題目後來加上去了，
+    # 於是簡中的 Android 使用者被叫去看「台式机版窗口」。現在補上。
+    "zh-Hans": "请附上台式机版窗口左上角显示的版本号（例如 Kairumo v4.2.1）与操作步骤。",
     "ja":      "デスクトップ版のウインドウタイトルに表示されるバージョン（例：Kairumo v4.2.1）と、操作手順を添えてください。",
     "ko":      "데스크톱 창 제목에 보이는 버전(예: Kairumo v4.2.1)과 진행한 단계를 함께 알려 주세요。",
     "th":      "โปรดแจ้งเวอร์ชันที่แสดงบนชื่อหน้าต่างของเดสก์ท็อป (เช่น Kairumo v4.2.1) พร้อมขั้นตอนที่ทำ"
@@ -178,7 +221,7 @@ ANDROID_FAQ_REPORT_ORIG = {
 ANDROID_FAQ_REPORT_REPL = {
     "zh-Hant": "請附上版本號（在設定的「關於 Kairumo」查看，例如 Kairumo v4.2.1）與操作步驟。",
     "en":      "Include the version number (found in the app's About screen, for example Kairumo v4.2.1) and the steps you took.",
-    "zh-Hans": None,
+    "zh-Hans": "请附上版本号（在设置的「关于 Kairumo」查看，例如 Kairumo v4.2.1）与操作步骤。",
     "ja":      "アプリの「設定」→「Kairumo について」で確認できるバージョン（例：Kairumo v4.2.1）と、操作手順を添えてください。",
     "ko":      "앱 내 정보 화면에서 확인한 버전(예: Kairumo v4.2.1)과 진행한 단계를 함께 알려 주세요.",
     "th":      "โปรดแจ้งเวอร์ชัน (ดูได้ที่หน้า 'เกี่ยวกับ Kairumo' ในการตั้งค่า เช่น Kairumo v4.2.1) พร้อมขั้นตอนที่ทำ"
@@ -248,15 +291,10 @@ def build_android(data):
                 tablet_repl  = ANDROID_START_TABLET_REPL.get(locale)
                 desktop_orig = ANDROID_START_DESKTOP_ORIG.get(locale)
                 desktop_repl = ANDROID_START_DESKTOP_REPL.get(locale)
-                new_steps = []
-                for step in sec.get("steps", []):
-                    if tablet_orig and step == tablet_orig:
-                        new_steps.append(tablet_repl)
-                    elif desktop_orig and step == desktop_orig:
-                        new_steps.append(desktop_repl)
-                    else:
-                        new_steps.append(step)
-                sec["steps"] = new_steps
+                steps = sec.get("steps", [])
+                steps = swap(steps, tablet_orig, tablet_repl)
+                steps = swap(steps, desktop_orig, desktop_repl)
+                sec["steps"] = steps
 
             # 2. keys：完整替換為觸控手勢節
             elif sec["id"] == "keys":
@@ -267,24 +305,48 @@ def build_android(data):
             elif sec["id"] == "multi":
                 orig = ANDROID_MULTI_DESKTOP_ORIG.get(locale)
                 repl = ANDROID_MULTI_DESKTOP_REPL.get(locale)
-                if orig and repl:
-                    sec["steps"] = [repl if s == orig else s for s in sec.get("steps", [])]
+                sec["steps"] = swap(sec.get("steps", []), orig, repl)
 
-            # 4. faq：替換「問題回報」答案
+            # 4. write：掌拒靈敏度的入口兩端不同
+            #
+            # Apple 放在插入／工具選單裡，Android 是手繪工具列上的晶片。
+            # 不改的話，Android 的手冊會叫使用者去一個不存在的地方 ——
+            # 那對零基礎的讀者是死路。
+            elif sec["id"] == "write":
+                orig = ANDROID_PALM_ORIG.get(locale)
+                repl = ANDROID_PALM_REPL.get(locale)
+                sec["steps"] = swap(sec.get("steps", []), orig, repl)
+
+            # 5. faq：替換「問題回報」答案
             elif sec["id"] == "faq":
                 orig_a = ANDROID_FAQ_REPORT_ORIG.get(locale)
                 repl_a = ANDROID_FAQ_REPORT_REPL.get(locale)
                 if orig_a and repl_a:
+                    key = re.sub(r"v\d+(\.\d+)*", "", orig_a)[:14].strip()
                     for qa in sec.get("faq", []):
-                        if qa[1] == orig_a:
+                        if key and key in qa[1]:
                             qa[1] = repl_a
     return d
+
+
+# `--check`：只驗證不寫檔（CI 用這條）。
+#
+# 產出是**產物**。有人改了 manual.js 卻沒重跑產生器，或直接改了產物，
+# 兩個 App 打包進去的就是對不上來源的那一份 —— 而那不會有任何錯誤訊息，
+# 只是使用者讀到的說明是錯的。
+CHECK = "--check" in sys.argv
+STALE = []
 
 
 def write_js(data, dest, comment):
     os.makedirs(os.path.dirname(dest), exist_ok=True)
     payload = json.dumps(data, ensure_ascii=False, indent=2)
     content = f"/*\n{comment}\n */\n\nwindow.KAIRUMO_MANUAL = {payload};\n"
+    if CHECK:
+        have = open(dest, encoding="utf-8").read() if os.path.exists(dest) else ""
+        if have != content:
+            STALE.append(os.path.relpath(dest, REPO))
+        return
     with open(dest, "w", encoding="utf-8") as f:
         f.write(content)
     print(f"✅ 已產生 {os.path.relpath(dest, REPO)}")
@@ -325,7 +387,52 @@ def main():
         frag = APPLE_MULTI_FOLDABLE_FRAGMENTS[locale]
         assert not any(frag in step for step in apple_multi["steps"]), \
             f"Apple/{locale} multi 節仍含折疊螢幕描述"
+    check_no_leak(apple_data, android_data)
+    if STALE:
+        print("❌ 這幾份與 manual.js 不一致：" + "、".join(STALE), file=sys.stderr)
+        print("   手冊只維護 docs/manual/manual.js，", file=sys.stderr)
+        print("   另外兩份請跑 python3 scripts/build-platform-docs.py 重新產生。", file=sys.stderr)
+        sys.exit(1)
     print("✅ 基本驗證通過")
+
+
+# ── 平台用語洩漏檢查 ──────────────────────────────────────────────
+#
+# 2026-09-22：Android 的手冊裡有兩句叫使用者去看「桌機版視窗左上角」。
+# 改寫規則其實寫了，只是比對的原文含著版本號，版本一升就對不上，
+# **改寫靜默地不再發生**。沒有人會去讀產生出來的六語系 JSON 找這種東西。
+#
+# 所以把「不准出現」寫成會擋下來的檢查。字詞刻意挑得保守 ——
+# 誤擋一個字的代價是改一行文案；漏掉一個字的代價是使用者照著手冊
+# 去找一個不存在的東西，然後以為是自己笨。
+APPLE_FORBIDDEN = ["Android", "android", "Google Play", "S Pen", "Samsung"]
+ANDROID_FORBIDDEN = [
+    "iPad", "iPhone", "iPadOS", "macOS", "iCloud", "Apple Pencil",
+    "桌機", "デスクトップ", "데스크톱", "台式机",
+]
+
+
+def check_no_leak(apple_data, android_data):
+    """一端的手冊不准出現另一端才有的東西。"""
+    problems = []
+    for name, data, forbidden in (
+        ("manual-apple.js", apple_data, APPLE_FORBIDDEN),
+        ("manual-android.js", android_data, ANDROID_FORBIDDEN),
+    ):
+        blob = json.dumps(data, ensure_ascii=False)
+        for word in forbidden:
+            if word in blob:
+                problems.append(f"{name} 出現了「{word}」")
+    if problems:
+        print("❌ 平台用語洩漏：", file=sys.stderr)
+        for p2 in problems:
+            print("   " + p2, file=sys.stderr)
+        print(
+            "\n改寫規則可能與 manual.js 的原文脫鉤了（常見原因：原文含版本號，"
+            "版本一升就對不上）。\n修 build-platform-docs.py 的對照表，不要去改產生出來的檔案。",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 
 if __name__ == "__main__":

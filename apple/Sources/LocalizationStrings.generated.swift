@@ -5320,12 +5320,12 @@ extension LocalizationManager {
             .th: "ก่อนกู้คืน “%@”"
         ],
         "milestone_empty": [
-            .zhHant: "還沒有里程碑。按「建立快照」記下現在這一刻。",
-            .en: "No milestones yet. Tap “Create snapshot” to mark this moment.",
-            .zhHans: "还没有里程碑。按「创建快照」记下现在这一刻。",
+            .zhHant: "還沒有里程碑。選「建立協同快照」記下現在這一刻。",
+            .en: "No milestones yet. Choose “Create Snapshot” to mark this moment.",
+            .zhHans: "还没有里程碑。选「创建协同快照」记下现在这一刻。",
             .ja: "マイルストーンはまだありません。「スナップショットを作成」で今を記録できます。",
-            .ko: "아직 마일스톤이 없습니다. “스냅샷 만들기”로 지금을 기록하세요.",
-            .th: "ยังไม่มีเหตุการณ์สำคัญ แตะ “สร้างสแนปช็อต” เพื่อบันทึกช่วงเวลานี้"
+            .ko: "아직 마일스톤이 없습니다. “스냅샷 생성”을 선택해 지금을 기록하세요.",
+            .th: "ยังไม่มีเหตุการณ์สำคัญ เลือก “สร้างสแนปช็อต” เพื่อบันทึกช่วงเวลานี้"
         ],
         "milestone_legacy": [
             .zhHant: "舊版",
