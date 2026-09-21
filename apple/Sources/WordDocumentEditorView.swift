@@ -93,10 +93,10 @@ public struct WordToolbarView: View {
 
                 // 3. 字型系列選單
                 Menu {
-                    Button("系統預設 (System Sans)") { setFontFamily(nil) }
-                    Button("襯線體 (Serif)") { setFontFamily("Georgia") }
-                    Button("等寬體 (Monospace)") { setFontFamily("Courier New") }
-                    Button("圓體 (Rounded)") { setFontFamily("Arial Rounded MT Bold") }
+                    Button(localizationManager.localized("font_system_default")) { setFontFamily(nil) }
+                    Button(localizationManager.localized("font_serif")) { setFontFamily("Georgia") }
+                    Button(localizationManager.localized("font_mono")) { setFontFamily("Courier New") }
+                    Button(localizationManager.localized("font_rounded")) { setFontFamily("Arial Rounded MT Bold") }
                 } label: {
                     HStack(spacing: 4) {
                         Text(currentFontDisplayName)
@@ -195,7 +195,7 @@ public struct WordToolbarView: View {
 
                     // 螢光筆標記
                     Menu {
-                        Button("無醒目提示") {
+                        Button(localizationManager.localized("no_highlight")) {
                             activeText.backgroundColorHex = "clear"
                             onCommitChange()
                         }
@@ -274,7 +274,7 @@ public struct WordToolbarView: View {
                     Menu {
                         ForEach([2, 3, 4, 5], id: \.self) { r in
                             ForEach([2, 3, 4, 5], id: \.self) { c in
-                                Button("\(r) 列 × \(c) 欄") {
+                                Button(String(format: localizationManager.localized("table_rows_cols"), "\(r)", "\(c)")) {
                                     onInsertTable(r, c)
                                 }
                             }
@@ -325,7 +325,7 @@ public struct WordToolbarView: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel(localizationManager.localized("wd_ink_block"))
-                        .help("插入局部手繪畫布區塊")
+                        .help(localizationManager.localized("wd_insert_inline_canvas"))
                     }
 
                     // 插入連結
@@ -349,7 +349,7 @@ public struct WordToolbarView: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(localizationManager.localized("wd_insert_divider"))
-                    .help("插入分隔線")
+                    .help(localizationManager.localized("wd_insert_divider"))
                 }
 
                 Divider().frame(height: 20)
@@ -364,7 +364,7 @@ public struct WordToolbarView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(localizationManager.localized("wd_clear_format"))
-                .help("清除格式")
+                .help(localizationManager.localized("wd_clear_format"))
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 7)
@@ -411,11 +411,11 @@ public struct WordToolbarView: View {
 
     private var currentFontDisplayName: String {
         guard let family = activeText.fontFamily, !family.isEmpty else {
-            return "系統字型"
+            return localizationManager.localized("font_system")
         }
-        if family.contains("Georgia") { return "襯線 (Serif)" }
-        if family.contains("Courier") { return "等寬 (Mono)" }
-        if family.contains("Rounded") { return "圓體 (Rounded)" }
+        if family.contains("Georgia") { return localizationManager.localized("font_serif") }
+        if family.contains("Courier") { return localizationManager.localized("font_mono") }
+        if family.contains("Rounded") { return localizationManager.localized("font_rounded") }
         return family
     }
 

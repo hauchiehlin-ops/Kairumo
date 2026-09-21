@@ -209,7 +209,7 @@ public struct ProColorPickerSheet: View {
                     .autocapitalization(.allCharacters)
                     .disableAutocorrection(true)
 
-                Button("應用色碼") {
+                Button(LocalizationManager.shared.localized("apply_hex")) {
                     applyHex(hexInputString)
                 }
                 .buttonStyle(.borderedProminent)

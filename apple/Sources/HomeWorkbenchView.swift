@@ -304,7 +304,7 @@ public struct HomeWorkbenchView: View {
                         }
                     }
                     .accessibilityLabel(localizationManager.localized("hw_diag_a11y"))
-                    .help("系統診斷與日誌")
+                    .help(localizationManager.localized("hw_diag_a11y"))
                     .accessibilityIdentifier("home.diagnostics_button")
                 }
 
@@ -2912,7 +2912,7 @@ extension AppDiagnosticsSheet {
     /// 語音轉錄與離線模型狀態（提供離線模型檢測、進度顯示、鏡像分流與手動匯入）
     @ViewBuilder
     var speechTranscriptionSection: some View {
-        Section("語音轉錄與離線模型") {
+        Section(localizationManager.localized("asr_section_title2")) {
             let status = transcriber.checkOfflineStatus()
             HStack {
                 Text(localizationManager.localized("hw_asr_onboard"))
@@ -2943,7 +2943,7 @@ extension AppDiagnosticsSheet {
                         .font(.footnote)
                         .foregroundColor(.secondary)
                     Spacer()
-                    Button("移除釋放空間", role: .destructive) {
+                    Button(localizationManager.localized("asr_remove_model"), role: .destructive) {
                         try? transcriber.deleteWhisperModel()
                     }
                     .font(.caption)
@@ -2954,7 +2954,7 @@ extension AppDiagnosticsSheet {
                     HStack {
                         ProgressView(value: transcriber.downloadProgress)
                             .progressViewStyle(.linear)
-                        Button("取消") {
+                        Button(localizationManager.localized("cancel")) {
                             transcriber.cancelModelDownload()
                         }
                         .font(.caption)
@@ -4062,7 +4062,7 @@ public struct CloudSyncDetailSheet: View {
                         Text(localizationManager.localized("hw_google_still_signed_in"))
                             .font(.footnote)
                         Spacer()
-                        Button("登出 Google") {
+                        Button(localizationManager.localized("google_sign_out")) {
                             Task { await googleAuth.signOut() }
                         }
                         .font(.footnote)
@@ -4075,7 +4075,7 @@ public struct CloudSyncDetailSheet: View {
                         Text(localizationManager.localized("hw_folder_still_linked"))
                             .font(.footnote)
                         Spacer()
-                        Button("解除連結") {
+                        Button(localizationManager.localized("folder_unlink")) {
                             CloudSyncFolder.clearFolder()
                         }
                         .font(.footnote)

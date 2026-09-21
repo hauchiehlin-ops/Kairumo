@@ -383,6 +383,14 @@ extension LocalizationManager {
             .ko: "앱 버전 정보",
             .th: "ข้อมูลเวอร์ชันแอปพลิเคชัน"
         ],
+        "apply_hex": [
+            .zhHant: "套用色碼",
+            .en: "Apply hex",
+            .zhHans: "应用色码",
+            .ja: "カラーコードを適用",
+            .ko: "색상 코드 적용",
+            .th: "ใช้รหัสสี"
+        ],
         "apply_refine": [
             .zhHant: "一鍵修飾",
             .en: "Auto Refine",
@@ -399,6 +407,30 @@ extension LocalizationManager {
             .ko: "아키텍처 모드",
             .th: "โหมดสถาปัตยกรรม"
         ],
+        "asr_cancel_download": [
+            .zhHant: "取消下載 Whisper 模型",
+            .en: "Cancel the Whisper download",
+            .zhHans: "取消下载 Whisper 模型",
+            .ja: "Whisper のダウンロードをキャンセル",
+            .ko: "Whisper 다운로드 취소",
+            .th: "ยกเลิกการดาวน์โหลด Whisper"
+        ],
+        "asr_download_btn": [
+            .zhHant: "下載 Whisper 離線模型（574 MB）",
+            .en: "Download the offline Whisper model (574 MB)",
+            .zhHans: "下载 Whisper 离线模型（574 MB）",
+            .ja: "オフライン Whisper モデルをダウンロード（574 MB）",
+            .ko: "오프라인 Whisper 모델 다운로드(574 MB)",
+            .th: "ดาวน์โหลดโมเดล Whisper ออฟไลน์ (574 MB)"
+        ],
+        "asr_download_mirror_btn": [
+            .zhHant: "改用鏡像下載（hf-mirror.com）",
+            .en: "Download from the mirror (hf-mirror.com)",
+            .zhHans: "改用镜像下载（hf-mirror.com）",
+            .ja: "ミラーからダウンロード（hf-mirror.com）",
+            .ko: "미러에서 다운로드(hf-mirror.com)",
+            .th: "ดาวน์โหลดจากมิเรอร์ (hf-mirror.com)"
+        ],
         "asr_model_not_listed": [
             .zhHant: "清單裡沒有 %@",
             .en: "%@ is not in the list",
@@ -406,6 +438,38 @@ extension LocalizationManager {
             .ja: "%@ は一覧にありません",
             .ko: "목록에 %@이(가) 없습니다",
             .th: "ไม่มี %@ ในรายการ"
+        ],
+        "asr_open_settings_btn": [
+            .zhHant: "到系統設定下載聽寫模型",
+            .en: "Download the dictation model in System Settings",
+            .zhHans: "到系统设置下载听写模型",
+            .ja: "システム設定で音声入力モデルをダウンロード",
+            .ko: "시스템 설정에서 받아쓰기 모델 다운로드",
+            .th: "ดาวน์โหลดโมเดลการพิมพ์ด้วยเสียงในการตั้งค่าระบบ"
+        ],
+        "asr_remove_model": [
+            .zhHant: "移除以釋放空間",
+            .en: "Remove to free up space",
+            .zhHans: "移除以释放空间",
+            .ja: "削除して空き容量を確保",
+            .ko: "삭제하여 공간 확보",
+            .th: "ลบเพื่อคืนพื้นที่"
+        ],
+        "asr_section_title": [
+            .zhHant: "語音轉文字與離線模型",
+            .en: "Speech to text and offline models",
+            .zhHans: "语音转文字与离线模型",
+            .ja: "音声認識とオフラインモデル",
+            .ko: "음성 인식 및 오프라인 모델",
+            .th: "การถอดเสียงและโมเดลออฟไลน์"
+        ],
+        "asr_section_title2": [
+            .zhHant: "語音轉錄與離線模型",
+            .en: "Transcription and offline models",
+            .zhHans: "语音转录与离线模型",
+            .ja: "文字起こしとオフラインモデル",
+            .ko: "전사 및 오프라인 모델",
+            .th: "การถอดเสียงและโมเดลออฟไลน์"
         ],
         "asr_state_downloading": [
             .zhHant: "Whisper 模型下載中：%@\n下載完成後會自動啟用多語言偵測與標點。",
@@ -1182,6 +1246,14 @@ extension LocalizationManager {
             .ja: "キャンセル",
             .ko: "취소",
             .th: "ยกเลิก"
+        ],
+        "cancel_selection_hint": [
+            .zhHant: "取消框選，回到上一個工具",
+            .en: "Cancel the selection and go back to the previous tool",
+            .zhHans: "取消框选，回到上一个工具",
+            .ja: "選択を解除して前のツールに戻る",
+            .ko: "선택을 해제하고 이전 도구로 돌아가기",
+            .th: "ยกเลิกการเลือกและกลับไปยังเครื่องมือก่อนหน้า"
         ],
         "card_style": [
             .zhHant: "卡片樣式",
@@ -3439,6 +3511,14 @@ extension LocalizationManager {
             .ko: "폴더 이름",
             .th: "ชื่อโฟลเดอร์"
         ],
+        "folder_unlink": [
+            .zhHant: "解除連結",
+            .en: "Unlink",
+            .zhHans: "解除链接",
+            .ja: "リンクを解除",
+            .ko: "연결 해제",
+            .th: "ยกเลิกการเชื่อมโยง"
+        ],
         "folders": [
             .zhHant: "資料夾",
             .en: "Folders",
@@ -3446,6 +3526,30 @@ extension LocalizationManager {
             .ja: "フォルダ",
             .ko: "폴더",
             .th: "โฟลเดอร์"
+        ],
+        "font_mono": [
+            .zhHant: "等寬",
+            .en: "Mono",
+            .zhHans: "等宽",
+            .ja: "等幅",
+            .ko: "고정폭",
+            .th: "ความกว้างคงที่"
+        ],
+        "font_rounded": [
+            .zhHant: "圓體",
+            .en: "Rounded",
+            .zhHans: "圆体",
+            .ja: "丸ゴシック",
+            .ko: "둥근체",
+            .th: "ตัวมน"
+        ],
+        "font_serif": [
+            .zhHant: "襯線",
+            .en: "Serif",
+            .zhHans: "衬线",
+            .ja: "セリフ",
+            .ko: "세리프",
+            .th: "มีเชิง"
         ],
         "font_size": [
             .zhHant: "字級大小",
@@ -3462,6 +3566,22 @@ extension LocalizationManager {
             .ja: "文字スタイル",
             .ko: "글자 스타일",
             .th: "ลักษณะอักษร"
+        ],
+        "font_system": [
+            .zhHant: "系統字型",
+            .en: "System",
+            .zhHans: "系统字体",
+            .ja: "システム",
+            .ko: "시스템",
+            .th: "ระบบ"
+        ],
+        "font_system_default": [
+            .zhHant: "系統預設",
+            .en: "System default",
+            .zhHans: "系统默认",
+            .ja: "システム標準",
+            .ko: "시스템 기본",
+            .th: "ค่าเริ่มต้นของระบบ"
         ],
         "footer_tagline": [
             .zhHant: "筆跡與錄音同步 · 本地優先 · 開放原始碼",
@@ -3550,6 +3670,14 @@ extension LocalizationManager {
             .ja: "黄金螺旋ガイド",
             .ko: "황금 나선 가이드",
             .th: "เส้นนำเกลียวทอง"
+        ],
+        "google_sign_out": [
+            .zhHant: "登出 Google",
+            .en: "Sign out of Google",
+            .zhHans: "登出 Google",
+            .ja: "Google からサインアウト",
+            .ko: "Google 로그아웃",
+            .th: "ออกจากระบบ Google"
         ],
         "guide_action": [
             .zhHant: "行為",
@@ -4791,6 +4919,14 @@ extension LocalizationManager {
             .ko: "가져왔습니다: %@",
             .th: "นำเข้าแล้ว: %@"
         ],
+        "ink_change_colour": [
+            .zhHant: "換色",
+            .en: "Change colour",
+            .zhHans: "换色",
+            .ja: "色を変更",
+            .ko: "색 변경",
+            .th: "เปลี่ยนสี"
+        ],
         "ink_clear": [
             .zhHant: "清除",
             .en: "Clear",
@@ -4838,6 +4974,14 @@ extension LocalizationManager {
             .ja: "スタイラスのみ",
             .ko: "스타일러스 전용",
             .th: "ปากกาสไตลัสเท่านั้น"
+        ],
+        "ink_pro_wheel": [
+            .zhHant: "專業 HSV 色環與和諧配色",
+            .en: "Pro HSV wheel and colour harmonies",
+            .zhHans: "专业 HSV 色环与和谐配色",
+            .ja: "プロ向け HSV ホイールと配色",
+            .ko: "전문가용 HSV 휠과 색 조화",
+            .th: "วงล้อ HSV ระดับโปรและชุดสีที่เข้ากัน"
         ],
         "ink_stroke_count": [
             .zhHant: "%@ 筆",
@@ -6279,6 +6423,14 @@ extension LocalizationManager {
             .ko: "다른 검색어를 입력하거나 테마 탭을 전환해 보세요",
             .th: "ลองเปลี่ยนคำค้นหาหรือสลับแท็บธีม"
         ],
+        "no_highlight": [
+            .zhHant: "不加醒目提示",
+            .en: "No highlight",
+            .zhHans: "不加醒目提示",
+            .ja: "ハイライトなし",
+            .ko: "강조 없음",
+            .th: "ไม่ไฮไลต์"
+        ],
         "no_notes_empty": [
             .zhHant: "尚無筆記，點選「新增筆記」開始繪製",
             .en: "No notes yet. Tap 'New Note' to start.",
@@ -7318,6 +7470,14 @@ extension LocalizationManager {
             .ja: "音声録音と同期",
             .ko: "음성 녹음 및 동기화",
             .th: "การบันทึกเสียงและการซิงค์"
+        ],
+        "radial_menu": [
+            .zhHant: "環形快捷工具盤",
+            .en: "Radial tool menu",
+            .zhHans: "环形快捷工具盘",
+            .ja: "放射状ツールメニュー",
+            .ko: "방사형 도구 메뉴",
+            .th: "เมนูเครื่องมือแบบวงกลม"
         ],
         "rec_title_input": [
             .zhHant: "錄音標題",
@@ -8959,6 +9119,46 @@ extension LocalizationManager {
             .ko: "사양 및 재료 권장사항",
             .th: "ข้อมูลจำเพาะและคำแนะนำวัสดุ"
         ],
+        "stab_light": [
+            .zhHant: "輕微防抖",
+            .en: "Light stabiliser",
+            .zhHans: "轻微防抖",
+            .ja: "弱い手ブレ補正",
+            .ko: "약한 손떨림 보정",
+            .th: "กันสั่นเบา"
+        ],
+        "stab_medium": [
+            .zhHant: "中度防抖",
+            .en: "Medium stabiliser",
+            .zhHans: "中度防抖",
+            .ja: "中程度の手ブレ補正",
+            .ko: "보통 손떨림 보정",
+            .th: "กันสั่นปานกลาง"
+        ],
+        "stab_off": [
+            .zhHant: "關閉防抖",
+            .en: "Stabiliser off",
+            .zhHans: "关闭防抖",
+            .ja: "手ブレ補正オフ",
+            .ko: "손떨림 보정 끔",
+            .th: "ปิดการกันสั่น"
+        ],
+        "stab_strong": [
+            .zhHant: "強力防抖",
+            .en: "Strong stabiliser",
+            .zhHans: "强力防抖",
+            .ja: "強い手ブレ補正",
+            .ko: "강한 손떨림 보정",
+            .th: "กันสั่นแรง"
+        ],
+        "stab_title": [
+            .zhHant: "線條平滑防抖",
+            .en: "Stroke stabiliser",
+            .zhHans: "线条平滑防抖",
+            .ja: "線の手ブレ補正",
+            .ko: "선 손떨림 보정",
+            .th: "การกันสั่นของเส้น"
+        ],
         "standalone_recording": [
             .zhHant: "不附加（僅儲存為獨立錄音）",
             .en: "Standalone (Save as separate audio file)",
@@ -9150,6 +9350,14 @@ extension LocalizationManager {
             .ja: "実物",
             .ko: "실물",
             .th: "ภาพทึบ"
+        ],
+        "symmetry_guide": [
+            .zhHant: "鏡像對稱輔助線",
+            .en: "Mirror symmetry guide",
+            .zhHans: "镜像对称辅助线",
+            .ja: "左右対称ガイド",
+            .ko: "좌우 대칭 안내선",
+            .th: "เส้นนำสมมาตรกระจก"
         ],
         "sync_account": [
             .zhHant: "帳號",
@@ -9486,6 +9694,14 @@ extension LocalizationManager {
             .ja: "プレビュー",
             .ko: "미리보기",
             .th: "ตัวอย่าง"
+        ],
+        "table_rows_cols": [
+            .zhHant: "%@ 列 × %@ 欄",
+            .en: "%@ × %@",
+            .zhHans: "%@ 行 × %@ 列",
+            .ja: "%@ 行 × %@ 列",
+            .ko: "%@행 × %@열",
+            .th: "%@ แถว × %@ คอลัมน์"
         ],
         "table_studio": [
             .zhHant: "表格",
@@ -10630,6 +10846,14 @@ extension LocalizationManager {
             .ja: "区切り線を挿入",
             .ko: "구분선 삽입",
             .th: "แทรกเส้นคั่น"
+        ],
+        "wd_insert_inline_canvas": [
+            .zhHant: "插入文件內手繪畫布",
+            .en: "Insert a handwriting canvas",
+            .zhHans: "插入文档内手绘画布",
+            .ja: "手書きキャンバスを挿入",
+            .ko: "필기 캔버스 삽입",
+            .th: "แทรกผืนผ้าใบลายมือ"
         ],
         "wd_placeholder": [
             .zhHant: "在這裡輸入文件內容…",

@@ -5230,7 +5230,7 @@ public struct NotebookEditorView: View {
                 .cornerRadius(6)
         }
         .buttonStyle(.plain)
-        .help("換色")
+        .help(localizationManager.localized("ink_change_colour"))
         .popover(isPresented: $showLassoColorPicker) {
             HStack(spacing: 12) {
                 ForEach(colorPalette, id: \.self) { color in
@@ -5524,7 +5524,7 @@ public struct NotebookEditorView: View {
                             .frame(width: DS.Icon.medium, height: DS.Icon.medium)
                     }
                     .buttonStyle(.plain)
-                    .help("專業 HSV 色相環與和諧色")
+                    .help(localizationManager.localized("ink_pro_wheel"))
                     .popover(isPresented: $showProColorWheel) {
                         ProColorWheelView(
                             selectedColorHex: Binding(
@@ -5543,10 +5543,10 @@ public struct NotebookEditorView: View {
 
                 // 🌟 專業筆刷平滑防抖 (Stroke Stabilizer)
                 Menu {
-                    Button("關閉防抖 (0%)") { strokeStabilizer = 0.0 }
-                    Button("輕微防抖 (25%)") { strokeStabilizer = 0.25 }
-                    Button("中度防抖 (50%)") { strokeStabilizer = 0.50 }
-                    Button("強力防抖 (85% - CSP專業級)") { strokeStabilizer = 0.85 }
+                    Button(localizationManager.localized("stab_off")) { strokeStabilizer = 0.0 }
+                    Button(localizationManager.localized("stab_light")) { strokeStabilizer = 0.25 }
+                    Button(localizationManager.localized("stab_medium")) { strokeStabilizer = 0.50 }
+                    Button(localizationManager.localized("stab_strong")) { strokeStabilizer = 0.85 }
                 } label: {
                     HStack(spacing: 3) {
                         Image(systemName: "waveform.path")
@@ -5562,7 +5562,7 @@ public struct NotebookEditorView: View {
                     .background(strokeStabilizer > 0 ? Color.accentColor.opacity(0.15) : Color.clear)
                     .cornerRadius(6)
                 }
-                .help("線條平滑防抖修正 (Stabilizer 0-100)")
+                .help(localizationManager.localized("stab_title"))
 
                 // 🌟 鏡像對稱尺規 (Symmetry Guide)
                 Button {
@@ -5577,7 +5577,7 @@ public struct NotebookEditorView: View {
                         .cornerRadius(6)
                 }
                 .buttonStyle(.plain)
-                .help("鏡像對稱尺規 (Symmetry Guide)")
+                .help(localizationManager.localized("symmetry_guide"))
 
                 // 🌟 響應式極簡畫布收折按鈕
                 Button {
@@ -5615,7 +5615,7 @@ public struct NotebookEditorView: View {
                         .clipShape(Circle())
                 }
                 .buttonStyle(.plain)
-                .help("徑向飛輪快捷工具盤 (Radial Menu)")
+                .help(localizationManager.localized("radial_menu"))
 
                 eraserModeControls
 
@@ -6433,7 +6433,7 @@ public struct NotebookEditorView: View {
             .buttonStyle(.plain)
             .keyboardShortcut(.escape, modifiers: [])
             .accessibilityLabel(localizationManager.localized("ed_cancel_selection"))
-            .help("取消框選模式，回到上一個工具")
+            .help(localizationManager.localized("cancel_selection_hint"))
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)

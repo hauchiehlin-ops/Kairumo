@@ -37,7 +37,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 CJK = re.compile(r"[一-鿿぀-ヿ가-힯฀-๿]")
-CALL = re.compile(r'(?:Text|Label|\.accessibilityLabel)\(\s*"((?:[^"\\]|\\.)*)"')
+# 會把字串直接顯示出來的建構子／修飾詞。
+#
+# 名單是**逐次補出來的**，每一次都是在真實畫面上先看到中文才知道漏了誰：
+# Text/Label（第一版）→ 資料欄位（previewSnippet）→ Button/Picker/Toggle…
+# 這說明一件事：靜態規則永遠落後於畫面。它擋得住回歸，但找不完新洞。
+CALL = re.compile(
+    r"(?:Text|Label|Button|Toggle|TextField|SecureField|Picker|Section|Stepper|Link"
+    r"|Menu|confirmationDialog|alert|navigationTitle|\.accessibilityLabel|\.help)"
+    r'\(\s*"((?:[^"\\]|\\.)*)"'
+)
 
 # 第二條規則：CJK 字面值被指派給「看起來是給人看的」欄位或變數。
 #

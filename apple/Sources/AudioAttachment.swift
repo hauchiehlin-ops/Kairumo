@@ -192,22 +192,22 @@ struct AudioAttachmentItemView: View {
                     dismissButton: .default(Text(localizationManager.localized("done")))
                 )
             }
-            .alert("語音轉文字與離線模型狀態", isPresented: $showOfflineInfo) {
+            .alert(localizationManager.localized("asr_section_title"), isPresented: $showOfflineInfo) {
                 if !transcriber.isWhisperAvailable {
                     if transcriber.isDownloadingModel {
-                        Button("取消下載 Whisper 模型", role: .destructive) {
+                        Button(localizationManager.localized("asr_cancel_download"), role: .destructive) {
                             transcriber.cancelModelDownload()
                         }
                     } else {
-                        Button("下載 Whisper 離線神經模型 (574 MB)") {
+                        Button(localizationManager.localized("asr_download_btn")) {
                             transcriber.downloadWhisperModel(useMirror: false)
                         }
-                        Button("使用鏡像分流下載 (hf-mirror.com)") {
+                        Button(localizationManager.localized("asr_download_mirror_btn")) {
                             transcriber.downloadWhisperModel(useMirror: true)
                         }
                     }
                 }
-                Button("前往系統設定下載聽寫模型") {
+                Button(localizationManager.localized("asr_open_settings_btn")) {
                     transcriber.openSystemDictationSettings()
                 }
                 Button(localizationManager.localized("cancel"), role: .cancel) {}

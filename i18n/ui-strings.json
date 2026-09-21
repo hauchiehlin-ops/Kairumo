@@ -367,6 +367,14 @@
     "zhHans": "应用程序版本信息",
     "zhHant": "應用程式版本資訊"
   },
+  "apply_hex": {
+    "en": "Apply hex",
+    "ja": "カラーコードを適用",
+    "ko": "색상 코드 적용",
+    "th": "ใช้รหัสสี",
+    "zhHans": "应用色码",
+    "zhHant": "套用色碼"
+  },
   "apply_refine": {
     "en": "Auto Refine",
     "ja": "自動補正",
@@ -383,6 +391,30 @@
     "zhHans": "架构模式",
     "zhHant": "架構模式"
   },
+  "asr_cancel_download": {
+    "en": "Cancel the Whisper download",
+    "ja": "Whisper のダウンロードをキャンセル",
+    "ko": "Whisper 다운로드 취소",
+    "th": "ยกเลิกการดาวน์โหลด Whisper",
+    "zhHans": "取消下载 Whisper 模型",
+    "zhHant": "取消下載 Whisper 模型"
+  },
+  "asr_download_btn": {
+    "en": "Download the offline Whisper model (574 MB)",
+    "ja": "オフライン Whisper モデルをダウンロード（574 MB）",
+    "ko": "오프라인 Whisper 모델 다운로드(574 MB)",
+    "th": "ดาวน์โหลดโมเดล Whisper ออฟไลน์ (574 MB)",
+    "zhHans": "下载 Whisper 离线模型（574 MB）",
+    "zhHant": "下載 Whisper 離線模型（574 MB）"
+  },
+  "asr_download_mirror_btn": {
+    "en": "Download from the mirror (hf-mirror.com)",
+    "ja": "ミラーからダウンロード（hf-mirror.com）",
+    "ko": "미러에서 다운로드(hf-mirror.com)",
+    "th": "ดาวน์โหลดจากมิเรอร์ (hf-mirror.com)",
+    "zhHans": "改用镜像下载（hf-mirror.com）",
+    "zhHant": "改用鏡像下載（hf-mirror.com）"
+  },
   "asr_model_not_listed": {
     "en": "%@ is not in the list",
     "ja": "%@ は一覧にありません",
@@ -390,6 +422,38 @@
     "th": "ไม่มี %@ ในรายการ",
     "zhHans": "清单里没有 %@",
     "zhHant": "清單裡沒有 %@"
+  },
+  "asr_open_settings_btn": {
+    "en": "Download the dictation model in System Settings",
+    "ja": "システム設定で音声入力モデルをダウンロード",
+    "ko": "시스템 설정에서 받아쓰기 모델 다운로드",
+    "th": "ดาวน์โหลดโมเดลการพิมพ์ด้วยเสียงในการตั้งค่าระบบ",
+    "zhHans": "到系统设置下载听写模型",
+    "zhHant": "到系統設定下載聽寫模型"
+  },
+  "asr_remove_model": {
+    "en": "Remove to free up space",
+    "ja": "削除して空き容量を確保",
+    "ko": "삭제하여 공간 확보",
+    "th": "ลบเพื่อคืนพื้นที่",
+    "zhHans": "移除以释放空间",
+    "zhHant": "移除以釋放空間"
+  },
+  "asr_section_title": {
+    "en": "Speech to text and offline models",
+    "ja": "音声認識とオフラインモデル",
+    "ko": "음성 인식 및 오프라인 모델",
+    "th": "การถอดเสียงและโมเดลออฟไลน์",
+    "zhHans": "语音转文字与离线模型",
+    "zhHant": "語音轉文字與離線模型"
+  },
+  "asr_section_title2": {
+    "en": "Transcription and offline models",
+    "ja": "文字起こしとオフラインモデル",
+    "ko": "전사 및 오프라인 모델",
+    "th": "การถอดเสียงและโมเดลออฟไลน์",
+    "zhHans": "语音转录与离线模型",
+    "zhHant": "語音轉錄與離線模型"
   },
   "asr_state_downloading": {
     "en": "Downloading the Whisper model: %@\nLanguage detection and punctuation turn on automatically when it finishes.",
@@ -1166,6 +1230,14 @@
     "th": "ยกเลิก",
     "zhHans": "取消",
     "zhHant": "取消"
+  },
+  "cancel_selection_hint": {
+    "en": "Cancel the selection and go back to the previous tool",
+    "ja": "選択を解除して前のツールに戻る",
+    "ko": "선택을 해제하고 이전 도구로 돌아가기",
+    "th": "ยกเลิกการเลือกและกลับไปยังเครื่องมือก่อนหน้า",
+    "zhHans": "取消框选，回到上一个工具",
+    "zhHant": "取消框選，回到上一個工具"
   },
   "card_style": {
     "en": "Card Style",
@@ -3423,6 +3495,14 @@
     "zhHans": "文件夹名称",
     "zhHant": "資料夾名稱"
   },
+  "folder_unlink": {
+    "en": "Unlink",
+    "ja": "リンクを解除",
+    "ko": "연결 해제",
+    "th": "ยกเลิกการเชื่อมโยง",
+    "zhHans": "解除链接",
+    "zhHant": "解除連結"
+  },
   "folders": {
     "en": "Folders",
     "ja": "フォルダ",
@@ -3430,6 +3510,30 @@
     "th": "โฟลเดอร์",
     "zhHans": "文件夹",
     "zhHant": "資料夾"
+  },
+  "font_mono": {
+    "en": "Mono",
+    "ja": "等幅",
+    "ko": "고정폭",
+    "th": "ความกว้างคงที่",
+    "zhHans": "等宽",
+    "zhHant": "等寬"
+  },
+  "font_rounded": {
+    "en": "Rounded",
+    "ja": "丸ゴシック",
+    "ko": "둥근체",
+    "th": "ตัวมน",
+    "zhHans": "圆体",
+    "zhHant": "圓體"
+  },
+  "font_serif": {
+    "en": "Serif",
+    "ja": "セリフ",
+    "ko": "세리프",
+    "th": "มีเชิง",
+    "zhHans": "衬线",
+    "zhHant": "襯線"
   },
   "font_size": {
     "en": "Font Size",
@@ -3446,6 +3550,22 @@
     "th": "ลักษณะอักษร",
     "zhHans": "字形",
     "zhHant": "字形"
+  },
+  "font_system": {
+    "en": "System",
+    "ja": "システム",
+    "ko": "시스템",
+    "th": "ระบบ",
+    "zhHans": "系统字体",
+    "zhHant": "系統字型"
+  },
+  "font_system_default": {
+    "en": "System default",
+    "ja": "システム標準",
+    "ko": "시스템 기본",
+    "th": "ค่าเริ่มต้นของระบบ",
+    "zhHans": "系统默认",
+    "zhHant": "系統預設"
   },
   "footer_tagline": {
     "en": "Dual Ink & Audio Sync · Offline First · Open Source",
@@ -3534,6 +3654,14 @@
     "th": "เส้นนำเกลียวทอง",
     "zhHans": "黄金螺旋参考线 (Golden Spiral)",
     "zhHant": "黃金螺旋參考線 (Golden Spiral)"
+  },
+  "google_sign_out": {
+    "en": "Sign out of Google",
+    "ja": "Google からサインアウト",
+    "ko": "Google 로그아웃",
+    "th": "ออกจากระบบ Google",
+    "zhHans": "登出 Google",
+    "zhHant": "登出 Google"
   },
   "guide_action": {
     "en": "Action",
@@ -4775,6 +4903,14 @@
     "zhHans": "已导入：%@",
     "zhHant": "已匯入：%@"
   },
+  "ink_change_colour": {
+    "en": "Change colour",
+    "ja": "色を変更",
+    "ko": "색 변경",
+    "th": "เปลี่ยนสี",
+    "zhHans": "换色",
+    "zhHant": "換色"
+  },
   "ink_clear": {
     "en": "Clear",
     "ja": "消去",
@@ -4822,6 +4958,14 @@
     "th": "ปากกาสไตลัสเท่านั้น",
     "zhHans": "仅限触控笔",
     "zhHant": "僅限觸控筆"
+  },
+  "ink_pro_wheel": {
+    "en": "Pro HSV wheel and colour harmonies",
+    "ja": "プロ向け HSV ホイールと配色",
+    "ko": "전문가용 HSV 휠과 색 조화",
+    "th": "วงล้อ HSV ระดับโปรและชุดสีที่เข้ากัน",
+    "zhHans": "专业 HSV 色环与和谐配色",
+    "zhHant": "專業 HSV 色環與和諧配色"
   },
   "ink_stroke_count": {
     "en": "%@ strokes",
@@ -6263,6 +6407,14 @@
     "zhHans": "尝试更换搜索关键字或切换主题分类标签",
     "zhHant": "嘗試更換搜尋關鍵字或切換主題分類標籤"
   },
+  "no_highlight": {
+    "en": "No highlight",
+    "ja": "ハイライトなし",
+    "ko": "강조 없음",
+    "th": "ไม่ไฮไลต์",
+    "zhHans": "不加醒目提示",
+    "zhHant": "不加醒目提示"
+  },
   "no_notes_empty": {
     "en": "No notes yet. Tap 'New Note' to start.",
     "ja": "ノートがありません。「新規ノート」をタップして開始。",
@@ -7302,6 +7454,14 @@
     "th": "การบันทึกเสียงและการซิงค์",
     "zhHans": "语音录音与对齐",
     "zhHant": "語音錄音與對齊"
+  },
+  "radial_menu": {
+    "en": "Radial tool menu",
+    "ja": "放射状ツールメニュー",
+    "ko": "방사형 도구 메뉴",
+    "th": "เมนูเครื่องมือแบบวงกลม",
+    "zhHans": "环形快捷工具盘",
+    "zhHant": "環形快捷工具盤"
   },
   "rec_title_input": {
     "en": "Recording Title",
@@ -8943,6 +9103,46 @@
     "zhHans": "实体规格与材料建议",
     "zhHant": "實體規格與材料建議"
   },
+  "stab_light": {
+    "en": "Light stabiliser",
+    "ja": "弱い手ブレ補正",
+    "ko": "약한 손떨림 보정",
+    "th": "กันสั่นเบา",
+    "zhHans": "轻微防抖",
+    "zhHant": "輕微防抖"
+  },
+  "stab_medium": {
+    "en": "Medium stabiliser",
+    "ja": "中程度の手ブレ補正",
+    "ko": "보통 손떨림 보정",
+    "th": "กันสั่นปานกลาง",
+    "zhHans": "中度防抖",
+    "zhHant": "中度防抖"
+  },
+  "stab_off": {
+    "en": "Stabiliser off",
+    "ja": "手ブレ補正オフ",
+    "ko": "손떨림 보정 끔",
+    "th": "ปิดการกันสั่น",
+    "zhHans": "关闭防抖",
+    "zhHant": "關閉防抖"
+  },
+  "stab_strong": {
+    "en": "Strong stabiliser",
+    "ja": "強い手ブレ補正",
+    "ko": "강한 손떨림 보정",
+    "th": "กันสั่นแรง",
+    "zhHans": "强力防抖",
+    "zhHant": "強力防抖"
+  },
+  "stab_title": {
+    "en": "Stroke stabiliser",
+    "ja": "線の手ブレ補正",
+    "ko": "선 손떨림 보정",
+    "th": "การกันสั่นของเส้น",
+    "zhHans": "线条平滑防抖",
+    "zhHant": "線條平滑防抖"
+  },
   "standalone_recording": {
     "en": "Standalone (Save as separate audio file)",
     "ja": "添付しない（独立ファイルとして保存）",
@@ -9134,6 +9334,14 @@
     "th": "ภาพทึบ",
     "zhHans": "实物",
     "zhHant": "實物"
+  },
+  "symmetry_guide": {
+    "en": "Mirror symmetry guide",
+    "ja": "左右対称ガイド",
+    "ko": "좌우 대칭 안내선",
+    "th": "เส้นนำสมมาตรกระจก",
+    "zhHans": "镜像对称辅助线",
+    "zhHant": "鏡像對稱輔助線"
   },
   "sync_account": {
     "en": "Account",
@@ -9470,6 +9678,14 @@
     "th": "ตัวอย่าง",
     "zhHans": "预览",
     "zhHant": "預覽"
+  },
+  "table_rows_cols": {
+    "en": "%@ × %@",
+    "ja": "%@ 行 × %@ 列",
+    "ko": "%@행 × %@열",
+    "th": "%@ แถว × %@ คอลัมน์",
+    "zhHans": "%@ 行 × %@ 列",
+    "zhHant": "%@ 列 × %@ 欄"
   },
   "table_studio": {
     "en": "Table",
@@ -10614,6 +10830,14 @@
     "th": "แทรกเส้นคั่น",
     "zhHans": "插入分隔线",
     "zhHant": "插入分隔線"
+  },
+  "wd_insert_inline_canvas": {
+    "en": "Insert a handwriting canvas",
+    "ja": "手書きキャンバスを挿入",
+    "ko": "필기 캔버스 삽입",
+    "th": "แทรกผืนผ้าใบลายมือ",
+    "zhHans": "插入文档内手绘画布",
+    "zhHant": "插入文件內手繪畫布"
   },
   "wd_placeholder": {
     "en": "Type the document here…",
