@@ -2271,6 +2271,14 @@
     "zhHans": "设计师色系",
     "zhHant": "設計師色系"
   },
+  "diagnostics": {
+    "en": "Diagnostics",
+    "ja": "診断",
+    "ko": "진단",
+    "th": "การวินิจฉัย",
+    "zhHans": "诊断",
+    "zhHant": "診斷"
+  },
   "dimension_callout": {
     "en": "Dimension Callout",
     "ja": "寸法引出線",
@@ -4070,6 +4078,246 @@
     "th": "อัลมอนด์อุ่น",
     "zhHans": "暖杏色",
     "zhHant": "暖杏色"
+  },
+  "hw_asr_download_failed": {
+    "en": "Download failed: %@",
+    "ja": "ダウンロードに失敗しました：%@",
+    "ko": "다운로드 실패: %@",
+    "th": "ดาวน์โหลดไม่สำเร็จ: %@",
+    "zhHans": "下载失败：%@",
+    "zhHant": "下載失敗：%@"
+  },
+  "hw_asr_download_mirror": {
+    "en": "If the official source is slow, download from the mirror (hf-mirror.com)",
+    "ja": "公式が遅い場合はミラーからダウンロード（hf-mirror.com）",
+    "ko": "공식 소스가 느리면 미러에서 다운로드(hf-mirror.com)",
+    "th": "หากแหล่งทางการช้า ให้ดาวน์โหลดจากมิเรอร์ (hf-mirror.com)",
+    "zhHans": "官方来源较慢时，改用镜像下载（hf-mirror.com）",
+    "zhHant": "官方來源較慢時，改用鏡像下載（hf-mirror.com）"
+  },
+  "hw_asr_download_official": {
+    "en": "Download the on-device Whisper model (574 MB, official source)",
+    "ja": "端末内 Whisper モデルをダウンロード（574 MB・公式）",
+    "ko": "기기 내 Whisper 모델 다운로드(574 MB, 공식)",
+    "th": "ดาวน์โหลดโมเดล Whisper ในเครื่อง (574 MB, แหล่งทางการ)",
+    "zhHans": "下载 Whisper 端侧模型（574 MB，官方来源）",
+    "zhHant": "下載 Whisper 端側模型（574 MB，官方來源）"
+  },
+  "hw_asr_explainer": {
+    "en": "Prefers the on-device Whisper model (99 languages detected automatically, punctuation restored, fully offline). Falls back to system dictation when no model is present.",
+    "ja": "端末内の Whisper モデルを優先します（99 言語を自動判定、句読点を自動付与、完全オフライン）。モデルが無い場合はシステムの音声入力に切り替わります。",
+    "ko": "기기 내 Whisper 모델을 우선 사용합니다(99개 언어 자동 감지, 문장 부호 자동 복원, 완전 오프라인). 모델이 없으면 시스템 받아쓰기로 전환됩니다.",
+    "th": "ใช้โมเดล Whisper ในเครื่องเป็นหลัก (ตรวจ 99 ภาษาอัตโนมัติ เติมวรรคตอน ทำงานออฟไลน์ทั้งหมด) หากไม่มีโมเดลจะสลับไปใช้การพิมพ์ด้วยเสียงของระบบ",
+    "zhHans": "优先使用端侧 Whisper 模型（自动检测 99 种语言、自动标点，全程离线）。没有模型时会自动改用系统听写。",
+    "zhHant": "優先使用端側 Whisper 模型（自動偵測 99 種語言、自動標點，全程離線）。沒有模型時會自動改用系統聽寫。"
+  },
+  "hw_asr_import_file": {
+    "en": "Import an offline model (.bin) from Files",
+    "ja": "「ファイル」からオフラインモデル（.bin）を読み込む",
+    "ko": "“파일”에서 오프라인 모델(.bin) 가져오기",
+    "th": "นำเข้าโมเดลออฟไลน์ (.bin) จาก “ไฟล์”",
+    "zhHans": "从「文件」导入离线模型（.bin）",
+    "zhHant": "從「檔案」匯入離線模型（.bin）"
+  },
+  "hw_asr_model_ready_size": {
+    "en": "On-device neural model ready (574 MB)",
+    "ja": "端末内ニューラルモデル準備完了（574 MB）",
+    "ko": "기기 내 신경망 모델 준비됨(574 MB)",
+    "th": "โมเดลประสาทในเครื่องพร้อม (574 MB)",
+    "zhHans": "本机神经模型已就绪（574 MB）",
+    "zhHant": "本機神經模型已就緒（574 MB）"
+  },
+  "hw_asr_no_model": {
+    "en": "No model downloaded (uses the online service)",
+    "ja": "モデル未ダウンロード（オンラインを使用）",
+    "ko": "모델이 없습니다(온라인 서비스 사용)",
+    "th": "ยังไม่ได้ดาวน์โหลดโมเดล (ใช้บริการออนไลน์)",
+    "zhHans": "尚未下载模型（改用在线服务）",
+    "zhHant": "尚未下載模型（改用線上服務）"
+  },
+  "hw_asr_onboard": {
+    "en": "On-device neural recognition",
+    "ja": "端末内ニューラル認識",
+    "ko": "기기 내 신경망 인식",
+    "th": "การรู้จำด้วยโครงข่ายประสาทในเครื่อง",
+    "zhHans": "本机神经离线识别",
+    "zhHant": "本機神經離線辨識"
+  },
+  "hw_asr_retry_mirror": {
+    "en": "Retry with the mirror (hf-mirror)",
+    "ja": "ミラーで再試行（hf-mirror）",
+    "ko": "미러로 다시 시도(hf-mirror)",
+    "th": "ลองใหม่ด้วยมิเรอร์ (hf-mirror)",
+    "zhHans": "改用镜像来源重试（hf-mirror）",
+    "zhHant": "改用鏡像來源重試（hf-mirror）"
+  },
+  "hw_asr_retry_official": {
+    "en": "Retry the official source",
+    "ja": "公式ソースで再試行",
+    "ko": "공식 소스로 다시 시도",
+    "th": "ลองแหล่งทางการอีกครั้ง",
+    "zhHans": "重试官方来源",
+    "zhHant": "重試官方來源"
+  },
+  "hw_asr_system_ready": {
+    "en": "System dictation ready (no network needed)",
+    "ja": "システムの音声入力が利用可能（オフライン）",
+    "ko": "시스템 받아쓰기 준비됨(오프라인)",
+    "th": "การพิมพ์ด้วยเสียงของระบบพร้อม (ไม่ต้องต่อเน็ต)",
+    "zhHans": "系统听写就绪（免联网）",
+    "zhHant": "系統聽寫就緒（免連網）"
+  },
+  "hw_asr_system_settings": {
+    "en": "Open Dictation in System Settings to download the offline language pack",
+    "ja": "システム設定で「音声入力」を有効にし、オフライン言語パックをダウンロード",
+    "ko": "시스템 설정에서 “받아쓰기”를 켜고 오프라인 언어 팩을 받으세요",
+    "th": "เปิด “การพิมพ์ด้วยเสียง” ในการตั้งค่าระบบเพื่อดาวน์โหลดแพ็กภาษาออฟไลน์",
+    "zhHans": "到系统设置开启「听写」，下载离线语音包",
+    "zhHant": "到系統設定開啟「聽寫」，下載離線語音包"
+  },
+  "hw_asr_unsupported": {
+    "en": "Not supported on this device",
+    "ja": "この端末では利用できません",
+    "ko": "이 기기에서는 지원되지 않습니다",
+    "th": "อุปกรณ์นี้ไม่รองรับ",
+    "zhHans": "这台设备不支持",
+    "zhHant": "這台裝置不支援"
+  },
+  "hw_asr_whisper_ready": {
+    "en": "Whisper ready (automatic language detection)",
+    "ja": "Whisper 準備完了（言語自動判定）",
+    "ko": "Whisper 준비됨(언어 자동 감지)",
+    "th": "Whisper พร้อมใช้งาน (ตรวจภาษาอัตโนมัติ)",
+    "zhHans": "Whisper 就绪（自动检测语言）",
+    "zhHant": "Whisper 就緒（自動偵測語言）"
+  },
+  "hw_diag_a11y": {
+    "en": "System diagnostics and logs",
+    "ja": "システム診断とログ",
+    "ko": "시스템 진단 및 로그",
+    "th": "การวินิจฉัยระบบและบันทึก",
+    "zhHans": "系统诊断与日志",
+    "zhHant": "系統診斷與日誌"
+  },
+  "hw_folder_still_linked": {
+    "en": "This sync folder is still connected:",
+    "ja": "この同期フォルダはまだ接続されています：",
+    "ko": "이 동기화 폴더가 아직 연결되어 있습니다:",
+    "th": "ยังเชื่อมต่อกับโฟลเดอร์ซิงก์นี้อยู่:",
+    "zhHans": "目前仍连着这个同步文件夹：",
+    "zhHant": "目前仍連著這個同步資料夾："
+  },
+  "hw_google_still_signed_in": {
+    "en": "This Google account is still signed in:",
+    "ja": "Google アカウントは現在もサインインしています：",
+    "ko": "Google 계정이 아직 로그인되어 있습니다:",
+    "th": "บัญชี Google ยังลงชื่อเข้าใช้อยู่:",
+    "zhHans": "Google 账号目前仍是登录状态：",
+    "zhHant": "Google 帳號目前仍是登入狀態："
+  },
+  "hw_local_only_explainer": {
+    "en": "In this mode your notes, handwriting and recordings stay in this device's sandbox. Nothing is sent over the network or to any cloud.",
+    "ja": "このモードでは、ノート・手書き・録音はこの端末のサンドボックス内にのみ保存され、ネットワークやクラウドへの送信は一切行われません。",
+    "ko": "이 모드에서는 노트·필기·녹음이 이 기기의 샌드박스에만 저장되며 네트워크나 클라우드로 전송되지 않습니다.",
+    "th": "ในโหมดนี้ โน้ต ลายมือ และการบันทึกเสียงจะอยู่ในแซนด์บ็อกซ์ของอุปกรณ์นี้เท่านั้น ไม่มีการส่งผ่านเครือข่ายหรือคลาวด์",
+    "zhHans": "在这个模式下，你的笔记、手写与录音只存在这台设备的沙盒里，不会有任何网络或云端传输。",
+    "zhHant": "在這個模式下，你的筆記、手寫與錄音只存在這台裝置的沙盒裡，不會有任何網路或雲端傳輸。"
+  },
+  "hw_local_only_mode": {
+    "en": "On this device only",
+    "ja": "この端末のみ",
+    "ko": "이 기기에서만",
+    "th": "เฉพาะอุปกรณ์นี้",
+    "zhHans": "仅本机",
+    "zhHant": "僅本機"
+  },
+  "hw_local_only_sub": {
+    "en": "Stored on this device only (cloud sync is off)",
+    "ja": "この端末にのみ保存（クラウド同期はオフ）",
+    "ko": "이 기기에만 저장됨(클라우드 동기화 꺼짐)",
+    "th": "เก็บไว้ในอุปกรณ์นี้เท่านั้น (ปิดการซิงก์คลาวด์)",
+    "zhHans": "只存在这台设备（没有开启云端同步）",
+    "zhHant": "只存在這台裝置（沒有開啟雲端同步）"
+  },
+  "hw_signing_in": {
+    "en": "Signing in…",
+    "ja": "サインイン中…",
+    "ko": "로그인 중…",
+    "th": "กำลังลงชื่อเข้าใช้…",
+    "zhHans": "登录中…",
+    "zhHant": "登入中…"
+  },
+  "hw_sync_choose_service": {
+    "en": "Choose how to sync",
+    "ja": "同期方法を選択",
+    "ko": "동기화 방식 선택",
+    "th": "เลือกวิธีซิงก์",
+    "zhHans": "选择同步方式",
+    "zhHant": "選擇同步方式"
+  },
+  "hw_sync_disconnect": {
+    "en": "Disconnect",
+    "ja": "同期を解除",
+    "ko": "동기화 해제",
+    "th": "ยกเลิกการซิงก์",
+    "zhHans": "中断同步",
+    "zhHant": "中斷同步"
+  },
+  "hw_sync_gdrive_option": {
+    "en": "Google Drive (cross-platform)",
+    "ja": "Google Drive（クロスプラットフォーム）",
+    "ko": "Google Drive(플랫폼 간)",
+    "th": "Google Drive (ข้ามแพลตฟอร์ม)",
+    "zhHans": "Google Drive（跨平台）",
+    "zhHant": "Google Drive（跨平台）"
+  },
+  "hw_sync_how_it_works": {
+    "en": "How syncing works across your devices",
+    "ja": "同期の仕組みと端末間の連携",
+    "ko": "동기화 방식과 기기 간 연동",
+    "th": "การซิงก์ทำงานอย่างไรระหว่างอุปกรณ์ของคุณ",
+    "zhHans": "同步怎么运作、跨设备怎么联动",
+    "zhHant": "同步怎麼運作、跨裝置怎麼連動"
+  },
+  "hw_sync_off_option": {
+    "en": "Sync off",
+    "ja": "同期しない",
+    "ko": "동기화 끔",
+    "th": "ปิดการซิงก์",
+    "zhHans": "关闭同步",
+    "zhHant": "關閉同步"
+  },
+  "hw_sync_running_folder": {
+    "en": "iCloud / folder sync is running in the background",
+    "ja": "iCloud／フォルダ同期をバックグラウンドで実行中",
+    "ko": "iCloud/폴더 동기화가 백그라운드에서 실행 중입니다",
+    "th": "การซิงก์ iCloud / โฟลเดอร์กำลังทำงานเบื้องหลัง",
+    "zhHans": "iCloud／文件夹同步正在后台执行",
+    "zhHant": "iCloud／資料夾同步正在背景執行"
+  },
+  "hw_sync_running_gdrive": {
+    "en": "Google Drive sync is running in the background",
+    "ja": "Google Drive 同期をバックグラウンドで実行中",
+    "ko": "Google Drive 동기화가 백그라운드에서 실행 중입니다",
+    "th": "การซิงก์ Google Drive กำลังทำงานเบื้องหลัง",
+    "zhHans": "Google Drive 同步正在后台执行",
+    "zhHant": "Google Drive 同步正在背景執行"
+  },
+  "hw_sync_status": {
+    "en": "Sync status",
+    "ja": "同期の状態",
+    "ko": "동기화 상태",
+    "th": "สถานะการซิงก์",
+    "zhHans": "同步状态",
+    "zhHant": "同步狀態"
+  },
+  "hw_system": {
+    "en": "System",
+    "ja": "システム",
+    "ko": "시스템",
+    "th": "ระบบ",
+    "zhHans": "系统",
+    "zhHant": "系統"
   },
   "hwr_no_model": {
     "en": "Handwriting recognition does not support “%@”",
@@ -8607,6 +8855,22 @@
     "zhHans": "同步由你自己的云端硬盘负责（iCloud Drive、Google Drive、Dropbox…）。没有账号、没有我们的服务器。两台设备指到同一个文件夹就会互相同步。",
     "zhHant": "同步由你自己的雲端硬碟負責（iCloud Drive、Google Drive、Dropbox…）。沒有帳號、沒有我們的伺服器。兩台裝置指到同一個資料夾就會互相同步。"
   },
+  "sync_explainer_folder": {
+    "en": "Two-way sync of notes and handwriting through the iCloud or local folder you chose — nothing passes through us.",
+    "ja": "指定した iCloud またはローカルのフォルダを介してノートと手書きを双方向に同期します。当方を経由することはありません。",
+    "ko": "선택한 iCloud 또는 로컬 폴더를 통해 노트와 필기를 양방향으로 동기화합니다. 내용은 당사를 거치지 않습니다.",
+    "th": "ซิงก์โน้ตและลายมือสองทางผ่านโฟลเดอร์ iCloud หรือโฟลเดอร์ในเครื่องที่คุณเลือก โดยไม่ผ่านเรา",
+    "zhHans": "通过你指定的 iCloud 或本地文件夹双向同步笔记与手写，内容不经过我们。",
+    "zhHant": "透過你指定的 iCloud 或本機資料夾雙向同步筆記與手寫，內容不經過我們。"
+  },
+  "sync_explainer_none": {
+    "en": "Sync across platforms with Google Drive, or use an iCloud Drive folder with no account at all.",
+    "ja": "Google Drive でのクロスプラットフォーム同期、または iCloud Drive フォルダを使ったアカウント不要の同期に対応しています。",
+    "ko": "Google Drive로 플랫폼 간 동기화하거나, 계정 없이 iCloud Drive 폴더를 사용할 수 있습니다.",
+    "th": "ซิงก์ข้ามแพลตฟอร์มด้วย Google Drive หรือใช้โฟลเดอร์ iCloud Drive โดยไม่ต้องมีบัญชี",
+    "zhHans": "支持 Google Drive 跨平台同步，或 iCloud Drive 文件夹免账号同步。",
+    "zhHant": "支援 Google Drive 跨平台同步，或 iCloud Drive 資料夾免帳號同步。"
+  },
   "sync_failed": {
     "en": "Sync failed: %@",
     "ja": "同期に失敗しました：%@",
@@ -8622,6 +8886,14 @@
     "th": "ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์ iCloud Drive หรือ Google Drive เดียวกัน",
     "zhHans": "指到 iCloud Drive 或 Google Drive 的文件夹，两台设备就会互相同步",
     "zhHant": "指到 iCloud Drive 或 Google Drive 的資料夾，兩台裝置就會互相同步"
+  },
+  "sync_folder_label": {
+    "en": "iCloud / folder",
+    "ja": "iCloud／フォルダ",
+    "ko": "iCloud/폴더",
+    "th": "iCloud / โฟลเดอร์",
+    "zhHans": "iCloud／文件夹",
+    "zhHant": "iCloud／資料夾"
   },
   "sync_folder_path": {
     "en": "Folder",
@@ -8678,6 +8950,14 @@
     "th": "ยังไม่ได้เลือกโฟลเดอร์",
     "zhHans": "尚未选择文件夹",
     "zhHant": "尚未選擇資料夾"
+  },
+  "sync_not_set_up": {
+    "en": "Sync not set up yet (tap to set it up)",
+    "ja": "同期は未設定です（タップして設定）",
+    "ko": "동기화가 아직 설정되지 않았습니다(탭하여 설정)",
+    "th": "ยังไม่ได้ตั้งค่าการซิงก์ (แตะเพื่อตั้งค่า)",
+    "zhHans": "尚未设置同步（点一下设置）",
+    "zhHant": "尚未設定同步（點一下設定）"
   },
   "sync_now": {
     "en": "Sync Now",
@@ -9880,12 +10160,12 @@
     "zhHant": "操作手冊"
   },
   "user_manual_desc": {
-    "en": "Fourteen step-by-step chapters with screenshots",
-    "ja": "実機画面つきの全14章ガイド",
-    "ko": "실제 화면이 포함된 14개 장 안내",
-    "th": "คู่มือ 14 บท พร้อมภาพหน้าจอจริง",
-    "zhHans": "十四章手把手教学，含实机画面",
-    "zhHant": "十四章手把手教學，含實機畫面"
+    "en": "Step-by-step chapters, each with real screenshots",
+    "ja": "手順ごとの各章に実機のスクリーンショット付き",
+    "ko": "단계별 각 장마다 실제 화면 스크린샷 제공",
+    "th": "บทเรียนทีละขั้น พร้อมภาพหน้าจอจริงในทุกบท",
+    "zhHans": "逐步教程，每一章都配实机截图",
+    "zhHant": "逐步教學，每一章都配實機截圖"
   },
   "user_profile": {
     "en": "Profile Information",

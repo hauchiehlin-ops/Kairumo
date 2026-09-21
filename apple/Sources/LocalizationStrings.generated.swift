@@ -2287,6 +2287,14 @@ extension LocalizationManager {
             .ko: "디자이너 팔레트",
             .th: "จานสีนักออกแบบ"
         ],
+        "diagnostics": [
+            .zhHant: "診斷",
+            .en: "Diagnostics",
+            .zhHans: "诊断",
+            .ja: "診断",
+            .ko: "진단",
+            .th: "การวินิจฉัย"
+        ],
         "dimension_callout": [
             .zhHant: "工程引線標註",
             .en: "Dimension Callout",
@@ -4086,6 +4094,246 @@ extension LocalizationManager {
             .ja: "ウォームアーモンド",
             .ko: "웜 아몬드",
             .th: "อัลมอนด์อุ่น"
+        ],
+        "hw_asr_download_failed": [
+            .zhHant: "下載失敗：%@",
+            .en: "Download failed: %@",
+            .zhHans: "下载失败：%@",
+            .ja: "ダウンロードに失敗しました：%@",
+            .ko: "다운로드 실패: %@",
+            .th: "ดาวน์โหลดไม่สำเร็จ: %@"
+        ],
+        "hw_asr_download_mirror": [
+            .zhHant: "官方來源較慢時，改用鏡像下載（hf-mirror.com）",
+            .en: "If the official source is slow, download from the mirror (hf-mirror.com)",
+            .zhHans: "官方来源较慢时，改用镜像下载（hf-mirror.com）",
+            .ja: "公式が遅い場合はミラーからダウンロード（hf-mirror.com）",
+            .ko: "공식 소스가 느리면 미러에서 다운로드(hf-mirror.com)",
+            .th: "หากแหล่งทางการช้า ให้ดาวน์โหลดจากมิเรอร์ (hf-mirror.com)"
+        ],
+        "hw_asr_download_official": [
+            .zhHant: "下載 Whisper 端側模型（574 MB，官方來源）",
+            .en: "Download the on-device Whisper model (574 MB, official source)",
+            .zhHans: "下载 Whisper 端侧模型（574 MB，官方来源）",
+            .ja: "端末内 Whisper モデルをダウンロード（574 MB・公式）",
+            .ko: "기기 내 Whisper 모델 다운로드(574 MB, 공식)",
+            .th: "ดาวน์โหลดโมเดล Whisper ในเครื่อง (574 MB, แหล่งทางการ)"
+        ],
+        "hw_asr_explainer": [
+            .zhHant: "優先使用端側 Whisper 模型（自動偵測 99 種語言、自動標點，全程離線）。沒有模型時會自動改用系統聽寫。",
+            .en: "Prefers the on-device Whisper model (99 languages detected automatically, punctuation restored, fully offline). Falls back to system dictation when no model is present.",
+            .zhHans: "优先使用端侧 Whisper 模型（自动检测 99 种语言、自动标点，全程离线）。没有模型时会自动改用系统听写。",
+            .ja: "端末内の Whisper モデルを優先します（99 言語を自動判定、句読点を自動付与、完全オフライン）。モデルが無い場合はシステムの音声入力に切り替わります。",
+            .ko: "기기 내 Whisper 모델을 우선 사용합니다(99개 언어 자동 감지, 문장 부호 자동 복원, 완전 오프라인). 모델이 없으면 시스템 받아쓰기로 전환됩니다.",
+            .th: "ใช้โมเดล Whisper ในเครื่องเป็นหลัก (ตรวจ 99 ภาษาอัตโนมัติ เติมวรรคตอน ทำงานออฟไลน์ทั้งหมด) หากไม่มีโมเดลจะสลับไปใช้การพิมพ์ด้วยเสียงของระบบ"
+        ],
+        "hw_asr_import_file": [
+            .zhHant: "從「檔案」匯入離線模型（.bin）",
+            .en: "Import an offline model (.bin) from Files",
+            .zhHans: "从「文件」导入离线模型（.bin）",
+            .ja: "「ファイル」からオフラインモデル（.bin）を読み込む",
+            .ko: "“파일”에서 오프라인 모델(.bin) 가져오기",
+            .th: "นำเข้าโมเดลออฟไลน์ (.bin) จาก “ไฟล์”"
+        ],
+        "hw_asr_model_ready_size": [
+            .zhHant: "本機神經模型已就緒（574 MB）",
+            .en: "On-device neural model ready (574 MB)",
+            .zhHans: "本机神经模型已就绪（574 MB）",
+            .ja: "端末内ニューラルモデル準備完了（574 MB）",
+            .ko: "기기 내 신경망 모델 준비됨(574 MB)",
+            .th: "โมเดลประสาทในเครื่องพร้อม (574 MB)"
+        ],
+        "hw_asr_no_model": [
+            .zhHant: "尚未下載模型（改用線上服務）",
+            .en: "No model downloaded (uses the online service)",
+            .zhHans: "尚未下载模型（改用在线服务）",
+            .ja: "モデル未ダウンロード（オンラインを使用）",
+            .ko: "모델이 없습니다(온라인 서비스 사용)",
+            .th: "ยังไม่ได้ดาวน์โหลดโมเดล (ใช้บริการออนไลน์)"
+        ],
+        "hw_asr_onboard": [
+            .zhHant: "本機神經離線辨識",
+            .en: "On-device neural recognition",
+            .zhHans: "本机神经离线识别",
+            .ja: "端末内ニューラル認識",
+            .ko: "기기 내 신경망 인식",
+            .th: "การรู้จำด้วยโครงข่ายประสาทในเครื่อง"
+        ],
+        "hw_asr_retry_mirror": [
+            .zhHant: "改用鏡像來源重試（hf-mirror）",
+            .en: "Retry with the mirror (hf-mirror)",
+            .zhHans: "改用镜像来源重试（hf-mirror）",
+            .ja: "ミラーで再試行（hf-mirror）",
+            .ko: "미러로 다시 시도(hf-mirror)",
+            .th: "ลองใหม่ด้วยมิเรอร์ (hf-mirror)"
+        ],
+        "hw_asr_retry_official": [
+            .zhHant: "重試官方來源",
+            .en: "Retry the official source",
+            .zhHans: "重试官方来源",
+            .ja: "公式ソースで再試行",
+            .ko: "공식 소스로 다시 시도",
+            .th: "ลองแหล่งทางการอีกครั้ง"
+        ],
+        "hw_asr_system_ready": [
+            .zhHant: "系統聽寫就緒（免連網）",
+            .en: "System dictation ready (no network needed)",
+            .zhHans: "系统听写就绪（免联网）",
+            .ja: "システムの音声入力が利用可能（オフライン）",
+            .ko: "시스템 받아쓰기 준비됨(오프라인)",
+            .th: "การพิมพ์ด้วยเสียงของระบบพร้อม (ไม่ต้องต่อเน็ต)"
+        ],
+        "hw_asr_system_settings": [
+            .zhHant: "到系統設定開啟「聽寫」，下載離線語音包",
+            .en: "Open Dictation in System Settings to download the offline language pack",
+            .zhHans: "到系统设置开启「听写」，下载离线语音包",
+            .ja: "システム設定で「音声入力」を有効にし、オフライン言語パックをダウンロード",
+            .ko: "시스템 설정에서 “받아쓰기”를 켜고 오프라인 언어 팩을 받으세요",
+            .th: "เปิด “การพิมพ์ด้วยเสียง” ในการตั้งค่าระบบเพื่อดาวน์โหลดแพ็กภาษาออฟไลน์"
+        ],
+        "hw_asr_unsupported": [
+            .zhHant: "這台裝置不支援",
+            .en: "Not supported on this device",
+            .zhHans: "这台设备不支持",
+            .ja: "この端末では利用できません",
+            .ko: "이 기기에서는 지원되지 않습니다",
+            .th: "อุปกรณ์นี้ไม่รองรับ"
+        ],
+        "hw_asr_whisper_ready": [
+            .zhHant: "Whisper 就緒（自動偵測語言）",
+            .en: "Whisper ready (automatic language detection)",
+            .zhHans: "Whisper 就绪（自动检测语言）",
+            .ja: "Whisper 準備完了（言語自動判定）",
+            .ko: "Whisper 준비됨(언어 자동 감지)",
+            .th: "Whisper พร้อมใช้งาน (ตรวจภาษาอัตโนมัติ)"
+        ],
+        "hw_diag_a11y": [
+            .zhHant: "系統診斷與日誌",
+            .en: "System diagnostics and logs",
+            .zhHans: "系统诊断与日志",
+            .ja: "システム診断とログ",
+            .ko: "시스템 진단 및 로그",
+            .th: "การวินิจฉัยระบบและบันทึก"
+        ],
+        "hw_folder_still_linked": [
+            .zhHant: "目前仍連著這個同步資料夾：",
+            .en: "This sync folder is still connected:",
+            .zhHans: "目前仍连着这个同步文件夹：",
+            .ja: "この同期フォルダはまだ接続されています：",
+            .ko: "이 동기화 폴더가 아직 연결되어 있습니다:",
+            .th: "ยังเชื่อมต่อกับโฟลเดอร์ซิงก์นี้อยู่:"
+        ],
+        "hw_google_still_signed_in": [
+            .zhHant: "Google 帳號目前仍是登入狀態：",
+            .en: "This Google account is still signed in:",
+            .zhHans: "Google 账号目前仍是登录状态：",
+            .ja: "Google アカウントは現在もサインインしています：",
+            .ko: "Google 계정이 아직 로그인되어 있습니다:",
+            .th: "บัญชี Google ยังลงชื่อเข้าใช้อยู่:"
+        ],
+        "hw_local_only_explainer": [
+            .zhHant: "在這個模式下，你的筆記、手寫與錄音只存在這台裝置的沙盒裡，不會有任何網路或雲端傳輸。",
+            .en: "In this mode your notes, handwriting and recordings stay in this device's sandbox. Nothing is sent over the network or to any cloud.",
+            .zhHans: "在这个模式下，你的笔记、手写与录音只存在这台设备的沙盒里，不会有任何网络或云端传输。",
+            .ja: "このモードでは、ノート・手書き・録音はこの端末のサンドボックス内にのみ保存され、ネットワークやクラウドへの送信は一切行われません。",
+            .ko: "이 모드에서는 노트·필기·녹음이 이 기기의 샌드박스에만 저장되며 네트워크나 클라우드로 전송되지 않습니다.",
+            .th: "ในโหมดนี้ โน้ต ลายมือ และการบันทึกเสียงจะอยู่ในแซนด์บ็อกซ์ของอุปกรณ์นี้เท่านั้น ไม่มีการส่งผ่านเครือข่ายหรือคลาวด์"
+        ],
+        "hw_local_only_mode": [
+            .zhHant: "僅本機",
+            .en: "On this device only",
+            .zhHans: "仅本机",
+            .ja: "この端末のみ",
+            .ko: "이 기기에서만",
+            .th: "เฉพาะอุปกรณ์นี้"
+        ],
+        "hw_local_only_sub": [
+            .zhHant: "只存在這台裝置（沒有開啟雲端同步）",
+            .en: "Stored on this device only (cloud sync is off)",
+            .zhHans: "只存在这台设备（没有开启云端同步）",
+            .ja: "この端末にのみ保存（クラウド同期はオフ）",
+            .ko: "이 기기에만 저장됨(클라우드 동기화 꺼짐)",
+            .th: "เก็บไว้ในอุปกรณ์นี้เท่านั้น (ปิดการซิงก์คลาวด์)"
+        ],
+        "hw_signing_in": [
+            .zhHant: "登入中…",
+            .en: "Signing in…",
+            .zhHans: "登录中…",
+            .ja: "サインイン中…",
+            .ko: "로그인 중…",
+            .th: "กำลังลงชื่อเข้าใช้…"
+        ],
+        "hw_sync_choose_service": [
+            .zhHant: "選擇同步方式",
+            .en: "Choose how to sync",
+            .zhHans: "选择同步方式",
+            .ja: "同期方法を選択",
+            .ko: "동기화 방식 선택",
+            .th: "เลือกวิธีซิงก์"
+        ],
+        "hw_sync_disconnect": [
+            .zhHant: "中斷同步",
+            .en: "Disconnect",
+            .zhHans: "中断同步",
+            .ja: "同期を解除",
+            .ko: "동기화 해제",
+            .th: "ยกเลิกการซิงก์"
+        ],
+        "hw_sync_gdrive_option": [
+            .zhHant: "Google Drive（跨平台）",
+            .en: "Google Drive (cross-platform)",
+            .zhHans: "Google Drive（跨平台）",
+            .ja: "Google Drive（クロスプラットフォーム）",
+            .ko: "Google Drive(플랫폼 간)",
+            .th: "Google Drive (ข้ามแพลตฟอร์ม)"
+        ],
+        "hw_sync_how_it_works": [
+            .zhHant: "同步怎麼運作、跨裝置怎麼連動",
+            .en: "How syncing works across your devices",
+            .zhHans: "同步怎么运作、跨设备怎么联动",
+            .ja: "同期の仕組みと端末間の連携",
+            .ko: "동기화 방식과 기기 간 연동",
+            .th: "การซิงก์ทำงานอย่างไรระหว่างอุปกรณ์ของคุณ"
+        ],
+        "hw_sync_off_option": [
+            .zhHant: "關閉同步",
+            .en: "Sync off",
+            .zhHans: "关闭同步",
+            .ja: "同期しない",
+            .ko: "동기화 끔",
+            .th: "ปิดการซิงก์"
+        ],
+        "hw_sync_running_folder": [
+            .zhHant: "iCloud／資料夾同步正在背景執行",
+            .en: "iCloud / folder sync is running in the background",
+            .zhHans: "iCloud／文件夹同步正在后台执行",
+            .ja: "iCloud／フォルダ同期をバックグラウンドで実行中",
+            .ko: "iCloud/폴더 동기화가 백그라운드에서 실행 중입니다",
+            .th: "การซิงก์ iCloud / โฟลเดอร์กำลังทำงานเบื้องหลัง"
+        ],
+        "hw_sync_running_gdrive": [
+            .zhHant: "Google Drive 同步正在背景執行",
+            .en: "Google Drive sync is running in the background",
+            .zhHans: "Google Drive 同步正在后台执行",
+            .ja: "Google Drive 同期をバックグラウンドで実行中",
+            .ko: "Google Drive 동기화가 백그라운드에서 실행 중입니다",
+            .th: "การซิงก์ Google Drive กำลังทำงานเบื้องหลัง"
+        ],
+        "hw_sync_status": [
+            .zhHant: "同步狀態",
+            .en: "Sync status",
+            .zhHans: "同步状态",
+            .ja: "同期の状態",
+            .ko: "동기화 상태",
+            .th: "สถานะการซิงก์"
+        ],
+        "hw_system": [
+            .zhHant: "系統",
+            .en: "System",
+            .zhHans: "系统",
+            .ja: "システム",
+            .ko: "시스템",
+            .th: "ระบบ"
         ],
         "hwr_no_model": [
             .zhHant: "手寫辨識不支援「%@」",
@@ -8623,6 +8871,22 @@ extension LocalizationManager {
             .ko: "동기화는 사용자의 클라우드 드라이브(iCloud Drive, Google Drive, Dropbox 등)가 담당합니다. 계정도, 저희 서버도 없습니다. 두 기기를 같은 폴더로 지정하면 서로 동기화됩니다.",
             .th: "การซิงก์ทำโดยคลาวด์ไดรฟ์ของคุณเอง (iCloud Drive, Google Drive, Dropbox ฯลฯ) ไม่มีบัญชีและไม่มีเซิร์ฟเวอร์ของเรา ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์เดียวกันก็ซิงก์กันได้"
         ],
+        "sync_explainer_folder": [
+            .zhHant: "透過你指定的 iCloud 或本機資料夾雙向同步筆記與手寫，內容不經過我們。",
+            .en: "Two-way sync of notes and handwriting through the iCloud or local folder you chose — nothing passes through us.",
+            .zhHans: "通过你指定的 iCloud 或本地文件夹双向同步笔记与手写，内容不经过我们。",
+            .ja: "指定した iCloud またはローカルのフォルダを介してノートと手書きを双方向に同期します。当方を経由することはありません。",
+            .ko: "선택한 iCloud 또는 로컬 폴더를 통해 노트와 필기를 양방향으로 동기화합니다. 내용은 당사를 거치지 않습니다.",
+            .th: "ซิงก์โน้ตและลายมือสองทางผ่านโฟลเดอร์ iCloud หรือโฟลเดอร์ในเครื่องที่คุณเลือก โดยไม่ผ่านเรา"
+        ],
+        "sync_explainer_none": [
+            .zhHant: "支援 Google Drive 跨平台同步，或 iCloud Drive 資料夾免帳號同步。",
+            .en: "Sync across platforms with Google Drive, or use an iCloud Drive folder with no account at all.",
+            .zhHans: "支持 Google Drive 跨平台同步，或 iCloud Drive 文件夹免账号同步。",
+            .ja: "Google Drive でのクロスプラットフォーム同期、または iCloud Drive フォルダを使ったアカウント不要の同期に対応しています。",
+            .ko: "Google Drive로 플랫폼 간 동기화하거나, 계정 없이 iCloud Drive 폴더를 사용할 수 있습니다.",
+            .th: "ซิงก์ข้ามแพลตฟอร์มด้วย Google Drive หรือใช้โฟลเดอร์ iCloud Drive โดยไม่ต้องมีบัญชี"
+        ],
         "sync_failed": [
             .zhHant: "同步失敗：%@",
             .en: "Sync failed: %@",
@@ -8638,6 +8902,14 @@ extension LocalizationManager {
             .ja: "iCloud Drive や Google Drive の同じフォルダを 2 台の端末に指定",
             .ko: "두 기기를 같은 iCloud Drive 또는 Google Drive 폴더로 지정",
             .th: "ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์ iCloud Drive หรือ Google Drive เดียวกัน"
+        ],
+        "sync_folder_label": [
+            .zhHant: "iCloud／資料夾",
+            .en: "iCloud / folder",
+            .zhHans: "iCloud／文件夹",
+            .ja: "iCloud／フォルダ",
+            .ko: "iCloud/폴더",
+            .th: "iCloud / โฟลเดอร์"
         ],
         "sync_folder_path": [
             .zhHant: "資料夾路徑",
@@ -8694,6 +8966,14 @@ extension LocalizationManager {
             .ja: "フォルダ未選択",
             .ko: "폴더를 아직 선택하지 않음",
             .th: "ยังไม่ได้เลือกโฟลเดอร์"
+        ],
+        "sync_not_set_up": [
+            .zhHant: "尚未設定同步（點一下設定）",
+            .en: "Sync not set up yet (tap to set it up)",
+            .zhHans: "尚未设置同步（点一下设置）",
+            .ja: "同期は未設定です（タップして設定）",
+            .ko: "동기화가 아직 설정되지 않았습니다(탭하여 설정)",
+            .th: "ยังไม่ได้ตั้งค่าการซิงก์ (แตะเพื่อตั้งค่า)"
         ],
         "sync_now": [
             .zhHant: "立即同步",
@@ -9896,12 +10176,12 @@ extension LocalizationManager {
             .th: "คู่มือการใช้งาน"
         ],
         "user_manual_desc": [
-            .zhHant: "十四章手把手教學，含實機畫面",
-            .en: "Fourteen step-by-step chapters with screenshots",
-            .zhHans: "十四章手把手教学，含实机画面",
-            .ja: "実機画面つきの全14章ガイド",
-            .ko: "실제 화면이 포함된 14개 장 안내",
-            .th: "คู่มือ 14 บท พร้อมภาพหน้าจอจริง"
+            .zhHant: "逐步教學，每一章都配實機截圖",
+            .en: "Step-by-step chapters, each with real screenshots",
+            .zhHans: "逐步教程，每一章都配实机截图",
+            .ja: "手順ごとの各章に実機のスクリーンショット付き",
+            .ko: "단계별 각 장마다 실제 화면 스크린샷 제공",
+            .th: "บทเรียนทีละขั้น พร้อมภาพหน้าจอจริงในทุกบท"
         ],
         "user_profile": [
             .zhHant: "個人基本資訊",

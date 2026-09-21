@@ -27,6 +27,7 @@ object LocalizationStrings {
             putAll(part13())
             putAll(part14())
             putAll(part15())
+            putAll(part16())
         }
     }
 
@@ -2312,6 +2313,14 @@ object LocalizationStrings {
             "ko" to "디자이너 팔레트",
             "th" to "จานสีนักออกแบบ"
         ),
+        "diagnostics" to mapOf(
+            "zh-Hant" to "診斷",
+            "en" to "Diagnostics",
+            "zh-Hans" to "诊断",
+            "ja" to "診断",
+            "ko" to "진단",
+            "th" to "การวินิจฉัย"
+        ),
         "dimension_callout" to mapOf(
             "zh-Hant" to "工程引線標註",
             "en" to "Dimension Callout",
@@ -2591,7 +2600,10 @@ object LocalizationStrings {
             "ja" to "ルートフォルダ名を変更",
             "ko" to "최상위 폴더 이름 변경",
             "th" to "แก้ไขชื่อโฟลเดอร์ระดับบนสุด"
-        ),
+        )
+    )
+
+    private fun part4(): Map<String, Map<String, String>> = mapOf(
         "email" to mapOf(
             "zh-Hant" to "電子郵件",
             "en" to "Email",
@@ -2599,10 +2611,7 @@ object LocalizationStrings {
             "ja" to "メールアドレス",
             "ko" to "이메일",
             "th" to "อีเมล"
-        )
-    )
-
-    private fun part4(): Map<String, Map<String, String>> = mapOf(
+        ),
         "encrypt_covers_images" to mapOf(
             "zh-Hant" to "圖片",
             "en" to "Images",
@@ -3234,7 +3243,10 @@ object LocalizationStrings {
             "ja" to "長押しでメニュー",
             "ko" to "길게 눌러 메뉴",
             "th" to "กดค้างเพื่อเปิดเมนู"
-        ),
+        )
+    )
+
+    private fun part5(): Map<String, Map<String, String>> = mapOf(
         "gesture_success" to mapOf(
             "zh-Hant" to "成功驗證回饋",
             "en" to "Success feedback",
@@ -3242,10 +3254,7 @@ object LocalizationStrings {
             "ja" to "成功フィードバック",
             "ko" to "성공 피드백",
             "th" to "แจ้งผลสำเร็จ"
-        )
-    )
-
-    private fun part5(): Map<String, Map<String, String>> = mapOf(
+        ),
         "gesture_swipe" to mapOf(
             "zh-Hant" to "左右滑動切換",
             "en" to "Swipe to switch",
@@ -3877,7 +3886,10 @@ object LocalizationStrings {
             "ja" to "フォールンリーフ",
             "ko" to "낙엽색",
             "th" to "ใบไม้ร่วง"
-        ),
+        )
+    )
+
+    private fun part6(): Map<String, Map<String, String>> = mapOf(
         "hue_fir_green" to mapOf(
             "zh-Hant" to "冷杉綠",
             "en" to "Fir Green",
@@ -3885,10 +3897,7 @@ object LocalizationStrings {
             "ja" to "ファーグリーン",
             "ko" to "전나무 초록",
             "th" to "เขียวเฟอร์"
-        )
-    )
-
-    private fun part6(): Map<String, Map<String, String>> = mapOf(
+        ),
         "hue_fluoro_cyan" to mapOf(
             "zh-Hant" to "螢光青藍",
             "en" to "Fluoro Cyan",
@@ -4121,6 +4130,246 @@ object LocalizationStrings {
             "ko" to "웜 아몬드",
             "th" to "อัลมอนด์อุ่น"
         ),
+        "hw_asr_download_failed" to mapOf(
+            "zh-Hant" to "下載失敗：%@",
+            "en" to "Download failed: %@",
+            "zh-Hans" to "下载失败：%@",
+            "ja" to "ダウンロードに失敗しました：%@",
+            "ko" to "다운로드 실패: %@",
+            "th" to "ดาวน์โหลดไม่สำเร็จ: %@"
+        ),
+        "hw_asr_download_mirror" to mapOf(
+            "zh-Hant" to "官方來源較慢時，改用鏡像下載（hf-mirror.com）",
+            "en" to "If the official source is slow, download from the mirror (hf-mirror.com)",
+            "zh-Hans" to "官方来源较慢时，改用镜像下载（hf-mirror.com）",
+            "ja" to "公式が遅い場合はミラーからダウンロード（hf-mirror.com）",
+            "ko" to "공식 소스가 느리면 미러에서 다운로드(hf-mirror.com)",
+            "th" to "หากแหล่งทางการช้า ให้ดาวน์โหลดจากมิเรอร์ (hf-mirror.com)"
+        ),
+        "hw_asr_download_official" to mapOf(
+            "zh-Hant" to "下載 Whisper 端側模型（574 MB，官方來源）",
+            "en" to "Download the on-device Whisper model (574 MB, official source)",
+            "zh-Hans" to "下载 Whisper 端侧模型（574 MB，官方来源）",
+            "ja" to "端末内 Whisper モデルをダウンロード（574 MB・公式）",
+            "ko" to "기기 내 Whisper 모델 다운로드(574 MB, 공식)",
+            "th" to "ดาวน์โหลดโมเดล Whisper ในเครื่อง (574 MB, แหล่งทางการ)"
+        ),
+        "hw_asr_explainer" to mapOf(
+            "zh-Hant" to "優先使用端側 Whisper 模型（自動偵測 99 種語言、自動標點，全程離線）。沒有模型時會自動改用系統聽寫。",
+            "en" to "Prefers the on-device Whisper model (99 languages detected automatically, punctuation restored, fully offline). Falls back to system dictation when no model is present.",
+            "zh-Hans" to "优先使用端侧 Whisper 模型（自动检测 99 种语言、自动标点，全程离线）。没有模型时会自动改用系统听写。",
+            "ja" to "端末内の Whisper モデルを優先します（99 言語を自動判定、句読点を自動付与、完全オフライン）。モデルが無い場合はシステムの音声入力に切り替わります。",
+            "ko" to "기기 내 Whisper 모델을 우선 사용합니다(99개 언어 자동 감지, 문장 부호 자동 복원, 완전 오프라인). 모델이 없으면 시스템 받아쓰기로 전환됩니다.",
+            "th" to "ใช้โมเดล Whisper ในเครื่องเป็นหลัก (ตรวจ 99 ภาษาอัตโนมัติ เติมวรรคตอน ทำงานออฟไลน์ทั้งหมด) หากไม่มีโมเดลจะสลับไปใช้การพิมพ์ด้วยเสียงของระบบ"
+        ),
+        "hw_asr_import_file" to mapOf(
+            "zh-Hant" to "從「檔案」匯入離線模型（.bin）",
+            "en" to "Import an offline model (.bin) from Files",
+            "zh-Hans" to "从「文件」导入离线模型（.bin）",
+            "ja" to "「ファイル」からオフラインモデル（.bin）を読み込む",
+            "ko" to "“파일”에서 오프라인 모델(.bin) 가져오기",
+            "th" to "นำเข้าโมเดลออฟไลน์ (.bin) จาก “ไฟล์”"
+        ),
+        "hw_asr_model_ready_size" to mapOf(
+            "zh-Hant" to "本機神經模型已就緒（574 MB）",
+            "en" to "On-device neural model ready (574 MB)",
+            "zh-Hans" to "本机神经模型已就绪（574 MB）",
+            "ja" to "端末内ニューラルモデル準備完了（574 MB）",
+            "ko" to "기기 내 신경망 모델 준비됨(574 MB)",
+            "th" to "โมเดลประสาทในเครื่องพร้อม (574 MB)"
+        ),
+        "hw_asr_no_model" to mapOf(
+            "zh-Hant" to "尚未下載模型（改用線上服務）",
+            "en" to "No model downloaded (uses the online service)",
+            "zh-Hans" to "尚未下载模型（改用在线服务）",
+            "ja" to "モデル未ダウンロード（オンラインを使用）",
+            "ko" to "모델이 없습니다(온라인 서비스 사용)",
+            "th" to "ยังไม่ได้ดาวน์โหลดโมเดล (ใช้บริการออนไลน์)"
+        ),
+        "hw_asr_onboard" to mapOf(
+            "zh-Hant" to "本機神經離線辨識",
+            "en" to "On-device neural recognition",
+            "zh-Hans" to "本机神经离线识别",
+            "ja" to "端末内ニューラル認識",
+            "ko" to "기기 내 신경망 인식",
+            "th" to "การรู้จำด้วยโครงข่ายประสาทในเครื่อง"
+        ),
+        "hw_asr_retry_mirror" to mapOf(
+            "zh-Hant" to "改用鏡像來源重試（hf-mirror）",
+            "en" to "Retry with the mirror (hf-mirror)",
+            "zh-Hans" to "改用镜像来源重试（hf-mirror）",
+            "ja" to "ミラーで再試行（hf-mirror）",
+            "ko" to "미러로 다시 시도(hf-mirror)",
+            "th" to "ลองใหม่ด้วยมิเรอร์ (hf-mirror)"
+        ),
+        "hw_asr_retry_official" to mapOf(
+            "zh-Hant" to "重試官方來源",
+            "en" to "Retry the official source",
+            "zh-Hans" to "重试官方来源",
+            "ja" to "公式ソースで再試行",
+            "ko" to "공식 소스로 다시 시도",
+            "th" to "ลองแหล่งทางการอีกครั้ง"
+        ),
+        "hw_asr_system_ready" to mapOf(
+            "zh-Hant" to "系統聽寫就緒（免連網）",
+            "en" to "System dictation ready (no network needed)",
+            "zh-Hans" to "系统听写就绪（免联网）",
+            "ja" to "システムの音声入力が利用可能（オフライン）",
+            "ko" to "시스템 받아쓰기 준비됨(오프라인)",
+            "th" to "การพิมพ์ด้วยเสียงของระบบพร้อม (ไม่ต้องต่อเน็ต)"
+        ),
+        "hw_asr_system_settings" to mapOf(
+            "zh-Hant" to "到系統設定開啟「聽寫」，下載離線語音包",
+            "en" to "Open Dictation in System Settings to download the offline language pack",
+            "zh-Hans" to "到系统设置开启「听写」，下载离线语音包",
+            "ja" to "システム設定で「音声入力」を有効にし、オフライン言語パックをダウンロード",
+            "ko" to "시스템 설정에서 “받아쓰기”를 켜고 오프라인 언어 팩을 받으세요",
+            "th" to "เปิด “การพิมพ์ด้วยเสียง” ในการตั้งค่าระบบเพื่อดาวน์โหลดแพ็กภาษาออฟไลน์"
+        ),
+        "hw_asr_unsupported" to mapOf(
+            "zh-Hant" to "這台裝置不支援",
+            "en" to "Not supported on this device",
+            "zh-Hans" to "这台设备不支持",
+            "ja" to "この端末では利用できません",
+            "ko" to "이 기기에서는 지원되지 않습니다",
+            "th" to "อุปกรณ์นี้ไม่รองรับ"
+        ),
+        "hw_asr_whisper_ready" to mapOf(
+            "zh-Hant" to "Whisper 就緒（自動偵測語言）",
+            "en" to "Whisper ready (automatic language detection)",
+            "zh-Hans" to "Whisper 就绪（自动检测语言）",
+            "ja" to "Whisper 準備完了（言語自動判定）",
+            "ko" to "Whisper 준비됨(언어 자동 감지)",
+            "th" to "Whisper พร้อมใช้งาน (ตรวจภาษาอัตโนมัติ)"
+        ),
+        "hw_diag_a11y" to mapOf(
+            "zh-Hant" to "系統診斷與日誌",
+            "en" to "System diagnostics and logs",
+            "zh-Hans" to "系统诊断与日志",
+            "ja" to "システム診断とログ",
+            "ko" to "시스템 진단 및 로그",
+            "th" to "การวินิจฉัยระบบและบันทึก"
+        ),
+        "hw_folder_still_linked" to mapOf(
+            "zh-Hant" to "目前仍連著這個同步資料夾：",
+            "en" to "This sync folder is still connected:",
+            "zh-Hans" to "目前仍连着这个同步文件夹：",
+            "ja" to "この同期フォルダはまだ接続されています：",
+            "ko" to "이 동기화 폴더가 아직 연결되어 있습니다:",
+            "th" to "ยังเชื่อมต่อกับโฟลเดอร์ซิงก์นี้อยู่:"
+        ),
+        "hw_google_still_signed_in" to mapOf(
+            "zh-Hant" to "Google 帳號目前仍是登入狀態：",
+            "en" to "This Google account is still signed in:",
+            "zh-Hans" to "Google 账号目前仍是登录状态：",
+            "ja" to "Google アカウントは現在もサインインしています：",
+            "ko" to "Google 계정이 아직 로그인되어 있습니다:",
+            "th" to "บัญชี Google ยังลงชื่อเข้าใช้อยู่:"
+        ),
+        "hw_local_only_explainer" to mapOf(
+            "zh-Hant" to "在這個模式下，你的筆記、手寫與錄音只存在這台裝置的沙盒裡，不會有任何網路或雲端傳輸。",
+            "en" to "In this mode your notes, handwriting and recordings stay in this device's sandbox. Nothing is sent over the network or to any cloud.",
+            "zh-Hans" to "在这个模式下，你的笔记、手写与录音只存在这台设备的沙盒里，不会有任何网络或云端传输。",
+            "ja" to "このモードでは、ノート・手書き・録音はこの端末のサンドボックス内にのみ保存され、ネットワークやクラウドへの送信は一切行われません。",
+            "ko" to "이 모드에서는 노트·필기·녹음이 이 기기의 샌드박스에만 저장되며 네트워크나 클라우드로 전송되지 않습니다.",
+            "th" to "ในโหมดนี้ โน้ต ลายมือ และการบันทึกเสียงจะอยู่ในแซนด์บ็อกซ์ของอุปกรณ์นี้เท่านั้น ไม่มีการส่งผ่านเครือข่ายหรือคลาวด์"
+        ),
+        "hw_local_only_mode" to mapOf(
+            "zh-Hant" to "僅本機",
+            "en" to "On this device only",
+            "zh-Hans" to "仅本机",
+            "ja" to "この端末のみ",
+            "ko" to "이 기기에서만",
+            "th" to "เฉพาะอุปกรณ์นี้"
+        ),
+        "hw_local_only_sub" to mapOf(
+            "zh-Hant" to "只存在這台裝置（沒有開啟雲端同步）",
+            "en" to "Stored on this device only (cloud sync is off)",
+            "zh-Hans" to "只存在这台设备（没有开启云端同步）",
+            "ja" to "この端末にのみ保存（クラウド同期はオフ）",
+            "ko" to "이 기기에만 저장됨(클라우드 동기화 꺼짐)",
+            "th" to "เก็บไว้ในอุปกรณ์นี้เท่านั้น (ปิดการซิงก์คลาวด์)"
+        ),
+        "hw_signing_in" to mapOf(
+            "zh-Hant" to "登入中…",
+            "en" to "Signing in…",
+            "zh-Hans" to "登录中…",
+            "ja" to "サインイン中…",
+            "ko" to "로그인 중…",
+            "th" to "กำลังลงชื่อเข้าใช้…"
+        ),
+        "hw_sync_choose_service" to mapOf(
+            "zh-Hant" to "選擇同步方式",
+            "en" to "Choose how to sync",
+            "zh-Hans" to "选择同步方式",
+            "ja" to "同期方法を選択",
+            "ko" to "동기화 방식 선택",
+            "th" to "เลือกวิธีซิงก์"
+        ),
+        "hw_sync_disconnect" to mapOf(
+            "zh-Hant" to "中斷同步",
+            "en" to "Disconnect",
+            "zh-Hans" to "中断同步",
+            "ja" to "同期を解除",
+            "ko" to "동기화 해제",
+            "th" to "ยกเลิกการซิงก์"
+        ),
+        "hw_sync_gdrive_option" to mapOf(
+            "zh-Hant" to "Google Drive（跨平台）",
+            "en" to "Google Drive (cross-platform)",
+            "zh-Hans" to "Google Drive（跨平台）",
+            "ja" to "Google Drive（クロスプラットフォーム）",
+            "ko" to "Google Drive(플랫폼 간)",
+            "th" to "Google Drive (ข้ามแพลตฟอร์ม)"
+        ),
+        "hw_sync_how_it_works" to mapOf(
+            "zh-Hant" to "同步怎麼運作、跨裝置怎麼連動",
+            "en" to "How syncing works across your devices",
+            "zh-Hans" to "同步怎么运作、跨设备怎么联动",
+            "ja" to "同期の仕組みと端末間の連携",
+            "ko" to "동기화 방식과 기기 간 연동",
+            "th" to "การซิงก์ทำงานอย่างไรระหว่างอุปกรณ์ของคุณ"
+        ),
+        "hw_sync_off_option" to mapOf(
+            "zh-Hant" to "關閉同步",
+            "en" to "Sync off",
+            "zh-Hans" to "关闭同步",
+            "ja" to "同期しない",
+            "ko" to "동기화 끔",
+            "th" to "ปิดการซิงก์"
+        ),
+        "hw_sync_running_folder" to mapOf(
+            "zh-Hant" to "iCloud／資料夾同步正在背景執行",
+            "en" to "iCloud / folder sync is running in the background",
+            "zh-Hans" to "iCloud／文件夹同步正在后台执行",
+            "ja" to "iCloud／フォルダ同期をバックグラウンドで実行中",
+            "ko" to "iCloud/폴더 동기화가 백그라운드에서 실행 중입니다",
+            "th" to "การซิงก์ iCloud / โฟลเดอร์กำลังทำงานเบื้องหลัง"
+        ),
+        "hw_sync_running_gdrive" to mapOf(
+            "zh-Hant" to "Google Drive 同步正在背景執行",
+            "en" to "Google Drive sync is running in the background",
+            "zh-Hans" to "Google Drive 同步正在后台执行",
+            "ja" to "Google Drive 同期をバックグラウンドで実行中",
+            "ko" to "Google Drive 동기화가 백그라운드에서 실행 중입니다",
+            "th" to "การซิงก์ Google Drive กำลังทำงานเบื้องหลัง"
+        ),
+        "hw_sync_status" to mapOf(
+            "zh-Hant" to "同步狀態",
+            "en" to "Sync status",
+            "zh-Hans" to "同步状态",
+            "ja" to "同期の状態",
+            "ko" to "동기화 상태",
+            "th" to "สถานะการซิงก์"
+        ),
+        "hw_system" to mapOf(
+            "zh-Hant" to "系統",
+            "en" to "System",
+            "zh-Hans" to "系统",
+            "ja" to "システム",
+            "ko" to "시스템",
+            "th" to "ระบบ"
+        ),
         "hwr_no_model" to mapOf(
             "zh-Hant" to "手寫辨識不支援「%@」",
             "en" to "Handwriting recognition does not support “%@”",
@@ -4280,7 +4529,10 @@ object LocalizationStrings {
             "ja" to "読み込みました：%@",
             "ko" to "가져왔습니다: %@",
             "th" to "นำเข้าแล้ว: %@"
-        ),
+        )
+    )
+
+    private fun part7(): Map<String, Map<String, String>> = mapOf(
         "ink_clear" to mapOf(
             "zh-Hant" to "清除",
             "en" to "Clear",
@@ -4528,10 +4780,7 @@ object LocalizationStrings {
             "ja" to "枠線を維持",
             "ko" to "테두리 유지",
             "th" to "เก็บเส้นขอบ"
-        )
-    )
-
-    private fun part7(): Map<String, Map<String, String>> = mapOf(
+        ),
         "language" to mapOf(
             "zh-Hant" to "介面語系",
             "en" to "Language",
@@ -4923,7 +5172,10 @@ object LocalizationStrings {
             "ja" to "カッパー (銅)",
             "ko" to "구리 (동)",
             "th" to "ทองแดง"
-        ),
+        )
+    )
+
+    private fun part8(): Map<String, Map<String, String>> = mapOf(
         "mat_gold" to mapOf(
             "zh-Hant" to "黃金",
             "en" to "Gold",
@@ -5171,10 +5423,7 @@ object LocalizationStrings {
             "ja" to "式を入力してください",
             "ko" to "수식을 입력하세요",
             "th" to "กรุณาใส่นิพจน์"
-        )
-    )
-
-    private fun part8(): Map<String, Map<String, String>> = mapOf(
+        ),
         "math_error_not_finite" to mapOf(
             "zh-Hant" to "算不出有限的結果（可能除以零）",
             "en" to "No finite result (division by zero?)",
@@ -5566,7 +5815,10 @@ object LocalizationStrings {
             "ja" to "オブジェクト名",
             "ko" to "개체 이름",
             "th" to "ชื่อวัตถุ"
-        ),
+        )
+    )
+
+    private fun part9(): Map<String, Map<String, String>> = mapOf(
         "model_unavailable" to mapOf(
             "zh-Hant" to "尚未提供下載來源",
             "en" to "No download source yet",
@@ -5814,10 +6066,7 @@ object LocalizationStrings {
             "ja" to "録音がありません。「録音開始」で音声を録音します",
             "ko" to "녹음 파일이 없습니다. \"녹음 시작\"을 탭하여 녹음하세요.",
             "th" to "ยังไม่มีเสียงบันทึก แตะ \"เริ่มบันทึก\" เพื่อบันทึกเสียง"
-        )
-    )
-
-    private fun part9(): Map<String, Map<String, String>> = mapOf(
+        ),
         "no_search_results" to mapOf(
             "zh-Hant" to "找不到符合「%@」的筆記",
             "en" to "No notes matching \"%@\"",
@@ -6209,7 +6458,10 @@ object LocalizationStrings {
             "ja" to "A4",
             "ko" to "A4",
             "th" to "A4"
-        ),
+        )
+    )
+
+    private fun part10(): Map<String, Map<String, String>> = mapOf(
         "page_format_a4_landscape" to mapOf(
             "zh-Hant" to "A4 橫式",
             "en" to "A4 landscape",
@@ -6457,10 +6709,7 @@ object LocalizationStrings {
             "ja" to "ネオン",
             "ko" to "네온",
             "th" to "นีออน"
-        )
-    )
-
-    private fun part10(): Map<String, Map<String, String>> = mapOf(
+        ),
         "palette_pastel" to mapOf(
             "zh-Hant" to "柔和粉彩",
             "en" to "Pastel",
@@ -6852,7 +7101,10 @@ object LocalizationStrings {
             "ja" to "最近使った",
             "ko" to "최근 사용",
             "th" to "ใช้ล่าสุด"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "recognize_handwriting" to mapOf(
             "zh-Hant" to "辨識手寫",
             "en" to "Recognize Handwriting",
@@ -7100,10 +7352,7 @@ object LocalizationStrings {
             "ja" to "フォルダ名を変更",
             "ko" to "폴더 이름 변경",
             "th" to "เปลี่ยนชื่อโฟลเดอร์"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "rename_note" to mapOf(
             "zh-Hant" to "重新命名筆記",
             "en" to "Rename Notebook",
@@ -7495,7 +7744,10 @@ object LocalizationStrings {
             "ja" to "タスク|担当|期限\nミドルレンジ Android の遅延計測|チェン|9/22\nマニュアルに「録音の挿入」章を追加|ウェン|9/20\n本番署名鍵の申請|ペイ|9/19",
             "ko" to "할 일|담당|기한\n중급 안드로이드 지연 측정|치엔|9/22\n설명서 “녹음 삽입” 장 추가|원|9/20\n정식 서명 키 신청|페이|9/19",
             "th" to "สิ่งที่ต้องทำ|ผู้รับผิดชอบ|กำหนด\nวัดความหน่วงบน Android รุ่นกลาง|เชียน|22 ก.ย.\nเขียนบท “แทรกเสียงบันทึก” ในคู่มือ|เหวิน|20 ก.ย.\nขอคีย์เซ็นชื่อจริง|เผย|19 ก.ย."
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "sample_welcome_p1_body" to mapOf(
             "zh-Hant" to "這是一本可以直接改的說明筆記。\n\n• 手寫：用觸控筆、手指或滑鼠都寫得了，寫下的是原始取樣點。\n• 打字：插入文字方塊，字型、行距、對齊都調得動。\n• 錄音：錄下的聲音與筆跡在同一條時間軸上，點筆跡就跳到當時的聲音。\n\n這一頁上的每一個方塊、表格與圖形都可以搬、可以改、可以刪。試著拖一下看看。",
             "en" to "This is a help note you can edit directly.\n\n• Handwriting: pen, finger or mouse — raw sample points are what get stored.\n• Typing: insert a text box and adjust font, line spacing and alignment.\n• Recording: audio and ink share one timeline — tap a stroke to jump to that moment.\n\nEvery box, table and shape on this page can be moved, edited and deleted. Try dragging one.",
@@ -7743,10 +7995,7 @@ object LocalizationStrings {
             "ja" to "下矢印",
             "ko" to "아래쪽 화살표",
             "th" to "ลูกศรลง"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_arrowblockleft" to mapOf(
             "zh-Hant" to "左箭頭",
             "en" to "Left arrow",
@@ -8138,7 +8387,10 @@ object LocalizationStrings {
             "ja" to "太陽",
             "ko" to "해",
             "th" to "ดวงอาทิตย์"
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_teardrop" to mapOf(
             "zh-Hant" to "水滴",
             "en" to "Teardrop",
@@ -8386,10 +8638,7 @@ object LocalizationStrings {
             "ja" to "名前順で並べ替え",
             "ko" to "이름순 정렬",
             "th" to "เรียงตามชื่อ"
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "spec_dimensions" to mapOf(
             "zh-Hant" to "參考尺寸：",
             "en" to "Reference Dimensions: ",
@@ -8678,6 +8927,22 @@ object LocalizationStrings {
             "ko" to "동기화는 사용자의 클라우드 드라이브(iCloud Drive, Google Drive, Dropbox 등)가 담당합니다. 계정도, 저희 서버도 없습니다. 두 기기를 같은 폴더로 지정하면 서로 동기화됩니다.",
             "th" to "การซิงก์ทำโดยคลาวด์ไดรฟ์ของคุณเอง (iCloud Drive, Google Drive, Dropbox ฯลฯ) ไม่มีบัญชีและไม่มีเซิร์ฟเวอร์ของเรา ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์เดียวกันก็ซิงก์กันได้"
         ),
+        "sync_explainer_folder" to mapOf(
+            "zh-Hant" to "透過你指定的 iCloud 或本機資料夾雙向同步筆記與手寫，內容不經過我們。",
+            "en" to "Two-way sync of notes and handwriting through the iCloud or local folder you chose — nothing passes through us.",
+            "zh-Hans" to "通过你指定的 iCloud 或本地文件夹双向同步笔记与手写，内容不经过我们。",
+            "ja" to "指定した iCloud またはローカルのフォルダを介してノートと手書きを双方向に同期します。当方を経由することはありません。",
+            "ko" to "선택한 iCloud 또는 로컬 폴더를 통해 노트와 필기를 양방향으로 동기화합니다. 내용은 당사를 거치지 않습니다.",
+            "th" to "ซิงก์โน้ตและลายมือสองทางผ่านโฟลเดอร์ iCloud หรือโฟลเดอร์ในเครื่องที่คุณเลือก โดยไม่ผ่านเรา"
+        ),
+        "sync_explainer_none" to mapOf(
+            "zh-Hant" to "支援 Google Drive 跨平台同步，或 iCloud Drive 資料夾免帳號同步。",
+            "en" to "Sync across platforms with Google Drive, or use an iCloud Drive folder with no account at all.",
+            "zh-Hans" to "支持 Google Drive 跨平台同步，或 iCloud Drive 文件夹免账号同步。",
+            "ja" to "Google Drive でのクロスプラットフォーム同期、または iCloud Drive フォルダを使ったアカウント不要の同期に対応しています。",
+            "ko" to "Google Drive로 플랫폼 간 동기화하거나, 계정 없이 iCloud Drive 폴더를 사용할 수 있습니다.",
+            "th" to "ซิงก์ข้ามแพลตฟอร์มด้วย Google Drive หรือใช้โฟลเดอร์ iCloud Drive โดยไม่ต้องมีบัญชี"
+        ),
         "sync_failed" to mapOf(
             "zh-Hant" to "同步失敗：%@",
             "en" to "Sync failed: %@",
@@ -8693,6 +8958,14 @@ object LocalizationStrings {
             "ja" to "iCloud Drive や Google Drive の同じフォルダを 2 台の端末に指定",
             "ko" to "두 기기를 같은 iCloud Drive 또는 Google Drive 폴더로 지정",
             "th" to "ตั้งให้สองอุปกรณ์ชี้ไปยังโฟลเดอร์ iCloud Drive หรือ Google Drive เดียวกัน"
+        ),
+        "sync_folder_label" to mapOf(
+            "zh-Hant" to "iCloud／資料夾",
+            "en" to "iCloud / folder",
+            "zh-Hans" to "iCloud／文件夹",
+            "ja" to "iCloud／フォルダ",
+            "ko" to "iCloud/폴더",
+            "th" to "iCloud / โฟลเดอร์"
         ),
         "sync_folder_path" to mapOf(
             "zh-Hant" to "資料夾路徑",
@@ -8750,6 +9023,17 @@ object LocalizationStrings {
             "ko" to "폴더를 아직 선택하지 않음",
             "th" to "ยังไม่ได้เลือกโฟลเดอร์"
         ),
+        "sync_not_set_up" to mapOf(
+            "zh-Hant" to "尚未設定同步（點一下設定）",
+            "en" to "Sync not set up yet (tap to set it up)",
+            "zh-Hans" to "尚未设置同步（点一下设置）",
+            "ja" to "同期は未設定です（タップして設定）",
+            "ko" to "동기화가 아직 설정되지 않았습니다(탭하여 설정)",
+            "th" to "ยังไม่ได้ตั้งค่าการซิงก์ (แตะเพื่อตั้งค่า)"
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "sync_now" to mapOf(
             "zh-Hant" to "立即同步",
             "en" to "Sync Now",
@@ -9029,10 +9313,7 @@ object LocalizationStrings {
             "ja" to "記号",
             "ko" to "기호",
             "th" to "สัญลักษณ์"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "text_underline" to mapOf(
             "zh-Hant" to "底線",
             "en" to "Underline",
@@ -9392,7 +9673,10 @@ object LocalizationStrings {
             "ja" to "機構部品、3D製品外観、分解斜視図専用",
             "ko" to "기구 부품, 3D 제품 외관 및 분해 투시도 전용",
             "th" to "สำหรับชิ้นส่วนกลไก ผลิตภัณฑ์ 3 มิติ และภาพระเบิด"
-        ),
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
         "tmpl_kwl" to mapOf(
             "zh-Hant" to "KWL 表",
             "en" to "K-W-L Chart",
@@ -9672,10 +9956,7 @@ object LocalizationStrings {
             "ja" to "週間7列",
             "ko" to "주간 7열",
             "th" to "เจ็ดคอลัมน์รายสัปดาห์"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_weekly_columns_desc" to mapOf(
             "zh-Hant" to "週一到週日七欄，含橫線",
             "en" to "Seven day columns with ruled rows",
@@ -9957,12 +10238,12 @@ object LocalizationStrings {
             "th" to "คู่มือการใช้งาน"
         ),
         "user_manual_desc" to mapOf(
-            "zh-Hant" to "十四章手把手教學，含實機畫面",
-            "en" to "Fourteen step-by-step chapters with screenshots",
-            "zh-Hans" to "十四章手把手教学，含实机画面",
-            "ja" to "実機画面つきの全14章ガイド",
-            "ko" to "실제 화면이 포함된 14개 장 안내",
-            "th" to "คู่มือ 14 บท พร้อมภาพหน้าจอจริง"
+            "zh-Hant" to "逐步教學，每一章都配實機截圖",
+            "en" to "Step-by-step chapters, each with real screenshots",
+            "zh-Hans" to "逐步教程，每一章都配实机截图",
+            "ja" to "手順ごとの各章に実機のスクリーンショット付き",
+            "ko" to "단계별 각 장마다 실제 화면 스크린샷 제공",
+            "th" to "บทเรียนทีละขั้น พร้อมภาพหน้าจอจริงในทุกบท"
         ),
         "user_profile" to mapOf(
             "zh-Hant" to "個人基本資訊",
@@ -10035,7 +10316,10 @@ object LocalizationStrings {
             "ja" to "ボトムタブバー（5 タブ）",
             "ko" to "하단 탭 바 (5개 탭)",
             "th" to "แถบแท็บด้านล่าง (5 แท็บ)"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "word_studio" to mapOf(
             "zh-Hant" to "Word文字編修",
             "en" to "Word Text Studio",

@@ -299,11 +299,11 @@ public struct HomeWorkbenchView: View {
                         HStack(spacing: DS.Space.xxs) {
                             Image(systemName: "wrench.and.screwdriver")
                                 .font(.system(size: DS.Icon.small, weight: .medium))
-                            Text("診斷")
+                            Text(localizationManager.localized("diagnostics"))
                                 .font(.subheadline)
                         }
                     }
-                    .accessibilityLabel("系統診斷與日誌")
+                    .accessibilityLabel(localizationManager.localized("hw_diag_a11y"))
                     .help("系統診斷與日誌")
                     .accessibilityIdentifier("home.diagnostics_button")
                 }
@@ -1619,9 +1619,9 @@ public struct HomeWorkbenchView: View {
         if homeGoogleAuth.isSignedIn {
             return "Google Drive · " + (homeGoogleAuth.accountEmail ?? localizationManager.localized("signed_in"))
         } else if let folder = CloudSyncFolder.resolveFolder() {
-            return "iCloud / 資料夾 · " + folder.lastPathComponent
+            return localizationManager.localized("sync_folder_label") + " · " + folder.lastPathComponent
         } else {
-            return "尚未設定同步（點擊進入設定）"
+            return localizationManager.localized("sync_not_set_up")
         }
     }
 
@@ -1629,9 +1629,9 @@ public struct HomeWorkbenchView: View {
         if homeGoogleAuth.isSignedIn {
             return localizationManager.localized("cloud_sync_explainer")
         } else if CloudSyncFolder.resolveFolder() != nil {
-            return "透過指定的 iCloud 或本機資料夾雙向同步筆記與手繪，完全保護隱私。"
+            return localizationManager.localized("sync_explainer_folder")
         } else {
-            return "支援 Google Drive 跨平台同步，或 iCloud Drive 資料夾免帳號同步。"
+            return localizationManager.localized("sync_explainer_none")
         }
     }
 
@@ -2837,7 +2837,7 @@ extension AppDiagnosticsSheet {
                             .font(.caption)
                             .foregroundColor(.secondary)
                     } else if let folder = CloudSyncFolder.resolveFolder() {
-                        Text("iCloud / 資料夾: \(folder.lastPathComponent)")
+                        Text(localizationManager.localized("sync_folder_label") + ": \(folder.lastPathComponent)")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     } else {
@@ -2915,23 +2915,23 @@ extension AppDiagnosticsSheet {
         Section("語音轉錄與離線模型") {
             let status = transcriber.checkOfflineStatus()
             HStack {
-                Text("本機神經離線辨識")
+                Text(localizationManager.localized("hw_asr_onboard"))
                 Spacer()
                 switch status {
                 case .whisperReady:
-                    Label("Whisper 就緒 (自動語言偵測)", systemImage: "checkmark.seal.fill")
+                    Label(localizationManager.localized("hw_asr_whisper_ready"), systemImage: "checkmark.seal.fill")
                         .foregroundColor(.green)
                         .font(.footnote)
                 case .ready, .appleSpeechReady:
-                    Label("系統聽寫就緒 (免聯網)", systemImage: "checkmark.circle.fill")
+                    Label(localizationManager.localized("hw_asr_system_ready"), systemImage: "checkmark.circle.fill")
                         .foregroundColor(.green)
                         .font(.footnote)
                 case .needsDownload:
-                    Label("未下載模型 (使用線上)", systemImage: "exclamationmark.triangle.fill")
+                    Label(localizationManager.localized("hw_asr_no_model"), systemImage: "exclamationmark.triangle.fill")
                         .foregroundColor(.orange)
                         .font(.footnote)
                 case .unsupported:
-                    Label("系統不支援", systemImage: "info.circle")
+                    Label(localizationManager.localized("hw_asr_unsupported"), systemImage: "info.circle")
                         .foregroundColor(.secondary)
                         .font(.footnote)
                 }
@@ -2939,7 +2939,7 @@ extension AppDiagnosticsSheet {
 
             if transcriber.isWhisperAvailable {
                 HStack {
-                    Label("本地神經模型已就緒 (574 MB)", systemImage: "internaldrive.fill")
+                    Label(localizationManager.localized("hw_asr_model_ready_size"), systemImage: "internaldrive.fill")
                         .font(.footnote)
                         .foregroundColor(.secondary)
                     Spacer()
@@ -2973,7 +2973,7 @@ extension AppDiagnosticsSheet {
                         HStack(spacing: 4) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .foregroundColor(.red)
-                            Text("下載失敗: \(error)")
+                            Text(String(format: localizationManager.localized("hw_asr_download_failed"), error))
                                 .font(.caption)
                                 .foregroundColor(.red)
                         }
@@ -2981,13 +2981,13 @@ extension AppDiagnosticsSheet {
                             Button {
                                 transcriber.downloadWhisperModel(useMirror: false)
                             } label: {
-                                Text("重試官方來源")
+                                Text(localizationManager.localized("hw_asr_retry_official"))
                                     .font(.caption)
                             }
                             Button {
                                 transcriber.downloadWhisperModel(useMirror: true)
                             } label: {
-                                Text("使用鏡像分流重試 (hf-mirror)")
+                                Text(localizationManager.localized("hw_asr_retry_mirror"))
                                     .font(.caption)
                             }
                         }
@@ -2999,7 +2999,7 @@ extension AppDiagnosticsSheet {
                     } label: {
                         HStack {
                             Image(systemName: "arrow.down.circle.fill")
-                            Text("下載 Whisper 端側模型 (574 MB，官方來源)")
+                            Text(localizationManager.localized("hw_asr_download_official"))
                         }
                     }
                     .font(.footnote)
@@ -3009,7 +3009,7 @@ extension AppDiagnosticsSheet {
                     } label: {
                         HStack {
                             Image(systemName: "arrow.triangle.2.circlepath.circle")
-                            Text("若官方連線較慢，使用鏡像分流下載 (hf-mirror.com)")
+                            Text(localizationManager.localized("hw_asr_download_mirror"))
                         }
                     }
                     .font(.footnote)
@@ -3021,7 +3021,7 @@ extension AppDiagnosticsSheet {
                 } label: {
                     HStack {
                         Image(systemName: "folder.badge.plus")
-                        Text("從「檔案」匯入離線模型 (.bin)")
+                        Text(localizationManager.localized("hw_asr_import_file"))
                     }
                 }
                 .font(.footnote)
@@ -3039,12 +3039,12 @@ extension AppDiagnosticsSheet {
             } label: {
                 HStack {
                     Image(systemName: "gearshape")
-                    Text("前往系統設定開啟「聽寫」下載離線語音包")
+                    Text(localizationManager.localized("hw_asr_system_settings"))
                 }
             }
             .font(.footnote)
 
-            Text("優先使用端側 Whisper 神經網絡模型（支援 99 種語言自動偵測與智慧標點還原，100% 離線運算）。若尚未下載模型，將自動平滑降級為 Apple 系統聽寫服務。")
+            Text(localizationManager.localized("hw_asr_explainer"))
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
@@ -3508,13 +3508,13 @@ public struct CloudSyncDetailSheet: View {
                 VStack(alignment: .leading, spacing: DS.Space.l) {
                     // 同步服務切換分頁
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("選擇同步服務")
+                        Text(localizationManager.localized("hw_sync_choose_service"))
                             .font(DS.Font.caption)
                             .foregroundColor(.secondary)
                         Picker("", selection: $selectedProvider) {
-                            Text("Google Drive (跨平台)").tag(CloudSyncProvider.googleDrive)
-                            Text("iCloud / 資料夾").tag(CloudSyncProvider.folderOrICloud)
-                            Text("關閉同步").tag(CloudSyncProvider.disabled)
+                            Text(localizationManager.localized("hw_sync_gdrive_option")).tag(CloudSyncProvider.googleDrive)
+                            Text(localizationManager.localized("sync_folder_label")).tag(CloudSyncProvider.folderOrICloud)
+                            Text(localizationManager.localized("hw_sync_off_option")).tag(CloudSyncProvider.disabled)
                         }
                         .pickerStyle(.segmented)
                     }
@@ -3651,7 +3651,7 @@ public struct CloudSyncDetailSheet: View {
                 HStack(spacing: 6) {
                     Image(systemName: "info.circle")
                         .foregroundColor(.teal)
-                    Text("提示：iCloud / 資料夾同步正在背景執行中")
+                    Text(localizationManager.localized("hw_sync_running_folder"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -3677,7 +3677,7 @@ public struct CloudSyncDetailSheet: View {
                             HStack {
                                 ProgressView()
                                     .padding(.trailing, 6)
-                                Text("中斷同步")
+                                Text(localizationManager.localized("hw_sync_disconnect"))
                                     .fontWeight(.semibold)
                             }
                             .frame(maxWidth: .infinity)
@@ -3737,7 +3737,7 @@ public struct CloudSyncDetailSheet: View {
                             if googleAuth.isSigningIn {
                                 ProgressView()
                                     .padding(.trailing, 6)
-                                Text("登入中…")
+                                Text(localizationManager.localized("hw_signing_in"))
                                     .fontWeight(.semibold)
                             } else {
                                 Image(systemName: "arrow.up.circle.fill")
@@ -3849,7 +3849,7 @@ public struct CloudSyncDetailSheet: View {
                 HStack(spacing: 6) {
                     Image(systemName: "info.circle")
                         .foregroundColor(.indigo)
-                    Text("提示：Google Drive 同步正在背景執行中")
+                    Text(localizationManager.localized("hw_sync_running_gdrive"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -3889,7 +3889,7 @@ public struct CloudSyncDetailSheet: View {
                             HStack {
                                 ProgressView()
                                     .padding(.trailing, 6)
-                                Text("中斷同步")
+                                Text(localizationManager.localized("hw_sync_disconnect"))
                                     .fontWeight(.semibold)
                             }
                             .frame(maxWidth: .infinity)
@@ -3930,7 +3930,7 @@ public struct CloudSyncDetailSheet: View {
             }
 
             VStack(alignment: .leading, spacing: DS.Space.m) {
-                Text("功能運作與跨裝置連動說明")
+                Text(localizationManager.localized("hw_sync_how_it_works"))
                     .font(DS.Font.cardTitle)
                     .foregroundColor(.primary)
 
@@ -4042,24 +4042,24 @@ public struct CloudSyncDetailSheet: View {
                     .foregroundStyle(Color.gray)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("本機模式")
+                    Text(localizationManager.localized("hw_local_only_mode"))
                         .font(DS.Font.screenTitle)
                         .foregroundColor(.primary)
 
-                    Text("僅保存在此裝置（未啟用雲端同步）")
+                    Text(localizationManager.localized("hw_local_only_sub"))
                         .font(DS.Font.cardTitle)
                         .foregroundColor(.secondary)
                 }
             }
 
             VStack(alignment: .leading, spacing: 12) {
-                Text("在此模式下，您的所有筆記、手繪筆跡與錄音均僅存放在目前裝置的沙箱內部，完全不進行任何網路或雲端傳輸。")
+                Text(localizationManager.localized("hw_local_only_explainer"))
                     .font(DS.Font.body)
                     .foregroundColor(.secondary)
 
                 if googleAuth.isSignedIn {
                     HStack {
-                        Text("Google 帳號目前仍處於登入狀態：")
+                        Text(localizationManager.localized("hw_google_still_signed_in"))
                             .font(.footnote)
                         Spacer()
                         Button("登出 Google") {
@@ -4072,7 +4072,7 @@ public struct CloudSyncDetailSheet: View {
 
                 if CloudSyncFolder.resolveFolder() != nil {
                     HStack {
-                        Text("目前仍連結了同步資料夾：")
+                        Text(localizationManager.localized("hw_folder_still_linked"))
                             .font(.footnote)
                         Spacer()
                         Button("解除連結") {
@@ -4285,7 +4285,7 @@ public struct CloudSyncDetailSheet: View {
     private var syncDoctorSection: some View {
         let diagnostics = currentDiagnostics
         return VStack(alignment: .leading, spacing: 8) {
-            Text("同步狀態")
+            Text(localizationManager.localized("hw_sync_status"))
                 .font(DS.Font.caption)
                 .foregroundColor(.secondary)
             VStack(alignment: .leading, spacing: 6) {
@@ -4477,7 +4477,7 @@ public struct CloudSyncDetailSheet: View {
                 .foregroundColor(.teal)
                 .cornerRadius(3)
         case .general:
-            Text("系統")
+            Text(localizationManager.localized("hw_system"))
                 .font(.system(size: 9, weight: .bold))
                 .padding(.horizontal, 4)
                 .padding(.vertical, 1)
