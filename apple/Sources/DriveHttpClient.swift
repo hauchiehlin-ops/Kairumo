@@ -179,6 +179,15 @@ final class DriveHttpClient: FfiDriveHttp {
         _ = try send(request)
     }
 
+    func delete(url: String) throws {
+        guard let target = URL(string: url) else {
+            throw FfiDriveError.Backend(detail: "bad_url")
+        }
+        var request = URLRequest(url: target)
+        request.httpMethod = "DELETE"
+        _ = try send(request)
+    }
+
     // MARK: - 內部
 
     private func send(_ base: URLRequest) throws -> Data {
@@ -370,11 +379,11 @@ public enum CloudSync {
         }
         let result: FfiNotebookSyncResult
         do {
-            result = try await withTimeout(seconds: 90) { await detached.value }
+            result = try await withTimeout(seconds: 300) { await detached.value }
         } catch {
             detached.cancel()
             return FfiNotebookSyncResult(ok: false, uploaded: 0, downloaded: 0,
-                error: "下載逾時（超過 90 秒）", needsReauth: false)
+                error: "下載逾時（超過 300 秒）", needsReauth: false)
         }
 
         if result.needsReauth {

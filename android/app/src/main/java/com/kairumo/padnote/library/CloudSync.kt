@@ -229,8 +229,8 @@ object CloudSync {
             }
         }
 
-        // 背景並行佇列：分批（最多 4 路並發）執行
-        val concurrencyLimit = 4
+        // 背景並行佇列：分批（2 路並發，兼顧速度與連線穩定度）執行
+        val concurrencyLimit = 2
         var backgroundQueue = background
         while (backgroundQueue.isNotEmpty()) {
             val batch = backgroundQueue.take(concurrencyLimit)
@@ -248,15 +248,17 @@ object CloudSync {
 
             var shouldBreak = false
             for ((id, res, err) in batchResults) {
-                if (res != null && res.ok) {
+                if (err != null) {
+                    SyncLogger.log("筆記本 $id 背景同步失敗：$err", SyncSource.GOOGLE_DRIVE)
+                }
+                if (res != null) {
                     uploaded += res.uploaded.toInt()
                     downloaded += res.downloaded.toInt()
                     if (res.downloaded > 0u) changed += id
-                } else if (err != null) {
-                    SyncLogger.log("筆記本 $id 背景同步失敗：$err", SyncSource.GOOGLE_DRIVE)
-                    if (res?.needsReauth == true) {
+                    if (res.needsReauth) {
                         GoogleAuth.signOutLocally(context)
                         shouldBreak = true
+                        break
                     }
                 }
             }
@@ -303,6 +305,7 @@ object CloudSync {
             // 權杖每一本都重新取一次：整批抓下來可能跨過存取權杖的有效期，
             // 用同一個舊的會在中途開始 401。
             val token = GoogleAuth.validAccessToken(context) ?: break
+            SyncLogger.log("發現新筆記「${item.title}」(${item.id})，開始自雲端下載...", SyncSource.GOOGLE_DRIVE)
             val result = uniffi.padnote_core.gdriveCloneNotebook(
                 DriveHttpClient(token),
                 path.absolutePath,
@@ -312,7 +315,9 @@ object CloudSync {
             )
             if (result.ok) {
                 pulled += item.id
+                SyncLogger.log("筆記本「${item.title}」成功自雲端下載完成", SyncSource.GOOGLE_DRIVE)
             } else {
+                SyncLogger.log("筆記本「${item.title}」自雲端下載失敗：${result.error}", SyncSource.GOOGLE_DRIVE)
                 // 抓失敗時把空殼刪掉。留著的話，下一輪 `path.exists()` 為真，
                 // 這本就再也不會被重抓 —— 使用者會看到一本永遠打不開的空筆記。
                 path.deleteRecursively()

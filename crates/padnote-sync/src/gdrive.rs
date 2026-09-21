@@ -46,6 +46,7 @@ pub trait DriveHttp: Send + Sync + Debug {
     fn get_bytes(&self, url: &str, range: Option<Range<u64>>) -> Result<Vec<u8>, SyncError>;
     fn post_json(&self, url: &str, body: &Value) -> Result<Value, SyncError>;
     fn patch_bytes(&self, url: &str, data: &[u8]) -> Result<(), SyncError>;
+    fn delete(&self, url: &str) -> Result<(), SyncError>;
 
     /// 開一個可續傳上傳的工作階段，回傳工作階段 URI。
     ///
@@ -208,9 +209,30 @@ impl<H: DriveHttp> GDriveProvider<H> {
         self.http
             .get_bytes(&format!("{FILES_URL}/{file_id}?alt=media"), None)
     }
+
+    /// 刪除雲端檔案。
+    pub fn delete(&self, path: &str) -> Result<(), SyncError> {
+        let file_id = match self.find_file_id(path) {
+            Ok(id) => id,
+            Err(SyncError::NotFound(_)) => return Ok(()),
+            Err(e) => return Err(e),
+        };
+        self.delete_by_id(&file_id)?;
+        self.id_cache.lock().unwrap().remove(path);
+        Ok(())
+    }
+
+    /// 依 file_id 刪除雲端檔案。
+    pub fn delete_by_id(&self, file_id: &str) -> Result<(), SyncError> {
+        let url = format!("{FILES_URL}/{file_id}");
+        self.http.delete(&url)
+    }
 }
 
 impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
+    fn delete(&self, path: &str) -> Result<(), SyncError> {
+        GDriveProvider::delete(self, path)
+    }
     fn list(&self, prefix: &str) -> Result<Vec<RemoteEntry>, SyncError> {
         let pages = self.list_all(&list_query(prefix), "id, name, size")?;
 
@@ -428,6 +450,19 @@ impl DriveHttp for ReqwestDriveHttp {
         }
         Ok(())
     }
+
+    fn delete(&self, url: &str) -> Result<(), SyncError> {
+        let resp = self
+            .client
+            .delete(url)
+            .header(reqwest::header::AUTHORIZATION, self.bearer())
+            .send()
+            .map_err(|e| SyncError::Backend(e.to_string()))?;
+        if !resp.status().is_success() && resp.status().as_u16() != 404 {
+            return Err(Self::status_error(resp.status(), url));
+        }
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -545,6 +580,18 @@ mod tests {
                 .lock()
                 .unwrap()
                 .push((url.to_string(), data.to_vec()));
+            Ok(())
+        }
+
+        fn delete(&self, url: &str) -> Result<(), SyncError> {
+            if let Some(id_str) = url.split("files/id-").nth(1)
+                && let Ok(idx) = id_str.split('?').next().unwrap_or("").parse::<usize>()
+            {
+                let mut files = self.files.lock().unwrap();
+                if idx < files.len() {
+                    files[idx].1.clear();
+                }
+            }
             Ok(())
         }
 
@@ -723,5 +770,16 @@ mod tests {
             drive.get_range("settings/global.json", 0..3).unwrap(),
             b"new"
         );
+    }
+
+    #[test]
+    fn delete_removes_file_from_drive() {
+        let drive = GDriveProvider::new(FakeDrive::with(
+            &[("notebooks/nb1/doc/ops/0001-dev.oplog", b"test-op")],
+            100,
+        ));
+        assert!(drive.delete("notebooks/nb1/doc/ops/0001-dev.oplog").is_ok());
+        // 刪除後快取被清除
+        assert!(drive.id_cache.lock().unwrap().is_empty());
     }
 }

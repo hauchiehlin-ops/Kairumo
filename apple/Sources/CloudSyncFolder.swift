@@ -201,11 +201,11 @@ enum CloudSyncFolder {
         let src = source.appendingPathComponent(relative)
         let dst = destination.appendingPathComponent(relative)
 
-        // 若來源尚未自 iCloud 下載，觸發下載並短暫等待
+        // 若來源尚未自 iCloud 下載，觸發下載並等待檔案就緒
         let placeholder = src.deletingLastPathComponent().appendingPathComponent(".\(src.lastPathComponent).icloud")
         if fm.fileExists(atPath: placeholder.path) && !fm.fileExists(atPath: src.path) {
             try? fm.startDownloadingUbiquitousItem(at: src)
-            for _ in 0..<6 {
+            for _ in 0..<15 {
                 if fm.fileExists(atPath: src.path) { break }
                 Thread.sleep(forTimeInterval: 0.2)
             }

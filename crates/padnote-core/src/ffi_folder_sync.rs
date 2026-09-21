@@ -50,6 +50,27 @@ pub fn plan_folder_sync(local: Vec<SyncFileEntry>, remote: Vec<SyncFileEntry>) -
     let local_map: HashMap<&str, u64> = local.iter().map(|e| (e.path.as_str(), e.size)).collect();
     let remote_map: HashMap<&str, u64> = remote.iter().map(|e| (e.path.as_str(), e.size)).collect();
 
+    // 計算本機各裝置的最大 lamport。若本機已存在該裝置更大或相同 lamport 的檔（例如已壓實），
+    // 遠端較舊的碎檔（小於最大 lamport）就無需下載，因為其操作已完整包含在本機壓實檔中。
+    let mut local_max_lamport_by_device: HashMap<String, u64> = HashMap::new();
+    for entry in &local {
+        if let Some(file_name) = entry.path.rsplit('/').next()
+            && file_name.ends_with(".oplog")
+            && let Some(pos) = file_name.rfind('-')
+        {
+            let dev_suffix = &file_name[pos..];
+            let lamport_hex = &file_name[..pos];
+            if let Ok(l) = u64::from_str_radix(lamport_hex, 16) {
+                let e = local_max_lamport_by_device
+                    .entry(dev_suffix.to_string())
+                    .or_insert(0);
+                if l > *e {
+                    *e = l;
+                }
+            }
+        }
+    }
+
     let mut plan = SyncPlan {
         upload: Vec::new(),
         download: Vec::new(),
@@ -75,6 +96,20 @@ pub fn plan_folder_sync(local: Vec<SyncFileEntry>, remote: Vec<SyncFileEntry>) -
 
     for entry in &remote {
         if !local_map.contains_key(entry.path.as_str()) {
+            if let Some(file_name) = entry.path.rsplit('/').next()
+                && file_name.ends_with(".oplog")
+                && let Some(pos) = file_name.rfind('-')
+            {
+                let dev_suffix = &file_name[pos..];
+                let lamport_hex = &file_name[..pos];
+                if let Ok(l) = u64::from_str_radix(lamport_hex, 16)
+                    && let Some(&max_l) = local_max_lamport_by_device.get(dev_suffix)
+                    && l < max_l
+                {
+                    // 該舊碎檔已包含在本機壓實檔中，無需重新拉取
+                    continue;
+                }
+            }
             plan.download.push(entry.path.clone());
         }
     }
@@ -178,5 +213,22 @@ mod tests {
         );
         assert_eq!(plan.download.len(), 2);
         assert!(plan.upload.is_empty());
+    }
+
+    #[test]
+    fn shadowed_oplogs_are_not_downloaded() {
+        // 本機已有 0010 壓實檔，遠端的 0001~0009 舊碎檔不應被拉回
+        let local = vec![e("doc/ops/0000000000000010-00000001.oplog", 1000)];
+        let remote = vec![
+            e("doc/ops/0000000000000005-00000001.oplog", 100),
+            e("doc/ops/0000000000000010-00000001.oplog", 1000),
+            e("doc/ops/0000000000000015-00000001.oplog", 1500),
+        ];
+        let plan = plan_folder_sync(local, remote);
+        // 0005 被跳過，只拉取更新的 0015
+        assert_eq!(
+            plan.download,
+            vec!["doc/ops/0000000000000015-00000001.oplog"]
+        );
     }
 }

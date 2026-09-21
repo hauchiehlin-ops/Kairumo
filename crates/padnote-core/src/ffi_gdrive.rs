@@ -75,6 +75,8 @@ pub trait FfiDriveHttp: Send + Sync {
     fn post_json(&self, url: String, body_json: String) -> Result<String, FfiDriveError>;
     /// PATCH 原始位元組（上傳檔案內容，**小檔用**）。
     fn patch_bytes(&self, url: String, data: Vec<u8>) -> Result<(), FfiDriveError>;
+    /// DELETE 雲端檔案。
+    fn delete(&self, url: String) -> Result<(), FfiDriveError>;
 
     /// 開一個可續傳上傳的工作階段，回傳工作階段 URI。
     ///
@@ -181,6 +183,10 @@ impl DriveHttp for ForeignHttp {
 
     fn patch_bytes(&self, url: &str, data: &[u8]) -> Result<(), SyncError> {
         Ok(self.0.patch_bytes(url.to_string(), data.to_vec())?)
+    }
+
+    fn delete(&self, url: &str) -> Result<(), SyncError> {
+        Ok(self.0.delete(url.to_string())?)
     }
 
     fn start_resumable(&self, url: &str, body: &serde_json::Value) -> Result<String, SyncError> {
@@ -378,6 +384,20 @@ pub fn gdrive_sync_notebook(
         }
     }
 
+    // 清理雲端已被本機壓實檔完整涵蓋的舊碎檔（避免雲端無限積累歷史碎檔導致下載幾百個檔案逾時）
+    for name in remote_by_name.keys() {
+        if let Some(pos) = name.rfind('-') {
+            let dev_suffix = &name[pos..];
+            let lamport_hex = &name[..pos];
+            if let Ok(l) = u64::from_str_radix(lamport_hex, 16)
+                && let Some(&max_l) = local_max_lamport_by_device.get(dev_suffix)
+                && l < max_l
+            {
+                let _ = drive.delete(&format!("{prefix}/{name}"));
+            }
+        }
+    }
+
     // 上傳：雲端沒有的，或者本機這一份比較長的。
     //
     // 比長度而不是只看「有沒有」：`append_doc_ops` 在同一個 lamport 上是
@@ -413,7 +433,7 @@ pub fn gdrive_sync_notebook(
         if *remote_size <= local_size {
             continue;
         }
-        // 若雲端檔的 lamport 嚴格小於本機已存在的該裝置最大 lamport，代表此碎檔已在壓實檔中，跳過下載
+        // 若雲端檔的 lamport 嚴格小於本機已存在的該裝置最大 lamport，代表此碎檔已在壓實檔中，跳過下載並清理雲端舊檔
         if let Some(pos) = name.rfind('-') {
             let dev_suffix = &name[pos..];
             let lamport_hex = &name[..pos];
@@ -422,6 +442,7 @@ pub fn gdrive_sync_notebook(
                 .zip(local_max_lamport_by_device.get(dev_suffix).copied())
                 .is_some_and(|(l, max_l)| l < max_l);
             if is_shadowed {
+                let _ = drive.delete(&format!("{prefix}/{name}"));
                 continue;
             }
         }
@@ -437,9 +458,39 @@ pub fn gdrive_sync_notebook(
         downloaded += 1;
     }
 
-    // 若下載了新的碎檔，同步完成前再次壓實，保持套件精簡
+    // 若下載了新的碎檔，同步完成前再次壓實，保持套件精簡，並清理雲端已被壓實涵蓋的舊碎檔
     if downloaded > 0 {
         let _ = package.compact_doc_ops(5);
+        if let Ok(post_local) = package.doc_op_files() {
+            let mut post_max_lamport_by_device: std::collections::HashMap<String, u64> =
+                std::collections::HashMap::new();
+            for (name, _) in &post_local {
+                if let Some(pos) = name.rfind('-') {
+                    let dev_suffix = &name[pos..];
+                    let lamport_hex = &name[..pos];
+                    if let Ok(l) = u64::from_str_radix(lamport_hex, 16) {
+                        let entry = post_max_lamport_by_device
+                            .entry(dev_suffix.to_string())
+                            .or_insert(0);
+                        if l > *entry {
+                            *entry = l;
+                        }
+                    }
+                }
+            }
+            for name in remote_by_name.keys() {
+                if let Some(pos) = name.rfind('-') {
+                    let dev_suffix = &name[pos..];
+                    let lamport_hex = &name[..pos];
+                    if let Ok(l) = u64::from_str_radix(lamport_hex, 16)
+                        && let Some(&max_l) = post_max_lamport_by_device.get(dev_suffix)
+                        && l < max_l
+                    {
+                        let _ = drive.delete(&format!("{prefix}/{name}"));
+                    }
+                }
+            }
+        }
     }
 
     FfiNotebookSyncResult {
@@ -736,6 +787,9 @@ mod tests {
                 .iter()
                 .enumerate()
                 .filter(|(_, (name, _))| {
+                    if name.is_empty() {
+                        return false;
+                    }
                     if let Some(rest) = q.split("name = '").nth(1) {
                         name == rest.trim_end_matches('\'')
                     } else if let Some(rest) = q.split("name contains '").nth(1) {
@@ -783,6 +837,21 @@ mod tests {
 
         fn patch_bytes(&self, url: String, data: Vec<u8>) -> Result<(), FfiDriveError> {
             self.write_at(&url, data)
+        }
+
+        fn delete(&self, url: String) -> Result<(), FfiDriveError> {
+            let index: usize = url
+                .split("files/id-")
+                .nth(1)
+                .and_then(|s| s.split('?').next())
+                .and_then(|s| s.parse().ok())
+                .ok_or(FfiDriveError::NotFound { path: url.clone() })?;
+            let mut files = self.files.lock().unwrap();
+            if let Some(slot) = files.get_mut(index) {
+                slot.0.clear();
+                slot.1.clear();
+            }
+            Ok(())
         }
 
         fn start_resumable(&self, url: String, _body: String) -> Result<String, FfiDriveError> {

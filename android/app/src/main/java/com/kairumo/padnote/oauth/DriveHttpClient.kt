@@ -62,6 +62,10 @@ class DriveHttpClient(
         bytes(Request.Builder().url(url).patch(data.toRequestBody(OCTET_STREAM)))
     }
 
+    override fun delete(url: String) {
+        bytes(Request.Builder().url(url).delete())
+    }
+
     /**
      * 開一個可續傳上傳的工作階段。
      *
@@ -74,11 +78,7 @@ class DriveHttpClient(
             .post(bodyJson.toRequestBody(JSON))
             .header("Authorization", "Bearer $accessToken")
             .build()
-        val response = try {
-            http.newCall(request).execute()
-        } catch (t: Throwable) {
-            throw FfiDriveException.Backend(t.message ?: "network_error")
-        }
+        val response = executeWithRetry(request)
         response.use {
             if (!it.isSuccessful) {
                 throw classify(it.code, request.url.encodedPath, it.body?.string() ?: "")
@@ -97,14 +97,38 @@ class DriveHttpClient(
     private fun text(builder: Request.Builder): String =
         String(bytes(builder), Charsets.UTF_8)
 
+    private fun executeWithRetry(request: Request, maxRetries: Int = 3): okhttp3.Response {
+        var attempt = 0
+        var lastException: Throwable? = null
+        while (attempt < maxRetries) {
+            try {
+                val response = http.newCall(request).execute()
+                // 伺服器回 429 (Too Many Requests) 或 5xx (Server Error) 退避重試
+                if (response.code == 429 || response.code >= 500) {
+                    response.close()
+                    attempt++
+                    if (attempt < maxRetries) {
+                        Thread.sleep((500L * (1 shl (attempt - 1))).coerceAtMost(3000L))
+                        continue
+                    }
+                }
+                return response
+            } catch (e: java.io.IOException) {
+                lastException = e
+                attempt++
+                if (attempt < maxRetries) {
+                    Thread.sleep((500L * (1 shl (attempt - 1))).coerceAtMost(3000L))
+                }
+            } catch (t: Throwable) {
+                throw FfiDriveException.Backend(t.message ?: "network_error")
+            }
+        }
+        throw FfiDriveException.Backend(lastException?.message ?: "network_error")
+    }
+
     private fun bytes(builder: Request.Builder): ByteArray {
         val request = builder.header("Authorization", "Bearer $accessToken").build()
-        val response = try {
-            http.newCall(request).execute()
-        } catch (t: Throwable) {
-            // 連不上：網路問題，重試會好。
-            throw FfiDriveException.Backend(t.message ?: "network_error")
-        }
+        val response = executeWithRetry(request)
         response.use {
             val body = it.body?.bytes() ?: ByteArray(0)
             if (it.isSuccessful) return body
@@ -123,6 +147,11 @@ class DriveHttpClient(
         private val OCTET_STREAM = "application/octet-stream".toMediaType()
 
         /** 共用連線池。每次同步都開一個 client 會白白重建 TLS 連線。 */
-        private val shared = OkHttpClient()
+        private val shared = OkHttpClient.Builder()
+            .connectTimeout(30, java.util.concurrent.TimeUnit.SECONDS)
+            .readTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .writeTimeout(60, java.util.concurrent.TimeUnit.SECONDS)
+            .retryOnConnectionFailure(true)
+            .build()
     }
 }

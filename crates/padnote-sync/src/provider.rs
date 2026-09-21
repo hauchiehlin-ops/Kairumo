@@ -58,6 +58,11 @@ pub trait CloudProvider: Send + Sync + Debug {
 
     fn put(&self, path: &str, data: &[u8]) -> Result<(), SyncError>;
 
+    /// 刪除雲端檔案。預設為空實作。
+    fn delete(&self, _path: &str) -> Result<(), SyncError> {
+        Ok(())
+    }
+
     /// Google Drive 無 append API ⇒ 回傳 `false`，由上層退化為分塊檔策略
     /// （`format-spec.md` §7.2）。
     fn supports_native_append(&self) -> bool;
