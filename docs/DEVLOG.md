@@ -68,6 +68,10 @@
 - 核心 `sync_diagnose()`（零 HTTP、不需權杖 —— 診斷畫面在網路不通時最需要），
   兩平台各一張「同步狀態」卡：游標建立了沒、快照追蹤幾個檔、哪幾本還有差異。
 - 日誌答得出「發生過什麼」，答不出「現在是什麼狀態」，而後者才是下一步的依據。
+- 一致性測試 `crates/padnote-core/tests/sync_conformance.rs`：一個**會鬧脾氣**
+  的假 Drive（同名重複檔、垃圾桶、5 MB 單次上傳上限、游標過期），
+  用固定種子的隨機操作序列跑兩台裝置，斷言收斂。
+  單元測試釘的是單一行為，這裡釘的是「湊在一起還對不對」。
 
 ### 六、順手修掉的既有建置破損
 
@@ -78,7 +82,7 @@
 改走新增的 `AccountSyncStore.indexJSONSnapshot()`。
 
 ### 驗證
-- Rust：`cargo test --workspace` 全過；`RUSTFLAGS="-D warnings" cargo clippy
+- Rust：`cargo test --workspace` 1342 條全過；`RUSTFLAGS="-D warnings" cargo clippy
   --workspace --all-targets` 乾淨。
 - Apple：374 個單元測試全過（UI 測試有兩條既有的版面失敗，與同步無關）。
 - Android：`:app:compileDebugKotlin` 通過。
