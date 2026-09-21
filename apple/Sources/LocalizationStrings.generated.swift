@@ -2591,6 +2591,14 @@ extension LocalizationManager {
             .ko: "암호화됨",
             .th: "เข้ารหัสแล้ว"
         ],
+        "encrypt_local_copy_warning": [
+            .zhHant: "在這台裝置上，工作副本仍以明文存放。目前加密保護的是會同步到你雲端的筆記本套件。",
+            .en: "On this device, the working copy is still stored unencrypted. Encryption currently protects the notebook package — the copy that syncs to your cloud.",
+            .zhHans: "在这台设备上，工作副本仍以明文存放。目前加密保护的是会同步到你云端的笔记本套件。",
+            .ja: "この端末では作業用コピーは暗号化されていません。暗号化が保護するのは、クラウドに同期されるノートパッケージです。",
+            .ko: "이 기기의 작업 사본은 아직 암호화되지 않습니다. 현재 암호화는 클라우드로 동기화되는 노트 패키지를 보호합니다.",
+            .th: "บนอุปกรณ์นี้ สำเนาที่ใช้งานยังไม่ถูกเข้ารหัส การเข้ารหัสปกป้องแพ็กเกจที่ซิงก์ไปยังคลาวด์"
+        ],
         "encrypt_not_recordings": [
             .zhHant: "錄音尚未加密",
             .en: "Recordings are NOT encrypted yet",

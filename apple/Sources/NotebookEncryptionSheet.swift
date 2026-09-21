@@ -99,6 +99,19 @@ struct NotebookEncryptionSheet: View {
                           systemImage: "exclamationmark.triangle.fill")
                         .foregroundColor(.orange)
                 }
+                // **Apple 端的工作副本在套件外面。**
+                //
+                // `notebooks_v1.json` 與 `Drawings/*.drawing` 住在 Documents，
+                // 而加密保護的是 `.padnote` 套件 —— 也就是**同步出去的那一份**。
+                // 不講的話，使用者會以為這台裝置上的檔案也加密了。
+                //
+                // 要真的涵蓋本機副本，Apple 的儲存模型得搬進套件裡；
+                // 那是一件大事，見 docs/TODO.md 的 H-CRYPTO-2。
+                Label(localizationManager.localized("encrypt_local_copy_warning"),
+                      systemImage: "exclamationmark.triangle.fill")
+                    .font(.caption)
+                    .foregroundColor(.orange)
+
                 Text(localizationManager.localized("encrypt_only_new"))
                     .font(.caption)
                     .foregroundColor(.secondary)
