@@ -76,6 +76,14 @@ fun NewNotebookDialog(
      */
     recentTemplates: List<DocumentTemplateCatalog.Template> = emptyList(),
     onDismiss: () -> Unit,
+    /**
+     * 改走「建立加密筆記本」那條路。
+     *
+     * 加密不是這張表單裡的一個開關：它有三步而且不能跳
+     * （設密碼 → 抄復原碼 → 把復原碼輸回來），塞成開關會讓人以為
+     * 那是可以之後再說的選項，而復原碼沒有「之後再說」。
+     */
+    onCreateEncrypted: () -> Unit = {},
     onConfirm: (
         title: String,
         templateId: String?,
@@ -121,10 +129,17 @@ fun NewNotebookDialog(
             ) { Text(l("confirm")) }
         },
         dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                modifier = Modifier.testTag("new_notebook.cancel")
-            ) { Text(l("cancel")) }
+            androidx.compose.foundation.layout.Row {
+                // 加密走另一條路 —— 見 `onCreateEncrypted` 的說明。
+                TextButton(
+                    onClick = onCreateEncrypted,
+                    modifier = Modifier.testTag("new_notebook.encrypted")
+                ) { Text("🔒 " + l("encrypt_notebook")) }
+                TextButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.testTag("new_notebook.cancel")
+                ) { Text(l("cancel")) }
+            }
         },
         text = {
             Column {

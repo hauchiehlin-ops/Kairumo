@@ -360,6 +360,9 @@ private fun NotebookHome(
     var sort by remember { mutableStateOf(NotebookLibrary.Sort.MODIFIED) }
     var revision by remember { mutableIntStateOf(0) }
     var creatingNotebook by remember { mutableStateOf(false) }
+    /// 建立**加密**筆記本的流程（H-CRYPTO）。與一般新增分開：
+    /// 它有三步而且不能跳（設密碼 → 抄復原碼 → 把復原碼輸回來）。
+    var creatingEncryptedNotebook by remember { mutableStateOf(false) }
     // 換介面語系。原本只有編輯器的「⋯」裡有，使用者得先開一本筆記才找得到。
     var homeLanguagePicker by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
@@ -1136,6 +1139,21 @@ private fun NotebookHome(
         )
     }
 
+    if (creatingEncryptedNotebook) {
+        com.kairumo.padnote.crypto.EncryptedNotebookDialog(
+            l = ::l,
+            onDismiss = { creatingEncryptedNotebook = false },
+            onCreated = { id, title ->
+                // 套件已經由核心建好了（含加密），這裡只補上索引那一筆。
+                com.kairumo.padnote.library.AccountSyncStore.record(
+                    activity, id = id,
+                    title = title.ifBlank { l("new_note") }, parentId = null
+                )
+                revision++
+            }
+        )
+    }
+
     if (creatingNotebook) {
         NewNotebookDialog(
             // **只列文件範本。** 紙張樣板那個主題掛在上面的紙張清單底下，
@@ -1150,6 +1168,13 @@ private fun NotebookHome(
                         ?: DocumentTemplateCatalog.paperTemplate(activity, id)
                 },
             onDismiss = { creatingNotebook = false },
+            // 加密是**另一條路**，不是這張表單裡的一個開關 ——
+            // 塞成開關會讓人以為那是可以之後再說的選項，
+            // 而復原碼沒有「之後再說」。
+            onCreateEncrypted = {
+                creatingNotebook = false
+                creatingEncryptedNotebook = true
+            },
             onConfirm = { title, templateId, kind, paperId, paperVariant, paletteId ->
                 creatingNotebook = false
                 // 建在使用者當下看著的那一層 —— 一律建在最上層的話，
