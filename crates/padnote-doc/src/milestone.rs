@@ -212,6 +212,9 @@ pub fn resolve(entries: Vec<OpEntry>) -> Resolved {
         if matches!(e.op, DocOp::RestoreMilestone { .. }) {
             continue; // 還原本身不是狀態變更，效果已經體現在過濾上
         }
+        if matches!(e.op, DocOp::BatchOrigin { .. }) {
+            continue; // 只是座標標記，`padnote-storage` 讀的時候就用掉了
+        }
         if suppressions
             .iter()
             .any(|s| s.hides_doc(e.lamport, e.device))

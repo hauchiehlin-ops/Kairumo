@@ -271,7 +271,12 @@ impl NotebookSession {
                 style,
                 created_at,
             } => {
-                self.texts.insert(*id, TextCrdt::new());
+                // **只在第一次見到時建 CRDT。** 重設的話，先前套用的
+                // `TextEdit` 全部作廢 —— 使用者看到的是一個空白的文字方塊，
+                // 而內容其實還在 oplog 裡。
+                if !self.block_exists(*id) {
+                    self.texts.insert(*id, TextCrdt::new());
+                }
                 self.add_block_to_page(
                     *page,
                     Block {
@@ -575,6 +580,10 @@ impl NotebookSession {
             // （被遮蔽的操作根本不會走到這裡）。
             DocOp::MarkMilestone { .. } | DocOp::RestoreMilestone { .. } => {}
 
+            // 批次座標標記，不是狀態變更。`padnote-storage` 在讀的時候就
+            // 用掉了，這裡只會在同步直接餵進 `apply_remote` 時看到。
+            DocOp::BatchOrigin { .. } => {}
+
             DocOp::AddWord {
                 text,
                 start,
@@ -591,10 +600,30 @@ impl NotebookSession {
         }
     }
 
+    /// 把區塊掛到頁面上。**同一個區塊 id 只會存在一份。**
+    ///
+    /// # 為什麼需要去重
+    ///
+    /// 同一筆 `Add*Block` 會從兩個檔案抵達：壓實後的大檔裡有它，而別台
+    /// 裝置手上那份還沒被壓實的碎檔裡也有它（見 `DocOp::BatchOrigin`）。
+    /// 重播是冪等的才對 —— 不去重的話，畫面上會多出一個**空白**的同名區塊，
+    /// 因為 `AddTextBlock` 會把文字 CRDT 重設成空的，把先前套用的內容抹掉。
+    ///
+    /// 這與 `AddPage` 的去重是同一個理由，只是那裡先被發現。
     fn add_block_to_page(&mut self, page: Uuid, block: Block) {
+        if self.block_exists(block.id) {
+            return;
+        }
         if let Some(p) = self.notebook.page_mut(page) {
             p.add_block(block);
         }
+    }
+
+    fn block_exists(&self, id: Uuid) -> bool {
+        self.notebook
+            .pages()
+            .iter()
+            .any(|p| p.blocks().iter().any(|b| b.id == id))
     }
 
     fn page_of_block(&self, block: Uuid) -> Option<Uuid> {
@@ -2288,6 +2317,33 @@ mod tests {
             },
         ]);
         assert_eq!(s.notebook().page_count(), before + 2);
+    }
+
+    /// **同一筆操作到達兩次，結果必須跟到達一次一樣。**
+    ///
+    /// 這在同步裡是家常便飯：壓實後的大檔裡有它，別台裝置手上那份還沒被
+    /// 壓實的碎檔裡也有它。不冪等的話，畫面上會多出一個**空白**的同名
+    /// 文字方塊 —— 因為 `AddTextBlock` 會把文字 CRDT 重設成空的，
+    /// 把先前套用的內容抹掉。使用者看到的是「字不見了，還多一個空框」。
+    #[test]
+    fn replaying_the_same_block_operations_twice_changes_nothing() {
+        let mut s = session("idempotent-replay");
+        let page = s.first_page().unwrap();
+        s.add_text_block(page, "只該有一份", TextStyle::Body)
+            .unwrap();
+
+        let ops = s.package.read_doc_ops().unwrap();
+        s.apply_remote(&ops); // 再餵一次同一批
+
+        let blocks: Vec<String> = s
+            .notebook
+            .page(page)
+            .unwrap()
+            .blocks()
+            .iter()
+            .filter_map(|b| b.searchable_text().map(str::to_string))
+            .collect();
+        assert_eq!(blocks, ["只該有一份"]);
     }
 
     // ---- 里程碑快照（工作項 S-99）----

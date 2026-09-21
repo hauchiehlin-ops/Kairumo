@@ -242,6 +242,24 @@ pub enum DocOp {
         end: NotebookTime,
         confidence: f32,
     },
+    /// 這一批操作的來源座標，寫在**批次的最前面**（工作項 H-MILESTONE）。
+    ///
+    /// # 為什麼座標不能只靠檔名
+    ///
+    /// oplog 檔名是 `<lamport>-<device>.oplog`，里程碑就拿它當座標。
+    /// 但壓實會把 `0002..0006` 併成一個叫 `0006` 的檔 —— 併完之後，
+    /// 本來 lamport 為 2 的操作對外宣稱自己是 6。
+    ///
+    /// 後果是**資料遺失，不只是設定失效**：一個「回到 lamport 3 那一刻」的
+    /// 里程碑，會把整個併起來的檔一起收走，包含那一刀**之前**就該留下來的
+    /// 內容。而且沒有任何錯誤訊息 —— 使用者按下還原，東西就少了。
+    ///
+    /// 把座標寫進資料流本身，壓實（純位元組串接）就保得住它。
+    /// 沒有這一筆的舊檔案仍然退回用檔名，所以既有的套件照樣讀得動。
+    BatchOrigin {
+        lamport: u64,
+        device: u32,
+    },
     /// 建立一個具名的里程碑（工作項 S-99）。
     ///
     /// 它**不改變任何狀態** —— 只是把「歷史上的這一刀」連同名字記進 oplog，
@@ -304,6 +322,7 @@ const OP_SET_NOTEBOOK_META: u8 = 33;
 /// 與先前三十三個 op 的情況相同 —— 兩端要同版本發布。
 const OP_MOVE_PAGE: u8 = 34;
 const OP_MARK_MILESTONE: u8 = 35;
+const OP_BATCH_ORIGIN: u8 = 37;
 const OP_RESTORE_MILESTONE: u8 = 36;
 
 #[derive(Debug, PartialEq, Eq)]
@@ -1054,6 +1073,9 @@ pub fn encode(ops: &[DocOp]) -> Vec<u8> {
                     .cut(cut)
                     .u8(u8::from(*automatic));
             }
+            DocOp::BatchOrigin { lamport, device } => {
+                w.u8(OP_BATCH_ORIGIN).u64(*lamport).u32(*device);
+            }
             DocOp::RestoreMilestone {
                 milestone,
                 cut,
@@ -1251,6 +1273,10 @@ pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
                 created_unix_ms: r.u64()?,
                 cut: r.cut()?,
                 automatic: r.u8()? != 0,
+            },
+            OP_BATCH_ORIGIN => DocOp::BatchOrigin {
+                lamport: r.u64()?,
+                device: r.u32()?,
             },
             OP_RESTORE_MILESTONE => DocOp::RestoreMilestone {
                 milestone: r.uuid()?,

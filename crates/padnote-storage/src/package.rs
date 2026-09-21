@@ -480,7 +480,16 @@ impl NotebookPackage {
         fs::create_dir_all(&dir)?;
         let path = dir.join(format!("{lamport:016x}-{device:08x}.oplog"));
 
-        let encoded = padnote_doc::ops::encode(ops);
+        // **座標寫進資料流的最前面**，不要只靠檔名。
+        //
+        // 壓實是純位元組串接，併完之後檔名只剩一個 —— 靠檔名的話，
+        // 被併進去的操作會全部宣稱自己是最大的那個 lamport，
+        // 里程碑的那一刀就落在錯的地方，而且是**往後**落：
+        // 該留下來的內容會跟著被收走。見 `DocOp::BatchOrigin`。
+        let mut framed = Vec::with_capacity(ops.len() + 1);
+        framed.push(DocOp::BatchOrigin { lamport, device });
+        framed.extend_from_slice(ops);
+        let encoded = padnote_doc::ops::encode(&framed);
         // 加密套件寫的是**框架**（長度前綴 + 密文），未加密的直接寫明文。
         // 兩者都是純追加，所以同步的「較長的是超集」在兩種情況下都成立。
         let bytes = match &self.dek {
@@ -882,16 +891,24 @@ impl NotebookPackage {
                 }
                 None => raw,
             };
-            out.extend(
-                padnote_doc::ops::decode(&bytes)
-                    .map_err(|e| StorageError::DocOps(e.to_string()))?
-                    .into_iter()
-                    .map(|op| OpEntry {
-                        lamport,
-                        device,
-                        op,
-                    }),
-            );
+            // 起始座標取自檔名 —— 舊檔沒有 `BatchOrigin`，只能靠它。
+            // 有 `BatchOrigin` 的批次會把座標改成自己帶的那一組，
+            // 所以壓實過的檔案裡，每一批仍然報得出它原本的 lamport。
+            let (mut cur_lamport, mut cur_device) = (lamport, device);
+            for op in
+                padnote_doc::ops::decode(&bytes).map_err(|e| StorageError::DocOps(e.to_string()))?
+            {
+                if let DocOp::BatchOrigin { lamport, device } = op {
+                    cur_lamport = lamport;
+                    cur_device = device;
+                    continue;
+                }
+                out.push(OpEntry {
+                    lamport: cur_lamport,
+                    device: cur_device,
+                    op,
+                });
+            }
         }
         Ok(out)
     }
@@ -1166,6 +1183,70 @@ pub fn extract_package(archive_file: &Path, out_dir: &Path) -> Result<(), Storag
 
 #[cfg(test)]
 mod tests {
+
+    /// 沒有 `BatchOrigin` 的舊檔仍然要讀得出座標。
+    ///
+    /// 使用者手上已經有那種檔案了 —— 退不回去用檔名的話，
+    /// 既有套件裡每一筆操作的 lamport 都會變成 0，因果序整個垮掉。
+    #[test]
+    fn an_oplog_written_before_batch_origin_falls_back_to_its_filename() {
+        let root = tmp("legacy-oplog");
+        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+
+        // 直接寫一個**沒有** BatchOrigin 的檔，模擬舊版產生的 oplog。
+        let dir = root.join("doc/ops");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(
+            dir.join("0000000000000009-000000aa.oplog"),
+            padnote_doc::ops::encode(&[DocOp::SetTitle {
+                title: "舊檔".into(),
+            }]),
+        )
+        .unwrap();
+
+        let entries = pkg.read_doc_op_entries().unwrap();
+        let found = entries
+            .iter()
+            .find(|e| matches!(&e.op, DocOp::SetTitle { title } if title == "舊檔"))
+            .expect("舊檔的操作要讀得出來");
+        assert_eq!((found.lamport, found.device), (9, 0xAA));
+    }
+
+    /// 壓實過的檔案裡，每一批仍然報得出它原本的 lamport。
+    ///
+    /// **這是一次資料遺失的防線。** 靠檔名的話，被併進去的操作會全部宣稱
+    /// 自己是最大的那個 lamport，於是一個「回到某一刻」的里程碑會連那一刻
+    /// **之前**該留下來的內容一起收走。
+    #[test]
+    fn compaction_preserves_each_batch_its_own_lamport() {
+        let root = tmp("origin-survives-compaction");
+        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        let dev = 0xCCu32;
+        for l in 1..=4u64 {
+            pkg.append_doc_ops(
+                l,
+                dev,
+                &[DocOp::SetTitle {
+                    title: format!("第{l}"),
+                }],
+            )
+            .unwrap();
+        }
+        pkg.compact_own_doc_ops(2, dev).unwrap();
+
+        let coords: Vec<(u64, u32)> = pkg
+            .read_doc_op_entries()
+            .unwrap()
+            .iter()
+            .filter(|e| matches!(e.op, DocOp::SetTitle { .. }))
+            .map(|e| (e.lamport, e.device))
+            .collect();
+        assert_eq!(
+            coords,
+            [(1, dev), (2, dev), (3, dev), (4, dev)],
+            "壓實之後每一批的 lamport 都要還原得出來，而不是全部變成最大值"
+        );
+    }
 
     /// 里程碑最怕的是壓實：壓實會改寫檔名裡的 lamport，而 lamport 就是
     /// 里程碑的座標。這一項確認界線真的擋住了它 ——
