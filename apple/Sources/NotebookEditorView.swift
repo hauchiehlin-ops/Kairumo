@@ -2133,7 +2133,10 @@ public struct NotebookEditorView: View {
             } else {
                 Button {
                     Task {
-                        _ = await audioManager.startRecording(title: "\(notebook.displayTitle()) \(localizationManager.localized("recording_suffix"))")
+                        _ = await audioManager.startRecording(
+                            notebookId: notebook.id,
+                            notebookTitle: notebook.displayTitle(),
+                            title: "\(notebook.displayTitle()) \(localizationManager.localized("recording_suffix"))")
                     }
                 } label: {
                     HStack(spacing: 4) {
@@ -2433,7 +2436,10 @@ public struct NotebookEditorView: View {
         } else {
             Button {
                 Task {
-                    _ = await audioManager.startRecording(title: "\(notebook.displayTitle()) \(localizationManager.localized("recording_suffix"))")
+                    _ = await audioManager.startRecording(
+                            notebookId: notebook.id,
+                            notebookTitle: notebook.displayTitle(),
+                            title: "\(notebook.displayTitle()) \(localizationManager.localized("recording_suffix"))")
                 }
             } label: {
                 Image(systemName: "mic.fill")
@@ -3145,6 +3151,7 @@ public struct NotebookEditorView: View {
                     if item.pageIndex == page {
                         AudioAttachmentItemView(
                             item: binding(forAudioId: item.id),
+                            notebookId: notebook.id,
                             onDelete: {
                                 notebook.audioAttachments?.removeAll { $0.id == item.id }
                                 store.updateNotebook(notebook)
@@ -6088,7 +6095,9 @@ public struct NotebookEditorView: View {
     private func audioPlaybackBar(fileName: String) -> AnyView { AnyView(audioPlaybackBarContent(fileName: fileName)) }
 
     private func audioPlaybackBarContent(fileName: String) -> some View {
-        let fileUrl = audioManager.recordingsDirectory.appendingPathComponent(fileName)
+        // 錄音現在住在套件裡（會被同步）；舊的還在 Kairumo Record，
+        // 由 store 決定該指向哪一個。
+        let fileUrl = store.recordingFileURL(fileName: fileName, notebookId: notebook.id)
         let isCurrentPlaying = audioManager.isPlaying && audioManager.playingRecordingId == fileName
 
         return HStack(spacing: 12) {
@@ -6198,7 +6207,9 @@ public struct NotebookEditorView: View {
     private func floatingAudioBadge(fileName: String) -> AnyView { AnyView(floatingAudioBadgeContent(fileName: fileName)) }
 
     private func floatingAudioBadgeContent(fileName: String) -> some View {
-        let fileUrl = audioManager.recordingsDirectory.appendingPathComponent(fileName)
+        // 錄音現在住在套件裡（會被同步）；舊的還在 Kairumo Record，
+        // 由 store 決定該指向哪一個。
+        let fileUrl = store.recordingFileURL(fileName: fileName, notebookId: notebook.id)
         let isCurrentPlaying = audioManager.isPlaying && audioManager.playingRecordingId == fileName
 
         return HStack(spacing: 8) {

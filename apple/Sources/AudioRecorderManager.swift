@@ -35,6 +35,11 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     private var audioPlayer: AVAudioPlayer?
     /// Ogg-Opus 的播放器。`AVAudioPlayer` 播不動這個格式，見 `OpusAudioPlayer`。
     private var opusPlayer: OpusAudioPlayer?
+    /// 走核心的錄音（R2）。有值就代表這一次錄音寫進的是套件，不是 m4a。
+    private var coreCapture: CoreAudioCapture?
+    private var coreSession: PadnoteSession?
+    private var coreRecordingId: String?
+    private var coreNotebookId: String?
     private var timer: Timer?
     private var playbackTimer: Timer?
     private var currentAudioUrl: URL?
@@ -267,6 +272,9 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
     /// 停止錄音並回傳儲存的檔案 URL 及總時長（秒）
     public func stopRecording() -> (url: URL, duration: TimeInterval)? {
+        if coreSession != nil {
+            return stopCoreRecording()
+        }
         guard let recorder = audioRecorder, status == .recording || status == .paused else { return nil }
         let duration = recorder.currentTime
         recorder.stop()
@@ -277,6 +285,124 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
         guard let url = currentAudioUrl else { return nil }
         return (url, duration)
+    }
+
+    // MARK: - 錄進套件（R2）
+
+    /// 錄音直接寫進某一本筆記的套件。
+    ///
+    /// # 與 `startRecording()` 的差別
+    ///
+    /// 舊的那條路用 `AVAudioRecorder` 寫 `.m4a` 到 `Documents/Kairumo Record`
+    /// —— **套件外面**。而同步的單位是套件，所以那些錄音從來沒有被同步過。
+    ///
+    /// 這條路走核心：麥克風 → 16 kHz 單聲道 → `session.feedAudio()` →
+    /// `media/audio/<uuid>.opus`。與 Android 是同一條管線。
+    ///
+    /// 回傳 false 表示沒錄成（權限、麥克風被佔用、或套件開不起來）。
+    public func startRecording(
+        notebookId: String,
+        notebookTitle: String,
+        title: String? = nil
+    ) async -> Bool {
+        guard await requestMicrophonePermission() else { return false }
+        guard let session = NotebookStore.shared.packageSession(
+            forNotebookId: notebookId, title: notebookTitle)
+        else {
+            print("[AudioRecorderManager] 開不了套件：\(notebookId)")
+            return false
+        }
+
+        let capture = coreCapture ?? CoreAudioCapture()
+        coreCapture = capture
+        capture.onError = { message in
+            print("[AudioRecorderManager] \(message)")
+        }
+        guard let recordingId = capture.start(session: session) else { return false }
+
+        coreSession = session
+        coreRecordingId = recordingId
+        coreNotebookId = notebookId
+        currentAudioUrl = NotebookStore.shared.corePackagesDirectory
+            .appendingPathComponent("\(notebookId.lowercased()).padnote")
+            .appendingPathComponent("media/audio/\(recordingId).opus")
+        status = .recording
+        elapsedSeconds = 0
+        audioLevels = Array(repeating: 0.15, count: 20)
+
+        // 長度由核心算 —— 兩個平台各自問系統 API 的話，同一段錄音會顯示
+        // 不同的秒數，而使用者會以為同步壞了。
+        timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, let session = self.coreSession else { return }
+                self.elapsedSeconds = Double(session.recordedAudioUs()) / 1_000_000.0
+            }
+        }
+        return true
+    }
+
+    /// 停掉走核心的那條路。
+    private func stopCoreRecording() -> (url: URL, duration: TimeInterval)? {
+        guard let session = coreSession else { return nil }
+        coreCapture?.stop()
+        // 先停擷取再叫核心收尾：反過來的話，收尾之後還會有音訊被餵進來，
+        // 而那時候核心已經不在錄音狀態了。
+        let durationUs = session.recordedAudioUs()
+        _ = try? session.stopRecording()
+
+        timer?.invalidate()
+        timer = nil
+        status = .idle
+        audioLevels = Array(repeating: 0.15, count: 20)
+
+        let url = currentAudioUrl
+        coreSession = nil
+        coreRecordingId = nil
+        coreNotebookId = nil
+        guard let url else { return nil }
+        return (url, Double(durationUs) / 1_000_000.0)
+    }
+
+    /// 只要麥克風權限，不碰任何錄音器。
+    private func requestMicrophonePermission() async -> Bool {
+        #if targetEnvironment(macCatalyst)
+        let status = AVCaptureDevice.authorizationStatus(for: .audio)
+        let granted: Bool
+        if status == .authorized {
+            granted = true
+        } else if status == .notDetermined {
+            granted = await AVCaptureDevice.requestAccess(for: .audio)
+        } else {
+            granted = false
+        }
+        if !granted { showPermissionAlert = true }
+        if granted {
+            let session = AVAudioSession.sharedInstance()
+            try? session.setCategory(.playAndRecord, mode: .default)
+            try? session.setActive(true)
+        }
+        return granted
+        #elseif os(iOS)
+        let session = AVAudioSession.sharedInstance()
+        let granted: Bool
+        if #available(iOS 17.0, *) {
+            granted = await AVAudioApplication.requestRecordPermission()
+        } else {
+            granted = await withCheckedContinuation { continuation in
+                session.requestRecordPermission { ok in continuation.resume(returning: ok) }
+            }
+        }
+        if !granted {
+            showPermissionAlert = true
+            return false
+        }
+        try? session.setCategory(
+            .playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+        try? session.setActive(true)
+        return true
+        #else
+        return true
+        #endif
     }
 
     // MARK: - 播放控制
@@ -346,6 +472,17 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
                 self.playbackProgress = p.progress
             }
         }
+    }
+
+    /// 暫停／恢復錄音（走核心那條路）。
+    public func pauseCoreRecording() {
+        coreCapture?.pause()
+        status = .paused
+    }
+
+    public func resumeCoreRecording() {
+        coreCapture?.resume()
+        status = .recording
     }
 
     public func pauseAudio() {

@@ -24,6 +24,80 @@ pub fn audio_duration_seconds(bytes: Vec<u8>) -> u32 {
     }
 }
 
+/// 「錄音收件匣」筆記本的 id。
+///
+/// # 為什麼要寫死
+///
+/// 使用者在首頁直接按錄音時，那段音沒有所屬的筆記本 —— 但錄音**必須**
+/// 住在某個套件裡，因為套件才是同步的單位。放在套件外的後果已經看過了：
+/// Apple 的錄音存在 `Documents/Kairumo Record`，於是從來沒有被同步過。
+///
+/// 收件匣用固定 id 不是偷懶，是正確性：**兩台裝置各自建立的收件匣會收斂
+/// 成同一本**，內容由 CRDT 合併。用隨機 id 的話，每台裝置一本，
+/// 使用者會看到「錄音收件匣」「錄音收件匣 2」「錄音收件匣 3」。
+///
+/// 值本身是任意的，但**一旦發佈就不能改** —— 改了等於所有裝置的收件匣
+/// 一分為二。
+#[uniffi::export]
+pub fn recording_inbox_notebook_id() -> String {
+    "a0d10000-0000-4000-8000-000000000001".to_string()
+}
+
+/// 把一段 16 kHz 單聲道 PCM 編成 Ogg-Opus 並寫到 `out_path`。
+///
+/// # 為什麼遷移要走核心
+///
+/// 舊的 Apple 錄音是 `.m4a`，躺在套件外面，所以從來沒有被同步過。
+/// 要讓它們同步，就得變成套件裡的 `media/audio/<uuid>.opus`。
+///
+/// 轉檔本身可以在平台端做（Apple 有 AVFoundation 的編碼器），但**寫出來的
+/// 檔案必須與錄製時的位元組結構一致** —— pre-skip、granule、頁面切分
+/// 都是這裡在管。各寫一份的結果是同一個 App 產出兩種略有差異的 Ogg，
+/// 而差異只會在別的播放器上顯現。
+///
+/// 回傳寫出去的長度（微秒）；失敗回 `None`（呼叫端要保留原檔）。
+#[uniffi::export]
+pub fn audio_encode_pcm_to_opus(pcm_16k_mono: Vec<f32>, out_path: String) -> Option<u64> {
+    use std::io::Write;
+
+    let mut encoder = padnote_audio::OpusEncoder::new().ok()?;
+    let mut buffer: Vec<u8> = Vec::new();
+    {
+        let mut writer = padnote_audio::ogg::OggOpusWriter::with_pre_skip(
+            &mut buffer,
+            0x5041_444e,
+            encoder.lookahead_48k(),
+        )
+        .ok()?;
+        for packet in encoder.encode(&pcm_16k_mono).ok()? {
+            writer.push(packet).ok()?;
+        }
+        // 不足一個音框的尾巴要補齊再寫出去，否則錄音的最後一小段會不見。
+        if let Ok(Some(tail)) = encoder.finish() {
+            writer.push(tail).ok()?;
+        }
+        writer.finish().ok()?;
+    }
+
+    let path = std::path::Path::new(&out_path);
+    if let Some(parent) = path.parent() {
+        std::fs::create_dir_all(parent).ok()?;
+    }
+    // 原子寫入：遷移寫到一半被中斷的話，留下的半個檔會被同步當成
+    // 「比較舊的版本」推上雲端。
+    let tmp = path.with_extension("opus.part");
+    {
+        let mut file = std::fs::File::create(&tmp).ok()?;
+        file.write_all(&buffer).ok()?;
+        file.sync_all().ok()?;
+    }
+    if std::fs::rename(&tmp, path).is_err() {
+        let _ = std::fs::remove_file(&tmp);
+        return None;
+    }
+    padnote_audio::ogg_opus_duration_us(&buffer)
+}
+
 /// 一段錄音的中繼資訊。
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct FfiAudioInfo {
@@ -191,6 +265,51 @@ mod tests {
         if let Some(d) = decoder {
             assert!(d.next_chunk(1024).is_empty());
         }
+    }
+
+    #[test]
+    fn the_inbox_id_is_a_lowercase_uuid_and_survives_path_canonicalisation() {
+        // 它會變成雲端路徑的一段。含大寫或非 ASCII 的話，Apple 與 Android
+        // 會寫到不同的檔案 —— 那個 bug 已經爆過一次。
+        let id = recording_inbox_notebook_id();
+        assert_eq!(id, id.to_lowercase());
+        assert_eq!(padnote_sync::paths::canonical_id(&id), id);
+    }
+
+    #[test]
+    fn encoding_pcm_produces_a_file_that_decodes_back() {
+        // 遷移的往返：PCM → .opus → 解回 PCM。長度對不上就代表
+        // 使用者的舊錄音在遷移時被截斷了。
+        let dir = std::env::temp_dir().join(format!("padnote-enc-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        let out = dir.join("x.opus");
+
+        let pcm: Vec<f32> = (0..16_000).map(|i| (i as f32 * 0.05).sin() * 0.4).collect();
+        let us =
+            audio_encode_pcm_to_opus(pcm.clone(), out.to_string_lossy().into()).expect("編碼失敗");
+        assert!(us.abs_diff(1_000_000) < 60_000, "長度不對：{us} µs");
+
+        let decoder = audio_decoder_open(out.to_string_lossy().into()).expect("解不開");
+        let mut total = 0usize;
+        loop {
+            let chunk = decoder.next_chunk(4096);
+            if chunk.is_empty() {
+                break;
+            }
+            total += chunk.len();
+        }
+        assert!(
+            total.abs_diff(pcm.len()) < 1_000,
+            "解回 {total} 個樣本，原本 {}",
+            pcm.len()
+        );
+    }
+
+    #[test]
+    fn a_failed_encode_leaves_no_half_file_behind() {
+        // 半個檔會被同步當成「比較舊的版本」推上雲端。
+        let bad = "/no/such/dir/x.opus".to_string();
+        assert!(audio_encode_pcm_to_opus(vec![0.0; 320], bad).is_none());
     }
 
     #[test]

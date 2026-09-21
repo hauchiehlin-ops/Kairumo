@@ -34,6 +34,9 @@ struct AudioAttachmentItemView: View {
     @ObservedObject private var audioManager = AudioRecorderManager.shared
     @ObservedObject private var transcriber = AudioTranscriber.shared
     @Binding var item: NoteAudioAttachment
+    /// 這張卡片所屬的筆記本。錄音住在**那一本的套件裡**，
+    /// 沒有它就只能猜路徑，而猜錯的症狀是「按了播放沒有反應」。
+    var notebookId: String? = nil
     let onDelete: () -> Void
     var onTranscribe: ((String) -> Void)? = nil
 
@@ -58,7 +61,9 @@ struct AudioAttachmentItemView: View {
     }
 
     private var fileUrl: URL {
-        audioManager.recordingsDirectory.appendingPathComponent(item.fileName)
+        // 套件裡的優先（那份會被同步），找不到才退回舊的 Kairumo Record。
+        NotebookStore.shared.recordingFileURL(
+            fileName: item.fileName, notebookId: notebookId)
     }
 
     private var fileExists: Bool {

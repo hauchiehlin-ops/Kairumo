@@ -6511,6 +6511,14 @@ extension LocalizationManager {
             .ko: "%@초 녹음됨",
             .th: "บันทึกแล้ว %@ วินาที"
         ],
+        "recording_inbox": [
+            .zhHant: "錄音收件匣",
+            .en: "Recording Inbox",
+            .zhHans: "录音收件匣",
+            .ja: "録音インボックス",
+            .ko: "녹음 받은함",
+            .th: "กล่องขาเข้าการบันทึก"
+        ],
         "recording_paused": [
             .zhHant: "錄音已暫停",
             .en: "Recording Paused",

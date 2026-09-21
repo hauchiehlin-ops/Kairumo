@@ -1046,7 +1046,11 @@ public struct NoteAudioAttachment: Identifiable, Codable, Hashable, ObjectFrameS
     public var pageIndex: Int
     /// 對應的錄音索引 id。索引被刪掉時仍然保留，播放走 `fileName`。
     public var recordingId: String
-    /// 音檔檔名（相對於 `AudioRecorderManager.recordingsDirectory`）。
+    /// 音檔檔名。
+    ///
+    /// 位置由 `NotebookStore.recordingFileURL(fileName:notebookId:)` 決定：
+    /// 新的錄音住在所屬筆記本套件的 `media/audio/`（會被同步），
+    /// 還沒遷移的舊錄音在 `Kairumo Record`（套件外，不會被同步）。
     public var fileName: String
     public var title: String
     public var durationSeconds: Int
@@ -1436,6 +1440,49 @@ public final class NotebookStore: ObservableObject {
             return d
         }
         return PKDrawing()
+    }
+
+    // MARK: - 錄音套件（R2）
+
+    /// 開一個可以寫入的套件 session，套件不存在就建立。
+    ///
+    /// 錄音必須落在套件裡 —— **套件才是同步的單位**。存在套件外的後果
+    /// 已經看過了：Apple 的錄音存在 `Documents/Kairumo Record`，
+    /// 於是從來沒有被同步過。
+    public func packageSession(forNotebookId id: String, title: String) -> PadnoteSession? {
+        let path = corePackagesDirectory.appendingPathComponent("\(id.lowercased()).padnote")
+        try? FileManager.default.createDirectory(
+            at: corePackagesDirectory, withIntermediateDirectories: true)
+        let device = NotebookMigration.deviceId
+        if let existing = try? PadnoteSession.openExisting(path: path.path, deviceId: device) {
+            return existing
+        }
+        let now = UInt64(max(0, Date().timeIntervalSince1970 * 1000))
+        return try? PadnoteSession.create(
+            path: path.path, title: title, nowUnixMs: now, deviceId: device)
+    }
+
+    /// 「錄音收件匣」筆記本，不存在就建立。
+    ///
+    /// id 由核心給（`recordingInboxNotebookId()`），兩個平台共用同一個值 ——
+    /// 各自取一個的話，同一個帳號下會出現兩本收件匣，而且誰也不會發現，
+    /// 因為兩台裝置各自只看得到自己那本。
+    @discardableResult
+    public func recordingInbox() -> NotebookDocument {
+        let id = recordingInboxNotebookId()
+        if let existing = notebooks.first(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }) {
+            return existing
+        }
+        var doc = NotebookDocument(
+            id: id,
+            title: LocalizationManager.shared.localized("recording_inbox"),
+            pageCount: 1,
+            template: .blank)
+        doc.hasRecording = true
+        notebooks.append(doc)
+        AccountSyncStore.shared.record(id: id, title: doc.title, parentId: nil, isFolder: false)
+        markDirtyAndPersist()
+        return doc
     }
 
     /// 圖片附件實體存儲目錄
@@ -2408,10 +2455,136 @@ public final class NotebookStore: ObservableObject {
         return rec
     }
 
+    /// 一段錄音的實體檔案在哪裡。
+    ///
+    /// # 為什麼要有這個函式
+    ///
+    /// 錄音有兩個可能的位置：新的在**筆記本套件裡**（`media/audio/`，
+    /// 會被同步），舊的在 `Documents/Kairumo Record`（套件外，
+    /// 從來沒有被同步過，等 R5 遷移）。
+    ///
+    /// 各處自己拼路徑的話，遷移期間一定會有地方拼到錯的那一個 ——
+    /// 而症狀是「按了播放沒有反應」，沒有任何錯誤訊息。
+    /// 依檔名解析錄音的位置（`notebookId` 為這一段錄音所屬的筆記本）。
+    ///
+    /// 與 [`recordingFileURL(for:)`] 同一條規則，給只拿得到檔名的呼叫端用。
+    public func recordingFileURL(fileName: String, notebookId: String?) -> URL {
+        if let notebookId {
+            let inPackage = corePackagesDirectory
+                .appendingPathComponent("\(notebookId.lowercased()).padnote")
+                .appendingPathComponent("media/audio")
+                .appendingPathComponent(fileName)
+            if FileManager.default.fileExists(atPath: inPackage.path) {
+                return inPackage
+            }
+        }
+        return AudioRecorderManager.shared.recordingsDirectory.appendingPathComponent(fileName)
+    }
+
+    public func recordingFileURL(for record: AudioRecordingRecord) -> URL {
+        if let notebookId = record.linkedNotebookId {
+            let inPackage = corePackagesDirectory
+                .appendingPathComponent("\(notebookId.lowercased()).padnote")
+                .appendingPathComponent("media/audio")
+                .appendingPathComponent(record.fileName)
+            if FileManager.default.fileExists(atPath: inPackage.path) {
+                return inPackage
+            }
+        }
+        return AudioRecorderManager.shared.recordingsDirectory
+            .appendingPathComponent(record.fileName)
+    }
+
+    /// 重新掃描所有套件裡的錄音，與本機那份清單合併。
+    ///
+    /// # 為什麼要掃檔案，而不是只信自己那份索引
+    ///
+    /// 只信索引的話，**從另一台裝置同步過來的錄音永遠不會出現在清單上**
+    /// —— 而那正是「最近錄音」最該顯示的東西。Android 一直是掃套件的
+    /// （`RecordingIndex.kt`），Apple 這邊補齊。
+    ///
+    /// 既有的記錄會被保留（標題是使用者取的，不能用檔名蓋掉）；
+    /// 只有掃到、而索引裡沒有的才會被補進來。
+    public func refreshRecordings() {
+        let fm = FileManager.default
+        var byFileName: [String: AudioRecordingRecord] = [:]
+        for rec in recordings {
+            byFileName[rec.fileName.lowercased()] = rec
+        }
+
+        var scanned: [AudioRecordingRecord] = []
+        for doc in notebooks {
+            let audioDir = corePackagesDirectory
+                .appendingPathComponent("\(doc.id.lowercased()).padnote")
+                .appendingPathComponent("media/audio")
+            let files = (try? fm.contentsOfDirectory(
+                at: audioDir, includingPropertiesForKeys: [.contentModificationDateKey]))?
+                .filter { $0.pathExtension.lowercased() == "opus" } ?? []
+            for file in files {
+                let name = file.lastPathComponent
+                if let existing = byFileName[name.lowercased()] {
+                    scanned.append(existing)
+                    byFileName.removeValue(forKey: name.lowercased())
+                    continue
+                }
+                // 從別台同步過來的：索引裡沒有，要補一筆才看得到。
+                // 長度走核心算 —— 兩個平台各自問系統 API 的話，
+                // 同一段錄音會顯示不同的秒數，而使用者會以為同步壞了。
+                let bytes = (try? Data(contentsOf: file)) ?? Data()
+                let seconds = Int(audioDurationSeconds(bytes: bytes))
+                let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?
+                    .contentModificationDate ?? Date()
+                let suffix = LocalizationManager.shared.localized("recording_suffix")
+                scanned.append(AudioRecordingRecord(
+                    title: "\(doc.displayTitle()) \(suffix)",
+                    durationSeconds: seconds,
+                    recordedDate: modified,
+                    fileName: name,
+                    linkedNotebookId: doc.id))
+            }
+        }
+
+        // 還沒遷移、仍然躺在 Kairumo Record 的舊錄音要留著，
+        // 否則使用者會以為它們不見了。
+        let legacyDir = AudioRecorderManager.shared.recordingsDirectory
+        let legacy = byFileName.values.filter {
+            fm.fileExists(atPath: legacyDir.appendingPathComponent($0.fileName).path)
+        }
+
+        recordings = (scanned + legacy).sorted { $0.recordedDate > $1.recordedDate }
+        persistData()
+    }
+
+    /// 遷移之後改指到套件裡的新檔案。
+    public func replaceRecordingFile(recordingId: String, fileName: String, notebookId: String) {
+        guard let idx = recordings.firstIndex(where: { $0.id == recordingId }) else { return }
+        recordings[idx].fileName = fileName
+        recordings[idx].linkedNotebookId = notebookId
+        if let nIdx = notebooks.firstIndex(where: {
+            $0.id.caseInsensitiveCompare(notebookId) == .orderedSame
+        }) {
+            notebooks[nIdx].hasRecording = true
+            notebooks[nIdx].recordingAudioPath = fileName
+        }
+        // 畫布上的錄音卡片也指著舊檔名 —— 不一起換的話，
+        // 卡片會變成「按了播放沒有反應」。
+        for nIdx in notebooks.indices {
+            guard var cards = notebooks[nIdx].audioAttachments else { continue }
+            var touched = false
+            for cIdx in cards.indices where cards[cIdx].recordingId == recordingId {
+                cards[cIdx].fileName = fileName
+                touched = true
+            }
+            if touched {
+                notebooks[nIdx].audioAttachments = cards
+            }
+        }
+        persistData()
+    }
+
     public func deleteRecording(id: String) {
         if let rec = recordings.first(where: { $0.id == id }) {
-            let fileUrl = AudioRecorderManager.shared.recordingsDirectory.appendingPathComponent(rec.fileName)
-            try? FileManager.default.removeItem(at: fileUrl)
+            try? FileManager.default.removeItem(at: recordingFileURL(for: rec))
         }
         recordings.removeAll { $0.id == id }
         persistData()

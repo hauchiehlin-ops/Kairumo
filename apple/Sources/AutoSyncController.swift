@@ -176,6 +176,11 @@ public final class AutoSyncController: ObservableObject {
         lastMessage = report.isNoOp
             ? "已是最新"
             : "上傳 \(report.uploaded)、下載 \(report.downloaded)"
+        // 同步可能把別台裝置的錄音寫進套件。不重掃的話，「最近錄音」
+        // 那份清單看不到它們 —— 而那正是它最該顯示的東西。
+        if report.downloaded > 0 || report.newNotebooks > 0 {
+            NotebookStore.shared.refreshRecordings()
+        }
         if !report.isNoOp || report.newNotebooks > 0 {
             SyncHistory.markGoogleSynced()
         }

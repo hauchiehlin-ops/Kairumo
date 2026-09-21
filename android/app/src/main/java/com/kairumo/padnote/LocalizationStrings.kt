@@ -6556,6 +6556,14 @@ object LocalizationStrings {
             "ko" to "%@초 녹음됨",
             "th" to "บันทึกแล้ว %@ วินาที"
         ),
+        "recording_inbox" to mapOf(
+            "zh-Hant" to "錄音收件匣",
+            "en" to "Recording Inbox",
+            "zh-Hans" to "录音收件匣",
+            "ja" to "録音インボックス",
+            "ko" to "녹음 받은함",
+            "th" to "กล่องขาเข้าการบันทึก"
+        ),
         "recording_paused" to mapOf(
             "zh-Hant" to "錄音已暫停",
             "en" to "Recording Paused",
@@ -7091,7 +7099,10 @@ object LocalizationStrings {
             "ja" to "これはそのまま編集できる説明ノートです。\n\n• 手書き：ペン・指・マウスのいずれでも書けます。保存されるのは生のサンプル点です。\n• 入力：テキストボックスを挿入し、フォント・行間・配置を調整できます。\n• 録音：音声と筆跡は同じタイムライン上にあり、筆跡をタップするとその瞬間の音声に飛びます。\n\nこのページのボックス・表・図形はすべて移動・編集・削除できます。ドラッグしてみてください。",
             "ko" to "바로 편집할 수 있는 설명 노트입니다.\n\n• 필기: 펜, 손가락, 마우스 모두 가능하며 원본 샘플 점이 저장됩니다.\n• 입력: 텍스트 상자를 넣고 글꼴·줄 간격·정렬을 조정할 수 있습니다.\n• 녹음: 음성과 필기가 같은 타임라인에 있어 획을 누르면 그 순간의 소리로 이동합니다.\n\n이 페이지의 상자·표·도형은 모두 옮기고 고치고 지울 수 있습니다. 한번 끌어보세요.",
             "th" to "นี่คือสมุดคำอธิบายที่แก้ไขได้ทันที\n\n• เขียนด้วยลายมือ: ใช้ปากกา นิ้ว หรือเมาส์ได้ ระบบเก็บจุดตัวอย่างดิบไว้\n• พิมพ์: แทรกกล่องข้อความแล้วปรับฟอนต์ ระยะบรรทัด และการจัดวาง\n• บันทึกเสียง: เสียงกับลายเส้นอยู่บนไทม์ไลน์เดียวกัน แตะเส้นเพื่อข้ามไปยังช่วงเสียงนั้น\n\nทุกกล่อง ตาราง และรูปทรงบนหน้านี้ ย้าย แก้ไข และลบได้ ลองลากดู"
-        ),
+        )
+    )
+
+    private fun part11(): Map<String, Map<String, String>> = mapOf(
         "sample_welcome_p1_title" to mapOf(
             "zh-Hant" to "歡迎使用 Kairumo",
             "en" to "Welcome to Kairumo",
@@ -7099,10 +7110,7 @@ object LocalizationStrings {
             "ja" to "Kairumo へようこそ",
             "ko" to "Kairumo에 오신 것을 환영합니다",
             "th" to "ยินดีต้อนรับสู่ Kairumo"
-        )
-    )
-
-    private fun part11(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sample_welcome_p2_body" to mapOf(
             "zh-Hant" to "這張表是真的表格物件：點兩下任一格就能改字，拖右下角可以調大小。",
             "en" to "This is a real table object — double-tap any cell to edit it, drag the corner to resize.",
@@ -7734,7 +7742,10 @@ object LocalizationStrings {
             "ja" to "しずく",
             "ko" to "물방울",
             "th" to "หยดน้ำ"
-        ),
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_terminator" to mapOf(
             "zh-Hant" to "起終點",
             "en" to "Terminator",
@@ -7742,10 +7753,7 @@ object LocalizationStrings {
             "ja" to "開始／終了",
             "ko" to "시작·종료",
             "th" to "จุดเริ่ม/จบ"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_trapezoid" to mapOf(
             "zh-Hant" to "梯形",
             "en" to "Trapezoid",
@@ -8377,7 +8385,10 @@ object LocalizationStrings {
             "ja" to "最新の状態です",
             "ko" to "이미 최신 상태",
             "th" to "เป็นเวอร์ชันล่าสุดแล้ว"
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "syncing" to mapOf(
             "zh-Hant" to "同步中…",
             "en" to "Syncing…",
@@ -8385,10 +8396,7 @@ object LocalizationStrings {
             "ja" to "同期中…",
             "ko" to "동기화 중…",
             "th" to "กำลังซิงค์…"
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "system_diagnostics" to mapOf(
             "zh-Hant" to "系統診斷與版本資訊",
             "en" to "Diagnostics & Version Info",
@@ -9020,7 +9028,10 @@ object LocalizationStrings {
             "ja" to "マインドマップ",
             "ko" to "마인드맵",
             "th" to "ผังความคิด"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "tmpl_mind_map_desc" to mapOf(
             "zh-Hant" to "中心方塊與四向分支起點，點陣底紋",
             "en" to "A centre box and four branch stubs on a dot grid",
@@ -9028,10 +9039,7 @@ object LocalizationStrings {
             "ja" to "中心と4方向の枝の起点。点方眼つき",
             "ko" to "중앙 상자와 네 갈래 시작점, 점 모눈",
             "th" to "กล่องกลางและกิ่งสี่ทิศบนจุดตาราง"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_mobile_wireframe" to mapOf(
             "zh-Hant" to "行動端線框 (8pt Grid)",
             "en" to "Mobile Wireframe (8pt)",

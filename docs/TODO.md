@@ -7,6 +7,33 @@
 
 ## 🔴 被硬體或資料卡住（程式已就緒）
 
+### H-REC. 錄音納入同步的實機驗證（R1–R6 已全部實作）
+- **卡在**：需要兩台真實裝置（Apple + Android）＋ 真的用耳朵聽。
+  模擬器可以確認「有解出樣本」，確認不了「聽起來對不對」。
+- **已就緒**：
+  - 核心：`padnote-audio::decoder`（串流 Opus 解碼）、
+    `audio_decoder_open()`、`audio_encode_pcm_to_opus()`、
+    `recording_inbox_notebook_id()`。
+  - Apple：`CoreAudioCapture`（錄進套件）、`OpusAudioPlayer`（核心解碼播放）、
+    `RecordingMigration`（舊 m4a 搬進套件）、清單改掃套件。
+  - Android：首頁快速錄音改落在同一本「錄音收件匣」。
+- **要做（依序）**：
+  1. Apple 錄一段，確認落在 `<notebook>.padnote/media/audio/*.opus`
+     且**聽得到聲音**、長度正確。
+  2. Apple 播 Android 錄的 `.opus`；Android 播 Apple 錄的 `.opus`。
+     **這一條是整個方案的成立條件。**
+  3. 開頭有沒有被剪掉（pre-skip 的修正）：錄一段開頭就出聲的音，
+     確認第一個字還在。
+  4. 遷移：舊 m4a 轉完之後長度相符、聽起來沒有異常，
+     原檔還在 `Kairumo Record/migrated/`。
+  5. A 錄音 → B 同步 → B 的「最近錄音」看得到並播得出來。
+  6. 一小時錄音的播放記憶體峰值（驗證串流解碼）。
+  7. 跳轉：目前是重開解碼器往前丟樣本，一小時的錄音跳到結尾會卡多久。
+- **已知未處理**：錄音期間若同一本筆記同時被同步，會有兩個
+  `PadnoteSession` 對同一個套件寫入。Android 一直是這個狀態且沒有回報過
+  問題，所以先維持一致、不另外加鎖 —— 但這是一個**已知的**競態，
+  不是「沒想到」。
+
 ### H-SYNC. 雲端同步大修的實機驗證（P0–P4 已全部實作）
 - **卡在**：需要**兩台真實裝置**（至少一台 Apple + 一台 Android）登入同一個
   Google 帳號，而且要在真實網路上跑。模擬器與假 Drive 測不出配額、

@@ -265,6 +265,32 @@ object NotebookLibrary {
     }
 
     /**
+     * 「錄音收件匣」筆記本，不存在就建立。回傳它的 id。
+     *
+     * # 為什麼首頁的快速錄音需要它
+     *
+     * 錄音**必須住在某個套件裡** —— 套件才是同步的單位。使用者在首頁
+     * 直接按錄音時沒有指定筆記本，總要有個地方放。
+     *
+     * 舊版是落在 `entries.firstOrNull()`（清單上的第一本），那等於把錄音
+     * 塞進一本完全不相干的筆記；沒有筆記時又另外建一本，於是清單會被
+     * 錄音洗版。
+     *
+     * id 由核心給（`recordingInboxNotebookId()`），**兩個平台共用同一個值**：
+     * 兩台裝置各自建立的收件匣會收斂成同一本，內容由 CRDT 合併。
+     * 各取各的話，使用者會看到「錄音收件匣」「錄音收件匣 2」。
+     */
+    fun recordingInbox(context: Context, deviceId: UInt, title: String): String? {
+        val id = uniffi.padnote_core.recordingInboxNotebookId()
+        val path = File(directory(context), "$id.$EXTENSION")
+        if (!path.exists()) {
+            open(context, id, deviceId, title) ?: return null
+            AccountSyncStore.record(context, id = id, title = title, parentId = null)
+        }
+        return id
+    }
+
+    /**
      * 這台裝置要開的那一本。
      *
      * 沒有任何筆記本時建一本 —— 打開 App 看到空畫面，使用者不會知道下一步該做什麼。

@@ -903,8 +903,12 @@ private fun NotebookHome(
                     } else {
                         Button(
                             onClick = {
-                                val bookId = targetNoteId ?: entries.firstOrNull()?.id
-                                    ?: NotebookLibrary.create(activity, l("new_note"), device)
+                                // 沒指定筆記本時落在「錄音收件匣」，不是清單上的
+                                // 第一本 —— 那等於把錄音塞進一本完全不相干的筆記。
+                                // 收件匣的 id 由核心給，與 Apple 端同一本。
+                                val bookId = targetNoteId
+                                    ?: NotebookLibrary.recordingInbox(
+                                        activity, device, l("recording_inbox"))
                                 if (bookId != null) {
                                     val notePath = File(NotebookLibrary.directory(activity), "$bookId.${NotebookLibrary.EXTENSION}")
                                     val session = runCatching {

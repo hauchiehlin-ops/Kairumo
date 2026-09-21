@@ -67,6 +67,10 @@ struct KairumoApp: App {
                     // 啟動時先給予 1 秒寬限期讓 UI 算繪完畢，避免阻塞主執行緒造成卡頓感
                     Task { @MainActor in
                         try? await Task.sleep(nanoseconds: 1_000_000_000)
+                        // 舊錄音搬進套件（R5）。**要排在同步之前** ——
+                        // 搬完才有東西可以傳，反過來的話要多等一輪。
+                        await RecordingMigration.runIfNeeded(store: NotebookStore.shared)
+                        NotebookStore.shared.refreshRecordings()
                         AutoSyncController.shared.start(
                             store: NotebookStore.shared, deviceId: NotebookMigration.deviceId)
                         AutoSyncController.shared.request(.foreground)

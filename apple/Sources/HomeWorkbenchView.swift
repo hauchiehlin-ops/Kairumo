@@ -1017,7 +1017,7 @@ public struct HomeWorkbenchView: View {
             } else {
                 VStack(spacing: 10) {
                     ForEach(displayedRecordings) { rec in
-                        let fileUrl = audioManager.recordingsDirectory.appendingPathComponent(rec.fileName)
+                        let fileUrl = notebookStore.recordingFileURL(for: rec)
                         let isPlayingThis = audioManager.isPlaying && audioManager.playingRecordingId == rec.id
 
                         HStack(spacing: 14) {
@@ -2428,9 +2428,7 @@ struct QuickAudioRecorderModal: View {
                     .padding(.horizontal, 32)
                 } else {
                     Button {
-                        Task {
-                            _ = await audioManager.startRecording(title: recordingTitle)
-                        }
+                        Task { await startQuickRecording() }
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "record.circle")
@@ -2477,11 +2475,32 @@ struct QuickAudioRecorderModal: View {
                 if recordingTitle.isEmpty {
                     recordingTitle = "\(localizationManager.localized("quick_record_title")) \(Date().formatted(date: .numeric, time: .shortened))"
                 }
-                Task {
-                    _ = await audioManager.startRecording(title: recordingTitle)
-                }
+                Task { await startQuickRecording() }
             }
         }
+    }
+
+    /// 首頁的快速錄音。
+    ///
+    /// 錄音**一定要落在某個套件裡** —— 套件才是同步的單位。使用者沒有指定
+    /// 筆記本時就落在「錄音收件匣」，那是一本 id 寫死的筆記本，
+    /// 兩台裝置會收斂成同一本（見核心的 `recordingInboxNotebookId()`）。
+    ///
+    /// 舊版寫到 `Documents/Kairumo Record` 的 m4a —— 那在套件外面，
+    /// 所以從來沒有被同步過。
+    @MainActor
+    private func startQuickRecording() async {
+        let target: NotebookDocument
+        if let id = targetNotebookId,
+           let picked = notebookStore.notebooks.first(where: { $0.id == id }) {
+            target = picked
+        } else {
+            target = notebookStore.recordingInbox()
+        }
+        _ = await audioManager.startRecording(
+            notebookId: target.id,
+            notebookTitle: target.displayTitle(),
+            title: recordingTitle)
     }
 
     private func formatTime(seconds: TimeInterval) -> String {
