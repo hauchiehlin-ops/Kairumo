@@ -404,16 +404,16 @@ impl NotebookPackage {
         if let Ok(entries) = fs::read_dir(&dir) {
             for entry in entries.filter_map(Result::ok) {
                 let path = entry.path();
-                if let Some(file_name) = path.file_name().and_then(|n| n.to_str()) {
-                    if file_name.ends_with(".oplog") && file_name.contains('-') {
-                        if let Some(pos) = file_name.rfind('-') {
-                            let suffix = &file_name[pos..];
-                            files_by_device
-                                .entry(suffix.to_string())
-                                .or_default()
-                                .push(path);
-                        }
-                    }
+                let file_name = match path.file_name().and_then(|n| n.to_str()) {
+                    Some(name) if name.ends_with(".oplog") => name,
+                    _ => continue,
+                };
+                if let Some(pos) = file_name.rfind('-') {
+                    let suffix = &file_name[pos..];
+                    files_by_device
+                        .entry(suffix.to_string())
+                        .or_default()
+                        .push(path);
                 }
             }
         }
@@ -1052,4 +1052,3 @@ mod tests {
         assert_eq!(files[0].0, "0000000000000006-00000042.oplog");
     }
 }
-

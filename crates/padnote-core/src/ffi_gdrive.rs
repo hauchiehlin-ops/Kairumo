@@ -417,12 +417,12 @@ pub fn gdrive_sync_notebook(
         if let Some(pos) = name.rfind('-') {
             let dev_suffix = &name[pos..];
             let lamport_hex = &name[..pos];
-            if let Ok(l) = u64::from_str_radix(lamport_hex, 16) {
-                if let Some(&max_l) = local_max_lamport_by_device.get(dev_suffix) {
-                    if l < max_l {
-                        continue;
-                    }
-                }
+            let is_shadowed = u64::from_str_radix(lamport_hex, 16)
+                .ok()
+                .zip(local_max_lamport_by_device.get(dev_suffix).copied())
+                .is_some_and(|(l, max_l)| l < max_l);
+            if is_shadowed {
+                continue;
             }
         }
         let bytes = match drive.get_all(&format!("{prefix}/{name}")) {

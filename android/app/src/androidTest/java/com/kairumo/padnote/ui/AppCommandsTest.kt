@@ -57,13 +57,18 @@ class AppCommandsTest {
 
     @Test
     fun eachDigitCarriesItsOwnToolIndex() {
-        // Ctrl+1 是第 0 個工具。差一格的話，使用者按「鋼筆」會拿到原子筆。
-        for (index in 0 until AppCommands.MAX_TOOL_SHORTCUTS) {
+        // Ctrl+1 是第 0 個工具，Ctrl+9 是第 8 個工具。差一格的話，使用者按「鋼筆」會拿到原子筆。
+        for (index in 0 until 9) {
             assertEquals(
                 AppCommand.SelectTool(index),
                 AppCommands.command(
                     KeyEvent.KEYCODE_1 + index, ctrlPressed = true, shiftPressed = false))
         }
+        // Ctrl+0 是第 9 個工具（第十支筆）
+        assertEquals(
+            AppCommand.SelectTool(9),
+            AppCommands.command(
+                KeyEvent.KEYCODE_0, ctrlPressed = true, shiftPressed = false))
     }
 
     @Test

@@ -63,8 +63,8 @@ object AppCommands {
         _events.tryEmit(command)
     }
 
-    /** 工具快捷鍵最多到 9 —— 數字鍵就這麼多個。 */
-    const val MAX_TOOL_SHORTCUTS: Int = 9
+    /** 工具快捷鍵最多到 10 —— 數字鍵 1–9 與 0（第 10 支工具，對齊 Apple 端 ⌘0）。 */
+    const val MAX_TOOL_SHORTCUTS: Int = 10
 
     /**
      * 把按鍵翻成命令；不是快捷鍵就回 null。
@@ -80,10 +80,11 @@ object AppCommands {
             KeyEvent.KEYCODE_N -> if (shiftPressed) AppCommand.NewNotebook else null
             KeyEvent.KEYCODE_F -> if (shiftPressed) null else AppCommand.FocusSearch
             KeyEvent.KEYCODE_E -> if (shiftPressed) null else AppCommand.ToggleEditorMode
+            KeyEvent.KEYCODE_0 -> if (shiftPressed) null else AppCommand.SelectTool(9)
             else -> {
                 if (shiftPressed) return null
                 val digit = keyCode - KeyEvent.KEYCODE_1
-                if (digit in 0 until MAX_TOOL_SHORTCUTS) AppCommand.SelectTool(digit) else null
+                if (digit in 0 until 9) AppCommand.SelectTool(digit) else null
             }
         }
     }

@@ -297,6 +297,8 @@ class InkToolbarTest {
                     assertTrue("橡皮擦不該對到某一種筆刷", tool.isEraser)
                 tool.isLasso ->
                     assertTrue("套索不該對到某一種筆刷", tool.kind == null)
+                tool.isMaskingTape ->
+                    assertTrue("遮蔽膠帶不該對到某一種筆刷", tool.kind == null)
                 else ->
                     assertTrue("${tool.name} 沒有對到核心的筆刷", tool.kind != null)
             }
