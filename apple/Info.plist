@@ -74,6 +74,18 @@
 			</array>
 		</dict>
 	</array>
+	<!--
+	  **這兩個鍵要一起在。** 少了 `UIFileSharingEnabled`，App 的 Documents
+	  目錄不會出現在「檔案」App 的「我的 iPhone」底下 —— 於是
+	  `shareddocuments://` 這個 URL 沒有東西可以導航到，「檔案」只會停在
+	  它上次待的地方。症狀正是「按了開啟資料夾，打開的不是放錄音的那個」，
+	  而且**不會有任何錯誤**：URL 開成功了，只是目的地不存在。
+
+	  順帶也兌現了資料主權那條承諾（H4）：使用者可以直接用「檔案」App
+	  進去看自己的錄音與 `.padnote` 套件。
+	-->
+	<key>UIFileSharingEnabled</key>
+	<true/>
 	<key>LSSupportsOpeningDocumentsInPlace</key>
 	<true/>
 	<key>UTExportedTypeDeclarations</key>

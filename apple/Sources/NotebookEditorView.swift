@@ -932,6 +932,21 @@ public struct NotebookEditorView: View {
         PageDisplayMode(rawValue: pageDisplayModeRaw) ?? .single
     }
     @State private var currentDrawing: PKDrawing = PKDrawing()
+    /// 筆跡改動後「把這本筆記標記為剛改過」的去抖動計時器。
+    ///
+    /// 筆畫本身是**每次變動就落盤**的（見 `onDrawingChanged` 裡的
+    /// `store.saveDrawing`），但那只寫 `.drawing` 檔，不會動到筆記本身。
+    /// 少了這一步的後果有兩個，而且都看起來像「筆跡沒有被儲存」：
+    ///
+    /// 1. 首頁卡片上的修改時間停在上一次插入物件的時刻 —— 使用者寫了
+    ///    一整頁字，清單上那本筆記卻沒有往上移，時間也沒變。
+    /// 2. **雲端同步不會被觸發**。自動同步掛在 `persistData()` 上，
+    ///    而只寫 `.drawing` 檔不會經過它 —— 於是手寫內容要等到使用者
+    ///    換頁或離開編輯器才會上雲。
+    ///
+    /// 為什麼要去抖動：`onDrawingChanged` 在**一筆畫的途中**就會被叫很多次，
+    /// 每次都寫 `notebooks.json` 並觸發整棵畫面重算的話，寫字會頓。
+    @State private var inkTouchWork: DispatchWorkItem? = nil
     @State private var canvasView: PKCanvasView? = nil
     @State private var currentPageHeight: CGFloat = PageGeometry.height
     /// 掌拒（工作項 S-45）。判定規則走核心，與 Android 同一份。
@@ -3224,6 +3239,9 @@ public struct NotebookEditorView: View {
                     let newDrawing = processedDrawing
                     // 即時自動儲存至專屬二進位檔案（不觸發 Struct 重新賦值以防競態覆蓋）
                     store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: newDrawing)
+                    // 筆畫已經落盤了，但筆記本身還沒被標記成「剛改過」——
+                    // 沒有這一步，首頁的修改時間不會動，雲端同步也不會被觸發。
+                    noteInkEdited()
 
                     if !isApplyingRemoteUpdate && isCollaborating {
                         let count = newDrawing.strokes.count
@@ -6893,7 +6911,29 @@ public struct NotebookEditorView: View {
         PenHaptics.penControlFired(in: canvasView)
     }
 
+    /// 筆跡動過了。去抖動之後把筆記標記成剛改過並落盤。
+    ///
+    /// 1.2 秒與同步排程器的去抖動（1.5 秒）刻意錯開：先把本機狀態定下來，
+    /// 再讓同步那一輪去看已經穩定的內容。反過來的話，同步會拿到寫到一半的
+    /// 那個瞬間，然後下一輪再傳一次。
+    private func noteInkEdited() {
+        inkTouchWork?.cancel()
+        let work = DispatchWorkItem {
+            // `updateNotebook` 自己會蓋上現在的時間，並在 `persistData()`
+            // 裡通知自動同步。這裡不碰 `AccountSyncStore` —— 內容改動不是
+            // 中繼資料改動，把時戳往前推會讓這台裝置永遠贏過另一台對同一本
+            // 筆記的改名，而那次改名其實比較晚。
+            store.updateNotebook(notebook)
+        }
+        inkTouchWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: work)
+    }
+
     private func saveCurrentPageDrawing() {
+        // 明確存檔就把待辦的去抖動取消掉 —— 留著的話 1.2 秒後會再寫一次
+        // 一模一樣的內容。
+        inkTouchWork?.cancel()
+        inkTouchWork = nil
         store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: currentDrawing)
         notebook.lastModifiedDate = Date()
         store.updateNotebook(notebook)

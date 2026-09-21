@@ -58,8 +58,19 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         _ = recordingsDirectory // 啟動時自動檢查並建立「Kairumo Record」資料夾
     }
 
-    /// 在 Finder 中開啟「Kairumo Record」資料夾
+    /// 在「檔案」／Finder 中開啟「Kairumo Record」資料夾。
+    ///
+    /// # iOS 這條路有兩個前提，少一個都會安靜地跑錯地方
+    ///
+    /// 1. `Info.plist` 要有 `UIFileSharingEnabled` —— 沒有的話，App 的
+    ///    Documents 根本不會出現在「檔案」App 裡，`shareddocuments://`
+    ///    沒有東西可以導航到，「檔案」只會停在它上次待的地方。
+    ///    **URL 仍然「開成功」**，所以不會有任何錯誤可以看。
+    /// 2. 目標資料夾**必須已經存在**。指向一個不存在的路徑時，
+    ///    「檔案」一樣會落到別的地方 —— 使用者看到的還是「開錯資料夾」。
+    ///    第一次啟動後還沒錄過音就是這個狀態。
     public func openRecordingsFolderInFinder() {
+        // 先確保它存在（getter 本身會建立）。
         let folderUrl = recordingsDirectory
         #if targetEnvironment(macCatalyst) || os(macOS)
         if let wsClass = NSClassFromString("NSWorkspace") as? NSObjectProtocol,
@@ -68,10 +79,25 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
             return
         }
         #else
-        var components = URLComponents(url: folderUrl, resolvingAgainstBaseURL: false)
+        // 標準化路徑：`/var/...` 是 `/private/var/...` 的符號連結，
+        // 而「檔案」認的是後者。不解析的話會導航失敗。
+        let resolved = folderUrl.resolvingSymlinksInPath()
+        var components = URLComponents(url: resolved, resolvingAgainstBaseURL: false)
         components?.scheme = "shareddocuments"
         if let filesAppUrl = components?.url {
-            UIApplication.shared.open(filesAppUrl, options: [:], completionHandler: nil)
+            UIApplication.shared.open(filesAppUrl, options: [:]) { opened in
+                guard !opened else { return }
+                // 退回開 Documents 根目錄：至少落在這個 App 自己的區域裡，
+                // 而不是「檔案」上次待的某個不相干的地方。
+                var root = URLComponents(
+                    url: self.recordingsDirectory.deletingLastPathComponent()
+                        .resolvingSymlinksInPath(),
+                    resolvingAgainstBaseURL: false)
+                root?.scheme = "shareddocuments"
+                if let rootUrl = root?.url {
+                    UIApplication.shared.open(rootUrl, options: [:], completionHandler: nil)
+                }
+            }
             return
         }
         #endif
