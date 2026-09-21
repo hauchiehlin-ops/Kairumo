@@ -222,36 +222,6 @@ class InkSurfaceView(
     }
 
     private fun Canvas.drawStroke(points: List<StrokePoint>, tool: ToolKind) {
-        if (points.size < 2) return
-        val sensitive = when (tool) {
-            ToolKind.FOUNTAIN_PEN, ToolKind.PENCIL, ToolKind.BRUSH, ToolKind.WATERCOLOR -> true
-            ToolKind.BALL_POINT, ToolKind.HIGHLIGHTER, ToolKind.MARKER -> false
-        }
-        val multiplier = when (tool) {
-            ToolKind.BRUSH -> 2.2f
-            ToolKind.MARKER -> 2.8f
-            ToolKind.HIGHLIGHTER -> 3.8f
-            ToolKind.PENCIL -> 1.3f
-            ToolKind.WATERCOLOR -> 2.4f
-            ToolKind.BALL_POINT -> 0.65f
-            ToolKind.FOUNTAIN_PEN -> 1.1f
-        }
-        val origAlpha = paint.alpha
-        val toolAlpha = when (tool) {
-            ToolKind.HIGHLIGHTER -> (origAlpha * 0.35f).toInt()
-            ToolKind.WATERCOLOR -> (origAlpha * 0.55f).toInt()
-            ToolKind.MARKER -> (origAlpha * 0.85f).toInt()
-            ToolKind.PENCIL -> (origAlpha * 0.85f).toInt()
-            else -> origAlpha
-        }
-        paint.alpha = toolAlpha
-        for (i in 1 until points.size) {
-            val a = points[i - 1]
-            val b = points[i]
-            val scale = if (sensitive) 0.35f + 0.65f * b.pressure.coerceIn(0f, 1f) else 1f
-            paint.strokeWidth = engine.baseWidth * multiplier * scale * pxPerDp
-            drawLine(a.x * pxPerDp, a.y * pxPerDp, b.x * pxPerDp, b.y * pxPerDp, paint)
-        }
-        paint.alpha = origAlpha
+        InkBrushRenderer.drawStrokeOnCanvas(this, paint, points, tool, engine.baseWidth, pxPerDp)
     }
 }

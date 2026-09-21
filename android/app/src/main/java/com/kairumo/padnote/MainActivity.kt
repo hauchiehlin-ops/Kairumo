@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -2044,7 +2045,7 @@ private fun InkScreen(
     val posture = rememberFoldPosture(activity)
     val isTabletopActive = posture.separatingHorizontally || isTabletopManual
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    Column(modifier = Modifier.fillMaxSize().statusBarsPadding()) {
         // 只有兩個切換留在工具列上，其餘進溢位選單。
         //
         // 工具列分兩排，與 Apple 端一致（工作項 S-59）。

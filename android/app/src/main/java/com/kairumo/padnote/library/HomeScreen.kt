@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -208,7 +209,7 @@ fun HomeScreen(
     // 螢幕，眼睛要掃過全寬才讀完一行，而右邊大半是空的 —— 那不是用到了
     // 空間，是沒有版面。與 Apple 端同一組數字。
     BoxWithConstraints(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().statusBarsPadding(),
         contentAlignment = Alignment.TopCenter
     ) {
         val gutter = DS.Content.gutter(this.maxWidth)

@@ -32,6 +32,9 @@ import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.LocalizationStrings
 import com.kairumo.padnote.canvas.EditorMode
 
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.ui.semantics.Role
+
 /**
  * 流體動態傳送島 (Android 端 Dynamic Portal Island)。
  *
@@ -57,15 +60,13 @@ fun DynamicPortalIsland(
     ) {
         Surface(
             shape = CircleShape,
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.92f),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
             shadowElevation = 2.dp,
-            modifier = Modifier
-                .testTag("editor.mode")
-                .clip(CircleShape)
+            modifier = Modifier.testTag("editor.mode")
         ) {
             Row(
                 modifier = Modifier.padding(3.dp),
-                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // 手繪工作室按鈕
@@ -76,10 +77,8 @@ fun DynamicPortalIsland(
                     activeColor = MaterialTheme.colorScheme.primary,
                     testTag = "portal.draw",
                     onClick = {
-                        if (currentMode != EditorMode.DRAW) {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onModeChange(EditorMode.DRAW)
-                        }
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onModeChange(EditorMode.DRAW)
                     }
                 )
 
@@ -91,10 +90,8 @@ fun DynamicPortalIsland(
                     activeColor = Color(0xFF6366F1), // 智庫經典靛藍
                     testTag = "portal.type",
                     onClick = {
-                        if (currentMode != EditorMode.TYPE) {
-                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                            onModeChange(EditorMode.TYPE)
-                        }
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        onModeChange(EditorMode.TYPE)
                     }
                 )
             }
@@ -154,17 +151,21 @@ private fun ModePillButton(
         label = "pill_bg"
     )
     val contentColor by animateColorAsState(
-        targetValue = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+        targetValue = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurface,
         label = "pill_text"
     )
 
     Box(
         modifier = Modifier
             .then(if (testTag.isNotEmpty()) Modifier.testTag(testTag) else Modifier)
+            .defaultMinSize(minHeight = 36.dp)
             .clip(CircleShape)
             .background(backgroundColor)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 5.dp),
+            .clickable(
+                role = Role.Tab,
+                onClick = onClick
+            )
+            .padding(horizontal = 12.dp, vertical = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(
@@ -173,13 +174,13 @@ private fun ModePillButton(
         ) {
             Text(
                 text = icon,
-                fontSize = 12.sp
+                fontSize = 13.sp
             )
             Text(
                 text = title,
                 style = MaterialTheme.typography.labelMedium.copy(
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                    fontSize = 12.sp
+                    fontSize = 12.5.sp
                 ),
                 color = contentColor
             )
