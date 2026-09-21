@@ -833,7 +833,7 @@ public struct HomeWorkbenchView: View {
                                             }
                                             Button {
                                                 withAnimation {
-                                                    hiddenNoteIds.insert(note.id)
+                                                    _ = hiddenNoteIds.insert(note.id)
                                                 }
                                             } label: {
                                                 Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
@@ -1114,7 +1114,7 @@ public struct HomeWorkbenchView: View {
                                 Divider()
                                 Button {
                                     withAnimation {
-                                        hiddenRecordingIds.insert(rec.id)
+                                        _ = hiddenRecordingIds.insert(rec.id)
                                     }
                                 } label: {
                                     Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
@@ -1376,7 +1376,7 @@ public struct HomeWorkbenchView: View {
                                     }
                                     Button {
                                         withAnimation {
-                                            hiddenNoteIds.insert(note.id)
+                                            _ = hiddenNoteIds.insert(note.id)
                                         }
                                     } label: {
                                         Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")

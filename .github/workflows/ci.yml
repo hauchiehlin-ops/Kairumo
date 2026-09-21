@@ -52,6 +52,14 @@ jobs:
       # **只跑單元測試，不跑 UITests。** 介面測試會因為動畫與載入時序
       # 間歇失敗，而間歇失敗的閘門會在第三次紅的時候被關掉 ——
       # 這個教訓 scripts/check-screen-parity.py 的說明裡已經寫過一次。
+      # 把 runner 的 Xcode 版本印出來。
+      #
+      # 2026-09-22：Apple 端在 CI 上編不過，而本機編得過 —— 差別是本機
+      # Xcode 27，runner 上舊得多，有些運算式只有新版的型別檢查器兜得起來。
+      # 不印版本的話，下一次遇到同一類失敗只能靠猜。
+      - name: Xcode 版本
+        if: runner.os == 'macOS'
+        run: xcodebuild -version
       - name: 核心的 xcframework（Apple 測試要連它）
         if: runner.os == 'macOS'
         run: ./scripts/build-xcframework.sh
