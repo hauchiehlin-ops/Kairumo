@@ -910,6 +910,21 @@ impl NotebookPackage {
                 });
             }
         }
+
+        // **依座標排序，不要相信檔案順序。**
+        //
+        // 「檔名字典序即因果序」只在沒有壓實過的時候成立。壓實把
+        // `0001..0003` 併成一個叫 `0003` 的檔之後，本來排最前面的那一批
+        // 會跟著檔名跑到後面去 —— 於是別台裝置 lamport 為 2 的操作
+        // 被重播在自己 lamport 為 1 的 `AddPage` **之前**，
+        // 那一頁還不存在，掛在它上面的區塊就被靜默丟掉了。
+        //
+        // 這是多裝置模型檢查（`model_multi_device.rs`）抓到的，
+        // 縮小之後只要七步：新裝置加入、兩邊各寫一筆、同步、壓實。
+        //
+        // 用穩定排序：同一批之內的順序是有意義的（先 AddTextBlock
+        // 再 TextEdit），不可以被打亂。
+        out.sort_by_key(|e| (e.lamport, e.device));
         Ok(out)
     }
 
@@ -1006,10 +1021,21 @@ impl NotebookPackage {
     }
 
     /// 「現在」這一刀 —— 建立里程碑時要記的就是它。
+    ///
+    /// 除了向量時鐘，還要記下**當下看得到哪些還原操作**。
+    /// 理由見 `MilestoneCut::seen_restores`：部分同步會在時鐘裡留下洞，
+    /// 而落在洞裡的還原之後才到達時，用區間規則取消不掉它。
     pub fn current_cut(&self) -> Result<MilestoneCut, StorageError> {
+        let seen_restores = self
+            .read_doc_op_entries()?
+            .iter()
+            .filter(|e| matches!(e.op, DocOp::RestoreMilestone { .. }))
+            .map(|e| (e.lamport, e.device))
+            .collect();
         Ok(MilestoneCut {
             doc: self.doc_clock(),
             ink: self.ink_clock()?,
+            seen_restores,
         })
     }
 

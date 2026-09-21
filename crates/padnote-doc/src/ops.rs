@@ -414,6 +414,11 @@ impl Writer {
         for ((page, device), count) in &c.ink {
             self.uuid(*page).u32(*device).u32(*count);
         }
+        // 建立這一刀時已經看得到的還原（見 `MilestoneCut::seen_restores`）。
+        self.u32(c.seen_restores.len() as u32);
+        for (lamport, device) in &c.seen_restores {
+            self.u64(*lamport).u32(*device);
+        }
         self
     }
     fn uuids(&mut self, ids: &[Uuid]) -> &mut Self {
@@ -631,7 +636,16 @@ impl<'a> Reader<'a> {
             let device = self.u32()?;
             ink.insert((page, device), self.u32()?);
         }
-        Ok(MilestoneCut { doc, ink })
+        let mut seen_restores = std::collections::BTreeSet::new();
+        for _ in 0..self.u32()? {
+            let lamport = self.u64()?;
+            seen_restores.insert((lamport, self.u32()?));
+        }
+        Ok(MilestoneCut {
+            doc,
+            ink,
+            seen_restores,
+        })
     }
     fn uuids(&mut self) -> Result<Vec<Uuid>, DocCodecError> {
         let n = self.u32()? as usize;

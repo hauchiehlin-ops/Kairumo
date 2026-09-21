@@ -109,6 +109,11 @@ pub struct NotebookSession {
     /// 每一頁的物件樹（ADR-0010）。群組與變換住在這裡，
     /// **筆畫資料完全不動**。
     objects: std::collections::HashMap<Uuid, ObjectTree>,
+    /// 指向一個**還沒出現的頁面**的區塊，暫存於此。
+    ///
+    /// 那一頁的 `AddPage` 一到就掛上去。物件樹沒有這個問題 ——
+    /// 它用 `entry().or_default()`，本來就與順序無關。
+    pending_blocks: std::collections::HashMap<Uuid, Vec<Block>>,
 }
 
 impl NotebookSession {
@@ -161,6 +166,7 @@ impl NotebookSession {
             recorded_audio_us: 0,
             vad_model: None,
             objects: Default::default(),
+            pending_blocks: Default::default(),
         };
         Ok(session)
     }
@@ -186,6 +192,7 @@ impl NotebookSession {
             recorded_audio_us: 0,
             vad_model: None,
             objects: Default::default(),
+            pending_blocks: Default::default(),
         };
 
         // **計數器要從磁碟接續，不能從 0 重來。**
@@ -252,6 +259,10 @@ impl NotebookSession {
                 if self.notebook.page(*id).is_none() {
                     self.notebook
                         .insert_page(*index as usize, Page::new(*id, template.clone()));
+                }
+                // 這一頁還沒到之前先收著的區塊，現在掛上去。見 `pending_blocks`。
+                for block in self.pending_blocks.remove(id).unwrap_or_default() {
+                    self.add_block_to_page(*id, block);
                 }
             }
             DocOp::RemovePage { id } => {
@@ -616,6 +627,16 @@ impl NotebookSession {
         }
         if let Some(p) = self.notebook.page_mut(page) {
             p.add_block(block);
+        } else {
+            // **那一頁還沒到，先收著，不要丟掉。**
+            //
+            // `document.rs` 開宗明義說這個模型「所有變更都是可交換的操作，
+            // 順序無關」。在此之前那句話是假的：頁面還不存在時，掛在它上面
+            // 的區塊會被靜默丟棄 —— 使用者看到的是內容少了一段，
+            // 沒有錯誤訊息，而且資料其實還好端端在 oplog 裡。
+            //
+            // 部分同步（只下載了一半的檔）與壓實都會造成這個順序。
+            self.pending_blocks.entry(page).or_default().push(block);
         }
     }
 
@@ -1118,6 +1139,7 @@ impl NotebookSession {
         self.index = SearchIndex::new();
         self.texts = Default::default();
         self.objects = Default::default();
+        self.pending_blocks = Default::default();
         let ops = self.package.read_doc_ops()?;
         self.replay(&ops);
         Ok(())
@@ -2317,6 +2339,40 @@ mod tests {
             },
         ]);
         assert_eq!(s.notebook().page_count(), before + 2);
+    }
+
+    /// **區塊比它所屬的頁面先到，不可以被丟掉。**
+    ///
+    /// `document.rs` 開宗明義說這個模型「所有變更都是可交換的操作，
+    /// 順序無關」。在此之前那句話是假的 —— 部分同步（只下載到一半）
+    /// 與壓實都會造成這個順序，而結果是內容少了一段、沒有錯誤訊息，
+    /// 資料其實還好端端在 oplog 裡。
+    #[test]
+    fn a_block_that_arrives_before_its_page_is_not_lost() {
+        let mut s = session("out-of-order-block");
+        let page = Uuid::now_v7();
+        let block = Uuid::now_v7();
+
+        // 先套用區塊，那一頁還不存在。
+        s.apply_remote(&[DocOp::AddTextBlock {
+            page,
+            id: block,
+            style: TextStyle::Body,
+            created_at: NotebookTime::ZERO,
+        }]);
+        assert!(s.notebook.page(page).is_none());
+
+        // 那一頁到了 —— 區塊必須自己掛上去。
+        s.apply_remote(&[DocOp::AddPage {
+            id: page,
+            template: PageTemplate::Blank,
+            index: 0,
+        }]);
+        assert_eq!(
+            s.notebook.page(page).unwrap().blocks().len(),
+            1,
+            "先到的區塊要在頁面出現時補掛上去，不是丟掉"
+        );
     }
 
     /// **同一筆操作到達兩次，結果必須跟到達一次一樣。**

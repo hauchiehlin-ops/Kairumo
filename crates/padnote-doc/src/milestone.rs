@@ -43,7 +43,7 @@
 
 use crate::Uuid;
 use crate::ops::DocOp;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 
 /// 文件操作的向量時鐘：`device -> 已寫到的最大 lamport`。
 pub type DocClock = BTreeMap<u32, u64>;
@@ -56,6 +56,27 @@ pub type InkClock = BTreeMap<(Uuid, u32), u32>;
 pub struct MilestoneCut {
     pub doc: DocClock,
     pub ink: InkClock,
+    /// 建立這一刀時，**已經看得到的還原操作**（座標）。
+    ///
+    /// # 為什麼向量時鐘不夠
+    ///
+    /// `doc` 是「每台裝置的最大 lamport」，它隱含一個假設：
+    /// 「我拿到了那台裝置 1..max 的每一筆」。**部分同步會讓這個假設變成謊話**
+    /// —— 上傳到一半斷線、逾時、App 被系統殺掉，另一台就可能拿到
+    /// lamport 3 與 6 而中間的 5 還在路上。
+    ///
+    /// 對一般操作，中間那筆晚到只是「內容變多」，無害。
+    /// **對還原操作就不是**：晚到的還原會生效，而且沒有辦法用「回到那一刀」
+    /// 取消它 —— 它的 lamport 比刀口小，不落在遮蔽區間 `(cut, upto]` 裡。
+    ///
+    /// 症狀：使用者在 A 上還原掉一段內容；B 在還沒收到那筆還原時建了里程碑
+    /// （畫面上那段內容還在）；B 補同步之後內容消失；B 還原回那個里程碑
+    /// —— **內容沒有回來**。時光機對它自己的快照說謊。
+    ///
+    /// 記下「當時看得到哪些還原」就精確了，而且很小：
+    /// 還原是使用者按下去的動作，一本筆記本裡只有個位數到幾十筆。
+    /// （反過來若要記下「當時看得到的每一筆操作」，那是每次編輯一個 u64。）
+    pub seen_restores: BTreeSet<(u64, u32)>,
 }
 
 impl MilestoneCut {
@@ -108,6 +129,15 @@ impl Suppression {
     /// 這一筆文件操作落在遮蔽區間內嗎？
     fn hides_doc(&self, lamport: u64, device: u32) -> bool {
         lamport > self.cut.doc_at(device) && lamport <= self.upto.doc_at(device)
+    }
+
+    /// 這一筆**還原操作**要不要被取消？
+    ///
+    /// 規則比一般操作寬：只要它是在這次還原之前發生的，而且**建立這一刀的
+    /// 時候還沒看到它**，就取消。理由見 [`MilestoneCut::seen_restores`] ——
+    /// 晚到的還原用區間規則抓不到，時光機會對自己的快照說謊。
+    fn hides_restore(&self, lamport: u64, device: u32) -> bool {
+        lamport <= self.upto.doc_at(device) && !self.cut.seen_restores.contains(&(lamport, device))
     }
 
     /// 這一筆筆畫記錄（第 `index` 筆，從 0 起算）落在遮蔽區間內嗎？
@@ -177,7 +207,7 @@ pub fn resolve(entries: Vec<OpEntry>) -> Resolved {
     for cand in candidates.into_iter().rev() {
         if suppressions
             .iter()
-            .any(|s| s.hides_doc(cand.lamport, cand.device))
+            .any(|s| s.hides_restore(cand.lamport, cand.device))
         {
             continue; // 這次還原已經被後來的還原取消掉了
         }
@@ -252,6 +282,7 @@ mod tests {
         MilestoneCut {
             doc: pairs.iter().copied().collect(),
             ink: BTreeMap::new(),
+            seen_restores: BTreeSet::new(),
         }
     }
 
@@ -359,16 +390,77 @@ mod tests {
         assert_eq!(titles(&r), ["他人"]);
     }
 
+    /// **部分同步會在向量時鐘裡留下洞，而落在洞裡的還原之後才到達。**
+    ///
+    /// 這是多裝置模型檢查（400 步的長時間版）抓到的。
+    /// 情境：A 還原掉一段內容；B 在還沒收到那筆還原時建了里程碑（畫面上
+    /// 那段還在）；B 補同步之後內容消失；B 還原回自己的里程碑 ——
+    /// 在此之前**內容不會回來**，因為那筆還原的 lamport 比刀口小，
+    /// 不落在遮蔽區間 `(cut, upto]` 裡。時光機對它自己的快照說謊。
+    #[test]
+    fn a_restore_that_arrived_late_is_undone_by_going_back_to_the_snapshot() {
+        // 裝置 1 在 lamport 5 還原掉了「乙」。
+        // 裝置 2 在 lamport 6 建里程碑時**還沒收到**那一筆 —— 它的時鐘說
+        // 「裝置 1 寫到 6」（因為它拿到了 6，只是中間的 5 還在路上）。
+        let cut = MilestoneCut {
+            doc: [(1, 6)].into_iter().collect(),
+            ink: BTreeMap::new(),
+            seen_restores: BTreeSet::new(), // ← 沒看到 lamport 5 那一筆
+        };
+        let upto = clock(&[(1, 7), (2, 8)]);
+
+        let r = resolve(vec![
+            title(1, 1, "甲"),
+            title(2, 1, "乙"),
+            mark(6, 2, 1, cut.clone()),
+            restore(5, 1, 9, clock(&[(1, 1)]), clock(&[(1, 2)])), // 晚到的還原
+            restore(8, 2, 1, cut, upto),                          // 回到里程碑
+        ]);
+        assert_eq!(
+            titles(&r),
+            ["甲", "乙"],
+            "回到里程碑時，建立那一刀時還沒看到的還原必須被取消"
+        );
+    }
+
+    /// 反過來：建立里程碑時**已經看到**的還原，回去之後要維持原狀。
+    ///
+    /// 少了這一條，上面那個修法會變成「還原到任何里程碑都會取消所有還原」。
+    #[test]
+    fn a_restore_that_was_already_visible_stays_in_effect() {
+        let cut = MilestoneCut {
+            doc: [(1, 6)].into_iter().collect(),
+            ink: BTreeMap::new(),
+            seen_restores: [(5u64, 1u32)].into_iter().collect(), // ← 當時看到了
+        };
+        let upto = clock(&[(1, 7), (2, 8)]);
+
+        let r = resolve(vec![
+            title(1, 1, "甲"),
+            title(2, 1, "乙"),
+            restore(5, 1, 9, clock(&[(1, 1)]), clock(&[(1, 2)])),
+            mark(6, 2, 1, cut.clone()),
+            restore(8, 2, 1, cut, upto),
+        ]);
+        assert_eq!(
+            titles(&r),
+            ["甲"],
+            "快照當時「乙」就已經不在了，回去之後不該冒出來"
+        );
+    }
+
     #[test]
     fn ink_indices_are_filtered_by_the_same_interval() {
         let page = uuid(9);
         let cut = MilestoneCut {
             doc: [(1, 0)].into_iter().collect(),
             ink: [((page, 1), 2)].into_iter().collect(),
+            seen_restores: BTreeSet::new(),
         };
         let upto = MilestoneCut {
             doc: [(1, 1)].into_iter().collect(),
             ink: [((page, 1), 5)].into_iter().collect(),
+            seen_restores: BTreeSet::new(),
         };
         let r = resolve(vec![restore(2, 1, 1, cut, upto)]);
         // 0、1 在快照裡；2–4 是之後畫的，遮掉；5 以後是還原之後畫的，留著。

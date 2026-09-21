@@ -163,6 +163,26 @@ jobs:
 
   # 決策 D6：授權稽核。禁止 AGPL 進入相依樹。
   # 每一筆豁免的理由都寫在 deny.toml 裡，不要在這裡放行。
+  # ── 一致性閘門 3：多裝置模型檢查 ────────────────────────────────
+  #
+  # 隨機抽幾百步「一台裝置能做的事」（編輯／同步／壓實／里程碑／還原／
+  # 離線／裝置消失／新裝置加入），每一步之後檢查收斂、單調、冪等、
+  # 快照回得去。失敗時自動把序列縮到最短再印出來。
+  #
+  # 這道閘門在寫出來的第一天就抓到兩個會掉資料的 bug —— 兩個都是
+  # 「我沒想到要去試」的情境。它跑在一般的 Linux runner 上，幾十秒。
+  model-check:
+    name: Multi-device model check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: 系統相依（cpal → ALSA、audiopus → Opus）
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev pkg-config
+      - name: 隨機歷史與回歸種子
+        run: cargo test -p padnote-core --no-default-features --test model_multi_device
+
   licenses:
     name: License audit
     runs-on: ubuntu-latest
