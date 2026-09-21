@@ -63,6 +63,13 @@ impl fmt::Debug for BlobId {
 #[derive(Debug)]
 pub struct BlobStore {
     root: PathBuf,
+    /// 內容加密金鑰。`None` 表示這個套件沒有加密。
+    ///
+    /// **檔名一律是明文的 SHA-256**，即使內容加密了 —— 那是去重的鍵，
+    /// 而兩台裝置的同一張圖必須算出同一個名字才去重得掉。
+    /// 檔名不洩漏內容（雜湊不可逆），但它確實洩漏「你有沒有某一張特定的圖」；
+    /// 這個取捨換來的是同步層完全不必改。
+    dek: Option<padnote_crypto::envelope::Dek>,
 }
 
 #[derive(Debug)]
@@ -100,7 +107,15 @@ impl BlobStore {
     pub fn new(package_root: impl Into<PathBuf>) -> Self {
         Self {
             root: package_root.into(),
+            dek: None,
         }
+    }
+
+    /// 帶上內容金鑰。加密套件的 blob 存的是密文。
+    #[must_use]
+    pub fn with_dek(mut self, dek: Option<padnote_crypto::envelope::Dek>) -> Self {
+        self.dek = dek;
+        self
     }
 
     fn path_of(&self, id: BlobId) -> PathBuf {
@@ -109,11 +124,22 @@ impl BlobStore {
 
     /// 寫入並回傳內容雜湊。已存在時直接回傳（**去重，不重複寫入**）。
     pub fn put(&self, data: &[u8]) -> Result<BlobId, BlobError> {
+        // **id 一律取自明文**，加密與否都一樣 —— 它是去重的鍵。
         let id = BlobId::of(data);
         let path = self.path_of(id);
         if path.exists() {
             return Ok(id);
         }
+        let stored: Vec<u8>;
+        let data = match &self.dek {
+            Some(dek) => {
+                stored = dek
+                    .seal(data, id.to_string().as_bytes())
+                    .map_err(|e| BlobError::Io(std::io::Error::other(e.to_string())))?;
+                &stored[..]
+            }
+            None => data,
+        };
         // 先寫暫存檔、fsync、再 rename：避免中途當機留下半個 blob 卻頂著
         // 正確的檔名。少了 fsync 的話，斷電後會得到一個名字對、內容是零的檔案。
         crate::atomic::write_atomic(&path, data)?;
@@ -123,10 +149,17 @@ impl BlobStore {
     /// 讀取並**驗證完整性**。雜湊不符時回報 `Corrupted` 而非回傳壞資料。
     pub fn get(&self, id: BlobId) -> Result<Vec<u8>, BlobError> {
         let path = self.path_of(id);
-        let data = fs::read(&path).map_err(|e| match e.kind() {
+        let raw = fs::read(&path).map_err(|e| match e.kind() {
             std::io::ErrorKind::NotFound => BlobError::NotFound(id),
             _ => BlobError::Io(e),
         })?;
+        let data = match &self.dek {
+            // 解開之後才驗雜湊：檔名是**明文**的雜湊。
+            Some(dek) => dek
+                .open(&raw, id.to_string().as_bytes())
+                .map_err(|e| BlobError::Io(std::io::Error::other(e.to_string())))?,
+            None => raw,
+        };
 
         let actual = BlobId::of(&data);
         if actual != id {

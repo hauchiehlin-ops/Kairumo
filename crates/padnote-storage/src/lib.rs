@@ -7,6 +7,7 @@ pub mod atomic;
 pub mod blob;
 pub mod manifest;
 pub mod package;
+pub mod sealed;
 
 pub use atomic::write_atomic;
 pub use blob::{BlobId, BlobStore};

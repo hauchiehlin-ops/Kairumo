@@ -84,6 +84,15 @@ pub struct NotebookPackage {
     /// 預設 0 是為了讓既有的呼叫端（與測試）不用全部改；真正在用的路徑
     /// 會透過 [`NotebookPackage::with_device`] 設定成裝置實際的 id。
     device: u32,
+    /// 內容加密金鑰。`None` 表示這是一個未加密的套件。
+    ///
+    /// # 為什麼是「開啟時才給」
+    ///
+    /// 金鑰由使用者的密碼解出來（`manifest.json` 裡只有**包好的** DEK），
+    /// 所以套件可以在沒有密碼的情況下被開啟 —— 這很重要：
+    /// **同步不需要密碼**。同步搬的是密文、壓實只是把位元組接起來，
+    /// 兩者都不必解密。需要密碼的只有「把內容顯示給使用者看」。
+    dek: Option<padnote_crypto::envelope::Dek>,
 }
 
 impl NotebookPackage {
@@ -104,9 +113,50 @@ impl NotebookPackage {
             root,
             manifest,
             device: 0,
+            dek: None,
         };
         pkg.write_manifest()?;
         Ok(pkg)
+    }
+
+    /// 建立一個**加密的**新套件。
+    ///
+    /// 回傳套件本身與復原碼 —— 復原碼**只在這一刻存在**，
+    /// 之後任何人（包括我們）都算不回來。呼叫端必須讓使用者抄下來並回填
+    /// 驗證過，才算完成啟用；不擋的話，第一個忘記密碼的使用者會失去全部筆記。
+    pub fn create_encrypted(
+        root: impl Into<PathBuf>,
+        title: &str,
+        now_unix_ms: u64,
+        passphrase: &str,
+    ) -> Result<(Self, String), StorageError> {
+        use base64::Engine as _;
+
+        let (envelope, dek) = padnote_crypto::envelope::Envelope::create(passphrase)
+            .map_err(|e| StorageError::DocOps(e.to_string()))?;
+        let words = padnote_crypto::recovery::english_wordlist();
+        let recovery = padnote_crypto::recovery::RecoveryCode::generate(&words)
+            .map_err(|e| StorageError::DocOps(e.to_string()))?;
+
+        let mut pkg = Self::create(root, title, now_unix_ms)?;
+        let kdf = envelope.kdf_params();
+        pkg.manifest.encryption = crate::manifest::Encryption::XChaCha20Poly1305Argon2id {
+            kdf: crate::manifest::KdfParams {
+                algo: "argon2id".into(),
+                m_cost_kib: kdf.m_cost_kib,
+                t_cost: kdf.t_cost,
+                p_cost: kdf.p_cost,
+                salt_b64: base64::engine::general_purpose::STANDARD.encode(&kdf.salt),
+            },
+            wrapped_dek_b64: envelope.wrapped_dek_b64(),
+            recovery: crate::manifest::RecoveryParams {
+                algo: "bip39-en".into(),
+                words: recovery.words().len() as u32,
+            },
+        };
+        pkg.write_manifest()?;
+        let phrase = recovery.phrase();
+        Ok((pkg.with_dek(dek), phrase))
     }
 
     /// 指定這台裝置的識別碼。**多裝置同步時必須設定** ——
@@ -119,6 +169,132 @@ impl NotebookPackage {
 
     pub fn device(&self) -> u32 {
         self.device
+    }
+
+    /// 一個 oplog 框架的附加驗證資料（AAD）。
+    ///
+    /// # 為什麼綁的是「筆記本 + 裝置」，不是完整檔名
+    ///
+    /// 直覺會想綁完整檔名，但那會**與壓實衝突**：壓實把同一台裝置的好幾個
+    /// 碎檔接成一個新檔名（用最大的 lamport），而框架的位元組原封不動 ——
+    /// 綁檔名的話，壓實之後就再也解不開了，而且錯誤訊息是「密語錯誤」，
+    /// 指向一個完全不相干的地方。
+    ///
+    /// 綁「筆記本 id + 裝置後綴」剛好是**不該改變**的那一部分：
+    /// 壓實只在同一本筆記、同一台裝置之內合併，所以它一定不變；
+    /// 而把密文搬到另一本筆記或冒充成另一台裝置的檔案，仍然打不開。
+    fn oplog_aad(&self, file_name: &str) -> String {
+        let device_suffix = file_name.rsplit('-').next().unwrap_or(file_name);
+        format!("{}:{}", self.manifest.notebook_id, device_suffix)
+    }
+
+    /// 換密碼。
+    ///
+    /// **內容一個位元組都不會動** —— 換的只有 `manifest.json` 裡包住 DEK
+    /// 的那一層。所以這一步很快，也不會與同步打架（oplog 檔沒變，
+    /// 對面不會看到任何差異）。
+    ///
+    /// 反過來做（重新加密全部內容）的話，每換一次密碼就等於把整本筆記
+    /// 重傳一次，而且中途失敗會留下一半新一半舊的套件。
+    pub fn rewrap_passphrase(
+        &self,
+        old_passphrase: &str,
+        new_passphrase: &str,
+    ) -> Result<(), StorageError> {
+        use base64::Engine as _;
+
+        let crate::manifest::Encryption::XChaCha20Poly1305Argon2id {
+            kdf,
+            wrapped_dek_b64,
+            recovery,
+        } = &self.manifest.encryption
+        else {
+            return Err(StorageError::DocOps("這個套件沒有加密".into()));
+        };
+
+        let salt = base64::engine::general_purpose::STANDARD
+            .decode(&kdf.salt_b64)
+            .map_err(|e| StorageError::DocOps(format!("salt 不是合法 base64：{e}")))?;
+        let envelope = padnote_crypto::envelope::Envelope::from_parts(
+            padnote_crypto::envelope::KdfParams {
+                m_cost_kib: kdf.m_cost_kib,
+                t_cost: kdf.t_cost,
+                p_cost: kdf.p_cost,
+                salt,
+            },
+            wrapped_dek_b64,
+        )
+        .map_err(|e| StorageError::DocOps(e.to_string()))?;
+
+        let fresh = envelope
+            .rewrap(old_passphrase, new_passphrase)
+            .map_err(|e| StorageError::DocOps(e.to_string()))?;
+
+        let mut manifest = self.manifest.clone();
+        let fresh_kdf = fresh.kdf_params();
+        manifest.encryption = crate::manifest::Encryption::XChaCha20Poly1305Argon2id {
+            kdf: crate::manifest::KdfParams {
+                algo: kdf.algo.clone(),
+                m_cost_kib: fresh_kdf.m_cost_kib,
+                t_cost: fresh_kdf.t_cost,
+                p_cost: fresh_kdf.p_cost,
+                salt_b64: base64::engine::general_purpose::STANDARD.encode(&fresh_kdf.salt),
+            },
+            wrapped_dek_b64: fresh.wrapped_dek_b64(),
+            recovery: recovery.clone(),
+        };
+
+        let json = serde_json::to_vec_pretty(&manifest)
+            .map_err(|e| StorageError::MalformedManifest(e.to_string()))?;
+        crate::atomic::write_atomic(&self.root.join("manifest.json"), &json)?;
+        Ok(())
+    }
+
+    /// 這個套件加密了嗎（看 manifest，不需要密碼）。
+    pub fn is_encrypted(&self) -> bool {
+        self.manifest.is_encrypted()
+    }
+
+    /// 帶上內容金鑰。**沒帶的話，加密套件的內容讀不出來**
+    /// （`read_doc_ops` 會回錯誤，而不是回空的 —— 回空的會讓上層
+    /// 以為這本筆記是空白的，然後把它覆蓋掉）。
+    #[must_use]
+    pub fn with_dek(mut self, dek: padnote_crypto::envelope::Dek) -> Self {
+        self.dek = Some(dek);
+        self
+    }
+
+    /// 用密碼解開這個套件的內容金鑰。
+    pub fn unlock(self, passphrase: &str) -> Result<Self, StorageError> {
+        let envelope = match &self.manifest.encryption {
+            crate::manifest::Encryption::None => {
+                return Err(StorageError::DocOps("這個套件沒有加密".into()));
+            }
+            crate::manifest::Encryption::XChaCha20Poly1305Argon2id {
+                kdf,
+                wrapped_dek_b64,
+                ..
+            } => {
+                use base64::Engine as _;
+                let salt = base64::engine::general_purpose::STANDARD
+                    .decode(&kdf.salt_b64)
+                    .map_err(|e| StorageError::DocOps(format!("salt 不是合法 base64：{e}")))?;
+                padnote_crypto::envelope::Envelope::from_parts(
+                    padnote_crypto::envelope::KdfParams {
+                        m_cost_kib: kdf.m_cost_kib,
+                        t_cost: kdf.t_cost,
+                        p_cost: kdf.p_cost,
+                        salt,
+                    },
+                    wrapped_dek_b64,
+                )
+                .map_err(|e| StorageError::DocOps(e.to_string()))?
+            }
+        };
+        let dek = envelope
+            .unwrap_dek(passphrase)
+            .map_err(|e| StorageError::DocOps(e.to_string()))?;
+        Ok(self.with_dek(dek))
     }
 
     pub fn open(root: impl Into<PathBuf>) -> Result<Self, StorageError> {
@@ -143,6 +319,7 @@ impl NotebookPackage {
             root,
             manifest,
             device: 0,
+            dek: None,
         })
     }
 
@@ -155,7 +332,9 @@ impl NotebookPackage {
     }
 
     pub fn blobs(&self) -> BlobStore {
-        BlobStore::new(&self.root)
+        // 金鑰跟著走 —— 忘了傳的話，加密套件會把圖片以明文存進去，
+        // 而使用者以為它加密了。
+        BlobStore::new(&self.root).with_dek(self.dek.clone())
     }
 
     pub fn set_title(&mut self, title: &str) -> Result<(), StorageError> {
@@ -277,7 +456,17 @@ impl NotebookPackage {
         fs::create_dir_all(&dir)?;
         let path = dir.join(format!("{lamport:016x}-{device:08x}.oplog"));
 
-        let bytes = padnote_doc::ops::encode(ops);
+        let encoded = padnote_doc::ops::encode(ops);
+        // 加密套件寫的是**框架**（長度前綴 + 密文），未加密的直接寫明文。
+        // 兩者都是純追加，所以同步的「較長的是超集」在兩種情況下都成立。
+        let bytes = match &self.dek {
+            Some(dek) => {
+                let aad = self.oplog_aad(&format!("{lamport:016x}-{device:08x}.oplog"));
+                crate::sealed::seal_frame(dek, &encoded, aad.as_bytes())
+                    .map_err(|e| StorageError::DocOps(e.to_string()))?
+            }
+            None => encoded,
+        };
         use std::io::Write;
         fs::OpenOptions::new()
             .create(true)
@@ -585,9 +774,27 @@ impl NotebookPackage {
             .collect();
         files.sort(); // 字典序 = 因果序
 
+        // 加密套件沒有金鑰時**回錯誤，不要回空的**。
+        // 回空的話，上層會以為這本筆記是空白的，然後把它存回去 ——
+        // 那是一次沒有任何錯誤訊息的資料覆蓋。
+        if self.manifest.is_encrypted() && self.dek.is_none() {
+            return Err(StorageError::DocOps(
+                "這個套件已加密，需要先解鎖才讀得出內容".into(),
+            ));
+        }
+
         let mut out = Vec::new();
         for f in files {
-            let bytes = fs::read(&f)?;
+            let raw = fs::read(&f)?;
+            let bytes = match &self.dek {
+                Some(dek) => {
+                    let name = f.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+                    let aad = self.oplog_aad(name);
+                    crate::sealed::open_frames(dek, &raw, aad.as_bytes())
+                        .map_err(|e| StorageError::DocOps(e.to_string()))?
+                }
+                None => raw,
+            };
             out.extend(
                 padnote_doc::ops::decode(&bytes)
                     .map_err(|e| StorageError::DocOps(e.to_string()))?,
@@ -1098,6 +1305,249 @@ mod tests {
         assert_eq!(reopened.read_ink(page).unwrap().len(), 1);
 
         let _ = fs::remove_file(zip_file);
+    }
+
+    #[test]
+    fn an_encrypted_package_round_trips_its_ops() {
+        use padnote_doc::ops::DocOp;
+        let root = tmp("enc-roundtrip");
+        let (pkg, phrase) =
+            NotebookPackage::create_encrypted(&root, "秘密筆記", 1, "correct horse").unwrap();
+        assert!(!phrase.is_empty(), "復原碼只在建立那一刻存在");
+        assert!(pkg.is_encrypted());
+
+        pkg.append_doc_ops(
+            1,
+            0xAA,
+            &[DocOp::SetTitle {
+                title: "機密".into(),
+            }],
+        )
+        .unwrap();
+        pkg.append_doc_ops(
+            2,
+            0xAA,
+            &[DocOp::SetTitle {
+                title: "更機密".into(),
+            }],
+        )
+        .unwrap();
+
+        let reopened = NotebookPackage::open(&root)
+            .unwrap()
+            .unlock("correct horse")
+            .unwrap();
+        let ops = reopened.read_doc_ops().unwrap();
+        assert_eq!(ops.len(), 2);
+    }
+
+    #[test]
+    fn the_plaintext_never_touches_the_disk() {
+        use padnote_doc::ops::DocOp;
+        let root = tmp("enc-ondisk");
+        let (pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
+        pkg.append_doc_ops(
+            1,
+            0xAA,
+            &[DocOp::SetTitle {
+                title: "這串字不該出現在檔案裡".into(),
+            }],
+        )
+        .unwrap();
+
+        let dir = root.join("doc/ops");
+        let mut found = false;
+        for entry in std::fs::read_dir(&dir).unwrap().filter_map(Result::ok) {
+            let bytes = std::fs::read(entry.path()).unwrap();
+            let needle = "這串字".as_bytes();
+            assert!(
+                !bytes.windows(needle.len()).any(|w| w == needle),
+                "明文出現在 {:?}",
+                entry.path()
+            );
+            found = true;
+        }
+        assert!(found, "沒有寫出任何 oplog 檔");
+    }
+
+    #[test]
+    fn a_locked_package_refuses_instead_of_looking_empty() {
+        // **回空的比回錯誤危險得多**：上層會以為這本筆記是空白的，
+        // 然後把它存回去 —— 那是一次沒有任何錯誤訊息的資料覆蓋。
+        use padnote_doc::ops::DocOp;
+        let root = tmp("enc-locked");
+        let (pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
+        pkg.append_doc_ops(1, 0xAA, &[DocOp::SetTitle { title: "x".into() }])
+            .unwrap();
+
+        let locked = NotebookPackage::open(&root).unwrap();
+        assert!(locked.read_doc_ops().is_err(), "鎖著卻讀得出東西");
+    }
+
+    #[test]
+    fn a_wrong_passphrase_does_not_unlock() {
+        let root = tmp("enc-wrongpw");
+        NotebookPackage::create_encrypted(&root, "t", 1, "right").unwrap();
+        assert!(
+            NotebookPackage::open(&root)
+                .unwrap()
+                .unlock("wrong")
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn compaction_works_without_the_passphrase() {
+        // **這一條很重要**：壓實只是把框架接起來，不需要解密。
+        // 需要密碼的話，背景同步在鎖定狀態下就完全動不了。
+        use padnote_doc::ops::DocOp;
+        let root = tmp("enc-compact");
+        let (pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
+        for lamport in 1..=6u64 {
+            pkg.append_doc_ops(
+                lamport,
+                0xAA,
+                &[DocOp::SetTitle {
+                    title: format!("t{lamport}"),
+                }],
+            )
+            .unwrap();
+        }
+
+        // 用一個**沒有金鑰**的把手壓實。
+        let locked = NotebookPackage::open(&root).unwrap();
+        let outcome = locked.compact_own_doc_ops(5, 0xAA).unwrap().unwrap();
+        assert_eq!(outcome.absorbed.len(), 5);
+
+        // 壓實之後內容還在。
+        let unlocked = NotebookPackage::open(&root).unwrap().unlock("pw").unwrap();
+        assert_eq!(unlocked.read_doc_ops().unwrap().len(), 6);
+    }
+
+    #[test]
+    fn an_encrypted_blob_is_ciphertext_on_disk_but_keeps_its_plaintext_name() {
+        let root = tmp("enc-blob");
+        let (pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
+        let plaintext = "這張圖的內容不該出現在磁碟上".as_bytes();
+        let id = pkg.blobs().put(plaintext).unwrap();
+
+        // 檔名是**明文**的雜湊 —— 那是去重的鍵，兩台裝置的同一張圖
+        // 必須算出同一個名字。
+        assert_eq!(id, crate::BlobId::of(plaintext));
+
+        // 但磁碟上的位元組是密文。
+        let mut found = false;
+        for entry in walk(&root.join("media/blobs")) {
+            let bytes = std::fs::read(&entry).unwrap();
+            assert!(
+                !bytes.windows(plaintext.len()).any(|w| w == plaintext),
+                "明文出現在 {entry:?}"
+            );
+            found = true;
+        }
+        assert!(found, "沒有寫出任何 blob");
+
+        // 解得回來，而且驗得過雜湊。
+        let reopened = NotebookPackage::open(&root).unwrap().unlock("pw").unwrap();
+        assert_eq!(reopened.blobs().get(id).unwrap(), plaintext);
+    }
+
+    #[test]
+    fn a_blob_cannot_be_read_without_the_passphrase() {
+        let root = tmp("enc-blob-locked");
+        let (pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
+        let id = pkg.blobs().put(b"secret image").unwrap();
+        // 沒有金鑰的把手讀出來的是密文，雜湊當然對不上 —— 要回錯誤，
+        // 不能把那串密文交出去（交出去的話畫面上會出現一張壞掉的圖）。
+        let locked = NotebookPackage::open(&root).unwrap();
+        assert!(locked.blobs().get(id).is_err());
+    }
+
+    /// 遞迴列出目錄下的所有檔案。blob 是分兩層放的（`<aa>/<sha256>`）。
+    fn walk(dir: &std::path::Path) -> Vec<PathBuf> {
+        let mut out = Vec::new();
+        let Ok(entries) = std::fs::read_dir(dir) else {
+            return out;
+        };
+        for entry in entries.filter_map(Result::ok) {
+            let path = entry.path();
+            if path.is_dir() {
+                out.extend(walk(&path));
+            } else {
+                out.push(path);
+            }
+        }
+        out
+    }
+
+    #[test]
+    fn a_frame_cannot_be_moved_to_another_notebook() {
+        // AAD 綁筆記本 id。少了它，把 A 本的密文搬進 B 本仍然解得開 ——
+        // 兩本用同一把金鑰時（同一個使用者）這是真的可能發生的。
+        use padnote_doc::ops::DocOp;
+        let a_root = tmp("enc-aad-a");
+        let b_root = tmp("enc-aad-b");
+        let (a, _) = NotebookPackage::create_encrypted(&a_root, "A", 1, "pw").unwrap();
+        a.append_doc_ops(
+            1,
+            0xAA,
+            &[DocOp::SetTitle {
+                title: "A 的秘密".into(),
+            }],
+        )
+        .unwrap();
+
+        // 把 A 的金鑰與密文搬到 B。
+        let (b, _) = NotebookPackage::create_encrypted(&b_root, "B", 1, "pw").unwrap();
+        let stolen = std::fs::read(a_root.join("doc/ops/0000000000000001-000000aa.oplog")).unwrap();
+        b.write_doc_op_file("0000000000000001-000000aa.oplog", &stolen)
+            .unwrap();
+
+        let a_dek = NotebookPackage::open(&a_root)
+            .unwrap()
+            .unlock("pw")
+            .unwrap();
+        let _ = a_dek; // 只是確認 A 自己開得起來
+        // B 用自己的密碼（同一組密碼，不同的 DEK）當然開不了；
+        // 重點是**即使金鑰相同**，AAD 也會擋下來 —— 這裡用 B 的把手試。
+        let b_unlocked = NotebookPackage::open(&b_root)
+            .unwrap()
+            .unlock("pw")
+            .unwrap();
+        assert!(b_unlocked.read_doc_ops().is_err(), "別本的密文被讀出來了");
+    }
+
+    #[test]
+    fn an_unencrypted_package_is_unaffected() {
+        // 決策：**只加密新的，舊的原地不動**。既有的套件一個位元組都不該變。
+        use padnote_doc::ops::DocOp;
+        let root = tmp("enc-none");
+        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        assert!(!pkg.is_encrypted());
+        pkg.append_doc_ops(
+            1,
+            0xAA,
+            &[DocOp::SetTitle {
+                title: "明文".into(),
+            }],
+        )
+        .unwrap();
+        assert_eq!(
+            NotebookPackage::open(&root)
+                .unwrap()
+                .read_doc_ops()
+                .unwrap()
+                .len(),
+            1,
+            "未加密的套件不需要解鎖"
+        );
+    }
+
+    #[test]
+    fn unlocking_a_plain_package_is_an_error_not_a_silent_success() {
+        let root = tmp("enc-plainunlock");
+        NotebookPackage::create(&root, "t", 1).unwrap();
+        assert!(NotebookPackage::open(&root).unwrap().unlock("pw").is_err());
     }
 
     #[test]

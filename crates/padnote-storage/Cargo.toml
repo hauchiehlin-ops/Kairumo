@@ -11,6 +11,8 @@ publish = false
 workspace = true
 
 [dependencies]
+padnote-crypto = { path = "../padnote-crypto" }
+base64 = { workspace = true }
 padnote-doc = { path = "../padnote-doc" }
 padnote-ink = { path = "../padnote-ink" }
 serde = { workspace = true }

@@ -139,6 +139,13 @@ impl Envelope {
         })
     }
 
+    /// 包裝金鑰時用的 KDF 參數。**要原樣寫進 `manifest.json`** ——
+    /// 少寫或寫錯任何一項，同一組密碼就推不出同一把 KEK，
+    /// 而使用者看到的是「密碼錯誤」，但他的密碼其實是對的。
+    pub fn kdf_params(&self) -> &KdfParams {
+        &self.kdf
+    }
+
     pub fn wrapped_dek_b64(&self) -> String {
         B64.encode(&self.wrapped_dek)
     }

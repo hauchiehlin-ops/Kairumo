@@ -2485,6 +2485,8 @@ dependencies = [
 name = "padnote-storage"
 version = "4.8.1"
 dependencies = [
+ "base64 0.22.1",
+ "padnote-crypto",
  "padnote-doc",
  "padnote-ink",
  "serde",

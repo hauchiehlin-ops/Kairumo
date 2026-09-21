@@ -6,14 +6,28 @@
 //! 採 BIP39 風格：熵 + SHA-256 校驗和 → 助記詞。校驗和讓抄錯字當場就被抓到，
 //! 而不是等到真的要救資料時才發現。
 //!
-//! 詞表以參數傳入，正式版使用官方 BIP39 英文 2048 詞表。
-//! TODO(M3/WP21)：內嵌官方詞表並加上中文詞表選項。
+//! 詞表以參數傳入；官方 BIP39 英文 2048 詞表由 [`english_wordlist`] 提供，
+//! 內嵌在二進位裡（`third_party/bip39/english.txt`）。
+//!
+//! **詞表不能隨版本改。** 換掉一個字，所有既有的復原碼就再也解不開 ——
+//! 而那是使用者唯一的後路。
 
 use sha2::{Digest, Sha256};
 use std::fmt;
 
 /// 詞表必須的大小（2^11，每個詞編碼 11 bit）。
 pub const WORDLIST_LEN: usize = 2048;
+
+/// 官方 BIP39 英文詞表（來源與雜湊見 `third_party/bip39/README.md`）。
+const ENGLISH_WORDLIST: &str = include_str!("../../../third_party/bip39/english.txt");
+
+/// 官方 BIP39 英文詞表，2048 個詞。
+///
+/// 每次呼叫都會切一次字串，但那只發生在產生或驗證復原碼的時候 ——
+/// 一個使用者一輩子大概做兩次。
+pub fn english_wordlist() -> Vec<&'static str> {
+    ENGLISH_WORDLIST.split_whitespace().collect()
+}
 
 #[derive(Debug)]
 pub enum RecoveryError {
@@ -150,6 +164,63 @@ impl RecoveryCode {
     /// 供使用者抄寫的呈現形式。
     pub fn phrase(&self) -> String {
         self.words.join(" ")
+    }
+}
+
+#[cfg(test)]
+mod wordlist_tests {
+    use super::*;
+
+    #[test]
+    fn the_embedded_wordlist_is_the_official_one() {
+        let words = english_wordlist();
+        assert_eq!(words.len(), WORDLIST_LEN, "詞表長度不對");
+        assert_eq!(words[0], "abandon");
+        assert_eq!(words[WORDLIST_LEN - 1], "zoo");
+    }
+
+    #[test]
+    fn every_word_is_unique() {
+        // 重複的字會讓同一個助記詞對應到兩個索引 —— 解出來的熵就錯了，
+        // 而錯誤只會在真的要救資料時出現。
+        let words = english_wordlist();
+        let unique: std::collections::BTreeSet<&str> = words.iter().copied().collect();
+        assert_eq!(unique.len(), WORDLIST_LEN);
+    }
+
+    #[test]
+    fn the_first_four_letters_identify_a_word() {
+        // BIP39 的設計保證：前四個字母即可唯一辨識。
+        // 使用者抄到一半看不清後面幾個字母時，這一點救得回來。
+        let words = english_wordlist();
+        let prefixes: std::collections::BTreeSet<String> = words
+            .iter()
+            .map(|w| w.chars().take(4).collect::<String>())
+            .collect();
+        assert_eq!(prefixes.len(), WORDLIST_LEN, "有前四字母相同的字");
+    }
+
+    #[test]
+    fn a_generated_code_round_trips_through_the_official_wordlist() {
+        let words = english_wordlist();
+        let code = RecoveryCode::generate(&words).expect("產生復原碼");
+        let parsed = RecoveryCode::parse(&code.phrase(), &words).expect("解析復原碼");
+        assert_eq!(parsed.entropy(), code.entropy());
+    }
+
+    #[test]
+    fn a_typo_is_caught_by_the_checksum() {
+        // 校驗和的意義就是「抄錯字當場被抓到」，而不是等到要救資料時。
+        let words = english_wordlist();
+        let code = RecoveryCode::generate(&words).expect("產生復原碼");
+        let mut parts: Vec<String> = code.words().to_vec();
+        // 換掉第一個字（換成一個一定不同的）。
+        parts[0] = if parts[0] == "abandon" {
+            "ability".into()
+        } else {
+            "abandon".into()
+        };
+        assert!(RecoveryCode::parse(&parts.join(" "), &words).is_err());
     }
 }
 
