@@ -25,10 +25,15 @@
      且停止後**完整**同步過去。
   4. 飛航模式開關一次，確認網路恢復會自己補一輪。
   5. 兩台同時編輯同一本，確認收斂且沒有重複筆畫。
-  6. Android 進 Doze 之後的行為（目前只有前景週期，**尚未接 WorkManager**）。
+  6. Android 進 Doze 之後的行為（WorkManager 已接，但要實機放置一段時間才驗得出來）。
+  7. iOS 背景更新：切到背景後放置，確認 `BGAppRefreshTask` 真的有被喚醒
+     （看同步日誌的時間戳）。
 - **判定**：1 通過且 3、5 沒有資料異常 = 這次大修達到「即時、迅速、正確」。
-- **已知未完成**：iOS 的 `BGProcessingTask` 與 Android 的 `WorkManager`
-  背景排程**還沒接**。目前 App 在背景時不會同步，只在進前景與進背景那一刻各推一次。
+- **背景排程已接**：iOS `BGAppRefreshTask`（`com.kairumo.padnote.sync.refresh`，
+  Info.plist 已宣告）、Android `WorkManager`（15 分鐘週期，需連網）。
+  兩者都是**保底**，系統決定什麼時候給時間；真正的「即時」靠前景觸發。
+  **背景那條路只有實機測得出來** —— 模擬器要用 Xcode 的
+  `_simulateLaunchForTaskWithIdentifier` 才會觸發，那不等於真實行為。
 
 ### H0. iOS 實機驗證（`--ios-install` 那條路尚未實測）
 - **卡在**：目前沒有任何實體 iPhone / iPad 連著這台 Mac。

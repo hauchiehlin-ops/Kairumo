@@ -73,6 +73,9 @@ object AutoSync {
 
     private fun nowMs(): ULong = SystemClock.elapsedRealtime().toULong()
 
+    /** 背景 worker 拿不到 Activity，只好跟這裡要 device id。 */
+    fun currentDeviceId(): UInt = deviceId
+
     /** App 啟動時呼叫一次。 */
     @Synchronized
     fun start(context: Context, deviceId: UInt) {
@@ -92,6 +95,8 @@ object AutoSync {
         }
 
         watchNetwork(app)
+        // 背景保底：App 被收掉之後，前景的心跳也跟著停。
+        SyncWorker.schedule(app)
         request(app, FfiSyncTrigger.FOREGROUND)
     }
 

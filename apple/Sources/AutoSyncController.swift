@@ -33,6 +33,9 @@
 
 import Foundation
 import Network
+#if canImport(BackgroundTasks)
+import BackgroundTasks
+#endif
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -83,8 +86,17 @@ public final class AutoSyncController: ObservableObject {
 
         startNetworkMonitor()
         observeLifecycle()
+        registerBackgroundTask()
         request(.foreground)
     }
+
+    /// 背景同步的任務識別字。
+    ///
+    /// **必須與 `Info.plist` 的 `BGTaskSchedulerPermittedIdentifiers` 逐字相同。**
+    /// 不一致時 iOS 不會報錯，只是那個任務永遠不會被喚醒 —— 而「永遠不會被
+    /// 喚醒」與「有排但還沒輪到」在畫面上長得一模一樣。
+    static let backgroundTaskId = "com.kairumo.padnote.sync.refresh"
+
 
     /// 送一個觸發事件進排程器。
     public func request(_ trigger: FfiSyncTrigger) {
@@ -170,6 +182,54 @@ public final class AutoSyncController: ObservableObject {
         return .success
     }
 
+    // MARK: - 背景
+
+    /// 註冊並排一次背景更新。
+    ///
+    /// # 為什麼前景的計時器不夠
+    ///
+    /// iOS 會**直接凍結** App。使用者切走之前寫的最後一段要等他下次打開才會
+    /// 上雲 —— 而他通常是在另一台裝置上發現那一段不見了。
+    ///
+    /// # 這是保底，不是主要路徑
+    ///
+    /// 系統決定什麼時候給你時間，可能好幾個小時才一次。真正的「即時」
+    /// 靠前景觸發（進前景、存檔去抖動、週期拉取）。
+    private func registerBackgroundTask() {
+        #if canImport(BackgroundTasks) && !targetEnvironment(macCatalyst)
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: Self.backgroundTaskId, using: nil
+        ) { task in
+            Task { @MainActor in
+                // **每次執行完都要再排下一次。** BGTaskScheduler 不會自己重複，
+                // 漏掉這一步的症狀是「背景同步只在安裝後動過一次」。
+                self.scheduleBackgroundTask()
+                guard let store = self.store else {
+                    task.setTaskCompleted(success: true)
+                    return
+                }
+                // 系統隨時會收回時間。被收回時要把任務標成未完成，
+                // 否則這次沒做完的事不會被重排。
+                task.expirationHandler = {
+                    NotebookSyncCoordinator.cancelSync()
+                }
+                let outcome = await self.runOneRound(store: store)
+                task.setTaskCompleted(success: outcome == .success)
+            }
+        }
+        scheduleBackgroundTask()
+        #endif
+    }
+
+    private func scheduleBackgroundTask() {
+        #if canImport(BackgroundTasks) && !targetEnvironment(macCatalyst)
+        let request = BGAppRefreshTaskRequest(identifier: Self.backgroundTaskId)
+        // 最早 15 分鐘後。給得比這個短沒有意義 —— 系統本來就不保證時間。
+        request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
+        try? BGTaskScheduler.shared.submit(request)
+        #endif
+    }
+
     // MARK: - 觸發來源
 
     private func startNetworkMonitor() {
@@ -201,7 +261,10 @@ public final class AutoSyncController: ObservableObject {
         NotificationCenter.default.addObserver(
             forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
         ) { [weak self] _ in
-            Task { @MainActor in self?.request(.background) }
+            Task { @MainActor in
+                self?.request(.background)
+                self?.scheduleBackgroundTask()
+            }
         }
         #endif
     }

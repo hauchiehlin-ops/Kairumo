@@ -160,6 +160,11 @@ dependencies {
     // 也沒有 URLSession 的對應品 —— OkHttp 是這裡唯一實務上的選擇。
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
 
+    // 背景同步。App 在背景時行程隨時會被收掉，前景的計時器跟著停 ——
+    // 沒有它的話，使用者把 App 切走之後寫的東西要等下次打開才會上雲。
+    // WorkManager 是唯一會處理 Doze、開機重啟與重試的排程器。
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+
     // 折疊機的姿態（鉸鏈在哪、闔起還是攤開）。Configuration 只給得出寬度，
     // 給不出「畫面中間橫著一條鉸鏈」—— 內容壓在鉸鏈上是折疊機最明顯的毛病。
     implementation("androidx.window:window:1.3.0")

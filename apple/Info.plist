@@ -20,6 +20,22 @@
 	  專案是 GENERATE_INFOPLIST_FILE，而產生器不會自己補上這個鍵；
 	  它是巢狀字典，INFOPLIST_KEY_* 表達不了，所以放在這裡。
 	-->
+	<!--
+	  背景同步（P2）。**這兩個鍵少一個，BGTaskScheduler 會在註冊時直接丟例外**
+	  （`BGTaskSchedulerErrorDomain Code=3 notPermitted`），而那發生在啟動路徑上。
+
+	  識別字必須與 `AutoSyncController` 裡註冊／送出的那一個逐字相同 ——
+	  不一致時 iOS 不會報錯，只是那個任務永遠不會被喚醒。
+	-->
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.kairumo.padnote.sync.refresh</string>
+	</array>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>processing</string>
+	</array>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

@@ -43,6 +43,10 @@
   「排程策略不同」，是「Android 比較慢」。
 - 觸發點對齊：進前景、進背景、登入完成、網路由斷轉通、本機存檔（去抖動）、
   前景週期。Apple `AutoSyncController` / Android `AutoSync`。
+- 背景保底：iOS `BGAppRefreshTask`（Info.plist 的
+  `BGTaskSchedulerPermittedIdentifiers` 少一個就會在註冊時丟例外，而那在啟動
+  路徑上）、Android `WorkManager` 15 分鐘週期。系統決定什麼時候給時間，
+  所以它是保底不是主要路徑 —— 真正的「即時」靠前景觸發。
 - 之前只有「回到首頁／按按鈕」會觸發 —— 在編輯器裡寫完一段切到另一台，
   什麼也不會發生。
 
