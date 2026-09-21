@@ -72,7 +72,8 @@ window.KAIRUMO_MANUAL = {
           "按「開始使用」進入首頁。這一頁之後不會再出現。"
         ],
         "tip": "權限不會在安裝的時候就要 —— 系統一律等到真的要用那個功能才問。所以還沒給權限就按錄音的話，會在那個當下再引導一次。",
-        "fig": null
+        "fig": "firstrun",
+        "cap": "第一次打開：講清楚是什麼、不需要帳號、只要一個權限"
       },
       {
         "id": "home",
@@ -281,7 +282,8 @@ window.KAIRUMO_MANUAL = {
           "智慧雙軌同步與即時差異核實：同步啟動前，系統會即時核實本機現存筆記本與雲端差異樣態，主動排除並清理已刪除的殘留套件，絕不對已刪除檔案發送無效請求；前台極速軌優先同步當前作用中筆記，其餘筆記本於背景並行收斂。在雲端同步視窗與系統診斷面板中，更提供「一鍵複製」與「匯出文字檔」功能，方便完整儲存工程診斷日誌。"
         ],
         "tip": "檔案的搬運交給你原本就在用的雲端硬碟。我們不碰網路，也沒有你的資料 —— 這也是為什麼找不到「登入 Kairumo」。同步只會新增檔案，不會覆蓋別台裝置寫的內容。",
-        "fig": null
+        "fig": "data",
+        "cap": "首頁的「資料與同步」：雲端同步、建立備份、從備份還原"
       },
       {
         "id": "comment",
@@ -361,7 +363,8 @@ window.KAIRUMO_MANUAL = {
           "系統會自動替「還原之前」那一刻也建一個里程碑，標著「自動」。想取消剛才的還原，就回滾到那一個。"
         ],
         "tip": "快照不是複製一份筆記，它只記下「歷史上的那一刀」，所以建再多也幾乎不佔空間，而且會跟著同步傳到你的其他裝置。",
-        "cap": ""
+        "cap": "協同面板裡的「里程碑快照時光機」：建立快照，之後可回滾至此版本",
+        "fig": "milestone"
       },
       {
         "id": "record",
@@ -564,7 +567,8 @@ window.KAIRUMO_MANUAL = {
           "Tap “Get Started” to go to the home screen. This page will not come back."
         ],
         "tip": "Permissions are never requested at install time — the system only asks when a feature actually needs one. So if you start recording before granting it, you will be guided through it right then.",
-        "fig": null
+        "fig": "firstrun",
+        "cap": "First launch: what it is, no account needed, one permission"
       },
       {
         "id": "home",
@@ -773,7 +777,8 @@ window.KAIRUMO_MANUAL = {
           "Dual-track sync and real-time diff reconciliation: Before syncing, the system reconciles existing local notebooks with remote cloud indexes, actively excluding and cleaning up deleted orphaned packages without wasting bandwidth; the foreground track prioritizes your active notebook while the background queue processes remaining notebooks concurrently. Furthermore, the Cloud Sync sheet and App Diagnostics panel offer “One-click Copy” and “Export Log File” buttons to easily preserve engineering diagnostic logs."
         ],
         "tip": "Moving the files is your cloud drive's job — the one you already use. We never touch the network and never hold your data, which is why there is no “Sign in to Kairumo”. Syncing only adds files; it never overwrites what another device wrote.",
-        "fig": null
+        "fig": "data",
+        "cap": "“Data & Sync” on the home screen: cloud sync, create backup, restore from backup"
       },
       {
         "id": "comment",
@@ -853,7 +858,8 @@ window.KAIRUMO_MANUAL = {
           "A snapshot of the moment just before the rollback is created automatically and marked “Automatic”. To undo the rollback, roll back to that one."
         ],
         "tip": "A snapshot is not a copy of the notebook. It records a point in its history, so you can make as many as you like at almost no cost, and they sync to your other devices.",
-        "cap": ""
+        "cap": "“Milestone Snapshots” inside the collaboration panel: create one, roll back to it later",
+        "fig": "milestone"
       },
       {
         "id": "record",
@@ -1052,7 +1058,8 @@ window.KAIRUMO_MANUAL = {
           "按「开始使用」进入首页。这一页之后不会再出现。"
         ],
         "tip": "权限不会在安装的时候就要 —— 系统一律等到真的要用那个功能才问。所以还没给权限就按录音的话，会在那个当下再引导一次。",
-        "fig": null
+        "fig": "firstrun",
+        "cap": "第一次打开：讲清楚是什么、不需要账号、只要一个权限"
       },
       {
         "id": "home",
@@ -1258,7 +1265,8 @@ window.KAIRUMO_MANUAL = {
           "智能双轨同步与即时差异核实：同步启动前，系统会即时核实本机现存笔记本与云端差异样态，主动排除并清理已删除的残留套件，绝不对已删除档案发送无效请求；前台极速轨优先同步当前作用中笔记，其余笔记本于背景并行收敛。在云端同步窗口与系统诊断面板中，更提供“一键复制”与“导出文本档”功能，方便完整保存工程诊断日志。"
         ],
         "tip": "文件搬运交给你原本就在用的云端硬盘。我们不碰网络，也没有你的数据 —— 这也是为什么找不到“登录 Kairumo”。同步只会新增文件，不会覆盖别台设备写的内容。",
-        "fig": null
+        "fig": "data",
+        "cap": "首页的「数据与同步」：云端同步、创建备份、从备份还原"
       },
       {
         "id": "comment",
@@ -1338,7 +1346,8 @@ window.KAIRUMO_MANUAL = {
           "系统会自动替「还原之前」那一刻也建一个里程碑，标着「自动」。想取消刚才的还原，就回滚到那一个。"
         ],
         "tip": "快照不是复制一份笔记，它只记下「历史上的那一刀」，所以建再多也几乎不占空间，而且会跟着同步传到你的其他设备。",
-        "cap": ""
+        "cap": "协同面板里的「里程碑快照时光机」：创建快照，之后可回滚至此版本",
+        "fig": "milestone"
       },
       {
         "id": "record",
@@ -1537,7 +1546,8 @@ window.KAIRUMO_MANUAL = {
           "「はじめる」を押すとホームに進みます。このページが再び出ることはありません。"
         ],
         "tip": "権限はインストール時には要求されません。システムは機能が実際に必要とするまでたずねない仕組みです。許可せずに録音を始めた場合は、そのときにあらためて案内されます。",
-        "fig": null
+        "fig": "firstrun",
+        "cap": "初回起動：概要・アカウント不要・必要な権限は一つ"
       },
       {
         "id": "home",
@@ -1743,7 +1753,8 @@ window.KAIRUMO_MANUAL = {
           "デュアルトラック同期とリアルタイム差分照合：同期開始前にローカルの既存ノートとクラウドインデックスの差分を即時照合し、削除済みの不要パッケージを自動除外・クリーンアップします。フォアグラウンド高速レーンで編集中ノートを最優先同期し、残りはバックグラウンド並行キューで処理します。さらにクラウド同期シートや診断ツールでは「ワンクリックコピー」と「ログファイル書き出し」を提供し、エンジニアリングログを簡単に保存できます。"
         ],
         "tip": "ファイルの運搬は普段お使いのクラウドが担当します。当方はネットワークに触れず、データも保持しません。だから「Kairumo にサインイン」はありません。同期はファイルを追加するだけで、別の端末が書いた内容を上書きしません。",
-        "fig": null
+        "fig": "data",
+        "cap": "ホームの「データと同期」：クラウド同期・バックアップ作成・バックアップから復元"
       },
       {
         "id": "comment",
@@ -1823,7 +1834,8 @@ window.KAIRUMO_MANUAL = {
           "復元する直前の状態も自動でマイルストーンとして保存され、「自動」と表示されます。復元を取り消したいときは、それに復元してください。"
         ],
         "tip": "スナップショットはノートの複製ではなく、履歴上の一点を記録するだけです。いくつ作ってもほとんど容量を使わず、他の端末にも同期されます。",
-        "cap": ""
+        "cap": "共同編集パネル内の「マイルストーンスナップショット」：作成して、あとで復元",
+        "fig": "milestone"
       },
       {
         "id": "record",
@@ -2022,7 +2034,8 @@ window.KAIRUMO_MANUAL = {
           "「시작하기」를 누르면 홈으로 이동합니다. 이 페이지는 다시 나오지 않습니다."
         ],
         "tip": "권한은 설치 시점에 요청되지 않습니다. 시스템은 기능이 실제로 필요할 때만 묻습니다. 허용하지 않은 채 녹음을 시작하면 바로 그 시점에 다시 안내합니다.",
-        "fig": null
+        "fig": "firstrun",
+        "cap": "첫 실행: 무엇인지, 계정 불필요, 권한은 하나"
       },
       {
         "id": "home",
@@ -2228,7 +2241,8 @@ window.KAIRUMO_MANUAL = {
           "듀얼 트랙 동기화 및 실시간 차이 검증: 동기화가 시작되기 전 시스템이 로컬에 실제로 존재하는 전자노트와 클라우드 인덱스를 즉시 대조하여 삭제된 잔여 패키지를 자동으로 배제하고 정리합니다. 전경 고속 트랙이 현재 편집 중인 노트를 최우선 동기화하며 나머지는 백그라운드 병렬 큐에서 수렴합니다. 또한 클라우드 동기화 시트와 진단 패널에서 “원클릭 복사” 및 “로그 파일 내보내기” 기능을 제공하여 진단 로그를 간편하게 저장할 수 있습니다."
         ],
         "tip": "파일 이동은 이미 쓰고 계신 클라우드가 맡습니다. 저희는 네트워크를 건드리지 않고 데이터도 보관하지 않습니다. 그래서 “Kairumo 로그인”이 없습니다. 동기화는 파일을 추가만 하며 다른 기기의 내용을 덮어쓰지 않습니다.",
-        "fig": null
+        "fig": "data",
+        "cap": "홈의 “데이터 및 동기화”: 클라우드 동기화, 백업 생성, 백업에서 복원"
       },
       {
         "id": "comment",
@@ -2308,7 +2322,8 @@ window.KAIRUMO_MANUAL = {
           "롤백 직전 시점도 자동으로 마일스톤으로 저장되며 “자동”으로 표시됩니다. 롤백을 취소하려면 그 마일스톤으로 롤백하세요."
         ],
         "tip": "스냅샷은 노트의 사본이 아니라 기록상의 한 지점만 저장합니다. 많이 만들어도 용량을 거의 쓰지 않으며 다른 기기로도 동기화됩니다.",
-        "cap": ""
+        "cap": "공동 편집 패널의 “마일스톤 스냅샷”: 만들고 나중에 롤백",
+        "fig": "milestone"
       },
       {
         "id": "record",
@@ -2507,7 +2522,8 @@ window.KAIRUMO_MANUAL = {
           "แตะ “เริ่มใช้งาน” เพื่อเข้าสู่หน้าแรก หน้านี้จะไม่กลับมาอีก"
         ],
         "tip": "ระบบจะไม่ขอสิทธิ์ตอนติดตั้ง แต่จะถามเมื่อฟีเจอร์นั้นต้องใช้จริง ๆ ดังนั้นหากเริ่มบันทึกเสียงก่อนให้สิทธิ์ ระบบจะแนะนำให้อีกครั้งในตอนนั้น",
-        "fig": null
+        "fig": "firstrun",
+        "cap": "เปิดครั้งแรก: คืออะไร ไม่ต้องมีบัญชี ขอสิทธิ์เพียงอย่างเดียว"
       },
       {
         "id": "home",
@@ -2713,7 +2729,8 @@ window.KAIRUMO_MANUAL = {
           "การซิงค์แทร็กคู่และการกระทบยอดความแตกต่างแบบเรียลไทม์: ก่อนเริ่มการซิงค์ ระบบจะกระทบยอดความแตกต่างระหว่างสมุดบันทึกในเครื่องกับดัชนีบนคลาวด์ พร้อมทั้งคัดแยกและล้างแพ็กเกจที่ถูกลบออกไปโดยอัตโนมัติ แทร็กเบื้องหน้าจะให้ความสำคัญกับสมุดบันทึกที่กำลังเปิดใช้งานเป็นอันดับแรก ในขณะที่คิวเบื้องหลังจะซิงค์ส่วนที่เหลือพร้อมกัน นอกจากนี้ยังมีปุ่ม “คัดลอกในคลิกเดียว” และ “ส่งออกไฟล์บันทึก” เพื่อบันทึกข้อมูลการวินิจฉัยทางวิศวกรรมได้อย่างง่ายดาย"
         ],
         "tip": "การย้ายไฟล์เป็นหน้าที่ของคลาวด์ที่คุณใช้อยู่แล้ว เราไม่แตะเครือข่ายและไม่เก็บข้อมูลของคุณ จึงไม่มีปุ่ม “ลงชื่อเข้าใช้ Kairumo” การซิงก์เพิ่มไฟล์เท่านั้น ไม่เขียนทับสิ่งที่เครื่องอื่นเขียนไว้",
-        "fig": null
+        "fig": "data",
+        "cap": "“ข้อมูลและการซิงก์” บนหน้าแรก: ซิงก์คลาวด์ สร้างข้อมูลสำรอง กู้คืนจากข้อมูลสำรอง"
       },
       {
         "id": "comment",
@@ -2793,7 +2810,8 @@ window.KAIRUMO_MANUAL = {
           "ระบบจะสร้างสแนปช็อตของช่วงก่อนย้อนกลับให้อัตโนมัติ และแสดงคำว่า “อัตโนมัติ” หากต้องการยกเลิกการย้อนกลับ ให้ย้อนไปยังสแนปช็อตนั้น"
         ],
         "tip": "สแนปช็อตไม่ใช่สำเนาของสมุด แต่บันทึกเพียงจุดหนึ่งในประวัติ จึงสร้างได้มากโดยแทบไม่กินพื้นที่ และซิงก์ไปยังอุปกรณ์อื่นของคุณด้วย",
-        "cap": ""
+        "cap": "“สแนปช็อตเหตุการณ์สำคัญ” ในแผงการทำงานร่วมกัน: สร้างไว้แล้วย้อนกลับได้ภายหลัง",
+        "fig": "milestone"
       },
       {
         "id": "record",
