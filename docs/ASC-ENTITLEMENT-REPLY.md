@@ -28,12 +28,12 @@ start one.
 
 How to see it:
 1. Open any notebook.
-2. In the editor toolbar, tap "Collaborate" (the two-person icon).
-3. Tap "Start Collaboration".
+2. In the editor toolbar, click "Collaborate" (the two-person icon).
+3. Click "Start Collaboration".
 4. The panel then shows "Hosting relay on this device" together with the LAN
    address other devices connect to (for example ws://192.168.1.20:9002). That
    address is the listener created under this entitlement.
-5. On a second device on the same network, open the same panel, tap "Join Room",
+5. On a second device on the same network, open the same panel, click "Join Room",
    and paste the invite link (or room code) shown on the first device.
 
 
@@ -45,6 +45,41 @@ entitlements are requested.
 ## 二、回覆給 App Review 的信
 
 見 `ASC-ENTITLEMENT-REPLY-LETTER.txt`。
+
+### ⚠️ 寄出前要選一個：你有沒有要先上傳新 build？
+
+信裡有一段（"A NOTE ON WHY THE AUTOMATED ANALYSIS MAY HAVE MISSED IT"）
+寫著「本次回覆隨附的 build 已經把狀態顯示出來」。**那句話只有在你先上傳
+新 build 時才是真的。** 對 App Review 講一句當下不成立的話，代價遠大於
+省下的那一趟。
+
+**選項 A｜先上傳新 build（建議）**
+
+顯示中繼狀態的修正已經在 main 上。跑 `./scripts/apple-release.sh` 出新
+build、等它出現在那個版本裡，再回信。信照原文寄，不用改。
+好處是審查員照著步驟點下去**看得到東西**，不必只憑文字相信你。
+
+**選項 B｜就用現在送審的那個 build 回覆**
+
+權限的功能在現在這個 build 裡本來就有，只是看不到。這條路比較快，
+但要把那一段換成下面這版（沒有提到新 build）：
+
+```
+A NOTE ON WHY THE AUTOMATED ANALYSIS MAY HAVE MISSED IT
+
+In the build currently under review the app starts the listener but does not
+display that it is doing so, and a failure to bind is only logged. The
+functionality is present and reachable through the steps above, but it is not
+visibly labelled in the interface, which is most likely why the automated
+analysis did not find matching functionality.
+
+A subsequent build will surface this directly: the collaboration panel will show
+the hosting state and the LAN address, and will report a readable reason if the
+listener cannot start.
+```
+
+選 B 的話，記得那句「A subsequent build will…」是承諾，下一版要真的做到 ——
+它已經在 main 上了，所以做得到。
 
 ## 三、這次做的程式修正
 

@@ -26,12 +26,12 @@ never start one.
 HOW TO REPRODUCE IT
 
 1. Open any notebook.
-2. In the editor toolbar, tap "Collaborate" (the two-person icon).
-3. Tap "Start Collaboration".
+2. In the editor toolbar, click "Collaborate" (the two-person icon).
+3. Click "Start Collaboration".
 4. The panel then shows "Hosting relay on this device" together with the LAN
    address other devices connect to, for example ws://192.168.1.20:9002. That
    address is the listener created under this entitlement.
-5. On a second device on the same network, open the same panel, tap "Join Room",
+5. On a second device on the same network, open the same panel, click "Join Room",
    and paste the invite link (or room code) shown on the first device.
 
 A NOTE ON WHY THE AUTOMATED ANALYSIS MAY HAVE MISSED IT
