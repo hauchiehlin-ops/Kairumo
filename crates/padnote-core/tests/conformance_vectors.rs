@@ -191,7 +191,15 @@ fn conformance_vectors_are_up_to_date() {
     for (name, value) in all() {
         let text = format!("{}\n", serde_json::to_string_pretty(&value).unwrap());
         let path = dir.join(name);
-        let current = std::fs::read_to_string(&path).unwrap_or_default();
+        // **換行符要正規化再比。**
+        //
+        // Windows 的 CI runner 預設 `core.autocrlf=true`，簽出時把 LF 換成
+        // CRLF —— 於是這裡讀到的位元組與產生出來的不一樣，測試在**程式碼
+        // 一行都沒改**的情況下變紅。`.gitattributes` 已經把它釘成 LF，
+        // 這一層是第二道保險：它擋的是「有人在自己機器上把設定改回去」。
+        let current = std::fs::read_to_string(&path)
+            .unwrap_or_default()
+            .replace("\r\n", "\n");
         if current == text {
             continue;
         }

@@ -1,0 +1,41 @@
+# 換行符一律 LF（一致性閘門 1 的前提）。
+#
+# # 為什麼需要這個檔
+#
+# Windows 的 CI runner 預設 `core.autocrlf=true`，簽出時會把 LF 換成 CRLF。
+# 於是 `docs/conformance/*.json` 在 Windows 上的位元組與核心產生出來的
+# 不一樣 —— 一致性向量的比對當場就紅，而**程式碼一行都沒改**。
+#
+# 那正是這個專案一路在修的形狀：同一份事實，在不同平台有兩種表示。
+# 解法不是讓測試去容忍差異（雖然它也容忍了，見 `conformance_vectors.rs`），
+# 而是讓磁碟上的位元組在每一台機器上都一樣。
+#
+# 一律 LF：Rust、Swift、Kotlin、JSON、Markdown 的工具鏈在 Windows 上
+# 都讀得懂 LF，沒有反過來的必要。
+* text=auto eol=lf
+
+# **Windows 的批次檔例外，必須是 CRLF。**
+# cmd.exe 對只有 LF 的 .bat 會出怪事（尤其是含 label/goto 的），
+# 而 android/gradlew.bat 正好是那種。這一條是加上面那行之後才發現的：
+# `git add --renormalize .` 當場就把它改寫了。
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# 這些是二進位，不准碰。
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.pdf binary
+*.opus binary
+*.wav binary
+*.so binary
+*.a binary
+*.dylib binary
+*.drawing binary
+*.padnote binary
+*.ttf binary
+*.otf binary
+*.onnx binary
+*.bin binary
