@@ -54,6 +54,27 @@ public final class LocalizationManager: ObservableObject {
 
     private let languageKey = "kairumo.app.language"
 
+    /// UI 測試指定的語言，蓋過同步與本機記錄。
+    ///
+    /// # 為什麼需要它
+    ///
+    /// 介面測試原本綁在**顯示文字**上（`app.staticTexts["User Manual"]`），
+    /// 於是模擬器當下是什麼語言就決定測試成敗 —— 拍完中文截圖之後整套
+    /// UI 測試就全紅了，而那跟程式對不對無關。
+    ///
+    /// `KAIRUMO_UITEST=1` 把語言釘在英文；要跑其他語系就給
+    /// `KAIRUMO_UITEST_LANGUAGE`（例如 `zh-Hant`）。
+    ///
+    /// 只讀不寫：這裡不經過 `setLanguage`，所以不會寫進 UserDefaults，
+    /// 也不會被當成使用者的選擇同步出去。
+    static var uiTestLanguage: AppLanguage? {
+        let env = ProcessInfo.processInfo.environment
+        if let raw = env["KAIRUMO_UITEST_LANGUAGE"], let lang = AppLanguage(rawValue: raw) {
+            return lang
+        }
+        return env["KAIRUMO_UITEST"] == "1" ? .en : nil
+    }
+
     @Published public var currentLanguage: AppLanguage {
         didSet {
             UserDefaults.standard.set(currentLanguage.rawValue, forKey: languageKey)
@@ -68,7 +89,7 @@ public final class LocalizationManager: ObservableObject {
         // 使用者會覺得「同步根本沒在動」。
         let synced = AccountSyncStore.shared.syncedLanguage.flatMap(AppLanguage.init(rawValue:))
         let local = UserDefaults.standard.string(forKey: languageKey).flatMap(AppLanguage.init(rawValue:))
-        let resolved = synced ?? local ?? .en
+        let resolved = Self.uiTestLanguage ?? synced ?? local ?? .en
         self.currentLanguage = resolved
         Self.snapshotLanguage = resolved
     }

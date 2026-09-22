@@ -101,6 +101,39 @@ Android 是 `setSyncedToolbarJson`（大小寫不同），而 Apple 那個還沒
 
 ---
 
+### S-259. 畫面稽核的三個缺口 —— 閘門已立，逐項補
+
+`apple/UITests/ScreenAudit.swift`（CI 上的「畫面稽核（控制項點得到）」）
+已經在守「畫得出來就必須點得到」。目前有三個缺口：
+
+**1. 選單裡的控制項稽核不到（編輯器 40 項）**
+
+`insert.*` 在插入選單、`export.*` 在匯出選單、`text.*` 只有打字模式才有、
+`sidebar.*` 要先展開側欄。單一畫面狀態看不到它們，目前全放在
+`SmokeUITests.editorNotWiredYet` 裡。正解是為每個選單各加一段
+（開啟 → 稽核 → 關閉）。
+
+**2. `editor.canvas` 掛在沒被顯示的視圖上**
+
+識別碼寫在 `NotebookEditorView.swift:3369`，但實際渲染出來的是另一個分支的
+`kairumo.canvas`。掃原始碼的閘門看不見這種（識別碼確實在原始碼裡），
+執行期稽核看得見。
+
+**3. 首頁 6 個規格要求的控制項找不到**
+
+`home.identity.edit`、`home.recordings.open_folder`、`home.notebooks.sort`、
+`home.notebooks.rename_root`、`home.cloud.signin`、`home.data.folder`。
+可能是條件顯示、也可能是真的沒接識別碼，要逐個確認。
+
+**另外兩條既有的紅**（早於這次工作，CI 沒掛它們）：
+`testCanvasExpandsWhenSidebarCollapses`、`testMigrationRunsFromTheDiagnosticsSheet`。
+
+**還有**：筆記卡片沒有各自的識別碼（只有整個清單有 `home.notebooks.list`），
+所以編輯器稽核靠種子筆記的英文標題進去。補上
+`home.notebooks.card.<id>` 之後連語言都不必釘。
+
+---
+
 ### S-257. 十個被默默忽略的參數 —— 閘門已立，逐項清空
 
 `scripts/check-unused-params.py`（CI 上的「沒有被默默忽略的參數」）第一次

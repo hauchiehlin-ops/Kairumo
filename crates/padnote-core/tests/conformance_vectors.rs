@@ -168,6 +168,24 @@ fn page_geometry() -> Value {
     })
 }
 
+/// 每個畫面**這個平台必須有**的控制項識別碼。
+///
+/// 兩端的介面測試拿這份清單去斷言「存在、而且點得到」。清單寫在各自的
+/// 測試裡的話，兩端會各自漂移 —— 那正是這個專案一再發生的事。
+fn screens() -> Value {
+    let mut out = serde_json::Map::new();
+    for id in padnote_core::ffi_screens::screen_ids() {
+        out.insert(
+            id.clone(),
+            json!({
+                "apple": padnote_core::ffi_screens::screen_required_control_ids(id.clone(), true),
+                "android": padnote_core::ffi_screens::screen_required_control_ids(id, false),
+            }),
+        );
+    }
+    Value::Object(out)
+}
+
 fn all() -> Vec<(&'static str, Value)> {
     vec![
         ("layout.json", layout()),
@@ -177,6 +195,7 @@ fn all() -> Vec<(&'static str, Value)> {
         ("symbols.json", symbols()),
         ("page-guides.json", page_guides()),
         ("page-geometry.json", page_geometry()),
+        ("screens.json", screens()),
     ]
 }
 

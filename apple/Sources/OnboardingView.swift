@@ -26,7 +26,27 @@ struct OnboardingView: View {
     static let seenKey = "kairumo.onboarding.seen.v1"
 
     static var hasSeen: Bool {
-        UserDefaults.standard.bool(forKey: Self.seenKey)
+        if let forced = Self.uiTestHasSeen { return forced }
+        return UserDefaults.standard.bool(forKey: Self.seenKey)
+    }
+
+    /// UI 測試指定的起始狀態。
+    ///
+    /// # 為什麼需要它
+    ///
+    /// 導覽看過沒是存在 `UserDefaults` 的，所以測試的起始畫面取決於這台
+    /// 模擬器之前被怎麼玩過 —— 同一份程式碼，有時候從首頁開始、有時候卡在
+    /// 導覽。畫面稽核第一次跑就踩到：規格要求的 27 個首頁控制項全部「找不到」，
+    /// 而真正的原因是**根本沒到首頁**。
+    ///
+    /// `KAIRUMO_UITEST=1` 一律當成看過了。要測導覽本身就再給
+    /// `KAIRUMO_UITEST_SHOW_ONBOARDING=1`。
+    ///
+    /// 只讀不寫 —— 不碰 `UserDefaults`，不會污染使用者的狀態。
+    static var uiTestHasSeen: Bool? {
+        let env = ProcessInfo.processInfo.environment
+        guard env["KAIRUMO_UITEST"] == "1" else { return nil }
+        return env["KAIRUMO_UITEST_SHOW_ONBOARDING"] == "1" ? false : true
     }
 
     let onDone: () -> Void

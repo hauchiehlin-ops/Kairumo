@@ -6,6 +6,13 @@ final class SmokeUITests: XCTestCase {
 
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
+        // 這個變數以前**沒有任何人讀**，測試設了等於沒設。現在
+        // LocalizationManager 會認它，把語言釘在英文。
+        //
+        // 為什麼重要：這些測試原本靠顯示文字定位
+        // （`app.staticTexts["User Manual"]`），於是模擬器當下是什麼語言
+        // 就決定測試成敗 —— 拍完中文截圖之後整套就全紅了，而那跟程式對不對
+        // 一點關係都沒有。間歇失敗的測試會在第三次紅的時候被關掉。
         app.launchEnvironment["KAIRUMO_UITEST"] = "1"
         app.launch()
         return app
@@ -327,4 +334,109 @@ final class AppStoreMacScreenshotsUITests: XCTestCase {
         try capture("05-editor-typing.png", app: app)
 
     }
+}
+
+// MARK: - 畫面稽核（提案 ①）
+
+extension SmokeUITests {
+
+    /// 首頁：規格要求的控制項要在、而且點得到。
+    ///
+    /// 這條測試守的是「畫得出來卻點不到」—— 討論串面板與圖釘放置層都
+    /// 栽在這上面，兩次都是盯著截圖才發現的。詳見 `ScreenAudit`。
+    func testHomeScreenControlsAreReachable() {
+        let app = launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+        ScreenAudit.check(app, screen: "home", allowMissing: Self.homeNotWiredYet)
+    }
+
+    /// 編輯器：同上。
+    func testEditorScreenControlsAreReachable() {
+        let app = launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+
+        // 種子筆記的標題。語言已經被 KAIRUMO_UITEST 釘在英文，所以這是確定的。
+        //
+        // 比較好的做法是給每張卡片一個識別碼（`home.notebooks.card.<id>`），
+        // 那樣連語言都不必釘。目前卡片沒有 —— 只有整個清單有
+        // `home.notebooks.list`。記在 docs/TODO.md 的 S-259。
+        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
+        guard card.waitForExistence(timeout: 10) else {
+            XCTFail("首頁找不到種子筆記，開不了編輯器")
+            return
+        }
+        card.tap()
+
+        let canvas = app.descendants(matching: .any).matching(identifier: "kairumo.canvas").firstMatch
+        XCTAssertTrue(canvas.waitForExistence(timeout: 15), "點了卡片之後沒進到編輯器")
+
+        ScreenAudit.check(app, screen: "editor", allowMissing: Self.editorNotWiredYet)
+    }
+
+    /// 棘輪：還沒接上識別碼的控制項。**只准縮小**。
+    ///
+    /// 這裡放著的每一項都代表「規格說要有、實際上稽核找不到」。清空的辦法是
+    /// 去把 `accessibilityIdentifier` 補上，不是把項目搬進來。
+    static let homeNotWiredYet: Set<String> = [
+        "home.identity.edit",
+        "home.recordings.open_folder",
+        "home.notebooks.sort",
+        "home.notebooks.rename_root",
+        "home.cloud.signin",
+        "home.data.folder",
+    ]
+    /// 編輯器的棘輪。**大部分不是「沒接上」，是「藏在選單／浮層裡」** ——
+    /// `insert.*` 在插入選單、`export.*` 在匯出選單、`text.*` 只有打字模式才有、
+    /// `sidebar.*` 要先展開側欄。單一畫面狀態的稽核看不到它們。
+    ///
+    /// 正確的解是為每個選單各加一段稽核（開啟選單 → 稽核 → 關閉），
+    /// 記在 docs/TODO.md 的 S-259。在那之前這些放在這裡，稽核仍然守住
+    /// 編輯器基礎狀態的 28 個控制項。
+    ///
+    /// `editor.canvas` 是另一回事：識別碼寫在程式碼裡
+    /// （NotebookEditorView.swift:3369），但實際渲染的是另一個分支的
+    /// `kairumo.canvas` —— **識別碼掛在沒被顯示的那個視圖上**。
+    /// 掃原始碼的閘門看不見這種，執行期稽核看得見。
+    static let editorNotWiredYet: Set<String> = [
+        "editor.insert.assets",
+        "editor.insert.audio",
+        "editor.insert.image",
+        "editor.insert.math",
+        "editor.insert.chart",
+        "editor.insert.table",
+        "editor.insert.shape",
+        "editor.insert.model3d",
+        "editor.insert.theme_tools",
+        "editor.insert.refine_sketch",
+        "editor.insert.comment_pin",
+        "editor.insert.collaborate",
+        "editor.insert.recognize",
+        "editor.insert.ai_summary",
+        "editor.export.pdf",
+        "editor.export.image",
+        "editor.export.print",
+        "editor.export.share",
+        "editor.text.add_box",
+        "editor.text.studio",
+        "editor.text.bold",
+        "editor.text.italic",
+        "editor.text.underline",
+        "editor.text.align_left",
+        "editor.text.align_center",
+        "editor.text.align_right",
+        "editor.text.snap_grid",
+        "editor.text.layer_forward",
+        "editor.text.layer_backward",
+        "editor.text.symbols",
+        "editor.text.select",
+        "editor.text.link",
+        "editor.text.undo",
+        "editor.text.redo",
+        "editor.sidebar.tab.pages",
+        "editor.sidebar.tab.folders",
+        "editor.sidebar.list",
+        "editor.sidebar.thumb_smaller",
+        "editor.sidebar.thumb_larger",
+        "editor.canvas",
+    ]
 }

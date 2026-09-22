@@ -83,6 +83,10 @@ targets:
     platform: iOS
     sources:
       - path: UITests
+      # 畫面規格由核心產生（docs/conformance/screens.json），兩端共用同一份。
+      # UI 測試 bundle 跑在 App 之外的行程，連不到核心框架，所以讀檔。
+      - path: ../docs/conformance/screens.json
+        buildPhase: resources
     dependencies:
       - target: Kairumo
     settings:
