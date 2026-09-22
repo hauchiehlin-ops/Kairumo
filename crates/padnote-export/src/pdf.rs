@@ -684,7 +684,7 @@ impl PdfWriter {
                     if g.text.is_empty() {
                         continue;
                     }
-                    let (font, literal) = format_pdf_text(&g.text, "/F1");
+
                     // 對齊：核心給的 x 是**錨點**，不是左緣。寬度用字級估
                     // （0.5 em ≈ 一個西文字的平均寬度，CJK 約 1 em）——
                     // PDF 這裡沒有字型度量，估得夠用就好：版面標籤都很短。
@@ -697,10 +697,14 @@ impl PdfWriter {
                     };
                     // PDF 的文字基線在下緣，而核心給的 y 是上緣。
                     let baseline = top - g.size * 0.8;
-                    let _ = writeln!(
+                    write_pdf_text(
                         content,
-                        "BT {font} {size:.1} Tf {r:.3} {gc:.3} {b:.3} rg {x:.2} {baseline:.2} Td {literal} Tj ET",
-                        size = g.size.max(1.0)
+                        &g.text,
+                        "/F1",
+                        g.size.max(1.0),
+                        &format!("{r:.3} {gc:.3} {b:.3} rg"),
+                        x,
+                        baseline,
                     );
                 }
             }
@@ -840,10 +844,14 @@ impl PdfWriter {
                         .enumerate()
                     {
                         let line_y = pdf_y - line_height * i as f32;
-                        let (font, literal) = format_pdf_text(line, default_font);
-                        let _ = writeln!(
+                        write_pdf_text(
                             content,
-                            "BT {font} {size:.1} Tf {r:.2} {g:.2} {b:.2} rg {bx:.2} {line_y:.2} Td {literal} Tj ET"
+                            line,
+                            default_font,
+                            size,
+                            &format!("{r:.2} {g:.2} {b:.2} rg"),
+                            bx,
+                            line_y,
                         );
                     }
 
@@ -920,10 +928,14 @@ impl PdfWriter {
                                 }
                                 for (i, line) in lines.iter().enumerate() {
                                     let ly = cell_y - 12.0 * i as f32;
-                                    let (font, literal) = format_pdf_text(line, def_font);
-                                    let _ = writeln!(
+                                    write_pdf_text(
                                         content,
-                                        "BT {font} 10 Tf 0.1 0.1 0.1 rg {cell_x:.2} {ly:.2} Td {literal} Tj ET"
+                                        line,
+                                        def_font,
+                                        10.0,
+                                        "0.1 0.1 0.1 rg",
+                                        cell_x,
+                                        ly,
                                     );
                                 }
                             }
@@ -968,10 +980,17 @@ impl PdfWriter {
                     }
                 }
                 BlockKind::Transcript { text, .. } => {
-                    let (font, literal) = format_pdf_text(&format!("[語音] {text}"), "/F1");
-                    let _ = writeln!(
+                    write_pdf_text(
                         content,
-                        "BT {font} 10 Tf 0.3 0.3 0.4 rg {bx:.2} {pdf_y:.2} Td {literal} Tj ET"
+                        // 這個標記目前寫死英文：padnote-export 完全不知道介面語言，
+                        // 而匯出的 PDF 是要給別人看的文件，不該固定出現中文。
+                        // 真正的解是把語系傳進來，記在 docs/TODO.md 的 S-54c。
+                        &format!("[Audio] {text}"),
+                        "/F1",
+                        10.0,
+                        "0.3 0.3 0.4 rg",
+                        bx,
+                        pdf_y,
                     );
                     cursor_y += 18.0;
                 }
@@ -1025,17 +1044,73 @@ impl PdfWriter {
 fn escape_pdf_string(s: &str) -> String {
     let mut out = String::with_capacity(s.len() + 8);
     for ch in s.chars() {
-        match ch {
-            '(' => out.push_str("\\("),
-            ')' => out.push_str("\\)"),
-            '\\' => out.push_str("\\\\"),
-            '\r' => out.push_str("\\r"),
-            '\n' => out.push_str("\\n"),
-            c if c.is_ascii() => out.push(c),
-            c => out.push(c),
+        let Some(byte) = winansi_byte(ch) else {
+            // 呼叫者已經用 winansi_byte 分過段，走到這裡代表分段漏了。
+            // 與其寫出壞位元組，不如留一個看得見的替代字。
+            out.push('?');
+            continue;
+        };
+        match byte {
+            b'(' => out.push_str("\\("),
+            b')' => out.push_str("\\)"),
+            b'\\' => out.push_str("\\\\"),
+            0x20..=0x7E => out.push(byte as char),
+            // 非 ASCII 的 WinAnsi 位元組（‧– — ' ' 等）必須寫成八進位跳脫，
+            // 直接塞原始位元組會被當成 UTF-8 的一半而錯位。
+            _ => out.push_str(&format!("\\{byte:03o}")),
         }
     }
     out
+}
+
+/// 這個字在 WinAnsiEncoding（≈ CP1252）裡的位元組，沒有就是 `None`。
+///
+/// **為什麼需要這張表**：`•`（U+2022）不是 ASCII。在此之前
+/// `format_pdf_text` 只問「是不是純 ASCII」，於是一句
+/// `• Draft the outline` 會整句被丟進 STSong/UniGB-UTF16 —— 圓點畫成別的
+/// 字，後面每個英文字母都變成 GB 的**全形**拉丁字，看起來就像被拉開了
+/// 字距。兩個症狀是同一行程式造成的，也因此與介面語言無關。
+/// WinAnsi 本來就有 `•`（0x95）與破折號、彎引號，讓它們留在 Helvetica。
+fn winansi_byte(ch: char) -> Option<u8> {
+    let c = ch as u32;
+    // 製表與換行交給呼叫端處理，不進字串。
+    if (0x20..=0x7E).contains(&c) {
+        return Some(c as u8);
+    }
+    if (0xA0..=0xFF).contains(&c) {
+        return Some(c as u8);
+    }
+    // CP1252 的 0x80..=0x9F 特區：Unicode 碼位跳開了，只能查表。
+    Some(match ch {
+        '\u{20AC}' => 0x80,
+        '\u{201A}' => 0x82,
+        '\u{0192}' => 0x83,
+        '\u{201E}' => 0x84,
+        '\u{2026}' => 0x85,
+        '\u{2020}' => 0x86,
+        '\u{2021}' => 0x87,
+        '\u{02C6}' => 0x88,
+        '\u{2030}' => 0x89,
+        '\u{0160}' => 0x8A,
+        '\u{2039}' => 0x8B,
+        '\u{0152}' => 0x8C,
+        '\u{017D}' => 0x8E,
+        '\u{2018}' => 0x91,
+        '\u{2019}' => 0x92,
+        '\u{201C}' => 0x93,
+        '\u{201D}' => 0x94,
+        '\u{2022}' => 0x95,
+        '\u{2013}' => 0x96,
+        '\u{2014}' => 0x97,
+        '\u{02DC}' => 0x98,
+        '\u{2122}' => 0x99,
+        '\u{0161}' => 0x9A,
+        '\u{203A}' => 0x9B,
+        '\u{0153}' => 0x9C,
+        '\u{017E}' => 0x9E,
+        '\u{0178}' => 0x9F,
+        _ => return None,
+    })
 }
 
 /// 這個字本身是不是全形（用來決定能不能在它後面斷行）。
@@ -1047,16 +1122,16 @@ fn is_wide_char(ch: char) -> bool {
 
 /// 一個字畫出來大約多寬。
 ///
-/// `cjk_font` 指這一行是不是會用 CJK 複合字型畫。**這件事會改變半形字的
-/// 寬度**：`format_pdf_text` 只要看到一個非 ASCII 字元，就把整串丟給
-/// STSong 以 UTF-16BE 輸出，於是裡面的數字與英文也是照全形前進 ——
-/// 仍然按 0.55 去估的話，帶數字的中文句子會被低估，換行換得太晚，
-/// 尾巴衝出紙外。這個誤差就是實際踩到的那一個。
-fn glyph_width(ch: char, font_size: f32, cjk_font: bool) -> f32 {
-    if is_wide_char(ch) || cjk_font {
-        font_size
-    } else {
+/// 依這個字**實際會落在哪個字型**來估：進得了 WinAnsi 的走 Helvetica，
+/// 約 0.55 em；其餘走 STSong，一律 1 em。在此之前這件事是**整段**一起
+/// 決定的（整段只要有一個非 ASCII 就全部按 1 em），於是一句
+/// 「今天 2026-09-22 要交」的數字被高估、純英文卻被整段高估，換行位置
+/// 兩邊都不對。逐字判斷之後與 `format_pdf_runs` 的切法完全一致。
+fn glyph_width(ch: char, font_size: f32) -> f32 {
+    if winansi_byte(ch).is_some() {
         font_size * 0.55
+    } else {
+        font_size
     }
 }
 
@@ -1075,15 +1150,13 @@ fn wrap_pdf_lines(text: &str, font_size: f32, max_width: f32) -> Vec<String> {
             out.push(String::new());
             continue;
         }
-        // 整段只要有一個非 ASCII 字元，就會整段走 CJK 字型。見 glyph_width。
-        let cjk_font = !paragraph.is_ascii();
         let mut line = String::new();
         let mut line_w = 0.0f32;
         let mut pending = String::new();
         let mut pending_w = 0.0f32;
 
         for ch in paragraph.chars() {
-            let w = glyph_width(ch, font_size, cjk_font);
+            let w = glyph_width(ch, font_size);
             let breakable = ch.is_whitespace() || is_wide_char(ch);
 
             if breakable {
@@ -1124,20 +1197,67 @@ fn wrap_pdf_lines(text: &str, font_size: f32, max_width: f32) -> Vec<String> {
     out
 }
 
-/// 格式化 PDF 文字：非 ASCII 字元使用 CJK 字型與 UTF-16BE 十六進位格式
-fn format_pdf_text(text: &str, default_font: &str) -> (String, String) {
-    let has_non_ascii = !text.is_ascii();
-    if has_non_ascii {
-        let mut hex = String::from("<FEFF");
-        for u16_val in text.encode_utf16() {
-            hex.push_str(&format!("{u16_val:04X}"));
+/// 把一行文字切成「字型 → 字面值」的連續段落。
+///
+/// 一行裡可以同時有西文與中日韓字，兩者的字型不同，所以不能整行只挑一個
+/// 字型：挑錯的那一半會變成別的字或全形。切成段之後，呼叫端在同一個
+/// `BT`／`Td` 裡依序 `Tf` + `Tj`，PDF 的文字矩陣會自己往前推進，
+/// 不必自己算 x 座標。
+fn format_pdf_runs(text: &str, default_font: &str) -> Vec<(String, String)> {
+    let mut runs: Vec<(String, String)> = Vec::new();
+    let mut buf = String::new();
+    let mut buf_is_cjk: Option<bool> = None;
+
+    fn flush(runs: &mut Vec<(String, String)>, buf: &mut String, is_cjk: bool, default_font: &str) {
+        if buf.is_empty() {
+            return;
         }
-        hex.push('>');
-        ("/F_CJK".to_string(), hex)
-    } else {
-        let esc = escape_pdf_string(text);
-        (default_font.to_string(), format!("({esc})"))
+        if is_cjk {
+            let mut hex = String::from("<FEFF");
+            for u16_val in buf.encode_utf16() {
+                hex.push_str(&format!("{u16_val:04X}"));
+            }
+            hex.push('>');
+            runs.push(("/F_CJK".to_string(), hex));
+        } else {
+            runs.push((default_font.to_string(), format!("({})", escape_pdf_string(buf))));
+        }
+        buf.clear();
     }
+
+    for ch in text.chars() {
+        let is_cjk = winansi_byte(ch).is_none();
+        if buf_is_cjk != Some(is_cjk) {
+            flush(&mut runs, &mut buf, buf_is_cjk.unwrap_or(false), default_font);
+            buf_is_cjk = Some(is_cjk);
+        }
+        buf.push(ch);
+    }
+    flush(&mut runs, &mut buf, buf_is_cjk.unwrap_or(false), default_font);
+    runs
+}
+
+/// 把 `format_pdf_runs` 的結果寫成一段 `BT … ET`。
+///
+/// `prelude` 是顏色之類在 `Td` 之前要下的指令。
+fn write_pdf_text(
+    content: &mut Vec<u8>,
+    text: &str,
+    default_font: &str,
+    size: f32,
+    prelude: &str,
+    x: f32,
+    baseline: f32,
+) {
+    let runs = format_pdf_runs(text, default_font);
+    if runs.is_empty() {
+        return;
+    }
+    let _ = write!(content, "BT {prelude} {x:.2} {baseline:.2} Td");
+    for (font, literal) in runs {
+        let _ = write!(content, " {font} {size:.1} Tf {literal} Tj");
+    }
+    let _ = writeln!(content, " ET");
 }
 
 #[cfg(test)]
@@ -1388,6 +1508,49 @@ mod tests {
 
 #[cfg(test)]
 mod wrap_tests {
+    use super::{format_pdf_runs, winansi_byte};
+
+    /// 這條測試守的是實際在匯出預覽上看到的那個壞掉的畫面。
+    ///
+    /// 在此之前只要一行裡有 `•`（非 ASCII），整行連同英文字母都被丟進
+    /// STSong/UniGB —— 圓點畫成別的字，字母變成全形，看起來像被拉開字距。
+    #[test]
+    fn a_bullet_line_stays_in_the_latin_font() {
+        let runs = format_pdf_runs("\u{2022} Draft the outline", "/F1");
+        assert_eq!(runs.len(), 1, "整行應該只有一段：{runs:?}");
+        assert_eq!(runs[0].0, "/F1", "圓點把整行拖進了 CJK 字型");
+        assert!(
+            runs[0].1.contains("\\225"),
+            "圓點要寫成 WinAnsi 的八進位 0x95：{}",
+            runs[0].1
+        );
+        assert!(!runs[0].1.starts_with('<'), "不該走 UTF-16 十六進位");
+    }
+
+    /// 中英混排要切成兩段，各用各的字型 —— 挑單一字型的話總有一半是錯的。
+    #[test]
+    fn mixed_text_splits_into_one_run_per_font() {
+        let runs = format_pdf_runs("\u{4ECA}\u{5929} meeting", "/F1");
+        assert_eq!(runs.len(), 2, "應該切成兩段：{runs:?}");
+        assert_eq!(runs[0].0, "/F_CJK");
+        assert!(runs[0].1.starts_with("<FEFF"));
+        assert_eq!(runs[1].0, "/F1");
+        assert!(runs[1].1.contains("meeting"));
+    }
+
+    /// WinAnsi 的 0x80..0x9F 特區碼位是跳開的，只能查表；查錯就變成別的字。
+    #[test]
+    fn the_winansi_special_block_maps_correctly() {
+        assert_eq!(winansi_byte('\u{2022}'), Some(0x95));
+        assert_eq!(winansi_byte('\u{2014}'), Some(0x97));
+        assert_eq!(winansi_byte('\u{2019}'), Some(0x92));
+        assert_eq!(winansi_byte('\u{2026}'), Some(0x85));
+        assert_eq!(winansi_byte('A'), Some(b'A'));
+        assert_eq!(winansi_byte('\u{00E9}'), Some(0xE9));
+        assert_eq!(winansi_byte('\u{4E2D}'), None, "中日韓字不在 WinAnsi 裡");
+        assert_eq!(winansi_byte('\u{2192}'), None, "箭頭也不在，要走 CJK 字型");
+    }
+
     use super::*;
 
     #[test]
@@ -1413,7 +1576,7 @@ mod wrap_tests {
         for line in &lines {
             let w: f32 = line
                 .chars()
-                .map(|c| glyph_width(c, 12.0, !line.is_ascii()))
+                .map(|c| glyph_width(c, 12.0))
                 .sum();
             assert!(w <= max + 12.0, "這一行超出可用寬度：{w} > {max}");
         }
@@ -1436,7 +1599,7 @@ mod wrap_tests {
         for line in &lines {
             let w: f32 = line
                 .chars()
-                .map(|c| glyph_width(c, 12.0, !line.is_ascii()))
+                .map(|c| glyph_width(c, 12.0))
                 .sum();
             assert!(w <= 200.0 + 12.0, "硬切後仍然超寬：{w}");
         }
