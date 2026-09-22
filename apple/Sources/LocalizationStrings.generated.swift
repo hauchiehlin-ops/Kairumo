@@ -423,14 +423,6 @@ extension LocalizationManager {
             .ko: "오프라인 Whisper 모델 다운로드(574 MB)",
             .th: "ดาวน์โหลดโมเดล Whisper ออฟไลน์ (574 MB)"
         ],
-        "asr_download_mirror_btn": [
-            .zhHant: "改用鏡像下載（hf-mirror.com）",
-            .en: "Download from the mirror (hf-mirror.com)",
-            .zhHans: "改用镜像下载（hf-mirror.com）",
-            .ja: "ミラーからダウンロード（hf-mirror.com）",
-            .ko: "미러에서 다운로드(hf-mirror.com)",
-            .th: "ดาวน์โหลดจากมิเรอร์ (hf-mirror.com)"
-        ],
         "asr_model_not_listed": [
             .zhHant: "清單裡沒有 %@",
             .en: "%@ is not in the list",
@@ -4527,21 +4519,13 @@ extension LocalizationManager {
             .ko: "다운로드 실패: %@",
             .th: "ดาวน์โหลดไม่สำเร็จ: %@"
         ],
-        "hw_asr_download_mirror": [
-            .zhHant: "官方來源較慢時，改用鏡像下載（hf-mirror.com）",
-            .en: "If the official source is slow, download from the mirror (hf-mirror.com)",
-            .zhHans: "官方来源较慢时，改用镜像下载（hf-mirror.com）",
-            .ja: "公式が遅い場合はミラーからダウンロード（hf-mirror.com）",
-            .ko: "공식 소스가 느리면 미러에서 다운로드(hf-mirror.com)",
-            .th: "หากแหล่งทางการช้า ให้ดาวน์โหลดจากมิเรอร์ (hf-mirror.com)"
-        ],
         "hw_asr_download_official": [
-            .zhHant: "下載 Whisper 端側模型（574 MB，官方來源）",
-            .en: "Download the on-device Whisper model (574 MB, official source)",
-            .zhHans: "下载 Whisper 端侧模型（574 MB，官方来源）",
-            .ja: "端末内 Whisper モデルをダウンロード（574 MB・公式）",
-            .ko: "기기 내 Whisper 모델 다운로드(574 MB, 공식)",
-            .th: "ดาวน์โหลดโมเดล Whisper ในเครื่อง (574 MB, แหล่งทางการ)"
+            .zhHant: "下載 Whisper 端側模型（574 MB）",
+            .en: "Download the on-device Whisper model (574 MB)",
+            .zhHans: "下载 Whisper 端侧模型（574 MB）",
+            .ja: "端末内 Whisper モデルをダウンロード（574 MB）",
+            .ko: "기기 내 Whisper 모델 다운로드(574 MB)",
+            .th: "ดาวน์โหลดโมเดล Whisper ในเครื่อง (574 MB)"
         ],
         "hw_asr_explainer": [
             .zhHant: "優先使用端側 Whisper 模型（自動偵測 99 種語言、自動標點，全程離線）。沒有模型時會自動改用系統聽寫。",
@@ -4583,21 +4567,13 @@ extension LocalizationManager {
             .ko: "기기 내 신경망 인식",
             .th: "การรู้จำด้วยโครงข่ายประสาทในเครื่อง"
         ],
-        "hw_asr_retry_mirror": [
-            .zhHant: "改用鏡像來源重試（hf-mirror）",
-            .en: "Retry with the mirror (hf-mirror)",
-            .zhHans: "改用镜像来源重试（hf-mirror）",
-            .ja: "ミラーで再試行（hf-mirror）",
-            .ko: "미러로 다시 시도(hf-mirror)",
-            .th: "ลองใหม่ด้วยมิเรอร์ (hf-mirror)"
-        ],
         "hw_asr_retry_official": [
-            .zhHant: "重試官方來源",
-            .en: "Retry the official source",
-            .zhHans: "重试官方来源",
-            .ja: "公式ソースで再試行",
-            .ko: "공식 소스로 다시 시도",
-            .th: "ลองแหล่งทางการอีกครั้ง"
+            .zhHant: "重試下載",
+            .en: "Retry the download",
+            .zhHans: "重试下载",
+            .ja: "ダウンロードを再試行",
+            .ko: "다운로드 다시 시도",
+            .th: "ลองดาวน์โหลดอีกครั้ง"
         ],
         "hw_asr_system_ready": [
             .zhHant: "系統聽寫就緒（免連網）",

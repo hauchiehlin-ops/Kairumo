@@ -407,14 +407,6 @@
     "zhHans": "下载 Whisper 离线模型（574 MB）",
     "zhHant": "下載 Whisper 離線模型（574 MB）"
   },
-  "asr_download_mirror_btn": {
-    "en": "Download from the mirror (hf-mirror.com)",
-    "ja": "ミラーからダウンロード（hf-mirror.com）",
-    "ko": "미러에서 다운로드(hf-mirror.com)",
-    "th": "ดาวน์โหลดจากมิเรอร์ (hf-mirror.com)",
-    "zhHans": "改用镜像下载（hf-mirror.com）",
-    "zhHant": "改用鏡像下載（hf-mirror.com）"
-  },
   "asr_model_not_listed": {
     "en": "%@ is not in the list",
     "ja": "%@ は一覧にありません",
@@ -4511,21 +4503,13 @@
     "zhHans": "下载失败：%@",
     "zhHant": "下載失敗：%@"
   },
-  "hw_asr_download_mirror": {
-    "en": "If the official source is slow, download from the mirror (hf-mirror.com)",
-    "ja": "公式が遅い場合はミラーからダウンロード（hf-mirror.com）",
-    "ko": "공식 소스가 느리면 미러에서 다운로드(hf-mirror.com)",
-    "th": "หากแหล่งทางการช้า ให้ดาวน์โหลดจากมิเรอร์ (hf-mirror.com)",
-    "zhHans": "官方来源较慢时，改用镜像下载（hf-mirror.com）",
-    "zhHant": "官方來源較慢時，改用鏡像下載（hf-mirror.com）"
-  },
   "hw_asr_download_official": {
-    "en": "Download the on-device Whisper model (574 MB, official source)",
-    "ja": "端末内 Whisper モデルをダウンロード（574 MB・公式）",
-    "ko": "기기 내 Whisper 모델 다운로드(574 MB, 공식)",
-    "th": "ดาวน์โหลดโมเดล Whisper ในเครื่อง (574 MB, แหล่งทางการ)",
-    "zhHans": "下载 Whisper 端侧模型（574 MB，官方来源）",
-    "zhHant": "下載 Whisper 端側模型（574 MB，官方來源）"
+    "en": "Download the on-device Whisper model (574 MB)",
+    "ja": "端末内 Whisper モデルをダウンロード（574 MB）",
+    "ko": "기기 내 Whisper 모델 다운로드(574 MB)",
+    "th": "ดาวน์โหลดโมเดล Whisper ในเครื่อง (574 MB)",
+    "zhHans": "下载 Whisper 端侧模型（574 MB）",
+    "zhHant": "下載 Whisper 端側模型（574 MB）"
   },
   "hw_asr_explainer": {
     "en": "Prefers the on-device Whisper model (99 languages detected automatically, punctuation restored, fully offline). Falls back to system dictation when no model is present.",
@@ -4567,21 +4551,13 @@
     "zhHans": "本机神经离线识别",
     "zhHant": "本機神經離線辨識"
   },
-  "hw_asr_retry_mirror": {
-    "en": "Retry with the mirror (hf-mirror)",
-    "ja": "ミラーで再試行（hf-mirror）",
-    "ko": "미러로 다시 시도(hf-mirror)",
-    "th": "ลองใหม่ด้วยมิเรอร์ (hf-mirror)",
-    "zhHans": "改用镜像来源重试（hf-mirror）",
-    "zhHant": "改用鏡像來源重試（hf-mirror）"
-  },
   "hw_asr_retry_official": {
-    "en": "Retry the official source",
-    "ja": "公式ソースで再試行",
-    "ko": "공식 소스로 다시 시도",
-    "th": "ลองแหล่งทางการอีกครั้ง",
-    "zhHans": "重试官方来源",
-    "zhHant": "重試官方來源"
+    "en": "Retry the download",
+    "ja": "ダウンロードを再試行",
+    "ko": "다운로드 다시 시도",
+    "th": "ลองดาวน์โหลดอีกครั้ง",
+    "zhHans": "重试下载",
+    "zhHant": "重試下載"
   },
   "hw_asr_system_ready": {
     "en": "System dictation ready (no network needed)",

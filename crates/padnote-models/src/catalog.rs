@@ -6,6 +6,19 @@ use serde::{Deserialize, Serialize};
 pub struct ModelEntry {
     pub id: String,
     pub url: String,
+    /// 主來源連不上時自動改用的鏡像。空字串表示沒有鏡像。
+    ///
+    /// # 為什麼是自動，不是讓使用者選
+    ///
+    /// 介面上原本有「從鏡像下載」按鈕，而使用者**不知道自己該選哪個** ——
+    /// 他只知道「下載失敗了」。把選擇權交給使用者，等於把一個他沒有資訊
+    /// 可以判斷的決定丟給他。
+    ///
+    /// 換來源之後續傳照樣進行（要求的是同一個位元組區間），而
+    /// `finalize` 的大小 + sha256 雙重驗證是安全網：兩邊內容只要有一個
+    /// 位元組不同，檔案會被刪掉而不是被當成好的留下來。
+    #[serde(default)]
+    pub mirror_url: String,
     /// 小寫 hex，64 字元。
     pub sha256: String,
     pub size_bytes: u64,
@@ -149,6 +162,7 @@ mod tests {
             required_for: vec![],
             optional: false,
             notes: String::new(),
+            mirror_url: String::new(),
         };
         assert!(!m.is_well_formed());
     }

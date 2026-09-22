@@ -5,6 +5,8 @@
     "介面上也會顯示為「尚未提供下載來源」而不是讓使用者按下去才失敗。",
     "url 為空字串者代表**原本填的網址是假的或已失效**，已實測過（見每一筆的 notes）。",
     "已確認的項目其 url、size_bytes 與 sha256 皆經實際請求驗證。",
+    "mirror_url 是選填：主來源連不上時核心會**自動**改用它，不問使用者。",
+    "換來源之後續傳照樣進行，而 sha256 是安全網 —— 兩邊內容不同就刪檔重來。",
     "上架前必須全部補齊 —— 見 docs/TODO.md H3。"
   ],
   "models": [
@@ -45,6 +47,7 @@
     {
       "id": "whisper-large-v3-turbo-q5",
       "url": "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
+      "mirror_url": "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin",
       "sha256": "394221709cd5ad1f40c46e6031ca61bce88931e6e088c188294c6d5a55ffa7e2",
       "size_bytes": 574041195,
       "license": "MIT",

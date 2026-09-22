@@ -167,16 +167,46 @@ impl Downloader {
             downloaded = 0;
         }
 
+        // 主來源連不上就自動改用鏡像，**不問使用者**。
+        //
+        // 使用者不知道自己該選哪個 —— 他只知道「下載失敗了」。介面上原本有
+        // 一顆「從鏡像下載」按鈕，把一個他沒有資訊可以判斷的決定丟給他。
+        //
+        // 換來源之後續傳照樣進行（要求的是同一個位元組區間）。兩邊內容只要
+        // 有一個位元組不同，`finalize` 的大小 + sha256 驗證會把檔案刪掉，
+        // 不會把壞模型當成好的留下來。
+        //
+        // 只換一次，不來回跳：兩邊都連不上就是真的沒網路，繼續輪流試只會
+        // 讓使用者多等而已。
+        let mut url = entry.url.clone();
+        let mut switched_to_mirror = false;
+
         while downloaded < entry.size_bytes {
-            let chunk = fetcher
-                .fetch(&RangeRequest {
-                    url: entry.url.clone(),
-                    from: downloaded,
-                })
-                .map_err(DownloadError::Network)?;
+            let chunk = match fetcher.fetch(&RangeRequest {
+                url: url.clone(),
+                from: downloaded,
+            }) {
+                Ok(chunk) => chunk,
+                Err(err) => {
+                    if switched_to_mirror || entry.mirror_url.is_empty() {
+                        return Err(DownloadError::Network(err));
+                    }
+                    url = entry.mirror_url.clone();
+                    switched_to_mirror = true;
+                    continue;
+                }
+            };
 
             if chunk.is_empty() {
                 // 伺服器沒給資料 —— 保住進度，讓上層稍後重試。
+                //
+                // 主來源給空的也算一次「連不上」：有些伺服器不回錯誤，
+                // 只是安靜地不給資料，而那對使用者來說跟連不上沒有差別。
+                if !switched_to_mirror && !entry.mirror_url.is_empty() {
+                    url = entry.mirror_url.clone();
+                    switched_to_mirror = true;
+                    continue;
+                }
                 return Ok(None);
             }
 
@@ -294,6 +324,38 @@ mod tests {
             required_for: vec!["asr.zh".into()],
             optional: false,
             notes: String::new(),
+            mirror_url: String::new(),
+        }
+    }
+
+    /// 主來源壞掉、鏡像正常。用來驗自動改用鏡像。
+    struct MirrorOnlyFetcher {
+        data: Vec<u8>,
+        primary: String,
+        /// 主來源是回錯誤，還是安靜地回空陣列。兩種都要能觸發改用鏡像。
+        primary_is_silent: bool,
+        urls: Mutex<Vec<String>>,
+    }
+
+    impl Fetcher for MirrorOnlyFetcher {
+        fn fetch(&self, req: &RangeRequest) -> Result<Vec<u8>, String> {
+            self.urls.lock().unwrap().push(req.url.clone());
+            if req.url == self.primary {
+                return if self.primary_is_silent {
+                    Ok(Vec::new())
+                } else {
+                    Err("連不上".into())
+                };
+            }
+            let from = req.from as usize;
+            if from >= self.data.len() {
+                return Ok(Vec::new());
+            }
+            Ok(self.data[from..].to_vec())
+        }
+
+        fn supports_range(&self) -> bool {
+            true
         }
     }
 
@@ -530,5 +592,93 @@ mod tests {
         );
         assert_eq!(DownloadState::Complete.progress_percent(1000), 100);
         assert_eq!(DownloadState::NotStarted.progress_percent(1000), 0);
+    }
+
+    /// 主來源回錯誤時自動改用鏡像 —— **不問使用者**。
+    ///
+    /// 介面上原本有一顆「從鏡像下載」按鈕，而使用者不知道自己該選哪個：
+    /// 他只知道「下載失敗了」。這條測試守的是「不必問也會成功」。
+    #[test]
+    fn falls_back_to_the_mirror_when_the_primary_errors() {
+        let data = b"weights".repeat(500);
+        let mut entry = entry_for(&data);
+        entry.mirror_url = "https://mirror.example.com/m.onnx".into();
+
+        let fetcher = MirrorOnlyFetcher {
+            data: data.clone(),
+            primary: entry.url.clone(),
+            primary_is_silent: false,
+            urls: Mutex::new(Vec::new()),
+        };
+        let d = Downloader::new(tmp("mirror-error"));
+        let path = d.download(&entry, &fetcher).unwrap();
+
+        assert!(path.is_some(), "改用鏡像之後應該要下載成功");
+        let urls = fetcher.urls.lock().unwrap();
+        assert_eq!(urls[0], entry.url, "第一次要先試主來源");
+        assert!(
+            urls[1..].iter().all(|u| *u == entry.mirror_url),
+            "換過去之後就不該再回頭試主來源 —— 來回跳只會讓使用者多等"
+        );
+    }
+
+    /// 主來源安靜地回空陣列（不回錯誤）也要改用鏡像。
+    ///
+    /// 有些伺服器不回錯誤，只是不給資料。對使用者來說那跟連不上沒有差別，
+    /// 而原本的邏輯會把它當成「保住進度，稍後重試」—— 於是永遠不會成功。
+    #[test]
+    fn falls_back_when_the_primary_goes_quiet() {
+        let data = b"weights".repeat(500);
+        let mut entry = entry_for(&data);
+        entry.mirror_url = "https://mirror.example.com/m.onnx".into();
+
+        let fetcher = MirrorOnlyFetcher {
+            data: data.clone(),
+            primary: entry.url.clone(),
+            primary_is_silent: true,
+            urls: Mutex::new(Vec::new()),
+        };
+        let d = Downloader::new(tmp("mirror-quiet"));
+        assert!(d.download(&entry, &fetcher).unwrap().is_some());
+    }
+
+    /// 沒有鏡像時行為不變：主來源錯誤就是錯誤。
+    #[test]
+    fn without_a_mirror_a_primary_error_is_still_an_error() {
+        let data = b"weights".repeat(500);
+        let entry = entry_for(&data); // mirror_url 是空的
+        let fetcher = MirrorOnlyFetcher {
+            data,
+            primary: entry.url.clone(),
+            primary_is_silent: false,
+            urls: Mutex::new(Vec::new()),
+        };
+        let d = Downloader::new(tmp("no-mirror"));
+        assert!(matches!(
+            d.download(&entry, &fetcher),
+            Err(DownloadError::Network(_))
+        ));
+    }
+
+    /// 鏡像給的內容不一樣時要被擋下來，而不是留一個壞模型。
+    #[test]
+    fn a_mirror_serving_different_bytes_is_rejected() {
+        let real = b"weights".repeat(500);
+        let mut entry = entry_for(&real);
+        entry.mirror_url = "https://mirror.example.com/m.onnx".into();
+
+        // 大小一樣、內容不同 —— 只有 sha256 擋得住。
+        let tampered = b"WEIGHTS".repeat(500);
+        let fetcher = MirrorOnlyFetcher {
+            data: tampered,
+            primary: entry.url.clone(),
+            primary_is_silent: false,
+            urls: Mutex::new(Vec::new()),
+        };
+        let d = Downloader::new(tmp("mirror-tampered"));
+        assert!(matches!(
+            d.download(&entry, &fetcher),
+            Err(DownloadError::ChecksumMismatch { .. })
+        ));
     }
 }
