@@ -99,6 +99,46 @@ Apple 單元測試 382 條中 381 過（唯一那條紅是無障礙標籤，與�
 
 合計刪掉約 **430 行**死程式碼。
 
+### S-263. 畫面稽核接到 Android 之後暴露的三件事
+
+`android/app/src/androidTest/.../screens/ScreenAuditTest.kt` 已經上線，與
+Apple 端讀**同一份** `docs/conformance/screens.json`（`android` 那半邊）。
+CI 的「Android instrumented tests」跑整個 `connectedDebugAndroidTest`，
+所以它自動被涵蓋，不必改 CI。
+
+**1. 兩端共同缺同兩項 —— 比較可能是規格錯了**
+
+| 控制項 | Apple | Android |
+|---|---|---|
+| `home.notebooks.sort` | ❌ | ❌ |
+| `home.notebooks.rename_root` | ❌ | ❌ |
+| `home.notebooks.new_folder` | ✅ | ❌ |
+| `home.identity.edit` | ❌ | ✅ |
+| `home.recordings.open_folder` | ❌ | ✅ |
+| `home.cloud.signin` | ❌ | ✅ |
+| `home.data.folder` | ❌ | ✅ |
+
+前兩項兩端都缺 —— 規格標為**必要**，而兩端預設狀態下都不顯示。兩端同時
+缺同兩項，比較可能是規格該改成 `optional`（或它們屬於某個條件狀態），
+而不是兩端各自漏掉。**其餘五項才是真的落差**，要逐個補。
+
+**2. 條件顯示的控制項，規格表達不出來**
+
+`home.recordings.list` 只在有錄音時才畫。`FfiControlSpec` 已經有 `optional`
+欄位，但這一項標的是必要。要嘛改成 optional，要嘛讓測試先塞一筆資料。
+
+**3. Android 還沒有「點得到」那一半**
+
+Apple 端斷言 `isHittable`，擋的是 zIndex 那種「畫得出來卻按不到」。
+Compose 沒有等價的單一查詢 —— `assertIsDisplayed` 只看在不在畫面上，
+不看上面有沒有蓋東西。目前 Android 只守「存在」那一半。
+
+**另外**：兩端的筆記卡片都沒有各自的 testTag／accessibilityIdentifier，
+所以編輯器那一輪 Android 還沒做（Apple 靠種子筆記的英文標題進去）。
+補上 `home.notebooks.card.<id>` 之後兩端都能直接進編輯器。
+
+---
+
 ### S-261. 工具列同步的管線做好了，但沒有「自訂工具列」這個功能
 
 兩端各有 `setSyncedToolbarJson` / `syncedToolbarJson`，核心也有
