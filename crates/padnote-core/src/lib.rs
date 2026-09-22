@@ -24,6 +24,7 @@ pub mod ffi_gdrive;
 pub mod ffi_geometry;
 pub mod ffi_gesture;
 pub mod ffi_guides;
+pub mod ffi_hints;
 pub mod ffi_hwr;
 pub mod ffi_input;
 pub mod ffi_interop;

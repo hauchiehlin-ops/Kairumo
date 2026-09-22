@@ -4175,6 +4175,86 @@
     "zhHans": "隐藏此项",
     "zhHant": "隱藏此項目"
   },
+  "hint_comment_pin_body": {
+    "en": "Now tap anywhere on the page to drop a pin there. Tap the toolbar icon again to leave placement mode.",
+    "zhHant": "接著**點頁面上任何一處**就會放下圖釘。再按一次工具列上的圖示即可離開放置模式。",
+    "zhHans": "接着**点页面上任何一处**就会放下图钉。再按一次工具栏上的图标即可离开放置模式。",
+    "ja": "次に、ページ上の**好きな場所をタップ**するとピンが置かれます。ツールバーのアイコンをもう一度押すと配置モードを終了します。",
+    "ko": "이제 페이지의 **아무 곳이나 탭**하면 핀이 놓입니다. 도구 모음 아이콘을 다시 누르면 배치 모드를 벗어납니다.",
+    "th": "จากนั้น**แตะที่ใดก็ได้บนหน้า**เพื่อวางหมุด แตะไอคอนบนแถบเครื่องมืออีกครั้งเพื่อออกจากโหมดวาง"
+  },
+  "hint_comment_pin_title": {
+    "en": "Add Comment Pin",
+    "zhHant": "新增討論圖釘",
+    "zhHans": "新增讨论图钉",
+    "ja": "コメントピンを追加",
+    "ko": "댓글 핀 추가",
+    "th": "เพิ่มหมุดความคิดเห็น"
+  },
+  "hint_dont_show_again": {
+    "en": "Don't show this again",
+    "zhHant": "不要再顯示這則提示",
+    "zhHans": "不要再显示这则提示",
+    "ja": "今後このヒントを表示しない",
+    "ko": "이 안내를 다시 표시하지 않기",
+    "th": "ไม่ต้องแสดงคำแนะนำนี้อีก"
+  },
+  "hint_got_it": {
+    "en": "Got it",
+    "zhHant": "知道了",
+    "zhHans": "知道了",
+    "ja": "わかりました",
+    "ko": "알겠습니다",
+    "th": "เข้าใจแล้ว"
+  },
+  "hint_recognize_body": {
+    "en": "This reads the handwriting on the current page and turns it into text. An empty page gives no result — draw or write something first.",
+    "zhHant": "這會讀**目前這一頁**的手寫字並轉成文字。空白頁不會有結果 —— 先寫一點東西。",
+    "zhHans": "这会读**目前这一页**的手写字并转成文字。空白页不会有结果 —— 先写一点东西。",
+    "ja": "**現在のページ**の手書きを読み取ってテキストにします。空のページでは結果が出ません —— まず何か書いてください。",
+    "ko": "**현재 페이지**의 손글씨를 읽어 텍스트로 바꿉니다. 빈 페이지는 결과가 없습니다 —— 먼저 무언가 쓰세요.",
+    "th": "อ่านลายมือใน**หน้าปัจจุบัน**แล้วแปลงเป็นข้อความ หน้าว่างจะไม่ได้ผลลัพธ์ —— เขียนอะไรสักอย่างก่อน"
+  },
+  "hint_recognize_title": {
+    "en": "Recognise Handwriting",
+    "zhHant": "辨識手寫",
+    "zhHans": "识别手写",
+    "ja": "手書きを認識",
+    "ko": "손글씨 인식",
+    "th": "รู้จำลายมือ"
+  },
+  "hint_refine_sketch_body": {
+    "en": "Draw something first, then use the bar at the top of the canvas to straighten lines and regularise shapes. You can dial the strength down or undo it.",
+    "zhHant": "先畫一些東西，再用畫布上方那條控制列把線條拉直、把形狀變規則。強度可以調，也可以還原。",
+    "zhHans": "先画一些东西，再用画布上方那条控制栏把线条拉直、把形状变规则。强度可以调，也可以还原。",
+    "ja": "まず何か描いてから、キャンバス上部のバーで線をまっすぐにし、図形を整えます。強度の調整も取り消しもできます。",
+    "ko": "먼저 무언가를 그린 다음, 캔버스 위쪽 막대로 선을 곧게 펴고 도형을 정리하세요. 강도 조절과 되돌리기가 가능합니다.",
+    "th": "วาดอะไรสักอย่างก่อน แล้วใช้แถบด้านบนผืนผ้าใบเพื่อจัดเส้นให้ตรงและปรับรูปทรงให้เรียบร้อย ปรับความเข้มหรือเลิกทำได้"
+  },
+  "hint_refine_sketch_title": {
+    "en": "Refine Sketch",
+    "zhHant": "草圖修飾",
+    "zhHans": "草图修饰",
+    "ja": "スケッチを整える",
+    "ko": "스케치 다듬기",
+    "th": "ปรับแต่งภาพร่าง"
+  },
+  "hint_tabletop_body": {
+    "en": "Splits the screen: the canvas goes on top, the tools move to the bottom half. Made for a device standing on a desk — look at the top, write on the bottom.",
+    "zhHant": "把畫面分成兩半：畫布在上，工具移到下半部。這是給立在桌上的裝置用的 —— 上面看、下面寫。",
+    "zhHans": "把画面分成两半：画布在上，工具移到下半部。这是给立在桌上的设备用的 —— 上面看、下面写。",
+    "ja": "画面を上下に分割します：上がキャンバス、下がツールです。机に立てた端末向け —— 上を見ながら下で書きます。",
+    "ko": "화면을 둘로 나눕니다: 위는 캔버스, 아래는 도구입니다. 책상에 세워 둔 기기를 위한 모드 —— 위를 보며 아래에 씁니다.",
+    "th": "แบ่งหน้าจอเป็นสองส่วน: ผืนผ้าใบอยู่บน เครื่องมืออยู่ล่าง ออกแบบมาสำหรับอุปกรณ์ที่ตั้งบนโต๊ะ —— ดูด้านบน เขียนด้านล่าง"
+  },
+  "hint_tabletop_title": {
+    "en": "Tabletop / Flex Mode",
+    "zhHant": "立起懸停模式",
+    "zhHans": "立起悬停模式",
+    "ja": "卓上／フレックスモード",
+    "ko": "탁상 / 플렉스 모드",
+    "th": "โหมดตั้งโต๊ะ / เฟล็กซ์"
+  },
   "home": {
     "en": "Home",
     "ja": "ホーム",

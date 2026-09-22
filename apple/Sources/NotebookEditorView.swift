@@ -1116,6 +1116,11 @@ public struct NotebookEditorView: View {
     @State private var objectClipboard: [ClipboardObject] = []
     /// 手寫辨識的結果或錯誤，顯示在浮動提示上。
     @State private var recognitionMessage: String?
+    /// 辨識手寫剛被按下 —— 只給提示用。
+    ///
+    /// 其他三個功能本身就是布林模式，辨識手寫不是（它跑完就結束），
+    /// 所以要一個獨立的旗標才跳得出提示。
+    @State private var isRecognisingHandwriting = false
     @State private var isGoldenSpiralOverlay: Bool = false
     @State private var isRuleOfThirdsOverlay: Bool = false
 
@@ -1666,6 +1671,13 @@ public struct NotebookEditorView: View {
                 fileExtension: exportFileExtension,
                 onExport: { wantsShareAfterPreview = true })
         }
+        // 四個「按下去之後還要再做一個動作」的功能，第一次用時給一則提示
+        // （使用者回報：不知道該怎麼操作）。內容與 id 都來自核心，
+        // 兩端同一份 —— 鍵不一樣的話，在一台裝置上關掉的提示會在另一台冒出來。
+        .featureHint("hint.comment_pin", trigger: isPlacingCommentPin)
+        .featureHint("hint.refine_sketch", trigger: showSketchRefineBar)
+        .featureHint("hint.tabletop", trigger: isTabletopMode)
+        .featureHint("hint.recognize", trigger: isRecognisingHandwriting)
         .sheet(isPresented: $showToolbarCustomization) {
             NavigationStack { ToolbarCustomizationView() }
         }
@@ -6721,6 +6733,7 @@ public struct NotebookEditorView: View {
     /// **不會改動任何一筆畫。** 辨識只是讓手寫找得到 —— 手寫筆記的價值
     /// 就在那個手寫。分組規則走核心（與 Android 同一份），辨識引擎是 Vision。
     private func recognizeHandwritingOnCurrentPage() {
+        isRecognisingHandwriting = true
         let drawing = currentDrawing
         guard !drawing.strokes.isEmpty else {
             recognitionMessage = localizationManager.localized("no_strokes")

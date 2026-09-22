@@ -1485,6 +1485,13 @@ private fun InkScreen(
     // 討論圖釘。存在筆記本中繼資料裡，Android 在此之前讀不到 ——
     // iPad 上標的討論同步過來就像不存在。
     var pins by remember(notebook) { mutableStateOf(meta.commentPins()) }
+    /// 正在放置討論圖釘 —— 點畫布就會放下一個。與 Apple 端同一個模式。
+    var isPlacingCommentPin by remember { mutableStateOf(false) }
+    /// 辨識手寫剛被按下 —— 只給操作提示用。
+    ///
+    /// 其他三個功能本身就是布林模式，辨識手寫不是（它跑完就結束），
+    /// 所以要一個獨立的旗標才跳得出提示。
+    var isRecognisingHandwriting by remember { mutableStateOf(false) }
     var pinRevision by remember { mutableIntStateOf(0) }
     var openPin by remember { mutableStateOf<CommentPin?>(null) }
 
@@ -2599,23 +2606,15 @@ private fun InkScreen(
                     modifier = Modifier.testTag("editor.insert.comment_pin"),
                     onClick = {
                         showMenu = false
-                        val profile = AccountManager.load(activity, l10n("default_user_name"))
-                        val pin = CommentPin(
-                            id = java.util.UUID.randomUUID().toString(),
-                            pageIndex = pageIndex,
-                            x = 80f, y = 120f,
-                            authorId = deviceId(activity).toString(),
-                            authorName = profile.displayName,
-                            authorColor = profile.colorHex,
-                            createdAt = java.util.Date(),
-                            isResolved = false,
-                            messages = mutableListOf()
-                        )
-                        pins = (pins + pin).toMutableList()
-                        meta.setCommentPins(notebook?.first, pins)
-                        pinRevision++
-                        openPin = pin
-                        editorMode = EditorMode.TYPE
+                        // **進入放置模式，讓使用者自己選位置。**
+                        //
+                        // 原本這裡直接把圖釘丟在寫死的 (80, 120) —— 每一個
+                        // 都疊在同一個角落，而使用者完全不能選。Apple 端
+                        // 一直是「點哪裡就放哪裡」，這一側只是沒做。
+                        //
+                        // 兩端共用的操作提示說的是「接著點頁面任何一處」，
+                        // 在改這裡之前那句話在 Android 上是假的。
+                        isPlacingCommentPin = true
                     }
                 )
                 DropdownMenuItem(
@@ -2827,9 +2826,11 @@ private fun InkScreen(
                         if (session == null || page == null) {
                             message = uiString("err_core_not_ready")
                         } else {
+                            isRecognisingHandwriting = true
                             message = l10n("recognizing")
                             scope.launch {
                                 message = recognizeHandwriting(session, page, engine)
+                                isRecognisingHandwriting = false
                             }
                         }
                     }
@@ -4369,6 +4370,42 @@ private fun InkScreen(
                 )
             }
         }
+            // 放置討論圖釘：點哪裡就放哪裡（與 Apple 端同一個模式）。
+            //
+            // 疊在最上面，只在放置模式時存在 —— 常駐的話它會把畫布的
+            // 觸控全部吃掉，筆就畫不了了。
+            if (isPlacingCommentPin) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .testTag("editor.comment_pin.placing")
+                        .pointerInput(pageIndex) {
+                            detectTapGestures { offset ->
+                                val profile = AccountManager.load(
+                                    activity, l10n("default_user_name"))
+                                val pin = CommentPin(
+                                    id = java.util.UUID.randomUUID().toString(),
+                                    pageIndex = pageIndex,
+                                    x = offset.x / canvasDensity,
+                                    y = offset.y / canvasDensity,
+                                    authorId = deviceId(activity).toString(),
+                                    authorName = profile.displayName,
+                                    authorColor = profile.colorHex,
+                                    createdAt = java.util.Date(),
+                                    isResolved = false,
+                                    messages = mutableListOf()
+                                )
+                                pins = (pins + pin).toMutableList()
+                                meta.setCommentPins(notebook?.first, pins)
+                                pinRevision++
+                                openPin = pin
+                                isPlacingCommentPin = false
+                                editorMode = EditorMode.TYPE
+                            }
+                        }
+                )
+            }
+
         }
         if (sideToolbar && toolbarPlacement == uniffi.padnote_core.FfiPlacement.RIGHT) {
             androidx.compose.foundation.layout.Column(
@@ -4384,6 +4421,19 @@ private fun InkScreen(
         ) {
             inkBar()
         }
+
+        // 四個「按下去之後還要再做一個動作」的功能，第一次用時給一則提示
+        // （使用者回報：不知道該怎麼操作）。內容與 id 都來自核心，
+        // 與 Apple 端同一份 —— 鍵不一樣的話，在一台裝置上關掉的提示會在
+        // 另一台冒出來。
+        com.kairumo.padnote.ui.FeatureHintHost(
+            activity, "hint.comment_pin", isPlacingCommentPin, deviceLanguageTag())
+        com.kairumo.padnote.ui.FeatureHintHost(
+            activity, "hint.refine_sketch", showRefineBar, deviceLanguageTag())
+        com.kairumo.padnote.ui.FeatureHintHost(
+            activity, "hint.tabletop", isTabletopManual, deviceLanguageTag())
+        com.kairumo.padnote.ui.FeatureHintHost(
+            activity, "hint.recognize", isRecognisingHandwriting, deviceLanguageTag())
         }
 
         // 次世代 UI/UX Phase 5: 折疊立起雙屏創作工作盤 (Tabletop Studio Control Deck)
