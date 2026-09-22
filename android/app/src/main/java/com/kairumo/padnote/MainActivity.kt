@@ -111,6 +111,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.ui.geometry.Offset
@@ -2214,7 +2216,12 @@ private fun InkScreen(
                     )
                     showRadialMenu = !showRadialMenu
                 },
-                modifier = Modifier.size(36.dp).testTag("editor.radialMenuToggle")
+                // ○／◎ 是幾何字元，TalkBack 念不出功能（對應 Apple 端的
+                // radial_menu 標籤）。
+                modifier = Modifier
+                    .size(36.dp)
+                    .testTag("editor.radialMenuToggle")
+                    .semantics { contentDescription = l10n("radial_menu") }
             ) {
                 Text(
                     text = if (showRadialMenu) "◎" else "○",

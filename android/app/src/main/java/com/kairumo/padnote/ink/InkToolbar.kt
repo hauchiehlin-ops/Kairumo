@@ -220,7 +220,13 @@ fun InkToolbar(
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                         .border(1.dp, MaterialTheme.colorScheme.outlineVariant, CircleShape)
-                        .clickable { onOpenColorWheel() },
+                        .clickable { onOpenColorWheel() }
+                        // 只有一個 🎨 emoji，TalkBack 念不出功能（對應 Apple 端
+                        // 的 ink_pro_wheel 標籤）。
+                        .semantics {
+                            contentDescription =
+                                LocalizationStrings.localized("ink_pro_wheel", languageTag)
+                        },
                     contentAlignment = Alignment.Center
                 ) {
                     Text("🎨", fontSize = 12.sp)

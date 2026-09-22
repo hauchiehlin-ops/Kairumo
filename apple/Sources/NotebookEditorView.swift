@@ -5248,6 +5248,7 @@ public struct NotebookEditorView: View {
         }
         .buttonStyle(.plain)
         .help(localizationManager.localized("ink_change_colour"))
+        .accessibilityLabel(localizationManager.localized("ink_change_colour"))
         .popover(isPresented: $showLassoColorPicker) {
             HStack(spacing: 12) {
                 ForEach(colorPalette, id: \.self) { color in
@@ -5542,6 +5543,7 @@ public struct NotebookEditorView: View {
                     }
                     .buttonStyle(.plain)
                     .help(localizationManager.localized("ink_pro_wheel"))
+                    .accessibilityLabel(localizationManager.localized("ink_pro_wheel"))
                     .popover(isPresented: $showProColorWheel) {
                         ProColorWheelView(
                             selectedColorHex: Binding(
@@ -5580,6 +5582,7 @@ public struct NotebookEditorView: View {
                     .cornerRadius(6)
                 }
                 .help(localizationManager.localized("stab_title"))
+                .accessibilityLabel(localizationManager.localized("stab_title"))
 
                 // 🌟 鏡像對稱尺規 (Symmetry Guide)
                 Button {
@@ -5595,6 +5598,7 @@ public struct NotebookEditorView: View {
                 }
                 .buttonStyle(.plain)
                 .help(localizationManager.localized("symmetry_guide"))
+                .accessibilityLabel(localizationManager.localized("symmetry_guide"))
 
                 // 🌟 響應式極簡畫布收折按鈕
                 Button {
@@ -5633,6 +5637,7 @@ public struct NotebookEditorView: View {
                 }
                 .buttonStyle(.plain)
                 .help(localizationManager.localized("radial_menu"))
+                .accessibilityLabel(localizationManager.localized("radial_menu"))
 
                 eraserModeControls
 
