@@ -13,6 +13,7 @@
 //! 7. **圖片區塊真實尺寸與繪製**：支援 JPEG 與 PNG 影像解析及 XObject 擺放（P1）。
 
 use padnote_doc::{BlockKind, Notebook, Page, PageTemplate, TextStyle, Uuid};
+use padnote_i18n::Locale;
 use padnote_ink::Stroke;
 use padnote_pdf::{PageMapping, stroke_to_annotation};
 use padnote_storage::{BlobId, BlobStore};
@@ -73,6 +74,12 @@ pub struct PdfExportOptions {
     /// 康乃爾的三區、四象限的十字、週計畫的七欄都在這裡。在此之前**匯出的
     /// PDF 完全沒有它們**：畫布上是一張康乃爾，匯出來是一張空白紙。
     pub page_guides: HashMap<Uuid, Vec<GuideItem>>,
+    /// 文件裡那幾個標記要用哪一種語言（目前只有轉錄區塊的「語音」）。
+    ///
+    /// 預設英文。匯出的 PDF 是要給別人看的文件 —— 猜錯語言的話，
+    /// 英文使用者會在自己的文件裡看到一個看不懂的詞，
+    /// 而那比一個他看得懂但不是母語的詞更糟。
+    pub locale: Locale,
 }
 
 impl Default for PdfExportOptions {
@@ -83,6 +90,7 @@ impl Default for PdfExportOptions {
             page_range: None,
             compress_streams: true,
             page_guides: HashMap::new(),
+            locale: Locale::English,
         }
     }
 }
@@ -491,7 +499,7 @@ impl PdfWriter {
                     self.render_page_guides(&mut content, guides, h);
                 }
             }
-            self.render_blocks(&mut content, page, w, h, &po.images);
+            self.render_blocks(&mut content, page, w, h, &po.images, options.locale);
             self.render_strokes_vector(&mut content, page_strokes, h);
 
             // 串流壓縮（P2）
@@ -797,6 +805,7 @@ impl PdfWriter {
         width: f32,
         height: f32,
         images: &[ProcessedImage],
+        locale: Locale,
     ) {
         let mut cursor_y = height - 60.0;
         let left_margin = 40.0;
@@ -980,12 +989,10 @@ impl PdfWriter {
                     }
                 }
                 BlockKind::Transcript { text, .. } => {
+                    let marker = padnote_i18n::text(padnote_i18n::Key::Transcript, locale);
                     write_pdf_text(
                         content,
-                        // 這個標記目前寫死英文：padnote-export 完全不知道介面語言，
-                        // 而匯出的 PDF 是要給別人看的文件，不該固定出現中文。
-                        // 真正的解是把語系傳進來，記在 docs/TODO.md 的 S-54c。
-                        &format!("[Audio] {text}"),
+                        &format!("[{marker}] {text}"),
                         "/F1",
                         10.0,
                         "0.3 0.3 0.4 rg",
@@ -1610,5 +1617,31 @@ mod wrap_tests {
             let w: f32 = line.chars().map(|c| glyph_width(c, 12.0)).sum();
             assert!(w <= 200.0 + 12.0, "硬切後仍然超寬：{w}");
         }
+    }
+}
+
+#[cfg(test)]
+mod transcript_marker_tests {
+    use super::*;
+
+    /// 轉錄區塊的標記要跟著語言走。
+    ///
+    /// 這裡原本寫死 `[Audio]`，而在那之前寫死的是 `[語音]` —— 後者更糟：
+    /// 匯出的 PDF 是要給別人看的文件，英文使用者會在自己的文件裡看到一個
+    /// 看不懂的詞。現在兩種都不會發生。
+    #[test]
+    fn the_transcript_marker_follows_the_locale() {
+        let en = padnote_i18n::text(padnote_i18n::Key::Transcript, Locale::English);
+        let zh = padnote_i18n::text(padnote_i18n::Key::Transcript, Locale::TraditionalChinese);
+        assert_ne!(en, zh, "兩種語言的標記一樣，表示語系沒有真的傳到查表");
+        assert!(!en.is_empty() && !zh.is_empty());
+    }
+
+    /// 預設是英文，不是使用者當下的語言。
+    ///
+    /// 猜錯語言比用英文更糟：英文至少是這份文件的通用退路。
+    #[test]
+    fn the_default_is_english_not_a_guess() {
+        assert_eq!(PdfExportOptions::default().locale, Locale::English);
     }
 }

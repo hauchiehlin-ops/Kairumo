@@ -125,6 +125,15 @@ public final class LocalizationManager: ObservableObject {
         return out
     }
 
+    /// 目前語言的 BCP 47 標籤，不受 actor 隔離。
+    ///
+    /// 匯出 PDF 要把語系交給核心（S-54c），而匯出整段跑在背景執行緒
+    /// （H-SYNC-MAINACTOR 把它搬離主執行緒），碰不到 `currentLanguage`。
+    /// 與 `localizedUnsafe` 讀的是同一個快照。
+    public nonisolated func currentLanguageTagUnsafe() -> String {
+        Self.snapshotLanguage.rawValue
+    }
+
     /// 目前語言的快照，供背景執行緒查表用。
     ///
     /// 用 `nonisolated(unsafe)` 是刻意的：它只被寫入一次（切換語言時），

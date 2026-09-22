@@ -1482,7 +1482,7 @@ mod tests {
             .map(|i| {
                 let id = format!("nb{i:04}");
                 let root = tmp_package(&format!("{tag}-{i}"), 0xAA);
-                let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+                let mut pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
                 pkg.append_doc_ops(
                     1,
                     0xAA,
@@ -1545,7 +1545,7 @@ mod tests {
         assert!(after.pending_notebooks.is_empty(), "全部同步過了還說有待辦");
 
         // 再改一本，它就該單獨出現在待辦裡。
-        let pkg = padnote_storage::NotebookPackage::open(&books[1].1).unwrap();
+        let mut pkg = padnote_storage::NotebookPackage::open(&books[1].1).unwrap();
         pkg.append_doc_ops(
             5,
             0xAA,
@@ -1628,7 +1628,7 @@ mod tests {
 
         // 另一台裝置（0xBB）改了第 7 本。
         let other_root = tmp_package("onechanged-other", 0xBB);
-        let other = padnote_storage::NotebookPackage::open(&other_root).unwrap();
+        let mut other = padnote_storage::NotebookPackage::open(&other_root).unwrap();
         other
             .append_doc_ops(
                 9,
@@ -1820,7 +1820,7 @@ mod tests {
 
         let fake = Arc::new(FakeDrive::default());
         let root = tmp_package("delete-order", 0xAA);
-        let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        let mut pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
         for lamport in 1..=6u64 {
             pkg.append_doc_ops(
                 lamport,
@@ -1881,7 +1881,7 @@ mod tests {
 
         // 另一台裝置（0xBB）在雲端留下幾個碎檔。
         let other_root = tmp_package("foreign-frag-other", 0xBB);
-        let other = padnote_storage::NotebookPackage::open(&other_root).unwrap();
+        let mut other = padnote_storage::NotebookPackage::open(&other_root).unwrap();
         for lamport in 1..=3u64 {
             other
                 .append_doc_ops(lamport, 0xBB, &[DocOp::SetTitle { title: "b".into() }])
@@ -1897,7 +1897,7 @@ mod tests {
 
         // 本機這一台（0xAA）寫很多自己的碎檔，然後同步。
         let root = tmp_package("foreign-frag-mine", 0xAA);
-        let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        let mut pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
         for lamport in 10..=16u64 {
             pkg.append_doc_ops(lamport, 0xAA, &[DocOp::SetTitle { title: "a".into() }])
                 .unwrap();
@@ -1926,7 +1926,7 @@ mod tests {
         let http: Arc<dyn FfiDriveHttp> = fake.clone();
 
         let root = tmp_package("own-cleanup", 0xAA);
-        let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        let mut pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
         for lamport in 1..=6u64 {
             pkg.append_doc_ops(lamport, 0xAA, &[DocOp::SetTitle { title: "a".into() }])
                 .unwrap();
@@ -1965,7 +1965,7 @@ mod tests {
         let http: Arc<dyn FfiDriveHttp> = fake.clone();
 
         let a_root = tmp_package("noloss-a", 0xAA);
-        let a = padnote_storage::NotebookPackage::open(&a_root).unwrap();
+        let mut a = padnote_storage::NotebookPackage::open(&a_root).unwrap();
         for lamport in 1..=6u64 {
             a.append_doc_ops(
                 lamport,
@@ -2021,7 +2021,7 @@ mod tests {
         let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
 
         let a_root = tmp_package("conv-a", 0xAA);
-        let a = padnote_storage::NotebookPackage::open(&a_root).unwrap();
+        let mut a = padnote_storage::NotebookPackage::open(&a_root).unwrap();
         a.append_doc_ops(
             1,
             0xAA,
@@ -2032,7 +2032,7 @@ mod tests {
         .unwrap();
 
         let b_root = tmp_package("conv-b", 0xBB);
-        let b = padnote_storage::NotebookPackage::open(&b_root).unwrap();
+        let mut b = padnote_storage::NotebookPackage::open(&b_root).unwrap();
         b.append_doc_ops(
             2,
             0xBB,
@@ -2090,7 +2090,7 @@ mod tests {
         let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
 
         let a_root = tmp_package("clone-a", 0xAA);
-        let a = padnote_storage::NotebookPackage::open(&a_root).unwrap();
+        let mut a = padnote_storage::NotebookPackage::open(&a_root).unwrap();
         a.append_doc_ops(
             1,
             0xAA,
@@ -2171,7 +2171,7 @@ mod tests {
 
         let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
         let root = tmp_package("idem", 0xAA);
-        let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        let mut pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
         pkg.append_doc_ops(
             1,
             0xAA,

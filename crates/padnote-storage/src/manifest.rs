@@ -4,7 +4,27 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 /// 本 build 支援的格式版本。
-pub const SPEC_VERSION: u32 = 1;
+///
+/// # 為什麼從 1 變成 2（H-OPLOG-COMPAT）
+///
+/// 這一版的 oplog **每一批都會寫 `DocOp::BatchOrigin`（op 37）**，而
+/// `decode` 遇到不認得的 op 類型是**回錯誤**的 —— 錯誤一路傳到
+/// `NotebookSession::open`，結果是**整本筆記打不開**，不是「少了某些內容」。
+///
+/// `format-spec.md` §8 本來就規定「寫入舊讀取器不認得的 op 時要提升
+/// `min_reader_version`」。那條規矩**從來沒有真的被執行過** —— 於是現在
+/// 的行為是一個看不懂的解碼錯誤，而不是設計中的「拒絕開啟並提示升級」。
+///
+/// 提升之後，舊版讀到 `min_reader_version = 2` 會在 `can_be_opened` 就
+/// 乾淨地拒絕（`package.rs` 已經在檢查了），使用者看到的是「這本筆記需要
+/// 較新的版本」，而不是「格式錯誤」。
+pub const SPEC_VERSION: u32 = 2;
+
+/// 會寫出 `BatchOrigin`（op 37）的套件，讀取器至少要是這一版。
+///
+/// 這個常數存在的理由是**讓下一次格式變更有地方掛**：直接寫
+/// `min_reader_version = 2` 的話，下一個人新增 op 時不會知道要動哪裡。
+pub const READER_VERSION_FOR_BATCH_ORIGIN: u32 = 2;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
@@ -64,6 +84,28 @@ pub struct KdfParams {
 pub struct RecoveryParams {
     pub algo: String,
     pub words: u32,
+    /// **用復原碼包住的同一把 DEK**，以及它自己的 KDF 參數。
+    ///
+    /// # 為什麼原本沒有，以及那有多糟
+    ///
+    /// 這一欄原本不存在 —— 復原碼是一串與 DEK 完全無關的隨機詞，
+    /// manifest 只記了「用哪套字表」與「幾個詞」。於是介面上那句
+    /// 「沒有密碼重設。忘記密碼的話，這組碼是**唯一**的後路」是假的：
+    /// 那組碼什麼也打不開，而三步驟流程還強迫使用者抄下並回填它。
+    ///
+    /// 忘記密碼等於永久失去那本筆記，而 App 明確承諾了相反的事。
+    ///
+    /// `Option` 是為了讀得動舊的套件（那些套件的復原碼是真的沒用）——
+    /// 不是為了讓新套件可以不寫。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub wrapped: Option<WrappedDek>,
+}
+
+/// 一份用某個密語包住的 DEK，含它自己的 KDF 參數。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WrappedDek {
+    pub kdf: KdfParams,
+    pub wrapped_dek_b64: String,
 }
 
 impl Manifest {
@@ -173,6 +215,7 @@ mod tests {
             recovery: RecoveryParams {
                 algo: "bip39".into(),
                 words: 24,
+                wrapped: None,
             },
         };
         let json = serde_json::to_string(&m).unwrap();

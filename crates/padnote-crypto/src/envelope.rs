@@ -117,6 +117,26 @@ impl Envelope {
         ))
     }
 
+    /// 用**同一把已知的 DEK** 再包一個信封。
+    ///
+    /// # 為什麼需要這個
+    ///
+    /// 復原碼原本是「產生 24 個詞給使用者抄下來」，**而那些詞與 DEK
+    /// 完全無關** —— manifest 只存了 `algo` 與 `words` 兩個欄位，
+    /// 沒有任何一份用復原碼包住的金鑰。於是介面上那句「忘記密碼的話，
+    /// 這組碼是唯一的後路」是假的：那組碼什麼也打不開。
+    ///
+    /// 同一把 DEK 包兩次（一次用密碼、一次用復原碼），兩條路才都通。
+    /// 各自有自己的 salt —— 共用 salt 會讓兩條路的 KEK 互相洩漏強度。
+    pub fn wrap_existing(dek: &Dek, passphrase: &str) -> Result<Self, CryptoError> {
+        let kdf = KdfParams::recommended()?;
+        let wrapped = wrap(&kdf.derive_kek(passphrase)?, &dek.0)?;
+        Ok(Self {
+            kdf,
+            wrapped_dek: wrapped,
+        })
+    }
+
     /// 以密語解出 DEK。
     pub fn unwrap_dek(&self, passphrase: &str) -> Result<Dek, CryptoError> {
         let kek = self.kdf.derive_kek(passphrase)?;

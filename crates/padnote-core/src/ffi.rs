@@ -1792,9 +1792,11 @@ impl PadnoteSession {
         paper_ids: Vec<String>,
         palette_id: String,
         labels: HashMap<String, String>,
+        locale_tag: String,
     ) -> Result<Vec<u8>, FfiError> {
         let app = self.lock();
         let mut options = padnote_export::PdfExportOptions::default();
+        options.locale = padnote_i18n::Locale::from_tag_or_default(&locale_tag);
         for (index, page) in app.notebook().pages().iter().enumerate() {
             let Some(paper) = paper_ids.get(index) else {
                 continue;
@@ -1816,6 +1818,7 @@ impl PadnoteSession {
         paper_id: String,
         palette_id: String,
         labels: HashMap<String, String>,
+        locale_tag: String,
     ) -> Result<Vec<u8>, FfiError> {
         let page_uuid = parse_uuid(&page_id)?;
         let app = self.lock();
@@ -1827,6 +1830,7 @@ impl PadnoteSession {
         let guides =
             crate::app::NotebookSession::resolve_page_guides(&paper_id, w, h, &palette_id, &labels);
         let mut options = padnote_export::PdfExportOptions::default();
+        options.locale = padnote_i18n::Locale::from_tag_or_default(&locale_tag);
         if !guides.is_empty() {
             options.page_guides.insert(page_uuid, guides);
         }

@@ -77,14 +77,18 @@ object Exporter {
                 val labels = LocalizationStrings.table
                     .filterKeys { it.startsWith("guide_") }
                     .mapValues { (key, _) -> LocalizationStrings.localized(key, languageTag) }
+                // 轉錄區塊的標記要跟著介面語言（S-54c）。核心原本完全不知道
+                // 語言，於是寫死 `[Audio]`；再之前寫死的是 `[語音]`，而那更糟
+                // —— 匯出的 PDF 是要給別人看的文件。
                 if (pageId == null) {
-                    session.exportPdfWithLayout(paperIds, meta.paletteId(), labels)
+                    session.exportPdfWithLayout(paperIds, meta.paletteId(), labels, languageTag)
                 } else {
                     session.exportPagePdfWithLayout(
                         pageId,
                         meta.paperId(pageIndexOf(session, pageId)),
                         meta.paletteId(),
-                        labels
+                        labels,
+                        languageTag
                     )
                 }
             }

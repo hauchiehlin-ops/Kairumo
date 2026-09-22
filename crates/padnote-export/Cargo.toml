@@ -9,6 +9,7 @@ publish = false
 
 [dependencies]
 padnote-doc = { path = "../padnote-doc" }
+padnote-i18n = { path = "../padnote-i18n" }
 padnote-ink = { path = "../padnote-ink" }
 padnote-pdf = { path = "../padnote-pdf" }
 padnote-shapes = { path = "../padnote-shapes" }

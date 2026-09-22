@@ -358,7 +358,11 @@ enum NotebookPackageBridge {
         return try session.exportPdfWithLayout(
             paperIds: paperIds,
             paletteId: document.guidePaletteId ?? "",
-            labels: LocalizationManager.shared.guideLabelsUnsafe())
+            labels: LocalizationManager.shared.guideLabelsUnsafe(),
+            // 轉錄區塊的標記要跟著介面語言（S-54c）。核心原本完全不知道
+            // 語言，於是寫死 `[Audio]`；再之前寫死的是 `[語音]`，而那更糟
+            // —— 匯出的 PDF 是要給別人看的文件。
+            localeTag: LocalizationManager.shared.currentLanguageTagUnsafe())
     }
 
     // MARK: - 讀回（驗證用）

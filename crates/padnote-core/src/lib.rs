@@ -80,7 +80,9 @@ pub use setup::{Capability, Feature, FeatureReadiness, SetupAction, SetupCenter,
 pub use transcript::TranscriptPostProcessor;
 
 /// 本 build 所實作的 `.padnote` 格式版本（`format-spec.md` §3）。
-pub const SPEC_VERSION: u32 = 1;
+///
+/// 與 `padnote_storage::SPEC_VERSION` 必須一致 —— 有測試守著。
+pub const SPEC_VERSION: u32 = 2;
 
 /// 可讀取的最低格式版本。低於此者必須拒絕開啟，絕不猜測解析。
 pub const MIN_READER_VERSION: u32 = 1;

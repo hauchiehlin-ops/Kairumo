@@ -96,6 +96,30 @@ pub struct NotebookPackage {
     dek: Option<padnote_crypto::envelope::Dek>,
 }
 
+/// 用某個密語把一把已知的 DEK 包成 manifest 能存的形狀。
+///
+/// 復原碼與密碼走**同一套** Argon2id 信封，只是各有各的 salt ——
+/// 共用 salt 會讓兩條路的 KEK 互相洩漏強度。
+fn wrap_with(
+    dek: &padnote_crypto::envelope::Dek,
+    phrase: &str,
+) -> Result<crate::manifest::WrappedDek, StorageError> {
+    use base64::Engine as _;
+    let env = padnote_crypto::envelope::Envelope::wrap_existing(dek, phrase)
+        .map_err(|e| StorageError::DocOps(e.to_string()))?;
+    let kdf = env.kdf_params();
+    Ok(crate::manifest::WrappedDek {
+        kdf: crate::manifest::KdfParams {
+            algo: "argon2id".into(),
+            m_cost_kib: kdf.m_cost_kib,
+            t_cost: kdf.t_cost,
+            p_cost: kdf.p_cost,
+            salt_b64: base64::engine::general_purpose::STANDARD.encode(&kdf.salt),
+        },
+        wrapped_dek_b64: env.wrapped_dek_b64(),
+    })
+}
+
 impl NotebookPackage {
     /// 建立新套件。目錄必須不存在或為空。
     pub fn create(
@@ -139,6 +163,9 @@ impl NotebookPackage {
         let recovery = padnote_crypto::recovery::RecoveryCode::generate(&words)
             .map_err(|e| StorageError::DocOps(e.to_string()))?;
 
+        // 復原碼的字串要在包裝**之前**拿到 —— 包的就是它。
+        let phrase_for_wrap = recovery.phrase();
+
         let mut pkg = Self::create(root, title, now_unix_ms)?;
         let kdf = envelope.kdf_params();
         pkg.manifest.encryption = crate::manifest::Encryption::XChaCha20Poly1305Argon2id {
@@ -153,11 +180,15 @@ impl NotebookPackage {
             recovery: crate::manifest::RecoveryParams {
                 algo: "bip39-en".into(),
                 words: recovery.words().len() as u32,
+                // **同一把 DEK 再包一次，這次用復原碼。**
+                //
+                // 少了這一份，那 24 個詞就只是 24 個詞 —— 而介面上寫著
+                // 它是忘記密碼時唯一的後路。見 `RecoveryParams::wrapped`。
+                wrapped: Some(wrap_with(&dek, &phrase_for_wrap)?),
             },
         };
         pkg.write_manifest()?;
-        let phrase = recovery.phrase();
-        Ok((pkg.with_dek(dek), phrase))
+        Ok((pkg.with_dek(dek), phrase_for_wrap))
     }
 
     /// 指定這台裝置的識別碼。**多裝置同步時必須設定** ——
@@ -252,6 +283,7 @@ impl NotebookPackage {
     }
 
     /// 這個套件加密了嗎（看 manifest，不需要密碼）。
+    // （`wrap_with` 定義在檔案末端的自由函式區）
     pub fn is_encrypted(&self) -> bool {
         self.manifest.is_encrypted()
     }
@@ -298,6 +330,65 @@ impl NotebookPackage {
         Ok(self.with_dek(dek))
     }
 
+    /// 用**復原碼**解開，給忘記密碼的人。
+    ///
+    /// # 這條路原本不存在
+    ///
+    /// 介面上寫著「沒有密碼重設。忘記密碼的話，這組碼是唯一的後路」，
+    /// 而在此之前復原碼是一串**與 DEK 完全無關**的隨機詞 —— 它什麼也
+    /// 打不開。使用者被要求抄下並回填的那 24 個詞是裝飾品，
+    /// 忘記密碼就是永久失去那本筆記。
+    ///
+    /// 舊套件（`recovery.wrapped` 是 `None`）救不回來 —— 當初沒有把 DEK
+    /// 用復原碼包起來，現在也算不出來。那種情況回一個**講實話**的錯誤，
+    /// 而不是「復原碼錯誤」：碼沒錯，是這本筆記從來就沒有後路。
+    pub fn unlock_with_recovery(self, phrase: &str) -> Result<Self, StorageError> {
+        use base64::Engine as _;
+        let crate::manifest::Encryption::XChaCha20Poly1305Argon2id { recovery, .. } =
+            &self.manifest.encryption
+        else {
+            return Err(StorageError::DocOps("這個套件沒有加密".into()));
+        };
+        let Some(wrapped) = &recovery.wrapped else {
+            return Err(StorageError::DocOps(
+                "這本筆記是在復原碼還不能解鎖的版本建立的 ——                  它的復原碼從來沒有被用來包住金鑰，只有密碼開得了"
+                    .into(),
+            ));
+        };
+        let salt = base64::engine::general_purpose::STANDARD
+            .decode(&wrapped.kdf.salt_b64)
+            .map_err(|e| StorageError::DocOps(format!("salt 不是合法 base64：{e}")))?;
+        let envelope = padnote_crypto::envelope::Envelope::from_parts(
+            padnote_crypto::envelope::KdfParams {
+                m_cost_kib: wrapped.kdf.m_cost_kib,
+                t_cost: wrapped.kdf.t_cost,
+                p_cost: wrapped.kdf.p_cost,
+                salt,
+            },
+            &wrapped.wrapped_dek_b64,
+        )
+        .map_err(|e| StorageError::DocOps(e.to_string()))?;
+        // 復原碼大小寫與多餘空白都正規化過再用 —— 抄在紙上的東西，
+        // 使用者輸回來時多一個空格是常態。
+        let normalised = phrase.split_whitespace().collect::<Vec<_>>().join(" ");
+        let dek = envelope
+            .unwrap_dek(&normalised)
+            .map_err(|e| StorageError::DocOps(e.to_string()))?;
+        Ok(self.with_dek(dek))
+    }
+
+    /// 這本筆記的復原碼**真的解得開**嗎。
+    ///
+    /// 舊版建立的套件回 false —— 介面要照實講，不能讓使用者以為自己還有
+    /// 後路。看 manifest 就知道，不需要密碼。
+    pub fn recovery_can_unlock(&self) -> bool {
+        matches!(
+            &self.manifest.encryption,
+            crate::manifest::Encryption::XChaCha20Poly1305Argon2id { recovery, .. }
+                if recovery.wrapped.is_some()
+        )
+    }
+
     pub fn open(root: impl Into<PathBuf>) -> Result<Self, StorageError> {
         let root = root.into();
         let manifest_path = root.join("manifest.json");
@@ -340,6 +431,20 @@ impl NotebookPackage {
 
     pub fn set_title(&mut self, title: &str) -> Result<(), StorageError> {
         self.manifest.title = title.to_string();
+        self.write_manifest()
+    }
+
+    /// 把 `min_reader_version` 提到至少 `required`，需要時才落盤。
+    ///
+    /// 只升不降：同一個套件可能被多個版本寫過，降回去等於把已經寫進去的
+    /// 新 op 重新暴露給讀不懂它的版本。
+    fn raise_min_reader_version(&mut self, required: u32) -> Result<(), StorageError> {
+        if self.manifest.min_reader_version >= required {
+            return Ok(());
+        }
+        self.manifest.min_reader_version = required;
+        // `spec_version` 也一起跟上 —— 它記的是「這份套件是哪一版寫的」。
+        self.manifest.spec_version = self.manifest.spec_version.max(required);
         self.write_manifest()
     }
 
@@ -471,7 +576,12 @@ impl NotebookPackage {
     /// ⇒ **檔名字典序即因果序**，掃描目錄即得套用順序，不需要額外的索引檔
     /// （少一個可能損毀的單點）。裝置 id 在檔名裡 ⇒ 兩台裝置永不寫同一個檔。
     pub fn append_doc_ops(
-        &self,
+        // `&mut self`：寫 op 37 之前要把 manifest 的 `min_reader_version`
+        // 提上去（H-OPLOG-COMPAT）。用 `&self` 搭配「改一份複本再落盤」
+        // 也做得到，但那樣記憶體裡的 manifest 會落後，而下一次
+        // `write_manifest`（例如改標題）就會把門檻**降回去** ——
+        // 那是比沒做更糟的結果：檔案裡有新 op，manifest 卻說舊版可以開。
+        &mut self,
         lamport: u64,
         device: u32,
         ops: &[DocOp],
@@ -486,6 +596,17 @@ impl NotebookPackage {
         // 被併進去的操作會全部宣稱自己是最大的那個 lamport，
         // 里程碑的那一刀就落在錯的地方，而且是**往後**落：
         // 該留下來的內容會跟著被收走。見 `DocOp::BatchOrigin`。
+        // **寫 op 37 之前先把門檻提上去**（H-OPLOG-COMPAT，format-spec §8）。
+        //
+        // 這一行是那條規矩的唯一落實點。少了它，舊版讀取器會通過
+        // `can_be_opened` 的檢查、開始解析，然後在 `decode` 撞上 op 37 ——
+        // 而那個錯誤會讓**整本筆記打不開**，訊息還是「格式錯誤」。
+        //
+        // 提升之後舊版在開啟前就乾淨地拒絕，使用者看到的是「需要較新的版本」。
+        // 對既有套件也要做：這本筆記可能是舊版建的，manifest 還寫著 1，
+        // 而我們正要往裡面塞一個它讀不懂的 op。
+        self.raise_min_reader_version(crate::manifest::READER_VERSION_FOR_BATCH_ORIGIN)?;
+
         let mut framed = Vec::with_capacity(ops.len() + 1);
         framed.push(DocOp::BatchOrigin { lamport, device });
         framed.extend_from_slice(ops);
@@ -1208,6 +1329,114 @@ pub fn extract_package(archive_file: &Path, out_dir: &Path) -> Result<(), Storag
 }
 
 #[cfg(test)]
+mod recovery_really_works {
+    use super::*;
+
+    fn tmp(name: &str) -> std::path::PathBuf {
+        let d =
+            std::env::temp_dir().join(format!("padnote-recovery-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&d);
+        d
+    }
+
+    /// **復原碼要真的開得了鎖。**
+    ///
+    /// 這是整個復原碼流程存在的唯一理由。在寫這條測試之前，那 24 個詞
+    /// 與 DEK 完全無關 —— 使用者被要求抄下並回填它，而它什麼也打不開。
+    #[test]
+    fn the_recovery_code_actually_unlocks_the_notebook() {
+        let root = tmp("unlock");
+        let (mut pkg, phrase) =
+            NotebookPackage::create_encrypted(&root, "秘密", 1, "correct horse battery")
+                .expect("建立");
+        assert!(pkg.recovery_can_unlock(), "新建的套件應該有可用的復原碼");
+        drop(pkg);
+
+        let reopened = NotebookPackage::open(&root).expect("重開");
+        let unlocked = reopened
+            .unlock_with_recovery(&phrase)
+            .expect("復原碼應該解得開 —— 解不開的話它就只是 24 個裝飾用的詞");
+        assert!(unlocked.is_encrypted());
+    }
+
+    /// 復原碼抄回來時多幾個空白、換行也要認得。
+    ///
+    /// 那是抄在紙上的東西 —— 輸回來時空白不對是常態，
+    /// 為此回「復原碼錯誤」等於把使用者的最後一條路堵死。
+    #[test]
+    fn extra_whitespace_in_the_recovery_code_is_forgiven() {
+        let root = tmp("whitespace");
+        let (_, phrase) =
+            NotebookPackage::create_encrypted(&root, "秘密", 1, "correct horse battery")
+                .expect("建立");
+        let messy = phrase.split_whitespace().collect::<Vec<_>>().join("  \n ");
+        NotebookPackage::open(&root)
+            .expect("重開")
+            .unlock_with_recovery(&messy)
+            .expect("多餘空白不該讓復原碼失效");
+    }
+
+    /// 錯的復原碼要被擋下來。
+    #[test]
+    fn a_wrong_recovery_code_does_not_unlock() {
+        let root = tmp("wrong");
+        let (_, phrase) =
+            NotebookPackage::create_encrypted(&root, "秘密", 1, "correct horse battery")
+                .expect("建立");
+        let mut words: Vec<&str> = phrase.split_whitespace().collect();
+        words.swap(0, 1);
+        let swapped = words.join(" ");
+        assert!(
+            NotebookPackage::open(&root)
+                .expect("重開")
+                .unlock_with_recovery(&swapped)
+                .is_err(),
+            "換了兩個詞的順序還開得了，表示根本沒在驗"
+        );
+    }
+
+    /// 密碼那條路不受影響。
+    #[test]
+    fn the_passphrase_still_works_alongside_the_recovery_code() {
+        let root = tmp("both");
+        let _ = NotebookPackage::create_encrypted(&root, "秘密", 1, "correct horse battery")
+            .expect("建立");
+        NotebookPackage::open(&root)
+            .expect("重開")
+            .unlock(&"correct horse battery")
+            .expect("密碼應該照樣開得了");
+    }
+
+    /// 舊套件（沒有 `wrapped`）要回一個**講實話**的錯誤。
+    ///
+    /// 回「復原碼錯誤」的話，使用者會一直重打那串他抄得好好的詞。
+    #[test]
+    fn an_old_package_says_why_the_recovery_code_cannot_help() {
+        let root = tmp("legacy");
+        let (_, phrase) =
+            NotebookPackage::create_encrypted(&root, "秘密", 1, "correct horse battery")
+                .expect("建立");
+
+        // 把 `wrapped` 拿掉，模擬舊版建立的套件。
+        let mut pkg = NotebookPackage::open(&root).expect("重開");
+        if let crate::manifest::Encryption::XChaCha20Poly1305Argon2id { recovery, .. } =
+            &mut pkg.manifest.encryption
+        {
+            recovery.wrapped = None;
+        }
+        pkg.write_manifest().expect("寫回");
+        assert!(!pkg.recovery_can_unlock());
+
+        let err = NotebookPackage::open(&root)
+            .expect("重開")
+            .unlock_with_recovery(&phrase)
+            .expect_err("舊套件的復原碼開不了");
+        let msg = err.to_string();
+        assert!(msg.contains("從來沒有"), "訊息要講清楚原因，實得：{msg}");
+    }
+}
+
+#[cfg(test)]
 mod tests {
 
     /// 沒有 `BatchOrigin` 的舊檔仍然要讀得出座標。
@@ -1246,7 +1475,7 @@ mod tests {
     #[test]
     fn compaction_preserves_each_batch_its_own_lamport() {
         let root = tmp("origin-survives-compaction");
-        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        let mut pkg = NotebookPackage::create(&root, "t", 1).unwrap();
         let dev = 0xCCu32;
         for l in 1..=4u64 {
             pkg.append_doc_ops(
@@ -1345,7 +1574,7 @@ mod tests {
     #[test]
     fn oplog_files_are_listed_in_causal_order() {
         let root = tmp("oplog-order");
-        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        let mut pkg = NotebookPackage::create(&root, "t", 1).unwrap();
         pkg.append_doc_ops(
             2,
             0xAA,
@@ -1378,7 +1607,7 @@ mod tests {
     #[test]
     fn an_oplog_file_survives_a_round_trip() {
         let source_root = tmp("oplog-src");
-        let source = NotebookPackage::create(&source_root, "t", 1).unwrap();
+        let mut source = NotebookPackage::create(&source_root, "t", 1).unwrap();
         source
             .append_doc_ops(
                 1,
@@ -1404,7 +1633,7 @@ mod tests {
         // 同步可能重複送同一個檔。用 append 的話內容會寫兩次，
         // 重播之後每個操作都套用兩遍。
         let source_root = tmp("oplog-dup-src");
-        let source = NotebookPackage::create(&source_root, "t", 1).unwrap();
+        let mut source = NotebookPackage::create(&source_root, "t", 1).unwrap();
         source
             .append_doc_ops(
                 1,
@@ -1559,7 +1788,7 @@ mod tests {
     #[test]
     fn doc_ops_persist_and_replay_in_causal_order() {
         let root = tmp("docops");
-        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        let mut pkg = NotebookPackage::create(&root, "t", 1).unwrap();
 
         // 故意以非遞增的 lamport 寫入，驗證讀取時會依序排好
         pkg.append_doc_ops(
@@ -1602,7 +1831,7 @@ mod tests {
     #[test]
     fn doc_ops_append_within_the_same_file() {
         let root = tmp("docappend");
-        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        let mut pkg = NotebookPackage::create(&root, "t", 1).unwrap();
         let a = pkg
             .append_doc_ops(
                 1,
@@ -1629,7 +1858,7 @@ mod tests {
     #[test]
     fn two_devices_never_share_an_oplog_file() {
         let root = tmp("docdevices");
-        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        let mut pkg = NotebookPackage::create(&root, "t", 1).unwrap();
         let a = pkg
             .append_doc_ops(7, 0xA1, &[DocOp::SetTitle { title: "a".into() }])
             .unwrap();
@@ -1707,7 +1936,7 @@ mod tests {
     fn an_encrypted_package_round_trips_its_ops() {
         use padnote_doc::ops::DocOp;
         let root = tmp("enc-roundtrip");
-        let (pkg, phrase) =
+        let (mut pkg, phrase) =
             NotebookPackage::create_encrypted(&root, "秘密筆記", 1, "correct horse").unwrap();
         assert!(!phrase.is_empty(), "復原碼只在建立那一刻存在");
         assert!(pkg.is_encrypted());
@@ -1741,7 +1970,7 @@ mod tests {
     fn the_plaintext_never_touches_the_disk() {
         use padnote_doc::ops::DocOp;
         let root = tmp("enc-ondisk");
-        let (pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
+        let (mut pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
         pkg.append_doc_ops(
             1,
             0xAA,
@@ -1772,7 +2001,7 @@ mod tests {
         // 然後把它存回去 —— 那是一次沒有任何錯誤訊息的資料覆蓋。
         use padnote_doc::ops::DocOp;
         let root = tmp("enc-locked");
-        let (pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
+        let (mut pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
         pkg.append_doc_ops(1, 0xAA, &[DocOp::SetTitle { title: "x".into() }])
             .unwrap();
 
@@ -1798,7 +2027,7 @@ mod tests {
         // 需要密碼的話，背景同步在鎖定狀態下就完全動不了。
         use padnote_doc::ops::DocOp;
         let root = tmp("enc-compact");
-        let (pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
+        let (mut pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
         for lamport in 1..=6u64 {
             pkg.append_doc_ops(
                 lamport,
@@ -1823,7 +2052,7 @@ mod tests {
     #[test]
     fn an_encrypted_blob_is_ciphertext_on_disk_but_keeps_its_plaintext_name() {
         let root = tmp("enc-blob");
-        let (pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
+        let (mut pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
         let plaintext = "這張圖的內容不該出現在磁碟上".as_bytes();
         let id = pkg.blobs().put(plaintext).unwrap();
 
@@ -1851,7 +2080,7 @@ mod tests {
     #[test]
     fn a_blob_cannot_be_read_without_the_passphrase() {
         let root = tmp("enc-blob-locked");
-        let (pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
+        let (mut pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
         let id = pkg.blobs().put(b"secret image").unwrap();
         // 沒有金鑰的把手讀出來的是密文，雜湊當然對不上 —— 要回錯誤，
         // 不能把那串密文交出去（交出去的話畫面上會出現一張壞掉的圖）。
@@ -1883,7 +2112,7 @@ mod tests {
         use padnote_doc::ops::DocOp;
         let a_root = tmp("enc-aad-a");
         let b_root = tmp("enc-aad-b");
-        let (a, _) = NotebookPackage::create_encrypted(&a_root, "A", 1, "pw").unwrap();
+        let (mut a, _) = NotebookPackage::create_encrypted(&a_root, "A", 1, "pw").unwrap();
         a.append_doc_ops(
             1,
             0xAA,
@@ -1918,7 +2147,7 @@ mod tests {
         // 決策：**只加密新的，舊的原地不動**。既有的套件一個位元組都不該變。
         use padnote_doc::ops::DocOp;
         let root = tmp("enc-none");
-        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        let mut pkg = NotebookPackage::create(&root, "t", 1).unwrap();
         assert!(!pkg.is_encrypted());
         pkg.append_doc_ops(
             1,
@@ -1952,7 +2181,7 @@ mod tests {
         // 而本機可能根本沒拿到它全部的碎檔。
         use padnote_doc::ops::DocOp;
         let root = tmp("compact-own");
-        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        let mut pkg = NotebookPackage::create(&root, "t", 1).unwrap();
         for lamport in 1..=6u64 {
             pkg.append_doc_ops(lamport, 0xAA, &[DocOp::SetTitle { title: "a".into() }])
                 .unwrap();
@@ -1993,7 +2222,7 @@ mod tests {
     fn compaction_below_the_threshold_does_nothing() {
         use padnote_doc::ops::DocOp;
         let root = tmp("compact-below");
-        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        let mut pkg = NotebookPackage::create(&root, "t", 1).unwrap();
         for lamport in 1..=3u64 {
             pkg.append_doc_ops(lamport, 0xAA, &[DocOp::SetTitle { title: "a".into() }])
                 .unwrap();
@@ -2007,7 +2236,7 @@ mod tests {
         // 壓實是位元組拼接。掉一個 frame 的症狀是「同步之後少了幾筆」。
         use padnote_doc::ops::DocOp;
         let root = tmp("compact-keeps");
-        let pkg = NotebookPackage::create(&root, "t", 1).unwrap();
+        let mut pkg = NotebookPackage::create(&root, "t", 1).unwrap();
         for lamport in 1..=6u64 {
             pkg.append_doc_ops(
                 lamport,
@@ -2026,7 +2255,7 @@ mod tests {
     #[test]
     fn compact_doc_ops_groups_by_device_and_works_when_opened_with_device_zero() {
         let root = tmp("compact-device-zero");
-        let pkg = NotebookPackage::create(&root, "壓實測試", 1).unwrap();
+        let mut pkg = NotebookPackage::create(&root, "壓實測試", 1).unwrap();
         // 寫入 6 個 device 0x42 的 oplog 檔
         for i in 1..=6 {
             pkg.append_doc_ops(

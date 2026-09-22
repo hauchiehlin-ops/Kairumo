@@ -2364,6 +2364,7 @@ version = "4.8.2"
 dependencies = [
  "miniz_oxide 0.8.9",
  "padnote-doc",
+ "padnote-i18n",
  "padnote-ink",
  "padnote-pdf",
  "padnote-shapes",
