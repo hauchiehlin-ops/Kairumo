@@ -197,7 +197,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         #endif
 
         let fileId = UUID().uuidString
-        let fileUrl = recordingsDirectory.appendingPathComponent("\(fileId).m4a")
+        let fileUrl = recordingsDirectory.appending(path: "\(fileId).m4a")
         self.currentAudioUrl = fileUrl
 
         let settings: [String: Any] = [
@@ -324,8 +324,8 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         coreRecordingId = recordingId
         coreNotebookId = notebookId
         currentAudioUrl = NotebookStore.shared.corePackagesDirectory
-            .appendingPathComponent("\(notebookId.lowercased()).padnote")
-            .appendingPathComponent("media/audio/\(recordingId).opus")
+            .appending(path: "\(notebookId.lowercased()).padnote")
+            .appending(path: "media/audio/\(recordingId).opus")
         status = .recording
         elapsedSeconds = 0
         audioLevels = Array(repeating: 0.15, count: 20)

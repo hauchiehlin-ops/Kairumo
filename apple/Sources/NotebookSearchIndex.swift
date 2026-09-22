@@ -73,7 +73,7 @@ public final class NotebookSearchIndex: ObservableObject {
 
         let packages = notebooks.map { doc -> (String, String) in
             (doc.id, NotebookStore.shared.corePackagesDirectory
-                .appendingPathComponent("\(doc.id.lowercased()).padnote").path)
+                .appending(path: "\(doc.id.lowercased()).padnote").path)
         }
         task = Task { @MainActor in
             try? await Task.sleep(nanoseconds: 250_000_000)

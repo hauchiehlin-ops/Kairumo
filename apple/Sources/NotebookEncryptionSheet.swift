@@ -211,7 +211,7 @@ struct NotebookEncryptionSheet: View {
             : title
         let id = UUID().uuidString.lowercased()
         let path = NotebookStore.shared.corePackagesDirectory
-            .appendingPathComponent("\(id).padnote").path
+            .appending(path: "\(id).padnote").path
         let pass = passphrase
 
         isWorking = true
@@ -255,7 +255,7 @@ struct NotebookEncryptionSheet: View {
     private func discardIfUnconfirmed() {
         guard !createdId.isEmpty else { return }
         let path = NotebookStore.shared.corePackagesDirectory
-            .appendingPathComponent("\(createdId).padnote")
+            .appending(path: "\(createdId).padnote")
         try? FileManager.default.removeItem(at: path)
         createdId = ""
     }

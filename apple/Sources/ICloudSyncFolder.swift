@@ -113,6 +113,6 @@ public enum ICloudSyncFolder {
         let name = placeholder.lastPathComponent
         guard isPlaceholder(placeholder) else { return placeholder }
         let inner = String(name.dropFirst().dropLast(".icloud".count))
-        return placeholder.deletingLastPathComponent().appendingPathComponent(inner)
+        return placeholder.deletingLastPathComponent().appending(path: inner)
     }
 }

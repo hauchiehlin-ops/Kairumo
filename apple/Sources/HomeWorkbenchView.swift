@@ -3447,7 +3447,7 @@ private enum LogExportUtility {
 
     static func writeTextFile(_ text: String, filename: String) throws -> URL {
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent(filename)
+            .appending(path: filename)
         try text.write(to: url, atomically: true, encoding: .utf8)
         return url
     }
@@ -4334,7 +4334,7 @@ public struct CloudSyncDetailSheet: View {
             remoteIndexJson: AccountSyncStore.shared.remoteIndexJSON(
                 account: googleAuth.accountEmail ?? ""),
             packagePaths: books.map {
-                packagesDir.appendingPathComponent("\($0.id).padnote").path
+                packagesDir.appending(path: "\($0.id).padnote").path
             },
             notebookIds: books.map { $0.id })
     }

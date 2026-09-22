@@ -137,7 +137,19 @@ enum NotebookSyncCoordinator {
                 SyncLogger.logAsync("【資料夾同步】已手動中斷。", source: .folder)
                 return report
             }
-            let package = packagesDir.appendingPathComponent("\(document.id).padnote")
+            // 每一本之間讓出主執行緒一次。
+            //
+            // 這個迴圈整段跑在 MainActor 上：exportOne 每一頁要讀一次檔、
+            // 解一次 PKDrawing、再寫一次 CRDT 套件。筆記本一多，主執行緒就
+            // 被連續佔住十秒以上，iOS 的 scene-update 看門狗直接 SIGKILL
+            // （0x8BADF00D）—— 實機上就是「按下同步之後整個 App 消失」。
+            // 讓出之後畫面更新照樣排得進來，看門狗的計時也就不會到期。
+            //
+            // 真正的解是把匯出整段搬離 MainActor（Android 的
+            // CloudSync.runFull 本來就包在 withContext(Dispatchers.IO) 裡），
+            // 那要先把 store 的讀取切出來，記在 docs/TODO.md 的 H-SYNC-MAINACTOR。
+            await Task.yield()
+            let package = packagesDir.appending(path: "\(document.id).padnote")
             do {
                 let own = try exportOne(document, from: store, to: package, deviceId: deviceId)
                 ownStrokes.merge(own) { first, _ in first }
@@ -311,7 +323,19 @@ enum NotebookSyncCoordinator {
                 SyncLogger.logAsync("【Google Drive 同步】已手動中斷。", source: .googleDrive)
                 return report
             }
-            let package = packagesDir.appendingPathComponent("\(document.id).padnote")
+            // 每一本之間讓出主執行緒一次。
+            //
+            // 這個迴圈整段跑在 MainActor 上：exportOne 每一頁要讀一次檔、
+            // 解一次 PKDrawing、再寫一次 CRDT 套件。筆記本一多，主執行緒就
+            // 被連續佔住十秒以上，iOS 的 scene-update 看門狗直接 SIGKILL
+            // （0x8BADF00D）—— 實機上就是「按下同步之後整個 App 消失」。
+            // 讓出之後畫面更新照樣排得進來，看門狗的計時也就不會到期。
+            //
+            // 真正的解是把匯出整段搬離 MainActor（Android 的
+            // CloudSync.runFull 本來就包在 withContext(Dispatchers.IO) 裡），
+            // 那要先把 store 的讀取切出來，記在 docs/TODO.md 的 H-SYNC-MAINACTOR。
+            await Task.yield()
+            let package = packagesDir.appending(path: "\(document.id).padnote")
             do {
                 let own = try exportOne(document, from: store, to: package, deviceId: deviceId)
                 ownStrokes.merge(own) { first, _ in first }
@@ -506,14 +530,14 @@ enum NotebookSyncCoordinator {
         for item in syncLiveNotebooks(indexJson: index) {
             let normId = item.id.lowercased()
             guard !deletedNotebookIds.contains(normId) else { continue }
-            let package = packagesDir.appendingPathComponent("\(item.id).padnote")
-            let lowerPackage = packagesDir.appendingPathComponent("\(normId).padnote")
+            let package = packagesDir.appending(path: "\(item.id).padnote")
+            let lowerPackage = packagesDir.appending(path: "\(normId).padnote")
             let targetPackage = fm.fileExists(atPath: package.path) ? package : lowerPackage
 
             // 防禦性檢查：若本地存在該目錄，但本機 store 尚未載入該筆記本，
             // 檢查是否為無 ops 檔案的殘留空殼；若為空殼則移除，以便重新 clone
             if fm.fileExists(atPath: targetPackage.path) && !activeLocalIds.contains(normId) {
-                let opsDir = targetPackage.appendingPathComponent("doc/ops")
+                let opsDir = targetPackage.appending(path: "doc/ops")
                 let opFiles = (try? fm.contentsOfDirectory(at: opsDir, includingPropertiesForKeys: nil))?
                     .filter { $0.pathExtension == "oplog" } ?? []
                 if opFiles.isEmpty {
@@ -580,7 +604,7 @@ enum NotebookSyncCoordinator {
         try? FileManager.default.createDirectory(
             at: store.syncPackagesDirectory, withIntermediateDirectories: true)
         return store.syncPackagesDirectory
-            .appendingPathComponent("\(notebookId.lowercased()).padnote")
+            .appending(path: "\(notebookId.lowercased()).padnote")
     }
 
     // MARK: - 單本
@@ -611,7 +635,7 @@ enum NotebookSyncCoordinator {
         }
         var images: [String: Data] = [:]
         for attachment in document.attachments ?? [] {
-            let url = store.syncAttachmentsDirectory.appendingPathComponent(attachment.fileName)
+            let url = store.syncAttachmentsDirectory.appending(path: attachment.fileName)
             if let bytes = try? Data(contentsOf: url) { images[attachment.fileName] = bytes }
         }
         try NotebookPackageBridge.exportPreservingOtherDevices(
@@ -630,7 +654,7 @@ enum NotebookSyncCoordinator {
 
         // 圖片先落地：筆記本指到一個不存在的檔名時，畫面上會是一格空白。
         for (fileName, bytes) in imported.imageData {
-            let url = store.syncAttachmentsDirectory.appendingPathComponent(fileName)
+            let url = store.syncAttachmentsDirectory.appending(path: fileName)
             if !FileManager.default.fileExists(atPath: url.path) {
                 try? bytes.write(to: url, options: .atomic)
             }
@@ -655,7 +679,7 @@ enum NotebookSyncCoordinator {
         store: SyncableNotebookStore, notebookId: String, pageIndex: Int
     ) -> URL {
         store.syncBaselineDirectory
-            .appendingPathComponent("\(baselineKey(notebookId, pageIndex)).drawing")
+            .appending(path: "\(baselineKey(notebookId, pageIndex)).drawing")
     }
 
     private static func loadBaseline(
@@ -699,7 +723,7 @@ enum NotebookSyncCoordinator {
             var isDir: ObjCBool = false
             if fm.fileExists(atPath: package.path, isDirectory: &isDir), !isDir.boolValue {
                 // 如果是 .padnote 單檔封裝（ZIP），先解壓縮成套件目錄
-                let tempDir = fm.temporaryDirectory.appendingPathComponent("import-\(UUID().uuidString)")
+                let tempDir = fm.temporaryDirectory.appending(path: "import-\(UUID().uuidString)")
                 do {
                     try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
                     try extractNotebook(archiveFile: package.path, outDir: tempDir.path)
@@ -713,9 +737,9 @@ enum NotebookSyncCoordinator {
             }
 
             // 檢查目錄內是否有 manifest.json
-            let manifest = package.appendingPathComponent("manifest.json")
+            let manifest = package.appending(path: "manifest.json")
             if !fm.fileExists(atPath: manifest.path) {
-                let manifestPlaceholder = package.appendingPathComponent(".manifest.json.icloud")
+                let manifestPlaceholder = package.appending(path: ".manifest.json.icloud")
                 if fm.fileExists(atPath: manifestPlaceholder.path) {
                     try? fm.startDownloadingUbiquitousItem(at: manifest)
                     report.failures[package.lastPathComponent] = "iCloud 雲端檔案下載中，請稍候重試"
@@ -771,7 +795,7 @@ enum NotebookSyncCoordinator {
             var isDir: ObjCBool = false
             if fm.fileExists(atPath: package.path, isDirectory: &isDir), !isDir.boolValue {
                 // 如果是 .padnote 單檔封裝（ZIP），先解壓縮成套件目錄
-                let tempDir = fm.temporaryDirectory.appendingPathComponent("import-\(UUID().uuidString)")
+                let tempDir = fm.temporaryDirectory.appending(path: "import-\(UUID().uuidString)")
                 do {
                     try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
                     try extractNotebook(archiveFile: package.path, outDir: tempDir.path)
@@ -785,9 +809,9 @@ enum NotebookSyncCoordinator {
             }
 
             // 檢查目錄內是否有 manifest.json
-            let manifest = package.appendingPathComponent("manifest.json")
+            let manifest = package.appending(path: "manifest.json")
             if !fm.fileExists(atPath: manifest.path) {
-                let manifestPlaceholder = package.appendingPathComponent(".manifest.json.icloud")
+                let manifestPlaceholder = package.appending(path: ".manifest.json.icloud")
                 if fm.fileExists(atPath: manifestPlaceholder.path) {
                     try? fm.startDownloadingUbiquitousItem(at: manifest)
                     report.failures[package.lastPathComponent] = "iCloud 雲端檔案下載中，請稍候重試"
@@ -838,7 +862,7 @@ enum NotebookSyncCoordinator {
             }
             guard actualName.hasSuffix(".padnote") else { continue }
 
-            let local = packagesDir.appendingPathComponent(actualName)
+            let local = packagesDir.appending(path: actualName)
             let notebookId = packageId(for: local)
 
             // 若本機已有此筆記本（活躍），跳過——CloudSyncFolder.sync 已處理雙向同步。
@@ -853,7 +877,7 @@ enum NotebookSyncCoordinator {
             var isDir: ObjCBool = false
             if fm.fileExists(atPath: remoteItem.path, isDirectory: &isDir), !isDir.boolValue {
                 // 是單一 .padnote 壓縮檔，直接解壓至本機套件目錄
-                let tempDir = fm.temporaryDirectory.appendingPathComponent("pull-\(UUID().uuidString)")
+                let tempDir = fm.temporaryDirectory.appending(path: "pull-\(UUID().uuidString)")
                 do {
                     try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
                     try extractNotebook(archiveFile: remoteItem.path, outDir: tempDir.path)

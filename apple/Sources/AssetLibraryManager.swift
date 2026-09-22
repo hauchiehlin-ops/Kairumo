@@ -202,7 +202,7 @@ public final class AssetLibraryManager: ObservableObject {
     }
 
     public func fileURL(for id: String) -> URL {
-        assetsDirectory.appendingPathComponent("\(id).png")
+        assetsDirectory.appending(path: "\(id).png")
     }
 
     /// 各素材實際佔用的位元組數（僅已落盤者）。

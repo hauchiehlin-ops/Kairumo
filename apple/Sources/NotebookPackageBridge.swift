@@ -327,7 +327,7 @@ enum NotebookPackageBridge {
     ) throws -> Data {
         // 用一個暫存套件當中繼。它在匯出完就沒有用了。
         let staging = FileManager.default.temporaryDirectory
-            .appendingPathComponent("pdf-\(UUID().uuidString).padnote")
+            .appending(path: "pdf-\(UUID().uuidString).padnote")
         defer { try? FileManager.default.removeItem(at: staging) }
 
         try export(
@@ -441,9 +441,9 @@ enum NotebookPackageBridge {
         }
 
         let staging = fm.temporaryDirectory
-            .appendingPathComponent("kairumo-staging-\(UUID().uuidString)", isDirectory: true)
+            .appending(path: "kairumo-staging-\(UUID().uuidString)", directoryHint: .isDirectory)
         defer { try? fm.removeItem(at: staging) }
-        let fresh = staging.appendingPathComponent(destination.lastPathComponent)
+        let fresh = staging.appending(path: destination.lastPathComponent)
 
         let summary = try export(
             document: document, drawings: drawings, imageData: imageData,
@@ -452,12 +452,12 @@ enum NotebookPackageBridge {
         let suffix = deviceSuffix(deviceId)
         // 1. 先清掉這台裝置舊的 oplog 與筆畫檔 —— 不清的話新舊會疊加。
         for relative in relativeFiles(in: destination) where relative.contains(suffix) {
-            try? fm.removeItem(at: destination.appendingPathComponent(relative))
+            try? fm.removeItem(at: destination.appending(path: relative))
         }
         // 2. 再把新的搬過去。blob 與 manifest 缺的才補，不覆蓋既有的。
         for relative in relativeFiles(in: fresh) {
-            let src = fresh.appendingPathComponent(relative)
-            let dst = destination.appendingPathComponent(relative)
+            let src = fresh.appending(path: relative)
+            let dst = destination.appending(path: relative)
             let isOwn = relative.contains(suffix) || relative == "manifest.json"
             if !isOwn && fm.fileExists(atPath: dst.path) { continue }
             try? fm.createDirectory(

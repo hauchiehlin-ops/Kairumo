@@ -113,21 +113,21 @@ public enum NotebookMigration {
     // MARK: - 路徑
 
     public static func packagesDirectory(in root: URL) -> URL {
-        root.appendingPathComponent("Packages", isDirectory: true)
+        root.appending(path: "Packages", directoryHint: .isDirectory)
     }
 
     public static func statePath(in root: URL) -> URL {
-        packagesDirectory(in: root).appendingPathComponent("migration-state.json")
+        packagesDirectory(in: root).appending(path: "migration-state.json")
     }
 
     /// 遷移會讀、但永遠不會寫的那些檔案。備份與「原檔未被更動」的檢查都看這份清單。
     public static func sourceItems(in root: URL) -> [URL] {
         [
-            root.appendingPathComponent("notebooks_v1.json"),
-            root.appendingPathComponent("folders_v1.json"),
-            root.appendingPathComponent("recordings_v1.json"),
-            root.appendingPathComponent("Drawings", isDirectory: true),
-            root.appendingPathComponent("Attachments", isDirectory: true)
+            root.appending(path: "notebooks_v1.json"),
+            root.appending(path: "folders_v1.json"),
+            root.appending(path: "recordings_v1.json"),
+            root.appending(path: "Drawings", directoryHint: .isDirectory),
+            root.appending(path: "Attachments", directoryHint: .isDirectory)
         ]
     }
 
@@ -156,11 +156,11 @@ public enum NotebookMigration {
     public static func backup(root: URL, at date: Date = Date()) throws -> URL {
         let stamp = ISO8601DateFormatter().string(from: date)
             .replacingOccurrences(of: ":", with: "-")
-        let dir = root.appendingPathComponent("MigrationBackup-\(stamp)", isDirectory: true)
+        let dir = root.appending(path: "MigrationBackup-\(stamp)", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
 
         for item in sourceItems(in: root) where FileManager.default.fileExists(atPath: item.path) {
-            let dest = dir.appendingPathComponent(item.lastPathComponent)
+            let dest = dir.appending(path: item.lastPathComponent)
             try? FileManager.default.removeItem(at: dest)
             try FileManager.default.copyItem(at: item, to: dest)
         }
@@ -173,7 +173,7 @@ public enum NotebookMigration {
     /// 誰也說不清楚狀態的資料。
     public static func rollback(root: URL, from backupDir: URL) throws {
         for item in sourceItems(in: root) {
-            let source = backupDir.appendingPathComponent(item.lastPathComponent)
+            let source = backupDir.appending(path: item.lastPathComponent)
             guard FileManager.default.fileExists(atPath: source.path) else { continue }
             try? FileManager.default.removeItem(at: item)
             try FileManager.default.copyItem(at: source, to: item)
@@ -224,7 +224,7 @@ public enum NotebookMigration {
             let drawings = (0..<pageCount).map { drawingLoader(doc.id, $0) }
             let fingerprint = self.fingerprint(of: doc, drawings: drawings)
             let packageName = "\(doc.id).padnote"
-            let packageURL = packagesDir.appendingPathComponent(packageName)
+            let packageURL = packagesDir.appending(path: packageName)
 
             if let existing = state.entries[doc.id],
                existing.fingerprint == fingerprint,

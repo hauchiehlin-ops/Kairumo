@@ -165,7 +165,7 @@ enum CloudSyncFolder {
     @discardableResult
     static func sync(localPackage: URL, into remoteFolder: URL) -> Result {
         let fm = FileManager.default
-        let remotePackage = remoteFolder.appendingPathComponent(localPackage.lastPathComponent)
+        let remotePackage = remoteFolder.appending(path: localPackage.lastPathComponent)
 
         var result = Result()
         do {
@@ -198,11 +198,11 @@ enum CloudSyncFolder {
         uploading: Bool
     ) {
         let fm = FileManager.default
-        let src = source.appendingPathComponent(relative)
-        let dst = destination.appendingPathComponent(relative)
+        let src = source.appending(path: relative)
+        let dst = destination.appending(path: relative)
 
         // 若來源尚未自 iCloud 下載，觸發下載並等待檔案就緒
-        let placeholder = src.deletingLastPathComponent().appendingPathComponent(".\(src.lastPathComponent).icloud")
+        let placeholder = src.deletingLastPathComponent().appending(path: ".\(src.lastPathComponent).icloud")
         if fm.fileExists(atPath: placeholder.path) && !fm.fileExists(atPath: src.path) {
             try? fm.startDownloadingUbiquitousItem(at: src)
             for _ in 0..<15 {

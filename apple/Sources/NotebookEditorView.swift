@@ -7479,9 +7479,9 @@ public struct NotebookEditorView: View {
 
     private func shareNotebookFile() {
         saveCurrentPageDrawing()
-        let tempDir = FileManager.default.temporaryDirectory.appendingPathComponent("share_\(UUID().uuidString)")
-        let pkgDir = tempDir.appendingPathComponent("\(notebook.id).padnote")
-        let zipUrl = tempDir.appendingPathComponent("\(notebook.displayTitle()).padnote")
+        let tempDir = FileManager.default.temporaryDirectory.appending(path: "share_\(UUID().uuidString)")
+        let pkgDir = tempDir.appending(path: "\(notebook.id).padnote")
+        let zipUrl = tempDir.appending(path: "\(notebook.displayTitle()).padnote")
 
         do {
             try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -7491,7 +7491,7 @@ public struct NotebookEditorView: View {
             }
             var imageMap: [String: Data] = [:]
             for att in notebook.attachments ?? [] {
-                let fileUrl = store.attachmentsDirectory.appendingPathComponent(att.fileName)
+                let fileUrl = store.attachmentsDirectory.appending(path: att.fileName)
                 if let data = try? Data(contentsOf: fileUrl) {
                     imageMap[att.fileName] = data
                 }
@@ -8849,7 +8849,7 @@ struct ShareActivityView: UIViewControllerRepresentable {
     let filename: String
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        let tempUrl = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        let tempUrl = FileManager.default.temporaryDirectory.appending(path: filename)
         try? data.write(to: tempUrl)
         return UIActivityViewController(activityItems: [tempUrl], applicationActivities: nil)
     }

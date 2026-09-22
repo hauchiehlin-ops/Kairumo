@@ -60,7 +60,7 @@ enum RecordingMigration {
 
         let records = store.recordings
         for record in records {
-            let source = legacyDir.appendingPathComponent(record.fileName)
+            let source = legacyDir.appending(path: record.fileName)
             guard fm.fileExists(atPath: source.path),
                   source.pathExtension.lowercased() != "opus"
             else {
@@ -87,9 +87,9 @@ enum RecordingMigration {
                 continue
             }
             let target = store.corePackagesDirectory
-                .appendingPathComponent("\(notebookId.lowercased()).padnote")
-                .appendingPathComponent("media/audio")
-                .appendingPathComponent("\(UUID().uuidString.lowercased()).opus")
+                .appending(path: "\(notebookId.lowercased()).padnote")
+                .appending(path: "media/audio")
+                .appending(path: "\(UUID().uuidString.lowercased()).opus")
 
             guard audioEncodePcmToOpus(pcm16kMono: pcm, outPath: target.path) != nil else {
                 report.failed.append(record.fileName)
@@ -113,7 +113,7 @@ enum RecordingMigration {
             // **原檔不刪，移到 migrated/。** 二次轉碼萬一有問題，
             // 使用者還拿得回原本那一份。
             try? fm.createDirectory(at: archiveDir, withIntermediateDirectories: true)
-            let archived = archiveDir.appendingPathComponent(record.fileName)
+            let archived = archiveDir.appending(path: record.fileName)
             try? fm.removeItem(at: archived)
             try? fm.moveItem(at: source, to: archived)
             report.migrated += 1

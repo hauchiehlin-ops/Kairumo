@@ -115,7 +115,7 @@ private final class ModelDownloadDelegate: NSObject, URLSessionDownloadDelegate,
             if !FileManager.default.fileExists(atPath: parentDir.path) {
                 try FileManager.default.createDirectory(at: parentDir, withIntermediateDirectories: true)
             }
-            let stagingUrl = parentDir.appendingPathComponent("whisper-downloading-\(UUID().uuidString).tmp")
+            let stagingUrl = parentDir.appending(path: "whisper-downloading-\(UUID().uuidString).tmp")
             if FileManager.default.fileExists(atPath: stagingUrl.path) {
                 try? FileManager.default.removeItem(at: stagingUrl)
             }

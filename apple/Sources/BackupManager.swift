@@ -79,7 +79,7 @@ enum BackupManager {
         // 放在 tmp：備份檔不該再被下一次備份包進去，也不該佔用使用者的
         // 文件空間直到他決定要放哪裡。
         let out = FileManager.default.temporaryDirectory
-            .appendingPathComponent("Kairumo-\(stamp)\(suffix)-\(unique).\(fileExtension)")
+            .appending(path: "Kairumo-\(stamp)\(suffix)-\(unique).\(fileExtension)")
 
         // 完整寫出模組名：同名的靜態方法會蓋掉核心那個自由函式。
         let info = try Kairumo.createBackup(

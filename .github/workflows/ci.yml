@@ -247,6 +247,16 @@ jobs:
       - name: 介面上沒有硬寫死的文字
         run: python3 scripts/check-hardcoded-strings.py
 
+      # 主執行緒上的 lstat。
+      #
+      # v4.8.2 build 60 在 iPhone 17 上按下雲端同步就被 SIGKILL：
+      # scene-update 看門狗 10 秒到期（0x8BADF00D），主執行緒堆疊頂端停在
+      # lstat ← _SwiftURL.isDirectory ← URL.appendingPathComponent。
+      # 那個多載的 directoryHint 預設是 .checkFileSystem，當時 Sources 裡
+      # 有 100 處在用它。Android 沒事：File(parent, child) 是純字串運算。
+      - name: 主執行緒上沒有會 lstat 的路徑組法
+        run: python3 scripts/check-main-thread-io.py
+
   # 跨平台畫面對照（android-parity-plan.md 階段 0）。
   #
   # 「Android 版面跟 Apple 差太多」修過兩次，兩次都是補完就漂回去 ——

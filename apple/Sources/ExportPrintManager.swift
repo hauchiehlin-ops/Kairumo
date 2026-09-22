@@ -49,7 +49,7 @@ public final class ExportPrintManager {
         from viewController: UIViewController,
         sourceView: UIView? = nil
     ) {
-        let tempUrl = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        let tempUrl = FileManager.default.temporaryDirectory.appending(path: filename)
         do {
             try data.write(to: tempUrl, options: .atomic)
         } catch {

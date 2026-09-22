@@ -1175,15 +1175,15 @@ public final class NotebookStore: ObservableObject {
     }
 
     private var notebooksFile: URL {
-        documentsDir.appendingPathComponent("notebooks_v1.json")
+        documentsDir.appending(path: "notebooks_v1.json")
     }
 
     private var recordingsFile: URL {
-        documentsDir.appendingPathComponent("recordings_v1.json")
+        documentsDir.appending(path: "recordings_v1.json")
     }
 
     private var foldersFile: URL {
-        documentsDir.appendingPathComponent("folders_v1.json")
+        documentsDir.appending(path: "folders_v1.json")
     }
 
     private init() {
@@ -1269,12 +1269,12 @@ public final class NotebookStore: ObservableObject {
             for original in migrated {
                 if !retainedIds.contains(original.id) {
                     AccountSyncStore.shared.recordDeletion(id: original.id)
-                    let pkgDir = corePackagesDirectory.appendingPathComponent("\(original.id).padnote")
+                    let pkgDir = corePackagesDirectory.appending(path: "\(original.id).padnote")
                     try? FileManager.default.removeItem(at: pkgDir)
                     if let cloudFolder = CloudSyncFolder.resolveFolder() {
                         let scoped = cloudFolder.startAccessingSecurityScopedResource()
                         defer { if scoped { cloudFolder.stopAccessingSecurityScopedResource() } }
-                        let remotePkg = cloudFolder.appendingPathComponent("\(original.id).padnote")
+                        let remotePkg = cloudFolder.appending(path: "\(original.id).padnote")
                         try? FileManager.default.removeItem(at: remotePkg)
                     }
                 }
@@ -1452,14 +1452,14 @@ public final class NotebookStore: ObservableObject {
 
     /// 即時自動儲存單頁手繪內容
     public func saveDrawing(notebookId: String, pageIndex: Int, drawing: PKDrawing) {
-        let fileUrl = drawingsDirectory.appendingPathComponent("\(notebookId)_p\(pageIndex).drawing")
+        let fileUrl = drawingsDirectory.appending(path: "\(notebookId)_p\(pageIndex).drawing")
         let data = drawing.dataRepresentation()
         try? data.write(to: fileUrl, options: .atomic)
     }
 
     /// 讀取單頁手繪內容
     public func loadDrawing(notebookId: String, pageIndex: Int) -> PKDrawing {
-        let fileUrl = drawingsDirectory.appendingPathComponent("\(notebookId)_p\(pageIndex).drawing")
+        let fileUrl = drawingsDirectory.appending(path: "\(notebookId)_p\(pageIndex).drawing")
         if let data = try? Data(contentsOf: fileUrl), let d = try? PKDrawing(data: data) {
             return d
         }
@@ -1474,7 +1474,7 @@ public final class NotebookStore: ObservableObject {
     /// 已經看過了：Apple 的錄音存在 `Documents/Kairumo Record`，
     /// 於是從來沒有被同步過。
     public func packageSession(forNotebookId id: String, title: String) -> PadnoteSession? {
-        let path = corePackagesDirectory.appendingPathComponent("\(id.lowercased()).padnote")
+        let path = corePackagesDirectory.appending(path: "\(id.lowercased()).padnote")
         try? FileManager.default.createDirectory(
             at: corePackagesDirectory, withIntermediateDirectories: true)
         let device = NotebookMigration.deviceId
@@ -1524,7 +1524,7 @@ public final class NotebookStore: ObservableObject {
     /// 儲存圖片附件至本地磁碟，回傳儲存後的檔名
     public func saveAttachmentImage(_ image: UIImage) -> String? {
         let fileName = "att_\(UUID().uuidString).png"
-        let fileUrl = attachmentsDirectory.appendingPathComponent(fileName)
+        let fileUrl = attachmentsDirectory.appending(path: fileName)
         guard let data = image.pngData() else { return nil }
         do {
             try data.write(to: fileUrl, options: .atomic)
@@ -1541,7 +1541,7 @@ public final class NotebookStore: ObservableObject {
         if let cached = imageCache.object(forKey: key) {
             return cached
         }
-        let fileUrl = attachmentsDirectory.appendingPathComponent(fileName)
+        let fileUrl = attachmentsDirectory.appending(path: fileName)
         guard let data = try? Data(contentsOf: fileUrl), let img = UIImage(data: data) else { return nil }
         imageCache.setObject(img, forKey: key)
         return img
@@ -1678,11 +1678,11 @@ public final class NotebookStore: ObservableObject {
         }
 
         let fm = FileManager.default
-        let tempDir = fm.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        let tempDir = fm.temporaryDirectory.appending(path: UUID().uuidString)
         try fm.createDirectory(at: tempDir, withIntermediateDirectories: true)
         defer { try? fm.removeItem(at: tempDir) }
 
-        let pkgDir = tempDir.appendingPathComponent("notebook.padnote")
+        let pkgDir = tempDir.appending(path: "notebook.padnote")
         try extractNotebook(archiveFile: archiveUrl.path, outDir: pkgDir.path)
 
         // 匯入一律給新的 id。沿用檔案裡那個的話，把自己匯出的檔再匯入
@@ -1693,7 +1693,7 @@ public final class NotebookStore: ObservableObject {
 
         // 套件要留下來，否則這本筆記下次開啟是空的 —— 內容在套件裡，
         // `NotebookDocument` 只是畫面用的投影。
-        let destination = corePackagesDirectory.appendingPathComponent("\(newId).padnote")
+        let destination = corePackagesDirectory.appending(path: "\(newId).padnote")
         try? fm.createDirectory(at: corePackagesDirectory, withIntermediateDirectories: true)
         try? fm.removeItem(at: destination)
         try fm.moveItem(at: pkgDir, to: destination)
@@ -1709,20 +1709,20 @@ public final class NotebookStore: ObservableObject {
     public func deleteNotebook(id: String) {
         notebooks.removeAll { $0.id.caseInsensitiveCompare(id) == .orderedSame }
         AccountSyncStore.shared.recordDeletion(id: id)
-        let pkgDir = corePackagesDirectory.appendingPathComponent("\(id).padnote")
+        let pkgDir = corePackagesDirectory.appending(path: "\(id).padnote")
         try? FileManager.default.removeItem(at: pkgDir)
-        let lowerPkgDir = corePackagesDirectory.appendingPathComponent("\(id.lowercased()).padnote")
+        let lowerPkgDir = corePackagesDirectory.appending(path: "\(id.lowercased()).padnote")
         try? FileManager.default.removeItem(at: lowerPkgDir)
-        let baseDir = documentsDirectory.appendingPathComponent("SyncBaseline/\(id).padnote")
+        let baseDir = documentsDirectory.appending(path: "SyncBaseline/\(id).padnote")
         try? FileManager.default.removeItem(at: baseDir)
-        let lowerBaseDir = documentsDirectory.appendingPathComponent("SyncBaseline/\(id.lowercased()).padnote")
+        let lowerBaseDir = documentsDirectory.appending(path: "SyncBaseline/\(id.lowercased()).padnote")
         try? FileManager.default.removeItem(at: lowerBaseDir)
         if let cloudFolder = CloudSyncFolder.resolveFolder() {
             let scoped = cloudFolder.startAccessingSecurityScopedResource()
             defer { if scoped { cloudFolder.stopAccessingSecurityScopedResource() } }
-            let remotePkg = cloudFolder.appendingPathComponent("\(id).padnote")
+            let remotePkg = cloudFolder.appending(path: "\(id).padnote")
             try? FileManager.default.removeItem(at: remotePkg)
-            let lowerRemotePkg = cloudFolder.appendingPathComponent("\(id.lowercased()).padnote")
+            let lowerRemotePkg = cloudFolder.appending(path: "\(id.lowercased()).padnote")
             try? FileManager.default.removeItem(at: lowerRemotePkg)
         }
         persistData()
@@ -1736,20 +1736,20 @@ public final class NotebookStore: ObservableObject {
         notebooks.removeAll { lowercasedDeleted.contains($0.id.lowercased()) }
         for id in deletedIds {
             let lowerId = id.lowercased()
-            let pkgDir = corePackagesDirectory.appendingPathComponent("\(lowerId).padnote")
+            let pkgDir = corePackagesDirectory.appending(path: "\(lowerId).padnote")
             try? FileManager.default.removeItem(at: pkgDir)
-            let origPkgDir = corePackagesDirectory.appendingPathComponent("\(id).padnote")
+            let origPkgDir = corePackagesDirectory.appending(path: "\(id).padnote")
             try? FileManager.default.removeItem(at: origPkgDir)
-            let baseDir = documentsDirectory.appendingPathComponent("SyncBaseline/\(lowerId).padnote")
+            let baseDir = documentsDirectory.appending(path: "SyncBaseline/\(lowerId).padnote")
             try? FileManager.default.removeItem(at: baseDir)
-            let origBaseDir = documentsDirectory.appendingPathComponent("SyncBaseline/\(id).padnote")
+            let origBaseDir = documentsDirectory.appending(path: "SyncBaseline/\(id).padnote")
             try? FileManager.default.removeItem(at: origBaseDir)
             if let cloudFolder = CloudSyncFolder.resolveFolder() {
                 let scoped = cloudFolder.startAccessingSecurityScopedResource()
                 defer { if scoped { cloudFolder.stopAccessingSecurityScopedResource() } }
-                let remotePkg = cloudFolder.appendingPathComponent("\(lowerId).padnote")
+                let remotePkg = cloudFolder.appending(path: "\(lowerId).padnote")
                 try? FileManager.default.removeItem(at: remotePkg)
-                let origRemotePkg = cloudFolder.appendingPathComponent("\(id).padnote")
+                let origRemotePkg = cloudFolder.appending(path: "\(id).padnote")
                 try? FileManager.default.removeItem(at: origRemotePkg)
             }
         }
@@ -2053,7 +2053,7 @@ public final class NotebookStore: ObservableObject {
             p += 1
         }
         // 移除最後一頁檔案
-        let lastFileUrl = drawingsDirectory.appendingPathComponent("\(notebookId)_p\(total - 1).drawing")
+        let lastFileUrl = drawingsDirectory.appending(path: "\(notebookId)_p\(total - 1).drawing")
         try? FileManager.default.removeItem(at: lastFileUrl)
 
         // 平移高度陣列
@@ -2498,28 +2498,28 @@ public final class NotebookStore: ObservableObject {
     public func recordingFileURL(fileName: String, notebookId: String?) -> URL {
         if let notebookId {
             let inPackage = corePackagesDirectory
-                .appendingPathComponent("\(notebookId.lowercased()).padnote")
-                .appendingPathComponent("media/audio")
-                .appendingPathComponent(fileName)
+                .appending(path: "\(notebookId.lowercased()).padnote")
+                .appending(path: "media/audio")
+                .appending(path: fileName)
             if FileManager.default.fileExists(atPath: inPackage.path) {
                 return inPackage
             }
         }
-        return AudioRecorderManager.shared.recordingsDirectory.appendingPathComponent(fileName)
+        return AudioRecorderManager.shared.recordingsDirectory.appending(path: fileName)
     }
 
     public func recordingFileURL(for record: AudioRecordingRecord) -> URL {
         if let notebookId = record.linkedNotebookId {
             let inPackage = corePackagesDirectory
-                .appendingPathComponent("\(notebookId.lowercased()).padnote")
-                .appendingPathComponent("media/audio")
-                .appendingPathComponent(record.fileName)
+                .appending(path: "\(notebookId.lowercased()).padnote")
+                .appending(path: "media/audio")
+                .appending(path: record.fileName)
             if FileManager.default.fileExists(atPath: inPackage.path) {
                 return inPackage
             }
         }
         return AudioRecorderManager.shared.recordingsDirectory
-            .appendingPathComponent(record.fileName)
+            .appending(path: record.fileName)
     }
 
     /// 重新掃描所有套件裡的錄音，與本機那份清單合併。
@@ -2542,8 +2542,8 @@ public final class NotebookStore: ObservableObject {
         var scanned: [AudioRecordingRecord] = []
         for doc in notebooks {
             let audioDir = corePackagesDirectory
-                .appendingPathComponent("\(doc.id.lowercased()).padnote")
-                .appendingPathComponent("media/audio")
+                .appending(path: "\(doc.id.lowercased()).padnote")
+                .appending(path: "media/audio")
             let files = (try? fm.contentsOfDirectory(
                 at: audioDir, includingPropertiesForKeys: [.contentModificationDateKey]))?
                 .filter { $0.pathExtension.lowercased() == "opus" } ?? []
@@ -2575,7 +2575,7 @@ public final class NotebookStore: ObservableObject {
         // 否則使用者會以為它們不見了。
         let legacyDir = AudioRecorderManager.shared.recordingsDirectory
         let legacy = byFileName.values.filter {
-            fm.fileExists(atPath: legacyDir.appendingPathComponent($0.fileName).path)
+            fm.fileExists(atPath: legacyDir.appending(path: $0.fileName).path)
         }
 
         recordings = (scanned + legacy).sorted { $0.recordedDate > $1.recordedDate }
@@ -2638,7 +2638,7 @@ public final class NotebookStore: ObservableObject {
             },
             imageLoader: { [weak self] fileName in
                 guard let self else { return nil }
-                let url = self.attachmentsDirectory.appendingPathComponent(fileName)
+                let url = self.attachmentsDirectory.appending(path: fileName)
                 return try? Data(contentsOf: url)
             }
         )
@@ -2728,7 +2728,7 @@ public final class NotebookStore: ObservableObject {
         var list: [NotebookMilestoneSnapshot] = []
         let deviceId = NotebookMigration.deviceId
         let package = corePackagesDirectory
-            .appendingPathComponent("\(notebookId.lowercased()).padnote")
+            .appending(path: "\(notebookId.lowercased()).padnote")
         if let session = try? PadnoteSession.openExisting(path: package.path, deviceId: deviceId),
             let milestones = try? session.milestones()
         {
@@ -2825,7 +2825,7 @@ public final class NotebookStore: ObservableObject {
     private func restoreLegacySnapshot(notebookId: String, id: String) -> Bool {
         let url = snapshotsDirectory
             .appendingPathComponent(notebookId, isDirectory: true)
-            .appendingPathComponent("\(id).snapshot")
+            .appending(path: "\(id).snapshot")
         guard let data = try? Data(contentsOf: url),
             let old = try? JSONDecoder().decode(LegacySnapshot.self, from: data),
             let restoredNote = try? JSONDecoder().decode(

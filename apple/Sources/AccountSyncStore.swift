@@ -233,7 +233,7 @@ public final class AccountSyncStore: ObservableObject {
             : account.lowercased().map { $0.isLetter || $0.isNumber ? String($0) : "-" }.joined()
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("Kairumo/sync", isDirectory: true)
-        return base.appendingPathComponent("remote-index-\(safe).json")
+        return base.appending(path: "remote-index-\(safe).json")
     }
 
     // MARK: - 內部

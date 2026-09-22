@@ -27,6 +27,43 @@
 
 ## 🔴 被硬體或資料卡住（程式已就緒）
 
+### H-SYNC-MAINACTOR. Apple 的同步整段跑在主執行緒 —— **等實機回報**
+
+`NotebookSyncCoordinator` 整個 enum 標了 `@MainActor`，所以 `runDrive`
+（Google Drive）與 `run`（資料夾）的步驟 1 是在主執行緒上逐本匯出的：
+每一本每一頁要讀一次檔、解一次 `PKDrawing`、再寫一次 CRDT 套件。
+
+**Android 沒有這個問題**：`CloudSync.runFull` 從第一天就包在
+`withContext(Dispatchers.IO)` 裡，`MainActivity.kt` 的註解甚至寫著
+「在主執行緒跑會直接卡死畫面」。是 Apple 這邊漏掉，不是設計如此。
+macOS（Catalyst）是同一份 Swift，所以同樣中招 —— 只是沒有 10 秒看門狗，
+症狀從 SIGKILL 變成視窗卡住，而桌機使用者的筆記本通常更多。
+
+**已經做掉的**（v4.8.2 之後）：
+- 100 處 `URL.appendingPathComponent(_:)` 換成 `appending(path:)`。
+  前者的 `directoryHint` 預設是 `.checkFileSystem`，**每呼叫一次
+  lstat 一次**；實機當機的堆疊頂端就停在那個 `lstat`。
+  由 `scripts/check-main-thread-io.py` 守住不讓它回流。
+- `run` 與 `runDrive` 的步驟 1 每本之間 `await Task.yield()`，
+  讓畫面更新排得進來、看門狗的計時不會到期。
+
+**還沒做的**：把匯出整段搬離 `MainActor`。`run` 的步驟 2 已經有
+`Task.detached(priority: .utility)` 的先例可抄，但步驟 1 卡在
+`exportOne` 會呼叫 `store.syncLoadDrawing`，而 `store` 是 `@MainActor`
+單例 —— 要先把「讀圖」從 store 切出來，變成可以在任何執行緒跑的純函式。
+
+**驗收**：實機上一本一本加到 50 本，按下雲端同步，畫面不卡、不被
+看門狗殺掉；`Instruments` 的 Time Profiler 上主執行緒沒有連續超過
+一個 frame 的檔案 I/O。
+
+### S-54c. 匯出的 PDF 裡的標記寫死英文
+
+`padnote-export` 完全不知道介面語言，所以轉錄區塊的標記固定是
+`[Audio]`。原本寫死的是 `[語音]`，那比英文更糟 —— 匯出的 PDF 是要給
+別人看的文件。真正的解是把語系傳進 `padnote-export`。
+
+---
+
 ### H-OPLOG-COMPAT. 舊版讀取器開不了新版寫的 oplog —— **等你拍板**
 
 `decode` 遇到不認得的 op 類型會**回錯誤**，而錯誤會一路傳到
