@@ -171,6 +171,17 @@ enum NotebookSyncCoordinator {
             exportInputs(for: $0, store: store, packagesDir: packagesDir, deviceId: deviceId)
         }
         let exportOutcome = await Task.detached(priority: .utility) { () -> (OwnStrokes, Int, [String: String], Bool) in
+            // **這一段不准回到主執行緒。**
+            //
+            // 不是效能建議，是硬性條件：這裡每本每頁要讀一次檔、解一次
+            // PKDrawing、再寫一次 CRDT 套件。在主執行緒上做，筆記本一多就
+            // 撞上 iOS 的 scene-update 看門狗 —— 實機上是 SIGKILL
+            // 0x8BADF00D，使用者看到的是「按下同步之後整個 App 消失」。
+            //
+            // 有這一行，任何人把 Task.detached 拿掉的當下就會在開發／測試時
+            // 立刻炸掉，而不是等到某台裝置上的筆記本夠多才發現。
+            dispatchPrecondition(condition: .notOnQueue(.main))
+
             var own: OwnStrokes = [:]
             var exported = 0
             var failures = [String: String]()
@@ -369,6 +380,17 @@ enum NotebookSyncCoordinator {
             exportInputs(for: $0, store: store, packagesDir: packagesDir, deviceId: deviceId)
         }
         let exportOutcome = await Task.detached(priority: .utility) { () -> (OwnStrokes, Int, [String: String], Bool) in
+            // **這一段不准回到主執行緒。**
+            //
+            // 不是效能建議，是硬性條件：這裡每本每頁要讀一次檔、解一次
+            // PKDrawing、再寫一次 CRDT 套件。在主執行緒上做，筆記本一多就
+            // 撞上 iOS 的 scene-update 看門狗 —— 實機上是 SIGKILL
+            // 0x8BADF00D，使用者看到的是「按下同步之後整個 App 消失」。
+            //
+            // 有這一行，任何人把 Task.detached 拿掉的當下就會在開發／測試時
+            // 立刻炸掉，而不是等到某台裝置上的筆記本夠多才發現。
+            dispatchPrecondition(condition: .notOnQueue(.main))
+
             var own: OwnStrokes = [:]
             var exported = 0
             var failures = [String: String]()

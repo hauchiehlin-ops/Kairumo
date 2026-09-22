@@ -278,3 +278,87 @@ final class NotebookSyncCoordinatorTests: XCTestCase {
         XCTAssertFalse(report.failures.isEmpty, "壞掉的那一本要被回報，不是靜靜跳過")
     }
 }
+
+// MARK: - 主執行緒預算（提案 ⑤）
+
+extension NotebookSyncCoordinatorTests {
+
+    /// 同步不准把主執行緒佔住。
+    ///
+    /// # 為什麼需要在桌機上量這件事
+    ///
+    /// v4.8.2 build 60 在 iPhone 上按下雲端同步就被 SIGKILL：scene-update
+    /// 看門狗 10 秒到期（0x8BADF00D）。成因是匯出整段跟著
+    /// `NotebookSyncCoordinator` 的 `@MainActor` 標記留在主執行緒上。
+    ///
+    /// 那個 bug **在桌機上完全測不出來** —— 單元測試不看主執行緒有沒有被佔住，
+    /// 而模擬器沒有看門狗。只有實機、而且筆記本要夠多，才會炸。
+    /// 使用者的時間不該花在幫我們找這種東西。
+    ///
+    /// # 量法
+    ///
+    /// 在主執行緒的 run loop 上掛一個心跳，量**兩次心跳之間最長的間隔**。
+    /// 主執行緒被佔住的時候心跳就不會跳，間隔等於被佔住的時間 —— 這正是
+    /// 看門狗在量的東西。
+    ///
+    /// # 門檻是量出來的，不是猜的
+    ///
+    /// 這台機器上，200 本筆記：
+    ///
+    /// | 狀態 | 主執行緒最長被佔住 |
+    /// |---|---|
+    /// | 正確（匯出在背景執行緒） | **24 ms** |
+    /// | 退步（把 `Task.detached` 拿掉） | **293 ms** |
+    ///
+    /// 差 12 倍。門檻取 150 ms：離正常值有 6 倍餘裕（CI 的機器比較慢也
+    /// 撐得住），離退步值有 2 倍偵測空間。
+    ///
+    /// 第一版訂在 1 秒、用 40 本筆記 —— **抓不到退步**（量到 81 ms，
+    /// 遠低於門檻）。訂門檻前先量兩種狀態，不然只是寫了一條永遠會綠的測試。
+    ///
+    /// 那 24 ms 不是雜訊，是 MainActor 上真的在做的事：200 次
+    /// `exportInputs` 快照。它會隨筆記本數量線性成長，所以筆記本再多十倍
+    /// 時這個數字要重新量。
+    @MainActor
+    func testSyncDoesNotBlockTheMainThread() async throws {
+        // 量得出差距需要足夠的量。40 本 × 每本一頁一筆。
+        for index in 0..<200 {
+            var note = NotebookDocument(title: "壓測 \(index)", pageCount: 1)
+            note.textAttachments = [NoteTextAttachment(pageIndex: 0, text: "內容 \(index)")]
+            alice.documents.append(note)
+            alice.syncSaveDrawing(
+                notebookId: note.id, pageIndex: 0,
+                drawing: PKDrawing(strokes: [stroke(at: CGFloat(index))]))
+        }
+
+        var longestBlock: TimeInterval = 0
+        var lastBeat = CFAbsoluteTimeGetCurrent()
+        let heartbeat = Timer(timeInterval: 0.01, repeats: true) { _ in
+            let now = CFAbsoluteTimeGetCurrent()
+            longestBlock = max(longestBlock, now - lastBeat)
+            lastBeat = now
+        }
+        // `.common` 才會在捲動之類的模式下照跳；預設模式在某些情況會停。
+        RunLoop.main.add(heartbeat, forMode: .common)
+        defer { heartbeat.invalidate() }
+
+        // 先讓心跳跑起來，不然第一次間隔會把「還沒開始跳」也算進去。
+        try await Task.sleep(nanoseconds: 100_000_000)
+        longestBlock = 0
+        lastBeat = CFAbsoluteTimeGetCurrent()
+
+        let started = CFAbsoluteTimeGetCurrent()
+        let report = await sync(alice, aliceId)
+        let elapsed = CFAbsoluteTimeGetCurrent() - started
+        print(String(
+            format: "【主執行緒預算】同步耗時 %.3fs，主執行緒最長被佔住 %.3fs",
+            elapsed, longestBlock))
+        XCTAssertEqual(report.exported, 200, "200 本沒有全部匯出，這一輪的量測不算數")
+
+        XCTAssertLessThan(
+            longestBlock, 0.150,
+            "同步把主執行緒連續佔住了 \(String(format: "%.2f", longestBlock)) 秒。"
+                + "實機上這會撞到 scene-update 看門狗（10 秒）——"
+                + "匯出那一段是不是又回到 MainActor 上了？")
+    }
+}
