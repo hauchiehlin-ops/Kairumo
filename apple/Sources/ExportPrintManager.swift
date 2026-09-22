@@ -75,6 +75,9 @@ public final class ExportPrintManager {
     /// - Parameters:
     ///   - pageId: 若為 `nil` 則列印整份筆記本；指定 ID 則列印該單頁。
     ///   - jobTitle: 列印任務名稱（顯示於印表機排程或佇列中）。
+    // unused-param-ok: iPad 上的列印面板要錨在某個東西上，而這裡錨的是
+    // `sourceView`。`viewController` 是 iPhone 那條路留下的，兩條路合併
+    // 之後就沒人讀它了 —— 但簽章是公開 API，拿掉會動到呼叫端。
     public func printNotebook(
         session: PadnoteSession,
         pageId: String? = nil,

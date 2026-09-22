@@ -148,7 +148,7 @@ enum SeedContent {
 
     // MARK: - 歡迎使用 Kairumo
 
-    static func fillWelcome(_ doc: inout NotebookDocument, store: NotebookStore) {
+    static func fillWelcome(_ doc: inout NotebookDocument) {
         ensurePages(&doc, count: welcomePageCount)
 
         var texts: [NoteTextAttachment] = []

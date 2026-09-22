@@ -1793,7 +1793,7 @@ public struct NotebookEditorView: View {
             Spacer()
 
             // 手繪與打字模式切換器
-            editorModeSwitcher(compact: false)
+            editorModeSwitcher()
 
             // 🌟 畫布極簡模式恢復按鈕（讓使用者一秒找到退出鍵）
             if isMinimalistCanvasActive {
@@ -2273,7 +2273,7 @@ public struct NotebookEditorView: View {
         .accessibilityIdentifier("editor.sidebar_toggle")
 
         // 模式切換（緊湊圖標）
-        editorModeSwitcher(compact: true)
+        editorModeSwitcher()
             .accessibilityIdentifier("editor.mode")
 
         if isMinimalistCanvasActive {
@@ -3848,7 +3848,10 @@ public struct NotebookEditorView: View {
     // 版本號在兩個地方仍然看得到：首頁頁尾，以及快捷選單裡的系統診斷。
 
     // MARK: - 次世代動態模式傳送門 (The Dynamic Mode Portal)
-    private func editorModeSwitcher(compact: Bool) -> some View {
+    /// 原本收一個 `compact` 旗標，而 `DynamicPortalIsland` **根本沒有緊湊
+    /// 變體**，所以呼叫端傳 true 或 false 畫出來完全一樣。拿掉假旗標讓
+    /// 「沒有緊湊版面」這件事看得見 —— 真要做的時候會是一次刻意的改動。
+    private func editorModeSwitcher() -> some View {
         DynamicPortalIsland(
             editorMode: $editorMode,
             contextualState: contextualPortalState,

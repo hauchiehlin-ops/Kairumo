@@ -112,13 +112,56 @@ Apple 單元測試 382 條中 381 過（唯一那條紅是無障礙標籤，與�
 
 ---
 
-### S-257. 十個被默默忽略的參數 —— 閘門已立，逐項清空
+### ~~S-257~~ ✅ 十個被默默忽略的參數 —— **已清空**
 
-`scripts/check-unused-params.py`（CI 上的「沒有被默默忽略的參數」）第一次
-跑就抓到這些：宣告了、呼叫端照著傳、而函式主體從頭到尾沒讀過。
+**修好兩個真的 bug：**
 
-| 函式 | 檔案 | 影響 |
-|---|---|---|
+| Bug | 症狀 |
+|---|---|
+| `generate(prompt:maxTokens:)` | LLM 生成**完全不受 token 上限約束**。呼叫端設多少都一樣，使用者等很久拿到一大段沒要的東西。改成把上限傳進 `GenerationOptions(maximumResponseTokens:)` |
+| `downloadWhisperModel(useMirror:)` | 介面上有「從鏡像下載」按鈕（Apple 有三處），旗標被丟掉 —— **選了等於沒選**。按鈕已拿掉，見 S-262 |
+
+**拿掉的假旗標：**
+
+- `editorModeSwitcher(compact:)` —— 呼叫端傳 `true` 與 `false` 各一次，而
+  `DynamicPortalIsland` **根本沒有緊湊變體**，兩種畫出來一模一樣
+- `createRoom(noteId:)` —— 呼叫端從沒傳過；房間與筆記本的關聯不存在
+- `fillWelcome(store:)` —— 三個呼叫點都傳 `self`，主體沒讀
+- `ChartPreview(languageTag:)`（Android）—— `ChartRenderer.draw` 不收語系，
+  `failureReason` 回的是原始例外訊息。Apple 的 `ChartPreview(spec:)` 本來就
+  沒有，拿掉之後兩端一致
+
+**放行（有理由）：** `rollAngle(of:)`（PencilKit 沒有 roll 欄位）、
+`printNotebook(from:)`（公開 API，實際錨在 `sourceView`）、
+`startRecording(title:)`（AVAudioRecorder 那條路沒有地方放標題）、
+`height(forPage:)`（頁高由規格決定）
+
+---
+
+### S-262. Whisper 模型的鏡像下載 —— 按鈕拿掉了，功能要不要做？
+
+`AudioTranscriber.mirrorModelUrl` 指向 `hf-mirror.com`，那是 huggingface
+在部分地區被擋時的標準替代。這個 App 有簡繁中文版，**對真實使用者是有意義的**。
+
+但它從來沒被任何人使用：下載走核心的 `modelDownload(root:id:fetcher:)`，
+網址由核心依 id 從 `models/manifest.json` 取，沒有覆寫的介面。
+`models/manifest.json` 每個模型也只有一個 `url` 欄位。
+
+介面上原本有三顆「從鏡像下載／重試」，全部拿掉了 —— **一顆按下去跟旁邊那顆
+做同一件事的按鈕，比沒有按鈕更糟**：使用者以為自己有備援。Android 本來就
+只有一顆，所以這也順手修掉一個落差。
+
+要真的做需要三層改動：
+
+1. `models/manifest.json` 加 `mirror_url` 欄位
+2. 核心的 `modelDownload` 支援選來源（或失敗時自動退到鏡像）
+3. 兩端各補一顆按鈕（或做成自動，不必讓使用者選）
+
+**建議做成自動退到鏡像**，不要讓使用者選 —— 使用者不知道自己該選哪個。
+
+---
+
+---|---|
 | `ChartPreview(…languageTag…)` | `ChartStudio.kt` | 圖表預覽收了語系卻沒用 |
 | `startRecording(…title…)` | `AudioRecorderManager.swift` | 錄音標題傳進去就被丟掉 |
 | `downloadWhisperModel(…useMirror…)` | `AudioTranscriber.swift` | 主體裡沒有任何鏡像邏輯 |

@@ -95,6 +95,16 @@ public final class AudioTranscriber: ObservableObject {
     @Published public var downloadError: String? = nil
 
     public static let primaryModelUrl = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin"
+    /// 鏡像來源。**目前沒有任何人用它** —— 下載走核心的
+    /// `modelDownload(root:id:fetcher:)`，網址由核心依 id 從
+    /// `models/manifest.json` 取，沒有覆寫的介面。
+    ///
+    /// 留著不刪：hf-mirror.com 是 huggingface 在部分地區被擋時的標準替代，
+    /// 而這個 App 有簡繁中文版 —— 對真實使用者是有意義的。真要做需要三層
+    /// 改動（清單加欄位、核心支援選來源、兩端接線），記在 docs/TODO.md 的 S-262。
+    ///
+    /// 在那之前介面上**不留**「從鏡像下載」的按鈕：一顆按下去跟旁邊那顆
+    /// 做同一件事的按鈕，比沒有按鈕更糟 —— 使用者以為自己有備援。
     public static let mirrorModelUrl = "https://hf-mirror.com/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin"
 
     private var activeDownloadSession: URLSession?
@@ -194,9 +204,8 @@ public final class AudioTranscriber: ObservableObject {
     /// - **沒有驗證**：傳輸損毀或被替換不會被發現，使用者只會覺得
     ///   「轉錄出來的東西很奇怪」，而不會想到是模型壞了。
     ///
-    /// `useMirror` 暫時保留給呼叫端相容；鏡像節點要回到清單裡才有意義
     /// （清單是兩個平台共用的，寫死在單一平台等於 Android 拿不到）。
-    public func downloadWhisperModel(useMirror: Bool = false) {
+    public func downloadWhisperModel() {
         guard !isDownloadingModel, !isWhisperAvailable else { return }
         isDownloadingModel = true
         downloadProgress = 0

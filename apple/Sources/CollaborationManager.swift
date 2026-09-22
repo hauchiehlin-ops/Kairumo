@@ -227,7 +227,9 @@ public class CollaborationManager: ObservableObject {
     // MARK: - 連線與房間管理
 
     /// 建立新協同房間（作為房主 Owner）
-    public func createRoom(noteId: String? = nil) {
+    // 原本收一個 `noteId`，而主體從沒讀過它、呼叫端也從沒傳過。
+    // 房間與筆記本的關聯目前不存在 —— 拿掉參數讓這件事看得見。
+    public func createRoom() {
         generateRoomKey()
         connect(roomId: collabNewRoomId(), asHost: true)
     }

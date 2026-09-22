@@ -2972,25 +2972,20 @@ extension AppDiagnosticsSheet {
                                 .font(.caption)
                                 .foregroundColor(.red)
                         }
-                        HStack(spacing: 12) {
-                            Button {
-                                transcriber.downloadWhisperModel(useMirror: false)
-                            } label: {
-                                Text(localizationManager.localized("hw_asr_retry_official"))
-                                    .font(.caption)
-                            }
-                            Button {
-                                transcriber.downloadWhisperModel(useMirror: true)
-                            } label: {
-                                Text(localizationManager.localized("hw_asr_retry_mirror"))
-                                    .font(.caption)
-                            }
+                        // 原本這裡有「官方／鏡像」兩顆重試。鏡像那顆拿掉了——
+                        // 鏡像的概念在下載管理員、核心與 models/manifest.json
+                        // 裡都不存在，兩顆做的事一模一樣。
+                        Button {
+                            transcriber.downloadWhisperModel()
+                        } label: {
+                            Text(localizationManager.localized("hw_asr_retry_official"))
+                                .font(.caption)
                         }
                     }
                     .padding(.vertical, 2)
                 } else {
                     Button {
-                        transcriber.downloadWhisperModel(useMirror: false)
+                        transcriber.downloadWhisperModel()
                     } label: {
                         HStack {
                             Image(systemName: "arrow.down.circle.fill")
@@ -2999,16 +2994,6 @@ extension AppDiagnosticsSheet {
                     }
                     .font(.footnote)
 
-                    Button {
-                        transcriber.downloadWhisperModel(useMirror: true)
-                    } label: {
-                        HStack {
-                            Image(systemName: "arrow.triangle.2.circlepath.circle")
-                            Text(localizationManager.localized("hw_asr_download_mirror"))
-                        }
-                    }
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
                 }
 
                 Button {

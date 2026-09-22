@@ -1380,7 +1380,7 @@ public final class NotebookStore: ObservableObject {
             notebooks[index].pageCount = 0
 
             if key == "seed_welcome_title" {
-                SeedContent.fillWelcome(&notebooks[index], store: self)
+                SeedContent.fillWelcome(&notebooks[index])
             } else {
                 SeedContent.fillMeeting(&notebooks[index], store: self)
             }
@@ -1601,7 +1601,7 @@ public final class NotebookStore: ObservableObject {
         // 兩本範例筆記原本都只有空白頁。「示範」什麼都不示範的話，
         // 使用者第一次打開看到的是一片白 —— 那比沒有範例還糟，
         // 因為他會以為這個 App 只能手寫。
-        SeedContent.fillWelcome(&n1, store: self)
+        SeedContent.fillWelcome(&n1)
         SeedContent.fillMeeting(&n2, store: self)
 
         self.notebooks = [n1, n2]

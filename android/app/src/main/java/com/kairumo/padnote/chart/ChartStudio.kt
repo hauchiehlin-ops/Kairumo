@@ -74,7 +74,7 @@ fun ChartStudio(
     }
 
     Column(Modifier.fillMaxSize()) {
-        ChartPreview(spec, languageTag, Modifier.fillMaxWidth().height(240.dp))
+        ChartPreview(spec, Modifier.fillMaxWidth().height(240.dp))
         HorizontalDivider()
 
         val tabs = listOf("chart_tab_data", "chart_tab_type", "chart_tab_format")
@@ -116,7 +116,10 @@ fun ChartStudio(
  * 函式，否則預覽好看、插進去卻不一樣，而使用者要到插入後才會發現。
  */
 @Composable
-fun ChartPreview(spec: ChartSpec, languageTag: String, modifier: Modifier = Modifier) {
+// 原本收一個 `languageTag`，主體從沒讀過它 —— ChartRenderer.draw 不收語系，
+// failureReason 回的是原始例外訊息（沒有翻譯）。Apple 的 ChartPreview(spec:)
+// 也沒有這個參數，拿掉之後兩端一致。
+fun ChartPreview(spec: ChartSpec, modifier: Modifier = Modifier) {
     val foreground = MaterialTheme.colorScheme.onSurface
     val grid = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
     var reason by remember(spec) { mutableStateOf<String?>(null) }

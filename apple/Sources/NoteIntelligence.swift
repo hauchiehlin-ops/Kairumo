@@ -84,7 +84,12 @@ final class SystemLanguageBackend: FfiLlm, @unchecked Sendable {
             Task.detached {
                 do {
                     let session = LanguageModelSession()
-                    let response = try await session.respond(to: prompt)
+                    // 上限要真的傳下去。在此之前 `maxTokens` 收了不用，
+                    // 呼叫端設多少都一樣 —— 而生成不受限的後果是使用者等很久、
+                    // 拿到一大段他沒要的東西。
+                    let response = try await session.respond(
+                        to: prompt,
+                        options: GenerationOptions(maximumResponseTokens: Int(maxTokens)))
                     box.value = .success(response.content)
                 } catch {
                     box.value = .failure(error)

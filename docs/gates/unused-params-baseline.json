@@ -1,12 +1,1 @@
-[
-  "android/app/src/main/java/com/kairumo/padnote/chart/ChartStudio.kt::ChartPreview::languageTag",
-  "apple/Sources/AudioRecorderManager.swift::startRecording::title",
-  "apple/Sources/AudioTranscriber.swift::downloadWhisperModel::useMirror",
-  "apple/Sources/CollaborationManager.swift::createRoom::noteId",
-  "apple/Sources/ExportPrintManager.swift::printNotebook::viewController",
-  "apple/Sources/InkInterop.swift::rollAngle::cp",
-  "apple/Sources/NoteIntelligence.swift::generate::maxTokens",
-  "apple/Sources/NotebookEditorView.swift::editorModeSwitcher::compact",
-  "apple/Sources/PageThumbnailRenderer.swift::drawConnection::ctx",
-  "apple/Sources/SeedContent.swift::fillWelcome::store"
-]
+[]

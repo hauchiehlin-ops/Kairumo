@@ -199,11 +199,13 @@ struct AudioAttachmentItemView: View {
                             transcriber.cancelModelDownload()
                         }
                     } else {
+                        // 原本這裡有第二顆「從鏡像下載」。拿掉了 ——
+                        // `useMirror` 從來沒被讀過，下載管理員與核心都沒有鏡像
+                        // 的概念，models/manifest.json 每個模型也只有一個 url。
+                        // 兩顆按鈕做的事一模一樣，而使用者會以為自己有備援。
+                        // Android 本來就只有一顆。
                         Button(localizationManager.localized("asr_download_btn")) {
-                            transcriber.downloadWhisperModel(useMirror: false)
-                        }
-                        Button(localizationManager.localized("asr_download_mirror_btn")) {
-                            transcriber.downloadWhisperModel(useMirror: true)
+                            transcriber.downloadWhisperModel()
                         }
                     }
                 }

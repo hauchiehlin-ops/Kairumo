@@ -255,6 +255,9 @@ enum InkInterop {
     ///
     /// 要在這一邊也存得下來，前提是不再用 PencilKit 收筆畫 —— 那是另一個
     /// 量級的決定，不在這裡順手做。
+    // unused-param-ok: PencilKit 的 PKStrokePoint 沒有 roll 這個欄位，
+    // 所以這裡一律回 0。保留參數是為了與核心的 Stroke 欄位一一對應，
+    // 哪天 PencilKit 給了就只改主體。
     private static func rollAngle(of cp: PKStrokePoint) -> CGFloat {
         0
     }

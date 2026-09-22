@@ -133,6 +133,9 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     // MARK: - 錄音控制
 
     /// 請求麥克風權限並啟動錄音
+    // unused-param-ok: 這是 AVAudioRecorder 那條路（不進套件），檔名由
+    // 時間戳決定，沒有地方放標題。核心那條路的同名多載才會用到它。
+    // 保留是為了兩個多載的呼叫端長得一樣。
     public func startRecording(title: String? = nil) async -> Bool {
         #if targetEnvironment(macCatalyst)
         let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)

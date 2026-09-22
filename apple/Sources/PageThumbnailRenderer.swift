@@ -599,6 +599,9 @@ public enum PageThumbnailRenderer {
         )
     }
 
+    // unused-param-ok: 連接線是用 UIBezierPath 直接畫在當前的繪圖脈絡上，
+    // 不經過 `ctx`。保留參數是為了跟同一批 draw* 函式的簽章一致 ——
+    // 只有這一個不收 ctx 的話，下一個人會以為它是特例而去找原因。
     private static func drawConnection(
         _ item: NoteConnectionAttachment,
         shapes: [NoteShapeAttachment],
