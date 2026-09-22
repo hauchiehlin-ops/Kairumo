@@ -179,10 +179,6 @@ public final class AccountSyncStore: ObservableObject {
         return value.isEmpty ? nil : value
     }
 
-    // orphan-ok: 工具列同步的管線兩端都做好了，核心也有 `.toolbarJson` 欄位 ——
-    // 但**「自訂工具列」這個功能還沒做**，所以沒有人會讀寫它。
-    // 刪掉的話等功能做出來要在三處（Apple／Android／核心格式）重接一次，
-    // 而格式欄位動了就是相容性問題。記在 docs/TODO.md 的 S-261。
     public func setSyncedToolbarJSON(_ json: String) {
         setSettings(
             syncSetSetting(

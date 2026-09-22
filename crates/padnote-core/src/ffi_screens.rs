@@ -139,6 +139,7 @@ pub fn screen_ids() -> Vec<String> {
         "home".to_string(),
         "editor".to_string(),
         "new_notebook".to_string(),
+        "toolbar".to_string(),
     ]
 }
 
@@ -150,6 +151,7 @@ pub fn screen_spec(id: String) -> FfiScreenSpec {
         "home" => home_spec(),
         "editor" => editor_spec(),
         "new_notebook" => new_notebook_spec(),
+        "toolbar" => toolbar_spec(),
         _ => FfiScreenSpec {
             id,
             title_key: String::new(),
@@ -348,6 +350,11 @@ fn editor_spec() -> FfiScreenSpec {
                     c("editor.insert.shape", Button, "shape_studio"),
                     c("editor.insert.model3d", Button, "insert_3d"),
                     c("editor.insert.theme_tools", Button, "theme_tools"),
+                    // 「自訂工具列」的入口（S-261）。放在這一組是因為它
+                    // 與其他項目一樣住在「更多」選單裡 —— 而選單內容不會
+                    // 出現在 XCUITest 的無障礙樹裡，所以兩端的畫面稽核都
+                    // 看不到它，只有靜態的對照閘門掃得到。
+                    c("editor.customize_toolbar", Button, "customize_toolbar"),
                     c("editor.insert.refine_sketch", Button, "refine_sketch"),
                     c("editor.insert.comment_pin", Button, "add_comment_pin"),
                     c("editor.insert.collaborate", Button, "collaborate"),
@@ -379,6 +386,9 @@ fn editor_spec() -> FfiScreenSpec {
                     c("editor.ink.watercolor", Button, "tool_watercolor"),
                     c("editor.ink.eraser", Button, "tool_eraser"),
                     c("editor.ink.lasso", Button, "tool_lasso"),
+                    // 兩端都有這一支，規格卻一直沒寫進來 —— 於是對照閘門
+                    // 從來沒檢查過它（S-261 稽核到的）。
+                    c("editor.ink.maskingTape", Button, "tool_masking_tape"),
                     c("editor.ink.width", Slider, "stroke_width"),
                     c("editor.ink.palette", Picker, "color"),
                     c("editor.ink.undo", Button, "undo"),
@@ -470,6 +480,69 @@ fn new_notebook_spec() -> FfiScreenSpec {
                 ],
             ),
         ],
+    }
+}
+
+// ───────────────────────── 自訂工具列（S-261）─────────────────────────
+
+/// 「自訂工具列」設定畫面。
+///
+/// 每一個開關的 id 是 `toolbar.tool.` 接上該工具在編輯器裡的識別字尾碼 ——
+/// 例如編輯器的 `editor.ink.pen` 對應這裡的 `toolbar.tool.pen`。
+/// 兩邊用同一個字尾，對照閘門紅掉時一眼看得出是哪一支工具，
+/// 而不是「toolbar 第 7 個開關」。
+fn toolbar_spec() -> FfiScreenSpec {
+    use FfiControlKind::*;
+    let tools = padnote_toolbar::tools::all_tools()
+        .into_iter()
+        .map(|t| {
+            let suffix = t
+                .parity_identifier()
+                .rsplit('.')
+                .next()
+                .expect("識別字一定有字尾");
+            c(&format!("toolbar.tool.{suffix}"), Toggle, ui_label_key(t))
+        })
+        .collect::<Vec<_>>();
+
+    FfiScreenSpec {
+        id: "toolbar".to_string(),
+        title_key: "customize_toolbar".to_string(),
+        sections: vec![
+            section(
+                "toolbar.header",
+                "",
+                vec![
+                    c("toolbar.hint", Label, ""),
+                    c("toolbar.reset", Button, "toolbar_reset"),
+                ],
+            ),
+            section("toolbar.tools", "customize_toolbar", tools),
+        ],
+    }
+}
+
+/// 工具在**介面字串表**（`i18n/ui-strings.json`）裡的鍵。
+///
+/// 與核心 `Tool::label_key` 是兩張不同的表：核心那張給 Rust 端用，
+/// 這張是兩個平台的畫面在用的。設定畫面上的字必須與編輯器工具列上的字
+/// **逐字相同** —— 使用者要靠那行字認出自己在關哪一顆按鈕。
+fn ui_label_key(t: padnote_toolbar::Tool) -> &'static str {
+    use padnote_toolbar::Tool::*;
+    match t {
+        Pen => "tool_pen",
+        BallPoint => "tool_ballpoint",
+        Brush => "tool_brush",
+        Marker => "tool_marker",
+        Highlighter => "tool_highlighter",
+        Pencil => "tool_pencil",
+        Watercolor => "tool_watercolor",
+        Eraser => "tool_eraser",
+        Lasso => "tool_lasso",
+        MaskingTape => "tool_masking_tape",
+        Undo => "undo",
+        Redo => "redo",
+        ClearPage => "clear_page",
     }
 }
 

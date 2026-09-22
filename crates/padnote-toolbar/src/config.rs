@@ -1,8 +1,52 @@
 //! 工具列設定的持久化與還原。
 
 use crate::tools::{Tool, ToolGroup, all_tools};
-use serde::{Deserialize, Serialize};
+use serde::de::IgnoredAny;
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::BTreeSet;
+
+/// 認得就收下，不認得就跳過（而不是讓整筆失敗）。
+///
+/// 這份設定**會同步到別台裝置**，而那台可能還是舊版。新版多一支工具之後，
+/// 舊版讀到不認得的名字時若整份設定回到預設，使用者看到的是
+/// 「我在 iPad 上關掉的筆，在 Mac 上又全部冒出來」—— 而他沒有動過設定。
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum Lenient<T> {
+    Known(T),
+    Unknown(IgnoredAny),
+}
+
+fn lenient_visible<'de, D: Deserializer<'de>>(d: D) -> Result<BTreeSet<Tool>, D::Error> {
+    Ok(Vec::<Lenient<Tool>>::deserialize(d)?
+        .into_iter()
+        .filter_map(|e| match e {
+            Lenient::Known(t) => Some(t),
+            Lenient::Unknown(_) => None,
+        })
+        .collect())
+}
+
+fn lenient_groups<'de, D: Deserializer<'de>>(d: D) -> Result<Vec<ToolGroup>, D::Error> {
+    Ok(Vec::<Lenient<ToolGroup>>::deserialize(d)?
+        .into_iter()
+        .filter_map(|e| match e {
+            Lenient::Known(g) => Some(g),
+            Lenient::Unknown(_) => None,
+        })
+        .collect())
+}
+
+fn default_visible() -> BTreeSet<Tool> {
+    all_tools()
+        .into_iter()
+        .filter(|t| t.shown_by_default())
+        .collect()
+}
+
+fn default_group_order() -> Vec<ToolGroup> {
+    ToolGroup::ALL.to_vec()
+}
 
 /// 工具列位置。
 ///
@@ -23,14 +67,18 @@ pub enum Placement {
 /// 使用者的工具列設定。
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ToolbarConfig {
+    #[serde(default)]
     pub placement: Placement,
     /// 顯示中的工具。
+    #[serde(default = "default_visible", deserialize_with = "lenient_visible")]
     visible: BTreeSet<Tool>,
     /// 分組顯示順序。
+    #[serde(default = "default_group_order", deserialize_with = "lenient_groups")]
     group_order: Vec<ToolGroup>,
     /// 是否顯示文字標籤（而非只有圖示）。
     ///
     /// 泰文與日文的字串常比英文長 30–50%，這些語言下預設關閉比較安全。
+    #[serde(default)]
     pub show_labels: bool,
 }
 
@@ -38,11 +86,8 @@ impl Default for ToolbarConfig {
     fn default() -> Self {
         Self {
             placement: Placement::default(),
-            visible: all_tools()
-                .into_iter()
-                .filter(|t| t.shown_by_default())
-                .collect(),
-            group_order: ToolGroup::ALL.to_vec(),
+            visible: default_visible(),
+            group_order: default_group_order(),
             show_labels: false,
         }
     }
@@ -98,6 +143,28 @@ impl ToolbarConfig {
         self.group_order = seen;
     }
 
+    /// 藏起某支工具之後，目前選中的該換成哪一支。
+    ///
+    /// 使用者可以把正在用的筆關掉 —— 那之後畫面上**沒有任何按鈕是亮的**，
+    /// 而畫布還在用那支筆。他看到的是「我的筆不見了，但寫出來還是原本那支」。
+    ///
+    /// 規則沉在核心而不是各寫一份：兩端對「關掉正在用的工具」的反應
+    /// 不一樣的話，同一個帳號在兩台裝置上會得到兩種結果。
+    ///
+    /// 全部都藏起來時回傳原本那支 —— 使用者有權清空工具列專心書寫，
+    /// 那時候繼續用目前的筆是唯一說得通的行為。
+    pub fn tool_after_hiding(&self, current: Tool) -> Tool {
+        if self.is_visible(current) {
+            return current;
+        }
+        // 先找同類的：關掉螢光筆該換一支筆，而不是跳到橡皮擦。
+        all_tools()
+            .into_iter()
+            .find(|t| t.is_brush() == current.is_brush() && self.is_visible(*t))
+            .or_else(|| all_tools().into_iter().find(|t| self.is_visible(*t)))
+            .unwrap_or(current)
+    }
+
     /// 還原為預設。**使用者改壞了要回得去。**
     pub fn reset(&mut self) {
         *self = Self::default();
@@ -121,21 +188,22 @@ mod tests {
     use padnote_i18n::Locale;
 
     #[test]
-    fn defaults_show_the_core_tools() {
+    fn defaults_show_everything_that_is_on_screen_today() {
+        // 「自訂工具列」上線那天，使用者的工具列不能少任何一顆按鈕。
         let c = ToolbarConfig::default();
-        assert!(c.is_visible(Tool::FountainPen));
-        assert!(c.is_visible(Tool::Eraser));
-        assert!(!c.is_visible(Tool::LaserPointer), "進階工具預設隱藏");
+        for t in all_tools() {
+            assert!(c.is_visible(t), "{t:?} 預設就不見了");
+        }
     }
 
     #[test]
     fn tools_can_be_toggled() {
         let mut c = ToolbarConfig::default();
-        c.set_visible(Tool::LaserPointer, true);
-        assert!(c.is_visible(Tool::LaserPointer));
+        c.set_visible(Tool::Watercolor, false);
+        assert!(!c.is_visible(Tool::Watercolor));
 
-        c.set_visible(Tool::FountainPen, false);
-        assert!(!c.is_visible(Tool::FountainPen));
+        c.set_visible(Tool::Watercolor, true);
+        assert!(c.is_visible(Tool::Watercolor));
     }
 
     #[test]
@@ -187,14 +255,57 @@ mod tests {
     }
 
     #[test]
+    fn hiding_a_tool_you_are_not_using_changes_nothing() {
+        let mut c = ToolbarConfig::default();
+        c.set_visible(Tool::Watercolor, false);
+        assert_eq!(c.tool_after_hiding(Tool::Pen), Tool::Pen);
+    }
+
+    #[test]
+    fn hiding_the_tool_in_use_moves_to_another_of_the_same_kind() {
+        // 關掉正在用的螢光筆，該換一支筆 —— 不是跳到橡皮擦。
+        let mut c = ToolbarConfig::default();
+        c.set_visible(Tool::Highlighter, false);
+        let next = c.tool_after_hiding(Tool::Highlighter);
+        assert!(next.is_brush(), "換成了 {next:?}");
+        assert_eq!(next, Tool::Pen);
+
+        // 反過來也一樣：關掉橡皮擦不該讓使用者突然開始畫畫。
+        c.set_visible(Tool::Eraser, false);
+        let next = c.tool_after_hiding(Tool::Eraser);
+        assert!(!next.is_brush(), "換成了 {next:?}");
+    }
+
+    #[test]
+    fn hiding_the_last_of_a_kind_falls_back_to_whatever_is_left() {
+        let mut c = ToolbarConfig::default();
+        for t in all_tools().into_iter().filter(|t| !t.is_brush()) {
+            c.set_visible(t, false);
+        }
+        // 模式全關了，還在用套索 —— 只能換成筆。
+        assert!(c.tool_after_hiding(Tool::Lasso).is_brush());
+    }
+
+    #[test]
+    fn an_empty_toolbar_keeps_the_current_tool() {
+        // 使用者有權把工具列清空（專心書寫）。那時候畫布不該換筆。
+        let mut c = ToolbarConfig::default();
+        for t in all_tools() {
+            c.set_visible(t, false);
+        }
+        assert!(c.visible_tools().is_empty());
+        assert_eq!(c.tool_after_hiding(Tool::Marker), Tool::Marker);
+    }
+
+    #[test]
     fn reset_restores_defaults() {
         // 使用者改壞了要回得去。
         let mut c = ToolbarConfig::default();
-        c.set_visible(Tool::FountainPen, false);
+        c.set_visible(Tool::Pen, false);
         c.placement = Placement::Left;
 
         c.reset();
-        assert!(c.is_visible(Tool::FountainPen));
+        assert!(c.is_visible(Tool::Pen));
         assert_eq!(c.placement, Placement::Bottom);
     }
 
@@ -204,20 +315,32 @@ mod tests {
             placement: Placement::Right,
             ..Default::default()
         };
-        c.set_visible(Tool::Ruler, true);
+        c.set_visible(Tool::MaskingTape, false);
         c.show_labels = true;
 
         let back = ToolbarConfig::from_json(&c.to_json());
         assert_eq!(back.placement, Placement::Right);
-        assert!(back.is_visible(Tool::Ruler));
+        assert!(!back.is_visible(Tool::MaskingTape));
         assert!(back.show_labels);
+    }
+
+    #[test]
+    fn an_unknown_tool_in_the_json_does_not_wipe_the_whole_config() {
+        // 這份 JSON **會同步到別台裝置**，而那台可能是舊版 App。
+        // 新版新增一支工具之後，舊版讀到不認得的名字時若整份設定回到預設，
+        // 使用者會看到「我在 iPad 上關掉的筆，在 Mac 上又全部冒出來」。
+        let json = r#"{"placement":"left","visible":["pen","time_machine"],"group_order":["pens"],"show_labels":true}"#;
+        let c = ToolbarConfig::from_json(json);
+        assert_eq!(c.placement, Placement::Left, "整份設定被丟掉了");
+        assert!(c.is_visible(Tool::Pen));
+        assert!(!c.is_visible(Tool::Eraser), "不在清單上的工具不該冒出來");
     }
 
     #[test]
     fn corrupt_config_falls_back_to_defaults() {
         // 設定檔損毀不該讓 App 開不起來。
         let c = ToolbarConfig::from_json("{ not json");
-        assert!(c.is_visible(Tool::FountainPen));
+        assert!(c.is_visible(Tool::Pen));
         assert_eq!(c.placement, Placement::Bottom);
     }
 
@@ -227,15 +350,5 @@ mod tests {
         assert!(!ToolbarConfig::for_locale(Locale::Thai).show_labels);
         assert!(!ToolbarConfig::for_locale(Locale::Japanese).show_labels);
         assert!(ToolbarConfig::for_locale(Locale::English).show_labels);
-    }
-
-    #[test]
-    fn hiding_everything_is_allowed_and_safe() {
-        // 使用者有權把工具列清空（專心書寫）。不該 panic 或自動補回來。
-        let mut c = ToolbarConfig::default();
-        for t in all_tools() {
-            c.set_visible(t, false);
-        }
-        assert!(c.visible_tools().is_empty());
     }
 }

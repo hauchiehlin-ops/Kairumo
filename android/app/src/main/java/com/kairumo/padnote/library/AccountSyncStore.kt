@@ -224,13 +224,9 @@ object AccountSyncStore {
         )
     }
 
-    // orphan-ok: 工具列同步的管線兩端都做好了，核心也有 `.toolbarJson` 欄位 ——
-    // 但**「自訂工具列」這個功能還沒做**，所以沒有人會讀寫它。見 S-261。
     fun syncedToolbarJson(context: Context): String? =
         syncGetSetting(settingsJson(context), FfiSyncedField.TOOLBAR_JSON).takeIf { it.isNotEmpty() }
 
-    // orphan-ok: 工具列同步的管線兩端都做好了，核心也有 `.toolbarJson` 欄位 ——
-    // 但**「自訂工具列」這個功能還沒做**，所以沒有人會讀寫它。見 S-261。
     fun setSyncedToolbarJson(context: Context, json: String) {
         setSettings(
             context,

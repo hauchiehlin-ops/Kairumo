@@ -154,7 +154,9 @@ fun InkToolbar(
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        for (option in InkTool.entries) {
+        // 使用者關掉的工具不畫出來（S-261）。設定存在核心，兩端同一份。
+        val hidden = com.kairumo.padnote.ui.ToolbarSettings.hiddenIdentifiers
+        for (option in InkTool.entries.filter { it.parityIdentifier !in hidden }) {
             FilterChip(
                 selected = tool == option,
                 onClick = { onToolChange(option) },

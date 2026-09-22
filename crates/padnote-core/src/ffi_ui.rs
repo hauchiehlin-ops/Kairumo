@@ -95,6 +95,12 @@ pub struct FfiToolInfo {
     pub label: String,
     pub group: FfiToolGroup,
     pub visible: bool,
+    /// 跨平台對照用的識別字（`editor.ink.*`）。
+    ///
+    /// 平台端的工具列按鈕早就掛著同一個字串當無障礙識別字，所以這裡帶出來
+    /// 之後，兩邊是**用同一把鑰匙對上**，而不是各自維護一張
+    /// 「FfiTool 對應到我這邊哪個 enum」的表 —— 那種表漏一格不會有人發現。
+    pub identifier: String,
 }
 
 /// 一個分組與其工具。
@@ -105,53 +111,40 @@ pub struct FfiToolGroupInfo {
     pub tools: Vec<FfiToolInfo>,
 }
 
+/// 繪圖工具列上的一個項目。與核心的 `Tool` 一一對應。
 #[derive(Clone, Copy, PartialEq, Eq, Debug, uniffi::Enum)]
 pub enum FfiTool {
-    FountainPen,
+    Pen,
     BallPoint,
+    Brush,
+    Marker,
     Highlighter,
     Pencil,
+    Watercolor,
     Eraser,
     Lasso,
-    Text,
-    Image,
-    Shape,
-    Table,
-    Embed,
+    MaskingTape,
     Undo,
     Redo,
-    Ruler,
-    ShapeRecognition,
-    ZoomWrite,
-    LaserPointer,
-    Record,
-    StickerLibrary,
-    MaskingTape,
+    ClearPage,
 }
 
 impl From<FfiTool> for Tool {
     fn from(t: FfiTool) -> Self {
         match t {
-            FfiTool::FountainPen => Self::FountainPen,
+            FfiTool::Pen => Self::Pen,
             FfiTool::BallPoint => Self::BallPoint,
+            FfiTool::Brush => Self::Brush,
+            FfiTool::Marker => Self::Marker,
             FfiTool::Highlighter => Self::Highlighter,
             FfiTool::Pencil => Self::Pencil,
+            FfiTool::Watercolor => Self::Watercolor,
             FfiTool::Eraser => Self::Eraser,
             FfiTool::Lasso => Self::Lasso,
-            FfiTool::Text => Self::Text,
-            FfiTool::Image => Self::Image,
-            FfiTool::Shape => Self::Shape,
-            FfiTool::Table => Self::Table,
-            FfiTool::Embed => Self::Embed,
+            FfiTool::MaskingTape => Self::MaskingTape,
             FfiTool::Undo => Self::Undo,
             FfiTool::Redo => Self::Redo,
-            FfiTool::Ruler => Self::Ruler,
-            FfiTool::ShapeRecognition => Self::ShapeRecognition,
-            FfiTool::ZoomWrite => Self::ZoomWrite,
-            FfiTool::LaserPointer => Self::LaserPointer,
-            FfiTool::Record => Self::Record,
-            FfiTool::StickerLibrary => Self::StickerLibrary,
-            FfiTool::MaskingTape => Self::MaskingTape,
+            FfiTool::ClearPage => Self::ClearPage,
         }
     }
 }
@@ -159,26 +152,19 @@ impl From<FfiTool> for Tool {
 impl From<Tool> for FfiTool {
     fn from(t: Tool) -> Self {
         match t {
-            Tool::FountainPen => Self::FountainPen,
+            Tool::Pen => Self::Pen,
             Tool::BallPoint => Self::BallPoint,
+            Tool::Brush => Self::Brush,
+            Tool::Marker => Self::Marker,
             Tool::Highlighter => Self::Highlighter,
             Tool::Pencil => Self::Pencil,
+            Tool::Watercolor => Self::Watercolor,
             Tool::Eraser => Self::Eraser,
             Tool::Lasso => Self::Lasso,
-            Tool::Text => Self::Text,
-            Tool::Image => Self::Image,
-            Tool::Shape => Self::Shape,
-            Tool::Table => Self::Table,
-            Tool::Embed => Self::Embed,
+            Tool::MaskingTape => Self::MaskingTape,
             Tool::Undo => Self::Undo,
             Tool::Redo => Self::Redo,
-            Tool::Ruler => Self::Ruler,
-            Tool::ShapeRecognition => Self::ShapeRecognition,
-            Tool::ZoomWrite => Self::ZoomWrite,
-            Tool::LaserPointer => Self::LaserPointer,
-            Tool::Record => Self::Record,
-            Tool::StickerLibrary => Self::StickerLibrary,
-            Tool::MaskingTape => Self::MaskingTape,
+            Tool::ClearPage => Self::ClearPage,
         }
     }
 }
@@ -187,9 +173,7 @@ impl From<Tool> for FfiTool {
 pub enum FfiToolGroup {
     Pens,
     Edit,
-    Insert,
     History,
-    Extras,
 }
 
 impl From<FfiToolGroup> for ToolGroup {
@@ -197,9 +181,7 @@ impl From<FfiToolGroup> for ToolGroup {
         match g {
             FfiToolGroup::Pens => Self::Pens,
             FfiToolGroup::Edit => Self::Edit,
-            FfiToolGroup::Insert => Self::Insert,
             FfiToolGroup::History => Self::History,
-            FfiToolGroup::Extras => Self::Extras,
         }
     }
 }
@@ -209,9 +191,7 @@ impl From<ToolGroup> for FfiToolGroup {
         match g {
             ToolGroup::Pens => Self::Pens,
             ToolGroup::Edit => Self::Edit,
-            ToolGroup::Insert => Self::Insert,
             ToolGroup::History => Self::History,
-            ToolGroup::Extras => Self::Extras,
         }
     }
 }
@@ -341,6 +321,19 @@ impl FfiToolbar {
             .set_group_order(order.into_iter().map(Into::into).collect());
     }
 
+    /// 藏起某支工具之後，目前選中的該換成哪一支。
+    ///
+    /// 使用者可以把正在用的筆關掉。規則沉在核心，兩端才不會對
+    /// 「關掉正在用的工具」給出不同答案 —— 那會讓同一個帳號在兩台裝置上
+    /// 停在不同的筆上。詳見 `ToolbarConfig::tool_after_hiding`。
+    pub fn tool_after_hiding(&self, current: FfiTool) -> FfiTool {
+        self.inner
+            .lock()
+            .unwrap()
+            .tool_after_hiding(current.into())
+            .into()
+    }
+
     /// 回到出廠設定。
     pub fn reset(&self) {
         self.inner.lock().unwrap().reset();
@@ -368,6 +361,7 @@ fn group_info(
                 label: catalog::text(t.label_key(), locale).to_string(),
                 group: group.into(),
                 visible: cfg.is_visible(t),
+                identifier: t.parity_identifier().to_string(),
             })
             .collect(),
     }
@@ -411,22 +405,53 @@ mod tests {
     #[test]
     fn visibility_survives_a_save_and_reload() {
         let tb = FfiToolbar::new(FfiLocale::TraditionalChinese);
-        tb.set_visible(FfiTool::Ruler, true);
+        tb.set_visible(FfiTool::Watercolor, false);
         tb.set_placement(FfiPlacement::Left);
         let json = tb.to_json();
 
         let back = FfiToolbar::from_json(FfiLocale::TraditionalChinese, json);
-        assert!(back.is_visible(FfiTool::Ruler));
+        assert!(!back.is_visible(FfiTool::Watercolor));
         assert_eq!(back.placement(), FfiPlacement::Left);
     }
 
     #[test]
-    fn visible_groups_is_a_subset_of_all_groups() {
+    fn nothing_is_hidden_until_the_user_hides_something() {
+        // 預設等於使用者現在看到的那一排 —— 一顆不多，一顆不少。
         let tb = FfiToolbar::new(FfiLocale::English);
         let visible: usize = tb.visible_groups().iter().map(|g| g.tools.len()).sum();
         let all: usize = tb.all_groups().iter().map(|g| g.tools.len()).sum();
-        assert!(visible < all, "預設應該有工具是隱藏的：{visible} / {all}");
-        assert!(visible > 0);
+        assert_eq!(visible, all, "預設就藏了東西");
+
+        tb.set_visible(FfiTool::Watercolor, false);
+        let after: usize = tb.visible_groups().iter().map(|g| g.tools.len()).sum();
+        assert_eq!(after, all - 1, "關掉之後 visible_groups 沒有跟著少");
+    }
+
+    #[test]
+    fn every_tool_carries_the_identifier_the_platforms_already_use() {
+        // 兩端的工具列按鈕掛的無障礙識別字就是這些字串。對不上的話，
+        // 平台端會靜靜地過濾不到任何東西 —— 設定畫面按了沒反應。
+        let tb = FfiToolbar::new(FfiLocale::English);
+        let ids: Vec<String> = tb
+            .all_groups()
+            .into_iter()
+            .flat_map(|g| g.tools)
+            .map(|t| t.identifier)
+            .collect();
+        assert_eq!(ids.len(), 13);
+        assert!(ids.contains(&"editor.ink.pen".to_string()));
+        assert!(ids.contains(&"editor.ink.maskingTape".to_string()));
+        assert!(ids.iter().all(|s| s.starts_with("editor.ink.")), "{ids:?}");
+    }
+
+    #[test]
+    fn hiding_the_tool_in_use_reaches_the_platform_layer() {
+        let tb = FfiToolbar::new(FfiLocale::English);
+        assert_eq!(tb.tool_after_hiding(FfiTool::Pen), FfiTool::Pen);
+        tb.set_visible(FfiTool::Pen, false);
+        let next = tb.tool_after_hiding(FfiTool::Pen);
+        assert_ne!(next, FfiTool::Pen);
+        assert_eq!(next, FfiTool::BallPoint, "該換成下一支筆");
     }
 
     #[test]

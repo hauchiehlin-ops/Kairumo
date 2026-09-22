@@ -1966,6 +1966,18 @@ private fun InkScreen(
         if (!picked.isLasso) lasso.clear()
     }
 
+    // 使用者把正在用的那一支關掉時要換一支，否則畫面上沒有任何晶片是亮的，
+    // 而畫布還在用那支筆 —— 他看到的是「我的筆不見了，但寫出來還是原本那支」。
+    // 換成哪一支由核心決定（S-261），Apple 走同一條規則。
+    LaunchedEffect(com.kairumo.padnote.ui.ToolbarSettings.hiddenIdentifiers) {
+        val next = com.kairumo.padnote.ui.ToolbarSettings.identifierAfterHiding(
+            activity, deviceLanguageTag(), inkTool.parityIdentifier
+        )
+        if (next != inkTool.parityIdentifier) {
+            InkTool.entries.firstOrNull { it.parityIdentifier == next }?.let { applyInkTool(it) }
+        }
+    }
+
     // 觸控筆側鍵（或把筆倒過來）。
     //
     // **規則不在這裡** —— 「這個動作要做什麼」整張表在核心
@@ -2062,6 +2074,7 @@ private fun InkScreen(
 
     /// 主題專屬工具與它的兩個構圖輔助疊層。
     var showThemeTools by remember { mutableStateOf(false) }
+    var showToolbarCustomization by remember { mutableStateOf(false) }
     var showAssetLibrary by remember { mutableStateOf(false) }
 
     /// 協同編輯。與 Apple 端講同一套協定（房號、邀請連結、端對端加密都在核心）。
@@ -2396,6 +2409,14 @@ private fun InkScreen(
 
             // 復原／重做（S-64 的缺口）。Apple 的兩個工具列上都有，
             // Android 原本**完全沒有** —— 寫錯一筆只能用橡皮擦擦掉。
+            //
+            // 「自訂工具列」只管**繪圖**那一排（S-261）。這兩顆按鈕在
+            // Android 是兩個模式共用的，所以只在繪圖模式下才跟著設定走 ——
+            // 否則使用者關掉繪圖的復原，連打字的復原也會一起不見。
+            val hiddenTools = com.kairumo.padnote.ui.ToolbarSettings.hiddenIdentifiers
+            fun toolShown(id: String) =
+                editorMode != EditorMode.DRAW || id !in hiddenTools
+            if (toolShown("editor.ink.undo")) {
             TextButton(
                 onClick = { if (engine.undo()) { revision++; clearToken++ } },
                 enabled = engine.canUndo,
@@ -2403,6 +2424,8 @@ private fun InkScreen(
                     if (editorMode == EditorMode.DRAW) "editor.ink.undo" else "editor.text.undo"
                 )
             ) { Text("↶") }
+            }
+            if (toolShown("editor.ink.redo")) {
             TextButton(
                 onClick = { if (engine.redo()) { revision++; clearToken++ } },
                 enabled = engine.canRedo,
@@ -2410,6 +2433,7 @@ private fun InkScreen(
                     if (editorMode == EditorMode.DRAW) "editor.ink.redo" else "editor.text.redo"
                 )
             ) { Text("↷") }
+            }
 
             var showShareMenu by remember { mutableStateOf(false) }
             TextButton(
@@ -2482,6 +2506,7 @@ private fun InkScreen(
             ) { Text("⋯") }
 
             DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                if (toolShown("editor.ink.clear")) {
                 DropdownMenuItem(
                     text = { Text(l10n("ink_clear")) },
                     modifier = Modifier.testTag("editor.ink.clear"),
@@ -2493,6 +2518,7 @@ private fun InkScreen(
                         clearToken++   // 表面上的像素也要清，不是只清資料
                     }
                 )
+                }
                 Divider()
                 DropdownMenuItem(
                     text = { Text(l10n(if (recording) "stop_recording" else "start_recording")) },
@@ -2630,6 +2656,13 @@ private fun InkScreen(
                     text = { Text(l10n("theme_tools")) },
                     modifier = Modifier.testTag("editor.insert.theme_tools"),
                     onClick = { showMenu = false; showThemeTools = true }
+                )
+                // 放在編輯器而不是設定頁：使用者想關掉某支筆的那一刻，
+                // 是他正看著那支筆的時候。
+                DropdownMenuItem(
+                    text = { Text(l10n("customize_toolbar")) },
+                    modifier = Modifier.testTag("editor.customize_toolbar"),
+                    onClick = { showMenu = false; showToolbarCustomization = true }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("insert_3d")) },
@@ -4760,6 +4793,14 @@ private fun InkScreen(
                 }
             },
             onDismiss = { showAssetLibrary = false }
+        )
+    }
+
+    if (showToolbarCustomization) {
+        com.kairumo.padnote.ui.ToolbarCustomizationSheet(
+            context = activity,
+            languageTag = deviceLanguageTag(),
+            onDismiss = { showToolbarCustomization = false }
         )
     }
 

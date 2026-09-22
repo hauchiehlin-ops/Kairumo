@@ -154,7 +154,7 @@ enum ScreenAudit {
     ///
     /// 有這個之後失敗訊息才講得清楚「是缺識別碼，還是根本沒到這個畫面」。
     /// 沒有它的話，兩種情況看起來一模一樣：清單全紅。
-    private static func presentIdentifiers(_ app: XCUIApplication) -> [String] {
+    static func presentIdentifiers(_ app: XCUIApplication) -> [String] {
         var seen: [String] = []
         for query in [app.buttons, app.staticTexts, app.otherElements, app.textFields] {
             for element in query.allElementsBoundByIndex where !element.identifier.isEmpty {

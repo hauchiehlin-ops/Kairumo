@@ -2335,6 +2335,14 @@ extension LocalizationManager {
             .ko: "사용자 색상",
             .th: "สีกำหนดเอง"
         ],
+        "customize_toolbar": [
+            .zhHant: "自訂工具列",
+            .en: "Customize Toolbar",
+            .zhHans: "自定义工具栏",
+            .ja: "ツールバーをカスタマイズ",
+            .ko: "도구 모음 사용자화",
+            .th: "ปรับแต่งแถบเครื่องมือ"
+        ],
         "cut_selected": [
             .zhHant: "剪下選取",
             .en: "Cut Selection",
@@ -10558,6 +10566,30 @@ extension LocalizationManager {
             .ja: "水彩筆",
             .ko: "수채화 붓",
             .th: "พู่กันสีน้ำ"
+        ],
+        "toolbar_all_hidden": [
+            .zhHant: "所有工具都已隱藏。畫布仍會沿用你最後選的那一支。",
+            .en: "Every tool is hidden. The canvas keeps the tool you were last using.",
+            .zhHans: "所有工具都已隐藏。画布仍会沿用你最后选的那一支。",
+            .ja: "すべてのツールが非表示です。キャンバスは最後に使ったツールのままです。",
+            .ko: "모든 도구가 숨겨졌습니다. 캔버스는 마지막에 쓰던 도구를 그대로 사용합니다.",
+            .th: "เครื่องมือทั้งหมดถูกซ่อนไว้ ผืนผ้าใบจะยังคงใช้เครื่องมือที่คุณใช้ล่าสุด"
+        ],
+        "toolbar_customize_hint": [
+            .zhHant: "把用不到的工具關掉，剩下的順序不變。",
+            .en: "Turn off the tools you don't use. The rest keep their order.",
+            .zhHans: "把用不到的工具关掉，剩下的顺序不变。",
+            .ja: "使わないツールをオフにします。残りの並び順は変わりません。",
+            .ko: "사용하지 않는 도구를 끄세요. 나머지 순서는 그대로입니다.",
+            .th: "ปิดเครื่องมือที่ไม่ได้ใช้ ลำดับของที่เหลือจะไม่เปลี่ยน"
+        ],
+        "toolbar_reset": [
+            .zhHant: "還原預設工具列",
+            .en: "Restore Default Toolbar",
+            .zhHans: "还原默认工具栏",
+            .ja: "ツールバーを初期設定に戻す",
+            .ko: "기본 도구 모음으로 되돌리기",
+            .th: "คืนค่าแถบเครื่องมือเริ่มต้น"
         ],
         "transcribe_audio": [
             .zhHant: "音訊轉文字",

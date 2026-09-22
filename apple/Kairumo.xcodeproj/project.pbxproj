@@ -106,6 +106,7 @@
 		B3DFF4CFC65E91FEEA6AA7B4 /* HomeWorkbenchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */; };
 		B427747146A395C471480C6C /* ExportPreviewSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0957AAFF21A2EF4C121E63E /* ExportPreviewSheet.swift */; };
 		B461E05D52232C76413B2DB2 /* Docs in Resources */ = {isa = PBXBuildFile; fileRef = B7FE882F90D6ABA99E0820BF /* Docs */; };
+		B93880F17A79F17C6474B133 /* ToolbarCustomization.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC162947E9D0CD0579D7848B /* ToolbarCustomization.swift */; };
 		BBA19BDEFC495AD7A5BDD2F4 /* BundledDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0A240F9E5D8ED4900468913 /* BundledDocumentTests.swift */; };
 		BBA43DAF3585326259C48FE6 /* AppVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D059ACC4F96D906F5A18970D /* AppVersion.swift */; };
 		BCF67AEC6E3360B45CBC8631 /* AudioTranscriber.swift in Sources */ = {isa = PBXBuildFile; fileRef = 186DAB55422E783F9C99DE02 /* AudioTranscriber.swift */; };
@@ -318,6 +319,7 @@
 		DA14AB7B6F3436E39B58DAA1 /* ObjectStacking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectStacking.swift; sourceTree = "<group>"; };
 		DA24513DE1A6A5996FB190AC /* AssetLibraryManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetLibraryManager.swift; sourceTree = "<group>"; };
 		DBEA4CFB130D285D67B343EC /* NoteShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteShape.swift; sourceTree = "<group>"; };
+		DC162947E9D0CD0579D7848B /* ToolbarCustomization.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarCustomization.swift; sourceTree = "<group>"; };
 		DC2F0D7F265BF495CF6D7B79 /* ThemeSpecificToolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeSpecificToolsView.swift; sourceTree = "<group>"; };
 		DC6D1F547D3EA6FBF9266760 /* SmokeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SmokeUITests.swift; sourceTree = "<group>"; };
 		DC7046379C24B0D590B6F0E8 /* ToolbarSeparator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolbarSeparator.swift; sourceTree = "<group>"; };
@@ -569,6 +571,7 @@
 				7418A9EE9E549FC11AB793EF /* TextBoxAppearance.swift */,
 				07F27CA2672052EAEA15EBF5 /* TextBoxMetrics.swift */,
 				DC2F0D7F265BF495CF6D7B79 /* ThemeSpecificToolsView.swift */,
+				DC162947E9D0CD0579D7848B /* ToolbarCustomization.swift */,
 				DC7046379C24B0D590B6F0E8 /* ToolbarSeparator.swift */,
 				B9BFDAE4EA9BBA2EA8438447 /* WordDocumentEditorView.swift */,
 				F30959766B1D00F248AD7D2D /* WordTextStudioView.swift */,
@@ -861,6 +864,7 @@
 				8677E2062758DE5EA2EEE87F /* TextBoxAppearance.swift in Sources */,
 				A4E78AFAEE5B0C91C172F7AC /* TextBoxMetrics.swift in Sources */,
 				DA9086448B1E257FEC002D07 /* ThemeSpecificToolsView.swift in Sources */,
+				B93880F17A79F17C6474B133 /* ToolbarCustomization.swift in Sources */,
 				D259D790432BD38F30537209 /* ToolbarSeparator.swift in Sources */,
 				A44EE7C0B4F7E4620207AD56 /* WordDocumentEditorView.swift in Sources */,
 				7BF616F79113EDEF36132B11 /* WordTextStudioView.swift in Sources */,

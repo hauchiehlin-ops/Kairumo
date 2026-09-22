@@ -373,6 +373,39 @@ extension SmokeUITests {
         ScreenAudit.check(app, screen: "editor", allowMissing: Self.editorNotWiredYet)
     }
 
+    /// 自訂工具列：十三個開關加上說明與還原，全部要在、而且點得到。
+    ///
+    /// 入口在「更多」選單裡，而 SwiftUI 的 `Menu` 內容**不會出現在
+    /// XCUITest 的無障礙樹裡** —— 點開之後掃到的只有工具列那些控制項
+    /// （實測過，失敗訊息裡列的二十個識別碼全是 `editor.*` 工具列的）。
+    /// 所以這裡用啟動變數把表直接叫出來，驗的是**表本身**。
+    ///
+    /// 選單那顆入口因此沒有執行期測試守著，只有靜態的跨平台對照閘門
+    /// （它掃得到 `editor.customize_toolbar` 這個字面值）。記在 S-261d。
+    func testToolbarCustomizationControlsAreReachable() {
+        let app = XCUIApplication()
+        app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launchEnvironment["KAIRUMO_UITEST_TOOLBAR"] = "1"
+        app.launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+
+        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
+        guard card.waitForExistence(timeout: 10) else {
+            XCTFail("首頁找不到種子筆記，開不了編輯器")
+            return
+        }
+        card.tap()
+
+        let reset = app.descendants(matching: .any).matching(identifier: "toolbar.reset").firstMatch
+        guard reset.waitForExistence(timeout: 15) else {
+            XCTFail("自訂工具列沒有打開。現場有的："
+                    + ScreenAudit.presentIdentifiers(app).joined(separator: ", "))
+            return
+        }
+
+        ScreenAudit.check(app, screen: "toolbar", allowMissing: [])
+    }
+
     /// 棘輪：還沒接上識別碼的控制項。**只准縮小**。
     ///
     /// 這裡放著的每一項都代表「規格說要有、實際上稽核找不到」。清空的辦法是
@@ -408,6 +441,10 @@ extension SmokeUITests {
     /// `kairumo.canvas` —— **識別碼掛在沒被顯示的那個視圖上**。
     /// 掃原始碼的閘門看不見這種，執行期稽核看得見。
     static let editorNotWiredYet: Set<String> = [
+        // 「自訂工具列」的入口，與下面的 insert.* 一樣住在「更多」選單裡。
+        // 這張表本身有自己的測試（testToolbarCustomizationControlsAreReachable），
+        // 走的是啟動變數而不是選單 —— 理由見那條測試。
+        "editor.customize_toolbar",
         "editor.insert.assets",
         "editor.insert.audio",
         "editor.insert.image",

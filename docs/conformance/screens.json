@@ -25,6 +25,7 @@
       "editor.insert.shape",
       "editor.insert.model3d",
       "editor.insert.theme_tools",
+      "editor.customize_toolbar",
       "editor.insert.refine_sketch",
       "editor.insert.comment_pin",
       "editor.insert.collaborate",
@@ -43,6 +44,7 @@
       "editor.ink.watercolor",
       "editor.ink.eraser",
       "editor.ink.lasso",
+      "editor.ink.maskingTape",
       "editor.ink.width",
       "editor.ink.palette",
       "editor.ink.undo",
@@ -95,6 +97,7 @@
       "editor.insert.shape",
       "editor.insert.model3d",
       "editor.insert.theme_tools",
+      "editor.customize_toolbar",
       "editor.insert.refine_sketch",
       "editor.insert.comment_pin",
       "editor.insert.collaborate",
@@ -113,6 +116,7 @@
       "editor.ink.watercolor",
       "editor.ink.eraser",
       "editor.ink.lasso",
+      "editor.ink.maskingTape",
       "editor.ink.width",
       "editor.ink.palette",
       "editor.ink.undo",
@@ -221,6 +225,42 @@
       "new_notebook.palette",
       "new_notebook.document.current",
       "new_notebook.document.tree"
+    ]
+  },
+  "toolbar": {
+    "android": [
+      "toolbar.hint",
+      "toolbar.reset",
+      "toolbar.tool.pen",
+      "toolbar.tool.ballpoint",
+      "toolbar.tool.brush",
+      "toolbar.tool.marker",
+      "toolbar.tool.highlighter",
+      "toolbar.tool.pencil",
+      "toolbar.tool.watercolor",
+      "toolbar.tool.eraser",
+      "toolbar.tool.lasso",
+      "toolbar.tool.maskingTape",
+      "toolbar.tool.undo",
+      "toolbar.tool.redo",
+      "toolbar.tool.clear"
+    ],
+    "apple": [
+      "toolbar.hint",
+      "toolbar.reset",
+      "toolbar.tool.pen",
+      "toolbar.tool.ballpoint",
+      "toolbar.tool.brush",
+      "toolbar.tool.marker",
+      "toolbar.tool.highlighter",
+      "toolbar.tool.pencil",
+      "toolbar.tool.watercolor",
+      "toolbar.tool.eraser",
+      "toolbar.tool.lasso",
+      "toolbar.tool.maskingTape",
+      "toolbar.tool.undo",
+      "toolbar.tool.redo",
+      "toolbar.tool.clear"
     ]
   }
 }

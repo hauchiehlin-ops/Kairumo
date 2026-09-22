@@ -916,6 +916,8 @@ public struct NotebookEditorView: View {
     @ObservedObject var store = NotebookStore.shared
     @ObservedObject var audioManager = AudioRecorderManager.shared
     @ObservedObject var localizationManager = LocalizationManager.shared
+    /// 使用者自訂的工具列（S-261）。關掉的工具不畫出來。
+    @ObservedObject var toolbarSettings = ToolbarSettings.shared
     private func L(_ key: String) -> String { localizationManager.localized(key) }
 
     // 頁面狀態
@@ -951,6 +953,7 @@ public struct NotebookEditorView: View {
     @State private var currentPageHeight: CGFloat = PageGeometry.height
     /// 掌拒（工作項 S-45）。判定規則走核心，與 Android 同一份。
     @State private var palmRejection = PalmRejectionCoordinator()
+    @State private var showToolbarCustomization = false
     @State private var showPalmThresholdSheet = false
     @State private var showExportPreview = false
     @State private var wantsShareAfterPreview = false
@@ -1619,6 +1622,21 @@ public struct NotebookEditorView: View {
                 data: exportPdfData ?? Data(),
                 fileExtension: exportFileExtension,
                 onExport: { wantsShareAfterPreview = true })
+        }
+        .sheet(isPresented: $showToolbarCustomization) {
+            NavigationStack { ToolbarCustomizationView() }
+        }
+        // UI 測試直接把這張表叫出來。
+        //
+        // 不是為了偷懶 —— 這個入口在「更多」選單裡，而 SwiftUI 的 `Menu`
+        // 內容**根本不會出現在 XCUITest 的無障礙樹裡**（點開之後掃到的只有
+        // 工具列那些控制項）。編輯器稽核那 40 項菜單內控制項全部進棘輪
+        // 也是同一個原因。走不到選單就驗不了這張表，而這張表值得驗 ——
+        // 十三個開關少一個，使用者就有一支筆關不掉。
+        .onAppear {
+            if ProcessInfo.processInfo.environment["KAIRUMO_UITEST_TOOLBAR"] == "1" {
+                showToolbarCustomization = true
+            }
         }
         .sheet(isPresented: $showPalmThresholdSheet) {
             // 改完立刻套進仲裁器。存了卻要重開筆記本才生效的話，
@@ -2419,6 +2437,12 @@ public struct NotebookEditorView: View {
                     Label(localizationManager.localized("palm_rejection_settings"), systemImage: "hand.raised.slash")
                 }
                 .accessibilityIdentifier("editor.insert.palm_thresholds")
+                // 放在編輯器而不是設定頁：使用者想關掉某支筆的那一刻，
+                // 是他正看著那支筆的時候。
+                Button { showToolbarCustomization = true } label: {
+                    Label(localizationManager.localized("customize_toolbar"), systemImage: "slider.horizontal.3")
+                }
+                .accessibilityIdentifier("editor.customize_toolbar")
                 Button { withAnimation { isPlacingCommentPin.toggle() } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
                     .accessibilityIdentifier("editor.insert.comment_pin")
                 Button { showCollaborationSheet = true } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }
@@ -5372,6 +5396,17 @@ public struct NotebookEditorView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .background(Color(uiColor: .tertiarySystemGroupedBackground))
+        // 使用者把正在用的那一支關掉時要換一支，否則畫面上沒有任何按鈕
+        // 是亮的，而畫布還在用那支筆 —— 他看到的是「我的筆不見了，
+        // 但寫出來還是原本那支」。換成哪一支由核心決定（S-261），
+        // Android 走同一條規則。
+        .onChange(of: toolbarSettings.hiddenIdentifiers) { _ in
+            let next = toolbarSettings.identifierAfterHiding(selectedTool.parityIdentifier)
+            guard next != selectedTool.parityIdentifier,
+                  let tool = EditorToolType.allCases.first(where: { $0.parityIdentifier == next })
+            else { return }
+            selectEditorTool(tool)
+        }
     }
 
     private func drawingToolbarRow(showToolLabels: Bool) -> some View {
@@ -5385,7 +5420,7 @@ public struct NotebookEditorView: View {
     @ViewBuilder
     private func drawingToolbarItems(showToolLabels: Bool) -> some View {
                 // 筆刷群組。橡皮擦與套索另成一組（見 EditorToolType.isBrush）。
-                ForEach(EditorToolType.allCases.filter(\.isBrush)) { tool in
+                ForEach(EditorToolType.allCases.filter { $0.isBrush && toolbarSettings.isVisible($0.parityIdentifier) }) { tool in
                     Button {
                         selectEditorTool(tool)
                     } label: {
@@ -5416,7 +5451,7 @@ public struct NotebookEditorView: View {
                     .frame(height: 24)
 
                 // 擦除與選取。與筆刷分開，因為它們不沾墨，也不吃顏色與粗細。
-                ForEach(EditorToolType.allCases.filter { !$0.isBrush }) { tool in
+                ForEach(EditorToolType.allCases.filter { !$0.isBrush && toolbarSettings.isVisible($0.parityIdentifier) }) { tool in
                     Button {
                         selectEditorTool(tool)
                     } label: {
@@ -5696,6 +5731,7 @@ public struct NotebookEditorView: View {
 
                 // 復原與重做
                 HStack(spacing: 8) {
+                    if toolbarSettings.isVisible("editor.ink.undo") {
                     Button {
                         performUndo()
                     } label: {
@@ -5706,7 +5742,9 @@ public struct NotebookEditorView: View {
                     .accessibilityLabel(localizationManager.localized("undo"))
                     .help(localizationManager.localized("undo"))
                     .accessibilityIdentifier("editor.ink.undo")
+                    }
 
+                    if toolbarSettings.isVisible("editor.ink.redo") {
                     Button {
                         canvasView?.undoManager?.redo()
                     } label: {
@@ -5717,7 +5755,9 @@ public struct NotebookEditorView: View {
                     .accessibilityLabel(localizationManager.localized("redo"))
                     .help(localizationManager.localized("redo"))
                     .accessibilityIdentifier("editor.ink.redo")
+                    }
 
+                    if toolbarSettings.isVisible("editor.ink.clear") {
                     // 「清空整頁」與復原／重做之間要有分隔（工作項 S-62）。
                     //
                     // 三顆按鈕原本等距排在一起，而其中一顆會**清掉整頁**。
@@ -5738,6 +5778,7 @@ public struct NotebookEditorView: View {
                     .accessibilityLabel(localizationManager.localized("clear_page"))
                     .help(localizationManager.localized("clear_page"))
                     .accessibilityIdentifier("editor.ink.clear")
+                    }
                 }
     }
 
