@@ -3533,6 +3533,22 @@ private fun InkScreen(
         }
         val onePanFinger = gesture.oneFinger == uniffi.padnote_core.FfiFingerAction.PAN
 
+        // 多指手勢的動作端（S-GESTURE）。動作由核心的表決定，這裡只負責
+        // 把它接到 Android 這一側的對應操作上。
+        val onMultiFinger: (uniffi.padnote_core.FfiMultiFingerAction) -> Unit = { action ->
+            when (action) {
+                uniffi.padnote_core.FfiMultiFingerAction.NONE -> Unit
+                uniffi.padnote_core.FfiMultiFingerAction.UNDO ->
+                    if (engine.undo()) { revision++; clearToken++ }
+                uniffi.padnote_core.FfiMultiFingerAction.REDO ->
+                    if (engine.redo()) { revision++; clearToken++ }
+                uniffi.padnote_core.FfiMultiFingerAction.PREV_PAGE ->
+                    if (pageIndex > 0) pageIndex--
+                uniffi.padnote_core.FfiMultiFingerAction.NEXT_PAGE ->
+                    if (pageIndex < pageCount - 1) pageIndex++
+            }
+        }
+
         Box(
             modifier = Modifier.weight(1f).fillMaxHeight().padding(8.dp)
                 .dragAndDropTarget(
@@ -3565,8 +3581,28 @@ private fun InkScreen(
                                 (onePanFinger && !stylus && canvasScale > 1f)
                             if (!takeIt) continue
 
+                            // **多指手勢（S-GESTURE）。**
+                            //
+                            // 雙指點擊＝復原、三指點擊＝重做、三指上下滑＝翻頁。
+                            // 這四個動作 Apple 端一直都有（四個寫死的 @objc
+                            // 方法），**Android 一個都沒有** —— 使用者回報
+                            // 「手指操作畫布的設計無法落地」，在這一側那是字面
+                            // 意義的真。規則現在在核心的 finger_tap_action /
+                            // finger_swipe_action，兩端同一張表。
+                            //
+                            // 判定要在「手指全部離開」時才下：中途就判的話，
+                            // 一個正在進行的縮放會在經過兩指的瞬間被當成點擊。
+                            val startFingers = pointers
+                            var maxFingers = pointers
+                            var totalPan = Offset.Zero
+                            var totalZoom = 1f
+
                             var event = first
                             while (event.changes.any { it.pressed }) {
+                                maxFingers = maxOf(
+                                    maxFingers, event.changes.count { it.pressed })
+                                totalPan += event.calculatePan()
+                                totalZoom *= event.calculateZoom()
                                 val zoomChange = event.calculateZoom()
                                 val panChange = event.calculatePan()
                                 if (zoomChange != 1f || panChange != Offset.Zero) {
@@ -3596,6 +3632,25 @@ private fun InkScreen(
                                 event.changes.forEach { it.consume() }
                                 event = awaitPointerEvent(PointerEventPass.Initial)
                             }
+
+                            // 手指全部離開了 —— 現在才判這是點擊、滑動，
+                            // 還是一次縮放／平移。
+                            val zoomed = kotlin.math.abs(totalZoom - 1f) > 0.05f
+                            val panDistance = totalPan.getDistance()
+                            val action = when {
+                                zoomed -> uniffi.padnote_core.FfiMultiFingerAction.NONE
+                                // 幾乎沒動 = 點擊。48dp 是 Android 的最小
+                                // 觸控目標，拿它當「有沒有移動」的門檻。
+                                panDistance < 48.dp.toPx() ->
+                                    uniffi.padnote_core.fingerTapAction(maxFingers.toUByte())
+                                // 縱向為主才算滑動；橫向亂晃不該翻頁。
+                                kotlin.math.abs(totalPan.y) > kotlin.math.abs(totalPan.x) * 2 ->
+                                    uniffi.padnote_core.fingerSwipeAction(
+                                        maxFingers.toUByte(), totalPan.y < 0)
+                                else -> uniffi.padnote_core.FfiMultiFingerAction.NONE
+                            }
+                            // 起手就一指的不算多指手勢 —— 那是平移。
+                            if (startFingers >= 2) onMultiFinger(action)
                         }
                     }
                 }

@@ -94,6 +94,52 @@ pub fn canvas_gesture(mode: FfiEditorMode, ink: FfiInkPolicy) -> FfiCanvasGestur
     }
 }
 
+/// 多根手指一次點下或滑動時要做什麼。
+#[derive(Clone, Copy, PartialEq, Eq, Debug, uniffi::Enum)]
+pub enum FfiMultiFingerAction {
+    /// 沒有對應的動作 —— 什麼都不做。
+    None,
+    Undo,
+    Redo,
+    PrevPage,
+    NextPage,
+}
+
+/// N 根手指點一下要做什麼。
+///
+/// # 為什麼這張表要在核心
+///
+/// 這四個動作原本**只有 Apple 有**，而且是直接寫在
+/// `NotebookEditorView` 裡的四個 `@objc` 方法 —— Android 一個都沒有。
+/// 使用者的回報是「手指操作畫布的設計無法落地」，而在 Android 上那句話
+/// 是字面意義的真：雙指點了沒有復原，三指滑了不會翻頁。
+///
+/// 規則不在核心，兩端就不可能對齊 —— 這四個動作與「一指是畫還是平移」
+/// 一樣是使用者的肌肉記憶，在兩台裝置上不一樣比兩台都沒有更糟。
+///
+/// 一根手指不在這裡：那是畫線或平移，由 [`canvas_gesture`] 決定。
+#[uniffi::export]
+pub fn finger_tap_action(fingers: u8) -> FfiMultiFingerAction {
+    match fingers {
+        2 => FfiMultiFingerAction::Undo,
+        3 => FfiMultiFingerAction::Redo,
+        _ => FfiMultiFingerAction::None,
+    }
+}
+
+/// N 根手指往上／往下滑要做什麼。
+///
+/// 三指上滑是**下一頁**：內容跟著手指往上走，下一頁從底下進來 ——
+/// 與捲動的方向感一致。四指以上不給動作，那通常是手掌放上去。
+#[uniffi::export]
+pub fn finger_swipe_action(fingers: u8, upwards: bool) -> FfiMultiFingerAction {
+    match (fingers, upwards) {
+        (3, true) => FfiMultiFingerAction::NextPage,
+        (3, false) => FfiMultiFingerAction::PrevPage,
+        _ => FfiMultiFingerAction::None,
+    }
+}
+
 /// 把縮放值夾在允許範圍內。
 ///
 /// 兩端各自 `coerceIn` 的話，其中一邊寫錯常數不會有人發現 ——
@@ -122,6 +168,52 @@ pub fn max_pan_offset(content: f32, viewport: f32, scale: f32) -> f32 {
 
 #[cfg(test)]
 mod tests {
+    use super::{FfiMultiFingerAction, finger_swipe_action, finger_tap_action};
+
+    #[test]
+    fn two_and_three_finger_taps_are_undo_and_redo() {
+        assert_eq!(finger_tap_action(2), FfiMultiFingerAction::Undo);
+        assert_eq!(finger_tap_action(3), FfiMultiFingerAction::Redo);
+    }
+
+    #[test]
+    fn one_finger_has_no_tap_action() {
+        // 一指是畫線或平移，由 `canvas_gesture` 決定 —— 在這裡給它一個
+        // 動作的話，每畫一筆都會順便復原一次。
+        assert_eq!(finger_tap_action(1), FfiMultiFingerAction::None);
+    }
+
+    #[test]
+    fn four_or_more_fingers_do_nothing() {
+        // 四指以上通常是手掌放上去。給它動作的話，使用者把手靠在螢幕上
+        // 就會莫名其妙翻頁。
+        for n in 4..=10 {
+            assert_eq!(finger_tap_action(n), FfiMultiFingerAction::None, "{n} 指");
+            assert_eq!(
+                finger_swipe_action(n, true),
+                FfiMultiFingerAction::None,
+                "{n} 指"
+            );
+        }
+    }
+
+    #[test]
+    fn three_finger_swipe_turns_pages_in_the_scroll_direction() {
+        // 上滑是下一頁：內容跟著手指往上走，下一頁從底下進來。
+        assert_eq!(finger_swipe_action(3, true), FfiMultiFingerAction::NextPage);
+        assert_eq!(
+            finger_swipe_action(3, false),
+            FfiMultiFingerAction::PrevPage
+        );
+    }
+
+    #[test]
+    fn two_finger_swipe_is_not_a_page_turn() {
+        // 兩指是平移與縮放 —— 平移途中順手翻頁是最糟的誤觸。
+        assert_eq!(finger_swipe_action(2, true), FfiMultiFingerAction::None);
+        assert_eq!(finger_swipe_action(2, false), FfiMultiFingerAction::None);
+    }
+
     use super::*;
 
     #[test]

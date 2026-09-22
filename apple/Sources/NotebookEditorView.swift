@@ -457,6 +457,11 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         // 給自動化測試一個穩定的抓取點（畫面上有多個 scroll view）
         canvas.accessibilityIdentifier = "kairumo.canvas"
+        // 初始讀數。沒有這一行的話，測試在捏合之前讀到的是 nil，
+        // 而 nil 與 "zoom:1.000" 的差別會被誤讀成「縮放有作用」。
+        if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+            canvas.accessibilityValue = String(format: "zoom:%.3f", canvas.zoomScale)
+        }
         canvas.installPointerInteractionIfNeeded(delegate: context.coordinator)
         canvas.installPencilInteractionIfNeeded(delegate: context.coordinator.pencilTaps)
         context.coordinator.penHover.currentPath = { [weak coordinator = context.coordinator] in
@@ -566,6 +571,24 @@ struct CanvasRepresentable: UIViewRepresentable {
             reportScrollMetrics(scrollView)
         }
 
+        /// 縮放倍率的讀數，**只在 UI 測試下掛上去**。
+        ///
+        /// 「兩指捏合到底有沒有作用」這件事，看程式碼是看不出來的 ——
+        /// min/max 設了、delegate 接了、`viewForZooming` 也回了，每一項都
+        /// 對，而使用者回報它沒反應。中間任何一層（手勢辨識器互相擋、
+        /// scroll view 被停用、回傳了錯的子視圖）都會讓它靜靜地失效。
+        ///
+        /// 所以把倍率暴露出來讓測試讀。生產環境不掛 —— `accessibilityValue`
+        /// 是給 VoiceOver 念的，念一串「zoom:1.000」沒有任何意義。
+        private func publishZoomForTests(_ scrollView: UIScrollView) {
+            guard ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" else { return }
+            scrollView.accessibilityValue = String(format: "zoom:%.3f", scrollView.zoomScale)
+        }
+
+        func scrollViewDidZoom(_ scrollView: UIScrollView) {
+            publishZoomForTests(scrollView)
+        }
+
         func viewForZooming(in scrollView: UIScrollView) -> UIView? {
             // PKCanvasView 的縮放必須透過 delegate 指定目標視圖。
             // 因為我們接管了 delegate，內建的處理被覆蓋了，縮放手勢會完全失效。
@@ -597,28 +620,42 @@ struct CanvasRepresentable: UIViewRepresentable {
         /// 手勢辨識器只對 target 保持 weak 參考。
         let penHover = PenHoverCoordinator()
 
-        @objc func handleTwoFingerTap(_ sender: UITapGestureRecognizer) {
-            if sender.state == .ended {
-                parent.onUndo?()
+        /// 多指手勢的動作**由核心決定**（`finger_tap_action` /
+        /// `finger_swipe_action`）。
+        ///
+        /// 原本這四個方法各自寫死一個動作，而 Android 一個都沒有 ——
+        /// 使用者回報「手指操作畫布的設計無法落地」，在 Android 上那是
+        /// 字面意義的真。規則搬進核心之後兩端才可能對齊，而這四個動作
+        /// 與「一指是畫還是平移」一樣是肌肉記憶：兩台裝置不一樣，
+        /// 比兩台都沒有更糟。
+        private func perform(_ action: FfiMultiFingerAction) {
+            switch action {
+            case .none: break
+            case .undo: parent.onUndo?()
+            case .redo: parent.onRedo?()
+            case .prevPage: parent.onPrevPage?()
+            case .nextPage: parent.onNextPage?()
             }
+        }
+
+        @objc func handleTwoFingerTap(_ sender: UITapGestureRecognizer) {
+            guard sender.state == .ended else { return }
+            perform(fingerTapAction(fingers: 2))
         }
 
         @objc func handleThreeFingerTap(_ sender: UITapGestureRecognizer) {
-            if sender.state == .ended {
-                parent.onRedo?()
-            }
+            guard sender.state == .ended else { return }
+            perform(fingerTapAction(fingers: 3))
         }
 
         @objc func handleThreeFingerSwipeUp(_ sender: UISwipeGestureRecognizer) {
-            if sender.state == .ended {
-                parent.onNextPage?()
-            }
+            guard sender.state == .ended else { return }
+            perform(fingerSwipeAction(fingers: 3, upwards: true))
         }
 
         @objc func handleThreeFingerSwipeDown(_ sender: UISwipeGestureRecognizer) {
-            if sender.state == .ended {
-                parent.onPrevPage?()
-            }
+            guard sender.state == .ended else { return }
+            perform(fingerSwipeAction(fingers: 3, upwards: false))
         }
 
         init(_ parent: CanvasRepresentable) {
