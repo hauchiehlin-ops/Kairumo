@@ -3465,7 +3465,15 @@ public struct NotebookEditorView: View {
                 )
             }
 
-            // 放置討論圖釘模式互動層
+            // 放置討論圖釘模式互動層。
+            //
+            // **`zIndex` 不能省。** 這一層原本沒有設，於是預設為 0 ——
+            // 而畫布是 `.zIndex(1)`、物件層是 `.zIndex(2)`，它就被壓在最底下，
+            // 點擊永遠到不了它。症狀是「加入討論圖釘」按下去之後，橫幅叫你
+            // 點畫布，點下去卻是在畫線（手繪模式）或插入文字游標（打字模式），
+            // 圖釘**一個都放不上去**。這個功能等於完全不能用。
+            //
+            // 2026-09-22 拍操作手冊截圖時發現：橫幅出現了，圖釘卻怎麼點都不出現。
             if isPlacingCommentPin {
                 GeometryReader { geo in
                     Color.blue.opacity(0.001)
@@ -3499,6 +3507,7 @@ public struct NotebookEditorView: View {
                             collaborationManager.broadcastSelection(selectedId: newPin.id)
                         }
                 }
+                .zIndex(3)
 
                 // 放置圖釘模式頂部提示條
                 HStack(spacing: 8) {
