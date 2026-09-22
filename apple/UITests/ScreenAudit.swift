@@ -55,6 +55,7 @@ enum ScreenAudit {
 
         var missing: [String] = []
         var unreachable: [String] = []
+        var matchedByLabelOnly: [String] = []
         let visible = app.windows.firstMatch.frame
 
         // 先等第一個控制項出現，讓畫面安定下來；之後就用 `.exists` 不再等。
@@ -68,14 +69,34 @@ enum ScreenAudit {
                 .waitForExistence(timeout: 10)
         }
 
+        let labels = labelsById(screen: screen)
         for id in required where !allowMissing.contains(id) {
-            let element = app.descendants(matching: .any)
-                .matching(identifier: id)
-                .firstMatch
-            guard exists(element, in: app) else {
-                missing.append(id)
-                continue
+            // **順序很重要。** 先用識別字找（必要時捲動），真的找不到才退回標籤。
+            //
+            // 反過來寫過一次，結果是災難：標籤在整個 App 裡不是唯一的。
+            // 「自訂工具列」那張表底下四列（遮蔽膠帶／復原／重做／清除頁面）
+            // 在小螢幕上要捲才看得到，而 `app.buttons["Undo"]` 立刻就對上了
+            // **編輯器自己那顆復原**（它在表單後面、被蓋住、點不到）——
+            // 於是稽核報了四個「點不到」，而那四個是它自己找錯的元素。
+            //
+            // 識別字才是唯一的。標籤只用在識別字真的不存在的地方（選單項目）。
+            let byId = app.descendants(matching: .any).matching(identifier: id).firstMatch
+            var element = byId
+            var matchedByLabel = false
+            if !exists(byId, in: app) {
+                guard let label = labels[id], !label.isEmpty,
+                      case let byLabel = app.buttons[label].firstMatch,
+                      byLabel.exists
+                else {
+                    missing.append(id)
+                    continue
+                }
+                element = byLabel
+                matchedByLabel = true
             }
+            // 用標籤對上的，代表識別字沒跟進無障礙樹。功能可能是通的，
+            // 但下一個人改文案就會把這條稽核改紅 —— 值得知道，不值得擋。
+            if matchedByLabel { matchedByLabelOnly.append(id) }
             // 停用的控制項不該被算成「點不到」—— 那是它自己的狀態。
             guard element.isEnabled else { continue }
             // 沒有面積的東西本來就點不到，那是版面問題不是遮蔽問題。
@@ -83,13 +104,20 @@ enum ScreenAudit {
                 missing.append("\(id)（面積是 0）")
                 continue
             }
-            // **只看畫面上的**。捲動範圍之外的東西 `isHittable` 本來就是
-            // false，那不是 bug，捲下去就點得到 —— 首頁的 home.version、
-            // home.docs.manual 都是這樣，第一次跑被誤判成 11 個「點不到」。
+            // **只看完整落在畫面上的**。捲動範圍之外的東西 `isHittable`
+            // 本來就是 false，那不是 bug，捲下去就點得到 —— 首頁的
+            // home.version、home.docs.manual 都是這樣，第一次跑被誤判成
+            // 11 個「點不到」。
             //
-            // 這道稽核要抓的是「就在眼前、看得到、卻按不出反應」，
+            // 條件是「完整包含」而不是「有重疊」。被視窗邊緣切掉一半的東西
+            // 也點不到，而那同樣不是 bug —— 「更多」選單最下面四項就是這樣
+            // （實測：視窗高 874，它們在 y=723～912），排在更後面、完全在
+            // 窗外的那幾項反而因為沒有重疊而被正確跳過。同一個成因兩種結論，
+            // 分界線畫錯了。
+            //
+            // 這道稽核要抓的是「就在眼前、整個看得到、卻按不出反應」，
             // 也就是上面蓋了一層沒給 zIndex 的東西。
-            guard element.frame.intersects(visible) else { continue }
+            guard visible.contains(element.frame) else { continue }
             if !element.isHittable {
                 unreachable.append(id)
             }
@@ -104,6 +132,12 @@ enum ScreenAudit {
                 + "\n\n一個都對不上的話，多半不是缺識別碼，是**根本沒到這個畫面**"
                 + "（例如卡在首次啟動流程）。",
             file: file, line: line)
+        if !matchedByLabelOnly.isEmpty {
+            // 不是失敗。是「這些只能靠標籤認出來」的清單 —— 文案一改就會
+            // 變成假的缺失，所以要看得見。
+            print("【稽核｜\(screen)】只能用標籤對上（識別字沒跟進無障礙樹）："
+                  + matchedByLabelOnly.joined(separator: ", "))
+        }
         XCTAssertTrue(
             unreachable.isEmpty,
             "畫面「\(screen)」這些控制項畫得出來、也是啟用的，卻**點不到** ——"
@@ -113,13 +147,125 @@ enum ScreenAudit {
     }
 
     /// 從 `screens.json` 讀這個平台在這個畫面上必須有的控制項。
-    private static func requiredControlIds(screen: String) -> [String] {
+    /// 只稽核指定的幾個控制項，其餘不管。
+    ///
+    /// 給「要先做一個動作才看得到」的東西用 —— 選單項目就是這樣：
+    /// `check` 是在「畫面已到位、還沒開任何浮層」的時點呼叫的，那時選單
+    /// 是關的，十八個項目一個都不在樹裡。不能把開選單塞進 `check`，
+    /// 因為開著的選單會把它底下的控制項全部變成點不到。
+    /// - Parameters:
+    ///   - requireHittable: 是否要求「點得到」。系統算繪的選單要傳 `false`。
+    ///
+    ///     原因不是為了讓測試變綠。這道稽核抓的是「上面蓋了一層沒給 zIndex
+    ///     的東西」，而**那件事在系統選單裡不可能發生** —— 版面是 UIKit 的，
+    ///     不是我們排的。實測「更多」選單有十八項，底下幾項落在選單自己的
+    ///     捲動範圍外，`isHittable` 因此是 false；那跟遮蔽沒有關係，
+    ///     捲一下就點得到。
+    ///
+    ///     這裡守得住的是「項目在不在、是不是啟用的」，而那已經從
+    ///     **完全沒有執行期檢查**變成有了。
+    static func checkOnly(
+        _ app: XCUIApplication,
+        screen: String,
+        ids: [String],
+        requireHittable: Bool = true,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        let labels = labelsById(screen: screen)
+        var missing: [String] = []
+        var unreachable: [String] = []
+        let visible = app.windows.firstMatch.frame
+
+        for id in ids {
+            let (element, _) = elementFor(id, label: labels[id], in: app)
+            guard element.exists else {
+                missing.append("\(id)（標籤：\(labels[id] ?? "—")）")
+                continue
+            }
+            guard element.isEnabled else { continue }
+            // 同 `check`：完整落在畫面上才問點不點得到。理由見那邊。
+            guard requireHittable, visible.contains(element.frame) else { continue }
+            if !element.isHittable {
+                // 座標一起印。「點不到」有兩種完全不同的成因 ——
+                // 上面蓋了東西（要修產品），或是它其實在畫面外而
+                // `intersects` 因為選單裁切而誤判（要修稽核）。
+                // 沒有座標就分不出來，而分不出來就只能猜。
+                unreachable.append(
+                    "\(id) frame=\(element.frame) 視窗=\(visible)"
+                    + " label=\(labels[id] ?? "—")")
+            }
+        }
+
+        XCTAssertTrue(
+            missing.isEmpty,
+            "畫面「\(screen)」少了這些控制項：\n" + missing.joined(separator: "\n"),
+            file: file, line: line)
+        XCTAssertTrue(
+            unreachable.isEmpty,
+            "畫面「\(screen)」這些控制項在、也是啟用的，卻**點不到**：\n"
+                + unreachable.joined(separator: "\n"),
+            file: file, line: line)
+    }
+
+    /// 控制項 id → 英文標籤。只給 `elementFor` 當後備。
+    ///
+    /// # 為什麼需要後備
+    ///
+    /// SwiftUI 的 `Menu` 把選單項目交給 UIKit 的 `UIAction` 算繪，而
+    /// **`.accessibilityIdentifier` 不會跟過去**。實測（`MenuProbe`）：打開
+    /// 「更多」之後，十八個項目全部在無障礙樹裡，`identifier` 全是空的，
+    /// `label` 全部正確。
+    ///
+    /// 在量到這件事之前，編輯器棘輪裡那 40 項的註解寫的是「藏在選單／浮層裡」
+    /// —— 那個說法讓人以為是**時序**問題（沒展開所以看不到），於是沒有人再
+    /// 往下追。真正的原因是識別字在跨進 UIKit 時掉了，而那是修得動的。
+    ///
+    /// 標籤來自核心的字串表（經由 `screens.json`），不是測試自己寫死的 ——
+    /// 寫死的話文案一改，稽核就會開始報假的缺失。
+    private static func labelsById(screen: String) -> [String: String] {
+        guard let entry = specEntry(screen: screen),
+              let controls = entry["controls"] as? [[String: Any]]
+        else { return [:] }
+        var out: [String: String] = [:]
+        for c in controls {
+            if let id = c["id"] as? String,
+               let label = c["label_en"] as? String,
+               !label.isEmpty {
+                out[id] = label
+            }
+        }
+        return out
+    }
+
+    /// 先用識別字找；找不到才退而用標籤找。
+    ///
+    /// 順序不能反 —— 標籤會重複（兩顆按鈕寫著同一個字是常態），
+    /// 識別字才是唯一的。標籤只是「總比完全驗不到好」。
+    private static func elementFor(
+        _ id: String, label: String?, in app: XCUIApplication
+    ) -> (element: XCUIElement, matchedByLabel: Bool) {
+        let byId = app.descendants(matching: .any).matching(identifier: id).firstMatch
+        if byId.exists { return (byId, false) }
+        if let label, !label.isEmpty {
+            let byLabel = app.buttons[label].firstMatch
+            if byLabel.exists { return (byLabel, true) }
+        }
+        return (byId, false)
+    }
+
+    private static func specEntry(screen: String) -> [String: Any]? {
         guard let url = Bundle(for: ScreenAuditAnchor.self)
             .url(forResource: "screens", withExtension: "json"),
             let data = try? Data(contentsOf: url),
-            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let entry = root[screen] as? [String: Any],
-            let ids = entry["apple"] as? [String]
+            let root = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return nil }
+        return root[screen] as? [String: Any]
+    }
+
+    private static func requiredControlIds(screen: String) -> [String] {
+        guard let entry = specEntry(screen: screen),
+              let ids = entry["apple"] as? [String]
         else {
             XCTFail(
                 "讀不到 screens.json 的「\(screen)」—— "

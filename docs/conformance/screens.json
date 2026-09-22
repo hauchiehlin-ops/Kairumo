@@ -144,6 +144,363 @@
       "editor.sidebar.thumb_smaller",
       "editor.sidebar.thumb_larger",
       "editor.canvas"
+    ],
+    "controls": [
+      {
+        "id": "editor.system_back",
+        "label_en": "",
+        "label_key": "back"
+      },
+      {
+        "id": "editor.home",
+        "label_en": "Home",
+        "label_key": "home"
+      },
+      {
+        "id": "editor.sidebar_toggle",
+        "label_en": "",
+        "label_key": "page_structure"
+      },
+      {
+        "id": "editor.mode",
+        "label_en": "",
+        "label_key": "editor_mode"
+      },
+      {
+        "id": "editor.title",
+        "label_en": "Notebook Title",
+        "label_key": "note_title"
+      },
+      {
+        "id": "editor.page.prev",
+        "label_en": "Previous page",
+        "label_key": "previous_page"
+      },
+      {
+        "id": "editor.page.indicator",
+        "label_en": "",
+        "label_key": ""
+      },
+      {
+        "id": "editor.page.next",
+        "label_en": "Next page",
+        "label_key": "next_page"
+      },
+      {
+        "id": "editor.page.add",
+        "label_en": "Add Page",
+        "label_key": "add_page"
+      },
+      {
+        "id": "editor.page.display_mode",
+        "label_en": "Page mode",
+        "label_key": "page_mode"
+      },
+      {
+        "id": "editor.page_format",
+        "label_en": "Page format",
+        "label_key": "page_format"
+      },
+      {
+        "id": "editor.guide_palette",
+        "label_en": "Guide Colour",
+        "label_key": "guide_palette"
+      },
+      {
+        "id": "editor.more",
+        "label_en": "More",
+        "label_key": "more_tools"
+      },
+      {
+        "id": "editor.record",
+        "label_en": "Start Recording",
+        "label_key": "start_recording"
+      },
+      {
+        "id": "editor.share",
+        "label_en": "",
+        "label_key": "export_and_print"
+      },
+      {
+        "id": "editor.insert.assets",
+        "label_en": "Asset Library",
+        "label_key": "asset_library"
+      },
+      {
+        "id": "editor.insert.audio",
+        "label_en": "Insert Recording",
+        "label_key": "insert_audio"
+      },
+      {
+        "id": "editor.insert.image",
+        "label_en": "Insert Image",
+        "label_key": "insert_image"
+      },
+      {
+        "id": "editor.insert.math",
+        "label_en": "Math Calculator",
+        "label_key": "math_calc"
+      },
+      {
+        "id": "editor.insert.chart",
+        "label_en": "Chart Studio",
+        "label_key": "chart_studio"
+      },
+      {
+        "id": "editor.insert.table",
+        "label_en": "Table",
+        "label_key": "table_studio"
+      },
+      {
+        "id": "editor.insert.shape",
+        "label_en": "Shapes & Flowcharts",
+        "label_key": "shape_studio"
+      },
+      {
+        "id": "editor.insert.model3d",
+        "label_en": "Insert 3D Model",
+        "label_key": "insert_3d"
+      },
+      {
+        "id": "editor.insert.theme_tools",
+        "label_en": "Theme Tools",
+        "label_key": "theme_tools"
+      },
+      {
+        "id": "editor.customize_toolbar",
+        "label_en": "Customize Toolbar",
+        "label_key": "customize_toolbar"
+      },
+      {
+        "id": "editor.insert.refine_sketch",
+        "label_en": "Refine Sketch",
+        "label_key": "refine_sketch"
+      },
+      {
+        "id": "editor.insert.comment_pin",
+        "label_en": "Add Comment Pin",
+        "label_key": "add_comment_pin"
+      },
+      {
+        "id": "editor.insert.collaborate",
+        "label_en": "Collaborate",
+        "label_key": "collaborate"
+      },
+      {
+        "id": "editor.insert.recognize",
+        "label_en": "Recognize Handwriting",
+        "label_key": "recognize_handwriting"
+      },
+      {
+        "id": "editor.insert.ai_summary",
+        "label_en": "Summary & To-dos",
+        "label_key": "ai_summary"
+      },
+      {
+        "id": "editor.export.pdf",
+        "label_en": "Export PDF",
+        "label_key": "export_pdf"
+      },
+      {
+        "id": "editor.export.image",
+        "label_en": "Export Image",
+        "label_key": "export_image"
+      },
+      {
+        "id": "editor.export.print",
+        "label_en": "Print Notebook",
+        "label_key": "print_note"
+      },
+      {
+        "id": "editor.export.share",
+        "label_en": "Share Note",
+        "label_key": "share_note"
+      },
+      {
+        "id": "editor.ink.pen",
+        "label_en": "Pen",
+        "label_key": "tool_pen"
+      },
+      {
+        "id": "editor.ink.ballpoint",
+        "label_en": "Ballpoint",
+        "label_key": "tool_ballpoint"
+      },
+      {
+        "id": "editor.ink.brush",
+        "label_en": "Calligraphy Brush",
+        "label_key": "tool_brush"
+      },
+      {
+        "id": "editor.ink.marker",
+        "label_en": "Marker",
+        "label_key": "tool_marker"
+      },
+      {
+        "id": "editor.ink.highlighter",
+        "label_en": "Highlighter",
+        "label_key": "tool_highlighter"
+      },
+      {
+        "id": "editor.ink.pencil",
+        "label_en": "Pencil",
+        "label_key": "tool_pencil"
+      },
+      {
+        "id": "editor.ink.watercolor",
+        "label_en": "Watercolor",
+        "label_key": "tool_watercolor"
+      },
+      {
+        "id": "editor.ink.eraser",
+        "label_en": "Eraser",
+        "label_key": "tool_eraser"
+      },
+      {
+        "id": "editor.ink.lasso",
+        "label_en": "Lasso",
+        "label_key": "tool_lasso"
+      },
+      {
+        "id": "editor.ink.maskingTape",
+        "label_en": "Masking Tape",
+        "label_key": "tool_masking_tape"
+      },
+      {
+        "id": "editor.ink.width",
+        "label_en": "Stroke Width",
+        "label_key": "stroke_width"
+      },
+      {
+        "id": "editor.ink.palette",
+        "label_en": "",
+        "label_key": "color"
+      },
+      {
+        "id": "editor.ink.undo",
+        "label_en": "Undo",
+        "label_key": "undo"
+      },
+      {
+        "id": "editor.ink.redo",
+        "label_en": "Redo",
+        "label_key": "redo"
+      },
+      {
+        "id": "editor.ink.clear",
+        "label_en": "Clear Current Page",
+        "label_key": "clear_page"
+      },
+      {
+        "id": "editor.text.add_box",
+        "label_en": "Add Text Box",
+        "label_key": "add_text_box"
+      },
+      {
+        "id": "editor.text.studio",
+        "label_en": "Text Studio",
+        "label_key": "tool_text"
+      },
+      {
+        "id": "editor.text.bold",
+        "label_en": "Bold",
+        "label_key": "text_bold"
+      },
+      {
+        "id": "editor.text.italic",
+        "label_en": "Italic",
+        "label_key": "text_italic"
+      },
+      {
+        "id": "editor.text.underline",
+        "label_en": "Underline",
+        "label_key": "text_underline"
+      },
+      {
+        "id": "editor.text.align_left",
+        "label_en": "Align left",
+        "label_key": "align_left"
+      },
+      {
+        "id": "editor.text.align_center",
+        "label_en": "Center horizontally",
+        "label_key": "align_center_h"
+      },
+      {
+        "id": "editor.text.align_right",
+        "label_en": "Align right",
+        "label_key": "align_right"
+      },
+      {
+        "id": "editor.text.snap_grid",
+        "label_en": "Snap to Grid",
+        "label_key": "snap_to_grid"
+      },
+      {
+        "id": "editor.text.layer_forward",
+        "label_en": "Bring Forward",
+        "label_key": "layer_bring_forward"
+      },
+      {
+        "id": "editor.text.layer_backward",
+        "label_en": "Send Backward",
+        "label_key": "layer_send_backward"
+      },
+      {
+        "id": "editor.text.symbols",
+        "label_en": "Special Symbols",
+        "label_key": "special_symbols"
+      },
+      {
+        "id": "editor.text.select",
+        "label_en": "Select",
+        "label_key": "marquee_select"
+      },
+      {
+        "id": "editor.text.link",
+        "label_en": "Insert Link",
+        "label_key": "insert_link"
+      },
+      {
+        "id": "editor.text.undo",
+        "label_en": "Undo",
+        "label_key": "undo"
+      },
+      {
+        "id": "editor.text.redo",
+        "label_en": "Redo",
+        "label_key": "redo"
+      },
+      {
+        "id": "editor.sidebar.tab.pages",
+        "label_en": "Pages",
+        "label_key": "structure_pages"
+      },
+      {
+        "id": "editor.sidebar.tab.folders",
+        "label_en": "Folders",
+        "label_key": "structure_folders"
+      },
+      {
+        "id": "editor.sidebar.list",
+        "label_en": "",
+        "label_key": ""
+      },
+      {
+        "id": "editor.sidebar.thumb_smaller",
+        "label_en": "Smaller Previews",
+        "label_key": "thumbnail_smaller"
+      },
+      {
+        "id": "editor.sidebar.thumb_larger",
+        "label_en": "Larger Previews",
+        "label_key": "thumbnail_larger"
+      },
+      {
+        "id": "editor.canvas",
+        "label_en": "",
+        "label_key": ""
+      }
     ]
   },
   "home": {
@@ -203,6 +560,168 @@
       "home.docs.privacy",
       "home.version",
       "home.diagnostics"
+    ],
+    "controls": [
+      {
+        "id": "home.title",
+        "label_en": "",
+        "label_key": ""
+      },
+      {
+        "id": "home.language",
+        "label_en": "Language",
+        "label_key": "language"
+      },
+      {
+        "id": "home.identity.card",
+        "label_en": "Shown while collaborating · stored on this device",
+        "label_key": "identity_desc_short"
+      },
+      {
+        "id": "home.identity.edit",
+        "label_en": "Edit Identity",
+        "label_key": "edit_identity"
+      },
+      {
+        "id": "home.search.field",
+        "label_en": "Search note titles, drafts, or transcripts…",
+        "label_key": "search_placeholder"
+      },
+      {
+        "id": "home.action.new_note",
+        "label_en": "New Note",
+        "label_key": "new_note"
+      },
+      {
+        "id": "home.action.record",
+        "label_en": "Start Recording",
+        "label_key": "start_recording"
+      },
+      {
+        "id": "home.action.assets",
+        "label_en": "Asset Library",
+        "label_key": "asset_library"
+      },
+      {
+        "id": "home.action.import",
+        "label_en": "Import Note",
+        "label_key": "import_note"
+      },
+      {
+        "id": "home.continue.show_all",
+        "label_en": "All",
+        "label_key": "show_all"
+      },
+      {
+        "id": "home.continue.unhide",
+        "label_en": "Reset Hidden",
+        "label_key": "unhide_items"
+      },
+      {
+        "id": "home.continue.list",
+        "label_en": "",
+        "label_key": ""
+      },
+      {
+        "id": "home.recordings.show_all",
+        "label_en": "All",
+        "label_key": "show_all"
+      },
+      {
+        "id": "home.recordings.unhide",
+        "label_en": "Reset Hidden",
+        "label_key": "unhide_items"
+      },
+      {
+        "id": "home.recordings.open_folder",
+        "label_en": "Open Kairumo Record Folder",
+        "label_key": "open_record_folder"
+      },
+      {
+        "id": "home.recordings.list",
+        "label_en": "",
+        "label_key": ""
+      },
+      {
+        "id": "home.notebooks.sort",
+        "label_en": "",
+        "label_key": "sort_by"
+      },
+      {
+        "id": "home.notebooks.rename_root",
+        "label_en": "Rename Root Folder",
+        "label_key": "edit_root_folder"
+      },
+      {
+        "id": "home.notebooks.new_folder",
+        "label_en": "New Subfolder",
+        "label_key": "new_subfolder"
+      },
+      {
+        "id": "home.notebooks.unhide",
+        "label_en": "Reset Hidden",
+        "label_key": "unhide_items"
+      },
+      {
+        "id": "home.notebooks.list",
+        "label_en": "",
+        "label_key": ""
+      },
+      {
+        "id": "home.cloud.card",
+        "label_en": "Sign in once and your notebooks, folders and settings stay in sync on every device. Data goes to a private app folder in your Google Drive — you won't see it among your files, and neither will we.",
+        "label_key": "cloud_sync_explainer"
+      },
+      {
+        "id": "home.cloud.signin",
+        "label_en": "Connect Google Drive",
+        "label_key": "sign_in_google"
+      },
+      {
+        "id": "home.cloud.sync_now",
+        "label_en": "Sync Now",
+        "label_key": "sync_now"
+      },
+      {
+        "id": "home.cloud.signout",
+        "label_en": "Sign out",
+        "label_key": "sign_out"
+      },
+      {
+        "id": "home.data.backup",
+        "label_en": "Create Backup",
+        "label_key": "backup_create"
+      },
+      {
+        "id": "home.data.restore",
+        "label_en": "Restore from Backup",
+        "label_key": "backup_restore"
+      },
+      {
+        "id": "home.data.folder",
+        "label_en": "Choose Sync Folder",
+        "label_key": "sync_choose_folder"
+      },
+      {
+        "id": "home.docs.manual",
+        "label_en": "User Manual",
+        "label_key": "user_manual"
+      },
+      {
+        "id": "home.docs.privacy",
+        "label_en": "Privacy Policy",
+        "label_key": "privacy_policy"
+      },
+      {
+        "id": "home.version",
+        "label_en": "Version",
+        "label_key": "version_number"
+      },
+      {
+        "id": "home.diagnostics",
+        "label_en": "Version",
+        "label_key": "version_number"
+      }
     ]
   },
   "new_notebook": {
@@ -225,6 +744,58 @@
       "new_notebook.palette",
       "new_notebook.document.current",
       "new_notebook.document.tree"
+    ],
+    "controls": [
+      {
+        "id": "new_notebook.cancel",
+        "label_en": "Cancel",
+        "label_key": "cancel"
+      },
+      {
+        "id": "new_notebook.confirm",
+        "label_en": "OK",
+        "label_key": "confirm"
+      },
+      {
+        "id": "new_notebook.title.field",
+        "label_en": "Notebook Title",
+        "label_key": "note_title"
+      },
+      {
+        "id": "new_notebook.paper.themes",
+        "label_en": "Page Templates",
+        "label_key": "select_template"
+      },
+      {
+        "id": "new_notebook.paper.list",
+        "label_en": "",
+        "label_key": ""
+      },
+      {
+        "id": "new_notebook.paper.content",
+        "label_en": "Content on this paper",
+        "label_key": "paper_content"
+      },
+      {
+        "id": "new_notebook.palette",
+        "label_en": "Guide Colour",
+        "label_key": "guide_palette"
+      },
+      {
+        "id": "new_notebook.recent.list",
+        "label_en": "",
+        "label_key": ""
+      },
+      {
+        "id": "new_notebook.document.current",
+        "label_en": "Template in use",
+        "label_key": "doc_template"
+      },
+      {
+        "id": "new_notebook.document.tree",
+        "label_en": "",
+        "label_key": ""
+      }
     ]
   },
   "toolbar": {
@@ -261,6 +832,83 @@
       "toolbar.tool.undo",
       "toolbar.tool.redo",
       "toolbar.tool.clear"
+    ],
+    "controls": [
+      {
+        "id": "toolbar.hint",
+        "label_en": "",
+        "label_key": ""
+      },
+      {
+        "id": "toolbar.reset",
+        "label_en": "Restore Default Toolbar",
+        "label_key": "toolbar_reset"
+      },
+      {
+        "id": "toolbar.tool.pen",
+        "label_en": "Pen",
+        "label_key": "tool_pen"
+      },
+      {
+        "id": "toolbar.tool.ballpoint",
+        "label_en": "Ballpoint",
+        "label_key": "tool_ballpoint"
+      },
+      {
+        "id": "toolbar.tool.brush",
+        "label_en": "Calligraphy Brush",
+        "label_key": "tool_brush"
+      },
+      {
+        "id": "toolbar.tool.marker",
+        "label_en": "Marker",
+        "label_key": "tool_marker"
+      },
+      {
+        "id": "toolbar.tool.highlighter",
+        "label_en": "Highlighter",
+        "label_key": "tool_highlighter"
+      },
+      {
+        "id": "toolbar.tool.pencil",
+        "label_en": "Pencil",
+        "label_key": "tool_pencil"
+      },
+      {
+        "id": "toolbar.tool.watercolor",
+        "label_en": "Watercolor",
+        "label_key": "tool_watercolor"
+      },
+      {
+        "id": "toolbar.tool.eraser",
+        "label_en": "Eraser",
+        "label_key": "tool_eraser"
+      },
+      {
+        "id": "toolbar.tool.lasso",
+        "label_en": "Lasso",
+        "label_key": "tool_lasso"
+      },
+      {
+        "id": "toolbar.tool.maskingTape",
+        "label_en": "Masking Tape",
+        "label_key": "tool_masking_tape"
+      },
+      {
+        "id": "toolbar.tool.undo",
+        "label_en": "Undo",
+        "label_key": "undo"
+      },
+      {
+        "id": "toolbar.tool.redo",
+        "label_en": "Redo",
+        "label_key": "redo"
+      },
+      {
+        "id": "toolbar.tool.clear",
+        "label_en": "Clear Current Page",
+        "label_key": "clear_page"
+      }
     ]
   }
 }

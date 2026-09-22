@@ -373,6 +373,68 @@ extension SmokeUITests {
         ScreenAudit.check(app, screen: "editor", allowMissing: Self.editorNotWiredYet)
     }
 
+    /// 「更多」選單裡的十六個項目：打開之後要在、而且點得到。
+    ///
+    /// # 這條測試補的是 S-261d
+    ///
+    /// 在此之前，`editor.insert.*` 那一整批只有靜態對照閘門在守 ——
+    /// 它掃的是原始碼裡有沒有寫出那個識別碼，所以「按鈕在、但按下去沒反應」
+    /// 或「按鈕被蓋住點不到」它一律看不見。
+    ///
+    /// 沒有人寫這條測試的原因是：用識別碼找不到選單項目。實測
+    /// （`MenuProbe`）查出真正的原因 —— SwiftUI 的 `Menu` 把項目交給 UIKit
+    /// 的 `UIAction` 算繪，`.accessibilityIdentifier` 不會跟過去，
+    /// 但**標籤會**。所以 `ScreenAudit` 現在找不到識別碼時會改用標籤找，
+    /// 標籤同樣來自核心的字串表。
+    func testMoreMenuItemsAreReachable() {
+        let app = launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+
+        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
+        guard card.waitForExistence(timeout: 10) else {
+            XCTFail("首頁找不到種子筆記，開不了編輯器")
+            return
+        }
+        card.tap()
+
+        let more = app.descendants(matching: .any).matching(identifier: "editor.more").firstMatch
+        guard more.waitForExistence(timeout: 15) else {
+            XCTFail("編輯器上沒有「更多」選單")
+            return
+        }
+        more.tap()
+
+        // 選單有展開動畫。太早掃會掃到一半，而**間歇失敗的閘門會被關掉**。
+        let firstItem = app.buttons["Asset Library"].firstMatch
+        XCTAssertTrue(firstItem.waitForExistence(timeout: 5), "「更多」選單沒有打開")
+
+        // `requireHittable: false` —— 理由見 `ScreenAudit.checkOnly`。
+        // 簡單說：選單的版面是 UIKit 排的，遮蔽這個 bug 類型在那裡不會發生，
+        // 而底下幾項落在選單自己的捲動範圍外，點不到是正常的。
+        ScreenAudit.checkOnly(
+            app, screen: "editor", ids: Self.moreMenuItems, requireHittable: false)
+    }
+
+    /// 「更多」選單裡的項目。與 `editorNotWiredYet` 是互補的兩半 ——
+    /// 這裡每加一個，那邊就該少一個。
+    static let moreMenuItems: [String] = [
+        "editor.insert.assets",
+        "editor.insert.audio",
+        "editor.insert.image",
+        "editor.insert.math",
+        "editor.insert.chart",
+        "editor.insert.table",
+        "editor.insert.shape",
+        "editor.insert.model3d",
+        "editor.insert.theme_tools",
+        "editor.customize_toolbar",
+        "editor.insert.refine_sketch",
+        "editor.insert.comment_pin",
+        "editor.insert.collaborate",
+        "editor.insert.recognize",
+        "editor.insert.ai_summary",
+    ]
+
     /// 自訂工具列：十三個開關加上說明與還原，全部要在、而且點得到。
     ///
     /// 入口在「更多」選單裡，而 SwiftUI 的 `Menu` 內容**不會出現在
@@ -441,9 +503,15 @@ extension SmokeUITests {
     /// `kairumo.canvas` —— **識別碼掛在沒被顯示的那個視圖上**。
     /// 掃原始碼的閘門看不見這種，執行期稽核看得見。
     static let editorNotWiredYet: Set<String> = [
-        // 「自訂工具列」的入口，與下面的 insert.* 一樣住在「更多」選單裡。
-        // 這張表本身有自己的測試（testToolbarCustomizationControlsAreReachable），
-        // 走的是啟動變數而不是選單 —— 理由見那條測試。
+        // ↓ 這十五項**已經有執行期檢查了**（testMoreMenuItemsAreReachable），
+        //   只是不在這條單一畫面狀態的稽核裡 —— 它們要先打開選單才看得到，
+        //   而開著的選單會把底下的控制項全部變成點不到。
+        //
+        //   留在棘輪裡不代表「還沒接上」。在量清楚 S-261d 之前，這整批的
+        //   註解寫的是「藏在選單／浮層裡」，那個說法讓人以為是時序問題
+        //   （沒展開所以看不到），於是沒有再往下追。真正的原因是 SwiftUI
+        //   的 `Menu` 把項目交給 UIKit 的 `UIAction`，識別字沒跟過去 ——
+        //   而標籤有。
         "editor.customize_toolbar",
         "editor.insert.assets",
         "editor.insert.audio",
@@ -459,6 +527,9 @@ extension SmokeUITests {
         "editor.insert.collaborate",
         "editor.insert.recognize",
         "editor.insert.ai_summary",
+        // ↓ 以下還沒有任何執行期檢查。匯出那四項在另一張選單
+        //   （`editor.share`），做法與 testMoreMenuItemsAreReachable 相同，
+        //   只是還沒寫。記在 docs/TODO.md 的 S-261d。
         "editor.export.pdf",
         "editor.export.image",
         "editor.export.print",

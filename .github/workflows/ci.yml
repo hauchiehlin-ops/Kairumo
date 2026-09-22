@@ -79,9 +79,13 @@ jobs:
       # 掃原始碼的 check-screen-parity.py 看不見這種：那兩個 bug 的識別碼
       # 都寫得好好的。
       #
-      # 只掛這兩條，不是整個 KairumoUITests —— testCanvasExpandsWhenSidebarCollapses
+      # 只掛這四條，不是整個 KairumoUITests —— testCanvasExpandsWhenSidebarCollapses
       # 與 testMigrationRunsFromTheDiagnosticsSheet 在此之前就紅著（S-259），
       # 把它們一起掛上去只會讓這道閘門在第一天就被關掉。
+      #
+      # 後兩條是 S-261／S-261d 補的：選單裡的十五個項目與「自訂工具列」
+      # 那張表，在此之前**完全沒有執行期檢查** —— 只有掃原始碼字面值的
+      # check-screen-parity.py 在守，而它看不見「按鈕在但按不到」。
       - name: 畫面稽核（控制項點得到）
         if: runner.os == 'macOS'
         run: |
@@ -89,6 +93,8 @@ jobs:
             -destination "id=$(python3 scripts/pick-ios-simulator.py)" \
             -only-testing:KairumoUITests/SmokeUITests/testHomeScreenControlsAreReachable \
             -only-testing:KairumoUITests/SmokeUITests/testEditorScreenControlsAreReachable \
+            -only-testing:KairumoUITests/SmokeUITests/testMoreMenuItemsAreReachable \
+            -only-testing:KairumoUITests/SmokeUITests/testToolbarCustomizationControlsAreReachable \
             -quiet
 
   # WP1/WP2：Android 產出必須跟著每次提交一起驗證，否則 Apple 端的改動會

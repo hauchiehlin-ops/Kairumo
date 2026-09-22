@@ -172,18 +172,63 @@ fn page_geometry() -> Value {
 ///
 /// 兩端的介面測試拿這份清單去斷言「存在、而且點得到」。清單寫在各自的
 /// 測試裡的話，兩端會各自漂移 —— 那正是這個專案一再發生的事。
+/// 畫面規格倒成向量：每個控制項帶著 id、語系鍵與**英文標籤**。
+///
+/// # 為什麼要帶英文標籤
+///
+/// SwiftUI 的 `Menu` 把選單項目交給 UIKit 的 `UIAction` 算繪，而
+/// `.accessibilityIdentifier` **不會跟過去** —— 實測（`MenuProbe`）：打開
+/// 「更多」之後，十八個項目全部出現在無障礙樹裡，`id` 全是空的，`label`
+/// 全部正確。所以稽核找不到識別字時要能改用標籤找。
+///
+/// 標籤從核心的字串表拿，不是測試自己寫死的 —— 寫死的話文案一改，
+/// 稽核就會開始報假的缺失，而假的缺失會讓真的缺失被忽略。
+/// UI 測試把語言釘在英文（`KAIRUMO_UITEST`），所以只需要英文那一欄。
 fn screens() -> Value {
     let mut out = serde_json::Map::new();
     for id in padnote_core::ffi_screens::screen_ids() {
+        let controls: Vec<Value> = padnote_core::ffi_screens::screen_spec(id.clone())
+            .sections
+            .into_iter()
+            .flat_map(|s| s.controls)
+            .map(|c| {
+                json!({
+                    "id": c.id,
+                    "label_key": c.label_key,
+                    "label_en": ui_label_en(&c.label_key),
+                })
+            })
+            .collect();
         out.insert(
             id.clone(),
             json!({
                 "apple": padnote_core::ffi_screens::screen_required_control_ids(id.clone(), true),
-                "android": padnote_core::ffi_screens::screen_required_control_ids(id, false),
+                "android": padnote_core::ffi_screens::screen_required_control_ids(id.clone(), false),
+                "controls": controls,
             }),
         );
     }
     Value::Object(out)
+}
+
+/// 介面字串表（`i18n/ui-strings.json`）裡那個鍵的英文。
+///
+/// 找不到就回空字串 —— 稽核會退回只用識別字找，而不是拿一個假標籤去比對
+/// 然後報一個不存在的缺失。
+fn ui_label_en(key: &str) -> String {
+    if key.is_empty() {
+        return String::new();
+    }
+    static UI_STRINGS: &str = include_str!("../../../i18n/ui-strings.json");
+    serde_json::from_str::<Value>(UI_STRINGS)
+        .ok()
+        .and_then(|v| {
+            v.get(key)
+                .and_then(|e| e.get("en"))
+                .and_then(|s| s.as_str())
+                .map(str::to_owned)
+        })
+        .unwrap_or_default()
 }
 
 fn all() -> Vec<(&'static str, Value)> {
