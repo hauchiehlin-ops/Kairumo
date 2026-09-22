@@ -436,8 +436,27 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     /// 這一本筆記的頁面尺寸。
     public var pageSize: CGSize { PageGeometry.size(forFormat: pageFormatId) }
 
-    public func height(forPage pageIndex: Int, defaultHeight: CGFloat = PageGeometry.height) -> CGFloat {
-        PageGeometry.height
+    /// 這一本筆記某一頁的高度。
+    ///
+    /// 取的是**這一本自己的**規格，不是 `PageGeometry.height`。後者是
+    /// 「目前螢幕上那一本」的高度（`PageGeometry.currentSize`），同步一次
+    /// 要匯出幾十本、其中只有一本在螢幕上，用那個值等於把作用中筆記的頁高
+    /// 寫進所有其他筆記 —— 規格不同的那些在另一台裝置上就會變形。
+    ///
+    /// 也因為 `PageGeometry.height` 走 `MainActor.assumeIsolated`（在背景
+    /// 執行緒上直接 trap），連當作**預設參數**都不行 —— 預設參數是在呼叫端
+    /// 求值的。匯出搬離主執行緒就是卡在這裡。`pageSize` 走的是純函式
+    /// `PageGeometry.size(forFormat:)`，哪個執行緒都成立。
+    ///
+    /// `pageIndex` 目前用不到：頁高早就統一由規格決定，不再逐頁記錄
+    /// （舊檔的 `pageHeights` 只有遷移會讀，見 `legacyHeight(forPage:)`）。
+    /// 保留參數是因為分頁一旦回到「每頁可不同」，簽名不必再動一次。
+    ///
+    /// 原本還有一個 `defaultHeight` 參數，而函式主體**從來沒有用過它** ——
+    /// 編輯器那邊一直傳 1800 進來，也一直沒有生效。拿掉，而不是留著：
+    /// 一個被默默忽略的參數看起來像是有作用的。
+    public func height(forPage pageIndex: Int) -> CGFloat {
+        pageSize.height
     }
 
     /// 舊版存下來的頁面高度。只有遷移會用到。

@@ -26,7 +26,17 @@ import PencilKit
 final class FakeStore: SyncableNotebookStore {
     let root: URL
     var documents: [NotebookDocument] = []
-    private var drawings: [String: PKDrawing] = [:]
+    /// 有鎖是因為匯出真的會在背景執行緒上讀它（見 `syncDrawingLoader`）。
+    /// 正式版的筆跡在磁碟上，沒有這個問題；測試替身放在記憶體裡，就得自己
+    /// 保證安全 —— 不然這裡會是一個只有在測試裡才存在的資料競爭。
+    private nonisolated let drawingsLock = NSLock()
+    /// `nonisolated(unsafe)` 的「unsafe」由上面那把鎖負責 —— 每一處存取都
+    /// 走 `drawingsLock`，沒有例外。
+    private nonisolated(unsafe) var _drawings: [String: PKDrawing] = [:]
+    private var drawings: [String: PKDrawing] {
+        get { drawingsLock.withLock { _drawings } }
+        set { drawingsLock.withLock { _drawings = newValue } }
+    }
 
     init(root: URL) {
         self.root = root
@@ -45,6 +55,13 @@ final class FakeStore: SyncableNotebookStore {
 
     func syncLoadDrawing(notebookId: String, pageIndex: Int) -> PKDrawing {
         drawings["\(notebookId)_\(pageIndex)"] ?? PKDrawing()
+    }
+
+    /// 只捕捉 `self`（有鎖）—— 匯出會在背景執行緒上呼叫它。
+    var syncDrawingLoader: @Sendable (String, Int) -> PKDrawing {
+        { [self] notebookId, pageIndex in
+            drawingsLock.withLock { _drawings["\(notebookId)_\(pageIndex)"] } ?? PKDrawing()
+        }
     }
 
     func syncSaveDrawing(notebookId: String, pageIndex: Int, drawing: PKDrawing) {

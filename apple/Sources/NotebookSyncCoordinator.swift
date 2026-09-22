@@ -39,6 +39,18 @@ protocol SyncableNotebookStore: AnyObject {
     var syncAttachmentsDirectory: URL { get }
     /// **別台裝置**寫的那些筆畫。匯出時要扣掉它們，才不會複製一份掛在自己名下。
     var syncBaselineDirectory: URL { get }
+
+    /// 讀一頁筆跡 —— **可以在任何執行緒上呼叫**。
+    ///
+    /// 為什麼是閉包而不是方法：`syncLoadDrawing` 本身沒有碰任何
+    /// `@Published` 狀態（它只是把 URL 兜起來再讀檔），但它掛在
+    /// `@MainActor` 的 store 上，於是整個匯出迴圈也被釘在主執行緒 ——
+    /// 每本每頁讀一次檔、解一次 PKDrawing、寫一次 CRDT 套件，筆記本一多
+    /// 就撞上 iOS 的 10 秒看門狗。把「讀圖」這件事提成一個只捕捉值型別的
+    /// `@Sendable` 閉包，匯出就能整段搬到背景執行緒上。
+    ///
+    /// 實作這個協定的人有義務保證回傳的閉包真的不碰主執行緒狀態。
+    var syncDrawingLoader: @Sendable (String, Int) -> PKDrawing { get }
     /// 目前正在編輯／檢視的作用中筆記本 ID（nil 表示在首頁或未指定）
     var activeNotebookId: String? { get }
 
@@ -57,6 +69,19 @@ extension NotebookStore: SyncableNotebookStore {
     var syncNotebooks: [NotebookDocument] { visibleNotebooks }
     var allNotebooks: [NotebookDocument] { notebooks }
     var syncPackagesDirectory: URL { corePackagesDirectory }
+
+    /// 在主執行緒上把目錄抄成一個 URL，回傳的閉包只捕捉那個 URL ——
+    /// 所以閉包帶到哪個執行緒都成立。
+    var syncDrawingLoader: @Sendable (String, Int) -> PKDrawing {
+        let dir = drawingsDirectory
+        return { notebookId, pageIndex in
+            let url = dir.appending(path: "\(notebookId)_p\(pageIndex).drawing")
+            guard let data = try? Data(contentsOf: url),
+                  let drawing = try? PKDrawing(data: data)
+            else { return PKDrawing() }
+            return drawing
+        }
+    }
     var syncAttachmentsDirectory: URL { attachmentsDirectory }
     // activeNotebookId 由 NotebookStore 本身的 @Published var 直接滿足協定，不需要在此重新宣告
 
@@ -131,33 +156,45 @@ enum NotebookSyncCoordinator {
 
         // ── 1. 匯出本機的筆記 ──────────────────────────────
         SyncLogger.logAsync("步驟 1：匯出本機筆記 (\(store.syncNotebooks.count) 本)...", source: .folder)
-        var ownStrokes: OwnStrokes = [:]
-        for document in store.syncNotebooks {
-            if isCancelled || Task.isCancelled {
-                SyncLogger.logAsync("【資料夾同步】已手動中斷。", source: .folder)
-                return report
+        // 匯出整段在背景執行緒上跑。
+        //
+        // 每一本每一頁要讀一次檔、解一次 `PKDrawing`、再寫一次 CRDT 套件，
+        // 是整個同步最貴的一段。這段原本跟著 `NotebookSyncCoordinator` 的
+        // `@MainActor` 標記留在主執行緒上，於是筆記本一多就被連續佔住十秒
+        // 以上 —— iOS 的 scene-update 看門狗直接 SIGKILL（0x8BADF00D）。
+        //
+        // 先在 MainActor 上把每一本要用到的東西抄成值（便宜，只讀幾個 URL），
+        // 之後整個迴圈都不再需要 `store`，就能整包交給背景執行緒。
+        // Android 的 `CloudSync.runFull` 從第一天就包在
+        // `withContext(Dispatchers.IO)` 裡，這裡是補上同一件事。
+        let inputs = store.syncNotebooks.map {
+            exportInputs(for: $0, store: store, packagesDir: packagesDir, deviceId: deviceId)
+        }
+        let exportOutcome = await Task.detached(priority: .utility) { () -> (OwnStrokes, Int, [String: String], Bool) in
+            var own: OwnStrokes = [:]
+            var exported = 0
+            var failures = [String: String]()
+            for input in inputs {
+                if isCancelled || Task.isCancelled { return (own, exported, failures, true) }
+                do {
+                    let mine = try exportOne(input)
+                    own.merge(mine) { first, _ in first }
+                    exported += 1
+                } catch {
+                    SyncLogger.logAsync(
+                        "匯出失敗 (\(input.document.title))：\(error.localizedDescription)",
+                        source: .folder)
+                    failures[input.document.title] = error.localizedDescription
+                }
             }
-            // 每一本之間讓出主執行緒一次。
-            //
-            // 這個迴圈整段跑在 MainActor 上：exportOne 每一頁要讀一次檔、
-            // 解一次 PKDrawing、再寫一次 CRDT 套件。筆記本一多，主執行緒就
-            // 被連續佔住十秒以上，iOS 的 scene-update 看門狗直接 SIGKILL
-            // （0x8BADF00D）—— 實機上就是「按下同步之後整個 App 消失」。
-            // 讓出之後畫面更新照樣排得進來，看門狗的計時也就不會到期。
-            //
-            // 真正的解是把匯出整段搬離 MainActor（Android 的
-            // CloudSync.runFull 本來就包在 withContext(Dispatchers.IO) 裡），
-            // 那要先把 store 的讀取切出來，記在 docs/TODO.md 的 H-SYNC-MAINACTOR。
-            await Task.yield()
-            let package = packagesDir.appending(path: "\(document.id).padnote")
-            do {
-                let own = try exportOne(document, from: store, to: package, deviceId: deviceId)
-                ownStrokes.merge(own) { first, _ in first }
-                report.exported += 1
-            } catch {
-                SyncLogger.logAsync("匯出失敗 (\(document.title))：\(error.localizedDescription)", source: .folder)
-                report.failures[document.title] = error.localizedDescription
-            }
+            return (own, exported, failures, false)
+        }.value
+        let ownStrokes = exportOutcome.0
+        report.exported = exportOutcome.1
+        report.failures.merge(exportOutcome.2) { first, _ in first }
+        if exportOutcome.3 {
+            SyncLogger.logAsync("【資料夾同步】已手動中斷。", source: .folder)
+            return report
         }
         SyncLogger.logAsync("步驟 1 完成，成功匯出 \(report.exported) 本", source: .folder)
 
@@ -317,33 +354,45 @@ enum NotebookSyncCoordinator {
         }
 
         SyncLogger.logAsync("步驟 1：匯出本機筆記 (\(store.syncNotebooks.count) 本)...", source: .googleDrive)
-        var ownStrokes: OwnStrokes = [:]
-        for document in store.syncNotebooks {
-            if isCancelled || Task.isCancelled {
-                SyncLogger.logAsync("【Google Drive 同步】已手動中斷。", source: .googleDrive)
-                return report
+        // 匯出整段在背景執行緒上跑。
+        //
+        // 每一本每一頁要讀一次檔、解一次 `PKDrawing`、再寫一次 CRDT 套件，
+        // 是整個同步最貴的一段。這段原本跟著 `NotebookSyncCoordinator` 的
+        // `@MainActor` 標記留在主執行緒上，於是筆記本一多就被連續佔住十秒
+        // 以上 —— iOS 的 scene-update 看門狗直接 SIGKILL（0x8BADF00D）。
+        //
+        // 先在 MainActor 上把每一本要用到的東西抄成值（便宜，只讀幾個 URL），
+        // 之後整個迴圈都不再需要 `store`，就能整包交給背景執行緒。
+        // Android 的 `CloudSync.runFull` 從第一天就包在
+        // `withContext(Dispatchers.IO)` 裡，這裡是補上同一件事。
+        let inputs = store.syncNotebooks.map {
+            exportInputs(for: $0, store: store, packagesDir: packagesDir, deviceId: deviceId)
+        }
+        let exportOutcome = await Task.detached(priority: .utility) { () -> (OwnStrokes, Int, [String: String], Bool) in
+            var own: OwnStrokes = [:]
+            var exported = 0
+            var failures = [String: String]()
+            for input in inputs {
+                if isCancelled || Task.isCancelled { return (own, exported, failures, true) }
+                do {
+                    let mine = try exportOne(input)
+                    own.merge(mine) { first, _ in first }
+                    exported += 1
+                } catch {
+                    SyncLogger.logAsync(
+                        "匯出失敗 (\(input.document.title))：\(error.localizedDescription)",
+                        source: .googleDrive)
+                    failures[input.document.title] = error.localizedDescription
+                }
             }
-            // 每一本之間讓出主執行緒一次。
-            //
-            // 這個迴圈整段跑在 MainActor 上：exportOne 每一頁要讀一次檔、
-            // 解一次 PKDrawing、再寫一次 CRDT 套件。筆記本一多，主執行緒就
-            // 被連續佔住十秒以上，iOS 的 scene-update 看門狗直接 SIGKILL
-            // （0x8BADF00D）—— 實機上就是「按下同步之後整個 App 消失」。
-            // 讓出之後畫面更新照樣排得進來，看門狗的計時也就不會到期。
-            //
-            // 真正的解是把匯出整段搬離 MainActor（Android 的
-            // CloudSync.runFull 本來就包在 withContext(Dispatchers.IO) 裡），
-            // 那要先把 store 的讀取切出來，記在 docs/TODO.md 的 H-SYNC-MAINACTOR。
-            await Task.yield()
-            let package = packagesDir.appending(path: "\(document.id).padnote")
-            do {
-                let own = try exportOne(document, from: store, to: package, deviceId: deviceId)
-                ownStrokes.merge(own) { first, _ in first }
-                report.exported += 1
-            } catch {
-                SyncLogger.logAsync("匯出失敗 (\(document.title))：\(error.localizedDescription)", source: .googleDrive)
-                report.failures[document.title] = error.localizedDescription
-            }
+            return (own, exported, failures, false)
+        }.value
+        let ownStrokes = exportOutcome.0
+        report.exported = exportOutcome.1
+        report.failures.merge(exportOutcome.2) { first, _ in first }
+        if exportOutcome.3 {
+            SyncLogger.logAsync("【Google Drive 同步】已手動中斷。", source: .googleDrive)
+            return report
         }
         SyncLogger.logAsync("步驟 1 完成，成功匯出 \(report.exported) 本", source: .googleDrive)
 
@@ -583,7 +632,18 @@ enum NotebookSyncCoordinator {
         _ document: NotebookDocument, store: SyncableNotebookStore, deviceId: UInt32
     ) throws -> URL {
         let package = packageURL(for: document.id, in: store)
-        _ = try exportOne(document, from: store, to: package, deviceId: deviceId)
+        // 這裡是單本、使用者剛按下某個動作的當下，量很小，就地跑完即可 ——
+        // 會撞看門狗的是同步那條「一次幾十本」的迴圈，不是這裡。
+        var inputs = exportInputs(
+            for: document, store: store, packagesDir: store.syncPackagesDirectory,
+            deviceId: deviceId)
+        // packageURL 會把 id 轉小寫，exportInputs 不會 —— 以前者為準。
+        inputs = ExportInputs(
+            document: inputs.document, package: package,
+            baselineDirectory: inputs.baselineDirectory,
+            attachmentsDirectory: inputs.attachmentsDirectory,
+            deviceId: inputs.deviceId, loadDrawing: inputs.loadDrawing)
+        _ = try exportOne(inputs)
         return package
     }
 
@@ -609,12 +669,44 @@ enum NotebookSyncCoordinator {
 
     // MARK: - 單本
 
+    /// 匯出一本筆記所需要的全部東西。
+    ///
+    /// 全是值型別與 `@Sendable` 閉包，所以整包可以帶到背景執行緒上 ——
+    /// 這是把匯出搬離 MainActor 的關鍵：迴圈不再需要 `store`。
+    struct ExportInputs: @unchecked Sendable {
+        let document: NotebookDocument
+        let package: URL
+        let baselineDirectory: URL
+        let attachmentsDirectory: URL
+        let deviceId: UInt32
+        let loadDrawing: @Sendable (String, Int) -> PKDrawing
+    }
+
+    /// 在 MainActor 上把一本筆記要用到的東西抄成值。**很便宜**：只讀
+    /// 幾個 URL 與一份已經在記憶體裡的 document，不碰檔案系統。
+    @MainActor
+    private static func exportInputs(
+        for document: NotebookDocument, store: SyncableNotebookStore,
+        packagesDir: URL, deviceId: UInt32
+    ) -> ExportInputs {
+        ExportInputs(
+            document: document,
+            package: packagesDir.appending(path: "\(document.id).padnote"),
+            baselineDirectory: store.syncBaselineDirectory,
+            attachmentsDirectory: store.syncAttachmentsDirectory,
+            deviceId: deviceId,
+            loadDrawing: store.syncDrawingLoader)
+    }
+
     /// 匯出一本，回傳這台裝置在各頁自己擁有的筆畫。
+    ///
+    /// `nonisolated`：這裡每頁要讀一次檔、解一次 `PKDrawing`、再寫一次
+    /// CRDT 套件，是整個同步最貴的一段。留在 MainActor 上的話，筆記本一多
+    /// 主執行緒就被連續佔住十秒以上 —— iOS 的 scene-update 看門狗會直接
+    /// SIGKILL（0x8BADF00D），實機上就是「按下同步之後整個 App 消失」。
     @discardableResult
-    private static func exportOne(
-        _ document: NotebookDocument, from store: SyncableNotebookStore,
-        to package: URL, deviceId: UInt32
-    ) throws -> OwnStrokes {
+    nonisolated private static func exportOne(_ inputs: ExportInputs) throws -> OwnStrokes {
+        let document = inputs.document
         let pageCount = max(document.pageCount, 1)
         // 只寫這台裝置自己新增的筆畫。
         //
@@ -627,20 +719,20 @@ enum NotebookSyncCoordinator {
         // 而它的檔案又會被整個重寫，等於自己把自己的內容刪掉。
         var own: OwnStrokes = [:]
         let drawings = (0..<pageCount).map { page -> PKDrawing in
-            let current = store.syncLoadDrawing(notebookId: document.id, pageIndex: page)
-            let others = loadBaseline(store: store, notebookId: document.id, pageIndex: page)
+            let current = inputs.loadDrawing(document.id, page)
+            let others = loadBaseline(in: inputs.baselineDirectory, notebookId: document.id, pageIndex: page)
             let mine = PKDrawing(strokes: StrokeDelta.added(in: current, since: others))
             own[baselineKey(document.id, page)] = mine
             return mine
         }
         var images: [String: Data] = [:]
         for attachment in document.attachments ?? [] {
-            let url = store.syncAttachmentsDirectory.appending(path: attachment.fileName)
+            let url = inputs.attachmentsDirectory.appending(path: attachment.fileName)
             if let bytes = try? Data(contentsOf: url) { images[attachment.fileName] = bytes }
         }
         try NotebookPackageBridge.exportPreservingOtherDevices(
             document: document, drawings: drawings, imageData: images,
-            to: package, deviceId: deviceId)
+            to: inputs.package, deviceId: inputs.deviceId)
         return own
     }
 
@@ -664,38 +756,39 @@ enum NotebookSyncCoordinator {
             // 別台裝置的部分 = 合併後的 − 自己的。下次匯出要扣掉它。
             let mine = ownStrokes[baselineKey(documentId, index)] ?? PKDrawing()
             let others = PKDrawing(strokes: StrokeDelta.added(in: drawing, since: mine))
-            saveBaseline(others, store: store, notebookId: documentId, pageIndex: index)
+            saveBaseline(others, in: store.syncBaselineDirectory, notebookId: documentId, pageIndex: index)
         }
         store.syncUpsert(imported.document)
     }
 
     // MARK: - 基準線
 
-    private static func baselineKey(_ notebookId: String, _ pageIndex: Int) -> String {
+    nonisolated private static func baselineKey(_ notebookId: String, _ pageIndex: Int) -> String {
         "\(notebookId)_p\(pageIndex)"
     }
 
-    private static func baselineURL(
-        store: SyncableNotebookStore, notebookId: String, pageIndex: Int
+    /// 這幾個取的是目錄而不是 `store`：匯出要在背景執行緒上跑，那裡碰不到
+    /// `@MainActor` 的 store。目錄是一個 URL，值型別，帶到哪裡都成立。
+    nonisolated private static func baselineURL(
+        in directory: URL, notebookId: String, pageIndex: Int
     ) -> URL {
-        store.syncBaselineDirectory
-            .appending(path: "\(baselineKey(notebookId, pageIndex)).drawing")
+        directory.appending(path: "\(baselineKey(notebookId, pageIndex)).drawing")
     }
 
-    private static func loadBaseline(
-        store: SyncableNotebookStore, notebookId: String, pageIndex: Int
+    nonisolated private static func loadBaseline(
+        in directory: URL, notebookId: String, pageIndex: Int
     ) -> PKDrawing {
-        let url = baselineURL(store: store, notebookId: notebookId, pageIndex: pageIndex)
+        let url = baselineURL(in: directory, notebookId: notebookId, pageIndex: pageIndex)
         guard let data = try? Data(contentsOf: url), let drawing = try? PKDrawing(data: data)
         else { return PKDrawing() }
         return drawing
     }
 
-    private static func saveBaseline(
-        _ drawing: PKDrawing, store: SyncableNotebookStore, notebookId: String, pageIndex: Int
+    nonisolated private static func saveBaseline(
+        _ drawing: PKDrawing, in directory: URL, notebookId: String, pageIndex: Int
     ) {
         try? drawing.dataRepresentation().write(
-            to: baselineURL(store: store, notebookId: notebookId, pageIndex: pageIndex),
+            to: baselineURL(in: directory, notebookId: notebookId, pageIndex: pageIndex),
             options: .atomic)
     }
 

@@ -27,34 +27,51 @@
 
 ## 🔴 被硬體或資料卡住（程式已就緒）
 
-### H-SYNC-MAINACTOR. Apple 的同步整段跑在主執行緒 —— **等實機回報**
+### ~~H-SYNC-MAINACTOR~~ ✅ Apple 的同步整段跑在主執行緒 —— **已修**
 
 `NotebookSyncCoordinator` 整個 enum 標了 `@MainActor`，所以 `runDrive`
 （Google Drive）與 `run`（資料夾）的步驟 1 是在主執行緒上逐本匯出的：
 每一本每一頁要讀一次檔、解一次 `PKDrawing`、再寫一次 CRDT 套件。
+筆記本一多，iOS 的 scene-update 看門狗 10 秒到期 → SIGKILL 0x8BADF00D。
 
-**Android 沒有這個問題**：`CloudSync.runFull` 從第一天就包在
+**Android 從來沒有這個問題**：`CloudSync.runFull` 從第一天就包在
 `withContext(Dispatchers.IO)` 裡，`MainActivity.kt` 的註解甚至寫著
 「在主執行緒跑會直接卡死畫面」。是 Apple 這邊漏掉，不是設計如此。
-macOS（Catalyst）是同一份 Swift，所以同樣中招 —— 只是沒有 10 秒看門狗，
-症狀從 SIGKILL 變成視窗卡住，而桌機使用者的筆記本通常更多。
 
-**已經做掉的**（v4.8.2 之後）：
-- 100 處 `URL.appendingPathComponent(_:)` 換成 `appending(path:)`。
-  前者的 `directoryHint` 預設是 `.checkFileSystem`，**每呼叫一次
-  lstat 一次**；實機當機的堆疊頂端就停在那個 `lstat`。
-  由 `scripts/check-main-thread-io.py` 守住不讓它回流。
-- `run` 與 `runDrive` 的步驟 1 每本之間 `await Task.yield()`，
-  讓畫面更新排得進來、看門狗的計時不會到期。
+怎麼修的：
 
-**還沒做的**：把匯出整段搬離 `MainActor`。`run` 的步驟 2 已經有
-`Task.detached(priority: .utility)` 的先例可抄，但步驟 1 卡在
-`exportOne` 會呼叫 `store.syncLoadDrawing`，而 `store` 是 `@MainActor`
-單例 —— 要先把「讀圖」從 store 切出來，變成可以在任何執行緒跑的純函式。
+1. **100 處 `URL.appendingPathComponent(_:)` 換成 `appending(path:)`。**
+   前者的 `directoryHint` 預設是 `.checkFileSystem`，**每呼叫一次
+   lstat 一次**；當機堆疊的頂端就停在那個 `lstat`。
+   閘門：`scripts/check-main-thread-io.py`。
 
-**驗收**：實機上一本一本加到 50 本，按下雲端同步，畫面不卡、不被
-看門狗殺掉；`Instruments` 的 Time Profiler 上主執行緒沒有連續超過
-一個 frame 的檔案 I/O。
+2. **`exportOne` 改成 `nonisolated`，吃一包 `ExportInputs` 值。**
+   先在 MainActor 上把每本要用到的東西抄成值（幾個 URL + document，
+   很便宜），之後整個迴圈都不再需要 `store`，就能整包丟進
+   `Task.detached(priority: .utility)`。讀圖改走
+   `syncDrawingLoader` —— 一個只捕捉 URL 的 `@Sendable` 閉包。
+
+3. **拆掉三顆 `MainActor.assumeIsolated` 地雷。** 這是真正卡住這件事的
+   東西，而且一顆都沒有編譯期線索：
+   - `PageGeometry.size` 讀 `@MainActor` 的 `currentSize` → 改成
+     一把鎖 + `nonisolated(unsafe)`，寫的人照樣只有主執行緒。
+   - `NotebookDocument.height(forPage:)` 的**預設參數**是
+     `PageGeometry.height`，預設參數在呼叫端求值，照樣 trap。
+   - `PageGuideRenderer` 的字串查表 → 改用既有的 `localizedUnsafe`。
+
+   閘門：`scripts/check-assume-isolated.py`。
+
+**順手修掉的兩個正確性問題**（第 3 點的副產品）：
+- 匯出寫進套件的頁寬／頁高取的是 `PageGeometry` 的「**目前螢幕上那一本**」，
+  不是正在匯出的那一本。同步一次要匯出幾十本、其中只有一本在螢幕上 ——
+  規格不同的那些在另一台裝置上就會變形。改成 `document.pageSize`。
+- `height(forPage:defaultHeight:)` 的 `defaultHeight` **從來沒被用過**，
+  而編輯器一直傳 1800 進來。參數拿掉。
+
+**驗證**：10 條雙裝置同步測試全過（匯出確實在背景執行緒上跑），
+Apple 單元測試 382 條中 381 過（唯一那條紅是無障礙標籤，與此無關）。
+**還沒在實機上壓過** —— 那是下一步：一本一本加到 50 本按同步，
+看畫面卡不卡、會不會再被看門狗殺掉。
 
 ### S-54c. 匯出的 PDF 裡的標記寫死英文
 

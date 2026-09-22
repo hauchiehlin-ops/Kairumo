@@ -257,6 +257,15 @@ jobs:
       - name: 主執行緒上沒有會 lstat 的路徑組法
         run: python3 scripts/check-main-thread-io.py
 
+      # MainActor.assumeIsolated。
+      #
+      # 它的意思是「我保證這裡是主執行緒」，編譯器照單全收 —— 保證錯了
+      # 沒有警告，只有執行期的 SIGTRAP。把同步的匯出搬離 MainActor 時
+      # 一連踩到三顆（PageGeometry.width、height(forPage:) 的預設參數、
+      # PageGuideRenderer 的字串查表），每一顆都是行程直接消失。
+      - name: 沒有 MainActor.assumeIsolated
+        run: python3 scripts/check-assume-isolated.py
+
   # 跨平台畫面對照（android-parity-plan.md 階段 0）。
   #
   # 「Android 版面跟 Apple 差太多」修過兩次，兩次都是補完就漂回去 ——

@@ -138,7 +138,10 @@ public enum PageGuideRenderer {
     }
 
     private static func label(_ g: FfiGuide, at point: CGPoint, colors: Palette) {
-        let text = MainActor.assumeIsolated { LocalizationManager.shared.localized(g.textKey) }
+        // `localizedUnsafe` 而不是 `assumeIsolated { localized }`：縮圖與
+        // 匯出都可能在背景執行緒上畫，後者在那裡會直接 trap，而且編譯器
+        // 不會警告 —— `assumeIsolated` 的意思正是「我保證這裡是主執行緒」。
+        let text = LocalizationManager.shared.localizedUnsafe(g.textKey)
         guard !text.isEmpty else { return }
         // 縮圖上的頁面只有兩百多點寬，字級照比例縮下去會小於一個像素。
         // 下限不是為了好看，是為了「畫了等於沒畫」。

@@ -6642,7 +6642,7 @@ public struct NotebookEditorView: View {
         let loaded = store.loadDrawing(notebookId: notebook.id, pageIndex: currentPageIndex)
         self.currentDrawing = loaded
         self.lastStrokeCount = loaded.strokes.count
-        self.currentPageHeight = notebook.height(forPage: currentPageIndex, defaultHeight: 1800)
+        self.currentPageHeight = notebook.height(forPage: currentPageIndex)
         self.hasLassoSelection = false
         self.originalSketchBackup = nil
         self.refinedSketchCache = nil

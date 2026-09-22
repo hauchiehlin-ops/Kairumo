@@ -51,19 +51,34 @@ public enum PageGeometry {
     /// 是純函式，手上沒有筆記本 —— 把筆記本一路傳進去要改十幾個簽名，
     /// 而漏掉其中一個的症狀是「這一頁的分頁位置跟別的地方算的不一樣」。
     ///
-    /// 所以由編輯器在開啟筆記與變更規格時設定一次。**只在主執行緒動**，
+    /// 所以由編輯器在開啟筆記與變更規格時設定一次。**只在主執行緒寫**，
     /// 而且畫面上同時只會有一本筆記在編輯。
+    ///
+    /// # 為什麼是鎖，不是 `@MainActor`
+    ///
+    /// 原本這裡是 `@MainActor var`，而 `size` 用 `MainActor.assumeIsolated`
+    /// 去讀它。那個組合在主執行緒上看起來沒事，離開主執行緒就**直接 trap**
+    /// （`dispatch_assert_queue_fail` / SIGTRAP）—— 而且編譯器不會警告，
+    /// 因為 `assumeIsolated` 的意思正是「我保證這裡是主執行緒」。
+    ///
+    /// 這讓同步的匯出搬不出主執行緒（見 H-SYNC-MAINACTOR）：一搬就在
+    /// `PageGeometry.width` 上炸掉。改成一把鎖之後，寫的人照樣只有主執行緒，
+    /// 但**任何執行緒都讀得到**，而且是編譯器管不到的地方由鎖真的管住。
+    private nonisolated(unsafe) static var storedCurrentSize: CGSize = defaultSize
+    private nonisolated static let currentSizeLock = NSLock()
+
     @MainActor
-    public private(set) static var currentSize: CGSize = defaultSize
+    public static var currentSize: CGSize { size }
 
     /// 換一本筆記或改了規格時呼叫。
     @MainActor
     public static func use(format id: String?) {
-        currentSize = size(forFormat: id)
+        let next = size(forFormat: id)
+        currentSizeLock.withLock { storedCurrentSize = next }
     }
 
-    public static var size: CGSize {
-        MainActor.assumeIsolated { currentSize }
+    public nonisolated static var size: CGSize {
+        currentSizeLock.withLock { storedCurrentSize }
     }
 
     public static var width: CGFloat { size.width }

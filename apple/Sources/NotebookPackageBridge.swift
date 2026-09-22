@@ -120,9 +120,20 @@ enum NotebookPackageBridge {
             for (index, pageId) in pageIds.enumerated() {
                 // 頁面高度是內容的一部分：使用者向下延長過的頁面若沒寫進去，
                 // 另一個平台會看到一頁被截短的筆記。
+                // 寬度取**這一本自己的**規格，不是 `PageGeometry.width`。
+                //
+                // 後者是「目前螢幕上那一本」的頁寬（`PageGeometry.currentSize`，
+                // 由編輯器在開啟筆記時設定）。同步一次要匯出幾十本，其中只有
+                // 一本在螢幕上 —— 用那個值等於把作用中筆記的頁寬寫進所有其他
+                // 筆記，規格不同的那些在另一台裝置上就會變形。
+                //
+                // 順便解開了一個死結：`PageGeometry.width` 走
+                // `MainActor.assumeIsolated`，在背景執行緒上直接 trap，
+                // 匯出因此搬不出主執行緒。`document.pageSize` 走的是純函式
+                // `PageGeometry.size(forFormat:)`，哪個執行緒都成立。
                 try session.setPageSize(
                     pageId: pageId,
-                    width: Float(PageThumbnailRenderer.minPageWidth),
+                    width: Float(document.pageSize.width),
                     height: Float(document.height(forPage: index))
                 )
 
