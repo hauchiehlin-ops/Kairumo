@@ -266,6 +266,17 @@ jobs:
       - name: 沒有 MainActor.assumeIsolated
         run: python3 scripts/check-assume-isolated.py
 
+      # 被默默忽略的參數。
+      #
+      # 一個宣告了但主體從沒讀過的參數**看起來像是有作用的** —— 呼叫端照著
+      # 傳，以為設定生效了。編譯器不會警告，測試也測不到（那個功能本來就
+      # 沒接上，沒有人會為它寫測試）。第一次跑抓到 10 處，其中
+      # createRoom(noteId:) 建立協同房間時完全不管是哪一本筆記、
+      # generate(maxTokens:) 的 token 上限從不生效、
+      # editorModeSwitcher(compact:) 的緊湊版面旗標沒接線。
+      - name: 沒有被默默忽略的參數
+        run: python3 scripts/check-unused-params.py
+
   # 跨平台畫面對照（android-parity-plan.md 階段 0）。
   #
   # 「Android 版面跟 Apple 差太多」修過兩次，兩次都是補完就漂回去 ——

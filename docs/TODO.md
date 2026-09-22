@@ -73,6 +73,31 @@ Apple 單元測試 382 條中 381 過（唯一那條紅是無障礙標籤，與�
 **還沒在實機上壓過** —— 那是下一步：一本一本加到 50 本按同步，
 看畫面卡不卡、會不會再被看門狗殺掉。
 
+### S-257. 十個被默默忽略的參數 —— 閘門已立，逐項清空
+
+`scripts/check-unused-params.py`（CI 上的「沒有被默默忽略的參數」）第一次
+跑就抓到這些：宣告了、呼叫端照著傳、而函式主體從頭到尾沒讀過。
+
+| 函式 | 檔案 | 影響 |
+|---|---|---|
+| `ChartPreview(…languageTag…)` | `ChartStudio.kt` | 圖表預覽收了語系卻沒用 |
+| `startRecording(…title…)` | `AudioRecorderManager.swift` | 錄音標題傳進去就被丟掉 |
+| `downloadWhisperModel(…useMirror…)` | `AudioTranscriber.swift` | 主體裡沒有任何鏡像邏輯 |
+| `createRoom(…noteId…)` | `CollaborationManager.swift` | 建立協同房間時完全不管是哪一本筆記 |
+| `printNotebook(…viewController…)` | `ExportPrintManager.swift` |  |
+| `rollAngle(…cp…)` | `InkInterop.swift` |  |
+| `generate(…maxTokens…)` | `NoteIntelligence.swift` | LLM 生成完全不受 token 上限約束 |
+| `editorModeSwitcher(…compact…)` | `NotebookEditorView.swift` | 窄螢幕的緊湊版面旗標沒接線 |
+| `drawConnection(…ctx…)` | `PageThumbnailRenderer.swift` |  |
+| `fillWelcome(…store…)` | `SeedContent.swift` |  |
+
+每一項的修法三選一：**真的用它／拿掉它／在上方寫 `// unused-param-ok: 理由`**。
+清掉一項就跑 `--update-baseline` 讓棘輪縮一格（它只縮不長）。
+
+`createRoom` 與 `generate` 是其中影響最實際的兩個，建議先處理。
+
+---
+
 ### S-54c. 匯出的 PDF 裡的標記寫死英文
 
 `padnote-export` 完全不知道介面語言，所以轉錄區塊的標記固定是

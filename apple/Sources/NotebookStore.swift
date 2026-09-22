@@ -455,6 +455,8 @@ public struct NotebookDocument: Identifiable, Codable, Hashable {
     /// 原本還有一個 `defaultHeight` 參數，而函式主體**從來沒有用過它** ——
     /// 編輯器那邊一直傳 1800 進來，也一直沒有生效。拿掉，而不是留著：
     /// 一個被默默忽略的參數看起來像是有作用的。
+    // unused-param-ok: 頁高統一由規格決定，不再逐頁記錄；保留參數是為了分頁
+    // 一旦回到「每頁可不同」時簽章不必再動一次（理由見上方說明）。
     public func height(forPage pageIndex: Int) -> CGFloat {
         pageSize.height
     }
