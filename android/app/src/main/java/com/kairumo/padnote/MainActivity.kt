@@ -2081,6 +2081,7 @@ private fun InkScreen(
 
     /// 主題專屬工具與它的兩個構圖輔助疊層。
     var showThemeTools by remember { mutableStateOf(false) }
+    var showStickerLibrary by remember { mutableStateOf(false) }
     var showToolbarCustomization by remember { mutableStateOf(false) }
     var showAssetLibrary by remember { mutableStateOf(false) }
 
@@ -2672,6 +2673,13 @@ private fun InkScreen(
                     text = { Text(l10n("asset_library")) },
                     modifier = Modifier.testTag("editor.insert.assets"),
                     onClick = { showMenu = false; showAssetLibrary = true }
+                )
+                // 貼紙庫（Android 原本完全沒有這個功能 —— 畫面規格漏了
+                // 這一項，所以跨平台對照閘門從來沒檢查過）。
+                DropdownMenuItem(
+                    text = { Text(l10n("sticker_library")) },
+                    modifier = Modifier.testTag("editor.insert.stickers"),
+                    onClick = { showMenu = false; showStickerLibrary = true }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("collaborate")) },
@@ -4946,6 +4954,21 @@ private fun InkScreen(
                 }
             },
             onDismiss = { showAssetLibrary = false }
+        )
+    }
+
+    if (showStickerLibrary) {
+        com.kairumo.padnote.ui.StickerLibrarySheet(
+            languageTag = deviceLanguageTag(),
+            onPick = { code ->
+                // 貼紙貼進來之後就是**一般的筆跡** —— 可以擦掉一部分、
+                // 套索搬走、換顏色。變成圖片的話它就成了另一種東西，
+                // 而「貼紙貼上去就不能改了」是很多筆記 App 的通病。
+                engine.addStickerStrokes(code, 160f, 200f, 120f)
+                revision++
+                showStickerLibrary = false
+            },
+            onDismiss = { showStickerLibrary = false }
         )
     }
 

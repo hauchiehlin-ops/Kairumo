@@ -342,6 +342,10 @@ fn editor_spec() -> FfiScreenSpec {
                 "insert_object",
                 vec![
                     c("editor.insert.assets", Button, "asset_library"),
+                    // 規格原本漏了這一項 —— Apple 有、Android 沒有，
+                    // 而對照閘門是綠的（它只檢查規格裡列出來的）。
+                    // 漏一項的代價就是一個平台少一整個功能，沒有人會發現。
+                    c("editor.insert.stickers", Button, "sticker_library"),
                     c("editor.insert.audio", Button, "insert_audio"),
                     c("editor.insert.image", Button, "insert_image"),
                     c("editor.insert.math", Button, "math_calc"),

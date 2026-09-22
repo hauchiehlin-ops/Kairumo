@@ -9295,6 +9295,286 @@ extension LocalizationManager {
             .ko: "연결 끊김",
             .th: "ไม่ได้เชื่อมต่อ"
         ],
+        "sticker_arrow_curve": [
+            .zhHant: "曲線箭頭",
+            .en: "Curved arrow",
+            .zhHans: "曲线箭头",
+            .ja: "曲線矢印",
+            .ko: "곡선 화살표",
+            .th: "ลูกศรโค้ง"
+        ],
+        "sticker_arrow_down": [
+            .zhHant: "向下箭頭",
+            .en: "Arrow down",
+            .zhHans: "向下箭头",
+            .ja: "下矢印",
+            .ko: "아래쪽 화살표",
+            .th: "ลูกศรลง"
+        ],
+        "sticker_arrow_left": [
+            .zhHant: "向左箭頭",
+            .en: "Arrow left",
+            .zhHans: "向左箭头",
+            .ja: "左矢印",
+            .ko: "왼쪽 화살표",
+            .th: "ลูกศรซ้าย"
+        ],
+        "sticker_arrow_right": [
+            .zhHant: "向右箭頭",
+            .en: "Arrow right",
+            .zhHans: "向右箭头",
+            .ja: "右矢印",
+            .ko: "오른쪽 화살표",
+            .th: "ลูกศรขวา"
+        ],
+        "sticker_arrow_up": [
+            .zhHant: "向上箭頭",
+            .en: "Arrow up",
+            .zhHans: "向上箭头",
+            .ja: "上矢印",
+            .ko: "위쪽 화살표",
+            .th: "ลูกศรขึ้น"
+        ],
+        "sticker_badge": [
+            .zhHant: "徽章",
+            .en: "Badge",
+            .zhHans: "徽章",
+            .ja: "バッジ",
+            .ko: "배지",
+            .th: "เหรียญตรา"
+        ],
+        "sticker_blocked": [
+            .zhHant: "卡住",
+            .en: "Blocked",
+            .zhHans: "卡住",
+            .ja: "ブロック中",
+            .ko: "막힘",
+            .th: "ติดขัด"
+        ],
+        "sticker_book": [
+            .zhHant: "書",
+            .en: "Book",
+            .zhHans: "书",
+            .ja: "本",
+            .ko: "책",
+            .th: "หนังสือ"
+        ],
+        "sticker_bookmark": [
+            .zhHant: "書籤",
+            .en: "Bookmark",
+            .zhHans: "书签",
+            .ja: "ブックマーク",
+            .ko: "북마크",
+            .th: "ที่คั่นหนังสือ"
+        ],
+        "sticker_bracket": [
+            .zhHant: "方括號",
+            .en: "Bracket",
+            .zhHans: "方括号",
+            .ja: "角括弧",
+            .ko: "대괄호",
+            .th: "วงเล็บเหลี่ยม"
+        ],
+        "sticker_branch": [
+            .zhHant: "分支",
+            .en: "Branch",
+            .zhHans: "分支",
+            .ja: "分岐",
+            .ko: "분기",
+            .th: "แยกสาขา"
+        ],
+        "sticker_bubble": [
+            .zhHant: "對話泡",
+            .en: "Speech bubble",
+            .zhHans: "对话泡",
+            .ja: "吹き出し",
+            .ko: "말풍선",
+            .th: "กรอบคำพูด"
+        ],
+        "sticker_builtin": [
+            .zhHant: "內建",
+            .en: "Built-in",
+            .zhHans: "内置",
+            .ja: "組み込み",
+            .ko: "기본 제공",
+            .th: "ในตัว"
+        ],
+        "sticker_bullet": [
+            .zhHant: "項目點",
+            .en: "Bullet",
+            .zhHans: "项目点",
+            .ja: "箇条書き",
+            .ko: "글머리 기호",
+            .th: "จุดนำ"
+        ],
+        "sticker_calendar": [
+            .zhHant: "日期",
+            .en: "Date",
+            .zhHans: "日期",
+            .ja: "日付",
+            .ko: "날짜",
+            .th: "วันที่"
+        ],
+        "sticker_cat_annotate": [
+            .zhHant: "標註",
+            .en: "Annotate",
+            .zhHans: "标注",
+            .ja: "注釈",
+            .ko: "주석",
+            .th: "ทำเครื่องหมาย"
+        ],
+        "sticker_cat_flow": [
+            .zhHant: "流程",
+            .en: "Flow",
+            .zhHans: "流程",
+            .ja: "フロー",
+            .ko: "흐름",
+            .th: "ผังงาน"
+        ],
+        "sticker_cat_label": [
+            .zhHant: "標籤",
+            .en: "Labels",
+            .zhHans: "标签",
+            .ja: "ラベル",
+            .ko: "라벨",
+            .th: "ป้ายกำกับ"
+        ],
+        "sticker_cat_mood": [
+            .zhHant: "心情",
+            .en: "Reactions",
+            .zhHans: "心情",
+            .ja: "リアクション",
+            .ko: "반응",
+            .th: "อารมณ์"
+        ],
+        "sticker_cat_study": [
+            .zhHant: "學習",
+            .en: "Study",
+            .zhHans: "学习",
+            .ja: "学習",
+            .ko: "학습",
+            .th: "การเรียน"
+        ],
+        "sticker_cat_task": [
+            .zhHant: "待辦",
+            .en: "Tasks",
+            .zhHans: "待办",
+            .ja: "タスク",
+            .ko: "할 일",
+            .th: "งานที่ต้องทำ"
+        ],
+        "sticker_check": [
+            .zhHant: "勾",
+            .en: "Check",
+            .zhHans: "勾",
+            .ja: "チェック",
+            .ko: "체크",
+            .th: "เครื่องหมายถูก"
+        ],
+        "sticker_checkbox": [
+            .zhHant: "待辦",
+            .en: "To do",
+            .zhHans: "待办",
+            .ja: "未完了",
+            .ko: "할 일",
+            .th: "ยังไม่ทำ"
+        ],
+        "sticker_checkbox_done": [
+            .zhHant: "已完成",
+            .en: "Done",
+            .zhHans: "已完成",
+            .ja: "完了",
+            .ko: "완료",
+            .th: "เสร็จแล้ว"
+        ],
+        "sticker_circle_mark": [
+            .zhHant: "圈選",
+            .en: "Circle",
+            .zhHans: "圈选",
+            .ja: "丸で囲む",
+            .ko: "동그라미",
+            .th: "วงกลม"
+        ],
+        "sticker_clock": [
+            .zhHant: "時間",
+            .en: "Time",
+            .zhHans: "时间",
+            .ja: "時間",
+            .ko: "시간",
+            .th: "เวลา"
+        ],
+        "sticker_cross": [
+            .zhHant: "叉",
+            .en: "Cross",
+            .zhHans: "叉",
+            .ja: "バツ",
+            .ko: "가위표",
+            .th: "กากบาท"
+        ],
+        "sticker_exclaim": [
+            .zhHant: "驚嘆號",
+            .en: "Important",
+            .zhHans: "惊叹号",
+            .ja: "感嘆符",
+            .ko: "느낌표",
+            .th: "เครื่องหมายอัศเจรีย์"
+        ],
+        "sticker_flag": [
+            .zhHant: "旗標",
+            .en: "Flag",
+            .zhHans: "旗标",
+            .ja: "フラグ",
+            .ko: "깃발",
+            .th: "ธง"
+        ],
+        "sticker_formula": [
+            .zhHant: "公式",
+            .en: "Formula",
+            .zhHans: "公式",
+            .ja: "数式",
+            .ko: "수식",
+            .th: "สูตร"
+        ],
+        "sticker_frown": [
+            .zhHant: "不滿",
+            .en: "Unhappy",
+            .zhHans: "不满",
+            .ja: "不満",
+            .ko: "아쉬움",
+            .th: "ไม่พอใจ"
+        ],
+        "sticker_half_done": [
+            .zhHant: "進行中",
+            .en: "In progress",
+            .zhHans: "进行中",
+            .ja: "進行中",
+            .ko: "진행 중",
+            .th: "กำลังดำเนินการ"
+        ],
+        "sticker_heart": [
+            .zhHant: "喜歡",
+            .en: "Love",
+            .zhHans: "喜欢",
+            .ja: "お気に入り",
+            .ko: "좋아요",
+            .th: "ถูกใจ"
+        ],
+        "sticker_hot": [
+            .zhHant: "重點",
+            .en: "Key point",
+            .zhHans: "重点",
+            .ja: "重要",
+            .ko: "핵심",
+            .th: "จุดสำคัญ"
+        ],
+        "sticker_idea": [
+            .zhHant: "靈感",
+            .en: "Idea",
+            .zhHans: "灵感",
+            .ja: "アイデア",
+            .ko: "아이디어",
+            .th: "ไอเดีย"
+        ],
         "sticker_library": [
             .zhHant: "貼紙庫",
             .en: "Sticker Library",
@@ -9302,6 +9582,110 @@ extension LocalizationManager {
             .ja: "ステッカーライブラリ",
             .ko: "스티커 라이브러리",
             .th: "คลังสติกเกอร์"
+        ],
+        "sticker_loop": [
+            .zhHant: "循環",
+            .en: "Loop",
+            .zhHans: "循环",
+            .ja: "ループ",
+            .ko: "반복",
+            .th: "วนซ้ำ"
+        ],
+        "sticker_mine": [
+            .zhHant: "我存的",
+            .en: "Saved by me",
+            .zhHans: "我存的",
+            .ja: "保存したもの",
+            .ko: "내가 저장한 것",
+            .th: "ที่ฉันบันทึก"
+        ],
+        "sticker_neutral": [
+            .zhHant: "普通",
+            .en: "Neutral",
+            .zhHans: "普通",
+            .ja: "ふつう",
+            .ko: "보통",
+            .th: "เฉย ๆ"
+        ],
+        "sticker_note": [
+            .zhHant: "便利貼",
+            .en: "Sticky note",
+            .zhHans: "便利贴",
+            .ja: "付箋",
+            .ko: "포스트잇",
+            .th: "กระดาษโน้ต"
+        ],
+        "sticker_pencil": [
+            .zhHant: "鉛筆",
+            .en: "Pencil",
+            .zhHans: "铅笔",
+            .ja: "鉛筆",
+            .ko: "연필",
+            .th: "ดินสอ"
+        ],
+        "sticker_qa": [
+            .zhHant: "問與答",
+            .en: "Q & A",
+            .zhHans: "问与答",
+            .ja: "質疑応答",
+            .ko: "질문과 답변",
+            .th: "ถาม-ตอบ"
+        ],
+        "sticker_question": [
+            .zhHant: "問號",
+            .en: "Question",
+            .zhHans: "问号",
+            .ja: "疑問符",
+            .ko: "물음표",
+            .th: "เครื่องหมายคำถาม"
+        ],
+        "sticker_ribbon": [
+            .zhHant: "緞帶",
+            .en: "Ribbon",
+            .zhHans: "绶带",
+            .ja: "リボン",
+            .ko: "리본",
+            .th: "ริบบิ้น"
+        ],
+        "sticker_smile": [
+            .zhHant: "開心",
+            .en: "Happy",
+            .zhHans: "开心",
+            .ja: "うれしい",
+            .ko: "좋음",
+            .th: "ยิ้ม"
+        ],
+        "sticker_star": [
+            .zhHant: "星星",
+            .en: "Star",
+            .zhHans: "星星",
+            .ja: "星",
+            .ko: "별",
+            .th: "ดาว"
+        ],
+        "sticker_tag": [
+            .zhHant: "標籤",
+            .en: "Tag",
+            .zhHans: "标签",
+            .ja: "タグ",
+            .ko: "태그",
+            .th: "แท็ก"
+        ],
+        "sticker_thumb_up": [
+            .zhHant: "讚",
+            .en: "Good",
+            .zhHans: "赞",
+            .ja: "いいね",
+            .ko: "좋아요",
+            .th: "ดี"
+        ],
+        "sticker_underline": [
+            .zhHant: "波浪底線",
+            .en: "Squiggle",
+            .zhHans: "波浪下划线",
+            .ja: "波線",
+            .ko: "물결 밑줄",
+            .th: "ขีดเส้นหยัก"
         ],
         "sticky_anchor_ink": [
             .zhHant: "錨定重疊筆跡",

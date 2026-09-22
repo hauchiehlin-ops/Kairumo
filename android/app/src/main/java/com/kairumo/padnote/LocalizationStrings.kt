@@ -29,6 +29,7 @@ object LocalizationStrings {
             putAll(part15())
             putAll(part16())
             putAll(part17())
+            putAll(part18())
         }
     }
 
@@ -9355,6 +9356,286 @@ object LocalizationStrings {
             "ko" to "연결 끊김",
             "th" to "ไม่ได้เชื่อมต่อ"
         ),
+        "sticker_arrow_curve" to mapOf(
+            "zh-Hant" to "曲線箭頭",
+            "en" to "Curved arrow",
+            "zh-Hans" to "曲线箭头",
+            "ja" to "曲線矢印",
+            "ko" to "곡선 화살표",
+            "th" to "ลูกศรโค้ง"
+        ),
+        "sticker_arrow_down" to mapOf(
+            "zh-Hant" to "向下箭頭",
+            "en" to "Arrow down",
+            "zh-Hans" to "向下箭头",
+            "ja" to "下矢印",
+            "ko" to "아래쪽 화살표",
+            "th" to "ลูกศรลง"
+        ),
+        "sticker_arrow_left" to mapOf(
+            "zh-Hant" to "向左箭頭",
+            "en" to "Arrow left",
+            "zh-Hans" to "向左箭头",
+            "ja" to "左矢印",
+            "ko" to "왼쪽 화살표",
+            "th" to "ลูกศรซ้าย"
+        ),
+        "sticker_arrow_right" to mapOf(
+            "zh-Hant" to "向右箭頭",
+            "en" to "Arrow right",
+            "zh-Hans" to "向右箭头",
+            "ja" to "右矢印",
+            "ko" to "오른쪽 화살표",
+            "th" to "ลูกศรขวา"
+        ),
+        "sticker_arrow_up" to mapOf(
+            "zh-Hant" to "向上箭頭",
+            "en" to "Arrow up",
+            "zh-Hans" to "向上箭头",
+            "ja" to "上矢印",
+            "ko" to "위쪽 화살표",
+            "th" to "ลูกศรขึ้น"
+        ),
+        "sticker_badge" to mapOf(
+            "zh-Hant" to "徽章",
+            "en" to "Badge",
+            "zh-Hans" to "徽章",
+            "ja" to "バッジ",
+            "ko" to "배지",
+            "th" to "เหรียญตรา"
+        ),
+        "sticker_blocked" to mapOf(
+            "zh-Hant" to "卡住",
+            "en" to "Blocked",
+            "zh-Hans" to "卡住",
+            "ja" to "ブロック中",
+            "ko" to "막힘",
+            "th" to "ติดขัด"
+        ),
+        "sticker_book" to mapOf(
+            "zh-Hant" to "書",
+            "en" to "Book",
+            "zh-Hans" to "书",
+            "ja" to "本",
+            "ko" to "책",
+            "th" to "หนังสือ"
+        ),
+        "sticker_bookmark" to mapOf(
+            "zh-Hant" to "書籤",
+            "en" to "Bookmark",
+            "zh-Hans" to "书签",
+            "ja" to "ブックマーク",
+            "ko" to "북마크",
+            "th" to "ที่คั่นหนังสือ"
+        ),
+        "sticker_bracket" to mapOf(
+            "zh-Hant" to "方括號",
+            "en" to "Bracket",
+            "zh-Hans" to "方括号",
+            "ja" to "角括弧",
+            "ko" to "대괄호",
+            "th" to "วงเล็บเหลี่ยม"
+        ),
+        "sticker_branch" to mapOf(
+            "zh-Hant" to "分支",
+            "en" to "Branch",
+            "zh-Hans" to "分支",
+            "ja" to "分岐",
+            "ko" to "분기",
+            "th" to "แยกสาขา"
+        ),
+        "sticker_bubble" to mapOf(
+            "zh-Hant" to "對話泡",
+            "en" to "Speech bubble",
+            "zh-Hans" to "对话泡",
+            "ja" to "吹き出し",
+            "ko" to "말풍선",
+            "th" to "กรอบคำพูด"
+        ),
+        "sticker_builtin" to mapOf(
+            "zh-Hant" to "內建",
+            "en" to "Built-in",
+            "zh-Hans" to "内置",
+            "ja" to "組み込み",
+            "ko" to "기본 제공",
+            "th" to "ในตัว"
+        ),
+        "sticker_bullet" to mapOf(
+            "zh-Hant" to "項目點",
+            "en" to "Bullet",
+            "zh-Hans" to "项目点",
+            "ja" to "箇条書き",
+            "ko" to "글머리 기호",
+            "th" to "จุดนำ"
+        ),
+        "sticker_calendar" to mapOf(
+            "zh-Hant" to "日期",
+            "en" to "Date",
+            "zh-Hans" to "日期",
+            "ja" to "日付",
+            "ko" to "날짜",
+            "th" to "วันที่"
+        ),
+        "sticker_cat_annotate" to mapOf(
+            "zh-Hant" to "標註",
+            "en" to "Annotate",
+            "zh-Hans" to "标注",
+            "ja" to "注釈",
+            "ko" to "주석",
+            "th" to "ทำเครื่องหมาย"
+        ),
+        "sticker_cat_flow" to mapOf(
+            "zh-Hant" to "流程",
+            "en" to "Flow",
+            "zh-Hans" to "流程",
+            "ja" to "フロー",
+            "ko" to "흐름",
+            "th" to "ผังงาน"
+        ),
+        "sticker_cat_label" to mapOf(
+            "zh-Hant" to "標籤",
+            "en" to "Labels",
+            "zh-Hans" to "标签",
+            "ja" to "ラベル",
+            "ko" to "라벨",
+            "th" to "ป้ายกำกับ"
+        ),
+        "sticker_cat_mood" to mapOf(
+            "zh-Hant" to "心情",
+            "en" to "Reactions",
+            "zh-Hans" to "心情",
+            "ja" to "リアクション",
+            "ko" to "반응",
+            "th" to "อารมณ์"
+        ),
+        "sticker_cat_study" to mapOf(
+            "zh-Hant" to "學習",
+            "en" to "Study",
+            "zh-Hans" to "学习",
+            "ja" to "学習",
+            "ko" to "학습",
+            "th" to "การเรียน"
+        ),
+        "sticker_cat_task" to mapOf(
+            "zh-Hant" to "待辦",
+            "en" to "Tasks",
+            "zh-Hans" to "待办",
+            "ja" to "タスク",
+            "ko" to "할 일",
+            "th" to "งานที่ต้องทำ"
+        ),
+        "sticker_check" to mapOf(
+            "zh-Hant" to "勾",
+            "en" to "Check",
+            "zh-Hans" to "勾",
+            "ja" to "チェック",
+            "ko" to "체크",
+            "th" to "เครื่องหมายถูก"
+        ),
+        "sticker_checkbox" to mapOf(
+            "zh-Hant" to "待辦",
+            "en" to "To do",
+            "zh-Hans" to "待办",
+            "ja" to "未完了",
+            "ko" to "할 일",
+            "th" to "ยังไม่ทำ"
+        ),
+        "sticker_checkbox_done" to mapOf(
+            "zh-Hant" to "已完成",
+            "en" to "Done",
+            "zh-Hans" to "已完成",
+            "ja" to "完了",
+            "ko" to "완료",
+            "th" to "เสร็จแล้ว"
+        ),
+        "sticker_circle_mark" to mapOf(
+            "zh-Hant" to "圈選",
+            "en" to "Circle",
+            "zh-Hans" to "圈选",
+            "ja" to "丸で囲む",
+            "ko" to "동그라미",
+            "th" to "วงกลม"
+        ),
+        "sticker_clock" to mapOf(
+            "zh-Hant" to "時間",
+            "en" to "Time",
+            "zh-Hans" to "时间",
+            "ja" to "時間",
+            "ko" to "시간",
+            "th" to "เวลา"
+        ),
+        "sticker_cross" to mapOf(
+            "zh-Hant" to "叉",
+            "en" to "Cross",
+            "zh-Hans" to "叉",
+            "ja" to "バツ",
+            "ko" to "가위표",
+            "th" to "กากบาท"
+        ),
+        "sticker_exclaim" to mapOf(
+            "zh-Hant" to "驚嘆號",
+            "en" to "Important",
+            "zh-Hans" to "惊叹号",
+            "ja" to "感嘆符",
+            "ko" to "느낌표",
+            "th" to "เครื่องหมายอัศเจรีย์"
+        ),
+        "sticker_flag" to mapOf(
+            "zh-Hant" to "旗標",
+            "en" to "Flag",
+            "zh-Hans" to "旗标",
+            "ja" to "フラグ",
+            "ko" to "깃발",
+            "th" to "ธง"
+        ),
+        "sticker_formula" to mapOf(
+            "zh-Hant" to "公式",
+            "en" to "Formula",
+            "zh-Hans" to "公式",
+            "ja" to "数式",
+            "ko" to "수식",
+            "th" to "สูตร"
+        ),
+        "sticker_frown" to mapOf(
+            "zh-Hant" to "不滿",
+            "en" to "Unhappy",
+            "zh-Hans" to "不满",
+            "ja" to "不満",
+            "ko" to "아쉬움",
+            "th" to "ไม่พอใจ"
+        ),
+        "sticker_half_done" to mapOf(
+            "zh-Hant" to "進行中",
+            "en" to "In progress",
+            "zh-Hans" to "进行中",
+            "ja" to "進行中",
+            "ko" to "진행 중",
+            "th" to "กำลังดำเนินการ"
+        ),
+        "sticker_heart" to mapOf(
+            "zh-Hant" to "喜歡",
+            "en" to "Love",
+            "zh-Hans" to "喜欢",
+            "ja" to "お気に入り",
+            "ko" to "좋아요",
+            "th" to "ถูกใจ"
+        ),
+        "sticker_hot" to mapOf(
+            "zh-Hant" to "重點",
+            "en" to "Key point",
+            "zh-Hans" to "重点",
+            "ja" to "重要",
+            "ko" to "핵심",
+            "th" to "จุดสำคัญ"
+        ),
+        "sticker_idea" to mapOf(
+            "zh-Hant" to "靈感",
+            "en" to "Idea",
+            "zh-Hans" to "灵感",
+            "ja" to "アイデア",
+            "ko" to "아이디어",
+            "th" to "ไอเดีย"
+        ),
         "sticker_library" to mapOf(
             "zh-Hant" to "貼紙庫",
             "en" to "Sticker Library",
@@ -9362,6 +9643,113 @@ object LocalizationStrings {
             "ja" to "ステッカーライブラリ",
             "ko" to "스티커 라이브러리",
             "th" to "คลังสติกเกอร์"
+        ),
+        "sticker_loop" to mapOf(
+            "zh-Hant" to "循環",
+            "en" to "Loop",
+            "zh-Hans" to "循环",
+            "ja" to "ループ",
+            "ko" to "반복",
+            "th" to "วนซ้ำ"
+        ),
+        "sticker_mine" to mapOf(
+            "zh-Hant" to "我存的",
+            "en" to "Saved by me",
+            "zh-Hans" to "我存的",
+            "ja" to "保存したもの",
+            "ko" to "내가 저장한 것",
+            "th" to "ที่ฉันบันทึก"
+        ),
+        "sticker_neutral" to mapOf(
+            "zh-Hant" to "普通",
+            "en" to "Neutral",
+            "zh-Hans" to "普通",
+            "ja" to "ふつう",
+            "ko" to "보통",
+            "th" to "เฉย ๆ"
+        ),
+        "sticker_note" to mapOf(
+            "zh-Hant" to "便利貼",
+            "en" to "Sticky note",
+            "zh-Hans" to "便利贴",
+            "ja" to "付箋",
+            "ko" to "포스트잇",
+            "th" to "กระดาษโน้ต"
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        "sticker_pencil" to mapOf(
+            "zh-Hant" to "鉛筆",
+            "en" to "Pencil",
+            "zh-Hans" to "铅笔",
+            "ja" to "鉛筆",
+            "ko" to "연필",
+            "th" to "ดินสอ"
+        ),
+        "sticker_qa" to mapOf(
+            "zh-Hant" to "問與答",
+            "en" to "Q & A",
+            "zh-Hans" to "问与答",
+            "ja" to "質疑応答",
+            "ko" to "질문과 답변",
+            "th" to "ถาม-ตอบ"
+        ),
+        "sticker_question" to mapOf(
+            "zh-Hant" to "問號",
+            "en" to "Question",
+            "zh-Hans" to "问号",
+            "ja" to "疑問符",
+            "ko" to "물음표",
+            "th" to "เครื่องหมายคำถาม"
+        ),
+        "sticker_ribbon" to mapOf(
+            "zh-Hant" to "緞帶",
+            "en" to "Ribbon",
+            "zh-Hans" to "绶带",
+            "ja" to "リボン",
+            "ko" to "리본",
+            "th" to "ริบบิ้น"
+        ),
+        "sticker_smile" to mapOf(
+            "zh-Hant" to "開心",
+            "en" to "Happy",
+            "zh-Hans" to "开心",
+            "ja" to "うれしい",
+            "ko" to "좋음",
+            "th" to "ยิ้ม"
+        ),
+        "sticker_star" to mapOf(
+            "zh-Hant" to "星星",
+            "en" to "Star",
+            "zh-Hans" to "星星",
+            "ja" to "星",
+            "ko" to "별",
+            "th" to "ดาว"
+        ),
+        "sticker_tag" to mapOf(
+            "zh-Hant" to "標籤",
+            "en" to "Tag",
+            "zh-Hans" to "标签",
+            "ja" to "タグ",
+            "ko" to "태그",
+            "th" to "แท็ก"
+        ),
+        "sticker_thumb_up" to mapOf(
+            "zh-Hant" to "讚",
+            "en" to "Good",
+            "zh-Hans" to "赞",
+            "ja" to "いいね",
+            "ko" to "좋아요",
+            "th" to "ดี"
+        ),
+        "sticker_underline" to mapOf(
+            "zh-Hant" to "波浪底線",
+            "en" to "Squiggle",
+            "zh-Hans" to "波浪下划线",
+            "ja" to "波線",
+            "ko" to "물결 밑줄",
+            "th" to "ขีดเส้นหยัก"
         ),
         "sticky_anchor_ink" to mapOf(
             "zh-Hant" to "錨定重疊筆跡",
@@ -9674,10 +10062,7 @@ object LocalizationStrings {
             "ja" to "何が同期されますか？",
             "ko" to "무엇이 동기화되나요?",
             "th" to "ฟังก์ชันนี้ซิงก์อะไรบ้าง"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_recording_in_progress" to mapOf(
             "zh-Hant" to "同步錄音中",
             "en" to "Sync Recording",
@@ -9933,7 +10318,10 @@ object LocalizationStrings {
             "ja" to "文字スタイル",
             "ko" to "텍스트 서식",
             "th" to "จัดรูปแบบข้อความ"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "text_style" to mapOf(
             "zh-Hant" to "文字格式",
             "en" to "Text Style",
@@ -10317,10 +10705,7 @@ object LocalizationStrings {
             "ja" to "30° 等角投影立体グリッド",
             "ko" to "30° 등각 투영 그리드",
             "th" to "กริดไอโซเมตริก 30°"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_isometric_desc" to mapOf(
             "zh-Hant" to "機械構件、三維產品外觀與爆炸透視專用",
             "en" to "Dedicated for mechanism components, 3D products & exploded views",
@@ -10576,7 +10961,10 @@ object LocalizationStrings {
             "ja" to "ユーザージャーニーとフロー",
             "ko" to "사용자 여정 및 플로우",
             "th" to "แผนผังการเดินทางของผู้ใช้"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "tmpl_user_journey_desc" to mapOf(
             "zh-Hant" to "階段泳道、步驟節點與決策條件分支引導",
             "en" to "Swimlanes, step nodes & decision branch guides",
@@ -10960,10 +11348,7 @@ object LocalizationStrings {
             "ja" to "取り消す",
             "ko" to "실행 취소",
             "th" to "เลิกทำ"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "unfiled_notes" to mapOf(
             "zh-Hant" to "未分類檔案",
             "en" to "Unfiled Notes",
@@ -11219,7 +11604,10 @@ object LocalizationStrings {
             "ja" to "UI ワイヤーフレーム",
             "ko" to "UI 와이어프레임",
             "th" to "ไวร์เฟรม UI"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "wireframe_modal" to mapOf(
             "zh-Hant" to "對話框彈窗 (Modal)",
             "en" to "Modal dialog",

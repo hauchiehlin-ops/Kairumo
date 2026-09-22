@@ -43,6 +43,7 @@ pub mod ffi_scheduler;
 pub mod ffi_screens;
 pub mod ffi_shapes;
 pub mod ffi_sketch;
+pub mod ffi_stickers;
 pub mod ffi_symbols;
 pub mod ffi_table;
 pub mod ffi_texture;

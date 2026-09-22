@@ -9279,6 +9279,286 @@
     "zhHans": "未连接",
     "zhHant": "未連線"
   },
+  "sticker_arrow_curve": {
+    "en": "Curved arrow",
+    "zhHant": "曲線箭頭",
+    "zhHans": "曲线箭头",
+    "ja": "曲線矢印",
+    "ko": "곡선 화살표",
+    "th": "ลูกศรโค้ง"
+  },
+  "sticker_arrow_down": {
+    "en": "Arrow down",
+    "zhHant": "向下箭頭",
+    "zhHans": "向下箭头",
+    "ja": "下矢印",
+    "ko": "아래쪽 화살표",
+    "th": "ลูกศรลง"
+  },
+  "sticker_arrow_left": {
+    "en": "Arrow left",
+    "zhHant": "向左箭頭",
+    "zhHans": "向左箭头",
+    "ja": "左矢印",
+    "ko": "왼쪽 화살표",
+    "th": "ลูกศรซ้าย"
+  },
+  "sticker_arrow_right": {
+    "en": "Arrow right",
+    "zhHant": "向右箭頭",
+    "zhHans": "向右箭头",
+    "ja": "右矢印",
+    "ko": "오른쪽 화살표",
+    "th": "ลูกศรขวา"
+  },
+  "sticker_arrow_up": {
+    "en": "Arrow up",
+    "zhHant": "向上箭頭",
+    "zhHans": "向上箭头",
+    "ja": "上矢印",
+    "ko": "위쪽 화살표",
+    "th": "ลูกศรขึ้น"
+  },
+  "sticker_badge": {
+    "en": "Badge",
+    "zhHant": "徽章",
+    "zhHans": "徽章",
+    "ja": "バッジ",
+    "ko": "배지",
+    "th": "เหรียญตรา"
+  },
+  "sticker_blocked": {
+    "en": "Blocked",
+    "zhHant": "卡住",
+    "zhHans": "卡住",
+    "ja": "ブロック中",
+    "ko": "막힘",
+    "th": "ติดขัด"
+  },
+  "sticker_book": {
+    "en": "Book",
+    "zhHant": "書",
+    "zhHans": "书",
+    "ja": "本",
+    "ko": "책",
+    "th": "หนังสือ"
+  },
+  "sticker_bookmark": {
+    "en": "Bookmark",
+    "zhHant": "書籤",
+    "zhHans": "书签",
+    "ja": "ブックマーク",
+    "ko": "북마크",
+    "th": "ที่คั่นหนังสือ"
+  },
+  "sticker_bracket": {
+    "en": "Bracket",
+    "zhHant": "方括號",
+    "zhHans": "方括号",
+    "ja": "角括弧",
+    "ko": "대괄호",
+    "th": "วงเล็บเหลี่ยม"
+  },
+  "sticker_branch": {
+    "en": "Branch",
+    "zhHant": "分支",
+    "zhHans": "分支",
+    "ja": "分岐",
+    "ko": "분기",
+    "th": "แยกสาขา"
+  },
+  "sticker_bubble": {
+    "en": "Speech bubble",
+    "zhHant": "對話泡",
+    "zhHans": "对话泡",
+    "ja": "吹き出し",
+    "ko": "말풍선",
+    "th": "กรอบคำพูด"
+  },
+  "sticker_builtin": {
+    "en": "Built-in",
+    "zhHant": "內建",
+    "zhHans": "内置",
+    "ja": "組み込み",
+    "ko": "기본 제공",
+    "th": "ในตัว"
+  },
+  "sticker_bullet": {
+    "en": "Bullet",
+    "zhHant": "項目點",
+    "zhHans": "项目点",
+    "ja": "箇条書き",
+    "ko": "글머리 기호",
+    "th": "จุดนำ"
+  },
+  "sticker_calendar": {
+    "en": "Date",
+    "zhHant": "日期",
+    "zhHans": "日期",
+    "ja": "日付",
+    "ko": "날짜",
+    "th": "วันที่"
+  },
+  "sticker_cat_annotate": {
+    "en": "Annotate",
+    "zhHant": "標註",
+    "zhHans": "标注",
+    "ja": "注釈",
+    "ko": "주석",
+    "th": "ทำเครื่องหมาย"
+  },
+  "sticker_cat_flow": {
+    "en": "Flow",
+    "zhHant": "流程",
+    "zhHans": "流程",
+    "ja": "フロー",
+    "ko": "흐름",
+    "th": "ผังงาน"
+  },
+  "sticker_cat_label": {
+    "en": "Labels",
+    "zhHant": "標籤",
+    "zhHans": "标签",
+    "ja": "ラベル",
+    "ko": "라벨",
+    "th": "ป้ายกำกับ"
+  },
+  "sticker_cat_mood": {
+    "en": "Reactions",
+    "zhHant": "心情",
+    "zhHans": "心情",
+    "ja": "リアクション",
+    "ko": "반응",
+    "th": "อารมณ์"
+  },
+  "sticker_cat_study": {
+    "en": "Study",
+    "zhHant": "學習",
+    "zhHans": "学习",
+    "ja": "学習",
+    "ko": "학습",
+    "th": "การเรียน"
+  },
+  "sticker_cat_task": {
+    "en": "Tasks",
+    "zhHant": "待辦",
+    "zhHans": "待办",
+    "ja": "タスク",
+    "ko": "할 일",
+    "th": "งานที่ต้องทำ"
+  },
+  "sticker_check": {
+    "en": "Check",
+    "zhHant": "勾",
+    "zhHans": "勾",
+    "ja": "チェック",
+    "ko": "체크",
+    "th": "เครื่องหมายถูก"
+  },
+  "sticker_checkbox": {
+    "en": "To do",
+    "zhHant": "待辦",
+    "zhHans": "待办",
+    "ja": "未完了",
+    "ko": "할 일",
+    "th": "ยังไม่ทำ"
+  },
+  "sticker_checkbox_done": {
+    "en": "Done",
+    "zhHant": "已完成",
+    "zhHans": "已完成",
+    "ja": "完了",
+    "ko": "완료",
+    "th": "เสร็จแล้ว"
+  },
+  "sticker_circle_mark": {
+    "en": "Circle",
+    "zhHant": "圈選",
+    "zhHans": "圈选",
+    "ja": "丸で囲む",
+    "ko": "동그라미",
+    "th": "วงกลม"
+  },
+  "sticker_clock": {
+    "en": "Time",
+    "zhHant": "時間",
+    "zhHans": "时间",
+    "ja": "時間",
+    "ko": "시간",
+    "th": "เวลา"
+  },
+  "sticker_cross": {
+    "en": "Cross",
+    "zhHant": "叉",
+    "zhHans": "叉",
+    "ja": "バツ",
+    "ko": "가위표",
+    "th": "กากบาท"
+  },
+  "sticker_exclaim": {
+    "en": "Important",
+    "zhHant": "驚嘆號",
+    "zhHans": "惊叹号",
+    "ja": "感嘆符",
+    "ko": "느낌표",
+    "th": "เครื่องหมายอัศเจรีย์"
+  },
+  "sticker_flag": {
+    "en": "Flag",
+    "zhHant": "旗標",
+    "zhHans": "旗标",
+    "ja": "フラグ",
+    "ko": "깃발",
+    "th": "ธง"
+  },
+  "sticker_formula": {
+    "en": "Formula",
+    "zhHant": "公式",
+    "zhHans": "公式",
+    "ja": "数式",
+    "ko": "수식",
+    "th": "สูตร"
+  },
+  "sticker_frown": {
+    "en": "Unhappy",
+    "zhHant": "不滿",
+    "zhHans": "不满",
+    "ja": "不満",
+    "ko": "아쉬움",
+    "th": "ไม่พอใจ"
+  },
+  "sticker_half_done": {
+    "en": "In progress",
+    "zhHant": "進行中",
+    "zhHans": "进行中",
+    "ja": "進行中",
+    "ko": "진행 중",
+    "th": "กำลังดำเนินการ"
+  },
+  "sticker_heart": {
+    "en": "Love",
+    "zhHant": "喜歡",
+    "zhHans": "喜欢",
+    "ja": "お気に入り",
+    "ko": "좋아요",
+    "th": "ถูกใจ"
+  },
+  "sticker_hot": {
+    "en": "Key point",
+    "zhHant": "重點",
+    "zhHans": "重点",
+    "ja": "重要",
+    "ko": "핵심",
+    "th": "จุดสำคัญ"
+  },
+  "sticker_idea": {
+    "en": "Idea",
+    "zhHant": "靈感",
+    "zhHans": "灵感",
+    "ja": "アイデア",
+    "ko": "아이디어",
+    "th": "ไอเดีย"
+  },
   "sticker_library": {
     "en": "Sticker Library",
     "ja": "ステッカーライブラリ",
@@ -9286,6 +9566,110 @@
     "th": "คลังสติกเกอร์",
     "zhHans": "贴纸库",
     "zhHant": "貼紙庫"
+  },
+  "sticker_loop": {
+    "en": "Loop",
+    "zhHant": "循環",
+    "zhHans": "循环",
+    "ja": "ループ",
+    "ko": "반복",
+    "th": "วนซ้ำ"
+  },
+  "sticker_mine": {
+    "en": "Saved by me",
+    "zhHant": "我存的",
+    "zhHans": "我存的",
+    "ja": "保存したもの",
+    "ko": "내가 저장한 것",
+    "th": "ที่ฉันบันทึก"
+  },
+  "sticker_neutral": {
+    "en": "Neutral",
+    "zhHant": "普通",
+    "zhHans": "普通",
+    "ja": "ふつう",
+    "ko": "보통",
+    "th": "เฉย ๆ"
+  },
+  "sticker_note": {
+    "en": "Sticky note",
+    "zhHant": "便利貼",
+    "zhHans": "便利贴",
+    "ja": "付箋",
+    "ko": "포스트잇",
+    "th": "กระดาษโน้ต"
+  },
+  "sticker_pencil": {
+    "en": "Pencil",
+    "zhHant": "鉛筆",
+    "zhHans": "铅笔",
+    "ja": "鉛筆",
+    "ko": "연필",
+    "th": "ดินสอ"
+  },
+  "sticker_qa": {
+    "en": "Q & A",
+    "zhHant": "問與答",
+    "zhHans": "问与答",
+    "ja": "質疑応答",
+    "ko": "질문과 답변",
+    "th": "ถาม-ตอบ"
+  },
+  "sticker_question": {
+    "en": "Question",
+    "zhHant": "問號",
+    "zhHans": "问号",
+    "ja": "疑問符",
+    "ko": "물음표",
+    "th": "เครื่องหมายคำถาม"
+  },
+  "sticker_ribbon": {
+    "en": "Ribbon",
+    "zhHant": "緞帶",
+    "zhHans": "绶带",
+    "ja": "リボン",
+    "ko": "리본",
+    "th": "ริบบิ้น"
+  },
+  "sticker_smile": {
+    "en": "Happy",
+    "zhHant": "開心",
+    "zhHans": "开心",
+    "ja": "うれしい",
+    "ko": "좋음",
+    "th": "ยิ้ม"
+  },
+  "sticker_star": {
+    "en": "Star",
+    "zhHant": "星星",
+    "zhHans": "星星",
+    "ja": "星",
+    "ko": "별",
+    "th": "ดาว"
+  },
+  "sticker_tag": {
+    "en": "Tag",
+    "zhHant": "標籤",
+    "zhHans": "标签",
+    "ja": "タグ",
+    "ko": "태그",
+    "th": "แท็ก"
+  },
+  "sticker_thumb_up": {
+    "en": "Good",
+    "zhHant": "讚",
+    "zhHans": "赞",
+    "ja": "いいね",
+    "ko": "좋아요",
+    "th": "ดี"
+  },
+  "sticker_underline": {
+    "en": "Squiggle",
+    "zhHant": "波浪底線",
+    "zhHans": "波浪下划线",
+    "ja": "波線",
+    "ko": "물결 밑줄",
+    "th": "ขีดเส้นหยัก"
   },
   "sticky_anchor_ink": {
     "en": "Anchor Overlapping Ink",

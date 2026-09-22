@@ -17,6 +17,7 @@
       "editor.record",
       "editor.share",
       "editor.insert.assets",
+      "editor.insert.stickers",
       "editor.insert.audio",
       "editor.insert.image",
       "editor.insert.math",
@@ -89,6 +90,7 @@
       "editor.record",
       "editor.share",
       "editor.insert.assets",
+      "editor.insert.stickers",
       "editor.insert.audio",
       "editor.insert.image",
       "editor.insert.math",
@@ -225,6 +227,11 @@
         "id": "editor.insert.assets",
         "label_en": "Asset Library",
         "label_key": "asset_library"
+      },
+      {
+        "id": "editor.insert.stickers",
+        "label_en": "Sticker Library",
+        "label_key": "sticker_library"
       },
       {
         "id": "editor.insert.audio",

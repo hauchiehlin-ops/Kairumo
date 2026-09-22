@@ -10237,53 +10237,151 @@ public class StickerManager: ObservableObject {
 public struct StickerLibraryView: View {
     @Environment(\.dismiss) var dismiss
     @ObservedObject private var manager = StickerManager.shared
+    @ObservedObject private var localizationManager = LocalizationManager.shared
     public var onSelect: ((PKDrawing) -> Void)?
-    
+
+    /// 內建還是自己存的。
+    ///
+    /// 原本只有「自己存的」那一半，而它一開始一定是空的 —— 第一次打開
+    /// 貼紙庫的人看到一片空白，卻不知道要怎麼生出第一張。
+    private enum Tab: Hashable { case builtin, mine }
+    @State private var tab: Tab = .builtin
+
+    /// 貼進畫布的尺寸（點）。
+    ///
+    /// 120 是實測的折衷：小於 90 的話笑臉的眼睛會糊成一點，
+    /// 大於 160 的話貼一個勾就佔掉半行字。使用者貼上去之後還能縮放 ——
+    /// 它就是一般的筆跡。
+    private static let insertSize: CGFloat = 120
+
     public init(onSelect: ((PKDrawing) -> Void)? = nil) {
         self.onSelect = onSelect
     }
-    
+
+    private func L(_ key: String) -> String { localizationManager.localized(key) }
+
     public var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 120, maximum: 160), spacing: 16)], spacing: 16) {
-                    ForEach(manager.stickers) { sticker in
-                        if let drawing = try? PKDrawing(data: sticker.drawingData) {
-                            StickerCell(drawing: drawing) {
-                                onSelect?(drawing)
-                                dismiss()
-                            } onRemove: {
-                                manager.removeSticker(withId: sticker.id)
+            VStack(spacing: 0) {
+                Picker("", selection: $tab) {
+                    Text(L("sticker_builtin")).tag(Tab.builtin)
+                    Text(L("sticker_mine")).tag(Tab.mine)
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.bottom, 8)
+                .accessibilityIdentifier("stickers.tab")
+
+                switch tab {
+                case .builtin: builtinGrid
+                case .mine: mineGrid
+                }
+            }
+            .navigationTitle(L("sticker_library"))
+            #if os(iOS)
+            .navigationBarTitleDisplayMode(.inline)
+            #endif
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(L("cancel")) { dismiss() }
+                        .accessibilityIdentifier("stickers.cancel")
+                }
+            }
+        }
+    }
+
+    /// 內建貼紙，依用途分類。
+    ///
+    /// 分類依「使用者想做什麼」分，不是依圖形長相分 —— 那是核心的決定，
+    /// 這裡照著顯示。
+    private var builtinGrid: some View {
+        ScrollView {
+            LazyVStack(alignment: .leading, spacing: 20) {
+                ForEach(stickerCategories(), id: \.id) { category in
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text(L(category.titleKey))
+                            .font(.headline)
+                            .padding(.horizontal)
+                        LazyVGrid(
+                            columns: [GridItem(.adaptive(minimum: 74, maximum: 96), spacing: 12)],
+                            spacing: 12
+                        ) {
+                            ForEach(category.codes, id: \.self) { code in
+                                builtinCell(code)
                             }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+            }
+            .padding(.vertical)
+        }
+        .accessibilityIdentifier("stickers.builtin")
+    }
+
+    private func builtinCell(_ code: String) -> some View {
+        Button {
+            onSelect?(StickerCatalogue.drawing(
+                code: code,
+                size: Self.insertSize,
+                origin: CGPoint(x: 160, y: 200),
+                color: UIColor.label))
+            dismiss()
+        } label: {
+            VStack(spacing: 4) {
+                StickerGlyph(code: code)
+                    .frame(width: 52, height: 52)
+                Text(L(stickerLabelKey(code: code)))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .background(Color(uiColor: .secondarySystemGroupedBackground))
+            .cornerRadius(10)
+        }
+        .buttonStyle(.plain)
+        // 名稱在底下，但識別碼掛在整顆 Button 上 ——
+        // 掛在內層 Text 的話，VoiceOver 與 UI 測試按到的是那行字（S-263）。
+        .accessibilityLabel(L(stickerLabelKey(code: code)))
+        .accessibilityIdentifier("stickers.item")
+    }
+
+    /// 使用者自己存下來的。
+    private var mineGrid: some View {
+        ScrollView {
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 120, maximum: 160), spacing: 16)],
+                spacing: 16
+            ) {
+                ForEach(manager.stickers) { sticker in
+                    if let drawing = try? PKDrawing(data: sticker.drawingData) {
+                        StickerCell(drawing: drawing) {
+                            onSelect?(drawing)
+                            dismiss()
+                        } onRemove: {
+                            manager.removeSticker(withId: sticker.id)
                         }
                     }
                 }
+            }
+            .padding()
+        }
+        .accessibilityIdentifier("stickers.mine")
+        .overlay {
+            if manager.stickers.isEmpty {
+                VStack(spacing: 12) {
+                    Image(systemName: "photo.on.rectangle")
+                        .font(.system(size: 48))
+                        .foregroundColor(.secondary)
+                    Text(L("no_stickers")).font(.headline)
+                    Text(L("no_stickers_hint"))
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                }
                 .padding()
-            }
-            .navigationTitle(LocalizationManager.shared.localized("sticker_library"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(LocalizationManager.shared.localized("cancel")) {
-                        dismiss()
-                    }
-                }
-            }
-            .overlay {
-                if manager.stickers.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "photo.on.rectangle")
-                            .font(.system(size: 48))
-                            .foregroundColor(.secondary)
-                        Text(LocalizationManager.shared.localized("no_stickers"))
-                            .font(.headline)
-                        Text(LocalizationManager.shared.localized("no_stickers_hint"))
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .padding()
-                }
             }
         }
     }

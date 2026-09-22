@@ -39,6 +39,88 @@ class InkEngine(
     val strokes: List<CompletedStroke> get() = _strokes
 
     /**
+     * 把一張內建貼紙貼成**一般的筆跡**。
+     *
+     * # 為什麼是筆跡不是圖片
+     *
+     * 貼進來之後它就可以擦掉一部分、套索搬走、換顏色 —— 與手寫的東西
+     * 完全一樣。變成圖片的話它就成了另一種物件，使用者得用另一套操作，
+     * 而「貼紙貼上去就不能改了」是很多筆記 App 的通病。
+     *
+     * 路徑來自核心（`stickerDrawing`），與 Apple 端同一份資料。
+     * 曲線要自己取樣 —— 筆畫只吃點，不吃貝茲。16 段是下限：再少的話
+     * 笑臉的嘴會變成折線，而那在 120px 的格子裡看得出來。
+     */
+    fun addStickerStrokes(code: String, x: Float, y: Float, size: Float) {
+        val unit = uniffi.padnote_core.stickerCanvasSize()
+        val scale = size / unit
+        uniffi.padnote_core.stickerDrawing(code).forEach { path ->
+            val pts = samplePath(path.segs)
+            if (pts.size < 2) return@forEach
+            val points = pts.map { (px, py) ->
+                StrokePoint(
+                    x = x + px * scale,
+                    y = y + py * scale,
+                    pressure = 1f,
+                    tilt = 0f,
+                    azimuth = 0f,
+                    dtUs = 8000u
+                )
+            }
+            val target = session
+            val page = pageId
+            val coreId = if (target != null && page != null) {
+                runCatching {
+                    target.addStroke(page, ToolKind.FOUNTAIN_PEN, colorRgba, path.width * scale, points)
+                }.getOrNull()
+            } else {
+                null
+            }
+            _strokes += CompletedStroke(
+                pointerId = 0uL,
+                coreStrokeId = coreId,
+                points = points,
+                tool = ToolKind.FOUNTAIN_PEN,
+                startedAtMs = System.currentTimeMillis(),
+                colorRgba = colorRgba,
+                baseWidth = path.width * scale
+            )
+        }
+        onContentCommitted?.invoke()
+    }
+
+    /** 路徑指令 → 取樣過的點。曲線用 16 段近似。 */
+    private fun samplePath(
+        segs: List<uniffi.padnote_core.FfiPathSeg>
+    ): List<Pair<Float, Float>> {
+        val out = mutableListOf<Pair<Float, Float>>()
+        var cur = 0f to 0f
+        var start = 0f to 0f
+        segs.forEach { s ->
+            val to = s.x to s.y
+            when (s.verb) {
+                uniffi.padnote_core.FfiPathVerb.MOVE -> { cur = to; start = to; out += to }
+                uniffi.padnote_core.FfiPathVerb.LINE -> { out += to; cur = to }
+                uniffi.padnote_core.FfiPathVerb.CURVE -> {
+                    for (i in 1..16) {
+                        val t = i / 16f
+                        val u = 1 - t
+                        val a = u * u * u
+                        val b = 3 * u * u * t
+                        val c = 3 * u * t * t
+                        val d = t * t * t
+                        out += (a * cur.first + b * s.c1x + c * s.c2x + d * s.x) to
+                            (a * cur.second + b * s.c1y + c * s.c2y + d * s.y)
+                    }
+                    cur = to
+                }
+                uniffi.padnote_core.FfiPathVerb.CLOSE -> { out += start; cur = start }
+            }
+        }
+        return out
+    }
+
+    /**
      * 使用者自訂的掌拒門檻。`null` 表示沒有自訂，跟著模式走預設值。
      *
      * 自訂之後**兩種模式都用同一個數字** —— 「我設了門檻，那就是門檻」

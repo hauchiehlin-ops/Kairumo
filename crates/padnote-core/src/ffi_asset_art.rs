@@ -172,7 +172,7 @@ const DEFAULT_WIDTH: f32 = 2.5;
 /// 橢圓轉貝茲的控制點比例。四段三次貝茲逼近圓的標準常數。
 const KAPPA: f32 = 0.5522848;
 
-fn seg(verb: FfiPathVerb, x: f32, y: f32) -> FfiPathSeg {
+pub(crate) fn seg(verb: FfiPathVerb, x: f32, y: f32) -> FfiPathSeg {
     FfiPathSeg {
         verb,
         x,
@@ -184,7 +184,7 @@ fn seg(verb: FfiPathVerb, x: f32, y: f32) -> FfiPathSeg {
     }
 }
 
-fn curve_seg(c1: (f32, f32), c2: (f32, f32), to: (f32, f32)) -> FfiPathSeg {
+pub(crate) fn curve_seg(c1: (f32, f32), c2: (f32, f32), to: (f32, f32)) -> FfiPathSeg {
     FfiPathSeg {
         verb: FfiPathVerb::Curve,
         x: to.0,
@@ -196,7 +196,7 @@ fn curve_seg(c1: (f32, f32), c2: (f32, f32), to: (f32, f32)) -> FfiPathSeg {
     }
 }
 
-struct Builder {
+pub(crate) struct Builder {
     paths: Vec<FfiDrawPath>,
     width: f32,
     accent: bool,
@@ -205,7 +205,7 @@ struct Builder {
 }
 
 impl Builder {
-    fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             paths: Vec::new(),
             width: DEFAULT_WIDTH,
@@ -215,18 +215,18 @@ impl Builder {
     }
 
     /// 對應 `cg.setLineWidth`。
-    fn width(&mut self, w: f32) -> &mut Self {
+    pub(crate) fn width(&mut self, w: f32) -> &mut Self {
         self.width = w;
         self
     }
 
     /// 對應 `cg.setStrokeColor(accentColor)` / 切回主線色。
-    fn accent(&mut self, on: bool) -> &mut Self {
+    pub(crate) fn accent(&mut self, on: bool) -> &mut Self {
         self.accent = on;
         self
     }
 
-    fn push(&mut self, segs: Vec<FfiPathSeg>, fillable: bool, dashed: bool) {
+    pub(crate) fn push(&mut self, segs: Vec<FfiPathSeg>, fillable: bool, dashed: bool) {
         if segs.is_empty() {
             return;
         }
@@ -241,7 +241,7 @@ impl Builder {
     }
 
     /// 開放折線。
-    fn poly(&mut self, pts: &[(f32, f32)]) -> &mut Self {
+    pub(crate) fn poly(&mut self, pts: &[(f32, f32)]) -> &mut Self {
         if pts.len() < 2 {
             return self;
         }
@@ -254,7 +254,7 @@ impl Builder {
     }
 
     /// 虛線折線。
-    fn dash(&mut self, pts: &[(f32, f32)]) -> &mut Self {
+    pub(crate) fn dash(&mut self, pts: &[(f32, f32)]) -> &mut Self {
         if pts.len() < 2 {
             return self;
         }
@@ -267,7 +267,7 @@ impl Builder {
     }
 
     /// 封閉折線（實物風格會填色）。
-    fn shape(&mut self, pts: &[(f32, f32)]) -> &mut Self {
+    pub(crate) fn shape(&mut self, pts: &[(f32, f32)]) -> &mut Self {
         if pts.len() < 3 {
             return self;
         }
@@ -288,7 +288,7 @@ impl Builder {
     ///
     /// Apple 端的 `cg.stroke(rect)` 不經過 `fillAndStroke`，所以**實物風格
     /// 也不填色**。照抄那個行為 —— 不然同一張圖在兩個平台上填色的部位不同。
-    fn rect_open(&mut self, x: f32, y: f32, w: f32, h: f32) -> &mut Self {
+    pub(crate) fn rect_open(&mut self, x: f32, y: f32, w: f32, h: f32) -> &mut Self {
         let segs = vec![
             seg(FfiPathVerb::Move, x, y),
             seg(FfiPathVerb::Line, x + w, y),
@@ -301,7 +301,7 @@ impl Builder {
     }
 
     /// 圓角矩形。
-    fn rounded(&mut self, x: f32, y: f32, w: f32, h: f32, r: f32) -> &mut Self {
+    pub(crate) fn rounded(&mut self, x: f32, y: f32, w: f32, h: f32, r: f32) -> &mut Self {
         let r = r.min(w / 2.0).min(h / 2.0).max(0.0);
         let k = r * KAPPA;
         let (x1, y1) = (x + w, y + h);
@@ -322,7 +322,7 @@ impl Builder {
     }
 
     /// 以外接矩形畫橢圓。
-    fn ellipse(&mut self, x: f32, y: f32, w: f32, h: f32) -> &mut Self {
+    pub(crate) fn ellipse(&mut self, x: f32, y: f32, w: f32, h: f32) -> &mut Self {
         let (rx, ry) = (w / 2.0, h / 2.0);
         let (cx, cy) = (x + rx, y + ry);
         let (kx, ky) = (rx * KAPPA, ry * KAPPA);
@@ -339,24 +339,31 @@ impl Builder {
     }
 
     /// 以圓心與半徑畫圓。
-    fn circle(&mut self, cx: f32, cy: f32, r: f32) -> &mut Self {
+    pub(crate) fn circle(&mut self, cx: f32, cy: f32, r: f32) -> &mut Self {
         self.ellipse(cx - r, cy - r, r * 2.0, r * 2.0)
     }
 
     /// 下一條路徑用指定的填色。
-    fn fill_with(&mut self, hex: &str) -> &mut Self {
+    pub(crate) fn fill_with(&mut self, hex: &str) -> &mut Self {
         self.fill_override = hex.to_string();
         self
     }
 
     /// 自由路徑：直接餵指令，給貝茲曲線用。
-    fn path(&mut self, segs: Vec<FfiPathSeg>) -> &mut Self {
+    pub(crate) fn path(&mut self, segs: Vec<FfiPathSeg>) -> &mut Self {
         self.push(segs, false, false);
         self
     }
 
     /// 螺紋鋸齒側視輪廓，用在螺釘與鉚釘。
-    fn thread(&mut self, x: f32, top: f32, bottom: f32, half_width: f32, pitch: f32) -> &mut Self {
+    pub(crate) fn thread(
+        &mut self,
+        x: f32,
+        top: f32,
+        bottom: f32,
+        half_width: f32,
+        pitch: f32,
+    ) -> &mut Self {
         let mut pts = Vec::new();
         let mut y = top;
         let mut left = true;
@@ -368,13 +375,13 @@ impl Builder {
         self.poly(&pts)
     }
 
-    fn finish(&mut self) -> Vec<FfiDrawPath> {
+    pub(crate) fn finish(&mut self) -> Vec<FfiDrawPath> {
         std::mem::take(&mut self.paths)
     }
 }
 
 /// 路徑開頭。
-fn m(x: f32, y: f32) -> FfiPathSeg {
+pub(crate) fn m(x: f32, y: f32) -> FfiPathSeg {
     seg(FfiPathVerb::Move, x, y)
 }
 
@@ -385,7 +392,7 @@ fn l(x: f32, y: f32) -> FfiPathSeg {
 
 /// 三次貝茲。參數順序與 CoreGraphics 的 `addCurve(to:control1:control2:)`
 /// **相反**（這裡是 c1, c2, to），對照原始程式碼時要留意。
-fn c(c1x: f32, c1y: f32, c2x: f32, c2y: f32, x: f32, y: f32) -> FfiPathSeg {
+pub(crate) fn c(c1x: f32, c1y: f32, c2x: f32, c2y: f32, x: f32, y: f32) -> FfiPathSeg {
     curve_seg((c1x, c1y), (c2x, c2y), (x, y))
 }
 
