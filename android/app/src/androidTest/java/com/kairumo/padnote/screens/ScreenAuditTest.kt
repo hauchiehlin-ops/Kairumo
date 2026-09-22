@@ -7,8 +7,8 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
-import androidx.compose.ui.test.performTouchInput
-import androidx.compose.ui.test.swipeUp
+import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
@@ -111,36 +111,25 @@ class ScreenAuditTest {
      * 漏掉尾巴，而那會表現成「某個控制項不見了」的假警報。
      */
     /**
-     * 邊捲邊找，回傳捲到底之後仍然找不到的。
+     * 捲到每一個控制項那裡去看它在不在。
      *
      * **一定要捲。** Compose 的 LazyColumn 只組合看得見的項目 —— 沒捲到的
-     * 控制項根本不在語意樹裡，不是「缺 testTag」。同一份程式碼同一台模擬器，
-     * 第一次跑缺 1 項、第二次缺 13 項，差別只在捲動位置。
-     * **結果不確定的閘門會被關掉**，所以這一段不是優化。
+     * 控制項根本不在語意樹裡，不是「缺 testTag」。同一份程式碼、同一台
+     * 模擬器，不捲的話第一次跑缺 1 項、第二次缺 13 項，差別只在起始捲動
+     * 位置。**結果不確定的閘門會被關掉**，所以這一段不是優化。
      *
-     * 找到就從待找清單移除，全部找到就提早結束 —— 不必每次都捲到底。
+     * 用 `performScrollToNode` 而不是自己 `swipeUp` 迴圈：一次 swipe 會跳過
+     * 好幾個項目，而被跳過的那些會在兩次檢查之間被組合又丟棄 —— 於是明明
+     * 無條件渲染的 `home.notebooks.sort` 也會被判成「不見了」。
+     * 這個 API 就是為 lazy 清單設計的，它會捲到節點真的被組合出來為止。
      */
-    private fun findMissingWhileScrolling(wanted: List<String>, scrollTag: String): List<String> {
-        var pending = wanted.filter { compose.onAllNodesWithTag(it).fetchSemanticsNodes().isEmpty() }
-        repeat(MAX_SCROLLS) {
-            if (pending.isEmpty()) return emptyList()
-            compose.onNodeWithTag(scrollTag).performTouchInput { swipeUp() }
-            compose.waitForIdle()
-            val before = pending.size
-            pending = pending.filter { compose.onAllNodesWithTag(it).fetchSemanticsNodes().isEmpty() }
-            // 捲了一次卻沒有任何新東西出現 —— 到底了。
-            if (pending.size == before && !scrolledFurther(scrollTag)) return pending
+    private fun findMissingWhileScrolling(wanted: List<String>, scrollTag: String): List<String> =
+        wanted.filter { id ->
+            if (compose.onAllNodesWithTag(id).fetchSemanticsNodes().isNotEmpty()) return@filter false
+            runCatching {
+                compose.onNodeWithTag(scrollTag).performScrollToNode(hasTestTag(id))
+            }.isFailure
         }
-        return pending
-    }
-
-    /** 捲動之後畫面有沒有真的動。到底之後再 swipe 也不會變。 */
-    private fun scrolledFurther(scrollTag: String): Boolean {
-        val before = presentTags()
-        compose.onNodeWithTag(scrollTag).performTouchInput { swipeUp() }
-        compose.waitForIdle()
-        return presentTags() != before
-    }
 
     /** 現場實際存在的 testTag。 */
     private fun presentTags(): List<String> =
@@ -166,15 +155,7 @@ class ScreenAuditTest {
             // 條件顯示：HomeScreen.kt 在 recordings.isEmpty() 時畫的是空狀態
             // 提示，這個 tag 根本不存在。乾淨的模擬器上沒有錄音。
             "home.recordings.list",
-            // 這三個在筆記本區的標頭。**sort 與 rename_root 在 Apple 端也缺**
-            // （見 SmokeUITests.homeNotWiredYet）—— 規格標為必要，但兩端預設
-            // 都不顯示。是規格該改成 optional，還是兩端都該補？見 S-263。
-            "home.notebooks.sort",
-            "home.notebooks.rename_root",
-            "home.notebooks.new_folder",
         )
 
-        /** 捲動上限。到底之前就會因為「沒有新 tag」提早停，這只是保險。 */
-        const val MAX_SCROLLS = 20
     }
 }

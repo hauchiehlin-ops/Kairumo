@@ -467,7 +467,18 @@ public struct HomeWorkbenchView: View {
     // MARK: - 1. 頂部使用者帳號橫幅（響應式自適應寬度）
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
     private var userAccountBanner: AnyView {
-        AnyView(userAccountBannerContent.accessibilityIdentifier("home.identity.card"))
+        // `.accessibilityElement(children: .contain)` 不是可有可無的。
+        //
+        // `.accessibilityIdentifier` 套在**容器**上會讓那個容器變成單一無障礙
+        // 元素，**把子元素整個吞掉** —— 於是 home.identity.edit、
+        // home.notebooks.sort 這些子控制項在無障礙樹裡根本不存在。
+        //
+        // 那不只是測試找不到：**VoiceOver 使用者同樣按不到它們**。
+        // `.contain` 讓容器保有自己的識別碼，同時把子元素留在樹上。
+        AnyView(
+            userAccountBannerContent
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("home.identity.card"))
     }
 
     private var userAccountBannerContent: some View {
@@ -530,7 +541,6 @@ public struct HomeWorkbenchView: View {
             showAccountSheet = true
         } label: {
             Text(localizationManager.localized("edit_identity"))
-                .accessibilityIdentifier("home.identity.edit")
                 .font(.caption)
                 .fontWeight(.medium)
                 .padding(.horizontal, 10)
@@ -539,6 +549,10 @@ public struct HomeWorkbenchView: View {
                 .cornerRadius(8)
         }
         .buttonStyle(.plain)
+        // 識別碼要在 Button 上，不能在 label 裡的 Text 上 —— SwiftUI 會把
+        // Button 的子樹合併成一個無障礙元素，內層的識別碼浮不上來，
+        // 於是畫面稽核找不到它（而畫面對照閘門掃原始碼看得到，所以是綠的）。
+        .accessibilityIdentifier("home.identity.edit")
     }
 
     // MARK: - 2. 頂部搜尋列
@@ -696,7 +710,10 @@ public struct HomeWorkbenchView: View {
     // MARK: - 4. 繼續 Working Section（真實筆記）
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
     private var continueWorkingSection: AnyView {
-        AnyView(continueWorkingSectionContent.accessibilityIdentifier("home.continue.list"))
+        AnyView(
+            continueWorkingSectionContent
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("home.continue.list"))
     }
 
     private var continueWorkingSectionContent: some View {
@@ -917,7 +934,10 @@ public struct HomeWorkbenchView: View {
     // MARK: - 5. 最近錄音（真實實體播放）
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
     private var recentRecordingsSection: AnyView {
-        AnyView(recentRecordingsSectionContent.accessibilityIdentifier("home.recordings.list"))
+        AnyView(
+            recentRecordingsSectionContent
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("home.recordings.list"))
     }
 
     private var recentRecordingsSectionContent: some View {
@@ -968,13 +988,15 @@ public struct HomeWorkbenchView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "folder")
                             Text(localizationManager.localized("open_record_folder"))
-                                .accessibilityIdentifier("home.recordings.open_folder")
                         }
                         .dsChip()
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(localizationManager.localized("open_record_folder"))
                     .help(localizationManager.localized("open_record_folder"))
+                    // 識別碼在 Button 上，不在 label 裡的 Text 上（見
+                    // switchAccountButton 的說明）。
+                    .accessibilityIdentifier("home.recordings.open_folder")
                 }
 
                 // 窄螢幕分行並排
@@ -1150,7 +1172,10 @@ public struct HomeWorkbenchView: View {
     // MARK: - 6. 全部筆記（真實多頁手繪文件）
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
     private var allNotebooksSection: AnyView {
-        AnyView(allNotebooksSectionContent.accessibilityIdentifier("home.notebooks.list"))
+        AnyView(
+            allNotebooksSectionContent
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("home.notebooks.list"))
     }
 
     private var allNotebooksSectionContent: some View {
@@ -1457,7 +1482,7 @@ public struct HomeWorkbenchView: View {
 
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
     private var allNotebooksSortMenu: AnyView {
-        AnyView(allNotebooksSortMenuContent.accessibilityIdentifier("home.notebooks.sort"))
+        AnyView(allNotebooksSortMenuContent)
     }
 
     private var allNotebooksSortMenuContent: some View {
@@ -1487,6 +1512,9 @@ public struct HomeWorkbenchView: View {
             .background(Color(uiColor: .tertiarySystemGroupedBackground))
             .cornerRadius(8)
         }
+        // 識別碼在 Menu 上，不在包著它的 AnyView 上 —— 型別抹除那一層不是
+        // 無障礙元素，識別碼掛在那裡查不到。
+        .accessibilityIdentifier("home.notebooks.sort")
     }
 
     // MARK: - 7. 底部工作台品牌與版本號
@@ -1611,6 +1639,9 @@ public struct HomeWorkbenchView: View {
             RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous)
                 .stroke(DS.Color.hairline, lineWidth: 1)
         )
+        // 見 userAccountBanner 的說明：識別碼套在容器上會把子元素吞掉，
+        // 這張卡裡的 home.cloud.signin / sync_now / sign_out 都會不見。
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("home.cloud.card")
     }
 

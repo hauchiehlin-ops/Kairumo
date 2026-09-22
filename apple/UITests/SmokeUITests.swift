@@ -377,12 +377,22 @@ extension SmokeUITests {
     ///
     /// 這裡放著的每一項都代表「規格說要有、實際上稽核找不到」。清空的辦法是
     /// 去把 `accessibilityIdentifier` 補上，不是把項目搬進來。
+    /// 棘輪。**只准縮小。**
+    ///
+    /// 原本有 6 項，四個容器加上 `.accessibilityElement(children: .contain)`
+    /// 之後剩這 2 項 —— 那個修正同時也是無障礙修正，見 HomeWorkbenchView
+    /// 的說明。
     static let homeNotWiredYet: Set<String> = [
-        "home.identity.edit",
+        // 「在 Finder 裡打開錄音資料夾」。動作本體是 Mac 專屬
+        // （AudioRecorderManager.openRecordingsFolderInFinder 整段包在
+        // `#if targetEnvironment(macCatalyst) || os(macOS)` 裡），但**按鈕
+        // 本身沒有跟著條件顯示** —— iPhone 上按了什麼都不會發生。
+        // 要嘛按鈕也包起來、規格改標 Mac 專屬，要嘛在 iOS 上改成「用檔案
+        // App 打開」。見 S-263。
         "home.recordings.open_folder",
-        "home.notebooks.sort",
-        "home.notebooks.rename_root",
-        "home.cloud.signin",
+        // Apple 的「資料與同步」只有兩張卡（backup_create、backup_restore），
+        // **沒有 sync_choose_folder 那一張** —— 而 dataCardIdentifier 還替它
+        // 留著對照。Android 有這張卡。這是真的功能缺口，不是標籤問題。
         "home.data.folder",
     ]
     /// 編輯器的棘輪。**大部分不是「沒接上」，是「藏在選單／浮層裡」** ——

@@ -99,43 +99,47 @@ Apple 單元測試 382 條中 381 過（唯一那條紅是無障礙標籤，與�
 
 合計刪掉約 **430 行**死程式碼。
 
-### S-263. 畫面稽核接到 Android 之後暴露的三件事
+### S-263. 畫面稽核的剩餘缺口 —— 從 6 降到 2
 
-`android/app/src/androidTest/.../screens/ScreenAuditTest.kt` 已經上線，與
-Apple 端讀**同一份** `docs/conformance/screens.json`（`android` 那半邊）。
-CI 的「Android instrumented tests」跑整個 `connectedDebugAndroidTest`，
-所以它自動被涵蓋，不必改 CI。
+**先更正一個我自己報錯的發現。** 我曾說「`home.notebooks.sort` 與
+`home.notebooks.rename_root` 兩端都缺，可能是規格錯了」——**那是錯的**。
+Android 端改用 `performScrollToNode` 之後，26 項裡只缺 1 項。那三項從來
+沒缺過，是稽核用 `swipeUp` 一次跳太遠造成的假訊號：被跳過的項目在兩次
+檢查之間被組合又丟棄。**假的缺失會讓真的缺失被忽略。**
 
-**1. 兩端共同缺同兩項 —— 比較可能是規格錯了**
+#### 根因：識別碼套在容器上，會把子元素吞掉
 
-| 控制項 | Apple | Android |
-|---|---|---|
-| `home.notebooks.sort` | ❌ | ❌ |
-| `home.notebooks.rename_root` | ❌ | ❌ |
-| `home.notebooks.new_folder` | ✅ | ❌ |
-| `home.identity.edit` | ❌ | ✅ |
-| `home.recordings.open_folder` | ❌ | ✅ |
-| `home.cloud.signin` | ❌ | ✅ |
-| `home.data.folder` | ❌ | ✅ |
+Apple 那 6 項的成因是同一個。`.accessibilityIdentifier` 套在容器上會讓
+那個容器變成**單一**無障礙元素，子元素整個從樹上消失：
 
-前兩項兩端都缺 —— 規格標為**必要**，而兩端預設狀態下都不顯示。兩端同時
-缺同兩項，比較可能是規格該改成 `optional`（或它們屬於某個條件狀態），
-而不是兩端各自漏掉。**其餘五項才是真的落差**，要逐個補。
+```swift
+AnyView(userAccountBannerContent.accessibilityIdentifier("home.identity.card"))
+//  → home.identity.edit（裡面的按鈕）在無障礙樹裡不存在
+```
 
-**2. 條件顯示的控制項，規格表達不出來**
+比對稽核結果完全吻合 —— 找得到的全是容器（`identity.card`、
+`notebooks.list`、`cloud.card`），找不到的全是那些容器的子控制項。
 
-`home.recordings.list` 只在有錄音時才畫。`FfiControlSpec` 已經有 `optional`
-欄位，但這一項標的是必要。要嘛改成 optional，要嘛讓測試先塞一筆資料。
+**這不只是測試問題：VoiceOver 使用者同樣按不到那些按鈕。**
 
-**3. Android 還沒有「點得到」那一半**
+修法是 `.accessibilityElement(children: .contain)`，容器保有自己的識別碼，
+子元素留在樹上。五個容器都補上之後，6 → 2。
 
-Apple 端斷言 `isHittable`，擋的是 zIndex 那種「畫得出來卻按不到」。
-Compose 沒有等價的單一查詢 —— `assertIsDisplayed` 只看在不在畫面上，
-不看上面有沒有蓋東西。目前 Android 只守「存在」那一半。
+#### 剩下的 2 項
 
-**另外**：兩端的筆記卡片都沒有各自的 testTag／accessibilityIdentifier，
-所以編輯器那一輪 Android 還沒做（Apple 靠種子筆記的英文標題進去）。
-補上 `home.notebooks.card.<id>` 之後兩端都能直接進編輯器。
+| 控制項 | 性質 |
+|---|---|
+| `home.recordings.open_folder` | 動作本體是 **Mac 專屬**（`openRecordingsFolderInFinder` 整段包在 `#if targetEnvironment(macCatalyst) \|\| os(macOS)`），但**按鈕本身沒有跟著條件顯示** —— iPhone 上按了什麼都不會發生。要嘛按鈕也包起來、規格改標 Mac 專屬，要嘛在 iOS 上改成「用檔案 App 打開」 |
+| `home.data.folder` | Apple 的「資料與同步」只有兩張卡（`backup_create`、`backup_restore`），**沒有 `sync_choose_folder` 那一張** —— 而 `dataCardIdentifier` 還替它留著對照。Android 有這張卡。**真的功能缺口** |
+
+Android 端剩 1 項：`home.recordings.list` 只在有錄音時才畫
+（`FfiControlSpec` 有 `optional` 欄位，但這一項標的是必要 —— 要嘛改標，
+要嘛讓測試先塞一筆資料）。
+
+#### 兩端還缺的
+
+- Android 沒有「點得到」那一半（Compose 沒有 `isHittable` 的等價查詢）
+- 兩端的筆記卡片都沒有各自的識別碼，所以 Android 還沒有編輯器那一輪
 
 ---
 
