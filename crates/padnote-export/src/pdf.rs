@@ -1220,7 +1220,10 @@ fn format_pdf_runs(text: &str, default_font: &str) -> Vec<(String, String)> {
             hex.push('>');
             runs.push(("/F_CJK".to_string(), hex));
         } else {
-            runs.push((default_font.to_string(), format!("({})", escape_pdf_string(buf))));
+            runs.push((
+                default_font.to_string(),
+                format!("({})", escape_pdf_string(buf)),
+            ));
         }
         buf.clear();
     }
@@ -1228,12 +1231,22 @@ fn format_pdf_runs(text: &str, default_font: &str) -> Vec<(String, String)> {
     for ch in text.chars() {
         let is_cjk = winansi_byte(ch).is_none();
         if buf_is_cjk != Some(is_cjk) {
-            flush(&mut runs, &mut buf, buf_is_cjk.unwrap_or(false), default_font);
+            flush(
+                &mut runs,
+                &mut buf,
+                buf_is_cjk.unwrap_or(false),
+                default_font,
+            );
             buf_is_cjk = Some(is_cjk);
         }
         buf.push(ch);
     }
-    flush(&mut runs, &mut buf, buf_is_cjk.unwrap_or(false), default_font);
+    flush(
+        &mut runs,
+        &mut buf,
+        buf_is_cjk.unwrap_or(false),
+        default_font,
+    );
     runs
 }
 
@@ -1574,10 +1587,7 @@ mod wrap_tests {
         let lines = wrap_pdf_lines(&text, 12.0, max);
         assert!(lines.len() > 1, "應該要換行，實得 {} 行", lines.len());
         for line in &lines {
-            let w: f32 = line
-                .chars()
-                .map(|c| glyph_width(c, 12.0))
-                .sum();
+            let w: f32 = line.chars().map(|c| glyph_width(c, 12.0)).sum();
             assert!(w <= max + 12.0, "這一行超出可用寬度：{w} > {max}");
         }
     }
@@ -1597,10 +1607,7 @@ mod wrap_tests {
         let lines = wrap_pdf_lines(&"x".repeat(400), 12.0, 200.0);
         assert!(lines.len() > 1, "超長詞應該被硬切");
         for line in &lines {
-            let w: f32 = line
-                .chars()
-                .map(|c| glyph_width(c, 12.0))
-                .sum();
+            let w: f32 = line.chars().map(|c| glyph_width(c, 12.0)).sum();
             assert!(w <= 200.0 + 12.0, "硬切後仍然超寬：{w}");
         }
     }
