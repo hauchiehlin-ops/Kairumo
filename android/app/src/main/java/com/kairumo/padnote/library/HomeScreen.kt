@@ -434,8 +434,20 @@ fun HomeScreen(
                 }
             }
         }
+        // 沒有錄音時也要有這個容器（S-263）。
+        //
+        // 原本 tag 掛在每一列上，於是**沒有錄音時它整個不存在** —— 畫面稽核
+        // 在乾淨的裝置上一定看不到它，而那一項就只能長期躺在棘輪裡。
+        // 躺在棘輪裡的東西沒有人會再看第二眼。
+        //
+        // Apple 端本來就是這樣做的：區塊永遠在，沒有內容時裡面放一句提示。
+        // 兩端對齊之後，這一項就是真的被守住了。
         if (recordings.isEmpty()) {
-            item { EmptyHint(l("no_recordings_hint")) }
+            item {
+                Box(Modifier.testTag("home.recordings.list")) {
+                    EmptyHint(l("no_recordings_hint"))
+                }
+            }
         } else {
             val shownRecordings = if (showAllRecordings) recordings else recordings.take(5)
             items(shownRecordings, key = { "rec-${it.file.absolutePath}" }) { recording ->
@@ -817,7 +829,17 @@ private fun NotebookGridCard(
                     onDrag = { _, _ -> }
                 )
             }
-            .clickable { onOpen(entry.id) },
+            .clickable { onOpen(entry.id) }
+            // 每一張卡片一個識別碼（S-263）。
+            //
+            // 在此之前只有整份清單有 `home.notebooks.list`，於是測試要開一本
+            // 筆記只能**靠顯示文字**去找 —— Apple 端那條就是這樣寫的
+            // （`app.staticTexts["Welcome to Kairumo"]`），而那讓測試的成敗
+            // 取決於模擬器當下是什麼語言。
+            //
+            // 用 id 而不是序號：序號會隨排序與新增而變，而測試靠序號定位
+            // 的話，使用者改一次排序就會紅一片。
+            .testTag("home.notebooks.card.${entry.id}"),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant

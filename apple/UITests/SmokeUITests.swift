@@ -415,6 +415,45 @@ extension SmokeUITests {
             app, screen: "editor", ids: Self.moreMenuItems, requireHittable: false)
     }
 
+    /// 匯出選單裡的四個項目：打開之後要在、而且是啟用的。
+    ///
+    /// 與 `testMoreMenuItemsAreReachable` 同一個做法、同一個理由（S-261d）。
+    /// 分成兩條而不是合併成一條：兩張選單不能同時打開，而一條測試裡開關
+    /// 兩次選單，失敗時分不出是哪一張沒開起來。
+    func testExportMenuItemsAreReachable() {
+        let app = launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+
+        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
+        guard card.waitForExistence(timeout: 10) else {
+            XCTFail("首頁找不到種子筆記，開不了編輯器")
+            return
+        }
+        card.tap()
+
+        let share = app.descendants(matching: .any).matching(identifier: "editor.share").firstMatch
+        guard share.waitForExistence(timeout: 15) else {
+            XCTFail("編輯器上沒有匯出選單")
+            return
+        }
+        share.tap()
+
+        // 選單有展開動畫。太早掃會掃到一半，而**間歇失敗的閘門會被關掉**。
+        let firstItem = app.buttons["Export PDF"].firstMatch
+        XCTAssertTrue(firstItem.waitForExistence(timeout: 5), "匯出選單沒有打開")
+
+        ScreenAudit.checkOnly(
+            app, screen: "editor", ids: Self.exportMenuItems, requireHittable: false)
+    }
+
+    /// 匯出選單裡的項目。
+    static let exportMenuItems: [String] = [
+        "editor.export.pdf",
+        "editor.export.image",
+        "editor.export.print",
+        "editor.export.share",
+    ]
+
     /// 「更多」選單裡的項目。與 `editorNotWiredYet` 是互補的兩半 ——
     /// 這裡每加一個，那邊就該少一個。
     static let moreMenuItems: [String] = [
@@ -478,17 +517,16 @@ extension SmokeUITests {
     /// 之後剩這 2 項 —— 那個修正同時也是無障礙修正，見 HomeWorkbenchView
     /// 的說明。
     static let homeNotWiredYet: Set<String> = [
-        // 「在 Finder 裡打開錄音資料夾」。動作本體是 Mac 專屬
-        // （AudioRecorderManager.openRecordingsFolderInFinder 整段包在
-        // `#if targetEnvironment(macCatalyst) || os(macOS)` 裡），但**按鈕
-        // 本身沒有跟著條件顯示** —— iPhone 上按了什麼都不會發生。
-        // 要嘛按鈕也包起來、規格改標 Mac 專屬，要嘛在 iOS 上改成「用檔案
-        // App 打開」。見 S-263。
-        "home.recordings.open_folder",
-        // Apple 的「資料與同步」只有兩張卡（backup_create、backup_restore），
-        // **沒有 sync_choose_folder 那一張** —— 而 dataCardIdentifier 還替它
-        // 留著對照。Android 有這張卡。這是真的功能缺口，不是標籤問題。
-        "home.data.folder",
+        // 空的。原本有 6 項，四個容器補上
+        // `.accessibilityElement(children: .contain)` 之後剩 2 項（S-263），
+        // 那兩項也在 2026-09-23 清掉了：
+        //
+        //   * home.recordings.open_folder —— 窄螢幕那個版面變體的按鈕
+        //     **沒掛識別碼**，而 iPhone 上 ViewThatFits 選的就是它。
+        //     兩個變體只接一邊的線。
+        //   * home.data.folder —— Apple 首頁少了「選擇同步資料夾」那張卡，
+        //     而 FolderSyncDetailSheet 早就做好、也接在 .sheet 上了，
+        //     只是沒有任何地方打得開它。
     ]
     /// 編輯器的棘輪。**大部分不是「沒接上」，是「藏在選單／浮層裡」** ——
     /// `insert.*` 在插入選單、`export.*` 在匯出選單、`text.*` 只有打字模式才有、
@@ -527,9 +565,9 @@ extension SmokeUITests {
         "editor.insert.collaborate",
         "editor.insert.recognize",
         "editor.insert.ai_summary",
-        // ↓ 以下還沒有任何執行期檢查。匯出那四項在另一張選單
-        //   （`editor.share`），做法與 testMoreMenuItemsAreReachable 相同，
-        //   只是還沒寫。記在 docs/TODO.md 的 S-261d。
+        // ↓ 匯出那四項在另一張選單（`editor.share`），由
+        //   testExportMenuItemsAreReachable 守著。同樣不在這條單一畫面
+        //   狀態的稽核裡 —— 要先打開選單才看得到。
         "editor.export.pdf",
         "editor.export.image",
         "editor.export.print",

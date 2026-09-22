@@ -8,6 +8,7 @@ import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -57,9 +58,58 @@ class ScreenAuditTest {
         audit("home", allowMissing = HOME_NOT_WIRED_YET, scrollTag = "home.scroll")
     }
 
-    private fun audit(screen: String, allowMissing: Set<String>, scrollTag: String) {
+    /**
+     * @param scrollTag 捲動容器的 tag。`null` 代表這個畫面不是 lazy 清單
+     *   （編輯器的工具列是 `FlowRow`，整排一次組合完）—— 那時候捲動不但沒用，
+     *   還會把「找不到」誤報成「捲不過去」。
+     * @param navigate 走到這個畫面要先做什麼。首頁是 `{}`。
+     */
+    @Test
+    fun editorScreenRendersEveryRequiredControl() {
+        audit("editor", allowMissing = EDITOR_NOT_WIRED_YET, scrollTag = null) {
+            openFirstNotebook()
+        }
+    }
+
+    @Test
+    fun toolbarScreenRendersEveryRequiredControl() {
+        audit("toolbar", allowMissing = emptySet(), scrollTag = null) {
+            openFirstNotebook()
+            compose.onNodeWithTag("editor.more").performClick()
+            compose.waitForIdle()
+            compose.onNodeWithTag("editor.customize_toolbar").performClick()
+            compose.waitForIdle()
+        }
+    }
+
+    /**
+     * 開啟第一本筆記。
+     *
+     * 靠 `home.notebooks.card.<id>` 這個前綴找，不靠顯示文字 —— 文字會隨
+     * 語言變，而這個稽核本來就刻意與語言無關。卡片的識別碼是 S-263 補的，
+     * 在那之前整份清單只有一個 tag，根本點不到特定一本。
+     */
+    private fun openFirstNotebook() {
+        val cards = compose.onAllNodes(
+            SemanticsMatcher("testTag 以 home.notebooks.card. 開頭") { node ->
+                node.config.getOrNull(SemanticsProperties.TestTag)
+                    ?.startsWith("home.notebooks.card.") == true
+            })
+        val nodes = cards.fetchSemanticsNodes()
+        assertTrue("首頁一本筆記都沒有 —— 種子資料沒建起來？", nodes.isNotEmpty())
+        cards[0].performClick()
+    }
+
+    private fun audit(
+        screen: String,
+        allowMissing: Set<String>,
+        scrollTag: String?,
+        navigate: () -> Unit = {}
+    ) {
         skipOnboarding()
         ActivityScenario.launch(MainActivity::class.java).use {
+            compose.waitForIdle()
+            navigate()
             compose.waitForIdle()
 
             val required = requiredControlIds(screen)
@@ -123,9 +173,12 @@ class ScreenAuditTest {
      * 無條件渲染的 `home.notebooks.sort` 也會被判成「不見了」。
      * 這個 API 就是為 lazy 清單設計的，它會捲到節點真的被組合出來為止。
      */
-    private fun findMissingWhileScrolling(wanted: List<String>, scrollTag: String): List<String> =
+    private fun findMissingWhileScrolling(wanted: List<String>, scrollTag: String?): List<String> =
         wanted.filter { id ->
             if (compose.onAllNodesWithTag(id).fetchSemanticsNodes().isNotEmpty()) return@filter false
+            // 沒有捲動容器就是真的不在 —— 硬捲一個不存在的容器只會把
+            // 「缺這個控制項」變成「捲不過去」，兩種訊息看起來一樣。
+            if (scrollTag == null) return@filter true
             runCatching {
                 compose.onNodeWithTag(scrollTag).performScrollToNode(hasTestTag(id))
             }.isFailure
@@ -143,18 +196,70 @@ class ScreenAuditTest {
         /**
          * 還沒接上 testTag 的控制項（棘輪）。**只准縮小。**
          *
-         * `home.recordings.list` 是條件顯示：`HomeScreen.kt:433` 在
-         * `recordings.isEmpty()` 時畫的是空狀態提示，那個 tag 根本不存在。
-         * 乾淨的模擬器上沒有錄音，所以稽核一定看不到它。
+         * 空的。`home.recordings.list` 原本在這裡 —— 它的 tag 掛在每一列
+         * 錄音上，於是**沒有錄音時整個不存在**，乾淨的裝置上一定看不到。
          *
-         * 正解是讓稽核能表達「這個控制項要有資料才會出現」—— 規格的
-         * `FfiControlSpec` 已經有 `optional` 欄位，但這一項標的是必要。
-         * 要嘛把它改成 optional，要嘛讓測試先塞一筆錄音。記在 S-263。
+         * 2026-09-23 改成「沒有錄音時容器仍在，裡面放空狀態提示」，與
+         * Apple 端一致。修的是產品不是測試：一個只在有資料時才存在的容器，
+         * 對無障礙工具來說也是同一個問題。
          */
-        val HOME_NOT_WIRED_YET = setOf(
-            // 條件顯示：HomeScreen.kt 在 recordings.isEmpty() 時畫的是空狀態
-            // 提示，這個 tag 根本不存在。乾淨的模擬器上沒有錄音。
-            "home.recordings.list",
+        val HOME_NOT_WIRED_YET = emptySet<String>()
+
+        /**
+         * 編輯器的棘輪。**只准縮小。**
+         *
+         * 與 Apple 端那一份是同一批東西、同一個理由：`insert.*` 在「更多」
+         * 選單裡、`export.*` 在匯出選單裡、`text.*` 只有打字模式才有、
+         * `sidebar.*` 要先展開側欄 —— 單一畫面狀態的稽核看不到它們。
+         *
+         * Apple 端已經有兩條測試把選單那批守住了
+         * （testMoreMenuItemsAreReachable / testExportMenuItemsAreReachable）。
+         * Android 這邊還沒有對應的 —— Compose 的 DropdownMenu 內容進不進
+         * 語意樹還沒量過，而**沒量過就不該假設它跟 Apple 一樣**。
+         * 記在 docs/TODO.md 的 S-261c。
+         */
+        val EDITOR_NOT_WIRED_YET = setOf(
+            "editor.insert.assets",
+            "editor.insert.audio",
+            "editor.insert.image",
+            "editor.insert.math",
+            "editor.insert.chart",
+            "editor.insert.table",
+            "editor.insert.shape",
+            "editor.insert.model3d",
+            "editor.insert.theme_tools",
+            "editor.customize_toolbar",
+            "editor.insert.refine_sketch",
+            "editor.insert.comment_pin",
+            "editor.insert.collaborate",
+            "editor.insert.recognize",
+            "editor.insert.ai_summary",
+            "editor.export.pdf",
+            "editor.export.image",
+            "editor.export.print",
+            "editor.export.share",
+            "editor.ink.clear",
+            "editor.text.add_box",
+            "editor.text.studio",
+            "editor.text.bold",
+            "editor.text.italic",
+            "editor.text.underline",
+            "editor.text.align_left",
+            "editor.text.align_center",
+            "editor.text.align_right",
+            "editor.text.snap_grid",
+            "editor.text.layer_forward",
+            "editor.text.layer_backward",
+            "editor.text.symbols",
+            "editor.text.select",
+            "editor.text.link",
+            "editor.text.undo",
+            "editor.text.redo",
+            "editor.sidebar.tab.pages",
+            "editor.sidebar.tab.folders",
+            "editor.sidebar.list",
+            "editor.sidebar.thumb_smaller",
+            "editor.sidebar.thumb_larger",
         )
 
     }

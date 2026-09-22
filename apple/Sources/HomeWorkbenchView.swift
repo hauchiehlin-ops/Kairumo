@@ -975,12 +975,13 @@ public struct HomeWorkbenchView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Text(showAllRecordings ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleRecordings.count))")
-                                .accessibilityIdentifier("home.recordings.show_all")
                             Image(systemName: showAllRecordings ? "chevron.up" : "chevron.down")
                         }
                         .dsChip()
                     }
                     .buttonStyle(.plain)
+                    // 識別碼在 Button 上，不在裡面的 Text 上（S-263）。
+                    .accessibilityIdentifier("home.recordings.show_all")
 
                     Button {
                         audioManager.openRecordingsFolderInFinder()
@@ -1031,23 +1032,35 @@ public struct HomeWorkbenchView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Text(showAllRecordings ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleRecordings.count))")
-                                .accessibilityIdentifier("home.recordings.show_all")
                                 Image(systemName: showAllRecordings ? "chevron.up" : "chevron.down")
                             }
                             .dsChip()
                         }
                         .buttonStyle(.plain)
+                        // 識別碼在 Button 上，不在裡面的 Text 上（S-263）。
+                        .accessibilityIdentifier("home.recordings.show_all")
 
+                        // 與寬螢幕那一顆是**同一個動作**，所以掛同一個識別碼、
+                        // 用同一個語系鍵。
+                        //
+                        // 原本這一顆兩樣都沒有：`ViewThatFits` 在 iPhone 上
+                        // 選的是這個變體，於是識別碼在整個窄螢幕上等於不存在
+                        // （畫面稽核找不到它，而 VoiceOver 念到的是「資料夾」，
+                        // 不是「開啟錄音資料夾」）。兩個版面變體只接一邊的線，
+                        // 是這個專案一再出現的一類 bug。
                         Button {
                             audioManager.openRecordingsFolderInFinder()
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "folder")
-                                Text(localizationManager.localized("folders"))
+                                Text(localizationManager.localized("open_record_folder"))
                             }
                             .dsChip()
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(localizationManager.localized("open_record_folder"))
+                        .help(localizationManager.localized("open_record_folder"))
+                        .accessibilityIdentifier("home.recordings.open_folder")
                     }
                 }
             }
@@ -1460,6 +1473,16 @@ public struct HomeWorkbenchView: View {
                         .shadow(color: Color.black.opacity(0.03), radius: 4, y: 2)
                     }
                     .buttonStyle(.plain)
+                    // 每一張卡片一個識別碼（S-263）。
+                    //
+                    // 在此之前只有整份清單有 `home.notebooks.list`，於是測試
+                    // 要開一本筆記只能**靠顯示文字**去找
+                    // （`app.staticTexts["Welcome to Kairumo"]`），而那讓測試的
+                    // 成敗取決於模擬器當下是什麼語言 —— 拍完中文截圖之後整套
+                    // 就會全紅，而那跟程式對不對一點關係都沒有。
+                    //
+                    // 用 id 而不是序號：序號會隨排序與新增而變。
+                    .accessibilityIdentifier("home.notebooks.card.\(note.id)")
                     // 拖到上面的資料夾膠囊上就分類完成（S-88）。
                     //
                     // 編輯器的側欄早就能這樣拖，首頁卻不行 —— 而首頁才是
@@ -1539,9 +1562,20 @@ public struct HomeWorkbenchView: View {
                     .foregroundColor(.secondary)
             }
 
+            // 「選擇同步資料夾」那張卡（S-263）。
+            //
+            // 兩件事一起修：Android 首頁一直有這張卡而 Apple 沒有，
+            // 而 `FolderSyncDetailSheet` 這整張畫面**早就做好也接在
+            // `.sheet` 上了，只是沒有任何地方把 showFolderSyncSheet 設成
+            // true** —— 做完卻進不去。
+            //
+            // 資料夾同步在 Apple 這邊原本只能從「雲端同步」那張卡進去再切
+            // 分頁，使用者要先知道它藏在那裡。
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
                     unifiedSyncCard
+                    dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
+                             "sync_folder_desc", .teal) { showFolderSyncSheet = true }
                     dataCard("externaldrive.badge.timemachine", "backup_create",
                              "backup_create_desc", .blue) { showBackupCreateSheet = true }
                     dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
@@ -1549,6 +1583,8 @@ public struct HomeWorkbenchView: View {
                 }
                 VStack(spacing: 12) {
                     unifiedSyncCard
+                    dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
+                             "sync_folder_desc", .teal) { showFolderSyncSheet = true }
                     dataCard("externaldrive.badge.timemachine", "backup_create",
                              "backup_create_desc", .blue) { showBackupCreateSheet = true }
                     dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
