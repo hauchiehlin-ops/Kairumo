@@ -412,7 +412,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "PDF 內的標註座標與原稿一致，用其他 App 打開也不會跑位。",
         "fig": "export",
-        "cap": "匯出與列印選單：匯出 PDF、匯出為圖片、列印筆記、分享筆記"
+        "cap": "匯出與列印選單：匯出 PDF、匯出為圖片、列印筆記、分享筆記",
+        "fig2": "export_preview",
+        "cap2": "匯出預覽：這就是真的會送出去的那份檔案，確認版面之後再選「匯出」"
       },
       {
         "id": "keys",
@@ -904,7 +906,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "Annotation coordinates in the PDF match the original, so they stay in place in other apps too.",
         "fig": "export",
-        "cap": "Export & Print menu: Export PDF, Export Image, Print Notebook, Share Note"
+        "cap": "Export & Print menu: Export PDF, Export Image, Print Notebook, Share Note",
+        "fig2": "export_preview",
+        "cap2": "Export preview: this is the actual file that will be sent — check the layout, then choose “Export”"
       },
       {
         "id": "keys",
@@ -1389,7 +1393,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "PDF 内的批注坐标与原稿一致，用其他 App 打开也不会跑位。",
         "fig": "export",
-        "cap": "导出与打印菜单：导出 PDF、导出为图片、打印笔记、分享笔记"
+        "cap": "导出与打印菜单：导出 PDF、导出为图片、打印笔记、分享笔记",
+        "fig2": "export_preview",
+        "cap2": "导出预览：这就是真的会送出去的那份文件，确认版面之后再选「导出」"
       },
       {
         "id": "keys",
@@ -1874,7 +1880,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "PDF 内の注釈座標は原本と一致するため、他のアプリで開いてもずれません。",
         "fig": "export",
-        "cap": "書き出しメニュー：PDF、画像、印刷、ノートを共有"
+        "cap": "書き出しメニュー：PDF、画像、印刷、ノートを共有",
+        "fig2": "export_preview",
+        "cap2": "書き出しプレビュー：実際に書き出されるファイルそのものです。レイアウトを確認してから「書き出す」を選びます"
       },
       {
         "id": "keys",
@@ -2359,7 +2367,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "PDF 안의 주석 좌표가 원본과 같아 다른 앱에서 열어도 위치가 틀어지지 않습니다.",
         "fig": "export",
-        "cap": "내보내기 메뉴: PDF, 이미지, 인쇄, 노트 공유"
+        "cap": "내보내기 메뉴: PDF, 이미지, 인쇄, 노트 공유",
+        "fig2": "export_preview",
+        "cap2": "내보내기 미리보기: 실제로 내보낼 파일 그 자체입니다. 레이아웃을 확인한 뒤 “내보내기”를 선택하세요"
       },
       {
         "id": "keys",
@@ -2844,7 +2854,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "พิกัดของคำอธิบายใน PDF ตรงกับต้นฉบับ เปิดในแอปอื่นก็ไม่เคลื่อน",
         "fig": "export",
-        "cap": "เมนูส่งออก: PDF รูปภาพ พิมพ์ และแชร์โน้ต"
+        "cap": "เมนูส่งออก: PDF รูปภาพ พิมพ์ และแชร์โน้ต",
+        "fig2": "export_preview",
+        "cap2": "ตัวอย่างการส่งออก: นี่คือไฟล์จริงที่จะถูกส่งออก ตรวจเลย์เอาต์แล้วเลือก “ส่งออก”"
       },
       {
         "id": "keys",
