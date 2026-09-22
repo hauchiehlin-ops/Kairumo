@@ -219,7 +219,11 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxHeight()
                 .dsContentWidth()
-                .padding(horizontal = gutter),
+                .padding(horizontal = gutter)
+                // 畫面稽核要捲過整份清單才看得到下面的控制項 —— LazyColumn
+                // 只組合看得見的項目，沒捲到的根本不在語意樹裡。
+                // 見 androidTest 的 ScreenAuditTest。
+                .testTag("home.scroll"),
             verticalArrangement = Arrangement.spacedBy(DS.Space.s),
             contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = DS.Space.m)
         ) {
