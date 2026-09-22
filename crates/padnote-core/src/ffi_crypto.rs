@@ -135,7 +135,15 @@ pub struct FfiEncryptionScope {
     pub covers_notes: bool,
     /// 圖片。
     pub covers_images: bool,
-    /// 錄音。**目前是 false**，理由見模組說明。
+    /// 錄音。**永遠是 false —— 這是拍板的決定，不是還沒做**（2026-09-23）。
+    ///
+    /// 錄音是邊錄邊寫的 Ogg 串流。包成加密框架之後，它就不再是播放器打得
+    /// 開的檔案 —— 而「可以用 VLC 打開自己的錄音」是這個產品明講過的承諾
+    /// （H4）。兩者只能挑一個，選的是後者：**使用者的檔案要一直是他自己
+    /// 打得開的檔案。**
+    ///
+    /// 所以介面上不是「錄音還沒加密」，是「錄音不加密」。這個欄位存在的
+    /// 唯一理由就是讓介面**照實講**，而不是讓它有一天悄悄變成 true。
     pub covers_recordings: bool,
 }
 
@@ -144,8 +152,8 @@ pub fn crypto_encryption_scope() -> FfiEncryptionScope {
     FfiEncryptionScope {
         covers_notes: true,
         covers_images: true,
-        // 錄音是邊錄邊寫的 Ogg 串流，包成框架就不再是播放器打得開的檔案。
-        // 那個取捨要單獨決定 —— 在決定之前，介面必須誠實說「錄音沒有加密」。
+        // **已拍板：錄音不加密**（2026-09-23）。理由見上面的欄位說明 ——
+        // 加密會讓錄音不再是 VLC 打得開的檔案，而那是明講過的承諾。
         covers_recordings: false,
     }
 }
@@ -200,6 +208,41 @@ pub fn crypto_unlock(
         package_path,
         passphrase,
     }))
+}
+
+/// 用**復原碼**開一個已加密的套件，給忘記密碼的人。
+///
+/// **這一步很慢（Argon2id 刻意如此），不要在主執行緒呼叫。**
+///
+/// 回 `WrongPassphrase` 有兩種可能，而介面要分得出來 —— 先問
+/// [`crypto_recovery_can_unlock`]：回 false 的話，那本筆記的復原碼**從來
+/// 就沒有被用來包住金鑰**（舊版建立的），再怎麼輸入都不會成功。
+#[uniffi::export]
+pub fn crypto_unlock_with_recovery(
+    package_path: String,
+    recovery_phrase: String,
+) -> Result<Arc<FfiUnlockedNotebook>, FfiCryptoError> {
+    padnote_storage::NotebookPackage::open(std::path::Path::new(&package_path))
+        .and_then(|p| p.unlock_with_recovery(&recovery_phrase))
+        .map_err(|_| FfiCryptoError::WrongPassphrase)?;
+    // 復原碼開出來的 handle 不帶密碼 —— 使用者本來就是因為忘記密碼才走
+    // 這條路。`change_passphrase` 因此在這種 handle 上用不了，
+    // 介面要引導他去「設定新密碼」。
+    Ok(Arc::new(FfiUnlockedNotebook {
+        package_path,
+        passphrase: String::new(),
+    }))
+}
+
+/// 這本筆記的復原碼**真的解得開**嗎。
+///
+/// 舊版建立的套件回 false。介面要照實講，不能讓使用者對著一串抄得好好的
+/// 詞一直重打 —— 那組碼從來沒有被用來包住金鑰。
+#[uniffi::export]
+pub fn crypto_recovery_can_unlock(package_path: String) -> bool {
+    padnote_storage::NotebookPackage::open(std::path::Path::new(&package_path))
+        .map(|p| p.recovery_can_unlock())
+        .unwrap_or(false)
 }
 
 #[cfg(test)]

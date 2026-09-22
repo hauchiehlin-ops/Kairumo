@@ -2984,12 +2984,12 @@ extension LocalizationManager {
             .th: "บนอุปกรณ์นี้ สำเนาที่ใช้งานยังไม่ถูกเข้ารหัส การเข้ารหัสปกป้องแพ็กเกจที่ซิงก์ไปยังคลาวด์"
         ],
         "encrypt_not_recordings": [
-            .zhHant: "錄音尚未加密",
-            .en: "Recordings are NOT encrypted yet",
-            .zhHans: "录音尚未加密",
-            .ja: "録音はまだ暗号化されません",
-            .ko: "녹음은 아직 암호화되지 않습니다",
-            .th: "การบันทึกเสียงยังไม่ถูกเข้ารหัส"
+            .zhHant: "錄音不加密 —— 這是刻意的",
+            .en: "Recordings are not encrypted — on purpose",
+            .zhHans: "录音不加密 —— 这是刻意的",
+            .ja: "録音は暗号化されません —— 意図的です",
+            .ko: "녹음은 암호화되지 않습니다 —— 의도적입니다",
+            .th: "การบันทึกเสียงไม่ถูกเข้ารหัส —— เป็นความตั้งใจ"
         ],
         "encrypt_notebook": [
             .zhHant: "加密這本筆記",
@@ -3038,6 +3038,14 @@ extension LocalizationManager {
             .ja: "8 文字以上にしてください",
             .ko: "8자 이상 입력하세요",
             .th: "ใช้อย่างน้อย 8 ตัวอักษร"
+        ],
+        "encrypt_recordings_why": [
+            .zhHant: "加密之後，VLC 之類的播放器就打不開你自己的錄音了。你的檔案要一直是你自己打得開的檔案。",
+            .en: "Encrypting them would stop VLC and other players from opening your own recordings. Your files stay files you can open yourself.",
+            .zhHans: "加密之后，VLC 之类的播放器就打不开你自己的录音了。你的文件要一直是你自己打得开的文件。",
+            .ja: "暗号化すると、VLC などのプレーヤーで自分の録音を開けなくなります。あなたのファイルは、あなた自身が開けるファイルのままにします。",
+            .ko: "암호화하면 VLC 같은 플레이어로 자기 녹음을 열 수 없게 됩니다. 당신의 파일은 당신이 직접 열 수 있는 파일로 남습니다.",
+            .th: "การเข้ารหัสจะทำให้ VLC และโปรแกรมเล่นอื่นเปิดไฟล์บันทึกเสียงของคุณไม่ได้ ไฟล์ของคุณจะยังคงเป็นไฟล์ที่คุณเปิดเองได้"
         ],
         "encrypt_scope_title": [
             .zhHant: "加密涵蓋的範圍",
@@ -10575,6 +10583,14 @@ extension LocalizationManager {
             .ko: "모든 도구가 숨겨졌습니다. 캔버스는 마지막에 쓰던 도구를 그대로 사용합니다.",
             .th: "เครื่องมือทั้งหมดถูกซ่อนไว้ ผืนผ้าใบจะยังคงใช้เครื่องมือที่คุณใช้ล่าสุด"
         ],
+        "toolbar_collapsed_hint": [
+            .zhHant: "收合會把整列藏起來，只留下浮動的工具丸。",
+            .en: "Collapsed hides the bar entirely — only the floating tool bubble stays.",
+            .zhHans: "收合会把整列藏起来，只留下浮动的工具丸。",
+            .ja: "折りたたむとバー全体が消え、フローティングのツールバブルだけが残ります。",
+            .ko: "접으면 막대가 완전히 숨겨지고 떠 있는 도구 버블만 남습니다.",
+            .th: "การย่อเก็บจะซ่อนแถบทั้งหมด เหลือเพียงปุ่มเครื่องมือลอย"
+        ],
         "toolbar_customize_hint": [
             .zhHant: "把用不到的工具關掉，剩下的順序不變。",
             .en: "Turn off the tools you don't use. The rest keep their order.",
@@ -10583,6 +10599,70 @@ extension LocalizationManager {
             .ko: "사용하지 않는 도구를 끄세요. 나머지 순서는 그대로입니다.",
             .th: "ปิดเครื่องมือที่ไม่ได้ใช้ ลำดับของที่เหลือจะไม่เปลี่ยน"
         ],
+        "toolbar_labels_hint": [
+            .zhHant: "關掉之後工具列只顯示圖示，放得下更多工具。",
+            .en: "Turned off, the toolbar shows icons only and fits more tools.",
+            .zhHans: "关掉之后工具栏只显示图标，放得下更多工具。",
+            .ja: "オフにするとアイコンのみになり、より多くのツールが収まります。",
+            .ko: "끄면 아이콘만 표시되어 더 많은 도구가 들어갑니다.",
+            .th: "ปิดแล้วแถบเครื่องมือจะแสดงเฉพาะไอคอน และใส่เครื่องมือได้มากขึ้น"
+        ],
+        "toolbar_place_bottom": [
+            .zhHant: "下方",
+            .en: "Bottom",
+            .zhHans: "下方",
+            .ja: "下",
+            .ko: "아래",
+            .th: "ด้านล่าง"
+        ],
+        "toolbar_place_collapsed": [
+            .zhHant: "收合",
+            .en: "Collapsed",
+            .zhHans: "收合",
+            .ja: "折りたたむ",
+            .ko: "접기",
+            .th: "ย่อเก็บ"
+        ],
+        "toolbar_place_left": [
+            .zhHant: "左側",
+            .en: "Left",
+            .zhHans: "左侧",
+            .ja: "左",
+            .ko: "왼쪽",
+            .th: "ด้านซ้าย"
+        ],
+        "toolbar_place_right": [
+            .zhHant: "右側",
+            .en: "Right",
+            .zhHans: "右侧",
+            .ja: "右",
+            .ko: "오른쪽",
+            .th: "ด้านขวา"
+        ],
+        "toolbar_place_top": [
+            .zhHant: "上方",
+            .en: "Top",
+            .zhHans: "上方",
+            .ja: "上",
+            .ko: "위",
+            .th: "ด้านบน"
+        ],
+        "toolbar_placement": [
+            .zhHant: "工具列的位置",
+            .en: "Where the toolbar sits",
+            .zhHans: "工具栏的位置",
+            .ja: "ツールバーの位置",
+            .ko: "도구 모음 위치",
+            .th: "ตำแหน่งแถบเครื่องมือ"
+        ],
+        "toolbar_placement_hint": [
+            .zhHant: "擺在左側或右側，工具列就不會擋到你寫字的那隻手。",
+            .en: "Left or right keeps the toolbar out of your writing hand's way.",
+            .zhHans: "摆在左侧或右侧，工具栏就不会挡到你写字的那只手。",
+            .ja: "左右に置くと、書く手にツールバーが重なりません。",
+            .ko: "왼쪽이나 오른쪽에 두면 필기하는 손을 가리지 않습니다.",
+            .th: "วางไว้ซ้ายหรือขวาเพื่อไม่ให้แถบเครื่องมือบังมือที่เขียน"
+        ],
         "toolbar_reset": [
             .zhHant: "還原預設工具列",
             .en: "Restore Default Toolbar",
@@ -10590,6 +10670,14 @@ extension LocalizationManager {
             .ja: "ツールバーを初期設定に戻す",
             .ko: "기본 도구 모음으로 되돌리기",
             .th: "คืนค่าแถบเครื่องมือเริ่มต้น"
+        ],
+        "toolbar_show_labels": [
+            .zhHant: "顯示文字標籤",
+            .en: "Show text labels",
+            .zhHans: "显示文字标签",
+            .ja: "文字ラベルを表示",
+            .ko: "텍스트 레이블 표시",
+            .th: "แสดงป้ายข้อความ"
         ],
         "transcribe_audio": [
             .zhHant: "音訊轉文字",
@@ -10742,6 +10830,78 @@ extension LocalizationManager {
             .ja: "非表示を解除",
             .ko: "숨김 초기화",
             .th: "รีเซ็ตที่ซ่อน"
+        ],
+        "unlock_desc": [
+            .zhHant: "輸入你加密時設定的密碼。",
+            .en: "Enter the passphrase you chose when you encrypted it.",
+            .zhHans: "输入你加密时设置的密码。",
+            .ja: "暗号化したときに設定したパスフレーズを入力してください。",
+            .ko: "암호화할 때 설정한 암호를 입력하세요.",
+            .th: "ป้อนรหัสผ่านที่คุณตั้งไว้ตอนเข้ารหัส"
+        ],
+        "unlock_recovery_prompt": [
+            .zhHant: "輸入全部 24 個詞，以空白分隔",
+            .en: "Type all 24 words, separated by spaces",
+            .zhHans: "输入全部 24 个词，以空格分隔",
+            .ja: "24 個の単語をすべてスペース区切りで入力してください",
+            .ko: "24개 단어를 모두 공백으로 구분해 입력하세요",
+            .th: "พิมพ์ครบทั้ง 24 คำ คั่นด้วยเว้นวรรค"
+        ],
+        "unlock_recovery_unavailable": [
+            .zhHant: "這本筆記是在復原碼還不能解鎖的版本建立的。它的復原碼從來沒有被用來包住金鑰 —— 只有密碼開得了。",
+            .en: "This notebook was created before recovery codes could unlock anything. Its recovery code was never used to wrap the key — only the passphrase opens it.",
+            .zhHans: "这本笔记是在恢复码还不能解锁的版本建立的。它的恢复码从来没有被用来包住密钥 —— 只有密码开得了。",
+            .ja: "このノートは、復元コードでロック解除できない時期に作成されました。復元コードは鍵の保護に使われていません —— パスフレーズでのみ開けます。",
+            .ko: "이 노트는 복구 코드로 잠금 해제할 수 없던 버전에서 만들어졌습니다. 복구 코드는 키를 감싸는 데 쓰인 적이 없습니다 —— 암호로만 열 수 있습니다.",
+            .th: "สมุดบันทึกนี้สร้างขึ้นก่อนที่รหัสกู้คืนจะปลดล็อกได้ รหัสกู้คืนไม่เคยถูกใช้ห่อหุ้มกุญแจ —— เปิดได้ด้วยรหัสผ่านเท่านั้น"
+        ],
+        "unlock_slow_hint": [
+            .zhHant: "這會花幾秒鐘，是刻意的 —— 正是它讓別人猜你的密碼變得昂貴。",
+            .en: "This takes a few seconds on purpose — it is what makes guessing your passphrase expensive.",
+            .zhHans: "这会花几秒钟，是刻意的 —— 正是它让别人猜你的密码变得昂贵。",
+            .ja: "数秒かかるのは意図的です —— パスフレーズの総当たりを高くつくものにしています。",
+            .ko: "몇 초 걸리는 것은 의도적입니다 —— 암호를 추측하는 비용을 크게 만듭니다.",
+            .th: "ใช้เวลาสองสามวินาทีโดยตั้งใจ —— นี่คือสิ่งที่ทำให้การเดารหัสผ่านมีต้นทุนสูง"
+        ],
+        "unlock_title": [
+            .zhHant: "這本筆記已上鎖",
+            .en: "This notebook is locked",
+            .zhHans: "这本笔记已上锁",
+            .ja: "このノートはロックされています",
+            .ko: "이 노트는 잠겨 있습니다",
+            .th: "สมุดบันทึกนี้ถูกล็อกอยู่"
+        ],
+        "unlock_use_passphrase": [
+            .zhHant: "改用密碼",
+            .en: "Use the passphrase instead",
+            .zhHans: "改用密码",
+            .ja: "パスフレーズを使う",
+            .ko: "암호 사용",
+            .th: "ใช้รหัสผ่านแทน"
+        ],
+        "unlock_use_recovery": [
+            .zhHant: "忘記了？改用復原碼",
+            .en: "Forgot it? Use your recovery code",
+            .zhHans: "忘记了？改用恢复码",
+            .ja: "忘れた場合は復元コードを使う",
+            .ko: "잊으셨나요? 복구 코드 사용",
+            .th: "ลืมรหัสผ่าน? ใช้รหัสกู้คืน"
+        ],
+        "unlock_working": [
+            .zhHant: "解鎖中…",
+            .en: "Unlocking…",
+            .zhHans: "解锁中…",
+            .ja: "ロック解除中…",
+            .ko: "잠금 해제 중…",
+            .th: "กำลังปลดล็อก…"
+        ],
+        "unlock_wrong_recovery": [
+            .zhHant: "這組復原碼開不了這本筆記",
+            .en: "That recovery code does not open this notebook",
+            .zhHans: "这组恢复码开不了这本笔记",
+            .ja: "この復元コードではこのノートを開けません",
+            .ko: "이 복구 코드로는 이 노트를 열 수 없습니다",
+            .th: "รหัสกู้คืนนี้เปิดสมุดบันทึกนี้ไม่ได้"
         ],
         "untitled_note": [
             .zhHant: "未命名筆記",

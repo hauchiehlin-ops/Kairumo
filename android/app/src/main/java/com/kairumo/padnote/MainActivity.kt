@@ -2865,6 +2865,27 @@ private fun InkScreen(
         }
     }
 
+    val toolbarPlacement = com.kairumo.padnote.ui.ToolbarSettings.placement
+    // 同一份工具列，四個位置共用 —— 各寫一份的話，之後加一支筆就得改
+    // 四個地方，而漏掉的那個位置會安靜地少一顆按鈕。
+    val inkBar: @Composable () -> Unit = {
+        InkToolbar(
+            tool = inkTool,
+            colorHex = inkColorHex,
+            width = inkWidth,
+            languageTag = deviceLanguageTag(),
+            onToolChange = { picked -> applyInkTool(picked) },
+            onColorChange = { hex ->
+                inkColorHex = hex
+                engine.colorRgba = hexToRgba(hex)
+            },
+            onWidthChange = { value ->
+                inkWidth = value
+                engine.baseWidth = value
+            },
+            onOpenColorWheel = { showProColorWheel = true }
+        )
+    }
     if (!minimalistCanvasMode) {
         // ── 第二排：目前模式的工具 ────────────────────────────────
         //
@@ -3100,23 +3121,14 @@ private fun InkScreen(
         )
 
         // 筆刷列只在手寫模式出現（雙向情境切換：effectiveToolbarMode）。
-        if (effectiveToolbarMode == EditorMode.DRAW) {
-            InkToolbar(
-                tool = inkTool,
-                colorHex = inkColorHex,
-                width = inkWidth,
-                languageTag = deviceLanguageTag(),
-                onToolChange = { picked -> applyInkTool(picked) },
-                onColorChange = { hex ->
-                    inkColorHex = hex
-                    engine.colorRgba = hexToRgba(hex)
-                },
-                onWidthChange = { value ->
-                    inkWidth = value
-                    engine.baseWidth = value
-                },
-                onOpenColorWheel = { showProColorWheel = true }
-            )
+        //
+        // **位置由使用者決定**（S-261b）。這裡畫的是「上」；左／右／下
+        // 由 `EditorWorkArea` 貼在畫布旁邊，收合則完全不畫 —— 那時只剩
+        // 浮動的工具丸。與 Apple 端同一組選項、同一個核心設定。
+        if (effectiveToolbarMode == EditorMode.DRAW &&
+            toolbarPlacement == uniffi.padnote_core.FfiPlacement.TOP
+        ) {
+            inkBar()
             // 防手震強度滑桿（只在滑桿開啟時顯示）
             if (strokeStabilizer > 0f) {
                 androidx.compose.foundation.layout.Row(
@@ -3549,6 +3561,28 @@ private fun InkScreen(
             }
         }
 
+        // 工具列在左／右時，畫布與它並排（S-261b）。
+        //
+        // 永遠包一層 Row：上／下／收合時它只裝畫布一個子項，與沒有包是
+        // 等價的。用條件式決定要不要包的話，Compose 會在切換位置時把整棵
+        // 畫布子樹丟掉重建 —— 那會清掉筆跡的暫存狀態。
+        //
+        // 直向工具列要能捲：十三顆按鈕在手機橫放時高度不夠，不給捲的話
+        // 下面幾顆永遠點不到。
+        val sideToolbar = effectiveToolbarMode == EditorMode.DRAW &&
+            (toolbarPlacement == uniffi.padnote_core.FfiPlacement.LEFT ||
+                toolbarPlacement == uniffi.padnote_core.FfiPlacement.RIGHT)
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier.weight(1f).fillMaxWidth()
+        ) {
+        if (sideToolbar && toolbarPlacement == uniffi.padnote_core.FfiPlacement.LEFT) {
+            androidx.compose.foundation.layout.Column(
+                modifier = Modifier
+                    .width(110.dp)
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState())
+            ) { inkBar() }
+        }
         Box(
             modifier = Modifier.weight(1f).fillMaxHeight().padding(8.dp)
                 .dragAndDropTarget(
@@ -4335,6 +4369,20 @@ private fun InkScreen(
                 )
             }
         }
+        }
+        if (sideToolbar && toolbarPlacement == uniffi.padnote_core.FfiPlacement.RIGHT) {
+            androidx.compose.foundation.layout.Column(
+                modifier = Modifier
+                    .width(110.dp)
+                    .fillMaxHeight()
+                    .verticalScroll(rememberScrollState())
+            ) { inkBar() }
+        }
+        }
+        if (effectiveToolbarMode == EditorMode.DRAW &&
+            toolbarPlacement == uniffi.padnote_core.FfiPlacement.BOTTOM
+        ) {
+            inkBar()
         }
         }
 

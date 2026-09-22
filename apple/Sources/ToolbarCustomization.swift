@@ -67,6 +67,28 @@ public final class ToolbarSettings: ObservableObject {
         persist()
     }
 
+    /// 工具列擺哪裡（S-261b）。
+    ///
+    /// 可移動是刻意的：Goodnotes 的工具列頂部固定，**左撇子與橫向書寫時
+    /// 會擋手**。這個設定與「哪些工具顯示」一樣同步得動。
+    @Published public private(set) var placement: FfiPlacement = .bottom
+
+    /// 顯示文字標籤還是只有圖示。
+    ///
+    /// 泰文與日文的字串常比英文長 30–50%，那些語言預設只有圖示 ——
+    /// 預設值由核心依語言決定，這裡只負責讓使用者改。
+    @Published public private(set) var showLabels: Bool = false
+
+    public func setPlacement(_ next: FfiPlacement) {
+        core.setPlacement(placement: next)
+        persist()
+    }
+
+    public func setShowLabels(_ next: Bool) {
+        core.setShowLabels(show: next)
+        persist()
+    }
+
     /// 回到出廠設定。**使用者改壞了要回得去。**
     public func reset() {
         core.reset()
@@ -95,6 +117,8 @@ public final class ToolbarSettings: ObservableObject {
     }
 
     private func refresh() {
+        placement = core.placement()
+        showLabels = core.showLabels()
         hiddenIdentifiers = Set(
             core.allGroups()
                 .flatMap(\.tools)
@@ -134,6 +158,44 @@ public struct ToolbarCustomizationView: View {
 
             // 用序號當 id 而不是 `\.group`：UniFFI 產生的列舉沒有
             // `Hashable`，而分組順序本來就是核心決定的固定順序。
+            // 位置與文字標籤（S-261b）。
+            //
+            // 這兩個設定原本只存在核心裡、也同步得動，但**兩端都沒有 UI** ——
+            // 理由是「只做得動一邊的設定比沒有更糟」。現在兩端都能真的移動
+            // 工具列，所以開關才有意義。
+            Section(L("toolbar_placement")) {
+                Picker(L("toolbar_placement"), selection: Binding(
+                    get: { settings.placement },
+                    set: { settings.setPlacement($0) }
+                )) {
+                    Text(L("toolbar_place_top")).tag(FfiPlacement.top)
+                    Text(L("toolbar_place_bottom")).tag(FfiPlacement.bottom)
+                    Text(L("toolbar_place_left")).tag(FfiPlacement.left)
+                    Text(L("toolbar_place_right")).tag(FfiPlacement.right)
+                    Text(L("toolbar_place_collapsed")).tag(FfiPlacement.collapsed)
+                }
+                .pickerStyle(.segmented)
+                .accessibilityIdentifier("toolbar.placement")
+
+                Text(settings.placement == .collapsed
+                     ? L("toolbar_collapsed_hint")
+                     : L("toolbar_placement_hint"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+
+                Toggle(isOn: Binding(
+                    get: { settings.showLabels },
+                    set: { settings.setShowLabels($0) }
+                )) {
+                    Text(L("toolbar_show_labels"))
+                }
+                .accessibilityIdentifier("toolbar.show_labels")
+
+                Text(L("toolbar_labels_hint"))
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
+
             ForEach(Array(settings.groups().enumerated()), id: \.offset) { _, group in
                 Section(group.label) {
                     ForEach(group.tools, id: \.identifier) { info in

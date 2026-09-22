@@ -64,6 +64,7 @@
 		68C1811CB88877353FF14D31 /* CStubs.c in Sources */ = {isa = PBXBuildFile; fileRef = 26F09C378F9F1B6835D9ECB2 /* CStubs.c */; };
 		6EB543F097562AD8E0751343 /* StrokeWidthSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3111941E411F546450CCE85 /* StrokeWidthSlider.swift */; };
 		6F06E6527CA4B83E42449AE8 /* OpusAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3CEDDA81C7A0784D31A451C /* OpusAudioPlayer.swift */; };
+		708160431AB7514FC43ECF76 /* NotebookUnlockSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E3EF3928D3630E321C01133 /* NotebookUnlockSheet.swift */; };
 		718C3BE123192CC4792EB80C /* ObjectStacking.swift in Sources */ = {isa = PBXBuildFile; fileRef = DA14AB7B6F3436E39B58DAA1 /* ObjectStacking.swift */; };
 		723A25DA76A24DB5650DCDAA /* LinkPreviewEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B829DBCA4D5374715A49087 /* LinkPreviewEngine.swift */; };
 		7538D1239BB959B0B15C6C66 /* PageBackgroundRepresentable.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FF4AA82DF5A02A09AE79B7E /* PageBackgroundRepresentable.swift */; };
@@ -229,6 +230,7 @@
 		473B5EDC9DF95F4358F83CFB /* BackupManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupManagerTests.swift; sourceTree = "<group>"; };
 		49C432411765C8C4D7362EA7 /* FloatingToolPill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingToolPill.swift; sourceTree = "<group>"; };
 		4BA1621FF70166498E5FC736 /* AudioAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioAttachment.swift; sourceTree = "<group>"; };
+		4E3EF3928D3630E321C01133 /* NotebookUnlockSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookUnlockSheet.swift; sourceTree = "<group>"; };
 		4F6548BCB85682AC49CE9184 /* PageGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageGeometry.swift; sourceTree = "<group>"; };
 		51E8541179F28A49C13A1967 /* MaterialEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaterialEngine.swift; sourceTree = "<group>"; };
 		52BB9EE17D04DDC7ACA3D7C2 /* ImageDropPlacement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDropPlacement.swift; sourceTree = "<group>"; };
@@ -531,6 +533,7 @@
 				CB1466C3AB0C78C44ED34AB8 /* NotebookSearchIndex.swift */,
 				C72410287ED6D6BF9B550D5B /* NotebookStore.swift */,
 				D76C7E92895F6C4334996D92 /* NotebookSyncCoordinator.swift */,
+				4E3EF3928D3630E321C01133 /* NotebookUnlockSheet.swift */,
 				56D3BCE203ED4099F1E71EFB /* NoteIntelligence.swift */,
 				E90D65B77C9075837E5F50D2 /* NoteIntelligenceSheet.swift */,
 				DBEA4CFB130D285D67B343EC /* NoteShape.swift */,
@@ -829,6 +832,7 @@
 				C55F400179E7174C52F3821F /* NotebookSearchIndex.swift in Sources */,
 				F582ACE682ECDB8D43C78140 /* NotebookStore.swift in Sources */,
 				9F2B0BAAA1DE545936528DA8 /* NotebookSyncCoordinator.swift in Sources */,
+				708160431AB7514FC43ECF76 /* NotebookUnlockSheet.swift in Sources */,
 				C5C788E40414F0CEBD323695 /* ObjectFrameStyleMenu.swift in Sources */,
 				260CDAF04744DB75E570A1F3 /* ObjectLayerPanel.swift in Sources */,
 				F74DE2184CA0735F2E086AE3 /* ObjectMarquee.swift in Sources */,

@@ -98,11 +98,20 @@ fun EncryptedNotebookDialog(
                         if (scopeInfo.coversNotes) Text("✓ " + l("encrypt_covers_notes"))
                         if (scopeInfo.coversImages) Text("✓ " + l("encrypt_covers_images"))
                         if (!scopeInfo.coversRecordings) {
-                            // **這一行不能拿掉。** 使用者會據此決定要不要
+                            // **這兩行不能拿掉。** 使用者會據此決定要不要
                             // 把敏感的東西錄進來。
+                            //
+                            // 而且要講**為什麼** —— 只說「錄音不加密」會讓
+                            // 人以為是還沒做。這是拍板的取捨（2026-09-23）：
+                            // 加密會讓錄音不再是 VLC 打得開的檔案，
+                            // 而那是明講過的承諾。
                             Text(
                                 "⚠ " + l("encrypt_not_recordings"),
                                 color = MaterialTheme.colorScheme.error
+                            )
+                            Text(
+                                l("encrypt_recordings_why"),
+                                style = MaterialTheme.typography.bodySmall
                             )
                         }
                         Text(

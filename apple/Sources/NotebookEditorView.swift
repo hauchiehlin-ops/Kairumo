@@ -1294,9 +1294,15 @@ public struct NotebookEditorView: View {
             // 1. 頂部自訂主工作列（返回首頁、筆記結構、打字/手繪切換、標題、頁面切換、匯出與列印）
             editorTopBar
 
-            // 2. 🌟 實體模式專屬工具列（手繪模式 vs 打字文書處理模式，具備上下文智能切換）
+            // 2. 🌟 實體模式專屬工具列（手繪模式 vs 打字文書處理模式）
+            //
+            // **只有「上」這個位置畫在這裡**（S-261b）。左／右／下由
+            // `canvasWithToolbar` 貼在畫布旁邊，收合則完全不畫 ——
+            // 那時只剩浮動的工具丸。
+            //
+            // 可移動是刻意的：工具列頂部固定時，**左撇子與橫向書寫會擋手**。
             if effectiveToolbarMode == .draw {
-                if !isMinimalistCanvasActive {
+                if !isMinimalistCanvasActive && toolbarSettings.placement == .top {
                     drawingToolbar
                         .transition(.move(edge: .top).combined(with: .opacity))
                 }
@@ -2631,9 +2637,48 @@ public struct NotebookEditorView: View {
     private var canvasWorkArea: AnyView {
         // 兩條完全獨立的路。連續模式不碰整頁模式的任何一行 ——
         // 那一段綁著存檔、協同、掌拒與套索，是最沒本錢壞掉的地方。
-        switch pageDisplayMode {
-        case .single:     return AnyView(singlePageWorkArea)
-        case .continuous: return AnyView(continuousPagesContent)
+        let canvas: AnyView = switch pageDisplayMode {
+        case .single:     AnyView(singlePageWorkArea)
+        case .continuous: AnyView(continuousPagesContent)
+        }
+        return AnyView(placed(canvas))
+    }
+
+    /// 把工具列貼到畫布的哪一邊（S-261b）。
+    ///
+    /// 「上」由 `body` 的 VStack 畫（它要排在頂部工作列底下），
+    /// 這裡只處理左／右／下與收合。分兩處看起來不漂亮，但合併的代價是
+    /// 把整個頂部區塊搬進畫布層 —— 那會動到尺規列、播放列與錄音列的順序。
+    ///
+    /// 收合（`.collapsed`）時完全不畫：那時使用者要的就是只剩浮動工具丸。
+    @ViewBuilder
+    private func placed(_ canvas: AnyView) -> some View {
+        if effectiveToolbarMode != .draw || isMinimalistCanvasActive {
+            canvas
+        } else {
+            switch toolbarSettings.placement {
+            case .top, .collapsed:
+                canvas
+            case .bottom:
+                VStack(spacing: 0) {
+                    canvas
+                    drawingToolbar
+                }
+            case .left:
+                HStack(spacing: 0) {
+                    // 直向工具列要能捲 —— 十三顆按鈕在 iPhone 橫放時
+                    // 高度不夠，不給捲的話下面幾顆永遠點不到。
+                    ScrollView(.vertical) { drawingToolbar }
+                        .frame(maxWidth: 96)
+                    canvas
+                }
+            case .right:
+                HStack(spacing: 0) {
+                    canvas
+                    ScrollView(.vertical) { drawingToolbar }
+                        .frame(maxWidth: 96)
+                }
+            }
         }
     }
 
@@ -5421,8 +5466,16 @@ public struct NotebookEditorView: View {
                 Divider()
             }
 
+            // 文字標籤（S-261b）。
+            //
+            // 使用者關掉的話就**不提供**帶標籤的那個變體 —— 原本這裡完全
+            // 由 `ViewThatFits` 依寬度決定，塞得下就一定有字。
+            // 泰文與日文的字串比英文長 30–50%，那些語言核心預設只給圖示，
+            // 而使用者也該有權在任何語言下關掉它。
             ViewThatFits(in: .horizontal) {
-                drawingToolbarRow(showToolLabels: true)
+                if toolbarSettings.showLabels {
+                    drawingToolbarRow(showToolLabels: true)
+                }
                 drawingToolbarRow(showToolLabels: false)
                 WrapLayout(spacing: 12, lineSpacing: 8) {
                     drawingToolbarItems(showToolLabels: false)

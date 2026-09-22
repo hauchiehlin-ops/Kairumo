@@ -86,6 +86,38 @@ object ToolbarSettings {
         persist(context, c)
     }
 
+    /**
+     * 工具列擺哪裡（S-261b）。
+     *
+     * 可移動是刻意的：工具列頂部固定時，**左撇子與橫向書寫會擋手**。
+     */
+    var placement by mutableStateOf(uniffi.padnote_core.FfiPlacement.BOTTOM)
+        private set
+
+    /**
+     * 顯示文字標籤還是只有圖示。
+     *
+     * 泰文與日文的字串常比英文長 30–50%，那些語言核心預設只給圖示。
+     */
+    var showLabels by mutableStateOf(false)
+        private set
+
+    fun setPlacement(
+        context: Context,
+        languageTag: String,
+        next: uniffi.padnote_core.FfiPlacement
+    ) {
+        val c = core(context, languageTag)
+        c.setPlacement(next)
+        persist(context, c)
+    }
+
+    fun setShowLabels(context: Context, languageTag: String, next: Boolean) {
+        val c = core(context, languageTag)
+        c.setShowLabels(next)
+        persist(context, c)
+    }
+
     /** 回到出廠設定。**使用者改壞了要回得去。** */
     fun reset(context: Context, languageTag: String) {
         val c = core(context, languageTag)
@@ -116,6 +148,8 @@ object ToolbarSettings {
     }
 
     private fun refresh(c: FfiToolbar) {
+        placement = c.placement()
+        showLabels = c.showLabels()
         hiddenIdentifiers = c.allGroups()
             .flatMap { it.tools }
             .filter { !it.visible }
@@ -152,6 +186,15 @@ object ToolbarSettings {
      * 字面值**，拼出來的識別字它看不見 —— 那樣某支工具在設定畫面上漏掉一個
      * 開關，閘門也不會紅。這件事在 `InkTool.parityIdentifier` 已經踩過一次。
      */
+    /** 位置選項與它們的語系鍵。順序與 Apple 端的 Picker 相同。 */
+    val PLACEMENTS: List<Pair<uniffi.padnote_core.FfiPlacement, String>> = listOf(
+        uniffi.padnote_core.FfiPlacement.TOP to "toolbar_place_top",
+        uniffi.padnote_core.FfiPlacement.BOTTOM to "toolbar_place_bottom",
+        uniffi.padnote_core.FfiPlacement.LEFT to "toolbar_place_left",
+        uniffi.padnote_core.FfiPlacement.RIGHT to "toolbar_place_right",
+        uniffi.padnote_core.FfiPlacement.COLLAPSED to "toolbar_place_collapsed",
+    )
+
     fun settingsTag(editorIdentifier: String): String = when (editorIdentifier) {
         "editor.ink.pen" -> "toolbar.tool.pen"
         "editor.ink.ballpoint" -> "toolbar.tool.ballpoint"
@@ -171,6 +214,7 @@ object ToolbarSettings {
 }
 
 /** 「自訂工具列」設定畫面。 */
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun ToolbarCustomizationSheet(
     context: Context,
@@ -195,6 +239,61 @@ fun ToolbarCustomizationSheet(
                     modifier = Modifier.testTag("toolbar.hint")
                 )
                 LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    // 位置與文字標籤（S-261b）。
+                    //
+                    // 這兩個設定原本只存在核心裡、也同步得動，但**兩端都
+                    // 沒有 UI** —— 理由是「只做得動一邊的設定比沒有更糟」。
+                    // 現在兩端都能真的移動工具列，開關才有意義。
+                    item(key = "placement") {
+                        HorizontalDivider()
+                        Text(
+                            l10n("toolbar_placement"),
+                            style = MaterialTheme.typography.labelMedium,
+                            modifier = Modifier.padding(top = 6.dp)
+                        )
+                        androidx.compose.foundation.layout.FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.testTag("toolbar.placement")
+                        ) {
+                            ToolbarSettings.PLACEMENTS.forEach { (value, key) ->
+                                androidx.compose.material3.FilterChip(
+                                    selected = ToolbarSettings.placement == value,
+                                    onClick = {
+                                        ToolbarSettings.setPlacement(context, languageTag, value)
+                                    },
+                                    label = { Text(l10n(key)) }
+                                )
+                            }
+                        }
+                        Text(
+                            if (ToolbarSettings.placement ==
+                                uniffi.padnote_core.FfiPlacement.COLLAPSED) {
+                                l10n("toolbar_collapsed_hint")
+                            } else {
+                                l10n("toolbar_placement_hint")
+                            },
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        androidx.compose.foundation.layout.Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .testTag("toolbar.show_labels"),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(l10n("toolbar_show_labels"))
+                            Switch(
+                                checked = ToolbarSettings.showLabels,
+                                onCheckedChange = {
+                                    ToolbarSettings.setShowLabels(context, languageTag, it)
+                                }
+                            )
+                        }
+                        Text(
+                            l10n("toolbar_labels_hint"),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                     groups.forEach { group ->
                         item(key = group.label) {
                             HorizontalDivider()

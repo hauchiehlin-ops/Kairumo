@@ -93,11 +93,18 @@ struct NotebookEncryptionSheet: View {
                           systemImage: "checkmark.circle.fill")
                 }
                 if !scope.coversRecordings {
-                    // **這一行不能拿掉。** 使用者會據此決定要不要把敏感的
+                    // **這兩行不能拿掉。** 使用者會據此決定要不要把敏感的
                     // 東西錄進來。
+                    //
+                    // 而且要講**為什麼** —— 只說「錄音不加密」會讓人以為
+                    // 是還沒做。這是拍板的取捨（2026-09-23）：加密會讓錄音
+                    // 不再是 VLC 打得開的檔案，而那是明講過的承諾。
                     Label(localizationManager.localized("encrypt_not_recordings"),
                           systemImage: "exclamationmark.triangle.fill")
                         .foregroundColor(.orange)
+                    Text(localizationManager.localized("encrypt_recordings_why"))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
                 // **Apple 端的工作副本在套件外面。**
                 //
