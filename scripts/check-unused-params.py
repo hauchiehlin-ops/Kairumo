@@ -21,7 +21,7 @@
 
 1. **框架協定**：`makeUIView(context:)`、`urlSession(_:task:...)` 這些
    簽章由 Apple 定死，用不到也必須留著。列在 `FRAMEWORK_CALLBACKS`。
-2. **刻意保留**：在函式上方三行內寫
+2. **刻意保留**：在函式上方六行內寫
    `// unused-param-ok: <理由>` 放行。理由要寫，不然下一個人不知道
    這是刻意的還是漏掉的。
 
@@ -248,7 +248,8 @@ def scan(path: pathlib.Path, keyword: str) -> list[tuple[str, int, str, str]]:
         if "override" in decl:
             continue
         # 上方三行內的放行註解
-        window = "\n".join(raw_lines[max(0, line_no - 4) : line_no])
+        # 往上看六行 —— 理由常常寫不進三行，而逼人把理由寫短會讓理由變成廢話。
+        window = "\n".join(raw_lines[max(0, line_no - 7) : line_no])
         if WAIVER.search(window):
             continue
 

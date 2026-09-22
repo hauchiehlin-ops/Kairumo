@@ -111,21 +111,4 @@ public enum PageGeometry {
         return remainder < 0 ? remainder + height : remainder
     }
 
-    /// 這個矩形是否整個落在頁面內。
-    public static func fitsInPage(_ rect: CGRect) -> Bool {
-        rect.minX >= 0 && rect.minY >= 0
-            && rect.maxX <= width && rect.maxY <= height
-    }
-
-    /// 把矩形夾進頁面內。
-    ///
-    /// 比頁面還大的物件夾不進去 —— 那種情況只縮到頁面大小，而不是讓它溢出去。
-    /// 溢出的部分在匯出時會被裁掉，使用者看不到自己丟了什麼。
-    public static func clamp(_ rect: CGRect) -> CGRect {
-        let w = min(rect.width, width)
-        let h = min(rect.height, height)
-        let x = min(max(rect.minX, 0), width - w)
-        let y = min(max(rect.minY, 0), height - h)
-        return CGRect(x: x, y: y, width: w, height: h)
-    }
 }

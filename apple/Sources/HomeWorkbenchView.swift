@@ -1492,7 +1492,6 @@ public struct HomeWorkbenchView: View {
     // MARK: - 7. 底部工作台品牌與版本號
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
 
-
     /// 資料與同步入口。
     ///
     /// 這三項原本只藏在「系統診斷」裡 —— 使用者回報「一鍵備份的功能在哪裡？」
@@ -1701,10 +1700,6 @@ public struct HomeWorkbenchView: View {
                     .replacingFirst("%2@", with: "\(report.downloaded)")
             }
         }
-    }
-
-    private func showDiagnosticsForData() {
-        showInfoSheet = true
     }
 
     /// 「資料與同步」那三張卡。識別字由 `titleKey` 推出來
@@ -3355,7 +3350,6 @@ private extension String {
 #Preview {
     HomeWorkbenchView()
 }
-
 
 /// 編輯器的宿主視圖。
 ///

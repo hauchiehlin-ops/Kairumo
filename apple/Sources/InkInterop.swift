@@ -64,11 +64,6 @@ enum InkInterop {
         baseWidth * inkWidthScale(tool: tool, pressure: pressure)
     }
 
-    /// 與核心 `Tool::is_pressure_sensitive()` 一致 —— 因為問的就是它。
-    static func isPressureSensitive(_ tool: ToolKind) -> Bool {
-        inkToolIsPressureSensitive(tool: tool)
-    }
-
     // MARK: - 筆刷對應
 
     static func toolKind(for inkType: PKInk.InkType) -> ToolKind {

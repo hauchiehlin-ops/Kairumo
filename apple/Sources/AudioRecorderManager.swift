@@ -242,7 +242,21 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     }
 
     /// 暫停當前錄音
+    ///
+    /// **兩條路都要顧。** 錄音實際走的是核心那條（`startRecording(notebookId:…)`
+    /// → `coreCapture`），而這裡原本只 `guard let recorder = audioRecorder` ——
+    /// 核心錄音時那是 nil，於是**按下暫停什麼都不會發生**。
+    ///
+    /// `stopRecording()` 一直都有委派給 `stopCoreRecording()`，只有暫停／繼續
+    /// 漏了。`pauseCoreRecording()` 早就寫好，只是沒有人呼叫它 ——
+    /// 是 scripts/check-orphans.py 把它翻出來的。
     public func pauseRecording() {
+        if coreSession != nil {
+            pauseCoreRecording()
+            timer?.invalidate()
+            timer = nil
+            return
+        }
         guard let recorder = audioRecorder, status == .recording else { return }
         recorder.pause()
         status = .paused
@@ -252,6 +266,11 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
     /// 恢復繼續錄音
     public func resumeRecording() {
+        if coreSession != nil {
+            resumeCoreRecording()
+            startCoreElapsedTimer()
+            return
+        }
         guard let recorder = audioRecorder, status == .paused else { return }
         guard recorder.record() else { return }
         status = .recording
@@ -330,15 +349,25 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         elapsedSeconds = 0
         audioLevels = Array(repeating: 0.15, count: 20)
 
-        // 長度由核心算 —— 兩個平台各自問系統 API 的話，同一段錄音會顯示
-        // 不同的秒數，而使用者會以為同步壞了。
+        startCoreElapsedTimer()
+        return true
+    }
+
+    /// 核心錄音的秒數計時器。
+    ///
+    /// 長度由核心算 —— 兩個平台各自問系統 API 的話，同一段錄音會顯示不同的
+    /// 秒數，而使用者會以為同步壞了。
+    ///
+    /// 抽成一個方法是因為**開始**與**從暫停恢復**都要它。原本只寫在開始那裡，
+    /// 恢復之後秒數就不再往前跑。
+    private func startCoreElapsedTimer() {
+        timer?.invalidate()
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let session = self.coreSession else { return }
                 self.elapsedSeconds = Double(session.recordedAudioUs()) / 1_000_000.0
             }
         }
-        return true
     }
 
     /// 停掉走核心的那條路。

@@ -208,13 +208,6 @@ object NotebookLibrary {
     }.getOrNull()
 
     /** 這一頁是不是完全空的。換掉第一頁之前一定要確認。 */
-    private fun isPageEmpty(session: PadnoteSession, pageId: String): Boolean =
-        runCatching {
-            session.drawOrder(pageId).isEmpty() &&
-                session.textBlockIds(pageId).isEmpty() &&
-                session.tableBlockIds(pageId).isEmpty() &&
-                session.imageBlockIds(pageId).isEmpty()
-        }.getOrDefault(false)
 
     /** 從外部 .padnote 封裝壓縮檔匯入整本筆記本。 */
     fun importArchive(context: Context, archiveFile: File, deviceId: UInt): Entry? = runCatching {

@@ -53,9 +53,6 @@ object AudioTranscriber {
         data class Failed(val detail: String) : Outcome
     }
 
-    fun isModelAvailable(context: Context): Boolean =
-        whisperIsModelAvailable(ModelDownloadManager.modelPath(context, WHISPER_MODEL_ID))
-
     /** 核心清單裡的 id。與 `models/manifest.json` 一致。 */
     const val WHISPER_MODEL_ID = "whisper-large-v3-turbo-q5"
 

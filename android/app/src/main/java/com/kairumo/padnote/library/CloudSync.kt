@@ -106,12 +106,6 @@ object CloudSync {
      *
      * **會阻塞網路 I/O，要在背景執行緒呼叫。** 回傳 null 表示沒登入。
      */
-    fun runOnce(context: Context): FfiCloudSyncResult? {
-        val session = makeSession(context) ?: return null
-        val result = syncMetadata(context, session)
-        persist(context, session)
-        return result
-    }
 
     /**
      * 同步一本筆記本的內容與媒體。**會阻塞網路 I/O，要在背景執行緒呼叫。**
@@ -180,7 +174,6 @@ object CloudSync {
                 AccountSyncStore.record(context, diskId, title, null, false)
             }
         }
-
 
         // ── 一次 changes.list，然後只碰真的有差異的筆記本 ──────────
         //

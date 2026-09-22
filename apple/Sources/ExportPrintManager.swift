@@ -17,13 +17,6 @@ public final class ExportPrintManager {
 
     private init() {}
 
-    // MARK: - 匯出功能 (Export)
-
-    /// 匯出整份筆記本為 PDF 資料。
-    public func exportNotebookPdf(session: PadnoteSession) throws -> Data {
-        return try session.exportPdf()
-    }
-
     /// 匯出指定頁面為單頁 PDF 資料。
     public func exportPagePdf(session: PadnoteSession, pageId: String) throws -> Data {
         return try session.exportPagePdf(pageId: pageId)

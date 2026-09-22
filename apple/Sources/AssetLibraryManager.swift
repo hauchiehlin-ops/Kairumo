@@ -282,11 +282,6 @@ public final class AssetLibraryManager: ObservableObject {
         }.value
     }
 
-    /// 讀回已落盤的素材。
-    public func cachedImage(for id: String) -> UIImage? {
-        UIImage(contentsOfFile: fileURL(for: id).path)
-    }
-
     /// 移除指定素材之本機快取
     public func removeItem(id: String) {
         try? FileManager.default.removeItem(at: fileURL(for: id))

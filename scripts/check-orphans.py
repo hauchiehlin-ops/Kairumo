@@ -35,7 +35,7 @@ Kotlin 都不對 public 宣告報 dead code），測試也測不到（沒有人�
    當然找不到呼叫點。列在 `FRAMEWORK_CALLBACKS`。
 2. **同名多處**：覆寫與協定實作會有好幾個同名宣告，無法分辨是哪一個沒被用，
    直接跳過。
-3. **刻意保留**：宣告上方三行內寫 `// orphan-ok: <理由>`。
+3. **刻意保留**：宣告上方六行內寫 `// orphan-ok: <理由>`。
 
 # 為什麼有 baseline（棘輪）
 
@@ -152,7 +152,9 @@ def collect() -> tuple[list[str], dict[str, str]]:
         rel, line, kind = sites[0]
 
         lines = sources[rel].split("\n")
-        window = "\n".join(lines[max(0, line - 4) : line])
+        # 往上看六行 —— 理由常常寫不進三行，而**逼人把理由寫短會讓理由變成
+        # 廢話**（「暫時保留」之類）。放行註解的價值全在那句理由上。
+        window = "\n".join(lines[max(0, line - 7) : line])
         if WAIVER.search(window):
             continue
         if "override" in lines[line - 1]:

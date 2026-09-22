@@ -94,9 +94,6 @@ final class DriveHttpClient: FfiDriveHttp {
         }
     }
 
-    func updateAccessToken(_ token: String) {
-        self.accessToken = token
-    }
     func getJson(url: String, query: [FfiQueryParam]) throws -> String {
         guard var components = URLComponents(string: url) else {
             throw FfiDriveError.Backend(detail: "bad_url")

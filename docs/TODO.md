@@ -73,105 +73,42 @@ Apple 單元測試 382 條中 381 過（唯一那條紅是無障礙標籤，與�
 **還沒在實機上壓過** —— 那是下一步：一本一本加到 50 本按同步，
 看畫面卡不卡、會不會再被看門狗殺掉。
 
-### S-258. 二十三處沒人引用的實作 —— 閘門已立，逐項清空
+### ~~S-258~~ ✅ 二十三處沒人引用的實作 —— **已清空**
 
-`scripts/check-orphans.py`（CI 上的「沒有沒人引用的實作」）第一次跑抓到的。
-**功能在那裡，但沒有任何一條路徑會走到它。**
+`scripts/check-orphans.py` 抓到的 23 項全部處理完，baseline 歸零。
 
-最要緊的三組：
+**修好一個真的 bug：錄音中按暫停沒反應**
 
-| 組 | 內容 | 意味著 |
-|---|---|---|
-| **套索編輯** | `cutSelected` `duplicateSelected` `moveSelected` `recolorSelected` + `LassoPathOverlay` | 五項全部零引用（只有 `deleteSelected` 有接線）。**套索選完之後能做的事幾乎都是死的**，連選取外框都沒被放進任何畫面 |
-| **物件旋轉** | `RotatedHitTest` `boundingBox` | 旋轉後的命中測試寫好了沒人用 |
-| **錄音暫停** | `pauseCoreRecording` `resumeCoreRecording` | 錄音的暫停／繼續實作好了沒接線 |
+錄音實際走核心那條路（`startRecording(notebookId:…)` → `coreCapture`），
+而 `pauseRecording()` 原本只 `guard let recorder = audioRecorder` ——
+核心錄音時那是 nil，於是**按下暫停什麼都不會發生**。
+`stopRecording()` 一直都有委派給 `stopCoreRecording()`，只有暫停／繼續漏了。
+修正（`pauseCoreRecording`）早就寫好，只是沒有人呼叫它。
 
-其餘：`ModelDownloadDelegate`（下載進度回呼沒掛上 URLSession）、
-`exportNotebookPdf`、`updateAccessToken`、`showDiagnosticsForData`、
-`isPressureSensitive`、`cachedImage`、`clamp`、`fitsInPage`，
-Android 的 `runOnce`、`isPageEmpty`、`isModelAvailable`。
+**刪掉的（被放棄的重複實作）**
 
-**順帶抓到一個跨平台不一致**：Apple 是 `setSyncedToolbarJSON`、
-Android 是 `setSyncedToolbarJson`（大小寫不同），而 Apple 那個還沒人叫。
-
-每一項的修法三選一：**接上它／刪掉它／在宣告上方寫 `// orphan-ok: 理由`**。
-清掉就跑 `--update-baseline` 讓棘輪縮一格。
-
-建議先處理套索那一組 —— 那是使用者看得到入口、按下去沒反應的那種。
-
----
-
-### S-260. 提案 ② 的普查結果 —— **建議不要做成每次推送的閘門**
-
-`apple/UITests/DeadControlSurvey.swift` 是一次量測，不是閘門。它做的是
-提案 ② 的想法：點一下 → 比對無障礙樹的雜湊 → 沒變化就是死的。
-
-**首頁實測：**
-
-| | |
+| 刪掉 | 為什麼 |
 |---|---|
-| 規格要求 | 27 項 |
-| 當下點得到 | 10 項 |
-| **按了沒反應** | **0 項** |
-| 不在畫面上（要捲動） | 17 項 |
-| 耗時 | 346 秒（每項 12.8 秒） |
+| `LassoSelection.swift`（251 行） | 檔頭寫著「為什麼不用 PKLassoTool」，而編輯器實際用的就是 `PKLassoTool()`。是 Android 版的移植，Apple 最後沒採用 |
+| `RotatedHitTest`（36 行） | 物件用 SwiftUI 的 `.rotationEffect`，命中測試由框架處理；縮圖用 `CGContext.rotate`。兩個函式都多餘 |
+| `ModelDownloadDelegate`（70 行） | 下載進度走別的機制，這份沒被掛到任何 URLSession |
+| `updateAccessToken` | 權杖換發在 `DriveHttpClient` 內部已處理，這是重複 setter |
+| `isPageEmpty`（Android） | 註解說「換掉第一頁之前一定要確認」，但換紙張已經移到 `create()`，那條路不存在了 |
+| `runOnce`（Android） | `runFull` 才是用的那個 |
+| `cachedImage` `exportNotebookPdf` `showDiagnosticsForData` `isPressureSensitive` `fitsInPage` `clamp` `isModelAvailable` | 沒人叫的一行包裝 |
 
-**三個結論：**
+合計刪掉約 **430 行**死程式碼。
 
-1. **成本很高。** 每項 12.8 秒（每點一個就重啟 App —— 那是唯一確定的
-   重置方式）。規格裡有 78 個 Button，跑完一輪約 17 分鐘。每次推送都跑
-   不可行。
+### S-261. 工具列同步的管線做好了，但沒有「自訂工具列」這個功能
 
-2. **產出是零。** 首頁 10 個點得到的控制項全部有反應。
+兩端各有 `setSyncedToolbarJson` / `syncedToolbarJson`，核心也有
+`.toolbarJson` 欄位 —— 全套管線齊備，而**應用程式裡根本沒有自訂工具列
+這個功能**，所以沒有人會讀寫它。
 
-3. **覆蓋只有 37%。** 17 項在捲動範圍外沒被測到。補上捲動邏輯會增加
-   不穩定性，而**間歇失敗的閘門會被關掉**。
+目前用 `// orphan-ok:` 放行，不刪：刪掉的話等功能做出來要在三處
+（Apple／Android／核心格式）重接一次，而格式欄位動了就是相容性問題。
 
-**為什麼產出低**：③（孤兒）與 ①（畫面稽核）已經把「死 UI」的主要面積
-蓋掉了 —— ③ 抓到套索那一整組沒接線，① 抓到點不到與缺漏。② 只剩下
-「畫得出來、點得到、動作也真的執行了，但沒有任何可觀察的變化」這個很窄的
-殘留類別。
-
-**建議**：留著當手動／夜間工具，不要接進每次推送的 CI。同樣的力氣放在
-下面兩件事的產出高得多：
-
-  * 清掉 ③④ 的 baseline —— 那裡有 **33 個已經確認的真問題**躺著
-    （S-257 十個空參數、S-258 二十三個孤兒）
-  * 把 ① 的畫面稽核**接到 Android** —— `screens.json` 的 `android`
-    那半邊已經產好了，但 Android 端一條稽核都還沒有
-
----
-
-### S-259. 畫面稽核的三個缺口 —— 閘門已立，逐項補
-
-`apple/UITests/ScreenAudit.swift`（CI 上的「畫面稽核（控制項點得到）」）
-已經在守「畫得出來就必須點得到」。目前有三個缺口：
-
-**1. 選單裡的控制項稽核不到（編輯器 40 項）**
-
-`insert.*` 在插入選單、`export.*` 在匯出選單、`text.*` 只有打字模式才有、
-`sidebar.*` 要先展開側欄。單一畫面狀態看不到它們，目前全放在
-`SmokeUITests.editorNotWiredYet` 裡。正解是為每個選單各加一段
-（開啟 → 稽核 → 關閉）。
-
-**2. `editor.canvas` 掛在沒被顯示的視圖上**
-
-識別碼寫在 `NotebookEditorView.swift:3369`，但實際渲染出來的是另一個分支的
-`kairumo.canvas`。掃原始碼的閘門看不見這種（識別碼確實在原始碼裡），
-執行期稽核看得見。
-
-**3. 首頁 6 個規格要求的控制項找不到**
-
-`home.identity.edit`、`home.recordings.open_folder`、`home.notebooks.sort`、
-`home.notebooks.rename_root`、`home.cloud.signin`、`home.data.folder`。
-可能是條件顯示、也可能是真的沒接識別碼，要逐個確認。
-
-**另外兩條既有的紅**（早於這次工作，CI 沒掛它們）：
-`testCanvasExpandsWhenSidebarCollapses`、`testMigrationRunsFromTheDiagnosticsSheet`。
-
-**還有**：筆記卡片沒有各自的識別碼（只有整個清單有 `home.notebooks.list`），
-所以編輯器稽核靠種子筆記的英文標題進去。補上
-`home.notebooks.card.<id>` 之後連語言都不必釘。
+做或不做要拍板 —— 放著不管的話這個放行註解會變成永久的。
 
 ---
 
