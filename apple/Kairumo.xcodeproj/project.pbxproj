@@ -34,6 +34,7 @@
 		3054D36A50503BD7EC24C84C /* FloatingToolPill.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49C432411765C8C4D7362EA7 /* FloatingToolPill.swift */; };
 		31303FA237927EC5B53EFE38 /* AssetLibraryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A351D8EB2219ECF83FF78645 /* AssetLibraryView.swift */; };
 		33C06FCCD5F5DF767E8DCA25 /* PalmThresholdSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = FD3609DAFC6CD0A448F250C1 /* PalmThresholdSheet.swift */; };
+		3CFD6D8CF0C7C32DF12770A2 /* DeadControlSurvey.swift in Sources */ = {isa = PBXBuildFile; fileRef = D2E4B63FC00CBE41E1C67031 /* DeadControlSurvey.swift */; };
 		44F395EF97582BCF2480ECDD /* BackupManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 473B5EDC9DF95F4358F83CFB /* BackupManagerTests.swift */; };
 		4514902261D4A927D6FBC105 /* Templates in Resources */ = {isa = PBXBuildFile; fileRef = 2A2253FE74C35178B0F901C8 /* Templates */; };
 		4739A382D63316D061431753 /* BrushCursorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B36AD7F19677B4F27E94262B /* BrushCursorTests.swift */; };
@@ -313,6 +314,7 @@
 		CC38A8D206CF6F7CDF0CEEDE /* AutoSyncController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoSyncController.swift; sourceTree = "<group>"; };
 		CCBD6EB2E871A9532370A15B /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
 		D059ACC4F96D906F5A18970D /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
+		D2E4B63FC00CBE41E1C67031 /* DeadControlSurvey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadControlSurvey.swift; sourceTree = "<group>"; };
 		D76C7E92895F6C4334996D92 /* NotebookSyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookSyncCoordinator.swift; sourceTree = "<group>"; };
 		D92F2373941302ED5F5C66CD /* ImageDropPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDropPlacementTests.swift; sourceTree = "<group>"; };
 		DA14AB7B6F3436E39B58DAA1 /* ObjectStacking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectStacking.swift; sourceTree = "<group>"; };
@@ -413,6 +415,7 @@
 		7D3DF22B3FEC4288146A9780 /* UITests */ = {
 			isa = PBXGroup;
 			children = (
+				D2E4B63FC00CBE41E1C67031 /* DeadControlSurvey.swift */,
 				6E69D62954A410C548C81F3A /* ScreenAudit.swift */,
 				DC6D1F547D3EA6FBF9266760 /* SmokeUITests.swift */,
 			);
@@ -746,6 +749,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				3CFD6D8CF0C7C32DF12770A2 /* DeadControlSurvey.swift in Sources */,
 				1CC2292EB91628D7287E4780 /* ScreenAudit.swift in Sources */,
 				613D0C4337E03D7899725FA7 /* SmokeUITests.swift in Sources */,
 			);
