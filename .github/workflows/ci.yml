@@ -277,6 +277,16 @@ jobs:
       - name: 沒有被默默忽略的參數
         run: python3 scripts/check-unused-params.py
 
+      # 實作好了但沒有任何人引用的型別與函式。
+      #
+      # 功能寫完了、程式碼在那裡、看起來一切正常，但沒有任何路徑會走到它 ——
+      # 使用者在介面上看不到，或看得到卻按不出反應。Swift 與 Kotlin 都不對
+      # public 宣告報 dead code，測試也測不到（沒有人會為接不上的功能寫測試）。
+      # 第一次跑抓到 23 處，其中套索的 cut/duplicate/move/recolor 四個操作
+      # 與它的外框 View 全部沒接線 —— 那是一整個功能是死的。
+      - name: 沒有沒人引用的實作
+        run: python3 scripts/check-orphans.py
+
   # 跨平台畫面對照（android-parity-plan.md 階段 0）。
   #
   # 「Android 版面跟 Apple 差太多」修過兩次，兩次都是補完就漂回去 ——

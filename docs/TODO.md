@@ -73,6 +73,34 @@ Apple 單元測試 382 條中 381 過（唯一那條紅是無障礙標籤，與�
 **還沒在實機上壓過** —— 那是下一步：一本一本加到 50 本按同步，
 看畫面卡不卡、會不會再被看門狗殺掉。
 
+### S-258. 二十三處沒人引用的實作 —— 閘門已立，逐項清空
+
+`scripts/check-orphans.py`（CI 上的「沒有沒人引用的實作」）第一次跑抓到的。
+**功能在那裡，但沒有任何一條路徑會走到它。**
+
+最要緊的三組：
+
+| 組 | 內容 | 意味著 |
+|---|---|---|
+| **套索編輯** | `cutSelected` `duplicateSelected` `moveSelected` `recolorSelected` + `LassoPathOverlay` | 五項全部零引用（只有 `deleteSelected` 有接線）。**套索選完之後能做的事幾乎都是死的**，連選取外框都沒被放進任何畫面 |
+| **物件旋轉** | `RotatedHitTest` `boundingBox` | 旋轉後的命中測試寫好了沒人用 |
+| **錄音暫停** | `pauseCoreRecording` `resumeCoreRecording` | 錄音的暫停／繼續實作好了沒接線 |
+
+其餘：`ModelDownloadDelegate`（下載進度回呼沒掛上 URLSession）、
+`exportNotebookPdf`、`updateAccessToken`、`showDiagnosticsForData`、
+`isPressureSensitive`、`cachedImage`、`clamp`、`fitsInPage`，
+Android 的 `runOnce`、`isPageEmpty`、`isModelAvailable`。
+
+**順帶抓到一個跨平台不一致**：Apple 是 `setSyncedToolbarJSON`、
+Android 是 `setSyncedToolbarJson`（大小寫不同），而 Apple 那個還沒人叫。
+
+每一項的修法三選一：**接上它／刪掉它／在宣告上方寫 `// orphan-ok: 理由`**。
+清掉就跑 `--update-baseline` 讓棘輪縮一格。
+
+建議先處理套索那一組 —— 那是使用者看得到入口、按下去沒反應的那種。
+
+---
+
 ### S-257. 十個被默默忽略的參數 —— 閘門已立，逐項清空
 
 `scripts/check-unused-params.py`（CI 上的「沒有被默默忽略的參數」）第一次
