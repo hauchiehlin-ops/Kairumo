@@ -33,6 +33,7 @@ public struct HomeWorkbenchView: View {
     @State private var showInfoSheet: Bool = false
     @State private var showCloudSyncSheet: Bool = false
     @State private var showBackupCreateSheet: Bool = false
+    @State private var showNotebookSnapshotSheet: Bool = false
     @State private var showBackupRestoreSheet: Bool = false
     @State private var showFolderSyncSheet: Bool = false
     @State private var showAccountSheet: Bool = false
@@ -361,6 +362,9 @@ public struct HomeWorkbenchView: View {
             } }
             .sheet(isPresented: $showBackupCreateSheet) { resizableSheet {
                 BackupCreateDetailSheet()
+            } }
+            .sheet(isPresented: $showNotebookSnapshotSheet) { resizableSheet {
+                NotebookSnapshotDetailSheet()
             } }
             .sheet(isPresented: $showBackupRestoreSheet) { resizableSheet {
                 BackupRestoreDetailSheet()
@@ -1576,6 +1580,8 @@ public struct HomeWorkbenchView: View {
                     unifiedSyncCard
                     dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
                              "sync_folder_desc", .teal) { showFolderSyncSheet = true }
+                    dataCard("doc.zipper", "backup_snapshot",
+                             "backup_snapshot_desc", .purple) { showNotebookSnapshotSheet = true }
                     dataCard("externaldrive.badge.timemachine", "backup_create",
                              "backup_create_desc", .blue) { showBackupCreateSheet = true }
                     dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
@@ -1585,6 +1591,8 @@ public struct HomeWorkbenchView: View {
                     unifiedSyncCard
                     dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
                              "sync_folder_desc", .teal) { showFolderSyncSheet = true }
+                    dataCard("doc.zipper", "backup_snapshot",
+                             "backup_snapshot_desc", .purple) { showNotebookSnapshotSheet = true }
                     dataCard("externaldrive.badge.timemachine", "backup_create",
                              "backup_create_desc", .blue) { showBackupCreateSheet = true }
                     dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
@@ -1774,6 +1782,7 @@ public struct HomeWorkbenchView: View {
     /// 手寫一份對照表的話，加第四張卡時一定會忘記加進去。
     private func dataCardIdentifier(_ titleKey: String) -> String {
         switch titleKey {
+        case "backup_snapshot": return "home.data.snapshot"
         case "backup_create": return "home.data.backup"
         case "backup_restore": return "home.data.restore"
         case "sync_choose_folder": return "home.data.folder"
@@ -4534,7 +4543,130 @@ public struct CloudSyncDetailSheet: View {
     }
 }
 
-// MARK: - 2. 建立備份檔專屬獨立視窗
+// MARK: - 2. 單本筆記快照專屬獨立視窗
+public struct NotebookSnapshotDetailSheet: View {
+    @ObservedObject var localizationManager = LocalizationManager.shared
+    @ObservedObject private var store = NotebookStore.shared
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var snapshotMessage: String?
+    @State private var exportURL: URL?
+    @State private var creatingNotebookId: String?
+
+    public init() {}
+
+    public var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: DS.Space.l) {
+                    HStack(spacing: DS.Space.m) {
+                        Image(systemName: "doc.zipper")
+                            .font(.system(size: 44))
+                            .foregroundStyle(Color.purple)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(localizationManager.localized("backup_snapshot"))
+                                .font(DS.Font.screenTitle)
+                            Text(localizationManager.localized("backup_snapshot_desc"))
+                                .font(DS.Font.cardTitle)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.top, DS.Space.s)
+
+                    if let snapshotMessage {
+                        Text(snapshotMessage)
+                            .font(DS.Font.caption)
+                            .foregroundColor(.secondary)
+                    }
+
+                    VStack(alignment: .leading, spacing: DS.Space.s) {
+                        Text(localizationManager.localized("backup_snapshot_picker_title"))
+                            .font(DS.Font.cardTitle)
+
+                        ForEach(store.visibleNotebooks) { notebook in
+                            Button {
+                                createSnapshot(for: notebook)
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "book.closed")
+                                        .foregroundColor(.purple)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(notebook.displayTitle(localizationManager))
+                                            .font(DS.Font.body)
+                                            .foregroundColor(.primary)
+                                            .lineLimit(1)
+                                        Text("\(notebook.pageCount) \(localizationManager.localized("pages"))")
+                                            .font(DS.Font.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    Spacer()
+                                    if creatingNotebookId == notebook.id {
+                                        ProgressView()
+                                    } else {
+                                        Image(systemName: "square.and.arrow.up")
+                                            .foregroundColor(.secondary)
+                                    }
+                                }
+                                .padding(DS.Space.m)
+                                .background(Color(uiColor: .secondarySystemGroupedBackground))
+                                .cornerRadius(DS.Radius.m)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(creatingNotebookId != nil)
+                        }
+                    }
+                }
+                .padding(DS.Space.m)
+            }
+            .background(Color(uiColor: .systemGroupedBackground))
+            .navigationTitle(localizationManager.localized("backup_snapshot"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(localizationManager.localized("close")) { dismiss() }
+                }
+            }
+            .sheet(item: Binding(
+                get: { exportURL.map { IdentifiableURL(url: $0) } },
+                set: { exportURL = $0?.url }
+            )) { item in
+                DocumentExporter(url: item.url)
+            }
+        }
+    }
+
+    private func createSnapshot(for notebook: NotebookDocument) {
+        guard creatingNotebookId == nil else { return }
+        creatingNotebookId = notebook.id
+        defer { creatingNotebookId = nil }
+
+        do {
+            let package = try NotebookSyncCoordinator.mirrorWorkingCopyIntoPackage(
+                notebook, store: store, deviceId: NotebookMigration.deviceId)
+            let filename = Self.safeFilename(notebook.displayTitle(localizationManager))
+            let out = FileManager.default.temporaryDirectory
+                .appending(path: "\(filename).padnote")
+            try? FileManager.default.removeItem(at: out)
+            try archiveNotebook(packageDir: package.path, outFile: out.path)
+            exportURL = out
+            snapshotMessage = localizationManager.localized("export_done")
+                .replacingFirst("%@", with: out.lastPathComponent)
+        } catch {
+            snapshotMessage = localizationManager.localized("export_failed")
+                .replacingFirst("%@", with: error.localizedDescription)
+        }
+    }
+
+    private static func safeFilename(_ title: String) -> String {
+        let invalid = CharacterSet(charactersIn: "/\\:*?\"<>|")
+        let cleaned = title.components(separatedBy: invalid).joined(separator: "_")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return cleaned.isEmpty ? "Kairumo" : cleaned
+    }
+}
+
+// MARK: - 3. 建立備份檔專屬獨立視窗
 public struct BackupCreateDetailSheet: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject private var store = NotebookStore.shared

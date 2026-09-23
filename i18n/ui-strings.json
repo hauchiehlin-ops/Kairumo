@@ -1135,6 +1135,30 @@
     "zhHans": "这不是 Kairumo 的备份文件",
     "zhHant": "這不是 Kairumo 的備份檔"
   },
+  "backup_snapshot": {
+    "en": "Backup Snapshot",
+    "ja": "バックアップスナップショット",
+    "ko": "백업 스냅샷",
+    "th": "สแนปช็อตสำรอง",
+    "zhHans": "备份快照",
+    "zhHant": "備份快照"
+  },
+  "backup_snapshot_desc": {
+    "en": "Export one notebook as a single .padnote file for cloud drives, local storage or another viewer app",
+    "ja": "1 冊のノートを単一の .padnote ファイルとして書き出し、クラウドドライブ、ローカル保存、別のビューアアプリで使えます",
+    "ko": "노트북 하나를 단일 .padnote 파일로 내보내 클라우드 드라이브, 로컬 저장소 또는 다른 뷰어 앱에서 사용할 수 있습니다",
+    "th": "ส่งออกสมุดบันทึกหนึ่งเล่มเป็นไฟล์ .padnote ไฟล์เดียว สำหรับคลาวด์ไดรฟ์ พื้นที่ในเครื่อง หรือแอปดูไฟล์อื่น",
+    "zhHans": "将单本笔记导出成一个 .padnote 文件，可放到云端硬盘、本机档案或给另一套 viewer app 读取",
+    "zhHant": "將單本筆記匯出成一個 .padnote 檔，可放到雲端硬碟、本機檔案或給另一套 viewer app 讀取"
+  },
+  "backup_snapshot_picker_title": {
+    "en": "Choose a notebook to snapshot",
+    "ja": "スナップショットにするノートを選択",
+    "ko": "스냅샷으로 만들 노트북 선택",
+    "th": "เลือกสมุดบันทึกที่จะทำสแนปช็อต",
+    "zhHans": "选择要建立快照的笔记",
+    "zhHant": "選擇要建立快照的筆記"
+  },
   "backup_restore": {
     "en": "Restore from Backup",
     "ja": "バックアップから復元",

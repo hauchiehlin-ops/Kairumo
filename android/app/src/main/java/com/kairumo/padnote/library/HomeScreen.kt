@@ -124,6 +124,7 @@ fun HomeScreen(
     onEditIdentity: () -> Unit,
     onToggleRecording: () -> Unit,
     onBackup: () -> Unit,
+    onCreateSnapshot: (NotebookLibrary.Entry?) -> Unit,
     onRestore: () -> Unit,
     recordings: List<RecordingIndex.Recording>,
     /** Google 帳號同步的狀態，與 Apple 的 `googleAccountSection` 一一對應。 */
@@ -537,7 +538,7 @@ fun HomeScreen(
                 ) {
                     for (entry in row) {
                         NotebookGridCard(
-                            entry, l, onOpen, onRename, onDelete, onMove,
+                            entry, l, onOpen, onRename, onDelete, onMove, onCreateSnapshot,
                             modifier = Modifier.weight(1f)
                         )
                     }
@@ -563,6 +564,8 @@ fun HomeScreen(
         item { CloudSyncCard(cloud, l) }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SettingRow("📦", l("backup_snapshot"), l("backup_snapshot_desc"),
+                    Modifier.testTag("home.data.snapshot")) { onCreateSnapshot(null) }
                 SettingRow("💾", l("backup_create"), l("backup_explainer"),
                     Modifier.testTag("home.data.backup"), onBackup)
                 SettingRow("↺", l("backup_restore"), l("backup_restore_desc"),
@@ -809,6 +812,7 @@ private fun NotebookGridCard(
     onRename: (NotebookLibrary.Entry) -> Unit,
     onDelete: (NotebookLibrary.Entry) -> Unit,
     onMove: (NotebookLibrary.Entry) -> Unit,
+    onCreateSnapshot: (NotebookLibrary.Entry?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var menu by remember(entry.id) { mutableStateOf(false) }
@@ -880,6 +884,10 @@ private fun NotebookGridCard(
                         DropdownMenuItem(
                             text = { Text(l("move_to_folder")) },
                             onClick = { menu = false; onMove(entry) }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(l("backup_snapshot")) },
+                            onClick = { menu = false; onCreateSnapshot(entry) }
                         )
                         DropdownMenuItem(
                             text = { Text(l("delete")) },

@@ -1191,6 +1191,30 @@ extension LocalizationManager {
             .ko: "백업 및 복원",
             .th: "สำรองและกู้คืน"
         ],
+        "backup_snapshot": [
+            .zhHant: "備份快照",
+            .en: "Backup Snapshot",
+            .zhHans: "备份快照",
+            .ja: "バックアップスナップショット",
+            .ko: "백업 스냅샷",
+            .th: "สแนปช็อตสำรอง"
+        ],
+        "backup_snapshot_desc": [
+            .zhHant: "將單本筆記匯出成一個 .padnote 檔，可放到雲端硬碟、本機檔案或給另一套 viewer app 讀取",
+            .en: "Export one notebook as a single .padnote file for cloud drives, local storage or another viewer app",
+            .zhHans: "将单本笔记导出成一个 .padnote 文件，可放到云端硬盘、本机档案或给另一套 viewer app 读取",
+            .ja: "1 冊のノートを単一の .padnote ファイルとして書き出し、クラウドドライブ、ローカル保存、別のビューアアプリで使えます",
+            .ko: "노트북 하나를 단일 .padnote 파일로 내보내 클라우드 드라이브, 로컬 저장소 또는 다른 뷰어 앱에서 사용할 수 있습니다",
+            .th: "ส่งออกสมุดบันทึกหนึ่งเล่มเป็นไฟล์ .padnote ไฟล์เดียว สำหรับคลาวด์ไดรฟ์ พื้นที่ในเครื่อง หรือแอปดูไฟล์อื่น"
+        ],
+        "backup_snapshot_picker_title": [
+            .zhHant: "選擇要建立快照的筆記",
+            .en: "Choose a notebook to snapshot",
+            .zhHans: "选择要建立快照的笔记",
+            .ja: "スナップショットにするノートを選択",
+            .ko: "스냅샷으로 만들 노트북 선택",
+            .th: "เลือกสมุดบันทึกที่จะทำสแนปช็อต"
+        ],
         "border_color": [
             .zhHant: "邊框顏色",
             .en: "Border color",

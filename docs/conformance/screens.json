@@ -531,6 +531,7 @@
       "home.notebooks.list",
       "home.cloud.card",
       "home.cloud.signin",
+      "home.data.snapshot",
       "home.data.backup",
       "home.data.restore",
       "home.data.folder",
@@ -560,6 +561,7 @@
       "home.notebooks.list",
       "home.cloud.card",
       "home.cloud.signin",
+      "home.data.snapshot",
       "home.data.backup",
       "home.data.restore",
       "home.data.folder",
@@ -693,6 +695,11 @@
         "id": "home.cloud.signout",
         "label_en": "Sign out",
         "label_key": "sign_out"
+      },
+      {
+        "id": "home.data.snapshot",
+        "label_en": "Backup Snapshot",
+        "label_key": "backup_snapshot"
       },
       {
         "id": "home.data.backup",

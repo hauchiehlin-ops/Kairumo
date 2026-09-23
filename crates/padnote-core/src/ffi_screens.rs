@@ -274,6 +274,7 @@ fn home_spec() -> FfiScreenSpec {
                     c("home.cloud.signin", Button, "sign_in_google"),
                     opt(c("home.cloud.sync_now", Button, "sync_now")),
                     opt(c("home.cloud.signout", Button, "sign_out")),
+                    c("home.data.snapshot", Card, "backup_snapshot"),
                     c("home.data.backup", Card, "backup_create"),
                     c("home.data.restore", Card, "backup_restore"),
                     c("home.data.folder", Card, "sync_choose_folder"),

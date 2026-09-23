@@ -165,6 +165,7 @@ import com.kairumo.padnote.library.SeedNotebooks
 import com.kairumo.padnote.library.FolderNameDialog
 import com.kairumo.padnote.library.DeleteFolderDialog
 import com.kairumo.padnote.library.MoveToFolderDialog
+import com.kairumo.padnote.library.TransferPagesDialog
 import com.kairumo.padnote.shape.NoteConnection
 import com.kairumo.padnote.shape.NoteShape
 import com.kairumo.padnote.shape.ShapeLayer
@@ -386,6 +387,7 @@ private fun NotebookHome(
     // 要回報問題的人得先開一本筆記才找得到那一頁。
     var homeStatus by remember { mutableStateOf(false) }
     var showBackupCreateDialog by remember { mutableStateOf(false) }
+    var showNotebookSnapshotPicker by remember { mutableStateOf(false) }
     var showBackupRestoreDialog by remember { mutableStateOf(false) }
     var showFolderSyncDialog by remember { mutableStateOf(false) }
     var showCloudSyncDialog by remember { mutableStateOf(false) }
@@ -627,6 +629,13 @@ private fun NotebookHome(
                 }
             },
             onBackup = { showBackupCreateDialog = true },
+            onCreateSnapshot = { entry ->
+                if (entry == null) {
+                    showNotebookSnapshotPicker = true
+                } else {
+                    message = shareNotebookPackage(activity, entry.path, entry.title)
+                }
+            },
             onRestore = { showBackupRestoreDialog = true },
             onImportNotebook = { importNotePicker.launch(arrayOf("*/*")) },
             recordings = recordings,
@@ -1029,6 +1038,19 @@ private fun NotebookHome(
                 val unique = java.util.UUID.randomUUID().toString().take(6)
                 createBackupPicker.launch("Kairumo-$stamp-$unique.kairumobackup")
                 showBackupCreateDialog = false
+            }
+        )
+    }
+
+    if (showNotebookSnapshotPicker) {
+        TransferPagesDialog(
+            title = l("backup_snapshot_picker_title"),
+            notebooks = allEntries,
+            l = ::l,
+            onDismiss = { showNotebookSnapshotPicker = false },
+            onPick = { entry ->
+                showNotebookSnapshotPicker = false
+                message = shareNotebookPackage(activity, entry.path, entry.title)
             }
         )
     }
