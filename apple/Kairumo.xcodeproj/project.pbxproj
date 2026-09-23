@@ -61,6 +61,7 @@
 		6444B0470BC928731D0F99F5 /* PageDeletionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E2366585C08FE826ADFEB01 /* PageDeletionTests.swift */; };
 		65B2ADC8B553B1BE9708540A /* PenHoverPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0013D28CD49B4181F40017F3 /* PenHoverPreview.swift */; };
 		67CF9DE54436AC7DD3FF5065 /* NotebookMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C19329463E6F6E313A0F1DB /* NotebookMigration.swift */; };
+		6849D8D81A0F512DCC4FC8E8 /* InsertToolsAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 831C71226B45B48B268CE8F6 /* InsertToolsAudit.swift */; };
 		68C1811CB88877353FF14D31 /* CStubs.c in Sources */ = {isa = PBXBuildFile; fileRef = 26F09C378F9F1B6835D9ECB2 /* CStubs.c */; };
 		6EB543F097562AD8E0751343 /* StrokeWidthSlider.swift in Sources */ = {isa = PBXBuildFile; fileRef = F3111941E411F546450CCE85 /* StrokeWidthSlider.swift */; };
 		6F06E6527CA4B83E42449AE8 /* OpusAudioPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B3CEDDA81C7A0784D31A451C /* OpusAudioPlayer.swift */; };
@@ -278,6 +279,7 @@
 		7A2F8130E223B0B02F303F80 /* BrushCursor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrushCursor.swift; sourceTree = "<group>"; };
 		7D2A6B1E41A4693B543BEDCB /* PageRepaginationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageRepaginationTests.swift; sourceTree = "<group>"; };
 		824AF14643DF914996543B0B /* ProColorPickerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProColorPickerSheet.swift; sourceTree = "<group>"; };
+		831C71226B45B48B268CE8F6 /* InsertToolsAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InsertToolsAudit.swift; sourceTree = "<group>"; };
 		843458EEF60FCF8BD686B73F /* NotebookSearchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookSearchTests.swift; sourceTree = "<group>"; };
 		851A8A998279271B01471E88 /* AppCommandTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppCommandTests.swift; sourceTree = "<group>"; };
 		86EC0F8038D34C787D2A729D /* ChartStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartStudioView.swift; sourceTree = "<group>"; };
@@ -425,6 +427,7 @@
 			children = (
 				0345B65C7AA3708D3D2EC807 /* CanvasGestureTests.swift */,
 				D2E4B63FC00CBE41E1C67031 /* DeadControlSurvey.swift */,
+				831C71226B45B48B268CE8F6 /* InsertToolsAudit.swift */,
 				6E69D62954A410C548C81F3A /* ScreenAudit.swift */,
 				DC6D1F547D3EA6FBF9266760 /* SmokeUITests.swift */,
 			);
@@ -763,6 +766,7 @@
 			files = (
 				1E31AD89CA8BEB732ADA8899 /* CanvasGestureTests.swift in Sources */,
 				3CFD6D8CF0C7C32DF12770A2 /* DeadControlSurvey.swift in Sources */,
+				6849D8D81A0F512DCC4FC8E8 /* InsertToolsAudit.swift in Sources */,
 				1CC2292EB91628D7287E4780 /* ScreenAudit.swift in Sources */,
 				613D0C4337E03D7899725FA7 /* SmokeUITests.swift in Sources */,
 			);

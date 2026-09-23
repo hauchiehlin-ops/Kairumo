@@ -79,13 +79,18 @@ jobs:
       # 掃原始碼的 check-screen-parity.py 看不見這種：那兩個 bug 的識別碼
       # 都寫得好好的。
       #
-      # 只掛這五條，不是整個 KairumoUITests —— testCanvasExpandsWhenSidebarCollapses
+      # 只掛這幾條，不是整個 KairumoUITests —— testCanvasExpandsWhenSidebarCollapses
       # 與 testMigrationRunsFromTheDiagnosticsSheet 在此之前就紅著（S-259），
       # 把它們一起掛上去只會讓這道閘門在第一天就被關掉。
       #
-      # 後三條是 S-261／S-261d 補的：兩張選單裡的十九個項目與「自訂工具列」
+      # 後幾條是 S-261／S-261d 補的：兩張選單裡的十九個項目與「自訂工具列」
       # 那張表，在此之前**完全沒有執行期檢查** —— 只有掃原始碼字面值的
       # check-screen-parity.py 在守，而它看不見「按鈕在但按不到」。
+      #
+      # InsertToolsAudit 逐一點開每個插入工具，確認它真的打開了東西。
+      # 那六張面板裡原本有五張**一個識別碼都沒有**，所以任何自動檢查
+      # 都碰不到它們 —— 使用者回報「不知道怎麼操作」時，我們連
+      # 「它打不打得開」都答不出來。
       - name: 畫面稽核（控制項點得到）
         if: runner.os == 'macOS'
         run: |
@@ -96,6 +101,7 @@ jobs:
             -only-testing:KairumoUITests/SmokeUITests/testMoreMenuItemsAreReachable \
             -only-testing:KairumoUITests/SmokeUITests/testExportMenuItemsAreReachable \
             -only-testing:KairumoUITests/SmokeUITests/testToolbarCustomizationControlsAreReachable \
+            -only-testing:KairumoUITests/InsertToolsAudit \
             -quiet
 
   # WP1/WP2：Android 產出必須跟著每次提交一起驗證，否則 Apple 端的改動會

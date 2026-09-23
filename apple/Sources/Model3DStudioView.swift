@@ -218,6 +218,10 @@ public struct Model3DStudioView: View {
                     Button(localizationManager.localized("close")) {
                         dismiss()
                     }
+                    // 與其他四張插入面板一致 —— 在此之前這六張面板裡
+                    // 有五張一個識別碼都沒有，所以稽核與無障礙工具
+                    // 都碰不到它們。
+                    .accessibilityIdentifier("model3d.close")
                 }
             }
         }

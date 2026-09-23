@@ -79,6 +79,9 @@ public struct ChartStudioView: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(localizationManager.localized("cancel")) { dismiss() }
+                    // 稽核與無障礙都要認得這張表 —— 在此之前這四張
+                    // 插入面板**一個識別碼都沒有**，所以從來沒被檢查過。
+                    .accessibilityIdentifier("chart.close")
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(localizationManager.localized(isEditingExisting ? "chart_update" : "chart_insert")) {
