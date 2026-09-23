@@ -61,5 +61,33 @@ else
     echo "   保險起見請跑一次 ./scripts/build-xcframework.sh"
 fi
 
+# ── Android App 真正編譯的那一份綁定 ────────────────────────────────
+#
+# **這一段是後來補的，因為同一個錯誤在一天之內發生了四次。**
+#
+# `android/Generated` 是用預設 feature 產的，只給人看。App 真正編譯的是
+# `android/app/src/main/java/uniffi/`，而它必須用 **Android 的 feature 組合**
+# 產生（`--no-default-features --features relay`）——
+# 用預設 feature 產的話會少掉 relay 那批型別，Kotlin 端整片 Unresolved。
+#
+# 在此之前這一步只存在於 `build-android-libs.sh` 裡，而那支腳本要跑十分鐘
+# （整個 NDK 交叉編譯）。於是每次只改 FFI 的人都會跳過它，然後在 Kotlin
+# 編譯時撞到一堆 Unresolved reference —— 而那個錯誤訊息完全指不出
+# 「你忘了重新產綁定」。
+echo "==> 產生 Android App 用的 Kotlin 綁定（Android feature 組合）"
+cargo build -p padnote-core --no-default-features --features relay >/dev/null 2>&1
+ANDROID_LIB="target/debug/libpadnote_core.dylib"
+[[ -f "$ANDROID_LIB" ]] || ANDROID_LIB="target/debug/libpadnote_core.so"
+if [[ -f "$ANDROID_LIB" ]]; then
+    cargo run -q -p padnote-core --bin uniffi-bindgen -- generate \
+        --library "$ANDROID_LIB" --language kotlin \
+        --out-dir android/app/src/main/java 2>&1 | grep -v "^Warning: Unable to auto-format" || true
+    echo "   ✅ android/app/src/main/java/uniffi/"
+else
+    echo "   ⚠️ 找不到 Android feature 組合的函式庫，這一份綁定沒有更新"
+    echo "      Kotlin 端會出現 Unresolved reference —— 手動跑："
+    echo "      cargo build -p padnote-core --no-default-features --features relay"
+fi
+
 echo "==> 完成"
 ls -1 apple/Generated android/Generated/uniffi/padnote_core 2>/dev/null

@@ -36,7 +36,21 @@ data class Model3DObject(
     var width: Float = 240f,
     var height: Float = 240f,
     /** 畫布上的旋轉角度（度）。與其他物件共用同一個概念。 */
-    var rotationDegrees: Double = 0.0
+    var rotationDegrees: Double = 0.0,
+    /**
+     * 匯入的模型檔名（在筆記本的附件目錄下）。`null` 代表用內建幾何體。
+     *
+     * **這一側畫不出來。** Android 沒有內建的 USDZ／GLB 算繪器，
+     * 而為了一個模型預覽把 Filament 那種等級的相依拉進來，代價與收益
+     * 不成比例（見 `Model3DLayer` 的說明）。
+     *
+     * 但檔案**存得下也同步得動** —— 使用者在 iPad 上插的模型，
+     * 在這裡看得到它在那裡、搬得動、改得了邊框，只是畫面上顯示的是檔名
+     * 而不是模型。這比「同步過來之後那個物件整個不見」好得多。
+     */
+    var importedFileName: String? = null,
+    /** 使用者原本的檔名，只拿來顯示。 */
+    var importedDisplayName: String? = null
 ) {
     /** 材質列舉。認不得的字串退回黃金 —— 與 Apple 端「壞資料仍要開得起來」一致。 */
     val material: FfiMaterial

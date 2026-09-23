@@ -9,6 +9,7 @@
 
 import SwiftUI
 import SceneKit
+import UniformTypeIdentifiers
 
 #if os(macOS) && !targetEnvironment(macCatalyst)
 typealias SCNFloat = CGFloat
@@ -52,6 +53,43 @@ public enum Model3DType: String, CaseIterable, Identifiable {
 
 /// 3D 輔助工具：建立 SceneKit 場景
 public struct SceneKitHelper {
+    /// 匯入檔案的場景。
+    ///
+    /// SceneKit 直接讀得懂 USDZ / OBJ / DAE，副檔名就是它的判斷依據 ——
+    /// 所以 `saveImportedFile` 保留原副檔名不是裝飾。
+    ///
+    /// 讀不出來時回 `nil` 而不是一個空場景：呼叫端要能分辨「這個檔案壞了」
+    /// 與「這是一個空模型」，回空場景的話兩者看起來一模一樣。
+    public static func makeImportedScene(url: URL, rotationX: Float, rotationY: Float,
+                                         rotationZ: Float, scale: Float) -> SCNScene? {
+        guard let scene = try? SCNScene(url: url, options: [.checkConsistency: true]) else {
+            return nil
+        }
+        // 匯入的模型尺寸差異極大（有的以公尺為單位、有的以公分），
+        // 所以照它自己的包圍盒正規化到與內建幾何體差不多大 ——
+        // 不做的話，一個建築模型插進來會是一個看不見的巨物。
+        let root = SCNNode()
+        for child in scene.rootNode.childNodes { root.addChildNode(child) }
+        let (minV, maxV) = root.boundingBox
+        let span = max(maxV.x - minV.x, max(maxV.y - minV.y, maxV.z - minV.z))
+        let norm = span > 0.0001 ? 2.0 / span : 1.0
+        root.scale = SCNVector3(norm * scale, norm * scale, norm * scale)
+        root.position = SCNVector3(
+            -(minV.x + maxV.x) / 2 * norm * scale,
+            -(minV.y + maxV.y) / 2 * norm * scale,
+            -(minV.z + maxV.z) / 2 * norm * scale)
+        root.eulerAngles = SCNVector3(rotationX, rotationY, rotationZ)
+
+        let out = SCNScene()
+        out.rootNode.addChildNode(root)
+        let light = SCNNode()
+        light.light = SCNLight()
+        light.light?.type = .omni
+        light.position = SCNVector3(3, 5, 6)
+        out.rootNode.addChildNode(light)
+        return out
+    }
+
     public static func makeScene(
         modelTypeRaw: String,
         material: MaterialType,
@@ -130,6 +168,17 @@ public struct Model3DStudioView: View {
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var previewRotationX: Float = 0.3
 
+    /// 匯入的檔案（檔名、顯示名）。`nil` 代表用內建幾何體。
+    ///
+    /// # 為什麼要有這條路
+    ///
+    /// 這個工作室原本**只能插六個固定的幾何體** —— 球、方塊、圓柱、環、
+    /// 角錐、膠囊。使用者手上那個模型檔進不來，而那才是他想放進筆記的
+    /// 東西。內建幾何體的用途是示意圖，不是「3D 模型」。
+    @State private var imported: (fileName: String, displayName: String)?
+    @State private var showFileImporter = false
+    @State private var importError: String = ""
+
     public init(onInsert: @escaping (Note3DAttachment) -> Void) {
         self.onInsert = onInsert
     }
@@ -154,6 +203,16 @@ public struct Model3DStudioView: View {
             }
             .navigationTitle(localizationManager.localized("model3d_studio"))
             .navigationBarTitleDisplayMode(.inline)
+            // 檔案挑選器的過濾條件來自核心 —— 兩端收的格式一樣，
+            // 而「這個檔案在 iPad 上挑得到、在手機上挑不到」是使用者
+            // 完全無法理解的行為。
+            .fileImporter(
+                isPresented: $showFileImporter,
+                allowedContentTypes: Self.allowedTypes,
+                allowsMultipleSelection: false
+            ) { result in
+                handleImport(result)
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(localizationManager.localized("close")) {
@@ -162,6 +221,77 @@ public struct Model3DStudioView: View {
                 }
             }
         }
+    }
+
+    /// 檔案挑選器收哪些型別。清單來自核心（`importExtensions`）——
+    /// 兩端收的格式一樣，而「這個檔案在 iPad 上挑得到、在手機上挑不到」
+    /// 是使用者完全無法理解的行為。
+    private static var allowedTypes: [UTType] {
+        let exts = importExtensions(slot: .model3d)
+        let types = exts.compactMap { UTType(filenameExtension: $0) }
+        // 全部對不上時退回 `.data` —— 讓使用者至少挑得到東西，
+        // 核心的 `importCheck` 會在挑完之後擋下不對的格式。
+        // 灰掉整個挑選器的話，他會以為功能壞了。
+        return types.isEmpty ? [.data] : types
+    }
+
+    private func handleImport(_ result: Result<[URL], Error>) {
+        importError = ""
+        guard case .success(let urls) = result, let url = urls.first else {
+            if case .failure = result { importError = localizationManager.localized("import_failed_read") }
+            return
+        }
+        // **安全範圍存取**：從檔案 App 挑來的 URL 在沙箱外，
+        // 不開存取權的話 `Data(contentsOf:)` 會回 permission denied，
+        // 而那個錯誤看起來像檔案壞了。
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+
+        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).flatMap { UInt64($0) } ?? 0
+        let verdict = importCheck(
+            slot: .model3d, fileName: url.lastPathComponent, sizeBytes: size)
+        guard verdict.accepted else {
+            importError = localizationManager.localized(verdict.reasonKey)
+            return
+        }
+        guard let data = try? Data(contentsOf: url) else {
+            importError = localizationManager.localized("import_failed_read")
+            return
+        }
+        guard let saved = NotebookStore.shared.saveImportedFile(
+            data: data, extension: verdict.extension) else {
+            importError = localizationManager.localized("import_failed_read")
+            return
+        }
+        imported = (saved, url.deletingPathExtension().lastPathComponent)
+        if title.isEmpty || title == "3D 幾何模型" {
+            title = url.deletingPathExtension().lastPathComponent
+        }
+    }
+
+    /// 預覽要畫什麼：匯入的檔案優先，沒有才畫內建幾何體。
+    ///
+    /// 匯入的檔案讀不出來時**退回內建幾何體並顯示錯誤** —— 回一個空場景
+    /// 的話，使用者看到的是一片黑，而他不知道那是模型是黑的還是壞了。
+    private var previewScene: SCNScene {
+        if let imported {
+            let url = NotebookStore.shared.importedFileURL(fileName: imported.fileName)
+            if let scene = SceneKitHelper.makeImportedScene(
+                url: url,
+                rotationX: previewRotationX,
+                rotationY: previewRotationY,
+                rotationZ: 0,
+                scale: 1.0) {
+                return scene
+            }
+        }
+        return SceneKitHelper.makeScene(
+            modelTypeRaw: selectedModelType.rawValue,
+            material: selectedMaterial,
+            rotationX: previewRotationX,
+            rotationY: previewRotationY,
+            rotationZ: 0,
+            scale: 1.0)
     }
 
     private var previewView: some View {
@@ -176,14 +306,7 @@ public struct Model3DStudioView: View {
                     .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 4)
 
                 SceneView(
-                    scene: SceneKitHelper.makeScene(
-                        modelTypeRaw: selectedModelType.rawValue,
-                        material: selectedMaterial,
-                        rotationX: previewRotationX,
-                        rotationY: previewRotationY,
-                        rotationZ: 0,
-                        scale: 1.0
-                    ),
+                    scene: previewScene,
                     options: [.allowsCameraControl, .autoenablesDefaultLighting]
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 16))
@@ -215,7 +338,53 @@ public struct Model3DStudioView: View {
                 TextField(localizationManager.localized("model_title"), text: $title)
             }
 
-            Section(header: Text(localizationManager.localized("geom_shape"))) {
+            // 匯入本機檔案。放在形狀選擇**之前** —— 使用者來這裡多半是
+            // 因為手上有一個模型檔，內建幾何體是退路不是主角。
+            Section(header: Text(localizationManager.localized("import_my_files"))) {
+                Button {
+                    showFileImporter = true
+                } label: {
+                    Label(
+                        localizationManager.localized("import_from_files"),
+                        systemImage: "folder.badge.plus")
+                }
+                .accessibilityIdentifier("model3d.import")
+
+                if let imported {
+                    HStack {
+                        Image(systemName: "cube.transparent.fill")
+                            .foregroundStyle(.tint)
+                        Text(imported.displayName).lineLimit(1)
+                        Spacer()
+                        Button {
+                            self.imported = nil
+                        } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(localizationManager.localized("delete"))
+                    }
+                    .accessibilityIdentifier("model3d.imported_name")
+                }
+
+                if !importError.isEmpty {
+                    Text(importError)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .accessibilityIdentifier("model3d.import_error")
+                }
+
+                Text(String(
+                    format: localizationManager.localized("import_limit_note"),
+                    "\(importSizeLimitMb(slot: .model3d))"))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
+            // 內建幾何體。匯入檔案之後這一區就不影響預覽了 ——
+            // 但不藏起來：使用者可能想換回內建的。
+            Section(header: Text(localizationManager.localized(
+                imported == nil ? "geom_shape" : "import_builtin_shapes"))) {
                 Picker(localizationManager.localized("geom_shape"), selection: $selectedModelType) {
                     ForEach(Model3DType.allCases) { type in
                         HStack {
@@ -258,7 +427,13 @@ public struct Model3DStudioView: View {
                         x: 100,
                         y: 150,
                         width: 280,
-                        height: 260
+                        height: 260,
+                        // 匯入的檔案跟著附件走。插進畫布之後它與內建幾何體
+                        // 完全一樣 —— 可以搬、縮放、旋轉、改邊框（都來自
+                        // `ObjectFrameStyled`）。「匯入的東西就不能編輯」
+                        // 是很多 App 的通病。
+                        importedFileName: imported?.fileName,
+                        importedDisplayName: imported?.displayName
                     )
                     onInsert(newAttachment)
                     dismiss()
@@ -383,19 +558,34 @@ public struct Model3DInteractiveCardView: View {
         .background(Color(UIColor.secondarySystemBackground))
     }
 
+    /// 畫布上這張卡片要畫什麼：匯入的檔案優先，沒有才畫內建幾何體。
+    ///
+    /// 讀不出來時退回內建幾何體 —— 檔案被刪掉或還沒同步下來時，
+    /// 使用者至少看得到一個物件在那裡，而不是一片黑。
+    private var cardScene: SCNScene {
+        if let name = attachment.importedFileName {
+            let url = NotebookStore.shared.importedFileURL(fileName: name)
+            if let scene = SceneKitHelper.makeImportedScene(
+                url: url,
+                rotationX: attachment.rotationX,
+                rotationY: attachment.rotationY,
+                rotationZ: attachment.rotationZ,
+                scale: attachment.scale) {
+                return scene
+            }
+        }
+        return SceneKitHelper.makeScene(
+            modelTypeRaw: attachment.modelTypeRaw,
+            material: attachment.materialType,
+            rotationX: attachment.rotationX,
+            rotationY: attachment.rotationY,
+            rotationZ: attachment.rotationZ,
+            scale: attachment.scale)
+    }
+
     private var cardViewport: some View {
         ZStack {
-            SceneView(
-                scene: SceneKitHelper.makeScene(
-                    modelTypeRaw: attachment.modelTypeRaw,
-                    material: attachment.materialType,
-                    rotationX: attachment.rotationX,
-                    rotationY: attachment.rotationY,
-                    rotationZ: attachment.rotationZ,
-                    scale: attachment.scale
-                ),
-                options: [.autoenablesDefaultLighting]
-            )
+            SceneView(scene: cardScene, options: [.autoenablesDefaultLighting])
 
             // 覆蓋手勢層：360° 拖曳旋轉
             Color.clear

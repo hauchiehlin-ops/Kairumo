@@ -4943,6 +4943,22 @@
     "zhHans": "图片",
     "zhHant": "圖片"
   },
+  "import_builtin_shapes": {
+    "en": "Built-in shapes",
+    "zhHant": "內建形狀",
+    "zhHans": "内置形状",
+    "ja": "組み込みの図形",
+    "ko": "기본 도형",
+    "th": "รูปทรงในตัว"
+  },
+  "import_empty_file": {
+    "en": "That file is empty — it may still be downloading from your cloud",
+    "zhHant": "這個檔案是空的 —— 它可能還在從雲端下載",
+    "zhHans": "这个文件是空的 —— 它可能还在从云端下载",
+    "ja": "このファイルは空です —— クラウドからまだダウンロード中かもしれません",
+    "ko": "이 파일은 비어 있습니다 —— 클라우드에서 아직 다운로드 중일 수 있습니다",
+    "th": "ไฟล์นี้ว่างเปล่า —— อาจกำลังดาวน์โหลดจากคลาวด์อยู่"
+  },
   "import_failed": {
     "en": "Import failed: %@",
     "ja": "読み込みに失敗しました：%@",
@@ -4950,6 +4966,46 @@
     "th": "นำเข้าไม่สำเร็จ: %@",
     "zhHans": "导入失败：%@",
     "zhHant": "匯入失敗：%@"
+  },
+  "import_failed_read": {
+    "en": "That file could not be read",
+    "zhHant": "這個檔案讀不出來",
+    "zhHans": "这个文件读不出来",
+    "ja": "このファイルは読み込めませんでした",
+    "ko": "이 파일을 읽을 수 없습니다",
+    "th": "อ่านไฟล์นี้ไม่ได้"
+  },
+  "import_from_files": {
+    "en": "Choose from Files",
+    "zhHant": "從檔案選擇",
+    "zhHans": "从文件选择",
+    "ja": "ファイルから選択",
+    "ko": "파일에서 선택",
+    "th": "เลือกจากไฟล์"
+  },
+  "import_limit_note": {
+    "en": "Up to %@ MB — everything you insert syncs with the notebook",
+    "zhHant": "上限 %@ MB —— 插入的東西都會跟著筆記本同步",
+    "zhHans": "上限 %@ MB —— 插入的东西都会跟着笔记本同步",
+    "ja": "上限 %@ MB —— 挿入したものはノートと一緒に同期されます",
+    "ko": "최대 %@ MB —— 삽입한 것은 노트와 함께 동기화됩니다",
+    "th": "สูงสุด %@ MB —— สิ่งที่แทรกจะซิงก์ไปพร้อมกับสมุดบันทึก"
+  },
+  "import_model_android_note": {
+    "en": "Imported models are stored with the notebook and sync, but this device cannot render them yet — it shows the file name instead.",
+    "zhHant": "匯入的模型會跟著筆記本儲存與同步，但這台裝置還畫不出來 —— 目前顯示的是檔名。",
+    "zhHans": "导入的模型会跟着笔记本储存与同步，但这台设备还画不出来 —— 目前显示的是文件名。",
+    "ja": "読み込んだモデルはノートと共に保存・同期されますが、この端末ではまだ描画できません —— ファイル名を表示しています。",
+    "ko": "가져온 모델은 노트와 함께 저장·동기화되지만 이 기기에서는 아직 그릴 수 없습니다 —— 파일 이름을 표시합니다.",
+    "th": "โมเดลที่นำเข้าจะถูกเก็บและซิงก์ไปกับสมุดบันทึก แต่อุปกรณ์นี้ยังแสดงผลไม่ได้ —— จะแสดงชื่อไฟล์แทน"
+  },
+  "import_my_files": {
+    "en": "My files",
+    "zhHant": "我的檔案",
+    "zhHans": "我的文件",
+    "ja": "マイファイル",
+    "ko": "내 파일",
+    "th": "ไฟล์ของฉัน"
   },
   "import_note": {
     "en": "Import Note",
@@ -4974,6 +5030,22 @@
     "th": "นำเข้าแล้ว: %@",
     "zhHans": "已导入：%@",
     "zhHant": "已匯入：%@"
+  },
+  "import_too_large": {
+    "en": "That file is too big to sync comfortably",
+    "zhHant": "這個檔案太大，同步會很痛苦",
+    "zhHans": "这个文件太大，同步会很痛苦",
+    "ja": "このファイルは大きすぎて同期に支障が出ます",
+    "ko": "이 파일은 너무 커서 동기화에 부담이 됩니다",
+    "th": "ไฟล์นี้ใหญ่เกินไปสำหรับการซิงก์"
+  },
+  "import_unsupported_type": {
+    "en": "This kind of file can't go here",
+    "zhHant": "這種檔案不能放進這裡",
+    "zhHans": "这种文件不能放进这里",
+    "ja": "この種類のファイルはここに入れられません",
+    "ko": "이 종류의 파일은 여기에 넣을 수 없습니다",
+    "th": "ไฟล์ชนิดนี้ใส่ตรงนี้ไม่ได้"
   },
   "ink_change_colour": {
     "en": "Change colour",

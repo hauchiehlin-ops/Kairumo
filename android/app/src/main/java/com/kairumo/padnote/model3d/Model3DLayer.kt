@@ -21,6 +21,8 @@ import com.kairumo.padnote.canvas.MIN_OBJECT_WIDTH_DP
 import com.kairumo.padnote.canvas.ResizeHandle
 import com.kairumo.padnote.canvas.StyleHandle
 import com.kairumo.padnote.canvas.gesturesIf
+import androidx.compose.ui.platform.testTag
+import androidx.compose.foundation.layout.Arrangement
 
 /**
  * 畫布上的 3D 模型圖層（Android）。
@@ -102,8 +104,35 @@ private fun Model3DView(
                 }
             }
     ) {
-        Canvas(Modifier.size(model.width.dp, model.height.dp)) {
-            Model3DRenderer.draw(this, model, size.width, size.height)
+        // 匯入的模型：**這一側畫不出來，所以照實顯示檔名。**
+        //
+        // Android 沒有內建的 USDZ／GLB 算繪器，而為了一個模型預覽把
+        // Filament 那種等級的相依拉進來，代價與收益不成比例。
+        //
+        // 重點是檔案**存得下也同步得動**：使用者在 iPad 上插的模型，
+        // 在這裡看得到它在那裡、搬得動、改得了邊框 —— 只是顯示的是檔名。
+        // 這比「同步過來之後那個物件整個不見」好得多，也比畫一個空白卡片
+        // 讓他以為壞掉了好。
+        val importedName = model.importedDisplayName ?: model.importedFileName
+        if (importedName != null) {
+            androidx.compose.foundation.layout.Column(
+                modifier = Modifier
+                    .size(model.width.dp, model.height.dp)
+                    .testTag("model3d.imported_placeholder"),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("🧊", style = MaterialTheme.typography.headlineMedium)
+                Text(
+                    importedName,
+                    style = MaterialTheme.typography.labelMedium,
+                    maxLines = 2
+                )
+            }
+        } else {
+            Canvas(Modifier.size(model.width.dp, model.height.dp)) {
+                Model3DRenderer.draw(this, model, size.width, size.height)
+            }
         }
 
         if (model.title.isNotBlank()) {

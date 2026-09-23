@@ -4959,6 +4959,22 @@ extension LocalizationManager {
             .ko: "이미지",
             .th: "รูปภาพ"
         ],
+        "import_builtin_shapes": [
+            .zhHant: "內建形狀",
+            .en: "Built-in shapes",
+            .zhHans: "内置形状",
+            .ja: "組み込みの図形",
+            .ko: "기본 도형",
+            .th: "รูปทรงในตัว"
+        ],
+        "import_empty_file": [
+            .zhHant: "這個檔案是空的 —— 它可能還在從雲端下載",
+            .en: "That file is empty — it may still be downloading from your cloud",
+            .zhHans: "这个文件是空的 —— 它可能还在从云端下载",
+            .ja: "このファイルは空です —— クラウドからまだダウンロード中かもしれません",
+            .ko: "이 파일은 비어 있습니다 —— 클라우드에서 아직 다운로드 중일 수 있습니다",
+            .th: "ไฟล์นี้ว่างเปล่า —— อาจกำลังดาวน์โหลดจากคลาวด์อยู่"
+        ],
         "import_failed": [
             .zhHant: "匯入失敗：%@",
             .en: "Import failed: %@",
@@ -4966,6 +4982,46 @@ extension LocalizationManager {
             .ja: "読み込みに失敗しました：%@",
             .ko: "가져오기 실패: %@",
             .th: "นำเข้าไม่สำเร็จ: %@"
+        ],
+        "import_failed_read": [
+            .zhHant: "這個檔案讀不出來",
+            .en: "That file could not be read",
+            .zhHans: "这个文件读不出来",
+            .ja: "このファイルは読み込めませんでした",
+            .ko: "이 파일을 읽을 수 없습니다",
+            .th: "อ่านไฟล์นี้ไม่ได้"
+        ],
+        "import_from_files": [
+            .zhHant: "從檔案選擇",
+            .en: "Choose from Files",
+            .zhHans: "从文件选择",
+            .ja: "ファイルから選択",
+            .ko: "파일에서 선택",
+            .th: "เลือกจากไฟล์"
+        ],
+        "import_limit_note": [
+            .zhHant: "上限 %@ MB —— 插入的東西都會跟著筆記本同步",
+            .en: "Up to %@ MB — everything you insert syncs with the notebook",
+            .zhHans: "上限 %@ MB —— 插入的东西都会跟着笔记本同步",
+            .ja: "上限 %@ MB —— 挿入したものはノートと一緒に同期されます",
+            .ko: "최대 %@ MB —— 삽입한 것은 노트와 함께 동기화됩니다",
+            .th: "สูงสุด %@ MB —— สิ่งที่แทรกจะซิงก์ไปพร้อมกับสมุดบันทึก"
+        ],
+        "import_model_android_note": [
+            .zhHant: "匯入的模型會跟著筆記本儲存與同步，但這台裝置還畫不出來 —— 目前顯示的是檔名。",
+            .en: "Imported models are stored with the notebook and sync, but this device cannot render them yet — it shows the file name instead.",
+            .zhHans: "导入的模型会跟着笔记本储存与同步，但这台设备还画不出来 —— 目前显示的是文件名。",
+            .ja: "読み込んだモデルはノートと共に保存・同期されますが、この端末ではまだ描画できません —— ファイル名を表示しています。",
+            .ko: "가져온 모델은 노트와 함께 저장·동기화되지만 이 기기에서는 아직 그릴 수 없습니다 —— 파일 이름을 표시합니다.",
+            .th: "โมเดลที่นำเข้าจะถูกเก็บและซิงก์ไปกับสมุดบันทึก แต่อุปกรณ์นี้ยังแสดงผลไม่ได้ —— จะแสดงชื่อไฟล์แทน"
+        ],
+        "import_my_files": [
+            .zhHant: "我的檔案",
+            .en: "My files",
+            .zhHans: "我的文件",
+            .ja: "マイファイル",
+            .ko: "내 파일",
+            .th: "ไฟล์ของฉัน"
         ],
         "import_note": [
             .zhHant: "匯入筆記",
@@ -4990,6 +5046,22 @@ extension LocalizationManager {
             .ja: "読み込みました：%@",
             .ko: "가져왔습니다: %@",
             .th: "นำเข้าแล้ว: %@"
+        ],
+        "import_too_large": [
+            .zhHant: "這個檔案太大，同步會很痛苦",
+            .en: "That file is too big to sync comfortably",
+            .zhHans: "这个文件太大，同步会很痛苦",
+            .ja: "このファイルは大きすぎて同期に支障が出ます",
+            .ko: "이 파일은 너무 커서 동기화에 부담이 됩니다",
+            .th: "ไฟล์นี้ใหญ่เกินไปสำหรับการซิงก์"
+        ],
+        "import_unsupported_type": [
+            .zhHant: "這種檔案不能放進這裡",
+            .en: "This kind of file can't go here",
+            .zhHans: "这种文件不能放进这里",
+            .ja: "この種類のファイルはここに入れられません",
+            .ko: "이 종류의 파일은 여기에 넣을 수 없습니다",
+            .th: "ไฟล์ชนิดนี้ใส่ตรงนี้ไม่ได้"
         ],
         "ink_change_colour": [
             .zhHant: "換色",

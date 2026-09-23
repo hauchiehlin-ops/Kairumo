@@ -26,6 +26,7 @@ pub mod ffi_gesture;
 pub mod ffi_guides;
 pub mod ffi_hints;
 pub mod ffi_hwr;
+pub mod ffi_import;
 pub mod ffi_input;
 pub mod ffi_interop;
 pub mod ffi_layout;

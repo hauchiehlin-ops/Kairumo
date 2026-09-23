@@ -677,6 +677,17 @@ public struct Note3DAttachment: Identifiable, Codable, Hashable, ObjectFrameStyl
     public var pageIndex: Int
     public var title: String
     public var modelTypeRaw: String // "cube", "sphere", "cylinder", "torus", "pyramid", "capsule"
+    /// 匯入的模型檔名（在 `Attachments` 目錄下）。`nil` 代表用內建幾何體。
+    ///
+    /// **必須是 Optional** —— 非 Optional 的新欄位會讓舊筆記整份解碼失敗，
+    /// 而載入走的是 `try?`：使用者的筆記會**整批靜默消失**
+    /// （見 `ObjectFrameStyled.canvasRotation` 的說明）。
+    public var importedFileName: String?
+    /// 使用者原本的檔名，只拿來顯示。
+    ///
+    /// 存這一個是因為 `importedFileName` 是 `imp_<uuid>.usdz` 這種內部名字
+    /// —— 拿它當標題的話，使用者在自己的筆記裡看到一串 UUID。
+    public var importedDisplayName: String?
     public var materialType: MaterialType
     public var rotationX: Float
     public var rotationY: Float
@@ -714,12 +725,16 @@ public struct Note3DAttachment: Identifiable, Codable, Hashable, ObjectFrameStyl
         borderColorHex: String? = nil,
         borderWidth: CGFloat? = nil,
         backgroundColorHex: String? = nil,
-        cornerRadius: CGFloat = 12
+        cornerRadius: CGFloat = 12,
+        importedFileName: String? = nil,
+        importedDisplayName: String? = nil
     ) {
         self.id = id
         self.pageIndex = pageIndex
         self.title = title
         self.modelTypeRaw = modelTypeRaw
+        self.importedFileName = importedFileName
+        self.importedDisplayName = importedDisplayName
         self.materialType = materialType
         self.rotationX = rotationX
         self.rotationY = rotationY
@@ -1537,6 +1552,41 @@ public final class NotebookStore: ObservableObject {
             try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         }
         return dir
+    }
+
+    /// 把**任何**匯入的檔案存進附件目錄，回傳檔名。
+    ///
+    /// # 為什麼是通用的，不是每種附件各寫一份
+    ///
+    /// 插入工具原本只給得出內建的東西 —— 3D 模型只有六個固定幾何體。
+    /// 使用者手上那個檔案（一個模型、一份 PDF、一段錄音）進不來，
+    /// 而那才是他真正想放進筆記的東西。
+    ///
+    /// 每種附件各寫一個儲存函式的話，第七種附件出現時會再抄一次，
+    /// 而抄漏的那一次（忘了 `.atomic`、忘了建目錄）要等使用者掉資料才發現。
+    ///
+    /// 副檔名保留原樣：SceneKit 要靠它判斷格式（`SCNScene(url:)` 讀的是
+    /// 副檔名，不是內容）。
+    public func saveImportedFile(data: Data, extension ext: String) -> String? {
+        let clean = ext.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ". "))
+        let fileName = clean.isEmpty
+            ? "imp_\(UUID().uuidString)"
+            : "imp_\(UUID().uuidString).\(clean)"
+        let fileUrl = attachmentsDirectory.appending(path: fileName)
+        do {
+            // `.atomic`：寫到一半當機的話，留下的是舊檔或沒有檔，
+            // 不是一個讀得到但壞掉的檔 —— 後者會讓使用者看到一個
+            // 打不開的物件，而且看不出原因。
+            try data.write(to: fileUrl, options: .atomic)
+            return fileName
+        } catch {
+            return nil
+        }
+    }
+
+    /// 匯入檔案在磁碟上的位置。**不保證它存在**。
+    public func importedFileURL(fileName: String) -> URL {
+        attachmentsDirectory.appending(path: fileName)
     }
 
     /// 記憶體層級圖片快取，徹底消除物件拖曳時每秒 60-120 次磁碟讀取解碼產生的殘影與掉幀
