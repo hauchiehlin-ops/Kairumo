@@ -348,7 +348,13 @@ fn editor_spec() -> FfiScreenSpec {
                     // 漏一項的代價就是一個平台少一整個功能，沒有人會發現。
                     c("editor.insert.stickers", Button, "sticker_library"),
                     c("editor.insert.audio", Button, "insert_audio"),
+                    // 「從本機檔案匯入」那兩項。與上面那兩項是**不同的入口**：
+                    // 上面挑的是 App 自己有的東西（錄好的音、相簿裡的圖），
+                    // 這兩項挑的是使用者手上那個檔案 —— 而那常常正是他想放
+                    // 進筆記的東西。規格裡列著，兩端才不會只有一邊做。
+                    c("editor.insert.audio_file", Button, "import_audio_from_files"),
                     c("editor.insert.image", Button, "insert_image"),
+                    c("editor.insert.image_file", Button, "import_from_files"),
                     c("editor.insert.math", Button, "math_calc"),
                     c("editor.insert.chart", Button, "chart_studio"),
                     c("editor.insert.table", Button, "table_studio"),

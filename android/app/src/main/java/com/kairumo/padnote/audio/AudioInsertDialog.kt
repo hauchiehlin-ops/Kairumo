@@ -18,6 +18,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,7 +38,9 @@ fun AudioInsertDialog(
     l: (String) -> String,
     audioDirectory: File?,
     onDismiss: () -> Unit,
-    onPick: (File) -> Unit
+    onPick: (File) -> Unit,
+    /** 開本機檔案挑選器。挑完之後由呼叫端收檔並自己呼叫 [onPick]。 */
+    onImportFile: () -> Unit
 ) {
     val height = rememberDialogHeight("audioInsert", 320.dp)
 
@@ -51,11 +54,20 @@ fun AudioInsertDialog(
         title = { Text(l("insert_audio")) },
         text = {
             if (files.isEmpty()) {
-                Text(
-                    l("no_recordings_hint"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                // 一句「還沒有錄音」本身是個死路 —— 使用者手上那個音訊檔
+                // 進不來，而那常常正是他想插的東西。所以空的時候更要
+                // 把匯入那條路擺在眼前。
+                Column(Modifier.fillMaxWidth()) {
+                    Text(
+                        l("no_recordings_hint"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    TextButton(
+                        onClick = onImportFile,
+                        modifier = Modifier.testTag("audio_insert.import_file")
+                    ) { Text(l("import_audio_from_files")) }
+                }
             } else {
                 Column(
                     Modifier.fillMaxWidth().height(height.value)
@@ -80,6 +92,10 @@ fun AudioInsertDialog(
                         }
                     }
                 }
+                TextButton(
+                    onClick = onImportFile,
+                    modifier = Modifier.testTag("audio_insert.import_file")
+                ) { Text(l("import_audio_from_files")) }
                 // 底部的拖曳把手：往下拖變高（S-72）。
                 DialogResizeHandle(height, "audioInsert")
             }

@@ -9,7 +9,6 @@
 
 import SwiftUI
 import SceneKit
-import UniformTypeIdentifiers
 
 #if os(macOS) && !targetEnvironment(macCatalyst)
 typealias SCNFloat = CGFloat
@@ -208,7 +207,7 @@ public struct Model3DStudioView: View {
             // 完全無法理解的行為。
             .fileImporter(
                 isPresented: $showFileImporter,
-                allowedContentTypes: Self.allowedTypes,
+                allowedContentTypes: FileImport.allowedTypes(for: .model3d),
                 allowsMultipleSelection: false
             ) { result in
                 handleImport(result)
@@ -227,49 +226,21 @@ public struct Model3DStudioView: View {
         }
     }
 
-    /// 檔案挑選器收哪些型別。清單來自核心（`importExtensions`）——
-    /// 兩端收的格式一樣，而「這個檔案在 iPad 上挑得到、在手機上挑不到」
-    /// 是使用者完全無法理解的行為。
-    private static var allowedTypes: [UTType] {
-        let exts = importExtensions(slot: .model3d)
-        let types = exts.compactMap { UTType(filenameExtension: $0) }
-        // 全部對不上時退回 `.data` —— 讓使用者至少挑得到東西，
-        // 核心的 `importCheck` 會在挑完之後擋下不對的格式。
-        // 灰掉整個挑選器的話，他會以為功能壞了。
-        return types.isEmpty ? [.data] : types
-    }
-
     private func handleImport(_ result: Result<[URL], Error>) {
         importError = ""
-        guard case .success(let urls) = result, let url = urls.first else {
-            if case .failure = result { importError = localizationManager.localized("import_failed_read") }
+        // 挑檔案、檢查、存起來的流程全部在 `FileImport` —— 與插入圖片、
+        // 插入錄音走同一條路。每個插入工具各抄一份的話，抄漏的那一次
+        // （忘了開安全範圍存取、忘了先問大小）要等使用者掉資料才發現。
+        guard let outcome = FileImport.take(result: result, slot: .model3d) else {
+            return  // 使用者取消，不是錯誤。
+        }
+        guard outcome.succeeded else {
+            importError = localizationManager.localized(outcome.errorKey)
             return
         }
-        // **安全範圍存取**：從檔案 App 挑來的 URL 在沙箱外，
-        // 不開存取權的話 `Data(contentsOf:)` 會回 permission denied，
-        // 而那個錯誤看起來像檔案壞了。
-        let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-
-        let size = (try? url.resourceValues(forKeys: [.fileSizeKey]).fileSize).flatMap { UInt64($0) } ?? 0
-        let verdict = importCheck(
-            slot: .model3d, fileName: url.lastPathComponent, sizeBytes: size)
-        guard verdict.accepted else {
-            importError = localizationManager.localized(verdict.reasonKey)
-            return
-        }
-        guard let data = try? Data(contentsOf: url) else {
-            importError = localizationManager.localized("import_failed_read")
-            return
-        }
-        guard let saved = NotebookStore.shared.saveImportedFile(
-            data: data, extension: verdict.extension) else {
-            importError = localizationManager.localized("import_failed_read")
-            return
-        }
-        imported = (saved, url.deletingPathExtension().lastPathComponent)
+        imported = (outcome.storedName, outcome.displayName)
         if title.isEmpty || title == "3D 幾何模型" {
-            title = url.deletingPathExtension().lastPathComponent
+            title = outcome.displayName
         }
     }
 

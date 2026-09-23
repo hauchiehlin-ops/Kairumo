@@ -3,10 +3,12 @@ package com.kairumo.padnote.platform
 import android.content.Context
 import android.net.Uri
 import android.provider.OpenableColumns
+import android.webkit.MimeTypeMap
 import java.io.File
 import java.util.UUID
 import uniffi.padnote_core.FfiImportSlot
 import uniffi.padnote_core.importCheck
+import uniffi.padnote_core.importExtensions
 
 /**
  * 從本機檔案匯入東西到筆記頁（Android）。
@@ -34,12 +36,43 @@ object FileImport {
     )
 
     /**
+     * 檔案挑選器收哪些 MIME 型別。副檔名清單來自核心（`importExtensions`）——
+     * 「這個檔案在 iPad 上挑得到、在手機上挑不到」是使用者完全無法理解的行為。
+     *
+     * 對不出 MIME 的那些不是丟掉，而是整個退回「全部型別」：讓使用者至少挑得到
+     * 東西，核心的 `importCheck` 會在挑完之後擋下不對的格式。把挑選器
+     * 縮到只剩一半格式的話，他會以為自己的檔案壞了。
+     */
+    fun mimeTypes(slot: FfiImportSlot): Array<String> {
+        val map = MimeTypeMap.getSingleton()
+        val exts = importExtensions(slot)
+        val types = exts.mapNotNull { map.getMimeTypeFromExtension(it) }.distinct()
+        return if (types.size < exts.size || types.isEmpty()) {
+            // 萬用型別。Kotlin 的區塊註解可以巢狀，所以**不要**把這個
+            // 字面值寫進上面的說明裡 —— 那裡的 /* 會在註解裡開一層新的，
+            // 而編譯器的抱怨會指到這一行，完全看不出原因（踩過）。
+            arrayOf("*/*")
+        } else {
+            types.toTypedArray()
+        }
+    }
+
+    /**
      * 把 `uri` 指到的檔案收進 App 的附件目錄。
      *
      * **整個過程只讀一次檔案。** 先問大小再決定要不要讀 —— 讀進來才發現
      * 太大的話，手機上那一下配置就可能直接被系統殺掉。
+     *
+     * `destDir` 指定收到哪裡，預設是附件目錄。匯入的音訊**不能**放在那裡：
+     * 播放與同步兩條路都是照「錄音就在套件的 media/audio 底下」在解析
+     * 的，放錯地方的症狀是「按了播放沒有反應」，而且沒有任何錯誤訊息。
      */
-    fun take(context: Context, uri: Uri, slot: FfiImportSlot): Outcome {
+    fun take(
+        context: Context,
+        uri: Uri,
+        slot: FfiImportSlot,
+        destDir: File? = null
+    ): Outcome {
         val (name, size) = query(context, uri)
         val verdict = importCheck(slot, name, size.toULong())
         if (!verdict.accepted) {
@@ -51,7 +84,8 @@ object FileImport {
         } else {
             "imp_${UUID.randomUUID()}.${verdict.extension}"
         }
-        val target = File(attachmentsDir(context), stored)
+        val dir = (destDir ?: attachmentsDir(context)).apply { mkdirs() }
+        val target = File(dir, stored)
         return try {
             // 寫到暫存檔再改名：寫到一半被中斷的話，留下的是沒有檔，
             // 不是一個讀得到但壞掉的檔 —— 後者會讓使用者看到一個打不開
@@ -77,10 +111,9 @@ object FileImport {
     /**
      * 匯入檔案在磁碟上的位置。**不保證它存在**。
      */
-    // orphan-ok: 匯入的模型這一側畫不出來（沒有 USDZ／GLB 算繪器），
-    // 所以目前沒有人需要那個路徑 —— 顯示的是檔名。不刪掉：檔案是真的
-    // 存著也同步著，「把它交出去」是下一個需求必然要用到的那一行，
-    // 而重寫的那個多半會忘了 mkdirs()。
+    // 插入圖片用它把剛收進來的檔案讀回去解碼。匯入的 3D 模型這一側
+    // 畫不出來（沒有 USDZ／GLB 算繪器），顯示的是檔名 —— 但檔案是真的
+    // 存著也同步著。
     fun fileFor(context: Context, storedName: String): File =
         File(attachmentsDir(context), storedName)
 

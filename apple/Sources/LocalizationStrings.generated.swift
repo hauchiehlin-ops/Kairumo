@@ -4983,6 +4983,14 @@ extension LocalizationManager {
             .ko: "이미지",
             .th: "รูปภาพ"
         ],
+        "import_audio_from_files": [
+            .zhHant: "匯入音訊檔",
+            .en: "Import an audio file",
+            .zhHans: "导入音频文件",
+            .ja: "音声ファイルを読み込む",
+            .ko: "오디오 파일 가져오기",
+            .th: "นำเข้าไฟล์เสียง"
+        ],
         "import_builtin_shapes": [
             .zhHant: "內建形狀",
             .en: "Built-in shapes",
@@ -5022,6 +5030,14 @@ extension LocalizationManager {
             .ja: "ファイルから選択",
             .ko: "파일에서 선택",
             .th: "เลือกจากไฟล์"
+        ],
+        "import_from_photos": [
+            .zhHant: "從相簿選擇",
+            .en: "Choose from Photos",
+            .zhHans: "从相册选择",
+            .ja: "写真から選ぶ",
+            .ko: "사진에서 선택",
+            .th: "เลือกจากรูปภาพ"
         ],
         "import_limit_note": [
             .zhHant: "上限 %@ MB —— 插入的東西都會跟著筆記本同步",

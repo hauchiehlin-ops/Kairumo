@@ -93,6 +93,7 @@ import com.kairumo.padnote.platform.AudioCapture
 import com.kairumo.padnote.platform.DocsViewer
 import com.kairumo.padnote.platform.ExportPreviewDialog
 import com.kairumo.padnote.platform.Exporter
+import com.kairumo.padnote.platform.FileImport
 import com.kairumo.padnote.platform.Handwriting
 import com.kairumo.padnote.sync.FolderSync
 import com.kairumo.padnote.backup.BackupManager
@@ -213,6 +214,7 @@ import androidx.compose.ui.platform.LocalView
 import com.kairumo.padnote.ai.NoteIntelligenceSheet
 import com.kairumo.padnote.ai.notePlainText
 import com.kairumo.padnote.ink.PenHardware
+import uniffi.padnote_core.FfiImportSlot
 import uniffi.padnote_core.FfiPenOutcome
 import com.kairumo.padnote.asset.AssetLibrarySheet
 import com.kairumo.padnote.collab.CollaborationManager
@@ -1552,6 +1554,59 @@ private fun InkScreen(
             "media/audio"
         )
     }
+    // 插一張錄音卡片。挑既有錄音與匯入外部音訊走的是**同一條路** ——
+    // 兩邊各寫一份的話，漏掉的那一項（寫回 meta、切模式）會變成
+    // 「插進去了但畫面上沒反應」。
+    val insertAudioCard: (java.io.File) -> Unit = { file ->
+                    // 位置逐張往右下錯開。全部疊在同一點的話，插第二張時
+                    // 使用者會以為沒插進去。
+                    val existing = audioCards.count { it.pageIndex == pageIndex }
+                    val offset = (existing % 6) * 18f
+                    val card = AudioObject(
+                        id = java.util.UUID.randomUUID().toString(),
+                        pageIndex = pageIndex,
+                        recordingId = file.nameWithoutExtension,
+                        fileName = file.name,
+                        title = file.nameWithoutExtension,
+                        // 長度走核心算（S-42）。各平台問各自的系統 API 的話，
+                        // 同一段錄音在兩台裝置上會顯示不同的秒數。
+                        durationSeconds = runCatching {
+                            uniffi.padnote_core.audioDurationSeconds(file.readBytes()).toInt()
+                        }.getOrDefault(0),
+                        x = 80f + offset, y = 120f + offset,
+                        width = 260f, height = 76f
+                    )
+                    audioCards = (audioCards + card).toMutableList()
+                    meta.setAudioCards(notebook?.first, audioCards)
+                    insertingAudio = false
+                    selectedAudioId = card.id
+                    // 插入後切到打字模式 —— 手寫模式下物件不吃觸控，
+                    // 剛插進來的卡片會拖不動，看起來像插壞了。
+                    editorMode = EditorMode.TYPE
+                    audioRevision++
+    }
+
+    // 匯入本機音訊檔。**收進套件的 media/audio**，不是附件目錄 ——
+    // 播放與同步兩條路都是照「錄音就在那裡」在解析的，放錯地方的症狀
+    // 是「按了播放沒有反應」，而且沒有任何錯誤訊息。
+    val audioImportPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val dir = audioDirectory
+            if (dir == null) {
+                message = l10n("import_failed_read")
+            } else {
+                val outcome = FileImport.take(activity, uri, FfiImportSlot.AUDIO, dir)
+                if (outcome.errorKey.isNotEmpty()) {
+                    message = l10n(outcome.errorKey)
+                } else {
+                    insertAudioCard(java.io.File(dir, outcome.storedName))
+                }
+            }
+        }
+    }
+
     // 離開編輯畫面要放掉播放器 —— 不放的話聲音會在使用者回到首頁之後
     // 繼續播下去，而且畫面上沒有任何東西能停它。
     androidx.compose.runtime.DisposableEffect(notebook) {
@@ -1572,28 +1627,51 @@ private fun InkScreen(
     var editingImage by remember { mutableStateOf<NoteImage?>(null) }
     LaunchedEffect(notebook, pageId) { imageStore.load(); imageRevision++ }
 
-    // 相簿選圖。用 OpenDocument 而不是舊的 GET_CONTENT：前者拿得到持久權限，
+    // 挑選器的過濾條件來自核心，算一次就好 —— 每次開選單都重算的話，
+    // 那是一趟不必要的 FFI 往返。
+    val imageMimeTypes = remember { FileImport.mimeTypes(FfiImportSlot.IMAGE) }
+    val audioMimeTypes = remember { FileImport.mimeTypes(FfiImportSlot.AUDIO) }
+
+    // 本機選圖。用 OpenDocument 而不是舊的 GET_CONTENT：前者拿得到持久權限，
     // 而且在 Android 13+ 不需要任何儲存權限。
-    val imagePicker = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocument()
-    ) { uri ->
-        if (uri != null) {
+    // 相簿與檔案兩個入口共用這一段。各寫一份的話，漏掉的那一項
+    // （切模式、錯誤訊息）會變成「從相簿插得進去、從檔案插進去沒反應」。
+    val onImagePicked: (android.net.Uri) -> Unit = { uri ->
+        // **先問大小再讀。** 原本是直接 `readBytes()`，在一張 60 MB
+        // 的掃描上那一下配置就可能被系統殺掉 —— 而那看起來像 App
+        // 當掉，不像「檔案太大」。判斷走核心（`importCheck`），
+        // 與 Apple 端同一套規則、同一套錯誤訊息。
+        val outcome = FileImport.take(activity, uri, FfiImportSlot.IMAGE)
+        if (outcome.errorKey.isNotEmpty()) {
+            message = l10n(outcome.errorKey)
+        } else {
             val bytes = runCatching {
-                activity.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                FileImport.fileFor(activity, outcome.storedName).readBytes()
             }.getOrNull()
-            val name = uri.lastPathSegment?.substringAfterLast('/') ?: "image.png"
             if (bytes != null) {
-                val inserted = imageStore.insert(bytes, name)
+                val inserted = imageStore.insert(bytes, outcome.displayName)
                 imageRevision++
                 selectedImageId = inserted?.id
                 // 插入後自動切到打字模式 —— 手寫模式下物件不吃觸控，
                 // 使用者剛插進來的圖會拖不動，看起來像插壞了。
                 if (inserted != null) editorMode = EditorMode.TYPE
+                else message = l10n("err_image_read_failed")
             } else {
-                message = l10n("err_image_read_failed")
+                message = l10n("import_failed_read")
             }
         }
     }
+
+    // 相簿選圖。與「從檔案選擇」是**不同的入口**：系統相簿挑選器看得到
+    // 的只有相簿裡的東西，使用者從電腦拷進「下載」的那張圖它一張都看不到
+    // —— 反過來也一樣。Apple 端同樣是兩個入口。
+    val photoPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickVisualMedia()
+    ) { uri -> if (uri != null) onImagePicked(uri) }
+
+    val imagePicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> if (uri != null) onImagePicked(uri) }
 
     val shapeStore = remember(notebook, pageId) { ShapeStore(notebook?.first, pageId) }
     var shapeRevision by remember { mutableIntStateOf(0) }
@@ -2761,7 +2839,19 @@ private fun InkScreen(
                 DropdownMenuItem(
                     text = { Text(l10n("insert_image")) },
                     modifier = Modifier.testTag("editor.insert.image"),
-                    onClick = { showMenu = false; imagePicker.launch(arrayOf("image/*")) }
+                    onClick = {
+                        showMenu = false
+                        photoPicker.launch(
+                            androidx.activity.result.PickVisualMediaRequest(
+                                ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("import_from_files")) },
+                    modifier = Modifier.testTag("editor.insert.image_file"),
+                    // 過濾條件來自核心 —— 「這個檔案在 iPad 上挑得到、在
+                    // Android 手機上挑不到」是使用者完全無法理解的行為。
+                    onClick = { showMenu = false; imagePicker.launch(imageMimeTypes) }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("insert_link")) },
@@ -2771,6 +2861,11 @@ private fun InkScreen(
                     text = { Text(l10n("insert_audio")) },
                     modifier = Modifier.testTag("editor.insert.audio"),
                     onClick = { showMenu = false; insertingAudio = true }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("import_audio_from_files")) },
+                    modifier = Modifier.testTag("editor.insert.audio_file"),
+                    onClick = { showMenu = false; audioImportPicker.launch(audioMimeTypes) }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("marquee_select")) },
@@ -4774,33 +4869,10 @@ private fun InkScreen(
             l = { key -> l10n(key) },
             audioDirectory = audioDirectory,
             onDismiss = { insertingAudio = false },
-            onPick = { file ->
-                // 位置逐張往右下錯開。全部疊在同一點的話，插第二張時
-                // 使用者會以為沒插進去。
-                val existing = audioCards.count { it.pageIndex == pageIndex }
-                val offset = (existing % 6) * 18f
-                val card = AudioObject(
-                    id = java.util.UUID.randomUUID().toString(),
-                    pageIndex = pageIndex,
-                    recordingId = file.nameWithoutExtension,
-                    fileName = file.name,
-                    title = file.nameWithoutExtension,
-                    // 長度走核心算（S-42）。各平台問各自的系統 API 的話，
-                    // 同一段錄音在兩台裝置上會顯示不同的秒數。
-                    durationSeconds = runCatching {
-                        uniffi.padnote_core.audioDurationSeconds(file.readBytes()).toInt()
-                    }.getOrDefault(0),
-                    x = 80f + offset, y = 120f + offset,
-                    width = 260f, height = 76f
-                )
-                audioCards = (audioCards + card).toMutableList()
-                meta.setAudioCards(notebook?.first, audioCards)
+            onPick = { file -> insertAudioCard(file) },
+            onImportFile = {
                 insertingAudio = false
-                selectedAudioId = card.id
-                // 插入後切到打字模式 —— 手寫模式下物件不吃觸控，
-                // 剛插進來的卡片會拖不動，看起來像插壞了。
-                editorMode = EditorMode.TYPE
-                audioRevision++
+                audioImportPicker.launch(audioMimeTypes)
             }
         )
     }

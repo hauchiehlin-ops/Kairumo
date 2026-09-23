@@ -38,6 +38,8 @@ final class InsertToolsAudit: XCTestCase {
         ("Asset Library", "assets.close"),
         ("Sticker Library", "stickers.cancel"),
         ("Insert Image", ""),          // 系統相片選擇器，不是我們的畫面
+        ("Choose from Files", ""),     // 系統檔案挑選器，同上
+        ("Import an audio file", ""),  // 系統檔案挑選器，同上
         ("Math Calculator", "math.close"),
         ("Chart Studio", "chart.close"),
         ("Insert 3D Model", "model3d.import"),
@@ -144,5 +146,37 @@ final class InsertToolsAudit: XCTestCase {
         XCTAssertTrue(
             failures.isEmpty,
             "這些插入工具點了沒有打開東西：\n" + failures.joined(separator: "\n"))
+    }
+
+    /// 「從本機檔案匯入」那幾項真的在選單裡。
+    ///
+    /// **只找，不點。** 它們開的是系統檔案挑選器，而那個東西一旦打開就
+    /// 會把整條測試卡住，後面每一項都找不到 —— 症狀是某個毫不相干的
+    /// 工具「不見了」（上面那段註解記的就是這件事）。
+    ///
+    /// 這一條守的是一個很容易悄悄消失的東西：使用者手上那個檔案進得來
+    /// 的那條路。它沒有自己的畫面可以檢查，所以沒有這條測試的話，
+    /// 哪天選單重排把它擠掉了，不會有任何閘門變紅。
+    func testLocalFileImportEntriesAreInTheMenu() {
+        let app = launch()
+        guard openEditor(app) else {
+            XCTFail("進不到編輯器")
+            return
+        }
+        element(app, "editor.more").tap()
+
+        var missing: [String] = []
+        for label in ["Choose from Files", "Import an audio file", "Insert 3D Model"] {
+            let item = app.buttons[label].firstMatch
+            if !item.waitForExistence(timeout: 3) {
+                // **一定要捲。** 這張選單在手機上放不下所有項目。
+                for _ in 0..<6 where !item.exists { app.swipeUp() }
+            }
+            if !item.exists { missing.append(label) }
+        }
+
+        XCTAssertTrue(
+            missing.isEmpty,
+            "插入選單裡找不到這幾項匯入入口：\n" + missing.joined(separator: "\n"))
     }
 }

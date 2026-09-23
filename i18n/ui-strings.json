@@ -11646,5 +11646,21 @@
     "th": "การแก้ไขข้อความ Word",
     "zhHans": "Word文字编修",
     "zhHant": "Word文字編修"
+  },
+  "import_from_photos": {
+    "en": "Choose from Photos",
+    "zhHant": "從相簿選擇",
+    "zhHans": "从相册选择",
+    "ja": "写真から選ぶ",
+    "ko": "사진에서 선택",
+    "th": "เลือกจากรูปภาพ"
+  },
+  "import_audio_from_files": {
+    "en": "Import an audio file",
+    "zhHant": "匯入音訊檔",
+    "zhHans": "导入音频文件",
+    "ja": "音声ファイルを読み込む",
+    "ko": "오디오 파일 가져오기",
+    "th": "นำเข้าไฟล์เสียง"
   }
 }

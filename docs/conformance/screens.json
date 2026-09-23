@@ -19,7 +19,9 @@
       "editor.insert.assets",
       "editor.insert.stickers",
       "editor.insert.audio",
+      "editor.insert.audio_file",
       "editor.insert.image",
+      "editor.insert.image_file",
       "editor.insert.math",
       "editor.insert.chart",
       "editor.insert.table",
@@ -92,7 +94,9 @@
       "editor.insert.assets",
       "editor.insert.stickers",
       "editor.insert.audio",
+      "editor.insert.audio_file",
       "editor.insert.image",
+      "editor.insert.image_file",
       "editor.insert.math",
       "editor.insert.chart",
       "editor.insert.table",
@@ -239,9 +243,19 @@
         "label_key": "insert_audio"
       },
       {
+        "id": "editor.insert.audio_file",
+        "label_en": "Import an audio file",
+        "label_key": "import_audio_from_files"
+      },
+      {
         "id": "editor.insert.image",
         "label_en": "Insert Image",
         "label_key": "insert_image"
+      },
+      {
+        "id": "editor.insert.image_file",
+        "label_en": "Choose from Files",
+        "label_key": "import_from_files"
       },
       {
         "id": "editor.insert.math",

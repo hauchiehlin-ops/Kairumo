@@ -1057,6 +1057,15 @@ public struct NotebookEditorView: View {
     // 圖片、算式、圖表、文字與連結狀態
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var showPhotoPicker: Bool = false
+    /// 從「檔案」挑圖，而不是從相簿。
+    ///
+    /// 相簿挑得到的只有相簿裡的東西 —— 使用者掃描的 PDF 轉出的 PNG、
+    /// 從 Mac 拖進 iCloud 雲碟的那張圖，`PhotosPicker` 一張都看不到。
+    @State private var showImageFileImporter: Bool = false
+    /// 從「檔案」挑音訊。App 自己錄的那些走 `showAudioPicker`。
+    @State private var showAudioFileImporter: Bool = false
+    /// 匯入失敗的語系鍵。非空就跳提示。
+    @State private var importErrorKey: String = ""
     @State private var showStickerLibrary: Bool = false
     @State private var showMathCalculator: Bool = false
     @State private var showChartStudio: Bool = false
@@ -1533,6 +1542,29 @@ public struct NotebookEditorView: View {
             }
         } }
         .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
+        // 三個修飾詞收在一個 `ViewModifier` 裡。
+        //
+        // **不是為了好看**：這條鏈已經長到編譯器會放棄的程度 ——
+        // 直接把三個攤在這裡，`body` 就會撞上
+        // 「unable to type-check this expression in reasonable time」，
+        // 而錯誤指的是整條鏈的開頭，看不出是哪一個加上去的。
+        .modifier(ImportPickersModifier(
+            showImageFileImporter: $showImageFileImporter,
+            showAudioFileImporter: $showAudioFileImporter,
+            importErrorKey: $importErrorKey,
+            onImage: { outcome in
+                // 存進附件目錄之後再讀回來解碼。先解碼再存的話，一個看起來
+                // 像圖但其實壞掉的檔會在畫布上變成一個永遠空白的方塊。
+                let url = store.importedFileURL(fileName: outcome.storedName)
+                guard let data = try? Data(contentsOf: url),
+                      let image = UIImage(data: data) else {
+                    importErrorKey = "import_failed_read"
+                    return
+                }
+                insertImageAttachment(image)
+            },
+            onAudio: { outcome in insertImportedAudio(outcome) }
+        ))
         .onChange(of: selectedPhotoItem) { newItem in
             Task {
                 if let item = newItem,
@@ -2476,8 +2508,12 @@ public struct NotebookEditorView: View {
                     .accessibilityIdentifier("editor.insert.stickers")
                     Button { showAudioPicker = true } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
                         .accessibilityIdentifier("editor.insert.audio")
+                    Button { showAudioFileImporter = true } label: { Label(localizationManager.localized("import_audio_from_files"), systemImage: "square.and.arrow.down.on.square") }
+                        .accessibilityIdentifier("editor.insert.audio_file")
                 Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
                     .accessibilityIdentifier("editor.insert.image")
+                Button { showImageFileImporter = true } label: { Label(localizationManager.localized("import_from_files"), systemImage: "folder.badge.plus") }
+                    .accessibilityIdentifier("editor.insert.image_file")
                 Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
                     .accessibilityIdentifier("editor.insert.math")
                 Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
@@ -8420,6 +8456,29 @@ public struct NotebookEditorView: View {
     /// 把一段既有的錄音插到目前這一頁。
     ///
     /// 位置逐張往右下錯開。全部疊在同一點的話，插第二張時使用者會以為沒插進去。
+    /// 匯入的音訊檔變成一張跟自己錄的完全一樣的卡片。
+    ///
+    /// **它會被登記成一段真正的錄音**（`addRecording`），而不是另一種
+    /// 只在這一頁存在的附件。理由是使用者接下來會做的每一件事 ——
+    /// 播放、在「最近錄音」找它、讓它跟著筆記本同步到另一台裝置 ——
+    /// 走的都是錄音那條路；自成一格的話，那些全部要再實作一次，
+    /// 而漏掉的那一項會變成「這張卡片按了沒反應」。
+    private func insertImportedAudio(_ outcome: FileImport.Outcome) {
+        // 長度走核心算（S-42）。各平台問各自的系統 API 的話，
+        // 同一個檔案在兩台裝置上會顯示不同的秒數。
+        let url = store.recordingFileURL(fileName: outcome.storedName, notebookId: nil)
+        let seconds = (try? Data(contentsOf: url)).map {
+            Int(audioDurationSeconds(bytes: $0))
+        } ?? 0
+        let rec = store.addRecording(
+            title: outcome.displayName,
+            durationSeconds: seconds,
+            fileName: outcome.storedName,
+            linkedNotebookId: notebook.id
+        )
+        insertAudioAttachment(rec)
+    }
+
     private func insertAudioAttachment(_ recording: AudioRecordingRecord) {
         let existing = (notebook.audioAttachments ?? []).filter { $0.pageIndex == currentPageIndex }.count
         let offset = CGFloat(existing % 6) * 18
@@ -10587,6 +10646,55 @@ private struct TapeView: View {
                 } else {
                     onToggleReveal()
                 }
+            }
+    }
+}
+
+/// 「從檔案匯入」那三個修飾詞（挑圖、挑音訊、失敗提示）。
+///
+/// 收成一個 `ViewModifier` 是因為編輯器的 `body` 修飾詞鏈已經長到
+/// 編譯器會放棄型別推導 —— 攤開來寫會讓整支檔案編不過，而錯誤訊息
+/// 指的是鏈的開頭，完全看不出是哪一個加上去的。
+private struct ImportPickersModifier: ViewModifier {
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+    @Binding var showImageFileImporter: Bool
+    @Binding var showAudioFileImporter: Bool
+    @Binding var importErrorKey: String
+    let onImage: (FileImport.Outcome) -> Void
+    let onAudio: (FileImport.Outcome) -> Void
+
+    func body(content: Content) -> some View {
+        content
+            // 挑選器的過濾條件與「收不收」的判斷都來自核心 —— 同一個檔案
+            // 在 iPad 上挑得到、在 Android 手機上挑不到，是使用者完全
+            // 無法理解的行為。
+            .fileImporter(
+                isPresented: $showImageFileImporter,
+                allowedContentTypes: FileImport.allowedTypes(for: .image),
+                allowsMultipleSelection: false
+            ) { result in
+                guard let outcome = FileImport.take(result: result, slot: .image) else { return }
+                if outcome.succeeded { onImage(outcome) } else { importErrorKey = outcome.errorKey }
+            }
+            .fileImporter(
+                isPresented: $showAudioFileImporter,
+                allowedContentTypes: FileImport.allowedTypes(for: .audio),
+                allowsMultipleSelection: false
+            ) { result in
+                guard let outcome = FileImport.take(
+                    result: result, slot: .audio, into: .recordings) else { return }
+                if outcome.succeeded { onAudio(outcome) } else { importErrorKey = outcome.errorKey }
+            }
+            .alert(
+                localizationManager.localized("import_failed_read"),
+                isPresented: Binding(
+                    get: { !importErrorKey.isEmpty },
+                    set: { if !$0 { importErrorKey = "" } })
+            ) {
+                Button(localizationManager.localized("confirm"), role: .cancel) { importErrorKey = "" }
+            } message: {
+                // 理由來自核心的 `reason_key` —— 「為什麼不收」兩端講同一句話。
+                Text(localizationManager.localized(importErrorKey))
             }
     }
 }
