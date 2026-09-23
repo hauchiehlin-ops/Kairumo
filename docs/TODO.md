@@ -133,6 +133,28 @@ Apple 單元測試 382 條中 381 過（唯一那條紅是無障礙標籤，與�
 
 規格新增 `editor.insert.pdf`。
 
+### 🔴 S-SPEC-MENUS. 選單歸屬還是手抄的 —— 兩端各一份
+
+`docs/conformance/screens.json` 已經照畫面分好了，但它不知道「這個 id 在
+**哪一張選單**裡」。於是兩端的測試各自維護一份清單：
+
+* Apple：`SmokeUITests.moreMenuItems` / `exportMenuItems`
+* Android：`ScreenAuditTest.MORE_MENU_ITEMS` / `EXPORT_MENU_ITEMS`
+
+新增一個選單項目要記得改**三個**地方（核心規格 + 兩端各一份）。漏掉任何
+一份的症狀都一樣：單一畫面狀態的稽核報「畫面少了規格要求的控制項」——
+看起來像產品壞了，實際上是測試清單沒跟上。
+
+已經踩過兩次：
+1. `editor.insert.stickers` 在 Apple 那份漏了很久，CI 一直紅著。
+2. 補 `editor.export.save_as` 時改了核心與 Apple、漏了 Android ——
+   而那是在我剛把 Apple 的棘輪改成「由清單組出來」之後的同一輪。
+   那個改法擋住的是第三份（棘輪），擋不住第二份（另一個平台的清單）。
+
+**做法**：核心的 `ffi_screens` 給每個控制項加一個「在哪張選單／浮層裡」的
+欄位（`section` 已經有了，缺的是「要先做什麼才看得到」），產進
+`screens.json`，兩端的測試改成讀它。那時候三份就會變成一份。
+
 ### ~~S-MODEL-IMPORT-RENDER~~ ✅ 匯入的 3D 模型在 Android 上畫得出來了
 
 **先更正一句我自己寫在程式碼註解裡的話。** `Model3DLayer.kt` 原本寫著
