@@ -370,6 +370,9 @@ class ScreenAuditTest {
             "editor.export.pdf",
             "editor.export.image",
             "editor.export.print",
+            // 存到使用者自己選的位置（SAF）。Apple 端因為缺這個被
+            // Mac App Store 退件（審查指南 2.4.5(i)），兩邊一起補。
+            "editor.export.save_as",
             "editor.export.share",
         )
 

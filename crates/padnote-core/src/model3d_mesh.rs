@@ -235,7 +235,11 @@ fn parse_stl_binary(bytes: &[u8]) -> ImportedMesh {
         let mut p = at + 12;
         let base = vertices.len();
         for _ in 0..3 {
-            vertices.push((read_f32(bytes, p), read_f32(bytes, p + 4), read_f32(bytes, p + 8)));
+            vertices.push((
+                read_f32(bytes, p),
+                read_f32(bytes, p + 4),
+                read_f32(bytes, p + 8),
+            ));
             p += 12;
         }
         faces.push(vec![base, base + 1, base + 2]);
@@ -258,7 +262,10 @@ fn parse_stl_ascii(bytes: &[u8]) -> ImportedMesh {
     for line in text.lines() {
         let line = line.trim();
         if let Some(rest) = line.strip_prefix("vertex") {
-            let nums: Vec<f32> = rest.split_whitespace().filter_map(|p| p.parse().ok()).collect();
+            let nums: Vec<f32> = rest
+                .split_whitespace()
+                .filter_map(|p| p.parse().ok())
+                .collect();
             if nums.len() >= 3 {
                 current.push(vertices.len());
                 vertices.push((nums[0], nums[1], nums[2]));
@@ -442,7 +449,10 @@ endsolid t
         for _ in 0..(MAX_FACES + 1) {
             obj.push_str("f 1 2 3\n");
         }
-        assert_eq!(parse(obj.as_bytes(), "obj").unwrap_err(), MeshError::TooManyFaces);
+        assert_eq!(
+            parse(obj.as_bytes(), "obj").unwrap_err(),
+            MeshError::TooManyFaces
+        );
     }
 
     #[test]
@@ -452,7 +462,10 @@ endsolid t
         let obj = "v 5 5 5\nv 5 5 5\nv 5 5 5\nf 1 2 3\n";
         let m = parse(obj.as_bytes(), "obj").unwrap();
         for v in &m.vertices {
-            assert!(v.0.is_finite() && v.1.is_finite() && v.2.is_finite(), "{v:?}");
+            assert!(
+                v.0.is_finite() && v.1.is_finite() && v.2.is_finite(),
+                "{v:?}"
+            );
         }
     }
 

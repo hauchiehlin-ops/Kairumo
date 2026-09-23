@@ -35,7 +35,6 @@ pub mod ffi_llm;
 pub mod ffi_math;
 pub mod ffi_model3d;
 pub mod ffi_models;
-pub mod model3d_mesh;
 pub mod ffi_oauth;
 pub mod ffi_pages;
 pub mod ffi_paper;
@@ -51,6 +50,7 @@ pub mod ffi_table;
 pub mod ffi_texture;
 pub mod ffi_theme_tools;
 pub mod ffi_ui;
+pub mod model3d_mesh;
 pub mod setup;
 pub mod transcript;
 

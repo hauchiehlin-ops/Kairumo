@@ -19,8 +19,8 @@
 //! 沒有 z-buffer，所以互相穿插的幾何會畫錯 —— 但這六種都是凸多面體，
 //! 凸多面體用畫家演算法是正確的。要加入非凸模型時這個假設就不成立了。
 
-use std::sync::Arc;
 use std::f32::consts::{PI, TAU};
+use std::sync::Arc;
 
 use crate::ffi_shapes::FfiPoint;
 
@@ -171,7 +171,9 @@ pub fn model3d_faces(
 ) -> Vec<FfiShadedFace> {
     let mesh = mesh(kind);
     // 內建那六個都是凸多面體：剔除背面之後不會有面互相遮擋。
-    shade_mesh(&mesh, rotation_x, rotation_y, rotation_z, scale, width, height, true)
+    shade_mesh(
+        &mesh, rotation_x, rotation_y, rotation_z, scale, width, height, true,
+    )
 }
 
 /// 把任何網格投影成一串由遠而近的多邊形。
@@ -328,14 +330,7 @@ impl FfiImportedModel3d {
         height: f32,
     ) -> Vec<FfiShadedFace> {
         shade_mesh(
-            &self.mesh,
-            rotation_x,
-            rotation_y,
-            rotation_z,
-            scale,
-            width,
-            height,
-            false,
+            &self.mesh, rotation_x, rotation_y, rotation_z, scale, width, height, false,
         )
     }
 
@@ -717,10 +712,12 @@ f 1 2 3\nf 1 2 4\nf 2 3 4\nf 1 3 4\n";
         let model = FfiImportedModel3d::parse(TETRA.as_bytes().to_vec(), "obj".into()).unwrap();
         let a = model.faces(0.0, 0.0, 0.0, 1.0, 200.0, 200.0);
         let b = model.faces(0.0, 1.0, 0.0, 1.0, 200.0, 200.0);
-        let same = a
-            .iter()
-            .zip(b.iter())
-            .all(|(x, y)| x.points.iter().zip(y.points.iter()).all(|(p, q)| p.x == q.x));
+        let same = a.iter().zip(b.iter()).all(|(x, y)| {
+            x.points
+                .iter()
+                .zip(y.points.iter())
+                .all(|(p, q)| p.x == q.x)
+        });
         assert!(!same, "轉了 1 弧度畫面卻完全沒變");
     }
 
