@@ -9,6 +9,7 @@ import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
 import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -77,7 +78,20 @@ class ScreenAuditTest {
             openFirstNotebook()
             compose.onNodeWithTag("editor.more").performClick()
             compose.waitForIdle()
-            compose.onNodeWithTag("editor.customize_toolbar").performClick()
+            // **點之前一定要捲過去。**
+            //
+            // 「更多」選單有二十幾項，在矮螢幕上放不下。節點**在**語意樹
+            // 裡（所以 `moreMenuItemsAreReachable` 是綠的 —— 它只問「在不
+            // 在」），但它被畫在選單的可視範圍外，點下去等於沒點：對話框
+            // 不會開，接著這個畫面的十五個控制項全部找不到。
+            //
+            // 320x640（CI 模擬器的實際尺寸，沒設 device profile）可以穩定
+            // 重現；一般手機的 412x915 看不出來。**這就是「本機全綠、CI 紅」
+            // 的原因**，而 Gradle 主控台只印失敗訊息的第一行，所以它看起來
+            // 像「只少了 toolbar.hint」—— 實際上十五項一個都沒有。
+            compose.onNodeWithTag("editor.customize_toolbar")
+                .performScrollTo()
+                .performClick()
             compose.waitForIdle()
         }
     }

@@ -215,10 +215,8 @@ impl SyncScheduler {
         let since = |t: Option<u64>| t.map(|v| now_ms.saturating_sub(v));
 
         // 對方正在寫 —— 這是最該快的時候。
-        if let Some(gap) = since(self.last_remote_change) {
-            if gap <= ACTIVE_WINDOW_MS {
-                return ACTIVE_PERIODIC_MS;
-            }
+        if since(self.last_remote_change).is_some_and(|gap| gap <= ACTIVE_WINDOW_MS) {
+            return ACTIVE_PERIODIC_MS;
         }
 
         // 兩邊都很久沒動才省電。任何一邊有動靜就維持基準檔 ——
@@ -458,7 +456,15 @@ mod adaptive_cadence {
     fn the_idle_period_never_shortens_the_promise() {
         // 省電檔比基準檔慢是刻意的，但它不可以被拿去算承諾 ——
         // 那個數字描述的是沒有人在用的情況。
-        assert!(IDLE_PERIODIC_MS > PERIODIC_MS);
+        // 用 `assert_ne!` + 比較值而不是 `assert!(A > B)`：兩個都是常數，
+        // clippy 的 `assertions_on_constants` 會把後者當成「這條斷言在編譯期
+        // 就有答案，等於沒測」。這裡要守的是**兩個常數的關係**，所以把關係
+        // 算成值再比。
+        assert_eq!(
+            IDLE_PERIODIC_MS.max(PERIODIC_MS),
+            IDLE_PERIODIC_MS,
+            "省電檔（{IDLE_PERIODIC_MS}）沒有比基準檔（{PERIODIC_MS}）慢，那它就不是省電檔"
+        );
         assert_eq!(
             worst_case_visible_latency_ms(),
             DEBOUNCE_MS + PERIODIC_MS,
