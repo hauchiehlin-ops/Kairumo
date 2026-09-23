@@ -43,6 +43,19 @@ struct KairumoApp: App {
         StartupLogger.log("核心引擎版本: \(coreVer), 平台目標: \(info.targetOs)/\(info.targetArch)")
         print("🚀 Kairumo 啟動完成 - 核心引擎版本: \(coreVer), 平台目標: \(info.targetOs)/\(info.targetArch)")
         #endif
+
+        // **背景任務必須在這裡註冊，不能晚一步。**
+        //
+        // `BGTaskScheduler.register` 只接受在 App 啟動完成之前的註冊；
+        // 晚了就丟 NSInternalInconsistencyException（"All launch handlers
+        // must be registered before application finishes launching"），
+        // 而那是**未捕捉的 Objective-C 例外 —— App 直接當掉**。
+        //
+        // 原本它藏在 `AutoSyncController.start()` 裡，而 `start()` 是在
+        // scenePhase 變成 .active 之後才呼叫 —— 畫面都出來了，早就太晚。
+        // iPad 一開就死，而 iPhone 尺寸下的時序剛好沒觸發，所以所有既有的
+        // UI 測試（全部只跑 iPhone）都沒發現。
+        AutoSyncController.registerBackgroundTask()
     }
 
     private var appVersionTitle: String { AppVersion.windowTitle }

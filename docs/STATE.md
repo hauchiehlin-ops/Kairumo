@@ -73,6 +73,17 @@ Kairumo —— 手寫、打字、錄音轉文字三合一的筆記 App。
   也會過，然後被誤判成「點不到」。要用 `contains`
 - ❌ 本機與 CI 跑不同機型的 UI 測試 —— 螢幕尺寸不同，被切掉的控制項就不同，
   本機全綠而 CI 紅得莫名其妙
+- ❌ **UI 測試只跑 iPhone** —— iPad 走的是另一條版面分支，而它一啟動就當掉
+  了都沒有人知道（`BGTaskScheduler` 註冊時機，見下一條）
+- ❌ `BGTaskScheduler.register` 放在 `scenePhase` 變 active 之後 ——
+  它必須在 App 啟動完成**前**註冊，晚一步就是未捕捉的 ObjC 例外＝直接當掉
+- ❌ UI 測試用 `descendants(matching: .any)` 反覆掃整棵樹 —— XCTest 每次
+  查詢都發 signpost，量大到系統把行程**隔離**，然後在 strcmp(NULL) 上 SIGSEGV
+- ❌ 用 `find` 抓 DerivedData 裡的 .app —— 機器上可能有多個，抓到舊的那個
+  症狀是「修了沒用」，而那會讓人去改一個本來就對的東西。
+  用 `xcodebuild -showBuildSettings` 問 BUILT_PRODUCTS_DIR
+- ❌ 連續跑多輪 UI 測試把模擬器操到拒絕啟動 —— 錯誤訊息是
+  `Application failed preflight checks`，看起來完全像 App 有問題
 - ❌ 先轉繁體再標點 —— ct-punc 的詞表是簡體的，順序反了會大量 `<unk>`
 - ❌ 相信自己寫的測試期望 —— CIF 那兩條是測試錯、實作對
 - ❌ `cargo add zhconv` —— 預設綁 MediaWiki 的 **GPL-2.0** 轉換表，

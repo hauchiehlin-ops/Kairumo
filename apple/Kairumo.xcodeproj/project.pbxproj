@@ -40,6 +40,7 @@
 		4739A382D63316D061431753 /* BrushCursorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B36AD7F19677B4F27E94262B /* BrushCursorTests.swift */; };
 		476A452C0006DB556DE70790 /* ShapeStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2A90E6661A2C0079EE609AFA /* ShapeStudioView.swift */; };
 		4778715DC0B3FB2B8CAB004B /* padnote_core.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28A8E33C21E81EED174CEBA3 /* padnote_core.swift */; };
+		47AF8E7626A6A3C946AB0185 /* ResponsiveAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = D32FB35605394A7823F6017B /* ResponsiveAudit.swift */; };
 		499550DA23C61C95EC0BB640 /* TableAppearance.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E824B2D4C00682C282AEF8E /* TableAppearance.swift */; };
 		4DF85F141ECE9CBA9B5E2105 /* PdfKitDocumentTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 420CDB8E187D7BF4EB48CB2E /* PdfKitDocumentTests.swift */; };
 		4E956F4EA57EA9FAED4B8EEB /* MathCalculatorSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DEEDC3EBFC3C910FFC5735C /* MathCalculatorSheet.swift */; };
@@ -323,6 +324,7 @@
 		CCBD6EB2E871A9532370A15B /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
 		D059ACC4F96D906F5A18970D /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
 		D2E4B63FC00CBE41E1C67031 /* DeadControlSurvey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadControlSurvey.swift; sourceTree = "<group>"; };
+		D32FB35605394A7823F6017B /* ResponsiveAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResponsiveAudit.swift; sourceTree = "<group>"; };
 		D76C7E92895F6C4334996D92 /* NotebookSyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookSyncCoordinator.swift; sourceTree = "<group>"; };
 		D92F2373941302ED5F5C66CD /* ImageDropPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDropPlacementTests.swift; sourceTree = "<group>"; };
 		DA14AB7B6F3436E39B58DAA1 /* ObjectStacking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectStacking.swift; sourceTree = "<group>"; };
@@ -428,6 +430,7 @@
 				0345B65C7AA3708D3D2EC807 /* CanvasGestureTests.swift */,
 				D2E4B63FC00CBE41E1C67031 /* DeadControlSurvey.swift */,
 				831C71226B45B48B268CE8F6 /* InsertToolsAudit.swift */,
+				D32FB35605394A7823F6017B /* ResponsiveAudit.swift */,
 				6E69D62954A410C548C81F3A /* ScreenAudit.swift */,
 				DC6D1F547D3EA6FBF9266760 /* SmokeUITests.swift */,
 			);
@@ -767,6 +770,7 @@
 				1E31AD89CA8BEB732ADA8899 /* CanvasGestureTests.swift in Sources */,
 				3CFD6D8CF0C7C32DF12770A2 /* DeadControlSurvey.swift in Sources */,
 				6849D8D81A0F512DCC4FC8E8 /* InsertToolsAudit.swift in Sources */,
+				47AF8E7626A6A3C946AB0185 /* ResponsiveAudit.swift in Sources */,
 				1CC2292EB91628D7287E4780 /* ScreenAudit.swift in Sources */,
 				613D0C4337E03D7899725FA7 /* SmokeUITests.swift in Sources */,
 			);

@@ -86,7 +86,10 @@ public final class AutoSyncController: ObservableObject {
 
         startNetworkMonitor()
         observeLifecycle()
-        registerBackgroundTask()
+        // **背景任務的註冊不在這裡。** 見 `registerBackgroundTask()` ——
+        // 它必須在 App 啟動完成之前呼叫，而 `start()` 是在畫面出現之後
+        // 才被呼叫的。放在這裡會讓 App 一啟動就當掉。
+        scheduleBackgroundTask()
         request(.foreground)
     }
 
@@ -200,16 +203,38 @@ public final class AutoSyncController: ObservableObject {
     ///
     /// 系統決定什麼時候給你時間，可能好幾個小時才一次。真正的「即時」
     /// 靠前景觸發（進前景、存檔去抖動、週期拉取）。
-    private func registerBackgroundTask() {
+    /// 註冊背景同步任務。
+    ///
+    /// # **必須在 App 啟動完成之前呼叫**
+    ///
+    /// `BGTaskScheduler.register` 只接受在 `application(_:didFinishLaunching…)`
+    /// 回傳之前的註冊；晚一步就丟 `NSInternalInconsistencyException`
+    /// （"All launch handlers must be registered before application finishes
+    /// launching"），而那是**未捕捉的 Objective-C 例外 —— App 直接當掉**。
+    ///
+    /// 在此之前這一行藏在 `start()` 裡，而 `start()` 是在
+    /// `onChange(of: scenePhase)` 變成 `.active` 時才呼叫的 —— 也就是畫面
+    /// 都出來之後。那時候早就太晚了。
+    ///
+    /// **為什麼沒有早點發現**：所有既有的 UI 測試都只跑 iPhone 尺寸，
+    /// 而那個尺寸下的啟動時序剛好讓它沒有觸發。iPad 一開就死。
+    /// 響應式清查（不同尺寸跑同一套測試）第一輪就抓到了。
+    ///
+    /// 從 `KairumoApp.init` 呼叫。
+    static func registerBackgroundTask() {
         #if canImport(BackgroundTasks) && !targetEnvironment(macCatalyst)
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: Self.backgroundTaskId, using: nil
         ) { task in
             Task { @MainActor in
+                // 這個閉包活得比任何一次 start() 都久（它註冊在 App 啟動時），
+                // 所以拿單例而不是捕捉 self —— 捕捉的話會把一個
+                // 早該釋放的控制器留在記憶體裡。
+                let controller = AutoSyncController.shared
                 // **每次執行完都要再排下一次。** BGTaskScheduler 不會自己重複，
                 // 漏掉這一步的症狀是「背景同步只在安裝後動過一次」。
-                self.scheduleBackgroundTask()
-                guard let store = self.store else {
+                controller.scheduleBackgroundTask()
+                guard let store = controller.store else {
                     task.setTaskCompleted(success: true)
                     return
                 }
@@ -218,11 +243,10 @@ public final class AutoSyncController: ObservableObject {
                 task.expirationHandler = {
                     NotebookSyncCoordinator.cancelSync()
                 }
-                let outcome = await self.runOneRound(store: store)
+                let outcome = await controller.runOneRound(store: store)
                 task.setTaskCompleted(success: outcome == .success)
             }
         }
-        scheduleBackgroundTask()
         #endif
     }
 

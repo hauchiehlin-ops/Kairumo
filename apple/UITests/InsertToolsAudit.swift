@@ -44,6 +44,26 @@ final class InsertToolsAudit: XCTestCase {
         ("Theme Tools", "theme.close"),
     ]
 
+    /// 依識別碼找元素，**不掃整棵樹**。
+    ///
+    /// `descendants(matching: .any)` 會走完整棵無障礙樹，而這個 App 的樹
+    /// 有好幾百個節點。在迴圈裡反覆這樣查的後果不只是慢 ——
+    /// XCTest 每一次查詢都會發 signpost，量大到一個程度之後系統的
+    /// log 子系統會把這個行程**隔離**（`LIBTRACE_CLIENT_QUARANTINED_DUE_TO_
+    /// HIGH_LOGGING_VOLUME`），接著 XCTest 自己的 fault callback 會在
+    /// strcmp(NULL) 上炸掉。實測過：iPad 上跑到第 40 秒左右 SIGSEGV。
+    ///
+    /// 按型別查只走那一類元素，量差一個數量級。按鈕優先 ——
+    /// 我們掛識別碼的東西絕大多數是按鈕。
+    private func element(_ app: XCUIApplication, _ id: String) -> XCUIElement {
+        let button = app.buttons[id]
+        if button.exists { return button }
+        let other = app.otherElements[id]
+        if other.exists { return other }
+        // 兩種都沒有才回退 —— 回退本身很貴，但只在真的找不到時發生一次。
+        return app.descendants(matching: .any).matching(identifier: id).firstMatch
+    }
+
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchEnvironment["KAIRUMO_UITEST"] = "1"
@@ -59,7 +79,7 @@ final class InsertToolsAudit: XCTestCase {
     private func dismissSheet(_ app: XCUIApplication) {
         for id in ["assets.close", "stickers.cancel", "math.close",
                    "chart.close", "theme.close", "model3d.close"] {
-            let button = app.descendants(matching: .any).matching(identifier: id).firstMatch
+            let button = element(app, id)
             if button.exists && button.isHittable {
                 button.tap()
                 return
@@ -73,9 +93,7 @@ final class InsertToolsAudit: XCTestCase {
         let card = app.staticTexts["Welcome to Kairumo"].firstMatch
         guard card.waitForExistence(timeout: 10) else { return false }
         card.tap()
-        return app.descendants(matching: .any)
-            .matching(identifier: "editor.more").firstMatch
-            .waitForExistence(timeout: 15)
+        return element(app, "editor.more").waitForExistence(timeout: 15)
     }
 
     /// 每一張插入面板打開之後，畫面上要真的出現它的內容。
@@ -90,8 +108,7 @@ final class InsertToolsAudit: XCTestCase {
 
         var failures: [String] = []
         for tool in Self.tools where !tool.opened.isEmpty {
-            let more = app.descendants(matching: .any)
-                .matching(identifier: "editor.more").firstMatch
+            let more = element(app, "editor.more")
             more.tap()
 
             // **一定要捲。** 這張選單有十九個項目，在手機上會捲動，
