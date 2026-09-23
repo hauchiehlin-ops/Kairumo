@@ -19,6 +19,7 @@
 //! 沒有 z-buffer，所以互相穿插的幾何會畫錯 —— 但這六種都是凸多面體，
 //! 凸多面體用畫家演算法是正確的。要加入非凸模型時這個假設就不成立了。
 
+use std::sync::Arc;
 use std::f32::consts::{PI, TAU};
 
 use crate::ffi_shapes::FfiPoint;
@@ -169,6 +170,26 @@ pub fn model3d_faces(
     height: f32,
 ) -> Vec<FfiShadedFace> {
     let mesh = mesh(kind);
+    // 內建那六個都是凸多面體：剔除背面之後不會有面互相遮擋。
+    shade_mesh(&mesh, rotation_x, rotation_y, rotation_z, scale, width, height, true)
+}
+
+/// 把任何網格投影成一串由遠而近的多邊形。
+///
+/// `cull_backfaces` 只有**凸**多面體能開。匯入的模型通常不是凸的，而且
+/// 面的纏繞方向也不保證一致（STL 常常整批反過來）—— 開著的話會在模型上
+/// 挖出一個個洞，而使用者只會覺得「匯進來的東西破破爛爛的」。
+#[allow(clippy::too_many_arguments)]
+fn shade_mesh(
+    mesh: &Mesh,
+    rotation_x: f32,
+    rotation_y: f32,
+    rotation_z: f32,
+    scale: f32,
+    width: f32,
+    height: f32,
+    cull_backfaces: bool,
+) -> Vec<FfiShadedFace> {
     // scale 0 或負值會讓整個模型塌成一點或內外翻面。夾住而不是回空清單 ——
     // 面板上的滑桿滑到底時應該看到很小的模型，不是一片空白。
     let scale = scale.clamp(0.05, 5.0);
@@ -203,11 +224,15 @@ pub fn model3d_faces(
             })
             .collect();
 
-        // 相機在 +z：面朝相機的法線 z 分量為正，背面直接不畫。
-        // 凸多面體剔除背面之後就不會有面互相遮擋的問題。
-        let n = face_normal(&world);
+        // 相機在 +z：面朝相機的法線 z 分量為正，背面朝外。
+        let mut n = face_normal(&world);
         if n.2 <= 0.0 {
-            continue;
+            if cull_backfaces {
+                continue;
+            }
+            // 不剔除時把法線翻正再算明暗 —— 不翻的話背向的面會是全黑，
+            // 而那在畫面上看起來像模型缺了一塊。
+            n = (-n.0, -n.1, -n.2);
         }
 
         let depth = world.iter().map(|p| p.2).sum::<f32>() / world.len() as f32;
@@ -244,8 +269,85 @@ pub fn model3d_faces(
     out.into_iter().map(|(_, f)| f).collect()
 }
 
+// ── 匯入的模型 ──────────────────────────────────────────────────────
+
+/// 讀不進來的理由。攜帶的是**語系鍵**，平台端查表。
+#[derive(Debug, thiserror::Error, uniffi::Error)]
+pub enum FfiModel3dError {
+    /// `reason_key` 是語系鍵，不是給人看的句子。
+    #[error("{reason_key}")]
+    Rejected { reason_key: String },
+}
+
+/// 一個從使用者的檔案讀進來的模型。
+///
+/// # 為什麼是一個物件，而不是一支「讀檔又算繪」的函式
+///
+/// 使用者拖旋轉滑桿的時候，每一幀都要重算一次投影。把解析也塞進那條路的話
+/// ，等於每一幀重讀一次整個檔案 —— 一個兩萬面的模型會讓滑桿變成幻燈片。
+/// 解析一次、留著網格，之後每一幀只做投影與明暗。
+#[derive(Debug, uniffi::Object)]
+pub struct FfiImportedModel3d {
+    mesh: Mesh,
+}
+
+#[uniffi::export]
+impl FfiImportedModel3d {
+    /// 讀一個 OBJ 或 STL。`extension` 不分大小寫，可含或不含點。
+    ///
+    /// 位元組直接傳進來而不是傳路徑：Android 從「檔案」App 拿到的是
+    /// content URI，**沒有路徑可言**，硬轉成路徑會拿到一個不存在的檔名。
+    #[uniffi::constructor]
+    pub fn parse(bytes: Vec<u8>, extension: String) -> Result<Arc<Self>, FfiModel3dError> {
+        let parsed = crate::model3d_mesh::parse(&bytes, &extension).map_err(|e| {
+            FfiModel3dError::Rejected {
+                reason_key: e.reason_key().to_string(),
+            }
+        })?;
+        Ok(Arc::new(Self {
+            mesh: Mesh {
+                vertices: parsed.vertices,
+                faces: parsed.faces,
+            },
+        }))
+    }
+
+    /// 與 [`model3d_faces`] 同樣的輸出，只是網格來自檔案。
+    ///
+    /// **不剔除背面。** 匯入的模型通常不是凸的，纏繞方向也不保證一致 ——
+    /// 剔除會在模型上挖出一個個洞。代價是凹面模型的前後關係靠逐面深度排序
+    /// （畫家演算法），交錯的面會有瑕疵；那仍然遠好過看不見，真要解得做
+    /// z-buffer，那是另一件事。
+    pub fn faces(
+        &self,
+        rotation_x: f32,
+        rotation_y: f32,
+        rotation_z: f32,
+        scale: f32,
+        width: f32,
+        height: f32,
+    ) -> Vec<FfiShadedFace> {
+        shade_mesh(
+            &self.mesh,
+            rotation_x,
+            rotation_y,
+            rotation_z,
+            scale,
+            width,
+            height,
+            false,
+        )
+    }
+
+    /// 面數。介面拿它顯示「這個模型多複雜」。
+    pub fn face_count(&self) -> u32 {
+        self.mesh.faces.len() as u32
+    }
+}
+
 // ── 網格 ────────────────────────────────────────────────────────────
 
+#[derive(Debug)]
 struct Mesh {
     vertices: Vec<(f32, f32, f32)>,
     /// 每一面的頂點索引。凸多邊形，順序為逆時針（從外面看）。
@@ -560,5 +662,72 @@ mod tests {
                         })
                 });
         assert!(!same, "轉了 1 弧度畫面卻完全沒變");
+    }
+
+    // ── 匯入的模型 ──────────────────────────────────────────────────
+
+    /// 一個四面體。四個面，每一面都朝不同方向。
+    const TETRA: &str = "v 0 0 0\nv 1 0 0\nv 0 1 0\nv 0 0 1\n\
+f 1 2 3\nf 1 2 4\nf 2 3 4\nf 1 3 4\n";
+
+    #[test]
+    fn an_imported_model_actually_produces_something_to_draw() {
+        // **這一條就是整件事的重點。** 在此之前匯入的模型在 Android 上
+        // 存得下、同步得動、畫不出來 —— 而沒有任何測試會紅。
+        let model = FfiImportedModel3d::parse(TETRA.as_bytes().to_vec(), "obj".into()).unwrap();
+        let faces = model.faces(0.3, 0.4, 0.0, 1.0, 200.0, 200.0);
+
+        assert!(!faces.is_empty(), "匯入的模型一個面都沒畫出來");
+        for f in &faces {
+            assert!(f.points.len() >= 3, "面少於三個點");
+            for p in &f.points {
+                assert!(p.x.is_finite() && p.y.is_finite(), "座標是 NaN：{p:?}");
+            }
+            assert!((0.0..=1.0).contains(&f.shade), "明暗超出範圍：{}", f.shade);
+        }
+    }
+
+    #[test]
+    fn an_imported_model_keeps_every_face_because_winding_is_not_trusted() {
+        // 匯入的模型不保證是凸的，纏繞方向也不保證一致（STL 常常整批
+        // 反過來）。剔除背面會在模型上挖出一個個洞，而使用者只會覺得
+        // 「匯進來的東西破破爛爛的」。
+        let model = FfiImportedModel3d::parse(TETRA.as_bytes().to_vec(), "obj".into()).unwrap();
+        assert_eq!(model.face_count(), 4);
+        assert_eq!(
+            model.faces(0.0, 0.0, 0.0, 1.0, 200.0, 200.0).len(),
+            4,
+            "有面被剔除了 —— 匯入的模型不該剔除背面"
+        );
+    }
+
+    #[test]
+    fn a_built_in_model_still_culls_its_backfaces() {
+        // 內建那六個是凸多面體，剔除背面是對的（也比較快）。
+        // 這一條守的是「把剔除改成可選」沒有順手把內建的也關掉」。
+        let faces = model3d_faces(FfiModel3dKind::Cube, 0.0, 0.0, 0.0, 1.0, 200.0, 200.0);
+        assert!(
+            faces.len() < 6,
+            "立方體六個面全畫出來了 —— 背面剔除被關掉了"
+        );
+    }
+
+    #[test]
+    fn an_imported_model_rotates() {
+        let model = FfiImportedModel3d::parse(TETRA.as_bytes().to_vec(), "obj".into()).unwrap();
+        let a = model.faces(0.0, 0.0, 0.0, 1.0, 200.0, 200.0);
+        let b = model.faces(0.0, 1.0, 0.0, 1.0, 200.0, 200.0);
+        let same = a
+            .iter()
+            .zip(b.iter())
+            .all(|(x, y)| x.points.iter().zip(y.points.iter()).all(|(p, q)| p.x == q.x));
+        assert!(!same, "轉了 1 弧度畫面卻完全沒變");
+    }
+
+    #[test]
+    fn a_file_we_cannot_read_comes_back_with_a_reason_key() {
+        let err = FfiImportedModel3d::parse(b"not a model".to_vec(), "glb".into()).unwrap_err();
+        let FfiModel3dError::Rejected { reason_key } = err;
+        assert_eq!(reason_key, "model_unsupported_format");
     }
 }

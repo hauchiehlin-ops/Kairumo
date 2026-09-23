@@ -4,6 +4,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import uniffi.padnote_core.FfiImportedModel3d
 import uniffi.padnote_core.FfiMaterial
 import uniffi.padnote_core.model3dFaces
 import uniffi.padnote_core.model3dKindFromRaw
@@ -12,8 +13,9 @@ import uniffi.padnote_core.model3dMaterialLook
 /**
  * 3D 模型的算繪（Android）。
  *
- * 幾何、旋轉、投影、明暗全部來自核心 `model3dFaces()` —— Apple 端用 SceneKit，
- * Android 沒有對應品，所以那一份數學下沉到核心之後兩邊才畫得出同一個東西。
+ * 幾何、旋轉、投影、明暗全部來自核心 —— 內建幾何體走 `model3dFaces()`，
+ * 使用者匯入的檔案走 `FfiImportedModel3d.faces()`。**兩條路回傳同一種東西**，
+ * 所以這裡的填色完全不必分岔。
  *
  * 這裡只做一件事：把核心回傳的多邊形**照順序**填色。順序就是前後關係
  * （由遠而近），不要自己重排。
@@ -24,16 +26,30 @@ object Model3DRenderer {
         scope: DrawScope,
         model: Model3DObject,
         width: Float,
-        height: Float
+        height: Float,
+        /**
+         * 使用者自己匯入的模型。給了就畫它，沒給就畫內建幾何體。
+         *
+         * 兩條路**回傳的是同一種東西**（核心算好的多邊形），所以下面填色
+         * 那一段完全不必分岔 —— 這正是把「檔案 → 網格」也放進核心的好處。
+         */
+        imported: FfiImportedModel3d? = null
     ) {
         val look = model3dMaterialLook(model.material)
         val base = parseHex(look.hex)
 
-        val faces = model3dFaces(
-            model3dKindFromRaw(model.modelTypeRaw),
-            model.rotationX, model.rotationY, model.rotationZ,
-            model.scale, width, height
-        )
+        val faces = if (imported != null) {
+            imported.faces(
+                model.rotationX, model.rotationY, model.rotationZ,
+                model.scale, width, height
+            )
+        } else {
+            model3dFaces(
+                model3dKindFromRaw(model.modelTypeRaw),
+                model.rotationX, model.rotationY, model.rotationZ,
+                model.scale, width, height
+            )
+        }
 
         for (face in faces) {
             if (face.points.size < 3) continue

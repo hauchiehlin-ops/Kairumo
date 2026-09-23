@@ -11,8 +11,10 @@
 //!
 //! # 這一層**不**做什麼
 //!
-//! 不解析檔案內容、不算繪。那是平台的事（Apple 用 SceneKit 讀 USDZ、
-//! Android 用 BitmapFactory 讀圖）。這裡只回答三個問題：
+//! 不解析檔案內容、不算繪。圖片與 PDF 交給平台的解碼器（各自的系統
+//! 都比我們做得好），3D 則交給核心自己的 `model3d_mesh` + 算繪器 ——
+//! 那一種**不能**交給平台，因為只有一邊有現成的算繪器，結果就是同一個
+//! 檔案在 iPad 上看得到、在 Android 上是空白。這裡只回答三個問題：
 //!
 //!   1. 這個副檔名，這個插入工具收不收？
 //!   2. 大小在不在合理範圍？
@@ -47,15 +49,22 @@ pub struct FfiImportVerdict {
 
 /// 每個插入槽收哪些副檔名。
 ///
-/// # 為什麼 3D 只收這四種
+/// # 為什麼 3D 只收 OBJ 與 STL
 ///
-/// USDZ 與 GLB 是兩大生態的標準單檔格式，OBJ 與 STL 是通用交換格式。
-/// 收 FBX 之類的專有格式只會讓使用者丟進來之後看到一個打不開的方塊 ——
-/// **收得進來但顯示不出來，比一開始就說不支援更糟**。
+/// **收得進來但顯示不出來，比一開始就說不支援更糟。**
+///
+/// 這份清單原本還有 USDZ 與 GLB。那是照「哪些是標準格式」列的，不是照
+/// 「我們畫不畫得出來」列的 —— 結果是那兩種在 iPad 上看得到（Apple 端
+/// 私接了 SceneKit），在 Android 上存得下、同步得動、**畫不出來**。
+///
+/// 現在兩端都走核心的算繪器（`FfiImportedModel3d`），而它吃的是「一堆
+/// 頂點加一堆面」—— OBJ 與 STL 正好就是這個。USDZ 與 GLB 是二進位容器、
+/// 緩衝區檢視、壓縮、PBR 材質、骨架動畫，那是一個函式庫的工作量。
+/// 與其收進來給一個空白方塊，不如在挑選器就說不支援。
 pub fn accepted_extensions(slot: FfiImportSlot) -> &'static [&'static str] {
     match slot {
         FfiImportSlot::Image => &["png", "jpg", "jpeg", "heic", "gif", "webp", "tiff", "bmp"],
-        FfiImportSlot::Model3d => &["usdz", "glb", "obj", "stl"],
+        FfiImportSlot::Model3d => &["obj", "stl"],
         FfiImportSlot::Audio => &["m4a", "mp3", "wav", "aac", "caf", "ogg", "opus", "flac"],
         FfiImportSlot::Pdf => &["pdf"],
     }
@@ -221,6 +230,27 @@ mod tests {
                 assert!(!e.contains('.'), "{e} 帶了點");
                 assert_eq!(*e, e.to_ascii_lowercase(), "{e} 不是小寫");
             }
+        }
+    }
+
+    /// **每一種收得下的 3D 格式，都要真的畫得出來。**
+    ///
+    /// 這一條就是為了擋住這個清單當初怎麼歪掉的：它原本是照「哪些是標準
+    /// 格式」列的（usdz、glb、obj、stl），不是照「我們畫不畫得出來」列的。
+    /// 結果 usdz/glb 在 iPad 上看得到（Apple 私接了 SceneKit）、在 Android
+    /// 上存得下、同步得動、畫不出來 —— 而沒有任何閘門會紅。
+    ///
+    /// 以後誰想再加一種格式，得先讓 `model3d_mesh` 讀得懂它。
+    #[test]
+    fn every_accepted_3d_format_can_actually_be_rendered() {
+        for ext in accepted_extensions(FfiImportSlot::Model3d) {
+            let err = crate::model3d_mesh::parse(b"", ext).unwrap_err();
+            assert_ne!(
+                err,
+                crate::model3d_mesh::MeshError::UnsupportedFormat,
+                "收得下 .{ext} 但核心的算繪器讀不懂它 —— \
+                 使用者會得到一個空白方塊，而那比一開始就說不支援更糟"
+            );
         }
     }
 

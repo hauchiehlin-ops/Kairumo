@@ -52,43 +52,6 @@ public enum Model3DType: String, CaseIterable, Identifiable {
 
 /// 3D 輔助工具：建立 SceneKit 場景
 public struct SceneKitHelper {
-    /// 匯入檔案的場景。
-    ///
-    /// SceneKit 直接讀得懂 USDZ / OBJ / DAE，副檔名就是它的判斷依據 ——
-    /// 所以 `saveImportedFile` 保留原副檔名不是裝飾。
-    ///
-    /// 讀不出來時回 `nil` 而不是一個空場景：呼叫端要能分辨「這個檔案壞了」
-    /// 與「這是一個空模型」，回空場景的話兩者看起來一模一樣。
-    public static func makeImportedScene(url: URL, rotationX: Float, rotationY: Float,
-                                         rotationZ: Float, scale: Float) -> SCNScene? {
-        guard let scene = try? SCNScene(url: url, options: [.checkConsistency: true]) else {
-            return nil
-        }
-        // 匯入的模型尺寸差異極大（有的以公尺為單位、有的以公分），
-        // 所以照它自己的包圍盒正規化到與內建幾何體差不多大 ——
-        // 不做的話，一個建築模型插進來會是一個看不見的巨物。
-        let root = SCNNode()
-        for child in scene.rootNode.childNodes { root.addChildNode(child) }
-        let (minV, maxV) = root.boundingBox
-        let span = max(maxV.x - minV.x, max(maxV.y - minV.y, maxV.z - minV.z))
-        let norm = span > 0.0001 ? 2.0 / span : 1.0
-        root.scale = SCNVector3(norm * scale, norm * scale, norm * scale)
-        root.position = SCNVector3(
-            -(minV.x + maxV.x) / 2 * norm * scale,
-            -(minV.y + maxV.y) / 2 * norm * scale,
-            -(minV.z + maxV.z) / 2 * norm * scale)
-        root.eulerAngles = SCNVector3(rotationX, rotationY, rotationZ)
-
-        let out = SCNScene()
-        out.rootNode.addChildNode(root)
-        let light = SCNNode()
-        light.light = SCNLight()
-        light.light?.type = .omni
-        light.position = SCNVector3(3, 5, 6)
-        out.rootNode.addChildNode(light)
-        return out
-    }
-
     public static func makeScene(
         modelTypeRaw: String,
         material: MaterialType,
@@ -244,23 +207,17 @@ public struct Model3DStudioView: View {
         }
     }
 
-    /// 預覽要畫什麼：匯入的檔案優先，沒有才畫內建幾何體。
-    ///
-    /// 匯入的檔案讀不出來時**退回內建幾何體並顯示錯誤** —— 回一個空場景
-    /// 的話，使用者看到的是一片黑，而他不知道那是模型是黑的還是壞了。
+    /// 讀進來的匯入模型。讀不出來就是 `nil`，畫面退回內建幾何體 ——
+    /// 回一個空場景的話，使用者看到的是一片黑，而他不知道那是模型是黑的
+    /// 還是壞了。
+    private var importedMesh: FfiImportedModel3d? {
+        guard let imported else { return nil }
+        return ImportedModelCache.model(fileName: imported.fileName)
+    }
+
+    /// 內建幾何體的預覽。匯入的模型走 `ImportedModelView`。
     private var previewScene: SCNScene {
-        if let imported {
-            let url = NotebookStore.shared.importedFileURL(fileName: imported.fileName)
-            if let scene = SceneKitHelper.makeImportedScene(
-                url: url,
-                rotationX: previewRotationX,
-                rotationY: previewRotationY,
-                rotationZ: 0,
-                scale: 1.0) {
-                return scene
-            }
-        }
-        return SceneKitHelper.makeScene(
+        SceneKitHelper.makeScene(
             modelTypeRaw: selectedModelType.rawValue,
             material: selectedMaterial,
             rotationX: previewRotationX,
@@ -280,11 +237,28 @@ public struct Model3DStudioView: View {
                     .fill(Color(UIColor.secondarySystemBackground))
                     .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 4)
 
-                SceneView(
-                    scene: previewScene,
-                    options: [.allowsCameraControl, .autoenablesDefaultLighting]
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                // 匯入的模型走核心的算繪器，內建幾何體走 SceneKit。
+                //
+                // 為什麼匯入的那條**不能**留在 SceneKit：`SCNScene(url:)`
+                // 只有 Apple 有，於是同一個檔案在 iPad 上看得到、在
+                // Android 上是一張寫著檔名的卡片。核心那一份兩端共用。
+                if let mesh = importedMesh {
+                    ImportedModelView(
+                        model: mesh,
+                        rotationX: previewRotationX,
+                        rotationY: previewRotationY,
+                        rotationZ: 0,
+                        scale: 1.0,
+                        hex: MaterialEngine.hex(for: selectedMaterial))
+                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                        .accessibilityIdentifier("model3d.preview")
+                } else {
+                    SceneView(
+                        scene: previewScene,
+                        options: [.allowsCameraControl, .autoenablesDefaultLighting]
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
 
                 // 旋轉指示文字
                 VStack {
@@ -533,23 +507,16 @@ public struct Model3DInteractiveCardView: View {
         .background(Color(UIColor.secondarySystemBackground))
     }
 
-    /// 畫布上這張卡片要畫什麼：匯入的檔案優先，沒有才畫內建幾何體。
-    ///
-    /// 讀不出來時退回內建幾何體 —— 檔案被刪掉或還沒同步下來時，
-    /// 使用者至少看得到一個物件在那裡，而不是一片黑。
+    /// 這張卡片上的匯入模型。檔案被刪掉或還沒同步下來時是 `nil`，
+    /// 畫面退回內建幾何體 —— 使用者至少看得到一個物件在那裡，不是一片黑。
+    private var importedMesh: FfiImportedModel3d? {
+        guard let name = attachment.importedFileName else { return nil }
+        return ImportedModelCache.model(fileName: name)
+    }
+
+    /// 內建幾何體的卡片。匯入的模型走 `ImportedModelView`。
     private var cardScene: SCNScene {
-        if let name = attachment.importedFileName {
-            let url = NotebookStore.shared.importedFileURL(fileName: name)
-            if let scene = SceneKitHelper.makeImportedScene(
-                url: url,
-                rotationX: attachment.rotationX,
-                rotationY: attachment.rotationY,
-                rotationZ: attachment.rotationZ,
-                scale: attachment.scale) {
-                return scene
-            }
-        }
-        return SceneKitHelper.makeScene(
+        SceneKitHelper.makeScene(
             modelTypeRaw: attachment.modelTypeRaw,
             material: attachment.materialType,
             rotationX: attachment.rotationX,
@@ -560,7 +527,17 @@ public struct Model3DInteractiveCardView: View {
 
     private var cardViewport: some View {
         ZStack {
-            SceneView(scene: cardScene, options: [.autoenablesDefaultLighting])
+            if let mesh = importedMesh {
+                ImportedModelView(
+                    model: mesh,
+                    rotationX: attachment.rotationX,
+                    rotationY: attachment.rotationY,
+                    rotationZ: attachment.rotationZ,
+                    scale: attachment.scale,
+                    hex: MaterialEngine.hex(for: attachment.materialType))
+            } else {
+                SceneView(scene: cardScene, options: [.autoenablesDefaultLighting])
+            }
 
             // 覆蓋手勢層：360° 拖曳旋轉
             Color.clear

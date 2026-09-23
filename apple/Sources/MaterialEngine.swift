@@ -40,6 +40,12 @@ public class MaterialEngine {
     ///
     /// 用 rawValue 對照而不是逐一硬寫：rawValue 就是落盤字串，核心那邊也記著
     /// 同一份，對不上才是真的有問題，不該被一個 `default:` 靜靜吞掉。
+    /// 材質的基本色（`#RRGGBB`）。給不走 SceneKit 的那條路用
+    /// （匯入的模型是自己填多邊形的，沒有 SCNMaterial 可以掛）。
+    static func hex(for type: MaterialType) -> String {
+        model3dMaterialLook(material: ffiMaterial(type)).hex
+    }
+
     private static func ffiMaterial(_ type: MaterialType) -> FfiMaterial {
         for candidate in model3dMaterials() where model3dMaterialLook(material: candidate).raw == type.rawValue {
             return candidate

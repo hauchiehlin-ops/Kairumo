@@ -72,6 +72,7 @@ private fun Model3DView(
     onEdit: (Model3DObject) -> Unit,
     onChanged: (Model3DObject) -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     Box(
         Modifier
             .offset(model.x.dp, model.y.dp)
@@ -104,17 +105,26 @@ private fun Model3DView(
                 }
             }
     ) {
-        // 匯入的模型：**這一側畫不出來，所以照實顯示檔名。**
+        // 匯入的模型現在**畫得出來**。
         //
-        // Android 沒有內建的 USDZ／GLB 算繪器，而為了一個模型預覽把
-        // Filament 那種等級的相依拉進來，代價與收益不成比例。
+        // 這裡原本是一張寫著檔名的卡片，註解寫的是「Android 沒有內建的
+        // USDZ／GLB 算繪器」。那句話把問題描述錯了：核心裡一直都有一個
+        // 完整的軟體算繪器（投影、明暗、深度排序），缺的只是「檔案 → 網格」
+        // 那一段 —— 而 Apple 端當時是繞過核心、私接 SceneKit，所以只有
+        // 那一邊看得到。現在兩端走同一條路。
         //
-        // 重點是檔案**存得下也同步得動**：使用者在 iPad 上插的模型，
-        // 在這裡看得到它在那裡、搬得動、改得了邊框 —— 只是顯示的是檔名。
-        // 這比「同步過來之後那個物件整個不見」好得多，也比畫一個空白卡片
-        // 讓他以為壞掉了好。
+        // 卡片沒有拿掉，因為它還有一個真正的用途：檔案還沒從雲端同步下來
+        // （或壞了）的時候，讓使用者看得到那個物件在那裡、搬得動、改得了
+        // 邊框，而不是整個不見。
         val importedName = model.importedDisplayName ?: model.importedFileName
-        if (importedName != null) {
+        val importedMesh = model.importedFileName?.let {
+            ImportedModelCache.get(context, it)
+        }
+        if (importedMesh != null) {
+            Canvas(Modifier.size(model.width.dp, model.height.dp)) {
+                Model3DRenderer.draw(this, model, size.width, size.height, importedMesh)
+            }
+        } else if (importedName != null) {
             androidx.compose.foundation.layout.Column(
                 modifier = Modifier
                     .size(model.width.dp, model.height.dp)
