@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -102,6 +103,8 @@ fun OnboardingScreen(onDone: () -> Unit) {
     ) { result ->
         granted = result
         asked = true
+        // 問完就離開導覽，不論給不給 —— 把人卡在導覽裡沒有道理。
+        onDone()
     }
 
     // 這一頁全是文字，所以用「可讀寬度」而不是一般的內容寬度。
@@ -143,31 +146,37 @@ fun OnboardingScreen(onDone: () -> Unit) {
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary
             )
-        } else {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(DS.Space.s),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Button(onClick = {
-                    // 已經問過而且被拒 —— 再問一次系統不會有反應，送去設定頁。
-                    if (asked) Onboarding.openAppSettings(context)
-                    else micPermission.launch(Manifest.permission.RECORD_AUDIO)
-                }) {
-                    Text(if (asked) l("permission_open_settings") else l("onboarding_allow_microphone"))
-                }
-                TextButton(onClick = onDone) { Text(l("onboarding_later")) }
+        } else if (asked) {
+            // 已經問過而且被拒 —— 再問一次系統不會有反應，送去設定頁。
+            OutlinedButton(onClick = { Onboarding.openAppSettings(context) }) {
+                Text(l("permission_open_settings"))
             }
         }
 
         Spacer(Modifier.height(DS.Space.m))
+        // **這顆按鈕只有一個，而且一定會走到系統的權限對話框。**
+        //
+        // 原本是「允許麥克風」＋「稍後再說」兩顆。那個版本在 App Store 審查
+        // 被點名（指南 5.1.1(iv)）：按鈕不可以替使用者預先回答系統的問題，
+        // 說明出現之後也不可以給一顆「稍後」把權限對話框跳過。
+        //
+        // Android 這一側不歸 Apple 管，但同一套流程兩邊要一致 —— 而且那個
+        // 意見本身是對的：要不要給，本來就該由系統那個對話框問。
+        val needsRequest = !granted && !asked
         Button(
             onClick = {
                 Onboarding.markSeen(context)
-                onDone()
+                if (needsRequest) {
+                    // 問完不論給不給都往下走（結果由 micPermission 的回呼
+                    // 處理）—— 沒拿到麥克風，App 仍然是一個完整的手寫筆記本。
+                    micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                } else {
+                    onDone()
+                }
             },
             modifier = Modifier.fillMaxWidth().widthIn(max = DS.Content.readableMaxWidth)
         ) {
-            Text(l("onboarding_start"))
+            Text(if (needsRequest) l("onboarding_continue") else l("onboarding_start"))
         }
         Spacer(Modifier.height(DS.Space.l))
     }

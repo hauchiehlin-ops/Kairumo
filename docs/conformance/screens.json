@@ -38,6 +38,7 @@
       "editor.export.pdf",
       "editor.export.image",
       "editor.export.print",
+      "editor.export.save_as",
       "editor.export.share",
       "editor.ink.pen",
       "editor.ink.ballpoint",
@@ -114,6 +115,7 @@
       "editor.export.pdf",
       "editor.export.image",
       "editor.export.print",
+      "editor.export.save_as",
       "editor.export.share",
       "editor.ink.pen",
       "editor.ink.ballpoint",
@@ -338,6 +340,11 @@
         "id": "editor.export.print",
         "label_en": "Print Notebook",
         "label_key": "print_note"
+      },
+      {
+        "id": "editor.export.save_as",
+        "label_en": "Save to Files…",
+        "label_key": "export_save_as"
       },
       {
         "id": "editor.export.share",

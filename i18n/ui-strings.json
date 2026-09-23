@@ -6799,22 +6799,6 @@
     "zhHans": "目前离线，已暂存 %d 笔操作，连接恢复时将自动同步。",
     "zhHant": "目前離線，已暫存 %d 筆操作，連線恢復時將自動同步。"
   },
-  "onboarding_allow_microphone": {
-    "en": "Allow Microphone",
-    "ja": "マイクを許可",
-    "ko": "마이크 허용",
-    "th": "อนุญาตไมโครโฟน",
-    "zhHans": "允许麦克风",
-    "zhHant": "允許麥克風"
-  },
-  "onboarding_later": {
-    "en": "Later",
-    "ja": "あとで",
-    "ko": "나중에",
-    "th": "ไว้ภายหลัง",
-    "zhHans": "之后再说",
-    "zhHant": "之後再說"
-  },
   "onboarding_microphone_granted": {
     "en": "Microphone allowed",
     "ja": "マイクを許可しました",
@@ -11694,5 +11678,85 @@
     "ja": "このページは描画できませんでした",
     "ko": "이 페이지를 그릴 수 없습니다",
     "th": "วาดหน้านี้ไม่ได้"
+  },
+  "model_unsupported_format": {
+    "en": "Only OBJ and STL models can be drawn here",
+    "zhHant": "這裡只畫得出 OBJ 與 STL 模型",
+    "zhHans": "这里只画得出 OBJ 与 STL 模型",
+    "ja": "ここで描けるのは OBJ と STL のモデルだけです",
+    "ko": "여기서는 OBJ와 STL 모델만 그릴 수 있습니다",
+    "th": "ที่นี่วาดได้เฉพาะโมเดล OBJ และ STL"
+  },
+  "model_no_geometry": {
+    "en": "That model file has no shapes in it",
+    "zhHant": "這個模型檔裡沒有任何形狀",
+    "zhHans": "这个模型文件里没有任何形状",
+    "ja": "このモデルファイルには形状が入っていません",
+    "ko": "이 모델 파일에는 도형이 없습니다",
+    "th": "ไฟล์โมเดลนี้ไม่มีรูปทรงอยู่เลย"
+  },
+  "model_too_many_faces": {
+    "en": "That model is too detailed to rotate smoothly",
+    "zhHant": "這個模型太細緻，轉起來會卡",
+    "zhHans": "这个模型太细致，转起来会卡",
+    "ja": "このモデルは精細すぎて滑らかに回転できません",
+    "ko": "이 모델은 너무 정밀해서 부드럽게 회전할 수 없습니다",
+    "th": "โมเดลนี้ละเอียดเกินไป หมุนแล้วจะไม่ลื่น"
+  },
+  "NSMicrophoneUsageDescription": {
+    "en": "Kairumo uses the microphone to record voice notes in class or meetings, keeping your handwriting in sync with the recording timeline.",
+    "zhHant": "Kairumo 需要使用麥克風，以便在課堂或會議中錄製語音筆記，並讓手寫筆劃與錄音時間軸即時動態對齊。",
+    "zhHans": "Kairumo 需要使用麦克风，以便在课堂或会议中录制语音笔记，并让手写笔划与录音时间轴实时动态对齐。",
+    "ja": "Kairumo は、授業や会議で音声メモを録音し、手書きと録音のタイムラインを同期させるためにマイクを使用します。",
+    "ko": "Kairumo는 수업이나 회의에서 음성 메모를 녹음하고 필기와 녹음 타임라인을 맞추기 위해 마이크를 사용합니다.",
+    "th": "Kairumo ใช้ไมโครโฟนเพื่อบันทึกเสียงในชั้นเรียนหรือการประชุม และซิงค์ลายมือกับไทม์ไลน์ของเสียง"
+  },
+  "NSSpeechRecognitionUsageDescription": {
+    "en": "Kairumo uses speech recognition to transcribe your recordings into text on your device and place the transcript in your notes.",
+    "zhHant": "Kairumo 需要語音辨識權限，以便在您的裝置端將錄音語音即時轉錄為文字稿，並直接插入筆記畫布。",
+    "zhHans": "Kairumo 需要语音识别权限，以便在您的设备端将录音语音实时转录为文字稿，并直接插入笔记画布。",
+    "ja": "Kairumo は、録音した音声を端末内で文字起こしし、ノートに挿入するために音声認識を使用します。",
+    "ko": "Kairumo는 녹음을 기기 내에서 텍스트로 변환해 노트에 넣기 위해 음성 인식을 사용합니다.",
+    "th": "Kairumo ใช้การรู้จำเสียงเพื่อถอดเสียงที่บันทึกไว้เป็นข้อความบนเครื่องของคุณ และใส่ลงในโน้ต"
+  },
+  "NSLocalNetworkUsageDescription": {
+    "en": "Kairumo uses the local network to edit notes together with people on the same Wi-Fi. Everything is end-to-end encrypted and never passes through a server.",
+    "zhHant": "Kairumo 需要區域網路權限，以便在同一個 Wi-Fi 網路下直接與協同夥伴連線共同編輯筆記，所有傳輸均經端對端加密且不經外部伺服器。",
+    "zhHans": "Kairumo 需要局域网权限，以便在同一个 Wi-Fi 网络下直接与协作伙伴连线共同编辑笔记，所有传输均经端到端加密且不经外部服务器。",
+    "ja": "Kairumo は、同じ Wi-Fi にいる相手と一緒にノートを編集するためにローカルネットワークを使用します。通信はすべてエンドツーエンドで暗号化され、サーバーを経由しません。",
+    "ko": "Kairumo는 같은 Wi-Fi에 있는 사람과 함께 노트를 편집하기 위해 로컬 네트워크를 사용합니다. 모든 전송은 종단간 암호화되며 서버를 거치지 않습니다.",
+    "th": "Kairumo ใช้เครือข่ายภายในเพื่อแก้ไขโน้ตร่วมกับผู้ที่อยู่บน Wi-Fi เดียวกัน ทุกการส่งข้อมูลเข้ารหัสแบบปลายทางถึงปลายทางและไม่ผ่านเซิร์ฟเวอร์"
+  },
+  "NSPhotoLibraryUsageDescription": {
+    "en": "Kairumo accesses your photo library so you can place pictures into a note and annotate them.",
+    "zhHant": "Kairumo 需要存取您的相片圖庫，以便您挑選圖片插入筆記頁面進行批註與繪製。",
+    "zhHans": "Kairumo 需要访问您的相片图库，以便您挑选图片插入笔记页面进行批注与绘制。",
+    "ja": "Kairumo は、写真をノートに挿入して書き込めるようにするために写真ライブラリにアクセスします。",
+    "ko": "Kairumo는 사진을 노트에 넣고 주석을 달 수 있도록 사진 보관함에 접근합니다.",
+    "th": "Kairumo เข้าถึงคลังรูปภาพเพื่อให้คุณใส่รูปลงในโน้ตและเขียนกำกับได้"
+  },
+  "NSPhotoLibraryAddUsageDescription": {
+    "en": "Kairumo saves pages and drawings you export to your photo library.",
+    "zhHant": "Kairumo 需要儲存圖片權限，以便將您導出的筆記頁面或繪圖成果儲存至相片圖庫。",
+    "zhHans": "Kairumo 需要保存图片权限，以便将您导出的笔记页面或绘图成果保存至相片图库。",
+    "ja": "Kairumo は、書き出したページや描画を写真ライブラリに保存します。",
+    "ko": "Kairumo는 내보낸 페이지나 그림을 사진 보관함에 저장합니다.",
+    "th": "Kairumo บันทึกหน้าและภาพวาดที่คุณส่งออกไปยังคลังรูปภาพ"
+  },
+  "onboarding_continue": {
+    "en": "Continue",
+    "zhHant": "繼續",
+    "zhHans": "继续",
+    "ja": "続ける",
+    "ko": "계속",
+    "th": "ดำเนินการต่อ"
+  },
+  "export_save_as": {
+    "en": "Save to Files…",
+    "zhHant": "儲存到…",
+    "zhHans": "保存到…",
+    "ja": "ファイルに保存…",
+    "ko": "파일로 저장…",
+    "th": "บันทึกไปยังไฟล์…"
   }
 }

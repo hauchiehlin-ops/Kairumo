@@ -1045,6 +1045,8 @@ public struct NotebookEditorView: View {
     @State private var showRenameAlert: Bool = false
     @State private var renameText: String = ""
     @State private var showShareSheet: Bool = false
+    /// 匯出之後要開的是**儲存對話框**（而不是分享面板）。
+    @State private var showSaveDialog: Bool = false
     @State private var showClearConfirmAlert: Bool = false
     @State private var exportPdfData: Data? = nil
     /// 這一次匯出的副檔名。
@@ -1524,6 +1526,13 @@ public struct NotebookEditorView: View {
         .sheet(isPresented: $showShareSheet) { erasedView {
             if let data = exportPdfData {
                 ShareActivityView(
+                    data: data,
+                    filename: "\(notebook.displayTitle()).\(exportFileExtension)")
+            }
+        } }
+        .sheet(isPresented: $showSaveDialog) { erasedView {
+            if let data = exportPdfData {
+                SaveToFilesView(
                     data: data,
                     filename: "\(notebook.displayTitle()).\(exportFileExtension)")
             }
@@ -2642,6 +2651,14 @@ public struct NotebookEditorView: View {
             Button { printCurrentNotebook() } label: { Label(localizationManager.localized("print_note"), systemImage: "printer.fill") }
                 .accessibilityIdentifier("editor.export.print")
             Divider()
+            // **把檔案存到使用者自己選的位置。**
+            //
+            // 分享面板可以把檔案送去別的 App，但它不是儲存對話框 ——
+            // 使用者沒辦法說「存到我的文件資料夾」。而這個 App 的資料全部
+            // 在沙盒容器裡，容器是隱藏的、使用者碰不到。Mac App Store 審查
+            // 指南 2.4.5(i) 因此把這個版本退了回來。
+            Button { saveNotebookFile() } label: { Label(localizationManager.localized("export_save_as"), systemImage: "folder.badge.plus") }
+                .accessibilityIdentifier("editor.export.save_as")
             Button { shareNotebookFile() } label: { Label(localizationManager.localized("share_note"), systemImage: "square.and.arrow.up") }
                 .accessibilityIdentifier("editor.export.share")
         } label: {
@@ -7770,7 +7787,16 @@ public struct NotebookEditorView: View {
         }
     }
 
-    private func shareNotebookFile() {
+    /// 把整本筆記打包成 `.padnote`，然後開**儲存對話框**。
+    ///
+    /// 與 `shareNotebookFile()` 只差在最後開哪一個面板 —— 打包那一段一模
+    /// 一樣，所以共用，不要再抄一份（抄漏的那一次會是「存出來的檔案少了
+    /// 圖片」，而那要等使用者在另一台裝置打開才發現）。
+    private func saveNotebookFile() {
+        shareNotebookFile(asSaveDialog: true)
+    }
+
+    private func shareNotebookFile(asSaveDialog: Bool = false) {
         saveCurrentPageDrawing()
         let tempDir = FileManager.default.temporaryDirectory.appending(path: "share_\(UUID().uuidString)")
         let pkgDir = tempDir.appending(path: "\(notebook.id).padnote")
@@ -7800,7 +7826,11 @@ public struct NotebookEditorView: View {
             let zipData = try Data(contentsOf: zipUrl)
             self.exportPdfData = zipData
             self.exportFileExtension = "padnote"
-            self.showShareSheet = true
+            if asSaveDialog {
+                self.showSaveDialog = true
+            } else {
+                self.showShareSheet = true
+            }
             try? FileManager.default.removeItem(at: tempDir)
         } catch {
             print("[ShareNotebook] Failed to package notebook: \(error)")
@@ -9160,6 +9190,26 @@ public struct NotebookEditorView: View {
 }
 
 /// 系統分享面板封裝
+/// 系統的儲存對話框。
+///
+/// Catalyst 上這就是 macOS 的儲存面板（拿不到 `NSSavePanel` —— 這是一個
+/// UIKit 程式），iOS 上是「檔案」的儲存介面。
+///
+/// `asCopy: true`：交出去的是副本。少了它，使用者存完之後我們那份暫存檔
+/// 會被系統搬走，而暫存目錄隨時會被清掉。
+struct SaveToFilesView: UIViewControllerRepresentable {
+    let data: Data
+    let filename: String
+
+    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+        let tempUrl = FileManager.default.temporaryDirectory.appending(path: filename)
+        try? data.write(to: tempUrl, options: .atomic)
+        return UIDocumentPickerViewController(forExporting: [tempUrl], asCopy: true)
+    }
+
+    func updateUIViewController(_ uiViewController: UIDocumentPickerViewController, context: Context) {}
+}
+
 struct ShareActivityView: UIViewControllerRepresentable {
     let data: Data
     let filename: String

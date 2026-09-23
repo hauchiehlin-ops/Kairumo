@@ -21,6 +21,21 @@ SWIFT_SRC = ROOT / "apple/Sources/LocalizationManager.swift"
 CATALOG = ROOT / "i18n/ui-strings.json"
 SWIFT_OUT = ROOT / "apple/Sources/LocalizationStrings.generated.swift"
 KOTLIN_OUT = ROOT / "android/app/src/main/java/com/kairumo/padnote/LocalizationStrings.kt"
+LPROJ_ROOT = ROOT / "apple/Resources/Localizable"
+
+# 權限說明。這幾條**不進** Swift／Kotlin 字串表 —— 它們是系統在顯示權限
+# 對話框時自己去 app bundle 裡讀的，讀的是 `InfoPlist.strings`。
+#
+# 之前它們寫死在 `apple/Info.plist` 裡，只有繁體中文一種。審查用英文語系的
+# 機器跑，看到的是中文的權限說明 —— App Store 審查指南 4（Design）判定
+# 「權限請求沒有跟著 App 的語系」，iOS 與 macOS 兩邊同時被退。
+INFO_PLIST_KEYS = [
+    "NSMicrophoneUsageDescription",
+    "NSSpeechRecognitionUsageDescription",
+    "NSLocalNetworkUsageDescription",
+    "NSPhotoLibraryUsageDescription",
+    "NSPhotoLibraryAddUsageDescription",
+]
 
 LANGS = ["zhHant", "en", "zhHans", "ja", "ko", "th"]
 LANG_CODES = {
@@ -168,8 +183,37 @@ def cmd_generate():
                '']
     KOTLIN_OUT.parent.mkdir(parents=True, exist_ok=True)
     KOTLIN_OUT.write_text("\n".join(kotlin))
+    write_info_plist_strings(table)
     print(f"產生 {len(keys)} 條 → {SWIFT_OUT.relative_to(ROOT)}")
     print(f"產生 {len(keys)} 條 → {KOTLIN_OUT.relative_to(ROOT)}")
+
+
+def write_info_plist_strings(table):
+    """每個語系一份 `InfoPlist.strings`。
+
+    系統顯示權限對話框時會去 app bundle 裡找對應語系的這個檔案，找不到才用
+    `Info.plist` 裡的字面值。所以**光是把字串翻好沒有用**，一定要以
+    `<語系>.lproj/InfoPlist.strings` 的形式進 bundle。
+    """
+    for lang in LANGS:
+        folder = LPROJ_ROOT / f"{LANG_CODES[lang]}.lproj"
+        folder.mkdir(parents=True, exist_ok=True)
+        lines = [
+            "/* 這是產生檔，不要手改。",
+            "   來源：i18n/ui-strings.json —— 改字串請改那裡，再跑：",
+            "       python3 scripts/i18n_tool.py generate */",
+            "",
+        ]
+        for key in INFO_PLIST_KEYS:
+            entry = table.get(key) or {}
+            value = entry.get(lang) or entry.get("en") or ""
+            if not value:
+                continue
+            lines.append(f'"{key}" = "{swift_escape(value)}";')
+        lines.append("")
+        (folder / "InfoPlist.strings").write_text("\n".join(lines), encoding="utf-8")
+    print(f"產生 {len(INFO_PLIST_KEYS)} 條權限說明 × {len(LANGS)} 語系 "
+          f"→ {LPROJ_ROOT.relative_to(ROOT)}/*.lproj/InfoPlist.strings")
 
 
 KOTLIN_ENTRY_RE = re.compile(r'"((?:[^"\\]|\\.)*)"\s*to\s*mapOf\((.*?)\n\s*\)', re.S)

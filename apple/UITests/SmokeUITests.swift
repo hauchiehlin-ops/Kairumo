@@ -412,7 +412,8 @@ extension SmokeUITests {
         // 簡單說：選單的版面是 UIKit 排的，遮蔽這個 bug 類型在那裡不會發生，
         // 而底下幾項落在選單自己的捲動範圍外，點不到是正常的。
         ScreenAudit.checkOnly(
-            app, screen: "editor", ids: Self.moreMenuItems, requireHittable: false)
+            app, screen: "editor", ids: Self.moreMenuItems,
+            requireHittable: false, scrollToFind: true)
     }
 
     /// 匯出選單裡的四個項目：打開之後要在、而且是啟用的。
@@ -443,7 +444,8 @@ extension SmokeUITests {
         XCTAssertTrue(firstItem.waitForExistence(timeout: 5), "匯出選單沒有打開")
 
         ScreenAudit.checkOnly(
-            app, screen: "editor", ids: Self.exportMenuItems, requireHittable: false)
+            app, screen: "editor", ids: Self.exportMenuItems,
+            requireHittable: false, scrollToFind: true)
     }
 
     /// 匯出選單裡的項目。
@@ -451,6 +453,7 @@ extension SmokeUITests {
         "editor.export.pdf",
         "editor.export.image",
         "editor.export.print",
+        "editor.export.save_as",
         "editor.export.share",
     ]
 
@@ -458,8 +461,15 @@ extension SmokeUITests {
     /// 這裡每加一個，那邊就該少一個。
     static let moreMenuItems: [String] = [
         "editor.insert.assets",
+        // 規格裡有、但這份清單一直漏掉它 —— 於是
+        // `testEditorScreenControlsAreReachable` 一直在紅，而沒有人把那個
+        // 紅燈跟「貼紙庫沒有執行期測試」連起來。
+        "editor.insert.stickers",
         "editor.insert.audio",
+        "editor.insert.audio_file",
         "editor.insert.image",
+        "editor.insert.image_file",
+        "editor.insert.pdf",
         "editor.insert.math",
         "editor.insert.chart",
         "editor.insert.table",
@@ -540,38 +550,25 @@ extension SmokeUITests {
     /// （NotebookEditorView.swift:3369），但實際渲染的是另一個分支的
     /// `kairumo.canvas` —— **識別碼掛在沒被顯示的那個視圖上**。
     /// 掃原始碼的閘門看不見這種，執行期稽核看得見。
-    static let editorNotWiredYet: Set<String> = [
-        // ↓ 這十五項**已經有執行期檢查了**（testMoreMenuItemsAreReachable），
-        //   只是不在這條單一畫面狀態的稽核裡 —— 它們要先打開選單才看得到，
-        //   而開著的選單會把底下的控制項全部變成點不到。
+    static var editorNotWiredYet: Set<String> {
+        // 選單裡那兩批**不是抄一份**，是直接引用上面那兩份清單。
         //
-        //   留在棘輪裡不代表「還沒接上」。在量清楚 S-261d 之前，這整批的
-        //   註解寫的是「藏在選單／浮層裡」，那個說法讓人以為是時序問題
-        //   （沒展開所以看不到），於是沒有再往下追。真正的原因是 SwiftUI
-        //   的 `Menu` 把項目交給 UIKit 的 `UIAction`，識別字沒跟過去 ——
-        //   而標籤有。
-        "editor.customize_toolbar",
-        "editor.insert.assets",
-        "editor.insert.audio",
-        "editor.insert.image",
-        "editor.insert.math",
-        "editor.insert.chart",
-        "editor.insert.table",
-        "editor.insert.shape",
-        "editor.insert.model3d",
-        "editor.insert.theme_tools",
-        "editor.insert.refine_sketch",
-        "editor.insert.comment_pin",
-        "editor.insert.collaborate",
-        "editor.insert.recognize",
-        "editor.insert.ai_summary",
-        // ↓ 匯出那四項在另一張選單（`editor.share`），由
-        //   testExportMenuItemsAreReachable 守著。同樣不在這條單一畫面
-        //   狀態的稽核裡 —— 要先打開選單才看得到。
-        "editor.export.pdf",
-        "editor.export.image",
-        "editor.export.print",
-        "editor.export.share",
+        // 原本這裡是手抄的第三份，於是新增一個選單項目要記得改三個地方：
+        // 核心的規格、`moreMenuItems`、還有這裡。漏掉第三個的症狀是
+        // `testEditorScreenControlsAreReachable` 紅掉，而錯誤訊息說的是
+        // 「畫面少了控制項」—— 看起來像產品壞了，實際上是測試清單沒跟上。
+        // 實際發生過（editor.insert.stickers 漏了很久）。
+        //
+        // 這些項目**已經有執行期檢查**（testMoreMenuItemsAreReachable /
+        // testExportMenuItemsAreReachable），只是不在這條單一畫面狀態的
+        // 稽核裡 —— 它們要先打開選單才看得到，而開著的選單會把底下的
+        // 控制項全部變成點不到。
+        //
+        // 留在這裡不代表「還沒接上」。在量清楚 S-261d 之前，這整批的註解
+        // 寫的是「藏在選單／浮層裡」，那個說法讓人以為是時序問題（沒展開
+        // 所以看不到），於是沒有再往下追。真正的原因是 SwiftUI 的 `Menu`
+        // 把項目交給 UIKit 的 `UIAction`，識別字沒跟過去 —— 而標籤有。
+        Set(moreMenuItems).union(exportMenuItems).union([
         "editor.text.add_box",
         "editor.text.studio",
         "editor.text.bold",
@@ -594,5 +591,6 @@ extension SmokeUITests {
         "editor.sidebar.thumb_smaller",
         "editor.sidebar.thumb_larger",
         "editor.canvas",
-    ]
+        ])
+    }
 }

@@ -1,0 +1,9 @@
+/* 這是產生檔，不要手改。
+   來源：i18n/ui-strings.json —— 改字串請改那裡，再跑：
+       python3 scripts/i18n_tool.py generate */
+
+"NSMicrophoneUsageDescription" = "Kairumo ใช้ไมโครโฟนเพื่อบันทึกเสียงในชั้นเรียนหรือการประชุม และซิงค์ลายมือกับไทม์ไลน์ของเสียง";
+"NSSpeechRecognitionUsageDescription" = "Kairumo ใช้การรู้จำเสียงเพื่อถอดเสียงที่บันทึกไว้เป็นข้อความบนเครื่องของคุณ และใส่ลงในโน้ต";
+"NSLocalNetworkUsageDescription" = "Kairumo ใช้เครือข่ายภายในเพื่อแก้ไขโน้ตร่วมกับผู้ที่อยู่บน Wi-Fi เดียวกัน ทุกการส่งข้อมูลเข้ารหัสแบบปลายทางถึงปลายทางและไม่ผ่านเซิร์ฟเวอร์";
+"NSPhotoLibraryUsageDescription" = "Kairumo เข้าถึงคลังรูปภาพเพื่อให้คุณใส่รูปลงในโน้ตและเขียนกำกับได้";
+"NSPhotoLibraryAddUsageDescription" = "Kairumo บันทึกหน้าและภาพวาดที่คุณส่งออกไปยังคลังรูปภาพ";

@@ -63,6 +63,7 @@
 		643674D7CEE546261D15F308 /* ExportPrintManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */; };
 		6444B0470BC928731D0F99F5 /* PageDeletionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E2366585C08FE826ADFEB01 /* PageDeletionTests.swift */; };
 		65B2ADC8B553B1BE9708540A /* PenHoverPreview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0013D28CD49B4181F40017F3 /* PenHoverPreview.swift */; };
+		67A314D2F3FA0DC4C77135E9 /* ImportedModelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E76A078696B95A56868B4EEA /* ImportedModelView.swift */; };
 		67CF9DE54436AC7DD3FF5065 /* NotebookMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C19329463E6F6E313A0F1DB /* NotebookMigration.swift */; };
 		6849D8D81A0F512DCC4FC8E8 /* InsertToolsAudit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 831C71226B45B48B268CE8F6 /* InsertToolsAudit.swift */; };
 		68C1811CB88877353FF14D31 /* CStubs.c in Sources */ = {isa = PBXBuildFile; fileRef = 26F09C378F9F1B6835D9ECB2 /* CStubs.c */; };
@@ -86,6 +87,7 @@
 		8B7009124FD56264BEA6268D /* PageRepaginationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2A6B1E41A4693B543BEDCB /* PageRepaginationTests.swift */; };
 		8C664C6515AEE123F5150344 /* PageOrderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C0468278DE21C442DB88E1F /* PageOrderTests.swift */; };
 		8CBE67FB1F6A87103F12949F /* NoteTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1C81A31EBC2D3D1F020B0BF /* NoteTable.swift */; };
+		8D806A0AE9A0B225778E104E /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = B1F609A61FB18F129EB3D008 /* InfoPlist.strings */; };
 		901E3C8B49A3F9629193D439 /* PdfPageRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E769C6B3B1895BA7A6BC71AB /* PdfPageRendererTests.swift */; };
 		91FC0D28445F73F9D4685CE7 /* ConformanceVectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 067CE78048E5C142AD56E841 /* ConformanceVectorTests.swift */; };
 		95A26994BC9D5BCCF7291E2F /* CommentThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 205572122F598A01BD07BC2A /* CommentThreadView.swift */; };
@@ -229,6 +231,7 @@
 		3CF52FA26FE1FF9A388527D6 /* InkLatencyMeterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InkLatencyMeterTests.swift; sourceTree = "<group>"; };
 		3D05E57F469CF735B91FC514 /* SketchRefineEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SketchRefineEngine.swift; sourceTree = "<group>"; };
 		3E642D648CC5479DA382CE35 /* MathEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathEngine.swift; sourceTree = "<group>"; };
+		3E7DB5CC05714A7F1CB75BEF /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
 		3F5C250C0AEBC876CF34807D /* PenHardwareTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PenHardwareTests.swift; sourceTree = "<group>"; };
 		405C79E461A1D1A0AC7BE206 /* HoverHighlight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HoverHighlight.swift; sourceTree = "<group>"; };
 		420CDB8E187D7BF4EB48CB2E /* PdfKitDocumentTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PdfKitDocumentTests.swift; sourceTree = "<group>"; };
@@ -253,6 +256,8 @@
 		5C7088E4DBE1611C3E697B4A /* TableStudioLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableStudioLayoutTests.swift; sourceTree = "<group>"; };
 		5DEEDC3EBFC3C910FFC5735C /* MathCalculatorSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MathCalculatorSheet.swift; sourceTree = "<group>"; };
 		5E0D07EB41098C2C0F9A8E37 /* PackageRoundTripTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PackageRoundTripTests.swift; sourceTree = "<group>"; };
+		5E24F92E6302316407360361 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		61043E910A35DABA29547058 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		61C6C10FAD15645C91E246C0 /* TableStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableStudioView.swift; sourceTree = "<group>"; };
 		61D0BC500318C879D185099E /* Model3DStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Model3DStudioView.swift; sourceTree = "<group>"; };
 		621C052FCB25E32FBB633BE3 /* MacReleaseConfigTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacReleaseConfigTests.swift; sourceTree = "<group>"; };
@@ -264,6 +269,7 @@
 		6923436682B5101DB7AF5FAA /* HandwritingRecognizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandwritingRecognizer.swift; sourceTree = "<group>"; };
 		6A0C24F3FD1D464196490E2D /* ContinuousPagesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContinuousPagesView.swift; sourceTree = "<group>"; };
 		6A934F46156BC32DC1149F62 /* DocumentTemplateCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTemplateCatalog.swift; sourceTree = "<group>"; };
+		6BBFAF9B5C395AEE3C081E24 /* th */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = th; path = th.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		6C2FF9AF4DA70CC155EC6704 /* ObjectLayerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectLayerTests.swift; sourceTree = "<group>"; };
 		6C5E7D8CE394BD3B16FD57B5 /* DocumentTemplateApply.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentTemplateApply.swift; sourceTree = "<group>"; };
 		6CEFD1F0AF714DC269A5E144 /* AccountSyncStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountSyncStore.swift; sourceTree = "<group>"; };
@@ -329,6 +335,7 @@
 		CCBD6EB2E871A9532370A15B /* GoogleAuth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GoogleAuth.swift; sourceTree = "<group>"; };
 		D059ACC4F96D906F5A18970D /* AppVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppVersion.swift; sourceTree = "<group>"; };
 		D2E4B63FC00CBE41E1C67031 /* DeadControlSurvey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadControlSurvey.swift; sourceTree = "<group>"; };
+		D32B1A1C085E81299624C82B /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		D32FB35605394A7823F6017B /* ResponsiveAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResponsiveAudit.swift; sourceTree = "<group>"; };
 		D76C7E92895F6C4334996D92 /* NotebookSyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookSyncCoordinator.swift; sourceTree = "<group>"; };
 		D92F2373941302ED5F5C66CD /* ImageDropPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDropPlacementTests.swift; sourceTree = "<group>"; };
@@ -344,9 +351,11 @@
 		DFCDD31E1D415BEFE8FB47D5 /* ImageAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageAppearance.swift; sourceTree = "<group>"; };
 		E6A2A119D757D992BD181DEE /* BackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupManager.swift; sourceTree = "<group>"; };
 		E769C6B3B1895BA7A6BC71AB /* PdfPageRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PdfPageRendererTests.swift; sourceTree = "<group>"; };
+		E76A078696B95A56868B4EEA /* ImportedModelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportedModelView.swift; sourceTree = "<group>"; };
 		E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPrintManager.swift; sourceTree = "<group>"; };
 		E9016EACE65CDA75A37567CE /* PageImageRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageImageRendererTests.swift; sourceTree = "<group>"; };
 		E90D65B77C9075837E5F50D2 /* NoteIntelligenceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteIntelligenceSheet.swift; sourceTree = "<group>"; };
+		EA25DC2EBA9A2BCFD1F0DED2 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = ja.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		EE084F883D6D8A652CD86063 /* SeedContent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeedContent.swift; sourceTree = "<group>"; };
 		EE3F4D9B18C940D7D37A888E /* KairumoTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KairumoTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		F165F09A8FEE2E882FD9107C /* FeatureHint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeatureHint.swift; sourceTree = "<group>"; };
@@ -453,6 +462,7 @@
 				C1D3BC1DADA8673F09BE386B /* conformance */,
 				D6E56CB73EE4D2B95BAA4723 /* Examples */,
 				07AEA3051AAD14D8367E5D1A /* Generated */,
+				E87C360232CFA2827B00F6E1 /* Localizable */,
 				FE24CD0F7EA498AAB508EE5E /* Sources */,
 				37B5B8BF5CE7D40051617B74 /* Tests */,
 				7D3DF22B3FEC4288146A9780 /* UITests */,
@@ -476,6 +486,15 @@
 				AB04C4FA3426304F705E5046 /* HomeWorkbenchUsage.swift */,
 			);
 			path = Examples;
+			sourceTree = "<group>";
+		};
+		E87C360232CFA2827B00F6E1 /* Localizable */ = {
+			isa = PBXGroup;
+			children = (
+				B1F609A61FB18F129EB3D008 /* InfoPlist.strings */,
+			);
+			name = Localizable;
+			path = Resources/Localizable;
 			sourceTree = "<group>";
 		};
 		EA32A1B532F499DEC0425B81 /* Frameworks */ = {
@@ -532,6 +551,7 @@
 				DFCDD31E1D415BEFE8FB47D5 /* ImageAppearance.swift */,
 				52BB9EE17D04DDC7ACA3D7C2 /* ImageDropPlacement.swift */,
 				29BFE1D24D00A1328C62BA89 /* ImageEditControls.swift */,
+				E76A078696B95A56868B4EEA /* ImportedModelView.swift */,
 				893FBBAA69ABDE7B5D03BDA9 /* InkInterop.swift */,
 				00CDBBB784601FDFB342136D /* InkLatencyMeter.swift */,
 				0B829DBCA4D5374715A49087 /* LinkPreviewEngine.swift */,
@@ -693,6 +713,11 @@
 			knownRegions = (
 				Base,
 				en,
+				ja,
+				ko,
+				th,
+				"zh-Hans",
+				"zh-Hant",
 			);
 			mainGroup = B4C83A5E69DB56E9D3761F3B;
 			minimizedProjectReferenceProxies = 1;
@@ -715,6 +740,7 @@
 			files = (
 				EB15B2D411DC5BA9B5335B94 /* Assets.xcassets in Resources */,
 				B461E05D52232C76413B2DB2 /* Docs in Resources */,
+				8D806A0AE9A0B225778E104E /* InfoPlist.strings in Resources */,
 				4514902261D4A927D6FBC105 /* Templates in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -834,6 +860,7 @@
 				C1263F774996D8A32718A1FF /* ImageAppearance.swift in Sources */,
 				633B552A6948F3E66E5C7DCD /* ImageDropPlacement.swift in Sources */,
 				9BCE1D88DD79DE3FD381D46D /* ImageEditControls.swift in Sources */,
+				67A314D2F3FA0DC4C77135E9 /* ImportedModelView.swift in Sources */,
 				04A2C2BA6EE78D99402F87AD /* InkInterop.swift in Sources */,
 				AC68B6EC6A6BA0BF03560351 /* InkLatencyMeter.swift in Sources */,
 				723A25DA76A24DB5650DCDAA /* LinkPreviewEngine.swift in Sources */,
@@ -923,6 +950,22 @@
 			targetProxy = 3AAF567082E0ECA079E333F2 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
+
+/* Begin PBXVariantGroup section */
+		B1F609A61FB18F129EB3D008 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				61043E910A35DABA29547058 /* en */,
+				EA25DC2EBA9A2BCFD1F0DED2 /* ja */,
+				D32B1A1C085E81299624C82B /* ko */,
+				6BBFAF9B5C395AEE3C081E24 /* th */,
+				3E7DB5CC05714A7F1CB75BEF /* zh-Hans */,
+				5E24F92E6302316407360361 /* zh-Hant */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		01D0ADD488FC3DDC8F5B9FD3 /* Release */ = {
@@ -1102,11 +1145,11 @@
 				INFOPLIST_KEY_CFBundleVersion = 60;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Kairumo 需要區域網路權限，以便在同一個 Wi-Fi 網路下直接與協同夥伴連線共同編輯筆記，所有傳輸均經端對端加密且不經外部伺服器。";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo 需要使用麥克風，以便在課堂或會議中錄製語音筆記，並讓手寫筆劃與錄音時間軸即時動態對齊。";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Kairumo 需要儲存圖片權限，以便將您導出的筆記頁面或繪圖成果儲存至相片圖庫。";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Kairumo 需要存取您的相片圖庫，以便您挑選圖片插入筆記頁面進行批註與繪製。";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Kairumo 需要語音辨識權限，以便在您的裝置端將錄音語音即時轉錄為文字稿，並直接插入筆記畫布。";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Kairumo uses the local network to edit notes together with people on the same Wi-Fi. Everything is end-to-end encrypted and never passes through a server.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo uses the microphone to record voice notes in class or meetings, keeping your handwriting in sync with the recording timeline.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Kairumo saves pages and drawings you export to your photo library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Kairumo accesses your photo library so you can place pictures into a note and annotate them.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Kairumo uses speech recognition to transcribe your recordings into text on your device and place the transcript in your notes.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
@@ -1186,11 +1229,11 @@
 				INFOPLIST_KEY_CFBundleVersion = 60;
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.productivity";
-				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Kairumo 需要區域網路權限，以便在同一個 Wi-Fi 網路下直接與協同夥伴連線共同編輯筆記，所有傳輸均經端對端加密且不經外部伺服器。";
-				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo 需要使用麥克風，以便在課堂或會議中錄製語音筆記，並讓手寫筆劃與錄音時間軸即時動態對齊。";
-				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Kairumo 需要儲存圖片權限，以便將您導出的筆記頁面或繪圖成果儲存至相片圖庫。";
-				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Kairumo 需要存取您的相片圖庫，以便您挑選圖片插入筆記頁面進行批註與繪製。";
-				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Kairumo 需要語音辨識權限，以便在您的裝置端將錄音語音即時轉錄為文字稿，並直接插入筆記畫布。";
+				INFOPLIST_KEY_NSLocalNetworkUsageDescription = "Kairumo uses the local network to edit notes together with people on the same Wi-Fi. Everything is end-to-end encrypted and never passes through a server.";
+				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Kairumo uses the microphone to record voice notes in class or meetings, keeping your handwriting in sync with the recording timeline.";
+				INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription = "Kairumo saves pages and drawings you export to your photo library.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Kairumo accesses your photo library so you can place pictures into a note and annotate them.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Kairumo uses speech recognition to transcribe your recordings into text on your device and place the transcript in your notes.";
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				IPHONEOS_DEPLOYMENT_TARGET = 16.0;

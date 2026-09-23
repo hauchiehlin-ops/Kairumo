@@ -90,31 +90,35 @@ struct OnboardingView: View {
                 if granted {
                     Label(l("onboarding_microphone_granted"), systemImage: "checkmark.circle.fill")
                         .foregroundStyle(.tint)
-                } else {
-                    HStack(spacing: DS.Space.s) {
-                        Button(asked ? l("permission_open_settings") : l("onboarding_allow_microphone")) {
-                            if asked {
-                                openSettings()
-                            } else {
-                                requestMicrophone()
-                            }
-                        }
-                        .buttonStyle(.borderedProminent)
-
-                        Button(l("onboarding_later"), action: finish)
-                            .buttonStyle(.plain)
-                            .foregroundStyle(.tint)
-                    }
+                } else if asked {
+                    // 問過而且沒拿到：系統對話框不會再跳，設定頁是唯一還
+                    // 走得通的路。
+                    Button(l("permission_open_settings"), action: openSettings)
+                        .buttonStyle(.bordered)
+                        .accessibilityIdentifier("onboarding.open_settings")
                 }
 
                 Spacer(minLength: DS.Space.l)
 
-                Button(action: finish) {
-                    Text(l("onboarding_start"))
+                // **這顆按鈕只有一個，而且一定會走到系統的權限對話框。**
+                //
+                // 原本這裡是「允許麥克風」＋「稍後再說」兩顆。App Store 審查
+                // 指南 5.1.1(iv) 兩件事都點名了：
+                //
+                //   1. 按鈕不可以寫「允許麥克風」—— 那是在替使用者預先回答
+                //      系統的問題。要寫「繼續」這種中性的字。
+                //   2. 說明出現之後**一定要走到權限對話框**，不可以給一顆
+                //      「稍後」把它跳過。
+                //
+                // 所以說明看完就是繼續，而「要不要給」由系統那個對話框問 ——
+                // 那本來就是使用者做決定的地方，我們不該在前面先攔一次。
+                Button(action: continueFromIntro) {
+                    Text(needsRequest ? l("onboarding_continue") : l("onboarding_start"))
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
+                .accessibilityIdentifier("onboarding.continue")
             }
             .frame(maxWidth: DS.Content.readableMaxWidth, alignment: .leading)
             .frame(maxWidth: .infinity)
@@ -122,12 +126,32 @@ struct OnboardingView: View {
         }
     }
 
+    /// 還沒問過，所以按下去會跳系統對話框。
+    private var needsRequest: Bool { !granted && !asked }
+
+    /// 說明看完之後唯一的動作。
+    ///
+    /// 還沒問過就去問（問完就結束導覽，不論使用者給不給）；問過了就直接
+    /// 結束。**不會有「跳過權限」這條路** —— 那正是審查指南 5.1.1(iv)
+    /// 不允許的。
+    private func continueFromIntro() {
+        guard needsRequest else {
+            finish()
+            return
+        }
+        requestMicrophone(then: finish)
+    }
+
     private func finish() {
         UserDefaults.standard.set(true, forKey: Self.seenKey)
         onDone()
     }
 
-    private func requestMicrophone() {
+    /// 問麥克風權限，問完（不論結果）再做 `then`。
+    ///
+    /// `then` 一定會被呼叫 —— 使用者按「不允許」也一樣往下走。App 沒拿到
+    /// 麥克風仍然是一個完整的手寫筆記本，把人卡在導覽裡沒有道理。
+    private func requestMicrophone(then: (() -> Void)? = nil) {
         #if os(iOS) || targetEnvironment(macCatalyst)
         Task {
             let result: Bool
@@ -143,8 +167,11 @@ struct OnboardingView: View {
             await MainActor.run {
                 granted = result
                 asked = true
+                then?()
             }
         }
+        #else
+        then?()
         #endif
     }
 

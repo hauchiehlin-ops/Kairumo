@@ -169,6 +169,14 @@ enum ScreenAudit {
         screen: String,
         ids: [String],
         requireHittable: Bool = true,
+        /// 找不到就捲一下再找。
+        ///
+        /// **選單放不下的時候一定要開。** 「更多」選單有二十幾項，在手機
+        /// 尺寸上底下幾項根本沒被算繪出來 —— 於是稽核報「少了
+        /// editor.insert.ai_summary」，看起來像那個功能不見了，實際上是
+        /// 它在捲動範圍外。加一個項目就可能把最後一項擠出去，而那個紅燈
+        /// 指向的是一個完全無辜的 id（實際踩過）。
+        scrollToFind: Bool = false,
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
@@ -178,7 +186,13 @@ enum ScreenAudit {
         let visible = app.windows.firstMatch.frame
 
         for id in ids {
-            let (element, _) = elementFor(id, label: labels[id], in: app)
+            var (element, _) = elementFor(id, label: labels[id], in: app)
+            if scrollToFind && !element.exists {
+                for _ in 0..<6 where !element.exists {
+                    app.swipeUp()
+                    (element, _) = elementFor(id, label: labels[id], in: app)
+                }
+            }
             guard element.exists else {
                 missing.append("\(id)（標籤：\(labels[id] ?? "—")）")
                 continue

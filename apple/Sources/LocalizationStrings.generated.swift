@@ -15,6 +15,46 @@ import Foundation
 extension LocalizationManager {
     /// 由 i18n/ui-strings.json 產生的完整字串表（六國語系）
     static let generatedStrings: [String: [AppLanguage: String]] = [
+        "NSLocalNetworkUsageDescription": [
+            .zhHant: "Kairumo 需要區域網路權限，以便在同一個 Wi-Fi 網路下直接與協同夥伴連線共同編輯筆記，所有傳輸均經端對端加密且不經外部伺服器。",
+            .en: "Kairumo uses the local network to edit notes together with people on the same Wi-Fi. Everything is end-to-end encrypted and never passes through a server.",
+            .zhHans: "Kairumo 需要局域网权限，以便在同一个 Wi-Fi 网络下直接与协作伙伴连线共同编辑笔记，所有传输均经端到端加密且不经外部服务器。",
+            .ja: "Kairumo は、同じ Wi-Fi にいる相手と一緒にノートを編集するためにローカルネットワークを使用します。通信はすべてエンドツーエンドで暗号化され、サーバーを経由しません。",
+            .ko: "Kairumo는 같은 Wi-Fi에 있는 사람과 함께 노트를 편집하기 위해 로컬 네트워크를 사용합니다. 모든 전송은 종단간 암호화되며 서버를 거치지 않습니다.",
+            .th: "Kairumo ใช้เครือข่ายภายในเพื่อแก้ไขโน้ตร่วมกับผู้ที่อยู่บน Wi-Fi เดียวกัน ทุกการส่งข้อมูลเข้ารหัสแบบปลายทางถึงปลายทางและไม่ผ่านเซิร์ฟเวอร์"
+        ],
+        "NSMicrophoneUsageDescription": [
+            .zhHant: "Kairumo 需要使用麥克風，以便在課堂或會議中錄製語音筆記，並讓手寫筆劃與錄音時間軸即時動態對齊。",
+            .en: "Kairumo uses the microphone to record voice notes in class or meetings, keeping your handwriting in sync with the recording timeline.",
+            .zhHans: "Kairumo 需要使用麦克风，以便在课堂或会议中录制语音笔记，并让手写笔划与录音时间轴实时动态对齐。",
+            .ja: "Kairumo は、授業や会議で音声メモを録音し、手書きと録音のタイムラインを同期させるためにマイクを使用します。",
+            .ko: "Kairumo는 수업이나 회의에서 음성 메모를 녹음하고 필기와 녹음 타임라인을 맞추기 위해 마이크를 사용합니다.",
+            .th: "Kairumo ใช้ไมโครโฟนเพื่อบันทึกเสียงในชั้นเรียนหรือการประชุม และซิงค์ลายมือกับไทม์ไลน์ของเสียง"
+        ],
+        "NSPhotoLibraryAddUsageDescription": [
+            .zhHant: "Kairumo 需要儲存圖片權限，以便將您導出的筆記頁面或繪圖成果儲存至相片圖庫。",
+            .en: "Kairumo saves pages and drawings you export to your photo library.",
+            .zhHans: "Kairumo 需要保存图片权限，以便将您导出的笔记页面或绘图成果保存至相片图库。",
+            .ja: "Kairumo は、書き出したページや描画を写真ライブラリに保存します。",
+            .ko: "Kairumo는 내보낸 페이지나 그림을 사진 보관함에 저장합니다.",
+            .th: "Kairumo บันทึกหน้าและภาพวาดที่คุณส่งออกไปยังคลังรูปภาพ"
+        ],
+        "NSPhotoLibraryUsageDescription": [
+            .zhHant: "Kairumo 需要存取您的相片圖庫，以便您挑選圖片插入筆記頁面進行批註與繪製。",
+            .en: "Kairumo accesses your photo library so you can place pictures into a note and annotate them.",
+            .zhHans: "Kairumo 需要访问您的相片图库，以便您挑选图片插入笔记页面进行批注与绘制。",
+            .ja: "Kairumo は、写真をノートに挿入して書き込めるようにするために写真ライブラリにアクセスします。",
+            .ko: "Kairumo는 사진을 노트에 넣고 주석을 달 수 있도록 사진 보관함에 접근합니다.",
+            .th: "Kairumo เข้าถึงคลังรูปภาพเพื่อให้คุณใส่รูปลงในโน้ตและเขียนกำกับได้"
+        ],
+        "NSSpeechRecognitionUsageDescription": [
+            .zhHant: "Kairumo 需要語音辨識權限，以便在您的裝置端將錄音語音即時轉錄為文字稿，並直接插入筆記畫布。",
+            .en: "Kairumo uses speech recognition to transcribe your recordings into text on your device and place the transcript in your notes.",
+            .zhHans: "Kairumo 需要语音识别权限，以便在您的设备端将录音语音实时转录为文字稿，并直接插入笔记画布。",
+            .ja: "Kairumo は、録音した音声を端末内で文字起こしし、ノートに挿入するために音声認識を使用します。",
+            .ko: "Kairumo는 녹음을 기기 내에서 텍스트로 변환해 노트에 넣기 위해 음성 인식을 사용합니다.",
+            .th: "Kairumo ใช้การรู้จำเสียงเพื่อถอดเสียงที่บันทึกไว้เป็นข้อความบนเครื่องของคุณ และใส่ลงในโน้ต"
+        ],
         "about_app": [
             .zhHant: "關於 Kairumo",
             .en: "About Kairumo",
@@ -3415,6 +3455,14 @@ extension LocalizationManager {
             .ko: "내보내기 및 인쇄",
             .th: "ส่งออกและพิมพ์"
         ],
+        "export_save_as": [
+            .zhHant: "儲存到…",
+            .en: "Save to Files…",
+            .zhHans: "保存到…",
+            .ja: "ファイルに保存…",
+            .ko: "파일로 저장…",
+            .th: "บันทึกไปยังไฟล์…"
+        ],
         "extend_page": [
             .zhHant: "延長此頁",
             .en: "Extend Page",
@@ -6367,6 +6415,14 @@ extension LocalizationManager {
             .ko: "다운로드 중…",
             .th: "กำลังดาวน์โหลด…"
         ],
+        "model_no_geometry": [
+            .zhHant: "這個模型檔裡沒有任何形狀",
+            .en: "That model file has no shapes in it",
+            .zhHans: "这个模型文件里没有任何形状",
+            .ja: "このモデルファイルには形状が入っていません",
+            .ko: "이 모델 파일에는 도형이 없습니다",
+            .th: "ไฟล์โมเดลนี้ไม่มีรูปทรงอยู่เลย"
+        ],
         "model_optional": [
             .zhHant: "可選",
             .en: "Optional",
@@ -6407,6 +6463,14 @@ extension LocalizationManager {
             .ko: "개체 이름",
             .th: "ชื่อวัตถุ"
         ],
+        "model_too_many_faces": [
+            .zhHant: "這個模型太細緻，轉起來會卡",
+            .en: "That model is too detailed to rotate smoothly",
+            .zhHans: "这个模型太细致，转起来会卡",
+            .ja: "このモデルは精細すぎて滑らかに回転できません",
+            .ko: "이 모델은 너무 정밀해서 부드럽게 회전할 수 없습니다",
+            .th: "โมเดลนี้ละเอียดเกินไป หมุนแล้วจะไม่ลื่น"
+        ],
         "model_unavailable": [
             .zhHant: "尚未提供下載來源",
             .en: "No download source yet",
@@ -6414,6 +6478,14 @@ extension LocalizationManager {
             .ja: "入手先が未確定",
             .ko: "다운로드 경로 미정",
             .th: "ยังไม่มีแหล่งดาวน์โหลด"
+        ],
+        "model_unsupported_format": [
+            .zhHant: "這裡只畫得出 OBJ 與 STL 模型",
+            .en: "Only OBJ and STL models can be drawn here",
+            .zhHans: "这里只画得出 OBJ 与 STL 模型",
+            .ja: "ここで描けるのは OBJ と STL のモデルだけです",
+            .ko: "여기서는 OBJ와 STL 모델만 그릴 수 있습니다",
+            .th: "ที่นี่วาดได้เฉพาะโมเดล OBJ และ STL"
         ],
         "models_desc": [
             .zhHant: "下載後即可在本機使用語音轉錄與 OCR，資料不離開這台裝置。",
@@ -6839,21 +6911,13 @@ extension LocalizationManager {
             .ko: "오프라인 상태입니다: %d개 작업 대기 중. 다시 연결되면 자동 동기화됩니다.",
             .th: "ออฟไลน์อยู่: รอคิว %d รายการ จะซิงค์อัตโนมัติเมื่อเชื่อมต่อใหม่"
         ],
-        "onboarding_allow_microphone": [
-            .zhHant: "允許麥克風",
-            .en: "Allow Microphone",
-            .zhHans: "允许麦克风",
-            .ja: "マイクを許可",
-            .ko: "마이크 허용",
-            .th: "อนุญาตไมโครโฟน"
-        ],
-        "onboarding_later": [
-            .zhHant: "之後再說",
-            .en: "Later",
-            .zhHans: "之后再说",
-            .ja: "あとで",
-            .ko: "나중에",
-            .th: "ไว้ภายหลัง"
+        "onboarding_continue": [
+            .zhHant: "繼續",
+            .en: "Continue",
+            .zhHans: "继续",
+            .ja: "続ける",
+            .ko: "계속",
+            .th: "ดำเนินการต่อ"
         ],
         "onboarding_microphone_granted": [
             .zhHant: "麥克風已允許",

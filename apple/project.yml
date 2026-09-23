@@ -22,6 +22,17 @@ targets:
       # `Templates/document-templates.json` 這個子路徑。
       - path: Resources/Templates
         type: folder
+      # 權限說明的六個語系（產生自 i18n/ui-strings.json）。
+      #
+      # **這些 .lproj 要以 group 進 bundle，不能用 type: folder** ——
+      # 資料夾參照會讓 `zh-Hant.lproj` 變成 bundle 裡的一個**子目錄**，
+      # 而系統找的是 bundle 根目錄下的 `<語系>.lproj/InfoPlist.strings`。
+      # 包錯位置的症狀是權限對話框仍然顯示 Info.plist 裡那一份，
+      # 而且沒有任何警告。
+      - path: Resources/Localizable
+        includes:
+          - "*.lproj/InfoPlist.strings"
+        excludes: []
     dependencies:
       - framework: PadnoteCore.xcframework
         embed: false
@@ -52,11 +63,18 @@ targets:
         INFOPLIST_KEY_CFBundleDisplayName: "Kairumo"
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Kairumo 需要使用麥克風，以便在課堂或會議中錄製語音筆記，並讓手寫筆劃與錄音時間軸即時動態對齊。"
-        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Kairumo 需要語音辨識權限，以便在您的裝置端將錄音語音即時轉錄為文字稿，並直接插入筆記畫布。"
-        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Kairumo 需要區域網路權限，以便在同一個 Wi-Fi 網路下直接與協同夥伴連線共同編輯筆記，所有傳輸均經端對端加密且不經外部伺服器。"
-        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Kairumo 需要存取您的相片圖庫，以便您挑選圖片插入筆記頁面進行批註與繪製。"
-        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Kairumo 需要儲存圖片權限，以便將您導出的筆記頁面或繪圖成果儲存至相片圖庫。"
+        # 權限說明的**基準值**（開發語系＝英文）。真正顯示給使用者的是
+        # `Resources/Localizable/<語系>.lproj/InfoPlist.strings`，兩者都產生自
+        # `i18n/ui-strings.json`。
+        #
+        # 這裡原本是寫死的繁體中文，而且 `Info.plist` 裡還有第二份一模一樣的。
+        # 審查用英文語系的機器跑，看到的權限對話框是中文 —— 審查指南 4
+        # （Design）判定「權限請求沒有跟著 App 的語系」，iOS 與 macOS 同時被退。
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "Kairumo uses the microphone to record voice notes in class or meetings, keeping your handwriting in sync with the recording timeline."
+        INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Kairumo uses speech recognition to transcribe your recordings into text on your device and place the transcript in your notes."
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Kairumo uses the local network to edit notes together with people on the same Wi-Fi. Everything is end-to-end encrypted and never passes through a server."
+        INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Kairumo accesses your photo library so you can place pictures into a note and annotate them."
+        INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Kairumo saves pages and drawings you export to your photo library."
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         # Mac App Store 必填（上傳時被 altool 以 90242 擋下過）。
         INFOPLIST_KEY_LSApplicationCategoryType: "public.app-category.productivity"

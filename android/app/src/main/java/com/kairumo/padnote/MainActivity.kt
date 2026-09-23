@@ -1628,6 +1628,25 @@ private fun InkScreen(
     var editingImage by remember { mutableStateOf<NoteImage?>(null) }
     LaunchedEffect(notebook, pageId) { imageStore.load(); imageRevision++ }
 
+    // 把打包好的筆記存到**使用者自己選的位置**（SAF）。
+    //
+    // App 的資料在私有目錄裡，使用者碰不到 —— 分享可以把檔案送去別的 App，
+    // 但那不是「存到我選的資料夾」。Apple 端因為同一件事被 Mac App Store
+    // 退件（審查指南 2.4.5(i)），而這個缺口兩邊都有。
+    var pendingSaveBytes by remember { mutableStateOf<ByteArray?>(null) }
+    val saveAsPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/zip")
+    ) { uri ->
+        val bytes = pendingSaveBytes
+        pendingSaveBytes = null
+        if (uri != null && bytes != null) {
+            message = runCatching {
+                activity.contentResolver.openOutputStream(uri)?.use { it.write(bytes) }
+                l10n("export_done")
+            }.getOrElse { l10n("import_failed_read") }
+        }
+    }
+
     // 挑選器的過濾條件來自核心，算一次就好 —— 每次開選單都重算的話，
     // 那是一趟不必要的 FFI 往返。
     val imageMimeTypes = remember { FileImport.mimeTypes(FfiImportSlot.IMAGE) }
@@ -2611,6 +2630,32 @@ private fun InkScreen(
                     }
                 )
                 Divider()
+                DropdownMenuItem(
+                    text = { Text(l10n("export_save_as")) },
+                    modifier = Modifier.testTag("editor.export.save_as"),
+                    onClick = {
+                        showShareMenu = false
+                        val id = notebook?.second ?: notebookId
+                        if (id != null) {
+                            val dir = File(
+                                NotebookLibrary.directory(activity),
+                                "$id.${NotebookLibrary.EXTENSION}")
+                            val title = FolderTree.titleOf(activity, id) ?: "Notebook"
+                            // 打包那一段與「分享」共用 `Exporter.sharePackage`
+                            // —— 差別只在拿到檔案之後給誰。
+                            Exporter.sharePackage(activity, dir, title)
+                                .mapCatching { it.readBytes() }
+                                .fold(
+                                    onSuccess = {
+                                        pendingSaveBytes = it
+                                        saveAsPicker.launch(
+                                            "$title.${NotebookLibrary.EXTENSION}")
+                                    },
+                                    onFailure = { message = exportFailureMessage(it) }
+                                )
+                        }
+                    }
+                )
                 DropdownMenuItem(
                     text = { Text(l10n("share_note")) },
                     modifier = Modifier.testTag("editor.export.share"),

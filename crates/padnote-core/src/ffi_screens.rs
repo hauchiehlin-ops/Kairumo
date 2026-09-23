@@ -386,6 +386,10 @@ fn editor_spec() -> FfiScreenSpec {
                     c("editor.export.pdf", Button, "export_pdf"),
                     c("editor.export.image", Button, "export_image"),
                     c("editor.export.print", Button, "print_note"),
+                    // 存到**使用者自己選的位置**。分享面板不算 ——
+                    // 它把檔案送去別的 App，但使用者沒辦法說「存到我的文件
+                    // 資料夾」。Mac App Store 審查指南 2.4.5(i) 要的是這一個。
+                    c("editor.export.save_as", Button, "export_save_as"),
                     c("editor.export.share", Button, "share_note"),
                 ],
             ),
