@@ -1346,7 +1346,7 @@ mod recovery_really_works {
     #[test]
     fn the_recovery_code_actually_unlocks_the_notebook() {
         let root = tmp("unlock");
-        let (mut pkg, phrase) =
+        let (pkg, phrase) =
             NotebookPackage::create_encrypted(&root, "秘密", 1, "correct horse battery")
                 .expect("建立");
         assert!(pkg.recovery_can_unlock(), "新建的套件應該有可用的復原碼");
@@ -1403,7 +1403,7 @@ mod recovery_really_works {
             .expect("建立");
         NotebookPackage::open(&root)
             .expect("重開")
-            .unlock(&"correct horse battery")
+            .unlock("correct horse battery")
             .expect("密碼應該照樣開得了");
     }
 
@@ -2052,7 +2052,7 @@ mod tests {
     #[test]
     fn an_encrypted_blob_is_ciphertext_on_disk_but_keeps_its_plaintext_name() {
         let root = tmp("enc-blob");
-        let (mut pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
+        let (pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
         let plaintext = "這張圖的內容不該出現在磁碟上".as_bytes();
         let id = pkg.blobs().put(plaintext).unwrap();
 
@@ -2080,7 +2080,7 @@ mod tests {
     #[test]
     fn a_blob_cannot_be_read_without_the_passphrase() {
         let root = tmp("enc-blob-locked");
-        let (mut pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
+        let (pkg, _) = NotebookPackage::create_encrypted(&root, "t", 1, "pw").unwrap();
         let id = pkg.blobs().put(b"secret image").unwrap();
         // 沒有金鑰的把手讀出來的是密文，雜湊當然對不上 —— 要回錯誤，
         // 不能把那串密文交出去（交出去的話畫面上會出現一張壞掉的圖）。

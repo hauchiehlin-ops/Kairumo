@@ -1795,8 +1795,7 @@ impl PadnoteSession {
         locale_tag: String,
     ) -> Result<Vec<u8>, FfiError> {
         let app = self.lock();
-        let mut options = padnote_export::PdfExportOptions::default();
-        options.locale = padnote_i18n::Locale::from_tag_or_default(&locale_tag);
+        let mut page_guides = HashMap::new();
         for (index, page) in app.notebook().pages().iter().enumerate() {
             let Some(paper) = paper_ids.get(index) else {
                 continue;
@@ -1805,9 +1804,14 @@ impl PadnoteSession {
             let guides =
                 crate::app::NotebookSession::resolve_page_guides(paper, w, h, &palette_id, &labels);
             if !guides.is_empty() {
-                options.page_guides.insert(page.id, guides);
+                page_guides.insert(page.id, guides);
             }
         }
+        let options = padnote_export::PdfExportOptions {
+            locale: padnote_i18n::Locale::from_tag_or_default(&locale_tag),
+            page_guides,
+            ..Default::default()
+        };
         Ok(app.export_pdf(&options)?)
     }
 
@@ -1829,18 +1833,23 @@ impl PadnoteSession {
         let (w, h) = page.size;
         let guides =
             crate::app::NotebookSession::resolve_page_guides(&paper_id, w, h, &palette_id, &labels);
-        let mut options = padnote_export::PdfExportOptions::default();
-        options.locale = padnote_i18n::Locale::from_tag_or_default(&locale_tag);
+        let mut page_guides = HashMap::new();
         if !guides.is_empty() {
-            options.page_guides.insert(page_uuid, guides);
+            page_guides.insert(page_uuid, guides);
         }
-        options.page_range = Some(vec![
+        let page_range = Some(vec![
             app.notebook()
                 .pages()
                 .iter()
                 .position(|p| p.id == page_uuid)
                 .unwrap_or(0),
         ]);
+        let options = padnote_export::PdfExportOptions {
+            page_range,
+            page_guides,
+            locale: padnote_i18n::Locale::from_tag_or_default(&locale_tag),
+            ..Default::default()
+        };
         Ok(app.export_pdf(&options)?)
     }
 

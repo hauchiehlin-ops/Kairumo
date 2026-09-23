@@ -986,6 +986,14 @@ public struct NotebookEditorView: View {
     /// 為什麼要去抖動：`onDrawingChanged` 在**一筆畫的途中**就會被叫很多次，
     /// 每次都寫 `notebooks.json` 並觸發整棵畫面重算的話，寫字會頓。
     @State private var inkTouchWork: DispatchWorkItem? = nil
+    /// 已經寫進核心 `.padnote` 的筆跡基準線，依頁次保存。
+    ///
+    /// `PKCanvasView` 在一筆畫尚未離筆時就會連續回報 drawing 變更。核心的 ink log
+    /// 是 append-only；若每次回報都 append，會把同一筆的半成品寫成好幾筆。
+    /// 因此畫布仍即時寫 `.drawing`，核心套件則停筆後用這個基準線只補新增筆畫。
+    @State private var coreInkBaselines: [Int: PKDrawing] = [:]
+    @State private var pendingCoreInk: [Int: PKDrawing] = [:]
+    @State private var coreInkWork: DispatchWorkItem? = nil
     @State private var canvasView: PKCanvasView? = nil
     @State private var currentPageHeight: CGFloat = PageGeometry.height
     /// 掌拒（工作項 S-45）。判定規則走核心，與 Android 同一份。
@@ -1466,6 +1474,10 @@ public struct NotebookEditorView: View {
         .onChange(of: notebook.id) { _ in
             // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
             currentPageIndex = 0
+            coreInkBaselines.removeAll()
+            pendingCoreInk.removeAll()
+            coreInkWork?.cancel()
+            coreInkWork = nil
             loadCurrentPage()
             PageThumbnailRenderer.invalidateAll()
         }
@@ -3030,6 +3042,7 @@ public struct NotebookEditorView: View {
                             isFocused: index == currentPageIndex,
                             objectLayer: { objectLayer(forPage: index) },
                             onDrawingChanged: { page, updated in
+                                recordDrawingEdit(page: page, drawing: updated)
                                 broadcastDrawingChange(page: page, drawing: updated)
                             },
                             onSelectionChanged: { hasLassoSelection = $0 },
@@ -3396,11 +3409,7 @@ public struct NotebookEditorView: View {
                         processedDrawing = applySymmetry(to: processedDrawing)
                     }
                     let newDrawing = processedDrawing
-                    // 即時自動儲存至專屬二進位檔案（不觸發 Struct 重新賦值以防競態覆蓋）
-                    store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: newDrawing)
-                    // 筆畫已經落盤了，但筆記本身還沒被標記成「剛改過」——
-                    // 沒有這一步，首頁的修改時間不會動，雲端同步也不會被觸發。
-                    noteInkEdited()
+                    recordDrawingEdit(page: currentPageIndex, drawing: newDrawing)
 
                     if !isApplyingRemoteUpdate && isCollaborating {
                         let count = newDrawing.strokes.count
@@ -7143,12 +7152,88 @@ public struct NotebookEditorView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: work)
     }
 
+    private func corePackageURL() -> URL {
+        store.corePackagesDirectory.appending(path: "\(notebook.id.lowercased()).padnote")
+    }
+
+    private func coreInkBaseline(for page: Int) -> PKDrawing {
+        if let cached = coreInkBaselines[page] { return cached }
+        let packageDrawings = try? NotebookPackageBridge.drawings(
+            fromPackageAt: corePackageURL(),
+            deviceId: NotebookMigration.deviceId)
+        let baseline: PKDrawing
+        if let packageDrawings, packageDrawings.indices.contains(page) {
+            baseline = packageDrawings[page]
+        } else {
+            baseline = PKDrawing()
+        }
+        coreInkBaselines[page] = baseline
+        return baseline
+    }
+
+    private func recordDrawingEdit(page: Int, drawing: PKDrawing) {
+        store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: drawing)
+        if page == currentPageIndex {
+            currentDrawing = drawing
+        }
+        pendingCoreInk[page] = drawing
+        scheduleCoreInkFlush()
+        noteInkEdited()
+    }
+
+    private func scheduleCoreInkFlush() {
+        coreInkWork?.cancel()
+        let work = DispatchWorkItem {
+            flushPendingCoreInk()
+        }
+        coreInkWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: work)
+    }
+
+    private func flushPendingCoreInk() {
+        coreInkWork?.cancel()
+        coreInkWork = nil
+        let pending = pendingCoreInk
+        pendingCoreInk.removeAll()
+
+        for (page, drawing) in pending {
+            let baseline = coreInkBaseline(for: page)
+            let added = StrokeDelta.added(in: drawing, since: baseline)
+            guard !added.isEmpty else {
+                coreInkBaselines[page] = drawing
+                continue
+            }
+            do {
+                try NotebookPackageBridge.appendInkDelta(
+                    document: notebook,
+                    pageIndex: page,
+                    strokes: added,
+                    to: corePackageURL(),
+                    deviceId: NotebookMigration.deviceId)
+                coreInkBaselines[page] = drawing
+            } catch {
+                // 保留下一輪再試；不要因為核心套件暫時寫不進去而丟掉 Apple 端的
+                // 即時 `.drawing` 自動存檔。
+                pendingCoreInk[page] = drawing
+                print("[InkAutosave] Failed to append ink to package: \(error)")
+            }
+        }
+    }
+
     private func saveCurrentPageDrawing() {
         // 明確存檔就把待辦的去抖動取消掉 —— 留著的話 1.2 秒後會再寫一次
         // 一模一樣的內容。
         inkTouchWork?.cancel()
         inkTouchWork = nil
+        if pageDisplayMode == .continuous {
+            flushPendingCoreInk()
+            notebook.lastModifiedDate = Date()
+            store.updateNotebook(notebook)
+            return
+        }
         store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: currentDrawing)
+        pendingCoreInk[currentPageIndex] = currentDrawing
+        flushPendingCoreInk()
         notebook.lastModifiedDate = Date()
         store.updateNotebook(notebook)
     }

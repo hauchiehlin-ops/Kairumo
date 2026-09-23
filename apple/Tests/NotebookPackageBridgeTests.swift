@@ -192,6 +192,37 @@ final class NotebookPackageBridgeTests: XCTestCase {
         XCTAssertTrue(readBack[0].strokes.isEmpty)
     }
 
+    func testInkDeltaAppendAutosavesIntoThePackage() throws {
+        let doc = NotebookDocument(title: "即時筆跡", pageCount: 1)
+        let path = workDir.appendingPathComponent("autosave.padnote")
+        let first = stroke(at: 10, color: .red)
+        let second = stroke(at: 80, color: .blue)
+
+        try NotebookPackageBridge.appendInkDelta(
+            document: doc,
+            pageIndex: 0,
+            strokes: [first],
+            to: path,
+            deviceId: 0xC1)
+
+        var readBack = try NotebookPackageBridge.drawings(fromPackageAt: path, deviceId: 0xC2)
+        XCTAssertEqual(readBack.count, 1)
+        XCTAssertEqual(readBack[0].strokes.count, 1)
+
+        try NotebookPackageBridge.appendInkDelta(
+            document: doc,
+            pageIndex: 0,
+            strokes: [second],
+            to: path,
+            deviceId: 0xC1)
+
+        readBack = try NotebookPackageBridge.drawings(fromPackageAt: path, deviceId: 0xC2)
+        XCTAssertEqual(readBack[0].strokes.count, 2)
+        XCTAssertEqual(
+            Array(InkInterop.rgba(from: readBack[0].strokes[1].ink.color)),
+            Array(InkInterop.rgba(from: second.ink.color)))
+    }
+
     /// 產生一份給 Android 開的交接檔。
     ///
     /// 這不是在測 Swift —— 它是整個 WP4 的驗收素材：iOS 這邊真的建一本筆記、

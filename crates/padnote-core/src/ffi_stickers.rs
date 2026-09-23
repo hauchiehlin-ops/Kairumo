@@ -16,7 +16,7 @@
 
 // 與素材線圖共用同一組 `Builder` 與小工具 —— 複製一份的話，兩邊的
 // 圓角、貝茲近似值會慢慢漂開，而那是使用者看得到的。
-use crate::ffi_asset_art::{Builder, FfiDrawPath, FfiPathSeg, FfiPathVerb, curve_seg, m, seg};
+use crate::ffi_asset_art::{Builder, FfiDrawPath, FfiPathVerb, curve_seg, m, seg};
 
 include!("sticker_shapes.rs");
 

@@ -483,6 +483,62 @@ enum NotebookPackageBridge {
         return summary
     }
 
+    /// 把某一頁「新增加的」筆畫追加進核心套件。
+    ///
+    /// 編輯器的即時自動儲存原本只寫 `Drawings/*.drawing`，那是 Apple 端自己的
+    /// 快取；Android、同步與 `.padnote` 套件都看不到。整本匯出可以重建套件，
+    /// 但停筆後的自動儲存不能每次重建整本，否則一頁寫字會把所有附件都重寫。
+    /// 這裡只做 append-only 的 ink log，和核心儲存格式一致。
+    static func appendInkDelta(
+        document: NotebookDocument,
+        pageIndex: Int,
+        strokes: [PKStroke],
+        to destination: URL,
+        deviceId: UInt32
+    ) throws {
+        guard !strokes.isEmpty else { return }
+
+        let session: PadnoteSession
+        if FileManager.default.fileExists(atPath: destination.path) {
+            session = try PadnoteSession.openExisting(path: destination.path, deviceId: deviceId)
+        } else {
+            try FileManager.default.createDirectory(
+                at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+            session = try PadnoteSession.createEmpty(
+                path: destination.path,
+                title: document.title,
+                nowUnixMs: UInt64(document.createdAt.timeIntervalSince1970 * 1000),
+                deviceId: deviceId)
+        }
+
+        let style = pageStyle(for: document.template)
+        while Int(session.pageCount()) <= pageIndex {
+            _ = try session.addPage(style: style)
+        }
+
+        let ids = try pageIds(of: session)
+        guard pageIndex < ids.count else { throw BridgeError.noPages }
+        let pageId = ids[pageIndex]
+        try session.setPageSize(
+            pageId: pageId,
+            width: Float(document.pageSize.width),
+            height: Float(document.height(forPage: pageIndex)))
+
+        var meta = NotebookMeta(from: document)
+        meta.pageIds = ids
+        try session.setNotebookMeta(json: meta.encodedJSON())
+
+        for stroke in strokes {
+            let draft = InkInterop.draft(from: stroke)
+            _ = try session.addStroke(
+                pageId: pageId,
+                tool: draft.tool,
+                colorRgba: draft.colorRgba,
+                baseWidth: draft.baseWidth,
+                points: draft.points)
+        }
+    }
+
     /// 套件裡現有的頁面 id，依頁次。開不起來時回 `nil`。
     private static func existingPageIds(in package: URL, deviceId: UInt32) -> [String]? {
         guard FileManager.default.fileExists(atPath: package.path),

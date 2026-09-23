@@ -60,6 +60,7 @@ pub struct Manifest {
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(tag = "scheme", rename_all = "kebab-case")]
+#[allow(clippy::large_enum_variant)]
 pub enum Encryption {
     #[default]
     None,
