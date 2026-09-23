@@ -105,6 +105,22 @@ impl FfiSyncScheduler {
         self.inner.lock().unwrap().finish(outcome.into(), now_ms);
     }
 
+    /// 這一輪**真的拉到了對方的東西**（下載數或新筆記本 > 0）。
+    ///
+    /// 跟 `finish(.success)` 不一樣：一輪跑完通常什麼也沒變，那是常態。
+    /// 只有真的拉到東西才代表對方正在寫，而那是唯一值得把節奏加快到
+    /// 三秒的時候 —— 拿「跑完一輪」當證據的話，快檔會永遠開著。
+    pub fn note_remote_change(&self, now_ms: u64) {
+        self.inner.lock().unwrap().note_remote_change(now_ms);
+    }
+
+    /// 現在這一刻的輪詢間隔（毫秒）。平台層不需要據此重設計時器 ——
+    /// 心跳照 [`sync_heartbeat_interval_ms`] 跑，由排程器擋掉太早的那些。
+    /// 這個方法是給介面顯示與測試用的。
+    pub fn current_period_ms(&self, now_ms: u64) -> u64 {
+        self.inner.lock().unwrap().current_period_ms(now_ms)
+    }
+
     /// 距離下一次起跑還有多久。`u64::MAX` 表示沒有待辦。
     pub fn next_due_in_ms(&self, now_ms: u64) -> u64 {
         self.inner
@@ -124,10 +140,21 @@ impl FfiSyncScheduler {
     }
 }
 
-/// 前景心跳的建議間隔（毫秒）。平台層照這個值設計時器。
+/// 基準輪詢間隔（毫秒）。這是**節奏**，不是心跳頻率 ——
+/// 平台層要設計時器的話用 [`sync_heartbeat_interval_ms`]。
 #[uniffi::export]
 pub fn sync_periodic_interval_ms() -> u64 {
     padnote_sync::scheduler::PERIODIC_MS
+}
+
+/// 前景心跳的間隔（毫秒）。平台層照這個值設計時器。
+///
+/// 它等於**最快的那一檔**：心跳只是「問一下」，真正的節奏由
+/// [`FfiSyncScheduler::tick`] 內部依當下狀態決定。心跳比最快檔慢的話，
+/// 快檔永遠跑不出來 —— 三秒的設定會被十二秒的計時器吃掉。
+#[uniffi::export]
+pub fn sync_heartbeat_interval_ms() -> u64 {
+    padnote_sync::scheduler::ACTIVE_PERIODIC_MS
 }
 
 /// 本機存檔後的去抖動時間（毫秒）。
@@ -168,5 +195,26 @@ mod tests {
     fn no_pending_work_reports_max() {
         let s = FfiSyncScheduler::create();
         assert_eq!(s.next_due_in_ms(0), u64::MAX);
+    }
+}
+
+#[cfg(test)]
+mod adaptive_cadence_crosses_the_ffi {
+    use super::*;
+
+    #[test]
+    fn pulling_a_remote_change_speeds_the_scheduler_up() {
+        // FFI 這一層漏掉 `note_remote_change` 的話，核心的快檔
+        // 在兩個平台上都等於不存在。
+        let s = FfiSyncScheduler::create();
+        s.tick(0);
+        assert_eq!(s.current_period_ms(0), sync_periodic_interval_ms());
+        s.note_remote_change(0);
+        assert_eq!(s.current_period_ms(0), sync_heartbeat_interval_ms());
+    }
+
+    #[test]
+    fn the_heartbeat_is_never_slower_than_the_fastest_period() {
+        assert!(sync_heartbeat_interval_ms() <= sync_periodic_interval_ms());
     }
 }

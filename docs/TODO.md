@@ -99,6 +99,54 @@ Apple 單元測試 382 條中 381 過（唯一那條紅是無障礙標籤，與�
 
 合計刪掉約 **430 行**死程式碼。
 
+### ~~S-SYNC-CADENCE~~ ✅ 同步節奏改成三檔自適應 —— **兩端同時生效**
+
+原本的排程器不管有沒有人在用，一律十二秒拉一次。它分不出
+「一直在拉但都是空的」與「對方正在改」—— 而這兩種情況該用完全不同的
+節奏。
+
+| 情況 | 間隔 | 判斷依據 |
+|---|---|---|
+| 九十秒內真的拉到遠端變動 | **3 秒** | `note_remote_change()` |
+| 任一邊十分鐘內有動靜 | 12 秒（`PERIODIC_MS`） | 本機編輯或遠端變動 |
+| 兩邊都十分鐘沒動 | 60 秒 | 省電 |
+
+**「跑完一輪」不算動靜。** 一輪跑完通常什麼也沒變，那是常態；拿它當
+「對方在寫」的證據的話，快檔會永遠開著 —— 那等於把十二秒改成三秒的
+全時段輪詢，配額與電池都吃不消。兩端各自接的是「真的下載到東西」那個
+訊號（Apple 的 `report.downloaded > 0 || report.newNotebooks > 0`、
+Android 的 `result.changed.isNotEmpty()`）。
+
+**「沒有歷史」也不算閒著。** 剛開起來的裝置正是最可能要接收對方編輯的
+那一台，所以排程器記了 `first_seen`：要先照基準檔跑滿十分鐘，才有資格
+降到省電檔。第一版沒有這一條，直接打掉了兩條既有測試 —— 而它們打掉的
+正是 `VISIBLE_LATENCY_BUDGET_MS` 那個承諾。
+
+**心跳 ≠ 輪詢頻率。** 平台的計時器改用 `syncHeartbeatIntervalMs()`
+（= 最快的那一檔，3 秒），心跳只是「問一下」，真正的節奏由
+`FfiSyncScheduler::tick` 內部決定。心跳比最快檔慢的話，三秒的設定會被
+十二秒的計時器整個吃掉。
+
+`worst_case_visible_latency_ms()` **刻意沒有**改用省電檔計算 —— 那會讓
+承諾變成 61.5 秒，一個誠實但沒有用的數字：它描述的是沒有人在用的情況。
+另外有 `active_visible_latency_ms()`（6 秒）描述來回編輯時的體感。
+
+**驗證**：`padnote-sync` 111 項、`padnote-core` 461 項全過；Android
+`compileDebugKotlin` 乾淨。**實機雙裝置的體感還沒量過** —— 見 H-SYNC。
+
+### 附帶修掉的一個腳本坑：Android 綁定被 Apple 的檢查擋住
+
+`generate-bindings.sh` 裡產生 Android App 綁定的那一段，排在
+XCFramework 同步檢查**後面**，而那個檢查會 `exit 1`。結果是：
+只要 XCFramework 一過期，Android 的綁定就跟著不更新，而畫面上只看得到
+一段叫你去重建 XCFramework 的訊息。症狀是 Kotlin 端整片
+`Unresolved reference`，完全指不到真正的原因。已把 Android 那一段移到
+檢查之前。
+
+同一段裡還有一個順序問題：原本先編 relay 版的 dylib、再用 `cargo run`
+叫 bindgen —— 而 `cargo run` 會為了編 bindgen 用**預設 feature** 重編
+`padnote-core`，把剛產好的 dylib 蓋掉。現在先把 bindgen 編出來再編 dylib。
+
 ### S-263. 畫面稽核的剩餘缺口 —— 從 6 降到 2
 
 **先更正一個我自己報錯的發現。** 我曾說「`home.notebooks.sort` 與

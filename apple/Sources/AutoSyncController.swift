@@ -75,7 +75,12 @@ public final class AutoSyncController: ObservableObject {
         started = true
 
         // 前景心跳。間隔由核心給 —— 兩個平台照同一個數字。
-        let interval = Double(syncPeriodicIntervalMs()) / 1000.0
+        //
+        // 心跳只是「問一下」，不是輪詢頻率：真正的節奏由排程器依
+        // 當下狀態決定（對方正在寫→三秒、有人在動→十二秒、
+        // 兩邊都閒→一分鐘）。心跳要跟最快的那一檔一樣快，否則
+        // 快檔會被慢計時器吃掉。
+        let interval = Double(syncHeartbeatIntervalMs()) / 1000.0
         let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.heartbeat() }
         }
@@ -183,6 +188,9 @@ public final class AutoSyncController: ObservableObject {
         // 那份清單看不到它們 —— 而那正是它最該顯示的東西。
         if report.downloaded > 0 || report.newNotebooks > 0 {
             NotebookStore.shared.refreshRecordings()
+            // 真的拉到了對方的東西 = 對方正在寫。接下來九十秒改用
+            // 快檔，讓來回編輯像在同一台裝置上。
+            scheduler.noteRemoteChange(nowMs: nowMs)
         }
         if !report.isNoOp || report.newNotebooks > 0 {
             SyncHistory.markGoogleSynced()

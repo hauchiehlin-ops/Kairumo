@@ -21,7 +21,7 @@ import kotlinx.coroutines.sync.withLock
 import uniffi.padnote_core.FfiSyncOutcome
 import uniffi.padnote_core.FfiSyncScheduler
 import uniffi.padnote_core.FfiSyncTrigger
-import uniffi.padnote_core.syncPeriodicIntervalMs
+import uniffi.padnote_core.syncHeartbeatIntervalMs
 
 /**
  * 自動同步的觸發器（P2，Android）。
@@ -85,8 +85,13 @@ object AutoSync {
         val app = context.applicationContext
 
         // 前景心跳。間隔由核心給 —— 兩個平台照同一個數字。
+        //
+        // 心跳只是「問一下」，不是輪詢頻率：真正的節奏由排程器依
+        // 當下狀態決定（對方正在寫→三秒、有人在動→十二秒、
+        // 兩邊都閒→一分鐘）。心跳要跟最快的那一檔一樣快，否則
+        // 快檔會被慢計時器吃掉。
         scope.launch {
-            val interval = syncPeriodicIntervalMs().toLong()
+            val interval = syncHeartbeatIntervalMs().toLong()
             while (true) {
                 delay(interval)
                 scheduler.tick(nowMs())
@@ -162,6 +167,9 @@ object AutoSync {
                     SyncHistory.markGoogleSynced(context)
                     if (result.changed.isNotEmpty()) {
                         _changedNotebooks.value = result.changed
+                        // 真的拉到了對方的東西 = 對方正在寫。接下來
+                        // 九十秒改用快檔，讓來回編輯像在同一台裝置上。
+                        scheduler.noteRemoteChange(nowMs())
                     }
                     FfiSyncOutcome.SUCCESS
                 }

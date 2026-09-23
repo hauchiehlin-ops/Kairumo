@@ -64,11 +64,44 @@ pub enum SyncOutcome {
 /// 1.5 秒是一句話寫完的自然停頓。
 pub const DEBOUNCE_MS: u64 = 1_500;
 
-/// 前景時多久拉一次。
+/// 前景時多久拉一次（**沒有跡象顯示對方在動**時的基準）。
 ///
 /// P1 之後這是**一個** HTTP 請求（`changes.list`），沒有變動就是空回應，
 /// 所以 12 秒不貴。舊結構下這個頻率會把 Drive 的配額打爆。
 pub const PERIODIC_MS: u64 = 12_000;
+
+/// **對方正在寫**的時候多久拉一次。
+///
+/// # 為什麼要分快慢兩檔
+///
+/// 固定 12 秒的問題不是它太慢，是它**在最該快的時候也只有 12 秒**。
+/// 兩個人（或同一個人的兩台裝置）正在來回改同一本筆記時，每一次
+/// 都要等最多 12 秒才看得到對方 —— 那個體感就是「這個同步不是即時的」。
+///
+/// 反過來，三小時沒有人動的時候，12 秒一次的輪詢是純粹的耗電與配額。
+///
+/// 3 秒是「對話節奏」的上限：再久使用者就會開始重整、開始懷疑。
+/// 再短的話一輪還沒回來下一輪就排上了，而那只會讓請求互相排隊。
+pub const ACTIVE_PERIODIC_MS: u64 = 3_000;
+
+/// 距離上一次「真的有拉到東西」多久之內算**對方正在寫**。
+///
+/// 90 秒而不是 10 秒：使用者在兩台裝置之間切換、思考、寫一段話的節奏
+/// 是以分鐘計的。窗口太短的話，他停下來想三十秒，快檔就掉回慢檔，
+/// 而他繼續寫的那一刻又要等 12 秒。
+pub const ACTIVE_WINDOW_MS: u64 = 90_000;
+
+/// 完全沒有動靜多久之後改用省電節奏。
+pub const IDLE_AFTER_MS: u64 = 10 * 60_000;
+
+/// 省電節奏下多久拉一次。
+///
+/// 這一檔只在**本機十分鐘沒有編輯、遠端十分鐘沒有變動**時生效。
+/// 那種情況下 12 秒拉一次換到的是零 —— 而手機的電池是有限的。
+///
+/// 使用者回到 App（`Foreground`）或寫任何東西（`LocalEdit`）都會立刻
+/// 跳回快檔，所以這一檔不會讓他「等很久才同步」。
+pub const IDLE_PERIODIC_MS: u64 = 60_000;
 
 /// **對使用者的承諾**：一邊寫完，另一邊最久多久看得到（毫秒）。
 ///
@@ -86,11 +119,23 @@ pub const VISIBLE_LATENCY_BUDGET_MS: u64 = 15_000;
 
 /// 最壞情況下，A 寫完到 B 看得見要多久。
 ///
-/// A 端去抖動之後才推（`DEBOUNCE_MS`），B 端最久要等一輪定期拉取
-/// （`PERIODIC_MS`）。兩段相加就是上界 ——
-/// 中間的網路時間不算在內，那不是排程器決定得了的。
+/// A 端去抖動之後才推（`DEBOUNCE_MS`），B 端最久要等一輪定期拉取。
+/// 兩段相加就是上界 —— 中間的網路時間不算在內，那不是排程器決定得了的。
+///
+/// **用 `PERIODIC_MS` 而不是 `IDLE_PERIODIC_MS` 是刻意的。** 省電那一檔
+/// 只在雙方都十分鐘沒有動靜時生效，而那時候「即時」沒有意義；
+/// 任何一邊一動（本機編輯、回到前景、拉到遠端變動）就立刻回到快檔。
+/// 拿省電檔去算承諾的話，這個數字會變成 61.5 秒 —— 那是個誠實但沒有用的
+/// 數字，它描述的是沒有人在用的情況。
 pub const fn worst_case_visible_latency_ms() -> u64 {
     DEBOUNCE_MS + PERIODIC_MS
+}
+
+/// 對方正在寫的時候，A 寫完到 B 看得見要多久。
+///
+/// 這才是使用者在**來回改同一本筆記**時感受到的數字。
+pub const fn active_visible_latency_ms() -> u64 {
+    DEBOUNCE_MS + ACTIVE_PERIODIC_MS
 }
 
 /// 失敗退避的起點與上限。
@@ -113,6 +158,17 @@ pub struct SyncScheduler {
     blocked_on_auth: bool,
     /// 上一次跑完的時間，週期性拉取據此計算。
     last_finished: Option<u64>,
+    /// 上一次**真的拉到東西**的時間。快慢檔據此決定。
+    ///
+    /// 與 `last_finished` 分開：一輪跑完但什麼也沒變（空回應）是常態，
+    /// 拿它當「對方在動」的證據的話，快檔會永遠開著。
+    last_remote_change: Option<u64>,
+    /// 上一次本機編輯的時間。省電檔要兩邊都沒動才生效。
+    last_local_edit: Option<u64>,
+    /// 這個排程器第一次被叫到的時間。**沒有歷史不等於安靜** ——
+    /// 剛開 App 的裝置正是最需要快的那一個，拿「從來沒動過」
+    /// 當作省電的理由，會讓對方的編輯要等一分鐘才看得見。
+    first_seen: Option<u64>,
 }
 
 impl Default for SyncScheduler {
@@ -129,6 +185,57 @@ impl SyncScheduler {
             failures: 0,
             blocked_on_auth: false,
             last_finished: None,
+            last_remote_change: None,
+            last_local_edit: None,
+            first_seen: None,
+        }
+    }
+
+    /// 這一輪**真的拉到了東西**。
+    ///
+    /// 呼叫端在同步帶回遠端變動時呼叫它 —— 那是「對方正在寫」唯一可靠的
+    /// 證據。沒有這個訊號的話，排程器分不出「一直在拉但都是空的」與
+    /// 「對方正在改」，而那兩種情況該用完全不同的節奏。
+    pub fn note_remote_change(&mut self, now_ms: u64) {
+        self.first_seen.get_or_insert(now_ms);
+        self.last_remote_change = Some(now_ms);
+    }
+
+    /// 現在該用哪一種輪詢間隔。
+    ///
+    /// 三檔，依「有沒有人在動」決定：
+    ///
+    /// * 剛拉到遠端變動（90 秒內）→ 快檔，對方正在寫
+    /// * 本機或遠端十分鐘內有動靜 → 基準檔
+    /// * 兩邊都十分鐘沒動 → 省電檔
+    ///
+    /// 回傳的是毫秒。公開是為了讓平台層能據此設定計時器 ——
+    /// 平台端自己猜一個數字的話，兩端的節奏會不一樣。
+    pub fn current_period_ms(&self, now_ms: u64) -> u64 {
+        let since = |t: Option<u64>| t.map(|v| now_ms.saturating_sub(v));
+
+        // 對方正在寫 —— 這是最該快的時候。
+        if let Some(gap) = since(self.last_remote_change) {
+            if gap <= ACTIVE_WINDOW_MS {
+                return ACTIVE_PERIODIC_MS;
+            }
+        }
+
+        // 兩邊都很久沒動才省電。任何一邊有動靜就維持基準檔 ——
+        // 使用者正在寫的時候把節奏放慢，是最糟的省電方式。
+        //
+        // 「從來沒動過」算進來的是 `first_seen`，不是無限久以前：
+        // 一台剛開起來、還沒收到任何東西的裝置，要先照基準檔跑滿
+        // 十分鐘，才有資格說自己閒著。
+        let last_activity = [self.last_local_edit, self.last_remote_change, self.first_seen]
+            .into_iter()
+            .flatten()
+            .max();
+        match since(last_activity) {
+            Some(gap) if gap >= IDLE_AFTER_MS => IDLE_PERIODIC_MS,
+            // 連 `first_seen` 都還沒設 —— 還沒開始跑，照基準檔。
+            None => PERIODIC_MS,
+            Some(_) => PERIODIC_MS,
         }
     }
 
@@ -142,6 +249,10 @@ impl SyncScheduler {
         if self.blocked_on_auth && trigger != SyncTrigger::Manual {
             return;
         }
+        if trigger == SyncTrigger::LocalEdit {
+            self.last_local_edit = Some(now_ms);
+        }
+        self.first_seen.get_or_insert(now_ms);
         let due = if trigger.debounced() {
             now_ms + DEBOUNCE_MS
         } else {
@@ -198,6 +309,7 @@ impl SyncScheduler {
 
     /// 前景的心跳。呼叫端每次計時器響就呼叫它，由排程器決定要不要排一輪。
     pub fn tick(&mut self, now_ms: u64) {
+        self.first_seen.get_or_insert(now_ms);
         if self.blocked_on_auth || self.running || self.due_at.is_some() {
             return;
         }
@@ -206,7 +318,7 @@ impl SyncScheduler {
             // 還沒跑過任何一輪：立刻排一次。
             None => u64::MAX,
         };
-        if elapsed >= PERIODIC_MS {
+        if elapsed >= self.current_period_ms(now_ms) {
             self.request(SyncTrigger::Periodic, now_ms);
         }
     }
@@ -239,6 +351,128 @@ impl SyncScheduler {
         BACKOFF_MIN_MS
             .saturating_mul(1u64 << shift)
             .min(BACKOFF_MAX_MS)
+    }
+}
+
+#[cfg(test)]
+mod adaptive_cadence {
+    use super::*;
+
+    #[test]
+    fn a_fresh_scheduler_uses_the_baseline_not_the_idle_period() {
+        // **沒有歷史 ≠ 閒著。** 剛開起來的裝置正是最可能要接收
+        // 對方編輯的那一台；把它當成閒置會直接違反
+        // `VISIBLE_LATENCY_BUDGET_MS`。
+        let mut s = SyncScheduler::new();
+        s.tick(0);
+        assert_eq!(s.current_period_ms(0), PERIODIC_MS);
+        assert_eq!(
+            s.current_period_ms(IDLE_AFTER_MS - 1),
+            PERIODIC_MS,
+            "十分鐘還沒滿就降檔了"
+        );
+    }
+
+    #[test]
+    fn pulling_a_remote_change_switches_to_the_fast_period() {
+        // **這是整個改動的重點。** 拉到東西就代表對方正在寫，
+        // 而那是最該快的時候 —— 原本這種情況也只有 12 秒。
+        let mut s = SyncScheduler::new();
+        s.note_remote_change(100_000);
+        assert_eq!(s.current_period_ms(100_000), ACTIVE_PERIODIC_MS);
+        assert_eq!(
+            s.current_period_ms(100_000 + ACTIVE_WINDOW_MS),
+            ACTIVE_PERIODIC_MS,
+            "窗口邊界上還算在寫"
+        );
+    }
+
+    #[test]
+    fn the_fast_period_expires_after_the_window() {
+        let mut s = SyncScheduler::new();
+        s.note_remote_change(0);
+        // 窗口過了就回基準檔 —— 但還不到省電檔，因為遠端十分鐘內有動過。
+        assert_eq!(s.current_period_ms(ACTIVE_WINDOW_MS + 1), PERIODIC_MS);
+    }
+
+    #[test]
+    fn a_local_edit_keeps_the_baseline_period_not_the_idle_one() {
+        // **使用者正在寫的時候把節奏放慢，是最糟的省電方式。**
+        let mut s = SyncScheduler::new();
+        s.request(SyncTrigger::LocalEdit, 500_000);
+        assert_eq!(s.current_period_ms(500_000), PERIODIC_MS);
+        assert_eq!(s.current_period_ms(500_000 + IDLE_AFTER_MS - 1), PERIODIC_MS);
+    }
+
+    #[test]
+    fn both_sides_quiet_for_ten_minutes_drops_to_power_saving() {
+        let mut s = SyncScheduler::new();
+        s.request(SyncTrigger::LocalEdit, 0);
+        s.note_remote_change(0);
+        assert_eq!(s.current_period_ms(IDLE_AFTER_MS), IDLE_PERIODIC_MS);
+        // 再動一下就立刻回到基準檔。
+        s.request(SyncTrigger::LocalEdit, IDLE_AFTER_MS);
+        assert_eq!(s.current_period_ms(IDLE_AFTER_MS), PERIODIC_MS);
+    }
+
+    #[test]
+    fn tick_respects_the_adaptive_period() {
+        // 快檔時 tick 要比基準檔早排一輪 —— 只改 `current_period_ms`
+        // 而沒有把它接進 `tick` 的話，整個改動等於沒有效果。
+        let mut s = SyncScheduler::new();
+        s.request(SyncTrigger::Manual, 0);
+        assert!(s.should_start(0));
+        s.finish(SyncOutcome::Success, 0);
+        s.note_remote_change(0);
+
+        s.tick(ACTIVE_PERIODIC_MS - 1);
+        assert!(!s.has_pending(), "還沒到快檔的間隔就排了");
+        s.tick(ACTIVE_PERIODIC_MS);
+        assert!(s.has_pending(), "到了快檔的間隔卻沒有排");
+    }
+
+    #[test]
+    fn the_active_latency_is_the_number_users_actually_feel() {
+        // 來回改同一本筆記時的延遲。這個數字放寬**仍然做得到**，
+        // 但要改常數 —— 那正是它該被看見的時候（與
+        // `VISIBLE_LATENCY_BUDGET_MS` 同一個理由）。
+        assert!(
+            active_visible_latency_ms() <= 5_000,
+            "對方正在寫時的延遲是 {} ms，超過五秒就不算即時了",
+            active_visible_latency_ms()
+        );
+        assert!(
+            active_visible_latency_ms() < worst_case_visible_latency_ms(),
+            "快檔沒有比基準檔快，那這個改動沒有意義"
+        );
+    }
+
+    #[test]
+    fn the_idle_period_never_shortens_the_promise() {
+        // 省電檔比基準檔慢是刻意的，但它不可以被拿去算承諾 ——
+        // 那個數字描述的是沒有人在用的情況。
+        assert!(IDLE_PERIODIC_MS > PERIODIC_MS);
+        assert_eq!(
+            worst_case_visible_latency_ms(),
+            DEBOUNCE_MS + PERIODIC_MS,
+            "承諾被改成用省電檔算了"
+        );
+    }
+
+    #[test]
+    fn an_empty_round_does_not_count_as_activity() {
+        // 一輪跑完但什麼也沒變是常態。拿它當「對方在動」的證據的話，
+        // 快檔會永遠開著 —— 那是把 12 秒改成 3 秒的全時段輪詢，
+        // 配額與電池都吃不消。
+        let mut s = SyncScheduler::new();
+        s.request(SyncTrigger::Manual, 0);
+        assert!(s.should_start(0));
+        s.finish(SyncOutcome::Success, 0);
+        assert_eq!(
+            s.current_period_ms(0),
+            PERIODIC_MS,
+            "空的一輪不該讓節奏變快"
+        );
     }
 }
 
