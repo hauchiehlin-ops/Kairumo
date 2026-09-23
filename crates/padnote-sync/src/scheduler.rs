@@ -227,10 +227,14 @@ impl SyncScheduler {
         // 「從來沒動過」算進來的是 `first_seen`，不是無限久以前：
         // 一台剛開起來、還沒收到任何東西的裝置，要先照基準檔跑滿
         // 十分鐘，才有資格說自己閒著。
-        let last_activity = [self.last_local_edit, self.last_remote_change, self.first_seen]
-            .into_iter()
-            .flatten()
-            .max();
+        let last_activity = [
+            self.last_local_edit,
+            self.last_remote_change,
+            self.first_seen,
+        ]
+        .into_iter()
+        .flatten()
+        .max();
         match since(last_activity) {
             Some(gap) if gap >= IDLE_AFTER_MS => IDLE_PERIODIC_MS,
             // 連 `first_seen` 都還沒設 —— 還沒開始跑，照基準檔。
@@ -401,7 +405,10 @@ mod adaptive_cadence {
         let mut s = SyncScheduler::new();
         s.request(SyncTrigger::LocalEdit, 500_000);
         assert_eq!(s.current_period_ms(500_000), PERIODIC_MS);
-        assert_eq!(s.current_period_ms(500_000 + IDLE_AFTER_MS - 1), PERIODIC_MS);
+        assert_eq!(
+            s.current_period_ms(500_000 + IDLE_AFTER_MS - 1),
+            PERIODIC_MS
+        );
     }
 
     #[test]

@@ -352,7 +352,11 @@ fn editor_spec() -> FfiScreenSpec {
                     // 上面挑的是 App 自己有的東西（錄好的音、相簿裡的圖），
                     // 這兩項挑的是使用者手上那個檔案 —— 而那常常正是他想放
                     // 進筆記的東西。規格裡列著，兩端才不會只有一邊做。
-                    c("editor.insert.audio_file", Button, "import_audio_from_files"),
+                    c(
+                        "editor.insert.audio_file",
+                        Button,
+                        "import_audio_from_files",
+                    ),
                     c("editor.insert.image", Button, "insert_image"),
                     c("editor.insert.image_file", Button, "import_from_files"),
                     // PDF 只有一個入口：它從來不會在相簿裡。

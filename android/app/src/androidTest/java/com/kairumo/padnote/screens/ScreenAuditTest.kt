@@ -271,7 +271,25 @@ class ScreenAuditTest {
      */
     private fun findMissingWhileScrolling(wanted: List<String>, scrollTag: String?): List<String> =
         wanted.filter { id ->
-            if (compose.onAllNodesWithTag(id).fetchSemanticsNodes().isNotEmpty()) return@filter false
+            // **合併樹與未合併樹都要查。**
+            //
+            // 預設的 `onAllNodesWithTag` 查的是**合併後**的語意樹，而
+            // Compose 會把一段沒有自己互動行為的內容合併進祖先節點 ——
+            // 合併掉的那些，子節點的 `testTag` 就從合併樹上消失了。
+            //
+            // 實際踩過：自訂工具列那張對話框裡，`toolbar.scroll` 清單中的
+            // 每一支筆都查得到（清單項目各自可點，不會被合併），只有
+            // 那段純文字的 `toolbar.hint` 查不到 —— 而它明明無條件渲染。
+            // 更糟的是這件事**會隨環境變**：本機過、CI 紅。
+            //
+            // 無障礙工具看的也是合併樹，所以「在不在合併樹上」本身有意義；
+            // 但這份稽核問的是「這個控制項有沒有被接上」，那就該兩邊都認。
+            if (compose.onAllNodesWithTag(id).fetchSemanticsNodes().isNotEmpty() ||
+                compose.onAllNodesWithTag(id, useUnmergedTree = true)
+                    .fetchSemanticsNodes().isNotEmpty()
+            ) {
+                return@filter false
+            }
             // 沒有捲動容器就是真的不在 —— 硬捲一個不存在的容器只會把
             // 「缺這個控制項」變成「捲不過去」，兩種訊息看起來一樣。
             if (scrollTag == null) return@filter true
