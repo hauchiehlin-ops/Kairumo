@@ -5279,6 +5279,14 @@ extension LocalizationManager {
             .ko: "템플릿을 골라 페이지 삽입…",
             .th: "แทรกหน้าด้วยเทมเพลต…"
         ],
+        "insert_pdf": [
+            .zhHant: "插入 PDF 頁面",
+            .en: "Insert PDF Page",
+            .zhHans: "插入 PDF 页面",
+            .ja: "PDF ページを挿入",
+            .ko: "PDF 페이지 삽입",
+            .th: "แทรกหน้า PDF"
+        ],
         "insert_swatch": [
             .zhHant: "插入色票卡",
             .en: "Insert Color Swatch",
@@ -7511,6 +7519,14 @@ extension LocalizationManager {
             .ko: "녹음 일시정지",
             .th: "หยุดการบันทึกชั่วคราว"
         ],
+        "pdf_choose_page": [
+            .zhHant: "要插入第幾頁？",
+            .en: "Which page?",
+            .zhHans: "要插入第几页？",
+            .ja: "何ページ目を挿入しますか？",
+            .ko: "몇 번째 페이지를 넣을까요?",
+            .th: "หน้าไหน?"
+        ],
         "pdf_not_a_pdf": [
             .zhHant: "這個檔案不是 PDF，或者已經損壞。",
             .en: "This file isn't a PDF, or it's damaged.",
@@ -7527,6 +7543,14 @@ extension LocalizationManager {
             .ko: "%1@ 페이지는 없습니다. 이 PDF는 %2@ 페이지입니다.",
             .th: "ไม่มีหน้า %1@ — PDF นี้มี %2@ หน้า"
         ],
+        "pdf_page_range": [
+            .zhHant: "這份 PDF 共 %@ 頁",
+            .en: "This PDF has %@ pages",
+            .zhHans: "这份 PDF 共 %@ 页",
+            .ja: "この PDF は全 %@ ページです",
+            .ko: "이 PDF는 총 %@페이지입니다",
+            .th: "PDF นี้มี %@ หน้า"
+        ],
         "pdf_password_required": [
             .zhHant: "這個 PDF 需要密碼。",
             .en: "This PDF needs a password.",
@@ -7534,6 +7558,14 @@ extension LocalizationManager {
             .ja: "この PDF にはパスワードが必要です。",
             .ko: "이 PDF는 비밀번호가 필요합니다.",
             .th: "PDF นี้ต้องใช้รหัสผ่าน"
+        ],
+        "pdf_render_failed": [
+            .zhHant: "這一頁畫不出來",
+            .en: "That page could not be drawn",
+            .zhHans: "这一页画不出来",
+            .ja: "このページは描画できませんでした",
+            .ko: "이 페이지를 그릴 수 없습니다",
+            .th: "วาดหน้านี้ไม่ได้"
         ],
         "pen_only_toast": [
             .zhHant: "已開啟「僅限觸控筆」，手指觸控會被忽略。要用手指寫字請把它關掉。",

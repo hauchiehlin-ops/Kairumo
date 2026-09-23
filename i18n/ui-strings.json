@@ -11662,5 +11662,37 @@
     "ja": "音声ファイルを読み込む",
     "ko": "오디오 파일 가져오기",
     "th": "นำเข้าไฟล์เสียง"
+  },
+  "insert_pdf": {
+    "en": "Insert PDF Page",
+    "zhHant": "插入 PDF 頁面",
+    "zhHans": "插入 PDF 页面",
+    "ja": "PDF ページを挿入",
+    "ko": "PDF 페이지 삽입",
+    "th": "แทรกหน้า PDF"
+  },
+  "pdf_choose_page": {
+    "en": "Which page?",
+    "zhHant": "要插入第幾頁？",
+    "zhHans": "要插入第几页？",
+    "ja": "何ページ目を挿入しますか？",
+    "ko": "몇 번째 페이지를 넣을까요?",
+    "th": "หน้าไหน?"
+  },
+  "pdf_page_range": {
+    "en": "This PDF has %@ pages",
+    "zhHant": "這份 PDF 共 %@ 頁",
+    "zhHans": "这份 PDF 共 %@ 页",
+    "ja": "この PDF は全 %@ ページです",
+    "ko": "이 PDF는 총 %@페이지입니다",
+    "th": "PDF นี้มี %@ หน้า"
+  },
+  "pdf_render_failed": {
+    "en": "That page could not be drawn",
+    "zhHant": "這一頁畫不出來",
+    "zhHans": "这一页画不出来",
+    "ja": "このページは描画できませんでした",
+    "ko": "이 페이지를 그릴 수 없습니다",
+    "th": "วาดหน้านี้ไม่ได้"
   }
 }

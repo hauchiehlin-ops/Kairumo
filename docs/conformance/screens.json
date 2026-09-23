@@ -22,6 +22,7 @@
       "editor.insert.audio_file",
       "editor.insert.image",
       "editor.insert.image_file",
+      "editor.insert.pdf",
       "editor.insert.math",
       "editor.insert.chart",
       "editor.insert.table",
@@ -97,6 +98,7 @@
       "editor.insert.audio_file",
       "editor.insert.image",
       "editor.insert.image_file",
+      "editor.insert.pdf",
       "editor.insert.math",
       "editor.insert.chart",
       "editor.insert.table",
@@ -256,6 +258,11 @@
         "id": "editor.insert.image_file",
         "label_en": "Choose from Files",
         "label_key": "import_from_files"
+      },
+      {
+        "id": "editor.insert.pdf",
+        "label_en": "Insert PDF Page",
+        "label_key": "insert_pdf"
       },
       {
         "id": "editor.insert.math",

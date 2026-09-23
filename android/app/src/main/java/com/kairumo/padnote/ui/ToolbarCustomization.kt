@@ -238,7 +238,13 @@ fun ToolbarCustomizationSheet(
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.testTag("toolbar.hint")
                 )
-                LazyColumn(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                // 捲動容器要有 tag：畫面稽核得靠它 `performScrollToNode`。
+                // 沒有的話後面五支筆（套索、紙膠帶、復原、重做、清除）
+                // 永遠在摺線下面，稽核會判成「不見了」—— 實際發生過。
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.testTag("toolbar.scroll")
+                ) {
                     // 位置與文字標籤（S-261b）。
                     //
                     // 這兩個設定原本只存在核心裡、也同步得動，但**兩端都

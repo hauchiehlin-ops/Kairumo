@@ -73,12 +73,87 @@ class ScreenAuditTest {
 
     @Test
     fun toolbarScreenRendersEveryRequiredControl() {
-        audit("toolbar", allowMissing = emptySet(), scrollTag = null) {
+        audit("toolbar", allowMissing = emptySet(), scrollTag = "toolbar.scroll") {
             openFirstNotebook()
             compose.onNodeWithTag("editor.more").performClick()
             compose.waitForIdle()
             compose.onNodeWithTag("editor.customize_toolbar").performClick()
             compose.waitForIdle()
+        }
+    }
+
+    /**
+     * 「更多」選單裡的項目。
+     *
+     * # 為什麼可以這樣測（而 Apple 不行）
+     *
+     * 量過了：**Compose 的 `DropdownMenu` 項目帶著 `testTag` 進語意樹**
+     * （見 `DropdownSemanticsProbeTest`）。SwiftUI 那邊不是這樣 ——
+     * 項目交給 UIKit 的 `UIAction` 算繪，識別碼不會跟過去，只剩標籤
+     * （S-261d），所以 Apple 端那兩條測試是用標籤找的。
+     *
+     * 這個差別就是為什麼這十幾項在 Android 這邊被放進棘輪放了這麼久：
+     * 註解寫的是「沒量過就不該假設它跟 Apple 一樣」—— 那句話是對的，
+     * 而量完的答案是「不一樣，而且是好的那一邊」。
+     */
+    @Test
+    fun moreMenuItemsAreReachable() {
+        auditSubset(MORE_MENU_ITEMS, scrollTag = null) {
+            openFirstNotebook()
+            compose.onNodeWithTag("editor.more").performClick()
+        }
+    }
+
+    /**
+     * 側欄裡的項目。展開之後它們都看得到。
+     *
+     * 與選單那兩條同一個道理：單一畫面狀態的稽核看不到要先互動才出現的
+     * 東西，而「看不到」被記成棘輪之後就沒有人會再去看它是不是真的還缺。
+     */
+    @Test
+    fun sidebarItemsAreReachable() {
+        auditSubset(SIDEBAR_ITEMS, scrollTag = null) {
+            openFirstNotebook()
+            compose.onNodeWithTag("editor.sidebar_toggle").performClick()
+        }
+    }
+
+    /** 匯出選單裡的四個項目。與上面同一個做法、同一個理由。 */
+    @Test
+    fun exportMenuItemsAreReachable() {
+        auditSubset(EXPORT_MENU_ITEMS, scrollTag = null) {
+            openFirstNotebook()
+            compose.onNodeWithTag("editor.share").performClick()
+        }
+    }
+
+    /**
+     * 只檢查指定的那幾個 id，不管整份規格。
+     *
+     * 選單打開的時候底下的畫面還在，但**整份 editor 規格不會因此就都在**
+     * （例如打字模式那一批）。合併成一條的話，失敗訊息會混著兩種完全不同
+     * 的原因。
+     */
+    private fun auditSubset(
+        ids: List<String>,
+        scrollTag: String?,
+        navigate: () -> Unit
+    ) {
+        skipOnboarding()
+        ActivityScenario.launch(MainActivity::class.java).use {
+            compose.waitForIdle()
+            navigate()
+            compose.waitForIdle()
+
+            val missing = findMissingWhileScrolling(wanted = ids, scrollTag = scrollTag)
+            assertTrue(
+                buildString {
+                    append("選單打開之後仍然找不到這些控制項：\n")
+                    append(missing.joinToString("\n"))
+                    append("\n\n現場實際有的 testTag（最多 20 個）：\n")
+                    append(presentTags().take(20).joinToString("\n"))
+                },
+                missing.isEmpty())
         }
     }
 
@@ -90,13 +165,34 @@ class ScreenAuditTest {
      * 在那之前整份清單只有一個 tag，根本點不到特定一本。
      */
     private fun openFirstNotebook() {
-        val cards = compose.onAllNodes(
-            SemanticsMatcher("testTag 以 home.notebooks.card. 開頭") { node ->
-                node.config.getOrNull(SemanticsProperties.TestTag)
-                    ?.startsWith("home.notebooks.card.") == true
-            })
+        // **一定要先捲。**
+        //
+        // 筆記清單在首頁的下半部，而 `LazyColumn` 只組合看得見的項目 ——
+        // 在乾淨的模擬器上，種子筆記**確實建起來了，只是在摺線下面**，
+        // 於是這裡找不到任何卡片。
+        //
+        // 原本的錯誤訊息寫的是「種子資料沒建起來？」，而那句話把人帶去
+        // 查 `SeedNotebooks`（實際發生過：查了 NDK、查了 .so 版本、查了
+        // 種子邏輯，全部沒問題）。上面 `audit()` 那一段早就把同一件事
+        // 寫清楚了，這裡卻漏了 —— 整份稽核裡唯一沒捲的就是這一步。
+        val matcher = SemanticsMatcher("testTag 以 home.notebooks.card. 開頭") { node ->
+            node.config.getOrNull(SemanticsProperties.TestTag)
+                ?.startsWith("home.notebooks.card.") == true
+        }
+        if (compose.onAllNodes(matcher).fetchSemanticsNodes().isEmpty()) {
+            runCatching {
+                compose.onNodeWithTag("home.scroll")
+                    .performScrollToNode(matcher)
+                compose.waitForIdle()
+            }
+        }
+
+        val cards = compose.onAllNodes(matcher)
         val nodes = cards.fetchSemanticsNodes()
-        assertTrue("首頁一本筆記都沒有 —— 種子資料沒建起來？", nodes.isNotEmpty())
+        assertTrue(
+            "首頁一本筆記都沒有 —— 捲過之後仍然找不到 home.notebooks.card.*。" +
+                "現場的 tag：" + presentTags().take(20).joinToString(", "),
+            nodes.isNotEmpty())
         cards[0].performClick()
     }
 
@@ -206,22 +302,22 @@ class ScreenAuditTest {
         val HOME_NOT_WIRED_YET = emptySet<String>()
 
         /**
-         * 編輯器的棘輪。**只准縮小。**
+         * 「更多」選單裡的項目。選單打開之後它們**都看得到**。
          *
-         * 與 Apple 端那一份是同一批東西、同一個理由：`insert.*` 在「更多」
-         * 選單裡、`export.*` 在匯出選單裡、`text.*` 只有打字模式才有、
-         * `sidebar.*` 要先展開側欄 —— 單一畫面狀態的稽核看不到它們。
-         *
-         * Apple 端已經有兩條測試把選單那批守住了
-         * （testMoreMenuItemsAreReachable / testExportMenuItemsAreReachable）。
-         * Android 這邊還沒有對應的 —— Compose 的 DropdownMenu 內容進不進
-         * 語意樹還沒量過，而**沒量過就不該假設它跟 Apple 一樣**。
-         * 記在 docs/TODO.md 的 S-261c。
+         * 量過了：Compose 的 `DropdownMenu` 項目帶著 `testTag` 進語意樹
+         * （`DropdownSemanticsProbeTest`）。在那之前這一批被放在棘輪裡，
+         * 理由是「Android 還沒量過，沒量過就不該假設它跟 Apple 一樣」——
+         * 那個判斷是對的，而量完的答案是**不一樣**：Apple 的選單項目識別碼
+         * 會被 UIKit 吃掉，Compose 的不會。
          */
-        val EDITOR_NOT_WIRED_YET = setOf(
+        val MORE_MENU_ITEMS = listOf(
             "editor.insert.assets",
+            "editor.insert.stickers",
             "editor.insert.audio",
+            "editor.insert.audio_file",
             "editor.insert.image",
+            "editor.insert.image_file",
+            "editor.insert.pdf",
             "editor.insert.math",
             "editor.insert.chart",
             "editor.insert.table",
@@ -234,10 +330,55 @@ class ScreenAuditTest {
             "editor.insert.collaborate",
             "editor.insert.recognize",
             "editor.insert.ai_summary",
+            "editor.record",
+        )
+
+        /** 匯出選單裡的四項。 */
+        val EXPORT_MENU_ITEMS = listOf(
             "editor.export.pdf",
             "editor.export.image",
             "editor.export.print",
             "editor.export.share",
+        )
+
+        /**
+         * **不是漏做，是畫面上本來就沒有這個東西可以摸。**
+         *
+         * `editor.system_back` 在 Android 上是 `BackHandler` —— 一個手勢
+         * 攔截器，不是控制項，永遠不會出現在語意樹裡。它在原始碼裡用
+         * `// parity: editor.system_back` 宣告過，靜態對照閘門看得到它。
+         *
+         * 與棘輪分開列，是因為棘輪的承諾是「總有一天會清空」，而這一項
+         * 永遠不會 —— 混在一起的話，那個承諾就變成謊話。
+         */
+        /** 側欄展開之後才看得到的那幾項。 */
+        val SIDEBAR_ITEMS = listOf(
+            "editor.sidebar.tab.pages",
+            "editor.sidebar.tab.folders",
+            "editor.sidebar.list",
+            "editor.sidebar.thumb_smaller",
+            "editor.sidebar.thumb_larger",
+        )
+
+        // 宣告在棘輪**之前**：companion object 的屬性照寫的順序初始化，
+        // 放在後面的話 `EDITOR_NOT_WIRED_YET` 會拿到一個空集合。
+        val NOT_A_WIDGET = setOf("editor.system_back")
+
+        /**
+         * 編輯器的棘輪。**只准縮小。**
+         *
+         * 2026-09-23 從 19 項降到剩下的這些。清掉的那一批不是放寬標準，
+         * 是**改成用會打開選單的測試去看**（`moreMenuItemsAreReachable`、
+         * `exportMenuItemsAreReachable`）—— 棘輪裡的東西沒有人會再看第二眼，
+         * 而那正是它們待了這麼久的原因。
+         *
+         * 剩下的只有一類：`editor.text.*` —— 只有打字模式才有，而且那是
+         * 另一套工具列。要清掉它得先有一條「切到打字模式再稽核」的測試。
+         *
+         * `editor.ink.clear` 在這裡是因為它只在自訂工具列開啟後才進主列，
+         * 預設是收起來的。
+         */
+        val EDITOR_NOT_WIRED_YET = setOf(
             "editor.ink.clear",
             "editor.text.add_box",
             "editor.text.studio",
@@ -255,12 +396,8 @@ class ScreenAuditTest {
             "editor.text.link",
             "editor.text.undo",
             "editor.text.redo",
-            "editor.sidebar.tab.pages",
-            "editor.sidebar.tab.folders",
-            "editor.sidebar.list",
-            "editor.sidebar.thumb_smaller",
-            "editor.sidebar.thumb_larger",
-        )
+        ) + MORE_MENU_ITEMS + EXPORT_MENU_ITEMS + SIDEBAR_ITEMS + NOT_A_WIDGET
+
 
     }
 }

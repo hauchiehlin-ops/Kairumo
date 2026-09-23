@@ -1064,6 +1064,10 @@ public struct NotebookEditorView: View {
     @State private var showImageFileImporter: Bool = false
     /// 從「檔案」挑音訊。App 自己錄的那些走 `showAudioPicker`。
     @State private var showAudioFileImporter: Bool = false
+    /// 挑一份 PDF 插進來。PDF 只有這一個入口 —— 它從來不會在相簿裡。
+    @State private var showPdfFileImporter: Bool = false
+    /// 已經收進來、正在讓使用者挑頁的那份 PDF。
+    @State private var pdfToInsert: URL? = nil
     /// 匯入失敗的語系鍵。非空就跳提示。
     @State private var importErrorKey: String = ""
     @State private var showStickerLibrary: Bool = false
@@ -1563,8 +1567,22 @@ public struct NotebookEditorView: View {
                 }
                 insertImageAttachment(image)
             },
-            onAudio: { outcome in insertImportedAudio(outcome) }
+            onAudio: { outcome in insertImportedAudio(outcome) },
+            showPdfFileImporter: $showPdfFileImporter,
+            onPdf: { outcome in
+                pdfToInsert = store.importedFileURL(fileName: outcome.storedName)
+            }
         ))
+        .sheet(item: Binding(
+            get: { pdfToInsert.map(IdentifiedURL.init) },
+            set: { if $0 == nil { pdfToInsert = nil } })
+        ) { wrapped in
+            resizableSheet {
+                PdfPageInsertSheet(fileURL: wrapped.url) { image in
+                    insertImageAttachment(image)
+                }
+            }
+        }
         .onChange(of: selectedPhotoItem) { newItem in
             Task {
                 if let item = newItem,
@@ -2514,6 +2532,8 @@ public struct NotebookEditorView: View {
                     .accessibilityIdentifier("editor.insert.image")
                 Button { showImageFileImporter = true } label: { Label(localizationManager.localized("import_from_files"), systemImage: "folder.badge.plus") }
                     .accessibilityIdentifier("editor.insert.image_file")
+                Button { showPdfFileImporter = true } label: { Label(localizationManager.localized("insert_pdf"), systemImage: "doc.richtext") }
+                    .accessibilityIdentifier("editor.insert.pdf")
                 Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
                     .accessibilityIdentifier("editor.insert.math")
                 Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
@@ -10662,6 +10682,8 @@ private struct ImportPickersModifier: ViewModifier {
     @Binding var importErrorKey: String
     let onImage: (FileImport.Outcome) -> Void
     let onAudio: (FileImport.Outcome) -> Void
+    @Binding var showPdfFileImporter: Bool
+    let onPdf: (FileImport.Outcome) -> Void
 
     func body(content: Content) -> some View {
         content
@@ -10685,6 +10707,14 @@ private struct ImportPickersModifier: ViewModifier {
                     result: result, slot: .audio, into: .recordings) else { return }
                 if outcome.succeeded { onAudio(outcome) } else { importErrorKey = outcome.errorKey }
             }
+            .fileImporter(
+                isPresented: $showPdfFileImporter,
+                allowedContentTypes: FileImport.allowedTypes(for: .pdf),
+                allowsMultipleSelection: false
+            ) { result in
+                guard let outcome = FileImport.take(result: result, slot: .pdf) else { return }
+                if outcome.succeeded { onPdf(outcome) } else { importErrorKey = outcome.errorKey }
+            }
             .alert(
                 localizationManager.localized("import_failed_read"),
                 isPresented: Binding(
@@ -10697,4 +10727,14 @@ private struct ImportPickersModifier: ViewModifier {
                 Text(localizationManager.localized(importErrorKey))
             }
     }
+}
+
+/// `.sheet(item:)` 需要 `Identifiable`，而 `URL` 不是。
+///
+/// 用 `isPresented` + 另一個狀態也做得到，但那有一個很難查的坑：表打開的
+/// 那一幀如果 URL 還沒設好，裡面的畫面會拿到 `nil` 然後畫一片空白，而重畫
+/// 之後也不會自己補回來。`item:` 把「有東西」與「打開」綁成同一件事。
+private struct IdentifiedURL: Identifiable {
+    let url: URL
+    var id: String { url.path }
 }

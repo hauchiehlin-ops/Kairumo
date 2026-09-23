@@ -355,6 +355,8 @@ fn editor_spec() -> FfiScreenSpec {
                     c("editor.insert.audio_file", Button, "import_audio_from_files"),
                     c("editor.insert.image", Button, "insert_image"),
                     c("editor.insert.image_file", Button, "import_from_files"),
+                    // PDF 只有一個入口：它從來不會在相簿裡。
+                    c("editor.insert.pdf", Button, "insert_pdf"),
                     c("editor.insert.math", Button, "math_calc"),
                     c("editor.insert.chart", Button, "chart_studio"),
                     c("editor.insert.table", Button, "table_studio"),

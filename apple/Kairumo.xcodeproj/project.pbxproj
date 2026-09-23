@@ -14,6 +14,7 @@
 		0B1742B04E12553332EF15CC /* NoteShapeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC0776567843FC6C74C2A9C0 /* NoteShapeTests.swift */; };
 		0D7E2AFBD2E9D88478C4DC9B /* ObjectRotationControls.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFC2EC4F24CB728264AB91A5 /* ObjectRotationControls.swift */; };
 		0EE7F03B3191160516BF1CFA /* RecordingMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = 68A635D915554C60E116768E /* RecordingMigration.swift */; };
+		0FB20CC94AE2D1712F486313 /* PdfPageInsertSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = ADF7A49AC27362737BFEF526 /* PdfPageInsertSheet.swift */; };
 		10BA1BD57CA8F89E29F7E905 /* TableFormulaEvaluator.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB9ADD02C399D5D1AD079D72 /* TableFormulaEvaluator.swift */; };
 		10FB036C7B09279D8B7F1D0E /* AccountSyncStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6CEFD1F0AF714DC269A5E144 /* AccountSyncStore.swift */; };
 		115AA723F107721EC68777AA /* RadialMarkMenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E8568739E3C10539C54B9DC /* RadialMarkMenuView.swift */; };
@@ -85,6 +86,7 @@
 		8B7009124FD56264BEA6268D /* PageRepaginationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D2A6B1E41A4693B543BEDCB /* PageRepaginationTests.swift */; };
 		8C664C6515AEE123F5150344 /* PageOrderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3C0468278DE21C442DB88E1F /* PageOrderTests.swift */; };
 		8CBE67FB1F6A87103F12949F /* NoteTable.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1C81A31EBC2D3D1F020B0BF /* NoteTable.swift */; };
+		901E3C8B49A3F9629193D439 /* PdfPageRendererTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E769C6B3B1895BA7A6BC71AB /* PdfPageRendererTests.swift */; };
 		91FC0D28445F73F9D4685CE7 /* ConformanceVectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 067CE78048E5C142AD56E841 /* ConformanceVectorTests.swift */; };
 		95A26994BC9D5BCCF7291E2F /* CommentThreadView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 205572122F598A01BD07BC2A /* CommentThreadView.swift */; };
 		978CADAB7182E4DCAB4F9372 /* DocumentTemplateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B8F51C245CED14D4079BC5B4 /* DocumentTemplateTests.swift */; };
@@ -307,6 +309,7 @@
 		AB04C4FA3426304F705E5046 /* HomeWorkbenchUsage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeWorkbenchUsage.swift; sourceTree = "<group>"; };
 		AB9ADD02C399D5D1AD079D72 /* TableFormulaEvaluator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableFormulaEvaluator.swift; sourceTree = "<group>"; };
 		ADB3B259C241361F259FE9CD /* ChartStudioTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartStudioTests.swift; sourceTree = "<group>"; };
+		ADF7A49AC27362737BFEF526 /* PdfPageInsertSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PdfPageInsertSheet.swift; sourceTree = "<group>"; };
 		B05DE382C8B7C4EE39BD076B /* NotebookPackageBridgeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookPackageBridgeTests.swift; sourceTree = "<group>"; };
 		B2929D89A7985F84100FDB68 /* RecentTemplates.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecentTemplates.swift; sourceTree = "<group>"; };
 		B36AD7F19677B4F27E94262B /* BrushCursorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrushCursorTests.swift; sourceTree = "<group>"; };
@@ -340,6 +343,7 @@
 		DFB782C4FBD863E4DD9CC1D7 /* TextBoxEditingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TextBoxEditingTests.swift; sourceTree = "<group>"; };
 		DFCDD31E1D415BEFE8FB47D5 /* ImageAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageAppearance.swift; sourceTree = "<group>"; };
 		E6A2A119D757D992BD181DEE /* BackupManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackupManager.swift; sourceTree = "<group>"; };
+		E769C6B3B1895BA7A6BC71AB /* PdfPageRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PdfPageRendererTests.swift; sourceTree = "<group>"; };
 		E7BBB164B4ED22BB56939A40 /* ExportPrintManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportPrintManager.swift; sourceTree = "<group>"; };
 		E9016EACE65CDA75A37567CE /* PageImageRendererTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PageImageRendererTests.swift; sourceTree = "<group>"; };
 		E90D65B77C9075837E5F50D2 /* NoteIntelligenceSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteIntelligenceSheet.swift; sourceTree = "<group>"; };
@@ -419,6 +423,7 @@
 				F85F010611BBEED2B2DF9AC3 /* PalmRejectionTests.swift */,
 				3A1525CF56EBBE47CE94BDBD /* PdfAnnotationInteropTests.swift */,
 				420CDB8E187D7BF4EB48CB2E /* PdfKitDocumentTests.swift */,
+				E769C6B3B1895BA7A6BC71AB /* PdfPageRendererTests.swift */,
 				3F5C250C0AEBC876CF34807D /* PenHardwareTests.swift */,
 				5C7088E4DBE1611C3E697B4A /* TableStudioLayoutTests.swift */,
 				DFB782C4FBD863E4DD9CC1D7 /* TextBoxEditingTests.swift */,
@@ -568,6 +573,7 @@
 				1064607D4E02AABFD6A63F53 /* PalmRejection.swift */,
 				FD3609DAFC6CD0A448F250C1 /* PalmThresholdSheet.swift */,
 				43B5E732D6E01F9549B1147D /* PdfKitDocument.swift */,
+				ADF7A49AC27362737BFEF526 /* PdfPageInsertSheet.swift */,
 				F9BA3DC03F5BD38348D5D9DE /* PenHardware.swift */,
 				0013D28CD49B4181F40017F3 /* PenHoverPreview.swift */,
 				824AF14643DF914996543B0B /* ProColorPickerSheet.swift */,
@@ -760,6 +766,7 @@
 				99B29892A3970C9ADBADEB7E /* PalmRejectionTests.swift in Sources */,
 				F91E0C4A0E48E4695D0337C6 /* PdfAnnotationInteropTests.swift in Sources */,
 				4DF85F141ECE9CBA9B5E2105 /* PdfKitDocumentTests.swift in Sources */,
+				901E3C8B49A3F9629193D439 /* PdfPageRendererTests.swift in Sources */,
 				ED78060E3D4FFB5D6F0A3AF6 /* PenHardwareTests.swift in Sources */,
 				DA19398422DF402A5ABB16F7 /* TableStudioLayoutTests.swift in Sources */,
 				F27FB2D126ECCD38DCCFE5CD /* TextBoxEditingTests.swift in Sources */,
@@ -868,6 +875,7 @@
 				512B7389435793F9304B338D /* PalmRejection.swift in Sources */,
 				33C06FCCD5F5DF767E8DCA25 /* PalmThresholdSheet.swift in Sources */,
 				582629D6ADA3FCAEA7E65830 /* PdfKitDocument.swift in Sources */,
+				0FB20CC94AE2D1712F486313 /* PdfPageInsertSheet.swift in Sources */,
 				D22176F0157CE8624CA7590B /* PenHardware.swift in Sources */,
 				65B2ADC8B553B1BE9708540A /* PenHoverPreview.swift in Sources */,
 				891B35800C7FEFD3421B7293 /* ProColorPickerSheet.swift in Sources */,

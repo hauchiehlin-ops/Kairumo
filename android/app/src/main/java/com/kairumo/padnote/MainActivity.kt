@@ -94,6 +94,7 @@ import com.kairumo.padnote.platform.DocsViewer
 import com.kairumo.padnote.platform.ExportPreviewDialog
 import com.kairumo.padnote.platform.Exporter
 import com.kairumo.padnote.platform.FileImport
+import com.kairumo.padnote.platform.PdfPageInsertDialog
 import com.kairumo.padnote.platform.Handwriting
 import com.kairumo.padnote.sync.FolderSync
 import com.kairumo.padnote.backup.BackupManager
@@ -1673,6 +1674,23 @@ private fun InkScreen(
         ActivityResultContracts.OpenDocument()
     ) { uri -> if (uri != null) onImagePicked(uri) }
 
+    // 插入 PDF 頁面。收進來的那份 PDF 與挑到第幾頁 —— 兩個一起才有意義，
+    // 所以放在同一個狀態裡。
+    var pdfToInsert by remember { mutableStateOf<java.io.File?>(null) }
+    val pdfMimeTypes = remember { FileImport.mimeTypes(FfiImportSlot.PDF) }
+    val pdfPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val outcome = FileImport.take(activity, uri, FfiImportSlot.PDF)
+            if (outcome.errorKey.isNotEmpty()) {
+                message = l10n(outcome.errorKey)
+            } else {
+                pdfToInsert = FileImport.fileFor(activity, outcome.storedName)
+            }
+        }
+    }
+
     val shapeStore = remember(notebook, pageId) { ShapeStore(notebook?.first, pageId) }
     var shapeRevision by remember { mutableIntStateOf(0) }
     var selectedShapeIds by remember { mutableStateOf(setOf<String>()) }
@@ -2845,6 +2863,11 @@ private fun InkScreen(
                             androidx.activity.result.PickVisualMediaRequest(
                                 ActivityResultContracts.PickVisualMedia.ImageOnly))
                     }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("insert_pdf")) },
+                    modifier = Modifier.testTag("editor.insert.pdf"),
+                    onClick = { showMenu = false; pdfPicker.launch(pdfMimeTypes) }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("import_from_files")) },
@@ -4860,6 +4883,27 @@ private fun InkScreen(
                 androidx.compose.material3.TextButton(onClick = { editingLink = null }) {
                     Text(l10n("cancel"))
                 }
+            }
+        )
+    }
+
+    pdfToInsert?.let { pdfFile ->
+        PdfPageInsertDialog(
+            l = { key -> l10n(key) },
+            file = pdfFile,
+            onDismiss = { pdfToInsert = null },
+            onPick = { png ->
+                val inserted = imageStore.insert(png, pdfFile.nameWithoutExtension)
+                imageRevision++
+                selectedImageId = inserted?.id
+                if (inserted != null) {
+                    // 插入後切到打字模式 —— 手寫模式下物件不吃觸控，
+                    // 剛插進來的那一頁會拖不動，看起來像插壞了。
+                    editorMode = EditorMode.TYPE
+                } else {
+                    message = l10n("pdf_render_failed")
+                }
+                pdfToInsert = null
             }
         )
     }
