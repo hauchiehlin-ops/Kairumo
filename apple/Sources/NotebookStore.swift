@@ -2621,7 +2621,7 @@ public final class NotebookStore: ObservableObject {
                 _ = try session.importEmbedded(pageId: pageId, path: outcome.storedName)
             }
             let fileURL = corePackagesDirectory.appending(path: "\(doc.id.lowercased()).padnote")
-            if let unpacked = NotebookPackageBridge.read(from: fileURL, documentId: doc.id) {
+            if let unpacked = try? NotebookPackageBridge.importDocument(fromPackageAt: fileURL, deviceId: NotebookMigration.deviceId, documentId: doc.id) {
                 updateNotebook(unpacked.document)
             } else {
                 updateNotebook(doc)

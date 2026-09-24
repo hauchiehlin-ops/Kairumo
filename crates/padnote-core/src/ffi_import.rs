@@ -35,6 +35,8 @@ pub enum FfiImportSlot {
     Audio,
     /// PDF（當成頁面底圖或附件）。
     Pdf,
+    /// 文件（Markdown, JSON, Office 等可匯入格式）。
+    Document,
 }
 
 /// 收不收，以及為什麼不收。
@@ -67,6 +69,7 @@ pub fn accepted_extensions(slot: FfiImportSlot) -> &'static [&'static str] {
         FfiImportSlot::Model3d => &["obj", "stl"],
         FfiImportSlot::Audio => &["m4a", "mp3", "wav", "aac", "caf", "ogg", "opus", "flac"],
         FfiImportSlot::Pdf => &["pdf"],
+        FfiImportSlot::Document => &["md", "json", "docx", "xlsx", "pptx"],
     }
 }
 
@@ -89,6 +92,7 @@ pub fn size_limit_bytes(slot: FfiImportSlot) -> u64 {
         // 一小時的 m4a 約 30 MB。
         FfiImportSlot::Audio => 120 * 1024 * 1024,
         FfiImportSlot::Pdf => 120 * 1024 * 1024,
+        FfiImportSlot::Document => 50 * 1024 * 1024,
     }
 }
 

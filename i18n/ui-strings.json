@@ -11942,5 +11942,12 @@
     "th": "การแก้ไขข้อความ Word",
     "zhHans": "Word文字编修",
     "zhHant": "Word文字編修"
+  },
+  "import_document": {
+    "zhHant": "匯入文件",
+    "zhHans": "导入文件",
+    "en": "Import Document",
+    "ja": "ドキュメントをインポート",
+    "ko": "문서 가져오기"
   }
 }

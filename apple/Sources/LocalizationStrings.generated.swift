@@ -5047,6 +5047,13 @@ extension LocalizationManager {
             .ko: "기본 도형",
             .th: "รูปทรงในตัว"
         ],
+        "import_document": [
+            .zhHant: "匯入文件",
+            .en: "Import Document",
+            .zhHans: "导入文件",
+            .ja: "ドキュメントをインポート",
+            .ko: "문서 가져오기"
+        ],
         "import_empty_file": [
             .zhHant: "這個檔案是空的 —— 它可能還在從雲端下載",
             .en: "That file is empty — it may still be downloading from your cloud",

@@ -1710,6 +1710,45 @@ private fun InkScreen(
     // 所以放在同一個狀態裡。
     var pdfToInsert by remember { mutableStateOf<java.io.File?>(null) }
     val pdfMimeTypes = remember { FileImport.mimeTypes(FfiImportSlot.PDF) }
+        val documentMimeTypes = remember { FileImport.mimeTypes(FfiImportSlot.DOCUMENT) }
+    val documentPicker = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri != null) {
+            val outcome = FileImport.take(activity, uri, FfiImportSlot.DOCUMENT)
+            if (outcome.errorKey.isNotEmpty()) {
+                message = l10n(outcome.errorKey)
+            } else {
+                val f = FileImport.fileFor(activity, outcome.storedName)
+                runCatching {
+                    val ext = outcome.displayName.substringAfterLast('.', "").lowercase()
+                    val session = notebook?.first
+                    if (session != null) {
+                        if (ext == "json") {
+                            session.importJson(f.readText())
+                            sessionRevision++
+                        } else if (ext == "md") {
+                            session.importMarkdown(f.readText())
+                            sessionRevision++
+                        } else {
+                            if (pageId != null) {
+                                session.importEmbedded(pageId, f.absolutePath)
+                                sessionRevision++
+                            } else {
+                                message = l10n("import_failed_read")
+                            }
+                        }
+                        if (pageId != null || ext == "json" || ext == "md") {
+                            message = l10n("import_success").replace("%@", outcome.displayName)
+                        }
+                    }
+                }.onFailure {
+                    message = l10n("import_failed_read")
+                }
+            }
+        }
+    }
+
     val pdfPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -2935,6 +2974,11 @@ private fun InkScreen(
                             androidx.activity.result.PickVisualMediaRequest(
                                 ActivityResultContracts.PickVisualMedia.ImageOnly))
                     }
+                )
+                DropdownMenuItem(
+                    text = { Text(l10n("import_document")) },
+                    modifier = Modifier.testTag("editor.insert.document"),
+                    onClick = { showMenu = false; documentPicker.launch(documentMimeTypes) }
                 )
                 DropdownMenuItem(
                     text = { Text(l10n("insert_pdf")) },
