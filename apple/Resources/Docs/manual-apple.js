@@ -24,7 +24,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作手冊",
       "tagline": "手寫、打字、錄音三合一的筆記本。零基礎也能一步一步跟著做。",
-      "version": "適用版本 v4.8.2（build 60）· 2026 年 9 月 19 日",
+      "version": "適用版本 v4.9.0（build 61）· 2026 年 9 月 19 日",
       "tocTitle": "目錄",
       "tocHint": "點任一項目直接跳到該段落",
       "stepsLabel": "操作步驟",
@@ -46,7 +46,7 @@ window.KAIRUMO_MANUAL = {
           "第一次打開不需要註冊帳號，也不需要網路連線。",
           "第一次打開會有兩本範例筆記（「歡迎使用 Kairumo」與「課堂與會議記錄」），裡面是可以直接改的圖、文、表範例。不需要就整本刪掉。",
           "你寫下的每一筆都存在這台裝置裡。要在多台裝置之間同步，就挑一個自己的雲端硬碟資料夾（見「資料備份與同步」）。",
-          "桌機版視窗左上角會顯示版本號（例如 Kairumo v4.8.2），回報問題時請附上它。"
+          "桌機版視窗左上角會顯示版本號（例如 Kairumo v4.9.0），回報問題時請附上它。"
         ],
         "tip": "沒有伺服器、沒有帳號，就沒有「忘記密碼」這回事 —— 但也代表裝置遺失時沒有雲端副本，請自己做備份。",
         "fig": null
@@ -68,7 +68,8 @@ window.KAIRUMO_MANUAL = {
           "按「開始使用」進入首頁。這一頁之後不會再出現。"
         ],
         "tip": "權限不會在安裝的時候就要 —— 系統一律等到真的要用那個功能才問。所以還沒給權限就按錄音的話，會在那個當下再引導一次。",
-        "fig": null
+        "fig": "firstrun",
+        "cap": "第一次打開：講清楚是什麼、不需要帳號、只要一個權限"
       },
       {
         "id": "home",
@@ -155,7 +156,8 @@ window.KAIRUMO_MANUAL = {
           "套索選取",
           "筆跡粗細",
           "筆跡磁吸對齊與尺規",
-          "進階調色"
+          "進階調色",
+          "掌拒靈敏度"
         ],
         "steps": [
           "確認上排停在「手繪模式」。",
@@ -167,7 +169,8 @@ window.KAIRUMO_MANUAL = {
           "支援的觸控筆可以不必回工具列換橡皮擦：有的筆**雙擊筆桿**、有的筆**按住筆桿上的側鍵**，也有的筆倒過來用就是橡皮擦。擦完再敲一次或放開側鍵，就回到你剛才那支筆。雙擊要做什麼是系統設定裡的偏好，這裡照它走。",
           "繪製直線與線段時開啟「筆跡磁吸對齊與尺規」，筆尖接近 0°、45°、90°、135°、180° 等幾何角度或格線時會自動磁吸對齊，畫面投射青色雷射導引線並給予微震反饋。",
           "工具列支援四段「筆跡平滑防抖」濾波，大幅消除書寫微抖；點「進階調色」可開啟環形色相飽和度調色盤，支援互補與三角色等和諧配色。",
-          "「畫布極致極簡模式」：點擊工具列收折按鈕可將工具列收納為螢幕角落的單一懸浮膠囊（Floating Tool Pill），享受無干擾全螢幕書寫。需要恢復時，點擊頂部常駐的高亮「退出畫布極簡模式」按鈕、點擊懸浮氣泡展開迷你工具箱、或在鍵盤上按下 Esc 鍵，即可立刻展開完整工具列。"
+          "「畫布極致極簡模式」：點擊工具列收折按鈕可將工具列收納為螢幕角落的單一懸浮膠囊（Floating Tool Pill），享受無干擾全螢幕書寫。需要恢復時，點擊頂部常駐的高亮「退出畫布極簡模式」按鈕、點擊懸浮氣泡展開迷你工具箱、或在鍵盤上按下 Esc 鍵，即可立刻展開完整工具列。",
+          "手掌放在螢幕上會留下線條時，調「掌拒靈敏度」：在插入／工具選單裡找到它，用兩支滑桿調「接觸半徑門檻」與「筆落下時的收回時間窗」。**調壞了按「恢復預設」** —— 半徑調太低連筆尖都會被當成手掌，那時候畫布上什麼都畫不出來。"
         ],
         "tip": "用觸控筆書寫時可以直接把手掌放在螢幕上 —— 掌拒會忽略手掌，只認筆尖。手繪模式下畫布上的物件是鎖住的（不會被拖到）；要搬動或編輯物件請切到打字模式。",
         "fig": "editor",
@@ -275,7 +278,8 @@ window.KAIRUMO_MANUAL = {
           "智慧雙軌同步與即時差異核實：同步啟動前，系統會即時核實本機現存筆記本與雲端差異樣態，主動排除並清理已刪除的殘留套件，絕不對已刪除檔案發送無效請求；前台極速軌優先同步當前作用中筆記，其餘筆記本於背景並行收斂。在雲端同步視窗與系統診斷面板中，更提供「一鍵複製」與「匯出文字檔」功能，方便完整儲存工程診斷日誌。"
         ],
         "tip": "檔案的搬運交給你原本就在用的雲端硬碟。我們不碰網路，也沒有你的資料 —— 這也是為什麼找不到「登入 Kairumo」。同步只會新增檔案，不會覆蓋別台裝置寫的內容。",
-        "fig": null
+        "fig": "data",
+        "cap": "首頁的「資料與同步」：雲端同步、建立備份、從備份還原"
       },
       {
         "id": "comment",
@@ -337,6 +341,28 @@ window.KAIRUMO_MANUAL = {
         "cap2": "已連線：房間識別碼、端對端加密、本機正在提供中繼、線上參與者"
       },
       {
+        "id": "milestone",
+        "title": "里程碑快照（時光機）",
+        "lead": "在重要的時刻插一個名字，之後隨時整本退回那一刻。**退回之後還可以再退回來**，不會有東西真的消失。",
+        "buttons": [
+          "線上協同",
+          "里程碑快照時光機",
+          "建立協同快照",
+          "回滾至此版本"
+        ],
+        "steps": [
+          "在筆記畫面上找到「線上協同」，把面板打開。不必真的開始協同，里程碑就在同一個面板裡。",
+          "往下捲到「里程碑快照時光機」。",
+          "選「建立協同快照」，替這一刻取一個看得懂的名字（例如「交稿前」「老師改之前」），再確認。",
+          "之後想退回，回到同一個面板，在清單上找到那個名字，選「回滾至此版本」。",
+          "確認視窗會說明：之後的變更會被收起來，但**不會消失**。確認之後，整本筆記（文字、筆跡、圖片、版面）都回到那一刻。",
+          "系統會自動替「還原之前」那一刻也建一個里程碑，標著「自動」。想取消剛才的還原，就回滾到那一個。"
+        ],
+        "tip": "快照不是複製一份筆記，它只記下「歷史上的那一刀」，所以建再多也幾乎不佔空間，而且會跟著同步傳到你的其他裝置。",
+        "cap": "協同面板裡的「里程碑快照時光機」：建立快照，之後可回滾至此版本",
+        "fig": "milestone"
+      },
+      {
         "id": "record",
         "title": "錄音與轉錄",
         "lead": "錄音與筆跡走同一條時間軸 —— 點文字就能跳回當時寫下的那一筆。",
@@ -373,10 +399,12 @@ window.KAIRUMO_MANUAL = {
           "匯出 PDF",
           "匯出為圖片",
           "列印筆記",
-          "分享筆記"
+          "分享筆記",
+          "匯出預覽"
         ],
         "steps": [
           "點右上角的「匯出與列印」。",
+          "選了「匯出 PDF」或「匯出為圖片」之後會先出現「匯出預覽」—— 那就是**真的要送出去的那份檔案**，不是另外畫的示意圖。左右翻頁確認版面，沒問題再選「匯出」；不想要就選「取消」，那份檔案會被丟掉。",
           "「匯出 PDF」把整本筆記轉成 PDF，適合寄給別人或存檔。",
           "「匯出為圖片」輸出目前這一頁的圖檔。",
           "「列印筆記」走系統列印流程。",
@@ -384,7 +412,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "PDF 內的標註座標與原稿一致，用其他 App 打開也不會跑位。",
         "fig": "export",
-        "cap": "匯出與列印選單：匯出 PDF、匯出為圖片、列印筆記、分享筆記"
+        "cap": "匯出與列印選單：匯出 PDF、匯出為圖片、列印筆記、分享筆記",
+        "fig2": "export_preview",
+        "cap2": "匯出預覽：這就是真的會送出去的那份檔案，確認版面之後再選「匯出」"
       },
       {
         "id": "keys",
@@ -467,7 +497,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "怎麼回報問題？",
-            "請附上桌機版視窗左上角顯示的版本號（例如 Kairumo v4.8.2）與操作步驟。"
+            "請附上桌機版視窗左上角顯示的版本號（例如 Kairumo v4.9.0）與操作步驟。"
           ],
           [
             "同一本筆記可以混用不同的頁面格式嗎？",
@@ -488,7 +518,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo User Manual",
       "tagline": "Handwriting, typing and audio in one notebook. Step by step, from zero.",
-      "version": "For version 4.8.2 (build 60) · 19 September 2026",
+      "version": "For version 4.9.0 (build 61) · 19 September 2026",
       "tocTitle": "Contents",
       "tocHint": "Tap any entry to jump straight to it",
       "stepsLabel": "Steps",
@@ -510,7 +540,7 @@ window.KAIRUMO_MANUAL = {
           "No account and no internet connection are needed to start.",
           "On first launch you get two sample notebooks (“Welcome to Kairumo” and “Lectures & Meetings”) with editable text, tables, charts and shapes. Delete them if you do not want them.",
           "Everything you write is stored on this device. To sync across devices, point them at a folder in your own cloud drive (see “Backup and sync”).",
-          "On desktop the window title shows the version (for example Kairumo v4.8.2) — include it when you report a problem."
+          "On desktop the window title shows the version (for example Kairumo v4.9.0) — include it when you report a problem."
         ],
         "tip": "No server and no account means there is no password to forget — and no cloud copy if you lose the device, so make your own backup.",
         "fig": null
@@ -532,7 +562,8 @@ window.KAIRUMO_MANUAL = {
           "Tap “Get Started” to go to the home screen. This page will not come back."
         ],
         "tip": "Permissions are never requested at install time — the system only asks when a feature actually needs one. So if you start recording before granting it, you will be guided through it right then.",
-        "fig": null
+        "fig": "firstrun",
+        "cap": "First launch: what it is, no account needed, one permission"
       },
       {
         "id": "home",
@@ -619,7 +650,8 @@ window.KAIRUMO_MANUAL = {
           "Lasso",
           "Stroke Width",
           "Magnetic Snap & Ruler",
-          "Advanced Color Studio"
+          "Advanced Color Studio",
+          "Palm rejection"
         ],
         "steps": [
           "Make sure the top bar is set to handwriting mode.",
@@ -631,7 +663,8 @@ window.KAIRUMO_MANUAL = {
           "With a supported stylus you do not have to go back to the toolbar to erase: some pens **double-tap on the barrel**, some have a **side button you hold**, and some erase when you turn them over. Tap again, or let the button go, and you are back on the pen you were using. What the double-tap does is a system-wide preference, and this follows it.",
           "Turn on “Magnetic Snap & Ruler” while drawing lines or geometric contours; strokes snap automatically to canonical angles (0°, 45°, 90°, 135°, 180°) and page grids with a cyan laser guideline and haptic feedback.",
           "The toolbar provides 4-level stroke stabilization to smooth out hand jitters; tap “Advanced Color Studio” to open a full hue-saturation wheel with complementary and triadic harmonies.",
-          "“Minimalist Canvas Mode”: Click the collapse button on the toolbar to fold it into a floating tool pill in the screen corner for immersive distraction-free writing. To restore the full toolbar anytime, click the prominent “Exit Minimalist Canvas” button pinned to the top navigation bar, tap the floating bubble to expand the mini-toolbox, or press the Esc key on your physical keyboard."
+          "“Minimalist Canvas Mode”: Click the collapse button on the toolbar to fold it into a floating tool pill in the screen corner for immersive distraction-free writing. To restore the full toolbar anytime, click the prominent “Exit Minimalist Canvas” button pinned to the top navigation bar, tap the floating bubble to expand the mini-toolbox, or press the Esc key on your physical keyboard.",
+          "If resting your palm leaves marks, adjust “Palm rejection”: find it in the insert/tools menu and use the two sliders, “Touch radius threshold” and “Retract window when the pen lands”. **If it goes wrong, press “Restore defaults”** — set the radius too low and even the pen tip is treated as a palm, and then nothing draws at all."
         ],
         "tip": "Rest your palm on the screen while writing with a stylus — palm rejection ignores it and follows only the tip. In handwriting mode the objects on the canvas are locked so you cannot drag them by accident; switch to typing mode to move or edit them.",
         "fig": "editor",
@@ -739,7 +772,8 @@ window.KAIRUMO_MANUAL = {
           "Dual-track sync and real-time diff reconciliation: Before syncing, the system reconciles existing local notebooks with remote cloud indexes, actively excluding and cleaning up deleted orphaned packages without wasting bandwidth; the foreground track prioritizes your active notebook while the background queue processes remaining notebooks concurrently. Furthermore, the Cloud Sync sheet and App Diagnostics panel offer “One-click Copy” and “Export Log File” buttons to easily preserve engineering diagnostic logs."
         ],
         "tip": "Moving the files is your cloud drive's job — the one you already use. We never touch the network and never hold your data, which is why there is no “Sign in to Kairumo”. Syncing only adds files; it never overwrites what another device wrote.",
-        "fig": null
+        "fig": "data",
+        "cap": "“Data & Sync” on the home screen: cloud sync, create backup, restore from backup"
       },
       {
         "id": "comment",
@@ -801,6 +835,28 @@ window.KAIRUMO_MANUAL = {
         "cap2": "Connected: room ID, end-to-end encryption, relay hosted on this device, participants"
       },
       {
+        "id": "milestone",
+        "title": "Milestone snapshots (time machine)",
+        "lead": "Put a name on an important moment, then roll the whole notebook back to it whenever you like. **A rollback can itself be rolled back** — nothing is really lost.",
+        "buttons": [
+          "Collaborate",
+          "Milestone Snapshots",
+          "Create Snapshot",
+          "Rollback to Snapshot"
+        ],
+        "steps": [
+          "In a notebook, open “Collaborate”. You do not have to start a session — milestones live in the same panel.",
+          "Scroll down to “Milestone Snapshots”.",
+          "Choose “Create Snapshot” and give this moment a name you will recognise later (“Before handing in”, “Before the review”), then confirm.",
+          "To go back, open the same panel, find that name in the list and choose “Rollback to Snapshot”.",
+          "The confirmation explains it: later changes are set aside, **not deleted**. After you confirm, the whole notebook — text, handwriting, images, layout — returns to that moment.",
+          "A snapshot of the moment just before the rollback is created automatically and marked “Automatic”. To undo the rollback, roll back to that one."
+        ],
+        "tip": "A snapshot is not a copy of the notebook. It records a point in its history, so you can make as many as you like at almost no cost, and they sync to your other devices.",
+        "cap": "“Milestone Snapshots” inside the collaboration panel: create one, roll back to it later",
+        "fig": "milestone"
+      },
+      {
         "id": "record",
         "title": "Recording and transcription",
         "lead": "Audio and ink share one timeline — tap a word and jump to the stroke you wrote at that moment.",
@@ -837,10 +893,12 @@ window.KAIRUMO_MANUAL = {
           "Export PDF",
           "Export Image",
           "Print Notebook",
-          "Share Note"
+          "Share Note",
+          "Export preview"
         ],
         "steps": [
           "Tap “Export & Print” at the top right.",
+          "After you choose “Export PDF” or “Export as Image”, an “Export preview” appears first. **That is the actual file that will be sent**, not a mock-up. Page through it to check the layout, then choose “Export”; choose “Cancel” and the file is discarded.",
           "“Export PDF” turns the whole notebook into a PDF to send or archive.",
           "“Export Image” saves the current page as an image file.",
           "“Print Notebook” hands the note to the system print dialog.",
@@ -848,7 +906,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "Annotation coordinates in the PDF match the original, so they stay in place in other apps too.",
         "fig": "export",
-        "cap": "Export & Print menu: Export PDF, Export Image, Print Notebook, Share Note"
+        "cap": "Export & Print menu: Export PDF, Export Image, Print Notebook, Share Note",
+        "fig2": "export_preview",
+        "cap2": "Export preview: this is the actual file that will be sent — check the layout, then choose “Export”"
       },
       {
         "id": "keys",
@@ -927,7 +987,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "How do I report a problem?",
-            "Include the version shown in the desktop window title (for example Kairumo v4.8.2) and the steps you took."
+            "Include the version shown in the desktop window title (for example Kairumo v4.9.0) and the steps you took."
           ],
           [
             "Can one notebook mix different page formats?",
@@ -948,7 +1008,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作手册",
       "tagline": "手写、打字、录音三合一的笔记本。零基础也能一步一步跟着做。",
-      "version": "适用版本 v4.8.2（build 60）· 2026 年 9 月 19 日",
+      "version": "适用版本 v4.9.0（build 61）· 2026 年 9 月 19 日",
       "tocTitle": "目录",
       "tocHint": "点任一项目直接跳到该段落",
       "stepsLabel": "操作步骤",
@@ -970,7 +1030,7 @@ window.KAIRUMO_MANUAL = {
           "第一次打开不需要注册账号，也不需要联网。",
           "第一次打开会有两本范例笔记（「欢迎使用 Kairumo」与「课堂与会议记录」），里面是可以直接改的图、文、表范例。不需要就整本删掉。",
           "你写下的每一笔都存在这台设备里。要在多台设备之间同步，就挑一个自己的云端硬盘文件夹（见「数据备份与同步」）。",
-          "台式机版窗口左上角会显示版本号（例如 Kairumo v4.8.2），反馈问题时请附上它。"
+          "台式机版窗口左上角会显示版本号（例如 Kairumo v4.9.0），反馈问题时请附上它。"
         ],
         "tip": "没有服务器、没有账号，就没有“忘记密码”这回事 —— 但也意味着设备丢失时没有云端副本，请自己做备份。",
         "fig": null
@@ -992,7 +1052,8 @@ window.KAIRUMO_MANUAL = {
           "按「开始使用」进入首页。这一页之后不会再出现。"
         ],
         "tip": "权限不会在安装的时候就要 —— 系统一律等到真的要用那个功能才问。所以还没给权限就按录音的话，会在那个当下再引导一次。",
-        "fig": null
+        "fig": "firstrun",
+        "cap": "第一次打开：讲清楚是什么、不需要账号、只要一个权限"
       },
       {
         "id": "home",
@@ -1079,7 +1140,8 @@ window.KAIRUMO_MANUAL = {
           "套索选取",
           "笔迹粗细",
           "笔迹磁吸对齐与尺规",
-          "进阶调色"
+          "进阶调色",
+          "掌拒灵敏度"
         ],
         "steps": [
           "确认上排停在“手绘模式”。",
@@ -1091,7 +1153,8 @@ window.KAIRUMO_MANUAL = {
           "支持的触控笔可以不必回工具栏换橡皮擦：有的笔**双击笔杆**、有的笔**按住笔杆上的侧键**，也有的笔倒过来用就是橡皮擦。擦完再敲一次或松开侧键，就回到你刚才那支笔。双击要做什么是系统设置里的偏好，这里照它走。",
           "绘制直线与线段时开启“笔迹磁吸对齐与尺规”，笔尖接近 0°、45°、90°、135°、180° 等几何角度或网格线时会自动磁吸对齐，画面投射青色激光引导线并给予微震反馈。",
           "工具栏支持四段“笔迹平滑防抖”滤波，大幅消除书写微抖；点“进阶调色”可开启环形色相饱和度调色盘，支持互补与三角色等和谐配色。",
-          "“画布极致极简模式”：点击工具栏收折按钮可将工具栏收纳为屏幕角落的单一悬浮胶囊（Floating Tool Pill），享受无干扰全屏书写。需要恢复时，点击顶部常驻的高亮“退出画布极简模式”按钮、点击悬浮气泡展开迷你工具箱、或在键盘上按下 Esc 键，即可立刻展开完整工具栏。"
+          "“画布极致极简模式”：点击工具栏收折按钮可将工具栏收纳为屏幕角落的单一悬浮胶囊（Floating Tool Pill），享受无干扰全屏书写。需要恢复时，点击顶部常驻的高亮“退出画布极简模式”按钮、点击悬浮气泡展开迷你工具箱、或在键盘上按下 Esc 键，即可立刻展开完整工具栏。",
+          "手掌放在屏幕上会留下线条时，调「掌拒灵敏度」：在插入／工具菜单里找到它，用两支滑杆调「接触半径阈值」与「笔落下时的收回时间窗」。**调坏了按「恢复默认」** —— 半径调太低连笔尖都会被当成手掌，那时候画布上什么都画不出来。"
         ],
         "tip": "用触控笔书写时可以直接把手掌放在屏幕上 —— 掌拒会忽略手掌，只认笔尖。手绘模式下画布上的物件是锁住的（不会被拖到）；要搬动或编辑物件请切到打字模式。",
         "fig": "editor",
@@ -1196,7 +1259,8 @@ window.KAIRUMO_MANUAL = {
           "智能双轨同步与即时差异核实：同步启动前，系统会即时核实本机现存笔记本与云端差异样态，主动排除并清理已删除的残留套件，绝不对已删除档案发送无效请求；前台极速轨优先同步当前作用中笔记，其余笔记本于背景并行收敛。在云端同步窗口与系统诊断面板中，更提供“一键复制”与“导出文本档”功能，方便完整保存工程诊断日志。"
         ],
         "tip": "文件搬运交给你原本就在用的云端硬盘。我们不碰网络，也没有你的数据 —— 这也是为什么找不到“登录 Kairumo”。同步只会新增文件，不会覆盖别台设备写的内容。",
-        "fig": null
+        "fig": "data",
+        "cap": "首页的「数据与同步」：云端同步、创建备份、从备份还原"
       },
       {
         "id": "comment",
@@ -1258,6 +1322,28 @@ window.KAIRUMO_MANUAL = {
         "cap2": "已连接：房间标识码、端到端加密、本机正在提供中继、在线参与者"
       },
       {
+        "id": "milestone",
+        "title": "里程碑快照（时光机）",
+        "lead": "在重要的时刻插一个名字，之后随时整本退回那一刻。**退回之后还可以再退回来**，不会有东西真的消失。",
+        "buttons": [
+          "线上协同",
+          "里程碑快照时光机",
+          "创建协同快照",
+          "回滚至此版本"
+        ],
+        "steps": [
+          "在笔记画面上找到「线上协同」，把面板打开。不必真的开始协同，里程碑就在同一个面板里。",
+          "往下滚到「里程碑快照时光机」。",
+          "选「创建协同快照」，替这一刻取一个看得懂的名字（例如「交稿前」「老师改之前」），再确认。",
+          "之后想退回，回到同一个面板，在清单上找到那个名字，选「回滚至此版本」。",
+          "确认窗口会说明：之后的更改会被收起来，但**不会消失**。确认之后，整本笔记（文字、笔迹、图片、版面）都回到那一刻。",
+          "系统会自动替「还原之前」那一刻也建一个里程碑，标着「自动」。想取消刚才的还原，就回滚到那一个。"
+        ],
+        "tip": "快照不是复制一份笔记，它只记下「历史上的那一刀」，所以建再多也几乎不占空间，而且会跟着同步传到你的其他设备。",
+        "cap": "协同面板里的「里程碑快照时光机」：创建快照，之后可回滚至此版本",
+        "fig": "milestone"
+      },
+      {
         "id": "record",
         "title": "录音与转写",
         "lead": "录音与笔迹走同一条时间轴 —— 点文字就能跳回当时写下的那一笔。",
@@ -1294,10 +1380,12 @@ window.KAIRUMO_MANUAL = {
           "导出 PDF",
           "导出为图片",
           "打印笔记",
-          "分享笔记"
+          "分享笔记",
+          "导出预览"
         ],
         "steps": [
           "点右上角的“导出与打印”。",
+          "选了「导出 PDF」或「导出为图片」之后会先出现「导出预览」—— 那就是**真的要送出去的那份文件**，不是另外画的示意图。左右翻页确认版面，没问题再选「导出」；不想要就选「取消」，那份文件会被丢掉。",
           "“导出 PDF”把整本笔记转成 PDF，适合发给别人或存档。",
           "“导出为图片”输出当前这一页的图片文件。",
           "“打印笔记”走系统打印流程。",
@@ -1305,7 +1393,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "PDF 内的批注坐标与原稿一致，用其他 App 打开也不会跑位。",
         "fig": "export",
-        "cap": "导出与打印菜单：导出 PDF、导出为图片、打印笔记、分享笔记"
+        "cap": "导出与打印菜单：导出 PDF、导出为图片、打印笔记、分享笔记",
+        "fig2": "export_preview",
+        "cap2": "导出预览：这就是真的会送出去的那份文件，确认版面之后再选「导出」"
       },
       {
         "id": "keys",
@@ -1384,7 +1474,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "怎么反馈问题？",
-            "请附上台式机版窗口左上角显示的版本号（例如 Kairumo v4.8.2）与操作步骤。"
+            "请附上台式机版窗口左上角显示的版本号（例如 Kairumo v4.9.0）与操作步骤。"
           ],
           [
             "同一本笔记可以混用不同的页面格式吗？",
@@ -1405,7 +1495,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作マニュアル",
       "tagline": "手書き・タイピング・録音をひとつにしたノート。はじめての方でも順番どおりに進められます。",
-      "version": "対象バージョン v4.8.2（build 60）· 2026年9月19日",
+      "version": "対象バージョン v4.9.0（build 61）· 2026年9月19日",
       "tocTitle": "目次",
       "tocHint": "項目をタップすると該当セクションへ移動します",
       "stepsLabel": "手順",
@@ -1427,7 +1517,7 @@ window.KAIRUMO_MANUAL = {
           "アカウント登録もインターネット接続も不要です。",
           "初回起動時にサンプルノートが2冊（「Kairumo へようこそ」と「授業と会議の記録」）入っています。そのまま編集できる文章・表・グラフ・図形の例です。不要なら削除してください。",
           "書いた内容はこの端末に保存されます。複数の端末で同期するには、ご自身のクラウドのフォルダを指定してください（「バックアップと同期」参照）。",
-          "デスクトップ版ではウインドウのタイトルにバージョン（例：Kairumo v4.8.2）が表示されます。不具合報告の際は添えてください。"
+          "デスクトップ版ではウインドウのタイトルにバージョン（例：Kairumo v4.9.0）が表示されます。不具合報告の際は添えてください。"
         ],
         "tip": "サーバーもアカウントもないためパスワードを忘れる心配はありません。その代わりクラウド上の控えもないので、バックアップはご自身で。",
         "fig": null
@@ -1449,7 +1539,8 @@ window.KAIRUMO_MANUAL = {
           "「はじめる」を押すとホームに進みます。このページが再び出ることはありません。"
         ],
         "tip": "権限はインストール時には要求されません。システムは機能が実際に必要とするまでたずねない仕組みです。許可せずに録音を始めた場合は、そのときにあらためて案内されます。",
-        "fig": null
+        "fig": "firstrun",
+        "cap": "初回起動：概要・アカウント不要・必要な権限は一つ"
       },
       {
         "id": "home",
@@ -1536,7 +1627,8 @@ window.KAIRUMO_MANUAL = {
           "投げ縄",
           "線の太さ",
           "磁気スナップと定規",
-          "高度な調色"
+          "高度な調色",
+          "パームリジェクション"
         ],
         "steps": [
           "上部が手書きモードになっていることを確認します。",
@@ -1548,7 +1640,8 @@ window.KAIRUMO_MANUAL = {
           "対応するスタイラスなら、消すたびにツールバーへ戻る必要はありません。**ペン軸をダブルタップ**するもの、**軸のサイドボタンを押している間**だけ切り替わるもの、**逆さにする**と消しゴムになるものがあります。もう一度タップするかボタンを離せば、さっきまで使っていたペンに戻ります。ダブルタップの動作はシステム設定の設定に従います。",
           "直線や幾何線画を描く際に「磁気スナップと定規」をオンにすると、0°・45°・90°・135°・180° などの標準角度やグリッドに自動吸着し、シアンのレーザー誘導線と触覚フィードバックでお知らせします。",
           "ツールバーでは4段階の「手ぶれ補正」でペンの微細な震えを抑えられます。「高度な調色」を開くと、補色やトライアドなどの配色調和に対応した色相・彩度サークルで色を作れます。",
-          "「キャンバス極小ミニマルモード」：ツールバーの折りたたみボタンをタップすると、画面隅のフローティングカプセルに収納され、邪魔のない全画面手書きを楽しめます。復帰したい時は、上部バーに常駐する強調「キャンバス極小モードを終了」ボタンを押すか、フローティングバブルをタップしてミニツールボックスを展開するか、キーボードの Esc キーを押すだけで瞬時にツールバーが再展開されます。"
+          "「キャンバス極小ミニマルモード」：ツールバーの折りたたみボタンをタップすると、画面隅のフローティングカプセルに収納され、邪魔のない全画面手書きを楽しめます。復帰したい時は、上部バーに常駐する強調「キャンバス極小モードを終了」ボタンを押すか、フローティングバブルをタップしてミニツールボックスを展開するか、キーボードの Esc キーを押すだけで瞬時にツールバーが再展開されます。",
+          "手のひらを置くと線が残る場合は「パームリジェクション」を調整します。挿入／ツールメニューから開き、「接触半径のしきい値」と「ペンが触れたときの取り消し時間」の 2 つのスライダーで調整してください。**おかしくなったら「既定に戻す」を押します** —— 半径を下げすぎるとペン先まで手のひらと判定され、何も描けなくなります。"
         ],
         "tip": "スタイラスで書くときは手のひらを画面に置いて構いません。パームリジェクションが手のひらを無視してペン先だけを拾います。手書きモードではキャンバス上のオブジェクトはロックされていて誤って動きません。移動や編集は入力モードで行ってください。",
         "fig": "editor",
@@ -1653,7 +1746,8 @@ window.KAIRUMO_MANUAL = {
           "デュアルトラック同期とリアルタイム差分照合：同期開始前にローカルの既存ノートとクラウドインデックスの差分を即時照合し、削除済みの不要パッケージを自動除外・クリーンアップします。フォアグラウンド高速レーンで編集中ノートを最優先同期し、残りはバックグラウンド並行キューで処理します。さらにクラウド同期シートや診断ツールでは「ワンクリックコピー」と「ログファイル書き出し」を提供し、エンジニアリングログを簡単に保存できます。"
         ],
         "tip": "ファイルの運搬は普段お使いのクラウドが担当します。当方はネットワークに触れず、データも保持しません。だから「Kairumo にサインイン」はありません。同期はファイルを追加するだけで、別の端末が書いた内容を上書きしません。",
-        "fig": null
+        "fig": "data",
+        "cap": "ホームの「データと同期」：クラウド同期・バックアップ作成・バックアップから復元"
       },
       {
         "id": "comment",
@@ -1715,6 +1809,28 @@ window.KAIRUMO_MANUAL = {
         "cap2": "接続中：ルームID、暗号化、この端末が中継、参加者一覧"
       },
       {
+        "id": "milestone",
+        "title": "マイルストーンスナップショット（タイムマシン）",
+        "lead": "大事な瞬間に名前を付けておくと、あとでノート全体をその時点に戻せます。**戻した操作自体も戻せる**ので、本当に消えるものはありません。",
+        "buttons": [
+          "共同編集",
+          "マイルストーンスナップショット",
+          "スナップショットを作成",
+          "このバージョンに復元"
+        ],
+        "steps": [
+          "ノートを開いて「共同編集」をタップします。実際に共同編集を始める必要はありません。マイルストーンは同じパネルにあります。",
+          "「マイルストーンスナップショット」まで下にスクロールします。",
+          "「スナップショットを作成」を選び、あとで分かる名前（「提出前」「先生に見せる前」など）を付けて確定します。",
+          "戻したくなったら同じパネルを開き、一覧からその名前を探して「このバージョンに復元」を選びます。",
+          "確認画面に説明があります。以降の変更は削除されず、脇に置かれるだけです。確定すると、文字・手書き・画像・レイアウトを含むノート全体がその時点に戻ります。",
+          "復元する直前の状態も自動でマイルストーンとして保存され、「自動」と表示されます。復元を取り消したいときは、それに復元してください。"
+        ],
+        "tip": "スナップショットはノートの複製ではなく、履歴上の一点を記録するだけです。いくつ作ってもほとんど容量を使わず、他の端末にも同期されます。",
+        "cap": "共同編集パネル内の「マイルストーンスナップショット」：作成して、あとで復元",
+        "fig": "milestone"
+      },
+      {
         "id": "record",
         "title": "録音と文字起こし",
         "lead": "音声と手書きは同じタイムライン上にあります。単語をタップすれば、その瞬間の筆跡へ移動します。",
@@ -1751,10 +1867,12 @@ window.KAIRUMO_MANUAL = {
           "PDF を書き出す",
           "画像として書き出し",
           "ノートを印刷",
-          "ノートを共有"
+          "ノートを共有",
+          "書き出しプレビュー"
         ],
         "steps": [
           "右上の「書き出しと印刷」をタップします。",
+          "「PDF を書き出す」または「画像として書き出す」を選ぶと、まず「書き出しプレビュー」が表示されます。これは**実際に書き出されるファイルそのもの**で、イメージ図ではありません。ページを送ってレイアウトを確認し、問題なければ「書き出す」を選びます。「キャンセル」を選ぶとそのファイルは破棄されます。",
           "「PDF を書き出す」はノート全体を PDF にします。",
           "「画像として書き出し」は現在のページを画像として保存します。",
           "「ノートを印刷」はシステムの印刷画面に渡します。",
@@ -1762,7 +1880,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "PDF 内の注釈座標は原本と一致するため、他のアプリで開いてもずれません。",
         "fig": "export",
-        "cap": "書き出しメニュー：PDF、画像、印刷、ノートを共有"
+        "cap": "書き出しメニュー：PDF、画像、印刷、ノートを共有",
+        "fig2": "export_preview",
+        "cap2": "書き出しプレビュー：実際に書き出されるファイルそのものです。レイアウトを確認してから「書き出す」を選びます"
       },
       {
         "id": "keys",
@@ -1841,7 +1961,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "不具合はどう報告しますか？",
-            "デスクトップ版のウインドウタイトルに表示されるバージョン（例：Kairumo v4.8.2）と、操作手順を添えてください。"
+            "デスクトップ版のウインドウタイトルに表示されるバージョン（例：Kairumo v4.9.0）と、操作手順を添えてください。"
           ],
           [
             "1 冊のノートでページ規格を混ぜられますか？",
@@ -1862,7 +1982,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 사용 설명서",
       "tagline": "손글씨·타이핑·녹음을 하나로 묶은 노트. 처음이어도 순서대로 따라 하면 됩니다.",
-      "version": "대상 버전 v4.8.2 (build 60) · 2026년 9월 19일",
+      "version": "대상 버전 v4.9.0 (build 61) · 2026년 9월 19일",
       "tocTitle": "목차",
       "tocHint": "항목을 누르면 해당 섹션으로 이동합니다",
       "stepsLabel": "따라 하기",
@@ -1884,7 +2004,7 @@ window.KAIRUMO_MANUAL = {
           "계정 가입도, 인터넷 연결도 필요 없습니다.",
           "처음 실행하면 샘플 노트 두 권(“Kairumo에 오신 것을 환영합니다”, “수업·회의 기록”)이 들어 있습니다. 바로 고칠 수 있는 글·표·차트·도형 예시입니다. 필요 없으면 지우세요.",
           "작성한 내용은 이 기기에 저장됩니다. 여러 기기에서 동기화하려면 본인 클라우드의 폴더를 지정하세요(「백업 및 동기화」 참고).",
-          "데스크톱에서는 창 제목에 버전(예: Kairumo v4.8.2)이 표시됩니다. 문제를 알릴 때 함께 적어 주세요."
+          "데스크톱에서는 창 제목에 버전(예: Kairumo v4.9.0)이 표시됩니다. 문제를 알릴 때 함께 적어 주세요."
         ],
         "tip": "서버도 계정도 없으므로 비밀번호를 잊을 일이 없습니다. 대신 클라우드 사본도 없으니 백업은 직접 해 두세요.",
         "fig": null
@@ -1906,7 +2026,8 @@ window.KAIRUMO_MANUAL = {
           "「시작하기」를 누르면 홈으로 이동합니다. 이 페이지는 다시 나오지 않습니다."
         ],
         "tip": "권한은 설치 시점에 요청되지 않습니다. 시스템은 기능이 실제로 필요할 때만 묻습니다. 허용하지 않은 채 녹음을 시작하면 바로 그 시점에 다시 안내합니다.",
-        "fig": null
+        "fig": "firstrun",
+        "cap": "첫 실행: 무엇인지, 계정 불필요, 권한은 하나"
       },
       {
         "id": "home",
@@ -1993,7 +2114,8 @@ window.KAIRUMO_MANUAL = {
           "올가미",
           "선 굵기",
           "자석 스냅 및 눈금자",
-          "고급 색상 조색"
+          "고급 색상 조색",
+          "손바닥 인식 차단"
         ],
         "steps": [
           "상단이 손글씨 모드인지 확인합니다.",
@@ -2005,7 +2127,8 @@ window.KAIRUMO_MANUAL = {
           "지원되는 스타일러스라면 지우려고 도구 모음으로 돌아갈 필요가 없습니다. **펜대를 두 번 두드리는** 방식, **펜대의 측면 버튼을 누르고 있는** 방식, **뒤집으면** 지우개가 되는 방식이 있습니다. 다시 두드리거나 버튼을 놓으면 쓰던 펜으로 돌아옵니다. 두 번 두드렸을 때의 동작은 시스템 설정을 따릅니다.",
           "직선이나 도형 윤곽을 그릴 때 “자석 스냅 및 눈금자”를 켜면 펜 끝이 0°, 45°, 90°, 135°, 180° 등의 표준 각도나 격자에 자동으로 달라붙으며 청록색 레이저 가이드선과 햅틱 피드백이 표시됩니다.",
           "도구 모음에서 4단계 “손떨림 보정”으로 손떨림을 깔끔하게 잡아줄 수 있습니다. “고급 색상 조색”을 열면 보색 및 삼각 조화 등 색채 조화가 지원되는 원형 색상환으로 색을 고를 수 있습니다.",
-          "“캔버스 미니멀 모드”: 도구 모음의 접기 버튼을 누르면 화면 구석의 단일 플로팅 캡슐(Floating Tool Pill)로 접혀 방해 없는 전체 화면 필기를 즐길 수 있습니다. 언제든지 복구하려면 상단 탐색 표시줄에 상주하는 강조된 “캔버스 미니멀 모드 종료” 버튼을 클릭하거나 플로팅 버블을 탭하여 미니 도구 상자를 펼치거나 물리 키보드의 Esc 키를 누르면 전체 도구 모음이 즉시 다시 열립니다."
+          "“캔버스 미니멀 모드”: 도구 모음의 접기 버튼을 누르면 화면 구석의 단일 플로팅 캡슐(Floating Tool Pill)로 접혀 방해 없는 전체 화면 필기를 즐길 수 있습니다. 언제든지 복구하려면 상단 탐색 표시줄에 상주하는 강조된 “캔버스 미니멀 모드 종료” 버튼을 클릭하거나 플로팅 버블을 탭하여 미니 도구 상자를 펼치거나 물리 키보드의 Esc 키를 누르면 전체 도구 모음이 즉시 다시 열립니다.",
+          "손바닥을 올렸을 때 선이 남는다면 “손바닥 인식 차단”을 조정하세요. 삽입/도구 메뉴에서 열어 “접촉 반경 임계값”과 “펜이 닿을 때 되돌릴 시간” 두 슬라이더로 조정합니다. **잘못되면 “기본값 복원”을 누르세요** — 반경을 너무 낮추면 펜촉까지 손바닥으로 인식되어 아무것도 그려지지 않습니다."
         ],
         "tip": "스타일러스로 쓸 때 손바닥을 화면에 올려도 됩니다. 팜 리젝션이 손바닥을 무시하고 펜 끝만 인식합니다. 필기 모드에서는 캔버스의 객체가 잠겨 있어 실수로 끌리지 않습니다. 옮기거나 고치려면 입력 모드로 바꾸세요.",
         "fig": "editor",
@@ -2110,7 +2233,8 @@ window.KAIRUMO_MANUAL = {
           "듀얼 트랙 동기화 및 실시간 차이 검증: 동기화가 시작되기 전 시스템이 로컬에 실제로 존재하는 전자노트와 클라우드 인덱스를 즉시 대조하여 삭제된 잔여 패키지를 자동으로 배제하고 정리합니다. 전경 고속 트랙이 현재 편집 중인 노트를 최우선 동기화하며 나머지는 백그라운드 병렬 큐에서 수렴합니다. 또한 클라우드 동기화 시트와 진단 패널에서 “원클릭 복사” 및 “로그 파일 내보내기” 기능을 제공하여 진단 로그를 간편하게 저장할 수 있습니다."
         ],
         "tip": "파일 이동은 이미 쓰고 계신 클라우드가 맡습니다. 저희는 네트워크를 건드리지 않고 데이터도 보관하지 않습니다. 그래서 “Kairumo 로그인”이 없습니다. 동기화는 파일을 추가만 하며 다른 기기의 내용을 덮어쓰지 않습니다.",
-        "fig": null
+        "fig": "data",
+        "cap": "홈의 “데이터 및 동기화”: 클라우드 동기화, 백업 생성, 백업에서 복원"
       },
       {
         "id": "comment",
@@ -2172,6 +2296,28 @@ window.KAIRUMO_MANUAL = {
         "cap2": "연결됨: 룸 ID, 종단 간 암호화, 이 기기가 중계, 참여자"
       },
       {
+        "id": "milestone",
+        "title": "마일스톤 스냅샷(타임머신)",
+        "lead": "중요한 순간에 이름을 남겨 두면 언제든 노트 전체를 그 시점으로 되돌릴 수 있습니다. **되돌린 것도 다시 되돌릴 수 있어** 실제로 사라지는 것은 없습니다.",
+        "buttons": [
+          "공동 편집",
+          "마일스톤 스냅샷",
+          "스냅샷 생성",
+          "이 버전으로 롤백"
+        ],
+        "steps": [
+          "노트에서 “공동 편집”을 엽니다. 실제로 공동 편집을 시작할 필요는 없습니다. 마일스톤이 같은 패널에 있습니다.",
+          "“마일스톤 스냅샷”까지 아래로 스크롤합니다.",
+          "“스냅샷 생성”을 선택하고 나중에 알아볼 이름(“제출 전”, “검토 전”)을 입력한 뒤 확인합니다.",
+          "되돌리려면 같은 패널을 열고 목록에서 그 이름을 찾아 “이 버전으로 롤백”을 선택합니다.",
+          "확인 창이 설명해 줍니다. 이후 변경 사항은 삭제되지 않고 보관됩니다. 확인하면 글자·필기·이미지·레이아웃을 포함한 노트 전체가 그 시점으로 돌아갑니다.",
+          "롤백 직전 시점도 자동으로 마일스톤으로 저장되며 “자동”으로 표시됩니다. 롤백을 취소하려면 그 마일스톤으로 롤백하세요."
+        ],
+        "tip": "스냅샷은 노트의 사본이 아니라 기록상의 한 지점만 저장합니다. 많이 만들어도 용량을 거의 쓰지 않으며 다른 기기로도 동기화됩니다.",
+        "cap": "공동 편집 패널의 “마일스톤 스냅샷”: 만들고 나중에 롤백",
+        "fig": "milestone"
+      },
+      {
         "id": "record",
         "title": "녹음과 전사",
         "lead": "소리와 필기가 같은 타임라인 위에 있습니다. 단어를 누르면 그때 쓴 획으로 이동합니다.",
@@ -2208,10 +2354,12 @@ window.KAIRUMO_MANUAL = {
           "PDF 내보내기",
           "이미지로 내보내기",
           "노트 인쇄",
-          "노트 공유"
+          "노트 공유",
+          "내보내기 미리보기"
         ],
         "steps": [
           "오른쪽 위 “내보내기 및 인쇄”를 누릅니다.",
+          "“PDF로 내보내기” 또는 “이미지로 내보내기”를 선택하면 먼저 “내보내기 미리보기”가 나타납니다. 이것은 **실제로 내보낼 파일 그 자체**이며 예시 이미지가 아닙니다. 페이지를 넘겨 레이아웃을 확인한 뒤 “내보내기”를 선택하세요. “취소”를 선택하면 그 파일은 폐기됩니다.",
           "“PDF 내보내기”는 노트 전체를 PDF로 만듭니다.",
           "“이미지로 내보내기”는 현재 페이지를 이미지 파일로 저장합니다.",
           "“노트 인쇄”은 시스템 인쇄 화면으로 넘깁니다.",
@@ -2219,7 +2367,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "PDF 안의 주석 좌표가 원본과 같아 다른 앱에서 열어도 위치가 틀어지지 않습니다.",
         "fig": "export",
-        "cap": "내보내기 메뉴: PDF, 이미지, 인쇄, 노트 공유"
+        "cap": "내보내기 메뉴: PDF, 이미지, 인쇄, 노트 공유",
+        "fig2": "export_preview",
+        "cap2": "내보내기 미리보기: 실제로 내보낼 파일 그 자체입니다. 레이아웃을 확인한 뒤 “내보내기”를 선택하세요"
       },
       {
         "id": "keys",
@@ -2298,7 +2448,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "문제는 어떻게 알리나요?",
-            "데스크톱 창 제목에 보이는 버전(예: Kairumo v4.8.2)과 진행한 단계를 함께 알려 주세요."
+            "데스크톱 창 제목에 보이는 버전(예: Kairumo v4.9.0)과 진행한 단계를 함께 알려 주세요."
           ],
           [
             "한 노트에서 페이지 규격을 섞어 쓸 수 있나요?",
@@ -2319,7 +2469,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "คู่มือการใช้งาน Kairumo",
       "tagline": "สมุดจดที่รวมลายมือ การพิมพ์ และการอัดเสียงไว้ด้วยกัน ทำตามทีละขั้นได้แม้เพิ่งเริ่มใช้",
-      "version": "สำหรับเวอร์ชัน v4.8.2 (build 60) · 19 กันยายน 2026",
+      "version": "สำหรับเวอร์ชัน v4.9.0 (build 61) · 19 กันยายน 2026",
       "tocTitle": "สารบัญ",
       "tocHint": "แตะหัวข้อเพื่อไปยังส่วนนั้นทันที",
       "stepsLabel": "ขั้นตอน",
@@ -2341,7 +2491,7 @@ window.KAIRUMO_MANUAL = {
           "ไม่ต้องสมัครบัญชีและไม่ต้องต่ออินเทอร์เน็ต",
           "เมื่อเปิดครั้งแรกจะมีสมุดตัวอย่างสองเล่ม (“ยินดีต้อนรับสู่ Kairumo” และ “บันทึกการเรียนและการประชุม”) ซึ่งมีข้อความ ตาราง แผนภูมิ และรูปทรงที่แก้ไขได้ทันที ลบทิ้งได้ถ้าไม่ต้องการ",
           "ทุกอย่างที่คุณเขียนถูกเก็บไว้ในเครื่องนี้ หากต้องการซิงค์ระหว่างหลายเครื่อง ให้ชี้ไปที่โฟลเดอร์บนคลาวด์ของคุณเอง (ดู “สำรองข้อมูลและซิงค์”)",
-          "บนเดสก์ท็อป ชื่อหน้าต่างจะแสดงเวอร์ชัน (เช่น Kairumo v4.8.2) โปรดแจ้งมาด้วยเมื่อรายงานปัญหา"
+          "บนเดสก์ท็อป ชื่อหน้าต่างจะแสดงเวอร์ชัน (เช่น Kairumo v4.9.0) โปรดแจ้งมาด้วยเมื่อรายงานปัญหา"
         ],
         "tip": "เมื่อไม่มีเซิร์ฟเวอร์และไม่มีบัญชี ก็ไม่มีรหัสผ่านให้ลืม แต่ก็ไม่มีสำเนาบนคลาวด์เช่นกัน จึงควรสำรองข้อมูลเอง",
         "fig": null
@@ -2363,7 +2513,8 @@ window.KAIRUMO_MANUAL = {
           "แตะ “เริ่มใช้งาน” เพื่อเข้าสู่หน้าแรก หน้านี้จะไม่กลับมาอีก"
         ],
         "tip": "ระบบจะไม่ขอสิทธิ์ตอนติดตั้ง แต่จะถามเมื่อฟีเจอร์นั้นต้องใช้จริง ๆ ดังนั้นหากเริ่มบันทึกเสียงก่อนให้สิทธิ์ ระบบจะแนะนำให้อีกครั้งในตอนนั้น",
-        "fig": null
+        "fig": "firstrun",
+        "cap": "เปิดครั้งแรก: คืออะไร ไม่ต้องมีบัญชี ขอสิทธิ์เพียงอย่างเดียว"
       },
       {
         "id": "home",
@@ -2450,7 +2601,8 @@ window.KAIRUMO_MANUAL = {
           "บ่วงบาศก์",
           "ความหนาของเส้น",
           "สแน็ปแม่เหล็กและไม้บรรทัด",
-          "สตูดิโอสีขั้นสูง"
+          "สตูดิโอสีขั้นสูง",
+          "การปฏิเสธฝ่ามือ"
         ],
         "steps": [
           "ตรวจว่าแถบบนอยู่ในโหมดลายมือ",
@@ -2462,7 +2614,8 @@ window.KAIRUMO_MANUAL = {
           "หากใช้สไตลัสที่รองรับ ไม่ต้องกลับไปที่แถบเครื่องมือเพื่อลบ ปากกาบางรุ่น**แตะสองครั้งที่ด้ามปากกา** บางรุ่นมี**ปุ่มข้างด้ามให้กดค้าง** และบางรุ่นกลับหัวปากกาก็กลายเป็นยางลบ แตะอีกครั้งหรือปล่อยปุ่มก็กลับไปใช้ปากกาเดิม ส่วนการแตะสองครั้งจะทำอะไรนั้นเป็นค่าที่ตั้งไว้ในระบบ และที่นี่ทำตามค่านั้น",
           "เปิด “สแน็ปแม่เหล็กและไม้บรรทัด” ขณะวาดเส้นตรงหรือรูปทรงเรขาคณิต ลายเส้นจะดูดเข้ากับมุมมาตรฐาน (0°, 45°, 90°, 135°, 180°) และเส้นตารางอัตโนมัติ พร้อมเส้นนำเลเซอร์สีฟ้าและการสั่นตอบสนอง",
           "แถบเครื่องมือมีระบบลดการสั่น 4 ระดับเพื่อช่วยให้เส้นนิ่งขึ้น และแตะ “สตูดิโอสีขั้นสูง” เพื่อเปิดวงล้อสีแบบวงกลมพร้อมชุดสีคู่ตรงข้ามและสามเฉดสีที่กลมกลืน",
-          "“โหมดแคนวาสมินิมอล”: แตะปุ่มยุบแถบเครื่องมือเพื่อพับเก็บเป็นแคปซูลลอย (Floating Tool Pill) ที่มุมจอ เพื่อการเขียนแบบเต็มจอที่ไร้สิ่งรบกวน เมื่อต้องการกู้คืน ให้คลิกปุ่มเน้นเด่นชัด “ออกจากโหมดแคนวาสมินิมอล” บนแถบนำทางด้านบน แตะฟองลอยเพื่อขยายกล่องเครื่องมือขนาดเล็ก หรือกดปุ่ม Esc บนแป้นพิมพ์เพื่อเปิดแถบเครื่องมือแบบเต็มทันที"
+          "“โหมดแคนวาสมินิมอล”: แตะปุ่มยุบแถบเครื่องมือเพื่อพับเก็บเป็นแคปซูลลอย (Floating Tool Pill) ที่มุมจอ เพื่อการเขียนแบบเต็มจอที่ไร้สิ่งรบกวน เมื่อต้องการกู้คืน ให้คลิกปุ่มเน้นเด่นชัด “ออกจากโหมดแคนวาสมินิมอล” บนแถบนำทางด้านบน แตะฟองลอยเพื่อขยายกล่องเครื่องมือขนาดเล็ก หรือกดปุ่ม Esc บนแป้นพิมพ์เพื่อเปิดแถบเครื่องมือแบบเต็มทันที",
+          "หากวางฝ่ามือแล้วเกิดรอยเส้น ให้ปรับ “การปฏิเสธฝ่ามือ” เปิดจากเมนูแทรก/เครื่องมือ แล้วปรับด้วยแถบเลื่อนสองอัน คือ “เกณฑ์รัศมีการสัมผัส” และ “ช่วงเวลาย้อนกลับเมื่อปากกาแตะ” **หากผิดพลาดให้กด “คืนค่าเริ่มต้น”** เพราะถ้าตั้งรัศมีต่ำเกินไป ปลายปากกาจะถูกมองว่าเป็นฝ่ามือ และจะวาดอะไรไม่ได้เลย"
         ],
         "tip": "วางฝ่ามือบนจอขณะเขียนด้วยสไตลัสได้ ระบบตัดการสัมผัสฝ่ามือจะรับเฉพาะปลายปากกา ในโหมดเขียนด้วยลายมือ วัตถุบนผืนผ้าใบถูกล็อกไว้จึงไม่ถูกลากโดยบังเอิญ หากต้องการย้ายหรือแก้ไข ให้สลับไปโหมดพิมพ์",
         "fig": "editor",
@@ -2567,7 +2720,8 @@ window.KAIRUMO_MANUAL = {
           "การซิงค์แทร็กคู่และการกระทบยอดความแตกต่างแบบเรียลไทม์: ก่อนเริ่มการซิงค์ ระบบจะกระทบยอดความแตกต่างระหว่างสมุดบันทึกในเครื่องกับดัชนีบนคลาวด์ พร้อมทั้งคัดแยกและล้างแพ็กเกจที่ถูกลบออกไปโดยอัตโนมัติ แทร็กเบื้องหน้าจะให้ความสำคัญกับสมุดบันทึกที่กำลังเปิดใช้งานเป็นอันดับแรก ในขณะที่คิวเบื้องหลังจะซิงค์ส่วนที่เหลือพร้อมกัน นอกจากนี้ยังมีปุ่ม “คัดลอกในคลิกเดียว” และ “ส่งออกไฟล์บันทึก” เพื่อบันทึกข้อมูลการวินิจฉัยทางวิศวกรรมได้อย่างง่ายดาย"
         ],
         "tip": "การย้ายไฟล์เป็นหน้าที่ของคลาวด์ที่คุณใช้อยู่แล้ว เราไม่แตะเครือข่ายและไม่เก็บข้อมูลของคุณ จึงไม่มีปุ่ม “ลงชื่อเข้าใช้ Kairumo” การซิงก์เพิ่มไฟล์เท่านั้น ไม่เขียนทับสิ่งที่เครื่องอื่นเขียนไว้",
-        "fig": null
+        "fig": "data",
+        "cap": "“ข้อมูลและการซิงก์” บนหน้าแรก: ซิงก์คลาวด์ สร้างข้อมูลสำรอง กู้คืนจากข้อมูลสำรอง"
       },
       {
         "id": "comment",
@@ -2629,6 +2783,28 @@ window.KAIRUMO_MANUAL = {
         "cap2": "เชื่อมต่อแล้ว: Room ID การเข้ารหัส เครื่องนี้เป็นตัวส่งต่อ และผู้เข้าร่วม"
       },
       {
+        "id": "milestone",
+        "title": "สแนปช็อตเหตุการณ์สำคัญ (ไทม์แมชชีน)",
+        "lead": "ตั้งชื่อให้ช่วงเวลาสำคัญ แล้วย้อนทั้งสมุดกลับไปยังจุดนั้นเมื่อใดก็ได้ **การย้อนกลับก็ย้อนกลับได้อีก** จึงไม่มีอะไรหายไปจริง ๆ",
+        "buttons": [
+          "การทำงานร่วมกัน",
+          "สแนปช็อตเหตุการณ์สำคัญ",
+          "สร้างสแนปช็อต",
+          "ย้อนกลับไปยังเวอร์ชันนี้"
+        ],
+        "steps": [
+          "เปิดสมุดแล้วเลือก “การทำงานร่วมกัน” ไม่จำเป็นต้องเริ่มทำงานร่วมกันจริง เพราะเหตุการณ์สำคัญอยู่ในแผงเดียวกัน",
+          "เลื่อนลงไปที่ “สแนปช็อตเหตุการณ์สำคัญ”",
+          "เลือก “สร้างสแนปช็อต” ตั้งชื่อที่จำได้ (เช่น “ก่อนส่งงาน”) แล้วยืนยัน",
+          "เมื่อต้องการย้อนกลับ ให้เปิดแผงเดิม หาชื่อนั้นในรายการ แล้วเลือก “ย้อนกลับไปยังเวอร์ชันนี้”",
+          "หน้าต่างยืนยันจะอธิบายว่า การเปลี่ยนแปลงหลังจากนั้นจะถูกเก็บไว้ ไม่ได้ถูกลบ เมื่อยืนยันแล้ว ทั้งสมุด—ข้อความ ลายมือ รูปภาพ และเลย์เอาต์—จะกลับไปยังช่วงเวลานั้น",
+          "ระบบจะสร้างสแนปช็อตของช่วงก่อนย้อนกลับให้อัตโนมัติ และแสดงคำว่า “อัตโนมัติ” หากต้องการยกเลิกการย้อนกลับ ให้ย้อนไปยังสแนปช็อตนั้น"
+        ],
+        "tip": "สแนปช็อตไม่ใช่สำเนาของสมุด แต่บันทึกเพียงจุดหนึ่งในประวัติ จึงสร้างได้มากโดยแทบไม่กินพื้นที่ และซิงก์ไปยังอุปกรณ์อื่นของคุณด้วย",
+        "cap": "“สแนปช็อตเหตุการณ์สำคัญ” ในแผงการทำงานร่วมกัน: สร้างไว้แล้วย้อนกลับได้ภายหลัง",
+        "fig": "milestone"
+      },
+      {
         "id": "record",
         "title": "อัดเสียงและถอดความ",
         "lead": "เสียงกับลายมืออยู่บนไทม์ไลน์เดียวกัน แตะคำหนึ่งแล้วกระโดดไปยังเส้นที่เขียนในวินาทีนั้น",
@@ -2665,10 +2841,12 @@ window.KAIRUMO_MANUAL = {
           "ส่งออก PDF",
           "ส่งออกเป็นรูปภาพ",
           "พิมพ์สมุดบันทึก",
-          "แชร์บันทึก"
+          "แชร์บันทึก",
+          "ตัวอย่างการส่งออก"
         ],
         "steps": [
           "แตะ “ส่งออกและพิมพ์” ที่มุมขวาบน",
+          "เมื่อเลือก “ส่งออก PDF” หรือ “ส่งออกเป็นรูปภาพ” จะมี “ตัวอย่างการส่งออก” ขึ้นมาก่อน นั่นคือ**ไฟล์จริงที่จะถูกส่งออก** ไม่ใช่ภาพจำลอง เลื่อนดูหน้าเพื่อตรวจเลย์เอาต์ แล้วเลือก “ส่งออก” หากเลือก “ยกเลิก” ไฟล์นั้นจะถูกทิ้ง",
           "“ส่งออก PDF” เปลี่ยนทั้งเล่มเป็นไฟล์ PDF",
           "“ส่งออกเป็นรูปภาพ” บันทึกหน้าปัจจุบันเป็นไฟล์รูป",
           "“พิมพ์สมุดบันทึก” ส่งต่อไปยังหน้าต่างพิมพ์ของระบบ",
@@ -2676,7 +2854,9 @@ window.KAIRUMO_MANUAL = {
         ],
         "tip": "พิกัดของคำอธิบายใน PDF ตรงกับต้นฉบับ เปิดในแอปอื่นก็ไม่เคลื่อน",
         "fig": "export",
-        "cap": "เมนูส่งออก: PDF รูปภาพ พิมพ์ และแชร์โน้ต"
+        "cap": "เมนูส่งออก: PDF รูปภาพ พิมพ์ และแชร์โน้ต",
+        "fig2": "export_preview",
+        "cap2": "ตัวอย่างการส่งออก: นี่คือไฟล์จริงที่จะถูกส่งออก ตรวจเลย์เอาต์แล้วเลือก “ส่งออก”"
       },
       {
         "id": "keys",
@@ -2755,7 +2935,7 @@ window.KAIRUMO_MANUAL = {
           ],
           [
             "รายงานปัญหาอย่างไร",
-            "โปรดแจ้งเวอร์ชันที่แสดงบนชื่อหน้าต่างของเดสก์ท็อป (เช่น Kairumo v4.8.2) พร้อมขั้นตอนที่ทำ"
+            "โปรดแจ้งเวอร์ชันที่แสดงบนชื่อหน้าต่างของเดสก์ท็อป (เช่น Kairumo v4.9.0) พร้อมขั้นตอนที่ทำ"
           ],
           [
             "สมุดเล่มเดียวใช้ขนาด/เทมเพลตหน้าต่างกันได้ไหม",
