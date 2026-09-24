@@ -82,9 +82,14 @@ final class InsertToolsAudit: XCTestCase {
         item.tap()
 
         // 「插入畫布」在面板底部，手機尺寸上要捲才看得到。
+        // CI 的機器比本機慢，面板動畫與 SceneKit 第一次建場景都要時間 ——
+        // 逾時抓太緊的話，紅燈說的是「找不到」，實際是「還沒到」。
         let insert = element(app, "model3d.insert")
-        if !insert.waitForExistence(timeout: 6) {
-            for _ in 0..<6 where !insert.exists { app.swipeUp() }
+        if !insert.waitForExistence(timeout: 15) {
+            for _ in 0..<8 where !insert.exists {
+                app.swipeUp()
+                _ = insert.waitForExistence(timeout: 1)
+            }
         }
         guard insert.exists else {
             XCTFail(
@@ -98,8 +103,93 @@ final class InsertToolsAudit: XCTestCase {
 
         let handle = element(app, "model3d.resize")
         XCTAssertTrue(
-            handle.waitForExistence(timeout: 8),
-            "插進畫布的 3D 模型上沒有縮放把手 —— 使用者改不了它的大小")
+            handle.waitForExistence(timeout: 15),
+            "插進畫布的 3D 模型上沒有縮放把手 —— 使用者改不了它的大小。\n"
+                + "現場的識別碼："
+                + app.descendants(matching: .any).allElementsBoundByIndex
+                    .prefix(50).map { $0.identifier }.filter { !$0.isEmpty }
+                    .joined(separator: ", "))
+    }
+
+    /// 錄音啟動失敗的時候，**畫面上要說一聲**。
+    ///
+    /// # 為什麼要能從外面把它弄壞
+    ///
+    /// `startRecording` 有三處會靜靜地回 false（權限被拒、開不了套件、
+    /// 擷取啟動失敗），而按鈕原本是 `_ = await ...` —— 回傳值直接丟掉，
+    /// 失敗時畫面上什麼都不會發生。使用者回報的就是「錄音鈕沒反應」。
+    ///
+    /// 這種「失敗路徑」不製造一次失敗是驗不到的，所以用啟動環境變數
+    /// 強制它失敗。沒有這條測試的話，下一次有人把 `showCanvasNotice`
+    /// 那一行刪掉，不會有任何東西變紅。
+    func testRecordingFailureTellsTheUser() {
+        let app = XCUIApplication()
+        app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launchEnvironment["KAIRUMO_UITEST_FAIL_RECORDING"] = "1"
+        app.launch()
+        guard openEditor(app) else {
+            XCTFail("進不到編輯器")
+            return
+        }
+
+        element(app, "editor.record").tap()
+
+        XCTAssertTrue(
+            element(app, "editor.notice").waitForExistence(timeout: 6),
+            "錄音啟動失敗了，畫面上卻什麼都沒說 —— 那就是「按了沒反應」。\n"
+                + "現場的識別碼："
+                + app.descendants(matching: .any).allElementsBoundByIndex
+                    .prefix(50).map { $0.identifier }.filter { !$0.isEmpty }
+                    .joined(separator: ", ")
+                + "\n靜態文字："
+                + app.staticTexts.allElementsBoundByIndex
+                    .prefix(20).map { $0.label }.joined(separator: " | "))
+    }
+
+    /// 拿不到畫布的時候，貼紙要說一聲。
+    ///
+    /// 貼紙是貼成**筆跡**的（所以可以擦、可以套索搬走），那需要畫布在場。
+    /// 原本是 `guard let canvas = canvasView else { return }` ——
+    /// 使用者挑了一張貼紙、面板關上、畫布上什麼也沒有，沒有任何線索。
+    func testStickerWithoutCanvasTellsTheUser() {
+        let app = XCUIApplication()
+        app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launchEnvironment["KAIRUMO_UITEST_NO_CANVAS"] = "1"
+        app.launch()
+        guard openEditor(app) else {
+            XCTFail("進不到編輯器")
+            return
+        }
+
+        element(app, "editor.more").tap()
+        let item = app.buttons["Sticker Library"].firstMatch
+        if !item.waitForExistence(timeout: 3) {
+            for _ in 0..<6 where !item.exists { app.swipeUp() }
+        }
+        guard item.exists else {
+            XCTFail("「更多」選單裡找不到貼紙庫")
+            return
+        }
+        item.tap()
+
+        // 挑第一張貼紙。內建那些的識別碼都是 `stickers.item`。
+        let sticker = app.descendants(matching: .any)
+            .matching(identifier: "stickers.item").firstMatch
+        guard sticker.waitForExistence(timeout: 8) else {
+            XCTFail("貼紙庫裡一張貼紙都沒有")
+            return
+        }
+        sticker.tap()
+
+        XCTAssertTrue(
+            element(app, "editor.notice").waitForExistence(timeout: 6),
+            "貼紙插不進去，畫面上卻什麼都沒說。\n現場的識別碼："
+                + app.descendants(matching: .any).allElementsBoundByIndex
+                    .prefix(50).map { $0.identifier }.filter { !$0.isEmpty }
+                    .joined(separator: ", ")
+                + "\n靜態文字："
+                + app.staticTexts.allElementsBoundByIndex
+                    .prefix(20).map { $0.label }.joined(separator: " | "))
     }
 
     /// 依識別碼找元素，**不掃整棵樹**。

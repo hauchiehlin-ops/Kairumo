@@ -1606,7 +1606,10 @@ public struct NotebookEditorView: View {
                 // 貼紙是貼成**筆跡**的（所以可以擦、可以套索搬走），
                 // 那需要畫布在場。打字模式下畫布不吃筆跡，所以先講清楚
                 // 要切回手寫模式。
-                guard let canvas = canvasView else {
+                // 同上：要驗「拿不到畫布時會不會出聲」，就要能把畫布拿走。
+                let noCanvas = ProcessInfo.processInfo
+                    .environment["KAIRUMO_UITEST_NO_CANVAS"] == "1"
+                guard let canvas = canvasView, !noCanvas else {
                     showCanvasNotice(localizationManager.localized("insert_needs_canvas"))
                     return
                 }
@@ -2714,7 +2717,16 @@ public struct NotebookEditorView: View {
                     //
                     // 權限被拒那一條由 `AudioRecorderManager` 自己跳系統
                     // 提示（`showPermissionAlert`），其餘的在這裡說一聲。
-                    let started = await audioManager.startRecording(
+                    // **可以從外面把它弄壞。**
+                    //
+                    // 「失敗時會不會出聲」這件事，不製造一次失敗是驗不到的
+                    // —— 而沒有測試守著的修正，等於一個還沒發生的回歸
+                    // （筆跡那一條就是這樣活了很久）。
+                    let forcedFailure = ProcessInfo.processInfo
+                        .environment["KAIRUMO_UITEST_FAIL_RECORDING"] == "1"
+                    let started = forcedFailure
+                        ? false
+                        : await audioManager.startRecording(
                             notebookId: notebook.id,
                             notebookTitle: notebook.displayTitle(),
                             title: "\(notebook.displayTitle()) \(localizationManager.localized("recording_suffix"))")
@@ -2829,7 +2841,20 @@ public struct NotebookEditorView: View {
         case .single:     AnyView(singlePageWorkArea)
         case .continuous: AnyView(continuousPagesContent)
         }
-        return AnyView(placed(canvas))
+        // **提示條掛在兩種模式共用的這一層。**
+        //
+        // 它原本只長在 `singlePageWorkArea` 裡，於是連續模式下
+        // `showCanvasNotice(...)` 等於什麼都沒做 —— 而那正是它要補的那個洞
+        // （失敗時沒有任何回饋）。「有時候會提示、有時候不會」比一直沒提示
+        // 更難查。
+        return AnyView(
+            ZStack(alignment: .bottom) {
+                placed(canvas)
+                if let notice = canvasNotice {
+                    canvasNoticeBanner(notice)
+                }
+            }
+        )
     }
 
     /// 把工具列貼到畫布的哪一邊（S-261b）。
@@ -2926,9 +2951,6 @@ public struct NotebookEditorView: View {
                     // 棘輪、附上一段解釋 —— 解釋是對的，但沒有人回頭把它修好。
                     .accessibilityIdentifier("editor.canvas")
 
-                if let notice = canvasNotice {
-                    canvasNoticeBanner(notice)
-                }
             }
             .frame(width: outer.size.width, height: outer.size.height)
         }
@@ -3173,6 +3195,9 @@ public struct NotebookEditorView: View {
         .padding(.bottom, 20)
         .transition(.move(edge: .bottom).combined(with: .opacity))
         .allowsHitTesting(false)
+        // 測試要認得這條提示 —— 「失敗時有沒有出聲」本身就是要守的行為。
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("editor.notice")
     }
 
     /// 連續頁面模式的工作區。
@@ -10375,7 +10400,27 @@ struct Model3DCanvasItemView: View {
 
             Model3DInteractiveCardView(
                 attachment: $item,
-                onDelete: onDelete
+                onDelete: onDelete,
+                // 拖卡片本體 = 移動，與畫布上其他每一種物件一致。
+                // （旋轉改成卡片右上角那顆鈕先開啟。）
+                onMove: { translation in
+                    dragOffset = translation
+                },
+                onMoveEnded: {
+                    // 與頂部手把那條路同一個夾擠（S-85：拖出可列印範圍要推回）。
+                    let landed = PrintableArea.clampOrigin(
+                        x: item.x + dragOffset.width,
+                        y: item.y + dragOffset.height,
+                        width: item.width, height: item.height)
+                    item.x = landed.x
+                    item.y = landed.y
+                    dragOffset = .zero
+                    if let data = try? JSONEncoder().encode(item),
+                       let dict = try? JSONSerialization.jsonObject(with: data)
+                        as? [String: Any] {
+                        collaborationManager.broadcastAttachmentUpsert(type: "3d", itemDict: dict)
+                    }
+                }
             )
             // 底色與邊框吃使用者的設定。原本是寫死的 —— 那表示「所有插入的
             // 東西都能調外框」這件事在 3D 模型上是假的。

@@ -235,6 +235,43 @@ CI 的「畫面稽核」那一步只跑五條 `SmokeUITests` 加 `InsertToolsAud
 欄位（`section` 已經有了，缺的是「要先做什麼才看得到」），產進
 `screens.json`，兩端的測試改成讀它。那時候三份就會變成一份。
 
+### ~~S-SILENT-FAILURES~~ ✅ 「按了沒反應」現在有測試守著
+
+使用者回報的五項裡，有兩項的根因是**失敗時畫面一聲不吭**：錄音啟動失敗、
+貼紙拿不到畫布。修法是呼叫 `showCanvasNotice(...)` 說一聲，但這種修正
+**不製造一次失敗就驗不到** —— 而沒有測試守著的修正，等於一個還沒發生的
+回歸（筆跡自動儲存那一條就是這樣活了很久）。
+
+所以加了兩個環境變數把失敗打進來：`KAIRUMO_UITEST_FAIL_RECORDING`、
+`KAIRUMO_UITEST_NO_CANVAS`，配兩條測試斷言畫面上真的出現了提示。
+
+**第一次跑是紅的，而那是對的**：診斷輸出顯示整棵樹裡沒有 `editor.notice`。
+真因是 `canvasNoticeBanner` 只掛在 `singlePageWorkArea` 裡 —— 連續捲動模式
+下提示條根本不存在。已提到 `canvasWorkArea`，兩種模式共用。兩條測試轉綠。
+
+### ~~S-3D-MOVE~~ ✅ 插進畫布的 3D 模型可以搬、可以縮
+
+卡片給了 `model3d.resize` 把手；本體拖曳預設是**搬動**，要旋轉的話按
+`model3d.rotate_mode` 切過去（原本本體拖曳一律是旋轉，所以看起來像
+「插進去就動不了」）。搬動的落點走 `PrintableArea.clampOrigin`，
+跟其他物件同一條規則。
+
+### ~~S-CI-QUIET~~ ✅ CI 紅燈現在說得出為什麼紅
+
+`xcodebuild ... -quiet` 會把**斷言訊息整段吃掉**：`testInsertedModelHasAResizeHandle`
+在 CI 上紅了一次，日誌裡只有 `Failing tests: <名字>`，一個字的理由都沒有。
+（本機同一條是綠的；CI 那一輪整步跑了 834 秒，逾時抓太緊很可能就是主因，
+已把該測試的等待從 6/8 秒放寬到 15 秒，並在失敗時印出現場識別碼。）
+
+兩個 Apple 測試步驟改成把輸出導到檔案、失敗時 `grep -A8 error:` 印出來
+（`-A8` 是因為斷言訊息常常是多行的 —— Gradle 那邊只印第一行，害我對
+Android 工具列稽核連續誤診兩次）。
+
+**雙指縮放畫布**：`testPinchZoomsTheCanvas` / `testPinchZoomsBackOut` 兩條
+都綠，可以落地使用。（中途我自己把讀數解析器弄壞過 —— 在讀數裡加了
+`strokes:` 欄位，而解析器用 `split(":").last`，於是讀到的是筆畫數。
+修好解析器之後兩條都過。）
+
 ### ~~S-MODEL-IMPORT-RENDER~~ ✅ 匯入的 3D 模型在 Android 上畫得出來了
 
 **先更正一句我自己寫在程式碼註解裡的話。** `Model3DLayer.kt` 原本寫著

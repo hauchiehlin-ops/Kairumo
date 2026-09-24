@@ -6375,6 +6375,14 @@ extension LocalizationManager {
             .ko: "3D",
             .th: "3D"
         ],
+        "model3d_rotate_mode": [
+            .zhHant: "旋轉",
+            .en: "Rotate",
+            .zhHans: "旋转",
+            .ja: "回転",
+            .ko: "회전",
+            .th: "หมุน"
+        ],
         "model3d_studio": [
             .zhHant: "3D 模型工作室",
             .en: "3D Model Studio",

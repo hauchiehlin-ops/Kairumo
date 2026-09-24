@@ -97,10 +97,20 @@ final class CanvasGestureTests: XCTestCase {
             "捏回去之後倍率沒有變小（放大後 \(zoomedIn)，捏回後 \(zoomedOut)）")
     }
 
+    /// 從讀數裡取**縮放倍率**。
+    ///
+    /// 讀數是 `zoom:1.000 strokes:3` —— 兩個欄位。原本這裡是
+    /// `split(separator: ":").last`，在只有 `zoom:` 一個欄位的年代是對的，
+    /// 加上筆畫數之後它抓到的是**筆畫數**，而那個數字照樣是個 Double，
+    /// 於是測試不會報錯，只會安靜地量錯東西（實際發生：放大前後都「3.0」，
+    /// 那是三筆筆畫，不是三倍）。
+    ///
+    /// 認欄位名，不要認位置。
     private func zoomValue(_ element: XCUIElement) -> Double {
         guard let raw = element.value as? String,
-              let number = raw.split(separator: ":").last,
-              let value = Double(number)
+              let field = raw.split(separator: " ")
+                .first(where: { $0.hasPrefix("zoom:") }),
+              let value = Double(field.dropFirst("zoom:".count))
         else { return .nan }
         return value
     }

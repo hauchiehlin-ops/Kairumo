@@ -426,10 +426,33 @@ public struct Model3DInteractiveCardView: View {
     @State private var isDraggingRotation = false
     @State private var lastDragLocation: CGPoint = .zero
     @State private var isEditingTitle = false
+    /// 拖曳卡片本體要做什麼：預設是**移動**，按下旋轉鈕才變成轉模型。
+    ///
+    /// # 為什麼預設是移動
+    ///
+    /// 畫布上其他每一種物件（圖片、表格、圖表、文字方塊）拖本體都是移動，
+    /// 只有 3D 卡片是旋轉 —— 使用者回報「插入 3D 模型後無法移動」，
+    /// 實際上移動一直做得到，但唯一的入口是卡片頂端那條細手把，
+    /// 而他直覺去拖的是模型本體，然後模型就轉了起來。
+    ///
+    /// 旋轉沒有被拿掉，只是改成要先說一聲 —— 它是這個卡片的特色功能，
+    /// 但不該搶走所有物件共通的那個動作。
+    @State private var rotateMode = false
 
-    public init(attachment: Binding<Note3DAttachment>, onDelete: @escaping () -> Void) {
+    /// 拖曳本體時把位移交給外面（畫布上的位置由母視圖管）。
+    var onMove: ((CGSize) -> Void)?
+    var onMoveEnded: (() -> Void)?
+
+    public init(
+        attachment: Binding<Note3DAttachment>,
+        onDelete: @escaping () -> Void,
+        onMove: ((CGSize) -> Void)? = nil,
+        onMoveEnded: (() -> Void)? = nil
+    ) {
         self._attachment = attachment
         self.onDelete = onDelete
+        self.onMove = onMove
+        self.onMoveEnded = onMoveEnded
     }
 
     public var body: some View {
@@ -540,12 +563,20 @@ public struct Model3DInteractiveCardView: View {
                 SceneView(scene: cardScene, options: [.autoenablesDefaultLighting])
             }
 
-            // 覆蓋手勢層：360° 拖曳旋轉
+            // 覆蓋手勢層。**預設移動，旋轉模式才轉。**
+            //
+            // 一律用同一層處理，不用 `allowsHitTesting` 切換 —— 關掉之後
+            // 底下是 `SceneView`／`Canvas`，它們會不會吞掉拖曳要看平台版本，
+            // 而「有時候拖得動有時候拖不動」比「拖了會轉」更難查。
             Color.clear
                 .contentShape(Rectangle())
                 .gesture(
                     DragGesture()
                         .onChanged { value in
+                            guard rotateMode else {
+                                onMove?(value.translation)
+                                return
+                            }
                             if !isDraggingRotation {
                                 isDraggingRotation = true
                                 lastDragLocation = value.location
@@ -559,8 +590,35 @@ public struct Model3DInteractiveCardView: View {
                         }
                         .onEnded { _ in
                             isDraggingRotation = false
+                            if !rotateMode { onMoveEnded?() }
                         }
                 )
+
+            // 旋轉模式開關。開著的時候邊框亮起來 —— 不然使用者不知道
+            // 自己現在拖下去會轉還是會搬。
+            VStack {
+                HStack {
+                    Spacer()
+                    Button {
+                        rotateMode.toggle()
+                    } label: {
+                        Image(systemName: "rotate.3d")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundColor(rotateMode ? .white : .accentColor)
+                            .padding(5)
+                            .background(
+                                Circle().fill(
+                                    rotateMode
+                                        ? Color.accentColor
+                                        : Color(UIColor.tertiarySystemBackground)))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("model3d_rotate_mode"))
+                    .accessibilityIdentifier("model3d.rotate_mode")
+                    .padding(6)
+                }
+                Spacer()
+            }
 
             // 旋轉與操作提示（右下角）
             VStack {

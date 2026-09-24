@@ -67,9 +67,20 @@ jobs:
         if: runner.os == 'macOS'
         # 模擬器由腳本挑（見它的說明：寫死名字會在 Xcode 升版時無故變紅）。
         run: |
+          set -o pipefail
           xcodebuild test -project apple/Kairumo.xcodeproj -scheme Kairumo \
             -destination "id=$(python3 scripts/pick-ios-simulator.py)" \
-            -only-testing:KairumoTests -quiet
+            -only-testing:KairumoTests \
+            > "$RUNNER_TEMP/apple-unit.log" 2>&1; rc=$?
+          # `-quiet` 會把**斷言訊息整段吃掉**：紅燈只剩 "Failing tests: <名字>"，
+          # 說不出為什麼紅。訊息又常常是多行的，只抓 error: 那一行還是會漏
+          # （Gradle 那邊踩過一模一樣的坑，害我連誤診兩次）—— 所以 -A8。
+          grep -E "Test Case .*(passed|failed)|Failing tests:" "$RUNNER_TEMP/apple-unit.log" || true
+          if [ $rc -ne 0 ]; then
+            echo "=== 斷言細節 ==="
+            grep -A8 -E "error:" "$RUNNER_TEMP/apple-unit.log" | head -120 || true
+          fi
+          exit $rc
 
       # 畫面稽核（提案 ①）：規格說必須有的控制項，要存在、而且**點得到**。
       #
@@ -94,6 +105,7 @@ jobs:
       - name: 畫面稽核（控制項點得到）
         if: runner.os == 'macOS'
         run: |
+          set -o pipefail
           xcodebuild test -project apple/Kairumo.xcodeproj -scheme Kairumo \
             -destination "id=$(python3 scripts/pick-ios-simulator.py)" \
             -only-testing:KairumoUITests/SmokeUITests/testHomeScreenControlsAreReachable \
@@ -102,7 +114,16 @@ jobs:
             -only-testing:KairumoUITests/SmokeUITests/testExportMenuItemsAreReachable \
             -only-testing:KairumoUITests/SmokeUITests/testToolbarCustomizationControlsAreReachable \
             -only-testing:KairumoUITests/InsertToolsAudit \
-            -quiet
+            > "$RUNNER_TEMP/apple-ui.log" 2>&1; rc=$?
+          # `-quiet` 會把**斷言訊息整段吃掉**：紅燈只剩 "Failing tests: <名字>"，
+          # 說不出為什麼紅。訊息又常常是多行的，只抓 error: 那一行還是會漏
+          # （Gradle 那邊踩過一模一樣的坑，害我連誤診兩次）—— 所以 -A8。
+          grep -E "Test Case .*(passed|failed)|Failing tests:" "$RUNNER_TEMP/apple-ui.log" || true
+          if [ $rc -ne 0 ]; then
+            echo "=== 斷言細節 ==="
+            grep -A8 -E "error:" "$RUNNER_TEMP/apple-ui.log" | head -120 || true
+          fi
+          exit $rc
 
   # WP1/WP2：Android 產出必須跟著每次提交一起驗證，否則 Apple 端的改動會
   # 悄悄弄壞跨平台建置（例如把新的 ONNX 相依加進核心）。
