@@ -2682,7 +2682,25 @@ public final class NotebookStore: ObservableObject {
 
     public func deleteRecording(id: String) {
         if let rec = recordings.first(where: { $0.id == id }) {
-            try? FileManager.default.removeItem(at: recordingFileURL(for: rec))
+            // **刪套件裡那一份要留墓碑。**
+            //
+            // 只刪檔案的話，同步看到「遠端有、本機沒有」就會把它抓回來 ——
+            // 刪除永遠刪不掉，每同步一次復活一次。使用者回報的「一直無法
+            // 處於真正同步狀態」就有這一條。
+            //
+            // 墓碑的規則在核心（`padnote_sync::media_tombstone`），兩端共用。
+            if let notebookId = rec.linkedNotebookId {
+                let packagePath = corePackagesDirectory
+                    .appending(path: "\(notebookId.lowercased()).padnote").path
+                let error = mediaDeleteAudio(packagePath: packagePath, name: rec.fileName)
+                if !error.isEmpty {
+                    SyncLogger.logAsync("刪除錄音：\(error)", source: .googleDrive)
+                }
+            }
+            // 套件外那一份（還沒歸到任何筆記本的錄音）直接刪，它不參與同步。
+            let loose = AudioRecorderManager.shared.recordingsDirectory
+                .appending(path: rec.fileName)
+            try? FileManager.default.removeItem(at: loose)
         }
         recordings.removeAll { $0.id == id }
         persistData()

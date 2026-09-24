@@ -572,7 +572,20 @@ enum NotebookSyncCoordinator {
             source: .googleDrive)
 
         // 前台作用中的那一本排最前面：使用者正在看的內容要先到。
-        let ordered = pending.sorted { a, _ in packageId(for: a) == activeId }
+        //
+        // **原本這裡是壞的。** 寫的是
+        // `pending.sorted { a, _ in packageId(for: a) == activeId }` ——
+        // 它忽略第二個參數，所以不是合法的嚴格弱序；Swift 的 `sorted(by:)`
+        // 對無效比較器的結果是**未定義**的。也就是說「前台優先」可能根本
+        // 沒在運作，而症狀只是「有時候比較慢」，沒有人會去查。
+        //
+        // 規則改用核心那一份（`padnote_sync::order`），兩端同一套，
+        // 而且有測試守著「不重複、不遺漏、其餘維持原序」。
+        let orderedIds = syncOrderActiveFirst(
+            ids: pending.map { packageId(for: $0) }, activeId: activeId)
+        let byId = Dictionary(
+            pending.map { (packageId(for: $0), $0) }, uniquingKeysWith: { first, _ in first })
+        let ordered = orderedIds.compactMap { byId[$0] }
 
         for package in ordered {
             if isCancelled || Task.isCancelled { break }

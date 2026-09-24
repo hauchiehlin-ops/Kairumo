@@ -359,6 +359,41 @@ public enum CloudSync {
         return result
     }
 
+    /// **回收已刪除筆記本留在雲端的檔案。**
+    ///
+    /// 只刪「索引裡有墓碑」的那些。這台裝置還沒辨識的檔案絕不碰 ——
+    /// 那多半是另一台剛建立、索引還沒拉到，刪掉等於吃掉別台剛寫的東西。
+    ///
+    /// 走互斥閘：回收到一半被另一輪同步插進來的話，兩邊會對同一批檔案
+    /// 一個刪一個傳。
+    public static func reclaimDeleted() async -> FfiGcResult? {
+        let grant = syncGateTryEnter(
+            label: "reclaim", nowMs: UInt64(ProcessInfo.processInfo.systemUptime * 1000))
+        guard grant.granted else {
+            SyncLogger.logAsync(
+                "【回收】有一輪同步正在跑（\(grant.holder)）—— 等它結束再試",
+                source: .googleDrive)
+            return nil
+        }
+        defer { _ = syncGateLeave(ticket: grant.ticket) }
+
+        guard let session = await makeSession() else { return nil }
+        // **先把雲端的現況拉一次。** 拿舊快照去回收，等於照著一份可能過期
+        // 的清單刪檔案。
+        _ = await refresh(session)
+        let library = await AccountSyncStore.shared.indexJSON
+        let result = await Task.detached(priority: .utility) {
+            session.collectGarbage(libraryIndexJson: library)
+        }.value
+        await persist(session)
+        SyncLogger.logAsync(
+            result.ok
+                ? "【回收】完成，刪除 \(result.deleted) 個檔案"
+                : "【回收】刪除 \(result.deleted) 個，失敗 \(result.failed) 個：\(result.error)",
+            source: .googleDrive)
+        return result
+    }
+
     /// 把工作階段的快照存回磁碟。**每輪同步結束都要做**，否則下次開 App
     /// 又要全量重建一次。
     public static func persist(_ session: FfiSyncSession) async {

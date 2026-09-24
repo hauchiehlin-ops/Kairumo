@@ -1357,6 +1357,19 @@ private fun InkScreen(
 ) {
     val activity = LocalContext.current as ComponentActivity
     val l10n = { key: String -> uiString(key) }
+
+    // **告訴自動同步「使用者正在看這一本」。**
+    //
+    // 自動同步靠它把這一本排到隊伍最前面 —— 在這之前只有編輯器裡的
+    // 「立即同步」會傳，背景自動那條完全沒傳，於是最該即時的組合
+    // （背景自動 + 正在編輯）反而排在隨意的順序裡。
+    //
+    // 離開編輯器要清掉，否則首頁也會一直讓那一本插隊。
+    DisposableEffect(notebookId) {
+        com.kairumo.padnote.sync.AutoSync.activeNotebookId = notebookId
+        onDispose { com.kairumo.padnote.sync.AutoSync.activeNotebookId = null }
+    }
+
     // 真的開一本筆記本：沒有 session 的話，匯出與錄音都沒有東西可寫，
     // 這一頁就只是個畫圖玩具而不是筆記 App。
     // 同步把別台的 oplog 寫進套件之後，要重開 session 才看得到 ——

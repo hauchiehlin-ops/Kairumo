@@ -700,6 +700,84 @@ impl NotebookPackage {
         Ok(())
     }
 
+    /// 刪除一個錄音檔。
+    ///
+    /// **只刪檔案是不夠的** —— 同步看到「遠端有、本機沒有」會把它抓回來，
+    /// 刪除永遠刪不掉。呼叫端要接著留下墓碑
+    /// （核心的 `media_tombstone_mark`，見 `padnote_sync::media_tombstone`）。
+    pub fn delete_audio_file(&self, name: &str) -> Result<(), StorageError> {
+        let path = self.audio_path(name)?;
+        match fs::remove_file(&path) {
+            Ok(()) => Ok(()),
+            // 已經不在了不是錯誤 —— 刪除要是冪等的，兩台同時刪同一個檔案
+            // 不該讓其中一台失敗。
+            Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    /// 列出墓碑檔：`(檔名, 位元組數)`。同步要逐一傳。
+    ///
+    /// 內容的格式（JSON、合併規則）屬於同步層，這裡只管路徑與讀寫 ——
+    /// `padnote-storage` 與 `padnote-sync` 互不依賴，硬要把型別搬進來會
+    /// 變成循環相依。
+    pub fn media_tombstone_files(&self) -> Result<Vec<(String, u64)>, StorageError> {
+        let dir = self.root.join("media/tombstones");
+        if !dir.exists() {
+            return Ok(Vec::new());
+        }
+        let mut out: Vec<(String, u64)> = fs::read_dir(&dir)?
+            .filter_map(Result::ok)
+            .filter(|e| e.path().extension().is_some_and(|x| x == "json"))
+            .filter_map(|e| {
+                let name = e.file_name().to_str()?.to_string();
+                if crate::atomic::is_temp_name(&name) {
+                    return None;
+                }
+                Some((name, e.metadata().ok()?.len()))
+            })
+            .collect();
+        out.sort();
+        Ok(out)
+    }
+
+    /// 讀某台裝置那一份墓碑的原始 JSON。沒有就是空字串。
+    pub fn read_media_tombstone(&self, device: &str) -> Result<String, StorageError> {
+        let path = self.tombstone_path(device)?;
+        match fs::read_to_string(&path) {
+            Ok(text) => Ok(text),
+            Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => Ok(String::new()),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    /// 寫入某台裝置那一份墓碑（同步下載回來時也走這裡）。
+    pub fn write_media_tombstone(&self, device: &str, json: &str) -> Result<(), StorageError> {
+        let path = self.tombstone_path(device)?;
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        crate::atomic::write_atomic(&path, json.as_bytes())?;
+        Ok(())
+    }
+
+    /// 裝置 id 也可能從雲端來，同樣當成不可信輸入。
+    fn tombstone_path(&self, device: &str) -> Result<PathBuf, StorageError> {
+        let name = device.trim_end_matches(".json");
+        let safe = !name.is_empty()
+            && name.len() <= 64
+            && name
+                .chars()
+                .all(|c| c.is_ascii_alphanumeric() || matches!(c, '-' | '_'));
+        if !safe {
+            return Err(StorageError::DocOps(format!("不合法的裝置 id：{device}")));
+        }
+        Ok(self
+            .root
+            .join("media/tombstones")
+            .join(format!("{name}.json")))
+    }
+
     /// 檔名從雲端來，當成不可信輸入（理由同 [`Self::doc_op_path`]）。
     fn audio_path(&self, name: &str) -> Result<PathBuf, StorageError> {
         let looks_safe = !name.is_empty()

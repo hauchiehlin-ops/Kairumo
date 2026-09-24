@@ -60,6 +60,8 @@ fun SyncDoctorCard(deviceId: UInt, modifier: Modifier = Modifier) {
     val needsSignIn by AutoSync.needsSignIn.collectAsState()
     val scope = rememberCoroutineScope()
     var showConfirm by remember { mutableStateOf(false) }
+    var showReclaim by remember { mutableStateOf(false) }
+    var reclaiming by remember { mutableStateOf(false) }
     var wiping by remember { mutableStateOf(false) }
     var wipeMessage by remember { mutableStateOf<String?>(null) }
 
@@ -156,6 +158,21 @@ fun SyncDoctorCard(deviceId: UInt, modifier: Modifier = Modifier) {
             // drive.google.com 看不到也刪不掉。唯一的手動路徑只清雲端，
             // 本機還留著一份「雲端有這些檔案」的快照 —— 下一輪會拿著
             // 幻覺去比對。所以重置要由 App 來做，兩邊一起清。
+            // **回收**：只刪已刪除筆記本的殘骸。比「重置」溫和得多，
+            // 所以排在它前面 —— 多數人要的是這一個。
+            if ((audit?.deleted ?: 0u) > 0u) {
+                TextButton(
+                    onClick = { showReclaim = true },
+                    enabled = !reclaiming && !wiping,
+                    modifier = Modifier.fillMaxWidth().testTag("sync.reclaim")
+                ) {
+                    Text(
+                        if (reclaiming) l("sync_reclaim_running") else l("sync_reclaim"),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+
             TextButton(
                 onClick = { showConfirm = true },
                 enabled = !wiping,
@@ -168,6 +185,40 @@ fun SyncDoctorCard(deviceId: UInt, modifier: Modifier = Modifier) {
                 )
             }
         }
+    }
+
+    if (showReclaim) {
+        AlertDialog(
+            onDismissRequest = { showReclaim = false },
+            title = { Text(l("sync_reclaim")) },
+            text = { Text(l("sync_reclaim_confirm_body")) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showReclaim = false
+                    reclaiming = true
+                    wipeMessage = l("sync_reclaim_running")
+                    scope.launch {
+                        val result = withContext(Dispatchers.IO) {
+                            runCatching { CloudSync.reclaimDeleted(context) }.getOrNull()
+                        }
+                        wipeMessage = when {
+                            result == null -> l("sync_reset_cloud_busy")
+                            result.deleted == 0u && result.failed == 0u ->
+                                l("sync_reclaim_nothing")
+                            result.ok -> l("sync_reclaim_done")
+                                .replace("%1@", "${result.deleted}")
+                            else -> l("sync_reclaim_partial")
+                                .replace("%1@", "${result.deleted}")
+                                .replace("%2@", "${result.failed}")
+                        }
+                        reclaiming = false
+                    }
+                }) { Text(l("sync_reclaim")) }
+            },
+            dismissButton = {
+                TextButton(onClick = { showReclaim = false }) { Text(l("cancel")) }
+            }
+        )
     }
 
     if (showConfirm) {

@@ -614,6 +614,79 @@ fn sync_notebook_media(
     // 不致命、但使用者該知道的事（例如雲端上一個壞掉的 blob）。
     let mut warnings: Vec<String> = Vec::new();
 
+    // ── 媒體墓碑（先同步這個）────────────────────────────────
+    //
+    // **順序不能反。** 要先知道哪些東西已經死了，才知道等一下哪些不該傳、
+    // 哪些不該抓。反過來的話，這一輪還是會把別台刪掉的錄音抓回來，
+    // 要到下一輪才收斂 —— 而使用者看到的是「刪掉的東西閃了一下又出現」。
+    let tombstone_prefix = padnote_sync::media_tombstone::tombstones_prefix(notebook_id);
+    let remote_tombstones = match remote_entries(drive, index, &tombstone_prefix) {
+        Ok(entries) => entries,
+        Err(e) => return from_sync_error(e),
+    };
+    // 先把別台的拉下來（墓碑只會長大，所以無條件合併是安全的）。
+    for (name, file) in &remote_tombstones {
+        let device = name.trim_end_matches(".json");
+        let bytes = match download_file(drive, file) {
+            Ok(b) => b,
+            Err(SyncError::NotFound(_)) => continue,
+            Err(e) => return from_sync_error(e),
+        };
+        let incoming = padnote_sync::MediaTombstones::from_json(&String::from_utf8_lossy(&bytes));
+        let mut merged = padnote_sync::MediaTombstones::from_json(
+            &package.read_media_tombstone(device).unwrap_or_default(),
+        );
+        merged.merge(&incoming);
+        if let Err(e) = package.write_media_tombstone(device, &merged.to_json()) {
+            warnings.push(format!("寫不進墓碑 {device}：{e}"));
+        }
+    }
+    let tombstones = merged_tombstones(&package);
+    // **別台刪掉的，這台也要跟著刪。**
+    //
+    // 只做到「不下載」是不夠的：B 已經有那段錄音了，不刪的話它就一直留在
+    // B 上，而 A 那邊早就不見了 —— 兩台看到的東西不一樣，使用者說的
+    // 「無法處於真正同步狀態」就是這個。
+    if !tombstones.is_empty() {
+        if let Ok(local) = package.audio_files() {
+            for (name, _) in local {
+                if tombstones.contains(&name) {
+                    if let Err(e) = package.delete_audio_file(&name) {
+                        warnings.push(format!("刪不掉本機的錄音 {name}：{e}"));
+                    }
+                }
+            }
+        }
+    }
+    // 再把這台自己那一份傳上去。**只寫自己的** —— 沿用 oplog 的不變式，
+    // 沒有跨裝置寫入競爭，雲端硬碟不會判定為修改衝突。
+    if let Ok(files) = package.media_tombstone_files() {
+        for (file_name, _) in files {
+            let device = file_name.trim_end_matches(".json");
+            if device != package.device().to_string() {
+                continue;
+            }
+            let Ok(json) = package.read_media_tombstone(device) else {
+                continue;
+            };
+            let path = padnote_sync::media_tombstone::tombstone_file(notebook_id, device);
+            let key = padnote_sync::paths::canonical_name(&file_name);
+            let existing = remote_tombstones.get(&key);
+            if existing.map_or(0, |f| f.size) as usize >= json.len() {
+                continue;
+            }
+            match upload_file(drive, existing, &path, json.as_bytes()) {
+                Ok(file_id) => {
+                    if !file_id.is_empty() {
+                        index.note_upload(&path, &file_id, json.len() as u64);
+                    }
+                    uploaded += 1;
+                }
+                Err(e) => return from_sync_error(e),
+            }
+        }
+    }
+
     // ── 圖片 blob（內容定址）──────────────────────────────────
     let blobs = package.blobs();
     let local_blobs = match blobs.list() {
@@ -700,6 +773,10 @@ fn sync_notebook_media(
 
     for (name, size) in &local_audio {
         let key = padnote_sync::paths::canonical_name(name);
+        // 本機還留著、但已經有墓碑：別台刪掉而這台還沒清乾淨。不要傳上去。
+        if tombstones.contains(name) {
+            continue;
+        }
         let existing = remote_audio.get(&key);
         let remote_size = existing.map_or(0, |f| f.size);
         if *size <= remote_size {
@@ -740,6 +817,21 @@ fn sync_notebook_media(
         .map(|(n, s)| (padnote_sync::paths::canonical_name(n), *s))
         .collect();
     for (name, file) in &remote_audio {
+        // **刪掉的不可以抓回來。**
+        //
+        // 原本的條件只有「遠端比本機長就下載」，而使用者刪掉之後本機是 0
+        // —— 於是每同步一次就復活一次。刪除是明確的事件（墓碑），不是
+        // 從「檔案不見了」推論出來的。
+        if tombstones.contains(name) {
+            // 順便把雲端那一份也收掉，否則別台每一輪都要重新判斷一次，
+            // 而且雲端會一直留著使用者以為已經刪掉的錄音。
+            if let Err(e) = drive.delete_by_id(&file.id) {
+                warnings.push(format!("刪不掉雲端的錄音 {name}：{e}"));
+            } else {
+                index.note_delete(&padnote_sync::paths::notebook_audio_file(notebook_id, name));
+            }
+            continue;
+        }
         if file.size <= local_audio_sizes.get(name).copied().unwrap_or(0) {
             continue;
         }
@@ -941,6 +1033,63 @@ pub fn cloud_audit(remote_index_json: String, library_index_json: String) -> Ffi
     }
 }
 
+/// 這本筆記本所有裝置的媒體墓碑合併起來。
+fn merged_tombstones(package: &padnote_storage::NotebookPackage) -> padnote_sync::MediaTombstones {
+    let mut out = padnote_sync::MediaTombstones::new();
+    let Ok(files) = package.media_tombstone_files() else {
+        return out;
+    };
+    for (name, _) in files {
+        let device = name.trim_end_matches(".json");
+        if let Ok(json) = package.read_media_tombstone(device) {
+            out.merge(&padnote_sync::MediaTombstones::from_json(&json));
+        }
+    }
+    out
+}
+
+/// **刪除一段錄音，並留下墓碑。**
+///
+/// 平台層刪錄音一律走這裡。只刪檔案的話，同步看到「遠端有、本機沒有」
+/// 就會把它抓回來 —— 刪除永遠刪不掉，每同步一次復活一次。
+#[uniffi::export]
+pub fn media_delete_audio(package_path: String, name: String) -> String {
+    let root = std::path::Path::new(&package_path);
+    let package = match padnote_storage::NotebookPackage::open(root) {
+        Ok(p) => p,
+        Err(e) => return format!("開不了套件：{e}"),
+    };
+    if let Err(e) = package.delete_audio_file(&name) {
+        return format!("刪不掉錄音 {name}：{e}");
+    }
+    let device = package.device().to_string();
+    let mut own =
+        padnote_sync::MediaTombstones::from_json(&match package.read_media_tombstone(&device) {
+            Ok(json) => json,
+            Err(e) => return format!("讀不到墓碑：{e}"),
+        });
+    // Lamport 借用文件操作那一條時鐘 —— 它本來就隨每次編輯往前走，而且
+    // 已經是跨裝置單調的。另外養一條只會多一個要對齊的東西。
+    let lamport = package.max_doc_lamport().saturating_add(1);
+    own.mark(&name, lamport, &device);
+    match package.write_media_tombstone(&device, &own.to_json()) {
+        Ok(()) => String::new(),
+        Err(e) => format!("寫不進墓碑：{e}"),
+    }
+}
+
+/// [`FfiSyncSession::collect_garbage`] 的結果。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiGcResult {
+    pub ok: bool,
+    /// 回收掉幾個檔案。
+    pub deleted: u32,
+    /// 刪不掉幾個。下一輪會再試。
+    pub failed: u32,
+    /// 第一個問題。全部成功時是空字串。
+    pub error: String,
+}
+
 /// [`FfiSyncSession::wipe_cloud`] 的結果。
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct FfiWipeResult {
@@ -1034,6 +1183,70 @@ impl FfiSyncSession {
             failed,
             error: first_error,
             needs_reauth: false,
+        }
+    }
+
+    /// **回收已刪除筆記本留在雲端的檔案。**
+    ///
+    /// # 安全前提是「索引夠新」，不是「墓碑夠舊」
+    ///
+    /// 直覺會想加一條「墓碑放滿 N 天才回收」。但墓碑只有 Lamport 計數、
+    /// 沒有牆上時鐘，量不出年紀 —— 而且那條規則要防的事其實不會發生：
+    /// 墓碑一旦進了雲端索引，任何裝置**合併之後**都會收斂到刪除
+    /// （墓碑在同一時戳上優先），所以沒有人會把檔案再傳回來。
+    ///
+    /// 真正的前提是**這一輪的快照要是可信的**。快照還沒建立時
+    /// （`needs_rebuild`）我們對雲端的認識是空的，那時候「沒看到的東西」
+    /// 一律不能當成垃圾 —— 所以直接拒絕執行。
+    ///
+    /// # 絕不碰的東西
+    ///
+    /// 只刪 [`padnote_sync::audit::FileClass::Deleted`]。`Unknown`（索引裡
+    /// 沒有這個 id）永遠不刪 —— 那多半是另一台裝置剛建立、這台還沒拉到
+    /// 索引，刪掉等於把別台剛寫的東西吃掉。
+    pub fn collect_garbage(&self, library_index_json: String) -> FfiGcResult {
+        if self.index.lock().unwrap().needs_rebuild() {
+            return FfiGcResult {
+                ok: false,
+                deleted: 0,
+                failed: 0,
+                error: "雲端快照還沒建立，這一輪不知道雲端上有什麼 —— 先同步一次再回收".to_string(),
+            };
+        }
+        let library = padnote_sync::library::LibraryIndex::from_json(&library_index_json);
+        let targets: Vec<String> = {
+            let index = self.index.lock().unwrap();
+            let paths: Vec<&str> = index.files.keys().map(String::as_str).collect();
+            padnote_sync::audit::audit(paths, &library).collectable
+        };
+
+        let mut deleted = 0u32;
+        let mut failed = 0u32;
+        let mut first_error = String::new();
+        for path in &targets {
+            let file_id = {
+                let index = self.index.lock().unwrap();
+                index.get(path).map(|f| f.id.clone())
+            };
+            let Some(file_id) = file_id else { continue };
+            match self.drive.delete_by_id(&file_id) {
+                Ok(()) => {
+                    self.index.lock().unwrap().note_delete(path);
+                    deleted += 1;
+                }
+                Err(e) => {
+                    failed += 1;
+                    if first_error.is_empty() {
+                        first_error = format!("{path}：{e}");
+                    }
+                }
+            }
+        }
+        FfiGcResult {
+            ok: failed == 0,
+            deleted,
+            failed,
+            error: first_error,
         }
     }
 
@@ -2507,6 +2720,150 @@ mod tests {
     }
 
     /// 雲端本來就是空的：不是錯誤，也不該炸掉。
+    /// 回收只動「有墓碑」的那些，**而且絕不碰沒見過的**。
+    #[test]
+    fn garbage_collection_removes_deleted_notebooks_but_spares_unseen_ones() {
+        let fake = FakeDrive::default();
+        for path in [
+            "notebooks/gone/doc/ops/dev-a.bin",
+            "notebooks/gone/media/blobs/x",
+            "notebooks/live/doc/ops/dev-a.bin",
+            "notebooks/mystery/doc/ops/dev-b.bin",
+        ] {
+            fake.files.lock().unwrap().push((path.to_string(), vec![1]));
+        }
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(fake);
+        let session = FfiSyncSession::create(cloud, String::new());
+        assert!(session.refresh().ok);
+        assert_eq!(session.tracked_files(), 4);
+
+        // 索引：live 活著、gone 有墓碑、mystery 完全沒提到。
+        let mut library = padnote_sync::library::LibraryIndex::default();
+        for (id, deleted) in [("live", false), ("gone", true)] {
+            library.upsert(padnote_sync::library::LibraryItem {
+                id: id.to_string(),
+                kind: padnote_sync::library::ItemKind::Notebook,
+                title: id.to_string(),
+                parent_id: None,
+                lamport: 1,
+                device: "dev-a".to_string(),
+                deleted,
+            });
+        }
+
+        let result = session.collect_garbage(library.to_json());
+        assert!(result.ok, "{}", result.error);
+        assert_eq!(result.deleted, 2, "只有 gone 的兩個檔案該被回收");
+
+        // live 與 mystery 都要還在。mystery 那一條是安全底線：
+        // 它多半是另一台裝置剛建立、這台還沒拉到索引。
+        assert_eq!(session.tracked_files(), 2);
+    }
+
+    /// 快照還沒建立時，我們對雲端的認識是空的 —— 那時候什麼都不能回收。
+    #[test]
+    fn garbage_collection_refuses_to_run_without_a_snapshot() {
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
+        let session = FfiSyncSession::create(cloud, String::new());
+        // 沒有 refresh() —— 快照還沒建立。
+        let result = session.collect_garbage("{}".to_string());
+        assert!(!result.ok);
+        assert_eq!(result.deleted, 0);
+        assert!(result.error.contains("還沒建立"), "{}", result.error);
+    }
+
+    /// **刪掉的錄音會復活。**（使用者 2026-09-25 回報「一直無法真正同步」）
+    ///
+    /// 下載那一段的條件是「遠端有、本機沒有就抓回來」。使用者刪掉一段錄音
+    /// 之後本機長度變成 0，下一輪同步就把它從雲端抓回來 —— 刪除永遠刪不掉，
+    /// 而且每同步一次就復活一次。
+    ///
+    /// 這正是 `library.rs` 開頭警告的那個錯誤（刪除必須是明確事件，不能從
+    /// 「檔案不見了」推論），只是媒體檔這一層還沒有墓碑。
+    ///
+    #[test]
+    fn a_deleted_recording_does_not_come_back() {
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
+        let root = tmp_package("audio-del", 0xA1);
+        let name = "11111111-1111-1111-1111-111111111111.opus";
+        {
+            let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+            pkg.write_audio_file(name, b"A-audio").unwrap();
+        }
+        let path: String = root.to_string_lossy().into();
+
+        // 傳上去。
+        let first = gdrive_sync_media(cloud.clone(), path.clone(), "nb1".into());
+        assert!(first.ok, "{}", first.error);
+        assert_eq!(first.uploaded, 1);
+
+        // 使用者把它刪掉。**一定要走留墓碑的那條路**，只刪檔案是不夠的。
+        let err = media_delete_audio(path.clone(), name.to_string());
+        assert!(err.is_empty(), "{err}");
+
+        // 再同步一次 —— **不可以把它抓回來**。
+        let second = gdrive_sync_media(cloud, path, "nb1".into());
+        assert!(second.ok, "{}", second.error);
+        assert_eq!(second.downloaded, 0, "刪掉的錄音不可以被抓回來");
+
+        let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        assert!(
+            pkg.audio_files().unwrap().is_empty(),
+            "刪掉的錄音復活了 —— 刪除沒有傳播"
+        );
+    }
+
+    /// **使用者要的那件事：A 刪掉的錄音，B 上也要不見。**
+    ///
+    /// 這是 2026-09-25 那條時間線的媒體版本。索引層本來就會傳播刪除
+    /// （`library::user_scenario` 四條測試），媒體層在這之前不會。
+    #[test]
+    fn deleting_a_recording_on_one_device_removes_it_on_the_other() {
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
+        let name = "22222222-2222-2222-2222-222222222222.opus";
+
+        let a_root = tmp_package("tomb-a", 0xA1);
+        let b_root = tmp_package("tomb-b", 0xB2);
+        let a_path: String = a_root.to_string_lossy().into();
+        let b_path: String = b_root.to_string_lossy().into();
+
+        // A 錄了一段並傳上去。
+        padnote_storage::NotebookPackage::open(&a_root)
+            .unwrap()
+            .write_audio_file(name, b"A-audio")
+            .unwrap();
+        assert!(gdrive_sync_media(cloud.clone(), a_path.clone(), "nb1".into()).ok);
+
+        // B 同步，拿到那段錄音。
+        let b_first = gdrive_sync_media(cloud.clone(), b_path.clone(), "nb1".into());
+        assert!(b_first.ok, "{}", b_first.error);
+        assert_eq!(
+            padnote_storage::NotebookPackage::open(&b_root)
+                .unwrap()
+                .audio_files()
+                .unwrap()
+                .len(),
+            1,
+            "B 要先拿得到才談得上刪除"
+        );
+
+        // A 刪掉它，同步。
+        let err = media_delete_audio(a_path.clone(), name.to_string());
+        assert!(err.is_empty(), "{err}");
+        let a_second = gdrive_sync_media(cloud.clone(), a_path, "nb1".into());
+        assert!(a_second.ok, "{}", a_second.error);
+
+        // B 再同步一次 —— **那段錄音要消失**。
+        let b_second = gdrive_sync_media(cloud, b_path, "nb1".into());
+        assert!(b_second.ok, "{}", b_second.error);
+        let b_after = padnote_storage::NotebookPackage::open(&b_root).unwrap();
+        assert!(
+            b_after.audio_files().unwrap().is_empty(),
+            "A 刪掉的錄音在 B 上還在 —— 刪除沒有傳播：{:?}",
+            b_after.audio_files().unwrap()
+        );
+    }
+
     #[test]
     fn wiping_an_empty_cloud_is_fine() {
         let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());

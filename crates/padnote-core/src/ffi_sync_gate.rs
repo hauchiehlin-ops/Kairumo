@@ -100,6 +100,15 @@ pub fn sync_gate_stale_takeover_ms() -> u64 {
     padnote_sync::gate::STALE_TAKEOVER_MS
 }
 
+/// 一輪同步先做哪一本：**使用者正在看的那一本排最前面**。
+///
+/// 規則在 [`padnote_sync::order`]，兩端共用 —— 各寫一份的話，使用者感覺到
+/// 的不是「策略不同」，是「Android 比較慢」。
+#[uniffi::export]
+pub fn sync_order_active_first(ids: Vec<String>, active_id: Option<String>) -> Vec<String> {
+    padnote_sync::order::active_first(&ids, active_id.as_deref())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

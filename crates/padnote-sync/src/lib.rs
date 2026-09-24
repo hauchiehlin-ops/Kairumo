@@ -13,7 +13,9 @@ pub mod gate;
 pub mod gdrive;
 pub mod library;
 pub mod local;
+pub mod media_tombstone;
 pub mod oplog;
+pub mod order;
 pub mod paths;
 pub mod provider;
 pub mod remote_index;
@@ -26,7 +28,9 @@ pub use gate::{GateDecision, STALE_TAKEOVER_MS, SyncGate};
 pub use gdrive::{DriveHttp, GDriveProvider, ReqwestDriveHttp};
 pub use library::{INDEX_PATH, ItemKind, LibraryIndex, LibraryItem};
 pub use local::LocalFolderProvider;
+pub use media_tombstone::{MediaTombstone, MediaTombstones};
 pub use oplog::{DeviceId, OplogName};
+pub use order::active_first;
 pub use paths::{
     canonical_id, canonical_name, canonical_path, is_canonical, notebook_audio_file,
     notebook_audio_prefix, notebook_blob_file, notebook_blobs_prefix, notebook_op_file,

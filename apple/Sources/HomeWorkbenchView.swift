@@ -3548,6 +3548,8 @@ public struct CloudSyncDetailSheet: View {
     @State private var googleStatusMessage: String?
     /// 「重置雲端同步」的確認與進行狀態。
     @State private var showWipeConfirm = false
+    @State private var showReclaimConfirm = false
+    @State private var isReclaiming = false
     @State private var isWiping = false
     @State private var wipeMessage: String?
     @State private var isGoogleSyncing = false
@@ -3697,6 +3699,27 @@ public struct CloudSyncDetailSheet: View {
                         title: localizationManager.localized("sync_last_at"),
                         value: SyncHistory.lastGoogleSyncDescription(none: localizationManager.localized("sync_never"))
                     )
+                    // **同一件事不可以兩個地方說不同的話。**
+                    //
+                    // 這張面板原本只顯示「上次成功是什麼時候」，而它背後的
+                    // 卡片顯示的是「現在正在跑」—— 兩邊各自帶 @State，互不
+                    // 知情。使用者看到的是卡片寫「同步中…」、面板寫「3 天前」
+                    // 而且「立即同步」還按得下去（按了只會被互斥閘擋掉）。
+                    //
+                    // 狀態改成讀同一個來源：`AutoSyncController`。
+                    if AutoSyncController.shared.isSyncing {
+                        Divider()
+                        detailRow(
+                            title: localizationManager.localized("sync_status"),
+                            value: localizationManager.localized("syncing")
+                        )
+                    } else if !AutoSyncController.shared.lastMessage.isEmpty {
+                        Divider()
+                        detailRow(
+                            title: localizationManager.localized("sync_status"),
+                            value: AutoSyncController.shared.lastMessage
+                        )
+                    }
                 } else {
                     HStack {
                         Image(systemName: "person.crop.circle.badge.exclamationmark")
@@ -3736,7 +3759,12 @@ public struct CloudSyncDetailSheet: View {
 
             VStack(spacing: DS.Space.s) {
                 if googleAuth.isSignedIn {
-                    if isGoogleSyncing {
+                    // **「正在跑」要包含自動同步那一輪。**
+                    //
+                    // 原本只看這張面板自己的 `isGoogleSyncing`，所以背景自動
+                    // 同步進行中時，這裡照樣顯示「立即同步」按得下去 ——
+                    // 按了只會被互斥閘擋掉，而使用者只看到一顆沒反應的按鈕。
+                    if isGoogleSyncing || AutoSyncController.shared.isSyncing {
                         Button(role: .destructive) {
                             googleSyncTask?.cancel()
                             NotebookSyncCoordinator.cancelSync()
@@ -3929,6 +3957,21 @@ public struct CloudSyncDetailSheet: View {
                 Text(folderStatusMessage)
                     .font(DS.Font.caption)
                     .foregroundColor(folderStatusMessage.contains("失敗") || folderStatusMessage.contains("錯誤") ? .red : .secondary)
+                    .padding(.horizontal, DS.Space.xs)
+            }
+
+            // **兩種同步都設定時，只有 Drive 會自動跑。**
+            //
+            // `AutoSyncController.runOneRound` 是「登入 Drive 就只跑 Drive」，
+            // 資料夾那條在自動路徑上碰不到。在這之前這件事完全不會說 ——
+            // 使用者設好 iCloud 資料夾，看起來已設定，實際上永遠不會自動
+            // 更新，變成一份會過期的備份。那比沒設定更危險。
+            //
+            // 不強迫擇一（雙備份是合理需求），但要講清楚哪一個是自動的。
+            if googleAuth.isSignedIn {
+                Text(localizationManager.localized("sync_folder_manual_while_drive"))
+                    .font(DS.Font.caption)
+                    .foregroundColor(.secondary)
                     .padding(.horizontal, DS.Space.xs)
             }
 
@@ -4358,6 +4401,11 @@ public struct CloudSyncDetailSheet: View {
     /// 最需要，依賴一個要先去換權杖的工作階段就等於在最需要時失效。
     private var syncDoctorSection: some View {
         let diagnostics = currentDiagnostics
+        // **提到最外層。** 原本宣告在內層 VStack 裡，於是外層的回收按鈕
+        // 看不到它 —— 而 `audit` 這個名字在 Darwin 上**有一個同名的 C 函式**，
+        // 所以編譯器不是報「找不到」，是報「(UnsafeRawPointer?, Int32) -> Int32
+        // 沒有 deleted 這個成員」。錯誤訊息完全不指向真正的問題。
+        let cloudFiles = currentAudit
         return VStack(alignment: .leading, spacing: 8) {
             Text(localizationManager.localized("hw_sync_status"))
                 .font(DS.Font.caption)
@@ -4381,14 +4429,13 @@ public struct CloudSyncDetailSheet: View {
                 // **這幾千個檔案裡有多少是活的。** 在這之前沒有人答得出來：
                 // 面板只說「追蹤 N 個檔案」，而 N 裡面混著已刪筆記本的殘骸、
                 // 別台裝置剛建立還沒拉到索引的東西，以及舊版留下的雜物。
-                let audit = currentAudit
                 doctorRow(
                     localizationManager.localized("sync_audit_files"),
                     localizationManager.localized("sync_audit_breakdown")
-                        .replacingFirst("%1@", with: "\(audit.live)")
-                        .replacingFirst("%2@", with: "\(audit.deleted)")
-                        .replacingFirst("%3@", with: "\(audit.unknown)"))
-                if audit.unknown > 0 {
+                        .replacingFirst("%1@", with: "\(cloudFiles.live)")
+                        .replacingFirst("%2@", with: "\(cloudFiles.deleted)")
+                        .replacingFirst("%3@", with: "\(cloudFiles.unknown)"))
+                if cloudFiles.unknown > 0 {
                     Text(localizationManager.localized("sync_audit_unknown_hint"))
                         .font(DS.Font.caption)
                         .foregroundColor(.secondary)
@@ -4415,6 +4462,38 @@ public struct CloudSyncDetailSheet: View {
             // 唯一的手動路徑是 Drive 設定 →「管理應用程式」→「刪除隱藏的
             // 應用程式資料」，而那條路徑**只清雲端**：本機還留著一份
             // 「雲端有這些檔案」的快照，下一輪同步會拿著幻覺去比對。
+            // **回收**：只刪已刪除筆記本的殘骸。比「重置」溫和得多，
+            // 所以排在它前面 —— 多數人要的是這一個。
+            if cloudFiles.deleted > 0 {
+                Button {
+                    showReclaimConfirm = true
+                } label: {
+                    if isReclaiming {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text(localizationManager.localized("sync_reclaim_running"))
+                        }
+                    } else {
+                        Text(localizationManager.localized("sync_reclaim"))
+                    }
+                }
+                .font(DS.Font.caption)
+                .disabled(isReclaiming)
+                .accessibilityIdentifier("sync.reclaim")
+                .confirmationDialog(
+                    localizationManager.localized("sync_reclaim"),
+                    isPresented: $showReclaimConfirm,
+                    titleVisibility: .visible
+                ) {
+                    Button(localizationManager.localized("sync_reclaim")) {
+                        Task { await runReclaim() }
+                    }
+                    Button(localizationManager.localized("cancel"), role: .cancel) {}
+                } message: {
+                    Text(localizationManager.localized("sync_reclaim_confirm_body"))
+                }
+            }
+
             Button(role: .destructive) {
                 showWipeConfirm = true
             } label: {
@@ -4442,6 +4521,28 @@ public struct CloudSyncDetailSheet: View {
             } message: {
                 Text(localizationManager.localized("sync_reset_cloud_confirm_body"))
             }
+        }
+    }
+
+    /// 回收已刪除筆記本留在雲端的檔案。
+    @MainActor
+    private func runReclaim() async {
+        isReclaiming = true
+        defer { isReclaiming = false }
+        wipeMessage = localizationManager.localized("sync_reclaim_running")
+        guard let result = await CloudSync.reclaimDeleted() else {
+            wipeMessage = localizationManager.localized("sync_reset_cloud_busy")
+            return
+        }
+        if result.deleted == 0 && result.failed == 0 {
+            wipeMessage = localizationManager.localized("sync_reclaim_nothing")
+        } else if result.ok {
+            wipeMessage = localizationManager.localized("sync_reclaim_done")
+                .replacingFirst("%1@", with: "\(result.deleted)")
+        } else {
+            wipeMessage = localizationManager.localized("sync_reclaim_partial")
+                .replacingFirst("%1@", with: "\(result.deleted)")
+                .replacingFirst("%2@", with: "\(result.failed)")
         }
     }
 

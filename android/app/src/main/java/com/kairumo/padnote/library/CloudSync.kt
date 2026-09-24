@@ -115,6 +115,45 @@ object CloudSync {
         }
     }
 
+    /**
+     * **回收已刪除筆記本留在雲端的檔案。**
+     *
+     * 只刪「索引裡有墓碑」的那些。這台裝置還沒辨識的檔案絕不碰 —— 那多半
+     * 是另一台剛建立、索引還沒拉到，刪掉等於吃掉別台剛寫的東西。
+     *
+     * 走互斥閘：回收到一半被另一輪同步插進來的話，兩邊會對同一批檔案一個
+     * 刪一個傳。
+     *
+     * **會阻塞網路 I/O，要在背景執行緒呼叫。**
+     */
+    fun reclaimDeleted(context: Context): uniffi.padnote_core.FfiGcResult? {
+        val nowMs = android.os.SystemClock.elapsedRealtime().toULong()
+        val grant = uniffi.padnote_core.syncGateTryEnter("android:reclaim", nowMs)
+        if (!grant.granted) {
+            SyncLogger.log(
+                "【回收】有一輪同步正在跑（${grant.holder}）—— 等它結束再試",
+                SyncSource.GOOGLE_DRIVE
+            )
+            return null
+        }
+        return try {
+            val session = makeSession(context) ?: return null
+            // 先把雲端的現況拉一次。拿舊快照去回收，等於照著一份可能過期的
+            // 清單刪檔案。
+            session.refresh()
+            val result = session.collectGarbage(AccountSyncStore.indexJson(context))
+            persist(context, session)
+            SyncLogger.log(
+                if (result.ok) "【回收】完成，刪除 ${result.deleted} 個檔案"
+                else "【回收】刪除 ${result.deleted} 個，失敗 ${result.failed} 個：${result.error}",
+                SyncSource.GOOGLE_DRIVE
+            )
+            result
+        } finally {
+            uniffi.padnote_core.syncGateLeave(grant.ticket)
+        }
+    }
+
     /** 把工作階段的快照存回磁碟。**每輪同步結束都要做。** */
     fun persist(context: Context, session: uniffi.padnote_core.FfiSyncSession) {
         AccountSyncStore.saveRemoteIndexJson(
@@ -348,7 +387,14 @@ object CloudSync {
         val changed = mutableListOf<String>()
 
         // 前台作用中的那一本排最前面：使用者正在看的內容要先到。
-        val ordered = pending.sortedBy { it.name.removeSuffix(".padnote") != activeNotebookId }
+        // 規則用核心那一份，與 Apple 同一套（各寫一份的話，使用者感覺到的
+        // 不是「策略不同」，是「Android 比較慢」）。
+        val orderedIds = uniffi.padnote_core.syncOrderActiveFirst(
+            pending.map { it.name.removeSuffix(".padnote") },
+            activeNotebookId
+        )
+        val byId = pending.associateBy { it.name.removeSuffix(".padnote") }
+        val ordered = orderedIds.mapNotNull { byId[it] }
 
         for (pkg in ordered) {
             val id = pkg.name.removeSuffix(".padnote")

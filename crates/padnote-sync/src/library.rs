@@ -263,6 +263,141 @@ impl LibraryIndex {
 }
 
 #[cfg(test)]
+mod user_scenario {
+    //! 使用者 2026-09-25 描述的那條時間線，逐步驗一次。
+    //!
+    //! 他問的是「此機制是否可行」，而他心裡想的做法是**鏡像**：
+    //! 以 A 為基準清空雲端，再以雲端為基準清空 B。
+    //!
+    //! 這裡驗的是實際採用的做法（合併），並且附上一條測試說明**為什麼
+    //! 不採用鏡像** —— 鏡像會把 B 上還沒同步出去的東西直接刪掉。
+
+    use super::*;
+
+    fn notebook(id: &str, lamport: u64, device: &str) -> LibraryItem {
+        LibraryItem {
+            id: id.to_string(),
+            kind: ItemKind::Notebook,
+            title: id.to_string(),
+            parent_id: None,
+            lamport,
+            device: device.to_string(),
+            deleted: false,
+        }
+    }
+
+    fn live_ids(index: &LibraryIndex) -> Vec<String> {
+        let mut ids: Vec<String> = index.live().iter().map(|i| i.id.clone()).collect();
+        ids.sort();
+        ids
+    }
+
+    /// 時間點一～二：A 新增三本、刪掉一本舊的，同步；B 開 App 之後要長得
+    /// 跟 A 一樣 —— **包含那本被刪掉的要消失**。
+    #[test]
+    fn b_matches_a_after_one_round() {
+        // 兩台裝置一開始都有一本舊筆記。
+        let mut cloud = LibraryIndex::default();
+        cloud.upsert(notebook("old", 1, "dev-a"));
+
+        let mut a = cloud.clone();
+        let mut b = cloud.clone();
+
+        // 時間點一：A 新增三本、刪掉舊的那本。
+        for (i, id) in ["nb1", "nb2", "nb3"].iter().enumerate() {
+            a.upsert(notebook(id, 2 + i as u64, "dev-a"));
+        }
+        a.tombstone("old", 10, "dev-a");
+        cloud.merge(&a);
+
+        // 時間點二：B 開 App 自動同步。
+        b.merge(&cloud);
+
+        assert_eq!(live_ids(&b), ["nb1", "nb2", "nb3"]);
+        assert_eq!(live_ids(&b), live_ids(&a), "B 要跟 A 一模一樣");
+        assert!(
+            b.items.get("old").is_some_and(|i| i.deleted),
+            "A 刪掉的那本在 B 上也要是刪除狀態"
+        );
+    }
+
+    /// 時間點三：換 B 動作 —— 再刪一本、再加一本，A 同步後要跟 B 一樣。
+    #[test]
+    fn a_matches_b_after_the_next_round() {
+        let mut cloud = LibraryIndex::default();
+        for (i, id) in ["nb1", "nb2", "nb3"].iter().enumerate() {
+            cloud.upsert(notebook(id, 2 + i as u64, "dev-a"));
+        }
+        let mut a = cloud.clone();
+        let mut b = cloud.clone();
+
+        // B 刪掉 nb2、新增 nb4。
+        b.tombstone("nb2", 20, "dev-b");
+        b.upsert(notebook("nb4", 21, "dev-b"));
+        cloud.merge(&b);
+
+        // A 同步。
+        a.merge(&cloud);
+
+        assert_eq!(live_ids(&a), ["nb1", "nb3", "nb4"]);
+        assert_eq!(live_ids(&a), live_ids(&b));
+    }
+
+    /// **為什麼不做鏡像。**
+    ///
+    /// 鏡像的說法是「以雲端為基準清理 B 的內容」。可是 B 上可能有還沒同步
+    /// 出去的東西 —— 飛航模式下寫的那一本、剛剛才建立還沒輪到上傳的那一本。
+    /// 照雲端清空 B，那些就直接沒了，而且**使用者不會收到任何提示**。
+    ///
+    /// 合併不會：B 沒送出去的照樣活著，下一輪就上雲端。
+    #[test]
+    fn merging_keeps_work_that_has_not_reached_the_cloud_yet() {
+        let mut cloud = LibraryIndex::default();
+        cloud.upsert(notebook("nb1", 1, "dev-a"));
+
+        let mut b = cloud.clone();
+        // B 在離線時寫的那一本，雲端還不知道。
+        b.upsert(notebook("offline-work", 5, "dev-b"));
+
+        b.merge(&cloud);
+
+        assert!(
+            live_ids(&b).contains(&"offline-work".to_string()),
+            "還沒上雲端的東西不可以因為同步而消失"
+        );
+        assert_eq!(live_ids(&b), ["nb1", "offline-work"]);
+    }
+
+    /// 兩台同時動同一本：一邊改名、一邊刪除 —— 收斂到刪除。
+    /// 反過來的話，使用者刪掉的東西會因為另一台的無關修改而復活。
+    #[test]
+    fn a_delete_beats_a_concurrent_rename() {
+        let mut a = LibraryIndex::default();
+        a.upsert(notebook("nb1", 1, "dev-a"));
+        let mut b = a.clone();
+
+        a.upsert(LibraryItem {
+            title: "A 改的新名字".to_string(),
+            ..notebook("nb1", 7, "dev-a")
+        });
+        b.tombstone("nb1", 7, "dev-b");
+
+        // 兩個順序都要收斂到同一個結果 —— 套用順序不能影響答案。
+        let mut merged_ab = a.clone();
+        merged_ab.merge(&b);
+        let mut merged_ba = b.clone();
+        merged_ba.merge(&a);
+
+        assert!(merged_ab.items["nb1"].deleted, "刪除要贏");
+        assert_eq!(
+            merged_ab.items["nb1"].deleted,
+            merged_ba.items["nb1"].deleted
+        );
+        assert!(live_ids(&merged_ab).is_empty());
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use super::*;
 

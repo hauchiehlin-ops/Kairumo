@@ -68,6 +68,18 @@ object AutoSync {
     val changedNotebooks: StateFlow<List<String>> = _changedNotebooks
 
     private var started = false
+
+    /**
+     * 使用者現在打開的那一本。**自動同步靠它決定先做哪一本。**
+     *
+     * 在這之前只有編輯器裡的「立即同步」會傳作用中的 id，自動同步那條
+     * 完全沒傳 —— 於是最該即時的那條路徑（背景自動 + 正在編輯）反而排在
+     * 隨意的順序裡。使用者在另一台寫的那一行，可能要等前面十九本都傳完。
+     *
+     * `@Volatile`：寫的是主執行緒（畫面），讀的是同步的背景執行緒。
+     */
+    @Volatile
+    var activeNotebookId: String? = null
     private var deviceId: UInt = 0u
     private var wasOnline = true
 
@@ -156,7 +168,9 @@ object AutoSync {
             return FfiSyncOutcome.SUCCESS
         }
         return kotlinx.coroutines.withContext(Dispatchers.IO) {
-            val result = runCatching { CloudSync.runFull(context, deviceId) }.getOrNull()
+            val result = runCatching {
+                CloudSync.runFull(context, deviceId, activeNotebookId)
+            }.getOrNull()
             val meta = result?.meta
             when {
                 result == null -> FfiSyncOutcome.TRANSIENT

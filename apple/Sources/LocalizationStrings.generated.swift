@@ -10175,6 +10175,14 @@ extension LocalizationManager {
             .ko: "iCloud/폴더",
             .th: "iCloud / โฟลเดอร์"
         ],
+        "sync_folder_manual_while_drive": [
+            .zhHant: "自動同步由 Google Drive 負責。這個資料夾是手動備份 —— 按「立即同步」才會更新。",
+            .en: "Automatic sync is handled by Google Drive. This folder is a manual backup — tap Sync now to update it.",
+            .zhHans: "自动同步由 Google Drive 负责。这个文件夹是手动备份 —— 按「立即同步」才会更新。",
+            .ja: "自動同期は Google Drive が担当します。このフォルダは手動バックアップです —「今すぐ同期」で更新してください。",
+            .ko: "자동 동기화는 Google Drive가 담당합니다. 이 폴더는 수동 백업입니다 — ‘지금 동기화’로 갱신하세요.",
+            .th: "การซิงค์อัตโนมัติใช้ Google Drive โฟลเดอร์นี้เป็นสำรองแบบแมนนวล — แตะ ซิงค์ทันที เพื่ออัปเดต"
+        ],
         "sync_folder_path": [
             .zhHant: "資料夾路徑",
             .en: "Folder",
@@ -10271,6 +10279,54 @@ extension LocalizationManager {
             .ko: "무엇이 동기화되나요?",
             .th: "ฟังก์ชันนี้ซิงก์อะไรบ้าง"
         ],
+        "sync_reclaim": [
+            .zhHant: "回收已刪除的檔案",
+            .en: "Reclaim deleted files",
+            .zhHans: "回收已删除的档案",
+            .ja: "削除済みファイルを回収",
+            .ko: "삭제된 파일 회수",
+            .th: "เรียกคืนไฟล์ที่ลบแล้ว"
+        ],
+        "sync_reclaim_confirm_body": [
+            .zhHant: "這會刪除你已經刪掉的筆記本留在雲端的檔案。這台裝置尚未辨識的檔案絕不會被動到 —— 它們通常屬於別台裝置剛建立的筆記本。",
+            .en: "This deletes the cloud files of notebooks you already deleted. Files this device has not identified yet are never touched — they usually belong to a notebook another device just created.",
+            .zhHans: "这会删除你已经删掉的笔记本留在云端的档案。这台设备尚未辨识的档案绝不会被动到 —— 它们通常属于别台设备刚建立的笔记本。",
+            .ja: "すでに削除したノートのクラウド上のファイルを削除します。この端末がまだ識別できていないファイルには触れません（通常は他の端末が作成したばかりのものです）。",
+            .ko: "이미 삭제한 노트의 클라우드 파일을 지웁니다. 이 기기가 아직 식별하지 못한 파일은 건드리지 않습니다.",
+            .th: "จะลบไฟล์บนคลาวด์ของบันทึกที่คุณลบไปแล้ว ไฟล์ที่เครื่องนี้ยังระบุไม่ได้จะไม่ถูกแตะต้อง"
+        ],
+        "sync_reclaim_done": [
+            .zhHant: "已回收 %1@ 個檔案。",
+            .en: "Reclaimed %1@ files.",
+            .zhHans: "已回收 %1@ 个档案。",
+            .ja: "%1@ 件を回収しました。",
+            .ko: "%1@개를 회수했습니다.",
+            .th: "เรียกคืน %1@ ไฟล์แล้ว"
+        ],
+        "sync_reclaim_nothing": [
+            .zhHant: "沒有可回收的檔案。",
+            .en: "Nothing to reclaim.",
+            .zhHans: "没有可回收的档案。",
+            .ja: "回収するものはありません。",
+            .ko: "회수할 것이 없습니다.",
+            .th: "ไม่มีอะไรให้เรียกคืน"
+        ],
+        "sync_reclaim_partial": [
+            .zhHant: "已回收 %1@ 個、失敗 %2@ 個 —— 其餘下一輪再試。",
+            .en: "Reclaimed %1@, failed %2@ — the rest will be retried.",
+            .zhHans: "已回收 %1@ 个、失败 %2@ 个 —— 其余下一轮再试。",
+            .ja: "%1@ 件回収、%2@ 件失敗 —— 残りは次回再試行します。",
+            .ko: "%1@개 회수, %2@개 실패 — 나머지는 다시 시도합니다.",
+            .th: "เรียกคืน %1@ ล้มเหลว %2@ — ที่เหลือจะลองใหม่"
+        ],
+        "sync_reclaim_running": [
+            .zhHant: "回收中…",
+            .en: "Reclaiming…",
+            .zhHans: "回收中…",
+            .ja: "回収中…",
+            .ko: "회수 중…",
+            .th: "กำลังเรียกคืน…"
+        ],
         "sync_recording_in_progress": [
             .zhHant: "同步錄音中",
             .en: "Sync Recording",
@@ -10350,6 +10406,14 @@ extension LocalizationManager {
             .ja: "クラウド同期",
             .ko: "클라우드 동기화",
             .th: "ซิงก์คลาวด์"
+        ],
+        "sync_status": [
+            .zhHant: "狀態",
+            .en: "Status",
+            .zhHans: "状态",
+            .ja: "状態",
+            .ko: "상태",
+            .th: "สถานะ"
         ],
         "sync_up_to_date": [
             .zhHant: "已是最新",
