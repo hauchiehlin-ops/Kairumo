@@ -6593,6 +6593,73 @@ private fun FolderSyncDetailDialog(
                     ) {
                         Text(l("delete_item"), color = MaterialTheme.colorScheme.error)
                     }
+
+                    var showWipeConfirm by remember { mutableStateOf(false) }
+                    var wiping by remember { mutableStateOf(false) }
+                    var wipeMessage by remember { mutableStateOf<String?>(null) }
+                    val scope = rememberCoroutineScope()
+                    val context = LocalContext.current
+
+                    TextButton(
+                        onClick = { showWipeConfirm = true },
+                        enabled = !wiping && !isSyncing,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (wiping) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp).padding(end = 8.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.error
+                            )
+                            Text(l("sync_reset_cloud_running"), color = MaterialTheme.colorScheme.error)
+                        } else {
+                            Text(l("sync_reset_cloud"), color = MaterialTheme.colorScheme.error)
+                        }
+                    }
+
+                    if (showWipeConfirm) {
+                        AlertDialog(
+                            onDismissRequest = { showWipeConfirm = false },
+                            title = { Text(l("sync_reset_cloud_confirm_title")) },
+                            text = { Text(l("sync_reset_cloud_confirm_body")) },
+                            confirmButton = {
+                                TextButton(onClick = {
+                                    showWipeConfirm = false
+                                    wiping = true
+                                    wipeMessage = l("sync_reset_cloud_running")
+                                    scope.launch {
+                                        val result = withContext(Dispatchers.IO) {
+                                            runCatching { com.kairumo.padnote.sync.FolderSync.wipeCloud(context) }.getOrNull()
+                                        }
+                                        wipeMessage = when {
+                                            result == null -> l("sync_reset_cloud_busy")
+                                            result.ok -> l("sync_reset_cloud_done")
+                                                .replace("%1@", "${result.deleted}")
+                                            else -> l("sync_reset_cloud_partial")
+                                                .replace("%1@", "${result.deleted}")
+                                                .replace("%2@", "${result.failed}")
+                                        }
+                                        wiping = false
+                                    }
+                                }) {
+                                    Text(l("sync_reset_cloud"), color = MaterialTheme.colorScheme.error)
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showWipeConfirm = false }) { Text(l("cancel")) }
+                            }
+                        )
+                    }
+
+                    wipeMessage?.let { msg ->
+                        Text(
+                            text = msg,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                        )
+                    }
                 }
 
                 // 即時資料夾同步日誌（含複製、匯出、清理）

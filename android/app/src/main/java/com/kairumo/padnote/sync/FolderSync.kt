@@ -244,4 +244,34 @@ object FolderSync {
         }
         return node?.takeIf { it.isFile }
     }
+    fun wipeCloud(context: Context): uniffi.padnote_core.FfiWipeResult? {
+        val rootUri = folderUri(context) ?: return uniffi.padnote_core.FfiWipeResult(
+            ok = false, deleted = 0u, failed = 0u, error = "未設定同步資料夾", needsReauth = false
+        )
+        val root = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, rootUri) ?: return uniffi.padnote_core.FfiWipeResult(
+            ok = false, deleted = 0u, failed = 0u, error = "無法存取資料夾", needsReauth = false
+        )
+        var deleted = 0u
+        var failed = 0u
+        var firstError = ""
+        for (item in root.listFiles()) {
+            val name = item.name ?: continue
+            if (name.endsWith(".padnote")) {
+                try {
+                    if (item.delete()) {
+                        deleted++
+                    } else {
+                        failed++
+                        if (firstError.isEmpty()) firstError = "刪除失敗：$name"
+                    }
+                } catch (e: Exception) {
+                    failed++
+                    if (firstError.isEmpty()) firstError = e.localizedMessage ?: "Unknown error"
+                }
+            }
+        }
+        return uniffi.padnote_core.FfiWipeResult(
+            ok = failed == 0u, deleted = deleted, failed = failed, error = firstError, needsReauth = false
+        )
+    }
 }

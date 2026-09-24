@@ -4038,6 +4038,46 @@ public struct CloudSyncDetailSheet: View {
                     }
                     .buttonStyle(.plain)
                     .foregroundColor(.red)
+                    // 重置雲端資料夾
+                    Button(role: .destructive) {
+                        showWipeConfirm = true
+                    } label: {
+                        if isWiping {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small)
+                                Text(localizationManager.localized("sync_reset_cloud_running"))
+                            }
+                        } else {
+                            HStack {
+                                Image(systemName: "trash")
+                                Text(localizationManager.localized("sync_reset_cloud"))
+                            }
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.red)
+                    .padding(.top, DS.Space.m)
+                    .disabled(isWiping || isFolderSyncing)
+                    .confirmationDialog(
+                        localizationManager.localized("sync_reset_cloud_confirm_title"),
+                        isPresented: $showWipeConfirm,
+                        titleVisibility: .visible
+                    ) {
+                        Button(localizationManager.localized("sync_reset_cloud"), role: .destructive) {
+                            Task { await runWipeCloud() }
+                        }
+                        Button(localizationManager.localized("cancel"), role: .cancel) {}
+                    } message: {
+                        Text(localizationManager.localized("sync_reset_cloud_confirm_body"))
+                    }
+
+                    if let wipeMessage {
+                        Text(wipeMessage)
+                            .font(DS.Font.caption)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                            .padding(.top, 4)
+                    }
                 }
             }
 
@@ -4555,17 +4595,25 @@ public struct CloudSyncDetailSheet: View {
         isWiping = true
         defer { isWiping = false }
         wipeMessage = localizationManager.localized("sync_reset_cloud_running")
-        guard let result = await CloudSync.wipeCloud() else {
+        
+        let result: FfiWipeResult?
+        if selectedProvider == .folderOrICloud {
+            result = CloudSyncFolder.wipeCloud()
+        } else {
+            result = await CloudSync.wipeCloud()
+        }
+        
+        guard let res = result else {
             wipeMessage = localizationManager.localized("sync_reset_cloud_busy")
             return
         }
-        if result.ok {
+        if res.ok {
             wipeMessage = localizationManager.localized("sync_reset_cloud_done")
-                .replacingFirst("%1@", with: "\(result.deleted)")
+                .replacingFirst("%1@", with: "\(res.deleted)")
         } else {
             wipeMessage = localizationManager.localized("sync_reset_cloud_partial")
-                .replacingFirst("%1@", with: "\(result.deleted)")
-                .replacingFirst("%2@", with: "\(result.failed)")
+                .replacingFirst("%1@", with: "\(res.deleted)")
+                .replacingFirst("%2@", with: "\(res.failed)")
         }
     }
 
