@@ -10127,6 +10127,14 @@ object LocalizationStrings {
             "ko" to "계정",
             "th" to "บัญชี"
         ),
+        "sync_already_running" to mapOf(
+            "zh-Hant" to "已有一輪同步在進行中",
+            "en" to "Another sync is already running",
+            "zh-Hans" to "已有一轮同步在进行中",
+            "ja" to "別の同期が実行中です",
+            "ko" to "다른 동기화가 실행 중입니다",
+            "th" to "กำลังซิงค์อยู่แล้ว"
+        ),
         "sync_choose_folder" to mapOf(
             "zh-Hant" to "iCloud 或本機資料夾同步",
             "en" to "Choose Sync Folder",
@@ -10310,7 +10318,10 @@ object LocalizationStrings {
             "ja" to "同期録音中",
             "ko" to "동기화 녹음 중",
             "th" to "กำลังบันทึกเสียงพร้อมกัน"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "sync_result" to mapOf(
             "zh-Hant" to "上傳 %1@、下載 %2@",
             "en" to "%1@ uploaded, %2@ downloaded",
@@ -10318,10 +10329,7 @@ object LocalizationStrings {
             "ja" to "%1@ 件アップロード、%2@ 件ダウンロード",
             "ko" to "%1@개 업로드, %2@개 다운로드",
             "th" to "อัปโหลด %1@ ดาวน์โหลด %2@"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_section" to mapOf(
             "zh-Hant" to "雲端同步",
             "en" to "Cloud Sync",
@@ -10953,7 +10961,10 @@ object LocalizationStrings {
             "ja" to "機構部品、3D製品外観、分解斜視図専用",
             "ko" to "기구 부품, 3D 제품 외관 및 분해 투시도 전용",
             "th" to "สำหรับชิ้นส่วนกลไก ผลิตภัณฑ์ 3 มิติ และภาพระเบิด"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "tmpl_kwl" to mapOf(
             "zh-Hant" to "KWL 表",
             "en" to "K-W-L Chart",
@@ -10961,10 +10972,7 @@ object LocalizationStrings {
             "ja" to "KWL表",
             "ko" to "K-W-L 표",
             "th" to "ตาราง K-W-L"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_kwl_desc" to mapOf(
             "zh-Hant" to "已知／想知道／學到了，同一主題三欄",
             "en" to "Know / Want to know / Learned — three columns across one topic",
@@ -11596,7 +11604,10 @@ object LocalizationStrings {
             "ja" to "未分類ノート",
             "ko" to "미분류 노트",
             "th" to "บันทึกที่ไม่ได้จัดหมวดหมู่"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "unhide_items" to mapOf(
             "zh-Hant" to "重置隱藏項目",
             "en" to "Reset Hidden",
@@ -11604,10 +11615,7 @@ object LocalizationStrings {
             "ja" to "非表示を解除",
             "ko" to "숨김 초기화",
             "th" to "รีเซ็ตที่ซ่อน"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "unlock_desc" to mapOf(
             "zh-Hant" to "輸入你加密時設定的密碼。",
             "en" to "Enter the passphrase you chose when you encrypted it.",

@@ -175,6 +175,12 @@ public final class AutoSyncController: ObservableObject {
     }
 
     private func finishMessage(report: NotebookSyncCoordinator.Report) -> FfiSyncOutcome {
+        // 被互斥閘擋下來的不是失敗，也不是「已是最新」—— 它根本沒跑。
+        // 當成成功會讓排程器以為這一輪做完了，於是待辦被清掉。
+        if report.wasSkipped {
+            lastMessage = ""
+            return .transient
+        }
         if let failure = report.failures.first {
             lastMessage = "\(failure.key)：\(failure.value)"
             // 權杖問題由 runDrive 內部處理成登出；這裡一律當成可重試，

@@ -46,6 +46,9 @@ class SyncWorker(context: Context, params: WorkerParameters) :
             val full = CloudSync.runFull(context, AutoSync.currentDeviceId())
             val meta = full.meta
             when {
+                // 被擋下來代表有一輪正在跑；這次排程重試即可。
+                // 當成 success 的話這次排程就這樣沒了。
+                full.skipped -> Result.retry()
                 meta == null -> Result.success() // 拿不到權杖：等使用者去登入
                 meta.needsReauth -> Result.success()
                 !meta.ok -> Result.retry()

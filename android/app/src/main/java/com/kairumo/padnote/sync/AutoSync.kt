@@ -160,6 +160,10 @@ object AutoSync {
             val meta = result?.meta
             when {
                 result == null -> FfiSyncOutcome.TRANSIENT
+                // **跳過不是「要重新登入」。** 被擋下來時 meta 是 null，
+                // 照 null 那一條走會回 NEEDS_REAUTH —— 一次跳過就把自動
+                // 同步停掉、叫使用者去重新登入，而他根本沒有登出。
+                result.skipped -> FfiSyncOutcome.TRANSIENT
                 meta == null -> FfiSyncOutcome.NEEDS_REAUTH
                 meta.needsReauth -> FfiSyncOutcome.NEEDS_REAUTH
                 !meta.ok -> FfiSyncOutcome.TRANSIENT

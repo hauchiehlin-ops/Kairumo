@@ -117,6 +117,11 @@ enum NotebookSyncCoordinator {
         var newNotebooks: Int = 0
         var needsAttention: [String] = []
         var failures: [String: String] = [:]
+        /// 這一輪**根本沒跑** —— 已經有另一輪在進行中。
+        ///
+        /// 跟「跑了但沒事做」要分得開：都回報「已是最新」的話，使用者按下
+        /// 「立即同步」看到「已是最新」，會以為雲端真的比對過了。
+        var wasSkipped: Bool = false
 
         var isNoOp: Bool { uploaded == 0 && downloaded == 0 }
     }
@@ -126,6 +131,14 @@ enum NotebookSyncCoordinator {
     /// 匯出時算出來，匯入後要用它反推「別台裝置的部分」——
     /// `別人的 = 合併後的 − 自己的`。
     private typealias OwnStrokes = [String: PKDrawing]
+
+    /// 閘用的時鐘。
+    ///
+    /// **要單調的。** 用牆上時鐘的話，時區或校時跳一下就會讓「拿著多久」
+    /// 算出負數或幾小時 —— 前者永遠不接手，後者立刻把正在跑的那輪踢掉。
+    private static func gateNowMs() -> UInt64 {
+        UInt64(ProcessInfo.processInfo.systemUptime * 1000)
+    }
 
     public nonisolated static var isCancelled: Bool {
         DriveHttpClient.isCancellationRequested
@@ -146,6 +159,21 @@ enum NotebookSyncCoordinator {
     ///   - store: 筆記本的本機儲存。
     ///   - folder: 使用者選的雲端資料夾。呼叫端負責取得 security scope。
     static func run(store: SyncableNotebookStore, folder: URL, deviceId: UInt32) async -> Report {
+        let grant = syncGateTryEnter(label: "folder", nowMs: gateNowMs())
+        guard grant.granted else {
+            SyncLogger.logAsync(
+                "【資料夾同步】已有一輪在跑（\(grant.holder)，\(grant.heldMs / 1000) 秒）—— 這次跳過",
+                source: .folder)
+            var skipped = Report()
+            skipped.wasSkipped = true
+            return skipped
+        }
+        if grant.tookOver {
+            SyncLogger.logAsync(
+                "【資料夾同步】上一輪（\(grant.holder)）卡了 \(grant.heldMs / 1000) 秒沒收尾，接手",
+                source: .folder)
+        }
+        defer { _ = syncGateLeave(ticket: grant.ticket) }
         resetCancellation()
         defer { resetCancellation() }
         SyncLogger.logAsync("【資料夾同步】開始執行，目標：\(folder.lastPathComponent)", source: .folder)
@@ -332,6 +360,35 @@ enum NotebookSyncCoordinator {
     /// 跑完一輪**Google Drive** 的同步。
     static func runDrive(store: SyncableNotebookStore, deviceId: UInt32) async -> Report? {
         guard await GoogleAuth.shared.isSignedIn else { return nil }
+        // **整個行程同一時間只准跑一輪。**
+        //
+        // 每個入口原本各自帶一個旗標（首頁一顆、設定兩顆、自動同步一個），
+        // 那些旗標彼此不認識 —— 自動同步在跑的時候按下「立即同步」，兩輪
+        // 就並行了。而併發的症狀完全不像併發：
+        //
+        //   * 「找不到：/upload/drive/v3/files/…」——兩輪各自為同一本筆記
+        //     開了可續傳上傳工作階段，先完成的那一輪把檔案換掉，另一輪
+        //     手上的網址就失效了。看起來像 Drive 弄丟檔案。
+        //   * 「blob … 下載後雜湊不符」—— 一輪在下載，另一輪同時把同名的
+        //     blob 換掉。看起來像傳輸損毀。
+        //
+        // 鎖在核心（`sync_gate_*`），兩端共用同一把 —— 各寫一份的話，
+        // 下一個新增的入口只會補上其中一邊。
+        let grant = syncGateTryEnter(label: "google-drive", nowMs: gateNowMs())
+        guard grant.granted else {
+            SyncLogger.logAsync(
+                "【Google Drive 同步】已有一輪在跑（\(grant.holder)，\(grant.heldMs / 1000) 秒）—— 這次跳過",
+                source: .googleDrive)
+            var skipped = Report()
+            skipped.wasSkipped = true
+            return skipped
+        }
+        if grant.tookOver {
+            SyncLogger.logAsync(
+                "【Google Drive 同步】上一輪（\(grant.holder)）卡了 \(grant.heldMs / 1000) 秒沒收尾，接手",
+                source: .googleDrive)
+        }
+        defer { _ = syncGateLeave(ticket: grant.ticket) }
         resetCancellation()
         defer { resetCancellation() }
         SyncLogger.logAsync("【Google Drive 同步】開始執行", source: .googleDrive)

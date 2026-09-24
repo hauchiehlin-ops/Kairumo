@@ -46,6 +46,7 @@ pub mod ffi_shapes;
 pub mod ffi_sketch;
 pub mod ffi_stickers;
 pub mod ffi_symbols;
+pub mod ffi_sync_gate;
 pub mod ffi_table;
 pub mod ffi_texture;
 pub mod ffi_theme_tools;

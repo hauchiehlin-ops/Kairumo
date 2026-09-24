@@ -2893,6 +2893,9 @@ private fun InkScreen(
                             }
                             val meta = result.meta
                             message = when {
+                                // 被互斥閘擋下來：meta 是 null，但那不是
+                                // 「沒登入」—— 說錯的話使用者會跑去重新登入。
+                                result.skipped -> l10n("sync_already_running")
                                 meta == null -> l10n("not_signed_in")
                                 meta.needsReauth -> l10n("sync_needs_reauth")
                                 !meta.ok -> l10n("sync_failed").replace("%@", meta.error)

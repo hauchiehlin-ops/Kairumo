@@ -10047,6 +10047,14 @@
     "zhHans": "账号",
     "zhHant": "帳號"
   },
+  "sync_already_running": {
+    "en": "Another sync is already running",
+    "ja": "別の同期が実行中です",
+    "ko": "다른 동기화가 실행 중입니다",
+    "th": "กำลังซิงค์อยู่แล้ว",
+    "zhHans": "已有一轮同步在进行中",
+    "zhHant": "已有一輪同步在進行中"
+  },
   "sync_choose_folder": {
     "en": "Choose Sync Folder",
     "ja": "同期フォルダを選択",

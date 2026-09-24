@@ -146,10 +146,57 @@ object CloudSync {
         val uploaded: Int,
         val downloaded: Int,
         /** 被別台改過、需要重開 session 的筆記本 id。 */
-        val changed: List<String>
+        val changed: List<String>,
+        /**
+         * 這一輪**根本沒跑** —— 已經有另一輪在進行中。
+         *
+         * 跟「跑了但沒事做」要分得開：都說「同步完成」的話，使用者按下
+         * 「立即同步」看到完成，會以為雲端真的比對過了。
+         */
+        val skipped: Boolean = false
     )
 
+    /**
+     * 跑一輪完整同步。**整個行程同一時間只准一輪。**
+     *
+     * 入口有四個（自動同步、`SyncWorker`、兩顆手動），原本彼此不認識，
+     * 於是自動同步在跑的時候按下「立即同步」，兩輪就並行了。併發的症狀
+     * 完全不像併發：
+     *
+     * * 「找不到：/upload/drive/v3/files/…」—— 兩輪各自為同一本筆記開了
+     *   可續傳上傳工作階段，先完成的那一輪把檔案換掉，另一輪手上的網址
+     *   就失效了。看起來像 Drive 弄丟檔案。
+     * * 「blob … 下載後雜湊不符」—— 一輪在下載，另一輪同時把同名的 blob
+     *   換掉。看起來像傳輸損毀。
+     *
+     * 鎖在核心（`syncGateTryEnter`／`syncGateLeave`），與 Apple 共用同一把。
+     */
     fun runFull(context: Context, deviceId: UInt, activeNotebookId: String? = null): FullResult {
+        // 單調時鐘：牆上時鐘跳一下會讓「拿著多久」算錯，於是不是永遠不
+        // 接手，就是立刻把正在跑的那輪踢掉。
+        val nowMs = android.os.SystemClock.elapsedRealtime().toULong()
+        val grant = uniffi.padnote_core.syncGateTryEnter("android:google-drive", nowMs)
+        if (!grant.granted) {
+            SyncLogger.log(
+                "【Google Drive 同步】已有一輪在跑（${grant.holder}，${grant.heldMs / 1000u} 秒）—— 這次跳過",
+                SyncSource.GOOGLE_DRIVE
+            )
+            return FullResult(null, 0, 0, emptyList(), skipped = true)
+        }
+        if (grant.tookOver) {
+            SyncLogger.log(
+                "【Google Drive 同步】上一輪（${grant.holder}）卡了 ${grant.heldMs / 1000u} 秒沒收尾，接手",
+                SyncSource.GOOGLE_DRIVE
+            )
+        }
+        return try {
+            runFullBody(context, deviceId, activeNotebookId)
+        } finally {
+            uniffi.padnote_core.syncGateLeave(grant.ticket)
+        }
+    }
+
+    private fun runFullBody(context: Context, deviceId: UInt, activeNotebookId: String? = null): FullResult {
         SyncLogger.log("【Google Drive 同步】開始執行", SyncSource.GOOGLE_DRIVE)
         SyncLogger.log("步驟 1：同步中繼資料與索引 (連線中)...", SyncSource.GOOGLE_DRIVE)
 

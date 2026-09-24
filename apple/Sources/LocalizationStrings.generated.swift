@@ -10063,6 +10063,14 @@ extension LocalizationManager {
             .ko: "계정",
             .th: "บัญชี"
         ],
+        "sync_already_running": [
+            .zhHant: "已有一輪同步在進行中",
+            .en: "Another sync is already running",
+            .zhHans: "已有一轮同步在进行中",
+            .ja: "別の同期が実行中です",
+            .ko: "다른 동기화가 실행 중입니다",
+            .th: "กำลังซิงค์อยู่แล้ว"
+        ],
         "sync_choose_folder": [
             .zhHant: "iCloud 或本機資料夾同步",
             .en: "Choose Sync Folder",

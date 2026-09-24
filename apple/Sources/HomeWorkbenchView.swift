@@ -1731,6 +1731,11 @@ public struct HomeWorkbenchView: View {
             homeGoogleMessage = localizationManager.localized("not_signed_in")
             return
         }
+        // 被互斥閘擋下來：別說「已是最新」—— 這一輪根本沒比對過雲端。
+        if report.wasSkipped {
+            homeGoogleMessage = localizationManager.localized("sync_already_running")
+            return
+        }
         if report.failures.isEmpty { SyncHistory.markGoogleSynced() }
         if let failure = report.failures.first {
             homeGoogleMessage = "\(failure.key)：\(failure.value)"
@@ -3127,6 +3132,11 @@ extension AppDiagnosticsSheet {
             googleMessage = localizationManager.localized("not_signed_in")
             return
         }
+        // 被互斥閘擋下來：別說「已是最新」—— 這一輪根本沒比對過雲端。
+        if report.wasSkipped {
+            googleMessage = localizationManager.localized("sync_already_running")
+            return
+        }
         if report.failures.isEmpty { SyncHistory.markGoogleSynced() }
         if let failure = report.failures.first {
             googleMessage = "\(failure.key)：\(failure.value)"
@@ -4213,6 +4223,11 @@ public struct CloudSyncDetailSheet: View {
         }
         guard let report else {
             googleStatusMessage = localizationManager.localized("not_signed_in")
+            return
+        }
+        // 被互斥閘擋下來：別說「已是最新」—— 這一輪根本沒比對過雲端。
+        if report.wasSkipped {
+            googleStatusMessage = localizationManager.localized("sync_already_running")
             return
         }
         if report.failures.isEmpty { SyncHistory.markGoogleSynced() }

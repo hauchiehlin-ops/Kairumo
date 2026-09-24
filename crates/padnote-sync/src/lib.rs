@@ -8,6 +8,7 @@
 //! ⇒ **檔案層級衝突在數學上不可能發生**（Dropbox/iCloud 的 "conflicted copy"）。
 
 pub mod engine;
+pub mod gate;
 pub mod gdrive;
 pub mod library;
 pub mod local;
@@ -19,6 +20,7 @@ pub mod scheduler;
 pub mod settings;
 
 pub use engine::{PulledBatch, SyncCursors, SyncEngine};
+pub use gate::{GateDecision, STALE_TAKEOVER_MS, SyncGate};
 pub use gdrive::{DriveHttp, GDriveProvider, ReqwestDriveHttp};
 pub use library::{INDEX_PATH, ItemKind, LibraryIndex, LibraryItem};
 pub use local::LocalFolderProvider;
