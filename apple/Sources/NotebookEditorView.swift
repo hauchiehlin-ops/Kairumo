@@ -453,14 +453,33 @@ struct CanvasRepresentable: UIViewRepresentable {
         canvas.maximumZoomScale = CGFloat(gesture.maxZoom)
         canvas.bouncesZoom = true
 
+        // **這一行一定要包在 `isProgrammaticUpdate` 裡。**
+        //
+        // 上面第一件事就是 `canvas.delegate = context.coordinator`，所以這裡
+        // 一設 `drawing`，`canvasViewDrawingDidChange` 就會被叫到 —— 而它會
+        // 走到 `recordDrawingEdit`，把當下這份 drawing **寫進磁碟**。
+        //
+        // 而 `makeUIView` 跑在 `body` 求值的時候，**比 `.onAppear` 早**，
+        // 那時 `loadCurrentPage()` 還沒跑，`currentDrawing` 還是 `@State`
+        // 的初始空值。結果就是：**每一次重新打開筆記本，都會先把已經存好的
+        // 筆跡蓋成一張空白。**
+        //
+        // 這就是「筆跡沒有自動儲存」的真正原因 —— 存是存進去了（量過：
+        // 畫完不離開，檔案是 638 bytes），是重新開啟的那一瞬間被清掉的
+        // （同一個檔案變成 42 bytes，空的 PKDrawing）。
+        //
+        // `updateUIView` 裡設 `drawing` 的那一處一直都有這個保護，只有
+        // 建立時這一處漏了。
+        context.coordinator.isProgrammaticUpdate = true
         canvas.drawing = drawing
+        context.coordinator.isProgrammaticUpdate = false
 
         // 給自動化測試一個穩定的抓取點（畫面上有多個 scroll view）
-        canvas.accessibilityIdentifier = "kairumo.canvas"
+        canvas.accessibilityIdentifier = "editor.canvas"
         // 初始讀數。沒有這一行的話，測試在捏合之前讀到的是 nil，
         // 而 nil 與 "zoom:1.000" 的差別會被誤讀成「縮放有作用」。
         if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
-            canvas.accessibilityValue = String(format: "zoom:%.3f", canvas.zoomScale)
+            canvas.accessibilityValue = CanvasRepresentable.testReadout(canvas)
         }
         canvas.installPointerInteractionIfNeeded(delegate: context.coordinator)
         canvas.installPencilInteractionIfNeeded(delegate: context.coordinator.pencilTaps)
@@ -548,6 +567,16 @@ struct CanvasRepresentable: UIViewRepresentable {
             context.coordinator.isProgrammaticUpdate = true
             uiView.drawing = drawing
             context.coordinator.isProgrammaticUpdate = false
+            // 讀數要跟著更新。
+            //
+            // `isProgrammaticUpdate` 會讓 delegate 直接 return（那是對的 ——
+            // 程式設進去的內容不該再存一次），但**讀數也跟著沒更新**。
+            // 於是重新打開筆記本之後，畫面上明明有筆跡，測試讀到的卻還是
+            // 建立當下那個 `strokes:0`：一個**看起來像資料掉了、其實是
+            // 儀器沒動**的假象。實際被這個騙過一次。
+            if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+                uiView.accessibilityValue = CanvasRepresentable.testReadout(uiView)
+            }
         }
         uiView.isRulerActive = isRulerActive
 
@@ -561,6 +590,24 @@ struct CanvasRepresentable: UIViewRepresentable {
         context.coordinator.applyTool(to: uiView)
     }
 
+    /// 測試用讀數：縮放倍率**與筆畫數**。
+    ///
+    /// # 為什麼筆畫數也要暴露
+    ///
+    /// 「筆跡有沒有存下來」看程式碼是看不出來的 —— `saveDrawing` 有呼叫、
+    /// `onDisappear` 有存、`scenePhase` 也有存，每一項都對，而使用者一再
+    /// 回報「筆跡沒有自動儲存」。
+    ///
+    /// 在此之前**沒有任何一條測試畫一筆、離開、再回來看它還在不在**：
+    /// `testDrawingToolsAndTypeModeGridTap` 只點了工具再點一下畫布，
+    /// 不檢查任何東西留下來。所以每一次「修好了」都沒有東西守著 ——
+    /// 而這正是它被修了很多次卻還在的原因。
+    ///
+    /// 生產環境不掛：`accessibilityValue` 是給 VoiceOver 念的，
+    /// 念一串「zoom:1.000 strokes:3」沒有任何意義。
+    static func testReadout(_ canvas: PKCanvasView) -> String {
+        String(format: "zoom:%.3f strokes:%d", canvas.zoomScale, canvas.drawing.strokes.count)
+    }
     func makeCoordinator() -> Coordinator {
         Coordinator(self)
     }
@@ -582,7 +629,11 @@ struct CanvasRepresentable: UIViewRepresentable {
         /// 是給 VoiceOver 念的，念一串「zoom:1.000」沒有任何意義。
         private func publishZoomForTests(_ scrollView: UIScrollView) {
             guard ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" else { return }
-            scrollView.accessibilityValue = String(format: "zoom:%.3f", scrollView.zoomScale)
+            if let canvas = scrollView as? PKCanvasView {
+                scrollView.accessibilityValue = CanvasRepresentable.testReadout(canvas)
+            } else {
+                scrollView.accessibilityValue = String(format: "zoom:%.3f", scrollView.zoomScale)
+            }
         }
 
         func scrollViewDidZoom(_ scrollView: UIScrollView) {
@@ -683,6 +734,12 @@ struct CanvasRepresentable: UIViewRepresentable {
                 effective = corrected
             }
             parent.drawing = effective
+
+            // 筆畫數也要跟著更新 —— 只在建立時寫一次的話，測試讀到的
+            // 永遠是 0，而「畫了沒存」與「根本沒畫進去」看起來一模一樣。
+            if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+                canvasView.accessibilityValue = CanvasRepresentable.testReadout(canvasView)
+            }
 
             // ── 長按圖形辨識 ────────────────────────────────────
             // 新增筆劃時啟動 0.5 秒計時器；期間若再下筆就取消。
@@ -1539,7 +1596,20 @@ public struct NotebookEditorView: View {
         } }
         .sheet(isPresented: $showStickerLibrary) { resizableSheet {
             StickerLibraryView { drawing in
-                guard let canvas = canvasView else { return }
+                // **拿不到畫布就要說一聲。**
+                //
+                // 原本這裡是 `guard let canvas = canvasView else { return }`
+                // —— 靜靜地什麼都不做。使用者挑了一張貼紙、面板關上、
+                // 畫布上什麼也沒有，而且沒有任何線索。回報就是
+                // 「無法插入 Sticker」。
+                //
+                // 貼紙是貼成**筆跡**的（所以可以擦、可以套索搬走），
+                // 那需要畫布在場。打字模式下畫布不吃筆跡，所以先講清楚
+                // 要切回手寫模式。
+                guard let canvas = canvasView else {
+                    showCanvasNotice(localizationManager.localized("insert_needs_canvas"))
+                    return
+                }
                 let visibleRect = canvas.bounds
                 let drawingCenter = CGPoint(x: drawing.bounds.midX, y: drawing.bounds.midY)
                 let targetCenter = CGPoint(x: visibleRect.midX, y: visibleRect.midY)
@@ -2549,7 +2619,16 @@ public struct NotebookEditorView: View {
                     .accessibilityIdentifier("editor.insert.chart")
                 Button { insertDefaultTable() } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
                     .accessibilityIdentifier("editor.insert.table")
-                Button { insertDefaultShape() } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
+                // **開工作室，不要默默丟一個矩形。**
+                //
+                // 這一項原本呼叫 `insertDefaultShape()`：在 (200, 200) 塞一個
+                // 預設矩形就結束。標籤寫著「形狀工作室」，使用者點下去卻
+                // 沒有任何面板 —— 而那個矩形可能落在畫面外或被當成雜訊，
+                // 所以回報是「點了沒反應」。
+                //
+                // 工作室（`ShapeStudioView`）一直都在，而且另一個插入選單
+                // 早就接著它了；只有這個主選單接錯了。
+                Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
                     .accessibilityIdentifier("editor.insert.shape")
                 Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
                     .accessibilityIdentifier("editor.insert.model3d")
@@ -2626,10 +2705,22 @@ public struct NotebookEditorView: View {
         } else {
             Button {
                 Task {
-                    _ = await audioManager.startRecording(
+                    // **失敗要讓使用者看見。**
+                    //
+                    // 原本是 `_ = await ...` —— 回傳值直接丟掉。而
+                    // `startRecording` 有三處會靜靜地回 false（權限被拒、
+                    // 開不了套件、擷取啟動失敗），於是按下去之後畫面上
+                    // 什麼都不會發生，使用者回報的就是「錄音鈕沒反應」。
+                    //
+                    // 權限被拒那一條由 `AudioRecorderManager` 自己跳系統
+                    // 提示（`showPermissionAlert`），其餘的在這裡說一聲。
+                    let started = await audioManager.startRecording(
                             notebookId: notebook.id,
                             notebookTitle: notebook.displayTitle(),
                             title: "\(notebook.displayTitle()) \(localizationManager.localized("recording_suffix"))")
+                    if !started && !audioManager.showPermissionAlert {
+                        showCanvasNotice(localizationManager.localized("recording_failed"))
+                    }
                 }
             } label: {
                 Image(systemName: "mic.fill")
@@ -2827,7 +2918,13 @@ public struct NotebookEditorView: View {
                     // 模式把它套上 `scaleEffect` 之後，它就不再出現在 XCUITest
                     // 的樹裡 —— 測試說「找不到畫布」而畫面上明明有，VoiceOver
                     // 也就同樣找不到。掛在外層這一個，縮放不會把它吃掉。
-                    .accessibilityIdentifier("kairumo.canvas")
+                    //
+                    // **名字用規格那一個（`editor.canvas`）。** 在此之前畫布有
+                    // 兩個名字：真正畫出來的這一層叫 `kairumo.canvas`，而規格
+                    // 要求的 `editor.canvas` 掛在另一個**不會被算繪**的分支上。
+                    // 於是畫面稽核一直報「少了 editor.canvas」，而那一項被放進
+                    // 棘輪、附上一段解釋 —— 解釋是對的，但沒有人回頭把它修好。
+                    .accessibilityIdentifier("editor.canvas")
 
                 if let notice = canvasNotice {
                     canvasNoticeBanner(notice)
@@ -4071,6 +4168,19 @@ public struct NotebookEditorView: View {
                 }
             }
         )
+        // **`children: .contain` 不是裝飾。**
+        //
+        // 只掛識別字的話，這座島會變成一個「單一無障礙元素」，裡面那兩顆
+        // 藥丸（`portal.draw` / `portal.type`）就**整個從無障礙樹上消失**
+        // —— 實測：編輯器上掃得到 `editor.mode`（而且有兩個），一個
+        // `portal.*` 都沒有。
+        //
+        // 那不只是測試找不到按鈕：VoiceOver 的使用者也點不到「手寫／打字」
+        // 這兩顆，他只會聽到一個沒有作用的容器。
+        //
+        // `.contain` 讓這一層仍然是可定位的群組（規格要 `editor.mode`），
+        // 同時保留子元素。首頁那四個容器踩過同一件事（S-263）。
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("editor.mode")
     }
 
@@ -5310,6 +5420,21 @@ public struct NotebookEditorView: View {
                 .background(Color.accentColor.opacity(0.12))
                 Divider()
             }
+
+            // **文字方塊物件的工具列。**
+            //
+            // 這一整份（新增方塊、粗體斜體底線、對齊、貼齊格線、疊層、
+            // 特殊符號、框選）原本是**死的** —— 全專案沒有任何地方引用
+            // `typingToolbar`，而規格要求的十六個 `editor.text.*` 識別碼
+            // 全掛在它身上。結果是：靜態的跨平台對照閘門一直綠的（它掃的是
+            // 原始碼裡有沒有那個字串），而使用者在 iPad 上**根本點不到**
+            // 這些功能，Android 卻有。
+            //
+            // 它與底下的 `WordToolbarView` 不是重複：這一份操作的是畫布上
+            // 的**文字方塊物件**（位置、疊層、對齊到格線），`WordToolbarView`
+            // 操作的是**文件內文**（標題階層、字體、清單、表格）。
+            // 兩者是不同層次，所以兩份都留。
+            typingToolbar
 
             WordToolbarView(
                 activeText: Binding(
@@ -10279,6 +10404,38 @@ struct Model3DCanvasItemView: View {
                 Button(role: .destructive, action: onDelete) {
                     Label(localizationManager.localized("delete"), systemImage: "trash")
                 }
+            }
+            // **右下角的縮放把手。**
+            //
+            // 在此之前 3D 卡片**完全沒有縮放**：圖片、表格、圖表都有四角
+            // 把手，只有它沒有，而卡片寬度寫死在 `.frame(width:)` 裡。
+            // 使用者回報的「插入 3D 模型後無法改變大小」就是這一項 ——
+            // 那不是他沒找到，是真的沒有。
+            .overlay(alignment: .bottomTrailing) {
+                Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(4)
+                    .background(Circle().fill(Color.accentColor))
+                    .offset(x: 6, y: 6)
+                    .accessibilityIdentifier("model3d.resize")
+                    .gesture(
+                        DragGesture(minimumDistance: 2)
+                            .onChanged { value in
+                                // 下限與卡片本身的 `max(200, ...)` 對齊 ——
+                                // 不對齊的話縮到最小時把手會跑到卡片外面。
+                                item.width = max(200, item.width + value.translation.width)
+                                item.height = max(160, item.height + value.translation.height)
+                            }
+                            .onEnded { _ in
+                                if let data = try? JSONEncoder().encode(item),
+                                   let dict = try? JSONSerialization.jsonObject(with: data)
+                                    as? [String: Any] {
+                                    collaborationManager.broadcastAttachmentUpsert(
+                                        type: "3d", itemDict: dict)
+                                }
+                            }
+                    )
             }
         }
         .frame(width: max(200, item.width))

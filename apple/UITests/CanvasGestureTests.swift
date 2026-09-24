@@ -39,11 +39,11 @@ final class CanvasGestureTests: XCTestCase {
         // `Other` 的那個 —— 同一個識別碼在樹上不只一個元素（SwiftUI 的
         // 包裝層會把它繼承下去），而捏合要送給真正的 `UIScrollView`。
         // 抓錯的症狀是 `value` 一直是空字串，看起來像「讀數沒掛上」。
-        let canvas = app.scrollViews.matching(identifier: "kairumo.canvas").firstMatch
+        let canvas = app.scrollViews.matching(identifier: "editor.canvas").firstMatch
         guard canvas.waitForExistence(timeout: 15) else {
-            XCTFail("找不到畫布的 scroll view。掛著 kairumo.canvas 的元素有："
+            XCTFail("找不到畫布的 scroll view。掛著 editor.canvas 的元素有："
                     + app.descendants(matching: .any)
-                        .matching(identifier: "kairumo.canvas")
+                        .matching(identifier: "editor.canvas")
                         .allElementsBoundByIndex
                         .map { "\($0.elementType.rawValue)" }
                         .joined(separator: ", "))
@@ -80,7 +80,7 @@ final class CanvasGestureTests: XCTestCase {
         guard card.waitForExistence(timeout: 10) else { return }
         card.tap()
 
-        let canvas = app.scrollViews.matching(identifier: "kairumo.canvas").firstMatch
+        let canvas = app.scrollViews.matching(identifier: "editor.canvas").firstMatch
         guard canvas.waitForExistence(timeout: 15) else {
             XCTFail("找不到畫布的 scroll view")
             return

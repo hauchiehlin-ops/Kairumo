@@ -138,7 +138,10 @@ public struct ShapeStudioView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
+                    // 與其他五張插入面板一致的識別碼 —— 稽核要靠它確認
+                    // 這張表真的打開了（S-261d 那一批的同一個理由）。
                     Button(localizationManager.localized("cancel")) { dismiss() }
+                        .accessibilityIdentifier("shape.cancel")
                 }
             }
         }

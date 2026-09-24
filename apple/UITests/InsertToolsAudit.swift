@@ -43,8 +43,64 @@ final class InsertToolsAudit: XCTestCase {
         ("Math Calculator", "math.close"),
         ("Chart Studio", "chart.close"),
         ("Insert 3D Model", "model3d.import"),
+        // 這一項原本接錯：主選單呼叫的是 `insertDefaultShape()`，在
+        // (200, 200) 默默塞一個矩形就結束，工作室從來沒被打開過 ——
+        // 使用者回報的「點了沒反應」就是它。現在這條測試守著。
+        ("Shapes & Flowcharts", "shape.cancel"),
         ("Theme Tools", "theme.close"),
     ]
+
+    /// 插進畫布的 3D 模型**搬得動、也改得了大小**。
+    ///
+    /// # 為什麼要有這條
+    ///
+    /// 使用者回報「插入 3D 模型後，畫布上的物件無法移動、改變大小」。
+    /// 查下去兩件事都是真的：
+    ///
+    ///   * **縮放根本沒有** —— 圖片、表格、圖表都有角落把手，只有 3D 卡片
+    ///     沒有，卡片寬度寫死在 `.frame(width:)` 裡。
+    ///   * 移動做得到，但唯一的入口是卡片頂端那條細手把；拖模型本體會被
+    ///     旋轉手勢吃掉，所以直覺去拖就是拖不動。
+    ///
+    /// 這條守的是縮放把手真的在畫布上（那是補出來的那一半）。
+    func testInsertedModelHasAResizeHandle() {
+        let app = launch()
+        guard openEditor(app) else {
+            XCTFail("進不到編輯器")
+            return
+        }
+
+        element(app, "editor.more").tap()
+        let item = app.buttons["Insert 3D Model"].firstMatch
+        if !item.waitForExistence(timeout: 3) {
+            for _ in 0..<6 where !item.exists { app.swipeUp() }
+        }
+        guard item.exists else {
+            XCTFail("「更多」選單裡找不到 Insert 3D Model")
+            return
+        }
+        item.tap()
+
+        // 「插入畫布」在面板底部，手機尺寸上要捲才看得到。
+        let insert = element(app, "model3d.insert")
+        if !insert.waitForExistence(timeout: 6) {
+            for _ in 0..<6 where !insert.exists { app.swipeUp() }
+        }
+        guard insert.exists else {
+            XCTFail(
+                "3D 工作室裡找不到「插入畫布」。現場的識別碼："
+                    + app.descendants(matching: .any).allElementsBoundByIndex
+                        .prefix(40).map { $0.identifier }.filter { !$0.isEmpty }
+                        .joined(separator: ", "))
+            return
+        }
+        insert.tap()
+
+        let handle = element(app, "model3d.resize")
+        XCTAssertTrue(
+            handle.waitForExistence(timeout: 8),
+            "插進畫布的 3D 模型上沒有縮放把手 —— 使用者改不了它的大小")
+    }
 
     /// 依識別碼找元素，**不掃整棵樹**。
     ///
@@ -79,7 +135,7 @@ final class InsertToolsAudit: XCTestCase {
     /// 下滑在 `.presentationDetents` 的表單上不一定有效，而且會滑到
     /// 底下的畫布上（那會畫出一筆）。
     private func dismissSheet(_ app: XCUIApplication) {
-        for id in ["assets.close", "stickers.cancel", "math.close",
+        for id in ["assets.close", "stickers.cancel", "math.close", "shape.cancel",
                    "chart.close", "theme.close", "model3d.close"] {
             let button = element(app, id)
             if button.exists && button.isHittable {

@@ -5303,6 +5303,14 @@ extension LocalizationManager {
             .ko: "링크 삽입",
             .th: "แทรกลิงก์"
         ],
+        "insert_needs_canvas": [
+            .zhHant: "請先切到手寫模式 —— 這個東西是貼在畫布上的",
+            .en: "Switch to drawing mode first — that is where this goes",
+            .zhHans: "请先切到手写模式 —— 这个东西是贴在画布上的",
+            .ja: "先に手書きモードに切り替えてください —— これはキャンバスに貼られます",
+            .ko: "먼저 필기 모드로 전환하세요 —— 이것은 캔버스에 붙습니다",
+            .th: "สลับไปโหมดเขียนก่อน —— สิ่งนี้วางบนผืนผ้าใบ"
+        ],
         "insert_object": [
             .zhHant: "插入",
             .en: "Insert",
@@ -7862,6 +7870,14 @@ extension LocalizationManager {
             .ja: "%@ 秒録音",
             .ko: "%@초 녹음됨",
             .th: "บันทึกแล้ว %@ วินาที"
+        ],
+        "recording_failed": [
+            .zhHant: "錄音啟動失敗",
+            .en: "Recording could not start",
+            .zhHans: "录音启动失败",
+            .ja: "録音を開始できませんでした",
+            .ko: "녹음을 시작할 수 없습니다",
+            .th: "เริ่มบันทึกเสียงไม่ได้"
         ],
         "recording_inbox": [
             .zhHant: "錄音收件匣",

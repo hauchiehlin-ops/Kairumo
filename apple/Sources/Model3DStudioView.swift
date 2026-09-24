@@ -397,6 +397,7 @@ public struct Model3DStudioView: View {
                     .padding(.vertical, 4)
                 }
                 .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("model3d.insert")
             }
         }
     }
