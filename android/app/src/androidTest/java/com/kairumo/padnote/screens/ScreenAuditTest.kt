@@ -67,7 +67,9 @@ class ScreenAuditTest {
      */
     @Test
     fun editorScreenRendersEveryRequiredControl() {
-        audit("editor", allowMissing = EDITOR_NOT_WIRED_YET, scrollTag = null) {
+        // 不是 `always` 的都不該在這一掃裡 —— 它們各自由會先互動的
+        // 那幾條測試檢查。這份名單來自核心規格，不是手抄的。
+        audit("editor", allowMissing = notAlwaysVisible("editor"), scrollTag = null) {
             openFirstNotebook()
         }
     }
@@ -112,7 +114,7 @@ class ScreenAuditTest {
      */
     @Test
     fun moreMenuItemsAreReachable() {
-        auditSubset(MORE_MENU_ITEMS, scrollTag = null) {
+        auditSubset(controlIdsRevealedBy("editor", "more_menu"), scrollTag = null) {
             openFirstNotebook()
             compose.onNodeWithTag("editor.more").performClick()
         }
@@ -126,16 +128,31 @@ class ScreenAuditTest {
      */
     @Test
     fun sidebarItemsAreReachable() {
-        auditSubset(SIDEBAR_ITEMS, scrollTag = null) {
+        auditSubset(controlIdsRevealedBy("editor", "sidebar"), scrollTag = null) {
             openFirstNotebook()
             compose.onNodeWithTag("editor.sidebar_toggle").performClick()
+        }
+    }
+
+    /**
+     * 打字模式那一套工具列。
+     *
+     * 十六個控制項在此之前完全沒有執行期檢查 —— 它們只有在切到打字模式
+     * 之後才存在，而單一畫面狀態的稽核看不到，於是整批被放進棘輪。
+     * 棘輪裡的東西沒有人會再看第二眼。
+     */
+    @Test
+    fun typingModeItemsAreReachable() {
+        auditSubset(controlIdsRevealedBy("editor", "typing_mode"), scrollTag = null) {
+            openFirstNotebook()
+            compose.onNodeWithTag("portal.type").performClick()
         }
     }
 
     /** 匯出選單裡的四個項目。與上面同一個做法、同一個理由。 */
     @Test
     fun exportMenuItemsAreReachable() {
-        auditSubset(EXPORT_MENU_ITEMS, scrollTag = null) {
+        auditSubset(controlIdsRevealedBy("editor", "export_menu"), scrollTag = null) {
             openFirstNotebook()
             compose.onNodeWithTag("editor.share").performClick()
         }
@@ -256,6 +273,57 @@ class ScreenAuditTest {
             .edit().putBoolean("seen_v1", true).commit()
     }
 
+    /**
+     * 要先做 `reveal` 那件事才看得到的控制項 id。
+     *
+     * **這份歸屬來自核心的規格**（`ffi_screens` 的 `FfiReveal`，產進
+     * `screens.json` 的 `controls[].reveal`），不是這裡手抄的清單。
+     *
+     * 在此之前它被抄了三份：核心規格、Apple 的測試、Android 的測試。
+     * 新增一個選單項目要記得改三個地方，而漏掉任何一份的症狀完全一樣 ——
+     * 稽核報「畫面少了規格要求的控制項」，看起來像產品壞了。實際踩過兩次
+     * （`editor.insert.stickers`、`editor.export.save_as`）。
+     */
+    private fun controlIdsRevealedBy(screen: String, reveal: String): List<String> {
+        val required = requiredControlIds(screen).toSet()
+        val text = InstrumentationRegistry.getInstrumentation().context
+            .assets.open("conformance/screens.json").bufferedReader().readText()
+        val controls = JSONObject(text).optJSONObject(screen)?.optJSONArray("controls")
+            ?: return emptyList()
+        return (0 until controls.length())
+            .map { controls.getJSONObject(it) }
+            .filter { it.optString("reveal") == reveal }
+            .map { it.optString("id") }
+            // `controls` 含兩端全部（也含 AppleOnly 的），要與這個平台
+            // 實際要求的那份取交集。
+            .filter { it in required }
+    }
+
+    /**
+     * 這個畫面上**不是**進來就看得到的控制項。
+     *
+     * 取代了原本手抄的 `EDITOR_NOT_WIRED_YET` 棘輪。棘輪的問題不只是要
+     * 手動維護 —— 它把兩件完全不同的事混在一起：「還沒做」與「要先按個
+     * 東西才看得到」。前者該清空，後者永遠不會清空，而混在一起之後
+     * 「只准縮小」這個承諾就變成謊話。
+     *
+     * 現在兩者由核心的 `FfiReveal` 分開：不是 `always` 的都在這裡，
+     * 而它們各自由會先互動的那幾條測試檢查。
+     */
+    private fun notAlwaysVisible(screen: String): Set<String> {
+        val required = requiredControlIds(screen).toSet()
+        val text = InstrumentationRegistry.getInstrumentation().context
+            .assets.open("conformance/screens.json").bufferedReader().readText()
+        val controls = JSONObject(text).optJSONObject(screen)?.optJSONArray("controls")
+            ?: return emptySet()
+        return (0 until controls.length())
+            .map { controls.getJSONObject(it) }
+            .filter { it.optString("reveal") != "always" }
+            .map { it.optString("id") }
+            .filter { it in required }
+            .toSet()
+    }
+
     private fun requiredControlIds(screen: String): List<String> {
         val text = InstrumentationRegistry.getInstrumentation().context
             .assets.open("conformance/screens.json").bufferedReader().readText()
@@ -333,105 +401,6 @@ class ScreenAuditTest {
          */
         val HOME_NOT_WIRED_YET = emptySet<String>()
 
-        /**
-         * 「更多」選單裡的項目。選單打開之後它們**都看得到**。
-         *
-         * 量過了：Compose 的 `DropdownMenu` 項目帶著 `testTag` 進語意樹
-         * （`DropdownSemanticsProbeTest`）。在那之前這一批被放在棘輪裡，
-         * 理由是「Android 還沒量過，沒量過就不該假設它跟 Apple 一樣」——
-         * 那個判斷是對的，而量完的答案是**不一樣**：Apple 的選單項目識別碼
-         * 會被 UIKit 吃掉，Compose 的不會。
-         */
-        val MORE_MENU_ITEMS = listOf(
-            "editor.insert.assets",
-            "editor.insert.stickers",
-            "editor.insert.audio",
-            "editor.insert.audio_file",
-            "editor.insert.image",
-            "editor.insert.image_file",
-            "editor.insert.pdf",
-            "editor.insert.math",
-            "editor.insert.chart",
-            "editor.insert.table",
-            "editor.insert.shape",
-            "editor.insert.model3d",
-            "editor.insert.theme_tools",
-            "editor.customize_toolbar",
-            "editor.insert.refine_sketch",
-            "editor.insert.comment_pin",
-            "editor.insert.collaborate",
-            "editor.insert.recognize",
-            "editor.insert.ai_summary",
-            "editor.record",
-        )
-
-        /** 匯出選單裡的四項。 */
-        val EXPORT_MENU_ITEMS = listOf(
-            "editor.export.pdf",
-            "editor.export.image",
-            "editor.export.print",
-            // 存到使用者自己選的位置（SAF）。Apple 端因為缺這個被
-            // Mac App Store 退件（審查指南 2.4.5(i)），兩邊一起補。
-            "editor.export.save_as",
-            "editor.export.share",
-        )
-
-        /**
-         * **不是漏做，是畫面上本來就沒有這個東西可以摸。**
-         *
-         * `editor.system_back` 在 Android 上是 `BackHandler` —— 一個手勢
-         * 攔截器，不是控制項，永遠不會出現在語意樹裡。它在原始碼裡用
-         * `// parity: editor.system_back` 宣告過，靜態對照閘門看得到它。
-         *
-         * 與棘輪分開列，是因為棘輪的承諾是「總有一天會清空」，而這一項
-         * 永遠不會 —— 混在一起的話，那個承諾就變成謊話。
-         */
-        /** 側欄展開之後才看得到的那幾項。 */
-        val SIDEBAR_ITEMS = listOf(
-            "editor.sidebar.tab.pages",
-            "editor.sidebar.tab.folders",
-            "editor.sidebar.list",
-            "editor.sidebar.thumb_smaller",
-            "editor.sidebar.thumb_larger",
-        )
-
-        // 宣告在棘輪**之前**：companion object 的屬性照寫的順序初始化，
-        // 放在後面的話 `EDITOR_NOT_WIRED_YET` 會拿到一個空集合。
-        val NOT_A_WIDGET = setOf("editor.system_back")
-
-        /**
-         * 編輯器的棘輪。**只准縮小。**
-         *
-         * 2026-09-23 從 19 項降到剩下的這些。清掉的那一批不是放寬標準，
-         * 是**改成用會打開選單的測試去看**（`moreMenuItemsAreReachable`、
-         * `exportMenuItemsAreReachable`）—— 棘輪裡的東西沒有人會再看第二眼，
-         * 而那正是它們待了這麼久的原因。
-         *
-         * 剩下的只有一類：`editor.text.*` —— 只有打字模式才有，而且那是
-         * 另一套工具列。要清掉它得先有一條「切到打字模式再稽核」的測試。
-         *
-         * `editor.ink.clear` 在這裡是因為它只在自訂工具列開啟後才進主列，
-         * 預設是收起來的。
-         */
-        val EDITOR_NOT_WIRED_YET = setOf(
-            "editor.ink.clear",
-            "editor.text.add_box",
-            "editor.text.studio",
-            "editor.text.bold",
-            "editor.text.italic",
-            "editor.text.underline",
-            "editor.text.align_left",
-            "editor.text.align_center",
-            "editor.text.align_right",
-            "editor.text.snap_grid",
-            "editor.text.layer_forward",
-            "editor.text.layer_backward",
-            "editor.text.symbols",
-            "editor.text.select",
-            "editor.text.link",
-            "editor.text.undo",
-            "editor.text.redo",
-        ) + MORE_MENU_ITEMS + EXPORT_MENU_ITEMS + SIDEBAR_ITEMS + NOT_A_WIDGET
 
 
     }

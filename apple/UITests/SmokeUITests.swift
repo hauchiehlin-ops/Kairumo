@@ -123,7 +123,7 @@ final class SmokeUITests: XCTestCase {
         // `PKCanvasView`（UIScrollView 的子類），但整頁模式把它套上縮放
         // 之後，XCUITest 樹裡它就不再以 ScrollView 出現，測試於是說
         // 「找不到畫布」而畫面上明明有。識別字才是我們保證的東西。
-        let canvas = app.descendants(matching: .any)["kairumo.canvas"].firstMatch
+        let canvas = app.descendants(matching: .any)["editor.canvas"].firstMatch
         XCTAssertTrue(canvas.waitForExistence(timeout: 8), "找不到畫布：\n\(app.debugDescription)")
         let windowWidth = app.windows.firstMatch.frame.width
 
@@ -157,7 +157,7 @@ final class SmokeUITests: XCTestCase {
         sleep(2)
         assertAlive(app, "進入筆記編輯器")
 
-        let canvas = app.descendants(matching: .any)["kairumo.canvas"].firstMatch
+        let canvas = app.descendants(matching: .any)["editor.canvas"].firstMatch
         XCTAssertTrue(canvas.waitForExistence(timeout: 10), "找不到畫布")
 
         // 1. 測試各手繪工具鍵點擊響應
@@ -325,7 +325,7 @@ final class AppStoreMacScreenshotsUITests: XCTestCase {
         let welcome = app.staticTexts.matching(NSPredicate(format: "label CONTAINS[c] 'Kairumo'")).firstMatch
         XCTAssertTrue(welcome.waitForExistence(timeout: 10), "找不到範例筆記卡片")
         welcome.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["kairumo.canvas"].waitForExistence(timeout: 15), "找不到畫布")
+        XCTAssertTrue(app.descendants(matching: .any)["editor.canvas"].waitForExistence(timeout: 15), "找不到畫布")
         try capture("04-editor-pen.png", app: app)
 
         let typeMode = app.staticTexts["打字模式"].firstMatch
@@ -367,10 +367,14 @@ extension SmokeUITests {
         }
         card.tap()
 
-        let canvas = app.descendants(matching: .any).matching(identifier: "kairumo.canvas").firstMatch
+        let canvas = app.descendants(matching: .any).matching(identifier: "editor.canvas").firstMatch
         XCTAssertTrue(canvas.waitForExistence(timeout: 15), "點了卡片之後沒進到編輯器")
 
-        ScreenAudit.check(app, screen: "editor", allowMissing: Self.editorNotWiredYet)
+        // 不是 `always` 的都不該在這一掃裡 —— 它們各自由會先互動的那幾條
+        // 測試檢查。這份名單來自核心規格，不是手抄的（S-SPEC-MENUS）。
+        ScreenAudit.check(
+            app, screen: "editor",
+            allowMissing: ScreenAudit.notAlwaysVisible(screen: "editor"))
     }
 
     /// 「更多」選單裡的十六個項目：打開之後要在、而且點得到。
@@ -412,7 +416,8 @@ extension SmokeUITests {
         // 簡單說：選單的版面是 UIKit 排的，遮蔽這個 bug 類型在那裡不會發生，
         // 而底下幾項落在選單自己的捲動範圍外，點不到是正常的。
         ScreenAudit.checkOnly(
-            app, screen: "editor", ids: Self.moreMenuItems,
+            app, screen: "editor",
+            ids: ScreenAudit.controlIds(screen: "editor", revealedBy: "more_menu"),
             requireHittable: false, scrollToFind: true)
     }
 
@@ -444,45 +449,229 @@ extension SmokeUITests {
         XCTAssertTrue(firstItem.waitForExistence(timeout: 5), "匯出選單沒有打開")
 
         ScreenAudit.checkOnly(
-            app, screen: "editor", ids: Self.exportMenuItems,
+            app, screen: "editor",
+            ids: ScreenAudit.controlIds(screen: "editor", revealedBy: "export_menu"),
+            requireHittable: false, scrollToFind: true)
+    }
+    /// **畫一筆、離開、回來 —— 那一筆還在嗎？**
+    ///
+    /// # 為什麼這條測試以前不存在
+    ///
+    /// 使用者一再回報「筆跡沒有自動儲存」，而每次查程式碼每一項都是對的：
+    /// `recordDrawingEdit` 有存、`onDisappear` 有存、`scenePhase` 進背景
+    /// 也有存。於是每一次都「修好了」，然後下一次又壞。
+    ///
+    /// 原因是**沒有任何東西守著它**：`testDrawingToolsAndTypeModeGridTap`
+    /// 只點了工具再點一下畫布，不檢查任何東西留下來。一個沒有測試守著的
+    /// 修正，等於一個還沒發生的回歸。
+    ///
+    /// 筆畫數從畫布的 `accessibilityValue` 讀（只在 `KAIRUMO_UITEST` 下掛）
+    /// —— 與縮放倍率同一個做法、同一個理由。
+    func testInkSurvivesLeavingAndReopeningTheNotebook() {
+        let app = launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+
+        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
+        guard card.waitForExistence(timeout: 10) else {
+            XCTFail("首頁找不到種子筆記，開不了編輯器")
+            return
+        }
+        card.tap()
+
+        let canvas = app.descendants(matching: .any)["editor.canvas"].firstMatch
+        XCTAssertTrue(canvas.waitForExistence(timeout: 15), "找不到畫布")
+
+        let before = Self.strokeCount(canvas)
+
+        // 畫一筆。
+        //
+        // **PencilKit 對合成觸控很挑**：`tap()` 與快速的 `press+drag` 都
+        // 產生不出筆畫（實測讀數一直是 strokes:0）。要壓住、慢慢拖、再停住
+        // 一下才會被當成一筆。
+        let start = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.45))
+        let end = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.55))
+        start.press(
+            forDuration: 0.4,
+            thenDragTo: end,
+            withVelocity: .slow,
+            thenHoldForDuration: 0.4)
+
+        // 去抖動是 1.2 秒，落盤再給一點餘裕。
+        sleep(3)
+
+        let afterDraw = Self.strokeCount(canvas)
+        XCTAssertGreaterThan(
+            afterDraw, before,
+            "拖曳之後畫布上沒有多出筆畫 —— 這條測試的前提就不成立了")
+
+        // 回首頁再進來。**這就是使用者做的事。**
+        let home = app.descendants(matching: .any).matching(identifier: "editor.home").firstMatch
+        guard home.waitForExistence(timeout: 10) else {
+            XCTFail("編輯器上沒有回首頁的按鈕")
+            return
+        }
+        home.tap()
+
+        let cardAgain = app.staticTexts["Welcome to Kairumo"].firstMatch
+        XCTAssertTrue(cardAgain.waitForExistence(timeout: 15), "回不到首頁")
+        cardAgain.tap()
+
+        let canvasAgain = app.descendants(matching: .any)["editor.canvas"].firstMatch
+        XCTAssertTrue(canvasAgain.waitForExistence(timeout: 15), "重新開啟之後找不到畫布")
+        sleep(2)
+
+        XCTAssertGreaterThanOrEqual(
+            Self.strokeCount(canvasAgain), afterDraw,
+            "**筆跡沒有留下來。** 離開前畫布上有 \(afterDraw) 筆，"
+                + "重新開啟之後剩 \(Self.strokeCount(canvasAgain)) 筆。")
+    }
+
+    /// 只畫一筆然後停住 —— **不離開編輯器**。
+    ///
+    /// 把「畫得進去嗎」「存得下去嗎」「離開再回來還在嗎」三件事拆開。
+    /// 合在一條裡的話，紅燈只說得出「最後沒了」，說不出是哪一段掉的。
+    func testInkProbeDrawOnly() {
+        let app = launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
+        guard card.waitForExistence(timeout: 10) else { XCTFail("找不到種子筆記"); return }
+        card.tap()
+
+        let canvas = app.descendants(matching: .any)["editor.canvas"].firstMatch
+        XCTAssertTrue(canvas.waitForExistence(timeout: 15), "找不到畫布")
+
+        let start = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.45))
+        let end = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.55))
+        start.press(forDuration: 0.4, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.4)
+        sleep(4)
+
+        XCTAssertGreaterThan(Self.strokeCount(canvas), 0, "畫不進去")
+    }
+
+    /// 畫一筆 → 回首頁 → **停在首頁**。
+    ///
+    /// 與 `testInkProbeDrawOnly` 合起來夾出「是離開時掉的，還是重新開啟時
+    /// 掉的」。檔案內容由外面的腳本檢查 —— 測試本身只負責把 App 開到那個
+    /// 狀態。
+    func testInkProbeDrawThenLeave() {
+        let app = launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
+        guard card.waitForExistence(timeout: 10) else { XCTFail("找不到種子筆記"); return }
+        card.tap()
+
+        let canvas = app.descendants(matching: .any)["editor.canvas"].firstMatch
+        XCTAssertTrue(canvas.waitForExistence(timeout: 15), "找不到畫布")
+
+        let start = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.45))
+        let end = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.55))
+        start.press(forDuration: 0.4, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.4)
+        sleep(4)
+        XCTAssertGreaterThan(Self.strokeCount(canvas), 0, "畫不進去")
+
+        let home = app.descendants(matching: .any).matching(identifier: "editor.home").firstMatch
+        guard home.waitForExistence(timeout: 10) else { XCTFail("沒有回首頁的按鈕"); return }
+        home.tap()
+        XCTAssertTrue(
+            app.staticTexts["Welcome to Kairumo"].firstMatch.waitForExistence(timeout: 15),
+            "回不到首頁")
+        sleep(3)
+    }
+
+    /// 從畫布的測試讀數裡取筆畫數。讀不到回 -1（與 0 分得開 ——
+    /// 0 是「畫布上沒有筆畫」，-1 是「讀數根本沒掛上去」）。
+    static func strokeCount(_ canvas: XCUIElement) -> Int {
+        guard let value = canvas.value as? String,
+              let range = value.range(of: "strokes:")
+        else { return -1 }
+        return Int(value[range.upperBound...].prefix(while: \.isNumber)) ?? -1
+    }
+
+    /// 打字模式那一套工具列。
+    ///
+    /// # 這條測試查出了什麼
+    ///
+    /// 第一次跑的時候，規格要求的十六個 `editor.text.*` 只找得到三個 ——
+    /// 而原因不是識別碼沒掛，是**掛在一份沒有人算繪的程式碼上**：
+    /// `typingToolbar` 帶著全部十六個識別碼，但全專案沒有任何地方引用它，
+    /// 真正畫出來的是 `WordToolbarView`（一個文書處理工具列，
+    /// 一個識別碼都沒有）。
+    ///
+    /// **靜態的跨平台對照閘門一直是綠的**，因為它掃的是原始碼裡有沒有那個
+    /// 字串 —— 而那些字串就在死程式碼裡。這正是執行期稽核存在的理由，
+    /// 也正是把這一整批藏在棘輪裡的代價：那時候的註解寫的是「藏在選單／
+    /// 浮層裡，單一畫面狀態看不到」，對了一半，於是沒有人再往下查。
+    ///
+    /// 要檢查哪幾個來自核心規格（`reveal == typing_mode`），不是這裡手抄的
+    /// 清單。
+    func testTypingModeItemsAreReachable() {
+        let app = launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+
+        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
+        guard card.waitForExistence(timeout: 10) else {
+            XCTFail("首頁找不到種子筆記，開不了編輯器")
+            return
+        }
+        card.tap()
+
+        // `portal.type` 是 `DynamicPortalIsland` 裡那顆藥丸，而整座島掛著
+        // `editor.mode` —— 先等島出現再找藥丸。
+        let island = app.descendants(matching: .any)
+            .matching(identifier: "editor.mode").firstMatch
+        XCTAssertTrue(island.waitForExistence(timeout: 15), "編輯器上沒有模式切換")
+
+        let type = app.descendants(matching: .any).matching(identifier: "portal.type").firstMatch
+        guard type.waitForExistence(timeout: 10) else {
+            XCTFail("找不到 portal.type —— 模式切換的子元素被合併掉了？")
+            return
+        }
+        type.tap()
+
+        ScreenAudit.checkOnly(
+            app, screen: "editor",
+            ids: ScreenAudit.controlIds(screen: "editor", revealedBy: "typing_mode"),
             requireHittable: false, scrollToFind: true)
     }
 
-    /// 匯出選單裡的項目。
-    static let exportMenuItems: [String] = [
-        "editor.export.pdf",
-        "editor.export.image",
-        "editor.export.print",
-        "editor.export.save_as",
-        "editor.export.share",
-    ]
+    /// 側欄展開之後才看得到的那幾項。
+    func testSidebarItemsAreReachable() {
+        let app = launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
 
-    /// 「更多」選單裡的項目。與 `editorNotWiredYet` 是互補的兩半 ——
-    /// 這裡每加一個，那邊就該少一個。
-    static let moreMenuItems: [String] = [
-        "editor.insert.assets",
-        // 規格裡有、但這份清單一直漏掉它 —— 於是
-        // `testEditorScreenControlsAreReachable` 一直在紅，而沒有人把那個
-        // 紅燈跟「貼紙庫沒有執行期測試」連起來。
-        "editor.insert.stickers",
-        "editor.insert.audio",
-        "editor.insert.audio_file",
-        "editor.insert.image",
-        "editor.insert.image_file",
-        "editor.insert.pdf",
-        "editor.insert.math",
-        "editor.insert.chart",
-        "editor.insert.table",
-        "editor.insert.shape",
-        "editor.insert.model3d",
-        "editor.insert.theme_tools",
-        "editor.customize_toolbar",
-        "editor.insert.refine_sketch",
-        "editor.insert.comment_pin",
-        "editor.insert.collaborate",
-        "editor.insert.recognize",
-        "editor.insert.ai_summary",
-    ]
+        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
+        guard card.waitForExistence(timeout: 10) else {
+            XCTFail("首頁找不到種子筆記，開不了編輯器")
+            return
+        }
+        card.tap()
+
+        let toggle = app.descendants(matching: .any)
+            .matching(identifier: "editor.sidebar_toggle").firstMatch
+        guard toggle.waitForExistence(timeout: 15) else {
+            XCTFail("編輯器上沒有側欄開關")
+            return
+        }
+        toggle.tap()
+
+        // **側欄預設開在「資料夾」分頁**（`kairumo_editor_sidebar_tab`
+        // 的預設值是 `folders`），而縮圖大小那兩顆住在「頁面」分頁的底部。
+        // 不先切過去的話，它們根本沒被算繪 —— 稽核會報「少了控制項」，
+        // 而那不是產品缺了東西，是測試沒走到那個狀態。
+        let pagesTab = app.descendants(matching: .any)
+            .matching(identifier: "editor.sidebar.tab.pages").firstMatch
+        if pagesTab.waitForExistence(timeout: 5) {
+            pagesTab.tap()
+        }
+
+        ScreenAudit.checkOnly(
+            app, screen: "editor",
+            ids: ScreenAudit.controlIds(screen: "editor", revealedBy: "sidebar"),
+            requireHittable: false, scrollToFind: true)
+    }
+
+
+
 
     /// 自訂工具列：十三個開關加上說明與還原，全部要在、而且點得到。
     ///
@@ -538,59 +727,4 @@ extension SmokeUITests {
         //     而 FolderSyncDetailSheet 早就做好、也接在 .sheet 上了，
         //     只是沒有任何地方打得開它。
     ]
-    /// 編輯器的棘輪。**大部分不是「沒接上」，是「藏在選單／浮層裡」** ——
-    /// `insert.*` 在插入選單、`export.*` 在匯出選單、`text.*` 只有打字模式才有、
-    /// `sidebar.*` 要先展開側欄。單一畫面狀態的稽核看不到它們。
-    ///
-    /// 正確的解是為每個選單各加一段稽核（開啟選單 → 稽核 → 關閉），
-    /// 記在 docs/TODO.md 的 S-259。在那之前這些放在這裡，稽核仍然守住
-    /// 編輯器基礎狀態的 28 個控制項。
-    ///
-    /// `editor.canvas` 是另一回事：識別碼寫在程式碼裡
-    /// （NotebookEditorView.swift:3369），但實際渲染的是另一個分支的
-    /// `kairumo.canvas` —— **識別碼掛在沒被顯示的那個視圖上**。
-    /// 掃原始碼的閘門看不見這種，執行期稽核看得見。
-    static var editorNotWiredYet: Set<String> {
-        // 選單裡那兩批**不是抄一份**，是直接引用上面那兩份清單。
-        //
-        // 原本這裡是手抄的第三份，於是新增一個選單項目要記得改三個地方：
-        // 核心的規格、`moreMenuItems`、還有這裡。漏掉第三個的症狀是
-        // `testEditorScreenControlsAreReachable` 紅掉，而錯誤訊息說的是
-        // 「畫面少了控制項」—— 看起來像產品壞了，實際上是測試清單沒跟上。
-        // 實際發生過（editor.insert.stickers 漏了很久）。
-        //
-        // 這些項目**已經有執行期檢查**（testMoreMenuItemsAreReachable /
-        // testExportMenuItemsAreReachable），只是不在這條單一畫面狀態的
-        // 稽核裡 —— 它們要先打開選單才看得到，而開著的選單會把底下的
-        // 控制項全部變成點不到。
-        //
-        // 留在這裡不代表「還沒接上」。在量清楚 S-261d 之前，這整批的註解
-        // 寫的是「藏在選單／浮層裡」，那個說法讓人以為是時序問題（沒展開
-        // 所以看不到），於是沒有再往下追。真正的原因是 SwiftUI 的 `Menu`
-        // 把項目交給 UIKit 的 `UIAction`，識別字沒跟過去 —— 而標籤有。
-        Set(moreMenuItems).union(exportMenuItems).union([
-        "editor.text.add_box",
-        "editor.text.studio",
-        "editor.text.bold",
-        "editor.text.italic",
-        "editor.text.underline",
-        "editor.text.align_left",
-        "editor.text.align_center",
-        "editor.text.align_right",
-        "editor.text.snap_grid",
-        "editor.text.layer_forward",
-        "editor.text.layer_backward",
-        "editor.text.symbols",
-        "editor.text.select",
-        "editor.text.link",
-        "editor.text.undo",
-        "editor.text.redo",
-        "editor.sidebar.tab.pages",
-        "editor.sidebar.tab.folders",
-        "editor.sidebar.list",
-        "editor.sidebar.thumb_smaller",
-        "editor.sidebar.thumb_larger",
-        "editor.canvas",
-        ])
-    }
 }

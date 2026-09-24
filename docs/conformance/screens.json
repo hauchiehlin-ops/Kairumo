@@ -159,382 +159,458 @@
       {
         "id": "editor.system_back",
         "label_en": "",
-        "label_key": "back"
+        "label_key": "back",
+        "reveal": "not_a_widget"
       },
       {
         "id": "editor.home",
         "label_en": "Home",
-        "label_key": "home"
+        "label_key": "home",
+        "reveal": "always"
       },
       {
         "id": "editor.sidebar_toggle",
         "label_en": "",
-        "label_key": "page_structure"
+        "label_key": "page_structure",
+        "reveal": "always"
       },
       {
         "id": "editor.mode",
         "label_en": "",
-        "label_key": "editor_mode"
+        "label_key": "editor_mode",
+        "reveal": "always"
       },
       {
         "id": "editor.title",
         "label_en": "Notebook Title",
-        "label_key": "note_title"
+        "label_key": "note_title",
+        "reveal": "always"
       },
       {
         "id": "editor.page.prev",
         "label_en": "Previous page",
-        "label_key": "previous_page"
+        "label_key": "previous_page",
+        "reveal": "always"
       },
       {
         "id": "editor.page.indicator",
         "label_en": "",
-        "label_key": ""
+        "label_key": "",
+        "reveal": "always"
       },
       {
         "id": "editor.page.next",
         "label_en": "Next page",
-        "label_key": "next_page"
+        "label_key": "next_page",
+        "reveal": "always"
       },
       {
         "id": "editor.page.add",
         "label_en": "Add Page",
-        "label_key": "add_page"
+        "label_key": "add_page",
+        "reveal": "always"
       },
       {
         "id": "editor.page.display_mode",
         "label_en": "Page mode",
-        "label_key": "page_mode"
+        "label_key": "page_mode",
+        "reveal": "always"
       },
       {
         "id": "editor.page_format",
         "label_en": "Page format",
-        "label_key": "page_format"
+        "label_key": "page_format",
+        "reveal": "always"
       },
       {
         "id": "editor.guide_palette",
         "label_en": "Guide Colour",
-        "label_key": "guide_palette"
+        "label_key": "guide_palette",
+        "reveal": "always"
       },
       {
         "id": "editor.more",
         "label_en": "More",
-        "label_key": "more_tools"
+        "label_key": "more_tools",
+        "reveal": "always"
       },
       {
         "id": "editor.record",
         "label_en": "Start Recording",
-        "label_key": "start_recording"
+        "label_key": "start_recording",
+        "reveal": "always"
       },
       {
         "id": "editor.share",
         "label_en": "",
-        "label_key": "export_and_print"
+        "label_key": "export_and_print",
+        "reveal": "always"
       },
       {
         "id": "editor.insert.assets",
         "label_en": "Asset Library",
-        "label_key": "asset_library"
+        "label_key": "asset_library",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.stickers",
         "label_en": "Sticker Library",
-        "label_key": "sticker_library"
+        "label_key": "sticker_library",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.audio",
         "label_en": "Insert Recording",
-        "label_key": "insert_audio"
+        "label_key": "insert_audio",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.audio_file",
         "label_en": "Import an audio file",
-        "label_key": "import_audio_from_files"
+        "label_key": "import_audio_from_files",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.image",
         "label_en": "Insert Image",
-        "label_key": "insert_image"
+        "label_key": "insert_image",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.image_file",
         "label_en": "Choose from Files",
-        "label_key": "import_from_files"
+        "label_key": "import_from_files",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.pdf",
         "label_en": "Insert PDF Page",
-        "label_key": "insert_pdf"
+        "label_key": "insert_pdf",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.math",
         "label_en": "Math Calculator",
-        "label_key": "math_calc"
+        "label_key": "math_calc",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.chart",
         "label_en": "Chart Studio",
-        "label_key": "chart_studio"
+        "label_key": "chart_studio",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.table",
         "label_en": "Table",
-        "label_key": "table_studio"
+        "label_key": "table_studio",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.shape",
         "label_en": "Shapes & Flowcharts",
-        "label_key": "shape_studio"
+        "label_key": "shape_studio",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.model3d",
         "label_en": "Insert 3D Model",
-        "label_key": "insert_3d"
+        "label_key": "insert_3d",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.theme_tools",
         "label_en": "Theme Tools",
-        "label_key": "theme_tools"
+        "label_key": "theme_tools",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.customize_toolbar",
         "label_en": "Customize Toolbar",
-        "label_key": "customize_toolbar"
+        "label_key": "customize_toolbar",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.refine_sketch",
         "label_en": "Refine Sketch",
-        "label_key": "refine_sketch"
+        "label_key": "refine_sketch",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.comment_pin",
         "label_en": "Add Comment Pin",
-        "label_key": "add_comment_pin"
+        "label_key": "add_comment_pin",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.collaborate",
         "label_en": "Collaborate",
-        "label_key": "collaborate"
+        "label_key": "collaborate",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.recognize",
         "label_en": "Recognize Handwriting",
-        "label_key": "recognize_handwriting"
+        "label_key": "recognize_handwriting",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.insert.ai_summary",
         "label_en": "Summary & To-dos",
-        "label_key": "ai_summary"
+        "label_key": "ai_summary",
+        "reveal": "more_menu"
       },
       {
         "id": "editor.export.pdf",
         "label_en": "Export PDF",
-        "label_key": "export_pdf"
+        "label_key": "export_pdf",
+        "reveal": "export_menu"
       },
       {
         "id": "editor.export.image",
         "label_en": "Export Image",
-        "label_key": "export_image"
+        "label_key": "export_image",
+        "reveal": "export_menu"
       },
       {
         "id": "editor.export.print",
         "label_en": "Print Notebook",
-        "label_key": "print_note"
+        "label_key": "print_note",
+        "reveal": "export_menu"
       },
       {
         "id": "editor.export.save_as",
         "label_en": "Save to Files…",
-        "label_key": "export_save_as"
+        "label_key": "export_save_as",
+        "reveal": "export_menu"
       },
       {
         "id": "editor.export.share",
         "label_en": "Share Note",
-        "label_key": "share_note"
+        "label_key": "share_note",
+        "reveal": "export_menu"
       },
       {
         "id": "editor.ink.pen",
         "label_en": "Pen",
-        "label_key": "tool_pen"
+        "label_key": "tool_pen",
+        "reveal": "always"
       },
       {
         "id": "editor.ink.ballpoint",
         "label_en": "Ballpoint",
-        "label_key": "tool_ballpoint"
+        "label_key": "tool_ballpoint",
+        "reveal": "always"
       },
       {
         "id": "editor.ink.brush",
         "label_en": "Calligraphy Brush",
-        "label_key": "tool_brush"
+        "label_key": "tool_brush",
+        "reveal": "always"
       },
       {
         "id": "editor.ink.marker",
         "label_en": "Marker",
-        "label_key": "tool_marker"
+        "label_key": "tool_marker",
+        "reveal": "always"
       },
       {
         "id": "editor.ink.highlighter",
         "label_en": "Highlighter",
-        "label_key": "tool_highlighter"
+        "label_key": "tool_highlighter",
+        "reveal": "always"
       },
       {
         "id": "editor.ink.pencil",
         "label_en": "Pencil",
-        "label_key": "tool_pencil"
+        "label_key": "tool_pencil",
+        "reveal": "always"
       },
       {
         "id": "editor.ink.watercolor",
         "label_en": "Watercolor",
-        "label_key": "tool_watercolor"
+        "label_key": "tool_watercolor",
+        "reveal": "always"
       },
       {
         "id": "editor.ink.eraser",
         "label_en": "Eraser",
-        "label_key": "tool_eraser"
+        "label_key": "tool_eraser",
+        "reveal": "always"
       },
       {
         "id": "editor.ink.lasso",
         "label_en": "Lasso",
-        "label_key": "tool_lasso"
+        "label_key": "tool_lasso",
+        "reveal": "always"
       },
       {
         "id": "editor.ink.maskingTape",
         "label_en": "Masking Tape",
-        "label_key": "tool_masking_tape"
+        "label_key": "tool_masking_tape",
+        "reveal": "always"
       },
       {
         "id": "editor.ink.width",
         "label_en": "Stroke Width",
-        "label_key": "stroke_width"
+        "label_key": "stroke_width",
+        "reveal": "always"
       },
       {
         "id": "editor.ink.palette",
         "label_en": "",
-        "label_key": "color"
+        "label_key": "color",
+        "reveal": "always"
       },
       {
         "id": "editor.ink.undo",
         "label_en": "Undo",
-        "label_key": "undo"
+        "label_key": "undo",
+        "reveal": "always"
       },
       {
         "id": "editor.ink.redo",
         "label_en": "Redo",
-        "label_key": "redo"
+        "label_key": "redo",
+        "reveal": "always"
       },
       {
         "id": "editor.ink.clear",
         "label_en": "Clear Current Page",
-        "label_key": "clear_page"
+        "label_key": "clear_page",
+        "reveal": "toolbar_sheet"
       },
       {
         "id": "editor.text.add_box",
         "label_en": "Add Text Box",
-        "label_key": "add_text_box"
+        "label_key": "add_text_box",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.studio",
         "label_en": "Text Studio",
-        "label_key": "tool_text"
+        "label_key": "tool_text",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.bold",
         "label_en": "Bold",
-        "label_key": "text_bold"
+        "label_key": "text_bold",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.italic",
         "label_en": "Italic",
-        "label_key": "text_italic"
+        "label_key": "text_italic",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.underline",
         "label_en": "Underline",
-        "label_key": "text_underline"
+        "label_key": "text_underline",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.align_left",
         "label_en": "Align left",
-        "label_key": "align_left"
+        "label_key": "align_left",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.align_center",
         "label_en": "Center horizontally",
-        "label_key": "align_center_h"
+        "label_key": "align_center_h",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.align_right",
         "label_en": "Align right",
-        "label_key": "align_right"
+        "label_key": "align_right",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.snap_grid",
         "label_en": "Snap to Grid",
-        "label_key": "snap_to_grid"
+        "label_key": "snap_to_grid",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.layer_forward",
         "label_en": "Bring Forward",
-        "label_key": "layer_bring_forward"
+        "label_key": "layer_bring_forward",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.layer_backward",
         "label_en": "Send Backward",
-        "label_key": "layer_send_backward"
+        "label_key": "layer_send_backward",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.symbols",
         "label_en": "Special Symbols",
-        "label_key": "special_symbols"
+        "label_key": "special_symbols",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.select",
         "label_en": "Select",
-        "label_key": "marquee_select"
+        "label_key": "marquee_select",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.link",
         "label_en": "Insert Link",
-        "label_key": "insert_link"
+        "label_key": "insert_link",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.undo",
         "label_en": "Undo",
-        "label_key": "undo"
+        "label_key": "undo",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.text.redo",
         "label_en": "Redo",
-        "label_key": "redo"
+        "label_key": "redo",
+        "reveal": "typing_mode"
       },
       {
         "id": "editor.sidebar.tab.pages",
         "label_en": "Pages",
-        "label_key": "structure_pages"
+        "label_key": "structure_pages",
+        "reveal": "sidebar"
       },
       {
         "id": "editor.sidebar.tab.folders",
         "label_en": "Folders",
-        "label_key": "structure_folders"
+        "label_key": "structure_folders",
+        "reveal": "sidebar"
       },
       {
         "id": "editor.sidebar.list",
         "label_en": "",
-        "label_key": ""
+        "label_key": "",
+        "reveal": "sidebar"
       },
       {
         "id": "editor.sidebar.thumb_smaller",
         "label_en": "Smaller Previews",
-        "label_key": "thumbnail_smaller"
+        "label_key": "thumbnail_smaller",
+        "reveal": "sidebar"
       },
       {
         "id": "editor.sidebar.thumb_larger",
         "label_en": "Larger Previews",
-        "label_key": "thumbnail_larger"
+        "label_key": "thumbnail_larger",
+        "reveal": "sidebar"
       },
       {
         "id": "editor.canvas",
         "label_en": "",
-        "label_key": ""
+        "label_key": "",
+        "reveal": "always"
       }
     ]
   },
@@ -602,167 +678,200 @@
       {
         "id": "home.title",
         "label_en": "",
-        "label_key": ""
+        "label_key": "",
+        "reveal": "always"
       },
       {
         "id": "home.language",
         "label_en": "Language",
-        "label_key": "language"
+        "label_key": "language",
+        "reveal": "always"
       },
       {
         "id": "home.identity.card",
         "label_en": "Shown while collaborating · stored on this device",
-        "label_key": "identity_desc_short"
+        "label_key": "identity_desc_short",
+        "reveal": "always"
       },
       {
         "id": "home.identity.edit",
         "label_en": "Edit Identity",
-        "label_key": "edit_identity"
+        "label_key": "edit_identity",
+        "reveal": "always"
       },
       {
         "id": "home.search.field",
         "label_en": "Search note titles, drafts, or transcripts…",
-        "label_key": "search_placeholder"
+        "label_key": "search_placeholder",
+        "reveal": "always"
       },
       {
         "id": "home.action.new_note",
         "label_en": "New Note",
-        "label_key": "new_note"
+        "label_key": "new_note",
+        "reveal": "always"
       },
       {
         "id": "home.action.record",
         "label_en": "Start Recording",
-        "label_key": "start_recording"
+        "label_key": "start_recording",
+        "reveal": "always"
       },
       {
         "id": "home.action.assets",
         "label_en": "Asset Library",
-        "label_key": "asset_library"
+        "label_key": "asset_library",
+        "reveal": "always"
       },
       {
         "id": "home.action.import",
         "label_en": "Import Note",
-        "label_key": "import_note"
+        "label_key": "import_note",
+        "reveal": "always"
       },
       {
         "id": "home.continue.show_all",
         "label_en": "All",
-        "label_key": "show_all"
+        "label_key": "show_all",
+        "reveal": "always"
       },
       {
         "id": "home.continue.unhide",
         "label_en": "Reset Hidden",
-        "label_key": "unhide_items"
+        "label_key": "unhide_items",
+        "reveal": "always"
       },
       {
         "id": "home.continue.list",
         "label_en": "",
-        "label_key": ""
+        "label_key": "",
+        "reveal": "always"
       },
       {
         "id": "home.recordings.show_all",
         "label_en": "All",
-        "label_key": "show_all"
+        "label_key": "show_all",
+        "reveal": "always"
       },
       {
         "id": "home.recordings.unhide",
         "label_en": "Reset Hidden",
-        "label_key": "unhide_items"
+        "label_key": "unhide_items",
+        "reveal": "always"
       },
       {
         "id": "home.recordings.open_folder",
         "label_en": "Open Kairumo Record Folder",
-        "label_key": "open_record_folder"
+        "label_key": "open_record_folder",
+        "reveal": "always"
       },
       {
         "id": "home.recordings.list",
         "label_en": "",
-        "label_key": ""
+        "label_key": "",
+        "reveal": "always"
       },
       {
         "id": "home.notebooks.sort",
         "label_en": "",
-        "label_key": "sort_by"
+        "label_key": "sort_by",
+        "reveal": "always"
       },
       {
         "id": "home.notebooks.rename_root",
         "label_en": "Rename Root Folder",
-        "label_key": "edit_root_folder"
+        "label_key": "edit_root_folder",
+        "reveal": "always"
       },
       {
         "id": "home.notebooks.new_folder",
         "label_en": "New Subfolder",
-        "label_key": "new_subfolder"
+        "label_key": "new_subfolder",
+        "reveal": "always"
       },
       {
         "id": "home.notebooks.unhide",
         "label_en": "Reset Hidden",
-        "label_key": "unhide_items"
+        "label_key": "unhide_items",
+        "reveal": "always"
       },
       {
         "id": "home.notebooks.list",
         "label_en": "",
-        "label_key": ""
+        "label_key": "",
+        "reveal": "always"
       },
       {
         "id": "home.cloud.card",
         "label_en": "Sign in once and your notebooks, folders and settings stay in sync on every device. Data goes to a private app folder in your Google Drive — you won't see it among your files, and neither will we.",
-        "label_key": "cloud_sync_explainer"
+        "label_key": "cloud_sync_explainer",
+        "reveal": "always"
       },
       {
         "id": "home.cloud.signin",
         "label_en": "Connect Google Drive",
-        "label_key": "sign_in_google"
+        "label_key": "sign_in_google",
+        "reveal": "always"
       },
       {
         "id": "home.cloud.sync_now",
         "label_en": "Sync Now",
-        "label_key": "sync_now"
+        "label_key": "sync_now",
+        "reveal": "always"
       },
       {
         "id": "home.cloud.signout",
         "label_en": "Sign out",
-        "label_key": "sign_out"
+        "label_key": "sign_out",
+        "reveal": "always"
       },
       {
         "id": "home.data.snapshot",
         "label_en": "Backup Snapshot",
-        "label_key": "backup_snapshot"
+        "label_key": "backup_snapshot",
+        "reveal": "always"
       },
       {
         "id": "home.data.backup",
         "label_en": "Create Backup",
-        "label_key": "backup_create"
+        "label_key": "backup_create",
+        "reveal": "always"
       },
       {
         "id": "home.data.restore",
         "label_en": "Restore from Backup",
-        "label_key": "backup_restore"
+        "label_key": "backup_restore",
+        "reveal": "always"
       },
       {
         "id": "home.data.folder",
         "label_en": "Choose Sync Folder",
-        "label_key": "sync_choose_folder"
+        "label_key": "sync_choose_folder",
+        "reveal": "always"
       },
       {
         "id": "home.docs.manual",
         "label_en": "User Manual",
-        "label_key": "user_manual"
+        "label_key": "user_manual",
+        "reveal": "always"
       },
       {
         "id": "home.docs.privacy",
         "label_en": "Privacy Policy",
-        "label_key": "privacy_policy"
+        "label_key": "privacy_policy",
+        "reveal": "always"
       },
       {
         "id": "home.version",
         "label_en": "Version",
-        "label_key": "version_number"
+        "label_key": "version_number",
+        "reveal": "always"
       },
       {
         "id": "home.diagnostics",
         "label_en": "Version",
-        "label_key": "version_number"
+        "label_key": "version_number",
+        "reveal": "always"
       }
     ]
   },
@@ -791,52 +900,62 @@
       {
         "id": "new_notebook.cancel",
         "label_en": "Cancel",
-        "label_key": "cancel"
+        "label_key": "cancel",
+        "reveal": "always"
       },
       {
         "id": "new_notebook.confirm",
         "label_en": "OK",
-        "label_key": "confirm"
+        "label_key": "confirm",
+        "reveal": "always"
       },
       {
         "id": "new_notebook.title.field",
         "label_en": "Notebook Title",
-        "label_key": "note_title"
+        "label_key": "note_title",
+        "reveal": "always"
       },
       {
         "id": "new_notebook.paper.themes",
         "label_en": "Page Templates",
-        "label_key": "select_template"
+        "label_key": "select_template",
+        "reveal": "always"
       },
       {
         "id": "new_notebook.paper.list",
         "label_en": "",
-        "label_key": ""
+        "label_key": "",
+        "reveal": "always"
       },
       {
         "id": "new_notebook.paper.content",
         "label_en": "Content on this paper",
-        "label_key": "paper_content"
+        "label_key": "paper_content",
+        "reveal": "always"
       },
       {
         "id": "new_notebook.palette",
         "label_en": "Guide Colour",
-        "label_key": "guide_palette"
+        "label_key": "guide_palette",
+        "reveal": "always"
       },
       {
         "id": "new_notebook.recent.list",
         "label_en": "",
-        "label_key": ""
+        "label_key": "",
+        "reveal": "always"
       },
       {
         "id": "new_notebook.document.current",
         "label_en": "Template in use",
-        "label_key": "doc_template"
+        "label_key": "doc_template",
+        "reveal": "always"
       },
       {
         "id": "new_notebook.document.tree",
         "label_en": "",
-        "label_key": ""
+        "label_key": "",
+        "reveal": "always"
       }
     ]
   },
@@ -879,77 +998,92 @@
       {
         "id": "toolbar.hint",
         "label_en": "",
-        "label_key": ""
+        "label_key": "",
+        "reveal": "always"
       },
       {
         "id": "toolbar.reset",
         "label_en": "Restore Default Toolbar",
-        "label_key": "toolbar_reset"
+        "label_key": "toolbar_reset",
+        "reveal": "always"
       },
       {
         "id": "toolbar.tool.pen",
         "label_en": "Pen",
-        "label_key": "tool_pen"
+        "label_key": "tool_pen",
+        "reveal": "always"
       },
       {
         "id": "toolbar.tool.ballpoint",
         "label_en": "Ballpoint",
-        "label_key": "tool_ballpoint"
+        "label_key": "tool_ballpoint",
+        "reveal": "always"
       },
       {
         "id": "toolbar.tool.brush",
         "label_en": "Calligraphy Brush",
-        "label_key": "tool_brush"
+        "label_key": "tool_brush",
+        "reveal": "always"
       },
       {
         "id": "toolbar.tool.marker",
         "label_en": "Marker",
-        "label_key": "tool_marker"
+        "label_key": "tool_marker",
+        "reveal": "always"
       },
       {
         "id": "toolbar.tool.highlighter",
         "label_en": "Highlighter",
-        "label_key": "tool_highlighter"
+        "label_key": "tool_highlighter",
+        "reveal": "always"
       },
       {
         "id": "toolbar.tool.pencil",
         "label_en": "Pencil",
-        "label_key": "tool_pencil"
+        "label_key": "tool_pencil",
+        "reveal": "always"
       },
       {
         "id": "toolbar.tool.watercolor",
         "label_en": "Watercolor",
-        "label_key": "tool_watercolor"
+        "label_key": "tool_watercolor",
+        "reveal": "always"
       },
       {
         "id": "toolbar.tool.eraser",
         "label_en": "Eraser",
-        "label_key": "tool_eraser"
+        "label_key": "tool_eraser",
+        "reveal": "always"
       },
       {
         "id": "toolbar.tool.lasso",
         "label_en": "Lasso",
-        "label_key": "tool_lasso"
+        "label_key": "tool_lasso",
+        "reveal": "always"
       },
       {
         "id": "toolbar.tool.maskingTape",
         "label_en": "Masking Tape",
-        "label_key": "tool_masking_tape"
+        "label_key": "tool_masking_tape",
+        "reveal": "always"
       },
       {
         "id": "toolbar.tool.undo",
         "label_en": "Undo",
-        "label_key": "undo"
+        "label_key": "undo",
+        "reveal": "always"
       },
       {
         "id": "toolbar.tool.redo",
         "label_en": "Redo",
-        "label_key": "redo"
+        "label_key": "redo",
+        "reveal": "always"
       },
       {
         "id": "toolbar.tool.clear",
         "label_en": "Clear Current Page",
-        "label_key": "clear_page"
+        "label_key": "clear_page",
+        "reveal": "always"
       }
     ]
   }

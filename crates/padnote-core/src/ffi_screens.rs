@@ -38,6 +38,43 @@ pub enum FfiPlatforms {
     AndroidOnly,
 }
 
+/// 要先做什麼，這個控制項才看得到。
+///
+/// # 為什麼規格要管這件事
+///
+/// 兩端的畫面稽核都是「打開畫面 → 掃語意樹 → 對照規格」。藏在選單、側欄、
+/// 或另一個模式裡的控制項在那一掃裡**本來就不該在**，所以兩端各自維護了
+/// 一份「這些不用檢查」的清單，再各自維護一份「這些由另一條測試檢查」。
+///
+/// 那等於同一份資訊被手抄三遍（核心規格 + 兩端各一份），而新增一個選單
+/// 項目要記得改三個地方。漏掉任何一份的症狀完全一樣：稽核報
+/// 「畫面少了規格要求的控制項」—— 看起來像產品壞了，實際上是測試清單
+/// 沒跟上。**這個坑踩過兩次**：`editor.insert.stickers` 在 Apple 那份漏了
+/// 很久（CI 一直紅著），`editor.export.save_as` 則是補 Apple 時漏了 Android。
+///
+/// 把「要先做什麼才看得到」放進規格，三份就變成一份。
+#[derive(Clone, Copy, PartialEq, Eq, Debug, uniffi::Enum)]
+pub enum FfiReveal {
+    /// 進到這個畫面就看得到。**絕大多數是這一種。**
+    Always,
+    /// 要先打開「更多」選單（`editor.more`）。
+    MoreMenu,
+    /// 要先打開匯出選單（`editor.share`）。
+    ExportMenu,
+    /// 要先展開側欄（`editor.sidebar_toggle`）。
+    Sidebar,
+    /// 要先切到打字模式（`portal.type`）—— 那是另一套工具列。
+    TypingMode,
+    /// 要先打開「自訂工具列」那張表。
+    ToolbarSheet,
+    /// **永遠不會出現在語意樹裡。**
+    ///
+    /// 目前只有 Android 的系統返回：它是一個手勢攔截器（`BackHandler`），
+    /// 不是控制項。與「還沒做」分開標記，是因為棘輪的承諾是「總有一天會
+    /// 清空」，把一個永遠清不掉的東西混進去，那個承諾就變成謊話。
+    NotAWidget,
+}
+
 /// 控制項的種類。測試只比對種類，不比對長相 ——
 /// 同一個「選擇器」在 Apple 是 `Picker`、在 Android 是 `DropdownMenu`，
 /// 那是 L3 外觀層的事。
@@ -80,6 +117,8 @@ pub struct FfiControlSpec {
     /// 依狀態才出現（例如「登出」只在已登入時）。
     /// 對照測試對 optional 的項目只檢查「出現時 id 要對」，不檢查它必須在。
     pub optional: bool,
+    /// 要先做什麼才看得到。見 [`FfiReveal`]。
+    pub reveal: FfiReveal,
 }
 
 /// 畫面裡的一個區塊。
@@ -107,7 +146,14 @@ fn c(id: &str, kind: FfiControlKind, label_key: &str) -> FfiControlSpec {
         label_key: label_key.to_string(),
         platforms: FfiPlatforms::Both,
         optional: false,
+        reveal: FfiReveal::Always,
     }
+}
+
+/// 「要先做某件事才看得到」的控制項。
+fn behind(mut spec: FfiControlSpec, reveal: FfiReveal) -> FfiControlSpec {
+    spec.reveal = reveal;
+    spec
 }
 
 fn opt(mut spec: FfiControlSpec) -> FfiControlSpec {
@@ -186,6 +232,27 @@ pub fn screen_required_control_ids(id: String, apple: bool) -> Vec<String> {
             FfiPlatforms::AppleOnly => apple,
             FfiPlatforms::AndroidOnly => !apple,
         })
+        .map(|c| c.id)
+        .collect()
+}
+
+/// 某個畫面上、要先做 `reveal` 那件事才看得到的控制項 id。
+///
+/// 兩端的測試拿它取代手抄的清單 —— 這就是 S-SPEC-MENUS 的重點：
+/// 「這個 id 藏在哪張選單裡」從三份（核心 + 兩端各一份）收斂成一份。
+#[uniffi::export]
+pub fn screen_control_ids_revealed_by(id: String, apple: bool, reveal: FfiReveal) -> Vec<String> {
+    screen_spec(id)
+        .sections
+        .into_iter()
+        .flat_map(|s| s.controls)
+        .filter(|c| !c.optional)
+        .filter(|c| match c.platforms {
+            FfiPlatforms::Both => true,
+            FfiPlatforms::AppleOnly => apple,
+            FfiPlatforms::AndroidOnly => !apple,
+        })
+        .filter(|c| c.reveal == reveal)
         .map(|c| c.id)
         .collect()
 }
@@ -304,6 +371,7 @@ fn home_spec() -> FfiScreenSpec {
 
 fn editor_spec() -> FfiScreenSpec {
     use FfiControlKind::*;
+    use FfiReveal::*;
     FfiScreenSpec {
         id: "editor".to_string(),
         title_key: "notebook".to_string(),
@@ -317,7 +385,11 @@ fn editor_spec() -> FfiScreenSpec {
                     // Android 另外接系統返回鍵（`BackHandler`）—— 那是平台慣例，
                     // 拿掉等於這個 App 在 Android 上壞掉；Apple 沒有對應物。
                     only(
-                        c("editor.system_back", Button, "back"),
+                        // `BackHandler` 是一個手勢攔截器，不是控制項 ——
+                        // 它永遠不會出現在語意樹裡，所以標成 `NotAWidget`
+                        // 而不是丟進「還沒做」的棘輪。棘輪的承諾是「總有
+                        // 一天會清空」，混一個永遠清不掉的進去就變成謊話。
+                        behind(c("editor.system_back", Button, "back"), NotAWidget),
                         FfiPlatforms::AndroidOnly,
                     ),
                     c("editor.home", Button, "home"),
@@ -342,55 +414,88 @@ fn editor_spec() -> FfiScreenSpec {
                 "editor.insert",
                 "insert_object",
                 vec![
-                    c("editor.insert.assets", Button, "asset_library"),
+                    behind(c("editor.insert.assets", Button, "asset_library"), MoreMenu),
                     // 規格原本漏了這一項 —— Apple 有、Android 沒有，
                     // 而對照閘門是綠的（它只檢查規格裡列出來的）。
                     // 漏一項的代價就是一個平台少一整個功能，沒有人會發現。
-                    c("editor.insert.stickers", Button, "sticker_library"),
-                    c("editor.insert.audio", Button, "insert_audio"),
+                    behind(
+                        c("editor.insert.stickers", Button, "sticker_library"),
+                        MoreMenu,
+                    ),
+                    behind(c("editor.insert.audio", Button, "insert_audio"), MoreMenu),
                     // 「從本機檔案匯入」那兩項。與上面那兩項是**不同的入口**：
                     // 上面挑的是 App 自己有的東西（錄好的音、相簿裡的圖），
                     // 這兩項挑的是使用者手上那個檔案 —— 而那常常正是他想放
                     // 進筆記的東西。規格裡列著，兩端才不會只有一邊做。
-                    c(
-                        "editor.insert.audio_file",
-                        Button,
-                        "import_audio_from_files",
+                    behind(
+                        c(
+                            "editor.insert.audio_file",
+                            Button,
+                            "import_audio_from_files",
+                        ),
+                        MoreMenu,
                     ),
-                    c("editor.insert.image", Button, "insert_image"),
-                    c("editor.insert.image_file", Button, "import_from_files"),
+                    behind(c("editor.insert.image", Button, "insert_image"), MoreMenu),
+                    behind(
+                        c("editor.insert.image_file", Button, "import_from_files"),
+                        MoreMenu,
+                    ),
                     // PDF 只有一個入口：它從來不會在相簿裡。
-                    c("editor.insert.pdf", Button, "insert_pdf"),
-                    c("editor.insert.math", Button, "math_calc"),
-                    c("editor.insert.chart", Button, "chart_studio"),
-                    c("editor.insert.table", Button, "table_studio"),
-                    c("editor.insert.shape", Button, "shape_studio"),
-                    c("editor.insert.model3d", Button, "insert_3d"),
-                    c("editor.insert.theme_tools", Button, "theme_tools"),
+                    behind(c("editor.insert.pdf", Button, "insert_pdf"), MoreMenu),
+                    behind(c("editor.insert.math", Button, "math_calc"), MoreMenu),
+                    behind(c("editor.insert.chart", Button, "chart_studio"), MoreMenu),
+                    behind(c("editor.insert.table", Button, "table_studio"), MoreMenu),
+                    behind(c("editor.insert.shape", Button, "shape_studio"), MoreMenu),
+                    behind(c("editor.insert.model3d", Button, "insert_3d"), MoreMenu),
+                    behind(
+                        c("editor.insert.theme_tools", Button, "theme_tools"),
+                        MoreMenu,
+                    ),
                     // 「自訂工具列」的入口（S-261）。放在這一組是因為它
                     // 與其他項目一樣住在「更多」選單裡 —— 而選單內容不會
                     // 出現在 XCUITest 的無障礙樹裡，所以兩端的畫面稽核都
                     // 看不到它，只有靜態的對照閘門掃得到。
-                    c("editor.customize_toolbar", Button, "customize_toolbar"),
-                    c("editor.insert.refine_sketch", Button, "refine_sketch"),
-                    c("editor.insert.comment_pin", Button, "add_comment_pin"),
-                    c("editor.insert.collaborate", Button, "collaborate"),
-                    c("editor.insert.recognize", Button, "recognize_handwriting"),
-                    c("editor.insert.ai_summary", Button, "ai_summary"),
+                    behind(
+                        c("editor.customize_toolbar", Button, "customize_toolbar"),
+                        MoreMenu,
+                    ),
+                    behind(
+                        c("editor.insert.refine_sketch", Button, "refine_sketch"),
+                        MoreMenu,
+                    ),
+                    behind(
+                        c("editor.insert.comment_pin", Button, "add_comment_pin"),
+                        MoreMenu,
+                    ),
+                    behind(
+                        c("editor.insert.collaborate", Button, "collaborate"),
+                        MoreMenu,
+                    ),
+                    behind(
+                        c("editor.insert.recognize", Button, "recognize_handwriting"),
+                        MoreMenu,
+                    ),
+                    behind(
+                        c("editor.insert.ai_summary", Button, "ai_summary"),
+                        MoreMenu,
+                    ),
                 ],
             ),
             section(
                 "editor.export",
                 "export_and_print",
                 vec![
-                    c("editor.export.pdf", Button, "export_pdf"),
-                    c("editor.export.image", Button, "export_image"),
-                    c("editor.export.print", Button, "print_note"),
+                    behind(c("editor.export.pdf", Button, "export_pdf"), ExportMenu),
+                    behind(c("editor.export.image", Button, "export_image"), ExportMenu),
+                    behind(c("editor.export.print", Button, "print_note"), ExportMenu),
                     // 存到**使用者自己選的位置**。分享面板不算 ——
                     // 它把檔案送去別的 App，但使用者沒辦法說「存到我的文件
                     // 資料夾」。Mac App Store 審查指南 2.4.5(i) 要的是這一個。
-                    c("editor.export.save_as", Button, "export_save_as"),
-                    c("editor.export.share", Button, "share_note"),
+                    behind(
+                        c("editor.export.save_as", Button, "export_save_as"),
+                        ExportMenu,
+                    ),
+                    behind(c("editor.export.share", Button, "share_note"), ExportMenu),
                 ],
             ),
             // 第二排：手寫模式。九個工具的順序與 `EditorToolType` 一致。
@@ -414,7 +519,7 @@ fn editor_spec() -> FfiScreenSpec {
                     c("editor.ink.palette", Picker, "color"),
                     c("editor.ink.undo", Button, "undo"),
                     c("editor.ink.redo", Button, "redo"),
-                    c("editor.ink.clear", Button, "clear_page"),
+                    behind(c("editor.ink.clear", Button, "clear_page"), ToolbarSheet),
                 ],
             ),
             // 第二排：打字模式（Word 風格工具列 Ribbon）。
@@ -422,33 +527,72 @@ fn editor_spec() -> FfiScreenSpec {
                 "editor.texttools",
                 "",
                 vec![
-                    c("editor.text.add_box", Button, "add_text_box"),
-                    c("editor.text.studio", Button, "tool_text"),
-                    c("editor.text.bold", Button, "text_bold"),
-                    c("editor.text.italic", Button, "text_italic"),
-                    c("editor.text.underline", Button, "text_underline"),
-                    c("editor.text.align_left", Button, "align_left"),
-                    c("editor.text.align_center", Button, "align_center_h"),
-                    c("editor.text.align_right", Button, "align_right"),
-                    c("editor.text.snap_grid", Button, "snap_to_grid"),
-                    c("editor.text.layer_forward", Button, "layer_bring_forward"),
-                    c("editor.text.layer_backward", Button, "layer_send_backward"),
-                    c("editor.text.symbols", Button, "special_symbols"),
-                    c("editor.text.select", Button, "marquee_select"),
-                    c("editor.text.link", Button, "insert_link"),
-                    c("editor.text.undo", Button, "undo"),
-                    c("editor.text.redo", Button, "redo"),
+                    behind(c("editor.text.add_box", Button, "add_text_box"), TypingMode),
+                    behind(c("editor.text.studio", Button, "tool_text"), TypingMode),
+                    behind(c("editor.text.bold", Button, "text_bold"), TypingMode),
+                    behind(c("editor.text.italic", Button, "text_italic"), TypingMode),
+                    behind(
+                        c("editor.text.underline", Button, "text_underline"),
+                        TypingMode,
+                    ),
+                    behind(
+                        c("editor.text.align_left", Button, "align_left"),
+                        TypingMode,
+                    ),
+                    behind(
+                        c("editor.text.align_center", Button, "align_center_h"),
+                        TypingMode,
+                    ),
+                    behind(
+                        c("editor.text.align_right", Button, "align_right"),
+                        TypingMode,
+                    ),
+                    behind(
+                        c("editor.text.snap_grid", Button, "snap_to_grid"),
+                        TypingMode,
+                    ),
+                    behind(
+                        c("editor.text.layer_forward", Button, "layer_bring_forward"),
+                        TypingMode,
+                    ),
+                    behind(
+                        c("editor.text.layer_backward", Button, "layer_send_backward"),
+                        TypingMode,
+                    ),
+                    behind(
+                        c("editor.text.symbols", Button, "special_symbols"),
+                        TypingMode,
+                    ),
+                    behind(
+                        c("editor.text.select", Button, "marquee_select"),
+                        TypingMode,
+                    ),
+                    behind(c("editor.text.link", Button, "insert_link"), TypingMode),
+                    behind(c("editor.text.undo", Button, "undo"), TypingMode),
+                    behind(c("editor.text.redo", Button, "redo"), TypingMode),
                 ],
             ),
             section(
                 "editor.sidebar",
                 "page_structure",
                 vec![
-                    c("editor.sidebar.tab.pages", Button, "structure_pages"),
-                    c("editor.sidebar.tab.folders", Button, "structure_folders"),
-                    c("editor.sidebar.list", List, ""),
-                    c("editor.sidebar.thumb_smaller", Button, "thumbnail_smaller"),
-                    c("editor.sidebar.thumb_larger", Button, "thumbnail_larger"),
+                    behind(
+                        c("editor.sidebar.tab.pages", Button, "structure_pages"),
+                        Sidebar,
+                    ),
+                    behind(
+                        c("editor.sidebar.tab.folders", Button, "structure_folders"),
+                        Sidebar,
+                    ),
+                    behind(c("editor.sidebar.list", List, ""), Sidebar),
+                    behind(
+                        c("editor.sidebar.thumb_smaller", Button, "thumbnail_smaller"),
+                        Sidebar,
+                    ),
+                    behind(
+                        c("editor.sidebar.thumb_larger", Button, "thumbnail_larger"),
+                        Sidebar,
+                    ),
                 ],
             ),
             section("editor.canvas", "", vec![c("editor.canvas", Canvas, "")]),

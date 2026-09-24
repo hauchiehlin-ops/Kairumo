@@ -133,7 +133,87 @@ Apple 單元測試 382 條中 381 過（唯一那條紅是無障礙標籤，與�
 
 規格新增 `editor.insert.pdf`。
 
-### 🔴 S-SPEC-MENUS. 選單歸屬還是手抄的 —— 兩端各一份
+### 🔴 S-APPLE-TEXT-TOOLBAR. Apple 的打字工具列 —— 識別碼掛在死程式碼上
+
+**規格要求的十六個 `editor.text.*`，Apple 端執行期只找得到三個。**
+
+拿掉棘輪、改用核心的 `FfiReveal` 之後，新增的「切到打字模式再稽核」那條
+測試一跑就掉出來。查下去發現不是識別碼沒掛，是掛在**沒有人算繪的程式碼**
+上：
+
+| | |
+|---|---|
+| `NotebookEditorView.typingToolbar` / `typingToolbarItems` | 帶著全部十六個識別碼，**整份是死的** —— 全專案沒有任何地方引用 `typingToolbar` |
+| `WordToolbarView`（WordDocumentEditorView.swift） | 真正畫出來的那一個。文書處理工具列（標題階層、字體、清單、表格），**一個 accessibility identifier 都沒有** |
+
+**靜態的跨平台對照閘門一直是綠的**，因為它掃的是原始碼裡有沒有那個字串
+—— 而那些字串就在死程式碼裡。這正是執行期稽核存在的理由，也正是把它們
+藏在棘輪裡的代價：那一整批被記成「藏在選單／浮層裡，單一畫面狀態看不到」，
+那個描述對了一半，於是沒有人再往下查。
+
+Android 端是綠的：十六個都在（`typingModeItemsAreReachable`）。
+
+#### 要先決定的事（產品決策，不該由一條測試偷偷決定）
+
+兩條路：
+
+1. **Apple 的打字工具列長成規格那樣** —— 把對齊、疊層、特殊符號、框選那幾顆
+   補進 `WordToolbarView`，並把十六個識別碼掛上去，然後刪掉 `typingToolbar`
+   那份死程式碼。兩端一致，但要動 Apple 的打字介面。
+2. **規格改成描述文書處理工具列** —— 那表示 Android 要跟著改成一樣的東西，
+   而 Android 現有的那十六顆要重新安置。
+
+我的建議是 **1**：規格裡那幾顆（對齊、疊層、框選）是操作**文字方塊物件**的，
+而 `WordToolbarView` 操作的是**文件內文**，兩者是不同層次的東西 ——
+現在的 Apple 介面等於少了前者。但這要你拍板。
+
+在決定之前，Apple 端**不加**那條測試（加了就是一條永遠紅的閘門，而永遠紅
+的閘門會被關掉）。
+
+### 🔴 S-CI-UNRUN-TESTS. 兩條 UI 測試紅著，而 CI 不跑它們
+
+CI 的「畫面稽核」那一步只跑五條 `SmokeUITests` 加 `InsertToolsAudit`
+（`-only-testing:` 一條一條列的）。本機把整個 `SmokeUITests` 跑完之後，
+有兩條是紅的：
+
+* `testCanvasExpandsWhenSidebarCollapses` —— 找不到「筆記結構」按鈕。
+  它用的是 `label CONTAINS 'sidebar' OR 'Split View'` 這種**靠標籤猜**的
+  查法，而標籤一改它就找不到。接著畫布寬度斷言也跟著失敗
+  （325.8 / 視窗 402）。
+* `testMigrationRunsFromTheDiagnosticsSheet` —— 診斷頁裡找不到轉換按鈕。
+
+**兩條都不是今天改壞的**：前者在畫布識別字改名**之前**那一輪就已經是紅的。
+它們是「CI 不跑，所以壞了沒有人知道」—— 與這個專案一直在修的
+「會說謊的閘門」是同一類問題，只是方向相反：閘門不是報錯，是根本沒看。
+
+**決定要做什麼之前先想清楚**：把它們加進 CI 會讓那一步從 ~4 分鐘變長，
+而其中一條本來就用不可靠的查法。比較可能的正解是先把查法改成用識別字
+（`editor.sidebar_toggle` 已經有了），再納入 CI。
+
+### ~~S-SPEC-MENUS~~ ✅ 選單歸屬收進核心規格 —— 三份變一份
+
+**已完成。** 核心的 `FfiReveal` 記下每個控制項「要先做什麼才看得到」
+（`always` / `more_menu` / `export_menu` / `sidebar` / `typing_mode` /
+`toolbar_sheet` / `not_a_widget`），產進 `screens.json` 的
+`controls[].reveal`，兩端的測試改成讀它。
+
+刪掉的手抄清單：Android 99 行、Apple 77 行。兩端的「棘輪」一起消失 ——
+它原本把兩件完全不同的事混在一起（「還沒做」與「要先按個東西才看得到」），
+而混在一起之後「只准縮小」這個承諾就變成謊話。
+
+**這個欄位上線當天就抓到兩個真的問題：**
+
+1. **`editor.record` 在 Android 上藏在「更多」選單裡**，而核心規格一直把它
+   放在 `editor.topbar`（與 Apple 一樣是工具列上的一顆）。錄音是這個 App
+   的主要動作之一，上課上到一半要按兩下再找一行字 —— 使用者感覺得到。
+   在 `FfiReveal` 出現之前，沒有任何閘門分得出「藏在選單裡」與「放在工具列
+   上」。已移到工具列。
+2. **畫布有兩個識別字**：真正算繪出來的那一層叫 `kairumo.canvas`，而規格
+   要求的 `editor.canvas` 掛在一個**不會被算繪**的分支上。畫面稽核因此一直
+   報「少了 editor.canvas」，而那一項被放進棘輪、附上一段正確的解釋 ——
+   解釋是對的，但沒有人回頭把它修好。已統一成規格那一個。
+
+下面這段是當初記下的原始分析，留著當背景：
 
 `docs/conformance/screens.json` 已經照畫面分好了，但它不知道「這個 id 在
 **哪一張選單**裡」。於是兩端的測試各自維護一份清單：

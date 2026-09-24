@@ -196,6 +196,12 @@ fn screens() -> Value {
                     "id": c.id,
                     "label_key": c.label_key,
                     "label_en": ui_label_en(&c.label_key),
+                    // 「要先做什麼才看得到」。兩端的畫面稽核照它分流：
+                    // `always` 的在基礎狀態就要掃得到，其餘的各自由會先
+                    // 互動的那條測試檢查。在此之前這份歸屬是兩端各抄一份
+                    // 的（S-SPEC-MENUS），而漏抄的症狀是稽核報「畫面少了
+                    // 控制項」—— 看起來像產品壞了。
+                    "reveal": reveal_name(c.reveal),
                 })
             })
             .collect();
@@ -209,6 +215,19 @@ fn screens() -> Value {
         );
     }
     Value::Object(out)
+}
+
+fn reveal_name(r: padnote_core::ffi_screens::FfiReveal) -> &'static str {
+    use padnote_core::ffi_screens::FfiReveal::*;
+    match r {
+        Always => "always",
+        MoreMenu => "more_menu",
+        ExportMenu => "export_menu",
+        Sidebar => "sidebar",
+        TypingMode => "typing_mode",
+        ToolbarSheet => "toolbar_sheet",
+        NotAWidget => "not_a_widget",
+    }
 }
 
 /// 介面字串表（`i18n/ui-strings.json`）裡那個鍵的英文。

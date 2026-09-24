@@ -2580,6 +2580,39 @@ private fun InkScreen(
             ) { Text("↷") }
             }
 
+            // **錄音在工具列上，不在「更多」選單裡。**
+            //
+            // 原本它是選單的第十幾項。Apple 端一直是工具列上的一顆紅點，
+            // 而錄音是這個 App 的主要動作之一 —— 上課上到一半要按兩下再
+            // 找一行字，那個差別使用者感覺得到。
+            //
+            // 核心規格把它放在 `editor.topbar`（與 `editor.more`、
+            // `editor.share` 同一組），所以這是規格早就說好的位置，
+            // 只是 Android 這邊沒照著做 —— 而在 `FfiReveal` 出現之前，
+            // 沒有任何閘門分得出「藏在選單裡」與「放在工具列上」。
+            TextButton(
+                onClick = {
+                    val session = notebook?.first
+                    if (session != null) {
+                        if (recording) {
+                            val us = audio.stop(session)
+                            recording = false
+                            recordingPaused = false
+                            message = l10n("recorded_duration")
+                                .replace("%@", "${us / 1_000_000uL}")
+                        } else if (AudioCapture.hasPermission(activity)) {
+                            recordSeconds = 0
+                            recordingPaused = false
+                            message = audio.start(session, deviceLanguageTag()) { message = it }
+                            recording = audio.isRecording
+                        } else {
+                            micPermission.launch(Manifest.permission.RECORD_AUDIO)
+                        }
+                    }
+                },
+                modifier = Modifier.testTag("editor.record")
+            ) { Text(if (recording) "⏹" else "⏺") }
+
             var showShareMenu by remember { mutableStateOf(false) }
             TextButton(
                 onClick = { showShareMenu = true },
@@ -2690,28 +2723,6 @@ private fun InkScreen(
                     }
                 )
                 }
-                Divider()
-                DropdownMenuItem(
-                    text = { Text(l10n(if (recording) "stop_recording" else "start_recording")) },
-                    modifier = Modifier.testTag("editor.record"),
-                    onClick = {
-                        showMenu = false
-                        val session = notebook?.first ?: return@DropdownMenuItem
-                        if (recording) {
-                            val us = audio.stop(session)
-                            recording = false
-                            recordingPaused = false
-                            message = l10n("recorded_duration").replace("%@", "${us / 1_000_000uL}")
-                        } else if (AudioCapture.hasPermission(activity)) {
-                            recordSeconds = 0
-                            recordingPaused = false
-                            message = audio.start(session, deviceLanguageTag()) { message = it }
-                            recording = audio.isRecording
-                        } else {
-                            micPermission.launch(Manifest.permission.RECORD_AUDIO)
-                        }
-                    }
-                )
                 Divider()
                 DropdownMenuItem(
                     text = { Text(l10n("export_pdf")) },

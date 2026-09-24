@@ -213,7 +213,17 @@ enum ScreenAudit {
 
         XCTAssertTrue(
             missing.isEmpty,
-            "畫面「\(screen)」少了這些控制項：\n" + missing.joined(separator: "\n"),
+            "畫面「\(screen)」少了這些控制項：\n" + missing.joined(separator: "\n")
+                // **現場有什麼也要印。** 只說「少了 X」的話，分不出
+                // 「這個控制項沒接上」與「根本沒走到那個畫面／狀態」——
+                // 而那兩種的修法完全不同。`check` 早就印了，這裡漏了。
+                + "\n\n現場實際有的識別碼（最多 30 個）：\n"
+                + app.descendants(matching: .any).allElementsBoundByIndex
+                    .prefix(60)
+                    .map { $0.identifier }
+                    .filter { !$0.isEmpty }
+                    .prefix(30)
+                    .joined(separator: "\n"),
             file: file, line: line)
         XCTAssertTrue(
             unreachable.isEmpty,
@@ -237,6 +247,51 @@ enum ScreenAudit {
     ///
     /// 標籤來自核心的字串表（經由 `screens.json`），不是測試自己寫死的 ——
     /// 寫死的話文案一改，稽核就會開始報假的缺失。
+    /// 要先做 `reveal` 那件事才看得到的控制項 id。
+    ///
+    /// **這份歸屬來自核心的規格**（`ffi_screens` 的 `FfiReveal`，產進
+    /// `screens.json` 的 `controls[].reveal`），不是測試裡手抄的清單。
+    ///
+    /// 在此之前它被抄了三份：核心規格、Apple 的測試、Android 的測試。
+    /// 新增一個選單項目要記得改三個地方，而漏掉任何一份的症狀完全一樣 ——
+    /// 稽核報「畫面少了規格要求的控制項」，看起來像產品壞了。實際踩過兩次
+    /// （`editor.insert.stickers`、`editor.export.save_as`）。
+    static func controlIds(screen: String, revealedBy reveal: String) -> [String] {
+        let required = Set(requiredControlIds(screen: screen))
+        guard let entry = specEntry(screen: screen),
+              let controls = entry["controls"] as? [[String: Any]]
+        else { return [] }
+        return controls.compactMap { c -> String? in
+            guard let id = c["id"] as? String,
+                  (c["reveal"] as? String) == reveal,
+                  // `controls` 含兩端全部（也含 AndroidOnly 的），
+                  // 要與這個平台實際要求的那份取交集。
+                  required.contains(id)
+            else { return nil }
+            return id
+        }
+    }
+
+    /// 這個畫面上**不是**進來就看得到的控制項。
+    ///
+    /// 取代了原本手抄的 `editorNotWiredYet` 棘輪。棘輪的問題不只是要手動
+    /// 維護 —— 它把兩件完全不同的事混在一起：「還沒做」與「要先按個東西
+    /// 才看得到」。前者該清空，後者永遠不會清空，而混在一起之後
+    /// 「只准縮小」這個承諾就變成謊話。
+    static func notAlwaysVisible(screen: String) -> Set<String> {
+        let required = Set(requiredControlIds(screen: screen))
+        guard let entry = specEntry(screen: screen),
+              let controls = entry["controls"] as? [[String: Any]]
+        else { return [] }
+        return Set(controls.compactMap { c -> String? in
+            guard let id = c["id"] as? String,
+                  (c["reveal"] as? String) != "always",
+                  required.contains(id)
+            else { return nil }
+            return id
+        })
+    }
+
     private static func labelsById(screen: String) -> [String: String] {
         guard let entry = specEntry(screen: screen),
               let controls = entry["controls"] as? [[String: Any]]
@@ -277,7 +332,7 @@ enum ScreenAudit {
         return root[screen] as? [String: Any]
     }
 
-    private static func requiredControlIds(screen: String) -> [String] {
+    static func requiredControlIds(screen: String) -> [String] {
         guard let entry = specEntry(screen: screen),
               let ids = entry["apple"] as? [String]
         else {
