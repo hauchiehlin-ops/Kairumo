@@ -72,11 +72,15 @@ final class InsertToolsAudit: XCTestCase {
 
         element(app, "editor.more").tap()
         let item = app.buttons["Insert 3D Model"].firstMatch
-        if !item.waitForExistence(timeout: 3) {
-            for _ in 0..<6 where !item.exists { app.swipeUp() }
-        }
-        guard item.exists else {
-            XCTFail("「更多」選單裡找不到 Insert 3D Model")
+        _ = item.waitForExistence(timeout: 3)
+        // **要 `isHittable`，不是 `exists`。** 露出一角的按鈕 `exists` 是 true，
+        // 但 XCUITest 點的是元素中心 —— 中心在畫面外，點了等於沒點，
+        // 而且**不會報錯**，測試要到很後面才以一個不相干的斷言失敗。
+        // （這一輪就是這樣：CI 說「模型上沒有縮放把手」，真因是模型根本
+        // 沒插進去，因為「插入畫布」在摺線下面。）
+        for _ in 0..<6 where !item.isHittable { app.swipeUp() }
+        guard item.isHittable else {
+            XCTFail("「更多」選單裡的 Insert 3D Model 點不到")
             return
         }
         item.tap()
@@ -84,19 +88,47 @@ final class InsertToolsAudit: XCTestCase {
         // 「插入畫布」在面板底部，手機尺寸上要捲才看得到。
         // CI 的機器比本機慢，面板動畫與 SceneKit 第一次建場景都要時間 ——
         // 逾時抓太緊的話，紅燈說的是「找不到」，實際是「還沒到」。
-        let insert = element(app, "model3d.insert")
-        if !insert.waitForExistence(timeout: 15) {
-            for _ in 0..<8 where !insert.exists {
-                app.swipeUp()
-                _ = insert.waitForExistence(timeout: 1)
-            }
+        // **先確定面板真的開了，再捲。**
+        //
+        // 原本是「找不到就先滑八下」。面板開得比較慢的時候，那八下滑的是
+        // **編輯器**：乾淨安裝預設連續捲動，每滑到底就自動補一頁
+        // （`onReachedPageBottom`），焦點頁跟著一路往下跑。等面板終於開了、
+        // 模型插進去，它落在二十幾頁之外 —— 卡片不在畫面上，把手當然找不到。
+        //
+        // CI 的紅燈長這樣：現場識別碼裡二十六個 `editor.canvas`、一個
+        // `model3d.*` 都沒有。訊息說「模型上沒有縮放把手」，真因是
+        // **模型插到別頁去了**。
+        // 面板開了沒有，要用**一定畫得出來**的東西判斷。`model3d.insert`
+        // 在 Form 底部的 Section 裡，而 SwiftUI 的 Form 不會算繪畫面外的列
+        // —— 沒捲到它之前 `exists` 就是 false，拿它當「面板開了沒」會冤枉
+        // 面板。`model3d.close` 在工具列上，永遠在。
+        guard element(app, "model3d.close").waitForExistence(timeout: 25) else {
+            XCTFail("點了 Insert 3D Model，3D 工作室沒打開")
+            return
         }
-        guard insert.exists else {
+        // **要捲在面板裡面。**
+        //
+        // `resizableSheet` 用的是 `[.medium, .large]`，預設只佔下半個螢幕。
+        // `app.swipeUp()` 從整個 app 的中心滑 —— 那個點在面板**上面**，
+        // 滑到的是編輯器：連續捲動模式每滑到底就自動補一頁，焦點頁一路往下，
+        // 模型最後插到二十幾頁之外。（CI 的紅燈裡二十六個 `editor.canvas`
+        // 就是這麼來的。）
+        //
+        // 所以用面板裡的 `model3d.close` 當錨點，往它上方拖。
+        let close = element(app, "model3d.close")
+        let insert = element(app, "model3d.insert")
+        for _ in 0..<8 where !insert.isHittable {
+            close.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 12))
+                .press(
+                    forDuration: 0.05,
+                    thenDragTo: close.coordinate(
+                        withNormalizedOffset: CGVector(dx: 0.5, dy: 3)))
+            _ = insert.waitForExistence(timeout: 1)
+        }
+        guard insert.isHittable else {
             XCTFail(
-                "3D 工作室裡找不到「插入畫布」。現場的識別碼："
-                    + app.descendants(matching: .any).allElementsBoundByIndex
-                        .prefix(40).map { $0.identifier }.filter { !$0.isEmpty }
-                        .joined(separator: ", "))
+                "3D 工作室裡的「插入畫布」點不到。現場的識別碼："
+                    + liveIdentifiers(app).joined(separator: ", "))
             return
         }
         insert.tap()
@@ -105,10 +137,7 @@ final class InsertToolsAudit: XCTestCase {
         XCTAssertTrue(
             handle.waitForExistence(timeout: 15),
             "插進畫布的 3D 模型上沒有縮放把手 —— 使用者改不了它的大小。\n"
-                + "現場的識別碼："
-                + app.descendants(matching: .any).allElementsBoundByIndex
-                    .prefix(50).map { $0.identifier }.filter { !$0.isEmpty }
-                    .joined(separator: ", "))
+                + describeModel3d(app))
     }
 
     /// 錄音啟動失敗的時候，**畫面上要說一聲**。
@@ -163,11 +192,12 @@ final class InsertToolsAudit: XCTestCase {
 
         element(app, "editor.more").tap()
         let item = app.buttons["Sticker Library"].firstMatch
-        if !item.waitForExistence(timeout: 3) {
-            for _ in 0..<6 where !item.exists { app.swipeUp() }
-        }
-        guard item.exists else {
-            XCTFail("「更多」選單裡找不到貼紙庫")
+        _ = item.waitForExistence(timeout: 3)
+        // 點得到才算數：只露一角的項目 `exists` 是 true，但點擊落在畫面外
+        // —— 不報錯，卻什麼也沒發生。
+        for _ in 0..<6 where !item.isHittable { app.swipeUp() }
+        guard item.isHittable else {
+            XCTFail("「更多」選單裡的貼紙庫點不到")
             return
         }
         item.tap()
@@ -238,9 +268,7 @@ final class InsertToolsAudit: XCTestCase {
 
     private func openEditor(_ app: XCUIApplication) -> Bool {
         guard app.wait(for: .runningForeground, timeout: 15) else { return false }
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        guard card.waitForExistence(timeout: 10) else { return false }
-        card.tap()
+        guard openSeedNotebook(app) else { return false }
         return element(app, "editor.more").waitForExistence(timeout: 15)
     }
 
@@ -263,11 +291,12 @@ final class InsertToolsAudit: XCTestCase {
             // 而每開關一張表之後捲動位置都不一樣 —— 不捲的話同一條測試
             // 第一次過、第二次紅，而**間歇失敗的閘門會被關掉**。
             let item = app.buttons[tool.menuLabel].firstMatch
-            if !item.waitForExistence(timeout: 3) {
-                for _ in 0..<6 where !item.exists { app.swipeUp() }
-            }
-            guard item.exists else {
-                failures.append("\(tool.menuLabel)：選單裡找不到")
+            _ = item.waitForExistence(timeout: 3)
+                // 點得到才算數：只露一角的項目 `exists` 是 true，
+                // 但點擊落在畫面外 —— 不報錯，卻什麼也沒發生。
+            for _ in 0..<6 where !item.isHittable { app.swipeUp() }
+            guard item.isHittable else {
+                failures.append("\(tool.menuLabel)：選單裡點不到")
                 // 關掉選單再試下一個 —— 開著的選單會擋住下一次點擊。
                 app.tap()
                 continue
@@ -325,4 +354,33 @@ final class InsertToolsAudit: XCTestCase {
             missing.isEmpty,
             "插入選單裡找不到這幾項匯入入口：\n" + missing.joined(separator: "\n"))
     }
+}
+
+/// 現場所有有識別碼的元素。
+///
+/// **先過濾再截斷。** 原本寫的是 `.prefix(50).filter { !$0.isEmpty }` ——
+/// 先截前五十個元素、再挑出有識別碼的，於是實際印出來只有十幾個，
+/// 而且永遠是樹最前面那一段（工具列）。它害我把「傾印裡沒有 model3d.*」
+/// 當成「模型沒插進去」的證據，追了兩層冤枉路。
+func liveIdentifiers(_ app: XCUIApplication, limit: Int = 80) -> [String] {
+    app.descendants(matching: .any).allElementsBoundByIndex
+        .map { $0.identifier }
+        .filter { !$0.isEmpty }
+        .prefix(limit)
+        .map { $0 }
+}
+
+/// 針對 3D 卡片問一個**明確的問題**，而不是傾印樹的前面一段。
+///
+/// 傾印會騙人：工具列加二十幾個 `editor.canvas` 就把額度吃光，卡片在更深的
+///地方，於是「傾印裡沒有 model3d.*」看起來像「模型沒插進去」——
+/// 而模型其實好端端地在畫布上（手動開模擬器截圖確認過）。
+func describeModel3d(_ app: XCUIApplication) -> String {
+    let anyModel = app.descendants(matching: .any)
+        .matching(NSPredicate(format: "identifier BEGINSWITH 'model3d'"))
+    let ids = anyModel.allElementsBoundByIndex.map { $0.identifier }
+    return "\n樹裡 model3d.* 的數量：\(ids.count)"
+        + (ids.isEmpty ? "（一個都沒有 —— 卡片可能沒插進去，也可能是整個子樹"
+                         + "沒有進無障礙樹）" : "：" + ids.joined(separator: ", "))
+        + "\n整棵樹的元素數：\(app.descendants(matching: .any).count)"
 }

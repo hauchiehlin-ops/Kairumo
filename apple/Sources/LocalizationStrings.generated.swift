@@ -8103,6 +8103,14 @@ extension LocalizationManager {
             .ko: "초기화",
             .th: "รีเซ็ต"
         ],
+        "resize": [
+            .zhHant: "調整大小",
+            .en: "Resize",
+            .zhHans: "调整大小",
+            .ja: "サイズ変更",
+            .ko: "크기 조절",
+            .th: "ปรับขนาด"
+        ],
         "resize_audio_card": [
             .zhHant: "調整錄音卡片大小",
             .en: "Resize recording card",

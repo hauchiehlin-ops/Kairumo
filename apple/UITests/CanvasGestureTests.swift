@@ -26,12 +26,7 @@ final class CanvasGestureTests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
 
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        guard card.waitForExistence(timeout: 10) else {
-            XCTFail("首頁找不到種子筆記，開不了編輯器")
-            return
-        }
-        card.tap()
+        guard openSeedNotebook(app) else { return }
 
         // **要抓 scroll view 那一個。**
         //
@@ -76,9 +71,7 @@ final class CanvasGestureTests: XCTestCase {
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
 
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        guard card.waitForExistence(timeout: 10) else { return }
-        card.tap()
+        guard openSeedNotebook(app) else { return }
 
         let canvas = app.scrollViews.matching(identifier: "editor.canvas").firstMatch
         guard canvas.waitForExistence(timeout: 15) else {

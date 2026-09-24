@@ -44,12 +44,7 @@ final class ResponsiveAudit: XCTestCase {
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
 
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        guard card.waitForExistence(timeout: 10) else {
-            XCTFail("首頁找不到種子筆記")
-            return
-        }
-        card.tap()
+        guard openSeedNotebook(app) else { return }
         guard element(app, "editor.more").waitForExistence(timeout: 15) else {
             XCTFail("進不到編輯器")
             return
@@ -61,11 +56,12 @@ final class ResponsiveAudit: XCTestCase {
         for sheet in Self.sheets {
             element(app, "editor.more").tap()
             let item = app.buttons[sheet.menuLabel].firstMatch
-            if !item.waitForExistence(timeout: 3) {
-                for _ in 0..<6 where !item.exists { app.swipeUp() }
-            }
-            guard item.exists else {
-                problems.append("\(sheet.menuLabel)：選單裡找不到")
+            _ = item.waitForExistence(timeout: 3)
+                // 點得到才算數：只露一角的項目 `exists` 是 true，
+                // 但點擊落在畫面外 —— 不報錯，卻什麼也沒發生。
+            for _ in 0..<6 where !item.isHittable { app.swipeUp() }
+            guard item.isHittable else {
+                problems.append("\(sheet.menuLabel)：選單裡點不到")
                 app.tap()
                 continue
             }

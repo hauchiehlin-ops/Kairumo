@@ -1,4 +1,44 @@
 {
+  "NSLocalNetworkUsageDescription": {
+    "en": "Kairumo uses the local network to edit notes together with people on the same Wi-Fi. Everything is end-to-end encrypted and never passes through a server.",
+    "zhHant": "Kairumo 需要區域網路權限，以便在同一個 Wi-Fi 網路下直接與協同夥伴連線共同編輯筆記，所有傳輸均經端對端加密且不經外部伺服器。",
+    "zhHans": "Kairumo 需要局域网权限，以便在同一个 Wi-Fi 网络下直接与协作伙伴连线共同编辑笔记，所有传输均经端到端加密且不经外部服务器。",
+    "ja": "Kairumo は、同じ Wi-Fi にいる相手と一緒にノートを編集するためにローカルネットワークを使用します。通信はすべてエンドツーエンドで暗号化され、サーバーを経由しません。",
+    "ko": "Kairumo는 같은 Wi-Fi에 있는 사람과 함께 노트를 편집하기 위해 로컬 네트워크를 사용합니다. 모든 전송은 종단간 암호화되며 서버를 거치지 않습니다.",
+    "th": "Kairumo ใช้เครือข่ายภายในเพื่อแก้ไขโน้ตร่วมกับผู้ที่อยู่บน Wi-Fi เดียวกัน ทุกการส่งข้อมูลเข้ารหัสแบบปลายทางถึงปลายทางและไม่ผ่านเซิร์ฟเวอร์"
+  },
+  "NSMicrophoneUsageDescription": {
+    "en": "Kairumo uses the microphone to record voice notes in class or meetings, keeping your handwriting in sync with the recording timeline.",
+    "zhHant": "Kairumo 需要使用麥克風，以便在課堂或會議中錄製語音筆記，並讓手寫筆劃與錄音時間軸即時動態對齊。",
+    "zhHans": "Kairumo 需要使用麦克风，以便在课堂或会议中录制语音笔记，并让手写笔划与录音时间轴实时动态对齐。",
+    "ja": "Kairumo は、授業や会議で音声メモを録音し、手書きと録音のタイムラインを同期させるためにマイクを使用します。",
+    "ko": "Kairumo는 수업이나 회의에서 음성 메모를 녹음하고 필기와 녹음 타임라인을 맞추기 위해 마이크를 사용합니다.",
+    "th": "Kairumo ใช้ไมโครโฟนเพื่อบันทึกเสียงในชั้นเรียนหรือการประชุม และซิงค์ลายมือกับไทม์ไลน์ของเสียง"
+  },
+  "NSPhotoLibraryAddUsageDescription": {
+    "en": "Kairumo saves pages and drawings you export to your photo library.",
+    "zhHant": "Kairumo 需要儲存圖片權限，以便將您導出的筆記頁面或繪圖成果儲存至相片圖庫。",
+    "zhHans": "Kairumo 需要保存图片权限，以便将您导出的笔记页面或绘图成果保存至相片图库。",
+    "ja": "Kairumo は、書き出したページや描画を写真ライブラリに保存します。",
+    "ko": "Kairumo는 내보낸 페이지나 그림을 사진 보관함에 저장합니다.",
+    "th": "Kairumo บันทึกหน้าและภาพวาดที่คุณส่งออกไปยังคลังรูปภาพ"
+  },
+  "NSPhotoLibraryUsageDescription": {
+    "en": "Kairumo accesses your photo library so you can place pictures into a note and annotate them.",
+    "zhHant": "Kairumo 需要存取您的相片圖庫，以便您挑選圖片插入筆記頁面進行批註與繪製。",
+    "zhHans": "Kairumo 需要访问您的相片图库，以便您挑选图片插入笔记页面进行批注与绘制。",
+    "ja": "Kairumo は、写真をノートに挿入して書き込めるようにするために写真ライブラリにアクセスします。",
+    "ko": "Kairumo는 사진을 노트에 넣고 주석을 달 수 있도록 사진 보관함에 접근합니다.",
+    "th": "Kairumo เข้าถึงคลังรูปภาพเพื่อให้คุณใส่รูปลงในโน้ตและเขียนกำกับได้"
+  },
+  "NSSpeechRecognitionUsageDescription": {
+    "en": "Kairumo uses speech recognition to transcribe your recordings into text on your device and place the transcript in your notes.",
+    "zhHant": "Kairumo 需要語音辨識權限，以便在您的裝置端將錄音語音即時轉錄為文字稿，並直接插入筆記畫布。",
+    "zhHans": "Kairumo 需要语音识别权限，以便在您的设备端将录音语音实时转录为文字稿，并直接插入笔记画布。",
+    "ja": "Kairumo は、録音した音声を端末内で文字起こしし、ノートに挿入するために音声認識を使用します。",
+    "ko": "Kairumo는 녹음을 기기 내에서 텍스트로 변환해 노트에 넣기 위해 음성 인식을 사용합니다.",
+    "th": "Kairumo ใช้การรู้จำเสียงเพื่อถอดเสียงที่บันทึกไว้เป็นข้อความบนเครื่องของคุณ และใส่ลงในโน้ต"
+  },
   "about_app": {
     "en": "About Kairumo",
     "ja": "Kairumo について",
@@ -1135,30 +1175,6 @@
     "zhHans": "这不是 Kairumo 的备份文件",
     "zhHant": "這不是 Kairumo 的備份檔"
   },
-  "backup_snapshot": {
-    "en": "Backup Snapshot",
-    "ja": "バックアップスナップショット",
-    "ko": "백업 스냅샷",
-    "th": "สแนปช็อตสำรอง",
-    "zhHans": "备份快照",
-    "zhHant": "備份快照"
-  },
-  "backup_snapshot_desc": {
-    "en": "Export one notebook as a single .padnote file for cloud drives, local storage or another viewer app",
-    "ja": "1 冊のノートを単一の .padnote ファイルとして書き出し、クラウドドライブ、ローカル保存、別のビューアアプリで使えます",
-    "ko": "노트북 하나를 단일 .padnote 파일로 내보내 클라우드 드라이브, 로컬 저장소 또는 다른 뷰어 앱에서 사용할 수 있습니다",
-    "th": "ส่งออกสมุดบันทึกหนึ่งเล่มเป็นไฟล์ .padnote ไฟล์เดียว สำหรับคลาวด์ไดรฟ์ พื้นที่ในเครื่อง หรือแอปดูไฟล์อื่น",
-    "zhHans": "将单本笔记导出成一个 .padnote 文件，可放到云端硬盘、本机档案或给另一套 viewer app 读取",
-    "zhHant": "將單本筆記匯出成一個 .padnote 檔，可放到雲端硬碟、本機檔案或給另一套 viewer app 讀取"
-  },
-  "backup_snapshot_picker_title": {
-    "en": "Choose a notebook to snapshot",
-    "ja": "スナップショットにするノートを選択",
-    "ko": "스냅샷으로 만들 노트북 선택",
-    "th": "เลือกสมุดบันทึกที่จะทำสแนปช็อต",
-    "zhHans": "选择要建立快照的笔记",
-    "zhHant": "選擇要建立快照的筆記"
-  },
   "backup_restore": {
     "en": "Restore from Backup",
     "ja": "バックアップから復元",
@@ -1198,6 +1214,30 @@
     "th": "สำรองและกู้คืน",
     "zhHans": "备份与恢复",
     "zhHant": "備份與復原"
+  },
+  "backup_snapshot": {
+    "en": "Backup Snapshot",
+    "ja": "バックアップスナップショット",
+    "ko": "백업 스냅샷",
+    "th": "สแนปช็อตสำรอง",
+    "zhHans": "备份快照",
+    "zhHant": "備份快照"
+  },
+  "backup_snapshot_desc": {
+    "en": "Export one notebook as a single .padnote file for cloud drives, local storage or another viewer app",
+    "ja": "1 冊のノートを単一の .padnote ファイルとして書き出し、クラウドドライブ、ローカル保存、別のビューアアプリで使えます",
+    "ko": "노트북 하나를 단일 .padnote 파일로 내보내 클라우드 드라이브, 로컬 저장소 또는 다른 뷰어 앱에서 사용할 수 있습니다",
+    "th": "ส่งออกสมุดบันทึกหนึ่งเล่มเป็นไฟล์ .padnote ไฟล์เดียว สำหรับคลาวด์ไดรฟ์ พื้นที่ในเครื่อง หรือแอปดูไฟล์อื่น",
+    "zhHans": "将单本笔记导出成一个 .padnote 文件，可放到云端硬盘、本机档案或给另一套 viewer app 读取",
+    "zhHant": "將單本筆記匯出成一個 .padnote 檔，可放到雲端硬碟、本機檔案或給另一套 viewer app 讀取"
+  },
+  "backup_snapshot_picker_title": {
+    "en": "Choose a notebook to snapshot",
+    "ja": "スナップショットにするノートを選択",
+    "ko": "스냅샷으로 만들 노트북 선택",
+    "th": "เลือกสมุดบันทึกที่จะทำสแนปช็อต",
+    "zhHans": "选择要建立快照的笔记",
+    "zhHant": "選擇要建立快照的筆記"
   },
   "border_color": {
     "en": "Border color",
@@ -3399,6 +3439,14 @@
     "zhHans": "导出与打印",
     "zhHant": "匯出與列印"
   },
+  "export_save_as": {
+    "en": "Save to Files…",
+    "zhHant": "儲存到…",
+    "zhHans": "保存到…",
+    "ja": "ファイルに保存…",
+    "ko": "파일로 저장…",
+    "th": "บันทึกไปยังไฟล์…"
+  },
   "extend_page": {
     "en": "Extend Page",
     "ja": "ページを延長",
@@ -4967,6 +5015,14 @@
     "zhHans": "图片",
     "zhHant": "圖片"
   },
+  "import_audio_from_files": {
+    "en": "Import an audio file",
+    "zhHant": "匯入音訊檔",
+    "zhHans": "导入音频文件",
+    "ja": "音声ファイルを読み込む",
+    "ko": "오디오 파일 가져오기",
+    "th": "นำเข้าไฟล์เสียง"
+  },
   "import_builtin_shapes": {
     "en": "Built-in shapes",
     "zhHant": "內建形狀",
@@ -5006,6 +5062,14 @@
     "ja": "ファイルから選択",
     "ko": "파일에서 선택",
     "th": "เลือกจากไฟล์"
+  },
+  "import_from_photos": {
+    "en": "Choose from Photos",
+    "zhHant": "從相簿選擇",
+    "zhHans": "从相册选择",
+    "ja": "写真から選ぶ",
+    "ko": "사진에서 선택",
+    "th": "เลือกจากรูปภาพ"
   },
   "import_limit_note": {
     "en": "Up to %@ MB — everything you insert syncs with the notebook",
@@ -5223,6 +5287,14 @@
     "zhHans": "插入链接",
     "zhHant": "插入連結"
   },
+  "insert_needs_canvas": {
+    "en": "Switch to drawing mode first — that is where this goes",
+    "zhHant": "請先切到手寫模式 —— 這個東西是貼在畫布上的",
+    "zhHans": "请先切到手写模式 —— 这个东西是贴在画布上的",
+    "ja": "先に手書きモードに切り替えてください —— これはキャンバスに貼られます",
+    "ko": "먼저 필기 모드로 전환하세요 —— 이것은 캔버스에 붙습니다",
+    "th": "สลับไปโหมดเขียนก่อน —— สิ่งนี้วางบนผืนผ้าใบ"
+  },
   "insert_object": {
     "en": "Insert",
     "ja": "挿入",
@@ -5246,6 +5318,14 @@
     "th": "แทรกหน้าด้วยเทมเพลต…",
     "zhHans": "插入其他样板页面…",
     "zhHant": "插入其他樣板頁面…"
+  },
+  "insert_pdf": {
+    "en": "Insert PDF Page",
+    "zhHant": "插入 PDF 頁面",
+    "zhHans": "插入 PDF 页面",
+    "ja": "PDF ページを挿入",
+    "ko": "PDF 페이지 삽입",
+    "th": "แทรกหน้า PDF"
   },
   "insert_swatch": {
     "en": "Insert Color Swatch",
@@ -6279,6 +6359,14 @@
     "zhHans": "3D 模型",
     "zhHant": "3D 模型"
   },
+  "model3d_rotate_mode": {
+    "en": "Rotate",
+    "zhHant": "旋轉",
+    "zhHans": "旋转",
+    "ja": "回転",
+    "ko": "회전",
+    "th": "หมุน"
+  },
   "model3d_studio": {
     "en": "3D Model Studio",
     "ja": "3D モデルスタジオ",
@@ -6327,6 +6415,14 @@
     "zhHans": "下载中…",
     "zhHant": "下載中…"
   },
+  "model_no_geometry": {
+    "en": "That model file has no shapes in it",
+    "zhHant": "這個模型檔裡沒有任何形狀",
+    "zhHans": "这个模型文件里没有任何形状",
+    "ja": "このモデルファイルには形状が入っていません",
+    "ko": "이 모델 파일에는 도형이 없습니다",
+    "th": "ไฟล์โมเดลนี้ไม่มีรูปทรงอยู่เลย"
+  },
   "model_optional": {
     "en": "Optional",
     "ja": "任意",
@@ -6367,6 +6463,14 @@
     "zhHans": "物体名称",
     "zhHant": "物件名稱"
   },
+  "model_too_many_faces": {
+    "en": "That model is too detailed to rotate smoothly",
+    "zhHant": "這個模型太細緻，轉起來會卡",
+    "zhHans": "这个模型太细致，转起来会卡",
+    "ja": "このモデルは精細すぎて滑らかに回転できません",
+    "ko": "이 모델은 너무 정밀해서 부드럽게 회전할 수 없습니다",
+    "th": "โมเดลนี้ละเอียดเกินไป หมุนแล้วจะไม่ลื่น"
+  },
   "model_unavailable": {
     "en": "No download source yet",
     "ja": "入手先が未確定",
@@ -6374,6 +6478,14 @@
     "th": "ยังไม่มีแหล่งดาวน์โหลด",
     "zhHans": "尚未提供下载来源",
     "zhHant": "尚未提供下載來源"
+  },
+  "model_unsupported_format": {
+    "en": "Only OBJ and STL models can be drawn here",
+    "zhHant": "這裡只畫得出 OBJ 與 STL 模型",
+    "zhHans": "这里只画得出 OBJ 与 STL 模型",
+    "ja": "ここで描けるのは OBJ と STL のモデルだけです",
+    "ko": "여기서는 OBJ와 STL 모델만 그릴 수 있습니다",
+    "th": "ที่นี่วาดได้เฉพาะโมเดล OBJ และ STL"
   },
   "models_desc": {
     "en": "Download models to enable on-device transcription and OCR. Everything stays on this device.",
@@ -6798,6 +6910,14 @@
     "th": "ออฟไลน์อยู่: รอคิว %d รายการ จะซิงค์อัตโนมัติเมื่อเชื่อมต่อใหม่",
     "zhHans": "目前离线，已暂存 %d 笔操作，连接恢复时将自动同步。",
     "zhHant": "目前離線，已暫存 %d 筆操作，連線恢復時將自動同步。"
+  },
+  "onboarding_continue": {
+    "en": "Continue",
+    "zhHant": "繼續",
+    "zhHans": "继续",
+    "ja": "続ける",
+    "ko": "계속",
+    "th": "ดำเนินการต่อ"
   },
   "onboarding_microphone_granted": {
     "en": "Microphone allowed",
@@ -7463,6 +7583,14 @@
     "zhHans": "暂停录音",
     "zhHant": "暫停錄音"
   },
+  "pdf_choose_page": {
+    "en": "Which page?",
+    "zhHant": "要插入第幾頁？",
+    "zhHans": "要插入第几页？",
+    "ja": "何ページ目を挿入しますか？",
+    "ko": "몇 번째 페이지를 넣을까요?",
+    "th": "หน้าไหน?"
+  },
   "pdf_not_a_pdf": {
     "en": "This file isn't a PDF, or it's damaged.",
     "ja": "このファイルは PDF ではないか、壊れています。",
@@ -7479,6 +7607,14 @@
     "zhHans": "第 %1@ 页不存在，这个 PDF 共 %2@ 页。",
     "zhHant": "第 %1@ 頁不存在，這個 PDF 共 %2@ 頁。"
   },
+  "pdf_page_range": {
+    "en": "This PDF has %@ pages",
+    "zhHant": "這份 PDF 共 %@ 頁",
+    "zhHans": "这份 PDF 共 %@ 页",
+    "ja": "この PDF は全 %@ ページです",
+    "ko": "이 PDF는 총 %@페이지입니다",
+    "th": "PDF นี้มี %@ หน้า"
+  },
   "pdf_password_required": {
     "en": "This PDF needs a password.",
     "ja": "この PDF にはパスワードが必要です。",
@@ -7486,6 +7622,14 @@
     "th": "PDF นี้ต้องใช้รหัสผ่าน",
     "zhHans": "这个 PDF 需要密码。",
     "zhHant": "這個 PDF 需要密碼。"
+  },
+  "pdf_render_failed": {
+    "en": "That page could not be drawn",
+    "zhHant": "這一頁畫不出來",
+    "zhHans": "这一页画不出来",
+    "ja": "このページは描画できませんでした",
+    "ko": "이 페이지를 그릴 수 없습니다",
+    "th": "วาดหน้านี้ไม่ได้"
   },
   "pen_only_toast": {
     "en": "“Pen only” is on, so finger touches are ignored. Turn it off to write with your finger.",
@@ -7719,6 +7863,14 @@
     "zhHans": "已录 %@ 秒",
     "zhHant": "已錄 %@ 秒"
   },
+  "recording_failed": {
+    "en": "Recording could not start",
+    "zhHant": "錄音啟動失敗",
+    "zhHans": "录音启动失败",
+    "ja": "録音を開始できませんでした",
+    "ko": "녹음을 시작할 수 없습니다",
+    "th": "เริ่มบันทึกเสียงไม่ได้"
+  },
   "recording_inbox": {
     "en": "Recording Inbox",
     "ja": "録音インボックス",
@@ -7934,6 +8086,14 @@
     "th": "รีเซ็ต",
     "zhHans": "重置",
     "zhHant": "重設"
+  },
+  "resize": {
+    "en": "Resize",
+    "ja": "サイズ変更",
+    "ko": "크기 조절",
+    "th": "ปรับขนาด",
+    "zhHans": "调整大小",
+    "zhHant": "調整大小"
   },
   "resize_audio_card": {
     "en": "Resize recording card",
@@ -11630,157 +11790,5 @@
     "th": "การแก้ไขข้อความ Word",
     "zhHans": "Word文字编修",
     "zhHant": "Word文字編修"
-  },
-  "import_from_photos": {
-    "en": "Choose from Photos",
-    "zhHant": "從相簿選擇",
-    "zhHans": "从相册选择",
-    "ja": "写真から選ぶ",
-    "ko": "사진에서 선택",
-    "th": "เลือกจากรูปภาพ"
-  },
-  "import_audio_from_files": {
-    "en": "Import an audio file",
-    "zhHant": "匯入音訊檔",
-    "zhHans": "导入音频文件",
-    "ja": "音声ファイルを読み込む",
-    "ko": "오디오 파일 가져오기",
-    "th": "นำเข้าไฟล์เสียง"
-  },
-  "insert_pdf": {
-    "en": "Insert PDF Page",
-    "zhHant": "插入 PDF 頁面",
-    "zhHans": "插入 PDF 页面",
-    "ja": "PDF ページを挿入",
-    "ko": "PDF 페이지 삽입",
-    "th": "แทรกหน้า PDF"
-  },
-  "pdf_choose_page": {
-    "en": "Which page?",
-    "zhHant": "要插入第幾頁？",
-    "zhHans": "要插入第几页？",
-    "ja": "何ページ目を挿入しますか？",
-    "ko": "몇 번째 페이지를 넣을까요?",
-    "th": "หน้าไหน?"
-  },
-  "pdf_page_range": {
-    "en": "This PDF has %@ pages",
-    "zhHant": "這份 PDF 共 %@ 頁",
-    "zhHans": "这份 PDF 共 %@ 页",
-    "ja": "この PDF は全 %@ ページです",
-    "ko": "이 PDF는 총 %@페이지입니다",
-    "th": "PDF นี้มี %@ หน้า"
-  },
-  "pdf_render_failed": {
-    "en": "That page could not be drawn",
-    "zhHant": "這一頁畫不出來",
-    "zhHans": "这一页画不出来",
-    "ja": "このページは描画できませんでした",
-    "ko": "이 페이지를 그릴 수 없습니다",
-    "th": "วาดหน้านี้ไม่ได้"
-  },
-  "model_unsupported_format": {
-    "en": "Only OBJ and STL models can be drawn here",
-    "zhHant": "這裡只畫得出 OBJ 與 STL 模型",
-    "zhHans": "这里只画得出 OBJ 与 STL 模型",
-    "ja": "ここで描けるのは OBJ と STL のモデルだけです",
-    "ko": "여기서는 OBJ와 STL 모델만 그릴 수 있습니다",
-    "th": "ที่นี่วาดได้เฉพาะโมเดล OBJ และ STL"
-  },
-  "model_no_geometry": {
-    "en": "That model file has no shapes in it",
-    "zhHant": "這個模型檔裡沒有任何形狀",
-    "zhHans": "这个模型文件里没有任何形状",
-    "ja": "このモデルファイルには形状が入っていません",
-    "ko": "이 모델 파일에는 도형이 없습니다",
-    "th": "ไฟล์โมเดลนี้ไม่มีรูปทรงอยู่เลย"
-  },
-  "model_too_many_faces": {
-    "en": "That model is too detailed to rotate smoothly",
-    "zhHant": "這個模型太細緻，轉起來會卡",
-    "zhHans": "这个模型太细致，转起来会卡",
-    "ja": "このモデルは精細すぎて滑らかに回転できません",
-    "ko": "이 모델은 너무 정밀해서 부드럽게 회전할 수 없습니다",
-    "th": "โมเดลนี้ละเอียดเกินไป หมุนแล้วจะไม่ลื่น"
-  },
-  "NSMicrophoneUsageDescription": {
-    "en": "Kairumo uses the microphone to record voice notes in class or meetings, keeping your handwriting in sync with the recording timeline.",
-    "zhHant": "Kairumo 需要使用麥克風，以便在課堂或會議中錄製語音筆記，並讓手寫筆劃與錄音時間軸即時動態對齊。",
-    "zhHans": "Kairumo 需要使用麦克风，以便在课堂或会议中录制语音笔记，并让手写笔划与录音时间轴实时动态对齐。",
-    "ja": "Kairumo は、授業や会議で音声メモを録音し、手書きと録音のタイムラインを同期させるためにマイクを使用します。",
-    "ko": "Kairumo는 수업이나 회의에서 음성 메모를 녹음하고 필기와 녹음 타임라인을 맞추기 위해 마이크를 사용합니다.",
-    "th": "Kairumo ใช้ไมโครโฟนเพื่อบันทึกเสียงในชั้นเรียนหรือการประชุม และซิงค์ลายมือกับไทม์ไลน์ของเสียง"
-  },
-  "NSSpeechRecognitionUsageDescription": {
-    "en": "Kairumo uses speech recognition to transcribe your recordings into text on your device and place the transcript in your notes.",
-    "zhHant": "Kairumo 需要語音辨識權限，以便在您的裝置端將錄音語音即時轉錄為文字稿，並直接插入筆記畫布。",
-    "zhHans": "Kairumo 需要语音识别权限，以便在您的设备端将录音语音实时转录为文字稿，并直接插入笔记画布。",
-    "ja": "Kairumo は、録音した音声を端末内で文字起こしし、ノートに挿入するために音声認識を使用します。",
-    "ko": "Kairumo는 녹음을 기기 내에서 텍스트로 변환해 노트에 넣기 위해 음성 인식을 사용합니다.",
-    "th": "Kairumo ใช้การรู้จำเสียงเพื่อถอดเสียงที่บันทึกไว้เป็นข้อความบนเครื่องของคุณ และใส่ลงในโน้ต"
-  },
-  "NSLocalNetworkUsageDescription": {
-    "en": "Kairumo uses the local network to edit notes together with people on the same Wi-Fi. Everything is end-to-end encrypted and never passes through a server.",
-    "zhHant": "Kairumo 需要區域網路權限，以便在同一個 Wi-Fi 網路下直接與協同夥伴連線共同編輯筆記，所有傳輸均經端對端加密且不經外部伺服器。",
-    "zhHans": "Kairumo 需要局域网权限，以便在同一个 Wi-Fi 网络下直接与协作伙伴连线共同编辑笔记，所有传输均经端到端加密且不经外部服务器。",
-    "ja": "Kairumo は、同じ Wi-Fi にいる相手と一緒にノートを編集するためにローカルネットワークを使用します。通信はすべてエンドツーエンドで暗号化され、サーバーを経由しません。",
-    "ko": "Kairumo는 같은 Wi-Fi에 있는 사람과 함께 노트를 편집하기 위해 로컬 네트워크를 사용합니다. 모든 전송은 종단간 암호화되며 서버를 거치지 않습니다.",
-    "th": "Kairumo ใช้เครือข่ายภายในเพื่อแก้ไขโน้ตร่วมกับผู้ที่อยู่บน Wi-Fi เดียวกัน ทุกการส่งข้อมูลเข้ารหัสแบบปลายทางถึงปลายทางและไม่ผ่านเซิร์ฟเวอร์"
-  },
-  "NSPhotoLibraryUsageDescription": {
-    "en": "Kairumo accesses your photo library so you can place pictures into a note and annotate them.",
-    "zhHant": "Kairumo 需要存取您的相片圖庫，以便您挑選圖片插入筆記頁面進行批註與繪製。",
-    "zhHans": "Kairumo 需要访问您的相片图库，以便您挑选图片插入笔记页面进行批注与绘制。",
-    "ja": "Kairumo は、写真をノートに挿入して書き込めるようにするために写真ライブラリにアクセスします。",
-    "ko": "Kairumo는 사진을 노트에 넣고 주석을 달 수 있도록 사진 보관함에 접근합니다.",
-    "th": "Kairumo เข้าถึงคลังรูปภาพเพื่อให้คุณใส่รูปลงในโน้ตและเขียนกำกับได้"
-  },
-  "NSPhotoLibraryAddUsageDescription": {
-    "en": "Kairumo saves pages and drawings you export to your photo library.",
-    "zhHant": "Kairumo 需要儲存圖片權限，以便將您導出的筆記頁面或繪圖成果儲存至相片圖庫。",
-    "zhHans": "Kairumo 需要保存图片权限，以便将您导出的笔记页面或绘图成果保存至相片图库。",
-    "ja": "Kairumo は、書き出したページや描画を写真ライブラリに保存します。",
-    "ko": "Kairumo는 내보낸 페이지나 그림을 사진 보관함에 저장합니다.",
-    "th": "Kairumo บันทึกหน้าและภาพวาดที่คุณส่งออกไปยังคลังรูปภาพ"
-  },
-  "onboarding_continue": {
-    "en": "Continue",
-    "zhHant": "繼續",
-    "zhHans": "继续",
-    "ja": "続ける",
-    "ko": "계속",
-    "th": "ดำเนินการต่อ"
-  },
-  "export_save_as": {
-    "en": "Save to Files…",
-    "zhHant": "儲存到…",
-    "zhHans": "保存到…",
-    "ja": "ファイルに保存…",
-    "ko": "파일로 저장…",
-    "th": "บันทึกไปยังไฟล์…"
-  },
-  "recording_failed": {
-    "en": "Recording could not start",
-    "zhHant": "錄音啟動失敗",
-    "zhHans": "录音启动失败",
-    "ja": "録音を開始できませんでした",
-    "ko": "녹음을 시작할 수 없습니다",
-    "th": "เริ่มบันทึกเสียงไม่ได้"
-  },
-  "insert_needs_canvas": {
-    "en": "Switch to drawing mode first — that is where this goes",
-    "zhHant": "請先切到手寫模式 —— 這個東西是貼在畫布上的",
-    "zhHans": "请先切到手写模式 —— 这个东西是贴在画布上的",
-    "ja": "先に手書きモードに切り替えてください —— これはキャンバスに貼られます",
-    "ko": "먼저 필기 모드로 전환하세요 —— 이것은 캔버스에 붙습니다",
-    "th": "สลับไปโหมดเขียนก่อน —— สิ่งนี้วางบนผืนผ้าใบ"
-  },
-  "model3d_rotate_mode": {
-    "en": "Rotate",
-    "zhHant": "旋轉",
-    "zhHans": "旋转",
-    "ja": "回転",
-    "ko": "회전",
-    "th": "หมุน"
   }
 }

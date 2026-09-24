@@ -119,7 +119,22 @@ enum ScreenAudit {
             // 也就是上面蓋了一層沒給 zIndex 的東西。
             guard visible.contains(element.frame) else { continue }
             if !element.isHittable {
-                unreachable.append(id)
+                // **把現場說清楚。** 只回報 id 的話，下一步永遠是猜
+                // 「誰蓋在上面」—— 這個專案已經為了猜錯白改兩次。
+                // 中心點那顆元素就是實際會吃掉點擊的那一個。
+                let mid = CGVector(dx: 0.5, dy: 0.5)
+                let hit = app.coordinate(withNormalizedOffset: .zero)
+                let centre = element.coordinate(withNormalizedOffset: mid).screenPoint
+                _ = hit
+                let covering = app.descendants(matching: .any).allElementsBoundByIndex
+                    .filter { $0.exists && $0.frame.contains(centre) && $0.elementType != .window
+                        && $0.frame.width * $0.frame.height
+                            < element.frame.width * element.frame.height * 4 }
+                    .suffix(6)
+                    .map { "\($0.elementType.rawValue)#\($0.identifier)\($0.frame)" }
+                unreachable.append(
+                    "\(id) frame=\(element.frame) 中心=\(centre)\n"
+                        + "      蓋在中心點上的（由外而內）：" + covering.joined(separator: " / "))
             }
         }
 
@@ -384,3 +399,52 @@ enum ScreenAudit {
 /// 只為了拿到測試 bundle。`Bundle(for:)` 需要一個這個 bundle 裡的類別，
 /// 而 `ScreenAudit` 是 enum。
 private final class ScreenAuditAnchor {}
+
+// MARK: - 開啟種子筆記
+
+/// 從首頁點開種子筆記，**並且確認真的進去了**。
+///
+/// # 為什麼要有這個
+///
+/// 十八個測試各自抄了同一段「找卡片→點下去」。那段有兩個洞：
+///
+/// 1. **卡片可能在摺線下面。** 「Welcome to Kairumo」在 iPhone 直向時
+///    排在一長串入口的最底下，只露出一角。XCUITest 點的是元素中心，
+///    而那個中心在畫面外 —— 點了等於沒點。
+/// 2. **`editor.canvas` 在還沒導航前就存在。** SwiftUI 會先把導航目的地
+///    建好，所以「畫布出現了」證明不了「已經離開首頁」。於是稽核拿首頁
+///    當成編輯器掃，報出來的是 `editor.canvas 點不到` —— 而它說的其實是
+///    「首頁的 New Note 鈕蓋在上面」。真因與症狀差了十萬八千里。
+///
+/// 所以這裡先把卡片捲進可點範圍，點完之後再等**首頁真的消失**。
+@discardableResult
+func openSeedNotebook(
+    _ app: XCUIApplication,
+    file: StaticString = #filePath, line: UInt = #line
+) -> Bool {
+    let card = app.staticTexts["Welcome to Kairumo"].firstMatch
+    guard card.waitForExistence(timeout: 15) else {
+        XCTFail("首頁找不到種子筆記，開不了編輯器", file: file, line: line)
+        return false
+    }
+    // 捲到看得到為止。`isHittable` 才算數 —— 只露一角的卡片 `exists` 是 true。
+    for _ in 0..<8 where !card.isHittable {
+        app.swipeUp()
+        _ = card.waitForExistence(timeout: 1)
+    }
+    card.tap()
+
+    // **離開首頁了沒有。** 用首頁自己的識別碼判斷，不用畫布 —— 見上面第 2 點。
+    let home = app.descendants(matching: .any)
+        .matching(identifier: "home.action.new_note").firstMatch
+    let left = NSPredicate(format: "exists == false OR isHittable == false")
+    let gone = XCTNSPredicateExpectation(predicate: left, object: home)
+    guard XCTWaiter().wait(for: [gone], timeout: 15) == .completed else {
+        XCTFail(
+            "點了種子筆記卡片，畫面卻還停在首頁（New Note 鈕還按得到）—— "
+                + "多半是卡片在摺線下面，點到的是空白處",
+            file: file, line: line)
+        return false
+    }
+    return true
+}

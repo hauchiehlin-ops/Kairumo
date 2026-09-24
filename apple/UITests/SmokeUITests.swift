@@ -27,9 +27,7 @@ final class SmokeUITests: XCTestCase {
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
 
         // 1. 從首頁開啟一則筆記
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        XCTAssertTrue(card.waitForExistence(timeout: 10), "找不到首頁筆記卡片")
-        card.tap()
+        guard openSeedNotebook(app) else { return }
         sleep(2)
         assertAlive(app, "開啟筆記")
 
@@ -114,9 +112,7 @@ final class SmokeUITests: XCTestCase {
         let app = launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
 
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        XCTAssertTrue(card.waitForExistence(timeout: 10))
-        card.tap()
+        guard openSeedNotebook(app) else { return }
         sleep(3)
 
         // **不指定型別。** 原本查的是 `scrollViews` —— 畫布確實是
@@ -151,9 +147,7 @@ final class SmokeUITests: XCTestCase {
         let app = launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
 
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        XCTAssertTrue(card.waitForExistence(timeout: 10))
-        card.tap()
+        guard openSeedNotebook(app) else { return }
         sleep(2)
         assertAlive(app, "進入筆記編輯器")
 
@@ -360,12 +354,7 @@ extension SmokeUITests {
         // 比較好的做法是給每張卡片一個識別碼（`home.notebooks.card.<id>`），
         // 那樣連語言都不必釘。目前卡片沒有 —— 只有整個清單有
         // `home.notebooks.list`。記在 docs/TODO.md 的 S-259。
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        guard card.waitForExistence(timeout: 10) else {
-            XCTFail("首頁找不到種子筆記，開不了編輯器")
-            return
-        }
-        card.tap()
+        guard openSeedNotebook(app) else { return }
 
         let canvas = app.descendants(matching: .any).matching(identifier: "editor.canvas").firstMatch
         XCTAssertTrue(canvas.waitForExistence(timeout: 15), "點了卡片之後沒進到編輯器")
@@ -394,12 +383,7 @@ extension SmokeUITests {
         let app = launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
 
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        guard card.waitForExistence(timeout: 10) else {
-            XCTFail("首頁找不到種子筆記，開不了編輯器")
-            return
-        }
-        card.tap()
+        guard openSeedNotebook(app) else { return }
 
         let more = app.descendants(matching: .any).matching(identifier: "editor.more").firstMatch
         guard more.waitForExistence(timeout: 15) else {
@@ -430,12 +414,7 @@ extension SmokeUITests {
         let app = launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
 
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        guard card.waitForExistence(timeout: 10) else {
-            XCTFail("首頁找不到種子筆記，開不了編輯器")
-            return
-        }
-        card.tap()
+        guard openSeedNotebook(app) else { return }
 
         let share = app.descendants(matching: .any).matching(identifier: "editor.share").firstMatch
         guard share.waitForExistence(timeout: 15) else {
@@ -471,12 +450,7 @@ extension SmokeUITests {
         let app = launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
 
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        guard card.waitForExistence(timeout: 10) else {
-            XCTFail("首頁找不到種子筆記，開不了編輯器")
-            return
-        }
-        card.tap()
+        guard openSeedNotebook(app) else { return }
 
         let canvas = app.descendants(matching: .any)["editor.canvas"].firstMatch
         XCTAssertTrue(canvas.waitForExistence(timeout: 15), "找不到畫布")
@@ -512,9 +486,7 @@ extension SmokeUITests {
         }
         home.tap()
 
-        let cardAgain = app.staticTexts["Welcome to Kairumo"].firstMatch
-        XCTAssertTrue(cardAgain.waitForExistence(timeout: 15), "回不到首頁")
-        cardAgain.tap()
+        guard openSeedNotebook(app) else { return }
 
         let canvasAgain = app.descendants(matching: .any)["editor.canvas"].firstMatch
         XCTAssertTrue(canvasAgain.waitForExistence(timeout: 15), "重新開啟之後找不到畫布")
@@ -533,9 +505,7 @@ extension SmokeUITests {
     func testInkProbeDrawOnly() {
         let app = launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        guard card.waitForExistence(timeout: 10) else { XCTFail("找不到種子筆記"); return }
-        card.tap()
+        guard openSeedNotebook(app) else { return }
 
         let canvas = app.descendants(matching: .any)["editor.canvas"].firstMatch
         XCTAssertTrue(canvas.waitForExistence(timeout: 15), "找不到畫布")
@@ -556,9 +526,7 @@ extension SmokeUITests {
     func testInkProbeDrawThenLeave() {
         let app = launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        guard card.waitForExistence(timeout: 10) else { XCTFail("找不到種子筆記"); return }
-        card.tap()
+        guard openSeedNotebook(app) else { return }
 
         let canvas = app.descendants(matching: .any)["editor.canvas"].firstMatch
         XCTAssertTrue(canvas.waitForExistence(timeout: 15), "找不到畫布")
@@ -608,12 +576,7 @@ extension SmokeUITests {
         let app = launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
 
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        guard card.waitForExistence(timeout: 10) else {
-            XCTFail("首頁找不到種子筆記，開不了編輯器")
-            return
-        }
-        card.tap()
+        guard openSeedNotebook(app) else { return }
 
         // `portal.type` 是 `DynamicPortalIsland` 裡那顆藥丸，而整座島掛著
         // `editor.mode` —— 先等島出現再找藥丸。
@@ -639,12 +602,7 @@ extension SmokeUITests {
         let app = launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
 
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        guard card.waitForExistence(timeout: 10) else {
-            XCTFail("首頁找不到種子筆記，開不了編輯器")
-            return
-        }
-        card.tap()
+        guard openSeedNotebook(app) else { return }
 
         let toggle = app.descendants(matching: .any)
             .matching(identifier: "editor.sidebar_toggle").firstMatch
@@ -689,12 +647,7 @@ extension SmokeUITests {
         app.launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
 
-        let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-        guard card.waitForExistence(timeout: 10) else {
-            XCTFail("首頁找不到種子筆記，開不了編輯器")
-            return
-        }
-        card.tap()
+        guard openSeedNotebook(app) else { return }
 
         let reset = app.descendants(matching: .any).matching(identifier: "toolbar.reset").firstMatch
         guard reset.waitForExistence(timeout: 15) else {

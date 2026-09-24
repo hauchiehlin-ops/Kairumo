@@ -2949,6 +2949,15 @@ public struct NotebookEditorView: View {
                     // 要求的 `editor.canvas` 掛在另一個**不會被算繪**的分支上。
                     // 於是畫面稽核一直報「少了 editor.canvas」，而那一項被放進
                     // 棘輪、附上一段解釋 —— 解釋是對的，但沒有人回頭把它修好。
+                    //
+                    // **`children: .contain` 不能拿掉。** 識別字掛在一個
+                    // **容器**上，而 SwiftUI 預設會把容器底下的東西合併成
+                    // 一個元素 —— 畫布上所有的物件（3D 卡片、圖片、表格…）
+                    // 就此從無障礙樹裡消失。症狀認不出來：稽核說「模型上
+                    // 沒有縮放把手」，而把手畫得好好的，截圖裡看得見。
+                    // 受害的不只是測試 —— VoiceOver 的使用者同樣碰不到
+                    // 畫布上的任何物件。
+                    .accessibilityElement(children: .contain)
                     .accessibilityIdentifier("editor.canvas")
 
             }
@@ -10463,6 +10472,18 @@ struct Model3DCanvasItemView: View {
                     .padding(4)
                     .background(Circle().fill(Color.accentColor))
                     .offset(x: 6, y: 6)
+                    // **要先變成一個無障礙元素，識別字才有東西可以掛。**
+                    //
+                    // 這是一張沒有標籤的 `Image`，SwiftUI 不會把它當成元素，
+                    // 於是 `.accessibilityIdentifier` 掛了等於沒掛 —— 稽核
+                    // 在樹裡一個 `model3d.*` 都找不到，訊息說「模型上沒有
+                    // 縮放把手」，而把手其實畫得好好的（截圖裡看得見）。
+                    //
+                    // 這不只是測試看不到：**VoiceOver 的使用者也碰不到它**，
+                    // 所以那是真的缺陷，不是測試的毛病。
+                    .accessibilityElement()
+                    .accessibilityAddTraits(.isButton)
+                    .accessibilityLabel(localizationManager.localized("resize"))
                     .accessibilityIdentifier("model3d.resize")
                     .gesture(
                         DragGesture(minimumDistance: 2)
