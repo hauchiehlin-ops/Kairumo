@@ -422,29 +422,48 @@ func openSeedNotebook(
     _ app: XCUIApplication,
     file: StaticString = #filePath, line: UInt = #line
 ) -> Bool {
-    let card = app.staticTexts["Welcome to Kairumo"].firstMatch
-    guard card.waitForExistence(timeout: 15) else {
+    let seedCards = app.staticTexts.matching(
+        NSPredicate(format: "label == %@", "Welcome to Kairumo"))
+    guard seedCards.firstMatch.waitForExistence(timeout: 15) else {
         XCTFail("首頁找不到種子筆記，開不了編輯器", file: file, line: line)
         return false
     }
-    // 捲到看得到為止。`isHittable` 才算數 —— 只露一角的卡片 `exists` 是 true。
-    for _ in 0..<8 where !card.isHittable {
-        app.swipeUp()
-        _ = card.waitForExistence(timeout: 1)
-    }
-    card.tap()
 
-    // **離開首頁了沒有。** 用首頁自己的識別碼判斷，不用畫布 —— 見上面第 2 點。
+    // **不可以用 `firstMatch`。**
+    //
+    // 首頁上「Welcome to Kairumo」這個字串出現**三次**：Continue 區的卡片、
+    // 「所有筆記本」區的卡片，以及那張卡片縮圖裡的標籤。`firstMatch` 拿到
+    // 的是樹序上的第一個，而它不一定是點得動的那一個 —— 縮圖標籤就點不動。
+    //
+    // 症狀是「點了卡片，畫面還停在首頁」，而且**跟捲動位置有關**：同一條
+    // 測試在這台機器上過、在 CI 上紅。
+    //
+    // 所以逐一試「點得到的那幾個」，點完確認真的離開首頁；沒離開就換下一個。
     let home = app.descendants(matching: .any)
         .matching(identifier: "home.action.new_note").firstMatch
-    let left = NSPredicate(format: "exists == false OR isHittable == false")
-    let gone = XCTNSPredicateExpectation(predicate: left, object: home)
-    guard XCTWaiter().wait(for: [gone], timeout: 15) == .completed else {
-        XCTFail(
-            "點了種子筆記卡片，畫面卻還停在首頁（New Note 鈕還按得到）—— "
-                + "多半是卡片在摺線下面，點到的是空白處",
-            file: file, line: line)
-        return false
+
+    for attempt in 0..<3 {
+        let candidates = seedCards.allElementsBoundByIndex.filter { $0.isHittable }
+        if candidates.isEmpty {
+            // 一個都點不到：往下捲一點再看。
+            app.swipeUp()
+            continue
+        }
+        for candidate in candidates {
+            candidate.tap()
+            let left = NSPredicate(format: "exists == false OR isHittable == false")
+            let gone = XCTNSPredicateExpectation(predicate: left, object: home)
+            if XCTWaiter().wait(for: [gone], timeout: 10) == .completed {
+                return true
+            }
+        }
+        _ = attempt
+        app.swipeUp()
     }
-    return true
+
+    XCTFail(
+        "點遍了首頁上所有點得到的「Welcome to Kairumo」，畫面還是停在首頁"
+            + "（New Note 鈕還按得到）",
+        file: file, line: line)
+    return false
 }
