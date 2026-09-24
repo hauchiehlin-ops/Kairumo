@@ -4378,6 +4378,21 @@ public struct CloudSyncDetailSheet: View {
                     AutoSyncController.shared.needsSignIn
                         ? "已暫停，請重新登入"
                         : (AutoSyncController.shared.isSyncing ? "進行中" : "待命"))
+                // **這幾千個檔案裡有多少是活的。** 在這之前沒有人答得出來：
+                // 面板只說「追蹤 N 個檔案」，而 N 裡面混著已刪筆記本的殘骸、
+                // 別台裝置剛建立還沒拉到索引的東西，以及舊版留下的雜物。
+                let audit = currentAudit
+                doctorRow(
+                    localizationManager.localized("sync_audit_files"),
+                    localizationManager.localized("sync_audit_breakdown")
+                        .replacingFirst("%1@", with: "\(audit.live)")
+                        .replacingFirst("%2@", with: "\(audit.deleted)")
+                        .replacingFirst("%3@", with: "\(audit.unknown)"))
+                if audit.unknown > 0 {
+                    Text(localizationManager.localized("sync_audit_unknown_hint"))
+                        .font(DS.Font.caption)
+                        .foregroundColor(.secondary)
+                }
                 if !AutoSyncController.shared.lastMessage.isEmpty {
                     doctorRow("最後結果", AutoSyncController.shared.lastMessage)
                 }
@@ -4459,6 +4474,14 @@ public struct CloudSyncDetailSheet: View {
             Text(value).foregroundColor(.primary)
             Spacer(minLength: 0)
         }
+    }
+
+    /// 雲端每一個檔案的歸屬。純計算，零 HTTP。
+    private var currentAudit: FfiCloudAudit {
+        cloudAudit(
+            remoteIndexJson: AccountSyncStore.shared.remoteIndexJSON(
+                account: googleAuth.accountEmail ?? ""),
+            libraryIndexJson: AccountSyncStore.shared.indexJSON)
     }
 
     private var currentDiagnostics: FfiSyncDiagnostics {

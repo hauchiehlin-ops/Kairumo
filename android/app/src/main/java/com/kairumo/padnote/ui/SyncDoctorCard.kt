@@ -63,6 +63,20 @@ fun SyncDoctorCard(deviceId: UInt, modifier: Modifier = Modifier) {
     var wiping by remember { mutableStateOf(false) }
     var wipeMessage by remember { mutableStateOf<String?>(null) }
 
+    // 雲端檔案歸屬：純計算，但讀兩份快照要碰磁碟。
+    val audit by produceState<uniffi.padnote_core.FfiCloudAudit?>(initialValue = null, isSyncing) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                uniffi.padnote_core.cloudAudit(
+                    AccountSyncStore.remoteIndexJson(
+                        context, AccountSyncStore.lastAccount(context)
+                    ),
+                    AccountSyncStore.indexJson(context)
+                )
+            }.getOrNull()
+        }
+    }
+
     // 掃套件目錄要碰磁碟，不能在主執行緒做。
     val diagnostics by produceState<FfiSyncDiagnostics?>(initialValue = null, isSyncing) {
         value = withContext(Dispatchers.IO) {
@@ -115,6 +129,24 @@ fun SyncDoctorCard(deviceId: UInt, modifier: Modifier = Modifier) {
                         else -> "待命"
                     }
                 )
+                // **這幾千個檔案裡有多少是活的。** 在這之前沒有人答得出來。
+                audit?.let { a ->
+                    DoctorRow(
+                        l("sync_audit_files"),
+                        l("sync_audit_breakdown")
+                            .replace("%1@", "${a.live}")
+                            .replace("%2@", "${a.deleted}")
+                            .replace("%3@", "${a.unknown}")
+                    )
+                    if (a.unknown > 0u) {
+                        Text(
+                            l("sync_audit_unknown_hint"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
                 wipeMessage?.let { DoctorRow("重置", it) }
             }
 

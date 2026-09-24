@@ -363,6 +363,11 @@ object CloudSync {
                 uploaded += result.uploaded.toInt()
                 downloaded += result.downloaded.toInt()
                 if (result.downloaded > 0u) changed += id
+                // 不致命但要看得見：例如雲端上一個壞掉的 blob。悄悄吞掉的話，
+                // 使用者會發現某張圖永遠出不來而查不出原因。
+                for (warning in result.warnings) {
+                    SyncLogger.log("筆記本 $id $warning", SyncSource.GOOGLE_DRIVE)
+                }
             } else {
                 SyncLogger.log("筆記本 $id 同步失敗：${result.error}", SyncSource.GOOGLE_DRIVE)
                 if (result.needsReauth) {

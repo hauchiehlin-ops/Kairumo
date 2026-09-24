@@ -335,6 +335,15 @@ pub struct FfiNotebookSyncResult {
     pub downloaded: u32,
     pub error: String,
     pub needs_reauth: bool,
+    /// **不致命、但使用者該知道的事。**
+    ///
+    /// 在這之前只有「成功」與「整本失敗」兩種結局。於是雲端上一個壞掉的
+    /// blob（上傳到一半留下的殘骸，名字對、內容截斷）會讓**整本筆記**的
+    /// 同步中止 —— 那一本裡的筆跡、錄音、文字全部停住，而訊息只說某個
+    /// blob 雜湊不符，看起來像傳輸壞掉。
+    ///
+    /// 一個媒體檔拿不回來，不該是「這本筆記不能同步」的理由。
+    pub warnings: Vec<String>,
 }
 
 /// 雲端某個前綴底下的檔案：`短檔名 → 檔案`。
@@ -545,6 +554,7 @@ fn sync_notebook_ops(
         downloaded,
         error: String::new(),
         needs_reauth: false,
+        warnings: Vec::new(),
     }
 }
 
@@ -601,6 +611,8 @@ fn sync_notebook_media(
 
     let mut uploaded = 0u32;
     let mut downloaded = 0u32;
+    // 不致命、但使用者該知道的事（例如雲端上一個壞掉的 blob）。
+    let mut warnings: Vec<String> = Vec::new();
 
     // ── 圖片 blob（內容定址）──────────────────────────────────
     let blobs = package.blobs();
@@ -659,7 +671,17 @@ fn sync_notebook_media(
                 }
                 downloaded += 1;
             }
-            Some(_) => return notebook_failed(format!("blob {name} 下載後雜湊不符")),
+            // **不致命。**
+            //
+            // 原本這裡是 `return notebook_failed(...)` —— 整本筆記的同步
+            // 就此中止，那一本裡的筆跡、錄音、文字全部停住，而訊息只說
+            // 某個 blob 雜湊不符，看起來像傳輸壞掉。雲端上留著一個上傳到
+            // 一半的殘骸（名字對、內容截斷）就會造成這個結果，而且**每一輪
+            // 都會再撞一次**，那本筆記從此再也同步不了。
+            //
+            // 一個媒體檔拿不回來，不該是「這本筆記不能同步」的理由。
+            // 記成警告，其餘照常。
+            Some(_) => warnings.push(format!("blob {name} 下載後雜湊不符，已略過")),
             // 不是合法的 blob 名字：別人放進來的檔案，跳過就好。
             None => continue,
         }
@@ -738,6 +760,7 @@ fn sync_notebook_media(
         downloaded,
         error: String::new(),
         needs_reauth: false,
+        warnings,
     }
 }
 
@@ -819,6 +842,7 @@ fn gdrive_clone_notebook(
         downloaded: ops.downloaded + media.downloaded,
         error: media.error,
         needs_reauth: media.needs_reauth,
+        warnings: Vec::new(),
     }
 }
 
@@ -873,6 +897,50 @@ pub struct FfiSyncDiagnostics {
 ///
 /// 快照要由平台層持久化（[`Self::index_json`]），否則每次開 App 都要
 /// 重建一次基準。
+/// 雲端檔案歸屬稽核的結果。
+///
+/// 回答的是「追蹤的這幾千個檔案裡，有多少是活的」—— 在這之前沒有人
+/// 答得出來。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiCloudAudit {
+    /// 屬於活著的筆記本。
+    pub live: u32,
+    /// 屬於已刪除（有墓碑）的筆記本 —— **可以回收**。
+    pub deleted: u32,
+    /// 路徑形狀對，但這台裝置的索引裡沒有這個 id。
+    ///
+    /// **不是垃圾**：多半是另一台裝置剛建立、索引還沒拉到。只回報。
+    pub unknown: u32,
+    /// 不符合任何已知形狀。
+    pub foreign: u32,
+    /// 索引檔本身。
+    pub index: u32,
+    /// 沒見過的筆記本 id（對應 `unknown`）。
+    pub unknown_notebooks: Vec<String>,
+    /// 可回收的檔案路徑。
+    pub collectable: Vec<String>,
+}
+
+/// 稽核雲端上的每一個檔案：它屬於誰、還需不需要。
+///
+/// **純計算，一次 HTTP 都不打** —— 兩份輸入都是平台層本來就存著的快照。
+#[uniffi::export]
+pub fn cloud_audit(remote_index_json: String, library_index_json: String) -> FfiCloudAudit {
+    let remote = RemoteIndex::from_json(&remote_index_json);
+    let library = padnote_sync::library::LibraryIndex::from_json(&library_index_json);
+    let paths: Vec<&str> = remote.files.keys().map(String::as_str).collect();
+    let result = padnote_sync::audit::audit(paths, &library);
+    FfiCloudAudit {
+        live: result.count(padnote_sync::audit::FileClass::Live),
+        deleted: result.count(padnote_sync::audit::FileClass::Deleted),
+        unknown: result.count(padnote_sync::audit::FileClass::Unknown),
+        foreign: result.count(padnote_sync::audit::FileClass::Foreign),
+        index: result.count(padnote_sync::audit::FileClass::Index),
+        unknown_notebooks: result.unknown_notebooks.into_iter().collect(),
+        collectable: result.collectable,
+    }
+}
+
 /// [`FfiSyncSession::wipe_cloud`] 的結果。
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct FfiWipeResult {
@@ -1074,6 +1142,7 @@ impl FfiSyncSession {
             downloaded: ops.downloaded + media.downloaded,
             error: media.error,
             needs_reauth: media.needs_reauth,
+            warnings: Vec::new(),
         }
     }
 
@@ -1127,6 +1196,7 @@ impl FfiSyncSession {
             downloaded: result.downloaded + media.downloaded,
             error: media.error,
             needs_reauth: media.needs_reauth,
+            warnings: Vec::new(),
         }
     }
 
@@ -1287,6 +1357,7 @@ fn notebook_failed(error: String) -> FfiNotebookSyncResult {
         downloaded: 0,
         error,
         needs_reauth: false,
+        warnings: Vec::new(),
     }
 }
 
@@ -1298,6 +1369,7 @@ fn from_sync_error(error: SyncError) -> FfiNotebookSyncResult {
         downloaded: 0,
         error: error.to_string(),
         needs_reauth,
+        warnings: Vec::new(),
     }
 }
 
@@ -2461,8 +2533,26 @@ mod tests {
 
         let root = tmp_package("media-corrupt", 0xAA);
         let result = gdrive_sync_media(cloud, root.to_string_lossy().into(), "nb1".into());
-        assert!(!result.ok);
-        assert!(result.error.contains("雜湊不符"), "{}", result.error);
+
+        // **不致命。** 一個媒體檔拿不回來，不該是「這本筆記不能同步」的
+        // 理由 —— 原本這裡是整本中止，於是雲端上一個上傳到一半的殘骸就
+        // 讓那本筆記的筆跡、錄音、文字全部停住，而且每一輪都再撞一次。
+        assert!(
+            result.ok,
+            "壞掉的 blob 不該讓整本筆記失敗：{}",
+            result.error
+        );
+        assert_eq!(
+            result.warnings.len(),
+            1,
+            "要留下一條看得見的警告：{:?}",
+            result.warnings
+        );
+        assert!(
+            result.warnings[0].contains("雜湊不符"),
+            "{:?}",
+            result.warnings
+        );
 
         // 而且不可以把壞資料留在套件裡。
         let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();

@@ -438,7 +438,7 @@ public enum CloudSync {
         } catch {
             detached.cancel()
             return FfiNotebookSyncResult(ok: false, uploaded: 0, downloaded: 0,
-                error: String(format: LocalizationManager.shared.localizedUnsafe("drive_timeout_generic"), "\(Int(timeoutSeconds))"), needsReauth: false)
+                error: String(format: LocalizationManager.shared.localizedUnsafe("drive_timeout_generic"), "\(Int(timeoutSeconds))"), needsReauth: false, warnings: [])
         }
         if result.needsReauth {
             await GoogleAuth.shared.signOut()
@@ -467,7 +467,7 @@ public enum CloudSync {
         } catch {
             detached.cancel()
             return FfiNotebookSyncResult(ok: false, uploaded: 0, downloaded: 0,
-                error: LocalizationManager.shared.localizedUnsafe("drive_timeout_download"), needsReauth: false)
+                error: LocalizationManager.shared.localizedUnsafe("drive_timeout_download"), needsReauth: false, warnings: [])
         }
         if result.needsReauth {
             await GoogleAuth.shared.signOut()

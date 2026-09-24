@@ -10071,6 +10071,30 @@ extension LocalizationManager {
             .ko: "다른 동기화가 실행 중입니다",
             .th: "กำลังซิงค์อยู่แล้ว"
         ],
+        "sync_audit_breakdown": [
+            .zhHant: "使用中 %1@ · 可回收 %2@ · 尚未辨識 %3@",
+            .en: "%1@ in use · %2@ reclaimable · %3@ not yet identified",
+            .zhHans: "使用中 %1@ · 可回收 %2@ · 尚未辨識 %3@",
+            .ja: "使用中 %1@ 件・回収可能 %2@ 件・未識別 %3@ 件",
+            .ko: "사용 중 %1@ · 회수 가능 %2@ · 미식별 %3@",
+            .th: "ใช้งาน %1@ · กู้คืนได้ %2@ · ยังระบุไม่ได้ %3@"
+        ],
+        "sync_audit_files": [
+            .zhHant: "雲端檔案",
+            .en: "Cloud files",
+            .zhHans: "云端档案",
+            .ja: "クラウドのファイル",
+            .ko: "클라우드 파일",
+            .th: "ไฟล์บนคลาวด์"
+        ],
+        "sync_audit_unknown_hint": [
+            .zhHant: "「尚未辨識」通常代表這些是別台裝置建立的，而這台還沒拉到索引。系統絕不會自動刪除它們。",
+            .en: "Not yet identified usually means another device created these and this device has not pulled the index yet. They are never deleted automatically.",
+            .zhHans: "「尚未辨识」通常代表这些是别台设备建立的，而这台还没拉到索引。系统绝不会自动删除它们。",
+            .ja: "未識別は通常、他の端末が作成したものをこの端末がまだ取得していない状態です。自動削除されることはありません。",
+            .ko: "미식별은 보통 다른 기기가 만든 것을 이 기기가 아직 받지 못한 상태입니다. 자동으로 삭제되지 않습니다.",
+            .th: "ยังระบุไม่ได้ มักหมายถึงอุปกรณ์อื่นสร้างไว้และเครื่องนี้ยังไม่ได้ดึงดัชนีมา ระบบจะไม่ลบอัตโนมัติ"
+        ],
         "sync_choose_folder": [
             .zhHant: "iCloud 或本機資料夾同步",
             .en: "Choose Sync Folder",

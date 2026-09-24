@@ -586,6 +586,12 @@ enum NotebookSyncCoordinator {
                     source: .googleDrive)
                 report.uploaded += Int(result.uploaded)
                 report.downloaded += Int(result.downloaded)
+                // 不致命但要看得見：例如雲端上一個壞掉的 blob。
+                // 悄悄吞掉的話，使用者會發現某張圖永遠出不來而查不出原因。
+                for warning in result.warnings {
+                    SyncLogger.logAsync("筆記本 \(id.prefix(8))… \(warning)", source: .googleDrive)
+                    report.needsAttention.append("\(id.prefix(8))…：\(warning)")
+                }
             } else {
                 SyncLogger.logAsync("筆記本 \(id.prefix(8))… 同步失敗：\(result.error)", source: .googleDrive)
                 report.failures[id] = result.error

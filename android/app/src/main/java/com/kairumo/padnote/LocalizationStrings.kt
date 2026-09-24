@@ -10135,6 +10135,30 @@ object LocalizationStrings {
             "ko" to "다른 동기화가 실행 중입니다",
             "th" to "กำลังซิงค์อยู่แล้ว"
         ),
+        "sync_audit_breakdown" to mapOf(
+            "zh-Hant" to "使用中 %1@ · 可回收 %2@ · 尚未辨識 %3@",
+            "en" to "%1@ in use · %2@ reclaimable · %3@ not yet identified",
+            "zh-Hans" to "使用中 %1@ · 可回收 %2@ · 尚未辨識 %3@",
+            "ja" to "使用中 %1@ 件・回収可能 %2@ 件・未識別 %3@ 件",
+            "ko" to "사용 중 %1@ · 회수 가능 %2@ · 미식별 %3@",
+            "th" to "ใช้งาน %1@ · กู้คืนได้ %2@ · ยังระบุไม่ได้ %3@"
+        ),
+        "sync_audit_files" to mapOf(
+            "zh-Hant" to "雲端檔案",
+            "en" to "Cloud files",
+            "zh-Hans" to "云端档案",
+            "ja" to "クラウドのファイル",
+            "ko" to "클라우드 파일",
+            "th" to "ไฟล์บนคลาวด์"
+        ),
+        "sync_audit_unknown_hint" to mapOf(
+            "zh-Hant" to "「尚未辨識」通常代表這些是別台裝置建立的，而這台還沒拉到索引。系統絕不會自動刪除它們。",
+            "en" to "Not yet identified usually means another device created these and this device has not pulled the index yet. They are never deleted automatically.",
+            "zh-Hans" to "「尚未辨识」通常代表这些是别台设备建立的，而这台还没拉到索引。系统绝不会自动删除它们。",
+            "ja" to "未識別は通常、他の端末が作成したものをこの端末がまだ取得していない状態です。自動削除されることはありません。",
+            "ko" to "미식별은 보통 다른 기기가 만든 것을 이 기기가 아직 받지 못한 상태입니다. 자동으로 삭제되지 않습니다.",
+            "th" to "ยังระบุไม่ได้ มักหมายถึงอุปกรณ์อื่นสร้างไว้และเครื่องนี้ยังไม่ได้ดึงดัชนีมา ระบบจะไม่ลบอัตโนมัติ"
+        ),
         "sync_choose_folder" to mapOf(
             "zh-Hant" to "iCloud 或本機資料夾同步",
             "en" to "Choose Sync Folder",
@@ -10294,7 +10318,10 @@ object LocalizationStrings {
             "ja" to "他の端末とどのように連携しますか？",
             "ko" to "다른 기기와 어떻게 연동되나요?",
             "th" to "เชื่อมกับอุปกรณ์อื่นอย่างไร"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "sync_q_privacy" to mapOf(
             "zh-Hant" to "完全隱私，無須註冊帳號",
             "en" to "Fully private, no account needed",
@@ -10318,10 +10345,7 @@ object LocalizationStrings {
             "ja" to "同期録音中",
             "ko" to "동기화 녹음 중",
             "th" to "กำลังบันทึกเสียงพร้อมกัน"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_reset_cloud" to mapOf(
             "zh-Hant" to "重置雲端同步",
             "en" to "Reset cloud sync",
@@ -10937,7 +10961,10 @@ object LocalizationStrings {
             "ja" to "朝から夜まで30分刻み＋予定欄",
             "ko" to "아침부터 밤까지 30분 간격 + 일정 칸",
             "th" to "ช่วงครึ่งชั่วโมงตลอดวัน"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "tmpl_dot_grid_fine" to mapOf(
             "zh-Hant" to "極細點陣 (5mm)",
             "en" to "Fine Dot Grid (5mm)",
@@ -10961,10 +10988,7 @@ object LocalizationStrings {
             "ja" to "黄金比と三分分割構図",
             "ko" to "황금비 및 3분할 구도",
             "th" to "สัดส่วนทองคำและกฎสามส่วน"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_golden_ratio_desc" to mapOf(
             "zh-Hant" to "經典黃金分割線與九宮格參考輔助線",
             "en" to "Classical golden spiral & rule-of-thirds composition guides",
@@ -11580,7 +11604,10 @@ object LocalizationStrings {
             "ja" to "文字起こし中…",
             "ko" to "텍스트 변환 중…",
             "th" to "กำลังแปลงเสียง…"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "transfer_failed" to mapOf(
             "zh-Hant" to "沒有任何頁面被轉移",
             "en" to "Nothing was transferred",
@@ -11604,10 +11631,7 @@ object LocalizationStrings {
             "ja" to "同じノート内での並べ替えは「ページを上へ／下へ」",
             "ko" to "같은 노트 안에서는 ‘페이지 위로/아래로’를 쓰세요",
             "th" to "จัดลำดับในสมุดเดียวกันให้ใช้เลื่อนหน้าขึ้น/ลง"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "transfer_would_empty_source" to mapOf(
             "zh-Hant" to "一本筆記至少要留一頁",
             "en" to "A notebook must keep at least one page",
