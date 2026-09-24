@@ -647,14 +647,10 @@ fn sync_notebook_media(
     // 只做到「不下載」是不夠的：B 已經有那段錄音了，不刪的話它就一直留在
     // B 上，而 A 那邊早就不見了 —— 兩台看到的東西不一樣，使用者說的
     // 「無法處於真正同步狀態」就是這個。
-    if !tombstones.is_empty() {
-        if let Ok(local) = package.audio_files() {
-            for (name, _) in local {
-                if tombstones.contains(&name) {
-                    if let Err(e) = package.delete_audio_file(&name) {
-                        warnings.push(format!("刪不掉本機的錄音 {name}：{e}"));
-                    }
-                }
+    if let Ok(local) = package.audio_files() {
+        for (name, _) in local.iter().filter(|(n, _)| tombstones.contains(n)) {
+            if let Err(e) = package.delete_audio_file(name) {
+                warnings.push(format!("刪不掉本機的錄音 {name}：{e}"));
             }
         }
     }
