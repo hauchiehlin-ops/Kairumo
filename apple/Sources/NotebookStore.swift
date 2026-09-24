@@ -2603,6 +2603,34 @@ public final class NotebookStore: ObservableObject {
     ///
     /// 既有的記錄會被保留（標題是使用者取的，不能用檔名蓋掉）；
     /// 只有掃到、而索引裡沒有的才會被補進來。
+
+    func importDocument(notebookId: String, pageIndex: Int, outcome: FileImport.Outcome) {
+        guard let doc = notebooks.first(where: { $0.id == notebookId }) else { return }
+        guard let session = packageSession(forNotebookId: doc.id, title: doc.title) else { return }
+        guard pageIndex >= 0 && pageIndex < doc.pageCount else { return }
+        guard let pageId = session.pageIdAt(index: UInt32(pageIndex)) else { return }
+        do {
+            let url = importedFileURL(fileName: outcome.storedName)
+            if outcome.fileExtension == "md" {
+                let text = try String(contentsOf: url)
+                _ = try session.importMarkdown(text: text)
+            } else if outcome.fileExtension == "json" {
+                let text = try String(contentsOf: url)
+                _ = try session.importJson(text: text)
+            } else {
+                _ = try session.importEmbedded(pageId: pageId, path: outcome.storedName)
+            }
+            let fileURL = corePackagesDirectory.appending(path: "\(doc.id.lowercased()).padnote")
+            if let unpacked = NotebookPackageBridge.read(from: fileURL, documentId: doc.id) {
+                updateNotebook(unpacked.document)
+            } else {
+                updateNotebook(doc)
+            }
+        } catch {
+            print("Import document failed: \(error)")
+        }
+    }
+
     public func refreshRecordings() {
         let fm = FileManager.default
         var byFileName: [String: AudioRecordingRecord] = [:]

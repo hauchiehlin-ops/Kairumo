@@ -1125,6 +1125,7 @@ public struct NotebookEditorView: View {
     @State private var showAudioFileImporter: Bool = false
     /// 挑一份 PDF 插進來。PDF 只有這一個入口 —— 它從來不會在相簿裡。
     @State private var showPdfFileImporter: Bool = false
+    @State private var showDocumentFileImporter: Bool = false
     /// 已經收進來、正在讓使用者挑頁的那份 PDF。
     @State private var pdfToInsert: URL? = nil
     /// 匯入失敗的語系鍵。非空就跳提示。
@@ -1653,7 +1654,9 @@ public struct NotebookEditorView: View {
             showPdfFileImporter: $showPdfFileImporter,
             onPdf: { outcome in
                 pdfToInsert = store.importedFileURL(fileName: outcome.storedName)
-            }
+            },
+            showDocumentFileImporter: $showDocumentFileImporter,
+            onDocument: { outcome in store.importDocument(notebookId: notebook.id, pageIndex: currentPageIndex, outcome: outcome) }
         ))
         .sheet(item: Binding(
             get: { pdfToInsert.map(IdentifiedURL.init) },
@@ -2616,6 +2619,8 @@ public struct NotebookEditorView: View {
                     .accessibilityIdentifier("editor.insert.image_file")
                 Button { showPdfFileImporter = true } label: { Label(localizationManager.localized("insert_pdf"), systemImage: "doc.richtext") }
                     .accessibilityIdentifier("editor.insert.pdf")
+                Button { showDocumentFileImporter = true } label: { Label(localizationManager.localized("import_document"), systemImage: "doc.text") }
+                    .accessibilityIdentifier("editor.insert.document")
                 Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
                     .accessibilityIdentifier("editor.insert.math")
                 Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
@@ -10957,6 +10962,8 @@ private struct ImportPickersModifier: ViewModifier {
     let onAudio: (FileImport.Outcome) -> Void
     @Binding var showPdfFileImporter: Bool
     let onPdf: (FileImport.Outcome) -> Void
+    @Binding var showDocumentFileImporter: Bool
+    let onDocument: (FileImport.Outcome) -> Void
 
     func body(content: Content) -> some View {
         content
@@ -10987,6 +10994,15 @@ private struct ImportPickersModifier: ViewModifier {
             ) { result in
                 guard let outcome = FileImport.take(result: result, slot: .pdf) else { return }
                 if outcome.succeeded { onPdf(outcome) } else { importErrorKey = outcome.errorKey }
+            }
+
+            .fileImporter(
+                isPresented: $showDocumentFileImporter,
+                allowedContentTypes: FileImport.allowedTypes(for: .document),
+                allowsMultipleSelection: false
+            ) { result in
+                guard let outcome = FileImport.take(result: result, slot: .document) else { return }
+                if outcome.succeeded { onDocument(outcome) } else { importErrorKey = outcome.errorKey }
             }
             .alert(
                 localizationManager.localized("import_failed_read"),
