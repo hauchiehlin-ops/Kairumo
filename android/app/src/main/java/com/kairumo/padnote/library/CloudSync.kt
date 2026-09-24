@@ -69,6 +69,52 @@ object CloudSync {
         return uniffi.padnote_core.FfiSyncSession.create(DriveHttpClient(token), saved)
     }
 
+    /**
+     * **把這個帳號在雲端的同步資料整個刪掉。**
+     *
+     * 不可逆：只存在雲端的內容會一起消失。呼叫端必須先讓使用者確認。
+     *
+     * 為什麼要做在 App 裡：資料存在 Drive 的 `appDataFolder`，那是隱藏區
+     * —— 使用者在 drive.google.com 的檔案列表裡看不到也刪不掉。唯一的手動
+     * 路徑是 Drive 設定 →「管理應用程式」→「刪除隱藏的應用程式資料」，
+     * 而那條路徑**只清雲端**：本機還留著一份「雲端有這些檔案」的快照，
+     * 下一輪同步會拿著幻覺去比對。
+     *
+     * 走互斥閘 —— 清到一半被另一輪同步插進來重新上傳的話，留下的是一個
+     * 半清空的雲端，比原本的狀態更難解釋。
+     *
+     * **會阻塞網路 I/O，要在背景執行緒呼叫。**
+     *
+     * @return 結果；`null` 表示沒登入或有一輪同步正在跑。
+     */
+    fun wipeCloud(context: Context): uniffi.padnote_core.FfiWipeResult? {
+        val nowMs = android.os.SystemClock.elapsedRealtime().toULong()
+        val grant = uniffi.padnote_core.syncGateTryEnter("android:wipe-cloud", nowMs)
+        if (!grant.granted) {
+            SyncLogger.log(
+                "【重置雲端】有一輪同步正在跑（${grant.holder}）—— 等它結束再試",
+                SyncSource.GOOGLE_DRIVE
+            )
+            return null
+        }
+        return try {
+            val session = makeSession(context) ?: return null
+            SyncLogger.log("【重置雲端】開始刪除雲端資料…", SyncSource.GOOGLE_DRIVE)
+            val result = session.wipeCloud()
+            // 快照已經在核心裡歸零，這裡把歸零後的它存回磁碟 —— 不存的話
+            // 下次開 App 會從磁碟讀回舊快照，等於沒清。
+            persist(context, session)
+            SyncLogger.log(
+                if (result.ok) "【重置雲端】完成，刪除 ${result.deleted} 個檔案"
+                else "【重置雲端】刪除 ${result.deleted} 個，失敗 ${result.failed} 個：${result.error}",
+                SyncSource.GOOGLE_DRIVE
+            )
+            result
+        } finally {
+            uniffi.padnote_core.syncGateLeave(grant.ticket)
+        }
+    }
+
     /** 把工作階段的快照存回磁碟。**每輪同步結束都要做。** */
     fun persist(context: Context, session: uniffi.padnote_core.FfiSyncSession) {
         AccountSyncStore.saveRemoteIndexJson(

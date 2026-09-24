@@ -873,6 +873,20 @@ pub struct FfiSyncDiagnostics {
 ///
 /// 快照要由平台層持久化（[`Self::index_json`]），否則每次開 App 都要
 /// 重建一次基準。
+/// [`FfiSyncSession::wipe_cloud`] 的結果。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiWipeResult {
+    /// 全部刪乾淨了沒。
+    pub ok: bool,
+    /// 刪掉幾個。
+    pub deleted: u32,
+    /// 刪不掉幾個。**不是零的話雲端是半清空的狀態**，要再跑一次。
+    pub failed: u32,
+    /// 第一個刪不掉的檔案與原因。全部成功時是空字串。
+    pub error: String,
+    pub needs_reauth: bool,
+}
+
 #[derive(Debug, uniffi::Object)]
 pub struct FfiSyncSession {
     drive: GDriveProvider<ForeignHttp>,
@@ -893,6 +907,66 @@ impl FfiSyncSession {
             index: std::sync::Mutex::new(RemoteIndex::from_json(&remote_index_json)),
             seen_sizes: std::sync::Mutex::new(SeenSizes::new()),
         })
+    }
+
+    /// **把這個帳號在雲端的同步資料整個刪掉。**
+    ///
+    /// # 這是不可逆的
+    ///
+    /// 只存在雲端的內容（某台裝置改完之後就再也沒打開過的）會一起消失。
+    /// 呼叫端**必須**先讓使用者確認，而且要講清楚刪的是什麼。
+    ///
+    /// # 為什麼需要它
+    ///
+    /// 資料放在 Drive 的 `appDataFolder`，那是隱藏區 —— 使用者在
+    /// drive.google.com 的檔案列表裡**看不到也刪不掉**。唯一的手動路徑是
+    /// Drive 設定 →「管理應用程式」→「刪除隱藏的應用程式資料」，而那條
+    /// 路徑只清雲端：本機的遠端快照還指著已經不存在的檔案，下一輪同步
+    /// 會拿著一份幻覺去比對。所以重置要由 App 來做，兩邊一起清。
+    ///
+    /// # 回傳
+    ///
+    /// 刪掉的檔案數。**刪不掉的不會讓整件事失敗** —— 半途停下來留下的是
+    /// 一個更難解釋的狀態（清一半的雲端）。刪不掉的數量另外回報。
+    pub fn wipe_cloud(&self) -> FfiWipeResult {
+        let files = match self.drive.list_all_remote() {
+            Ok(files) => files,
+            Err(e) => {
+                let needs_reauth = matches!(e, SyncError::PermissionDenied(_));
+                return FfiWipeResult {
+                    ok: false,
+                    deleted: 0,
+                    failed: 0,
+                    error: format!("列不出雲端檔案：{e}"),
+                    needs_reauth,
+                };
+            }
+        };
+        let mut deleted = 0u32;
+        let mut failed = 0u32;
+        let mut first_error = String::new();
+        for file in &files {
+            match self.drive.delete_by_id(&file.id) {
+                Ok(()) => deleted += 1,
+                Err(e) => {
+                    failed += 1;
+                    if first_error.is_empty() {
+                        first_error = format!("{}：{e}", file.name);
+                    }
+                }
+            }
+        }
+        // 本機的快照也要一起歸零，否則下一輪會拿著一份「雲端還有這些檔案」
+        // 的幻覺去比對，而那比什麼都沒清更難查。
+        *self.index.lock().unwrap() = RemoteIndex::from_json("");
+        *self.seen_sizes.lock().unwrap() = SeenSizes::new();
+        FfiWipeResult {
+            ok: failed == 0,
+            deleted,
+            failed,
+            error: first_error,
+            needs_reauth: false,
+        }
     }
 
     /// 目前的快照。**平台層每輪同步後都要存回去。**
@@ -2327,6 +2401,48 @@ mod tests {
             .unwrap();
         let after = gdrive_sync_media(cloud, path, "nb1".into());
         assert_eq!(after.uploaded, 1, "變長之後要再傳一次");
+    }
+
+    /// 重置要把**雲端和本機快照一起**清乾淨。
+    ///
+    /// 只清雲端的話（那正是使用者手動刪隱藏資料會得到的狀態），本機還留著
+    /// 一份「雲端有這些檔案」的快照，下一輪同步拿著幻覺去比對 —— 那比
+    /// 什麼都沒清更難查。
+    #[test]
+    fn wiping_the_cloud_also_clears_the_local_snapshot() {
+        let fake = FakeDrive::default();
+        for i in 0..3 {
+            fake.files
+                .lock()
+                .unwrap()
+                .push((format!("notebooks/nb1/ops/dev-{i}.bin"), vec![1, 2, 3]));
+        }
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(fake);
+        let session = FfiSyncSession::create(cloud, String::new());
+
+        // 先建立快照，確認它真的看得到那三個檔案。
+        assert!(session.refresh().ok);
+        assert_eq!(session.tracked_files(), 3);
+
+        let wiped = session.wipe_cloud();
+        assert!(wiped.ok, "{}", wiped.error);
+        assert_eq!(wiped.deleted, 3);
+        assert_eq!(wiped.failed, 0);
+
+        // 本機快照歸零 —— 下一輪會重新建立基準，而不是拿著幻覺去比對。
+        assert_eq!(session.tracked_files(), 0);
+        assert!(session.needs_rebuild());
+    }
+
+    /// 雲端本來就是空的：不是錯誤，也不該炸掉。
+    #[test]
+    fn wiping_an_empty_cloud_is_fine() {
+        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
+        let session = FfiSyncSession::create(cloud, String::new());
+        let wiped = session.wipe_cloud();
+        assert!(wiped.ok);
+        assert_eq!(wiped.deleted, 0);
+        assert_eq!(wiped.failed, 0);
     }
 
     #[test]

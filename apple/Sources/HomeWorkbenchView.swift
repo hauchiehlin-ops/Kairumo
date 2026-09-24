@@ -3546,6 +3546,10 @@ public struct CloudSyncDetailSheet: View {
     @State private var logFilter: LogFilter = .currentTab
     @State private var selectedProvider: CloudSyncProvider = .googleDrive
     @State private var googleStatusMessage: String?
+    /// 「重置雲端同步」的確認與進行狀態。
+    @State private var showWipeConfirm = false
+    @State private var isWiping = false
+    @State private var wipeMessage: String?
     @State private var isGoogleSyncing = false
     @State private var googleSyncTask: Task<Void, Never>?
     @State private var folderStatusMessage: String?
@@ -4377,6 +4381,9 @@ public struct CloudSyncDetailSheet: View {
                 if !AutoSyncController.shared.lastMessage.isEmpty {
                     doctorRow("最後結果", AutoSyncController.shared.lastMessage)
                 }
+                if let wipeMessage {
+                    doctorRow("重置", wipeMessage)
+                }
             }
             .font(DS.Font.caption)
             .padding(DS.Space.s)
@@ -4385,6 +4392,64 @@ public struct CloudSyncDetailSheet: View {
                 RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous)
                     .fill(Color(uiColor: .secondarySystemGroupedBackground))
             )
+
+            // **重置雲端同步。**
+            //
+            // 為什麼要放在 App 裡：資料存在 Drive 的 `appDataFolder`，那是
+            // 隱藏區 —— 使用者在 drive.google.com 的檔案列表裡看不到也刪不掉。
+            // 唯一的手動路徑是 Drive 設定 →「管理應用程式」→「刪除隱藏的
+            // 應用程式資料」，而那條路徑**只清雲端**：本機還留著一份
+            // 「雲端有這些檔案」的快照，下一輪同步會拿著幻覺去比對。
+            Button(role: .destructive) {
+                showWipeConfirm = true
+            } label: {
+                if isWiping {
+                    HStack(spacing: 6) {
+                        ProgressView().controlSize(.small)
+                        Text(localizationManager.localized("sync_reset_cloud_running"))
+                    }
+                } else {
+                    Text(localizationManager.localized("sync_reset_cloud"))
+                }
+            }
+            .font(DS.Font.caption)
+            .disabled(isWiping)
+            .accessibilityIdentifier("sync.reset_cloud")
+            .confirmationDialog(
+                localizationManager.localized("sync_reset_cloud_confirm_title"),
+                isPresented: $showWipeConfirm,
+                titleVisibility: .visible
+            ) {
+                Button(localizationManager.localized("sync_reset_cloud"), role: .destructive) {
+                    Task { await runWipeCloud() }
+                }
+                Button(localizationManager.localized("cancel"), role: .cancel) {}
+            } message: {
+                Text(localizationManager.localized("sync_reset_cloud_confirm_body"))
+            }
+        }
+    }
+
+    /// 清空雲端，然後讓這台裝置把本機的內容整個重新上傳。
+    ///
+    /// **本機的筆記一個都不會動。** 清的只有雲端那一份與本機的遠端快照；
+    /// 接下來那一輪同步會把這台裝置上的東西當成新的基準傳上去。
+    @MainActor
+    private func runWipeCloud() async {
+        isWiping = true
+        defer { isWiping = false }
+        wipeMessage = localizationManager.localized("sync_reset_cloud_running")
+        guard let result = await CloudSync.wipeCloud() else {
+            wipeMessage = localizationManager.localized("sync_reset_cloud_busy")
+            return
+        }
+        if result.ok {
+            wipeMessage = localizationManager.localized("sync_reset_cloud_done")
+                .replacingFirst("%1@", with: "\(result.deleted)")
+        } else {
+            wipeMessage = localizationManager.localized("sync_reset_cloud_partial")
+                .replacingFirst("%1@", with: "\(result.deleted)")
+                .replacingFirst("%2@", with: "\(result.failed)")
         }
     }
 

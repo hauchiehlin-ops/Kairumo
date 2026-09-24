@@ -328,6 +328,37 @@ public enum CloudSync {
             http: DriveHttpClient(accessToken: token), remoteIndexJson: saved)
     }
 
+    /// **把這個帳號在雲端的同步資料整個刪掉。**
+    ///
+    /// 不可逆：只存在雲端的內容會一起消失。呼叫端必須先讓使用者確認。
+    ///
+    /// 走互斥閘 —— 清到一半被另一輪同步插進來重新上傳的話，會留下一個
+    /// 半清空的雲端，那比原本的狀態更難解釋。
+    public static func wipeCloud() async -> FfiWipeResult? {
+        let grant = syncGateTryEnter(
+            label: "wipe-cloud", nowMs: UInt64(ProcessInfo.processInfo.systemUptime * 1000))
+        guard grant.granted else {
+            SyncLogger.logAsync(
+                "【重置雲端】有一輪同步正在跑（\(grant.holder)）—— 等它結束再試",
+                source: .googleDrive)
+            return nil
+        }
+        defer { _ = syncGateLeave(ticket: grant.ticket) }
+
+        guard let session = await makeSession() else { return nil }
+        SyncLogger.logAsync("【重置雲端】開始刪除雲端資料…", source: .googleDrive)
+        let result = await Task.detached(priority: .utility) { session.wipeCloud() }.value
+        // 快照已經在核心裡歸零了，這裡把歸零後的它存回磁碟 ——
+        // 不存的話，下次開 App 會從磁碟讀回舊快照，等於沒清。
+        await persist(session)
+        SyncLogger.logAsync(
+            result.ok
+                ? "【重置雲端】完成，刪除 \(result.deleted) 個檔案"
+                : "【重置雲端】刪除 \(result.deleted) 個，失敗 \(result.failed) 個：\(result.error)",
+            source: .googleDrive)
+        return result
+    }
+
     /// 把工作階段的快照存回磁碟。**每輪同步結束都要做**，否則下次開 App
     /// 又要全量重建一次。
     public static func persist(_ session: FfiSyncSession) async {

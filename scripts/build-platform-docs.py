@@ -22,7 +22,7 @@ scripts/build-platform-docs.py
     - faq 節「問題回報」答案改為 Android 說明
 """
 
-import copy, json, os, re, sys
+import copy, io, json, os, re, sys
 
 
 def swap(steps, orig, repl):
@@ -37,11 +37,41 @@ def swap(steps, orig, repl):
 
     改成比對一段不含版本號的特徵字串，版本再怎麼跳都不會脫鉤。
     真的脫鉤了也有第二道：`check_no_leak` 會擋下來。
+
+    # 替換那一半也有同一個坑
+
+    上面只修好了**比對**。替換文字裡還寫死著 `v4.2.1`，所以升版之後重新
+    產生，會把 manual.js 已經更新的版本號**換回舊的** —— 而症狀出現在
+    別的地方：CI 的「操作手冊各平台版與來源一致」在每一次升版之後變紅，
+    看起來像手冊忘了重新產生。2026-09-24 實際發生（v4.9.0）。
+
+    所以替換文字裡的版本號一律改寫成**當下的版本**，取自 `Cargo.toml`
+    那個單一來源。寫死的那二十六處就此不必逐一維護。
     """
     if not orig or not repl:
         return steps
     key = re.sub(r"v\d+(\.\d+)*", "", orig)[:14].strip()
+    repl = re.sub(r"v\d+(?:\.\d+)+", "v" + current_version(), repl)
     return [repl if key and key in st else st for st in steps]
+
+
+def current_version():
+    """版本的單一來源：`Cargo.toml` 的 workspace 版本。
+
+    `scripts/check-version-consistency.sh` 守著它與其餘九處一致，所以從
+    這裡讀就等於從所有地方讀。
+    """
+    global _VERSION
+    if _VERSION is None:
+        with io.open(os.path.join(REPO, "Cargo.toml"), encoding="utf-8") as f:
+            match = re.search(r'^version\s*=\s*"([^"]+)"', f.read(), re.M)
+        if not match:
+            raise SystemExit("Cargo.toml 裡找不到版本號")
+        _VERSION = match.group(1)
+    return _VERSION
+
+
+_VERSION = None
 
 # ── 路徑 ──────────────────────────────────────────────────────────────
 REPO = os.path.join(os.path.dirname(__file__), "..")

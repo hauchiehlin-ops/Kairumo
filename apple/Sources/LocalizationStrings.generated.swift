@@ -10255,6 +10255,62 @@ extension LocalizationManager {
             .ko: "동기화 녹음 중",
             .th: "กำลังบันทึกเสียงพร้อมกัน"
         ],
+        "sync_reset_cloud": [
+            .zhHant: "重置雲端同步",
+            .en: "Reset cloud sync",
+            .zhHans: "重置云端同步",
+            .ja: "クラウド同期をリセット",
+            .ko: "클라우드 동기화 초기화",
+            .th: "รีเซ็ตการซิงค์คลาวด์"
+        ],
+        "sync_reset_cloud_busy": [
+            .zhHant: "有一輪同步正在跑，等它結束再試。",
+            .en: "A sync is running — wait for it to finish, then try again.",
+            .zhHans: "有一轮同步正在跑，等它结束再试。",
+            .ja: "同期の実行中です。終わってからもう一度お試しください。",
+            .ko: "동기화가 실행 중입니다. 끝난 뒤 다시 시도하세요.",
+            .th: "กำลังซิงค์อยู่ โปรดรอให้เสร็จแล้วลองใหม่"
+        ],
+        "sync_reset_cloud_confirm_body": [
+            .zhHant: "這會永久刪除本 App 存放在你 Drive 裡的所有資料。本機的筆記不會被動到，下一輪同步會重新上傳。只存在雲端的內容（某台你之後沒再打開過的裝置上的修改）會消失。",
+            .en: "This permanently deletes everything this app stores in your Drive. Notes on this device are not touched and will be re-uploaded on the next sync. Anything that exists only in the cloud — edits from a device you have not opened since — will be lost.",
+            .zhHans: "这会永久删除本应用存放在你 Drive 里的所有资料。本机的笔记不会被动到，下一轮同步会重新上传。只存在云端的内容（某台你之后没再打开过的设备上的修改）会消失。",
+            .ja: "このアプリが Drive に保存したデータをすべて完全に削除します。この端末のノートは変更されず、次回の同期で再アップロードされます。クラウドにしかない内容（その後開いていない端末での編集）は失われます。",
+            .ko: "이 앱이 Drive에 저장한 모든 데이터를 영구 삭제합니다. 이 기기의 노트는 그대로이며 다음 동기화에서 다시 업로드됩니다. 클라우드에만 있는 내용은 사라집니다.",
+            .th: "การดำเนินการนี้จะลบข้อมูลทั้งหมดที่แอปเก็บไว้ใน Drive อย่างถาวร บันทึกในเครื่องนี้จะไม่ถูกแตะต้องและจะอัปโหลดใหม่ในการซิงค์ครั้งถัดไป สิ่งที่มีอยู่เฉพาะบนคลาวด์จะสูญหาย"
+        ],
+        "sync_reset_cloud_confirm_title": [
+            .zhHant: "要重置雲端同步嗎？",
+            .en: "Reset cloud sync?",
+            .zhHans: "要重置云端同步吗？",
+            .ja: "クラウド同期をリセットしますか？",
+            .ko: "클라우드 동기화를 초기화할까요?",
+            .th: "รีเซ็ตการซิงค์คลาวด์?"
+        ],
+        "sync_reset_cloud_done": [
+            .zhHant: "雲端已清空（%1@ 個檔案）。下一輪同步會把本機的筆記當成新的基準傳上去。",
+            .en: "Cloud cleared (%1@ files). The next sync uploads this device's notes as the new baseline.",
+            .zhHans: "云端已清空（%1@ 个档案）。下一轮同步会把本机的笔记当成新的基准传上去。",
+            .ja: "クラウドを消去しました（%1@ 件）。次の同期でこの端末のノートが新しい基準になります。",
+            .ko: "클라우드를 지웠습니다(%1@개). 다음 동기화에서 이 기기의 노트가 새 기준이 됩니다.",
+            .th: "ล้างคลาวด์แล้ว (%1@ ไฟล์) การซิงค์ครั้งถัดไปจะอัปโหลดบันทึกของเครื่องนี้เป็นค่าตั้งต้นใหม่"
+        ],
+        "sync_reset_cloud_partial": [
+            .zhHant: "已刪除 %1@ 個、失敗 %2@ 個 —— 雲端是半清空的狀態，請再跑一次。",
+            .en: "Deleted %1@, failed %2@ — the cloud is half-cleared. Run it again.",
+            .zhHans: "已删除 %1@ 个、失败 %2@ 个 —— 云端是半清空的状态，请再跑一次。",
+            .ja: "%1@ 件削除、%2@ 件失敗 —— クラウドは中途半端な状態です。もう一度実行してください。",
+            .ko: "%1@개 삭제, %2@개 실패 — 클라우드가 절반만 지워졌습니다. 다시 실행하세요.",
+            .th: "ลบแล้ว %1@ ล้มเหลว %2@ — คลาวด์ถูกล้างเพียงบางส่วน โปรดลองอีกครั้ง"
+        ],
+        "sync_reset_cloud_running": [
+            .zhHant: "正在清除雲端資料…",
+            .en: "Clearing cloud data…",
+            .zhHans: "正在清除云端资料…",
+            .ja: "クラウドデータを削除中…",
+            .ko: "클라우드 데이터 삭제 중…",
+            .th: "กำลังลบข้อมูลคลาวด์…"
+        ],
         "sync_result": [
             .zhHant: "上傳 %1@、下載 %2@",
             .en: "%1@ uploaded, %2@ downloaded",

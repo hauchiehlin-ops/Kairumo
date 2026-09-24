@@ -16,7 +16,17 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.testTag
+import kotlinx.coroutines.launch
 import com.kairumo.padnote.library.AccountSyncStore
+import com.kairumo.padnote.library.CloudSync
 import com.kairumo.padnote.library.NotebookLibrary
 import com.kairumo.padnote.LocalizationStrings
 import com.kairumo.padnote.sync.AutoSync
@@ -48,6 +58,10 @@ fun SyncDoctorCard(deviceId: UInt, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val isSyncing by AutoSync.isSyncing.collectAsState()
     val needsSignIn by AutoSync.needsSignIn.collectAsState()
+    val scope = rememberCoroutineScope()
+    var showConfirm by remember { mutableStateOf(false) }
+    var wiping by remember { mutableStateOf(false) }
+    var wipeMessage by remember { mutableStateOf<String?>(null) }
 
     // 掃套件目錄要碰磁碟，不能在主執行緒做。
     val diagnostics by produceState<FfiSyncDiagnostics?>(initialValue = null, isSyncing) {
@@ -101,8 +115,61 @@ fun SyncDoctorCard(deviceId: UInt, modifier: Modifier = Modifier) {
                         else -> "待命"
                     }
                 )
+                wipeMessage?.let { DoctorRow("重置", it) }
+            }
+
+            // **重置雲端同步。**
+            //
+            // 資料存在 Drive 的 appDataFolder（隱藏區），使用者在
+            // drive.google.com 看不到也刪不掉。唯一的手動路徑只清雲端，
+            // 本機還留著一份「雲端有這些檔案」的快照 —— 下一輪會拿著
+            // 幻覺去比對。所以重置要由 App 來做，兩邊一起清。
+            TextButton(
+                onClick = { showConfirm = true },
+                enabled = !wiping,
+                modifier = Modifier.fillMaxWidth().testTag("sync.reset_cloud")
+            ) {
+                Text(
+                    if (wiping) l("sync_reset_cloud_running") else l("sync_reset_cloud"),
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall
+                )
             }
         }
+    }
+
+    if (showConfirm) {
+        AlertDialog(
+            onDismissRequest = { showConfirm = false },
+            title = { Text(l("sync_reset_cloud_confirm_title")) },
+            text = { Text(l("sync_reset_cloud_confirm_body")) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirm = false
+                    wiping = true
+                    wipeMessage = l("sync_reset_cloud_running")
+                    scope.launch {
+                        val result = withContext(Dispatchers.IO) {
+                            runCatching { CloudSync.wipeCloud(context) }.getOrNull()
+                        }
+                        wipeMessage = when {
+                            result == null -> l("sync_reset_cloud_busy")
+                            result.ok -> l("sync_reset_cloud_done")
+                                .replace("%1@", "${result.deleted}")
+                            else -> l("sync_reset_cloud_partial")
+                                .replace("%1@", "${result.deleted}")
+                                .replace("%2@", "${result.failed}")
+                        }
+                        wiping = false
+                    }
+                }) {
+                    Text(l("sync_reset_cloud"), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showConfirm = false }) { Text(l("cancel")) }
+            }
+        )
     }
 }
 
