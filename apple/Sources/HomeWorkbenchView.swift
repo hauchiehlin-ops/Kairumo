@@ -1625,6 +1625,59 @@ public struct HomeWorkbenchView: View {
     }
 
     /// 統一雲端同步卡片。結合 Google Drive 與 iCloud / 本機資料夾同步。
+
+    private var homeGoogleStatusText: String {
+        if !homeGoogleAuth.isSignedIn {
+            return localizationManager.localized("not_signed_in")
+        }
+        if homeGoogleSyncing {
+            return localizationManager.localized("syncing")
+        }
+        if let msg = homeGoogleMessage, msg.contains("失敗") || msg.contains("錯誤") || msg.contains("逾時") {
+            return "同步發生錯誤"
+        }
+        return localizationManager.localized("sync_done")
+    }
+
+    private var homeGoogleStatusColor: Color {
+        if !homeGoogleAuth.isSignedIn {
+            return .secondary
+        }
+        if homeGoogleSyncing {
+            return .teal
+        }
+        if let msg = homeGoogleMessage, msg.contains("失敗") || msg.contains("錯誤") || msg.contains("逾時") {
+            return .red
+        }
+        return .green
+    }
+
+    private var homeFolderStatusText: String {
+        if CloudSyncFolder.resolveFolder() == nil {
+            return localizationManager.localized("sync_not_configured")
+        }
+        if homeFolderSyncing {
+            return localizationManager.localized("syncing")
+        }
+        if let msg = homeGoogleMessage, msg.contains("失敗") || msg.contains("錯誤") {
+            return "同步失敗"
+        }
+        return localizationManager.localized("sync_done")
+    }
+
+    private var homeFolderStatusColor: Color {
+        if CloudSyncFolder.resolveFolder() == nil {
+            return .secondary
+        }
+        if homeFolderSyncing {
+            return .teal
+        }
+        if let msg = homeGoogleMessage, msg.contains("失敗") || msg.contains("錯誤") {
+            return .red
+        }
+        return .green
+    }
+
     private var unifiedSyncCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             Button {
@@ -1649,10 +1702,14 @@ public struct HomeWorkbenchView: View {
             }
             .buttonStyle(.plain)
 
-            if let homeGoogleMessage {
-                Text(homeGoogleMessage)
+            if homeGoogleAuth.isSignedIn {
+                Text(homeGoogleStatusText)
                     .font(DS.Font.caption)
-                    .foregroundStyle(DS.Color.secondaryText)
+                    .foregroundStyle(homeGoogleStatusColor)
+            } else if CloudSyncFolder.resolveFolder() != nil {
+                Text(homeFolderStatusText)
+                    .font(DS.Font.caption)
+                    .foregroundStyle(homeFolderStatusColor)
             }
 
             HStack(spacing: 8) {
