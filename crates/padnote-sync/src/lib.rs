@@ -44,3 +44,4 @@ pub mod webrtc;
 pub mod state_verification;
 pub mod compaction;
 pub mod presence;
+pub mod voice_room;
