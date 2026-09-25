@@ -115,6 +115,8 @@ public final class LocalRelayServer {
 
             do {
                 let newListener = try NWListener(using: parameters, on: nwPort)
+                // 廣播 mDNS 服務，讓區網內的其他裝置能自動發現（跨裝置即時同步）
+                newListener.service = NWListener.Service(name: "Kairumo_\(UUID().uuidString.prefix(8))", type: "_kairumosync._tcp", domain: "local.")
                 newListener.newConnectionHandler = { [weak self] connection in
                     self?.accept(connection)
                 }
@@ -396,5 +398,47 @@ public final class LocalRelayServer {
             pointer = interface.ifa_next
         }
         return address
+    }
+}
+import Foundation
+import Network
+import Combine
+
+/// 局域網同步自動發現（mDNS / Bonjour）。
+/// 用於尋找同一 Wi-Fi 下廣播 `_kairumosync._tcp` 的其他裝置，並建立 WebSocket 捷徑。
+public final class LocalSyncDiscovery: ObservableObject {
+    public static let shared = LocalSyncDiscovery()
+    
+    private var browser: NWBrowser?
+    private let queue = DispatchQueue(label: "com.kairumo.sync.discovery")
+    
+    @Published public var discoveredEndpoints: [NWEndpoint] = []
+    
+    private init() {}
+    
+    public func startBrowsing() {
+        guard browser == nil else { return }
+        
+        let parameters = NWParameters()
+        parameters.includePeerToPeer = true
+        let browser = NWBrowser(for: .bonjour(type: "_kairumosync._tcp", domain: "local."), using: parameters)
+        
+        browser.browseResultsChangedHandler = { [weak self] results, changes in
+            let endpoints = results.map { $0.endpoint }
+            DispatchQueue.main.async {
+                self?.discoveredEndpoints = endpoints
+            }
+        }
+        
+        browser.start(queue: queue)
+        self.browser = browser
+    }
+    
+    public func stopBrowsing() {
+        browser?.cancel()
+        browser = nil
+        DispatchQueue.main.async {
+            self.discoveredEndpoints.removeAll()
+        }
     }
 }
