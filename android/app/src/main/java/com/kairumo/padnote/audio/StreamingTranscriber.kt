@@ -36,13 +36,13 @@ class StreamingTranscriber(private val context: Context, private val session: Pa
                 for (seg in segments) {
                     try {
                         val result = whisperTranscribePcm(modelPath, seg.samples, languageTag)
-                        if (result.words.isNotEmpty()) {
-                            val inputs = result.words.map { w ->
+                        if (result.segments.isNotEmpty()) {
+                            val inputs = result.segments.map { w ->
                                 TranscriptWordInput(
                                     text = w.text,
                                     // 偏移量：從這段音訊在筆記本的時間點開始加
-                                    startUs = seg.sessionStartUs + seg.startUs + w.startUs,
-                                    endUs = seg.sessionStartUs + seg.startUs + w.endUs,
+                                    startUs = seg.sessionStartUs + seg.startUs + w.startMs * 1000u,
+                                    endUs = seg.sessionStartUs + seg.startUs + w.endMs * 1000u,
                                     confidence = w.confidence
                                 )
                             }

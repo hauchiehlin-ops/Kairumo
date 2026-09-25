@@ -1,5 +1,7 @@
 package com.kairumo.padnote.sync
 
+import com.kairumo.padnote.LocalizationStrings
+
 import android.content.Context
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
@@ -246,10 +248,10 @@ object FolderSync {
     }
     fun wipeCloud(context: Context): uniffi.padnote_core.FfiWipeResult? {
         val rootUri = folderUri(context) ?: return uniffi.padnote_core.FfiWipeResult(
-            ok = false, deleted = 0u, failed = 0u, error = "未設定同步資料夾", needsReauth = false
+            ok = false, deleted = 0u, failed = 0u, error = LocalizationStrings.localized("folder_sync_not_set", context.resources.configuration.locales[0].toLanguageTag()), needsReauth = false
         )
         val root = androidx.documentfile.provider.DocumentFile.fromTreeUri(context, rootUri) ?: return uniffi.padnote_core.FfiWipeResult(
-            ok = false, deleted = 0u, failed = 0u, error = "無法存取資料夾", needsReauth = false
+            ok = false, deleted = 0u, failed = 0u, error = LocalizationStrings.localized("folder_sync_inaccessible", context.resources.configuration.locales[0].toLanguageTag()), needsReauth = false
         )
         var deleted = 0u
         var failed = 0u

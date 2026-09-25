@@ -230,7 +230,7 @@ enum CloudSyncFolder {
     // MARK: - 清空雲端
     public static func wipeCloud() -> FfiWipeResult? {
         guard let folder = resolveFolder() else {
-            return FfiWipeResult(ok: false, deleted: 0, failed: 0, error: "未設定同步資料夾", needsReauth: false)
+            return FfiWipeResult(ok: false, deleted: 0, failed: 0, error: LocalizationManager.shared.localizedUnsafe("folder_sync_not_set"), needsReauth: false)
         }
         let scoped = folder.startAccessingSecurityScopedResource()
         defer { if scoped { folder.stopAccessingSecurityScopedResource() } }

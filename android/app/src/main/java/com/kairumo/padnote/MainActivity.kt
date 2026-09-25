@@ -59,6 +59,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.setValue
@@ -940,7 +941,7 @@ private fun NotebookHome(
                                     elapsedSec = 0
                                     isPaused = false
                                     if (session != null) {
-                                        val err = homeAudio.start(session, lang)
+                                        val err = homeAudio.start(null, session, lang)
                                         if (err != null) {
                                             message = err
                                         } else {
@@ -1422,7 +1423,7 @@ private fun InkScreen(
                 PalmThresholdStore.radius(activity),
                 PalmThresholdStore.retractMs(activity)
             )
-            notebook?.first?.setPressureCurve(
+            setPressureCurve(
                 PenSettingsStore.floor(activity) ?: 0.1f,
                 PenSettingsStore.gamma(activity) ?: 1.0f
             )
@@ -1446,7 +1447,7 @@ private fun InkScreen(
             while (true) {
                 kotlinx.coroutines.delay(1000L)
                 recordSeconds++
-                backlogUs = runCatching { notebook?.first?.transcriptionBacklogUs() ?: 0L }.getOrDefault(0L)
+                backlogUs = runCatching { notebook?.first?.transcriptionBacklogUs()?.toLong() ?: 0L }.getOrDefault(0L)
             }
         }
     }
@@ -2005,7 +2006,7 @@ private fun InkScreen(
         if (granted && session != null) {
             recordSeconds = 0
             recordingPaused = false
-            message = audio.start(notebook?.second?.pages?.get(viewport.currentPage)?.id ?: "", session, deviceLanguageTag()) { message = it }
+            message = audio.start(pageId ?: "", session, deviceLanguageTag()) { message = it }
             recording = audio.isRecording
         } else {
             // 被拒之後再按同一顆按鈕，系統**不會再跳對話框** —— 只會直接回
@@ -2668,7 +2669,7 @@ private fun InkScreen(
                         } else if (AudioCapture.hasPermission(activity)) {
                             recordSeconds = 0
                             recordingPaused = false
-                            message = audio.start(notebook?.second?.pages?.get(viewport.currentPage)?.id ?: "", session, deviceLanguageTag()) { message = it }
+                            message = audio.start(pageId ?: "", session, deviceLanguageTag()) { message = it }
                             recording = audio.isRecording
                         } else {
                             micPermission.launch(Manifest.permission.RECORD_AUDIO)
@@ -5199,7 +5200,7 @@ private fun InkScreen(
         AdvancedPenSettingsDialog(
             languageTag = deviceLanguageTag(),
             onApply = { floor, gamma ->
-                notebook?.first?.setPressureCurve(floor ?: 0.1f, gamma ?: 1.0f)
+                engine.setPressureCurve(floor ?: 0.1f, gamma ?: 1.0f)
                 penTuned = floor != null
             },
             onDismiss = { showPenSettings = false }

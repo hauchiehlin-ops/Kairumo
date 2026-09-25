@@ -697,4 +697,8 @@ class InkEngine(
         overrideRetractMs = retractWindowMs
         applyPalmThresholds(lastPenOnly)
     }
+    
+    fun setPressureCurve(floor: Float, gamma: Float) {
+        arbiter.setPressureCurve(floor, gamma)
+    }
 }

@@ -57,7 +57,7 @@ class AudioCapture(private val context: Context) {
      *         「錄不起來」有好幾種原因，使用者需要知道是哪一種。
      */
     @SuppressLint("MissingPermission")
-    fun start(pageId: String, 
+    fun start(pageId: String?, 
         session: PadnoteSession,
         languageTag: String = "zh-Hant",
         onError: (String) -> Unit = {}
@@ -96,7 +96,7 @@ class AudioCapture(private val context: Context) {
         recorder.startRecording()
         
         transcriber = StreamingTranscriber(context, session)
-        transcriber?.start(pageId, languageTag)
+        if (pageId != null) transcriber?.start(pageId, languageTag)
         runCatching { session.startRecording() }.onFailure {
             stop(session)
             return l("err_core_not_ready") + "：${it.message}"

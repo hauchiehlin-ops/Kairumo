@@ -3598,6 +3598,20 @@ extension LocalizationManager {
             .ko: "폴더 이름",
             .th: "ชื่อโฟลเดอร์"
         ],
+        "folder_sync_inaccessible": [
+            .zhHant: "無法存取資料夾",
+            .en: "Folder inaccessible",
+            .zhHans: "无法访问文件夹",
+            .ja: "フォルダにアクセスできません",
+            .ko: "폴더에 접근할 수 없습니다"
+        ],
+        "folder_sync_not_set": [
+            .zhHant: "未設定同步資料夾",
+            .en: "Sync folder not set",
+            .zhHans: "未设置同步文件夹",
+            .ja: "同期フォルダが設定されていません",
+            .ko: "동기화 폴더가 설정되지 않았습니다"
+        ],
         "folder_unlink": [
             .zhHant: "解除連結",
             .en: "Unlink",
