@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import com.kairumo.padnote.audio.StreamingTranscriber
 import uniffi.padnote_core.PadnoteSession
 
 /**
@@ -42,6 +43,7 @@ class AudioCapture(private val context: Context) {
 
     private var record: AudioRecord? = null
     private var job: Job? = null
+    private var transcriber: StreamingTranscriber? = null
     private val scope = CoroutineScope(Dispatchers.IO)
     @Volatile private var paused: Boolean = false
 
@@ -55,7 +57,7 @@ class AudioCapture(private val context: Context) {
      *         「錄不起來」有好幾種原因，使用者需要知道是哪一種。
      */
     @SuppressLint("MissingPermission")
-    fun start(
+    fun start(pageId: String, 
         session: PadnoteSession,
         languageTag: String = "zh-Hant",
         onError: (String) -> Unit = {}
@@ -92,6 +94,9 @@ class AudioCapture(private val context: Context) {
 
         record = recorder
         recorder.startRecording()
+        
+        transcriber = StreamingTranscriber(context, session)
+        transcriber?.start(pageId, languageTag)
         runCatching { session.startRecording() }.onFailure {
             stop(session)
             return l("err_core_not_ready") + "：${it.message}"
@@ -131,6 +136,7 @@ class AudioCapture(private val context: Context) {
     /** 停止錄音。回傳核心記錄到的時長（微秒）。 */
     fun stop(session: PadnoteSession): ULong {
         paused = false
+        transcriber?.stop()
         job?.cancel()
         job = null
         record?.let { r ->

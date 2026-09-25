@@ -11949,5 +11949,33 @@
     "en": "Import Document",
     "ja": "ドキュメントをインポート",
     "ko": "문서 가져오기"
+  },
+  "advanced_pen_settings": {
+    "en": "Advanced Pen Settings",
+    "zhHant": "進階畫筆設定",
+    "zhHans": "高级画笔设置",
+    "ja": "詳細なペン設定",
+    "ko": "고급 펜 설정"
+  },
+  "pen_settings_title": {
+    "en": "Advanced Pen Settings",
+    "zhHant": "進階畫筆設定",
+    "zhHans": "高级画笔设置",
+    "ja": "詳細なペン設定",
+    "ko": "고급 펜 설정"
+  },
+  "pressure_floor": {
+    "en": "Pressure Floor",
+    "zhHant": "下筆起始壓力",
+    "zhHans": "下笔起始压力",
+    "ja": "最小筆圧",
+    "ko": "최소 필압"
+  },
+  "pressure_gamma": {
+    "en": "Pressure Gamma",
+    "zhHant": "壓力敏感度曲線",
+    "zhHans": "压力敏感度曲线",
+    "ja": "筆圧感度カーブ",
+    "ko": "필압 감도 곡선"
   }
 }

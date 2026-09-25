@@ -183,6 +183,13 @@ extension LocalizationManager {
             .ko: "텍스트 상자 추가",
             .th: "เพิ่มกล่องข้อความ"
         ],
+        "advanced_pen_settings": [
+            .zhHant: "進階畫筆設定",
+            .en: "Advanced Pen Settings",
+            .zhHans: "高级画笔设置",
+            .ja: "詳細なペン設定",
+            .ko: "고급 펜 설정"
+        ],
         "ai_insert": [
             .zhHant: "插入筆記",
             .en: "Insert into note",
@@ -7662,6 +7669,13 @@ extension LocalizationManager {
             .ko: "“펜 전용”이 켜져 있어 손가락 터치는 무시됩니다. 손가락으로 쓰려면 끄세요.",
             .th: "เปิด “ปากกาเท่านั้น” อยู่ การแตะด้วยนิ้วจะถูกละเว้น หากต้องการเขียนด้วยนิ้วให้ปิดตัวเลือกนี้"
         ],
+        "pen_settings_title": [
+            .zhHant: "進階畫筆設定",
+            .en: "Advanced Pen Settings",
+            .zhHans: "高级画笔设置",
+            .ja: "詳細なペン設定",
+            .ko: "고급 펜 설정"
+        ],
         "permission_open_settings": [
             .zhHant: "開啟設定",
             .en: "Open Settings",
@@ -7693,6 +7707,20 @@ extension LocalizationManager {
             .ja: "環境設定と表示言語",
             .ko: "환경설정 및 언어",
             .th: "การตั้งค่าและภาษา"
+        ],
+        "pressure_floor": [
+            .zhHant: "下筆起始壓力",
+            .en: "Pressure Floor",
+            .zhHans: "下笔起始压力",
+            .ja: "最小筆圧",
+            .ko: "최소 필압"
+        ],
+        "pressure_gamma": [
+            .zhHant: "壓力敏感度曲線",
+            .en: "Pressure Gamma",
+            .zhHans: "压力敏感度曲线",
+            .ja: "筆圧感度カーブ",
+            .ko: "필압 감도 곡선"
         ],
         "preview_chart": [
             .zhHant: "圖表即時預覽",

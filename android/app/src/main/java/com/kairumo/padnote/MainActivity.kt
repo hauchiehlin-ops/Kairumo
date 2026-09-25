@@ -1436,6 +1436,7 @@ private fun InkScreen(
     var recording by remember { mutableStateOf(false) }
     var recordingPaused by remember { mutableStateOf(false) }
     var recordSeconds by remember { mutableIntStateOf(0) }
+    var backlogUs by remember { mutableLongStateOf(0L) }
     var message by remember { mutableStateOf<String?>(null) }
     var docsAsset by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -1445,6 +1446,7 @@ private fun InkScreen(
             while (true) {
                 kotlinx.coroutines.delay(1000L)
                 recordSeconds++
+                backlogUs = runCatching { notebook?.first?.transcriptionBacklogUs() ?: 0L }.getOrDefault(0L)
             }
         }
     }
@@ -3202,7 +3204,7 @@ private fun InkScreen(
                 FilterChip(
                     selected = penTuned,
                     onClick = { showPenSettings = true },
-                    label = { Text(if (deviceLanguageTag().startsWith("zh")) "進階畫筆設定" else "Advanced Pen Settings") }
+                    label = { Text(l10n("advanced_pen_settings")) }
                 )
                 // 防手震滑桿（Stroke Stabilizer）
                 FilterChip(
@@ -3590,6 +3592,7 @@ private fun InkScreen(
                     Spacer(Modifier.width(8.dp))
                     Text(
                         if (recordingPaused) "${l10n("recording_paused")}: $timeStr"
+                        else if (backlogUs > 5_000_000L) "${l10n("sync_recording_in_progress")}: $timeStr (轉錄落後 ${backlogUs / 1_000_000L}s)"
                         else "${l10n("sync_recording_in_progress")}: $timeStr",
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.SemiBold,
