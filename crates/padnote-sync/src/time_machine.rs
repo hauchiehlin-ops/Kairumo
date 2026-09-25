@@ -4,7 +4,7 @@
 //! 這個模組提供「唯讀」的視角，不會去修改 `padnote-doc` 內任何既有的 `App` 或 `NotebookSession` 狀態。
 //! 它透過篩選特定 Lamport 以前的 Oplog 來重播，從而建構出「過去某個時間點」的筆記本狀態。
 
-use std::collections::{HashMap};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct TimeMachine {
