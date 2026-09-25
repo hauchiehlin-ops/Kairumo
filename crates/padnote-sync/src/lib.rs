@@ -45,3 +45,5 @@ pub mod state_verification;
 pub mod compaction;
 pub mod presence;
 pub mod voice_room;
+pub mod time_machine;
+pub mod lazy_sync;

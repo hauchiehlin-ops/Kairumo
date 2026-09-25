@@ -11113,3 +11113,42 @@ public struct LiveCursorOverlay: View {
         .allowsHitTesting(false) // 絕對不阻擋使用者的任何觸控與手寫
     }
 }
+import SwiftUI
+
+/// (Advanced Feature 3) 供時光機與貢獻者高亮使用的資料結構
+public struct TextContributor {
+    public let range: NSRange
+    public let deviceId: UInt32
+    public let color: Color
+    
+    public init(range: NSRange, deviceId: UInt32, color: Color) {
+        self.range = range
+        self.deviceId = deviceId
+        self.color = color
+    }
+}
+
+/// 時間軸回溯拉桿 UI
+public struct TimeMachineSlider: View {
+    @Binding public var currentLamport: Double
+    public let maxLamport: Double
+    
+    public init(currentLamport: Binding<Double>, maxLamport: Double) {
+        self._currentLamport = currentLamport
+        self.maxLamport = maxLamport
+    }
+    
+    public var body: some View {
+        VStack {
+            Text("歷史回溯 (Lamport: \\(Int(currentLamport)))")
+                .font(.headline)
+            Slider(value: $currentLamport, in: 0...maxLamport)
+                .padding()
+            // 當 Slider 拖動時，可呼叫 Rust FFI: `replay_to_lamport`
+        }
+        .background(Color(.systemBackground).opacity(0.9))
+        .cornerRadius(12)
+        .shadow(radius: 5)
+        .padding()
+    }
+}
