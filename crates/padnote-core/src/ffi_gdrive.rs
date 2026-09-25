@@ -496,18 +496,22 @@ fn sync_notebook_ops(
         let text = String::from_utf8_lossy(&content);
         for line in text.lines() {
             let name = line.trim();
-            if name.is_empty() { continue; }
+            if name.is_empty() {
+                continue;
+            }
             let path = padnote_sync::paths::notebook_op_file(notebook_id, name);
             let key = padnote_sync::paths::canonical_name(name);
             if let Some(file) = remote.get(&key) {
-                let target = if file.id.is_empty() { path.clone() } else { file.name.clone() };
+                let target = if file.id.is_empty() {
+                    path.clone()
+                } else {
+                    file.name.clone()
+                };
                 let _ = CloudProvider::delete(drive, &target);
             }
             index.note_delete(&path);
         }
-        let _ = std::fs::remove_file(
-            package.root().join("doc/ops/compaction.tombstones")
-        );
+        let _ = std::fs::remove_file(package.root().join("doc/ops/compaction.tombstones"));
     }
 
     for outcome in &compaction {
