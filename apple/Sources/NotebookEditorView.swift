@@ -11140,7 +11140,7 @@ public struct TimeMachineSlider: View {
     
     public var body: some View {
         VStack {
-            Text("歷史回溯 (Lamport: \\(Int(currentLamport)))")
+            Text("\(LocalizationManager.shared.localized("collab_history_playback")) (Lamport: \\(Int(currentLamport)))")
                 .font(.headline)
             Slider(value: $currentLamport, in: 0...maxLamport)
                 .padding()
@@ -11164,12 +11164,12 @@ public struct CollabAdvancedFeaturesPanel: View {
     
     public var body: some View {
         VStack(spacing: 20) {
-            Text("進階協作控制面板")
+            Text(LocalizationManager.shared.localized("collab_advanced_panel"))
                 .font(.headline)
             
             // 1. 語音通話 (Voice Room) 操作區
             HStack {
-                Text("協作語音房間")
+                Text(LocalizationManager.shared.localized("collab_voice_room"))
                 Spacer()
                 Button(action: {
                     isVoiceRoomActive.toggle()
@@ -11194,7 +11194,7 @@ public struct CollabAdvancedFeaturesPanel: View {
             
             // 2. 時光機 (Time Machine) 操作區
             VStack(alignment: .leading) {
-                Text("時光機回溯 (Lamport: \\(Int(timeMachineLamport)))")
+                Text("\(LocalizationManager.shared.localized("collab_time_machine")) (Lamport: \\(Int(timeMachineLamport)))")
                 Slider(value: $timeMachineLamport, in: 0...1000) { editing in
                     if !editing {
                         // 呼叫 Rust FFI: collab_time_machine_contributors

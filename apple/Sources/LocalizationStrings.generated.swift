@@ -1998,6 +1998,22 @@ extension LocalizationManager {
             .ko: "한 번 로그인하면 노트·폴더·설정이 모든 기기에서 동기화됩니다. 데이터는 Google 드라이브의 앱 전용 폴더에 저장됩니다 —— 파일 목록에는 보이지 않으며, 저희도 볼 수 없습니다.",
             .th: "ลงชื่อเข้าใช้ครั้งเดียว สมุดบันทึก โฟลเดอร์ และการตั้งค่าจะซิงค์กันทุกอุปกรณ์ ข้อมูลถูกเก็บในโฟลเดอร์เฉพาะแอปใน Google Drive ของคุณ — ไม่ปรากฏในรายการไฟล์ และเราก็มองไม่เห็น"
         ],
+        "collab_advanced_panel": [
+            .zhHant: "進階協作控制面板",
+            .en: "Advanced Collaboration Panel",
+            .zhHans: "进阶协作控制面板",
+            .ja: "高度な共同編集パネル",
+            .ko: "고급 협업 패널",
+            .th: "แผงการทำงานร่วมกันขั้นสูง"
+        ],
+        "collab_history_playback": [
+            .zhHant: "歷史回溯",
+            .en: "History Playback",
+            .zhHans: "历史回溯",
+            .ja: "履歴再生",
+            .ko: "기록 재생",
+            .th: "เล่นประวัติ"
+        ],
         "collab_key_missing": [
             .zhHant: "你只用房號加入。少了邀請連結裡的金鑰，別人寫的內容在這裡一個字都解不開。請向房主要完整的邀請連結再加入一次。",
             .en: "You joined with the room code only. Without the key in the invite link, everything the others write stays unreadable here. Ask the host for the full invite link and join again.",
@@ -2021,6 +2037,22 @@ extension LocalizationManager {
             .ja: "共同スナップショット",
             .ko: "협업 스냅샷",
             .th: "สแนปช็อตร่วม"
+        ],
+        "collab_time_machine": [
+            .zhHant: "時光機回溯",
+            .en: "Time Machine Replay",
+            .zhHans: "时光机回溯",
+            .ja: "タイムマシンリプレイ",
+            .ko: "타임머신 리플레이",
+            .th: "การเล่นซ้ำไทม์แมชชีน"
+        ],
+        "collab_voice_room": [
+            .zhHant: "協作語音房間",
+            .en: "Voice Room",
+            .zhHans: "协作语音房间",
+            .ja: "ボイスルーム",
+            .ko: "음성 룸",
+            .th: "ห้องเสียง"
         ],
         "collaborate": [
             .zhHant: "線上協同",
