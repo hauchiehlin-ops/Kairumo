@@ -334,7 +334,7 @@ window.KAIRUMO_MANUAL = {
           "**步驟 4｜開始共筆。** 現在任何一台的筆畫、文字方塊、表格、圖形與討論圖釘，都會即時出現在另一台上。",
           "**步驟 5｜結束。** 房主按「結束協同會議」，房間關閉；隊友按「中斷連線」則只有自己離開。"
         ],
-        "tip": "裝置種類沒有差別：所有裝置用的是同一套房號、同一套金鑰、同一個中繼協定，誰當房主都可以。內容以 AES-256-GCM 端對端加密，中繼點只轉發看不懂的密文 —— 就算用的是別人的通道服務，它也讀不到你的筆記。離線期間的操作會先暫存，連線恢復後自動補送。",
+        "tip": "【全新進階協作】現在包含「即時游標」、「語音通話（房間面板麥克風）」與「時光機回溯（頂部工具列切換）」，以及百頁筆記的「懶載入」最佳化！裝置種類沒有差別：所有裝置用的是同一套房號、同一套金鑰、同一個中繼協定，誰當房主都可以。內容以 AES-256-GCM 端對端加密，中繼點只轉發看不懂的密文 —— 就算用的是別人的通道服務，它也讀不到你的筆記。離線期間的操作會先暫存，連線恢復後自動補送。",
         "fig": "collab",
         "cap": "尚未連線：開始多人協同、加入協同房間、協同伺服器位址",
         "fig2": "collab_on",
@@ -828,7 +828,7 @@ window.KAIRUMO_MANUAL = {
           "**Step 4 — write.** Strokes, text boxes, tables, shapes and comment pins from either device now appear on the other in real time.",
           "**Step 5 — finish.** The host taps “End Collaboration” to close the room; a guest tapping “Disconnect” only leaves themselves."
         ],
-        "tip": "The kind of device makes no difference: every device shares the same room IDs, the same keys and the same relay protocol, and any of them can host. Content is end-to-end encrypted with AES-256-GCM and the relay only forwards ciphertext it cannot read — so even a third-party tunnel service cannot see your notes. Edits made while offline are queued and sent automatically once the connection returns.",
+        "tip": "[NEW Advanced Features] Now includes Live Cursors, Voice Rooms (via mic icon), Time Machine (top toolbar), and Lazy Sync for large notebooks!\n\nThe kind of device makes no difference: every device shares the same room IDs, the same keys and the same relay protocol, and any of them can host. Content is end-to-end encrypted with AES-256-GCM and the relay only forwards ciphertext it cannot read — so even a third-party tunnel service cannot see your notes. Edits made while offline are queued and sent automatically once the connection returns.",
         "fig": "collab",
         "cap": "Not connected: Start Collaboration, Join Room, Relay Server Address",
         "fig2": "collab_on",
@@ -1315,7 +1315,7 @@ window.KAIRUMO_MANUAL = {
           "**步骤 4｜开始共笔。** 现在任何一台的笔画、文本框、表格、图形与讨论图钉，都会实时出现在另一台上。",
           "**步骤 5｜结束。** 房主按“结束协作会议”，房间关闭；队友按“断开连接”则只有自己离开。"
         ],
-        "tip": "设备种类没有差别：所有设备用的是同一套房号、同一套密钥、同一个中继协议，谁当房主都可以。内容以 AES-256-GCM 端到端加密，中继点只转发看不懂的密文 —— 就算用的是别人的通道服务，它也读不到你的笔记。离线期间的操作会先暂存，连接恢复后自动补发。",
+        "tip": "【全新进阶协作】现在包含「实时光标」、「语音通话（房间面板麦克风）」与「时光机回溯（顶部工具列切换）」，以及百页笔记的「懒加载」优化！\n\n设备种类没有差别：所有设备用的是同一套房号、同一套密钥、同一个中继协议，谁当房主都可以。内容以 AES-256-GCM 端到端加密，中继点只转发看不懂的密文 —— 就算用的是别人的通道服务，它也读不到你的笔记。离线期间的操作会先暂存，连接恢复后自动补发。",
         "fig": "collab",
         "cap": "尚未连接：开始多人协作、加入协作房间、协作服务器地址",
         "fig2": "collab_on",
@@ -1802,7 +1802,7 @@ window.KAIRUMO_MANUAL = {
           "**手順4 — 書き始めます。** どちらの筆跡・テキストボックス・表・図形・コメントピンも相手の画面にリアルタイムで現れます。",
           "**手順5 — 終了。** ホストが「共同編集を終了」でルームを閉じます。参加者の「切断」は自分だけ退出します。"
         ],
-        "tip": "端末の種類による違いはありません。すべての端末が同じルームID、同じ鍵、同じ中継プロトコルを使い、どれでもホストになれます。内容は AES-256-GCM でエンドツーエンド暗号化され、中継は読めない暗号文を転送するだけ —— 第三者のトンネルサービスを使ってもノートの中身は見られません。オフライン中の編集は保留され、再接続時に自動送信されます。",
+        "tip": "【新しい高度な機能】ライブカーソル、ボイスルーム（マイクアイコン）、タイムマシン、大規模ノートの遅延同期をサポート！\n\n端末の種類による違いはありません。すべての端末が同じルームID、同じ鍵、同じ中継プロトコルを使い、どれでもホストになれます。内容は AES-256-GCM でエンドツーエンド暗号化され、中継は読めない暗号文を転送するだけ —— 第三者のトンネルサービスを使ってもノートの中身は見られません。オフライン中の編集は保留され、再接続時に自動送信されます。",
         "fig": "collab",
         "cap": "未接続：共同編集を開始、ルームに参加、中継サーバーのアドレス",
         "fig2": "collab_on",
@@ -2289,7 +2289,7 @@ window.KAIRUMO_MANUAL = {
           "**4단계 — 함께 필기합니다.** 어느 기기의 필기·텍스트 상자·표·도형·코멘트 핀이든 상대 화면에 실시간으로 나타납니다.",
           "**5단계 — 종료.** 호스트가 “공동 편집 종료”를 누르면 방이 닫히고, 참여자의 “연결 해제”는 본인만 나갑니다."
         ],
-        "tip": "기기 종류는 상관없습니다. 모든 기기가 같은 룸 ID, 같은 키, 같은 중계 프로토콜을 쓰며 어느 기기든 호스트가 될 수 있습니다. 내용은 AES-256-GCM 으로 종단 간 암호화되고 중계는 읽을 수 없는 암호문만 전달합니다 —— 타사 터널 서비스를 거쳐도 노트 내용은 볼 수 없습니다. 오프라인 중 편집은 대기했다가 연결이 돌아오면 자동 전송됩니다.",
+        "tip": "[새로운 고급 기능] 라이브 커서, 음성 룸, 타임머신 및 대용량 노트를 위한 지연 동기화 포함!\n\n기기 종류는 상관없습니다. 모든 기기가 같은 룸 ID, 같은 키, 같은 중계 프로토콜을 쓰며 어느 기기든 호스트가 될 수 있습니다. 내용은 AES-256-GCM 으로 종단 간 암호화되고 중계는 읽을 수 없는 암호문만 전달합니다 —— 타사 터널 서비스를 거쳐도 노트 내용은 볼 수 없습니다. 오프라인 중 편집은 대기했다가 연결이 돌아오면 자동 전송됩니다.",
         "fig": "collab",
         "cap": "연결 전: 협업 시작, 룸 참여, 중계 서버 주소",
         "fig2": "collab_on",
@@ -2776,7 +2776,7 @@ window.KAIRUMO_MANUAL = {
           "**ขั้นที่ 4 — เริ่มเขียน** ลายเส้น กล่องข้อความ ตาราง รูปทรง และหมุดความเห็นจากเครื่องใดก็ตามจะปรากฏบนอีกเครื่องทันที",
           "**ขั้นที่ 5 — จบงาน** ผู้เปิดห้องแตะ “สิ้นสุดการทำงานร่วมกัน” เพื่อปิดห้อง ส่วนผู้เข้าร่วมที่แตะ “ตัดการเชื่อมต่อ” จะออกเฉพาะตัวเอง"
         ],
-        "tip": "ชนิดของเครื่องไม่มีผล ทุกเครื่องใช้ Room ID เดียวกัน กุญแจเดียวกัน และโปรโตคอลรีเลย์เดียวกัน เครื่องใดก็เป็นผู้เปิดห้องได้ เนื้อหาเข้ารหัสแบบ end-to-end ด้วย AES-256-GCM และตัวส่งต่อเพียงส่งข้อความที่อ่านไม่ออก —— แม้ใช้บริการอุโมงค์ของผู้อื่นก็อ่านโน้ตของคุณไม่ได้ การแก้ไขระหว่างออฟไลน์จะถูกพักไว้และส่งอัตโนมัติเมื่อกลับมาเชื่อมต่อ",
+        "tip": "[ฟีเจอร์ขั้นสูงใหม่] ตอนนี้มี Live Cursors, Voice Rooms (ไอคอนไมค์), Time Machine และ Lazy Sync สำหรับสมุดบันทึกขนาดใหญ่! ชนิดของเครื่องไม่มีผล ทุกเครื่องใช้ Room ID เดียวกัน กุญแจเดียวกัน และโปรโตคอลรีเลย์เดียวกัน เครื่องใดก็เป็นผู้เปิดห้องได้ เนื้อหาเข้ารหัสแบบ end-to-end ด้วย AES-256-GCM และตัวส่งต่อเพียงส่งข้อความที่อ่านไม่ออก —— แม้ใช้บริการอุโมงค์ของผู้อื่นก็อ่านโน้ตของคุณไม่ได้ การแก้ไขระหว่างออฟไลน์จะถูกพักไว้และส่งอัตโนมัติเมื่อกลับมาเชื่อมต่อ",
         "fig": "collab",
         "cap": "ยังไม่เชื่อมต่อ: เริ่มทำงานร่วมกัน เข้าร่วมห้อง ที่อยู่เซิร์ฟเวอร์รีเลย์",
         "fig2": "collab_on",
