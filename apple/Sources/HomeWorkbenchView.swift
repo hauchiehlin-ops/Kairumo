@@ -7,11 +7,11 @@
 //  跨平台架構：iOS / iPadOS / macOS (Mac Catalyst)
 //
 
-import SwiftUI
 import PencilKit
+import SwiftUI
 
 #if canImport(PadnoteCore)
-import PadnoteCore
+    import PadnoteCore
 #endif
 
 /// Kairumo 首頁工作台（真實可操作介面）
@@ -79,7 +79,7 @@ public struct HomeWorkbenchView: View {
     @State private var hiddenNoteIds: Set<String> = []
     @State private var hiddenRecordingIds: Set<String> = []
 
-    // 資料夾管理與過濾狀態
+    /// 資料夾管理與過濾狀態
     /// Google 帳號同步的狀態。首頁要直接看得到「登入了沒」——
     /// 藏在設定頁裡的話，使用者不會知道有這個功能。
     @ObservedObject private var homeGoogleAuth = GoogleAuth.shared
@@ -108,7 +108,9 @@ public struct HomeWorkbenchView: View {
         case byTitle = "title"
         case onlyRecordings = "recordings"
 
-        public var id: String { rawValue }
+        public var id: String {
+            rawValue
+        }
 
         @MainActor
         public func localizedTitle(using localizationManager: LocalizationManager) -> String {
@@ -127,8 +129,10 @@ public struct HomeWorkbenchView: View {
     /// 取得核心版本資訊
     public var appVersionString: String {
         #if canImport(PadnoteCore)
-        let v = coreVersion()
-        if !v.isEmpty { return "v\(v)" }
+            let v = coreVersion()
+            if !v.isEmpty {
+                return "v\(v)"
+            }
         #endif
         return "v\(AppVersion.marketing)"
     }
@@ -136,17 +140,17 @@ public struct HomeWorkbenchView: View {
     /// 核心平台環境描述
     public var platformArchitectureDescription: String {
         #if targetEnvironment(macCatalyst)
-        return "Mac Catalyst (Apple Silicon / Intel)"
+            return "Mac Catalyst (Apple Silicon / Intel)"
         #elseif os(macOS)
-        return "macOS Native"
+            return "macOS Native"
         #elseif os(iOS)
-        #if targetEnvironment(simulator)
-        return "iOS Simulator"
+            #if targetEnvironment(simulator)
+                return "iOS Simulator"
+            #else
+                return "iOS / iPadOS Device"
+            #endif
         #else
-        return "iOS / iPadOS Device"
-        #endif
-        #else
-        return "Apple Universal"
+            return "Apple Universal"
         #endif
     }
 
@@ -168,23 +172,33 @@ public struct HomeWorkbenchView: View {
             return text.localizedCaseInsensitiveContains(searchText)
         }
 
-        if hit(doc.displayTitle()) || hit(doc.previewSnippet) { return true }
+        if hit(doc.displayTitle()) || hit(doc.previewSnippet) {
+            return true
+        }
 
         // 手寫辨識的結果也要搜得到 —— 不然辨識完了卻找不到，
         // 使用者會以為辨識沒有作用。
-        if doc.recognizedText?.values.contains(where: { hit($0) }) == true { return true }
+        if doc.recognizedText?.values.contains(where: { hit($0) }) == true {
+            return true
+        }
 
         // 打字內容。
-        if doc.textAttachments?.contains(where: { hit($0.text) }) == true { return true }
+        if doc.textAttachments?.contains(where: { hit($0.text) }) == true {
+            return true
+        }
 
         // 表格。整張表逐格看 —— 使用者記得的往往是某一格裡的字，
         // 而不是標題。
         if doc.tableAttachments?.contains(where: { table in
             table.cells.contains { hit($0) }
-        }) == true { return true }
+        }) == true {
+            return true
+        }
 
         // 形狀上的標籤（流程圖的節點名稱）。
-        if doc.shapeAttachments?.contains(where: { hit($0.label) }) == true { return true }
+        if doc.shapeAttachments?.contains(where: { hit($0.label) }) == true {
+            return true
+        }
 
         // 記憶體裡的附件到此為止。**錄音轉錄、PDF 內容與 OCR 文字不在裡面**
         // —— 那三樣要問核心的索引（`NotebookSearchIndex`，與 Android 同一組
@@ -247,7 +261,7 @@ public struct HomeWorkbenchView: View {
                         dataAndSyncSection
                         documentsSection
 
-                    footerVersionSection
+                        footerVersionSection
                     }
                     // 內容置中並限制最大寬度（工作項 S-62）。
                     //
@@ -386,11 +400,13 @@ public struct HomeWorkbenchView: View {
                         title: title.isEmpty
                             ? localizationManager.localized("new_note") : title,
                         pageCount: 1,
-                        template: .blank)
+                        template: .blank
+                    )
                     doc.isEncrypted = true
                     notebookStore.upsertNotebook(doc)
                     AccountSyncStore.shared.record(
-                        id: id, title: doc.title, parentId: nil, isFolder: false)
+                        id: id, title: doc.title, parentId: nil, isFolder: false
+                    )
                 }
             } }
             .fileImporter(
@@ -406,7 +422,11 @@ public struct HomeWorkbenchView: View {
             } }
             .alert(localizationManager.localized("rename_note"), isPresented: Binding(
                 get: { renamingNotebookId != nil },
-                set: { if !$0 { renamingNotebookId = nil } }
+                set: {
+                    if !$0 {
+                        renamingNotebookId = nil
+                    }
+                }
             )) {
                 TextField(localizationManager.localized("enter_title"), text: $renameText)
                 Button(localizationManager.localized("cancel"), role: .cancel) { renamingNotebookId = nil }
@@ -434,7 +454,11 @@ public struct HomeWorkbenchView: View {
             }
             .alert(localizationManager.localized("rename_folder"), isPresented: Binding(
                 get: { folderToRename != nil },
-                set: { if !$0 { folderToRename = nil } }
+                set: {
+                    if !$0 {
+                        folderToRename = nil
+                    }
+                }
             )) {
                 TextField(localizationManager.localized("folder_name"), text: $folderRenameText)
                 Button(localizationManager.localized("cancel"), role: .cancel) { folderToRename = nil }
@@ -469,6 +493,7 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 1. 頂部使用者帳號橫幅（響應式自適應寬度）
+
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
     private var userAccountBanner: AnyView {
         // `.accessibilityElement(children: .contain)` 不是可有可無的。
@@ -482,7 +507,8 @@ public struct HomeWorkbenchView: View {
         AnyView(
             userAccountBannerContent
                 .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("home.identity.card"))
+                .accessibilityIdentifier("home.identity.card")
+        )
     }
 
     private var userAccountBannerContent: some View {
@@ -560,8 +586,11 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 2. 頂部搜尋列
+
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
-    private var searchBarSection: AnyView { AnyView(searchBarSectionContent) }
+    private var searchBarSection: AnyView {
+        AnyView(searchBarSectionContent)
+    }
 
     private var searchBarSectionContent: some View {
         HStack(spacing: 12) {
@@ -578,7 +607,8 @@ public struct HomeWorkbenchView: View {
                     searchIndex.update(
                         query: value,
                         notebooks: notebookStore.visibleNotebooks,
-                        deviceId: NotebookMigration.deviceId)
+                        deviceId: NotebookMigration.deviceId
+                    )
                 }
             if !searchText.isEmpty {
                 Button {
@@ -597,8 +627,11 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 3. 主要動作按鈕（響應式自適應網格：新增筆記、開始錄音、📦素材圖庫）
+
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
-    private var primaryActionsSection: AnyView { AnyView(primaryActionsSectionContent) }
+    private var primaryActionsSection: AnyView {
+        AnyView(primaryActionsSectionContent)
+    }
 
     private var primaryActionsSectionContent: some View {
         LazyVGrid(
@@ -688,7 +721,7 @@ public struct HomeWorkbenchView: View {
                     Text(subtitle)
                         .font(DS.Font.caption)
                         .foregroundStyle(prominent ? AnyShapeStyle(Color.white.opacity(0.85))
-                                                   : AnyShapeStyle(DS.Color.secondaryText))
+                            : AnyShapeStyle(DS.Color.secondaryText))
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                         // fixedSize 會觸發無上界 sizeThatFits，
@@ -712,12 +745,14 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 4. 繼續 Working Section（真實筆記）
+
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
     private var continueWorkingSection: AnyView {
         AnyView(
             continueWorkingSectionContent
                 .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("home.continue.list"))
+                .accessibilityIdentifier("home.continue.list")
+        )
     }
 
     private var continueWorkingSectionContent: some View {
@@ -795,7 +830,7 @@ public struct HomeWorkbenchView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Text(showAllContinue ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleList.count))")
-                                .accessibilityIdentifier("home.continue.show_all")
+                                    .accessibilityIdentifier("home.continue.show_all")
                                 Image(systemName: showAllContinue ? "chevron.up" : "chevron.down")
                             }
                             .dsChip()
@@ -936,12 +971,14 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 5. 最近錄音（真實實體播放）
+
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
     private var recentRecordingsSection: AnyView {
         AnyView(
             recentRecordingsSectionContent
                 .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("home.recordings.list"))
+                .accessibilityIdentifier("home.recordings.list")
+        )
     }
 
     private var recentRecordingsSectionContent: some View {
@@ -1187,12 +1224,14 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 6. 全部筆記（真實多頁手繪文件）
+
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
     private var allNotebooksSection: AnyView {
         AnyView(
             allNotebooksSectionContent
                 .accessibilityElement(children: .contain)
-                .accessibilityIdentifier("home.notebooks.list"))
+                .accessibilityIdentifier("home.notebooks.list")
+        )
     }
 
     private var allNotebooksSectionContent: some View {
@@ -1545,14 +1584,17 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 7. 底部工作台品牌與版本號
-    /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
+
+    // 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
 
     /// 資料與同步入口。
     ///
     /// 這三項原本只藏在「系統診斷」裡 —— 使用者回報「一鍵備份的功能在哪裡？」
     /// 「同步的功能在哪裡？」。備份與同步是會在**出事之後**才想起來的功能，
     /// 那時使用者不會去翻診斷頁。放在首頁。
-    private var dataAndSyncSection: AnyView { AnyView(dataAndSyncSectionContent) }
+    private var dataAndSyncSection: AnyView {
+        AnyView(dataAndSyncSectionContent)
+    }
 
     private var dataAndSyncSectionContent: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -1624,7 +1666,7 @@ public struct HomeWorkbenchView: View {
         .accessibilityIdentifier("home.p2p.card")
     }
 
-    /// 統一雲端同步卡片。結合 Google Drive 與 iCloud / 本機資料夾同步。
+    // 統一雲端同步卡片。結合 Google Drive 與 iCloud / 本機資料夾同步。
 
     private var homeGoogleStatusText: String {
         if !homeGoogleAuth.isSignedIn {
@@ -1751,7 +1793,7 @@ public struct HomeWorkbenchView: View {
             Text(unifiedSyncExplainer)
                 .font(DS.Font.caption)
                 .foregroundStyle(DS.Color.secondaryText)
-                .lineLimit(5)  // 替換 fixedSize：避免 CoreText 斷字字典 I/O (0x8BADF00D)
+                .lineLimit(5) // 替換 fixedSize：避免 CoreText 斷字字典 I/O (0x8BADF00D)
         }
         .padding(DS.Space.m)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -1799,7 +1841,8 @@ public struct HomeWorkbenchView: View {
         do {
             report = try await withSyncTimeout(seconds: 180) {
                 await NotebookSyncCoordinator.runDrive(
-                    store: notebookStore, deviceId: NotebookMigration.deviceId)
+                    store: notebookStore, deviceId: NotebookMigration.deviceId
+                )
             }
         } catch {
             homeGoogleMessage = "同步逾時，請確認網路連線後重試"
@@ -1814,7 +1857,9 @@ public struct HomeWorkbenchView: View {
             homeGoogleMessage = localizationManager.localized("sync_already_running")
             return
         }
-        if report.failures.isEmpty { SyncHistory.markGoogleSynced() }
+        if report.failures.isEmpty {
+            SyncHistory.markGoogleSynced()
+        }
         if let failure = report.failures.first {
             homeGoogleMessage = "\(failure.key)：\(failure.value)"
         } else if report.isNoOp {
@@ -1832,17 +1877,22 @@ public struct HomeWorkbenchView: View {
         guard !homeFolderSyncing else { return }
         guard let folder = CloudSyncFolder.resolveFolder() else { return }
         homeFolderSyncing = true
-        
+
         Task {
             defer { homeFolderSyncing = false }
             homeGoogleMessage = localizationManager.localized("syncing")
             let scoped = folder.startAccessingSecurityScopedResource()
-            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+            defer {
+                if scoped {
+                    folder.stopAccessingSecurityScopedResource()
+                }
+            }
 
             let report = await NotebookSyncCoordinator.run(
-                store: notebookStore, folder: folder, deviceId: NotebookMigration.deviceId)
+                store: notebookStore, folder: folder, deviceId: NotebookMigration.deviceId
+            )
 
-            if report.failures.isEmpty && report.needsAttention.isEmpty {
+            if report.failures.isEmpty, report.needsAttention.isEmpty {
                 SyncHistory.markFolderSynced()
             }
             if let first = report.needsAttention.first {
@@ -1916,7 +1966,9 @@ public struct HomeWorkbenchView: View {
     }
 
     /// 說明文件入口：操作手冊與隱私權政策（離線可讀，隨 App 打包）
-    private var documentsSection: AnyView { AnyView(documentsSectionContent) }
+    private var documentsSection: AnyView {
+        AnyView(documentsSectionContent)
+    }
 
     private var documentsSectionContent: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -1990,7 +2042,9 @@ public struct HomeWorkbenchView: View {
         .accessibilityIdentifier(documentCardIdentifier(doc))
     }
 
-    private var footerVersionSection: AnyView { AnyView(footerVersionSectionContent) }
+    private var footerVersionSection: AnyView {
+        AnyView(footerVersionSectionContent)
+    }
 
     private var footerVersionSectionContent: some View {
         VStack(spacing: 8) {
@@ -2044,8 +2098,11 @@ public struct HomeWorkbenchView: View {
     }
 
     // MARK: - 新增筆記彈窗
+
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
-    private var newNotebookModal: AnyView { AnyView(newNotebookModalContent) }
+    private var newNotebookModal: AnyView {
+        AnyView(newNotebookModalContent)
+    }
 
     private var newNotebookModalContent: some View {
         NavigationStack {
@@ -2101,23 +2158,29 @@ public struct HomeWorkbenchView: View {
                     Button(localizationManager.localized("confirm")) {
                         let defaultTitle = newNoteTitle.isEmpty ? localizationManager.localized("new_notebook") : newNoteTitle
                         var created = notebookStore.createNotebook(
-                            title: defaultTitle, template: selectedTemplate)
+                            title: defaultTitle, template: selectedTemplate
+                        )
                         created.guidePaletteId = newNotePaletteId
                         notebookStore.updateNotebook(created)
                         // 選了文件範本就把內容鋪進去，再存一次。
                         if let id = selectedDocTemplateId,
-                           let tmpl = DocumentTemplateCatalog.template(id: id) {
+                           let tmpl = DocumentTemplateCatalog.template(id: id)
+                        {
                             DocumentTemplateCatalog.apply(
                                 tmpl, kind: selectedDocVariant,
-                                language: localizationManager.currentLanguage.catalogKey, to: &created)
+                                language: localizationManager.currentLanguage.catalogKey, to: &created
+                            )
                             notebookStore.updateNotebook(created)
                         } else if let variant = selectedPaperVariant,
                                   let paper = DocumentTemplateCatalog.paperTemplate(
-                                    paperId: selectedTemplate.paperId) {
+                                      paperId: selectedTemplate.paperId
+                                  )
+                        {
                             // 沒選文件範本，但紙張自己帶了示範內容。
                             DocumentTemplateCatalog.apply(
                                 paper, kind: variant,
-                                language: localizationManager.currentLanguage.catalogKey, to: &created)
+                                language: localizationManager.currentLanguage.catalogKey, to: &created
+                            )
                             notebookStore.updateNotebook(created)
                         }
                         // 記下這一次用了哪個樣板，下次直接從「常用樣板」點。
@@ -2155,7 +2218,9 @@ public struct HomeWorkbenchView: View {
     }
 
     /// 紙張是由文件範本決定的嗎？是的話清單只能看，不能改。
-    private var paperIsLockedByDocument: Bool { selectedDocTemplateId != nil }
+    private var paperIsLockedByDocument: Bool {
+        selectedDocTemplateId != nil
+    }
 
     /// 主題分類 + 該主題底下的紙張，**同一個區塊**。
     ///
@@ -2255,7 +2320,8 @@ public struct HomeWorkbenchView: View {
     @ViewBuilder
     private var paperContentPicker: some View {
         if !paperIsLockedByDocument,
-           DocumentTemplateCatalog.paperTemplate(paperId: selectedTemplate.paperId) != nil {
+           DocumentTemplateCatalog.paperTemplate(paperId: selectedTemplate.paperId) != nil
+        {
             Picker(
                 localizationManager.localized("paper_content"),
                 selection: $selectedPaperVariant
@@ -2398,7 +2464,8 @@ public struct HomeWorkbenchView: View {
     /// 用文件範本的路徑去套紙張樣板的話，紙張那一欄會被鎖住而使用者改不動。
     private func applyRecentTemplate(_ tmpl: DocumentTemplateCatalog.Template) {
         if DocumentTemplateCatalog.paperTemplate(paperId: tmpl.id) != nil,
-           let paper = NoteTemplate(paperId: tmpl.id) {
+           let paper = NoteTemplate(paperId: tmpl.id)
+        {
             selectedDocTemplateId = nil
             selectedTemplate = paper
             selectedNewNoteCategory = paper.ffiTheme
@@ -2452,7 +2519,8 @@ public struct HomeWorkbenchView: View {
                 DisclosureGroup(
                     isExpanded: Binding(
                         get: { expandedDocTheme == theme.id },
-                        set: { expandedDocTheme = $0 ? theme.id : nil })
+                        set: { expandedDocTheme = $0 ? theme.id : nil }
+                    )
                 ) {
                     ForEach(theme.categories) { category in
                         Text(catalogText(category.name))
@@ -2504,7 +2572,8 @@ public struct HomeWorkbenchView: View {
 
     private func catalogText(_ table: [String: String]) -> String {
         DocumentTemplateCatalog.localized(
-            table, language: localizationManager.currentLanguage.catalogKey)
+            table, language: localizationManager.currentLanguage.catalogKey
+        )
     }
 
     private func formatDuration(seconds: Int) -> String {
@@ -2513,6 +2582,7 @@ public struct HomeWorkbenchView: View {
         return String(format: "%02d:%02d", m, s)
     }
 }
+
 /// 快速即時錄音彈窗視圖
 struct QuickAudioRecorderModal: View {
     @ObservedObject var audioManager = AudioRecorderManager.shared
@@ -2542,7 +2612,7 @@ struct QuickAudioRecorderModal: View {
                     }
 
                     HStack(spacing: 3) {
-                        ForEach(0..<audioManager.audioLevels.count, id: \.self) { i in
+                        ForEach(0 ..< audioManager.audioLevels.count, id: \.self) { i in
                             RoundedRectangle(cornerRadius: 2)
                                 .fill(audioManager.status == .recording ? Color.red : (audioManager.status == .paused ? Color.orange.opacity(0.6) : Color.secondary.opacity(0.3)))
                                 .frame(width: 4, height: max(6, audioManager.audioLevels[i] * 50))
@@ -2594,8 +2664,8 @@ struct QuickAudioRecorderModal: View {
                             HStack(spacing: 6) {
                                 Image(systemName: audioManager.status == .recording ? "pause.fill" : "play.fill")
                                 Text(audioManager.status == .recording
-                                     ? localizationManager.localized("pause_recording")
-                                     : localizationManager.localized("resume_recording"))
+                                    ? localizationManager.localized("pause_recording")
+                                    : localizationManager.localized("resume_recording"))
                                     .fontWeight(.semibold)
                             }
                             .padding()
@@ -2697,7 +2767,8 @@ struct QuickAudioRecorderModal: View {
     private func startQuickRecording() async {
         let target: NotebookDocument
         if let id = targetNotebookId,
-           let picked = notebookStore.notebooks.first(where: { $0.id == id }) {
+           let picked = notebookStore.notebooks.first(where: { $0.id == id })
+        {
             target = picked
         } else {
             target = notebookStore.recordingInbox()
@@ -2707,7 +2778,8 @@ struct QuickAudioRecorderModal: View {
             notebookTitle: target.displayTitle(),
             title: recordingTitle,
             pageIndex: 0,
-            languageTag: LocalizationManager.shared.currentLanguage.rawValue)
+            languageTag: LocalizationManager.shared.currentLanguage.rawValue
+        )
     }
 
     private func formatTime(seconds: TimeInterval) -> String {
@@ -2718,6 +2790,7 @@ struct QuickAudioRecorderModal: View {
 }
 
 // MARK: - 應用程式與核心診斷面板（點擊版本號展開）
+
 public struct AppDiagnosticsSheet: View {
     let versionString: String
     let platformDesc: String
@@ -2748,7 +2821,9 @@ public struct AppDiagnosticsSheet: View {
     /// 輸入診斷。與 Android 端同一組定義，兩邊的數字才比得起來。
     ///
     /// 用共用的那一份：使用者在編輯器裡寫字，接著到這裡來看數字。
-    private var inputDiagnostics: InkInputDiagnostics { .shared }
+    private var inputDiagnostics: InkInputDiagnostics {
+        .shared
+    }
 
     /// 備份與復原。
     @State private var backupMessage: String?
@@ -2842,7 +2917,7 @@ public struct AppDiagnosticsSheet: View {
             allowsMultipleSelection: false
         ) { result in
             switch result {
-            case .success(let urls):
+            case let .success(urls):
                 guard let url = urls.first else { return }
                 do {
                     try transcriber.importWhisperModel(from: url)
@@ -2850,7 +2925,7 @@ public struct AppDiagnosticsSheet: View {
                 } catch {
                     modelImportMessage = "❌ 匯入失敗: \(error.localizedDescription)"
                 }
-            case .failure(let error):
+            case let .failure(error):
                 modelImportMessage = "❌ 選取檔案失敗: \(error.localizedDescription)"
             }
         }
@@ -2858,13 +2933,11 @@ public struct AppDiagnosticsSheet: View {
 }
 
 extension AppDiagnosticsSheet {
-
     /// 備份與復原。
     ///
     /// 備份檔包含整個 Documents 目錄與 App 自己的設定 —— 目標是「換一台裝置
     /// 或重裝之後，一鍵回到原樣」。容器格式在核心，所以 iPad 上做的備份
     /// 在 Android 也開得起來。
-    @ViewBuilder
     var backupSection: some View {
         Section(localizationManager.localized("backup_section")) {
             if let backupMessage {
@@ -2891,7 +2964,7 @@ extension AppDiagnosticsSheet {
             allowedContentTypes: [.data],
             allowsMultipleSelection: false
         ) { result in
-            guard case .success(let urls) = result, let url = urls.first else { return }
+            guard case let .success(urls) = result, let url = urls.first else { return }
             restoreBackup(from: url)
         }
         .sheet(item: Binding(
@@ -2907,11 +2980,13 @@ extension AppDiagnosticsSheet {
     private func createBackup() {
         do {
             let (url, info) = try BackupManager.createBackup(
-                documentsDirectory: store.documentsDirectory)
+                documentsDirectory: store.documentsDirectory
+            )
             backupMessage = localizationManager.localized("backup_created")
                 .replacingFirst("%1@", with: "\(info.fileCount)")
                 .replacingFirst("%2@", with: ByteCountFormatter.string(
-                    fromByteCount: Int64(info.totalBytes), countStyle: .file))
+                    fromByteCount: Int64(info.totalBytes), countStyle: .file
+                ))
             // 直接叫出分享面板：備份檔留在 tmp 裡等於沒有備份，
             // 使用者要把它放到雲端或電腦上才算數。
             shareBackupURL = url
@@ -2922,12 +2997,17 @@ extension AppDiagnosticsSheet {
 
     private func restoreBackup(from url: URL) {
         let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        defer {
+            if scoped {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
         do {
             // 先看一眼再動手：使用者要知道自己選到的是什麼。
             _ = try BackupManager.inspect(url)
             let outcome = try BackupManager.restore(
-                from: url, into: store.documentsDirectory)
+                from: url, into: store.documentsDirectory
+            )
             store.loadData()
 
             var message = localizationManager.localized("backup_restored")
@@ -2965,9 +3045,9 @@ extension AppDiagnosticsSheet {
                     let report = store.repaginateToFixedPages()
                     repaginationMessage = report.allSucceeded
                         ? localizationManager.localized("page_model_done")
-                            .replacingFirst("%@", with: "\(report.changedCount)")
+                        .replacingFirst("%@", with: "\(report.changedCount)")
                         : localizationManager.localized("page_model_failed")
-                            .replacingFirst("%@", with: "\(report.failedCount)")
+                        .replacingFirst("%@", with: "\(report.failedCount)")
                 }
 
                 Text(localizationManager.localized("page_model_explainer"))
@@ -2980,7 +3060,6 @@ extension AppDiagnosticsSheet {
     /// Google 帳號同步（G-01 ～ G-05，ADR-0011）。
     ///
     /// 統一雲端同步中心（整合 Google Drive 與 iCloud / 自選資料夾）
-    @ViewBuilder
     var unifiedSyncSection: some View {
         Section(localizationManager.localized("cloud_sync")) {
             HStack {
@@ -3015,7 +3094,8 @@ extension AppDiagnosticsSheet {
                         .foregroundColor(.secondary)
                     Spacer()
                     Text(SyncHistory.lastGoogleSyncDescription(
-                        none: localizationManager.localized("sync_never")))
+                        none: localizationManager.localized("sync_never")
+                    ))
                 }
                 .font(.footnote)
 
@@ -3036,7 +3116,8 @@ extension AppDiagnosticsSheet {
                         .foregroundColor(.secondary)
                     Spacer()
                     Text(SyncHistory.lastFolderSyncDescription(
-                        none: localizationManager.localized("sync_never")))
+                        none: localizationManager.localized("sync_never")
+                    ))
                 }
                 .font(.footnote)
 
@@ -3066,7 +3147,6 @@ extension AppDiagnosticsSheet {
     }
 
     /// 語音轉錄與離線模型狀態（提供離線模型檢測、進度顯示、鏡像分流與手動匯入）
-    @ViewBuilder
     var speechTranscriptionSection: some View {
         Section(localizationManager.localized("asr_section_title2")) {
             let status = transcriber.checkOfflineStatus()
@@ -3154,7 +3234,6 @@ extension AppDiagnosticsSheet {
                         }
                     }
                     .font(.footnote)
-
                 }
 
                 Button {
@@ -3202,7 +3281,8 @@ extension AppDiagnosticsSheet {
         do {
             report = try await withSyncTimeout(seconds: 180) {
                 await NotebookSyncCoordinator.runDrive(
-                    store: store, deviceId: NotebookMigration.deviceId)
+                    store: store, deviceId: NotebookMigration.deviceId
+                )
             }
         } catch {
             googleMessage = "同步逾時，請確認網路連線後重試"
@@ -3217,7 +3297,9 @@ extension AppDiagnosticsSheet {
             googleMessage = localizationManager.localized("sync_already_running")
             return
         }
-        if report.failures.isEmpty { SyncHistory.markGoogleSynced() }
+        if report.failures.isEmpty {
+            SyncHistory.markGoogleSynced()
+        }
         if let failure = report.failures.first {
             googleMessage = "\(failure.key)：\(failure.value)"
         } else if report.isNoOp {
@@ -3231,15 +3313,20 @@ extension AppDiagnosticsSheet {
 
     private func runSync() {
         guard let folder = CloudSyncFolder.resolveFolder() else { return }
-        
+
         Task {
             let scoped = folder.startAccessingSecurityScopedResource()
-            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+            defer {
+                if scoped {
+                    folder.stopAccessingSecurityScopedResource()
+                }
+            }
 
             // 匯出 → 搬檔 → 匯入。順序不能顛倒：先搬檔的話上傳的是舊內容，
             // 不匯入的話另一台裝置寫的東西永遠不會變成筆記。
             let report = await NotebookSyncCoordinator.run(
-                store: store, folder: folder, deviceId: NotebookMigration.deviceId)
+                store: store, folder: folder, deviceId: NotebookMigration.deviceId
+            )
 
             if report.failures.isEmpty && report.needsAttention.isEmpty {
                 SyncHistory.markFolderSynced()
@@ -3267,7 +3354,6 @@ extension AppDiagnosticsSheet {
     /// 量到的是「事件在硬體上發生 → 交給畫面」，**不是筆尖到光子**：
     /// 面板的掃描與亮起時間量不到。它真正有用的地方是同一台裝置上開關某個
     /// 選項的前後對比。
-    @ViewBuilder
     var inputDiagnosticsSection: some View {
         Section(localizationManager.localized("input_diagnostics")) {
             ForEach(inputDiagnostics.lines(), id: \.0) { label, value in
@@ -3286,7 +3372,6 @@ extension AppDiagnosticsSheet {
     }
 
     /// 啟動與效能診斷日誌（毫秒時間戳與執行緒標記）。
-    @ViewBuilder
     var startupDiagnosticsSection: some View {
         Section {
             HStack {
@@ -3385,7 +3470,6 @@ extension AppDiagnosticsSheet {
     /// 跨平台格式轉換。
     ///
     /// 放在診斷頁而不是主畫面：這是進階動作，不該是使用者第一天就會按到的東西。
-    @ViewBuilder
     var migrationSection: some View {
         Section(localizationManager.localized("migration_section")) {
             HStack {
@@ -3423,9 +3507,12 @@ extension AppDiagnosticsSheet {
                 runMigration()
             } label: {
                 HStack {
-                    if isMigrating { ProgressView().padding(.trailing, 6) }
+                    if isMigrating {
+                        ProgressView().padding(.trailing, 6)
+                    }
                     Text(localizationManager.localized(
-                        isMigrating ? "migration_running" : "migration_run"))
+                        isMigrating ? "migration_running" : "migration_run"
+                    ))
                 }
             }
             .disabled(isMigrating)
@@ -3455,7 +3542,9 @@ extension AppDiagnosticsSheet {
 
     private func failedEntries(in report: NotebookMigration.Report) -> [(String, String)] {
         report.outcomes.compactMap { id, outcome in
-            if case .failed(let reason) = outcome { return (id, reason) }
+            if case let .failed(reason) = outcome {
+                return (id, reason)
+            }
             return nil
         }
         .sorted { $0.0 < $1.0 }
@@ -3493,8 +3582,8 @@ private extension String {
     /// 這些訊息有多個 `%@`，要逐一填不同的值；`replacingOccurrences` 會一次
     /// 全換成同一個數字，看起來像「成功 3、略過 3、失敗 3」。
     func replacingFirst(_ target: String, with replacement: String) -> String {
-        guard let range = self.range(of: target) else { return self }
-        return self.replacingCharacters(in: range, with: replacement)
+        guard let range = range(of: target) else { return self }
+        return replacingCharacters(in: range, with: replacement)
     }
 }
 
@@ -3515,7 +3604,7 @@ struct NotebookEditorHost: View {
 
     init(store: NotebookStore, initialNotebookId: String) {
         self.store = store
-        self._currentNotebookId = State(initialValue: initialNotebookId)
+        _currentNotebookId = State(initialValue: initialNotebookId)
     }
 
     var body: some View {
@@ -3550,29 +3639,31 @@ struct NotebookEditorHost: View {
 /// `sheet(item:)` 需要 Identifiable，而 URL 不是。
 private struct IdentifiableURL: Identifiable {
     let url: URL
-    var id: String { url.path }
+    var id: String {
+        url.path
+    }
 }
 
 /// 系統分享面板。備份檔留在 tmp 裡等於沒有備份 —— 一定要讓使用者把它帶走。
 private struct ShareSheet: UIViewControllerRepresentable {
     let items: [Any]
 
-    func makeUIViewController(context: Context) -> UIActivityViewController {
+    func makeUIViewController(context _: Context) -> UIActivityViewController {
         UIActivityViewController(activityItems: items, applicationActivities: nil)
     }
 
-    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+    func updateUIViewController(_: UIActivityViewController, context _: Context) {}
 }
 
 /// 系統檔案儲存面板（取代 ShareSheet，直接開啟 Files 選擇儲存位置）。
 private struct DocumentExporter: UIViewControllerRepresentable {
     let url: URL
 
-    func makeUIViewController(context: Context) -> UIDocumentPickerViewController {
+    func makeUIViewController(context _: Context) -> UIDocumentPickerViewController {
         UIDocumentPickerViewController(forExporting: [url], asCopy: true)
     }
 
-    func updateUIViewController(_ controller: UIDocumentPickerViewController, context: Context) {}
+    func updateUIViewController(_: UIDocumentPickerViewController, context _: Context) {}
 }
 
 private enum LogExportUtility {
@@ -3599,12 +3690,15 @@ private enum LogExportUtility {
 }
 
 // MARK: - 1. 雲端同步中心專屬獨立視窗 (整合 Google Drive 與 iCloud / 資料夾同步)
+
 public enum CloudSyncProvider: String, CaseIterable, Identifiable {
     case googleDrive = "google"
     case folderOrICloud = "folder"
-    case disabled = "disabled"
+    case disabled
 
-    public var id: String { rawValue }
+    public var id: String {
+        rawValue
+    }
 }
 
 public struct CloudSyncDetailSheet: View {
@@ -3620,7 +3714,9 @@ public struct CloudSyncDetailSheet: View {
         case googleDrive = "Google Drive"
         case folder = "iCloud / 資料夾"
 
-        public var id: String { rawValue }
+        public var id: String {
+            rawValue
+        }
     }
 
     @State private var logFilter: LogFilter = .currentTab
@@ -3640,6 +3736,39 @@ public struct CloudSyncDetailSheet: View {
     @State private var showFolderPicker = false
     @State private var shareSyncLogsURL: URL?
     @State private var copiedSyncLogs = false
+
+    // Asynchronous diagnostic state to prevent main thread blocking (watchdog crash)
+    @State private var currentDiagnostics: FfiSyncDiagnostics?
+    @State private var currentAudit: FfiCloudAudit?
+
+    private func refreshDiagnostics() async {
+        let store = notebookStore
+        let packagesDir = store.syncPackagesDirectory
+        let books = store.syncNotebooks
+        let account = googleAuth.accountEmail ?? ""
+        let remoteIndexJson = AccountSyncStore.shared.remoteIndexJSON(account: account)
+        let libraryIndexJson = AccountSyncStore.shared.indexJSON
+
+        let (d, a) = await Task.detached {
+            let packagePaths = books.map { packagesDir.appending(path: "\($0.id).padnote").path }
+            let notebookIds = books.map { $0.id }
+            let d = syncDiagnose(
+                remoteIndexJson: remoteIndexJson,
+                packagePaths: packagePaths,
+                notebookIds: notebookIds
+            )
+            let a = cloudAudit(
+                remoteIndexJson: remoteIndexJson,
+                libraryIndexJson: libraryIndexJson
+            )
+            return (d, a)
+        }.value
+
+        await MainActor.run {
+            self.currentDiagnostics = d
+            self.currentAudit = a
+        }
+    }
 
     private static let logDateFormatter: DateFormatter = {
         let f = DateFormatter()
@@ -3701,6 +3830,15 @@ public struct CloudSyncDetailSheet: View {
                     Button(localizationManager.localized("close")) { dismiss() }
                 }
             }
+            .task {
+                await refreshDiagnostics()
+            }
+            .onChange(of: isGoogleSyncing) { _ in
+                Task { await refreshDiagnostics() }
+            }
+            .onChange(of: AutoSyncController.shared.isSyncing) { _ in
+                Task { await refreshDiagnostics() }
+            }
             .onAppear {
                 if let initial = initialProvider {
                     selectedProvider = initial
@@ -3718,21 +3856,25 @@ public struct CloudSyncDetailSheet: View {
                 allowsMultipleSelection: false
             ) { result in
                 switch result {
-                case .success(let urls):
+                case let .success(urls):
                     guard let url = urls.first else { return }
                     if url.pathExtension == "padnote" || url.lastPathComponent.hasSuffix(".padnote") {
                         folderStatusMessage = localizationManager.localized("invalid_folder_padnote")
                         return
                     }
                     let scoped = url.startAccessingSecurityScopedResource()
-                    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+                    defer {
+                        if scoped {
+                            url.stopAccessingSecurityScopedResource()
+                        }
+                    }
                     do {
                         try CloudSyncFolder.setFolder(url)
                         folderSyncTask = Task { await runFolderSync() }
                     } catch {
                         folderStatusMessage = error.localizedDescription
                     }
-                case .failure(let error):
+                case let .failure(error):
                     folderStatusMessage = error.localizedDescription
                 }
             }
@@ -3746,6 +3888,7 @@ public struct CloudSyncDetailSheet: View {
     }
 
     // MARK: - Google Drive 視圖
+
     private var googleDriveSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.l) {
             HStack(spacing: DS.Space.m) {
@@ -3905,7 +4048,7 @@ public struct CloudSyncDetailSheet: View {
                                 }
                             case .failure(.cancelled):
                                 break
-                            case .failure(let error):
+                            case let .failure(error):
                                 googleStatusMessage = error.errorDescription ?? error.localizedDescription
                             }
                         }
@@ -3959,6 +4102,7 @@ public struct CloudSyncDetailSheet: View {
     }
 
     // MARK: - iCloud / 資料夾同步視圖
+
     private var folderSyncSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.l) {
             HStack(spacing: DS.Space.m) {
@@ -4266,6 +4410,7 @@ public struct CloudSyncDetailSheet: View {
     }
 
     // MARK: - 關閉同步視圖
+
     private var disabledSyncSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.l) {
             HStack(spacing: DS.Space.m) {
@@ -4355,7 +4500,7 @@ public struct CloudSyncDetailSheet: View {
                 Text(desc)
                     .font(DS.Font.caption)
                     .foregroundColor(.secondary)
-                    .lineLimit(5)  // 替換 fixedSize：避免 CoreText 斷字字典 I/O (0x8BADF00D)
+                    .lineLimit(5) // 替換 fixedSize：避免 CoreText 斷字字典 I/O (0x8BADF00D)
             }
         }
     }
@@ -4371,7 +4516,8 @@ public struct CloudSyncDetailSheet: View {
         do {
             report = try await withSyncTimeout(seconds: 180) {
                 await NotebookSyncCoordinator.runDrive(
-                    store: notebookStore, deviceId: NotebookMigration.deviceId)
+                    store: notebookStore, deviceId: NotebookMigration.deviceId
+                )
             }
         } catch is CancellationError {
             googleStatusMessage = "已中斷同步"
@@ -4397,7 +4543,9 @@ public struct CloudSyncDetailSheet: View {
             googleStatusMessage = localizationManager.localized("sync_already_running")
             return
         }
-        if report.failures.isEmpty { SyncHistory.markGoogleSynced() }
+        if report.failures.isEmpty {
+            SyncHistory.markGoogleSynced()
+        }
         if let failure = report.failures.first {
             googleStatusMessage = "\(failure.key)：\(failure.value)"
         } else if report.isNoOp {
@@ -4417,14 +4565,19 @@ public struct CloudSyncDetailSheet: View {
         defer { isFolderSyncing = false }
 
         let scoped = folder.startAccessingSecurityScopedResource()
-        defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+        defer {
+            if scoped {
+                folder.stopAccessingSecurityScopedResource()
+            }
+        }
 
         folderStatusMessage = "iCloud / 資料夾同步中..."
         let report: NotebookSyncCoordinator.Report
         do {
             report = try await withSyncTimeout(seconds: 180) {
                 await NotebookSyncCoordinator.run(
-                    store: notebookStore, folder: folder, deviceId: NotebookMigration.deviceId)
+                    store: notebookStore, folder: folder, deviceId: NotebookMigration.deviceId
+                )
             }
         } catch is CancellationError {
             folderStatusMessage = "已中斷同步"
@@ -4441,7 +4594,7 @@ public struct CloudSyncDetailSheet: View {
             folderStatusMessage = "已中斷同步"
             return
         }
-        if report.failures.isEmpty && report.needsAttention.isEmpty {
+        if report.failures.isEmpty, report.needsAttention.isEmpty {
             SyncHistory.markFolderSynced()
         }
         if let first = report.needsAttention.first {
@@ -4519,133 +4672,128 @@ public struct CloudSyncDetailSheet: View {
     ///
     /// 這一段**不打網路、也不需要權杖** —— 診斷畫面在網路不通的時候
     /// 最需要，依賴一個要先去換權杖的工作階段就等於在最需要時失效。
+    @ViewBuilder
     private var syncDoctorSection: some View {
-        let diagnostics = currentDiagnostics
-        // **提到最外層。** 原本宣告在內層 VStack 裡，於是外層的回收按鈕
-        // 看不到它 —— 而 `audit` 這個名字在 Darwin 上**有一個同名的 C 函式**，
-        // 所以編譯器不是報「找不到」，是報「(UnsafeRawPointer?, Int32) -> Int32
-        // 沒有 deleted 這個成員」。錯誤訊息完全不指向真正的問題。
-        let cloudFiles = currentAudit
-        return VStack(alignment: .leading, spacing: 8) {
-            Text(localizationManager.localized("hw_sync_status"))
-                .font(DS.Font.caption)
-                .foregroundColor(.secondary)
-            VStack(alignment: .leading, spacing: 6) {
-                doctorRow(
-                    "雲端快照",
-                    diagnostics.hasCursor
-                        ? "已建立（追蹤 \(diagnostics.trackedFiles) 個檔案）"
-                        : "尚未建立，下次同步會重新盤點一次")
-                doctorRow(
-                    "待同步筆記",
-                    diagnostics.pendingNotebooks.isEmpty
-                        ? "無（已檢查 \(diagnostics.checkedNotebooks) 本）"
-                        : "\(diagnostics.pendingNotebooks.count) / \(diagnostics.checkedNotebooks) 本")
-                doctorRow(
-                    "自動同步",
-                    AutoSyncController.shared.needsSignIn
-                        ? "已暫停，請重新登入"
-                        : (AutoSyncController.shared.isSyncing ? "進行中" : "待命"))
-                // **這幾千個檔案裡有多少是活的。** 在這之前沒有人答得出來：
-                // 面板只說「追蹤 N 個檔案」，而 N 裡面混著已刪筆記本的殘骸、
-                // 別台裝置剛建立還沒拉到索引的東西，以及舊版留下的雜物。
-                doctorRow(
-                    localizationManager.localized("sync_audit_files"),
-                    localizationManager.localized("sync_audit_breakdown")
-                        .replacingFirst("%1@", with: "\(cloudFiles.live)")
-                        .replacingFirst("%2@", with: "\(cloudFiles.deleted)")
-                        .replacingFirst("%3@", with: "\(cloudFiles.unknown)"))
-                if cloudFiles.unknown > 0 {
-                    Text(localizationManager.localized("sync_audit_unknown_hint"))
-                        .font(DS.Font.caption)
-                        .foregroundColor(.secondary)
-                }
-                if !AutoSyncController.shared.lastMessage.isEmpty {
-                    doctorRow("最後結果", AutoSyncController.shared.lastMessage)
-                }
-                if let wipeMessage {
-                    doctorRow("重置", wipeMessage)
-                }
-            }
-            .font(DS.Font.caption)
-            .padding(DS.Space.s)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous)
-                    .fill(Color(uiColor: .secondarySystemGroupedBackground))
-            )
-
-            // **重置雲端同步。**
-            //
-            // 為什麼要放在 App 裡：資料存在 Drive 的 `appDataFolder`，那是
-            // 隱藏區 —— 使用者在 drive.google.com 的檔案列表裡看不到也刪不掉。
-            // 唯一的手動路徑是 Drive 設定 →「管理應用程式」→「刪除隱藏的
-            // 應用程式資料」，而那條路徑**只清雲端**：本機還留著一份
-            // 「雲端有這些檔案」的快照，下一輪同步會拿著幻覺去比對。
-            // **回收**：只刪已刪除筆記本的殘骸。比「重置」溫和得多，
-            // 所以排在它前面 —— 多數人要的是這一個。
-            if cloudFiles.deleted > 0 {
-                Button {
-                    showReclaimConfirm = true
-                } label: {
-                    if isReclaiming {
-                        HStack(spacing: 6) {
-                            ProgressView().controlSize(.small)
-                            Text(localizationManager.localized("sync_reclaim_running"))
-                        }
-                    } else {
-                        Text(localizationManager.localized("sync_reclaim"))
+        if let diagnostics = currentDiagnostics, let cloudFiles = currentAudit {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(localizationManager.localized("hw_sync_status"))
+                    .font(DS.Font.caption)
+                    .foregroundColor(.secondary)
+                VStack(alignment: .leading, spacing: 6) {
+                    doctorRow(
+                        "雲端快照",
+                        diagnostics.hasCursor
+                            ? "已建立（追蹤 \(diagnostics.trackedFiles) 個檔案）"
+                            : "尚未建立，下次同步會重新盤點一次"
+                    )
+                    doctorRow(
+                        "待同步筆記",
+                        diagnostics.pendingNotebooks.isEmpty
+                            ? "無（已檢查 \(diagnostics.checkedNotebooks) 本）"
+                            : "\(diagnostics.pendingNotebooks.count) / \(diagnostics.checkedNotebooks) 本"
+                    )
+                    doctorRow(
+                        "自動同步",
+                        AutoSyncController.shared.needsSignIn
+                            ? "已暫停，請重新登入"
+                            : (AutoSyncController.shared.isSyncing ? "進行中" : "待命")
+                    )
+                    doctorRow(
+                        localizationManager.localized("sync_audit_files"),
+                        localizationManager.localized("sync_audit_breakdown")
+                            .replacingFirst("%1@", with: "\(cloudFiles.live)")
+                            .replacingFirst("%2@", with: "\(cloudFiles.deleted)")
+                            .replacingFirst("%3@", with: "\(cloudFiles.unknown)")
+                    )
+                    if cloudFiles.unknown > 0 {
+                        Text(localizationManager.localized("sync_audit_unknown_hint"))
+                            .font(DS.Font.caption)
+                            .foregroundColor(.secondary)
+                    }
+                    if !AutoSyncController.shared.lastMessage.isEmpty {
+                        doctorRow("最後結果", AutoSyncController.shared.lastMessage)
+                    }
+                    if let wipeMessage {
+                        doctorRow("重置", wipeMessage)
                     }
                 }
                 .font(DS.Font.caption)
-                .disabled(isReclaiming)
-                .accessibilityIdentifier("sync.reclaim")
+                .padding(DS.Space.s)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous)
+                        .fill(Color(uiColor: .secondarySystemGroupedBackground))
+                )
+
+                if cloudFiles.deleted > 0 {
+                    Button {
+                        showReclaimConfirm = true
+                    } label: {
+                        if isReclaiming {
+                            HStack(spacing: 6) {
+                                ProgressView().controlSize(.small)
+                                Text(localizationManager.localized("sync_reclaim_running"))
+                            }
+                        } else {
+                            Text(localizationManager.localized("sync_reclaim"))
+                        }
+                    }
+                    .font(DS.Font.caption)
+                    .disabled(isReclaiming)
+                    .accessibilityIdentifier("sync.reclaim")
+                    .confirmationDialog(
+                        localizationManager.localized("sync_reclaim"),
+                        isPresented: $showReclaimConfirm,
+                        titleVisibility: .visible
+                    ) {
+                        Button(localizationManager.localized("sync_reclaim")) {
+                            Task { await runReclaim() }
+                        }
+                        Button(localizationManager.localized("cancel"), role: .cancel) {}
+                    } message: {
+                        Text(localizationManager.localized("sync_reclaim_confirm_body"))
+                    }
+                }
+
+                Button(role: .destructive) {
+                    showWipeConfirm = true
+                } label: {
+                    if isWiping {
+                        HStack(spacing: 6) {
+                            ProgressView().controlSize(.small)
+                            Text(localizationManager.localized("sync_reset_cloud_running"))
+                        }
+                    } else {
+                        Text(localizationManager.localized("sync_reset_cloud"))
+                    }
+                }
+                .font(DS.Font.caption)
+                .disabled(isWiping)
+                .accessibilityIdentifier("sync.reset_cloud")
                 .confirmationDialog(
-                    localizationManager.localized("sync_reclaim"),
-                    isPresented: $showReclaimConfirm,
+                    localizationManager.localized("sync_reset_cloud_confirm_title"),
+                    isPresented: $showWipeConfirm,
                     titleVisibility: .visible
                 ) {
-                    Button(localizationManager.localized("sync_reclaim")) {
-                        Task { await runReclaim() }
+                    Button(localizationManager.localized("sync_reset_cloud"), role: .destructive) {
+                        Task { await runWipeCloud() }
                     }
                     Button(localizationManager.localized("cancel"), role: .cancel) {}
                 } message: {
-                    Text(localizationManager.localized("sync_reclaim_confirm_body"))
+                    Text(localizationManager.localized("sync_reset_cloud_confirm_body"))
                 }
             }
-
-            Button(role: .destructive) {
-                showWipeConfirm = true
-            } label: {
-                if isWiping {
-                    HStack(spacing: 6) {
-                        ProgressView().controlSize(.small)
-                        Text(localizationManager.localized("sync_reset_cloud_running"))
-                    }
-                } else {
-                    Text(localizationManager.localized("sync_reset_cloud"))
-                }
-            }
-            .font(DS.Font.caption)
-            .disabled(isWiping)
-            .accessibilityIdentifier("sync.reset_cloud")
-            .confirmationDialog(
-                localizationManager.localized("sync_reset_cloud_confirm_title"),
-                isPresented: $showWipeConfirm,
-                titleVisibility: .visible
-            ) {
-                Button(localizationManager.localized("sync_reset_cloud"), role: .destructive) {
-                    Task { await runWipeCloud() }
-                }
-                Button(localizationManager.localized("cancel"), role: .cancel) {}
-            } message: {
-                Text(localizationManager.localized("sync_reset_cloud_confirm_body"))
+        } else {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(localizationManager.localized("hw_sync_status"))
+                    .font(DS.Font.caption)
+                    .foregroundColor(.secondary)
+                ProgressView().controlSize(.small).padding(.vertical, DS.Space.s)
             }
         }
     }
 
-    /// 回收已刪除筆記本留在雲端的檔案。
-    @MainActor
+    /// 回收已刪除筆記本留在雲端的檔案。  @MainActor
     private func runReclaim() async {
         isReclaiming = true
         defer { isReclaiming = false }
@@ -4654,7 +4802,7 @@ public struct CloudSyncDetailSheet: View {
             wipeMessage = localizationManager.localized("sync_reset_cloud_busy")
             return
         }
-        if result.deleted == 0 && result.failed == 0 {
+        if result.deleted == 0, result.failed == 0 {
             wipeMessage = localizationManager.localized("sync_reclaim_nothing")
         } else if result.ok {
             wipeMessage = localizationManager.localized("sync_reclaim_done")
@@ -4675,14 +4823,14 @@ public struct CloudSyncDetailSheet: View {
         isWiping = true
         defer { isWiping = false }
         wipeMessage = localizationManager.localized("sync_reset_cloud_running")
-        
+
         let result: FfiWipeResult?
         if selectedProvider == .folderOrICloud {
             result = CloudSyncFolder.wipeCloud()
         } else {
             result = await CloudSync.wipeCloud()
         }
-        
+
         guard let res = result else {
             wipeMessage = localizationManager.localized("sync_reset_cloud_busy")
             return
@@ -4706,26 +4854,6 @@ public struct CloudSyncDetailSheet: View {
     }
 
     /// 雲端每一個檔案的歸屬。純計算，零 HTTP。
-    private var currentAudit: FfiCloudAudit {
-        cloudAudit(
-            remoteIndexJson: AccountSyncStore.shared.remoteIndexJSON(
-                account: googleAuth.accountEmail ?? ""),
-            libraryIndexJson: AccountSyncStore.shared.indexJSON)
-    }
-
-    private var currentDiagnostics: FfiSyncDiagnostics {
-        let store = notebookStore
-        let packagesDir = store.syncPackagesDirectory
-        let books = store.syncNotebooks
-        return syncDiagnose(
-            remoteIndexJson: AccountSyncStore.shared.remoteIndexJSON(
-                account: googleAuth.accountEmail ?? ""),
-            packagePaths: books.map {
-                packagesDir.appending(path: "\($0.id).padnote").path
-            },
-            notebookIds: books.map { $0.id })
-    }
-
     private var logSection: some View {
         VStack(alignment: .leading, spacing: DS.Space.s) {
             HStack(spacing: 8) {
@@ -4798,7 +4926,7 @@ public struct CloudSyncDetailSheet: View {
                     .foregroundColor(.indigo)
                 }
             }
-            
+
             if filteredLogEntries.isEmpty {
                 Text(localizationManager.localized("log_empty"))
                     .font(.system(size: 11, design: .monospaced))
@@ -4876,6 +5004,7 @@ public struct CloudSyncDetailSheet: View {
 }
 
 // MARK: - 2. 單本筆記快照專屬獨立視窗
+
 public struct NotebookSnapshotDetailSheet: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject private var store = NotebookStore.shared
@@ -4975,7 +5104,8 @@ public struct NotebookSnapshotDetailSheet: View {
 
         do {
             let package = try NotebookSyncCoordinator.mirrorWorkingCopyIntoPackage(
-                notebook, store: store, deviceId: NotebookMigration.deviceId)
+                notebook, store: store, deviceId: NotebookMigration.deviceId
+            )
             let filename = Self.safeFilename(notebook.displayTitle(localizationManager))
             let out = FileManager.default.temporaryDirectory
                 .appending(path: "\(filename).padnote")
@@ -4999,6 +5129,7 @@ public struct NotebookSnapshotDetailSheet: View {
 }
 
 // MARK: - 3. 建立備份檔專屬獨立視窗
+
 public struct BackupCreateDetailSheet: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject private var store = NotebookStore.shared
@@ -5164,7 +5295,7 @@ public struct BackupCreateDetailSheet: View {
                 Text(desc)
                     .font(DS.Font.caption)
                     .foregroundColor(.secondary)
-                    .lineLimit(5)  // 替換 fixedSize：避免 CoreText 斷字字典 I/O (0x8BADF00D)
+                    .lineLimit(5) // 替換 fixedSize：避免 CoreText 斷字字典 I/O (0x8BADF00D)
             }
         }
     }
@@ -5176,11 +5307,13 @@ public struct BackupCreateDetailSheet: View {
 
         do {
             let (url, info) = try BackupManager.createBackup(
-                documentsDirectory: store.documentsDirectory)
+                documentsDirectory: store.documentsDirectory
+            )
             backupMessage = localizationManager.localized("backup_created")
                 .replacingFirst("%1@", with: "\(info.fileCount)")
                 .replacingFirst("%2@", with: ByteCountFormatter.string(
-                    fromByteCount: Int64(info.totalBytes), countStyle: .file))
+                    fromByteCount: Int64(info.totalBytes), countStyle: .file
+                ))
             shareBackupURL = url
         } catch {
             backupMessage = error.localizedDescription
@@ -5189,6 +5322,7 @@ public struct BackupCreateDetailSheet: View {
 }
 
 // MARK: - 3. 從備份復原專屬獨立視窗
+
 public struct BackupRestoreDetailSheet: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject private var store = NotebookStore.shared
@@ -5322,7 +5456,7 @@ public struct BackupRestoreDetailSheet: View {
                 allowedContentTypes: [.data, .archive],
                 allowsMultipleSelection: false
             ) { result in
-                guard case .success(let urls) = result, let url = urls.first else { return }
+                guard case let .success(urls) = result, let url = urls.first else { return }
                 restore(from: url)
             }
         }
@@ -5346,7 +5480,7 @@ public struct BackupRestoreDetailSheet: View {
                 Text(desc)
                     .font(DS.Font.caption)
                     .foregroundColor(.secondary)
-                    .lineLimit(5)  // 替換 fixedSize：避免 CoreText 斷字字典 I/O (0x8BADF00D)
+                    .lineLimit(5) // 替換 fixedSize：避免 CoreText 斷字字典 I/O (0x8BADF00D)
             }
         }
     }
@@ -5357,12 +5491,17 @@ public struct BackupRestoreDetailSheet: View {
         defer { isRestoring = false }
 
         let scoped = url.startAccessingSecurityScopedResource()
-        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        defer {
+            if scoped {
+                url.stopAccessingSecurityScopedResource()
+            }
+        }
 
         do {
             _ = try BackupManager.inspect(url)
             let outcome = try BackupManager.restore(
-                from: url, into: store.documentsDirectory)
+                from: url, into: store.documentsDirectory
+            )
             store.loadData()
 
             var message = localizationManager.localized("backup_restored")
@@ -5397,6 +5536,7 @@ private func withSyncTimeout<T: Sendable>(
 }
 
 // MARK: - 4. 選擇同步資料夾專屬獨立視窗
+
 public struct FolderSyncDetailSheet: View {
     public init() {}
 
