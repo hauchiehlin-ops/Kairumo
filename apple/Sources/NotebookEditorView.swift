@@ -11152,3 +11152,60 @@ public struct TimeMachineSlider: View {
         .padding()
     }
 }
+import SwiftUI
+
+/// 進階協作四部曲：功能測試與操作面板
+/// 專門設計給終端使用者與 QA 測試進階連線功能，完全解耦自 NotebookEditorView 避免破壞核心。
+public struct CollabAdvancedFeaturesPanel: View {
+    @State private var timeMachineLamport: Double = 0.0
+    @State private var isVoiceRoomActive: Bool = false
+    
+    public init() {}
+    
+    public var body: some View {
+        VStack(spacing: 20) {
+            Text("進階協作控制面板")
+                .font(.headline)
+            
+            // 1. 語音通話 (Voice Room) 操作區
+            HStack {
+                Text("協作語音房間")
+                Spacer()
+                Button(action: {
+                    isVoiceRoomActive.toggle()
+                    if isVoiceRoomActive {
+                        // 觸發 FFI 或 WebSocket 狀態改變
+                        print("User joined Voice Room.")
+                    } else {
+                        print("User left Voice Room.")
+                    }
+                }) {
+                    HStack {
+                        Image(systemName: isVoiceRoomActive ? "mic.fill" : "mic.slash")
+                        Text(isVoiceRoomActive ? "連線中" : "已中斷")
+                    }
+                    .padding(8)
+                    .background(isVoiceRoomActive ? Color.green.opacity(0.2) : Color.gray.opacity(0.2))
+                    .cornerRadius(8)
+                }
+            }
+            
+            Divider()
+            
+            // 2. 時光機 (Time Machine) 操作區
+            VStack(alignment: .leading) {
+                Text("時光機回溯 (Lamport: \\(Int(timeMachineLamport)))")
+                Slider(value: $timeMachineLamport, in: 0...1000) { editing in
+                    if !editing {
+                        // 呼叫 Rust FFI: collab_time_machine_contributors
+                        print("Replaying history to lamport \\(timeMachineLamport)...")
+                    }
+                }
+            }
+        }
+        .padding()
+        .background(Color(uiColor: .systemBackground))
+        .cornerRadius(12)
+        .shadow(radius: 5)
+    }
+}
