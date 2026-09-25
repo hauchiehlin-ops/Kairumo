@@ -237,12 +237,13 @@ final class DriveHttpClient: FfiDriveHttp {
     private func syncDataTaskWithRetry(
         _ request: URLRequest,
         timeout: TimeInterval = DriveHttpClient.requestTimeout,
-        retriesLeft: Int = 1
+        retriesLeft: Int = 3
     ) throws -> (Data, HTTPURLResponse) {
         do {
             let (payload, response) = try syncDataTask(request, timeout: timeout)
             if (response.statusCode == 429 || response.statusCode >= 500) && retriesLeft > 0 && !Self.isCancellationRequested {
-                Thread.sleep(forTimeInterval: 1.5)
+                let delay = 1.0 + Double(4 - retriesLeft) * 2.0 // 3.0, 5.0, 7.0 seconds
+                Thread.sleep(forTimeInterval: delay)
                 return try syncDataTaskWithRetry(request, timeout: timeout, retriesLeft: retriesLeft - 1)
             }
             return (payload, response)
@@ -251,7 +252,8 @@ final class DriveHttpClient: FfiDriveHttp {
                 throw error
             }
             if retriesLeft > 0 {
-                Thread.sleep(forTimeInterval: 1.5)
+                let delay = 1.0 + Double(4 - retriesLeft) * 2.0
+                Thread.sleep(forTimeInterval: delay)
                 return try syncDataTaskWithRetry(request, timeout: timeout, retriesLeft: retriesLeft - 1)
             }
             throw error

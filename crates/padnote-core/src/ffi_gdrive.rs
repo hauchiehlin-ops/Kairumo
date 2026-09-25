@@ -1177,20 +1177,43 @@ impl FfiSyncSession {
                 };
             }
         };
-        let mut deleted = 0u32;
-        let mut failed = 0u32;
-        let mut first_error = String::new();
-        for file in &files {
-            match self.drive.delete_by_id(&file.id) {
-                Ok(()) => deleted += 1,
-                Err(e) => {
-                    failed += 1;
-                    if first_error.is_empty() {
-                        first_error = format!("{}：{e}", file.name);
+        let deleted = std::sync::atomic::AtomicU32::new(0);
+        let failed = std::sync::atomic::AtomicU32::new(0);
+        let first_error = std::sync::Mutex::new(String::new());
+
+        // 平行刪除以加速 25000 個檔案的清除
+        let thread_count = 8;
+        let chunk_size = (files.len() / thread_count).max(1);
+        let chunks: Vec<_> = files.chunks(chunk_size).collect();
+
+        std::thread::scope(|s| {
+            for chunk in chunks {
+                let deleted_ref = &deleted;
+                let failed_ref = &failed;
+                let first_error_ref = &first_error;
+                
+                s.spawn(move || {
+                    for file in chunk {
+                        match self.drive.delete_by_id(&file.id) {
+                            Ok(()) => {
+                                deleted_ref.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                            }
+                            Err(e) => {
+                                failed_ref.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                                let mut err = first_error_ref.lock().unwrap();
+                                if err.is_empty() {
+                                    *err = format!("{}：{e}", file.name);
+                                }
+                            }
+                        }
                     }
-                }
+                });
             }
-        }
+        });
+
+        let deleted = deleted.load(std::sync::atomic::Ordering::Relaxed);
+        let failed = failed.load(std::sync::atomic::Ordering::Relaxed);
+        let first_error = first_error.into_inner().unwrap();
         // 本機的快照也要一起歸零，否則下一輪會拿著一份「雲端還有這些檔案」
         // 的幻覺去比對，而那比什麼都沒清更難查。
         *self.index.lock().unwrap() = RemoteIndex::from_json("");
