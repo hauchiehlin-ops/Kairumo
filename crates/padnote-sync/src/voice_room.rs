@@ -24,7 +24,7 @@ pub enum VoiceRoomEvent {
     SpeakingState { device_id: u32, is_speaking: bool },
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct VoiceRoomManager {
     /// 記錄當前在通話中的設備及其靜音狀態
     active_participants: HashMap<u32, bool>,

@@ -689,6 +689,9 @@ public struct CollaborationSheet: View {
                 .buttonStyle(.plain)
             }
 
+            CollabAdvancedFeaturesPanel()
+                .padding(.horizontal)
+
             if snapshots.isEmpty {
                 HStack {
                     Spacer()

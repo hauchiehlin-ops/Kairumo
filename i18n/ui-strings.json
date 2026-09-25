@@ -2014,6 +2014,30 @@
     "zhHans": "Kairumo 协同消息",
     "zhHant": "Kairumo 協同訊息"
   },
+  "collab_p2p_scan": {
+    "en": "Scan LAN",
+    "ja": "LANをスキャン",
+    "ko": "LAN 스캔",
+    "th": "สแกน LAN",
+    "zhHans": "扫描局域网",
+    "zhHant": "掃描區網"
+  },
+  "collab_p2p_stop": {
+    "en": "Stop Scan",
+    "ja": "スキャン停止",
+    "ko": "스캔 중지",
+    "th": "หยุดสแกน",
+    "zhHans": "停止扫描",
+    "zhHant": "停止掃描"
+  },
+  "collab_p2p_test": {
+    "en": "Test Connection",
+    "ja": "接続テスト",
+    "ko": "연결 테스트",
+    "th": "ทดสอบการเชื่อมต่อ",
+    "zhHans": "连线测试",
+    "zhHant": "連線測試"
+  },
   "collab_snapshot": {
     "en": "Shared snapshot",
     "ja": "共同スナップショット",

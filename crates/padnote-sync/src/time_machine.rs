@@ -6,7 +6,7 @@
 
 use std::collections::HashMap;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct TimeMachine {
     // 預留：持有該筆記本的所有 Oplog 歷史
 }

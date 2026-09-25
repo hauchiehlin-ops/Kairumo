@@ -11058,29 +11058,9 @@ private struct IdentifiedURL: Identifiable {
 import SwiftUI
 
 /// 即時游標的資料結構 (對應 Rust PresenceEvent)
-public struct AdvancedPeerCursor: Identifiable {
-    public let id: UInt32 // device_id
-    public var x: CGFloat
-    public var y: CGFloat
-    public var color: Color
-    public var lastUpdated: Date
-    
-    public init(id: UInt32, x: CGFloat, y: CGFloat, color: Color) {
-        self.id = id
-        self.x = x
-        self.y = y
-        self.color = color
-        self.lastUpdated = Date()
-    }
 }
 
 /// 疊加於 Notebook 畫布上方的多人游標 UI
-public struct LiveCursorOverlay: View {
-    public var cursors: [AdvancedPeerCursor]
-    
-    public init(cursors: [AdvancedPeerCursor]) {
-        self.cursors = cursors
-    }
     
     public var body: some View {
         ZStack(alignment: .topLeading) {
@@ -11116,27 +11096,9 @@ public struct LiveCursorOverlay: View {
 import SwiftUI
 
 /// (Advanced Feature 3) 供時光機與貢獻者高亮使用的資料結構
-public struct TextContributor {
-    public let range: NSRange
-    public let deviceId: UInt32
-    public let color: Color
-    
-    public init(range: NSRange, deviceId: UInt32, color: Color) {
-        self.range = range
-        self.deviceId = deviceId
-        self.color = color
-    }
 }
 
 /// 時間軸回溯拉桿 UI
-public struct TimeMachineSlider: View {
-    @Binding public var currentLamport: Double
-    public let maxLamport: Double
-    
-    public init(currentLamport: Binding<Double>, maxLamport: Double) {
-        self._currentLamport = currentLamport
-        self.maxLamport = maxLamport
-    }
     
     public var body: some View {
         VStack {
@@ -11167,6 +11129,27 @@ public struct CollabAdvancedFeaturesPanel: View {
             Text(LocalizationManager.shared.localized("collab_advanced_panel"))
                 .font(.headline)
             
+            
+            // 2. 區網直連 (P2P Local Relay) 掃描與連線
+            HStack {
+                Button(LocalizationManager.shared.localized("collab_p2p_scan")) {
+                    LocalRelayServer.shared.startBrowsing()
+                }
+                .buttonStyle(.bordered)
+                
+                Button(LocalizationManager.shared.localized("collab_p2p_stop")) {
+                    LocalRelayServer.shared.stopBrowsing()
+                }
+                .buttonStyle(.bordered)
+                
+                Button(LocalizationManager.shared.localized("collab_p2p_test")) {
+                    if let endpoint = LocalRelayServer.shared.discoveredEndpoints.first {
+                        LocalRelayServer.shared.connectToP2P(endpoint: endpoint)
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+            }
+
             // 1. 語音通話 (Voice Room) 操作區
             HStack {
                 Text(LocalizationManager.shared.localized("collab_voice_room"))

@@ -20,7 +20,7 @@ use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 
 /// 筆記本狀態驗證器。
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct SyncStateVerifier {
     applied_oplogs: BTreeSet<String>,
 }

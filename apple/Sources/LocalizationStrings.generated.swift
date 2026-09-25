@@ -2030,6 +2030,30 @@ extension LocalizationManager {
             .ko: "Kairumo 공동 편집",
             .th: "การทำงานร่วมกันของ Kairumo"
         ],
+        "collab_p2p_scan": [
+            .zhHant: "掃描區網",
+            .en: "Scan LAN",
+            .zhHans: "扫描局域网",
+            .ja: "LANをスキャン",
+            .ko: "LAN 스캔",
+            .th: "สแกน LAN"
+        ],
+        "collab_p2p_stop": [
+            .zhHant: "停止掃描",
+            .en: "Stop Scan",
+            .zhHans: "停止扫描",
+            .ja: "スキャン停止",
+            .ko: "스캔 중지",
+            .th: "หยุดสแกน"
+        ],
+        "collab_p2p_test": [
+            .zhHant: "連線測試",
+            .en: "Test Connection",
+            .zhHans: "连线测试",
+            .ja: "接続テスト",
+            .ko: "연결 테스트",
+            .th: "ทดสอบการเชื่อมต่อ"
+        ],
         "collab_snapshot": [
             .zhHant: "協同快照",
             .en: "Shared snapshot",

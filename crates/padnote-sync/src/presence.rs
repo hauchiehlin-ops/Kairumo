@@ -29,7 +29,7 @@ pub enum PresenceEvent {
 }
 
 /// 狀態管理器：供 FFI 層將收到的網路廣播轉發給 UI 繪製
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct PresenceManager {
     // 預留：保存當前房間內各裝置的最新座標與顏色，供 UI 輪詢或訂閱
 }

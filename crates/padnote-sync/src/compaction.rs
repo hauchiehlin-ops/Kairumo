@@ -14,7 +14,7 @@ use std::path::Path;
 pub const COMPACTION_THRESHOLD: usize = 500;
 
 /// 壓實引擎
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct OplogCompactor {
     // 預留：將相依 padnote-doc 的解碼與合併邏輯
 }

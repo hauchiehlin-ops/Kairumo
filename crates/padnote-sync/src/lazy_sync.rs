@@ -7,7 +7,7 @@
 
 use std::collections::HashSet;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct LazySyncManager {
     /// 記錄使用者目前正在觀看或編輯的頁面 UUID
     active_pages: HashSet<String>,
