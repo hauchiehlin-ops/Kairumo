@@ -3603,6 +3603,13 @@ public struct NotebookEditorView: View {
         ZStack(alignment: .topTrailing) {
             PageBackgroundRepresentable(paperId: notebook.paperId(forPage: currentPageIndex), paletteId: notebook.guidePaletteId)
                 .allowsHitTesting(false)
+                // 背景（格線、橫線等）必須跟著雙指縮放同步 ——
+                // PKCanvasView 縮放的是自己的 content subview，
+                // 而背景層是 SwiftUI 層，不在同一個視圖樹裡，
+                // 必須手動套用相同的 scale + offset。
+                // objectLayer 也是同樣的做法（.zIndex(2)）。
+                .scaleEffect(canvasZoomScale, anchor: .topLeading)
+                .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
                 .zIndex(0)
 
             if editorMode == .type {
