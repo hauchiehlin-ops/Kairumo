@@ -11057,65 +11057,6 @@ private struct IdentifiedURL: Identifiable {
 }
 import SwiftUI
 
-/// 即時游標的資料結構 (對應 Rust PresenceEvent)
-}
-
-/// 疊加於 Notebook 畫布上方的多人游標 UI
-    
-    public var body: some View {
-        ZStack(alignment: .topLeading) {
-            // 背景透明，讓事件可以穿透到下方的畫布
-            Color.clear.allowsHitTesting(false)
-            
-            ForEach(cursors) { cursor in
-                VStack(alignment: .leading, spacing: 2) {
-                    // 游標本體 (自訂形狀或 SF Symbol)
-                    Image(systemName: "cursorarrow")
-                        .font(.system(size: 16))
-                        .foregroundColor(cursor.color)
-                        .shadow(color: .black.opacity(0.2), radius: 2, x: 1, y: 1)
-                    
-                    // 裝置或使用者 ID 標籤
-                    Text("Peer \(cursor.id)")
-                        .font(.caption2)
-                        .padding(.horizontal, 4)
-                        .padding(.vertical, 2)
-                        .background(cursor.color)
-                        .foregroundColor(.white)
-                        .cornerRadius(4)
-                }
-                // 使用 animation 讓網路傳來的離散座標平滑移動
-                .position(x: cursor.x, y: cursor.y)
-                .animation(.linear(duration: 0.15), value: cursor.x)
-                .animation(.linear(duration: 0.15), value: cursor.y)
-            }
-        }
-        .allowsHitTesting(false) // 絕對不阻擋使用者的任何觸控與手寫
-    }
-}
-import SwiftUI
-
-/// (Advanced Feature 3) 供時光機與貢獻者高亮使用的資料結構
-}
-
-/// 時間軸回溯拉桿 UI
-    
-    public var body: some View {
-        VStack {
-            Text("\(LocalizationManager.shared.localized("collab_history_playback")) (Lamport: \\(Int(currentLamport)))")
-                .font(.headline)
-            Slider(value: $currentLamport, in: 0...maxLamport)
-                .padding()
-            // 當 Slider 拖動時，可呼叫 Rust FFI: `replay_to_lamport`
-        }
-        .background(Color(.systemBackground).opacity(0.9))
-        .cornerRadius(12)
-        .shadow(radius: 5)
-        .padding()
-    }
-}
-import SwiftUI
-
 /// 進階協作四部曲：功能測試與操作面板
 /// 專門設計給終端使用者與 QA 測試進階連線功能，完全解耦自 NotebookEditorView 避免破壞核心。
 public struct CollabAdvancedFeaturesPanel: View {

@@ -1578,6 +1578,7 @@ public struct HomeWorkbenchView: View {
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: 12) {
                     unifiedSyncCard
+                    p2pSyncCard
                     dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
                              "sync_folder_desc", .teal) { showFolderSyncSheet = true }
                     dataCard("doc.zipper", "backup_snapshot",
@@ -1589,6 +1590,7 @@ public struct HomeWorkbenchView: View {
                 }
                 VStack(spacing: 12) {
                     unifiedSyncCard
+                    p2pSyncCard
                     dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
                              "sync_folder_desc", .teal) { showFolderSyncSheet = true }
                     dataCard("doc.zipper", "backup_snapshot",
@@ -1601,6 +1603,25 @@ public struct HomeWorkbenchView: View {
             }
         }
         .padding(.top, 6)
+    }
+
+    private var p2pSyncCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(localizationManager.localized("p2p_sync_tailscale_explainer"))
+                .font(DS.Font.caption)
+                .foregroundStyle(DS.Color.secondaryText)
+                .lineLimit(5)
+        }
+        .padding(DS.Space.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.Color.surface)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous)
+                .stroke(DS.Color.hairline, lineWidth: 1)
+        )
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("home.p2p.card")
     }
 
     /// 統一雲端同步卡片。結合 Google Drive 與 iCloud / 本機資料夾同步。
