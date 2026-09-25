@@ -406,16 +406,8 @@ public enum CloudSync {
     public static func refresh(_ session: FfiSyncSession) async -> FfiRefreshResult? {
         // 全量重建要列完整個 appDataFolder，給它寬一點；
         // 一般的 changes.list 幾百毫秒就回來了。
-        let seconds: Double = session.needsRebuild() ? 180 : 60
         let detached = Task.detached(priority: .utility) { session.refresh() }
-        do {
-            return try await withTimeout(seconds: seconds) { await detached.value }
-        } catch {
-            detached.cancel()
-            return FfiRefreshResult(
-                ok: false, changed: 0, fullRebuild: false, trackedFiles: 0,
-                error: String(format: LocalizationManager.shared.localizedUnsafe("drive_timeout_snapshot"), "\(Int(seconds))"), needsReauth: false)
-        }
+        return await detached.value
     }
 
     /// 中繼資料（設定、筆記本清單、刪除墓碑）。
@@ -427,15 +419,7 @@ public enum CloudSync {
         let detached = Task.detached(priority: .utility) {
             session.syncMetadata(localSettingsJson: settings, localIndexJson: index)
         }
-        let result: FfiCloudSyncResult
-        do {
-            result = try await withTimeout(seconds: 120) { await detached.value }
-        } catch {
-            detached.cancel()
-            return FfiCloudSyncResult(
-                ok: false, settingsJson: settings, indexJson: index,
-                error: LocalizationManager.shared.localizedUnsafe("drive_timeout_sync"), needsReauth: false)
-        }
+        let result = await detached.value
 
         if result.ok {
             // 合併結果要落地。只更新畫面不寫檔的話，重開 App 就回到同步前。
@@ -459,22 +443,11 @@ public enum CloudSync {
         deviceId: UInt32
     ) async -> FfiNotebookSyncResult? {
         // 逾時隨待同步的 oplog 數量調整：巨量歷史筆跡或弱網時別太早放棄。
-        let opsDir = (packagePath as NSString).appendingPathComponent("doc/ops")
-        let opsCount = (try? FileManager.default.contentsOfDirectory(atPath: opsDir).count) ?? 0
-        let timeoutSeconds = max(60.0, min(180.0, 30.0 + Double(opsCount) * 0.5))
-
         let detached = Task.detached(priority: .utility) {
             session.syncNotebook(
                 packagePath: packagePath, notebookId: notebookId, deviceId: deviceId)
         }
-        let result: FfiNotebookSyncResult
-        do {
-            result = try await withTimeout(seconds: timeoutSeconds) { await detached.value }
-        } catch {
-            detached.cancel()
-            return FfiNotebookSyncResult(ok: false, uploaded: 0, downloaded: 0,
-                error: String(format: LocalizationManager.shared.localizedUnsafe("drive_timeout_generic"), "\(Int(timeoutSeconds))"), needsReauth: false, warnings: [])
-        }
+        let result = await detached.value
         if result.needsReauth {
             await GoogleAuth.shared.signOut()
         }
@@ -496,14 +469,7 @@ public enum CloudSync {
             session.cloneNotebook(
                 packagePath: packagePath, notebookId: notebookId, title: title, nowUnixMs: now)
         }
-        let result: FfiNotebookSyncResult
-        do {
-            result = try await withTimeout(seconds: 300) { await detached.value }
-        } catch {
-            detached.cancel()
-            return FfiNotebookSyncResult(ok: false, uploaded: 0, downloaded: 0,
-                error: LocalizationManager.shared.localizedUnsafe("drive_timeout_download"), needsReauth: false, warnings: [])
-        }
+        let result = await detached.value
         if result.needsReauth {
             await GoogleAuth.shared.signOut()
         }
@@ -511,19 +477,3 @@ public enum CloudSync {
     }
 }
 
-/// 指定秒數內未完成就拋出 `CancellationError`。
-private func withTimeout<T: Sendable>(
-    seconds: Double,
-    operation: @escaping @Sendable () async throws -> T
-) async throws -> T {
-    try await withThrowingTaskGroup(of: T.self) { group in
-        group.addTask { try await operation() }
-        group.addTask {
-            try await Task.sleep(nanoseconds: UInt64(seconds * 1_000_000_000))
-            throw CancellationError()
-        }
-        let result = try await group.next()!
-        group.cancelAll()
-        return result
-    }
-}
