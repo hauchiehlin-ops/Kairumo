@@ -173,6 +173,7 @@ struct AudioAttachmentItemView: View {
                     .help(localizationManager.localized("rename_audio_card"))
                 }
             }
+            .padding(20)
             .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
             .alert(localizationManager.localized("rename_audio_card"), isPresented: $isRenaming) {
                 TextField(localizationManager.localized("recording_title"), text: $renameText)
@@ -309,21 +310,27 @@ struct AudioAttachmentItemView: View {
         }
         .contextMenu {
             Button {
-                performTranscribe()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    performTranscribe()
+                }
             } label: {
                 Label(localizationManager.localized("transcribe_audio"), systemImage: "waveform.badge.magnifyingglass")
             }
             .disabled(isTranscribing || !fileExists)
 
             Button {
-                showOfflineInfo = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    showOfflineInfo = true
+                }
             } label: {
                 Label(localizationManager.localized("asr_state_title"), systemImage: "arrow.down.circle")
             }
 
             Button {
-                renameText = item.title
-                isRenaming = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    renameText = item.title
+                    isRenaming = true
+                }
             } label: {
                 Label(localizationManager.localized("rename_audio_card"), systemImage: "pencil")
             }
@@ -331,7 +338,9 @@ struct AudioAttachmentItemView: View {
             Divider()
             
             Button(role: .destructive) {
-                onDelete()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                    onDelete()
+                }
             } label: {
                 Label(localizationManager.localized("action_delete"), systemImage: "trash")
             }

@@ -374,6 +374,7 @@ struct CanvasRepresentable: UIViewRepresentable {
     var canvasRef: ((PKCanvasView) -> Void)?
     /// 回報捲動狀態（可見比例、捲動比例），給自訂捲軸用
     var onScrollMetrics: ((_ visibleFraction: CGFloat, _ scrollFraction: CGFloat) -> Void)?
+    var onTransformChanged: ((_ scale: CGFloat, _ offset: CGPoint) -> Void)? = nil
     /// 掌拒（工作項 S-45）。判定規則走核心，與 Android 同一份。
     var palmRejection: PalmRejectionCoordinator?
     /// 仲裁器要求收回筆畫時通知編輯器。
@@ -616,6 +617,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         /// 把捲動狀態回報給 SwiftUI（自訂捲軸需要）
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             reportScrollMetrics(scrollView)
+            parent.onTransformChanged?(scrollView.zoomScale, scrollView.contentOffset)
         }
 
         /// 縮放倍率的讀數，**只在 UI 測試下掛上去**。
@@ -638,6 +640,7 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         func scrollViewDidZoom(_ scrollView: UIScrollView) {
             publishZoomForTests(scrollView)
+            parent.onTransformChanged?(scrollView.zoomScale, scrollView.contentOffset)
         }
 
         func viewForZooming(in scrollView: UIScrollView) -> UIView? {
@@ -1061,6 +1064,9 @@ public struct NotebookEditorView: View {
     @State private var wantsShareAfterPreview = false
     @State private var hasLassoSelection: Bool = false
     @State private var showExtendedBanner: Bool = false
+
+    @State private var canvasZoomScale: CGFloat = 1.0
+    @State private var canvasContentOffset: CGPoint = .zero
 
     // 實體工具列狀態
     @State private var selectedTool: EditorToolType = .pen
@@ -3664,6 +3670,10 @@ public struct NotebookEditorView: View {
                     canvasVisibleFraction = visible
                     canvasScrollFraction = fraction
                 },
+                onTransformChanged: { scale, offset in
+                    canvasZoomScale = scale
+                    canvasContentOffset = offset
+                },
                 palmRejection: palmRejection,
                 onRetractStrokes: { landedAt in
                     let cleaned = PalmRejectionCoordinator.retracting(
@@ -3724,6 +3734,8 @@ public struct NotebookEditorView: View {
             .zIndex(1)
 
             objectLayer(forPage: currentPageIndex)
+                .scaleEffect(canvasZoomScale, anchor: .topLeading)
+                .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
                 .allowsHitTesting(true)
                 .zIndex(2)
 
@@ -9629,6 +9641,7 @@ struct AttachmentItemView: View {
                 }
             }
         }
+        .padding(20)
         .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
     }
 }
@@ -9989,6 +10002,7 @@ struct TextAttachmentItemView: View {
                 // 畫布上只保留編輯／邊框／刪除三個明確的動作。
             }
         }
+        .padding(20)
         .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
         .onChange(of: isEditingInline) { editing in
             if editing {
@@ -10149,7 +10163,8 @@ struct LinkAttachmentItemView: View {
                     }
             )
             .onTapGesture { isSelected.toggle() }
-            .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
+            .padding(20)
+        .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
             .sheet(isPresented: $isEditing) { resizableSheet {
                 LinkAttachmentEditSheet(linkItem: $linkItem)
             } }
@@ -10510,6 +10525,7 @@ struct Model3DCanvasItemView: View {
             }
         }
         .frame(width: max(200, item.width))
+        .padding(20)
         .position(x: currentX + item.width / 2, y: currentY + item.height / 2)
     }
 }
