@@ -492,7 +492,7 @@ fn sync_notebook_ops(
     }
 
     // ── 上傳成功之後，才刪雲端上被自己壓實掉的碎檔 ──────────────
-    if let Ok(content) = package.read_doc_op_file("compaction.tombstones") {
+    if let Ok(content) = std::fs::read(package.root().join("doc/ops/compaction.tombstones")) {
         let text = String::from_utf8_lossy(&content);
         for line in text.lines() {
             let name = line.trim();
