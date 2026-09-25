@@ -11058,7 +11058,7 @@ private struct IdentifiedURL: Identifiable {
 import SwiftUI
 
 /// 即時游標的資料結構 (對應 Rust PresenceEvent)
-public struct PeerCursor: Identifiable {
+public struct AdvancedPeerCursor: Identifiable {
     public let id: UInt32 // device_id
     public var x: CGFloat
     public var y: CGFloat
@@ -11076,9 +11076,9 @@ public struct PeerCursor: Identifiable {
 
 /// 疊加於 Notebook 畫布上方的多人游標 UI
 public struct LiveCursorOverlay: View {
-    public var cursors: [PeerCursor]
+    public var cursors: [AdvancedPeerCursor]
     
-    public init(cursors: [PeerCursor]) {
+    public init(cursors: [AdvancedPeerCursor]) {
         self.cursors = cursors
     }
     
