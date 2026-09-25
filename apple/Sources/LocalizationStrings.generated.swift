@@ -7139,6 +7139,9 @@ extension LocalizationManager {
             .ko: "인쇄 영역 밖에 그려져 취소했습니다. 점선 테두리 바깥은 인쇄와 내보내기에 포함되지 않습니다.",
             .th: "เส้นนี้อยู่นอกพื้นที่พิมพ์จึงถูกลบออก สิ่งที่อยู่นอกกรอบเส้นประจะไม่ถูกพิมพ์หรือส่งออก"
         ],
+        "p2p_sync_tailscale_explainer": [
+            .en: "Cross-device Direct Sync: Padnote uses WebRTC for peer-to-peer fast syncing across the internet. For the most stable connection without public relays, we highly recommend installing Tailscale on your devices."
+        ],
         "page_extended_hint": [
             .zhHant: "已向下延長畫布長度 (+800pt)",
             .en: "Page length extended (+800pt)",

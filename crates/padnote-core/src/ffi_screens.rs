@@ -338,6 +338,7 @@ fn home_spec() -> FfiScreenSpec {
                 "data_and_sync",
                 vec![
                     c("home.cloud.card", Card, "cloud_sync_explainer"),
+                    c("home.p2p.card", Card, "p2p_sync_tailscale_explainer"),
                     c("home.cloud.signin", Button, "sign_in_google"),
                     opt(c("home.cloud.sync_now", Button, "sync_now")),
                     opt(c("home.cloud.signout", Button, "sign_out")),

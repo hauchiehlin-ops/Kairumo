@@ -7191,6 +7191,9 @@ object LocalizationStrings {
             "ko" to "인쇄 영역 밖에 그려져 취소했습니다. 점선 테두리 바깥은 인쇄와 내보내기에 포함되지 않습니다.",
             "th" to "เส้นนี้อยู่นอกพื้นที่พิมพ์จึงถูกลบออก สิ่งที่อยู่นอกกรอบเส้นประจะไม่ถูกพิมพ์หรือส่งออก"
         ),
+        "p2p_sync_tailscale_explainer" to mapOf(
+            "en" to "Cross-device Direct Sync: Padnote uses WebRTC for peer-to-peer fast syncing across the internet. For the most stable connection without public relays, we highly recommend installing Tailscale on your devices."
+        ),
         "page_extended_hint" to mapOf(
             "zh-Hant" to "已向下延長畫布長度 (+800pt)",
             "en" to "Page length extended (+800pt)",
@@ -7729,13 +7732,13 @@ object LocalizationStrings {
         ),
         "pen_action_eraser" to mapOf(
             "en" to "Eraser"
-        ),
-        "pen_action_inkAttributes" to mapOf(
-            "en" to "Show Ink Palette"
         )
     )
 
     private fun part12(): Map<String, Map<String, String>> = mapOf(
+        "pen_action_inkAttributes" to mapOf(
+            "en" to "Show Ink Palette"
+        ),
         "pen_action_lasso" to mapOf(
             "en" to "Lasso Tool"
         ),
@@ -8314,7 +8317,10 @@ object LocalizationStrings {
             "ja" to "解決済み",
             "ko" to "해결됨",
             "th" to "แก้ไขแล้ว"
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "responsive_asset_desc" to mapOf(
             "zh-Hant" to "隨需下載高解析實體規格圖與 3D 零組件",
             "en" to "Download on-demand physical specs & 3D models",
@@ -8322,10 +8328,7 @@ object LocalizationStrings {
             "ja" to "高解像度の仕様書と3DモデルをオンデマンドDL",
             "ko" to "고해상도 실제 사양도 및 3D 부품 온디맨드 다운로드",
             "th" to "ดาวน์โหลดสเปกจริงและชิ้นส่วน 3D ตามความต้องการ"
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "restore_original" to mapOf(
             "zh-Hant" to "恢復原草圖",
             "en" to "Restore Original",
@@ -8957,7 +8960,10 @@ object LocalizationStrings {
             "ja" to "結合子",
             "ko" to "연결점",
             "th" to "จุดเชื่อม"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_cross" to mapOf(
             "zh-Hant" to "十字",
             "en" to "Cross",
@@ -8965,10 +8971,7 @@ object LocalizationStrings {
             "ja" to "十字",
             "ko" to "십자",
             "th" to "กากบาท"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_data" to mapOf(
             "zh-Hant" to "資料",
             "en" to "Data",
@@ -9600,7 +9603,10 @@ object LocalizationStrings {
             "ja" to "手ブレ補正オフ",
             "ko" to "손떨림 보정 끔",
             "th" to "ปิดการกันสั่น"
-        ),
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
         "stab_strong" to mapOf(
             "zh-Hant" to "強力防抖",
             "en" to "Strong stabiliser",
@@ -9608,10 +9614,7 @@ object LocalizationStrings {
             "ja" to "強い手ブレ補正",
             "ko" to "강한 손떨림 보정",
             "th" to "กันสั่นแรง"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "stab_title" to mapOf(
             "zh-Hant" to "線條平滑防抖",
             "en" to "Stroke stabiliser",
@@ -10243,7 +10246,10 @@ object LocalizationStrings {
             "ja" to "未識別は通常、他の端末が作成したものをこの端末がまだ取得していない状態です。自動削除されることはありません。",
             "ko" to "미식별은 보통 다른 기기가 만든 것을 이 기기가 아직 받지 못한 상태입니다. 자동으로 삭제되지 않습니다.",
             "th" to "ยังระบุไม่ได้ มักหมายถึงอุปกรณ์อื่นสร้างไว้และเครื่องนี้ยังไม่ได้ดึงดัชนีมา ระบบจะไม่ลบอัตโนมัติ"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "sync_choose_folder" to mapOf(
             "zh-Hant" to "iCloud 或本機資料夾同步",
             "en" to "Choose Sync Folder",
@@ -10251,10 +10257,7 @@ object LocalizationStrings {
             "ja" to "同期フォルダを選択",
             "ko" to "동기화 폴더 선택",
             "th" to "เลือกโฟลเดอร์ซิงก์"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_destination" to mapOf(
             "zh-Hant" to "同步目的地",
             "en" to "Destination",
@@ -10886,7 +10889,10 @@ object LocalizationStrings {
             "ja" to "ノート術",
             "ko" to "노트 기법",
             "th" to "วิธีจดบันทึก"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "theme_palette_bauhaus" to mapOf(
             "zh-Hant" to "包浩斯復古工業",
             "en" to "Bauhaus Industrial",
@@ -10894,10 +10900,7 @@ object LocalizationStrings {
             "ja" to "バウハウス インダストリアル",
             "ko" to "바우하우스 인더스트리얼",
             "th" to "เบาเฮาส์ อินดัสเทรียล"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "theme_palette_cyberpunk" to mapOf(
             "zh-Hant" to "賽博霓虹",
             "en" to "Cyberpunk Neon",
@@ -11529,7 +11532,10 @@ object LocalizationStrings {
             "ja" to "蛍光ペン",
             "ko" to "형광펜",
             "th" to "ปากกาเน้นข้อความ"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "tool_lasso" to mapOf(
             "zh-Hant" to "套索選取",
             "en" to "Lasso",
@@ -11537,10 +11543,7 @@ object LocalizationStrings {
             "ja" to "投げ縄",
             "ko" to "올가미",
             "th" to "บ่วงบาศก์"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tool_marker" to mapOf(
             "zh-Hant" to "麥克筆",
             "en" to "Marker",
