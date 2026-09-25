@@ -209,6 +209,8 @@ import com.kairumo.padnote.image.ImageDropPlacement
 import com.kairumo.padnote.ink.PageGeometry
 import com.kairumo.padnote.ink.PalmThresholdDialog
 import com.kairumo.padnote.ink.PalmThresholdStore
+import com.kairumo.padnote.ink.AdvancedPenSettingsDialog
+import com.kairumo.padnote.ink.PenSettingsStore
 import com.kairumo.padnote.ink.SketchRefineBar
 import android.view.HapticFeedbackConstants
 import androidx.compose.ui.platform.LocalView
@@ -1420,6 +1422,10 @@ private fun InkScreen(
                 PalmThresholdStore.radius(activity),
                 PalmThresholdStore.retractMs(activity)
             )
+            notebook?.first?.setPressureCurve(
+                PenSettingsStore.floor(activity) ?: 0.1f,
+                PenSettingsStore.gamma(activity) ?: 1.0f
+            )
         }
     }
     // 套索選取。換頁就換一個 —— 選取的是「這一頁的筆畫 id」，
@@ -1997,7 +2003,7 @@ private fun InkScreen(
         if (granted && session != null) {
             recordSeconds = 0
             recordingPaused = false
-            message = audio.start(session, deviceLanguageTag()) { message = it }
+            message = audio.start(notebook?.second?.pages?.get(viewport.currentPage)?.id ?: "", session, deviceLanguageTag()) { message = it }
             recording = audio.isRecording
         } else {
             // 被拒之後再按同一顆按鈕，系統**不會再跳對話框** —— 只會直接回
@@ -2028,6 +2034,11 @@ private fun InkScreen(
     var palmTuned by remember {
         mutableStateOf(PalmThresholdStore.radius(activity) != null)
     }
+    var showPenSettings by remember { mutableStateOf(false) }
+    var penTuned by remember {
+        mutableStateOf(PenSettingsStore.floor(activity) != null)
+    }
+
     var lowLatencyUnavailable by remember { mutableStateOf(false) }
     var revision by remember { mutableIntStateOf(0) }
 
@@ -2655,7 +2666,7 @@ private fun InkScreen(
                         } else if (AudioCapture.hasPermission(activity)) {
                             recordSeconds = 0
                             recordingPaused = false
-                            message = audio.start(session, deviceLanguageTag()) { message = it }
+                            message = audio.start(notebook?.second?.pages?.get(viewport.currentPage)?.id ?: "", session, deviceLanguageTag()) { message = it }
                             recording = audio.isRecording
                         } else {
                             micPermission.launch(Manifest.permission.RECORD_AUDIO)
@@ -3187,6 +3198,11 @@ private fun InkScreen(
                     selected = palmTuned,
                     onClick = { showPalmThresholds = true },
                     label = { Text(l10n("palm_rejection_settings")) }
+                )
+                FilterChip(
+                    selected = penTuned,
+                    onClick = { showPenSettings = true },
+                    label = { Text(if (deviceLanguageTag().startsWith("zh")) "進階畫筆設定" else "Advanced Pen Settings") }
                 )
                 // 防手震滑桿（Stroke Stabilizer）
                 FilterChip(
@@ -5173,6 +5189,17 @@ private fun InkScreen(
                 palmTuned = radius != null
             },
             onDismiss = { showPalmThresholds = false }
+        )
+    }
+
+    if (showPenSettings) {
+        AdvancedPenSettingsDialog(
+            languageTag = deviceLanguageTag(),
+            onApply = { floor, gamma ->
+                notebook?.first?.setPressureCurve(floor ?: 0.1f, gamma ?: 1.0f)
+                penTuned = floor != null
+            },
+            onDismiss = { showPenSettings = false }
         )
     }
 
