@@ -281,6 +281,15 @@ pub struct RecordingStats {
     pub backlog_us: u64,
 }
 
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiPendingSegment {
+    pub session_id: String,
+    pub session_start_us: u64,
+    pub start_us: u64,
+    pub end_us: u64,
+    pub samples: Vec<f32>,
+}
+
 /// 平台層傳入的轉錄結果。時間戳必須已在筆記本時間軸上。
 #[derive(Clone, Debug, uniffi::Record)]
 pub struct TranscriptWordInput {
@@ -1338,6 +1347,20 @@ impl PadnoteSession {
             recorded_us: guard.recorded_audio_us(),
             backlog_us: guard.transcription_backlog_us(),
         })
+    }
+
+    pub fn take_pending_segments(&self) -> Vec<FfiPendingSegment> {
+        self.lock()
+            .take_pending_segments()
+            .into_iter()
+            .map(|p| FfiPendingSegment {
+                session_id: p.session.to_string(),
+                session_start_us: p.session_start.as_micros(),
+                start_us: p.segment.start_us,
+                end_us: p.segment.end_us,
+                samples: p.segment.samples,
+            })
+            .collect()
     }
 
     /// 設定 Silero VAD 模型路徑（S-26）。下一次開始錄音時生效。
