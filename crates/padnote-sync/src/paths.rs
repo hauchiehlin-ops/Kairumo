@@ -126,6 +126,19 @@ pub fn notebook_audio_file(notebook_id: &str, file_name: &str) -> String {
     )
 }
 
+/// 筆跡手繪目錄前綴。
+pub fn notebook_ink_prefix(notebook_id: &str) -> String {
+    format!("{}/ink", notebook_root(notebook_id))
+}
+
+pub fn notebook_ink_file(notebook_id: &str, file_name: &str) -> String {
+    format!(
+        "{}/{}",
+        notebook_ink_prefix(notebook_id),
+        canonical_name(file_name)
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -142,6 +155,8 @@ mod tests {
             notebook_blob_file(messy, "DEADBEEF"),
             notebook_audio_prefix(messy),
             notebook_audio_file(messy, "5F2A-BB.OPUS"),
+            notebook_ink_prefix(messy),
+            notebook_ink_file(messy, "PAGE-00000001.STROKES"),
             crate::settings::SETTINGS_PATH.to_string(),
             crate::library::INDEX_PATH.to_string(),
         ];

@@ -363,7 +363,7 @@ enum NotebookSyncCoordinator {
 
         // ── 3. 匯入回筆記 ─────────────────────────────────
         SyncLogger.logAsync("步驟 3：匯入套件回本機筆記...", source: .folder)
-        importPackagesForFolderSync(
+        await importPackagesForFolderSync(
             from: packagesDir,
             into: store,
             deviceId: deviceId,
@@ -421,11 +421,24 @@ enum NotebookSyncCoordinator {
         try? fm.createDirectory(at: packagesDir, withIntermediateDirectories: true)
 
         let localIndexJson = AccountSyncStore.shared.indexJSON
-        let localLiveSet = Set(syncLiveNotebooks(indexJson: localIndexJson).map { $0.id })
+        let localLiveItems = syncLiveNotebooks(indexJson: localIndexJson)
+        let localLiveById = Dictionary(localLiveItems.map { ($0.id.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
 
-        // (A) 從 store.allNotebooks 全集確認未刪除的筆記本存在於 localIndexJson
+        // (A) 從 store.allNotebooks 全集確認未刪除的筆記本存在於 localIndexJson，且最新標題與資料夾一致
         for document in store.allNotebooks {
-            if !AccountSyncStore.shared.isDeleted(id: document.id), !localLiveSet.contains(document.id) {
+            let docId = document.id.lowercased()
+            guard !AccountSyncStore.shared.isDeleted(id: document.id) else { continue }
+            if let existing = localLiveById[docId] {
+                // 如果本機標題或資料夾改過，記錄進同步索引以推進 Lamport 時戳
+                if existing.title != document.title || (existing.parentId ?? "") != (document.folderId ?? "") {
+                    AccountSyncStore.shared.record(
+                        id: document.id,
+                        title: document.title,
+                        parentId: document.folderId,
+                        isFolder: false
+                    )
+                }
+            } else {
                 AccountSyncStore.shared.record(
                     id: document.id,
                     title: document.title,
@@ -574,7 +587,7 @@ enum NotebookSyncCoordinator {
         // 🌟 先拉取雲端上有、本機還沒有的新筆記本！
         // 原本放在所有既有筆記同步之後：如果前面任何一本現有筆記同步耗時（如巨量歷史或錄音）或中途失敗，
         // 新筆記本就永遠輪不到拉取，導致多裝置看到完全不同的筆記本清單。
-        let newBooks = await pullNewNotebooks(
+        let (newBooks, pulledNewIds) = await pullNewNotebooks(
             session,
             into: packagesDir,
             index: meta.indexJson,
@@ -583,6 +596,8 @@ enum NotebookSyncCoordinator {
             report: &report
         )
         report.newNotebooks += newBooks
+
+        var changedPackageIds = pulledNewIds
 
         let allDiskPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
             .filter { $0.pathExtension == "padnote" } ?? []
@@ -652,6 +667,7 @@ enum NotebookSyncCoordinator {
                 // 通知正在打開這本筆記的編輯器丟掉舊快取、重新讀取套件，
                 // 讓使用者不需要關掉重開就能看到最新筆跡。
                 if result.downloaded > 0 {
+                    changedPackageIds.insert(id.lowercased())
                     NotificationCenter.default.post(
                         name: AppCommand.notebookPackageChanged,
                         object: id.lowercased()
@@ -673,16 +689,24 @@ enum NotebookSyncCoordinator {
             }
         }
 
+        for pkg in allDiskPackages {
+            let id = packageId(for: pkg).lowercased()
+            if !activeLocalIds.contains(id) {
+                changedPackageIds.insert(id)
+            }
+        }
+
         if isCancelled || Task.isCancelled {
             await CloudSync.persist(session)
             // 即使被手動中斷，已經下載的套件也要匯入，不能丟掉！
-            importPackages(
+            await importPackages(
                 from: packagesDir,
                 into: store,
                 deviceId: deviceId,
                 ownStrokes: ownStrokes,
                 activeLocalIds: activeLocalIds,
                 deletedNotebookIds: deletedNotebookIds,
+                onlyNotebookIds: changedPackageIds,
                 report: &report
             )
             store.syncPurgeDeletedNotebooks(deletedNotebookIds)
@@ -702,13 +726,14 @@ enum NotebookSyncCoordinator {
 
         // ── 3. 匯入回筆記 ─────────────────────────────────
         SyncLogger.logAsync("步驟 3：匯入套件回本機筆記...", source: .googleDrive)
-        importPackages(
+        await importPackages(
             from: packagesDir,
             into: store,
             deviceId: deviceId,
             ownStrokes: ownStrokes,
             activeLocalIds: activeLocalIds,
             deletedNotebookIds: deletedNotebookIds,
+            onlyNotebookIds: changedPackageIds,
             report: &report
         )
         // ── 4. 清理已被遠端刪除的本地殭屍筆記 ─────────────────
@@ -729,9 +754,10 @@ enum NotebookSyncCoordinator {
         activeLocalIds: Set<String>,
         deletedNotebookIds: Set<String>,
         report: inout Report
-    ) async -> Int {
+    ) async -> (pulled: Int, pulledIds: Set<String>) {
         let fm = FileManager.default
         var pulled = 0
+        var pulledIds = Set<String>()
         for item in syncLiveNotebooks(indexJson: index) {
             let normId = item.id.lowercased()
             guard !deletedNotebookIds.contains(normId) else { continue }
@@ -741,7 +767,7 @@ enum NotebookSyncCoordinator {
 
             // 防禦性檢查：若本地存在該目錄，但本機 store 尚未載入該筆記本，
             // 檢查是否為無 ops 檔案的殘留空殼；若為空殼則移除，以便重新 clone
-            if fm.fileExists(atPath: targetPackage.path) && !activeLocalIds.contains(normId) {
+            if fm.fileExists(atPath: targetPackage.path), !activeLocalIds.contains(normId) {
                 let opsDir = targetPackage.appending(path: "doc/ops")
                 let opFiles = (try? fm.contentsOfDirectory(at: opsDir, includingPropertiesForKeys: nil))?
                     .filter { $0.pathExtension == "oplog" } ?? []
@@ -757,6 +783,7 @@ enum NotebookSyncCoordinator {
             if result.ok {
                 report.downloaded += Int(result.downloaded)
                 pulled += 1
+                pulledIds.insert(normId)
             } else {
                 // 抓失敗時把空殼刪掉。留著的話，下一輪 `fileExists` 為真，
                 // 這本就再也不會被重抓 —— 使用者會看到一本永遠打不開的空筆記。
@@ -767,7 +794,7 @@ enum NotebookSyncCoordinator {
                 }
             }
         }
-        return pulled
+        return (pulled, pulledIds)
     }
 
     // MARK: - 里程碑（工作項 S-99）
@@ -911,15 +938,20 @@ enum NotebookSyncCoordinator {
     private static func importOne(
         _ package: URL, into store: SyncableNotebookStore, deviceId: UInt32,
         ownStrokes: OwnStrokes
-    ) throws {
+    ) async throws {
         let documentId = package.deletingPathExtension().lastPathComponent
-        let imported = try NotebookPackageBridge.importDocument(
-            fromPackageAt: package, deviceId: deviceId, documentId: documentId
-        )
+        // 在背景執行緒解碼 PKDrawing 與套件物件，避免佔住主執行緒超過看門狗限制
+        let imported = try await Task.detached(priority: .utility) {
+            try NotebookPackageBridge.importDocument(
+                fromPackageAt: package, deviceId: deviceId, documentId: documentId
+            )
+        }.value
 
         // 圖片先落地：筆記本指到一個不存在的檔名時，畫面上會是一格空白。
+        let attachmentsDir = store.syncAttachmentsDirectory
+        let baselineDir = store.syncBaselineDirectory
         for (fileName, bytes) in imported.imageData {
-            let url = store.syncAttachmentsDirectory.appending(path: fileName)
+            let url = attachmentsDir.appending(path: fileName)
             if !FileManager.default.fileExists(atPath: url.path) {
                 try? bytes.write(to: url, options: .atomic)
             }
@@ -929,7 +961,7 @@ enum NotebookSyncCoordinator {
             // 別台裝置的部分 = 合併後的 − 自己的。下次匯出要扣掉它。
             let mine = ownStrokes[baselineKey(documentId, index)] ?? PKDrawing()
             let others = PKDrawing(strokes: StrokeDelta.added(in: drawing, since: mine))
-            saveBaseline(others, in: store.syncBaselineDirectory, notebookId: documentId, pageIndex: index)
+            saveBaseline(others, in: baselineDir, notebookId: documentId, pageIndex: index)
         }
         store.syncUpsert(imported.document)
     }
@@ -974,16 +1006,23 @@ enum NotebookSyncCoordinator {
         ownStrokes: OwnStrokes,
         activeLocalIds: Set<String>,
         deletedNotebookIds: Set<String>,
+        onlyNotebookIds: Set<String>? = nil,
         report: inout Report
-    ) {
+    ) async {
         let fm = FileManager.default
         let allPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
             .filter { $0.pathExtension == "padnote" } ?? []
         for package in allPackages {
             let notebookId = packageId(for: package)
-            if deletedNotebookIds.contains(notebookId) {
+            let normId = notebookId.lowercased()
+            if deletedNotebookIds.contains(normId) {
                 try? fm.removeItem(at: package)
                 SyncLogger.logAsync("已清理已刪除筆記本殘留套件：\(notebookId)", source: .general)
+                continue
+            }
+
+            // 如果指定了只匯入特定變更的筆記本，且此筆記本不在名單中，且本地已載入過，則跳過重算
+            if let only = onlyNotebookIds, !only.contains(normId), activeLocalIds.contains(normId) {
                 continue
             }
 
@@ -1019,7 +1058,7 @@ enum NotebookSyncCoordinator {
             }
 
             do {
-                try importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
+                try await importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
                 report.imported += 1
             } catch {
                 report.failures[package.lastPathComponent] = error.localizedDescription
@@ -1027,10 +1066,12 @@ enum NotebookSyncCoordinator {
                 // 若這本筆記本尚未成功載入本機 store，必須把磁碟上的破損/空套件刪除。
                 // 否則下次 pullNewNotebooks 會因為 fileExists(atPath:) 為真而跳過，
                 // 導致筆記本永遠卡在無法匯入的死鎖狀態。
-                if !activeLocalIds.contains(notebookId) {
+                if !activeLocalIds.contains(normId) {
                     try? fm.removeItem(at: package)
                 }
             }
+            // 每匯入完一本主動讓出時間片段給 RunLoop，防止連續解碼觸發 iOS 10秒看門狗 (0x8BADF00D)
+            await Task.yield()
         }
     }
 
@@ -1047,14 +1088,15 @@ enum NotebookSyncCoordinator {
         activeLocalIds: Set<String>,
         deletedNotebookIds: Set<String>,
         report: inout Report
-    ) {
+    ) async {
         let fm = FileManager.default
         let allPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
             .filter { $0.pathExtension == "padnote" } ?? []
         for package in allPackages {
             let notebookId = packageId(for: package)
+            let normId = notebookId.lowercased()
 
-            if deletedNotebookIds.contains(notebookId) {
+            if deletedNotebookIds.contains(normId) {
                 try? fm.removeItem(at: package)
                 continue
             }
@@ -1091,14 +1133,15 @@ enum NotebookSyncCoordinator {
             }
 
             do {
-                try importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
+                try await importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
                 report.imported += 1
             } catch {
                 report.failures[package.lastPathComponent] = error.localizedDescription
-                if !activeLocalIds.contains(notebookId) {
+                if !activeLocalIds.contains(normId) {
                     try? fm.removeItem(at: package)
                 }
             }
+            await Task.yield()
         }
     }
 

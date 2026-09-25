@@ -126,7 +126,15 @@ public final class AutoSyncController: ObservableObject {
     public func request(_ trigger: FfiSyncTrigger) {
         scheduler.request(trigger: trigger, nowMs: nowMs)
         needsSignIn = scheduler.isBlockedOnAuth()
-        pump()
+        let due = scheduler.nextDueInMs(nowMs: nowMs)
+        if due != UInt64.max, due > 0 {
+            Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: due * 1_000_000)
+                self?.pump()
+            }
+        } else {
+            pump()
+        }
     }
 
     /// 本機存檔之後呼叫。**會去抖動**，連續存檔只會推一次。

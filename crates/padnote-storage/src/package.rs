@@ -819,6 +819,44 @@ impl NotebookPackage {
         Ok(out)
     }
 
+    /// 套件目錄下所有的筆跡檔（`(檔名, 位元組大小)`）。
+    pub fn ink_files(&self) -> Result<Vec<(String, u64)>, StorageError> {
+        let dir = self.root.join("ink");
+        if !dir.exists() {
+            return Ok(Vec::new());
+        }
+        let mut out: Vec<(String, u64)> = fs::read_dir(&dir)?
+            .filter_map(Result::ok)
+            .filter(|e| e.path().extension().is_some_and(|x| x == "strokes"))
+            .filter_map(|e| {
+                let name = e.file_name().to_str()?.to_string();
+                if crate::atomic::is_temp_name(&name) {
+                    return None;
+                }
+                let size = e.metadata().ok()?.len();
+                Some((name, size))
+            })
+            .collect();
+        out.sort();
+        Ok(out)
+    }
+
+    /// 讀取單一筆跡檔的完整二進位資料。
+    pub fn read_ink_file(&self, name: &str) -> Result<Vec<u8>, StorageError> {
+        let path = self.root.join("ink").join(name);
+        Ok(fs::read(path)?)
+    }
+
+    /// 寫入單一筆跡檔（原子寫入）。
+    pub fn write_ink_file(&self, name: &str, bytes: &[u8]) -> Result<(), StorageError> {
+        let path = self.root.join("ink").join(name);
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        crate::atomic::write_atomic(&path, bytes)?;
+        Ok(())
+    }
+
     /// 壓實本機 oplog 碎檔。
     ///
     /// 當**這台裝置**的碎檔數 `>= threshold` 時，把所有屬於此裝置的碎檔

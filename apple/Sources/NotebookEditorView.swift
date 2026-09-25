@@ -1876,10 +1876,10 @@ public struct NotebookEditorView: View {
             Button(localizationManager.localized("cancel"), role: .cancel) {}
             Button(localizationManager.localized("confirm")) {
                 if !renameText.isEmpty {
-                    notebook.title = renameText
-                    // 使用者命名後不再跟著語系翻譯（見 NotebookDocument.titleKey）。
-                    notebook.titleKey = nil
-                    store.updateNotebook(notebook)
+                    store.renameNotebook(id: notebook.id, newTitle: renameText)
+                    if let updated = store.notebooks.first(where: { $0.id.caseInsensitiveCompare(notebook.id) == .orderedSame }) {
+                        notebook = updated
+                    }
                 }
             }
         }

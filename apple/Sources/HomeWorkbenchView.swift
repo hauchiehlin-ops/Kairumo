@@ -489,6 +489,8 @@ public struct HomeWorkbenchView: View {
                 StartupLogger.log("HomeWorkbenchView.onAppear: 首頁畫面載入就緒")
                 // 不限定 macCatalyst：使用者在 Mac 上跑的是 iOS 版（Designed for iPad）
                 MacWindowTitle.apply()
+                autoSync.start(store: store, deviceId: NotebookMigration.deviceId)
+                autoSync.request(.foreground)
             }
         }
     }

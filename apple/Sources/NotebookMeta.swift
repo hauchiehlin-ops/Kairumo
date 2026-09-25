@@ -41,6 +41,7 @@ struct NotebookMeta: Codable, Hashable {
     /// Letter 橫式、在 Android 上回到 A4 直式，分頁位置、可列印範圍與匯出的
     /// PDF 全部分家，而使用者什麼也沒做。
     var pageFormat: String?
+    var title: String?
     var folderId: String?
     /// 系統預設標題／摘要的語系鍵（見 `NotebookDocument.titleKey`）。
     var titleKey: String?
@@ -115,6 +116,7 @@ struct NotebookMeta: Codable, Hashable {
         pageTemplates = document.pagePaperIds
         guidePalette = document.guidePaletteId
         pageFormat = document.pageFormatId
+        title = document.title
         folderId = document.folderId
         titleKey = document.titleKey
         snippetKey = document.snippetKey
@@ -133,23 +135,62 @@ struct NotebookMeta: Codable, Hashable {
 
     /// 把中繼資料套回文件。缺的欄位一律保留文件原本的值。
     func apply(to document: inout NotebookDocument) {
-        if let raw = template, let value = NoteTemplate(rawValue: raw) { document.template = value }
-        if let pageTemplates { document.pagePaperIds = pageTemplates }
-        if let guidePalette { document.guidePaletteId = guidePalette }
-        if let pageFormat { document.pageFormatId = pageFormat }
-        if let folderId { document.folderId = folderId }
-        if let titleKey { document.titleKey = titleKey }
-        if let snippetKey { document.snippetKey = snippetKey }
-        if let previewSnippet { document.previewSnippet = previewSnippet }
-        if let createdAt { document.createdAt = createdAt }
-        if let lastModifiedDate { document.lastModifiedDate = lastModifiedDate }
-        if let hasRecording { document.hasRecording = hasRecording }
-        if let recordingAudioPath { document.recordingAudioPath = recordingAudioPath }
-        if let linkAttachments { document.linkAttachments = linkAttachments }
-        if let model3DAttachments { document.model3DAttachments = model3DAttachments }
-        if let audioAttachments { document.audioAttachments = audioAttachments }
-        if let commentPins { document.commentPins = commentPins }
-        if let objectOrderByPage { document.objectOrderByPage = objectOrderByPage }
-        if let stickyAnchors { document.stickyAnchors = stickyAnchors }
+        if let raw = template, let value = NoteTemplate(rawValue: raw) {
+            document.template = value
+        }
+        if let pageTemplates {
+            document.pagePaperIds = pageTemplates
+        }
+        if let guidePalette {
+            document.guidePaletteId = guidePalette
+        }
+        if let pageFormat {
+            document.pageFormatId = pageFormat
+        }
+        if let title, !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            document.title = title
+        }
+        if let folderId {
+            document.folderId = folderId
+        }
+        if let titleKey {
+            document.titleKey = titleKey
+        }
+        if let snippetKey {
+            document.snippetKey = snippetKey
+        }
+        if let previewSnippet {
+            document.previewSnippet = previewSnippet
+        }
+        if let createdAt {
+            document.createdAt = createdAt
+        }
+        if let lastModifiedDate {
+            document.lastModifiedDate = lastModifiedDate
+        }
+        if let hasRecording {
+            document.hasRecording = hasRecording
+        }
+        if let recordingAudioPath {
+            document.recordingAudioPath = recordingAudioPath
+        }
+        if let linkAttachments {
+            document.linkAttachments = linkAttachments
+        }
+        if let model3DAttachments {
+            document.model3DAttachments = model3DAttachments
+        }
+        if let audioAttachments {
+            document.audioAttachments = audioAttachments
+        }
+        if let commentPins {
+            document.commentPins = commentPins
+        }
+        if let objectOrderByPage {
+            document.objectOrderByPage = objectOrderByPage
+        }
+        if let stickyAnchors {
+            document.stickyAnchors = stickyAnchors
+        }
     }
 }

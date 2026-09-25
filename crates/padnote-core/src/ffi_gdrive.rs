@@ -594,6 +594,91 @@ fn sync_notebook_ops(
     }
 }
 
+/// 同步一本筆記本的**手繪筆跡檔**（ink/*.strokes）。
+///
+/// 筆畫是獨立於 doc/ops 之外的二進位向量資料，也是筆記內容的核心。
+/// 每一頁每台裝置各存一個檔，同 oplog 依大小增量同步。
+fn sync_notebook_ink(
+    drive: &GDriveProvider<ForeignHttp>,
+    index: &mut RemoteIndex,
+    package_path: &str,
+    notebook_id: &str,
+) -> FfiNotebookSyncResult {
+    let package = match padnote_storage::NotebookPackage::open(std::path::Path::new(package_path)) {
+        Ok(p) => p,
+        Err(e) => return notebook_failed(format!("開不了套件：{e}")),
+    };
+    let local = match package.ink_files() {
+        Ok(files) => files,
+        Err(e) => return notebook_failed(format!("讀不到本機筆跡：{e}")),
+    };
+    let prefix = padnote_sync::paths::notebook_ink_prefix(notebook_id);
+    let remote = match remote_entries(drive, index, &prefix) {
+        Ok(entries) => entries,
+        Err(e) => return from_sync_error(e),
+    };
+
+    // ── 上傳 ────────────────────────────────────────────────
+    let mut uploaded = 0u32;
+    for (name, size) in &local {
+        let key = padnote_sync::paths::canonical_name(name);
+        let existing = remote.get(&key);
+        if *size <= existing.map_or(0, |f| f.size) {
+            continue;
+        }
+        let bytes = match package.read_ink_file(name) {
+            Ok(b) => b,
+            Err(padnote_storage::StorageError::Io(ref e))
+                if e.kind() == std::io::ErrorKind::NotFound =>
+            {
+                continue;
+            }
+            Err(e) => return notebook_failed(format!("讀不到筆跡 {name}：{e}")),
+        };
+        let path = padnote_sync::paths::notebook_ink_file(notebook_id, name);
+        match upload_file(drive, existing, &path, &bytes) {
+            Ok(id) => {
+                if !id.is_empty() {
+                    index.note_upload(&path, &id, bytes.len() as u64);
+                }
+            }
+            Err(e) => return from_sync_error(e),
+        }
+        uploaded += 1;
+    }
+
+    // ── 下載 ────────────────────────────────────────────────
+    let local_by_key: std::collections::BTreeMap<String, u64> = local
+        .iter()
+        .map(|(n, s)| (padnote_sync::paths::canonical_name(n), *s))
+        .collect();
+    let mut downloaded = 0u32;
+    for (name, file) in &remote {
+        let local_size = local_by_key.get(name).copied().unwrap_or(0);
+        if file.size <= local_size {
+            continue;
+        }
+        let bytes = match download_file(drive, file) {
+            Ok(b) => b,
+            Err(SyncError::NotFound(_)) => continue,
+            Err(e) => return from_sync_error(e),
+        };
+        if let Err(e) = package.write_ink_file(name, &bytes) {
+            return notebook_failed(format!("寫不進筆跡 {name}：{e}"));
+        }
+        downloaded += 1;
+    }
+
+    FfiNotebookSyncResult {
+        ok: true,
+        uploaded,
+        downloaded,
+        error: String::new(),
+        needs_reauth: false,
+        warnings: Vec::new(),
+    }
+}
+
 /// 同步一本筆記本的內容。
 ///
 /// **只有測試在用。** 正式路徑走 [`FfiSyncSession::sync_notebook`]。
@@ -605,7 +690,22 @@ fn gdrive_sync_notebook(
 ) -> FfiNotebookSyncResult {
     let drive = GDriveProvider::new(ForeignHttp(http));
     let mut index = RemoteIndex::default();
-    sync_notebook_ops(&drive, &mut index, &package_path, &notebook_id, 0)
+    let ops = sync_notebook_ops(&drive, &mut index, &package_path, &notebook_id, 0);
+    if !ops.ok {
+        return ops;
+    }
+    let ink = sync_notebook_ink(&drive, &mut index, &package_path, &notebook_id);
+    if !ink.ok {
+        return ink;
+    }
+    FfiNotebookSyncResult {
+        ok: true,
+        uploaded: ops.uploaded + ink.uploaded,
+        downloaded: ops.downloaded + ink.downloaded,
+        error: String::new(),
+        needs_reauth: false,
+        warnings: Vec::new(),
+    }
 }
 
 /// 同步一本筆記本的**媒體檔**（圖片 blob 與錄音）。
@@ -962,17 +1062,25 @@ fn gdrive_clone_notebook(
         return notebook_failed("雲端尚無此筆記本之操作記錄，已清理暫存等待來源端上傳".to_string());
     }
 
-    // 媒體接在 oplog 之後，理由與平台那一側相同：oplog 裡的 AddImage 會指向
+    let ink = sync_notebook_ink(&drive, &mut index, &package_path, &notebook_id);
+    if !ink.ok {
+        let _ = std::fs::remove_dir_all(root);
+        return ink;
+    }
+
+    // 媒體接在 oplog 與 ink 之後，理由與平台那一側相同：oplog 裡的 AddImage 會指向
     // 一個 blob id，媒體還沒到的話那一頁是一個指向不存在檔案的圖片區塊。
     let mut seen = SeenSizes::new();
     let media = sync_notebook_media(&drive, &mut index, &mut seen, &package_path, &notebook_id);
+    let mut warnings = ink.warnings;
+    warnings.extend(media.warnings);
     FfiNotebookSyncResult {
         ok: media.ok,
-        uploaded: ops.uploaded + media.uploaded,
-        downloaded: ops.downloaded + media.downloaded,
+        uploaded: ops.uploaded + ink.uploaded + media.uploaded,
+        downloaded: ops.downloaded + ink.downloaded + media.downloaded,
         error: media.error,
         needs_reauth: media.needs_reauth,
-        warnings: Vec::new(),
+        warnings,
     }
 }
 
@@ -1400,7 +1508,11 @@ impl FfiSyncSession {
         if !ops.ok {
             return ops;
         }
-        // 媒體接在 oplog 之後。順序很重要：oplog 裡的 AddImage 會指向一個
+        let ink = sync_notebook_ink(&self.drive, &mut index, &package_path, &notebook_id);
+        if !ink.ok {
+            return ink;
+        }
+        // 媒體接在 oplog 與 ink 之後。順序很重要：oplog 裡的 AddImage 會指向一個
         // blob id，媒體還沒到的話，那一頁會有一個指向不存在檔案的圖片區塊。
         let mut seen = self.seen_sizes.lock().unwrap();
         let media = sync_notebook_media(
@@ -1410,13 +1522,15 @@ impl FfiSyncSession {
             &package_path,
             &notebook_id,
         );
+        let mut warnings = ink.warnings;
+        warnings.extend(media.warnings);
         FfiNotebookSyncResult {
             ok: media.ok,
-            uploaded: ops.uploaded + media.uploaded,
-            downloaded: ops.downloaded + media.downloaded,
+            uploaded: ops.uploaded + ink.uploaded + media.uploaded,
+            downloaded: ops.downloaded + ink.downloaded + media.downloaded,
             error: media.error,
             needs_reauth: media.needs_reauth,
-            warnings: Vec::new(),
+            warnings,
         }
     }
 
@@ -1453,6 +1567,14 @@ impl FfiSyncSession {
                 "雲端尚無此筆記本之操作記錄，已清理暫存等待來源端上傳".to_string(),
             );
         }
+        let ink = {
+            let mut index = self.index.lock().unwrap();
+            sync_notebook_ink(&self.drive, &mut index, &package_path, &notebook_id)
+        };
+        if !ink.ok {
+            let _ = std::fs::remove_dir_all(root);
+            return ink;
+        }
         let media = {
             let mut index = self.index.lock().unwrap();
             let mut seen = self.seen_sizes.lock().unwrap();
@@ -1464,13 +1586,15 @@ impl FfiSyncSession {
                 &notebook_id,
             )
         };
+        let mut warnings = ink.warnings;
+        warnings.extend(media.warnings);
         FfiNotebookSyncResult {
             ok: media.ok,
-            uploaded: result.uploaded + media.uploaded,
-            downloaded: result.downloaded + media.downloaded,
+            uploaded: result.uploaded + ink.uploaded + media.uploaded,
+            downloaded: result.downloaded + ink.downloaded + media.downloaded,
             error: media.error,
             needs_reauth: media.needs_reauth,
-            warnings: Vec::new(),
+            warnings,
         }
     }
 
@@ -1564,6 +1688,12 @@ fn notebook_differs(index: &RemoteIndex, package_path: &str, notebook_id: &str) 
     if differs(
         &package.doc_op_files().unwrap_or_default(),
         &index.entries_under(&notebook_ops_prefix(notebook_id)),
+    ) {
+        return true;
+    }
+    if differs(
+        &package.ink_files().unwrap_or_default(),
+        &index.entries_under(&padnote_sync::paths::notebook_ink_prefix(notebook_id)),
     ) {
         return true;
     }
