@@ -562,6 +562,7 @@ fun HomeScreen(
             }
         }
         item { CloudSyncCard(cloud, l) }
+        item { P2PSyncCard(l) }
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 SettingRow("📦", l("backup_snapshot"), l("backup_snapshot_desc"),
@@ -1409,6 +1410,28 @@ data class CloudSyncUiState(
  * **但看得到的東西與做得到的事必須一樣**：使用者換裝置時不該發現
  * 「這台可以登出、那台不行」。
  */
+@Composable
+private fun P2PSyncCard(l: (String) -> String) {
+    Card(
+        modifier = Modifier.fillMaxWidth().testTag("home.p2p.card").padding(top = 8.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth().padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(
+                text = l("p2p_sync_tailscale_explainer"),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
 @Composable
 private fun CloudSyncCard(state: CloudSyncUiState, l: (String) -> String) {
     Card(
