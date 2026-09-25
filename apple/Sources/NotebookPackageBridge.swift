@@ -465,9 +465,19 @@ enum NotebookPackageBridge {
             to: fresh, deviceId: deviceId, pageIds: pageIds)
 
         let suffix = deviceSuffix(deviceId)
+        var deletedDocOps = [String]()
         // 1. 先清掉這台裝置舊的 oplog 與筆畫檔 —— 不清的話新舊會疊加。
         for relative in relativeFiles(in: destination) where relative.contains(suffix) {
+            if relative.hasPrefix("doc/ops/") {
+                deletedDocOps.append(URL(fileURLWithPath: relative).lastPathComponent)
+            }
             try? fm.removeItem(at: destination.appending(path: relative))
+        }
+        if !deletedDocOps.isEmpty {
+            let tombstonePath = destination.appending(path: "doc/ops/compaction.tombstones")
+            let existing = (try? String(contentsOf: tombstonePath)) ?? ""
+            let newLines = deletedDocOps.joined(separator: "\n") + "\n"
+            try? (existing + newLines).write(to: tombstonePath, atomically: true, encoding: .utf8)
         }
         // 2. 再把新的搬過去。blob 與 manifest 缺的才補，不覆蓋既有的。
         for relative in relativeFiles(in: fresh) {
