@@ -43,3 +43,4 @@ pub use settings::{DefaultPen, DeviceSettings, Identity, SETTINGS_PATH, Stamped,
 pub mod webrtc;
 pub mod state_verification;
 pub mod compaction;
+pub mod presence;

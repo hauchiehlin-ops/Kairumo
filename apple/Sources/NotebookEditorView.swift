@@ -11055,3 +11055,61 @@ private struct IdentifiedURL: Identifiable {
     let url: URL
     var id: String { url.path }
 }
+import SwiftUI
+
+/// 即時游標的資料結構 (對應 Rust PresenceEvent)
+public struct PeerCursor: Identifiable {
+    public let id: UInt32 // device_id
+    public var x: CGFloat
+    public var y: CGFloat
+    public var color: Color
+    public var lastUpdated: Date
+    
+    public init(id: UInt32, x: CGFloat, y: CGFloat, color: Color) {
+        self.id = id
+        self.x = x
+        self.y = y
+        self.color = color
+        self.lastUpdated = Date()
+    }
+}
+
+/// 疊加於 Notebook 畫布上方的多人游標 UI
+public struct LiveCursorOverlay: View {
+    public var cursors: [PeerCursor]
+    
+    public init(cursors: [PeerCursor]) {
+        self.cursors = cursors
+    }
+    
+    public var body: some View {
+        ZStack(alignment: .topLeading) {
+            // 背景透明，讓事件可以穿透到下方的畫布
+            Color.clear.allowsHitTesting(false)
+            
+            ForEach(cursors) { cursor in
+                VStack(alignment: .leading, spacing: 2) {
+                    // 游標本體 (自訂形狀或 SF Symbol)
+                    Image(systemName: "cursorarrow")
+                        .font(.system(size: 16))
+                        .foregroundColor(cursor.color)
+                        .shadow(color: .black.opacity(0.2), radius: 2, x: 1, y: 1)
+                    
+                    // 裝置或使用者 ID 標籤
+                    Text("Peer \(cursor.id)")
+                        .font(.caption2)
+                        .padding(.horizontal, 4)
+                        .padding(.vertical, 2)
+                        .background(cursor.color)
+                        .foregroundColor(.white)
+                        .cornerRadius(4)
+                }
+                // 使用 animation 讓網路傳來的離散座標平滑移動
+                .position(x: cursor.x, y: cursor.y)
+                .animation(.linear(duration: 0.15), value: cursor.x)
+                .animation(.linear(duration: 0.15), value: cursor.y)
+            }
+        }
+        .allowsHitTesting(false) // 絕對不阻擋使用者的任何觸控與手寫
+    }
+}
