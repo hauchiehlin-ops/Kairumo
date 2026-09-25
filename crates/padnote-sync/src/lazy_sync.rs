@@ -7,6 +7,7 @@
 
 use std::collections::HashSet;
 
+#[derive(Debug)]
 pub struct LazySyncManager {
     /// 記錄使用者目前正在觀看或編輯的頁面 UUID
     active_pages: HashSet<String>,
@@ -18,7 +19,7 @@ impl LazySyncManager {
             active_pages: HashSet::new(),
         }
     }
-    
+
     /// 由 UI 層呼叫，宣告使用者翻到了哪些頁面
     pub fn focus_pages(&mut self, page_ids: Vec<String>) {
         self.active_pages.clear();
@@ -28,7 +29,7 @@ impl LazySyncManager {
         // TODO: 觸發 WebRTC 或 Cloud 拉取任務的優先權重排
         // 優先抓取與 active_pages 相關的 Oplog 檔案
     }
-    
+
     /// 取得當前的優先同步名單
     pub fn get_priorities(&self) -> Vec<String> {
         self.active_pages.iter().cloned().collect()

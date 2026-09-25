@@ -3,7 +3,7 @@
 //! 設計成 **CRDT 友善**：所有變更都是可交換的操作，順序無關。
 //! 筆畫**不在這裡** —— 它們走 append-only 串流（ADR-0002），本模型只持有引用。
 
-use crate::{NotebookTime, Uuid, TextCrdt};
+use crate::{NotebookTime, TextCrdt, Uuid};
 use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]

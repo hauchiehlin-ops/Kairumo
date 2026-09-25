@@ -1044,26 +1044,29 @@ impl NotebookSession {
         if current == title {
             return Ok(());
         }
-        
+
         let mut text_ops = Vec::new();
         let len = self.notebook.title_crdt.len();
-        
+
         // 字元級 CRDT: 為了簡單取代 SetTitle，直接產生「全刪除」與「全插入」的 TextOp。
         // 未來可改進為 Myers Diff 以保留最長共同子字串。
         if len > 0 {
             text_ops.extend(self.editor.delete(&self.notebook.title_crdt, 0, len));
         }
-        
+
         // 由於我們把原本的都刪了，新插入的起點一律放在絕對開頭 (index 0)。
         if !title.is_empty() {
             text_ops.extend(self.editor.insert(&self.notebook.title_crdt, 0, title));
         }
-        
-        let ops: Vec<DocOp> = text_ops.into_iter().map(|op| DocOp::TitleEdit { op }).collect();
+
+        let ops: Vec<DocOp> = text_ops
+            .into_iter()
+            .map(|op| DocOp::TitleEdit { op })
+            .collect();
         if ops.is_empty() {
             return Ok(());
         }
-        
+
         self.record(ops)
     }
 

@@ -842,8 +842,12 @@ pub fn encode(ops: &[DocOp]) -> Vec<u8> {
                     TextOp::Insert { id, origin, ch } => {
                         w.u8(1).op_id(*id);
                         match origin {
-                            Some(o) => { w.u8(1).op_id(*o); }
-                            None => { w.u8(0); }
+                            Some(o) => {
+                                w.u8(1).op_id(*o);
+                            }
+                            None => {
+                                w.u8(0);
+                            }
                         }
                         w.u32(*ch as u32);
                     }
@@ -1149,7 +1153,7 @@ pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
                     k => return Err(DocCodecError::UnknownOp(k)),
                 };
                 DocOp::TitleEdit { op }
-            },
+            }
             OP_ADD_PAGE => DocOp::AddPage {
                 id: r.uuid()?,
                 template: r.template()?,
