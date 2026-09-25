@@ -41,3 +41,4 @@ pub use remote_index::{RemoteFile, RemoteIndex};
 pub use scheduler::{SyncOutcome, SyncScheduler, SyncTrigger};
 pub use settings::{DefaultPen, DeviceSettings, Identity, SETTINGS_PATH, Stamped, SyncedSettings};
 pub mod webrtc;
+pub mod state_verification;
