@@ -355,7 +355,7 @@ def build_android(data):
                     key = re.sub(r"v\d+(\.\d+)*", "", orig_a)[:14].strip()
                     for qa in sec.get("faq", []):
                         if key and key in qa[1]:
-                            qa[1] = repl_a
+                            qa[1] = re.sub(r"v\d+(?:\.\d+)+", "v" + current_version(), repl_a)
     return d
 
 
