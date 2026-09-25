@@ -457,6 +457,8 @@ enum NotebookSyncCoordinator {
                     let mine = try exportOne(input)
                     own.merge(mine) { first, _ in first }
                     exported += 1
+                } catch is CancellationError {
+                    return (own, exported, failures, true)
                 } catch {
                     SyncLogger.logAsync(
                         "匯出失敗 (\(input.document.title))：\(error.localizedDescription)",
@@ -816,12 +818,17 @@ enum NotebookSyncCoordinator {
         // 扣掉全部的話，這台裝置自己的筆畫在下一次匯出時會被扣成空的，
         // 而它的檔案又會被整個重寫，等於自己把自己的內容刪掉。
         var own: OwnStrokes = [:]
-        let drawings = (0..<pageCount).map { page -> PKDrawing in
+        var drawings = [PKDrawing]()
+        drawings.reserveCapacity(pageCount)
+        for page in 0..<pageCount {
+            if NotebookSyncCoordinator.isCancelled || Task.isCancelled {
+                throw CancellationError()
+            }
             let current = inputs.loadDrawing(document.id, page)
             let others = loadBaseline(in: inputs.baselineDirectory, notebookId: document.id, pageIndex: page)
             let mine = PKDrawing(strokes: StrokeDelta.added(in: current, since: others))
             own[baselineKey(document.id, page)] = mine
-            return mine
+            drawings.append(mine)
         }
         var images: [String: Data] = [:]
         for attachment in document.attachments ?? [] {
