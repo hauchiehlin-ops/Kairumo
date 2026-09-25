@@ -350,6 +350,12 @@ object CloudSync {
         val deletedNotebookIds = AccountSyncStore.deletedNotebookIds(context).toMutableSet()
         val cloudLiveIds = uniffi.padnote_core.syncLiveNotebooks(meta.indexJson).map { it.id }.toSet()
 
+        // 🌟 先把別台裝置新建、本機還沒有的筆記本整本抓下來
+        val pulled = pullNewNotebooks(context, session, meta.indexJson, activeLocalIds, deletedNotebookIds)
+        val changed = mutableListOf<String>()
+        changed += pulled
+        var downloaded = pulled.size
+
         val allDiskPackages = dir.listFiles { file -> file.name.endsWith(".padnote") } ?: emptyArray()
 
         val validPackages = mutableListOf<File>()
@@ -383,8 +389,6 @@ object CloudSync {
         )
 
         var uploaded = 0
-        var downloaded = 0
-        val changed = mutableListOf<String>()
 
         // 前台作用中的那一本排最前面：使用者正在看的內容要先到。
         // 規則用核心那一份，與 Apple 同一套（各寫一份的話，使用者感覺到的
@@ -422,11 +426,6 @@ object CloudSync {
                 }
             }
         }
-
-        // 別台裝置新建的筆記本整本抓下來（排除已被刪除的筆記本）
-        val pulled = pullNewNotebooks(context, session, meta.indexJson, activeLocalIds, deletedNotebookIds)
-        changed += pulled
-        downloaded += pulled.size
 
         // 快照要落地。不存的話，下次開 App 又要全量重建一次 ——
         // 那是唯一的慢路徑，不該每次啟動都走。

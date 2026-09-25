@@ -61,14 +61,25 @@ protocol SyncableNotebookStore: AnyObject {
 }
 
 extension SyncableNotebookStore {
-    var activeNotebookId: String? { nil }
-    func syncPurgeDeletedNotebooks(_ deletedIds: Set<String>) {}
+    var activeNotebookId: String? {
+        nil
+    }
+
+    func syncPurgeDeletedNotebooks(_: Set<String>) {}
 }
 
 extension NotebookStore: SyncableNotebookStore {
-    var syncNotebooks: [NotebookDocument] { visibleNotebooks }
-    var allNotebooks: [NotebookDocument] { notebooks }
-    var syncPackagesDirectory: URL { corePackagesDirectory }
+    var syncNotebooks: [NotebookDocument] {
+        visibleNotebooks
+    }
+
+    var allNotebooks: [NotebookDocument] {
+        notebooks
+    }
+
+    var syncPackagesDirectory: URL {
+        corePackagesDirectory
+    }
 
     /// 在主執行緒上把目錄抄成一個 URL，回傳的閉包只捕捉那個 URL ——
     /// 所以閉包帶到哪個執行緒都成立。
@@ -82,9 +93,12 @@ extension NotebookStore: SyncableNotebookStore {
             return drawing
         }
     }
-    var syncAttachmentsDirectory: URL { attachmentsDirectory }
-    // activeNotebookId 由 NotebookStore 本身的 @Published var 直接滿足協定，不需要在此重新宣告
 
+    var syncAttachmentsDirectory: URL {
+        attachmentsDirectory
+    }
+
+    // activeNotebookId 由 NotebookStore 本身的 @Published var 直接滿足協定，不需要在此重新宣告
 
     var syncBaselineDirectory: URL {
         let dir = documentsDirectory.appendingPathComponent("SyncBaseline", isDirectory: true)
@@ -107,7 +121,6 @@ extension NotebookStore: SyncableNotebookStore {
 
 @MainActor
 enum NotebookSyncCoordinator {
-
     struct Report {
         var exported: Int = 0
         var uploaded: Int = 0
@@ -123,7 +136,9 @@ enum NotebookSyncCoordinator {
         /// 「立即同步」看到「已是最新」，會以為雲端真的比對過了。
         var wasSkipped: Bool = false
 
-        var isNoOp: Bool { uploaded == 0 && downloaded == 0 }
+        var isNoOp: Bool {
+            uploaded == 0 && downloaded == 0
+        }
     }
 
     /// 這一輪各頁算出來的「自己的筆畫」。
@@ -140,16 +155,16 @@ enum NotebookSyncCoordinator {
         UInt64(ProcessInfo.processInfo.systemUptime * 1000)
     }
 
-    public nonisolated static var isCancelled: Bool {
+    nonisolated static var isCancelled: Bool {
         DriveHttpClient.isCancellationRequested
     }
 
-    public nonisolated static func cancelSync() {
+    nonisolated static func cancelSync() {
         DriveHttpClient.cancelAll()
         SyncLogger.logAsync("【同步中斷】已送出中斷要求，正在終止進行中的任務...", source: .general)
     }
 
-    public nonisolated static func resetCancellation() {
+    nonisolated static func resetCancellation() {
         DriveHttpClient.resetCancellation()
     }
 
@@ -163,7 +178,8 @@ enum NotebookSyncCoordinator {
         guard grant.granted else {
             SyncLogger.logAsync(
                 "【資料夾同步】已有一輪在跑（\(grant.holder)，\(grant.heldMs / 1000) 秒）—— 這次跳過",
-                source: .folder)
+                source: .folder
+            )
             var skipped = Report()
             skipped.wasSkipped = true
             return skipped
@@ -171,7 +187,8 @@ enum NotebookSyncCoordinator {
         if grant.tookOver {
             SyncLogger.logAsync(
                 "【資料夾同步】上一輪（\(grant.holder)）卡了 \(grant.heldMs / 1000) 秒沒收尾，接手",
-                source: .folder)
+                source: .folder
+            )
         }
         defer { _ = syncGateLeave(ticket: grant.ticket) }
         resetCancellation()
@@ -214,7 +231,9 @@ enum NotebookSyncCoordinator {
             var exported = 0
             var failures = [String: String]()
             for input in inputs {
-                if isCancelled || Task.isCancelled { return (own, exported, failures, true) }
+                if isCancelled || Task.isCancelled {
+                    return (own, exported, failures, true)
+                }
                 do {
                     let mine = try exportOne(input)
                     own.merge(mine) { first, _ in first }
@@ -222,7 +241,8 @@ enum NotebookSyncCoordinator {
                 } catch {
                     SyncLogger.logAsync(
                         "匯出失敗 (\(input.document.title))：\(error.localizedDescription)",
-                        source: .folder)
+                        source: .folder
+                    )
                     failures[input.document.title] = error.localizedDescription
                 }
             }
@@ -298,7 +318,9 @@ enum NotebookSyncCoordinator {
             if !mutablePackages.isEmpty {
                 SyncLogger.logAsync("【背景佇列】開始同步其餘 \(mutablePackages.count) 本非作用中筆記...", source: .folder)
                 for package in mutablePackages {
-                    if Task.isCancelled || DriveHttpClient.isCancellationRequested { break }
+                    if Task.isCancelled || DriveHttpClient.isCancellationRequested {
+                        break
+                    }
                     let pkgId = packageId(for: package)
                     SyncLogger.logAsync("【背景佇列】開始同步筆記本 (\(pkgId.prefix(8))...)...", source: .folder)
                     let result = CloudSyncFolder.sync(localPackage: package, into: folder)
@@ -356,7 +378,6 @@ enum NotebookSyncCoordinator {
         return report
     }
 
-
     /// 跑完一輪**Google Drive** 的同步。
     static func runDrive(store: SyncableNotebookStore, deviceId: UInt32) async -> Report? {
         guard await GoogleAuth.shared.isSignedIn else { return nil }
@@ -378,7 +399,8 @@ enum NotebookSyncCoordinator {
         guard grant.granted else {
             SyncLogger.logAsync(
                 "【Google Drive 同步】已有一輪在跑（\(grant.holder)，\(grant.heldMs / 1000) 秒）—— 這次跳過",
-                source: .googleDrive)
+                source: .googleDrive
+            )
             var skipped = Report()
             skipped.wasSkipped = true
             return skipped
@@ -386,7 +408,8 @@ enum NotebookSyncCoordinator {
         if grant.tookOver {
             SyncLogger.logAsync(
                 "【Google Drive 同步】上一輪（\(grant.holder)）卡了 \(grant.heldMs / 1000) 秒沒收尾，接手",
-                source: .googleDrive)
+                source: .googleDrive
+            )
         }
         defer { _ = syncGateLeave(ticket: grant.ticket) }
         resetCancellation()
@@ -402,7 +425,7 @@ enum NotebookSyncCoordinator {
 
         // (A) 從 store.allNotebooks 全集確認未刪除的筆記本存在於 localIndexJson
         for document in store.allNotebooks {
-            if !AccountSyncStore.shared.isDeleted(id: document.id) && !localLiveSet.contains(document.id) {
+            if !AccountSyncStore.shared.isDeleted(id: document.id), !localLiveSet.contains(document.id) {
                 AccountSyncStore.shared.record(
                     id: document.id,
                     title: document.title,
@@ -452,7 +475,9 @@ enum NotebookSyncCoordinator {
             var exported = 0
             var failures = [String: String]()
             for input in inputs {
-                if isCancelled || Task.isCancelled { return (own, exported, failures, true) }
+                if isCancelled || Task.isCancelled {
+                    return (own, exported, failures, true)
+                }
                 do {
                     let mine = try exportOne(input)
                     own.merge(mine) { first, _ in first }
@@ -462,7 +487,8 @@ enum NotebookSyncCoordinator {
                 } catch {
                     SyncLogger.logAsync(
                         "匯出失敗 (\(input.document.title))：\(error.localizedDescription)",
-                        source: .googleDrive)
+                        source: .googleDrive
+                    )
                     failures[input.document.title] = error.localizedDescription
                 }
             }
@@ -511,7 +537,8 @@ enum NotebookSyncCoordinator {
             refreshed.fullRebuild
                 ? "雲端快照重建完成（\(refreshed.trackedFiles) 個檔案）"
                 : "雲端變動 \(refreshed.changed) 筆，快照共 \(refreshed.trackedFiles) 個檔案",
-            source: .googleDrive)
+            source: .googleDrive
+        )
 
         // 中繼資料（設定、筆記本清單、刪除墓碑）。
         guard let meta = await CloudSync.syncMetadata(session) else {
@@ -544,6 +571,19 @@ enum NotebookSyncCoordinator {
         var deletedNotebookIds = Set(AccountSyncStore.shared.deletedNotebookIds.map { $0.lowercased() })
         let cloudLiveIds = Set(syncLiveNotebooks(indexJson: meta.indexJson).map { $0.id.lowercased() })
 
+        // 🌟 先拉取雲端上有、本機還沒有的新筆記本！
+        // 原本放在所有既有筆記同步之後：如果前面任何一本現有筆記同步耗時（如巨量歷史或錄音）或中途失敗，
+        // 新筆記本就永遠輪不到拉取，導致多裝置看到完全不同的筆記本清單。
+        let newBooks = await pullNewNotebooks(
+            session,
+            into: packagesDir,
+            index: meta.indexJson,
+            activeLocalIds: activeLocalIds,
+            deletedNotebookIds: deletedNotebookIds,
+            report: &report
+        )
+        report.newNotebooks += newBooks
+
         let allDiskPackages = (try? fm.contentsOfDirectory(at: packagesDir, includingPropertiesForKeys: nil))?
             .filter { $0.pathExtension == "padnote" } ?? []
 
@@ -571,7 +611,8 @@ enum NotebookSyncCoordinator {
         SyncLogger.logAsync(
             "📊【同步前核實】本機 \(activeLocalIds.count) 本，清理 \(cleanedCount) 本，"
                 + "有差異待同步 \(pending.count) 本（跳過 \(packages.count - pending.count) 本）",
-            source: .googleDrive)
+            source: .googleDrive
+        )
 
         // 前台作用中的那一本排最前面：使用者正在看的內容要先到。
         //
@@ -584,23 +625,38 @@ enum NotebookSyncCoordinator {
         // 規則改用核心那一份（`padnote_sync::order`），兩端同一套，
         // 而且有測試守著「不重複、不遺漏、其餘維持原序」。
         let orderedIds = syncOrderActiveFirst(
-            ids: pending.map { packageId(for: $0) }, activeId: activeId)
+            ids: pending.map { packageId(for: $0) }, activeId: activeId
+        )
         let byId = Dictionary(
-            pending.map { (packageId(for: $0), $0) }, uniquingKeysWith: { first, _ in first })
+            pending.map { (packageId(for: $0), $0) }, uniquingKeysWith: { first, _ in first }
+        )
         let ordered = orderedIds.compactMap { byId[$0] }
 
         for package in ordered {
-            if isCancelled || Task.isCancelled { break }
+            if isCancelled || Task.isCancelled {
+                break
+            }
             let id = packageId(for: package)
             guard let result = await CloudSync.syncNotebook(
-                session, packagePath: package.path, notebookId: id, deviceId: deviceId)
+                session, packagePath: package.path, notebookId: id, deviceId: deviceId
+            )
             else { continue }
             if result.ok {
                 SyncLogger.logAsync(
                     "筆記本 \(id.prefix(8))… 完成（上傳 \(result.uploaded)、下載 \(result.downloaded)）",
-                    source: .googleDrive)
+                    source: .googleDrive
+                )
                 report.uploaded += Int(result.uploaded)
                 report.downloaded += Int(result.downloaded)
+                // 有下載就代表雲端有別台裝置的新內容。
+                // 通知正在打開這本筆記的編輯器丟掉舊快取、重新讀取套件，
+                // 讓使用者不需要關掉重開就能看到最新筆跡。
+                if result.downloaded > 0 {
+                    NotificationCenter.default.post(
+                        name: AppCommand.notebookPackageChanged,
+                        object: id.lowercased()
+                    )
+                }
                 // 不致命但要看得見：例如雲端上一個壞掉的 blob。
                 // 悄悄吞掉的話，使用者會發現某張圖永遠出不來而查不出原因。
                 for warning in result.warnings {
@@ -619,20 +675,20 @@ enum NotebookSyncCoordinator {
 
         if isCancelled || Task.isCancelled {
             await CloudSync.persist(session)
+            // 即使被手動中斷，已經下載的套件也要匯入，不能丟掉！
+            importPackages(
+                from: packagesDir,
+                into: store,
+                deviceId: deviceId,
+                ownStrokes: ownStrokes,
+                activeLocalIds: activeLocalIds,
+                deletedNotebookIds: deletedNotebookIds,
+                report: &report
+            )
+            store.syncPurgeDeletedNotebooks(deletedNotebookIds)
             SyncLogger.logAsync("【Google Drive 同步】已手動中斷。", source: .googleDrive)
             return report
         }
-
-        // 別台裝置新建的筆記本
-        let newBooks = await pullNewNotebooks(
-            session,
-            into: packagesDir,
-            index: meta.indexJson,
-            activeLocalIds: activeLocalIds,
-            deletedNotebookIds: deletedNotebookIds,
-            report: &report
-        )
-        report.newNotebooks += newBooks
 
         // 快照要落地。不存的話，下次開 App 又要全量重建一次 ——
         // 那是唯一的慢路徑，不該每次啟動都走。
@@ -695,7 +751,8 @@ enum NotebookSyncCoordinator {
             }
             guard !fm.fileExists(atPath: targetPackage.path) else { continue }
             guard let result = await CloudSync.cloneNotebook(
-                session, packagePath: targetPackage.path, notebookId: item.id, title: item.title)
+                session, packagePath: targetPackage.path, notebookId: item.id, title: item.title
+            )
             else { break }
             if result.ok {
                 report.downloaded += Int(result.downloaded)
@@ -705,7 +762,9 @@ enum NotebookSyncCoordinator {
                 // 這本就再也不會被重抓 —— 使用者會看到一本永遠打不開的空筆記。
                 try? fm.removeItem(at: targetPackage)
                 report.failures[item.title] = result.error
-                if result.needsReauth { break }
+                if result.needsReauth {
+                    break
+                }
             }
         }
         return pulled
@@ -736,13 +795,15 @@ enum NotebookSyncCoordinator {
         // 會撞看門狗的是同步那條「一次幾十本」的迴圈，不是這裡。
         var inputs = exportInputs(
             for: document, store: store, packagesDir: store.syncPackagesDirectory,
-            deviceId: deviceId)
+            deviceId: deviceId
+        )
         // packageURL 會把 id 轉小寫，exportInputs 不會 —— 以前者為準。
         inputs = ExportInputs(
             document: inputs.document, package: package,
             baselineDirectory: inputs.baselineDirectory,
             attachmentsDirectory: inputs.attachmentsDirectory,
-            deviceId: inputs.deviceId, loadDrawing: inputs.loadDrawing)
+            deviceId: inputs.deviceId, loadDrawing: inputs.loadDrawing
+        )
         _ = try exportOne(inputs)
         return package
     }
@@ -756,13 +817,15 @@ enum NotebookSyncCoordinator {
         // 傳空的基準線，讓匯入把合併後的全部內容都算成別人的。
         try importOne(
             packageURL(for: notebookId, in: store), into: store, deviceId: deviceId,
-            ownStrokes: [:])
+            ownStrokes: [:]
+        )
     }
 
     @MainActor
     private static func packageURL(for notebookId: String, in store: SyncableNotebookStore) -> URL {
         try? FileManager.default.createDirectory(
-            at: store.syncPackagesDirectory, withIntermediateDirectories: true)
+            at: store.syncPackagesDirectory, withIntermediateDirectories: true
+        )
         return store.syncPackagesDirectory
             .appending(path: "\(notebookId.lowercased()).padnote")
     }
@@ -795,7 +858,8 @@ enum NotebookSyncCoordinator {
             baselineDirectory: store.syncBaselineDirectory,
             attachmentsDirectory: store.syncAttachmentsDirectory,
             deviceId: deviceId,
-            loadDrawing: store.syncDrawingLoader)
+            loadDrawing: store.syncDrawingLoader
+        )
     }
 
     /// 匯出一本，回傳這台裝置在各頁自己擁有的筆畫。
@@ -805,7 +869,7 @@ enum NotebookSyncCoordinator {
     /// 主執行緒就被連續佔住十秒以上 —— iOS 的 scene-update 看門狗會直接
     /// SIGKILL（0x8BADF00D），實機上就是「按下同步之後整個 App 消失」。
     @discardableResult
-    nonisolated private static func exportOne(_ inputs: ExportInputs) throws -> OwnStrokes {
+    private nonisolated static func exportOne(_ inputs: ExportInputs) throws -> OwnStrokes {
         let document = inputs.document
         let pageCount = max(document.pageCount, 1)
         // 只寫這台裝置自己新增的筆畫。
@@ -820,7 +884,7 @@ enum NotebookSyncCoordinator {
         var own: OwnStrokes = [:]
         var drawings = [PKDrawing]()
         drawings.reserveCapacity(pageCount)
-        for page in 0..<pageCount {
+        for page in 0 ..< pageCount {
             if NotebookSyncCoordinator.isCancelled || Task.isCancelled {
                 throw CancellationError()
             }
@@ -833,11 +897,14 @@ enum NotebookSyncCoordinator {
         var images: [String: Data] = [:]
         for attachment in document.attachments ?? [] {
             let url = inputs.attachmentsDirectory.appending(path: attachment.fileName)
-            if let bytes = try? Data(contentsOf: url) { images[attachment.fileName] = bytes }
+            if let bytes = try? Data(contentsOf: url) {
+                images[attachment.fileName] = bytes
+            }
         }
         try NotebookPackageBridge.exportPreservingOtherDevices(
             document: document, drawings: drawings, imageData: images,
-            to: inputs.package, deviceId: inputs.deviceId)
+            to: inputs.package, deviceId: inputs.deviceId
+        )
         return own
     }
 
@@ -847,7 +914,8 @@ enum NotebookSyncCoordinator {
     ) throws {
         let documentId = package.deletingPathExtension().lastPathComponent
         let imported = try NotebookPackageBridge.importDocument(
-            fromPackageAt: package, deviceId: deviceId, documentId: documentId)
+            fromPackageAt: package, deviceId: deviceId, documentId: documentId
+        )
 
         // 圖片先落地：筆記本指到一個不存在的檔名時，畫面上會是一格空白。
         for (fileName, bytes) in imported.imageData {
@@ -868,19 +936,19 @@ enum NotebookSyncCoordinator {
 
     // MARK: - 基準線
 
-    nonisolated private static func baselineKey(_ notebookId: String, _ pageIndex: Int) -> String {
+    private nonisolated static func baselineKey(_ notebookId: String, _ pageIndex: Int) -> String {
         "\(notebookId)_p\(pageIndex)"
     }
 
     /// 這幾個取的是目錄而不是 `store`：匯出要在背景執行緒上跑，那裡碰不到
     /// `@MainActor` 的 store。目錄是一個 URL，值型別，帶到哪裡都成立。
-    nonisolated private static func baselineURL(
+    private nonisolated static func baselineURL(
         in directory: URL, notebookId: String, pageIndex: Int
     ) -> URL {
         directory.appending(path: "\(baselineKey(notebookId, pageIndex)).drawing")
     }
 
-    nonisolated private static func loadBaseline(
+    private nonisolated static func loadBaseline(
         in directory: URL, notebookId: String, pageIndex: Int
     ) -> PKDrawing {
         let url = baselineURL(in: directory, notebookId: notebookId, pageIndex: pageIndex)
@@ -889,12 +957,13 @@ enum NotebookSyncCoordinator {
         return drawing
     }
 
-    nonisolated private static func saveBaseline(
+    private nonisolated static func saveBaseline(
         _ drawing: PKDrawing, in directory: URL, notebookId: String, pageIndex: Int
     ) {
         try? drawing.dataRepresentation().write(
             to: baselineURL(in: directory, notebookId: notebookId, pageIndex: pageIndex),
-            options: .atomic)
+            options: .atomic
+        )
     }
 
     /// 匯入套件目錄下的所有筆記本，具備破損目錄防禦與 iCloud 佔位檔處理。
@@ -1037,7 +1106,7 @@ enum NotebookSyncCoordinator {
     ///
     /// `CloudSyncFolder.sync` 只處理「本機已經有這個套件目錄」的情況 ——
     /// 另一台裝置**新建**的筆記本在本機連目錄都沒有，不另外抓的話永遠不會出現。
-    nonisolated private static func pullUnknownPackages(
+    private nonisolated static func pullUnknownPackages(
         into packagesDir: URL,
         from folder: URL,
         activeLocalIds: Set<String>,
@@ -1064,7 +1133,9 @@ enum NotebookSyncCoordinator {
             let notebookId = packageId(for: local)
 
             // 若本機已有此筆記本（活躍），跳過——CloudSyncFolder.sync 已處理雙向同步。
-            if activeLocalIds.contains(notebookId) { continue }
+            if activeLocalIds.contains(notebookId) {
+                continue
+            }
             // 若為已刪除的筆記本（帶墓碑），跳過並從雲端清除殘留，絕不重新拉取
             if deletedNotebookIds.contains(notebookId) {
                 try? fm.removeItem(at: remoteItem)
@@ -1092,16 +1163,18 @@ enum NotebookSyncCoordinator {
             let result = CloudSyncFolder.sync(localPackage: local, into: folder)
             report.downloaded += result.downloaded.count
             report.failures.merge(result.failures) { first, _ in first }
-            if !result.downloaded.isEmpty { pulled += 1 }
+            if !result.downloaded.isEmpty {
+                pulled += 1
+            }
         }
         return pulled
     }
 
-
-    nonisolated private static func packageId(for package: URL) -> String {
+    private nonisolated static func packageId(for package: URL) -> String {
         package.deletingPathExtension().lastPathComponent
     }
 }
+
 import Foundation
 
 /// 同步來源識別（頂層型別，nonisolated 上下文可安全引用）
@@ -1121,9 +1194,9 @@ public final class SyncLogger: ObservableObject {
         public let source: SyncSource
         public let message: String
     }
-    
+
     @Published public private(set) var entries: [LogEntry] = []
-    
+
     public func log(_ message: String, source: SyncSource = .general) {
         let entry = LogEntry(source: source, message: message)
         entries.append(entry)
@@ -1131,7 +1204,7 @@ public final class SyncLogger: ObservableObject {
             entries.removeFirst(entries.count - 300)
         }
     }
-    
+
     public func clear(for source: SyncSource? = nil) {
         if let source {
             entries.removeAll { $0.source == source }
@@ -1141,8 +1214,8 @@ public final class SyncLogger: ObservableObject {
     }
 }
 
-extension SyncLogger {
-    public nonisolated static func logAsync(_ message: String, source: SyncSource = .general) {
+public extension SyncLogger {
+    nonisolated static func logAsync(_ message: String, source: SyncSource = .general) {
         Task { @MainActor in
             SyncLogger.shared.log(message, source: source)
         }

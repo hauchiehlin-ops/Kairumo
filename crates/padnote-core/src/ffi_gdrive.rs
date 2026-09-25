@@ -389,8 +389,13 @@ fn upload_file(
 ) -> Result<String, SyncError> {
     match existing {
         Some(file) if !file.id.is_empty() => {
-            drive.put_to_id(&file.id, bytes)?;
-            Ok(file.id.clone())
+            match drive.put_to_id(&file.id, bytes) {
+                Ok(()) => Ok(file.id.clone()),
+                // 雲端快照中的 file_id 可能在遠端已被刪除或重置（回傳 404 NotFound）。
+                // 此時絕不能使整本筆記同步失敗，應自動回退為 create_and_upload 重建該檔案。
+                Err(SyncError::NotFound(_)) => drive.create_and_upload(path, bytes),
+                Err(e) => Err(e),
+            }
         }
         // 雲端已經有這個名字但 id 未知（舊路徑）：用路徑上傳，它會自己查。
         Some(file) => {
@@ -408,7 +413,11 @@ fn download_file(
     if file.id.is_empty() {
         drive.get_all(&file.name)
     } else {
-        drive.get_all_by_id(&file.id)
+        match drive.get_all_by_id(&file.id) {
+            Ok(bytes) => Ok(bytes),
+            Err(SyncError::NotFound(_)) => drive.get_all(&file.name),
+            Err(e) => Err(e),
+        }
     }
 }
 
@@ -753,7 +762,10 @@ fn sync_notebook_media(
         let bytes = match download_file(drive, file) {
             Ok(b) => b,
             Err(SyncError::NotFound(_)) => continue,
-            Err(e) => return from_sync_error(e),
+            Err(e) => {
+                warnings.push(format!("下載 blob {name} 失敗：{e}，將在下一輪重試"));
+                continue;
+            }
         };
         // **驗雜湊。** blob 的檔名就是內容的雜湊，所以對不上就代表
         // 傳輸壞了或有人動過手腳。直接 put 的話，壞資料會被存在
@@ -861,7 +873,10 @@ fn sync_notebook_media(
         let bytes = match download_file(drive, file) {
             Ok(b) => b,
             Err(SyncError::NotFound(_)) => continue,
-            Err(e) => return from_sync_error(e),
+            Err(e) => {
+                warnings.push(format!("下載錄音 {name} 失敗：{e}，將在下一輪重試"));
+                continue;
+            }
         };
         if let Err(e) = package.write_audio_file(name, &bytes) {
             return notebook_failed(format!("寫不進錄音 {name}：{e}"));

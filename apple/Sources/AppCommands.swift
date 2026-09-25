@@ -44,6 +44,12 @@ enum AppCommand {
     static let toggleEditorMode = Notification.Name("kairumo.command.toggleEditorMode")
     /// 選第 n 個工具（`object` 是 `Int`，從 0 起算）。
     static let selectTool = Notification.Name("kairumo.command.selectTool")
+    /// 某個 `.padnote` 套件因同步下載而有了新內容。
+    ///
+    /// `object` 是 `String`（筆記本 id，小寫）。
+    /// 接到這個通知的編輯器，如果打開的是這本，就丟掉舊的 coreInkBaselines
+    /// 並重新讀取套件，讓畫面顯示最新的跨裝置筆跡。
+    static let notebookPackageChanged = Notification.Name("kairumo.notebookPackageChanged")
 }
 
 /// App delegate。存在的唯一理由就是註冊上面那些命令。
