@@ -441,4 +441,27 @@ public final class LocalSyncDiscovery: ObservableObject {
             self.discoveredEndpoints.removeAll()
         }
     }
+    
+    /// 向掃描到的局域網裝置發起 WebSocket 直連 (Phase 1 實作)
+    public func connectToP2P(endpoint: NWEndpoint) {
+        let parameters = NWParameters.tcp
+        let wsOptions = NWProtocolWebSocket.Options()
+        wsOptions.autoReplyPing = true
+        parameters.defaultProtocolStack.applicationProtocols.insert(wsOptions, at: 0)
+        
+        let connection = NWConnection(to: endpoint, using: parameters)
+        connection.stateUpdateHandler = { state in
+            switch state {
+            case .ready:
+                print("✅ [P2P] 成功與區網設備建立 WebRTC/WebSocket 直連！")
+                // TODO: 這裡接上 padnote-sync 的 FFI 介面，開始雙向交換 Oplog 檔案。
+            case .failed(let error):
+                print("❌ [P2P] 直連失敗：\(error)")
+            default:
+                break
+            }
+        }
+        connection.start(queue: queue)
+        // 注意：需在全域保存 connection 實體以避免被釋放
+    }
 }

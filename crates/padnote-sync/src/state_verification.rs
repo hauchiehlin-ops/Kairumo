@@ -55,4 +55,17 @@ impl SyncStateVerifier {
     pub fn verify_match(&self, remote_hash: u64) -> bool {
         self.compute_state_hash() == remote_hash
     }
+    
+    /// (Phase 2) 雙向交換 Hash 的網路溝通介面。
+    /// 當發起 P2P 或雲端拉取前，先呼叫此方法。若回傳 false，則觸發差集比對 (Set Difference)。
+    pub fn exchange_and_verify(&self, remote_hash: u64) -> Result<bool, String> {
+        let local_hash = self.compute_state_hash();
+        if local_hash == remote_hash {
+            Ok(true)
+        } else {
+            // TODO: 在此處發送 local_hash 與 oplog 總數給對方，並要求對方回傳 oplog 列表
+            // 以找出漏檔的具體項目。目前先回傳不匹配。
+            Ok(false)
+        }
+    }
 }
