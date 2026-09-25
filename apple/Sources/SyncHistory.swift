@@ -23,21 +23,29 @@ enum SyncHistory {
 
     static func markGoogleSynced(at date: Date = Date()) {
         UserDefaults.standard.set(date.timeIntervalSince1970, forKey: googleKey)
+        Task { @MainActor in
+            AutoSyncController.shared.noteGoogleSynced(at: date)
+        }
     }
 
     static func markFolderSynced(at date: Date = Date()) {
         UserDefaults.standard.set(date.timeIntervalSince1970, forKey: folderKey)
     }
 
-    static func lastGoogleSync() -> Date? { date(forKey: googleKey) }
-    static func lastFolderSync() -> Date? { date(forKey: folderKey) }
-
-    static func lastGoogleSyncDescription(none: String) -> String {
-        describe(lastGoogleSync(), none: none)
+    static func lastGoogleSync() -> Date? {
+        date(forKey: googleKey)
     }
 
-    static func lastFolderSyncDescription(none: String) -> String {
-        describe(lastFolderSync(), none: none)
+    static func lastFolderSync() -> Date? {
+        date(forKey: folderKey)
+    }
+
+    static func lastGoogleSyncDescription(date: Date? = lastGoogleSync(), none: String) -> String {
+        describe(date, none: none)
+    }
+
+    static func lastFolderSyncDescription(date: Date? = lastFolderSync(), none: String) -> String {
+        describe(date, none: none)
     }
 
     private static func date(forKey key: String) -> Date? {
@@ -49,7 +57,7 @@ enum SyncHistory {
     ///
     /// 使用者在這一頁要回答的問題是「剛才那次到底有沒有成功」，
     /// 而不是「那是幾點幾分」。相對時間直接回答了前者。
-    private static func describe(_ date: Date?, none: String) -> String {
+    static func describe(_ date: Date?, none: String) -> String {
         guard let date else { return none }
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .short

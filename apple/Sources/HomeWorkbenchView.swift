@@ -83,6 +83,7 @@ public struct HomeWorkbenchView: View {
     /// Google 帳號同步的狀態。首頁要直接看得到「登入了沒」——
     /// 藏在設定頁裡的話，使用者不會知道有這個功能。
     @ObservedObject private var homeGoogleAuth = GoogleAuth.shared
+    @ObservedObject private var autoSync = AutoSyncController.shared
     /// 首頁那張卡片自己的同步狀態。
     ///
     /// 原本首頁的卡片只是一個「開啟診斷頁」的入口，登入／同步／登出三顆按鈕
@@ -1672,10 +1673,10 @@ public struct HomeWorkbenchView: View {
         if !homeGoogleAuth.isSignedIn {
             return localizationManager.localized("not_signed_in")
         }
-        if homeGoogleSyncing {
+        if homeGoogleSyncing || autoSync.isSyncing {
             return localizationManager.localized("syncing")
         }
-        if let msg = homeGoogleMessage, msg.contains("失敗") || msg.contains("錯誤") || msg.contains("逾時") {
+        if let msg = homeGoogleMessage ?? (autoSync.lastMessage.isEmpty ? nil : autoSync.lastMessage), msg.contains("失敗") || msg.contains("錯誤") || msg.contains("逾時") {
             return "同步發生錯誤"
         }
         return localizationManager.localized("sync_done")
@@ -1685,10 +1686,10 @@ public struct HomeWorkbenchView: View {
         if !homeGoogleAuth.isSignedIn {
             return .secondary
         }
-        if homeGoogleSyncing {
+        if homeGoogleSyncing || autoSync.isSyncing {
             return .teal
         }
-        if let msg = homeGoogleMessage, msg.contains("失敗") || msg.contains("錯誤") || msg.contains("逾時") {
+        if let msg = homeGoogleMessage ?? (autoSync.lastMessage.isEmpty ? nil : autoSync.lastMessage), msg.contains("失敗") || msg.contains("錯誤") || msg.contains("逾時") {
             return .red
         }
         return .green
@@ -1759,7 +1760,7 @@ public struct HomeWorkbenchView: View {
                     Button(localizationManager.localized("sync_now")) {
                         Task { await runHomeGoogleSync() }
                     }
-                    .disabled(homeGoogleSyncing)
+                    .disabled(homeGoogleSyncing || autoSync.isSyncing)
                     .accessibilityIdentifier("home.cloud.sync_now")
 
                     Button(localizationManager.localized("sign_out"), role: .destructive) {
@@ -1832,9 +1833,13 @@ public struct HomeWorkbenchView: View {
     /// 首頁卡片上的 Google Drive「立即同步」。
     @MainActor
     private func runHomeGoogleSync() async {
-        guard !homeGoogleSyncing else { return }
+        guard !homeGoogleSyncing, !autoSync.isSyncing else { return }
         homeGoogleSyncing = true
-        defer { homeGoogleSyncing = false }
+        autoSync.setSyncing(true, message: localizationManager.localized("syncing"))
+        defer {
+            homeGoogleSyncing = false
+            autoSync.setSyncing(false)
+        }
 
         homeGoogleMessage = localizationManager.localized("syncing")
         let report: NotebookSyncCoordinator.Report?
@@ -3704,6 +3709,7 @@ public enum CloudSyncProvider: String, CaseIterable, Identifiable {
 public struct CloudSyncDetailSheet: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     @ObservedObject private var googleAuth = GoogleAuth.shared
+    @ObservedObject private var autoSync = AutoSyncController.shared
     @ObservedObject private var notebookStore = NotebookStore.shared
     @ObservedObject private var syncLogger = SyncLogger.shared
     @Environment(\.dismiss) private var dismiss
@@ -3836,7 +3842,7 @@ public struct CloudSyncDetailSheet: View {
             .onChange(of: isGoogleSyncing) { _ in
                 Task { await refreshDiagnostics() }
             }
-            .onChange(of: AutoSyncController.shared.isSyncing) { _ in
+            .onChange(of: autoSync.isSyncing) { _ in
                 Task { await refreshDiagnostics() }
             }
             .onAppear {
@@ -3920,7 +3926,7 @@ public struct CloudSyncDetailSheet: View {
                     Divider()
                     detailRow(
                         title: localizationManager.localized("sync_last_at"),
-                        value: SyncHistory.lastGoogleSyncDescription(none: localizationManager.localized("sync_never"))
+                        value: SyncHistory.lastGoogleSyncDescription(date: autoSync.lastGoogleSyncDate, none: localizationManager.localized("sync_never"))
                     )
                     // **同一件事不可以兩個地方說不同的話。**
                     //
@@ -3930,17 +3936,17 @@ public struct CloudSyncDetailSheet: View {
                     // 而且「立即同步」還按得下去（按了只會被互斥閘擋掉）。
                     //
                     // 狀態改成讀同一個來源：`AutoSyncController`。
-                    if AutoSyncController.shared.isSyncing {
+                    if isGoogleSyncing || autoSync.isSyncing {
                         Divider()
                         detailRow(
                             title: localizationManager.localized("sync_status"),
                             value: localizationManager.localized("syncing")
                         )
-                    } else if !AutoSyncController.shared.lastMessage.isEmpty {
+                    } else if let msg = googleStatusMessage ?? (autoSync.lastMessage.isEmpty ? nil : autoSync.lastMessage), !msg.isEmpty {
                         Divider()
                         detailRow(
                             title: localizationManager.localized("sync_status"),
-                            value: AutoSyncController.shared.lastMessage
+                            value: msg
                         )
                     }
                 } else {
@@ -3987,11 +3993,12 @@ public struct CloudSyncDetailSheet: View {
                     // 原本只看這張面板自己的 `isGoogleSyncing`，所以背景自動
                     // 同步進行中時，這裡照樣顯示「立即同步」按得下去 ——
                     // 按了只會被互斥閘擋掉，而使用者只看到一顆沒反應的按鈕。
-                    if isGoogleSyncing || AutoSyncController.shared.isSyncing {
+                    if isGoogleSyncing || autoSync.isSyncing {
                         Button(role: .destructive) {
                             googleSyncTask?.cancel()
                             NotebookSyncCoordinator.cancelSync()
                             isGoogleSyncing = false
+                            autoSync.setSyncing(false, message: "已中斷同步")
                             googleStatusMessage = "已中斷同步"
                         } label: {
                             HStack {
@@ -4370,10 +4377,10 @@ public struct CloudSyncDetailSheet: View {
         if !googleAuth.isSignedIn {
             return localizationManager.localized("not_signed_in")
         }
-        if isGoogleSyncing {
+        if isGoogleSyncing || autoSync.isSyncing {
             return localizationManager.localized("syncing")
         }
-        if let msg = googleStatusMessage, msg.contains("失敗") || msg.contains("錯誤") || msg.contains("過期") {
+        if let msg = googleStatusMessage ?? (autoSync.lastMessage.isEmpty ? nil : autoSync.lastMessage), msg.contains("失敗") || msg.contains("錯誤") || msg.contains("過期") || msg.contains("逾時") {
             return "同步發生錯誤"
         }
         return localizationManager.localized("sync_done")
@@ -4383,10 +4390,10 @@ public struct CloudSyncDetailSheet: View {
         if !googleAuth.isSignedIn {
             return .secondary
         }
-        if isGoogleSyncing {
+        if isGoogleSyncing || autoSync.isSyncing {
             return .teal
         }
-        if let msg = googleStatusMessage, msg.contains("失敗") || msg.contains("錯誤") || msg.contains("過期") {
+        if let msg = googleStatusMessage ?? (autoSync.lastMessage.isEmpty ? nil : autoSync.lastMessage), msg.contains("失敗") || msg.contains("錯誤") || msg.contains("過期") || msg.contains("逾時") {
             return .red
         }
         return .green
@@ -4507,9 +4514,13 @@ public struct CloudSyncDetailSheet: View {
 
     @MainActor
     private func runGoogleSync() async {
-        guard !isGoogleSyncing else { return }
+        guard !isGoogleSyncing, !autoSync.isSyncing else { return }
         isGoogleSyncing = true
-        defer { isGoogleSyncing = false }
+        autoSync.setSyncing(true, message: "Google Drive 同步中...")
+        defer {
+            isGoogleSyncing = false
+            autoSync.setSyncing(false)
+        }
 
         googleStatusMessage = "Google Drive 同步中..."
         let report: NotebookSyncCoordinator.Report?

@@ -34,15 +34,14 @@
 import Foundation
 import Network
 #if canImport(BackgroundTasks)
-import BackgroundTasks
+    import BackgroundTasks
 #endif
 #if canImport(UIKit)
-import UIKit
+    import UIKit
 #endif
 
 @MainActor
 public final class AutoSyncController: ObservableObject {
-
     public static let shared = AutoSyncController()
 
     /// 目前正在跑一輪同步。介面用它顯示轉圈。
@@ -53,6 +52,22 @@ public final class AutoSyncController: ObservableObject {
     @Published public private(set) var needsSignIn = false
     /// 最後一次成功同步的單調時間（毫秒）。
     @Published public private(set) var lastSuccessAt: UInt64?
+    /// 最近一次成功同步的時間（供 UI 統一即時重繪）。
+    @Published public private(set) var lastGoogleSyncDate: Date? = {
+        let raw = UserDefaults.standard.double(forKey: "kairumo.sync.lastGoogleAt")
+        return raw > 0 ? Date(timeIntervalSince1970: raw) : nil
+    }()
+
+    public func noteGoogleSynced(at date: Date = Date()) {
+        lastGoogleSyncDate = date
+    }
+
+    public func setSyncing(_ syncing: Bool, message: String? = nil) {
+        isSyncing = syncing
+        if let message {
+            lastMessage = message
+        }
+    }
 
     private let scheduler = FfiSyncScheduler.create()
     private var timer: Timer?
@@ -63,7 +78,9 @@ public final class AutoSyncController: ObservableObject {
     private var started = false
 
     /// 單調時鐘的毫秒數。**不要用 `Date()`** —— 系統校時會讓它往回跳。
-    private var nowMs: UInt64 { UInt64(ProcessInfo.processInfo.systemUptime * 1000) }
+    private var nowMs: UInt64 {
+        UInt64(ProcessInfo.processInfo.systemUptime * 1000)
+    }
 
     private init() {}
 
@@ -105,7 +122,6 @@ public final class AutoSyncController: ObservableObject {
     /// 喚醒」與「有排但還沒輪到」在畫面上長得一模一樣。
     static let backgroundTaskId = "com.kairumo.padnote.sync.refresh"
 
-
     /// 送一個觸發事件進排程器。
     public func request(_ trigger: FfiSyncTrigger) {
         scheduler.request(trigger: trigger, nowMs: nowMs)
@@ -133,7 +149,9 @@ public final class AutoSyncController: ObservableObject {
             let outcome = await runOneRound(store: store)
             scheduler.finish(outcome: outcome, nowMs: nowMs)
             needsSignIn = scheduler.isBlockedOnAuth()
-            if outcome == .success { lastSuccessAt = nowMs }
+            if outcome == .success {
+                lastSuccessAt = nowMs
+            }
             // 這一輪結束後還有待辦（例如跑到一半又存了檔）就接著跑。
             scheduleNextWake()
         }
@@ -155,7 +173,8 @@ public final class AutoSyncController: ObservableObject {
     private func runOneRound(store: SyncableNotebookStore) async -> FfiSyncOutcome {
         if await GoogleAuth.shared.isSignedIn {
             guard let report = await NotebookSyncCoordinator.runDrive(
-                store: store, deviceId: deviceId)
+                store: store, deviceId: deviceId
+            )
             else {
                 lastMessage = "尚未登入"
                 return .needsReauth
@@ -164,9 +183,14 @@ public final class AutoSyncController: ObservableObject {
         }
         if let folder = CloudSyncFolder.resolveFolder() {
             let scoped = folder.startAccessingSecurityScopedResource()
-            defer { if scoped { folder.stopAccessingSecurityScopedResource() } }
+            defer {
+                if scoped {
+                    folder.stopAccessingSecurityScopedResource()
+                }
+            }
             let report = await NotebookSyncCoordinator.run(
-                store: store, folder: folder, deviceId: deviceId)
+                store: store, folder: folder, deviceId: deviceId
+            )
             return finishMessage(report: report)
         }
         // 沒設定任何同步方式：不是錯誤，也不該一直重試。
@@ -198,7 +222,7 @@ public final class AutoSyncController: ObservableObject {
             // 快檔，讓來回編輯像在同一台裝置上。
             scheduler.noteRemoteChange(nowMs: nowMs)
         }
-        if !report.isNoOp || report.newNotebooks > 0 {
+        if report.failures.isEmpty {
             SyncHistory.markGoogleSynced()
         }
         return .success
@@ -237,39 +261,39 @@ public final class AutoSyncController: ObservableObject {
     /// 從 `KairumoApp.init` 呼叫。
     static func registerBackgroundTask() {
         #if canImport(BackgroundTasks) && !targetEnvironment(macCatalyst)
-        BGTaskScheduler.shared.register(
-            forTaskWithIdentifier: Self.backgroundTaskId, using: nil
-        ) { task in
-            Task { @MainActor in
-                // 這個閉包活得比任何一次 start() 都久（它註冊在 App 啟動時），
-                // 所以拿單例而不是捕捉 self —— 捕捉的話會把一個
-                // 早該釋放的控制器留在記憶體裡。
-                let controller = AutoSyncController.shared
-                // **每次執行完都要再排下一次。** BGTaskScheduler 不會自己重複，
-                // 漏掉這一步的症狀是「背景同步只在安裝後動過一次」。
-                controller.scheduleBackgroundTask()
-                guard let store = controller.store else {
-                    task.setTaskCompleted(success: true)
-                    return
+            BGTaskScheduler.shared.register(
+                forTaskWithIdentifier: backgroundTaskId, using: nil
+            ) { task in
+                Task { @MainActor in
+                    // 這個閉包活得比任何一次 start() 都久（它註冊在 App 啟動時），
+                    // 所以拿單例而不是捕捉 self —— 捕捉的話會把一個
+                    // 早該釋放的控制器留在記憶體裡。
+                    let controller = AutoSyncController.shared
+                    // **每次執行完都要再排下一次。** BGTaskScheduler 不會自己重複，
+                    // 漏掉這一步的症狀是「背景同步只在安裝後動過一次」。
+                    controller.scheduleBackgroundTask()
+                    guard let store = controller.store else {
+                        task.setTaskCompleted(success: true)
+                        return
+                    }
+                    // 系統隨時會收回時間。被收回時要把任務標成未完成，
+                    // 否則這次沒做完的事不會被重排。
+                    task.expirationHandler = {
+                        NotebookSyncCoordinator.cancelSync()
+                    }
+                    let outcome = await controller.runOneRound(store: store)
+                    task.setTaskCompleted(success: outcome == .success)
                 }
-                // 系統隨時會收回時間。被收回時要把任務標成未完成，
-                // 否則這次沒做完的事不會被重排。
-                task.expirationHandler = {
-                    NotebookSyncCoordinator.cancelSync()
-                }
-                let outcome = await controller.runOneRound(store: store)
-                task.setTaskCompleted(success: outcome == .success)
             }
-        }
         #endif
     }
 
     private func scheduleBackgroundTask() {
         #if canImport(BackgroundTasks) && !targetEnvironment(macCatalyst)
-        let request = BGAppRefreshTaskRequest(identifier: Self.backgroundTaskId)
-        // 最早 15 分鐘後。給得比這個短沒有意義 —— 系統本來就不保證時間。
-        request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
-        try? BGTaskScheduler.shared.submit(request)
+            let request = BGAppRefreshTaskRequest(identifier: Self.backgroundTaskId)
+            // 最早 15 分鐘後。給得比這個短沒有意義 —— 系統本來就不保證時間。
+            request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
+            try? BGTaskScheduler.shared.submit(request)
         #endif
     }
 
@@ -283,7 +307,7 @@ public final class AutoSyncController: ObservableObject {
                 let online = path.status == .satisfied
                 // 只在**由斷轉通**時觸發。每次路徑變動都觸發的話，
                 // 切換 Wi-Fi/行動網路會連放好幾槍。
-                if online && !self.wasOnline {
+                if online, !self.wasOnline {
                     self.request(.networkRegained)
                 }
                 self.wasOnline = online
@@ -295,20 +319,20 @@ public final class AutoSyncController: ObservableObject {
 
     private func observeLifecycle() {
         #if canImport(UIKit)
-        NotificationCenter.default.addObserver(
-            forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in self?.request(.foreground) }
-        }
-        // 進背景前推一次：iOS 會直接凍結 App，沒推出去的內容要等下次開啟。
-        NotificationCenter.default.addObserver(
-            forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor in
-                self?.request(.background)
-                self?.scheduleBackgroundTask()
+            NotificationCenter.default.addObserver(
+                forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in self?.request(.foreground) }
             }
-        }
+            // 進背景前推一次：iOS 會直接凍結 App，沒推出去的內容要等下次開啟。
+            NotificationCenter.default.addObserver(
+                forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                Task { @MainActor in
+                    self?.request(.background)
+                    self?.scheduleBackgroundTask()
+                }
+            }
         #endif
     }
 }
