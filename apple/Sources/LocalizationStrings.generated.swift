@@ -7675,6 +7675,36 @@ extension LocalizationManager {
             .ko: "이 페이지를 그릴 수 없습니다",
             .th: "วาดหน้านี้ไม่ได้"
         ],
+        "pen_action_eraser": [
+            .en: "Eraser"
+        ],
+        "pen_action_inkAttributes": [
+            .en: "Show Ink Palette"
+        ],
+        "pen_action_lasso": [
+            .en: "Lasso Tool"
+        ],
+        "pen_action_lastBrush": [
+            .en: "Last Used Brush"
+        ],
+        "pen_action_none": [
+            .en: "None"
+        ],
+        "pen_action_redo": [
+            .en: "Redo"
+        ],
+        "pen_action_ruler": [
+            .en: "Show Ruler"
+        ],
+        "pen_action_undo": [
+            .en: "Undo"
+        ],
+        "pen_controls_title": [
+            .en: "Side Buttons & Gestures"
+        ],
+        "pen_double_tap": [
+            .en: "Double Tap"
+        ],
         "pen_only_toast": [
             .zhHant: "已開啟「僅限觸控筆」，手指觸控會被忽略。要用手指寫字請把它關掉。",
             .en: "“Pen only” is on, so finger touches are ignored. Turn it off to write with your finger.",
@@ -7683,12 +7713,18 @@ extension LocalizationManager {
             .ko: "“펜 전용”이 켜져 있어 손가락 터치는 무시됩니다. 손가락으로 쓰려면 끄세요.",
             .th: "เปิด “ปากกาเท่านั้น” อยู่ การแตะด้วยนิ้วจะถูกละเว้น หากต้องการเขียนด้วยนิ้วให้ปิดตัวเลือกนี้"
         ],
+        "pen_pressure_apple_note": [
+            .en: "Apple Pencil pressure curves are optimized natively by the system and cannot be manually overridden."
+        ],
         "pen_settings_title": [
             .zhHant: "進階畫筆設定",
             .en: "Advanced Pen Settings",
             .zhHans: "高级画笔设置",
             .ja: "詳細なペン設定",
             .ko: "고급 펜 설정"
+        ],
+        "pen_squeeze": [
+            .en: "Squeeze (Pencil Pro)"
         ],
         "permission_open_settings": [
             .zhHant: "開啟設定",

@@ -11991,5 +11991,53 @@
     "zhHans": "无法访问文件夹",
     "ja": "フォルダにアクセスできません",
     "ko": "폴더에 접근할 수 없습니다"
+  },
+  "pen_pressure_apple_note": {
+    "en": "Apple Pencil pressure curves are optimized natively by the system and cannot be manually overridden.",
+    "zh": "Apple Pencil 的壓感曲線由系統原生最佳化接管，不支援手動覆寫。"
+  },
+  "pen_controls_title": {
+    "en": "Side Buttons & Gestures",
+    "zh": "側鍵與手勢"
+  },
+  "pen_double_tap": {
+    "en": "Double Tap",
+    "zh": "雙擊"
+  },
+  "pen_squeeze": {
+    "en": "Squeeze (Pencil Pro)",
+    "zh": "擠壓 (Pencil Pro)"
+  },
+  "pen_action_none": {
+    "en": "None",
+    "zh": "無"
+  },
+  "pen_action_eraser": {
+    "en": "Eraser",
+    "zh": "橡皮擦"
+  },
+  "pen_action_lastBrush": {
+    "en": "Last Used Brush",
+    "zh": "上一個使用的筆刷"
+  },
+  "pen_action_inkAttributes": {
+    "en": "Show Ink Palette",
+    "zh": "顯示調色盤"
+  },
+  "pen_action_lasso": {
+    "en": "Lasso Tool",
+    "zh": "套索工具"
+  },
+  "pen_action_undo": {
+    "en": "Undo",
+    "zh": "復原"
+  },
+  "pen_action_redo": {
+    "en": "Redo",
+    "zh": "重做"
+  },
+  "pen_action_ruler": {
+    "en": "Show Ruler",
+    "zh": "顯示尺規"
   }
 }

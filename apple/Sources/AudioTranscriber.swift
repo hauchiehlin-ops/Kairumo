@@ -462,3 +462,68 @@ public final class AudioTranscriber: ObservableObject {
         }
     }
 }
+import Foundation
+
+/// 串流轉錄 Worker。
+/// 定期從核心抓取 `takePendingSegments` 並送進 Whisper 進行語音辨識，
+/// 最後呼叫 `addTranscript` 寫回筆記本。
+public class StreamingTranscriber {
+    private let session: PadnoteSession
+    private var transcribingTask: Task<Void, Never>?
+    private let transcriber = AudioTranscriber.shared
+
+    public init(session: PadnoteSession) {
+        self.session = session
+    }
+
+    @MainActor
+    public func start(pageId: String, languageTag: String?) {
+        guard transcribingTask == nil else { return }
+        
+        let modelPath = transcriber.whisperModelPath
+        guard transcriber.isWhisperAvailable else { return }
+
+        transcribingTask = Task.detached(priority: .background) { [weak self] in
+            while !Task.isCancelled {
+                do {
+                    try await Task.sleep(nanoseconds: 1_000_000_000)
+                } catch {
+                    break
+                }
+                guard let self = self else { break }
+                
+                let segments = self.session.takePendingSegments()
+                if segments.isEmpty { continue }
+
+                for seg in segments {
+                    do {
+                        let result = try whisperTranscribePcm(
+                            modelPath: modelPath,
+                            pcm16kMono: seg.samples,
+                            language: languageTag
+                        )
+                        if !result.segments.isEmpty {
+                            let inputs = result.segments.map { w in
+                                TranscriptWordInput(
+                                    text: w.text,
+                                    // 偏移量：從這段音訊在筆記本的時間點開始加
+                                    startUs: seg.sessionStartUs + seg.startUs + UInt64(w.startMs * 1000),
+                                    endUs: seg.sessionStartUs + seg.startUs + UInt64(w.endMs * 1000),
+                                    confidence: w.confidence
+                                )
+                            }
+                            try self.session.addTranscript(pageId: pageId, sessionId: seg.sessionId, words: inputs)
+                        }
+                    } catch {
+                        print("StreamingTranscriber error: \(error)")
+                    }
+                }
+            }
+        }
+    }
+
+    public func stop() {
+        transcribingTask?.cancel()
+        transcribingTask = nil
+    }
+}

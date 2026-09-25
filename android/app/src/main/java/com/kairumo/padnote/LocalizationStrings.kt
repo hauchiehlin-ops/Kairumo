@@ -7727,6 +7727,39 @@ object LocalizationStrings {
             "ko" to "이 페이지를 그릴 수 없습니다",
             "th" to "วาดหน้านี้ไม่ได้"
         ),
+        "pen_action_eraser" to mapOf(
+            "en" to "Eraser"
+        ),
+        "pen_action_inkAttributes" to mapOf(
+            "en" to "Show Ink Palette"
+        )
+    )
+
+    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        "pen_action_lasso" to mapOf(
+            "en" to "Lasso Tool"
+        ),
+        "pen_action_lastBrush" to mapOf(
+            "en" to "Last Used Brush"
+        ),
+        "pen_action_none" to mapOf(
+            "en" to "None"
+        ),
+        "pen_action_redo" to mapOf(
+            "en" to "Redo"
+        ),
+        "pen_action_ruler" to mapOf(
+            "en" to "Show Ruler"
+        ),
+        "pen_action_undo" to mapOf(
+            "en" to "Undo"
+        ),
+        "pen_controls_title" to mapOf(
+            "en" to "Side Buttons & Gestures"
+        ),
+        "pen_double_tap" to mapOf(
+            "en" to "Double Tap"
+        ),
         "pen_only_toast" to mapOf(
             "zh-Hant" to "已開啟「僅限觸控筆」，手指觸控會被忽略。要用手指寫字請把它關掉。",
             "en" to "“Pen only” is on, so finger touches are ignored. Turn it off to write with your finger.",
@@ -7735,16 +7768,19 @@ object LocalizationStrings {
             "ko" to "“펜 전용”이 켜져 있어 손가락 터치는 무시됩니다. 손가락으로 쓰려면 끄세요.",
             "th" to "เปิด “ปากกาเท่านั้น” อยู่ การแตะด้วยนิ้วจะถูกละเว้น หากต้องการเขียนด้วยนิ้วให้ปิดตัวเลือกนี้"
         ),
+        "pen_pressure_apple_note" to mapOf(
+            "en" to "Apple Pencil pressure curves are optimized natively by the system and cannot be manually overridden."
+        ),
         "pen_settings_title" to mapOf(
             "zh-Hant" to "進階畫筆設定",
             "en" to "Advanced Pen Settings",
             "zh-Hans" to "高级画笔设置",
             "ja" to "詳細なペン設定",
             "ko" to "고급 펜 설정"
-        )
-    )
-
-    private fun part12(): Map<String, Map<String, String>> = mapOf(
+        ),
+        "pen_squeeze" to mapOf(
+            "en" to "Squeeze (Pencil Pro)"
+        ),
         "permission_open_settings" to mapOf(
             "zh-Hant" to "開啟設定",
             "en" to "Open Settings",
@@ -8286,7 +8322,10 @@ object LocalizationStrings {
             "ja" to "高解像度の仕様書と3DモデルをオンデマンドDL",
             "ko" to "고해상도 실제 사양도 및 3D 부품 온디맨드 다운로드",
             "th" to "ดาวน์โหลดสเปกจริงและชิ้นส่วน 3D ตามความต้องการ"
-        ),
+        )
+    )
+
+    private fun part13(): Map<String, Map<String, String>> = mapOf(
         "restore_original" to mapOf(
             "zh-Hant" to "恢復原草圖",
             "en" to "Restore Original",
@@ -8382,10 +8421,7 @@ object LocalizationStrings {
             "ja" to "ルートフォルダ",
             "ko" to "최상위 폴더",
             "th" to "โฟลเดอร์ระดับบนสุด"
-        )
-    )
-
-    private fun part13(): Map<String, Map<String, String>> = mapOf(
+        ),
         "rotate_handle" to mapOf(
             "zh-Hant" to "旋轉把手",
             "en" to "Rotate handle",
@@ -8929,7 +8965,10 @@ object LocalizationStrings {
             "ja" to "十字",
             "ko" to "십자",
             "th" to "กากบาท"
-        ),
+        )
+    )
+
+    private fun part14(): Map<String, Map<String, String>> = mapOf(
         "shape_kind_data" to mapOf(
             "zh-Hant" to "資料",
             "en" to "Data",
@@ -9025,10 +9064,7 @@ object LocalizationStrings {
             "ja" to "七角形",
             "ko" to "칠각형",
             "th" to "เจ็ดเหลี่ยม"
-        )
-    )
-
-    private fun part14(): Map<String, Map<String, String>> = mapOf(
+        ),
         "shape_kind_hexagon" to mapOf(
             "zh-Hant" to "六邊形",
             "en" to "Hexagon",
@@ -9572,7 +9608,10 @@ object LocalizationStrings {
             "ja" to "強い手ブレ補正",
             "ko" to "강한 손떨림 보정",
             "th" to "กันสั่นแรง"
-        ),
+        )
+    )
+
+    private fun part15(): Map<String, Map<String, String>> = mapOf(
         "stab_title" to mapOf(
             "zh-Hant" to "線條平滑防抖",
             "en" to "Stroke stabiliser",
@@ -9668,10 +9707,7 @@ object LocalizationStrings {
             "ja" to "左矢印",
             "ko" to "왼쪽 화살표",
             "th" to "ลูกศรซ้าย"
-        )
-    )
-
-    private fun part15(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sticker_arrow_right" to mapOf(
             "zh-Hant" to "向右箭頭",
             "en" to "Arrow right",
@@ -10215,7 +10251,10 @@ object LocalizationStrings {
             "ja" to "同期フォルダを選択",
             "ko" to "동기화 폴더 선택",
             "th" to "เลือกโฟลเดอร์ซิงก์"
-        ),
+        )
+    )
+
+    private fun part16(): Map<String, Map<String, String>> = mapOf(
         "sync_destination" to mapOf(
             "zh-Hant" to "同步目的地",
             "en" to "Destination",
@@ -10311,10 +10350,7 @@ object LocalizationStrings {
             "ja" to "最終同期",
             "ko" to "마지막 동기화",
             "th" to "ซิงค์ล่าสุด"
-        )
-    )
-
-    private fun part16(): Map<String, Map<String, String>> = mapOf(
+        ),
         "sync_logs_title" to mapOf(
             "zh-Hant" to "同步日誌 (工程診斷)",
             "en" to "Sync Logs (Diagnostics)",
@@ -10858,7 +10894,10 @@ object LocalizationStrings {
             "ja" to "バウハウス インダストリアル",
             "ko" to "바우하우스 인더스트리얼",
             "th" to "เบาเฮาส์ อินดัสเทรียล"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "theme_palette_cyberpunk" to mapOf(
             "zh-Hant" to "賽博霓虹",
             "en" to "Cyberpunk Neon",
@@ -10954,10 +10993,7 @@ object LocalizationStrings {
             "ja" to "白紙",
             "ko" to "빈 용지",
             "th" to "กระดาษเปล่า"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_blank_desc" to mapOf(
             "zh-Hant" to "適合自由手繪、心智圖與草稿",
             "en" to "Best for sketching, mind maps & free drafting",
@@ -11501,7 +11537,10 @@ object LocalizationStrings {
             "ja" to "投げ縄",
             "ko" to "올가미",
             "th" to "บ่วงบาศก์"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "tool_marker" to mapOf(
             "zh-Hant" to "麥克筆",
             "en" to "Marker",
@@ -11597,10 +11636,7 @@ object LocalizationStrings {
             "ja" to "折りたたむ",
             "ko" to "접기",
             "th" to "ย่อเก็บ"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "toolbar_place_left" to mapOf(
             "zh-Hant" to "左側",
             "en" to "Left",

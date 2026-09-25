@@ -1060,6 +1060,7 @@ public struct NotebookEditorView: View {
     @State private var palmRejection = PalmRejectionCoordinator()
     @State private var showToolbarCustomization = false
     @State private var showPalmThresholdSheet = false
+    @State private var showAdvancedPenSettingsSheet = false
     @State private var showExportPreview = false
     @State private var wantsShareAfterPreview = false
     @State private var hasLassoSelection: Bool = false
@@ -1851,6 +1852,9 @@ public struct NotebookEditorView: View {
             // 使用者會以為設定沒有存到，然後再調一次。
             PalmThresholdSheet { palmRejection.applyStoredThresholds() }
         }
+        .sheet(isPresented: $showAdvancedPenSettingsSheet) {
+            AdvancedPenSettingsSheet()
+        }
         .onReceive(collaborationManager.oplogReceived) { event in
             handleRemoteOplog(event)
         }
@@ -2389,7 +2393,9 @@ public struct NotebookEditorView: View {
                         _ = await audioManager.startRecording(
                             notebookId: notebook.id,
                             notebookTitle: notebook.displayTitle(),
-                            title: "\(notebook.displayTitle()) \(localizationManager.localized("recording_suffix"))")
+                            title: "\(notebook.displayTitle()) \(localizationManager.localized("recording_suffix"))",
+                            pageIndex: currentPageIndex,
+                            languageTag: LocalizationManager.shared.currentLanguage.rawValue)
                     }
                 } label: {
                     HStack(spacing: 4) {
@@ -2662,6 +2668,10 @@ public struct NotebookEditorView: View {
                     Label(localizationManager.localized("palm_rejection_settings"), systemImage: "hand.raised.slash")
                 }
                 .accessibilityIdentifier("editor.insert.palm_thresholds")
+                Button { showAdvancedPenSettingsSheet = true } label: {
+                    Label(localizationManager.localized("pen_settings_title"), systemImage: "applepencil.and.scribble")
+                }
+                .accessibilityIdentifier("editor.insert.advanced_pen_settings")
                 // 放在編輯器而不是設定頁：使用者想關掉某支筆的那一刻，
                 // 是他正看著那支筆的時候。
                 Button { showToolbarCustomization = true } label: {
@@ -2740,7 +2750,9 @@ public struct NotebookEditorView: View {
                         : await audioManager.startRecording(
                             notebookId: notebook.id,
                             notebookTitle: notebook.displayTitle(),
-                            title: "\(notebook.displayTitle()) \(localizationManager.localized("recording_suffix"))")
+                            title: "\(notebook.displayTitle()) \(localizationManager.localized("recording_suffix"))",
+                            pageIndex: currentPageIndex,
+                            languageTag: LocalizationManager.shared.currentLanguage.rawValue)
                     if !started && !audioManager.showPermissionAlert {
                         showCanvasNotice(localizationManager.localized("recording_failed"))
                     }

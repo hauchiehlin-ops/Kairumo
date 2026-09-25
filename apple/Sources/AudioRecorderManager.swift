@@ -38,6 +38,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     /// 走核心的錄音（R2）。有值就代表這一次錄音寫進的是套件，不是 m4a。
     private var coreCapture: CoreAudioCapture?
     private var coreSession: PadnoteSession?
+    private var streamingTranscriber: StreamingTranscriber?
     private var coreRecordingId: String?
     private var coreNotebookId: String?
     private var timer: Timer?
@@ -325,7 +326,9 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     public func startRecording(
         notebookId: String,
         notebookTitle: String,
-        title: String? = nil
+        title: String? = nil,
+        pageIndex: Int,
+        languageTag: String?
     ) async -> Bool {
         guard await requestMicrophonePermission() else { return false }
         guard let session = NotebookStore.shared.packageSession(
@@ -344,6 +347,10 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
         coreSession = session
         coreRecordingId = recordingId
+        let transcriber = StreamingTranscriber(session: session)
+        streamingTranscriber = transcriber
+        let pageId = session.pageIdAt(index: UInt32(pageIndex)) ?? ""
+        transcriber.start(pageId: pageId, languageTag: languageTag)
         coreNotebookId = notebookId
         currentAudioUrl = NotebookStore.shared.corePackagesDirectory
             .appending(path: "\(notebookId.lowercased()).padnote")

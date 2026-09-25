@@ -2627,7 +2627,9 @@ struct QuickAudioRecorderModal: View {
         _ = await audioManager.startRecording(
             notebookId: target.id,
             notebookTitle: target.displayTitle(),
-            title: recordingTitle)
+            title: recordingTitle,
+            pageIndex: 0,
+            languageTag: LocalizationManager.shared.currentLanguage.rawValue)
     }
 
     private func formatTime(seconds: TimeInterval) -> String {
