@@ -22,7 +22,6 @@ import PencilKit
 import UIKit
 
 enum NotebookPackageBridge {
-
     /// 匯出時遇到的問題。刻意逐項分開 —— 「匯出失敗」四個字幫不了使用者。
     enum BridgeError: LocalizedError {
         case coreRejected(String)
@@ -30,7 +29,7 @@ enum NotebookPackageBridge {
 
         var errorDescription: String? {
             switch self {
-            case .coreRejected(let detail):
+            case let .coreRejected(detail):
                 return LocalizationManager.shared.localizedUnsafe("err_core_not_ready") + "：\(detail)"
             case .noPages:
                 return LocalizationManager.shared.localizedUnsafe("err_no_pages")
@@ -108,7 +107,7 @@ enum NotebookPackageBridge {
                 pageIds.append(id)
             }
             while pageIds.count < pageCount {
-                pageIds.append(try session.addPage(style: style))
+                try pageIds.append(session.addPage(style: style))
             }
 
             // 筆記本層級的中繼資料（樣板、資料夾、圖釘、連結卡片、3D、頁面 id）。
@@ -152,13 +151,16 @@ enum NotebookPackageBridge {
 
                 for text in document.textAttachments?.filter({ $0.pageIndex == index }) ?? [] {
                     let blockId = try session.addText(
-                        pageId: pageId, content: text.text, style: .body)
+                        pageId: pageId, content: text.text, style: .body
+                    )
                     try session.setBlockPosition(
-                        blockId: blockId, x: Float(text.x), y: Float(text.y))
+                        blockId: blockId, x: Float(text.x), y: Float(text.y)
+                    )
                     // 顏色、邊框、段落也要跨過去。只帶文字與位置的話，
                     // 使用者在另一個平台打開會看到一個白底無行距的方框。
                     try session.setBlockAppearance(
-                        blockId: blockId, json: TextBoxAppearance.encode(text))
+                        blockId: blockId, json: TextBoxAppearance.encode(text)
+                    )
                     summary.textBlockCount += 1
                 }
 
@@ -173,16 +175,20 @@ enum NotebookPackageBridge {
                         rows: UInt32(table.rows),
                         cols: UInt32(table.cols),
                         cells: table.cells,
-                        headerRow: table.headerRow)
+                        headerRow: table.headerRow
+                    )
                     try session.setBlockPosition(
-                        blockId: blockId, x: Float(table.x), y: Float(table.y))
+                        blockId: blockId, x: Float(table.x), y: Float(table.y)
+                    )
                     try session.setBlockAppearance(
-                        blockId: blockId, json: TableAppearance.encode(table))
+                        blockId: blockId, json: TableAppearance.encode(table)
+                    )
                     for span in table.mergedCells {
                         try? session.mergeTableCells(
                             blockId: blockId,
                             row: UInt32(span.row), col: UInt32(span.col),
-                            rowSpan: UInt32(span.rowSpan), colSpan: UInt32(span.colSpan))
+                            rowSpan: UInt32(span.rowSpan), colSpan: UInt32(span.colSpan)
+                        )
                     }
                     summary.tableCount += 1
                 }
@@ -196,15 +202,19 @@ enum NotebookPackageBridge {
                     let blob = try session.putBlob(bytes: png)
                     let blockId = try session.addImage(
                         pageId: pageId, blob: blob,
-                        width: Float(model.width), height: Float(model.height))
+                        width: Float(model.width), height: Float(model.height)
+                    )
                     try session.setBlockPosition(
-                        blockId: blockId, x: Float(model.x), y: Float(model.y))
+                        blockId: blockId, x: Float(model.x), y: Float(model.y)
+                    )
                     // 標記成衍生圖片：它的真身在筆記本中繼資料裡，匯入時要跳過
                     // 這一張，否則同一個模型會變成兩份。
                     try session.setBlockAppearance(
                         blockId: blockId,
                         json: ImageAppearance.encodeDerived(
-                            objectKind: "model3d", fileName: "\(model.id).png"))
+                            objectKind: "model3d", fileName: "\(model.id).png"
+                        )
+                    )
                     summary.imageCount += 1
                 }
 
@@ -214,13 +224,17 @@ enum NotebookPackageBridge {
                     let blob = try session.putBlob(bytes: png)
                     let blockId = try session.addImage(
                         pageId: pageId, blob: blob,
-                        width: Float(link.width), height: Float(max(60, link.height)))
+                        width: Float(link.width), height: Float(max(60, link.height))
+                    )
                     try session.setBlockPosition(
-                        blockId: blockId, x: Float(link.x), y: Float(link.y))
+                        blockId: blockId, x: Float(link.x), y: Float(link.y)
+                    )
                     try session.setBlockAppearance(
                         blockId: blockId,
                         json: ImageAppearance.encodeDerived(
-                            objectKind: "link", fileName: "\(link.id).png"))
+                            objectKind: "link", fileName: "\(link.id).png"
+                        )
+                    )
                     summary.imageCount += 1
                 }
 
@@ -230,13 +244,17 @@ enum NotebookPackageBridge {
                     let blob = try session.putBlob(bytes: png)
                     let blockId = try session.addImage(
                         pageId: pageId, blob: blob,
-                        width: Float(audio.width), height: Float(audio.height))
+                        width: Float(audio.width), height: Float(audio.height)
+                    )
                     try session.setBlockPosition(
-                        blockId: blockId, x: Float(audio.x), y: Float(audio.y))
+                        blockId: blockId, x: Float(audio.x), y: Float(audio.y)
+                    )
                     try session.setBlockAppearance(
                         blockId: blockId,
                         json: ImageAppearance.encodeDerived(
-                            objectKind: "audio", fileName: "\(audio.id).png"))
+                            objectKind: "audio", fileName: "\(audio.id).png"
+                        )
+                    )
                     summary.imageCount += 1
                 }
 
@@ -297,14 +315,17 @@ enum NotebookPackageBridge {
                     let blob = try session.putBlob(bytes: bytes)
                     let blockId = try session.addImage(
                         pageId: pageId, blob: blob,
-                        width: Float(image.width), height: Float(image.height))
+                        width: Float(image.width), height: Float(image.height)
+                    )
                     try session.setBlockPosition(
-                        blockId: blockId, x: Float(image.x), y: Float(image.y))
+                        blockId: blockId, x: Float(image.x), y: Float(image.y)
+                    )
                     // 圓角、邊框、陰影、濾鏡、旋轉，以及「這是不是一張圖表」。
                     // 只帶點陣圖的話，在另一台裝置上會變成一張沒有樣式的方形照片，
                     // 而且圖表會改不動。
                     try session.setBlockAppearance(
-                        blockId: blockId, json: ImageAppearance.encode(image))
+                        blockId: blockId, json: ImageAppearance.encode(image)
+                    )
                     summary.imageCount += 1
                 }
             }
@@ -343,7 +364,8 @@ enum NotebookPackageBridge {
 
         try export(
             document: document, drawings: drawings, imageData: imageData,
-            to: staging, deviceId: deviceId)
+            to: staging, deviceId: deviceId
+        )
 
         let session = try PadnoteSession.openExisting(path: staging.path, deviceId: deviceId)
         // **把版面一起畫進去**（S-90）。
@@ -354,7 +376,7 @@ enum NotebookPackageBridge {
         //
         // 顏色與文字核心拿不到（配色是使用者選的、語系鍵住在兩端共用的
         // 字串表裡），所以這裡一起交過去。
-        let paperIds = (0..<max(document.pageCount, 1)).map { document.paperId(forPage: $0) }
+        let paperIds = (0 ..< max(document.pageCount, 1)).map { document.paperId(forPage: $0) }
         return try session.exportPdfWithLayout(
             paperIds: paperIds,
             paletteId: document.guidePaletteId ?? "",
@@ -362,7 +384,8 @@ enum NotebookPackageBridge {
             // 轉錄區塊的標記要跟著介面語言（S-54c）。核心原本完全不知道
             // 語言，於是寫死 `[Audio]`；再之前寫死的是 `[語音]`，而那更糟
             // —— 匯出的 PDF 是要給別人看的文件。
-            localeTag: LocalizationManager.shared.currentLanguageTagUnsafe())
+            localeTag: LocalizationManager.shared.currentLanguageTagUnsafe()
+        )
     }
 
     // MARK: - 讀回（驗證用）
@@ -452,7 +475,8 @@ enum NotebookPackageBridge {
         guard fm.fileExists(atPath: destination.path) else {
             return try export(
                 document: document, drawings: drawings, imageData: imageData,
-                to: destination, deviceId: deviceId, pageIds: pageIds)
+                to: destination, deviceId: deviceId, pageIds: pageIds
+            )
         }
 
         let staging = fm.temporaryDirectory
@@ -462,7 +486,8 @@ enum NotebookPackageBridge {
 
         let summary = try export(
             document: document, drawings: drawings, imageData: imageData,
-            to: fresh, deviceId: deviceId, pageIds: pageIds)
+            to: fresh, deviceId: deviceId, pageIds: pageIds
+        )
 
         let suffix = deviceSuffix(deviceId)
         var deletedDocOps = [String]()
@@ -484,9 +509,12 @@ enum NotebookPackageBridge {
             let src = fresh.appending(path: relative)
             let dst = destination.appending(path: relative)
             let isOwn = relative.contains(suffix) || relative == "manifest.json"
-            if !isOwn && fm.fileExists(atPath: dst.path) { continue }
+            if !isOwn && fm.fileExists(atPath: dst.path) {
+                continue
+            }
             try? fm.createDirectory(
-                at: dst.deletingLastPathComponent(), withIntermediateDirectories: true)
+                at: dst.deletingLastPathComponent(), withIntermediateDirectories: true
+            )
             let bytes = try Data(contentsOf: src)
             try bytes.write(to: dst, options: .atomic)
         }
@@ -513,12 +541,14 @@ enum NotebookPackageBridge {
             session = try PadnoteSession.openExisting(path: destination.path, deviceId: deviceId)
         } else {
             try FileManager.default.createDirectory(
-                at: destination.deletingLastPathComponent(), withIntermediateDirectories: true)
+                at: destination.deletingLastPathComponent(), withIntermediateDirectories: true
+            )
             session = try PadnoteSession.createEmpty(
                 path: destination.path,
                 title: document.title,
                 nowUnixMs: UInt64(document.createdAt.timeIntervalSince1970 * 1000),
-                deviceId: deviceId)
+                deviceId: deviceId
+            )
         }
 
         let style = pageStyle(for: document.template)
@@ -532,7 +562,8 @@ enum NotebookPackageBridge {
         try session.setPageSize(
             pageId: pageId,
             width: Float(document.pageSize.width),
-            height: Float(document.height(forPage: pageIndex)))
+            height: Float(document.height(forPage: pageIndex))
+        )
 
         var meta = NotebookMeta(from: document)
         meta.pageIds = ids
@@ -545,7 +576,8 @@ enum NotebookPackageBridge {
                 tool: draft.tool,
                 colorRgba: draft.colorRgba,
                 baseWidth: draft.baseWidth,
-                points: draft.points)
+                points: draft.points
+            )
         }
     }
 
@@ -613,11 +645,11 @@ enum NotebookPackageBridge {
         var imageData: [String: Data] = [:]
 
         for (index, pageId) in pageIds.enumerated() {
-            drawings.append(InkInterop.drawing(from: try session.visibleStrokeDetails(pageId: pageId)))
+            try drawings.append(InkInterop.drawing(from: session.visibleStrokeDetails(pageId: pageId)))
 
             for blockId in try session.textBlockIds(pageId: pageId) {
                 var item = NoteTextAttachment(pageIndex: index, text: "")
-                item.text = (try session.blockText(blockId: blockId)) ?? ""
+                item.text = try (session.blockText(blockId: blockId)) ?? ""
                 if let position = try session.blockPosition(blockId: blockId), position.count >= 2 {
                     item.x = CGFloat(position[0])
                     item.y = CGFloat(position[1])
@@ -639,12 +671,14 @@ enum NotebookPackageBridge {
                     rows: Int(core.rows),
                     cols: Int(core.cols),
                     cells: core.cells,
-                    headerRow: core.headerRow)
+                    headerRow: core.headerRow
+                )
                 if let appearance = try session.blockAppearance(blockId: blockId) {
                     TableAppearance.apply(appearance, to: &item)
                 }
                 if let position = try session.blockPosition(blockId: blockId),
-                   position.count >= 2 {
+                   position.count >= 2
+                {
                     item.x = CGFloat(position[0])
                     item.y = CGFloat(position[1])
                 }
@@ -652,7 +686,8 @@ enum NotebookPackageBridge {
                     guard span.count >= 4 else { return nil }
                     return NoteTableSpan(
                         row: Int(span[0]), col: Int(span[1]),
-                        rowSpan: Int(span[2]), colSpan: Int(span[3]))
+                        rowSpan: Int(span[2]), colSpan: Int(span[3])
+                    )
                 }
                 tables.append(item)
             }
@@ -661,7 +696,9 @@ enum NotebookPackageBridge {
                 let appearance = try session.blockAppearance(blockId: blockId)
                 // 連結卡片與 3D 模型在套件裡是算繪出來的圖片，真身在中繼資料裡。
                 // 不跳過的話，同一個物件會變成兩份，而且每同步一趟就再多一份。
-                if ImageAppearance.isDerived(appearance) { continue }
+                if ImageAppearance.isDerived(appearance) {
+                    continue
+                }
 
                 var item = NoteImageAttachment(fileName: "", pageIndex: index)
                 if let position = try session.blockPosition(blockId: blockId), position.count >= 2 {
@@ -682,7 +719,8 @@ enum NotebookPackageBridge {
                 // 位元組拿不到就跳過這張圖，而不是讓整本筆記匯不進來 ——
                 // 缺一張圖，跟整本打不開，對使用者是完全不同等級的損失。
                 if let blob = (try? session.blockBlobId(blockId: blockId)) ?? nil,
-                   let bytes = try? session.blobBytes(blobId: blob) {
+                   let bytes = try? session.blobBytes(blobId: blob)
+                {
                     imageData[item.fileName] = Data(bytes)
                 }
                 images.append(item)
@@ -710,16 +748,19 @@ enum NotebookPackageBridge {
                     // 下次匯出才重組得回來。
                     for memberId in object.members {
                         guard let member = try session.objectNode(
-                            pageId: pageId, objectId: memberId) else { continue }
+                            pageId: pageId, objectId: memberId
+                        ) else { continue }
                         pending.append((member, object.id))
                     }
                 case .shape:
                     guard let core = try session.shapeObject(
-                        pageId: pageId, objectId: object.id) else { continue }
+                        pageId: pageId, objectId: object.id
+                    ) else { continue }
                     // 位移走的是變換，不改寫形狀的原始邊界（ADR-0010）——
                     // 不套上去的話，搬動過的形狀會跳回原位。
                     let transform = (try? session.objectTransform(
-                        pageId: pageId, objectId: object.id)) ?? []
+                        pageId: pageId, objectId: object.id
+                    )) ?? []
                     let dx = transform.count >= 6 ? CGFloat(transform[4]) : 0
                     let dy = transform.count >= 6 ? CGFloat(transform[5]) : 0
                     shapes.append(
@@ -738,7 +779,8 @@ enum NotebookPackageBridge {
                     )
                 case .connection:
                     guard let core = try session.connectionObject(
-                        pageId: pageId, objectId: object.id) else { continue }
+                        pageId: pageId, objectId: object.id
+                    ) else { continue }
                     connections.append(
                         NoteConnectionAttachment(
                             id: object.id,
@@ -760,7 +802,8 @@ enum NotebookPackageBridge {
         // 所以走非隔離的快照而不是 @MainActor 的發布狀態。
         let storeItems = syncLiveNotebooks(indexJson: AccountSyncStore.indexJSONSnapshot())
         if let syncItem = storeItems.first(where: { $0.id.caseInsensitiveCompare(targetId) == .orderedSame }),
-           !syncItem.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+           !syncItem.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        {
             initialTitle = syncItem.title
         }
 
@@ -789,7 +832,8 @@ enum NotebookPackageBridge {
         // 頁面 id 一律以**檔案裡實際的那批**為準，不是中繼資料寫的那批 ——
         // 中繼資料可能是別台裝置寫的舊版本。下次匯出要沿用這批。
         return ImportedNotebook(
-            document: document, drawings: drawings, imageData: imageData, pageIds: pageIds)
+            document: document, drawings: drawings, imageData: imageData, pageIds: pageIds
+        )
     }
 
     /// 從套件讀回來的一本筆記。
@@ -811,9 +855,13 @@ enum NotebookPackageBridge {
     /// 猜 id 的產生規則，那是內部實作，改了就悄悄壞掉。
     private static func pageIds(of session: PadnoteSession) throws -> [String] {
         var ids: [String] = []
-        if let first = try session.firstPageId() { ids.append(first) }
-        for index in 1..<max(Int(session.pageCount()), 1) {
-            if let id = try session.pageIdAt(index: UInt32(index)) { ids.append(id) }
+        if let first = try session.firstPageId() {
+            ids.append(first)
+        }
+        for index in 1 ..< max(Int(session.pageCount()), 1) {
+            if let id = try session.pageIdAt(index: UInt32(index)) {
+                ids.append(id)
+            }
         }
         return ids
     }
