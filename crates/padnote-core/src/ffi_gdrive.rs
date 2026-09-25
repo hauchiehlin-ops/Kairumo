@@ -1211,7 +1211,7 @@ impl FfiSyncSession {
                 let deleted_ref = &deleted;
                 let failed_ref = &failed;
                 let first_error_ref = &first_error;
-                
+
                 s.spawn(move || {
                     for file in chunk {
                         match self.drive.delete_by_id(&file.id) {
