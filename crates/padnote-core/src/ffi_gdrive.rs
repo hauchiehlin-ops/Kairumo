@@ -507,7 +507,12 @@ fn sync_notebook_ops(
                 } else {
                     file.name.clone()
                 };
-                let _ = CloudProvider::delete(drive, &target);
+                // 如果索引裡面根本沒有這個檔案（代表雲端本來就沒有，或是已經被 changes.list 刪除），
+                // 就不需要發送無謂的 HTTP DELETE 請求。這避免了在清理大量檔案時產生不必要的 API 呼叫。
+                let canonical = padnote_sync::paths::canonical_path(&target);
+                if index.files.contains_key(&canonical) {
+                    let _ = CloudProvider::delete(drive, &target);
+                }
             }
             index.note_delete(&path);
         }
