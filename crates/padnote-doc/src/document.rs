@@ -3,7 +3,7 @@
 //! 設計成 **CRDT 友善**：所有變更都是可交換的操作，順序無關。
 //! 筆畫**不在這裡** —— 它們走 append-only 串流（ADR-0002），本模型只持有引用。
 
-use crate::{NotebookTime, Uuid};
+use crate::{NotebookTime, Uuid, TextCrdt};
 use std::collections::BTreeMap;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -250,6 +250,7 @@ impl Page {
 pub struct Notebook {
     pub id: Uuid,
     pub title: String,
+    pub title_crdt: TextCrdt,
     pub layout: LayoutMode,
     /// 平台自訂的筆記本中繼資料（見 `DocOp::SetNotebookMeta`）。核心不解讀。
     pub meta: Option<String>,
@@ -263,6 +264,7 @@ impl Notebook {
         Self {
             id,
             title: title.into(),
+            title_crdt: TextCrdt::new(),
             layout: LayoutMode::default(),
             meta: None,
             pages: Vec::new(),

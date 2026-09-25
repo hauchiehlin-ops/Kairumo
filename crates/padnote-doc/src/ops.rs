@@ -20,6 +20,10 @@ pub enum DocOp {
     SetTitle {
         title: String,
     },
+    /// 標題的字元級 CRDT 編輯（Phase 2 優化）。
+    TitleEdit {
+        op: TextOp,
+    },
     AddPage {
         id: Uuid,
         template: PageTemplate,
@@ -324,6 +328,7 @@ const OP_MOVE_PAGE: u8 = 34;
 const OP_MARK_MILESTONE: u8 = 35;
 const OP_BATCH_ORIGIN: u8 = 37;
 const OP_RESTORE_MILESTONE: u8 = 36;
+const OP_TITLE_EDIT: u8 = 38;
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum DocCodecError {
@@ -831,6 +836,22 @@ pub fn encode(ops: &[DocOp]) -> Vec<u8> {
             DocOp::SetTitle { title } => {
                 w.u8(OP_SET_TITLE).str(title);
             }
+            DocOp::TitleEdit { op } => {
+                w.u8(OP_TITLE_EDIT);
+                match op {
+                    TextOp::Insert { id, origin, ch } => {
+                        w.u8(1).op_id(*id);
+                        match origin {
+                            Some(o) => { w.u8(1).op_id(*o); }
+                            None => { w.u8(0); }
+                        }
+                        w.u32(*ch as u32);
+                    }
+                    TextOp::Delete { id } => {
+                        w.u8(2).op_id(*id);
+                    }
+                }
+            }
             DocOp::AddPage {
                 id,
                 template,
@@ -1112,6 +1133,23 @@ pub fn decode(data: &[u8]) -> Result<Vec<DocOp>, DocCodecError> {
     while r.pos < data.len() {
         let op = match r.u8()? {
             OP_SET_TITLE => DocOp::SetTitle { title: r.str()? },
+            OP_TITLE_EDIT => {
+                let op = match r.u8()? {
+                    1 => {
+                        let id = r.op_id()?;
+                        let origin = if r.u8()? == 1 { Some(r.op_id()?) } else { None };
+                        let cp = r.u32()?;
+                        TextOp::Insert {
+                            id,
+                            origin,
+                            ch: char::from_u32(cp).ok_or(DocCodecError::InvalidChar(cp))?,
+                        }
+                    }
+                    2 => TextOp::Delete { id: r.op_id()? },
+                    k => return Err(DocCodecError::UnknownOp(k)),
+                };
+                DocOp::TitleEdit { op }
+            },
             OP_ADD_PAGE => DocOp::AddPage {
                 id: r.uuid()?,
                 template: r.template()?,
