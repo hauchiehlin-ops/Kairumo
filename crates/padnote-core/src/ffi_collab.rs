@@ -303,6 +303,50 @@ pub fn collab_tuning() -> FfiCollabTuning {
     }
 }
 
+
+
+// =====================================================================
+// Phase 1-4 進階功能 FFI 端口
+// =====================================================================
+
+#[uniffi::export]
+pub fn collab_create_presence_event(device_id: u32, page_id: String, x: f32, y: f32) -> String {
+    padnote_sync::presence::PresenceManager::create_cursor_event(device_id, &page_id, x, y)
+}
+
+#[uniffi::export]
+pub fn collab_parse_presence_event(json: String) -> String {
+    // 簡單回傳格式，供外層判定（實務上可回傳 Enum）
+    json
+}
+
+#[uniffi::export]
+pub fn collab_get_state_hash(oplog_paths: Vec<String>) -> u64 {
+    let mut verifier = padnote_sync::state_verification::SyncStateVerifier::new();
+    for p in oplog_paths {
+        verifier.record_oplog(p);
+    }
+    verifier.compute_state_hash()
+}
+
+#[uniffi::export]
+pub fn collab_lazy_sync_focus(page_ids: Vec<String>) {
+    let mut manager = padnote_sync::lazy_sync::LazySyncManager::new();
+    manager.focus_pages(page_ids);
+}
+
+#[uniffi::export]
+pub fn collab_time_machine_contributors(block_id: String) -> std::collections::HashMap<u32, u32> {
+    // 預留 FFI，回傳 index -> device_id
+    let tm = padnote_sync::time_machine::TimeMachine::new();
+    let map = tm.get_text_contributors(&block_id);
+    let mut result = std::collections::HashMap::new();
+    for (k, v) in map {
+        result.insert(k as u32, v);
+    }
+    result
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
