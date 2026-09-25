@@ -7192,7 +7192,7 @@ object LocalizationStrings {
             "th" to "เส้นนี้อยู่นอกพื้นที่พิมพ์จึงถูกลบออก สิ่งที่อยู่นอกกรอบเส้นประจะไม่ถูกพิมพ์หรือส่งออก"
         ),
         "p2p_sync_tailscale_explainer" to mapOf(
-            "en" to "Cross-device Direct Sync: Padnote uses WebRTC for peer-to-peer fast syncing across the internet. For the most stable connection without public relays, we highly recommend installing Tailscale on your devices."
+            "en" to "Cross-device Direct Sync: Padnote uses WebRTC for peer-to-peer fast syncing across the internet. For the most stable connection without public relays, we highly recommend installing Tailscale on your devices. https://tailscale.com/download"
         ),
         "page_extended_hint" to mapOf(
             "zh-Hant" to "已向下延長畫布長度 (+800pt)",
