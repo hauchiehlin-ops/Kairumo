@@ -11074,18 +11074,18 @@ public struct CollabAdvancedFeaturesPanel: View {
             // 2. 區網直連 (P2P Local Relay) 掃描與連線
             HStack {
                 Button(LocalizationManager.shared.localized("collab_p2p_scan")) {
-                    LocalRelayServer.shared.startBrowsing()
+                    LocalSyncDiscovery.shared.startBrowsing()
                 }
                 .buttonStyle(.bordered)
                 
                 Button(LocalizationManager.shared.localized("collab_p2p_stop")) {
-                    LocalRelayServer.shared.stopBrowsing()
+                    LocalSyncDiscovery.shared.stopBrowsing()
                 }
                 .buttonStyle(.bordered)
                 
                 Button(LocalizationManager.shared.localized("collab_p2p_test")) {
-                    if let endpoint = LocalRelayServer.shared.discoveredEndpoints.first {
-                        LocalRelayServer.shared.connectToP2P(endpoint: endpoint)
+                    if let endpoint = LocalSyncDiscovery.shared.discoveredEndpoints.first {
+                        LocalSyncDiscovery.shared.connectToP2P(endpoint: endpoint)
                     }
                 }
                 .buttonStyle(.borderedProminent)
