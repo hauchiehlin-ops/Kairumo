@@ -7421,7 +7421,6 @@ public struct NotebookEditorView: View {
     }
 
     private func recordDrawingEdit(page: Int, drawing: PKDrawing) {
-        store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: drawing)
         if page == currentPageIndex {
             currentDrawing = drawing
         }
@@ -7446,6 +7445,7 @@ public struct NotebookEditorView: View {
         pendingCoreInk.removeAll()
 
         for (page, drawing) in pending {
+            store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: drawing)
             let baseline = coreInkBaseline(for: page)
             let added = StrokeDelta.added(in: drawing, since: baseline)
             guard !added.isEmpty else {
