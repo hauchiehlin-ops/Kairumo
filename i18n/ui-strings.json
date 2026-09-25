@@ -7181,7 +7181,7 @@
   },
   "p2p_sync_tailscale_explainer": {
     "en": "Cross-device Direct Sync: Padnote uses WebRTC for peer-to-peer fast syncing across the internet. For the most stable connection without public relays, we highly recommend installing Tailscale on your devices. https://tailscale.com/download",
-    "zh": "跨裝置直連同步：Padnote 使用 WebRTC 進行跨網際網路的點對點極速同步。為達到最穩定的無伺服器穿透效果，強烈建議在您的裝置上安裝 Tailscale：https://tailscale.com/download"
+    "zhHant": "跨裝置直連同步：Padnote 使用 WebRTC 進行跨網際網路的點對點極速同步。為達到最穩定的無伺服器穿透效果，強烈建議在您的裝置上安裝 Tailscale：https://tailscale.com/download"
   },
   "page_extended_hint": {
     "en": "Page length extended (+800pt)",
@@ -7721,43 +7721,43 @@
   },
   "pen_action_eraser": {
     "en": "Eraser",
-    "zh": "橡皮擦"
+    "zhHant": "橡皮擦"
   },
   "pen_action_inkAttributes": {
     "en": "Show Ink Palette",
-    "zh": "顯示調色盤"
+    "zhHant": "顯示調色盤"
   },
   "pen_action_lasso": {
     "en": "Lasso Tool",
-    "zh": "套索工具"
+    "zhHant": "套索工具"
   },
   "pen_action_lastBrush": {
     "en": "Last Used Brush",
-    "zh": "上一個使用的筆刷"
+    "zhHant": "上一個使用的筆刷"
   },
   "pen_action_none": {
     "en": "None",
-    "zh": "無"
+    "zhHant": "無"
   },
   "pen_action_redo": {
     "en": "Redo",
-    "zh": "重做"
+    "zhHant": "重做"
   },
   "pen_action_ruler": {
     "en": "Show Ruler",
-    "zh": "顯示尺規"
+    "zhHant": "顯示尺規"
   },
   "pen_action_undo": {
     "en": "Undo",
-    "zh": "復原"
+    "zhHant": "復原"
   },
   "pen_controls_title": {
     "en": "Side Buttons & Gestures",
-    "zh": "側鍵與手勢"
+    "zhHant": "側鍵與手勢"
   },
   "pen_double_tap": {
     "en": "Double Tap",
-    "zh": "雙擊"
+    "zhHant": "雙擊"
   },
   "pen_only_toast": {
     "en": "“Pen only” is on, so finger touches are ignored. Turn it off to write with your finger.",
@@ -7769,7 +7769,7 @@
   },
   "pen_pressure_apple_note": {
     "en": "Apple Pencil pressure curves are optimized natively by the system and cannot be manually overridden.",
-    "zh": "Apple Pencil 的壓感曲線由系統原生最佳化接管，不支援手動覆寫。"
+    "zhHant": "Apple Pencil 的壓感曲線由系統原生最佳化接管，不支援手動覆寫。"
   },
   "pen_settings_title": {
     "en": "Advanced Pen Settings",
@@ -7780,7 +7780,7 @@
   },
   "pen_squeeze": {
     "en": "Squeeze (Pencil Pro)",
-    "zh": "擠壓 (Pencil Pro)"
+    "zhHant": "擠壓 (Pencil Pro)"
   },
   "permission_open_settings": {
     "en": "Open Settings",

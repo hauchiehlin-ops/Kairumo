@@ -7196,6 +7196,7 @@ extension LocalizationManager {
             .th: "เส้นนี้อยู่นอกพื้นที่พิมพ์จึงถูกลบออก สิ่งที่อยู่นอกกรอบเส้นประจะไม่ถูกพิมพ์หรือส่งออก"
         ],
         "p2p_sync_tailscale_explainer": [
+            .zhHant: "跨裝置直連同步：Padnote 使用 WebRTC 進行跨網際網路的點對點極速同步。為達到最穩定的無伺服器穿透效果，強烈建議在您的裝置上安裝 Tailscale：https://tailscale.com/download",
             .en: "Cross-device Direct Sync: Padnote uses WebRTC for peer-to-peer fast syncing across the internet. For the most stable connection without public relays, we highly recommend installing Tailscale on your devices. https://tailscale.com/download"
         ],
         "page_extended_hint": [
@@ -7735,33 +7736,43 @@ extension LocalizationManager {
             .th: "วาดหน้านี้ไม่ได้"
         ],
         "pen_action_eraser": [
+            .zhHant: "橡皮擦",
             .en: "Eraser"
         ],
         "pen_action_inkAttributes": [
+            .zhHant: "顯示調色盤",
             .en: "Show Ink Palette"
         ],
         "pen_action_lasso": [
+            .zhHant: "套索工具",
             .en: "Lasso Tool"
         ],
         "pen_action_lastBrush": [
+            .zhHant: "上一個使用的筆刷",
             .en: "Last Used Brush"
         ],
         "pen_action_none": [
+            .zhHant: "無",
             .en: "None"
         ],
         "pen_action_redo": [
+            .zhHant: "重做",
             .en: "Redo"
         ],
         "pen_action_ruler": [
+            .zhHant: "顯示尺規",
             .en: "Show Ruler"
         ],
         "pen_action_undo": [
+            .zhHant: "復原",
             .en: "Undo"
         ],
         "pen_controls_title": [
+            .zhHant: "側鍵與手勢",
             .en: "Side Buttons & Gestures"
         ],
         "pen_double_tap": [
+            .zhHant: "雙擊",
             .en: "Double Tap"
         ],
         "pen_only_toast": [
@@ -7773,6 +7784,7 @@ extension LocalizationManager {
             .th: "เปิด “ปากกาเท่านั้น” อยู่ การแตะด้วยนิ้วจะถูกละเว้น หากต้องการเขียนด้วยนิ้วให้ปิดตัวเลือกนี้"
         ],
         "pen_pressure_apple_note": [
+            .zhHant: "Apple Pencil 的壓感曲線由系統原生最佳化接管，不支援手動覆寫。",
             .en: "Apple Pencil pressure curves are optimized natively by the system and cannot be manually overridden."
         ],
         "pen_settings_title": [
@@ -7783,6 +7795,7 @@ extension LocalizationManager {
             .ko: "고급 펜 설정"
         ],
         "pen_squeeze": [
+            .zhHant: "擠壓 (Pencil Pro)",
             .en: "Squeeze (Pencil Pro)"
         ],
         "permission_open_settings": [

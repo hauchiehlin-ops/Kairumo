@@ -7248,6 +7248,7 @@ object LocalizationStrings {
             "th" to "เส้นนี้อยู่นอกพื้นที่พิมพ์จึงถูกลบออก สิ่งที่อยู่นอกกรอบเส้นประจะไม่ถูกพิมพ์หรือส่งออก"
         ),
         "p2p_sync_tailscale_explainer" to mapOf(
+            "zh-Hant" to "跨裝置直連同步：Padnote 使用 WebRTC 進行跨網際網路的點對點極速同步。為達到最穩定的無伺服器穿透效果，強烈建議在您的裝置上安裝 Tailscale：https://tailscale.com/download",
             "en" to "Cross-device Direct Sync: Padnote uses WebRTC for peer-to-peer fast syncing across the internet. For the most stable connection without public relays, we highly recommend installing Tailscale on your devices. https://tailscale.com/download"
         ),
         "page_extended_hint" to mapOf(
@@ -7790,33 +7791,43 @@ object LocalizationStrings {
             "th" to "วาดหน้านี้ไม่ได้"
         ),
         "pen_action_eraser" to mapOf(
+            "zh-Hant" to "橡皮擦",
             "en" to "Eraser"
         ),
         "pen_action_inkAttributes" to mapOf(
+            "zh-Hant" to "顯示調色盤",
             "en" to "Show Ink Palette"
         ),
         "pen_action_lasso" to mapOf(
+            "zh-Hant" to "套索工具",
             "en" to "Lasso Tool"
         ),
         "pen_action_lastBrush" to mapOf(
+            "zh-Hant" to "上一個使用的筆刷",
             "en" to "Last Used Brush"
         ),
         "pen_action_none" to mapOf(
+            "zh-Hant" to "無",
             "en" to "None"
         ),
         "pen_action_redo" to mapOf(
+            "zh-Hant" to "重做",
             "en" to "Redo"
         ),
         "pen_action_ruler" to mapOf(
+            "zh-Hant" to "顯示尺規",
             "en" to "Show Ruler"
         ),
         "pen_action_undo" to mapOf(
+            "zh-Hant" to "復原",
             "en" to "Undo"
         ),
         "pen_controls_title" to mapOf(
+            "zh-Hant" to "側鍵與手勢",
             "en" to "Side Buttons & Gestures"
         ),
         "pen_double_tap" to mapOf(
+            "zh-Hant" to "雙擊",
             "en" to "Double Tap"
         ),
         "pen_only_toast" to mapOf(
@@ -7828,6 +7839,7 @@ object LocalizationStrings {
             "th" to "เปิด “ปากกาเท่านั้น” อยู่ การแตะด้วยนิ้วจะถูกละเว้น หากต้องการเขียนด้วยนิ้วให้ปิดตัวเลือกนี้"
         ),
         "pen_pressure_apple_note" to mapOf(
+            "zh-Hant" to "Apple Pencil 的壓感曲線由系統原生最佳化接管，不支援手動覆寫。",
             "en" to "Apple Pencil pressure curves are optimized natively by the system and cannot be manually overridden."
         ),
         "pen_settings_title" to mapOf(
@@ -7838,6 +7850,7 @@ object LocalizationStrings {
             "ko" to "고급 펜 설정"
         ),
         "pen_squeeze" to mapOf(
+            "zh-Hant" to "擠壓 (Pencil Pro)",
             "en" to "Squeeze (Pencil Pro)"
         ),
         "permission_open_settings" to mapOf(
