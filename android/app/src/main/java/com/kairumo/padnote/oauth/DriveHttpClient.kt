@@ -73,9 +73,11 @@ class DriveHttpClient(
      * 這就是為什麼這一步必須由平台做，核心看不到標頭。
      */
     override fun startResumable(url: String, bodyJson: String): String {
+        val isUpdate = url.contains("/files/")
+        val method = if (isUpdate) "PATCH" else "POST"
         val request = Request.Builder()
             .url(url)
-            .post(bodyJson.toRequestBody(JSON))
+            .method(method, bodyJson.toRequestBody(JSON))
             .header("Authorization", "Bearer $accessToken")
             .build()
         val response = executeWithRetry(request)

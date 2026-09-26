@@ -1383,34 +1383,69 @@ impl FfiSyncSession {
             };
         }
         let library = padnote_sync::library::LibraryIndex::from_json(&library_index_json);
-        let targets: Vec<String> = {
+        let targets: Vec<(String, String)> = {
             let index = self.index.lock().unwrap();
             let paths: Vec<&str> = index.files.keys().map(String::as_str).collect();
-            padnote_sync::audit::audit(paths, &library).collectable
+            let collectable = padnote_sync::audit::audit(paths, &library).collectable;
+            collectable
+                .into_iter()
+                .filter_map(|p| {
+                    let id = index.get(&p)?.id.clone();
+                    if id.is_empty() {
+                        None
+                    } else {
+                        Some((p, id))
+                    }
+                })
+                .collect()
         };
 
-        let mut deleted = 0u32;
-        let mut failed = 0u32;
-        let mut first_error = String::new();
-        for path in &targets {
-            let file_id = {
-                let index = self.index.lock().unwrap();
-                index.get(path).map(|f| f.id.clone())
-            };
-            let Some(file_id) = file_id else { continue };
-            match self.drive.delete_by_id(&file_id) {
-                Ok(()) => {
-                    self.index.lock().unwrap().note_delete(path);
-                    deleted += 1;
-                }
-                Err(e) => {
-                    failed += 1;
-                    if first_error.is_empty() {
-                        first_error = format!("{path}：{e}");
+        let deleted = std::sync::atomic::AtomicU32::new(0);
+        let failed = std::sync::atomic::AtomicU32::new(0);
+        let first_error = std::sync::Mutex::new(String::new());
+        let deleted_paths = std::sync::Mutex::new(Vec::new());
+
+        let thread_count = 8;
+        let chunk_size = (targets.len() / thread_count).max(1);
+        let chunks: Vec<_> = targets.chunks(chunk_size).collect();
+
+        std::thread::scope(|s| {
+            for chunk in chunks {
+                let deleted_ref = &deleted;
+                let failed_ref = &failed;
+                let first_error_ref = &first_error;
+                let paths_ref = &deleted_paths;
+
+                s.spawn(move || {
+                    for (path, file_id) in chunk {
+                        match self.drive.delete_by_id(file_id) {
+                            Ok(()) | Err(SyncError::NotFound(_)) => {
+                                deleted_ref.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                                paths_ref.lock().unwrap().push(path.clone());
+                            }
+                            Err(e) => {
+                                failed_ref.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+                                let mut err = first_error_ref.lock().unwrap();
+                                if err.is_empty() {
+                                    *err = format!("{path}：{e}");
+                                }
+                            }
+                        }
                     }
-                }
+                });
+            }
+        });
+
+        {
+            let mut index = self.index.lock().unwrap();
+            for path in deleted_paths.into_inner().unwrap() {
+                index.note_delete(&path);
             }
         }
+
+        let deleted = deleted.load(std::sync::atomic::Ordering::Relaxed);
+        let failed = failed.load(std::sync::atomic::Ordering::Relaxed);
+        let first_error = first_error.into_inner().unwrap();
         FfiGcResult {
             ok: failed == 0,
             deleted,

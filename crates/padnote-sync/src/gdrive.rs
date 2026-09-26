@@ -729,9 +729,13 @@ impl DriveHttp for ReqwestDriveHttp {
     }
 
     fn start_resumable(&self, url: &str, body: &Value) -> Result<String, SyncError> {
-        let resp = self
-            .client
-            .post(url)
+        let is_update = url.contains("/files/");
+        let req = if is_update {
+            self.client.patch(url)
+        } else {
+            self.client.post(url)
+        };
+        let resp = req
             .header(reqwest::header::AUTHORIZATION, self.bearer())
             .json(body)
             .send()

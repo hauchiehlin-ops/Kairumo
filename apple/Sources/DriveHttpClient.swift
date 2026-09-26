@@ -153,7 +153,10 @@ final class DriveHttpClient: FfiDriveHttp {
             throw FfiDriveError.Backend(detail: "bad_url")
         }
         var request = URLRequest(url: target)
-        request.httpMethod = "POST"
+        // 若網址包含 /files/<id>（更新既有檔案內容），Drive API v3 規定必須以 PATCH 發起；
+        // 若為新建檔案（/files?uploadType=resumable），則為 POST。
+        let isUpdate = target.path.contains("/files/")
+        request.httpMethod = isUpdate ? "PATCH" : "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.httpBody = bodyJson.data(using: .utf8)
         let (_, headers) = try sendWithHeaders(request)
