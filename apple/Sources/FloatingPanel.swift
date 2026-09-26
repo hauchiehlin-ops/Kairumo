@@ -121,7 +121,7 @@ struct FloatingPanel<Content: View>: View {
             .highPriorityGesture(TapGesture().onEnded {
                 onClose()
             })
-            .accessibilityLabel(Text("關閉面板"))
+            .accessibilityLabel(LocalizationManager.shared.localized("close"))
         }
         .padding(.leading, 12)
         .padding(.trailing, 6)

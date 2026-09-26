@@ -1337,7 +1337,7 @@ public struct HomeWorkbenchView: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
-                    Text(transcriber.isWhisperAvailable ? "Whisper 端側神經語音模型已就緒" : "未下載 Whisper 離線語音模型")
+                    Text(transcriber.isWhisperAvailable ? localizationManager.localized("asr_whisper_model_ready") : localizationManager.localized("asr_whisper_model_not_downloaded"))
                         .font(.subheadline)
                         .fontWeight(.semibold)
 
@@ -1347,7 +1347,7 @@ public struct HomeWorkbenchView: View {
                 }
 
                 if transcriber.isWhisperAvailable {
-                    Text("100% 離線高精準辨識 (574 MB)，支援多國語自動偵測與智慧標點")
+                    Text(localizationManager.localized("asr_banner_whisper_desc"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 } else if transcriber.isDownloadingModel {
@@ -1366,11 +1366,11 @@ public struct HomeWorkbenchView: View {
                         .foregroundColor(.red)
                     }
                 } else if let error = transcriber.downloadError {
-                    Text("下載中斷：\(error)")
+                    Text("\(localizationManager.localized("download_interrupted")): \(error)")
                         .font(.caption)
                         .foregroundColor(.red)
                 } else {
-                    Text("點擊下載離線模型 (574 MB)；未下載時自動降級以系統聽寫轉錄")
+                    Text(localizationManager.localized("asr_banner_download_hint"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -1385,7 +1385,7 @@ public struct HomeWorkbenchView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "arrow.down.circle")
-                            Text("下載模型")
+                            Text(localizationManager.localized("download_model"))
                         }
                         .font(.footnote)
                         .fontWeight(.medium)
@@ -1396,7 +1396,7 @@ public struct HomeWorkbenchView: View {
                 Button {
                     showInfoSheet = true
                 } label: {
-                    Text("管理")
+                    Text(localizationManager.localized("manage"))
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -1896,7 +1896,7 @@ public struct HomeWorkbenchView: View {
                     Image(systemName: "point.3.filled.connected.trianglepath")
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundColor(.indigo)
-                    Text("Tailscale 點對點直連同步")
+                    Text(localizationManager.localized("p2p_sync_tailscale_title"))
                         .font(DS.Font.cardTitle)
                         .fontWeight(.semibold)
                 }
@@ -1908,7 +1908,7 @@ public struct HomeWorkbenchView: View {
                     Circle()
                         .fill(tailscale.isConnected ? Color.green : Color.secondary.opacity(0.4))
                         .frame(width: 8, height: 8)
-                    Text(tailscale.isConnected ? (tailscale.ipAddress ?? "已連線") : "未連線")
+                    Text(tailscale.isConnected ? (tailscale.ipAddress ?? localizationManager.localized("status_connected")) : localizationManager.localized("status_disconnected"))
                         .font(.system(size: 11, weight: .medium, design: .monospaced))
                         .foregroundColor(tailscale.isConnected ? .green : .secondary)
                 }
@@ -1918,7 +1918,7 @@ public struct HomeWorkbenchView: View {
                 .clipShape(Capsule())
             }
 
-            Text("跨裝置直連同步：Padnote 使用 WebRTC 進行跨網際網路的點對點極速同步。為達到最穩定的無伺服器穿透效果，強烈建議在您的裝置上安裝 Tailscale。")
+            Text(localizationManager.localized("p2p_sync_tailscale_explainer"))
                 .font(DS.Font.caption)
                 .foregroundStyle(DS.Color.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1927,7 +1927,7 @@ public struct HomeWorkbenchView: View {
             Link(destination: URL(string: "https://tailscale.com/download")!) {
                 HStack(spacing: 4) {
                     Image(systemName: "arrow.up.right.square")
-                    Text("前往下載 Tailscale (tailscale.com/download)")
+                    Text(localizationManager.localized("download_tailscale_link"))
                 }
                 .font(DS.Font.caption)
                 .fontWeight(.medium)
@@ -4134,7 +4134,7 @@ public struct CloudSyncDetailSheet: View {
                         Circle()
                             .fill(tailscaleMonitor.status.isConnected ? Color.green : Color.secondary.opacity(0.4))
                             .frame(width: 8, height: 8)
-                        Text(tailscaleMonitor.status.isConnected ? "Tailscale 直連就緒 (\(tailscaleMonitor.status.ipAddress ?? ""))" : "Tailscale 未連線")
+                        Text(tailscaleMonitor.status.isConnected ? String(format: localizationManager.localized("tailscale_p2p_ready"), tailscaleMonitor.status.ipAddress ?? "") : localizationManager.localized("tailscale_not_connected"))
                             .font(DS.Font.caption)
                             .foregroundColor(tailscaleMonitor.status.isConnected ? .green : .secondary)
 
@@ -4143,7 +4143,7 @@ public struct CloudSyncDetailSheet: View {
                         Link(destination: URL(string: "https://tailscale.com/download")!) {
                             HStack(spacing: 3) {
                                 Image(systemName: "arrow.up.right.square")
-                                Text("下載 Tailscale")
+                                Text(localizationManager.localized("download_tailscale"))
                             }
                             .font(DS.Font.caption)
                             .foregroundColor(.accentColor)

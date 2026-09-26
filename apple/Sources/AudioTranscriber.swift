@@ -93,7 +93,7 @@ public enum AudioPCMDecoder {
     /// 將 16kHz 單聲道 Float32 PCM 寫入臨時 .wav 檔，供 AVFoundation 或 Apple Speech 辨識
     public static func writePcmToTempWav(samples: [Float], sampleRate: Int = 16000) throws -> URL {
         let tempDir = FileManager.default.temporaryDirectory
-        let tempUrl = tempDir.appendingPathComponent("transcribe_\(UUID().uuidString).wav")
+        let tempUrl = tempDir.appending(path: "transcribe_\(UUID().uuidString).wav")
         guard let format = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
             sampleRate: Double(sampleRate),

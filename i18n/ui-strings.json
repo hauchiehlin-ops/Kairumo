@@ -438,6 +438,22 @@
     "zhHans": "架构模式",
     "zhHant": "架構模式"
   },
+  "asr_banner_download_hint": {
+    "en": "Download offline model (574 MB); system dictation is used when not downloaded",
+    "ja": "オフラインモデルをダウンロード（574 MB）。未ダウンロード時はシステム音声入力を使用します",
+    "ko": "오프라인 모델 다운로드(574 MB). 내려받지 않은 경우 시스템 받아쓰기로 대체됩니다",
+    "th": "ดาวน์โหลดโมเดลออฟไลน์ (574 MB) หากยังไม่ได้ดาวน์โหลดจะใช้การพิมพ์ด้วยเสียงของระบบแทน",
+    "zhHans": "点击下载离线模型 (574 MB)；未下载时自动降级以系统听写转录",
+    "zhHant": "點擊下載離線模型 (574 MB)；未下載時自動降級以系統聽寫轉錄"
+  },
+  "asr_banner_whisper_desc": {
+    "en": "100% offline high accuracy (574 MB), with auto language detection and punctuation",
+    "ja": "100% オフライン高精度認識（574 MB）、言語自動判定と句読点付与に対応",
+    "ko": "100% 오프라인 고정밀 인식(574 MB), 언어 자동 감지 및 문장 부호 복원 지원",
+    "th": "การรู้จำความแม่นยำสูงแบบออฟไลน์ 100% (574 MB) พร้อมการตรวจภาษาและวรรคตอนอัตโนมัติ",
+    "zhHans": "100% 离线高精尖识别 (574 MB)，支持多国语自动检测与智能标点",
+    "zhHant": "100% 離線高精準辨識 (574 MB)，支援多國語自動偵測與智慧標點"
+  },
   "asr_cancel_download": {
     "en": "Cancel the Whisper download",
     "ja": "Whisper のダウンロードをキャンセル",
@@ -557,6 +573,22 @@
     "th": "สถานะโมเดลเสียงออฟไลน์",
     "zhHans": "离线语音模型状态",
     "zhHant": "離線語音模型狀態"
+  },
+  "asr_whisper_model_not_downloaded": {
+    "en": "Whisper Offline Speech Model Not Downloaded",
+    "ja": "Whisper オフライン音声モデル未ダウンロード",
+    "ko": "Whisper 오프라인 음성 모델 미다운로드",
+    "th": "ยังไม่ได้ดาวน์โหลดโมเดลเสียงออฟไลน์ Whisper",
+    "zhHans": "未下载 Whisper 离线语音模型",
+    "zhHant": "未下載 Whisper 離線語音模型"
+  },
+  "asr_whisper_model_ready": {
+    "en": "Whisper On-Device Neural Speech Model Ready",
+    "ja": "Whisper 端末内音声モデルの準備完了",
+    "ko": "Whisper 기기 내 음성 모델 준비됨",
+    "th": "โมเดลเสียง Whisper ในเครื่องพร้อมใช้งาน",
+    "zhHans": "Whisper 端侧神经语音模型已就绪",
+    "zhHant": "Whisper 端側神經語音模型已就緒"
   },
   "asset_aes_comp_01_title": {
     "en": "Golden-Spiral Logarithmic Composition Guide",
@@ -2854,6 +2886,14 @@
     "zhHans": "下载本类全部",
     "zhHant": "下載本類全部"
   },
+  "download_interrupted": {
+    "en": "Download interrupted: %@",
+    "ja": "ダウンロードが中断されました：%@",
+    "ko": "다운로드가 중단되었습니다: %@",
+    "th": "การดาวน์โหลดหยุดชะงัก: %@",
+    "zhHans": "下载中断：%@",
+    "zhHant": "下載中斷：%@"
+  },
   "download_item": {
     "en": "Download",
     "ja": "ダウンロード",
@@ -2861,6 +2901,30 @@
     "th": "ดาวน์โหลด",
     "zhHans": "下载",
     "zhHant": "下載"
+  },
+  "download_model": {
+    "en": "Download Model",
+    "ja": "モデルをダウンロード",
+    "ko": "모델 다운로드",
+    "th": "ดาวน์โหลดโมเดล",
+    "zhHans": "下载模型",
+    "zhHant": "下載模型"
+  },
+  "download_tailscale": {
+    "en": "Download Tailscale",
+    "ja": "Tailscale をダウンロード",
+    "ko": "Tailscale 다운로드",
+    "th": "ดาวน์โหลด Tailscale",
+    "zhHans": "下载 Tailscale",
+    "zhHant": "下載 Tailscale"
+  },
+  "download_tailscale_link": {
+    "en": "Download Tailscale (tailscale.com/download)",
+    "ja": "Tailscale をダウンロード (tailscale.com/download)",
+    "ko": "Tailscale 다운로드 (tailscale.com/download)",
+    "th": "ดาวน์โหลด Tailscale (tailscale.com/download)",
+    "zhHans": "前往下载 Tailscale (tailscale.com/download)",
+    "zhHant": "前往下載 Tailscale (tailscale.com/download)"
   },
   "downloaded": {
     "en": "Downloaded",
@@ -5859,6 +5923,14 @@
     "zhHans": "笔迹磁吸对齐与尺规",
     "zhHant": "筆跡磁吸對齊與尺規"
   },
+  "manage": {
+    "en": "Manage",
+    "ja": "管理",
+    "ko": "관리",
+    "th": "จัดการ",
+    "zhHans": "管理",
+    "zhHant": "管理"
+  },
   "marquee_hint": {
     "en": "Drag to select objects. Drag inside the selection to move them together.",
     "ja": "ドラッグで範囲選択。選択範囲の中をドラッグするとまとめて移動できます。",
@@ -7180,8 +7252,20 @@
     "zhHant": "這一筆畫在可列印範圍之外，已經撤銷。虛線框以外的內容不會被列印，也不會進入匯出檔。"
   },
   "p2p_sync_tailscale_explainer": {
-    "en": "Cross-device Direct Sync: Padnote uses WebRTC for peer-to-peer fast syncing across the internet. For the most stable connection without public relays, we highly recommend installing Tailscale on your devices. https://tailscale.com/download",
-    "zhHant": "跨裝置直連同步：Padnote 使用 WebRTC 進行跨網際網路的點對點極速同步。為達到最穩定的無伺服器穿透效果，強烈建議在您的裝置上安裝 Tailscale：https://tailscale.com/download"
+    "en": "Cross-device Direct Sync: Padnote uses WebRTC for peer-to-peer fast syncing across the internet. For the most stable connection without public relays, we highly recommend installing Tailscale on your devices.",
+    "ja": "端末間直接同期：Padnote は WebRTC を利用してインターネット経由で高速 P2P 同期を行います。最も安定した接続のために、お使いの端末に Tailscale をインストールすることを強く推奨します。",
+    "ko": "기기간 직접 동기화: Padnote는 WebRTC를 사용하여 인터넷을 통한 빠른 P2P 동기화를 제공합니다. 가장 안정적인 연결을 위해 기기에 Tailscale을 설치하는 것을 권장합니다.",
+    "th": "การซิงก์โดยตรงระหว่างอุปกรณ์: Padnote ใช้ WebRTC สำหรับการซิงก์ P2P ความเร็วสูง เพื่อการเชื่อมต่อที่เสถียรที่สุด ขอแนะนำให้ติดตั้ง Tailscale บนอุปกรณ์ของคุณ",
+    "zhHans": "跨设备直连同步：Padnote 使用 WebRTC 进行跨互联网的点对点极速同步。为达到最稳定的无服务器穿透效果，强烈建议在您的设备上安装 Tailscale。",
+    "zhHant": "跨裝置直連同步：Padnote 使用 WebRTC 進行跨網際網路的點對點極速同步。為達到最穩定的無伺服器穿透效果，強烈建議在您的裝置上安裝 Tailscale。"
+  },
+  "p2p_sync_tailscale_title": {
+    "en": "Tailscale Direct P2P Sync",
+    "ja": "Tailscale P2P 直接同期",
+    "ko": "Tailscale P2P 직접 동기화",
+    "th": "การซิงก์แบบ P2P โดยตรงด้วย Tailscale",
+    "zhHans": "Tailscale 点对点直连同步",
+    "zhHant": "Tailscale 點對點直連同步"
   },
   "page_extended_hint": {
     "en": "Page length extended (+800pt)",
@@ -10739,6 +10823,22 @@
     "th": "ความกว้างตาราง",
     "zhHans": "表格宽度",
     "zhHant": "表格寬度"
+  },
+  "tailscale_not_connected": {
+    "en": "Tailscale Not Connected",
+    "ja": "Tailscale 未接続",
+    "ko": "Tailscale 연결 안 됨",
+    "th": "ไม่ได้เชื่อมต่อ Tailscale",
+    "zhHans": "Tailscale 未连接",
+    "zhHant": "Tailscale 未連線"
+  },
+  "tailscale_p2p_ready": {
+    "en": "Tailscale P2P Ready (%@)",
+    "ja": "Tailscale 直結準備完了 (%@)",
+    "ko": "Tailscale P2P 준비됨 (%@)",
+    "th": "Tailscale P2P พร้อมใช้งาน (%@)",
+    "zhHans": "Tailscale 直连就绪 (%@)",
+    "zhHant": "Tailscale 直連就緒 (%@)"
   },
   "tap_to_place_pin": {
     "en": "Tap on canvas to place pin",

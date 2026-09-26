@@ -1391,11 +1391,7 @@ impl FfiSyncSession {
                 .into_iter()
                 .filter_map(|p| {
                     let id = index.get(&p)?.id.clone();
-                    if id.is_empty() {
-                        None
-                    } else {
-                        Some((p, id))
-                    }
+                    if id.is_empty() { None } else { Some((p, id)) }
                 })
                 .collect()
         };

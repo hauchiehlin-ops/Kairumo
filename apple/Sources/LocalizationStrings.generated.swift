@@ -454,6 +454,22 @@ extension LocalizationManager {
             .ko: "아키텍처 모드",
             .th: "โหมดสถาปัตยกรรม"
         ],
+        "asr_banner_download_hint": [
+            .zhHant: "點擊下載離線模型 (574 MB)；未下載時自動降級以系統聽寫轉錄",
+            .en: "Download offline model (574 MB); system dictation is used when not downloaded",
+            .zhHans: "点击下载离线模型 (574 MB)；未下载时自动降级以系统听写转录",
+            .ja: "オフラインモデルをダウンロード（574 MB）。未ダウンロード時はシステム音声入力を使用します",
+            .ko: "오프라인 모델 다운로드(574 MB). 내려받지 않은 경우 시스템 받아쓰기로 대체됩니다",
+            .th: "ดาวน์โหลดโมเดลออฟไลน์ (574 MB) หากยังไม่ได้ดาวน์โหลดจะใช้การพิมพ์ด้วยเสียงของระบบแทน"
+        ],
+        "asr_banner_whisper_desc": [
+            .zhHant: "100% 離線高精準辨識 (574 MB)，支援多國語自動偵測與智慧標點",
+            .en: "100% offline high accuracy (574 MB), with auto language detection and punctuation",
+            .zhHans: "100% 离线高精尖识别 (574 MB)，支持多国语自动检测与智能标点",
+            .ja: "100% オフライン高精度認識（574 MB）、言語自動判定と句読点付与に対応",
+            .ko: "100% 오프라인 고정밀 인식(574 MB), 언어 자동 감지 및 문장 부호 복원 지원",
+            .th: "การรู้จำความแม่นยำสูงแบบออฟไลน์ 100% (574 MB) พร้อมการตรวจภาษาและวรรคตอนอัตโนมัติ"
+        ],
         "asr_cancel_download": [
             .zhHant: "取消下載 Whisper 模型",
             .en: "Cancel the Whisper download",
@@ -573,6 +589,22 @@ extension LocalizationManager {
             .ja: "オフライン音声モデルの状態",
             .ko: "오프라인 음성 모델 상태",
             .th: "สถานะโมเดลเสียงออฟไลน์"
+        ],
+        "asr_whisper_model_not_downloaded": [
+            .zhHant: "未下載 Whisper 離線語音模型",
+            .en: "Whisper Offline Speech Model Not Downloaded",
+            .zhHans: "未下载 Whisper 离线语音模型",
+            .ja: "Whisper オフライン音声モデル未ダウンロード",
+            .ko: "Whisper 오프라인 음성 모델 미다운로드",
+            .th: "ยังไม่ได้ดาวน์โหลดโมเดลเสียงออฟไลน์ Whisper"
+        ],
+        "asr_whisper_model_ready": [
+            .zhHant: "Whisper 端側神經語音模型已就緒",
+            .en: "Whisper On-Device Neural Speech Model Ready",
+            .zhHans: "Whisper 端侧神经语音模型已就绪",
+            .ja: "Whisper 端末内音声モデルの準備完了",
+            .ko: "Whisper 기기 내 음성 모델 준비됨",
+            .th: "โมเดลเสียง Whisper ในเครื่องพร้อมใช้งาน"
         ],
         "asset_aes_comp_01_title": [
             .zhHant: "黃金螺旋對數構圖尺標",
@@ -2870,6 +2902,14 @@ extension LocalizationManager {
             .ko: "이 카테고리 모두 다운로드",
             .th: "ดาวน์โหลดทั้งหมดในหมวดหมู่นี้"
         ],
+        "download_interrupted": [
+            .zhHant: "下載中斷：%@",
+            .en: "Download interrupted: %@",
+            .zhHans: "下载中断：%@",
+            .ja: "ダウンロードが中断されました：%@",
+            .ko: "다운로드가 중단되었습니다: %@",
+            .th: "การดาวน์โหลดหยุดชะงัก: %@"
+        ],
         "download_item": [
             .zhHant: "下載",
             .en: "Download",
@@ -2877,6 +2917,30 @@ extension LocalizationManager {
             .ja: "ダウンロード",
             .ko: "다운로드",
             .th: "ดาวน์โหลด"
+        ],
+        "download_model": [
+            .zhHant: "下載模型",
+            .en: "Download Model",
+            .zhHans: "下载模型",
+            .ja: "モデルをダウンロード",
+            .ko: "모델 다운로드",
+            .th: "ดาวน์โหลดโมเดล"
+        ],
+        "download_tailscale": [
+            .zhHant: "下載 Tailscale",
+            .en: "Download Tailscale",
+            .zhHans: "下载 Tailscale",
+            .ja: "Tailscale をダウンロード",
+            .ko: "Tailscale 다운로드",
+            .th: "ดาวน์โหลด Tailscale"
+        ],
+        "download_tailscale_link": [
+            .zhHant: "前往下載 Tailscale (tailscale.com/download)",
+            .en: "Download Tailscale (tailscale.com/download)",
+            .zhHans: "前往下载 Tailscale (tailscale.com/download)",
+            .ja: "Tailscale をダウンロード (tailscale.com/download)",
+            .ko: "Tailscale 다운로드 (tailscale.com/download)",
+            .th: "ดาวน์โหลด Tailscale (tailscale.com/download)"
         ],
         "downloaded": [
             .zhHant: "已下載",
@@ -5875,6 +5939,14 @@ extension LocalizationManager {
             .ko: "자석 스냅 및 눈금자",
             .th: "สแน็ปแม่เหล็กและไม้บรรทัด"
         ],
+        "manage": [
+            .zhHant: "管理",
+            .en: "Manage",
+            .zhHans: "管理",
+            .ja: "管理",
+            .ko: "관리",
+            .th: "จัดการ"
+        ],
         "marquee_hint": [
             .zhHant: "拖曳拉框選取物件；在選取範圍內拖曳＝整組搬移",
             .en: "Drag to select objects. Drag inside the selection to move them together.",
@@ -7196,8 +7268,20 @@ extension LocalizationManager {
             .th: "เส้นนี้อยู่นอกพื้นที่พิมพ์จึงถูกลบออก สิ่งที่อยู่นอกกรอบเส้นประจะไม่ถูกพิมพ์หรือส่งออก"
         ],
         "p2p_sync_tailscale_explainer": [
-            .zhHant: "跨裝置直連同步：Padnote 使用 WebRTC 進行跨網際網路的點對點極速同步。為達到最穩定的無伺服器穿透效果，強烈建議在您的裝置上安裝 Tailscale：https://tailscale.com/download",
-            .en: "Cross-device Direct Sync: Padnote uses WebRTC for peer-to-peer fast syncing across the internet. For the most stable connection without public relays, we highly recommend installing Tailscale on your devices. https://tailscale.com/download"
+            .zhHant: "跨裝置直連同步：Padnote 使用 WebRTC 進行跨網際網路的點對點極速同步。為達到最穩定的無伺服器穿透效果，強烈建議在您的裝置上安裝 Tailscale。",
+            .en: "Cross-device Direct Sync: Padnote uses WebRTC for peer-to-peer fast syncing across the internet. For the most stable connection without public relays, we highly recommend installing Tailscale on your devices.",
+            .zhHans: "跨设备直连同步：Padnote 使用 WebRTC 进行跨互联网的点对点极速同步。为达到最稳定的无服务器穿透效果，强烈建议在您的设备上安装 Tailscale。",
+            .ja: "端末間直接同期：Padnote は WebRTC を利用してインターネット経由で高速 P2P 同期を行います。最も安定した接続のために、お使いの端末に Tailscale をインストールすることを強く推奨します。",
+            .ko: "기기간 직접 동기화: Padnote는 WebRTC를 사용하여 인터넷을 통한 빠른 P2P 동기화를 제공합니다. 가장 안정적인 연결을 위해 기기에 Tailscale을 설치하는 것을 권장합니다.",
+            .th: "การซิงก์โดยตรงระหว่างอุปกรณ์: Padnote ใช้ WebRTC สำหรับการซิงก์ P2P ความเร็วสูง เพื่อการเชื่อมต่อที่เสถียรที่สุด ขอแนะนำให้ติดตั้ง Tailscale บนอุปกรณ์ของคุณ"
+        ],
+        "p2p_sync_tailscale_title": [
+            .zhHant: "Tailscale 點對點直連同步",
+            .en: "Tailscale Direct P2P Sync",
+            .zhHans: "Tailscale 点对点直连同步",
+            .ja: "Tailscale P2P 直接同期",
+            .ko: "Tailscale P2P 직접 동기화",
+            .th: "การซิงก์แบบ P2P โดยตรงด้วย Tailscale"
         ],
         "page_extended_hint": [
             .zhHant: "已向下延長畫布長度 (+800pt)",
@@ -10755,6 +10839,22 @@ extension LocalizationManager {
             .ja: "表の幅",
             .ko: "표 너비",
             .th: "ความกว้างตาราง"
+        ],
+        "tailscale_not_connected": [
+            .zhHant: "Tailscale 未連線",
+            .en: "Tailscale Not Connected",
+            .zhHans: "Tailscale 未连接",
+            .ja: "Tailscale 未接続",
+            .ko: "Tailscale 연결 안 됨",
+            .th: "ไม่ได้เชื่อมต่อ Tailscale"
+        ],
+        "tailscale_p2p_ready": [
+            .zhHant: "Tailscale 直連就緒 (%@)",
+            .en: "Tailscale P2P Ready (%@)",
+            .zhHans: "Tailscale 直连就绪 (%@)",
+            .ja: "Tailscale 直結準備完了 (%@)",
+            .ko: "Tailscale P2P 준비됨 (%@)",
+            .th: "Tailscale P2P พร้อมใช้งาน (%@)"
         ],
         "tap_to_place_pin": [
             .zhHant: "請在畫布上輕點以放置圖釘",
