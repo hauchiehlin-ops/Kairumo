@@ -67,13 +67,12 @@ fun InkCanvas(
      * 「從檔案讀回來的筆畫」要等使用者下一次碰畫布才會出現。
      */
     contentVersion: Int = 0,
+    /** 硬體觸控筆感知：偵測到實體筆時自動通知外層切換為繪圖模式（方案 A）。 */
+    onStylusDetected: () -> Unit = {},
     /**
      * 這個模式下畫布接不接受筆畫。
      *
-     * 打字模式要的是「**誰都不能畫**」—— 掌拒的 pen-only 擋得掉手指，
-     * 擋不掉觸控筆。少了這道開關，使用者切到打字模式後拿筆一碰畫布
-     * 還是在畫線，而畫面上沒有任何東西告訴他模式換了。
-     * 與 Apple 端關掉 `drawingGestureRecognizer` 是同一件事。
+     * 打字模式下如果偵測到硬體觸控筆，會自動切換為手繪模式並接收筆劃。
      */
     acceptsInk: Boolean = true
 ) {
@@ -119,8 +118,15 @@ fun InkCanvas(
                 }
             }
             .pointerInteropFilter { event ->
-                // 不收筆畫時把事件原樣讓出去，外層照常捲動與選取。
-                if (!acceptsInk) return@pointerInteropFilter false
+                val isStylus = (0 until event.pointerCount).any {
+                    val tool = event.getToolType(it)
+                    tool == MotionEvent.TOOL_TYPE_STYLUS || tool == MotionEvent.TOOL_TYPE_ERASER
+                }
+                if (isStylus && !acceptsInk) {
+                    onStylusDetected()
+                }
+                // 不收筆畫且不是硬體觸控筆時把事件原樣讓出去，外層照常捲動與選取。
+                if (!acceptsInk && !isStylus) return@pointerInteropFilter false
                 val outcome = engine.onMotionEvent(event, density)
                 revision++
                 liveVersion = System.nanoTime()
@@ -267,6 +273,8 @@ fun LowLatencyInkCanvas(
     onUnavailable: () -> Unit = {},
     /// 外層改變這個值就會清空畫面（按下「清除」時遞增）。
     clearToken: Int = 0,
+    /** 硬體觸控筆感知：偵測到實體筆時自動通知外層切換為繪圖模式（方案 A）。 */
+    onStylusDetected: () -> Unit = {},
     /// 見 [InkCanvas] 的同名參數。
     acceptsInk: Boolean = true
 ) {
@@ -276,6 +284,7 @@ fun LowLatencyInkCanvas(
         factory = { context ->
             InkSurfaceView(context, engine, latency, pxPerDp = density, onInkChanged = onInkChanged).also { view ->
                 view.acceptsInk = acceptsInk
+                view.onStylusDetected = onStylusDetected
                 if (!view.start()) onUnavailable()
             }
         },
@@ -283,6 +292,7 @@ fun LowLatencyInkCanvas(
             // 模式切換時要跟著改 —— 只在 factory 設的話，切過去之後
             // 那個 view 會被重用，筆照樣畫得出來。
             view.acceptsInk = acceptsInk
+            view.onStylusDetected = onStylusDetected
             if (clearToken > 0 && engine.strokes.isEmpty()) view.clearAll()
         },
         onRelease = { it.stop() }

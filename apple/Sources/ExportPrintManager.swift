@@ -111,8 +111,13 @@ public final class ExportPrintManager {
         }
 
         if UIDevice.current.userInterfaceIdiom == .pad {
-            if let sourceView = sourceView {
-                printController.present(from: sourceView.bounds, in: sourceView, animated: true, completionHandler: completionHandler)
+            let targetView = sourceView ?? UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+                .first { $0.isKeyWindow }?.rootViewController?.view
+            if let view = targetView {
+                let rect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+                printController.present(from: rect, in: view, animated: true, completionHandler: completionHandler)
             } else {
                 printController.present(animated: true, completionHandler: completionHandler)
             }

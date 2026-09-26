@@ -2677,7 +2677,7 @@ public struct NotebookEditorView: View {
                     .accessibilityIdentifier("editor.insert.math")
                 Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
                     .accessibilityIdentifier("editor.insert.chart")
-                Button { insertDefaultTable() } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
+                Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
                     .accessibilityIdentifier("editor.insert.table")
                 // **開工作室，不要默默丟一個矩形。**
                 //
@@ -6060,6 +6060,7 @@ public struct NotebookEditorView: View {
                                 selectedColor = Color(hex: hex) ?? selectedColor
                             }
                         )
+                        .modifier(PopoverCompactAdaptation())
                     }
                 }
                 .accessibilityIdentifier("editor.ink.palette")
@@ -8112,7 +8113,20 @@ public struct NotebookEditorView: View {
         printInfo.jobName = notebook.title
         printController.printInfo = printInfo
         printController.printingItem = pdfData
-        printController.present(animated: true, completionHandler: nil)
+        if UIDevice.current.userInterfaceIdiom == .pad {
+            let targetView = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+                .first { $0.isKeyWindow }?.rootViewController?.view
+            if let view = targetView {
+                let rect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+                printController.present(from: rect, in: view, animated: true, completionHandler: nil)
+            } else {
+                printController.present(animated: true, completionHandler: nil)
+            }
+        } else {
+            printController.present(animated: true, completionHandler: nil)
+        }
     }
 
     private func exportAsPngImage() {
@@ -9675,7 +9689,19 @@ struct ShareActivityView: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let tempUrl = FileManager.default.temporaryDirectory.appending(path: filename)
         try? data.write(to: tempUrl)
-        return UIActivityViewController(activityItems: [tempUrl], applicationActivities: nil)
+        let controller = UIActivityViewController(activityItems: [tempUrl], applicationActivities: nil)
+        if let popover = controller.popoverPresentationController {
+            let targetView = UIApplication.shared.connectedScenes
+                .compactMap { $0 as? UIWindowScene }
+                .flatMap { $0.windows }
+                .first { $0.isKeyWindow }?.rootViewController?.view
+            if let view = targetView {
+                popover.sourceView = view
+                popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+                popover.permittedArrowDirections = []
+            }
+        }
+        return controller
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}

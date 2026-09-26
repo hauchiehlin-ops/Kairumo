@@ -131,12 +131,23 @@ class InkSurfaceView(
      * 打字模式要的是「誰都不能畫」—— 掌拒的 pen-only 擋得掉手指，
      * 擋不掉觸控筆。
      */
+    /** 硬體觸控筆感知：偵測到實體筆時自動通知外層切換為繪圖模式（方案 A）。 */
+    var onStylusDetected: (() -> Unit)? = null
+
     var acceptsInk: Boolean = true
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
-        // 不收筆畫時把事件讓出去，外層照常捲動與選取。
-        if (!acceptsInk) return false
+        val isStylus = (0 until event.pointerCount).any {
+            val tool = event.getToolType(it)
+            tool == MotionEvent.TOOL_TYPE_STYLUS || tool == MotionEvent.TOOL_TYPE_ERASER
+        }
+        if (isStylus && !acceptsInk) {
+            acceptsInk = true
+            onStylusDetected?.invoke()
+        }
+        // 不收筆畫且不是硬體觸控筆時把事件讓出去，外層照常捲動與選取。
+        if (!acceptsInk && !isStylus) return false
         val active = renderer ?: return false
         predictor?.record(event)
 

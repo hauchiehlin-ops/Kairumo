@@ -3691,6 +3691,7 @@ private fun InkScreen(
                     penOnly = penOnly
                 ),
                 editorMode = editorMode,
+                onModeChange = { editorMode = it },
                 // 任何一種物件有變動就讓連續模式重讀。逐項接 callback 的話，
                 // 之後新增一種物件很容易忘記接上，而症狀是「插進去看不到」。
                 reloadToken = textRevision + shapeRevision + tableRevision +
@@ -4081,6 +4082,7 @@ private fun InkScreen(
                     },
                     onUnavailable = { lowLatencyUnavailable = true },
                     clearToken = clearToken,
+                    onStylusDetected = { editorMode = EditorMode.DRAW },
                     acceptsInk = editorMode == EditorMode.DRAW
                 )
             } else {
@@ -4103,6 +4105,7 @@ private fun InkScreen(
                             message = l10n("pen_only_toast")
                         }
                     },
+                    onStylusDetected = { editorMode = EditorMode.DRAW },
                     contentVersion = revision,
                     // 底紋要畫在**畫布自己的白底之上、筆跡之下**。
                     // 疊一層 Composable 在外面是不行的：`InkCanvas` 會用
@@ -4112,7 +4115,6 @@ private fun InkScreen(
                     localizeGuide = l10n,
                     guideMeasurer = guideMeasurer,
                     guidePaletteId = guidePaletteId,
-                    // 打字模式下筆也不會畫線 —— 這個模式只處理文字與物件。
                     acceptsInk = editorMode == EditorMode.DRAW
                 )
             }

@@ -142,6 +142,7 @@ fun ContinuousPagesView(
     onFocusChange: (Int) -> Unit,
     ink: InkSettings,
     editorMode: EditorMode,
+    onModeChange: (EditorMode) -> Unit = {},
     /** 外層插入物件之後 bump，讓對應的頁重新讀 store。 */
     reloadToken: Int,
     modifier: Modifier = Modifier
@@ -203,6 +204,7 @@ fun ContinuousPagesView(
                             isFocused = index == focusIndex,
                             ink = ink,
                             editorMode = editorMode,
+                            onModeChange = onModeChange,
                             density = density,
                             reloadToken = reloadToken
                         )
@@ -275,6 +277,7 @@ private fun ContinuousPage(
     isFocused: Boolean,
     ink: InkSettings,
     editorMode: EditorMode,
+    onModeChange: (EditorMode) -> Unit,
     density: Float,
     reloadToken: Int
 ) {
@@ -356,7 +359,9 @@ private fun ContinuousPage(
             modifier = Modifier.fillMaxSize(),
             inkColor = currentInkColor,
             onInkChanged = { revision++ },
-            contentVersion = revision
+            onStylusDetected = { onModeChange(EditorMode.DRAW) },
+            contentVersion = revision,
+            acceptsInk = editorMode == EditorMode.DRAW
         )
 
         key(revision) {
