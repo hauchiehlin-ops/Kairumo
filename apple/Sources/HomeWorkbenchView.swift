@@ -2001,83 +2001,116 @@ public struct HomeWorkbenchView: View {
     }
 
     private var unifiedSyncCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        ZStack(alignment: .topLeading) {
+            // 底層全卡片點擊按鈕：確保點擊卡片任何空白處皆可直接開啟設定 Sheet
             Button {
                 showCloudSyncSheet = true
             } label: {
-                HStack(spacing: 8) {
-                    Image(systemName: "arrow.triangle.2.circlepath.icloud.fill")
-                        .foregroundStyle(Color.indigo)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(localizationManager.localized("cloud_sync"))
-                            .font(DS.Font.cardTitle)
-                            .foregroundStyle(Color.primary)
-                        Text(unifiedSyncSubtitle)
-                            .font(DS.Font.caption)
-                            .foregroundStyle(DS.Color.secondaryText)
-                    }
-                    Spacer(minLength: 4)
-                    Image(systemName: "chevron.right")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+                Color.clear
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
-            if homeGoogleAuth.isSignedIn {
-                Text(homeGoogleStatusText)
-                    .font(DS.Font.caption)
-                    .foregroundStyle(homeGoogleStatusColor)
-            } else if CloudSyncFolder.resolveFolder() != nil {
-                Text(homeFolderStatusText)
-                    .font(DS.Font.caption)
-                    .foregroundStyle(homeFolderStatusColor)
-            }
-
-            HStack(spacing: 8) {
-                if homeGoogleAuth.isSignedIn {
-                    Button(localizationManager.localized("sync_now")) {
-                        Task { await runHomeGoogleSync() }
-                    }
-                    .disabled(homeGoogleSyncing || autoSync.isSyncing)
-                    .accessibilityIdentifier("home.cloud.sync_now")
-
-                    Button(localizationManager.localized("sign_out"), role: .destructive) {
-                        Task {
-                            await GoogleAuth.shared.signOut()
-                            homeGoogleMessage = nil
+            VStack(alignment: .leading, spacing: 8) {
+                // 標題行按鈕：整列包含圖示、文字、Spacer 與箭頭皆可點擊
+                Button {
+                    showCloudSyncSheet = true
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.triangle.2.circlepath.icloud.fill")
+                            .foregroundStyle(Color.indigo)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(localizationManager.localized("cloud_sync"))
+                                .font(DS.Font.cardTitle)
+                                .foregroundStyle(Color.primary)
+                            Text(unifiedSyncSubtitle)
+                                .font(DS.Font.caption)
+                                .foregroundStyle(DS.Color.secondaryText)
                         }
+                        Spacer(minLength: 4)
+                        Image(systemName: "chevron.right")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
                     }
-                    .accessibilityIdentifier("home.cloud.signout")
-                } else if CloudSyncFolder.resolveFolder() != nil {
-                    Button(localizationManager.localized("sync_now")) {
-                        runHomeFolderSync()
-                    }
-                    .disabled(homeFolderSyncing)
-                    .accessibilityIdentifier("home.folder.sync_now")
-
-                    Button(localizationManager.localized("settings")) {
-                        showCloudSyncSheet = true
-                    }
-                    .accessibilityIdentifier("home.cloud.settings")
-                } else {
-                    Button(localizationManager.localized("settings")) {
-                        showCloudSyncSheet = true
-                    }
-                    .accessibilityIdentifier("home.cloud.signin")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
-            }
-            .buttonStyle(.bordered)
-            .font(DS.Font.caption)
+                .buttonStyle(.plain)
 
-            Text(unifiedSyncExplainer)
+                if homeGoogleAuth.isSignedIn {
+                    Text(homeGoogleStatusText)
+                        .font(DS.Font.caption)
+                        .foregroundStyle(homeGoogleStatusColor)
+                } else if CloudSyncFolder.resolveFolder() != nil {
+                    Text(homeFolderStatusText)
+                        .font(DS.Font.caption)
+                        .foregroundStyle(homeFolderStatusColor)
+                }
+
+                HStack(spacing: 6) {
+                    if homeGoogleAuth.isSignedIn {
+                        Button(localizationManager.localized("sync_now")) {
+                            Task { await runHomeGoogleSync() }
+                        }
+                        .disabled(homeGoogleSyncing || autoSync.isSyncing)
+                        .accessibilityIdentifier("home.cloud.sync_now")
+
+                        Button(localizationManager.localized("settings")) {
+                            showCloudSyncSheet = true
+                        }
+                        .accessibilityIdentifier("home.cloud.settings")
+
+                        Button(localizationManager.localized("sign_out"), role: .destructive) {
+                            Task {
+                                await GoogleAuth.shared.signOut()
+                                homeGoogleMessage = nil
+                            }
+                        }
+                        .accessibilityIdentifier("home.cloud.signout")
+                    } else if CloudSyncFolder.resolveFolder() != nil {
+                        Button(localizationManager.localized("sync_now")) {
+                            runHomeFolderSync()
+                        }
+                        .disabled(homeFolderSyncing)
+                        .accessibilityIdentifier("home.folder.sync_now")
+
+                        Button(localizationManager.localized("settings")) {
+                            showCloudSyncSheet = true
+                        }
+                        .accessibilityIdentifier("home.cloud.settings")
+                    } else {
+                        Button(localizationManager.localized("settings")) {
+                            showCloudSyncSheet = true
+                        }
+                        .accessibilityIdentifier("home.cloud.signin")
+                    }
+                }
+                .buttonStyle(.bordered)
                 .font(DS.Font.caption)
-                .foregroundStyle(DS.Color.secondaryText)
-                .lineLimit(5) // 替換 fixedSize：避免 CoreText 斷字字典 I/O (0x8BADF00D)
+
+                // 說明文字亦支援點擊展開設定
+                Button {
+                    showCloudSyncSheet = true
+                } label: {
+                    Text(unifiedSyncExplainer)
+                        .font(DS.Font.caption)
+                        .foregroundStyle(DS.Color.secondaryText)
+                        .lineLimit(5) // 替換 fixedSize：避免 CoreText 斷字字典 I/O (0x8BADF00D)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(DS.Space.m)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(DS.Color.surface)
+        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous))
+        .onTapGesture {
+            showCloudSyncSheet = true
+        }
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous)
