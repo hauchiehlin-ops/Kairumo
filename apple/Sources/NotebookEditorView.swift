@@ -1596,6 +1596,14 @@ public struct NotebookEditorView: View {
         } }
         .sheet(isPresented: $showStickerLibrary) { resizableSheet {
             StickerLibraryView { drawing in
+                // 拿不到畫布或 UI 測試模擬無畫布時提示使用者
+                let noCanvas = ProcessInfo.processInfo
+                    .environment["KAIRUMO_UITEST_NO_CANVAS"] == "1"
+                guard !noCanvas else {
+                    showCanvasNotice(localizationManager.localized("insert_needs_canvas"))
+                    return
+                }
+
                 // 若當前在打字/非手繪模式，自動切換至手寫手繪模式，讓貼紙立即呈現與可編輯
                 if editorMode != .draw {
                     editorMode = .draw
