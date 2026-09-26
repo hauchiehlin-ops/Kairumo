@@ -8739,21 +8739,6 @@ public struct NotebookEditorView: View {
         editingTextId = nil
     }
 
-    /// 在畫布的指定位置新增一個空文字方塊並直接進入隨點隨打。
-    @discardableResult
-    private func insertDefaultTable() {
-        if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
-        notebook.tableAttachments?.append(NoteTableAttachment(pageIndex: currentPageIndex, x: PageGeometry.printableInset, y: 200, rows: 3, cols: 3))
-        store.updateNotebook(notebook)
-        PageThumbnailRenderer.invalidateAll()
-    }
-
-    private func insertDefaultShape() {
-        if notebook.shapeAttachments == nil { notebook.shapeAttachments = [] }
-        notebook.shapeAttachments?.append(NoteShapeAttachment(pageIndex: currentPageIndex, kindName: "rectangle", x: PageGeometry.printableInset, y: 200, width: 120, height: 80, cornerRadius: 8, strokeColorHex: "#000000", fillColorHex: "#FFFFFF", lineWidth: 2))
-        store.updateNotebook(notebook)
-        PageThumbnailRenderer.invalidateAll()
-    }
 
     private func snapYToGuideLine(at y: CGFloat) -> CGFloat {
         let guides = pageGuides(
