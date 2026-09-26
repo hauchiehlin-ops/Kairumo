@@ -1412,6 +1412,39 @@ data class CloudSyncUiState(
  */
 @Composable
 private fun P2PSyncCard(l: (String) -> String) {
+    val context = LocalContext.current
+    val tailscaleStatus = remember {
+        try {
+            var found = false
+            var ip: String? = null
+            val interfaces = java.net.NetworkInterface.getNetworkInterfaces()
+            if (interfaces != null) {
+                for (iface in interfaces.asSequence()) {
+                    if (!iface.isUp) continue
+                    for (addr in iface.inetAddresses.asSequence()) {
+                        if (addr is java.net.Inet4Address) {
+                            val host = addr.hostAddress ?: ""
+                            val parts = host.split(".")
+                            if (parts.size == 4) {
+                                val first = parts[0].toIntOrNull() ?: 0
+                                val second = parts[1].toIntOrNull() ?: 0
+                                if (first == 100 && second in 64..127) {
+                                    found = true
+                                    ip = host
+                                    break
+                                }
+                            }
+                        }
+                    }
+                    if (found) break
+                }
+            }
+            Pair(found, ip)
+        } catch (_: Throwable) {
+            Pair(false, null)
+        }
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth().testTag("home.p2p.card").padding(top = 8.dp),
         shape = RoundedCornerShape(12.dp),
@@ -1421,13 +1454,88 @@ private fun P2PSyncCard(l: (String) -> String) {
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = l("p2p_sync_tailscale_title"),
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                val isConnected = tailscaleStatus.first
+                val statusText = if (isConnected) {
+                    val tmpl = l("tailscale_p2p_ready")
+                    if (tmpl.contains("%@")) tmpl.replace("%@", tailscaleStatus.second ?: "")
+                    else "${l("status_connected")} (${tailscaleStatus.second ?: ""})"
+                } else {
+                    l("tailscale_not_connected")
+                }
+                Box(
+                    modifier = Modifier
+                        .background(
+                            if (isConnected) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surface,
+                            shape = RoundedCornerShape(12.dp)
+                        )
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .background(
+                                    if (isConnected) Color(0xFF4CAF50) else Color.Gray.copy(alpha = 0.5f),
+                                    shape = CircleShape
+                                )
+                        )
+                        Text(
+                            text = statusText,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (isConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
             Text(
                 text = l("p2p_sync_tailscale_explainer"),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
+            Row(
+                modifier = Modifier
+                    .clickable {
+                        runCatching {
+                            context.startActivity(
+                                android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse("https://tailscale.com/download")
+                                )
+                            )
+                        }
+                    }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "↗",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = l("download_tailscale_link"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
+            }
         }
     }
 }

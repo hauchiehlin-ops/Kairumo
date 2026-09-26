@@ -1858,31 +1858,20 @@ public struct HomeWorkbenchView: View {
             //
             // 資料夾同步在 Apple 這邊原本只能從「雲端同步」那張卡進去再切
             // 分頁，使用者要先知道它藏在那裡。
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) {
-                    unifiedSyncCard
-                    p2pSyncCard
-                    dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
-                             "sync_folder_desc", .teal) { showFolderSyncSheet = true }
-                    dataCard("doc.zipper", "backup_snapshot",
-                             "backup_snapshot_desc", .purple) { showNotebookSnapshotSheet = true }
-                    dataCard("externaldrive.badge.timemachine", "backup_create",
-                             "backup_create_desc", .blue) { showBackupCreateSheet = true }
-                    dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
-                             "backup_restore_desc", .orange) { showBackupRestoreSheet = true }
-                }
-                VStack(spacing: 12) {
-                    unifiedSyncCard
-                    p2pSyncCard
-                    dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
-                             "sync_folder_desc", .teal) { showFolderSyncSheet = true }
-                    dataCard("doc.zipper", "backup_snapshot",
-                             "backup_snapshot_desc", .purple) { showNotebookSnapshotSheet = true }
-                    dataCard("externaldrive.badge.timemachine", "backup_create",
-                             "backup_create_desc", .blue) { showBackupCreateSheet = true }
-                    dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
-                             "backup_restore_desc", .orange) { showBackupRestoreSheet = true }
-                }
+            LazyVGrid(
+                columns: [GridItem(.adaptive(minimum: 280, maximum: .infinity), spacing: 12)],
+                spacing: 12
+            ) {
+                unifiedSyncCard
+                p2pSyncCard
+                dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
+                         "sync_folder_desc", .teal) { showFolderSyncSheet = true }
+                dataCard("doc.zipper", "backup_snapshot",
+                         "backup_snapshot_desc", .purple) { showNotebookSnapshotSheet = true }
+                dataCard("externaldrive.badge.timemachine", "backup_create",
+                         "backup_create_desc", .blue) { showBackupCreateSheet = true }
+                dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
+                         "backup_restore_desc", .orange) { showBackupRestoreSheet = true }
             }
         }
         .padding(.top, 6)
