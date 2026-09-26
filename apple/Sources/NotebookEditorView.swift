@@ -589,6 +589,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         }
 
         context.coordinator.applyTool(to: uiView)
+        canvasRef?(uiView)
     }
 
     /// 測試用讀數：縮放倍率**與筆畫數**。
@@ -1617,19 +1618,40 @@ public struct NotebookEditorView: View {
                     targetCenter = CGPoint(x: PageGeometry.width / 2.0, y: PageGeometry.height / 2.0)
                 }
                 let drawingCenter = CGPoint(x: drawing.bounds.midX, y: drawing.bounds.midY)
-                let transform = CGAffineTransform(
-                    translationX: targetCenter.x - drawingCenter.x,
-                    y: targetCenter.y - drawingCenter.y
-                )
-                let translatedStrokes = drawing.strokes.map {
-                    PKStroke(ink: $0.ink, path: $0.path, transform: $0.transform.concatenating(transform), mask: $0.mask)
+                let dx = targetCenter.x - drawingCenter.x
+                let dy = targetCenter.y - drawingCenter.y
+
+                // 🌟 直接將位移烘焙至控制點 (controlPoints)，並將 transform 設為 .identity
+                // 徹底解決 PencilKit 在即時畫布 (Metal GPU Pipeline) 渲染時因 stroke.transform 矩陣未能即時重繪之缺陷
+                let translatedStrokes = drawing.strokes.map { stroke -> PKStroke in
+                    var newPoints: [PKStrokePoint] = []
+                    newPoints.reserveCapacity(stroke.path.count)
+                    for i in 0..<stroke.path.count {
+                        let pt = stroke.path[i]
+                        let loc = pt.location
+                            .applying(stroke.transform)
+                            .applying(CGAffineTransform(translationX: dx, y: dy))
+                        newPoints.append(PKStrokePoint(
+                            location: loc,
+                            timeOffset: pt.timeOffset,
+                            size: pt.size,
+                            opacity: pt.opacity,
+                            force: pt.force,
+                            azimuth: pt.azimuth,
+                            altitude: pt.altitude
+                        ))
+                    }
+                    let newPath = PKStrokePath(controlPoints: newPoints, creationDate: stroke.path.creationDate)
+                    return PKStroke(ink: stroke.ink, path: newPath, transform: .identity, mask: stroke.mask)
                 }
 
                 var newDrawing = canvasView?.drawing ?? self.currentDrawing
                 newDrawing.strokes.append(contentsOf: translatedStrokes)
                 canvasView?.drawing = newDrawing
+                canvasView?.setNeedsDisplay()
                 self.currentDrawing = newDrawing
                 self.saveCurrentPageDrawing()
+                PageThumbnailRenderer.invalidateAll()
             }
         } }
         .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
@@ -3495,6 +3517,8 @@ public struct NotebookEditorView: View {
                                 }
                             ),
                             isTypeMode: editorMode == .type,
+                            snapToGrid: snapToGrid,
+                            snapY: { y in snapYToGuideLine(at: y) },
                             onEdit: {
                                 self.editingTextId = item.id
                             },
@@ -8524,13 +8548,55 @@ public struct NotebookEditorView: View {
         store.updateNotebook(notebook)
     }
 
+    private func snapYToGuideLine(at y: CGFloat) -> CGFloat {
+        let guides = pageGuides(
+            paperId: notebook.paperId(forPage: currentPageIndex),
+            width: Float(PageGeometry.width),
+            height: Float(PageGeometry.height)
+        )
+        // 尋找版面中的所有水平導引線（橫線紙、問答格線、康乃爾筆記橫線等）
+        let horizontalLines = guides.compactMap { g -> CGFloat? in
+            if g.kind == .line && abs(g.h) < 1.0 && g.w > 50 {
+                return CGFloat(g.y)
+            }
+            return nil
+        }
+
+        let fontSize: CGFloat = activeTextAttachment?.fontSize ?? 16
+        // 文字基準線 (baseline) 距離文字方塊頂部的預估高度 (頂部內距 + 字體上升高度)
+        let fontAscender: CGFloat = round(fontSize * 0.95)
+        let topPadding: CGFloat = TextBoxMetrics.padding(width: 200, height: 40)
+        let baselineOffset = topPadding + fontAscender
+
+        if !horizontalLines.isEmpty {
+            // 找出距離當前點擊處最接近的水平導引線
+            var nearestLine: CGFloat = horizontalLines[0]
+            var minDiff: CGFloat = abs(y - horizontalLines[0])
+            for line in horizontalLines {
+                let diff = abs(y - line)
+                if diff < minDiff {
+                    minDiff = diff
+                    nearestLine = line
+                }
+            }
+            // 若點擊位置在導引線附近（50pt 內），吸附使文字基準線剛好座落在該導引線上
+            if minDiff < 50 {
+                return max(PageGeometry.printableInset, nearestLine - baselineOffset)
+            }
+        }
+
+        // 若非橫線範本或距離橫線較遠，吸附至 20pt 步進網格
+        let step: CGFloat = 20.0
+        return round(y / step) * step
+    }
+
     private func insertTextBox(at location: CGPoint) -> NoteTextAttachment {
         var targetX = location.x
         var targetY = location.y
         if snapToGrid {
             let step: CGFloat = 20.0
             targetX = round(targetX / step) * step
-            targetY = round(targetY / step) * step
+            targetY = snapYToGuideLine(at: location.y)
         }
         let printable = PageGeometry.printableRect
         let startX = max(printable.minX, targetX)
@@ -9698,6 +9764,8 @@ struct TextAttachmentItemView: View {
     @Binding var textItem: NoteTextAttachment
     @Binding var isEditingInline: Bool
     var isTypeMode: Bool = false
+    var snapToGrid: Bool = false
+    var snapY: ((CGFloat) -> CGFloat)? = nil
     let onEdit: () -> Void
     let onDelete: () -> Void
     var onMoved: ((CGSize) -> Void)? = nil
@@ -9964,7 +10032,7 @@ struct TextAttachmentItemView: View {
                                     y: textItem.y + value.translation.height,
                                     width: textItem.width, height: textItem.height)
                                 textItem.x = landed.x
-                                textItem.y = landed.y
+                                textItem.y = (snapToGrid && snapY != nil) ? snapY!(landed.y) : landed.y
                                 dragOffset = .zero
                                 isDragging = false
                             }
@@ -10996,6 +11064,8 @@ private struct ImportPickersModifier: ViewModifier {
     let onPdf: (FileImport.Outcome) -> Void
     let onDocument: (FileImport.Outcome) -> Void
 
+    @State private var currentSlot: FfiImportSlot? = nil
+
     func body(content: Content) -> some View {
         content
             // 統一由單一 fileImporter 呈現：避免多個 fileImporter 造成 SwiftUI 底層 UIDocumentPickerViewController 競爭互斥
@@ -11004,10 +11074,11 @@ private struct ImportPickersModifier: ViewModifier {
                     get: { activeImportSlot != nil },
                     set: { if !$0 { activeImportSlot = nil } }
                 ),
-                allowedContentTypes: activeImportSlot.map { FileImport.allowedTypes(for: $0) } ?? [.item],
+                allowedContentTypes: (activeImportSlot ?? currentSlot).map { FileImport.allowedTypes(for: $0) } ?? [.item],
                 allowsMultipleSelection: false
             ) { result in
-                guard let slot = activeImportSlot else { return }
+                guard let slot = currentSlot ?? activeImportSlot else { return }
+                currentSlot = nil
                 activeImportSlot = nil
                 let destination: FileImport.Destination = (slot == .audio) ? .recordings : .attachments
                 guard let outcome = FileImport.take(result: result, slot: slot, into: destination) else { return }
@@ -11026,6 +11097,11 @@ private struct ImportPickersModifier: ViewModifier {
                     }
                 } else {
                     importErrorKey = outcome.errorKey
+                }
+            }
+            .onChange(of: activeImportSlot) { slot in
+                if let slot {
+                    currentSlot = slot
                 }
             }
             .alert(
