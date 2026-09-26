@@ -108,7 +108,7 @@ final class PalmRejectionCoordinator {
     /// 用時間而不是指標 id：PencilKit 不告訴我們某一筆畫是哪根手指畫的，
     /// 所以只能依「筆落下前那一小段時間內完成的筆畫」來判斷。時間窗與核心
     /// 仲裁器用的是同一個值。
-    static func retracting(_ drawing: PKDrawing, landedAt: Date, window: TimeInterval = 0.25) -> PKDrawing {
+    static func retracting(_ drawing: PKDrawing, landedAt: Date, window: TimeInterval = 0.5) -> PKDrawing {
         let cutoff = landedAt.addingTimeInterval(-window)
         let kept = drawing.strokes.filter { stroke in
             // 沒有 creationDate 的筆畫（例如從檔案讀回來的）一律保留 ——
