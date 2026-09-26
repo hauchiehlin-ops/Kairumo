@@ -752,6 +752,18 @@ enum NotebookSyncCoordinator {
         // ── 4. 清理已被遠端刪除的本地殭屍筆記 ─────────────────
         store.syncPurgeDeletedNotebooks(deletedNotebookIds)
         store.syncRefreshRecordings()
+
+        // ── 5. 自動垃圾回收 (Garbage Collection) ─────────────
+        // 若雲端或本機有已刪除筆記本或孤兒檔案，自動在背景清理，不需使用者手動點擊「回收已刪除檔案」
+        let library = await AccountSyncStore.shared.indexJSON
+        let gcResult = await Task.detached(priority: .utility) {
+            session.collectGarbage(libraryIndexJson: library)
+        }.value
+        if gcResult.deleted > 0 {
+            SyncLogger.logAsync("【自動維護】已自動清理雲端 \(gcResult.deleted) 個孤兒與已刪除檔案", source: .googleDrive)
+            await CloudSync.persist(session)
+        }
+
         SyncLogger.logAsync("【Google Drive 同步】全部完成。", source: .googleDrive)
 
         return report

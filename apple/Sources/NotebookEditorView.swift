@@ -1123,16 +1123,8 @@ public struct NotebookEditorView: View {
     // 圖片、算式、圖表、文字與連結狀態
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var showPhotoPicker: Bool = false
-    /// 從「檔案」挑圖，而不是從相簿。
-    ///
-    /// 相簿挑得到的只有相簿裡的東西 —— 使用者掃描的 PDF 轉出的 PNG、
-    /// 從 Mac 拖進 iCloud 雲碟的那張圖，`PhotosPicker` 一張都看不到。
-    @State private var showImageFileImporter: Bool = false
-    /// 從「檔案」挑音訊。App 自己錄的那些走 `showAudioPicker`。
-    @State private var showAudioFileImporter: Bool = false
-    /// 挑一份 PDF 插進來。PDF 只有這一個入口 —— 它從來不會在相簿裡。
-    @State private var showPdfFileImporter: Bool = false
-    @State private var showDocumentFileImporter: Bool = false
+    /// 統一管理自檔案匯入的插槽，避免 SwiftUI 多個 .fileImporter 競爭互斥
+    @State private var activeImportSlot: FfiImportSlot? = nil
     /// 已經收進來、正在讓使用者挑頁的那份 PDF。
     @State private var pdfToInsert: URL? = nil
     /// 匯入失敗的語系鍵。非空就跳提示。
@@ -1604,33 +1596,30 @@ public struct NotebookEditorView: View {
         } }
         .sheet(isPresented: $showStickerLibrary) { resizableSheet {
             StickerLibraryView { drawing in
-                // **拿不到畫布就要說一聲。**
-                //
-                // 原本這裡是 `guard let canvas = canvasView else { return }`
-                // —— 靜靜地什麼都不做。使用者挑了一張貼紙、面板關上、
-                // 畫布上什麼也沒有，而且沒有任何線索。回報就是
-                // 「無法插入 Sticker」。
-                //
-                // 貼紙是貼成**筆跡**的（所以可以擦、可以套索搬走），
-                // 那需要畫布在場。打字模式下畫布不吃筆跡，所以先講清楚
-                // 要切回手寫模式。
-                // 同上：要驗「拿不到畫布時會不會出聲」，就要能把畫布拿走。
-                let noCanvas = ProcessInfo.processInfo
-                    .environment["KAIRUMO_UITEST_NO_CANVAS"] == "1"
-                guard let canvas = canvasView, !noCanvas else {
-                    showCanvasNotice(localizationManager.localized("insert_needs_canvas"))
-                    return
+                // 若當前在打字/非手繪模式，自動切換至手寫手繪模式，讓貼紙立即呈現與可編輯
+                if editorMode != .draw {
+                    editorMode = .draw
                 }
-                let visibleRect = canvas.bounds
+
+                // 計算貼紙置中位置：若拿得到 canvasView 則以可視區為準，否則以紙張中心為準
+                let targetCenter: CGPoint
+                if let canvas = canvasView, canvas.bounds.width > 50, canvas.bounds.height > 50 {
+                    targetCenter = CGPoint(x: canvas.bounds.midX, y: canvas.bounds.midY)
+                } else {
+                    targetCenter = CGPoint(x: PageGeometry.width / 2.0, y: PageGeometry.height / 2.0)
+                }
                 let drawingCenter = CGPoint(x: drawing.bounds.midX, y: drawing.bounds.midY)
-                let targetCenter = CGPoint(x: visibleRect.midX, y: visibleRect.midY)
-                let transform = CGAffineTransform(translationX: targetCenter.x - drawingCenter.x, y: targetCenter.y - drawingCenter.y)
+                let transform = CGAffineTransform(
+                    translationX: targetCenter.x - drawingCenter.x,
+                    y: targetCenter.y - drawingCenter.y
+                )
                 let translatedStrokes = drawing.strokes.map {
                     PKStroke(ink: $0.ink, path: $0.path, transform: $0.transform.concatenating(transform), mask: $0.mask)
                 }
-                var newDrawing = canvas.drawing
+
+                var newDrawing = canvasView?.drawing ?? self.currentDrawing
                 newDrawing.strokes.append(contentsOf: translatedStrokes)
-                canvas.drawing = newDrawing
+                canvasView?.drawing = newDrawing
                 self.currentDrawing = newDrawing
                 self.saveCurrentPageDrawing()
             }
@@ -1643,8 +1632,7 @@ public struct NotebookEditorView: View {
         // 「unable to type-check this expression in reasonable time」，
         // 而錯誤指的是整條鏈的開頭，看不出是哪一個加上去的。
         .modifier(ImportPickersModifier(
-            showImageFileImporter: $showImageFileImporter,
-            showAudioFileImporter: $showAudioFileImporter,
+            activeImportSlot: $activeImportSlot,
             importErrorKey: $importErrorKey,
             onImage: { outcome in
                 // 存進附件目錄之後再讀回來解碼。先解碼再存的話，一個看起來
@@ -1658,11 +1646,9 @@ public struct NotebookEditorView: View {
                 insertImageAttachment(image)
             },
             onAudio: { outcome in insertImportedAudio(outcome) },
-            showPdfFileImporter: $showPdfFileImporter,
             onPdf: { outcome in
                 pdfToInsert = store.importedFileURL(fileName: outcome.storedName)
             },
-            showDocumentFileImporter: $showDocumentFileImporter,
             onDocument: { outcome in store.importDocument(notebookId: notebook.id, pageIndex: currentPageIndex, outcome: outcome) }
         ))
         .sheet(item: Binding(
@@ -2623,15 +2609,15 @@ public struct NotebookEditorView: View {
                     .accessibilityIdentifier("editor.insert.stickers")
                     Button { showAudioPicker = true } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
                         .accessibilityIdentifier("editor.insert.audio")
-                    Button { showAudioFileImporter = true } label: { Label(localizationManager.localized("import_audio_from_files"), systemImage: "square.and.arrow.down.on.square") }
+                    Button { activeImportSlot = .audio } label: { Label(localizationManager.localized("import_audio_from_files"), systemImage: "square.and.arrow.down.on.square") }
                         .accessibilityIdentifier("editor.insert.audio_file")
                 Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
                     .accessibilityIdentifier("editor.insert.image")
-                Button { showImageFileImporter = true } label: { Label(localizationManager.localized("import_from_files"), systemImage: "folder.badge.plus") }
+                Button { activeImportSlot = .image } label: { Label(localizationManager.localized("import_from_files"), systemImage: "folder.badge.plus") }
                     .accessibilityIdentifier("editor.insert.image_file")
-                Button { showPdfFileImporter = true } label: { Label(localizationManager.localized("insert_pdf"), systemImage: "doc.richtext") }
+                Button { activeImportSlot = .pdf } label: { Label(localizationManager.localized("insert_pdf"), systemImage: "doc.richtext") }
                     .accessibilityIdentifier("editor.insert.pdf")
-                Button { showDocumentFileImporter = true } label: { Label(localizationManager.localized("import_document"), systemImage: "doc.text") }
+                Button { activeImportSlot = .document } label: { Label(localizationManager.localized("import_document"), systemImage: "doc.text") }
                     .accessibilityIdentifier("editor.insert.document")
                 Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
                     .accessibilityIdentifier("editor.insert.math")
@@ -3695,6 +3681,7 @@ public struct NotebookEditorView: View {
                 },
                 palmRejection: palmRejection,
                 onRetractStrokes: { landedAt in
+                    guard palmRejection.drawingPolicy(now: landedAt) != .pencilOnly else { return }
                     let cleaned = PalmRejectionCoordinator.retracting(
                         currentDrawing, landedAt: landedAt)
                     guard cleaned.strokes.count != currentDrawing.strokes.count else { return }
@@ -4049,11 +4036,15 @@ public struct NotebookEditorView: View {
                             .controlSize(.small)
                         }
 
-                        ImageEditControls(attachment: binding(for: id)) {
-                            notebook.attachments?.removeAll { $0.id == id }
-                            store.updateNotebook(notebook)
-                            editingAttachmentId = nil
-                        }
+                        ImageEditControls(
+                            attachment: binding(for: id),
+                            onDone: { editingAttachmentId = nil },
+                            onDelete: {
+                                notebook.attachments?.removeAll { $0.id == id }
+                                store.updateNotebook(notebook)
+                                editingAttachmentId = nil
+                            }
+                        )
                     }
                 }
             }
@@ -10990,54 +10981,44 @@ private struct TapeView: View {
 /// 指的是鏈的開頭，完全看不出是哪一個加上去的。
 private struct ImportPickersModifier: ViewModifier {
     @ObservedObject private var localizationManager = LocalizationManager.shared
-    @Binding var showImageFileImporter: Bool
-    @Binding var showAudioFileImporter: Bool
+    @Binding var activeImportSlot: FfiImportSlot?
     @Binding var importErrorKey: String
     let onImage: (FileImport.Outcome) -> Void
     let onAudio: (FileImport.Outcome) -> Void
-    @Binding var showPdfFileImporter: Bool
     let onPdf: (FileImport.Outcome) -> Void
-    @Binding var showDocumentFileImporter: Bool
     let onDocument: (FileImport.Outcome) -> Void
 
     func body(content: Content) -> some View {
         content
-            // 挑選器的過濾條件與「收不收」的判斷都來自核心 —— 同一個檔案
-            // 在 iPad 上挑得到、在 Android 手機上挑不到，是使用者完全
-            // 無法理解的行為。
+            // 統一由單一 fileImporter 呈現：避免多個 fileImporter 造成 SwiftUI 底層 UIDocumentPickerViewController 競爭互斥
             .fileImporter(
-                isPresented: $showImageFileImporter,
-                allowedContentTypes: FileImport.allowedTypes(for: .image),
+                isPresented: Binding(
+                    get: { activeImportSlot != nil },
+                    set: { if !$0 { activeImportSlot = nil } }
+                ),
+                allowedContentTypes: activeImportSlot.map { FileImport.allowedTypes(for: $0) } ?? [.item],
                 allowsMultipleSelection: false
             ) { result in
-                guard let outcome = FileImport.take(result: result, slot: .image) else { return }
-                if outcome.succeeded { onImage(outcome) } else { importErrorKey = outcome.errorKey }
-            }
-            .fileImporter(
-                isPresented: $showAudioFileImporter,
-                allowedContentTypes: FileImport.allowedTypes(for: .audio),
-                allowsMultipleSelection: false
-            ) { result in
-                guard let outcome = FileImport.take(
-                    result: result, slot: .audio, into: .recordings) else { return }
-                if outcome.succeeded { onAudio(outcome) } else { importErrorKey = outcome.errorKey }
-            }
-            .fileImporter(
-                isPresented: $showPdfFileImporter,
-                allowedContentTypes: FileImport.allowedTypes(for: .pdf),
-                allowsMultipleSelection: false
-            ) { result in
-                guard let outcome = FileImport.take(result: result, slot: .pdf) else { return }
-                if outcome.succeeded { onPdf(outcome) } else { importErrorKey = outcome.errorKey }
-            }
-
-            .fileImporter(
-                isPresented: $showDocumentFileImporter,
-                allowedContentTypes: FileImport.allowedTypes(for: .document),
-                allowsMultipleSelection: false
-            ) { result in
-                guard let outcome = FileImport.take(result: result, slot: .document) else { return }
-                if outcome.succeeded { onDocument(outcome) } else { importErrorKey = outcome.errorKey }
+                guard let slot = activeImportSlot else { return }
+                activeImportSlot = nil
+                let destination: FileImport.Destination = (slot == .audio) ? .recordings : .attachments
+                guard let outcome = FileImport.take(result: result, slot: slot, into: destination) else { return }
+                if outcome.succeeded {
+                    switch slot {
+                    case .image:
+                        onImage(outcome)
+                    case .audio:
+                        onAudio(outcome)
+                    case .pdf:
+                        onPdf(outcome)
+                    case .document:
+                        onDocument(outcome)
+                    default:
+                        break
+                    }
+                } else {
+                    importErrorKey = outcome.errorKey
+                }
             }
             .alert(
                 localizationManager.localized("import_failed_read"),

@@ -85,12 +85,21 @@ final class PalmRejectionCoordinator {
     /// `retract` 一定要處理：使用者的自然動作是手掌先碰螢幕、筆才落下，
     /// 此時手掌那一筆已經畫出來了。不收回的話，掌拒只擋得住「筆之後」的
     /// 誤觸 —— 擋不住最常見的那一種。
+    ///
+    /// **絕不收回真實筆跡**：若當前政策為 `.pencilOnly` 或最近正在用 Apple Pencil，
+    /// 畫布上的所有筆畫皆為真實筆跡（PencilKit 系統層已做硬體掌拒）。
+    /// 連續快速書寫或筆勢加重時若觸發收回，會把 0.2~0.5 秒前剛寫完的字抹掉造成「斷線」。
     @discardableResult
     func observe(touch: UITouch, now: Date = Date()) -> Bool {
+        let isUsingPencil = (lastPencilAt != nil && now.timeIntervalSince(lastPencilAt!) < Self.pencilGrace)
         if touch.type == .pencil {
             lastPencilAt = now
         }
         let decision = arbiter.handle(event: Self.event(from: touch, now: now))
+
+        if drawingPolicy(now: now) == .pencilOnly || isUsingPencil || touch.type == .pencil {
+            return false
+        }
         return !decision.retract.isEmpty
     }
 
@@ -99,7 +108,7 @@ final class PalmRejectionCoordinator {
     /// 用時間而不是指標 id：PencilKit 不告訴我們某一筆畫是哪根手指畫的，
     /// 所以只能依「筆落下前那一小段時間內完成的筆畫」來判斷。時間窗與核心
     /// 仲裁器用的是同一個值。
-    static func retracting(_ drawing: PKDrawing, landedAt: Date, window: TimeInterval = 0.5) -> PKDrawing {
+    static func retracting(_ drawing: PKDrawing, landedAt: Date, window: TimeInterval = 0.25) -> PKDrawing {
         let cutoff = landedAt.addingTimeInterval(-window)
         let kept = drawing.strokes.filter { stroke in
             // 沒有 creationDate 的筆畫（例如從檔案讀回來的）一律保留 ——

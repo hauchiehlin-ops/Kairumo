@@ -71,59 +71,61 @@ struct FloatingPanel<Content: View>: View {
 
     private var header: some View {
         HStack(spacing: 8) {
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 12, weight: .bold))
-                .foregroundColor(.secondary)
+            // 可拖曳區域：只綁定在標題與拖曳把手，避免劫持右側按鈕的點擊手勢
+            HStack(spacing: 8) {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundColor(.secondary)
 
-            Text(title)
-                .font(.subheadline)
-                .fontWeight(.semibold)
+                Text(title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
 
-            Spacer()
+                Spacer()
+            }
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(coordinateSpace: .global)
+                    .onChanged { value in
+                        var transaction = Transaction()
+                        transaction.animation = nil
+                        withTransaction(transaction) {
+                            offset = CGSize(
+                                width: dragStart.width + value.translation.width,
+                                height: dragStart.height + value.translation.height
+                            )
+                        }
+                    }
+                    .onEnded { _ in dragStart = offset }
+            )
 
             Button {
                 withAnimation(.easeInOut(duration: 0.18)) { isCollapsed.toggle() }
             } label: {
                 Image(systemName: isCollapsed ? "chevron.down" : "chevron.up")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: 13, weight: .bold))
                     .foregroundColor(.secondary)
-                    .padding(4)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
 
             Button(action: onClose) {
                 Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 15))
+                    .font(.system(size: 18))
                     .foregroundColor(.secondary)
+                    .frame(width: 36, height: 36)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .highPriorityGesture(TapGesture().onEnded {
+                onClose()
+            })
+            .accessibilityLabel(Text("關閉面板"))
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 10)
-        .contentShape(Rectangle())
-        // 只有標題列可拖曳：整片都能拖的話，面板內的滑桿會搶不到手勢。
-        //
-        // **座標空間一定要用 `.global`。** 預設的 `.local` 會跟著這個 view 一起
-        // 被 `.offset` 移動 —— 於是位移是對著一個**正在移動的參考點**量的，
-        // 形成正回饋：面板移動 → 參考點移動 → 量到更大的位移 → 移動更多。
-        // 畫面上看到的就是劇烈晃動。畫布上的物件之所以拖得平順，
-        // 正是因為它們用的是固定的具名座標空間。
-        .gesture(
-            DragGesture(coordinateSpace: .global)
-                .onChanged { value in
-                    // 拖曳不要動畫：SwiftUI 會替每一次位置變化插補，
-                    // 手指已經到了、面板還在追，看起來就是黏滯與抖動。
-                    var transaction = Transaction()
-                    transaction.animation = nil
-                    withTransaction(transaction) {
-                        offset = CGSize(
-                            width: dragStart.width + value.translation.width,
-                            height: dragStart.height + value.translation.height
-                        )
-                    }
-                }
-                .onEnded { _ in dragStart = offset }
-        )
+        .padding(.leading, 12)
+        .padding(.trailing, 6)
+        .padding(.vertical, 6)
     }
 }
 

@@ -15,8 +15,22 @@ import UIKit
 // MARK: - 音訊 PCM 解碼器 (硬體加速轉換為 16kHz 單聲道 Float32)
 
 public enum AudioPCMDecoder {
-    /// 將本地音訊檔（.m4a, .wav, .caf 等）解碼並重採樣為 16,000 Hz 單聲道 Float32 PCM
+    /// 將本地音訊檔（.m4a, .wav, .caf, .opus 等）解碼並重採樣為 16,000 Hz 單聲道 Float32 PCM
     public static func decodeTo16kMono(url: URL) throws -> [Float] {
+        // .opus 走核心 Ogg-Opus 解碼器（AVAudioFile 無法解析 Ogg 容器）
+        if url.pathExtension.lowercased() == "opus" {
+            guard let decoder = audioDecoderOpen(path: url.path) else {
+                throw NSError(domain: "AudioPCMDecoder", code: 4, userInfo: [NSLocalizedDescriptionKey: "無法開啟 Opus 音訊解碼器"])
+            }
+            var allSamples = [Float]()
+            while true {
+                let chunk = decoder.nextChunk(maxSamples: 16000)
+                if chunk.isEmpty { break }
+                allSamples.append(contentsOf: chunk)
+            }
+            return allSamples
+        }
+
         let file = try AVAudioFile(forReading: url)
         guard let targetFormat = AVAudioFormat(
             commonFormat: .pcmFormatFloat32,
@@ -74,6 +88,33 @@ public enum AudioPCMDecoder {
 
         let count = Int(outputBuffer.frameLength)
         return Array(UnsafeBufferPointer(start: channelData, count: count))
+    }
+
+    /// 將 16kHz 單聲道 Float32 PCM 寫入臨時 .wav 檔，供 AVFoundation 或 Apple Speech 辨識
+    public static func writePcmToTempWav(samples: [Float], sampleRate: Int = 16000) throws -> URL {
+        let tempDir = FileManager.default.temporaryDirectory
+        let tempUrl = tempDir.appendingPathComponent("transcribe_\(UUID().uuidString).wav")
+        guard let format = AVAudioFormat(
+            commonFormat: .pcmFormatFloat32,
+            sampleRate: Double(sampleRate),
+            channels: 1,
+            interleaved: false
+        ) else {
+            throw NSError(domain: "AudioPCMDecoder", code: 10, userInfo: [NSLocalizedDescriptionKey: "無法初始化 WAV 格式"])
+        }
+        let file = try AVAudioFile(forWriting: tempUrl, settings: format.settings, commonFormat: .pcmFormatFloat32, interleaved: false)
+        let frameCount = AVAudioFrameCount(max(1, samples.count))
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else {
+            throw NSError(domain: "AudioPCMDecoder", code: 11, userInfo: [NSLocalizedDescriptionKey: "無法配置音訊緩衝區"])
+        }
+        buffer.frameLength = AVAudioFrameCount(samples.count)
+        if let channelData = buffer.floatChannelData?[0], !samples.isEmpty {
+            samples.withUnsafeBufferPointer { ptr in
+                channelData.assign(from: ptr.baseAddress!, count: samples.count)
+            }
+        }
+        try file.write(from: buffer)
+        return tempUrl
     }
 }
 
@@ -370,6 +411,31 @@ public final class AudioTranscriber: ObservableObject {
             )
         }
 
+        // Apple Speech (SFSpeechURLRecognitionRequest) 無法直接解析 Ogg-Opus 容器（會報 No speech detected 1110），
+        // 需透過核心解碼器解出 PCM 並轉存為臨時標準 .wav 檔後送入辨識。
+        let effectiveUrl: URL
+        let isTempWav: Bool
+        if url.pathExtension.lowercased() == "opus" {
+            let pcm = try AudioPCMDecoder.decodeTo16kMono(url: url)
+            guard !pcm.isEmpty else {
+                throw NSError(
+                    domain: "AudioTranscriber",
+                    code: 6,
+                    userInfo: [NSLocalizedDescriptionKey: "音訊內容為空，無法轉錄"]
+                )
+            }
+            effectiveUrl = try AudioPCMDecoder.writePcmToTempWav(samples: pcm)
+            isTempWav = true
+        } else {
+            effectiveUrl = url
+            isTempWav = false
+        }
+        defer {
+            if isTempWav {
+                try? FileManager.default.removeItem(at: effectiveUrl)
+            }
+        }
+
         let locale: Locale
         if let languageCode = languageCode, !languageCode.isEmpty {
             locale = Locale(identifier: languageCode)
@@ -395,16 +461,16 @@ public final class AudioTranscriber: ObservableObject {
 
         if recognizer.supportsOnDeviceRecognition {
             do {
-                let res = try await performRecognitionTask(recognizer: recognizer, url: url, requiresOnDevice: true)
+                let res = try await performRecognitionTask(recognizer: recognizer, url: effectiveUrl, requiresOnDevice: true)
                 lastUsedOnDevice = true
                 return res
             } catch {
                 lastUsedOnDevice = false
-                return try await performRecognitionTask(recognizer: recognizer, url: url, requiresOnDevice: false)
+                return try await performRecognitionTask(recognizer: recognizer, url: effectiveUrl, requiresOnDevice: false)
             }
         } else {
             lastUsedOnDevice = false
-            return try await performRecognitionTask(recognizer: recognizer, url: url, requiresOnDevice: false)
+            return try await performRecognitionTask(recognizer: recognizer, url: effectiveUrl, requiresOnDevice: false)
         }
     }
 

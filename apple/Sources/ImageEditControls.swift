@@ -15,10 +15,16 @@ import SwiftUI
 public struct ImageEditControls: View {
     @Binding var attachment: NoteImageAttachment
     var onDelete: () -> Void
+    var onDone: (() -> Void)?
     @ObservedObject var localizationManager = LocalizationManager.shared
 
-    public init(attachment: Binding<NoteImageAttachment>, onDelete: @escaping () -> Void) {
+    public init(
+        attachment: Binding<NoteImageAttachment>,
+        onDone: (() -> Void)? = nil,
+        onDelete: @escaping () -> Void
+    ) {
         self._attachment = attachment
+        self.onDone = onDone
         self.onDelete = onDelete
     }
 
@@ -74,15 +80,29 @@ public struct ImageEditControls: View {
 
             Divider()
 
-            Button(role: .destructive) {
-                onDelete()
-            } label: {
-                Label(localizationManager.localized("remove_image_from_canvas"), systemImage: "trash")
-                    .font(.subheadline)
-                    .frame(maxWidth: .infinity)
+            HStack(spacing: 12) {
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label(localizationManager.localized("remove_image_from_canvas"), systemImage: "trash")
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .tint(.red)
+
+                if let onDone = onDone {
+                    Button {
+                        onDone()
+                    } label: {
+                        Text(localizationManager.localized("confirm"))
+                            .font(.subheadline)
+                            .fontWeight(.medium)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
             }
-            .buttonStyle(.bordered)
-            .tint(.red)
         }
     }
 
