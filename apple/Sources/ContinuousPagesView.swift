@@ -126,6 +126,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 .allowsHitTesting(true)
                 .zIndex(2)
         }
+        .coordinateSpace(name: CanvasCoordinateSpace.name)
         .contentShape(Rectangle())
         .simultaneousGesture(
             SpatialTapGesture(count: 1).onEnded { value in

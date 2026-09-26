@@ -175,6 +175,7 @@ struct AudioAttachmentItemView: View {
             }
             .padding(20)
             .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
+            .animation(nil, value: dragOffset)
             .alert(localizationManager.localized("rename_audio_card"), isPresented: $isRenaming) {
                 TextField(localizationManager.localized("recording_title"), text: $renameText)
                 Button(localizationManager.localized("done")) {

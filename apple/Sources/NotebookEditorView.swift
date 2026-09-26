@@ -3277,6 +3277,7 @@ public struct NotebookEditorView: View {
                             canvasRef: { canvasView = $0 },
                             onCanvasTap: { location in
                                 currentPageIndex = index
+                                currentDrawing = drawingForPage(index)
                                 handleCanvasTapInTypeMode(at: location)
                             },
                             onPenControl: applyPenControl,
@@ -3354,6 +3355,7 @@ public struct NotebookEditorView: View {
         }
         guard let page = nearest?.key, page != currentPageIndex else { return }
         currentPageIndex = page
+        currentDrawing = drawingForPage(page)
     }
 
 
@@ -3625,6 +3627,7 @@ public struct NotebookEditorView: View {
                 }
 
         }
+        .coordinateSpace(name: CanvasCoordinateSpace.name)
     }
 
     private var canvasWorkAreaContent: some View {
@@ -4766,7 +4769,7 @@ public struct NotebookEditorView: View {
                 // 縮圖用畫布的實際寬度算繪，並讓卡片維持同樣的長寬比 ——
                 // 舊版固定 800 寬、卡片固定 130 高，一張 800x1800 的頁面
                 // scaledToFit 之後只剩 50pt 寬，物件小到看不出是什麼。
-                let pageDrawing = (idx == currentPageIndex) ? currentDrawing : store.loadDrawing(notebookId: notebook.id, pageIndex: idx)
+                let pageDrawing = drawingForPage(idx)
                 let img = PageThumbnailRenderer.render(
                     notebook: notebook,
                     pageIndex: idx,
@@ -5547,7 +5550,17 @@ public struct NotebookEditorView: View {
                         if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == updated.id }) {
                             notebook.textAttachments?[idx] = updated
                         } else {
-                            notebook.textAttachments?.append(updated)
+                            var toAdd = updated
+                            toAdd.pageIndex = currentPageIndex
+                            if toAdd.x == 0 && toAdd.y == 0 {
+                                toAdd.x = PageGeometry.printableInset
+                                toAdd.y = 200
+                                toAdd.width = PageGeometry.printableRect.width
+                                toAdd.hasBorder = true
+                            }
+                            notebook.textAttachments?.append(toAdd)
+                            inlineEditingTextId = toAdd.id
+                            editingTextId = toAdd.id
                         }
                         store.updateNotebook(notebook)
                         PageThumbnailRenderer.invalidateAll()
@@ -5558,7 +5571,7 @@ public struct NotebookEditorView: View {
                 onUndo: { performUndo() },
                 onRedo: { canvasView?.undoManager?.redo() },
                 onInsertTable: { rows, cols in
-                    let table = NoteTableAttachment(pageIndex: currentPageIndex, x: 40, y: 120, rows: rows, cols: cols)
+                    let table = NoteTableAttachment(pageIndex: currentPageIndex, x: PageGeometry.printableInset, y: 200, rows: rows, cols: cols)
                     if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
                     notebook.tableAttachments?.append(table)
                     store.updateNotebook(notebook)
@@ -7472,6 +7485,17 @@ public struct NotebookEditorView: View {
         return baseline
     }
 
+    /// 取得指定頁面的手寫筆跡（優先取待存核心筆跡、當前單頁模式中正在編輯的筆跡、最後取磁碟存檔）
+    private func drawingForPage(_ page: Int) -> PKDrawing {
+        if let pending = pendingCoreInk[page] {
+            return pending
+        }
+        if pageDisplayMode == .single && page == currentPageIndex {
+            return currentDrawing
+        }
+        return store.loadDrawing(notebookId: notebook.id, pageIndex: page)
+    }
+
     private func recordDrawingEdit(page: Int, drawing: PKDrawing) {
         if page == currentPageIndex {
             currentDrawing = drawing
@@ -7968,7 +7992,7 @@ public struct NotebookEditorView: View {
     private func composedPageImages(scale: CGFloat) -> [(image: UIImage, size: CGSize)] {
         let width = max(canvasContentWidth, PageThumbnailRenderer.minPageWidth)
         return (0..<max(1, notebook.pageCount)).map { i in
-            let drawing = (i == currentPageIndex) ? currentDrawing : store.loadDrawing(notebookId: notebook.id, pageIndex: i)
+            let drawing = drawingForPage(i)
             let image = PageThumbnailRenderer.renderFullPage(
                 notebook: notebook,
                 pageIndex: i,
@@ -8054,7 +8078,7 @@ public struct NotebookEditorView: View {
         let img = PageThumbnailRenderer.renderFullPage(
             notebook: notebook,
             pageIndex: currentPageIndex,
-            drawing: currentDrawing,
+            drawing: drawingForPage(currentPageIndex),
             store: store,
             canvasWidth: width,
             scale: 2.0
@@ -8447,51 +8471,61 @@ public struct NotebookEditorView: View {
         activeTextAttachment?.alignmentRaw ?? "left"
     }
 
+    private func ensureActiveTextAttachment() -> (id: String, index: Int) {
+        if let id = activeTextAttachment?.id,
+           let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
+            return (id, index)
+        }
+        let draft = insertTextBox(at: CGPoint(x: PageGeometry.printableInset, y: 200))
+        let idx = (notebook.textAttachments?.firstIndex(where: { $0.id == draft.id })) ?? 0
+        return (draft.id, idx)
+    }
+
     private func toggleActiveTextBold() {
-        guard let id = activeTextAttachment?.id,
-              let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
-        notebook.textAttachments?[index].isBold.toggle()
+        let target = ensureActiveTextAttachment()
+        guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
+        notebook.textAttachments?[target.index].isBold.toggle()
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
     }
 
     private func toggleActiveTextItalic() {
-        guard let id = activeTextAttachment?.id,
-              let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
-        notebook.textAttachments?[index].isItalic.toggle()
+        let target = ensureActiveTextAttachment()
+        guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
+        notebook.textAttachments?[target.index].isItalic.toggle()
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
     }
 
     private func toggleActiveTextUnderline() {
-        guard let id = activeTextAttachment?.id,
-              let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
-        notebook.textAttachments?[index].isUnderline.toggle()
+        let target = ensureActiveTextAttachment()
+        guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
+        notebook.textAttachments?[target.index].isUnderline.toggle()
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
     }
 
     private func setActiveTextAlignment(_ align: String) {
-        guard let id = activeTextAttachment?.id,
-              let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
-        notebook.textAttachments?[index].alignmentRaw = align
+        let target = ensureActiveTextAttachment()
+        guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
+        notebook.textAttachments?[target.index].alignmentRaw = align
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
     }
 
     private func changeActiveTextFontSize(delta: CGFloat) {
-        guard let id = activeTextAttachment?.id,
-              let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
-        let current = notebook.textAttachments?[index].fontSize ?? 16
-        notebook.textAttachments?[index].fontSize = max(10, min(72, current + delta))
+        let target = ensureActiveTextAttachment()
+        guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
+        let current = notebook.textAttachments?[target.index].fontSize ?? 16
+        notebook.textAttachments?[target.index].fontSize = max(10, min(72, current + delta))
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
     }
 
     private func setActiveTextColor(_ hex: String) {
-        guard let id = activeTextAttachment?.id,
-              let index = notebook.textAttachments?.firstIndex(where: { $0.id == id }) else { return }
-        notebook.textAttachments?[index].textColorHex = hex
+        let target = ensureActiveTextAttachment()
+        guard let items = notebook.textAttachments, items.indices.contains(target.index) else { return }
+        notebook.textAttachments?[target.index].textColorHex = hex
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
     }
@@ -8599,14 +8633,16 @@ public struct NotebookEditorView: View {
     @discardableResult
     private func insertDefaultTable() {
         if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
-        notebook.tableAttachments?.append(NoteTableAttachment(pageIndex: currentPageIndex, x: 200, y: 200, rows: 3, cols: 3))
+        notebook.tableAttachments?.append(NoteTableAttachment(pageIndex: currentPageIndex, x: PageGeometry.printableInset, y: 200, rows: 3, cols: 3))
         store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
     }
 
     private func insertDefaultShape() {
         if notebook.shapeAttachments == nil { notebook.shapeAttachments = [] }
-        notebook.shapeAttachments?.append(NoteShapeAttachment(pageIndex: currentPageIndex, kindName: "rectangle", x: 200, y: 200, width: 120, height: 80, cornerRadius: 8, strokeColorHex: "#000000", fillColorHex: "#FFFFFF", lineWidth: 2))
+        notebook.shapeAttachments?.append(NoteShapeAttachment(pageIndex: currentPageIndex, kindName: "rectangle", x: PageGeometry.printableInset, y: 200, width: 120, height: 80, cornerRadius: 8, strokeColorHex: "#000000", fillColorHex: "#FFFFFF", lineWidth: 2))
         store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
     }
 
     private func snapYToGuideLine(at y: CGFloat) -> CGFloat {
@@ -8676,7 +8712,7 @@ public struct NotebookEditorView: View {
             fontSize: activeTextAttachment?.fontSize ?? 16,
             textColorHex: activeTextAttachment?.textColorHex ?? "#000000",
             backgroundColorHex: "clear",
-            hasBorder: false,
+            hasBorder: true,
             x: startX,
             y: max(printable.minY, min(targetY, printable.maxY - 40)),
             width: availWidth,
@@ -8691,6 +8727,8 @@ public struct NotebookEditorView: View {
         notebook.setObjectOrder(order, forPage: currentPageIndex)
 
         store.updateNotebook(notebook)
+        inlineEditingTextId = draft.id
+        editingTextId = draft.id
         return draft
     }
 
@@ -8705,27 +8743,30 @@ public struct NotebookEditorView: View {
     }
 
     private func insertQuickTextSnippet(_ text: String) {
-        // 尺寸配合內容。高度現在是權威值（見 format-spec §6.2），
-        // 160 × 60 配 24pt 粗體裝不下「↔ 120.0 ±0.05 mm」這種標註，
-        // 會被裁掉 —— 而使用者看不出那是尺寸問題還是字沒插進去。
+        if let id = inlineEditingTextId ?? editingTextId,
+           let idx = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
+            notebook.textAttachments?[idx].text.append(text)
+            store.updateNotebook(notebook)
+            PageThumbnailRenderer.invalidateAll()
+            return
+        }
         let newBox = NoteTextAttachment(
             pageIndex: currentPageIndex,
             text: text,
             fontSize: 20,
             isBold: true,
-            x: 100,
-            y: 120,
+            hasBorder: true,
+            x: PageGeometry.printableInset,
+            y: 200,
             width: 260,
             height: 64
         )
         if notebook.textAttachments == nil {
             notebook.textAttachments = []
         }
-        if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == newBox.id }) {
-            notebook.textAttachments?[idx] = newBox
-        } else {
-            notebook.textAttachments?.append(newBox)
-        }
+        notebook.textAttachments?.append(newBox)
+        inlineEditingTextId = newBox.id
+        editingTextId = newBox.id
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
     }
@@ -9788,6 +9829,7 @@ struct AttachmentItemView: View {
         }
         .padding(20)
         .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
+        .animation(nil, value: dragOffset)
     }
 }
 
@@ -10151,6 +10193,7 @@ struct TextAttachmentItemView: View {
         }
         .padding(20)
         .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
+        .animation(nil, value: dragOffset)
         .onChange(of: isEditingInline) { editing in
             if editing {
                 inlineFocused = true
@@ -10312,6 +10355,7 @@ struct LinkAttachmentItemView: View {
             .onTapGesture { isSelected.toggle() }
             .padding(20)
         .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
+        .animation(nil, value: dragOffset)
             .sheet(isPresented: $isEditing) { resizableSheet {
                 LinkAttachmentEditSheet(linkItem: $linkItem)
             } }
@@ -10674,6 +10718,7 @@ struct Model3DCanvasItemView: View {
         .frame(width: max(200, item.width))
         .padding(20)
         .position(x: currentX + item.width / 2, y: currentY + item.height / 2)
+        .animation(nil, value: dragOffset)
     }
 }
 

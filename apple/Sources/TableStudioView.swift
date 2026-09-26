@@ -410,5 +410,6 @@ struct TableAttachmentItemView: View {
                 x: currentX + CGFloat(layout.width) / 2,
                 y: currentY + CGFloat(layout.height) / 2
             )
+            .animation(nil, value: dragOffset)
     }
 }

@@ -463,6 +463,7 @@ struct ShapeAttachmentItemView: View {
                 }
             }
             .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
+            .animation(nil, value: dragOffset)
             .sheet(isPresented: $isEditingStyle) { resizableSheet {
                 ShapeStyleSheet(shape: $shape)
             } }
