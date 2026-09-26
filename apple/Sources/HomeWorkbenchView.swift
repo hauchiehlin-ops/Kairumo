@@ -20,6 +20,8 @@ public struct HomeWorkbenchView: View {
     @StateObject private var notebookStore = NotebookStore.shared
     @StateObject private var audioManager = AudioRecorderManager.shared
     @StateObject private var localizationManager = LocalizationManager.shared
+    @ObservedObject private var transcriber = AudioTranscriber.shared
+    @ObservedObject private var tailscaleMonitor = TailscaleMonitor.shared
 
     @State private var searchText: String = ""
     /// 核心索引的搜尋結果（轉錄、PDF、OCR）。見 `NotebookSearchIndex`。
@@ -1109,6 +1111,9 @@ public struct HomeWorkbenchView: View {
                 }
             }
 
+            // 🌟 語音轉錄引擎狀態與 Whisper 模型下載橫幅
+            whisperModelBanner
+
             if visibleRecordings.isEmpty {
                 HStack {
                     Spacer()
@@ -1224,6 +1229,89 @@ public struct HomeWorkbenchView: View {
                 }
             }
         }
+    }
+
+    private var whisperModelBanner: some View {
+        HStack(spacing: 12) {
+            Image(systemName: transcriber.isWhisperAvailable ? "waveform.badge.mic" : "arrow.down.circle.fill")
+                .font(.system(size: 20))
+                .foregroundColor(transcriber.isWhisperAvailable ? .green : .blue)
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(transcriber.isWhisperAvailable ? "Whisper 端側神經語音模型已就緒" : "未下載 Whisper 離線語音模型")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+
+                    Circle()
+                        .fill(transcriber.isWhisperAvailable ? Color.green : Color.orange)
+                        .frame(width: 8, height: 8)
+                }
+
+                if transcriber.isWhisperAvailable {
+                    Text("100% 離線高精準辨識 (574 MB)，支援多國語自動偵測與智慧標點")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                } else if transcriber.isDownloadingModel {
+                    HStack(spacing: 8) {
+                        ProgressView(value: transcriber.downloadProgress)
+                            .progressViewStyle(.linear)
+                            .frame(maxWidth: 160)
+                        Text(transcriber.downloadStatusText.isEmpty ? "\(Int(transcriber.downloadProgress * 100))%" : transcriber.downloadStatusText)
+                            .font(.caption2)
+                            .monospacedDigit()
+                            .foregroundColor(.secondary)
+                        Button(localizationManager.localized("cancel")) {
+                            transcriber.cancelModelDownload()
+                        }
+                        .font(.caption2)
+                        .foregroundColor(.red)
+                    }
+                } else if let error = transcriber.downloadError {
+                    Text("下載中斷：\(error)")
+                        .font(.caption)
+                        .foregroundColor(.red)
+                } else {
+                    Text("點擊下載離線模型 (574 MB)；未下載時自動降級以系統聽寫轉錄")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+
+            Spacer()
+
+            if !transcriber.isWhisperAvailable {
+                if !transcriber.isDownloadingModel {
+                    Button {
+                        transcriber.downloadWhisperModel()
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "arrow.down.circle")
+                            Text("下載模型")
+                        }
+                        .font(.footnote)
+                        .fontWeight(.medium)
+                    }
+                    .buttonStyle(.borderedProminent)
+                }
+            } else {
+                Button {
+                    showInfoSheet = true
+                } label: {
+                    Text("管理")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .buttonStyle(.bordered)
+            }
+        }
+        .padding(12)
+        .background(transcriber.isWhisperAvailable ? Color.green.opacity(0.06) : Color.blue.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(transcriber.isWhisperAvailable ? Color.green.opacity(0.2) : Color.blue.opacity(0.2), lineWidth: 1)
+        )
     }
 
     // MARK: - 6. 全部筆記（真實多頁手繪文件）
@@ -1651,11 +1739,50 @@ public struct HomeWorkbenchView: View {
     }
 
     private var p2pSyncCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(localizationManager.localized("p2p_sync_tailscale_explainer"))
+        let tailscale = tailscaleMonitor.status
+        return VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .center) {
+                HStack(spacing: 8) {
+                    Image(systemName: "point.3.filled.connected.trianglepath")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundColor(.indigo)
+                    Text("Tailscale 點對點直連同步")
+                        .font(DS.Font.cardTitle)
+                        .fontWeight(.semibold)
+                }
+
+                Spacer()
+
+                // 連線狀態指示燈
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(tailscale.isConnected ? Color.green : Color.secondary.opacity(0.4))
+                        .frame(width: 8, height: 8)
+                    Text(tailscale.isConnected ? (tailscale.ipAddress ?? "已連線") : "未連線")
+                        .font(.system(size: 11, weight: .medium, design: .monospaced))
+                        .foregroundColor(tailscale.isConnected ? .green : .secondary)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
+                .background(tailscale.isConnected ? Color.green.opacity(0.12) : Color.secondary.opacity(0.08))
+                .clipShape(Capsule())
+            }
+
+            Text("跨裝置直連同步：Padnote 使用 WebRTC 進行跨網際網路的點對點極速同步。為達到最穩定的無伺服器穿透效果，強烈建議在您的裝置上安裝 Tailscale。")
                 .font(DS.Font.caption)
                 .foregroundStyle(DS.Color.secondaryText)
-                .lineLimit(5)
+                .fixedSize(horizontal: false, vertical: true)
+
+            // 超連結
+            Link(destination: URL(string: "https://tailscale.com/download")!) {
+                HStack(spacing: 4) {
+                    Image(systemName: "arrow.up.right.square")
+                    Text("前往下載 Tailscale (tailscale.com/download)")
+                }
+                .font(DS.Font.caption)
+                .fontWeight(.medium)
+                .foregroundColor(.accentColor)
+            }
         }
         .padding(DS.Space.m)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -3724,6 +3851,7 @@ public struct CloudSyncDetailSheet: View {
     @ObservedObject private var autoSync = AutoSyncController.shared
     @ObservedObject private var notebookStore = NotebookStore.shared
     @ObservedObject private var syncLogger = SyncLogger.shared
+    @ObservedObject private var tailscaleMonitor = TailscaleMonitor.shared
     @Environment(\.dismiss) private var dismiss
 
     public enum LogFilter: String, CaseIterable, Identifiable {
@@ -3817,6 +3945,31 @@ public struct CloudSyncDetailSheet: View {
                         .pickerStyle(.segmented)
                     }
                     .padding(.top, DS.Space.xs)
+
+                    // Tailscale 點對點連線狀態指示
+                    HStack(spacing: 8) {
+                        Circle()
+                            .fill(tailscaleMonitor.status.isConnected ? Color.green : Color.secondary.opacity(0.4))
+                            .frame(width: 8, height: 8)
+                        Text(tailscaleMonitor.status.isConnected ? "Tailscale 直連就緒 (\(tailscaleMonitor.status.ipAddress ?? ""))" : "Tailscale 未連線")
+                            .font(DS.Font.caption)
+                            .foregroundColor(tailscaleMonitor.status.isConnected ? .green : .secondary)
+
+                        Spacer()
+
+                        Link(destination: URL(string: "https://tailscale.com/download")!) {
+                            HStack(spacing: 3) {
+                                Image(systemName: "arrow.up.right.square")
+                                Text("下載 Tailscale")
+                            }
+                            .font(DS.Font.caption)
+                            .foregroundColor(.accentColor)
+                        }
+                    }
+                    .padding(.horizontal, DS.Space.s)
+                    .padding(.vertical, DS.Space.xs)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                     if selectedProvider == .googleDrive {
                         googleDriveSection
