@@ -31,6 +31,7 @@ public struct HomeWorkbenchView: View {
     @State private var viewingDocument: BundledDocument? = nil
     /// 正在挑「要插進哪一本筆記」的錄音。
     @State private var insertingRecording: AudioRecordingRecord? = nil
+    @State private var shareRecordingURL: URL? = nil
     @Environment(\.openWindow) private var openWindow
     @State private var showInfoSheet: Bool = false
     @State private var showCloudSyncSheet: Bool = false
@@ -367,9 +368,6 @@ public struct HomeWorkbenchView: View {
             } }
             .sheet(item: $viewingDocument) { doc in resizableSheet {
                 DocumentViewerSheet(document: doc)
-            } }
-            .sheet(item: $insertingRecording) { rec in resizableSheet {
-                RecordingToNotebookSheet(recording: rec)
             } }
             .sheet(isPresented: $showInfoSheet) { resizableSheet {
                 AppDiagnosticsSheet(versionString: appVersionString, platformDesc: platformArchitectureDescription)
@@ -860,113 +858,154 @@ public struct HomeWorkbenchView: View {
                 ScrollView(.horizontal, showsIndicators: true) {
                     HStack(spacing: 14) {
                         ForEach(displayedList) { note in
-                            Button {
-                                selectedNotebookForEditing = note
-                            } label: {
-                                VStack(alignment: .leading, spacing: 10) {
-                                    HStack {
-                                        Image(systemName: note.template.iconName)
-                                            .foregroundColor(.accentColor)
+                            ZStack(alignment: .topTrailing) {
+                                Button {
+                                    selectedNotebookForEditing = note
+                                } label: {
+                                    VStack(alignment: .leading, spacing: 10) {
+                                        HStack {
+                                            Image(systemName: note.template.iconName)
+                                                .foregroundColor(.accentColor)
 
-                                        if note.hasRecording {
-                                            HStack(spacing: 3) {
-                                                Circle()
-                                                    .fill(Color.red)
-                                                    .frame(width: 6, height: 6)
-                                                Image(systemName: "waveform")
-                                                    .font(.caption2)
-                                                    .foregroundColor(.red)
-                                            }
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 3)
-                                            .background(Color.red.opacity(0.1))
-                                            .cornerRadius(8)
-                                        }
-
-                                        Spacer()
-
-                                        // 個別檔案功能選項（隱藏、重新命名、副本、刪除）
-                                        Menu {
-                                            Button {
-                                                selectedNotebookForEditing = note
-                                            } label: {
-                                                Label(localizationManager.localized("open_editor"), systemImage: "pencil.and.scribble")
-                                            }
-                                            Button {
-                                                withAnimation {
-                                                    _ = hiddenNoteIds.insert(note.id)
+                                            if note.hasRecording {
+                                                HStack(spacing: 3) {
+                                                    Circle()
+                                                        .fill(Color.red)
+                                                        .frame(width: 6, height: 6)
+                                                    Image(systemName: "waveform")
+                                                        .font(.caption2)
+                                                        .foregroundColor(.red)
                                                 }
-                                            } label: {
-                                                Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 3)
+                                                .background(Color.red.opacity(0.1))
+                                                .cornerRadius(8)
                                             }
-                                            Button {
-                                                renameText = note.displayTitle()
-                                                renamingNotebookId = note.id
-                                            } label: {
-                                                Label(localizationManager.localized("rename_note"), systemImage: "pencil")
-                                            }
-                                            Button {
-                                                notebookToMoveId = note.id
-                                                showMoveNotebookSheet = true
-                                            } label: {
-                                                Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
-                                            }
-                                            Button {
-                                                notebookStore.duplicateNotebook(id: note.id)
-                                            } label: {
-                                                Label(localizationManager.localized("duplicate_note"), systemImage: "doc.on.doc")
-                                            }
-                                            Divider()
-                                            Button(role: .destructive) {
-                                                notebookStore.deleteNotebook(id: note.id)
-                                            } label: {
-                                                Label(localizationManager.localized("delete_item"), systemImage: "trash")
-                                            }
-                                        } label: {
-                                            Image(systemName: "ellipsis.circle")
-                                                .font(.system(size: 15))
-                                                .foregroundColor(.secondary)
-                                                .padding(2)
+
+                                            Spacer()
                                         }
-                                        .buttonStyle(.plain)
+
+                                        Text(note.displayTitle())
+                                            .font(.headline)
+                                            .foregroundColor(.primary)
+                                            .lineLimit(1)
+
+                                        if let snippet = note.displaySnippet() {
+                                            Text(snippet)
+                                                .font(.caption)
+                                                .foregroundColor(.secondary)
+                                                .lineLimit(2)
+                                                .truncationMode(.tail)
+                                                .environment(\.layoutDirection, .leftToRight)
+                                        }
+
+                                        Spacer(minLength: 0)
+
+                                        HStack {
+                                            Text("\(note.pageCount) \(localizationManager.localized("pages_count_suffix")) · \(localizationManager.localized(note.template.localizationKey))")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                            Spacer()
+                                            Text(note.lastModifiedDate, style: .time)
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                        }
                                     }
-
-                                    Text(note.displayTitle())
-                                        .font(.headline)
-                                        .foregroundColor(.primary)
-                                        .lineLimit(1)
-
-                                    if let snippet = note.displaySnippet() {
-                                        Text(snippet)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                            .lineLimit(2)
-                                            .truncationMode(.tail)
-                                            // 停用連字斷字：避免 CoreText 在 main thread
-                                            // 同步載入斷字字典（CFBurstTrieCreateFromFile），
-                                            // 防止 0x8BADF00D watchdog 終止。
-                                            .environment(\.layoutDirection, .leftToRight)
-                                    }
-
-                                    Spacer(minLength: 0)
-
-                                    HStack {
-                                        Text("\(note.pageCount) \(localizationManager.localized("pages_count_suffix")) · \(localizationManager.localized(note.template.localizationKey))")
-                                            .font(.caption2)
-                                            .foregroundColor(.secondary)
-                                        Spacer()
-                                        Text(note.lastModifiedDate, style: .time)
-                                            .font(.caption2)
-                                            .foregroundColor(.secondary)
-                                    }
+                                    .padding(14)
+                                    .frame(width: 220, height: 140)
+                                    .contentShape(Rectangle())
                                 }
-                                .padding(14)
-                                .frame(width: 220, height: 140)
-                                .background(Color(uiColor: .secondarySystemGroupedBackground))
-                                .cornerRadius(14)
-                                .shadow(color: Color.black.opacity(0.04), radius: 6, y: 2)
+                                .buttonStyle(.plain)
+
+                                // 個別檔案功能選項（隱藏、重新命名、副本、刪除）
+                                Menu {
+                                    Button {
+                                        selectedNotebookForEditing = note
+                                    } label: {
+                                        Label(localizationManager.localized("open_editor"), systemImage: "pencil.and.scribble")
+                                    }
+                                    Button {
+                                        withAnimation {
+                                            _ = hiddenNoteIds.insert(note.id)
+                                        }
+                                    } label: {
+                                        Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
+                                    }
+                                    Button {
+                                        renameText = note.displayTitle()
+                                        renamingNotebookId = note.id
+                                    } label: {
+                                        Label(localizationManager.localized("rename_note"), systemImage: "pencil")
+                                    }
+                                    Button {
+                                        notebookToMoveId = note.id
+                                        showMoveNotebookSheet = true
+                                    } label: {
+                                        Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
+                                    }
+                                    Button {
+                                        notebookStore.duplicateNotebook(id: note.id)
+                                    } label: {
+                                        Label(localizationManager.localized("duplicate_note"), systemImage: "doc.on.doc")
+                                    }
+                                    Divider()
+                                    Button(role: .destructive) {
+                                        withAnimation {
+                                            notebookStore.deleteNotebook(id: note.id)
+                                        }
+                                    } label: {
+                                        Label(localizationManager.localized("delete_item"), systemImage: "trash")
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                        .font(.system(size: 15))
+                                        .foregroundColor(.secondary)
+                                        .padding(10)
+                                        .contentShape(Rectangle())
+                                }
                             }
-                            .buttonStyle(.plain)
+                            .background(Color(uiColor: .secondarySystemGroupedBackground))
+                            .cornerRadius(14)
+                            .shadow(color: Color.black.opacity(0.04), radius: 6, y: 2)
+                            .contextMenu {
+                                Button {
+                                    selectedNotebookForEditing = note
+                                } label: {
+                                    Label(localizationManager.localized("open_editor"), systemImage: "pencil.and.scribble")
+                                }
+                                Button {
+                                    withAnimation {
+                                        _ = hiddenNoteIds.insert(note.id)
+                                    }
+                                } label: {
+                                    Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
+                                }
+                                Button {
+                                    renameText = note.displayTitle()
+                                    renamingNotebookId = note.id
+                                } label: {
+                                    Label(localizationManager.localized("rename_note"), systemImage: "pencil")
+                                }
+                                Button {
+                                    notebookToMoveId = note.id
+                                    showMoveNotebookSheet = true
+                                } label: {
+                                    Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
+                                }
+                                Button {
+                                    notebookStore.duplicateNotebook(id: note.id)
+                                } label: {
+                                    Label(localizationManager.localized("duplicate_note"), systemImage: "doc.on.doc")
+                                }
+                                Divider()
+                                Button(role: .destructive) {
+                                    withAnimation {
+                                        notebookStore.deleteNotebook(id: note.id)
+                                    }
+                                } label: {
+                                    Label(localizationManager.localized("delete_item"), systemImage: "trash")
+                                }
+                            }
                         }
                     }
                     .padding(.vertical, 4)
@@ -1030,7 +1069,11 @@ public struct HomeWorkbenchView: View {
                     .accessibilityIdentifier("home.recordings.show_all")
 
                     Button {
+                        #if targetEnvironment(macCatalyst) || os(macOS)
                         audioManager.openRecordingsFolderInFinder()
+                        #else
+                        shareRecordingURL = audioManager.recordingsDirectory
+                        #endif
                     } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "folder")
@@ -1095,7 +1138,11 @@ public struct HomeWorkbenchView: View {
                         // 不是「開啟錄音資料夾」）。兩個版面變體只接一邊的線，
                         // 是這個專案一再出現的一類 bug。
                         Button {
+                            #if targetEnvironment(macCatalyst) || os(macOS)
                             audioManager.openRecordingsFolderInFinder()
+                            #else
+                            shareRecordingURL = audioManager.recordingsDirectory
+                            #endif
                         } label: {
                             HStack(spacing: 4) {
                                 Image(systemName: "folder")
@@ -1204,13 +1251,19 @@ public struct HomeWorkbenchView: View {
                                     Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
                                 }
                                 Button {
+                                    #if targetEnvironment(macCatalyst) || os(macOS)
                                     audioManager.openRecordingsFolderInFinder()
+                                    #else
+                                    shareRecordingURL = fileUrl
+                                    #endif
                                 } label: {
                                     Label(localizationManager.localized("show_in_folder"), systemImage: "folder")
                                 }
                                 Divider()
                                 Button(role: .destructive) {
-                                    notebookStore.deleteRecording(id: rec.id)
+                                    withAnimation {
+                                        notebookStore.deleteRecording(id: rec.id)
+                                    }
                                 } label: {
                                     Label(localizationManager.localized("delete_recording"), systemImage: "trash")
                                 }
@@ -1218,16 +1271,61 @@ public struct HomeWorkbenchView: View {
                                 Image(systemName: "ellipsis.circle")
                                     .font(.system(size: 16))
                                     .foregroundColor(.secondary)
-                                    .padding(4)
+                                    .padding(8)
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
                         }
                         .padding(12)
                         .background(Color(uiColor: .secondarySystemGroupedBackground))
                         .cornerRadius(12)
+                        .contextMenu {
+                            Button {
+                                insertingRecording = rec
+                            } label: {
+                                Label(localizationManager.localized("insert_to_notebook"),
+                                      systemImage: "text.badge.plus")
+                            }
+                            Divider()
+                            Button {
+                                withAnimation {
+                                    _ = hiddenRecordingIds.insert(rec.id)
+                                }
+                            } label: {
+                                Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
+                            }
+                            Button {
+                                #if targetEnvironment(macCatalyst) || os(macOS)
+                                audioManager.openRecordingsFolderInFinder()
+                                #else
+                                shareRecordingURL = fileUrl
+                                #endif
+                            } label: {
+                                Label(localizationManager.localized("show_in_folder"), systemImage: "folder")
+                            }
+                            Divider()
+                            Button(role: .destructive) {
+                                withAnimation {
+                                    notebookStore.deleteRecording(id: rec.id)
+                                }
+                            } label: {
+                                Label(localizationManager.localized("delete_recording"), systemImage: "trash")
+                            }
+                        }
                     }
                 }
             }
+        }
+        .sheet(item: $insertingRecording) { rec in
+            resizableSheet {
+                RecordingToNotebookSheet(recording: rec)
+            }
+        }
+        .sheet(item: Binding(
+            get: { shareRecordingURL.map { IdentifiableURL(url: $0) } },
+            set: { shareRecordingURL = $0?.url }
+        )) { item in
+            ShareSheet(items: [item.url])
         }
     }
 
@@ -1518,95 +1616,147 @@ public struct HomeWorkbenchView: View {
 
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 14)], spacing: 14) {
                 ForEach(visibleList) { note in
-                    Button {
-                        selectedNotebookForEditing = note
-                    } label: {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ZStack(alignment: .topTrailing) {
-                                RoundedRectangle(cornerRadius: 10)
-                                    .fill(Color(uiColor: .tertiarySystemGroupedBackground))
-                                    .frame(height: 110)
+                    VStack(alignment: .leading, spacing: 8) {
+                        ZStack(alignment: .topTrailing) {
+                            Button {
+                                selectedNotebookForEditing = note
+                            } label: {
+                                ZStack {
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(Color(uiColor: .tertiarySystemGroupedBackground))
+                                        .frame(height: 110)
 
-                                VStack(spacing: 6) {
-                                    Image(systemName: note.template.iconName)
-                                        .font(.largeTitle)
-                                        .foregroundColor(.accentColor.opacity(0.7))
-                                    Text(note.displayTitle())
-                                        .font(.caption2)
-                                        .lineLimit(1)
-                                        .foregroundColor(.secondary)
+                                    VStack(spacing: 6) {
+                                        Image(systemName: note.template.iconName)
+                                            .font(.largeTitle)
+                                            .foregroundColor(.accentColor.opacity(0.7))
+                                        Text(note.displayTitle())
+                                            .font(.caption2)
+                                            .lineLimit(1)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    .padding(8)
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                                 }
-                                .padding(8)
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
 
-                                // 個別功能選項
-                                Menu {
-                                    Button {
-                                        selectedNotebookForEditing = note
-                                    } label: {
-                                        Label(localizationManager.localized("open_editor"), systemImage: "pencil.and.scribble")
-                                    }
-                                    Button {
-                                        withAnimation {
-                                            _ = hiddenNoteIds.insert(note.id)
-                                        }
-                                    } label: {
-                                        Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
-                                    }
-                                    Button {
-                                        renameText = note.displayTitle()
-                                        renamingNotebookId = note.id
-                                    } label: {
-                                        Label(localizationManager.localized("rename_note"), systemImage: "pencil")
-                                    }
-                                    Button {
-                                        notebookToMoveId = note.id
-                                        showMoveNotebookSheet = true
-                                    } label: {
-                                        Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
-                                    }
-                                    Button {
-                                        notebookStore.duplicateNotebook(id: note.id)
-                                    } label: {
-                                        Label(localizationManager.localized("duplicate_note"), systemImage: "doc.on.doc")
-                                    }
-                                    Divider()
-                                    Button(role: .destructive) {
-                                        notebookStore.deleteNotebook(id: note.id)
-                                    } label: {
-                                        Label(localizationManager.localized("delete_item"), systemImage: "trash")
+                            // 個別功能選項
+                            Menu {
+                                Button {
+                                    selectedNotebookForEditing = note
+                                } label: {
+                                    Label(localizationManager.localized("open_editor"), systemImage: "pencil.and.scribble")
+                                }
+                                Button {
+                                    withAnimation {
+                                        _ = hiddenNoteIds.insert(note.id)
                                     }
                                 } label: {
-                                    Image(systemName: "ellipsis.circle.fill")
-                                        .font(.system(size: 16))
-                                        .foregroundColor(.secondary.opacity(0.8))
-                                        .padding(8)
+                                    Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
                                 }
-                                .buttonStyle(.plain)
-                            }
-
-                            Text(note.displayTitle())
-                                .font(.subheadline)
-                                .fontWeight(.medium)
-                                .foregroundColor(.primary)
-                                .lineLimit(1)
-
-                            HStack {
-                                Text("\(note.pageCount) \(localizationManager.localized("pages_count_suffix"))")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                Spacer()
-                                Text(note.lastModifiedDate, style: .date)
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
+                                Button {
+                                    renameText = note.displayTitle()
+                                    renamingNotebookId = note.id
+                                } label: {
+                                    Label(localizationManager.localized("rename_note"), systemImage: "pencil")
+                                }
+                                Button {
+                                    notebookToMoveId = note.id
+                                    showMoveNotebookSheet = true
+                                } label: {
+                                    Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
+                                }
+                                Button {
+                                    notebookStore.duplicateNotebook(id: note.id)
+                                } label: {
+                                    Label(localizationManager.localized("duplicate_note"), systemImage: "doc.on.doc")
+                                }
+                                Divider()
+                                Button(role: .destructive) {
+                                    withAnimation {
+                                        notebookStore.deleteNotebook(id: note.id)
+                                    }
+                                } label: {
+                                    Label(localizationManager.localized("delete_item"), systemImage: "trash")
+                                }
+                            } label: {
+                                Image(systemName: "ellipsis.circle.fill")
+                                    .font(.system(size: 16))
+                                    .foregroundColor(.secondary.opacity(0.8))
+                                    .padding(8)
+                                    .contentShape(Rectangle())
                             }
                         }
-                        .padding(10)
-                        .background(Color(uiColor: .secondarySystemGroupedBackground))
-                        .cornerRadius(12)
-                        .shadow(color: Color.black.opacity(0.03), radius: 4, y: 2)
+
+                        Button {
+                            selectedNotebookForEditing = note
+                        } label: {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(note.displayTitle())
+                                    .font(.subheadline)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.primary)
+                                    .lineLimit(1)
+
+                                HStack {
+                                    Text("\(note.pageCount) \(localizationManager.localized("pages_count_suffix"))")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Text(note.lastModifiedDate, style: .date)
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
+                    .padding(10)
+                    .background(Color(uiColor: .secondarySystemGroupedBackground))
+                    .cornerRadius(12)
+                    .shadow(color: Color.black.opacity(0.03), radius: 4, y: 2)
+                    .contextMenu {
+                        Button {
+                            selectedNotebookForEditing = note
+                        } label: {
+                            Label(localizationManager.localized("open_editor"), systemImage: "pencil.and.scribble")
+                        }
+                        Button {
+                            withAnimation {
+                                _ = hiddenNoteIds.insert(note.id)
+                            }
+                        } label: {
+                            Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
+                        }
+                        Button {
+                            renameText = note.displayTitle()
+                            renamingNotebookId = note.id
+                        } label: {
+                            Label(localizationManager.localized("rename_note"), systemImage: "pencil")
+                        }
+                        Button {
+                            notebookToMoveId = note.id
+                            showMoveNotebookSheet = true
+                        } label: {
+                            Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
+                        }
+                        Button {
+                            notebookStore.duplicateNotebook(id: note.id)
+                        } label: {
+                            Label(localizationManager.localized("duplicate_note"), systemImage: "doc.on.doc")
+                        }
+                        Divider()
+                        Button(role: .destructive) {
+                            withAnimation {
+                                notebookStore.deleteNotebook(id: note.id)
+                            }
+                        } label: {
+                            Label(localizationManager.localized("delete_item"), systemImage: "trash")
+                        }
+                    }
                     // 每一張卡片一個識別碼（S-263）。
                     //
                     // 在此之前只有整份清單有 `home.notebooks.list`，於是測試

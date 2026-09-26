@@ -1782,7 +1782,12 @@ public final class NotebookStore: ObservableObject {
     }
 
     public func deleteNotebook(id: String) {
-        notebooks.removeAll { $0.id.caseInsensitiveCompare(id) == .orderedSame }
+        if activeNotebookId?.caseInsensitiveCompare(id) == .orderedSame {
+            activeNotebookId = nil
+        }
+        withAnimation {
+            notebooks.removeAll { $0.id.caseInsensitiveCompare(id) == .orderedSame }
+        }
         AccountSyncStore.shared.recordDeletion(id: id)
         let pkgDir = corePackagesDirectory.appending(path: "\(id).padnote")
         try? FileManager.default.removeItem(at: pkgDir)
@@ -2744,27 +2749,40 @@ public final class NotebookStore: ObservableObject {
 
     public func deleteRecording(id: String) {
         if let rec = recordings.first(where: { $0.id == id }) {
-            // **刪套件裡那一份要留墓碑。**
-            //
-            // 只刪檔案的話，同步看到「遠端有、本機沒有」就會把它抓回來 ——
-            // 刪除永遠刪不掉，每同步一次復活一次。使用者回報的「一直無法
-            // 處於真正同步狀態」就有這一條。
-            //
-            // 墓碑的規則在核心（`padnote_sync::media_tombstone`），兩端共用。
+            let fileName = rec.fileName
+            // 1. 若有關聯筆記本，走核心標記墓碑並刪除
             if let notebookId = rec.linkedNotebookId {
                 let packagePath = corePackagesDirectory
                     .appending(path: "\(notebookId.lowercased()).padnote").path
-                let error = mediaDeleteAudio(packagePath: packagePath, name: rec.fileName)
+                let error = mediaDeleteAudio(packagePath: packagePath, name: fileName)
                 if !error.isEmpty {
                     SyncLogger.logAsync("刪除錄音：\(error)", source: .googleDrive)
                 }
             }
-            // 套件外那一份（還沒歸到任何筆記本的錄音）直接刪，它不參與同步。
+            // 2. 檢查「錄音收件匣」套件
+            let inboxPath = corePackagesDirectory
+                .appending(path: "\(recordingInboxNotebookId().lowercased()).padnote").path
+            if FileManager.default.fileExists(atPath: inboxPath) {
+                _ = mediaDeleteAudio(packagePath: inboxPath, name: fileName)
+            }
+            // 3. 搜尋所有本機套件目錄，凡有該音訊檔皆刪除並留墓碑
+            if let packages = try? FileManager.default.contentsOfDirectory(at: corePackagesDirectory, includingPropertiesForKeys: nil) {
+                for pkg in packages where pkg.pathExtension == "padnote" {
+                    let audioFile = pkg.appending(path: "media/audio").appending(path: fileName)
+                    if FileManager.default.fileExists(atPath: audioFile.path) {
+                        _ = mediaDeleteAudio(packagePath: pkg.path, name: fileName)
+                        try? FileManager.default.removeItem(at: audioFile)
+                    }
+                }
+            }
+            // 4. 套件外那一份（還沒歸到任何筆記本的錄音）直接刪，它不參與同步。
             let loose = AudioRecorderManager.shared.recordingsDirectory
-                .appending(path: rec.fileName)
+                .appending(path: fileName)
             try? FileManager.default.removeItem(at: loose)
         }
-        recordings.removeAll { $0.id == id }
+        withAnimation {
+            recordings.removeAll { $0.id == id }
+        }
         persistData()
     }
 

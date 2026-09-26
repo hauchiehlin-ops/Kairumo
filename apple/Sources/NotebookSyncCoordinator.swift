@@ -620,12 +620,16 @@ enum NotebookSyncCoordinator {
 
         for pkg in allDiskPackages {
             let id = packageId(for: pkg).lowercased()
+            if deletedNotebookIds.contains(id) {
+                try? fm.removeItem(at: pkg)
+                cleanedCount += 1
+                continue
+            }
             if activeLocalIds.contains(id) {
-                deletedNotebookIds.remove(id)
                 packages.append(pkg)
                 continue
             }
-            if deletedNotebookIds.contains(id) || !cloudLiveIds.contains(id) {
+            if !cloudLiveIds.contains(id) {
                 try? fm.removeItem(at: pkg)
                 cleanedCount += 1
             }
