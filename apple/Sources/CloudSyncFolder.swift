@@ -101,10 +101,20 @@ enum CloudSyncFolder {
     static func setFolder(_ url: URL) throws {
         let data = try url.bookmarkData(options: bookmarkCreationOptions)
         UserDefaults.standard.set(data, forKey: bookmarkKey)
+        _cachedURL = url
+        _lastBookmarkData = data
+        Task { @MainActor in
+            CloudSyncFolderMonitor.shared.refresh()
+        }
     }
 
     static func clearFolder() {
         UserDefaults.standard.removeObject(forKey: bookmarkKey)
+        _cachedURL = nil
+        _lastBookmarkData = nil
+        Task { @MainActor in
+            CloudSyncFolderMonitor.shared.refresh()
+        }
     }
 
     // MARK: - 檔案清單
@@ -263,3 +273,16 @@ enum CloudSyncFolder {
         return FfiWipeResult(ok: failed == 0, deleted: UInt32(deleted), failed: UInt32(failed), error: firstError, needsReauth: false)
     }
 }
+
+/// 全局同步資料夾設定監聽器（提供 SwiftUI 響應式即時重繪）
+@MainActor
+public final class CloudSyncFolderMonitor: ObservableObject {
+    public static let shared = CloudSyncFolderMonitor()
+
+    @Published public private(set) var currentFolder: URL? = CloudSyncFolder.resolveFolder()
+
+    public func refresh() {
+        currentFolder = CloudSyncFolder.resolveFolder()
+    }
+}
+

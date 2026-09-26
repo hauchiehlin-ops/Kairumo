@@ -6662,11 +6662,36 @@ private fun FolderSyncDetailDialog(
                         Text(l("sync_now"))
                     }
 
+                    var showUnlinkConfirm by remember { mutableStateOf(false) }
+
                     TextButton(
-                        onClick = onClearFolder,
+                        onClick = { showUnlinkConfirm = true },
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text(l("delete_item"), color = MaterialTheme.colorScheme.error)
+                        Text(l("sync_folder_cancel_setting"), color = MaterialTheme.colorScheme.error)
+                    }
+
+                    if (showUnlinkConfirm) {
+                        AlertDialog(
+                            onDismissRequest = { showUnlinkConfirm = false },
+                            title = { Text(l("sync_folder_unlink_confirm_title")) },
+                            text = { Text(l("sync_folder_unlink_confirm_desc")) },
+                            confirmButton = {
+                                TextButton(
+                                    onClick = {
+                                        showUnlinkConfirm = false
+                                        onClearFolder()
+                                    }
+                                ) {
+                                    Text(l("folder_unlink"), color = MaterialTheme.colorScheme.error)
+                                }
+                            },
+                            dismissButton = {
+                                TextButton(onClick = { showUnlinkConfirm = false }) {
+                                    Text(l("cancel"))
+                                }
+                            }
+                        )
                     }
 
                     var showWipeConfirm by remember { mutableStateOf(false) }

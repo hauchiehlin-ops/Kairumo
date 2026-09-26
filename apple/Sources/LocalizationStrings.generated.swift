@@ -10400,6 +10400,14 @@ extension LocalizationManager {
             .ko: "동기화 실패: %@",
             .th: "ซิงค์ไม่สำเร็จ: %@"
         ],
+        "sync_folder_cancel_setting": [
+            .zhHant: "取消已設定的資料夾",
+            .en: "Unlink Configured Folder",
+            .zhHans: "取消已设置的文件夹",
+            .ja: "設定済みフォルダの解除",
+            .ko: "설정된 폴더 해제",
+            .th: "ยกเลิกการตั้งค่าโฟลเดอร์"
+        ],
         "sync_folder_desc": [
             .zhHant: "指到 iCloud Drive 或 Google Drive 的資料夾，兩台裝置就會互相同步",
             .en: "Point two devices at the same iCloud Drive or Google Drive folder",
@@ -10431,6 +10439,22 @@ extension LocalizationManager {
             .ja: "フォルダ",
             .ko: "폴더",
             .th: "โฟลเดอร์"
+        ],
+        "sync_folder_unlink_confirm_desc": [
+            .zhHant: "這只會取消與該資料夾的同步連結，不會刪除您本機或該資料夾內的任何筆記檔案。",
+            .en: "This will only unlink the folder from syncing. It will not delete any notes on your device or in the folder.",
+            .zhHans: "这只会取消与该文件夹的同步链接，不会删除您本机或该文件夹内的任何笔记文件。",
+            .ja: "同期のリンクを解除するだけで、端末内やフォルダ内のノートが削除されることはありません。",
+            .ko: "동기화 연결만 해제되며 기기나 해당 폴더의 노트 파일은 삭제되지 않습니다.",
+            .th: "การดำเนินการนี้จะยกเลิกการเชื่อมโยงการซิงก์เท่านั้น และจะไม่ลบโน้ตในเครื่องหรือในโฟลเดอร์ของคุณ"
+        ],
+        "sync_folder_unlink_confirm_title": [
+            .zhHant: "取消設定同步資料夾？",
+            .en: "Unlink Sync Folder?",
+            .zhHans: "取消设置同步文件夹？",
+            .ja: "同期フォルダの設定を解除しますか？",
+            .ko: "동기화 폴더 설정을 해제하시겠습니까?",
+            .th: "ยกเลิกการตั้งค่าโฟลเดอร์ซิงก์หรือไม่?"
         ],
         "sync_gdrive_syncing": [
             .zhHant: "Google Drive 同步中…",

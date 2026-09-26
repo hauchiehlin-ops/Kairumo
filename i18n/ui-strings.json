@@ -10408,6 +10408,14 @@
     "zhHans": "自动同步由 Google Drive 负责。这个文件夹是手动备份 —— 按「立即同步」才会更新。",
     "zhHant": "自動同步由 Google Drive 負責。這個資料夾是手動備份 —— 按「立即同步」才會更新。"
   },
+  "sync_folder_cancel_setting": {
+    "en": "Unlink Configured Folder",
+    "ja": "設定済みフォルダの解除",
+    "ko": "설정된 폴더 해제",
+    "th": "ยกเลิกการตั้งค่าโฟลเดอร์",
+    "zhHans": "取消已设置的文件夹",
+    "zhHant": "取消已設定的資料夾"
+  },
   "sync_folder_path": {
     "en": "Folder",
     "ja": "フォルダ",
@@ -10415,6 +10423,22 @@
     "th": "โฟลเดอร์",
     "zhHans": "资料夹路径",
     "zhHant": "資料夾路徑"
+  },
+  "sync_folder_unlink_confirm_desc": {
+    "en": "This will only unlink the folder from syncing. It will not delete any notes on your device or in the folder.",
+    "ja": "同期のリンクを解除するだけで、端末内やフォルダ内のノートが削除されることはありません。",
+    "ko": "동기화 연결만 해제되며 기기나 해당 폴더의 노트 파일은 삭제되지 않습니다.",
+    "th": "การดำเนินการนี้จะยกเลิกการเชื่อมโยงการซิงก์เท่านั้น และจะไม่ลบโน้ตในเครื่องหรือในโฟลเดอร์ของคุณ",
+    "zhHans": "这只会取消与该文件夹的同步链接，不会删除您本机或该文件夹内的任何笔记文件。",
+    "zhHant": "這只會取消與該資料夾的同步連結，不會刪除您本機或該資料夾內的任何筆記檔案。"
+  },
+  "sync_folder_unlink_confirm_title": {
+    "en": "Unlink Sync Folder?",
+    "ja": "同期フォルダの設定を解除しますか？",
+    "ko": "동기화 폴더 설정을 해제하시겠습니까?",
+    "th": "ยกเลิกการตั้งค่าโฟลเดอร์ซิงก์หรือไม่?",
+    "zhHans": "取消设置同步文件夹？",
+    "zhHant": "取消設定同步資料夾？"
   },
   "sync_gdrive_syncing": {
     "en": "Syncing Google Drive…",

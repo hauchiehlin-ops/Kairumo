@@ -10468,6 +10468,14 @@ object LocalizationStrings {
             "ko" to "동기화 실패: %@",
             "th" to "ซิงค์ไม่สำเร็จ: %@"
         ),
+        "sync_folder_cancel_setting" to mapOf(
+            "zh-Hant" to "取消已設定的資料夾",
+            "en" to "Unlink Configured Folder",
+            "zh-Hans" to "取消已设置的文件夹",
+            "ja" to "設定済みフォルダの解除",
+            "ko" to "설정된 폴더 해제",
+            "th" to "ยกเลิกการตั้งค่าโฟลเดอร์"
+        ),
         "sync_folder_desc" to mapOf(
             "zh-Hant" to "指到 iCloud Drive 或 Google Drive 的資料夾，兩台裝置就會互相同步",
             "en" to "Point two devices at the same iCloud Drive or Google Drive folder",
@@ -10499,6 +10507,22 @@ object LocalizationStrings {
             "ja" to "フォルダ",
             "ko" to "폴더",
             "th" to "โฟลเดอร์"
+        ),
+        "sync_folder_unlink_confirm_desc" to mapOf(
+            "zh-Hant" to "這只會取消與該資料夾的同步連結，不會刪除您本機或該資料夾內的任何筆記檔案。",
+            "en" to "This will only unlink the folder from syncing. It will not delete any notes on your device or in the folder.",
+            "zh-Hans" to "这只会取消与该文件夹的同步链接，不会删除您本机或该文件夹内的任何笔记文件。",
+            "ja" to "同期のリンクを解除するだけで、端末内やフォルダ内のノートが削除されることはありません。",
+            "ko" to "동기화 연결만 해제되며 기기나 해당 폴더의 노트 파일은 삭제되지 않습니다.",
+            "th" to "การดำเนินการนี้จะยกเลิกการเชื่อมโยงการซิงก์เท่านั้น และจะไม่ลบโน้ตในเครื่องหรือในโฟลเดอร์ของคุณ"
+        ),
+        "sync_folder_unlink_confirm_title" to mapOf(
+            "zh-Hant" to "取消設定同步資料夾？",
+            "en" to "Unlink Sync Folder?",
+            "zh-Hans" to "取消设置同步文件夹？",
+            "ja" to "同期フォルダの設定を解除しますか？",
+            "ko" to "동기화 폴더 설정을 해제하시겠습니까?",
+            "th" to "ยกเลิกการตั้งค่าโฟลเดอร์ซิงก์หรือไม่?"
         ),
         "sync_gdrive_syncing" to mapOf(
             "zh-Hant" to "Google Drive 同步中…",
@@ -10883,7 +10907,10 @@ object LocalizationStrings {
             "ja" to "表",
             "ko" to "표",
             "th" to "ตาราง"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "table_unmerge" to mapOf(
             "zh-Hant" to "取消合併",
             "en" to "Unmerge",
@@ -10907,10 +10934,7 @@ object LocalizationStrings {
             "ja" to "表の幅",
             "ko" to "표 너비",
             "th" to "ความกว้างตาราง"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tailscale_not_connected" to mapOf(
             "zh-Hant" to "Tailscale 未連線",
             "en" to "Tailscale Not Connected",
@@ -11526,7 +11550,10 @@ object LocalizationStrings {
             "ja" to "マイルストーン・担当・期日の3列",
             "ko" to "마일스톤·담당·기한 3열",
             "th" to "หมุดหมาย ผู้รับผิดชอบ กำหนดส่ง"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "tmpl_qa" to mapOf(
             "zh-Hant" to "問答筆記",
             "en" to "Question & Answer",
@@ -11550,10 +11577,7 @@ object LocalizationStrings {
             "ja" to "4象限メモ",
             "ko" to "4분면 노트",
             "th" to "บันทึกสี่ช่อง"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_quadrant_desc" to mapOf(
             "zh-Hant" to "重點、問題、決議、行動 —— 以下一步收尾的會議紀錄",
             "en" to "Points, questions, decisions, actions — meeting notes that end in a next step",
@@ -12169,7 +12193,10 @@ object LocalizationStrings {
             "ja" to "文字数：%@ 文字",
             "ko" to "글자 수: %@자",
             "th" to "จำนวนอักขระ: %@"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "wd_clear_format" to mapOf(
             "zh-Hant" to "清除格式",
             "en" to "Clear formatting",
@@ -12193,10 +12220,7 @@ object LocalizationStrings {
             "ja" to "蛍光色",
             "ko" to "형광색",
             "th" to "สีไฮไลต์"
-        )
-    )
-
-    private fun part19(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wd_ink_block" to mapOf(
             "zh-Hant" to "手繪區塊",
             "en" to "Handwriting block",

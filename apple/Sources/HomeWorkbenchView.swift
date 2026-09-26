@@ -87,6 +87,7 @@ public struct HomeWorkbenchView: View {
     /// 藏在設定頁裡的話，使用者不會知道有這個功能。
     @ObservedObject private var homeGoogleAuth = GoogleAuth.shared
     @ObservedObject private var autoSync = AutoSyncController.shared
+    @ObservedObject private var folderMonitor = CloudSyncFolderMonitor.shared
     /// 首頁那張卡片自己的同步狀態。
     ///
     /// 原本首頁的卡片只是一個「開啟診斷頁」的入口，登入／同步／登出三顆按鈕
@@ -4024,6 +4025,7 @@ public struct CloudSyncDetailSheet: View {
     @ObservedObject private var notebookStore = NotebookStore.shared
     @ObservedObject private var syncLogger = SyncLogger.shared
     @ObservedObject private var tailscaleMonitor = TailscaleMonitor.shared
+    @ObservedObject private var folderMonitor = CloudSyncFolderMonitor.shared
     @Environment(\.dismiss) private var dismiss
 
     public enum LogFilter: String, CaseIterable, Identifiable {
@@ -4052,6 +4054,7 @@ public struct CloudSyncDetailSheet: View {
     @State private var isFolderSyncing = false
     @State private var folderSyncTask: Task<Void, Never>?
     @State private var showFolderPicker = false
+    @State private var showUnlinkFolderConfirm = false
     @State private var shareSyncLogsURL: URL?
     @State private var copiedSyncLogs = false
 
@@ -4594,18 +4597,27 @@ public struct CloudSyncDetailSheet: View {
                     }
 
                     Button(role: .destructive) {
-                        CloudSyncFolder.clearFolder()
-                        folderStatusMessage = nil
+                        showUnlinkFolderConfirm = true
                     } label: {
-                        HStack {
-                            Image(systemName: "xmark.circle")
-                            Text(localizationManager.localized("delete_item"))
+                        HStack(spacing: 6) {
+                            Image(systemName: "folder.badge.minus")
+                            Text(localizationManager.localized("sync_folder_cancel_setting"))
+                                .fontWeight(.medium)
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                     }
-                    .buttonStyle(.plain)
-                    .foregroundColor(.red)
+                    .buttonStyle(.bordered)
+                    .tint(.red)
+                    .alert(localizationManager.localized("sync_folder_unlink_confirm_title"), isPresented: $showUnlinkFolderConfirm) {
+                        Button(localizationManager.localized("cancel"), role: .cancel) {}
+                        Button(localizationManager.localized("folder_unlink"), role: .destructive) {
+                            CloudSyncFolder.clearFolder()
+                            folderStatusMessage = nil
+                        }
+                    } message: {
+                        Text(localizationManager.localized("sync_folder_unlink_confirm_desc"))
+                    }
                     // 重置雲端資料夾
                     Button(role: .destructive) {
                         showWipeConfirm = true
