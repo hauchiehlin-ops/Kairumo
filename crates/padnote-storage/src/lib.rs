@@ -14,4 +14,5 @@ pub use blob::{BlobId, BlobStore};
 pub use manifest::{Encryption, Manifest};
 pub use package::{
     CompactOutcome, CompactResult, NotebookPackage, StorageError, archive_package, extract_package,
+    parse_oplog_name,
 };

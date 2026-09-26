@@ -5425,23 +5425,43 @@ public struct NotebookSnapshotDetailSheet: View {
     private func createSnapshot(for notebook: NotebookDocument) {
         guard creatingNotebookId == nil else { return }
         creatingNotebookId = notebook.id
-        defer { creatingNotebookId = nil }
 
-        do {
-            let package = try NotebookSyncCoordinator.mirrorWorkingCopyIntoPackage(
-                notebook, store: store, deviceId: NotebookMigration.deviceId
-            )
-            let filename = Self.safeFilename(notebook.displayTitle(localizationManager))
-            let out = FileManager.default.temporaryDirectory
-                .appending(path: "\(filename).padnote")
-            try? FileManager.default.removeItem(at: out)
-            try archiveNotebook(packageDir: package.path, outFile: out.path)
-            exportURL = out
-            snapshotMessage = localizationManager.localized("export_done")
-                .replacingFirst("%@", with: out.lastPathComponent)
-        } catch {
-            snapshotMessage = localizationManager.localized("export_failed")
-                .replacingFirst("%@", with: error.localizedDescription)
+        let store = self.store
+        let title = notebook.displayTitle(localizationManager)
+        let filename = Self.safeFilename(title)
+        let deviceId = NotebookMigration.deviceId
+
+        Task {
+            do {
+                let package = try await Task.detached(priority: .userInitiated) {
+                    try await MainActor.run {
+                        try NotebookSyncCoordinator.mirrorWorkingCopyIntoPackage(
+                            notebook, store: store, deviceId: deviceId
+                        )
+                    }
+                }.value
+
+                let out = try await Task.detached(priority: .userInitiated) { () -> URL in
+                    let fm = FileManager.default
+                    let outUrl = fm.temporaryDirectory.appending(path: "\(filename).padnote")
+                    try? fm.removeItem(at: outUrl)
+                    try archiveNotebook(packageDir: package.path, outFile: outUrl.path)
+                    return outUrl
+                }.value
+
+                await MainActor.run {
+                    self.exportURL = out
+                    self.snapshotMessage = self.localizationManager.localized("export_done")
+                        .replacingFirst("%@", with: out.lastPathComponent)
+                    self.creatingNotebookId = nil
+                }
+            } catch {
+                await MainActor.run {
+                    self.snapshotMessage = self.localizationManager.localized("export_failed")
+                        .replacingFirst("%@", with: error.localizedDescription)
+                    self.creatingNotebookId = nil
+                }
+            }
         }
     }
 

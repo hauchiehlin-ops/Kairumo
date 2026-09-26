@@ -204,7 +204,13 @@ enum ScreenAudit {
             var (element, _) = elementFor(id, label: labels[id], in: app)
             if scrollToFind && !element.exists {
                 for _ in 0..<6 where !element.exists {
-                    app.swipeUp()
+                    if let menu = app.menus.allElementsBoundByIndex.first(where: { $0.exists }) {
+                        menu.swipeUp()
+                    } else if let scroll = app.scrollViews.allElementsBoundByIndex.first(where: { $0.exists }) {
+                        scroll.swipeUp()
+                    } else {
+                        app.swipeUp()
+                    }
                     (element, _) = elementFor(id, label: labels[id], in: app)
                 }
             }
@@ -322,18 +328,21 @@ enum ScreenAudit {
         return out
     }
 
-    /// 先用識別字找；找不到才退而用標籤找。
-    ///
-    /// 順序不能反 —— 標籤會重複（兩顆按鈕寫著同一個字是常態），
-    /// 識別字才是唯一的。標籤只是「總比完全驗不到好」。
+    /// 尋找控制項：若有標籤則優先尋找真實渲染的按鈕（SwiftUI Menu 項目交由 UIKit
+    /// 算繪時會剝離 accessibilityIdentifier，若先查 identifier 會對上背景模板的幽靈節點，
+    /// 進而在存取 isEnabled 時拋出 Failed to get matching snapshot）。
+    /// 標籤找不到時退回識別字。
     private static func elementFor(
         _ id: String, label: String?, in app: XCUIApplication
     ) -> (element: XCUIElement, matchedByLabel: Bool) {
-        let byId = app.descendants(matching: .any).matching(identifier: id).firstMatch
-        if byId.exists { return (byId, false) }
         if let label, !label.isEmpty {
             let byLabel = app.buttons[label].firstMatch
             if byLabel.exists { return (byLabel, true) }
+        }
+        let byId = app.descendants(matching: .any).matching(identifier: id).firstMatch
+        if byId.exists { return (byId, false) }
+        if let label, !label.isEmpty {
+            return (app.buttons[label].firstMatch, true)
         }
         return (byId, false)
     }

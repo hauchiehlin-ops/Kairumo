@@ -1116,6 +1116,7 @@ impl NotebookPackage {
         }
 
         let mut out = Vec::new();
+        let mut seen_batches = std::collections::HashSet::new();
         for f in files {
             let name = f.file_name().and_then(|n| n.to_str()).unwrap_or_default();
             let (lamport, device) = parse_oplog_name(name).unwrap_or((0, 0));
@@ -1132,12 +1133,21 @@ impl NotebookPackage {
             // 有 `BatchOrigin` 的批次會把座標改成自己帶的那一組，
             // 所以壓實過的檔案裡，每一批仍然報得出它原本的 lamport。
             let (mut cur_lamport, mut cur_device) = (lamport, device);
+            let mut skipping_duplicate = if cur_lamport > 0 {
+                !seen_batches.insert((cur_lamport, cur_device))
+            } else {
+                false
+            };
             for op in
                 padnote_doc::ops::decode(&bytes).map_err(|e| StorageError::DocOps(e.to_string()))?
             {
                 if let DocOp::BatchOrigin { lamport, device } = op {
                     cur_lamport = lamport;
                     cur_device = device;
+                    skipping_duplicate = !seen_batches.insert((cur_lamport, cur_device));
+                    continue;
+                }
+                if skipping_duplicate {
                     continue;
                 }
                 out.push(OpEntry {
@@ -1232,7 +1242,24 @@ impl NotebookPackage {
     /// 所以每次開套件時抄一次：有金鑰的時候從 oplog 補齊界線，
     /// 之後即使鎖著也壓實得安全。
     pub fn absorb_milestone_barriers(&mut self) -> Result<bool, StorageError> {
-        let entries = self.read_doc_op_entries()?;
+        let dir = self.root.join("doc/ops");
+        if !dir.exists() {
+            return Ok(false);
+        }
+
+        let mut files: Vec<PathBuf> = fs::read_dir(&dir)?
+            .filter_map(Result::ok)
+            .map(|e| e.path())
+            .filter(|p| p.extension().is_some_and(|e| e == "oplog"))
+            .collect();
+        files.sort();
+
+        if self.manifest.is_encrypted() && self.dek.is_none() {
+            return Err(StorageError::DocOps(
+                "這個套件已加密，需要先解鎖才讀得出內容".into(),
+            ));
+        }
+
         let mut added = false;
         let mut note = |manifest: &mut Manifest, cut: &MilestoneCut| {
             for (device, lamport) in &cut.doc {
@@ -1241,14 +1268,29 @@ impl NotebookPackage {
                 added |= manifest.barriers_for(*device).len() != before;
             }
         };
-        for e in &entries {
-            match &e.op {
-                DocOp::MarkMilestone { cut, .. } => note(&mut self.manifest, cut),
-                DocOp::RestoreMilestone { cut, upto, .. } => {
-                    note(&mut self.manifest, cut);
-                    note(&mut self.manifest, upto);
+
+        for f in files {
+            let name = f.file_name().and_then(|n| n.to_str()).unwrap_or_default();
+            let raw = fs::read(&f)?;
+            let bytes = match &self.dek {
+                Some(dek) => {
+                    let aad = self.oplog_aad(name);
+                    crate::sealed::open_frames(dek, &raw, aad.as_bytes())
+                        .map_err(|e| StorageError::DocOps(e.to_string()))?
                 }
-                _ => {}
+                None => raw,
+            };
+            for op in
+                padnote_doc::ops::decode(&bytes).map_err(|e| StorageError::DocOps(e.to_string()))?
+            {
+                match &op {
+                    DocOp::MarkMilestone { cut, .. } => note(&mut self.manifest, cut),
+                    DocOp::RestoreMilestone { cut, upto, .. } => {
+                        note(&mut self.manifest, cut);
+                        note(&mut self.manifest, upto);
+                    }
+                    _ => {}
+                }
             }
         }
         if added {
@@ -1317,7 +1359,7 @@ fn parse_uuid(s: &str) -> Option<Uuid> {
 ///
 /// 檔名不合格式時回 `None`，呼叫端一律當成 `(0, 0)` ——
 /// 那種檔只可能是外部工具放進來的，把它排在最前面重播是最保守的選擇。
-fn parse_oplog_name(name: &str) -> Option<(u64, u32)> {
+pub fn parse_oplog_name(name: &str) -> Option<(u64, u32)> {
     let stem = name.strip_suffix(".oplog")?;
     let (l, d) = stem.split_once('-')?;
     Some((

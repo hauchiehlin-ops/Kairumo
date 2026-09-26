@@ -528,6 +528,7 @@ fn sync_notebook_ops(
         let _ = std::fs::remove_file(package.root().join("doc/ops/compaction.tombstones"));
     }
 
+    let tombstone_file = package.root().join("doc/ops/compaction.tombstones");
     for outcome in &compaction {
         let compacted_key = padnote_sync::paths::canonical_name(&outcome.compacted_name);
         let local_compacted_size = local
@@ -542,23 +543,64 @@ fn sync_notebook_ops(
                 .get(&compacted_key)
                 .is_some_and(|f| f.size >= local_compacted_size);
         if covered {
-            for name in outcome.absorbed.iter().take(MAX_DELETIONS_PER_SYNC) {
-                let path = padnote_sync::paths::notebook_op_file(notebook_id, name);
-                let key = padnote_sync::paths::canonical_name(name);
-                if let Some(file) = remote.get(&key) {
-                    let target = if file.id.is_empty() {
-                        path.clone()
-                    } else {
-                        file.name.clone()
-                    };
-                    let _ = CloudProvider::delete(drive, &target);
+            let mut remaining_absorbed = Vec::new();
+            let mut deleted_count = 0;
+            for name in &outcome.absorbed {
+                if deleted_count < MAX_DELETIONS_PER_SYNC {
+                    let path = padnote_sync::paths::notebook_op_file(notebook_id, name);
+                    let key = padnote_sync::paths::canonical_name(name);
+                    if let Some(file) = remote.get(&key) {
+                        let target = if file.id.is_empty() {
+                            path.clone()
+                        } else {
+                            file.name.clone()
+                        };
+                        let _ = CloudProvider::delete(drive, &target);
+                    }
+                    index.note_delete(&path);
+                    deleted_count += 1;
+                } else {
+                    remaining_absorbed.push(name.clone());
                 }
-                index.note_delete(&path);
             }
+            if !remaining_absorbed.is_empty() {
+                let existing = std::fs::read_to_string(&tombstone_file).unwrap_or_default();
+                let new_lines = remaining_absorbed.join("\n") + "\n";
+                let _ = std::fs::write(&tombstone_file, format!("{existing}{new_lines}"));
+            }
+        } else if !outcome.absorbed.is_empty() {
+            let existing = std::fs::read_to_string(&tombstone_file).unwrap_or_default();
+            let new_lines = outcome.absorbed.join("\n") + "\n";
+            let _ = std::fs::write(&tombstone_file, format!("{existing}{new_lines}"));
         }
     }
 
     // ── 下載 ────────────────────────────────────────────────
+    let mut absorbed_keys = std::collections::HashSet::new();
+    for outcome in &compaction {
+        for name in &outcome.absorbed {
+            absorbed_keys.insert(padnote_sync::paths::canonical_name(name));
+        }
+    }
+    if let Ok(content) = std::fs::read(&tombstone_file) {
+        let text = String::from_utf8_lossy(&content);
+        for line in text.lines() {
+            let name = line.trim();
+            if !name.is_empty() {
+                absorbed_keys.insert(padnote_sync::paths::canonical_name(name));
+            }
+        }
+    }
+
+    let local_max_lamport_for_device = local
+        .iter()
+        .filter_map(|(name, _)| {
+            padnote_storage::parse_oplog_name(name)
+                .and_then(|(l, dev)| if dev == device_id { Some(l) } else { None })
+        })
+        .max()
+        .unwrap_or(0);
+
     let local_by_key: std::collections::BTreeMap<String, u64> = local
         .iter()
         .map(|(n, s)| (padnote_sync::paths::canonical_name(n), *s))
@@ -568,6 +610,16 @@ fn sync_notebook_ops(
         let local_size = local_by_key.get(name).copied().unwrap_or(0);
         if file.size <= local_size {
             continue;
+        }
+        // 被壓實吃掉的碎檔絕不重複下載（避免壓實與下載形成死循環導致 oplog 無限倍增）
+        if absorbed_keys.contains(name) {
+            continue;
+        }
+        // 若本機已擁有該裝置較大的壓實檔，絕不重抓該裝置歷史碎檔
+        if let Some((remote_lamport, dev)) = padnote_storage::parse_oplog_name(name) {
+            if dev == device_id && remote_lamport <= local_max_lamport_for_device && local_size == 0 {
+                continue;
+            }
         }
         let bytes = match download_file(drive, file) {
             Ok(b) => b,
