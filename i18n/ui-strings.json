@@ -10332,6 +10332,22 @@
     "zhHans": "资料夹路径",
     "zhHant": "資料夾路徑"
   },
+  "sync_gdrive_syncing": {
+    "en": "Syncing Google Drive…",
+    "ja": "Google ドライブを同期中…",
+    "ko": "Google 드라이브 동기화 중…",
+    "th": "กำลังซิงก์ Google Drive…",
+    "zhHans": "Google Drive 同步中…",
+    "zhHant": "Google Drive 同步中…"
+  },
+  "sync_interrupted": {
+    "en": "Sync interrupted",
+    "ja": "同期が中断されました",
+    "ko": "동기화가 중단되었습니다",
+    "th": "การซิงก์ถูกขัดจังหวะ",
+    "zhHans": "已中断同步",
+    "zhHant": "已中斷同步"
+  },
   "sync_last_at": {
     "en": "Last synced",
     "ja": "最終同期",

@@ -30,6 +30,7 @@ object LocalizationStrings {
             putAll(part16())
             putAll(part17())
             putAll(part18())
+            putAll(part19())
         }
     }
 
@@ -10415,6 +10416,22 @@ object LocalizationStrings {
             "ko" to "폴더",
             "th" to "โฟลเดอร์"
         ),
+        "sync_gdrive_syncing" to mapOf(
+            "zh-Hant" to "Google Drive 同步中…",
+            "en" to "Syncing Google Drive…",
+            "zh-Hans" to "Google Drive 同步中…",
+            "ja" to "Google ドライブを同期中…",
+            "ko" to "Google 드라이브 동기화 중…",
+            "th" to "กำลังซิงก์ Google Drive…"
+        ),
+        "sync_interrupted" to mapOf(
+            "zh-Hant" to "已中斷同步",
+            "en" to "Sync interrupted",
+            "zh-Hans" to "已中断同步",
+            "ja" to "同期が中断されました",
+            "ko" to "동기화가 중단되었습니다",
+            "th" to "การซิงก์ถูกขัดจังหวะ"
+        ),
         "sync_last_at" to mapOf(
             "zh-Hant" to "上次同步",
             "en" to "Last synced",
@@ -10886,7 +10903,10 @@ object LocalizationStrings {
             "ja" to "フォント",
             "ko" to "글꼴",
             "th" to "แบบอักษร"
-        ),
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
         "text_tab_style" to mapOf(
             "zh-Hant" to "樣式",
             "en" to "Style",
@@ -10902,10 +10922,7 @@ object LocalizationStrings {
             "ja" to "記号",
             "ko" to "기호",
             "th" to "สัญลักษณ์"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "text_underline" to mapOf(
             "zh-Hant" to "底線",
             "en" to "Underline",
@@ -11529,7 +11546,10 @@ object LocalizationStrings {
             "ja" to "レスポンシブWeb 12カラム",
             "ko" to "반응형 웹 12컬럼",
             "th" to "กริดเว็บ 12 คอลัมน์"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "tmpl_web_grid_desc" to mapOf(
             "zh-Hant" to "標準 12 欄格線、間距 (Gutter) 與安全邊距引導",
             "en" to "Standard 12-column layout, gutters & safe margins",
@@ -11545,10 +11565,7 @@ object LocalizationStrings {
             "ja" to "週間7列",
             "ko" to "주간 7열",
             "th" to "เจ็ดคอลัมน์รายสัปดาห์"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_weekly_columns_desc" to mapOf(
             "zh-Hant" to "週一到週日七欄，含橫線",
             "en" to "Seven day columns with ruled rows",
@@ -12172,7 +12189,10 @@ object LocalizationStrings {
             "ja" to "モバイル ナビゲーションバー",
             "ko" to "모바일 상단 내비게이션 바",
             "th" to "แถบนำทางด้านบนบนมือถือ"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "wireframe_tabbar" to mapOf(
             "zh-Hant" to "底部五分頁 TabBar",
             "en" to "Bottom tab bar (5 tabs)",

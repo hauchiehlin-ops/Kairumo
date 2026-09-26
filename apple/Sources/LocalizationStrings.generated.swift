@@ -10348,6 +10348,22 @@ extension LocalizationManager {
             .ko: "폴더",
             .th: "โฟลเดอร์"
         ],
+        "sync_gdrive_syncing": [
+            .zhHant: "Google Drive 同步中…",
+            .en: "Syncing Google Drive…",
+            .zhHans: "Google Drive 同步中…",
+            .ja: "Google ドライブを同期中…",
+            .ko: "Google 드라이브 동기화 중…",
+            .th: "กำลังซิงก์ Google Drive…"
+        ],
+        "sync_interrupted": [
+            .zhHant: "已中斷同步",
+            .en: "Sync interrupted",
+            .zhHans: "已中断同步",
+            .ja: "同期が中断されました",
+            .ko: "동기화가 중단되었습니다",
+            .th: "การซิงก์ถูกขัดจังหวะ"
+        ],
         "sync_last_at": [
             .zhHant: "上次同步",
             .en: "Last synced",

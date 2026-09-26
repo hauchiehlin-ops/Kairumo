@@ -4010,8 +4010,8 @@ public struct CloudSyncDetailSheet: View {
                             googleSyncTask?.cancel()
                             NotebookSyncCoordinator.cancelSync()
                             isGoogleSyncing = false
-                            autoSync.setSyncing(false, message: "已中斷同步")
-                            googleStatusMessage = "已中斷同步"
+                            autoSync.setSyncing(false, message: localizationManager.localized("sync_interrupted"))
+                            googleStatusMessage = localizationManager.localized("sync_interrupted")
                         } label: {
                             HStack {
                                 ProgressView()
@@ -4528,13 +4528,13 @@ public struct CloudSyncDetailSheet: View {
     private func runGoogleSync() async {
         guard !isGoogleSyncing, !autoSync.isSyncing else { return }
         isGoogleSyncing = true
-        autoSync.setSyncing(true, message: "Google Drive 同步中...")
+        autoSync.setSyncing(true, message: localizationManager.localized("sync_gdrive_syncing"))
         defer {
             isGoogleSyncing = false
             autoSync.setSyncing(false)
         }
 
-        googleStatusMessage = "Google Drive 同步中..."
+        googleStatusMessage = localizationManager.localized("sync_gdrive_syncing")
         let report: NotebookSyncCoordinator.Report?
         do {
             report = try await withSyncTimeout(seconds: 180) {
