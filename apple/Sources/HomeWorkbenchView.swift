@@ -748,6 +748,181 @@ public struct HomeWorkbenchView: View {
         .accessibilityIdentifier(identifier)
     }
 
+    // MARK: - Menu Actions Safe Dispatchers (iPadOS / iOS popover dismissal lifecycle)
+
+    private func openNotebookFromMenu(_ note: NotebookDocument) {
+        selectedNotebookForEditing = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            selectedNotebookForEditing = note
+        }
+    }
+
+    private func hideNotebookFromMenu(_ note: NotebookDocument) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation {
+                _ = hiddenNoteIds.insert(note.id)
+            }
+        }
+    }
+
+    private func renameNotebookFromMenu(_ note: NotebookDocument) {
+        renamingNotebookId = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            renameText = note.displayTitle()
+            renamingNotebookId = note.id
+        }
+    }
+
+    private func moveNotebookFromMenu(_ note: NotebookDocument) {
+        showMoveNotebookSheet = false
+        notebookToMoveId = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            notebookToMoveId = note.id
+            showMoveNotebookSheet = true
+        }
+    }
+
+    private func duplicateNotebookFromMenu(_ note: NotebookDocument) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation {
+                notebookStore.duplicateNotebook(id: note.id)
+            }
+        }
+    }
+
+    private func deleteNotebookFromMenu(_ note: NotebookDocument) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation {
+                notebookStore.deleteNotebook(id: note.id)
+            }
+        }
+    }
+
+    private func insertRecordingFromMenu(_ rec: AudioRecordingRecord) {
+        insertingRecording = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            insertingRecording = rec
+        }
+    }
+
+    private func hideRecordingFromMenu(_ rec: AudioRecordingRecord) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation {
+                _ = hiddenRecordingIds.insert(rec.id)
+            }
+        }
+    }
+
+    private func shareRecordingFromMenu(_ fileUrl: URL) {
+        #if targetEnvironment(macCatalyst) || os(macOS)
+        audioManager.openRecordingsFolderInFinder()
+        #else
+        shareRecordingURL = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            shareRecordingURL = fileUrl
+        }
+        #endif
+    }
+
+    private func deleteRecordingFromMenu(_ rec: AudioRecordingRecord) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation {
+                notebookStore.deleteRecording(id: rec.id)
+            }
+        }
+    }
+
+    private func createSubfolderFromMenu(parentId: String) {
+        newFolderParentId = nil
+        showNewFolderAlert = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            newFolderParentId = parentId
+            newFolderNameText = ""
+            showNewFolderAlert = true
+        }
+    }
+
+    private func renameFolderFromMenu(_ folder: FolderItem) {
+        folderToRename = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            folderRenameText = folder.name
+            folderToRename = folder
+        }
+    }
+
+    private func deleteFolderFromMenu(_ folder: FolderItem) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation {
+                notebookStore.deleteFolder(id: folder.id)
+                if selectedFolderId == folder.id {
+                    selectedFolderId = nil
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func notebookCardContextMenuItems(note: NotebookDocument) -> some View {
+        Button {
+            openNotebookFromMenu(note)
+        } label: {
+            Label(localizationManager.localized("open_editor"), systemImage: "pencil.and.scribble")
+        }
+        Button {
+            hideNotebookFromMenu(note)
+        } label: {
+            Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
+        }
+        Button {
+            renameNotebookFromMenu(note)
+        } label: {
+            Label(localizationManager.localized("rename_note"), systemImage: "pencil")
+        }
+        Button {
+            moveNotebookFromMenu(note)
+        } label: {
+            Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
+        }
+        Button {
+            duplicateNotebookFromMenu(note)
+        } label: {
+            Label(localizationManager.localized("duplicate_note"), systemImage: "doc.on.doc")
+        }
+        Divider()
+        Button(role: .destructive) {
+            deleteNotebookFromMenu(note)
+        } label: {
+            Label(localizationManager.localized("delete_item"), systemImage: "trash")
+        }
+    }
+
+    @ViewBuilder
+    private func recordingContextMenuItems(rec: AudioRecordingRecord, fileUrl: URL) -> some View {
+        Button {
+            insertRecordingFromMenu(rec)
+        } label: {
+            Label(localizationManager.localized("insert_to_notebook"),
+                  systemImage: "text.badge.plus")
+        }
+        Divider()
+        Button {
+            hideRecordingFromMenu(rec)
+        } label: {
+            Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
+        }
+        Button {
+            shareRecordingFromMenu(fileUrl)
+        } label: {
+            Label(localizationManager.localized("show_in_folder"), systemImage: "folder")
+        }
+        Divider()
+        Button(role: .destructive) {
+            deleteRecordingFromMenu(rec)
+        } label: {
+            Label(localizationManager.localized("delete_recording"), systemImage: "trash")
+        }
+    }
+
     // MARK: - 4. 繼續 Working Section（真實筆記）
 
     /// 型別邊界（見 erasedView 的說明）：避免整棵子樹的型別被編進 body 的名稱。
@@ -920,92 +1095,21 @@ public struct HomeWorkbenchView: View {
 
                                 // 個別檔案功能選項（隱藏、重新命名、副本、刪除）
                                 Menu {
-                                    Button {
-                                        selectedNotebookForEditing = note
-                                    } label: {
-                                        Label(localizationManager.localized("open_editor"), systemImage: "pencil.and.scribble")
-                                    }
-                                    Button {
-                                        withAnimation {
-                                            _ = hiddenNoteIds.insert(note.id)
-                                        }
-                                    } label: {
-                                        Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
-                                    }
-                                    Button {
-                                        renameText = note.displayTitle()
-                                        renamingNotebookId = note.id
-                                    } label: {
-                                        Label(localizationManager.localized("rename_note"), systemImage: "pencil")
-                                    }
-                                    Button {
-                                        notebookToMoveId = note.id
-                                        showMoveNotebookSheet = true
-                                    } label: {
-                                        Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
-                                    }
-                                    Button {
-                                        notebookStore.duplicateNotebook(id: note.id)
-                                    } label: {
-                                        Label(localizationManager.localized("duplicate_note"), systemImage: "doc.on.doc")
-                                    }
-                                    Divider()
-                                    Button(role: .destructive) {
-                                        withAnimation {
-                                            notebookStore.deleteNotebook(id: note.id)
-                                        }
-                                    } label: {
-                                        Label(localizationManager.localized("delete_item"), systemImage: "trash")
-                                    }
+                                    notebookCardContextMenuItems(note: note)
                                 } label: {
                                     Image(systemName: "ellipsis.circle")
-                                        .font(.system(size: 15))
+                                        .font(.system(size: 16))
                                         .foregroundColor(.secondary)
-                                        .padding(10)
+                                        .frame(width: 44, height: 44)
                                         .contentShape(Rectangle())
                                 }
+                                .buttonStyle(.plain)
                             }
                             .background(Color(uiColor: .secondarySystemGroupedBackground))
                             .cornerRadius(14)
                             .shadow(color: Color.black.opacity(0.04), radius: 6, y: 2)
                             .contextMenu {
-                                Button {
-                                    selectedNotebookForEditing = note
-                                } label: {
-                                    Label(localizationManager.localized("open_editor"), systemImage: "pencil.and.scribble")
-                                }
-                                Button {
-                                    withAnimation {
-                                        _ = hiddenNoteIds.insert(note.id)
-                                    }
-                                } label: {
-                                    Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
-                                }
-                                Button {
-                                    renameText = note.displayTitle()
-                                    renamingNotebookId = note.id
-                                } label: {
-                                    Label(localizationManager.localized("rename_note"), systemImage: "pencil")
-                                }
-                                Button {
-                                    notebookToMoveId = note.id
-                                    showMoveNotebookSheet = true
-                                } label: {
-                                    Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
-                                }
-                                Button {
-                                    notebookStore.duplicateNotebook(id: note.id)
-                                } label: {
-                                    Label(localizationManager.localized("duplicate_note"), systemImage: "doc.on.doc")
-                                }
-                                Divider()
-                                Button(role: .destructive) {
-                                    withAnimation {
-                                        notebookStore.deleteNotebook(id: note.id)
-                                    }
-                                } label: {
-                                    Label(localizationManager.localized("delete_item"), systemImage: "trash")
-                                }
+                                notebookCardContextMenuItems(note: note)
                             }
                         }
                     }
@@ -1235,44 +1339,12 @@ public struct HomeWorkbenchView: View {
 
                             // 個別檔案功能選項（插入筆記、隱藏、開啟資料夾、刪除）
                             Menu {
-                                // 錄音原本只能在首頁播 —— 它進不了任何一頁，
-                                // 也就沒辦法擺在它對應的那段筆記旁邊。
-                                Button {
-                                    insertingRecording = rec
-                                } label: {
-                                    Label(localizationManager.localized("insert_to_notebook"),
-                                          systemImage: "text.badge.plus")
-                                }
-                                Divider()
-                                Button {
-                                    withAnimation {
-                                        _ = hiddenRecordingIds.insert(rec.id)
-                                    }
-                                } label: {
-                                    Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
-                                }
-                                Button {
-                                    #if targetEnvironment(macCatalyst) || os(macOS)
-                                    audioManager.openRecordingsFolderInFinder()
-                                    #else
-                                    shareRecordingURL = fileUrl
-                                    #endif
-                                } label: {
-                                    Label(localizationManager.localized("show_in_folder"), systemImage: "folder")
-                                }
-                                Divider()
-                                Button(role: .destructive) {
-                                    withAnimation {
-                                        notebookStore.deleteRecording(id: rec.id)
-                                    }
-                                } label: {
-                                    Label(localizationManager.localized("delete_recording"), systemImage: "trash")
-                                }
+                                recordingContextMenuItems(rec: rec, fileUrl: fileUrl)
                             } label: {
                                 Image(systemName: "ellipsis.circle")
                                     .font(.system(size: 16))
                                     .foregroundColor(.secondary)
-                                    .padding(8)
+                                    .frame(width: 44, height: 44)
                                     .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
@@ -1281,37 +1353,7 @@ public struct HomeWorkbenchView: View {
                         .background(Color(uiColor: .secondarySystemGroupedBackground))
                         .cornerRadius(12)
                         .contextMenu {
-                            Button {
-                                insertingRecording = rec
-                            } label: {
-                                Label(localizationManager.localized("insert_to_notebook"),
-                                      systemImage: "text.badge.plus")
-                            }
-                            Divider()
-                            Button {
-                                withAnimation {
-                                    _ = hiddenRecordingIds.insert(rec.id)
-                                }
-                            } label: {
-                                Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
-                            }
-                            Button {
-                                #if targetEnvironment(macCatalyst) || os(macOS)
-                                audioManager.openRecordingsFolderInFinder()
-                                #else
-                                shareRecordingURL = fileUrl
-                                #endif
-                            } label: {
-                                Label(localizationManager.localized("show_in_folder"), systemImage: "folder")
-                            }
-                            Divider()
-                            Button(role: .destructive) {
-                                withAnimation {
-                                    notebookStore.deleteRecording(id: rec.id)
-                                }
-                            } label: {
-                                Label(localizationManager.localized("delete_recording"), systemImage: "trash")
-                            }
+                            recordingContextMenuItems(rec: rec, fileUrl: fileUrl)
                         }
                     }
                 }
@@ -1564,24 +1606,18 @@ public struct HomeWorkbenchView: View {
                             let count = notebookStore.notebooks(in: folder.id).count
                             Menu {
                                 Button {
-                                    newFolderParentId = folder.id
-                                    newFolderNameText = ""
-                                    showNewFolderAlert = true
+                                    createSubfolderFromMenu(parentId: folder.id)
                                 } label: {
                                     Label(localizationManager.localized("new_subfolder"), systemImage: "folder.badge.plus")
                                 }
                                 Button {
-                                    folderToRename = folder
-                                    folderRenameText = folder.name
+                                    renameFolderFromMenu(folder)
                                 } label: {
                                     Label(localizationManager.localized("rename_folder"), systemImage: "pencil")
                                 }
                                 Divider()
                                 Button(role: .destructive) {
-                                    notebookStore.deleteFolder(id: folder.id)
-                                    if selectedFolderId == folder.id {
-                                        selectedFolderId = nil
-                                    }
+                                    deleteFolderFromMenu(folder)
                                 } label: {
                                     Label(localizationManager.localized("delete_folder"), systemImage: "trash")
                                 }
@@ -1645,50 +1681,15 @@ public struct HomeWorkbenchView: View {
 
                             // 個別功能選項
                             Menu {
-                                Button {
-                                    selectedNotebookForEditing = note
-                                } label: {
-                                    Label(localizationManager.localized("open_editor"), systemImage: "pencil.and.scribble")
-                                }
-                                Button {
-                                    withAnimation {
-                                        _ = hiddenNoteIds.insert(note.id)
-                                    }
-                                } label: {
-                                    Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
-                                }
-                                Button {
-                                    renameText = note.displayTitle()
-                                    renamingNotebookId = note.id
-                                } label: {
-                                    Label(localizationManager.localized("rename_note"), systemImage: "pencil")
-                                }
-                                Button {
-                                    notebookToMoveId = note.id
-                                    showMoveNotebookSheet = true
-                                } label: {
-                                    Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
-                                }
-                                Button {
-                                    notebookStore.duplicateNotebook(id: note.id)
-                                } label: {
-                                    Label(localizationManager.localized("duplicate_note"), systemImage: "doc.on.doc")
-                                }
-                                Divider()
-                                Button(role: .destructive) {
-                                    withAnimation {
-                                        notebookStore.deleteNotebook(id: note.id)
-                                    }
-                                } label: {
-                                    Label(localizationManager.localized("delete_item"), systemImage: "trash")
-                                }
+                                notebookCardContextMenuItems(note: note)
                             } label: {
                                 Image(systemName: "ellipsis.circle.fill")
                                     .font(.system(size: 16))
                                     .foregroundColor(.secondary.opacity(0.8))
-                                    .padding(8)
+                                    .frame(width: 44, height: 44)
                                     .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
                         }
 
                         Button {
@@ -1720,43 +1721,7 @@ public struct HomeWorkbenchView: View {
                     .cornerRadius(12)
                     .shadow(color: Color.black.opacity(0.03), radius: 4, y: 2)
                     .contextMenu {
-                        Button {
-                            selectedNotebookForEditing = note
-                        } label: {
-                            Label(localizationManager.localized("open_editor"), systemImage: "pencil.and.scribble")
-                        }
-                        Button {
-                            withAnimation {
-                                _ = hiddenNoteIds.insert(note.id)
-                            }
-                        } label: {
-                            Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
-                        }
-                        Button {
-                            renameText = note.displayTitle()
-                            renamingNotebookId = note.id
-                        } label: {
-                            Label(localizationManager.localized("rename_note"), systemImage: "pencil")
-                        }
-                        Button {
-                            notebookToMoveId = note.id
-                            showMoveNotebookSheet = true
-                        } label: {
-                            Label(localizationManager.localized("move_to_folder"), systemImage: "folder")
-                        }
-                        Button {
-                            notebookStore.duplicateNotebook(id: note.id)
-                        } label: {
-                            Label(localizationManager.localized("duplicate_note"), systemImage: "doc.on.doc")
-                        }
-                        Divider()
-                        Button(role: .destructive) {
-                            withAnimation {
-                                notebookStore.deleteNotebook(id: note.id)
-                            }
-                        } label: {
-                            Label(localizationManager.localized("delete_item"), systemImage: "trash")
-                        }
+                        notebookCardContextMenuItems(note: note)
                     }
                     // 每一張卡片一個識別碼（S-263）。
                     //

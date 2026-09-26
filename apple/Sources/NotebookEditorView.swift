@@ -2231,31 +2231,41 @@ public struct NotebookEditorView: View {
             // ➕ 插入物件下拉選單（整合圖片、算式、圖表、3D、主題工具）
             Menu {
                 Button {
-                    showAssetLibrarySheet = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showAssetLibrarySheet = true
+                    }
                 } label: {
                     Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill")
                 }
 
                 Button {
-                    showPhotoPicker = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showPhotoPicker = true
+                    }
                 } label: {
                     Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus")
                 }
 
                 Button {
-                    showMathCalculator = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showMathCalculator = true
+                    }
                 } label: {
                     Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus")
                 }
 
                 Button {
-                    showChartStudio = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showChartStudio = true
+                    }
                 } label: {
                     Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis")
                 }
 
                 Button {
-                    show3DStudio = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        show3DStudio = true
+                    }
                 } label: {
                     Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent")
                 }
@@ -2264,31 +2274,41 @@ public struct NotebookEditorView: View {
                 // 這個選單叫「插入物件」，卻插不了其中四種 ——
                 // 使用者找不到就會以為功能不存在。
                 Button {
-                    showTableStudio = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showTableStudio = true
+                    }
                 } label: {
                     Label(localizationManager.localized("table_studio"), systemImage: "tablecells")
                 }
 
                 Button {
-                    showShapeStudio = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showShapeStudio = true
+                    }
                 } label: {
                     Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle")
                 }
 
                 Button {
-                    showLinkPreviewSheet = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showLinkPreviewSheet = true
+                    }
                 } label: {
                     Label(localizationManager.localized("insert_link"), systemImage: "link")
                 }
 
                 Button {
-                    showAudioPicker = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showAudioPicker = true
+                    }
                 } label: {
                     Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus")
                 }
 
                 Button {
-                    showThemeToolsSheet = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showThemeToolsSheet = true
+                    }
                 } label: {
                     Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill")
                 }
@@ -2314,7 +2334,9 @@ public struct NotebookEditorView: View {
                 // 摘要與待辦（工作項 S-20）。核心的 `llm_summarize` 早就在
                 // FFI 上，缺的一直是這一顆按鈕。
                 Button {
-                    showNoteIntelligence = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showNoteIntelligence = true
+                    }
                 } label: {
                     Label(
                         localizationManager.localized("ai_summary"),
@@ -2456,19 +2478,25 @@ public struct NotebookEditorView: View {
             // 匯出與列印選單（解決「看不到匯出相關工具列」問題）
             Menu {
                 Button {
-                    exportAsPdf()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        exportAsPdf()
+                    }
                 } label: {
                     Label(localizationManager.localized("export_pdf"), systemImage: "doc.text.fill")
                 }
 
                 Button {
-                    exportAsPngImage()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        exportAsPngImage()
+                    }
                 } label: {
                     Label(localizationManager.localized("export_image"), systemImage: "photo")
                 }
 
                 Button {
-                    printCurrentNotebook()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        printCurrentNotebook()
+                    }
                 } label: {
                     Label(localizationManager.localized("print_note"), systemImage: "printer.fill")
                 }
@@ -2476,7 +2504,9 @@ public struct NotebookEditorView: View {
                 ToolbarSeparator()
 
                 Button {
-                    shareNotebookFile()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        shareNotebookFile()
+                    }
                 } label: {
                     Label(localizationManager.localized("share_note"), systemImage: "square.and.arrow.up")
                 }
@@ -2657,42 +2687,89 @@ public struct NotebookEditorView: View {
 
         Menu {
             Section {
-                Button { showAssetLibrarySheet = true } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showAssetLibrarySheet = true
+                    }
+                } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
                     .accessibilityIdentifier("editor.insert.assets")
-                Button { showStickerLibrary = true } label: { Label(localizationManager.localized("sticker_library"), systemImage: "photo.on.rectangle") }
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showStickerLibrary = true
+                    }
+                } label: { Label(localizationManager.localized("sticker_library"), systemImage: "photo.on.rectangle") }
                     .accessibilityIdentifier("editor.insert.stickers")
-                    Button { showAudioPicker = true } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
-                        .accessibilityIdentifier("editor.insert.audio")
-                    Button { activeImportSlot = .audio } label: { Label(localizationManager.localized("import_audio_from_files"), systemImage: "square.and.arrow.down.on.square") }
-                        .accessibilityIdentifier("editor.insert.audio_file")
-                Button { showPhotoPicker = true } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showAudioPicker = true
+                    }
+                } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
+                    .accessibilityIdentifier("editor.insert.audio")
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        activeImportSlot = .audio
+                    }
+                } label: { Label(localizationManager.localized("import_audio_from_files"), systemImage: "square.and.arrow.down.on.square") }
+                    .accessibilityIdentifier("editor.insert.audio_file")
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showPhotoPicker = true
+                    }
+                } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
                     .accessibilityIdentifier("editor.insert.image")
-                Button { activeImportSlot = .image } label: { Label(localizationManager.localized("import_from_files"), systemImage: "folder.badge.plus") }
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        activeImportSlot = .image
+                    }
+                } label: { Label(localizationManager.localized("import_from_files"), systemImage: "folder.badge.plus") }
                     .accessibilityIdentifier("editor.insert.image_file")
-                Button { activeImportSlot = .pdf } label: { Label(localizationManager.localized("insert_pdf"), systemImage: "doc.richtext") }
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        activeImportSlot = .pdf
+                    }
+                } label: { Label(localizationManager.localized("insert_pdf"), systemImage: "doc.richtext") }
                     .accessibilityIdentifier("editor.insert.pdf")
-                Button { activeImportSlot = .document } label: { Label(localizationManager.localized("import_document"), systemImage: "doc.text") }
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        activeImportSlot = .document
+                    }
+                } label: { Label(localizationManager.localized("import_document"), systemImage: "doc.text") }
                     .accessibilityIdentifier("editor.insert.document")
-                Button { showMathCalculator = true } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showMathCalculator = true
+                    }
+                } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
                     .accessibilityIdentifier("editor.insert.math")
-                Button { showChartStudio = true } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showChartStudio = true
+                    }
+                } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
                     .accessibilityIdentifier("editor.insert.chart")
-                Button { showTableStudio = true } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showTableStudio = true
+                    }
+                } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
                     .accessibilityIdentifier("editor.insert.table")
-                // **開工作室，不要默默丟一個矩形。**
-                //
-                // 這一項原本呼叫 `insertDefaultShape()`：在 (200, 200) 塞一個
-                // 預設矩形就結束。標籤寫著「形狀工作室」，使用者點下去卻
-                // 沒有任何面板 —— 而那個矩形可能落在畫面外或被當成雜訊，
-                // 所以回報是「點了沒反應」。
-                //
-                // 工作室（`ShapeStudioView`）一直都在，而且另一個插入選單
-                // 早就接著它了；只有這個主選單接錯了。
-                Button { showShapeStudio = true } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showShapeStudio = true
+                    }
+                } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
                     .accessibilityIdentifier("editor.insert.shape")
-                Button { show3DStudio = true } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        show3DStudio = true
+                    }
+                } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
                     .accessibilityIdentifier("editor.insert.model3d")
-                Button { showThemeToolsSheet = true } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showThemeToolsSheet = true
+                    }
+                } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
                     .accessibilityIdentifier("editor.insert.theme_tools")
             } header: {
                 Text(localizationManager.localized("insert_object"))
@@ -2704,29 +2781,49 @@ public struct NotebookEditorView: View {
                 // 掌拒門檻（S-101）。判定一直都在核心，缺的只是「讓使用者調」——
                 // 握筆姿勢比較特別的人，手掌一放上去就是一道線，
                 // 而在此之前他完全沒有辦法處理。
-                Button { showPalmThresholdSheet = true } label: {
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showPalmThresholdSheet = true
+                    }
+                } label: {
                     Label(localizationManager.localized("palm_rejection_settings"), systemImage: "hand.raised.slash")
                 }
                 .accessibilityIdentifier("editor.insert.palm_thresholds")
-                Button { showAdvancedPenSettingsSheet = true } label: {
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showAdvancedPenSettingsSheet = true
+                    }
+                } label: {
                     Label(localizationManager.localized("pen_settings_title"), systemImage: "applepencil.and.scribble")
                 }
                 .accessibilityIdentifier("editor.insert.advanced_pen_settings")
                 // 放在編輯器而不是設定頁：使用者想關掉某支筆的那一刻，
                 // 是他正看著那支筆的時候。
-                Button { showToolbarCustomization = true } label: {
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showToolbarCustomization = true
+                    }
+                } label: {
                     Label(localizationManager.localized("customize_toolbar"), systemImage: "slider.horizontal.3")
                 }
                 .accessibilityIdentifier("editor.customize_toolbar")
                 Button { withAnimation { isPlacingCommentPin.toggle() } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
                     .accessibilityIdentifier("editor.insert.comment_pin")
-                Button { showCollaborationSheet = true } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showCollaborationSheet = true
+                    }
+                } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }
                     .accessibilityIdentifier("editor.insert.collaborate")
                 Button { recognizeHandwritingOnCurrentPage() } label: {
                     Label(localizationManager.localized("recognize_handwriting"), systemImage: "text.viewfinder")
                 }
                 .accessibilityIdentifier("editor.insert.recognize")
-                Button { showNoteIntelligence = true } label: {
+                Button {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                        showNoteIntelligence = true
+                    }
+                } label: {
                     Label(localizationManager.localized("ai_summary"), systemImage: "sparkles")
                 }
                 .accessibilityIdentifier("editor.insert.ai_summary")
@@ -2810,11 +2907,23 @@ public struct NotebookEditorView: View {
 
         // 匯出功能選單
         Menu {
-            Button { exportAsPdf() } label: { Label(localizationManager.localized("export_pdf"), systemImage: "doc.text.fill") }
+            Button {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    exportAsPdf()
+                }
+            } label: { Label(localizationManager.localized("export_pdf"), systemImage: "doc.text.fill") }
                 .accessibilityIdentifier("editor.export.pdf")
-            Button { exportAsPngImage() } label: { Label(localizationManager.localized("export_image"), systemImage: "photo") }
+            Button {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    exportAsPngImage()
+                }
+            } label: { Label(localizationManager.localized("export_image"), systemImage: "photo") }
                 .accessibilityIdentifier("editor.export.image")
-            Button { printCurrentNotebook() } label: { Label(localizationManager.localized("print_note"), systemImage: "printer.fill") }
+            Button {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    printCurrentNotebook()
+                }
+            } label: { Label(localizationManager.localized("print_note"), systemImage: "printer.fill") }
                 .accessibilityIdentifier("editor.export.print")
             Divider()
             // **把檔案存到使用者自己選的位置。**
@@ -2823,9 +2932,17 @@ public struct NotebookEditorView: View {
             // 使用者沒辦法說「存到我的文件資料夾」。而這個 App 的資料全部
             // 在沙盒容器裡，容器是隱藏的、使用者碰不到。Mac App Store 審查
             // 指南 2.4.5(i) 因此把這個版本退了回來。
-            Button { saveNotebookFile() } label: { Label(localizationManager.localized("export_save_as"), systemImage: "folder.badge.plus") }
+            Button {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    saveNotebookFile()
+                }
+            } label: { Label(localizationManager.localized("export_save_as"), systemImage: "folder.badge.plus") }
                 .accessibilityIdentifier("editor.export.save_as")
-            Button { shareNotebookFile() } label: { Label(localizationManager.localized("share_note"), systemImage: "square.and.arrow.up") }
+            Button {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    shareNotebookFile()
+                }
+            } label: { Label(localizationManager.localized("share_note"), systemImage: "square.and.arrow.up") }
                 .accessibilityIdentifier("editor.export.share")
         } label: {
             Image(systemName: "square.and.arrow.up")
@@ -4976,8 +5093,10 @@ public struct NotebookEditorView: View {
 
             ToolbarSeparator()
             Button(role: .destructive) {
-                pageToDeleteIndex = idx
-                showDeletePageAlert = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    pageToDeleteIndex = idx
+                    showDeletePageAlert = true
+                }
             } label: {
                 Label(localizationManager.localized("delete_page"), systemImage: "trash")
             }
@@ -5314,9 +5433,11 @@ public struct NotebookEditorView: View {
                     // 功能選單
                     Menu {
                         Button {
-                            newFolderParentId = folder.id
-                            newFolderNameText = ""
-                            showNewFolderAlert = true
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                newFolderParentId = folder.id
+                                newFolderNameText = ""
+                                showNewFolderAlert = true
+                            }
                         } label: {
                             Label(localizationManager.localized("new_subfolder"), systemImage: "folder.badge.plus")
                         }
@@ -5333,8 +5454,10 @@ public struct NotebookEditorView: View {
                         }
 
                         Button {
-                            folderToRename = folder
-                            folderRenameText = folder.name
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                                folderRenameText = folder.name
+                                folderToRename = folder
+                            }
                         } label: {
                             Label(localizationManager.localized("rename_folder"), systemImage: "pencil")
                         }
