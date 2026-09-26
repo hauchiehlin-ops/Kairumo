@@ -1878,15 +1878,17 @@ public struct HomeWorkbenchView: View {
                 .foregroundStyle(DS.Color.secondaryText)
                 .fixedSize(horizontal: false, vertical: true)
 
-            // 超連結
-            Link(destination: URL(string: "https://tailscale.com/download")!) {
-                HStack(spacing: 4) {
-                    Image(systemName: "arrow.up.right.square")
-                    Text(localizationManager.localized("download_tailscale_link"))
+            // 只有未偵測到 Tailscale 時才顯示下載連結
+            if !tailscale.isConnected {
+                Link(destination: URL(string: "https://tailscale.com/download")!) {
+                    HStack(spacing: 4) {
+                        Image(systemName: "arrow.up.right.square")
+                        Text(localizationManager.localized("download_tailscale_link"))
+                    }
+                    .font(DS.Font.caption)
+                    .fontWeight(.medium)
+                    .foregroundColor(.accentColor)
                 }
-                .font(DS.Font.caption)
-                .fontWeight(.medium)
-                .foregroundColor(.accentColor)
             }
         }
         .padding(DS.Space.m)

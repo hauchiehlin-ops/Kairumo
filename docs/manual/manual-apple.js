@@ -268,8 +268,9 @@ window.KAIRUMO_MANUAL = {
           "取消已設定的資料夾"
         ],
         "steps": [
-          "首頁的「資料與同步」區塊裡有四張卡片，點任一張會開啟該功能的專屬說明與操作視窗。",
+          "首頁的「資料與同步」區塊提供多項備份與同步卡片，點任一張會開啟該功能的專屬說明與操作視窗。",
           "「雲端同步」顯示目前是否登入，點進去可以登入、查看同步位置並立即同步。",
+          "「Tailscale 點對點直連同步」：使用 WebRTC 進行跨網際網路或跨裝置的點對點極速同步。若系統偵測到已安裝並連線 Tailscale，狀態指示燈會顯示綠燈與虛擬 IP，並智慧隱藏下載連結；若未偵測到，則會顯示官方下載指引連結。",
           "要取消已設定的「iCloud／資料夾」：進入雲端同步設定，切到「資料夾」分頁，點「取消已設定的資料夾」，確認後清除。之後若需要重新同步，重新選擇資料夾即可。",
           "雲端同步支援兩種模式：**Google Drive**（登入 Google 帳號後自動同步，跨平台皆可用）或 **iCloud／資料夾**（Apple 裝置選取任意本機或雲端資料夾；未登入 Google 時啟用）。兩種模式嚴格互斥，同一時間只會跑一種。",
           "「建立備份」把所有筆記、圖片與錄音打包成一個檔案，存到你指定的位置。",
@@ -774,8 +775,9 @@ window.KAIRUMO_MANUAL = {
           "Cancel Configured Folder"
         ],
         "steps": [
-          "The “Data & Sync” block on the home screen has four cards; tapping one opens that feature’s own detail and action sheet.",
+          "The “Data & Sync” block on the home screen provides backup and sync cards; tapping one opens that feature’s own detail and action sheet.",
           "“Google Drive” shows whether you are signed in, and opens sign-in, sync location and Sync Now controls.",
+          "“Tailscale Direct P2P Sync”: uses WebRTC for peer-to-peer fast syncing across devices and the internet. If an active Tailscale connection is detected, the status light turns green with your private IP and the download link is automatically hidden; if not detected, the official download link appears.",
           "To remove a configured iCloud / Folder: open Cloud Sync settings, switch to the Folder tab, tap \"Cancel Configured Folder\", and confirm. You can always choose a new folder afterwards.",
           "Cloud sync has two modes: **Google Drive** (sign in with a Google account; works on all platforms) or **iCloud / Folder** (Apple devices: pick any local or cloud folder; active only when not signed in to Google). The two modes are strictly exclusive — only one runs at a time.",
           "“Create Backup” packs every note, image and recording into a single file and saves it where you choose.",
@@ -1273,8 +1275,9 @@ window.KAIRUMO_MANUAL = {
           "取消已设置的文件夹"
         ],
         "steps": [
-          "首页的“数据与同步”区块里有四张卡片，点任一张会打开该功能的专属说明与操作窗口。",
+          "首页的“数据与同步”区块提供多项备份与同步卡片，点任一张会打开该功能的专属说明与操作窗口。",
           "“云端同步”会显示目前是否登录，点进去可以登录、查看同步位置并立即同步。",
+          "“Tailscale 点对点直连同步”：使用 WebRTC 进行跨互联网或跨设备点对点极速同步。若系统检测到已安装并连线 Tailscale，状态指示灯会显示绿灯与虚拟 IP，并智能隐藏下载链接；若未检测到，则会显示官方下载指引链接。",
           "要取消已设置的「iCloud／文件夹」：进入云端同步设置，切换到「文件夹」选项卡，点击「取消已设置的文件夹」，确认后清除。之后若需要重新同步，重新选择文件夹即可。",
           "云端同步支持两种模式：**Google Drive**（登录 Google 账号后自动同步，跨平台均可用）或 **iCloud／文件夹**（Apple 设备选取任意本地或云端文件夹；未登录 Google 时启用）。两种模式严格互斥，同一时间只会运行一种。",
           "“创建备份”把所有笔记、图片与录音打包成一个文件，存到你指定的位置。",
@@ -1772,8 +1775,9 @@ window.KAIRUMO_MANUAL = {
           "設定済みフォルダを解除"
         ],
         "steps": [
-          "ホーム画面の「データと同期」には 4 枚のカードがあります。どれかをタップすると、その機能専用の説明と操作画面が開きます。",
+          "ホーム画面の「データと同期」にはバックアップと同期のカードが並び、タップするとその機能専用の説明と操作画面が開きます。",
           "「クラウド同期」は現在サインインしているかを表示し、サインイン・同期先・今すぐ同期の操作を開きます。",
+          "「Tailscale による P2P 直結同期」：WebRTC を利用して端末間やインターネット経由での高速 P2P 同期を行います。Tailscale の接続が検出されるとインジケーターが緑色になり仮想 IP が表示され、ダウンロードリンクは自動的に非表示になります。未検出の場合は公式ダウンロードリンクが表示されます。",
           "設定済みの「iCloud／フォルダ」を解除するには：クラウド同期設定を開き、「フォルダ」タブに切り替え、「設定済みフォルダを解除」をタップして確認します。後からいつでも新しいフォルダを選び直せます。",
           "クラウド同期には 2 つのモードがあります：**Google Drive**（Google アカウントでサインインして自動同期、全プラットフォーム対応）または **iCloud／フォルダ**（Apple デバイスでローカルまたはクラウドのフォルダを選択。Google 未サインイン時のみ有効）。2 つのモードは排他的で、同時に動作するのは 1 つだけです。",
           "「バックアップを作成」はノート・画像・録音を 1 つのファイルにまとめ、指定した場所へ保存します。",
@@ -2271,8 +2275,9 @@ window.KAIRUMO_MANUAL = {
           "설정된 폴더 해제"
         ],
         "steps": [
-          "홈 화면의 “데이터 및 동기화”에는 카드 네 개가 있습니다. 카드를 누르면 해당 기능의 설명과 작업 화면이 열립니다.",
+          "홈 화면의 “데이터 및 동기화”에는 백업 및 동기화 카드들이 제공되며, 카드를 누르면 해당 기능의 설명과 작업 화면이 열립니다.",
           "“클라우드 동기화”는 로그인 상태를 보여 주며 로그인, 동기화 위치, 지금 동기화 동작을 엽니다.",
+          "“Tailscale P2P 직접 동기화”: WebRTC를 사용하여 기기간 및 인터넷을 통한 빠른 P2P 동기화를 수행합니다. Tailscale 연결이 감지되면 상태 표시등이 초록색으로 켜지고 가상 IP가 표시되며 다운로드 링크가 자동으로 숨겨집니다. 미감지 시에는 공식 다운로드 링크가 표시됩니다.",
           "설정된 'iCloud / 폴더'를 해제하려면: 클라우드 동기화 설정을 열고, '폴더' 탭으로 전환한 후 '설정된 폴더 해제'를 탭하고 확인합니다. 이후 언제든지 새 폴더를 선택할 수 있습니다.",
           "클라우드 동기화에는 두 가지 모드가 있습니다: **Google Drive**（Google 계정으로 로그인 후 자동 동기화, 모든 플랫폼 지원）또는 **iCloud / 폴더**（Apple 기기에서 로컬 또는 클라우드 폴더 선택; Google 로그인 중이 아닐 때만 활성화）. 두 모드는 엄격히 배타적으로 동시에 하나만 실행됩니다.",
           "“백업 만들기”는 노트·이미지·녹음을 파일 하나로 묶어 원하는 위치에 저장합니다.",
@@ -2770,8 +2775,9 @@ window.KAIRUMO_MANUAL = {
           "ยกเลิกโฟลเดอร์ที่ตั้งค่า"
         ],
         "steps": [
-          "บล็อก “ข้อมูลและการซิงค์” บนหน้าแรกมีการ์ดสี่ใบ แตะการ์ดเพื่อเปิดหน้ารายละเอียดและปุ่มของฟังก์ชันนั้น",
+          "บล็อก “ข้อมูลและการซิงค์” บนหน้าแรกมีการ์ดสำรองข้อมูลและการซิงค์ แตะการ์ดเพื่อเปิดหน้ารายละเอียดและปุ่มของฟังก์ชันนั้น",
           "“ซิงก์คลาวด์” แสดงสถานะการลงชื่อเข้าใช้ และเปิดการลงชื่อเข้าใช้ ตำแหน่งซิงก์ และปุ่มซิงก์เดี๋ยวนี้",
+          "“การซิงก์ P2P โดยตรงด้วย Tailscale”: ใช้ WebRTC สำหรับการซิงก์ความเร็วสูงแบบ peer-to-peer ข้ามอุปกรณ์หรือผ่านอินเทอร์เน็ต หากระบบตรวจพบการเชื่อมต่อ Tailscale ไฟสถานะจะแสดงสีเขียวพร้อม IP เสมือน และซ่อนลิงก์ดาวน์โหลดโดยอัตโนมัติ หากยังไม่ตรวจพบ จะแสดงลิงก์ดาวน์โหลดอย่างเป็นทางการ",
           "หากต้องการยกเลิก iCloud / โฟลเดอร์ที่ตั้งค่าไว้: เปิดการตั้งค่าซิงค์คลาวด์ สลับไปที่แท็บ 'โฟลเดอร์' แตะ 'ยกเลิกโฟลเดอร์ที่ตั้งค่า' แล้วยืนยัน หลังจากนั้นสามารถเลือกโฟลเดอร์ใหม่ได้ตลอดเวลา",
           "การซิงค์คลาวด์มีสองโหมด: **Google Drive** (ลงชื่อเข้าใช้บัญชี Google เพื่อซิงค์อัตโนมัติ รองรับทุกแพลตฟอร์ม) หรือ **iCloud / โฟลเดอร์** (อุปกรณ์ Apple: เลือกโฟลเดอร์ในเครื่องหรือคลาวด์ใดก็ได้ ใช้งานเมื่อไม่ได้ลงชื่อเข้า Google) ทั้งสองโหมดทำงานแบบ exclusive ไม่สามารถใช้พร้อมกันได้",
           "“สร้างไฟล์สำรอง” รวมโน้ต รูปภาพ และเสียงไว้ในไฟล์เดียว แล้วบันทึกไปยังตำแหน่งที่เลือก",

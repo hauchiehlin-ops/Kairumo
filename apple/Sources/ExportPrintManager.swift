@@ -82,7 +82,7 @@ public final class ExportPrintManager {
     public func printNotebook(
         session: PadnoteSession,
         pageId: String? = nil,
-        jobTitle: String = "Padnote Document",
+        jobTitle: String = "Kairumo Document",
         from viewController: UIViewController,
         sourceView: UIView? = nil,
         completion: ((UIPrintInteractionController, Bool, Error?) -> Void)? = nil
@@ -130,7 +130,7 @@ public final class ExportPrintManager {
     public func printNotebook(
         session: PadnoteSession,
         pageId: String? = nil,
-        jobTitle: String = "Padnote Document"
+        jobTitle: String = "Kairumo Document"
     ) throws {
         let printPdfData = try session.printData(pageId: pageId)
         guard let pdfDoc = PDFDocument(data: printPdfData) else {
