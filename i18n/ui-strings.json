@@ -1102,6 +1102,14 @@
     "zhHans": "笔记随附录音",
     "zhHant": "筆記隨附錄音"
   },
+  "audio_empty_hint": {
+    "en": "The recording contains no audio or is empty.",
+    "ja": "録音の長さがゼロか、音声が検出されませんでした。",
+    "ko": "녹음 길이가 0이거나 음성이 감지되지 않았습니다.",
+    "th": "การบันทึกไม่มีเสียงหรือว่างเปล่า",
+    "zhHans": "录音长度为零或未检测到声音。",
+    "zhHant": "錄音長度為零或未偵測到聲音。"
+  },
   "audio_file_missing": {
     "en": "Audio file not found",
     "ja": "音声ファイルが見つかりません",
@@ -7874,6 +7882,14 @@
     "zhHans": "打开设置",
     "zhHant": "開啟設定"
   },
+  "place_sticker": {
+    "en": "Place Sticker",
+    "ja": "ステッカーを配置",
+    "ko": "스티커 배치",
+    "th": "วางสติกเกอร์",
+    "zhHans": "放置贴纸",
+    "zhHant": "放置貼紙"
+  },
   "platform_desc": {
     "en": "Platform",
     "ja": "プラットフォーム",
@@ -10079,6 +10095,14 @@
     "ja": "付箋",
     "ko": "포스트잇",
     "th": "กระดาษโน้ต"
+  },
+  "sticker_placed_hint": {
+    "en": "Sticker placed on canvas. You can adjust or move it anytime using the lasso or eraser.",
+    "ja": "ステッカーが配置されました。なげなわや消しゴムでいつでも微調整や移動が可能です。",
+    "ko": "스티커가 캔버스에 배치되었습니다. 올가미나 지우개로 언제든지 미세 조정하거나 이동할 수 있습니다.",
+    "th": "วางสติกเกอร์บนผืนผ้าใบแล้ว คุณสามารถปรับหรือย้ายได้ตลอดเวลาโดยใช้บ่วงบาศหรือยางลบ",
+    "zhHans": "贴纸已放置于画布。可随时使用套索或橡皮擦微调或移动。",
+    "zhHant": "貼紙已放置於畫布。可隨時使用套索或橡皮擦微調或移動。"
   },
   "sticker_pencil": {
     "en": "Pencil",

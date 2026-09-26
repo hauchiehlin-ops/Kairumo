@@ -17,6 +17,10 @@ import UIKit
 public enum AudioPCMDecoder {
     /// 將本地音訊檔（.m4a, .wav, .caf, .opus 等）解碼並重採樣為 16,000 Hz 單聲道 Float32 PCM
     public static func decodeTo16kMono(url: URL) throws -> [Float] {
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            throw NSError(domain: "AudioPCMDecoder", code: 404, userInfo: [NSLocalizedDescriptionKey: "音訊檔案不存在: \(url.lastPathComponent)"])
+        }
+
         // .opus 走核心 Ogg-Opus 解碼器（AVAudioFile 無法解析 Ogg 容器）
         if url.pathExtension.lowercased() == "opus" {
             guard let decoder = audioDecoderOpen(path: url.path) else {
@@ -28,66 +32,123 @@ public enum AudioPCMDecoder {
                 if chunk.isEmpty { break }
                 allSamples.append(contentsOf: chunk)
             }
+            guard !allSamples.isEmpty else {
+                throw NSError(domain: "AudioPCMDecoder", code: 5, userInfo: [NSLocalizedDescriptionKey: "音訊內容為空或長度為零"])
+            }
             return allSamples
         }
 
-        let file = try AVAudioFile(forReading: url)
-        guard let targetFormat = AVAudioFormat(
-            commonFormat: .pcmFormatFloat32,
-            sampleRate: 16000,
-            channels: 1,
-            interleaved: false
-        ) else {
-            throw NSError(domain: "AudioPCMDecoder", code: 1, userInfo: [NSLocalizedDescriptionKey: "無法初始化 16kHz 目標格式"])
-        }
-
-        let sourceFormat = file.processingFormat
-        guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
-            throw NSError(domain: "AudioPCMDecoder", code: 2, userInfo: [NSLocalizedDescriptionKey: "無法建立音訊格式轉換器"])
-        }
-
-        let ratio = 16000.0 / sourceFormat.sampleRate
-        let targetFrameCapacity = AVAudioFrameCount(Double(file.length) * ratio + 4096)
-        guard let outputBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: targetFrameCapacity) else {
-            throw NSError(domain: "AudioPCMDecoder", code: 3, userInfo: [NSLocalizedDescriptionKey: "無法配置輸出音訊緩衝區"])
-        }
-
-        var error: NSError? = nil
-        var allRead = false
-        converter.convert(to: outputBuffer, error: &error) { inNumPackets, outStatus in
-            if allRead {
-                outStatus.pointee = .endOfStream
-                return nil
+        // 非 opus 格式：先嘗試使用 AVAudioFile 解碼重採樣
+        do {
+            let file = try AVAudioFile(forReading: url)
+            guard let targetFormat = AVAudioFormat(
+                commonFormat: .pcmFormatFloat32,
+                sampleRate: 16000,
+                channels: 1,
+                interleaved: false
+            ) else {
+                throw NSError(domain: "AudioPCMDecoder", code: 1, userInfo: [NSLocalizedDescriptionKey: "無法初始化 16kHz 目標格式"])
             }
-            guard let readBuffer = AVAudioPCMBuffer(pcmFormat: sourceFormat, frameCapacity: inNumPackets) else {
-                outStatus.pointee = .noDataNow
-                return nil
+
+            let sourceFormat = file.processingFormat
+            guard let converter = AVAudioConverter(from: sourceFormat, to: targetFormat) else {
+                throw NSError(domain: "AudioPCMDecoder", code: 2, userInfo: [NSLocalizedDescriptionKey: "無法建立音訊格式轉換器"])
             }
-            do {
-                try file.read(into: readBuffer)
-                if readBuffer.frameLength == 0 {
-                    allRead = true
+
+            let ratio = 16000.0 / sourceFormat.sampleRate
+            let targetFrameCapacity = AVAudioFrameCount(Double(file.length) * ratio + 4096)
+            guard let outputBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: targetFrameCapacity) else {
+                throw NSError(domain: "AudioPCMDecoder", code: 3, userInfo: [NSLocalizedDescriptionKey: "無法配置輸出音訊緩衝區"])
+            }
+
+            var error: NSError? = nil
+            var allRead = false
+            converter.convert(to: outputBuffer, error: &error) { inNumPackets, outStatus in
+                if allRead {
                     outStatus.pointee = .endOfStream
                     return nil
                 }
-                outStatus.pointee = .haveData
-                return readBuffer
-            } catch {
-                outStatus.pointee = .endOfStream
-                return nil
+                guard let readBuffer = AVAudioPCMBuffer(pcmFormat: sourceFormat, frameCapacity: inNumPackets) else {
+                    outStatus.pointee = .noDataNow
+                    return nil
+                }
+                do {
+                    try file.read(into: readBuffer)
+                    if readBuffer.frameLength == 0 {
+                        allRead = true
+                        outStatus.pointee = .endOfStream
+                        return nil
+                    }
+                    outStatus.pointee = .haveData
+                    return readBuffer
+                } catch {
+                    outStatus.pointee = .endOfStream
+                    return nil
+                }
+            }
+
+            if let error = error {
+                throw error
+            }
+
+            if let channelData = outputBuffer.floatChannelData?[0], outputBuffer.frameLength > 0 {
+                let count = Int(outputBuffer.frameLength)
+                return Array(UnsafeBufferPointer(start: channelData, count: count))
+            }
+        } catch {
+            StartupLogger.log("ℹ️ AVAudioFile 解碼未完成，退回 AVAssetReader 降級解析: \(error.localizedDescription)")
+        }
+
+        // 備援：走 AVAssetReader（針對 MPEG4 / M4A 等容器媒體解碼）
+        let assetSamples = try decodeWithAssetReader(url: url)
+        guard !assetSamples.isEmpty else {
+            throw NSError(domain: "AudioPCMDecoder", code: 5, userInfo: [NSLocalizedDescriptionKey: "音訊內容為空或長度為零"])
+        }
+        return assetSamples
+    }
+
+    private static func decodeWithAssetReader(url: URL) throws -> [Float] {
+        let asset = AVURLAsset(url: url)
+        let tracks = asset.tracks(withMediaType: .audio)
+        guard let track = tracks.first else {
+            throw NSError(domain: "AudioPCMDecoder", code: 12, userInfo: [NSLocalizedDescriptionKey: "找不到音訊軌道"])
+        }
+        let reader = try AVAssetReader(asset: asset)
+        let outputSettings: [String: Any] = [
+            AVFormatIDKey: kAudioFormatLinearPCM,
+            AVSampleRateKey: 16000.0,
+            AVNumberOfChannelsKey: 1,
+            AVLinearPCMBitDepthKey: 32,
+            AVLinearPCMIsFloatKey: true,
+            AVLinearPCMIsBigEndianKey: false
+        ]
+        let readerOutput = AVAssetReaderTrackOutput(track: track, outputSettings: outputSettings)
+        reader.add(readerOutput)
+        guard reader.startReading() else {
+            throw reader.error ?? NSError(domain: "AudioPCMDecoder", code: 13, userInfo: [NSLocalizedDescriptionKey: "無法啟動音訊解碼器"])
+        }
+        var sampleData = [Float]()
+        while let sampleBuffer = readerOutput.copyNextSampleBuffer() {
+            guard let blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer) else { continue }
+            var totalLength = 0
+            var dataPointer: UnsafeMutablePointer<Int8>?
+            let status = CMBlockBufferGetDataPointer(
+                blockBuffer,
+                atOffset: 0,
+                lengthAtOffsetOut: nil,
+                totalLengthOut: &totalLength,
+                dataPointerOut: &dataPointer
+            )
+            if status == noErr, let ptr = dataPointer, totalLength > 0 {
+                let floatCount = totalLength / MemoryLayout<Float>.size
+                let floatPtr = ptr.withMemoryRebound(to: Float.self, capacity: floatCount) { $0 }
+                sampleData.append(contentsOf: UnsafeBufferPointer(start: floatPtr, count: floatCount))
             }
         }
-
-        if let error = error {
-            throw error
+        if reader.status == .failed, let err = reader.error {
+            throw err
         }
-
-        guard let channelData = outputBuffer.floatChannelData?[0] else {
-            return []
-        }
-
-        let count = Int(outputBuffer.frameLength)
-        return Array(UnsafeBufferPointer(start: channelData, count: count))
+        return sampleData
     }
 
     /// 將 16kHz 單聲道 Float32 PCM 寫入臨時 .wav 檔，供 AVFoundation 或 Apple Speech 辨識
@@ -374,13 +435,31 @@ public final class AudioTranscriber: ObservableObject {
         isTranscribing = true
         defer { isTranscribing = false }
 
+        // 先驗證並解碼音訊 PCM（避免傳遞空緩衝區給 Whisper 或 Apple Speech）
+        let pcm: [Float]
+        do {
+            pcm = try await Task.detached(priority: .userInitiated) {
+                try AudioPCMDecoder.decodeTo16kMono(url: url)
+            }.value
+        } catch {
+            StartupLogger.log("⚠️ 音訊解碼失敗: \(error.localizedDescription)")
+            throw error
+        }
+
+        guard !pcm.isEmpty else {
+            throw NSError(
+                domain: "AudioTranscriber",
+                code: 6,
+                userInfo: [NSLocalizedDescriptionKey: LocalizationManager.shared.localized("transcribe_no_speech")]
+            )
+        }
+
         // 1. 優先路徑：若已下載端側 Whisper 模型，走 Rust 核心 ASR 管線（支援多語言自動偵測與標點還原）
         if isWhisperAvailable {
             do {
                 StartupLogger.log("🎙️ 開始使用端側 Whisper 模型轉錄（自動語言偵測）...")
                 let result = try await Task.detached(priority: .userInitiated) { [path = whisperModelPath] () -> FfiTranscribeResult in
-                    let pcm = try AudioPCMDecoder.decodeTo16kMono(url: url)
-                    return try whisperTranscribePcm(modelPath: path, pcm16kMono: pcm, language: languageCode)
+                    try whisperTranscribePcm(modelPath: path, pcm16kMono: pcm, language: languageCode)
                 }.value
 
                 lastUsedOnDevice = true
@@ -398,10 +477,10 @@ public final class AudioTranscriber: ObservableObject {
         // 2. 降級備援路徑：走 Apple 系統聽寫框架
         lastEngineUsed = "Apple Speech"
         StartupLogger.log("🎙️ 使用 Apple Speech 系統聽寫進行轉錄...")
-        return try await transcribeWithAppleSpeech(url: url, languageCode: languageCode)
+        return try await transcribeWithAppleSpeech(pcm: pcm, languageCode: languageCode)
     }
 
-    private func transcribeWithAppleSpeech(url: URL, languageCode: String? = nil) async throws -> String {
+    private func transcribeWithAppleSpeech(pcm: [Float], languageCode: String? = nil) async throws -> String {
         let granted = await requestPermission()
         guard granted else {
             throw NSError(
@@ -411,29 +490,11 @@ public final class AudioTranscriber: ObservableObject {
             )
         }
 
-        // Apple Speech (SFSpeechURLRecognitionRequest) 無法直接解析 Ogg-Opus 容器（會報 No speech detected 1110），
-        // 需透過核心解碼器解出 PCM 並轉存為臨時標準 .wav 檔後送入辨識。
-        let effectiveUrl: URL
-        let isTempWav: Bool
-        if url.pathExtension.lowercased() == "opus" {
-            let pcm = try AudioPCMDecoder.decodeTo16kMono(url: url)
-            guard !pcm.isEmpty else {
-                throw NSError(
-                    domain: "AudioTranscriber",
-                    code: 6,
-                    userInfo: [NSLocalizedDescriptionKey: "音訊內容為空，無法轉錄"]
-                )
-            }
-            effectiveUrl = try AudioPCMDecoder.writePcmToTempWav(samples: pcm)
-            isTempWav = true
-        } else {
-            effectiveUrl = url
-            isTempWav = false
-        }
+        // Apple Speech (SFSpeechURLRecognitionRequest) 需要標準 WAV 容器，
+        // 透過核心解碼器已解出的 PCM 轉存為臨時標準 .wav 檔後送入辨識。
+        let effectiveUrl = try AudioPCMDecoder.writePcmToTempWav(samples: pcm)
         defer {
-            if isTempWav {
-                try? FileManager.default.removeItem(at: effectiveUrl)
-            }
+            try? FileManager.default.removeItem(at: effectiveUrl)
         }
 
         let locale: Locale

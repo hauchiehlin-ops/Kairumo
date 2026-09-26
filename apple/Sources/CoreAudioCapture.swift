@@ -26,6 +26,99 @@
 import AVFoundation
 import Foundation
 
+/// 專責音訊重採樣與管線串流的背景處理器。
+/// 保證所有麥克風取樣都在專用序列佇列上完成轉碼與送交核心，避免阻塞主執行緒或丟失收尾取樣。
+private final class CoreAudioPipeline: @unchecked Sendable {
+    private static let targetSampleRate: Double = 16_000
+    private let audioQueue = DispatchQueue(label: "com.kairumo.audio.capture", qos: .userInitiated)
+    private var converter: AVAudioConverter?
+    private var targetFormat: AVAudioFormat?
+    private var session: PadnoteSession?
+    private var isPaused = false
+
+    func configure(session: PadnoteSession, sourceFormat: AVAudioFormat, targetFormat: AVAudioFormat) {
+        audioQueue.sync {
+            self.session = session
+            self.targetFormat = targetFormat
+            self.converter = AVAudioConverter(from: sourceFormat, to: targetFormat)
+            self.isPaused = false
+        }
+    }
+
+    func pause() {
+        audioQueue.sync { self.isPaused = true }
+    }
+
+    func resume() {
+        audioQueue.sync { self.isPaused = false }
+    }
+
+    /// 停止管線並同步等待所有在隊列中的音訊緩衝處理完畢
+    func stop() {
+        audioQueue.sync {
+            self.converter = nil
+            self.targetFormat = nil
+            self.session = nil
+            self.isPaused = false
+        }
+    }
+
+    func feed(_ buffer: AVAudioPCMBuffer, onError: (@Sendable (String) -> Void)?) {
+        guard let copy = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: buffer.frameLength) else { return }
+        copy.frameLength = buffer.frameLength
+        let channelCount = Int(buffer.format.channelCount)
+        if let srcData = buffer.floatChannelData, let dstData = copy.floatChannelData {
+            for ch in 0..<channelCount {
+                dstData[ch].assign(from: srcData[ch], count: Int(buffer.frameLength))
+            }
+        }
+
+        audioQueue.async { [weak self] in
+            guard let self = self else { return }
+            self.process(copy, onError: onError)
+        }
+    }
+
+    private func process(_ buffer: AVAudioPCMBuffer, onError: (@Sendable (String) -> Void)?) {
+        guard !isPaused,
+              let target = targetFormat,
+              let session = session
+        else { return }
+
+        if converter == nil || converter?.inputFormat != buffer.format {
+            converter = AVAudioConverter(from: buffer.format, to: target)
+        }
+        guard let converter = converter else { return }
+
+        let ratio = target.sampleRate / buffer.format.sampleRate
+        let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 64
+        guard let out = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else { return }
+
+        var consumed = false
+        var error: NSError?
+        converter.convert(to: out, error: &error) { _, status in
+            if consumed {
+                status.pointee = .noDataNow
+                return nil
+            }
+            consumed = true
+            status.pointee = .haveData
+            return buffer
+        }
+        if let error = error {
+            onError?("音訊轉換失敗：\(error.localizedDescription)")
+            return
+        }
+        guard out.frameLength > 0, let channel = out.floatChannelData?[0] else { return }
+        let samples = Array(UnsafeBufferPointer(start: channel, count: Int(out.frameLength)))
+        do {
+            _ = try session.feedAudio(pcm16kMono: samples)
+        } catch {
+            onError?("餵音訊失敗：\(error)")
+        }
+    }
+}
+
 /// 從麥克風擷取音訊並餵給核心的錄音管線。
 @MainActor
 final class CoreAudioCapture {
@@ -34,10 +127,7 @@ final class CoreAudioCapture {
     private static let targetSampleRate: Double = 16_000
 
     private let engine = AVAudioEngine()
-    private var converter: AVAudioConverter?
-    private var targetFormat: AVAudioFormat?
-    private var session: PadnoteSession?
-    private var isPaused = false
+    private let pipeline = CoreAudioPipeline()
     private var tapInstalled = false
 
     /// 餵音訊失敗時回報（例如核心那邊沒有在錄音）。
@@ -66,9 +156,9 @@ final class CoreAudioCapture {
         }
         if chosenFormat.sampleRate <= 0 || chosenFormat.channelCount == 0 {
             #if os(iOS) || targetEnvironment(macCatalyst)
-            let session = AVAudioSession.sharedInstance()
-            try? session.setCategory(.playAndRecord, mode: .default)
-            try? session.setActive(true)
+            let audioSession = AVAudioSession.sharedInstance()
+            try? audioSession.setCategory(.playAndRecord, mode: .default)
+            try? audioSession.setActive(true)
             chosenFormat = input.outputFormat(forBus: 0)
             if chosenFormat.sampleRate <= 0 || chosenFormat.channelCount == 0 {
                 chosenFormat = input.inputFormat(forBus: 0)
@@ -81,10 +171,6 @@ final class CoreAudioCapture {
             onError?("麥克風尚未就緒（取樣率: \(chosenFormat.sampleRate), 聲道: \(chosenFormat.channelCount)）")
             return nil
         }
-        guard let converter = AVAudioConverter(from: chosenFormat, to: target) else {
-            onError?("建不出音訊轉換器")
-            return nil
-        }
 
         let recordingId: String
         do {
@@ -94,15 +180,11 @@ final class CoreAudioCapture {
             return nil
         }
 
-        self.converter = converter
-        self.targetFormat = target
-        self.session = session
-        self.isPaused = false
+        pipeline.configure(session: session, sourceFormat: chosenFormat, targetFormat: target)
 
+        let errorHandler = self.onError
         input.installTap(onBus: 0, bufferSize: 4096, format: chosenFormat) { [weak self] buffer, _ in
-            // 這個回呼在音訊執行緒上。**不要在這裡碰 @MainActor 的狀態**，
-            // 也不要做會配置記憶體以外的重活 —— 卡住它就是卡住麥克風。
-            self?.feed(buffer)
+            self?.pipeline.feed(buffer, onError: errorHandler)
         }
         tapInstalled = true
 
@@ -118,11 +200,11 @@ final class CoreAudioCapture {
     }
 
     func pause() {
-        isPaused = true
+        pipeline.pause()
     }
 
     func resume() {
-        isPaused = false
+        pipeline.resume()
     }
 
     /// 停止擷取。**不呼叫核心的 stopRecording** —— 那是呼叫端的事，
@@ -135,57 +217,6 @@ final class CoreAudioCapture {
         if engine.isRunning {
             engine.stop()
         }
-        converter = nil
-        targetFormat = nil
-        session = nil
-        isPaused = false
-    }
-
-    /// 把麥克風的緩衝轉成 16 kHz 單聲道再餵給核心。
-    private nonisolated func feed(_ buffer: AVAudioPCMBuffer) {
-        Task { @MainActor in
-            guard !self.isPaused,
-                  let target = self.targetFormat,
-                  let session = self.session
-            else { return }
-
-            if self.converter == nil || self.converter?.inputFormat != buffer.format {
-                self.converter = AVAudioConverter(from: buffer.format, to: target)
-            }
-            guard let converter = self.converter else { return }
-
-            // 輸出容量按取樣率比例估，多給一點餘裕：估太小會被轉換器截斷，
-            // 而截斷的症狀是聲音會週期性地缺一小塊。
-            let ratio = target.sampleRate / buffer.format.sampleRate
-            let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 64
-            guard let out = AVAudioPCMBuffer(pcmFormat: target, frameCapacity: capacity) else {
-                return
-            }
-
-            var consumed = false
-            var error: NSError?
-            converter.convert(to: out, error: &error) { _, status in
-                // 同一個輸入緩衝只能交出去一次。再交一次會讓轉換器
-                // 把同一段音重複算進去。
-                if consumed {
-                    status.pointee = .noDataNow
-                    return nil
-                }
-                consumed = true
-                status.pointee = .haveData
-                return buffer
-            }
-            if let error {
-                self.onError?("音訊轉換失敗：\(error.localizedDescription)")
-                return
-            }
-            guard out.frameLength > 0, let channel = out.floatChannelData?[0] else { return }
-            let samples = Array(UnsafeBufferPointer(start: channel, count: Int(out.frameLength)))
-            do {
-                _ = try session.feedAudio(pcm16kMono: samples)
-            } catch {
-                self.onError?("餵音訊失敗：\(error)")
-            }
-        }
+        pipeline.stop()
     }
 }

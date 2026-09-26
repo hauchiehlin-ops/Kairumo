@@ -378,6 +378,8 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     private func stopCoreRecording() -> (url: URL, duration: TimeInterval)? {
         guard let session = coreSession else { return nil }
         coreCapture?.stop()
+        streamingTranscriber?.stop()
+        streamingTranscriber = nil
         // 先停擷取再叫核心收尾：反過來的話，收尾之後還會有音訊被餵進來，
         // 而那時候核心已經不在錄音狀態了。
         let durationUs = session.recordedAudioUs()

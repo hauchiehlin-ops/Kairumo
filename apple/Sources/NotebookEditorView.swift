@@ -1131,6 +1131,7 @@ public struct NotebookEditorView: View {
     /// 匯入失敗的語系鍵。非空就跳提示。
     @State private var importErrorKey: String = ""
     @State private var showStickerLibrary: Bool = false
+    @State private var pendingStickerPlacement: PendingStickerPlacement? = nil
     @State private var showMathCalculator: Bool = false
     @State private var showChartStudio: Bool = false
     @State private var showTableStudio: Bool = false
@@ -1617,41 +1618,24 @@ public struct NotebookEditorView: View {
                 } else {
                     targetCenter = CGPoint(x: PageGeometry.width / 2.0, y: PageGeometry.height / 2.0)
                 }
-                let drawingCenter = CGPoint(x: drawing.bounds.midX, y: drawing.bounds.midY)
-                let dx = targetCenter.x - drawingCenter.x
-                let dy = targetCenter.y - drawingCenter.y
 
-                // 🌟 直接將位移烘焙至控制點 (controlPoints)，並將 transform 設為 .identity
-                // 徹底解決 PencilKit 在即時畫布 (Metal GPU Pipeline) 渲染時因 stroke.transform 矩陣未能即時重繪之缺陷
-                let translatedStrokes = drawing.strokes.map { stroke -> PKStroke in
-                    var newPoints: [PKStrokePoint] = []
-                    newPoints.reserveCapacity(stroke.path.count)
-                    for i in 0..<stroke.path.count {
-                        let pt = stroke.path[i]
-                        let loc = pt.location
-                            .applying(stroke.transform)
-                            .applying(CGAffineTransform(translationX: dx, y: dy))
-                        newPoints.append(PKStrokePoint(
-                            location: loc,
-                            timeOffset: pt.timeOffset,
-                            size: pt.size,
-                            opacity: pt.opacity,
-                            force: pt.force,
-                            azimuth: pt.azimuth,
-                            altitude: pt.altitude
-                        ))
-                    }
-                    let newPath = PKStrokePath(controlPoints: newPoints, creationDate: stroke.path.creationDate)
-                    return PKStroke(ink: stroke.ink, path: newPath, transform: .identity, mask: stroke.mask)
+                let b = drawing.bounds
+                let baseW = max(70, min(b.width > 0 ? b.width : 160, 260))
+                let baseH = max(70, min(b.height > 0 ? b.height : 160, 260))
+
+                // 若為自動化測試環境，直接蓋印以相容非互動 headless 測試流程
+                if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+                    commitStickerDrawing(drawing, at: targetCenter, scale: 1.0, rotationDegrees: 0)
+                } else {
+                    // 進入互動式貼圖放置模式：使用者可全畫面自由拖曳定位、縮放大小、旋轉角度，滿意後再確認蓋印
+                    self.pendingStickerPlacement = PendingStickerPlacement(
+                        drawing: drawing,
+                        center: targetCenter,
+                        size: CGSize(width: baseW, height: baseH),
+                        scale: 1.0,
+                        rotationDegrees: 0
+                    )
                 }
-
-                var newDrawing = canvasView?.drawing ?? self.currentDrawing
-                newDrawing.strokes.append(contentsOf: translatedStrokes)
-                canvasView?.drawing = newDrawing
-                canvasView?.setNeedsDisplay()
-                self.currentDrawing = newDrawing
-                self.saveCurrentPageDrawing()
-                PageThumbnailRenderer.invalidateAll()
             }
         } }
         .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotoItem, matching: .images)
@@ -3434,6 +3418,32 @@ public struct NotebookEditorView: View {
                         )
                         .zIndex(ObjectStacking.zIndex(for: item.id, kind: .shape, order: notebook.objectOrder(forPage: page)))
                     }
+                }
+
+                // 互動式貼圖定位與放置浮層（工作項：允許自由拖曳、縮放與旋轉貼圖位置）
+                if page == currentPageIndex, let placement = pendingStickerPlacement {
+                    StickerPlacementOverlayView(
+                        placement: Binding(
+                            get: { self.pendingStickerPlacement ?? placement },
+                            set: { self.pendingStickerPlacement = $0 }
+                        ),
+                        onCommit: {
+                            if let p = self.pendingStickerPlacement {
+                                commitStickerDrawing(
+                                    p.drawing,
+                                    at: p.center,
+                                    scale: p.scale,
+                                    rotationDegrees: p.rotationDegrees
+                                )
+                                self.pendingStickerPlacement = nil
+                                showCanvasNotice(localizationManager.localized("sticker_placed_hint"))
+                            }
+                        },
+                        onCancel: {
+                            self.pendingStickerPlacement = nil
+                        }
+                    )
+                    .zIndex(9999)
                 }
 
                 if showLayerPanel {
@@ -7869,6 +7879,57 @@ public struct NotebookEditorView: View {
         }
     }
 
+    private func commitStickerDrawing(
+        _ drawing: PKDrawing,
+        at targetCenter: CGPoint,
+        scale: CGFloat = 1.0,
+        rotationDegrees: Double = 0.0
+    ) {
+        let drawingCenter = CGPoint(x: drawing.bounds.midX, y: drawing.bounds.midY)
+        let radians = CGFloat(rotationDegrees * .pi / 180.0)
+        let cosA = cos(radians)
+        let sinA = sin(radians)
+
+        // 🌟 將位移、縮放與旋轉直接烘焙至控制點 (controlPoints)，並將 transform 設為 .identity
+        // 徹底解決 PencilKit 在即時畫布 (Metal GPU Pipeline) 渲染時因 stroke.transform 矩陣未能即時重繪之缺陷
+        let translatedStrokes = drawing.strokes.map { stroke -> PKStroke in
+            var newPoints: [PKStrokePoint] = []
+            newPoints.reserveCapacity(stroke.path.count)
+            for i in 0..<stroke.path.count {
+                let pt = stroke.path[i]
+                let rawLoc = pt.location.applying(stroke.transform)
+                let ox = (rawLoc.x - drawingCenter.x) * scale
+                let oy = (rawLoc.y - drawingCenter.y) * scale
+                let rx = ox * cosA - oy * sinA
+                let ry = ox * sinA + oy * cosA
+                let finalLoc = CGPoint(x: targetCenter.x + rx, y: targetCenter.y + ry)
+                let finalSize = CGSize(
+                    width: max(0.5, pt.size.width * scale),
+                    height: max(0.5, pt.size.height * scale)
+                )
+                newPoints.append(PKStrokePoint(
+                    location: finalLoc,
+                    timeOffset: pt.timeOffset,
+                    size: finalSize,
+                    opacity: pt.opacity,
+                    force: pt.force,
+                    azimuth: pt.azimuth,
+                    altitude: pt.altitude
+                ))
+            }
+            let newPath = PKStrokePath(controlPoints: newPoints, creationDate: stroke.path.creationDate)
+            return PKStroke(ink: stroke.ink, path: newPath, transform: .identity, mask: stroke.mask)
+        }
+
+        var newDrawing = canvasView?.drawing ?? self.currentDrawing
+        newDrawing.strokes.append(contentsOf: translatedStrokes)
+        canvasView?.drawing = newDrawing
+        canvasView?.setNeedsDisplay()
+        self.currentDrawing = newDrawing
+        self.saveCurrentPageDrawing()
+        PageThumbnailRenderer.invalidateAll()
+    }
+
     private func copySelectedStrokes() {
         guard let canvas = canvasView else { return }
         guard !canvas.drawing.strokes.isEmpty else {
@@ -10731,6 +10792,176 @@ struct RemoteCursorsOverlay: View {
 
 
 
+
+// MARK: - 互動式貼圖定位與放置元件
+
+public struct PendingStickerPlacement: Identifiable, Equatable {
+    public let id: UUID = UUID()
+    public var drawing: PKDrawing
+    public var center: CGPoint
+    public var size: CGSize
+    public var scale: CGFloat = 1.0
+    public var rotationDegrees: Double = 0.0
+
+    public static func == (lhs: PendingStickerPlacement, rhs: PendingStickerPlacement) -> Bool {
+        lhs.id == rhs.id &&
+        lhs.center == rhs.center &&
+        lhs.size == rhs.size &&
+        lhs.scale == rhs.scale &&
+        lhs.rotationDegrees == rhs.rotationDegrees
+    }
+}
+
+public struct StickerRenderView: View {
+    public let drawing: PKDrawing
+
+    public var body: some View {
+        let b = drawing.bounds
+        let safeBounds = (b.width > 0 && b.height > 0) ? b : CGRect(x: 0, y: 0, width: 100, height: 100)
+        let img = drawing.image(from: safeBounds, scale: 2.0)
+        Image(uiImage: img)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
+    }
+}
+
+public struct StickerPlacementOverlayView: View {
+    @Binding var placement: PendingStickerPlacement
+    let onCommit: () -> Void
+    let onCancel: () -> Void
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+
+    @State private var dragOffset: CGSize = .zero
+    @State private var liveScale: CGFloat = 1.0
+
+    private var currentCenter: CGPoint {
+        CGPoint(
+            x: placement.center.x + dragOffset.width,
+            y: placement.center.y + dragOffset.height
+        )
+    }
+
+    private var displayScale: CGFloat {
+        max(0.3, min(4.0, placement.scale * liveScale))
+    }
+
+    public var body: some View {
+        let baseW = max(50, placement.size.width)
+        let baseH = max(50, placement.size.height)
+        let displayW = baseW * displayScale
+        let displayH = baseH * displayScale
+
+        VStack(spacing: 10) {
+            // 頂部控制把手列：取消、重設、完成放置
+            HStack(spacing: 10) {
+                Button {
+                    onCancel()
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.white)
+                        .padding(7)
+                        .background(Color.red)
+                        .clipShape(Circle())
+                        .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 1)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("sticker.place.cancel")
+                .accessibilityLabel(localizationManager.localized("cancel"))
+
+                Button {
+                    placement.scale = 1.0
+                    placement.rotationDegrees = 0
+                } label: {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundColor(.primary)
+                        .padding(7)
+                        .background(Color(uiColor: .secondarySystemBackground))
+                        .clipShape(Circle())
+                        .shadow(color: Color.black.opacity(0.15), radius: 2, x: 0, y: 1)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(localizationManager.localized("reset"))
+
+                Button {
+                    onCommit()
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "checkmark")
+                            .font(.system(size: 12, weight: .bold))
+                        Text(localizationManager.localized("place_sticker"))
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundColor(.white)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 7)
+                    .background(Color.accentColor)
+                    .clipShape(Capsule())
+                    .shadow(color: Color.black.opacity(0.2), radius: 3, x: 0, y: 1)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("sticker.place.confirm")
+            }
+
+            // 貼圖互動預覽本體（可自由拖曳定位、旋轉、右下角縮放）
+            ZStack(alignment: .bottomTrailing) {
+                StickerRenderView(drawing: placement.drawing)
+                    .frame(width: displayW, height: displayH)
+                    .rotationEffect(.degrees(placement.rotationDegrees))
+
+                // 外圍邊框
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(style: StrokeStyle(lineWidth: 1.5, dash: [6, 4]))
+                    .foregroundColor(Color.accentColor)
+                    .frame(width: displayW + 16, height: displayH + 16)
+                    .rotationEffect(.degrees(placement.rotationDegrees))
+
+                // 右下角縮放把手
+                Image(systemName: "arrow.up.left.and.down.right")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.white)
+                    .padding(6)
+                    .background(Color.accentColor)
+                    .clipShape(Circle())
+                    .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
+                    .offset(x: 10, y: 10)
+                    .gesture(
+                        DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                            .onChanged { val in
+                                let delta = (val.translation.width + val.translation.height) / 2.0
+                                let factor = max(0.3, min(4.0, 1.0 + (delta / 120.0)))
+                                liveScale = factor
+                            }
+                            .onEnded { _ in
+                                placement.scale = displayScale
+                                liveScale = 1.0
+                            }
+                    )
+
+                // 頂部旋轉把手
+                ObjectRotationHandle(
+                    degrees: $placement.rotationDegrees,
+                    size: CGSize(width: displayW + 16, height: displayH + 16)
+                )
+            }
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 3, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                    .onChanged { val in
+                        dragOffset = val.translation
+                    }
+                    .onEnded { val in
+                        placement.center.x += val.translation.width
+                        placement.center.y += val.translation.height
+                        dragOffset = .zero
+                    }
+            )
+        }
+        .padding(20)
+        .position(x: currentCenter.x, y: currentCenter.y)
+    }
+}
 
 public struct Sticker: Identifiable, Codable {
     public let id: UUID

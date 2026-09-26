@@ -1118,6 +1118,14 @@ extension LocalizationManager {
             .ko: "노트 첨부 오디오",
             .th: "เสียงที่แนบมากับบันทึก"
         ],
+        "audio_empty_hint": [
+            .zhHant: "錄音長度為零或未偵測到聲音。",
+            .en: "The recording contains no audio or is empty.",
+            .zhHans: "录音长度为零或未检测到声音。",
+            .ja: "録音の長さがゼロか、音声が検出されませんでした。",
+            .ko: "녹음 길이가 0이거나 음성이 감지되지 않았습니다.",
+            .th: "การบันทึกไม่มีเสียงหรือว่างเปล่า"
+        ],
         "audio_file_missing": [
             .zhHant: "找不到音訊檔",
             .en: "Audio file not found",
@@ -7890,6 +7898,14 @@ extension LocalizationManager {
             .ko: "설정 열기",
             .th: "เปิดการตั้งค่า"
         ],
+        "place_sticker": [
+            .zhHant: "放置貼紙",
+            .en: "Place Sticker",
+            .zhHans: "放置贴纸",
+            .ja: "ステッカーを配置",
+            .ko: "스티커 배치",
+            .th: "วางสติกเกอร์"
+        ],
         "platform_desc": [
             .zhHant: "執行平台",
             .en: "Platform",
@@ -10103,6 +10119,14 @@ extension LocalizationManager {
             .ja: "鉛筆",
             .ko: "연필",
             .th: "ดินสอ"
+        ],
+        "sticker_placed_hint": [
+            .zhHant: "貼紙已放置於畫布。可隨時使用套索或橡皮擦微調或移動。",
+            .en: "Sticker placed on canvas. You can adjust or move it anytime using the lasso or eraser.",
+            .zhHans: "贴纸已放置于画布。可随时使用套索或橡皮擦微调或移动。",
+            .ja: "ステッカーが配置されました。なげなわや消しゴムでいつでも微調整や移動が可能です。",
+            .ko: "스티커가 캔버스에 배치되었습니다. 올가미나 지우개로 언제든지 미세 조정하거나 이동할 수 있습니다.",
+            .th: "วางสติกเกอร์บนผืนผ้าใบแล้ว คุณสามารถปรับหรือย้ายได้ตลอดเวลาโดยใช้บ่วงบาศหรือยางลบ"
         ],
         "sticker_qa": [
             .zhHant: "問與答",
