@@ -861,7 +861,7 @@ enum NotebookSyncCoordinator {
         let imported = try NotebookPackageBridge.importDocument(
             fromPackageAt: package, deviceId: deviceId, documentId: documentId
         )
-        applyImported(imported, documentId: documentId, into: store, deviceId: deviceId, ownStrokes: [:])
+        applyImported(imported, documentId: documentId, into: store, ownStrokes: [:])
     }
 
     @MainActor
@@ -962,14 +962,13 @@ enum NotebookSyncCoordinator {
                 fromPackageAt: package, deviceId: deviceId, documentId: documentId
             )
         }.value
-        applyImported(imported, documentId: documentId, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
+        applyImported(imported, documentId: documentId, into: store, ownStrokes: ownStrokes)
     }
 
     private static func applyImported(
         _ imported: NotebookPackageBridge.ImportedNotebook,
         documentId: String,
         into store: SyncableNotebookStore,
-        deviceId: UInt32,
         ownStrokes: OwnStrokes
     ) {
         // 圖片先落地：筆記本指到一個不存在的檔名時，畫面上會是一格空白。
