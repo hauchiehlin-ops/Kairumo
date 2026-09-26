@@ -24,7 +24,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作手冊",
       "tagline": "手寫、打字、錄音三合一的筆記本。零基礎也能一步一步跟著做。",
-      "version": "適用版本 v4.10.2（build 66）· 2026 年 9 月 19 日",
+      "version": "適用版本 v4.10.2（build 66）· 2026 年 9 月 26 日",
       "tocTitle": "目錄",
       "tocHint": "點任一項目直接跳到該段落",
       "stepsLabel": "操作步驟",
@@ -264,11 +264,14 @@ window.KAIRUMO_MANUAL = {
           "建立備份",
           "從備份復原",
           "選擇資料夾",
-          "立即同步"
+          "立即同步",
+          "取消已設定的資料夾"
         ],
         "steps": [
           "首頁的「資料與同步」區塊裡有四張卡片，點任一張會開啟該功能的專屬說明與操作視窗。",
           "「雲端同步」顯示目前是否登入，點進去可以登入、查看同步位置並立即同步。",
+          "要取消已設定的「iCloud／資料夾」：進入雲端同步設定，切到「資料夾」分頁，點「取消已設定的資料夾」，確認後清除。之後若需要重新同步，重新選擇資料夾即可。",
+          "雲端同步支援兩種模式：**Google Drive**（登入 Google 帳號後自動同步，跨平台皆可用）或 **iCloud／資料夾**（Apple 裝置選取任意本機或雲端資料夾；未登入 Google 時啟用）。兩種模式嚴格互斥，同一時間只會跑一種。",
           "「建立備份」把所有筆記、圖片與錄音打包成一個檔案，存到你指定的位置。",
           "「從備份復原」挑一個備份檔還原。復原前會先自動備份目前的資料，選錯檔案也救得回來。",
           "資料夾同步：先在自己的雲端硬碟裡建一個資料夾（例如叫 Kairumo），按「選擇資料夾」指到它。",
@@ -384,7 +387,8 @@ window.KAIRUMO_MANUAL = {
           "播放時點某一段轉錄文字，畫面會跳到當時寫下的筆跡；反過來點筆跡也可以跳到對應的聲音。",
           "要把某段錄音放進某一頁：在筆記裡點「更多 → 插入錄音」，或在首頁的錄音列點「⋯ → 插入至筆記本」。",
           "選取頁面上的錄音卡片後，點左上角的「轉錄文字」按鈕，Kairumo 會把音訊轉成文字方塊並放在卡片下方。",
-          "支援「聲筆動態同步」卡拉 OK：回放錄音時，當時書寫的筆畫會伴隨語音進度發光高亮；直接在畫布上點擊任一筆跡，錄音進度條會立刻跳轉至該筆畫書寫時的精確時間點。"
+          "支援「聲筆動態同步」卡拉 OK：回放錄音時，當時書寫的筆畫會伴隨語音進度發光高亮；直接在畫布上點擊任一筆跡，錄音進度條會立刻跳轉至該筆畫書寫時的精確時間點。",
+          "**Whisper 語音辨識引擎**：首頁頂端可能顯示「下載 Whisper 模型」橫幅。點它可直接下載裝置端 Whisper 模型（約數百 MB），下載後轉錄準確率大幅提升，且完全在本機運算，不會把聲音送出去。若已有其他相容引擎，橫幅不會出現。"
         ],
         "tip": "錄音與轉錄都在這台裝置上完成，不會上傳到任何伺服器。轉錄需要一個在裝置上跑的引擎，而**不是每台裝置都有** —— 沒有的話錄音照常運作，只是首頁的錄音列不會出現轉錄文字，錄音卡片也可能無法產生文字方塊。",
         "fig": "home",
@@ -506,6 +510,14 @@ window.KAIRUMO_MANUAL = {
           [
             "寫到框線外面會怎樣？",
             "那一圈虛線是可列印範圍，也是編輯區域。完全寫在外面的筆畫會被收回並跳出一則提醒 —— 因為它印不出來也匯不出去，留著只會讓人以為它還在。跨在線上的筆畫會留著，但也會提醒一次。"
+          ],
+          [
+            "Whisper 模型是什麼？一定要下載嗎？",
+            "Whisper 是 OpenAI 發布的開源語音辨識模型，Kairumo 把它裁剪並量化後放進 App。下載後完全在裝置本機運算，不會把聲音送出去。不下載也能用錄音功能，只是轉錄不會產生文字。橫幅只在找不到任何相容引擎時才出現。"
+          ],
+          [
+            "如何取消已設定的 iCloud／資料夾同步？",
+            "進入首頁 → 「雲端同步」卡片 → 設定頁 → 「資料夾」分頁，點「取消已設定的資料夾」並確認。取消後資料夾內已同步的檔案仍保留，只是 Kairumo 不再讀寫那個資料夾。若要重新啟用，重新選擇資料夾即可。"
           ]
         ],
         "fig": null
@@ -518,7 +530,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo User Manual",
       "tagline": "Handwriting, typing and audio in one notebook. Step by step, from zero.",
-      "version": "For version 4.10.2 (build 66) · 19 September 2026",
+      "version": "For version 4.10.2 (build 66) · 26 September 2026",
       "tocTitle": "Contents",
       "tocHint": "Tap any entry to jump straight to it",
       "stepsLabel": "Steps",
@@ -758,11 +770,14 @@ window.KAIRUMO_MANUAL = {
           "Create Backup",
           "Restore from Backup",
           "Choose Folder",
-          "Sync Now"
+          "Sync Now",
+          "Cancel Configured Folder"
         ],
         "steps": [
           "The “Data & Sync” block on the home screen has four cards; tapping one opens that feature’s own detail and action sheet.",
           "“Google Drive” shows whether you are signed in, and opens sign-in, sync location and Sync Now controls.",
+          "To remove a configured iCloud / Folder: open Cloud Sync settings, switch to the Folder tab, tap \"Cancel Configured Folder\", and confirm. You can always choose a new folder afterwards.",
+          "Cloud sync has two modes: **Google Drive** (sign in with a Google account; works on all platforms) or **iCloud / Folder** (Apple devices: pick any local or cloud folder; active only when not signed in to Google). The two modes are strictly exclusive — only one runs at a time.",
           "“Create Backup” packs every note, image and recording into a single file and saves it where you choose.",
           "“Restore from Backup” restores from one of those files. Your current data is backed up first, so picking the wrong file is recoverable.",
           "Folder sync: create a folder in your own cloud drive (call it Kairumo, say) and point “Choose Folder” at it.",
@@ -878,7 +893,8 @@ window.KAIRUMO_MANUAL = {
           "During playback, tap a line of transcript to jump to the ink written at that time — and the other way round.",
           "To place a recording on a page: inside a notebook choose “More → Insert Recording”, or on the home screen use “⋯ → Insert into Notebook” on the recording row.",
           "Select a recording card on the page and tap “Transcribe Audio” at its top left. Kairumo turns the audio into a text box under the card.",
-          "Supports “Audio-Ink Sync” karaoke playback: during playback, strokes written at that exact moment glow dynamically in sync with the audio; tap any stroke on the canvas to immediately seek the recording to that stroke’s timestamp."
+          "Supports “Audio-Ink Sync” karaoke playback: during playback, strokes written at that exact moment glow dynamically in sync with the audio; tap any stroke on the canvas to immediately seek the recording to that stroke’s timestamp.",
+          "**Whisper speech-recognition engine**: the home screen may show a \"Download Whisper Model\" banner. Tap it to download the on-device Whisper model (a few hundred MB). Once installed, transcription accuracy improves significantly — all inference runs locally and your audio never leaves the device. The banner only appears if no compatible engine is already present."
         ],
         "tip": "Recording and transcription both run on this device; nothing is uploaded. Transcription needs an on-device engine, and **not every device has one** — without it recording still works, but the recordings list has no transcript text and a recording card may not be able to create a text box.",
         "fig": "home",
@@ -996,6 +1012,14 @@ window.KAIRUMO_MANUAL = {
           [
             "What happens if I write outside the frame?",
             "The dashed rectangle is the printable area, which is also the editing area. A stroke drawn entirely outside it is taken back and you get a notice — it would neither print nor export, and leaving it there would only make you think it still exists. A stroke that straddles the line is kept, with a single reminder."
+          ],
+          [
+            "What is the Whisper model? Do I have to download it?",
+            "Whisper is an open-source speech-recognition model released by OpenAI. Kairumo ships a pruned and quantised version that runs entirely on-device — your audio never leaves the device. You can still record without it; transcription just won't produce text. The download banner only appears if no compatible engine is found."
+          ],
+          [
+            "How do I remove the iCloud / Folder sync I set up?",
+            "Go to the home screen → Cloud Sync card → settings → Folder tab, then tap \"Cancel Configured Folder\" and confirm. Files already synced to the folder are not deleted — Kairumo simply stops reading and writing there. You can re-enable sync at any time by choosing a folder again."
           ]
         ],
         "fig": null
@@ -1008,7 +1032,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作手册",
       "tagline": "手写、打字、录音三合一的笔记本。零基础也能一步一步跟着做。",
-      "version": "适用版本 v4.10.2（build 66）· 2026 年 9 月 19 日",
+      "version": "适用版本 v4.10.2（build 66）· 2026 年 9 月 26 日",
       "tocTitle": "目录",
       "tocHint": "点任一项目直接跳到该段落",
       "stepsLabel": "操作步骤",
@@ -1245,11 +1269,14 @@ window.KAIRUMO_MANUAL = {
           "创建备份",
           "从备份恢复",
           "选择文件夹",
-          "立即同步"
+          "立即同步",
+          "取消已设置的文件夹"
         ],
         "steps": [
           "首页的“数据与同步”区块里有四张卡片，点任一张会打开该功能的专属说明与操作窗口。",
           "“云端同步”会显示目前是否登录，点进去可以登录、查看同步位置并立即同步。",
+          "要取消已设置的「iCloud／文件夹」：进入云端同步设置，切换到「文件夹」选项卡，点击「取消已设置的文件夹」，确认后清除。之后若需要重新同步，重新选择文件夹即可。",
+          "云端同步支持两种模式：**Google Drive**（登录 Google 账号后自动同步，跨平台均可用）或 **iCloud／文件夹**（Apple 设备选取任意本地或云端文件夹；未登录 Google 时启用）。两种模式严格互斥，同一时间只会运行一种。",
           "“创建备份”把所有笔记、图片与录音打包成一个文件，存到你指定的位置。",
           "“从备份恢复”挑一个备份文件还原。恢复前会先自动备份当前数据，选错文件也救得回来。",
           "文件夹同步：先在自己的云端硬盘里建一个文件夹（例如叫 Kairumo），按“选择文件夹”指到它。",
@@ -1365,7 +1392,8 @@ window.KAIRUMO_MANUAL = {
           "播放时点某一段转写文字，画面会跳到当时写下的笔迹；反过来点笔迹也可以跳到对应的声音。",
           "要把某段录音放进某一页：在笔记里点「更多 → 插入录音」，或在首页的录音列点「⋯ → 插入至笔记本」。",
           "选取页面上的录音卡片后，点左上角的“转录文字”按钮，Kairumo 会把音频转成文本框并放在卡片下方。",
-          "支持“声笔动态同步”卡拉 OK：回放录音时，当时书写的笔画会伴随语音进度发光高亮；直接在画布上点击任一笔迹，录音进度条会立刻跳转至该笔画书写时的精确时间点。"
+          "支持“声笔动态同步”卡拉 OK：回放录音时，当时书写的笔画会伴随语音进度发光高亮；直接在画布上点击任一笔迹，录音进度条会立刻跳转至该笔画书写时的精确时间点。",
+          "**Whisper 语音识别引擎**：首页顶部可能显示「下载 Whisper 模型」横幅。点击可直接下载设备端 Whisper 模型（约数百 MB），下载后转录准确率大幅提升，且完全在本机运算，不会将声音发送出去。若已有其他兼容引擎，横幅不会出现。"
         ],
         "tip": "录音与转录都在这台设备上完成，不会上传到任何服务器。转录需要一个在设备上跑的引擎，而**不是每台设备都有** —— 没有的话录音照常运作，只是首页的录音列不会出现转录文字，录音卡片也可能无法产生文本框。",
         "fig": "home",
@@ -1483,6 +1511,14 @@ window.KAIRUMO_MANUAL = {
           [
             "写到框线外面会怎样？",
             "那一圈虚线是可打印范围，也是编辑区域。完全写在外面的笔画会被收回并跳出一则提醒 —— 因为它打印不出来也导不出去，留着只会让人以为它还在。跨在线上的笔画会留着，但也会提醒一次。"
+          ],
+          [
+            "Whisper 模型是什么？一定要下载吗？",
+            "Whisper 是 OpenAI 发布的开源语音识别模型，Kairumo 将其裁剪并量化后内置于 App。下载后完全在设备本机运算，不会将声音发送出去。不下载也能使用录音功能，只是转录不会产生文字。横幅仅在找不到任何兼容引擎时才出现。"
+          ],
+          [
+            "如何取消已设置的 iCloud／文件夹同步？",
+            "进入首页 → 「云端同步」卡片 → 设置页 → 「文件夹」选项卡，点击「取消已设置的文件夹」并确认。取消后文件夹内已同步的文件仍保留，只是 Kairumo 不再读写该文件夹。若要重新启用，重新选择文件夹即可。"
           ]
         ],
         "fig": null
@@ -1495,7 +1531,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 操作マニュアル",
       "tagline": "手書き・タイピング・録音をひとつにしたノート。はじめての方でも順番どおりに進められます。",
-      "version": "対象バージョン v4.10.2（build 66）· 2026年9月19日",
+      "version": "対象バージョン v4.10.2（build 66）· 2026年9月26日",
       "tocTitle": "目次",
       "tocHint": "項目をタップすると該当セクションへ移動します",
       "stepsLabel": "手順",
@@ -1732,11 +1768,14 @@ window.KAIRUMO_MANUAL = {
           "バックアップを作成",
           "バックアップから復元",
           "同期フォルダを選択",
-          "今すぐ同期"
+          "今すぐ同期",
+          "設定済みフォルダを解除"
         ],
         "steps": [
           "ホーム画面の「データと同期」には 4 枚のカードがあります。どれかをタップすると、その機能専用の説明と操作画面が開きます。",
           "「クラウド同期」は現在サインインしているかを表示し、サインイン・同期先・今すぐ同期の操作を開きます。",
+          "設定済みの「iCloud／フォルダ」を解除するには：クラウド同期設定を開き、「フォルダ」タブに切り替え、「設定済みフォルダを解除」をタップして確認します。後からいつでも新しいフォルダを選び直せます。",
+          "クラウド同期には 2 つのモードがあります：**Google Drive**（Google アカウントでサインインして自動同期、全プラットフォーム対応）または **iCloud／フォルダ**（Apple デバイスでローカルまたはクラウドのフォルダを選択。Google 未サインイン時のみ有効）。2 つのモードは排他的で、同時に動作するのは 1 つだけです。",
           "「バックアップを作成」はノート・画像・録音を 1 つのファイルにまとめ、指定した場所へ保存します。",
           "「バックアップから復元」はバックアップファイルを選んで復元します。復元前に現在のデータを自動でバックアップするため、間違えても戻せます。",
           "フォルダ同期：ご自身のクラウドにフォルダ（例：Kairumo）を作り、「同期フォルダを選択」で指定します。",
@@ -1852,7 +1891,8 @@ window.KAIRUMO_MANUAL = {
           "再生中に文字起こしの一行をタップすると、その時間に書いた筆跡へ移動します（逆方向も可能）。",
           "録音をページに置くには、ノート内で「その他 → 録音を挿入」、またはホームの録音行で「⋯ → ノートに挿入」を選びます。",
           "ページ上の録音カードを選択し、左上の「音声を文字起こし」を押すと、Kairumo が音声をテキストボックスにしてカードの下に置きます。",
-          "「音声・手書き同期」カラオケ再生に対応：録音の再生中、その瞬間に書かれた筆跡が音声に合わせて光ります。キャンバス上の手書きを直接タップすれば、その筆跡を書いた正確な再生位置へ即座にスキップします。"
+          "「音声・手書き同期」カラオケ再生に対応：録音の再生中、その瞬間に書かれた筆跡が音声に合わせて光ります。キャンバス上の手書きを直接タップすれば、その筆跡を書いた正確な再生位置へ即座にスキップします。",
+          "**Whisper 音声認識エンジン**：ホーム画面に「Whisper モデルをダウンロード」バナーが表示される場合があります。タップするとデバイス端の Whisper モデル（数百 MB 程度）をダウンロードできます。インストール後は文字起こしの精度が大幅に向上し、すべての処理はローカルで行われ、音声データが外部に送信されることはありません。互換エンジンがすでにある場合、バナーは表示されません。"
         ],
         "tip": "録音も文字起こしも、この端末の中で完結します。アップロードはありません。文字起こしには端末内で動くエンジンが必要で、**すべての端末にあるわけではありません** —— ない場合でも録音は使えますが、録音一覧に文字起こしは出ず、録音カードからテキストボックスを作れないことがあります。",
         "fig": "home",
@@ -1970,6 +2010,14 @@ window.KAIRUMO_MANUAL = {
           [
             "枠の外に書くとどうなりますか？",
             "破線の枠は印刷可能範囲であり、編集領域でもあります。完全に枠外に書かれたストロークは取り消され、通知が出ます。印刷も書き出しもできないので、残しておくと「まだある」と思わせてしまうからです。枠にまたがるストロークは残りますが、一度だけ知らせます。"
+          ],
+          [
+            "Whisper モデルとは何ですか？ダウンロードは必須ですか？",
+            "Whisper は OpenAI がリリースしたオープンソースの音声認識モデルです。Kairumo は軽量化・量子化したバージョンを使用しており、完全にデバイス上で処理されます。音声データが外部に送信されることはありません。ダウンロードしなくても録音機能は使えますが、文字起こしはできません。バナーは互換エンジンが見つからない場合にのみ表示されます。"
+          ],
+          [
+            "設定した iCloud／フォルダ同期を解除するには？",
+            "ホーム画面 → クラウド同期カード → 設定 → 「フォルダ」タブと進み、「設定済みフォルダを解除」をタップして確認します。解除後もフォルダ内の同期済みファイルは削除されません。Kairumo がそのフォルダへの読み書きを停止するだけです。再度有効にするには、フォルダを選び直してください。"
           ]
         ],
         "fig": null
@@ -1982,7 +2030,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "Kairumo 사용 설명서",
       "tagline": "손글씨·타이핑·녹음을 하나로 묶은 노트. 처음이어도 순서대로 따라 하면 됩니다.",
-      "version": "대상 버전 v4.10.2 (build 66) · 2026년 9월 19일",
+      "version": "대상 버전 v4.10.2 (build 66) · 2026년 9월 26일",
       "tocTitle": "목차",
       "tocHint": "항목을 누르면 해당 섹션으로 이동합니다",
       "stepsLabel": "따라 하기",
@@ -2219,11 +2267,14 @@ window.KAIRUMO_MANUAL = {
           "백업 만들기",
           "백업에서 복원",
           "동기화 폴더 선택",
-          "지금 동기화"
+          "지금 동기화",
+          "설정된 폴더 해제"
         ],
         "steps": [
           "홈 화면의 “데이터 및 동기화”에는 카드 네 개가 있습니다. 카드를 누르면 해당 기능의 설명과 작업 화면이 열립니다.",
           "“클라우드 동기화”는 로그인 상태를 보여 주며 로그인, 동기화 위치, 지금 동기화 동작을 엽니다.",
+          "설정된 'iCloud / 폴더'를 해제하려면: 클라우드 동기화 설정을 열고, '폴더' 탭으로 전환한 후 '설정된 폴더 해제'를 탭하고 확인합니다. 이후 언제든지 새 폴더를 선택할 수 있습니다.",
+          "클라우드 동기화에는 두 가지 모드가 있습니다: **Google Drive**（Google 계정으로 로그인 후 자동 동기화, 모든 플랫폼 지원）또는 **iCloud / 폴더**（Apple 기기에서 로컬 또는 클라우드 폴더 선택; Google 로그인 중이 아닐 때만 활성화）. 두 모드는 엄격히 배타적으로 동시에 하나만 실행됩니다.",
           "“백업 만들기”는 노트·이미지·녹음을 파일 하나로 묶어 원하는 위치에 저장합니다.",
           "“백업에서 복원”은 백업 파일을 골라 복원합니다. 복원 전 현재 데이터를 자동으로 백업하므로 잘못 골라도 되돌릴 수 있습니다.",
           "폴더 동기화: 본인 클라우드에 폴더(예: Kairumo)를 만들고 “동기화 폴더 선택”로 지정합니다.",
@@ -2339,7 +2390,8 @@ window.KAIRUMO_MANUAL = {
           "재생 중 전사된 줄을 누르면 그 시각에 쓴 필기로 이동합니다(반대 방향도 됩니다).",
           "녹음을 페이지에 놓으려면 노트에서 “더 보기 → 녹음 삽입”을 고르거나, 홈 녹음 행에서 “⋯ → 노트에 삽입”을 쓰세요.",
           "페이지의 녹음 카드를 선택하고 왼쪽 위 “오디오 전사”를 누르면 Kairumo가 소리를 텍스트 상자로 바꿔 카드 아래에 놓습니다.",
-          "“음성-필기 동기화” 노래방 재생 지원: 녹음을 재생하면 그 순간 작성된 필기 획이 음성에 맞춰 빛나며 하이라이트됩니다. 캔버스의 필기를 직접 탭하면 해당 획을 작성했던 정확한 녹음 시점으로 즉시 이동합니다."
+          "“음성-필기 동기화” 노래방 재생 지원: 녹음을 재생하면 그 순간 작성된 필기 획이 음성에 맞춰 빛나며 하이라이트됩니다. 캔버스의 필기를 직접 탭하면 해당 획을 작성했던 정확한 녹음 시점으로 즉시 이동합니다.",
+          "**Whisper 음성 인식 엔진**: 홈 화면에 'Whisper 모델 다운로드' 배너가 표시될 수 있습니다. 탭하면 기기 내 Whisper 모델(수백 MB)을 다운로드할 수 있습니다. 설치 후 전사 정확도가 크게 향상되며 모든 처리는 로컬에서 이루어지고 오디오는 기기 밖으로 전송되지 않습니다. 호환 엔진이 이미 있는 경우 배너가 표시되지 않습니다."
         ],
         "tip": "녹음과 전사 모두 이 기기 안에서 끝나며 업로드하지 않습니다. 전사에는 기기에서 동작하는 엔진이 필요하고 **모든 기기에 있는 것은 아닙니다** —— 없어도 녹음은 그대로 되지만 녹음 목록에 전사 텍스트가 없고, 녹음 카드가 텍스트 상자를 만들지 못할 수 있습니다.",
         "fig": "home",
@@ -2457,6 +2509,14 @@ window.KAIRUMO_MANUAL = {
           [
             "테두리 밖에 쓰면 어떻게 되나요?",
             "점선 사각형은 인쇄 가능 영역이자 편집 영역입니다. 완전히 바깥에 그린 획은 되돌려지고 알림이 뜹니다. 인쇄도 내보내기도 되지 않는데 남겨 두면 아직 있다고 착각하게 되기 때문입니다. 경계에 걸친 획은 남기되 한 번 알려 줍니다."
+          ],
+          [
+            "Whisper 모델이란 무엇인가요? 꼭 다운로드해야 하나요?",
+            "Whisper는 OpenAI가 출시한 오픈소스 음성 인식 모델입니다. Kairumo는 경량화·양자화된 버전을 사용하며 완전히 기기 내에서 처리됩니다. 오디오가 외부로 전송되지 않습니다. 다운로드하지 않아도 녹음 기능을 사용할 수 있지만 전사 텍스트가 생성되지 않습니다. 배너는 호환 엔진이 없을 때만 표시됩니다."
+          ],
+          [
+            "설정된 iCloud / 폴더 동기화를 해제하려면 어떻게 해야 하나요?",
+            "홈 화면 → 클라우드 동기화 카드 → 설정 → '폴더' 탭으로 이동한 후 '설정된 폴더 해제'를 탭하고 확인합니다. 해제 후 폴더의 동기화된 파일은 삭제되지 않습니다. Kairumo가 해당 폴더 읽기/쓰기를 중단할 뿐입니다. 언제든지 폴더를 다시 선택하여 재활성화할 수 있습니다."
           ]
         ],
         "fig": null
@@ -2469,7 +2529,7 @@ window.KAIRUMO_MANUAL = {
     "ui": {
       "docTitle": "คู่มือการใช้งาน Kairumo",
       "tagline": "สมุดจดที่รวมลายมือ การพิมพ์ และการอัดเสียงไว้ด้วยกัน ทำตามทีละขั้นได้แม้เพิ่งเริ่มใช้",
-      "version": "สำหรับเวอร์ชัน v4.10.2 (build 66) · 19 กันยายน 2026",
+      "version": "สำหรับเวอร์ชัน v4.10.2 (build 66) · 26 กันยายน 2026",
       "tocTitle": "สารบัญ",
       "tocHint": "แตะหัวข้อเพื่อไปยังส่วนนั้นทันที",
       "stepsLabel": "ขั้นตอน",
@@ -2706,11 +2766,14 @@ window.KAIRUMO_MANUAL = {
           "สร้างไฟล์สำรอง",
           "กู้คืนจากไฟล์สำรอง",
           "เลือกโฟลเดอร์ซิงก์",
-          "ซิงก์เดี๋ยวนี้"
+          "ซิงก์เดี๋ยวนี้",
+          "ยกเลิกโฟลเดอร์ที่ตั้งค่า"
         ],
         "steps": [
           "บล็อก “ข้อมูลและการซิงค์” บนหน้าแรกมีการ์ดสี่ใบ แตะการ์ดเพื่อเปิดหน้ารายละเอียดและปุ่มของฟังก์ชันนั้น",
           "“ซิงก์คลาวด์” แสดงสถานะการลงชื่อเข้าใช้ และเปิดการลงชื่อเข้าใช้ ตำแหน่งซิงก์ และปุ่มซิงก์เดี๋ยวนี้",
+          "หากต้องการยกเลิก iCloud / โฟลเดอร์ที่ตั้งค่าไว้: เปิดการตั้งค่าซิงค์คลาวด์ สลับไปที่แท็บ 'โฟลเดอร์' แตะ 'ยกเลิกโฟลเดอร์ที่ตั้งค่า' แล้วยืนยัน หลังจากนั้นสามารถเลือกโฟลเดอร์ใหม่ได้ตลอดเวลา",
+          "การซิงค์คลาวด์มีสองโหมด: **Google Drive** (ลงชื่อเข้าใช้บัญชี Google เพื่อซิงค์อัตโนมัติ รองรับทุกแพลตฟอร์ม) หรือ **iCloud / โฟลเดอร์** (อุปกรณ์ Apple: เลือกโฟลเดอร์ในเครื่องหรือคลาวด์ใดก็ได้ ใช้งานเมื่อไม่ได้ลงชื่อเข้า Google) ทั้งสองโหมดทำงานแบบ exclusive ไม่สามารถใช้พร้อมกันได้",
           "“สร้างไฟล์สำรอง” รวมโน้ต รูปภาพ และเสียงไว้ในไฟล์เดียว แล้วบันทึกไปยังตำแหน่งที่เลือก",
           "“กู้คืนจากไฟล์สำรอง” เลือกไฟล์สำรองเพื่อกู้คืน โดยจะสำรองข้อมูลปัจจุบันก่อนเสมอ",
           "ซิงค์โฟลเดอร์: สร้างโฟลเดอร์บนคลาวด์ของคุณ เช่น Kairumo แล้วกด “เลือกโฟลเดอร์ซิงก์” เพื่อชี้ไปที่โฟลเดอร์นั้น",
@@ -2826,7 +2889,8 @@ window.KAIRUMO_MANUAL = {
           "ระหว่างเล่น แตะบรรทัดของข้อความที่ถอดไว้ เพื่อไปยังลายมือในช่วงเวลานั้น (และย้อนกลับได้)",
           "หากต้องการวางเสียงบันทึกลงในหน้า ให้เลือก “เพิ่มเติม → แทรกเสียงบันทึก” ในสมุดบันทึก หรือใช้ “⋯ → แทรกลงในสมุดบันทึก” ที่แถวเสียงบนหน้าแรก",
           "เลือกการ์ดเสียงบนหน้าแล้วแตะ “ถอดเสียง” ที่มุมซ้ายบน Kairumo จะเปลี่ยนเสียงเป็นกล่องข้อความใต้การ์ด",
-          "รองรับการเล่นแบบ “การซิงค์เสียงกับลายมือ”: ขณะเล่นเสียง ลายมือที่เขียนในขณะนั้นจะสว่างขึ้นตามจังหวะเสียง และสามารถแตะที่ลายมือบนผืนผ้าใบเพื่อข้ามไปยังช่วงเวลาที่เขียนลายมือนั้นได้ทันที"
+          "รองรับการเล่นแบบ “การซิงค์เสียงกับลายมือ”: ขณะเล่นเสียง ลายมือที่เขียนในขณะนั้นจะสว่างขึ้นตามจังหวะเสียง และสามารถแตะที่ลายมือบนผืนผ้าใบเพื่อข้ามไปยังช่วงเวลาที่เขียนลายมือนั้นได้ทันที",
+          "**เครื่องมือจดจำเสียง Whisper**: หน้าแรกอาจแสดงแบนเนอร์ 'ดาวน์โหลดโมเดล Whisper' แตะเพื่อดาวน์โหลดโมเดล Whisper บนอุปกรณ์ (ประมาณหลายร้อย MB) เมื่อติดตั้งแล้ว ความแม่นยำในการถอดเสียงจะดีขึ้นอย่างมาก และการประมวลผลทั้งหมดทำในเครื่อง เสียงของคุณจะไม่ถูกส่งออกไปนอกอุปกรณ์ แบนเนอร์จะปรากฏเฉพาะเมื่อไม่มีเครื่องมือที่เข้ากันได้อยู่แล้ว"
         ],
         "tip": "ทั้งการบันทึกเสียงและการถอดความทำงานในเครื่องนี้ ไม่มีการอัปโหลด การถอดความต้องใช้เอนจินที่ทำงานในเครื่อง และ**ไม่ใช่ทุกเครื่องจะมี** — ถ้าไม่มี การบันทึกเสียงยังใช้ได้ แต่อาจไม่มีข้อความถอดความในรายการเสียง และการ์ดเสียงอาจสร้างกล่องข้อความไม่ได้",
         "fig": "home",
@@ -2944,6 +3008,14 @@ window.KAIRUMO_MANUAL = {
           [
             "ถ้าเขียนออกนอกกรอบจะเป็นอย่างไร",
             "กรอบเส้นประคือพื้นที่ที่พิมพ์ได้ และเป็นพื้นที่แก้ไขด้วย เส้นที่วาดนอกกรอบทั้งหมดจะถูกดึงกลับพร้อมข้อความแจ้ง เพราะพิมพ์และส่งออกไม่ได้ หากปล่อยไว้จะทำให้เข้าใจผิดว่ายังอยู่ ส่วนเส้นที่คร่อมกรอบจะคงไว้และแจ้งหนึ่งครั้ง"
+          ],
+          [
+            "โมเดล Whisper คืออะไร? จำเป็นต้องดาวน์โหลดหรือไม่?",
+            "Whisper เป็นโมเดลจดจำเสียงพูดโอเพ่นซอร์สที่ OpenAI เปิดตัว Kairumo ใช้เวอร์ชันที่ตัดแต่งและควอนไทซ์แล้ว ทำงานทั้งหมดในอุปกรณ์ เสียงของคุณจะไม่ถูกส่งออกไปข้างนอก หากไม่ดาวน์โหลด ยังสามารถใช้ฟีเจอร์บันทึกเสียงได้ แต่จะไม่มีการถอดเสียงเป็นข้อความ แบนเนอร์จะปรากฏเฉพาะเมื่อไม่พบเครื่องมือที่เข้ากันได้"
+          ],
+          [
+            "วิธียกเลิก iCloud / โฟลเดอร์ที่ตั้งค่าไว้?",
+            "ไปที่หน้าแรก → การ์ดซิงค์คลาวด์ → การตั้งค่า → แท็บ 'โฟลเดอร์' แตะ 'ยกเลิกโฟลเดอร์ที่ตั้งค่า' แล้วยืนยัน ไฟล์ที่ซิงค์ไปแล้วในโฟลเดอร์จะไม่ถูกลบ Kairumo เพียงหยุดอ่านและเขียนในโฟลเดอร์นั้น คุณสามารถเปิดใช้งานอีกครั้งได้ตลอดเวลาโดยเลือกโฟลเดอร์ใหม่"
           ]
         ],
         "fig": null

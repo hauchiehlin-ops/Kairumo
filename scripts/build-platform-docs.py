@@ -79,6 +79,42 @@ SRC  = os.path.join(REPO, "docs/manual/manual.js")
 DEST_APPLE   = os.path.join(REPO, "docs/manual/manual-apple.js")
 DEST_ANDROID = os.path.join(REPO, "docs/manual/manual-android.js")
 
+# ── data 節：過濾 iCloud 相關步驟（Android 無 iCloud）──────────────
+#
+# manual.js 的 data 節說明了兩種模式：Google Drive 與 iCloud/資料夾。
+# iCloud 是 Apple 獨有的，Android 版不能出現 iCloud 字樣。
+# 偵測標誌取每條新步驟的特徵前綴；語言或版本號變動都不影響識別。
+ANDROID_DATA_ICLOUD_FRAGMENTS = [
+    # zh-Hant
+    "\u96f2\u7aef\u540c\u6b65\u652f\u63f4\u5169\u7a2e\u6a21\u5f0f",
+    "\u8981\u53d6\u6d88\u5df2\u8a2d\u5b9a\u7684\u300ciCloud",
+    # en
+    "Cloud sync has two modes",
+    "To remove a configured iCloud",
+    # zh-Hans
+    "\u4e91\u7aef\u540c\u6b65\u652f\u6301\u4e24\u79cd\u6a21\u5f0f",
+    "\u8981\u53d6\u6d88\u5df2\u8bbe\u7f6e\u7684\u300ciCloud",
+    # ja
+    "\u30af\u30e9\u30a6\u30c9\u540c\u671f\u306b\u306f 2 \u3064",
+    "\u8a2d\u5b9a\u6e08\u307f\u306e\u300ciCloud",
+    # ko
+    "\ud074\ub77c\uc6b0\ub4dc \ub3d9\uae30\ud654\uc5d0\ub294 \ub450 \uac00\uc9c0",
+    "\uc124\uc815\ub41c 'iCloud",
+    # th
+    "\u0e01\u0e32\u0e23\u0e0b\u0e34\u0e07\u0e04\u0e4c\u0e04\u0e25\u0e32\u0e27\u0e14\u0e4c\u0e21\u0e35\u0e2a\u0e2d\u0e07\u0e42\u0e2b\u0e21\u0e14",
+    "\u0e2b\u0e32\u0e01\u0e15\u0e49\u0e2d\u0e07\u0e01\u0e32\u0e23\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01 iCloud",
+]
+# 「取消設定資料夾」按鈕在 Android data 節也需移除
+ANDROID_DATA_ICLOUD_BUTTONS = [
+    "\u53d6\u6d88\u5df2\u8a2d\u5b9a\u7684\u8cc7\u6599\u593e",
+    "Cancel Configured Folder",
+    "\u53d6\u6d88\u5df2\u8bbe\u7f6e\u7684\u6587\u4ef6\u5939",
+    "\u8a2d\u5b9a\u6e08\u307f\u30d5\u30a9\u30eb\u30c0\u3092\u89e3\u9664",
+    "\uc124\uc815\ub41c \ud3f4\ub354 \ud574\uc81c",
+    "\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01\u0e42\u0e1f\u0e25\u0e40\u0e14\u0e2d\u0e23\u0e4c\u0e17\u0e35\u0e48\u0e15\u0e31\u0e49\u0e07\u0e04\u0e48\u0e32",
+]
+
+
 # ── 掌拒靈敏度：入口兩端不同 ──────────────────────────────────────
 #
 # Apple：插入／工具選單裡的一項。
@@ -331,7 +367,18 @@ def build_android(data):
                 for k, v in ANDROID_KEYS[locale].items():
                     sec[k] = v
 
-            # 3. multi：替換首步「桌機」描述，保留折疊螢幕
+            # 3a. data：移除 iCloud 相關步驟與按鈕（Apple 獨有）
+            elif sec["id"] == "data":
+                sec["steps"] = [
+                    s for s in sec.get("steps", [])
+                    if not any(frag in s for frag in ANDROID_DATA_ICLOUD_FRAGMENTS)
+                ]
+                sec["buttons"] = [
+                    b for b in sec.get("buttons", [])
+                    if b not in ANDROID_DATA_ICLOUD_BUTTONS
+                ]
+
+            # 3b. multi：替換首步「桌機」描述，保留折疊螢幕
             elif sec["id"] == "multi":
                 orig = ANDROID_MULTI_DESKTOP_ORIG.get(locale)
                 repl = ANDROID_MULTI_DESKTOP_REPL.get(locale)
@@ -356,6 +403,40 @@ def build_android(data):
                     for qa in sec.get("faq", []):
                         if key and key in qa[1]:
                             qa[1] = re.sub(r"v\d+(?:\.\d+)+", "v" + current_version(), repl_a)
+                # iCloud FAQ 問題在 Android 版改為通用「資料夾同步」措辭
+                ICLOUD_FAQ_REWRITES = {
+                    # (old_q_fragment, old_a_fragment) → (new_q, new_a)
+                    "iCloud\uff0f\u8cc7\u6599\u593e\u540c\u6b65": (
+                        "\u5982\u4f55\u53d6\u6d88\u5df2\u8a2d\u5b9a\u7684\u8cc7\u6599\u593e\u540c\u6b65\uff1f",
+                        "\u9032\u5165\u9996\u9801 \u2192 \u300c\u96f2\u7aef\u540c\u6b65\u300d\u5361\u7247 \u2192 \u8a2d\u5b9a\u9801 \u2192 \u300c\u8cc7\u6599\u593e\u300d\u5206\u9801\uff0c\u9ede\u300c\u53d6\u6d88\u5df2\u8a2d\u5b9a\u7684\u8cc7\u6599\u593e\u300d\u4e26\u78ba\u8a8d\u3002\u53d6\u6d88\u5f8c\u8cc7\u6599\u593e\u5167\u5df2\u540c\u6b65\u7684\u6a94\u6848\u4ecd\u4fdd\u7559\uff0c\u53ea\u662f Kairumo \u4e0d\u518d\u8b80\u5beb\u90a3\u500b\u8cc7\u6599\u593e\u3002\u82e5\u8981\u91cd\u65b0\u555f\u7528\uff0c\u91cd\u65b0\u9078\u64c7\u8cc7\u6599\u593e\u5373\u53ef\u3002",
+                    ),
+                    "iCloud / Folder sync": (
+                        "How do I remove the Folder sync I set up?",
+                        "Go to the home screen \u2192 Cloud Sync card \u2192 settings \u2192 Folder tab, then tap \"Cancel Configured Folder\" and confirm. Files already synced to the folder are not deleted \u2014 Kairumo simply stops reading and writing there. You can re-enable sync at any time by choosing a folder again.",
+                    ),
+                    "iCloud\uff0f\u6587\u4ef6\u5939\u540c\u6b65": (
+                        "\u5982\u4f55\u53d6\u6d88\u5df2\u8bbe\u7f6e\u7684\u6587\u4ef6\u5939\u540c\u6b65\uff1f",
+                        "\u8fdb\u5165\u9996\u9875 \u2192 \u300c\u4e91\u7aef\u540c\u6b65\u300d\u5361\u7247 \u2192 \u8bbe\u7f6e\u9875 \u2192 \u300c\u6587\u4ef6\u5939\u300d\u9009\u9879\u5361\uff0c\u70b9\u51fb\u300c\u53d6\u6d88\u5df2\u8bbe\u7f6e\u7684\u6587\u4ef6\u5939\u300d\u5e76\u786e\u8ba4\u3002\u53d6\u6d88\u540e\u6587\u4ef6\u5939\u5185\u5df2\u540c\u6b65\u7684\u6587\u4ef6\u4ecd\u4fdd\u7559\uff0c\u53ea\u662f Kairumo \u4e0d\u518d\u8bfb\u5199\u8be5\u6587\u4ef6\u5939\u3002\u82e5\u8981\u91cd\u65b0\u542f\u7528\uff0c\u91cd\u65b0\u9009\u62e9\u6587\u4ef6\u5939\u5373\u53ef\u3002",
+                    ),
+                    "iCloud\uff0f\u30d5\u30a9\u30eb\u30c0\u540c\u671f": (
+                        "\u8a2d\u5b9a\u3057\u305f\u30d5\u30a9\u30eb\u30c0\u540c\u671f\u3092\u89e3\u9664\u3059\u308b\u306b\u306f\uff1f",
+                        "\u30db\u30fc\u30e0\u753b\u9762 \u2192 \u30af\u30e9\u30a6\u30c9\u540c\u671f\u30ab\u30fc\u30c9 \u2192 \u8a2d\u5b9a \u2192 \u300c\u30d5\u30a9\u30eb\u30c0\u300d\u30bf\u30d6\u3068\u9032\u307f\u3001\u300c\u8a2d\u5b9a\u6e08\u307f\u30d5\u30a9\u30eb\u30c0\u3092\u89e3\u9664\u300d\u3092\u30bf\u30c3\u30d7\u3057\u3066\u78ba\u8a8d\u3057\u307e\u3059\u3002\u89e3\u9664\u5f8c\u3082\u30d5\u30a9\u30eb\u30c0\u5185\u306e\u540c\u671f\u6e08\u307f\u30d5\u30a1\u30a4\u30eb\u306f\u524a\u9664\u3055\u308c\u307e\u305b\u3093\u3002Kairumo \u304c\u305d\u306e\u30d5\u30a9\u30eb\u30c0\u3078\u306e\u8aad\u307f\u66f8\u304d\u3092\u505c\u6b62\u3059\u308b\u3060\u3051\u3067\u3059\u3002\u518d\u5ea6\u6709\u52b9\u306b\u3059\u308b\u306b\u306f\u3001\u30d5\u30a9\u30eb\u30c0\u3092\u9078\u3073\u76f4\u3057\u3066\u304f\u3060\u3055\u3044\u3002",
+                    ),
+                    "iCloud / \ud3f4\ub354 \ub3d9\uae30\ud654": (
+                        "\uc124\uc815\ub41c \ud3f4\ub354 \ub3d9\uae30\ud654\ub97c \ud574\uc81c\ud558\ub824\uba74?",
+                        "\ud648 \ud654\uba74 \u2192 \ud074\ub77c\uc6b0\ub4dc \ub3d9\uae30\ud654 \uce74\ub4dc \u2192 \uc124\uc815 \u2192 '\ud3f4\ub354' \ud0ed\uc73c\ub85c \uc774\ub3d9\ud55c \ud6c4 '\uc124\uc815\ub41c \ud3f4\ub354 \ud574\uc81c'\ub97c \ud0ed\ud558\uace0 \ud655\uc778\ud569\ub2c8\ub2e4. \ud574\uc81c \ud6c4 \ud3f4\ub354\uc758 \ub3d9\uae30\ud654\ub41c \ud30c\uc77c\uc740 \uc0ad\uc81c\ub418\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4. Kairumo\uac00 \ud574\ub2f9 \ud3f4\ub354 \uc77d\uae30/\uc4f0\uae30\ub97c \uc911\ub2e8\ud560 \ubfd0\uc785\ub2c8\ub2e4. \uc5b8\uc81c\ub4e0\uc9c0 \ud3f4\ub354\ub97c \ub2e4\uc2dc \uc120\ud0dd\ud558\uc5ec \uc7ac\ud65c\uc131\ud654\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
+                    ),
+                    "iCloud / \u0e42\u0e1f\u0e25\u0e40\u0e14\u0e2d\u0e23\u0e4c": (
+                        "\u0e27\u0e34\u0e18\u0e35\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01\u0e42\u0e1f\u0e25\u0e40\u0e14\u0e2d\u0e23\u0e4c\u0e17\u0e35\u0e48\u0e15\u0e31\u0e49\u0e07\u0e04\u0e48\u0e32\u0e44\u0e27\u0e49?",
+                        "\u0e44\u0e1b\u0e17\u0e35\u0e48\u0e2b\u0e19\u0e49\u0e32\u0e41\u0e23\u0e01 \u2192 \u0e01\u0e32\u0e23\u0e4c\u0e14\u0e0b\u0e34\u0e07\u0e04\u0e4c\u0e04\u0e25\u0e32\u0e27\u0e14\u0e4c \u2192 \u0e01\u0e32\u0e23\u0e15\u0e31\u0e49\u0e07\u0e04\u0e48\u0e32 \u2192 \u0e41\u0e17\u0e47\u0e1a '\u0e42\u0e1f\u0e25\u0e40\u0e14\u0e2d\u0e23\u0e4c' \u0e41\u0e15\u0e30\u0e41\u0e15\u0e30 '\u0e22\u0e01\u0e40\u0e25\u0e34\u0e01\u0e42\u0e1f\u0e25\u0e40\u0e14\u0e2d\u0e23\u0e4c\u0e17\u0e35\u0e48\u0e15\u0e31\u0e49\u0e07\u0e04\u0e48\u0e32' \u0e41\u0e25\u0e49\u0e27\u0e22\u0e37\u0e19\u0e22\u0e31\u0e19 \u0e44\u0e1f\u0e25\u0e4c\u0e17\u0e35\u0e48\u0e0b\u0e34\u0e07\u0e04\u0e4c\u0e44\u0e1b\u0e41\u0e25\u0e49\u0e27\u0e08\u0e30\u0e44\u0e21\u0e48\u0e16\u0e39\u0e01\u0e25\u0e1a Kairumo \u0e40\u0e1e\u0e35\u0e22\u0e07\u0e2b\u0e22\u0e38\u0e14\u0e2d\u0e48\u0e32\u0e19\u0e41\u0e25\u0e30\u0e40\u0e02\u0e35\u0e22\u0e19\u0e43\u0e19\u0e42\u0e1f\u0e25\u0e40\u0e14\u0e2d\u0e23\u0e4c\u0e19\u0e31\u0e49\u0e19 \u0e2a\u0e32\u0e21\u0e32\u0e23\u0e16\u0e40\u0e1b\u0e34\u0e14\u0e43\u0e0a\u0e49\u0e07\u0e32\u0e19\u0e2d\u0e35\u0e01\u0e04\u0e23\u0e31\u0e49\u0e07\u0e44\u0e14\u0e49\u0e15\u0e25\u0e2d\u0e14\u0e40\u0e27\u0e25\u0e32\u0e42\u0e14\u0e22\u0e40\u0e25\u0e37\u0e2d\u0e01\u0e42\u0e1f\u0e25\u0e40\u0e14\u0e2d\u0e23\u0e4c\u0e43\u0e2b\u0e21\u0e48",
+                    ),
+                }
+                for qa in sec.get("faq", []):
+                    for frag, (new_q, new_a) in ICLOUD_FAQ_REWRITES.items():
+                        if frag in qa[0]:
+                            qa[0] = new_q
+                            qa[1] = new_a
+                            break
     return d
 
 

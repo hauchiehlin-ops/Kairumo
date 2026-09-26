@@ -191,7 +191,21 @@
   <div class="summary"><p id="summary"></p></div>
   <div id="body"></div>
   <footer id="footer"></footer>
-</main>
+
+      <!-- icloud-folder-sync-disclosure -->
+      <section>
+        <h2>iCloud ／ 資料夾同步 / iCloud / Folder Sync</h2>
+        <p>當您在「雲端同步」設定中選擇「資料夾」模式並指定一個資料夾時，Kairumo 僅透過 iOS／macOS 的 Security-Scoped Bookmark 存取該資料夾，以進行本機筆記套件的讀取與寫入。我們的伺服器不會介入此流程，您選定的資料夾路徑與內容均不會上傳至任何第三方。您可隨時在設定中點擊「取消已設定的資料夾」撤销授權，Kairumo 將立即停止存取。</p>
+        <p>When you select the Folder sync mode and point it to a folder, Kairumo uses the platform’s Security-Scoped Bookmark to read and write notebook packages in that folder only. Our servers are never involved; the folder path and its contents are not uploaded to any third party. You can revoke access at any time by tapping “Cancel Configured Folder” in settings.</p>
+      </section>
+    
+      <!-- whisper-local-inference-disclosure -->
+      <section>
+        <h2>Whisper 語音辨識（本機推理）/ Whisper Speech Recognition (On-Device Inference)</h2>
+        <p>Kairumo 選配的 Whisper 語音辨識引擎是一個完全執行於您裝置本機的開源模型（量子化版本）。錄音音訊從不離開您的裝置，亦不會傳送至我們或任何第三方的伺服器。模型下載時僅從我們的靜態 CDN 下載模型権重檔案；音訊資料不在此範圍內。</p>
+        <p>Kairumo’s optional Whisper speech-recognition engine is an open-source model (quantised version) that runs entirely on your device. Your recorded audio never leaves your device and is never sent to our servers or any third party. The model download only fetches model-weight files from our static CDN; audio data is entirely out of scope.</p>
+      </section>
+    </main>
 
 <script>
 // 公開聯絡信箱（由專案擁有者指定）。
@@ -202,7 +216,7 @@ const DOC = {
     name: "繁體中文",
     title: "隱私權政策",
     tagline: "Kairumo 不收集你的資料。沒有帳號、沒有後端伺服器、沒有分析追蹤。這份文件說明為什麼可以這樣宣稱。",
-    effective: "生效日：2026 年 9 月 19 日",
+    effective: "生效日：2026 年 9 月 26 日",
     appver: "適用平台：iOS · iPadOS · macOS | 適用版本：v4.10.2",
     summary: "一句話：你的筆記、錄音與手寫紀錄留在你自己的裝置上。我們沒有伺服器可以接收它們，也沒有帳號可以連結到你。",
     sections: [
@@ -227,7 +241,7 @@ const DOC = {
     name: "English",
     title: "Privacy Policy",
     tagline: "Kairumo does not collect your data. No accounts, no backend servers, no analytics. This page explains how that claim holds up.",
-    effective: "Effective: 19 September 2026",
+    effective: "Effective: 26 September 2026",
     appver: "Platform: iOS · iPadOS · macOS | Applies to: v4.10.2",
     summary: "In one sentence: your notes, recordings and handwriting stay on your own device. We have no server that could receive them and no account that could be linked to you.",
     sections: [
@@ -251,7 +265,7 @@ const DOC = {
     name: "简体中文",
     title: "隐私政策",
     tagline: "Kairumo 不收集你的数据。没有账号、没有后端服务器、没有分析追踪。本文说明为什么可以这样声明。",
-    effective: "生效日期：2026 年 9 月 19 日",
+    effective: "生效日期：2026 年 9 月 26 日",
     appver: "适用平台：iOS · iPadOS · macOS | 适用版本：v4.10.2",
     summary: "一句话：你的笔记、录音与手写记录留在你自己的设备上。我们没有服务器可以接收它们，也没有账号可以关联到你。",
     sections: [
@@ -276,7 +290,7 @@ const DOC = {
     name: "日本語",
     title: "プライバシーポリシー",
     tagline: "Kairumo はあなたのデータを収集しません。アカウントもバックエンドサーバーも解析もありません。その根拠をこのページで説明します。",
-    effective: "発効日：2026年9月19日",
+    effective: "発効日：2026年9月26日",
     appver: "対象プラットフォーム：iOS · iPadOS · macOS | 対象バージョン：v4.10.2",
     summary: "ひとことで言えば、ノート・録音・手書きはあなたの端末に留まります。それを受け取るサーバーも、あなたと結び付けられるアカウントも存在しません。",
     sections: [
@@ -301,7 +315,7 @@ const DOC = {
     name: "한국어",
     title: "개인정보 처리방침",
     tagline: "Kairumo는 사용자의 데이터를 수집하지 않습니다. 계정도, 백엔드 서버도, 분석 도구도 없습니다. 이 문서는 그 근거를 설명합니다.",
-    effective: "시행일: 2026년 9월 19일",
+    effective: "시행일: 2026년 9월 26일",
     appver: "적용 플랫폼: iOS · iPadOS · macOS | 적용 버전: v4.10.2",
     summary: "한 문장으로: 노트와 녹음, 손글씨는 사용자의 기기에 남습니다. 그것을 받을 서버도, 사용자와 연결할 계정도 존재하지 않습니다.",
     sections: [
@@ -325,7 +339,7 @@ const DOC = {
     name: "ไทย",
     title: "นโยบายความเป็นส่วนตัว",
     tagline: "Kairumo ไม่เก็บข้อมูลของคุณ ไม่มีบัญชีผู้ใช้ ไม่มีเซิร์ฟเวอร์เบื้องหลัง และไม่มีการเก็บสถิติการใช้งาน หน้านี้อธิบายว่าทำไมจึงกล่าวเช่นนั้นได้",
-    effective: "มีผลวันที่ 19 กันยายน 2026",
+    effective: "มีผลวันที่ 26 กันยายน 2026",
     appver: "แพลตฟอร์ม: iOS · iPadOS · macOS | ใช้กับเวอร์ชัน v4.10.2",
     summary: "สรุปสั้น ๆ: โน้ต ไฟล์เสียง และลายมือของคุณอยู่ในเครื่องของคุณ เราไม่มีเซิร์ฟเวอร์ที่จะรับข้อมูลเหล่านั้น และไม่มีบัญชีที่จะเชื่อมโยงถึงตัวคุณ",
     sections: [
