@@ -617,7 +617,8 @@ fn sync_notebook_ops(
         }
         // 若本機已擁有該裝置較大的壓實檔，絕不重抓該裝置歷史碎檔
         if let Some((remote_lamport, dev)) = padnote_storage::parse_oplog_name(name) {
-            if dev == device_id && remote_lamport <= local_max_lamport_for_device && local_size == 0 {
+            if dev == device_id && remote_lamport <= local_max_lamport_for_device && local_size == 0
+            {
                 continue;
             }
         }

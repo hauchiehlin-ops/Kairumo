@@ -1116,7 +1116,6 @@ impl NotebookPackage {
         }
 
         let mut out = Vec::new();
-        let mut seen_batches = std::collections::HashSet::new();
         for f in files {
             let name = f.file_name().and_then(|n| n.to_str()).unwrap_or_default();
             let (lamport, device) = parse_oplog_name(name).unwrap_or((0, 0));
@@ -1133,21 +1132,12 @@ impl NotebookPackage {
             // 有 `BatchOrigin` 的批次會把座標改成自己帶的那一組，
             // 所以壓實過的檔案裡，每一批仍然報得出它原本的 lamport。
             let (mut cur_lamport, mut cur_device) = (lamport, device);
-            let mut skipping_duplicate = if cur_lamport > 0 {
-                !seen_batches.insert((cur_lamport, cur_device))
-            } else {
-                false
-            };
             for op in
                 padnote_doc::ops::decode(&bytes).map_err(|e| StorageError::DocOps(e.to_string()))?
             {
                 if let DocOp::BatchOrigin { lamport, device } = op {
                     cur_lamport = lamport;
                     cur_device = device;
-                    skipping_duplicate = !seen_batches.insert((cur_lamport, cur_device));
-                    continue;
-                }
-                if skipping_duplicate {
                     continue;
                 }
                 out.push(OpEntry {
