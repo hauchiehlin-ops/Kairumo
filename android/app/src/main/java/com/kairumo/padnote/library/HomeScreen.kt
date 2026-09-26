@@ -1445,6 +1445,8 @@ private fun P2PSyncCard(l: (String) -> String) {
         }
     }
 
+    val isConnected = tailscaleStatus.first
+
     Card(
         modifier = Modifier.fillMaxWidth().testTag("home.p2p.card").padding(top = 8.dp),
         shape = RoundedCornerShape(12.dp),
@@ -1465,7 +1467,6 @@ private fun P2PSyncCard(l: (String) -> String) {
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f)
                 )
-                val isConnected = tailscaleStatus.first
                 val statusText = if (isConnected) {
                     val tmpl = l("tailscale_p2p_ready")
                     if (tmpl.contains("%@")) tmpl.replace("%@", tailscaleStatus.second ?: "")
