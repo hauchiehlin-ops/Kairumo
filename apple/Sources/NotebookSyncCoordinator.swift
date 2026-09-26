@@ -58,6 +58,7 @@ protocol SyncableNotebookStore: AnyObject {
     func syncSaveDrawing(notebookId: String, pageIndex: Int, drawing: PKDrawing)
     func syncUpsert(_ document: NotebookDocument)
     func syncPurgeDeletedNotebooks(_ deletedIds: Set<String>)
+    func syncRefreshRecordings()
 }
 
 extension SyncableNotebookStore {
@@ -66,11 +67,22 @@ extension SyncableNotebookStore {
     }
 
     func syncPurgeDeletedNotebooks(_: Set<String>) {}
+    func syncRefreshRecordings() {}
 }
 
 extension NotebookStore: SyncableNotebookStore {
     var syncNotebooks: [NotebookDocument] {
-        visibleNotebooks
+        var list = visibleNotebooks
+        let inboxId = recordingInboxNotebookId()
+        if let inbox = notebooks.first(where: { $0.id.caseInsensitiveCompare(inboxId) == .orderedSame }),
+           !list.contains(where: { $0.id.caseInsensitiveCompare(inboxId) == .orderedSame }) {
+            list.append(inbox)
+        }
+        return list
+    }
+
+    func syncRefreshRecordings() {
+        refreshRecordings()
     }
 
     var allNotebooks: [NotebookDocument] {
@@ -373,6 +385,7 @@ enum NotebookSyncCoordinator {
             report: &report
         )
         store.syncPurgeDeletedNotebooks(deletedNotebookIds)
+        store.syncRefreshRecordings()
         SyncLogger.logAsync("【資料夾同步】全部完成。", source: .folder)
 
         return report
@@ -738,6 +751,7 @@ enum NotebookSyncCoordinator {
         )
         // ── 4. 清理已被遠端刪除的本地殭屍筆記 ─────────────────
         store.syncPurgeDeletedNotebooks(deletedNotebookIds)
+        store.syncRefreshRecordings()
         SyncLogger.logAsync("【Google Drive 同步】全部完成。", source: .googleDrive)
 
         return report
@@ -842,10 +856,12 @@ enum NotebookSyncCoordinator {
     ) throws {
         // 還原是整份取代，這台裝置沒有「自己新增的那些」要保留 ——
         // 傳空的基準線，讓匯入把合併後的全部內容都算成別人的。
-        try importOne(
-            packageURL(for: notebookId, in: store), into: store, deviceId: deviceId,
-            ownStrokes: [:]
+        let package = packageURL(for: notebookId, in: store)
+        let documentId = package.deletingPathExtension().lastPathComponent
+        let imported = try NotebookPackageBridge.importDocument(
+            fromPackageAt: package, deviceId: deviceId, documentId: documentId
         )
+        applyImported(imported, documentId: documentId, into: store, deviceId: deviceId, ownStrokes: [:])
     }
 
     @MainActor
@@ -946,7 +962,16 @@ enum NotebookSyncCoordinator {
                 fromPackageAt: package, deviceId: deviceId, documentId: documentId
             )
         }.value
+        applyImported(imported, documentId: documentId, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
+    }
 
+    private static func applyImported(
+        _ imported: NotebookPackageBridge.ImportedNotebook,
+        documentId: String,
+        into store: SyncableNotebookStore,
+        deviceId: UInt32,
+        ownStrokes: OwnStrokes
+    ) {
         // 圖片先落地：筆記本指到一個不存在的檔名時，畫面上會是一格空白。
         let attachmentsDir = store.syncAttachmentsDirectory
         let baselineDir = store.syncBaselineDirectory

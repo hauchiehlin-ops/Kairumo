@@ -1321,6 +1321,7 @@ public final class NotebookStore: ObservableObject {
            let recList = try? JSONDecoder().decode([AudioRecordingRecord].self, from: recData) {
             self.recordings = recList
         }
+        refreshRecordings()
 
         if let fData = try? Data(contentsOf: foldersFile),
            let fList = try? JSONDecoder().decode([FolderItem].self, from: fData) {
@@ -2007,7 +2008,10 @@ public final class NotebookStore: ObservableObject {
     /// 清單要顯示的筆記本。**不要用 `notebooks`** —— 那一份是真相來源，
     /// 編輯器靠它找得到目前開著的那一本，過濾掉會讓正在編輯的筆記消失。
     public var visibleNotebooks: [NotebookDocument] {
-        notebooks.filter { !isHiddenBySync($0.id) }
+        notebooks.filter {
+            !isHiddenBySync($0.id) &&
+            $0.id.caseInsensitiveCompare(recordingInboxNotebookId()) != .orderedSame
+        }
     }
 
     // MARK: - 集中單一事實分頁管理 (Atomic Page Management)
@@ -2576,21 +2580,27 @@ public final class NotebookStore: ObservableObject {
                 return inPackage
             }
         }
+        let inInbox = corePackagesDirectory
+            .appending(path: "\(recordingInboxNotebookId().lowercased()).padnote")
+            .appending(path: "media/audio")
+            .appending(path: fileName)
+        if FileManager.default.fileExists(atPath: inInbox.path) {
+            return inInbox
+        }
+        let fm = FileManager.default
+        if let packages = try? fm.contentsOfDirectory(at: corePackagesDirectory, includingPropertiesForKeys: nil) {
+            for pkg in packages where pkg.pathExtension == "padnote" {
+                let candidate = pkg.appending(path: "media/audio").appending(path: fileName)
+                if fm.fileExists(atPath: candidate.path) {
+                    return candidate
+                }
+            }
+        }
         return AudioRecorderManager.shared.recordingsDirectory.appending(path: fileName)
     }
 
     public func recordingFileURL(for record: AudioRecordingRecord) -> URL {
-        if let notebookId = record.linkedNotebookId {
-            let inPackage = corePackagesDirectory
-                .appending(path: "\(notebookId.lowercased()).padnote")
-                .appending(path: "media/audio")
-                .appending(path: record.fileName)
-            if FileManager.default.fileExists(atPath: inPackage.path) {
-                return inPackage
-            }
-        }
-        return AudioRecorderManager.shared.recordingsDirectory
-            .appending(path: record.fileName)
+        recordingFileURL(fileName: record.fileName, notebookId: record.linkedNotebookId)
     }
 
     /// 重新掃描所有套件裡的錄音，與本機那份清單合併。
@@ -2639,7 +2649,14 @@ public final class NotebookStore: ObservableObject {
         }
 
         var scanned: [AudioRecordingRecord] = []
-        for doc in notebooks {
+        var docList = notebooks
+        let inboxId = recordingInboxNotebookId()
+        if !docList.contains(where: { $0.id.caseInsensitiveCompare(inboxId) == .orderedSame }) {
+            docList.append(recordingInbox())
+        }
+
+        for doc in docList {
+            let isInbox = doc.id.caseInsensitiveCompare(inboxId) == .orderedSame
             let audioDir = corePackagesDirectory
                 .appending(path: "\(doc.id.lowercased()).padnote")
                 .appending(path: "media/audio")
@@ -2649,7 +2666,11 @@ public final class NotebookStore: ObservableObject {
             for file in files {
                 let name = file.lastPathComponent
                 if let existing = byFileName[name.lowercased()] {
-                    scanned.append(existing)
+                    var updated = existing
+                    if updated.linkedNotebookId == nil {
+                        updated.linkedNotebookId = doc.id
+                    }
+                    scanned.append(updated)
                     byFileName.removeValue(forKey: name.lowercased())
                     continue
                 }
@@ -2660,9 +2681,15 @@ public final class NotebookStore: ObservableObject {
                 let seconds = Int(audioDurationSeconds(bytes: bytes))
                 let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?
                     .contentModificationDate ?? Date()
-                let suffix = LocalizationManager.shared.localized("recording_suffix")
+                let title: String
+                if isInbox {
+                    title = LocalizationManager.shared.localized("quick_record")
+                } else {
+                    let suffix = LocalizationManager.shared.localized("recording_suffix")
+                    title = "\(doc.displayTitle()) \(suffix)"
+                }
                 scanned.append(AudioRecordingRecord(
-                    title: "\(doc.displayTitle()) \(suffix)",
+                    title: title,
                     durationSeconds: seconds,
                     recordedDate: modified,
                     fileName: name,

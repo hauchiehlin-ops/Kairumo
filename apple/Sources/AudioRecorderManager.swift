@@ -45,6 +45,15 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     private var playbackTimer: Timer?
     private var currentAudioUrl: URL?
 
+    /// 判斷目前是否執行在 Mac 環境（原生 macOS、Mac Catalyst 或 Apple Silicon 上的 iOS App）
+    public var isRunningOnMac: Bool {
+        #if targetEnvironment(macCatalyst) || os(macOS)
+        return true
+        #else
+        return ProcessInfo.processInfo.isiOSAppOnMac
+        #endif
+    }
+
     /// 錄音檔預設儲存位置：本機文件資料夾（自動新設「Kairumo Record」資料夾）
     public var recordingsDirectory: URL {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
@@ -138,40 +147,31 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     // 時間戳決定，沒有地方放標題。核心那條路的同名多載才會用到它。
     // 保留是為了兩個多載的呼叫端長得一樣。
     public func startRecording(title: String? = nil) async -> Bool {
-        #if targetEnvironment(macCatalyst)
-        let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)
         let permissionGranted: Bool
-        if authStatus == .authorized {
-            permissionGranted = true
-        } else if authStatus == .notDetermined {
-            permissionGranted = await AVCaptureDevice.requestAccess(for: .audio)
+        if isRunningOnMac {
+            let authStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+            if authStatus == .authorized {
+                permissionGranted = true
+            } else if authStatus == .notDetermined {
+                permissionGranted = await AVCaptureDevice.requestAccess(for: .audio)
+            } else {
+                permissionGranted = false
+            }
         } else {
-            permissionGranted = false
-        }
-        guard permissionGranted else {
-            print("[AudioRecorderManager] Mac Catalyst 麥克風權限被拒絕")
-            self.showPermissionAlert = true
-            return false
-        }
-
-        let session = AVAudioSession.sharedInstance()
-        do {
-            try session.setCategory(.playAndRecord, mode: .default)
-            try session.setActive(true)
-        } catch {
-            print("[AudioRecorderManager] Mac Catalyst 音訊 Session 設定警告: \(error)")
-        }
-        #elseif os(iOS)
-        let session = AVAudioSession.sharedInstance()
-        let permissionGranted: Bool
-        if #available(iOS 17.0, *) {
-            permissionGranted = await AVAudioApplication.requestRecordPermission()
-        } else {
-            permissionGranted = await withCheckedContinuation { continuation in
-                session.requestRecordPermission { granted in
-                    continuation.resume(returning: granted)
+            #if os(iOS)
+            if #available(iOS 17.0, *) {
+                permissionGranted = await AVAudioApplication.requestRecordPermission()
+            } else {
+                let session = AVAudioSession.sharedInstance()
+                permissionGranted = await withCheckedContinuation { continuation in
+                    session.requestRecordPermission { granted in
+                        continuation.resume(returning: granted)
+                    }
                 }
             }
+            #else
+            permissionGranted = true
+            #endif
         }
 
         guard permissionGranted else {
@@ -180,23 +180,17 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
             return false
         }
 
+        #if os(iOS) || targetEnvironment(macCatalyst)
+        let session = AVAudioSession.sharedInstance()
         do {
-            try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+            if isRunningOnMac {
+                try session.setCategory(.playAndRecord, mode: .default)
+            } else {
+                try session.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+            }
             try session.setActive(true)
         } catch {
             print("[AudioRecorderManager] 音訊 Session 設定失敗: \(error)")
-        }
-        #elseif os(macOS)
-        let permissionGranted: Bool
-        if #available(macOS 10.14, *) {
-            permissionGranted = await AVCaptureDevice.requestAccess(for: .audio)
-        } else {
-            permissionGranted = true
-        }
-        guard permissionGranted else {
-            print("[AudioRecorderManager] macOS 麥克風權限被拒絕")
-            self.showPermissionAlert = true
-            return false
         }
         #endif
 
@@ -404,44 +398,53 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
     /// 只要麥克風權限，不碰任何錄音器。
     private func requestMicrophonePermission() async -> Bool {
-        #if targetEnvironment(macCatalyst)
-        let status = AVCaptureDevice.authorizationStatus(for: .audio)
         let granted: Bool
-        if status == .authorized {
-            granted = true
-        } else if status == .notDetermined {
-            granted = await AVCaptureDevice.requestAccess(for: .audio)
-        } else {
-            granted = false
-        }
-        if !granted { showPermissionAlert = true }
-        if granted {
-            let session = AVAudioSession.sharedInstance()
-            try? session.setCategory(.playAndRecord, mode: .default)
-            try? session.setActive(true)
-        }
-        return granted
-        #elseif os(iOS)
-        let session = AVAudioSession.sharedInstance()
-        let granted: Bool
-        if #available(iOS 17.0, *) {
-            granted = await AVAudioApplication.requestRecordPermission()
-        } else {
-            granted = await withCheckedContinuation { continuation in
-                session.requestRecordPermission { ok in continuation.resume(returning: ok) }
+        if isRunningOnMac {
+            let status = AVCaptureDevice.authorizationStatus(for: .audio)
+            if status == .authorized {
+                granted = true
+            } else if status == .notDetermined {
+                granted = await AVCaptureDevice.requestAccess(for: .audio)
+            } else {
+                granted = false
             }
+        } else {
+            #if os(iOS)
+            if #available(iOS 17.0, *) {
+                granted = await AVAudioApplication.requestRecordPermission()
+            } else {
+                let session = AVAudioSession.sharedInstance()
+                granted = await withCheckedContinuation { continuation in
+                    session.requestRecordPermission { ok in continuation.resume(returning: ok) }
+                }
+            }
+            #else
+            granted = true
+            #endif
         }
+
         if !granted {
             showPermissionAlert = true
             return false
         }
-        try? session.setCategory(
-            .playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
-        try? session.setActive(true)
-        return true
-        #else
-        return true
+
+        #if os(iOS) || targetEnvironment(macCatalyst)
+        let session = AVAudioSession.sharedInstance()
+        do {
+            if isRunningOnMac {
+                // Mac 硬體沒有聽筒（receiver），傳入 .defaultToSpeaker 會導致設定失敗拋錯
+                try session.setCategory(.playAndRecord, mode: .default)
+            } else {
+                try session.setCategory(
+                    .playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+            }
+            try session.setActive(true)
+        } catch {
+            print("[AudioRecorderManager] AVAudioSession 設定警告: \(error)")
+        }
         #endif
+
+        return true
     }
 
     // MARK: - 播放控制

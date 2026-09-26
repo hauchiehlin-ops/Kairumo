@@ -100,14 +100,21 @@ enum NotebookPackageBridge {
             // 匯出走，否則兩台裝置的頁永遠不會收斂。
             let style = pageStyle(for: document.template)
             var pageIds: [String] = []
-            // 有已知的頁面 id 就照用 —— 頁面身分要跟著筆記走，不是跟著某一次
-            // 匯出走，否則兩台裝置的頁永遠不會收斂。
-            for id in (knownPageIds ?? []).prefix(pageCount) {
-                try session.addPageWithId(pageId: id, style: style)
-                pageIds.append(id)
-            }
-            while pageIds.count < pageCount {
-                try pageIds.append(session.addPage(style: style))
+            let isInbox = document.id.caseInsensitiveCompare(recordingInboxNotebookId()) == .orderedSame
+            if isInbox {
+                let fixedInboxPageId = "a0d10000-0000-4000-8000-000000000002"
+                try session.addPageWithId(pageId: fixedInboxPageId, style: style)
+                pageIds.append(fixedInboxPageId)
+            } else {
+                // 有已知的頁面 id 就照用 —— 頁面身分要跟著筆記走，不是跟著某一次
+                // 匯出走，否則兩台裝置的頁永遠不會收斂。
+                for id in (knownPageIds ?? []).prefix(pageCount) {
+                    try session.addPageWithId(pageId: id, style: style)
+                    pageIds.append(id)
+                }
+                while pageIds.count < pageCount {
+                    try pageIds.append(session.addPage(style: style))
+                }
             }
 
             // 筆記本層級的中繼資料（樣板、資料夾、圖釘、連結卡片、3D、頁面 id）。
@@ -583,6 +590,10 @@ enum NotebookPackageBridge {
 
     /// 套件裡現有的頁面 id，依頁次。開不起來時回 `nil`。
     private static func existingPageIds(in package: URL, deviceId: UInt32) -> [String]? {
+        let pkgName = package.deletingPathExtension().lastPathComponent
+        if pkgName.caseInsensitiveCompare(recordingInboxNotebookId()) == .orderedSame {
+            return ["a0d10000-0000-4000-8000-000000000002"]
+        }
         guard FileManager.default.fileExists(atPath: package.path),
               let session = try? PadnoteSession.openExisting(path: package.path, deviceId: deviceId),
               let ids = try? pageIds(of: session), !ids.isEmpty
@@ -828,6 +839,10 @@ enum NotebookPackageBridge {
         // 不是中繼資料。兩邊都帶的話會變成兩份。
         document.shapeAttachments = shapes.isEmpty ? nil : shapes
         document.connectionAttachments = connections.isEmpty ? nil : connections
+
+        if document.id.caseInsensitiveCompare(recordingInboxNotebookId()) == .orderedSame {
+            document.pageCount = 1
+        }
 
         // 頁面 id 一律以**檔案裡實際的那批**為準，不是中繼資料寫的那批 ——
         // 中繼資料可能是別台裝置寫的舊版本。下次匯出要沿用這批。

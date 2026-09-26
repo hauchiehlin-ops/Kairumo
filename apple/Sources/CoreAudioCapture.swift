@@ -60,13 +60,28 @@ final class CoreAudioCapture {
         else { return nil }
 
         let input = engine.inputNode
-        let inputFormat = input.outputFormat(forBus: 0)
+        var chosenFormat = input.outputFormat(forBus: 0)
+        if chosenFormat.sampleRate <= 0 || chosenFormat.channelCount == 0 {
+            chosenFormat = input.inputFormat(forBus: 0)
+        }
+        if chosenFormat.sampleRate <= 0 || chosenFormat.channelCount == 0 {
+            #if os(iOS) || targetEnvironment(macCatalyst)
+            let session = AVAudioSession.sharedInstance()
+            try? session.setCategory(.playAndRecord, mode: .default)
+            try? session.setActive(true)
+            chosenFormat = input.outputFormat(forBus: 0)
+            if chosenFormat.sampleRate <= 0 || chosenFormat.channelCount == 0 {
+                chosenFormat = input.inputFormat(forBus: 0)
+            }
+            #endif
+        }
+
         // 取樣率為 0 表示麥克風還沒準備好（權限沒過、或被別的 App 佔用）。
-        guard inputFormat.sampleRate > 0 else {
-            onError?("麥克風尚未就緒")
+        guard chosenFormat.sampleRate > 0 && chosenFormat.channelCount > 0 else {
+            onError?("麥克風尚未就緒（取樣率: \(chosenFormat.sampleRate), 聲道: \(chosenFormat.channelCount)）")
             return nil
         }
-        guard let converter = AVAudioConverter(from: inputFormat, to: target) else {
+        guard let converter = AVAudioConverter(from: chosenFormat, to: target) else {
             onError?("建不出音訊轉換器")
             return nil
         }
@@ -84,7 +99,7 @@ final class CoreAudioCapture {
         self.session = session
         self.isPaused = false
 
-        input.installTap(onBus: 0, bufferSize: 4096, format: inputFormat) { [weak self] buffer, _ in
+        input.installTap(onBus: 0, bufferSize: 4096, format: chosenFormat) { [weak self] buffer, _ in
             // 這個回呼在音訊執行緒上。**不要在這裡碰 @MainActor 的狀態**，
             // 也不要做會配置記憶體以外的重活 —— 卡住它就是卡住麥克風。
             self?.feed(buffer)
@@ -130,10 +145,14 @@ final class CoreAudioCapture {
     private nonisolated func feed(_ buffer: AVAudioPCMBuffer) {
         Task { @MainActor in
             guard !self.isPaused,
-                  let converter = self.converter,
                   let target = self.targetFormat,
                   let session = self.session
             else { return }
+
+            if self.converter == nil || self.converter?.inputFormat != buffer.format {
+                self.converter = AVAudioConverter(from: buffer.format, to: target)
+            }
+            guard let converter = self.converter else { return }
 
             // 輸出容量按取樣率比例估，多給一點餘裕：估太小會被轉換器截斷，
             // 而截斷的症狀是聲音會週期性地缺一小塊。

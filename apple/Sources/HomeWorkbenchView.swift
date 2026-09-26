@@ -489,7 +489,7 @@ public struct HomeWorkbenchView: View {
                 StartupLogger.log("HomeWorkbenchView.onAppear: 首頁畫面載入就緒")
                 // 不限定 macCatalyst：使用者在 Mac 上跑的是 iOS 版（Designed for iPad）
                 MacWindowTitle.apply()
-                autoSync.start(store: store, deviceId: NotebookMigration.deviceId)
+                autoSync.start(store: notebookStore, deviceId: NotebookMigration.deviceId)
                 autoSync.request(.foreground)
             }
         }
@@ -2645,7 +2645,7 @@ struct QuickAudioRecorderModal: View {
 
                     Picker(localizationManager.localized("attach_picker_label"), selection: $targetNotebookId) {
                         Text(localizationManager.localized("standalone_recording")).tag(nil as String?)
-                        ForEach(notebookStore.notebooks) { nb in
+                        ForEach(notebookStore.visibleNotebooks) { nb in
                             Text(nb.displayTitle()).tag(nb.id as String?)
                         }
                     }
@@ -2686,11 +2686,12 @@ struct QuickAudioRecorderModal: View {
                         Button {
                             if let res = audioManager.stopRecording() {
                                 let fileName = res.url.lastPathComponent
+                                let linkedId = targetNotebookId ?? notebookStore.recordingInbox().id
                                 notebookStore.addRecording(
                                     title: recordingTitle,
                                     durationSeconds: Int(res.duration),
                                     fileName: fileName,
-                                    linkedNotebookId: targetNotebookId
+                                    linkedNotebookId: linkedId
                                 )
                             }
                             dismiss()
@@ -2733,8 +2734,17 @@ struct QuickAudioRecorderModal: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(localizationManager.localized("close")) {
-                        if audioManager.status == .recording {
-                            _ = audioManager.stopRecording()
+                        if audioManager.status == .recording || audioManager.status == .paused {
+                            if let res = audioManager.stopRecording() {
+                                let fileName = res.url.lastPathComponent
+                                let linkedId = targetNotebookId ?? notebookStore.recordingInbox().id
+                                notebookStore.addRecording(
+                                    title: recordingTitle,
+                                    durationSeconds: Int(res.duration),
+                                    fileName: fileName,
+                                    linkedNotebookId: linkedId
+                                )
+                            }
                         }
                         dismiss()
                     }
