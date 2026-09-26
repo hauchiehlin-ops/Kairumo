@@ -2651,6 +2651,7 @@ public final class NotebookStore: ObservableObject {
             byFileName[rec.fileName.lowercased()] = rec
         }
 
+        var scanned: [AudioRecordingRecord] = []
         struct TargetInfo {
             let id: String
             let displayTitle: String
