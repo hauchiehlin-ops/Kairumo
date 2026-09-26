@@ -64,6 +64,8 @@ struct ContinuousPageView<ObjectLayer: View>: View {
     /// 這一頁的畫布實體。焦點頁的才交出去（undo／草圖美化要用）。
     let canvasRef: (PKCanvasView) -> Void
     var onCanvasTap: ((CGPoint) -> Void)? = nil
+    var onCanvasDoubleTap: ((CGPoint) -> Void)? = nil
+    var onPencilTouchBegan: (() -> Void)? = nil
     /// Apple Pencil 雙擊筆桿（工作項 S-67）。只有焦點頁回報 —— 每一頁都報的話，
     /// 一次雙擊會被當成好幾次，工具在筆與橡皮擦之間跳回原地。
     var onPenControl: ((FfiPenControl, Bool) -> Void)? = nil
@@ -79,15 +81,6 @@ struct ContinuousPageView<ObjectLayer: View>: View {
             PageBackgroundRepresentable(paperId: paperId, paletteId: paletteId)
                 .allowsHitTesting(false)
                 .zIndex(0)
-
-            if editorMode == .type {
-                Color.black.opacity(0.0001)
-                    .contentShape(Rectangle())
-                    .onTapGesture { location in
-                        onCanvasTap?(location)
-                    }
-                    .zIndex(0.5)
-            }
 
             CanvasRepresentable(
                 drawing: $drawing,
@@ -117,9 +110,17 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 palmRejection: palmRejection,
                 onPenControl: { control, pressed in
                     if isFocused { onPenControl?(control, pressed) }
+                },
+                onPencilTouchBegan: {
+                    if isFocused { onPencilTouchBegan?() }
+                },
+                onCanvasDirectTap: { location in
+                    onCanvasTap?(location)
+                },
+                onCanvasDirectDoubleTap: { location in
+                    onCanvasDoubleTap?(location)
                 }
             )
-            .allowsHitTesting(editorMode == .draw)
             .zIndex(1)
 
             objectLayer()
@@ -128,11 +129,6 @@ struct ContinuousPageView<ObjectLayer: View>: View {
         }
         .coordinateSpace(name: CanvasCoordinateSpace.name)
         .contentShape(Rectangle())
-        .simultaneousGesture(
-            SpatialTapGesture(count: 1).onEnded { value in
-                onCanvasTap?(value.location)
-            }
-        )
         // 拖到哪一頁就插到哪一頁 —— 連續模式下每一頁都是自己的落點。
         .onDrop(of: [.image], isTargeted: $isDropTargeted) { providers, location in
             onImageDropped?(pageIndex, providers, location) ?? false

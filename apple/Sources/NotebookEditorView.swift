@@ -232,6 +232,9 @@ final class AdaptiveCanvasView: PKCanvasView {
     /// 編得過，但那是靠 @objc 動態派發矇混，不是 Swift 保證的行為。
     var onTouchObserved: ((UITouch) -> Void)?
 
+    /// Apple Pencil 感知：當筆尖碰到畫布時立即回報（方案 A：硬體感知分離）
+    var onPencilTouchBegan: (() -> Void)?
+
     /// 輸入診斷。掛在同一個觀察點上 —— 出問題時要看得到輸入本身長什麼樣。
     ///
     /// `touchesMoved` 也要記：`coalescedTouches` 的數量只有在移動時才有意義，
@@ -292,9 +295,12 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
-        touches.forEach {
-            onTouchObserved?($0)
-            onTouchDiagnostics?($0, event)
+        for touch in touches {
+            if touch.type == .pencil {
+                onPencilTouchBegan?()
+            }
+            onTouchObserved?(touch)
+            onTouchDiagnostics?(touch, event)
         }
         super.touchesBegan(touches, with: event)
     }
@@ -389,22 +395,19 @@ struct CanvasRepresentable: UIViewRepresentable {
     var onRedo: (() -> Void)?
     var onMagneticSnap: ((CGPoint, CGPoint) -> Void)?
 
+    /// 🌟 方案 A+B：Apple Pencil 硬體落筆感知與手指單雙擊回呼
+    var onPencilTouchBegan: (() -> Void)? = nil
+    var onCanvasDirectTap: ((CGPoint) -> Void)? = nil
+    var onCanvasDirectDoubleTap: ((CGPoint) -> Void)? = nil
+
     /// 目前該用哪個輸入政策。
     ///
-    /// 打字模式一律只有筆能寫（手指要用來捲動與選取）。手寫模式交給掌拒
-    /// 協調器決定 —— 沒有它時退回原本的 `.anyInput`，行為與以前相同。
-    ///
-    /// **`drawingPolicy` 只能表達「誰可以畫」，表達不了「誰都不能畫」。**
-    /// 打字模式下真正要的是後者，所以另外關掉 `drawingGestureRecognizer`
-    /// —— 只設 `.pencilOnly` 的話，拿 Apple Pencil 的人在「打字模式」裡
-    /// 照樣在畫畫，而畫面上沒有任何東西告訴他模式換了。
+    /// 打字模式一律設為 `.pencilOnly`：拿 Apple Pencil 的使用者隨時可順暢下筆，手指則負責點選與選取物件。
+    /// 手寫模式交給掌拒協調器決定 —— 沒有它時退回原本的 `.anyInput`。
     private func resolvedPolicy(now: Date = Date()) -> PKCanvasViewDrawingPolicy {
         guard editorMode == .draw else { return .pencilOnly }
         return palmRejection?.drawingPolicy(now: now) ?? .anyInput
     }
-
-    /// 這個模式下畫布接不接受筆畫。
-    private var acceptsInk: Bool { editorMode == .draw }
 
     /// 給核心看的模式。
     private var ffiEditorMode: FfiEditorMode { editorMode == .draw ? .draw : .type }
@@ -417,6 +420,7 @@ struct CanvasRepresentable: UIViewRepresentable {
     func makeUIView(context: Context) -> PKCanvasView {
         let canvas = AdaptiveCanvasView()
         canvas.drawingPolicy = resolvedPolicy()
+        canvas.onPencilTouchBegan = onPencilTouchBegan
         canvas.onTouchObserved = { [weak canvas] touch in
             guard let palm = palmRejection else { return }
             let landed = Date()
@@ -431,8 +435,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             InkInputDiagnostics.shared.record(touch: touch, event: event, in: canvas)
         }
         canvas.delegate = context.coordinator
-        canvas.drawingGestureRecognizer.isEnabled = acceptsInk
-        canvas.isUserInteractionEnabled = acceptsInk
+        canvas.drawingGestureRecognizer.isEnabled = true
+        canvas.isUserInteractionEnabled = true
         canvas.backgroundColor = .clear
         canvas.isOpaque = false
         canvas.isScrollEnabled = isScrollEnabled
@@ -522,6 +526,26 @@ struct CanvasRepresentable: UIViewRepresentable {
         swipeDown.direction = .down
         canvas.addGestureRecognizer(swipeDown)
 
+        // 🌟 方案 A+B：手指／游標單擊與雙擊手勢（限定 direct / indirectPointer，完全不阻礙 Apple Pencil 筆跡）
+        let directSingleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDirectSingleTap(_:)))
+        directSingleTap.numberOfTapsRequired = 1
+        directSingleTap.allowedTouchTypes = [
+            NSNumber(value: UITouch.TouchType.direct.rawValue),
+            NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
+        ]
+        directSingleTap.cancelsTouchesInView = false
+
+        let directDoubleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDirectDoubleTap(_:)))
+        directDoubleTap.numberOfTapsRequired = 2
+        directDoubleTap.allowedTouchTypes = [
+            NSNumber(value: UITouch.TouchType.direct.rawValue),
+            NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
+        ]
+        directDoubleTap.cancelsTouchesInView = false
+        directSingleTap.require(toFail: directDoubleTap)
+
+        canvas.addGestureRecognizer(directDoubleTap)
+        canvas.addGestureRecognizer(directSingleTap)
 
         context.coordinator.parent = self
         context.coordinator.applyTool(to: canvas)
@@ -552,14 +576,18 @@ struct CanvasRepresentable: UIViewRepresentable {
         if uiView.maximumZoomScale != CGFloat(gesture.maxZoom) {
             uiView.maximumZoomScale = CGFloat(gesture.maxZoom)
         }
-        // 見 `acceptsInk`：政策擋不掉 Pencil，手勢本身要關。
-        if uiView.drawingGestureRecognizer.isEnabled != acceptsInk {
-            uiView.drawingGestureRecognizer.isEnabled = acceptsInk
+        // 確保 Apple Pencil 隨時可書寫
+        if !uiView.drawingGestureRecognizer.isEnabled {
+            uiView.drawingGestureRecognizer.isEnabled = true
+        }
+        if !uiView.isUserInteractionEnabled {
+            uiView.isUserInteractionEnabled = true
         }
 
         // 換筆刷或拉筆寬時，游標要跟著變 —— 不更新的話使用者得把滑鼠移出去
         // 再移回來才看得到新的筆頭。
         if let adaptive = uiView as? AdaptiveCanvasView {
+            adaptive.onPencilTouchBegan = onPencilTouchBegan
             adaptive.installPointerInteractionIfNeeded(delegate: context.coordinator)
             adaptive.refreshPointer(BrushCursor.path(for: selectedTool, strokeWidth: strokeWidth))
         }
@@ -711,6 +739,18 @@ struct CanvasRepresentable: UIViewRepresentable {
         @objc func handleThreeFingerSwipeDown(_ sender: UISwipeGestureRecognizer) {
             guard sender.state == .ended else { return }
             perform(fingerSwipeAction(fingers: 3, upwards: false))
+        }
+
+        @objc func handleDirectSingleTap(_ sender: UITapGestureRecognizer) {
+            guard sender.state == .ended, let canvas = sender.view else { return }
+            let loc = sender.location(in: canvas)
+            parent.onCanvasDirectTap?(loc)
+        }
+
+        @objc func handleDirectDoubleTap(_ sender: UITapGestureRecognizer) {
+            guard sender.state == .ended, let canvas = sender.view else { return }
+            let loc = sender.location(in: canvas)
+            parent.onCanvasDirectDoubleTap?(loc)
         }
 
         init(_ parent: CanvasRepresentable) {
@@ -3278,7 +3318,17 @@ public struct NotebookEditorView: View {
                             onCanvasTap: { location in
                                 currentPageIndex = index
                                 currentDrawing = drawingForPage(index)
-                                handleCanvasTapInTypeMode(at: location)
+                                handleCanvasDirectTap(at: location, page: index)
+                            },
+                            onCanvasDoubleTap: { location in
+                                currentPageIndex = index
+                                currentDrawing = drawingForPage(index)
+                                handleCanvasDirectDoubleTap(at: location, page: index)
+                            },
+                            onPencilTouchBegan: {
+                                currentPageIndex = index
+                                currentDrawing = drawingForPage(index)
+                                handlePencilTouchBegan()
                             },
                             onPenControl: applyPenControl,
                             onImageDropped: { page, providers, location in
@@ -3643,15 +3693,6 @@ public struct NotebookEditorView: View {
                 .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
                 .zIndex(0)
 
-            if editorMode == .type {
-                Color.black.opacity(0.0001)
-                    .contentShape(Rectangle())
-                    .onTapGesture { location in
-                        handleCanvasTapInTypeMode(at: location)
-                    }
-                    .zIndex(0.5)
-            }
-
             CanvasRepresentable(
                 drawing: $currentDrawing,
                 selectedTool: selectedTool,
@@ -3761,7 +3802,10 @@ public struct NotebookEditorView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
                         magneticGuideActive = false
                     }
-                }
+                },
+                onPencilTouchBegan: { handlePencilTouchBegan() },
+                onCanvasDirectTap: { location in handleCanvasDirectTap(at: location) },
+                onCanvasDirectDoubleTap: { location in handleCanvasDirectDoubleTap(at: location) }
             )
             .accessibilityIdentifier("editor.canvas")
             // 從別的 App 把圖拖進來（工作項 S-68）。
@@ -3781,7 +3825,6 @@ public struct NotebookEditorView: View {
                         }
                 }
             )
-            .allowsHitTesting(editorMode == .draw)
             .zIndex(1)
 
             objectLayer(forPage: currentPageIndex)
@@ -8595,6 +8638,59 @@ public struct NotebookEditorView: View {
         return false
     }
 
+    /// 🌟 方案 A：Apple Pencil 碰到畫布時，立即收回文字輸入狀態並無縫切換至手寫模式
+    private func handlePencilTouchBegan() {
+        if let activeId = inlineEditingTextId {
+            if let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
+               activeItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                notebook.textAttachments?.removeAll { $0.id == activeId }
+                store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+            }
+            inlineEditingTextId = nil
+        }
+        if editorMode != .draw {
+            editorMode = .draw
+        }
+    }
+
+    /// 🌟 方案 A+B：手指或游標在畫布上的單擊事件
+    private func handleCanvasDirectTap(at location: CGPoint, page: Int? = nil) {
+        if let p = page { currentPageIndex = p }
+        if editorMode == .type {
+            handleCanvasTapInTypeMode(at: location)
+        } else {
+            // 手寫模式下單擊畫布空白處：若先前有焦點中的文字方塊，收回文字編輯狀態
+            if let activeId = inlineEditingTextId {
+                if let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
+                   activeItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    notebook.textAttachments?.removeAll { $0.id == activeId }
+                    store.updateNotebook(notebook)
+                    PageThumbnailRenderer.invalidateAll()
+                }
+                inlineEditingTextId = nil
+            }
+        }
+    }
+
+    /// 🌟 方案 A+B：手指或游標在畫布上的雙擊事件（手繪或打字模式下皆可直接建立並聚焦文字方塊）
+    private func handleCanvasDirectDoubleTap(at location: CGPoint, page: Int? = nil) {
+        let targetPage = page ?? currentPageIndex
+        currentPageIndex = targetPage
+        if isLocationInsideAnyObject(at: location, page: targetPage) { return }
+        // 若先前有空白文字方塊先清理
+        if let activeId = inlineEditingTextId,
+           let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
+           activeItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            notebook.textAttachments?.removeAll { $0.id == activeId }
+            store.updateNotebook(notebook)
+            PageThumbnailRenderer.invalidateAll()
+        }
+        let draft = insertTextBox(at: location)
+        inlineEditingTextId = draft.id
+        editingTextId = nil
+    }
+
     private func handleCanvasTapInTypeMode(at location: CGPoint) {
         // 1. 若先前有就地編輯但未打任何字的空方塊，先自動清理
         if let activeId = inlineEditingTextId,
@@ -10064,16 +10160,10 @@ struct TextAttachmentItemView: View {
             }
             .onTapGesture {
                 guard lockedByPeer == nil else { return }
-                if isTypeMode {
-                    // 打字模式下，單擊文字方塊直接就地編輯
-                    isSelected = true
-                    isEditingInline = true
-                    inlineFocused = true
-                } else {
-                    if isEditingInline { return }
-                    isSelected.toggle()
-                    collaborationManager.broadcastSelection(selectedId: isSelected ? textItem.id : nil)
-                }
+                isSelected = true
+                isEditingInline = true
+                inlineFocused = true
+                collaborationManager.broadcastSelection(selectedId: textItem.id)
             }
             // 右鍵／長按也要能刪除 —— 這是大家最先嘗試的操作
             .contextMenu {
@@ -10115,14 +10205,10 @@ struct TextAttachmentItemView: View {
                     .onEnded { value in
                         guard lockedByPeer == nil else { return }
                         if hypot(value.translation.width, value.translation.height) < 4 {
-                            if isTypeMode {
-                                isSelected = true
-                                isEditingInline = true
-                                inlineFocused = true
-                            } else {
-                                isSelected.toggle()
-                                collaborationManager.broadcastSelection(selectedId: isSelected ? textItem.id : nil)
-                            }
+                            isSelected = true
+                            isEditingInline = true
+                            inlineFocused = true
+                            collaborationManager.broadcastSelection(selectedId: textItem.id)
                         } else {
                             let oldX = textItem.x
                             let oldY = textItem.y
