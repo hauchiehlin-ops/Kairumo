@@ -1226,13 +1226,17 @@ public final class NotebookStore: ObservableObject {
         StartupLogger.log("NotebookStore.init 開始載入資料")
         documentsRootOverride = nil
         loadData()
-        if notebooks.isEmpty {
+        let nonInbox = notebooks.filter {
+            $0.id.caseInsensitiveCompare(recordingInboxNotebookId()) != .orderedSame
+        }
+        if nonInbox.isEmpty {
             StartupLogger.log("NotebookStore: 建立預設種子筆記")
             seedDefaultNotebooks()
         } else {
             StartupLogger.log("NotebookStore: 檢查/回填種子筆記")
             backfillEmptySeedNotebooks()
         }
+        refreshRecordings()
         StartupLogger.log("NotebookStore.init 初始化完成")
     }
 
@@ -1321,7 +1325,6 @@ public final class NotebookStore: ObservableObject {
            let recList = try? JSONDecoder().decode([AudioRecordingRecord].self, from: recData) {
             self.recordings = recList
         }
-        refreshRecordings()
 
         if let fData = try? Data(contentsOf: foldersFile),
            let fList = try? JSONDecoder().decode([FolderItem].self, from: fData) {
@@ -2648,14 +2651,17 @@ public final class NotebookStore: ObservableObject {
             byFileName[rec.fileName.lowercased()] = rec
         }
 
-        var scanned: [AudioRecordingRecord] = []
-        var docList = notebooks
+        struct TargetInfo {
+            let id: String
+            let displayTitle: String
+        }
+        var targets: [TargetInfo] = notebooks.map { TargetInfo(id: $0.id, displayTitle: $0.displayTitle()) }
         let inboxId = recordingInboxNotebookId()
-        if !docList.contains(where: { $0.id.caseInsensitiveCompare(inboxId) == .orderedSame }) {
-            docList.append(recordingInbox())
+        if !targets.contains(where: { $0.id.caseInsensitiveCompare(inboxId) == .orderedSame }) {
+            targets.append(TargetInfo(id: inboxId, displayTitle: LocalizationManager.shared.localized("recording_inbox")))
         }
 
-        for doc in docList {
+        for doc in targets {
             let isInbox = doc.id.caseInsensitiveCompare(inboxId) == .orderedSame
             let audioDir = corePackagesDirectory
                 .appending(path: "\(doc.id.lowercased()).padnote")
@@ -2686,7 +2692,7 @@ public final class NotebookStore: ObservableObject {
                     title = LocalizationManager.shared.localized("quick_record")
                 } else {
                     let suffix = LocalizationManager.shared.localized("recording_suffix")
-                    title = "\(doc.displayTitle()) \(suffix)"
+                    title = "\(doc.displayTitle) \(suffix)"
                 }
                 scanned.append(AudioRecordingRecord(
                     title: title,
