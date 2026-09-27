@@ -3174,6 +3174,7 @@ public struct NotebookEditorView: View {
                             RoundedRectangle(cornerRadius: 10)
                                 .stroke(selectedTool == .pen ? Color.accentColor : Color.clear, lineWidth: 1.5)
                         )
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
 
@@ -3194,6 +3195,7 @@ public struct NotebookEditorView: View {
                             RoundedRectangle(cornerRadius: 10)
                                 .stroke(selectedTool == .highlighter ? Color.accentColor : Color.clear, lineWidth: 1.5)
                         )
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
 
@@ -3214,6 +3216,7 @@ public struct NotebookEditorView: View {
                             RoundedRectangle(cornerRadius: 10)
                                 .stroke(selectedTool == .eraser ? Color.accentColor : Color.clear, lineWidth: 1.5)
                         )
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
 
@@ -3234,6 +3237,7 @@ public struct NotebookEditorView: View {
                             RoundedRectangle(cornerRadius: 10)
                                 .stroke(selectedTool == .lasso ? Color.accentColor : Color.clear, lineWidth: 1.5)
                         )
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
 
@@ -5770,6 +5774,10 @@ public struct NotebookEditorView: View {
     private var drawingToolbar: AnyView { AnyView(drawingToolbarContent) }
 
     private func selectEditorTool(_ tool: EditorToolType) {
+        if editorMode != .draw {
+            editorMode = .draw
+            inlineEditingTextId = nil
+        }
         if tool == .lasso, selectedTool == .lasso {
             exitLassoMode()
         } else {

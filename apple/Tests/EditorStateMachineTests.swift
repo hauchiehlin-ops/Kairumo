@@ -110,6 +110,26 @@ final class EditorStateMachineTests: XCTestCase {
         sm.toggleMode()
         XCTAssertEqual(sm.currentMode, .draw)
     }
+
+    func testTextAndTableFocusMutualExclusion() {
+        let sm = EditorStateMachine()
+        let testTextId = UUID()
+
+        // 1. 開始文字輸入
+        sm.beginTextEditing(id: testTextId)
+        XCTAssertEqual(sm.activeTextId, testTextId)
+        XCTAssertNil(sm.activeTableCell)
+
+        // 2. 點選表格儲存格：文字焦點必須被自動清除，不發生焦點競爭
+        sm.selectTableCell(row: 0, col: 1)
+        XCTAssertNil(sm.activeTextId, "選取表格儲存格時，既有文字框焦點必須清除")
+        XCTAssertEqual(sm.activeTableCell, TableCellCoordinate(row: 0, col: 1))
+
+        // 3. 再次點選文字框：表格焦點必須被清除
+        sm.beginTextEditing(id: testTextId)
+        XCTAssertNil(sm.activeTableCell, "選取文字框時，既有表格儲存格焦點必須清除")
+        XCTAssertEqual(sm.activeTextId, testTextId)
+    }
 }
 
 @MainActor
@@ -160,5 +180,12 @@ final class SheetCoordinatorTests: XCTestCase {
         coordinator.triggerFileImportFromMenu(.audio)
         XCTAssertTrue(coordinator.isTransitioning)
     }
+
+    func testPresentFromMenuSetsTransitioning() {
+        let coordinator = SheetCoordinator()
+        coordinator.presentFromMenu(.mathCalculator)
+        XCTAssertTrue(coordinator.isTransitioning)
+    }
 }
+
 

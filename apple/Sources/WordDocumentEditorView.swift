@@ -398,24 +398,37 @@ public struct WordToolbarView: View {
     private func toggleButton(icon: String, isActive: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: icon)
-                .font(.system(size: 12, weight: .bold))
-                .frame(width: 26, height: 26)
-                .background(isActive ? Color.accentColor.opacity(0.25) : Color.clear)
-                .cornerRadius(4)
+                .font(.system(size: 13, weight: isActive ? .bold : .medium))
+                .foregroundColor(isActive ? .accentColor : .primary)
+                .frame(width: 30, height: 30)
+                .background(isActive ? Color.accentColor.opacity(0.18) : Color.clear)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isActive ? Color.accentColor : Color.clear, lineWidth: 1)
+                )
+                .cornerRadius(6)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
 
     private func alignButton(icon: String, value: String) -> some View {
-        Button {
+        let isActive = activeText.alignmentRaw == value
+        return Button {
             activeText.alignmentRaw = value
             onCommitChange()
         } label: {
             Image(systemName: icon)
-                .font(.system(size: 12))
-                .frame(width: 26, height: 26)
-                .background(activeText.alignmentRaw == value ? Color.accentColor.opacity(0.25) : Color.clear)
-                .cornerRadius(4)
+                .font(.system(size: 13, weight: isActive ? .bold : .medium))
+                .foregroundColor(isActive ? .accentColor : .primary)
+                .frame(width: 30, height: 30)
+                .background(isActive ? Color.accentColor.opacity(0.18) : Color.clear)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6)
+                        .stroke(isActive ? Color.accentColor : Color.clear, lineWidth: 1)
+                )
+                .cornerRadius(6)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
