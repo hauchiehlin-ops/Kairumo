@@ -107,6 +107,28 @@ public struct NoteTableAttachment: Identifiable, Codable, Hashable {
     }
 
     // MARK: - 增刪
+    /// 批次調整表格維度並保留相容格子內容
+    public mutating func resizeGrid(newRows: Int, newCols: Int) {
+        let targetRows = max(1, newRows)
+        let targetCols = max(1, newCols)
+        guard targetRows != rows || targetCols != cols else { return }
+        var newCells: [String] = []
+        for r in 0..<targetRows {
+            for c in 0..<targetCols {
+                if r < rows && c < cols {
+                    newCells.append(cell(row: r, col: c))
+                } else {
+                    newCells.append("")
+                }
+            }
+        }
+        self.rows = targetRows
+        self.cols = targetCols
+        self.cells = newCells
+        self.mergedCells.removeAll {
+            $0.row + $0.rowSpan > targetRows || $0.col + $0.colSpan > targetCols
+        }
+    }
 
     public mutating func insertRow(at index: Int) {
         let position = min(max(0, index), rows)

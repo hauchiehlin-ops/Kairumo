@@ -63,6 +63,29 @@ data class NoteTable(
 
     // MARK: - 增刪
 
+    /** 批次調整表格維度並保留相容格子內容 */
+    fun resizeGrid(newRows: Int, newCols: Int) {
+        val targetRows = maxOf(1, newRows)
+        val targetCols = maxOf(1, newCols)
+        if (targetRows == rows && targetCols == cols) return
+        val newCells = ArrayList<String>(targetRows * targetCols)
+        for (r in 0 until targetRows) {
+            for (c in 0 until targetCols) {
+                if (r < rows && c < cols) {
+                    newCells.add(cell(r, c))
+                } else {
+                    newCells.add("")
+                }
+            }
+        }
+        rows = targetRows
+        cols = targetCols
+        cells = newCells
+        mergedCells.removeAll {
+            it.row + it.rowSpan > targetRows || it.col + it.colSpan > targetCols
+        }
+    }
+
     fun insertRow(at: Int) {
         val position = at.coerceIn(0, rows)
         cells.addAll(position * cols, List(cols) { "" })

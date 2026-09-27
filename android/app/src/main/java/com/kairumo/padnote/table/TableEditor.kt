@@ -89,6 +89,22 @@ fun TableEditor(
 
                 HorizontalDivider()
 
+                // 快速行列規格選取
+                Row(
+                    Modifier.horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    listOf(2 to 2, 3 to 3, 4 to 4, 5 to 3, 3 to 5, 6 to 4).forEach { (r, c) ->
+                        TextButton(
+                            onClick = { mutate { resizeGrid(r, c) } }
+                        ) {
+                            Text("$r × $c")
+                        }
+                    }
+                }
+
+                HorizontalDivider()
+
                 // 格子
                 Column(
                     Modifier

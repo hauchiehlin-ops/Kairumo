@@ -290,6 +290,47 @@ public struct TableStudioView: View {
     private var controls: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
+                // 預設行列規格快速選取
+                VStack(alignment: .leading, spacing: 6) {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach([(2, 2), (3, 3), (4, 4), (5, 3), (3, 5), (6, 4)], id: \.0) { r, c in
+                                Button("\(r) × \(c)") {
+                                    table.resizeGrid(newRows: r, newCols: c)
+                                    selectedRow = min(selectedRow, r - 1)
+                                    selectedCol = min(selectedCol, c - 1)
+                                }
+                                .buttonStyle(.bordered)
+                                .tint(table.rows == r && table.cols == c ? Color.accentColor : Color.secondary)
+                            }
+                        }
+                    }
+
+                    HStack {
+                        Stepper(value: Binding(
+                            get: { table.rows },
+                            set: {
+                                table.resizeGrid(newRows: $0, newCols: table.cols)
+                                selectedRow = min(selectedRow, $0 - 1)
+                            }
+                        ), in: 1...20) {
+                            Text("\(table.rows) \(localizationManager.localized("table_add_row"))")
+                        }
+
+                        Stepper(value: Binding(
+                            get: { table.cols },
+                            set: {
+                                table.resizeGrid(newRows: table.rows, newCols: $0)
+                                selectedCol = min(selectedCol, $0 - 1)
+                            }
+                        ), in: 1...12) {
+                            Text("\(table.cols) \(localizationManager.localized("table_add_column"))")
+                        }
+                    }
+                }
+
+                Divider()
+
                 Toggle(localizationManager.localized("table_header_row"), isOn: $table.headerRow)
 
                 HStack {
