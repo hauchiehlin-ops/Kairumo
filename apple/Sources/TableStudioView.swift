@@ -15,12 +15,37 @@ import SwiftUI
 ///
 /// 格線與文字都照核心算好的位置畫 —— 這一層**不做任何排版**，
 /// 自己再斷一次行的話，兩個平台的表格高度就會不一樣。
+public struct TableCellCoordinate: Equatable, Hashable, Sendable {
+    public var row: Int
+    public var col: Int
+    public init(row: Int, col: Int) {
+        self.row = row
+        self.col = col
+    }
+}
+
 public struct NoteTableView: View {
     @Binding var table: NoteTableAttachment
     var isSelected: Bool
     var onEdit: () -> Void
+    var isInlineEditable: Bool
+    @Binding var editingCell: TableCellCoordinate?
 
     @Environment(\.colorScheme) private var colorScheme
+
+    public init(
+        table: Binding<NoteTableAttachment>,
+        isSelected: Bool,
+        onEdit: @escaping () -> Void,
+        isInlineEditable: Bool = false,
+        editingCell: Binding<TableCellCoordinate?> = .constant(nil)
+    ) {
+        self._table = table
+        self.isSelected = isSelected
+        self.onEdit = onEdit
+        self.isInlineEditable = isInlineEditable
+        self._editingCell = editingCell
+    }
 
     public var body: some View {
         let layout = table.layout()
@@ -46,18 +71,50 @@ public struct NoteTableView: View {
             .frame(width: CGFloat(layout.width), height: CGFloat(layout.height))
 
             ForEach(Array(layout.cells.enumerated()), id: \.offset) { _, cell in
-                let rawText = table.cell(row: Int(cell.row), col: Int(cell.col))
+                let r = Int(cell.row)
+                let c = Int(cell.col)
+                let isEditingThis = isInlineEditable && editingCell == TableCellCoordinate(row: r, col: c)
+                let rawText = table.cell(row: r, col: c)
                 let displayText = TableFormulaEvaluator.evaluateCell(
                     content: rawText,
                     allCells: table.cells,
                     rows: table.rows,
                     cols: table.cols
                 )
-                Text(displayText.isEmpty ? cell.lines.joined(separator: "\n") : displayText)
+
+                if isEditingThis {
+                    TextField(
+                        "",
+                        text: Binding(
+                            get: { table.cell(row: r, col: c) },
+                            set: { table.setCell($0, row: r, col: c) }
+                        )
+                    )
+                    .textFieldStyle(.plain)
                     .font(.system(size: table.fontSize, weight: cell.isHeader ? .semibold : .regular))
-                    .frame(width: cell.width - 12, alignment: .leading)
-                    .padding(6)
-                    .offset(x: cell.x, y: cell.y)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, 2)
+                    .background(Color(uiColor: .systemBackground).opacity(0.95))
+                    .cornerRadius(4)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(Color.accentColor, lineWidth: 1.5)
+                    )
+                    .frame(width: max(20, cell.width - 6), height: max(20, cell.height - 6), alignment: .leading)
+                    .offset(x: cell.x + 3, y: cell.y + 3)
+                } else {
+                    Text(displayText.isEmpty ? cell.lines.joined(separator: "\n") : displayText)
+                        .font(.system(size: table.fontSize, weight: cell.isHeader ? .semibold : .regular))
+                        .frame(width: max(10, cell.width - 12), alignment: .leading)
+                        .padding(6)
+                        .offset(x: cell.x, y: cell.y)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if isSelected || isInlineEditable {
+                                editingCell = TableCellCoordinate(row: r, col: c)
+                            }
+                        }
+                }
             }
         }
         .frame(width: CGFloat(layout.width), height: CGFloat(layout.height), alignment: .topLeading)
@@ -92,6 +149,7 @@ public struct TableStudioView: View {
     @State private var table: NoteTableAttachment
     @State private var selectedRow: Int = 0
     @State private var selectedCol: Int = 0
+    @FocusState private var activeCellKey: String?
     private let isEditingExisting: Bool
     private let onCommit: Commit
 
@@ -189,13 +247,15 @@ public struct TableStudioView: View {
     }
 
     private func cellField(row: Int, col: Int) -> some View {
-        TextField(
+        let cellKey = "\(row),\(col)"
+        return TextField(
             "",
             text: Binding(
                 get: { table.cell(row: row, col: col) },
                 set: { table.setCell($0, row: row, col: col) }
             )
         )
+        .focused($activeCellKey, equals: cellKey)
         .textFieldStyle(.roundedBorder)
         .font(.system(size: 13, weight: row == 0 && table.headerRow ? .semibold : .regular))
         .frame(width: 120)
@@ -204,10 +264,13 @@ public struct TableStudioView: View {
                 .strokeBorder(
                     row == selectedRow && col == selectedCol ? Color.accentColor : .clear,
                     lineWidth: 1.5)
+                .allowsHitTesting(false)
         )
-        .onTapGesture {
-            selectedRow = row
-            selectedCol = col
+        .onChange(of: activeCellKey) { key in
+            if key == cellKey {
+                selectedRow = row
+                selectedCol = col
+            }
         }
     }
 
@@ -340,24 +403,32 @@ struct TableAttachmentItemView: View {
     @State private var dragOffset: CGSize = .zero
     @State private var isSelected: Bool = false
     @State private var isDragging: Bool = false
+    @State private var editingCell: TableCellCoordinate? = nil
 
     var body: some View {
         let layout = table.layout()
         let currentX = table.x + dragOffset.width
         let currentY = table.y + dragOffset.height
 
-        NoteTableView(table: $table, isSelected: isSelected, onEdit: onEdit)
+        NoteTableView(
+            table: $table,
+            isSelected: isSelected,
+            onEdit: onEdit,
+            isInlineEditable: isSelected,
+            editingCell: $editingCell
+        )
             .shadow(color: isDragging ? .clear : Color.black.opacity(0.08), radius: 6, y: 3)
             .gesture(
                 DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         isDragging = true
                         isSelected = true
+                        editingCell = nil
                         dragOffset = value.translation
                     }
                     .onEnded { value in
                         if hypot(value.translation.width, value.translation.height) < 4 {
-                            isSelected.toggle()
+                            isSelected = true
                         } else {
                             table.x += dragOffset.width
                             table.y += dragOffset.height

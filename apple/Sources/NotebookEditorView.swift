@@ -405,7 +405,7 @@ struct CanvasRepresentable: UIViewRepresentable {
     /// 打字模式一律設為 `.pencilOnly`：拿 Apple Pencil 的使用者隨時可順暢下筆，手指則負責點選與選取物件。
     /// 手寫模式交給掌拒協調器決定 —— 沒有它時退回原本的 `.anyInput`。
     private func resolvedPolicy(now: Date = Date()) -> PKCanvasViewDrawingPolicy {
-        guard editorMode == .draw else { return .pencilOnly }
+        guard editorMode == .draw else { return .default }
         return palmRejection?.drawingPolicy(now: now) ?? .anyInput
     }
 
@@ -563,9 +563,21 @@ struct CanvasRepresentable: UIViewRepresentable {
             uiView.alwaysBounceVertical = isScrollEnabled
             uiView.showsVerticalScrollIndicator = isScrollEnabled
         }
-        let targetPolicy = resolvedPolicy()
-        if uiView.drawingPolicy != targetPolicy {
-            uiView.drawingPolicy = targetPolicy
+        if editorMode == .type {
+            if uiView.drawingGestureRecognizer.isEnabled {
+                uiView.drawingGestureRecognizer.isEnabled = false
+            }
+            if uiView.drawingPolicy != .default {
+                uiView.drawingPolicy = .default
+            }
+        } else {
+            if !uiView.drawingGestureRecognizer.isEnabled {
+                uiView.drawingGestureRecognizer.isEnabled = true
+            }
+            let targetPolicy = resolvedPolicy()
+            if uiView.drawingPolicy != targetPolicy {
+                uiView.drawingPolicy = targetPolicy
+            }
         }
         // 模式切換時縮放範圍也要重設 —— 只在 makeUIView 設的話，
         // SwiftUI 重用同一個 UIView 時會沿用舊值。
@@ -575,10 +587,6 @@ struct CanvasRepresentable: UIViewRepresentable {
         }
         if uiView.maximumZoomScale != CGFloat(gesture.maxZoom) {
             uiView.maximumZoomScale = CGFloat(gesture.maxZoom)
-        }
-        // 確保 Apple Pencil 隨時可書寫
-        if !uiView.drawingGestureRecognizer.isEnabled {
-            uiView.drawingGestureRecognizer.isEnabled = true
         }
         if !uiView.isUserInteractionEnabled {
             uiView.isUserInteractionEnabled = true
@@ -1753,9 +1761,15 @@ public struct NotebookEditorView: View {
             TableStudioView { created in
                 var table = created
                 table.pageIndex = currentPageIndex
+                let targetX = max(PageGeometry.printableInset, (PageGeometry.width - table.width) / 2)
+                let baseOffsetY = max(PageGeometry.printableInset, canvasContentOffset.y + 120)
+                let existingCount = notebook.tableAttachments?.filter { $0.pageIndex == currentPageIndex }.count ?? 0
+                table.x = targetX
+                table.y = min(PageGeometry.height - 200, baseOffsetY + CGFloat(existingCount * 40))
                 if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
                 notebook.tableAttachments?.append(table)
                 store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
             }
         } }
         .sheet(item: $editingTable) { target in resizableSheet {
@@ -2011,6 +2025,19 @@ public struct NotebookEditorView: View {
         .background(Color(uiColor: .secondarySystemGroupedBackground))
     }
 
+    private func triggerFileImport(_ slot: FfiImportSlot) {
+        activeImportSlot = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+            activeImportSlot = slot
+        }
+    }
+
+    private func presentFromMenu(_ action: @escaping () -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+            action()
+        }
+    }
+
     // 寬螢幕完整主工具列
     private var expandedEditorTopBar: some View {
         HStack(spacing: 10) {
@@ -2230,117 +2257,118 @@ public struct NotebookEditorView: View {
 
             // ➕ 插入物件下拉選單（整合圖片、算式、圖表、3D、主題工具）
             Menu {
-                Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showAssetLibrarySheet = true
+                Section {
+                    Button {
+                        presentFromMenu { showAssetLibrarySheet = true }
+                    } label: {
+                        Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill")
                     }
-                } label: {
-                    Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill")
+
+                    Button {
+                        presentFromMenu { showPhotoPicker = true }
+                    } label: {
+                        Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus")
+                    }
+
+                    Button {
+                        triggerFileImport(.image)
+                    } label: {
+                        Label(localizationManager.localized("import_from_files"), systemImage: "folder.badge.plus")
+                    }
+
+                    Button {
+                        presentFromMenu { showAudioPicker = true }
+                    } label: {
+                        Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus")
+                    }
+
+                    Button {
+                        triggerFileImport(.audio)
+                    } label: {
+                        Label(localizationManager.localized("import_audio_from_files"), systemImage: "square.and.arrow.down.on.square")
+                    }
+
+                    Button {
+                        triggerFileImport(.pdf)
+                    } label: {
+                        Label(localizationManager.localized("insert_pdf"), systemImage: "doc.richtext")
+                    }
+
+                    Button {
+                        triggerFileImport(.document)
+                    } label: {
+                        Label(localizationManager.localized("import_document"), systemImage: "doc.text")
+                    }
                 }
 
-                Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showPhotoPicker = true
+                Section {
+                    Button {
+                        presentFromMenu { showTableStudio = true }
+                    } label: {
+                        Label(localizationManager.localized("table_studio"), systemImage: "tablecells")
                     }
-                } label: {
-                    Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus")
-                }
 
-                Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showMathCalculator = true
+                    Button {
+                        presentFromMenu { showShapeStudio = true }
+                    } label: {
+                        Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle")
                     }
-                } label: {
-                    Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus")
-                }
 
-                Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showChartStudio = true
+                    Button {
+                        presentFromMenu { showMathCalculator = true }
+                    } label: {
+                        Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus")
                     }
-                } label: {
-                    Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis")
-                }
 
-                Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        show3DStudio = true
+                    Button {
+                        presentFromMenu { showChartStudio = true }
+                    } label: {
+                        Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis")
                     }
-                } label: {
-                    Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent")
-                }
 
-                // 表格、形狀、連結與錄音原本只在「更多」裡有。
-                // 這個選單叫「插入物件」，卻插不了其中四種 ——
-                // 使用者找不到就會以為功能不存在。
-                Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showTableStudio = true
+                    Button {
+                        presentFromMenu { show3DStudio = true }
+                    } label: {
+                        Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent")
                     }
-                } label: {
-                    Label(localizationManager.localized("table_studio"), systemImage: "tablecells")
-                }
 
-                Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showShapeStudio = true
+                    Button {
+                        presentFromMenu { showLinkPreviewSheet = true }
+                    } label: {
+                        Label(localizationManager.localized("insert_link"), systemImage: "link")
                     }
-                } label: {
-                    Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle")
-                }
 
-                Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showLinkPreviewSheet = true
+                    Button {
+                        presentFromMenu { showThemeToolsSheet = true }
+                    } label: {
+                        Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill")
                     }
-                } label: {
-                    Label(localizationManager.localized("insert_link"), systemImage: "link")
-                }
 
-                Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showAudioPicker = true
+                    Button {
+                        withAnimation {
+                            isPlacingCommentPin = true
+                        }
+                    } label: {
+                        Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill")
                     }
-                } label: {
-                    Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus")
-                }
 
-                Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showThemeToolsSheet = true
+                    ToolbarSeparator()
+
+                    Button {
+                        withAnimation {
+                            showSketchRefineBar.toggle()
+                        }
+                    } label: {
+                        Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars")
                     }
-                } label: {
-                    Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill")
-                }
 
-                Button {
-                    withAnimation {
-                        isPlacingCommentPin = true
+                    Button {
+                        presentFromMenu { showNoteIntelligence = true }
+                    } label: {
+                        Label(
+                            localizationManager.localized("ai_summary"),
+                            systemImage: "sparkles")
                     }
-                } label: {
-                    Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill")
-                }
-
-                ToolbarSeparator()
-
-                Button {
-                    withAnimation {
-                        showSketchRefineBar.toggle()
-                    }
-                } label: {
-                    Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars")
-                }
-
-                // 摘要與待辦（工作項 S-20）。核心的 `llm_summarize` 早就在
-                // FFI 上，缺的一直是這一顆按鈕。
-                Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showNoteIntelligence = true
-                    }
-                } label: {
-                    Label(
-                        localizationManager.localized("ai_summary"),
-                        systemImage: "sparkles")
                 }
             } label: {
                 HStack(spacing: 4) {
@@ -2478,7 +2506,7 @@ public struct NotebookEditorView: View {
             // 匯出與列印選單（解決「看不到匯出相關工具列」問題）
             Menu {
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    presentFromMenu {
                         exportAsPdf()
                     }
                 } label: {
@@ -2486,7 +2514,7 @@ public struct NotebookEditorView: View {
                 }
 
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    presentFromMenu {
                         exportAsPngImage()
                     }
                 } label: {
@@ -2494,7 +2522,7 @@ public struct NotebookEditorView: View {
                 }
 
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    presentFromMenu {
                         printCurrentNotebook()
                     }
                 } label: {
@@ -2504,7 +2532,7 @@ public struct NotebookEditorView: View {
                 ToolbarSeparator()
 
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    presentFromMenu {
                         shareNotebookFile()
                     }
                 } label: {
@@ -2688,87 +2716,59 @@ public struct NotebookEditorView: View {
         Menu {
             Section {
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showAssetLibrarySheet = true
-                    }
+                    presentFromMenu { showAssetLibrarySheet = true }
                 } label: { Label(localizationManager.localized("asset_library"), systemImage: "shippingbox.fill") }
                     .accessibilityIdentifier("editor.insert.assets")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showStickerLibrary = true
-                    }
+                    presentFromMenu { showStickerLibrary = true }
                 } label: { Label(localizationManager.localized("sticker_library"), systemImage: "photo.on.rectangle") }
                     .accessibilityIdentifier("editor.insert.stickers")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showAudioPicker = true
-                    }
+                    presentFromMenu { showAudioPicker = true }
                 } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
                     .accessibilityIdentifier("editor.insert.audio")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        activeImportSlot = .audio
-                    }
+                    triggerFileImport(.audio)
                 } label: { Label(localizationManager.localized("import_audio_from_files"), systemImage: "square.and.arrow.down.on.square") }
                     .accessibilityIdentifier("editor.insert.audio_file")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showPhotoPicker = true
-                    }
+                    presentFromMenu { showPhotoPicker = true }
                 } label: { Label(localizationManager.localized("insert_image"), systemImage: "photo.badge.plus") }
                     .accessibilityIdentifier("editor.insert.image")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        activeImportSlot = .image
-                    }
+                    triggerFileImport(.image)
                 } label: { Label(localizationManager.localized("import_from_files"), systemImage: "folder.badge.plus") }
                     .accessibilityIdentifier("editor.insert.image_file")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        activeImportSlot = .pdf
-                    }
+                    triggerFileImport(.pdf)
                 } label: { Label(localizationManager.localized("insert_pdf"), systemImage: "doc.richtext") }
                     .accessibilityIdentifier("editor.insert.pdf")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        activeImportSlot = .document
-                    }
+                    triggerFileImport(.document)
                 } label: { Label(localizationManager.localized("import_document"), systemImage: "doc.text") }
                     .accessibilityIdentifier("editor.insert.document")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showMathCalculator = true
-                    }
+                    presentFromMenu { showMathCalculator = true }
                 } label: { Label(localizationManager.localized("math_calc"), systemImage: "plus.forwardslash.minus") }
                     .accessibilityIdentifier("editor.insert.math")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showChartStudio = true
-                    }
+                    presentFromMenu { showChartStudio = true }
                 } label: { Label(localizationManager.localized("chart_studio"), systemImage: "chart.bar.xaxis") }
                     .accessibilityIdentifier("editor.insert.chart")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showTableStudio = true
-                    }
+                    presentFromMenu { showTableStudio = true }
                 } label: { Label(localizationManager.localized("table_studio"), systemImage: "tablecells") }
                     .accessibilityIdentifier("editor.insert.table")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showShapeStudio = true
-                    }
+                    presentFromMenu { showShapeStudio = true }
                 } label: { Label(localizationManager.localized("shape_studio"), systemImage: "square.on.circle") }
                     .accessibilityIdentifier("editor.insert.shape")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        show3DStudio = true
-                    }
+                    presentFromMenu { show3DStudio = true }
                 } label: { Label(localizationManager.localized("insert_3d"), systemImage: "cube.transparent") }
                     .accessibilityIdentifier("editor.insert.model3d")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showThemeToolsSheet = true
-                    }
+                    presentFromMenu { showThemeToolsSheet = true }
                 } label: { Label(localizationManager.localized("theme_tools"), systemImage: "paintpalette.fill") }
                     .accessibilityIdentifier("editor.insert.theme_tools")
             } header: {
@@ -2782,17 +2782,13 @@ public struct NotebookEditorView: View {
                 // 握筆姿勢比較特別的人，手掌一放上去就是一道線，
                 // 而在此之前他完全沒有辦法處理。
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showPalmThresholdSheet = true
-                    }
+                    presentFromMenu { showPalmThresholdSheet = true }
                 } label: {
                     Label(localizationManager.localized("palm_rejection_settings"), systemImage: "hand.raised.slash")
                 }
                 .accessibilityIdentifier("editor.insert.palm_thresholds")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showAdvancedPenSettingsSheet = true
-                    }
+                    presentFromMenu { showAdvancedPenSettingsSheet = true }
                 } label: {
                     Label(localizationManager.localized("pen_settings_title"), systemImage: "applepencil.and.scribble")
                 }
@@ -2800,9 +2796,7 @@ public struct NotebookEditorView: View {
                 // 放在編輯器而不是設定頁：使用者想關掉某支筆的那一刻，
                 // 是他正看著那支筆的時候。
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showToolbarCustomization = true
-                    }
+                    presentFromMenu { showToolbarCustomization = true }
                 } label: {
                     Label(localizationManager.localized("customize_toolbar"), systemImage: "slider.horizontal.3")
                 }
@@ -2810,9 +2804,7 @@ public struct NotebookEditorView: View {
                 Button { withAnimation { isPlacingCommentPin.toggle() } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
                     .accessibilityIdentifier("editor.insert.comment_pin")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showCollaborationSheet = true
-                    }
+                    presentFromMenu { showCollaborationSheet = true }
                 } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }
                     .accessibilityIdentifier("editor.insert.collaborate")
                 Button { recognizeHandwritingOnCurrentPage() } label: {
@@ -2820,9 +2812,7 @@ public struct NotebookEditorView: View {
                 }
                 .accessibilityIdentifier("editor.insert.recognize")
                 Button {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        showNoteIntelligence = true
-                    }
+                    presentFromMenu { showNoteIntelligence = true }
                 } label: {
                     Label(localizationManager.localized("ai_summary"), systemImage: "sparkles")
                 }
@@ -2908,19 +2898,19 @@ public struct NotebookEditorView: View {
         // 匯出功能選單
         Menu {
             Button {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                presentFromMenu {
                     exportAsPdf()
                 }
             } label: { Label(localizationManager.localized("export_pdf"), systemImage: "doc.text.fill") }
                 .accessibilityIdentifier("editor.export.pdf")
             Button {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                presentFromMenu {
                     exportAsPngImage()
                 }
             } label: { Label(localizationManager.localized("export_image"), systemImage: "photo") }
                 .accessibilityIdentifier("editor.export.image")
             Button {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                presentFromMenu {
                     printCurrentNotebook()
                 }
             } label: { Label(localizationManager.localized("print_note"), systemImage: "printer.fill") }
@@ -2933,13 +2923,13 @@ public struct NotebookEditorView: View {
             // 在沙盒容器裡，容器是隱藏的、使用者碰不到。Mac App Store 審查
             // 指南 2.4.5(i) 因此把這個版本退了回來。
             Button {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                presentFromMenu {
                     saveNotebookFile()
                 }
             } label: { Label(localizationManager.localized("export_save_as"), systemImage: "folder.badge.plus") }
                 .accessibilityIdentifier("editor.export.save_as")
             Button {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                presentFromMenu {
                     shareNotebookFile()
                 }
             } label: { Label(localizationManager.localized("share_note"), systemImage: "square.and.arrow.up") }
@@ -5093,7 +5083,7 @@ public struct NotebookEditorView: View {
 
             ToolbarSeparator()
             Button(role: .destructive) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                presentFromMenu {
                     pageToDeleteIndex = idx
                     showDeletePageAlert = true
                 }
@@ -5433,7 +5423,7 @@ public struct NotebookEditorView: View {
                     // 功能選單
                     Menu {
                         Button {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            presentFromMenu {
                                 newFolderParentId = folder.id
                                 newFolderNameText = ""
                                 showNewFolderAlert = true
@@ -5454,7 +5444,7 @@ public struct NotebookEditorView: View {
                         }
 
                         Button {
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            presentFromMenu {
                                 folderRenameText = folder.name
                                 folderToRename = folder
                             }
@@ -5737,11 +5727,16 @@ public struct NotebookEditorView: View {
                 onUndo: { performUndo() },
                 onRedo: { canvasView?.undoManager?.redo() },
                 onInsertTable: { rows, cols in
-                    let table = NoteTableAttachment(pageIndex: currentPageIndex, x: PageGeometry.printableInset, y: 200, rows: rows, cols: cols)
+                    let targetX = max(PageGeometry.printableInset, (PageGeometry.width - 440) / 2)
+                    let baseOffsetY = max(PageGeometry.printableInset, canvasContentOffset.y + 120)
+                    let existingCount = notebook.tableAttachments?.filter { $0.pageIndex == currentPageIndex }.count ?? 0
+                    let targetY = min(PageGeometry.height - 200, baseOffsetY + CGFloat(existingCount * 40))
+                    let table = NoteTableAttachment(pageIndex: currentPageIndex, x: targetX, y: targetY, rows: rows, cols: cols)
                     if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
                     notebook.tableAttachments?.append(table)
                     store.updateNotebook(notebook)
                     PageThumbnailRenderer.invalidateAll()
+                    showCanvasNotice(String(format: localizationManager.localized("table_rows_cols"), "\(rows)", "\(cols)"))
                 },
                 onInsertImage: { showPhotoPicker = true },
                 onInsertDrawingBlock: {
@@ -8775,8 +8770,9 @@ public struct NotebookEditorView: View {
         return false
     }
 
-    /// 🌟 方案 A：Apple Pencil 碰到畫布時，立即收回文字輸入狀態並無縫切換至手寫模式
+    /// 🌟 方案 A：手寫模式下 Apple Pencil 碰到畫布時收回未輸入完成的空白文字框
     private func handlePencilTouchBegan() {
+        guard editorMode == .draw else { return }
         if let activeId = inlineEditingTextId {
             if let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
                activeItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -8785,9 +8781,6 @@ public struct NotebookEditorView: View {
                 PageThumbnailRenderer.invalidateAll()
             }
             inlineEditingTextId = nil
-        }
-        if editorMode != .draw {
-            editorMode = .draw
         }
     }
 

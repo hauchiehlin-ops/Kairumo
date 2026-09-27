@@ -48,8 +48,18 @@ enum FileImport {
     /// `importCheck` 會在挑完之後擋下不對的格式。把整個挑選器灰掉的話，
     /// 他會以為功能壞了。
     static func allowedTypes(for slot: FfiImportSlot) -> [UTType] {
-        let types = importExtensions(slot: slot).compactMap {
+        var types = importExtensions(slot: slot).compactMap {
             UTType(filenameExtension: $0)
+        }
+        switch slot {
+        case .audio:
+            if !types.contains(.audio) { types.append(.audio) }
+        case .image:
+            if !types.contains(.image) { types.append(.image) }
+        case .pdf:
+            if !types.contains(.pdf) { types.append(.pdf) }
+        default:
+            break
         }
         return types.isEmpty ? [.data] : types
     }

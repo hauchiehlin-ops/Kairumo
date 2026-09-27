@@ -10,6 +10,31 @@
 import SwiftUI
 import PhotosUI
 
+struct TablePresetOption: Identifiable {
+    let rows: Int
+    let cols: Int
+    var id: String { "\(rows)x\(cols)" }
+}
+
+private let presetTableOptions: [TablePresetOption] = [
+    TablePresetOption(rows: 2, cols: 2),
+    TablePresetOption(rows: 2, cols: 3),
+    TablePresetOption(rows: 2, cols: 4),
+    TablePresetOption(rows: 2, cols: 5),
+    TablePresetOption(rows: 3, cols: 2),
+    TablePresetOption(rows: 3, cols: 3),
+    TablePresetOption(rows: 3, cols: 4),
+    TablePresetOption(rows: 3, cols: 5),
+    TablePresetOption(rows: 4, cols: 2),
+    TablePresetOption(rows: 4, cols: 3),
+    TablePresetOption(rows: 4, cols: 4),
+    TablePresetOption(rows: 4, cols: 5),
+    TablePresetOption(rows: 5, cols: 2),
+    TablePresetOption(rows: 5, cols: 3),
+    TablePresetOption(rows: 5, cols: 4),
+    TablePresetOption(rows: 5, cols: 5),
+]
+
 /// Word / Google Docs 樣式的專屬文書排版工具列
 public struct WordToolbarView: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
@@ -272,11 +297,9 @@ public struct WordToolbarView: View {
                 HStack(spacing: 4) {
                     // 插入表格
                     Menu {
-                        ForEach([2, 3, 4, 5], id: \.self) { r in
-                            ForEach([2, 3, 4, 5], id: \.self) { c in
-                                Button(String(format: localizationManager.localized("table_rows_cols"), "\(r)", "\(c)")) {
-                                    onInsertTable(r, c)
-                                }
+                        ForEach(presetTableOptions) { opt in
+                            Button(String(format: localizationManager.localized("table_rows_cols"), "\(opt.rows)", "\(opt.cols)")) {
+                                onInsertTable(opt.rows, opt.cols)
                             }
                         }
                     } label: {
