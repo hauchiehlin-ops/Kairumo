@@ -192,11 +192,15 @@ private fun AudioCardView(
                 )
                 Text(
                     // 檔案不見了要講清楚，否則使用者只看到一個按不動的播放鈕。
-                    if (exists) AudioCodec.duration(item.durationSeconds)
-                    else l("audio_file_missing"),
+                    if (!exists) l("audio_file_missing")
+                    else if (isPlaying) {
+                        val curSec = AudioPlayback.currentPositionMs / 1000
+                        "${AudioCodec.duration(curSec)} / ${AudioCodec.duration(item.durationSeconds)}"
+                    } else AudioCodec.duration(item.durationSeconds),
                     fontSize = 11.sp,
-                    color = if (exists) MaterialTheme.colorScheme.onSurfaceVariant
-                            else MaterialTheme.colorScheme.error,
+                    color = if (!exists) MaterialTheme.colorScheme.error
+                            else if (isPlaying) MaterialTheme.colorScheme.primary
+                            else MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )

@@ -266,9 +266,15 @@ struct AudioAttachmentItemView: View {
 
                 if fileExists {
                     if isPlayingThis {
-                        ProgressView(value: audioManager.playbackProgress)
-                            .progressViewStyle(.linear)
-                            .tint(.red)
+                        VStack(alignment: .leading, spacing: 2) {
+                            ProgressView(value: audioManager.playbackProgress)
+                                .progressViewStyle(.linear)
+                                .tint(.red)
+                            Text("\(AudioAttachmentFormat.duration(Int(audioManager.currentPlaybackTime))) / \(AudioAttachmentFormat.duration(item.durationSeconds))")
+                                .font(.system(size: 9))
+                                .monospacedDigit()
+                                .foregroundColor(.secondary)
+                        }
                     } else {
                         Text(AudioAttachmentFormat.duration(item.durationSeconds))
                             .font(.system(size: 11))

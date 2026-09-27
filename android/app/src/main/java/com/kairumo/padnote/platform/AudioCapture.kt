@@ -109,8 +109,10 @@ class AudioCapture(private val context: Context) {
                 val read = recorder.read(chunk, 0, chunk.size, AudioRecord.READ_BLOCKING)
                 if (read <= 0 || paused) continue
                 val slice = if (read == chunk.size) chunk else chunk.copyOf(read)
-                runCatching { session.feedAudio(slice.toList()) }
-                    .onFailure { onError("餵音訊失敗：${it.message}"); return@launch }
+                runCatching {
+                    session.feedAudio(slice.toList())
+                    session.advanceTime(session.recordedAudioUs())
+                }.onFailure { onError("餵音訊失敗：${it.message}"); return@launch }
             }
         }
         return null

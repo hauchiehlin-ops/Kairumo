@@ -30,6 +30,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     @Published public var isPlaying: Bool = false
     @Published public var playingRecordingId: String? = nil
     @Published public var playbackProgress: Double = 0.0
+    @Published public var currentPlaybackTime: TimeInterval = 0.0
 
     private var audioRecorder: AVAudioRecorder?
     private var audioPlayer: AVAudioPlayer?
@@ -369,7 +370,9 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let session = self.coreSession else { return }
-                self.elapsedSeconds = Double(session.recordedAudioUs()) / 1_000_000.0
+                let recordedUs = session.recordedAudioUs()
+                session.advanceTime(notebookTimeUs: recordedUs)
+                self.elapsedSeconds = Double(recordedUs) / 1_000_000.0
             }
         }
     }
@@ -493,6 +496,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
             self.playbackTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
                 guard let self = self, let p = self.audioPlayer else { return }
+                self.currentPlaybackTime = p.currentTime
                 if p.duration > 0 {
                     self.playbackProgress = p.currentTime / p.duration
                 }
@@ -534,6 +538,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         playbackTimer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { [weak self] _ in
             Task { @MainActor in
                 guard let self, let p = self.opusPlayer else { return }
+                self.currentPlaybackTime = p.currentTime
                 self.playbackProgress = p.progress
             }
         }
@@ -559,11 +564,13 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     public func seek(to time: TimeInterval) {
         if let opus = opusPlayer, opus.duration > 0 {
             opus.seek(to: time)
+            currentPlaybackTime = opus.currentTime
             playbackProgress = opus.progress
             return
         }
         guard let player = audioPlayer else { return }
         player.currentTime = max(0, min(time, player.duration))
+        currentPlaybackTime = player.currentTime
         playbackProgress = player.currentTime / player.duration
     }
 
@@ -577,6 +584,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         isPlaying = false
         playingRecordingId = nil
         playbackProgress = 0.0
+        currentPlaybackTime = 0.0
     }
 
     public func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {

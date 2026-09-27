@@ -125,6 +125,7 @@ private final class CoreAudioPipeline: @unchecked Sendable {
         let samples = Array(UnsafeBufferPointer(start: channel, count: Int(out.frameLength)))
         do {
             _ = try session.feedAudio(pcm16kMono: samples)
+            session.advanceTime(notebookTimeUs: session.recordedAudioUs())
         } catch {
             onError?("餵音訊失敗：\(error)")
         }
