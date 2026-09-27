@@ -85,7 +85,7 @@ enum ScreenAudit {
             var matchedByLabel = false
             if !exists(byId, in: app) {
                 guard let label = labels[id], !label.isEmpty,
-                      case let byLabel = app.buttons[label].firstMatch,
+                      case let byLabel = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch,
                       byLabel.exists
                 else {
                     missing.append(id)
@@ -207,7 +207,8 @@ enum ScreenAudit {
                 for _ in 0..<6 where !element.exists {
                     // 優先尋找非 editor.canvas 的滾動容器（例如 iOS 上 UIMenu 的滾動視圖 _UIContextMenuListView）。
                     // 絕不能滑動 editor.canvas，否則 UIKit 會視為點擊外部而立刻關閉選單。
-                    if let scroll = app.scrollViews.allElementsBoundByIndex.first(where: { $0.exists && $0.identifier != "editor.canvas" }) {
+                    let scroll = app.scrollViews.matching(NSPredicate(format: "identifier != 'editor.canvas'")).firstMatch
+                    if scroll.exists {
                         scroll.swipeUp()
                     } else if let menu = app.menus.allElementsBoundByIndex.first(where: { $0.exists }) {
                         menu.swipeUp()
@@ -334,21 +335,23 @@ enum ScreenAudit {
         return out
     }
 
-    /// 尋找控制項：若有標籤則優先尋找真實渲染的按鈕（SwiftUI Menu 項目交由 UIKit
+    /// 尋找控制項：若有標籤則優先尋找真實渲染的項目（SwiftUI Menu 項目交由 UIKit
     /// 算繪時會剝離 accessibilityIdentifier，若先查 identifier 會對上背景模板的幽靈節點，
     /// 進而在存取 isEnabled 時拋出 Failed to get matching snapshot）。
+    /// 注意：不能限於 app.buttons，因 UIKit/SwiftUI 可能將部分選單項目判定為 PopUpButton (type 14) 或 MenuItem，
+    /// 若限縮為 Button 會觸發 Automation type mismatch 異常。因此使用 descendants(matching: .any)。
     /// 標籤找不到時退回識別字。
     private static func elementFor(
         _ id: String, label: String?, in app: XCUIApplication
     ) -> (element: XCUIElement, matchedByLabel: Bool) {
         if let label, !label.isEmpty {
-            let byLabel = app.buttons[label].firstMatch
+            let byLabel = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch
             if byLabel.exists { return (byLabel, true) }
         }
         let byId = app.descendants(matching: .any).matching(identifier: id).firstMatch
         if byId.exists { return (byId, false) }
         if let label, !label.isEmpty {
-            return (app.buttons[label].firstMatch, true)
+            return (app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch, true)
         }
         return (byId, false)
     }

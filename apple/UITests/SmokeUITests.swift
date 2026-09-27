@@ -4,6 +4,17 @@ import XCTest
 /// 每一步都在 app 仍存活時才繼續，崩潰會讓後續查詢失敗並記錄在報告中。
 final class SmokeUITests: XCTestCase {
 
+    private var app: XCUIApplication?
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    override func tearDownWithError() throws {
+        app?.terminate()
+        app = nil
+    }
+
     private func launch() -> XCUIApplication {
         let app = XCUIApplication()
         // 這個變數以前**沒有任何人讀**，測試設了等於沒設。現在
@@ -15,6 +26,7 @@ final class SmokeUITests: XCTestCase {
         // 一點關係都沒有。間歇失敗的測試會在第三次紅的時候被關掉。
         app.launchEnvironment["KAIRUMO_UITEST"] = "1"
         app.launch()
+        self.app = app
         return app
     }
 
