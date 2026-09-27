@@ -94,14 +94,6 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
     }
 }
 
-/// 筆記編輯主模式（手繪手寫 vs 鍵盤打字排版）
-public enum EditorMode: String, CaseIterable, Identifiable {
-    case draw = "draw"
-    case type = "type"
-
-    public var id: String { rawValue }
-}
-
 /// 向量樣板背景繪製視圖（內嵌於 PKCanvasView 最底層，隨畫布長度無限延伸與同步滾動）
 final class TemplateCanvasBackgroundView: UIView {
     /// 這一頁用的紙張。**逐頁**，不是整本 —— 同一本筆記可以一頁四象限、

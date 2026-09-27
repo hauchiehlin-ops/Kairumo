@@ -102,6 +102,19 @@ public struct NoteTableView: View {
                     )
                     .frame(width: max(20, cell.width - 6), height: max(20, cell.height - 6), alignment: .leading)
                     .offset(x: cell.x + 3, y: cell.y + 3)
+                    .onSubmit {
+                        let nextCol = c + 1
+                        if nextCol < table.cols {
+                            editingCell = TableCellCoordinate(row: r, col: nextCol)
+                        } else {
+                            let nextRow = r + 1
+                            if nextRow < table.rows {
+                                editingCell = TableCellCoordinate(row: nextRow, col: 0)
+                            } else {
+                                editingCell = nil
+                            }
+                        }
+                    }
                 } else {
                     Text(displayText.isEmpty ? cell.lines.joined(separator: "\n") : displayText)
                         .font(.system(size: table.fontSize, weight: cell.isHeader ? .semibold : .regular))
@@ -110,9 +123,7 @@ public struct NoteTableView: View {
                         .offset(x: cell.x, y: cell.y)
                         .contentShape(Rectangle())
                         .onTapGesture {
-                            if isSelected || isInlineEditable {
-                                editingCell = TableCellCoordinate(row: r, col: c)
-                            }
+                            editingCell = TableCellCoordinate(row: r, col: c)
                         }
                 }
             }
@@ -412,9 +423,9 @@ struct TableAttachmentItemView: View {
 
         NoteTableView(
             table: $table,
-            isSelected: isSelected,
+            isSelected: isSelected || editingCell != nil,
             onEdit: onEdit,
-            isInlineEditable: isSelected,
+            isInlineEditable: isSelected || editingCell != nil,
             editingCell: $editingCell
         )
             .shadow(color: isDragging ? .clear : Color.black.opacity(0.08), radius: 6, y: 3)
