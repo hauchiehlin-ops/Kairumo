@@ -752,13 +752,13 @@ public struct HomeWorkbenchView: View {
 
     private func openNotebookFromMenu(_ note: NotebookDocument) {
         selectedNotebookForEditing = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        SheetCoordinator.shared.presentFromMenu {
             selectedNotebookForEditing = note
         }
     }
 
     private func hideNotebookFromMenu(_ note: NotebookDocument) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        SheetCoordinator.shared.presentFromMenu {
             withAnimation {
                 _ = hiddenNoteIds.insert(note.id)
             }
@@ -767,7 +767,7 @@ public struct HomeWorkbenchView: View {
 
     private func renameNotebookFromMenu(_ note: NotebookDocument) {
         renamingNotebookId = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        SheetCoordinator.shared.presentFromMenu {
             renameText = note.displayTitle()
             renamingNotebookId = note.id
         }
@@ -776,14 +776,14 @@ public struct HomeWorkbenchView: View {
     private func moveNotebookFromMenu(_ note: NotebookDocument) {
         showMoveNotebookSheet = false
         notebookToMoveId = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        SheetCoordinator.shared.presentFromMenu {
             notebookToMoveId = note.id
             showMoveNotebookSheet = true
         }
     }
 
     private func duplicateNotebookFromMenu(_ note: NotebookDocument) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        SheetCoordinator.shared.presentFromMenu {
             withAnimation {
                 notebookStore.duplicateNotebook(id: note.id)
             }
@@ -791,7 +791,7 @@ public struct HomeWorkbenchView: View {
     }
 
     private func deleteNotebookFromMenu(_ note: NotebookDocument) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        SheetCoordinator.shared.presentFromMenu {
             withAnimation {
                 notebookStore.deleteNotebook(id: note.id)
             }
@@ -800,13 +800,13 @@ public struct HomeWorkbenchView: View {
 
     private func insertRecordingFromMenu(_ rec: AudioRecordingRecord) {
         insertingRecording = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        SheetCoordinator.shared.presentFromMenu {
             insertingRecording = rec
         }
     }
 
     private func hideRecordingFromMenu(_ rec: AudioRecordingRecord) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        SheetCoordinator.shared.presentFromMenu {
             withAnimation {
                 _ = hiddenRecordingIds.insert(rec.id)
             }
@@ -818,14 +818,14 @@ public struct HomeWorkbenchView: View {
         audioManager.openRecordingsFolderInFinder()
         #else
         shareRecordingURL = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        SheetCoordinator.shared.presentFromMenu {
             shareRecordingURL = fileUrl
         }
         #endif
     }
 
     private func deleteRecordingFromMenu(_ rec: AudioRecordingRecord) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        SheetCoordinator.shared.presentFromMenu {
             withAnimation {
                 notebookStore.deleteRecording(id: rec.id)
             }
@@ -835,7 +835,7 @@ public struct HomeWorkbenchView: View {
     private func createSubfolderFromMenu(parentId: String) {
         newFolderParentId = nil
         showNewFolderAlert = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        SheetCoordinator.shared.presentFromMenu {
             newFolderParentId = parentId
             newFolderNameText = ""
             showNewFolderAlert = true
@@ -844,14 +844,14 @@ public struct HomeWorkbenchView: View {
 
     private func renameFolderFromMenu(_ folder: FolderItem) {
         folderToRename = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        SheetCoordinator.shared.presentFromMenu {
             folderRenameText = folder.name
             folderToRename = folder
         }
     }
 
     private func deleteFolderFromMenu(_ folder: FolderItem) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+        SheetCoordinator.shared.presentFromMenu {
             withAnimation {
                 notebookStore.deleteFolder(id: folder.id)
                 if selectedFolderId == folder.id {
@@ -2400,8 +2400,8 @@ public struct HomeWorkbenchView: View {
                 Section {
                     Button {
                         showNewNotebookSheet = false
-                        // 等這張 sheet 收完再開下一張，否則兩張會打架。
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        // 等這張 sheet 收完再開下一張，使用 SheetCoordinator 確保生命週期安全
+                        SheetCoordinator.shared.presentFromMenu {
                             showEncryptedNotebookSheet = true
                         }
                     } label: {
