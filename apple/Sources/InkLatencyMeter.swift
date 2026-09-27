@@ -114,6 +114,8 @@ public final class InkInputDiagnostics {
     /// 診斷是**跨畫面**的：使用者在編輯器裡寫字，接著到設定頁去看數字。
     /// 每個畫面各持有一份的話，設定頁看到的永遠是空的。
     public static let shared = InkInputDiagnostics()
+    /// 是否啟用診斷紀錄。預設關閉以降低 240Hz 手繪時的記憶體分配與 CPU 負荷（極致溫控優化）。
+    public static var isEnabled: Bool = false
 
     public private(set) var snapshot = Snapshot()
     public let latency = InkLatencyMeter()
@@ -122,6 +124,7 @@ public final class InkInputDiagnostics {
 
     /// 記下一次觸控事件的樣貌。
     public func record(touch: UITouch, event: UIEvent?, in view: UIView) {
+        guard Self.isEnabled || ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" else { return }
         var next = Snapshot()
         next.lastTouchType = InkInputDiagnostics.describe(touch.type)
         next.hasForce = touch.maximumPossibleForce > 0

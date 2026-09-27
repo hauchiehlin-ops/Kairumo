@@ -146,6 +146,7 @@
 		D6D9011F4AF3BF8A23D4E72C /* SidebarMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 774D27C6F512E16A8C9D57ED /* SidebarMetrics.swift */; };
 		D75487376DA755EFFAD879F0 /* DocumentTemplateApply.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C5E7D8CE394BD3B16FD57B5 /* DocumentTemplateApply.swift */; };
 		D88846691483243AC43A8668 /* NotebookMeta.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7187AC2B18533F28DABBB98A /* NotebookMeta.swift */; };
+		D9B00DD438F5C5638716D082 /* RealisticPenView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 991418E1945A781D92488905 /* RealisticPenView.swift */; };
 		DA19398422DF402A5ABB16F7 /* TableStudioLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5C7088E4DBE1611C3E697B4A /* TableStudioLayoutTests.swift */; };
 		DA44B3DD53605C6DD39E5FB2 /* NotebookSyncCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8100BDADD9AD9C5BFAE24EC /* NotebookSyncCoordinatorTests.swift */; };
 		DA9086448B1E257FEC002D07 /* ThemeSpecificToolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC2F0D7F265BF495CF6D7B79 /* ThemeSpecificToolsView.swift */; };
@@ -309,6 +310,7 @@
 		8E824B2D4C00682C282AEF8E /* TableAppearance.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TableAppearance.swift; sourceTree = "<group>"; };
 		8FEF2B249C62AD4AE2E3C246 /* AudioRecorderManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecorderManager.swift; sourceTree = "<group>"; };
 		94384F7616936803E2A4DAB3 /* ObjectLayerPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectLayerPanel.swift; sourceTree = "<group>"; };
+		991418E1945A781D92488905 /* RealisticPenView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RealisticPenView.swift; sourceTree = "<group>"; };
 		9A6E8DF2429CC830E9AF5BB6 /* ObjectFrameStyleTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectFrameStyleTests.swift; sourceTree = "<group>"; };
 		9DEABFE677080C2925F1968D /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9E0D4938AD7ED09F531105A2 /* NotebookEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookEditorView.swift; sourceTree = "<group>"; };
@@ -609,6 +611,7 @@
 				824AF14643DF914996543B0B /* ProColorPickerSheet.swift */,
 				74F41D2B41DD153EEA524BBC /* ProColorWheelView.swift */,
 				2E8568739E3C10539C54B9DC /* RadialMarkMenuView.swift */,
+				991418E1945A781D92488905 /* RealisticPenView.swift */,
 				B2929D89A7985F84100FDB68 /* RecentTemplates.swift */,
 				68A635D915554C60E116768E /* RecordingMigration.swift */,
 				16799A63AE107AAA8CCA34B4 /* ResizableSheet.swift */,
@@ -922,6 +925,7 @@
 				891B35800C7FEFD3421B7293 /* ProColorPickerSheet.swift in Sources */,
 				879124F0C755B79F15C42FE5 /* ProColorWheelView.swift in Sources */,
 				115AA723F107721EC68777AA /* RadialMarkMenuView.swift in Sources */,
+				D9B00DD438F5C5638716D082 /* RealisticPenView.swift in Sources */,
 				E26B4411597679C8486D535D /* RecentTemplates.swift in Sources */,
 				0EE7F03B3191160516BF1CFA /* RecordingMigration.swift in Sources */,
 				F94293BCC5D971D49F94BE8C /* ResizableSheet.swift in Sources */,

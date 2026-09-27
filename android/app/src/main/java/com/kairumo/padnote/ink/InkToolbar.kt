@@ -156,12 +156,15 @@ fun InkToolbar(
     ) {
         // 使用者關掉的工具不畫出來（S-261）。設定存在核心，兩端同一份。
         val hidden = com.kairumo.padnote.ui.ToolbarSettings.hiddenIdentifiers
+        val currentColor = runCatching { Color(android.graphics.Color.parseColor(colorHex)) }.getOrDefault(Color.Black)
         for (option in InkTool.entries.filter { it.parityIdentifier !in hidden }) {
-            FilterChip(
-                selected = tool == option,
-                onClick = { onToolChange(option) },
-                label = { Text(LocalizationStrings.localized(option.labelKey, languageTag)) },
-                modifier = Modifier.testTag(option.parityIdentifier)
+            RealisticPenItem(
+                tool = option,
+                isSelected = tool == option,
+                inkColor = currentColor,
+                strokeWidth = width,
+                languageTag = languageTag,
+                onClick = { onToolChange(option) }
             )
         }
 

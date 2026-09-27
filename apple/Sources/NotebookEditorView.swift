@@ -292,20 +292,26 @@ final class AdaptiveCanvasView: PKCanvasView {
                 onPencilTouchBegan?()
             }
             onTouchObserved?(touch)
-            onTouchDiagnostics?(touch, event)
+            if InkInputDiagnostics.isEnabled || ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+                onTouchDiagnostics?(touch, event)
+            }
         }
         super.touchesBegan(touches, with: event)
     }
 
     override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
-        touches.forEach { onTouchDiagnostics?($0, event) }
+        if InkInputDiagnostics.isEnabled || ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+            touches.forEach { onTouchDiagnostics?($0, event) }
+        }
         super.touchesMoved(touches, with: event)
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
         touches.forEach {
             onTouchObserved?($0)
-            onTouchDiagnostics?($0, event)
+            if InkInputDiagnostics.isEnabled || ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
+                onTouchDiagnostics?($0, event)
+            }
         }
         super.touchesEnded(touches, with: event)
     }
@@ -6028,21 +6034,25 @@ public struct NotebookEditorView: View {
                 // 筆刷群組。橡皮擦與套索另成一組（見 EditorToolType.isBrush）。
                 ForEach(EditorToolType.allCases.filter { $0.isBrush && toolbarSettings.isVisible($0.parityIdentifier) }) { tool in
                     Button {
-                        selectEditorTool(tool)
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
+                            selectEditorTool(tool)
+                        }
                     } label: {
-                        VStack(spacing: 3) {
-                            Image(systemName: tool.iconName)
-                                .font(.system(size: 16, weight: selectedTool == tool ? .bold : .regular))
+                        VStack(spacing: 2) {
+                            RealisticPenView(
+                                tool: tool,
+                                isSelected: selectedTool == tool,
+                                inkColor: selectedColor,
+                                strokeWidth: strokeWidth
+                            )
                             if showToolLabels {
                                 Text(localizationManager.localized(tool.localizationKey))
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 9, weight: selectedTool == tool ? .semibold : .regular))
+                                    .foregroundColor(selectedTool == tool ? .primary : .secondary)
                             }
                         }
-                        .foregroundColor(selectedTool == tool ? .accentColor : .secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 5)
-                        .background(selectedTool == tool ? Color.accentColor.opacity(0.15) : Color.clear)
-                        .cornerRadius(8)
+                        .padding(.horizontal, 2)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     // 工具列在窄螢幕上不顯示文字標籤（showToolLabels = false），
@@ -6054,32 +6064,36 @@ public struct NotebookEditorView: View {
                 }
 
                 ToolbarSeparator()
-                    .frame(height: 24)
+                    .frame(height: 36)
 
                 // 擦除與選取。與筆刷分開，因為它們不沾墨，也不吃顏色與粗細。
                 ForEach(EditorToolType.allCases.filter { !$0.isBrush && toolbarSettings.isVisible($0.parityIdentifier) }) { tool in
                     Button {
-                        selectEditorTool(tool)
+                        withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
+                            selectEditorTool(tool)
+                        }
                     } label: {
-                        VStack(spacing: 3) {
-                            Image(systemName: selectedTool == .lasso && tool == .lasso ? "xmark.circle.fill" : tool.iconName)
-                                .font(.system(size: 16, weight: selectedTool == tool ? .bold : .regular))
+                        VStack(spacing: 2) {
+                            RealisticPenView(
+                                tool: tool,
+                                isSelected: selectedTool == tool,
+                                inkColor: selectedColor,
+                                strokeWidth: strokeWidth
+                            )
                             if showToolLabels {
                                 Text(localizationManager.localized(tool.localizationKey))
-                                    .font(.system(size: 10))
+                                    .font(.system(size: 9, weight: selectedTool == tool ? .semibold : .regular))
+                                    .foregroundColor(selectedTool == tool ? .primary : .secondary)
                             }
                         }
-                        .foregroundColor(selectedTool == tool ? .accentColor : .secondary)
-                        .padding(.horizontal, DS.Space.xs)
-                        .padding(.vertical, 5)
-                        .background(selectedTool == tool ? DS.Color.accentSoft : Color.clear)
-                        .cornerRadius(DS.Radius.s)
+                        .padding(.horizontal, 2)
+                        .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel(localizationManager.localized(tool.localizationKey))
                     .accessibilityAddTraits(selectedTool == tool ? [.isSelected] : [])
                     .accessibilityIdentifier(tool.parityIdentifier)
-                    .help(tool == .lasso ? "套索框選 (Lasso) - 再按一次可取消框選模式" : localizationManager.localized(tool.localizationKey))
+                    .help(localizationManager.localized(tool.localizationKey))
                 }
 
                 Button {

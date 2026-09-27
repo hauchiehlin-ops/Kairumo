@@ -58,22 +58,26 @@ public enum TailscaleDetector {
     }
 }
 
-/// 全局 Tailscale 連線狀態監聽器（提供 SwiftUI 響應式更新）
+import Network
+
+/// 全局 Tailscale 連線狀態監聽器（提供 SwiftUI 響應式更新，採用零輪詢 NWPathMonitor）
 @MainActor
 public final class TailscaleMonitor: ObservableObject {
     public static let shared = TailscaleMonitor()
 
     @Published public private(set) var status: TailscaleDetector.Status = TailscaleDetector.check()
 
-    private var timer: Timer?
+    private let pathMonitor = NWPathMonitor()
+    private let monitorQueue = DispatchQueue(label: "com.kairumo.tailscale.monitor", qos: .utility)
 
     private init() {
         refresh()
-        timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+        pathMonitor.pathUpdateHandler = { [weak self] _ in
             Task { @MainActor in
                 self?.refresh()
             }
         }
+        pathMonitor.start(queue: monitorQueue)
     }
 
     public func refresh() {
@@ -81,5 +85,9 @@ public final class TailscaleMonitor: ObservableObject {
         if status != current {
             status = current
         }
+    }
+
+    deinit {
+        pathMonitor.cancel()
     }
 }
