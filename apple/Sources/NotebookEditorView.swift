@@ -3590,8 +3590,20 @@ public struct NotebookEditorView: View {
     /// 筆畫根本到不了畫布，看起來就是「筆刷在物件上沒作用」。
     @ViewBuilder
     private func objectLayer(forPage page: Int) -> some View {
-        ZStack {
-                ForEach(notebook.attachments ?? []) { item in
+        let pageHeight = notebook.height(forPage: page)
+        ZStack(alignment: .topLeading) {
+            // 🌟 打字模式下整頁空白區域接收點擊，隨點隨打插入文字方塊並聚焦游標
+            if editorMode == .type {
+                Color.clear
+                    .frame(width: PageGeometry.width, height: pageHeight)
+                    .contentShape(Rectangle())
+                    .onTapGesture(coordinateSpace: .local) { location in
+                        handleCanvasTapInTypeMode(at: location, page: page)
+                    }
+                    .zIndex(-1000)
+            }
+
+            ForEach(notebook.attachments ?? []) { item in
                     if item.pageIndex == page {
                         AttachmentItemView(
                             attachment: binding(for: item.id),
@@ -3864,7 +3876,7 @@ public struct NotebookEditorView: View {
                 .scaleEffect(canvasZoomScale, anchor: .topLeading)
                 .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
                 .allowsHitTesting(editorMode == .type)
-                .zIndex(1)
+                .zIndex(editorMode == .type ? 2 : 1)
 
             CanvasRepresentable(
                 drawing: $currentDrawing,
@@ -4003,7 +4015,7 @@ public struct NotebookEditorView: View {
                 }
             )
             .allowsHitTesting(editorMode == .draw)
-            .zIndex(2)
+            .zIndex(editorMode == .draw ? 2 : 1)
 
             modeBadge
                 .padding(.top, DS.Space.s)
@@ -4402,17 +4414,6 @@ public struct NotebookEditorView: View {
             .padding(.vertical, 10)
         }
         .coordinateSpace(name: CanvasCoordinateSpace.name)
-        // 打字模式下點擊空白處＝在該處新增文字方塊隨點隨打。
-        //
-        // 用 simultaneousGesture 讓手勢與底下的物件各自獨立辨識。
-        .simultaneousGesture(
-            editorMode == .type
-                ? SpatialTapGesture(count: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
-                    .onEnded { value in
-                        handleCanvasTapInTypeMode(at: value.location)
-                    }
-                : nil
-        )
         .onContinuousHover { phase in
             switch phase {
             case .active(let location):
@@ -8893,12 +8894,14 @@ public struct NotebookEditorView: View {
             store.updateNotebook(notebook)
             PageThumbnailRenderer.invalidateAll()
         }
-        let draft = insertTextBox(at: location)
+        let draft = insertTextBox(at: location, page: targetPage)
         inlineEditingTextId = draft.id
         editingTextId = nil
     }
 
-    private func handleCanvasTapInTypeMode(at location: CGPoint) {
+    private func handleCanvasTapInTypeMode(at location: CGPoint, page: Int? = nil) {
+        let targetPage = page ?? currentPageIndex
+        currentPageIndex = targetPage
         // 1. 若先前有就地編輯但未打任何字的空方塊，先自動清理
         if let activeId = inlineEditingTextId,
            let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
@@ -8911,7 +8914,7 @@ public struct NotebookEditorView: View {
 
         // 2. 檢查是否點擊在既有文字範圍內
         if let existing = notebook.textAttachments?.first(where: { item in
-            item.pageIndex == currentPageIndex &&
+            item.pageIndex == targetPage &&
             CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -12, dy: -12).contains(location)
         }) {
             // 直接就地聚焦編輯既有文字，絕不彈出浮動面板
@@ -8921,13 +8924,13 @@ public struct NotebookEditorView: View {
         }
 
         // 3. 若點擊在其他畫布物件（圖片、表格、形狀、錄音卡片、3D等）上，不新增文字，讓該物件處理選取
-        if isLocationInsideAnyObject(at: location, page: currentPageIndex) {
+        if isLocationInsideAnyObject(at: location, page: targetPage) {
             inlineEditingTextId = nil
             return
         }
 
         // 4. 點擊空白處：隨點隨打，像 Word 即點即書，建立自然排版文字
-        let draft = insertTextBox(at: location)
+        let draft = insertTextBox(at: location, page: targetPage)
         inlineEditingTextId = draft.id
         editingTextId = nil
     }
@@ -8975,7 +8978,8 @@ public struct NotebookEditorView: View {
         return round(y / step) * step
     }
 
-    private func insertTextBox(at location: CGPoint) -> NoteTextAttachment {
+    private func insertTextBox(at location: CGPoint, page: Int? = nil, openStudio: Bool = false) -> NoteTextAttachment {
+        let targetPage = page ?? currentPageIndex
         var targetX = location.x
         var targetY = location.y
         if snapToGrid {
@@ -8995,7 +8999,7 @@ public struct NotebookEditorView: View {
         }
         let draft = NoteTextAttachment(
             id: UUID().uuidString,
-            pageIndex: currentPageIndex,
+            pageIndex: targetPage,
             text: "",
             fontSize: activeTextAttachment?.fontSize ?? 16,
             textColorHex: activeTextAttachment?.textColorHex ?? "#000000",
@@ -9010,13 +9014,17 @@ public struct NotebookEditorView: View {
             notebook.textAttachments = []
         }
         notebook.textAttachments?.append(draft)
-        var order = ObjectStacking.normalized(objects: pageStackableObjects, order: notebook.objectOrder(forPage: currentPageIndex))
+        var order = ObjectStacking.normalized(objects: pageStackableObjects, order: notebook.objectOrder(forPage: targetPage))
         order = ObjectStacking.bringToFront([draft.id], in: order)
-        notebook.setObjectOrder(order, forPage: currentPageIndex)
+        notebook.setObjectOrder(order, forPage: targetPage)
 
         store.updateNotebook(notebook)
         inlineEditingTextId = draft.id
-        editingTextId = draft.id
+        if openStudio {
+            editingTextId = draft.id
+        } else {
+            editingTextId = nil
+        }
         return draft
     }
 
@@ -10486,7 +10494,9 @@ struct TextAttachmentItemView: View {
         .animation(nil, value: dragOffset)
         .onChange(of: isEditingInline) { editing in
             if editing {
-                inlineFocused = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                    inlineFocused = true
+                }
             } else {
                 inlineFocused = false
                 finishEditing()
@@ -10500,7 +10510,7 @@ struct TextAttachmentItemView: View {
         }
         .onAppear {
             if isEditingInline {
-                DispatchQueue.main.async {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                     inlineFocused = true
                 }
             }

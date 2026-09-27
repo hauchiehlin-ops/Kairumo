@@ -86,7 +86,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
             objectLayer()
                 .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
                 .allowsHitTesting(editorMode == .type)
-                .zIndex(1)
+                .zIndex(editorMode == .type ? 2 : 1)
 
             CanvasRepresentable(
                 drawing: $drawing,
@@ -129,7 +129,7 @@ struct ContinuousPageView<ObjectLayer: View>: View {
             )
             .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
             .allowsHitTesting(editorMode == .draw)
-            .zIndex(2)
+            .zIndex(editorMode == .draw ? 2 : 1)
         }
         .coordinateSpace(name: CanvasCoordinateSpace.name)
         .contentShape(Rectangle())
