@@ -106,10 +106,15 @@ public final class LocalizationManager: ObservableObject {
     /// 錯誤訊息會在背景執行緒組成（遷移、備份、同步都跑在背景），
     /// 而字串表是唯讀的靜態資料 —— 從哪個執行緒讀都一樣。目前語言是
     /// `@MainActor` 隔離的，所以這裡取一次快照。
-    public nonisolated func localizedUnsafe(_ key: String) -> String {
-        guard let dict = Self.generatedStrings[key] else { return key }
-        let language = Self.snapshotLanguage
+    /// 靜態非隔離查表，供背景執行緒與靜態解碼器使用。
+    public static nonisolated func localizedString(_ key: String) -> String {
+        guard let dict = generatedStrings[key] else { return key }
+        let language = snapshotLanguage
         return dict[language] ?? dict[.en] ?? dict[.zhHant] ?? key
+    }
+
+    public nonisolated func localizedUnsafe(_ key: String) -> String {
+        Self.localizedString(key)
     }
 
     /// 版面標籤的整張表（S-90）。

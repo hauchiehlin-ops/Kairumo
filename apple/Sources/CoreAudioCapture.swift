@@ -67,9 +67,21 @@ private final class CoreAudioPipeline: @unchecked Sendable {
         guard let copy = AVAudioPCMBuffer(pcmFormat: buffer.format, frameCapacity: buffer.frameLength) else { return }
         copy.frameLength = buffer.frameLength
         let channelCount = Int(buffer.format.channelCount)
-        if let srcData = buffer.floatChannelData, let dstData = copy.floatChannelData {
-            for ch in 0..<channelCount {
-                dstData[ch].assign(from: srcData[ch], count: Int(buffer.frameLength))
+        if buffer.format.isInterleaved {
+            if let src = buffer.floatChannelData?[0], let dst = copy.floatChannelData?[0] {
+                dst.assign(from: src, count: Int(buffer.frameLength) * channelCount)
+            } else if let src = buffer.int16ChannelData?[0], let dst = copy.int16ChannelData?[0] {
+                dst.assign(from: src, count: Int(buffer.frameLength) * channelCount)
+            }
+        } else {
+            if let srcData = buffer.floatChannelData, let dstData = copy.floatChannelData {
+                for ch in 0..<channelCount {
+                    dstData[ch].assign(from: srcData[ch], count: Int(buffer.frameLength))
+                }
+            } else if let srcData = buffer.int16ChannelData, let dstData = copy.int16ChannelData {
+                for ch in 0..<channelCount {
+                    dstData[ch].assign(from: srcData[ch], count: Int(buffer.frameLength))
+                }
             }
         }
 
@@ -126,14 +138,14 @@ final class CoreAudioCapture {
     /// 核心要的格式。
     private static let targetSampleRate: Double = 16_000
 
-    private let engine = AVAudioEngine()
+    private var engine: AVAudioEngine?
     private let pipeline = CoreAudioPipeline()
     private var tapInstalled = false
 
     /// 餵音訊失敗時回報（例如核心那邊沒有在錄音）。
     var onError: ((String) -> Void)?
 
-    var isCapturing: Bool { engine.isRunning }
+    var isCapturing: Bool { engine?.isRunning ?? false }
 
     /// 開始錄音，回傳核心給的 session uuid（＝ `media/audio/<uuid>.opus`）。
     ///
@@ -149,19 +161,36 @@ final class CoreAudioCapture {
             interleaved: false)
         else { return nil }
 
-        let input = engine.inputNode
+        #if os(iOS) || targetEnvironment(macCatalyst)
+        let audioSession = AVAudioSession.sharedInstance()
+        do {
+            if ProcessInfo.processInfo.isiOSAppOnMac {
+                try audioSession.setCategory(.playAndRecord, mode: .default)
+            } else {
+                try audioSession.setCategory(.playAndRecord, mode: .default, options: [.defaultToSpeaker, .allowBluetooth])
+            }
+            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
+        } catch {
+            StartupLogger.log("[CoreAudioCapture] AVAudioSession 設定警告: \(error)")
+        }
+        #endif
+
+        let newEngine = AVAudioEngine()
+        self.engine = newEngine
+        let input = newEngine.inputNode
+
         var chosenFormat = input.outputFormat(forBus: 0)
         if chosenFormat.sampleRate <= 0 || chosenFormat.channelCount == 0 {
             chosenFormat = input.inputFormat(forBus: 0)
         }
         if chosenFormat.sampleRate <= 0 || chosenFormat.channelCount == 0 {
             #if os(iOS) || targetEnvironment(macCatalyst)
-            let audioSession = AVAudioSession.sharedInstance()
-            try? audioSession.setCategory(.playAndRecord, mode: .default)
-            try? audioSession.setActive(true)
-            chosenFormat = input.outputFormat(forBus: 0)
-            if chosenFormat.sampleRate <= 0 || chosenFormat.channelCount == 0 {
-                chosenFormat = input.inputFormat(forBus: 0)
+            let sr = AVAudioSession.sharedInstance().sampleRate
+            let ch = AVAudioSession.sharedInstance().inputNumberOfChannels
+            let safeSr = sr > 0 ? sr : 44100
+            let safeCh = ch > 0 ? ch : 1
+            if let fallback = AVAudioFormat(standardFormatWithSampleRate: safeSr, channels: AVAudioChannelCount(safeCh)) {
+                chosenFormat = fallback
             }
             #endif
         }
@@ -169,6 +198,7 @@ final class CoreAudioCapture {
         // 取樣率為 0 表示麥克風還沒準備好（權限沒過、或被別的 App 佔用）。
         guard chosenFormat.sampleRate > 0 && chosenFormat.channelCount > 0 else {
             onError?("麥克風尚未就緒（取樣率: \(chosenFormat.sampleRate), 聲道: \(chosenFormat.channelCount)）")
+            stop()
             return nil
         }
 
@@ -177,6 +207,7 @@ final class CoreAudioCapture {
             recordingId = try session.startRecording()
         } catch {
             onError?("核心無法開始錄音：\(error)")
+            stop()
             return nil
         }
 
@@ -189,8 +220,8 @@ final class CoreAudioCapture {
         tapInstalled = true
 
         do {
-            engine.prepare()
-            try engine.start()
+            newEngine.prepare()
+            try newEngine.start()
         } catch {
             onError?("音訊引擎啟動失敗：\(error)")
             stop()
@@ -210,12 +241,16 @@ final class CoreAudioCapture {
     /// 停止擷取。**不呼叫核心的 stopRecording** —— 那是呼叫端的事，
     /// 因為它還要拿回長度與檔名。
     func stop() {
-        if tapInstalled {
-            engine.inputNode.removeTap(onBus: 0)
-            tapInstalled = false
-        }
-        if engine.isRunning {
-            engine.stop()
+        if let engine = self.engine {
+            if tapInstalled {
+                engine.inputNode.removeTap(onBus: 0)
+                tapInstalled = false
+            }
+            if engine.isRunning {
+                engine.stop()
+            }
+            engine.reset()
+            self.engine = nil
         }
         pipeline.stop()
     }

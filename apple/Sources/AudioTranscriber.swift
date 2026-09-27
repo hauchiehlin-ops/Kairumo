@@ -24,7 +24,7 @@ public enum AudioPCMDecoder {
         // .opus 走核心 Ogg-Opus 解碼器（AVAudioFile 無法解析 Ogg 容器）
         if url.pathExtension.lowercased() == "opus" {
             guard let decoder = audioDecoderOpen(path: url.path) else {
-                throw NSError(domain: "AudioPCMDecoder", code: 4, userInfo: [NSLocalizedDescriptionKey: "無法開啟 Opus 音訊解碼器"])
+                throw NSError(domain: "AudioPCMDecoder", code: 4, userInfo: [NSLocalizedDescriptionKey: LocalizationManager.localizedString("transcribe_audio_unreadable")])
             }
             var allSamples = [Float]()
             while true {
@@ -33,7 +33,7 @@ public enum AudioPCMDecoder {
                 allSamples.append(contentsOf: chunk)
             }
             guard !allSamples.isEmpty else {
-                throw NSError(domain: "AudioPCMDecoder", code: 5, userInfo: [NSLocalizedDescriptionKey: "音訊內容為空或長度為零"])
+                throw NSError(domain: "AudioPCMDecoder", code: 5, userInfo: [NSLocalizedDescriptionKey: LocalizationManager.localizedString("audio_empty_hint")])
             }
             return allSamples
         }
@@ -102,7 +102,7 @@ public enum AudioPCMDecoder {
         // 備援：走 AVAssetReader（針對 MPEG4 / M4A 等容器媒體解碼）
         let assetSamples = try decodeWithAssetReader(url: url)
         guard !assetSamples.isEmpty else {
-            throw NSError(domain: "AudioPCMDecoder", code: 5, userInfo: [NSLocalizedDescriptionKey: "音訊內容為空或長度為零"])
+            throw NSError(domain: "AudioPCMDecoder", code: 5, userInfo: [NSLocalizedDescriptionKey: LocalizationManager.localizedString("audio_empty_hint")])
         }
         return assetSamples
     }

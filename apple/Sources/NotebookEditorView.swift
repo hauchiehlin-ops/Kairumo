@@ -11097,7 +11097,8 @@ public struct StickerPlacementOverlayView: View {
     @ObservedObject private var localizationManager = LocalizationManager.shared
 
     @State private var dragOffset: CGSize = .zero
-    @State private var liveScale: CGFloat = 1.0
+    @State private var resizeBaseScale: CGFloat? = nil
+    @State private var pinchBaseScale: CGFloat? = nil
 
     private var currentCenter: CGPoint {
         CGPoint(
@@ -11107,7 +11108,7 @@ public struct StickerPlacementOverlayView: View {
     }
 
     private var displayScale: CGFloat {
-        max(0.3, min(4.0, placement.scale * liveScale))
+        max(0.2, min(5.0, placement.scale))
     }
 
     public var body: some View {
@@ -11169,11 +11170,34 @@ public struct StickerPlacementOverlayView: View {
                 .accessibilityIdentifier("sticker.place.confirm")
             }
 
-            // 貼圖互動預覽本體（可自由拖曳定位、旋轉、右下角縮放）
+            // 貼圖互動預覽本體（可自由拖曳定位、旋轉、右下角縮放與雙指捏合縮放）
             ZStack(alignment: .bottomTrailing) {
                 StickerRenderView(drawing: placement.drawing)
                     .frame(width: displayW, height: displayH)
                     .rotationEffect(.degrees(placement.rotationDegrees))
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 3, coordinateSpace: .named(CanvasCoordinateSpace.name))
+                            .onChanged { val in
+                                dragOffset = val.translation
+                            }
+                            .onEnded { val in
+                                placement.center.x += val.translation.width
+                                placement.center.y += val.translation.height
+                                dragOffset = .zero
+                            }
+                    )
+                    .simultaneousGesture(
+                        MagnificationGesture()
+                            .onChanged { mag in
+                                let base = pinchBaseScale ?? placement.scale
+                                if pinchBaseScale == nil { pinchBaseScale = base }
+                                placement.scale = max(0.2, min(5.0, base * mag))
+                            }
+                            .onEnded { _ in
+                                pinchBaseScale = nil
+                            }
+                    )
 
                 // 外圍邊框
                 RoundedRectangle(cornerRadius: 10)
@@ -11181,26 +11205,29 @@ public struct StickerPlacementOverlayView: View {
                     .foregroundColor(Color.accentColor)
                     .frame(width: displayW + 16, height: displayH + 16)
                     .rotationEffect(.degrees(placement.rotationDegrees))
+                    .allowsHitTesting(false)
 
                 // 右下角縮放把手
-                Image(systemName: "arrow.up.left.and.down.right")
+                Image(systemName: "arrow.up.left.and.down.right.and.arrow.up.right.and.down.left")
                     .font(.system(size: 11, weight: .bold))
                     .foregroundColor(.white)
-                    .padding(6)
+                    .frame(width: 32, height: 32)
                     .background(Color.accentColor)
                     .clipShape(Circle())
-                    .shadow(color: Color.black.opacity(0.2), radius: 2, x: 0, y: 1)
+                    .contentShape(Circle())
+                    .shadow(color: Color.black.opacity(0.25), radius: 3, x: 0, y: 1)
                     .offset(x: 10, y: 10)
-                    .gesture(
+                    .accessibilityLabel(localizationManager.localized("resize"))
+                    .highPriorityGesture(
                         DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))
                             .onChanged { val in
+                                let base = resizeBaseScale ?? placement.scale
+                                if resizeBaseScale == nil { resizeBaseScale = base }
                                 let delta = (val.translation.width + val.translation.height) / 2.0
-                                let factor = max(0.3, min(4.0, 1.0 + (delta / 120.0)))
-                                liveScale = factor
+                                placement.scale = max(0.2, min(5.0, base + (delta / 120.0)))
                             }
                             .onEnded { _ in
-                                placement.scale = displayScale
-                                liveScale = 1.0
+                                resizeBaseScale = nil
                             }
                     )
 
@@ -11210,18 +11237,6 @@ public struct StickerPlacementOverlayView: View {
                     size: CGSize(width: displayW + 16, height: displayH + 16)
                 )
             }
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 3, coordinateSpace: .named(CanvasCoordinateSpace.name))
-                    .onChanged { val in
-                        dragOffset = val.translation
-                    }
-                    .onEnded { val in
-                        placement.center.x += val.translation.width
-                        placement.center.y += val.translation.height
-                        dragOffset = .zero
-                    }
-            )
         }
         .padding(20)
         .position(x: currentCenter.x, y: currentCenter.y)

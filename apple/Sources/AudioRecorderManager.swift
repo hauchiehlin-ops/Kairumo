@@ -335,7 +335,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         let capture = coreCapture ?? CoreAudioCapture()
         coreCapture = capture
         capture.onError = { message in
-            print("[AudioRecorderManager] \(message)")
+            StartupLogger.log("[AudioRecorderManager] \(message)")
         }
         guard let recordingId = capture.start(session: session) else { return false }
 
@@ -382,8 +382,12 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         streamingTranscriber = nil
         // 先停擷取再叫核心收尾：反過來的話，收尾之後還會有音訊被餵進來，
         // 而那時候核心已經不在錄音狀態了。
+        do {
+            _ = try session.stopRecording()
+        } catch {
+            StartupLogger.log("[AudioRecorderManager] 核心停止錄音警告: \(error)")
+        }
         let durationUs = session.recordedAudioUs()
-        _ = try? session.stopRecording()
 
         timer?.invalidate()
         timer = nil
