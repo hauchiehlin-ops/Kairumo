@@ -56,8 +56,9 @@ final class PalmRejectionCoordinator {
     /// 另一台裝置上效果不同。
     func applyStoredThresholds() {
         let limits = palmThresholdLimits()
+        let radius = PalmThresholdStore.radius ?? (drawingPolicy() == .pencilOnly ? limits.defaultRadiusDp : limits.fingerModeRadiusDp)
         arbiter.setPalmThresholds(
-            palmRadius: PalmThresholdStore.radius ?? limits.defaultRadiusDp,
+            palmRadius: radius,
             retractWindowMs: PalmThresholdStore.retractMs ?? limits.defaultRetractMs)
     }
     /// 最後一次看到觸控筆的時間。

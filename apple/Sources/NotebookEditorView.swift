@@ -286,7 +286,12 @@ final class AdaptiveCanvasView: PKCanvasView {
         addInteraction(interaction)
     }
 
+    private(set) var activeTouchesCount: Int = 0
+    var pendingRetractDate: Date? = nil
+    var onPendingRetractNeeded: ((Date) -> Void)? = nil
+
     override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        activeTouchesCount += touches.count
         for touch in touches {
             if touch.type == .pencil {
                 onPencilTouchBegan?()
@@ -307,6 +312,7 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        activeTouchesCount = max(0, activeTouchesCount - touches.count)
         touches.forEach {
             onTouchObserved?($0)
             if InkInputDiagnostics.isEnabled || ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
@@ -314,6 +320,20 @@ final class AdaptiveCanvasView: PKCanvasView {
             }
         }
         super.touchesEnded(touches, with: event)
+        checkPendingRetract()
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent?) {
+        activeTouchesCount = max(0, activeTouchesCount - touches.count)
+        super.touchesCancelled(touches, with: event)
+        checkPendingRetract()
+    }
+
+    private func checkPendingRetract() {
+        if activeTouchesCount == 0, let date = pendingRetractDate {
+            pendingRetractDate = nil
+            onPendingRetractNeeded?(date)
+        }
     }
 
     var pageContentHeight: CGFloat = PageGeometry.height {
@@ -524,6 +544,17 @@ struct CanvasRepresentable: UIViewRepresentable {
         swipeDown.direction = .down
         canvas.addGestureRecognizer(swipeDown)
 
+        canvas.onPendingRetractNeeded = { [weak canvas] landedAt in
+            guard let canvas else { return }
+            guard palmRejection?.drawingPolicy(now: landedAt) != .pencilOnly else { return }
+            let cleaned = PalmRejectionCoordinator.retracting(canvas.drawing, landedAt: landedAt)
+            guard cleaned.strokes.count != canvas.drawing.strokes.count else { return }
+            context.coordinator.isProgrammaticUpdate = true
+            canvas.drawing = cleaned
+            context.coordinator.isProgrammaticUpdate = false
+            _ = onDrawingChanged?(cleaned)
+        }
+
         // 🌟 方案 A+B：手指／游標單擊與雙擊手勢（限定 direct / indirectPointer，完全不阻礙 Apple Pencil 筆跡）
         let directSingleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDirectSingleTap(_:)))
         directSingleTap.numberOfTapsRequired = 1
@@ -622,6 +653,16 @@ struct CanvasRepresentable: UIViewRepresentable {
         if let adaptive = uiView as? AdaptiveCanvasView {
             adaptive.pageContentHeight = PageGeometry.height
             adaptive.syncContentSize()
+            adaptive.onPendingRetractNeeded = { [weak uiView] landedAt in
+                guard let uiView else { return }
+                guard palmRejection?.drawingPolicy(now: landedAt) != .pencilOnly else { return }
+                let cleaned = PalmRejectionCoordinator.retracting(uiView.drawing, landedAt: landedAt)
+                guard cleaned.strokes.count != uiView.drawing.strokes.count else { return }
+                context.coordinator.isProgrammaticUpdate = true
+                uiView.drawing = cleaned
+                context.coordinator.isProgrammaticUpdate = false
+                _ = onDrawingChanged?(cleaned)
+            }
         }
 
         context.coordinator.applyTool(to: uiView)
@@ -3812,15 +3853,18 @@ public struct NotebookEditorView: View {
     private var canvasWorkAreaContent: some View {
         ZStack(alignment: .topTrailing) {
             PageBackgroundRepresentable(paperId: notebook.paperId(forPage: currentPageIndex), paletteId: notebook.guidePaletteId)
-                .allowsHitTesting(false)
-                // 背景（格線、橫線等）必須跟著雙指縮放同步 ——
-                // PKCanvasView 縮放的是自己的 content subview，
-                // 而背景層是 SwiftUI 層，不在同一個視圖樹裡，
-                // 必須手動套用相同的 scale + offset。
-                // objectLayer 也是同樣的做法（.zIndex(2)）。
+                .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
                 .scaleEffect(canvasZoomScale, anchor: .topLeading)
                 .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
+                .allowsHitTesting(false)
                 .zIndex(0)
+
+            objectLayer(forPage: currentPageIndex)
+                .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
+                .scaleEffect(canvasZoomScale, anchor: .topLeading)
+                .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
+                .allowsHitTesting(editorMode == .type)
+                .zIndex(1)
 
             CanvasRepresentable(
                 drawing: $currentDrawing,
@@ -3897,6 +3941,10 @@ public struct NotebookEditorView: View {
                 palmRejection: palmRejection,
                 onRetractStrokes: { landedAt in
                     guard palmRejection.drawingPolicy(now: landedAt) != .pencilOnly else { return }
+                    if let adaptive = canvasView as? AdaptiveCanvasView, adaptive.activeTouchesCount > 0 {
+                        adaptive.pendingRetractDate = landedAt
+                        return
+                    }
                     let cleaned = PalmRejectionCoordinator.retracting(
                         currentDrawing, landedAt: landedAt)
                     guard cleaned.strokes.count != currentDrawing.strokes.count else { return }
@@ -3954,13 +4002,8 @@ public struct NotebookEditorView: View {
                         }
                 }
             )
-            .zIndex(1)
-
-            objectLayer(forPage: currentPageIndex)
-                .scaleEffect(canvasZoomScale, anchor: .topLeading)
-                .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
-                .allowsHitTesting(true)
-                .zIndex(2)
+            .allowsHitTesting(editorMode == .draw)
+            .zIndex(2)
 
             modeBadge
                 .padding(.top, DS.Space.s)

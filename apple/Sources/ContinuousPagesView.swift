@@ -79,8 +79,14 @@ struct ContinuousPageView<ObjectLayer: View>: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
             PageBackgroundRepresentable(paperId: paperId, paletteId: paletteId)
+                .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
                 .allowsHitTesting(false)
                 .zIndex(0)
+
+            objectLayer()
+                .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
+                .allowsHitTesting(editorMode == .type)
+                .zIndex(1)
 
             CanvasRepresentable(
                 drawing: $drawing,
@@ -121,11 +127,9 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                     onCanvasDoubleTap?(location)
                 }
             )
-            .zIndex(1)
-
-            objectLayer()
-                .allowsHitTesting(true)
-                .zIndex(2)
+            .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
+            .allowsHitTesting(editorMode == .draw)
+            .zIndex(2)
         }
         .coordinateSpace(name: CanvasCoordinateSpace.name)
         .contentShape(Rectangle())
