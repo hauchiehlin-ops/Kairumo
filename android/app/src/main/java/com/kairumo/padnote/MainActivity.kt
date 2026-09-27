@@ -5255,6 +5255,11 @@ private fun InkScreen(
                 revision++
                 showStickerLibrary = false
             },
+            onPickWithSize = { code, size ->
+                engine.addStickerStrokes(code, 160f, 200f, size)
+                revision++
+                showStickerLibrary = false
+            },
             onDismiss = { showStickerLibrary = false }
         )
     }

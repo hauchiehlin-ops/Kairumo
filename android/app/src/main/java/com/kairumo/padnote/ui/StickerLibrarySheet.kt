@@ -33,6 +33,13 @@ import uniffi.padnote_core.stickerCategories
 import uniffi.padnote_core.stickerDrawing
 import uniffi.padnote_core.stickerLabelKey
 
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.Slider
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+
 /**
  * 內建貼紙庫（Android）。
  *
@@ -50,36 +57,63 @@ import uniffi.padnote_core.stickerLabelKey
 fun StickerLibrarySheet(
     languageTag: String,
     onPick: (String) -> Unit,
+    onPickWithSize: ((String, Float) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     fun l10n(key: String) = LocalizationStrings.localized(key, languageTag)
     val categories = stickerCategories()
+    var stickerSize by remember { mutableFloatStateOf(120f) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(l10n("sticker_library")) },
         text = {
-            LazyVerticalGrid(
-                columns = GridCells.Adaptive(minSize = 76.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(420.dp)
-                    .testTag("stickers.builtin")
-            ) {
-                categories.forEach { category ->
-                    // 分類標題佔滿一整行 —— 不跨行的話它會擠在第一個格子
-                    // 旁邊，看起來像一張沒畫出來的貼紙。
-                    item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                        Text(
-                            l10n(category.titleKey),
-                            style = MaterialTheme.typography.titleSmall,
-                            modifier = Modifier.padding(top = 8.dp)
-                        )
-                    }
-                    items(category.codes) { code ->
-                        StickerCell(code, l10n(stickerLabelKey(code))) { onPick(code) }
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        "${l10n("resize")}: ${stickerSize.toInt()} dp",
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Slider(
+                        value = stickerSize,
+                        onValueChange = { stickerSize = it },
+                        valueRange = 60f..260f,
+                        modifier = Modifier.weight(1f).padding(start = 12.dp)
+                    )
+                }
+
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 76.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(380.dp)
+                        .testTag("stickers.builtin")
+                ) {
+                    categories.forEach { category ->
+                        // 分類標題佔滿一整行 —— 不跨行的話它會擠在第一個格子
+                        // 旁邊，看起來像一張沒畫出來的貼紙。
+                        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                            Text(
+                                l10n(category.titleKey),
+                                style = MaterialTheme.typography.titleSmall,
+                                modifier = Modifier.padding(top = 8.dp)
+                            )
+                        }
+                        items(category.codes) { code ->
+                            StickerCell(code, l10n(stickerLabelKey(code))) {
+                                if (onPickWithSize != null) {
+                                    onPickWithSize(code, stickerSize)
+                                } else {
+                                    onPick(code)
+                                }
+                            }
+                        }
                     }
                 }
             }
