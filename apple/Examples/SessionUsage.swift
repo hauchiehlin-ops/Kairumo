@@ -2,8 +2,8 @@ import Foundation
 
 /// Rust core 的呼叫範例（工作項 S-12）。
 ///
-/// 重點示範功能 C1：**點一筆畫，跳回當時的錄音位置** —— 這是 Padnote 與
-/// Goodnotes（沒有錄音）和 Granola（沒有手寫）的核心差異。
+/// 重點示範功能 C1：**點一筆畫，跳回當時的錄音位置** —— 這是筆記與
+/// 單純錄音或純手寫應用的核心差異。
 ///
 /// 型別來自 `apple/Generated/padnote_core.swift`，由
 /// `scripts/generate-bindings.sh` 產生。

@@ -2,7 +2,7 @@
 //  SheetCoordinator.swift
 //  Kairumo
 //
-//  Created for Kairumo Goodnotes Transformation Plan (Phase 1).
+//  Created for Kairumo Architecture Enhancement Plan (Phase 1).
 //  統一彈窗與選單轉場協調器：徹底取代散落各處且不穩定的猜測性延遲（DispatchQueue.asyncAfter），
 //  確保次級視窗、系統選取器與工作坊 100% 可靠開啟，不被 UIKit/SwiftUI 動畫衝突丟棄。
 //

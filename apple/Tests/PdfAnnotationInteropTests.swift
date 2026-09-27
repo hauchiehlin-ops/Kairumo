@@ -4,7 +4,7 @@
 //
 //  匯出的 PDF 要能在別的 App 裡**繼續編輯我們的筆畫**（工作項 S-44）。
 //
-//  「開得起來」與「可以繼續編輯」是兩件事。任何 PDF 都能在 Goodnotes 裡
+//  「開得起來」與「可以繼續編輯」是兩件事。任何 PDF 都能在第三方 PDF 檢視器裡
 //  被加註；但要讓我們寫的那些筆畫成為**它認得的物件**，PDF 裡必須有標準的
 //  `/Subtype /Ink` 標註。原本的匯出是把整頁算繪成點陣圖 —— 看得到，改不了。
 //
@@ -103,9 +103,9 @@ final class PdfAnnotationInteropTests: XCTestCase {
         XCTAssertGreaterThanOrEqual(pages, 2, "兩頁都要在")
     }
 
-    /// 產一份真的 PDF 給人在 Goodnotes / Notability / PDF Expert 裡實測。
+    /// 產一份真的 PDF 給人在第三方 PDF 軟體裡實測。
     ///
-    /// 自動化測試證明得了「PDF 裡有 Ink 標註」，證明不了「Goodnotes 認得它」——
+    /// 自動化測試證明得了「PDF 裡有 Ink 標註」，證明不了「第三方軟體認得它」——
     /// 那要真的把檔案丟進去。檔案刻意留下不刪，並印出路徑。
     func testProduceSamplePdfForThirdPartyApps() throws {
         let data = try exportedPdf()

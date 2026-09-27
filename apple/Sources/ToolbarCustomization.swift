@@ -69,7 +69,7 @@ public final class ToolbarSettings: ObservableObject {
 
     /// 工具列擺哪裡（S-261b）。
     ///
-    /// 可移動是刻意的：Goodnotes 的工具列頂部固定，**左撇子與橫向書寫時
+    /// 可移動是刻意的：若工具列頂部固定，**左撇子與橫向書寫時
     /// 會擋手**。這個設定與「哪些工具顯示」一樣同步得動。
     @Published public private(set) var placement: FfiPlacement = .bottom
 

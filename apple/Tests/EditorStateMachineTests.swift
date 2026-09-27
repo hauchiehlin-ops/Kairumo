@@ -2,7 +2,7 @@
 //  EditorStateMachineTests.swift
 //  KairumoTests
 //
-//  Created for Kairumo Goodnotes Transformation Plan (Phase 3).
+//  Created for Kairumo Architecture Enhancement Plan (Phase 3).
 //  模式狀態機與轉場協調器單元測試：釘住編輯模式切換、Apple Pencil 守衛規則、表格與文字編輯焦點。
 //
 

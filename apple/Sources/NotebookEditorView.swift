@@ -8167,7 +8167,7 @@ public struct NotebookEditorView: View {
     /// 匯出 PDF。
     ///
     /// 走核心的匯出器，因為它同時輸出**向量筆畫與標準 `/Ink` 標註** ——
-    /// 在 Goodnotes / Notability / PDF Expert 打開後可以繼續編輯那些筆畫。
+    /// 在各主流 PDF 閱讀器與筆記軟體打開後可以繼續編輯那些筆畫。
     /// App 原本的做法是把整頁算繪成點陣圖，那樣只能「在上面加註」，
     /// 我們的筆畫本身不是物件。
     ///

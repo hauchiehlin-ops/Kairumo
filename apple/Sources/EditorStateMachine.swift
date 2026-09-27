@@ -2,7 +2,7 @@
 //  EditorStateMachine.swift
 //  Kairumo
 //
-//  Created for Kairumo Goodnotes Transformation Plan (Phase 1).
+//  Created for Kairumo Architecture Enhancement Plan (Phase 1).
 //  統一編輯器全域狀態機：解決手勢衝突、模式互搶、打字與手繪邊界模糊的根本架構元件。
 //
 
@@ -20,7 +20,7 @@ public enum EditorMode: String, CaseIterable, Identifiable, Sendable {
     public var isType: Bool { self == .type }
 }
 
-/// 編輯器互動階段（比照 Goodnotes 的單一職責模式設計）
+/// 編輯器互動階段（遵循標準單一職責模式設計）
 public enum EditorInteractionPhase: Equatable, Sendable {
     /// 手寫中（PencilKit 啟用、筆跡預測活躍、畫布點擊不產生文字框）
     case drawing
