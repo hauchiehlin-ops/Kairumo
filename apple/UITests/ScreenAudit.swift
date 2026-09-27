@@ -199,15 +199,20 @@ enum ScreenAudit {
         var missing: [String] = []
         var unreachable: [String] = []
         let visible = app.windows.firstMatch.frame
-
+ 
+        var lastFoundElement: XCUIElement? = nil
         for id in ids {
             var (element, _) = elementFor(id, label: labels[id], in: app)
             if scrollToFind && !element.exists {
                 for _ in 0..<6 where !element.exists {
-                    if let menu = app.menus.allElementsBoundByIndex.first(where: { $0.exists }) {
-                        menu.swipeUp()
-                    } else if let scroll = app.scrollViews.allElementsBoundByIndex.first(where: { $0.exists }) {
+                    // 優先尋找非 editor.canvas 的滾動容器（例如 iOS 上 UIMenu 的滾動視圖 _UIContextMenuListView）。
+                    // 絕不能滑動 editor.canvas，否則 UIKit 會視為點擊外部而立刻關閉選單。
+                    if let scroll = app.scrollViews.allElementsBoundByIndex.first(where: { $0.exists && $0.identifier != "editor.canvas" }) {
                         scroll.swipeUp()
+                    } else if let menu = app.menus.allElementsBoundByIndex.first(where: { $0.exists }) {
+                        menu.swipeUp()
+                    } else if let target = lastFoundElement, target.exists, target.frame.height > 0, visible.contains(target.frame) {
+                        target.swipeUp()
                     } else {
                         app.swipeUp()
                     }
@@ -218,6 +223,7 @@ enum ScreenAudit {
                 missing.append("\(id)（標籤：\(labels[id] ?? "—")）")
                 continue
             }
+            lastFoundElement = element
             guard element.isEnabled else { continue }
             // 同 `check`：完整落在畫面上才問點不點得到。理由見那邊。
             guard requireHittable, visible.contains(element.frame) else { continue }
