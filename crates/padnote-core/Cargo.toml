@@ -22,6 +22,9 @@ workspace = true
 [lib]
 # cdylib 供 Swift/Kotlin 動態連結；staticlib 供 iOS 靜態連結。
 crate-type = ["lib", "cdylib", "staticlib"]
+# 這個 crate 沒有可執行的 Rust 文件範例；doctest 只會觸發 lib/cdylib/staticlib
+# 的原生連結，卻不增加驗證覆蓋。
+doctest = false
 
 [features]
 # 預設全開：Apple 版（iOS / iPadOS / macOS）的行為與相依完全不變。
