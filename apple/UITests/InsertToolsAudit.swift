@@ -24,6 +24,17 @@ import XCTest
 
 final class InsertToolsAudit: XCTestCase {
 
+    private var app: XCUIApplication?
+
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+    }
+
+    override func tearDownWithError() throws {
+        app?.terminate()
+        app = nil
+    }
+
     /// 「插入」選單裡每一個項目，以及打開之後畫面上必須出現的那個識別碼。
     ///
     /// 沒有識別碼可以認的就用標籤 —— 選單項目本身的識別碼進不了無障礙樹
@@ -34,20 +45,20 @@ final class InsertToolsAudit: XCTestCase {
     /// `UIAction` 算繪，`.accessibilityIdentifier` 不會跟過去（S-261d）。
     /// 所以這裡的字串必須與 `i18n/ui-strings.json` 的英文逐字相同；
     /// 對不上的症狀就是「選單裡找不到」，而那看起來像功能壞了。
-    private static let tools: [(menuLabel: String, opened: String)] = [
-        ("Asset Library", "assets.close"),
-        ("Sticker Library", "stickers.cancel"),
-        ("Insert Image", ""),          // 系統相片選擇器，不是我們的畫面
-        ("Choose from Files", ""),     // 系統檔案挑選器，同上
-        ("Import an audio file", ""),  // 系統檔案挑選器，同上
-        ("Math Calculator", "math.close"),
-        ("Chart Studio", "chart.close"),
-        ("Insert 3D Model", "model3d.import"),
+    private static let tools: [(menuLabel: String, opened: String, closeId: String)] = [
+        ("Asset Library", "assets.close", "assets.close"),
+        ("Sticker Library", "stickers.cancel", "stickers.cancel"),
+        ("Insert Image", "", ""),          // 系統相片選擇器，不是我們的畫面
+        ("Choose from Files", "", ""),     // 系統檔案挑選器，同上
+        ("Import an audio file", "", ""),  // 系統檔案挑選器，同上
+        ("Math Calculator", "math.close", "math.close"),
+        ("Chart Studio", "chart.close", "chart.close"),
+        ("Insert 3D Model", "model3d.close", "model3d.close"),
         // 這一項原本接錯：主選單呼叫的是 `insertDefaultShape()`，在
         // (200, 200) 默默塞一個矩形就結束，工作室從來沒被打開過 ——
         // 使用者回報的「點了沒反應」就是它。現在這條測試守著。
-        ("Shapes & Flowcharts", "shape.cancel"),
-        ("Theme Tools", "theme.close"),
+        ("Shapes & Flowcharts", "shape.cancel", "shape.cancel"),
+        ("Theme Tools", "theme.close", "theme.close"),
     ]
 
     /// 插進畫布的 3D 模型**搬得動、也改得了大小**。
@@ -78,7 +89,7 @@ final class InsertToolsAudit: XCTestCase {
         // 而且**不會報錯**，測試要到很後面才以一個不相干的斷言失敗。
         // （這一輪就是這樣：CI 說「模型上沒有縮放把手」，真因是模型根本
         // 沒插進去，因為「插入畫布」在摺線下面。）
-        for _ in 0..<6 where !item.isHittable { app.swipeUp() }
+        scrollMenuUntilHittable(app, item)
         guard item.isHittable else {
             XCTFail("「更多」選單裡的 Insert 3D Model 點不到")
             return
@@ -156,6 +167,7 @@ final class InsertToolsAudit: XCTestCase {
         app.launchEnvironment["KAIRUMO_UITEST"] = "1"
         app.launchEnvironment["KAIRUMO_UITEST_FAIL_RECORDING"] = "1"
         app.launch()
+        self.app = app
         guard openEditor(app) else {
             XCTFail("進不到編輯器")
             return
@@ -185,6 +197,7 @@ final class InsertToolsAudit: XCTestCase {
         app.launchEnvironment["KAIRUMO_UITEST"] = "1"
         app.launchEnvironment["KAIRUMO_UITEST_NO_CANVAS"] = "1"
         app.launch()
+        self.app = app
         guard openEditor(app) else {
             XCTFail("進不到編輯器")
             return
@@ -195,7 +208,7 @@ final class InsertToolsAudit: XCTestCase {
         _ = item.waitForExistence(timeout: 3)
         // 點得到才算數：只露一角的項目 `exists` 是 true，但點擊落在畫面外
         // —— 不報錯，卻什麼也沒發生。
-        for _ in 0..<6 where !item.isHittable { app.swipeUp() }
+        scrollMenuUntilHittable(app, item)
         guard item.isHittable else {
             XCTFail("「更多」選單裡的貼紙庫點不到")
             return
@@ -246,24 +259,43 @@ final class InsertToolsAudit: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment["KAIRUMO_UITEST"] = "1"
         app.launch()
+        self.app = app
         return app
+    }
+
+    /// 優先在選單自己的滾動視圖裡滾動，避免 app.swipeUp() 滑到背景畫布導致選單被收合。
+    private func scrollMenuUntilHittable(_ app: XCUIApplication, _ item: XCUIElement) {
+        var attempts = 0
+        let menuScroll = app.scrollViews.matching(NSPredicate(format: "identifier != 'editor.canvas'")).firstMatch
+        while !item.isHittable && attempts < 6 {
+            attempts += 1
+            if menuScroll.exists {
+                menuScroll.swipeUp()
+            } else {
+                break
+            }
+        }
     }
 
     /// 關掉目前這張表，回到編輯器。
     ///
-    /// 優先找每張表都有的取消／關閉鍵；找不到才用下滑手勢 ——
-    /// 下滑在 `.presentationDetents` 的表單上不一定有效，而且會滑到
-    /// 底下的畫布上（那會畫出一筆）。
-    private func dismissSheet(_ app: XCUIApplication) {
+    /// 優先以指定的 `closeId` 或各表標準關閉鍵關閉；找不到才用下滑手勢。
+    /// 等待關閉完成（`waitForNonExistence`），避免連續操作時因 presentation 尚未結束而吞掉下一個彈窗。
+    private func dismissSheet(_ app: XCUIApplication, closeId: String? = nil) {
+        if let closeId {
+            let button = app.buttons[closeId]
+            if button.waitForExistence(timeout: 2) && button.isHittable {
+                button.tap()
+                _ = button.waitForNonExistence(timeout: 5)
+                return
+            }
+        }
         for id in ["assets.close", "stickers.cancel", "math.close", "shape.cancel",
                    "chart.close", "theme.close", "model3d.close"] {
-            let button = element(app, id)
+            let button = app.buttons[id]
             if button.exists && button.isHittable {
                 button.tap()
-                // 等待彈窗完全關閉完成，避免連續操作時因 presentation 尚未結束而吞掉下一個彈窗。
-                let disappeared = NSPredicate(format: "exists == false")
-                let exp = XCTNSPredicateExpectation(predicate: disappeared, object: button)
-                _ = XCTWaiter.wait(for: [exp], timeout: 5)
+                _ = button.waitForNonExistence(timeout: 5)
                 return
             }
         }
@@ -299,16 +331,7 @@ final class InsertToolsAudit: XCTestCase {
             // 優先找非 editor.canvas 的選單滾動容器，避免 app.swipeUp() 滑到背景畫布關閉選單。
             let item = app.buttons[tool.menuLabel].firstMatch
             _ = item.waitForExistence(timeout: 5)
-
-            var attempts = 0
-            while !item.isHittable && attempts < 6 {
-                attempts += 1
-                if let scroll = app.scrollViews.allElementsBoundByIndex.first(where: { $0.exists && $0.identifier != "editor.canvas" }) {
-                    scroll.swipeUp()
-                } else {
-                    break
-                }
-            }
+            scrollMenuUntilHittable(app, item)
             guard item.exists else {
                 failures.append("\(tool.menuLabel)：選單裡找不到")
                 app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.1)).tap()
@@ -323,7 +346,7 @@ final class InsertToolsAudit: XCTestCase {
             }
 
             // **關閉一律用同一個動作，不要去點那個標記。**
-            dismissSheet(app)
+            dismissSheet(app, closeId: tool.closeId)
         }
 
         XCTAssertTrue(
@@ -353,7 +376,7 @@ final class InsertToolsAudit: XCTestCase {
             let item = app.buttons[label].firstMatch
             if !item.waitForExistence(timeout: 3) {
                 // **一定要捲。** 這張選單在手機上放不下所有項目。
-                for _ in 0..<6 where !item.exists { app.swipeUp() }
+                scrollMenuUntilHittable(app, item)
             }
             if !item.exists { missing.append(label) }
         }

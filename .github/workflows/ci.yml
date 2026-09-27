@@ -114,8 +114,10 @@ jobs:
           # 這樣寫的，於是「讓紅燈說得出理由」的那次修正自己啞了一輪）。
           # `|| rc=$?` 讓它落在條件語境裡，-e 不會觸發。
           rc=0
+          sim_id="$(python3 scripts/pick-ios-simulator.py)"
+          xcrun simctl terminate "$sim_id" com.kairumo.padnote || true
           xcodebuild test -project apple/Kairumo.xcodeproj -scheme Kairumo \
-            -destination "id=$(python3 scripts/pick-ios-simulator.py)" \
+            -destination "id=$sim_id" \
             -only-testing:KairumoUITests/SmokeUITests/testHomeScreenControlsAreReachable \
             -only-testing:KairumoUITests/SmokeUITests/testEditorScreenControlsAreReachable \
             -only-testing:KairumoUITests/SmokeUITests/testMoreMenuItemsAreReachable \
