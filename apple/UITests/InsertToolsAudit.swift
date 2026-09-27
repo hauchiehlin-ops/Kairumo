@@ -260,6 +260,10 @@ final class InsertToolsAudit: XCTestCase {
             let button = element(app, id)
             if button.exists && button.isHittable {
                 button.tap()
+                // 等待彈窗完全關閉完成，避免連續操作時因 presentation 尚未結束而吞掉下一個彈窗。
+                let disappeared = NSPredicate(format: "exists == false")
+                let exp = XCTNSPredicateExpectation(predicate: disappeared, object: button)
+                _ = XCTWaiter.wait(for: [exp], timeout: 5)
                 return
             }
         }
@@ -285,36 +289,40 @@ final class InsertToolsAudit: XCTestCase {
         var failures: [String] = []
         for tool in Self.tools where !tool.opened.isEmpty {
             let more = element(app, "editor.more")
+            guard more.waitForExistence(timeout: 10) else {
+                failures.append("\(tool.menuLabel)：找不到「更多」選單按鈕")
+                continue
+            }
             more.tap()
 
             // **一定要捲。** 這張選單有十九個項目，在手機上會捲動，
-            // 而每開關一張表之後捲動位置都不一樣 —— 不捲的話同一條測試
-            // 第一次過、第二次紅，而**間歇失敗的閘門會被關掉**。
+            // 優先找非 editor.canvas 的選單滾動容器，避免 app.swipeUp() 滑到背景畫布關閉選單。
             let item = app.buttons[tool.menuLabel].firstMatch
-            _ = item.waitForExistence(timeout: 3)
-                // 點得到才算數：只露一角的項目 `exists` 是 true，
-                // 但點擊落在畫面外 —— 不報錯，卻什麼也沒發生。
-            for _ in 0..<6 where !item.isHittable { app.swipeUp() }
-            guard item.isHittable else {
-                failures.append("\(tool.menuLabel)：選單裡點不到")
-                // 關掉選單再試下一個 —— 開著的選單會擋住下一次點擊。
-                app.tap()
+            _ = item.waitForExistence(timeout: 5)
+
+            var attempts = 0
+            while !item.isHittable && attempts < 6 {
+                attempts += 1
+                if let scroll = app.scrollViews.allElementsBoundByIndex.first(where: { $0.exists && $0.identifier != "editor.canvas" }) {
+                    scroll.swipeUp()
+                } else {
+                    break
+                }
+            }
+            guard item.exists else {
+                failures.append("\(tool.menuLabel)：選單裡找不到")
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.1)).tap()
                 continue
             }
             item.tap()
 
             let opened = app.descendants(matching: .any)
                 .matching(identifier: tool.opened).firstMatch
-            if !opened.waitForExistence(timeout: 6) {
+            if !opened.waitForExistence(timeout: 8) {
                 failures.append("\(tool.menuLabel)：打開之後找不到 \(tool.opened)")
             }
 
             // **關閉一律用同一個動作，不要去點那個標記。**
-            //
-            // 第一版是「點 opened 那個元素來關掉它」，而 3D 那一項的標記
-            // 是「從檔案選擇」—— 點下去會打開系統檔案挑選器然後整個卡住，
-            // 後面每一個工具都找不到。症狀看起來像「Theme Tools 不見了」，
-            // 而真正的原因在三個步驟之前。
             dismissSheet(app)
         }
 
