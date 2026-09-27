@@ -500,6 +500,15 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
     /// Ogg-Opus 的播放路徑（R3）。
     private func playOpus(url: URL, recordingId: String) {
+        #if os(iOS) || targetEnvironment(macCatalyst)
+        do {
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.defaultToSpeaker])
+            try AVAudioSession.sharedInstance().setActive(true)
+        } catch {
+            print("[AudioRecorderManager] AVAudioSession 設定為 playback 失敗: \(error)")
+        }
+        #endif
+
         guard let player = opusPlayer ?? OpusAudioPlayer() else {
             print("[AudioRecorderManager] 建不出 Opus 播放器")
             return
