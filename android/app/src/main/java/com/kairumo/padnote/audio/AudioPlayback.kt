@@ -43,14 +43,21 @@ object AudioPlayback {
         stop()
         if (!file.isFile) return null
         return runCatching {
-            val mp = MediaPlayer()
-            mp.setDataSource(file.absolutePath)
-            mp.prepare()
-            mp.setOnCompletionListener {
-                stop()
-                onFinished()
+            val mp = MediaPlayer().apply {
+                setAudioAttributes(
+                    android.media.AudioAttributes.Builder()
+                        .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SPEECH)
+                        .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                        .build()
+                )
+                setDataSource(file.absolutePath)
+                prepare()
+                setOnCompletionListener {
+                    stop()
+                    onFinished()
+                }
+                start()
             }
-            mp.start()
             player = mp
             currentId = cardId
             cardId

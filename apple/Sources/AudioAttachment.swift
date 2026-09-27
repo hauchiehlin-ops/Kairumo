@@ -311,7 +311,7 @@ struct AudioAttachmentItemView: View {
         }
         .contextMenu {
             Button {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                SheetCoordinator.shared.presentFromMenu {
                     performTranscribe()
                 }
             } label: {
@@ -320,7 +320,7 @@ struct AudioAttachmentItemView: View {
             .disabled(isTranscribing || !fileExists)
 
             Button {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                SheetCoordinator.shared.presentFromMenu {
                     showOfflineInfo = true
                 }
             } label: {
@@ -328,7 +328,7 @@ struct AudioAttachmentItemView: View {
             }
 
             Button {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                SheetCoordinator.shared.presentFromMenu {
                     renameText = item.title
                     isRenaming = true
                 }
@@ -339,7 +339,7 @@ struct AudioAttachmentItemView: View {
             Divider()
             
             Button(role: .destructive) {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                SheetCoordinator.shared.presentFromMenu {
                     onDelete()
                 }
             } label: {

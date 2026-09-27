@@ -12,6 +12,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.kairumo.padnote.canvas.gesturesIf
+import com.kairumo.padnote.canvas.StyleHandle
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
@@ -118,5 +119,13 @@ private fun ChartObjectView(
                 )
             }
         }
+    }
+
+    if (isSelected) {
+        StyleHandle(
+            widthDp = chart.width,
+            heightDp = chart.height,
+            onTap = { onEdit(chart) }
+        )
     }
 }

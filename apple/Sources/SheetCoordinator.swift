@@ -69,9 +69,30 @@ public final class SheetCoordinator: ObservableObject {
     /// 是否正在等待前一個轉場動畫完成
     @Published public private(set) var isTransitioning: Bool = false
 
+    public static let shared = SheetCoordinator()
+
     public init() {}
 
     // MARK: - Safe Presentation APIs
+
+    /// 從選單安全執行彈窗展示閉包動作
+    /// 保證等待 UIMenu 收合動畫（0.25s）完全完成後才觸發呈現，避免 UIKit Attempt to present 警告與請求丟棄
+    public func presentFromMenu(_ action: @escaping () -> Void) {
+        isTransitioning = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { [weak self] in
+            action()
+            self?.isTransitioning = false
+        }
+    }
+
+    /// 從選單安全觸發檔案選取器閉包
+    public func triggerFileImportFromMenu(_ action: @escaping () -> Void) {
+        isTransitioning = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) { [weak self] in
+            action()
+            self?.isTransitioning = false
+        }
+    }
 
     /// 從選單安全開啟次級視窗
     /// 保證等待 UIMenu 收合動畫（0.25s）完全完成後才觸發呈現，避免 UIKit Attempt to present 警告與請求丟棄

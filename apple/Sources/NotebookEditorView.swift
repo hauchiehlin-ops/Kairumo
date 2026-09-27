@@ -2018,16 +2018,13 @@ public struct NotebookEditorView: View {
     }
 
     private func triggerFileImport(_ slot: FfiImportSlot) {
-        activeImportSlot = nil
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
-            activeImportSlot = slot
+        SheetCoordinator.shared.triggerFileImportFromMenu {
+            self.activeImportSlot = slot
         }
     }
 
     private func presentFromMenu(_ action: @escaping () -> Void) {
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            action()
-        }
+        SheetCoordinator.shared.presentFromMenu(action)
     }
 
     // 寬螢幕完整主工具列

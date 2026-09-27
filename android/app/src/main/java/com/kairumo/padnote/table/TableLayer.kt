@@ -22,6 +22,7 @@ import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import com.kairumo.padnote.canvas.StyleHandle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 
@@ -146,6 +147,12 @@ private fun TableObjectView(
     }
 
         if (isSelected) {
+            StyleHandle(
+                widthDp = layout.width.toFloat(),
+                heightDp = layout.height.toFloat(),
+                onTap = { onEdit(table) }
+            )
+
             RotationHandle(
                 degrees = rotation,
                 widthDp = layout.width.toFloat(),

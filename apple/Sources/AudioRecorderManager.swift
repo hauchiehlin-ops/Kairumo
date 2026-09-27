@@ -474,7 +474,11 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
         do {
             #if os(iOS) || targetEnvironment(macCatalyst)
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            if isRunningOnMac {
+                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            } else {
+                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.defaultToSpeaker])
+            }
             try AVAudioSession.sharedInstance().setActive(true)
             #endif
 
@@ -502,7 +506,11 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     private func playOpus(url: URL, recordingId: String) {
         #if os(iOS) || targetEnvironment(macCatalyst)
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.defaultToSpeaker])
+            if isRunningOnMac {
+                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            } else {
+                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.defaultToSpeaker])
+            }
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             print("[AudioRecorderManager] AVAudioSession 設定為 playback 失敗: \(error)")

@@ -186,6 +186,55 @@ final class SheetCoordinatorTests: XCTestCase {
         coordinator.presentFromMenu(.mathCalculator)
         XCTAssertTrue(coordinator.isTransitioning)
     }
+
+    func testSheetCoordinatorMultiPresentationSequencing() {
+        let coordinator = SheetCoordinator()
+        coordinator.presentDirectly(.tableStudio)
+        XCTAssertEqual(coordinator.activeSheet, .tableStudio)
+
+        // 重新直接開啟另一工作坊時，舊工作坊應立即替換
+        coordinator.presentDirectly(.shapeStudio)
+        XCTAssertEqual(coordinator.activeSheet, .shapeStudio)
+
+        coordinator.dismissAll()
+        XCTAssertNil(coordinator.activeSheet)
+    }
+}
+
+extension EditorStateMachineTests {
+    func testCrossPlatformInvariantsAcrossModes() {
+        let sm = EditorStateMachine()
+
+        // Draw 模式不變式
+        XCTAssertTrue(sm.isInkDrawingAllowed)
+        XCTAssertFalse(sm.isCanvasTapCreatesText)
+        XCTAssertFalse(sm.isObjectDirectSelectionAllowed)
+
+        // Type 模式不變式
+        sm.setMode(.type)
+        XCTAssertFalse(sm.isInkDrawingAllowed)
+        XCTAssertTrue(sm.isCanvasTapCreatesText)
+        XCTAssertTrue(sm.isObjectDirectSelectionAllowed)
+
+        // 模態彈窗中不變式
+        sm.isModalActive = true
+        XCTAssertFalse(sm.isInkDrawingAllowed)
+        XCTAssertFalse(sm.isCanvasTapCreatesText)
+    }
+
+    func testRapidModeTogglingPreservesStateConsistency() {
+        let sm = EditorStateMachine()
+        for i in 0..<20 {
+            sm.toggleMode()
+            if i % 2 == 0 {
+                XCTAssertEqual(sm.currentMode, .type)
+                XCTAssertFalse(sm.isInkDrawingAllowed)
+            } else {
+                XCTAssertEqual(sm.currentMode, .draw)
+                XCTAssertTrue(sm.isInkDrawingAllowed)
+            }
+        }
+    }
 }
 
 

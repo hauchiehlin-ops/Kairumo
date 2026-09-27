@@ -76,6 +76,13 @@ public final class EditorStateMachine: ObservableObject {
         return currentMode == .type
     }
 
+    /// 畫布上的物件（表格、便利貼、圖表）是否允許直接選取或拖曳
+    /// 守衛規則：在打字模式（.type）下啟用；手寫模式（.draw）下不攔截觸控，讓筆墨直達畫布
+    public var isObjectDirectSelectionAllowed: Bool {
+        guard !isModalActive else { return false }
+        return currentMode == .type
+    }
+
     // MARK: - Initializer
 
     public init(initialMode: EditorMode = .draw) {
