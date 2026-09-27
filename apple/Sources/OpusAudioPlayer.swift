@@ -103,7 +103,12 @@ final class OpusAudioPlayer {
 
         do {
             #if os(iOS) || targetEnvironment(macCatalyst)
-            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            // Mac 沒有聽筒，呼叫 .defaultToSpeaker 會拋例外；Mac 上只設 category。
+            if ProcessInfo.processInfo.isiOSAppOnMac || ProcessInfo.processInfo.isMacCatalystApp {
+                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+            } else {
+                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.defaultToSpeaker])
+            }
             try AVAudioSession.sharedInstance().setActive(true)
             #endif
             if !engine.isRunning {

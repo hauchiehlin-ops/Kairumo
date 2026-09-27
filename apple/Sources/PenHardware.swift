@@ -156,6 +156,14 @@ struct AdvancedPenSettingsSheet: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var settings = PenHardwareSettings.shared
 
+    // MARK: 壓感曲線（跨平台：iOS/iPadOS/macOS）
+    @State private var pressureFloor: Double =
+        Double(UserDefaults.standard.float(forKey: "kairumo.pen.pressureFloor").nonZero ?? 0.1)
+    @State private var pressureGamma: Double =
+        Double(UserDefaults.standard.float(forKey: "kairumo.pen.pressureGamma").nonZero ?? 1.0)
+
+    private let loc = LocalizationManager.shared
+
     private let controls: [(FfiPenControl, String)] = [
         (.doubleTap, "pen_double_tap"),
         (.squeeze, "pen_squeeze")
@@ -176,31 +184,81 @@ struct AdvancedPenSettingsSheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Text(LocalizationManager.shared.localized("pen_pressure_apple_note"))
+                    Text(loc.localized("pen_pressure_apple_note"))
                         .font(.footnote)
                         .foregroundColor(.secondary)
                 }
+
+                // MARK: 壓感曲線 Section
+                Section(header: Text(loc.localized("pressure_floor"))) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        HStack {
+                            Text(loc.localized("pressure_floor"))
+                                .font(.subheadline)
+                            Spacer()
+                            Text(String(format: "%.2f", pressureFloor))
+                                .font(.caption.monospacedDigit())
+                                .foregroundColor(.secondary)
+                        }
+                        Slider(value: $pressureFloor, in: 0.01...1.0, step: 0.01)
+                            .onChange(of: pressureFloor) { v in
+                                UserDefaults.standard.set(Float(v), forKey: "kairumo.pen.pressureFloor")
+                            }
+                        Text(loc.localized("pressure_gamma"))
+                            .font(.subheadline)
+                            .padding(.top, 6)
+                        HStack {
+                            Text(loc.localized("pressure_gamma"))
+                                .font(.subheadline)
+                                .hidden() // spacer label
+                            Spacer()
+                            Text(String(format: "%.2f", pressureGamma))
+                                .font(.caption.monospacedDigit())
+                                .foregroundColor(.secondary)
+                        }
+                        Slider(value: $pressureGamma, in: 0.5...2.5, step: 0.05)
+                            .onChange(of: pressureGamma) { v in
+                                UserDefaults.standard.set(Float(v), forKey: "kairumo.pen.pressureGamma")
+                            }
+                    }
+                    Button(loc.localized("reset")) {
+                        pressureFloor = 0.1
+                        pressureGamma = 1.0
+                        UserDefaults.standard.removeObject(forKey: "kairumo.pen.pressureFloor")
+                        UserDefaults.standard.removeObject(forKey: "kairumo.pen.pressureGamma")
+                    }
+                    .foregroundColor(.secondary)
+                    .font(.caption)
+                }
                 
-                Section(header: Text(LocalizationManager.shared.localized("pen_controls_title"))) {
+                Section(header: Text(loc.localized("pen_controls_title"))) {
                     ForEach(controls, id: \.0.hashValue) { control, labelKey in
-                        Picker(LocalizationManager.shared.localized(labelKey), selection: Binding(
+                        Picker(loc.localized(labelKey), selection: Binding(
                             get: { settings.action(for: control) },
                             set: { settings.setAction($0, for: control) }
                         )) {
                             ForEach(actions, id: \.0.hashValue) { action, actionLabelKey in
-                                Text(LocalizationManager.shared.localized(actionLabelKey)).tag(action)
+                                Text(loc.localized(actionLabelKey)).tag(action)
                             }
                         }
                     }
                 }
             }
-            .navigationTitle(LocalizationManager.shared.localized("pen_settings_title"))
+            .navigationTitle(loc.localized("pen_settings_title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(LocalizationManager.shared.localized("done")) { dismiss() }
+                    Button(loc.localized("done")) { dismiss() }
                 }
             }
         }
     }
 }
+
+// MARK: - Helper
+
+private extension Float {
+    /// 回傳非零值，否則回 nil（用於從 UserDefaults 讀取未設定的鍵）
+    var nonZero: Float? { self == 0 ? nil : self }
+}
+

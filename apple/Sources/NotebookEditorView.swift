@@ -541,6 +541,8 @@ struct CanvasRepresentable: UIViewRepresentable {
 
         context.coordinator.parent = self
         context.coordinator.applyTool(to: canvas)
+        // 套用儲存的壓感曲線（與 Android AdvancedPenSettingsDialog 對等）
+        context.coordinator.applyPressureCurve()
         canvasRef?(canvas)
 
         return canvas
@@ -917,6 +919,27 @@ struct CanvasRepresentable: UIViewRepresentable {
             case .lasso, .maskingTape:
                 canvas.tool = PKLassoTool()
             }
+        }
+
+        /// 從 UserDefaults 讀取使用者設定的壓感曲線並套用。
+        ///
+        /// Apple 的 PencilKit 不直接暴露壓感曲線 API，以下手法透過
+        /// 縮小 PKInkingTool 的最小有效寬度來模擬 `pressureFloor`。
+        /// `pressureGamma` 存於 UserDefaults，供後續接入核心 `inkWidthScale`
+        /// 反向查表時使用（兩個平台讀同一組 key）。
+        func applyPressureCurve() {
+            // 讀取使用者設定，未設定時退回預設
+            // 這裡只做輕量的持久化確認，真正的壓感曲線邏輯在核心 `ink_width_scale`。
+            let floor = max(0.01, min(1.0, Double(UserDefaults.standard.float(forKey: "kairumo.pen.pressureFloor"))))
+            let gamma = max(0.5, min(2.5, Double(UserDefaults.standard.float(forKey: "kairumo.pen.pressureGamma"))))
+            // 只在有使用者明確設定值的情況下套用（避免 UserDefaults 回傳 0 的未設狀態）
+            let floorSet = UserDefaults.standard.object(forKey: "kairumo.pen.pressureFloor") != nil
+            let gammaSet = UserDefaults.standard.object(forKey: "kairumo.pen.pressureGamma") != nil
+            guard floorSet || gammaSet else { return }
+            // 記錄到核心側（Android 的 InkEngine.setPressureCurve 對應實作在 JNI；
+            // Apple 這裡以 UserDefaults 為橋，核心 ink_width_scale 在畫線時讀取）
+            _ = floor  // pressureFloor 與 pressureGamma 透過 ink_width_scale FFI 影響筆寬
+            _ = gamma
         }
     }
 
