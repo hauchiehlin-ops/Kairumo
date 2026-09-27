@@ -160,10 +160,10 @@ public final class EditorStateMachine: ObservableObject {
     private func updatePhase() {
         if isModalActive {
             phase = .modalStudio
-        } else if currentMode == .type {
-            phase = .typing(activeTextId: activeTextId)
         } else if activeTableCell != nil {
             phase = .selecting
+        } else if currentMode == .type {
+            phase = .typing(activeTextId: activeTextId)
         } else {
             phase = .drawing
         }

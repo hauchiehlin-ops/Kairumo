@@ -4082,7 +4082,12 @@ private fun InkScreen(
                     },
                     onUnavailable = { lowLatencyUnavailable = true },
                     clearToken = clearToken,
-                    onStylusDetected = { editorMode = EditorMode.DRAW },
+                    onStylusDetected = {
+                        // 守衛：若當前處於打字模式（TYPE），絕對不允許自動切回 DRAW，保護使用者文字編輯與選取
+                        if (editorMode == EditorMode.DRAW) {
+                            // already in draw mode
+                        }
+                    },
                     acceptsInk = editorMode == EditorMode.DRAW
                 )
             } else {
@@ -4105,7 +4110,12 @@ private fun InkScreen(
                             message = l10n("pen_only_toast")
                         }
                     },
-                    onStylusDetected = { editorMode = EditorMode.DRAW },
+                    onStylusDetected = {
+                        // 守衛：若當前處於打字模式（TYPE），絕對不允許自動切回 DRAW，保護使用者文字編輯與選取
+                        if (editorMode == EditorMode.DRAW) {
+                            // already in draw mode
+                        }
+                    },
                     contentVersion = revision,
                     // 底紋要畫在**畫布自己的白底之上、筆跡之下**。
                     // 疊一層 Composable 在外面是不行的：`InkCanvas` 會用

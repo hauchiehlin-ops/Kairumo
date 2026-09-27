@@ -359,7 +359,12 @@ private fun ContinuousPage(
             modifier = Modifier.fillMaxSize(),
             inkColor = currentInkColor,
             onInkChanged = { revision++ },
-            onStylusDetected = { onModeChange(EditorMode.DRAW) },
+            onStylusDetected = {
+                // 守衛：若處於打字模式（TYPE），絕對不允許自動切回 DRAW，保護使用者文字編輯與選取
+                if (editorMode == EditorMode.DRAW) {
+                    onModeChange(EditorMode.DRAW)
+                }
+            },
             contentVersion = revision,
             acceptsInk = editorMode == EditorMode.DRAW
         )
