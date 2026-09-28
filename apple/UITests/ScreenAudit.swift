@@ -200,32 +200,34 @@ enum ScreenAudit {
         var unreachable: [String] = []
         let visible = app.windows.firstMatch.frame
  
-        var lastFoundElement: XCUIElement? = nil
+        var foundElements: [XCUIElement] = []
         for id in ids {
             var (element, _) = elementFor(id, label: labels[id], in: app)
             if scrollToFind && !element.exists {
-                for _ in 0..<6 where !element.exists {
-                    // 優先尋找非 editor.canvas 的滾動容器（例如 iOS 上 UIMenu 的滾動視圖 _UIContextMenuListView）。
-                    // 絕不能滑動 editor.canvas，否則 UIKit 會視為點擊外部而立刻關閉選單。
-                    let scroll = app.scrollViews.matching(NSPredicate(format: "identifier != 'editor.canvas'")).firstMatch
-                    if scroll.exists {
-                        scroll.swipeUp()
-                    } else if let menu = app.menus.allElementsBoundByIndex.first(where: { $0.exists }) {
-                        menu.swipeUp()
-                    } else if let target = lastFoundElement, target.exists, target.frame.height > 0, visible.contains(target.frame) {
-                        target.swipeUp()
-                    } else {
-                        // 絕不能在沒有明確滾動容器時 app.swipeUp()，否則會滑到選單外部背景導致 UIKit 立刻關閉選單。
-                        break
+                // 若選單或彈窗有項目在可見範圍外，透過在已找到的選單項目內溫和拖曳滾動（避免 swipeUp 滑出選單邊界被 UIKit 判定為點擊背景而關閉選單）。
+                let validFound = foundElements.filter { $0.exists && $0.frame.height > 0 && visible.contains($0.frame) }
+                if !validFound.isEmpty {
+                    let midX = validFound.map { $0.frame.midX }.reduce(0, +) / CGFloat(validFound.count)
+                    let minY = validFound.map { $0.frame.minY }.min() ?? 0
+                    let maxY = validFound.map { $0.frame.maxY }.max() ?? 0
+                    if maxY - minY > 40 {
+                        let startY = maxY - 15
+                        let endY = minY + 15
+                        for _ in 0..<3 where !element.exists {
+                            let startCoord = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: midX, dy: startY))
+                            let endCoord = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: midX, dy: endY))
+                            startCoord.press(forDuration: 0.1, thenDragTo: endCoord)
+                            Thread.sleep(forTimeInterval: 0.2)
+                            (element, _) = elementFor(id, label: labels[id], in: app)
+                        }
                     }
-                    (element, _) = elementFor(id, label: labels[id], in: app)
                 }
             }
             guard element.exists else {
                 missing.append("\(id)（標籤：\(labels[id] ?? "—")）")
                 continue
             }
-            lastFoundElement = element
+            foundElements.append(element)
             if requireHittable {
                 guard element.isEnabled else { continue }
                 // 同 `check`：完整落在畫面上才問點不點得到。理由見那邊。
@@ -396,13 +398,13 @@ enum ScreenAudit {
     /// 棘輪裡會塞滿假的缺失，而**假的缺失會讓真的缺失被忽略**。
     private static func exists(_ element: XCUIElement, in app: XCUIApplication) -> Bool {
         if element.exists { return true }
-        // 往下找最多 4 次（手機直向約 3~4 個螢幕高度即可覆蓋整個頁面，避免 12 次大幅滑動觸發彈性碰撞與逾時）
-        for _ in 0..<4 {
+        // 往下找最多 3 次（手機直向約 2~3 個螢幕高度即可覆蓋整個頁面，避免多次大幅滑動觸發彈性碰撞與逾時）
+        for _ in 0..<3 {
             app.swipeUp()
             if element.exists { return true }
         }
-        // 若往下找不到，往上捲回找最多 4 次（確保先前已滾動到下方的畫面也能找到頂部項目）
-        for _ in 0..<4 {
+        // 若往下找不到，往上捲回找最多 3 次（確保先前已滾動到下方的畫面也能找到頂部項目）
+        for _ in 0..<3 {
             app.swipeDown()
             if element.exists { return true }
         }

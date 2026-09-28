@@ -327,7 +327,7 @@ public struct HomeWorkbenchView: View {
                     }
                     .accessibilityLabel(localizationManager.localized("hw_diag_a11y"))
                     .help(localizationManager.localized("hw_diag_a11y"))
-                    .accessibilityIdentifier("home.diagnostics_button")
+                    .accessibilityIdentifier("home.diagnostics")
                 }
 
                 ToolbarItem(placement: .primaryAction) {
@@ -999,12 +999,12 @@ public struct HomeWorkbenchView: View {
                     } label: {
                         HStack(spacing: 4) {
                             Text(showAllContinue ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleList.count))")
-                                .accessibilityIdentifier("home.continue.show_all")
                             Image(systemName: showAllContinue ? "chevron.up" : "chevron.down")
                         }
                         .dsChip()
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("home.continue.show_all")
                 }
 
                 // 窄螢幕垂直分行
@@ -1039,12 +1039,12 @@ public struct HomeWorkbenchView: View {
                         } label: {
                             HStack(spacing: 4) {
                                 Text(showAllContinue ? localizationManager.localized("collapse") : "\(localizationManager.localized("show_all")) (\(visibleList.count))")
-                                    .accessibilityIdentifier("home.continue.show_all")
                                 Image(systemName: showAllContinue ? "chevron.up" : "chevron.down")
                             }
                             .dsChip()
                         }
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("home.continue.show_all")
                     }
                 }
             }
@@ -1593,11 +1593,11 @@ public struct HomeWorkbenchView: View {
                         HStack(spacing: 4) {
                             Image(systemName: "folder.badge.plus")
                             Text(localizationManager.localized("new_subfolder"))
-                                .accessibilityIdentifier("home.notebooks.new_folder")
                         }
                         .dsChip()
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("home.notebooks.new_folder")
                 }
 
                 ScrollView(.horizontal, showsIndicators: true) {
@@ -2370,7 +2370,6 @@ public struct HomeWorkbenchView: View {
                 } label: {
                     HStack(spacing: 4) {
                         Text("\(localizationManager.localized("version_number")): \(appVersionString)")
-                            .accessibilityIdentifier("home.version")
                             .font(.footnote)
                             .foregroundColor(.secondary)
                         Image(systemName: "chevron.right")
@@ -2379,9 +2378,7 @@ public struct HomeWorkbenchView: View {
                     }
                 }
                 .buttonStyle(.plain)
-                // 診斷頁原本要先開頭像選單才點得到，選單拿掉之後這裡是
-                // 首頁上最穩定的入口，UI 測試改指這一顆。
-                .accessibilityIdentifier("home.diagnostics")
+                .accessibilityIdentifier("home.version")
 
                 Text("•")
                     .font(.footnote)

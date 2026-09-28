@@ -2845,6 +2845,30 @@ public struct NotebookEditorView: View {
             Section {
                 Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
                     .accessibilityIdentifier("editor.insert.refine_sketch")
+                Button {
+                    presentFromMenu { showNoteIntelligence = true }
+                } label: {
+                    Label(localizationManager.localized("ai_summary"), systemImage: "sparkles")
+                }
+                .accessibilityIdentifier("editor.insert.ai_summary")
+                Button { recognizeHandwritingOnCurrentPage() } label: {
+                    Label(localizationManager.localized("recognize_handwriting"), systemImage: "text.viewfinder")
+                }
+                .accessibilityIdentifier("editor.insert.recognize")
+                Button {
+                    presentFromMenu { showCollaborationSheet = true }
+                } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }
+                    .accessibilityIdentifier("editor.insert.collaborate")
+                Button { withAnimation { isPlacingCommentPin.toggle() } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
+                    .accessibilityIdentifier("editor.insert.comment_pin")
+                // 放在編輯器而不是設定頁：使用者想關掉某支筆的那一刻，
+                // 是他正看著那支筆的時候。
+                Button {
+                    presentFromMenu { showToolbarCustomization = true }
+                } label: {
+                    Label(localizationManager.localized("customize_toolbar"), systemImage: "slider.horizontal.3")
+                }
+                .accessibilityIdentifier("editor.customize_toolbar")
                 // 掌拒門檻（S-101）。判定一直都在核心，缺的只是「讓使用者調」——
                 // 握筆姿勢比較特別的人，手掌一放上去就是一道線，
                 // 而在此之前他完全沒有辦法處理。
@@ -2860,30 +2884,6 @@ public struct NotebookEditorView: View {
                     Label(localizationManager.localized("pen_settings_title"), systemImage: "applepencil.and.scribble")
                 }
                 .accessibilityIdentifier("editor.insert.advanced_pen_settings")
-                // 放在編輯器而不是設定頁：使用者想關掉某支筆的那一刻，
-                // 是他正看著那支筆的時候。
-                Button {
-                    presentFromMenu { showToolbarCustomization = true }
-                } label: {
-                    Label(localizationManager.localized("customize_toolbar"), systemImage: "slider.horizontal.3")
-                }
-                .accessibilityIdentifier("editor.customize_toolbar")
-                Button { withAnimation { isPlacingCommentPin.toggle() } } label: { Label(localizationManager.localized("add_comment_pin"), systemImage: "text.bubble.fill") }
-                    .accessibilityIdentifier("editor.insert.comment_pin")
-                Button {
-                    presentFromMenu { showCollaborationSheet = true }
-                } label: { Label(localizationManager.localized("collaborate"), systemImage: "person.2.fill") }
-                    .accessibilityIdentifier("editor.insert.collaborate")
-                Button { recognizeHandwritingOnCurrentPage() } label: {
-                    Label(localizationManager.localized("recognize_handwriting"), systemImage: "text.viewfinder")
-                }
-                .accessibilityIdentifier("editor.insert.recognize")
-                Button {
-                    presentFromMenu { showNoteIntelligence = true }
-                } label: {
-                    Label(localizationManager.localized("ai_summary"), systemImage: "sparkles")
-                }
-                .accessibilityIdentifier("editor.insert.ai_summary")
 
                 Button {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
