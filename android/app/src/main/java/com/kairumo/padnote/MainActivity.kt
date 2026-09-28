@@ -436,24 +436,41 @@ private fun NotebookHome(
     //
     // 放在這裡而不是 `NotebookLibrary.currentOrCreate`：那條路只有「直接開一本」
     // 才會走到，從首頁進來的使用者看到的會是空清單。已經有東西就什麼也不做 ——
-    // 見 `SeedNotebooks.seedIfEmpty`。
-    val seeded = remember { SeedNotebooks.seedIfEmpty(activity, device, lang) }
+    var seeded by remember { mutableIntStateOf(0) }
+    var entries by remember { mutableStateOf<List<NotebookLibrary.Entry>>(emptyList()) }
+    var allEntries by remember { mutableStateOf<List<NotebookLibrary.Entry>>(emptyList()) }
+    var folders by remember { mutableStateOf<List<FolderTree.Folder>>(emptyList()) }
+    var breadcrumb by remember { mutableStateOf<List<FolderTree.Folder>>(emptyList()) }
+    var allFolders by remember { mutableStateOf<List<FolderTree.Folder>>(emptyList()) }
+    var recordings by remember { mutableStateOf<List<RecordingIndex.Recording>>(emptyList()) }
 
-    // revision 是重讀的觸發器。清單來自檔案系統，沒有觀察者可以訂閱 ——
-    // 新增或刪除之後不主動重讀的話，畫面會停在舊的內容。
-    val entries = remember(revision, sort, folderId, seeded) {
-        NotebookLibrary.all(activity, device, sort, folderId)
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            val count = SeedNotebooks.seedIfEmpty(activity, device, lang)
+            if (count > 0) {
+                withContext(Dispatchers.Main) { seeded = count }
+            }
+        }
     }
-    // 搜尋要搜整個筆記庫，不是只搜眼前這一層。
-    val allEntries = remember(revision, sort, seeded) {
-        NotebookLibrary.all(activity, device, sort)
+
+    LaunchedEffect(revision, sort, folderId, seeded) {
+        withContext(Dispatchers.IO) {
+            val loadedEntries = NotebookLibrary.all(activity, device, sort, folderId)
+            val loadedAll = NotebookLibrary.all(activity, device, sort)
+            val loadedFolders = FolderTree.subfolders(activity, folderId)
+            val loadedBreadcrumb = FolderTree.pathTo(activity, folderId)
+            val loadedAllFolders = FolderTree.all(activity)
+            val loadedRecordings = RecordingIndex.recent(activity, device)
+            withContext(Dispatchers.Main) {
+                entries = loadedEntries
+                allEntries = loadedAll
+                folders = loadedFolders
+                breadcrumb = loadedBreadcrumb
+                allFolders = loadedAllFolders
+                recordings = loadedRecordings
+            }
+        }
     }
-    val folders = remember(revision, folderId) { FolderTree.subfolders(activity, folderId) }
-    val breadcrumb = remember(revision, folderId) { FolderTree.pathTo(activity, folderId) }
-    // 搬移對話框要列出**全部**資料夾，不是只有這一層的。
-    val allFolders = remember(revision) { FolderTree.all(activity) }
-    // 掃整個筆記本目錄，所以不要每次重組都做 —— 綁在 revision 上就好。
-    val recordings = remember(revision) { RecordingIndex.recent(activity, device) }
 
     // 同步都在背景執行緒跑，共用同一個 scope。宣告要在第一個使用點之前 ——
     // Compose 的函式本體是由上往下讀的。
@@ -1496,7 +1513,7 @@ private fun InkScreen(
     var showProColorWheel by remember { mutableStateOf(false) }
     var minimalistCanvasMode by remember { mutableStateOf(false) }
     var floatingPillExpanded by remember { mutableStateOf(false) }
-    var strokeStabilizer by remember { mutableFloatStateOf(0f) }
+    var strokeStabilizer by remember { mutableFloatStateOf(35f) }
     var showSymmetryGuide by remember { mutableStateOf(false) }
     var showRadialMenu by remember { mutableStateOf(false) }
     var radialMenuCenter by remember { mutableStateOf(Offset(300f, 300f)) }
@@ -3194,31 +3211,6 @@ private fun InkScreen(
                     },
                     label = { Text(l10n("ink_pen_only")) }
                 )
-                // 掌拒門檻（S-101）。判定一直都在核心，缺的只是「讓使用者調」——
-                // 握筆姿勢比較特別的人，手掌一放上去就是一道線，
-                // 而在此之前他完全沒有辦法處理。
-                FilterChip(
-                    selected = palmTuned,
-                    onClick = { showPalmThresholds = true },
-                    label = { Text(l10n("palm_rejection_settings")) }
-                )
-                FilterChip(
-                    selected = penTuned,
-                    onClick = { showPenSettings = true },
-                    label = { Text(l10n("advanced_pen_settings")) }
-                )
-                // 防手震滑桿（Stroke Stabilizer）
-                FilterChip(
-                    selected = strokeStabilizer > 0f,
-                    onClick = { strokeStabilizer = if (strokeStabilizer > 0f) 0f else 50f },
-                    label = { Text(l10n("refine_sketch")) }
-                )
-                // 對稱繪圖輔助線（使用現有構圖輔助線 i18n key）
-                FilterChip(
-                    selected = showSymmetryGuide,
-                    onClick = { showSymmetryGuide = !showSymmetryGuide },
-                    label = { Text("⟺ " + l10n("composition_overlay")) }
-                )
             } else {
                 FilterChip(
                     selected = marqueeActive,
@@ -3413,23 +3405,6 @@ private fun InkScreen(
             toolbarPlacement == uniffi.padnote_core.FfiPlacement.TOP
         ) {
             inkBar()
-            // 防手震強度滑桿（只在滑桿開啟時顯示）
-            if (strokeStabilizer > 0f) {
-                androidx.compose.foundation.layout.Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-                    verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(l10n("refine_sketch"), style = MaterialTheme.typography.labelSmall)
-                    Slider(
-                        value = strokeStabilizer,
-                        onValueChange = { strokeStabilizer = it },
-                        valueRange = 0f..100f,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Text("${strokeStabilizer.toInt()}%", style = MaterialTheme.typography.labelSmall)
-                }
-            }
         }
     }
 

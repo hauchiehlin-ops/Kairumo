@@ -1529,7 +1529,11 @@ public struct NotebookEditorView: View {
                     // 立起雙屏模式：上方顯示主要畫布／預覽區，下方為沉浸式觸控工具盤
                     VStack(spacing: 0) {
                         ZStack(alignment: .topLeading) {
-                            canvasWorkArea
+                            if editorMode == .draw {
+                                canvasWorkArea
+                            } else {
+                                wordDocumentArea
+                            }
 
                             HStack(spacing: 6) {
                                 Image(systemName: "laptopcomputer.and.ipad")
@@ -1562,8 +1566,12 @@ public struct NotebookEditorView: View {
                             sidebarResizeHandle(total: geo.size.width, current: width)
                         }
 
-                        // 核心手寫（支援全品牌手寫筆） vs 打字排版模式（共用畫布，維持樣板與置中）
-                        canvasWorkArea
+                        // 核心手寫（支援全品牌手寫筆） vs Google Docs / Word 標準居中文檔紙張編輯區
+                        if editorMode == .draw {
+                            canvasWorkArea
+                        } else {
+                            wordDocumentArea
+                        }
                     }
                     .onAppear { editorAvailableWidth = geo.size.width }
                     .onChange(of: geo.size.width) { newValue in
@@ -3878,8 +3886,8 @@ public struct NotebookEditorView: View {
                 .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
                 .scaleEffect(canvasZoomScale, anchor: .topLeading)
                 .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
-                .allowsHitTesting(editorMode == .type)
-                .zIndex(editorMode == .type ? 3 : 1)
+                .allowsHitTesting(editorMode == .type || inlineEditingTextId != nil || editingTextId != nil)
+                .zIndex((editorMode == .type || inlineEditingTextId != nil) ? 3 : 1)
 
             CanvasRepresentable(
                 drawing: $currentDrawing,
@@ -8876,10 +8884,23 @@ public struct NotebookEditorView: View {
 
     /// 🌟 方案 A+B：手指或游標在畫布上的單擊事件
     private func handleCanvasDirectTap(at location: CGPoint, page: Int? = nil) {
-        if let p = page { currentPageIndex = p }
+        let targetPage = page ?? currentPageIndex
+        currentPageIndex = targetPage
         if editorMode == .type {
-            handleCanvasTapInTypeMode(at: location)
+            handleCanvasTapInTypeMode(at: location, page: targetPage)
         } else {
+            // 手寫模式下單擊：優先檢查是否點擊在既有文字方塊範圍內
+            if let existing = notebook.textAttachments?.first(where: { item in
+                item.pageIndex == targetPage &&
+                CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -12, dy: -12).contains(location)
+            }) {
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    inlineEditingTextId = existing.id
+                    editingTextId = nil
+                }
+                return
+            }
+
             // 手寫模式下單擊畫布空白處：若先前有焦點中的文字方塊，收回文字編輯狀態
             if let activeId = inlineEditingTextId {
                 if let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),

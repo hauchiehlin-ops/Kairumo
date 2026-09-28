@@ -180,23 +180,28 @@ final class CoreAudioCapture {
         self.engine = newEngine
         let input = newEngine.inputNode
 
-        var chosenFormat = input.outputFormat(forBus: 0)
+        #if os(iOS) || targetEnvironment(macCatalyst)
+        if !AVAudioSession.sharedInstance().isInputAvailable || AVAudioSession.sharedInstance().inputNumberOfChannels == 0 {
+            onError?("裝置未連接麥克風或無可用音訊輸入設備")
+            stop()
+            return nil
+        }
+        #endif
+
+        let hwFormat = input.inputFormat(forBus: 0)
+        let outFormat = input.outputFormat(forBus: 0)
+        if hwFormat.channelCount == 0 && outFormat.channelCount == 0 {
+            onError?("音訊輸入節點無可用聲道，請確認麥克風連線與系統權限")
+            stop()
+            return nil
+        }
+
+        var chosenFormat = (outFormat.channelCount > 0 && outFormat.sampleRate > 0) ? outFormat : hwFormat
         if chosenFormat.sampleRate <= 0 || chosenFormat.channelCount == 0 {
             chosenFormat = input.inputFormat(forBus: 0)
         }
-        if chosenFormat.sampleRate <= 0 || chosenFormat.channelCount == 0 {
-            #if os(iOS) || targetEnvironment(macCatalyst)
-            let sr = AVAudioSession.sharedInstance().sampleRate
-            let ch = AVAudioSession.sharedInstance().inputNumberOfChannels
-            let safeSr = sr > 0 ? sr : 44100
-            let safeCh = ch > 0 ? ch : 1
-            if let fallback = AVAudioFormat(standardFormatWithSampleRate: safeSr, channels: AVAudioChannelCount(safeCh)) {
-                chosenFormat = fallback
-            }
-            #endif
-        }
 
-        // 取樣率為 0 表示麥克風還沒準備好（權限沒過、或被別的 App 佔用）。
+        // 取樣率或聲道為 0 表示麥克風硬體不可用（權限沒過、無輸入設備、或被別的 App 佔用）。
         guard chosenFormat.sampleRate > 0 && chosenFormat.channelCount > 0 else {
             onError?("麥克風尚未就緒（取樣率: \(chosenFormat.sampleRate), 聲道: \(chosenFormat.channelCount)）")
             stop()

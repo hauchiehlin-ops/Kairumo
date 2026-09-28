@@ -269,6 +269,7 @@ public final class AutoSyncController: ObservableObject {
     /// 從 `KairumoApp.init` 呼叫。
     static func registerBackgroundTask() {
         #if canImport(BackgroundTasks) && !targetEnvironment(macCatalyst)
+            guard !ProcessInfo.processInfo.isiOSAppOnMac else { return }
             BGTaskScheduler.shared.register(
                 forTaskWithIdentifier: backgroundTaskId, using: nil
             ) { task in
@@ -298,6 +299,7 @@ public final class AutoSyncController: ObservableObject {
 
     private func scheduleBackgroundTask() {
         #if canImport(BackgroundTasks) && !targetEnvironment(macCatalyst)
+            guard !ProcessInfo.processInfo.isiOSAppOnMac else { return }
             let request = BGAppRefreshTaskRequest(identifier: Self.backgroundTaskId)
             // 最早 15 分鐘後。給得比這個短沒有意義 —— 系統本來就不保證時間。
             request.earliestBeginDate = Date(timeIntervalSinceNow: 15 * 60)
