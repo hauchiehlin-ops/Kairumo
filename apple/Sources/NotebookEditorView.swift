@@ -8868,9 +8868,13 @@ public struct NotebookEditorView: View {
         return false
     }
 
-    /// 🌟 方案 A：手寫模式下 Apple Pencil 碰到畫布時收回未輸入完成的空白文字框
+    /// 🌟 全自動意圖感知：Apple Pencil 碰到畫布時自動切換至手繪模式，並收回未輸入完成的空白文字框
     private func handlePencilTouchBegan() {
-        guard editorMode == .draw else { return }
+        if editorMode != .draw {
+            withAnimation(.easeInOut(duration: 0.2)) {
+                editorMode = .draw
+            }
+        }
         if let activeId = inlineEditingTextId {
             if let activeItem = notebook.textAttachments?.first(where: { $0.id == activeId }),
                activeItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -8894,7 +8898,9 @@ public struct NotebookEditorView: View {
                 item.pageIndex == targetPage &&
                 CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -12, dy: -12).contains(location)
             }) {
-                withAnimation(.easeInOut(duration: 0.15)) {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    // 全自動意圖感知：點擊文字方塊，自動切換至文字模式並聚焦，展開 Word 級文字編輯工具
+                    editorMode = .type
                     inlineEditingTextId = existing.id
                     editingTextId = nil
                 }

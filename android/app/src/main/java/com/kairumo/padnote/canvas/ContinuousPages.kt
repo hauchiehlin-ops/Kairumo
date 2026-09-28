@@ -360,8 +360,8 @@ private fun ContinuousPage(
             inkColor = currentInkColor,
             onInkChanged = { revision++ },
             onStylusDetected = {
-                // 守衛：若處於打字模式（TYPE），絕對不允許自動切回 DRAW，保護使用者文字編輯與選取
-                if (editorMode == EditorMode.DRAW) {
+                // 全自動意圖感知：偵測到 Stylus 觸控筆下筆時，自動平滑切換回 DRAW 手繪模式
+                if (editorMode != EditorMode.DRAW) {
                     onModeChange(EditorMode.DRAW)
                 }
             },

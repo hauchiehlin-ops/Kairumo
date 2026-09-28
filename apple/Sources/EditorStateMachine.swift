@@ -116,19 +116,21 @@ public final class EditorStateMachine: ObservableObject {
     }
 
     /// Apple Pencil 觸碰畫布時的回呼
-    /// - Returns: true 表示此觸碰應作為筆跡處理；false 表示應作為點擊/游標指針處理（不可切換模式）
+    /// - Returns: true 表示此觸碰應作為筆跡處理
+    @discardableResult
     public func handlePencilTouch() -> Bool {
-        // 核心守衛：若當前為打字模式，絕對不允許 Pencil 觸碰自動切換回 .draw
-        guard currentMode == .draw else {
-            return false
+        // 全自動意圖感知：當偵測到 Apple Pencil 下筆時，若處於打字模式，自動平滑切換回手繪模式
+        if currentMode == .type {
+            setMode(.draw)
         }
         return true
     }
 
     /// 點選文字方塊進行行內編輯
     public func beginTextEditing(id: UUID) {
+        // 全自動意圖感知：點擊文字方塊時，自動平滑切換至打字排版模式
         if currentMode != .type {
-            currentMode = .type
+            setMode(.type)
         }
         activeTextId = id
         activeTableCell = nil

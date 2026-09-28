@@ -4041,9 +4041,10 @@ private fun InkScreen(
                     onUnavailable = { lowLatencyUnavailable = true },
                     clearToken = clearToken,
                     onStylusDetected = {
-                        // 守衛：若當前處於打字模式（TYPE），絕對不允許自動切回 DRAW，保護使用者文字編輯與選取
-                        if (editorMode == EditorMode.DRAW) {
-                            // already in draw mode
+                        // 全自動意圖感知：偵測到 Stylus 觸控筆下筆時，自動平滑切換回 DRAW 手繪模式
+                        if (editorMode != EditorMode.DRAW) {
+                            editorMode = EditorMode.DRAW
+                            selectedTextId = null
                         }
                     },
                     acceptsInk = editorMode == EditorMode.DRAW
@@ -4069,9 +4070,10 @@ private fun InkScreen(
                         }
                     },
                     onStylusDetected = {
-                        // 守衛：若當前處於打字模式（TYPE），絕對不允許自動切回 DRAW，保護使用者文字編輯與選取
-                        if (editorMode == EditorMode.DRAW) {
-                            // already in draw mode
+                        // 全自動意圖感知：偵測到 Stylus 觸控筆下筆時，自動平滑切換回 DRAW 手繪模式
+                        if (editorMode != EditorMode.DRAW) {
+                            editorMode = EditorMode.DRAW
+                            selectedTextId = null
                         }
                     },
                     contentVersion = revision,
@@ -4157,11 +4159,16 @@ private fun InkScreen(
             key(textRevision) {
                 TextBoxLayer(
                     zIndexOf = zIndexOf,
-                    interactive = editorMode == EditorMode.TYPE,
+                    interactive = true,
                     boxes = textStore.all,
                     density = canvasDensity,
                     selectedId = selectedTextId,
-                    onSelect = { selectedTextId = it },
+                    onSelect = { id ->
+                        selectedTextId = id
+                        if (id != null && editorMode != EditorMode.TYPE) {
+                            editorMode = EditorMode.TYPE
+                        }
+                    },
                     onEditStyle = { editingText = it },
                     onChanged = { box -> textStore.persist(box); textRevision++ },
                     onMoved = { box, dx, dy ->
