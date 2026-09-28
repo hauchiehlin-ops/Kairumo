@@ -215,7 +215,8 @@ enum ScreenAudit {
                     } else if let target = lastFoundElement, target.exists, target.frame.height > 0, visible.contains(target.frame) {
                         target.swipeUp()
                     } else {
-                        app.swipeUp()
+                        // 絕不能在沒有明確滾動容器時 app.swipeUp()，否則會滑到選單外部背景導致 UIKit 立刻關閉選單。
+                        break
                     }
                     (element, _) = elementFor(id, label: labels[id], in: app)
                 }
@@ -225,17 +226,19 @@ enum ScreenAudit {
                 continue
             }
             lastFoundElement = element
-            guard element.isEnabled else { continue }
-            // 同 `check`：完整落在畫面上才問點不點得到。理由見那邊。
-            guard requireHittable, visible.contains(element.frame) else { continue }
-            if !element.isHittable {
-                // 座標一起印。「點不到」有兩種完全不同的成因 ——
-                // 上面蓋了東西（要修產品），或是它其實在畫面外而
-                // `intersects` 因為選單裁切而誤判（要修稽核）。
-                // 沒有座標就分不出來，而分不出來就只能猜。
-                unreachable.append(
-                    "\(id) frame=\(element.frame) 視窗=\(visible)"
-                    + " label=\(labels[id] ?? "—")")
+            if requireHittable {
+                guard element.isEnabled else { continue }
+                // 同 `check`：完整落在畫面上才問點不點得到。理由見那邊。
+                guard visible.contains(element.frame) else { continue }
+                if !element.isHittable {
+                    // 座標一起印。「點不到」有兩種完全不同的成因 ——
+                    // 上面蓋了東西（要修產品），或是它其實在畫面外而
+                    // `intersects` 因為選單裁切而誤判（要修稽核）。
+                    // 沒有座標就分不出來，而分不出來就只能猜。
+                    unreachable.append(
+                        "\(id) frame=\(element.frame) 視窗=\(visible)"
+                        + " label=\(labels[id] ?? "—")")
+                }
             }
         }
 
@@ -345,12 +348,16 @@ enum ScreenAudit {
         _ id: String, label: String?, in app: XCUIApplication
     ) -> (element: XCUIElement, matchedByLabel: Bool) {
         if let label, !label.isEmpty {
+            let byButton = app.buttons[label].firstMatch
+            if byButton.exists { return (byButton, true) }
             let byLabel = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch
             if byLabel.exists { return (byLabel, true) }
         }
         let byId = app.descendants(matching: .any).matching(identifier: id).firstMatch
         if byId.exists { return (byId, false) }
         if let label, !label.isEmpty {
+            let byButton = app.buttons[label].firstMatch
+            if byButton.exists { return (byButton, true) }
             return (app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch, true)
         }
         return (byId, false)
@@ -389,12 +396,16 @@ enum ScreenAudit {
     /// 棘輪裡會塞滿假的缺失，而**假的缺失會讓真的缺失被忽略**。
     private static func exists(_ element: XCUIElement, in app: XCUIApplication) -> Bool {
         if element.exists { return true }
-        for _ in 0..<12 {
+        // 往下找最多 4 次（手機直向約 3~4 個螢幕高度即可覆蓋整個頁面，避免 12 次大幅滑動觸發彈性碰撞與逾時）
+        for _ in 0..<4 {
             app.swipeUp()
             if element.exists { return true }
         }
-        // 捲回頂端，下一個控制項才從同一個起點找。
-        for _ in 0..<14 { app.swipeDown() }
+        // 若往下找不到，往上捲回找最多 4 次（確保先前已滾動到下方的畫面也能找到頂部項目）
+        for _ in 0..<4 {
+            app.swipeDown()
+            if element.exists { return true }
+        }
         return false
     }
 
