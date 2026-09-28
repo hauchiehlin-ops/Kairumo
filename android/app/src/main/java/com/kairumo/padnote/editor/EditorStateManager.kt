@@ -92,14 +92,11 @@ class EditorStateManager(initialMode: EditorMode = EditorMode.DRAW) {
 
     /**
      * 觸控筆（Stylus / S-Pen）觸碰畫布時的回呼
-     * @return true 表示此觸碰應作為筆跡處理
+     * @return true 表示此觸碰應作為筆跡處理；false 表示應作為點擊/游標指針處理（不可切換模式）
      */
     fun handleStylusTouch(): Boolean {
-        // 全自動意圖感知：當偵測到觸控筆下筆時，若處於打字模式，自動平滑切換回手繪模式
-        if (currentMode == EditorMode.TYPE) {
-            setMode(EditorMode.DRAW)
-        }
-        return true
+        // 核心守衛：若當前為打字模式，絕對不允許觸控筆觸碰自動切換回 DRAW
+        return currentMode == EditorMode.DRAW
     }
 
     /** 點選文字方塊進行行內編輯 */
