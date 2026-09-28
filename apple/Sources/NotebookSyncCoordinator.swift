@@ -26,6 +26,35 @@
 import Foundation
 import PencilKit
 
+/// 同一個 App 行程內的同步入口佇列。
+///
+/// 核心閘保證互斥；這一層把「忙碌就丟掉」改成「等前一輪收尾」。因此自動
+/// 同步、手動同步、資料夾同步與重置不會同時寫同一批套件，也不需要使用者
+/// 看見「上一輪仍在跑」後再手動重按。跨裝置不共用這把鎖：不同裝置靠各自
+/// oplog 與 CRDT 合併，才能離線工作。
+enum SyncGateQueue {
+    private static let pollNanoseconds: UInt64 = 150_000_000
+    private static let maxWaitMs: UInt64 = 2 * 60_000
+
+    static func enter(label: String) async -> FfiSyncGrant? {
+        let started = UInt64(ProcessInfo.processInfo.systemUptime * 1000)
+        while !Task.isCancelled {
+            let now = UInt64(ProcessInfo.processInfo.systemUptime * 1000)
+            let grant = syncGateTryEnter(label: label, nowMs: now)
+            if grant.granted { return grant }
+            if now.saturatingSubtract(started) >= maxWaitMs { return nil }
+            try? await Task.sleep(nanoseconds: pollNanoseconds)
+        }
+        return nil
+    }
+}
+
+private extension UInt64 {
+    func saturatingSubtract(_ other: UInt64) -> UInt64 {
+        self >= other ? self - other : 0
+    }
+}
+
 /// 同步需要用到的儲存能力。
 ///
 /// 抽出這個協定，是為了讓同步流程**測得到**：`NotebookStore` 是單例又綁死
@@ -37,6 +66,7 @@ protocol SyncableNotebookStore: AnyObject {
     var allNotebooks: [NotebookDocument] { get }
     var syncPackagesDirectory: URL { get }
     var syncAttachmentsDirectory: URL { get }
+    var syncDrawingsDirectory: URL { get }
     /// **別台裝置**寫的那些筆畫。匯出時要扣掉它們，才不會複製一份掛在自己名下。
     var syncBaselineDirectory: URL { get }
 
@@ -58,6 +88,7 @@ protocol SyncableNotebookStore: AnyObject {
     func syncSaveDrawing(notebookId: String, pageIndex: Int, drawing: PKDrawing)
     func syncUpsert(_ document: NotebookDocument)
     func syncPurgeDeletedNotebooks(_ deletedIds: Set<String>)
+    func syncRepairSeedDuplicates()
     func syncRefreshRecordings()
 }
 
@@ -67,6 +98,7 @@ extension SyncableNotebookStore {
     }
 
     func syncPurgeDeletedNotebooks(_: Set<String>) {}
+    func syncRepairSeedDuplicates() {}
     func syncRefreshRecordings() {}
 }
 
@@ -83,6 +115,10 @@ extension NotebookStore: SyncableNotebookStore {
 
     func syncRefreshRecordings() {
         refreshRecordings()
+    }
+
+    func syncRepairSeedDuplicates() {
+        repairSyncedSeedDuplicates()
     }
 
     var allNotebooks: [NotebookDocument] {
@@ -108,6 +144,10 @@ extension NotebookStore: SyncableNotebookStore {
 
     var syncAttachmentsDirectory: URL {
         attachmentsDirectory
+    }
+
+    var syncDrawingsDirectory: URL {
+        drawingsDirectory
     }
 
     // activeNotebookId 由 NotebookStore 本身的 @Published var 直接滿足協定，不需要在此重新宣告
@@ -159,14 +199,6 @@ enum NotebookSyncCoordinator {
     /// `別人的 = 合併後的 − 自己的`。
     private typealias OwnStrokes = [String: PKDrawing]
 
-    /// 閘用的時鐘。
-    ///
-    /// **要單調的。** 用牆上時鐘的話，時區或校時跳一下就會讓「拿著多久」
-    /// 算出負數或幾小時 —— 前者永遠不接手，後者立刻把正在跑的那輪踢掉。
-    private static func gateNowMs() -> UInt64 {
-        UInt64(ProcessInfo.processInfo.systemUptime * 1000)
-    }
-
     nonisolated static var isCancelled: Bool {
         DriveHttpClient.isCancellationRequested
     }
@@ -186,10 +218,9 @@ enum NotebookSyncCoordinator {
     ///   - store: 筆記本的本機儲存。
     ///   - folder: 使用者選的雲端資料夾。呼叫端負責取得 security scope。
     static func run(store: SyncableNotebookStore, folder: URL, deviceId: UInt32) async -> Report {
-        let grant = syncGateTryEnter(label: "folder", nowMs: gateNowMs())
-        guard grant.granted else {
+        guard let grant = await SyncGateQueue.enter(label: "folder") else {
             SyncLogger.logAsync(
-                "【資料夾同步】已有一輪在跑（\(grant.holder)，\(grant.heldMs / 1000) 秒）—— 這次跳過",
+                "【資料夾同步】等待上一輪結束逾時，已保留待同步狀態",
                 source: .folder
             )
             var skipped = Report()
@@ -384,6 +415,7 @@ enum NotebookSyncCoordinator {
             deletedNotebookIds: deletedNotebookIds,
             report: &report
         )
+        store.syncRepairSeedDuplicates()
         store.syncPurgeDeletedNotebooks(deletedNotebookIds)
         store.syncRefreshRecordings()
         SyncLogger.logAsync("【資料夾同步】全部完成。", source: .folder)
@@ -408,10 +440,9 @@ enum NotebookSyncCoordinator {
         //
         // 鎖在核心（`sync_gate_*`），兩端共用同一把 —— 各寫一份的話，
         // 下一個新增的入口只會補上其中一邊。
-        let grant = syncGateTryEnter(label: "google-drive", nowMs: gateNowMs())
-        guard grant.granted else {
+        guard let grant = await SyncGateQueue.enter(label: "google-drive") else {
             SyncLogger.logAsync(
-                "【Google Drive 同步】已有一輪在跑（\(grant.holder)，\(grant.heldMs / 1000) 秒）—— 這次跳過",
+                "【Google Drive 同步】等待上一輪結束逾時，已保留待同步狀態",
                 source: .googleDrive
             )
             var skipped = Report()
@@ -437,21 +468,17 @@ enum NotebookSyncCoordinator {
         let localLiveItems = syncLiveNotebooks(indexJson: localIndexJson)
         let localLiveById = Dictionary(localLiveItems.map { ($0.id.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
 
-        // (A) 從 store.allNotebooks 全集確認未刪除的筆記本存在於 localIndexJson，且最新標題與資料夾一致
+        // (A) 只把「索引從未見過」的舊版本機筆記補進去。
+        //
+        // 絕對不能在這裡用工作副本的標題去「校正」既有索引。工作副本可能是
+        // 一台離線很久的裝置留下的舊畫面；若每輪都 record，它會取得全新的
+        // Lamport 時戳，反而擊敗另一台較早發生、但語意上真正較新的改名。
+        // 使用者新增／改名／搬移的入口本來就會 record；同步只能合併事件，
+        // 不能把「啟動同步」偽裝成一次使用者編輯。
         for document in store.allNotebooks {
             let docId = document.id.lowercased()
             guard !AccountSyncStore.shared.isDeleted(id: document.id) else { continue }
-            if let existing = localLiveById[docId] {
-                // 如果本機標題或資料夾改過，記錄進同步索引以推進 Lamport 時戳
-                if existing.title != document.title || (existing.parentId ?? "") != (document.folderId ?? "") {
-                    AccountSyncStore.shared.record(
-                        id: document.id,
-                        title: document.title,
-                        parentId: document.folderId,
-                        isFolder: false
-                    )
-                }
-            } else {
+            if localLiveById[docId] == nil {
                 AccountSyncStore.shared.record(
                     id: document.id,
                     title: document.title,
@@ -503,6 +530,21 @@ enum NotebookSyncCoordinator {
             for input in inputs {
                 if isCancelled || Task.isCancelled {
                     return (own, exported, failures, true)
+                }
+                // 前景心跳每 3–12 秒會進來一次。沒有這道判斷時，每一輪都把
+                // 每一本套件完整重建，即使一個字都沒改；iPad 實機曾因此在
+                // 25 分鐘內寫入 4.3 GB，最後被系統以 excessive disk writes
+                // 終止。套件比工作副本新代表編輯器的增量寫入或上一輪匯出
+                // 已經包含這份內容，直接沿用即可。
+                if !workingCopyNeedsExport(input) {
+                    do {
+                        own.merge(try snapshotOwnStrokes(input)) { first, _ in first }
+                    } catch is CancellationError {
+                        return (own, exported, failures, true)
+                    } catch {
+                        failures[input.document.title] = error.localizedDescription
+                    }
+                    continue
                 }
                 do {
                     let mine = try exportOne(input)
@@ -594,7 +636,7 @@ enum NotebookSyncCoordinator {
 
         // ── 同步前即時核實：本機現存 vs. 雲端索引差異樣態 ──────────────
         let activeLocalIds = Set(store.syncNotebooks.map { $0.id.lowercased() })
-        var deletedNotebookIds = Set(AccountSyncStore.shared.deletedNotebookIds.map { $0.lowercased() })
+        let deletedNotebookIds = Set(AccountSyncStore.shared.deletedNotebookIds.map { $0.lowercased() })
         let cloudLiveIds = Set(syncLiveNotebooks(indexJson: meta.indexJson).map { $0.id.lowercased() })
 
         // 🌟 先拉取雲端上有、本機還沒有的新筆記本！
@@ -726,6 +768,7 @@ enum NotebookSyncCoordinator {
                 onlyNotebookIds: changedPackageIds,
                 report: &report
             )
+            store.syncRepairSeedDuplicates()
             store.syncPurgeDeletedNotebooks(deletedNotebookIds)
             SyncLogger.logAsync("【Google Drive 同步】已手動中斷。", source: .googleDrive)
             return report
@@ -754,6 +797,7 @@ enum NotebookSyncCoordinator {
             report: &report
         )
         // ── 4. 清理已被遠端刪除的本地殭屍筆記 ─────────────────
+        store.syncRepairSeedDuplicates()
         store.syncPurgeDeletedNotebooks(deletedNotebookIds)
         store.syncRefreshRecordings()
 
@@ -859,6 +903,7 @@ enum NotebookSyncCoordinator {
             document: inputs.document, package: package,
             baselineDirectory: inputs.baselineDirectory,
             attachmentsDirectory: inputs.attachmentsDirectory,
+            drawingsDirectory: inputs.drawingsDirectory,
             deviceId: inputs.deviceId, loadDrawing: inputs.loadDrawing
         )
         _ = try exportOne(inputs)
@@ -900,6 +945,7 @@ enum NotebookSyncCoordinator {
         let package: URL
         let baselineDirectory: URL
         let attachmentsDirectory: URL
+        let drawingsDirectory: URL
         let deviceId: UInt32
         let loadDrawing: @Sendable (String, Int) -> PKDrawing
     }
@@ -913,9 +959,13 @@ enum NotebookSyncCoordinator {
     ) -> ExportInputs {
         ExportInputs(
             document: document,
-            package: packagesDir.appending(path: "\(document.id).padnote"),
+            // 套件路徑與雲端路徑都以 canonical id 為準。iOS/macOS 常見磁碟
+            // 不分大小寫，測不出 A… 與 a… 其實是兩個雲端物件；Android 與
+            // Google Drive 會分開看，最後就變成兩本內容相同的筆記。
+            package: packagesDir.appending(path: "\(document.id.lowercased()).padnote"),
             baselineDirectory: store.syncBaselineDirectory,
             attachmentsDirectory: store.syncAttachmentsDirectory,
+            drawingsDirectory: store.syncDrawingsDirectory,
             deviceId: deviceId,
             loadDrawing: store.syncDrawingLoader
         )
@@ -940,18 +990,14 @@ enum NotebookSyncCoordinator {
         // 扣掉的是「別台裝置寫的那些」，不是「上次同步時的全部」——
         // 扣掉全部的話，這台裝置自己的筆畫在下一次匯出時會被扣成空的，
         // 而它的檔案又會被整個重寫，等於自己把自己的內容刪掉。
-        var own: OwnStrokes = [:]
+        let own = try snapshotOwnStrokes(inputs)
         var drawings = [PKDrawing]()
         drawings.reserveCapacity(pageCount)
         for page in 0 ..< pageCount {
             if NotebookSyncCoordinator.isCancelled || Task.isCancelled {
                 throw CancellationError()
             }
-            let current = inputs.loadDrawing(document.id, page)
-            let others = loadBaseline(in: inputs.baselineDirectory, notebookId: document.id, pageIndex: page)
-            let mine = PKDrawing(strokes: StrokeDelta.added(in: current, since: others))
-            own[baselineKey(document.id, page)] = mine
-            drawings.append(mine)
+            drawings.append(own[baselineKey(document.id, page)] ?? PKDrawing())
         }
         var images: [String: Data] = [:]
         for attachment in document.attachments ?? [] {
@@ -965,6 +1011,74 @@ enum NotebookSyncCoordinator {
             to: inputs.package, deviceId: inputs.deviceId
         )
         return own
+    }
+
+    /// 算出這台裝置在各頁擁有的筆畫，但不改寫套件。
+    ///
+    /// 未修改的筆記雖然可以跳過匯出，後續若下載了遠端內容，匯入仍需要這份
+    /// own/others 邊界來更新 baseline；省略它會把自己的舊筆畫誤認成別人的，
+    /// 下一次匯出時再把自己的 oplog 刪掉，造成看似隨機的內容回退。
+    private nonisolated static func snapshotOwnStrokes(_ inputs: ExportInputs) throws -> OwnStrokes {
+        var own: OwnStrokes = [:]
+        for page in 0 ..< max(inputs.document.pageCount, 1) {
+            if NotebookSyncCoordinator.isCancelled || Task.isCancelled {
+                throw CancellationError()
+            }
+            let current = inputs.loadDrawing(inputs.document.id, page)
+            let others = loadBaseline(
+                in: inputs.baselineDirectory,
+                notebookId: inputs.document.id,
+                pageIndex: page
+            )
+            own[baselineKey(inputs.document.id, page)] = PKDrawing(
+                strokes: StrokeDelta.added(in: current, since: others)
+            )
+        }
+        return own
+    }
+
+    /// 工作副本是否真的比套件新。
+    ///
+    /// 只讀檔案時間，不讀內容也不寫任何東西。目錄自己的 mtime 不可靠，
+    /// 所以取套件內所有檔案的最大值；工作副本則看文件時間、各頁 drawing
+    /// 與它引用的附件。任何資訊讀不到都保守地回 true，寧可多匯出一次，
+    /// 不冒漏資料的風險。
+    private nonisolated static func workingCopyNeedsExport(_ inputs: ExportInputs) -> Bool {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: inputs.package.path) else { return true }
+
+        guard let enumerator = fm.enumerator(
+            at: inputs.package,
+            includingPropertiesForKeys: [.contentModificationDateKey],
+            options: [.skipsHiddenFiles]
+        ) else { return true }
+
+        var packageNewest = Date.distantPast
+        for case let url as URL in enumerator {
+            guard let values = try? url.resourceValues(forKeys: [.contentModificationDateKey]),
+                  let modified = values.contentModificationDate
+            else { continue }
+            packageNewest = max(packageNewest, modified)
+        }
+        guard packageNewest != .distantPast else { return true }
+
+        var workingNewest = inputs.document.lastModifiedDate
+        let drawingsDir = inputs.drawingsDirectory
+        for page in 0 ..< max(inputs.document.pageCount, 1) {
+            let url = drawingsDir.appending(path: "\(inputs.document.id)_p\(page).drawing")
+            if let values = try? url.resourceValues(forKeys: [.contentModificationDateKey]),
+               let modified = values.contentModificationDate {
+                workingNewest = max(workingNewest, modified)
+            }
+        }
+        for attachment in inputs.document.attachments ?? [] {
+            let url = inputs.attachmentsDirectory.appending(path: attachment.fileName)
+            if let values = try? url.resourceValues(forKeys: [.contentModificationDateKey]),
+               let modified = values.contentModificationDate {
+                workingNewest = max(workingNewest, modified)
+            }
+        }
+        return workingNewest > packageNewest
     }
 
     private static func importOne(

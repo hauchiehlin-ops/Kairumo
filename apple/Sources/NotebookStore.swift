@@ -1296,6 +1296,27 @@ public final class NotebookStore: ObservableObject {
         return dedupedResult
     }
 
+    /// 同步剛拉回來的舊版範例筆記可能使用隨機 id；在同一輪立刻收斂成一本，
+    /// 不要求使用者關掉 App 再開才看見去重結果。只處理仍保有系統 titleKey
+    /// 的範例，使用者自行改過名的筆記不會被碰。
+    public func repairSyncedSeedDuplicates() {
+        let migrated = notebooks.map(migrateSeedTitles)
+        let deduped = Self.deduplicateById(migrated)
+        let retainedIds = Set(deduped.map { $0.id.lowercased() })
+        let removed = migrated.filter { !retainedIds.contains($0.id.lowercased()) }
+        guard !removed.isEmpty || migrated != notebooks else { return }
+
+        notebooks = deduped
+        for document in removed {
+            AccountSyncStore.shared.recordDeletion(id: document.id)
+            let original = corePackagesDirectory.appending(path: "\(document.id).padnote")
+            let canonical = corePackagesDirectory.appending(path: "\(document.id.lowercased()).padnote")
+            try? FileManager.default.removeItem(at: original)
+            if canonical != original { try? FileManager.default.removeItem(at: canonical) }
+        }
+        markDirtyAndPersist()
+    }
+
 
     public func loadData() {
         if let data = try? Data(contentsOf: notebooksFile),
@@ -2746,6 +2767,33 @@ public final class NotebookStore: ObservableObject {
             }
             if touched {
                 notebooks[nIdx].audioAttachments = cards
+            }
+        }
+        persistData()
+    }
+
+    /// 重新命名錄音的顯示名稱。
+    ///
+    /// 音檔本身以 UUID 命名，不能跟著改檔名，否則同步路徑與媒體墓碑都會
+    /// 斷掉。這裡更新首頁索引，並同步更新已插入各頁的錄音卡片；因此從首頁
+    /// 或筆記頁看到的是同一個名稱，下一輪套件匯出也會把卡片名稱帶到別台。
+    public func renameRecording(id: String, newTitle: String) {
+        let clean = newTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty,
+              let recordingIndex = recordings.firstIndex(where: { $0.id == id })
+        else { return }
+
+        recordings[recordingIndex].title = clean
+        for notebookIndex in notebooks.indices {
+            guard var cards = notebooks[notebookIndex].audioAttachments else { continue }
+            var changed = false
+            for cardIndex in cards.indices where cards[cardIndex].recordingId == id {
+                cards[cardIndex].title = clean
+                changed = true
+            }
+            if changed {
+                notebooks[notebookIndex].audioAttachments = cards
+                notebooks[notebookIndex].lastModifiedDate = Date()
             }
         }
         persistData()

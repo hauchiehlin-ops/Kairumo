@@ -340,15 +340,17 @@ public enum CloudSync {
     /// 走互斥閘 —— 清到一半被另一輪同步插進來重新上傳的話，會留下一個
     /// 半清空的雲端，那比原本的狀態更難解釋。
     public static func wipeCloud() async -> FfiWipeResult? {
-        let grant = syncGateTryEnter(
-            label: "wipe-cloud", nowMs: UInt64(ProcessInfo.processInfo.systemUptime * 1000))
-        guard grant.granted else {
+        guard let grant = await SyncGateQueue.enter(label: "wipe-cloud") else {
             SyncLogger.logAsync(
-                "【重置雲端】有一輪同步正在跑（\(grant.holder)）—— 等它結束再試",
+                "【重置雲端】等待上一輪結束逾時，請稍後重試",
                 source: .googleDrive)
             return nil
         }
         defer { _ = syncGateLeave(ticket: grant.ticket) }
+        // 呼叫端會先中斷正在跑的同步再排入重置。拿到閘代表舊的一輪已收尾，
+        // 此刻才清除那個中斷旗標；提早清會讓舊的一輪又繼續寫。
+        DriveHttpClient.resetCancellation()
+        defer { DriveHttpClient.resetCancellation() }
 
         guard let session = await makeSession() else { return nil }
         SyncLogger.logAsync("【重置雲端】開始刪除雲端資料…", source: .googleDrive)
@@ -372,15 +374,15 @@ public enum CloudSync {
     /// 走互斥閘：回收到一半被另一輪同步插進來的話，兩邊會對同一批檔案
     /// 一個刪一個傳。
     public static func reclaimDeleted() async -> FfiGcResult? {
-        let grant = syncGateTryEnter(
-            label: "reclaim", nowMs: UInt64(ProcessInfo.processInfo.systemUptime * 1000))
-        guard grant.granted else {
+        guard let grant = await SyncGateQueue.enter(label: "reclaim") else {
             SyncLogger.logAsync(
-                "【回收】有一輪同步正在跑（\(grant.holder)）—— 等它結束再試",
+                "【回收】等待上一輪結束逾時，請稍後重試",
                 source: .googleDrive)
             return nil
         }
         defer { _ = syncGateLeave(ticket: grant.ticket) }
+        DriveHttpClient.resetCancellation()
+        defer { DriveHttpClient.resetCancellation() }
 
         guard let session = await makeSession() else { return nil }
         // **先把雲端的現況拉一次。** 拿舊快照去回收，等於照著一份可能過期
@@ -481,4 +483,3 @@ public enum CloudSync {
         return result
     }
 }
-

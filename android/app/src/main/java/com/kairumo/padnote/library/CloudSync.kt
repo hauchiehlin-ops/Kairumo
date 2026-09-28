@@ -7,6 +7,10 @@ import com.kairumo.padnote.sync.SyncLogger
 import com.kairumo.padnote.sync.SyncSource
 import java.io.File
 import uniffi.padnote_core.FfiCloudSyncResult
+import uniffi.padnote_core.syncGateLeave
+import uniffi.padnote_core.syncGateTryEnter
+import uniffi.padnote_core.syncLiveNotebooks
+import uniffi.padnote_core.syncOrderActiveFirst
 
 /**
  * 跑一輪雲端同步（Android）。
@@ -19,6 +23,23 @@ import uniffi.padnote_core.FfiCloudSyncResult
  * （每一本筆記的 oplog 檔）。
  */
 object CloudSync {
+
+    /**
+     * 同一行程內的同步入口佇列。核心閘負責互斥，這裡把「忙碌就丟掉」
+     * 改成「等前一輪收尾」，讓自動、手動、Worker 與重置依序執行。
+     * 呼叫端依契約都在 Dispatchers.IO／Worker，這裡不會阻塞 UI thread。
+     */
+    private fun acquireGate(label: String): uniffi.padnote_core.FfiSyncGrant? {
+        val started = android.os.SystemClock.elapsedRealtime()
+        while (!Thread.currentThread().isInterrupted) {
+            val now = android.os.SystemClock.elapsedRealtime()
+            val grant = syncGateTryEnter(label, now.toULong())
+            if (grant.granted) return grant
+            if (now - started >= 120_000L) return null
+            Thread.sleep(150L)
+        }
+        return null
+    }
 
     /**
      * 同步一輪。**會阻塞網路 I/O，要在背景執行緒呼叫。**
@@ -88,11 +109,10 @@ object CloudSync {
      * @return 結果；`null` 表示沒登入或有一輪同步正在跑。
      */
     fun wipeCloud(context: Context): uniffi.padnote_core.FfiWipeResult? {
-        val nowMs = android.os.SystemClock.elapsedRealtime().toULong()
-        val grant = uniffi.padnote_core.syncGateTryEnter("android:wipe-cloud", nowMs)
-        if (!grant.granted) {
+        val grant = acquireGate("android:wipe-cloud")
+        if (grant == null) {
             SyncLogger.log(
-                "【重置雲端】有一輪同步正在跑（${grant.holder}）—— 等它結束再試",
+                "【重置雲端】等待上一輪結束逾時，請稍後重試",
                 SyncSource.GOOGLE_DRIVE
             )
             return null
@@ -111,7 +131,7 @@ object CloudSync {
             )
             result
         } finally {
-            uniffi.padnote_core.syncGateLeave(grant.ticket)
+            syncGateLeave(grant.ticket)
         }
     }
 
@@ -127,11 +147,10 @@ object CloudSync {
      * **會阻塞網路 I/O，要在背景執行緒呼叫。**
      */
     fun reclaimDeleted(context: Context): uniffi.padnote_core.FfiGcResult? {
-        val nowMs = android.os.SystemClock.elapsedRealtime().toULong()
-        val grant = uniffi.padnote_core.syncGateTryEnter("android:reclaim", nowMs)
-        if (!grant.granted) {
+        val grant = acquireGate("android:reclaim")
+        if (grant == null) {
             SyncLogger.log(
-                "【回收】有一輪同步正在跑（${grant.holder}）—— 等它結束再試",
+                "【回收】等待上一輪結束逾時，請稍後重試",
                 SyncSource.GOOGLE_DRIVE
             )
             return null
@@ -150,7 +169,7 @@ object CloudSync {
             )
             result
         } finally {
-            uniffi.padnote_core.syncGateLeave(grant.ticket)
+            syncGateLeave(grant.ticket)
         }
     }
 
@@ -259,11 +278,10 @@ object CloudSync {
     fun runFull(context: Context, deviceId: UInt, activeNotebookId: String? = null): FullResult {
         // 單調時鐘：牆上時鐘跳一下會讓「拿著多久」算錯，於是不是永遠不
         // 接手，就是立刻把正在跑的那輪踢掉。
-        val nowMs = android.os.SystemClock.elapsedRealtime().toULong()
-        val grant = uniffi.padnote_core.syncGateTryEnter("android:google-drive", nowMs)
-        if (!grant.granted) {
+        val grant = acquireGate("android:google-drive")
+        if (grant == null) {
             SyncLogger.log(
-                "【Google Drive 同步】已有一輪在跑（${grant.holder}，${grant.heldMs / 1000u} 秒）—— 這次跳過",
+                "【Google Drive 同步】等待上一輪結束逾時，已保留待同步狀態",
                 SyncSource.GOOGLE_DRIVE
             )
             return FullResult(null, 0, 0, emptyList(), skipped = true)
@@ -277,7 +295,7 @@ object CloudSync {
         return try {
             runFullBody(context, deviceId, activeNotebookId)
         } finally {
-            uniffi.padnote_core.syncGateLeave(grant.ticket)
+            syncGateLeave(grant.ticket)
         }
     }
 
@@ -285,23 +303,27 @@ object CloudSync {
         SyncLogger.log("【Google Drive 同步】開始執行", SyncSource.GOOGLE_DRIVE)
         SyncLogger.log("步驟 1：同步中繼資料與索引 (連線中)...", SyncSource.GOOGLE_DRIVE)
 
-        // 【RC-5 根治版】復活迴圈：掃「所有本機條目 + 磁碟套件目錄」，
-        // 而非僅掃 activeLocalIds（它可能因 tombstone 而不含被誤刪的筆記本）。
+        // 舊版本機資料遷移：只補「索引從未見過」的套件。
+        //
+        // 這裡以前會把墓碑也重新 record 成存活，而且每次同步都用本機套件
+        // 的舊標題產生一個更大的 Lamport 時戳。結果是：A 已刪除／改名，
+        // B 晚一點開 App，就會憑空偽造一次較新的編輯，把 A 的結果覆蓋。
+        // 真正的新增、改名與搬移入口本來就會 record；同步只能合併事件，
+        // 不能把「本機還有舊檔」解讀成使用者剛做了一次編輯。
         val allLocalEntries = NotebookLibrary.all(context, deviceId)
         val activeLocalIds = allLocalEntries.map { it.id }.toSet()
-        val localLiveIds = uniffi.padnote_core.syncLiveNotebooks(AccountSyncStore.indexJson(context)).map { it.id }.toSet()
-        // (A) 從本機條目全集復活
+        // (A) 從舊版本機條目補索引；明確墓碑絕不復活。
         for (entry in allLocalEntries) {
-            if (AccountSyncStore.isDeleted(context, entry.id) || !localLiveIds.contains(entry.id)) {
+            if (AccountSyncStore.item(context, entry.id) == null) {
                 AccountSyncStore.record(context, entry.id, entry.title, null, false)
             }
         }
-        // (B) 從磁碟套件目錄再掃一遍：有套件但被 tombstone 的也要復活
+        // (B) 磁碟上能開不起來的舊套件也只在索引未知時補；已刪除仍不碰。
         val packagesDir = NotebookLibrary.directory(context)
         val diskPackageIds = packagesDir.listFiles { f -> f.name.endsWith(".padnote") }
             ?.map { it.name.removeSuffix(".padnote") }?.toSet() ?: emptySet()
         for (diskId in diskPackageIds) {
-            if (AccountSyncStore.isDeleted(context, diskId) || !localLiveIds.contains(diskId)) {
+            if (AccountSyncStore.item(context, diskId) == null) {
                 val title = allLocalEntries.firstOrNull { it.id == diskId }?.title ?: diskId
                 AccountSyncStore.record(context, diskId, title, null, false)
             }
@@ -348,7 +370,7 @@ object CloudSync {
         // ── 同步前即時核實：本機現存 vs. 雲端索引差異樣態 ──────────────
         val dir = NotebookLibrary.directory(context)
         val deletedNotebookIds = AccountSyncStore.deletedNotebookIds(context).toMutableSet()
-        val cloudLiveIds = uniffi.padnote_core.syncLiveNotebooks(meta.indexJson).map { it.id }.toSet()
+        val cloudLiveIds = syncLiveNotebooks(meta.indexJson).map { it.id }.toSet()
 
         // 🌟 先把別台裝置新建、本機還沒有的筆記本整本抓下來
         val pulled = pullNewNotebooks(context, session, meta.indexJson, activeLocalIds, deletedNotebookIds)
@@ -393,7 +415,7 @@ object CloudSync {
         // 前台作用中的那一本排最前面：使用者正在看的內容要先到。
         // 規則用核心那一份，與 Apple 同一套（各寫一份的話，使用者感覺到的
         // 不是「策略不同」，是「Android 比較慢」）。
-        val orderedIds = uniffi.padnote_core.syncOrderActiveFirst(
+        val orderedIds = syncOrderActiveFirst(
             pending.map { it.name.removeSuffix(".padnote") },
             activeNotebookId
         )
@@ -451,7 +473,7 @@ object CloudSync {
     ): List<String> {
         val dir = NotebookLibrary.directory(context)
         val pulled = mutableListOf<String>()
-        for (item in uniffi.padnote_core.syncLiveNotebooks(mergedIndexJson)) {
+        for (item in syncLiveNotebooks(mergedIndexJson)) {
             if (deletedNotebookIds.contains(item.id)) continue
             val path = File(dir, "${item.id}.padnote")
             // 防禦性檢查：若本地存在該目錄，但本機尚未載入該筆記本，檢查是否為無 ops 的空殼目錄

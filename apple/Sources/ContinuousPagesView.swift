@@ -83,10 +83,26 @@ struct ContinuousPageView<ObjectLayer: View>: View {
                 .allowsHitTesting(false)
                 .zIndex(0)
 
+            // 打字模式的空白頁面必須有自己的命中層。過去這一層藏在
+            // objectLayer 裡、還被放到負的 z-index；在 iPad 實機上透明視圖
+            // 會落到 PencilKit 畫布後方，於是切到打字模式後點頁面完全沒有
+            // 事件。把「空白處新增文字」和「既有物件互動」拆成兩層，既有
+            // 文字仍在上面，空白處則一定由這一層接住。
+            if editorMode == .type {
+                Color.clear
+                    .frame(width: PageGeometry.width, height: PageGeometry.height)
+                    .contentShape(Rectangle())
+                    .onTapGesture(coordinateSpace: .local) { location in
+                        onCanvasTap?(location)
+                    }
+                    .accessibilityIdentifier("editor.text.canvas_input")
+                    .zIndex(1)
+            }
+
             objectLayer()
                 .frame(width: PageGeometry.width, height: PageGeometry.height, alignment: .topLeading)
                 .allowsHitTesting(editorMode == .type)
-                .zIndex(editorMode == .type ? 2 : 1)
+                .zIndex(editorMode == .type ? 3 : 1)
 
             CanvasRepresentable(
                 drawing: $drawing,

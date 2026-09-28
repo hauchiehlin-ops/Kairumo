@@ -51,6 +51,7 @@ final class FakeStore: SyncableNotebookStore {
     var allNotebooks: [NotebookDocument] { documents }
     var syncPackagesDirectory: URL { root.appendingPathComponent("Packages") }
     var syncAttachmentsDirectory: URL { root.appendingPathComponent("Attachments") }
+    var syncDrawingsDirectory: URL { root.appendingPathComponent("Drawings") }
     var syncBaselineDirectory: URL { root.appendingPathComponent("SyncBaseline") }
 
     func syncLoadDrawing(notebookId: String, pageIndex: Int) -> PKDrawing {

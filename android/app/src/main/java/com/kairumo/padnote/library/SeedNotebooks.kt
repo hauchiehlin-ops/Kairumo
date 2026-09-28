@@ -115,11 +115,15 @@ object SeedNotebooks {
 
     private const val PREFS = "kairumo.seed"
     private const val KEY_BACKFILLED = "samples_backfilled"
+    private const val WELCOME_ID = "seed-welcome-notebook-v1"
+    private const val MEETING_ID = "seed-meeting-notebook-v1"
 
     // MARK: - 歡迎使用 Kairumo
 
     private fun buildWelcome(context: Context, deviceId: UInt, l: (String) -> String): Boolean {
-        val id = NotebookLibrary.create(context, l("seed_welcome_title"), deviceId) ?: return false
+        val id = NotebookLibrary.create(
+            context, l("seed_welcome_title"), deviceId, id = WELCOME_ID
+        ) ?: return false
         val opened = NotebookLibrary.open(context, id, deviceId) ?: return false
         val (session, firstPage) = opened
         val pages = ensurePages(session, firstPage, 3)
@@ -146,7 +150,9 @@ object SeedNotebooks {
     // MARK: - 課堂與會議記錄
 
     private fun buildMeeting(context: Context, deviceId: UInt, l: (String) -> String): Boolean {
-        val id = NotebookLibrary.create(context, l("seed_meeting_title"), deviceId) ?: return false
+        val id = NotebookLibrary.create(
+            context, l("seed_meeting_title"), deviceId, id = MEETING_ID
+        ) ?: return false
         val opened = NotebookLibrary.open(context, id, deviceId) ?: return false
         val (session, firstPage) = opened
         val pages = ensurePages(session, firstPage, 3)

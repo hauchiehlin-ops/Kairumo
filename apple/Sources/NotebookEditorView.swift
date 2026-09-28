@@ -3590,19 +3590,7 @@ public struct NotebookEditorView: View {
     /// 筆畫根本到不了畫布，看起來就是「筆刷在物件上沒作用」。
     @ViewBuilder
     private func objectLayer(forPage page: Int) -> some View {
-        let pageHeight = notebook.height(forPage: page)
         ZStack(alignment: .topLeading) {
-            // 🌟 打字模式下整頁空白區域接收點擊，隨點隨打插入文字方塊並聚焦游標
-            if editorMode == .type {
-                Color.clear
-                    .frame(width: PageGeometry.width, height: pageHeight)
-                    .contentShape(Rectangle())
-                    .onTapGesture(coordinateSpace: .local) { location in
-                        handleCanvasTapInTypeMode(at: location, page: page)
-                    }
-                    .zIndex(-1000)
-            }
-
             ForEach(notebook.attachments ?? []) { item in
                     if item.pageIndex == page {
                         AttachmentItemView(
@@ -3871,12 +3859,27 @@ public struct NotebookEditorView: View {
                 .allowsHitTesting(false)
                 .zIndex(0)
 
+            // 空白頁點擊與既有物件的互動分層。這個視圖和頁面套用完全相同
+            // 的縮放／位移，因此 gesture 回傳的是正確的頁面座標。
+            if editorMode == .type {
+                Color.clear
+                    .frame(width: PageGeometry.width, height: currentPageHeight)
+                    .contentShape(Rectangle())
+                    .onTapGesture(coordinateSpace: .local) { location in
+                        handleCanvasTapInTypeMode(at: location, page: currentPageIndex)
+                    }
+                    .accessibilityIdentifier("editor.text.canvas_input")
+                    .scaleEffect(canvasZoomScale, anchor: .topLeading)
+                    .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
+                    .zIndex(2)
+            }
+
             objectLayer(forPage: currentPageIndex)
                 .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
                 .scaleEffect(canvasZoomScale, anchor: .topLeading)
                 .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
                 .allowsHitTesting(editorMode == .type)
-                .zIndex(editorMode == .type ? 2 : 1)
+                .zIndex(editorMode == .type ? 3 : 1)
 
             CanvasRepresentable(
                 drawing: $currentDrawing,
@@ -4476,6 +4479,11 @@ public struct NotebookEditorView: View {
             contextualState: contextualPortalState,
             onModeChange: { mode in
                 saveCurrentPageDrawing()
+                // PencilKit 可能仍握有 first responder。先交還鍵盤焦點，否則
+                // 新建立的 TextEditor 在同一個 run loop 內無法成為第一回應者。
+                if mode == .type {
+                    canvasView?.resignFirstResponder()
+                }
                 withAnimation(.easeInOut(duration: 0.18)) {
                     editorMode = mode
                     inlineEditingTextId = nil
@@ -10276,6 +10284,7 @@ struct TextAttachmentItemView: View {
                             .background(Color.clear)
                             .frame(minWidth: displayWidth, minHeight: max(36, displayHeight))
                             .focused($inlineFocused)
+                            .accessibilityIdentifier("editor.text.inline_editor")
                     }
                     .overlay(alignment: .bottomTrailing) {
                         if !isTypeMode {
@@ -10519,9 +10528,6 @@ struct TextAttachmentItemView: View {
         .onChange(of: isEditingInline) { editing in
             if editing {
                 hasBeenFocused = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                    inlineFocused = true
-                }
             } else {
                 inlineFocused = false
                 hasBeenFocused = false
@@ -10537,13 +10543,14 @@ struct TextAttachmentItemView: View {
                 finishEditing()
             }
         }
-        .onAppear {
-            if isEditingInline {
-                hasBeenFocused = false
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
-                    inlineFocused = true
-                }
-            }
+        // 固定延遲 80ms 會隨裝置速度與轉場動畫競速。task 會在 TextEditor
+        // 真正掛進視圖樹後執行；yield 一次讓 UIKit 完成 responder 安裝，
+        // 然後才要求焦點。
+        .task(id: isEditingInline) {
+            guard isEditingInline else { return }
+            hasBeenFocused = false
+            await Task.yield()
+            inlineFocused = true
         }
     }
 

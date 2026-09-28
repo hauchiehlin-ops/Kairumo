@@ -262,9 +262,13 @@ object NotebookLibrary {
          */
         paperId: String = "",
         /** 版面配色的 id（核心 `guidePalettes()`）。空字串用預設那一組。 */
-        paletteId: String = ""
+        paletteId: String = "",
+        /**
+         * 預先決定的跨平台 id。一般筆記不傳，仍使用隨機 UUID；只有系統內建
+         * 筆記這類「所有裝置語意上是同一本」的資料才傳固定值。
+         */
+        id: String = java.util.UUID.randomUUID().toString()
     ): String? {
-        val id = java.util.UUID.randomUUID().toString()
         val opened = open(context, id, deviceId, title, style = style) ?: return null
 
         // **核心建立筆記本時已經先放了一頁 `Lined`。**

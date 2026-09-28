@@ -154,64 +154,67 @@ final class SmokeUITests: XCTestCase {
         assertAlive(app, "收合側欄")
     }
 
-    /// 驗證手繪工具鍵操作與文字模式下點擊方格打字
+    /// 從全新的筆記本驗證「手寫 → 文字 → 點頁面 → 直接輸入」完整路徑。
+    ///
+    /// 過去這條測試只點 `editor.mode` 容器，再點一下畫布，最後只確認 App
+    /// 沒有閃退。即使模式根本沒切換、文字框根本沒建立，測試仍會通過。
+    /// 這裡必須真的找到 TextEditor、輸入文字並讀回值，才算功能落地。
     func testDrawingToolsAndTypeModeGridTap() {
         let app = launch()
-        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
 
-        guard openSeedNotebook(app) else { return }
-        sleep(2)
-        assertAlive(app, "進入筆記編輯器")
+        let newNote = app.descendants(matching: .any)
+            .matching(identifier: "home.action.new_note").firstMatch
+        guard newNote.waitForExistence(timeout: 15) else {
+            return XCTFail("首頁找不到新增筆記入口")
+        }
+        newNote.tap()
+
+        let title = app.descendants(matching: .any)
+            .matching(identifier: "new_notebook.title.field").firstMatch
+        XCTAssertTrue(title.waitForExistence(timeout: 10), "新增筆記表單沒有出現")
+
+        let confirm = app.descendants(matching: .any)
+            .matching(identifier: "new_notebook.confirm").firstMatch
+        guard confirm.waitForExistence(timeout: 10) else {
+            return XCTFail("新增筆記表單沒有確認按鈕")
+        }
+        confirm.tap()
 
         let canvas = app.descendants(matching: .any)["editor.canvas"].firstMatch
-        XCTAssertTrue(canvas.waitForExistence(timeout: 10), "找不到畫布")
+        XCTAssertTrue(canvas.waitForExistence(timeout: 15), "建立筆記後沒有進入畫布")
 
-        // 1. 測試各手繪工具鍵點擊響應
+        // 新筆記預設是手繪模式；先確認手繪工具真的可操作。
         let penTool = app.descendants(matching: .any)["editor.tool.pen"].firstMatch
         if penTool.waitForExistence(timeout: 5) {
             penTool.tap()
             assertAlive(app, "點選鋼筆工具")
         }
 
-        let highlighterTool = app.descendants(matching: .any)["editor.tool.highlighter"].firstMatch
-        if highlighterTool.exists {
-            highlighterTool.tap()
-            assertAlive(app, "點選螢光筆工具")
+        // 必須點真正的文字模式按鈕，不能再點沒有動作的容器。
+        let typeMode = app.descendants(matching: .any)
+            .matching(identifier: "portal.type").firstMatch
+        guard typeMode.waitForExistence(timeout: 10) else {
+            return XCTFail("找不到文字模式按鈕 portal.type")
         }
+        typeMode.tap()
 
-        let eraserTool = app.descendants(matching: .any)["editor.tool.eraser"].firstMatch
-        if eraserTool.exists {
-            eraserTool.tap()
-            assertAlive(app, "點選橡皮擦工具")
-        }
-
-        let lassoTool = app.descendants(matching: .any)["editor.tool.lasso"].firstMatch
-        if lassoTool.exists {
-            lassoTool.tap()
-            assertAlive(app, "點選套索工具")
-        }
-
-        // 2. 切換至文字模式
-        let modeSwitch = app.descendants(matching: .any)["editor.mode"].firstMatch
-        if modeSwitch.waitForExistence(timeout: 5) {
-            modeSwitch.tap()
-            sleep(1)
-            assertAlive(app, "切換模式")
-        }
-
-        // 3. 在畫布方格區域點擊
-        let coordinate = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.6))
+        // 點空白頁面後，應立即出現並聚焦內嵌 TextEditor。
+        let coordinate = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.45))
         coordinate.tap()
-        sleep(1)
-        assertAlive(app, "點擊畫布方格區域建立文字方塊")
 
-        // 4. 回首頁
-        let home = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'home' OR label CONTAINS[c] 'house'")).firstMatch
-        if home.exists {
-            home.tap()
-            sleep(2)
-            assertAlive(app, "回首頁")
+        let inlineEditor = app.descendants(matching: .any)
+            .matching(identifier: "editor.text.inline_editor").firstMatch
+        guard inlineEditor.waitForExistence(timeout: 10) else {
+            return XCTFail("文字模式點擊空白頁後沒有建立就地文字編輯器")
         }
+        let sentinel = "Word style typing works"
+        // 不可再補點一次 TextEditor：第一次點頁面就必須已經取得焦點。
+        inlineEditor.typeText(sentinel)
+
+        let value = inlineEditor.value as? String ?? ""
+        XCTAssertTrue(value.contains(sentinel), "TextEditor 沒有收到輸入；目前值：\(value)")
+        assertAlive(app, "文字模式即點即書")
     }
 }
 

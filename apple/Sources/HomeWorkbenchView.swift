@@ -75,6 +75,8 @@ public struct HomeWorkbenchView: View {
     // 重新命名彈窗
     @State private var renamingNotebookId: String? = nil
     @State private var renameText: String = ""
+    @State private var renamingRecordingId: String? = nil
+    @State private var recordingRenameText: String = ""
 
     // 各區塊展開 (All) 與個別檔案隱藏/刪除狀態
     @State private var showAllContinue: Bool = false
@@ -437,6 +439,21 @@ public struct HomeWorkbenchView: View {
                         notebookStore.renameNotebook(id: id, newTitle: renameText)
                     }
                     renamingNotebookId = nil
+                }
+            }
+            .alert(localizationManager.localized("rename_audio_card"), isPresented: Binding(
+                get: { renamingRecordingId != nil },
+                set: { if !$0 { renamingRecordingId = nil } }
+            )) {
+                TextField(localizationManager.localized("recording_title"), text: $recordingRenameText)
+                Button(localizationManager.localized("cancel"), role: .cancel) {
+                    renamingRecordingId = nil
+                }
+                Button(localizationManager.localized("save")) {
+                    if let id = renamingRecordingId {
+                        notebookStore.renameRecording(id: id, newTitle: recordingRenameText)
+                    }
+                    renamingRecordingId = nil
                 }
             }
             .alert(localizationManager.localized("edit_root_folder"), isPresented: $showRenameRootFolderAlert) {
@@ -813,6 +830,14 @@ public struct HomeWorkbenchView: View {
         }
     }
 
+    private func renameRecordingFromMenu(_ rec: AudioRecordingRecord) {
+        renamingRecordingId = nil
+        SheetCoordinator.shared.presentFromMenu {
+            recordingRenameText = rec.title
+            renamingRecordingId = rec.id
+        }
+    }
+
     private func shareRecordingFromMenu(_ fileUrl: URL) {
         #if targetEnvironment(macCatalyst) || os(macOS)
         audioManager.openRecordingsFolderInFinder()
@@ -909,6 +934,11 @@ public struct HomeWorkbenchView: View {
             hideRecordingFromMenu(rec)
         } label: {
             Label(localizationManager.localized("hide_item"), systemImage: "eye.slash")
+        }
+        Button {
+            renameRecordingFromMenu(rec)
+        } label: {
+            Label(localizationManager.localized("rename_audio_card"), systemImage: "pencil")
         }
         Button {
             shareRecordingFromMenu(fileUrl)

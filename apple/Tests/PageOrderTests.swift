@@ -268,4 +268,42 @@ final class PageOrderTests: XCTestCase {
         // 內嵌筆跡陣列要跟著長一頁，否則匯出時少一頁。
         XCTAssertEqual(updated.pagesData.count, 4)
     }
+
+    /// 首頁與筆記頁顯示的是同一段錄音；從首頁改名後，已插入的卡片也要一致。
+    func testRenamingARecordingUpdatesHomeIndexAndInsertedCards() {
+        let store = Self.isolatedStore()
+        let recording = store.addRecording(
+            title: "舊名稱", durationSeconds: 12, fileName: "audio.opus")
+        var doc = makeNotebook(pages: 1)
+        doc.audioAttachments = [NoteAudioAttachment(
+            recordingId: recording.id,
+            fileName: recording.fileName,
+            title: recording.title,
+            durationSeconds: recording.durationSeconds
+        )]
+        store.notebooks = [doc]
+
+        store.renameRecording(id: recording.id, newTitle: "  訪談錄音  ")
+
+        XCTAssertEqual(store.recordings.first?.title, "訪談錄音")
+        XCTAssertEqual(store.notebooks.first?.audioAttachments?.first?.title, "訪談錄音")
+    }
+
+    func testSyncedSeedDuplicatesAreRepairedWithoutRestarting() {
+        let store = Self.isolatedStore()
+        var older = makeNotebook(pages: 1)
+        older.title = "歡迎使用 Kairumo"
+        older.titleKey = "seed_welcome_title"
+        older.lastModifiedDate = Date(timeIntervalSince1970: 10)
+        var newer = makeNotebook(pages: 1)
+        newer.title = "歡迎使用 Kairumo"
+        newer.titleKey = "seed_welcome_title"
+        newer.lastModifiedDate = Date(timeIntervalSince1970: 20)
+        store.notebooks = [older, newer]
+
+        store.repairSyncedSeedDuplicates()
+
+        XCTAssertEqual(store.notebooks.count, 1)
+        XCTAssertEqual(store.notebooks.first?.id, newer.id)
+    }
 }
