@@ -3423,9 +3423,9 @@ public struct NotebookEditorView: View {
     /// 用浮動提示而不是 alert：使用者正在寫字，跳一個要按確定的對話框
     /// 會把筆打斷，而這件事沒有嚴重到值得打斷。
     private func canvasNoticeBanner(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundColor(.orange)
+        HStack(alignment: .center, spacing: 8) {
+            Image(systemName: "info.circle.fill")
+                .foregroundColor(.accentColor)
             Text(text)
                 .font(.footnote)
                 .fixedSize(horizontal: false, vertical: true)
@@ -6483,7 +6483,11 @@ public struct NotebookEditorView: View {
     private var typingToolbarItems: some View {
         // 1. 新增文字方塊按鈕
         Button {
-            _ = insertTextBox(at: CGPoint(x: 200, y: 200))
+            let draft = insertTextBox(at: CGPoint(x: 200, y: 200))
+            withAnimation(.easeInOut(duration: 0.18)) {
+                editorMode = .type
+                inlineEditingTextId = draft.id
+            }
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: "plus.bubble")
@@ -8895,8 +8899,11 @@ public struct NotebookEditorView: View {
             PageThumbnailRenderer.invalidateAll()
         }
         let draft = insertTextBox(at: location, page: targetPage)
-        inlineEditingTextId = draft.id
-        editingTextId = nil
+        withAnimation(.easeInOut(duration: 0.18)) {
+            editorMode = .type
+            inlineEditingTextId = draft.id
+            editingTextId = nil
+        }
     }
 
     private func handleCanvasTapInTypeMode(at location: CGPoint, page: Int? = nil) {
@@ -8936,18 +8943,35 @@ public struct NotebookEditorView: View {
     }
 
 
-    private func snapYToGuideLine(at y: CGFloat) -> CGFloat {
+    private func snapYToGuideLine(at y: CGFloat, page: Int? = nil) -> CGFloat {
+        let targetPage = page ?? currentPageIndex
+        let paperId = notebook.paperId(forPage: targetPage)
         let guides = pageGuides(
-            paperId: notebook.paperId(forPage: currentPageIndex),
+            paperId: paperId,
             width: Float(PageGeometry.width),
             height: Float(PageGeometry.height)
         )
         // 尋找版面中的所有水平導引線（橫線紙、問答格線、康乃爾筆記橫線等）
-        let horizontalLines = guides.compactMap { g -> CGFloat? in
+        var horizontalLines = guides.compactMap { g -> CGFloat? in
             if g.kind == .line && abs(g.h) < 1.0 && g.w > 50 {
                 return CGFloat(g.y)
             }
             return nil
+        }
+
+        // 若為橫線底紋 (lined)，水平格線來自 pageTexture
+        if horizontalLines.isEmpty {
+            let textures = pageTexture(
+                paperId: paperId,
+                style: NoteTemplate(paperId: paperId)?.pageStyle ?? .blank,
+                width: Float(PageGeometry.width),
+                height: Float(PageGeometry.height)
+            )
+            for b in textures where b.kind == .line && b.stepY > 0 {
+                for i in 0..<Int(b.count) {
+                    horizontalLines.append(CGFloat(b.y + b.stepY * Float(i)))
+                }
+            }
         }
 
         let fontSize: CGFloat = activeTextAttachment?.fontSize ?? 16
@@ -10190,6 +10214,7 @@ struct TextAttachmentItemView: View {
     @State private var resizeBaseWidth: CGFloat? = nil
     @State private var isSelected: Bool = false
     @State private var isDragging: Bool = false
+    @State private var hasBeenFocused: Bool = false
     @FocusState private var inlineFocused: Bool
 
     private var lockedByPeer: CollaboratorPeer? {
@@ -10365,16 +10390,16 @@ struct TextAttachmentItemView: View {
             }
             .onTapGesture(count: 2) {
                 // 點兩下＝就地編輯
+                guard !isEditingInline else { return }
                 guard lockedByPeer == nil else { return }
                 isSelected = true
                 isEditingInline = true
-                inlineFocused = true
             }
             .onTapGesture {
+                guard !isEditingInline else { return }
                 guard lockedByPeer == nil else { return }
                 isSelected = true
                 isEditingInline = true
-                inlineFocused = true
                 collaborationManager.broadcastSelection(selectedId: textItem.id)
             }
             // 右鍵／長按也要能刪除 —— 這是大家最先嘗試的操作
@@ -10382,7 +10407,6 @@ struct TextAttachmentItemView: View {
                 Button {
                     isSelected = true
                     isEditingInline = true
-                    inlineFocused = true
                 } label: { Label(localizationManager.localized("edit_in_place"), systemImage: "character.cursor.ibeam") }
 
                 Button {
@@ -10404,6 +10428,7 @@ struct TextAttachmentItemView: View {
                 } label: { Label(localizationManager.localized("delete"), systemImage: "trash") }
             }
             .gesture(
+                isEditingInline ? nil :
                 DragGesture(minimumDistance: 5, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
                         guard lockedByPeer == nil else { return }
@@ -10419,7 +10444,6 @@ struct TextAttachmentItemView: View {
                         if hypot(value.translation.width, value.translation.height) < 4 {
                             isSelected = true
                             isEditingInline = true
-                            inlineFocused = true
                             collaborationManager.broadcastSelection(selectedId: textItem.id)
                         } else {
                             let oldX = textItem.x
@@ -10494,23 +10518,29 @@ struct TextAttachmentItemView: View {
         .animation(nil, value: dragOffset)
         .onChange(of: isEditingInline) { editing in
             if editing {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                hasBeenFocused = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
                     inlineFocused = true
                 }
             } else {
                 inlineFocused = false
+                hasBeenFocused = false
                 finishEditing()
             }
         }
         .onChange(of: inlineFocused) { focused in
-            if !focused && isEditingInline {
+            if focused {
+                hasBeenFocused = true
+            } else if hasBeenFocused && isEditingInline {
                 isEditingInline = false
+                hasBeenFocused = false
                 finishEditing()
             }
         }
         .onAppear {
             if isEditingInline {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                hasBeenFocused = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
                     inlineFocused = true
                 }
             }
@@ -10518,11 +10548,7 @@ struct TextAttachmentItemView: View {
     }
 
     private func finishEditing() {
-        if textItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            onDelete()
-        } else {
-            broadcastTextChange()
-        }
+        broadcastTextChange()
     }
 
     private func broadcastTextChange() {

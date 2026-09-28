@@ -1762,6 +1762,7 @@ public final class NotebookStore: ObservableObject {
 
         // 匯入一律給新的 id。沿用檔案裡那個的話，把自己匯出的檔再匯入
         // 就會蓋掉原本那一本 —— 使用者以為多一份副本，實際是少一本。
+        let rawFileName = archiveUrl.deletingPathExtension().lastPathComponent
         let newId = UUID().uuidString.lowercased()
         let imported = try NotebookPackageBridge.importDocument(
             fromPackageAt: pkgDir, deviceId: NotebookMigration.deviceId, documentId: newId)
@@ -1774,7 +1775,10 @@ public final class NotebookStore: ObservableObject {
         try fm.moveItem(at: pkgDir, to: destination)
 
         // `importDocument` 已經用 `documentId` 建好文件，id 是常數。
-        let document = imported.document
+        var document = imported.document
+        if !rawFileName.isEmpty && (document.title.isEmpty || document.title == "未命名筆記" || document.title == "Untitled Note" || document.title == "notebook") {
+            document.title = rawFileName
+        }
         upsertNotebook(document)
         AccountSyncStore.shared.record(
             id: newId, title: document.title, parentId: document.folderId, isFolder: false)

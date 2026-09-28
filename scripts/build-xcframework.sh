@@ -22,16 +22,23 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
+AUDIOPUS_SYS_MANIFEST="$(cargo metadata --format-version 1 | python3 -c "import json, sys; d=json.load(sys.stdin); print([p['manifest_path'] for p in d['packages'] if p['name'] == 'audiopus_sys'][0])" 2>/dev/null || true)"
+if [[ -n "$AUDIOPUS_SYS_MANIFEST" && -f "$AUDIOPUS_SYS_MANIFEST" ]]; then
+  OPUS_SRC="$(dirname "$AUDIOPUS_SYS_MANIFEST")/opus"
+else
+  OPUS_SRC="$(find ~/.cargo/registry/src/ -type d -name "opus" | grep audiopus_sys | head -n 1 || true)"
+fi
+
 echo "==> 編譯 release 靜態庫"
 for t in "${TARGETS[@]}"; do
   case "$t" in
     aarch64-apple-ios)
       SDK="iphoneos"
-      CLANG_TARGET="arm64-apple-ios"
+      CLANG_TARGET="arm64-apple-ios16.0"
       ;;
     aarch64-apple-ios-sim)
       SDK="iphonesimulator"
-      CLANG_TARGET="arm64-apple-ios-simulator"
+      CLANG_TARGET="arm64-apple-ios16.0-simulator"
       ;;
     aarch64-apple-ios-macabi)
       SDK="macosx"
@@ -49,15 +56,32 @@ for t in "${TARGETS[@]}"; do
 
   STUB_DIR="${REPO_ROOT}/target/stubs/$t"
   mkdir -p "$STUB_DIR"
-  if [[ ! -f "${STUB_DIR}/libonnxruntime.a" || ! -f "${STUB_DIR}/libopus.a" ]]; then
-    SDK_PATH="$(xcrun --sdk "$SDK" --show-sdk-path 2>/dev/null || true)"
+  SDK_PATH="$(xcrun --sdk "$SDK" --show-sdk-path 2>/dev/null || true)"
+  if [[ ! -f "${STUB_DIR}/libonnxruntime.a" ]]; then
     if [[ -n "$SDK_PATH" ]]; then
       echo "void _padnote_stub(void) {}" | xcrun clang -x c - -target "$CLANG_TARGET" -isysroot "$SDK_PATH" -c -o "${STUB_DIR}/dummy.o" 2>/dev/null || touch "${STUB_DIR}/dummy.o"
     else
       echo "void _padnote_stub(void) {}" | xcrun clang -x c - -target "$CLANG_TARGET" -c -o "${STUB_DIR}/dummy.o" 2>/dev/null || touch "${STUB_DIR}/dummy.o"
     fi
     ar cr "${STUB_DIR}/libonnxruntime.a" "${STUB_DIR}/dummy.o" 2>/dev/null || true
-    ar cr "${STUB_DIR}/libopus.a" "${STUB_DIR}/dummy.o" 2>/dev/null || true
+  fi
+
+  OPUS_DIR="${REPO_ROOT}/target/opus/$t"
+  if [[ ! -f "${OPUS_DIR}/lib/libopus.a" && -n "$OPUS_SRC" && -d "$OPUS_SRC" ]]; then
+    echo "  --> 為 $t 建置原生 libopus.a"
+    mkdir -p "${OPUS_DIR}/build"
+    cp -r "${OPUS_SRC}"/* "${OPUS_DIR}/build/"
+    (
+      cd "${OPUS_DIR}/build"
+      sh autogen.sh >/dev/null 2>&1 || true
+      CC="$(xcrun --sdk "$SDK" -f clang)" \
+      CFLAGS="-target $CLANG_TARGET -isysroot $SDK_PATH -O3 -fPIC" \
+      ./configure --host=aarch64-apple-darwin --prefix="${OPUS_DIR}" \
+        --enable-static --disable-shared --disable-doc --disable-extra-programs --with-pic >/dev/null 2>&1
+      make -j"$(sysctl -n hw.logicalcpu)" >/dev/null 2>&1
+      make install >/dev/null 2>&1
+    )
+    rm -rf "${OPUS_DIR}/build"
   fi
 
   echo "  --> 編譯 target: $t"
@@ -88,7 +112,9 @@ for t in "${TARGETS[@]}"; do
   #    所以匯出的 PNG 上看不到字（工作項 S-60）。兩個平台現在都改走
   #    `PageImageRenderer`（核心產 PDF、系統算繪），與 pdf feature 無關 ——
   #    Apple 不帶 PDFium 的判斷仍然成立，但理由要算在那裡，不是算在這裡。
-  ORT_LIB_LOCATION="$STUB_DIR" OPUS_LIB_DIR="$STUB_DIR" \
+  rm -f "${REPO_ROOT}/target/$t/release/libpadnote_core.a"
+  OPUS_LIB_DIR="${OPUS_DIR}/lib" \
+  ORT_LIB_LOCATION="$STUB_DIR" \
     cargo rustc -p padnote-core --lib --release --target "$t" \
     --no-default-features --features asr --crate-type staticlib
 done

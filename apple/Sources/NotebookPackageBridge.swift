@@ -808,6 +808,7 @@ enum NotebookPackageBridge {
         }
 
         let targetId = documentId ?? path.deletingPathExtension().lastPathComponent
+        let pathFilename = path.deletingPathExtension().lastPathComponent
         var initialTitle = session.title()
         // 這個函式是 nonisolated 的（讀套件不該在主執行緒做），
         // 所以走非隔離的快照而不是 @MainActor 的發布狀態。
@@ -834,6 +835,16 @@ enum NotebookPackageBridge {
         // 讀不懂時保留預設值，筆畫與文字仍然回得來。
         if let json = session.notebookMeta(), let meta = NotebookMeta.decode(from: json) {
             meta.apply(to: &document)
+        }
+
+        // 確保來自同步索引庫的權威標題不會被舊中繼資料沖掉；
+        // 若標題仍為預設空白/未命名，且匯入檔名並非 UUID 亦非預設 notebook，則沿用檔名
+        if let syncItem = storeItems.first(where: { $0.id.caseInsensitiveCompare(targetId) == .orderedSame }),
+           !syncItem.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            document.title = syncItem.title
+        } else if (document.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || document.title == "未命名筆記" || document.title == "Untitled Note" || document.title == "无标题笔记") &&
+                  UUID(uuidString: pathFilename) == nil && !pathFilename.isEmpty && pathFilename != "notebook" {
+            document.title = pathFilename
         }
         // 中繼資料套完之後再放回形狀：形狀的事實來源是**核心的物件樹**，
         // 不是中繼資料。兩邊都帶的話會變成兩份。
