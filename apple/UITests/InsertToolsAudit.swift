@@ -267,9 +267,12 @@ final class InsertToolsAudit: XCTestCase {
     private func scrollMenuUntilHittable(_ app: XCUIApplication, _ item: XCUIElement) {
         var attempts = 0
         let menuScroll = app.scrollViews.matching(NSPredicate(format: "identifier != 'editor.canvas'")).firstMatch
+        let menuCollection = app.collectionViews.firstMatch
         while !item.isHittable && attempts < 6 {
             attempts += 1
-            if menuScroll.exists {
+            if menuCollection.exists {
+                menuCollection.swipeUp()
+            } else if menuScroll.exists {
                 menuScroll.swipeUp()
             } else {
                 break

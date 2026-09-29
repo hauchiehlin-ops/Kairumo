@@ -201,18 +201,25 @@ enum ScreenAudit {
         let visible = app.windows.firstMatch.frame
  
         var foundElements: [XCUIElement] = []
+        var estimatedMenuFrame: CGRect? = nil
         for id in ids {
             var (element, _) = elementFor(id, label: labels[id], in: app)
             if scrollToFind && !element.exists {
-                // 若選單或彈窗有項目在可見範圍外，透過在已找到的選單項目內溫和拖曳滾動（避免 swipeUp 滑出選單邊界被 UIKit 判定為點擊背景而關閉選單）。
-                let validFound = foundElements.filter { $0.exists && $0.frame.height > 0 && visible.intersects($0.frame) }
-                if !validFound.isEmpty {
-                    let midX = validFound.map { $0.frame.midX }.reduce(0, +) / CGFloat(validFound.count)
-                    let minY = max(visible.minY + 20, validFound.map { $0.frame.minY }.min() ?? 0)
-                    let maxY = min(visible.maxY - 20, validFound.map { $0.frame.maxY }.max() ?? 0)
-                    if maxY - minY > 40 {
-                        let startY = maxY - 15
-                        let endY = minY + 15
+                // 若選單或彈窗有項目在可見範圍外，優先在 iOS 原生選單容器中滑動
+                let menuContainer = app.collectionViews.firstMatch
+                if menuContainer.exists {
+                    for _ in 0..<3 where !element.exists {
+                        menuContainer.swipeUp()
+                        Thread.sleep(forTimeInterval: 0.2)
+                        (element, _) = elementFor(id, label: labels[id], in: app)
+                    }
+                } else if let menuFrame = estimatedMenuFrame {
+                    // Fallback 給非原生選單（例如舊版 popover 或客製化選單）
+                    let clamped = menuFrame.intersection(visible)
+                    if clamped.height > 60 {
+                        let midX = clamped.midX
+                        let startY = clamped.maxY - 20
+                        let endY = clamped.minY + 20
                         for _ in 0..<3 where !element.exists {
                             let startCoord = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: midX, dy: startY))
                             let endCoord = app.coordinate(withNormalizedOffset: .zero).withOffset(CGVector(dx: midX, dy: endY))
@@ -228,6 +235,9 @@ enum ScreenAudit {
                 continue
             }
             foundElements.append(element)
+            if element.frame.height > 0 && visible.intersects(element.frame) {
+                estimatedMenuFrame = estimatedMenuFrame?.union(element.frame) ?? element.frame
+            }
             if requireHittable {
                 guard element.isEnabled else { continue }
                 // 同 `check`：完整落在畫面上才問點不點得到。理由見那邊。
@@ -416,10 +426,14 @@ enum ScreenAudit {
     /// 沒有它的話，兩種情況看起來一模一樣：清單全紅。
     static func presentIdentifiers(_ app: XCUIApplication) -> [String] {
         var seen: [String] = []
-        for query in [app.buttons, app.staticTexts, app.otherElements, app.textFields] {
-            for element in query.allElementsBoundByIndex where !element.identifier.isEmpty {
-                seen.append(element.identifier)
-                if seen.count >= 20 { return seen }
+        for query in [app.buttons, app.staticTexts, app.otherElements] {
+            let count = min(query.count, 30)
+            for i in 0..<count {
+                let element = query.element(boundBy: i)
+                if element.exists && !element.identifier.isEmpty {
+                    seen.append(element.identifier)
+                    if seen.count >= 30 { return seen }
+                }
             }
         }
         return seen
