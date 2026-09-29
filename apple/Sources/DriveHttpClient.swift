@@ -41,8 +41,25 @@ final class DriveHttpClient: FfiDriveHttp {
         isCancelled = true
         let sessions = activeSessions
         activeLock.unlock()
+        // **只取消進行中的 task，不可以讓 session 失效。**
+        //
+        // 原本這裡呼叫 `invalidateAndCancel()`。但共用的工作階段
+        // （`CloudSync.makeSession`）會被下一輪同步重複使用，`resetCancellation()`
+        // 只清旗標、不會換新的 session —— 於是下一次 `session.dataTask(with:)`
+        // 打在一個已失效的 session 上，Foundation 丟出 `NSGenericException`
+        // （"Task created in a session that has been invalidated"）。
+        //
+        // 那是 **Objective-C 例外**，Swift 的 `do/catch` 接不到；它從 Swift 回呼
+        // 一路穿過 Rust 的 `catch_unwind`，Rust 只認自己的 panic，遇到外來例外
+        // 直接 `abort()`。崩潰報告的堆疊就是這樣：
+        // `CloudSync.refresh` → `FfiSyncSession.refresh` → `__rust_foreign_exception`。
+        //
+        // 取消 task 之後 completion 會帶 `NSURLErrorCancelled` 回來，
+        // `syncDataTask` 已經把它當成「使用者中斷同步」處理。
         for s in sessions {
-            s.invalidateAndCancel()
+            s.getAllTasks { tasks in
+                tasks.forEach { $0.cancel() }
+            }
         }
     }
 
