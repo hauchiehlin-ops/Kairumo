@@ -1612,6 +1612,15 @@ impl FfiSyncSession {
                 let changed = batch.changes.len() as u32;
                 let mut effective = 0u32;
                 for change in &batch.changes {
+                    // `RemoteIndex` 與 provider 的路徑→file-id 快取必須一起前進。
+                    // 雲端被另一台裝置清空後，同一路徑重建出來的是全新 id；
+                    // 只更新前者的話，下面的 metadata 讀取仍會打到舊 id 的
+                    // 404，整輪在真正下載筆記與錄音之前就停止。
+                    if change.gone {
+                        self.drive.forget_id(&change.file_id);
+                    } else if let Some(name) = change.name.as_deref() {
+                        self.drive.prime_id(name, &change.file_id);
+                    }
                     if index.apply(
                         &change.file_id,
                         change.name.as_deref(),
@@ -2214,6 +2223,7 @@ mod tests {
             let files = self.files.lock().unwrap();
             files
                 .get(index)
+                .filter(|(name, _)| !name.is_empty())
                 .map(|(_, d)| d.clone())
                 .ok_or(FfiDriveError::NotFound { path: url })
         }
@@ -2280,11 +2290,11 @@ mod tests {
             let ok = {
                 let mut files = self.files.lock().unwrap();
                 match files.get_mut(index) {
-                    Some(slot) => {
+                    Some(slot) if !slot.0.is_empty() => {
                         slot.1 = data;
                         true
                     }
-                    None => false,
+                    Some(_) | None => false,
                 }
             };
             if ok {
@@ -3379,6 +3389,49 @@ mod tests {
         // 本機快照歸零 —— 下一輪會重新建立基準，而不是拿著幻覺去比對。
         assert_eq!(session.tracked_files(), 0);
         assert!(session.needs_rebuild());
+    }
+
+    /// 另一台裝置清空 Drive 再重建同名檔案時，已開著的接收端 session
+    /// 不能繼續使用清除前的 file id。
+    ///
+    /// 這正是「iPad 清除並重新上傳後，喚醒 Mac／iPhone 卻不同步」的時間線：
+    /// 接收端的 `RemoteIndex` 會前進，但 provider 另有一份 id 快取。兩份若
+    /// 沒有一起更新，讀 `notebooks/index.json` 就會先撞舊 id 的 404，內容與
+    /// 錄音同步根本還沒開始。
+    #[test]
+    fn a_live_receiver_follows_file_ids_recreated_after_cloud_wipe() {
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+        let source = FfiSyncSession::create(http.clone(), String::new());
+        let receiver = FfiSyncSession::create(http, String::new());
+
+        assert!(source.refresh().ok);
+        let old_index = sync_upsert_item(String::new(), item("n1", "舊標題", 1, "ipad"));
+        let first = source.sync_metadata(String::new(), old_index);
+        assert!(first.ok, "{}", first.error);
+
+        // 接收端先同步一次，刻意把清除前的 metadata file id 暖進快取。
+        assert!(receiver.refresh().ok);
+        let received_first = receiver.sync_metadata(String::new(), String::new());
+        assert!(received_first.ok, "{}", received_first.error);
+        assert!(received_first.index_json.contains("舊標題"));
+
+        assert!(source.wipe_cloud().ok);
+        assert!(source.refresh().ok);
+        let rebuilt_index = sync_upsert_item(String::new(), item("n1", "iPad 重建後", 2, "ipad"));
+        let rebuilt = source.sync_metadata(String::new(), rebuilt_index);
+        assert!(rebuilt.ok, "{}", rebuilt.error);
+
+        // 同一個 receiver 物件模擬 App 從背景恢復；不是重開 process。
+        let refreshed = receiver.refresh();
+        assert!(refreshed.ok, "{}", refreshed.error);
+        let received_rebuild = receiver.sync_metadata(String::new(), String::new());
+        assert!(received_rebuild.ok, "{}", received_rebuild.error);
+        assert!(
+            received_rebuild.index_json.contains("iPad 重建後"),
+            "接收端仍在讀清除前的 Drive file id：{}",
+            received_rebuild.index_json
+        );
     }
 
     /// 雲端本來就是空的：不是錯誤，也不該炸掉。

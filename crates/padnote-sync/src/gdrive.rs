@@ -455,6 +455,19 @@ impl<H: DriveHttp> GDriveProvider<H> {
         del.remove(&path.to_lowercase());
     }
 
+    /// Drive 回報某個 file id 已刪除時，把所有指向它的路徑快取清掉。
+    ///
+    /// `changes.list` 的刪除事件通常只有 file id、沒有檔名；而「清除雲端
+    /// 資料」後重新上傳會讓同一路徑取得全新的 id。若只更新 `RemoteIndex`
+    /// 而留下這份快取，中繼資料仍會去讀清除前的 id，整輪同步就在下載
+    /// 筆記本與錄音之前以 404 中止。
+    pub fn forget_id(&self, file_id: &str) {
+        self.id_cache
+            .lock()
+            .unwrap()
+            .retain(|_, cached_id| cached_id != file_id);
+    }
+
     /// 依 file id 直接讀整個檔案，不先查 id。
     pub fn get_all_by_id(&self, file_id: &str) -> Result<Vec<u8>, SyncError> {
         self.http
@@ -610,9 +623,15 @@ impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
             match self.http.patch_bytes(&url, data) {
                 Ok(()) => return Ok(()),
                 Err(SyncError::NotFound(_)) => {
-                    let mut cache = self.id_cache.lock().unwrap();
-                    cache.remove(path);
-                    cache.remove(&lower);
+                    // 先釋放鎖再進 `put_new`；它會呼叫 `prime_id` 再拿同一把
+                    // 鎖。把 `return self.put_new(...)` 寫在 guard 還活著的
+                    // scope 裡會自我死鎖，症狀就是清除雲端後「重新同步」
+                    // 永遠停住。
+                    {
+                        let mut cache = self.id_cache.lock().unwrap();
+                        cache.remove(path);
+                        cache.remove(&lower);
+                    }
                     return self.put_new(path, data);
                 }
                 Err(other) => return Err(other),
