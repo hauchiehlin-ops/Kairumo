@@ -174,4 +174,32 @@ final class ObjectLayerTests: XCTestCase {
         XCTAssertEqual(rows.count, 2)
         XCTAssertTrue(rows.allSatisfy(\.isGroup))
     }
+
+    // MARK: - 批次查表要與單一版本逐項一致
+
+    /// `ObjectStacking.Lookup` 是為了避開 O(m×N) 才存在的（主執行緒卡十秒、
+    /// 被看門狗殺掉，見該型別的註解）。它**只能改複雜度，不能改結果** ——
+    /// 疊放次序錯了使用者馬上看得到。
+    func testLookupMatchesTheSingleShotZIndexForEveryKind() {
+        let orders: [[String]?] = [
+            nil,
+            [],
+            ["a", "b", "c"],
+            // 重複的 id：`firstIndex(of:)` 取第一個，查表也必須取第一個。
+            ["a", "b", "a", "c"],
+        ]
+        let ids = ["a", "b", "c", "not-in-order"]
+
+        for order in orders {
+            let lookup = ObjectStacking.Lookup(order: order)
+            for id in ids {
+                for kind in StackableObject.Kind.allCases {
+                    XCTAssertEqual(
+                        lookup.zIndex(for: id, kind: kind),
+                        ObjectStacking.zIndex(for: id, kind: kind, order: order),
+                        "order=\(String(describing: order)) id=\(id) kind=\(kind)")
+                }
+            }
+        }
+    }
 }

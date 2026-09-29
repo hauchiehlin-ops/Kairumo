@@ -3604,6 +3604,9 @@ public struct NotebookEditorView: View {
     /// 筆畫根本到不了畫布，看起來就是「筆刷在物件上沒作用」。
     @ViewBuilder
     private func objectLayer(forPage page: Int) -> some View {
+        // 堆疊順序的索引表：一次算繪只建一次，不要每個物件各掃一遍
+        // （見 `ObjectStacking.Lookup`）。
+        let stacking = ObjectStacking.Lookup(order: notebook.objectOrder(forPage: page))
         ZStack(alignment: .topLeading) {
             ForEach(notebook.attachments ?? []) { item in
                     if item.pageIndex == page {
@@ -3620,7 +3623,7 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
-                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .image, order: notebook.objectOrder(forPage: page)))
+                        .zIndex(stacking.zIndex(for: item.id, kind: .image))
                     }
                 }
 
@@ -3652,7 +3655,7 @@ public struct NotebookEditorView: View {
                                 store.updateNotebook(notebook)
                             }
                         )
-                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .shape, order: notebook.objectOrder(forPage: page)))
+                        .zIndex(stacking.zIndex(for: item.id, kind: .shape))
                     }
                 }
 
@@ -3743,15 +3746,15 @@ public struct NotebookEditorView: View {
                                 store.updateNotebook(notebook)
                             }
                         )
-                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .table, order: notebook.objectOrder(forPage: page)))
+                        .zIndex(stacking.zIndex(for: item.id, kind: .table))
                     }
                 }
 
                 // 🌟 筆記內嵌 Word 級文字方塊（支援段落對齊、特殊符號與便利貼卡片底色）
-                ForEach(notebook.textAttachments ?? []) { item in
+                ForEach(Array((notebook.textAttachments ?? []).enumerated()), id: \.element.id) { position, item in
                     if item.pageIndex == page {
                         TextAttachmentItemView(
-                            textItem: binding(forTextId: item.id),
+                            textItem: binding(forTextId: item.id, hint: position),
                             isEditingInline: Binding(
                                 get: { inlineEditingTextId == item.id },
                                 set: { editing in
@@ -3784,7 +3787,7 @@ public struct NotebookEditorView: View {
                                 anchorOverlappingInkToText(textItem: item)
                             }
                         )
-                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .text, order: notebook.objectOrder(forPage: page)))
+                        .zIndex(stacking.zIndex(for: item.id, kind: .text))
                     }
                 }
 
@@ -3798,7 +3801,7 @@ public struct NotebookEditorView: View {
                                 store.updateNotebook(notebook)
                             }
                         )
-                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .link, order: notebook.objectOrder(forPage: page)))
+                        .zIndex(stacking.zIndex(for: item.id, kind: .link))
                     }
                 }
 
@@ -3816,7 +3819,7 @@ public struct NotebookEditorView: View {
                                 insertTranscriptText(transcribedText, for: item)
                             }
                         )
-                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .audio, order: notebook.objectOrder(forPage: page)))
+                        .zIndex(stacking.zIndex(for: item.id, kind: .audio))
                     }
                 }
 
@@ -3833,7 +3836,7 @@ public struct NotebookEditorView: View {
                                 collaborationManager.broadcastSelection(selectedId: nil)
                             }
                         )
-                        .zIndex(ObjectStacking.zIndex(for: item.id, kind: .model3D, order: notebook.objectOrder(forPage: page)))
+                        .zIndex(stacking.zIndex(for: item.id, kind: .model3D))
                     }
                 }
 
@@ -3856,7 +3859,7 @@ public struct NotebookEditorView: View {
                             }
                         )
                         .position(x: pin.x, y: pin.y)
-                        .zIndex(ObjectStacking.zIndex(for: pin.id, kind: .pin, order: notebook.objectOrder(forPage: page)))
+                        .zIndex(stacking.zIndex(for: pin.id, kind: .pin))
                     }
                 }
 
@@ -9877,13 +9880,27 @@ public struct NotebookEditorView: View {
         )
     }
 
-    private func binding(forTextId id: String) -> Binding<NoteTextAttachment> {
-        Binding(
+    /// - Parameter hint: 呼叫端已經知道的位置（`ForEach` 走到第幾個）。
+    ///   對得上就直接用，O(1)；對不上（陣列在兩次算繪之間變動了）才退回線性搜尋。
+    ///
+    /// **不能每次都線性搜尋。** `Binding(get:set:)` 建立時就會先呼叫一次 `get`，
+    /// 一頁有 m 個文字方塊、全本有 n 個，一次算繪就是 m×n 次 UUID 字串比對，
+    /// 而 SwiftUI 一次更新會重算好幾輪。主執行緒因此卡住超過十秒，看門狗
+    /// （`0x8BADF00D`）在背景把 App 殺掉 —— 崩潰報告的主執行緒堆疊停在
+    /// 這個閉包裡的 `_stringCompareInternal`。
+    private func binding(forTextId id: String, hint: Int? = nil) -> Binding<NoteTextAttachment> {
+        func index(in items: [NoteTextAttachment]?) -> Int? {
+            guard let items else { return nil }
+            if let hint, items.indices.contains(hint), items[hint].id == id { return hint }
+            return items.firstIndex(where: { $0.id == id })
+        }
+        return Binding(
             get: {
-                notebook.textAttachments?.first(where: { $0.id == id }) ?? NoteTextAttachment()
+                index(in: notebook.textAttachments).map { notebook.textAttachments![$0] }
+                    ?? NoteTextAttachment()
             },
             set: { updated in
-                if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
+                if let idx = index(in: notebook.textAttachments) {
                     notebook.textAttachments?[idx] = updated
                     store.updateNotebook(notebook)
                 }

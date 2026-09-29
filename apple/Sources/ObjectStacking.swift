@@ -49,6 +49,37 @@ public struct StackableObject: Identifiable, Hashable {
 
 public enum ObjectStacking {
 
+    /// `zIndex(for:kind:order:)` 的批次版本：把 `order` 只掃一次，之後每個物件 O(1)。
+    ///
+    /// **為什麼要有它。** 單一版本每個物件都對整份 `order` 做一次 `firstIndex(of:)`，
+    /// 一頁有 m 個物件、順序清單長 N，一次算繪就是 m×N 次字串比對；
+    /// 而 SwiftUI 在一次更新裡會重算好幾輪。物件很多的筆記本在主執行緒上
+    /// 因此可以吃掉十秒以上 —— 系統看門狗（`0x8BADF00D`，scene-update）
+    /// 就在這時把 App 殺掉（TestFlight 4.15.0 build 71 的崩潰報告）。
+    ///
+    /// 語意與單一版本逐項相同，只是查表方式不同。
+    public struct Lookup {
+        private let indexById: [String: Int]
+        private let count: Int
+
+        public init(order: [String]?) {
+            var map = [String: Int](minimumCapacity: order?.count ?? 0)
+            // 重複的 id 取**第一個**位置，與 `firstIndex(of:)` 一致。
+            for (index, id) in (order ?? []).enumerated() where map[id] == nil {
+                map[id] = index
+            }
+            self.indexById = map
+            self.count = order?.count ?? 0
+        }
+
+        public func zIndex(for id: String, kind: StackableObject.Kind) -> Double {
+            if let index = indexById[id] {
+                return Double(index)
+            }
+            return Double(count + 1) + Double(kind.defaultLayer)
+        }
+    }
+
     /// 一個物件的 z 值。
     ///
     /// 在 `order` 裡的照它的位置；不在的排到後面，同型別之間保持原本的相對次序。
