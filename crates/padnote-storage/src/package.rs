@@ -1006,36 +1006,49 @@ impl NotebookPackage {
                         let mut cur_device = file_device;
                         let mut cur_batch: Vec<DocOp> = Vec::new();
 
-                        let flush_to_merged = |lamport: u64,
-                                                   device: u32,
-                                                   batch: &mut Vec<DocOp>,
-                                                   seen: &mut std::collections::HashMap<(u64, u32), Vec<Vec<DocOp>>>,
-                                                   merged: &mut Vec<u8>| {
-                            if batch.is_empty() {
-                                return;
-                            }
-                            let existing = seen.entry((lamport, device)).or_default();
-                            if !existing.iter().any(|prev| prev == batch) {
-                                existing.push(batch.clone());
-                                let mut framed = Vec::with_capacity(batch.len() + 1);
-                                framed.push(DocOp::BatchOrigin { lamport, device });
-                                framed.append(batch);
-                                merged.extend_from_slice(&padnote_doc::ops::encode(&framed));
-                            } else {
-                                batch.clear();
-                            }
-                        };
+                        let flush_to_merged =
+                            |lamport: u64,
+                             device: u32,
+                             batch: &mut Vec<DocOp>,
+                             seen: &mut std::collections::HashMap<(u64, u32), Vec<Vec<DocOp>>>,
+                             merged: &mut Vec<u8>| {
+                                if batch.is_empty() {
+                                    return;
+                                }
+                                let existing = seen.entry((lamport, device)).or_default();
+                                if !existing.iter().any(|prev| prev == batch) {
+                                    existing.push(batch.clone());
+                                    let mut framed = Vec::with_capacity(batch.len() + 1);
+                                    framed.push(DocOp::BatchOrigin { lamport, device });
+                                    framed.append(batch);
+                                    merged.extend_from_slice(&padnote_doc::ops::encode(&framed));
+                                } else {
+                                    batch.clear();
+                                }
+                            };
 
                         for op in ops {
                             if let DocOp::BatchOrigin { lamport, device } = op {
-                                flush_to_merged(cur_lamport, cur_device, &mut cur_batch, &mut seen_batches, &mut merged);
+                                flush_to_merged(
+                                    cur_lamport,
+                                    cur_device,
+                                    &mut cur_batch,
+                                    &mut seen_batches,
+                                    &mut merged,
+                                );
                                 cur_lamport = lamport;
                                 cur_device = device;
                                 continue;
                             }
                             cur_batch.push(op);
                         }
-                        flush_to_merged(cur_lamport, cur_device, &mut cur_batch, &mut seen_batches, &mut merged);
+                        flush_to_merged(
+                            cur_lamport,
+                            cur_device,
+                            &mut cur_batch,
+                            &mut seen_batches,
+                            &mut merged,
+                        );
                     } else {
                         merged.extend_from_slice(&raw);
                     }
@@ -1183,48 +1196,61 @@ impl NotebookPackage {
             let mut cur_device = file_device;
             let mut cur_batch: Vec<DocOp> = Vec::new();
 
-            let flush_batch = |lamport: u64,
-                                   device: u32,
-                                   batch: &mut Vec<DocOp>,
-                                   seen: &mut std::collections::HashMap<(u64, u32), Vec<Vec<DocOp>>>,
-                                   out: &mut Vec<OpEntry>|
-             -> Result<(), StorageError> {
-                if batch.is_empty() {
-                    return Ok(());
-                }
-                let existing = seen.entry((lamport, device)).or_default();
-                if !existing.iter().any(|prev| prev == batch) {
-                    existing.push(batch.clone());
-                    for op in batch.drain(..) {
-                        out.push(OpEntry {
-                            lamport,
-                            device,
-                            op,
-                        });
-                        if out.len() > MAX_SAFE_OPS {
-                            return Err(StorageError::DocOps(
-                                "oplog 操作筆數超過上限，已終止載入以防止記憶體溢出".into(),
-                            ));
-                        }
+            let flush_batch =
+                |lamport: u64,
+                 device: u32,
+                 batch: &mut Vec<DocOp>,
+                 seen: &mut std::collections::HashMap<(u64, u32), Vec<Vec<DocOp>>>,
+                 out: &mut Vec<OpEntry>|
+                 -> Result<(), StorageError> {
+                    if batch.is_empty() {
+                        return Ok(());
                     }
-                } else {
-                    batch.clear();
-                }
-                Ok(())
-            };
+                    let existing = seen.entry((lamport, device)).or_default();
+                    if !existing.iter().any(|prev| prev == batch) {
+                        existing.push(batch.clone());
+                        for op in batch.drain(..) {
+                            out.push(OpEntry {
+                                lamport,
+                                device,
+                                op,
+                            });
+                            if out.len() > MAX_SAFE_OPS {
+                                return Err(StorageError::DocOps(
+                                    "oplog 操作筆數超過上限，已終止載入以防止記憶體溢出".into(),
+                                ));
+                            }
+                        }
+                    } else {
+                        batch.clear();
+                    }
+                    Ok(())
+                };
 
             for op in
                 padnote_doc::ops::decode(&bytes).map_err(|e| StorageError::DocOps(e.to_string()))?
             {
                 if let DocOp::BatchOrigin { lamport, device } = op {
-                    flush_batch(cur_lamport, cur_device, &mut cur_batch, &mut seen_batches, &mut out)?;
+                    flush_batch(
+                        cur_lamport,
+                        cur_device,
+                        &mut cur_batch,
+                        &mut seen_batches,
+                        &mut out,
+                    )?;
                     cur_lamport = lamport;
                     cur_device = device;
                     continue;
                 }
                 cur_batch.push(op);
             }
-            flush_batch(cur_lamport, cur_device, &mut cur_batch, &mut seen_batches, &mut out)?;
+            flush_batch(
+                cur_lamport,
+                cur_device,
+                &mut cur_batch,
+                &mut seen_batches,
+                &mut out,
+            )?;
         }
 
         // **依座標排序，不要相信檔案順序。**
