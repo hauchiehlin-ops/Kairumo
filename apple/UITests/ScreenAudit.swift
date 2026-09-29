@@ -200,14 +200,14 @@ enum ScreenAudit {
         var unreachable: [String] = []
         let visible = app.windows.firstMatch.frame
  
-        var foundElements: [XCUIElement] = []
+        let menuContainer = app.collectionViews.firstMatch
+        let hasNativeMenuContainer = menuContainer.exists
         var estimatedMenuFrame: CGRect? = nil
         for id in ids {
             var (element, _) = elementFor(id, label: labels[id], in: app)
             if scrollToFind && !element.exists {
                 // 若選單或彈窗有項目在可見範圍外，優先在 iOS 原生選單容器中滑動
-                let menuContainer = app.collectionViews.firstMatch
-                if menuContainer.exists {
+                if hasNativeMenuContainer {
                     for _ in 0..<3 where !element.exists {
                         menuContainer.swipeUp()
                         Thread.sleep(forTimeInterval: 0.2)
@@ -234,8 +234,13 @@ enum ScreenAudit {
                 missing.append("\(id)（標籤：\(labels[id] ?? "—")）")
                 continue
             }
-            foundElements.append(element)
-            if element.frame.height > 0 && visible.intersects(element.frame) {
+            // 原生選單滾動時會回收剛離開畫面的 row。上面的 `.exists` 為 true
+            // 不代表緊接著的 `.frame` 還拿得到同一份 snapshot；在 CI 上這會變成
+            // `Failed to get matching snapshot`。原生容器本來就不需要估選單範圍，
+            // 所以只在自繪選單的拖曳 fallback 路徑取 frame。
+            if !hasNativeMenuContainer,
+               element.frame.height > 0,
+               visible.intersects(element.frame) {
                 estimatedMenuFrame = estimatedMenuFrame?.union(element.frame) ?? element.frame
             }
             if requireHittable {
@@ -353,23 +358,22 @@ enum ScreenAudit {
     /// 尋找控制項：若有標籤則優先尋找真實渲染的項目（SwiftUI Menu 項目交由 UIKit
     /// 算繪時會剝離 accessibilityIdentifier，若先查 identifier 會對上背景模板的幽靈節點，
     /// 進而在存取 isEnabled 時拋出 Failed to get matching snapshot）。
-    /// 注意：不能限於 app.buttons，因 UIKit/SwiftUI 可能將部分選單項目判定為 PopUpButton (type 14) 或 MenuItem，
-    /// 若限縮為 Button 會觸發 Automation type mismatch 異常。因此使用 descendants(matching: .any)。
+    ///
+    /// 這裡從查詢開始就不能限於 `app.buttons`。`app.buttons[label]` 會建立
+    /// 「Button + identifier」的 typed query；UIKit/SwiftUI 之後若把同一個選單項目回報為
+    /// PopUpButton (type 14) 或 MenuItem，光是讀 `.exists` 就會觸發 Automation type
+    /// mismatch。因此只用 `descendants(matching: .any)` 以 label predicate 查找。
     /// 標籤找不到時退回識別字。
     private static func elementFor(
         _ id: String, label: String?, in app: XCUIApplication
     ) -> (element: XCUIElement, matchedByLabel: Bool) {
         if let label, !label.isEmpty {
-            let byButton = app.buttons[label].firstMatch
-            if byButton.exists { return (byButton, true) }
             let byLabel = app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch
             if byLabel.exists { return (byLabel, true) }
         }
         let byId = app.descendants(matching: .any).matching(identifier: id).firstMatch
         if byId.exists { return (byId, false) }
         if let label, !label.isEmpty {
-            let byButton = app.buttons[label].firstMatch
-            if byButton.exists { return (byButton, true) }
             return (app.descendants(matching: .any).matching(NSPredicate(format: "label == %@", label)).firstMatch, true)
         }
         return (byId, false)
