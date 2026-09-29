@@ -44,16 +44,22 @@
   變 0、沒有起算點的舊墓碑不算期滿、失聯 90 天的裝置不再卡住清除、沒有確認檔的舊版裝置
   在期滿後多等 90 天、確認檔只增不減（重開 App 也不會倒退）。
 - 修改時間不參與「快照有沒有改變」，所以焦點通道不會把自己的推送誤判成對方動了。
-- xcframework 已重建、Swift 與 Kotlin 綁定已重新產生。
+- xcframework 已重建、Swift 與 Kotlin 綁定已重新產生；`nm` 確認新符號在三個 Apple target
+  的二進位裡，`nm -D` 確認在 Android 兩個 ABI（arm64-v8a、x86_64，NDK 28.2 釘定版本）的
+  `libpadnote_core.so` 裡。
+- **Apple**：軟刪除（套件搬到 `TrashPackages/`）、還原、永久刪除、到期清除、遠端刪除／還原對帳、
+  `TrashView`、診斷畫面入口。編譯通過；`KairumoTests` 全綠（含 `NotebookTrashTests` 13 項）；
+  `SmokeUITests` + `InsertToolsAudit` 在乾淨模擬器上全綠。
+- **Android**：`NotebookTrash`、`TrashDialog`、同步後的確認／回收／清理。主程式與儀器測試編譯通過、
+  JVM 單元測試通過；**儀器測試在 Android 模擬器（kairumo35）上跑過：整套 278 項，0 失敗**，
+  含 `NotebookTrashTest` 7 項。（`NotebookTrash.empty` 刻意不測，因為它會清掉裝置上真正的回收桶。）
 
-**已寫、但還沒編譯或沒跑過：**
+**還沒驗證：**
 
-- 🔴 **Apple**：軟刪除（套件搬到 `TrashPackages/`）、還原、永久刪除、到期清除、遠端刪除／還原對帳、
-  `TrashView`、診斷畫面入口、`NotebookTrashTests`。（撰寫時編譯與測試尚未跑完，見 `docs/DEVLOG.md`。）
-- 🔴 **Android**：`NotebookTrash`、`TrashDialog`、同步後的確認／回收／清理、`NotebookTrashTest`
-  （儀器測試，需要裝置或模擬器；`NotebookTrash.empty` 刻意不測，因為它會清掉裝置上真正的回收桶）。
 - 🔴 **兩台以上真實裝置**的完整流程（A 刪除 → B 確認 → 期滿後雲端清除；B 還原 → A 自動救回）
-  只能實機驗證。
+  只能實機驗證。單元測試證明了每一段的規則，但沒有證明兩台真的裝置串起來的行為。
+- 🔴 **回收桶畫面的實際操作**（`TrashView`／`TrashDialog`）：只驗證了它能編譯、入口不影響畫面稽核，
+  沒有人真的點過還原、永久刪除、清空。
 
 **刻意不做（原因寫在設計文件裡）：**
 
