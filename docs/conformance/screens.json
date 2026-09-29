@@ -685,8 +685,8 @@
       },
       {
         "id": "home.language",
-        "label_en": "Language",
-        "label_key": "language",
+        "label_en": "Select Language",
+        "label_key": "select_language",
         "reveal": "always"
       },
       {
@@ -877,8 +877,8 @@
       },
       {
         "id": "home.diagnostics",
-        "label_en": "Version",
-        "label_key": "version_number",
+        "label_en": "System diagnostics and logs",
+        "label_key": "hw_diag_a11y",
         "reveal": "always"
       }
     ]

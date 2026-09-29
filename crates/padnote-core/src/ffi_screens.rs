@@ -270,7 +270,7 @@ fn home_spec() -> FfiScreenSpec {
                 "",
                 vec![
                     c("home.title", Label, ""),
-                    c("home.language", Button, "language"),
+                    c("home.language", Button, "select_language"),
                 ],
             ),
             section(
@@ -361,7 +361,7 @@ fn home_spec() -> FfiScreenSpec {
                 "",
                 vec![
                     c("home.version", Label, "version_number"),
-                    c("home.diagnostics", Button, "version_number"),
+                    c("home.diagnostics", Button, "hw_diag_a11y"),
                 ],
             ),
         ],
