@@ -222,6 +222,20 @@ final class InsertToolsAudit: XCTestCase {
             XCTFail("貼紙庫裡一張貼紙都沒有")
             return
         }
+        // LazyVGrid 可能已經建立第一格的無障礙節點，但面板動畫尚未結束，
+        // 此時 exists 是 true、tap 卻不會送到按鈕。CI 較慢時就會一路等到
+        // notice 逾時，錯誤訊息看起來像產品沒有提示，實際上根本沒選到貼紙。
+        if !sticker.isHittable {
+            let grid = element(app, "stickers.builtin")
+            for _ in 0..<3 where !sticker.isHittable {
+                if grid.exists { grid.swipeDown() }
+                _ = sticker.waitForExistence(timeout: 1)
+            }
+        }
+        guard sticker.isHittable else {
+            XCTFail("貼紙庫第一張貼紙存在但點不到")
+            return
+        }
         sticker.tap()
 
         XCTAssertTrue(

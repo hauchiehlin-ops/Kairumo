@@ -320,14 +320,14 @@ public struct HomeWorkbenchView: View {
                 if horizontalSizeClass == .compact {
                     ToolbarItem(placement: .topBarLeading) {
                         HStack(spacing: DS.Space.xs) {
-                            manualToolbarButton
-                            privacyToolbarButton
+                            compactManualToolbarButton
+                            compactPrivacyToolbarButton
                         }
                     }
                     ToolbarItem(placement: .topBarTrailing) {
                         HStack(spacing: DS.Space.xs) {
-                            diagnosticsToolbarButton
-                            languageToolbarMenu
+                            compactDiagnosticsToolbarButton
+                            compactLanguageToolbarMenu
                         }
                     }
                 } else {
@@ -1875,6 +1875,25 @@ public struct HomeWorkbenchView: View {
         .accessibilityIdentifier("home.docs.manual")
     }
 
+    /// Compact 導覽列放不下四個「圖示＋文字」按鈕。把兩組 HStack 交給
+    /// UIKit 自動折疊時，iOS 只保留左邊的手冊與隱私，右邊的診斷與語言會
+    /// 整組從無障礙樹消失。窄螢幕改用圖示；完整名稱仍由 accessibilityLabel
+    /// 提供，四個入口也都能同時留在工具列上。
+    private var compactManualToolbarButton: some View {
+        Button {
+            if DocumentWindow.supportsSeparateWindow {
+                openWindow(id: DocumentWindow.id, value: BundledDocument.manual.id)
+            } else {
+                viewingDocument = .manual
+            }
+        } label: {
+            Image(systemName: "book.pages")
+        }
+        .accessibilityLabel(localizationManager.localized(BundledDocument.manual.titleKey))
+        .help(localizationManager.localized(BundledDocument.manual.titleKey))
+        .accessibilityIdentifier("home.docs.manual")
+    }
+
     private var privacyToolbarButton: some View {
         Button {
             if DocumentWindow.supportsSeparateWindow {
@@ -1895,6 +1914,21 @@ public struct HomeWorkbenchView: View {
         .accessibilityIdentifier("home.docs.privacy")
     }
 
+    private var compactPrivacyToolbarButton: some View {
+        Button {
+            if DocumentWindow.supportsSeparateWindow {
+                openWindow(id: DocumentWindow.id, value: BundledDocument.privacy.id)
+            } else {
+                viewingDocument = .privacy
+            }
+        } label: {
+            Image(systemName: "lock.shield")
+        }
+        .accessibilityLabel(localizationManager.localized(BundledDocument.privacy.titleKey))
+        .help(localizationManager.localized(BundledDocument.privacy.titleKey))
+        .accessibilityIdentifier("home.docs.privacy")
+    }
+
     private var diagnosticsToolbarButton: some View {
         Button {
             showInfoSheet = true
@@ -1905,6 +1939,17 @@ public struct HomeWorkbenchView: View {
                 Text(localizationManager.localized("diagnostics"))
                     .font(.subheadline)
             }
+        }
+        .accessibilityLabel(localizationManager.localized("hw_diag_a11y"))
+        .help(localizationManager.localized("hw_diag_a11y"))
+        .accessibilityIdentifier("home.diagnostics")
+    }
+
+    private var compactDiagnosticsToolbarButton: some View {
+        Button {
+            showInfoSheet = true
+        } label: {
+            Image(systemName: "wrench.and.screwdriver")
         }
         .accessibilityLabel(localizationManager.localized("hw_diag_a11y"))
         .help(localizationManager.localized("hw_diag_a11y"))
@@ -1932,6 +1977,28 @@ public struct HomeWorkbenchView: View {
                 Text(localizationManager.localized("language"))
                     .font(.subheadline)
             }
+        }
+        .accessibilityLabel(localizationManager.localized("select_language"))
+        .help(localizationManager.localized("select_language"))
+        .accessibilityIdentifier("home.language")
+    }
+
+    private var compactLanguageToolbarMenu: some View {
+        Menu {
+            ForEach(AppLanguage.allCases) { lang in
+                Button {
+                    localizationManager.setLanguage(lang)
+                } label: {
+                    HStack {
+                        Text(lang.endonym)
+                        if localizationManager.currentLanguage == lang {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Image(systemName: "globe")
         }
         .accessibilityLabel(localizationManager.localized("select_language"))
         .help(localizationManager.localized("select_language"))
