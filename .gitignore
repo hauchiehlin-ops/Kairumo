@@ -61,3 +61,6 @@ __pycache__/
 # Claude Code 的本機工作區（worktree 暫存），不進版控。
 /.claude/
 asc-macos-screenshots/
+
+# 臨時腳本／補丁一律放這裡，不入版控（否則 release.sh 會因工作目錄不乾淨而中止）
+/scratch/
