@@ -44,7 +44,7 @@ final class SmokeUITests: XCTestCase {
         assertAlive(app, "開啟筆記")
 
         // 2. 開啟筆記結構側欄
-        let structure = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] 'sidebar' OR label CONTAINS[c] 'Split View'")).firstMatch
+        let structure = app.buttons["editor.sidebar_toggle"].firstMatch
         if structure.waitForExistence(timeout: 5) {
             structure.tap()
             sleep(2)
@@ -94,14 +94,10 @@ final class SmokeUITests: XCTestCase {
         let app = launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
 
-        // 往下捲到說明文件區塊
-        let manual = app.staticTexts["User Manual"].firstMatch
-        var tries = 0
-        while !manual.exists && tries < 8 {
-            app.swipeUp()
-            tries += 1
-        }
-        XCTAssertTrue(manual.waitForExistence(timeout: 5), "首頁找不到「操作手冊」入口")
+        // 兩個入口都在首頁導覽列上（不必捲動），用識別碼找：標籤是圖示按鈕的
+        // 系統標籤，語言不同就不同。
+        let manual = app.buttons["home.docs.manual"].firstMatch
+        XCTAssertTrue(manual.waitForExistence(timeout: 8), "首頁找不到「操作手冊」入口")
         manual.tap()
         sleep(3)
         assertAlive(app, "開啟操作手冊")
@@ -112,14 +108,19 @@ final class SmokeUITests: XCTestCase {
         done.tap()
         sleep(1)
 
-        let privacy = app.staticTexts["Privacy Policy"].firstMatch
+        let privacy = app.buttons["home.docs.privacy"].firstMatch
         XCTAssertTrue(privacy.waitForExistence(timeout: 5), "首頁找不到「隱私權政策」入口")
         privacy.tap()
         sleep(3)
         assertAlive(app, "開啟隱私權政策")
     }
 
-    /// 收合左側結構欄之後，畫布必須撐滿視窗寬度
+    /// 收合左側結構欄之後，畫布不能比展開時窄，而且側欄清單真的收起來了。
+    ///
+    /// 這條原本斷言「畫布寬度 > 視窗的 85%」。整頁模式之後那不成立了：
+    /// 頁面是「寬高兩個比例取較小者」等比縮放（整張 A4 一定看得完），
+    /// 手機直向時工具列吃掉大半高度，紙本來就只有視窗的七成寬。
+    /// 「撐滿」不是這個版面的承諾；承諾的是**側欄不該佔走畫布的空間**。
     func testCanvasExpandsWhenSidebarCollapses() {
         let app = launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 10))
@@ -133,24 +134,38 @@ final class SmokeUITests: XCTestCase {
         // 「找不到畫布」而畫面上明明有。識別字才是我們保證的東西。
         let canvas = app.descendants(matching: .any)["editor.canvas"].firstMatch
         XCTAssertTrue(canvas.waitForExistence(timeout: 8), "找不到畫布：\n\(app.debugDescription)")
-        let windowWidth = app.windows.firstMatch.frame.width
 
-        // 側欄可能預設展開（iPad）或收合（iPhone）—— 先確保它是收合的
-        let structure = app.buttons.matching(
-            NSPredicate(format: "label CONTAINS[c] 'sidebar' OR label CONTAINS[c] 'Split View'")
-        ).firstMatch
+        let structure = app.buttons["editor.sidebar_toggle"].firstMatch
         XCTAssertTrue(structure.waitForExistence(timeout: 5), "找不到筆記結構按鈕")
 
-        if canvas.frame.width < windowWidth * 0.8 {
+        // 量最寬的那一個：`editor.canvas` 同時掛在工作區容器與裡面的 `PKCanvasView` 上。
+        func canvasWidth() -> CGFloat {
+            app.descendants(matching: .any).matching(identifier: "editor.canvas")
+                .allElementsBoundByIndex.map { $0.frame.width }.max() ?? 0
+        }
+        // 側欄清單只在展開時才存在。
+        func sidebarIsOpen() -> Bool {
+            app.descendants(matching: .any).matching(identifier: "editor.sidebar.list")
+                .firstMatch.waitForExistence(timeout: 2)
+        }
+
+        // 側欄可能預設展開（iPad）或收合（iPhone）—— 先確保它是收合的。
+        if sidebarIsOpen() {
             structure.tap()
             sleep(2)
         }
+        XCTAssertFalse(sidebarIsOpen(), "點了結構按鈕之後側欄還開著")
+        let collapsed = canvasWidth()
 
-        let width = canvas.frame.width
-        XCTAssertGreaterThan(
-            width, windowWidth * 0.85,
-            "側欄收合後畫布沒有撐滿：畫布 \(width) / 視窗 \(windowWidth)"
-        )
+        structure.tap()
+        sleep(2)
+        XCTAssertTrue(sidebarIsOpen(), "再點一次結構按鈕，側欄沒有展開")
+        let expanded = canvasWidth()
+
+        XCTAssertGreaterThan(collapsed, 0, "收合狀態量不到畫布寬度")
+        XCTAssertGreaterThanOrEqual(
+            collapsed, expanded - 1,
+            "側欄收合後畫布反而比展開時窄：收合 \(collapsed) / 展開 \(expanded)")
         assertAlive(app, "收合側欄")
     }
 
@@ -199,21 +214,25 @@ final class SmokeUITests: XCTestCase {
         }
         typeMode.tap()
 
-        // 點空白頁面後，應立即出現並聚焦內嵌 TextEditor。
-        let coordinate = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.45))
-        coordinate.tap()
-
-        let inlineEditor = app.descendants(matching: .any)
-            .matching(identifier: "editor.text.inline_editor").firstMatch
-        guard inlineEditor.waitForExistence(timeout: 10) else {
-            return XCTFail("文字模式點擊空白頁後沒有建立就地文字編輯器")
+        // 打字模式是 Word 風格的整頁文件（`WordDocumentEditorView`）：正文是一個
+        // `TextEditor`，點下去就取得焦點、直接打字。舊版「點空白頁 → 出現
+        // 就地文字框（`editor.text.inline_editor`）」是另一條路徑，這個模式
+        // 不走它。
+        //
+        // 正文沒有識別碼；整個畫面上只有它一個 `TextView`（首頁的搜尋框是
+        // TextField，而且此時已不在畫面上），所以用型別找。
+        let body = app.textViews.firstMatch
+        guard body.waitForExistence(timeout: 10) else {
+            return XCTFail("切到文字模式後找不到文件正文（TextView）")
         }
-        let sentinel = "Word style typing works"
-        // 不可再補點一次 TextEditor：第一次點頁面就必須已經取得焦點。
-        inlineEditor.typeText(sentinel)
+        body.tap()
 
-        let value = inlineEditor.value as? String ?? ""
-        XCTAssertTrue(value.contains(sentinel), "TextEditor 沒有收到輸入；目前值：\(value)")
+        let sentinel = "Word style typing works"
+        // 不可再補點一次：第一次點就必須已經取得焦點。
+        body.typeText(sentinel)
+
+        let value = body.value as? String ?? ""
+        XCTAssertTrue(value.contains(sentinel), "文件正文沒有收到輸入；目前值：\(value)")
         assertAlive(app, "文字模式即點即書")
     }
 }
@@ -245,9 +264,16 @@ extension SmokeUITests {
         sleep(2)
         XCTAssertEqual(app.state, .runningForeground, "開啟診斷頁後 App 不在前景")
 
+        // 診斷頁是一張很長的表單，轉換區段離頂端很遠。SwiftUI 的 List 沒捲到就
+        // 不算繪那一列，所以「找不到」不代表沒有 —— 往下捲到它出現而且點得到。
         let convert = app.buttons["migration.run"]
-        guard convert.waitForExistence(timeout: 5) else {
-            return XCTFail("診斷頁裡找不到轉換按鈕")
+        var scrolls = 0
+        while !(convert.exists && convert.isHittable) && scrolls < 15 {
+            app.swipeUp()
+            scrolls += 1
+        }
+        guard convert.exists, convert.isHittable else {
+            return XCTFail("診斷頁往下捲了 \(scrolls) 次，還是找不到轉換按鈕")
         }
         convert.tap()
 
@@ -484,7 +510,7 @@ extension SmokeUITests {
         let canvas = app.descendants(matching: .any)["editor.canvas"].firstMatch
         XCTAssertTrue(canvas.waitForExistence(timeout: 15), "找不到畫布")
 
-        let before = Self.strokeCount(canvas)
+        let before = Self.strokeCount(in: app)
 
         // 畫一筆。
         //
@@ -502,7 +528,7 @@ extension SmokeUITests {
         // 去抖動是 1.2 秒，落盤再給一點餘裕。
         sleep(3)
 
-        let afterDraw = Self.strokeCount(canvas)
+        let afterDraw = Self.strokeCount(in: app)
         XCTAssertGreaterThan(
             afterDraw, before,
             "拖曳之後畫布上沒有多出筆畫 —— 這條測試的前提就不成立了")
@@ -522,9 +548,9 @@ extension SmokeUITests {
         sleep(2)
 
         XCTAssertGreaterThanOrEqual(
-            Self.strokeCount(canvasAgain), afterDraw,
+            Self.strokeCount(in: app), afterDraw,
             "**筆跡沒有留下來。** 離開前畫布上有 \(afterDraw) 筆，"
-                + "重新開啟之後剩 \(Self.strokeCount(canvasAgain)) 筆。")
+                + "重新開啟之後剩 \(Self.strokeCount(in: app)) 筆。")
     }
 
     /// 只畫一筆然後停住 —— **不離開編輯器**。
@@ -544,7 +570,7 @@ extension SmokeUITests {
         start.press(forDuration: 0.4, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.4)
         sleep(4)
 
-        XCTAssertGreaterThan(Self.strokeCount(canvas), 0, "畫不進去")
+        XCTAssertGreaterThan(Self.strokeCount(in: app), 0, "畫不進去")
     }
 
     /// 畫一筆 → 回首頁 → **停在首頁**。
@@ -564,7 +590,7 @@ extension SmokeUITests {
         let end = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.65, dy: 0.55))
         start.press(forDuration: 0.4, thenDragTo: end, withVelocity: .slow, thenHoldForDuration: 0.4)
         sleep(4)
-        XCTAssertGreaterThan(Self.strokeCount(canvas), 0, "畫不進去")
+        XCTAssertGreaterThan(Self.strokeCount(in: app), 0, "畫不進去")
 
         let home = app.descendants(matching: .any).matching(identifier: "editor.home").firstMatch
         guard home.waitForExistence(timeout: 10) else { XCTFail("沒有回首頁的按鈕"); return }
@@ -577,11 +603,19 @@ extension SmokeUITests {
 
     /// 從畫布的測試讀數裡取筆畫數。讀不到回 -1（與 0 分得開 ——
     /// 0 是「畫布上沒有筆畫」，-1 是「讀數根本沒掛上去」）。
-    static func strokeCount(_ canvas: XCUIElement) -> Int {
-        guard let value = canvas.value as? String,
-              let range = value.range(of: "strokes:")
-        else { return -1 }
-        return Int(value[range.upperBound...].prefix(while: \.isNumber)) ?? -1
+    ///
+    /// **要掃過所有 `editor.canvas`，不能用 `firstMatch`。** 這個識別字同時掛在
+    /// 外層的 SwiftUI 容器與裡面的 `PKCanvasView` 上，讀數只在後者；
+    /// `firstMatch` 拿到哪一個由樹序決定，拿到容器就永遠讀不到。
+    static func strokeCount(in app: XCUIApplication) -> Int {
+        let matches = app.descendants(matching: .any).matching(identifier: "editor.canvas")
+        for element in matches.allElementsBoundByIndex {
+            guard let value = element.value as? String,
+                  let range = value.range(of: "strokes:")
+            else { continue }
+            return Int(value[range.upperBound...].prefix(while: \.isNumber)) ?? -1
+        }
+        return -1
     }
 
     /// 打字模式那一套工具列。

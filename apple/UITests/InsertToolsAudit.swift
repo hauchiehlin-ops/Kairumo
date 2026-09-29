@@ -82,19 +82,10 @@ final class InsertToolsAudit: XCTestCase {
         }
 
         element(app, "editor.more").tap()
-        let item = app.buttons["Insert 3D Model"].firstMatch
-        _ = item.waitForExistence(timeout: 3)
-        // **要 `isHittable`，不是 `exists`。** 露出一角的按鈕 `exists` 是 true，
-        // 但 XCUITest 點的是元素中心 —— 中心在畫面外，點了等於沒點，
-        // 而且**不會報錯**，測試要到很後面才以一個不相干的斷言失敗。
-        // （這一輪就是這樣：CI 說「模型上沒有縮放把手」，真因是模型根本
-        // 沒插進去，因為「插入畫布」在摺線下面。）
-        scrollMenuUntilHittable(app, item)
-        guard item.isHittable else {
+        guard tapMenuItem(app, label: "Insert 3D Model") else {
             XCTFail("「更多」選單裡的 Insert 3D Model 點不到")
             return
         }
-        item.tap()
 
         // 「插入畫布」在面板底部，手機尺寸上要捲才看得到。
         // CI 的機器比本機慢，面板動畫與 SceneKit 第一次建場景都要時間 ——
@@ -204,16 +195,10 @@ final class InsertToolsAudit: XCTestCase {
         }
 
         element(app, "editor.more").tap()
-        let item = app.buttons["Sticker Library"].firstMatch
-        _ = item.waitForExistence(timeout: 3)
-        // 點得到才算數：只露一角的項目 `exists` 是 true，但點擊落在畫面外
-        // —— 不報錯，卻什麼也沒發生。
-        scrollMenuUntilHittable(app, item)
-        guard item.isHittable else {
+        guard tapMenuItem(app, label: "Sticker Library") else {
             XCTFail("「更多」選單裡的貼紙庫點不到")
             return
         }
-        item.tap()
 
         // 挑第一張貼紙。內建那些的識別碼都是 `stickers.item`。
         let sticker = app.descendants(matching: .any)
@@ -277,21 +262,60 @@ final class InsertToolsAudit: XCTestCase {
         return app
     }
 
-    /// 優先在選單自己的滾動視圖裡滾動，避免 app.swipeUp() 滑到背景畫布導致選單被收合。
-    private func scrollMenuUntilHittable(_ app: XCUIApplication, _ item: XCUIElement) {
-        var attempts = 0
-        let menuScroll = app.scrollViews.matching(NSPredicate(format: "identifier != 'editor.canvas'")).firstMatch
+    /// 用標籤找原生選單項目，必要時在選單內往下捲。
+    ///
+    /// 不能用 `app.buttons[label]`：SwiftUI `Menu` 交給 UIKit 後，同一列可能被
+    /// 回報為 Button、PopUpButton 或 MenuItem，typed query 會在快照時發生
+    /// Automation type mismatch。也不問 `isHittable`：畫面邊緣被裁掉的列沒有
+    /// 合法 activation point，XCTest 不是回 false，而是直接丟測試錯誤。
+    ///
+    /// 每滑一次都重新建 query，因為原生選單會回收離開畫面的 row。
+    private func visibleMenuItem(
+        _ app: XCUIApplication, label: String
+    ) -> XCUIElement? {
+        let window = app.windows.firstMatch.frame
         let menuCollection = app.collectionViews.firstMatch
-        while !item.isHittable && attempts < 6 {
-            attempts += 1
-            if menuCollection.exists {
-                menuCollection.swipeUp()
-            } else if menuScroll.exists {
-                menuScroll.swipeUp()
-            } else {
-                break
-            }
+        let viewport = menuCollection.exists
+            ? window.intersection(menuCollection.frame)
+            : window
+
+        for attempt in 0...6 {
+            // 原生 menu row 在 XCTest 的樹上不一定是 CollectionView 的孫節點，
+            // 不能把 query 限在 collection 裡。但編輯器背景可能也有同標籤
+            // 的工具列節點：把同標籤的都取出來，挑落在 menu frame 裡、
+            // 而且最寬的那個（menu row 會撐滿整列）。
+            let matches = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", label))
+            _ = matches.firstMatch.waitForExistence(timeout: attempt == 0 ? 3 : 1)
+            let candidates = matches.allElementsBoundByIndex.compactMap {
+                element -> (element: XCUIElement, frame: CGRect)? in
+                guard element.exists else { return nil }
+                let frame = element.frame
+                guard frame.width > 0, frame.height > 0,
+                      frame.midX >= viewport.minX, frame.midX <= viewport.maxX,
+                      viewport.intersects(frame)
+                else { return nil }
+                return (element, frame)
+            }.sorted { $0.frame.width > $1.frame.width }
+
+            if let (element, _) = candidates.first { return element }
+
+            guard attempt < 6 else { break }
+            // Lazy menu 還沒有算繪這列時，請原生容器自己滾動。
+            // 不回退到 app/ScrollView：那會滑背景畫布或收起選單。
+            let currentMenu = app.collectionViews.firstMatch
+            guard currentMenu.exists else { break }
+            currentMenu.swipeUp()
         }
+        return nil
+    }
+
+    /// 用語意點擊讓 XCTest 自己把部分裁切的 row 滾到可點位置。
+    /// 這裡不先問 `isHittable`：原始 CI 失敗就是這個屬性在裁切列上拋錯。
+    private func tapMenuItem(_ app: XCUIApplication, label: String) -> Bool {
+        guard let item = visibleMenuItem(app, label: label) else { return false }
+        item.tap()
+        return true
     }
 
     /// 關掉目前這張表，回到編輯器。
@@ -344,17 +368,14 @@ final class InsertToolsAudit: XCTestCase {
             }
             more.tap()
 
-            // **一定要捲。** 這張選單有十九個項目，在手機上會捲動，
-            // 優先找非 editor.canvas 的選單滾動容器，避免 app.swipeUp() 滑到背景畫布關閉選單。
-            let item = app.buttons[tool.menuLabel].firstMatch
-            _ = item.waitForExistence(timeout: 5)
-            scrollMenuUntilHittable(app, item)
-            guard item.exists else {
+            // **一定要捲。** 這張選單有十九個項目，在手機上會捲動。
+            guard tapMenuItem(app, label: tool.menuLabel) else {
                 failures.append("\(tool.menuLabel)：選單裡找不到")
-                app.coordinate(withNormalizedOffset: CGVector(dx: 0.1, dy: 0.1)).tap()
+                // 右側畫布在選單外，點它只會收選單。原本的 (0.1, 0.1)
+                // 正好是左上角「返回」，一次找不到會讓後面所有工具跟著失敗。
+                app.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
                 continue
             }
-            item.tap()
 
             let opened = app.descendants(matching: .any)
                 .matching(identifier: tool.opened).firstMatch
@@ -390,12 +411,8 @@ final class InsertToolsAudit: XCTestCase {
 
         var missing: [String] = []
         for label in ["Choose from Files", "Import an audio file", "Insert 3D Model"] {
-            let item = app.buttons[label].firstMatch
-            if !item.waitForExistence(timeout: 3) {
-                // **一定要捲。** 這張選單在手機上放不下所有項目。
-                scrollMenuUntilHittable(app, item)
-            }
-            if !item.exists { missing.append(label) }
+            // **一定要捲。** 這張選單在手機上放不下所有項目。
+            if visibleMenuItem(app, label: label) == nil { missing.append(label) }
         }
 
         XCTAssertTrue(
