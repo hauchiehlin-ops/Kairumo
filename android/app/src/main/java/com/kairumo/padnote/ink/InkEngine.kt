@@ -31,6 +31,14 @@ class InkEngine(
     /** 正在畫、尚未結束的一筆。 */
     private val inFlight = LinkedHashMap<ULong, MutableList<InkInput.Sample>>()
 
+    /**
+     * 有沒有一筆正在畫（指標已經落下、還沒抬起）。
+     *
+     * 別台裝置的更新要重開 session 時據此等一下：換掉引擎的話，落筆到一半的
+     * 那一筆會消失。
+     */
+    val isDrawing: Boolean get() = inFlight.isNotEmpty()
+
     /** 已經寫進核心、但仍在可收回時間窗內的筆畫：指標 id → 核心筆畫 id。 */
     private val committed = LinkedHashMap<ULong, String>()
 

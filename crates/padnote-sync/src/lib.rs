@@ -9,8 +9,10 @@
 
 pub mod audit;
 pub mod engine;
+pub mod focus;
 pub mod gate;
 pub mod gdrive;
+pub mod lan;
 pub mod library;
 pub mod local;
 pub mod media_tombstone;
@@ -24,7 +26,8 @@ pub mod settings;
 
 pub use audit::{CloudAudit, FileClass, audit, classify};
 pub use engine::{PulledBatch, SyncCursors, SyncEngine};
-pub use gate::{GateDecision, STALE_TAKEOVER_MS, SyncGate};
+pub use focus::{FocusLane, FocusOutcome, FocusRun};
+pub use gate::{GateDecision, NotebookLocks, STALE_TAKEOVER_MS, SyncGate};
 pub use gdrive::{DriveHttp, GDriveProvider, ReqwestDriveHttp};
 pub use library::{INDEX_PATH, ItemKind, LibraryIndex, LibraryItem};
 pub use local::LocalFolderProvider;

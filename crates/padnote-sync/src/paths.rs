@@ -159,6 +159,7 @@ mod tests {
             notebook_ink_file(messy, "PAGE-00000001.STROKES"),
             crate::settings::SETTINGS_PATH.to_string(),
             crate::library::INDEX_PATH.to_string(),
+            crate::lan::LAN_KEY_PATH.to_string(),
         ];
         for p in paths {
             assert!(is_canonical(&p), "不是正規路徑：{p}");

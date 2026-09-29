@@ -27,6 +27,18 @@
 	  識別字必須與 `AutoSyncController` 裡註冊／送出的那一個逐字相同 ——
 	  不一致時 iOS 不會報錯，只是那個任務永遠不會被喚醒。
 	-->
+	<!--
+	  區網直連（秒同步）。**iOS 14 之後要瀏覽 Bonjour 服務就必須事先宣告類型**，
+	  少了這個鍵，`NWBrowser` 不會報錯，只是永遠找不到任何裝置 ——
+	  而「找不到」與「附近沒有裝置」在畫面上長得一模一樣。
+	  類型必須與核心 `lan_service_type()` 逐字相同（`_kairumo-sync._tcp`）；
+	  Android 端 `LanDiscovery.kt` 用的是同一個。
+	  權限說明沿用 `NSLocalNetworkUsageDescription`（project.yml）。
+	-->
+	<key>NSBonjourServices</key>
+	<array>
+		<string>_kairumo-sync._tcp</string>
+	</array>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.kairumo.padnote.sync.refresh</string>

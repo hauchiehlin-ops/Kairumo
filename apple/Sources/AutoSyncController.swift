@@ -88,6 +88,8 @@ public final class AutoSyncController: ObservableObject {
     func start(store: SyncableNotebookStore, deviceId: UInt32) {
         self.store = store
         self.deviceId = deviceId
+        // 焦點通道與區網直連（秒同步）。整庫這條通道照舊，兩者互不依賴。
+        FocusSyncController.shared.start(store: store, deviceId: deviceId)
         guard !started else { return }
         started = true
 
@@ -124,6 +126,9 @@ public final class AutoSyncController: ObservableObject {
 
     /// 送一個觸發事件進排程器。
     public func request(_ trigger: FfiSyncTrigger) {
+        if trigger == .signedIn {
+            FocusSyncController.shared.noteSignedIn()
+        }
         scheduler.request(trigger: trigger, nowMs: nowMs)
         needsSignIn = scheduler.isBlockedOnAuth()
         let due = scheduler.nextDueInMs(nowMs: nowMs)
@@ -140,6 +145,14 @@ public final class AutoSyncController: ObservableObject {
     /// 本機存檔之後呼叫。**會去抖動**，連續存檔只會推一次。
     public func noteLocalEdit() {
         request(.localEdit)
+        // 開著的那一本走焦點通道，不必等整庫這一輪。
+        FocusSyncController.shared.noteLocalEdit()
+    }
+
+    /// 焦點通道或區網直連**真的收到了對方的東西**。對方正在寫 ——
+    /// 整庫通道也改用快檔，其他筆記本的變動才不會慢半拍。
+    public func noteRemoteActivity() {
+        scheduler.noteRemoteChange(nowMs: nowMs)
     }
 
     private func heartbeat() {

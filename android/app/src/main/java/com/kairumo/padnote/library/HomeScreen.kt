@@ -257,6 +257,26 @@ fun HomeScreen(
 
                 Spacer(Modifier.width(4.dp))
 
+                InstantTooltip(text = l("user_manual")) {
+                    TextButton(onClick = onOpenManual, modifier = Modifier.testTag("home.docs.manual")) {
+                        Text("📖", fontSize = 16.sp)
+                        Spacer(Modifier.width(4.dp))
+                        Text(l("user_manual"))
+                    }
+                }
+
+                Spacer(Modifier.width(4.dp))
+
+                InstantTooltip(text = l("privacy_policy")) {
+                    TextButton(onClick = onOpenPrivacy, modifier = Modifier.testTag("home.docs.privacy")) {
+                        Text("🔒", fontSize = 16.sp)
+                        Spacer(Modifier.width(4.dp))
+                        Text(l("privacy_policy"))
+                    }
+                }
+
+                Spacer(Modifier.width(4.dp))
+
                 InstantTooltip(text = l("system_diagnostics")) {
                     IconButton(
                         onClick = onOpenDiagnostics,
@@ -562,36 +582,28 @@ fun HomeScreen(
             }
         }
         item { CloudSyncCard(cloud, l) }
-        item { P2PSyncCard(l) }
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SettingRow("📦", l("backup_snapshot"), l("backup_snapshot_desc"),
-                    Modifier.testTag("home.data.snapshot")) { onCreateSnapshot(null) }
-                SettingRow("💾", l("backup_create"), l("backup_explainer"),
-                    Modifier.testTag("home.data.backup"), onBackup)
-                SettingRow("↺", l("backup_restore"), l("backup_restore_desc"),
-                    Modifier.testTag("home.data.restore"), onRestore)
-                SettingRow("☁", l("sync_choose_folder"), l("sync_folder_desc"),
-                    Modifier.testTag("home.data.folder"), onChooseSyncFolder)
-            }
-        }
-
-        // ── 9. 說明與條款 ────────────────────────────────────────
-        // Apple 首頁最下面有這兩張卡。Android 原本只有編輯器的「⋯」裡有，
-        // 使用者要先開一本筆記才找得到操作說明。
-        item {
-            HorizontalDivider()
-            SectionTitle(l("help_and_legal"))
-        }
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            Card(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
             ) {
-                DocCard("📖", l("user_manual"), l("user_manual_desc"),
-                    Modifier.weight(1f).testTag("home.docs.manual"), onOpenManual)
-                DocCard("🔒", l("privacy_policy"), l("privacy_policy_desc"),
-                    Modifier.weight(1f).testTag("home.docs.privacy"), onOpenPrivacy)
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(l("backup_section"), fontWeight = FontWeight.SemiBold)
+                    SettingRow("📦", l("backup_snapshot"), l("backup_snapshot_desc"),
+                        Modifier.testTag("home.data.snapshot")) { onCreateSnapshot(null) }
+                    SettingRow("💾", l("backup_create"), l("backup_explainer"),
+                        Modifier.testTag("home.data.backup"), onBackup)
+                    SettingRow("↺", l("backup_restore"), l("backup_restore_desc"),
+                        Modifier.testTag("home.data.restore"), onRestore)
+                    SettingRow("☁", l("sync_choose_folder"), l("sync_folder_desc"),
+                        Modifier.testTag("home.data.folder"), onChooseSyncFolder)
+                }
             }
         }
 
@@ -1411,7 +1423,7 @@ data class CloudSyncUiState(
  * 「這台可以登出、那台不行」。
  */
 @Composable
-private fun P2PSyncCard(l: (String) -> String) {
+private fun P2PSyncSection(l: (String) -> String) {
     val context = LocalContext.current
     val tailscaleStatus = remember {
         try {
@@ -1447,97 +1459,89 @@ private fun P2PSyncCard(l: (String) -> String) {
 
     val isConnected = tailscaleStatus.first
 
-    Card(
-        modifier = Modifier.fillMaxWidth().testTag("home.p2p.card").padding(top = 8.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        )
+    Column(
+        modifier = Modifier.fillMaxWidth().testTag("home.p2p.card").padding(top = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Column(
-            modifier = Modifier.fillMaxWidth().padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+            Text(
+                text = l("p2p_sync_tailscale_title"),
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.weight(1f)
+            )
+            val statusText = if (isConnected) {
+                val tmpl = l("tailscale_p2p_ready")
+                if (tmpl.contains("%@")) tmpl.replace("%@", tailscaleStatus.second ?: "")
+                else "${l("status_connected")} (${tailscaleStatus.second ?: ""})"
+            } else {
+                l("tailscale_not_connected")
+            }
+            Box(
+                modifier = Modifier
+                    .background(
+                        if (isConnected) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surface,
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .padding(horizontal = 8.dp, vertical = 4.dp)
             ) {
-                Text(
-                    text = l("p2p_sync_tailscale_title"),
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.weight(1f)
-                )
-                val statusText = if (isConnected) {
-                    val tmpl = l("tailscale_p2p_ready")
-                    if (tmpl.contains("%@")) tmpl.replace("%@", tailscaleStatus.second ?: "")
-                    else "${l("status_connected")} (${tailscaleStatus.second ?: ""})"
-                } else {
-                    l("tailscale_not_connected")
-                }
-                Box(
-                    modifier = Modifier
-                        .background(
-                            if (isConnected) Color(0xFFE8F5E9) else MaterialTheme.colorScheme.surface,
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .background(
-                                    if (isConnected) Color(0xFF4CAF50) else Color.Gray.copy(alpha = 0.5f),
-                                    shape = CircleShape
-                                )
-                        )
-                        Text(
-                            text = statusText,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = if (isConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(
+                                if (isConnected) Color(0xFF4CAF50) else Color.Gray.copy(alpha = 0.5f),
+                                shape = CircleShape
+                            )
+                    )
+                    Text(
+                        text = statusText,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = if (isConnected) Color(0xFF2E7D32) else MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
+        }
 
-            Text(
-                text = l("p2p_sync_tailscale_explainer"),
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+        Text(
+            text = l("p2p_sync_tailscale_explainer"),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
 
-            if (!isConnected) {
-                Row(
-                    modifier = Modifier
-                        .clickable {
-                            runCatching {
-                                context.startActivity(
-                                    android.content.Intent(
-                                        android.content.Intent.ACTION_VIEW,
-                                        android.net.Uri.parse("https://tailscale.com/download")
-                                    )
+        if (!isConnected) {
+            Row(
+                modifier = Modifier
+                    .clickable {
+                        runCatching {
+                            context.startActivity(
+                                android.content.Intent(
+                                    android.content.Intent.ACTION_VIEW,
+                                    android.net.Uri.parse("https://tailscale.com/download")
                                 )
-                            }
+                            )
                         }
-                        .padding(vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "↗",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = l("download_tailscale_link"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
+                    }
+                    .padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Text(
+                    text = "↗",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Text(
+                    text = l("download_tailscale_link"),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.primary,
+                    fontWeight = FontWeight.Medium
+                )
             }
         }
     }
@@ -1652,6 +1656,9 @@ private fun CloudSyncCard(state: CloudSyncUiState, l: (String) -> String) {
                 )
                 state.folderLastSync?.let { SyncDetailRow(l("sync_last_at"), it) }
             }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 4.dp))
+            P2PSyncSection(l)
         }
     }
 }

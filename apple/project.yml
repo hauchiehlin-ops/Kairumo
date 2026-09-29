@@ -72,7 +72,7 @@ targets:
         # （Design）判定「權限請求沒有跟著 App 的語系」，iOS 與 macOS 同時被退。
         INFOPLIST_KEY_NSMicrophoneUsageDescription: "Kairumo uses the microphone to record voice notes in class or meetings, keeping your handwriting in sync with the recording timeline."
         INFOPLIST_KEY_NSSpeechRecognitionUsageDescription: "Kairumo uses speech recognition to transcribe your recordings into text on your device and place the transcript in your notes."
-        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Kairumo uses the local network to edit notes together with people on the same Wi-Fi. Everything is end-to-end encrypted and never passes through a server."
+        INFOPLIST_KEY_NSLocalNetworkUsageDescription: "Kairumo uses the local network to sync your own devices on the same Wi-Fi within a second, and to edit notes together with people on that network. Everything is end-to-end encrypted and never passes through a server."
         INFOPLIST_KEY_NSPhotoLibraryUsageDescription: "Kairumo accesses your photo library so you can place pictures into a note and annotate them."
         INFOPLIST_KEY_NSPhotoLibraryAddUsageDescription: "Kairumo saves pages and drawings you export to your photo library."
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO

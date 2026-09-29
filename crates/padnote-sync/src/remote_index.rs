@@ -75,30 +75,31 @@ impl RemoteIndex {
     ///
     /// 垃圾桶要當成刪除：Drive 預設查得到垃圾桶裡的檔案，不濾掉的話
     /// 已經刪掉的內容會被當成還在，然後重新拉回來。
-    pub fn apply(&mut self, id: &str, name: Option<&str>, size: u64, gone: bool) {
+    ///
+    /// 回傳**快照有沒有真的改變**。自己剛上傳的檔案，`changes.list` 之後也會
+    /// 回報它 —— 但 `note_upload` 早就把同樣的 id 與大小記進去了，套用之後
+    /// 什麼都沒變。焦點通道靠這個區分「對方動了」與「只是我自己的回音」，
+    /// 否則每次推送之後的下一次輪詢都會被誤判成雲端有新東西。
+    pub fn apply(&mut self, id: &str, name: Option<&str>, size: u64, gone: bool) -> bool {
         match (name, gone) {
             (_, true) => {
                 // 刪除只給得到 fileId，名字要從既有快照反查。
                 let key = name
                     .map(crate::paths::canonical_path)
                     .or_else(|| self.key_of_id(id));
-                if let Some(key) = key {
-                    self.files.remove(&key);
-                }
+                key.is_some_and(|key| self.files.remove(&key).is_some())
             }
             (Some(name), false) => {
                 let key = crate::paths::canonical_path(name);
-                self.files.insert(
-                    key,
-                    RemoteFile {
-                        id: id.to_string(),
-                        name: name.to_string(),
-                        size,
-                    },
-                );
+                let file = RemoteFile {
+                    id: id.to_string(),
+                    name: name.to_string(),
+                    size,
+                };
+                self.files.insert(key, file.clone()).as_ref() != Some(&file)
             }
             // 沒有名字又沒說被刪：這筆變更沒有可用的資訊。
-            (None, false) => {}
+            (None, false) => false,
         }
     }
 
@@ -274,5 +275,18 @@ mod tests {
         let mut idx = RemoteIndex::default();
         idx.note_upload("notebooks/nb1/doc/ops/a.oplog", "id-1", 99);
         assert_eq!(idx.get("notebooks/nb1/doc/ops/a.oplog").unwrap().size, 99);
+    }
+
+    #[test]
+    fn applying_the_echo_of_our_own_upload_changes_nothing() {
+        let mut idx = RemoteIndex::default();
+        idx.note_upload("notebooks/nb1/doc/ops/a.oplog", "id-1", 10);
+        // Drive 之後把同一個檔案當成變動回報。
+        assert!(!idx.apply("id-1", Some("notebooks/nb1/doc/ops/a.oplog"), 10, false));
+        // 對方把它變長了：這才是真的變動。
+        assert!(idx.apply("id-1", Some("notebooks/nb1/doc/ops/a.oplog"), 25, false));
+        // 刪除一個不存在的東西不算變動。
+        assert!(!idx.apply("id-9", None, 0, true));
+        assert!(idx.apply("id-1", None, 0, true));
     }
 }

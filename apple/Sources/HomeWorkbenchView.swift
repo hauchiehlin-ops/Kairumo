@@ -47,6 +47,9 @@ public struct HomeWorkbenchView: View {
     @State private var showQuickRecordSheet: Bool = false
     @State private var showImportPicker: Bool = false
     @State private var selectedSortOption: SortOption = .byDate
+    #if os(iOS)
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
     @State private var selectedNotebookForEditing: NotebookDocument? = nil
 
     // 新增筆記暫存狀態
@@ -266,7 +269,6 @@ public struct HomeWorkbenchView: View {
 
                         // 7. 底部工作台品牌與版本號
                         dataAndSyncSection
-                        documentsSection
 
                         footerVersionSection
                     }
@@ -314,54 +316,40 @@ public struct HomeWorkbenchView: View {
             //
             // 同一個入口出現兩次不會增加能力，只會讓使用者多一個地方要找。
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        showInfoSheet = true
-                    } label: {
-                        HStack(spacing: DS.Space.xxs) {
-                            Image(systemName: "wrench.and.screwdriver")
-                                .font(.system(size: DS.Icon.small, weight: .medium))
-                            Text(localizationManager.localized("diagnostics"))
-                                .font(.subheadline)
+                #if os(iOS)
+                if horizontalSizeClass == .compact {
+                    ToolbarItem(placement: .topBarLeading) {
+                        HStack(spacing: DS.Space.xs) {
+                            manualToolbarButton
+                            privacyToolbarButton
                         }
                     }
-                    .accessibilityLabel(localizationManager.localized("hw_diag_a11y"))
-                    .help(localizationManager.localized("hw_diag_a11y"))
-                    .accessibilityIdentifier("home.diagnostics")
-                }
-
-                ToolbarItem(placement: .primaryAction) {
-                    Menu {
-                        ForEach(AppLanguage.allCases) { lang in
-                            Button {
-                                localizationManager.setLanguage(lang)
-                            } label: {
-                                HStack {
-                                    Text(lang.endonym)
-                                    if localizationManager.currentLanguage == lang {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
-                        }
-                    } label: {
-                        // 圖示旁一定要有字。地球圖示在這個 App 裡代表過三件事
-                        // （語系、連結卡片、線上協同），光看圖示分不出按下去
-                        // 會發生什麼 —— 而換介面語言是一個按錯了要摸索回來的動作。
-                        // 用 HStack 而不是 `Label` + `.labelStyle(.titleAndIcon)`：
-                        // 工具列會自己覆寫 Menu 標籤的 label style，那個修飾子
-                        // **編得過但沒有作用** —— 畫出來還是只有圖示（實測過）。
-                        HStack(spacing: DS.Space.xxs) {
-                            Image(systemName: "globe")
-                                .font(.system(size: DS.Icon.small, weight: .medium))
-                            Text(localizationManager.localized("language"))
-                                .font(.subheadline)
+                    ToolbarItem(placement: .topBarTrailing) {
+                        HStack(spacing: DS.Space.xs) {
+                            diagnosticsToolbarButton
+                            languageToolbarMenu
                         }
                     }
-                    .accessibilityLabel(localizationManager.localized("select_language"))
-                    .help(localizationManager.localized("select_language"))
-                    .accessibilityIdentifier("home.language")
+                } else {
+                    ToolbarItem(placement: .primaryAction) {
+                        HStack(spacing: DS.Space.xs) {
+                            manualToolbarButton
+                            privacyToolbarButton
+                            diagnosticsToolbarButton
+                            languageToolbarMenu
+                        }
+                    }
                 }
+                #else
+                ToolbarItem(placement: .primaryAction) {
+                    HStack(spacing: DS.Space.xs) {
+                        manualToolbarButton
+                        privacyToolbarButton
+                        diagnosticsToolbarButton
+                        languageToolbarMenu
+                    }
+                }
+                #endif
             }
             .sheet(isPresented: $showAssetLibrarySheet) { resizableSheet {
                 AssetLibraryView()
@@ -1859,30 +1847,204 @@ public struct HomeWorkbenchView: View {
                 spacing: 12
             ) {
                 unifiedSyncCard
-                p2pSyncCard
                 dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
                          "sync_folder_desc", .teal) { showFolderSyncSheet = true }
-                dataCard("doc.zipper", "backup_snapshot",
-                         "backup_snapshot_desc", .purple) { showNotebookSnapshotSheet = true }
-                dataCard("externaldrive.badge.timemachine", "backup_create",
-                         "backup_create_desc", .blue) { showBackupCreateSheet = true }
-                dataCard("arrow.counterclockwise.circle.fill", "backup_restore",
-                         "backup_restore_desc", .orange) { showBackupRestoreSheet = true }
+                unifiedBackupCard
             }
         }
         .padding(.top, 6)
     }
 
-    private var p2pSyncCard: some View {
+    private var manualToolbarButton: some View {
+        Button {
+            if DocumentWindow.supportsSeparateWindow {
+                openWindow(id: DocumentWindow.id, value: BundledDocument.manual.id)
+            } else {
+                viewingDocument = .manual
+            }
+        } label: {
+            HStack(spacing: DS.Space.xxs) {
+                Image(systemName: "book.pages")
+                    .font(.system(size: DS.Icon.small, weight: .medium))
+                Text(localizationManager.localized(BundledDocument.manual.titleKey))
+                    .font(.subheadline)
+            }
+        }
+        .accessibilityLabel(localizationManager.localized(BundledDocument.manual.titleKey))
+        .help(localizationManager.localized(BundledDocument.manual.titleKey))
+        .accessibilityIdentifier("home.docs.manual")
+    }
+
+    private var privacyToolbarButton: some View {
+        Button {
+            if DocumentWindow.supportsSeparateWindow {
+                openWindow(id: DocumentWindow.id, value: BundledDocument.privacy.id)
+            } else {
+                viewingDocument = .privacy
+            }
+        } label: {
+            HStack(spacing: DS.Space.xxs) {
+                Image(systemName: "lock.shield")
+                    .font(.system(size: DS.Icon.small, weight: .medium))
+                Text(localizationManager.localized(BundledDocument.privacy.titleKey))
+                    .font(.subheadline)
+            }
+        }
+        .accessibilityLabel(localizationManager.localized(BundledDocument.privacy.titleKey))
+        .help(localizationManager.localized(BundledDocument.privacy.titleKey))
+        .accessibilityIdentifier("home.docs.privacy")
+    }
+
+    private var diagnosticsToolbarButton: some View {
+        Button {
+            showInfoSheet = true
+        } label: {
+            HStack(spacing: DS.Space.xxs) {
+                Image(systemName: "wrench.and.screwdriver")
+                    .font(.system(size: DS.Icon.small, weight: .medium))
+                Text(localizationManager.localized("diagnostics"))
+                    .font(.subheadline)
+            }
+        }
+        .accessibilityLabel(localizationManager.localized("hw_diag_a11y"))
+        .help(localizationManager.localized("hw_diag_a11y"))
+        .accessibilityIdentifier("home.diagnostics")
+    }
+
+    private var languageToolbarMenu: some View {
+        Menu {
+            ForEach(AppLanguage.allCases) { lang in
+                Button {
+                    localizationManager.setLanguage(lang)
+                } label: {
+                    HStack {
+                        Text(lang.endonym)
+                        if localizationManager.currentLanguage == lang {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            HStack(spacing: DS.Space.xxs) {
+                Image(systemName: "globe")
+                    .font(.system(size: DS.Icon.small, weight: .medium))
+                Text(localizationManager.localized("language"))
+                    .font(.subheadline)
+            }
+        }
+        .accessibilityLabel(localizationManager.localized("select_language"))
+        .help(localizationManager.localized("select_language"))
+        .accessibilityIdentifier("home.language")
+    }
+
+    private var unifiedBackupCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "archivebox.fill")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundColor(.purple)
+                Text(localizationManager.localized("backup_section"))
+                    .font(DS.Font.cardTitle)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color.primary)
+            }
+
+            VStack(spacing: 8) {
+                backupActionRow(
+                    icon: "doc.zipper",
+                    iconColor: .purple,
+                    titleKey: "backup_snapshot",
+                    descKey: "backup_snapshot_desc",
+                    identifier: "home.data.snapshot"
+                ) {
+                    showNotebookSnapshotSheet = true
+                }
+
+                Divider()
+
+                backupActionRow(
+                    icon: "externaldrive.badge.timemachine",
+                    iconColor: .blue,
+                    titleKey: "backup_create",
+                    descKey: "backup_create_desc",
+                    identifier: "home.data.backup"
+                ) {
+                    showBackupCreateSheet = true
+                }
+
+                Divider()
+
+                backupActionRow(
+                    icon: "arrow.counterclockwise.circle.fill",
+                    iconColor: .orange,
+                    titleKey: "backup_restore",
+                    descKey: "backup_restore_desc",
+                    identifier: "home.data.restore"
+                ) {
+                    showBackupRestoreSheet = true
+                }
+            }
+        }
+        .padding(DS.Space.m)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DS.Color.surface)
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous)
+                .stroke(DS.Color.hairline, lineWidth: 1)
+        )
+    }
+
+    private func backupActionRow(
+        icon: String,
+        iconColor: Color,
+        titleKey: String,
+        descKey: String,
+        identifier: String,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: icon)
+                    .font(.title3)
+                    .foregroundColor(iconColor)
+                    .frame(width: 26)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(localizationManager.localized(titleKey))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundColor(.primary)
+                    Text(localizationManager.localized(descKey))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                }
+
+                Spacer(minLength: 4)
+
+                Image(systemName: "chevron.right")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(identifier)
+    }
+
+    private var p2pDirectSyncSection: some View {
         let tailscale = tailscaleMonitor.status
-        return VStack(alignment: .leading, spacing: 10) {
+        return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center) {
-                HStack(spacing: 8) {
+                HStack(spacing: 6) {
                     Image(systemName: "point.3.filled.connected.trianglepath")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.indigo)
                     Text(localizationManager.localized("p2p_sync_tailscale_title"))
-                        .font(DS.Font.cardTitle)
+                        .font(DS.Font.caption)
                         .fontWeight(.semibold)
                 }
 
@@ -1906,9 +2068,10 @@ public struct HomeWorkbenchView: View {
             Text(localizationManager.localized("p2p_sync_tailscale_explainer"))
                 .font(DS.Font.caption)
                 .foregroundStyle(DS.Color.secondaryText)
-                .fixedSize(horizontal: false, vertical: true)
+                .lineLimit(4)
+                .multilineTextAlignment(.leading)
 
-            // 只有未偵測到 Tailscale 時才顯示下載連結
+            // 只有未偵測到 Tailscale 時才顯示下載連結（連線成功時自動隱藏）
             if !tailscale.isConnected {
                 Link(destination: URL(string: "https://tailscale.com/download")!) {
                     HStack(spacing: 4) {
@@ -1921,14 +2084,7 @@ public struct HomeWorkbenchView: View {
                 }
             }
         }
-        .padding(DS.Space.m)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(DS.Color.surface)
-        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: DS.Radius.m, style: .continuous)
-                .stroke(DS.Color.hairline, lineWidth: 1)
-        )
+        .padding(.top, 2)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("home.p2p.card")
     }
@@ -2089,6 +2245,11 @@ public struct HomeWorkbenchView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+
+                Divider()
+                    .padding(.vertical, 2)
+
+                p2pDirectSyncSection
             }
         }
         .padding(DS.Space.m)
@@ -2267,83 +2428,6 @@ public struct HomeWorkbenchView: View {
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(dataCardIdentifier(titleKey))
-    }
-
-    /// 說明文件入口：操作手冊與隱私權政策（離線可讀，隨 App 打包）
-    private var documentsSection: AnyView {
-        AnyView(documentsSectionContent)
-    }
-
-    private var documentsSectionContent: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(localizationManager.localized("help_and_legal"))
-                .font(.headline)
-                .fontWeight(.bold)
-
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 12) {
-                    documentCard(.manual)
-                    documentCard(.privacy)
-                }
-                VStack(spacing: 12) {
-                    documentCard(.manual)
-                    documentCard(.privacy)
-                }
-            }
-        }
-        .padding(.top, 6)
-    }
-
-    /// 說明文件卡片。識別字由文件本身推出來，與 `dataCard` 同一個道理。
-    private func documentCardIdentifier(_ doc: BundledDocument) -> String {
-        doc == .manual ? "home.docs.manual" : "home.docs.privacy"
-    }
-
-    private func documentCard(_ doc: BundledDocument) -> some View {
-        Button {
-            // Mac 上開成獨立視窗：可以移動、可以調整大小、可以擺在旁邊
-            // 一邊看一邊操作。工作表做不到這三件事。
-            if DocumentWindow.supportsSeparateWindow {
-                openWindow(id: DocumentWindow.id, value: doc.id)
-            } else {
-                viewingDocument = doc
-            }
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: doc == .manual ? "book.pages.fill" : "lock.shield.fill")
-                    .font(.title3)
-                    .foregroundColor(doc == .manual ? .accentColor : .green)
-                    .frame(width: 30)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(localizationManager.localized(doc.titleKey))
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(.primary)
-                    Text(localizationManager.localized(doc == .manual ? "user_manual_desc" : "privacy_policy_desc"))
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.leading)
-                }
-
-                Spacer(minLength: 4)
-
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(uiColor: .secondarySystemGroupedBackground))
-            .cornerRadius(12)
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-        .accessibilityIdentifier(documentCardIdentifier(doc))
     }
 
     private var footerVersionSection: AnyView {
@@ -4126,13 +4210,15 @@ public struct CloudSyncDetailSheet: View {
 
                         Spacer()
 
-                        Link(destination: URL(string: "https://tailscale.com/download")!) {
-                            HStack(spacing: 3) {
-                                Image(systemName: "arrow.up.right.square")
-                                Text(localizationManager.localized("download_tailscale"))
+                        if !tailscaleMonitor.status.isConnected {
+                            Link(destination: URL(string: "https://tailscale.com/download")!) {
+                                HStack(spacing: 3) {
+                                    Image(systemName: "arrow.up.right.square")
+                                    Text(localizationManager.localized("download_tailscale"))
+                                }
+                                .font(DS.Font.caption)
+                                .foregroundColor(.accentColor)
                             }
-                            .font(DS.Font.caption)
-                            .foregroundColor(.accentColor)
                         }
                     }
                     .padding(.horizontal, DS.Space.s)

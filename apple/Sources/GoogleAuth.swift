@@ -340,6 +340,8 @@ public final class GoogleAuth: NSObject, ObservableObject {
             _ = try? await URLSession.shared.data(for: request)
         }
         KeychainTokens.clear()
+        // 共用的雲端工作階段綁著舊帳號的快照，登出就要丟掉。
+        CloudSync.invalidateSession()
         await MainActor.run {
             isSignedIn = false
             accountEmail = nil

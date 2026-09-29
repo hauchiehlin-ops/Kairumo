@@ -1134,6 +1134,53 @@ zIndex 的東西」，而那件事在系統算繪的選單裡不可能發生 —
   **背景那條路只有實機測得出來** —— 模擬器要用 Xcode 的
   `_simulateLaunchForTaskWithIdentifier` 才會觸發，那不等於真實行為。
 
+### H-SYNC-FOCUS. 秒同步（焦點通道 + 區網直連）的實機驗證 —— **程式已全部實作**
+- **使用者 2026-09-29 回報**：雲端同步太慢，跨設備、跨平台都是。要求重新思考設計，
+  達到「秒同步」。
+- **診斷**：慢在**結構**而不是輪詢間隔。整庫一輪 = 匯出每一本 + changes.list +
+  中繼資料 + 逐本同步 + 匯入 + 垃圾回收，成本跟筆記本數量成正比，而且一輪跑完才能
+  跑下一輪；再加上編輯器 1.2 秒去抖動 + 排程器 1 秒去抖動，一筆畫要 2 秒多之後
+  才開始往外送。把週期調短只會讓整輪更常空跑。
+- **已就緒**：
+  - 核心：`padnote_sync::focus`（去抖動 250 ms／上限 1.5 s／輪詢 1 s）、
+    `NotebookLocks`（每本一把鎖）、`padnote_sync::lan`（區網協定）、
+    `FfiSyncSession::focus_round` / `lan_key`、`FfiRefreshResult.effective`。
+    43 項新測試，含**真的 TCP 迴路**的握手、傳檔、錯誤金鑰、冒充、路徑逃逸。
+  - Apple：`FocusSyncController`（含 Bonjour 發現）、編輯器落筆 flush 1.2 s → 0.4 s
+    （上限 1.5 s）、共用單一 `FfiSyncSession`、`Info.plist` 的 `NSBonjourServices`。
+  - Android：`FocusSync` + `LanLink`（NSD）、編輯器收到對方更新時重開 session
+    （**在這之前 Android 編輯器完全不會反應**，要關掉重開才看得到）、
+    `InkEngine.isDrawing`（等這一筆畫完才換 session）。
+  - 日誌：有工作的那幾輪寫 `【焦點同步】… 匯出 Xms、雲端 Yms、匯入 Zms`，
+    量出來才知道慢在哪。
+- **要做（依序）**：
+  1. **Drive 路徑**：A、B 同開一本，A 寫一筆 → 量 B 看到的秒數。目標 **≤ 3 秒**。
+     看 `【焦點同步】` 那幾行，找最大的一段。
+  2. **區網路徑**：同一個 Wi-Fi，A 寫 → B。目標 **< 1 秒**。
+     iOS 第一次會跳「本機網路」權限；**拒絕之後要確認 Drive 路徑照常**。
+  3. 關掉區網（B 換到行動網路），確認不影響 Drive 路徑、也沒有殘留連線。
+  4. Apple ↔ Android 各方向：Bonjour 與 NSD 互相看得到嗎？TXT 記錄的鍵是否一致？
+  5. **兩台同時寫同一頁**：收斂、沒有重複筆畫。這是最容易出現「兩條通道同時匯入」
+     的場景。
+  6. 一台開著焦點、另一台在整庫一輪的中間：確認沒有「找不到」或「雜湊不符」
+     （每本一把鎖是為了這個）。
+  7. 50 本筆記的資料庫，閒置時網路上是不是**每秒只有一個請求**。
+  8. Android 進背景 → `FocusSync.onBackground()` 有收掉 NSD 與 socket。
+- **判定**：1 ≤ 3 秒、2 < 1 秒、5 沒有資料異常 = 秒同步達成。
+- **Drive 的物理下限**：上傳 + 傳播 + 輪詢，大約 2–3 秒。沒有後端（D5），
+  `changes.watch` 需要公開端點，做不到主動推送。要低於這個數字只有區網。
+- **已知的取捨／後續**：
+  - 整庫那一輪每次仍會對**每一本**做 `snapshotOwnStrokes`（讀 `.drawing`、解
+    `PKDrawing`、算差異）—— 只有真的要匯入的那幾本才需要它的結果。做成延後計算
+    可以讓 50 本的資料庫閒置一輪便宜很多。這次沒動，因為那是整庫通道的核心，
+    改動風險大、而焦點通道已經繞過它。
+  - Apple 焦點通道的 `push` 不強制匯出（編輯器落筆已經追加進套件，看檔案時間判斷）。
+    文字／物件這類走 `updateNotebook` 的編輯靠文件時間比套件新來觸發匯出 ——
+    **要實機確認文字編輯也秒同步**，不只是筆跡。
+  - Android 16 之後可能要求「本機網路」執行期權限（`ACCESS_LOCAL_NETWORK`）；
+    目前的 `targetSdk` 還不受影響，升 `targetSdk` 時要回頭補。
+  - 資料夾同步（沒登入 Google）沒有區網金鑰，不走這條通道。
+
 ### H-ASR-ANDROID-VERIFY. Android 的 Whisper 已經編出來，待實機驗證
 - **已完成**：`cargo ndk` 現在編得出含 `asr-whisper` 的 `.so`
   （arm64-v8a 與 x86_64，release 各 12 MB，原本約 8 MB）。

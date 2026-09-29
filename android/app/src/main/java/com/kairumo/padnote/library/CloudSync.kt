@@ -7,6 +7,8 @@ import com.kairumo.padnote.sync.SyncLogger
 import com.kairumo.padnote.sync.SyncSource
 import java.io.File
 import uniffi.padnote_core.FfiCloudSyncResult
+import uniffi.padnote_core.notebookLockLeave
+import uniffi.padnote_core.notebookLockTryEnter
 import uniffi.padnote_core.syncGateLeave
 import uniffi.padnote_core.syncGateTryEnter
 import uniffi.padnote_core.syncLiveNotebooks
@@ -76,18 +78,53 @@ object CloudSync {
     // ── P1：帶著雲端快照的工作階段 ────────────────────────────────
 
     /**
-     * 開一輪同步。回傳 null 表示沒登入。
+     * 整個行程**共用一個**工作階段。
+     *
+     * 焦點通道（使用者開著的那一本，每秒輪詢）與整庫通道各自拿一個的話，就有兩份
+     * 雲端快照、兩個變更游標，彼此不知道對方上傳過什麼：一邊剛建立的檔案，另一邊的
+     * 快照裡沒有，於是又建立一次 —— Drive 允許同名檔案，結果是雲端多一份重複。
+     * 共用一個，快照與游標就只有一份，核心裡的索引鎖同時把兩條通道對同一份快照的
+     * 存取串起來。
+     */
+    private class Shared(
+        val session: uniffi.padnote_core.FfiSyncSession,
+        val http: DriveHttpClient,
+        val account: String
+    )
+
+    private var shared: Shared? = null
+
+    /**
+     * 取得共用的工作階段。回傳 null 表示沒登入。
      *
      * 工作階段握著一份 `RemoteIndex`：一次 `changes.list` 更新它，
      * 之後「這本要不要碰」完全在本機算，一個位元組都不傳。
      *
+     * 快照綁帳號：帳號不同就重建。
+     *
      * **會阻塞網路 I/O（取權杖），要在背景執行緒呼叫。**
      */
+    @Synchronized
     fun makeSession(context: Context): uniffi.padnote_core.FfiSyncSession? {
         val token = GoogleAuth.validAccessToken(context) ?: return null
         val account = AccountSyncStore.lastAccount(context)
+        shared?.let {
+            if (it.account == account) {
+                it.http.updateAccessToken(token)
+                return it.session
+            }
+        }
         val saved = AccountSyncStore.remoteIndexJson(context, account)
-        return uniffi.padnote_core.FfiSyncSession.create(DriveHttpClient(token), saved)
+        val http = DriveHttpClient(token)
+        val session = uniffi.padnote_core.FfiSyncSession.create(http, saved)
+        shared = Shared(session, http, account)
+        return session
+    }
+
+    /** 登出或換帳號之後丟掉共用的工作階段。 */
+    @Synchronized
+    fun invalidateSession() {
+        shared = null
     }
 
     /**
@@ -424,9 +461,15 @@ object CloudSync {
 
         for (pkg in ordered) {
             val id = pkg.name.removeSuffix(".padnote")
-            val result = runCatching {
-                session.syncNotebook(pkg.absolutePath, id, deviceId)
-            }.getOrNull()
+            // 焦點通道正在處理這一本（它自己會推、拉）：略過，不要兩條通道同時
+            // 動同一個套件目錄。同步是冪等的，這一本下一輪再看沒有任何代價。
+            val lock = notebookLockTryEnter(id, "full-sync", android.os.SystemClock.elapsedRealtime().toULong())
+            if (!lock.granted) continue
+            val result = try {
+                runCatching { session.syncNotebook(pkg.absolutePath, id, deviceId) }.getOrNull()
+            } finally {
+                notebookLockLeave(id, lock.ticket)
+            }
             if (result == null) {
                 SyncLogger.log("筆記本 $id 同步中斷", SyncSource.GOOGLE_DRIVE)
                 continue

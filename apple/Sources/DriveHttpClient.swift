@@ -58,12 +58,34 @@ final class DriveHttpClient: FfiDriveHttp {
         return isCancelled
     }
 
-    private var accessToken: String
+    /// 權杖會被兩個地方改：請求收到 401 自己換證，以及共用的工作階段在
+    /// 下一次使用前主動更新（`updateAccessToken`）。同一個 client 現在
+    /// 同時被整庫與焦點兩條通道的執行緒使用，所以要加鎖。
+    private let tokenLock = NSLock()
+    private var storedToken: String
+    private var accessToken: String {
+        get {
+            tokenLock.lock()
+            defer { tokenLock.unlock() }
+            return storedToken
+        }
+        set {
+            tokenLock.lock()
+            storedToken = newValue
+            tokenLock.unlock()
+        }
+    }
+
+    /// 共用工作階段在每次被取用時換上最新的權杖。
+    func updateAccessToken(_ token: String) {
+        accessToken = token
+    }
+
     private let session: URLSession
     private let ownsSession: Bool
 
     init(accessToken: String, session: URLSession? = nil) {
-        self.accessToken = accessToken
+        self.storedToken = accessToken
         if let s = session {
             self.session = s
             self.ownsSession = false
@@ -320,17 +342,50 @@ public enum CloudSync {
     // 工作階段握著一份 `RemoteIndex`，一次 `changes.list` 更新它，
     // 之後「這本要不要碰」完全在本機算。
 
-    /// 開一輪同步。回傳 nil 表示沒登入。
+    /// 整個行程**共用一個**工作階段。
+    ///
+    /// 焦點通道（使用者開著的那一本，每秒輪詢）與整庫通道各自拿一個工作階段的話，
+    /// 就有兩份雲端快照、兩個變更游標，彼此不知道對方上傳過什麼：
+    /// 一邊剛建立的檔案，另一邊的快照裡沒有，於是又建立一次 —— Drive 允許
+    /// 同名檔案，結果是雲端多一份重複。共用一個，快照與游標就只有一份，
+    /// 核心裡的索引鎖同時把兩條通道對同一份快照的存取串起來。
+    private static let sessionLock = NSLock()
+    private static var shared: (session: FfiSyncSession, http: DriveHttpClient, account: String)?
+
+    /// 取得共用的工作階段。回傳 nil 表示沒登入。
     ///
     /// 快照綁帳號：換 Google 帳號之後舊游標與 file id 全部失效，
     /// 而失效的游標**不會報錯** —— 它只會回一堆對不上的變更，
-    /// 症狀是「同步成功，但什麼也沒發生」。
+    /// 症狀是「同步成功，但什麼也沒發生」。所以帳號不同就重建。
     public static func makeSession() async -> FfiSyncSession? {
         guard let token = await GoogleAuth.shared.validAccessToken() else { return nil }
         let account = await GoogleAuth.shared.accountEmail ?? ""
+        sessionLock.lock()
+        if let existing = shared, existing.account == account {
+            existing.http.updateAccessToken(token)
+            sessionLock.unlock()
+            return existing.session
+        }
+        sessionLock.unlock()
+
         let saved = await AccountSyncStore.shared.remoteIndexJSON(account: account)
-        return FfiSyncSession.create(
-            http: DriveHttpClient(accessToken: token), remoteIndexJson: saved)
+        let http = DriveHttpClient(accessToken: token)
+        let session = FfiSyncSession.create(http: http, remoteIndexJson: saved)
+        sessionLock.lock()
+        defer { sessionLock.unlock() }
+        // 等待期間別的呼叫者可能已經建好了：用先到的那個，不要蓋掉。
+        if let existing = shared, existing.account == account {
+            return existing.session
+        }
+        shared = (session, http, account)
+        return session
+    }
+
+    /// 登出或換帳號之後丟掉共用的工作階段。
+    public static func invalidateSession() {
+        sessionLock.lock()
+        shared = nil
+        sessionLock.unlock()
     }
 
     /// **把這個帳號在雲端的同步資料整個刪掉。**

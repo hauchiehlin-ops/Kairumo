@@ -6,10 +6,20 @@
     <!-- 線上協同：連使用者自己輸入的 ws:// 位址，不經任何外部伺服器 -->
     <uses-permission android:name="android.permission.INTERNET" />
     <!--
+      區網直連（秒同步）。NSD 發現服務與網路狀態監聽（自動同步的「網路恢復」觸發）
+      用到這兩個，都是一般權限、不會跳出授權對話框。
+    -->
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <!--
         這裡原本還有 ACCESS_WIFI_STATE 與 NEARBY_WIFI_DEVICES，**程式裡從來
-        沒有用過** —— 協同沒有做任何裝置探索（沒有 NsdManager、沒有多播），
-        只是連一個使用者貼進來的位址。宣告了卻不用的危險權限，換來的是
-        商店頁面上一條「附近的裝置」，以及 Play Console 要你解釋用途。
+        沒有用過**，宣告了卻不用的危險權限換來的是商店頁面上一條「附近的裝置」，
+        以及 Play Console 要你解釋用途。
+
+        現在有了 NsdManager（區網直連，`sync/LanLink.kt`），但它**不需要**這兩個：
+        NSD 只走 mDNS，不掃描 Wi-Fi、不碰 Wi-Fi Direct。上面那兩個一般權限
+        （ACCESS_NETWORK_STATE、CHANGE_WIFI_MULTICAST_STATE）就夠了，
+        所以這兩個仍然不加。
     -->
 
     <uses-feature android:name="android.hardware.touchscreen.stylus" android:required="false" />

@@ -4,6 +4,6 @@
 
 "NSMicrophoneUsageDescription" = "Kairumo uses the microphone to record voice notes in class or meetings, keeping your handwriting in sync with the recording timeline.";
 "NSSpeechRecognitionUsageDescription" = "Kairumo uses speech recognition to transcribe your recordings into text on your device and place the transcript in your notes.";
-"NSLocalNetworkUsageDescription" = "Kairumo uses the local network to edit notes together with people on the same Wi-Fi. Everything is end-to-end encrypted and never passes through a server.";
+"NSLocalNetworkUsageDescription" = "Kairumo uses the local network to sync your own devices on the same Wi-Fi within a second, and to edit notes together with people on that network. Everything is end-to-end encrypted and never passes through a server.";
 "NSPhotoLibraryUsageDescription" = "Kairumo accesses your photo library so you can place pictures into a note and annotate them.";
 "NSPhotoLibraryAddUsageDescription" = "Kairumo saves pages and drawings you export to your photo library.";

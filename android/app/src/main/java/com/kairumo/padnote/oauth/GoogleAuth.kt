@@ -228,7 +228,24 @@ object GoogleAuth {
      */
     fun signOutLocally(context: Context) {
         store(context)?.edit()?.clear()?.apply()
+        // 共用的雲端工作階段綁著舊帳號的快照，登出就要丟掉。
+        com.kairumo.padnote.library.CloudSync.invalidateSession()
         notifyAuthChanged(context)
+    }
+
+    /**
+     * 區網金鑰（見核心 `padnote_sync::lan`）。與權杖放在同一個加密儲存 ——
+     * 它是能讀到全部同步資料的同一個信任等級。登出時跟著清掉。
+     */
+    fun loadLanKey(context: Context, account: String): ByteArray? =
+        store(context)?.getString("lan_key_$account", null)
+            ?.let { runCatching { android.util.Base64.decode(it, android.util.Base64.NO_WRAP) }.getOrNull() }
+            ?.takeIf { it.size == 32 }
+
+    fun saveLanKey(context: Context, account: String, key: ByteArray) {
+        store(context)?.edit()
+            ?.putString("lan_key_$account", android.util.Base64.encodeToString(key, android.util.Base64.NO_WRAP))
+            ?.apply()
     }
 
     private fun save(context: Context, tokens: FfiTokenSet, previousRefresh: String) {

@@ -155,6 +155,7 @@
 		E26B4411597679C8486D535D /* RecentTemplates.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2929D89A7985F84100FDB68 /* RecentTemplates.swift */; };
 		E3842272FC4874968EB1DD2C /* NotebookSearchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 843458EEF60FCF8BD686B73F /* NotebookSearchTests.swift */; };
 		E3A9312FAEBA705BEA9FA720 /* NotebookEncryptionSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 299963A100092694C08E3978 /* NotebookEncryptionSheet.swift */; };
+		E4A069A1B5199A2C9BC3729C /* FocusSyncController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B9062E427B4E1403BAD47F /* FocusSyncController.swift */; };
 		E4B93CFE05CF96BF2F488812 /* AppCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = 58A59801CFFFC6CE7230C128 /* AppCommands.swift */; };
 		E77C6702EE266A8D0B24EA19 /* PageRepagination.swift in Sources */ = {isa = PBXBuildFile; fileRef = 74C26B5B3A37A7FBDAABA8A7 /* PageRepagination.swift */; };
 		E8F3A38363417DE23F896842 /* PageGuideRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = B9DFE7E365BA2170726481B9 /* PageGuideRenderer.swift */; };
@@ -346,6 +347,7 @@
 		D2E4B63FC00CBE41E1C67031 /* DeadControlSurvey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeadControlSurvey.swift; sourceTree = "<group>"; };
 		D32B1A1C085E81299624C82B /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = ko.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		D32FB35605394A7823F6017B /* ResponsiveAudit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResponsiveAudit.swift; sourceTree = "<group>"; };
+		D3B9062E427B4E1403BAD47F /* FocusSyncController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FocusSyncController.swift; sourceTree = "<group>"; };
 		D76C7E92895F6C4334996D92 /* NotebookSyncCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotebookSyncCoordinator.swift; sourceTree = "<group>"; };
 		D92F2373941302ED5F5C66CD /* ImageDropPlacementTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageDropPlacementTests.swift; sourceTree = "<group>"; };
 		DA14AB7B6F3436E39B58DAA1 /* ObjectStacking.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ObjectStacking.swift; sourceTree = "<group>"; };
@@ -555,6 +557,7 @@
 				562E158E0A977219ABF76CC9 /* FileImport.swift */,
 				A94975999121E1FFF8139B6A /* FloatingPanel.swift */,
 				49C432411765C8C4D7362EA7 /* FloatingToolPill.swift */,
+				D3B9062E427B4E1403BAD47F /* FocusSyncController.swift */,
 				CCBD6EB2E871A9532370A15B /* GoogleAuth.swift */,
 				6923436682B5101DB7AF5FAA /* HandwritingRecognizer.swift */,
 				236D7B7260C10A27D9EA3771 /* HomeWorkbenchView.swift */,
@@ -868,6 +871,7 @@
 				0A37C2C946C8BA1AA9E41127 /* FileImport.swift in Sources */,
 				FDBFCB97F11915C9DA8EA7A9 /* FloatingPanel.swift in Sources */,
 				3054D36A50503BD7EC24C84C /* FloatingToolPill.swift in Sources */,
+				E4A069A1B5199A2C9BC3729C /* FocusSyncController.swift in Sources */,
 				2CD22470357DA2E190D83DBF /* GoogleAuth.swift in Sources */,
 				EA5494E606E6326E6BAEB42C /* HandwritingRecognizer.swift in Sources */,
 				023C029A763DC77377F7804E /* HomeWorkbenchUsage.swift in Sources */,

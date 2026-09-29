@@ -1148,10 +1148,55 @@ pub struct FfiRefreshResult {
     pub ok: bool,
     /// 這一輪有幾筆變更。0 表示雲端完全沒動 —— 上層可以直接跳過整輪同步。
     pub changed: u32,
+    /// 其中**真的改變了快照**的有幾筆。自己剛上傳的檔案會出現在 `changed`
+    /// 裡（Drive 回報所有變動，包括自己造成的），但快照早就知道它了，
+    /// 所以不算在這裡。這才是「對方動了」的數字。
+    pub effective: u32,
     /// 走了全量重建（第一次、或游標過期）。
     pub full_rebuild: bool,
     /// 目前快照裡有幾個檔案。給「同步醫生」畫面看的。
     pub tracked_files: u32,
+    pub error: String,
+    pub needs_reauth: bool,
+}
+
+/// 焦點通道一輪的結果（見 [`FfiSyncSession::focus_round`]）。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiFocusRoundResult {
+    pub ok: bool,
+    /// `changes.list` 帶回幾筆**真的改變了快照**的變更（整個帳號的，不只這一本；
+    /// 自己剛上傳的回音不算）。
+    pub remote_changes: u32,
+    /// 這一本有沒有事要做。`false` 表示只問了一次雲端就結束。
+    pub had_work: bool,
+    pub uploaded: u32,
+    pub downloaded: u32,
+    pub error: String,
+    pub needs_reauth: bool,
+    pub warnings: Vec<String>,
+}
+
+impl FfiFocusRoundResult {
+    fn failed(error: String, needs_reauth: bool) -> Self {
+        Self {
+            ok: false,
+            remote_changes: 0,
+            had_work: false,
+            uploaded: 0,
+            downloaded: 0,
+            error,
+            needs_reauth,
+            warnings: Vec::new(),
+        }
+    }
+}
+
+/// 區網金鑰（見 [`FfiSyncSession::lan_key`]）。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiLanKeyResult {
+    pub ok: bool,
+    /// 32 位元組。`ok` 為 false 時是空的。
+    pub key: Vec<u8>,
     pub error: String,
     pub needs_reauth: bool,
 }
@@ -1304,6 +1349,36 @@ pub struct FfiWipeResult {
     /// 第一個刪不掉的檔案與原因。全部成功時是空字串。
     pub error: String,
     pub needs_reauth: bool,
+}
+
+fn ok_key(key: [u8; 32]) -> FfiLanKeyResult {
+    FfiLanKeyResult {
+        ok: true,
+        key: key.to_vec(),
+        error: String::new(),
+        needs_reauth: false,
+    }
+}
+
+/// 讀雲端上的區網金鑰。沒有（或內容不合格式）回 `None`。
+fn read_lan_key<H: padnote_sync::gdrive::DriveHttp>(
+    drive: &GDriveProvider<H>,
+) -> Result<Option<[u8; 32]>, SyncError> {
+    let bytes = match drive.get_all(padnote_sync::lan::LAN_KEY_PATH) {
+        Ok(b) => b,
+        Err(SyncError::NotFound(_)) => return Ok(None),
+        Err(e) => return Err(e),
+    };
+    let value: serde_json::Value = match serde_json::from_slice(&bytes) {
+        Ok(v) => v,
+        Err(_) => return Ok(None),
+    };
+    let Some(encoded) = value.get("key").and_then(serde_json::Value::as_str) else {
+        return Ok(None);
+    };
+    Ok(padnote_crypto::session::SessionKey::from_base64(encoded)
+        .ok()
+        .map(|k| *k.as_bytes()))
 }
 
 #[derive(Debug, uniffi::Object)]
@@ -1537,18 +1612,22 @@ impl FfiSyncSession {
             Ok(batch) => {
                 let mut index = self.index.lock().unwrap();
                 let changed = batch.changes.len() as u32;
+                let mut effective = 0u32;
                 for change in &batch.changes {
-                    index.apply(
+                    if index.apply(
                         &change.file_id,
                         change.name.as_deref(),
                         change.size,
                         change.gone,
-                    );
+                    ) {
+                        effective += 1;
+                    }
                 }
                 index.page_token = batch.new_token;
                 FfiRefreshResult {
                     ok: true,
                     changed,
+                    effective,
                     full_rebuild: false,
                     tracked_files: index.len() as u32,
                     error: String::new(),
@@ -1685,6 +1764,123 @@ impl FfiSyncSession {
         }
     }
 
+    /// **焦點通道的一輪**：只處理使用者現在開著的那一本。
+    ///
+    /// 整庫那一輪（匯出每一本、中繼資料、逐本同步、匯入、垃圾回收）的成本
+    /// 跟筆記本數量成正比，所以「改一個字要多久才到另一台」取決於整個
+    /// 資料庫有多大。這裡把它縮成：
+    ///
+    /// 1. 一次 `changes.list`（沒有變動就是空回應）；
+    /// 2. 這一本的差異完全在本機算（[`Self::notebook_needs_sync`]），
+    ///    沒事就結束 —— 一輪輪詢只花一個 HTTP 請求；
+    /// 3. 有事才走 [`Self::sync_notebook`]，而它本來就只傳差異、
+    ///    而且憑快照裡的 file id 直接上傳／下載，不再列舉。
+    ///
+    /// 跟整庫通道共用同一個工作階段（同一份快照、同一把索引鎖），
+    /// 所以兩條通道不會各自拿著不同版本的雲端。
+    ///
+    /// **呼叫端要先拿 `notebook_lock`（每本一把）。**
+    ///
+    /// **這個方法會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
+    pub fn focus_round(
+        &self,
+        package_path: String,
+        notebook_id: String,
+        device_id: u32,
+    ) -> FfiFocusRoundResult {
+        let refreshed = self.refresh();
+        if !refreshed.ok {
+            return FfiFocusRoundResult::failed(refreshed.error, refreshed.needs_reauth);
+        }
+        let remote_changes = if refreshed.full_rebuild {
+            // 全量重建的 `changed` 是快照裡的檔案總數，不是「變動」。
+            0
+        } else {
+            // 用 `effective`：自己剛上傳的檔案也會出現在 `changes.list`，
+            // 但快照早就知道它了。用 `changed` 的話，每次推送之後的下一次
+            // 輪詢都會被誤判成「雲端有別人的新東西」。
+            refreshed.effective
+        };
+        if !self.notebook_needs_sync(package_path.clone(), notebook_id.clone()) {
+            return FfiFocusRoundResult {
+                ok: true,
+                remote_changes,
+                had_work: false,
+                uploaded: 0,
+                downloaded: 0,
+                error: String::new(),
+                needs_reauth: false,
+                warnings: Vec::new(),
+            };
+        }
+        let result = self.sync_notebook(package_path, notebook_id, device_id);
+        FfiFocusRoundResult {
+            ok: result.ok,
+            remote_changes,
+            had_work: true,
+            uploaded: result.uploaded,
+            downloaded: result.downloaded,
+            error: result.error,
+            needs_reauth: result.needs_reauth,
+            warnings: result.warnings,
+        }
+    }
+
+    /// 這個帳號的**區網金鑰**。雲端沒有就建一把，有就讀回來。
+    ///
+    /// 金鑰放在使用者自己的 Drive `appDataFolder`（`settings/lan-key.json`），
+    /// 所以「拿得到金鑰的人」＝「本來就拿得到全部同步資料的人」，
+    /// 區網通道沒有擴大任何信任面。
+    ///
+    /// # 兩台裝置同時第一次建立
+    ///
+    /// Drive 允許同名檔案，於是可能有兩份。這裡**建完再讀一次**，
+    /// 而讀取一律取最新修改的那個（見 `duplicate_names_resolve_to_the_newest`）——
+    /// 所以兩台最後讀到同一把。先建的那台如果拿著舊的，握手會因金鑰不符
+    /// 而失敗；平台在握手失敗時重新呼叫這個方法即可。
+    ///
+    /// **這個方法會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
+    pub fn lan_key(&self) -> FfiLanKeyResult {
+        let fail = |e: SyncError| {
+            let reauth = matches!(e, SyncError::PermissionDenied(_));
+            FfiLanKeyResult {
+                ok: false,
+                key: Vec::new(),
+                error: e.to_string(),
+                needs_reauth: reauth,
+            }
+        };
+        match read_lan_key(&self.drive) {
+            Ok(Some(key)) => return ok_key(key),
+            Ok(None) => {}
+            Err(e) => return fail(e),
+        }
+        let fresh = match padnote_crypto::session::SessionKey::generate() {
+            Ok(k) => k,
+            Err(_) => {
+                return FfiLanKeyResult {
+                    ok: false,
+                    key: Vec::new(),
+                    error: "產生不了亂數".to_string(),
+                    needs_reauth: false,
+                };
+            }
+        };
+        let body = serde_json::json!({ "v": 1, "key": fresh.to_base64() }).to_string();
+        if let Err(e) = CloudProvider::put_new(
+            &self.drive,
+            padnote_sync::lan::LAN_KEY_PATH,
+            body.as_bytes(),
+        ) {
+            return fail(e);
+        }
+        match read_lan_key(&self.drive) {
+            Ok(Some(key)) => ok_key(key),
+            Ok(None) => ok_key(*fresh.as_bytes()),
+            Err(e) => fail(e),
+        }
+    }
+
     /// 中繼資料（設定 + 筆記本索引）。
     ///
     /// **這個方法會同步地等平台的 HTTP 回來，不要在主執行緒呼叫。**
@@ -1716,6 +1912,7 @@ impl FfiSyncSession {
         FfiRefreshResult {
             ok: true,
             changed: count,
+            effective: count,
             full_rebuild: true,
             tracked_files: index.len() as u32,
             error: String::new(),
@@ -1810,6 +2007,7 @@ fn refresh_failed(error: SyncError) -> FfiRefreshResult {
     FfiRefreshResult {
         ok: false,
         changed: 0,
+        effective: 0,
         full_rebuild: false,
         tracked_files: 0,
         error: error.to_string(),
@@ -2242,6 +2440,194 @@ mod tests {
             fake.call_count(),
             1,
             "20 本筆記、什麼都沒變，整輪只該打一次 HTTP（changes.list）"
+        );
+    }
+
+    // ── 焦點通道：秒同步 ──────────────────────────────────────────
+
+    #[test]
+    fn a_focus_poll_with_nothing_to_do_costs_exactly_one_http_call() {
+        // 焦點通道每秒問一次。那一次必須便宜到不用想：一個請求，
+        // 不論資料庫裡有幾本筆記本。
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+        let books = many_packages("focus-quiet", 20);
+        let session = FfiSyncSession::create(http, String::new());
+        assert!(session.refresh().ok);
+        for (id, root) in &books {
+            assert!(
+                session
+                    .sync_notebook(root.to_string_lossy().into(), id.clone(), 0xAA)
+                    .ok
+            );
+        }
+        session.refresh();
+
+        fake.reset_calls();
+        let (id, root) = &books[3];
+        let round = session.focus_round(root.to_string_lossy().into(), id.clone(), 0xAA);
+        assert!(round.ok, "{}", round.error);
+        assert!(!round.had_work, "沒有事就不該碰這一本");
+        assert_eq!(fake.call_count(), 1, "一個 changes.list，沒有別的");
+    }
+
+    #[test]
+    fn a_focus_push_uploads_only_the_focused_notebook_without_listing() {
+        // 使用者在 20 本筆記裡改了其中一本：焦點通道只碰那一本，
+        // 而且憑快照裡的 file id 直接 PATCH，不再列舉。
+        use padnote_doc::ops::DocOp;
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+        let books = many_packages("focus-push", 20);
+        let session = FfiSyncSession::create(http, String::new());
+        assert!(session.refresh().ok);
+        for (id, root) in &books {
+            assert!(
+                session
+                    .sync_notebook(root.to_string_lossy().into(), id.clone(), 0xAA)
+                    .ok
+            );
+        }
+        session.refresh();
+
+        let (id, root) = &books[5];
+        let mut pkg = padnote_storage::NotebookPackage::open(root).unwrap();
+        pkg.append_doc_ops(
+            7,
+            0xAA,
+            &[DocOp::SetTitle {
+                title: "剛寫的".into(),
+            }],
+        )
+        .unwrap();
+
+        fake.reset_calls();
+        let round = session.focus_round(root.to_string_lossy().into(), id.clone(), 0xAA);
+        assert!(round.ok, "{}", round.error);
+        assert!(round.had_work);
+        assert_eq!(round.uploaded, 1);
+        // changes.list 一次 + 新檔一次建立（POST）+ 上傳一次。
+        assert!(
+            fake.call_count() <= 4,
+            "一本筆記的一次寫入該是個位數請求，實際 {}",
+            fake.call_count()
+        );
+        // 下一次輪詢會在 `changes.list` 裡看到**自己剛上傳的那個檔**，
+        // 但那不是別人動了東西：不能算成遠端變動，否則每次推送之後
+        // 整庫通道都會被莫名其妙叫醒。
+        let echo = session.focus_round(root.to_string_lossy().into(), id.clone(), 0xAA);
+        assert!(echo.ok, "{}", echo.error);
+        assert_eq!(echo.remote_changes, 0, "自己的回音被當成對方的變動");
+        assert!(!echo.had_work);
+        // 其他 19 本沒事。
+        for (other_id, other_root) in books.iter().filter(|(i, _)| i != id) {
+            assert!(
+                !session.notebook_needs_sync(other_root.to_string_lossy().into(), other_id.clone())
+            );
+        }
+    }
+
+    #[test]
+    fn two_devices_exchange_an_edit_through_focus_rounds_alone() {
+        // 秒同步的完整路徑，而且**完全不經過整庫那一輪**：
+        // A 寫 → A 焦點推 → B 焦點拉，兩邊套件內容一致。
+        use padnote_doc::ops::DocOp;
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+
+        let a_root = tmp_package("focus-a", 0xAA);
+        let b_root = tmp_package("focus-b", 0xBB);
+        let a = FfiSyncSession::create(http.clone(), String::new());
+        let b = FfiSyncSession::create(http.clone(), String::new());
+        let pa: String = a_root.to_string_lossy().into();
+        let pb: String = b_root.to_string_lossy().into();
+
+        // 先各跑一輪把基準建起來。
+        assert!(a.focus_round(pa.clone(), "nb".into(), 0xAA).ok);
+        assert!(b.focus_round(pb.clone(), "nb".into(), 0xBB).ok);
+
+        for round in 1..=3u64 {
+            let mut pkg = padnote_storage::NotebookPackage::open(&a_root).unwrap();
+            pkg.append_doc_ops(
+                round * 10,
+                0xAA,
+                &[DocOp::SetTitle {
+                    title: format!("第 {round} 次"),
+                }],
+            )
+            .unwrap();
+            let pushed = a.focus_round(pa.clone(), "nb".into(), 0xAA);
+            assert!(pushed.ok, "{}", pushed.error);
+            assert_eq!(pushed.uploaded, 1, "第 {round} 次沒推出去");
+
+            let pulled = b.focus_round(pb.clone(), "nb".into(), 0xBB);
+            assert!(pulled.ok, "{}", pulled.error);
+            assert!(pulled.remote_changes > 0, "changes.list 該看到 A 的檔");
+            assert_eq!(pulled.downloaded, 1, "第 {round} 次沒拉到");
+        }
+        let names = |root: &std::path::Path| -> Vec<String> {
+            padnote_storage::NotebookPackage::open(root)
+                .unwrap()
+                .doc_op_files()
+                .unwrap()
+                .into_iter()
+                .map(|(n, _)| n)
+                .collect()
+        };
+        assert_eq!(names(&a_root), names(&b_root));
+    }
+
+    #[test]
+    fn a_focus_round_reports_a_dead_token_as_needing_reauth() {
+        #[derive(Debug)]
+        struct Denied;
+        impl FfiDriveHttp for Denied {
+            fn get_json(&self, _: String, _: Vec<FfiQueryParam>) -> Result<String, FfiDriveError> {
+                Err(FfiDriveError::PermissionDenied { detail: "x".into() })
+            }
+            fn get_bytes(
+                &self,
+                _: String,
+                _: Option<FfiByteRange>,
+            ) -> Result<Vec<u8>, FfiDriveError> {
+                Err(FfiDriveError::PermissionDenied { detail: "x".into() })
+            }
+            fn post_json(&self, _: String, _: String) -> Result<String, FfiDriveError> {
+                Err(FfiDriveError::PermissionDenied { detail: "x".into() })
+            }
+            fn patch_bytes(&self, _: String, _: Vec<u8>) -> Result<(), FfiDriveError> {
+                Err(FfiDriveError::PermissionDenied { detail: "x".into() })
+            }
+            fn delete(&self, _: String) -> Result<(), FfiDriveError> {
+                Err(FfiDriveError::PermissionDenied { detail: "x".into() })
+            }
+            fn start_resumable(&self, _: String, _: String) -> Result<String, FfiDriveError> {
+                Err(FfiDriveError::PermissionDenied { detail: "x".into() })
+            }
+            fn put_bytes(&self, _: String, _: Vec<u8>) -> Result<(), FfiDriveError> {
+                Err(FfiDriveError::PermissionDenied { detail: "x".into() })
+            }
+        }
+        let session = FfiSyncSession::create(Arc::new(Denied), String::new());
+        let root = tmp_package("focus-denied", 0xAA);
+        let round = session.focus_round(root.to_string_lossy().into(), "nb".into(), 0xAA);
+        assert!(!round.ok);
+        assert!(round.needs_reauth);
+    }
+
+    #[test]
+    fn the_lan_key_is_created_once_and_read_back_identically() {
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+        let first = FfiSyncSession::create(http.clone(), String::new()).lan_key();
+        assert!(first.ok, "{}", first.error);
+        assert_eq!(first.key.len(), 32);
+        // 另一台裝置（全新的 session）讀到同一把。
+        let second = FfiSyncSession::create(http, String::new()).lan_key();
+        assert!(second.ok, "{}", second.error);
+        assert_eq!(
+            first.key, second.key,
+            "兩台必須拿到同一把，否則握手永遠失敗"
         );
     }
 

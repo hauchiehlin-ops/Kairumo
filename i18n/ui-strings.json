@@ -1,11 +1,11 @@
 {
   "NSLocalNetworkUsageDescription": {
-    "en": "Kairumo uses the local network to edit notes together with people on the same Wi-Fi. Everything is end-to-end encrypted and never passes through a server.",
-    "zhHant": "Kairumo 需要區域網路權限，以便在同一個 Wi-Fi 網路下直接與協同夥伴連線共同編輯筆記，所有傳輸均經端對端加密且不經外部伺服器。",
-    "zhHans": "Kairumo 需要局域网权限，以便在同一个 Wi-Fi 网络下直接与协作伙伴连线共同编辑笔记，所有传输均经端到端加密且不经外部服务器。",
-    "ja": "Kairumo は、同じ Wi-Fi にいる相手と一緒にノートを編集するためにローカルネットワークを使用します。通信はすべてエンドツーエンドで暗号化され、サーバーを経由しません。",
-    "ko": "Kairumo는 같은 Wi-Fi에 있는 사람과 함께 노트를 편집하기 위해 로컬 네트워크를 사용합니다. 모든 전송은 종단간 암호화되며 서버를 거치지 않습니다.",
-    "th": "Kairumo ใช้เครือข่ายภายในเพื่อแก้ไขโน้ตร่วมกับผู้ที่อยู่บน Wi-Fi เดียวกัน ทุกการส่งข้อมูลเข้ารหัสแบบปลายทางถึงปลายทางและไม่ผ่านเซิร์ฟเวอร์"
+    "en": "Kairumo uses the local network to sync your own devices on the same Wi-Fi within a second, and to edit notes together with people on that network. Everything is end-to-end encrypted and never passes through a server.",
+    "zhHant": "Kairumo 需要區域網路權限，以便在同一個 Wi-Fi 下讓您自己的裝置秒級同步筆記，並與同網路的協同夥伴共同編輯。所有傳輸均經端對端加密且不經外部伺服器。",
+    "zhHans": "Kairumo 需要局域网权限，以便在同一个 Wi-Fi 下让您自己的设备秒级同步笔记，并与同网络的协作伙伴共同编辑。所有传输均经端到端加密且不经外部服务器。",
+    "ja": "Kairumo は、同じ Wi-Fi 上のご自身のデバイス間でノートを瞬時に同期し、同じネットワーク上の相手と一緒に編集するためにローカルネットワークを使用します。通信はすべてエンドツーエンドで暗号化され、サーバーを経由しません。",
+    "ko": "Kairumo는 같은 Wi-Fi에 있는 내 기기끼리 노트를 즉시 동기화하고, 같은 네트워크의 사람과 함께 편집하기 위해 로컬 네트워크를 사용합니다. 모든 전송은 종단간 암호화되며 서버를 거치지 않습니다.",
+    "th": "Kairumo ใช้เครือข่ายภายในเพื่อซิงค์โน้ตระหว่างอุปกรณ์ของคุณบน Wi-Fi เดียวกันได้ในไม่กี่วินาที และแก้ไขร่วมกับผู้ที่อยู่ในเครือข่ายเดียวกัน ทุกการส่งข้อมูลเข้ารหัสแบบปลายทางถึงปลายทางและไม่ผ่านเซิร์ฟเวอร์"
   },
   "NSMicrophoneUsageDescription": {
     "en": "Kairumo uses the microphone to record voice notes in class or meetings, keeping your handwriting in sync with the recording timeline.",

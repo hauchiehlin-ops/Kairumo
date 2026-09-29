@@ -26,6 +26,42 @@
 import Foundation
 import PencilKit
 
+/// **每一本筆記本一把鎖**（核心：`notebook_lock_*`）。
+///
+/// 整庫互斥閘（`SyncGateQueue`）擋的是兩輪整庫同步並行。焦點通道與區網
+/// 直連刻意不走它 —— 整庫一輪可能跑幾十秒，秒同步等不起。兩條通道真正會撞在
+/// 一起的地方只有**同一本筆記本的套件目錄**（匯出寫、下載寫、匯入讀），
+/// 所以鎖的粒度是筆記本：焦點通道在處理 A 的時候，整庫通道照跑其他本，
+/// 遇到 A 就略過或稍等。
+enum NotebookLock {
+    private static var nowMs: UInt64 {
+        UInt64(ProcessInfo.processInfo.systemUptime * 1000)
+    }
+
+    static func tryEnter(_ notebookId: String, label: String) -> UInt64? {
+        let grant = notebookLockTryEnter(
+            notebookId: notebookId.lowercased(), label: label, nowMs: nowMs
+        )
+        return grant.granted ? grant.ticket : nil
+    }
+
+    static func leave(_ notebookId: String, ticket: UInt64) {
+        _ = notebookLockLeave(notebookId: notebookId.lowercased(), ticket: ticket)
+    }
+
+    /// 等一下再拿。給**不能略過**的動作用（例如把整庫下載到的內容匯入畫面：
+    /// 略過的話那份內容就沒有人會再去匯入）。焦點通道每輪很短，等幾秒夠了。
+    static func enter(_ notebookId: String, label: String, waitMs: UInt64) async -> UInt64? {
+        let started = nowMs
+        while !Task.isCancelled {
+            if let ticket = tryEnter(notebookId, label: label) { return ticket }
+            if nowMs - started >= waitMs { return nil }
+            try? await Task.sleep(nanoseconds: 80_000_000)
+        }
+        return nil
+    }
+}
+
 /// 同一個 App 行程內的同步入口佇列。
 ///
 /// 核心閘保證互斥；這一層把「忙碌就丟掉」改成「等前一輪收尾」。因此自動
@@ -531,6 +567,13 @@ enum NotebookSyncCoordinator {
                 if isCancelled || Task.isCancelled {
                     return (own, exported, failures, true)
                 }
+                // 焦點通道正在處理這一本（它自己會匯出、推送、匯入）：
+                // 略過，不要兩條通道同時寫同一個套件。同步是冪等的，
+                // 這一本下一輪再看沒有任何代價。
+                guard let lockTicket = NotebookLock.tryEnter(
+                    input.document.id, label: "full-export"
+                ) else { continue }
+                defer { NotebookLock.leave(input.document.id, ticket: lockTicket) }
                 // 前景心跳每 3–12 秒會進來一次。沒有這道判斷時，每一輪都把
                 // 每一本套件完整重建，即使一個字都沒改；iPad 實機曾因此在
                 // 25 分鐘內寫入 4.3 GB，最後被系統以 excessive disk writes
@@ -711,6 +754,9 @@ enum NotebookSyncCoordinator {
                 break
             }
             let id = packageId(for: package)
+            // 同上：焦點通道拿著這一本就略過。
+            guard let lockTicket = NotebookLock.tryEnter(id, label: "full-sync") else { continue }
+            defer { NotebookLock.leave(id, ticket: lockTicket) }
             guard let result = await CloudSync.syncNotebook(
                 session, packagePath: package.path, notebookId: id, deviceId: deviceId
             )
@@ -932,6 +978,161 @@ enum NotebookSyncCoordinator {
         )
         return store.syncPackagesDirectory
             .appending(path: "\(notebookId.lowercased()).padnote")
+    }
+
+    // MARK: - 焦點通道（秒同步）
+
+    /// 焦點通道一輪的結果。
+    struct FocusReport {
+        var ok = true
+        var hadWork = false
+        var uploaded = 0
+        var downloaded = 0
+        var remoteChanges = 0
+        var error = ""
+        var needsReauth = false
+        var warnings: [String] = []
+        /// 各段耗時（毫秒）。**量出來才知道慢在哪** —— 有工作的那幾輪寫進同步日誌。
+        var exportMs = 0
+        var driveMs = 0
+        var importMs = 0
+    }
+
+    private static func millis(since start: ContinuousClock.Instant, clock: ContinuousClock) -> Int {
+        let parts = start.duration(to: clock.now).components
+        return Int(parts.seconds * 1000 + parts.attoseconds / 1_000_000_000_000_000)
+    }
+
+    /// 焦點通道的一輪：只處理使用者現在開著的那一本。
+    ///
+    /// 整庫那一輪（匯出每一本、中繼資料、逐本同步、匯入、垃圾回收）的成本
+    /// 跟筆記本數量成正比，所以「改一個字要多久才到另一台」取決於整個
+    /// 資料庫有多大。這裡縮成：**匯出這一本 →（區網通知）→ 一次 `changes.list`
+    /// → 有差異才傳這一本 → 有下載才匯入這一本。**
+    ///
+    /// **呼叫端要先拿 `NotebookLock`。** 這個函式不自己拿：鎖的生命週期
+    /// 要涵蓋呼叫端在前後做的事（區網通知、排程回報）。
+    ///
+    /// - Parameter afterExport: 匯出完成、還沒去問 Drive 之前呼叫。區網直連
+    ///   在這裡把「我有新東西」通知對端 —— 不必等 Drive 那一趟。
+    @MainActor
+    static func runFocusRound(
+        store: SyncableNotebookStore,
+        deviceId: UInt32,
+        notebookId: String,
+        push: Bool,
+        session: FfiSyncSession,
+        afterExport: @escaping @Sendable () -> Void
+    ) async -> FocusReport {
+        var report = FocusReport()
+        guard let document = store.syncNotebooks.first(where: {
+            $0.id.caseInsensitiveCompare(notebookId) == .orderedSame
+        }) else {
+            return report
+        }
+        let packagesDir = store.syncPackagesDirectory
+        try? FileManager.default.createDirectory(at: packagesDir, withIntermediateDirectories: true)
+        let inputs = exportInputs(for: document, store: store, packagesDir: packagesDir, deviceId: deviceId)
+
+        // ── 1. 匯出。使用者剛寫的東西要先進套件，否則後面推的是舊的。
+        //
+        // **`push` 不強制匯出**：編輯器每次落筆都已經把增量追加進同一個套件
+        // （`flushPendingCoreInk`），這時套件比工作副本新，`workingCopyNeedsExport`
+        // 會判定不必重建。強制匯出等於每一筆都把整本筆記的每一頁重寫一次。
+        // 文字、物件這類走 `updateNotebook` 的編輯會讓文件時間比套件新，
+        // 那時候它自然會回 true。
+        let clock = ContinuousClock()
+        let exportStart = clock.now
+        let exported = await Task.detached(priority: .userInitiated) {
+            () -> (own: OwnStrokes?, didExport: Bool, error: String) in
+            do {
+                if workingCopyNeedsExport(inputs) {
+                    return (try exportOne(inputs), true, "")
+                }
+                return (try snapshotOwnStrokes(inputs), false, "")
+            } catch {
+                return (nil, false, error.localizedDescription)
+            }
+        }.value
+        report.exportMs = Self.millis(since: exportStart, clock: clock)
+        guard let own = exported.own else {
+            report.ok = false
+            report.error = String(format: LocalizationManager.shared.localized("export_failed"), exported.error)
+            return report
+        }
+        // 有寫入就通知區網對端（不論是這裡匯出的、還是編輯器已經追加進套件的）。
+        if push || exported.didExport { afterExport() }
+
+        // ── 2. 問 Drive、只傳這一本的差異。
+        let packagePath = inputs.package.path
+        let id = notebookId.lowercased()
+        let driveStart = clock.now
+        let round = await Task.detached(priority: .userInitiated) {
+            session.focusRound(packagePath: packagePath, notebookId: id, deviceId: deviceId)
+        }.value
+        report.driveMs = Self.millis(since: driveStart, clock: clock)
+        report.hadWork = round.hadWork
+        report.uploaded = Int(round.uploaded)
+        report.downloaded = Int(round.downloaded)
+        report.remoteChanges = Int(round.remoteChanges)
+        report.warnings = round.warnings
+        guard round.ok else {
+            report.ok = false
+            report.error = round.error
+            report.needsReauth = round.needsReauth
+            return report
+        }
+
+        // ── 3. 有下載才匯入這一本。**匯入前的匯出已經做完了**（步驟 1），
+        // 所以使用者剛寫的東西已經在套件裡，不會被合併結果蓋掉。
+        if round.downloaded > 0 {
+            let importStart = clock.now
+            defer { report.importMs = Self.millis(since: importStart, clock: clock) }
+            do {
+                try await importOne(inputs.package, into: store, deviceId: deviceId, ownStrokes: own)
+                NotificationCenter.default.post(
+                    name: AppCommand.notebookPackageChanged, object: id
+                )
+            } catch {
+                report.ok = false
+                report.error = String(format: LocalizationManager.shared.localized("import_failed"), error.localizedDescription)
+            }
+        }
+        return report
+    }
+
+    /// 區網對端把新的檔案寫進了套件 —— 把它匯入畫面。
+    ///
+    /// **順序是匯出、再匯入**，與 Drive 那條路一致：匯入會用套件的合併結果
+    /// 取代工作副本，使用者在這之前剛寫、還沒進套件的筆畫必須先匯出，
+    /// 不然會被蓋掉。呼叫端要先拿 `NotebookLock`。
+    @MainActor
+    static func importReceived(
+        store: SyncableNotebookStore, deviceId: UInt32, notebookId: String
+    ) async -> Bool {
+        guard let document = store.syncNotebooks.first(where: {
+            $0.id.caseInsensitiveCompare(notebookId) == .orderedSame
+        }) else { return false }
+        let packagesDir = store.syncPackagesDirectory
+        let inputs = exportInputs(for: document, store: store, packagesDir: packagesDir, deviceId: deviceId)
+        let own = await Task.detached(priority: .userInitiated) { () -> OwnStrokes? in
+            do {
+                if workingCopyNeedsExport(inputs) { return try exportOne(inputs) }
+                return try snapshotOwnStrokes(inputs)
+            } catch {
+                return nil
+            }
+        }.value
+        guard let own else { return false }
+        do {
+            try await importOne(inputs.package, into: store, deviceId: deviceId, ownStrokes: own)
+        } catch {
+            return false
+        }
+        NotificationCenter.default.post(
+            name: AppCommand.notebookPackageChanged, object: notebookId.lowercased()
+        )
+        return true
     }
 
     // MARK: - 單本
@@ -1211,6 +1412,18 @@ enum NotebookSyncCoordinator {
                 continue
             }
 
+            // 匯入**不能略過**：這一輪下載到的內容，除了這裡沒有別人會去匯入。
+            // 焦點通道每輪很短，等它放鎖。
+            guard let lockTicket = await NotebookLock.enter(
+                normId, label: "full-import", waitMs: 10_000
+            ) else {
+                SyncLogger.logAsync(
+                    "筆記本 \(normId.prefix(8))… 正在被焦點同步佔用，這一輪略過匯入",
+                    source: .googleDrive
+                )
+                continue
+            }
+            defer { NotebookLock.leave(normId, ticket: lockTicket) }
             do {
                 try await importOne(package, into: store, deviceId: deviceId, ownStrokes: ownStrokes)
                 report.imported += 1

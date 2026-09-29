@@ -92,9 +92,22 @@ object AutoSync {
     @Synchronized
     fun start(context: Context, deviceId: UInt) {
         this.deviceId = deviceId
+        // 焦點通道與區網直連（秒同步）。整庫這條通道照舊，兩者互不依賴。
+        FocusSync.start(context, deviceId)
         if (started) return
         started = true
         val app = context.applicationContext
+
+        // 登入完成 → 立刻同步。原本沒有這個觸發：Android 登入之後要等下一次心跳，
+        // 而心跳只在有變動時才快。
+        scope.launch {
+            GoogleAuth.authState.collect { signedIn ->
+                if (signedIn) {
+                    request(app, FfiSyncTrigger.SIGNED_IN)
+                    FocusSync.noteSignedIn()
+                }
+            }
+        }
 
         // 前景心跳。間隔由核心給 —— 兩個平台照同一個數字。
         //
@@ -131,7 +144,24 @@ object AutoSync {
     }
 
     /** 本機存檔之後呼叫。**會去抖動**，連續存檔只會推一次。 */
-    fun noteLocalEdit(context: Context) = request(context, FfiSyncTrigger.LOCAL_EDIT)
+    fun noteLocalEdit(context: Context) {
+        request(context, FfiSyncTrigger.LOCAL_EDIT)
+        // 開著的那一本走焦點通道，不必等整庫這一輪。
+        FocusSync.noteLocalEdit()
+    }
+
+    /**
+     * 焦點通道或區網直連**真的收到了對方的東西**。對方正在寫 ——
+     * 整庫通道也改用快檔，其他筆記本的變動才不會慢半拍。
+     */
+    fun noteRemoteActivity() {
+        scheduler.noteRemoteChange(nowMs())
+    }
+
+    /** 別的通道改了這些筆記本：首頁據此重讀清單。 */
+    fun publishChanged(ids: List<String>) {
+        _changedNotebooks.value = ids
+    }
 
     /** 首頁讀完變動清單之後清掉，避免重複觸發重讀。 */
     fun consumeChanged() {

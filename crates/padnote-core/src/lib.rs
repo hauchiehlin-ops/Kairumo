@@ -19,6 +19,7 @@ pub mod ffi_backup;
 pub mod ffi_chart;
 pub mod ffi_collab;
 pub mod ffi_crypto;
+pub mod ffi_focus;
 pub mod ffi_folder_sync;
 pub mod ffi_gdrive;
 pub mod ffi_geometry;

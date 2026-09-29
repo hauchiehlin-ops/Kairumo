@@ -1165,6 +1165,8 @@ public struct NotebookEditorView: View {
     @State private var coreInkBaselines: [Int: PKDrawing] = [:]
     @State private var pendingCoreInk: [Int: PKDrawing] = [:]
     @State private var coreInkWork: DispatchWorkItem? = nil
+    /// 這一批待寫筆畫最早的那一筆的時間。見 `scheduleCoreInkFlush` 的上限說明。
+    @State private var coreInkFirstPendingAt: Date? = nil
     @State private var canvasView: PKCanvasView? = nil
     @State private var currentPageHeight: CGFloat = PageGeometry.height
     /// 掌拒（工作項 S-45）。判定規則走核心，與 Android 同一份。
@@ -1666,6 +1668,7 @@ public struct NotebookEditorView: View {
         .onChange(of: notebook.id) { _ in
             // 外層換綁之後才會走到這裡，這時 notebook 已經是新的那一則。
             currentPageIndex = 0
+            FocusSyncController.shared.setFocus(notebook.id)
             coreInkBaselines.removeAll()
             pendingCoreInk.removeAll()
             coreInkWork?.cancel()
@@ -1683,6 +1686,8 @@ public struct NotebookEditorView: View {
         )
         .onAppear {
             store.activeNotebookId = notebook.id
+            // 開著的這一本走焦點通道（秒同步）與區網直連。
+            FocusSyncController.shared.setFocus(notebook.id)
             sanitizeTextAttachments()
             loadCurrentPage()
             MacWindowTitle.apply()
@@ -1692,6 +1697,7 @@ public struct NotebookEditorView: View {
         .onDisappear {
             if store.activeNotebookId == notebook.id {
                 store.activeNotebookId = nil
+                FocusSyncController.shared.setFocus(nil)
             }
             saveCurrentPageDrawing()
         }
@@ -7765,20 +7771,43 @@ public struct NotebookEditorView: View {
         noteInkEdited()
     }
 
+    /// 落筆之後多久把增量寫進套件。
+    ///
+    /// 原本是 1.2 秒，那是「另一台看得到」之前**必經的第一段** —— 再加上同步排程器
+    /// 的去抖動，一筆畫要兩秒多之後才開始往外送。這一步只是把增量追加進套件
+    /// （一個小檔案的 append）與寫 `.drawing`，並不昂貴；真正昂貴的
+    /// `updateNotebook()`（寫 `notebooks.json`、整棵畫面重算）仍由 `noteInkEdited()`
+    /// 的 1.2 秒去抖動負責，沒有動。
+    ///
+    /// 純去抖動有個缺點：一直不停手就一直不寫。所以有上限 ——
+    /// 這一批待寫的筆畫最早的那一筆起算，超過 `inkFlushMaxHold` 就不再等。
+    private static let inkFlushDelay: TimeInterval = 0.4
+    private static let inkFlushMaxHold: TimeInterval = 1.5
+
     private func scheduleCoreInkFlush() {
         coreInkWork?.cancel()
+        let now = Date()
+        let firstPending = coreInkFirstPendingAt ?? now
+        coreInkFirstPendingAt = firstPending
+        let remainingHold = Self.inkFlushMaxHold - now.timeIntervalSince(firstPending)
+        let delay = max(0, min(Self.inkFlushDelay, remainingHold))
         let work = DispatchWorkItem {
             flushPendingCoreInk()
         }
         coreInkWork = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2, execute: work)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     private func flushPendingCoreInk() {
         coreInkWork?.cancel()
         coreInkWork = nil
+        coreInkFirstPendingAt = nil
         let pending = pendingCoreInk
         pendingCoreInk.removeAll()
+        // 增量寫進套件之後才通知焦點通道 —— 先通知的話，它可能推到還沒寫完的檔案。
+        defer {
+            if !pending.isEmpty { FocusSyncController.shared.noteLocalEdit() }
+        }
 
         for (page, drawing) in pending {
             store.saveDrawing(notebookId: notebook.id, pageIndex: page, drawing: drawing)

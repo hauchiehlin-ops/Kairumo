@@ -2489,11 +2489,13 @@ dependencies = [
 name = "padnote-sync"
 version = "4.14.0"
 dependencies = [
+ "getrandom 0.2.17",
  "padnote-crypto",
  "padnote-doc",
  "reqwest",
  "serde",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]

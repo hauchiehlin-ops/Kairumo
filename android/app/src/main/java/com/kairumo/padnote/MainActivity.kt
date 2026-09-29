@@ -531,14 +531,18 @@ private fun NotebookHome(
         com.kairumo.padnote.sync.AutoSync.start(activity, device)
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             when (event) {
-                androidx.lifecycle.Lifecycle.Event.ON_RESUME ->
+                androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
                     com.kairumo.padnote.sync.AutoSync.request(
                         activity, uniffi.padnote_core.FfiSyncTrigger.FOREGROUND)
+                    com.kairumo.padnote.sync.FocusSync.onForeground()
+                }
                 // 進背景前推一次：系統隨時可能把行程收掉，
                 // 沒推出去的內容要等下次開啟才會走。
-                androidx.lifecycle.Lifecycle.Event.ON_PAUSE ->
+                androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> {
                     com.kairumo.padnote.sync.AutoSync.request(
                         activity, uniffi.padnote_core.FfiSyncTrigger.BACKGROUND)
+                    com.kairumo.padnote.sync.FocusSync.onBackground()
+                }
                 else -> Unit
             }
         }
@@ -1370,7 +1374,12 @@ private fun InkScreen(
     // 離開編輯器要清掉，否則首頁也會一直讓那一本插隊。
     DisposableEffect(notebookId) {
         com.kairumo.padnote.sync.AutoSync.activeNotebookId = notebookId
-        onDispose { com.kairumo.padnote.sync.AutoSync.activeNotebookId = null }
+        // 開著的這一本走焦點通道（秒同步）與區網直連。
+        com.kairumo.padnote.sync.FocusSync.setFocus(notebookId)
+        onDispose {
+            com.kairumo.padnote.sync.AutoSync.activeNotebookId = null
+            com.kairumo.padnote.sync.FocusSync.setFocus(null)
+        }
     }
 
     // 真的開一本筆記本：沒有 session 的話，匯出與錄音都沒有東西可寫，
@@ -1427,6 +1436,25 @@ private fun InkScreen(
                 PenSettingsStore.floor(activity) ?: 0.1f,
                 PenSettingsStore.gamma(activity) ?: 1.0f
             )
+        }
+    }
+    // 別台裝置（Drive 或區網）改了**正開著的這一本**：重開 session 才看得到。
+    //
+    // 在這之前編輯器完全不會反應 —— 下載的 oplog 檔已經寫進套件，但記憶體裡那份
+    // 還是同步前的狀態，兩台同時開著同一本筆記時，另一台寫的東西要關掉重開才會出現。
+    // 這正是「秒同步」在畫面上唯一看得見的一步。
+    //
+    // **等這一筆畫完再換。** 重開 session 會換掉引擎，落筆到一半換的話那一筆會消失。
+    // 落筆完成的筆畫都已經寫進套件（每一筆畫完就是一個 oplog 檔），所以換 session
+    // 不會丟掉任何已經畫完的東西。
+    val remoteChange by com.kairumo.padnote.sync.FocusSync.remoteChange.collectAsState()
+    LaunchedEffect(remoteChange.serial) {
+        if (remoteChange.serial > 0L &&
+            notebookId != null &&
+            remoteChange.notebookId.equals(notebookId, ignoreCase = true)
+        ) {
+            while (engine.isDrawing) kotlinx.coroutines.delay(50)
+            sessionRevision++
         }
     }
     // 套索選取。換頁就換一個 —— 選取的是「這一頁的筆畫 id」，

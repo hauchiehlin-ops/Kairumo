@@ -32,9 +32,25 @@ import uniffi.padnote_core.FfiQueryParam
  * 而且 OkHttp 帶著系統的 Proxy 設定、VPN 與憑證信任鏈，那些 reqwest 拿不到。
  */
 class DriveHttpClient(
-    private val accessToken: String,
+    initialToken: String,
     private val http: OkHttpClient = shared
 ) : FfiDriveHttp {
+
+    /**
+     * 權杖會在共用的工作階段被取用時更新（見 `CloudSync.makeSession`）。
+     *
+     * 整個行程現在**共用一個**工作階段：焦點通道與整庫通道各拿一個的話，就有兩份
+     * 雲端快照、兩個變更游標，彼此不知道對方上傳過什麼 —— 一邊剛建立的檔案，
+     * 另一邊的快照裡沒有，於是又建立一次，Drive 允許同名檔案，雲端就多了一份重複。
+     * 共用之後權杖會過期，所以要能換。`@Volatile`：換的是呼叫端的執行緒，
+     * 用的是核心的網路執行緒。
+     */
+    @Volatile
+    private var accessToken: String = initialToken
+
+    fun updateAccessToken(token: String) {
+        accessToken = token
+    }
 
     override fun getJson(url: String, query: List<FfiQueryParam>): String {
         val built = url.toHttpUrl().newBuilder().apply {

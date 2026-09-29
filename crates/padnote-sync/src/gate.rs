@@ -218,3 +218,111 @@ mod tests {
         assert_ne!(first, second);
     }
 }
+
+/// **每一本筆記本一把**的鎖。
+///
+/// 整庫互斥閘（[`SyncGate`]）擋的是「兩輪整庫同步並行」。焦點通道
+/// （[`crate::focus`]）刻意**不**走那把閘 —— 整庫一輪可能跑幾十秒，
+/// 焦點通道要等它就不叫秒同步了。
+///
+/// 兩條通道真正會撞在一起的地方只有一個：**同一本筆記本的套件目錄**
+/// （匯出寫它、下載寫它、匯入讀它）。所以鎖的粒度是筆記本：
+/// 焦點通道處理 A 的時候，整庫通道可以照跑其他本，遇到 A 就跳過，
+/// 下一輪再補 —— 同步是冪等的，晚一輪沒有代價。
+#[derive(Debug, Default)]
+pub struct NotebookLocks {
+    gates: std::collections::HashMap<String, SyncGate>,
+}
+
+impl NotebookLocks {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// 試著鎖住一本筆記本。`key` 會先轉小寫 —— 大小寫不同的同一個 id
+    /// 必須是同一把鎖（見 `paths::canonical_id`）。
+    pub fn try_enter(&mut self, key: &str, label: &str, now_ms: u64) -> GateDecision {
+        self.gates
+            .entry(key.to_ascii_lowercase())
+            .or_default()
+            .try_enter(label, now_ms)
+    }
+
+    pub fn leave(&mut self, key: &str, ticket: u64) -> bool {
+        let key = key.to_ascii_lowercase();
+        let Some(gate) = self.gates.get_mut(&key) else {
+            return false;
+        };
+        let released = gate.leave(ticket);
+        // 沒人拿著就把條目收掉，否則筆記本一多這張表只增不減。
+        if gate.holder().is_none() {
+            self.gates.remove(&key);
+        }
+        released
+    }
+
+    pub fn holder(&self, key: &str) -> Option<&str> {
+        self.gates
+            .get(&key.to_ascii_lowercase())
+            .and_then(SyncGate::holder)
+    }
+}
+
+#[cfg(test)]
+mod notebook_lock_tests {
+    use super::*;
+
+    fn ticket_of(decision: &GateDecision) -> u64 {
+        match decision {
+            GateDecision::Entered { ticket } | GateDecision::TookOver { ticket, .. } => *ticket,
+            GateDecision::Busy { .. } => panic!("沒拿到鎖：{decision:?}"),
+        }
+    }
+
+    #[test]
+    fn different_notebooks_do_not_block_each_other() {
+        let mut locks = NotebookLocks::new();
+        assert!(matches!(
+            locks.try_enter("a", "focus", 0),
+            GateDecision::Entered { .. }
+        ));
+        assert!(matches!(
+            locks.try_enter("b", "full", 0),
+            GateDecision::Entered { .. }
+        ));
+    }
+
+    #[test]
+    fn the_same_notebook_is_exclusive_regardless_of_case() {
+        let mut locks = NotebookLocks::new();
+        let held = ticket_of(&locks.try_enter("ABC-1", "focus", 0));
+        assert!(matches!(
+            locks.try_enter("abc-1", "full", 10),
+            GateDecision::Busy { .. }
+        ));
+        assert!(locks.leave("Abc-1", held));
+        assert!(matches!(
+            locks.try_enter("abc-1", "full", 20),
+            GateDecision::Entered { .. }
+        ));
+    }
+
+    #[test]
+    fn released_entries_are_dropped() {
+        let mut locks = NotebookLocks::new();
+        let held = ticket_of(&locks.try_enter("a", "focus", 0));
+        locks.leave("a", held);
+        assert!(locks.gates.is_empty());
+        assert!(!locks.leave("a", held), "重複放鎖無害");
+    }
+
+    #[test]
+    fn a_stuck_notebook_lock_is_taken_over() {
+        let mut locks = NotebookLocks::new();
+        locks.try_enter("a", "focus", 0);
+        assert!(matches!(
+            locks.try_enter("a", "full", STALE_TAKEOVER_MS),
+            GateDecision::TookOver { .. }
+        ));
+    }
+}
