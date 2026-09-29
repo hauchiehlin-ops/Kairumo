@@ -314,15 +314,36 @@ impl LanStore for PackageLanStore {
         // 被本機壓實吃掉的碎檔不再拿回來（見 sync_notebook_ops 的同一條規則）。
         if kind == LanKind::Ops
             && let Some(package) = self.open(notebook_id)
-            && let Ok(text) =
-                std::fs::read_to_string(package.root().join("doc/ops/compaction.tombstones"))
         {
-            let key = padnote_sync::paths::canonical_name(name);
-            if text
-                .lines()
-                .any(|line| padnote_sync::paths::canonical_name(line.trim()) == key)
+            if let Some((remote_lamport, dev)) = padnote_storage::parse_oplog_name(name)
+                && let Ok(files) = package.doc_op_files()
             {
-                return false;
+                let local_max = files
+                    .iter()
+                    .filter_map(|(n, _)| padnote_storage::parse_oplog_name(n))
+                    .filter(|(_, d)| *d == dev)
+                    .map(|(l, _)| l)
+                    .max()
+                    .unwrap_or(0);
+                let local_size = files
+                    .iter()
+                    .find(|(n, _)| *n == name)
+                    .map(|(_, s)| *s)
+                    .unwrap_or(0);
+                if remote_lamport <= local_max && local_size == 0 {
+                    return false;
+                }
+            }
+            if let Ok(text) =
+                std::fs::read_to_string(package.root().join("doc/ops/compaction.tombstones"))
+            {
+                let key = padnote_sync::paths::canonical_name(name);
+                if text
+                    .lines()
+                    .any(|line| padnote_sync::paths::canonical_name(line.trim()) == key)
+                {
+                    return false;
+                }
             }
         }
         true

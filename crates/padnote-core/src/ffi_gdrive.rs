@@ -592,14 +592,14 @@ fn sync_notebook_ops(
         }
     }
 
-    let local_max_lamport_for_device = local
-        .iter()
-        .filter_map(|(name, _)| {
-            padnote_storage::parse_oplog_name(name)
-                .and_then(|(l, dev)| if dev == device_id { Some(l) } else { None })
-        })
-        .max()
-        .unwrap_or(0);
+    let mut local_max_lamport_by_device: std::collections::HashMap<u32, u64> =
+        std::collections::HashMap::new();
+    for (name, _) in &local {
+        if let Some((l, dev)) = padnote_storage::parse_oplog_name(name) {
+            let entry = local_max_lamport_by_device.entry(dev).or_insert(0);
+            *entry = (*entry).max(l);
+        }
+    }
 
     let local_by_key: std::collections::BTreeMap<String, u64> = local
         .iter()
@@ -615,14 +615,12 @@ fn sync_notebook_ops(
         if absorbed_keys.contains(name) {
             continue;
         }
-        // 若本機已擁有該裝置較大的壓實檔，絕不重抓該裝置歷史碎檔
-        if matches!(
-            padnote_storage::parse_oplog_name(name),
-            Some((remote_lamport, dev))
-                if dev == device_id
-                    && remote_lamport <= local_max_lamport_for_device
-                    && local_size == 0
-        ) {
+        // 若本機已擁有該裝置較大的壓實檔，絕不重抓該裝置歷史碎檔（跨所有裝置適用）
+        if let Some((remote_lamport, dev)) = padnote_storage::parse_oplog_name(name)
+            && let Some(&max_lamport) = local_max_lamport_by_device.get(&dev)
+            && remote_lamport <= max_lamport
+            && local_size == 0
+        {
             continue;
         }
         let bytes = match download_file(drive, file) {

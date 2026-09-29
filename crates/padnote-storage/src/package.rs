@@ -995,8 +995,55 @@ impl NotebookPackage {
             let compacted_name = format!("{max_lamport_hex}-{device:08x}.oplog");
 
             let mut merged = Vec::new();
-            for name in &names {
-                merged.extend_from_slice(&fs::read(dir.join(name))?);
+            if !self.manifest.is_encrypted() {
+                let mut seen_batches: std::collections::HashMap<(u64, u32), Vec<Vec<DocOp>>> =
+                    std::collections::HashMap::new();
+                for name in &names {
+                    let (file_lamport, file_device) = parse_oplog_name(name).unwrap_or((0, 0));
+                    let raw = fs::read(dir.join(name))?;
+                    if let Ok(ops) = padnote_doc::ops::decode(&raw) {
+                        let mut cur_lamport = file_lamport;
+                        let mut cur_device = file_device;
+                        let mut cur_batch: Vec<DocOp> = Vec::new();
+
+                        let flush_to_merged = |lamport: u64,
+                                                   device: u32,
+                                                   batch: &mut Vec<DocOp>,
+                                                   seen: &mut std::collections::HashMap<(u64, u32), Vec<Vec<DocOp>>>,
+                                                   merged: &mut Vec<u8>| {
+                            if batch.is_empty() {
+                                return;
+                            }
+                            let existing = seen.entry((lamport, device)).or_default();
+                            if !existing.iter().any(|prev| prev == batch) {
+                                existing.push(batch.clone());
+                                let mut framed = Vec::with_capacity(batch.len() + 1);
+                                framed.push(DocOp::BatchOrigin { lamport, device });
+                                framed.append(batch);
+                                merged.extend_from_slice(&padnote_doc::ops::encode(&framed));
+                            } else {
+                                batch.clear();
+                            }
+                        };
+
+                        for op in ops {
+                            if let DocOp::BatchOrigin { lamport, device } = op {
+                                flush_to_merged(cur_lamport, cur_device, &mut cur_batch, &mut seen_batches, &mut merged);
+                                cur_lamport = lamport;
+                                cur_device = device;
+                                continue;
+                            }
+                            cur_batch.push(op);
+                        }
+                        flush_to_merged(cur_lamport, cur_device, &mut cur_batch, &mut seen_batches, &mut merged);
+                    } else {
+                        merged.extend_from_slice(&raw);
+                    }
+                }
+            } else {
+                for name in &names {
+                    merged.extend_from_slice(&fs::read(dir.join(name))?);
+                }
             }
             crate::atomic::write_atomic(&dir.join(&compacted_name), &merged)?;
 
@@ -1115,10 +1162,14 @@ impl NotebookPackage {
             ));
         }
 
+        let mut seen_batches: std::collections::HashMap<(u64, u32), Vec<Vec<DocOp>>> =
+            std::collections::HashMap::new();
         let mut out = Vec::new();
+        const MAX_SAFE_OPS: usize = 1_000_000;
+
         for f in files {
             let name = f.file_name().and_then(|n| n.to_str()).unwrap_or_default();
-            let (lamport, device) = parse_oplog_name(name).unwrap_or((0, 0));
+            let (file_lamport, file_device) = parse_oplog_name(name).unwrap_or((0, 0));
             let raw = fs::read(&f)?;
             let bytes = match &self.dek {
                 Some(dek) => {
@@ -1128,24 +1179,52 @@ impl NotebookPackage {
                 }
                 None => raw,
             };
-            // 起始座標取自檔名 —— 舊檔沒有 `BatchOrigin`，只能靠它。
-            // 有 `BatchOrigin` 的批次會把座標改成自己帶的那一組，
-            // 所以壓實過的檔案裡，每一批仍然報得出它原本的 lamport。
-            let (mut cur_lamport, mut cur_device) = (lamport, device);
+            let mut cur_lamport = file_lamport;
+            let mut cur_device = file_device;
+            let mut cur_batch: Vec<DocOp> = Vec::new();
+
+            let flush_batch = |lamport: u64,
+                                   device: u32,
+                                   batch: &mut Vec<DocOp>,
+                                   seen: &mut std::collections::HashMap<(u64, u32), Vec<Vec<DocOp>>>,
+                                   out: &mut Vec<OpEntry>|
+             -> Result<(), StorageError> {
+                if batch.is_empty() {
+                    return Ok(());
+                }
+                let existing = seen.entry((lamport, device)).or_default();
+                if !existing.iter().any(|prev| prev == batch) {
+                    existing.push(batch.clone());
+                    for op in batch.drain(..) {
+                        out.push(OpEntry {
+                            lamport,
+                            device,
+                            op,
+                        });
+                        if out.len() > MAX_SAFE_OPS {
+                            return Err(StorageError::DocOps(
+                                "oplog 操作筆數超過上限，已終止載入以防止記憶體溢出".into(),
+                            ));
+                        }
+                    }
+                } else {
+                    batch.clear();
+                }
+                Ok(())
+            };
+
             for op in
                 padnote_doc::ops::decode(&bytes).map_err(|e| StorageError::DocOps(e.to_string()))?
             {
                 if let DocOp::BatchOrigin { lamport, device } = op {
+                    flush_batch(cur_lamport, cur_device, &mut cur_batch, &mut seen_batches, &mut out)?;
                     cur_lamport = lamport;
                     cur_device = device;
                     continue;
                 }
-                out.push(OpEntry {
-                    lamport: cur_lamport,
-                    device: cur_device,
-                    op,
-                });
+                cur_batch.push(op);
             }
+            flush_batch(cur_lamport, cur_device, &mut cur_batch, &mut seen_batches, &mut out)?;
         }
 
         // **依座標排序，不要相信檔案順序。**
