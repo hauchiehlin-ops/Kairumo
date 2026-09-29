@@ -60,8 +60,13 @@ pub enum FileClass {
 pub struct CloudAudit {
     /// 每一類各有幾個檔案。
     pub counts: BTreeMap<String, u32>,
-    /// 可以回收的檔案路徑（[`FileClass::Deleted`]）。
+    /// 可以回收的檔案路徑（[`FileClass::Deleted`]，而且已被授權）。
     pub collectable: Vec<String>,
+    /// 屬於有墓碑的筆記本、但**還沒被授權回收**的檔案路徑 —— 還在回收桶的保留期內，
+    /// 或已期滿但還在等裝置確認（見 [`crate::retention`]）。**留著，不刪。**
+    ///
+    /// 只有 [`audit_gated`] 會填；[`audit`] 不設閘門，這一欄永遠是空的。
+    pub held_back: Vec<String>,
     /// 索引裡沒有、但雲端上有檔案的筆記本 id。
     ///
     /// **這不是「垃圾」** —— 多半是另一台裝置剛建立、索引還沒拉到。
@@ -128,17 +133,51 @@ fn lookup(index: &LibraryIndex, canonical: &str) -> Option<bool> {
     None
 }
 
-/// 稽核整個雲端檔案清單。
+/// 稽核整個雲端檔案清單。**不設閘門**：有墓碑的筆記本，檔案全部算可回收。
+///
+/// 只適合拿來「看」—— 統計數字、診斷畫面。真正要刪檔案請用 [`audit_gated`]，
+/// 否則回收桶的保留期限與多裝置確認就被繞過去了。
 ///
 /// `paths` 是雲端上所有物件的路徑（[`crate::remote_index::RemoteIndex`]
 /// 的鍵）。這是**純計算，一次 HTTP 都不打**。
 pub fn audit<'a>(paths: impl IntoIterator<Item = &'a str>, index: &LibraryIndex) -> CloudAudit {
+    audit_impl(paths, index, None)
+}
+
+/// 稽核，而且**只有被授權的墓碑才算可回收**。
+///
+/// `authorized` 是允許永久刪除的筆記本 id（來自 [`crate::retention::PurgePlan::cloud`]）。
+/// 有墓碑但不在名單裡的筆記本，它的檔案進 [`CloudAudit::held_back`]，不會被刪。
+pub fn audit_gated<'a>(
+    paths: impl IntoIterator<Item = &'a str>,
+    index: &LibraryIndex,
+    authorized: &BTreeSet<String>,
+) -> CloudAudit {
+    audit_impl(paths, index, Some(authorized))
+}
+
+fn audit_impl<'a>(
+    paths: impl IntoIterator<Item = &'a str>,
+    index: &LibraryIndex,
+    authorized: Option<&BTreeSet<String>>,
+) -> CloudAudit {
     let mut out = CloudAudit::default();
     for path in paths {
         let class = classify(path, index);
         *out.counts.entry(class_name(class).to_string()).or_insert(0) += 1;
         match class {
-            FileClass::Deleted => out.collectable.push(path.to_string()),
+            FileClass::Deleted => {
+                let allowed = authorized.is_none_or(|ids| {
+                    notebook_id_of(path)
+                        .map(crate::paths::canonical_id)
+                        .is_some_and(|id| ids.iter().any(|a| crate::paths::canonical_id(a) == id))
+                });
+                if allowed {
+                    out.collectable.push(path.to_string());
+                } else {
+                    out.held_back.push(path.to_string());
+                }
+            }
             FileClass::Unknown => {
                 if let Some(id) = notebook_id_of(path) {
                     out.unknown_notebooks.insert(id.to_string());
@@ -165,6 +204,7 @@ mod tests {
             lamport: 1,
             device: "dev-a".to_string(),
             deleted,
+            deleted_at: None,
         }
     }
 
@@ -268,5 +308,76 @@ mod tests {
         assert_eq!(result.count(FileClass::Unknown), 1);
         assert_eq!(result.count(FileClass::Foreign), 1);
         assert_eq!(result.count(FileClass::Index), 1);
+    }
+
+    // ─── 閘門：只有被授權的墓碑才會被回收 ───
+
+    fn paths() -> Vec<&'static str> {
+        vec![
+            "notebooks/gone/doc/ops/dev-a.bin",
+            "notebooks/gone/media/blobs/x",
+            "notebooks/trashed/doc/ops/dev-a.bin",
+            "notebooks/live/doc/ops/dev-a.bin",
+            "notebooks/mystery/doc/ops/dev-b.bin",
+        ]
+    }
+
+    fn library() -> LibraryIndex {
+        index_with(&[
+            item("live", false),
+            item("gone", true),
+            item("trashed", true),
+        ])
+    }
+
+    #[test]
+    fn the_ungated_audit_still_treats_every_tombstone_as_collectable() {
+        let audit = audit(paths(), &library());
+        assert_eq!(audit.collectable.len(), 3);
+        assert!(audit.held_back.is_empty());
+    }
+
+    #[test]
+    fn a_gated_audit_only_collects_authorized_tombstones() {
+        let authorized: BTreeSet<String> = ["gone".to_string()].into();
+        let audit = audit_gated(paths(), &library(), &authorized);
+        assert_eq!(
+            audit.collectable,
+            [
+                "notebooks/gone/doc/ops/dev-a.bin",
+                "notebooks/gone/media/blobs/x"
+            ]
+        );
+        // 在回收桶裡、還沒被授權的：留著。
+        assert_eq!(audit.held_back, ["notebooks/trashed/doc/ops/dev-a.bin"]);
+        // 統計仍然照實反映索引。
+        assert_eq!(audit.count(FileClass::Deleted), 3);
+    }
+
+    #[test]
+    fn an_empty_authorization_collects_nothing() {
+        let audit = audit_gated(paths(), &library(), &BTreeSet::new());
+        assert!(audit.collectable.is_empty());
+        assert_eq!(audit.held_back.len(), 3);
+    }
+
+    #[test]
+    fn authorization_never_reaches_live_or_unknown_files() {
+        // 就算名單裡有活著的、或索引裡根本沒有的 id，也不會刪它們的檔案。
+        let authorized: BTreeSet<String> = ["live".to_string(), "mystery".to_string()].into();
+        let audit = audit_gated(paths(), &library(), &authorized);
+        assert!(audit.collectable.is_empty());
+        assert!(audit.unknown_notebooks.contains("mystery"));
+    }
+
+    #[test]
+    fn authorization_matches_ids_regardless_of_case() {
+        let index = index_with(&[item("AbC", true)]);
+        let authorized: BTreeSet<String> = ["abc".to_string()].into();
+        let audit = audit_gated(["notebooks/abc/doc/ops/dev-a.bin"], &index, &authorized);
+        assert_eq!(audit.collectable.len(), 1);
+        let authorized: BTreeSet<String> = ["ABC".to_string()].into();
+        let audit = audit_gated(["notebooks/abc/doc/ops/dev-a.bin"], &index, &authorized);
+        assert_eq!(audit.collectable.len(), 1);
     }
 }

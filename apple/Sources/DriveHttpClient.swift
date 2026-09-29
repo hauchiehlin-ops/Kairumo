@@ -445,7 +445,11 @@ public enum CloudSync {
     ///
     /// 走互斥閘：回收到一半被另一輪同步插進來的話，兩邊會對同一批檔案
     /// 一個刪一個傳。
-    public static func reclaimDeleted() async -> FfiGcResult? {
+    ///
+    /// - Parameter emptyTrash: 使用者按了「立即清除」：忽略保留天數，把現在之前刪的
+    ///   全部視為期滿。**仍然要等所有必要裝置確認** —— 使用者的「立即」不能替
+    ///   一台還沒同步到刪除的裝置決定它的資料不要了。
+    public static func reclaimDeleted(emptyTrash: Bool = false) async -> FfiGcResult? {
         guard let grant = await SyncGateQueue.enter(label: "reclaim") else {
             SyncLogger.logAsync(
                 "【回收】等待上一輪結束逾時，請稍後重試",
@@ -461,15 +465,27 @@ public enum CloudSync {
         // 的清單刪檔案。
         _ = await refresh(session)
         let library = await AccountSyncStore.shared.indexJSON
+        let deviceId = await AccountSyncStore.shared.deviceId
+        let now = TrashRetention.nowUnixSeconds()
+        let retentionDays = TrashRetention.days
+        // 先發布這台的確認，再回收 —— 順序與每輪同步一致。
+        _ = session.publishAck(deviceId: deviceId, libraryIndexJson: library, nowUnixS: now)
         let result = await Task.detached(priority: .utility) {
-            session.collectGarbage(libraryIndexJson: library)
+            session.collectGarbage(
+                libraryIndexJson: library,
+                deviceId: deviceId,
+                nowUnixS: now,
+                retentionDays: retentionDays,
+                emptyTrash: emptyTrash)
         }.value
         await persist(session)
-        SyncLogger.logAsync(
-            result.ok
-                ? "【回收】完成，刪除 \(result.deleted) 個檔案"
-                : "【回收】刪除 \(result.deleted) 個，失敗 \(result.failed) 個：\(result.error)",
-            source: .googleDrive)
+        var summary = result.ok
+            ? "【回收】完成，刪除 \(result.deleted) 個檔案"
+            : "【回收】刪除 \(result.deleted) 個，失敗 \(result.failed) 個：\(result.error)"
+        if result.waitingNotebooks > 0 {
+            summary += "；\(result.waitingNotebooks) 本在等這些裝置確認：\(result.waitingDevices.joined(separator: ", "))"
+        }
+        SyncLogger.logAsync(summary, source: .googleDrive)
         return result
     }
 

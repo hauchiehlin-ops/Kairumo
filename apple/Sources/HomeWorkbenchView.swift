@@ -3269,6 +3269,8 @@ public struct AppDiagnosticsSheet: View {
 
     /// 雲端同步（決策 D3 選項 A）。
     @State private var showCloudSyncHub = false
+    /// 回收桶畫面（`TrashView`）。
+    @State private var showTrash = false
     @State private var showFolderPicker = false
     @State private var syncMessage: String?
 
@@ -3335,6 +3337,7 @@ public struct AppDiagnosticsSheet: View {
 
                 startupDiagnosticsSection
                 speechTranscriptionSection
+                trashSection
                 migrationSection
                 unifiedSyncSection
                 pageModelSection
@@ -3602,6 +3605,9 @@ extension AppDiagnosticsSheet {
             Text(localizationManager.localized("cloud_sync_explainer"))
                 .font(.caption)
                 .foregroundColor(.secondary)
+        }
+        .sheet(isPresented: $showTrash) {
+            TrashView()
         }
         .sheet(isPresented: $showCloudSyncHub) {
             CloudSyncDetailSheet()
@@ -3932,6 +3938,24 @@ extension AppDiagnosticsSheet {
     /// 跨平台格式轉換。
     ///
     /// 放在診斷頁而不是主畫面：這是進階動作，不該是使用者第一天就會按到的東西。
+    /// 回收桶入口。刪除的筆記本先進這裡、保留一段期限才永久刪除
+    /// （設計見 docs/plans/expiry-purge.md）。
+    var trashSection: some View {
+        Section(localizationManager.localized("trash_title")) {
+            Button {
+                showTrash = true
+            } label: {
+                HStack {
+                    Label(localizationManager.localized("trash_title"), systemImage: "trash")
+                    Spacer()
+                    Text("\(store.trashedNotebooks.count)")
+                        .foregroundColor(.secondary)
+                }
+            }
+            .accessibilityIdentifier("settings.trash")
+        }
+    }
+
     var migrationSection: some View {
         Section(localizationManager.localized("migration_section")) {
             HStack {
@@ -4038,7 +4062,7 @@ extension AppDiagnosticsSheet {
     }
 }
 
-private extension String {
+extension String {
     /// 只換掉第一個佔位符。
     ///
     /// 這些訊息有多個 `%@`，要逐一填不同的值；`replacingOccurrences` 會一次

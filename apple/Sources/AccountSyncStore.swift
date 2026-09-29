@@ -84,20 +84,74 @@ public final class AccountSyncStore: ObservableObject {
             parentId: parentId ?? "",
             lamport: nextLamport(),
             device: deviceId,
-            deleted: false
+            deleted: false,
+            deletedAt: 0
         )
         setIndex(syncUpsertItem(indexJson: indexJSON, item: item))
     }
 
     /// 記下刪除。留**墓碑**，不是把它從索引裡拿掉。
+    ///
+    /// 墓碑帶刪除時間 —— 回收桶的保留期限從這一刻起算。
     public func recordDeletion(id: String) {
         setIndex(
             syncDeleteItem(
                 indexJson: indexJSON,
                 itemId: id,
                 lamport: nextLamport(),
+                deviceId: deviceId,
+                deletedAt: TrashRetention.nowUnixSeconds()
+            )
+        )
+    }
+
+    /// 從回收桶還原。以更大的時戳寫回沒被刪的同一個項目，與任何時序下的刪除都會收斂。
+    public func recordRestore(id: String) {
+        setIndex(
+            syncRestoreItem(
+                indexJson: indexJSON,
+                itemId: id,
+                lamport: nextLamport(),
                 deviceId: deviceId
             )
+        )
+    }
+
+    // MARK: - 回收桶
+
+    /// 回收桶清單（最近刪的在前）。期限與剩餘天數由核心算。
+    public func trashEntries() -> [FfiTrashEntry] {
+        syncTrash(
+            indexJson: indexJSON,
+            nowUnixS: TrashRetention.nowUnixSeconds(),
+            retentionDays: TrashRetention.days
+        )
+    }
+
+    /// 給舊墓碑（沒有刪除時間）補蓋章，讓它們從現在起開始倒數。
+    ///
+    /// 沒有舊墓碑就什麼都不做 —— 不要白白進一格時戳、逼所有裝置重傳索引。
+    public func stampLegacyTombstonesIfNeeded() {
+        guard trashEntries().contains(where: { $0.deletedAt == 0 }) else { return }
+        setIndex(
+            syncStampLegacyTombstones(
+                indexJson: indexJSON,
+                nowUnixS: TrashRetention.nowUnixSeconds(),
+                lamport: nextLamport(),
+                deviceId: deviceId
+            )
+        )
+    }
+
+    /// 已期滿、可以永久刪除**本機**套件的筆記本 id（本機是自己的副本，不必等別台）。
+    ///
+    /// `emptyTrash` 為真時把現在之前刪的全部視為期滿（使用者按了「立即清除」）。
+    public func expiredNotebookIdsForLocalPurge(emptyTrash: Bool = false) -> [String] {
+        syncPlanLocalPurge(
+            indexJson: indexJSON,
+            nowUnixS: TrashRetention.nowUnixSeconds(),
+            retentionDays: TrashRetention.days,
+            emptyTrash: emptyTrash
         )
     }
 

@@ -27,6 +27,45 @@
 
 ## 🔴 被硬體或資料卡住（程式已就緒）
 
+### S-PURGE. 回收桶與過期資料的完整清除 —— 核心已驗證，兩端待實機
+
+設計見 [`plans/expiry-purge.md`](plans/expiry-purge.md)，線上格式見 `format-spec.md` §7.11。
+預設保留 30 天（7／30／90／永不可調）、自動清除、雲端等所有已知裝置確認才刪。
+
+**已驗證（跑過、綠的）：**
+
+- 核心（Rust）：墓碑 `deleted_at`（向後相容、不參與仲裁）、`retention.rs`（回收桶清單、
+  到期、補蓋章、還原、必要裝置、筆記本與孤兒的清除計畫）、`sync/<device>/ack.json`、
+  `RemoteFile.modified`、`collect_garbage` 只刪被授權的。
+  `cargo fmt`、`clippy --workspace --all-targets -D warnings`、`cargo test --workspace`
+  （1647 項，0 失敗）皆過；`i18n_tool.py verify`（1559 條）、`check-screen-parity.py`、
+  孤兒／未使用參數等 Python 閘門皆過。
+- 安全性質有測試釘住：保留期內不刪、年輕或年齡不明的孤兒不刪、「立即清除」不會讓孤兒的期限
+  變 0、沒有起算點的舊墓碑不算期滿、失聯 90 天的裝置不再卡住清除、沒有確認檔的舊版裝置
+  在期滿後多等 90 天、確認檔只增不減（重開 App 也不會倒退）。
+- 修改時間不參與「快照有沒有改變」，所以焦點通道不會把自己的推送誤判成對方動了。
+- xcframework 已重建、Swift 與 Kotlin 綁定已重新產生。
+
+**已寫、但還沒編譯或沒跑過：**
+
+- 🔴 **Apple**：軟刪除（套件搬到 `TrashPackages/`）、還原、永久刪除、到期清除、遠端刪除／還原對帳、
+  `TrashView`、診斷畫面入口、`NotebookTrashTests`。（撰寫時編譯與測試尚未跑完，見 `docs/DEVLOG.md`。）
+- 🔴 **Android**：`NotebookTrash`、`TrashDialog`、同步後的確認／回收／清理、`NotebookTrashTest`
+  （儀器測試，需要裝置或模擬器；`NotebookTrash.empty` 刻意不測，因為它會清掉裝置上真正的回收桶）。
+- 🔴 **兩台以上真實裝置**的完整流程（A 刪除 → B 確認 → 期滿後雲端清除；B 還原 → A 自動救回）
+  只能實機驗證。
+
+**刻意不做（原因寫在設計文件裡）：**
+
+- 個別被刪的**錄音**維持立即刪除，不套保留期：媒體墓碑是「只增不減」的集合、沒有還原，
+  延後刪除對使用者沒有好處。整本筆記本被刪時，底下的錄音與媒體照樣跟著走保留期。
+  要做「最近刪除的錄音」需要先改墓碑格式，是另一個設計。
+
+**已知限制：**
+
+- 保留天數是**每台裝置自己的設定**，沒有跨裝置同步。雲端清除用的是「執行清除的那台」的設定。
+- 沒有確認檔的舊版裝置，會讓雲端清除在墓碑期滿後多等 90 天。
+
 ### ~~H-SYNC-MAINACTOR~~ ✅ Apple 的同步整段跑在主執行緒 —— **已修**
 
 `NotebookSyncCoordinator` 整個 enum 標了 `@MainActor`，所以 `runDrive`

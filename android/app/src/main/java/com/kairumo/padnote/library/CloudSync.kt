@@ -175,15 +175,18 @@ object CloudSync {
     /**
      * **回收已刪除筆記本留在雲端的檔案。**
      *
-     * 只刪「索引裡有墓碑」的那些。這台裝置還沒辨識的檔案絕不碰 —— 那多半
+     * 只刪**被授權**的墓碑：期滿、而且每一台必要裝置都確認過（設計見
+     * `docs/plans/expiry-purge.md`）。這台裝置還沒辨識的檔案絕不碰 —— 那多半
      * 是另一台剛建立、索引還沒拉到，刪掉等於吃掉別台剛寫的東西。
+     *
+     * [emptyTrash]：使用者按了「立即清除」，忽略保留天數；**仍然要等必要裝置確認**。
      *
      * 走互斥閘：回收到一半被另一輪同步插進來的話，兩邊會對同一批檔案一個
      * 刪一個傳。
      *
      * **會阻塞網路 I/O，要在背景執行緒呼叫。**
      */
-    fun reclaimDeleted(context: Context): uniffi.padnote_core.FfiGcResult? {
+    fun reclaimDeleted(context: Context, emptyTrash: Boolean = false): uniffi.padnote_core.FfiGcResult? {
         val grant = acquireGate("android:reclaim")
         if (grant == null) {
             SyncLogger.log(
@@ -197,13 +200,23 @@ object CloudSync {
             // 先把雲端的現況拉一次。拿舊快照去回收，等於照著一份可能過期的
             // 清單刪檔案。
             session.refresh()
-            val result = session.collectGarbage(AccountSyncStore.indexJson(context))
-            persist(context, session)
-            SyncLogger.log(
-                if (result.ok) "【回收】完成，刪除 ${result.deleted} 個檔案"
-                else "【回收】刪除 ${result.deleted} 個，失敗 ${result.failed} 個：${result.error}",
-                SyncSource.GOOGLE_DRIVE
+            val library = AccountSyncStore.indexJson(context)
+            val deviceId = AccountSyncStore.deviceId(context)
+            val now = TrashRetention.nowUnixSeconds()
+            // 先發布這台的確認，再回收 —— 順序與每輪同步一致。
+            session.publishAck(deviceId, library, now)
+            val result = session.collectGarbage(
+                library, deviceId, now, TrashRetention.days(context), emptyTrash
             )
+            persist(context, session)
+            var summary =
+                if (result.ok) "【回收】完成，刪除 ${result.deleted} 個檔案"
+                else "【回收】刪除 ${result.deleted} 個，失敗 ${result.failed} 個：${result.error}"
+            if (result.waitingNotebooks > 0u) {
+                summary += "；${result.waitingNotebooks} 本在等這些裝置確認：" +
+                    result.waitingDevices.joinToString(", ")
+            }
+            SyncLogger.log(summary, SyncSource.GOOGLE_DRIVE)
             result
         } finally {
             syncGateLeave(grant.ticket)
@@ -404,6 +417,12 @@ object CloudSync {
             return FullResult(meta, 0, 0, emptyList())
         }
 
+        // ── 回收桶對帳（要在抓新筆記本之前）────────────────────────────
+        // 別台刪的 → 這台也進回收桶；別台還原的 → 這台回收桶裡那一本搬回來。
+        // 順序不能反：先抓的話，被還原的那本會在 `notebooks/` 底下被重新複製一份，
+        // 回收桶裡的舊副本就成了永遠清不掉的殘骸。
+        NotebookTrash.reconcile(context)
+
         // ── 同步前即時核實：本機現存 vs. 雲端索引差異樣態 ──────────────
         val dir = NotebookLibrary.directory(context)
         val deletedNotebookIds = AccountSyncStore.deletedNotebookIds(context).toMutableSet()
@@ -431,7 +450,11 @@ object CloudSync {
             // 判定 2：明確已刪除（本機墓碑中）⇒ 清理磁碟殘留
             // 判定 3：本機沒有、雲端也不再活躍 ⇒ 孤立過期套件
             // 注意：絕不在此呼叫 recordDeletion 產生虛假雲端墓碑！
-            if (deletedNotebookIds.contains(id) || !cloudLiveIds.contains(id)) {
+            if (deletedNotebookIds.contains(id)) {
+                // 明確已刪除：進回收桶，不是永久刪除（保留期限內還原得回來）。
+                if (!NotebookTrash.moveToTrash(context, id)) pkg.deleteRecursively()
+                cleanedCount++
+            } else if (!cloudLiveIds.contains(id)) {
                 pkg.deleteRecursively()
                 cleanedCount++
             }
@@ -496,6 +519,40 @@ object CloudSync {
         // 那是唯一的慢路徑，不該每次啟動都走。
         persist(context, session)
         SyncLogger.log("步驟 2 完成。上傳: $uploaded, 下載: $downloaded, 新增: ${pulled.size}", SyncSource.GOOGLE_DRIVE)
+
+        // ── 回收桶：發布確認、回收期滿的、清掉本機期滿的 ──────────────
+        //
+        // 刪除是先進回收桶、保留一段期限（預設 30 天）才永久刪除，不是同步一輪就刪。
+        // 雲端檔案要**期滿、而且每一台必要裝置都確認過這個刪除**才會動；
+        // 還在等的會回報在 `waitingDevices`。與 Apple 端每輪同步的第 5 步是同一套。
+        AccountSyncStore.stampLegacyTombstonesIfNeeded(context)
+        val library = AccountSyncStore.indexJson(context)
+        val syncDeviceId = AccountSyncStore.deviceId(context)
+        val now = TrashRetention.nowUnixSeconds()
+        // 先發布「這台已經合併到哪裡」。順序在回收之前：別台要靠它判斷能不能刪。
+        val ack = session.publishAck(syncDeviceId, library, now)
+        if (!ack.ok) {
+            SyncLogger.log("【回收桶】確認檔沒發布成功：${ack.error}", SyncSource.GOOGLE_DRIVE)
+        }
+        val gc = session.collectGarbage(
+            library, syncDeviceId, now, TrashRetention.days(context), false
+        )
+        if (gc.deleted > 0u) {
+            SyncLogger.log("【回收桶】已永久清理雲端 ${gc.deleted} 個過期檔案", SyncSource.GOOGLE_DRIVE)
+            persist(context, session)
+        }
+        if (gc.waitingNotebooks > 0u) {
+            SyncLogger.log(
+                "【回收桶】${gc.waitingNotebooks} 本已期滿，等待這些裝置確認：" +
+                    gc.waitingDevices.joinToString(", "),
+                SyncSource.GOOGLE_DRIVE
+            )
+        }
+        val purgedLocal = NotebookTrash.purgeExpired(context)
+        if (purgedLocal > 0) {
+            SyncLogger.log("【回收桶】已永久清理本機 $purgedLocal 本過期筆記本", SyncSource.GOOGLE_DRIVE)
+        }
+
         SyncLogger.log("【Google Drive 同步】全部完成。", SyncSource.GOOGLE_DRIVE)
 
         return FullResult(meta, uploaded, downloaded, changed)

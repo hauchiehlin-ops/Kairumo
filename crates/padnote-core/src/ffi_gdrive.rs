@@ -371,6 +371,7 @@ fn remote_entries(
                     id: String::new(),
                     name: e.path.clone(),
                     size: e.size,
+                    modified: 0,
                 },
             ))
         })
@@ -1333,7 +1334,22 @@ pub struct FfiGcResult {
     pub failed: u32,
     /// 第一個問題。全部成功時是空字串。
     pub error: String,
+    /// 已期滿、但還在等裝置確認所以**這一輪不能刪**的筆記本數。
+    pub waiting_notebooks: u32,
+    /// 它們在等哪些裝置（去重、排序）。給畫面顯示「等待 X 確認」。
+    pub waiting_devices: Vec<String>,
 }
+
+/// [`FfiSyncSession::publish_ack`] 的結果。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiAckResult {
+    pub ok: bool,
+    /// 失敗原因。成功時是空字串。
+    pub error: String,
+}
+
+/// 確認檔的「心跳」多久重寫一次（秒）。內容沒前進時不需要每輪都傳。
+const ACK_REFRESH_SECS: u64 = 86_400;
 
 /// [`FfiSyncSession::wipe_cloud`] 的結果。
 #[derive(Clone, Debug, uniffi::Record)]
@@ -1387,6 +1403,9 @@ pub struct FfiSyncSession {
     /// 見 [`AUDIO_GROWTH_THRESHOLD`]。**不持久化** —— 重開 App 之後
     /// 多傳一次而已，沒有正確性問題。
     seen_sizes: std::sync::Mutex<SeenSizes>,
+    /// 這台裝置上一次發布的確認檔內容。**不持久化** —— 重開 App 之後多抓一次自己的
+    /// 確認檔而已，沒有正確性問題。
+    own_ack: std::sync::Mutex<Option<padnote_sync::retention::DeviceAck>>,
 }
 
 #[uniffi::export]
@@ -1398,6 +1417,7 @@ impl FfiSyncSession {
             drive: GDriveProvider::new(ForeignHttp(http)),
             index: std::sync::Mutex::new(RemoteIndex::from_json(&remote_index_json)),
             seen_sizes: std::sync::Mutex::new(SeenSizes::new()),
+            own_ack: std::sync::Mutex::new(None),
         })
     }
 
@@ -1483,39 +1503,186 @@ impl FfiSyncSession {
             needs_reauth: false,
         }
     }
+    /// **這台裝置對「我已經合併到哪裡」的聲明。** 每輪同步結束後呼叫一次。
+    ///
+    /// 寫到 `sync/<device_id>/ack.json`，內容是這台已經合併過的最大 lamport 與時間。
+    /// 雲端永久刪除某個墓碑的檔案之前，要等每一台必要裝置都確認過它
+    /// （見 `padnote_sync::retention`）—— 這就是那份確認。
+    ///
+    /// 只寫自己的、而且兩個欄位只增不減（單調暫存器、單一寫入者），所以沿用
+    /// 「同步檔案層級不可能衝突」的不變式。內容沒前進、心跳也還新時**不傳**。
+    pub fn publish_ack(
+        &self,
+        device_id: String,
+        library_index_json: String,
+        now_unix_s: u64,
+    ) -> FfiAckResult {
+        use padnote_sync::retention::{DeviceAck, ack_path, max_lamport};
+        let fail = |error: String| FfiAckResult { ok: false, error };
+        let device = padnote_sync::paths::canonical_name(&device_id);
+        if device.is_empty() {
+            return fail("device id 是空的".to_string());
+        }
+        let path = ack_path(&device);
+        let library = padnote_sync::library::LibraryIndex::from_json(&library_index_json);
+        let seen = max_lamport(&library);
+        let existing = self.index.lock().unwrap().get(&path).cloned();
 
-    /// **回收已刪除筆記本留在雲端的檔案。**
-    ///
-    /// # 安全前提是「索引夠新」，不是「墓碑夠舊」
-    ///
-    /// 直覺會想加一條「墓碑放滿 N 天才回收」。但墓碑只有 Lamport 計數、
-    /// 沒有牆上時鐘，量不出年紀 —— 而且那條規則要防的事其實不會發生：
-    /// 墓碑一旦進了雲端索引，任何裝置**合併之後**都會收斂到刪除
-    /// （墓碑在同一時戳上優先），所以沒有人會把檔案再傳回來。
-    ///
-    /// 真正的前提是**這一輪的快照要是可信的**。快照還沒建立時
-    /// （`needs_rebuild`）我們對雲端的認識是空的，那時候「沒看到的東西」
-    /// 一律不能當成垃圾 —— 所以直接拒絕執行。
-    ///
-    /// # 絕不碰的東西
-    ///
-    /// 只刪 [`padnote_sync::audit::FileClass::Deleted`]。`Unknown`（索引裡
-    /// 沒有這個 id）永遠不刪 —— 那多半是另一台裝置剛建立、這台還沒拉到
-    /// 索引，刪掉等於把別台剛寫的東西吃掉。
-    pub fn collect_garbage(&self, library_index_json: String) -> FfiGcResult {
-        if self.index.lock().unwrap().needs_rebuild() {
-            return FfiGcResult {
-                ok: false,
-                deleted: 0,
-                failed: 0,
-                error: "雲端快照還沒建立，這一輪不知道雲端上有什麼 —— 先同步一次再回收".to_string(),
+        let before = {
+            let cached = *self.own_ack.lock().unwrap();
+            match (cached, existing.as_ref()) {
+                (Some(ack), _) => ack,
+                // 雲端已經有、這個行程還沒抓過：抓一次，免得把它倒退。
+                (None, Some(file)) => match download_file(&self.drive, file) {
+                    Ok(bytes) => DeviceAck::from_json(&String::from_utf8_lossy(&bytes)),
+                    Err(SyncError::NotFound(_)) => DeviceAck::default(),
+                    Err(e) => return fail(e.to_string()),
+                },
+                (None, None) => DeviceAck::default(),
+            }
+        };
+        let mut ack = before;
+        ack.advance(seen, now_unix_s);
+
+        let fresh = existing.is_some()
+            && ack.seen_lamport == before.seen_lamport
+            && now_unix_s.saturating_sub(before.at) < ACK_REFRESH_SECS;
+        if fresh {
+            *self.own_ack.lock().unwrap() = Some(before);
+            return FfiAckResult {
+                ok: true,
+                error: String::new(),
             };
         }
+
+        let json = ack.to_json();
+        match upload_file(&self.drive, existing.as_ref(), &path, json.as_bytes()) {
+            Ok(file_id) => {
+                if !file_id.is_empty() {
+                    self.index
+                        .lock()
+                        .unwrap()
+                        .note_upload(&path, &file_id, json.len() as u64);
+                }
+                *self.own_ack.lock().unwrap() = Some(ack);
+                FfiAckResult {
+                    ok: true,
+                    error: String::new(),
+                }
+            }
+            Err(e) => fail(e.to_string()),
+        }
+    }
+
+    /// **回收已刪除筆記本留在雲端的檔案 —— 只刪「被授權」的。**
+    ///
+    /// 一個有墓碑的筆記本要同時滿足三件事，它的雲端檔案才會被刪
+    /// （設計見 `docs/plans/expiry-purge.md`）：
+    ///
+    /// 1. **期滿**：刪除時間 + 保留天數已過。`retention_days = 0` 是「永不」；
+    ///    `empty_trash` 為真（使用者按了「立即清除」）時忽略保留天數，視為已期滿。
+    /// 2. **每一台必要裝置都確認過這個墓碑**（`sync/<device>/ack.json`）。
+    ///    還在等的會回報在 [`FfiGcResult::waiting_devices`]，這一輪不刪。
+    /// 3. 雲端快照已建立（否則不知道雲端上有什麼）。
+    ///
+    /// `Unknown`（索引裡沒有這個 id）**永遠不刪** —— 那多半是另一台裝置剛建立、
+    /// 這台還沒拉到索引，刪掉等於把別台剛寫的東西吃掉。
+    ///
+    /// `device_id` 是呼叫端自己 —— 自己不必等自己。
+    pub fn collect_garbage(
+        &self,
+        library_index_json: String,
+        device_id: String,
+        now_unix_s: u64,
+        retention_days: u32,
+        empty_trash: bool,
+    ) -> FfiGcResult {
+        use padnote_sync::retention::{
+            DeviceAck, RetentionPolicy, device_of_ack_path, known_devices, plan_purge,
+        };
+        let fail = |error: String| FfiGcResult {
+            ok: false,
+            deleted: 0,
+            failed: 0,
+            error,
+            waiting_notebooks: 0,
+            waiting_devices: Vec::new(),
+        };
+        if self.index.lock().unwrap().needs_rebuild() {
+            return fail(
+                "雲端快照還沒建立，這一輪不知道雲端上有什麼 —— 先同步一次再回收".to_string(),
+            );
+        }
         let library = padnote_sync::library::LibraryIndex::from_json(&library_index_json);
+        let policy = if empty_trash {
+            RetentionPolicy::Days(0)
+        } else {
+            RetentionPolicy::from_days(retention_days)
+        };
+        let me = padnote_sync::paths::canonical_name(&device_id);
+
+        // 各裝置的確認檔。讀不到的當作「沒有確認檔」—— 那是最保守的解讀
+        // （要多等一段），永遠不會讓刪除提早發生。
+        let (known, ack_files): (
+            std::collections::BTreeSet<String>,
+            Vec<(String, RemoteFile)>,
+        ) = {
+            let index = self.index.lock().unwrap();
+            let keys = index.files.keys().map(String::as_str);
+            let known = known_devices(keys.clone());
+            let files = keys
+                .filter_map(|p| {
+                    let device = device_of_ack_path(p)?.to_string();
+                    Some((device, index.get(p)?.clone()))
+                })
+                .collect();
+            (known, files)
+        };
+        let mut acks = std::collections::BTreeMap::new();
+        for (device, file) in &ack_files {
+            if let Ok(bytes) = download_file(&self.drive, file) {
+                acks.insert(
+                    device.clone(),
+                    DeviceAck::from_json(&String::from_utf8_lossy(&bytes)),
+                );
+            }
+        }
+
+        let plan = plan_purge(&library, now_unix_s, policy, &known, &acks, &me);
+        let authorized: std::collections::BTreeSet<String> = plan.cloud.iter().cloned().collect();
+        let waiting_notebooks = plan.waiting.len() as u32;
+        let waiting_devices: Vec<String> = plan
+            .waiting
+            .iter()
+            .flat_map(|w| w.missing_devices.iter().cloned())
+            .collect::<std::collections::BTreeSet<_>>()
+            .into_iter()
+            .collect();
+
         let targets: Vec<(String, String)> = {
             let index = self.index.lock().unwrap();
             let paths: Vec<&str> = index.files.keys().map(String::as_str).collect();
-            let collectable = padnote_sync::audit::audit(paths, &library).collectable;
+            let mut collectable =
+                padnote_sync::audit::audit_gated(paths, &library, &authorized).collectable;
+
+            // 孤兒檔案：索引裡從來沒有這個筆記本 id、放得夠久、而且每台必要裝置在它
+            // 寫進雲端之後都同步過。**用使用者真正設定的保留天數**，不跟著「立即清除」
+            // 變成 0 —— 否則年輕的 `Unknown`（多半是別台剛建立、索引還沒拉到）會被立刻刪掉。
+            let files: Vec<(String, u64)> = index
+                .files
+                .iter()
+                .map(|(path, file)| (path.clone(), file.modified))
+                .collect();
+            collectable.extend(padnote_sync::retention::plan_orphans(
+                &files,
+                &library,
+                now_unix_s,
+                RetentionPolicy::from_days(retention_days),
+                &known,
+                &acks,
+                &me,
+            ));
+
             collectable
                 .into_iter()
                 .filter_map(|p| {
@@ -1576,6 +1743,8 @@ impl FfiSyncSession {
             deleted,
             failed,
             error: first_error,
+            waiting_notebooks,
+            waiting_devices,
         }
     }
 
@@ -1625,6 +1794,7 @@ impl FfiSyncSession {
                         &change.file_id,
                         change.name.as_deref(),
                         change.size,
+                        change.modified,
                         change.gone,
                     ) {
                         effective += 1;
@@ -2085,6 +2255,7 @@ mod tests {
             lamport,
             device: device.into(),
             deleted: false,
+            deleted_at: 0,
         }
     }
 
@@ -2102,6 +2273,8 @@ mod tests {
         log: std::sync::Mutex<Vec<usize>>,
         /// 打了幾次 HTTP。**同步的成本就是這個數字**，所以要測得到。
         calls: std::sync::atomic::AtomicUsize,
+        /// 指定某個檔名的 `modifiedTime`（RFC 3339）。沒指定的用固定的舊時間。
+        times: std::sync::Mutex<std::collections::BTreeMap<String, String>>,
     }
 
     impl FakeDrive {
@@ -2122,6 +2295,23 @@ mod tests {
             self.log.lock().unwrap().push(index);
         }
 
+        /// 這個檔名的 `modifiedTime`。
+        fn modified_time(&self, name: &str, i: usize) -> String {
+            self.times
+                .lock()
+                .unwrap()
+                .get(name)
+                .cloned()
+                .unwrap_or_else(|| format!("2026-01-01T00:00:0{}Z", i % 10))
+        }
+
+        fn set_time(&self, name: &str, rfc3339: &str) {
+            self.times
+                .lock()
+                .unwrap()
+                .insert(name.to_string(), rfc3339.to_string());
+        }
+
         /// `changes.list` 的回應。
         fn changes_since(&self, token: &str) -> String {
             let from: usize = token.parse().unwrap_or(0);
@@ -2140,8 +2330,9 @@ mod tests {
                     out.push(format!(r#"{{"fileId":"id-{index}","removed":true}}"#));
                 } else {
                     out.push(format!(
-                        r#"{{"fileId":"id-{index}","removed":false,"file":{{"id":"id-{index}","name":"{name}","size":"{}","trashed":false}}}}"#,
-                        data.len()
+                        r#"{{"fileId":"id-{index}","removed":false,"file":{{"id":"id-{index}","name":"{name}","size":"{}","modifiedTime":"{}","trashed":false}}}}"#,
+                        data.len(),
+                        self.modified_time(name, *index)
                     ));
                 }
             }
@@ -2199,9 +2390,9 @@ mod tests {
                 })
                 .map(|(i, (name, data))| {
                     format!(
-                        r#"{{"id":"id-{i}","name":"{name}","size":"{}","modifiedTime":"2026-01-01T00:00:0{}Z"}}"#,
+                        r#"{{"id":"id-{i}","name":"{name}","size":"{}","modifiedTime":"{}"}}"#,
                         data.len(),
-                        i % 10
+                        self.modified_time(name, i)
                     )
                 })
                 .collect();
@@ -3434,11 +3625,46 @@ mod tests {
         );
     }
 
-    /// 雲端本來就是空的：不是錯誤，也不該炸掉。
-    /// 回收只動「有墓碑」的那些，**而且絕不碰沒見過的**。
-    #[test]
-    fn garbage_collection_removes_deleted_notebooks_but_spares_unseen_ones() {
-        let fake = FakeDrive::default();
+    // ─── 回收桶：只刪「被授權」的 ─────────────────────────────────
+
+    const GC_NOW: u64 = 1_800_000_000;
+    const GC_DAY: u64 = 86_400;
+
+    /// 索引：live 活著、gone 在 `gone_deleted_at` 被刪（lamport 10）、mystery 完全沒提到。
+    fn gc_library(gone_deleted_at: u64) -> padnote_sync::library::LibraryIndex {
+        use padnote_sync::library::{ItemKind, LibraryIndex, LibraryItem};
+        let mut library = LibraryIndex::default();
+        for id in ["live", "gone"] {
+            library.upsert(LibraryItem {
+                id: id.to_string(),
+                kind: ItemKind::Notebook,
+                title: id.to_string(),
+                parent_id: None,
+                lamport: 1,
+                device: "dev-a".to_string(),
+                deleted: false,
+                deleted_at: None,
+            });
+        }
+        library.tombstone_at("gone", 10, "dev-a", gone_deleted_at);
+        library
+    }
+
+    /// 一個已經建立好快照的 session，雲端上有 `extra` 這些檔案加上固定的四個。
+    fn gc_session(extra: &[(&str, Vec<u8>)]) -> (Arc<FakeDrive>, Arc<FfiSyncSession>) {
+        gc_session_timed(extra, &[])
+    }
+
+    /// 同上，但可以指定某些檔案的修改時間（RFC 3339）。**必須在快照建立之前指定** ——
+    /// 增量重新整理只處理有變更的檔案，事後改時間不會反映到快照裡。
+    fn gc_session_timed(
+        extra: &[(&str, Vec<u8>)],
+        times: &[(&str, &str)],
+    ) -> (Arc<FakeDrive>, Arc<FfiSyncSession>) {
+        let fake = Arc::new(FakeDrive::default());
+        for (name, time) in times {
+            fake.set_time(name, time);
+        }
         for path in [
             "notebooks/gone/doc/ops/dev-a.bin",
             "notebooks/gone/media/blobs/x",
@@ -3447,32 +3673,241 @@ mod tests {
         ] {
             fake.files.lock().unwrap().push((path.to_string(), vec![1]));
         }
-        let cloud: Arc<dyn FfiDriveHttp> = Arc::new(fake);
+        for (path, bytes) in extra {
+            fake.files
+                .lock()
+                .unwrap()
+                .push((path.to_string(), bytes.clone()));
+        }
+        // 預設都是「昨天才寫的」—— 年輕的 `Unknown`（mystery）不能被當成孤兒。
+        // 要測「夠老的孤兒」的測試自己用 `set_time` 調老。
+        let names: Vec<String> = fake
+            .files
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|(n, _)| n.clone())
+            .collect();
+        for name in names {
+            let unset = !fake.times.lock().unwrap().contains_key(&name);
+            if unset {
+                fake.set_time(&name, "2027-01-14T00:00:00Z");
+            }
+        }
+        let cloud: Arc<dyn FfiDriveHttp> = fake.clone();
         let session = FfiSyncSession::create(cloud, String::new());
         assert!(session.refresh().ok);
+        (fake, session)
+    }
+
+    fn ack_bytes(seen_lamport: u64, at: u64) -> Vec<u8> {
+        padnote_sync::retention::DeviceAck { seen_lamport, at }
+            .to_json()
+            .into_bytes()
+    }
+
+    #[test]
+    fn garbage_collection_removes_expired_deleted_notebooks_but_spares_unseen_ones() {
+        let (_, session) = gc_session(&[]);
         assert_eq!(session.tracked_files(), 4);
 
-        // 索引：live 活著、gone 有墓碑、mystery 完全沒提到。
-        let mut library = padnote_sync::library::LibraryIndex::default();
-        for (id, deleted) in [("live", false), ("gone", true)] {
-            library.upsert(padnote_sync::library::LibraryItem {
-                id: id.to_string(),
-                kind: padnote_sync::library::ItemKind::Notebook,
-                title: id.to_string(),
-                parent_id: None,
-                lamport: 1,
-                device: "dev-a".to_string(),
-                deleted,
-            });
-        }
-
-        let result = session.collect_garbage(library.to_json());
+        // 31 天前刪的、保留 30 天：期滿。這台是唯一的裝置，不必等誰。
+        let library = gc_library(GC_NOW - 31 * GC_DAY);
+        let result = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 30, false);
         assert!(result.ok, "{}", result.error);
         assert_eq!(result.deleted, 2, "只有 gone 的兩個檔案該被回收");
+        assert_eq!(result.waiting_notebooks, 0);
 
         // live 與 mystery 都要還在。mystery 那一條是安全底線：
         // 它多半是另一台裝置剛建立、這台還沒拉到索引。
         assert_eq!(session.tracked_files(), 2);
+    }
+
+    #[test]
+    fn a_notebook_still_in_the_trash_keeps_its_cloud_files() {
+        let (_, session) = gc_session(&[]);
+        // 5 天前刪的、保留 30 天：還在回收桶裡。
+        let library = gc_library(GC_NOW - 5 * GC_DAY);
+        let result = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 30, false);
+        assert!(result.ok, "{}", result.error);
+        assert_eq!(result.deleted, 0, "保留期內不可以刪雲端檔案");
+        assert_eq!(session.tracked_files(), 4);
+    }
+
+    fn remote_names(fake: &FakeDrive) -> Vec<String> {
+        fake.files
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(n, _)| !n.is_empty())
+            .map(|(n, _)| n.clone())
+            .collect()
+    }
+
+    #[test]
+    fn a_legacy_tombstone_without_a_time_is_never_collected() {
+        let (fake, session) = gc_session(&[]);
+        let mut library = gc_library(GC_NOW);
+        library.tombstone("gone", 11, "dev-a"); // 沒有時間的舊墓碑，而且蓋掉了有時間的
+        // 十年後。（`mystery` 那個孤兒到那時已經夠老、會被回收 —— 這裡不在乎它。）
+        session.collect_garbage(
+            library.to_json(),
+            "dev-a".into(),
+            GC_NOW + 3650 * GC_DAY,
+            30,
+            false,
+        );
+        let names = remote_names(&fake);
+        assert!(
+            names.contains(&"notebooks/gone/doc/ops/dev-a.bin".to_string()),
+            "沒有起算點就不能算期滿，它的檔案不可以被刪：{names:?}"
+        );
+    }
+
+    // ─── 孤兒檔案 ───
+
+    #[test]
+    fn an_old_orphan_is_collected_but_a_trashed_notebook_within_retention_is_not() {
+        // mystery 是索引裡從沒有過的 id，而且是 40 天前寫的。
+        let (fake, session) = gc_session_timed(
+            &[],
+            &[(
+                "notebooks/mystery/doc/ops/dev-b.bin",
+                "2026-12-01T00:00:00Z",
+            )],
+        );
+        // gone 只刪了 5 天：還在回收桶裡。
+        let library = gc_library(GC_NOW - 5 * GC_DAY);
+        let result = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 30, false);
+        assert!(result.ok, "{}", result.error);
+        assert_eq!(result.deleted, 1, "只有那個夠老的孤兒");
+        let names = remote_names(&fake);
+        assert!(!names.iter().any(|n| n.contains("mystery")));
+        assert!(
+            names.iter().any(|n| n.contains("notebooks/gone/")),
+            "回收桶內的不能動"
+        );
+        assert!(names.iter().any(|n| n.contains("notebooks/live/")));
+    }
+
+    #[test]
+    fn emptying_the_trash_does_not_make_a_young_orphan_collectable() {
+        // 「立即清除」把保留天數當成 0；孤兒若跟著變成 0，別台剛建立的筆記本就會被刪。
+        let (fake, session) = gc_session(&[]);
+        let library = gc_library(GC_NOW - GC_DAY);
+        let result = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 30, true);
+        assert_eq!(result.deleted, 2, "gone 的兩個檔案");
+        assert!(
+            remote_names(&fake).iter().any(|n| n.contains("mystery")),
+            "昨天才寫的孤兒不能因為按了立即清除就被刪"
+        );
+    }
+
+    #[test]
+    fn an_orphan_waits_for_a_device_that_has_not_synced_since_it_was_written() {
+        let (fake, session) = gc_session(&[
+            ("sync/dev-b/log-1.bin", vec![1]),
+            // dev-b 最後一次同步在孤兒寫進雲端**之前**。
+            ("sync/dev-b/ack.json", ack_bytes(10, GC_NOW - 60 * GC_DAY)),
+        ]);
+        fake.set_time(
+            "notebooks/mystery/doc/ops/dev-b.bin",
+            "2026-12-01T00:00:00Z",
+        );
+        assert!(session.refresh().ok);
+        let library = gc_library(GC_NOW - 5 * GC_DAY);
+        let result = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 30, false);
+        assert_eq!(result.deleted, 0);
+        assert!(remote_names(&fake).iter().any(|n| n.contains("mystery")));
+    }
+
+    #[test]
+    fn an_orphan_is_never_collected_under_a_retention_of_forever() {
+        let (fake, session) = gc_session(&[]);
+        fake.set_time(
+            "notebooks/mystery/doc/ops/dev-b.bin",
+            "2026-01-01T00:00:00Z",
+        );
+        assert!(session.refresh().ok);
+        let library = gc_library(GC_NOW - 5 * GC_DAY);
+        let result = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 0, false);
+        assert_eq!(result.deleted, 0);
+    }
+
+    #[test]
+    fn garbage_collection_waits_for_a_device_that_has_not_confirmed() {
+        // dev-b 在雲端有檔案，但沒有確認檔（舊版，或還沒同步到這個墓碑）。
+        let (_, session) = gc_session(&[("sync/dev-b/log-1.bin", vec![1])]);
+        let library = gc_library(GC_NOW - 31 * GC_DAY);
+        let result = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 30, false);
+        assert!(result.ok, "{}", result.error);
+        assert_eq!(result.deleted, 0);
+        assert_eq!(result.waiting_notebooks, 1);
+        assert_eq!(result.waiting_devices, ["dev-b"]);
+    }
+
+    #[test]
+    fn garbage_collection_proceeds_once_every_device_has_confirmed() {
+        let (_, session) = gc_session(&[
+            ("sync/dev-b/log-1.bin", vec![1]),
+            // 確認到 lamport 10，正好是墓碑的時戳。
+            ("sync/dev-b/ack.json", ack_bytes(10, GC_NOW - 60)),
+        ]);
+        let library = gc_library(GC_NOW - 31 * GC_DAY);
+        let result = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 30, false);
+        assert!(result.ok, "{}", result.error);
+        assert_eq!(result.deleted, 2);
+        assert_eq!(result.waiting_notebooks, 0);
+    }
+
+    #[test]
+    fn a_device_that_only_saw_an_older_state_still_blocks_collection() {
+        let (_, session) = gc_session(&[
+            ("sync/dev-b/log-1.bin", vec![1]),
+            ("sync/dev-b/ack.json", ack_bytes(9, GC_NOW - 60)),
+        ]);
+        let library = gc_library(GC_NOW - 31 * GC_DAY);
+        let result = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 30, false);
+        assert_eq!(result.deleted, 0);
+        assert_eq!(result.waiting_devices, ["dev-b"]);
+    }
+
+    #[test]
+    fn the_caller_does_not_wait_for_itself_even_with_an_uppercase_device_id() {
+        // 平台的 device id 可能是大寫 UUID，雲端路徑一律是正規化（小寫）後的。
+        let (_, session) = gc_session(&[("sync/abcd-1234/log-1.bin", vec![1])]);
+        let library = gc_library(GC_NOW - 31 * GC_DAY);
+        let result =
+            session.collect_garbage(library.to_json(), "ABCD-1234".into(), GC_NOW, 30, false);
+        assert_eq!(result.deleted, 2);
+        assert_eq!(result.waiting_notebooks, 0);
+    }
+
+    #[test]
+    fn emptying_the_trash_ignores_the_deadline_but_still_waits_for_devices() {
+        // 昨天才刪的。
+        let library = gc_library(GC_NOW - GC_DAY);
+
+        let (_, session) = gc_session(&[]);
+        let kept = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 30, false);
+        assert_eq!(kept.deleted, 0);
+        let emptied = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 30, true);
+        assert_eq!(emptied.deleted, 2, "立即清除要忽略保留天數");
+
+        // 但別台還沒確認的話，「立即清除」也不能替它決定。
+        let (_, session) = gc_session(&[("sync/dev-b/log-1.bin", vec![1])]);
+        let emptied = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 30, true);
+        assert_eq!(emptied.deleted, 0);
+        assert_eq!(emptied.waiting_devices, ["dev-b"]);
+    }
+
+    #[test]
+    fn a_retention_of_forever_never_collects_anything() {
+        let (_, session) = gc_session(&[]);
+        let library = gc_library(GC_NOW - 3650 * GC_DAY);
+        let result = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 0, false);
+        assert_eq!(result.deleted, 0);
+        assert_eq!(session.tracked_files(), 4);
     }
 
     /// 快照還沒建立時，我們對雲端的認識是空的 —— 那時候什麼都不能回收。
@@ -3481,10 +3916,116 @@ mod tests {
         let cloud: Arc<dyn FfiDriveHttp> = Arc::new(FakeDrive::default());
         let session = FfiSyncSession::create(cloud, String::new());
         // 沒有 refresh() —— 快照還沒建立。
-        let result = session.collect_garbage("{}".to_string());
+        let result = session.collect_garbage("{}".to_string(), "dev-a".into(), GC_NOW, 30, false);
         assert!(!result.ok);
         assert_eq!(result.deleted, 0);
         assert!(result.error.contains("還沒建立"), "{}", result.error);
+    }
+
+    // ─── 裝置確認檔 ───────────────────────────────────────────────
+
+    fn library_at(lamport: u64) -> String {
+        use padnote_sync::library::{ItemKind, LibraryIndex, LibraryItem};
+        let mut library = LibraryIndex::default();
+        library.upsert(LibraryItem {
+            id: "nb".into(),
+            kind: ItemKind::Notebook,
+            title: "nb".into(),
+            parent_id: None,
+            lamport,
+            device: "dev-a".into(),
+            deleted: false,
+            deleted_at: None,
+        });
+        library.to_json()
+    }
+
+    fn uploaded_ack(fake: &FakeDrive, device: &str) -> Option<padnote_sync::retention::DeviceAck> {
+        let path = format!("sync/{device}/ack.json");
+        let files = fake.files.lock().unwrap();
+        let (_, bytes) = files.iter().find(|(n, _)| *n == path)?;
+        Some(padnote_sync::retention::DeviceAck::from_json(
+            &String::from_utf8_lossy(bytes),
+        ))
+    }
+
+    #[test]
+    fn publishing_an_ack_records_how_far_this_device_has_merged() {
+        let (fake, session) = gc_session(&[]);
+        let result = session.publish_ack("DEV-A".into(), library_at(7), GC_NOW);
+        assert!(result.ok, "{}", result.error);
+        // 路徑是正規化過的（小寫）。
+        let ack = uploaded_ack(&fake, "dev-a").expect("確認檔要出現在雲端");
+        assert_eq!((ack.seen_lamport, ack.at), (7, GC_NOW));
+    }
+
+    #[test]
+    fn an_unchanged_ack_is_not_uploaded_again() {
+        let (fake, session) = gc_session(&[]);
+        assert!(
+            session
+                .publish_ack("dev-a".into(), library_at(7), GC_NOW)
+                .ok
+        );
+        fake.reset_calls();
+        // 同樣的進度、心跳還很新：一次 HTTP 都不該打。
+        let result = session.publish_ack("dev-a".into(), library_at(7), GC_NOW + 60);
+        assert!(result.ok);
+        assert_eq!(fake.call_count(), 0, "沒變的確認檔不該每輪都上傳");
+    }
+
+    #[test]
+    fn an_ack_is_refreshed_when_progress_advances_or_the_heartbeat_goes_stale() {
+        let (fake, session) = gc_session(&[]);
+        assert!(
+            session
+                .publish_ack("dev-a".into(), library_at(7), GC_NOW)
+                .ok
+        );
+
+        // 進度前進 → 重寫。
+        assert!(
+            session
+                .publish_ack("dev-a".into(), library_at(9), GC_NOW + 60)
+                .ok
+        );
+        assert_eq!(uploaded_ack(&fake, "dev-a").unwrap().seen_lamport, 9);
+
+        // 進度不變、但心跳超過一天 → 重寫（讓別台知道這台還活著）。
+        assert!(
+            session
+                .publish_ack("dev-a".into(), library_at(9), GC_NOW + 2 * GC_DAY)
+                .ok
+        );
+        assert_eq!(
+            uploaded_ack(&fake, "dev-a").unwrap().at,
+            GC_NOW + 2 * GC_DAY
+        );
+    }
+
+    #[test]
+    fn an_ack_never_moves_backwards_even_after_a_restart() {
+        let (fake, first) = gc_session(&[]);
+        assert!(first.publish_ack("dev-a".into(), library_at(9), GC_NOW).ok);
+
+        // 重開 App：新的 session（沒有記憶體裡的快取），拿一份較舊的索引來發布。
+        let cloud: Arc<dyn FfiDriveHttp> = fake.clone();
+        let second = FfiSyncSession::create(cloud, first.index_json());
+        assert!(
+            second
+                .publish_ack("dev-a".into(), library_at(4), GC_NOW + 2 * GC_DAY)
+                .ok
+        );
+        let ack = uploaded_ack(&fake, "dev-a").unwrap();
+        assert_eq!(ack.seen_lamport, 9, "確認檔只能前進");
+        assert_eq!(ack.at, GC_NOW + 2 * GC_DAY);
+    }
+
+    #[test]
+    fn publishing_an_ack_needs_a_device_id() {
+        let (_, session) = gc_session(&[]);
+        let result = session.publish_ack(String::new(), library_at(1), GC_NOW);
+        assert!(!result.ok);
     }
 
     /// **刪掉的錄音會復活。**（使用者 2026-09-25 回報「一直無法真正同步」）
@@ -3677,7 +4218,7 @@ mod tests {
         // 另一台刪掉的筆記本，本機還留著活的那一份。合併之後要維持刪除 ——
         // 不然每同步一次就復活一次。
         let live = sync_upsert_item(String::new(), item("n1", "會議", 1, "dev-a"));
-        let cloud_deleted = sync_delete_item(live.clone(), "n1".into(), 5, "dev-b".into());
+        let cloud_deleted = sync_delete_item(live.clone(), "n1".into(), 5, "dev-b".into(), 0);
         let (merged, _) = merge_index(&live, &cloud_deleted);
         assert!(merged.contains("\"deleted\": true"), "{merged}");
     }

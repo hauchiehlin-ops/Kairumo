@@ -130,6 +130,8 @@ pub struct DriveChange {
     /// 刪除的變更**沒有名字**，只有 id。
     pub name: Option<String>,
     pub size: u64,
+    /// `modifiedTime`（Unix 秒）。`0` = 不知道。
+    pub modified: u64,
     /// 被刪除或丟進垃圾桶。
     pub gone: bool,
 }
@@ -140,6 +142,51 @@ pub struct DriveChangeBatch {
     pub changes: Vec<DriveChange>,
     /// 下一次要用的游標。
     pub new_token: String,
+}
+
+/// 把 Drive 的 RFC 3339 時間（`2026-01-02T03:04:05.678Z`）轉成 Unix 秒。
+///
+/// 只認 UTC（`Z`）。**讀不懂就回 `0`（不知道）**，不要猜 —— 這個值只拿來判斷
+/// 孤兒檔案放多久了，「不知道」會讓它被當成年輕、永遠不刪，是安全的方向。
+pub fn parse_rfc3339_secs(text: &str) -> u64 {
+    let Some(text) = text.strip_suffix('Z') else {
+        return 0;
+    };
+    let (date, time) = match text.split_once('T') {
+        Some(parts) => parts,
+        None => return 0,
+    };
+    let mut d = date.split('-').map(|v| v.parse::<i64>());
+    let (Some(Ok(year)), Some(Ok(month)), Some(Ok(day)), None) =
+        (d.next(), d.next(), d.next(), d.next())
+    else {
+        return 0;
+    };
+    // 秒的小數部分丟掉。
+    let time = time.split('.').next().unwrap_or("");
+    let mut t = time.split(':').map(|v| v.parse::<i64>());
+    let (Some(Ok(hour)), Some(Ok(minute)), Some(Ok(second)), None) =
+        (t.next(), t.next(), t.next(), t.next())
+    else {
+        return 0;
+    };
+    if !(1..=12).contains(&month)
+        || !(1..=31).contains(&day)
+        || hour > 23
+        || minute > 59
+        || second > 60
+    {
+        return 0;
+    }
+    // Howard Hinnant 的 days_from_civil。
+    let y = if month <= 2 { year - 1 } else { year };
+    let era = y.div_euclid(400);
+    let yoe = y - era * 400;
+    let doy = (153 * (month + if month > 2 { -3 } else { 9 }) + 2) / 5 + day - 1;
+    let doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+    let days = era * 146_097 + doe - 719_468;
+    let secs = days * 86_400 + hour * 3_600 + minute * 60 + second;
+    u64::try_from(secs).unwrap_or(0)
 }
 
 /// 游標過期（Drive 回 410）。要退回一次全量列舉重建基準。
@@ -326,7 +373,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
     pub fn list_all_remote(&self) -> Result<Vec<crate::remote_index::RemoteFile>, SyncError> {
         let pages = self.list_all(
             "'appDataFolder' in parents and trashed = false",
-            "id, name, size",
+            "id, name, size, modifiedTime",
         )?;
         let mut out = Vec::new();
         let mut cache = self.id_cache.lock().unwrap();
@@ -348,12 +395,18 @@ impl<H: DriveHttp> GDriveProvider<H> {
                     .and_then(Value::as_str)
                     .and_then(|v| v.parse::<u64>().ok())
                     .unwrap_or(0);
+                let modified = f
+                    .get("modifiedTime")
+                    .and_then(Value::as_str)
+                    .map(parse_rfc3339_secs)
+                    .unwrap_or(0);
                 cache.insert(name.to_string(), id.to_string());
                 cache.insert(name.to_lowercase(), id.to_string());
                 out.push(crate::remote_index::RemoteFile {
                     id: id.to_string(),
                     name: name.to_string(),
                     size,
+                    modified,
                 });
             }
         }
@@ -374,7 +427,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
                 ("pageSize".to_string(), "1000".to_string()),
                 (
                     "fields".to_string(),
-                    "nextPageToken, newStartPageToken, changes(fileId, removed, file(id, name, size, trashed))"
+                    "nextPageToken, newStartPageToken, changes(fileId, removed, file(id, name, size, modifiedTime, trashed))"
                         .to_string(),
                 ),
             ];
@@ -407,6 +460,11 @@ impl<H: DriveHttp> GDriveProvider<H> {
                     .and_then(Value::as_str)
                     .and_then(|v| v.parse::<u64>().ok())
                     .unwrap_or(0);
+                let modified = file
+                    .and_then(|f| f.get("modifiedTime"))
+                    .and_then(Value::as_str)
+                    .map(parse_rfc3339_secs)
+                    .unwrap_or(0);
                 // 垃圾桶要當成刪除，理由與 `list_query` 加 `trashed = false` 相同。
                 let trashed = file
                     .and_then(|f| f.get("trashed"))
@@ -421,6 +479,7 @@ impl<H: DriveHttp> GDriveProvider<H> {
                     file_id,
                     name,
                     size,
+                    modified,
                     gone: removed || trashed,
                 });
             }
@@ -1182,5 +1241,37 @@ mod tests {
             entries[0].path,
             "notebooks/B62B0B1F-ADF4-4FF7/doc/ops/0001-dev.oplog"
         );
+    }
+
+    #[test]
+    fn rfc3339_times_become_unix_seconds() {
+        assert_eq!(parse_rfc3339_secs("1970-01-01T00:00:00Z"), 0);
+        assert_eq!(parse_rfc3339_secs("1970-01-01T00:00:01Z"), 1);
+        assert_eq!(parse_rfc3339_secs("2000-03-01T00:00:00Z"), 951_868_800);
+        // 閏日與世紀年。
+        assert_eq!(parse_rfc3339_secs("2024-02-29T12:00:00Z"), 1_709_208_000);
+        assert_eq!(parse_rfc3339_secs("2026-09-30T00:00:00Z"), 1_790_726_400);
+        // 小數秒丟掉。
+        assert_eq!(
+            parse_rfc3339_secs("2026-09-30T00:00:00.999Z"),
+            parse_rfc3339_secs("2026-09-30T00:00:00Z")
+        );
+    }
+
+    #[test]
+    fn unreadable_times_are_unknown_not_guessed() {
+        for bad in [
+            "",
+            "garbage",
+            "2026-09-30",
+            "2026-09-30T00:00:00",
+            "2026-13-01T00:00:00Z",
+            "2026-09-31T25:00:00Z",
+            "2026-09T00:00:00Z",
+            "2026-09-30T00:00Z",
+            "1969-12-31T00:00:00Z",
+        ] {
+            assert_eq!(parse_rfc3339_secs(bad), 0, "{bad:?}");
+        }
     }
 }

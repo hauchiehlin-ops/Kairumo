@@ -28,6 +28,7 @@ import kotlinx.coroutines.launch
 import com.kairumo.padnote.library.AccountSyncStore
 import com.kairumo.padnote.library.CloudSync
 import com.kairumo.padnote.library.NotebookLibrary
+import com.kairumo.padnote.library.NotebookTrash
 import com.kairumo.padnote.LocalizationStrings
 import com.kairumo.padnote.sync.AutoSync
 import kotlinx.coroutines.Dispatchers
@@ -61,6 +62,7 @@ fun SyncDoctorCard(deviceId: UInt, modifier: Modifier = Modifier) {
     val scope = rememberCoroutineScope()
     var showConfirm by remember { mutableStateOf(false) }
     var showReclaim by remember { mutableStateOf(false) }
+    var showTrash by remember { mutableStateOf(false) }
     var reclaiming by remember { mutableStateOf(false) }
     var wiping by remember { mutableStateOf(false) }
     var wipeMessage by remember { mutableStateOf<String?>(null) }
@@ -158,6 +160,18 @@ fun SyncDoctorCard(deviceId: UInt, modifier: Modifier = Modifier) {
             // drive.google.com 看不到也刪不掉。唯一的手動路徑只清雲端，
             // 本機還留著一份「雲端有這些檔案」的快照 —— 下一輪會拿著
             // 幻覺去比對。所以重置要由 App 來做，兩邊一起清。
+            // **回收桶**：刪除的筆記本先進這裡、保留一段期限才永久刪除
+            // （設計見 docs/plans/expiry-purge.md）。Apple 端在診斷畫面有同一個入口。
+            TextButton(
+                onClick = { showTrash = true },
+                modifier = Modifier.fillMaxWidth().testTag("settings.trash")
+            ) {
+                Text(
+                    l("trash_title") + "（${NotebookTrash.trashedIds(context).size}）",
+                    style = MaterialTheme.typography.bodySmall
+                )
+            }
+
             // **回收**：只刪已刪除筆記本的殘骸。比「重置」溫和得多，
             // 所以排在它前面 —— 多數人要的是這一個。
             if ((audit?.deleted ?: 0u) > 0u) {
@@ -185,6 +199,10 @@ fun SyncDoctorCard(deviceId: UInt, modifier: Modifier = Modifier) {
                 )
             }
         }
+    }
+
+    if (showTrash) {
+        TrashDialog(onDismiss = { showTrash = false })
     }
 
     if (showReclaim) {

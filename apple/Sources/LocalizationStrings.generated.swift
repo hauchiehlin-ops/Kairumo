@@ -2679,12 +2679,12 @@ extension LocalizationManager {
             .th: "ลบข้อความนี้"
         ],
         "delete_notebook_confirm": [
-            .zhHant: "確定要刪除「%@」嗎？這本筆記的所有內容都會消失，而且救不回來。",
-            .en: "Delete “%@”? Everything in this note will be gone, and it cannot be undone.",
-            .zhHans: "确定要删除「%@」吗？这本笔记的所有内容都会消失，而且救不回来。",
-            .ja: "「%@」を削除しますか？このノートの内容はすべて消え、元に戻せません。",
-            .ko: "‘%@’을(를) 삭제할까요? 이 노트의 모든 내용이 사라지며 되돌릴 수 없습니다.",
-            .th: "ลบ “%@” ไหม? เนื้อหาทั้งหมดจะหายไปและกู้คืนไม่ได้"
+            .zhHant: "要將「%@」移到回收桶嗎？在永久刪除之前，你可以從回收桶還原。",
+            .en: "Move “%@” to the Trash? You can restore it from the Trash until it is permanently removed.",
+            .zhHans: "要将“%@”移到回收站吗？在永久删除之前，你可以从回收站还原。",
+            .ja: "「%@」をゴミ箱に移動しますか？完全に削除されるまでは、ゴミ箱から元に戻せます。",
+            .ko: "“%@”을(를) 휴지통으로 이동할까요? 영구 삭제되기 전까지는 휴지통에서 복원할 수 있습니다.",
+            .th: "ย้าย “%@” ไปยังถังขยะหรือไม่? คุณสามารถกู้คืนจากถังขยะได้จนกว่าจะถูกลบถาวร"
         ],
         "delete_page": [
             .zhHant: "刪除此頁",
@@ -10593,12 +10593,12 @@ extension LocalizationManager {
             .th: "เรียกคืนไฟล์ที่ลบแล้ว"
         ],
         "sync_reclaim_confirm_body": [
-            .zhHant: "這會刪除你已經刪掉的筆記本留在雲端的檔案。這台裝置尚未辨識的檔案絕不會被動到 —— 它們通常屬於別台裝置剛建立的筆記本。",
-            .en: "This deletes the cloud files of notebooks you already deleted. Files this device has not identified yet are never touched — they usually belong to a notebook another device just created.",
-            .zhHans: "这会删除你已经删掉的笔记本留在云端的档案。这台设备尚未辨识的档案绝不会被动到 —— 它们通常属于别台设备刚建立的笔记本。",
-            .ja: "すでに削除したノートのクラウド上のファイルを削除します。この端末がまだ識別できていないファイルには触れません（通常は他の端末が作成したばかりのものです）。",
-            .ko: "이미 삭제한 노트의 클라우드 파일을 지웁니다. 이 기기가 아직 식별하지 못한 파일은 건드리지 않습니다.",
-            .th: "จะลบไฟล์บนคลาวด์ของบันทึกที่คุณลบไปแล้ว ไฟล์ที่เครื่องนี้ยังระบุไม่ได้จะไม่ถูกแตะต้อง"
+            .zhHant: "這會在你的其他所有裝置確認之後，刪除回收桶保留期已過的筆記本留在雲端的檔案。仍在回收桶裡的筆記本會保留。這台裝置尚未辨識的檔案絕不會被動到 —— 它們通常屬於別台裝置剛建立的筆記本。",
+            .en: "This deletes the cloud files of notebooks whose time in the Trash has run out, once all your other devices have confirmed. Notebooks still in the Trash are kept. Files this device has not identified yet are never touched — they usually belong to a notebook another device just created.",
+            .zhHans: "这会在你的其他所有设备确认之后，删除回收站保留期已过的笔记本留在云端的文件。仍在回收站里的笔记本会保留。这台设备尚未识别的文件绝不会被动到 —— 它们通常属于别的设备刚创建的笔记本。",
+            .ja: "ゴミ箱での保持期間が過ぎたノートのクラウド上のファイルを、他のすべてのデバイスが確認した後に削除します。ゴミ箱に残っているノートはそのまま保持されます。このデバイスがまだ識別していないファイルには一切触れません — 多くは別のデバイスが作成したばかりのノートのものです。",
+            .ko: "휴지통 보관 기간이 지난 노트의 클라우드 파일을, 다른 모든 기기가 확인한 후에 삭제합니다. 휴지통에 남아 있는 노트는 그대로 유지됩니다. 이 기기가 아직 식별하지 못한 파일은 절대 건드리지 않습니다 — 대부분 다른 기기가 방금 만든 노트의 파일입니다.",
+            .th: "การดำเนินการนี้จะลบไฟล์บนคลาวด์ของสมุดบันทึกที่หมดเวลาในถังขยะแล้ว หลังจากอุปกรณ์อื่นทั้งหมดของคุณยืนยันแล้ว สมุดบันทึกที่ยังอยู่ในถังขยะจะถูกเก็บไว้ ไฟล์ที่อุปกรณ์นี้ยังไม่รู้จักจะไม่ถูกแตะต้อง — มักเป็นของสมุดบันทึกที่อุปกรณ์อื่นเพิ่งสร้าง"
         ],
         "sync_reclaim_done": [
             .zhHant: "已回收 %1@ 個檔案。",
@@ -10609,12 +10609,12 @@ extension LocalizationManager {
             .th: "เรียกคืน %1@ ไฟล์แล้ว"
         ],
         "sync_reclaim_nothing": [
-            .zhHant: "沒有可回收的檔案。",
-            .en: "Nothing to reclaim.",
-            .zhHans: "没有可回收的档案。",
-            .ja: "回収するものはありません。",
-            .ko: "회수할 것이 없습니다.",
-            .th: "ไม่มีอะไรให้เรียกคืน"
+            .zhHant: "暫時沒有可回收的檔案。回收桶裡的筆記本會保留到保留期結束。",
+            .en: "Nothing to reclaim yet. Notebooks in the Trash are kept until their time runs out.",
+            .zhHans: "暂时没有可回收的文件。回收站里的笔记本会保留到保留期结束。",
+            .ja: "まだ回収するものはありません。ゴミ箱のノートは保持期間が過ぎるまで残ります。",
+            .ko: "아직 회수할 항목이 없습니다. 휴지통의 노트는 보관 기간이 끝날 때까지 유지됩니다.",
+            .th: "ยังไม่มีอะไรให้เก็บกู้ สมุดบันทึกในถังขยะจะถูกเก็บไว้จนกว่าจะหมดเวลา"
         ],
         "sync_reclaim_partial": [
             .zhHant: "已回收 %1@ 個、失敗 %2@ 個 —— 其餘下一輪再試。",
@@ -11951,6 +11951,158 @@ extension LocalizationManager {
             .ja: "ノートには最低1ページ必要です",
             .ko: "노트에는 최소 한 페이지가 있어야 합니다",
             .th: "สมุดต้องเหลืออย่างน้อยหนึ่งหน้า"
+        ],
+        "trash_clock_pending": [
+            .zhHant: "倒數將在下次同步後開始",
+            .en: "Countdown starts after the next sync",
+            .zhHans: "倒计时将在下次同步后开始",
+            .ja: "カウントダウンは次回の同期後に始まります",
+            .ko: "다음 동기화 후 카운트다운이 시작됩니다",
+            .th: "การนับถอยหลังจะเริ่มหลังการซิงค์ครั้งถัดไป"
+        ],
+        "trash_days_left": [
+            .zhHant: "還剩 %@ 天",
+            .en: "%@ days left",
+            .zhHans: "还剩 %@ 天",
+            .ja: "残り%@日",
+            .ko: "%@일 남음",
+            .th: "เหลืออีก %@ วัน"
+        ],
+        "trash_delete_forever": [
+            .zhHant: "永久刪除",
+            .en: "Delete Permanently",
+            .zhHans: "永久删除",
+            .ja: "完全に削除",
+            .ko: "영구 삭제",
+            .th: "ลบถาวร"
+        ],
+        "trash_delete_forever_confirm_message": [
+            .zhHant: "「%@」將從此裝置刪除，且無法復原。",
+            .en: "“%@” will be removed from this device and can’t be recovered.",
+            .zhHans: "“%@”将从此设备中删除，且无法恢复。",
+            .ja: "「%@」はこのデバイスから削除され、元に戻せません。",
+            .ko: "“%@”이(가) 이 기기에서 삭제되며 복구할 수 없습니다.",
+            .th: "“%@” จะถูกลบออกจากอุปกรณ์นี้และไม่สามารถกู้คืนได้"
+        ],
+        "trash_delete_forever_confirm_title": [
+            .zhHant: "要永久刪除嗎？",
+            .en: "Delete permanently?",
+            .zhHans: "要永久删除吗？",
+            .ja: "完全に削除しますか？",
+            .ko: "영구 삭제할까요?",
+            .th: "ลบถาวรหรือไม่?"
+        ],
+        "trash_empty": [
+            .zhHant: "回收桶是空的",
+            .en: "The trash is empty",
+            .zhHans: "回收站是空的",
+            .ja: "ゴミ箱は空です",
+            .ko: "휴지통이 비어 있습니다",
+            .th: "ถังขยะว่างเปล่า"
+        ],
+        "trash_empty_action": [
+            .zhHant: "清空回收桶",
+            .en: "Empty Trash",
+            .zhHans: "清空回收站",
+            .ja: "ゴミ箱を空にする",
+            .ko: "휴지통 비우기",
+            .th: "ล้างถังขยะ"
+        ],
+        "trash_empty_confirm_message": [
+            .zhHant: "回收桶中的所有內容將從此裝置永久刪除。雲端副本會在你的其他裝置確認後刪除。",
+            .en: "Everything in the trash will be permanently deleted from this device. Cloud copies are removed once your other devices have confirmed.",
+            .zhHans: "回收站中的所有内容将从此设备永久删除。云端副本会在你的其他设备确认后删除。",
+            .ja: "ゴミ箱の中身はすべてこのデバイスから完全に削除されます。クラウド上のコピーは、他のデバイスが確認した後に削除されます。",
+            .ko: "휴지통의 모든 항목이 이 기기에서 영구 삭제됩니다. 클라우드 사본은 다른 기기에서 확인한 후 삭제됩니다.",
+            .th: "ทุกอย่างในถังขยะจะถูกลบถาวรจากอุปกรณ์นี้ สำเนาบนคลาวด์จะถูกลบหลังจากอุปกรณ์อื่นของคุณยืนยันแล้ว"
+        ],
+        "trash_empty_confirm_title": [
+            .zhHant: "要清空回收桶嗎？",
+            .en: "Empty the trash?",
+            .zhHans: "要清空回收站吗？",
+            .ja: "ゴミ箱を空にしますか？",
+            .ko: "휴지통을 비울까요?",
+            .th: "ล้างถังขยะหรือไม่?"
+        ],
+        "trash_expired": [
+            .zhHant: "已到期 — 即將永久刪除",
+            .en: "Expired — will be removed soon",
+            .zhHans: "已到期 — 即将永久删除",
+            .ja: "期限切れ — まもなく完全に削除されます",
+            .ko: "기간 만료 — 곧 영구 삭제됩니다",
+            .th: "หมดอายุแล้ว — เร็วๆ นี้จะถูกลบถาวร"
+        ],
+        "trash_keep_forever_row": [
+            .zhHant: "保留到你手動刪除為止",
+            .en: "Kept until you remove it",
+            .zhHans: "保留到你手动删除为止",
+            .ja: "手動で削除するまで保持されます",
+            .ko: "직접 삭제할 때까지 보관됩니다",
+            .th: "เก็บไว้จนกว่าคุณจะลบเอง"
+        ],
+        "trash_restore": [
+            .zhHant: "還原",
+            .en: "Restore",
+            .zhHans: "还原",
+            .ja: "元に戻す",
+            .ko: "복원",
+            .th: "กู้คืน"
+        ],
+        "trash_restored_notice": [
+            .zhHant: "已還原「%@」",
+            .en: "Restored “%@”",
+            .zhHans: "已还原“%@”",
+            .ja: "「%@」を元に戻しました",
+            .ko: "“%@”을(를) 복원했습니다",
+            .th: "กู้คืน “%@” แล้ว"
+        ],
+        "trash_retention_days": [
+            .zhHant: "%@ 天",
+            .en: "%@ days",
+            .zhHans: "%@ 天",
+            .ja: "%@日",
+            .ko: "%@일",
+            .th: "%@ วัน"
+        ],
+        "trash_retention_footer": [
+            .zhHant: "超過這段時間後，已刪除的筆記本會從此裝置永久刪除，並在你的所有裝置確認後從雲端刪除。",
+            .en: "After this period, deleted notebooks are permanently removed from this device, and from the cloud once all your devices have confirmed.",
+            .zhHans: "超过这段时间后，已删除的笔记本会从此设备永久删除，并在你的所有设备确认后从云端删除。",
+            .ja: "この期間を過ぎると、削除したノートはこのデバイスから完全に削除され、すべてのデバイスが確認した後にクラウドからも削除されます。",
+            .ko: "이 기간이 지나면 삭제한 노트가 이 기기에서 영구 삭제되며, 모든 기기에서 확인한 후 클라우드에서도 삭제됩니다.",
+            .th: "เมื่อพ้นช่วงเวลานี้ สมุดบันทึกที่ลบจะถูกลบถาวรจากอุปกรณ์นี้ และจากคลาวด์หลังจากอุปกรณ์ทั้งหมดของคุณยืนยันแล้ว"
+        ],
+        "trash_retention_forever": [
+            .zhHant: "直到我手動刪除",
+            .en: "Until I delete them",
+            .zhHans: "直到我手动删除",
+            .ja: "手動で削除するまで",
+            .ko: "직접 삭제할 때까지",
+            .th: "จนกว่าฉันจะลบเอง"
+        ],
+        "trash_retention_title": [
+            .zhHant: "已刪除的筆記本保留時間",
+            .en: "Keep deleted notebooks for",
+            .zhHans: "已删除的笔记本保留时间",
+            .ja: "削除したノートを保持する期間",
+            .ko: "삭제한 노트를 보관할 기간",
+            .th: "เก็บสมุดบันทึกที่ลบไว้เป็นเวลา"
+        ],
+        "trash_title": [
+            .zhHant: "回收桶",
+            .en: "Trash",
+            .zhHans: "回收站",
+            .ja: "ゴミ箱",
+            .ko: "휴지통",
+            .th: "ถังขยะ"
+        ],
+        "trash_waiting_devices": [
+            .zhHant: "正在等待這些裝置確認：%@",
+            .en: "Waiting for these devices to confirm: %@",
+            .zhHans: "正在等待这些设备确认：%@",
+            .ja: "次のデバイスの確認を待っています: %@",
+            .ko: "다음 기기의 확인을 기다리는 중: %@",
+            .th: "กำลังรออุปกรณ์เหล่านี้ยืนยัน: %@"
         ],
         "txt_count": [
             .zhHant: "文字",

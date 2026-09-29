@@ -124,6 +124,8 @@ protocol SyncableNotebookStore: AnyObject {
     func syncSaveDrawing(notebookId: String, pageIndex: Int, drawing: PKDrawing)
     func syncUpsert(_ document: NotebookDocument)
     func syncPurgeDeletedNotebooks(_ deletedIds: Set<String>)
+    /// 永久清掉已期滿的本機回收桶項目，回傳清了幾本（回收桶，見 docs/plans/expiry-purge.md）。
+    func syncPurgeExpiredTrash() -> Int
     func syncRepairSeedDuplicates()
     func syncRefreshRecordings()
 }
@@ -134,6 +136,8 @@ extension SyncableNotebookStore {
     }
 
     func syncPurgeDeletedNotebooks(_: Set<String>) {}
+    /// 預設沒有回收桶（測試用的假 store）：什麼都不清。
+    func syncPurgeExpiredTrash() -> Int { 0 }
     func syncRepairSeedDuplicates() {}
     func syncRefreshRecordings() {}
 }
@@ -151,6 +155,10 @@ extension NotebookStore: SyncableNotebookStore {
 
     func syncRefreshRecordings() {
         refreshRecordings()
+    }
+
+    func syncPurgeExpiredTrash() -> Int {
+        purgeExpiredTrash()
     }
 
     func syncRepairSeedDuplicates() {
@@ -847,15 +855,43 @@ enum NotebookSyncCoordinator {
         store.syncPurgeDeletedNotebooks(deletedNotebookIds)
         store.syncRefreshRecordings()
 
-        // ── 5. 自動垃圾回收 (Garbage Collection) ─────────────
-        // 若雲端或本機有已刪除筆記本或孤兒檔案，自動在背景清理，不需使用者手動點擊「回收已刪除檔案」
+        // ── 5. 回收桶：發布確認、回收期滿的、清掉本機期滿的 ──────────
+        //
+        // 刪除是先進回收桶、保留一段期限（預設 30 天）才永久刪除，不是同步一輪就刪
+        // （設計見 docs/plans/expiry-purge.md）。雲端檔案要**期滿、而且每一台必要裝置都
+        // 確認過這個刪除**才會動；還在等的會回報在 `waitingDevices`。
+        await AccountSyncStore.shared.stampLegacyTombstonesIfNeeded()
         let library = await AccountSyncStore.shared.indexJSON
+        let syncDeviceId = await AccountSyncStore.shared.deviceId
+        let now = TrashRetention.nowUnixSeconds()
+        let retentionDays = TrashRetention.days
+
+        // 先發布「這台已經合併到哪裡」。順序在回收之前：別台要靠它判斷能不能刪。
+        let ack = session.publishAck(deviceId: syncDeviceId, libraryIndexJson: library, nowUnixS: now)
+        if !ack.ok {
+            SyncLogger.logAsync("【回收桶】確認檔沒發布成功：\(ack.error)", source: .googleDrive)
+        }
+
         let gcResult = await Task.detached(priority: .utility) {
-            session.collectGarbage(libraryIndexJson: library)
+            session.collectGarbage(
+                libraryIndexJson: library,
+                deviceId: syncDeviceId,
+                nowUnixS: now,
+                retentionDays: retentionDays,
+                emptyTrash: false)
         }.value
         if gcResult.deleted > 0 {
-            SyncLogger.logAsync("【自動維護】已自動清理雲端 \(gcResult.deleted) 個孤兒與已刪除檔案", source: .googleDrive)
+            SyncLogger.logAsync("【回收桶】已永久清理雲端 \(gcResult.deleted) 個過期檔案", source: .googleDrive)
             await CloudSync.persist(session)
+        }
+        if gcResult.waitingNotebooks > 0 {
+            SyncLogger.logAsync(
+                "【回收桶】\(gcResult.waitingNotebooks) 本已期滿，等待這些裝置確認：\(gcResult.waitingDevices.joined(separator: ", "))",
+                source: .googleDrive)
+        }
+        let purgedLocal = store.syncPurgeExpiredTrash()
+        if purgedLocal > 0 {
+            SyncLogger.logAsync("【回收桶】已永久清理本機 \(purgedLocal) 本過期筆記本", source: .googleDrive)
         }
 
         SyncLogger.logAsync("【Google Drive 同步】全部完成。", source: .googleDrive)

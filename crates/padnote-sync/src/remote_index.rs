@@ -43,6 +43,14 @@ pub struct RemoteFile {
     /// 雲端上的原始名字（可能含大寫，見模組說明）。
     pub name: String,
     pub size: u64,
+    /// Drive 的 `modifiedTime`（Unix 秒）。`0` = 不知道。
+    ///
+    /// 只給「孤兒檔案要放多久才算過期」用（`docs/plans/expiry-purge.md`）。
+    /// **不參與 [`RemoteIndex::apply`] 的「有沒有改變」判斷** —— 自己剛上傳的檔案，
+    /// 回音事件帶著修改時間、`note_upload` 當初卻不知道，若把它算進相等比較，
+    /// 焦點通道會把每一次自己的推送都誤判成「對方動了」。
+    #[serde(default)]
+    pub modified: u64,
 }
 
 /// 雲端內容的本機快照。
@@ -80,7 +88,14 @@ impl RemoteIndex {
     /// 回報它 —— 但 `note_upload` 早就把同樣的 id 與大小記進去了，套用之後
     /// 什麼都沒變。焦點通道靠這個區分「對方動了」與「只是我自己的回音」，
     /// 否則每次推送之後的下一次輪詢都會被誤判成雲端有新東西。
-    pub fn apply(&mut self, id: &str, name: Option<&str>, size: u64, gone: bool) -> bool {
+    pub fn apply(
+        &mut self,
+        id: &str,
+        name: Option<&str>,
+        size: u64,
+        modified: u64,
+        gone: bool,
+    ) -> bool {
         match (name, gone) {
             (_, true) => {
                 // 刪除只給得到 fileId，名字要從既有快照反查。
@@ -95,8 +110,14 @@ impl RemoteIndex {
                     id: id.to_string(),
                     name: name.to_string(),
                     size,
+                    modified,
                 };
-                self.files.insert(key, file.clone()).as_ref() != Some(&file)
+                // 「有沒有改變」只看 id、名字、大小；修改時間照樣更新，但不算改變。
+                let changed = self.files.get(&key).is_none_or(|old| {
+                    old.id != file.id || old.name != file.name || old.size != file.size
+                });
+                self.files.insert(key, file);
+                changed
             }
             // 沒有名字又沒說被刪：這筆變更沒有可用的資訊。
             (None, false) => false,
@@ -160,6 +181,8 @@ impl RemoteIndex {
                 id: id.to_string(),
                 name,
                 size,
+                // 剛自己傳上去的：不知道 Drive 記的時間，等下一次變更回音再補。
+                modified: 0,
             },
         );
     }
@@ -186,6 +209,7 @@ mod tests {
             id: id.into(),
             name: name.into(),
             size,
+            modified: 0,
         }
     }
 
@@ -213,8 +237,8 @@ mod tests {
     fn a_name_that_differs_only_in_case_is_the_same_entry() {
         // 這是真的爆過的 bug。索引層要把它收斂掉，否則上層永遠看到兩份。
         let mut idx = RemoteIndex::default();
-        idx.apply("1", Some("notebooks/NB1/media/audio/A1.opus"), 10, false);
-        idx.apply("2", Some("notebooks/nb1/media/audio/a1.opus"), 20, false);
+        idx.apply("1", Some("notebooks/NB1/media/audio/A1.opus"), 10, 0, false);
+        idx.apply("2", Some("notebooks/nb1/media/audio/a1.opus"), 20, 0, false);
         assert_eq!(idx.len(), 1, "大小寫不同不該變成兩個項目");
         assert_eq!(
             idx.get("notebooks/nb1/media/audio/a1.opus").unwrap().size,
@@ -227,7 +251,7 @@ mod tests {
         // 比對用正規化後的鍵，存取要用雲端上的原始名字 ——
         // 不然為了統一大小寫就得把整個雲端重傳一次。
         let mut idx = RemoteIndex::default();
-        idx.apply("1", Some("notebooks/NB1/doc/ops/AA.oplog"), 10, false);
+        idx.apply("1", Some("notebooks/NB1/doc/ops/AA.oplog"), 10, 0, false);
         assert_eq!(
             idx.get("notebooks/nb1/doc/ops/aa.oplog").unwrap().name,
             "notebooks/NB1/doc/ops/AA.oplog"
@@ -239,16 +263,16 @@ mod tests {
         // Drive 的刪除變更只給 fileId，沒有名字。反查不到就會留下幽靈項目，
         // 而幽靈項目會讓同步以為雲端還有那個檔。
         let mut idx = RemoteIndex::default();
-        idx.apply("id-7", Some("notebooks/nb1/doc/ops/a.oplog"), 10, false);
-        idx.apply("id-7", None, 0, true);
+        idx.apply("id-7", Some("notebooks/nb1/doc/ops/a.oplog"), 10, 0, false);
+        idx.apply("id-7", None, 0, 0, true);
         assert!(idx.is_empty(), "刪除沒有生效");
     }
 
     #[test]
     fn trashed_counts_as_gone() {
         let mut idx = RemoteIndex::default();
-        idx.apply("id-7", Some("notebooks/nb1/doc/ops/a.oplog"), 10, false);
-        idx.apply("id-7", Some("notebooks/nb1/doc/ops/a.oplog"), 10, true);
+        idx.apply("id-7", Some("notebooks/nb1/doc/ops/a.oplog"), 10, 0, false);
+        idx.apply("id-7", Some("notebooks/nb1/doc/ops/a.oplog"), 10, 0, true);
         assert!(idx.is_empty());
     }
 
@@ -258,7 +282,7 @@ mod tests {
             page_token: "tok-1".into(),
             ..Default::default()
         };
-        idx.apply("1", Some("notebooks/nb1/doc/ops/a.oplog"), 10, false);
+        idx.apply("1", Some("notebooks/nb1/doc/ops/a.oplog"), 10, 0, false);
         let back = RemoteIndex::from_json(&idx.to_json());
         assert_eq!(back, idx);
     }
@@ -282,11 +306,47 @@ mod tests {
         let mut idx = RemoteIndex::default();
         idx.note_upload("notebooks/nb1/doc/ops/a.oplog", "id-1", 10);
         // Drive 之後把同一個檔案當成變動回報。
-        assert!(!idx.apply("id-1", Some("notebooks/nb1/doc/ops/a.oplog"), 10, false));
+        assert!(!idx.apply("id-1", Some("notebooks/nb1/doc/ops/a.oplog"), 10, 0, false));
         // 對方把它變長了：這才是真的變動。
-        assert!(idx.apply("id-1", Some("notebooks/nb1/doc/ops/a.oplog"), 25, false));
+        assert!(idx.apply("id-1", Some("notebooks/nb1/doc/ops/a.oplog"), 25, 0, false));
         // 刪除一個不存在的東西不算變動。
-        assert!(!idx.apply("id-9", None, 0, true));
-        assert!(idx.apply("id-1", None, 0, true));
+        assert!(!idx.apply("id-9", None, 0, 0, true));
+        assert!(idx.apply("id-1", None, 0, 0, true));
+    }
+
+    #[test]
+    fn the_modified_time_is_recorded_but_is_not_a_change() {
+        // 自己剛上傳的檔案，回音事件帶著修改時間；`note_upload` 當初不知道。
+        // 那不能被算成「對方動了」，否則焦點通道每次自己的推送都會誤判。
+        let mut idx = RemoteIndex::default();
+        idx.note_upload("notebooks/nb1/doc/ops/a.oplog", "id-1", 10);
+        let changed = idx.apply(
+            "id-1",
+            Some("notebooks/nb1/doc/ops/a.oplog"),
+            10,
+            1_800_000_000,
+            false,
+        );
+        assert!(!changed, "只多了修改時間，不是對方的變動");
+        assert_eq!(
+            idx.get("notebooks/nb1/doc/ops/a.oplog").unwrap().modified,
+            1_800_000_000,
+            "修改時間仍然要記下來"
+        );
+        // 大小變了才是真的改變。
+        assert!(idx.apply(
+            "id-1",
+            Some("notebooks/nb1/doc/ops/a.oplog"),
+            11,
+            1_800_000_100,
+            false
+        ));
+    }
+
+    #[test]
+    fn an_old_snapshot_without_modified_times_still_loads() {
+        let json = r#"{"pageToken":"1","files":{"a":{"id":"1","name":"a","size":3}}}"#;
+        let idx = RemoteIndex::from_json(json);
+        assert_eq!(idx.get("a").unwrap().modified, 0);
     }
 }

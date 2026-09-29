@@ -46,6 +46,16 @@ pub struct LibraryItem {
     /// 已刪除。**刪除是一個欄位，不是「不在清單裡」**，見模組說明。
     #[serde(default)]
     pub deleted: bool,
+    /// 刪除的時間（Unix 秒）。只有 `deleted` 為真時有意義。
+    ///
+    /// **這是墓碑的屬性，不參與仲裁**：誰贏仍然只看 `lamport`（與平手時的
+    /// `deleted`／`device`），見 [`LibraryItem::wins_over`]。它存在的理由是
+    /// 回收桶的保留期限要有起算點（`docs/plans/expiry-purge.md`）。
+    ///
+    /// `None` 表示「不知道」—— 舊版寫的墓碑就是這樣。序列化時省略，
+    /// 所以沒有時間的墓碑位元組與過去完全相同（格式相容）。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub deleted_at: Option<u64>,
 }
 
 impl LibraryItem {
@@ -89,7 +99,18 @@ impl LibraryIndex {
     }
 
     /// 標記刪除。**留下墓碑而不是移除**，理由見模組說明。
+    ///
+    /// 不帶刪除時間（`deleted_at = None`）。要進回收桶請用 [`Self::tombstone_at`]。
     pub fn tombstone(&mut self, id: &str, lamport: u64, device: &str) {
+        self.tombstone_with(id, lamport, device, None);
+    }
+
+    /// 標記刪除並記下時間（Unix 秒）—— 保留期限從這一刻起算。
+    pub fn tombstone_at(&mut self, id: &str, lamport: u64, device: &str, deleted_at: u64) {
+        self.tombstone_with(id, lamport, device, Some(deleted_at));
+    }
+
+    fn tombstone_with(&mut self, id: &str, lamport: u64, device: &str, deleted_at: Option<u64>) {
         let norm_id = id.to_lowercase();
         let base = self.items.get(&norm_id).cloned();
         let item = LibraryItem {
@@ -100,8 +121,31 @@ impl LibraryIndex {
             lamport,
             device: device.to_string(),
             deleted: true,
+            deleted_at,
         };
         self.upsert(item);
+    }
+
+    /// 從回收桶還原：以更大的 `lamport` 寫回「沒被刪」的同一個項目。
+    ///
+    /// 還原也是一個普通的、帶時戳的寫入，所以與任何時序下的刪除都會收斂到同一個結果 ——
+    /// 不需要新的規則。回傳 `false` 表示這個 id 不在索引裡或本來就沒被刪。
+    pub fn restore(&mut self, id: &str, lamport: u64, device: &str) -> bool {
+        let norm_id = id.to_lowercase();
+        let Some(base) = self.items.get(&norm_id).cloned() else {
+            return false;
+        };
+        if !base.deleted {
+            return false;
+        }
+        self.upsert(LibraryItem {
+            lamport,
+            device: device.to_string(),
+            deleted: false,
+            deleted_at: None,
+            ..base
+        });
+        true
     }
 
     /// 合併另一台裝置的索引。可交換、冪等。
@@ -283,6 +327,7 @@ mod user_scenario {
             lamport,
             device: device.to_string(),
             deleted: false,
+            deleted_at: None,
         }
     }
 
@@ -416,6 +461,7 @@ mod tests {
             lamport,
             device: device.into(),
             deleted: false,
+            deleted_at: None,
         }
     }
 

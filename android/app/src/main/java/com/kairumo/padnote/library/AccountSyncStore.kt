@@ -4,6 +4,7 @@ import android.content.Context
 import java.util.UUID
 import uniffi.padnote_core.FfiLibraryItem
 import uniffi.padnote_core.FfiSyncedField
+import uniffi.padnote_core.FfiTrashEntry
 import uniffi.padnote_core.syncChildrenOf
 import uniffi.padnote_core.syncDeleteItem
 import uniffi.padnote_core.syncGetSetting
@@ -11,6 +12,10 @@ import uniffi.padnote_core.syncIsDeleted
 import uniffi.padnote_core.syncMergeIndex
 import uniffi.padnote_core.syncMergeSettings
 import uniffi.padnote_core.syncNextLamport
+import uniffi.padnote_core.syncPlanLocalPurge
+import uniffi.padnote_core.syncRestoreItem
+import uniffi.padnote_core.syncStampLegacyTombstones
+import uniffi.padnote_core.syncTrash
 import uniffi.padnote_core.syncSetSetting
 import uniffi.padnote_core.syncUpsertItem
 import uniffi.padnote_core.syncWouldCreateCycle
@@ -130,18 +135,67 @@ object AccountSyncStore {
             parentId = parentId ?: "",
             lamport = nextLamport(context),
             device = deviceId(context),
-            deleted = false
+            deleted = false,
+            deletedAt = 0uL
         )
         setIndex(context, syncUpsertItem(indexJson(context), item))
     }
 
-    /** 記下刪除。留**墓碑**，不是把它從索引裡拿掉。 */
+    /**
+     * 記下刪除。留**墓碑**，不是把它從索引裡拿掉。
+     *
+     * 墓碑帶刪除時間 —— 回收桶的保留期限從這一刻起算。
+     */
     fun recordDeletion(context: Context, id: String) {
         setIndex(
             context,
-            syncDeleteItem(indexJson(context), id, nextLamport(context), deviceId(context))
+            syncDeleteItem(
+                indexJson(context), id, nextLamport(context), deviceId(context),
+                TrashRetention.nowUnixSeconds()
+            )
         )
     }
+
+    /** 從回收桶還原。以更大的時戳寫回沒被刪的同一個項目，與任何時序下的刪除都會收斂。 */
+    fun recordRestore(context: Context, id: String) {
+        setIndex(
+            context,
+            syncRestoreItem(indexJson(context), id, nextLamport(context), deviceId(context))
+        )
+    }
+
+    // ── 回收桶 ────────────────────────────────────────────────────
+
+    /** 回收桶清單（最近刪的在前）。期限與剩餘天數由核心算。 */
+    fun trashEntries(context: Context): List<FfiTrashEntry> =
+        syncTrash(indexJson(context), TrashRetention.nowUnixSeconds(), TrashRetention.days(context))
+
+    /**
+     * 給舊墓碑（沒有刪除時間）補蓋章，讓它們從現在起開始倒數。
+     *
+     * 沒有舊墓碑就什麼都不做 —— 不要白白進一格時戳、逼所有裝置重傳索引。
+     */
+    fun stampLegacyTombstonesIfNeeded(context: Context) {
+        if (trashEntries(context).none { it.deletedAt == 0uL }) return
+        setIndex(
+            context,
+            syncStampLegacyTombstones(
+                indexJson(context), TrashRetention.nowUnixSeconds(),
+                nextLamport(context), deviceId(context)
+            )
+        )
+    }
+
+    /**
+     * 已期滿、可以永久刪除**本機**套件的筆記本 id（本機是自己的副本，不必等別台）。
+     *
+     * [emptyTrash] 為真時把現在之前刪的全部視為期滿（使用者按了「立即清除」）。
+     */
+    fun expiredNotebookIdsForLocalPurge(context: Context, emptyTrash: Boolean = false): List<String> =
+        syncPlanLocalPurge(
+            indexJson(context), TrashRetention.nowUnixSeconds(),
+            TrashRetention.days(context), emptyTrash
+        )
 
     /**
      * 這個 id 是不是已經被（可能是另一台裝置）刪除了。

@@ -167,18 +167,18 @@ object NotebookLibrary {
     }.getOrNull()
 
     /**
-     * 刪除一本筆記本。
+     * 刪除一本筆記本 —— **移進回收桶**，不是真的刪。
      *
-     * 真的刪掉整個套件目錄。**沒有回收桶** —— 呼叫端一定要先跟使用者確認，
-     * 這是使用者唯一的一份資料。
+     * 保留期限內（預設 30 天）還原得回來；期滿才永久刪除（[NotebookTrash.purgeExpired]）。
+     * 設計見 `docs/plans/expiry-purge.md`。
      */
     fun delete(context: Context, id: String): Boolean =
         runCatching {
-            val removed = File(directory(context), "$id.$EXTENSION").deleteRecursively()
+            val moved = NotebookTrash.moveToTrash(context, id)
             // **留墓碑。** 不留的話，等雲端接上，另一台還沒同步到刪除的裝置
             // 會把這本筆記原封不動傳回來 —— 刪除永遠刪不掉。
-            if (removed) AccountSyncStore.recordDeletion(context, id)
-            removed
+            if (moved) AccountSyncStore.recordDeletion(context, id)
+            moved
         }.getOrDefault(false)
 
     /** 開啟（或建立）一本筆記本，回傳 session 與第一頁。 */

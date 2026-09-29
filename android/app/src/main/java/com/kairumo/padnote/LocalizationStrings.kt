@@ -2711,12 +2711,12 @@ object LocalizationStrings {
             "th" to "ลบข้อความนี้"
         ),
         "delete_notebook_confirm" to mapOf(
-            "zh-Hant" to "確定要刪除「%@」嗎？這本筆記的所有內容都會消失，而且救不回來。",
-            "en" to "Delete “%@”? Everything in this note will be gone, and it cannot be undone.",
-            "zh-Hans" to "确定要删除「%@」吗？这本笔记的所有内容都会消失，而且救不回来。",
-            "ja" to "「%@」を削除しますか？このノートの内容はすべて消え、元に戻せません。",
-            "ko" to "‘%@’을(를) 삭제할까요? 이 노트의 모든 내용이 사라지며 되돌릴 수 없습니다.",
-            "th" to "ลบ “%@” ไหม? เนื้อหาทั้งหมดจะหายไปและกู้คืนไม่ได้"
+            "zh-Hant" to "要將「%@」移到回收桶嗎？在永久刪除之前，你可以從回收桶還原。",
+            "en" to "Move “%@” to the Trash? You can restore it from the Trash until it is permanently removed.",
+            "zh-Hans" to "要将“%@”移到回收站吗？在永久删除之前，你可以从回收站还原。",
+            "ja" to "「%@」をゴミ箱に移動しますか？完全に削除されるまでは、ゴミ箱から元に戻せます。",
+            "ko" to "“%@”을(를) 휴지통으로 이동할까요? 영구 삭제되기 전까지는 휴지통에서 복원할 수 있습니다.",
+            "th" to "ย้าย “%@” ไปยังถังขยะหรือไม่? คุณสามารถกู้คืนจากถังขยะได้จนกว่าจะถูกลบถาวร"
         ),
         "delete_page" to mapOf(
             "zh-Hant" to "刪除此頁",
@@ -10661,12 +10661,12 @@ object LocalizationStrings {
             "th" to "เรียกคืนไฟล์ที่ลบแล้ว"
         ),
         "sync_reclaim_confirm_body" to mapOf(
-            "zh-Hant" to "這會刪除你已經刪掉的筆記本留在雲端的檔案。這台裝置尚未辨識的檔案絕不會被動到 —— 它們通常屬於別台裝置剛建立的筆記本。",
-            "en" to "This deletes the cloud files of notebooks you already deleted. Files this device has not identified yet are never touched — they usually belong to a notebook another device just created.",
-            "zh-Hans" to "这会删除你已经删掉的笔记本留在云端的档案。这台设备尚未辨识的档案绝不会被动到 —— 它们通常属于别台设备刚建立的笔记本。",
-            "ja" to "すでに削除したノートのクラウド上のファイルを削除します。この端末がまだ識別できていないファイルには触れません（通常は他の端末が作成したばかりのものです）。",
-            "ko" to "이미 삭제한 노트의 클라우드 파일을 지웁니다. 이 기기가 아직 식별하지 못한 파일은 건드리지 않습니다.",
-            "th" to "จะลบไฟล์บนคลาวด์ของบันทึกที่คุณลบไปแล้ว ไฟล์ที่เครื่องนี้ยังระบุไม่ได้จะไม่ถูกแตะต้อง"
+            "zh-Hant" to "這會在你的其他所有裝置確認之後，刪除回收桶保留期已過的筆記本留在雲端的檔案。仍在回收桶裡的筆記本會保留。這台裝置尚未辨識的檔案絕不會被動到 —— 它們通常屬於別台裝置剛建立的筆記本。",
+            "en" to "This deletes the cloud files of notebooks whose time in the Trash has run out, once all your other devices have confirmed. Notebooks still in the Trash are kept. Files this device has not identified yet are never touched — they usually belong to a notebook another device just created.",
+            "zh-Hans" to "这会在你的其他所有设备确认之后，删除回收站保留期已过的笔记本留在云端的文件。仍在回收站里的笔记本会保留。这台设备尚未识别的文件绝不会被动到 —— 它们通常属于别的设备刚创建的笔记本。",
+            "ja" to "ゴミ箱での保持期間が過ぎたノートのクラウド上のファイルを、他のすべてのデバイスが確認した後に削除します。ゴミ箱に残っているノートはそのまま保持されます。このデバイスがまだ識別していないファイルには一切触れません — 多くは別のデバイスが作成したばかりのノートのものです。",
+            "ko" to "휴지통 보관 기간이 지난 노트의 클라우드 파일을, 다른 모든 기기가 확인한 후에 삭제합니다. 휴지통에 남아 있는 노트는 그대로 유지됩니다. 이 기기가 아직 식별하지 못한 파일은 절대 건드리지 않습니다 — 대부분 다른 기기가 방금 만든 노트의 파일입니다.",
+            "th" to "การดำเนินการนี้จะลบไฟล์บนคลาวด์ของสมุดบันทึกที่หมดเวลาในถังขยะแล้ว หลังจากอุปกรณ์อื่นทั้งหมดของคุณยืนยันแล้ว สมุดบันทึกที่ยังอยู่ในถังขยะจะถูกเก็บไว้ ไฟล์ที่อุปกรณ์นี้ยังไม่รู้จักจะไม่ถูกแตะต้อง — มักเป็นของสมุดบันทึกที่อุปกรณ์อื่นเพิ่งสร้าง"
         ),
         "sync_reclaim_done" to mapOf(
             "zh-Hant" to "已回收 %1@ 個檔案。",
@@ -10677,12 +10677,12 @@ object LocalizationStrings {
             "th" to "เรียกคืน %1@ ไฟล์แล้ว"
         ),
         "sync_reclaim_nothing" to mapOf(
-            "zh-Hant" to "沒有可回收的檔案。",
-            "en" to "Nothing to reclaim.",
-            "zh-Hans" to "没有可回收的档案。",
-            "ja" to "回収するものはありません。",
-            "ko" to "회수할 것이 없습니다.",
-            "th" to "ไม่มีอะไรให้เรียกคืน"
+            "zh-Hant" to "暫時沒有可回收的檔案。回收桶裡的筆記本會保留到保留期結束。",
+            "en" to "Nothing to reclaim yet. Notebooks in the Trash are kept until their time runs out.",
+            "zh-Hans" to "暂时没有可回收的文件。回收站里的笔记本会保留到保留期结束。",
+            "ja" to "まだ回収するものはありません。ゴミ箱のノートは保持期間が過ぎるまで残ります。",
+            "ko" to "아직 회수할 항목이 없습니다. 휴지통의 노트는 보관 기간이 끝날 때까지 유지됩니다.",
+            "th" to "ยังไม่มีอะไรให้เก็บกู้ สมุดบันทึกในถังขยะจะถูกเก็บไว้จนกว่าจะหมดเวลา"
         ),
         "sync_reclaim_partial" to mapOf(
             "zh-Hant" to "已回收 %1@ 個、失敗 %2@ 個 —— 其餘下一輪再試。",
@@ -12026,6 +12026,158 @@ object LocalizationStrings {
             "ko" to "노트에는 최소 한 페이지가 있어야 합니다",
             "th" to "สมุดต้องเหลืออย่างน้อยหนึ่งหน้า"
         ),
+        "trash_clock_pending" to mapOf(
+            "zh-Hant" to "倒數將在下次同步後開始",
+            "en" to "Countdown starts after the next sync",
+            "zh-Hans" to "倒计时将在下次同步后开始",
+            "ja" to "カウントダウンは次回の同期後に始まります",
+            "ko" to "다음 동기화 후 카운트다운이 시작됩니다",
+            "th" to "การนับถอยหลังจะเริ่มหลังการซิงค์ครั้งถัดไป"
+        ),
+        "trash_days_left" to mapOf(
+            "zh-Hant" to "還剩 %@ 天",
+            "en" to "%@ days left",
+            "zh-Hans" to "还剩 %@ 天",
+            "ja" to "残り%@日",
+            "ko" to "%@일 남음",
+            "th" to "เหลืออีก %@ วัน"
+        ),
+        "trash_delete_forever" to mapOf(
+            "zh-Hant" to "永久刪除",
+            "en" to "Delete Permanently",
+            "zh-Hans" to "永久删除",
+            "ja" to "完全に削除",
+            "ko" to "영구 삭제",
+            "th" to "ลบถาวร"
+        ),
+        "trash_delete_forever_confirm_message" to mapOf(
+            "zh-Hant" to "「%@」將從此裝置刪除，且無法復原。",
+            "en" to "“%@” will be removed from this device and can’t be recovered.",
+            "zh-Hans" to "“%@”将从此设备中删除，且无法恢复。",
+            "ja" to "「%@」はこのデバイスから削除され、元に戻せません。",
+            "ko" to "“%@”이(가) 이 기기에서 삭제되며 복구할 수 없습니다.",
+            "th" to "“%@” จะถูกลบออกจากอุปกรณ์นี้และไม่สามารถกู้คืนได้"
+        ),
+        "trash_delete_forever_confirm_title" to mapOf(
+            "zh-Hant" to "要永久刪除嗎？",
+            "en" to "Delete permanently?",
+            "zh-Hans" to "要永久删除吗？",
+            "ja" to "完全に削除しますか？",
+            "ko" to "영구 삭제할까요?",
+            "th" to "ลบถาวรหรือไม่?"
+        ),
+        "trash_empty" to mapOf(
+            "zh-Hant" to "回收桶是空的",
+            "en" to "The trash is empty",
+            "zh-Hans" to "回收站是空的",
+            "ja" to "ゴミ箱は空です",
+            "ko" to "휴지통이 비어 있습니다",
+            "th" to "ถังขยะว่างเปล่า"
+        ),
+        "trash_empty_action" to mapOf(
+            "zh-Hant" to "清空回收桶",
+            "en" to "Empty Trash",
+            "zh-Hans" to "清空回收站",
+            "ja" to "ゴミ箱を空にする",
+            "ko" to "휴지통 비우기",
+            "th" to "ล้างถังขยะ"
+        ),
+        "trash_empty_confirm_message" to mapOf(
+            "zh-Hant" to "回收桶中的所有內容將從此裝置永久刪除。雲端副本會在你的其他裝置確認後刪除。",
+            "en" to "Everything in the trash will be permanently deleted from this device. Cloud copies are removed once your other devices have confirmed.",
+            "zh-Hans" to "回收站中的所有内容将从此设备永久删除。云端副本会在你的其他设备确认后删除。",
+            "ja" to "ゴミ箱の中身はすべてこのデバイスから完全に削除されます。クラウド上のコピーは、他のデバイスが確認した後に削除されます。",
+            "ko" to "휴지통의 모든 항목이 이 기기에서 영구 삭제됩니다. 클라우드 사본은 다른 기기에서 확인한 후 삭제됩니다.",
+            "th" to "ทุกอย่างในถังขยะจะถูกลบถาวรจากอุปกรณ์นี้ สำเนาบนคลาวด์จะถูกลบหลังจากอุปกรณ์อื่นของคุณยืนยันแล้ว"
+        ),
+        "trash_empty_confirm_title" to mapOf(
+            "zh-Hant" to "要清空回收桶嗎？",
+            "en" to "Empty the trash?",
+            "zh-Hans" to "要清空回收站吗？",
+            "ja" to "ゴミ箱を空にしますか？",
+            "ko" to "휴지통을 비울까요?",
+            "th" to "ล้างถังขยะหรือไม่?"
+        ),
+        "trash_expired" to mapOf(
+            "zh-Hant" to "已到期 — 即將永久刪除",
+            "en" to "Expired — will be removed soon",
+            "zh-Hans" to "已到期 — 即将永久删除",
+            "ja" to "期限切れ — まもなく完全に削除されます",
+            "ko" to "기간 만료 — 곧 영구 삭제됩니다",
+            "th" to "หมดอายุแล้ว — เร็วๆ นี้จะถูกลบถาวร"
+        ),
+        "trash_keep_forever_row" to mapOf(
+            "zh-Hant" to "保留到你手動刪除為止",
+            "en" to "Kept until you remove it",
+            "zh-Hans" to "保留到你手动删除为止",
+            "ja" to "手動で削除するまで保持されます",
+            "ko" to "직접 삭제할 때까지 보관됩니다",
+            "th" to "เก็บไว้จนกว่าคุณจะลบเอง"
+        ),
+        "trash_restore" to mapOf(
+            "zh-Hant" to "還原",
+            "en" to "Restore",
+            "zh-Hans" to "还原",
+            "ja" to "元に戻す",
+            "ko" to "복원",
+            "th" to "กู้คืน"
+        ),
+        "trash_restored_notice" to mapOf(
+            "zh-Hant" to "已還原「%@」",
+            "en" to "Restored “%@”",
+            "zh-Hans" to "已还原“%@”",
+            "ja" to "「%@」を元に戻しました",
+            "ko" to "“%@”을(를) 복원했습니다",
+            "th" to "กู้คืน “%@” แล้ว"
+        ),
+        "trash_retention_days" to mapOf(
+            "zh-Hant" to "%@ 天",
+            "en" to "%@ days",
+            "zh-Hans" to "%@ 天",
+            "ja" to "%@日",
+            "ko" to "%@일",
+            "th" to "%@ วัน"
+        ),
+        "trash_retention_footer" to mapOf(
+            "zh-Hant" to "超過這段時間後，已刪除的筆記本會從此裝置永久刪除，並在你的所有裝置確認後從雲端刪除。",
+            "en" to "After this period, deleted notebooks are permanently removed from this device, and from the cloud once all your devices have confirmed.",
+            "zh-Hans" to "超过这段时间后，已删除的笔记本会从此设备永久删除，并在你的所有设备确认后从云端删除。",
+            "ja" to "この期間を過ぎると、削除したノートはこのデバイスから完全に削除され、すべてのデバイスが確認した後にクラウドからも削除されます。",
+            "ko" to "이 기간이 지나면 삭제한 노트가 이 기기에서 영구 삭제되며, 모든 기기에서 확인한 후 클라우드에서도 삭제됩니다.",
+            "th" to "เมื่อพ้นช่วงเวลานี้ สมุดบันทึกที่ลบจะถูกลบถาวรจากอุปกรณ์นี้ และจากคลาวด์หลังจากอุปกรณ์ทั้งหมดของคุณยืนยันแล้ว"
+        ),
+        "trash_retention_forever" to mapOf(
+            "zh-Hant" to "直到我手動刪除",
+            "en" to "Until I delete them",
+            "zh-Hans" to "直到我手动删除",
+            "ja" to "手動で削除するまで",
+            "ko" to "직접 삭제할 때까지",
+            "th" to "จนกว่าฉันจะลบเอง"
+        ),
+        "trash_retention_title" to mapOf(
+            "zh-Hant" to "已刪除的筆記本保留時間",
+            "en" to "Keep deleted notebooks for",
+            "zh-Hans" to "已删除的笔记本保留时间",
+            "ja" to "削除したノートを保持する期間",
+            "ko" to "삭제한 노트를 보관할 기간",
+            "th" to "เก็บสมุดบันทึกที่ลบไว้เป็นเวลา"
+        ),
+        "trash_title" to mapOf(
+            "zh-Hant" to "回收桶",
+            "en" to "Trash",
+            "zh-Hans" to "回收站",
+            "ja" to "ゴミ箱",
+            "ko" to "휴지통",
+            "th" to "ถังขยะ"
+        ),
+        "trash_waiting_devices" to mapOf(
+            "zh-Hant" to "正在等待這些裝置確認：%@",
+            "en" to "Waiting for these devices to confirm: %@",
+            "zh-Hans" to "正在等待这些设备确认：%@",
+            "ja" to "次のデバイスの確認を待っています: %@",
+            "ko" to "다음 기기의 확인을 기다리는 중: %@",
+            "th" to "กำลังรออุปกรณ์เหล่านี้ยืนยัน: %@"
+        ),
         "txt_count" to mapOf(
             "zh-Hant" to "文字",
             "en" to "Text",
@@ -12041,7 +12193,10 @@ object LocalizationStrings {
             "ja" to "入力モード準備完了（ペンロック）",
             "ko" to "타이핑 모드 준비 완료 (펜 잠금)",
             "th" to "โหมดการพิมพ์พร้อมใช้งาน (ล็อคปากกา)"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "typing_mode" to mapOf(
             "zh-Hant" to "打字模式",
             "en" to "Typing",
@@ -12193,10 +12348,7 @@ object LocalizationStrings {
             "ja" to "バージョン",
             "ko" to "버전",
             "th" to "เวอร์ชัน"
-        )
-    )
-
-    private fun part19(): Map<String, Map<String, String>> = mapOf(
+        ),
         "wd_a4_layout" to mapOf(
             "zh-Hant" to "A4 標準版面 · 100%",
             "en" to "A4 layout · 100%",

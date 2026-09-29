@@ -127,6 +127,8 @@ pub struct FfiLibraryItem {
     pub lamport: u64,
     pub device: String,
     pub deleted: bool,
+    /// 刪除時間（Unix 秒）。`0` = 不知道（舊版墓碑，或根本沒被刪）。
+    pub deleted_at: u64,
 }
 
 impl From<&LibraryItem> for FfiLibraryItem {
@@ -139,6 +141,7 @@ impl From<&LibraryItem> for FfiLibraryItem {
             lamport: item.lamport,
             device: item.device.clone(),
             deleted: item.deleted,
+            deleted_at: item.deleted_at.unwrap_or(0),
         }
     }
 }
@@ -157,6 +160,7 @@ impl From<FfiLibraryItem> for LibraryItem {
             lamport: item.lamport,
             device: item.device,
             deleted: item.deleted,
+            deleted_at: Some(item.deleted_at).filter(|t| *t != 0),
         }
     }
 }
@@ -179,16 +183,119 @@ pub fn sync_upsert_item(index_json: String, item: FfiLibraryItem) -> String {
 
 /// 刪除。**留下墓碑而不是移除** —— 從「檔案不見了」推論刪除的話，
 /// 還沒同步到的那台裝置會把它傳回去，刪除永遠刪不掉。
+///
+/// `deleted_at` 是刪除的時間（Unix 秒），保留期限從這一刻起算；
+/// 傳 `0` 表示不記時間（等同舊版行為，這個墓碑會等到被補蓋章才開始倒數）。
 #[uniffi::export]
 pub fn sync_delete_item(
     index_json: String,
     item_id: String,
     lamport: u64,
     device_id: String,
+    deleted_at: u64,
 ) -> String {
     let mut index = LibraryIndex::from_json(&index_json);
-    index.tombstone(&item_id, lamport, &device_id);
+    if deleted_at == 0 {
+        index.tombstone(&item_id, lamport, &device_id);
+    } else {
+        index.tombstone_at(&item_id, lamport, &device_id, deleted_at);
+    }
     index.to_json()
+}
+
+/// 從回收桶還原。以更大的 `lamport` 寫回沒被刪的同一個項目，所以與任何時序下的
+/// 刪除都會收斂。不在索引裡、或本來就沒被刪，回傳的索引不變。
+#[uniffi::export]
+pub fn sync_restore_item(
+    index_json: String,
+    item_id: String,
+    lamport: u64,
+    device_id: String,
+) -> String {
+    let mut index = LibraryIndex::from_json(&index_json);
+    index.restore(&item_id, lamport, &device_id);
+    index.to_json()
+}
+
+/// 回收桶裡的一項。
+#[derive(Clone, Debug, uniffi::Record)]
+pub struct FfiTrashEntry {
+    pub id: String,
+    pub title: String,
+    /// 刪除時間（Unix 秒）。`0` = 還沒有起算點（舊版墓碑）。
+    pub deleted_at: u64,
+    /// 是否有倒數。`false` = 保留期是「永不」，或這個墓碑還沒有起算點。
+    pub has_countdown: bool,
+    /// 還剩幾天（無條件進位）。已期滿是 `0`。`has_countdown` 為假時無意義。
+    pub days_left: u32,
+}
+
+/// 回收桶清單：所有已刪除的筆記本，最近刪的在前。
+///
+/// `retention_days`：`0` = 永不自動清除。**期限只在核心算** —— 兩個平台各算一份的話
+/// 「還剩幾天」遲早會不一致。
+#[uniffi::export]
+pub fn sync_trash(index_json: String, now_unix_s: u64, retention_days: u32) -> Vec<FfiTrashEntry> {
+    let index = LibraryIndex::from_json(&index_json);
+    padnote_sync::retention::trash(
+        &index,
+        now_unix_s,
+        padnote_sync::retention::RetentionPolicy::from_days(retention_days),
+    )
+    .into_iter()
+    .map(|e| FfiTrashEntry {
+        id: e.id,
+        title: e.title,
+        deleted_at: e.deleted_at.unwrap_or(0),
+        has_countdown: e.days_left.is_some(),
+        days_left: e.days_left.unwrap_or(0),
+    })
+    .collect()
+}
+
+/// 給舊墓碑（沒有刪除時間）補蓋章，讓它們從現在起開始倒數。回傳新的索引 JSON。
+///
+/// 是一次普通的帶時戳寫入，與任何時序都會收斂；`lamport` 必須大於已見過的任何時戳。
+/// 沒有舊墓碑時回傳的索引不變。
+#[uniffi::export]
+pub fn sync_stamp_legacy_tombstones(
+    index_json: String,
+    now_unix_s: u64,
+    lamport: u64,
+    device_id: String,
+) -> String {
+    let mut index = LibraryIndex::from_json(&index_json);
+    padnote_sync::retention::stamp_legacy(&mut index, now_unix_s, lamport, &device_id);
+    index.to_json()
+}
+
+/// 已期滿、可以**永久刪除本機套件**的筆記本 id。
+///
+/// 本機是自己的副本，不必等別的裝置。`empty_trash` 為真時把「現在」之前刪的全部視為期滿
+/// （使用者按了「立即清除」）；此時 `retention_days` 被忽略。
+#[uniffi::export]
+pub fn sync_plan_local_purge(
+    index_json: String,
+    now_unix_s: u64,
+    retention_days: u32,
+    empty_trash: bool,
+) -> Vec<String> {
+    use padnote_sync::retention::{RetentionPolicy, plan_purge};
+    let index = LibraryIndex::from_json(&index_json);
+    let policy = if empty_trash {
+        RetentionPolicy::Days(0)
+    } else {
+        RetentionPolicy::from_days(retention_days)
+    };
+    plan_purge(
+        &index,
+        now_unix_s,
+        policy,
+        &Default::default(),
+        &Default::default(),
+        "",
+    )
+    .local
 }
 
 /// 某個資料夾底下還活著的項目。`parent_id` 傳空字串表示根目錄。
@@ -290,6 +397,7 @@ mod tests {
             lamport,
             device: device.into(),
             deleted: false,
+            deleted_at: 0,
         }
     }
 
@@ -361,7 +469,7 @@ mod tests {
     #[test]
     fn a_deleted_item_stays_deleted_after_a_merge() {
         let live = sync_upsert_item(String::new(), item("n1", "會議", 1, "dev-a"));
-        let deleted = sync_delete_item(live.clone(), "n1".into(), 5, "dev-a".into());
+        let deleted = sync_delete_item(live.clone(), "n1".into(), 5, "dev-a".into(), 0);
         // 另一台手上還是活的那一份，合併之後不可以復活。
         let merged = sync_merge_index(live, deleted);
         assert!(sync_children_of(merged, String::new()).is_empty());
@@ -375,7 +483,7 @@ mod tests {
         assert!(!sync_is_deleted(live.clone(), "n1".into()));
         assert!(!sync_is_deleted(live.clone(), "從沒看過".into()));
 
-        let gone = sync_delete_item(live, "n1".into(), 2, "dev-a".into());
+        let gone = sync_delete_item(live, "n1".into(), 2, "dev-a".into(), 0);
         assert!(sync_is_deleted(gone, "n1".into()));
     }
 

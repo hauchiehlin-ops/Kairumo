@@ -1222,6 +1222,10 @@ public final class NotebookStore: ObservableObject {
         documentsDir.appending(path: "folders_v1.json")
     }
 
+    private var trashFile: URL {
+        documentsDir.appending(path: "trash_v1.json")
+    }
+
     private init() {
         StartupLogger.log("NotebookStore.init 開始載入資料")
         documentsRootOverride = nil
@@ -1352,6 +1356,11 @@ public final class NotebookStore: ObservableObject {
             self.folders = fList
         }
 
+        if let tData = try? Data(contentsOf: trashFile),
+           let tList = try? JSONDecoder().decode([NotebookDocument].self, from: tData) {
+            self.trashedNotebooks = Self.deduplicateById(tList)
+        }
+
         if let savedRoot = UserDefaults.standard.string(forKey: rootFolderNameKey),
            !savedRoot.isEmpty,
            !Self.legacyDefaultRootNames.contains(savedRoot) {
@@ -1451,9 +1460,15 @@ public final class NotebookStore: ObservableObject {
 
     public func persistData() {
         // 快照必須在主執行緒取得：這些陣列是 @MainActor 隔離的狀態。
-        let snapshot = (notebooks: notebooks, recordings: recordings, folders: folders)
+        let snapshot = (
+            notebooks: notebooks, recordings: recordings, folders: folders,
+            trash: trashedNotebooks
+        )
         let rootName = rootFolderName
-        let files = (notebooks: notebooksFile, recordings: recordingsFile, folders: foldersFile)
+        let files = (
+            notebooks: notebooksFile, recordings: recordingsFile, folders: foldersFile,
+            trash: trashFile
+        )
         let key = rootFolderNameKey
 
         guard !pendingWrite else { return }
@@ -1468,6 +1483,9 @@ public final class NotebookStore: ObservableObject {
             }
             if let fData = try? JSONEncoder().encode(snapshot.folders) {
                 try? fData.write(to: files.folders, options: .atomic)
+            }
+            if let tData = try? JSONEncoder().encode(snapshot.trash) {
+                try? tData.write(to: files.trash, options: .atomic)
             }
             UserDefaults.standard.set(rootName, forKey: key)
 
@@ -1807,58 +1825,191 @@ public final class NotebookStore: ObservableObject {
     }
 
     public func deleteNotebook(id: String) {
+        // 移進回收桶，**不是**真的刪。保留期限內還原得回來；期滿才永久刪除
+        // （`purgeExpiredTrash`）。設計見 docs/plans/expiry-purge.md。
+        if !trashLocally(id: id) {
+            // 不在清單裡（只剩一個孤立的套件目錄）：沒有東西可以進回收桶，直接清掉。
+            purgeLocally(id: id)
+        }
+        AccountSyncStore.shared.recordDeletion(id: id)
+        // 使用者資料夾裡的副本照舊立刻移除（那是匯出／備份用的資料夾，不是 App 的資料）。
+        removeFolderSyncCopy(id: id)
+        persistData()
+    }
+
+    // MARK: - 回收桶
+
+    /// 回收桶裡的筆記本。`NotebookDocument` 本身存在 `trash_v1.json`，
+    /// 套件目錄搬到 `TrashPackages/`。
+    ///
+    /// **套件搬離 `corePackagesDirectory`，而不是留在原地打個記號。**
+    /// 同步與匯入有十幾處會列舉那個目錄，任何一處漏判「已在回收桶」，
+    /// 這本筆記就會被當成新筆記匯回來 —— 刪掉的東西自己復活。搬走之後，
+    /// 那些程式碼根本看不到它。
+    @Published public var trashedNotebooks: [NotebookDocument] = []
+
+    /// 回收桶裡的套件與同步基準線。
+    public var trashPackagesDirectory: URL {
+        documentsDir.appending(path: "TrashPackages")
+    }
+
+    /// 一個筆記本 id 在磁碟上可能的目錄名（舊資料的 id 可能有大寫）。
+    private func packageDirectoryNames(for id: String) -> [String] {
+        var names = ["\(id).padnote"]
+        let lower = "\(id.lowercased()).padnote"
+        if lower != names[0] { names.append(lower) }
+        return names
+    }
+
+    private func moveIfExists(_ from: URL, to: URL) {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: from.path) else { return }
+        try? fm.createDirectory(
+            at: to.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try? fm.removeItem(at: to)
+        try? fm.moveItem(at: from, to: to)
+    }
+
+    /// 移進回收桶（**只動本機**，不記墓碑）。回傳有沒有真的移。
+    ///
+    /// 記墓碑是呼叫端的事（`deleteNotebook`）—— 分開是為了讓檔案搬移可以單獨測，
+    /// 不必碰到全域的同步索引。
+    @discardableResult
+    public func trashLocally(id: String) -> Bool {
+        guard let index = notebooks.firstIndex(where: {
+            $0.id.caseInsensitiveCompare(id) == .orderedSame
+        }) else { return false }
+        let document = notebooks[index]
         if activeNotebookId?.caseInsensitiveCompare(id) == .orderedSame {
             activeNotebookId = nil
         }
         withAnimation {
-            notebooks.removeAll { $0.id.caseInsensitiveCompare(id) == .orderedSame }
+            _ = notebooks.remove(at: index)
         }
-        AccountSyncStore.shared.recordDeletion(id: id)
-        let pkgDir = corePackagesDirectory.appending(path: "\(id).padnote")
-        try? FileManager.default.removeItem(at: pkgDir)
-        let lowerPkgDir = corePackagesDirectory.appending(path: "\(id.lowercased()).padnote")
-        try? FileManager.default.removeItem(at: lowerPkgDir)
-        let baseDir = documentsDirectory.appending(path: "SyncBaseline/\(id).padnote")
-        try? FileManager.default.removeItem(at: baseDir)
-        let lowerBaseDir = documentsDirectory.appending(path: "SyncBaseline/\(id.lowercased()).padnote")
-        try? FileManager.default.removeItem(at: lowerBaseDir)
-        if let cloudFolder = CloudSyncFolder.resolveFolder() {
-            let scoped = cloudFolder.startAccessingSecurityScopedResource()
-            defer { if scoped { cloudFolder.stopAccessingSecurityScopedResource() } }
-            let remotePkg = cloudFolder.appending(path: "\(id).padnote")
-            try? FileManager.default.removeItem(at: remotePkg)
-            let lowerRemotePkg = cloudFolder.appending(path: "\(id.lowercased()).padnote")
-            try? FileManager.default.removeItem(at: lowerRemotePkg)
+        trashedNotebooks.removeAll { $0.id.caseInsensitiveCompare(id) == .orderedSame }
+        trashedNotebooks.append(document)
+
+        for name in packageDirectoryNames(for: id) {
+            moveIfExists(
+                corePackagesDirectory.appending(path: name),
+                to: trashPackagesDirectory.appending(path: name))
+            moveIfExists(
+                documentsDirectory.appending(path: "SyncBaseline/\(name)"),
+                to: trashPackagesDirectory.appending(path: "SyncBaseline/\(name)"))
         }
+        return true
+    }
+
+    /// 從回收桶還原（**只動本機**，不記還原）。回傳有沒有真的還原。
+    @discardableResult
+    public func restoreLocally(id: String) -> Bool {
+        guard let index = trashedNotebooks.firstIndex(where: {
+            $0.id.caseInsensitiveCompare(id) == .orderedSame
+        }) else { return false }
+        let document = trashedNotebooks.remove(at: index)
+
+        for name in packageDirectoryNames(for: id) {
+            moveIfExists(
+                trashPackagesDirectory.appending(path: name),
+                to: corePackagesDirectory.appending(path: name))
+            moveIfExists(
+                trashPackagesDirectory.appending(path: "SyncBaseline/\(name)"),
+                to: documentsDirectory.appending(path: "SyncBaseline/\(name)"))
+        }
+        // 已經有同 id 的（不該發生）就不要再塞一份，否則 ForEach 的識別會壞。
+        if !notebooks.contains(where: { $0.id.caseInsensitiveCompare(id) == .orderedSame }) {
+            withAnimation {
+                notebooks.append(document)
+            }
+        }
+        return true
+    }
+
+    /// 永久刪除本機的一本（**只動本機**）：回收桶裡的紀錄、套件、同步基準線。
+    ///
+    /// 原本的位置也一併清 —— 正常不會有東西留在那裡，但殘留的話等於沒刪乾淨。
+    public func purgeLocally(id: String) {
+        trashedNotebooks.removeAll { $0.id.caseInsensitiveCompare(id) == .orderedSame }
+        let fm = FileManager.default
+        for name in packageDirectoryNames(for: id) {
+            for url in [
+                trashPackagesDirectory.appending(path: name),
+                trashPackagesDirectory.appending(path: "SyncBaseline/\(name)"),
+                corePackagesDirectory.appending(path: name),
+                documentsDirectory.appending(path: "SyncBaseline/\(name)"),
+            ] {
+                try? fm.removeItem(at: url)
+            }
+        }
+        removeFolderSyncCopy(id: id)
+    }
+
+    /// 使用者資料夾（雲端／匯出）裡這本筆記本的副本。
+    private func removeFolderSyncCopy(id: String) {
+        guard let cloudFolder = CloudSyncFolder.resolveFolder() else { return }
+        let scoped = cloudFolder.startAccessingSecurityScopedResource()
+        defer { if scoped { cloudFolder.stopAccessingSecurityScopedResource() } }
+        for name in packageDirectoryNames(for: id) {
+            try? FileManager.default.removeItem(at: cloudFolder.appending(path: name))
+        }
+    }
+
+    /// 從回收桶還原並記下還原（別的裝置也會看到它回來）。
+    @discardableResult
+    public func restoreNotebook(id: String) -> Bool {
+        guard restoreLocally(id: id) else { return false }
+        AccountSyncStore.shared.recordRestore(id: id)
+        persistData()
+        return true
+    }
+
+    /// 永久刪除回收桶裡的一本。墓碑留著（不然別台會把它傳回來）。
+    public func purgeNotebookPermanently(id: String) {
+        purgeLocally(id: id)
         persistData()
     }
 
-    /// 依據同步收斂後的刪除墓碑名單，清理本機中已在其他裝置被刪除的筆記本實體。
+    /// 永久清掉**已期滿**的本機筆記本。啟動時與每輪同步之後呼叫。
+    /// 期限由核心算（`AccountSyncStore.expiredNotebookIdsForLocalPurge`）。
+    @discardableResult
+    public func purgeExpiredTrash() -> Int {
+        AccountSyncStore.shared.stampLegacyTombstonesIfNeeded()
+        let expired = AccountSyncStore.shared.expiredNotebookIdsForLocalPurge()
+        for id in expired { purgeLocally(id: id) }
+        if !expired.isEmpty { persistData() }
+        return expired.count
+    }
+
+    /// 清空回收桶（使用者按了「立即清除」）。雲端那一半由呼叫端接著觸發回收。
+    @discardableResult
+    public func emptyTrash() -> Int {
+        let ids = trashedNotebooks.map(\.id)
+        for id in ids { purgeLocally(id: id) }
+        if !ids.isEmpty { persistData() }
+        return ids.count
+    }
+
+    /// 依據同步收斂後的刪除墓碑名單，讓本機與索引一致。
+    ///
+    /// - **別台刪掉的** → 這台也移進回收桶（**不是**永久刪除）。資料留到期滿，
+    ///   使用者在這台看得到、還原得回來，而不是被別台的一個動作直接抹掉。
+    /// - **別台還原的** → 這台回收桶裡那一本自動救回來。套件目錄還在，
+    ///   如果不救的話，同步看到「套件已存在」會略過複製，於是這本筆記
+    ///   不會出現在清單裡。
+    ///
+    /// 兩個方向都**以現在的索引為準**，不用傳進來的名單：同步進行到一半時使用者
+    /// 可能剛好刪了或還原了一本，用開頭算好的名單會把它倒回去。
     public func syncPurgeDeletedNotebooks(_ deletedIds: Set<String>) {
-        guard !deletedIds.isEmpty else { return }
-        let lowercasedDeleted = Set(deletedIds.map { $0.lowercased() })
-        let beforeCount = notebooks.count
-        notebooks.removeAll { lowercasedDeleted.contains($0.id.lowercased()) }
-        for id in deletedIds {
-            let lowerId = id.lowercased()
-            let pkgDir = corePackagesDirectory.appending(path: "\(lowerId).padnote")
-            try? FileManager.default.removeItem(at: pkgDir)
-            let origPkgDir = corePackagesDirectory.appending(path: "\(id).padnote")
-            try? FileManager.default.removeItem(at: origPkgDir)
-            let baseDir = documentsDirectory.appending(path: "SyncBaseline/\(lowerId).padnote")
-            try? FileManager.default.removeItem(at: baseDir)
-            let origBaseDir = documentsDirectory.appending(path: "SyncBaseline/\(id).padnote")
-            try? FileManager.default.removeItem(at: origBaseDir)
-            if let cloudFolder = CloudSyncFolder.resolveFolder() {
-                let scoped = cloudFolder.startAccessingSecurityScopedResource()
-                defer { if scoped { cloudFolder.stopAccessingSecurityScopedResource() } }
-                let remotePkg = cloudFolder.appending(path: "\(lowerId).padnote")
-                try? FileManager.default.removeItem(at: remotePkg)
-                let origRemotePkg = cloudFolder.appending(path: "\(id).padnote")
-                try? FileManager.default.removeItem(at: origRemotePkg)
-            }
+        var changed = false
+
+        for id in deletedIds where AccountSyncStore.shared.isDeleted(id: id) {
+            if trashLocally(id: id) { changed = true }
         }
-        if notebooks.count != beforeCount {
+        for document in trashedNotebooks where !AccountSyncStore.shared.isDeleted(id: document.id) {
+            if restoreLocally(id: document.id) { changed = true }
+        }
+
+        if changed {
             persistData()
         }
     }

@@ -21,6 +21,7 @@ pub mod order;
 pub mod paths;
 pub mod provider;
 pub mod remote_index;
+pub mod retention;
 pub mod scheduler;
 pub mod settings;
 
