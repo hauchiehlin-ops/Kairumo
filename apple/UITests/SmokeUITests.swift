@@ -360,10 +360,10 @@ extension SmokeUITests {
         // 在 iPhone (compact) 上，因為頂端工具列放不下所有文字標籤按鈕，
         // 系統會自動將它們折疊進「更多」選單（OverflowBarButtonItem）。
         // 如果這個選單存在，我們必須點開它才能讓畫面稽核找到裡面的控制項。
-        let overflow = app.buttons["More"] // iOS 預設的標籤是 More
+        let overflow = app.buttons["More"].firstMatch // iOS 預設的標籤是 More
         if !overflow.exists {
             // 也嘗試用識別碼找
-            let overflowById = app.buttons["OverflowBarButtonItem"]
+            let overflowById = app.buttons["OverflowBarButtonItem"].firstMatch
             if overflowById.exists { overflowById.tap() }
         } else {
             overflow.tap()

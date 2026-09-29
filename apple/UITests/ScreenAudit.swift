@@ -205,11 +205,11 @@ enum ScreenAudit {
             var (element, _) = elementFor(id, label: labels[id], in: app)
             if scrollToFind && !element.exists {
                 // 若選單或彈窗有項目在可見範圍外，透過在已找到的選單項目內溫和拖曳滾動（避免 swipeUp 滑出選單邊界被 UIKit 判定為點擊背景而關閉選單）。
-                let validFound = foundElements.filter { $0.exists && $0.frame.height > 0 && visible.contains($0.frame) }
+                let validFound = foundElements.filter { $0.exists && $0.frame.height > 0 && visible.intersects($0.frame) }
                 if !validFound.isEmpty {
                     let midX = validFound.map { $0.frame.midX }.reduce(0, +) / CGFloat(validFound.count)
-                    let minY = validFound.map { $0.frame.minY }.min() ?? 0
-                    let maxY = validFound.map { $0.frame.maxY }.max() ?? 0
+                    let minY = max(visible.minY + 20, validFound.map { $0.frame.minY }.min() ?? 0)
+                    let maxY = min(visible.maxY - 20, validFound.map { $0.frame.maxY }.max() ?? 0)
                     if maxY - minY > 40 {
                         let startY = maxY - 15
                         let endY = minY + 15
