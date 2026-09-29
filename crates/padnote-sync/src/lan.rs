@@ -827,6 +827,25 @@ mod tests {
                     .0;
             }
         }
+
+        /// 等到接收完成回呼也已送達。
+        ///
+        /// 檔案寫入發生在 `on_received` 之前；只等檔案出現後立刻檢查
+        /// `received` 仍有一個很小的競態窗口，CI 偶爾會看到空陣列。
+        fn wait_received(&self, notebook_id: &str, files: u32) {
+            let expected = (notebook_id.to_string(), files);
+            let deadline = Instant::now() + Duration::from_secs(5);
+            let mut received = self.received.lock().unwrap();
+            while !received.contains(&expected) {
+                let left = deadline.saturating_duration_since(Instant::now());
+                assert!(!left.is_zero(), "等不到接收完成回呼：{notebook_id}");
+                received = self
+                    .signal
+                    .wait_timeout(received, left.min(Duration::from_millis(50)))
+                    .unwrap()
+                    .0;
+            }
+        }
     }
 
     impl LanStore for MemStore {
@@ -918,6 +937,9 @@ mod tests {
             s.get("nb", LanKind::Ops, "0000000005-00000001.ops")
                 .is_some()
         });
+        // `write` 完成後才呼叫 `on_received`。若不另外等回呼，下面的斷言
+        // 偶爾會落在兩者之間，檔案已存在但事件陣列仍是空的。
+        sb.wait_received("nb", 1);
         assert_eq!(
             sb.get("nb", LanKind::Ops, "0000000005-00000001.ops"),
             Some(b"hello".to_vec())
