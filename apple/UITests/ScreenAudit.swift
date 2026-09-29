@@ -386,26 +386,25 @@ enum ScreenAudit {
         return ids
     }
 
-    /// 在不在 —— 找不到就捲一下再找。
-    ///
-    /// # 為什麼要捲
-    ///
-    /// Android 端踩過這個：Compose 的 LazyColumn 只組合看得見的項目，
-    /// 沒捲到的控制項根本不在語意樹裡。當時稽核報了三個「缺失」，
-    /// 而那三個在程式碼裡是**無條件**渲染的 —— 是稽核錯了，不是程式錯了。
-    ///
-    /// SwiftUI 的 `List` 與 `LazyVStack` 有同樣的性質。不捲就下結論的話，
-    /// 棘輪裡會塞滿假的缺失，而**假的缺失會讓真的缺失被忽略**。
-    private static func exists(_ element: XCUIElement, in app: XCUIApplication) -> Bool {
+    private static func exists(_ element: XCUIElement, in app: XCUIApplication, isMenu: Bool = false) -> Bool {
         if element.exists { return true }
-        // 往下找最多 3 次（手機直向約 2~3 個螢幕高度即可覆蓋整個頁面，避免多次大幅滑動觸發彈性碰撞與逾時）
+        // 往下找最多 3 次
+        let scrollTarget = isMenu ? app.collectionViews.firstMatch : app
         for _ in 0..<3 {
-            app.swipeUp()
+            if scrollTarget.exists {
+                scrollTarget.swipeUp()
+            } else {
+                app.swipeUp()
+            }
             if element.exists { return true }
         }
-        // 若往下找不到，往上捲回找最多 3 次（確保先前已滾動到下方的畫面也能找到頂部項目）
+        // 若往下找不到，往上捲回找最多 3 次
         for _ in 0..<3 {
-            app.swipeDown()
+            if scrollTarget.exists {
+                scrollTarget.swipeDown()
+            } else {
+                app.swipeDown()
+            }
             if element.exists { return true }
         }
         return false

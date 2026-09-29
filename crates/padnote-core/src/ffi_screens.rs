@@ -457,19 +457,11 @@ fn editor_spec() -> FfiScreenSpec {
                     // 出現在 XCUITest 的無障礙樹裡，所以兩端的畫面稽核都
                     // 看不到它，只有靜態的對照閘門掃得到。
                     behind(
-                        c("editor.customize_toolbar", Button, "customize_toolbar"),
-                        MoreMenu,
-                    ),
-                    behind(
                         c("editor.insert.refine_sketch", Button, "refine_sketch"),
                         MoreMenu,
                     ),
                     behind(
-                        c("editor.insert.comment_pin", Button, "add_comment_pin"),
-                        MoreMenu,
-                    ),
-                    behind(
-                        c("editor.insert.collaborate", Button, "collaborate"),
+                        c("editor.insert.ai_summary", Button, "ai_summary"),
                         MoreMenu,
                     ),
                     behind(
@@ -477,7 +469,15 @@ fn editor_spec() -> FfiScreenSpec {
                         MoreMenu,
                     ),
                     behind(
-                        c("editor.insert.ai_summary", Button, "ai_summary"),
+                        c("editor.insert.collaborate", Button, "collaborate"),
+                        MoreMenu,
+                    ),
+                    behind(
+                        c("editor.insert.comment_pin", Button, "add_comment_pin"),
+                        MoreMenu,
+                    ),
+                    behind(
+                        c("editor.customize_toolbar", Button, "customize_toolbar"),
                         MoreMenu,
                     ),
                 ],

@@ -29,12 +29,12 @@
       "editor.insert.shape",
       "editor.insert.model3d",
       "editor.insert.theme_tools",
-      "editor.customize_toolbar",
       "editor.insert.refine_sketch",
-      "editor.insert.comment_pin",
-      "editor.insert.collaborate",
-      "editor.insert.recognize",
       "editor.insert.ai_summary",
+      "editor.insert.recognize",
+      "editor.insert.collaborate",
+      "editor.insert.comment_pin",
+      "editor.customize_toolbar",
       "editor.export.pdf",
       "editor.export.image",
       "editor.export.print",
@@ -106,12 +106,12 @@
       "editor.insert.shape",
       "editor.insert.model3d",
       "editor.insert.theme_tools",
-      "editor.customize_toolbar",
       "editor.insert.refine_sketch",
-      "editor.insert.comment_pin",
-      "editor.insert.collaborate",
-      "editor.insert.recognize",
       "editor.insert.ai_summary",
+      "editor.insert.recognize",
+      "editor.insert.collaborate",
+      "editor.insert.comment_pin",
+      "editor.customize_toolbar",
       "editor.export.pdf",
       "editor.export.image",
       "editor.export.print",
@@ -325,27 +325,15 @@
         "reveal": "more_menu"
       },
       {
-        "id": "editor.customize_toolbar",
-        "label_en": "Customize Toolbar",
-        "label_key": "customize_toolbar",
-        "reveal": "more_menu"
-      },
-      {
         "id": "editor.insert.refine_sketch",
         "label_en": "Refine Sketch",
         "label_key": "refine_sketch",
         "reveal": "more_menu"
       },
       {
-        "id": "editor.insert.comment_pin",
-        "label_en": "Add Comment Pin",
-        "label_key": "add_comment_pin",
-        "reveal": "more_menu"
-      },
-      {
-        "id": "editor.insert.collaborate",
-        "label_en": "Collaborate",
-        "label_key": "collaborate",
+        "id": "editor.insert.ai_summary",
+        "label_en": "Summary & To-dos",
+        "label_key": "ai_summary",
         "reveal": "more_menu"
       },
       {
@@ -355,9 +343,21 @@
         "reveal": "more_menu"
       },
       {
-        "id": "editor.insert.ai_summary",
-        "label_en": "Summary & To-dos",
-        "label_key": "ai_summary",
+        "id": "editor.insert.collaborate",
+        "label_en": "Collaborate",
+        "label_key": "collaborate",
+        "reveal": "more_menu"
+      },
+      {
+        "id": "editor.insert.comment_pin",
+        "label_en": "Add Comment Pin",
+        "label_key": "add_comment_pin",
+        "reveal": "more_menu"
+      },
+      {
+        "id": "editor.customize_toolbar",
+        "label_en": "Customize Toolbar",
+        "label_key": "customize_toolbar",
         "reveal": "more_menu"
       },
       {
