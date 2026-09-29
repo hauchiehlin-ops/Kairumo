@@ -71,7 +71,7 @@ fun TrashDialog(onDismiss: () -> Unit) {
             .sortedByDescending { it.second?.deletedAt ?: 0uL }
     }
 
-    fun titleOf(id: String, entry: FfiTrashEntry?): String =
+    fun titleOf(entry: FfiTrashEntry?): String =
         entry?.title?.takeIf { it.isNotBlank() } ?: l("untitled_note")
 
     fun countdownText(entry: FfiTrashEntry?): String = when {
@@ -121,7 +121,7 @@ fun TrashDialog(onDismiss: () -> Unit) {
                         items(rows, key = { it.first }) { (id, entry) ->
                             Card(modifier = Modifier.fillMaxWidth().testTag("trash.row")) {
                                 Column(Modifier.padding(12.dp)) {
-                                    Text(titleOf(id, entry), style = MaterialTheme.typography.titleSmall)
+                                    Text(titleOf(entry), style = MaterialTheme.typography.titleSmall)
                                     Text(
                                         countdownText(entry),
                                         style = MaterialTheme.typography.bodySmall,
@@ -142,7 +142,7 @@ fun TrashDialog(onDismiss: () -> Unit) {
                                             modifier = Modifier.testTag("trash.restore")
                                         ) { Text(l("trash_restore")) }
                                         TextButton(
-                                            onClick = { pendingDelete = id to titleOf(id, entry) },
+                                            onClick = { pendingDelete = id to titleOf(entry) },
                                             modifier = Modifier.testTag("trash.deleteForever")
                                         ) {
                                             Text(
