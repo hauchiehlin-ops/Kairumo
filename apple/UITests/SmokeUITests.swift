@@ -169,6 +169,125 @@ final class SmokeUITests: XCTestCase {
         assertAlive(app, "收合側欄")
     }
 
+    /// 文字模式與手繪模式**共用同一塊紙**，而且文字模式打的字回到手繪模式後
+    /// 仍然點得到、可以再編輯。
+    ///
+    /// # 這條守的是什麼
+    ///
+    /// 使用者回報兩件事：
+    /// 1. 選了紙張樣板（如「橫線筆記」），切到文字模式後樣板消失、變成全白頁，
+    ///    頁面也不置中、可用區域的框線不見了。
+    /// 2. 文字模式打的字，切回手繪模式會變成文字方塊，卻點不動、拖不動。
+    ///
+    /// 兩者同一個根因：文字模式被換成獨立的 `WordDocumentEditorView`，整塊工作區
+    /// （樣板、置中、框線、物件層）都不在了。這條在 22fbc58 修過一次，
+    /// e479503 又把它「恢復」回來。
+    ///
+    /// 樣板本身是 UIKit 繪出來的、查不到，所以這裡守的是它的**必要條件**：
+    /// 文字模式下畫布與手繪模式是同一塊、位置與大小不變（沒有換成另一個視圖）。
+    func testTextModeSharesThePaperAndItsTextBoxesStayEditableInDrawMode() {
+        let app = launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+
+        let newNote = app.descendants(matching: .any)
+            .matching(identifier: "home.action.new_note").firstMatch
+        guard newNote.waitForExistence(timeout: 15) else {
+            return XCTFail("首頁找不到新增筆記入口")
+        }
+        newNote.tap()
+        let confirm = app.descendants(matching: .any)
+            .matching(identifier: "new_notebook.confirm").firstMatch
+        guard confirm.waitForExistence(timeout: 10) else {
+            return XCTFail("新增筆記表單沒有確認按鈕")
+        }
+        confirm.tap()
+
+        // `editor.canvas` 同時掛在工作區容器與裡面那張紙（`PKCanvasView`）上；
+        // 紙是比較窄的那一個。
+        func paperFrame() -> CGRect {
+            app.descendants(matching: .any).matching(identifier: "editor.canvas")
+                .allElementsBoundByIndex
+                .map(\.frame)
+                .filter { $0.width > 0 }
+                .min { $0.width < $1.width } ?? .zero
+        }
+        let canvas = app.descendants(matching: .any)["editor.canvas"].firstMatch
+        XCTAssertTrue(canvas.waitForExistence(timeout: 15), "建立筆記後沒有進入畫布")
+        sleep(1)
+        let windowMidX = app.windows.firstMatch.frame.midX
+        XCTAssertGreaterThan(paperFrame().width, 0, "手繪模式量不到畫布")
+        XCTAssertEqual(paperFrame().midX, windowMidX, accuracy: 24, "手繪模式下頁面沒有置中")
+
+        // 1. 切到文字模式：還是同一塊畫布、頁面仍置中。
+        //
+        // 紙的**大小**在兩個模式下不同是正常的：文字模式的工具列比較高，整頁模式
+        // 取寬高兩個比例的較小者縮放。所以不比大小，比的是「還在」與「置中」。
+        let typeMode = app.descendants(matching: .any)
+            .matching(identifier: "portal.type").firstMatch
+        guard typeMode.waitForExistence(timeout: 10) else {
+            return XCTFail("找不到文字模式按鈕 portal.type")
+        }
+        typeMode.tap()
+        XCTAssertTrue(
+            canvas.waitForExistence(timeout: 10),
+            "切到文字模式後畫布不見了 —— 工作區被換成另一個視圖（樣板、置中、框線都會跟著沒有）")
+        sleep(1)
+        XCTAssertEqual(paperFrame().midX, windowMidX, accuracy: 24, "文字模式下頁面沒有置中")
+
+        // 2. 在文字模式打字。
+        canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.3)).tap()
+        let inlineEditor = app.descendants(matching: .any)
+            .matching(identifier: "editor.text.inline_editor").firstMatch
+        guard inlineEditor.waitForExistence(timeout: 10) else {
+            return XCTFail("文字模式點擊頁面後沒有出現就地文字編輯器")
+        }
+        let sentinel = "MoveMe"
+        inlineEditor.typeText(sentinel)
+
+        // 3. 回手繪模式：文字方塊還在，點它要能再編輯。
+        let drawMode = app.descendants(matching: .any)
+            .matching(identifier: "portal.draw").firstMatch
+        guard drawMode.waitForExistence(timeout: 10) else {
+            return XCTFail("找不到手繪模式按鈕 portal.draw")
+        }
+        drawMode.tap()
+        sleep(1)
+        let box = app.staticTexts[sentinel].firstMatch
+        guard box.waitForExistence(timeout: 10) else {
+            return XCTFail("回到手繪模式後找不到剛打的文字方塊")
+        }
+        box.tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any).matching(identifier: "editor.text.inline_editor")
+                .firstMatch.waitForExistence(timeout: 10),
+            "手繪模式下點文字方塊沒有進入編輯")
+        // 那一下單擊不能被 PencilKit 當成一筆 —— 單擊要與繪圖手勢同時辨識，
+        // 前提是它不會多出一個點。
+        XCTAssertEqual(Self.strokeCount(in: app), 0, "點文字方塊多畫出了一筆")
+
+        // 4. 移動：拖曳只在「不在編輯中」時生效，所以先離開編輯狀態
+        //    （切到手繪再切回文字），再把方塊拖到別處。
+        app.descendants(matching: .any).matching(identifier: "portal.draw").firstMatch.tap()
+        sleep(1)
+        typeMode.tap()
+        sleep(1)
+        let movable = app.staticTexts[sentinel].firstMatch
+        guard movable.waitForExistence(timeout: 10) else {
+            return XCTFail("回到文字模式後找不到文字方塊")
+        }
+        let before = movable.frame
+        movable.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(
+                forDuration: 0.2,
+                thenDragTo: canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.75)))
+        sleep(1)
+        let after = app.staticTexts[sentinel].firstMatch.frame
+        XCTAssertGreaterThan(
+            abs(after.midY - before.midY), 20,
+            "拖曳之後文字方塊沒有移動：\(before) → \(after)")
+        assertAlive(app, "手繪模式再編輯、文字模式移動文字方塊")
+    }
+
     /// 從全新的筆記本驗證「手寫 → 文字 → 點頁面 → 直接輸入」完整路徑。
     ///
     /// 過去這條測試只點 `editor.mode` 容器，再點一下畫布，最後只確認 App
@@ -214,25 +333,21 @@ final class SmokeUITests: XCTestCase {
         }
         typeMode.tap()
 
-        // 打字模式是 Word 風格的整頁文件（`WordDocumentEditorView`）：正文是一個
-        // `TextEditor`，點下去就取得焦點、直接打字。舊版「點空白頁 → 出現
-        // 就地文字框（`editor.text.inline_editor`）」是另一條路徑，這個模式
-        // 不走它。
-        //
-        // 正文沒有識別碼；整個畫面上只有它一個 `TextView`（首頁的搜尋框是
-        // TextField，而且此時已不在畫面上），所以用型別找。
-        let body = app.textViews.firstMatch
-        guard body.waitForExistence(timeout: 10) else {
-            return XCTFail("切到文字模式後找不到文件正文（TextView）")
+        // 點空白頁面後，應立即出現並聚焦內嵌 TextEditor。
+        let coordinate = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.45, dy: 0.45))
+        coordinate.tap()
+
+        let inlineEditor = app.descendants(matching: .any)
+            .matching(identifier: "editor.text.inline_editor").firstMatch
+        guard inlineEditor.waitForExistence(timeout: 10) else {
+            return XCTFail("文字模式點擊空白頁後沒有建立就地文字編輯器")
         }
-        body.tap()
-
         let sentinel = "Word style typing works"
-        // 不可再補點一次：第一次點就必須已經取得焦點。
-        body.typeText(sentinel)
+        // 不可再補點一次 TextEditor：第一次點頁面就必須已經取得焦點。
+        inlineEditor.typeText(sentinel)
 
-        let value = body.value as? String ?? ""
-        XCTAssertTrue(value.contains(sentinel), "文件正文沒有收到輸入；目前值：\(value)")
+        let value = inlineEditor.value as? String ?? ""
+        XCTAssertTrue(value.contains(sentinel), "TextEditor 沒有收到輸入；目前值：\(value)")
         assertAlive(app, "文字模式即點即書")
     }
 }

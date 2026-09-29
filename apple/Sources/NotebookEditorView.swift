@@ -563,6 +563,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
         ]
         directSingleTap.cancelsTouchesInView = false
+        directSingleTap.name = Coordinator.directTapName
+        directSingleTap.delegate = context.coordinator
 
         let directDoubleTap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleDirectDoubleTap(_:)))
         directDoubleTap.numberOfTapsRequired = 2
@@ -571,6 +573,8 @@ struct CanvasRepresentable: UIViewRepresentable {
             NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)
         ]
         directDoubleTap.cancelsTouchesInView = false
+        directDoubleTap.name = Coordinator.directTapName
+        directDoubleTap.delegate = context.coordinator
         directSingleTap.require(toFail: directDoubleTap)
 
         canvas.addGestureRecognizer(directDoubleTap)
@@ -691,7 +695,27 @@ struct CanvasRepresentable: UIViewRepresentable {
         Coordinator(self)
     }
 
-    class Coordinator: NSObject, PKCanvasViewDelegate, UIPointerInteractionDelegate {
+    class Coordinator: NSObject, PKCanvasViewDelegate, UIPointerInteractionDelegate, UIGestureRecognizerDelegate {
+        /// 手指／游標單擊、雙擊辨識器的名字，讓委派認得出「是我們的」。
+        static let directTapName = "kairumo.canvas.directTap"
+
+        /// **單擊要能與 PencilKit 的繪圖手勢同時辨識。**
+        ///
+        /// 手繪模式（`.anyInput`，手指也能畫）下，PKCanvasView 的繪圖手勢一收到
+        /// 觸控就先宣告辨識，我們的單擊辨識器因此被擋掉 —— `handleDirectSingleTap`
+        /// 根本不會被呼叫。症狀：文字模式打的字，切回手繪模式後變成文字方塊，
+        /// 點它沒有任何反應，既不能編輯也不能移動。
+        ///
+        /// 同時辨識是安全的：夠短的單擊本來就不會被 PencilKit 當成一筆
+        /// （實測 `strokes` 讀數維持 0），所以不會多出一個點。
+        func gestureRecognizer(
+            _ gestureRecognizer: UIGestureRecognizer,
+            shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+        ) -> Bool {
+            gestureRecognizer.name == Self.directTapName
+                || other.name == Self.directTapName
+        }
+
         /// 把捲動狀態回報給 SwiftUI（自訂捲軸需要）
         func scrollViewDidScroll(_ scrollView: UIScrollView) {
             reportScrollMetrics(scrollView)
@@ -1531,11 +1555,7 @@ public struct NotebookEditorView: View {
                     // 立起雙屏模式：上方顯示主要畫布／預覽區，下方為沉浸式觸控工具盤
                     VStack(spacing: 0) {
                         ZStack(alignment: .topLeading) {
-                            if editorMode == .draw {
-                                canvasWorkArea
-                            } else {
-                                wordDocumentArea
-                            }
+                            canvasWorkArea
 
                             HStack(spacing: 6) {
                                 Image(systemName: "laptopcomputer.and.ipad")
@@ -1568,12 +1588,21 @@ public struct NotebookEditorView: View {
                             sidebarResizeHandle(total: geo.size.width, current: width)
                         }
 
-                        // 核心手寫（支援全品牌手寫筆） vs Google Docs / Word 標準居中文檔紙張編輯區
-                        if editorMode == .draw {
-                            canvasWorkArea
-                        } else {
-                            wordDocumentArea
-                        }
+                        // 手寫與打字**共用同一塊畫布**：紙張樣板、置中、可用區域框線、
+                        // 文字方塊與其他物件都在這裡。
+                        //
+                        // **打字模式不可以換成 `WordDocumentEditorView`。** 那條路換掉的
+                        // 是整塊工作區，結果：
+                        //   1. 樣板消失 —— 選了「橫線筆記」，切到文字卻是全白頁
+                        //   2. 頁面不置中（固定 760pt 寬、可橫向捲動），可用區域框線也沒了
+                        //   3. 畫布上的文字方塊物件層不在樹裡，切回手繪後那些方塊
+                        //      點不動、拖不動
+                        // 這三個問題在 22fbc58 修過一次（撤掉 Word 模式），e479503 又把它
+                        // 「恢復」回來，同樣的症狀原封不動地回來。
+                        //
+                        // 文書排版的工具（`WordToolbarView`）仍在工具列上，操作的是
+                        // 這塊畫布上的文字方塊。
+                        canvasWorkArea
                     }
                     .onAppear { editorAvailableWidth = geo.size.width }
                     .onChange(of: geo.size.width) { newValue in
@@ -8918,6 +8947,22 @@ public struct NotebookEditorView: View {
         }
     }
 
+    /// 拿掉「手指輕點」留下的那個小點。
+    ///
+    /// 只動**最後一筆**，而且必須同時符合：夠小（近乎一個點）、就落在點擊位置、
+    /// 剛剛才畫下（不會誤刪使用者真正寫的東西）。
+    private func removeTapDotStroke(near location: CGPoint) {
+        guard let last = currentDrawing.strokes.last else { return }
+        let bounds = last.renderBounds
+        let isDot = bounds.width < 10 && bounds.height < 10
+        let isHere = abs(bounds.midX - location.x) < 16 && abs(bounds.midY - location.y) < 16
+        let isFresh = Date().timeIntervalSince(last.path.creationDate) < 2
+        guard isDot, isHere, isFresh else { return }
+        var strokes = currentDrawing.strokes
+        strokes.removeLast()
+        currentDrawing = PKDrawing(strokes: strokes)
+    }
+
     /// 🌟 方案 A+B：手指或游標在畫布上的單擊事件
     private func handleCanvasDirectTap(at location: CGPoint, page: Int? = nil) {
         let targetPage = page ?? currentPageIndex
@@ -8930,6 +8975,10 @@ public struct NotebookEditorView: View {
                 item.pageIndex == targetPage &&
                 CGRect(x: item.x, y: item.y, width: item.width, height: item.height).insetBy(dx: -12, dy: -12).contains(location)
             }) {
+                // 單擊與 PencilKit 的繪圖手勢同時辨識（見 `Coordinator.gestureRecognizer`），
+                // 手指輕點會被畫成一個小點。這一下是「點文字方塊」，不是落筆 ——
+                // 把那個點拿掉，否則每次點方塊紙上都多一顆墨點。
+                removeTapDotStroke(near: location)
                 withAnimation(.easeInOut(duration: 0.2)) {
                     // 全自動意圖感知：點擊文字方塊，自動切換至文字模式並聚焦，展開 Word 級文字編輯工具
                     editorMode = .type
