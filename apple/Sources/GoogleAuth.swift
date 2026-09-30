@@ -61,6 +61,12 @@ public final class GoogleAuth: NSObject, ObservableObject {
 
     private override init() {
         super.init()
+        // 測試掛勾（見 FakeDriveHook.swift）：假裝已登入，好讓兩個模擬器共用假的雲端。
+        if FakeDrive.isEnabled {
+            isSignedIn = true
+            accountEmail = FakeDrive.accountEmail
+            return
+        }
         isSignedIn = !KeychainTokens.load().refreshToken.isEmpty
         // 帳號只是顯示用的字串，放 UserDefaults 就好 —— 放 Keychain 的話
         // 登出時忘了清會留下一個「已登出但還顯示著帳號」的狀態。
@@ -73,6 +79,7 @@ public final class GoogleAuth: NSObject, ObservableObject {
     ///
     /// 失敗就靜靜放著：這是一行顯示用的字，拿不到不該讓同步失敗。
     public func refreshAccountEmail() async {
+        if FakeDrive.isEnabled { return }
         guard isSignedIn, let token = await validAccessToken() else { return }
         var request = URLRequest(
             url: URL(string: "https://www.googleapis.com/drive/v3/about?fields=user")!)
@@ -249,6 +256,7 @@ public final class GoogleAuth: NSObject, ObservableObject {
     /// 兩者混在一起會變成無限重試的背景迴圈，而使用者只看到「同步失敗」
     /// 卻不知道該去登入。專案還在 Testing 狀態時，refresh token 七天就會到這裡。
     public func validAccessToken(forceRefresh: Bool = false) async -> String? {
+        if FakeDrive.isEnabled { return FakeDrive.accessToken }
         let current = KeychainTokens.load()
         if !forceRefresh && oauthIsAccessValid(tokens: current, nowS: nowSeconds()) {
             return current.accessToken
@@ -273,6 +281,7 @@ public final class GoogleAuth: NSObject, ObservableObject {
 
     /// 同步更新權杖（供背景 HTTP 執行緒在遇到 401 時自動重試換證）。
     public nonisolated func refreshTokenSync() -> String? {
+        if FakeDrive.isEnabled { return FakeDrive.accessToken }
         let current = KeychainTokens.load()
         guard !current.refreshToken.isEmpty else { return nil }
 

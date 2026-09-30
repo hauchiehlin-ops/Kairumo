@@ -44,6 +44,42 @@ class NotebookLibraryTest {
         )
     }
 
+    // ── 標題以同步索引為權威 ─────────────────────────────────
+
+    @Test
+    fun theSyncIndexTitleWinsOverAStalePackageTitle() {
+        // Apple 更名只寫索引、不動套件內的標題 CRDT。Android 只看套件的話會永遠顯示舊名字。
+        makeNotebook(File(NotebookLibrary.directory(context), "nb-1.padnote"), "舊名字")
+
+        val shown = NotebookLibrary.all(
+            context, deviceId, indexTitles = mapOf("nb-1" to "新名字")
+        ).single().title
+
+        assertEquals("新名字", shown)
+    }
+
+    @Test
+    fun aMissingOrBlankIndexTitleFallsBackToThePackageTitle() {
+        makeNotebook(File(NotebookLibrary.directory(context), "nb-1.padnote"), "套件裡的標題")
+        // 索引裡沒有這一本。
+        assertEquals(
+            "套件裡的標題",
+            NotebookLibrary.all(context, deviceId, indexTitles = emptyMap()).single().title
+        )
+    }
+
+    @Test
+    fun indexTitlesAreMatchedRegardlessOfTheIdCase() {
+        // 舊資料的 id 可能有大寫；索引與磁碟名稱的大小寫不一定一致。
+        makeNotebook(File(NotebookLibrary.directory(context), "NB-Upper.padnote"), "舊")
+        assertEquals(
+            "新",
+            NotebookLibrary.all(
+                context, deviceId, indexTitles = mapOf("nb-upper" to "新")
+            ).single().title
+        )
+    }
+
     // ── 舊版資料的搬家（最不能出錯的部分）───────────────────
 
     @Test

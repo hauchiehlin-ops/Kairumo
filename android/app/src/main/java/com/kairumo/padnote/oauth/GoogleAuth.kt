@@ -101,7 +101,8 @@ object GoogleAuth {
         )
     }
 
-    fun isSignedIn(context: Context): Boolean = tokens(context).refreshToken.isNotEmpty()
+    fun isSignedIn(context: Context): Boolean =
+        FakeDrive.enabled || tokens(context).refreshToken.isNotEmpty()
 
     /**
      * 開始授權。把使用者丟進 Custom Tabs。
@@ -185,6 +186,8 @@ object GoogleAuth {
      * 卻不知道該去登入。專案還在 Testing 狀態時，refresh token 七天就會到這裡。
      */
     fun validAccessToken(context: Context): String? {
+        // 測試掛勾（見 FakeDrive.kt）：假裝已登入，好讓模擬器共用假的雲端。
+        if (FakeDrive.enabled) return FakeDrive.ACCESS_TOKEN
         val current = tokens(context)
         if (oauthIsAccessValid(current, nowSeconds())) return current.accessToken
         if (current.refreshToken.isEmpty()) return null

@@ -205,6 +205,7 @@ mod tests {
             device: "dev-a".to_string(),
             deleted,
             deleted_at: None,
+            purge_at: None,
         }
     }
 

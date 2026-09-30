@@ -13,6 +13,7 @@ import uniffi.padnote_core.syncMergeIndex
 import uniffi.padnote_core.syncMergeSettings
 import uniffi.padnote_core.syncNextLamport
 import uniffi.padnote_core.syncPlanLocalPurge
+import uniffi.padnote_core.syncRequestPurge
 import uniffi.padnote_core.syncRestoreItem
 import uniffi.padnote_core.syncStampLegacyTombstones
 import uniffi.padnote_core.syncTrash
@@ -136,7 +137,8 @@ object AccountSyncStore {
             lamport = nextLamport(context),
             device = deviceId(context),
             deleted = false,
-            deletedAt = 0uL
+            deletedAt = 0uL,
+            purgeAt = 0uL
         )
         setIndex(context, syncUpsertItem(indexJson(context), item))
     }
@@ -161,6 +163,23 @@ object AccountSyncStore {
         setIndex(
             context,
             syncRestoreItem(indexJson(context), id, nextLamport(context), deviceId(context))
+        )
+    }
+
+    /**
+     * 使用者要求**立即永久刪除**回收桶裡的一項（「永久刪除」與「清空回收桶」用）。
+     *
+     * 寫進墓碑，不是只在按下去的那一刻試一次：另一台裝置還沒確認時雲端檔案要留著，
+     * 而使用者按完之後回收桶已經空了、按鈕停用了，沒有第二次機會。寫進墓碑之後，
+     * 之後每一輪同步都會依它自然完成雲端那一半，所有裝置一致。
+     */
+    fun recordPurgeRequest(context: Context, id: String) {
+        setIndex(
+            context,
+            syncRequestPurge(
+                indexJson(context), id, nextLamport(context), deviceId(context),
+                TrashRetention.nowUnixSeconds()
+            )
         )
     }
 

@@ -129,6 +129,8 @@ pub struct FfiLibraryItem {
     pub deleted: bool,
     /// 刪除時間（Unix 秒）。`0` = 不知道（舊版墓碑，或根本沒被刪）。
     pub deleted_at: u64,
+    /// 使用者要求立即永久刪除的時間（Unix 秒）。`0` = 沒有要求。
+    pub purge_at: u64,
 }
 
 impl From<&LibraryItem> for FfiLibraryItem {
@@ -142,6 +144,7 @@ impl From<&LibraryItem> for FfiLibraryItem {
             device: item.device.clone(),
             deleted: item.deleted,
             deleted_at: item.deleted_at.unwrap_or(0),
+            purge_at: item.purge_at.unwrap_or(0),
         }
     }
 }
@@ -161,6 +164,7 @@ impl From<FfiLibraryItem> for LibraryItem {
             device: item.device,
             deleted: item.deleted,
             deleted_at: Some(item.deleted_at).filter(|t| *t != 0),
+            purge_at: Some(item.purge_at).filter(|t| *t != 0),
         }
     }
 }
@@ -214,6 +218,25 @@ pub fn sync_restore_item(
 ) -> String {
     let mut index = LibraryIndex::from_json(&index_json);
     index.restore(&item_id, lamport, &device_id);
+    index.to_json()
+}
+
+/// 使用者要求**立即永久刪除**回收桶裡的一項（「永久刪除」與「清空回收桶」用）。
+///
+/// 把這個要求**寫進墓碑**（`purge_at`），而不是只在按下去的那一刻試一次：另一台裝置
+/// 還沒確認時雲端檔案要留著，而使用者按完之後回收桶已經空了、按鈕停用了 —— 沒有第二次
+/// 機會。寫進墓碑之後，之後每一輪同步都會依它自然完成雲端那一半，所有裝置一致。
+/// 沒有墓碑（還活著、或索引裡沒有）時回傳的索引不變。
+#[uniffi::export]
+pub fn sync_request_purge(
+    index_json: String,
+    item_id: String,
+    lamport: u64,
+    device_id: String,
+    now_unix_s: u64,
+) -> String {
+    let mut index = LibraryIndex::from_json(&index_json);
+    index.request_purge(&item_id, lamport, &device_id, now_unix_s);
     index.to_json()
 }
 
@@ -398,6 +421,7 @@ mod tests {
             device: device.into(),
             deleted: false,
             deleted_at: 0,
+            purge_at: 0,
         }
     }
 

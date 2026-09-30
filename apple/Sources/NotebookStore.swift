@@ -1965,6 +1965,8 @@ public final class NotebookStore: ObservableObject {
 
     /// 永久刪除回收桶裡的一本。墓碑留著（不然別台會把它傳回來）。
     public func purgeNotebookPermanently(id: String) {
+        // 先把「立即永久刪除」寫進墓碑，再清本機 —— 雲端那一半與別台的副本靠它自然完成。
+        AccountSyncStore.shared.recordPurgeRequest(id: id)
         purgeLocally(id: id)
         persistData()
     }
@@ -1984,7 +1986,10 @@ public final class NotebookStore: ObservableObject {
     @discardableResult
     public func emptyTrash() -> Int {
         let ids = trashedNotebooks.map(\.id)
-        for id in ids { purgeLocally(id: id) }
+        for id in ids {
+            AccountSyncStore.shared.recordPurgeRequest(id: id)
+            purgeLocally(id: id)
+        }
         if !ids.isEmpty { persistData() }
         return ids.count
     }

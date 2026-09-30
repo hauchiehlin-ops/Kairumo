@@ -53,7 +53,7 @@ class DriveHttpClient(
     }
 
     override fun getJson(url: String, query: List<FfiQueryParam>): String {
-        val built = url.toHttpUrl().newBuilder().apply {
+        val built = FakeDrive.rewrite(url).toHttpUrl().newBuilder().apply {
             // 讓 OkHttp 做百分號編碼 —— Drive 的 `q=` 裡有空格、單引號與括號，
             // 自己拼字串很容易漏掉其中一種。
             query.forEach { addQueryParameter(it.name, it.value) }
@@ -62,7 +62,7 @@ class DriveHttpClient(
     }
 
     override fun getBytes(url: String, range: FfiByteRange?): ByteArray {
-        val builder = Request.Builder().url(url).get()
+        val builder = Request.Builder().url(FakeDrive.rewrite(url)).get()
         if (range != null) {
             // 核心給的是半開區間 [start, end)，HTTP 的 Range 是**閉區間** ——
             // 尾端要減一。少減那個 1 會每次多拉一個位元組。
@@ -72,14 +72,14 @@ class DriveHttpClient(
     }
 
     override fun postJson(url: String, bodyJson: String): String =
-        text(Request.Builder().url(url).post(bodyJson.toRequestBody(JSON)))
+        text(Request.Builder().url(FakeDrive.rewrite(url)).post(bodyJson.toRequestBody(JSON)))
 
     override fun patchBytes(url: String, data: ByteArray) {
-        bytes(Request.Builder().url(url).patch(data.toRequestBody(OCTET_STREAM)))
+        bytes(Request.Builder().url(FakeDrive.rewrite(url)).patch(data.toRequestBody(OCTET_STREAM)))
     }
 
     override fun delete(url: String) {
-        bytes(Request.Builder().url(url).delete())
+        bytes(Request.Builder().url(FakeDrive.rewrite(url)).delete())
     }
 
     /**
@@ -92,7 +92,7 @@ class DriveHttpClient(
         val isUpdate = url.contains("/files/")
         val method = if (isUpdate) "PATCH" else "POST"
         val request = Request.Builder()
-            .url(url)
+            .url(FakeDrive.rewrite(url))
             .method(method, bodyJson.toRequestBody(JSON))
             .header("Authorization", "Bearer $accessToken")
             .build()
@@ -107,7 +107,7 @@ class DriveHttpClient(
     }
 
     override fun putBytes(url: String, data: ByteArray) {
-        bytes(Request.Builder().url(url).put(data.toRequestBody(OCTET_STREAM)))
+        bytes(Request.Builder().url(FakeDrive.rewrite(url)).put(data.toRequestBody(OCTET_STREAM)))
     }
 
     // ── 內部 ──────────────────────────────────────────────────

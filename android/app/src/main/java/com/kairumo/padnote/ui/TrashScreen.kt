@@ -212,7 +212,7 @@ fun TrashDialog(onDismiss: () -> Unit) {
             text = { Text(l("trash_delete_forever_confirm_message").replaceFirst("%@", title)) },
             confirmButton = {
                 TextButton(onClick = {
-                    NotebookTrash.purgeLocally(context, id)
+                    NotebookTrash.purgePermanently(context, id)
                     pendingDelete = null
                     version++
                 }) {

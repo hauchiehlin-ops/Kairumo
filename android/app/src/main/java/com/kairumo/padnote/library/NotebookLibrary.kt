@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.documentfile.provider.DocumentFile
 import com.kairumo.padnote.sync.FolderSync
 import java.io.File
+import uniffi.padnote_core.syncLiveNotebooks
 import uniffi.padnote_core.FfiMilestone
 import uniffi.padnote_core.PadnoteSession
 
@@ -76,11 +77,13 @@ object NotebookLibrary {
         deviceId: UInt,
         sort: Sort = Sort.MODIFIED,
         /** 只列這個資料夾底下的。null 表示最上層；傳 [ANY_FOLDER] 表示不分層全部列。 */
-        folderId: String? = ANY_FOLDER
+        folderId: String? = ANY_FOLDER,
+        /** 同步索引裡的標題（小寫 id → 標題）。預設讀真的索引；測試可以注入。 */
+        indexTitles: Map<String, String> = liveIndexTitles(context)
     ): List<Entry> {
         val entries = directory(context).listFiles()
             ?.filter { it.isDirectory && it.name.endsWith(".$EXTENSION") }
-            ?.mapNotNull { describe(it, deviceId) }
+            ?.mapNotNull { describe(it, deviceId, indexTitles) }
             // 另一台裝置刪掉的不要列出來。檔案這時可能還在本機硬碟上
             // （真正的清除是同步引擎的事），但它已經被刪了 ——
             // 還列出來的話，使用者在 A 上刪掉、走到 B 前面又看到它。
@@ -98,12 +101,31 @@ object NotebookLibrary {
         }
     }
 
-    private fun describe(path: File, deviceId: UInt): Entry? {
+    /**
+     * 同步索引裡還活著的筆記本的標題（小寫 id → 標題）。整份只解析一次 ——
+     * 逐本問的話，N 本筆記本就是 N 次解析整份索引。
+     */
+    fun liveIndexTitles(context: Context): Map<String, String> =
+        runCatching {
+            syncLiveNotebooks(AccountSyncStore.indexJson(context))
+                .filter { it.title.isNotBlank() }
+                .associate { it.id.lowercase() to it.title }
+        }.getOrDefault(emptyMap())
+
+    private fun describe(path: File, deviceId: UInt, indexTitles: Map<String, String>): Entry? {
         val session = runCatching { PadnoteSession.openExisting(path.absolutePath, deviceId) }
             .getOrNull() ?: return null
+        val id = path.nameWithoutExtension
         return Entry(
-            id = path.nameWithoutExtension,
-            title = runCatching { session.title() }.getOrDefault(path.nameWithoutExtension),
+            id = id,
+            // **標題以同步索引為權威**，索引沒有（或是空白）才用套件裡的。
+            //
+            // 標題存在兩個地方：套件內的標題 CRDT，與同步索引。Apple 更名只寫索引，
+            // 所以另一台（Android）如果只看套件，就會**永遠顯示舊名字** —— 在兩台真的模擬器上
+            // 重現過（iPad 改名之後 Android 同步完還是舊名）。Apple 匯入時本來就是
+            // 「索引權威」，這裡與它對齊。Android 自己更名時兩邊都寫，所以不會不一致。
+            title = indexTitles[id.lowercase()]
+                ?: runCatching { session.title() }.getOrDefault(id),
             pageCount = runCatching { session.pageCount().toInt() }.getOrDefault(0),
             path = path,
             // 取套件裡最新的那個檔案。目錄本身的 mtime 在某些檔案系統上
@@ -232,7 +254,8 @@ object NotebookLibrary {
             targetDir.mkdirs()
             tempDir.copyRecursively(targetDir, overwrite = true)
 
-            describe(targetDir, deviceId)?.also { entry ->
+            // 匯入的是一個外來的檔：索引裡還沒有它，標題只能取自套件。
+            describe(targetDir, deviceId, emptyMap())?.also { entry ->
                 AccountSyncStore.record(context, id = entry.id, title = entry.title, parentId = null)
             }
         } finally {

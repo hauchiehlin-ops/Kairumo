@@ -134,7 +134,7 @@ final class DriveHttpClient: FfiDriveHttp {
     }
 
     func getJson(url: String, query: [FfiQueryParam]) throws -> String {
-        guard var components = URLComponents(string: url) else {
+        guard var components = URLComponents(string: FakeDrive.rewrite(url)) else {
             throw FfiDriveError.Backend(detail: "bad_url")
         }
         // 交給 URLComponents 做百分號編碼 —— Drive 的 `q=` 裡有空格、
@@ -148,7 +148,7 @@ final class DriveHttpClient: FfiDriveHttp {
     }
 
     func getBytes(url: String, range: FfiByteRange?) throws -> Data {
-        guard let target = URL(string: url) else {
+        guard let target = URL(string: FakeDrive.rewrite(url)) else {
             throw FfiDriveError.Backend(detail: "bad_url")
         }
         var request = URLRequest(url: target)
@@ -161,7 +161,7 @@ final class DriveHttpClient: FfiDriveHttp {
     }
 
     func postJson(url: String, bodyJson: String) throws -> String {
-        guard let target = URL(string: url) else {
+        guard let target = URL(string: FakeDrive.rewrite(url)) else {
             throw FfiDriveError.Backend(detail: "bad_url")
         }
         var request = URLRequest(url: target)
@@ -173,7 +173,7 @@ final class DriveHttpClient: FfiDriveHttp {
     }
 
     func patchBytes(url: String, data: Data) throws {
-        guard let target = URL(string: url) else {
+        guard let target = URL(string: FakeDrive.rewrite(url)) else {
             throw FfiDriveError.Backend(detail: "bad_url")
         }
         var request = URLRequest(url: target)
@@ -188,7 +188,7 @@ final class DriveHttpClient: FfiDriveHttp {
     /// Drive 把工作階段 URI 放在**回應標頭 `Location`** 裡，不是 body ——
     /// 這就是為什麼這一步必須由平台做，核心看不到標頭。
     func startResumable(url: String, bodyJson: String) throws -> String {
-        guard let target = URL(string: url) else {
+        guard let target = URL(string: FakeDrive.rewrite(url)) else {
             throw FfiDriveError.Backend(detail: "bad_url")
         }
         var request = URLRequest(url: target)
@@ -208,7 +208,7 @@ final class DriveHttpClient: FfiDriveHttp {
     }
 
     func putBytes(url: String, data: Data) throws {
-        guard let target = URL(string: url) else {
+        guard let target = URL(string: FakeDrive.rewrite(url)) else {
             throw FfiDriveError.Backend(detail: "bad_url")
         }
         var request = URLRequest(url: target)
@@ -219,7 +219,7 @@ final class DriveHttpClient: FfiDriveHttp {
     }
 
     func delete(url: String) throws {
-        guard let target = URL(string: url) else {
+        guard let target = URL(string: FakeDrive.rewrite(url)) else {
             throw FfiDriveError.Backend(detail: "bad_url")
         }
         var request = URLRequest(url: target)

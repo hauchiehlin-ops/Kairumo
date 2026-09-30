@@ -48,6 +48,13 @@
 
 核心已驗證；Apple、Android、多裝置實機流程見 `docs/TODO.md` 的 S-PURGE。
 
+### 補記：三台模擬器的多機實測
+
+用本機假 Drive（`scripts/fake-drive-server.py`）讓 iPad、iPhone、Android 模擬器共用一個「雲端」，
+`scripts/multi-device-run.sh` 依序跑完 建立→更名→刪除→落後→清空→確認→雲端清除。
+抓到兩個單機測試看不到的問題：Android 更名後標題陳舊（改以索引標題為準）、清空時有裝置落後
+會拖到 30 天（墓碑加 `purge_at`）。全劇本通過。未查：iPad 更名／刪除進雲端索引約 2 分鐘。
+
 ## 2026-09-29 · 秒同步：焦點通道 + 區網直連
 
 使用者回報雲端同步太慢，跨設備、跨平台都是，要求重新思考設計。

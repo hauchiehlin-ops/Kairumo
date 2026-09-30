@@ -18,7 +18,7 @@ use std::collections::{BTreeMap, BTreeSet};
 
 use serde::{Deserialize, Serialize};
 
-use crate::library::{ItemKind, LibraryIndex};
+use crate::library::{ItemKind, LibraryIndex, LibraryItem};
 
 /// 預設保留天數。
 pub const DEFAULT_RETENTION_DAYS: u32 = 30;
@@ -81,10 +81,7 @@ pub fn trash(index: &LibraryIndex, now: u64, policy: RetentionPolicy) -> Vec<Tra
         .values()
         .filter(|i| i.deleted && i.kind == ItemKind::Notebook)
         .map(|i| {
-            let expires_at = match (i.deleted_at, policy.seconds()) {
-                (Some(t), Some(span)) => Some(t.saturating_add(span)),
-                _ => None,
-            };
+            let expires_at = expiry(i, policy);
             let days_left = expires_at.map(|e| {
                 if now >= e {
                     0
@@ -114,16 +111,24 @@ pub fn trash(index: &LibraryIndex, now: u64, policy: RetentionPolicy) -> Vec<Tra
 /// `lamport` 必須大於索引裡已見過的任何時戳（呼叫端的邏輯時鐘），否則蓋章寫不贏
 /// 原本的墓碑。回傳蓋了幾個。
 pub fn stamp_legacy(index: &mut LibraryIndex, now: u64, lamport: u64, device: &str) -> usize {
-    let legacy: Vec<String> = index
+    let legacy: Vec<LibraryItem> = index
         .items
         .values()
-        .filter(|i| i.deleted && i.deleted_at.is_none())
-        .map(|i| i.id.clone())
+        // 已經要求立即永久刪除的不必蓋章：它已經期滿，而且蓋章會把那個要求蓋掉。
+        .filter(|i| i.deleted && i.deleted_at.is_none() && i.purge_at.is_none())
+        .cloned()
         .collect();
-    for id in &legacy {
-        index.tombstone_at(id, lamport, device, now);
+    let stamped = legacy.len();
+    for base in legacy {
+        // 只改時戳、裝置與刪除時間，其餘欄位（標題、上層、…）原封不動。
+        index.upsert(LibraryItem {
+            lamport,
+            device: device.to_string(),
+            deleted_at: Some(now),
+            ..base
+        });
     }
-    legacy.len()
+    stamped
 }
 
 /// 索引裡看過的最大 lamport —— 「我這台已經合併到哪裡」。
@@ -131,9 +136,22 @@ pub fn max_lamport(index: &LibraryIndex) -> u64 {
     index.items.values().map(|i| i.lamport).max().unwrap_or(0)
 }
 
-/// 某個墓碑期滿了嗎？沒有起算點、或政策是「永不」，都不算期滿。
-fn expired_at(deleted_at: Option<u64>, policy: RetentionPolicy) -> Option<u64> {
-    Some(deleted_at?.saturating_add(policy.seconds()?))
+/// 某個墓碑什麼時候期滿（Unix 秒）。`None` = 不會期滿。
+///
+/// 兩個來源取**較早**的：
+/// - 保留期：`deleted_at + 保留天數`。沒有 `deleted_at`（舊墓碑）或政策是「永不」就沒有。
+/// - 使用者要求立即永久刪除：`purge_at`。**不管保留期怎麼設**（甚至是「永不」）都算數 ——
+///   那是使用者明確說「現在就刪」，見 [`LibraryItem::purge_at`]。
+fn expiry(item: &LibraryItem, policy: RetentionPolicy) -> Option<u64> {
+    let by_policy = item
+        .deleted_at
+        .zip(policy.seconds())
+        .map(|(at, span)| at.saturating_add(span));
+    match (item.purge_at, by_policy) {
+        (Some(p), Some(e)) => Some(p.min(e)),
+        (Some(p), None) => Some(p),
+        (None, e) => e,
+    }
 }
 
 // ─── 裝置確認 ────────────────────────────────────────────────────────────────
@@ -324,7 +342,7 @@ pub fn plan_purge(
         if !(item.deleted && item.kind == ItemKind::Notebook) {
             continue;
         }
-        let Some(expires_at) = expired_at(item.deleted_at, policy) else {
+        let Some(expires_at) = expiry(item, policy) else {
             continue;
         };
         if now < expires_at {
@@ -369,6 +387,7 @@ mod tests {
             device: "dev-a".into(),
             deleted: false,
             deleted_at: None,
+            purge_at: None,
         }
     }
 
@@ -954,5 +973,204 @@ mod tests {
             &BTreeMap::new(),
         );
         assert_eq!(got, ["notebooks/ghost/doc/ops/a.bin"]);
+    }
+
+    // ─── 使用者要求立即永久刪除（purge_at）───
+
+    /// 一本在 `T0` 被刪、並在 `T0 + 1 天` 被使用者要求立即永久刪除的筆記本。
+    fn index_with_purge_requested(id: &str) -> LibraryIndex {
+        let mut index = index_with_trashed(id);
+        assert!(index.request_purge(id, 11, "dev-a", T0 + days(1)));
+        index
+    }
+
+    #[test]
+    fn a_purge_request_expires_the_tombstone_at_once() {
+        let index = index_with_purge_requested("nb");
+        // 保留期 30 天，才過 1 天 —— 但使用者已經說「現在就刪」。
+        let plan = plan_purge(
+            &index,
+            T0 + days(1),
+            RetentionPolicy::Days(30),
+            &devices(&["me"]),
+            &BTreeMap::new(),
+            "me",
+        );
+        assert_eq!(plan.local, ["nb"]);
+        assert_eq!(plan.cloud, ["nb"]);
+    }
+
+    #[test]
+    fn a_purge_request_beats_a_retention_of_forever() {
+        let index = index_with_purge_requested("nb");
+        let plan = plan_purge(
+            &index,
+            T0 + days(2),
+            RetentionPolicy::Forever,
+            &devices(&["me"]),
+            &BTreeMap::new(),
+            "me",
+        );
+        assert_eq!(
+            plan.cloud,
+            ["nb"],
+            "「永不自動清除」管的是自動，不是使用者明說的立即刪除"
+        );
+    }
+
+    #[test]
+    fn a_purge_request_still_waits_for_every_required_device() {
+        let index = index_with_purge_requested("nb");
+        let now = T0 + days(2);
+        let known = devices(&["me", "phone"]);
+
+        // phone 只看到 lamport 10（刪除），還沒看到 11（要求立即刪除）—— 不能算確認。
+        let acks = BTreeMap::from([("phone".to_string(), ack(10, now - 5))]);
+        let plan = plan_purge(&index, now, RetentionPolicy::Days(30), &known, &acks, "me");
+        assert!(plan.cloud.is_empty());
+        assert_eq!(plan.waiting[0].missing_devices, ["phone"]);
+
+        // 確認到 11 之後放行。
+        let acks = BTreeMap::from([("phone".to_string(), ack(11, now - 5))]);
+        let plan = plan_purge(&index, now, RetentionPolicy::Days(30), &known, &acks, "me");
+        assert_eq!(plan.cloud, ["nb"]);
+    }
+
+    #[test]
+    fn an_old_app_gets_its_grace_counted_from_the_purge_request() {
+        let index = index_with_purge_requested("nb");
+        let known = devices(&["me", "old-app"]);
+        let requested = T0 + days(1);
+        let none = BTreeMap::new();
+
+        // 要求當天：沒有確認檔的舊版裝置，多等 90 天。
+        let plan = plan_purge(
+            &index,
+            requested,
+            RetentionPolicy::Days(30),
+            &known,
+            &none,
+            "me",
+        );
+        assert!(plan.cloud.is_empty());
+        let plan = plan_purge(
+            &index,
+            requested + days(90),
+            RetentionPolicy::Days(30),
+            &known,
+            &none,
+            "me",
+        );
+        assert_eq!(plan.cloud, ["nb"]);
+    }
+
+    #[test]
+    fn the_trash_listing_shows_a_purged_item_as_expired() {
+        let index = index_with_purge_requested("nb");
+        let entry = &trash(&index, T0 + days(2), RetentionPolicy::Days(30))[0];
+        assert_eq!(entry.days_left, Some(0));
+        assert_eq!(entry.expires_at, Some(T0 + days(1)));
+        // 保留期是「永不」時也一樣：要求立即刪除的有倒數，而且是 0。
+        let entry = &trash(&index, T0 + days(2), RetentionPolicy::Forever)[0];
+        assert_eq!(entry.days_left, Some(0));
+    }
+
+    #[test]
+    fn restoring_clears_a_purge_request() {
+        let mut index = index_with_purge_requested("nb");
+        assert!(index.restore("nb", 12, "dev-b"));
+        let item = &index.items["nb"];
+        assert!(!item.deleted);
+        assert_eq!((item.deleted_at, item.purge_at), (None, None));
+    }
+
+    #[test]
+    fn a_fresh_delete_does_not_inherit_an_old_purge_request() {
+        let mut index = index_with_purge_requested("nb");
+        index.restore("nb", 12, "dev-b");
+        index.tombstone_at("nb", 13, "dev-b", T0 + days(5));
+        let item = &index.items["nb"];
+        assert!(item.deleted);
+        assert_eq!(
+            item.purge_at, None,
+            "再刪一次要重新進回收桶，不是馬上被清掉"
+        );
+        let plan = plan_purge(
+            &index,
+            T0 + days(6),
+            RetentionPolicy::Days(30),
+            &devices(&["me"]),
+            &BTreeMap::new(),
+            "me",
+        );
+        assert_eq!(plan, PurgePlan::default());
+    }
+
+    #[test]
+    fn a_purge_request_only_applies_to_something_in_the_trash() {
+        let mut index = LibraryIndex::default();
+        index.upsert(live("alive", 1));
+        assert!(
+            !index.request_purge("alive", 5, "dev-a", T0),
+            "還活著的不能被要求永久刪除"
+        );
+        assert!(
+            !index.request_purge("ghost", 5, "dev-a", T0),
+            "索引裡沒有的也不行"
+        );
+        assert!(!index.items["alive"].deleted);
+    }
+
+    #[test]
+    fn a_purge_request_fills_in_a_missing_deletion_time() {
+        let mut index = LibraryIndex::default();
+        index.upsert(live("nb", 1));
+        index.tombstone("nb", 2, "dev-a"); // 舊墓碑：沒有刪除時間
+        assert!(index.request_purge("nb", 3, "dev-a", T0));
+        assert_eq!(index.items["nb"].deleted_at, Some(T0));
+    }
+
+    #[test]
+    fn stamping_never_overwrites_a_purge_request() {
+        let mut index = LibraryIndex::default();
+        index.upsert(live("nb", 1));
+        index.tombstone("nb", 2, "dev-a");
+        index.request_purge("nb", 3, "dev-a", T0);
+        // 補蓋章不該再碰它（它已經有刪除時間，也已經期滿）。
+        assert_eq!(stamp_legacy(&mut index, T0 + 999, 20, "dev-b"), 0);
+        assert_eq!(index.items["nb"].purge_at, Some(T0));
+    }
+
+    #[test]
+    fn stamping_keeps_every_other_field() {
+        let mut index = LibraryIndex::default();
+        index.upsert(LibraryItem {
+            parent_id: Some("folder".into()),
+            ..live("nb", 1)
+        });
+        index.tombstone("nb", 2, "dev-a");
+        stamp_legacy(&mut index, T0, 20, "dev-b");
+        let item = &index.items["nb"];
+        assert_eq!(item.title, "title-nb");
+        assert_eq!(
+            item.parent_id.as_deref(),
+            Some("folder"),
+            "補蓋章不能把它搬回最上層"
+        );
+    }
+
+    #[test]
+    fn a_purge_request_and_a_restore_converge_regardless_of_order() {
+        let base = index_with_trashed("nb");
+        let mut purged = base.clone();
+        purged.request_purge("nb", 11, "dev-a", T0 + days(1));
+        let mut restored = base.clone();
+        restored.restore("nb", 12, "dev-b");
+
+        let (mut a, mut b) = (purged.clone(), restored.clone());
+        a.merge(&restored);
+        b.merge(&purged);
+        assert_eq!(a, b);
+        assert!(!a.items["nb"].deleted, "較大的 lamport（還原）要贏");
     }
 }

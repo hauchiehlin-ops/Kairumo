@@ -117,10 +117,22 @@ object NotebookTrash {
         return expired.size
     }
 
-    /** 清空回收桶（使用者按了「立即清除」）。雲端那一半由呼叫端接著觸發回收。 */
+    /**
+     * 永久刪除回收桶裡的一本（使用者按了「永久刪除」）。
+     *
+     * 先把「立即永久刪除」寫進墓碑，再清本機 —— 雲端那一半與別台的副本靠它自然完成
+     * （見 [AccountSyncStore.recordPurgeRequest]）。與 [purgeLocally] 的差別：後者只動本機、
+     * 不記任何東西，給期滿清除與測試用。
+     */
+    fun purgePermanently(context: Context, id: String) {
+        AccountSyncStore.recordPurgeRequest(context, id)
+        purgeLocally(context, id)
+    }
+
+    /** 清空回收桶（使用者按了「清空」）。雲端那一半由呼叫端接著觸發回收。 */
     fun empty(context: Context): Int {
         val ids = trashedIds(context)
-        ids.forEach { purgeLocally(context, it) }
+        ids.forEach { purgePermanently(context, it) }
         return ids.size
     }
 }

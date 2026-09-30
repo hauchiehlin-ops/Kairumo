@@ -2256,6 +2256,7 @@ mod tests {
             device: device.into(),
             deleted: false,
             deleted_at: 0,
+            purge_at: 0,
         }
     }
 
@@ -3644,6 +3645,7 @@ mod tests {
                 device: "dev-a".to_string(),
                 deleted: false,
                 deleted_at: None,
+                purge_at: None,
             });
         }
         library.tombstone_at("gone", 10, "dev-a", gone_deleted_at);
@@ -3803,6 +3805,54 @@ mod tests {
         );
     }
 
+    // ─── 使用者要求立即永久刪除：寫進墓碑，之後的一般同步輪自然完成 ───
+
+    #[test]
+    fn a_purge_request_completes_the_cloud_half_on_a_plain_sync_round_once_devices_confirm() {
+        // 昨天才刪、保留期 30 天 —— 照理還在回收桶裡。但使用者按了「永久刪除」（lamport 11）。
+        let mut library = gc_library(GC_NOW - GC_DAY);
+        assert!(library.request_purge("gone", 11, "dev-a", GC_NOW - 60));
+
+        // dev-b 只看到刪除（lamport 10），還沒看到永久刪除的要求：雲端要留著。
+        let (fake, session) = gc_session(&[
+            ("sync/dev-b/log-1.bin", vec![1]),
+            ("sync/dev-b/ack.json", ack_bytes(10, GC_NOW - 30)),
+        ]);
+        // **注意 `empty_trash = false`**：這是一輪普通的同步，不是按鈕當下的那一次。
+        let waiting = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 30, false);
+        assert_eq!(waiting.deleted, 0, "另一台還沒確認，雲端不能動");
+        assert_eq!(waiting.waiting_devices, ["dev-b"]);
+        assert!(
+            remote_names(&fake)
+                .iter()
+                .any(|n| n.contains("notebooks/gone/"))
+        );
+
+        // dev-b 確認到 11 之後，**下一輪普通的同步**就該把雲端清掉，使用者不必再按一次。
+        let (fake, session) = gc_session(&[
+            ("sync/dev-b/log-1.bin", vec![1]),
+            ("sync/dev-b/ack.json", ack_bytes(11, GC_NOW - 10)),
+        ]);
+        let done = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 30, false);
+        assert!(done.ok, "{}", done.error);
+        assert_eq!(done.deleted, 2, "gone 的兩個檔案");
+        let names = remote_names(&fake);
+        assert!(!names.iter().any(|n| n.contains("notebooks/gone/")));
+        assert!(
+            names.iter().any(|n| n.contains("notebooks/live/")),
+            "活著的不能動"
+        );
+    }
+
+    #[test]
+    fn a_purge_request_works_even_with_a_retention_of_forever() {
+        let mut library = gc_library(GC_NOW - GC_DAY);
+        library.request_purge("gone", 11, "dev-a", GC_NOW - 60);
+        let (_, session) = gc_session(&[]);
+        let result = session.collect_garbage(library.to_json(), "dev-a".into(), GC_NOW, 0, false);
+        assert_eq!(result.deleted, 2);
+    }
+
     #[test]
     fn an_orphan_waits_for_a_device_that_has_not_synced_since_it_was_written() {
         let (fake, session) = gc_session(&[
@@ -3936,6 +3986,7 @@ mod tests {
             device: "dev-a".into(),
             deleted: false,
             deleted_at: None,
+            purge_at: None,
         });
         library.to_json()
     }

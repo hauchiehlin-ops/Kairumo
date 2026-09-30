@@ -85,7 +85,8 @@ public final class AccountSyncStore: ObservableObject {
             lamport: nextLamport(),
             device: deviceId,
             deleted: false,
-            deletedAt: 0
+            deletedAt: 0,
+            purgeAt: 0
         )
         setIndex(syncUpsertItem(indexJson: indexJSON, item: item))
     }
@@ -113,6 +114,23 @@ public final class AccountSyncStore: ObservableObject {
                 itemId: id,
                 lamport: nextLamport(),
                 deviceId: deviceId
+            )
+        )
+    }
+
+    /// 使用者要求**立即永久刪除**回收桶裡的一項（「永久刪除」與「清空回收桶」用）。
+    ///
+    /// 寫進墓碑，不是只在按下去的那一刻試一次：另一台裝置還沒確認時雲端檔案要留著，
+    /// 而使用者按完之後回收桶已經空了、按鈕停用了，沒有第二次機會。寫進墓碑之後，
+    /// 之後每一輪同步都會依它自然完成雲端那一半，所有裝置一致。
+    public func recordPurgeRequest(id: String) {
+        setIndex(
+            syncRequestPurge(
+                indexJson: indexJSON,
+                itemId: id,
+                lamport: nextLamport(),
+                deviceId: deviceId,
+                nowUnixS: TrashRetention.nowUnixSeconds()
             )
         )
     }

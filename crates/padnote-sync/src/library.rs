@@ -56,6 +56,18 @@ pub struct LibraryItem {
     /// 所以沒有時間的墓碑位元組與過去完全相同（格式相容）。
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deleted_at: Option<u64>,
+    /// 使用者要求**立即永久刪除**的時間（Unix 秒）。只有墓碑有意義。
+    ///
+    /// 「清空回收桶」與「永久刪除」寫的是這個。它讓墓碑**立即期滿**（不管保留期設多少、
+    /// 甚至是「永不」），而且是**寫進索引的事實**，所有裝置一致、之後每一輪同步都會依它
+    /// 自然完成雲端那一半 —— 不是一次性的動作。原本只是「按下去的那一刻試一次」：
+    /// 另一台還沒確認時雲端檔案會留著，而回收桶已經空了、按鈕停用了，使用者沒有第二次機會，
+    /// 結果雲端檔案要等滿保留期（預設 30 天）才會被清。
+    ///
+    /// 雲端仍然要等所有必要裝置確認（見 [`crate::retention`]）。
+    /// 不參與仲裁；序列化時省略，沒設的位元組不變。
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub purge_at: Option<u64>,
 }
 
 impl LibraryItem {
@@ -122,8 +134,33 @@ impl LibraryIndex {
             device: device.to_string(),
             deleted: true,
             deleted_at,
+            // 一次新的刪除不繼承先前的「立即永久刪除」—— 那是對上一輪刪除說的。
+            purge_at: None,
         };
         self.upsert(item);
+    }
+
+    /// 使用者要求**立即永久刪除**一個已在回收桶裡的筆記本或資料夾：
+    /// 以更大的時戳重寫同一個墓碑並填入 `purge_at`。回傳有沒有真的寫。
+    ///
+    /// 沒有墓碑（還活著、或索引裡沒有）就不動 —— 這個動作只對回收桶裡的東西有意義。
+    /// 沒有刪除時間的舊墓碑會順便補上（`deleted_at = now`），刪除時間不能空著。
+    pub fn request_purge(&mut self, id: &str, lamport: u64, device: &str, now: u64) -> bool {
+        let norm_id = id.to_lowercase();
+        let Some(base) = self.items.get(&norm_id).cloned() else {
+            return false;
+        };
+        if !base.deleted {
+            return false;
+        }
+        self.upsert(LibraryItem {
+            lamport,
+            device: device.to_string(),
+            deleted_at: base.deleted_at.or(Some(now)),
+            purge_at: Some(now),
+            ..base
+        });
+        true
     }
 
     /// 從回收桶還原：以更大的 `lamport` 寫回「沒被刪」的同一個項目。
@@ -143,6 +180,7 @@ impl LibraryIndex {
             device: device.to_string(),
             deleted: false,
             deleted_at: None,
+            purge_at: None,
             ..base
         });
         true
@@ -328,6 +366,7 @@ mod user_scenario {
             device: device.to_string(),
             deleted: false,
             deleted_at: None,
+            purge_at: None,
         }
     }
 
@@ -462,6 +501,7 @@ mod tests {
             device: device.into(),
             deleted: false,
             deleted_at: None,
+            purge_at: None,
         }
     }
 
