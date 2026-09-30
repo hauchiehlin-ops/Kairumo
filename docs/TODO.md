@@ -734,6 +734,12 @@ MIME 的話整個退回「全部型別」而不是丟掉那幾種 —— 挑選�
   （Apple `sleepSyncServices`／Android `SyncWorker.cancel`），下一個事件（`request`、
   `note_remote_change`）叫醒並重新啟動。**刻意不自動結束 App**：iOS 不允許程式自己結束行程
   （App Store 審核不通過），而且「同步沒有變化」不代表使用者沒在用。
+- **已在模擬器上實測休眠**（iPad，假 Drive）：啟動後第一輪、+64 秒一輪（沒變動 → 安靜）、
+  +8 分鐘、+16 分鐘兩次守望掃描，之後**連續 12 分鐘沒有任何請求**；有事件才醒來，下一輪 64 秒後。
+- **壓實墓碑的源頭**（已修）：Apple 的 `exportPreservingOtherDevices` 先把這台舊的 oplog 全刪並記成墓碑、
+  再寫出新的，名字常常相同，墓碑於是記著現行檔案，下一輪同步把雲端上的現行檔案刪掉。
+  現在寫完新檔之後，把又存在的名字從墓碑濾掉（`testReExportNeverTombstonesAFileItJustWroteAgain`，
+  沒修時失敗）；核心的刪除段另有「本機現有的不刪」護欄。
 - **代價**：整庫通道上，A 寫完到 B 看得見最壞約 66 秒（`worst_case_visible_latency_ms`，
   承諾 `VISIBLE_LATENCY_BUDGET_MS` = 70 秒）。開著的那一本走焦點通道（≤ 2 秒）不受影響。
   B 如果整庫已安靜、又沒開著那一本，要等 B 下一次事件（進前景等）才會看到。

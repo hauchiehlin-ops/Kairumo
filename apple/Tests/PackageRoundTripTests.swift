@@ -625,6 +625,30 @@ final class PackageMultiDeviceTests: XCTestCase {
         XCTAssertFalse(files(of: deviceA, in: package).isEmpty, "A 自己的檔案要寫進去")
     }
 
+    func testReExportNeverTombstonesAFileItJustWroteAgain() throws {
+        // 重新匯出會把這台舊的 oplog 全刪、再寫出新的，名字常常一模一樣。墓碑裡如果躺著
+        // 現行檔案的名字，下一輪同步就會把雲端上剛上傳的現行檔案刪掉（實測：建立筆記本後第二次
+        // 啟動，雲端那本被刪光，另一台收不到）。
+        let package = workDir.appendingPathComponent("tombstone.padnote")
+        let doc = document("A")
+        let drawing = [PKDrawing(strokes: [stroke(at: 10)])]
+
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: doc, drawings: drawing, to: package, deviceId: deviceA)
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: doc, drawings: drawing, to: package, deviceId: deviceA)
+
+        let live = Set(
+            (try? FileManager.default.contentsOfDirectory(
+                atPath: package.appendingPathComponent("doc/ops").path)) ?? [])
+        let tombstones = ((try? String(
+            contentsOf: package.appendingPathComponent("doc/ops/compaction.tombstones"))) ?? "")
+            .split(separator: "\n").map(String.init)
+        for name in tombstones {
+            XCTAssertFalse(live.contains(name), "墓碑記著現行檔案 \(name)，同步會把它從雲端刪掉")
+        }
+    }
+
     func testBothDevicesStrokesLandOnTheSamePage() throws {
         // 檔案還在還不夠 —— 兩邊的筆畫要落在**同一頁**上。
         // 頁面 id 沒有沿用的話，合併之後不是一頁有兩邊的內容，而是變成兩頁。

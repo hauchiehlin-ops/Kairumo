@@ -40,7 +40,7 @@ android() {
   # **不用 gradle 的 connectedAndroidTest**：它每次跑完都會把 App 解除安裝，
   # 上一步下載的筆記本就跟著沒了。改成先裝一次，每一步用 `am instrument` 直接跑。
   out=$("$SDK/platform-tools/adb" shell am instrument -w -r \
-      -e class "com.kairumo.padnote.library.MultiDeviceSyncTest#$1" \
+      -e multiDevice true -e class "com.kairumo.padnote.library.MultiDeviceSyncTest#$1" \
       com.kairumo.padnote.test/androidx.test.runner.AndroidJUnitRunner 2>&1)
   if echo "$out" | grep -q "^OK (1 test)\|OK (1 tests)"; then echo "PASS android $1"; else
     echo "FAIL android $1"; echo "$out" | grep -E "stack=|INSTRUMENTATION_RESULT|Failure|Assertion" | head -5 | cut -c1-300; fail=1; fi

@@ -4,6 +4,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.json.JSONObject
 import org.junit.After
+import org.junit.Assume
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
@@ -39,6 +40,11 @@ class MultiDeviceSyncTest {
 
     @Before
     fun useTheFakeDrive() {
+        // 這些是三台裝置劇本的**其中一步**，要配合假 Drive 與 iPad／iPhone 的步驟依序跑
+        // （scripts/multi-device-run.sh 會帶 `-e multiDevice true`）。整套儀器測試時沒有
+        // 劇本，單獨跑只會紅 —— 所以預設跳過。
+        val args = InstrumentationRegistry.getArguments()
+        Assume.assumeTrue("三台裝置劇本的一步：只在 multi-device-run.sh 下執行", args.getString("multiDevice") == "true")
         System.setProperty("kairumo.fakeDrive", server)
     }
 

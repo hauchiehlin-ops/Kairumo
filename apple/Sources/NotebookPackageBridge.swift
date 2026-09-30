@@ -525,6 +525,28 @@ enum NotebookPackageBridge {
             let bytes = try Data(contentsOf: src)
             try bytes.write(to: dst, options: .atomic)
         }
+        // 3. 墓碑只該記「舊的、而且沒有被重新寫出來」的名字。
+        //
+        // 上面第 1 步把這台舊的 oplog 全刪了、記成墓碑；第 2 步又寫出新的 ——
+        // 名字常常一模一樣（lamport 從頭數）。不處理的話，墓碑裡躺著**現行檔案**的名字，
+        // 下一輪同步就照墓碑把雲端上剛上傳的現行檔案刪掉（實測：建立筆記本後第二次啟動，
+        // 雲端那本被刪光，另一台收不到）。核心那邊也有護欄，這裡是從源頭不寫錯。
+        if !deletedDocOps.isEmpty {
+            let tombstonePath = destination.appending(path: "doc/ops/compaction.tombstones")
+            let liveOps = Set(
+                (try? fm.contentsOfDirectory(atPath: destination.appending(path: "doc/ops").path)) ?? []
+            )
+            let remaining = ((try? String(contentsOf: tombstonePath)) ?? "")
+                .split(separator: "\n")
+                .map { String($0).trimmingCharacters(in: .whitespaces) }
+                .filter { !$0.isEmpty && !liveOps.contains($0) }
+            if remaining.isEmpty {
+                try? fm.removeItem(at: tombstonePath)
+            } else {
+                try? (remaining.joined(separator: "\n") + "\n")
+                    .write(to: tombstonePath, atomically: true, encoding: .utf8)
+            }
+        }
         return summary
     }
 
