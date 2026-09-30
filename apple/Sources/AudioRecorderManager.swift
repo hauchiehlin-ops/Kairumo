@@ -57,7 +57,9 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
     /// 錄音檔預設儲存位置：本機文件資料夾（自動新設「Kairumo Record」資料夾）
     public var recordingsDirectory: URL {
-        let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+        // 舊格式的散裝錄音也要跟著使用者選定的主要文件庫走；否則切換位置後
+        // 筆記在新目錄、錄音仍留在 App container，備份與遷移就會漏檔。
+        let docs = DocumentStorageLocation.shared.rootURL
         let kairumoRecordDir = docs.appendingPathComponent("Kairumo Record", isDirectory: true)
 
         if !FileManager.default.fileExists(atPath: kairumoRecordDir.path) {

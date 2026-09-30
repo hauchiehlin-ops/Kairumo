@@ -142,4 +142,37 @@ final class MacReleaseConfigTests: XCTestCase {
         XCTAssertTrue(script.contains("variant=Mac Catalyst"), "發行腳本沒有封裝 Mac 版")
         XCTAssertTrue(script.contains("\"macos\""), "發行腳本沒有以 macos 平台上傳")
     }
+
+    // MARK: - 2.4.5(i)：使用者可存取的主要文件庫
+
+    func testPrimaryLibraryUsesAUserSelectedPersistentLocation() throws {
+        let location = try read("Sources/DocumentStorageLocation.swift")
+        XCTAssertTrue(location.contains("Kairumo Doc"), "預設文件庫名稱必須穩定且可辨識")
+        XCTAssertTrue(
+            location.contains("withSecurityScope"),
+            "Mac 重新啟動後必須仍能存取使用者選擇的位置"
+        )
+
+        let picker = try read("Sources/StorageLocationView.swift")
+        XCTAssertTrue(picker.contains(".fileImporter"), "必須使用標準系統資料夾選擇器")
+        XCTAssertTrue(picker.contains("allowedContentTypes: [.folder]"), "選擇器必須選資料夾")
+    }
+
+    func testNotebookStoreContinuouslyUsesTheSelectedPrimaryLibrary() throws {
+        let store = try read("Sources/NotebookStore.swift")
+        XCTAssertTrue(
+            store.contains("DocumentStorageLocation.shared.rootURL"),
+            "筆記本與錄音必須持續讀寫使用者選擇的主要文件庫"
+        )
+        XCTAssertTrue(
+            store.contains("func moveStorage(toParentFolder folder:"),
+            "變更位置時必須遷移現有資料並重新載入"
+        )
+
+        let root = try read("Examples/HomeWorkbenchUsage.swift")
+        XCTAssertTrue(
+            root.contains("requiresMacSelection"),
+            "Mac 初次啟動必須先讓使用者選擇可存取的位置"
+        )
+    }
 }

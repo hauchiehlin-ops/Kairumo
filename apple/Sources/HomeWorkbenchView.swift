@@ -39,6 +39,7 @@ public struct HomeWorkbenchView: View {
     @State private var showNotebookSnapshotSheet: Bool = false
     @State private var showBackupRestoreSheet: Bool = false
     @State private var showFolderSyncSheet: Bool = false
+    @State private var showStorageLocationSheet: Bool = false
     @State private var showAccountSheet: Bool = false
     @State private var showNewNotebookSheet: Bool = false
     /// 建立**加密**筆記本的流程（H-CRYPTO）。與一般新增分開：
@@ -377,6 +378,9 @@ public struct HomeWorkbenchView: View {
             } }
             .sheet(isPresented: $showFolderSyncSheet) { resizableSheet {
                 FolderSyncDetailSheet()
+            } }
+            .sheet(isPresented: $showStorageLocationSheet) { resizableSheet {
+                StorageLocationView(isRequired: false)
             } }
             .sheet(isPresented: $showNewNotebookSheet) { resizableSheet {
                 newNotebookModal
@@ -1846,6 +1850,10 @@ public struct HomeWorkbenchView: View {
                 columns: [GridItem(.adaptive(minimum: 280, maximum: .infinity), spacing: 12)],
                 spacing: 12
             ) {
+                dataCard("externaldrive.fill.badge.checkmark", "storage_library_title",
+                         "storage_library_subtitle", .blue) {
+                    showStorageLocationSheet = true
+                }
                 unifiedSyncCard
                 dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
                          "sync_folder_desc", .teal) { showFolderSyncSheet = true }
@@ -2451,6 +2459,7 @@ public struct HomeWorkbenchView: View {
         case "backup_create": return "home.data.backup"
         case "backup_restore": return "home.data.restore"
         case "sync_choose_folder": return "home.data.folder"
+        case "storage_library_title": return "home.data.storage"
         default: return ""
         }
     }

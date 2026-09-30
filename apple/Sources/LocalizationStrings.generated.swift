@@ -10240,6 +10240,46 @@ extension LocalizationManager {
             .ko: "녹음 중지",
             .th: "หยุดบันทึก"
         ],
+        "storage_choose_parent": [
+            .zhHant: "選擇文件資料夾…",
+            .en: "Choose Document Folder…",
+            .zhHans: "选择文件文件夹…",
+            .ja: "書類フォルダを選択…",
+            .ko: "문서 폴더 선택…",
+            .th: "เลือกโฟลเดอร์เอกสาร…"
+        ],
+        "storage_current_location": [
+            .zhHant: "目前主要資料庫",
+            .en: "Current primary library",
+            .zhHans: "当前主要资料库",
+            .ja: "現在のメインライブラリ",
+            .ko: "현재 기본 라이브러리",
+            .th: "คลังหลักปัจจุบัน"
+        ],
+        "storage_library_explainer": [
+            .zhHant: "請選擇可在 Finder 或「檔案」中存取的資料夾。Kairumo 會在其中建立「Kairumo Doc」，安全搬移目前資料庫，並持續將筆記本、錄音與附件儲存到該位置。",
+            .en: "Choose a folder you can access in Finder or Files. Kairumo creates “Kairumo Doc” there, moves the current library safely, and continuously saves notebooks, recordings, and attachments to that location.",
+            .zhHans: "请选择可在 Finder 或“文件”中访问的文件夹。Kairumo 会在其中建立“Kairumo Doc”，安全迁移当前资料库，并持续将笔记本、录音和附件保存到该位置。",
+            .ja: "Finder またはファイルからアクセスできるフォルダを選択してください。Kairumo はその中に「Kairumo Doc」を作成し、現在のライブラリを安全に移動して、ノート、録音、添付ファイルを継続的に保存します。",
+            .ko: "Finder 또는 파일 앱에서 접근할 수 있는 폴더를 선택하세요. Kairumo는 그 안에 ‘Kairumo Doc’을 만들고 현재 라이브러리를 안전하게 이동한 뒤 노트, 녹음 및 첨부 파일을 계속 저장합니다.",
+            .th: "เลือกโฟลเดอร์ที่คุณเข้าถึงได้ใน Finder หรือแอปไฟล์ Kairumo จะสร้าง “Kairumo Doc” ที่นั่น ย้ายคลังปัจจุบันอย่างปลอดภัย และบันทึกสมุดบันทึก เสียงบันทึก และไฟล์แนบลงในตำแหน่งนั้นอย่างต่อเนื่อง"
+        ],
+        "storage_library_subtitle": [
+            .zhHant: "選擇 Kairumo 持續儲存文件的位置",
+            .en: "Choose where Kairumo continuously stores your documents",
+            .zhHans: "选择 Kairumo 持续保存文件的位置",
+            .ja: "Kairumo が書類を継続的に保存する場所を選択",
+            .ko: "Kairumo가 문서를 계속 저장할 위치 선택",
+            .th: "เลือกตำแหน่งที่ Kairumo ใช้บันทึกเอกสารอย่างต่อเนื่อง"
+        ],
+        "storage_library_title": [
+            .zhHant: "主要文件資料庫",
+            .en: "Primary Document Library",
+            .zhHans: "主要文件资料库",
+            .ja: "メイン書類ライブラリ",
+            .ko: "기본 문서 라이브러리",
+            .th: "คลังเอกสารหลัก"
+        ],
         "storage_location": [
             .zhHant: "資料儲存位置",
             .en: "Data Storage Location",
@@ -10247,6 +10287,22 @@ extension LocalizationManager {
             .ja: "データ保存先",
             .ko: "데이터 저장 위치",
             .th: "ตำแหน่งจัดเก็บข้อมูล"
+        ],
+        "storage_move_complete": [
+            .zhHant: "主要資料庫現已持續儲存到所選位置。",
+            .en: "The primary library is now continuously saved at the selected location.",
+            .zhHans: "主要资料库现已持续保存到所选位置。",
+            .ja: "メインライブラリは選択した場所に継続的に保存されます。",
+            .ko: "이제 기본 라이브러리가 선택한 위치에 계속 저장됩니다.",
+            .th: "ขณะนี้คลังหลักจะถูกบันทึกอย่างต่อเนื่องในตำแหน่งที่เลือก"
+        ],
+        "storage_sync_explainer": [
+            .zhHant: "此位置僅屬於本裝置。跨設備更新會使用穩定的筆記本 ID，以及您設定的 Google Drive 或資料夾同步，因此 Mac、iPhone、iPad 與 Android 都不依賴其他裝置的本機路徑。",
+            .en: "This location is local to this device. Cross-device updates use stable notebook IDs and your configured Google Drive or folder sync, so Mac, iPhone, iPad, and Android never depend on another device’s local path.",
+            .zhHans: "此位置仅属于本设备。跨设备更新会使用稳定的笔记本 ID，以及您设置的 Google Drive 或文件夹同步，因此 Mac、iPhone、iPad 和 Android 都不依赖其他设备的本机路径。",
+            .ja: "この場所はこの端末専用です。端末間の更新には安定したノート ID と、設定済みの Google Drive またはフォルダ同期を使用するため、Mac、iPhone、iPad、Android が別端末のローカルパスに依存することはありません。",
+            .ko: "이 위치는 이 기기에만 적용됩니다. 기기 간 업데이트는 안정적인 노트 ID와 설정된 Google Drive 또는 폴더 동기화를 사용하므로 Mac, iPhone, iPad 및 Android는 다른 기기의 로컬 경로에 의존하지 않습니다.",
+            .th: "ตำแหน่งนี้ใช้เฉพาะอุปกรณ์เครื่องนี้ การอัปเดตข้ามอุปกรณ์ใช้รหัสสมุดบันทึกที่คงที่และ Google Drive หรือการซิงค์โฟลเดอร์ที่คุณตั้งค่าไว้ ดังนั้น Mac, iPhone, iPad และ Android จะไม่พึ่งพาพาธภายในของอุปกรณ์อื่น"
         ],
         "stroke_color": [
             .zhHant: "線條顏色",

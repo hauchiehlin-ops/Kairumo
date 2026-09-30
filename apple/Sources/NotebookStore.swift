@@ -1207,7 +1207,7 @@ public final class NotebookStore: ObservableObject {
 
     private var documentsDir: URL {
         documentsRootOverride
-            ?? FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first!
+            ?? DocumentStorageLocation.shared.rootURL
     }
 
     private var notebooksFile: URL {
@@ -1518,6 +1518,42 @@ public final class NotebookStore: ObservableObject {
         } else {
             persistData()
         }
+    }
+
+    /// 把整個持續使用中的文件庫搬到使用者透過系統選擇器指定的位置。
+    ///
+    /// 路徑是**每台裝置自己的設定**，不會同步成別台裝置上不存在的絕對路徑；
+    /// 跨裝置仍以筆記 UUID、device id 與既有 CRDT 同步索引辨識同一本筆記。
+    /// 搬完後所有自動儲存、錄音、附件、備份與同步都從新根目錄讀寫。
+    public func moveStorage(toParentFolder folder: URL) async throws {
+        // 先把記憶體裡最後一版確實落盤。若此時直接換根目錄，背景寫入會在
+        // 舊路徑收尾，使用者剛寫的最後幾筆就不在新文件庫裡。
+        markDirtyAndPersist()
+        while pendingWrite || needsAnotherWrite {
+            try Task.checkCancellation()
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+
+        guard let grant = await SyncGateQueue.enter(label: "storage-location") else {
+            throw NSError(
+                domain: "Kairumo.StorageLocation", code: 1,
+                userInfo: [NSLocalizedDescriptionKey: "A sync operation is still running. Please try again after it finishes."])
+        }
+        defer { _ = syncGateLeave(ticket: grant.ticket) }
+
+        let oldRoot = documentsDir
+        _ = try await DocumentStorageLocation.shared.useParentFolder(folder, movingFrom: oldRoot)
+
+        // copyDirectoryContents 已完成才切 bookmark；因此這裡讀到的一定是一份
+        // 完整文件庫。清掉舊的記憶體投影，避免目的地若是空庫時殘留舊清單。
+        notebooks = []
+        recordings = []
+        folders = []
+        trashedNotebooks = []
+        loadData()
+        refreshRecordings()
+        StartupLogger.log("主要文件庫已切換至：\(documentsDir.path)")
+        AutoSyncController.shared.request(.localEdit)
     }
 
     /// 專屬畫布筆畫向量二進位儲存目錄

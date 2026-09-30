@@ -192,11 +192,23 @@ public final class AssetLibraryManager: ObservableObject {
     /// 布林值翻成 true，容量數字也是寫死的，畫面上那句「已下載 4 (7.3 MB)」
     /// 完全是假的。現在真的產出 PNG 檔，容量也照實際位元組數回報。
     public var assetsDirectory: URL {
-        let dir = FileManager.default
-            .urls(for: .documentDirectory, in: .userDomainMask)[0]
-            .appendingPathComponent("AssetLibrary", isDirectory: true)
-        if !FileManager.default.fileExists(atPath: dir.path) {
-            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let fm = FileManager.default
+        let supportRoot = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Kairumo", isDirectory: true)
+        let dir = supportRoot.appendingPathComponent("AssetLibrary", isDirectory: true)
+        if !fm.fileExists(atPath: dir.path) {
+            try? fm.createDirectory(at: supportRoot, withIntermediateDirectories: true)
+
+            // 舊版曾把可重建的素材快取放在 Documents。為避免升級後重新算繪，
+            // 首次使用時複製到 Application Support；舊快取保留，不碰使用者資料。
+            let legacy = fm.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                .appendingPathComponent("AssetLibrary", isDirectory: true)
+            if fm.fileExists(atPath: legacy.path) {
+                try? fm.copyItem(at: legacy, to: dir)
+            }
+            if !fm.fileExists(atPath: dir.path) {
+                try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+            }
         }
         return dir
     }

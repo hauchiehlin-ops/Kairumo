@@ -15,12 +15,21 @@ import SwiftUI
 /// 第一次啟動先給引導，之後直接進首頁（見 `OnboardingView`）。
 private struct RootView: View {
     @State private var showOnboarding = !OnboardingView.hasSeen
+    @ObservedObject private var storageLocation = DocumentStorageLocation.shared
 
     var body: some View {
-        if showOnboarding {
-            OnboardingView(onDone: { showOnboarding = false })
-        } else {
-            HomeWorkbenchView()
+        Group {
+            if showOnboarding {
+                OnboardingView(onDone: { showOnboarding = false })
+            } else {
+                HomeWorkbenchView()
+            }
+        }
+        .sheet(isPresented: Binding(
+            get: { !showOnboarding && storageLocation.requiresMacSelection },
+            set: { _ in }
+        )) {
+            StorageLocationView(isRequired: true)
         }
     }
 }
