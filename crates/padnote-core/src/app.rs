@@ -1205,10 +1205,35 @@ impl NotebookSession {
         content: &str,
         style: TextStyle,
     ) -> Result<Uuid, AppError> {
+        let id = Uuid::now_v7();
+        self.add_text_block_with_id(page, id, content, style)?;
+        Ok(id)
+    }
+
+    /// 用**指定的 id** 建立文字區塊。已經有這個 id 的區塊就什麼都不做（回 `false`）。
+    ///
+    /// # 為什麼需要
+    ///
+    /// 平台的工作副本若每次匯出都呼叫 [`Self::add_text_block`]，核心每次發新 id，
+    /// 而匯入又會把別台裝置寫的區塊一起讀進來 —— 下一次匯出就把它們全部再寫一遍，
+    /// 兩台裝置來回之後數量依費氏數列增生（實測一本筆記長到 19,588 個文字方塊）。
+    /// 讓呼叫端用自己的穩定 id 新增，重複匯出就是冪等的。
+    ///
+    /// **已存在就連內容都不寫**：文字內容是字元級 CRDT，每次插入都帶新的 OpId，
+    /// 同一段內容寫兩次會變成「內容重複一份」，不是「同一份」。
+    pub fn add_text_block_with_id(
+        &mut self,
+        page: Uuid,
+        id: Uuid,
+        content: &str,
+        style: TextStyle,
+    ) -> Result<bool, AppError> {
         if self.notebook.page(page).is_none() {
             return Err(AppError::PageNotFound(page));
         }
-        let id = Uuid::now_v7();
+        if self.block_exists(id) {
+            return Ok(false);
+        }
         let mut ops = vec![DocOp::AddTextBlock {
             page,
             id,
@@ -1226,7 +1251,7 @@ impl NotebookSession {
             );
         }
         self.record(ops)?;
-        Ok(id)
+        Ok(true)
     }
 
     /// 在文字區塊的第 `index` 個字元位置插入文字。
@@ -1319,10 +1344,27 @@ impl NotebookSession {
         width: f32,
         height: f32,
     ) -> Result<Uuid, AppError> {
+        let id = Uuid::now_v7();
+        self.add_image_block_with_id(page, id, blob, width, height)?;
+        Ok(id)
+    }
+
+    /// 用指定的 id 插入圖片。已經有這個 id 的區塊就什麼都不做（回 `false`）。
+    /// 理由見 [`Self::add_text_block_with_id`]。
+    pub fn add_image_block_with_id(
+        &mut self,
+        page: Uuid,
+        id: Uuid,
+        blob: &str,
+        width: f32,
+        height: f32,
+    ) -> Result<bool, AppError> {
         if self.notebook.page(page).is_none() {
             return Err(AppError::PageNotFound(page));
         }
-        let id = Uuid::now_v7();
+        if self.block_exists(id) {
+            return Ok(false);
+        }
         self.record(vec![DocOp::AddImageBlock {
             page,
             id,
@@ -1331,7 +1373,7 @@ impl NotebookSession {
             height,
             created_at: self.now,
         }])?;
-        Ok(id)
+        Ok(true)
     }
 
     // ---- 錄音 ----
@@ -1540,17 +1582,32 @@ impl NotebookSession {
     }
 
     pub fn insert_shape(&mut self, page: Uuid, shape: ShapeObject) -> Result<Uuid, AppError> {
+        let id = Uuid::now_v7();
+        self.insert_shape_with_id(page, id, shape)?;
+        Ok(id)
+    }
+
+    /// 用指定的 id 插入形狀。已經有這個 id 的物件就什麼都不做（回 `false`）。
+    /// 理由見 [`Self::add_text_block_with_id`]。
+    pub fn insert_shape_with_id(
+        &mut self,
+        page: Uuid,
+        id: Uuid,
+        shape: ShapeObject,
+    ) -> Result<bool, AppError> {
         if self.notebook.page(page).is_none() {
             return Err(AppError::PageNotFound(page));
         }
-        let id = Uuid::now_v7();
+        if self.objects.values().any(|tree| tree.get(id).is_some()) {
+            return Ok(false);
+        }
         self.record(vec![DocOp::AddShapeObject {
             page,
             id,
             shape,
             transform: Affine2::IDENTITY,
         }])?;
-        Ok(id)
+        Ok(true)
     }
 
     pub fn insert_connection(
@@ -1558,6 +1615,19 @@ impl NotebookSession {
         page: Uuid,
         connection: ConnectionObject,
     ) -> Result<Uuid, AppError> {
+        let id = Uuid::now_v7();
+        self.insert_connection_with_id(page, id, connection)?;
+        Ok(id)
+    }
+
+    /// 用指定的 id 插入連接線。已經有這個 id 的物件就什麼都不做（回 `false`）。
+    /// 理由見 [`Self::add_text_block_with_id`]。
+    pub fn insert_connection_with_id(
+        &mut self,
+        page: Uuid,
+        id: Uuid,
+        connection: ConnectionObject,
+    ) -> Result<bool, AppError> {
         if self.notebook.page(page).is_none() {
             return Err(AppError::PageNotFound(page));
         }
@@ -1569,14 +1639,16 @@ impl NotebookSession {
         if !has_endpoint(connection.from) || !has_endpoint(connection.to) {
             return Err(AppError::BlockNotFound(connection.from));
         }
-        let id = Uuid::now_v7();
+        if self.objects.values().any(|tree| tree.get(id).is_some()) {
+            return Ok(false);
+        }
         self.record(vec![DocOp::AddConnectionObject {
             page,
             id,
             connection,
             transform: Affine2::IDENTITY,
         }])?;
-        Ok(id)
+        Ok(true)
     }
 
     /// 群組多個物件。
@@ -1886,12 +1958,30 @@ impl NotebookSession {
         cells: Vec<String>,
         header_row: bool,
     ) -> Result<Uuid, AppError> {
+        let id = Uuid::now_v7();
+        self.insert_table_with_id(page, id, rows, cols, cells, header_row)?;
+        Ok(id)
+    }
+
+    /// 用指定的 id 插入表格。已經有這個 id 的區塊就什麼都不做（回 `false`）。
+    /// 理由見 [`Self::add_text_block_with_id`]。
+    pub fn insert_table_with_id(
+        &mut self,
+        page: Uuid,
+        id: Uuid,
+        rows: u32,
+        cols: u32,
+        cells: Vec<String>,
+        header_row: bool,
+    ) -> Result<bool, AppError> {
         if self.notebook.page(page).is_none() {
             return Err(AppError::PageNotFound(page));
         }
+        if self.block_exists(id) {
+            return Ok(false);
+        }
         let mut cells = cells;
         cells.resize((rows as usize) * (cols as usize), String::new());
-        let id = Uuid::now_v7();
         self.record(vec![DocOp::AddTableBlock {
             page,
             id,
@@ -1901,7 +1991,7 @@ impl NotebookSession {
             header_row,
             created_at: self.now,
         }])?;
-        Ok(id)
+        Ok(true)
     }
 
     /// 改寫單一儲存格。越界索引回傳錯誤而非靜默忽略 ——
@@ -2430,6 +2520,94 @@ mod tests {
             .filter_map(|b| b.searchable_text().map(str::to_string))
             .collect();
         assert_eq!(blocks, ["只該有一份"]);
+    }
+
+    // ---- 指定 id 的新增（物件身分，docs/plans/object-identity.md）----
+
+    /// **用同一個 id 新增第二次，什麼都不能多。**
+    ///
+    /// 平台每次匯出都重新新增所有物件；核心若每次發新 id，兩台裝置來回之後數量依費氏數列增生
+    /// （實測一本筆記長到 19,588 個文字方塊、126 MB 的 oplog）。文字內容是字元級 CRDT，
+    /// 每次插入都帶新的 OpId —— 第二次若連內容也寫，內容會變成「重複一份」。
+    #[test]
+    fn adding_with_the_same_id_twice_adds_nothing() {
+        let mut s = session("with-id-idempotent");
+        let page = s.first_page().unwrap();
+        let (text, image, table, shape) = (
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+            Uuid::now_v7(),
+        );
+        let rect = || ShapeObject {
+            kind: padnote_doc::ShapeKind::Rectangle,
+            bounds: padnote_doc::ObjectRect {
+                min_x: 0.0,
+                min_y: 0.0,
+                max_x: 10.0,
+                max_y: 10.0,
+            },
+            corner_radius: 0.0,
+            text: String::new(),
+        };
+
+        for round in 0..3 {
+            let created = [
+                s.add_text_block_with_id(page, text, "只該有一份", TextStyle::Body)
+                    .unwrap(),
+                s.add_image_block_with_id(page, image, "blob-a", 10.0, 10.0)
+                    .unwrap(),
+                s.insert_table_with_id(page, table, 1, 2, vec!["a".into(), "b".into()], false)
+                    .unwrap(),
+                s.insert_shape_with_id(page, shape, rect()).unwrap(),
+            ];
+            assert_eq!(
+                created,
+                [round == 0; 4],
+                "第 {round} 趟：只有第一趟該真的新增"
+            );
+        }
+
+        assert_eq!(s.block_text(text).as_deref(), Some("只該有一份"));
+        let blocks = s.notebook.page(page).unwrap().blocks().len();
+        assert_eq!(blocks, 3, "文字、圖片、表格各一份");
+        assert_eq!(
+            s.objects
+                .values()
+                .filter(|t| t.get(shape).is_some())
+                .count(),
+            1,
+            "形狀只該有一份"
+        );
+    }
+
+    /// **別台裝置已經寫過的 id，這台再匯出時不能再寫一份。**
+    ///
+    /// 這是修掉增生的關鍵：匯入把別台的物件讀進工作副本，匯出用**同一個 id** 新增 ——
+    /// 核心看到已經有，什麼都不寫。
+    #[test]
+    fn an_id_written_by_another_device_is_not_written_again() {
+        let mut a = session("with-id-device-a");
+        let page = a.first_page().unwrap();
+        let block = Uuid::now_v7();
+        a.add_text_block_with_id(page, block, "A 寫的", TextStyle::Body)
+            .unwrap();
+
+        // B 收到 A 的操作（模擬同步下載），然後把「工作副本」再匯出一次。
+        let mut b = session("with-id-device-b");
+        b.apply_remote(&a.package.read_doc_ops().unwrap());
+        let before = b.package.read_doc_ops().unwrap().len();
+        let created = b
+            .add_text_block_with_id(page, block, "A 寫的", TextStyle::Body)
+            .unwrap();
+
+        assert!(!created, "B 已經有這個 id，不該再寫");
+        assert_eq!(
+            b.package.read_doc_ops().unwrap().len(),
+            before,
+            "B 的 oplog 不該多出任何操作"
+        );
+        assert_eq!(b.block_text(block).as_deref(), Some("A 寫的"));
     }
 
     // ---- 里程碑快照（工作項 S-99）----

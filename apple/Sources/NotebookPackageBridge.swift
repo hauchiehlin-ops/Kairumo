@@ -17,6 +17,7 @@
 //  在兩個平台上都驗過，才輪到談儲存層的正式遷移（含備份與回滾）。
 //
 
+import CryptoKit
 import Foundation
 import PencilKit
 import UIKit
@@ -68,7 +69,8 @@ enum NotebookPackageBridge {
         imageData: [String: Data] = [:],
         to destination: URL,
         deviceId: UInt32,
-        pageIds knownPageIds: [String]? = nil
+        pageIds knownPageIds: [String]? = nil,
+        skipBlockIds: Set<String> = []
     ) throws -> ExportSummary {
         let pageCount = max(document.pageCount, drawings.count)
         guard pageCount > 0 else { throw BridgeError.noPages }
@@ -157,9 +159,14 @@ enum NotebookPackageBridge {
                 }
 
                 for text in document.textAttachments?.filter({ $0.pageIndex == index }) ?? [] {
-                    let blockId = try session.addText(
-                        pageId: pageId, content: text.text, style: .body
-                    )
+                    // **用附件自己的穩定 id 新增，而且別台已經寫過的不重寫。**
+                    // 以前每次都讓核心發新 id，匯入又把別台的方塊讀進來，下一次匯出全部再寫一遍 ——
+                    // 兩台裝置來回之後數量依費氏數列增生（見 docs/plans/object-identity.md）。
+                    let blockId = stableBlockId(text.id)
+                    if skipBlockIds.contains(blockId) { continue }
+                    guard try session.addTextWithId(
+                        pageId: pageId, blockId: blockId, content: text.text, style: .body
+                    ) else { continue }
                     try session.setBlockPosition(
                         blockId: blockId, x: Float(text.x), y: Float(text.y)
                     )
@@ -177,13 +184,16 @@ enum NotebookPackageBridge {
                 // 所以使用者不會發現，直到在另一台裝置上打開。
                 // Android 端一直都有寫（`TableStore.persist`），只有這裡漏了。
                 for table in document.tableAttachments?.filter({ $0.pageIndex == index }) ?? [] {
-                    let blockId = try session.insertTable(
+                    let blockId = stableBlockId(table.id)
+                    if skipBlockIds.contains(blockId) { continue }
+                    guard try session.insertTableWithId(
                         pageId: pageId,
+                        blockId: blockId,
                         rows: UInt32(table.rows),
                         cols: UInt32(table.cols),
                         cells: table.cells,
                         headerRow: table.headerRow
-                    )
+                    ) else { continue }
                     try session.setBlockPosition(
                         blockId: blockId, x: Float(table.x), y: Float(table.y)
                     )
@@ -206,11 +216,14 @@ enum NotebookPackageBridge {
                 for model in document.model3DAttachments?.filter({ $0.pageIndex == index }) ?? [] {
                     guard let png = PageThumbnailRenderer.renderObjectImage(model)?.pngData()
                     else { continue }
+                    let derivedId = stableBlockId(model.id)
+                    if skipBlockIds.contains(derivedId) { continue }
                     let blob = try session.putBlob(bytes: png)
-                    let blockId = try session.addImage(
-                        pageId: pageId, blob: blob,
+                    let blockId = derivedId
+                    guard try session.addImageWithId(
+                        pageId: pageId, blockId: blockId, blob: blob,
                         width: Float(model.width), height: Float(model.height)
-                    )
+                    ) else { continue }
                     try session.setBlockPosition(
                         blockId: blockId, x: Float(model.x), y: Float(model.y)
                     )
@@ -228,11 +241,14 @@ enum NotebookPackageBridge {
                 for link in document.linkAttachments?.filter({ $0.pageIndex == index }) ?? [] {
                     guard let png = PageThumbnailRenderer.renderObjectImage(link)?.pngData()
                     else { continue }
+                    let derivedId = stableBlockId(link.id)
+                    if skipBlockIds.contains(derivedId) { continue }
                     let blob = try session.putBlob(bytes: png)
-                    let blockId = try session.addImage(
-                        pageId: pageId, blob: blob,
+                    let blockId = derivedId
+                    guard try session.addImageWithId(
+                        pageId: pageId, blockId: blockId, blob: blob,
                         width: Float(link.width), height: Float(max(60, link.height))
-                    )
+                    ) else { continue }
                     try session.setBlockPosition(
                         blockId: blockId, x: Float(link.x), y: Float(link.y)
                     )
@@ -248,11 +264,14 @@ enum NotebookPackageBridge {
                 for audio in document.audioAttachments?.filter({ $0.pageIndex == index }) ?? [] {
                     guard let png = PageThumbnailRenderer.renderObjectImage(audio)?.pngData()
                     else { continue }
+                    let derivedId = stableBlockId(audio.id)
+                    if skipBlockIds.contains(derivedId) { continue }
                     let blob = try session.putBlob(bytes: png)
-                    let blockId = try session.addImage(
-                        pageId: pageId, blob: blob,
+                    let blockId = derivedId
+                    guard try session.addImageWithId(
+                        pageId: pageId, blockId: blockId, blob: blob,
                         width: Float(audio.width), height: Float(audio.height)
-                    )
+                    ) else { continue }
                     try session.setBlockPosition(
                         blockId: blockId, x: Float(audio.x), y: Float(audio.y)
                     )
@@ -271,15 +290,24 @@ enum NotebookPackageBridge {
                 // 存在筆記檔的 JSON 裡只有這個平台看得懂，同一張流程圖傳過去
                 // 會整個消失，而且不會有任何錯誤訊息。
                 var shapeObjectIds: [String: String] = [:]
+                // 別台寫的形狀不重寫（見上面文字方塊的說明）；記下來，群組與連接線碰到它們就略過 ——
+                // 這份套件裡沒有那個物件，寫下去會是一條指向不存在物件的線。
+                var foreignShapeIds = Set<String>()
                 for shape in document.shapeAttachments?.filter({ $0.pageIndex == index }) ?? [] {
-                    let objectId = try session.insertShape(
+                    let objectId = stableBlockId(shape.id)
+                    if skipBlockIds.contains(objectId) {
+                        foreignShapeIds.insert(shape.id)
+                        continue
+                    }
+                    guard try session.insertShapeWithId(
                         pageId: pageId,
+                        objectId: objectId,
                         kind: shape.kind,
                         minX: Float(shape.x), minY: Float(shape.y),
                         maxX: Float(shape.x + shape.width), maxY: Float(shape.y + shape.height),
                         cornerRadius: Float(shape.cornerRadius),
                         text: shape.label
-                    )
+                    ) else { continue }
                     shapeObjectIds[shape.id] = objectId
                     summary.shapeCount += 1
                 }
@@ -295,7 +323,7 @@ enum NotebookPackageBridge {
                 )
                 for (_, members) in groups where members.count > 1 {
                     let objectIds = members.compactMap { shapeObjectIds[$0.id] }
-                    guard objectIds.count > 1 else { continue }
+                    guard objectIds.count > 1, objectIds.count == members.count else { continue }
                     _ = try? session.groupObjects(pageId: pageId, objectIds: objectIds)
                 }
 
@@ -304,8 +332,11 @@ enum NotebookPackageBridge {
                     // 寫進去的話會是一條指向不存在物件的線。
                     guard let from = shapeObjectIds[link.fromShapeId],
                           let to = shapeObjectIds[link.toShapeId] else { continue }
-                    _ = try session.insertConnection(
+                    let connectionId = stableBlockId(link.id)
+                    if skipBlockIds.contains(connectionId) { continue }
+                    _ = try session.insertConnectionWithId(
                         pageId: pageId,
+                        objectId: connectionId,
                         fromObjectId: from, toObjectId: to,
                         fromAnchor: .center, toAnchor: .center,
                         route: .straight,
@@ -319,11 +350,13 @@ enum NotebookPackageBridge {
                     // 讀不到某張圖不該讓整本筆記匯不出去 —— 缺一張圖，
                     // 跟整份匯出失敗，對使用者是完全不同等級的損失。
                     guard let bytes = imageData[image.fileName] else { continue }
+                    let blockId = stableBlockId(image.id)
+                    if skipBlockIds.contains(blockId) { continue }
                     let blob = try session.putBlob(bytes: bytes)
-                    let blockId = try session.addImage(
-                        pageId: pageId, blob: blob,
+                    guard try session.addImageWithId(
+                        pageId: pageId, blockId: blockId, blob: blob,
                         width: Float(image.width), height: Float(image.height)
-                    )
+                    ) else { continue }
                     try session.setBlockPosition(
                         blockId: blockId, x: Float(image.x), y: Float(image.y)
                     )
@@ -491,9 +524,19 @@ enum NotebookPackageBridge {
         defer { try? fm.removeItem(at: staging) }
         let fresh = staging.appending(path: destination.lastPathComponent)
 
+        // **先看別台裝置已經寫了哪些方塊／物件。**
+        //
+        // 這台的舊 oplog 下面會被整批換掉，所以「別台的檔案裡有、這台工作副本也有」的那些，
+        // 就是別台寫的 —— 匯出時不重寫（重寫會讓文字內容變兩份、物件數量依費氏數列增生）。
+        // 讀不到就中止這次匯出：照舊寫的話會把別台的內容再複製一份，比這本筆記這一輪不同步更糟。
+        guard let foreign = foreignBlocks(in: destination, deviceId: deviceId) else {
+            throw BridgeError.coreRejected("無法讀取其他裝置寫的內容")
+        }
+
         let summary = try export(
             document: document, drawings: drawings, imageData: imageData,
-            to: fresh, deviceId: deviceId, pageIds: pageIds
+            to: fresh, deviceId: deviceId, pageIds: pageIds,
+            skipBlockIds: foreign.ids
         )
 
         let suffix = deviceSuffix(deviceId)
@@ -547,7 +590,150 @@ enum NotebookPackageBridge {
                     .write(to: tombstonePath, atomically: true, encoding: .utf8)
             }
         }
+        // 4. 別台寫的方塊，這台搬動過、改過外觀的話，把**差異**寫出去（只有位置與外觀；
+        //    文字內容的跨裝置編輯目前不支援，見 docs/plans/object-identity.md）。
+        //    失敗不影響這次匯出 —— 下一輪會再試。
+        try? applyForeignEdits(
+            document: document, foreign: foreign, to: destination, deviceId: deviceId)
         return summary
+    }
+
+    /// 別台裝置寫在套件裡的方塊與物件：id、位置、外觀。
+    struct ForeignBlocks {
+        var ids = Set<String>()
+        var positions: [String: CGPoint] = [:]
+        var appearances: [String: String] = [:]
+    }
+
+    /// 讀出**別台裝置**寫的方塊與物件。
+    ///
+    /// 做法：把套件裡不屬於這台裝置的 oplog 連同 manifest 複製到暫存目錄，在那裡開一個
+    /// 工作階段 —— 合併出來的文件就只有別台的內容，這台自己的不會混進來。
+    /// 讀不到回 `nil`（例如 manifest 壞了）；沒有別台的檔案就回空集合。
+    nonisolated static func foreignBlocks(in destination: URL, deviceId: UInt32) -> ForeignBlocks? {
+        let fm = FileManager.default
+        let opsDirectory = destination.appending(path: "doc/ops", directoryHint: .isDirectory)
+        let suffix = deviceSuffix(deviceId)
+        let names = (try? fm.contentsOfDirectory(atPath: opsDirectory.path)) ?? []
+        let others = names.filter { $0.hasSuffix(".oplog") && !$0.contains(suffix) }
+        guard !others.isEmpty else { return ForeignBlocks() }
+
+        let root = fm.temporaryDirectory
+            .appending(path: "kairumo-foreign-\(UUID().uuidString)", directoryHint: .isDirectory)
+        defer { try? fm.removeItem(at: root) }
+        let scratch = root.appending(path: "foreign.padnote", directoryHint: .isDirectory)
+        do {
+            try fm.createDirectory(
+                at: scratch.appending(path: "doc/ops", directoryHint: .isDirectory),
+                withIntermediateDirectories: true)
+            try fm.copyItem(
+                at: destination.appending(path: "manifest.json"),
+                to: scratch.appending(path: "manifest.json"))
+            for name in others {
+                try fm.copyItem(
+                    at: opsDirectory.appending(path: name),
+                    to: scratch.appending(path: "doc/ops/\(name)"))
+            }
+            let session = try PadnoteSession.openExisting(path: scratch.path, deviceId: deviceId)
+            var result = ForeignBlocks()
+            for pageId in try pageIds(of: session) {
+                var blockIds = try session.textBlockIds(pageId: pageId)
+                blockIds += try session.tableBlockIds(pageId: pageId)
+                blockIds += try session.imageBlockIds(pageId: pageId)
+                for blockId in blockIds {
+                    let id = blockId.lowercased()
+                    result.ids.insert(id)
+                    if let position = try session.blockPosition(blockId: blockId), position.count >= 2 {
+                        result.positions[id] = CGPoint(x: CGFloat(position[0]), y: CGFloat(position[1]))
+                    }
+                    if let appearance = try session.blockAppearance(blockId: blockId) {
+                        result.appearances[id] = appearance
+                    }
+                }
+                // 形狀、連接線與群組：物件樹（成員要往下遞迴）。
+                var pending = try session.rootObjects(pageId: pageId)
+                while let object = pending.first {
+                    pending.removeFirst()
+                    result.ids.insert(object.id.lowercased())
+                    for memberId in object.members {
+                        if let member = try session.objectNode(pageId: pageId, objectId: memberId) {
+                            pending.append(member)
+                        }
+                    }
+                }
+            }
+            return result
+        } catch {
+            return nil
+        }
+    }
+
+    /// 別台寫的方塊，這台搬過或改過外觀的，把差異寫成這台的操作。
+    ///
+    /// 只比**語意**：外觀先套到副本上再一起編碼，格式或欄位順序不同不算不同 —— 否則每次匯出
+    /// 都會多寫一批操作，而別台下一輪又下載它們。
+    private static func applyForeignEdits(
+        document: NotebookDocument, foreign: ForeignBlocks, to destination: URL, deviceId: UInt32
+    ) throws {
+        struct Edit {
+            var id: String
+            var position: CGPoint?
+            var appearance: String?
+        }
+        func moved(_ id: String, x: CGFloat, y: CGFloat) -> CGPoint? {
+            guard let old = foreign.positions[id] else { return CGPoint(x: x, y: y) }
+            return abs(old.x - x) > 0.5 || abs(old.y - y) > 0.5 ? CGPoint(x: x, y: y) : nil
+        }
+        var edits: [Edit] = []
+
+        for text in document.textAttachments ?? [] {
+            let id = stableBlockId(text.id)
+            guard foreign.ids.contains(id) else { continue }
+            var probe = text
+            if let old = foreign.appearances[id] { TextBoxAppearance.apply(old, to: &probe) }
+            let now = TextBoxAppearance.encode(text)
+            let changed = TextBoxAppearance.encode(probe) != now
+            let position = moved(id, x: text.x, y: text.y)
+            if position != nil || changed {
+                edits.append(Edit(id: id, position: position, appearance: changed ? now : nil))
+            }
+        }
+        for table in document.tableAttachments ?? [] {
+            let id = stableBlockId(table.id)
+            guard foreign.ids.contains(id) else { continue }
+            var probe = table
+            if let old = foreign.appearances[id] { TableAppearance.apply(old, to: &probe) }
+            let now = TableAppearance.encode(table)
+            let changed = TableAppearance.encode(probe) != now
+            let position = moved(id, x: table.x, y: table.y)
+            if position != nil || changed {
+                edits.append(Edit(id: id, position: position, appearance: changed ? now : nil))
+            }
+        }
+        for image in document.attachments ?? [] {
+            let id = stableBlockId(image.id)
+            guard foreign.ids.contains(id) else { continue }
+            var probe = image
+            if let old = foreign.appearances[id] { ImageAppearance.apply(old, to: &probe) }
+            let now = ImageAppearance.encode(image)
+            let changed = ImageAppearance.encode(probe) != now
+            let position = moved(id, x: image.x, y: image.y)
+            if position != nil || changed {
+                edits.append(Edit(id: id, position: position, appearance: changed ? now : nil))
+            }
+        }
+        guard !edits.isEmpty else { return }
+
+        let session = try PadnoteSession.openExisting(path: destination.path, deviceId: deviceId)
+        for edit in edits {
+            if let position = edit.position {
+                try session.setBlockPosition(
+                    blockId: edit.id, x: Float(position.x), y: Float(position.y))
+            }
+            if let appearance = edit.appearance {
+                try session.setBlockAppearance(blockId: edit.id, json: appearance)
+            }
+        }
     }
 
     /// 把某一頁「新增加的」筆畫追加進核心套件。
@@ -628,6 +814,29 @@ enum NotebookPackageBridge {
         String(format: "-%08x", deviceId)
     }
 
+    /// 依 `key` 去掉重複，保留第一個、維持原順序。
+    static func collapseDuplicates<T>(_ items: [T], key: (T) -> String) -> [T] {
+        var seen = Set<String>()
+        return items.filter { seen.insert(key($0)).inserted }
+    }
+
+    /// 附件 id → 核心的區塊／物件 id（小寫 UUID 字串）。
+    ///
+    /// 附件的 id 本來就是 UUID 字串的話原樣（轉小寫）用；不是的（舊資料、測試）就用它的
+    /// SHA-256 前 16 位元組決定性地做一個 —— 同一個附件在每一台裝置、每一次匯出都得到同一個 id，
+    /// 這是「重複匯出是冪等的」的前提。
+    static func stableBlockId(_ raw: String) -> String {
+        if let uuid = UUID(uuidString: raw) { return uuid.uuidString.lowercased() }
+        var bytes = Array(SHA256.hash(data: Data(raw.utf8)).prefix(16))
+        bytes[6] = (bytes[6] & 0x0F) | 0x50 // 版本 5 樣式
+        bytes[8] = (bytes[8] & 0x3F) | 0x80
+        let uuid = UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
+        return uuid.uuidString.lowercased()
+    }
+
     /// 套件目錄下所有檔案的相對路徑。
     ///
     /// 一定要**遞迴**：真正的內容在 `doc/ops/` 與 `ink/` 底下。
@@ -681,7 +890,9 @@ enum NotebookPackageBridge {
             try drawings.append(InkInterop.drawing(from: session.visibleStrokeDetails(pageId: pageId)))
 
             for blockId in try session.textBlockIds(pageId: pageId) {
-                var item = NoteTextAttachment(pageIndex: index, text: "")
+                // 附件 id 就是核心的區塊 id：同一個方塊在每一台裝置、每一次匯入都是同一個 id，
+                // 下次匯出才認得出「這個別台已經寫過了」。
+                var item = NoteTextAttachment(id: blockId, pageIndex: index, text: "")
                 item.text = try (session.blockText(blockId: blockId)) ?? ""
                 if let position = try session.blockPosition(blockId: blockId), position.count >= 2 {
                     item.x = CGFloat(position[0])
@@ -733,7 +944,7 @@ enum NotebookPackageBridge {
                     continue
                 }
 
-                var item = NoteImageAttachment(fileName: "", pageIndex: index)
+                var item = NoteImageAttachment(id: blockId, fileName: "", pageIndex: index)
                 if let position = try session.blockPosition(blockId: blockId), position.count >= 2 {
                     item.x = CGFloat(position[0])
                     item.y = CGFloat(position[1])
@@ -758,6 +969,19 @@ enum NotebookPackageBridge {
                 }
                 images.append(item)
             }
+        }
+
+        // **舊資料的重複方塊收斂成一份。** 在有穩定 id 之前，每次匯出都會把別台的方塊再寫一遍，
+        // 套件裡因此有「內容、位置、外觀完全相同」的一堆方塊。同一頁上完全相同的只留第一個；
+        // 留下哪一個不重要，因為兩邊匯入時都用同一個順序挑。
+        texts = collapseDuplicates(texts) {
+            "\($0.pageIndex)|\($0.text)|\(Int($0.x.rounded()))|\(Int($0.y.rounded()))|\(TextBoxAppearance.encode($0))"
+        }
+        tables = collapseDuplicates(tables) {
+            "\($0.pageIndex)|\($0.cells.joined(separator: "\u{1F}"))|\(Int($0.x.rounded()))|\(Int($0.y.rounded()))"
+        }
+        images = collapseDuplicates(images) {
+            "\($0.pageIndex)|\($0.fileName)|\(Int($0.x.rounded()))|\(Int($0.y.rounded()))|\(Int($0.width.rounded()))|\(Int($0.height.rounded()))"
         }
 
         // 形狀與連接線從核心的物件樹讀回來。

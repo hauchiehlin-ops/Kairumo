@@ -1085,6 +1085,24 @@ impl PadnoteSession {
             .to_string())
     }
 
+    /// 用**指定的 id** 建立文字區塊。已經有這個 id 的區塊就什麼都不做（連內容都不寫），回 `false`。
+    ///
+    /// 文字內容是字元級 CRDT，每次插入都帶新的 OpId —— 同一段內容寫兩次會變成「內容重複一份」。
+    /// 理由見 [`Self::insert_shape_with_id`]。
+    pub fn add_text_with_id(
+        &self,
+        page_id: String,
+        block_id: String,
+        content: String,
+        style: BlockStyle,
+    ) -> Result<bool, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let id = parse_uuid(&block_id)?;
+        Ok(self
+            .lock()
+            .add_text_block_with_id(page, id, &content, style.into())?)
+    }
+
     /// 在文字區塊的第 `index` 個**字元**（非位元組）位置插入文字。
     ///
     /// 用字元索引是必要的：UTF-16 或位元組索引都會把中文與 emoji 切壞。
@@ -1306,6 +1324,23 @@ impl PadnoteSession {
             .to_string())
     }
 
+    /// 用**指定的 id** 插入圖片。已經有這個 id 的區塊就什麼都不做，回 `false`。
+    /// 理由見 [`Self::insert_shape_with_id`]。
+    pub fn add_image_with_id(
+        &self,
+        page_id: String,
+        block_id: String,
+        blob: String,
+        width: f32,
+        height: f32,
+    ) -> Result<bool, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let id = parse_uuid(&block_id)?;
+        Ok(self
+            .lock()
+            .add_image_block_with_id(page, id, &blob, width, height)?)
+    }
+
     /// 把位元組存成內容定址 blob，回傳其雜湊。供 `add_image` 使用。
     pub fn put_blob(&self, bytes: Vec<u8>) -> Result<String, FfiError> {
         self.lock()
@@ -1508,6 +1543,43 @@ impl PadnoteSession {
             .to_string())
     }
 
+    /// 用**指定的 id** 插入形狀。已經有這個 id 的物件就什麼都不做，回 `false`。
+    ///
+    /// 平台的工作副本用自己穩定的 id 匯出，重複匯出才是冪等的；每次都讓核心發新 id，
+    /// 兩台裝置來回之後物件會依費氏數列增生（見 `docs/plans/object-identity.md`）。
+    // UniFFI 的公開介面：改簽章等於同時改掉 Swift 與 Kotlin 兩邊的產生碼。
+    #[allow(clippy::too_many_arguments)]
+    pub fn insert_shape_with_id(
+        &self,
+        page_id: String,
+        object_id: String,
+        kind: FfiShapeKind,
+        min_x: f32,
+        min_y: f32,
+        max_x: f32,
+        max_y: f32,
+        corner_radius: f32,
+        text: String,
+    ) -> Result<bool, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let id = parse_uuid(&object_id)?;
+        Ok(self.lock().insert_shape_with_id(
+            page,
+            id,
+            ShapeObject {
+                kind: to_doc_shape_kind(kind),
+                bounds: ObjectRect {
+                    min_x,
+                    min_y,
+                    max_x,
+                    max_y,
+                },
+                corner_radius,
+                text,
+            },
+        )?)
+    }
+
     /// 插入依附於兩個物件的連接線（S-52）。
     // UniFFI 的公開介面：改簽章等於同時改掉 Swift 與 Kotlin 兩邊的產生碼。
     #[allow(clippy::too_many_arguments)]
@@ -1540,6 +1612,40 @@ impl PadnoteSession {
                 },
             )?
             .to_string())
+    }
+
+    /// 用**指定的 id** 插入連接線。已經有這個 id 的物件就什麼都不做，回 `false`。
+    /// 理由見 [`Self::insert_shape_with_id`]。
+    // UniFFI 的公開介面：改簽章等於同時改掉 Swift 與 Kotlin 兩邊的產生碼。
+    #[allow(clippy::too_many_arguments)]
+    pub fn insert_connection_with_id(
+        &self,
+        page_id: String,
+        object_id: String,
+        from_object_id: String,
+        to_object_id: String,
+        from_anchor: FfiAnchor,
+        to_anchor: FfiAnchor,
+        route: FfiRouteStyle,
+        start_cap: FfiEndCap,
+        end_cap: FfiEndCap,
+        label: String,
+    ) -> Result<bool, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        Ok(self.lock().insert_connection_with_id(
+            page,
+            parse_uuid(&object_id)?,
+            ConnectionObject {
+                from: parse_uuid(&from_object_id)?,
+                to: parse_uuid(&to_object_id)?,
+                from_anchor: to_doc_anchor(from_anchor),
+                to_anchor: to_doc_anchor(to_anchor),
+                route: to_doc_route_style(route),
+                start_cap: to_doc_end_cap(start_cap),
+                end_cap: to_doc_end_cap(end_cap),
+                label,
+            },
+        )?)
     }
 
     pub fn group_objects(
@@ -1669,6 +1775,24 @@ impl PadnoteSession {
             .lock()
             .insert_table(page, rows, cols, cells, header_row)?
             .to_string())
+    }
+
+    /// 用**指定的 id** 插入表格。已經有這個 id 的區塊就什麼都不做，回 `false`。
+    /// 理由見 [`Self::insert_shape_with_id`]。
+    pub fn insert_table_with_id(
+        &self,
+        page_id: String,
+        block_id: String,
+        rows: u32,
+        cols: u32,
+        cells: Vec<String>,
+        header_row: bool,
+    ) -> Result<bool, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let id = parse_uuid(&block_id)?;
+        Ok(self
+            .lock()
+            .insert_table_with_id(page, id, rows, cols, cells, header_row)?)
     }
 
     /// 改寫單一儲存格。

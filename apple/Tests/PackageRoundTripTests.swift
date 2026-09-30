@@ -649,14 +649,20 @@ final class PackageMultiDeviceTests: XCTestCase {
         }
     }
 
+    /// 兩台裝置輪流「匯入 → 匯出」一趟。回傳這一趟匯入後的文件。
+    @discardableResult
+    private func syncRound(_ package: URL, device: UInt32) throws -> NotebookDocument {
+        let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: device)
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: imported.document, drawings: imported.drawings,
+            imageData: imported.imageData, to: package, deviceId: device,
+            pageIds: imported.pageIds)
+        return imported.document
+    }
+
     func testTextBoxesDoNotMultiplyAcrossRepeatedSyncs() throws {
         // 實測：使用者的一本筆記出現 19,588 個文字方塊、雲端 oplog 126MB，其他裝置因
         // 「操作筆數超過上限」打不開。兩台裝置來回同步多趟之後，文字方塊數量必須維持不變。
-        // **已知問題（尚未修）**：匯出對每個文字方塊都呼叫 `addText`，核心每次發新的 block id，
-        // 而匯入又把別台裝置寫的方塊一起讀進來 —— 下一次匯出就把它們全部再寫一遍。
-        // 結構性修法是方塊要有跨裝置穩定的 id 與冪等的新增（見 docs/TODO.md）。
-        // 修好之後這個預期失敗會變成「非預期成功」而讓測試變紅，屆時把下面這行拿掉。
-        XCTExpectFailure("文字方塊跨裝置來回匯出會指數增生（費氏數列）")
         let package = workDir.appendingPathComponent("texts.padnote")
         var doc = document("T")
         doc.textAttachments = [
@@ -667,19 +673,107 @@ final class PackageMultiDeviceTests: XCTestCase {
             document: doc, drawings: [PKDrawing()], to: package, deviceId: deviceB)
 
         for round in 0..<8 {
-            let deviceId = round.isMultiple(of: 2) ? deviceA : deviceB
-            let imported = try NotebookPackageBridge.importDocument(
-                fromPackageAt: package, deviceId: deviceId)
-            try NotebookPackageBridge.exportPreservingOtherDevices(
-                document: imported.document, drawings: imported.drawings,
-                imageData: imported.imageData, to: package, deviceId: deviceId,
-                pageIds: imported.pageIds)
+            let imported = try syncRound(package, device: round.isMultiple(of: 2) ? deviceA : deviceB)
             XCTAssertEqual(
-                imported.document.textAttachments?.count, 2,
-                "第 \(round) 趟同步後文字方塊數變成 \(imported.document.textAttachments?.count ?? -1)")
+                imported.textAttachments?.count, 2,
+                "第 \(round) 趟同步後文字方塊數變成 \(imported.textAttachments?.count ?? -1)")
         }
         let final = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceA)
         XCTAssertEqual(final.document.textAttachments?.count, 2)
+        XCTAssertEqual(
+            Set(final.document.textAttachments?.map(\.text) ?? []), ["第一個", "第二個"],
+            "內容不該被重複寫成兩份（例如「第一個第一個」）")
+    }
+
+    func testEveryObjectTypeStaysSingleAcrossRepeatedSyncs() throws {
+        let package = workDir.appendingPathComponent("objects.padnote")
+        var doc = document("O")
+        doc.textAttachments = [NoteTextAttachment(pageIndex: 0, text: "字", x: 10, y: 10)]
+        doc.tableAttachments = [
+            NoteTableAttachment(pageIndex: 0, x: 10, y: 200, rows: 2, cols: 2,
+                                cells: ["a", "b", "c", "d"])
+        ]
+        let s1 = NoteShapeAttachment(pageIndex: 0, x: 300, y: 10, label: "一")
+        let s2 = NoteShapeAttachment(pageIndex: 0, x: 300, y: 200, label: "二")
+        doc.shapeAttachments = [s1, s2]
+        doc.connectionAttachments = [
+            NoteConnectionAttachment(pageIndex: 0, fromShapeId: s1.id, toShapeId: s2.id)
+        ]
+        try NotebookPackageBridge.export(
+            document: doc, drawings: [PKDrawing()], to: package, deviceId: deviceA)
+
+        for round in 0..<8 {
+            let imported = try syncRound(package, device: round.isMultiple(of: 2) ? deviceB : deviceA)
+            let counts = [
+                imported.textAttachments?.count ?? 0, imported.tableAttachments?.count ?? 0,
+                imported.shapeAttachments?.count ?? 0, imported.connectionAttachments?.count ?? 0,
+            ]
+            XCTAssertEqual(counts, [1, 1, 2, 1], "第 \(round) 趟同步後物件數量變了（文字、表格、形狀、連接線）")
+        }
+    }
+
+    func testAnotherDevicesObjectMoveSurvivesAndDoesNotDuplicate() throws {
+        let package = workDir.appendingPathComponent("move.padnote")
+        var doc = document("M")
+        doc.textAttachments = [NoteTextAttachment(pageIndex: 0, text: "A 寫的", x: 10, y: 10)]
+        try NotebookPackageBridge.export(
+            document: doc, drawings: [PKDrawing()], to: package, deviceId: deviceA)
+
+        // B 收到之後把它搬到別處，再匯出。
+        let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceB)
+        var moved = imported.document
+        var text = try XCTUnwrap(moved.textAttachments?.first)
+        text.x = 222
+        text.y = 333
+        moved.textAttachments = [text]
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: moved, drawings: imported.drawings, imageData: imported.imageData,
+            to: package, deviceId: deviceB, pageIds: imported.pageIds)
+
+        // A 再收到：只有一個方塊，而且在 B 搬過去的位置。
+        let back = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceA)
+        XCTAssertEqual(back.document.textAttachments?.count, 1, "搬動不該讓方塊變兩個")
+        XCTAssertEqual(try XCTUnwrap(back.document.textAttachments?.first).x, 222, accuracy: 0.5)
+        XCTAssertEqual(try XCTUnwrap(back.document.textAttachments?.first).y, 333, accuracy: 0.5)
+        XCTAssertEqual(back.document.textAttachments?.first?.text, "A 寫的")
+    }
+
+    func testDeletingYourOwnObjectReachesTheOtherDevice() throws {
+        let package = workDir.appendingPathComponent("delete.padnote")
+        var doc = document("D")
+        doc.textAttachments = [
+            NoteTextAttachment(pageIndex: 0, text: "留著", x: 10, y: 10),
+            NoteTextAttachment(pageIndex: 0, text: "要刪掉", x: 10, y: 60),
+        ]
+        try NotebookPackageBridge.export(
+            document: doc, drawings: [PKDrawing()], to: package, deviceId: deviceA)
+        // B 先同步一趟（收到兩個、什麼都不改）。
+        XCTAssertEqual(try syncRound(package, device: deviceB).textAttachments?.count, 2)
+
+        // A 刪掉一個、匯出。
+        var edited = doc
+        edited.textAttachments = [doc.textAttachments![0]]
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: edited, drawings: [PKDrawing()], to: package, deviceId: deviceA)
+
+        let b = try syncRound(package, device: deviceB)
+        XCTAssertEqual(b.textAttachments?.map(\.text), ["留著"], "A 刪掉的方塊在 B 還在，或 B 又把它寫回去了")
+    }
+
+    func testLegacyDuplicateBlocksCollapseOnImport() throws {
+        // 有穩定 id 之前的舊資料：同一頁上內容、位置、外觀完全相同的一堆方塊（id 各不相同）。
+        let package = workDir.appendingPathComponent("legacy.padnote")
+        var doc = document("L")
+        doc.textAttachments = (0..<5).map { _ in
+            NoteTextAttachment(pageIndex: 0, text: "重複", x: 40, y: 40)
+        } + [NoteTextAttachment(pageIndex: 0, text: "獨一無二", x: 40, y: 140)]
+        try NotebookPackageBridge.export(
+            document: doc, drawings: [PKDrawing()], to: package, deviceId: deviceA)
+
+        let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceB)
+        XCTAssertEqual(
+            imported.document.textAttachments?.map(\.text).sorted(), ["獨一無二", "重複"],
+            "舊的重複方塊該在匯入時收斂成一份")
     }
 
     func testBothDevicesStrokesLandOnTheSamePage() throws {
