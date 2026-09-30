@@ -73,8 +73,7 @@ final class DocumentStorageLocation: ObservableObject {
 
     private init() {
         let legacyDocuments = Self.containerDocumentsDirectory
-        let defaultRoot = legacyDocuments.appendingPathComponent(
-            Self.defaultFolderName, isDirectory: true)
+        let defaultRoot = legacyDocuments.appending(path: Self.defaultFolderName, directoryHint: .isDirectory)
 
         if let bookmarked = Self.resolveBookmark() {
             rootURL = bookmarked
@@ -106,8 +105,7 @@ final class DocumentStorageLocation: ObservableObject {
         if selectedFolder.lastPathComponent == Self.defaultFolderName {
             destination = selectedFolder
         } else {
-            destination = selectedFolder.appendingPathComponent(
-                Self.defaultFolderName, isDirectory: true)
+            destination = selectedFolder.appending(path: Self.defaultFolderName, directoryHint: .isDirectory)
         }
 
         let sourceStandard = source.standardizedFileURL
@@ -199,12 +197,12 @@ final class DocumentStorageLocation: ObservableObject {
         guard !defaults.bool(forKey: migrationKey) else { return }
 
         let fm = FileManager.default
-        guard fm.fileExists(atPath: source.appendingPathComponent("notebooks_v1.json").path)
+        guard fm.fileExists(atPath: source.appending(path: "notebooks_v1.json", directoryHint: .notDirectory).path)
         else {
             defaults.set(true, forKey: migrationKey)
             return
         }
-        guard !fm.fileExists(atPath: destination.appendingPathComponent("notebooks_v1.json").path)
+        guard !fm.fileExists(atPath: destination.appending(path: "notebooks_v1.json", directoryHint: .notDirectory).path)
         else {
             defaults.set(true, forKey: migrationKey)
             return
@@ -217,7 +215,7 @@ final class DocumentStorageLocation: ObservableObject {
             for child in children where child.lastPathComponent != defaultFolderName {
                 try copyItemReplacingIfNeeded(
                     from: child,
-                    to: destination.appendingPathComponent(child.lastPathComponent))
+                    to: destination.appending(path: child.lastPathComponent, directoryHint: .notDirectory))
             }
             defaults.set(true, forKey: migrationKey)
         } catch {
@@ -234,7 +232,7 @@ final class DocumentStorageLocation: ObservableObject {
         {
             throw LocationError.nestedLibraryLocation
         }
-        let destinationIndex = destination.appendingPathComponent("notebooks_v1.json")
+        let destinationIndex = destination.appending(path: "notebooks_v1.json", directoryHint: .notDirectory)
         guard fm.fileExists(atPath: destinationIndex.path) else { return }
 
         let sourceManifest = try? readManifest(in: source)
@@ -252,7 +250,7 @@ final class DocumentStorageLocation: ObservableObject {
         let children = try fm.contentsOfDirectory(
             at: source, includingPropertiesForKeys: [.isDirectoryKey])
         for child in children {
-            let target = destination.appendingPathComponent(child.lastPathComponent)
+            let target = destination.appending(path: child.lastPathComponent, directoryHint: .notDirectory)
             try copyItemReplacingIfNeeded(from: child, to: target)
         }
     }
@@ -267,7 +265,7 @@ final class DocumentStorageLocation: ObservableObject {
             {
                 try copyItemReplacingIfNeeded(
                     from: child,
-                    to: destination.appendingPathComponent(child.lastPathComponent))
+                    to: destination.appending(path: child.lastPathComponent, directoryHint: .notDirectory))
             }
         } else {
             try? fm.removeItem(at: destination)
@@ -285,12 +283,12 @@ final class DocumentStorageLocation: ObservableObject {
         )
         let data = try JSONEncoder().encode(manifest)
         try data.write(
-            to: root.appendingPathComponent(documentLibraryManifestFileName), options: .atomic)
+            to: root.appending(path: documentLibraryManifestFileName, directoryHint: .notDirectory), options: .atomic)
         return manifest
     }
 
     nonisolated static func readManifest(in root: URL) throws -> Manifest {
-        let data = try Data(contentsOf: root.appendingPathComponent(documentLibraryManifestFileName))
+        let data = try Data(contentsOf: root.appending(path: documentLibraryManifestFileName, directoryHint: .notDirectory))
         return try JSONDecoder().decode(Manifest.self, from: data)
     }
 }
