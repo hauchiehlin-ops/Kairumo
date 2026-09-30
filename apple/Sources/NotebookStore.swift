@@ -1525,7 +1525,10 @@ public final class NotebookStore: ObservableObject {
     /// 路徑是**每台裝置自己的設定**，不會同步成別台裝置上不存在的絕對路徑；
     /// 跨裝置仍以筆記 UUID、device id 與既有 CRDT 同步索引辨識同一本筆記。
     /// 搬完後所有自動儲存、錄音、附件、備份與同步都從新根目錄讀寫。
-    public func moveStorage(toParentFolder folder: URL) async throws {
+    func moveStorage(
+        toParentFolder folder: URL,
+        progress: DocumentStorageLocation.ProgressHandler? = nil
+    ) async throws {
         // 先把記憶體裡最後一版確實落盤。若此時直接換根目錄，背景寫入會在
         // 舊路徑收尾，使用者剛寫的最後幾筆就不在新文件庫裡。
         markDirtyAndPersist()
@@ -1534,6 +1537,10 @@ public final class NotebookStore: ObservableObject {
             try await Task.sleep(nanoseconds: 50_000_000)
         }
 
+        // 正在跑的那一輪同步會佔著互斥閘（下載大筆記本可以跑幾分鐘），而搬移要等它放手。
+        // 先請它中斷：同步是冪等的，下一輪會接著做；不中斷的話畫面就是一個轉圈圈等兩分鐘。
+        progress?(DocumentStorageLocation.MoveProgress(phase: .waitingForSync))
+        NotebookSyncCoordinator.cancelSync()
         guard let grant = await SyncGateQueue.enter(label: "storage-location") else {
             throw NSError(
                 domain: "Kairumo.StorageLocation", code: 1,
@@ -1542,7 +1549,8 @@ public final class NotebookStore: ObservableObject {
         defer { _ = syncGateLeave(ticket: grant.ticket) }
 
         let oldRoot = documentsDir
-        _ = try await DocumentStorageLocation.shared.useParentFolder(folder, movingFrom: oldRoot)
+        _ = try await DocumentStorageLocation.shared.useParentFolder(
+            folder, movingFrom: oldRoot, progress: progress)
 
         // copyDirectoryContents 已完成才切 bookmark；因此這裡讀到的一定是一份
         // 完整文件庫。清掉舊的記憶體投影，避免目的地若是空庫時殘留舊清單。
@@ -1553,6 +1561,73 @@ public final class NotebookStore: ObservableObject {
         loadData()
         refreshRecordings()
         StartupLogger.log("主要文件庫已切換至：\(documentsDir.path)")
+        AutoSyncController.shared.request(.localEdit)
+    }
+
+    /// 「重設本機資料」的階段，給畫面顯示。
+    enum ResetPhase: Sendable { case cloud, local }
+
+    /// 重設本機資料：清掉這台裝置上的筆記本、錄音、附件與同步狀態，從乾淨的資料庫開始。
+    ///
+    /// 順序：**先雲端、後本機**。本機先清、雲端還在的話，下一輪同步會把雲端的東西全部
+    /// 下載回來；而雲端清失敗就整個中止，本機一個檔案都不動。
+    /// 保留已下載的語音模型（`models`，幾百 MB，要重新下載很不划算）。
+    func resetLocalData(
+        alsoWipeCloud: Bool,
+        progress: (@Sendable (ResetPhase) -> Void)? = nil
+    ) async throws {
+        // 雲端：自己會進同步互斥閘，所以必須在我們拿閘之前做完。
+        if alsoWipeCloud {
+            progress?(.cloud)
+            NotebookSyncCoordinator.cancelSync()
+            var attempted = false
+            var result: FfiWipeResult?
+            if await GoogleAuth.shared.isSignedIn {
+                attempted = true
+                result = await CloudSync.wipeCloud()
+            } else if CloudSyncFolder.resolveFolder() != nil {
+                attempted = true
+                result = CloudSyncFolder.wipeCloud()
+            }
+            // 有同步可清卻沒有結果（忙碌、連不上）或清失敗：整個中止，本機不動。
+            // 沒設定任何同步就沒有雲端可清，那不是失敗。
+            if attempted, result?.ok != true {
+                throw NSError(
+                    domain: "Kairumo.ResetLocalData", code: 1,
+                    userInfo: [NSLocalizedDescriptionKey:
+                        LocalizationManager.shared.localizedUnsafe("storage_reset_cloud_failed")])
+            }
+        }
+
+        // 讓進行中的寫檔收尾：不然刪完之後背景寫入又把檔案寫回來。
+        while pendingWrite || needsAnotherWrite {
+            try Task.checkCancellation()
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+        progress?(.local)
+        NotebookSyncCoordinator.cancelSync()
+        guard let grant = await SyncGateQueue.enter(label: "reset-local-data") else {
+            throw NSError(
+                domain: "Kairumo.ResetLocalData", code: 2,
+                userInfo: [NSLocalizedDescriptionKey: "A sync operation is still running. Please try again after it finishes."])
+        }
+        defer { _ = syncGateLeave(ticket: grant.ticket) }
+
+        let root = documentsDir
+        let account = await GoogleAuth.shared.accountEmail ?? ""
+        await Task.detached(priority: .utility) {
+            DocumentStorageLocation.clearLibraryContents(at: root, keeping: ["models"])
+            _ = try? DocumentStorageLocation.ensureManifest(in: root)
+        }.value
+
+        AccountSyncStore.shared.resetLocalSyncState(account: account)
+        notebooks = []
+        recordings = []
+        folders = []
+        trashedNotebooks = []
+        loadData()
+        refreshRecordings()
+        StartupLogger.log("本機資料已重設：\(root.path)")
         AutoSyncController.shared.request(.localEdit)
     }
 

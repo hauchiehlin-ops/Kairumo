@@ -332,9 +332,23 @@ APPLE_MULTI_FOLDABLE_BUTTONS = {
 }
 
 
+# ── 「【Apple】」前綴：只屬於 Apple 的步驟 ─────────────────────────────
+#
+# manual.js 是混合版（index.html 直接讀它），所以 Apple 獨有的步驟用
+# 語言中立的 `【Apple】` 標記起頭。Apple 版拿掉標記、Android 版整條丟掉，
+# 並一併丟掉該節只為這些步驟而放的第二張截圖（`fig2`）。
+APPLE_ONLY = "\u3010Apple\u3011"
+
+
+def strip_apple_marker(step):
+    return step[len(APPLE_ONLY):].lstrip() if step.startswith(APPLE_ONLY) else step
+
+
 def build_apple(data):
     d = copy.deepcopy(data)
     for locale in [k for k in d if k != "figsets"]:
+        for sec in d[locale]["sections"]:
+            sec["steps"] = [strip_apple_marker(st) for st in sec.get("steps", [])]
         frag   = APPLE_MULTI_FOLDABLE_FRAGMENTS[locale]
         btn    = APPLE_MULTI_FOLDABLE_BUTTONS[locale]
         for sec in d[locale]["sections"]:
@@ -350,6 +364,11 @@ def build_android(data):
     d = copy.deepcopy(data)
     for locale in [k for k in d if k != "figsets"]:
         for sec in d[locale]["sections"]:
+            if any(st.startswith(APPLE_ONLY) for st in sec.get("steps", [])):
+                sec["steps"] = [st for st in sec["steps"] if not st.startswith(APPLE_ONLY)]
+                if sec.get("fig2") == "storage":
+                    sec.pop("fig2", None)
+                    sec.pop("cap2", None)
 
             # 1. start：替換「桌機版視窗」與「平板/桌機」首步
             if sec["id"] == "start":

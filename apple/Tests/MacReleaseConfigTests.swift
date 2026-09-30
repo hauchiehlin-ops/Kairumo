@@ -165,7 +165,7 @@ final class MacReleaseConfigTests: XCTestCase {
             "筆記本與錄音必須持續讀寫使用者選擇的主要文件庫"
         )
         XCTAssertTrue(
-            store.contains("func moveStorage(toParentFolder folder:"),
+            store.contains("func moveStorage(") && store.contains("toParentFolder folder: URL"),
             "變更位置時必須遷移現有資料並重新載入"
         )
 

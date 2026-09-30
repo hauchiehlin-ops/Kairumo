@@ -293,6 +293,15 @@ public final class AccountSyncStore: ObservableObject {
         try? json.write(to: url, atomically: true, encoding: .utf8)
     }
 
+    /// 重設本機資料時用：丟掉本機的筆記本索引與遠端快照，從空白重新開始。
+    ///
+    /// 裝置 id 與跨裝置設定（語言等）保留 —— 它們不是「資料」，而且換裝置 id 會讓別台
+    /// 把這台當成新裝置（回收桶的確認要多等九十天）。
+    public func resetLocalSyncState(account: String) {
+        setIndex("")
+        discardRemoteIndex(account: account)
+    }
+
     /// 快照壞掉或帳號換了就丟掉。下一輪會自己重建 —— 那是唯一的慢路徑，
     /// 而且自我修復。
     public func discardRemoteIndex(account: String) {

@@ -50,6 +50,38 @@ final class DocumentStorageLocation: ObservableObject {
         }
     }
 
+    /// 搬移進度，給畫面顯示。
+    struct MoveProgress: Sendable, Equatable {
+        enum Phase: Sendable, Equatable {
+            case waitingForSync, copying, verifying, removingOld
+        }
+
+        var phase: Phase
+        var copiedFiles = 0
+        var totalFiles = 0
+    }
+
+    typealias ProgressHandler = @Sendable (MoveProgress) -> Void
+
+    /// 這個位置（或它任何一層上層）是不是被 iCloud 雲碟同步。
+    ///
+    /// 要看**上層**：`~/Documents` 開了「桌面與文件」同步時，`~/Documents` 自己回報
+    /// `isUbiquitousItem == true`，但底下剛建的資料夾可能還回 `nil`。
+    nonisolated static func isICloudSynced(_ url: URL) -> Bool {
+        let fm = FileManager.default
+        var probe = url.standardizedFileURL
+        while probe.pathComponents.count > 1 {
+            if probe.path.contains("/Library/Mobile Documents/") { return true }
+            if fm.fileExists(atPath: probe.path),
+               (try? probe.resourceValues(forKeys: [.isUbiquitousItemKey]))?.isUbiquitousItem == true
+            {
+                return true
+            }
+            probe.deleteLastPathComponent()
+        }
+        return false
+    }
+
     @Published private(set) var rootURL: URL
     @Published private(set) var isUserSelected: Bool
 
@@ -95,7 +127,15 @@ final class DocumentStorageLocation: ObservableObject {
 
     /// 使用者挑的是「父資料夾」。若他直接挑到既有的 Kairumo Doc，就不再
     /// 套一層；其他位置一律建立預設名稱，讓 Finder / Files 裡清楚可辨識。
-    func useParentFolder(_ selectedFolder: URL, movingFrom source: URL) async throws -> URL {
+    ///
+    /// 流程：複製（可取消、回報進度）→ **驗證**（每個來源檔都在目的地、大小一樣）→ 切換書籤 →
+    /// 舊的資料庫確認是同一份才移除（以前只複製不處理，舊資料永遠留在隱藏的容器裡）。
+    /// 任何一步失敗或被取消，舊的資料庫原封不動；這次新建的目的地會清掉。
+    func useParentFolder(
+        _ selectedFolder: URL,
+        movingFrom source: URL,
+        progress: ProgressHandler? = nil
+    ) async throws -> URL {
         let parentScoped = selectedFolder.startAccessingSecurityScopedResource()
         defer {
             if parentScoped { selectedFolder.stopAccessingSecurityScopedResource() }
@@ -105,24 +145,37 @@ final class DocumentStorageLocation: ObservableObject {
         if selectedFolder.lastPathComponent == Self.defaultFolderName {
             destination = selectedFolder
         } else {
-            destination = selectedFolder.appending(path: Self.defaultFolderName, directoryHint: .isDirectory)
+            destination = selectedFolder.appending(
+                path: Self.defaultFolderName, directoryHint: .isDirectory)
         }
 
         let sourceStandard = source.standardizedFileURL
         let destinationStandard = destination.standardizedFileURL
+        let isSameFolder = sourceStandard == destinationStandard
+        let destinationExisted = FileManager.default.fileExists(atPath: destination.path)
+
         do {
-            try await Task.detached(priority: .utility) {
+            let work = Task.detached(priority: .utility) {
                 let fm = FileManager.default
                 try fm.createDirectory(at: destination, withIntermediateDirectories: true)
-                if sourceStandard != destinationStandard {
+                if !isSameFolder {
                     try Self.validateDestination(destination, source: source)
-                    try Self.copyDirectoryContents(from: source, to: destination)
+                    try Self.copyLibrary(from: source, to: destination, progress: progress)
+                    progress?(MoveProgress(phase: .verifying))
+                    try Self.verifyCopy(from: source, to: destination)
                 }
                 try Self.ensureManifest(in: destination)
-            }.value
-        } catch let error as LocationError {
-            throw error
+            }
+            try await withTaskCancellationHandler {
+                try await work.value
+            } onCancel: {
+                work.cancel()
+            }
         } catch {
+            // 失敗或取消：這次新建的目的地不留殘骸；原本就存在的不動。
+            if !destinationExisted { try? FileManager.default.removeItem(at: destination) }
+            if error is CancellationError { throw error }
+            if let error = error as? LocationError { throw error }
             throw LocationError.cannotMoveLibrary(error.localizedDescription)
         }
 
@@ -130,6 +183,9 @@ final class DocumentStorageLocation: ObservableObject {
         do {
             bookmark = try destination.bookmarkData(options: Self.bookmarkCreationOptions)
         } catch {
+            if !destinationExisted && !isSameFolder {
+                try? FileManager.default.removeItem(at: destination)
+            }
             throw LocationError.cannotRememberFolder
         }
 
@@ -141,6 +197,17 @@ final class DocumentStorageLocation: ObservableObject {
         isUserSelected = true
         scopedURL = destination
         scopedAccessActive = destination.startAccessingSecurityScopedResource()
+
+        // 已經切過去了：舊的那份若確定是**同一個資料庫**（文庫識別碼相同），就移除。
+        // 只做這一種確定的情況；對不上的（使用者自己放的資料夾）一律不碰。
+        if !isSameFolder {
+            progress?(MoveProgress(phase: .removingOld))
+            let old = source
+            let new = destination
+            await Task.detached(priority: .utility) {
+                Self.removeOldLibraryIfSame(old, as: new)
+            }.value
+        }
         return destination
     }
 
@@ -252,6 +319,108 @@ final class DocumentStorageLocation: ObservableObject {
         for child in children {
             let target = destination.appending(path: child.lastPathComponent, directoryHint: .notDirectory)
             try copyItemReplacingIfNeeded(from: child, to: target)
+        }
+    }
+
+    /// 資料庫裡所有一般檔案：相對路徑與大小。
+    nonisolated private static func libraryFiles(in root: URL) -> [(relative: String, size: Int64)] {
+        let fm = FileManager.default
+        guard let walker = fm.enumerator(
+            at: root,
+            includingPropertiesForKeys: [.isRegularFileKey, .fileSizeKey],
+            options: []
+        ) else { return [] }
+        let prefix = root.standardizedFileURL.path + "/"
+        var files: [(String, Int64)] = []
+        for case let url as URL in walker {
+            guard let values = try? url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey]),
+                  values.isRegularFile == true
+            else { continue }
+            let path = url.standardizedFileURL.path
+            guard path.hasPrefix(prefix) else { continue }
+            files.append((String(path.dropFirst(prefix.count)), Int64(values.fileSize ?? 0)))
+        }
+        return files
+    }
+
+    /// 逐檔複製，回報進度，每一檔之間檢查取消。已經在目的地且大小一樣的檔案跳過 ——
+    /// 所以中斷後重來不必從頭複製。
+    nonisolated static func copyLibrary(
+        from source: URL, to destination: URL, progress: ProgressHandler?
+    ) throws {
+        let fm = FileManager.default
+        let files = libraryFiles(in: source)
+        let total = files.count
+        progress?(MoveProgress(phase: .copying, copiedFiles: 0, totalFiles: total))
+        for (index, file) in files.enumerated() {
+            try Task.checkCancellation()
+            let from = source.appending(path: file.relative, directoryHint: .notDirectory)
+            let to = destination.appending(path: file.relative, directoryHint: .notDirectory)
+            let existing = (try? to.resourceValues(forKeys: [.fileSizeKey]))?.fileSize
+            if existing.map(Int64.init) != file.size {
+                try fm.createDirectory(
+                    at: to.deletingLastPathComponent(), withIntermediateDirectories: true)
+                try? fm.removeItem(at: to)
+                try fm.copyItem(at: from, to: to)
+            }
+            if index % 25 == 0 || index == total - 1 {
+                progress?(MoveProgress(phase: .copying, copiedFiles: index + 1, totalFiles: total))
+            }
+        }
+    }
+
+    /// 來源的每個檔案都要在目的地、大小一樣。少一個就不准切換。
+    nonisolated static func verifyCopy(from source: URL, to destination: URL) throws {
+        let fm = FileManager.default
+        for file in libraryFiles(in: source) {
+            try Task.checkCancellation()
+            let to = destination.appending(path: file.relative, directoryHint: .notDirectory)
+            guard fm.fileExists(atPath: to.path),
+                  Int64((try? to.resourceValues(forKeys: [.fileSizeKey]))?.fileSize ?? -1) == file.size
+            else {
+                throw LocationError.cannotMoveLibrary("複製後驗證失敗：\(file.relative)")
+            }
+        }
+    }
+
+    /// 清空資料庫根目錄底下的東西（「重設本機資料」用），但保留 `keeping` 裡的名字。
+    ///
+    /// Mac 先丟垃圾桶（還能救回來），丟不了才直接刪；iOS 沒有垃圾桶可用，直接刪。
+    /// 回傳 (移除幾項, 失敗幾項)。**只動根目錄的直接子項**，不會往外爬。
+    @discardableResult
+    nonisolated static func clearLibraryContents(
+        at root: URL, keeping: Set<String> = []
+    ) -> (removed: Int, failed: Int) {
+        let fm = FileManager.default
+        let children = (try? fm.contentsOfDirectory(atPath: root.path)) ?? []
+        var removed = 0
+        var failed = 0
+        for name in children where !keeping.contains(name) && name != ".DS_Store" {
+            let url = root.appending(path: name, directoryHint: .notDirectory)
+            var done = false
+            #if targetEnvironment(macCatalyst)
+            done = (try? fm.trashItem(at: url, resultingItemURL: nil)) != nil
+            #endif
+            if !done { done = (try? fm.removeItem(at: url)) != nil }
+            if done { removed += 1 } else { failed += 1 }
+        }
+        return (removed, failed)
+    }
+
+    /// 舊資料庫確定與新的是同一份（文庫識別碼相同）才移除。先丟垃圾桶，丟不了才直接刪。
+    @discardableResult
+    nonisolated static func removeOldLibraryIfSame(_ old: URL, as new: URL) -> Bool {
+        let fm = FileManager.default
+        guard fm.fileExists(atPath: old.path),
+              let oldManifest = try? readManifest(in: old),
+              let newManifest = try? readManifest(in: new),
+              oldManifest.libraryId == newManifest.libraryId
+        else { return false }
+        do {
+            try fm.trashItem(at: old, resultingItemURL: nil)
+            return true
+        } catch {
+            return (try? fm.removeItem(at: old)) != nil
         }
     }
 

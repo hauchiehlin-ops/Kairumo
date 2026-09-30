@@ -10256,6 +10256,38 @@ extension LocalizationManager {
             .ko: "현재 기본 라이브러리",
             .th: "คลังหลักปัจจุบัน"
         ],
+        "storage_icloud_continue": [
+            .zhHant: "仍要使用",
+            .en: "Use it anyway",
+            .zhHans: "仍要使用",
+            .ja: "このまま使う",
+            .ko: "그래도 사용",
+            .th: "ใช้ต่อไป"
+        ],
+        "storage_icloud_current": [
+            .zhHant: "這個位置會被 iCloud 雲碟同步，已刪除的檔案可能被還原；建議改放 iCloud 不會同步的資料夾。",
+            .en: "This location is synced by iCloud Drive. Deleted files may come back; consider a folder iCloud doesn't sync.",
+            .zhHans: "这个位置会被 iCloud 云盘同步，已删除的文件可能被恢复；建议改放 iCloud 不会同步的文件夹。",
+            .ja: "この場所は iCloud Drive で同期されます。削除したファイルが復元されることがあります。iCloud で同期されないフォルダをおすすめします。",
+            .ko: "이 위치는 iCloud Drive로 동기화됩니다. 삭제한 파일이 복원될 수 있으니 iCloud가 동기화하지 않는 폴더를 권장합니다.",
+            .th: "ตำแหน่งนี้ซิงก์ผ่าน iCloud Drive ไฟล์ที่ลบอาจกลับมา แนะนำให้ใช้โฟลเดอร์ที่ iCloud ไม่ซิงก์"
+        ],
+        "storage_icloud_message": [
+            .zhHant: "Kairumo 的資料庫由數千個小檔組成，而且已經透過 Google Drive 或同步資料夾同步。若再讓 iCloud 雲碟同步它，已刪除的檔案可能被還原，兩邊也可能互相衝突。建議選擇 iCloud 不會同步的資料夾，或仍要使用這個位置。",
+            .en: "Kairumo's library is made of thousands of small files and already syncs through Google Drive or a sync folder. If iCloud Drive syncs it too, deleted files can come back and the two can conflict. Choose a folder that iCloud does not sync, or continue anyway.",
+            .zhHans: "Kairumo 的资料库由数千个小文件组成，并且已经通过 Google Drive 或同步文件夹同步。若再让 iCloud 云盘同步它，已删除的文件可能被恢复，两边也可能互相冲突。建议选择 iCloud 不会同步的文件夹，或仍要使用这个位置。",
+            .ja: "Kairumo のライブラリは数千の小さなファイルでできており、すでに Google Drive または同期フォルダで同期されます。iCloud Drive でも同期すると、削除したファイルが復元されたり、競合が起きたりすることがあります。iCloud で同期されないフォルダを選ぶか、そのまま続行してください。",
+            .ko: "Kairumo 라이브러리는 수천 개의 작은 파일로 이루어져 있으며 이미 Google Drive 또는 동기화 폴더로 동기화됩니다. iCloud Drive로도 동기화하면 삭제한 파일이 복원되거나 충돌이 생길 수 있습니다. iCloud가 동기화하지 않는 폴더를 선택하거나 그대로 계속하세요.",
+            .th: "คลังของ Kairumo ประกอบด้วยไฟล์เล็กๆ หลายพันไฟล์ และซิงก์ผ่าน Google Drive หรือโฟลเดอร์ซิงก์อยู่แล้ว หาก iCloud Drive ซิงก์ด้วย ไฟล์ที่ลบไปอาจกลับมาและอาจเกิดความขัดแย้งได้ ควรเลือกโฟลเดอร์ที่ iCloud ไม่ซิงก์ หรือดำเนินการต่อ"
+        ],
+        "storage_icloud_title": [
+            .zhHant: "這個資料夾會被 iCloud 雲碟同步",
+            .en: "This folder is synced by iCloud Drive",
+            .zhHans: "这个文件夹会被 iCloud 云盘同步",
+            .ja: "このフォルダは iCloud Drive で同期されます",
+            .ko: "이 폴더는 iCloud Drive로 동기화됩니다",
+            .th: "โฟลเดอร์นี้ซิงก์ผ่าน iCloud Drive"
+        ],
         "storage_library_explainer": [
             .zhHant: "請選擇可在 Finder 或「檔案」中存取的資料夾。Kairumo 會在其中建立「Kairumo Doc」，安全搬移目前資料庫，並持續將筆記本、錄音與附件儲存到該位置。",
             .en: "Choose a folder you can access in Finder or Files. Kairumo creates “Kairumo Doc” there, moves the current library safely, and continuously saves notebooks, recordings, and attachments to that location.",
@@ -10288,6 +10320,14 @@ extension LocalizationManager {
             .ko: "데이터 저장 위치",
             .th: "ตำแหน่งจัดเก็บข้อมูล"
         ],
+        "storage_move_cancelled": [
+            .zhHant: "已取消搬移，沒有任何改動。",
+            .en: "Move cancelled. Nothing was changed.",
+            .zhHans: "已取消搬移，没有任何更改。",
+            .ja: "移動をキャンセルしました。変更はありません。",
+            .ko: "이동을 취소했습니다. 변경된 내용이 없습니다.",
+            .th: "ยกเลิกการย้ายแล้ว ไม่มีการเปลี่ยนแปลง"
+        ],
         "storage_move_complete": [
             .zhHant: "主要資料庫現已持續儲存到所選位置。",
             .en: "The primary library is now continuously saved at the selected location.",
@@ -10295,6 +10335,134 @@ extension LocalizationManager {
             .ja: "メインライブラリは選択した場所に継続的に保存されます。",
             .ko: "이제 기본 라이브러리가 선택한 위치에 계속 저장됩니다.",
             .th: "ขณะนี้คลังหลักจะถูกบันทึกอย่างต่อเนื่องในตำแหน่งที่เลือก"
+        ],
+        "storage_progress_cleaning": [
+            .zhHant: "移除舊的資料庫…",
+            .en: "Removing the old copy…",
+            .zhHans: "移除旧的资料库…",
+            .ja: "古いライブラリを削除しています…",
+            .ko: "이전 라이브러리를 삭제하는 중…",
+            .th: "กำลังลบคลังเดิม…"
+        ],
+        "storage_progress_copying": [
+            .zhHant: "複製中：%1$d／%2$d 個檔案…",
+            .en: "Copying %1$d of %2$d files…",
+            .zhHans: "复制中：%1$d／%2$d 个文件…",
+            .ja: "コピー中：%1$d／%2$d ファイル…",
+            .ko: "복사 중: %1$d/%2$d 파일…",
+            .th: "กำลังคัดลอก %1$d จาก %2$d ไฟล์…"
+        ],
+        "storage_progress_verifying": [
+            .zhHant: "驗證複製結果…",
+            .en: "Verifying the copy…",
+            .zhHans: "验证复制结果…",
+            .ja: "コピーを検証しています…",
+            .ko: "복사본을 확인하는 중…",
+            .th: "กำลังตรวจสอบสำเนา…"
+        ],
+        "storage_progress_waiting": [
+            .zhHant: "等待同步結束…",
+            .en: "Waiting for sync to finish…",
+            .zhHans: "等待同步结束…",
+            .ja: "同期の完了を待っています…",
+            .ko: "동기화가 끝나기를 기다리는 중…",
+            .th: "กำลังรอการซิงก์ให้เสร็จ…"
+        ],
+        "storage_reset_button": [
+            .zhHant: "重設本機資料…",
+            .en: "Reset local data…",
+            .zhHans: "重置本机数据…",
+            .ja: "ローカルデータをリセット…",
+            .ko: "로컬 데이터 초기화…",
+            .th: "รีเซ็ตข้อมูลในเครื่อง…"
+        ],
+        "storage_reset_cloud_failed": [
+            .zhHant: "雲端資料沒有清成功，所以本機沒有動任何東西。請再試一次，或關掉這個選項。",
+            .en: "Could not erase the cloud data, so nothing local was removed. Try again or turn the option off.",
+            .zhHans: "云端数据没有清成功，所以本机没有动任何东西。请再试一次，或关掉这个选项。",
+            .ja: "クラウドのデータを削除できなかったため、ローカルは何も変更していません。もう一度試すか、このオプションをオフにしてください。",
+            .ko: "클라우드 데이터를 지우지 못해 로컬은 아무것도 변경하지 않았습니다. 다시 시도하거나 이 옵션을 끄세요.",
+            .th: "ลบข้อมูลบนคลาวด์ไม่สำเร็จ จึงไม่ได้ลบอะไรในเครื่อง ลองอีกครั้งหรือปิดตัวเลือกนี้"
+        ],
+        "storage_reset_cloud_note": [
+            .zhHant: "清掉本 App 在 Google Drive 或同步資料夾裡的資料，其他裝置就不會把檔案帶回來。其他裝置本機的副本要等你在那些裝置上也重設才會清掉。",
+            .en: "Clears this app's Google Drive or sync-folder data so other devices cannot bring the files back. Other devices keep their own local copies until you reset them too.",
+            .zhHans: "清掉本 App 在 Google Drive 或同步文件夹里的数据，其他设备就不会把文件带回来。其他设备本机的副本要等你在那些设备上也重置才会清掉。",
+            .ja: "このアプリの Google Drive または同期フォルダのデータを消去し、他の端末がファイルを戻せないようにします。他の端末のローカルコピーは、その端末でもリセットするまで残ります。",
+            .ko: "이 앱의 Google Drive 또는 동기화 폴더 데이터를 지워 다른 기기가 파일을 다시 가져오지 못하게 합니다. 다른 기기의 로컬 사본은 그 기기에서도 초기화하기 전까지 남아 있습니다.",
+            .th: "ล้างข้อมูลของแอปนี้ใน Google Drive หรือโฟลเดอร์ซิงก์ เพื่อไม่ให้อุปกรณ์อื่นนำไฟล์กลับมา สำเนาในเครื่องของอุปกรณ์อื่นจะยังอยู่จนกว่าคุณจะรีเซ็ตที่เครื่องนั้นด้วย"
+        ],
+        "storage_reset_cloud_toggle": [
+            .zhHant: "先清除雲端同步資料",
+            .en: "Also erase the cloud sync data first",
+            .zhHans: "先清除云端同步数据",
+            .ja: "先にクラウド同期データも削除する",
+            .ko: "먼저 클라우드 동기화 데이터도 삭제",
+            .th: "ลบข้อมูลซิงก์บนคลาวด์ก่อนด้วย"
+        ],
+        "storage_reset_confirm_action": [
+            .zhHant: "重設",
+            .en: "Reset",
+            .zhHans: "重置",
+            .ja: "リセット",
+            .ko: "초기화",
+            .th: "รีเซ็ต"
+        ],
+        "storage_reset_confirm_message": [
+            .zhHant: "這會移除這台裝置上所有的筆記本、錄音與附件。垃圾桶清空之後就無法復原。",
+            .en: "This removes all notebooks, recordings and attachments on this device. Once the Trash is emptied it cannot be undone.",
+            .zhHans: "这会移除这台设备上所有的笔记本、录音与附件。废纸篓清空之后就无法恢复。",
+            .ja: "この端末のノート、録音、添付ファイルをすべて削除します。ゴミ箱を空にすると元に戻せません。",
+            .ko: "이 기기의 모든 노트, 녹음, 첨부 파일이 삭제됩니다. 휴지통을 비우면 되돌릴 수 없습니다.",
+            .th: "การดำเนินการนี้จะลบสมุดบันทึก การบันทึกเสียง และไฟล์แนบทั้งหมดในอุปกรณ์นี้ เมื่อล้างถังขยะแล้วจะกู้คืนไม่ได้"
+        ],
+        "storage_reset_confirm_title": [
+            .zhHant: "要重設本機資料嗎？",
+            .en: "Reset local data?",
+            .zhHans: "要重置本机数据吗？",
+            .ja: "ローカルデータをリセットしますか？",
+            .ko: "로컬 데이터를 초기화할까요?",
+            .th: "รีเซ็ตข้อมูลในเครื่องหรือไม่?"
+        ],
+        "storage_reset_done": [
+            .zhHant: "已重設本機資料。",
+            .en: "Local data was reset.",
+            .zhHans: "已重置本机数据。",
+            .ja: "ローカルデータをリセットしました。",
+            .ko: "로컬 데이터를 초기화했습니다.",
+            .th: "รีเซ็ตข้อมูลในเครื่องแล้ว"
+        ],
+        "storage_reset_explainer": [
+            .zhHant: "移除這台裝置上所有的筆記本、錄音與附件，從乾淨的資料庫重新開始。已下載的語音模型會保留。可以的話會先移到垃圾桶。",
+            .en: "Removes every notebook, recording and attachment stored on this device and starts from a clean library. Downloaded speech models are kept. Items go to the Trash where possible.",
+            .zhHans: "移除这台设备上所有的笔记本、录音与附件，从干净的资料库重新开始。已下载的语音模型会保留。可以的话会先移到废纸篓。",
+            .ja: "この端末に保存されているノート、録音、添付ファイルをすべて削除し、空のライブラリから始めます。ダウンロード済みの音声モデルは残ります。可能な場合はゴミ箱に移動します。",
+            .ko: "이 기기에 저장된 모든 노트, 녹음, 첨부 파일을 삭제하고 깨끗한 라이브러리로 시작합니다. 다운로드한 음성 모델은 유지됩니다. 가능하면 휴지통으로 이동합니다.",
+            .th: "ลบสมุดบันทึก การบันทึกเสียง และไฟล์แนบทั้งหมดในอุปกรณ์นี้ แล้วเริ่มต้นคลังใหม่ โมเดลเสียงที่ดาวน์โหลดไว้จะยังอยู่ และจะย้ายไปถังขยะเมื่อทำได้"
+        ],
+        "storage_reset_progress_cloud": [
+            .zhHant: "清除雲端同步資料…",
+            .en: "Erasing cloud sync data…",
+            .zhHans: "清除云端同步数据…",
+            .ja: "クラウド同期データを削除しています…",
+            .ko: "클라우드 동기화 데이터를 지우는 중…",
+            .th: "กำลังลบข้อมูลซิงก์บนคลาวด์…"
+        ],
+        "storage_reset_progress_local": [
+            .zhHant: "移除本機資料…",
+            .en: "Removing local data…",
+            .zhHans: "移除本机数据…",
+            .ja: "ローカルデータを削除しています…",
+            .ko: "로컬 데이터를 삭제하는 중…",
+            .th: "กำลังลบข้อมูลในเครื่อง…"
+        ],
+        "storage_reset_title": [
+            .zhHant: "重設本機資料",
+            .en: "Reset local data",
+            .zhHans: "重置本机数据",
+            .ja: "ローカルデータをリセット",
+            .ko: "로컬 데이터 초기화",
+            .th: "รีเซ็ตข้อมูลในเครื่อง"
         ],
         "storage_sync_explainer": [
             .zhHant: "此位置僅屬於本裝置。跨設備更新會使用穩定的筆記本 ID，以及您設定的 Google Drive 或資料夾同步，因此 Mac、iPhone、iPad 與 Android 都不依賴其他裝置的本機路徑。",
