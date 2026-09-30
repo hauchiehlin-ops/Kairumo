@@ -2,11 +2,14 @@ package com.kairumo.padnote.ui
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.FilterChip
@@ -14,6 +17,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -50,6 +54,7 @@ import uniffi.padnote_core.FfiTrashEntry
  * 墓碑」當清單 —— 永久刪除之後它還會一直出現。這裡列的是 `trash/` 底下實際存在的
  * 套件，再去核心的清單裡找它的時間資訊。
  */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TrashDialog(onDismiss: () -> Unit) {
     val languageTag = LocalAppLanguage.current
@@ -94,7 +99,14 @@ fun TrashDialog(onDismiss: () -> Unit) {
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Text(l("trash_retention_title"), style = MaterialTheme.typography.labelLarge)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // **用 `FlowRow`，不用 `Row`。** 四顆晶片（7／30／90 天、直到我手動刪除）在窄手機
+                // 的可用寬度裡放不下：`Row` 會把最後一顆擠成很窄，文字一路換行變得非常高，
+                // 把整個對話框的高度吃光，下面的清單就沒有空間了（在 320dp 寬的裝置上，
+                // 列被量測了卻完全被裁掉，點不到）。`FlowRow` 是整顆換行。
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
                     TrashRetention.CHOICES.forEach { days ->
                         FilterChip(
                             selected = retentionDays == days,
@@ -117,38 +129,49 @@ fun TrashDialog(onDismiss: () -> Unit) {
                 if (rows.isEmpty()) {
                     Text(l("trash_empty"), modifier = Modifier.testTag("trash.empty"))
                 } else {
-                    LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(rows, key = { it.first }) { (id, entry) ->
-                            Card(modifier = Modifier.fillMaxWidth().testTag("trash.row")) {
-                                Column(Modifier.padding(12.dp)) {
-                                    Text(titleOf(entry), style = MaterialTheme.typography.titleSmall)
-                                    Text(
-                                        countdownText(entry),
-                                        style = MaterialTheme.typography.bodySmall,
-                                        color = if (entry?.hasCountdown == true && entry.daysLeft == 0u)
-                                            MaterialTheme.colorScheme.error
-                                        else MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
-                                    Row {
-                                        TextButton(
-                                            onClick = {
-                                                // 本機回收桶裡有就從本機還原；沒有（只在雲端）就只記還原，
-                                                // 下一輪同步會把它拉回來。
-                                                if (!NotebookTrash.restore(context, id)) {
-                                                    AccountSyncStore.recordRestore(context, id)
-                                                }
-                                                version++
-                                            },
-                                            modifier = Modifier.testTag("trash.restore")
-                                        ) { Text(l("trash_restore")) }
-                                        TextButton(
-                                            onClick = { pendingDelete = id to titleOf(entry) },
-                                            modifier = Modifier.testTag("trash.deleteForever")
-                                        ) {
-                                            Text(
-                                                l("trash_delete_forever"),
-                                                color = MaterialTheme.colorScheme.error
-                                            )
+                    // 一般的 Column 加捲動，不用 `LazyColumn`：回收桶通常很短，不需要惰性載入。
+                    //
+                    // （這不是「LazyColumn 在 AlertDialog 裡會壞」的修法 —— 一度這樣懷疑過，
+                    // 換成 Column 之後列的位置仍然是全零，真正的原因是上面的選項晶片，見 `FlowRow`。）
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 320.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        rows.forEach { (id, entry) ->
+                            key(id) {
+                                Card(modifier = Modifier.fillMaxWidth().testTag("trash.row")) {
+                                    Column(Modifier.padding(12.dp)) {
+                                        Text(titleOf(entry), style = MaterialTheme.typography.titleSmall)
+                                        Text(
+                                            countdownText(entry),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = if (entry?.hasCountdown == true && entry.daysLeft == 0u)
+                                                MaterialTheme.colorScheme.error
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Row {
+                                            TextButton(
+                                                onClick = {
+                                                    // 本機回收桶裡有就從本機還原；沒有（只在雲端）就只記還原，
+                                                    // 下一輪同步會把它拉回來。
+                                                    if (!NotebookTrash.restore(context, id)) {
+                                                        AccountSyncStore.recordRestore(context, id)
+                                                    }
+                                                    version++
+                                                },
+                                                modifier = Modifier.testTag("trash.restore")
+                                            ) { Text(l("trash_restore")) }
+                                            TextButton(
+                                                onClick = { pendingDelete = id to titleOf(entry) },
+                                                modifier = Modifier.testTag("trash.deleteForever")
+                                            ) {
+                                                Text(
+                                                    l("trash_delete_forever"),
+                                                    color = MaterialTheme.colorScheme.error
+                                                )
+                                            }
                                         }
                                     }
                                 }
