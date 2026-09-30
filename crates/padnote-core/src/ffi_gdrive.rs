@@ -502,6 +502,15 @@ fn sync_notebook_ops(
     }
 
     // ── 上傳成功之後，才刪雲端上被自己壓實掉的碎檔 ──────────────
+    //
+    // **本機現在有的檔案，雲端那一份絕不能刪。** 墓碑檔記的是「以前被吃掉的名字」，
+    // 但同名的檔案之後可能又被重新寫出來（例如工作副本重新匯出）—— 那時候它是**現行**
+    // 的資料。照墓碑刪的話，雲端上剛上傳的現行檔案被自己刪掉，另一台裝置什麼都拿不到，
+    // 直到這台下一輪把它重傳。實測：建立筆記本後的第二次啟動就把雲端那本刪光了。
+    let live_local: std::collections::HashSet<String> = local
+        .iter()
+        .map(|(n, _)| padnote_sync::paths::canonical_name(n))
+        .collect();
     if let Ok(content) = std::fs::read(package.root().join("doc/ops/compaction.tombstones")) {
         let text = String::from_utf8_lossy(&content);
         for line in text.lines() {
@@ -511,6 +520,9 @@ fn sync_notebook_ops(
             }
             let path = padnote_sync::paths::notebook_op_file(notebook_id, name);
             let key = padnote_sync::paths::canonical_name(name);
+            if live_local.contains(&key) {
+                continue;
+            }
             if let Some(file) = remote.get(&key) {
                 let target = if file.id.is_empty() {
                     path.clone()
@@ -550,6 +562,10 @@ fn sync_notebook_ops(
                 if deleted_count < MAX_DELETIONS_PER_SYNC {
                     let path = padnote_sync::paths::notebook_op_file(notebook_id, name);
                     let key = padnote_sync::paths::canonical_name(name);
+                    // 同上：本機現在有這個名字就是現行檔，不刪。
+                    if live_local.contains(&key) {
+                        continue;
+                    }
                     if let Some(file) = remote.get(&key) {
                         let target = if file.id.is_empty() {
                             path.clone()
@@ -3138,6 +3154,50 @@ mod tests {
             .filter(|(n, _)| n.ends_with("-000000bb.oplog"))
             .count();
         assert_eq!(remaining_foreign, 3, "別台裝置的碎檔一個都不該被刪");
+    }
+
+    #[test]
+    fn a_stale_tombstone_never_deletes_a_file_that_is_live_locally() {
+        // 墓碑檔記著「以前被壓實吃掉的名字」。同名的檔案之後被重新寫出來（現行資料）時，
+        // 雲端那一份不能照墓碑刪掉 —— 否則剛上傳的內容被自己刪光，另一台拿不到。
+        use padnote_doc::ops::DocOp;
+        let fake = Arc::new(FakeDrive::default());
+        let http: Arc<dyn FfiDriveHttp> = fake.clone();
+
+        let root = tmp_package("stale-tombstone", 0xAA);
+        let mut pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
+        for lamport in 1..=3u64 {
+            pkg.append_doc_ops(lamport, 0xAA, &[DocOp::SetTitle { title: "a".into() }])
+                .unwrap();
+        }
+        // 先把三個檔原樣推上雲端（device 0 ⇒ 不壓實、不刪）。
+        let s0 = FfiSyncSession::create(http.clone(), String::new());
+        assert!(s0.refresh().ok);
+        assert!(
+            s0.sync_notebook(root.to_string_lossy().into(), "nb1".into(), 0)
+                .ok
+        );
+        // 之後本機留著一份過期的墓碑，名字正好是現行的這三個檔。
+        std::fs::write(
+            root.join("doc/ops/compaction.tombstones"),
+            "0000000000000001-000000aa.oplog\n0000000000000002-000000aa.oplog\n\
+             0000000000000003-000000aa.oplog\n",
+        )
+        .unwrap();
+        // 用存下來的快照開新的工作階段（App 每次啟動就是這樣），以自己的 device id 同步：
+        // 這一輪會走到「照墓碑刪雲端檔案」那一段。
+        let s1 = FfiSyncSession::create(http.clone(), s0.index_json());
+        let r = s1.sync_notebook(root.to_string_lossy().into(), "nb1".into(), 0xAA);
+        assert!(r.ok, "{}", r.error);
+
+        let live = fake
+            .files
+            .lock()
+            .unwrap()
+            .iter()
+            .filter(|(n, _)| n.ends_with("-000000aa.oplog"))
+            .count();
+        assert_eq!(live, 3, "本機還在用的三個檔被墓碑從雲端刪掉了");
     }
 
     #[test]

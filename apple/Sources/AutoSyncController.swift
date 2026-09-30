@@ -15,8 +15,9 @@
 //  - 進前景、登入完成、網路恢復 → 立刻跑
 //  - 本機存檔 → 去抖動 1.5 秒（使用者還在寫字時每一筆都推只是浪費電，
 //    而且會拖慢正在編輯的那一本）
-//  - 前景時每 12 秒拉一次 —— P1 之後那是**一個** HTTP 請求，
-//    沒有變動就是空回應
+//  - 前景時每 60 秒整庫同步一次；**一輪週期同步發現與上一輪相比沒有變動，
+//    就停止週期同步**，直到下一個事件（進前景、存檔、登入、網路恢復、
+//    別的通道收到對方的東西）。開著的那一本走焦點通道，不靠這一檔
 //
 //  # 策略不在這裡
 //
@@ -76,6 +77,9 @@ public final class AutoSyncController: ObservableObject {
     private var store: SyncableNotebookStore?
     private var deviceId: UInt32 = 0
     private var started = false
+    /// 最近一輪有沒有上傳、下載或新增東西。排程器據此決定要不要「安靜下來」
+    /// （週期觸發的一輪沒有變動 → 不再排下一個週期）。
+    private var roundChanged = true
 
     /// 單調時鐘的毫秒數。**不要用 `Date()`** —— 系統校時會讓它往回跳。
     private var nowMs: UInt64 {
@@ -95,18 +99,10 @@ public final class AutoSyncController: ObservableObject {
 
         // 前景心跳。間隔由核心給 —— 兩個平台照同一個數字。
         //
-        // 心跳只是「問一下」，不是輪詢頻率：真正的節奏由排程器依
-        // 當下狀態決定（對方正在寫→三秒、有人在動→十二秒、
-        // 兩邊都閒→一分鐘）。心跳要跟最快的那一檔一樣快，否則
-        // 快檔會被慢計時器吃掉。
-        let interval = Double(syncHeartbeatIntervalMs()) / 1000.0
-        let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.heartbeat() }
-        }
-        // 使用者捲動清單時 run loop 會切到 tracking mode，預設的計時器
-        // 在那段時間完全不會觸發 —— 症狀是「一邊滑一邊就不同步了」。
-        RunLoop.main.add(timer, forMode: .common)
-        self.timer = timer
+        // 心跳只是「問一下」，不是輪詢頻率：真正的節奏是核心的 60 秒週期，
+        // 而且週期同步沒有變動就會安靜下來（見 `finishRound`）。
+        // 心跳夠密，60 秒才不會實際變成 60～120 秒。
+        startHeartbeat()
 
         startNetworkMonitor()
         observeLifecycle()
@@ -115,6 +111,38 @@ public final class AutoSyncController: ObservableObject {
         // 才被呼叫的。放在這裡會讓 App 一啟動就當掉。
         scheduleBackgroundTask()
         request(.foreground)
+    }
+
+    /// 啟動前景心跳（已經在跑就什麼也不做）。
+    private func startHeartbeat() {
+        guard timer == nil else { return }
+        let interval = Double(syncHeartbeatIntervalMs()) / 1000.0
+        let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            Task { @MainActor in self?.heartbeat() }
+        }
+        // 使用者捲動清單時 run loop 會切到 tracking mode，預設的計時器
+        // 在那段時間完全不會觸發 —— 症狀是「一邊滑一邊就不同步了」。
+        RunLoop.main.add(timer, forMode: .common)
+        self.timer = timer
+    }
+
+    /// 排程器休眠了（安靜之後連續兩次 8 分鐘守望掃描都沒有變化）：
+    /// 停掉心跳計時器與背景更新排程。**不結束 App** —— iOS 不允許程式自己結束行程，
+    /// 而且「同步沒有變化」不代表使用者沒在用。下一個事件會叫醒（見 `wakeSyncServices`）。
+    private func sleepSyncServices() {
+        timer?.invalidate()
+        timer = nil
+        #if canImport(BackgroundTasks) && !targetEnvironment(macCatalyst)
+            guard !ProcessInfo.processInfo.isiOSAppOnMac else { return }
+            BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.backgroundTaskId)
+        #endif
+    }
+
+    /// 事件把休眠的同步服務叫醒：心跳與背景排程都重新開始。
+    private func wakeSyncServices() {
+        guard started, timer == nil else { return }
+        startHeartbeat()
+        scheduleBackgroundTask()
     }
 
     /// 背景同步的任務識別字。
@@ -130,6 +158,7 @@ public final class AutoSyncController: ObservableObject {
             FocusSyncController.shared.noteSignedIn()
         }
         scheduler.request(trigger: trigger, nowMs: nowMs)
+        wakeSyncServices()
         needsSignIn = scheduler.isBlockedOnAuth()
         let due = scheduler.nextDueInMs(nowMs: nowMs)
         if due != UInt64.max, due > 0 {
@@ -149,10 +178,11 @@ public final class AutoSyncController: ObservableObject {
         FocusSyncController.shared.noteLocalEdit()
     }
 
-    /// 焦點通道或區網直連**真的收到了對方的東西**。對方正在寫 ——
-    /// 整庫通道也改用快檔，其他筆記本的變動才不會慢半拍。
+    /// 焦點通道或區網直連**真的收到了對方的東西**。對方在動 ——
+    /// 整庫通道若已安靜下來，要重新開始，其他筆記本的變動才不會等不到。
     public func noteRemoteActivity() {
         scheduler.noteRemoteChange(nowMs: nowMs)
+        wakeSyncServices()
     }
 
     private func heartbeat() {
@@ -168,11 +198,12 @@ public final class AutoSyncController: ObservableObject {
         Task { @MainActor in
             defer { isSyncing = false }
             let outcome = await runOneRound(store: store)
-            scheduler.finish(outcome: outcome, nowMs: nowMs)
+            scheduler.finishRound(outcome: outcome, changed: roundChanged, nowMs: nowMs)
             needsSignIn = scheduler.isBlockedOnAuth()
             if outcome == .success {
                 lastSuccessAt = nowMs
             }
+            if scheduler.isDormant() { sleepSyncServices() }
             // 這一輪結束後還有待辦（例如跑到一半又存了檔）就接著跑。
             scheduleNextWake()
         }
@@ -192,6 +223,8 @@ public final class AutoSyncController: ObservableObject {
     }
 
     private func runOneRound(store: SyncableNotebookStore) async -> FfiSyncOutcome {
+        // 不知道的時候當作有變動：寧可多跑一輪，也不要誤判成安靜而停掉。
+        roundChanged = true
         if await GoogleAuth.shared.isSignedIn {
             guard let report = await NotebookSyncCoordinator.runDrive(
                 store: store, deviceId: deviceId
@@ -216,6 +249,7 @@ public final class AutoSyncController: ObservableObject {
         }
         // 沒設定任何同步方式：不是錯誤，也不該一直重試。
         lastMessage = ""
+        roundChanged = false
         return .success
     }
 
@@ -226,6 +260,7 @@ public final class AutoSyncController: ObservableObject {
             lastMessage = ""
             return .transient
         }
+        roundChanged = !report.isNoOp || report.newNotebooks > 0
         if let failure = report.failures.first {
             lastMessage = "\(failure.key)：\(failure.value)"
             // 權杖問題由 runDrive 內部處理成登出；這裡一律當成可重試，
@@ -239,8 +274,7 @@ public final class AutoSyncController: ObservableObject {
         // 那份清單看不到它們 —— 而那正是它最該顯示的東西。
         if report.downloaded > 0 || report.newNotebooks > 0 {
             NotebookStore.shared.refreshRecordings()
-            // 真的拉到了對方的東西 = 對方正在寫。接下來九十秒改用
-            // 快檔，讓來回編輯像在同一台裝置上。
+            // 真的拉到了對方的東西 = 對方在動：排程器重新開始週期同步。
             scheduler.noteRemoteChange(nowMs: nowMs)
         }
         if report.failures.isEmpty {

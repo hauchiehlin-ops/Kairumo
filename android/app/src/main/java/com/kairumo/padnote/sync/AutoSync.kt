@@ -11,6 +11,7 @@ import com.kairumo.padnote.library.SyncHistory
 import com.kairumo.padnote.oauth.GoogleAuth
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -37,8 +38,9 @@ import uniffi.padnote_core.syncHeartbeatIntervalMs
  * - 進前景、登入完成、網路恢復 → 立刻跑
  * - 本機存檔 → 去抖動 1.5 秒（使用者還在寫字時每一筆都推只是浪費電，
  *   而且會拖慢正在編輯的那一本）
- * - 前景時每 12 秒拉一次 —— P1 之後那是**一個** HTTP 請求，
- *   沒有變動就是空回應
+ * - 前景時每 60 秒整庫同步一次；**一輪週期同步發現與上一輪相比沒有變動，
+ *   就停止週期同步**，直到下一個事件（進前景、存檔、登入、網路恢復、
+ *   別的通道收到對方的東西）。開著的那一本走焦點通道，不靠這一檔
  *
  * # 策略不在這裡
  *
@@ -68,6 +70,16 @@ object AutoSync {
     val changedNotebooks: StateFlow<List<String>> = _changedNotebooks
 
     private var started = false
+
+    private var appContext: Context? = null
+    private var heartbeatJob: Job? = null
+
+    /**
+     * 最近一輪有沒有上傳、下載或新增東西。排程器據此決定要不要「安靜下來」
+     * （週期觸發的一輪沒有變動 → 不再排下一個週期）。不知道時當作有變動。
+     */
+    @Volatile
+    private var roundChanged = true
 
     /**
      * 使用者現在打開的那一本。**自動同步靠它決定先做哪一本。**
@@ -111,18 +123,11 @@ object AutoSync {
 
         // 前景心跳。間隔由核心給 —— 兩個平台照同一個數字。
         //
-        // 心跳只是「問一下」，不是輪詢頻率：真正的節奏由排程器依
-        // 當下狀態決定（對方正在寫→三秒、有人在動→十二秒、
-        // 兩邊都閒→一分鐘）。心跳要跟最快的那一檔一樣快，否則
-        // 快檔會被慢計時器吃掉。
-        scope.launch {
-            val interval = syncHeartbeatIntervalMs().toLong()
-            while (true) {
-                delay(interval)
-                scheduler.tick(nowMs())
-                pump(app)
-            }
-        }
+        // 心跳只是「問一下」，不是輪詢頻率：真正的節奏是核心的 60 秒週期，
+        // 而且週期同步沒有變動就會安靜下來（見 `finishRound`）。
+        // 心跳夠密，60 秒才不會實際變成 60～120 秒。
+        appContext = app
+        startHeartbeat(app)
 
         watchNetwork(app)
         // 背景保底：App 被收掉之後，前景的心跳也跟著停。
@@ -130,10 +135,44 @@ object AutoSync {
         request(app, FfiSyncTrigger.FOREGROUND)
     }
 
+    /** 啟動前景心跳（已經在跑就什麼也不做）。 */
+    @Synchronized
+    private fun startHeartbeat(app: Context) {
+        if (heartbeatJob?.isActive == true) return
+        heartbeatJob = scope.launch {
+            val interval = syncHeartbeatIntervalMs().toLong()
+            while (true) {
+                delay(interval)
+                scheduler.tick(nowMs())
+                pump(app)
+            }
+        }
+    }
+
+    /**
+     * 排程器休眠了（安靜之後連續兩次 8 分鐘守望掃描都沒有變化）：停掉心跳與背景 worker。
+     * **不結束 App** —— 「同步沒有變化」不代表使用者沒在用。下一個事件會叫醒（見 [wake]）。
+     */
+    @Synchronized
+    private fun sleepSyncServices(app: Context) {
+        heartbeatJob?.cancel()
+        heartbeatJob = null
+        SyncWorker.cancel(app)
+    }
+
+    /** 事件把休眠的同步服務叫醒：心跳與背景 worker 都重新開始。 */
+    @Synchronized
+    private fun wake(app: Context) {
+        if (!started || heartbeatJob?.isActive == true) return
+        startHeartbeat(app)
+        SyncWorker.schedule(app)
+    }
+
     /** 送一個觸發事件進排程器。 */
     fun request(context: Context, trigger: FfiSyncTrigger) {
         val app = context.applicationContext
         scheduler.request(trigger, nowMs())
+        wake(app)
         _needsSignIn.value = scheduler.isBlockedOnAuth()
         scope.launch {
             // 去抖動的觸發不會立刻起跑，所以要排一次「到點再問」。
@@ -151,11 +190,12 @@ object AutoSync {
     }
 
     /**
-     * 焦點通道或區網直連**真的收到了對方的東西**。對方正在寫 ——
-     * 整庫通道也改用快檔，其他筆記本的變動才不會慢半拍。
+     * 焦點通道或區網直連**真的收到了對方的東西**。對方在動 ——
+     * 整庫通道若已安靜下來，要重新開始，其他筆記本的變動才不會等不到。
      */
     fun noteRemoteActivity() {
         scheduler.noteRemoteChange(nowMs())
+        appContext?.let { wake(it) }
     }
 
     /** 別的通道改了這些筆記本：首頁據此重讀清單。 */
@@ -175,13 +215,15 @@ object AutoSync {
             runLock.withLock {
                 if (!scheduler.shouldStart(nowMs())) return@withLock
                 _isSyncing.value = true
+                roundChanged = true
                 val outcome = try {
                     runOneRound(context)
                 } finally {
                     _isSyncing.value = false
                 }
-                scheduler.finish(outcome, nowMs())
+                scheduler.finishRound(outcome, roundChanged, nowMs())
                 _needsSignIn.value = scheduler.isBlockedOnAuth()
+                if (scheduler.isDormant()) sleepSyncServices(context.applicationContext)
             }
             // 這一輪跑完之後還有待辦（例如跑到一半又存了檔）就接著跑。
             val due = scheduler.nextDueInMs(nowMs())
@@ -195,6 +237,7 @@ object AutoSync {
     private suspend fun runOneRound(context: Context): FfiSyncOutcome {
         if (!GoogleAuth.isSignedIn(context)) {
             // 沒登入不是錯誤，也不該一直重試。
+            roundChanged = false
             return FfiSyncOutcome.SUCCESS
         }
         return kotlinx.coroutines.withContext(Dispatchers.IO) {
@@ -213,10 +256,11 @@ object AutoSync {
                 !meta.ok -> FfiSyncOutcome.TRANSIENT
                 else -> {
                     SyncHistory.markGoogleSynced(context)
+                    roundChanged = result.uploaded > 0 || result.downloaded > 0 ||
+                        result.changed.isNotEmpty()
                     if (result.changed.isNotEmpty()) {
                         _changedNotebooks.value = result.changed
-                        // 真的拉到了對方的東西 = 對方正在寫。接下來
-                        // 九十秒改用快檔，讓來回編輯像在同一台裝置上。
+                        // 真的拉到了對方的東西 = 對方在動：排程器重新開始週期同步。
                         scheduler.noteRemoteChange(nowMs())
                     }
                     FfiSyncOutcome.SUCCESS

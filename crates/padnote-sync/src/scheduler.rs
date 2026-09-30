@@ -64,48 +64,41 @@ pub enum SyncOutcome {
 /// 1.5 秒是一句話寫完的自然停頓。
 pub const DEBOUNCE_MS: u64 = 1_000;
 
-/// 前景時多久拉一次（**沒有跡象顯示對方在動**時的基準）。
+/// 前景時多久整庫同步一次。
 ///
-/// P1 之後這是**一個** HTTP 請求（`changes.list`），沒有變動就是空回應。
-/// 降至 6 秒可大幅降低跨設備同步延遲，且不影響 Drive 配額。
-pub const PERIODIC_MS: u64 = 6_000;
-
-/// **對方正在寫**的時候多久拉一次。
+/// **一分鐘，而且只在「上一輪還有東西」時才繼續。** 以前有三檔（3 秒／12 秒／60 秒）
+/// 依「有沒有人在動」自適應，實測在使用者操作後的活躍模式裡每秒一輪，
+/// 每輪都要讀索引與 `changes.list` —— 在真實 Google Drive 上是持續的請求量，
+/// 吃配額也吃電。現在只有一檔：60 秒。
 ///
-/// 2 秒提供接近即時的跨設備對話與編輯流暢度。
-pub const ACTIVE_PERIODIC_MS: u64 = 2_000;
+/// 開著的那一本另有焦點通道與區網直連（秒同步），不靠這一檔。
+pub const PERIODIC_MS: u64 = 60_000;
 
-/// 距離上一次「真的有拉到東西」多久之內算**對方正在寫**。
-pub const ACTIVE_WINDOW_MS: u64 = 90_000;
-
-/// 完全沒有動靜多久之後改用省電節奏。
-pub const IDLE_AFTER_MS: u64 = 10 * 60_000;
-
-/// 省電節奏下多久拉一次。
-pub const IDLE_PERIODIC_MS: u64 = 60_000;
-
-/// **對使用者的承諾**：一邊寫完，另一邊最久多久看得到（毫秒）。
-pub const VISIBLE_LATENCY_BUDGET_MS: u64 = 10_000;
-
-/// 最壞情況下，A 寫完到 B 看得見要多久。
+/// **安靜之後的守望掃描間隔**：8 分鐘。
 ///
-/// A 端去抖動之後才推（`DEBOUNCE_MS`），B 端最久要等一輪定期拉取。
-/// 兩段相加就是上界 —— 中間的網路時間不算在內，那不是排程器決定得了的。
+/// 週期同步發現沒有變動而安靜下來之後，程式只要還在運行（前景或背景），
+/// 每 8 分鐘掃一次（索引 + `changes.list`，就是一輪整庫同步；沒有變動時
+/// 那只是兩三個請求），有變化就重新開始週期同步。**連續兩次掃描都沒有變化**
+/// 就進入休眠（[`SyncScheduler::is_dormant`]）：平台停掉同步的計時器與背景排程，
+/// 直到下一個事件（進前景、存檔、登入、網路恢復、手動、別的通道收到東西）才重新啟動。
+pub const WATCH_SCAN_MS: u64 = 8 * 60_000;
+
+/// 前景心跳的間隔。**心跳只是「問一下」，不是輪詢頻率** ——
+/// 真正的節奏是 [`PERIODIC_MS`]，由 [`SyncScheduler::tick`] 擋掉太早的那些。
+/// 心跳夠密才不會讓 60 秒的週期實際變成 60～120 秒。
+pub const HEARTBEAT_MS: u64 = 5_000;
+
+/// **對使用者的承諾**：整庫那條通道上，一邊寫完，另一邊最久多久看得到（毫秒）。
 ///
-/// **用 `PERIODIC_MS` 而不是 `IDLE_PERIODIC_MS` 是刻意的。** 省電那一檔
-/// 只在雙方都十分鐘沒有動靜時生效，而那時候「即時」沒有意義；
-/// 任何一邊一動（本機編輯、回到前景、拉到遠端變動）就立刻回到快檔。
-/// 拿省電檔去算承諾的話，這個數字會變成 61.5 秒 —— 那是個誠實但沒有用的
-/// 數字，它描述的是沒有人在用的情況。
+/// 去抖動 + 一個週期 + 一個心跳的抖動。開著的那一本走焦點通道，
+/// 不受這個數字限制。
+pub const VISIBLE_LATENCY_BUDGET_MS: u64 = 70_000;
+
+/// 最壞情況下，A 寫完到 B（整庫通道）看得見要多久。
+///
+/// 網路時間不算在內，那不是排程器決定得了的。
 pub const fn worst_case_visible_latency_ms() -> u64 {
-    DEBOUNCE_MS + PERIODIC_MS
-}
-
-/// 對方正在寫的時候，A 寫完到 B 看得見要多久。
-///
-/// 這才是使用者在**來回改同一本筆記**時感受到的數字。
-pub const fn active_visible_latency_ms() -> u64 {
-    DEBOUNCE_MS + ACTIVE_PERIODIC_MS
+    DEBOUNCE_MS + PERIODIC_MS + HEARTBEAT_MS
 }
 
 /// 失敗退避的起點與上限。
@@ -128,17 +121,20 @@ pub struct SyncScheduler {
     blocked_on_auth: bool,
     /// 上一次跑完的時間，週期性拉取據此計算。
     last_finished: Option<u64>,
-    /// 上一次**真的拉到東西**的時間。快慢檔據此決定。
-    ///
-    /// 與 `last_finished` 分開：一輪跑完但什麼也沒變（空回應）是常態，
-    /// 拿它當「對方在動」的證據的話，快檔會永遠開著。
-    last_remote_change: Option<u64>,
-    /// 上一次本機編輯的時間。省電檔要兩邊都沒動才生效。
-    last_local_edit: Option<u64>,
-    /// 這個排程器第一次被叫到的時間。**沒有歷史不等於安靜** ——
-    /// 剛開 App 的裝置正是最需要快的那一個，拿「從來沒動過」
-    /// 當作省電的理由，會讓對方的編輯要等一分鐘才看得見。
-    first_seen: Option<u64>,
+    /// **已安靜下來**：一輪由週期觸發的同步發現與上一輪相比沒有任何變動。
+    /// 之後不再排週期性同步，直到有事件（進前景、存檔、登入、網路恢復、
+    /// 手動、背景喚醒、別的通道收到對方的東西）才重新開始。
+    settled: bool,
+    /// 安靜之後，連續沒有變化的守望掃描次數（[`WATCH_SCAN_MS`]）。
+    quiet_scans: u32,
+    /// **休眠**：連續兩次守望掃描都沒有變化。不再排任何週期同步，
+    /// 平台可以停掉計時器與背景排程；下一個事件就會叫醒。
+    dormant: bool,
+    /// 目前排著的那一輪是不是**只**由週期觸發。只有這種輪才有資格讓排程器安靜下來 ——
+    /// 開機、存檔那一輪本來就該跑，它沒有變動不代表「跟上一分鐘相比沒有變動」。
+    pending_periodic: bool,
+    /// 正在跑的這一輪是不是週期觸發（起跑時從 `pending_periodic` 帶過來）。
+    running_periodic: bool,
 }
 
 impl Default for SyncScheduler {
@@ -155,60 +151,42 @@ impl SyncScheduler {
             failures: 0,
             blocked_on_auth: false,
             last_finished: None,
-            last_remote_change: None,
-            last_local_edit: None,
-            first_seen: None,
+            settled: false,
+            quiet_scans: 0,
+            dormant: false,
+            pending_periodic: false,
+            running_periodic: false,
         }
     }
 
-    /// 這一輪**真的拉到了東西**。
-    ///
-    /// 呼叫端在同步帶回遠端變動時呼叫它 —— 那是「對方正在寫」唯一可靠的
-    /// 證據。沒有這個訊號的話，排程器分不出「一直在拉但都是空的」與
-    /// 「對方正在改」，而那兩種情況該用完全不同的節奏。
-    pub fn note_remote_change(&mut self, now_ms: u64) {
-        self.first_seen.get_or_insert(now_ms);
-        self.last_remote_change = Some(now_ms);
+    /// 回到活躍：清掉「安靜」與「休眠」。任何事件都走這裡。
+    fn wake(&mut self) {
+        self.settled = false;
+        self.quiet_scans = 0;
+        self.dormant = false;
     }
 
-    /// 現在該用哪一種輪詢間隔。
+    /// 別的通道（焦點通道、區網直連）**真的收到了對方的東西**。
     ///
-    /// 三檔，依「有沒有人在動」決定：
-    ///
-    /// * 剛拉到遠端變動（90 秒內）→ 快檔，對方正在寫
-    /// * 本機或遠端十分鐘內有動靜 → 基準檔
-    /// * 兩邊都十分鐘沒動 → 省電檔
-    ///
-    /// 回傳的是毫秒。公開是為了讓平台層能據此設定計時器 ——
-    /// 平台端自己猜一個數字的話，兩端的節奏會不一樣。
-    pub fn current_period_ms(&self, now_ms: u64) -> u64 {
-        let since = |t: Option<u64>| t.map(|v| now_ms.saturating_sub(v));
+    /// 對方在動，整庫這條通道也該重新開始週期性同步 ——
+    /// 不然其他筆記本的變動會一直等到下一個事件。
+    pub fn note_remote_change(&mut self, _now_ms: u64) {
+        self.wake();
+    }
 
-        // 對方正在寫 —— 這是最該快的時候。
-        if since(self.last_remote_change).is_some_and(|gap| gap <= ACTIVE_WINDOW_MS) {
-            return ACTIVE_PERIODIC_MS;
+    /// 現在的間隔：活躍時 [`PERIODIC_MS`]，安靜之後 [`WATCH_SCAN_MS`]。
+    pub fn current_period_ms(&self, _now_ms: u64) -> u64 {
+        if self.settled {
+            WATCH_SCAN_MS
+        } else {
+            PERIODIC_MS
         }
+    }
 
-        // 兩邊都很久沒動才省電。任何一邊有動靜就維持基準檔 ——
-        // 使用者正在寫的時候把節奏放慢，是最糟的省電方式。
-        //
-        // 「從來沒動過」算進來的是 `first_seen`，不是無限久以前：
-        // 一台剛開起來、還沒收到任何東西的裝置，要先照基準檔跑滿
-        // 十分鐘，才有資格說自己閒著。
-        let last_activity = [
-            self.last_local_edit,
-            self.last_remote_change,
-            self.first_seen,
-        ]
-        .into_iter()
-        .flatten()
-        .max();
-        match since(last_activity) {
-            Some(gap) if gap >= IDLE_AFTER_MS => IDLE_PERIODIC_MS,
-            // 連 `first_seen` 都還沒設 —— 還沒開始跑，照基準檔。
-            None => PERIODIC_MS,
-            Some(_) => PERIODIC_MS,
-        }
+    /// 已休眠：連續兩次守望掃描都沒有變化。平台該停掉計時器與背景排程，
+    /// 下一個事件（`request`）會自動叫醒 —— 平台在 `request` 之後要重新啟動它們。
+    pub fn is_dormant(&self) -> bool {
+        self.dormant
     }
 
     /// 收到一個觸發。
@@ -221,10 +199,15 @@ impl SyncScheduler {
         if self.blocked_on_auth && trigger != SyncTrigger::Manual {
             return;
         }
-        if trigger == SyncTrigger::LocalEdit {
-            self.last_local_edit = Some(now_ms);
+        if trigger == SyncTrigger::Periodic {
+            // 已經排著別的原因的話，那一輪照跑，而且不算「純週期」。
+            if self.due_at.is_none() {
+                self.pending_periodic = true;
+            }
+        } else {
+            self.wake();
+            self.pending_periodic = false;
         }
-        self.first_seen.get_or_insert(now_ms);
         let due = if trigger.debounced() {
             now_ms + DEBOUNCE_MS
         } else {
@@ -248,19 +231,42 @@ impl SyncScheduler {
             Some(due) if due <= now_ms => {
                 self.running = true;
                 self.due_at = None;
+                self.running_periodic = std::mem::take(&mut self.pending_periodic);
                 true
             }
             _ => false,
         }
     }
 
-    /// 一輪跑完了。
+    /// 一輪跑完了，**不知道有沒有變動**（當作有）。
     pub fn finish(&mut self, outcome: SyncOutcome, now_ms: u64) {
+        self.finish_round(outcome, true, now_ms);
+    }
+
+    /// 一輪跑完了。`changed` 是這一輪有沒有上傳、下載或新增任何東西。
+    ///
+    /// 週期觸發的一輪成功而且沒有變動 → 安靜下來，不再排下一個週期。
+    pub fn finish_round(&mut self, outcome: SyncOutcome, changed: bool, now_ms: u64) {
         self.running = false;
         self.last_finished = Some(now_ms);
+        let was_periodic = std::mem::take(&mut self.running_periodic);
         match outcome {
             SyncOutcome::Success => {
                 self.failures = 0;
+                if changed {
+                    self.wake();
+                } else if was_periodic {
+                    if self.settled {
+                        // 又一次守望掃描，還是沒有變化。
+                        self.quiet_scans += 1;
+                        if self.quiet_scans >= 2 {
+                            self.dormant = true;
+                        }
+                    } else {
+                        self.settled = true;
+                        self.quiet_scans = 0;
+                    }
+                }
             }
             SyncOutcome::Transient => {
                 self.failures = self.failures.saturating_add(1);
@@ -281,8 +287,7 @@ impl SyncScheduler {
 
     /// 前景的心跳。呼叫端每次計時器響就呼叫它，由排程器決定要不要排一輪。
     pub fn tick(&mut self, now_ms: u64) {
-        self.first_seen.get_or_insert(now_ms);
-        if self.blocked_on_auth || self.running || self.due_at.is_some() {
+        if self.blocked_on_auth || self.running || self.due_at.is_some() || self.dormant {
             return;
         }
         let elapsed = match self.last_finished {
@@ -327,134 +332,179 @@ impl SyncScheduler {
 }
 
 #[cfg(test)]
-mod adaptive_cadence {
+mod quiet_after_an_unchanged_minute {
     use super::*;
 
+    fn run_round(s: &mut SyncScheduler, at: u64, changed: bool) {
+        assert!(s.should_start(at), "{at} ms 時該起跑卻沒有");
+        s.finish_round(SyncOutcome::Success, changed, at);
+    }
+
     #[test]
-    fn a_fresh_scheduler_uses_the_baseline_not_the_idle_period() {
-        // **沒有歷史 ≠ 閒著。** 剛開起來的裝置正是最可能要接收
-        // 對方編輯的那一台；把它當成閒置會直接違反
-        // `VISIBLE_LATENCY_BUDGET_MS`。
+    fn a_periodic_round_that_finds_nothing_stops_the_periodic_syncing() {
         let mut s = SyncScheduler::new();
-        s.tick(0);
-        assert_eq!(s.current_period_ms(0), PERIODIC_MS);
+        s.request(SyncTrigger::Foreground, 0);
+        run_round(&mut s, 0, false);
+        // 一分鐘後再問一次。
+        s.tick(PERIODIC_MS);
+        run_round(&mut s, PERIODIC_MS, false);
+        // 跟上一分鐘相比沒有變動 → 安靜：一分鐘的週期停了，改成每 8 分鐘守望掃描一次。
+        for k in 2..8 {
+            s.tick(PERIODIC_MS + k * PERIODIC_MS);
+            assert!(
+                !s.should_start(PERIODIC_MS + k * PERIODIC_MS),
+                "已經安靜了還在排第 {k} 個一分鐘週期"
+            );
+        }
+    }
+
+    #[test]
+    fn a_quiet_scheduler_scans_every_eight_minutes_and_sleeps_after_two_empty_scans() {
+        let mut s = SyncScheduler::new();
+        s.request(SyncTrigger::Foreground, 0);
+        run_round(&mut s, 0, false);
+        s.tick(PERIODIC_MS);
+        run_round(&mut s, PERIODIC_MS, false); // 安靜
+        let mut t = PERIODIC_MS;
+
+        // 第一次守望掃描：8 分鐘後，不早。
+        s.tick(t + WATCH_SCAN_MS - 1);
+        assert!(!s.has_pending(), "守望掃描提早了");
+        t += WATCH_SCAN_MS;
+        s.tick(t);
+        run_round(&mut s, t, false);
+        assert!(!s.is_dormant(), "只有一次掃描沒變化就休眠了");
+
+        // 第二次：再 8 分鐘。連續兩次都沒變化 → 休眠。
+        s.tick(t + WATCH_SCAN_MS - 1);
+        assert!(!s.has_pending());
+        t += WATCH_SCAN_MS;
+        s.tick(t);
+        run_round(&mut s, t, false);
+        assert!(s.is_dormant(), "連續兩次掃描沒變化卻沒有休眠");
+
+        // 休眠之後不再排任何同步。
+        for k in 1..50 {
+            s.tick(t + k * WATCH_SCAN_MS);
+            assert!(!s.has_pending(), "休眠之後還在排");
+        }
+    }
+
+    #[test]
+    fn a_scan_that_finds_something_restarts_the_minute_cycle() {
+        let mut s = SyncScheduler::new();
+        s.request(SyncTrigger::Foreground, 0);
+        run_round(&mut s, 0, false);
+        s.tick(PERIODIC_MS);
+        run_round(&mut s, PERIODIC_MS, false);
+        let t = PERIODIC_MS + WATCH_SCAN_MS;
+        s.tick(t);
+        run_round(&mut s, t, true);
+        assert!(!s.is_dormant());
+        // 又回到一分鐘週期。
+        s.tick(t + PERIODIC_MS);
+        assert!(s.has_pending(), "掃描有變化之後沒有回到一分鐘週期");
+    }
+
+    #[test]
+    fn an_event_wakes_a_dormant_scheduler() {
+        let mut s = SyncScheduler::new();
+        s.request(SyncTrigger::Foreground, 0);
+        run_round(&mut s, 0, false);
+        let mut t = 0;
+        for _ in 0..3 {
+            t += if t == 0 { PERIODIC_MS } else { WATCH_SCAN_MS };
+            s.tick(t);
+            run_round(&mut s, t, false);
+        }
+        assert!(s.is_dormant());
+        s.request(SyncTrigger::Foreground, t + 1);
+        assert!(!s.is_dormant(), "事件沒有叫醒休眠的排程器");
+        assert!(s.should_start(t + 1));
+    }
+
+    #[test]
+    fn the_launch_round_alone_does_not_settle_it() {
+        // 開機那一輪沒變動，不代表「跟上一分鐘相比沒有變動」——
+        // 還是要再看一個週期。
+        let mut s = SyncScheduler::new();
+        s.request(SyncTrigger::Foreground, 0);
+        run_round(&mut s, 0, false);
+        s.tick(PERIODIC_MS - 1);
+        assert!(!s.has_pending(), "沒到一分鐘就排了");
+        s.tick(PERIODIC_MS);
+        assert!(s.has_pending(), "開機那一輪之後沒有再看一個週期");
+    }
+
+    #[test]
+    fn a_periodic_round_that_finds_something_keeps_it_going() {
+        let mut s = SyncScheduler::new();
+        s.request(SyncTrigger::Foreground, 0);
+        run_round(&mut s, 0, false);
+        s.tick(PERIODIC_MS);
+        run_round(&mut s, PERIODIC_MS, true);
+        s.tick(2 * PERIODIC_MS);
+        assert!(s.has_pending(), "上一輪有變動，下一分鐘還要再看");
+    }
+
+    #[test]
+    fn any_event_wakes_it_up_again() {
+        for trigger in [
+            SyncTrigger::Foreground,
+            SyncTrigger::LocalEdit,
+            SyncTrigger::NetworkRegained,
+            SyncTrigger::Manual,
+            SyncTrigger::Background,
+        ] {
+            let mut s = SyncScheduler::new();
+            s.request(SyncTrigger::Foreground, 0);
+            run_round(&mut s, 0, false);
+            s.tick(PERIODIC_MS);
+            run_round(&mut s, PERIODIC_MS, false);
+            let t = 10 * PERIODIC_MS;
+            s.request(trigger, t);
+            assert!(s.should_start(t + DEBOUNCE_MS), "{trigger:?} 沒有喚醒");
+            s.finish_round(SyncOutcome::Success, false, t + DEBOUNCE_MS);
+            // 事件那一輪沒變動，仍要再看一個週期才能安靜。
+            s.tick(t + DEBOUNCE_MS + PERIODIC_MS);
+            assert!(s.has_pending(), "{trigger:?} 之後沒有再看一個週期");
+        }
+    }
+
+    #[test]
+    fn a_remote_change_seen_by_another_channel_wakes_it_up() {
+        let mut s = SyncScheduler::new();
+        s.request(SyncTrigger::Foreground, 0);
+        run_round(&mut s, 0, false);
+        s.tick(PERIODIC_MS);
+        run_round(&mut s, PERIODIC_MS, false);
+        s.tick(5 * PERIODIC_MS);
+        assert!(!s.has_pending());
+        s.note_remote_change(5 * PERIODIC_MS);
+        s.tick(5 * PERIODIC_MS);
+        assert!(s.has_pending(), "焦點通道收到對方的東西，整庫沒有重新開始");
+    }
+
+    #[test]
+    fn a_failed_round_never_settles_it() {
+        let mut s = SyncScheduler::new();
+        s.request(SyncTrigger::Foreground, 0);
+        run_round(&mut s, 0, false);
+        s.tick(PERIODIC_MS);
+        assert!(s.should_start(PERIODIC_MS));
+        s.finish_round(SyncOutcome::Transient, false, PERIODIC_MS);
+        // 失敗要退避重試，不是「安靜」。
+        assert!(s.has_pending(), "失敗之後沒有排重試");
+    }
+
+    #[test]
+    fn the_heartbeat_is_much_finer_than_the_period() {
+        // 心跳太慢的話，60 秒的週期會實際變成 60～120 秒。
+        // 兩個都是常數：算成值再比，避免 clippy 的 `assertions_on_constants`。
         assert_eq!(
-            s.current_period_ms(IDLE_AFTER_MS - 1),
-            PERIODIC_MS,
-            "十分鐘還沒滿就降檔了"
-        );
-    }
-
-    #[test]
-    fn pulling_a_remote_change_switches_to_the_fast_period() {
-        // **這是整個改動的重點。** 拉到東西就代表對方正在寫，
-        // 而那是最該快的時候 —— 原本這種情況也只有 12 秒。
-        let mut s = SyncScheduler::new();
-        s.note_remote_change(100_000);
-        assert_eq!(s.current_period_ms(100_000), ACTIVE_PERIODIC_MS);
-        assert_eq!(
-            s.current_period_ms(100_000 + ACTIVE_WINDOW_MS),
-            ACTIVE_PERIODIC_MS,
-            "窗口邊界上還算在寫"
-        );
-    }
-
-    #[test]
-    fn the_fast_period_expires_after_the_window() {
-        let mut s = SyncScheduler::new();
-        s.note_remote_change(0);
-        // 窗口過了就回基準檔 —— 但還不到省電檔，因為遠端十分鐘內有動過。
-        assert_eq!(s.current_period_ms(ACTIVE_WINDOW_MS + 1), PERIODIC_MS);
-    }
-
-    #[test]
-    fn a_local_edit_keeps_the_baseline_period_not_the_idle_one() {
-        // **使用者正在寫的時候把節奏放慢，是最糟的省電方式。**
-        let mut s = SyncScheduler::new();
-        s.request(SyncTrigger::LocalEdit, 500_000);
-        assert_eq!(s.current_period_ms(500_000), PERIODIC_MS);
-        assert_eq!(
-            s.current_period_ms(500_000 + IDLE_AFTER_MS - 1),
-            PERIODIC_MS
-        );
-    }
-
-    #[test]
-    fn both_sides_quiet_for_ten_minutes_drops_to_power_saving() {
-        let mut s = SyncScheduler::new();
-        s.request(SyncTrigger::LocalEdit, 0);
-        s.note_remote_change(0);
-        assert_eq!(s.current_period_ms(IDLE_AFTER_MS), IDLE_PERIODIC_MS);
-        // 再動一下就立刻回到基準檔。
-        s.request(SyncTrigger::LocalEdit, IDLE_AFTER_MS);
-        assert_eq!(s.current_period_ms(IDLE_AFTER_MS), PERIODIC_MS);
-    }
-
-    #[test]
-    fn tick_respects_the_adaptive_period() {
-        // 快檔時 tick 要比基準檔早排一輪 —— 只改 `current_period_ms`
-        // 而沒有把它接進 `tick` 的話，整個改動等於沒有效果。
-        let mut s = SyncScheduler::new();
-        s.request(SyncTrigger::Manual, 0);
-        assert!(s.should_start(0));
-        s.finish(SyncOutcome::Success, 0);
-        s.note_remote_change(0);
-
-        s.tick(ACTIVE_PERIODIC_MS - 1);
-        assert!(!s.has_pending(), "還沒到快檔的間隔就排了");
-        s.tick(ACTIVE_PERIODIC_MS);
-        assert!(s.has_pending(), "到了快檔的間隔卻沒有排");
-    }
-
-    #[test]
-    fn the_active_latency_is_the_number_users_actually_feel() {
-        // 來回改同一本筆記時的延遲。這個數字放寬**仍然做得到**，
-        // 但要改常數 —— 那正是它該被看見的時候（與
-        // `VISIBLE_LATENCY_BUDGET_MS` 同一個理由）。
-        assert!(
-            active_visible_latency_ms() <= 5_000,
-            "對方正在寫時的延遲是 {} ms，超過五秒就不算即時了",
-            active_visible_latency_ms()
-        );
-        assert!(
-            active_visible_latency_ms() < worst_case_visible_latency_ms(),
-            "快檔沒有比基準檔快，那這個改動沒有意義"
-        );
-    }
-
-    #[test]
-    fn the_idle_period_never_shortens_the_promise() {
-        // 省電檔比基準檔慢是刻意的，但它不可以被拿去算承諾 ——
-        // 那個數字描述的是沒有人在用的情況。
-        // 用 `assert_ne!` + 比較值而不是 `assert!(A > B)`：兩個都是常數，
-        // clippy 的 `assertions_on_constants` 會把後者當成「這條斷言在編譯期
-        // 就有答案，等於沒測」。這裡要守的是**兩個常數的關係**，所以把關係
-        // 算成值再比。
-        assert_eq!(
-            IDLE_PERIODIC_MS.max(PERIODIC_MS),
-            IDLE_PERIODIC_MS,
-            "省電檔（{IDLE_PERIODIC_MS}）沒有比基準檔（{PERIODIC_MS}）慢，那它就不是省電檔"
-        );
-        assert_eq!(
-            worst_case_visible_latency_ms(),
-            DEBOUNCE_MS + PERIODIC_MS,
-            "承諾被改成用省電檔算了"
-        );
-    }
-
-    #[test]
-    fn an_empty_round_does_not_count_as_activity() {
-        // 一輪跑完但什麼也沒變是常態。拿它當「對方在動」的證據的話，
-        // 快檔會永遠開著 —— 那是把 12 秒改成 3 秒的全時段輪詢，
-        // 配額與電池都吃不消。
-        let mut s = SyncScheduler::new();
-        s.request(SyncTrigger::Manual, 0);
-        assert!(s.should_start(0));
-        s.finish(SyncOutcome::Success, 0);
-        assert_eq!(
-            s.current_period_ms(0),
-            PERIODIC_MS,
-            "空的一輪不該讓節奏變快"
+            (PERIODIC_MS / HEARTBEAT_MS).min(6),
+            6,
+            "心跳（{HEARTBEAT_MS}）相對週期（{PERIODIC_MS}）太粗"
         );
     }
 }

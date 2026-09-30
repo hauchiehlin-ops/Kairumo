@@ -29,6 +29,8 @@
 用法：  python3 scripts/fake-drive-server.py [port]     （預設 8765）
 Android 模擬器用 http://10.0.2.2:<port> 連到這台 Mac 的 127.0.0.1。
 """
+import os
+import time
 import json
 import re
 import sys
@@ -81,8 +83,9 @@ def file_json(i):
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
 
-    def log_message(self, fmt, *args):  # 安靜
-        pass
+    def log_message(self, fmt, *args):  # 預設安靜；FAKE_DRIVE_LOG=1 時印出每個請求（量同步延遲用）
+        if os.environ.get("FAKE_DRIVE_LOG"):
+            print(time.strftime("%H:%M:%S"), fmt % args, flush=True)
 
     # ── 小工具 ──
     def _send(self, code, body=b"", ctype="application/json", headers=None):

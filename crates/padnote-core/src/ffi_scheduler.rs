@@ -105,6 +105,17 @@ impl FfiSyncScheduler {
         self.inner.lock().unwrap().finish(outcome.into(), now_ms);
     }
 
+    /// 跑完一輪，並告知**這一輪有沒有變動**（上傳、下載或新增任何東西）。
+    ///
+    /// 週期觸發的一輪成功而且沒有變動，排程器就安靜下來、不再排週期性同步，
+    /// 直到下一個事件。平台層應該用這個而不是 [`Self::finish`]。
+    pub fn finish_round(&self, outcome: FfiSyncOutcome, changed: bool, now_ms: u64) {
+        self.inner
+            .lock()
+            .unwrap()
+            .finish_round(outcome.into(), changed, now_ms);
+    }
+
     /// 這一輪**真的拉到了對方的東西**（下載數或新筆記本 > 0）。
     ///
     /// 跟 `finish(.success)` 不一樣：一輪跑完通常什麼也沒變，那是常態。
@@ -130,6 +141,13 @@ impl FfiSyncScheduler {
             .unwrap_or(u64::MAX)
     }
 
+    /// 已休眠：安靜之後連續兩次守望掃描（8 分鐘一次）都沒有變化。
+    /// 平台該停掉同步的計時器與背景排程；下一次 [`Self::request`] 會叫醒，
+    /// 平台在 `request` 之後要重新啟動它們。
+    pub fn is_dormant(&self) -> bool {
+        self.inner.lock().unwrap().is_dormant()
+    }
+
     pub fn is_running(&self) -> bool {
         self.inner.lock().unwrap().is_running()
     }
@@ -147,6 +165,12 @@ pub fn sync_periodic_interval_ms() -> u64 {
     padnote_sync::scheduler::PERIODIC_MS
 }
 
+/// 安靜之後的守望掃描間隔（毫秒，8 分鐘）。
+#[uniffi::export]
+pub fn sync_watch_scan_interval_ms() -> u64 {
+    padnote_sync::scheduler::WATCH_SCAN_MS
+}
+
 /// 前景心跳的間隔（毫秒）。平台層照這個值設計時器。
 ///
 /// 它等於**最快的那一檔**：心跳只是「問一下」，真正的節奏由
@@ -154,7 +178,7 @@ pub fn sync_periodic_interval_ms() -> u64 {
 /// 快檔永遠跑不出來 —— 三秒的設定會被十二秒的計時器吃掉。
 #[uniffi::export]
 pub fn sync_heartbeat_interval_ms() -> u64 {
-    padnote_sync::scheduler::ACTIVE_PERIODIC_MS
+    padnote_sync::scheduler::HEARTBEAT_MS
 }
 
 /// 本機存檔後的去抖動時間（毫秒）。
@@ -199,22 +223,57 @@ mod tests {
 }
 
 #[cfg(test)]
-mod adaptive_cadence_crosses_the_ffi {
+mod quiet_crosses_the_ffi {
     use super::*;
 
     #[test]
-    fn pulling_a_remote_change_speeds_the_scheduler_up() {
-        // FFI 這一層漏掉 `note_remote_change` 的話，核心的快檔
-        // 在兩個平台上都等於不存在。
+    fn an_unchanged_periodic_round_settles_the_scheduler_across_the_ffi() {
+        // FFI 這一層漏掉 `finish_round` 的話，「沒變動就停」在兩個平台上都不存在。
         let s = FfiSyncScheduler::create();
-        s.tick(0);
-        assert_eq!(s.current_period_ms(0), sync_periodic_interval_ms());
-        s.note_remote_change(0);
-        assert_eq!(s.current_period_ms(0), sync_heartbeat_interval_ms());
+        s.request(FfiSyncTrigger::Foreground, 0);
+        assert!(s.should_start(0));
+        s.finish_round(FfiSyncOutcome::Success, false, 0);
+        let p = sync_periodic_interval_ms();
+        s.tick(p);
+        assert!(s.should_start(p));
+        s.finish_round(FfiSyncOutcome::Success, false, p);
+        s.tick(3 * p);
+        assert_eq!(
+            s.next_due_in_ms(3 * p),
+            u64::MAX,
+            "安靜之後還在排一分鐘週期"
+        );
+        s.note_remote_change(3 * p);
+        s.tick(3 * p);
+        assert!(s.should_start(3 * p), "收到對方的東西之後沒有重新開始");
     }
 
     #[test]
-    fn the_heartbeat_is_never_slower_than_the_fastest_period() {
+    fn two_empty_watch_scans_put_the_scheduler_to_sleep_across_the_ffi() {
+        let s = FfiSyncScheduler::create();
+        s.request(FfiSyncTrigger::Foreground, 0);
+        assert!(s.should_start(0));
+        s.finish_round(FfiSyncOutcome::Success, false, 0);
+        let p = sync_periodic_interval_ms();
+        let w = sync_watch_scan_interval_ms();
+        let mut t = p;
+        s.tick(t);
+        assert!(s.should_start(t));
+        s.finish_round(FfiSyncOutcome::Success, false, t);
+        for _ in 0..2 {
+            assert!(!s.is_dormant());
+            t += w;
+            s.tick(t);
+            assert!(s.should_start(t), "守望掃描沒有排");
+            s.finish_round(FfiSyncOutcome::Success, false, t);
+        }
+        assert!(s.is_dormant());
+        s.request(FfiSyncTrigger::LocalEdit, t + 1);
+        assert!(!s.is_dormant(), "事件沒有叫醒");
+    }
+
+    #[test]
+    fn the_heartbeat_is_never_slower_than_the_period() {
         assert!(sync_heartbeat_interval_ms() <= sync_periodic_interval_ms());
     }
 }

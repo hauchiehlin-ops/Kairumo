@@ -75,6 +75,38 @@ final class MultiDeviceUITests: XCTestCase {
         waitForCloudIndex(matching: NSRegularExpression.escapedPattern(for: text), timeout: timeout)
     }
 
+    /// 等雲端「靜下來」：所有檔案的名字、大小、修改時間連續 `quietFor` 秒都沒變。
+    ///
+    /// 為什麼需要：一輪同步是**先推索引、再推筆記本內容**。測試一看到索引有新標題就結束、
+    /// App 被收掉的話，筆記本裡那筆改名的操作還沒上傳，另一台只拿得到索引 ——
+    /// 蘋果端的卡片標題是從筆記本內容來的，於是「更名沒傳過去」。以前被每秒一輪的
+    /// 自我觸發同步掩蓋了（測試要花兩分鐘才走到這裡，內容早就傳完了）。
+    private func waitForCloudSettled(quietFor: Int = 4, timeout: TimeInterval = 60) -> Bool {
+        func signature() -> String {
+            var text = ""
+            let done = DispatchSemaphore(value: 0)
+            URLSession.shared.dataTask(with: URL(string: "\(Self.server)/_admin/files")!) { data, _, _ in
+                if let data, let list = try? JSONSerialization.jsonObject(with: data) as? [[String: Any]] {
+                    text = list.map { "\($0["name"] ?? "")|\($0["size"] ?? "")|\($0["modified"] ?? "")" }
+                        .sorted().joined(separator: "\n")
+                }
+                done.signal()
+            }.resume()
+            _ = done.wait(timeout: .now() + 10)
+            return text
+        }
+        let deadline = Date().addingTimeInterval(timeout)
+        var last = signature()
+        var stable = 0
+        while Date() < deadline {
+            sleep(1)
+            let now = signature()
+            if now == last { stable += 1 } else { stable = 0; last = now }
+            if stable >= quietFor { return true }
+        }
+        return false
+    }
+
     /// 假雲端裡（名字以 `prefix` 開頭的）檔案。
     private func cloudFiles(prefix: String) -> [String] {
         var result: [String] = []
@@ -147,8 +179,24 @@ final class MultiDeviceUITests: XCTestCase {
             .firstMatch
     }
 
+    /// 用**識別碼**找卡片（識別碼 = `home.notebooks.card.<id>`，id 從雲端索引查）。
+    ///
+    /// 為什麼不用 `card()`：那條查詢是「所有後代 + 標題文字謂詞」，首頁樹很大的時候
+    /// 每問一次要好幾秒，`exists`／`isHittable`／`press` 各問一次，捲動迴圈再乘上去 ——
+    /// 實測選單那一步花了 125 秒，而同步本身只要 2 秒。識別碼是相等比對，快得多。
+    /// 查不到 id（還沒進雲端索引）就退回標題查詢。
+    private func fastCard(_ app: XCUIApplication, _ title: String) -> XCUIElement {
+        guard let id = notebookId(titledWithPrefix: String(title.prefix(11))) else {
+            return card(app, title)
+        }
+        let ids = ["home.notebooks.card.\(id)", "home.notebooks.card.\(id.uppercased())",
+                   "home.notebooks.card.\(id.lowercased())"]
+        return app.descendants(matching: .any)
+            .matching(NSPredicate(format: "identifier IN %@", ids)).firstMatch
+    }
+
     private func scrollToCard(_ app: XCUIApplication, _ title: String) -> Bool {
-        let element = card(app, title)
+        let element = fastCard(app, title)
         var scrolls = 0
         while !(element.exists && element.isHittable) && scrolls < 12 {
             app.swipeUp()
@@ -176,9 +224,16 @@ final class MultiDeviceUITests: XCTestCase {
         return false
     }
 
+    /// 開卡片的選單並選一項。
+    ///
+    /// **點卡片右上角的「⋯」按鈕，不用長按。** 長按會同時啟動拖曳抬起與內容選單，
+    /// XCUITest 在那段時間一直等不到「App 閒下來」，`press` 與選單項的 `tap`
+    /// 各等滿 60 秒（實測 125 秒）；而 App 在靜止時 CPU 是 0%，同步本身也只要 2 秒。
+    /// 卡片的識別碼蓋住了子元素（按鈕在無障礙樹裡看不到），所以用座標點右上角。
     private func menu(_ app: XCUIApplication, on title: String, choose label: String) -> Bool {
         guard scrollToCard(app, title) else { return false }
-        card(app, title).press(forDuration: 1.2)
+        fastCard(app, title)
+            .coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.14)).tap()
         let button = app.buttons[label].firstMatch
         if button.waitForExistence(timeout: 6) {
             button.tap()
@@ -234,18 +289,30 @@ final class MultiDeviceUITests: XCTestCase {
     func testStep3_A_renamesIt() {
         let title = savedTitle()
         let renamed = "\(title)-RENAMED"
+        let t0 = Date()
+        func mark(_ what: String) { print(String(format: "TIMING step3 %@ +%.1fs", what, Date().timeIntervalSince(t0))) }
         let app = launch()
-        XCTAssertTrue(menu(app, on: title, choose: "Rename Notebook"), "卡片選單沒有「重新命名」")
+        mark("launched")
+        let menuOK = menu(app, on: title, choose: "Rename Notebook")
+        mark("menu chosen")
+        XCTAssertTrue(menuOK, "卡片選單沒有「重新命名」")
         let field = app.alerts.textFields.firstMatch
         XCTAssertTrue(field.waitForExistence(timeout: 10), "沒有出現重新命名的輸入框")
         field.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
         if let existing = field.value as? String, !existing.isEmpty {
             field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
         }
+        mark("field ready")
         field.typeText(renamed)
+        mark("typed")
         app.alerts.buttons["Save"].firstMatch.tap()
+        mark("saved")
+        let seen = waitForCloudIndex(containing: renamed)
+        mark("cloud has it")
+        XCTAssertTrue(waitForCloudSettled(), "更名之後雲端一直沒有靜下來（筆記本內容沒傳完？）")
+        mark("cloud settled")
         XCTAssertTrue(
-            waitForCloudIndex(containing: renamed),
+            seen,
             "A 更名之後，新標題「\(renamed)」沒有出現在雲端索引裡")
     }
 

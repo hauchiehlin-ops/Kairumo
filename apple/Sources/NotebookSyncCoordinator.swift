@@ -582,7 +582,7 @@ enum NotebookSyncCoordinator {
                     input.document.id, label: "full-export"
                 ) else { continue }
                 defer { NotebookLock.leave(input.document.id, ticket: lockTicket) }
-                // 前景心跳每 3–12 秒會進來一次。沒有這道判斷時，每一輪都把
+                // 前景心跳與事件觸發會反覆進來。沒有這道判斷時，每一輪都把
                 // 每一本套件完整重建，即使一個字都沒改；iPad 實機曾因此在
                 // 25 分鐘內寫入 4.3 GB，最後被系統以 excessive disk writes
                 // 終止。套件比工作副本新代表編輯器的增量寫入或上一輪匯出

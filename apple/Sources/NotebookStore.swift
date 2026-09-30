@@ -2897,7 +2897,13 @@ public final class NotebookStore: ObservableObject {
             fm.fileExists(atPath: legacyDir.appending(path: $0.fileName).path)
         }
 
-        recordings = (scanned + legacy).sorted { $0.recordedDate > $1.recordedDate }
+        let refreshed = (scanned + legacy).sorted { $0.recordedDate > $1.recordedDate }
+        // **沒有變就不要寫檔。** 每一輪同步都會呼叫這裡；無條件 `persistData()` 會通知
+        // 排程器「本機有編輯」，於是同步自己又排出下一輪（約一秒後）—— 一個自我觸發的
+        // 迴圈：持續打 Drive、主執行緒永遠不閒（UI 測試的每個動作因此各等 60 秒才等到
+        // 「App 閒下來」）。
+        guard refreshed != recordings else { return }
+        recordings = refreshed
         persistData()
     }
 
