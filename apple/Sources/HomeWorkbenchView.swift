@@ -1846,21 +1846,45 @@ public struct HomeWorkbenchView: View {
             //
             // 資料夾同步在 Apple 這邊原本只能從「雲端同步」那張卡進去再切
             // 分頁，使用者要先知道它藏在那裡。
-            LazyVGrid(
-                columns: [GridItem(.adaptive(minimum: 280, maximum: .infinity), spacing: 12)],
-                spacing: 12
-            ) {
-                dataCard("externaldrive.fill.badge.checkmark", "storage_library_title",
-                         "storage_library_subtitle", .blue) {
-                    showStorageLocationSheet = true
+            //
+            // **版面：兩欄、頂端對齊，不是自動格線。** 原本用 `LazyVGrid(.adaptive)`：
+            // 「雲端同步」「備份與復原」是很高的卡片，「主要文件庫」「資料夾同步」是矮的。
+            // 格線一列的高度取最高的那張，矮卡片又預設垂直置中，於是矮卡片漂在高卡片的
+            // 中間、上下留下一大片空白，而且卡片數量不是欄數的倍數時最後一列只剩一張。
+            // 改成：寬螢幕左欄放高的雲端同步，右欄由上而下疊其餘的卡片；窄螢幕單欄。
+            if horizontalSizeClass == .compact {
+                VStack(spacing: 12) {
+                    storageLibraryCard
+                    unifiedSyncCard
+                    folderSyncCard
+                    unifiedBackupCard
                 }
-                unifiedSyncCard
-                dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
-                         "sync_folder_desc", .teal) { showFolderSyncSheet = true }
-                unifiedBackupCard
+            } else {
+                HStack(alignment: .top, spacing: 12) {
+                    unifiedSyncCard
+                        .frame(maxWidth: .infinity, alignment: .top)
+                    VStack(spacing: 12) {
+                        storageLibraryCard
+                        folderSyncCard
+                        unifiedBackupCard
+                    }
+                    .frame(maxWidth: .infinity, alignment: .top)
+                }
             }
         }
         .padding(.top, 6)
+    }
+
+    private var storageLibraryCard: some View {
+        dataCard("externaldrive.fill.badge.checkmark", "storage_library_title",
+                 "storage_library_subtitle", .blue) {
+            showStorageLocationSheet = true
+        }
+    }
+
+    private var folderSyncCard: some View {
+        dataCard("icloud.and.arrow.up.fill", "sync_choose_folder",
+                 "sync_folder_desc", .teal) { showFolderSyncSheet = true }
     }
 
     private var manualToolbarButton: some View {

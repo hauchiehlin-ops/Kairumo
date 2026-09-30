@@ -649,6 +649,39 @@ final class PackageMultiDeviceTests: XCTestCase {
         }
     }
 
+    func testTextBoxesDoNotMultiplyAcrossRepeatedSyncs() throws {
+        // 實測：使用者的一本筆記出現 19,588 個文字方塊、雲端 oplog 126MB，其他裝置因
+        // 「操作筆數超過上限」打不開。兩台裝置來回同步多趟之後，文字方塊數量必須維持不變。
+        // **已知問題（尚未修）**：匯出對每個文字方塊都呼叫 `addText`，核心每次發新的 block id，
+        // 而匯入又把別台裝置寫的方塊一起讀進來 —— 下一次匯出就把它們全部再寫一遍。
+        // 結構性修法是方塊要有跨裝置穩定的 id 與冪等的新增（見 docs/TODO.md）。
+        // 修好之後這個預期失敗會變成「非預期成功」而讓測試變紅，屆時把下面這行拿掉。
+        XCTExpectFailure("文字方塊跨裝置來回匯出會指數增生（費氏數列）")
+        let package = workDir.appendingPathComponent("texts.padnote")
+        var doc = document("T")
+        doc.textAttachments = [
+            NoteTextAttachment(pageIndex: 0, text: "第一個", x: 10, y: 10),
+            NoteTextAttachment(pageIndex: 0, text: "第二個", x: 10, y: 60),
+        ]
+        try NotebookPackageBridge.export(
+            document: doc, drawings: [PKDrawing()], to: package, deviceId: deviceB)
+
+        for round in 0..<8 {
+            let deviceId = round.isMultiple(of: 2) ? deviceA : deviceB
+            let imported = try NotebookPackageBridge.importDocument(
+                fromPackageAt: package, deviceId: deviceId)
+            try NotebookPackageBridge.exportPreservingOtherDevices(
+                document: imported.document, drawings: imported.drawings,
+                imageData: imported.imageData, to: package, deviceId: deviceId,
+                pageIds: imported.pageIds)
+            XCTAssertEqual(
+                imported.document.textAttachments?.count, 2,
+                "第 \(round) 趟同步後文字方塊數變成 \(imported.document.textAttachments?.count ?? -1)")
+        }
+        let final = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceA)
+        XCTAssertEqual(final.document.textAttachments?.count, 2)
+    }
+
     func testBothDevicesStrokesLandOnTheSamePage() throws {
         // 檔案還在還不夠 —— 兩邊的筆畫要落在**同一頁**上。
         // 頁面 id 沒有沿用的話，合併之後不是一頁有兩邊的內容，而是變成兩頁。

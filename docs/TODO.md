@@ -27,6 +27,27 @@
 
 ## 🔴 被硬體或資料卡住（程式已就緒）
 
+### 🔴 S-OBJ-IDENTITY. 文字方塊等物件跨裝置同步會指數增生 —— **已重現、尚未修**
+
+實測（2026-09-30）：使用者 Mac 上一本筆記有 **19,588 個文字方塊**、雲端 oplog 126 MB，
+iPhone 因「oplog 操作筆數超過上限（100 萬）」載入失敗並每一輪重試，Mac 開啟那本極慢甚至當掉，
+iPad 點卡片就撞 10 秒看門狗。附件資料夾也累積到 1.6 GB。
+
+根因：`NotebookPackageBridge.export` 對每個文字方塊／表格／圖片／形狀都呼叫 `addText`／
+`insertTable`／`addImage`／`insertShape`，核心**每次發新的 id**；而 `importDocument` 會把別台裝置
+寫的物件一起讀進工作副本，下一次匯出就把它們**全部再寫一遍**。兩台裝置來回，數量依費氏數列成長
+（測試 `testTextBoxesDoNotMultiplyAcrossRepeatedSyncs`：2→4→6→10→16→26→42…，目前以
+`XCTExpectFailure` 釘住）。頁面（`addPageWithId`）已經有穩定 id，所以不會增生。
+
+要修的是**物件身分**：方塊要有跨裝置穩定的 id 與冪等的新增（核心要有 `add_*_with_id`，已存在就不
+重寫內容），刪除與編輯也要以 id 表達，否則別台舊 oplog 會讓已刪的方塊復活。這是資料模型層級的
+改動。**Android 沒有這個問題**（核心是唯一事實來源、只寫差異），只有 Apple 用 JSON 工作副本 + 快照式匯出。
+設計見 [`plans/object-identity.md`](plans/object-identity.md)。**不是一個小修補**。修好前，多裝置同時編輯
+含文字方塊／表格／圖片的筆記會繼續增生。
+
+一次性清理（開發期間累積的垃圾）：先「重置雲端同步」清掉雲端，再清掉各裝置本機資料，最後重新登入。
+順序不能反：本機先清、雲端還在的話，下一輪就把 126 MB 下載回來。
+
 ### S-PURGE. 回收桶與過期資料的完整清除 —— 核心已驗證，兩端待實機
 
 設計見 [`plans/expiry-purge.md`](plans/expiry-purge.md)，線上格式見 `format-spec.md` §7.11。
