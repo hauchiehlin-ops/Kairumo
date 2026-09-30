@@ -3367,8 +3367,18 @@ public struct AppDiagnosticsSheet: View {
                     Button(localizationManager.localized("close")) {
                         dismiss()
                     }
+                    .accessibilityIdentifier("diagnostics.close")
                 }
             }
+        }
+        // **回收桶的 sheet 掛在最外層，不掛在區段上。**
+        //
+        // 診斷頁是一張很長的表單，SwiftUI 的 List 只繪製捲到附近的列，而掛在某個
+        // `Section` 上的修飾詞在表單裡並不可靠：點下按鈕之後什麼都不會發生，而且不會報錯
+        // （單元測試、編譯、畫面稽核全都是綠的，是 UI 測試實際點過才發現）。
+        // 掛在最外層，和下面另外兩個 sheet 同一層，就不受繪製範圍影響。
+        .sheet(isPresented: $showTrash) {
+            TrashView()
         }
         .sheet(item: Binding(
             get: { shareStartupLogsURL.map { IdentifiableURL(url: $0) } },
@@ -3605,9 +3615,6 @@ extension AppDiagnosticsSheet {
             Text(localizationManager.localized("cloud_sync_explainer"))
                 .font(.caption)
                 .foregroundColor(.secondary)
-        }
-        .sheet(isPresented: $showTrash) {
-            TrashView()
         }
         .sheet(isPresented: $showCloudSyncHub) {
             CloudSyncDetailSheet()

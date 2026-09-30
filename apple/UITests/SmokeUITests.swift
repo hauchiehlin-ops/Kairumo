@@ -288,6 +288,163 @@ final class SmokeUITests: XCTestCase {
         assertAlive(app, "手繪模式再編輯、文字模式移動文字方塊")
     }
 
+    /// 回收桶的完整路徑：刪除 → 進回收桶 → 還原 → 再刪除 → 永久刪除。
+    ///
+    /// # 這條守的是什麼
+    ///
+    /// 單元測試證明了背後的搬檔案與規則，但**沒有人真的點過回收桶畫面**。
+    /// 這裡從使用者的位置走一遍：首頁卡片長按選單刪除、診斷畫面裡的回收桶入口、
+    /// 還原、永久刪除。畫面能編譯、入口不擋別的東西，都不等於它點得動。
+    ///
+    /// 用一個一次性的標題找卡片，不依賴種子筆記；最後以永久刪除收尾，
+    /// 不在模擬器上留下垃圾（墓碑仍在索引裡，那是設計）。
+    func testTrashRoundTripFromTheHomeScreen() {
+        let app = launch()
+        XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
+        let title = "TrashProbe-\(UUID().uuidString.prefix(8))"
+
+        // 1. 建立一本有獨特標題的筆記本，然後回首頁。
+        let newNote = app.descendants(matching: .any)
+            .matching(identifier: "home.action.new_note").firstMatch
+        guard newNote.waitForExistence(timeout: 15) else {
+            return XCTFail("首頁找不到新增筆記入口")
+        }
+        newNote.tap()
+        let field = app.descendants(matching: .any)
+            .matching(identifier: "new_notebook.title.field").firstMatch
+        guard field.waitForExistence(timeout: 10) else {
+            return XCTFail("新增筆記表單沒有出現")
+        }
+        // 預設標題是有內容的，要先清掉。點欄位**最右邊**讓游標落在文字尾端，再用刪除鍵
+        // 一個一個刪 —— 不用「全選」：原生文字欄位的編輯選單抓不到。
+        field.coordinate(withNormalizedOffset: CGVector(dx: 0.98, dy: 0.5)).tap()
+        if let existing = field.value as? String, !existing.isEmpty {
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
+        }
+        field.typeText(title)
+        app.descendants(matching: .any).matching(identifier: "new_notebook.confirm")
+            .firstMatch.tap()
+        let home = app.descendants(matching: .any).matching(identifier: "editor.home").firstMatch
+        guard home.waitForExistence(timeout: 15) else {
+            return XCTFail("建立筆記後沒有進入編輯器")
+        }
+        home.tap()
+
+        // 首頁那張卡片。卡片在摺線下面，要捲到看得到。
+        func card() -> XCUIElement {
+            app.descendants(matching: .any)
+                .matching(NSPredicate(
+                    format: "identifier BEGINSWITH 'home.notebooks.card.' AND label CONTAINS %@",
+                    title))
+                .firstMatch
+        }
+        func scrollToCard() -> Bool {
+            var scrolls = 0
+            while !(card().exists && card().isHittable) && scrolls < 12 {
+                app.swipeUp()
+                scrolls += 1
+            }
+            return card().exists && card().isHittable
+        }
+        func waitGone(_ element: XCUIElement, _ message: String) {
+            let gone = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "exists == false"), object: element)
+            XCTAssertEqual(XCTWaiter().wait(for: [gone], timeout: 10), .completed, message)
+        }
+
+        // 用原生選單項目的標籤找（與 InsertToolsAudit 同一個理由：Menu 交給 UIKit 之後，
+        // 型別化的查詢會 type mismatch）。
+        func deleteFromCardMenu() -> Bool {
+            guard scrollToCard() else { return false }
+            card().press(forDuration: 1.2)
+            // 先用按鈕查詢：在首頁這麼大的階層上，`descendants(matching: .any)` 一次
+            // 快照要好幾十秒（實測整段刪除拖了兩分鐘）。找不到才退回萬用查詢。
+            let button = app.buttons["Delete Item"].firstMatch
+            if button.waitForExistence(timeout: 5) {
+                button.tap()
+                return true
+            }
+            let item = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", "Delete Item")).firstMatch
+            guard item.waitForExistence(timeout: 5) else { return false }
+            item.tap()
+            return true
+        }
+
+        /// 回傳 `nil` 表示成功，否則是**卡在哪一步**。三種失敗長得一樣（都是「開不了回收桶」），
+        /// 但原因完全不同，分開講才知道該修哪裡。
+        func openTrash() -> String? {
+            let started = Date()
+            func log(_ step: String) {
+                print("TRASHTEST \(step) +\(Int(Date().timeIntervalSince(started)))s")
+            }
+            let diagnostics = app.buttons["home.diagnostics"].firstMatch
+            var ups = 0
+            while !diagnostics.isHittable && ups < 4 { app.swipeDown(); ups += 1 }
+            guard diagnostics.waitForExistence(timeout: 10), diagnostics.isHittable else {
+                return "首頁找不到（或點不到）診斷入口 home.diagnostics"
+            }
+            log("diagnostics ready")
+            diagnostics.tap()
+            // 診斷頁是一張很長的表單，SwiftUI 的 List 沒捲到就不算繪那一列。
+            let entry = app.buttons["settings.trash"].firstMatch
+            var scrolls = 0
+            while !(entry.exists && entry.isHittable) && scrolls < 15 {
+                app.swipeUp()
+                scrolls += 1
+            }
+            log("scrolled \(scrolls)x, entry exists=\(entry.exists) hittable=\(entry.isHittable)")
+            guard entry.exists, entry.isHittable else {
+                return "診斷頁往下捲了 \(scrolls) 次，找不到（或點不到）回收桶入口 settings.trash"
+            }
+            entry.tap()
+            // 用「完成」按鈕當作回收桶已開啟的訊號，不用 `trash.sheet`：那個識別碼掛在
+            // `NavigationStack` 這個容器上，SwiftUI 不會把容器的識別碼暴露出來。
+            guard app.buttons["trash.done"].firstMatch.waitForExistence(timeout: 10) else {
+                return "點了回收桶入口，但回收桶畫面沒有出現（找不到 trash.done）"
+            }
+            log("trash open")
+            return nil
+        }
+
+        func closeTrash() {
+            app.buttons["trash.done"].firstMatch.tap()
+            app.buttons["diagnostics.close"].firstMatch.tap()
+        }
+
+        func trashRow() -> XCUIElement {
+            app.descendants(matching: .any).matching(identifier: "trash.row")
+                .containing(NSPredicate(format: "label == %@", title)).firstMatch
+        }
+
+        // 2. 刪除 → 卡片消失。
+        XCTAssertTrue(deleteFromCardMenu(), "首頁卡片的長按選單沒有「刪除」")
+        waitGone(card(), "刪除之後卡片還在首頁")
+
+        // 3. 進回收桶 → 看得到它 → 還原。
+        XCTAssertNil(openTrash(), "開不了回收桶")
+        XCTAssertTrue(trashRow().waitForExistence(timeout: 10), "剛刪掉的筆記本不在回收桶裡")
+        trashRow().buttons["trash.restore"].firstMatch.tap()
+        waitGone(trashRow(), "還原之後它還在回收桶裡")
+        closeTrash()
+
+        // 4. 回到首頁：卡片回來了。
+        XCTAssertTrue(scrollToCard(), "還原之後首頁沒有這本筆記本")
+
+        // 5. 再刪一次 → 回收桶 → 永久刪除（二次確認）。
+        XCTAssertTrue(deleteFromCardMenu(), "還原之後的卡片沒有「刪除」選項")
+        waitGone(card(), "第二次刪除之後卡片還在首頁")
+        XCTAssertNil(openTrash(), "第二次開不了回收桶")
+        XCTAssertTrue(trashRow().waitForExistence(timeout: 10), "第二次刪掉的不在回收桶裡")
+        trashRow().buttons["trash.deleteForever"].firstMatch.tap()
+        let confirm = app.alerts.buttons["Delete Permanently"].firstMatch
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "永久刪除沒有二次確認")
+        confirm.tap()
+        waitGone(trashRow(), "永久刪除之後它還在回收桶裡")
+        closeTrash()
+        assertAlive(app, "回收桶完整路徑")
+    }
+
     /// 從全新的筆記本驗證「手寫 → 文字 → 點頁面 → 直接輸入」完整路徑。
     ///
     /// 過去這條測試只點 `editor.mode` 容器，再點一下畫布，最後只確認 App
