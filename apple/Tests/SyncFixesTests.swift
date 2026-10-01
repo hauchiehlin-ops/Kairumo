@@ -71,31 +71,64 @@ final class SyncFixesTests: XCTestCase {
         return d
     }
 
+    private func snapshot(_ d: NotebookDocument) -> [String: Int] {
+        ExportedObjectIds.fingerprints(of: d)
+    }
+
     func testAnObjectAddedAfterTheExportSurvivesTheImport() {
         // 一輪同步是「匯出 → 等網路 → 匯入」，匯入是整份取代。等網路時使用者插了一段錄音，
         // 它不在匯出的套件裡，整份取代之後就消失了（回報：一同步錄音卡片就不見）。
+        let exportedDoc = doc(audio: ["old"])
         let imported = doc(audio: ["old"])
         let local = doc(audio: ["old", "just-added"])
-        let (merged, preserved) = NotebookSyncCoordinator.preservingLocalAdditions(
-            imported, local: local, exportedIds: ["old"])
+        let (merged, preserved) = NotebookSyncCoordinator.preservingLocalChanges(
+            imported, local: local, exported: snapshot(exportedDoc))
         XCTAssertEqual(merged.audioAttachments?.map(\.id), ["old", "just-added"])
         XCTAssertTrue(preserved, "有保住新增物件時不能標成「已同步」，它還沒進套件")
     }
 
+    func testAnObjectMovedAfterTheExportDoesNotJumpBack() {
+        // 回報：畫布上的物件移不動，一同步就回到原位。移動發生在匯出之後、匯入之前，
+        // 匯入的結果是舊位置。
+        var exportedDoc = doc(audio: [])
+        exportedDoc.textAttachments = [NoteTextAttachment(id: "t", text: "hi", x: 10, y: 10)]
+        let imported = exportedDoc // 套件裡還是舊位置
+        var local = exportedDoc
+        local.textAttachments?[0].x = 300
+        local.textAttachments?[0].y = 400
+        let (merged, preserved) = NotebookSyncCoordinator.preservingLocalChanges(
+            imported, local: local, exported: snapshot(exportedDoc))
+        XCTAssertEqual(merged.textAttachments?.first?.x, 300)
+        XCTAssertEqual(merged.textAttachments?.first?.y, 400)
+        XCTAssertTrue(preserved, "移動還沒進套件，下一輪要匯出")
+    }
+
+    func testAnotherDevicesMoveIsAcceptedWhenIDidNotTouchTheObject() {
+        // 我沒動過它（指紋與匯出當下相同），別台移動的結果要接受。
+        var exportedDoc = doc(audio: [])
+        exportedDoc.textAttachments = [NoteTextAttachment(id: "t", text: "hi", x: 10, y: 10)]
+        var imported = exportedDoc
+        imported.textAttachments?[0].x = 500
+        let (merged, preserved) = NotebookSyncCoordinator.preservingLocalChanges(
+            imported, local: exportedDoc, exported: snapshot(exportedDoc))
+        XCTAssertEqual(merged.textAttachments?.first?.x, 500)
+        XCTAssertFalse(preserved)
+    }
+
     func testAnObjectAnotherDeviceDeletedStaysDeleted() {
         // 匯出當下就有、匯入結果沒有 = 別台刪掉的。補回去會讓刪除復活。
+        let exportedDoc = doc(audio: ["gone"])
         let imported = doc(audio: [])
-        let local = doc(audio: ["gone"])
-        let (merged, preserved) = NotebookSyncCoordinator.preservingLocalAdditions(
-            imported, local: local, exportedIds: ["gone"])
+        let (merged, preserved) = NotebookSyncCoordinator.preservingLocalChanges(
+            imported, local: exportedDoc, exported: snapshot(exportedDoc))
         XCTAssertTrue(merged.audioAttachments?.isEmpty ?? true)
         XCTAssertFalse(preserved)
     }
 
     func testWithoutAnExportSnapshotNothingIsTouched() {
         let imported = doc(audio: ["a"])
-        let (merged, preserved) = NotebookSyncCoordinator.preservingLocalAdditions(
-            imported, local: doc(audio: ["a", "b"]), exportedIds: nil)
+        let (merged, preserved) = NotebookSyncCoordinator.preservingLocalChanges(
+            imported, local: doc(audio: ["a", "b"]), exported: nil)
         XCTAssertEqual(merged.audioAttachments?.map(\.id), ["a"], "沒有名單就分不出「新增」與「被刪」，不能補")
         XCTAssertFalse(preserved)
     }

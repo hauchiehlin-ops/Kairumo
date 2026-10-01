@@ -215,28 +215,35 @@ extension NotebookStore: SyncableNotebookStore {
     }
 }
 
-/// 這一輪匯出當下，每本筆記上有哪些物件（id）。
+/// 這一輪匯出當下，每本筆記上有哪些物件、各自長什麼樣子（id → 內容指紋）。
 ///
-/// 匯入要拿它判斷「匯出之後、匯入之前，使用者又新增了什麼」—— 見 `NotebookSyncCoordinator.preservingLocalAdditions`。
+/// 匯入要拿它判斷「匯出之後、匯入之前，使用者又動了什麼」——
+/// 新增的、移動過的、改過內容的，見 `NotebookSyncCoordinator.preservingLocalChanges`。
 final class ExportedObjectIds: @unchecked Sendable {
     static let shared = ExportedObjectIds()
     private let lock = NSLock()
-    private var ids: [String: Set<String>] = [:]
+    private var prints: [String: [String: Int]] = [:]
 
     func record(_ document: NotebookDocument) {
+        let fingerprints = Self.fingerprints(of: document)
         lock.lock(); defer { lock.unlock() }
-        ids[document.id.lowercased()] = Self.objectIds(of: document)
+        prints[document.id.lowercased()] = fingerprints
     }
 
-    func take(_ notebookId: String) -> Set<String>? {
+    func take(_ notebookId: String) -> [String: Int]? {
         lock.lock(); defer { lock.unlock() }
-        return ids.removeValue(forKey: notebookId.lowercased())
+        return prints.removeValue(forKey: notebookId.lowercased())
     }
 
-    static func objectIds(of d: NotebookDocument) -> Set<String> {
-        var out = Set<String>()
-        func add<T: Identifiable>(_ items: [T]?) where T.ID == String {
-            for item in items ?? [] { out.insert(item.id.lowercased()) }
+    /// 每個物件的內容指紋。位置、大小、文字、外觀任何一項變了，指紋就不同。
+    static func fingerprints(of d: NotebookDocument) -> [String: Int] {
+        var out: [String: Int] = [:]
+        func add<T: Identifiable & Encodable>(_ items: [T]?) where T.ID == String {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.sortedKeys]
+            for item in items ?? [] {
+                out[item.id.lowercased()] = (try? encoder.encode(item)).map { Data($0).hashValue } ?? 0
+            }
         }
         add(d.attachments); add(d.textAttachments); add(d.tableAttachments); add(d.shapeAttachments)
         add(d.connectionAttachments); add(d.linkAttachments); add(d.model3DAttachments)
@@ -1407,11 +1414,11 @@ enum NotebookSyncCoordinator {
             NotificationCenter.default.post(
                 name: .kairumoProInkChangedOnDisk, object: nil, userInfo: ["notebookId": documentId])
         }
-        let (merged, preserved) = preservingLocalAdditions(
+        let (merged, preserved) = preservingLocalChanges(
             imported.document, local: store.allNotebooks.first {
                 $0.id.caseInsensitiveCompare(documentId) == .orderedSame
             },
-            exportedIds: ExportedObjectIds.shared.take(documentId))
+            exported: ExportedObjectIds.shared.take(documentId))
         store.syncUpsert(merged)
         // 有保住使用者剛新增的東西就**不要**標成「已同步」：那些東西還沒進套件，下一輪要匯出。
         if !preserved {
@@ -1419,29 +1426,48 @@ enum NotebookSyncCoordinator {
         }
     }
 
-    /// 匯出之後、匯入之前，使用者新增的物件不能被匯入的結果蓋掉。
+    /// 匯出之後、匯入之前，使用者**新增或動過**的物件不能被匯入的結果蓋掉。
     ///
     /// 一輪同步是「匯出 → 等網路 → 匯入」，匯入是**整份取代**工作副本。等網路的那幾秒裡使用者
-    /// 又插了一段錄音、一個文字方塊 —— 它們不在剛匯出的套件裡，匯入結果也沒有，整份取代之後
-    /// 就消失了（使用者回報：插入錄音後，一同步錄音卡片就不見，進去馬上又消失）。
+    /// 又插了一段錄音、移動了一張圖 —— 它們在剛匯出的套件裡還是舊的樣子，整份取代之後
+    /// 新增的消失、移動過的**跳回原位**（使用者回報：畫布上的物件移不動，一同步就回去）。
     ///
-    /// 做法：匯出當下記下有哪些物件 id；匯入時，工作副本上「不在那份名單、匯入結果也沒有」的物件，
-    /// 就是匯出之後新增的，補回去。**沒有名單就不動**（沒辦法分辨「新增的」與「被別台刪掉的」，
-    /// 補回去會讓刪除復活）。
-    static func preservingLocalAdditions(
-        _ imported: NotebookDocument, local: NotebookDocument?, exportedIds: Set<String>?
+    /// 做法：匯出當下記下每個物件的內容指紋。匯入時，工作副本上的物件
+    /// - 不在名單、匯入結果也沒有 → 匯出之後新增的，補回去；
+    /// - 指紋與匯出當下不同 → 匯出之後改過（移動、改字、改外觀），**用工作副本的版本**。
+    ///
+    /// **沒有名單就不動**（分不出「新增」與「被別台刪掉」，補回去會讓刪除復活）。
+    static func preservingLocalChanges(
+        _ imported: NotebookDocument, local: NotebookDocument?, exported: [String: Int]?
     ) -> (NotebookDocument, Bool) {
-        guard let local, let exportedIds else { return (imported, false) }
+        guard let local, let exported else { return (imported, false) }
         var merged = imported
         var preserved = false
+        let current = ExportedObjectIds.fingerprints(of: local)
         func keep<T: Identifiable>(_ keyPath: WritableKeyPath<NotebookDocument, [T]?>) where T.ID == String {
-            let have = Set((imported[keyPath: keyPath] ?? []).map { $0.id.lowercased() })
-            let added = (local[keyPath: keyPath] ?? []).filter {
-                !exportedIds.contains($0.id.lowercased()) && !have.contains($0.id.lowercased())
+            let localItems = Dictionary(
+                (local[keyPath: keyPath] ?? []).map { ($0.id.lowercased(), $0) },
+                uniquingKeysWith: { first, _ in first })
+            var result: [T] = []
+            var have = Set<String>()
+            for item in imported[keyPath: keyPath] ?? [] {
+                let id = item.id.lowercased()
+                have.insert(id)
+                if let mine = localItems[id], let was = exported[id], current[id] != was {
+                    result.append(mine)
+                    preserved = true
+                } else {
+                    result.append(item)
+                }
             }
-            guard !added.isEmpty else { return }
-            merged[keyPath: keyPath] = (merged[keyPath: keyPath] ?? []) + added
-            preserved = true
+            let added = (local[keyPath: keyPath] ?? []).filter {
+                exported[$0.id.lowercased()] == nil && !have.contains($0.id.lowercased())
+            }
+            if !added.isEmpty { preserved = true }
+            result.append(contentsOf: added)
+            if !result.isEmpty || imported[keyPath: keyPath] != nil {
+                merged[keyPath: keyPath] = result
+            }
         }
         keep(\.attachments); keep(\.textAttachments); keep(\.tableAttachments)
         keep(\.shapeAttachments); keep(\.connectionAttachments); keep(\.linkAttachments)
