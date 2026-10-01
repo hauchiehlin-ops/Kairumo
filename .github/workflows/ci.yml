@@ -229,11 +229,9 @@ jobs:
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
       # 先編好再開模擬器。
-      # 這台模擬器活到約 6 分 15 秒就會整個凍住然後消失（四輪 CI 的存活時間都是
-      # 6:15～6:20，跟當時在跑哪個測試無關；單獨跑 ScreenAuditTest 也一樣）。
-      # 以前是先開模擬器再讓 Gradle 編譯，約 4 分鐘白白耗掉，測試開始時模擬器
-      # 已經快到那個時間點。編好之後整套測試約 2.5 分鐘，可以在那之前跑完。
-      # 這是繞開，不是根因：為什麼是 6 分 15 秒還不知道。
+      # 舊 renderer 的數輪失敗都落在開機後約 6 分 15 秒；先前是先開模擬器再讓
+      # Gradle 編譯，約 4 分鐘白白增加 renderer 暴露時間。先編好仍值得保留，
+      # 但它只是縮短 emulator 壽命需求，下面也必須使用受支援的 renderer。
       - name: 先編譯 App 與測試 APK
         working-directory: android
         run: ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon
@@ -249,22 +247,24 @@ jobs:
           # 被殺（logcat 在毫無預警下中斷，沒有 FATAL、沒有 lmkd）。
           # 先把記憶體加到 4GB 排除「被擠爆」這個最便宜的解釋。
           # 4GB 沒有改變結果（死前主機仍有 5GB 可用、沒有 OOM），所以不是記憶體。
-          # 真正的死因在主機 dmesg：`RenderThread[...]: segfault`，也就是
-          # emulator（37.1.11）自己的 gfxstream 渲染執行緒崩潰。logcat 在崩潰
-          # 當下中斷、沒有 FATAL，所以只看 Android 端永遠看不到。
-          # `-gpu guest` 試過，沒有避開這條路徑（guest 仍載入 *_emulation.so），已還原。
-          # 現在關掉 Vulkan：gfxstream 崩潰時最常見、改動最小的繞法。
-          # 不要改成 `-gpu host`：runner 沒有 GPU。
+          # 真正的死因曾在主機 dmesg 留下 `RenderThread[...]: segfault`，也就是
+          # emulator 自己的 gfxstream 渲染執行緒崩潰。37.2.12 的另一輪則是 qemu
+          # 還活著，但 ADB transport 消失；兩輪都不是 App 的 FATAL／ANR。
+          #
+          # 不要再用 `swiftshader_indirect`：Android Emulator 從 36.4.9 起已將它
+          # 標成 deprecated，而 CI 用的 37.x 正是出問題的版本。`software` 會讓
+          # emulator 依 AVD 與主機能力選目前受支援的軟體 renderer；runner 沒有
+          # 實體 GPU，不能改成 `host`。Vulkan 仍關掉，避免重回出過問題的路徑。
           ram-size: 4096M
           heap-size: 576M
-          emulator-options: -no-window -gpu swiftshader_indirect -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -no-metrics
+          emulator-options: -no-window -gpu software -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -no-metrics
           # 先在背景收兩樣東西：
           #   * logcat —— 模擬器中途消失時，Gradle 只剩 `device not found`；
-          #   * 主機端的記憶體與 qemu 程序 —— logcat 只記得到 Android 裡面的事，
-          #     模擬器程序「為什麼不見」只有主機看得到。
+          #   * 主機端記憶體、qemu 程序與 ADB state —— 可分清 qemu crash 與
+          #     「qemu 還活著、只有 device 從 ADB 消失」這兩種故障。
           script: |
             sh -c "adb logcat -v time > ${{ github.workspace }}/logcat.txt 2>&1 &"
-            sh -c "while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; sleep 2; done > ${{ github.workspace }}/host-monitor.txt 2>&1 &"
+            sh -c "while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; adb get-state 2>&1 || true; sleep 2; done > ${{ github.workspace }}/host-monitor.txt 2>&1 &"
             ./gradlew connectedDebugAndroidTest --no-daemon
       - name: 主機端死因（OOM killer、模擬器崩潰檔）
         if: always()
