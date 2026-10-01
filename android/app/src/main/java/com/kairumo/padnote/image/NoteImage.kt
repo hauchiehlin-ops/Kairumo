@@ -74,7 +74,7 @@ object ImageAppearance {
      */
     // 「由別種物件算繪出來」的圖片。真身在筆記本中繼資料裡 ——
     // 不跳過的話同一個物件會出現兩份，各自能拖到不同的地方。
-    private val DERIVED = setOf("link", "model3d", "audio", "pin", "tape", "sticky")
+    private val DERIVED = setOf("link", "model3d", "audio", "pin", "tape", "sticky", "rectitle")
 
     /** 這個區塊是不是衍生圖片（載入時要跳過）。 */
     fun isDerived(json: String?): Boolean {

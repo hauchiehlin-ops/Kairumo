@@ -25,6 +25,14 @@
 
 import Foundation
 
+/// 一段錄音的名字。**錄音清單只存在各自的裝置上**，沒有插進筆記的錄音沒有卡片可以帶名字，
+/// 所以名字另外存進錄音所在的套件（kind = `rectitle`），跟著同步走。
+struct RecordingTitle: Codable, Hashable, Sendable {
+    /// 音檔檔名（兩台裝置替同一個檔案產生的錄音 id 不同，只有檔名對得起來）。
+    var fileName: String
+    var title: String
+}
+
 enum ObjectEnvelope {
 
     static let payloadKey = "payload"

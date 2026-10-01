@@ -37,7 +37,7 @@ enum ImageAppearance {
     /// 「由別種物件算繪出來」的圖片。匯入時要跳過它們 ——
     /// 真身在筆記本中繼資料裡，不跳過的話同一個物件會變成兩份，
     /// 而且各自能拖到不同的地方。
-    static let derivedObjects: Set<String> = ["link", "model3d", "audio", "pin", "tape", "sticky"]
+    static let derivedObjects: Set<String> = ["link", "model3d", "audio", "pin", "tape", "sticky", "rectitle"]
 
     /// 標記一個「由別種物件算繪出來」的圖片區塊。
     static func encodeDerived(objectKind: String, fileName: String) -> String {

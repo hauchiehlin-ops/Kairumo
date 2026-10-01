@@ -5,6 +5,7 @@
 //  實機回報的同步問題：被登出、一直在同步、錄音卡片消失、日誌時間不對、錄音名稱帶筆記本名。
 //
 
+import PencilKit
 import XCTest
 @testable import Kairumo
 
@@ -183,5 +184,90 @@ final class RecordingRenameSyncTests: XCTestCase {
         store.renameRecording(id: "ipad-id", newTitle: "新名字")
         XCTAssertEqual(store.notebooks.first?.audioAttachments?.first?.title, "新名字")
         XCTAssertEqual(store.recordings.first?.title, "新名字")
+    }
+}
+
+// MARK: - 沒有卡片的錄音，名字也跟著套件同步
+
+@MainActor
+final class RecordingTitleInPackageTests: XCTestCase {
+
+    private var workDir: URL!
+    private let deviceA: UInt32 = 0x0A0A0A0A
+    private let deviceB: UInt32 = 0x0B0B0B0B
+
+    override func setUpWithError() throws {
+        workDir = FileManager.default.temporaryDirectory
+            .appendingPathComponent("kairumo-rectitle-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: workDir, withIntermediateDirectories: true)
+    }
+
+    override func tearDownWithError() throws {
+        try? FileManager.default.removeItem(at: workDir)
+    }
+
+    private func doc() -> NotebookDocument { NotebookDocument(title: "R", pageCount: 1) }
+
+    func testTheNameOfARecordingWithoutACardTravelsInThePackage() throws {
+        let package = workDir.appendingPathComponent("t.padnote")
+        try NotebookPackageBridge.export(
+            document: doc(), drawings: [PKDrawing()], to: package, deviceId: deviceB,
+            recordingTitles: ["a.opus": "週會紀錄"])
+        let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceA)
+        XCTAssertEqual(imported.recordingTitles["a.opus"], "週會紀錄")
+        // 名字區塊不能被當成圖片載入，也不能變成多出來的物件。
+        XCTAssertTrue(imported.document.attachments?.isEmpty ?? true)
+    }
+
+    func testARenameOnTheOtherDeviceWinsOverTheOriginalName() throws {
+        let package = workDir.appendingPathComponent("rename.padnote")
+        // Mac（B）錄的，名字 T0。
+        try NotebookPackageBridge.export(
+            document: doc(), drawings: [PKDrawing()], to: package, deviceId: deviceB,
+            recordingTitles: ["a.opus": "T0"])
+        // iPad（A）匯入後改名為 T1，再匯出。
+        let first = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceA)
+        XCTAssertEqual(first.recordingTitles["a.opus"], "T0")
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: first.document, drawings: [PKDrawing()], to: package, deviceId: deviceA,
+            pageIds: first.pageIds, recordingTitles: ["a.opus": "T1"])
+        // Mac 還不知道，照舊匯出自己的 T0。
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: doc(), drawings: [PKDrawing()], to: package, deviceId: deviceB,
+            pageIds: first.pageIds, recordingTitles: ["a.opus": "T0"])
+        let merged = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceB)
+        XCTAssertEqual(merged.recordingTitles["a.opus"], "T1", "iPad 後改的名字要贏過 Mac 重匯出的舊名字")
+    }
+
+    func testImportedTitlesUpdateTheListButNotARenameMadeSinceTheExport() {
+        let store = NotebookStore.shared
+        let saved = store.recordings
+        defer { store.recordings = saved }
+        store.recordings = [
+            AudioRecordingRecord(title: "舊", durationSeconds: 1, fileName: "a.opus"),
+            AudioRecordingRecord(title: "我剛改的", durationSeconds: 1, fileName: "b.opus"),
+        ]
+        store.applyRecordingTitles(
+            ["a.opus": "別台改的", "b.opus": "別台對 b 的名字"],
+            exported: ["a.opus": "舊", "b.opus": "匯出當時的名字"])
+        XCTAssertEqual(store.recordings[0].title, "別台改的")
+        XCTAssertEqual(store.recordings[1].title, "我剛改的", "匯出之後我又改過，不能被蓋掉")
+    }
+
+    func testRenamingARecordingMarksItsNotebookModifiedSoTheNextRoundExportsIt() {
+        let store = NotebookStore.shared
+        let savedNotebooks = store.notebooks
+        let savedRecordings = store.recordings
+        defer { store.notebooks = savedNotebooks; store.recordings = savedRecordings }
+
+        var book = NotebookDocument(title: "N", pageCount: 1)
+        book.lastModifiedDate = Date(timeIntervalSince1970: 0)
+        store.notebooks = [book]
+        let rec = AudioRecordingRecord(
+            id: "r1", title: "舊", durationSeconds: 1, fileName: "z.opus", linkedNotebookId: book.id)
+        store.recordings = [rec]
+        store.renameRecording(id: "r1", newTitle: "新")
+        XCTAssertGreaterThan(store.notebooks[0].lastModifiedDate, Date(timeIntervalSince1970: 1),
+                             "沒有卡片的錄音改名不動筆記，同步就以為沒有東西要匯出")
     }
 }

@@ -128,6 +128,11 @@ protocol SyncableNotebookStore: AnyObject {
     func syncPurgeExpiredTrash() -> Int
     func syncRepairSeedDuplicates()
     func syncRefreshRecordings()
+    /// 錄音清單。匯出時取出「屬於這本筆記的錄音」的名字。
+    var syncRecordings: [AudioRecordingRecord] { get }
+    /// 把別台改的錄音名字套進清單。`exported` 是匯出當下各錄音的名字：
+    /// 匯出之後使用者在這台又改過的（名字與 `exported` 不同）不被蓋掉。
+    func syncApplyRecordingTitles(_ titles: [String: String], exported: [String: String]?)
 }
 
 extension SyncableNotebookStore {
@@ -140,9 +145,17 @@ extension SyncableNotebookStore {
     func syncPurgeExpiredTrash() -> Int { 0 }
     func syncRepairSeedDuplicates() {}
     func syncRefreshRecordings() {}
+    var syncRecordings: [AudioRecordingRecord] { [] }
+    func syncApplyRecordingTitles(_: [String: String], exported _: [String: String]?) {}
 }
 
 extension NotebookStore: SyncableNotebookStore {
+    var syncRecordings: [AudioRecordingRecord] { recordings }
+
+    func syncApplyRecordingTitles(_ titles: [String: String], exported: [String: String]?) {
+        applyRecordingTitles(titles, exported: exported)
+    }
+
     var syncNotebooks: [NotebookDocument] {
         var list = visibleNotebooks
         let inboxId = recordingInboxNotebookId()
@@ -228,6 +241,18 @@ final class ExportedObjectIds: @unchecked Sendable {
         let fingerprints = Self.fingerprints(of: document)
         lock.lock(); defer { lock.unlock() }
         prints[document.id.lowercased()] = fingerprints
+    }
+
+    private var titles: [String: [String: String]] = [:]
+
+    func recordTitles(_ value: [String: String], for notebookId: String) {
+        lock.lock(); defer { lock.unlock() }
+        titles[notebookId.lowercased()] = value
+    }
+
+    func takeTitles(_ notebookId: String) -> [String: String]? {
+        lock.lock(); defer { lock.unlock() }
+        return titles.removeValue(forKey: notebookId.lowercased())
     }
 
     func take(_ notebookId: String) -> [String: Int]? {
@@ -1023,7 +1048,8 @@ enum NotebookSyncCoordinator {
             baselineDirectory: inputs.baselineDirectory,
             attachmentsDirectory: inputs.attachmentsDirectory,
             drawingsDirectory: inputs.drawingsDirectory,
-            deviceId: inputs.deviceId, loadDrawing: inputs.loadDrawing
+            deviceId: inputs.deviceId, loadDrawing: inputs.loadDrawing,
+            recordingTitles: inputs.recordingTitles
         )
         _ = try exportOne(inputs)
         return package
@@ -1222,6 +1248,8 @@ enum NotebookSyncCoordinator {
         let drawingsDirectory: URL
         let deviceId: UInt32
         let loadDrawing: @Sendable (String, Int) -> PKDrawing
+        /// 屬於這本筆記的錄音：檔名 → 名字。寫進套件，名字才跟著同步（見 `RecordingTitle`）。
+        var recordingTitles: [String: String] = [:]
     }
 
     /// 在 MainActor 上把一本筆記要用到的東西抄成值。**很便宜**：只讀
@@ -1241,8 +1269,22 @@ enum NotebookSyncCoordinator {
             attachmentsDirectory: store.syncAttachmentsDirectory,
             drawingsDirectory: store.syncDrawingsDirectory,
             deviceId: deviceId,
-            loadDrawing: store.syncDrawingLoader
+            loadDrawing: store.syncDrawingLoader,
+            recordingTitles: recordingTitles(of: document, in: store)
         )
+    }
+
+    /// 這本筆記的套件裡的錄音（`linkedNotebookId` 是它）：檔名（小寫）→ 名字。
+    @MainActor
+    private static func recordingTitles(
+        of document: NotebookDocument, in store: SyncableNotebookStore
+    ) -> [String: String] {
+        var out: [String: String] = [:]
+        for record in store.syncRecordings
+        where record.linkedNotebookId?.caseInsensitiveCompare(document.id) == .orderedSame {
+            out[record.fileName.lowercased()] = record.title
+        }
+        return out
     }
 
     /// 匯出一本，回傳這台裝置在各頁自己擁有的筆畫。
@@ -1420,6 +1462,8 @@ enum NotebookSyncCoordinator {
             },
             exported: ExportedObjectIds.shared.take(documentId))
         store.syncUpsert(merged)
+        store.syncApplyRecordingTitles(
+            imported.recordingTitles, exported: ExportedObjectIds.shared.takeTitles(documentId))
         // 有保住使用者剛新增的東西就**不要**標成「已同步」：那些東西還沒進套件，下一輪要匯出。
         if !preserved {
             markWorkingCopyInSync(documentId: documentId, store: store)

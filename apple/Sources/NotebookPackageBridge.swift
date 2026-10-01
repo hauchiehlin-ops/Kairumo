@@ -71,7 +71,8 @@ enum NotebookPackageBridge {
         deviceId: UInt32,
         pageIds knownPageIds: [String]? = nil,
         skipBlockIds: Set<String> = [],
-        proStrokes: [[ProStroke]] = []
+        proStrokes: [[ProStroke]] = [],
+        recordingTitles: [String: String] = [:]
     ) throws -> ExportSummary {
         let pageCount = max(document.pageCount, drawings.count)
         guard pageCount > 0 else { throw BridgeError.noPages }
@@ -281,6 +282,15 @@ enum NotebookPackageBridge {
                         kind: "sticky", id: anchor.id, payload: anchor, png: nil,
                         x: CGFloat(anchor.anchorOriginX), y: CGFloat(anchor.anchorOriginY),
                         width: 1, height: 1)
+                }
+                if index == 0 {
+                    // 錄音的名字（見 `RecordingTitle`）。掛在第一頁，每段錄音一個區塊，逐個合併。
+                    for (fileName, title) in recordingTitles.sorted(by: { $0.key < $1.key }) {
+                        try writeEnvelope(
+                            kind: "rectitle", id: recordingTitleBlockId(fileName),
+                            payload: RecordingTitle(fileName: fileName, title: title), png: nil,
+                            x: 0, y: 0, width: 1, height: 1)
+                    }
                 }
 
                 // 形狀與連接線寫成**核心的原生物件**，不是平台自己另存的 JSON。
@@ -504,7 +514,8 @@ enum NotebookPackageBridge {
         to destination: URL,
         deviceId: UInt32,
         pageIds knownPageIds: [String]? = nil,
-        proStrokes: [[ProStroke]] = []
+        proStrokes: [[ProStroke]] = [],
+        recordingTitles: [String: String] = [:]
     ) throws -> ExportSummary {
         let fm = FileManager.default
         // 已知的頁面 id 優先用呼叫端給的；沒給就沿用套件裡現有的那批 ——
@@ -516,7 +527,7 @@ enum NotebookPackageBridge {
             return try export(
                 document: document, drawings: drawings, imageData: imageData,
                 to: destination, deviceId: deviceId, pageIds: pageIds,
-                proStrokes: proStrokes
+                proStrokes: proStrokes, recordingTitles: recordingTitles
             )
         }
 
@@ -537,7 +548,7 @@ enum NotebookPackageBridge {
         let summary = try export(
             document: document, drawings: drawings, imageData: imageData,
             to: fresh, deviceId: deviceId, pageIds: pageIds,
-            skipBlockIds: foreign.ids, proStrokes: proStrokes
+            skipBlockIds: foreign.ids, proStrokes: proStrokes, recordingTitles: recordingTitles
         )
 
         // **把錄音當下由核心直接寫的操作搬過去。** 重建只含平台文件模型有的東西（文字、圖片、筆畫…），
@@ -605,7 +616,8 @@ enum NotebookPackageBridge {
         //    文字內容的跨裝置編輯目前不支援，見 docs/plans/object-identity.md）。
         //    失敗不影響這次匯出 —— 下一輪會再試。
         try? applyForeignEdits(
-            document: document, foreign: foreign, to: destination, deviceId: deviceId)
+            document: document, foreign: foreign, to: destination, deviceId: deviceId,
+            recordingTitles: recordingTitles)
         return summary
     }
 
@@ -617,6 +629,8 @@ enum NotebookPackageBridge {
         var pins: [NoteCommentPin] = []
         var tapes: [NoteTapeAttachment] = []
         var stickies: [StickyAnnotationAnchor] = []
+        /// 檔名（小寫）→ 名字。
+        var recordingTitles: [String: String] = [:]
     }
 
     /// 解開一個衍生圖片區塊的 payload。**頁次以區塊實際所在的頁為準**，不是 payload 寫的 ——
@@ -648,6 +662,10 @@ enum NotebookPackageBridge {
         case "sticky":
             if var item = ObjectEnvelope.decode(StickyAnnotationAnchor.self, kind: "sticky", from: appearance) {
                 item.pageIndex = pageIndex; out.stickies.append(item)
+            }
+        case "rectitle":
+            if let item = ObjectEnvelope.decode(RecordingTitle.self, kind: "rectitle", from: appearance) {
+                out.recordingTitles[item.fileName.lowercased()] = item.title
             }
         default:
             break
@@ -729,7 +747,8 @@ enum NotebookPackageBridge {
     /// 只比**語意**：外觀先套到副本上再一起編碼，格式或欄位順序不同不算不同 —— 否則每次匯出
     /// 都會多寫一批操作，而別台下一輪又下載它們。
     private static func applyForeignEdits(
-        document: NotebookDocument, foreign: ForeignBlocks, to destination: URL, deviceId: UInt32
+        document: NotebookDocument, foreign: ForeignBlocks, to destination: URL, deviceId: UInt32,
+        recordingTitles: [String: String] = [:]
     ) throws {
         struct Edit {
             var id: String
@@ -810,6 +829,11 @@ enum NotebookPackageBridge {
         for item in document.stickyAnchors ?? [] {
             envelope(kind: "sticky", id: item.id, payload: item,
                      x: CGFloat(item.anchorOriginX), y: CGFloat(item.anchorOriginY))
+        }
+        for (fileName, title) in recordingTitles {
+            envelope(
+                kind: "rectitle", id: recordingTitleBlockId(fileName),
+                payload: RecordingTitle(fileName: fileName, title: title), x: 0, y: 0)
         }
         guard !edits.isEmpty else { return }
 
@@ -907,6 +931,11 @@ enum NotebookPackageBridge {
     static func collapseDuplicates<T>(_ items: [T], key: (T) -> String) -> [T] {
         var seen = Set<String>()
         return items.filter { seen.insert(key($0)).inserted }
+    }
+
+    /// 錄音名字區塊的 id：由檔名決定，每台裝置、每次匯出都一樣。
+    static func recordingTitleBlockId(_ fileName: String) -> String {
+        "rectitle:\(fileName.lowercased())"
     }
 
     /// 附件 id → 核心的區塊／物件 id（小寫 UUID 字串）。
@@ -1216,7 +1245,7 @@ enum NotebookPackageBridge {
         // 中繼資料可能是別台裝置寫的舊版本。下次匯出要沿用這批。
         return ImportedNotebook(
             document: document, drawings: drawings, imageData: imageData, pageIds: pageIds,
-            proStrokes: proStrokes
+            proStrokes: proStrokes, recordingTitles: envelopes.recordingTitles
         )
     }
 
@@ -1231,6 +1260,8 @@ enum NotebookPackageBridge {
         let pageIds: [String]
         /// 每一頁的專業筆刷筆畫（自繪引擎），索引與頁次相同。包含這台自己的與別台的。
         var proStrokes: [[ProStroke]] = []
+        /// 檔名（小寫）→ 錄音的名字。
+        var recordingTitles: [String: String] = [:]
     }
 
     // MARK: - 私有

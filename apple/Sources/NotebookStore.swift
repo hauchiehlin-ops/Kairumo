@@ -2954,6 +2954,25 @@ public final class NotebookStore: ObservableObject {
         }
     }
 
+    /// 把別台改的錄音名字套進清單（見 `RecordingTitle`）。
+    ///
+    /// `exported` 是這一輪匯出當下各錄音的名字：清單現在的名字與它不同，代表匯出之後使用者在
+    /// 這台又改過 —— 保留使用者的，下一輪匯出會帶出去。沒有 `exported` 時一律採用別台的。
+    func applyRecordingTitles(_ titles: [String: String], exported: [String: String]?) {
+        guard !titles.isEmpty else { return }
+        var changed = false
+        for index in recordings.indices {
+            let key = recordings[index].fileName.lowercased()
+            guard let incoming = titles[key],
+                  !incoming.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                  incoming != recordings[index].title else { continue }
+            if let exported, let was = exported[key], recordings[index].title != was { continue }
+            recordings[index].title = incoming
+            changed = true
+        }
+        if changed { persistData(signalsLocalEdit: false) }
+    }
+
     /// 錄音清單的名字以插在筆記裡的錄音卡片為準。
     ///
     /// # 為什麼
@@ -3118,6 +3137,12 @@ public final class NotebookStore: ObservableObject {
         else { return }
 
         recordings[recordingIndex].title = clean
+        // 名字存在錄音所在的套件裡。沒有卡片的錄音，改名不會動到任何筆記，同步就以為沒有東西要匯出 ——
+        // 把那本筆記標成有修改，下一輪才會把新名字寫進套件。
+        if let linked = recordings[recordingIndex].linkedNotebookId,
+           let idx = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(linked) == .orderedSame }) {
+            notebooks[idx].lastModifiedDate = Date()
+        }
         let fileName = recordings[recordingIndex].fileName.lowercased()
         for notebookIndex in notebooks.indices {
             guard var cards = notebooks[notebookIndex].audioAttachments else { continue }
