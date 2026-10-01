@@ -235,7 +235,15 @@ jobs:
       - name: 先編譯 App 與測試 APK
         working-directory: android
         run: ./gradlew assembleDebug assembleDebugAndroidTest --no-daemon
-      - name: 跑 instrumented 測試
+      # ScreenAuditTest 會反覆啟動完整 MainActivity。它若接在 PDF、字型與 Compose
+      # renderer 測試之後跑，CI 曾在第一個 audit case 遇到短暫 ADB transport
+      # reset：qemu 與 `adb get-state` 都仍正常，但同一輪 UTP/ddmlib 不會重新接回，
+      # 於是把尚未跑的 102 條測試全算成「未收到」。讓 audit 使用自己的 emulator，
+      # 其餘測試也從乾淨的 renderer/ADB session 開始。兩步先容許繼續，好讓第二步
+      # 與診斷 artifact 一定會產生；最後再合併判定成敗。
+      - name: 跑畫面稽核 instrumented 測試
+        id: android-screen-audit
+        continue-on-error: true
         uses: reactivecircus/android-emulator-runner@v2
         with:
           api-level: 35
@@ -243,8 +251,8 @@ jobs:
           target: google_apis
           arch: x86_64
           working-directory: android
-          # 預設只給 2560MB，而且 CI 上第 189 個測試開始後 emulator 整個程序
-          # 被殺（logcat 在毫無預警下中斷，沒有 FATAL、沒有 lmkd）。
+          # 預設只給 2560MB；早期 CI 在第 189 個測試中斷時曾有 emulator renderer
+          # crash，後來也重現過 qemu 存活、只有 UTP/ddmlib 掉線的版本。
           # 先把記憶體加到 4GB 排除「被擠爆」這個最便宜的解釋。
           # 4GB 沒有改變結果（死前主機仍有 5GB 可用、沒有 OOM），所以不是記憶體。
           # 真正的死因曾在主機 dmesg 留下 `RenderThread[...]: segfault`，也就是
@@ -263,9 +271,43 @@ jobs:
           #   * 主機端記憶體、qemu 程序與 ADB state —— 可分清 qemu crash 與
           #     「qemu 還活著、只有 device 從 ADB 消失」這兩種故障。
           script: |
-            sh -c "adb logcat -v time > ${{ github.workspace }}/logcat.txt 2>&1 &"
-            sh -c "while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; adb get-state 2>&1 || true; sleep 2; done > ${{ github.workspace }}/host-monitor.txt 2>&1 &"
-            ./gradlew connectedDebugAndroidTest --no-daemon
+            adb logcat -v time > ${{ github.workspace }}/screen-audit-logcat.txt 2>&1 &
+            logcat_pid=$!
+            (while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; adb get-state 2>&1 || true; sleep 2; done) > ${{ github.workspace }}/screen-audit-host-monitor.txt 2>&1 &
+            monitor_pid=$!
+            set +e
+            ./gradlew connectedDebugAndroidTest --no-daemon -Pandroid.testInstrumentationRunnerArguments.class=com.kairumo.padnote.screens.ScreenAuditTest
+            test_status=$?
+            set -e
+            cp -r app/build/outputs/androidTest-results ${{ github.workspace }}/screen-audit-results || true
+            cp -r app/build/reports/androidTests ${{ github.workspace }}/screen-audit-reports || true
+            kill "$logcat_pid" "$monitor_pid" 2>/dev/null || true
+            wait "$logcat_pid" "$monitor_pid" 2>/dev/null || true
+            exit "$test_status"
+      - name: 跑其餘 instrumented 測試
+        id: android-remaining-tests
+        continue-on-error: true
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          working-directory: android
+          ram-size: 4096M
+          heap-size: 576M
+          emulator-options: -no-window -gpu software -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -no-metrics
+          script: |
+            adb logcat -v time > ${{ github.workspace }}/remaining-logcat.txt 2>&1 &
+            logcat_pid=$!
+            (while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; adb get-state 2>&1 || true; sleep 2; done) > ${{ github.workspace }}/remaining-host-monitor.txt 2>&1 &
+            monitor_pid=$!
+            set +e
+            ./gradlew connectedDebugAndroidTest --no-daemon -Pandroid.testInstrumentationRunnerArguments.notClass=com.kairumo.padnote.screens.ScreenAuditTest
+            test_status=$?
+            set -e
+            kill "$logcat_pid" "$monitor_pid" 2>/dev/null || true
+            wait "$logcat_pid" "$monitor_pid" 2>/dev/null || true
+            exit "$test_status"
       - name: 主機端死因（OOM killer、模擬器崩潰檔）
         if: always()
         run: |
@@ -288,11 +330,25 @@ jobs:
           path: |
             android/app/build/reports/androidTests
             android/app/build/outputs/androidTest-results
-            logcat.txt
-            host-monitor.txt
+            screen-audit-reports
+            screen-audit-results
+            screen-audit-logcat.txt
+            screen-audit-host-monitor.txt
+            remaining-logcat.txt
+            remaining-host-monitor.txt
             host-death.txt
             emu-crash
           if-no-files-found: warn
+      - name: Instrumented 測試總結
+        if: always()
+        env:
+          SCREEN_AUDIT_OUTCOME: ${{ steps.android-screen-audit.outcome }}
+          REMAINING_TESTS_OUTCOME: ${{ steps.android-remaining-tests.outcome }}
+        run: |
+          echo "ScreenAuditTest: $SCREEN_AUDIT_OUTCOME"
+          echo "其餘 instrumented tests: $REMAINING_TESTS_OUTCOME"
+          test "$SCREEN_AUDIT_OUTCOME" = success
+          test "$REMAINING_TESTS_OUTCOME" = success
 
   # 決策 D6：授權稽核。禁止 AGPL 進入相依樹。
   # 每一筆豁免的理由都寫在 deny.toml 裡，不要在這裡放行。
