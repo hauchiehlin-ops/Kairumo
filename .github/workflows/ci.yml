@@ -236,7 +236,21 @@ jobs:
           target: google_apis
           arch: x86_64
           working-directory: android
-          script: ./gradlew connectedDebugAndroidTest --no-daemon
+          # 先在背景收 logcat：模擬器中途消失時，Gradle 的輸出只剩
+          # `device not found`，真正的死因只在 logcat 裡。
+          script: |
+            sh -c "adb logcat -v time > ${{ github.workspace }}/logcat.txt 2>&1 &"
+            ./gradlew connectedDebugAndroidTest --no-daemon
+      - name: 留下測試報告與 logcat
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-instrumented-report
+          path: |
+            android/app/build/reports/androidTests
+            android/app/build/outputs/androidTest-results
+            logcat.txt
+          if-no-files-found: warn
 
   # 決策 D6：授權稽核。禁止 AGPL 進入相依樹。
   # 每一筆豁免的理由都寫在 deny.toml 裡，不要在這裡放行。
