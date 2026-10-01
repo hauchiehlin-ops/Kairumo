@@ -159,8 +159,28 @@ object InkBrushRenderer {
                 ToolKind.AIRBRUSH, ToolKind.OIL_PAINT, ToolKind.CALLIGRAPHY -> Unit
             }
         }
+        if (tool == ToolKind.BRUSH || tool == ToolKind.FOUNTAIN_PEN) smoothWidths(specs)
         return specs
     }
+
+    /** 粗細做前後平均，毛筆與鋼筆不會因取樣間隔不均而忽粗忽細。 */
+    private fun smoothWidths(specs: ArrayList<SegmentSpec>) {
+        if (specs.size < 3) return
+        val raw = FloatArray(specs.size) { specs[it].width }
+        var prev = raw[0]
+        for (i in specs.indices) {
+            val next = if (i + 1 < raw.size) raw[i + 1] else raw[i]
+            val w = 0.25f * prev + 0.5f * raw[i] + 0.25f * next
+            prev = raw[i]
+            specs[i] = specs[i].copy(width = w)
+        }
+    }
+
+    /** 半透明的筆（鉛筆、螢光筆）整條畫成一條路徑，段與段不會疊出接縫或虛線。 */
+    private fun isSinglePass(tool: ToolKind) = tool == ToolKind.HIGHLIGHTER || tool == ToolKind.PENCIL
+
+    private fun avgWidth(segments: List<SegmentSpec>) = segments.sumOf { it.width.toDouble() }.toFloat() / segments.size
+    private fun avgAlpha(segments: List<SegmentSpec>) = segments.sumOf { it.alpha.toDouble() }.toFloat() / segments.size
 
     /**
      * 在 Compose DrawScope 上繪製筆畫
@@ -182,6 +202,24 @@ object InkBrushRenderer {
 
         val isHighlighter = tool == ToolKind.HIGHLIGHTER
         val blend = if (isHighlighter) BlendMode.Multiply else BlendMode.SrcOver
+
+        if (isSinglePass(tool)) {
+            val path = androidx.compose.ui.graphics.Path().apply {
+                moveTo(segments[0].x1, segments[0].y1)
+                for (seg in segments) lineTo(seg.x2, seg.y2)
+            }
+            drawScope.drawPath(
+                path = path,
+                color = baseColor.copy(alpha = baseColor.alpha * avgAlpha(segments)),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(
+                    width = avgWidth(segments),
+                    cap = if (isHighlighter) StrokeCap.Square else StrokeCap.Round,
+                    join = androidx.compose.ui.graphics.StrokeJoin.Round
+                ),
+                blendMode = blend
+            )
+            return
+        }
 
         for (seg in segments) {
             val cap = if (seg.isSquareCap) StrokeCap.Square else StrokeCap.Round
@@ -252,6 +290,27 @@ object InkBrushRenderer {
 
         if (tool == ToolKind.HIGHLIGHTER) {
             paint.xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
+        }
+
+        if (isSinglePass(tool)) {
+            val path = android.graphics.Path().apply {
+                moveTo(segments[0].x1, segments[0].y1)
+                for (seg in segments) lineTo(seg.x2, seg.y2)
+            }
+            val origStyle = paint.style
+            val origJoin = paint.strokeJoin
+            paint.style = Paint.Style.STROKE
+            paint.strokeJoin = Paint.Join.ROUND
+            paint.strokeCap = if (tool == ToolKind.HIGHLIGHTER) Paint.Cap.SQUARE else Paint.Cap.ROUND
+            paint.alpha = (origAlpha * avgAlpha(segments)).toInt().coerceIn(0, 255)
+            paint.strokeWidth = avgWidth(segments)
+            canvas.drawPath(path, paint)
+            paint.style = origStyle
+            paint.strokeJoin = origJoin
+            paint.alpha = origAlpha
+            paint.strokeCap = origCap
+            paint.xfermode = origXfer
+            return
         }
 
         for (seg in segments) {
