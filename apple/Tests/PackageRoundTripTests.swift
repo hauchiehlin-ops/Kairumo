@@ -660,6 +660,118 @@ final class PackageMultiDeviceTests: XCTestCase {
         return imported.document
     }
 
+    // MARK: - 信封物件（連結、3D、錄音、圖釘、紙膠帶、便利貼錨點）
+
+    private func envelopeDocument() -> NotebookDocument {
+        var doc = document("E")
+        doc.linkAttachments = [NoteLinkAttachment(
+            id: "11111111-1111-4111-8111-111111111111", urlString: "https://example.com", title: "L")]
+        doc.model3DAttachments = [Note3DAttachment(id: "22222222-2222-4222-8222-222222222222")]
+        doc.audioAttachments = [NoteAudioAttachment(
+            id: "33333333-3333-4333-8333-333333333333", fileName: "a.m4a", title: "A")]
+        doc.commentPins = [
+            NoteCommentPin(id: "44444444-4444-4444-8444-444444444441", x: 10, y: 10,
+                           authorId: "u", authorName: "U", authorColor: "#fff"),
+            NoteCommentPin(id: "44444444-4444-4444-8444-444444444442", x: 50, y: 50,
+                           authorId: "u", authorName: "U", authorColor: "#fff"),
+        ]
+        doc.tapeAttachments = [NoteTapeAttachment(
+            id: "55555555-5555-4555-8555-555555555555", pageIndex: 0,
+            rect: CGRect(x: 20, y: 200, width: 100, height: 30))]
+        doc.stickyAnchors = [StickyAnnotationAnchor(
+            id: "66666666-6666-4666-8666-666666666666", targetId: "t",
+            anchorOriginX: 5, anchorOriginY: 6)]
+        return doc
+    }
+
+    func testEnvelopeObjectsStaySingleAcrossRepeatedSyncs() throws {
+        let package = workDir.appendingPathComponent("envelopes.padnote")
+        try NotebookPackageBridge.export(
+            document: envelopeDocument(), drawings: [PKDrawing()], to: package, deviceId: deviceB)
+
+        for round in 0..<6 {
+            let doc = try syncRound(package, device: round.isMultiple(of: 2) ? deviceA : deviceB)
+            XCTAssertEqual(doc.linkAttachments?.count, 1, "第 \(round) 趟：連結卡片數量變了")
+            XCTAssertEqual(doc.model3DAttachments?.count, 1, "第 \(round) 趟：3D 模型數量變了")
+            XCTAssertEqual(doc.audioAttachments?.count, 1, "第 \(round) 趟：錄音卡片數量變了")
+            XCTAssertEqual(doc.commentPins?.count, 2, "第 \(round) 趟：圖釘數量變了")
+            XCTAssertEqual(doc.tapeAttachments?.count, 1, "第 \(round) 趟：紙膠帶數量變了")
+            XCTAssertEqual(doc.stickyAnchors?.count, 1, "第 \(round) 趟：便利貼錨點數量變了")
+        }
+    }
+
+    func testTapeAndPinsSurviveWithoutAnyMetadata() throws {
+        // 紙膠帶以前完全沒進同步；圖釘只在中繼資料裡。信封讓它們自己一個區塊。
+        let package = workDir.appendingPathComponent("tape.padnote")
+        try NotebookPackageBridge.export(
+            document: envelopeDocument(), drawings: [PKDrawing()], to: package, deviceId: deviceB)
+        let imported = try NotebookPackageBridge.importDocument(
+            fromPackageAt: package, deviceId: deviceA)
+        XCTAssertEqual(imported.document.tapeAttachments?.first?.rect,
+                       CGRect(x: 20, y: 200, width: 100, height: 30))
+        XCTAssertEqual(imported.document.commentPins?.map(\.id).sorted(), [
+            "44444444-4444-4444-8444-444444444441", "44444444-4444-4444-8444-444444444442"])
+    }
+
+    func testTwoDevicesEditingDifferentEnvelopeObjectsBothSurvive() throws {
+        // 以前兩台各改不同的圖釘，後寫的那份中繼資料整包蓋掉先寫的。
+        let package = workDir.appendingPathComponent("two-edits.padnote")
+        try NotebookPackageBridge.export(
+            document: envelopeDocument(), drawings: [PKDrawing()], to: package, deviceId: deviceB)
+
+        // A：把第一個圖釘標成已解決。
+        var a = try syncRound(package, device: deviceA)
+        a.commentPins?[0].isResolved = true
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: a, drawings: [PKDrawing()], to: package, deviceId: deviceA,
+            pageIds: try NotebookPackageBridge.importDocument(
+                fromPackageAt: package, deviceId: deviceA).pageIds)
+
+        // B（還沒看到 A 的改動）：把第二個圖釘標成已解決。
+        var b = envelopeDocument()
+        b.commentPins?[1].isResolved = true
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: b, drawings: [PKDrawing()], to: package, deviceId: deviceB)
+
+        for device in [deviceA, deviceB, deviceA] {
+            let doc = try syncRound(package, device: device)
+            let resolved = (doc.commentPins ?? []).sorted { $0.id < $1.id }.map(\.isResolved)
+            XCTAssertEqual(resolved, [true, true], "兩台各改一個圖釘，其中一個修改消失了")
+        }
+    }
+
+    func testDeletingYourOwnEnvelopeObjectReachesTheOtherDevice() throws {
+        let package = workDir.appendingPathComponent("delete.padnote")
+        var doc = envelopeDocument()
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: doc, drawings: [PKDrawing()], to: package, deviceId: deviceA)
+        XCTAssertEqual(try syncRound(package, device: deviceB).commentPins?.count, 2)
+
+        doc.commentPins?.removeLast()
+        doc.tapeAttachments = nil
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: doc, drawings: [PKDrawing()], to: package, deviceId: deviceA)
+        let afterDelete = try NotebookPackageBridge.importDocument(
+            fromPackageAt: package, deviceId: deviceB).document
+        XCTAssertEqual(afterDelete.commentPins?.count, 1)
+        XCTAssertNil(afterDelete.tapeAttachments)
+    }
+
+    func testAnotherDevicesEnvelopeMoveSurvives() throws {
+        let package = workDir.appendingPathComponent("move.padnote")
+        try NotebookPackageBridge.export(
+            document: envelopeDocument(), drawings: [PKDrawing()], to: package, deviceId: deviceB)
+        var a = try syncRound(package, device: deviceA)
+        a.linkAttachments?[0].x = 300
+        a.linkAttachments?[0].y = 400
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: a, drawings: [PKDrawing()], to: package, deviceId: deviceA)
+        let b = try syncRound(package, device: deviceB)
+        XCTAssertEqual(b.linkAttachments?.count, 1)
+        XCTAssertEqual(b.linkAttachments?.first?.x, 300)
+        XCTAssertEqual(b.linkAttachments?.first?.y, 400)
+    }
+
     func testTextBoxesDoNotMultiplyAcrossRepeatedSyncs() throws {
         // 實測：使用者的一本筆記出現 19,588 個文字方塊、雲端 oplog 126MB，其他裝置因
         // 「操作筆數超過上限」打不開。兩台裝置來回同步多趟之後，文字方塊數量必須維持不變。

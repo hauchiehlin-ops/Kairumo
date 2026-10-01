@@ -29,6 +29,11 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         /** v3.8.0 的舊欄位：整本一份。只讀不寫，見 format-spec §6.2.1。 */
         private const val KEY_LEGACY_ORDER = "objectOrder"
         private const val KEY_COMMENT_PINS = "commentPins"
+        /**
+         * Apple 端寫的旗標：清單裡的物件另外有逐物件的區塊，匯入時以區塊為準。
+         * Android 改了清單就要清掉它，否則 Apple 會把 Android 新增的物件當成已被刪除而忽略。
+         */
+        private const val KEY_OBJECT_ENVELOPES = "objectEnvelopes"
         private const val KEY_MODELS_3D = "model3DAttachments"
 
         /**
@@ -251,6 +256,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         session: PadnoteSession?,
         pins: List<com.kairumo.padnote.comment.CommentPin>
     ) {
+        root.remove(KEY_OBJECT_ENVELOPES)
         root.put(KEY_COMMENT_PINS, com.kairumo.padnote.comment.CommentPinCodec.encodeAll(pins))
         runCatching { session?.setNotebookMeta(root.toString()) }
     }
@@ -266,6 +272,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         session: PadnoteSession?,
         items: List<com.kairumo.padnote.image.LinkObject>
     ) {
+        root.remove(KEY_OBJECT_ENVELOPES)
         root.put(KEY_LINKS, com.kairumo.padnote.image.LinkCodec.encodeAll(items))
         runCatching { session?.setNotebookMeta(root.toString()) }
     }
@@ -278,6 +285,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         session: PadnoteSession?,
         items: List<com.kairumo.padnote.audio.AudioObject>
     ) {
+        root.remove(KEY_OBJECT_ENVELOPES)
         root.put(KEY_AUDIO, com.kairumo.padnote.audio.AudioCodec.encodeAll(items))
         runCatching { session?.setNotebookMeta(root.toString()) }
     }
@@ -290,6 +298,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         session: PadnoteSession?,
         models: List<com.kairumo.padnote.model3d.Model3DObject>
     ) {
+        root.remove(KEY_OBJECT_ENVELOPES)
         root.put(KEY_MODELS_3D, com.kairumo.padnote.model3d.Model3DCodec.encodeAll(models))
         runCatching { session?.setNotebookMeta(root.toString()) }
     }
@@ -308,6 +317,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
     fun setStickyAnchors(session: PadnoteSession?, anchors: List<StickyAnnotationAnchor>) {
         val arr = JSONArray()
         anchors.forEach { arr.put(it.toJsonObject()) }
+        root.remove(KEY_OBJECT_ENVELOPES)
         root.put(KEY_STICKY_ANCHORS, arr)
         runCatching { session?.setNotebookMeta(root.toString()) }
     }

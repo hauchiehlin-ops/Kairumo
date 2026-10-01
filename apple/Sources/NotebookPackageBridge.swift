@@ -210,78 +210,62 @@ enum NotebookPackageBridge {
                     summary.tableCount += 1
                 }
 
-                // 3D 模型與連結卡片：核心的文件模型沒有這兩種型別，直接跳過的話
-                // 匯出的 PDF 就會少掉它們。算繪成圖片帶進去 —— 使用者看到的
-                // 是同一個東西，只是在 PDF 裡它是一張圖而不是可轉的模型。
+                // 核心的文件模型沒有連結卡片、3D 模型、錄音卡片、討論圖釘、紙膠帶、便利貼錨點這幾種型別。
+                // 每個物件寫成**一個衍生圖片區塊**，真身（payload）放在區塊外觀裡 ——
+                // 這樣它們跟文字框、表格一樣逐物件合併，不會被中繼資料那一份「最後寫入者贏」的
+                // JSON 整包蓋掉（見 ObjectEnvelope.swift）。圖片本身只是 PDF 匯出看得到它們的後備圖。
+                func writeEnvelope<T: Encodable>(
+                    kind: String, id: String, payload: T, png: Data?,
+                    x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat
+                ) throws {
+                    let blockId = stableBlockId(id)
+                    if skipBlockIds.contains(blockId) { return }
+                    let blob = try session.putBlob(bytes: png ?? ObjectEnvelope.transparentPNG)
+                    guard try session.addImageWithId(
+                        pageId: pageId, blockId: blockId, blob: blob,
+                        width: Float(max(width, 1)), height: Float(max(height, 1))
+                    ) else { return }
+                    try session.setBlockPosition(blockId: blockId, x: Float(x), y: Float(y))
+                    try session.setBlockAppearance(
+                        blockId: blockId,
+                        json: ObjectEnvelope.encode(kind: kind, fileName: "\(id).png", payload: payload)
+                    )
+                    summary.imageCount += 1
+                }
                 for model in document.model3DAttachments?.filter({ $0.pageIndex == index }) ?? [] {
-                    guard let png = PageThumbnailRenderer.renderObjectImage(model)?.pngData()
-                    else { continue }
-                    let derivedId = stableBlockId(model.id)
-                    if skipBlockIds.contains(derivedId) { continue }
-                    let blob = try session.putBlob(bytes: png)
-                    let blockId = derivedId
-                    guard try session.addImageWithId(
-                        pageId: pageId, blockId: blockId, blob: blob,
-                        width: Float(model.width), height: Float(model.height)
-                    ) else { continue }
-                    try session.setBlockPosition(
-                        blockId: blockId, x: Float(model.x), y: Float(model.y)
-                    )
-                    // 標記成衍生圖片：它的真身在筆記本中繼資料裡，匯入時要跳過
-                    // 這一張，否則同一個模型會變成兩份。
-                    try session.setBlockAppearance(
-                        blockId: blockId,
-                        json: ImageAppearance.encodeDerived(
-                            objectKind: "model3d", fileName: "\(model.id).png"
-                        )
-                    )
-                    summary.imageCount += 1
+                    try writeEnvelope(
+                        kind: "model3d", id: model.id, payload: model,
+                        png: PageThumbnailRenderer.renderObjectImage(model)?.pngData(),
+                        x: model.x, y: model.y, width: model.width, height: model.height)
                 }
-
                 for link in document.linkAttachments?.filter({ $0.pageIndex == index }) ?? [] {
-                    guard let png = PageThumbnailRenderer.renderObjectImage(link)?.pngData()
-                    else { continue }
-                    let derivedId = stableBlockId(link.id)
-                    if skipBlockIds.contains(derivedId) { continue }
-                    let blob = try session.putBlob(bytes: png)
-                    let blockId = derivedId
-                    guard try session.addImageWithId(
-                        pageId: pageId, blockId: blockId, blob: blob,
-                        width: Float(link.width), height: Float(max(60, link.height))
-                    ) else { continue }
-                    try session.setBlockPosition(
-                        blockId: blockId, x: Float(link.x), y: Float(link.y)
-                    )
-                    try session.setBlockAppearance(
-                        blockId: blockId,
-                        json: ImageAppearance.encodeDerived(
-                            objectKind: "link", fileName: "\(link.id).png"
-                        )
-                    )
-                    summary.imageCount += 1
+                    try writeEnvelope(
+                        kind: "link", id: link.id, payload: link,
+                        png: PageThumbnailRenderer.renderObjectImage(link)?.pngData(),
+                        x: link.x, y: link.y, width: link.width, height: link.height)
                 }
-
                 for audio in document.audioAttachments?.filter({ $0.pageIndex == index }) ?? [] {
-                    guard let png = PageThumbnailRenderer.renderObjectImage(audio)?.pngData()
-                    else { continue }
-                    let derivedId = stableBlockId(audio.id)
-                    if skipBlockIds.contains(derivedId) { continue }
-                    let blob = try session.putBlob(bytes: png)
-                    let blockId = derivedId
-                    guard try session.addImageWithId(
-                        pageId: pageId, blockId: blockId, blob: blob,
-                        width: Float(audio.width), height: Float(audio.height)
-                    ) else { continue }
-                    try session.setBlockPosition(
-                        blockId: blockId, x: Float(audio.x), y: Float(audio.y)
-                    )
-                    try session.setBlockAppearance(
-                        blockId: blockId,
-                        json: ImageAppearance.encodeDerived(
-                            objectKind: "audio", fileName: "\(audio.id).png"
-                        )
-                    )
-                    summary.imageCount += 1
+                    try writeEnvelope(
+                        kind: "audio", id: audio.id, payload: audio,
+                        png: PageThumbnailRenderer.renderObjectImage(audio)?.pngData(),
+                        x: audio.x, y: audio.y, width: audio.width, height: audio.height)
+                }
+                for pin in document.commentPins?.filter({ $0.pageIndex == index }) ?? [] {
+                    try writeEnvelope(
+                        kind: "pin", id: pin.id, payload: pin, png: nil,
+                        x: pin.x, y: pin.y, width: 1, height: 1)
+                }
+                for tape in document.tapeAttachments?.filter({ $0.pageIndex == index }) ?? [] {
+                    try writeEnvelope(
+                        kind: "tape", id: tape.id, payload: tape, png: nil,
+                        x: tape.rect.minX, y: tape.rect.minY,
+                        width: tape.rect.width, height: tape.rect.height)
+                }
+                for anchor in document.stickyAnchors?.filter({ $0.pageIndex == index }) ?? [] {
+                    try writeEnvelope(
+                        kind: "sticky", id: anchor.id, payload: anchor, png: nil,
+                        x: CGFloat(anchor.anchorOriginX), y: CGFloat(anchor.anchorOriginY),
+                        width: 1, height: 1)
                 }
 
                 // 形狀與連接線寫成**核心的原生物件**，不是平台自己另存的 JSON。
@@ -598,6 +582,51 @@ enum NotebookPackageBridge {
         return summary
     }
 
+    /// 從套件讀回來的信封物件（見 ObjectEnvelope.swift）。
+    struct EnvelopeObjects {
+        var links: [NoteLinkAttachment] = []
+        var models: [Note3DAttachment] = []
+        var audios: [NoteAudioAttachment] = []
+        var pins: [NoteCommentPin] = []
+        var tapes: [NoteTapeAttachment] = []
+        var stickies: [StickyAnnotationAnchor] = []
+    }
+
+    /// 解開一個衍生圖片區塊的 payload。**頁次以區塊實際所在的頁為準**，不是 payload 寫的 ——
+    /// 頁面被搬動過的話 payload 裡的頁次是舊的。
+    private static func collectEnvelope(
+        _ appearance: String?, pageIndex: Int, into out: inout EnvelopeObjects
+    ) {
+        switch ObjectEnvelope.kind(of: appearance) {
+        case "link":
+            if var item = ObjectEnvelope.decode(NoteLinkAttachment.self, kind: "link", from: appearance) {
+                item.pageIndex = pageIndex; out.links.append(item)
+            }
+        case "model3d":
+            if var item = ObjectEnvelope.decode(Note3DAttachment.self, kind: "model3d", from: appearance) {
+                item.pageIndex = pageIndex; out.models.append(item)
+            }
+        case "audio":
+            if var item = ObjectEnvelope.decode(NoteAudioAttachment.self, kind: "audio", from: appearance) {
+                item.pageIndex = pageIndex; out.audios.append(item)
+            }
+        case "pin":
+            if var item = ObjectEnvelope.decode(NoteCommentPin.self, kind: "pin", from: appearance) {
+                item.pageIndex = pageIndex; out.pins.append(item)
+            }
+        case "tape":
+            if var item = ObjectEnvelope.decode(NoteTapeAttachment.self, kind: "tape", from: appearance) {
+                item.pageIndex = pageIndex; out.tapes.append(item)
+            }
+        case "sticky":
+            if var item = ObjectEnvelope.decode(StickyAnnotationAnchor.self, kind: "sticky", from: appearance) {
+                item.pageIndex = pageIndex; out.stickies.append(item)
+            }
+        default:
+            break
+        }
+    }
+
     /// 別台裝置寫在套件裡的方塊與物件：id、位置、外觀。
     struct ForeignBlocks {
         var ids = Set<String>()
@@ -721,6 +750,39 @@ enum NotebookPackageBridge {
             if position != nil || changed {
                 edits.append(Edit(id: id, position: position, appearance: changed ? now : nil))
             }
+        }
+        // 信封物件：內容（含位置）跟別台寫的不同，就把整個 payload 重寫成這台的外觀操作。
+        // 只比 payload 的正規化字串，欄位順序或格式不同不算不同。
+        func envelope<T: Encodable>(
+            kind: String, id rawId: String, payload: T, x: CGFloat, y: CGFloat
+        ) {
+            let id = stableBlockId(rawId)
+            guard foreign.ids.contains(id),
+                  let now = ObjectEnvelope.canonicalPayload(payload),
+                  ObjectEnvelope.canonicalPayload(of: foreign.appearances[id]) != now
+            else { return }
+            edits.append(Edit(
+                id: id, position: CGPoint(x: x, y: y),
+                appearance: ObjectEnvelope.encode(kind: kind, fileName: "\(rawId).png", payload: payload)))
+        }
+        for item in document.linkAttachments ?? [] {
+            envelope(kind: "link", id: item.id, payload: item, x: item.x, y: item.y)
+        }
+        for item in document.model3DAttachments ?? [] {
+            envelope(kind: "model3d", id: item.id, payload: item, x: item.x, y: item.y)
+        }
+        for item in document.audioAttachments ?? [] {
+            envelope(kind: "audio", id: item.id, payload: item, x: item.x, y: item.y)
+        }
+        for item in document.commentPins ?? [] {
+            envelope(kind: "pin", id: item.id, payload: item, x: item.x, y: item.y)
+        }
+        for item in document.tapeAttachments ?? [] {
+            envelope(kind: "tape", id: item.id, payload: item, x: item.rect.minX, y: item.rect.minY)
+        }
+        for item in document.stickyAnchors ?? [] {
+            envelope(kind: "sticky", id: item.id, payload: item,
+                     x: CGFloat(item.anchorOriginX), y: CGFloat(item.anchorOriginY))
         }
         guard !edits.isEmpty else { return }
 
@@ -885,6 +947,7 @@ enum NotebookPackageBridge {
         var images: [NoteImageAttachment] = []
         var tables: [NoteTableAttachment] = []
         var imageData: [String: Data] = [:]
+        var envelopes = EnvelopeObjects()
 
         for (index, pageId) in pageIds.enumerated() {
             try drawings.append(InkInterop.drawing(from: session.visibleStrokeDetails(pageId: pageId)))
@@ -941,6 +1004,7 @@ enum NotebookPackageBridge {
                 // 連結卡片與 3D 模型在套件裡是算繪出來的圖片，真身在中繼資料裡。
                 // 不跳過的話，同一個物件會變成兩份，而且每同步一趟就再多一份。
                 if ImageAppearance.isDerived(appearance) {
+                    collectEnvelope(appearance, pageIndex: index, into: &envelopes)
                     continue
                 }
 
@@ -1079,9 +1143,24 @@ enum NotebookPackageBridge {
 
         // 中繼資料最後套：樣板、資料夾、圖釘、連結卡片、3D 模型都在裡面。
         // 讀不懂時保留預設值，筆畫與文字仍然回得來。
+        var envelopeAuthoritative = false
         if let json = session.notebookMeta(), let meta = NotebookMeta.decode(from: json) {
             meta.apply(to: &document)
+            envelopeAuthoritative = meta.objectEnvelopes == 1
         }
+
+        // 信封（逐物件）為準，中繼資料清單裡信封沒有的才補上 —— Android 與舊版只寫清單。
+        document.linkAttachments = ObjectEnvelope.merged(
+            envelopes: envelopes.links, legacy: envelopeAuthoritative ? nil : document.linkAttachments)
+        document.model3DAttachments = ObjectEnvelope.merged(
+            envelopes: envelopes.models, legacy: envelopeAuthoritative ? nil : document.model3DAttachments)
+        document.audioAttachments = ObjectEnvelope.merged(
+            envelopes: envelopes.audios, legacy: envelopeAuthoritative ? nil : document.audioAttachments)
+        document.commentPins = ObjectEnvelope.merged(
+            envelopes: envelopes.pins, legacy: envelopeAuthoritative ? nil : document.commentPins)
+        document.stickyAnchors = ObjectEnvelope.merged(
+            envelopes: envelopes.stickies, legacy: envelopeAuthoritative ? nil : document.stickyAnchors)
+        document.tapeAttachments = envelopes.tapes.isEmpty ? nil : envelopes.tapes
 
         // 確保來自同步索引庫的權威標題不會被舊中繼資料沖掉；
         // 若標題仍為預設空白/未命名，且匯入檔名並非 UUID 亦非預設 notebook，則沿用檔名

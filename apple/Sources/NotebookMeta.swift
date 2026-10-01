@@ -78,6 +78,15 @@ struct NotebookMeta: Codable, Hashable {
     var commentPins: [NoteCommentPin]?
     /// 手寫與文字動態流式錨定 (Fluid Sticky Annotations)
     var stickyAnchors: [StickyAnnotationAnchor]?
+    /// 手寫辨識出來的文字（`NotebookDocument.recognizedText`）。搜尋用 —— 沒有同步的話，
+    /// 在另一台裝置上搜不到手寫內容，直到那台自己重新辨識。
+    var recognizedText: [String: String]?
+    /// 旗標：清單裡的物件另外有逐物件的信封區塊（見 ObjectEnvelope.swift），匯入時以信封為準。
+    ///
+    /// 沒有這個旗標就只能取聯集 —— 但聯集會讓**已被刪除的物件復活**：另一台裝置較舊的中繼資料
+    /// 還列著它。有旗標代表這份中繼資料是新版 Apple 寫的，信封就是完整名單。
+    /// Android 改了清單會把旗標清掉（見 Android `NotebookMeta`），那一輪回到聯集。
+    var objectEnvelopes: Int?
 
     // MARK: - JSON
 
@@ -131,6 +140,8 @@ struct NotebookMeta: Codable, Hashable {
         commentPins = document.commentPins
         objectOrderByPage = document.objectOrderByPage
         stickyAnchors = document.stickyAnchors
+        recognizedText = document.recognizedText
+        objectEnvelopes = 1
     }
 
     /// 把中繼資料套回文件。缺的欄位一律保留文件原本的值。
@@ -191,6 +202,9 @@ struct NotebookMeta: Codable, Hashable {
         }
         if let stickyAnchors {
             document.stickyAnchors = stickyAnchors
+        }
+        if let recognizedText {
+            document.recognizedText = recognizedText
         }
     }
 }
