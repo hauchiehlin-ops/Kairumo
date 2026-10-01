@@ -93,6 +93,10 @@ struct KairumoApp: App {
                         store: NotebookStore.shared, deviceId: NotebookMigration.deviceId
                     )
                     AutoSyncController.shared.request(.foreground)
+                    // 清掉沒有任何東西指到的舊檔案（每天最多一次）。等第一輪同步先走完 ——
+                    // 它可能剛下載了圖片；檔案本身也要夠舊才會被動（見 `StorageJanitor`）。
+                    try? await Task.sleep(nanoseconds: 90_000_000_000)
+                    NotebookStore.shared.cleanUnusedFilesIfDue()
                 }
                 // 單參數的 onChange：新的兩參數版本要 iOS 17，而部署目標更低。
                 .onChange(of: scenePhase) { phase in

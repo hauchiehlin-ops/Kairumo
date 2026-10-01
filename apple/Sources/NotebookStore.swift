@@ -2954,6 +2954,63 @@ public final class NotebookStore: ObservableObject {
         }
     }
 
+    // MARK: - 清理沒人用的檔案
+
+    private static let janitorLastRunKey = "kairumo.storageJanitor.lastRun"
+
+    /// 每天最多清一次（App 啟動之後，背景、低優先）。規則與理由見 `StorageJanitor`。
+    func cleanUnusedFilesIfDue(now: Date = Date()) {
+        let last = UserDefaults.standard.object(forKey: Self.janitorLastRunKey) as? Date
+        if let last, now.timeIntervalSince(last) < 24 * 3600 { return }
+        cleanUnusedFiles(now: now)
+    }
+
+    func cleanUnusedFiles(now: Date = Date()) {
+        // 在主執行緒取快照（這些是 @MainActor 狀態），規劃與刪除丟到背景。
+        let all = notebooks + trashedNotebooks
+        var referenced = Set<String>()
+        for doc in all {
+            for image in doc.attachments ?? [] { referenced.insert(image.fileName) }
+        }
+        let infos = all.map { StorageJanitor.NotebookInfo(id: $0.id, pageCount: $0.pageCount) }
+        let attachments = attachmentsDirectory
+        let drawings = drawingsDirectory
+        let baseline = documentsDir.appendingPathComponent("SyncBaseline", isDirectory: true)
+        let protectedIds = Self.notebookIds(inSyncIndex: AccountSyncStore.indexJSONSnapshot())
+        UserDefaults.standard.set(now, forKey: Self.janitorLastRunKey)
+
+        Task.detached(priority: .background) {
+            let plan = StorageJanitor.plan(
+                attachmentsDirectory: attachments,
+                pageDirectories: [drawings, baseline],
+                notebooks: infos, protectedIds: protectedIds,
+                referencedAttachments: referenced, now: now)
+            let done = StorageJanitor.execute(plan)
+            guard done.count > 0 || !plan.keptSuspicious.isEmpty else { return }
+            let mb = String(format: "%.1f", Double(done.bytes) / 1_048_576)
+            SyncLogger.logAsync(
+                "已清理 \(done.count) 個沒有用到的檔案（\(mb) MB）；留下 \(plan.keptSuspicious.count) 個超出頁數但有內容的筆跡",
+                source: .general)
+        }
+    }
+
+    /// 同步索引裡記得的筆記本 id。
+    nonisolated static func notebookIds(inSyncIndex json: String) -> Set<String> {
+        guard let data = json.data(using: .utf8),
+              let root = try? JSONSerialization.jsonObject(with: data) else { return [] }
+        var ids = Set<String>()
+        func walk(_ value: Any) {
+            if let dict = value as? [String: Any] {
+                if let id = dict["id"] as? String { ids.insert(id) }
+                dict.values.forEach(walk)
+            } else if let array = value as? [Any] {
+                array.forEach(walk)
+            }
+        }
+        walk(root)
+        return ids
+    }
+
     /// 把別台改的錄音名字套進清單（見 `RecordingTitle`）。
     ///
     /// `exported` 是這一輪匯出當下各錄音的名字：清單現在的名字與它不同，代表匯出之後使用者在
