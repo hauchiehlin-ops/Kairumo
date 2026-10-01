@@ -58,7 +58,6 @@ fun RealisticPenItem(
     tool: InkTool,
     isSelected: Boolean,
     inkColor: Color,
-    strokeWidth: Float,
     languageTag: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier

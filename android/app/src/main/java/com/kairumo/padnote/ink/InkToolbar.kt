@@ -211,7 +211,6 @@ fun InkToolbar(
                 tool = option,
                 isSelected = tool == option,
                 inkColor = currentColor,
-                strokeWidth = width,
                 languageTag = languageTag,
                 onClick = { onToolChange(option) }
             )

@@ -532,7 +532,7 @@ mod tests {
         // 這裡以數量作為近似檢查。
         assert_eq!(
             ALL_KEYS.len(),
-            50,
+            59,
             "新增 Key 後請一併更新 ALL_KEYS 與此數字"
         );
     }

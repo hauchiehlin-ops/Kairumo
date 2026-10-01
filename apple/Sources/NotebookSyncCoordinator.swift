@@ -120,6 +120,7 @@ protocol SyncableNotebookStore: AnyObject {
     /// 目前正在編輯／檢視的作用中筆記本 ID（nil 表示在首頁或未指定）
     var activeNotebookId: String? { get }
 
+    // unused-param-ok: 協定要求只有宣告、沒有主體；檢查器把相鄰宣告之後的 { 誤認成它們的主體。
     func syncLoadDrawing(notebookId: String, pageIndex: Int) -> PKDrawing
     func syncSaveDrawing(notebookId: String, pageIndex: Int, drawing: PKDrawing)
     func syncUpsert(_ document: NotebookDocument)
