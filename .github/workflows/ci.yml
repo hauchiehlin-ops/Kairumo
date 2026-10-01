@@ -249,6 +249,11 @@ jobs:
           ram-size: 4096M
           heap-size: 576M
           emulator-options: -no-window -gpu swiftshader_indirect -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -no-metrics
+          # 實驗：把 ScreenAuditTest 單獨先跑，其餘留到第二次。
+          # 之前三種渲染設定都死在「第 189 個測試、emulator 存活約 6 分 20 秒」，
+          # 分不出是這個測試的問題還是 emulator 累積存活時間的問題。
+          # 單獨先跑它還會死 → 測試本身；單獨跑會過 → 存活時間。
+          # 兩次各自記成敗，第一次紅不會讓第二次被跳過。
           # 先在背景收兩樣東西：
           #   * logcat —— 模擬器中途消失時，Gradle 只剩 `device not found`；
           #   * 主機端的記憶體與 qemu 程序 —— logcat 只記得到 Android 裡面的事，
@@ -256,7 +261,11 @@ jobs:
           script: |
             sh -c "adb logcat -v time > ${{ github.workspace }}/logcat.txt 2>&1 &"
             sh -c "while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; sleep 2; done > ${{ github.workspace }}/host-monitor.txt 2>&1 &"
-            ./gradlew connectedDebugAndroidTest --no-daemon
+            ./gradlew connectedDebugAndroidTest --no-daemon -Pandroid.testInstrumentationRunnerArguments.class=com.kairumo.padnote.screens.ScreenAuditTest || touch ${{ github.workspace }}/audit-failed
+            cp -r app/build/outputs/androidTest-results ${{ github.workspace }}/first-run-results || true
+            cp -r app/build/reports/androidTests ${{ github.workspace }}/first-run-reports || true
+            ./gradlew connectedDebugAndroidTest --no-daemon -Pandroid.testInstrumentationRunnerArguments.notClass=com.kairumo.padnote.screens.ScreenAuditTest || touch ${{ github.workspace }}/rest-failed
+            test ! -e ${{ github.workspace }}/audit-failed && test ! -e ${{ github.workspace }}/rest-failed
       - name: 主機端死因（OOM killer、模擬器崩潰檔）
         if: always()
         run: |
@@ -283,6 +292,8 @@ jobs:
             host-monitor.txt
             host-death.txt
             emu-crash
+            first-run-results
+            first-run-reports
           if-no-files-found: warn
 
   # 決策 D6：授權稽核。禁止 AGPL 進入相依樹。
