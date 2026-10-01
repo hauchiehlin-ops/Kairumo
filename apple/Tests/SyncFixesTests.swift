@@ -133,3 +133,55 @@ final class SyncFixesTests: XCTestCase {
         XCTAssertFalse(preserved)
     }
 }
+
+// MARK: - 錄音改名要跟著同步
+
+@MainActor
+final class RecordingRenameSyncTests: XCTestCase {
+
+    private func record(_ title: String, file: String, id: String = UUID().uuidString) -> AudioRecordingRecord {
+        AudioRecordingRecord(id: id, title: title, durationSeconds: 5, fileName: file)
+    }
+
+    private func notebook(cardTitle: String, file: String, recordingId: String) -> NotebookDocument {
+        var doc = NotebookDocument(title: "N", pageCount: 1)
+        doc.audioAttachments = [NoteAudioAttachment(recordingId: recordingId, fileName: file, title: cardTitle)]
+        return doc
+    }
+
+    func testARenameMadeOnAnotherDeviceReachesTheRecordingList() {
+        // Mac 改名 → 卡片名稱同步到 iPad；iPad 的清單用的是自己替同一個檔案產生的 id，
+        // 所以只能用檔名對。
+        let list = [record("錄音 10/1 06:33", file: "A.opus", id: "ipad-id")]
+        let books = [notebook(cardTitle: "週會紀錄", file: "a.opus", recordingId: "mac-id")]
+        let result = NotebookStore.adoptingCardTitles(list, notebooks: books)
+        XCTAssertEqual(result.first?.title, "週會紀錄")
+    }
+
+    func testARecordingWithoutACardKeepsItsName() {
+        let list = [record("我的錄音", file: "b.opus")]
+        let result = NotebookStore.adoptingCardTitles(list, notebooks: [NotebookDocument(title: "N", pageCount: 1)])
+        XCTAssertEqual(result.first?.title, "我的錄音")
+    }
+
+    func testAnEmptyCardTitleNeverBlanksTheList() {
+        let list = [record("我的錄音", file: "c.opus")]
+        let books = [notebook(cardTitle: "   ", file: "c.opus", recordingId: "x")]
+        XCTAssertEqual(NotebookStore.adoptingCardTitles(list, notebooks: books).first?.title, "我的錄音")
+    }
+
+    func testRenamingARecordingMadeOnAnotherDeviceUpdatesItsCardToo() {
+        // 卡片上的錄音 id 是建立那台裝置的；這台改名時要用檔名找到卡片，名字才會同步回去。
+        let store = NotebookStore.shared
+        let savedNotebooks = store.notebooks
+        let savedRecordings = store.recordings
+        defer { store.notebooks = savedNotebooks; store.recordings = savedRecordings }
+
+        let rec = record("舊名字", file: "d.opus", id: "ipad-id")
+        store.recordings = [rec]
+        store.notebooks = [notebook(cardTitle: "舊名字", file: "d.opus", recordingId: "mac-id")]
+        store.renameRecording(id: "ipad-id", newTitle: "新名字")
+        XCTAssertEqual(store.notebooks.first?.audioAttachments?.first?.title, "新名字")
+        XCTAssertEqual(store.recordings.first?.title, "新名字")
+    }
+}

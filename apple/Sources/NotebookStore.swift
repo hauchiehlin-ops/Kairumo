@@ -2954,6 +2954,38 @@ public final class NotebookStore: ObservableObject {
         }
     }
 
+    /// 錄音清單的名字以插在筆記裡的錄音卡片為準。
+    ///
+    /// # 為什麼
+    ///
+    /// 錄音清單（`recordings`）只存在這台裝置；跨裝置同步的是筆記本，錄音卡片的名字在裡面。
+    /// 在 Mac 改名只會讓 Mac 的清單和卡片變新名字，卡片同步到 iPad 之後，iPad 的清單仍是
+    /// 掃描時取的預設名稱。所以清單要跟著卡片：卡片與錄音用**檔名**對（兩台裝置各自替同一個檔案
+    /// 產生的錄音 id 不一樣）。
+    ///
+    /// 沒有插進任何筆記的錄音沒有卡片，它的改名不會同步 —— 名字只存在這台裝置的清單裡。
+    static func adoptingCardTitles(
+        _ records: [AudioRecordingRecord], notebooks: [NotebookDocument]
+    ) -> [AudioRecordingRecord] {
+        var cardTitles: [String: String] = [:]
+        for notebook in notebooks {
+            for card in notebook.audioAttachments ?? [] {
+                let title = card.title.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !title.isEmpty else { continue }
+                let key = card.fileName.lowercased()
+                if cardTitles[key] == nil { cardTitles[key] = title }
+            }
+        }
+        return records.map { record in
+            guard let title = cardTitles[record.fileName.lowercased()], title != record.title else {
+                return record
+            }
+            var updated = record
+            updated.title = title
+            return updated
+        }
+    }
+
     /// 新錄音的預設名稱：「錄音 日期時間」。
     ///
     /// **不帶筆記本名稱。** 原本是「<筆記本名> 錄音」，於是在名為「mac建立」的筆記本裡錄的音，
@@ -3033,7 +3065,10 @@ public final class NotebookStore: ObservableObject {
             fm.fileExists(atPath: legacyDir.appending(path: $0.fileName).path)
         }
 
-        let refreshed = (scanned + legacy).sorted { $0.recordedDate > $1.recordedDate }
+        // 別台改的名字會跟著錄音卡片一起同步過來（卡片在筆記本裡，錄音清單不在）。
+        // 清單的名字跟著卡片走，否則在 Mac 改了名，iPad 的清單永遠是舊名字。
+        let refreshed = Self.adoptingCardTitles(
+            (scanned + legacy).sorted { $0.recordedDate > $1.recordedDate }, notebooks: notebooks)
         // **沒有變就不要寫檔。** 每一輪同步都會呼叫這裡；無條件 `persistData()` 會通知
         // 排程器「本機有編輯」，於是同步自己又排出下一輪（約一秒後）—— 一個自我觸發的
         // 迴圈：持續打 Drive、主執行緒永遠不閒（UI 測試的每個動作因此各等 60 秒才等到
@@ -3083,10 +3118,14 @@ public final class NotebookStore: ObservableObject {
         else { return }
 
         recordings[recordingIndex].title = clean
+        let fileName = recordings[recordingIndex].fileName.lowercased()
         for notebookIndex in notebooks.indices {
             guard var cards = notebooks[notebookIndex].audioAttachments else { continue }
             var changed = false
-            for cardIndex in cards.indices where cards[cardIndex].recordingId == id {
+            // 用檔名也對：卡片上的錄音 id 是**建立那台裝置**的，這台裝置替同一個檔案產生的 id 不同，
+            // 只比 id 的話，在 iPad 改一段 Mac 錄的音，卡片不會跟著改，名字也就不會同步回去。
+            for cardIndex in cards.indices
+            where cards[cardIndex].recordingId == id || cards[cardIndex].fileName.lowercased() == fileName {
                 cards[cardIndex].title = clean
                 changed = true
             }
