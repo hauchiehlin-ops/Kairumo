@@ -47,7 +47,7 @@ import uniffi.padnote_core.brushPreviewDabs
  * 工具列上的一顆筆：向量圖示、示範筆跡、選取時凸起。
  *
  * 圖示與示範筆跡都由核心提供（`brushIcon`、`brushPreviewDabs`）—— 圖示是
- * `assets/brushes/*.svg` 解析出來的路徑指令，筆跡預覽是同一份筆點陣。
+ * `assets/brushes` 資料夾裡的 SVG 解析出來的路徑指令，筆跡預覽是同一份筆點陣。
  * Apple 畫的是同一組資料，所以兩台裝置上每支筆長得一樣。
  */
 @Composable

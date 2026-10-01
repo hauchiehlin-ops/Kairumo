@@ -153,6 +153,10 @@ object InkBrushRenderer {
                         )
                     )
                 }
+
+                // 自繪引擎的筆刷由 `drawStroke…` 開頭的分支用核心的筆點陣畫，不會走到這裡。
+                ToolKind.FINELINER, ToolKind.CHARCOAL, ToolKind.CRAYON,
+                ToolKind.AIRBRUSH, ToolKind.OIL_PAINT, ToolKind.CALLIGRAPHY -> Unit
             }
         }
         return specs

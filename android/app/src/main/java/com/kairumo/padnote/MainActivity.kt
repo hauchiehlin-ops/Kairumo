@@ -230,6 +230,7 @@ import com.kairumo.padnote.model3d.Model3DStudio
 import com.kairumo.padnote.theme.CompositionOverlay
 import com.kairumo.padnote.theme.ThemeToolsSheet
 import com.kairumo.padnote.ink.InkTool
+import com.kairumo.padnote.ink.inkToolShortcutOrder
 import com.kairumo.padnote.ink.InkToolbar
 import com.kairumo.padnote.ink.InkLatencyMeter
 import com.kairumo.padnote.ink.LowLatencyInkCanvas
