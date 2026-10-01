@@ -456,62 +456,50 @@ private final class ScreenAuditAnchor {}
 ///
 /// 十八個測試各自抄了同一段「找卡片→點下去」。那段有兩個洞：
 ///
-/// 1. **卡片可能在摺線下面。** 「Welcome to Kairumo」在 iPhone 直向時
-///    排在一長串入口的最底下，只露出一角。XCUITest 點的是元素中心，
-///    而那個中心在畫面外 —— 點了等於沒點。
+/// 1. **卡片可能在摺線下面。** 種子卡片在 iPhone 直向時排在一長串入口
+///    的最底下，而且 `LazyVGrid` 在捲到附近前甚至不會建立它的無障礙節點。
+///    只等顯示文字出現，會把「尚未算繪」誤報成「種子資料不存在」。
 /// 2. **`editor.canvas` 在還沒導航前就存在。** SwiftUI 會先把導航目的地
-///    建好，所以「畫布出現了」證明不了「已經離開首頁」。於是稽核拿首頁
-///    當成編輯器掃，報出來的是 `editor.canvas 點不到` —— 而它說的其實是
-///    「首頁的 New Note 鈕蓋在上面」。真因與症狀差了十萬八千里。
+///    建好，所以「畫布出現了」證明不了「已經離開首頁」。首頁的 New Note
+///    在捲動後也本來就不可點，不能拿它的 `isHittable` 當導航證據。必須等
+///    編輯器工具列真的變成可點。
 ///
-/// 所以這裡先把卡片捲進可點範圍，點完之後再等**首頁真的消失**。
+/// 所以這裡用不受語言影響的固定卡片 id，一邊捲一邊重新查詢，點完之後
+/// 再等**編輯器工具列真的可以操作**。
 @discardableResult
 func openSeedNotebook(
     _ app: XCUIApplication,
     file: StaticString = #filePath, line: UInt = #line
 ) -> Bool {
-    let seedCards = app.staticTexts.matching(
-        NSPredicate(format: "label == %@", "Welcome to Kairumo"))
-    guard seedCards.firstMatch.waitForExistence(timeout: 15) else {
-        XCTFail("首頁找不到種子筆記，開不了編輯器", file: file, line: line)
+    let seedCardId = "home.notebooks.card.seed-welcome-notebook-v1"
+    let home = app.descendants(matching: .any)
+        .matching(identifier: "home.action.new_note").firstMatch
+    let editorMore = app.descendants(matching: .any)
+        .matching(identifier: "editor.more").firstMatch
+    guard home.waitForExistence(timeout: 15) else {
+        XCTFail("首頁沒有完成載入，找不到 New Note", file: file, line: line)
         return false
     }
 
-    // **不可以用 `firstMatch`。**
-    //
-    // 首頁上「Welcome to Kairumo」這個字串出現**三次**：Continue 區的卡片、
-    // 「所有筆記本」區的卡片，以及那張卡片縮圖裡的標籤。`firstMatch` 拿到
-    // 的是樹序上的第一個，而它不一定是點得動的那一個 —— 縮圖標籤就點不動。
-    //
-    // 症狀是「點了卡片，畫面還停在首頁」，而且**跟捲動位置有關**：同一條
-    // 測試在這台機器上過、在 CI 上紅。
-    //
-    // 所以逐一試「點得到的那幾個」，點完確認真的離開首頁；沒離開就換下一個。
-    let home = app.descendants(matching: .any)
-        .matching(identifier: "home.action.new_note").firstMatch
-
-    for attempt in 0..<3 {
-        let candidates = seedCards.allElementsBoundByIndex.filter { $0.isHittable }
-        if candidates.isEmpty {
-            // 一個都點不到：往下捲一點再看。
-            app.swipeUp()
-            continue
-        }
-        for candidate in candidates {
-            candidate.tap()
-            let left = NSPredicate(format: "exists == false OR isHittable == false")
-            let gone = XCTNSPredicateExpectation(predicate: left, object: home)
-            if XCTWaiter().wait(for: [gone], timeout: 10) == .completed {
+    // 每次捲動後重建 query：LazyVGrid 會回收畫面外的節點，保留舊 snapshot
+    // 可能讓 exists/isHittable 一直停在捲動前的值。
+    for _ in 0..<12 {
+        let card = app.descendants(matching: .any)
+            .matching(identifier: seedCardId).firstMatch
+        if card.exists && card.isHittable {
+            card.tap()
+            let entered = NSPredicate(format: "exists == true AND isHittable == true")
+            let ready = XCTNSPredicateExpectation(predicate: entered, object: editorMore)
+            if XCTWaiter().wait(for: [ready], timeout: 10) == .completed {
                 return true
             }
         }
-        _ = attempt
         app.swipeUp()
     }
 
     XCTFail(
-        "點遍了首頁上所有點得到的「Welcome to Kairumo」，畫面還是停在首頁"
-            + "（New Note 鈕還按得到）",
+        "捲遍首頁仍找不到或點不開種子筆記（\(seedCardId)）；"
+            + "編輯器的 More 鈕沒有變成可點",
         file: file, line: line)
     return false
 }

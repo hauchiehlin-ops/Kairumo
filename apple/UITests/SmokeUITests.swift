@@ -676,11 +676,8 @@ extension SmokeUITests {
         let app = launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
 
-        // 種子筆記的標題。語言已經被 KAIRUMO_UITEST 釘在英文，所以這是確定的。
-        //
-        // 比較好的做法是給每張卡片一個識別碼（`home.notebooks.card.<id>`），
-        // 那樣連語言都不必釘。目前卡片沒有 —— 只有整個清單有
-        // `home.notebooks.list`。記在 docs/TODO.md 的 S-259。
+        // 共用 helper 以 `home.notebooks.card.seed-welcome-notebook-v1` 找卡片，
+        // 不依賴語言；卡片在 LazyVGrid 摺線下方時也會先捲到節點建立為止。
         guard openSeedNotebook(app) else { return }
 
         let canvas = app.descendants(matching: .any).matching(identifier: "editor.canvas").firstMatch
