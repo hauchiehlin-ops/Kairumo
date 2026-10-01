@@ -20,4 +20,4 @@ pub mod config;
 pub mod tools;
 
 pub use config::{Placement, ToolbarConfig};
-pub use tools::{Tool, ToolGroup, all_groups};
+pub use tools::{BrushFamily, Tool, ToolGroup, all_groups};

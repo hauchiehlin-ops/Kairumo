@@ -68,6 +68,12 @@ fn ink_curve() -> Value {
         ("Brush", Brush),
         ("Marker", Marker),
         ("Watercolor", Watercolor),
+        ("Fineliner", Fineliner),
+        ("Charcoal", Charcoal),
+        ("Crayon", Crayon),
+        ("Airbrush", Airbrush),
+        ("OilPaint", OilPaint),
+        ("Calligraphy", Calligraphy),
     ];
     let cases: Vec<Value> = tools
         .iter()

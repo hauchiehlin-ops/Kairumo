@@ -48,13 +48,20 @@ import uniffi.padnote_core.ToolKind
  * 所以這裡的選單把它分開表示。
  */
 enum class InkTool(val kind: ToolKind?, val labelKey: String) {
+    // 依「書寫／繪畫／標記」三族排列（核心 `BrushFamily`），與 Apple 的 `EditorToolType` 同一個順序。
     FOUNTAIN_PEN(ToolKind.FOUNTAIN_PEN, "tool_pen"),
     BALLPOINT(ToolKind.BALL_POINT, "tool_ballpoint"),
+    FINELINER(ToolKind.FINELINER, "tool_fineliner"),
     BRUSH(ToolKind.BRUSH, "tool_brush"),
+    CALLIGRAPHY(ToolKind.CALLIGRAPHY, "tool_calligraphy"),
+    PENCIL(ToolKind.PENCIL, "tool_pencil"),
+    CHARCOAL(ToolKind.CHARCOAL, "tool_charcoal"),
+    CRAYON(ToolKind.CRAYON, "tool_crayon"),
+    AIRBRUSH(ToolKind.AIRBRUSH, "tool_airbrush"),
+    OIL_PAINT(ToolKind.OIL_PAINT, "tool_oilpaint"),
+    WATERCOLOR(ToolKind.WATERCOLOR, "tool_watercolor"),
     MARKER(ToolKind.MARKER, "tool_marker"),
     HIGHLIGHTER(ToolKind.HIGHLIGHTER, "tool_highlighter"),
-    PENCIL(ToolKind.PENCIL, "tool_pencil"),
-    WATERCOLOR(ToolKind.WATERCOLOR, "tool_watercolor"),
 
     /** 擦除。`kind` 為 null —— 它不是一種筆刷。 */
     ERASER(null, "tool_eraser"),
@@ -82,6 +89,12 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
         get() = when (this) {
             FOUNTAIN_PEN -> "editor.ink.pen"
             BALLPOINT -> "editor.ink.ballpoint"
+            FINELINER -> "editor.ink.fineliner"
+            CALLIGRAPHY -> "editor.ink.calligraphy"
+            CHARCOAL -> "editor.ink.charcoal"
+            CRAYON -> "editor.ink.crayon"
+            AIRBRUSH -> "editor.ink.airbrush"
+            OIL_PAINT -> "editor.ink.oilpaint"
             BRUSH -> "editor.ink.brush"
             MARKER -> "editor.ink.marker"
             HIGHLIGHTER -> "editor.ink.highlighter"
@@ -92,6 +105,18 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
             MASKING_TAPE -> "editor.ink.maskingTape"
         }
 
+    /**
+     * 筆刷所屬的族（書寫／繪畫／標記）。不是筆刷的工具為 null。
+     * 與核心 `Tool::family` 一致，`InkToolFamilyTest` 對帳。
+     */
+    val family: BrushFamily?
+        get() = when (this) {
+            FOUNTAIN_PEN, BALLPOINT, FINELINER, BRUSH, CALLIGRAPHY, PENCIL -> BrushFamily.WRITING
+            CHARCOAL, CRAYON, AIRBRUSH, OIL_PAINT, WATERCOLOR -> BrushFamily.PAINTING
+            MARKER, HIGHLIGHTER -> BrushFamily.MARKING
+            ERASER, LASSO, MASKING_TAPE -> null
+        }
+
     /** 擦除模式。**套索與遮蔽膠帶不算** —— 行為完全不同。 */
     val isEraser: Boolean get() = this == ERASER
 
@@ -99,6 +124,19 @@ enum class InkTool(val kind: ToolKind?, val labelKey: String) {
 
     val isMaskingTape: Boolean get() = this == MASKING_TAPE
 }
+
+/** 筆刷的族。與核心的 `BrushFamily` 一一對應。 */
+enum class BrushFamily { WRITING, PAINTING, MARKING }
+
+/**
+ * 快捷鍵 1…0 對應的工具，依**原本**的順序。
+ *
+ * 工具列改成三族排列之後 `InkTool.entries` 的順序變了；快捷鍵是肌肉記憶，不能跟著重排。
+ */
+val inkToolShortcutOrder: List<InkTool> = listOf(
+    InkTool.FOUNTAIN_PEN, InkTool.BALLPOINT, InkTool.BRUSH, InkTool.MARKER, InkTool.HIGHLIGHTER,
+    InkTool.PENCIL, InkTool.WATERCOLOR, InkTool.ERASER, InkTool.LASSO, InkTool.MASKING_TAPE
+)
 
 /**
  * 常用墨色。**來源是核心的 `ink_palette()`**（工作項 S-63）。
@@ -157,7 +195,18 @@ fun InkToolbar(
         // 使用者關掉的工具不畫出來（S-261）。設定存在核心，兩端同一份。
         val hidden = com.kairumo.padnote.ui.ToolbarSettings.hiddenIdentifiers
         val currentColor = runCatching { Color(android.graphics.Color.parseColor(colorHex)) }.getOrDefault(Color.Black)
-        for (option in InkTool.entries.filter { it.parityIdentifier !in hidden }) {
+        // 筆刷依三族分段，族與族之間一條分隔線；橡皮擦、套索、膠帶接在最後。
+        val visible = InkTool.entries.filter { it.parityIdentifier !in hidden }
+        var previousFamily: BrushFamily? = null
+        for (option in visible) {
+            val family = option.family
+            if (family != null && previousFamily != null && family != previousFamily) {
+                BrushFamilyDivider()
+            }
+            if (family == null && previousFamily != null) {
+                BrushFamilyDivider()
+            }
+            previousFamily = family ?: previousFamily
             RealisticPenItem(
                 tool = option,
                 isSelected = tool == option,
@@ -166,6 +215,7 @@ fun InkToolbar(
                 languageTag = languageTag,
                 onClick = { onToolChange(option) }
             )
+            if (family == null) previousFamily = null
         }
 
         // 擦除與套索都不需要顏色 —— 留著只會讓使用者以為可以擦成某個顏色，
@@ -280,6 +330,10 @@ fun InkToolbar(
 internal fun previewDiameter(tool: InkTool, width: Float): Float {
     val scale = when (tool) {
         InkTool.BALLPOINT -> 0.65f
+        InkTool.FINELINER -> 0.6f
+        InkTool.CALLIGRAPHY -> 1.4f
+        InkTool.CHARCOAL, InkTool.CRAYON, InkTool.OIL_PAINT -> 1.8f
+        InkTool.AIRBRUSH -> 2.6f
         InkTool.PENCIL -> 1.3f
         InkTool.FOUNTAIN_PEN -> 1.1f
         InkTool.BRUSH -> 2.2f

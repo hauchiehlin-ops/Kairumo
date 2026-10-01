@@ -28,14 +28,20 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Tool {
-    // 筆刷。七支，順序與兩端工具列一致。
+    // 筆刷。十三支，依「書寫／繪畫／標記」三族排列（見 `BrushFamily`），順序與兩端工具列一致。
     Pen,
     BallPoint,
+    Fineliner,
     Brush,
+    Calligraphy,
+    Pencil,
+    Charcoal,
+    Crayon,
+    Airbrush,
+    OilPaint,
+    Watercolor,
     Marker,
     Highlighter,
-    Pencil,
-    Watercolor,
     // 模式。不沾墨，也不吃顏色與粗細。
     Eraser,
     Lasso,
@@ -57,6 +63,12 @@ impl Tool {
             Self::Highlighter => Key::ToolHighlighter,
             Self::Pencil => Key::ToolPencil,
             Self::Watercolor => Key::ToolWatercolor,
+            Self::Fineliner => Key::ToolFineliner,
+            Self::Calligraphy => Key::ToolCalligraphy,
+            Self::Charcoal => Key::ToolCharcoal,
+            Self::Crayon => Key::ToolCrayon,
+            Self::Airbrush => Key::ToolAirbrush,
+            Self::OilPaint => Key::ToolOilPaint,
             Self::Eraser => Key::ToolEraser,
             Self::Lasso => Key::ToolLasso,
             Self::MaskingTape => Key::ToolMaskingTape,
@@ -80,6 +92,12 @@ impl Tool {
             Self::Highlighter => "editor.ink.highlighter",
             Self::Pencil => "editor.ink.pencil",
             Self::Watercolor => "editor.ink.watercolor",
+            Self::Fineliner => "editor.ink.fineliner",
+            Self::Calligraphy => "editor.ink.calligraphy",
+            Self::Charcoal => "editor.ink.charcoal",
+            Self::Crayon => "editor.ink.crayon",
+            Self::Airbrush => "editor.ink.airbrush",
+            Self::OilPaint => "editor.ink.oilpaint",
             Self::Eraser => "editor.ink.eraser",
             Self::Lasso => "editor.ink.lasso",
             Self::MaskingTape => "editor.ink.maskingTape",
@@ -102,7 +120,30 @@ impl Tool {
                 | Self::Highlighter
                 | Self::Pencil
                 | Self::Watercolor
+                | Self::Fineliner
+                | Self::Calligraphy
+                | Self::Charcoal
+                | Self::Crayon
+                | Self::Airbrush
+                | Self::OilPaint
         )
+    }
+
+    /// 筆刷所屬的「族」。不是筆刷的工具回傳 `None`。
+    pub fn family(self) -> Option<BrushFamily> {
+        Some(match self {
+            Self::Pen
+            | Self::BallPoint
+            | Self::Fineliner
+            | Self::Brush
+            | Self::Calligraphy
+            | Self::Pencil => BrushFamily::Writing,
+            Self::Charcoal | Self::Crayon | Self::Airbrush | Self::OilPaint | Self::Watercolor => {
+                BrushFamily::Painting
+            }
+            Self::Marker | Self::Highlighter => BrushFamily::Marking,
+            _ => return None,
+        })
     }
 
     /// 是否預設顯示。
@@ -126,6 +167,40 @@ impl Tool {
             Self::Eraser | Self::Lasso | Self::MaskingTape => ToolGroup::Edit,
             _ => ToolGroup::History,
         }
+    }
+}
+
+/// 筆刷的「族」：書寫、繪畫、標記。
+///
+/// 工具列上十三支筆排成一長列時，使用者得靠圖案去記哪支是哪支；分成三族之後，
+/// 族名就說明了用途 —— 要寫字去「書寫」、要上色去「繪畫」、要劃重點去「標記」。
+/// 與 `ToolGroup` 是兩回事：`ToolGroup::Pens` 仍然是「筆類」這一整組（工具列自訂用），
+/// 族只決定筆類**裡面**怎麼分段。
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum BrushFamily {
+    Writing,
+    Painting,
+    Marking,
+}
+
+impl BrushFamily {
+    pub const ALL: [Self; 3] = [Self::Writing, Self::Painting, Self::Marking];
+
+    pub fn label_key(self) -> Key {
+        match self {
+            Self::Writing => Key::FamilyWriting,
+            Self::Painting => Key::FamilyPainting,
+            Self::Marking => Key::FamilyMarking,
+        }
+    }
+
+    /// 此族的筆刷，依固定順序。
+    pub fn tools(self) -> Vec<Tool> {
+        all_tools()
+            .into_iter()
+            .filter(|t| t.family() == Some(self))
+            .collect()
     }
 }
 
@@ -163,11 +238,17 @@ pub fn all_tools() -> Vec<Tool> {
     vec![
         Tool::Pen,
         Tool::BallPoint,
+        Tool::Fineliner,
         Tool::Brush,
+        Tool::Calligraphy,
+        Tool::Pencil,
+        Tool::Charcoal,
+        Tool::Crayon,
+        Tool::Airbrush,
+        Tool::OilPaint,
+        Tool::Watercolor,
         Tool::Marker,
         Tool::Highlighter,
-        Tool::Pencil,
-        Tool::Watercolor,
         Tool::Eraser,
         Tool::Lasso,
         Tool::MaskingTape,
@@ -229,11 +310,17 @@ mod tests {
             vec![
                 "editor.ink.pen",
                 "editor.ink.ballpoint",
+                "editor.ink.fineliner",
                 "editor.ink.brush",
+                "editor.ink.calligraphy",
+                "editor.ink.pencil",
+                "editor.ink.charcoal",
+                "editor.ink.crayon",
+                "editor.ink.airbrush",
+                "editor.ink.oilpaint",
+                "editor.ink.watercolor",
                 "editor.ink.marker",
                 "editor.ink.highlighter",
-                "editor.ink.pencil",
-                "editor.ink.watercolor",
                 "editor.ink.eraser",
                 "editor.ink.lasso",
                 "editor.ink.maskingTape",
@@ -274,10 +361,40 @@ mod tests {
     }
 
     #[test]
+    fn every_brush_is_in_exactly_one_family_and_nothing_else_is() {
+        for t in all_tools() {
+            assert_eq!(
+                t.is_brush(),
+                t.family().is_some(),
+                "{t:?} 的「是筆刷」與「有族」對不上"
+            );
+        }
+        let total: usize = BrushFamily::ALL.iter().map(|f| f.tools().len()).sum();
+        assert_eq!(total, all_tools().iter().filter(|t| t.is_brush()).count());
+        assert_eq!(
+            BrushFamily::Marking.tools(),
+            vec![Tool::Marker, Tool::Highlighter]
+        );
+    }
+
+    #[test]
+    fn families_are_contiguous_in_the_toolbar_order() {
+        // 同一族的筆必須排在一起，否則兩端用「族」插分隔線時會出現同名分段兩次。
+        let fams: Vec<_> = all_tools().into_iter().filter_map(|t| t.family()).collect();
+        let mut seen = Vec::new();
+        for f in fams {
+            if seen.last() != Some(&f) {
+                assert!(!seen.contains(&f), "{f:?} 這一族被其他族打斷了");
+                seen.push(f);
+            }
+        }
+    }
+
+    #[test]
     fn tool_order_is_stable() {
         // 順序改變會讓使用者的肌肉記憶失效。
         assert_eq!(all_tools()[0], Tool::Pen);
-        assert_eq!(all_tools().len(), 13);
+        assert_eq!(all_tools().len(), 19);
     }
 
     #[test]

@@ -97,6 +97,9 @@ enum InkInterop {
                 return .pen
             }
         case .marker: return .marker
+        // 自繪引擎的筆刷（ProInk.swift）：PencilKit 沒有對應的墨水。
+        // 它們不走 PKStroke —— 這裡只是給 switch 一個答案，匯入時已經分流出去了。
+        case .fineliner, .charcoal, .crayon, .airbrush, .oilPaint, .calligraphy: return .pen
         case .watercolor:
             if #available(iOS 17.0, *) {
                 return .watercolor

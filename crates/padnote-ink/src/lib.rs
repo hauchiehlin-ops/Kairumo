@@ -6,11 +6,13 @@
 //! 能回溯受益 —— 競品多存已擬合的貝茲曲線，資訊一去不回。
 
 pub mod align;
+pub mod brush;
 pub mod codec;
 pub mod geometry;
 pub mod refine;
 
 pub use align::{Alignment, SnapResult, align, distribute, snap};
+pub use brush::{Dab, dabs};
 pub use codec::{StrokeReader, StrokeWriter};
 pub use geometry::{Rect, distance_to_segment, half_width, simplify, smooth_path};
 pub use padnote_doc::Affine2;
@@ -35,6 +37,19 @@ pub enum Tool {
     Marker = 6,
     /// 水彩筆（半透擴散、隨壓感混色）
     Watercolor = 7,
+    // ---- 自繪引擎的專業筆刷（見 `brush.rs`）：兩端都用同一份筆點陣算繪 ----
+    /// 針筆（等寬細線）
+    Fineliner = 8,
+    /// 炭筆（粗糙顆粒、輕壓淡重壓濃）
+    Charcoal = 9,
+    /// 蠟筆（蠟質、紙紋留白）
+    Crayon = 10,
+    /// 噴槍（柔邊、疊加漸層）
+    Airbrush = 11,
+    /// 油畫筆（多根鬃毛、色澤深淺不一）
+    OilPaint = 12,
+    /// 書法扁頭筆（固定角度的扁筆頭，橫細豎粗）
+    Calligraphy = 13,
 }
 
 impl Tool {
@@ -47,6 +62,12 @@ impl Tool {
             5 => Self::Brush,
             6 => Self::Marker,
             7 => Self::Watercolor,
+            8 => Self::Fineliner,
+            9 => Self::Charcoal,
+            10 => Self::Crayon,
+            11 => Self::Airbrush,
+            12 => Self::OilPaint,
+            13 => Self::Calligraphy,
             _ => return None,
         })
     }
@@ -55,7 +76,31 @@ impl Tool {
     pub fn is_pressure_sensitive(self) -> bool {
         matches!(
             self,
-            Self::FountainPen | Self::Pencil | Self::Brush | Self::Watercolor
+            Self::FountainPen
+                | Self::Pencil
+                | Self::Brush
+                | Self::Watercolor
+                | Self::Charcoal
+                | Self::Crayon
+                | Self::Airbrush
+                | Self::OilPaint
+                | Self::Calligraphy
+        )
+    }
+
+    /// 是否由自繪引擎（`brush.rs` 的筆點陣）算繪。
+    ///
+    /// PencilKit 與 Android 的既有筆刷各有自己的算繪；這幾支在兩端**沒有原生對應**，
+    /// 所以由核心算出同一份筆點陣，兩端只負責把橢圓畫出來 —— 同一筆在兩台裝置上長得一樣。
+    pub fn is_custom_engine(self) -> bool {
+        matches!(
+            self,
+            Self::Fineliner
+                | Self::Charcoal
+                | Self::Crayon
+                | Self::Airbrush
+                | Self::OilPaint
+                | Self::Calligraphy
         )
     }
 }

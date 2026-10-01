@@ -9,8 +9,13 @@ import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.geometry.Size
+import uniffi.padnote_core.FfiDab
 import uniffi.padnote_core.StrokePoint
 import uniffi.padnote_core.ToolKind
+import uniffi.padnote_core.brushDabs
+import uniffi.padnote_core.brushIsCustom
 import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.hypot
@@ -164,6 +169,10 @@ object InkBrushRenderer {
         baseColor: Color,
         density: Float
     ) {
+        if (brushIsCustom(tool)) {
+            drawDabsOnDrawScope(drawScope, brushDabs(tool, baseWidth, points), baseColor, density)
+            return
+        }
         val segments = computeSegments(points, tool, baseWidth, density)
         if (segments.isEmpty()) return
 
@@ -226,6 +235,10 @@ object InkBrushRenderer {
         baseWidth: Float,
         pxPerDp: Float
     ) {
+        if (brushIsCustom(tool)) {
+            drawDabsOnCanvas(canvas, paint, brushDabs(tool, baseWidth, points), pxPerDp)
+            return
+        }
         val segments = computeSegments(points, tool, baseWidth, pxPerDp)
         if (segments.isEmpty()) return
 
@@ -263,5 +276,97 @@ object InkBrushRenderer {
         paint.alpha = origAlpha
         paint.strokeCap = origCap
         paint.xfermode = origXfer
+    }
+
+    // ── 自繪引擎筆刷（針筆、炭筆、蠟筆、噴槍、油畫筆、書法扁頭筆）──────────────
+    //
+    // 筆點陣由核心算（`padnote-ink/src/brush.rs`），Apple 畫的是同一份，
+    // 所以同一筆在兩台裝置上長得一樣。這裡只負責把橢圓畫出來。
+
+    /** 明暗：向白或向黑偏最多 35%，與 Apple 端同一條式子。 */
+    private fun shade(channel: Float, shade: Float): Float {
+        val target = if (shade >= 0f) 1f else 0f
+        return channel + (target - channel) * (kotlin.math.abs(shade) * 0.35f)
+    }
+
+    /** 柔邊筆點由外向內疊四層漸縮的橢圓，每層只補一點不透明度。 */
+    private const val SOFT_LAYERS = 4
+
+    private fun drawDabsOnDrawScope(
+        drawScope: DrawScope,
+        dabs: List<FfiDab>,
+        baseColor: Color,
+        density: Float
+    ) {
+        for (dab in dabs) {
+            val color = Color(
+                red = shade(baseColor.red, dab.shade),
+                green = shade(baseColor.green, dab.shade),
+                blue = shade(baseColor.blue, dab.shade)
+            )
+            val cx = dab.x * density
+            val cy = dab.y * density
+            val rx = dab.rx * density
+            val ry = dab.ry * density
+            val alpha = dab.alpha * baseColor.alpha
+            drawScope.rotate(Math.toDegrees(dab.angle.toDouble()).toFloat(), Offset(cx, cy)) {
+                if (dab.softness > 0.5f) {
+                    for (step in 0 until SOFT_LAYERS) {
+                        val f = 1f - step * 0.22f
+                        drawOval(
+                            color = color.copy(alpha = alpha * 0.34f),
+                            topLeft = Offset(cx - rx * f, cy - ry * f),
+                            size = Size(rx * f * 2f, ry * f * 2f)
+                        )
+                    }
+                } else {
+                    drawOval(
+                        color = color.copy(alpha = alpha),
+                        topLeft = Offset(cx - rx, cy - ry),
+                        size = Size(rx * 2f, ry * 2f)
+                    )
+                }
+            }
+        }
+    }
+
+    private fun drawDabsOnCanvas(canvas: Canvas, paint: Paint, dabs: List<FfiDab>, pxPerDp: Float) {
+        val origColor = paint.color
+        val origAlpha = paint.alpha
+        val origStyle = paint.style
+        paint.style = Paint.Style.FILL
+        val baseR = android.graphics.Color.red(origColor) / 255f
+        val baseG = android.graphics.Color.green(origColor) / 255f
+        val baseB = android.graphics.Color.blue(origColor) / 255f
+        val oval = android.graphics.RectF()
+        for (dab in dabs) {
+            paint.color = android.graphics.Color.rgb(
+                (shade(baseR, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255),
+                (shade(baseG, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255),
+                (shade(baseB, dab.shade) * 255f + 0.5f).toInt().coerceIn(0, 255)
+            )
+            val cx = dab.x * pxPerDp
+            val cy = dab.y * pxPerDp
+            val rx = dab.rx * pxPerDp
+            val ry = dab.ry * pxPerDp
+            canvas.save()
+            canvas.rotate(Math.toDegrees(dab.angle.toDouble()).toFloat(), cx, cy)
+            if (dab.softness > 0.5f) {
+                for (step in 0 until SOFT_LAYERS) {
+                    val f = 1f - step * 0.22f
+                    paint.alpha = (origAlpha * dab.alpha * 0.34f).toInt().coerceIn(0, 255)
+                    oval.set(cx - rx * f, cy - ry * f, cx + rx * f, cy + ry * f)
+                    canvas.drawOval(oval, paint)
+                }
+            } else {
+                paint.alpha = (origAlpha * dab.alpha).toInt().coerceIn(0, 255)
+                oval.set(cx - rx, cy - ry, cx + rx, cy + ry)
+                canvas.drawOval(oval, paint)
+            }
+            canvas.restore()
+        }
+        paint.color = origColor
+        paint.alpha = origAlpha
+        paint.style = origStyle
     }
 }

@@ -94,6 +94,8 @@ pub struct FfiToolInfo {
     pub tool: FfiTool,
     pub label: String,
     pub group: FfiToolGroup,
+    /// 筆刷所屬的族（書寫／繪畫／標記）；不是筆刷的工具為 `None`。
+    pub family: Option<FfiBrushFamily>,
     pub visible: bool,
     /// 跨平台對照用的識別字（`editor.ink.*`）。
     ///
@@ -121,6 +123,12 @@ pub enum FfiTool {
     Highlighter,
     Pencil,
     Watercolor,
+    Fineliner,
+    Calligraphy,
+    Charcoal,
+    Crayon,
+    Airbrush,
+    OilPaint,
     Eraser,
     Lasso,
     MaskingTape,
@@ -139,6 +147,12 @@ impl From<FfiTool> for Tool {
             FfiTool::Highlighter => Self::Highlighter,
             FfiTool::Pencil => Self::Pencil,
             FfiTool::Watercolor => Self::Watercolor,
+            FfiTool::Fineliner => Self::Fineliner,
+            FfiTool::Calligraphy => Self::Calligraphy,
+            FfiTool::Charcoal => Self::Charcoal,
+            FfiTool::Crayon => Self::Crayon,
+            FfiTool::Airbrush => Self::Airbrush,
+            FfiTool::OilPaint => Self::OilPaint,
             FfiTool::Eraser => Self::Eraser,
             FfiTool::Lasso => Self::Lasso,
             FfiTool::MaskingTape => Self::MaskingTape,
@@ -159,12 +173,36 @@ impl From<Tool> for FfiTool {
             Tool::Highlighter => Self::Highlighter,
             Tool::Pencil => Self::Pencil,
             Tool::Watercolor => Self::Watercolor,
+            Tool::Fineliner => Self::Fineliner,
+            Tool::Calligraphy => Self::Calligraphy,
+            Tool::Charcoal => Self::Charcoal,
+            Tool::Crayon => Self::Crayon,
+            Tool::Airbrush => Self::Airbrush,
+            Tool::OilPaint => Self::OilPaint,
             Tool::Eraser => Self::Eraser,
             Tool::Lasso => Self::Lasso,
             Tool::MaskingTape => Self::MaskingTape,
             Tool::Undo => Self::Undo,
             Tool::Redo => Self::Redo,
             Tool::ClearPage => Self::ClearPage,
+        }
+    }
+}
+
+/// 筆刷的族。與核心的 `BrushFamily` 一一對應。
+#[derive(Clone, Copy, PartialEq, Eq, Debug, uniffi::Enum)]
+pub enum FfiBrushFamily {
+    Writing,
+    Painting,
+    Marking,
+}
+
+impl From<padnote_toolbar::BrushFamily> for FfiBrushFamily {
+    fn from(f: padnote_toolbar::BrushFamily) -> Self {
+        match f {
+            padnote_toolbar::BrushFamily::Writing => Self::Writing,
+            padnote_toolbar::BrushFamily::Painting => Self::Painting,
+            padnote_toolbar::BrushFamily::Marking => Self::Marking,
         }
     }
 }
@@ -360,6 +398,7 @@ fn group_info(
                 tool: t.into(),
                 label: catalog::text(t.label_key(), locale).to_string(),
                 group: group.into(),
+                family: t.family().map(Into::into),
                 visible: cfg.is_visible(t),
                 identifier: t.parity_identifier().to_string(),
             })
@@ -438,7 +477,7 @@ mod tests {
             .flat_map(|g| g.tools)
             .map(|t| t.identifier)
             .collect();
-        assert_eq!(ids.len(), 13);
+        assert_eq!(ids.len(), 19);
         assert!(ids.contains(&"editor.ink.pen".to_string()));
         assert!(ids.contains(&"editor.ink.maskingTape".to_string()));
         assert!(ids.iter().all(|s| s.starts_with("editor.ink.")), "{ids:?}");

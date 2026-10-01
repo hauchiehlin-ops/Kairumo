@@ -106,6 +106,8 @@ struct ContinuousPageView<ObjectLayer: View>: View {
 
             CanvasRepresentable(
                 drawing: $drawing,
+                proInk: ProInkBinding(
+                    directory: store.drawingsDirectory, notebookId: notebookId, pageIndex: pageIndex),
                 selectedTool: selectedTool,
                 selectedColor: selectedColor,
                 strokeWidth: strokeWidth,

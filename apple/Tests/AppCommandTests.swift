@@ -56,7 +56,7 @@ final class AppCommandTests: XCTestCase {
     func testEachToolCommandCarriesItsOwnIndex() {
         // ⌘1 是第 0 個工具，⌘0 是第 9 個工具。十個工具各有各的 selector —— 共用一個的話，
         // UIKit 會因為選單識別碼重複而在建立選單時直接把 App 打掉（踩過）。
-        for index in 0..<EditorToolType.allCases.count where index < 10 {
+        for index in 0..<EditorToolType.shortcutOrder.count where index < 10 {
             let note = expectNotification(
                 AppCommand.selectTool, whenPerforming: "commandTool\(index + 1)")
             XCTAssertEqual(
@@ -66,10 +66,10 @@ final class AppCommandTests: XCTestCase {
     }
 
     func testThereIsASelectorForEveryTool() {
-        // 工具列以後加了第十一支筆時，這條會提醒要補 selector ——
-        // 不補的話那支筆就是沒有快捷鍵，而且不會有任何錯誤。
+        // 快捷鍵只給前十支（⌘1…⌘0），順序是原本那十支，不跟著工具列重排。
+        // 後來加的專業筆刷沒有快捷鍵 —— 改 `shortcutOrder` 超過十個時，這條會提醒要補 selector。
         XCTAssertLessThanOrEqual(
-            EditorToolType.allCases.count, 10,
-            "工具數超過 10 個了，AppCommands 的 selector 清單要跟著補")
+            EditorToolType.shortcutOrder.count, 10,
+            "快捷鍵工具超過 10 個了，AppCommands 的 selector 清單要跟著補")
     }
 }

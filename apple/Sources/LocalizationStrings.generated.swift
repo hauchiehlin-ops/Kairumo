@@ -1334,6 +1334,30 @@ extension LocalizationManager {
             .ko: "상자 너비",
             .th: "ความกว้างกล่อง"
         ],
+        "brush_family_marking": [
+            .zhHant: "標記",
+            .en: "Marking",
+            .zhHans: "标记",
+            .ja: "マーキング",
+            .ko: "표시",
+            .th: "ไฮไลต์"
+        ],
+        "brush_family_painting": [
+            .zhHant: "繪畫",
+            .en: "Painting",
+            .zhHans: "绘画",
+            .ja: "描画",
+            .ko: "그리기",
+            .th: "วาดภาพ"
+        ],
+        "brush_family_writing": [
+            .zhHant: "書寫",
+            .en: "Writing",
+            .zhHans: "书写",
+            .ja: "筆記",
+            .ko: "필기",
+            .th: "เขียน"
+        ],
         "bullet_list": [
             .zhHant: "項目符號",
             .en: "Bulleted List",
@@ -11888,6 +11912,14 @@ extension LocalizationManager {
             .ko: "테두리 전환 (유지/제거)",
             .th: "สลับเส้นขอบ (เก็บ/ลบ)"
         ],
+        "tool_airbrush": [
+            .zhHant: "噴槍",
+            .en: "Airbrush",
+            .zhHans: "喷枪",
+            .ja: "エアブラシ",
+            .ko: "에어브러시",
+            .th: "แอร์บรัช"
+        ],
         "tool_ballpoint": [
             .zhHant: "原子筆",
             .en: "Ballpoint",
@@ -11904,6 +11936,30 @@ extension LocalizationManager {
             .ko: "붓",
             .th: "พู่กัน"
         ],
+        "tool_calligraphy": [
+            .zhHant: "書法筆",
+            .en: "Calligraphy Pen",
+            .zhHans: "书法笔",
+            .ja: "カリグラフィーペン",
+            .ko: "캘리그래피 펜",
+            .th: "ปากกาคัดลายมือ"
+        ],
+        "tool_charcoal": [
+            .zhHant: "炭筆",
+            .en: "Charcoal",
+            .zhHans: "炭笔",
+            .ja: "木炭",
+            .ko: "목탄",
+            .th: "ถ่าน"
+        ],
+        "tool_crayon": [
+            .zhHant: "蠟筆",
+            .en: "Crayon",
+            .zhHans: "蜡笔",
+            .ja: "クレヨン",
+            .ko: "크레용",
+            .th: "สีเทียน"
+        ],
         "tool_eraser": [
             .zhHant: "橡皮擦",
             .en: "Eraser",
@@ -11911,6 +11967,14 @@ extension LocalizationManager {
             .ja: "消しゴム",
             .ko: "지우개",
             .th: "ยางลบ"
+        ],
+        "tool_fineliner": [
+            .zhHant: "針筆",
+            .en: "Fineliner",
+            .zhHans: "针笔",
+            .ja: "ファインライナー",
+            .ko: "파인라이너",
+            .th: "ปากกาหัวเข็ม"
         ],
         "tool_highlighter": [
             .zhHant: "螢光筆",
@@ -11943,6 +12007,14 @@ extension LocalizationManager {
             .ja: "マスキングテープ",
             .ko: "마스킹 테이프",
             .th: "กระดาษกาว"
+        ],
+        "tool_oilpaint": [
+            .zhHant: "油畫筆",
+            .en: "Oil Brush",
+            .zhHans: "油画笔",
+            .ja: "油彩筆",
+            .ko: "유화 붓",
+            .th: "พู่กันสีน้ำมัน"
         ],
         "tool_pen": [
             .zhHant: "鋼筆",

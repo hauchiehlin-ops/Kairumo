@@ -12639,5 +12639,77 @@
     "th": "ลบข้อมูลบนคลาวด์ไม่สำเร็จ จึงไม่ได้ลบอะไรในเครื่อง ลองอีกครั้งหรือปิดตัวเลือกนี้",
     "zhHans": "云端数据没有清成功，所以本机没有动任何东西。请再试一次，或关掉这个选项。",
     "zhHant": "雲端資料沒有清成功，所以本機沒有動任何東西。請再試一次，或關掉這個選項。"
+  },
+  "tool_fineliner": {
+    "en": "Fineliner",
+    "ja": "ファインライナー",
+    "ko": "파인라이너",
+    "th": "ปากกาหัวเข็ม",
+    "zhHans": "针笔",
+    "zhHant": "針筆"
+  },
+  "tool_calligraphy": {
+    "en": "Calligraphy Pen",
+    "ja": "カリグラフィーペン",
+    "ko": "캘리그래피 펜",
+    "th": "ปากกาคัดลายมือ",
+    "zhHans": "书法笔",
+    "zhHant": "書法筆"
+  },
+  "tool_charcoal": {
+    "en": "Charcoal",
+    "ja": "木炭",
+    "ko": "목탄",
+    "th": "ถ่าน",
+    "zhHans": "炭笔",
+    "zhHant": "炭筆"
+  },
+  "tool_crayon": {
+    "en": "Crayon",
+    "ja": "クレヨン",
+    "ko": "크레용",
+    "th": "สีเทียน",
+    "zhHans": "蜡笔",
+    "zhHant": "蠟筆"
+  },
+  "tool_airbrush": {
+    "en": "Airbrush",
+    "ja": "エアブラシ",
+    "ko": "에어브러시",
+    "th": "แอร์บรัช",
+    "zhHans": "喷枪",
+    "zhHant": "噴槍"
+  },
+  "tool_oilpaint": {
+    "en": "Oil Brush",
+    "ja": "油彩筆",
+    "ko": "유화 붓",
+    "th": "พู่กันสีน้ำมัน",
+    "zhHans": "油画笔",
+    "zhHant": "油畫筆"
+  },
+  "brush_family_writing": {
+    "en": "Writing",
+    "ja": "筆記",
+    "ko": "필기",
+    "th": "เขียน",
+    "zhHans": "书写",
+    "zhHant": "書寫"
+  },
+  "brush_family_painting": {
+    "en": "Painting",
+    "ja": "描画",
+    "ko": "그리기",
+    "th": "วาดภาพ",
+    "zhHans": "绘画",
+    "zhHant": "繪畫"
+  },
+  "brush_family_marking": {
+    "en": "Marking",
+    "ja": "マーキング",
+    "ko": "표시",
+    "th": "ไฮไลต์",
+    "zhHans": "标记",
+    "zhHant": "標記"
   }
 }

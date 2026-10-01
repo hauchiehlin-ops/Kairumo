@@ -2281,7 +2281,7 @@ private fun InkScreen(
         AppCommands.events.collect { command ->
             when (command) {
                 is AppCommand.SelectTool ->
-                    InkTool.entries.getOrNull(command.index)?.let { inkTool = it }
+                    inkToolShortcutOrder.getOrNull(command.index)?.let { inkTool = it }
                 // 切回手寫時要清掉選取 —— 與工具列上那顆按鈕做的事一樣。
                 // 只翻模式不清的話，畫面上會浮著一組在手寫模式下按不動的把手。
                 is AppCommand.ToggleEditorMode ->

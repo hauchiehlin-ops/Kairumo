@@ -70,7 +70,8 @@ enum NotebookPackageBridge {
         to destination: URL,
         deviceId: UInt32,
         pageIds knownPageIds: [String]? = nil,
-        skipBlockIds: Set<String> = []
+        skipBlockIds: Set<String> = [],
+        proStrokes: [[ProStroke]] = []
     ) throws -> ExportSummary {
         let pageCount = max(document.pageCount, drawings.count)
         guard pageCount > 0 else { throw BridgeError.noPages }
@@ -153,6 +154,20 @@ enum NotebookPackageBridge {
                             colorRgba: draft.colorRgba,
                             baseWidth: draft.baseWidth,
                             points: draft.points
+                        )
+                        summary.strokeCount += 1
+                    }
+                }
+                // 專業筆刷（自繪引擎）的筆畫：核心把它們當一般筆畫存，只是筆刷種類不同。
+                if index < proStrokes.count {
+                    for pro in proStrokes[index] {
+                        guard let kind = ProInk.kind(named: pro.tool) else { continue }
+                        _ = try session.addStroke(
+                            pageId: pageId,
+                            tool: kind,
+                            colorRgba: Data(pro.colorRGBA),
+                            baseWidth: pro.baseWidth,
+                            points: ProInk.strokePoints(pro.points)
                         )
                         summary.strokeCount += 1
                     }
@@ -488,7 +503,8 @@ enum NotebookPackageBridge {
         imageData: [String: Data] = [:],
         to destination: URL,
         deviceId: UInt32,
-        pageIds knownPageIds: [String]? = nil
+        pageIds knownPageIds: [String]? = nil,
+        proStrokes: [[ProStroke]] = []
     ) throws -> ExportSummary {
         let fm = FileManager.default
         // 已知的頁面 id 優先用呼叫端給的；沒給就沿用套件裡現有的那批 ——
@@ -499,7 +515,8 @@ enum NotebookPackageBridge {
         guard fm.fileExists(atPath: destination.path) else {
             return try export(
                 document: document, drawings: drawings, imageData: imageData,
-                to: destination, deviceId: deviceId, pageIds: pageIds
+                to: destination, deviceId: deviceId, pageIds: pageIds,
+                proStrokes: proStrokes
             )
         }
 
@@ -520,8 +537,18 @@ enum NotebookPackageBridge {
         let summary = try export(
             document: document, drawings: drawings, imageData: imageData,
             to: fresh, deviceId: deviceId, pageIds: pageIds,
-            skipBlockIds: foreign.ids
+            skipBlockIds: foreign.ids, proStrokes: proStrokes
         )
+
+        // **把錄音當下由核心直接寫的操作搬過去。** 重建只含平台文件模型有的東西（文字、圖片、筆畫…），
+        // 錄音區段與轉錄詞不在裡面 —— 下面把舊的 oplog 整批換掉之後，它們就永遠消失了：
+        // 錄音卡片沒有時間軸、無法播放，「語音轉文字」只剩空的文字方框。
+        do {
+            _ = try carryOverRecordingOps(
+                oldPackagePath: destination.path, newPackagePath: fresh.path, deviceId: deviceId)
+        } catch {
+            throw BridgeError.coreRejected("無法保留錄音與轉錄內容：\(error)")
+        }
 
         let suffix = deviceSuffix(deviceId)
         var deletedDocOps = [String]()
@@ -540,16 +567,6 @@ enum NotebookPackageBridge {
         }
         // 2. 再把新的搬過去。blob 與 manifest 缺的才補，不覆蓋既有的。
         for relative in relativeFiles(in: fresh) {
-        // **把錄音當下由核心直接寫的操作搬過去。** 重建只含平台文件模型有的東西（文字、圖片、筆畫…），
-        // 錄音區段與轉錄詞不在裡面 —— 下面把舊的 oplog 整批換掉之後，它們就永遠消失了：
-        // 錄音卡片沒有時間軸、無法播放，「語音轉文字」只剩空的文字方框。
-        do {
-            _ = try carryOverRecordingOps(
-                oldPackagePath: destination.path, newPackagePath: fresh.path, deviceId: deviceId)
-        } catch {
-            throw BridgeError.coreRejected("無法保留錄音與轉錄內容：\(error)")
-        }
-
             let src = fresh.appending(path: relative)
             let dst = destination.appending(path: relative)
             let isOwn = relative.contains(suffix) || relative == "manifest.json"
@@ -958,9 +975,14 @@ enum NotebookPackageBridge {
         var tables: [NoteTableAttachment] = []
         var imageData: [String: Data] = [:]
         var envelopes = EnvelopeObjects()
+        var proStrokes: [[ProStroke]] = []
 
         for (index, pageId) in pageIds.enumerated() {
-            try drawings.append(InkInterop.drawing(from: session.visibleStrokeDetails(pageId: pageId)))
+            // 專業筆刷（自繪引擎）的筆畫不能變成 PKStroke —— PencilKit 畫不出來，
+            // 轉了也只會變成一條普通的線。另外收起來，由專業筆畫層自己畫。
+            let details = try session.visibleStrokeDetails(pageId: pageId)
+            drawings.append(InkInterop.drawing(from: details.filter { !brushIsCustom(tool: $0.tool) }))
+            proStrokes.append(details.filter { brushIsCustom(tool: $0.tool) }.compactMap(ProStroke.init(from:)))
 
             for blockId in try session.textBlockIds(pageId: pageId) {
                 // 附件 id 就是核心的區塊 id：同一個方塊在每一台裝置、每一次匯入都是同一個 id，
@@ -1193,7 +1215,8 @@ enum NotebookPackageBridge {
         // 頁面 id 一律以**檔案裡實際的那批**為準，不是中繼資料寫的那批 ——
         // 中繼資料可能是別台裝置寫的舊版本。下次匯出要沿用這批。
         return ImportedNotebook(
-            document: document, drawings: drawings, imageData: imageData, pageIds: pageIds
+            document: document, drawings: drawings, imageData: imageData, pageIds: pageIds,
+            proStrokes: proStrokes
         )
     }
 
@@ -1206,6 +1229,8 @@ enum NotebookPackageBridge {
         let imageData: [String: Data]
         /// 這本筆記在核心裡的頁面 id，依頁次。下次匯出要沿用它。
         let pageIds: [String]
+        /// 每一頁的專業筆刷筆畫（自繪引擎），索引與頁次相同。包含這台自己的與別台的。
+        var proStrokes: [[ProStroke]] = []
     }
 
     // MARK: - 私有

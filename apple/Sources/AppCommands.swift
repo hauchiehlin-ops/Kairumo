@@ -110,7 +110,7 @@ final class KairumoAppDelegate: UIResponder, UIApplicationDelegate {
             #selector(commandTool7), #selector(commandTool8), #selector(commandTool9),
             #selector(commandTool10)
         ]
-        for (index, tool) in EditorToolType.allCases.enumerated()
+        for (index, tool) in EditorToolType.shortcutOrder.enumerated()
         where index < toolSelectors.count {
             let key = index < 9 ? "\(index + 1)" : "0"
             editorChildren.append(

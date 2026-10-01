@@ -1274,9 +1274,13 @@ enum NotebookSyncCoordinator {
                 images[attachment.fileName] = bytes
             }
         }
+        // 專業筆刷（自繪引擎）：只寫這台自己的。別台的另存一份（`.proink-foreign`），不在這裡。
+        let pro = (0 ..< pageCount).map {
+            ProInkStore.load(in: inputs.drawingsDirectory, notebookId: document.id, page: $0)
+        }
         try NotebookPackageBridge.exportPreservingOtherDevices(
             document: document, drawings: drawings, imageData: images,
-            to: inputs.package, deviceId: inputs.deviceId
+            to: inputs.package, deviceId: inputs.deviceId, proStrokes: pro
         )
         return own
     }
@@ -1339,6 +1343,11 @@ enum NotebookSyncCoordinator {
                 workingNewest = max(workingNewest, modified)
             }
         }
+        for page in 0 ..< max(inputs.document.pageCount, 1) {
+            if let modified = ProInkStore.modified(in: drawingsDir, notebookId: inputs.document.id, page: page) {
+                workingNewest = max(workingNewest, modified)
+            }
+        }
         for attachment in inputs.document.attachments ?? [] {
             let url = inputs.attachmentsDirectory.appending(path: attachment.fileName)
             if let values = try? url.resourceValues(forKeys: [.contentModificationDateKey]),
@@ -1384,6 +1393,19 @@ enum NotebookSyncCoordinator {
             let mine = ownStrokes[baselineKey(documentId, index)] ?? PKDrawing()
             let others = PKDrawing(strokes: StrokeDelta.added(in: drawing, since: mine))
             saveBaseline(others, in: baselineDir, notebookId: documentId, pageIndex: index)
+        }
+        // 專業筆刷：合併後的全部 − 這台自己的 = 別台的。比對用內容指紋（核心每次匯出都換 id）。
+        let drawingsDir = store.syncDrawingsDirectory
+        for (index, merged) in imported.proStrokes.enumerated() {
+            let own = Set(
+                ProInkStore.load(in: drawingsDir, notebookId: documentId, page: index).map(\.contentKey))
+            ProInkStore.save(
+                merged.filter { !own.contains($0.contentKey) },
+                in: drawingsDir, notebookId: documentId, page: index, foreign: true)
+        }
+        if !imported.proStrokes.isEmpty {
+            NotificationCenter.default.post(
+                name: .kairumoProInkChangedOnDisk, object: nil, userInfo: ["notebookId": documentId])
         }
         let (merged, preserved) = preservingLocalAdditions(
             imported.document, local: store.allNotebooks.first {

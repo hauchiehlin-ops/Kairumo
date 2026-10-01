@@ -210,8 +210,10 @@ class InkSurfaceView(
 
     private fun widthFor(pressure: Float): Float {
         val sensitive = when (engine.tool) {
-            ToolKind.FOUNTAIN_PEN, ToolKind.PENCIL, ToolKind.BRUSH, ToolKind.WATERCOLOR -> true
-            ToolKind.BALL_POINT, ToolKind.HIGHLIGHTER, ToolKind.MARKER -> false
+            ToolKind.FOUNTAIN_PEN, ToolKind.PENCIL, ToolKind.BRUSH, ToolKind.WATERCOLOR,
+            ToolKind.CHARCOAL, ToolKind.CRAYON, ToolKind.AIRBRUSH, ToolKind.OIL_PAINT,
+            ToolKind.CALLIGRAPHY -> true
+            ToolKind.BALL_POINT, ToolKind.HIGHLIGHTER, ToolKind.MARKER, ToolKind.FINELINER -> false
         }
         val multiplier = when (engine.tool) {
             ToolKind.BRUSH -> 2.2f
@@ -221,6 +223,12 @@ class InkSurfaceView(
             ToolKind.WATERCOLOR -> 2.4f
             ToolKind.BALL_POINT -> 0.65f
             ToolKind.FOUNTAIN_PEN -> 1.1f
+            // 自繪引擎的筆刷（見 InkBrushRenderer）：落筆當下用這個寬度畫即時線條，
+            // 抬筆後整筆由核心的筆點陣重畫。倍率與 Apple 的 `BrushCursor.tipScale` 一致。
+            ToolKind.FINELINER -> 0.6f
+            ToolKind.CALLIGRAPHY -> 1.4f
+            ToolKind.CHARCOAL, ToolKind.CRAYON, ToolKind.OIL_PAINT -> 1.8f
+            ToolKind.AIRBRUSH -> 2.6f
         }
         val scale = if (sensitive) 0.35f + 0.65f * pressure.coerceIn(0f, 1f) else 1f
         return engine.baseWidth * multiplier * scale * pxPerDp

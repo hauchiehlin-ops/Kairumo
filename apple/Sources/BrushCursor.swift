@@ -43,7 +43,7 @@ enum BrushCursor {
         let tip = min(max(strokeWidth * tipScale(for: tool), 8), maxSide)
 
         switch tool {
-        case .highlighter, .marker:
+        case .highlighter, .marker, .calligraphy:
             return chiselPath(width: tip)
         default:
             // 圓筆頭與橡皮擦都是圓的。差別在系統怎麼呈現它：
@@ -71,6 +71,10 @@ enum BrushCursor {
     static func tipScale(for tool: EditorToolType) -> CGFloat {
         switch tool {
         case .ballpoint, .pencil: return 0.65
+        case .fineliner: return 0.6
+        case .calligraphy: return 1.4
+        case .charcoal, .crayon, .oilpaint: return 1.8
+        case .airbrush: return 2.6
         case .pen: return 1.1
         case .brush, .watercolor: return 2.2
         case .marker: return 2.8

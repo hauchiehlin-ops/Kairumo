@@ -4,25 +4,32 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -30,10 +37,18 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.LocalizationStrings
+import uniffi.padnote_core.FfiIconShape
+import uniffi.padnote_core.FfiPaint
+import uniffi.padnote_core.FfiTool
+import uniffi.padnote_core.brushIcon
+import uniffi.padnote_core.brushPreviewDabs
 
 /**
- * 實體擬真筆身幾何與渲染元件（Android Jetpack Compose 對等實作）。
- * 具備 Apple 模式之物理浮起動畫（-10.dp 抬升與環境陰影投射）以及即時墨水染色。
+ * 工具列上的一顆筆：向量圖示、示範筆跡、選取時凸起。
+ *
+ * 圖示與示範筆跡都由核心提供（`brushIcon`、`brushPreviewDabs`）—— 圖示是
+ * `assets/brushes/*.svg` 解析出來的路徑指令，筆跡預覽是同一份筆點陣。
+ * Apple 畫的是同一組資料，所以兩台裝置上每支筆長得一樣。
  */
 @Composable
 fun RealisticPenItem(
@@ -45,19 +60,15 @@ fun RealisticPenItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // 物理浮起動畫：選取時向上抬升 10dp，具備流暢物理彈簧曲線
+    // 選取時向上抬升，彈簧曲線。
     val offsetY by animateDpAsState(
-        targetValue = if (isSelected) (-10).dp else 0.dp,
+        targetValue = if (isSelected) (-6).dp else 0.dp,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
         label = "penElevation"
     )
-
-    val elevationShadow by animateDpAsState(
-        targetValue = if (isSelected) 6.dp else 1.dp,
-        label = "penShadow"
-    )
-
     val toolLabel = LocalizationStrings.localized(tool.labelKey, languageTag)
+    val ffiTool = remember(tool) { tool.ffiTool }
+    val shapes = remember(tool) { brushIcon(ffiTool) }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -74,29 +85,18 @@ fun RealisticPenItem(
             contentAlignment = Alignment.Center,
             modifier = Modifier
                 .offset(y = offsetY)
-                .shadow(elevationShadow, shape = MaterialTheme.shapes.extraSmall)
-                .size(width = 24.dp, height = 54.dp)
+                .then(
+                    if (isSelected) Modifier.shadow(4.dp, shape = MaterialTheme.shapes.extraSmall) else Modifier
+                )
+                .size(40.dp)
         ) {
-            Canvas(modifier = Modifier.size(width = 24.dp, height = 54.dp)) {
-                when (tool) {
-                    InkTool.FOUNTAIN_PEN, InkTool.BRUSH, InkTool.WATERCOLOR ->
-                        drawFountainPen(inkColor, isSelected, strokeWidth)
-                    InkTool.BALLPOINT ->
-                        drawBallpoint(inkColor, isSelected)
-                    InkTool.HIGHLIGHTER, InkTool.MARKER ->
-                        drawHighlighter(inkColor, isSelected)
-                    InkTool.PENCIL ->
-                        drawPencil(inkColor, isSelected)
-                    InkTool.ERASER ->
-                        drawEraser(isSelected)
-                    InkTool.LASSO ->
-                        drawLasso(isSelected)
-                    InkTool.MASKING_TAPE ->
-                        drawMaskingTape(isSelected)
-                }
+            Canvas(modifier = Modifier.size(40.dp)) { drawIcon(shapes, inkColor) }
+        }
+        if (tool.family != null) {
+            Canvas(modifier = Modifier.width(44.dp).height(14.dp)) {
+                drawPreview(ffiTool, inkColor, size)
             }
         }
-
         Text(
             text = toolLabel,
             fontSize = 9.sp,
@@ -106,252 +106,106 @@ fun RealisticPenItem(
     }
 }
 
-// MARK: - Draw Helpers
+/** 族與族之間的分隔線。 */
+@Composable
+fun BrushFamilyDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(54.dp)
+            .background(MaterialTheme.colorScheme.outlineVariant)
+    )
+}
 
-private fun DrawScope.drawFountainPen(color: Color, isSelected: Boolean, strokeWidth: Float) {
-    val w = size.width
-    val h = size.height
-
-    // 1. 金屬筆尖
-    val nib = Path().apply {
-        moveTo(w * 0.5f, 0f)
-        lineTo(w * 0.95f, h * 0.28f)
-        lineTo(w * 0.05f, h * 0.28f)
-        close()
+/** 對應核心的工具列項目。 */
+val InkTool.ffiTool: FfiTool
+    get() = when (this) {
+        InkTool.FOUNTAIN_PEN -> FfiTool.PEN
+        InkTool.BALLPOINT -> FfiTool.BALL_POINT
+        InkTool.FINELINER -> FfiTool.FINELINER
+        InkTool.BRUSH -> FfiTool.BRUSH
+        InkTool.CALLIGRAPHY -> FfiTool.CALLIGRAPHY
+        InkTool.PENCIL -> FfiTool.PENCIL
+        InkTool.CHARCOAL -> FfiTool.CHARCOAL
+        InkTool.CRAYON -> FfiTool.CRAYON
+        InkTool.AIRBRUSH -> FfiTool.AIRBRUSH
+        InkTool.OIL_PAINT -> FfiTool.OIL_PAINT
+        InkTool.WATERCOLOR -> FfiTool.WATERCOLOR
+        InkTool.MARKER -> FfiTool.MARKER
+        InkTool.HIGHLIGHTER -> FfiTool.HIGHLIGHTER
+        InkTool.ERASER -> FfiTool.ERASER
+        InkTool.LASSO -> FfiTool.LASSO
+        InkTool.MASKING_TAPE -> FfiTool.MASKING_TAPE
     }
-    drawPath(
-        path = nib,
-        brush = Brush.linearGradient(
-            colors = listOf(Color(0xFFE8E8E8), Color(0xFFAAAAAA), Color(0xFFD0D0D0))
+
+private const val ICON_VIEWBOX = 48f
+
+private fun paintColor(paint: FfiPaint, ink: Color): Color? = when (paint) {
+    is FfiPaint.None -> null
+    is FfiPaint.Ink -> ink
+    is FfiPaint.Color -> Color(paint.r.toInt(), paint.g.toInt(), paint.b.toInt())
+}
+
+private fun DrawScope.drawIcon(shapes: List<FfiIconShape>, ink: Color) {
+    val scale = minOf(size.width, size.height) / ICON_VIEWBOX
+    val ox = (size.width - ICON_VIEWBOX * scale) / 2f
+    val oy = (size.height - ICON_VIEWBOX * scale) / 2f
+    for (shape in shapes) {
+        val path = Path()
+        for (cmd in shape.commands) {
+            val a = cmd.args
+            fun x(i: Int) = ox + a[i] * scale
+            fun y(i: Int) = oy + a[i] * scale
+            when (cmd.op) {
+                "M" -> path.moveTo(x(0), y(1))
+                "L" -> path.lineTo(x(0), y(1))
+                "C" -> path.cubicTo(x(0), y(1), x(2), y(3), x(4), y(5))
+                "Z" -> path.close()
+            }
+        }
+        paintColor(shape.fill, ink)?.let { drawPath(path, it.copy(alpha = it.alpha * shape.opacity)) }
+        paintColor(shape.stroke, ink)?.let {
+            drawPath(
+                path, it.copy(alpha = it.alpha * shape.opacity),
+                style = Stroke(
+                    width = shape.strokeWidth * scale,
+                    cap = if (shape.roundCap) StrokeCap.Round else StrokeCap.Butt,
+                    join = StrokeJoin.Round
+                )
+            )
+        }
+    }
+}
+
+/** 一小段示範筆跡。 */
+private fun DrawScope.drawPreview(tool: FfiTool, ink: Color, size: Size) {
+    val dabs = brushPreviewDabs(tool, size.width, size.height)
+    for (dab in dabs) {
+        val s = dab.shade
+        val target = if (s >= 0f) 1f else 0f
+        val k = kotlin.math.abs(s) * 0.35f
+        val color = Color(
+            red = ink.red + (target - ink.red) * k,
+            green = ink.green + (target - ink.green) * k,
+            blue = ink.blue + (target - ink.blue) * k
         )
-    )
-
-    // 筆尖墨水沾染
-    val tipInk = Path().apply {
-        moveTo(w * 0.5f, 0f)
-        lineTo(w * 0.72f, h * 0.14f)
-        lineTo(w * 0.28f, h * 0.14f)
-        close()
+        rotate(Math.toDegrees(dab.angle.toDouble()).toFloat(), Offset(dab.x, dab.y)) {
+            if (dab.softness > 0.5f) {
+                for (step in 0 until 4) {
+                    val f = 1f - step * 0.22f
+                    drawOval(
+                        color.copy(alpha = dab.alpha * 0.34f),
+                        topLeft = Offset(dab.x - dab.rx * f, dab.y - dab.ry * f),
+                        size = Size(dab.rx * f * 2f, dab.ry * f * 2f)
+                    )
+                }
+            } else {
+                drawOval(
+                    color.copy(alpha = dab.alpha),
+                    topLeft = Offset(dab.x - dab.rx, dab.y - dab.ry),
+                    size = Size(dab.rx * 2f, dab.ry * 2f)
+                )
+            }
+        }
     }
-    drawPath(path = tipInk, color = color)
-
-    // 2. 金屬領圈
-    drawRect(
-        brush = Brush.horizontalGradient(listOf(Color(0xFFD5D5D5), Color(0xFF888888), Color(0xFFE0E0E0))),
-        topLeft = Offset(0f, h * 0.28f),
-        size = Size(w, h * 0.06f)
-    )
-
-    // 3. 染色墨水環
-    drawRect(
-        color = color,
-        topLeft = Offset(0f, h * 0.34f),
-        size = Size(w, h * 0.08f)
-    )
-
-    // 4. 曜石黑啞光筆桿
-    drawRect(
-        brush = Brush.horizontalGradient(listOf(Color(0xFF383838), Color(0xFF1E1E1E), Color(0xFF2E2E2E))),
-        topLeft = Offset(0f, h * 0.42f),
-        size = Size(w, h * 0.58f)
-    )
-}
-
-private fun DrawScope.drawBallpoint(color: Color, isSelected: Boolean) {
-    val w = size.width
-    val h = size.height
-
-    // 滾珠尖
-    drawCircle(
-        color = color,
-        radius = w * 0.1f,
-        center = Offset(w * 0.5f, h * 0.06f)
-    )
-
-    // 針管金屬套管
-    drawRect(
-        color = Color(0xFFCCCCCC),
-        topLeft = Offset(w * 0.38f, h * 0.08f),
-        size = Size(w * 0.24f, h * 0.16f)
-    )
-
-    // 階梯金屬承座
-    val base = Path().apply {
-        moveTo(w * 0.35f, h * 0.24f)
-        lineTo(w * 0.65f, h * 0.24f)
-        lineTo(w * 0.95f, h * 0.34f)
-        lineTo(w * 0.05f, h * 0.34f)
-        close()
-    }
-    drawPath(base, color = Color(0xFFAAAAAA))
-
-    // 色環
-    drawRect(
-        color = color,
-        topLeft = Offset(0f, h * 0.34f),
-        size = Size(w, h * 0.08f)
-    )
-
-    // 筆桿
-    drawRect(
-        brush = Brush.horizontalGradient(listOf(Color(0xFFE0E0E0), Color(0xFFB5B5B5), Color(0xFFD8D8D8))),
-        topLeft = Offset(0f, h * 0.42f),
-        size = Size(w, h * 0.58f)
-    )
-}
-
-private fun DrawScope.drawHighlighter(color: Color, isSelected: Boolean) {
-    val w = size.width
-    val h = size.height
-
-    // 斜切鑿形筆頭
-    val chisel = Path().apply {
-        moveTo(w * 0.2f, 0f)
-        lineTo(w * 0.88f, h * 0.08f)
-        lineTo(w * 0.82f, h * 0.24f)
-        lineTo(w * 0.18f, h * 0.24f)
-        close()
-    }
-    drawPath(chisel, color = color.copy(alpha = 0.92f))
-
-    // 黑色筆頸
-    drawRect(
-        color = Color(0xFF222222),
-        topLeft = Offset(w * 0.1f, h * 0.24f),
-        size = Size(w * 0.8f, h * 0.10f)
-    )
-
-    // 粗厚方圓筆身
-    drawRect(
-        brush = Brush.horizontalGradient(listOf(Color(0xFF424242), Color(0xFF262626))),
-        topLeft = Offset(0f, h * 0.34f),
-        size = Size(w, h * 0.66f)
-    )
-
-    // 筆身大螢光條
-    drawRect(
-        color = color.copy(alpha = 0.85f),
-        topLeft = Offset(w * 0.2f, h * 0.48f),
-        size = Size(w * 0.6f, h * 0.32f)
-    )
-}
-
-private fun DrawScope.drawPencil(color: Color, isSelected: Boolean) {
-    val w = size.width
-    val h = size.height
-
-    // 木質削錐
-    val cone = Path().apply {
-        moveTo(w * 0.5f, 0f)
-        lineTo(w * 0.95f, h * 0.28f)
-        lineTo(w * 0.05f, h * 0.28f)
-        close()
-    }
-    drawPath(cone, color = Color(0xFFDFB887))
-
-    // 石墨筆芯尖
-    val lead = Path().apply {
-        moveTo(w * 0.5f, 0f)
-        lineTo(w * 0.68f, h * 0.10f)
-        lineTo(w * 0.32f, h * 0.10f)
-        close()
-    }
-    drawPath(lead, color = Color(0xFF2D2D2D))
-
-    // 金黃六角鉛筆桿
-    drawRect(
-        brush = Brush.horizontalGradient(
-            listOf(Color(0xFFF5AC27), Color(0xFFD48B10), Color(0xFFF7BD48))
-        ),
-        topLeft = Offset(0f, h * 0.28f),
-        size = Size(w, h * 0.72f)
-    )
-}
-
-private fun DrawScope.drawEraser(isSelected: Boolean) {
-    val w = size.width
-    val h = size.height
-
-    // 櫻花粉紅橡皮頭
-    drawRoundRect(
-        color = Color(0xFFF8A5B8),
-        topLeft = Offset(w * 0.08f, 0f),
-        size = Size(w * 0.84f, h * 0.38f),
-        cornerRadius = androidx.compose.ui.geometry.CornerRadius(6f, 6f)
-    )
-
-    // 金屬固定箍
-    drawRect(
-        brush = Brush.horizontalGradient(listOf(Color(0xFFCCCCCC), Color(0xFF777777))),
-        topLeft = Offset(0f, h * 0.36f),
-        size = Size(w, h * 0.10f)
-    )
-
-    // 黑色握把
-    drawRect(
-        color = Color(0xFF252525),
-        topLeft = Offset(0f, h * 0.46f),
-        size = Size(w, h * 0.54f)
-    )
-}
-
-private fun DrawScope.drawLasso(isSelected: Boolean) {
-    val w = size.width
-    val h = size.height
-
-    // 手寫筆圓珠尖
-    drawCircle(
-        color = Color(0xFF555555),
-        radius = w * 0.12f,
-        center = Offset(w * 0.5f, h * 0.06f)
-    )
-
-    // 錐形尖
-    val cone = Path().apply {
-        moveTo(w * 0.35f, h * 0.08f)
-        lineTo(w * 0.65f, h * 0.08f)
-        lineTo(w * 0.95f, h * 0.26f)
-        lineTo(w * 0.05f, h * 0.26f)
-        close()
-    }
-    drawPath(cone, color = Color(0xFFE2E2E2))
-
-    // 白銀金屬筆身
-    drawRect(
-        brush = Brush.horizontalGradient(listOf(Color(0xFFF2F2F2), Color(0xFFD6D6D6), Color(0xFFEBEBEB))),
-        topLeft = Offset(0f, h * 0.26f),
-        size = Size(w, h * 0.74f)
-    )
-
-    // 套索環色環
-    drawRect(
-        color = Color(0xFF007AFF),
-        topLeft = Offset(0f, h * 0.44f),
-        size = Size(w, h * 0.08f)
-    )
-}
-
-private fun DrawScope.drawMaskingTape(isSelected: Boolean) {
-    val w = size.width
-    val h = size.height
-
-    // 鋸齒和紙膠帶頭
-    val teeth = Path().apply {
-        moveTo(0f, h * 0.18f)
-        lineTo(w * 0.25f, 0f)
-        lineTo(w * 0.5f, h * 0.12f)
-        lineTo(w * 0.75f, 0f)
-        lineTo(w, h * 0.18f)
-        lineTo(w, h)
-        lineTo(0f, h)
-        close()
-    }
-    drawPath(teeth, color = Color(0xFFE8DCBA))
-
-    // 膠帶中線紋理
-    drawRect(
-        color = Color(0xFFD4C59E),
-        topLeft = Offset(w * 0.2f, h * 0.3f),
-        size = Size(w * 0.6f, h * 0.5f)
-    )
 }

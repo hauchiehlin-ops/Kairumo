@@ -19,13 +19,20 @@ import PadnoteCore
 
 /// 繪圖工具模式
 public enum EditorToolType: String, CaseIterable, Identifiable {
+    // 順序依「書寫／繪畫／標記」三族排列（核心 `BrushFamily`），與核心的工具清單一致。
     case pen = "pen"
     case ballpoint = "ballpoint"
+    case fineliner = "fineliner"
     case brush = "brush"
+    case calligraphy = "calligraphy"
+    case pencil = "pencil"
+    case charcoal = "charcoal"
+    case crayon = "crayon"
+    case airbrush = "airbrush"
+    case oilpaint = "oilpaint"
+    case watercolor = "watercolor"
     case marker = "marker"
     case highlighter = "highlighter"
-    case pencil = "pencil"
-    case watercolor = "watercolor"
     case eraser = "eraser"
     case lasso = "lasso"
     case maskingTape = "masking_tape"
@@ -44,9 +51,46 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
         }
     }
 
+    /// ⌘1…⌘0 對應的工具，依**原本**的順序。
+    ///
+    /// 工具列改成「書寫／繪畫／標記」三族排列之後，`allCases` 的順序變了；
+    /// 快捷鍵是肌肉記憶，不能跟著工具列重排 —— 用 ⌘3 叫出毛筆的人，升級之後不該拿到針筆。
+    public static let shortcutOrder: [EditorToolType] = [
+        .pen, .ballpoint, .brush, .marker, .highlighter, .pencil, .watercolor, .eraser, .lasso, .maskingTape,
+    ]
+
+    /// 筆刷所屬的族。不是筆刷的工具為 `nil`。與核心 `Tool::family` 一致（有測試對帳）。
+    public var family: FfiBrushFamily? {
+        switch self {
+        case .pen, .ballpoint, .fineliner, .brush, .calligraphy, .pencil: return .writing
+        case .charcoal, .crayon, .airbrush, .oilpaint, .watercolor: return .painting
+        case .marker, .highlighter: return .marking
+        case .eraser, .lasso, .maskingTape: return nil
+        }
+    }
+
+    /// 由自繪引擎算繪的筆刷（見 ProInk.swift）。其餘走 PencilKit。
+    public var proToolKind: ToolKind? {
+        switch self {
+        case .fineliner: return .fineliner
+        case .charcoal: return .charcoal
+        case .crayon: return .crayon
+        case .airbrush: return .airbrush
+        case .oilpaint: return .oilPaint
+        case .calligraphy: return .calligraphy
+        default: return nil
+        }
+    }
+
     public var iconName: String {
         switch self {
         case .pen: return "pencil.tip"
+        case .fineliner: return "pencil.line"
+        case .calligraphy: return "pencil.tip.crop.circle"
+        case .charcoal: return "scribble"
+        case .crayon: return "pencil.and.scribble"
+        case .airbrush: return "sparkle"
+        case .oilpaint: return "paintbrush.pointed"
         case .ballpoint: return "pencil.line"
         case .brush: return "paintbrush.pointed.fill"
         case .marker: return "pencil.and.outline"
@@ -66,6 +110,12 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
     public var parityIdentifier: String {
         switch self {
         case .pen: return "editor.ink.pen"
+        case .fineliner: return "editor.ink.fineliner"
+        case .calligraphy: return "editor.ink.calligraphy"
+        case .charcoal: return "editor.ink.charcoal"
+        case .crayon: return "editor.ink.crayon"
+        case .airbrush: return "editor.ink.airbrush"
+        case .oilpaint: return "editor.ink.oilpaint"
         case .ballpoint: return "editor.ink.ballpoint"
         case .brush: return "editor.ink.brush"
         case .marker: return "editor.ink.marker"
@@ -81,6 +131,12 @@ public enum EditorToolType: String, CaseIterable, Identifiable {
     public var localizationKey: String {
         switch self {
         case .pen: return "tool_pen"
+        case .fineliner: return "tool_fineliner"
+        case .calligraphy: return "tool_calligraphy"
+        case .charcoal: return "tool_charcoal"
+        case .crayon: return "tool_crayon"
+        case .airbrush: return "tool_airbrush"
+        case .oilpaint: return "tool_oilpaint"
         case .ballpoint: return "tool_ballpoint"
         case .brush: return "tool_brush"
         case .marker: return "tool_marker"
@@ -213,6 +269,18 @@ final class TemplateCanvasBackgroundView: UIView {
 /// `bounds.width` 還是**舊的**（版面尚未跑完）。所以收合左側結構欄之後，
 /// contentSize 仍停在「扣掉側欄」的寬度，畫布右側就空出一塊灰色。
 /// 真正知道新寬度的時機是 `layoutSubviews`。
+/// 專業筆刷手勢與 PencilKit 手勢的並存規則：橡皮擦模式下兩邊同時收，其餘互不干擾。
+final class ProGestureDelegate: NSObject, UIGestureRecognizerDelegate {
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer
+    ) -> Bool {
+        guard let pro = gestureRecognizer as? ProStrokeGestureRecognizer else { return false }
+        // 橡皮擦：PencilKit 與我們同時收。畫筆：PencilKit 的落筆手勢已經關掉，沒有要並存的。
+        return pro.mode == .erase
+    }
+}
+
 final class AdaptiveCanvasView: PKCanvasView {
     /// 這一頁的高度（由 SwiftUI 端更新）
     /// 觸控觀察。
@@ -286,6 +354,103 @@ final class AdaptiveCanvasView: PKCanvasView {
         addInteraction(interaction)
     }
 
+    // MARK: 專業筆刷（自繪引擎，見 ProInk.swift）
+
+    /// 疊在畫布上的專業筆畫層。第一次需要時才建。
+    private(set) var proLayer: ProInkLayerView?
+    private var proGesture: ProStrokeGestureRecognizer?
+    private let proGestureDelegate = ProGestureDelegate()
+    /// 專業筆刷啟用前，捲動手勢要幾根手指 —— 停用時還原。
+    private var savedMinimumPanTouches: Int?
+
+    /// 目前的專業筆刷設定。手勢辨識器每次落筆時讀。
+    var proTool: ToolKind?
+    var proColor: [UInt8] = [0, 0, 0, 255]
+    var proWidth: Float = 4
+    var proEraserRadius: CGFloat = 10
+    var proAllowsFinger: () -> Bool = { true }
+
+    enum ProMode { case off, draw, erase }
+
+    /// 依目前的工具設定專業筆畫層與輸入手勢。
+    ///
+    /// - `.draw`：選了專業筆刷。PencilKit 的落筆手勢關掉、改由我們收筆；
+    ///   捲動改成兩指，單指（或 Apple Pencil）才能畫。
+    /// - `.erase`：選了橡皮擦。兩邊同時收：PencilKit 擦它的、我們擦專業筆畫。
+    /// - `.off`：其他工具。我們的手勢不收任何東西。
+    func configurePro(mode: ProMode, directory: URL?, notebookId: String, pageIndex: Int) {
+        if mode == .off, proLayer == nil { return }
+        let layer = installProLayerIfNeeded()
+        if let directory {
+            layer.load(directory: directory, notebookId: notebookId, pageIndex: pageIndex)
+        }
+        guard let gesture = proGesture else { return }
+        switch mode {
+        case .off:
+            gesture.isEnabled = false
+            restorePan()
+        case .draw:
+            gesture.mode = .draw
+            gesture.cancelsTouchesInView = true
+            gesture.isEnabled = true
+            drawingGestureRecognizer.isEnabled = false
+            overridePan()
+        case .erase:
+            gesture.mode = .erase
+            gesture.cancelsTouchesInView = false
+            gesture.isEnabled = true
+            restorePan()
+        }
+    }
+
+    private func overridePan() {
+        if savedMinimumPanTouches == nil {
+            savedMinimumPanTouches = panGestureRecognizer.minimumNumberOfTouches
+        }
+        panGestureRecognizer.minimumNumberOfTouches = 2
+    }
+
+    private func restorePan() {
+        guard let saved = savedMinimumPanTouches else { return }
+        panGestureRecognizer.minimumNumberOfTouches = saved
+        savedMinimumPanTouches = nil
+    }
+
+    private func installProLayerIfNeeded() -> ProInkLayerView {
+        if let proLayer { return proLayer }
+        let layer = ProInkLayerView(frame: .zero)
+        layer.layer.anchorPoint = .zero
+        layer.undoManagerProvider = { [weak self] in self?.undoManager }
+        addSubview(layer)
+        proLayer = layer
+
+        let gesture = ProStrokeGestureRecognizer()
+        gesture.layerView = layer
+        gesture.tool = { [weak self] in self?.proTool }
+        gesture.color = { [weak self] in self?.proColor ?? [0, 0, 0, 255] }
+        gesture.width = { [weak self] in self?.proWidth ?? 4 }
+        gesture.eraserRadius = { [weak self] in self?.proEraserRadius ?? 10 }
+        gesture.allowsFingerDrawing = { [weak self] in self?.proAllowsFinger() ?? true }
+        gesture.delegate = proGestureDelegate
+        gesture.isEnabled = false
+        addGestureRecognizer(gesture)
+        proGesture = gesture
+        syncProLayerGeometry()
+        return layer
+    }
+
+    /// 專業筆畫層要跟著頁面一起縮放與捲動：框是未縮放的頁面大小，縮放用 transform。
+    func syncProLayerGeometry() {
+        guard let layer = proLayer else { return }
+        let scale = max(zoomScale, 0.01)
+        let size = CGSize(
+            width: max(bounds.width, contentSize.width / scale),
+            height: max(pageContentHeight, contentSize.height / scale))
+        layer.bounds = CGRect(origin: .zero, size: size)
+        layer.layer.position = .zero
+        layer.transform = CGAffineTransform(scaleX: scale, y: scale)
+    }
+
     private(set) var activeTouchesCount: Int = 0
     var pendingRetractDate: Date? = nil
     var onPendingRetractNeeded: ((Date) -> Void)? = nil
@@ -348,6 +513,7 @@ final class AdaptiveCanvasView: PKCanvasView {
     }
 
     func syncContentSize() {
+        syncProLayerGeometry()
         let targetWidth = max(bounds.width, 1)
         let targetHeight = max(pageContentHeight, bounds.height)
         let target = CGSize(width: targetWidth, height: targetHeight)
@@ -363,8 +529,16 @@ final class AdaptiveCanvasView: PKCanvasView {
 enum EraserMode: String { case stroke, pixel }
 
 /// PencilKit 畫布之 SwiftUI 封裝（跨 iOS / iPadOS / Mac Catalyst，支援無限高度延長、背景同步滾動與套索選取監聽）
+struct ProInkBinding {
+    let directory: URL
+    let notebookId: String
+    let pageIndex: Int
+}
+
 struct CanvasRepresentable: UIViewRepresentable {
     @Binding var drawing: PKDrawing
+    /// 專業筆刷（自繪引擎）這一頁存哪裡。`nil` 表示這個畫布不支援專業筆刷。
+    var proInk: ProInkBinding? = nil
     var selectedTool: EditorToolType
     var selectedColor: Color
     var strokeWidth: CGFloat
@@ -584,6 +758,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         context.coordinator.applyTool(to: canvas)
         // 套用儲存的壓感曲線（與 Android AdvancedPenSettingsDialog 對等）
         context.coordinator.applyPressureCurve()
+        applyProInk(to: canvas)
         canvasRef?(canvas)
 
         return canvas
@@ -670,7 +845,33 @@ struct CanvasRepresentable: UIViewRepresentable {
         }
 
         context.coordinator.applyTool(to: uiView)
+        applyProInk(to: uiView)
         canvasRef?(uiView)
+    }
+
+    /// 專業筆刷：設好層、手勢與目前的筆色／筆寬。
+    private func applyProInk(to canvas: PKCanvasView) {
+        guard let adaptive = canvas as? AdaptiveCanvasView else { return }
+        let mode: AdaptiveCanvasView.ProMode
+        if editorMode != .draw {
+            mode = .off
+        } else if selectedTool.proToolKind != nil {
+            mode = .draw
+        } else if selectedTool == .eraser {
+            mode = .erase
+        } else {
+            mode = .off
+        }
+        adaptive.proTool = selectedTool.proToolKind
+        adaptive.proColor = InkInterop.rgba(from: UIColor(selectedColor)).map { $0 }
+        adaptive.proWidth = Float(max(1.2, strokeWidth * 1.4))
+        adaptive.proEraserRadius = eraserMode == .pixel ? max(8, pixelEraserWidth / 2) : 8
+        adaptive.proAllowsFinger = { [palmRejection] in
+            (palmRejection?.drawingPolicy(now: Date()) ?? .anyInput) == .anyInput
+        }
+        adaptive.configurePro(
+            mode: mode, directory: proInk?.directory,
+            notebookId: proInk?.notebookId ?? "", pageIndex: proInk?.pageIndex ?? 0)
     }
 
     /// 測試用讀數：縮放倍率**與筆畫數**。
@@ -741,6 +942,7 @@ struct CanvasRepresentable: UIViewRepresentable {
         }
 
         func scrollViewDidZoom(_ scrollView: UIScrollView) {
+            (scrollView as? AdaptiveCanvasView)?.syncProLayerGeometry()
             publishZoomForTests(scrollView)
             parent.onTransformChanged?(scrollView.zoomScale, scrollView.contentOffset)
         }
@@ -935,6 +1137,11 @@ struct CanvasRepresentable: UIViewRepresentable {
         func applyTool(to canvas: PKCanvasView) {
             let uiColor = UIColor(parent.selectedColor)
             switch parent.selectedTool {
+            case .fineliner, .calligraphy, .charcoal, .crayon, .airbrush, .oilpaint:
+                // 專業筆刷由自繪引擎收筆（ProInk.swift），PencilKit 的落筆手勢在這時是關著的。
+                // 這裡只放一支不會被用到的筆，讓畫布手上永遠有個合法的工具。
+                canvas.tool = PKInkingTool(.pen, color: uiColor, width: max(1, parent.strokeWidth))
+
             case .pen:
                 // 鋼筆：墨水充沛飽滿、帶有自然流暢的下筆壓力與速度過渡
                 canvas.tool = PKInkingTool(.pen, color: uiColor, width: max(2.5, parent.strokeWidth * 1.1))
@@ -1640,8 +1847,8 @@ public struct NotebookEditorView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: AppCommand.selectTool)) { note in
                 guard let index = note.object as? Int,
-                      EditorToolType.allCases.indices.contains(index) else { return }
-                selectEditorTool(EditorToolType.allCases[index])
+                      EditorToolType.shortcutOrder.indices.contains(index) else { return }
+                selectEditorTool(EditorToolType.shortcutOrder[index])
             }
         }
         .overlay(alignment: .bottomLeading) {
@@ -2047,6 +2254,9 @@ public struct NotebookEditorView: View {
             Button(localizationManager.localized("clear_confirm"), role: .destructive) {
                 currentDrawing = PKDrawing()
                 store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: currentDrawing)
+                // 專業筆刷的筆畫另存，一起清掉。
+                ProInkStore.save([], in: store.drawingsDirectory, notebookId: notebook.id, page: currentPageIndex)
+                (canvasView as? AdaptiveCanvasView)?.proLayer?.reload()
             }
         } message: {
             Text(localizationManager.localized("clear_page_confirm"))
@@ -3929,6 +4139,8 @@ public struct NotebookEditorView: View {
 
             CanvasRepresentable(
                 drawing: $currentDrawing,
+                proInk: ProInkBinding(
+                    directory: store.drawingsDirectory, notebookId: notebook.id, pageIndex: currentPageIndex),
                 selectedTool: selectedTool,
                 selectedColor: selectedColor,
                 strokeWidth: strokeWidth,
@@ -6119,6 +6331,34 @@ public struct NotebookEditorView: View {
         }
     }
 
+    /// 工具列上的一顆工具按鈕：向量圖示、（筆刷才有）示範筆跡、選取時凸起。
+    @ViewBuilder
+    private func brushToolButton(_ tool: EditorToolType, showToolLabels: Bool) -> some View {
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
+                selectEditorTool(tool)
+            }
+        } label: {
+            VStack(spacing: 2) {
+                BrushToolContent(tool: tool, isSelected: selectedTool == tool, ink: selectedColor)
+                // 工具列在窄螢幕上不顯示文字標籤（showToolLabels = false），
+                // 那時整排都是純圖示。
+                if showToolLabels {
+                    Text(localizationManager.localized(tool.localizationKey))
+                        .font(.system(size: 9, weight: selectedTool == tool ? .semibold : .regular))
+                        .foregroundColor(selectedTool == tool ? .primary : .secondary)
+                }
+            }
+            .padding(.horizontal, 2)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(localizationManager.localized(tool.localizationKey))
+        .accessibilityAddTraits(selectedTool == tool ? [.isSelected] : [])
+        .accessibilityIdentifier(tool.parityIdentifier)
+        .help(localizationManager.localized(tool.localizationKey))
+    }
+
     private func drawingToolbarRow(showToolLabels: Bool) -> some View {
         HStack(spacing: 14) {
             drawingToolbarItems(showToolLabels: showToolLabels)
@@ -6129,36 +6369,20 @@ public struct NotebookEditorView: View {
     /// 換行版才不會因為內容被包在容器裡而永遠不換行。
     @ViewBuilder
     private func drawingToolbarItems(showToolLabels: Bool) -> some View {
-                // 筆刷群組。橡皮擦與套索另成一組（見 EditorToolType.isBrush）。
-                ForEach(EditorToolType.allCases.filter { $0.isBrush && toolbarSettings.isVisible($0.parityIdentifier) }) { tool in
-                    Button {
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
-                            selectEditorTool(tool)
-                        }
-                    } label: {
-                        VStack(spacing: 2) {
-                            RealisticPenView(
-                                tool: tool,
-                                isSelected: selectedTool == tool,
-                                inkColor: selectedColor,
-                                strokeWidth: strokeWidth
-                            )
-                            if showToolLabels {
-                                Text(localizationManager.localized(tool.localizationKey))
-                                    .font(.system(size: 9, weight: selectedTool == tool ? .semibold : .regular))
-                                    .foregroundColor(selectedTool == tool ? .primary : .secondary)
-                            }
-                        }
-                        .padding(.horizontal, 2)
-                        .contentShape(Rectangle())
+                // 筆刷依「書寫／繪畫／標記」三族分段，族與族之間一條分隔線。
+                // 橡皮擦與套索另成一組（見 EditorToolType.isBrush）。
+                ForEach(Array([FfiBrushFamily.writing, .painting, .marking].enumerated()), id: \.offset) { index, family in
+                    let tools = EditorToolType.allCases.filter {
+                        $0.family == family && toolbarSettings.isVisible($0.parityIdentifier)
                     }
-                    .buttonStyle(.plain)
-                    // 工具列在窄螢幕上不顯示文字標籤（showToolLabels = false），
-                    // 那時整排都是純圖示。
-                    .accessibilityLabel(localizationManager.localized(tool.localizationKey))
-                    .accessibilityAddTraits(selectedTool == tool ? [.isSelected] : [])
-                    .accessibilityIdentifier(tool.parityIdentifier)
-                    .help(localizationManager.localized(tool.localizationKey))
+                    if !tools.isEmpty {
+                        if index > 0 {
+                            ToolbarSeparator().frame(height: 36)
+                        }
+                        ForEach(tools) { tool in
+                            brushToolButton(tool, showToolLabels: showToolLabels)
+                        }
+                    }
                 }
 
                 ToolbarSeparator()
@@ -6166,32 +6390,7 @@ public struct NotebookEditorView: View {
 
                 // 擦除與選取。與筆刷分開，因為它們不沾墨，也不吃顏色與粗細。
                 ForEach(EditorToolType.allCases.filter { !$0.isBrush && toolbarSettings.isVisible($0.parityIdentifier) }) { tool in
-                    Button {
-                        withAnimation(.spring(response: 0.32, dampingFraction: 0.72)) {
-                            selectEditorTool(tool)
-                        }
-                    } label: {
-                        VStack(spacing: 2) {
-                            RealisticPenView(
-                                tool: tool,
-                                isSelected: selectedTool == tool,
-                                inkColor: selectedColor,
-                                strokeWidth: strokeWidth
-                            )
-                            if showToolLabels {
-                                Text(localizationManager.localized(tool.localizationKey))
-                                    .font(.system(size: 9, weight: selectedTool == tool ? .semibold : .regular))
-                                    .foregroundColor(selectedTool == tool ? .primary : .secondary)
-                            }
-                        }
-                        .padding(.horizontal, 2)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(localizationManager.localized(tool.localizationKey))
-                    .accessibilityAddTraits(selectedTool == tool ? [.isSelected] : [])
-                    .accessibilityIdentifier(tool.parityIdentifier)
-                    .help(localizationManager.localized(tool.localizationKey))
+                    brushToolButton(tool, showToolLabels: showToolLabels)
                 }
 
                 Button {

@@ -60,6 +60,12 @@ pub enum ToolKind {
     Brush,
     Marker,
     Watercolor,
+    Fineliner,
+    Charcoal,
+    Crayon,
+    Airbrush,
+    OilPaint,
+    Calligraphy,
 }
 
 impl From<ToolKind> for Tool {
@@ -72,6 +78,12 @@ impl From<ToolKind> for Tool {
             ToolKind::Brush => Tool::Brush,
             ToolKind::Marker => Tool::Marker,
             ToolKind::Watercolor => Tool::Watercolor,
+            ToolKind::Fineliner => Tool::Fineliner,
+            ToolKind::Charcoal => Tool::Charcoal,
+            ToolKind::Crayon => Tool::Crayon,
+            ToolKind::Airbrush => Tool::Airbrush,
+            ToolKind::OilPaint => Tool::OilPaint,
+            ToolKind::Calligraphy => Tool::Calligraphy,
         }
     }
 }
@@ -87,6 +99,12 @@ impl From<Tool> for ToolKind {
             Tool::Brush => ToolKind::Brush,
             Tool::Marker => ToolKind::Marker,
             Tool::Watercolor => ToolKind::Watercolor,
+            Tool::Fineliner => ToolKind::Fineliner,
+            Tool::Charcoal => ToolKind::Charcoal,
+            Tool::Crayon => ToolKind::Crayon,
+            Tool::Airbrush => ToolKind::Airbrush,
+            Tool::OilPaint => ToolKind::OilPaint,
+            Tool::Calligraphy => ToolKind::Calligraphy,
         }
     }
 }
