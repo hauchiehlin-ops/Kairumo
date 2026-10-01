@@ -260,12 +260,14 @@ jobs:
           # 還活著，但 ADB transport 消失；兩輪都不是 App 的 FATAL／ANR。
           #
           # 不要再用 `swiftshader_indirect`：Android Emulator 從 36.4.9 起已將它
-          # 標成 deprecated，而 CI 用的 37.x 正是出問題的版本。`software` 會讓
-          # emulator 依 AVD 與主機能力選目前受支援的軟體 renderer；runner 沒有
-          # 實體 GPU，不能改成 `host`。Vulkan 仍關掉，避免重回出過問題的路徑。
+          # 標成 deprecated。`software` 在這台 runner 上仍會於第一個 audit case
+          # 卡住整個 qemu（logcat 同時停止，並非測試 assertion）；這一步改釘官方
+          # 支援的 Mesa 3D `lavapipe`，避開自動選到的 renderer。Vulkan 仍關掉，
+          # 避免把 guest Vulkan 暴露給 App；其餘 284 條已在 `software` 全數通過，
+          # 所以下一步維持原設定。
           ram-size: 4096M
           heap-size: 576M
-          emulator-options: -no-window -gpu software -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -no-metrics
+          emulator-options: -no-window -gpu lavapipe -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -no-metrics
           # 先在背景收兩樣東西：
           #   * logcat —— 模擬器中途消失時，Gradle 只剩 `device not found`；
           #   * 主機端記憶體、qemu 程序與 ADB state —— 可分清 qemu crash 與
@@ -274,15 +276,16 @@ jobs:
           # 變數（`$?`、`$!`）、`set +e`、subshell 都帶不到下一行。上一版靠
           # `test_status=$?` 再 `exit "$test_status"`，結果是 `exit: Illegal number:`
           # ——測試全過（284/284）步驟卻被標成失敗。所以這裡一律用檔案旗標傳遞，
-          # 不靠 shell 變數；背景程序用 pkill 收。
+          # 不靠 shell 變數。背景程序也把 PID 寫進檔案；不能用 `pkill -f`，因為
+          # 它會比對到執行 pkill 的那個 shell 自己，讓原本通過的步驟變成失敗。
           script: |
-            sh -c "adb logcat -v time > ${{ github.workspace }}/screen-audit-logcat.txt 2>&1 &"
-            sh -c "while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; adb get-state 2>&1 || true; sleep 2; done > ${{ github.workspace }}/screen-audit-host-monitor.txt 2>&1 &"
+            sh -c 'adb logcat -v time > "${{ github.workspace }}/screen-audit-logcat.txt" 2>&1 & echo $! > "${{ github.workspace }}/screen-audit-logcat.pid"'
+            sh -c '(while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; adb get-state 2>&1 || true; sleep 2; done) > "${{ github.workspace }}/screen-audit-host-monitor.txt" 2>&1 & echo $! > "${{ github.workspace }}/screen-audit-monitor.pid"'
             ./gradlew connectedDebugAndroidTest --no-daemon -Pandroid.testInstrumentationRunnerArguments.class=com.kairumo.padnote.screens.ScreenAuditTest || touch ${{ github.workspace }}/screen-audit-failed
             cp -r app/build/outputs/androidTest-results ${{ github.workspace }}/screen-audit-results || true
             cp -r app/build/reports/androidTests ${{ github.workspace }}/screen-audit-reports || true
-            pkill -f "adb logcat" || true
-            pkill -f "while true; do date" || true
+            sh -c 'if [ -f "${{ github.workspace }}/screen-audit-logcat.pid" ]; then kill "$(cat "${{ github.workspace }}/screen-audit-logcat.pid")" 2>/dev/null || true; fi'
+            sh -c 'if [ -f "${{ github.workspace }}/screen-audit-monitor.pid" ]; then kill "$(cat "${{ github.workspace }}/screen-audit-monitor.pid")" 2>/dev/null || true; fi'
             test ! -e ${{ github.workspace }}/screen-audit-failed
       - name: 跑其餘 instrumented 測試
         id: android-remaining-tests
@@ -300,15 +303,15 @@ jobs:
           # 變數（`$?`、`$!`）、`set +e`、subshell 都帶不到下一行。上一版靠
           # `test_status=$?` 再 `exit "$test_status"`，結果是 `exit: Illegal number:`
           # ——測試全過（284/284）步驟卻被標成失敗。所以這裡一律用檔案旗標傳遞，
-          # 不靠 shell 變數；背景程序用 pkill 收。
+          # 不靠 shell 變數；背景程序同樣以 PID 檔精準清理。
           script: |
-            sh -c "adb logcat -v time > ${{ github.workspace }}/remaining-logcat.txt 2>&1 &"
-            sh -c "while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; adb get-state 2>&1 || true; sleep 2; done > ${{ github.workspace }}/remaining-host-monitor.txt 2>&1 &"
+            sh -c 'adb logcat -v time > "${{ github.workspace }}/remaining-logcat.txt" 2>&1 & echo $! > "${{ github.workspace }}/remaining-logcat.pid"'
+            sh -c '(while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; adb get-state 2>&1 || true; sleep 2; done) > "${{ github.workspace }}/remaining-host-monitor.txt" 2>&1 & echo $! > "${{ github.workspace }}/remaining-monitor.pid"'
             ./gradlew connectedDebugAndroidTest --no-daemon -Pandroid.testInstrumentationRunnerArguments.notClass=com.kairumo.padnote.screens.ScreenAuditTest || touch ${{ github.workspace }}/remaining-failed
             cp -r app/build/outputs/androidTest-results ${{ github.workspace }}/remaining-results || true
             cp -r app/build/reports/androidTests ${{ github.workspace }}/remaining-reports || true
-            pkill -f "adb logcat" || true
-            pkill -f "while true; do date" || true
+            sh -c 'if [ -f "${{ github.workspace }}/remaining-logcat.pid" ]; then kill "$(cat "${{ github.workspace }}/remaining-logcat.pid")" 2>/dev/null || true; fi'
+            sh -c 'if [ -f "${{ github.workspace }}/remaining-monitor.pid" ]; then kill "$(cat "${{ github.workspace }}/remaining-monitor.pid")" 2>/dev/null || true; fi'
             test ! -e ${{ github.workspace }}/remaining-failed
       - name: 主機端死因（OOM killer、模擬器崩潰檔）
         if: always()
