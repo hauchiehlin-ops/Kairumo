@@ -9213,7 +9213,7 @@ public struct NotebookEditorView: View {
             store.updateNotebook(notebook)
             PageThumbnailRenderer.invalidateAll()
         }
-        let draft = insertTextBox(at: location, page: targetPage)
+        let draft = insertTextBox(at: location, page: targetPage, tapToWrite: true)
         withAnimation(.easeInOut(duration: 0.18)) {
             editorMode = .type
             inlineEditingTextId = draft.id
@@ -9252,76 +9252,69 @@ public struct NotebookEditorView: View {
         }
 
         // 4. 點擊空白處：隨點隨打，像 Word 即點即書，建立自然排版文字
-        let draft = insertTextBox(at: location, page: targetPage)
+        let draft = insertTextBox(at: location, page: targetPage, tapToWrite: true)
         inlineEditingTextId = draft.id
         editingTextId = nil
     }
 
 
-    private func snapYToGuideLine(at y: CGFloat, page: Int? = nil) -> CGFloat {
-        let targetPage = page ?? currentPageIndex
-        let paperId = notebook.paperId(forPage: targetPage)
+    /// 這一頁所有水平格線的 y（導引線與底紋都算，見 `RuledWriting.horizontalRules`）。
+    private func pageHorizontalRules(page: Int? = nil) -> [CGFloat] {
+        let paperId = notebook.paperId(forPage: page ?? currentPageIndex)
         let guides = pageGuides(
             paperId: paperId,
             width: Float(PageGeometry.width),
             height: Float(PageGeometry.height)
         )
-        // 尋找版面中的所有水平導引線（橫線紙、問答格線、康乃爾筆記橫線等）
-        var horizontalLines = guides.compactMap { g -> CGFloat? in
-            if g.kind == .line && abs(g.h) < 1.0 && g.w > 50 {
-                return CGFloat(g.y)
-            }
-            return nil
-        }
+        let bands = pageTexture(
+            paperId: paperId,
+            style: NoteTemplate(paperId: paperId)?.pageStyle ?? .blank,
+            width: Float(PageGeometry.width),
+            height: Float(PageGeometry.height)
+        )
+        return RuledWriting.horizontalRules(guides: guides, bands: bands)
+    }
 
-        // 若為橫線底紋 (lined)，水平格線來自 pageTexture
-        if horizontalLines.isEmpty {
-            let textures = pageTexture(
-                paperId: paperId,
-                style: NoteTemplate(paperId: paperId)?.pageStyle ?? .blank,
-                width: Float(PageGeometry.width),
-                height: Float(PageGeometry.height)
-            )
-            for b in textures where b.kind == .line && b.stepY > 0 {
-                for i in 0..<Int(b.count) {
-                    horizontalLines.append(CGFloat(b.y + b.stepY * Float(i)))
-                }
-            }
-        }
-
+    /// 拖曳文字方塊時的吸附：讓第一行基準線坐在最近的格線上。
+    private func snapYToGuideLine(at y: CGFloat, page: Int? = nil) -> CGFloat {
+        let rules = pageHorizontalRules(page: page)
         let fontSize: CGFloat = activeTextAttachment?.fontSize ?? 16
-        // 文字基準線 (baseline) 距離文字方塊頂部的預估高度 (頂部內距 + 字體上升高度)
-        let fontAscender: CGFloat = round(fontSize * 0.95)
-        let topPadding: CGFloat = TextBoxMetrics.padding(width: 200, height: 40)
-        let baselineOffset = topPadding + fontAscender
+        // 第一行基準線距方塊頂端 = 內距 + 字體 ascender（與 `RuledWriting.placement` 同一條式子）。
+        let baselineOffset = RuledWriting.padding + RuledWriting.ascender(fontSize: fontSize)
 
-        if !horizontalLines.isEmpty {
-            // 找出距離當前點擊處最接近的水平導引線
-            var nearestLine: CGFloat = horizontalLines[0]
-            var minDiff: CGFloat = abs(y - horizontalLines[0])
-            for line in horizontalLines {
-                let diff = abs(y - line)
-                if diff < minDiff {
-                    minDiff = diff
-                    nearestLine = line
-                }
-            }
-            // 若點擊位置在導引線附近（50pt 內），吸附使文字基準線剛好座落在該導引線上
-            if minDiff < 50 {
-                return max(PageGeometry.printableInset, nearestLine - baselineOffset)
-            }
+        if let nearest = rules.min(by: { abs($0 - y) < abs($1 - y) }), abs(nearest - y) < 50 {
+            return max(PageGeometry.printableInset, nearest - baselineOffset)
         }
-
-        // 若非橫線範本或距離橫線較遠，吸附至 20pt 步進網格
+        // 沒有格線或離得遠：吸附至 20pt 步進網格。
         let step: CGFloat = 20.0
         return round(y / step) * step
     }
 
-    private func insertTextBox(at location: CGPoint, page: Int? = nil, openStudio: Bool = false) -> NoteTextAttachment {
+    /// - Parameter tapToWrite: 文字模式「隨點即書」。文字從點的地方開始；橫線紙上基準線坐在格線上，
+    ///   一行一行對著格線寫；沒有框線、透明底，方塊會跟著內容長高。
+    ///   `false` 是工具列「新增文字方塊」那一顆：有框線的獨立方塊。
+    private func insertTextBox(
+        at location: CGPoint, page: Int? = nil, openStudio: Bool = false, tapToWrite: Bool = false
+    ) -> NoteTextAttachment {
         let targetPage = page ?? currentPageIndex
         var targetX = location.x
         var targetY = location.y
-        if snapToGrid {
+        var tapPlacement: RuledWriting.Placement?
+        if tapToWrite {
+            let baseSize: CGFloat = activeTextAttachment?.fontSize ?? 16
+            let minTop = PageGeometry.printableRect.minY
+            if snapToGrid,
+               let ruled = RuledWriting.placement(
+                   tapY: location.y, rules: pageHorizontalRules(page: targetPage),
+                   fontSize: baseSize, minTop: minTop) {
+                tapPlacement = ruled
+            } else {
+                tapPlacement = RuledWriting.freePlacement(tapY: location.y, fontSize: baseSize, minTop: minTop)
+            }
+            targetY = tapPlacement?.top ?? targetY
+            // 文字從點的地方開始：方塊左緣 = 點 − 內距。
+            targetX = location.x - RuledWriting.padding
+        } else if snapToGrid {
             let step: CGFloat = 20.0
             targetX = round(targetX / step) * step
             targetY = snapYToGuideLine(at: location.y)
@@ -9336,19 +9329,27 @@ public struct NotebookEditorView: View {
         } else {
             availWidth = max(180, printable.maxX - startX)
         }
-        let draft = NoteTextAttachment(
+        let tapHeight = RuledWriting.boxHeight(
+            text: "", width: availWidth, fontSize: tapPlacement?.fontSize ?? 16, bold: false,
+            lineSpacing: tapPlacement?.lineSpacing ?? 0)
+        var draft = NoteTextAttachment(
             id: UUID().uuidString,
             pageIndex: targetPage,
             text: "",
-            fontSize: activeTextAttachment?.fontSize ?? 16,
+            fontSize: tapPlacement?.fontSize ?? (activeTextAttachment?.fontSize ?? 16),
             textColorHex: activeTextAttachment?.textColorHex ?? "#000000",
             backgroundColorHex: "clear",
-            hasBorder: true,
+            hasBorder: !tapToWrite,
             x: startX,
-            y: max(printable.minY, min(targetY, printable.maxY - 40)),
+            y: tapToWrite
+                ? max(printable.minY - RuledWriting.padding, min(targetY, printable.maxY - tapHeight))
+                : max(printable.minY, min(targetY, printable.maxY - 40)),
             width: availWidth,
-            height: 40
+            height: tapToWrite ? tapHeight : 40
         )
+        if let placement = tapPlacement, placement.lineSpacing > 0 {
+            draft.lineSpacing = placement.lineSpacing
+        }
         if notebook.textAttachments == nil {
             notebook.textAttachments = []
         }
@@ -10597,13 +10598,18 @@ struct TextAttachmentItemView: View {
                                 .frame(maxWidth: .infinity, alignment: resolveFrameAlignment(textItem.alignmentRaw))
                         }
 
-                        TextEditor(text: $textItem.text)
+                        // `TextField(axis: .vertical)` 而不是 `TextEditor`：TextEditor 裡面有自己的
+                        // 上下左右內距（隨系統版本不同），第一行基準線因此離方塊頂端多出一個
+                        // 量不準的距離 —— 橫線紙上的字對不齊格線。垂直軸的 TextField 沒有內距，
+                        // 編輯中與編輯後（`Text`）的字完全重疊，基準線 = 內距 + ascender。
+                        TextField("", text: $textItem.text, axis: .vertical)
                             .font(.system(size: textItem.fontSize, weight: textItem.isBold ? .bold : .regular))
                             .foregroundColor(Color(hex: textItem.textColorHex) ?? .primary)
                             .multilineTextAlignment(resolveMultilineAlignment(textItem.alignmentRaw))
-                            .scrollContentBackground(.hidden)
+                            .lineSpacing(textItem.lineSpacing ?? 0)
+                            .textFieldStyle(.plain)
                             .background(Color.clear)
-                            .frame(minWidth: displayWidth, minHeight: max(36, displayHeight))
+                            .frame(maxWidth: .infinity, minHeight: 20, alignment: resolveFrameAlignment(textItem.alignmentRaw))
                             .focused($inlineFocused)
                             .accessibilityIdentifier("editor.text.inline_editor")
                     }
@@ -10846,6 +10852,20 @@ struct TextAttachmentItemView: View {
         .padding(20)
         .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
         .animation(nil, value: dragOffset)
+        // 方塊跟著內容長高（Word 的行為）。隨點即書的方塊一開始只有一行高，
+        // 打到第二行時不長高的話，後面的字被方塊裁掉、看起來像「打了字沒出現」。
+        // 內距固定 14（高度一律不小於 60），長高不會讓第一行跳離格線。
+        .onChange(of: textItem.text) { _ in
+            guard isEditingInline else { return }
+            let needed = RuledWriting.boxHeight(
+                text: textItem.text, width: textItem.width, fontSize: textItem.fontSize,
+                bold: textItem.isBold, lineSpacing: textItem.lineSpacing ?? 0)
+            // 有框線的方塊是使用者自己調過大小的：只在內容放不下時才加高，不縮小。
+            // 沒有框線的（隨點即書）完全跟著內容，刪字會縮回去。
+            if needed > textItem.height || (!textItem.hasBorder && needed < textItem.height) {
+                textItem.height = needed
+            }
+        }
         .onChange(of: isEditingInline) { editing in
             if editing {
                 hasBeenFocused = false
