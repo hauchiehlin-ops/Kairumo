@@ -42,11 +42,17 @@
       "editor.export.share",
       "editor.ink.pen",
       "editor.ink.ballpoint",
+      "editor.ink.fineliner",
       "editor.ink.brush",
+      "editor.ink.calligraphy",
+      "editor.ink.pencil",
+      "editor.ink.charcoal",
+      "editor.ink.crayon",
+      "editor.ink.airbrush",
+      "editor.ink.oilpaint",
+      "editor.ink.watercolor",
       "editor.ink.marker",
       "editor.ink.highlighter",
-      "editor.ink.pencil",
-      "editor.ink.watercolor",
       "editor.ink.eraser",
       "editor.ink.lasso",
       "editor.ink.maskingTape",
@@ -119,11 +125,17 @@
       "editor.export.share",
       "editor.ink.pen",
       "editor.ink.ballpoint",
+      "editor.ink.fineliner",
       "editor.ink.brush",
+      "editor.ink.calligraphy",
+      "editor.ink.pencil",
+      "editor.ink.charcoal",
+      "editor.ink.crayon",
+      "editor.ink.airbrush",
+      "editor.ink.oilpaint",
+      "editor.ink.watercolor",
       "editor.ink.marker",
       "editor.ink.highlighter",
-      "editor.ink.pencil",
-      "editor.ink.watercolor",
       "editor.ink.eraser",
       "editor.ink.lasso",
       "editor.ink.maskingTape",
@@ -403,9 +415,57 @@
         "reveal": "always"
       },
       {
+        "id": "editor.ink.fineliner",
+        "label_en": "Fineliner",
+        "label_key": "tool_fineliner",
+        "reveal": "always"
+      },
+      {
         "id": "editor.ink.brush",
         "label_en": "Calligraphy Brush",
         "label_key": "tool_brush",
+        "reveal": "always"
+      },
+      {
+        "id": "editor.ink.calligraphy",
+        "label_en": "Calligraphy Pen",
+        "label_key": "tool_calligraphy",
+        "reveal": "always"
+      },
+      {
+        "id": "editor.ink.pencil",
+        "label_en": "Pencil",
+        "label_key": "tool_pencil",
+        "reveal": "always"
+      },
+      {
+        "id": "editor.ink.charcoal",
+        "label_en": "Charcoal",
+        "label_key": "tool_charcoal",
+        "reveal": "always"
+      },
+      {
+        "id": "editor.ink.crayon",
+        "label_en": "Crayon",
+        "label_key": "tool_crayon",
+        "reveal": "always"
+      },
+      {
+        "id": "editor.ink.airbrush",
+        "label_en": "Airbrush",
+        "label_key": "tool_airbrush",
+        "reveal": "always"
+      },
+      {
+        "id": "editor.ink.oilpaint",
+        "label_en": "Oil Brush",
+        "label_key": "tool_oilpaint",
+        "reveal": "always"
+      },
+      {
+        "id": "editor.ink.watercolor",
+        "label_en": "Watercolor",
+        "label_key": "tool_watercolor",
         "reveal": "always"
       },
       {
@@ -418,18 +478,6 @@
         "id": "editor.ink.highlighter",
         "label_en": "Highlighter",
         "label_key": "tool_highlighter",
-        "reveal": "always"
-      },
-      {
-        "id": "editor.ink.pencil",
-        "label_en": "Pencil",
-        "label_key": "tool_pencil",
-        "reveal": "always"
-      },
-      {
-        "id": "editor.ink.watercolor",
-        "label_en": "Watercolor",
-        "label_key": "tool_watercolor",
         "reveal": "always"
       },
       {
@@ -973,11 +1021,17 @@
       "toolbar.reset",
       "toolbar.tool.pen",
       "toolbar.tool.ballpoint",
+      "toolbar.tool.fineliner",
       "toolbar.tool.brush",
+      "toolbar.tool.calligraphy",
+      "toolbar.tool.pencil",
+      "toolbar.tool.charcoal",
+      "toolbar.tool.crayon",
+      "toolbar.tool.airbrush",
+      "toolbar.tool.oilpaint",
+      "toolbar.tool.watercolor",
       "toolbar.tool.marker",
       "toolbar.tool.highlighter",
-      "toolbar.tool.pencil",
-      "toolbar.tool.watercolor",
       "toolbar.tool.eraser",
       "toolbar.tool.lasso",
       "toolbar.tool.maskingTape",
@@ -990,11 +1044,17 @@
       "toolbar.reset",
       "toolbar.tool.pen",
       "toolbar.tool.ballpoint",
+      "toolbar.tool.fineliner",
       "toolbar.tool.brush",
+      "toolbar.tool.calligraphy",
+      "toolbar.tool.pencil",
+      "toolbar.tool.charcoal",
+      "toolbar.tool.crayon",
+      "toolbar.tool.airbrush",
+      "toolbar.tool.oilpaint",
+      "toolbar.tool.watercolor",
       "toolbar.tool.marker",
       "toolbar.tool.highlighter",
-      "toolbar.tool.pencil",
-      "toolbar.tool.watercolor",
       "toolbar.tool.eraser",
       "toolbar.tool.lasso",
       "toolbar.tool.maskingTape",
@@ -1028,9 +1088,57 @@
         "reveal": "always"
       },
       {
+        "id": "toolbar.tool.fineliner",
+        "label_en": "Fineliner",
+        "label_key": "tool_fineliner",
+        "reveal": "always"
+      },
+      {
         "id": "toolbar.tool.brush",
         "label_en": "Calligraphy Brush",
         "label_key": "tool_brush",
+        "reveal": "always"
+      },
+      {
+        "id": "toolbar.tool.calligraphy",
+        "label_en": "Calligraphy Pen",
+        "label_key": "tool_calligraphy",
+        "reveal": "always"
+      },
+      {
+        "id": "toolbar.tool.pencil",
+        "label_en": "Pencil",
+        "label_key": "tool_pencil",
+        "reveal": "always"
+      },
+      {
+        "id": "toolbar.tool.charcoal",
+        "label_en": "Charcoal",
+        "label_key": "tool_charcoal",
+        "reveal": "always"
+      },
+      {
+        "id": "toolbar.tool.crayon",
+        "label_en": "Crayon",
+        "label_key": "tool_crayon",
+        "reveal": "always"
+      },
+      {
+        "id": "toolbar.tool.airbrush",
+        "label_en": "Airbrush",
+        "label_key": "tool_airbrush",
+        "reveal": "always"
+      },
+      {
+        "id": "toolbar.tool.oilpaint",
+        "label_en": "Oil Brush",
+        "label_key": "tool_oilpaint",
+        "reveal": "always"
+      },
+      {
+        "id": "toolbar.tool.watercolor",
+        "label_en": "Watercolor",
+        "label_key": "tool_watercolor",
         "reveal": "always"
       },
       {
@@ -1043,18 +1151,6 @@
         "id": "toolbar.tool.highlighter",
         "label_en": "Highlighter",
         "label_key": "tool_highlighter",
-        "reveal": "always"
-      },
-      {
-        "id": "toolbar.tool.pencil",
-        "label_en": "Pencil",
-        "label_key": "tool_pencil",
-        "reveal": "always"
-      },
-      {
-        "id": "toolbar.tool.watercolor",
-        "label_en": "Watercolor",
-        "label_key": "tool_watercolor",
         "reveal": "always"
       },
       {

@@ -76,6 +76,8 @@ final class ConformanceVectorTests: XCTestCase {
         let tools: [String: ToolKind] = [
             "FountainPen": .fountainPen, "BallPoint": .ballPoint, "Highlighter": .highlighter,
             "Pencil": .pencil, "Brush": .brush, "Marker": .marker, "Watercolor": .watercolor,
+            "Fineliner": .fineliner, "Charcoal": .charcoal, "Crayon": .crayon,
+            "Airbrush": .airbrush, "OilPaint": .oilPaint, "Calligraphy": .calligraphy,
         ]
         for c in try cases("ink-curve.json") {
             let name = c["tool"] as! String
