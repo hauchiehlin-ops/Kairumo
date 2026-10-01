@@ -136,6 +136,30 @@ class InkEngineTest {
         assertEquals(0, engine.strokes.size)
     }
 
+    @Test
+    fun anAdbStyleFingerSwipeDrawsInDefaultModeButNotPenOnly() {
+        // `adb shell input swipe` 的事件：手指、觸控面積 0、壓力 1.0、每 10ms 一點。
+        fun swipe(engine: InkEngine) {
+            for (i in 0..12) {
+                val action = when (i) {
+                    0 -> MotionEvent.ACTION_DOWN
+                    12 -> MotionEvent.ACTION_UP
+                    else -> MotionEvent.ACTION_MOVE
+                }
+                val props = MotionEvent.PointerProperties().apply { id = 0; toolType = MotionEvent.TOOL_TYPE_FINGER }
+                val coords = MotionEvent.PointerCoords().apply { x = 100f + i * 20f; y = 300f; pressure = 1f; touchMajor = 0f }
+                val e = MotionEvent.obtain(0L, 1_000L + i * 10L, action, 1, arrayOf(props), arrayOf(coords),
+                    0, 0, 1f, 1f, 0, 0, InputDevice.SOURCE_TOUCHSCREEN, 0)
+                engine.onMotionEvent(e, density = 1f)
+                e.recycle()
+            }
+        }
+        val any = InkEngine().also { swipe(it) }
+        val penOnly = InkEngine().also { it.setPenOnly(true); swipe(it) }
+        assertEquals("預設（筆與手指皆可）：手指滑動應成一筆", 1, any.strokes.size)
+        assertEquals("僅限筆：手指不該畫", 0, penOnly.strokes.size)
+    }
+
     // MARK: - 筆畫累積
 
     @Test
