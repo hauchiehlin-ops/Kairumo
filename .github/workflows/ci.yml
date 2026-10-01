@@ -236,11 +236,36 @@ jobs:
           target: google_apis
           arch: x86_64
           working-directory: android
-          # 先在背景收 logcat：模擬器中途消失時，Gradle 的輸出只剩
-          # `device not found`，真正的死因只在 logcat 裡。
+          # 預設只給 2560MB，而且 CI 上第 189 個測試開始後 emulator 整個程序
+          # 被殺（logcat 在毫無預警下中斷，沒有 FATAL、沒有 lmkd）。
+          # 先把記憶體加到 4GB 排除「被擠爆」這個最便宜的解釋。
+          # 其餘選項照 action 預設，只是明寫出來：`-gpu swiftshader_indirect`
+          # 是 runner 沒有 GPU 時唯一的選擇，不要改成 host。
+          ram-size: 4096M
+          heap-size: 576M
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -no-metrics
+          # 先在背景收兩樣東西：
+          #   * logcat —— 模擬器中途消失時，Gradle 只剩 `device not found`；
+          #   * 主機端的記憶體與 qemu 程序 —— logcat 只記得到 Android 裡面的事，
+          #     模擬器程序「為什麼不見」只有主機看得到。
           script: |
             sh -c "adb logcat -v time > ${{ github.workspace }}/logcat.txt 2>&1 &"
+            sh -c "while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; sleep 2; done > ${{ github.workspace }}/host-monitor.txt 2>&1 &"
             ./gradlew connectedDebugAndroidTest --no-daemon
+      - name: 主機端死因（OOM killer、模擬器崩潰檔）
+        if: always()
+        run: |
+          {
+            echo "== dmesg（OOM／kill／qemu）"
+            sudo dmesg 2>&1 | grep -iE "out of memory|oom|killed process|qemu|segfault" | tail -50 || true
+            echo "== journal"
+            sudo journalctl -k --no-pager 2>&1 | grep -iE "out of memory|oom|killed process|qemu" | tail -50 || true
+            echo "== 模擬器崩潰檔"
+            ls -la /tmp/android-runner/ 2>&1 || true
+          } > host-death.txt 2>&1
+          mkdir -p emu-crash
+          cp -r /tmp/android-runner/emu-crash* emu-crash/ 2>/dev/null || true
+          cp ~/.android/avd/*.avd/*.log emu-crash/ 2>/dev/null || true
       - name: 留下測試報告與 logcat
         if: always()
         uses: actions/upload-artifact@v4
@@ -250,6 +275,9 @@ jobs:
             android/app/build/reports/androidTests
             android/app/build/outputs/androidTest-results
             logcat.txt
+            host-monitor.txt
+            host-death.txt
+            emu-crash
           if-no-files-found: warn
 
   # 決策 D6：授權稽核。禁止 AGPL 進入相依樹。
