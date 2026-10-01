@@ -270,20 +270,20 @@ jobs:
           #   * logcat —— 模擬器中途消失時，Gradle 只剩 `device not found`；
           #   * 主機端記憶體、qemu 程序與 ADB state —— 可分清 qemu crash 與
           #     「qemu 還活著、只有 device 從 ADB 消失」這兩種故障。
+          # emulator-runner 把 script 的**每一行**各丟給一個獨立的 `sh -c`：
+          # 變數（`$?`、`$!`）、`set +e`、subshell 都帶不到下一行。上一版靠
+          # `test_status=$?` 再 `exit "$test_status"`，結果是 `exit: Illegal number:`
+          # ——測試全過（284/284）步驟卻被標成失敗。所以這裡一律用檔案旗標傳遞，
+          # 不靠 shell 變數；背景程序用 pkill 收。
           script: |
-            adb logcat -v time > ${{ github.workspace }}/screen-audit-logcat.txt 2>&1 &
-            logcat_pid=$!
-            (while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; adb get-state 2>&1 || true; sleep 2; done) > ${{ github.workspace }}/screen-audit-host-monitor.txt 2>&1 &
-            monitor_pid=$!
-            set +e
-            ./gradlew connectedDebugAndroidTest --no-daemon -Pandroid.testInstrumentationRunnerArguments.class=com.kairumo.padnote.screens.ScreenAuditTest
-            test_status=$?
-            set -e
+            sh -c "adb logcat -v time > ${{ github.workspace }}/screen-audit-logcat.txt 2>&1 &"
+            sh -c "while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; adb get-state 2>&1 || true; sleep 2; done > ${{ github.workspace }}/screen-audit-host-monitor.txt 2>&1 &"
+            ./gradlew connectedDebugAndroidTest --no-daemon -Pandroid.testInstrumentationRunnerArguments.class=com.kairumo.padnote.screens.ScreenAuditTest || touch ${{ github.workspace }}/screen-audit-failed
             cp -r app/build/outputs/androidTest-results ${{ github.workspace }}/screen-audit-results || true
             cp -r app/build/reports/androidTests ${{ github.workspace }}/screen-audit-reports || true
-            kill "$logcat_pid" "$monitor_pid" 2>/dev/null || true
-            wait "$logcat_pid" "$monitor_pid" 2>/dev/null || true
-            exit "$test_status"
+            pkill -f "adb logcat" || true
+            pkill -f "while true; do date" || true
+            test ! -e ${{ github.workspace }}/screen-audit-failed
       - name: 跑其餘 instrumented 測試
         id: android-remaining-tests
         continue-on-error: true
@@ -296,18 +296,20 @@ jobs:
           ram-size: 4096M
           heap-size: 576M
           emulator-options: -no-window -gpu software -feature -Vulkan -no-snapshot -noaudio -no-boot-anim -no-metrics
+          # emulator-runner 把 script 的**每一行**各丟給一個獨立的 `sh -c`：
+          # 變數（`$?`、`$!`）、`set +e`、subshell 都帶不到下一行。上一版靠
+          # `test_status=$?` 再 `exit "$test_status"`，結果是 `exit: Illegal number:`
+          # ——測試全過（284/284）步驟卻被標成失敗。所以這裡一律用檔案旗標傳遞，
+          # 不靠 shell 變數；背景程序用 pkill 收。
           script: |
-            adb logcat -v time > ${{ github.workspace }}/remaining-logcat.txt 2>&1 &
-            logcat_pid=$!
-            (while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; adb get-state 2>&1 || true; sleep 2; done) > ${{ github.workspace }}/remaining-host-monitor.txt 2>&1 &
-            monitor_pid=$!
-            set +e
-            ./gradlew connectedDebugAndroidTest --no-daemon -Pandroid.testInstrumentationRunnerArguments.notClass=com.kairumo.padnote.screens.ScreenAuditTest
-            test_status=$?
-            set -e
-            kill "$logcat_pid" "$monitor_pid" 2>/dev/null || true
-            wait "$logcat_pid" "$monitor_pid" 2>/dev/null || true
-            exit "$test_status"
+            sh -c "adb logcat -v time > ${{ github.workspace }}/remaining-logcat.txt 2>&1 &"
+            sh -c "while true; do date +%T; free -m | sed -n 2p; ps -C qemu-system-x86_64 -o pid,rss,etime,stat --no-headers; adb get-state 2>&1 || true; sleep 2; done > ${{ github.workspace }}/remaining-host-monitor.txt 2>&1 &"
+            ./gradlew connectedDebugAndroidTest --no-daemon -Pandroid.testInstrumentationRunnerArguments.notClass=com.kairumo.padnote.screens.ScreenAuditTest || touch ${{ github.workspace }}/remaining-failed
+            cp -r app/build/outputs/androidTest-results ${{ github.workspace }}/remaining-results || true
+            cp -r app/build/reports/androidTests ${{ github.workspace }}/remaining-reports || true
+            pkill -f "adb logcat" || true
+            pkill -f "while true; do date" || true
+            test ! -e ${{ github.workspace }}/remaining-failed
       - name: 主機端死因（OOM killer、模擬器崩潰檔）
         if: always()
         run: |
@@ -334,6 +336,8 @@ jobs:
             screen-audit-results
             screen-audit-logcat.txt
             screen-audit-host-monitor.txt
+            remaining-reports
+            remaining-results
             remaining-logcat.txt
             remaining-host-monitor.txt
             host-death.txt
