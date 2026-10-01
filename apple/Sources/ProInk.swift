@@ -374,16 +374,6 @@ final class ProInkLayerView: UIView {
         return false
     }
 
-    /// 清除這一頁所有（自己的）專業筆畫。
-    func clearOwn() {
-        guard !ownStrokes.isEmpty else { return }
-        let removed = ownStrokes
-        ownStrokes = []
-        setNeedsDisplay()
-        persist()
-        registerUndo(restoring: removed)
-    }
-
     // MARK: 復原／重做
 
     private func registerUndo(removing id: String) {

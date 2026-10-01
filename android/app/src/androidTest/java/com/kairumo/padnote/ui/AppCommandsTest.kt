@@ -3,6 +3,7 @@ package com.kairumo.padnote.ui
 import android.view.KeyEvent
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import com.kairumo.padnote.ink.InkTool
+import com.kairumo.padnote.ink.inkToolShortcutOrder
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -73,12 +74,12 @@ class AppCommandsTest {
 
     @Test
     fun thereIsAShortcutForEveryTool() {
-        // 工具列以後加到第十支筆時，這條會提醒數字鍵不夠用了 ——
-        // 不提醒的話那支筆就是沒有快捷鍵，而且不會有任何錯誤。
+        // 快捷鍵只給前十支（Ctrl+1…0），順序是原本那十支，不跟著工具列重排。
+        // 後來加的筆刷沒有快捷鍵 —— 改 `inkToolShortcutOrder` 超過十個時，這條會提醒數字鍵不夠用了。
         // Apple 端有一條一模一樣的（見 AppCommandTests.swift）。
         assertEquals(
-            "工具比數字鍵多，第十支之後按不到",
+            "快捷鍵工具比數字鍵多，第十支之後按不到",
             true,
-            InkTool.entries.size <= AppCommands.MAX_TOOL_SHORTCUTS)
+            inkToolShortcutOrder.size <= AppCommands.MAX_TOOL_SHORTCUTS)
     }
 }

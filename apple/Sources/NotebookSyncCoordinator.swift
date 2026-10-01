@@ -1299,6 +1299,8 @@ enum NotebookSyncCoordinator {
         let document = inputs.document
         let pageCount = max(document.pageCount, 1)
         ExportedObjectIds.shared.record(document)
+        // 匯入時要知道「匯出那一刻的名字」，才分得出錄音是誰改的名。
+        ExportedObjectIds.shared.recordTitles(inputs.recordingTitles, for: document.id)
         // 只寫這台裝置自己新增的筆畫。
         //
         // 寫整份的話，等於把從別台裝置下載下來的筆畫複製一份掛在自己名下，

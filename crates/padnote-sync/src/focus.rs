@@ -524,11 +524,13 @@ mod tests {
     fn success_resets_the_backoff() {
         let mut lane = focused(0);
         for i in 0..4u64 {
-            let t = i * 20_000;
+            let t = i * 10_000;
             let run = lane.poll(t).unwrap();
             lane.finish(&run.notebook_id, FocusOutcome::Transient, t);
         }
-        let t = 100_000;
+        // 仍在 FOCUS_HOT_WINDOW_MS 之內：超過之後輪詢會放慢到 FOCUS_IDLE_POLL_MS，
+        // 那是另一條規則，不是退避被重設。
+        let t = 40_000;
         let run = lane.poll(t).unwrap();
         lane.finish(&run.notebook_id, FocusOutcome::Success { pulled: false }, t);
         assert_eq!(lane.next_due_in_ms(t), Some(FOCUS_POLL_MS));
