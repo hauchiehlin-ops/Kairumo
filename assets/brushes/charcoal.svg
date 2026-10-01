@@ -1,9 +1,20 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
-  <polygon points="5.94,39.94 6.01,35.77 8.27,33.79 9.4,32.09 15.91,38.6 13.51,40.43 11.67,42.84 8.7,42.7" fill="currentColor"/>
-  <polygon points="9.26,31.95 23.4,17.81 30.19,24.6 16.05,38.74" fill="#34363b"/>
-  <polygon points="21.85,19.08 40.23,0.69 47.31,7.77 28.92,26.15" fill="#efe9dc" stroke="#8d939d" stroke-width="0.6" stroke-linejoin="round"/>
-  <line x1="24.68" y1="16.25" x2="31.75" y2="23.32" stroke="#8d939d" stroke-width="0.6" stroke-linecap="round"/>
-  <line x1="30.33" y1="10.59" x2="37.41" y2="17.67" stroke="#8d939d" stroke-width="0.6" stroke-linecap="round" opacity="0.6"/>
-  <circle cx="9.12" cy="37.46" r="0.7" fill="#ffffff" opacity="0.35"/>
-  <circle cx="12.3" cy="38.53" r="0.6" fill="#ffffff" opacity="0.3"/>
+  <defs><linearGradient id="g1" gradientUnits="userSpaceOnUse" x1="15.03" y1="27.12" x2="20.88" y2="32.97"><stop offset="0" stop-color="#050505"/><stop offset="0.3" stop-color="#2b2b2c"/><stop offset="0.5" stop-color="#4a4a4c"/><stop offset="0.8" stop-color="#171718"/><stop offset="1" stop-color="#050505"/></linearGradient><linearGradient id="g2" gradientUnits="userSpaceOnUse" x1="28.84" y1="12.93" x2="35.07" y2="19.16"><stop offset="0" stop-color="#cfc6b0"/><stop offset="0.3" stop-color="#f3ecd8"/><stop offset="0.5" stop-color="#fffaf0"/><stop offset="1" stop-color="#c3b99f"/></linearGradient><linearGradient id="g3" gradientUnits="userSpaceOnUse" x1="23.81" y1="18.08" x2="29.92" y2="24.19"><stop offset="0" stop-color="#cfc6b0"/><stop offset="0.3" stop-color="#f3ecd8"/><stop offset="0.5" stop-color="#fffaf0"/><stop offset="1" stop-color="#c3b99f"/></linearGradient></defs>
+  <path d="M 6.05,40.42 L 5.74,38.45 L 6.75,37.94 L 6.75,35.9 L 8.15,34.25 L 20.06,21.96 L 26.04,27.94 L 13.82,39.91 L 12.35,40.99 L 10.7,41.37 L 10.06,42.52 L 7.65,42.14 Z" fill="url(#g1)"/>
+  <circle cx="7.52" cy="39.21" r="0.45" fill="#8a8a8c" opacity="0.35"/>
+  <circle cx="10.7" cy="39.59" r="0.4" fill="#8a8a8c" opacity="0.35"/>
+  <circle cx="8.98" cy="35.71" r="0.5" fill="#8a8a8c" opacity="0.35"/>
+  <circle cx="12.74" cy="36.28" r="0.4" fill="#8a8a8c" opacity="0.35"/>
+  <circle cx="12.86" cy="32.59" r="0.35" fill="#8a8a8c" opacity="0.35"/>
+  <circle cx="17.57" cy="33.48" r="0.4" fill="#8a8a8c" opacity="0.35"/>
+  <path d="M 6.05,40.42 L 5.74,38.45 L 6.75,37.94 L 6.75,35.9 L 7.58,34.95 L 13.12,40.48 L 10.7,41.37 L 10.06,42.52 L 7.65,42.14 Z" fill="currentColor" opacity="0.55"/>
+  <circle cx="8.22" cy="43.09" r="0.5" fill="currentColor" opacity="0.6"/>
+  <circle cx="6.82" cy="41.69" r="0.4" fill="currentColor" opacity="0.6"/>
+  <circle cx="10.57" cy="44.3" r="0.45" fill="currentColor" opacity="0.6"/>
+  <circle cx="4.78" cy="39.65" r="0.4" fill="currentColor" opacity="0.6"/>
+  <path d="M 18.66,23.11 L 27.56,14.2 L 29.66,13.75 L 29.79,15.79 L 32.72,15.54 L 32.85,18.21 L 35.71,18.53 L 44.62,9.62 L 38.38,3.38 L 29.79,11.97 Z" fill="url(#g2)" stroke="#8c8470" stroke-width="0.25" stroke-linejoin="round"/>
+  <polygon points="18.66,23.11 21.52,20.24 24.89,29.34" fill="#000000" opacity="0"/>
+  <path d="M 18.72,23.17 L 29.86,12.03 L 29.79,15.79 L 32.72,15.54 L 32.85,18.21 L 35.65,18.46 L 24.83,29.28 Z" fill="url(#g3)" stroke="#8c8470" stroke-width="0.25" stroke-linejoin="round"/>
+  <line x1="21.52" y1="23.43" x2="27.88" y2="17.06" stroke="#6f6a5a" stroke-width="0.35" stroke-linecap="round" opacity="0.5"/>
+  <line x1="24.45" y1="26.35" x2="30.17" y2="20.63" stroke="#6f6a5a" stroke-width="0.35" stroke-linecap="round" opacity="0.5"/>
 </svg>

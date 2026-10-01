@@ -1,7 +1,18 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
-  <polygon points="5.59,39.59 8.84,30.11 17.89,39.16 9.12,43.12" fill="currentColor" opacity="0.85"/>
-  <polygon points="8.63,29.9 12.16,26.36 21.64,35.84 18.1,39.37" fill="#f1f2f4" stroke="#8d939d" stroke-width="0.6" stroke-linejoin="round"/>
-  <polygon points="11.95,26.15 34.58,3.52 44.48,13.42 21.85,36.05" fill="#f4f4ee" stroke="#8d939d" stroke-width="0.6" stroke-linejoin="round"/>
-  <polygon points="11.95,26.15 34.58,3.52 37.41,6.35 14.78,28.98" fill="currentColor" opacity="0.6"/>
-  <polygon points="35.14,4.09 39.39,-0.15 48.15,8.61 43.91,12.86" fill="currentColor"/>
+  <defs><linearGradient id="g1" gradientUnits="userSpaceOnUse" x1="5.29" y1="34.56" x2="13.44" y2="42.71"><stop offset="0" stop-color="currentColor" data-shade="-0.15" stop-opacity="0.95"/><stop offset="0.4" stop-color="currentColor" data-shade="0.25" stop-opacity="0.8"/><stop offset="1" stop-color="currentColor" data-shade="-0.25" stop-opacity="0.95"/></linearGradient><linearGradient id="g2" gradientUnits="userSpaceOnUse" x1="9.01" y1="30.33" x2="17.67" y2="38.99"><stop offset="0" stop-color="#d5d8dd"/><stop offset="0.4" stop-color="#ffffff"/><stop offset="1" stop-color="#aeb2ba"/></linearGradient><linearGradient id="g3" gradientUnits="userSpaceOnUse" x1="20.56" y1="18.65" x2="29.35" y2="27.44"><stop offset="0" stop-color="currentColor" data-shade="-0.1" stop-opacity="0.55"/><stop offset="0.3" stop-color="currentColor" data-shade="0.5" stop-opacity="0.35"/><stop offset="0.5" stop-color="#ffffff" stop-opacity="0.5"/><stop offset="1" stop-color="currentColor" data-shade="-0.2" stop-opacity="0.6"/></linearGradient><linearGradient id="g4" gradientUnits="userSpaceOnUse" x1="22.28" y1="20.37" x2="27.63" y2="25.72"><stop offset="0" stop-color="currentColor" data-shade="-0.3"/><stop offset="0.3" stop-color="currentColor" data-shade="0.05"/><stop offset="0.45" stop-color="currentColor" data-shade="0.4"/><stop offset="0.7" stop-color="currentColor" data-shade="-0.05"/><stop offset="1" stop-color="currentColor" data-shade="-0.4"/></linearGradient><linearGradient id="g5" gradientUnits="userSpaceOnUse" x1="33.16" y1="5.8" x2="42.2" y2="14.84"><stop offset="0" stop-color="currentColor" data-shade="-0.5"/><stop offset="0.35" stop-color="currentColor" data-shade="0"/><stop offset="0.5" stop-color="currentColor" data-shade="0.35"/><stop offset="1" stop-color="currentColor" data-shade="-0.55"/></linearGradient></defs>
+  <path d="M 4.72,39.72 L 4.08,36.28 L 8.15,31.7 L 16.3,39.85 L 11.72,43.92 L 8.79,43.79 Z" fill="url(#g1)" stroke="#222" stroke-width="0.12" stroke-linejoin="round"/>
+  <circle cx="5.61" cy="37.55" r="0.3" fill="#ffffff" opacity="0.35"/>
+  <circle cx="10.32" cy="40.23" r="0.3" fill="#ffffff" opacity="0.35"/>
+  <circle cx="9.55" cy="36.92" r="0.3" fill="#ffffff" opacity="0.35"/>
+  <circle cx="14.26" cy="39.59" r="0.3" fill="#ffffff" opacity="0.35"/>
+  <circle cx="7.77" cy="33.61" r="0.3" fill="#ffffff" opacity="0.35"/>
+  <polygon points="8.09,31.64 10.13,29.22 18.78,37.87 16.36,39.91" fill="url(#g2)" stroke="#9aa0aa" stroke-width="0.2" stroke-linejoin="round"/>
+  <polygon points="10.06,29.15 31.38,7.83 40.17,16.62 18.85,37.94" fill="url(#g3)" stroke="#8d939d" stroke-width="0.25" stroke-linejoin="round"/>
+  <polygon points="12.74,29.92 31.83,10.83 37.17,16.17 18.08,35.26" fill="url(#g4)" opacity="0.85"/>
+  <polygon points="11.53,28.71 30.62,9.62 31.19,10.19 12.1,29.28" fill="#ffffff" opacity="0.5"/>
+  <polygon points="30.05,9.04 36.35,2.62 45.38,11.65 38.96,17.95" fill="url(#g5)"/>
+  <line x1="31.51" y1="7.96" x2="40.04" y2="16.49" stroke="#000000" stroke-width="0.4" stroke-linecap="round" opacity="0.22"/>
+  <line x1="32.78" y1="6.69" x2="41.31" y2="15.22" stroke="#000000" stroke-width="0.4" stroke-linecap="round" opacity="0.22"/>
+  <line x1="34.06" y1="5.42" x2="42.58" y2="13.94" stroke="#000000" stroke-width="0.4" stroke-linecap="round" opacity="0.22"/>
+  <line x1="35.33" y1="4.14" x2="43.86" y2="12.67" stroke="#000000" stroke-width="0.4" stroke-linecap="round" opacity="0.22"/>
 </svg>

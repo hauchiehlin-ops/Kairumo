@@ -24,7 +24,9 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -37,6 +39,7 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kairumo.padnote.LocalizationStrings
+import uniffi.padnote_core.FfiGradientStop
 import uniffi.padnote_core.FfiIconShape
 import uniffi.padnote_core.FfiPaint
 import uniffi.padnote_core.FfiTool
@@ -88,9 +91,9 @@ fun RealisticPenItem(
                 .then(
                     if (isSelected) Modifier.shadow(4.dp, shape = MaterialTheme.shapes.extraSmall) else Modifier
                 )
-                .size(40.dp)
+                .size(44.dp)
         ) {
-            Canvas(modifier = Modifier.size(40.dp)) { drawIcon(shapes, inkColor) }
+            Canvas(modifier = Modifier.size(44.dp)) { drawIcon(shapes, inkColor) }
         }
         if (tool.family != null) {
             Canvas(modifier = Modifier.width(44.dp).height(14.dp)) {
@@ -140,33 +143,59 @@ val InkTool.ffiTool: FfiTool
 
 private const val ICON_VIEWBOX = 48f
 
-private fun paintColor(paint: FfiPaint, ink: Color): Color? = when (paint) {
+/** 色標的顏色：固定 RGB，或筆色再向黑／白偏 `shade`（-1…1）。 */
+private fun stopColor(stop: FfiGradientStop, ink: Color): Color {
+    val base = if (stop.ink) ink else Color(stop.r.toInt(), stop.g.toInt(), stop.b.toInt())
+    val target = if (stop.shade >= 0f) 1f else 0f
+    val k = kotlin.math.abs(stop.shade)
+    return Color(
+        red = base.red + (target - base.red) * k,
+        green = base.green + (target - base.green) * k,
+        blue = base.blue + (target - base.blue) * k,
+        alpha = stop.alpha
+    )
+}
+
+/** 填色或描邊用的 Brush。`None` 回 null。 */
+private fun paintBrush(paint: FfiPaint, ink: Color, point: (Float, Float) -> Offset, scale: Float): Brush? = when (paint) {
     is FfiPaint.None -> null
-    is FfiPaint.Ink -> ink
-    is FfiPaint.Color -> Color(paint.r.toInt(), paint.g.toInt(), paint.b.toInt())
+    is FfiPaint.Ink -> SolidColor(ink)
+    is FfiPaint.Color -> SolidColor(Color(paint.r.toInt(), paint.g.toInt(), paint.b.toInt()))
+    is FfiPaint.Linear -> Brush.linearGradient(
+        colorStops = paint.stops.map { it.offset to stopColor(it, ink) }.toTypedArray(),
+        start = point(paint.x1, paint.y1),
+        end = point(paint.x2, paint.y2)
+    )
+    is FfiPaint.Radial -> Brush.radialGradient(
+        colorStops = paint.stops.map { it.offset to stopColor(it, ink) }.toTypedArray(),
+        center = point(paint.cx, paint.cy),
+        radius = paint.r * scale
+    )
 }
 
 private fun DrawScope.drawIcon(shapes: List<FfiIconShape>, ink: Color) {
     val scale = minOf(size.width, size.height) / ICON_VIEWBOX
     val ox = (size.width - ICON_VIEWBOX * scale) / 2f
     val oy = (size.height - ICON_VIEWBOX * scale) / 2f
+    val point = { x: Float, y: Float -> Offset(ox + x * scale, oy + y * scale) }
     for (shape in shapes) {
         val path = Path()
         for (cmd in shape.commands) {
             val a = cmd.args
-            fun x(i: Int) = ox + a[i] * scale
-            fun y(i: Int) = oy + a[i] * scale
             when (cmd.op) {
-                "M" -> path.moveTo(x(0), y(1))
-                "L" -> path.lineTo(x(0), y(1))
-                "C" -> path.cubicTo(x(0), y(1), x(2), y(3), x(4), y(5))
+                "M" -> path.moveTo(ox + a[0] * scale, oy + a[1] * scale)
+                "L" -> path.lineTo(ox + a[0] * scale, oy + a[1] * scale)
+                "C" -> path.cubicTo(
+                    ox + a[0] * scale, oy + a[1] * scale, ox + a[2] * scale, oy + a[3] * scale,
+                    ox + a[4] * scale, oy + a[5] * scale
+                )
                 "Z" -> path.close()
             }
         }
-        paintColor(shape.fill, ink)?.let { drawPath(path, it.copy(alpha = it.alpha * shape.opacity)) }
-        paintColor(shape.stroke, ink)?.let {
+        paintBrush(shape.fill, ink, point, scale)?.let { drawPath(path, it, alpha = shape.opacity) }
+        paintBrush(shape.stroke, ink, point, scale)?.let {
             drawPath(
-                path, it.copy(alpha = it.alpha * shape.opacity),
+                path, it, alpha = shape.opacity,
                 style = Stroke(
                     width = shape.strokeWidth * scale,
                     cap = if (shape.roundCap) StrokeCap.Round else StrokeCap.Butt,

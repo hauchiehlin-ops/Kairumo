@@ -1,13 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48">
-  <polygon points="7.28,38.45 12.23,32.09 15.91,35.77 9.55,40.72" fill="#c9ced6" stroke="#8d939d" stroke-width="0.6" stroke-linejoin="round"/>
-  <polygon points="11.1,30.96 30.9,11.16 36.84,17.1 17.04,36.9" fill="#34363b"/>
-  <polygon points="15.27,26.65 20.93,20.99 27.01,27.07 21.35,32.73" fill="currentColor"/>
-  <polygon points="28.35,25.59 34.01,19.93 38.54,21.63 34.86,26.43" fill="#8d939d"/>
-  <polygon points="31.47,11.73 42.21,2.67 45.33,5.79 36.27,16.53" fill="#c9ced6" stroke="#8d939d" stroke-width="0.6" stroke-linejoin="round"/>
-  <circle cx="5.44" cy="42.56" r="1.1" fill="currentColor" opacity="0.85"/>
-  <circle cx="2.62" cy="42.27" r="0.8" fill="currentColor" opacity="0.7"/>
-  <circle cx="5.73" cy="45.67" r="0.8" fill="currentColor" opacity="0.7"/>
-  <circle cx="2.9" cy="45.38" r="0.65" fill="currentColor" opacity="0.5"/>
-  <circle cx="1.63" cy="39.87" r="0.55" fill="currentColor" opacity="0.45"/>
-  <circle cx="7.99" cy="46.8" r="0.55" fill="currentColor" opacity="0.45"/>
+  <defs><linearGradient id="g1" gradientUnits="userSpaceOnUse" x1="7.3" y1="38.8" x2="9.2" y2="40.7"><stop offset="0" stop-color="#4a4e56"/><stop offset="0.2" stop-color="#a9aeb8"/><stop offset="0.38" stop-color="#f1f3f6"/><stop offset="0.55" stop-color="#aeb3bc"/><stop offset="0.8" stop-color="#6a6f78"/><stop offset="1" stop-color="#3a3d44"/></linearGradient><linearGradient id="g2" gradientUnits="userSpaceOnUse" x1="8.98" y1="35.71" x2="12.29" y2="39.02"><stop offset="0" stop-color="#303338"/><stop offset="0.25" stop-color="#8b9099"/><stop offset="0.42" stop-color="#ffffff"/><stop offset="0.6" stop-color="#9aa0aa"/><stop offset="1" stop-color="#2b2e33"/></linearGradient><linearGradient id="g3" gradientUnits="userSpaceOnUse" x1="17.64" y1="25.91" x2="22.09" y2="30.36"><stop offset="0" stop-color="#4a4e56"/><stop offset="0.2" stop-color="#a9aeb8"/><stop offset="0.38" stop-color="#f1f3f6"/><stop offset="0.55" stop-color="#aeb3bc"/><stop offset="0.8" stop-color="#6a6f78"/><stop offset="1" stop-color="#3a3d44"/></linearGradient><linearGradient id="g4" gradientUnits="userSpaceOnUse" x1="14.14" y1="30.04" x2="17.96" y2="33.86"><stop offset="0" stop-color="#303338"/><stop offset="0.25" stop-color="#8b9099"/><stop offset="0.42" stop-color="#ffffff"/><stop offset="0.6" stop-color="#9aa0aa"/><stop offset="1" stop-color="#2b2e33"/></linearGradient><linearGradient id="g5" gradientUnits="userSpaceOnUse" x1="12.23" y1="28.14" x2="19.86" y2="20.5"><stop offset="0" stop-color="#4a4e56"/><stop offset="0.2" stop-color="#a9aeb8"/><stop offset="0.38" stop-color="#f1f3f6"/><stop offset="0.55" stop-color="#aeb3bc"/><stop offset="0.8" stop-color="#6a6f78"/><stop offset="1" stop-color="#3a3d44"/></linearGradient><linearGradient id="g6" gradientUnits="userSpaceOnUse" x1="18.59" y1="34.5" x2="27.18" y2="26.54"><stop offset="0" stop-color="#303338"/><stop offset="0.25" stop-color="#8b9099"/><stop offset="0.42" stop-color="#ffffff"/><stop offset="0.6" stop-color="#9aa0aa"/><stop offset="1" stop-color="#2b2e33"/></linearGradient><radialGradient id="g7" gradientUnits="userSpaceOnUse" cx="23.94" cy="31.44" r="2"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#6a6f78"/></radialGradient><linearGradient id="g8" gradientUnits="userSpaceOnUse" x1="29.79" y1="13.88" x2="34.12" y2="18.21"><stop offset="0" stop-color="#101113"/><stop offset="0.3" stop-color="#2c2e32"/><stop offset="0.5" stop-color="#4a4d53"/><stop offset="1" stop-color="#0d0e10"/></linearGradient><linearGradient id="g9" gradientUnits="userSpaceOnUse" x1="35.84" y1="9.74" x2="38.26" y2="12.16"><stop offset="0" stop-color="#303338"/><stop offset="0.25" stop-color="#8b9099"/><stop offset="0.42" stop-color="#ffffff"/><stop offset="0.6" stop-color="#9aa0aa"/><stop offset="1" stop-color="#2b2e33"/></linearGradient></defs>
+  <polygon points="6.53,40.9 8.73,37.36 10.64,39.27 7.1,41.47" fill="url(#g1)" stroke="#3a3d44" stroke-width="0.2" stroke-linejoin="round"/>
+  <line x1="6.5" y1="41.5" x2="6.75" y2="41.25" stroke="#9aa0aa" stroke-width="0.3" stroke-linecap="round"/>
+  <polygon points="8.73,37.36 9.94,34.75 13.25,38.06 10.64,39.27" fill="url(#g2)"/>
+  <polygon points="9.87,34.69 25.91,17.64 30.36,22.09 13.31,38.13" fill="url(#g3)" stroke="#3a3d44" stroke-width="0.25" stroke-linejoin="round"/>
+  <line x1="10.7" y1="34.88" x2="25.91" y2="18.91" stroke="#ffffff" stroke-width="0.7" stroke-linecap="round" opacity="0.55"/>
+  <polygon points="13.5,30.68 14.77,29.41 18.59,33.23 17.32,34.5" fill="url(#g4)"/>
+  <polygon points="15.28,28.64 20.37,23.55 17.7,19.35 11.08,25.97" fill="url(#g5)" stroke="#3a3d44" stroke-width="0.25" stroke-linejoin="round"/>
+  <polygon points="11.34,25.72 17.45,19.61 18.08,21.01 12.74,26.35" fill="currentColor" opacity="1"/>
+  <ellipse cx="14.52" cy="22.79" rx="2.88" ry="0.9" fill="currentColor" stroke="#2b2e33" stroke-width="0.3" stroke-linejoin="round" opacity="0.95"/>
+  <polygon points="18.21,34.12 25.85,26.48 27.5,26.86 18.59,35.77" fill="url(#g6)" stroke="#3a3d44" stroke-width="0.2" stroke-linejoin="round"/>
+  <circle cx="24.45" cy="31.44" r="1.5" fill="url(#g7)"/>
+  <polygon points="25.97,17.7 33.87,10.32 37.68,14.13 30.3,22.03" fill="url(#g8)"/>
+  <line x1="27.37" y1="16.55" x2="31.45" y2="20.63" stroke="#000000" stroke-width="0.35" stroke-linecap="round" opacity="0.5"/>
+  <line x1="28.65" y1="15.28" x2="32.72" y2="19.35" stroke="#000000" stroke-width="0.35" stroke-linecap="round" opacity="0.5"/>
+  <line x1="29.92" y1="14.01" x2="33.99" y2="18.08" stroke="#000000" stroke-width="0.35" stroke-linecap="round" opacity="0.5"/>
+  <line x1="31.19" y1="12.73" x2="35.27" y2="16.81" stroke="#000000" stroke-width="0.35" stroke-linecap="round" opacity="0.5"/>
+  <line x1="32.46" y1="11.46" x2="36.54" y2="15.54" stroke="#000000" stroke-width="0.35" stroke-linecap="round" opacity="0.5"/>
+  <polygon points="34.57,11.02 37.11,8.47 39.53,10.89 36.98,13.43" fill="url(#g9)"/>
+  <path d="M 38.32,9.68 C 39.59,8.41 42.14,8.41 44.05,10.32" fill="none" stroke="#2b2e33" stroke-width="1" stroke-linejoin="round" opacity="0.95"/>
+  <circle cx="5.35" cy="42.65" r="1.3" fill="currentColor" opacity="0.8"/>
+  <circle cx="3.19" cy="42.77" r="0.9" fill="currentColor" opacity="0.65"/>
+  <circle cx="5.23" cy="45.06" r="0.9" fill="currentColor" opacity="0.65"/>
+  <circle cx="3" cy="45.13" r="0.7" fill="currentColor" opacity="0.5"/>
+  <circle cx="1.15" cy="42.52" r="0.55" fill="currentColor" opacity="0.4"/>
+  <circle cx="5.42" cy="47.04" r="0.55" fill="currentColor" opacity="0.4"/>
+  <circle cx="1.09" cy="45" r="0.45" fill="currentColor" opacity="0.3"/>
+  <circle cx="3.13" cy="47.04" r="0.45" fill="currentColor" opacity="0.3"/>
 </svg>

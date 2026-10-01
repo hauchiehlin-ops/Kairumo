@@ -34,7 +34,7 @@ extension EditorToolType {
     }
 }
 
-/// 一支筆的向量圖示。`ink` 是使用者目前的筆色：圖示裡標成 `currentColor` 的部分會跟著換色。
+/// 一支筆的向量圖示。`ink` 是使用者目前的筆色：圖示裡標成 `currentColor` 的部分（含漸層色標）會跟著換色。
 struct BrushVectorIcon: View {
     let tool: EditorToolType
     let ink: Color
@@ -42,32 +42,33 @@ struct BrushVectorIcon: View {
     var body: some View {
         // 解析一次就好：核心每次呼叫都會重新讀 SVG。
         let shapes = Self.shapes(for: tool)
+        let inkRGB = Self.rgb(of: ink)
         Canvas { context, size in
             let scale = min(size.width, size.height) / 48
             let origin = CGPoint(x: (size.width - 48 * scale) / 2, y: (size.height - 48 * scale) / 2)
+            func point(_ x: Float, _ y: Float) -> CGPoint {
+                CGPoint(x: origin.x + CGFloat(x) * scale, y: origin.y + CGFloat(y) * scale)
+            }
             for shape in shapes {
                 var path = Path()
                 for command in shape.commands {
-                    let a = command.args.map { CGFloat($0) }
-                    func p(_ i: Int) -> CGPoint {
-                        CGPoint(x: origin.x + a[i] * scale, y: origin.y + a[i + 1] * scale)
-                    }
+                    let a = command.args
                     switch command.op {
-                    case "M": path.move(to: p(0))
-                    case "L": path.addLine(to: p(0))
-                    case "C": path.addCurve(to: p(4), control1: p(0), control2: p(2))
+                    case "M": path.move(to: point(a[0], a[1]))
+                    case "L": path.addLine(to: point(a[0], a[1]))
+                    case "C": path.addCurve(to: point(a[4], a[5]), control1: point(a[0], a[1]), control2: point(a[2], a[3]))
                     case "Z": path.closeSubpath()
                     default: break
                     }
                 }
                 var layer = context
                 layer.opacity = Double(shape.opacity)
-                if let fill = Self.color(shape.fill, ink: ink) {
-                    layer.fill(path, with: .color(fill))
+                if let fill = Self.shading(shape.fill, ink: ink, inkRGB: inkRGB, scale: scale, point: point) {
+                    layer.fill(path, with: fill)
                 }
-                if let stroke = Self.color(shape.stroke, ink: ink) {
+                if let stroke = Self.shading(shape.stroke, ink: ink, inkRGB: inkRGB, scale: scale, point: point) {
                     layer.stroke(
-                        path, with: .color(stroke),
+                        path, with: stroke,
                         style: StrokeStyle(
                             lineWidth: CGFloat(shape.strokeWidth) * scale,
                             lineCap: shape.roundCap ? .round : .butt, lineJoin: .round))
@@ -86,11 +87,47 @@ struct BrushVectorIcon: View {
         return parsed
     }
 
-    private static func color(_ paint: FfiPaint, ink: Color) -> Color? {
+    private static func rgb(of color: Color) -> (r: Double, g: Double, b: Double) {
+        let resolved = UIColor(color).resolvedColor(with: .current)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        resolved.getRed(&r, green: &g, blue: &b, alpha: &a)
+        return (Double(r), Double(g), Double(b))
+    }
+
+    /// 色標的顏色：固定 RGB，或筆色再向黑／白偏 `shade`（-1…1，最多偏 100%）。
+    private static func stopColor(_ stop: FfiGradientStop, inkRGB: (r: Double, g: Double, b: Double)) -> Color {
+        var r = stop.ink ? inkRGB.r : Double(stop.r) / 255
+        var g = stop.ink ? inkRGB.g : Double(stop.g) / 255
+        var b = stop.ink ? inkRGB.b : Double(stop.b) / 255
+        let target: Double = stop.shade >= 0 ? 1 : 0
+        let k = Double(abs(stop.shade))
+        r += (target - r) * k
+        g += (target - g) * k
+        b += (target - b) * k
+        return Color(red: r, green: g, blue: b).opacity(Double(stop.alpha))
+    }
+
+    private static func shading(
+        _ paint: FfiPaint, ink: Color, inkRGB: (r: Double, g: Double, b: Double), scale: CGFloat,
+        point: (Float, Float) -> CGPoint
+    ) -> GraphicsContext.Shading? {
         switch paint {
-        case .none: return nil
-        case .ink: return ink
-        case let .color(r, g, b): return Color(red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255)
+        case .none:
+            return nil
+        case .ink:
+            return .color(ink)
+        case let .color(r, g, b):
+            return .color(Color(red: Double(r) / 255, green: Double(g) / 255, blue: Double(b) / 255))
+        case let .linear(x1, y1, x2, y2, stops):
+            let gradient = Gradient(stops: stops.map {
+                Gradient.Stop(color: stopColor($0, inkRGB: inkRGB), location: CGFloat($0.offset))
+            })
+            return .linearGradient(gradient, startPoint: point(x1, y1), endPoint: point(x2, y2))
+        case let .radial(cx, cy, r, stops):
+            let gradient = Gradient(stops: stops.map {
+                Gradient.Stop(color: stopColor($0, inkRGB: inkRGB), location: CGFloat($0.offset))
+            })
+            return .radialGradient(gradient, center: point(cx, cy), startRadius: 0, endRadius: CGFloat(r) * scale)
         }
     }
 }
@@ -145,7 +182,7 @@ struct BrushToolContent: View {
     var body: some View {
         VStack(spacing: 2) {
             BrushVectorIcon(tool: tool, ink: ink)
-                .frame(width: 40, height: 40)
+                .frame(width: 44, height: 44)
                 .offset(y: isSelected ? -6 : 0)
                 .shadow(color: .black.opacity(isSelected ? 0.25 : 0), radius: 4, x: 0, y: 4)
             if tool.isBrush {
@@ -153,7 +190,7 @@ struct BrushToolContent: View {
                     .frame(width: 44, height: 14)
             }
         }
-        .frame(width: 48, height: tool.isBrush ? 60 : 46)
+        .frame(width: 52, height: tool.isBrush ? 64 : 50)
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(Color.accentColor.opacity(isSelected ? 0.14 : 0))

@@ -212,8 +212,24 @@ pub struct FfiPathCmd {
     pub args: Vec<f32>,
 }
 
+/// 漸層的一個色標。
+///
+/// 顏色是固定的 RGB，或**跟著筆色**（`ink`）再加深／提亮 `shade`（-1 向黑、+1 向白）。
+/// 真實的筆是圓柱：筆身要有「暗—亮—暗」的明暗才像一支筆，而上了色的那一段又要跟著使用者選的顏色走，
+/// 所以色標本身也能是筆色。
+#[derive(Clone, Copy, Debug, PartialEq, uniffi::Record)]
+pub struct FfiGradientStop {
+    pub offset: f32,
+    pub ink: bool,
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+    pub shade: f32,
+    pub alpha: f32,
+}
+
 /// 填色或描邊的顏色。
-#[derive(Clone, Copy, Debug, PartialEq, uniffi::Enum)]
+#[derive(Clone, Debug, PartialEq, uniffi::Enum)]
 pub enum FfiPaint {
     None,
     /// `currentColor`：使用者目前選的筆色，圖示會跟著換色。
@@ -222,6 +238,21 @@ pub enum FfiPaint {
         r: u8,
         g: u8,
         b: u8,
+    },
+    /// 線性漸層，座標在圖示的 48×48 座標系裡（`gradientUnits="userSpaceOnUse"`）。
+    Linear {
+        x1: f32,
+        y1: f32,
+        x2: f32,
+        y2: f32,
+        stops: Vec<FfiGradientStop>,
+    },
+    /// 放射漸層。
+    Radial {
+        cx: f32,
+        cy: f32,
+        r: f32,
+        stops: Vec<FfiGradientStop>,
     },
 }
 
@@ -328,11 +359,19 @@ fn num(attrs: &[(String, String)], key: &str) -> f32 {
         .unwrap_or(0.0)
 }
 
-fn paint(value: Option<&str>, default: FfiPaint) -> FfiPaint {
+fn paint(value: Option<&str>, default: FfiPaint, gradients: &[(String, FfiPaint)]) -> FfiPaint {
     match value.map(str::trim) {
         None => default,
         Some("none") => FfiPaint::None,
         Some("currentColor") => FfiPaint::Ink,
+        Some(url) if url.starts_with("url(#") && url.ends_with(')') => {
+            let id = &url[5..url.len() - 1];
+            gradients
+                .iter()
+                .find(|(g, _)| g == id)
+                .map(|(_, p)| p.clone())
+                .unwrap_or(default)
+        }
         Some(hex) if hex.starts_with('#') && hex.len() == 7 => {
             let p = |i: usize| u8::from_str_radix(&hex[i..i + 2], 16).unwrap_or(0);
             FfiPaint::Color {
@@ -522,8 +561,105 @@ fn ox_for(rel: bool, _k: usize, origin: f32, _current: f32) -> f32 {
     if rel { origin } else { 0.0 }
 }
 
+/// 一個 `<stop>` → 色標。`stop-color` 是 `#rrggbb` 或 `currentColor`；`data-shade` 是對筆色的明暗調整。
+fn parse_stop(a: &[(String, String)]) -> FfiGradientStop {
+    let offset = attr(a, "offset")
+        .map(|v| {
+            let v = v.trim();
+            v.strip_suffix('%').map_or_else(
+                || v.parse::<f32>().unwrap_or(0.0),
+                |p| p.parse::<f32>().unwrap_or(0.0) / 100.0,
+            )
+        })
+        .unwrap_or(0.0);
+    let color = attr(a, "stop-color").unwrap_or("#000000").trim();
+    let (ink, r, g, b) = if color == "currentColor" {
+        (true, 0, 0, 0)
+    } else if color.starts_with('#') && color.len() == 7 {
+        let p = |i: usize| u8::from_str_radix(&color[i..i + 2], 16).unwrap_or(0);
+        (false, p(1), p(3), p(5))
+    } else {
+        (false, 0, 0, 0)
+    };
+    FfiGradientStop {
+        offset,
+        ink,
+        r,
+        g,
+        b,
+        shade: attr(a, "data-shade")
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(0.0),
+        alpha: attr(a, "stop-opacity")
+            .and_then(|v| v.parse().ok())
+            .unwrap_or(1.0),
+    }
+}
+
+/// 正在收集色標的那個漸層：(id, 是否放射, 屬性, 色標)。
+type OpenGradient = (String, bool, Vec<(String, String)>, Vec<FfiGradientStop>);
+
+/// 掃出所有 `<linearGradient>`／`<radialGradient>`（id → 漸層）。
+fn parse_gradients(src: &str) -> Vec<(String, FfiPaint)> {
+    let mut out = Vec::new();
+    let mut rest = src;
+    // 目前正在收集色標的那個漸層：(id, 是否放射, 屬性, 色標)。
+    let mut open: Option<OpenGradient> = None;
+    while let Some(start) = rest.find('<') {
+        let Some(end) = rest[start..].find('>') else {
+            break;
+        };
+        let tag = &rest[start..start + end + 1];
+        rest = &rest[start + end + 1..];
+        let name: String = tag[1..]
+            .chars()
+            .take_while(|c| c.is_ascii_alphanumeric() || *c == '/')
+            .collect();
+        let a = attributes(tag);
+        match name.as_str() {
+            "linearGradient" | "radialGradient" => {
+                open = Some((
+                    attr(&a, "id").unwrap_or_default().to_string(),
+                    name == "radialGradient",
+                    a,
+                    Vec::new(),
+                ));
+            }
+            "stop" => {
+                if let Some((_, _, _, stops)) = open.as_mut() {
+                    stops.push(parse_stop(&a));
+                }
+            }
+            "/linearGradient" | "/radialGradient" => {
+                if let Some((id, radial, attrs, stops)) = open.take() {
+                    let paint = if radial {
+                        FfiPaint::Radial {
+                            cx: num(&attrs, "cx"),
+                            cy: num(&attrs, "cy"),
+                            r: num(&attrs, "r"),
+                            stops,
+                        }
+                    } else {
+                        FfiPaint::Linear {
+                            x1: num(&attrs, "x1"),
+                            y1: num(&attrs, "y1"),
+                            x2: num(&attrs, "x2"),
+                            y2: num(&attrs, "y2"),
+                            stops,
+                        }
+                    };
+                    out.push((id, paint));
+                }
+            }
+            _ => {}
+        }
+    }
+    out
+}
+
 /// 解析 SVG 子集。
 fn parse_svg(src: &str) -> Vec<FfiIconShape> {
+    let gradients = parse_gradients(src);
     let mut shapes = Vec::new();
     let mut rest = src;
     while let Some(start) = rest.find('<') {
@@ -584,9 +720,13 @@ fn parse_svg(src: &str) -> Vec<FfiIconShape> {
         let fill = if is_line {
             FfiPaint::None
         } else {
-            paint(attr(&a, "fill"), FfiPaint::Color { r: 0, g: 0, b: 0 })
+            paint(
+                attr(&a, "fill"),
+                FfiPaint::Color { r: 0, g: 0, b: 0 },
+                &gradients,
+            )
         };
-        let stroke = paint(attr(&a, "stroke"), FfiPaint::None);
+        let stroke = paint(attr(&a, "stroke"), FfiPaint::None, &gradients);
         shapes.push(FfiIconShape {
             commands,
             fill,
@@ -672,13 +812,51 @@ mod tests {
     #[test]
     fn brushes_follow_the_ink_colour_but_modes_do_not_need_to() {
         for t in all_tools().into_iter().filter(|t| t.is_brush()) {
+            let follows = |p: &FfiPaint| match p {
+                FfiPaint::Ink => true,
+                FfiPaint::Linear { stops, .. } | FfiPaint::Radial { stops, .. } => {
+                    stops.iter().any(|s| s.ink)
+                }
+                _ => false,
+            };
             let uses_ink = brush_icon(t.into())
                 .iter()
-                .any(|s| s.fill == FfiPaint::Ink || s.stroke == FfiPaint::Ink);
+                .any(|s| follows(&s.fill) || follows(&s.stroke));
             assert!(
                 uses_ink,
                 "{t:?} 的圖示不跟著筆色變 —— 使用者看不出自己選了什麼顏色"
             );
+        }
+    }
+
+    #[test]
+    fn gradients_are_well_formed_and_every_reference_resolves() {
+        for t in all_tools() {
+            let tool: FfiTool = t.into();
+            let src = icon_source(tool).unwrap_or("");
+            // 檔案裡每一個 `url(#…)` 都要找得到對應的漸層定義。
+            let defined = parse_gradients(src);
+            for part in src.split("url(#").skip(1) {
+                let id = part.split(')').next().unwrap_or("");
+                assert!(
+                    defined.iter().any(|(g, _)| g == id),
+                    "{tool:?}：找不到漸層 {id}"
+                );
+            }
+            for (id, paint) in &defined {
+                let stops = match paint {
+                    FfiPaint::Linear { stops, .. } | FfiPaint::Radial { stops, .. } => stops,
+                    _ => panic!("{tool:?}：{id} 不是漸層"),
+                };
+                assert!(stops.len() >= 2, "{tool:?}：漸層 {id} 至少要兩個色標");
+                assert!(
+                    stops.windows(2).all(|w| w[0].offset <= w[1].offset),
+                    "{tool:?}：漸層 {id} 的色標位置要遞增"
+                );
+                assert!(stops.iter().all(|s| (0.0..=1.0).contains(&s.offset)
+                    && (0.0..=1.0).contains(&s.alpha)
+                    && (-1.0..=1.0).contains(&s.shade)));
+            }
         }
     }
 
