@@ -239,11 +239,14 @@ jobs:
           # 預設只給 2560MB，而且 CI 上第 189 個測試開始後 emulator 整個程序
           # 被殺（logcat 在毫無預警下中斷，沒有 FATAL、沒有 lmkd）。
           # 先把記憶體加到 4GB 排除「被擠爆」這個最便宜的解釋。
-          # 其餘選項照 action 預設，只是明寫出來：`-gpu swiftshader_indirect`
-          # 是 runner 沒有 GPU 時唯一的選擇，不要改成 host。
+          # 4GB 沒有改變結果（死前主機仍有 5GB 可用、沒有 OOM），所以不是記憶體。
+          # 證據指向渲染：第 189 個測試開始後約 2.5 秒整個 guest 凍住約一分鐘，
+          # 然後 emulator 程序消失；當時 App 正在開 InkScreen，畫面平均每格 300ms 以上。
+          # 改用 `-gpu guest`（guest 內以 Skia 軟體繪製），避開主機端的
+          # swiftshader＋gfxstream。不要改成 host：runner 沒有 GPU。
           ram-size: 4096M
           heap-size: 576M
-          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -no-metrics
+          emulator-options: -no-window -gpu guest -no-snapshot -noaudio -no-boot-anim -no-metrics
           # 先在背景收兩樣東西：
           #   * logcat —— 模擬器中途消失時，Gradle 只剩 `device not found`；
           #   * 主機端的記憶體與 qemu 程序 —— logcat 只記得到 Android 裡面的事，
