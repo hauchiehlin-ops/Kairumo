@@ -16,6 +16,7 @@ pub mod ffi_asset_art;
 pub mod ffi_assets;
 mod ffi_audio;
 pub mod ffi_backup;
+pub mod ffi_carry;
 pub mod ffi_chart;
 pub mod ffi_collab;
 pub mod ffi_crypto;

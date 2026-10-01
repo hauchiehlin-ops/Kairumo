@@ -2585,7 +2585,7 @@ public struct NotebookEditorView: View {
                         _ = await audioManager.startRecording(
                             notebookId: notebook.id,
                             notebookTitle: notebook.displayTitle(),
-                            title: "\(notebook.displayTitle()) \(localizationManager.localized("recording_suffix"))",
+                            title: NotebookStore.defaultRecordingTitle(),
                             pageIndex: currentPageIndex,
                             languageTag: LocalizationManager.shared.currentLanguage.rawValue)
                     }
@@ -2979,7 +2979,7 @@ public struct NotebookEditorView: View {
                         : await audioManager.startRecording(
                             notebookId: notebook.id,
                             notebookTitle: notebook.displayTitle(),
-                            title: "\(notebook.displayTitle()) \(localizationManager.localized("recording_suffix"))",
+                            title: NotebookStore.defaultRecordingTitle(),
                             pageIndex: currentPageIndex,
                             languageTag: LocalizationManager.shared.currentLanguage.rawValue)
                     if !started && !audioManager.showPermissionAlert {
@@ -8296,7 +8296,7 @@ public struct NotebookEditorView: View {
             notebook.recordingAudioPath = fileName
             store.updateNotebook(notebook)
             let rec = store.addRecording(
-                title: "\(notebook.title) \(localizationManager.localized("recording_suffix"))",
+                title: NotebookStore.defaultRecordingTitle(),
                 durationSeconds: Int(result.duration),
                 fileName: fileName,
                 linkedNotebookId: notebook.id

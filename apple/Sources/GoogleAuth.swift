@@ -281,12 +281,25 @@ public final class GoogleAuth: NSObject, ObservableObject {
 
     /// 同步更新權杖（供背景 HTTP 執行緒在遇到 401 時自動重試換證）。
     public nonisolated func refreshTokenSync() -> String? {
-        if FakeDrive.isEnabled { return FakeDrive.accessToken }
+        refreshTokenOutcomeSync().token
+    }
+
+    /// 換證的結果。`fatal` 為 true 才代表**授權真的失效了**（沒有更新用的權杖、`invalid_grant`）。
+    ///
+    /// 網路不通、逾時、Google 暫時回不出東西都是 `token == nil && fatal == false` ——
+    /// 呼叫端不能因此登出：登出會**撤銷**授權，使用者只是剛好離線，就得重新走一次 Google 登入。
+    public struct RefreshOutcome: Sendable {
+        public let token: String?
+        public let fatal: Bool
+    }
+
+    public nonisolated func refreshTokenOutcomeSync() -> RefreshOutcome {
+        if FakeDrive.isEnabled { return RefreshOutcome(token: FakeDrive.accessToken, fatal: false) }
         let current = KeychainTokens.load()
-        guard !current.refreshToken.isEmpty else { return nil }
+        guard !current.refreshToken.isEmpty else { return RefreshOutcome(token: nil, fatal: true) }
 
         let body = oauthRefreshBody(platform: .apple, refreshToken: current.refreshToken)
-        guard let url = URL(string: oauthTokenEndpoint()) else { return nil }
+        guard let url = URL(string: oauthTokenEndpoint()) else { return RefreshOutcome(token: nil, fatal: false) }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -303,7 +316,8 @@ public final class GoogleAuth: NSObject, ObservableObject {
         _ = semaphore.wait(timeout: .now() + 15)
 
         guard let data = responseData, let json = String(data: data, encoding: .utf8) else {
-            return nil
+            // 沒有回應（離線、逾時）：不是授權失效。
+            return RefreshOutcome(token: nil, fatal: false)
         }
 
         let nowS = UInt64(max(0, Date().timeIntervalSince1970))
@@ -311,12 +325,13 @@ public final class GoogleAuth: NSObject, ObservableObject {
         if !refreshed.error.isEmpty {
             if oauthNeedsReauth(error: refreshed.error) || refreshed.error.contains("invalid_grant") {
                 markNeedsReauthSync()
+                return RefreshOutcome(token: nil, fatal: true)
             }
-            return nil
+            return RefreshOutcome(token: nil, fatal: false)
         }
 
         KeychainTokens.save(refreshed, previousRefresh: current.refreshToken)
-        return refreshed.accessToken
+        return RefreshOutcome(token: refreshed.accessToken, fatal: false)
     }
 
     /// 標記為需要重新授權，清除死掉的憑證。

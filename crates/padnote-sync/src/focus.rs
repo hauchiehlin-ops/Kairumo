@@ -45,6 +45,23 @@ pub const FOCUS_POLL_MS: u64 = 1_000;
 /// 剛拉到對方的東西之後的輪詢間隔（對方正在寫）。
 pub const FOCUS_ACTIVE_POLL_MS: u64 = 700;
 
+/// 距離上一次**有動靜**多久之內，才用 [`FOCUS_POLL_MS`] 的密度輪詢。
+///
+/// 動靜 = 打開這本筆記、本機寫入、拉到對方的東西、回到前景、收到區網通知。
+/// **一直每秒問一次 Drive 是錯的**：兩台裝置開著不動，一個小時就是 7200 次請求，
+/// 與整庫通道「一分鐘一次、沒變動就安靜」的規則直接衝突 —— 使用者看到的是
+/// 兩台一直在同步、沒有停止的跡象；而且請求量大到可能撞上 Drive 的速率限制。
+pub const FOCUS_HOT_WINDOW_MS: u64 = 60_000;
+
+/// 熱窗過了之後的輪詢間隔。對方開始寫的時候最慢這麼久才發現，之後立刻回到密集輪詢。
+pub const FOCUS_IDLE_POLL_MS: u64 = 15_000;
+
+/// 距離上一次有動靜超過這麼久就**完全不問了**（休眠）。
+///
+/// 之後由整庫通道的看守掃描（8 分鐘一次）負責；本機寫入、回到前景、區網通知、
+/// 重新打開筆記本都會立刻把這條通道叫醒。
+pub const FOCUS_DORMANT_AFTER_MS: u64 = 300_000;
+
 /// 距離上次拉到對方的東西多久之內算「對方正在寫」。
 pub const FOCUS_ACTIVE_WINDOW_MS: u64 = 30_000;
 
@@ -107,6 +124,8 @@ pub struct FocusLane {
     failures: u32,
     blocked_on_auth: bool,
     last_remote_change: Option<u64>,
+    /// 最近一次「有動靜」的時間（見 [`FOCUS_HOT_WINDOW_MS`]）。
+    last_active: u64,
 }
 
 impl FocusLane {
@@ -123,6 +142,7 @@ impl FocusLane {
             return;
         }
         self.notebook = notebook_id.map(str::to_string);
+        self.last_active = now_ms;
         self.dirty = false;
         self.dirty_since = None;
         self.failures = 0;
@@ -142,6 +162,7 @@ impl FocusLane {
         self.dirty = true;
         self.dirty_since.get_or_insert(now_ms);
         self.last_edit = now_ms;
+        self.last_active = now_ms;
     }
 
     /// 有跡象顯示雲端／對方剛動過（區網對端通知、App 進前景……）。
@@ -149,6 +170,7 @@ impl FocusLane {
     pub fn note_remote_hint(&mut self, now_ms: u64) {
         if self.notebook.is_some() {
             self.next_poll = self.next_poll.min(now_ms);
+            self.last_active = now_ms;
         }
     }
 
@@ -158,6 +180,7 @@ impl FocusLane {
         self.failures = 0;
         self.hold_until = 0;
         self.next_poll = now_ms;
+        self.last_active = now_ms;
     }
 
     /// 現在該不該跑一輪。回 `Some` 時呼叫端要開跑，結束時呼叫 [`Self::finish`]。
@@ -167,7 +190,7 @@ impl FocusLane {
         }
         let notebook = self.notebook.clone()?;
         let push_due = self.dirty && now_ms >= self.push_due_at();
-        let poll_due = now_ms >= self.next_poll;
+        let poll_due = now_ms >= self.next_poll && !self.is_dormant(now_ms);
         if !push_due && !poll_due {
             return None;
         }
@@ -200,8 +223,13 @@ impl FocusLane {
                 self.hold_until = 0;
                 if pulled {
                     self.last_remote_change = Some(now_ms);
+                    self.last_active = now_ms;
                 }
-                self.next_poll = now_ms + self.poll_interval_ms(now_ms);
+                self.next_poll = if self.is_dormant(now_ms) {
+                    u64::MAX
+                } else {
+                    now_ms + self.poll_interval_ms(now_ms)
+                };
             }
             FocusOutcome::Busy => {
                 // 另一條通道正在處理它。很快再問，不退避 —— 那不是錯誤。
@@ -228,6 +256,10 @@ impl FocusLane {
         if self.notebook.is_none() || self.running || self.blocked_on_auth {
             return None;
         }
+        // 休眠：沒有任何待辦，平台不用設計時器（省電）。有未推的寫入就不算休眠。
+        if self.is_dormant(now_ms) && !self.dirty {
+            return None;
+        }
         let mut due = self.next_poll;
         if self.dirty {
             due = due.min(self.push_due_at());
@@ -248,11 +280,26 @@ impl FocusLane {
     }
 
     /// 現在的輪詢間隔。
+    ///
+    /// 對方剛寫過 → 最密；本機或對方最近有動靜 → 每秒一次；之後放慢；久了就休眠（見 [`Self::is_dormant`]）。
     pub fn poll_interval_ms(&self, now_ms: u64) -> u64 {
-        match self.last_remote_change {
-            Some(t) if now_ms.saturating_sub(t) <= FOCUS_ACTIVE_WINDOW_MS => FOCUS_ACTIVE_POLL_MS,
-            _ => FOCUS_POLL_MS,
+        if matches!(self.last_remote_change, Some(t) if now_ms.saturating_sub(t) <= FOCUS_ACTIVE_WINDOW_MS)
+        {
+            return FOCUS_ACTIVE_POLL_MS;
         }
+        let quiet_for = now_ms.saturating_sub(self.last_active);
+        if quiet_for <= FOCUS_HOT_WINDOW_MS {
+            FOCUS_POLL_MS
+        } else {
+            FOCUS_IDLE_POLL_MS
+        }
+    }
+
+    /// 這條通道是不是已經休眠：有焦點筆記本，但很久沒有任何動靜。
+    ///
+    /// 休眠時不輪詢、`next_due_in_ms` 回 `None`。任何動靜都會叫醒它。
+    pub fn is_dormant(&self, now_ms: u64) -> bool {
+        self.notebook.is_some() && now_ms.saturating_sub(self.last_active) > FOCUS_DORMANT_AFTER_MS
     }
 
     /// 這一輪沒推成功（失敗、或鎖被佔著）：寫入還在，要保留。
@@ -534,5 +581,81 @@ mod tests {
     fn the_promise_is_under_two_seconds() {
         // 不含網路時間。改動任何常數時這條會提醒：承諾是給使用者的。
         assert!(worst_case_visible_latency_ms() <= 2_000);
+    }
+
+    #[test]
+    fn polls_every_second_only_while_something_is_happening() {
+        let lane = focused(0);
+        assert_eq!(lane.poll_interval_ms(1_000), FOCUS_POLL_MS);
+        assert_eq!(lane.poll_interval_ms(FOCUS_HOT_WINDOW_MS), FOCUS_POLL_MS);
+        // 熱窗過了就放慢。兩台開著不動的話，一小時不該是 7200 次請求。
+        assert_eq!(
+            lane.poll_interval_ms(FOCUS_HOT_WINDOW_MS + 1),
+            FOCUS_IDLE_POLL_MS
+        );
+    }
+
+    #[test]
+    fn goes_dormant_when_nothing_happens_and_stops_asking_for_a_timer() {
+        let mut lane = focused(0);
+        let t = FOCUS_DORMANT_AFTER_MS + 1;
+        assert!(lane.is_dormant(t));
+        assert_eq!(lane.next_due_in_ms(t), None, "休眠時平台不該設計時器");
+        assert_eq!(lane.poll(t), None, "休眠時不輪詢");
+        // 一輪結束後休眠就把下一次輪詢排到永遠。
+        let mut lane = focused(0);
+        let t = FOCUS_DORMANT_AFTER_MS - 1;
+        let run = lane.poll(t).expect("還沒休眠，要輪詢");
+        lane.finish(
+            &run.notebook_id,
+            FocusOutcome::Success { pulled: false },
+            FOCUS_DORMANT_AFTER_MS + 10,
+        );
+        assert_eq!(lane.poll(FOCUS_DORMANT_AFTER_MS + 20_000), None);
+    }
+
+    #[test]
+    fn every_kind_of_activity_wakes_a_dormant_lane() {
+        let late = FOCUS_DORMANT_AFTER_MS + 5_000;
+
+        let mut lane = focused(0);
+        lane.note_remote_hint(late);
+        assert!(!lane.is_dormant(late), "回到前景／區網通知要叫醒它");
+        assert!(lane.poll(late).is_some(), "叫醒之後要立刻問一次");
+
+        let mut lane = focused(0);
+        lane.note_local_edit(late);
+        assert!(!lane.is_dormant(late), "本機寫入要叫醒它");
+        assert!(lane.next_due_in_ms(late).is_some());
+
+        let mut lane = focused(0);
+        lane.set_focus(Some("other"), late);
+        assert!(!lane.is_dormant(late), "打開另一本筆記要叫醒它");
+    }
+
+    #[test]
+    fn pulling_the_other_devices_work_restarts_the_dense_polling() {
+        let mut lane = focused(0);
+        let t = FOCUS_HOT_WINDOW_MS + 10_000; // 已經過了熱窗、還沒休眠
+        assert_eq!(lane.poll_interval_ms(t), FOCUS_IDLE_POLL_MS);
+        let run = lane.poll(t).expect("到點了");
+        lane.finish(&run.notebook_id, FocusOutcome::Success { pulled: true }, t);
+        assert_eq!(
+            lane.poll_interval_ms(t),
+            FOCUS_ACTIVE_POLL_MS,
+            "對方正在寫，要密集"
+        );
+        assert!(!lane.is_dormant(t + FOCUS_HOT_WINDOW_MS));
+    }
+
+    #[test]
+    fn unpushed_edits_never_count_as_dormant() {
+        let mut lane = focused(0);
+        lane.note_local_edit(FOCUS_DORMANT_AFTER_MS - 1);
+        let t = FOCUS_DORMANT_AFTER_MS + FOCUS_DEBOUNCE_MS - 1;
+        assert!(
+            lane.next_due_in_ms(t).is_some(),
+            "有還沒推的寫入，不能因為休眠就不推"
+        );
     }
 }

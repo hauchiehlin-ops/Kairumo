@@ -283,7 +283,9 @@ final class DriveHttpClient: FfiDriveHttp {
     ) throws -> (Data, HTTPURLResponse) {
         do {
             let (payload, response) = try syncDataTask(request, timeout: timeout)
-            if (response.statusCode == 429 || response.statusCode >= 500) && retriesLeft > 0 && !Self.isCancellationRequested {
+            let rateLimited = response.statusCode == 429
+                || (response.statusCode == 403 && Self.isRateLimit(body: payload))
+            if (rateLimited || response.statusCode >= 500) && retriesLeft > 0 && !Self.isCancellationRequested {
                 let delay = 1.0 + Double(4 - retriesLeft) * 2.0 // 3.0, 5.0, 7.0 seconds
                 Thread.sleep(forTimeInterval: delay)
                 return try syncDataTaskWithRetry(request, timeout: timeout, retriesLeft: retriesLeft - 1)
@@ -312,18 +314,36 @@ final class DriveHttpClient: FfiDriveHttp {
             return (payload, response.allHeaderFields)
         }
 
-        // 401：嘗試自動換證並重試一次
-        if response.statusCode == 401, let newToken = GoogleAuth.shared.refreshTokenSync() {
+        // 401：嘗試自動換證並重試一次。
+        //
+        // **只有授權真的失效才要使用者重新登入。** 換證沒成功不等於授權失效：離線、逾時、
+        // Google 暫時回不出東西，都只是這一輪失敗、下一輪再試。以前這裡一律當成「憑證失效」，
+        // 而 `PermissionDenied` 會讓平台登出並撤銷授權 —— 使用者只是剛好離線一下，就被踢出帳號。
+        if response.statusCode == 401 {
+            let outcome = GoogleAuth.shared.refreshTokenOutcomeSync()
+            guard let newToken = outcome.token else {
+                if outcome.fatal {
+                    GoogleAuth.shared.markNeedsReauthSync()
+                    throw FfiDriveError.PermissionDenied(detail: "Google 帳號憑證已失效或過期，請重新登入 (HTTP 401)")
+                }
+                throw FfiDriveError.Backend(detail: "暫時無法更新 Google 憑證（網路不通？），稍後重試")
+            }
             self.accessToken = newToken
             var retryRequest = base
             retryRequest.setValue("Bearer \(newToken)", forHTTPHeaderField: "Authorization")
-            if let (retryPayload, retryResp) = try? syncDataTaskWithRetry(retryRequest),
-               (200..<300).contains(retryResp.statusCode) {
+            let (retryPayload, retryResp) = try syncDataTaskWithRetry(retryRequest)
+            if (200..<300).contains(retryResp.statusCode) {
                 return (retryPayload, retryResp.allHeaderFields)
             }
-            // 換新 token 後仍失敗 → 要求重新登入
-            GoogleAuth.shared.markNeedsReauthSync()
-            throw FfiDriveError.PermissionDenied(detail: "Google 帳號憑證已失效或過期，請重新登入 (HTTP 401)")
+            // 換了新權杖還是 401 才是真的失效；其他狀態（403 速率限制、5xx…）照一般錯誤處理。
+            if retryResp.statusCode == 401 {
+                GoogleAuth.shared.markNeedsReauthSync()
+            }
+            throw Self.classify(
+                status: retryResp.statusCode,
+                path: retryRequest.url?.path ?? "",
+                detail: String(data: retryPayload, encoding: .utf8) ?? ""
+            )
         }
 
         throw Self.classify(
@@ -333,9 +353,26 @@ final class DriveHttpClient: FfiDriveHttp {
         )
     }
 
-    private static func classify(status: Int, path: String, detail: String) -> FfiDriveError {
+    /// Drive 用 **403** 回報的速率限制／配額原因。**不是授權問題** —— 與核心的
+    /// `padnote_sync::gdrive::classify_status` 同一份清單。
+    ///
+    /// 當成 `PermissionDenied` 的後果很重：平台會登出並**撤銷**授權，使用者只是同步得太勤
+    /// 就被踢出帳號、要重新走一次 Google 登入（實測：兩台開著一段時間後雙雙被登出）。
+    private static let rateLimitReasons = [
+        "rateLimitExceeded", "userRateLimitExceeded", "sharingRateLimitExceeded",
+        "quotaExceeded", "dailyLimitExceeded",
+    ]
+
+    static func isRateLimit(body: Data) -> Bool {
+        guard let text = String(data: body, encoding: .utf8) else { return false }
+        return rateLimitReasons.contains { text.contains($0) }
+    }
+
+    static func classify(status: Int, path: String, detail: String) -> FfiDriveError {
         switch status {
         case 401: return .PermissionDenied(detail: "Google 帳號憑證已失效或過期，請重新登入 (HTTP 401)")
+        case 403 where rateLimitReasons.contains(where: detail.contains):
+            return .Backend(detail: "Drive 速率限制（HTTP 403），稍後重試")
         case 403: return .PermissionDenied(detail: "Google 帳號權限不足 (HTTP 403)")
         case 404: return .NotFound(path: path)
         default: return .Backend(detail: "HTTP \(status) \(detail)")

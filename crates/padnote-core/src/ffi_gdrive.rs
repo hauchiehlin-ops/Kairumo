@@ -800,6 +800,9 @@ fn gdrive_sync_notebook(
 /// 少掉結尾 —— 使用者會說「同步過去的錄音被截斷了」。
 const AUDIO_GROWTH_THRESHOLD: u64 = 1024 * 1024;
 
+/// 錄音疑似還在成長時，再量一次之前等多久。
+const AUDIO_SETTLE_PROBE: std::time::Duration = std::time::Duration::from_millis(1200);
+
 /// 上一輪看到的本機檔案長度，用來判斷「還在成長」還是「已經穩定」。
 type SeenSizes = std::collections::BTreeMap<String, u64>;
 
@@ -993,9 +996,25 @@ fn sync_notebook_media(
         let previous = seen.insert(key.clone(), *size);
         // **第一次看到不算「還在成長」。** 不知道就傳 —— 反過來假設的話，
         // 一段錄完很久的短錄音會在重開 App 之後永遠不上傳。
-        let still_growing = matches!(previous, Some(p) if p != *size);
+        let mut still_growing = matches!(previous, Some(p) if p != *size);
         if still_growing && size.saturating_sub(remote_size) < AUDIO_GROWTH_THRESHOLD {
-            continue;
+            // **別直接等下一輪。** 上一輪看到的長度與這一輪不同，只代表它在這兩輪之間長過 ——
+            // 不代表現在還在長。錄音停在這一輪之前的話，下一輪才補傳的做法會把尾巴丟在雲端之外：
+            // 排程器看到這一輪「沒有上傳」就會安靜下來，下一輪也許要等很久才來
+            // （實測：iPad 錄 15 秒，另一台只收到 4 秒）。
+            // 在這裡停一下再量一次：長度沒動就是錄完了，現在傳。
+            std::thread::sleep(AUDIO_SETTLE_PROBE);
+            let settled = package
+                .audio_files()
+                .ok()
+                .and_then(|files| files.into_iter().find(|(n, _)| n == name))
+                .is_some_and(|(_, now)| now == *size);
+            if settled {
+                still_growing = false;
+            }
+            if still_growing {
+                continue;
+            }
         }
         let bytes = match package.read_audio_file(name) {
             Ok(b) => b,
@@ -3551,7 +3570,7 @@ mod tests {
         let http: Arc<dyn FfiDriveHttp> = fake.clone();
         let root = tmp_package("media-throttle", 0xAA);
         let pkg = padnote_storage::NotebookPackage::open(&root).unwrap();
-        let name = "33333333-3333-3333-3333-333333333333.opus";
+        let name: &'static str = "33333333-3333-3333-3333-333333333333.opus";
         let path: String = root.to_string_lossy().into();
 
         let session = FfiSyncSession::create(http, String::new());
@@ -3570,13 +3589,23 @@ mod tests {
         for extra in 1..=3usize {
             pkg.write_audio_file(name, &vec![0u8; 1000 + extra * 100])
                 .unwrap();
-            assert_eq!(
-                session
-                    .sync_notebook(path.clone(), "nb1".into(), 0xAA)
-                    .uploaded,
-                0,
-                "錄製中的小幅成長不該整檔重傳"
-            );
+            // 真的還在錄：同步在「再量一次」的空檔裡，檔案又長了一點。
+            // （沒有這一步的話，檔案在空檔裡沒變，會被正確地判成「已經錄完」而上傳。）
+            let still_recording = {
+                let root = root.clone();
+                std::thread::spawn(move || {
+                    std::thread::sleep(std::time::Duration::from_millis(300));
+                    padnote_storage::NotebookPackage::open(&root)
+                        .unwrap()
+                        .write_audio_file(name, &vec![0u8; 1000 + extra * 100 + 37])
+                        .unwrap();
+                })
+            };
+            let uploaded_this_round = session
+                .sync_notebook(path.clone(), "nb1".into(), 0xAA)
+                .uploaded;
+            still_recording.join().unwrap();
+            assert_eq!(uploaded_this_round, 0, "錄製中的小幅成長不該整檔重傳");
         }
 
         // 錄完了：長度穩定下來，這一輪一定要傳 ——

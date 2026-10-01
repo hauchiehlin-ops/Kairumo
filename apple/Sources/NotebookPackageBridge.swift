@@ -540,6 +540,16 @@ enum NotebookPackageBridge {
         }
         // 2. 再把新的搬過去。blob 與 manifest 缺的才補，不覆蓋既有的。
         for relative in relativeFiles(in: fresh) {
+        // **把錄音當下由核心直接寫的操作搬過去。** 重建只含平台文件模型有的東西（文字、圖片、筆畫…），
+        // 錄音區段與轉錄詞不在裡面 —— 下面把舊的 oplog 整批換掉之後，它們就永遠消失了：
+        // 錄音卡片沒有時間軸、無法播放，「語音轉文字」只剩空的文字方框。
+        do {
+            _ = try carryOverRecordingOps(
+                oldPackagePath: destination.path, newPackagePath: fresh.path, deviceId: deviceId)
+        } catch {
+            throw BridgeError.coreRejected("無法保留錄音與轉錄內容：\(error)")
+        }
+
             let src = fresh.appending(path: relative)
             let dst = destination.appending(path: relative)
             let isOwn = relative.contains(suffix) || relative == "manifest.json"

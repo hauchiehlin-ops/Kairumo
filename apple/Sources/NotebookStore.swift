@@ -1458,7 +1458,12 @@ public final class NotebookStore: ObservableObject {
         }
     }
 
-    public func persistData() {
+    /// - Parameter signalsLocalEdit: 寫完之後要不要通知同步「本機有編輯」。
+    ///   **同步自己寫進來的東西不能通知**：同步匯入了別台的內容 → 寫檔 → 通知「本機有編輯」→
+    ///   排出下一輪同步 → 匯出（檔案時間比套件新）→ 上傳 → 對方下載、匯入、寫檔、通知……
+    ///   兩台裝置就這樣永遠互相推（實測：兩台一直在同步，排程器的「沒變動就安靜」從來沒有機會生效）。
+    public func persistData(signalsLocalEdit: Bool = true) {
+        if signalsLocalEdit { signalAfterWrite = true }
         // 快照必須在主執行緒取得：這些陣列是 @MainActor 隔離的狀態。
         let snapshot = (
             notebooks: notebooks, recordings: recordings, folders: folders,
@@ -1495,7 +1500,7 @@ public final class NotebookStore: ObservableObject {
                 // 寫檔期間若又有變更，補寫最後一版，否則會漏掉結尾的編輯。
                 if self.needsAnotherWrite {
                     self.needsAnotherWrite = false
-                    self.persistData()
+                    self.persistData(signalsLocalEdit: false)
                     return
                 }
                 // 落盤完成才通知同步。**順序不能顛倒**：先通知的話，
@@ -1503,20 +1508,27 @@ public final class NotebookStore: ObservableObject {
                 //
                 // 這是去抖動的觸發 —— 使用者還在寫字時每一筆都推只是浪費電，
                 // 排程器會等他停手 1.5 秒。
-                AutoSyncController.shared.noteLocalEdit()
+                if self.signalAfterWrite {
+                    self.signalAfterWrite = false
+                    AutoSyncController.shared.noteLocalEdit()
+                }
             }
         }
     }
+
+    /// 這一批寫入裡有沒有**使用者的**編輯。有才通知同步；只有同步自己的寫入就不通知。
+    private var signalAfterWrite: Bool = false
 
     /// 寫檔進行中又收到新變更的標記。
     private var needsAnotherWrite: Bool = false
 
     /// 標記資料已變更並排程落盤。寫檔進行中則記下，待目前這次寫完再補一次。
-    public func markDirtyAndPersist() {
+    public func markDirtyAndPersist(signalsLocalEdit: Bool = true) {
+        if signalsLocalEdit { signalAfterWrite = true }
         if pendingWrite {
             needsAnotherWrite = true
         } else {
-            persistData()
+            persistData(signalsLocalEdit: signalsLocalEdit)
         }
     }
 
@@ -1870,13 +1882,14 @@ public final class NotebookStore: ObservableObject {
     /// 但筆記沒出現」。
     ///
     /// 也不更新 `lastModifiedDate`：這份內容是從檔案讀回來的，不是使用者剛改的。
-    public func upsertNotebook(_ doc: NotebookDocument) {
+    /// - Parameter fromSync: 是同步匯入的結果。要落盤，但**不通知**同步「本機有編輯」（見 `persistData`）。
+    public func upsertNotebook(_ doc: NotebookDocument, fromSync: Bool = false) {
         if let index = notebooks.firstIndex(where: { $0.id.caseInsensitiveCompare(doc.id) == .orderedSame }) {
             notebooks[index] = doc
         } else {
             notebooks.append(doc)
         }
-        markDirtyAndPersist()
+        markDirtyAndPersist(signalsLocalEdit: !fromSync)
     }
 
     /// 從外部 `.padnote` 封裝檔匯入整本筆記本。
@@ -2941,6 +2954,16 @@ public final class NotebookStore: ObservableObject {
         }
     }
 
+    /// 新錄音的預設名稱：「錄音 日期時間」。
+    ///
+    /// **不帶筆記本名稱。** 原本是「<筆記本名> 錄音」，於是在名為「mac建立」的筆記本裡錄的音，
+    /// 在錄音清單裡每一筆都叫「mac建立 錄音」—— 使用者看到的是別的筆記本的名字出現在他新錄的檔案上。
+    /// 時間才是區分兩段錄音的東西。
+    static func defaultRecordingTitle(at date: Date = Date()) -> String {
+        let label = LocalizationManager.shared.localized("recording_suffix")
+        return "\(label) \(date.formatted(date: .numeric, time: .shortened))"
+    }
+
     public func refreshRecordings() {
         let fm = FileManager.default
         var byFileName: [String: AudioRecordingRecord] = [:]
@@ -2989,8 +3012,10 @@ public final class NotebookStore: ObservableObject {
                 if isInbox {
                     title = LocalizationManager.shared.localized("quick_record")
                 } else {
-                    let suffix = LocalizationManager.shared.localized("recording_suffix")
-                    title = "\(doc.displayTitle) \(suffix)"
+                    // 不放筆記本名稱：錄音檔是獨立的東西，它在「錄音」清單裡以時間辨識。
+                    // 把筆記本名稱放在最前面，會讓每一段錄音的名字都以同一個詞開頭，
+                    // 而且筆記本改名之後舊錄音的名字就對不上了。
+                    title = Self.defaultRecordingTitle(at: modified)
                 }
                 scanned.append(AudioRecordingRecord(
                     title: title,
@@ -3015,7 +3040,8 @@ public final class NotebookStore: ObservableObject {
         // 「App 閒下來」）。
         guard refreshed != recordings else { return }
         recordings = refreshed
-        persistData()
+        // 掃描結果是從磁碟（含同步下載的套件）讀出來的，不是使用者的編輯：不通知同步。
+        persistData(signalsLocalEdit: false)
     }
 
     /// 遷移之後改指到套件裡的新檔案。

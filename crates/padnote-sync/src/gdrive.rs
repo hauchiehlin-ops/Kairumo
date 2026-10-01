@@ -714,6 +714,35 @@ impl<H: DriveHttp> CloudProvider for GDriveProvider<H> {
     }
 }
 
+/// Drive 用 **403** 回報的「速率限制／配額」原因。這些**不是**授權問題。
+///
+/// 把它們當成 `PermissionDenied` 的後果很重：上層看到 `PermissionDenied` 就判定要重新登入，
+/// 平台會登出並**撤銷**授權 —— 使用者只是同步得太勤，就被踢出帳號，要重新走一次 Google 登入。
+/// 實際發生過：兩台裝置開著一段時間之後雙雙被登出。
+const DRIVE_RATE_LIMIT_REASONS: [&str; 5] = [
+    "rateLimitExceeded",
+    "userRateLimitExceeded",
+    "sharingRateLimitExceeded",
+    "quotaExceeded",
+    "dailyLimitExceeded",
+];
+
+/// HTTP 狀態與回應內容 → `SyncError`。
+///
+/// 401／403 要與「其他錯誤」分開：權杖過期是可以靠重新授權解決的，
+/// 把它混進 `Backend` 之後，UI 只能顯示一句「同步失敗」而不會提示登入。
+/// 但 **403 帶著速率限制的原因時是可重試的 `Backend`**，不是授權問題（見上）。
+pub fn classify_status(status: u16, path: &str, body: &str) -> SyncError {
+    match status {
+        403 if DRIVE_RATE_LIMIT_REASONS.iter().any(|r| body.contains(r)) => {
+            SyncError::Backend(format!("Drive API 速率限制（HTTP 403），稍後重試：{path}"))
+        }
+        401 | 403 => SyncError::PermissionDenied(format!("{path}（HTTP {status}）")),
+        404 => SyncError::NotFound(path.to_string()),
+        _ => SyncError::Backend(format!("Drive API {status}：{path}")),
+    }
+}
+
 // ── 真正打網路的實作 ────────────────────────────────────────────────
 
 /// 以 `reqwest` 的阻塞式 client 呼叫 Drive。
@@ -745,12 +774,10 @@ impl ReqwestDriveHttp {
     ///
     /// 401／403 要與「其他錯誤」分開：權杖過期是可以靠重新授權解決的，
     /// 把它混進 `Backend` 之後，UI 只能顯示一句「同步失敗」而不會提示登入。
-    fn status_error(status: reqwest::StatusCode, path: &str) -> SyncError {
-        match status.as_u16() {
-            401 | 403 => SyncError::PermissionDenied(format!("{path}（HTTP {status}）")),
-            404 => SyncError::NotFound(path.to_string()),
-            _ => SyncError::Backend(format!("Drive API {status}：{path}")),
-        }
+    fn status_error(resp: reqwest::blocking::Response, path: &str) -> SyncError {
+        let status = resp.status();
+        let body = resp.text().unwrap_or_default();
+        classify_status(status.as_u16(), path, &body)
     }
 }
 
@@ -764,7 +791,7 @@ impl DriveHttp for ReqwestDriveHttp {
             .send()
             .map_err(|e| SyncError::Backend(e.to_string()))?;
         if !resp.status().is_success() {
-            return Err(Self::status_error(resp.status(), url));
+            return Err(Self::status_error(resp, url));
         }
         resp.json().map_err(|e| SyncError::Backend(e.to_string()))
     }
@@ -785,7 +812,7 @@ impl DriveHttp for ReqwestDriveHttp {
         }
         let resp = req.send().map_err(|e| SyncError::Backend(e.to_string()))?;
         if !resp.status().is_success() {
-            return Err(Self::status_error(resp.status(), url));
+            return Err(Self::status_error(resp, url));
         }
         resp.bytes()
             .map(|b| b.to_vec())
@@ -801,7 +828,7 @@ impl DriveHttp for ReqwestDriveHttp {
             .send()
             .map_err(|e| SyncError::Backend(e.to_string()))?;
         if !resp.status().is_success() {
-            return Err(Self::status_error(resp.status(), url));
+            return Err(Self::status_error(resp, url));
         }
         resp.json().map_err(|e| SyncError::Backend(e.to_string()))
     }
@@ -819,7 +846,7 @@ impl DriveHttp for ReqwestDriveHttp {
             .send()
             .map_err(|e| SyncError::Backend(e.to_string()))?;
         if !resp.status().is_success() {
-            return Err(Self::status_error(resp.status(), url));
+            return Err(Self::status_error(resp, url));
         }
         resp.headers()
             .get(reqwest::header::LOCATION)
@@ -838,7 +865,7 @@ impl DriveHttp for ReqwestDriveHttp {
             .send()
             .map_err(|e| SyncError::Backend(e.to_string()))?;
         if !resp.status().is_success() {
-            return Err(Self::status_error(resp.status(), url));
+            return Err(Self::status_error(resp, url));
         }
         Ok(())
     }
@@ -853,7 +880,7 @@ impl DriveHttp for ReqwestDriveHttp {
             .send()
             .map_err(|e| SyncError::Backend(e.to_string()))?;
         if !resp.status().is_success() {
-            return Err(Self::status_error(resp.status(), url));
+            return Err(Self::status_error(resp, url));
         }
         Ok(())
     }
@@ -866,7 +893,7 @@ impl DriveHttp for ReqwestDriveHttp {
             .send()
             .map_err(|e| SyncError::Backend(e.to_string()))?;
         if !resp.status().is_success() && resp.status().as_u16() != 404 {
-            return Err(Self::status_error(resp.status(), url));
+            return Err(Self::status_error(resp, url));
         }
         Ok(())
     }
@@ -874,6 +901,41 @@ impl DriveHttp for ReqwestDriveHttp {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn a_403_rate_limit_is_retryable_not_a_reason_to_sign_out() {
+        for reason in super::DRIVE_RATE_LIMIT_REASONS {
+            let body = format!(r#"{{"error":{{"code":403,"errors":[{{"reason":"{reason}"}}]}}}}"#);
+            assert!(
+                matches!(
+                    super::classify_status(403, "p", &body),
+                    SyncError::Backend(_)
+                ),
+                "{reason} 被當成授權問題 —— 使用者會被登出並撤銷授權"
+            );
+        }
+    }
+
+    #[test]
+    fn real_authorisation_failures_still_ask_for_a_sign_in() {
+        assert!(matches!(
+            super::classify_status(401, "p", ""),
+            SyncError::PermissionDenied(_)
+        ));
+        let forbidden = r#"{"error":{"code":403,"errors":[{"reason":"forbidden"}]}}"#;
+        assert!(matches!(
+            super::classify_status(403, "p", forbidden),
+            SyncError::PermissionDenied(_)
+        ));
+        assert!(matches!(
+            super::classify_status(404, "p", ""),
+            SyncError::NotFound(_)
+        ));
+        assert!(matches!(
+            super::classify_status(500, "p", ""),
+            SyncError::Backend(_)
+        ));
+    }
+
     use super::*;
     use std::sync::Mutex;
 

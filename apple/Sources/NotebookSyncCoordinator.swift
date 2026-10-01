@@ -211,7 +211,37 @@ extension NotebookStore: SyncableNotebookStore {
     }
 
     func syncUpsert(_ document: NotebookDocument) {
-        upsertNotebook(document)
+        upsertNotebook(document, fromSync: true)
+    }
+}
+
+/// 這一輪匯出當下，每本筆記上有哪些物件（id）。
+///
+/// 匯入要拿它判斷「匯出之後、匯入之前，使用者又新增了什麼」—— 見 `NotebookSyncCoordinator.preservingLocalAdditions`。
+final class ExportedObjectIds: @unchecked Sendable {
+    static let shared = ExportedObjectIds()
+    private let lock = NSLock()
+    private var ids: [String: Set<String>] = [:]
+
+    func record(_ document: NotebookDocument) {
+        lock.lock(); defer { lock.unlock() }
+        ids[document.id.lowercased()] = Self.objectIds(of: document)
+    }
+
+    func take(_ notebookId: String) -> Set<String>? {
+        lock.lock(); defer { lock.unlock() }
+        return ids.removeValue(forKey: notebookId.lowercased())
+    }
+
+    static func objectIds(of d: NotebookDocument) -> Set<String> {
+        var out = Set<String>()
+        func add<T: Identifiable>(_ items: [T]?) where T.ID == String {
+            for item in items ?? [] { out.insert(item.id.lowercased()) }
+        }
+        add(d.attachments); add(d.textAttachments); add(d.tableAttachments); add(d.shapeAttachments)
+        add(d.connectionAttachments); add(d.linkAttachments); add(d.model3DAttachments)
+        add(d.audioAttachments); add(d.commentPins); add(d.tapeAttachments); add(d.stickyAnchors)
+        return out
     }
 }
 
@@ -1218,6 +1248,7 @@ enum NotebookSyncCoordinator {
     private nonisolated static func exportOne(_ inputs: ExportInputs) throws -> OwnStrokes {
         let document = inputs.document
         let pageCount = max(document.pageCount, 1)
+        ExportedObjectIds.shared.record(document)
         // 只寫這台裝置自己新增的筆畫。
         //
         // 寫整份的話，等於把從別台裝置下載下來的筆畫複製一份掛在自己名下，
@@ -1354,7 +1385,62 @@ enum NotebookSyncCoordinator {
             let others = PKDrawing(strokes: StrokeDelta.added(in: drawing, since: mine))
             saveBaseline(others, in: baselineDir, notebookId: documentId, pageIndex: index)
         }
-        store.syncUpsert(imported.document)
+        let (merged, preserved) = preservingLocalAdditions(
+            imported.document, local: store.allNotebooks.first {
+                $0.id.caseInsensitiveCompare(documentId) == .orderedSame
+            },
+            exportedIds: ExportedObjectIds.shared.take(documentId))
+        store.syncUpsert(merged)
+        // 有保住使用者剛新增的東西就**不要**標成「已同步」：那些東西還沒進套件，下一輪要匯出。
+        if !preserved {
+            markWorkingCopyInSync(documentId: documentId, store: store)
+        }
+    }
+
+    /// 匯出之後、匯入之前，使用者新增的物件不能被匯入的結果蓋掉。
+    ///
+    /// 一輪同步是「匯出 → 等網路 → 匯入」，匯入是**整份取代**工作副本。等網路的那幾秒裡使用者
+    /// 又插了一段錄音、一個文字方塊 —— 它們不在剛匯出的套件裡，匯入結果也沒有，整份取代之後
+    /// 就消失了（使用者回報：插入錄音後，一同步錄音卡片就不見，進去馬上又消失）。
+    ///
+    /// 做法：匯出當下記下有哪些物件 id；匯入時，工作副本上「不在那份名單、匯入結果也沒有」的物件，
+    /// 就是匯出之後新增的，補回去。**沒有名單就不動**（沒辦法分辨「新增的」與「被別台刪掉的」，
+    /// 補回去會讓刪除復活）。
+    static func preservingLocalAdditions(
+        _ imported: NotebookDocument, local: NotebookDocument?, exportedIds: Set<String>?
+    ) -> (NotebookDocument, Bool) {
+        guard let local, let exportedIds else { return (imported, false) }
+        var merged = imported
+        var preserved = false
+        func keep<T: Identifiable>(_ keyPath: WritableKeyPath<NotebookDocument, [T]?>) where T.ID == String {
+            let have = Set((imported[keyPath: keyPath] ?? []).map { $0.id.lowercased() })
+            let added = (local[keyPath: keyPath] ?? []).filter {
+                !exportedIds.contains($0.id.lowercased()) && !have.contains($0.id.lowercased())
+            }
+            guard !added.isEmpty else { return }
+            merged[keyPath: keyPath] = (merged[keyPath: keyPath] ?? []) + added
+            preserved = true
+        }
+        keep(\.attachments); keep(\.textAttachments); keep(\.tableAttachments)
+        keep(\.shapeAttachments); keep(\.connectionAttachments); keep(\.linkAttachments)
+        keep(\.model3DAttachments); keep(\.audioAttachments); keep(\.commentPins)
+        keep(\.tapeAttachments); keep(\.stickyAnchors)
+        return (merged, preserved)
+    }
+
+    /// 匯入之後，工作副本與套件是**同一份內容**，不是「工作副本比較新」。
+    ///
+    /// 匯入會寫各頁的 `.drawing`、基準線等檔案，它們的修改時間都晚於套件 ——
+    /// `workingCopyNeedsExport` 只看修改時間，就會判定「有新編輯、要匯出」，於是重建並上傳套件，
+    /// 對方下載、匯入、再重建、再上傳……（兩台互相推，永遠安靜不下來）。
+    /// 把套件的 manifest 時間更新到現在，讓下一輪看到的是「套件比較新或一樣新」。
+    /// 只動時間，不動內容，所以不會被當成有變動而上傳。
+    private static func markWorkingCopyInSync(documentId: String, store: SyncableNotebookStore) {
+        let manifest = store.syncPackagesDirectory
+            .appending(path: "\(documentId.lowercased()).padnote")
+            .appending(path: "manifest.json")
+        try? FileManager.default.setAttributes(
+            [.modificationDate: Date()], ofItemAtPath: manifest.path)
     }
 
     // MARK: - 基準線
@@ -1636,15 +1722,22 @@ public final class SyncLogger: ObservableObject {
 
     public struct LogEntry: Identifiable, Sendable {
         public let id = UUID()
-        public let timestamp = Date()
+        /// **事件發生的時刻**，不是「這一行被寫進清單的時刻」。
+        public let timestamp: Date
         public let source: SyncSource
         public let message: String
+
+        init(source: SyncSource, message: String, timestamp: Date = Date()) {
+            self.source = source
+            self.message = message
+            self.timestamp = timestamp
+        }
     }
 
     @Published public private(set) var entries: [LogEntry] = []
 
-    public func log(_ message: String, source: SyncSource = .general) {
-        let entry = LogEntry(source: source, message: message)
+    public func log(_ message: String, source: SyncSource = .general, at timestamp: Date = Date()) {
+        let entry = LogEntry(source: source, message: message, timestamp: timestamp)
         entries.append(entry)
         if entries.count > 300 {
             entries.removeFirst(entries.count - 300)
@@ -1662,8 +1755,12 @@ public final class SyncLogger: ObservableObject {
 
 public extension SyncLogger {
     nonisolated static func logAsync(_ message: String, source: SyncSource = .general) {
+        // 時間在**呼叫當下**取。原本是排進主執行緒之後才取 —— 主執行緒忙（同步、匯出）時，
+        // 背景執行緒寫的幾十行日誌會一起被蓋上「它們終於輪到執行」的時間，
+        // 於是日誌時間比實際發生的時間晚（實測差約四分鐘）。
+        let happenedAt = Date()
         Task { @MainActor in
-            SyncLogger.shared.log(message, source: source)
+            SyncLogger.shared.log(message, source: source, at: happenedAt)
         }
     }
 }
