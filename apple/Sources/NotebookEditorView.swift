@@ -1891,6 +1891,9 @@ public struct NotebookEditorView: View {
             }
         }
         .background(Color(uiColor: .systemGroupedBackground))
+        // 軟體鍵盤應覆蓋視窗底部，而不是重新排版整個編輯器。否則鍵盤每次
+        // 出現／消失都會改變 GeometryReader 高度，畫布和物件跟著跳動。
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .navigationBarBackButtonHidden(true)
         // Apple Pencil 雙擊要切回「最後用過的筆刷」（工作項 S-67），
         // 所以每次換工具都要把筆刷記下來。橡皮擦與套索不算筆刷。
@@ -3380,22 +3383,14 @@ public struct NotebookEditorView: View {
     /// 只縮不放：放大到超過原尺寸會讓筆跡變糊（圖層是先算繪再變換的）。
     private var singlePageWorkArea: some View {
         GeometryReader { outer in
-            // **寬與高都要算。**
-            //
-            // 原本只算寬度：`canvasWorkAreaContent` 沒有明確高度，於是它拿到
-            // 的是「剩下多少就多少」—— 在 iPhone 上工具列吃掉大半螢幕之後
-            // 只剩六百點，整張 A4 的版面（1132 點）就被壓進那六百點裡。
-            // 使用者看到的是一張被壓扁的紙，底下一大塊空白，而且畫布上那圈
-            // 虛線框與真正的可列印範圍對不起來 —— 寫在框裡的字有可能被判定
-            // 在範圍外（實機回報過）。
-            //
-            // 現在把頁面的真實高度給它，再用寬高兩個比例的**較小者**縮放：
-            // 整頁一定看得完，而且在可用空間裡盡可能大。
+            // 只用寬度算一次「放得進視窗」的比例。鍵盤、錄音列、工具列等
+            // 垂直 UI 出現時，GeometryReader 的高度會改變；若把高度也拿來算，
+            // 每一次點文字或物件都會讓整張紙忽大忽小。垂直空間現在只決定
+            // 看得到多少紙，縮放交給使用者的捏合手勢。
             let availableWidth = max(outer.size.width - 32, 1)
-            let availableHeight = max(outer.size.height - 16, 1)
-            let scale = min(
-                1,
-                min(availableWidth / PageGeometry.width, availableHeight / PageGeometry.height)
+            let scale = PageViewportLayout.scale(
+                availableWidth: availableWidth,
+                pageWidth: PageGeometry.width
             )
             ZStack(alignment: .bottom) {
                 canvasWorkAreaContent
@@ -3403,10 +3398,11 @@ public struct NotebookEditorView: View {
                     // 不給高度的話它會被壓成剩餘空間那麼扁（iPhone 上整張
                     // A4 被壓進六百點，見上面的說明）。
                     .frame(width: PageGeometry.width, height: PageGeometry.height)
-                    .scaleEffect(scale, anchor: .center)
+                    // 固定頂緣，鍵盤若改變可見高度，紙張不會跟著上下跳動。
+                    .scaleEffect(scale, anchor: .top)
                     // 工作區**就是可用空間**，不會因為頁面而長高 ——
                     // 長高的話外層 VStack 會把工具列擠出畫面（踩過）。
-                    .frame(width: outer.size.width, height: outer.size.height)
+                    .frame(width: outer.size.width, height: outer.size.height, alignment: .top)
                     // 識別字也掛在 SwiftUI 這一層。
                     //
                     // `PKCanvasView` 自己設了 `accessibilityIdentifier`，但整頁
@@ -3725,7 +3721,11 @@ public struct NotebookEditorView: View {
                             },
                             onSelectionChanged: { hasLassoSelection = $0 },
                             onReachedPageBottom: { ensureNextPageExists() },
-                            canvasRef: { canvasView = $0 },
+                            // LazyVStack 會建立多頁畫布；不能讓最後建立的頁面覆蓋
+                            // `canvasView`，否則貼紙可能蓋到別頁且存檔頁碼也錯。
+                            canvasRef: { ref in
+                                if index == currentPageIndex { canvasView = ref }
+                            },
                             onCanvasTap: { location in
                                 currentPageIndex = index
                                 currentDrawing = drawingForPage(index)
@@ -8453,11 +8453,14 @@ public struct NotebookEditorView: View {
             return PKStroke(ink: stroke.ink, path: newPath, transform: .identity, mask: stroke.mask)
         }
 
-        var newDrawing = canvasView?.drawing ?? self.currentDrawing
+        let page = currentPageIndex
+        var newDrawing = canvasView?.drawing ?? drawingForPage(page)
         newDrawing.strokes.append(contentsOf: translatedStrokes)
         canvasView?.drawing = newDrawing
         canvasView?.setNeedsDisplay()
-        self.currentDrawing = newDrawing
+        // 貼紙是程式加入的筆跡，不應只期待 PencilKit delegate 恰好回呼。
+        // 明確送進與手寫相同的 autosave 管線，連續頁面模式也會保存正確頁次。
+        recordDrawingEdit(page: page, drawing: newDrawing)
         self.saveCurrentPageDrawing()
         PageThumbnailRenderer.invalidateAll()
     }
@@ -9434,8 +9437,10 @@ public struct NotebookEditorView: View {
 
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
-        withAnimation(.easeInOut(duration: 0.18)) {
-            editorMode = .type
+        editorMode = .type
+        // 文字框先進入視圖樹，再要求就地編輯。和同一個動畫 transaction 一起
+        // 設定時，FocusState 偶爾會早於 TextField 建立，鍵盤便時有時無。
+        DispatchQueue.main.async {
             inlineEditingTextId = transcriptBox.id
         }
     }
@@ -10566,6 +10571,26 @@ struct TextAttachmentItemView: View {
     @State private var liveHeight: CGFloat? = nil
     @State private var resizeBaseSize: CGSize? = nil
 
+    /// 統一進入就地編輯。由快顯選單觸發時，先讓選單完成關閉再建立
+    /// first responder，避免 UIKit 在 dismiss 過程中立刻把新鍵盤焦點收走。
+    private func beginInlineEditing(afterContextMenu: Bool = false) {
+        let activate = {
+            isSelected = true
+            hasBeenFocused = false
+            isEditingInline = true
+            collaborationManager.broadcastSelection(selectedId: textItem.id)
+        }
+        if afterContextMenu {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: activate)
+        } else {
+            activate()
+        }
+    }
+
+    private func afterContextMenuDismisses(_ action: @escaping () -> Void) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: action)
+    }
+
     var body: some View {
         let currentX = textItem.x + dragOffset.width
         let currentY = textItem.y + dragOffset.height
@@ -10716,39 +10741,39 @@ struct TextAttachmentItemView: View {
                 // 點兩下＝就地編輯
                 guard !isEditingInline else { return }
                 guard lockedByPeer == nil else { return }
-                isSelected = true
-                isEditingInline = true
+                beginInlineEditing()
             }
             .onTapGesture {
                 guard !isEditingInline else { return }
                 guard lockedByPeer == nil else { return }
-                isSelected = true
-                isEditingInline = true
-                collaborationManager.broadcastSelection(selectedId: textItem.id)
+                beginInlineEditing()
             }
             // 右鍵／長按也要能刪除 —— 這是大家最先嘗試的操作
             .contextMenu {
                 Button {
-                    isSelected = true
-                    isEditingInline = true
+                    beginInlineEditing(afterContextMenu: true)
                 } label: { Label(localizationManager.localized("edit_in_place"), systemImage: "character.cursor.ibeam") }
 
                 Button {
-                    onEdit()
+                    afterContextMenuDismisses(onEdit)
                 } label: { Label(localizationManager.localized("text_studio"), systemImage: "textformat") }
 
                 if let onAnchorInk {
                     Button {
-                        onAnchorInk()
+                        afterContextMenuDismisses(onAnchorInk)
                     } label: { Label(localizationManager.localized("sticky_anchor_ink"), systemImage: "link.badge.plus") }
                 }
 
-                ObjectFrameStyleMenu(style: $textItem, onChange: broadcastTextChange)
+                ObjectFrameStyleMenu(
+                    style: $textItem,
+                    onChange: broadcastTextChange,
+                    schedule: afterContextMenuDismisses
+                )
 
                 Divider()
 
                 Button(role: .destructive) {
-                    onDelete()
+                    afterContextMenuDismisses(onDelete)
                 } label: { Label(localizationManager.localized("delete"), systemImage: "trash") }
             }
             .gesture(
@@ -10766,9 +10791,7 @@ struct TextAttachmentItemView: View {
                     .onEnded { value in
                         guard lockedByPeer == nil else { return }
                         if hypot(value.translation.width, value.translation.height) < 4 {
-                            isSelected = true
-                            isEditingInline = true
-                            collaborationManager.broadcastSelection(selectedId: textItem.id)
+                            beginInlineEditing()
                         } else {
                             let oldX = textItem.x
                             let oldY = textItem.y
@@ -10872,12 +10895,17 @@ struct TextAttachmentItemView: View {
                 finishEditing()
             }
         }
-        // 固定延遲 80ms 會隨裝置速度與轉場動畫競速。task 會在 TextEditor
-        // 真正掛進視圖樹後執行；yield 一次讓 UIKit 完成 responder 安裝，
-        // 然後才要求焦點。
+        // 快顯選單、語音轉錄和一般點擊進來的時機不同。先 yield 讓 TextField
+        // 掛進視圖樹，再給 UIKit 一小段時間安裝 responder；第一次仍未成功時
+        // 再要求一次，避免鍵盤時有時無。
         .task(id: isEditingInline) {
             guard isEditingInline else { return }
             hasBeenFocused = false
+            await Task.yield()
+            inlineFocused = true
+            try? await Task.sleep(nanoseconds: 80_000_000)
+            guard isEditingInline, !hasBeenFocused else { return }
+            inlineFocused = false
             await Task.yield()
             inlineFocused = true
         }

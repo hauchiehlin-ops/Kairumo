@@ -25,6 +25,9 @@ struct ObjectFrameStyleMenu<Style: ObjectFrameStyled>: View {
     @ObservedObject var localizationManager = LocalizationManager.shared
     /// 改完之後要落盤／廣播給協同對象。
     var onChange: () -> Void = {}
+    /// 快顯選單在 iPadOS / Catalyst 關閉時可能會吃掉同一個 transaction 的
+    /// 狀態更新。一般選單直接執行；文字框的 context menu 會延後到 dismiss 後。
+    var schedule: (@escaping () -> Void) -> Void = { $0() }
 
     /// 一組夠用的顏色。刻意不多 —— 選項太多的選單比沒有選單還難用。
     ///
@@ -40,7 +43,9 @@ struct ObjectFrameStyleMenu<Style: ObjectFrameStyled>: View {
         Menu(localizationManager.localized("object_frame_style")) {
             Toggle(isOn: Binding(
                 get: { style.hasBorder },
-                set: { style.hasBorder = $0; onChange() }
+                set: { value in
+                    schedule { style.hasBorder = value; onChange() }
+                }
             )) {
                 Label(localizationManager.localized("object_show_border"), systemImage: "square")
             }
@@ -48,24 +53,27 @@ struct ObjectFrameStyleMenu<Style: ObjectFrameStyled>: View {
             Menu(localizationManager.localized("object_border_color")) {
                 ForEach(Self.palette, id: \.hex) { entry in
                     Button(localizationManager.localized(entry.key)) {
-                        style.borderColorHex = entry.hex
-                        style.hasBorder = true      // 挑了顏色卻沒有邊框，選單就白按了
-                        onChange()
+                        schedule {
+                            style.borderColorHex = entry.hex
+                            style.hasBorder = true  // 挑了顏色卻沒有邊框，選單就白按了
+                            onChange()
+                        }
                     }
                 }
                 Divider()
                 Button(localizationManager.localized("object_use_default")) {
-                    style.borderColorHex = nil
-                    onChange()
+                    schedule { style.borderColorHex = nil; onChange() }
                 }
             }
 
             Menu(localizationManager.localized("object_border_width")) {
                 ForEach([1.0, 1.5, 2.5, 4.0], id: \.self) { width in
                     Button("\(Int(width * 10) / 10) pt") {
-                        style.borderWidth = CGFloat(width)
-                        style.hasBorder = true
-                        onChange()
+                        schedule {
+                            style.borderWidth = CGFloat(width)
+                            style.hasBorder = true
+                            onChange()
+                        }
                     }
                 }
             }
@@ -75,20 +83,17 @@ struct ObjectFrameStyleMenu<Style: ObjectFrameStyled>: View {
             Menu(localizationManager.localized("object_background_color")) {
                 // 透明放在最前面：那是使用者最常想要、而原本完全做不到的一項。
                 Button(localizationManager.localized("color_transparent")) {
-                    style.backgroundColorHex = "clear"
-                    onChange()
+                    schedule { style.backgroundColorHex = "clear"; onChange() }
                 }
                 Divider()
                 ForEach(Self.palette, id: \.hex) { entry in
                     Button(localizationManager.localized(entry.key)) {
-                        style.backgroundColorHex = entry.hex
-                        onChange()
+                        schedule { style.backgroundColorHex = entry.hex; onChange() }
                     }
                 }
                 Divider()
                 Button(localizationManager.localized("object_use_default")) {
-                    style.backgroundColorHex = nil
-                    onChange()
+                    schedule { style.backgroundColorHex = nil; onChange() }
                 }
             }
 
@@ -97,8 +102,7 @@ struct ObjectFrameStyleMenu<Style: ObjectFrameStyled>: View {
                     Button(radius == 0
                            ? localizationManager.localized("object_corner_square")
                            : "\(Int(radius)) pt") {
-                        style.cornerRadius = CGFloat(radius)
-                        onChange()
+                        schedule { style.cornerRadius = CGFloat(radius); onChange() }
                     }
                 }
             }

@@ -10,6 +10,18 @@ import XCTest
 @MainActor
 final class DocumentTemplateTests: XCTestCase {
 
+    func testPageScaleDoesNotChangeWhenOnlyViewportHeightChanges() {
+        let portrait = PageViewportLayout.scale(availableWidth: 368, pageWidth: 800)
+        let keyboardVisible = PageViewportLayout.scale(availableWidth: 368, pageWidth: 800)
+
+        XCTAssertEqual(portrait, keyboardVisible, accuracy: 0.0001)
+        XCTAssertEqual(portrait, 0.46, accuracy: 0.0001)
+        XCTAssertEqual(
+            PageViewportLayout.scale(availableWidth: 1_200, pageWidth: 800),
+            1,
+            "視窗再寬也不應自動把紙張放大；放大由使用者控制")
+    }
+
     func testTheCatalogIsActuallyBundled() {
         XCTAssertFalse(
             DocumentTemplateCatalog.themes.isEmpty,

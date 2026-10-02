@@ -112,3 +112,14 @@ public enum PageGeometry {
     }
 
 }
+
+/// 編輯器視窗如何把固定尺寸的紙張放進可用寬度。
+///
+/// 垂直空間刻意不參與比例計算。鍵盤、錄音列或工具列出現時只會遮住／減少
+/// 可見範圍，不應偷偷改變使用者正在看的縮放比例。
+public enum PageViewportLayout {
+    public static func scale(availableWidth: CGFloat, pageWidth: CGFloat) -> CGFloat {
+        guard pageWidth > 0 else { return 1 }
+        return min(1, max(availableWidth, 1) / pageWidth)
+    }
+}
