@@ -89,7 +89,16 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     /// 2. 目標資料夾**必須已經存在**。指向一個不存在的路徑時，
     ///    「檔案」一樣會落到別的地方 —— 使用者看到的還是「開錯資料夾」。
     ///    第一次啟動後還沒錄過音就是這個狀態。
-    public func openRecordingsFolderInFinder() {
+    /// 「檔案」App 認得的網址（`shareddocuments://`）。拆成純函式是為了能測：
+    /// `/var` 要換成 `/private/var`（「檔案」認的是後者），而且目標資料夾必須已經存在。
+    nonisolated static func filesAppURL(for folder: URL) -> URL? {
+        var components = URLComponents(
+            url: folder.resolvingSymlinksInPath(), resolvingAgainstBaseURL: false)
+        components?.scheme = "shareddocuments"
+        return components?.url
+    }
+
+    public func openRecordingsFolderInFinder(onFailure: (() -> Void)? = nil) {
         // 先確保它存在（getter 本身會建立）。
         let folderUrl = recordingsDirectory
         #if targetEnvironment(macCatalyst) || os(macOS)
@@ -101,10 +110,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         #else
         // 標準化路徑：`/var/...` 是 `/private/var/...` 的符號連結，
         // 而「檔案」認的是後者。不解析的話會導航失敗。
-        let resolved = folderUrl.resolvingSymlinksInPath()
-        var components = URLComponents(url: resolved, resolvingAgainstBaseURL: false)
-        components?.scheme = "shareddocuments"
-        if let filesAppUrl = components?.url {
+        if let filesAppUrl = Self.filesAppURL(for: folderUrl) {
             UIApplication.shared.open(filesAppUrl, options: [:]) { opened in
                 guard !opened else { return }
                 // 退回開 Documents 根目錄：至少落在這個 App 自己的區域裡，
@@ -114,8 +120,10 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
                         .resolvingSymlinksInPath(),
                     resolvingAgainstBaseURL: false)
                 root?.scheme = "shareddocuments"
-                if let rootUrl = root?.url {
-                    UIApplication.shared.open(rootUrl, options: [:], completionHandler: nil)
+                guard let rootUrl = root?.url else { onFailure?(); return }
+                UIApplication.shared.open(rootUrl, options: [:]) { openedRoot in
+                    // 連「檔案」都開不了（受管理的裝置、被停用）才退回分享面板。
+                    if !openedRoot { onFailure?() }
                 }
             }
             return
@@ -460,11 +468,34 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
     // MARK: - 播放控制
 
+    /// 一段錄音「顯示用的秒數」—— **永遠從檔案算**，與掃描套件時用的是同一個核心函式。
+    ///
+    /// 原本錄完音當下用計時器的 `Int(duration)`（截斷），別台裝置掃到檔案時用核心的
+    /// `audioDurationSeconds`（四捨五入）：同一段錄音在 iPad 寫 00:06、在 Mac 寫 00:05。
+    /// 兩邊都從檔案算同一個函式，數字才一定一樣。讀不出來（檔案還沒寫完、格式不認得）才退回計時器。
+    nonisolated static func displaySeconds(of url: URL, fallback: TimeInterval) -> Int {
+        if let data = try? Data(contentsOf: url, options: .mappedIfSafe) {
+            let seconds = Int(audioDurationSeconds(bytes: data))
+            if seconds > 0 { return seconds }
+        }
+        return Int(fallback.rounded())
+    }
+
+    /// 最近一次播放失敗的原因（給卡片顯示）。成功開始播放時清空。
+    ///
+    /// 原本失敗只 `print` 一行 —— 使用者按了播放鈕，畫面上什麼都沒發生，
+    /// 無從分辨「沒按到」與「播不出來」。
+    @Published public var playbackFailure: String?
+    /// 最近一次按下播放的是哪一張卡片 —— 同一頁有好幾張時，錯誤提示只出現在被按的那一張。
+    @Published public var lastPlaybackRequester: String?
+
     /// 播放一段錄音。
     ///
     /// `.opus` 走核心解碼（`AVAudioPlayer` 播不動 Ogg-Opus），
     /// 其餘（遷移完成前殘留的 `.m4a`）走 AVFoundation。
     public func playAudio(url: URL, recordingId: String) {
+        playbackFailure = nil
+        lastPlaybackRequester = recordingId
         if playingRecordingId == recordingId && isPlaying {
             pauseAudio()
             return
@@ -479,11 +510,8 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
         do {
             #if os(iOS) || targetEnvironment(macCatalyst)
-            if isRunningOnMac {
-                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-            } else {
-                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.defaultToSpeaker])
-            }
+            // `.playback` 不帶 `.defaultToSpeaker`（見 `OpusAudioPlayer.startEngine` 的說明）。
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
             try AVAudioSession.sharedInstance().setActive(true)
             #endif
 
@@ -505,6 +533,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
             }
         } catch {
             print("[AudioRecorderManager] 播放音訊失敗: \(error)")
+            playbackFailure = LocalizationManager.shared.localized("audio_playback_failed")
         }
     }
 
@@ -512,11 +541,8 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
     private func playOpus(url: URL, recordingId: String) {
         #if os(iOS) || targetEnvironment(macCatalyst)
         do {
-            if isRunningOnMac {
-                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-            } else {
-                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.defaultToSpeaker])
-            }
+            // `.playback` 不帶 `.defaultToSpeaker`（見 `OpusAudioPlayer.startEngine` 的說明）。
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
             try AVAudioSession.sharedInstance().setActive(true)
         } catch {
             print("[AudioRecorderManager] AVAudioSession 設定為 playback 失敗: \(error)")
@@ -525,6 +551,7 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
 
         guard let player = opusPlayer ?? OpusAudioPlayer() else {
             print("[AudioRecorderManager] 建不出 Opus 播放器")
+            playbackFailure = LocalizationManager.shared.localized("audio_playback_failed")
             return
         }
         opusPlayer = player
@@ -533,6 +560,8 @@ public final class AudioRecorderManager: NSObject, ObservableObject, AVAudioReco
         }
         guard player.play(url: url) else {
             print("[AudioRecorderManager] 打不開錄音：\(url.lastPathComponent)")
+            opusPlayer = nil
+            playbackFailure = LocalizationManager.shared.localized("audio_playback_failed")
             return
         }
         isPlaying = true

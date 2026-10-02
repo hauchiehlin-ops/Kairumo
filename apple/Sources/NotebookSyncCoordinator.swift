@@ -1465,6 +1465,7 @@ enum NotebookSyncCoordinator {
             },
             exported: ExportedObjectIds.shared.take(documentId))
         store.syncUpsert(merged)
+        SyncKnownObjects.recordVisible(merged)
         store.syncApplyRecordingTitles(
             imported.recordingTitles, exported: ExportedObjectIds.shared.takeTitles(documentId))
         // 有保住使用者剛新增的東西就**不要**標成「已同步」：那些東西還沒進套件，下一輪要匯出。
@@ -1500,6 +1501,12 @@ enum NotebookSyncCoordinator {
             for item in imported[keyPath: keyPath] ?? [] {
                 let id = item.id.lowercased()
                 have.insert(id)
+                // 匯出當下有、現在本機沒有 ⇒ 使用者在匯出之後刪掉的。匯入的是匯出當時的套件，
+                // 照單全收會讓剛刪的東西「秒出現」。
+                if exported[id] != nil, localItems[id] == nil {
+                    preserved = true
+                    continue
+                }
                 if let mine = localItems[id], let was = exported[id], current[id] != was {
                     result.append(mine)
                     preserved = true

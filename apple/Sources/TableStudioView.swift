@@ -536,6 +536,7 @@ struct TableAttachmentItemView: View {
                     .offset(x: 10, y: -10)
                 }
             }
+            .objectProbe("table")
             .position(
                 x: currentX + CGFloat(layout.width) / 2,
                 y: currentY + CGFloat(layout.height) / 2

@@ -257,6 +257,15 @@ final class CoreAudioCapture {
             }
             engine.reset()
             self.engine = nil
+            // **把錄音用的 audio session 還回去。**
+            //
+            // 停止錄音之後 session 還停在 `.playAndRecord` 且啟用中。緊接著按錄音卡片的
+            // 播放鈕時，播放那邊要把它切成 `.playback` 再啟動引擎 —— 麥克風剛放開的那一瞬間
+            // 切換可能失敗，而失敗只印一行 log，使用者看到的就是「按了沒有反應」，
+            // 轉文字（不碰 audio session）卻是好的。先在這裡停用，播放端拿到的就是乾淨的 session。
+            #if os(iOS) || targetEnvironment(macCatalyst)
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            #endif
         }
         pipeline.stop()
     }

@@ -1,5 +1,6 @@
 import Foundation
 import UniformTypeIdentifiers
+import UIKit
 
 /// 從本機檔案匯入東西到筆記頁（Apple）。
 ///
@@ -148,5 +149,72 @@ enum FileImport {
         } catch {
             return nil
         }
+    }
+}
+
+
+// MARK: - 命令式的檔案選擇器
+
+/// 用 `UIDocumentPickerViewController` 直接呈現的檔案選擇器。
+///
+/// # 為什麼不用 SwiftUI 的 `.fileImporter`
+///
+/// 回報是「第二次用匯入音檔，選擇器沒有跳出來」。`.fileImporter` 靠一個 `isPresented` 綁定驅動，
+/// 而編輯器這個視圖上同時掛著十幾個 `.sheet`／`.photosPicker`／`.alert`：SwiftUI 在多個呈現修飾詞
+/// 競爭同一個 presenter 時，會在某一次呈現之後把後續的要求靜靜吞掉（沒有錯誤，也沒有警告）。
+/// 模擬器上第一次成功、第二次完全沒反應，正是這個形狀。
+///
+/// 命令式呈現沒有「狀態沒翻回去」這個問題：每次呼叫都是一個新的 view controller，
+/// 從目前最上層的 view controller 呈現，結束就丟掉。
+@MainActor
+final class DocumentPickerPresenter: NSObject, UIDocumentPickerDelegate {
+    private static var current: DocumentPickerPresenter?
+
+    private let completion: (Result<[URL], Error>?) -> Void
+
+    private init(completion: @escaping (Result<[URL], Error>?) -> Void) {
+        self.completion = completion
+    }
+
+    /// 呈現選擇器。`completion` 收到 `nil` 代表使用者取消。
+    /// - Returns: 有沒有真的呈現出去（找不到可用的 view controller 時回 `false`）。
+    @discardableResult
+    static func present(
+        types: [UTType], completion: @escaping (Result<[URL], Error>?) -> Void
+    ) -> Bool {
+        guard let top = topViewController() else { return false }
+        let presenter = DocumentPickerPresenter(completion: completion)
+        current = presenter
+        let picker = UIDocumentPickerViewController(forOpeningContentTypes: types, asCopy: false)
+        picker.allowsMultipleSelection = false
+        picker.delegate = presenter
+        top.present(picker, animated: true)
+        return true
+    }
+
+    /// 目前找不找得到可以呈現選擇器的 view controller（給自檢用，不會真的呈現）。
+    static func canPresent() -> Bool { topViewController() != nil }
+
+    private static func topViewController() -> UIViewController? {
+        let scene = UIApplication.shared.connectedScenes
+            .compactMap { $0 as? UIWindowScene }
+            .first { $0.activationState == .foregroundActive }
+            ?? UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+        var top = scene?.windows.first(where: \.isKeyWindow)?.rootViewController
+            ?? scene?.windows.first?.rootViewController
+        while let presented = top?.presentedViewController, !presented.isBeingDismissed {
+            top = presented
+        }
+        return top
+    }
+
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        Self.current = nil
+        completion(.success(urls))
+    }
+
+    func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
+        Self.current = nil
+        completion(nil)
     }
 }

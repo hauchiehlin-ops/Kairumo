@@ -1190,6 +1190,22 @@ extension LocalizationManager {
             .ko: "음성-필기 동기화",
             .th: "การซิงค์เสียงกับลายมือ"
         ],
+        "audio_pause": [
+            .zhHant: "暫停",
+            .en: "Pause",
+            .zhHans: "暂停",
+            .ja: "一時停止",
+            .ko: "일시정지",
+            .th: "หยุดชั่วคราว"
+        ],
+        "audio_play": [
+            .zhHant: "播放",
+            .en: "Play",
+            .zhHans: "播放",
+            .ja: "再生",
+            .ko: "재생",
+            .th: "เล่น"
+        ],
         "audio_playback_align": [
             .zhHant: "真實音訊播放與對齊",
             .en: "Real Audio Playback & Alignment",
@@ -1197,6 +1213,14 @@ extension LocalizationManager {
             .ja: "リアル音声再生と同期",
             .ko: "실시간 오디오 재생 및 동기화",
             .th: "เล่นเสียงจริงและจัดตำแหน่ง"
+        ],
+        "audio_playback_failed": [
+            .zhHant: "這段錄音無法播放。請關閉其他占用麥克風或喇叭的 App 後再試一次。",
+            .en: "This recording could not be played. Close other apps that use the microphone or speaker and try again.",
+            .zhHans: "这段录音无法播放。请关闭其他占用麦克风或扬声器的 App 后再试一次。",
+            .ja: "この録音を再生できませんでした。マイクやスピーカーを使用している他のアプリを閉じて、もう一度お試しください。",
+            .ko: "이 녹음을 재생할 수 없습니다. 마이크나 스피커를 사용하는 다른 앱을 닫고 다시 시도하세요.",
+            .th: "ไม่สามารถเล่นการบันทึกเสียงนี้ได้ ปิดแอปอื่นที่ใช้ไมโครโฟนหรือลำโพงแล้วลองอีกครั้ง"
         ],
         "audio_playing": [
             .zhHant: "同步播放中",
@@ -4643,6 +4667,14 @@ extension LocalizationManager {
             .ja: "非表示",
             .ko: "숨기기",
             .th: "ซ่อนรายการนี้"
+        ],
+        "highlight_color": [
+            .zhHant: "螢光筆顏色",
+            .en: "Highlight color",
+            .zhHans: "荧光笔颜色",
+            .ja: "ハイライトの色",
+            .ko: "형광펜 색상",
+            .th: "สีไฮไลต์"
         ],
         "hint_comment_pin_body": [
             .zhHant: "接著**點頁面上任何一處**就會放下圖釘。再按一次工具列上的圖示即可離開放置模式。",
@@ -9288,6 +9320,38 @@ extension LocalizationManager {
             .ko: "선택됨",
             .th: "เลือกอยู่"
         ],
+        "selfcheck_copy": [
+            .zhHant: "複製報告",
+            .en: "Copy report",
+            .zhHans: "复制报告",
+            .ja: "レポートをコピー",
+            .ko: "보고서 복사",
+            .th: "คัดลอกรายงาน"
+        ],
+        "selfcheck_run": [
+            .zhHant: "執行自檢",
+            .en: "Run self-check",
+            .zhHans: "运行自检",
+            .ja: "セルフチェックを実行",
+            .ko: "자가 점검 실행",
+            .th: "เริ่มตรวจสอบ"
+        ],
+        "selfcheck_running": [
+            .zhHant: "檢查中…",
+            .en: "Checking…",
+            .zhHans: "检查中…",
+            .ja: "確認中…",
+            .ko: "점검 중…",
+            .th: "กำลังตรวจสอบ…"
+        ],
+        "selfcheck_title": [
+            .zhHant: "裝置自檢",
+            .en: "Device self-check",
+            .zhHans: "设备自检",
+            .ja: "端末セルフチェック",
+            .ko: "기기 자가 점검",
+            .th: "ตรวจสอบอุปกรณ์"
+        ],
         "settings": [
             .zhHant: "設定",
             .en: "Settings",
@@ -9976,6 +10040,22 @@ extension LocalizationManager {
             .ko: "페이지의 격자나 줄에 맞춰 텍스트를 정렬합니다",
             .th: "จัดตำแหน่งข้อความให้ชิดเส้นหรือตารางในหน้ากระดาษโดยอัตโนมัติ"
         ],
+        "snap_to_grid_off_notice": [
+            .zhHant: "吸附格線已關閉：文字會放在你點的位置。",
+            .en: "Snap to grid off: text is placed exactly where you tap.",
+            .zhHans: "吸附格线已关闭：文字会放在你点的位置。",
+            .ja: "グリッド吸着オフ：テキストはタップした位置にそのまま置かれます。",
+            .ko: "격자 맞춤 꺼짐: 텍스트가 탭한 위치에 그대로 놓입니다.",
+            .th: "ปิดจัดชิดเส้นตาราง: ข้อความจะวางตรงตำแหน่งที่แตะ"
+        ],
+        "snap_to_grid_on_notice": [
+            .zhHant: "吸附格線已開啟：隨點隨寫的文字會對齊頁面行線或方格。",
+            .en: "Snap to grid on: tap-to-write text aligns to the page's lines or grid.",
+            .zhHans: "吸附格线已开启：随点随写的文字会对齐页面行线或方格。",
+            .ja: "グリッド吸着オン：タップで書くテキストがページの罫線や方眼に揃います。",
+            .ko: "격자 맞춤 켜짐: 탭해서 쓰는 텍스트가 페이지의 줄이나 격자에 맞춰집니다.",
+            .th: "เปิดจัดชิดเส้นตาราง: ข้อความที่แตะเพื่อเขียนจะชิดเส้นหรือตารางของหน้า"
+        ],
         "snapshot_created": [
             .zhHant: "快照已成功建立",
             .en: "Snapshot Created",
@@ -10529,12 +10609,12 @@ extension LocalizationManager {
             .th: "ดินสอ"
         ],
         "sticker_placed_hint": [
-            .zhHant: "貼紙已放置於畫布。可隨時使用套索或橡皮擦微調或移動。",
-            .en: "Sticker placed on canvas. You can adjust or move it anytime using the lasso or eraser.",
-            .zhHans: "贴纸已放置于画布。可随时使用套索或橡皮擦微调或移动。",
-            .ja: "ステッカーが配置されました。なげなわや消しゴムでいつでも微調整や移動が可能です。",
-            .ko: "스티커가 캔버스에 배치되었습니다. 올가미나 지우개로 언제든지 미세 조정하거나 이동할 수 있습니다.",
-            .th: "วางสติกเกอร์บนผืนผ้าใบแล้ว คุณสามารถปรับหรือย้ายได้ตลอดเวลาโดยใช้บ่วงบาศหรือยางลบ"
+            .zhHant: "貼紙已放置。點一下即可移動、縮放、旋轉或刪除。",
+            .en: "Sticker placed. Tap it to move, resize, rotate or delete.",
+            .zhHans: "贴纸已放置。点一下即可移动、缩放、旋转或删除。",
+            .ja: "ステッカーを配置しました。タップすると移動・拡大縮小・回転・削除ができます。",
+            .ko: "스티커를 배치했습니다. 탭하면 이동, 크기 조절, 회전, 삭제할 수 있습니다.",
+            .th: "วางสติกเกอร์แล้ว แตะเพื่อย้าย ปรับขนาด หมุน หรือลบ"
         ],
         "sticker_qa": [
             .zhHant: "問與答",

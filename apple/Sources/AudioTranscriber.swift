@@ -244,9 +244,9 @@ public final class AudioTranscriber: ObservableObject {
 
         let locale: Locale
         if let languageCode = languageCode, !languageCode.isEmpty {
-            locale = Locale(identifier: languageCode)
+            locale = Self.speechLocale(forUILanguage: languageCode)
         } else {
-            locale = Locale(identifier: LocalizationManager.shared.currentLanguage.rawValue)
+            locale = Self.speechLocale(forUILanguage: LocalizationManager.shared.currentLanguage.rawValue)
         }
         guard let recognizer = SFSpeechRecognizer(locale: locale) ?? SFSpeechRecognizer() else {
             return .unsupported
@@ -467,7 +467,7 @@ public final class AudioTranscriber: ObservableObject {
                 StartupLogger.log("🎙️ Whisper 轉錄完成（語言: \(result.language), 片段數: \(result.segments.count)）")
                 let trimmed = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if !trimmed.isEmpty {
-                    return trimmed
+                    return Self.localizedScript(trimmed)
                 }
             } catch {
                 StartupLogger.log("⚠️ Whisper 轉錄異常: \(error.localizedDescription)，平滑降級至 Apple Speech...")
@@ -477,7 +477,29 @@ public final class AudioTranscriber: ObservableObject {
         // 2. 降級備援路徑：走 Apple 系統聽寫框架
         lastEngineUsed = "Apple Speech"
         StartupLogger.log("🎙️ 使用 Apple Speech 系統聽寫進行轉錄...")
-        return try await transcribeWithAppleSpeech(pcm: pcm, languageCode: languageCode)
+        let text = try await transcribeWithAppleSpeech(pcm: pcm, languageCode: languageCode)
+        return Self.localizedScript(text)
+    }
+
+    /// 轉錄結果的字體跟著介面語言（繁體介面 → 正體）。轉換在核心，
+    /// 與 Android 同一份規則；Whisper 與 Apple Speech 兩條路都要過這一關。
+    static func localizedScript(_ text: String) -> String {
+        localizeTranscriptScript(
+            text: text,
+            uiLanguage: LocalizationManager.shared.currentLanguage.rawValue)
+    }
+
+    /// 介面語言 → `SFSpeechRecognizer` 認得的 locale。
+    ///
+    /// `zh-Hant` / `zh-Hans` 是文字腳本標籤，語音辨識只認地區（`zh-TW`、`zh-CN`），
+    /// 直接丟進去會得到 nil 然後退回系統預設語言 —— 繁體介面的使用者可能因此
+    /// 拿到簡體或完全不同語言的辨識結果。
+    static func speechLocale(forUILanguage code: String) -> Locale {
+        switch code {
+        case "zh-Hant": return Locale(identifier: "zh-TW")
+        case "zh-Hans": return Locale(identifier: "zh-CN")
+        default: return Locale(identifier: code)
+        }
     }
 
     private func transcribeWithAppleSpeech(pcm: [Float], languageCode: String? = nil) async throws -> String {
@@ -499,9 +521,9 @@ public final class AudioTranscriber: ObservableObject {
 
         let locale: Locale
         if let languageCode = languageCode, !languageCode.isEmpty {
-            locale = Locale(identifier: languageCode)
+            locale = Self.speechLocale(forUILanguage: languageCode)
         } else {
-            locale = Locale(identifier: LocalizationManager.shared.currentLanguage.rawValue)
+            locale = Self.speechLocale(forUILanguage: LocalizationManager.shared.currentLanguage.rawValue)
         }
 
         guard let recognizer = SFSpeechRecognizer(locale: locale) ?? SFSpeechRecognizer() else {

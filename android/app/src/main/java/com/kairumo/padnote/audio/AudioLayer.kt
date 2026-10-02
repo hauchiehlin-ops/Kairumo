@@ -25,6 +25,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
@@ -175,6 +178,10 @@ private fun AudioCardView(
                     .size(34.dp)
                     .clip(CircleShape)
                     .background(AUDIO_ACCENT.copy(alpha = if (exists) 0.14f else 0.05f))
+                    // 圖示是文字符號（▶ ⏸），沒有描述的話 TalkBack 念的是符號本身；
+                    // testTag 讓互動測試（與 Apple 的 `audio.card.play` 對應）找得到它。
+                    .testTag("audio.card.play")
+                    .semantics { contentDescription = l(if (isPlaying) "audio_pause" else "audio_play") }
                     .clickable(enabled = interactive && exists) { onTogglePlay(item) },
                 contentAlignment = Alignment.Center
             ) {
@@ -234,6 +241,8 @@ private fun AudioCardView(
                     .size(26.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.error)
+                    .testTag("audio.card.delete")
+                    .semantics { contentDescription = l("action_delete") }
                     .clickable { onDelete(item) },
                 contentAlignment = Alignment.Center
             ) { Text("✕", fontSize = 11.sp, color = Color.White) }

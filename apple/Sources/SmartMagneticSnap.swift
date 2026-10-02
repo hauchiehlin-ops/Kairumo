@@ -77,4 +77,26 @@ public enum SmartMagneticSnap {
 
         return MagneticSnapResult(snappedPoint: current, snappedAngleDegrees: nil, didSnap: false)
     }
+
+    /// 這一筆是不是「刻意畫的直線」。
+    ///
+    /// # 為什麼要有這個判斷
+    ///
+    /// 磁吸原本對**每一筆**都生效：寫字的最後一筆只要起訖連線碰巧接近水平，
+    /// 或終點離格點不到 5pt，終點就被拉去對齊 —— 一個「口」的右下角會莫名其妙
+    /// 歪掉。磁吸的用途是畫圖時把直線扶正，不該碰手寫的字。
+    ///
+    /// 判準：每個中間點離起訖連線的距離都不超過線長的 8%（至少 3pt 的容許）。
+    public static func isNearlyStraight(_ points: [CGPoint]) -> Bool {
+        guard points.count >= 2, let first = points.first, let last = points.last else { return false }
+        let length = hypot(last.x - first.x, last.y - first.y)
+        guard length > 18 else { return false }
+        let tolerance = max(3, length * 0.08)
+        for p in points {
+            // 點到直線的距離（外積 / 線長）。
+            let d = abs((last.x - first.x) * (first.y - p.y) - (first.x - p.x) * (last.y - first.y)) / length
+            if d > tolerance { return false }
+        }
+        return true
+    }
 }

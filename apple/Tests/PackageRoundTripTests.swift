@@ -757,6 +757,156 @@ final class PackageMultiDeviceTests: XCTestCase {
         XCTAssertNil(afterDelete.tapeAttachments)
     }
 
+    func testDeletingAnObjectAnotherDeviceWroteSticksAcrossSyncRounds() throws {
+        // 使用者回報：在 iPad 刪掉錄音卡片，「秒出現」。卡片的 oplog 在別台裝置（或別台壓實過的檔案）
+        // 裡，這台重匯出只會重建自己的部分 —— 刪除沒有被表達，下一輪匯入又把它帶回來。
+        let package = workDir.appendingPathComponent("foreign-delete.padnote")
+        try NotebookPackageBridge.export(
+            document: envelopeDocument(), drawings: [PKDrawing()], to: package, deviceId: deviceB)
+
+        // A 看到並同步過一次（卡片是 B 寫的）。
+        var a = try syncRound(package, device: deviceA)
+        XCTAssertEqual(a.audioAttachments?.count, 1, "測試前提不成立：A 應該看得到 B 的錄音卡片")
+
+        // A 刪掉卡片與一個圖釘，然後走完整的一輪：匯出 → 匯入。
+        a.audioAttachments = nil
+        a.commentPins?.removeLast()
+        let pageIds = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceA).pageIds
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: a, drawings: [PKDrawing()], to: package, deviceId: deviceA, pageIds: pageIds)
+
+        let afterA = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceA).document
+        XCTAssertNil(afterA.audioAttachments, "刪掉的錄音卡片在 A 自己的下一輪匯入又出現了")
+        XCTAssertEqual(afterA.commentPins?.count, 1)
+
+        // 再多輪幾趟（A、B 輪流匯出）也不能復活。
+        for device in [deviceB, deviceA, deviceB, deviceA] {
+            let doc = try syncRound(package, device: device)
+            XCTAssertNil(doc.audioAttachments, "裝置 \(device) 又看到被刪掉的錄音卡片")
+            XCTAssertEqual(doc.commentPins?.count, 1)
+        }
+    }
+
+    /// 每一種信封物件都走一遍「別台寫的、這台刪掉」。
+    ///
+    /// 一次只測一種的話，漏掉的永遠是下一種新增的物件 —— 這個專案的刪除復活就是這樣一種一種被
+    /// 使用者在實機上發現的。新增物件種類時，把它加進 `deletions` 就會被這個矩陣擋住。
+    func testDeletingAnyForeignObjectKindSticksAcrossSyncRounds() throws {
+        let deletions: [(name: String, delete: (inout NotebookDocument) -> Void, remaining: (NotebookDocument) -> Int)] = [
+            ("link", { $0.linkAttachments = nil }, { $0.linkAttachments?.count ?? 0 }),
+            ("model3d", { $0.model3DAttachments = nil }, { $0.model3DAttachments?.count ?? 0 }),
+            ("audio", { $0.audioAttachments = nil }, { $0.audioAttachments?.count ?? 0 }),
+            ("pins", { $0.commentPins = nil }, { $0.commentPins?.count ?? 0 }),
+            ("tape", { $0.tapeAttachments = nil }, { $0.tapeAttachments?.count ?? 0 }),
+        ]
+        for (index, item) in deletions.enumerated() {
+            let package = workDir.appendingPathComponent("matrix-\(index).padnote")
+            try NotebookPackageBridge.export(
+                document: envelopeDocument(), drawings: [PKDrawing()], to: package, deviceId: deviceB)
+            var a = try syncRound(package, device: deviceA)
+            item.delete(&a)
+            let pageIds = try NotebookPackageBridge.importDocument(
+                fromPackageAt: package, deviceId: deviceA).pageIds
+            try NotebookPackageBridge.exportPreservingOtherDevices(
+                document: a, drawings: [PKDrawing()], to: package, deviceId: deviceA, pageIds: pageIds)
+            for device in [deviceA, deviceB, deviceA, deviceB] {
+                let doc = try syncRound(package, device: device)
+                XCTAssertEqual(item.remaining(doc), 0, "\(item.name)：被刪掉的物件在裝置 \(device) 又出現了")
+            }
+        }
+    }
+
+    @MainActor
+    func testItemDeletedAfterExportIsNotBroughtBackByTheImport() {
+        // 一輪同步是「匯出 → 等網路 → 匯入」。等網路的時候使用者刪了卡片，匯入的是匯出當時的
+        // 套件 —— 照單全收就是「刪掉又秒出現」。
+        let card = NoteAudioAttachment(
+            id: "33333333-3333-4333-8333-333333333333", fileName: "a.opus", title: "A")
+        var atExport = document("X")
+        atExport.audioAttachments = [card]
+        var nowLocal = atExport
+        nowLocal.audioAttachments = nil            // 匯出之後刪掉
+        let imported = atExport                    // 匯入的是舊套件
+        let (merged, preserved) = NotebookSyncCoordinator.preservingLocalChanges(
+            imported, local: nowLocal, exported: ExportedObjectIds.fingerprints(of: atExport))
+        XCTAssertTrue(merged.audioAttachments?.isEmpty ?? true, "剛刪的卡片被匯入帶回來了")
+        XCTAssertTrue(preserved, "有保住使用者的刪除，這一輪不能標成「已同步」")
+    }
+
+    /// 內容區塊類（文字、圖片、形狀）也走一遍「別台寫的、這台刪掉」。
+    /// 它們不是信封物件，進出套件的路徑不同（區塊／物件樹），復活的原因也可能不同。
+    func testDeletingForeignTextImageAndShapeSticksAcrossSyncRounds() throws {
+        let package = workDir.appendingPathComponent("blocks-delete.padnote")
+        let textId = "66666666-6666-4666-8666-666666666661"
+        let imageId = "66666666-6666-4666-8666-666666666662"
+        let shapeId = "66666666-6666-4666-8666-666666666663"
+        var doc = document("B")
+        doc.textAttachments = [
+            NoteTextAttachment(id: textId, pageIndex: 0, text: "刪我", x: 10, y: 10),
+            NoteTextAttachment(pageIndex: 0, text: "留著", x: 10, y: 80),
+        ]
+        doc.attachments = [NoteImageAttachment(id: imageId, fileName: "p.png", pageIndex: 0, x: 40, y: 200)]
+        doc.shapeAttachments = [NoteShapeAttachment(id: shapeId, pageIndex: 0, kindName: "process", x: 40, y: 400)]
+        let png = try UIGraphicsImageRenderer(size: CGSize(width: 6, height: 6)).image { _ in
+            UIColor.red.setFill(); UIRectFill(CGRect(x: 0, y: 0, width: 6, height: 6))
+        }.pngData().map { ["p.png": $0] } ?? [:]
+        try NotebookPackageBridge.export(
+            document: doc, drawings: [PKDrawing()], imageData: png, to: package, deviceId: deviceB)
+
+        func roundTrip(_ device: UInt32) throws -> NotebookDocument {
+            let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: device)
+            try NotebookPackageBridge.exportPreservingOtherDevices(
+                document: imported.document, drawings: imported.drawings, imageData: imported.imageData,
+                to: package, deviceId: device, pageIds: imported.pageIds)
+            return imported.document
+        }
+        var a = try roundTrip(deviceA)
+        XCTAssertEqual(a.textAttachments?.count, 2, "測試前提不成立")
+        a.textAttachments?.removeAll { $0.id.lowercased() == textId }
+        a.attachments = nil
+        a.shapeAttachments = nil
+        let imported = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceA)
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: a, drawings: imported.drawings, to: package, deviceId: deviceA, pageIds: imported.pageIds)
+
+        for device in [deviceB, deviceA, deviceB, deviceA] {
+            let d = try roundTrip(device)
+            XCTAssertEqual(d.textAttachments?.map(\.text), ["留著"], "裝置 \(device)：被刪的文字方塊復活了，或留著的那個不見了")
+            XCTAssertNil(d.attachments, "裝置 \(device)：被刪的圖片復活了")
+            XCTAssertNil(d.shapeAttachments, "裝置 \(device)：被刪的形狀復活了")
+        }
+    }
+
+    /// 錄音整條：A 錄音（名字、檔名、卡片、秒數）→ 匯出 → B 匯入 → 兩邊看到的東西一致。
+    /// 對應回報的「檔名沒同步、秒數有些微差異」。單點測試測不到，因為壞掉的是順序與資料來源的組合。
+    func testRecordingChainAgreesOnBothDevices() throws {
+        let package = workDir.appendingPathComponent("recording-chain.padnote")
+        var doc = document("R")
+        let fileName = "9a9a9a9a-9a9a-4a9a-8a9a-9a9a9a9a9a9a.opus"
+        doc.audioAttachments = [NoteAudioAttachment(
+            id: "77777777-7777-4777-8777-777777777771", recordingId: "r1", fileName: fileName,
+            title: "我取的名字", durationSeconds: 6)]
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: doc, drawings: [PKDrawing()], to: package, deviceId: deviceA,
+            recordingTitles: [fileName: "我取的名字"])
+
+        let b = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceB)
+        XCTAssertEqual(b.document.audioAttachments?.first?.fileName, fileName)
+        XCTAssertEqual(b.document.audioAttachments?.first?.title, "我取的名字")
+        XCTAssertEqual(b.document.audioAttachments?.first?.durationSeconds, 6)
+        XCTAssertEqual(b.recordingTitles[fileName], "我取的名字", "錄音清單的名字沒有跟著套件過去")
+
+        // B 改名之後 A 看得到（雙向）。
+        var renamed = b.document
+        renamed.audioAttachments?[0].title = "B 改的"
+        try NotebookPackageBridge.exportPreservingOtherDevices(
+            document: renamed, drawings: [PKDrawing()], to: package, deviceId: deviceB,
+            pageIds: b.pageIds, recordingTitles: [fileName: "B 改的"])
+        let a = try NotebookPackageBridge.importDocument(fromPackageAt: package, deviceId: deviceA)
+        XCTAssertEqual(a.document.audioAttachments?.first?.title, "B 改的")
+        XCTAssertEqual(a.recordingTitles[fileName], "B 改的")
+    }
+
     func testAnotherDevicesEnvelopeMoveSurvives() throws {
         let package = workDir.appendingPathComponent("move.padnote")
         try NotebookPackageBridge.export(

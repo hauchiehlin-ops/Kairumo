@@ -217,6 +217,7 @@ public struct WordToolbarView: View {
                         .cornerRadius(6)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("text_color"))
 
                     // 螢光筆標記
                     Menu {
@@ -244,6 +245,7 @@ public struct WordToolbarView: View {
                             .cornerRadius(6)
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(localizationManager.localized("highlight_color"))
                 }
 
                 Divider().frame(height: 20)

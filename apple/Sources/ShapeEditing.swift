@@ -202,6 +202,7 @@ struct ShapeAttachmentItemView: View {
             }
         }
         .frame(width: frame.width, height: frame.height)
+        .objectProbe("shape")
         .position(x: currentX + frame.width / 2, y: currentY + frame.height / 2)
         .animation(nil, value: dragOffset)
         .alert(
@@ -289,6 +290,9 @@ struct ShapeAttachmentItemView: View {
             // 視覺 11pt，點擊區 30pt：手指碰不到更小的東西。
             .frame(width: 30, height: 30)
             .contentShape(Rectangle())
+            .accessibilityElement()
+            .accessibilityLabel(localizationManager.localized("resize"))
+            .accessibilityAddTraits(.isButton)
             .position(x: w / 2 + handle.sx * w / 2, y: h / 2 + handle.sy * h / 2)
             .highPriorityGesture(
                 DragGesture(minimumDistance: 1, coordinateSpace: .named(CanvasCoordinateSpace.name))

@@ -1241,7 +1241,58 @@ public final class NotebookStore: ObservableObject {
             backfillEmptySeedNotebooks()
         }
         refreshRecordings()
+        injectInteractionFixturesIfRequested()
         StartupLogger.log("NotebookStore.init 初始化完成")
+    }
+
+    /// 互動矩陣專用筆記本的 id（`InteractionMatrixAudit` 靠它從首頁找到這本）。
+    static let interactionFixtureNotebookId = "uitest-matrix-notebook"
+
+    /// UI 測試專用（`KAIRUMO_UITEST_SEED_OBJECTS=1`）：建立一本**專用的**空白筆記，第 1 頁上每種物件各一個，
+    /// 互動矩陣（`InteractionMatrixAudit`）才有東西可以點。
+    ///
+    /// 獨立一本而不是塞進歡迎筆記：歡迎筆記已經有內容，物件會疊在別的東西上；
+    /// 而且位置全放在頁面上半部，橫式（可視高度短）也在畫面裡，量到的是「點不點得到」而不是「要不要捲」。
+    /// 音檔是真的 Ogg-Opus（核心編碼器產生），播放鈕走真實的播放管線。固定 id、冪等；沒設環境變數時完全不動。
+    private func injectInteractionFixturesIfRequested() {
+        let env = ProcessInfo.processInfo.environment
+        guard env["KAIRUMO_UITEST"] == "1", env["KAIRUMO_UITEST_SEED_OBJECTS"] == "1" else { return }
+        let nbId = Self.interactionFixtureNotebookId
+        // 每次啟動都重建：上一輪測試刪掉的物件不能讓這一輪少一格。
+        notebooks.removeAll { $0.id == nbId }
+        var doc = NotebookDocument(id: nbId, title: "Interaction Matrix", pageCount: 1)
+
+        let audioName = "uitest-fixture.opus"
+        let audioURL = AudioRecorderManager.shared.recordingsDirectory.appending(path: audioName)
+        if !FileManager.default.fileExists(atPath: audioURL.path) {
+            let pcm = (0..<32_000).map { Float(sin(Double($0) * 2 * .pi * 440 / 16_000)) * 0.4 }
+            _ = audioEncodePcmToOpus(pcm16kMono: pcm, outPath: audioURL.path)
+        }
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 120, height: 120))
+        let png = renderer.image { ctx in
+            UIColor.systemOrange.setFill()
+            ctx.fill(CGRect(x: 0, y: 0, width: 120, height: 120))
+        }
+        doc.audioAttachments = [NoteAudioAttachment(
+            id: "00000000-0000-4000-8000-0000000000a1", pageIndex: 0, recordingId: "uitest",
+            fileName: audioName, title: "Fixture audio", durationSeconds: 2, x: 60, y: 40)]
+        if let name = saveAttachmentImage(png) {
+            doc.attachments = [NoteImageAttachment(
+                id: "00000000-0000-4000-8000-0000000000a2", fileName: name, pageIndex: 0, x: 440, y: 40,
+                width: 120, height: 120, rotationDegrees: 0, cornerRadius: 0, hasShadow: false,
+                hasBorder: false, filterStyle: .original, chartSpecJSON: nil)]
+        }
+        doc.linkAttachments = [NoteLinkAttachment(
+            id: "00000000-0000-4000-8000-0000000000a4", pageIndex: 0, urlString: "https://example.com",
+            title: "Fixture link", x: 60, y: 200, width: 300, height: 100)]
+        doc.textAttachments = [NoteTextAttachment(
+            id: "00000000-0000-4000-8000-0000000000a3", pageIndex: 0, text: "Fixture text",
+            x: 440, y: 200, width: 280, height: 80)]
+        doc.shapeAttachments = [NoteShapeAttachment(
+            id: "00000000-0000-4000-8000-0000000000a5", pageIndex: 0, kindName: "process",
+            x: 60, y: 360, width: 160, height: 80, label: "Fixture shape")]
+        notebooks.append(doc)
+        persistData(signalsLocalEdit: false)
     }
 
     /// 測試專用：把資料根目錄換成一個暫存目錄，而且**不放範例筆記**（S-92）。
@@ -2984,12 +3035,23 @@ public final class NotebookStore: ObservableObject {
         return ids
     }
 
+    /// 別台取的錄音名字，但這台的清單裡還沒有那段錄音（檔名小寫 → 名字）。
+    private var unmatchedIncomingTitles: [String: String] = [:]
+
     /// 把別台改的錄音名字套進清單（見 `RecordingTitle`）。
     ///
     /// `exported` 是這一輪匯出當下各錄音的名字：清單現在的名字與它不同，代表匯出之後使用者在
     /// 這台又改過 —— 保留使用者的，下一輪匯出會帶出去。沒有 `exported` 時一律採用別台的。
     func applyRecordingTitles(_ titles: [String: String], exported: [String: String]?) {
         guard !titles.isEmpty else { return }
+        // 清單裡還沒有這段錄音的（別台剛錄、這台還沒掃描到）先記下來，掃描建立紀錄時用。
+        // 匯入名字發生在掃描**之前**：不記的話，掃描替它取預設名（「快速錄音」），
+        // 別台取的名字就永遠對不上 —— 使用者看到的是「檔名沒有同步」。
+        let known = Set(recordings.map { $0.fileName.lowercased() })
+        for (key, title) in titles where !known.contains(key)
+            && !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            unmatchedIncomingTitles[key] = title
+        }
         var changed = false
         for index in recordings.indices {
             let key = recordings[index].fileName.lowercased()
@@ -3090,7 +3152,9 @@ public final class NotebookStore: ObservableObject {
                 let modified = (try? file.resourceValues(forKeys: [.contentModificationDateKey]))?
                     .contentModificationDate ?? Date()
                 let title: String
-                if isInbox {
+                if let named = unmatchedIncomingTitles.removeValue(forKey: name.lowercased()) {
+                    title = named
+                } else if isInbox {
                     title = LocalizationManager.shared.localized("quick_record")
                 } else {
                     // 不放筆記本名稱：錄音檔是獨立的東西，它在「錄音」清單裡以時間辨識。

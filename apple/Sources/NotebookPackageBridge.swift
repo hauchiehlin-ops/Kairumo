@@ -645,7 +645,53 @@ enum NotebookPackageBridge {
         try? applyForeignEdits(
             document: document, foreign: foreign, to: destination, deviceId: deviceId,
             recordingTitles: recordingTitles)
+        // 5. 使用者刪掉的、別台裝置寫的物件：把「刪除」寫成這台的操作。
+        try? applyForeignDeletions(
+            document: document, foreign: foreign, to: destination, deviceId: deviceId)
         return summary
+    }
+
+    /// 文件裡所有物件在核心的區塊／物件 id（小寫）。
+    static func objectBlockIds(of d: NotebookDocument) -> Set<String> {
+        var out = Set<String>()
+        func add<T: Identifiable>(_ items: [T]?) where T.ID == String {
+            for item in items ?? [] { out.insert(stableBlockId(item.id)) }
+        }
+        add(d.attachments); add(d.textAttachments); add(d.tableAttachments); add(d.shapeAttachments)
+        add(d.connectionAttachments); add(d.linkAttachments); add(d.model3DAttachments)
+        add(d.audioAttachments); add(d.commentPins); add(d.tapeAttachments); add(d.stickyAnchors)
+        return out
+    }
+
+    /// 刪除要寫成操作的理由，與為什麼要兩份名單：
+    ///
+    /// 這台重匯出時只會重建**自己的** oplog；一個物件的「新增」若寫在別台的檔案裡（別台建立的，
+    /// 或別台壓實時把這台的新增併進它自己的檔案），這台把它從文件刪掉之後，重建的結果裡只是
+    /// 「沒有這個物件」—— 別台的檔案照樣有，下一輪匯入又把它帶回來（使用者回報：刪掉錄音卡片
+    /// 「秒出現」）。要讓刪除生效，必須在自己的 oplog 寫一筆 `removeBlock`。
+    ///
+    /// - `known`：上次同步（匯出／匯入）結束時，使用者在畫面上看得到的物件。**只有這些**才可能是
+    ///   「使用者刪的」；套件裡有、但使用者還沒看過的（剛下載、尚未匯入），不能當成刪除。
+    /// - `pending`：已經決定要刪、而別台的檔案裡還有的。這台的 oplog 每次匯出都整批重建，
+    ///   上一次寫的 `removeBlock` 會被一起洗掉，所以要每次重發，直到別台的檔案不再有它為止。
+    private static func applyForeignDeletions(
+        document: NotebookDocument, foreign: ForeignBlocks, to destination: URL, deviceId: UInt32
+    ) throws {
+        let key = document.id.lowercased()
+        let current = objectBlockIds(of: document)
+        let known = SyncKnownObjects.known(key)
+        var pending = SyncKnownObjects.pending(key)
+        pending.formUnion(known.intersection(foreign.ids).subtracting(current))
+        pending.subtract(current)            // 使用者又加回來了（還原）
+        pending.formIntersection(foreign.ids) // 別台已經沒有它了，不用再發
+        SyncKnownObjects.setPending(pending, key)
+        SyncKnownObjects.setKnown(current.union(known.subtracting(foreign.ids)), key)
+        guard !pending.isEmpty else { return }
+        let session = try PadnoteSession.openExisting(path: destination.path, deviceId: deviceId)
+        for id in pending {
+            try? session.removeBlock(blockId: id)
+            try? session.removeObject(objectId: id)
+        }
     }
 
     /// 從套件讀回來的信封物件（見 ObjectEnvelope.swift）。
@@ -1390,5 +1436,36 @@ enum NotebookPackageBridge {
     /// 真正危險的是有人順手補一個 `default: .blank`：新紙的底紋會靜靜消失。
     static func pageStyle(for template: NoteTemplate) -> PageStyle {
         template.pageStyle
+    }
+}
+
+
+/// 每本筆記「使用者看得到的物件 id」與「待刪的別台物件 id」，見
+/// `NotebookPackageBridge.applyForeignDeletions`。存在 UserDefaults：量小、不需要跟著筆記同步
+/// （同步的是刪除這個**操作**，不是這份名單）。
+enum SyncKnownObjects {
+    private static func key(_ kind: String, _ notebook: String) -> String {
+        "kairumo.sync.\(kind).\(notebook.lowercased())"
+    }
+
+    static func known(_ notebook: String) -> Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: key("known", notebook)) ?? [])
+    }
+
+    static func setKnown(_ ids: Set<String>, _ notebook: String) {
+        UserDefaults.standard.set(Array(ids), forKey: key("known", notebook))
+    }
+
+    static func pending(_ notebook: String) -> Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: key("pending", notebook)) ?? [])
+    }
+
+    static func setPending(_ ids: Set<String>, _ notebook: String) {
+        UserDefaults.standard.set(Array(ids), forKey: key("pending", notebook))
+    }
+
+    /// 匯入完成後：使用者現在看得到的就是合併後的文件。
+    static func recordVisible(_ document: NotebookDocument) {
+        setKnown(NotebookPackageBridge.objectBlockIds(of: document), document.id)
     }
 }

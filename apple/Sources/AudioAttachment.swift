@@ -75,9 +75,6 @@ struct AudioAttachmentItemView: View {
         let currentY = item.y + dragOffset.height
 
         card
-            .onTapGesture {
-                isSelected.toggle()
-            }
             .simultaneousGesture(
                 DragGesture(minimumDistance: 8, coordinateSpace: .named(CanvasCoordinateSpace.name))
                     .onChanged { value in
@@ -173,6 +170,7 @@ struct AudioAttachmentItemView: View {
                     .help(localizationManager.localized("rename_audio_card"))
                 }
             }
+            .objectProbe("audio")
             .padding(20)
             .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
             .animation(nil, value: dragOffset)
@@ -183,6 +181,14 @@ struct AudioAttachmentItemView: View {
                     if !trimmed.isEmpty { item.title = trimmed }
                 }
                 Button(localizationManager.localized("cancel"), role: .cancel) {}
+            }
+            .alert(localizationManager.localized("audio_play"), isPresented: Binding(
+                get: { audioManager.playbackFailure != nil && audioManager.lastPlaybackRequester == item.id },
+                set: { if !$0 { audioManager.playbackFailure = nil } }
+            )) {
+                Button(localizationManager.localized("done"), role: .cancel) {}
+            } message: {
+                Text(audioManager.playbackFailure ?? "")
             }
             .alert(isPresented: Binding(
                 get: { transcribeAlertMessage != nil },
@@ -255,7 +261,16 @@ struct AudioAttachmentItemView: View {
             }
             .buttonStyle(.plain)
             .disabled(!fileExists)
+            .accessibilityLabel(localizationManager.localized(isPlayingThis ? "audio_pause" : "audio_play"))
+            .accessibilityIdentifier("audio.card.play")
 
+            // 選取／取消選取的點擊**只掛在播放鈕以外的區域**。
+            //
+            // 原本是整張卡片（含播放鈕）外面包一層 `.onTapGesture`，於是播放鈕是它的
+            // 子孫：按下去由外層的點擊手勢吃掉，播放鈕的動作從來沒有被呼叫 ——
+            // 使用者回報的就是「點擊播放鈕沒有作用」，而且卡片連選取狀態都沒變
+            //（外層與裡面各掛了一個，一次點擊切換了兩次）。
+            HStack(spacing: 10) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.title.isEmpty
                      ? localizationManager.localized("layer_kind_audio")
@@ -295,6 +310,11 @@ struct AudioAttachmentItemView: View {
             Image(systemName: "waveform")
                 .font(.system(size: 15))
                 .foregroundColor(.secondary.opacity(0.6))
+            }
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isSelected.toggle()
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -312,9 +332,6 @@ struct AudioAttachmentItemView: View {
         )
         .shadow(color: Color.black.opacity(0.08), radius: 6, y: 3)
         .contentShape(Rectangle())
-        .onTapGesture {
-            isSelected.toggle()
-        }
         .contextMenu {
             ObjectOrderMenu(id: item.id)
             Button {

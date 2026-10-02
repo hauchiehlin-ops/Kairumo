@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -39,12 +40,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.kairumo.padnote.platform.PlatformSelfCheck
+import com.kairumo.padnote.platform.SelfCheckResult
 import com.kairumo.padnote.platform.StartupLogger
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 fun AppDiagnosticsDialog(
@@ -57,6 +62,9 @@ fun AppDiagnosticsDialog(
     val context = LocalContext.current
     var selectedTab by remember { mutableIntStateOf(0) }
     var copiedStartupLogs by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    var selfCheck by remember { mutableStateOf<List<SelfCheckResult>>(emptyList()) }
+    var selfCheckRunning by remember { mutableStateOf(false) }
 
     LaunchedEffect(copiedStartupLogs) {
         if (copiedStartupLogs) {
@@ -93,11 +101,53 @@ fun AppDiagnosticsDialog(
                         onClick = { selectedTab = 1 },
                         text = { Text(l("startup_logs_title"), maxLines = 1, fontSize = 12.sp) }
                     )
+                    Tab(
+                        selected = selectedTab == 2,
+                        onClick = { selectedTab = 2 },
+                        modifier = Modifier.testTag("diagnostics.selfcheck.tab"),
+                        text = { Text(l("selfcheck_title"), maxLines = 1, fontSize = 12.sp) }
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                if (selectedTab == 0) {
+                if (selectedTab == 2) {
+                    // 分頁 3：裝置自檢（與 Apple 同一組檢查與報告格式）
+                    Column(
+                        modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(
+                                enabled = !selfCheckRunning,
+                                modifier = Modifier.testTag("diagnostics.selfcheck.run"),
+                                onClick = {
+                                    selfCheckRunning = true
+                                    scope.launch {
+                                        selfCheck = PlatformSelfCheck.run(context, "")
+                                        selfCheckRunning = false
+                                    }
+                                }
+                            ) { Text(if (selfCheckRunning) l("selfcheck_running") else l("selfcheck_run")) }
+                            if (selfCheck.isNotEmpty()) {
+                                TextButton(onClick = {
+                                    LogExportUtility.copy(context, PlatformSelfCheck.report(selfCheck, ""))
+                                }) { Text(l("selfcheck_copy")) }
+                            }
+                        }
+                        selfCheck.forEach { r ->
+                            val mark = when (r.status) {
+                                SelfCheckResult.Status.PASS -> "✅"
+                                SelfCheckResult.Status.WARN -> "⚠️"
+                                SelfCheckResult.Status.FAIL -> "❌"
+                            }
+                            Column(modifier = Modifier.testTag("diagnostics.selfcheck.${r.id}")) {
+                                Text("$mark ${r.title}", style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
+                                Text(r.detail, style = MaterialTheme.typography.bodySmall, fontFamily = FontFamily.Monospace)
+                            }
+                        }
+                    }
+                } else if (selectedTab == 0) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()

@@ -199,9 +199,11 @@ fun ContinuousPagesView(
     BoxWithConstraints(modifier) {
         // 頁面是固定的 800 × 1132（P-01），視窗不是。縮到剛好放得下 ——
         // 不縮的話頁面右半邊會被切掉，而使用者看不出那是「超出去」
-        // 還是「畫布壞了」。
+        // 還是「畫布壞了」。視窗比紙張寬時反過來放大填滿（上限 2 倍，
+        // 與 Apple 的 `PageViewportLayout.maxFitScale` 同一個數字），
+        // 否則兩側留下的灰邊看起來像畫布被框住。
         val available = (maxWidth.value - 32f).coerceAtLeast(1f)
-        val scale = minOf(1f, available / PageGeometry.width)
+        val scale = minOf(MAX_FIT_SCALE, available / PageGeometry.width)
         LazyColumn(
             state = listState,
             modifier = Modifier.fillMaxSize(),
@@ -255,6 +257,9 @@ fun ContinuousPagesView(
     }
 }
 
+
+/** 自動貼合寬度時的放大上限；與 Apple `PageViewportLayout.maxFitScale` 一致。 */
+private const val MAX_FIT_SCALE = 2f
 
 /**
  * 把固定 800 × 1132 的頁面縮進捲動列表的一格。

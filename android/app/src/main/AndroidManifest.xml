@@ -42,6 +42,15 @@
         任何人拿到的都只是密文；但房號、成員與流量樣態是明文，這正是
         公開網路上必須用 wss:// 的理由。
     -->
+        <!-- 套件可見性（API 30+）：沒有宣告的話，`queryIntentActivities` 一律回空，
+         「裝置自檢」會誤報『沒有檔案選擇器』。只宣告我們實際會問的那一個動作。 -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.OPEN_DOCUMENT" />
+            <data android:mimeType="*/*" />
+        </intent>
+    </queries>
+
     <application
         android:usesCleartextTraffic="true"
         android:allowBackup="true"

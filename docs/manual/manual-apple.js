@@ -193,7 +193,9 @@ window.KAIRUMO_MANUAL = {
           "點「文字排版」可以調字級、粗體、斜體、底線、對齊與文字顏色。",
           "「特殊符號」可插入數學與常用符號；「插入連結」貼上網址後會變成可點擊的預覽卡片。",
           "文字方塊可以直接拖曳移動，拖右下角的把手可以改變大小。",
-          "「框選」可以拉一個框把多個物件一次選起來，接著整組搬移、複製、貼上、建立副本或刪除。在選取範圍裡拖曳就是整組搬移。",
+          "「框選」可以拉一個框把多個物件一次選起來，接著整組搬移、複製、貼上、建立副本或刪除。在選取範圍裡拖曳就是整組搬移。框選選的是**物件**（圖片、貼紙、文字方塊、表格、圖形、錄音卡片…）；手寫的筆跡要用手繪模式的**套索**。從「插入」選單也能進入框選，並會自動切到打字模式。",
+          "「吸附格線」只管一件事：隨點隨寫的文字與新文字方塊會對齊頁面的行線或方格。開啟時文字落在最近的一行，關閉時落在你點的位置；按下去會當場說明目前的狀態。",
+          "貼紙放置確認後是頁面上的**物件**：點一下就會出現把手，可以搬移、縮放、旋轉、刪除、調整圖層，也能被框選。",
           "「動態流式錨定」：選取文字方塊或框選周邊手寫筆畫後點「錨定至文字」，手寫批註將牢牢錨定在文字旁；拖曳文字方塊或增刪文字排版時，手寫筆劃會即時自動平移跟隨，絕不脫節跑位。"
         ],
         "tip": "打字模式下**筆也不會畫線** —— 這個模式只處理文字與物件。要寫字請切回手繪模式。連結卡片插入後選取它，左下角的鉛筆可以改網址、標題與說明。",
@@ -709,7 +711,9 @@ window.KAIRUMO_MANUAL = {
           "“Text Studio” sets size, bold, italic, underline, alignment and colour.",
           "“Special Symbols” inserts maths and common symbols; “Insert Link” turns a pasted URL into a tappable preview card.",
           "Drag a text box to move it; drag the handle at its bottom-right corner to resize it.",
-          "“Select” lets you drag a box around several objects at once, then move, copy, paste, duplicate or delete them together. Dragging inside the selection moves the whole group.",
+          "“Select” lets you drag a box around several objects at once, then move, copy, paste, duplicate or delete them together. Dragging inside the selection moves the whole group. It selects **objects** (images, stickers, text boxes, tables, shapes, audio cards…); to select handwritten strokes use the **lasso** in Handwriting mode. You can also start it from the Insert menu, which switches to Typing mode for you.",
+          "“Snap to Grid” does one thing: click-to-type text and new text boxes line up with the page’s rules or grid. When on, text lands on the nearest line; when off, it lands exactly where you tap. A notice tells you which state you are in.",
+          "Once placed, a sticker is an **object** on the page: tap it to get handles for moving, resizing, rotating, deleting and re-ordering layers, and it can be box-selected too.",
           "“Fluid Sticky Annotations”: select a text box or lasso overlapping strokes and tap “Anchor to Text”; handwriting binds to the text box so that dragging the text or reflowing paragraphs automatically carries the handwritten annotations along."
         ],
         "tip": "In typing mode **the pen does not draw either** — this mode only handles text and objects. Switch back to handwriting mode to write. Select an inserted link card and the pencil at its bottom left edits the URL, title and description.",

@@ -2654,7 +2654,7 @@ private fun InkScreen(
                         if (pageDisplayMode == PageDisplayMode.CONTINUOUS) "page_mode_continuous"
                         else "page_mode_single"
                     ),
-                    style = MaterialTheme.typography.labelSmall
+                    style = MaterialTheme.typography.labelLarge
                 )
             }
             TextButton(modifier = Modifier.testTag("editor.page.add"), onClick = {
@@ -2685,7 +2685,7 @@ private fun InkScreen(
                 ) {
                     Text(
                         l10n(uniffi.padnote_core.pageFormat(currentFormat).titleKey),
-                        style = MaterialTheme.typography.labelSmall
+                        style = MaterialTheme.typography.labelLarge
                     )
                 }
                 DropdownMenu(expanded = formatMenu, onDismissRequest = { formatMenu = false }) {
@@ -3151,7 +3151,10 @@ private fun InkScreen(
                         if (!marqueeActive) marqueeSelection = emptySet()
                         // 框選只在打字模式下有意義 —— 手繪模式下物件本來就
                         // 不吃觸控，框了也動不了。
-                        if (marqueeActive) editorMode = EditorMode.TYPE
+                        if (marqueeActive) {
+                            editorMode = EditorMode.TYPE
+                            message = l10n("marquee_hint")
+                        }
                     }
                 )
                 DropdownMenuItem(
@@ -3323,13 +3326,18 @@ private fun InkScreen(
                     onClick = {
                         marqueeActive = !marqueeActive
                         if (!marqueeActive) marqueeSelection = emptySet()
+                        // 框選選的是物件（圖片、貼紙、文字方塊…），筆跡用套索 ——
+                        // 進入時說明怎麼操作，與 Apple 同一句。
+                        else message = l10n("marquee_hint")
                     },
                     label = { Text(l10n("marquee_select")) },
                     modifier = Modifier.testTag("editor.text.select")
                 )
                 if (marqueeActive) {
                     Text(
-                        l10n("marquee_selected").replace("%@", marqueeSelection.size.toString()),
+                        // 還沒選到東西時顯示「怎麼選」，而不是「已選 0 個」。
+                        if (marqueeSelection.isEmpty()) l10n("marquee_hint")
+                        else l10n("marquee_selected").replace("%@", marqueeSelection.size.toString()),
                         style = MaterialTheme.typography.labelSmall
                     )
                     TextButton(
@@ -3448,7 +3456,12 @@ private fun InkScreen(
 
                 // 5. 格線/方格吸附開關
                 TextButton(
-                    onClick = { snapToGrid = !snapToGrid },
+                    onClick = {
+                        snapToGrid = !snapToGrid
+                        // 這顆開關只管隨點隨寫的文字落在哪裡 —— 按下去當場說清楚。
+                        message = l10n(
+                            if (snapToGrid) "snap_to_grid_on_notice" else "snap_to_grid_off_notice")
+                    },
                     modifier = Modifier.testTag("editor.text.snap_grid")
                 ) { Text(if (snapToGrid) "✓ ${l10n("snap_to_grid")}" else l10n("snap_to_grid")) }
 
@@ -4692,7 +4705,7 @@ private fun InkScreen(
             }
 
             // 🌟 筆跡磁吸對齊與幾何角度引導 (Smart Magnetic Snap Laser Guide)
-            if ((snapToGrid || isMagneticSnapActive) && editorMode == EditorMode.DRAW && magneticGuideActive) {
+            if (isMagneticSnapActive && editorMode == EditorMode.DRAW && magneticGuideActive) {
                 androidx.compose.foundation.Canvas(
                     modifier = Modifier.fillMaxSize().zIndex(9_002f)
                 ) {
@@ -5397,21 +5410,33 @@ private fun InkScreen(
     }
 
     if (showStickerLibrary) {
+        // 貼紙貼進來是**圖片物件**，不是筆跡：點一下就有把手，可以搬、縮放、旋轉、
+        // 刪除。貼成筆跡的話它跟手寫的字混在一起，確認後就沒有任何辦法再動它。
+        // 與 Apple 同一個做法；跟素材庫一樣落成 PNG 插進圖片區塊。
+        fun placeSticker(code: String, size: Float) {
+            val png = com.kairumo.padnote.ui.renderStickerPng(code, engine.colorRgba)
+            val inserted = png?.let { imageStore.insert(it, "$code.png", maxWidth = size) }
+            if (inserted == null) {
+                message = l10n("err_image_read_failed")
+                return
+            }
+            inserted.x = 160f
+            inserted.y = 200f
+            // 貼紙是透明底的線稿：不要圓角、不要陰影，否則會多出一塊方形的影子。
+            inserted.cornerRadius = 0f
+            inserted.hasShadow = false
+            imageStore.persist(inserted)
+            imageRevision++
+            selectedImageId = inserted.id
+            // 手寫模式下物件不吃觸控，貼完卻點不動等於原本的問題。
+            editorMode = EditorMode.TYPE
+            message = l10n("sticker_placed_hint")
+            showStickerLibrary = false
+        }
         com.kairumo.padnote.ui.StickerLibrarySheet(
             languageTag = deviceLanguageTag(),
-            onPick = { code ->
-                // 貼紙貼進來之後就是**一般的筆跡** —— 可以擦掉一部分、
-                // 套索搬走、換顏色。變成圖片的話它就成了另一種東西，
-                // 而「貼紙貼上去就不能改了」是很多筆記 App 的通病。
-                engine.addStickerStrokes(code, 160f, 200f, 120f)
-                revision++
-                showStickerLibrary = false
-            },
-            onPickWithSize = { code, size ->
-                engine.addStickerStrokes(code, 160f, 200f, size)
-                revision++
-                showStickerLibrary = false
-            },
+            onPick = { code -> placeSticker(code, 120f) },
+            onPickWithSize = { code, size -> placeSticker(code, size) },
             onDismiss = { showStickerLibrary = false }
         )
     }

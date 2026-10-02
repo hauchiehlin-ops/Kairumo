@@ -18,8 +18,12 @@ final class DocumentTemplateTests: XCTestCase {
         XCTAssertEqual(portrait, 0.46, accuracy: 0.0001)
         XCTAssertEqual(
             PageViewportLayout.scale(availableWidth: 1_200, pageWidth: 800),
-            1,
-            "視窗再寬也不應自動把紙張放大；放大由使用者控制")
+            1.5,
+            "視窗比紙張寬時要放大填滿，不留灰邊讓畫布看起來被框住")
+        XCTAssertEqual(
+            PageViewportLayout.scale(availableWidth: 4_000, pageWidth: 800),
+            PageViewportLayout.maxFitScale,
+            "放大有上限，否則筆跡會糊")
     }
 
     func testTheCatalogIsActuallyBundled() {

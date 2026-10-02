@@ -190,3 +190,40 @@ struct DSSectionHeader<Trailing: View>: View {
         }
     }
 }
+
+
+/// 編輯器頂端工具列的尺寸。
+///
+/// 原本右側那一排（頁碼、版面、配色、更多、錄音、匯出）各自寫死
+/// `.caption`／`.caption2`／11–12pt，加上 4–5pt 的內距，按鈕只有 22–24pt 見方，
+/// 跟下方筆具列的圖示比起來小了一圈，也低於 HIG 的可點擊下限太多。
+/// 集中成一組數字，之後改一處就是整排一起變。
+enum EditorToolbarMetrics {
+    /// 圖示大小。
+    static let icon: CGFloat = 17
+    /// 文字標籤（頁碼、版面名稱、標題）。
+    static let label: CGFloat = 14
+    /// 圖示周圍的內距 —— 17 + 2×8 = 33pt 見方。
+    static let padding: CGFloat = 8
+    static let corner: CGFloat = 9
+}
+
+
+extension View {
+    /// 讓畫布上的物件在無障礙樹裡有一個**以種類命名**的節點（`object.audio`、`object.image`…）。
+    ///
+    /// 做成一個蓋在物件上、不吃觸控的透明覆蓋層，而不是把識別碼掛在物件本身：
+    /// 物件的子樹（按鈕、把手、文字）各自有各自的無障礙元素，掛在容器上會讓框變成「子元素的聯集」
+    /// 或第一個子元素的框（形狀量出來只有 96×29），UI 測試就點不到真正的位置。覆蓋層的框
+    /// 就是物件自己的框，而且不改變 VoiceOver 看到的任何東西（它是獨立、無標籤的節點）。
+    /// 互動矩陣（`InteractionMatrixAudit`）靠它找物件。
+    func objectProbe(_ kind: String) -> some View {
+        overlay {
+            Color.clear
+                .allowsHitTesting(false)
+                .accessibilityElement()
+                .accessibilityIdentifier("object.\(kind)")
+                .accessibilityHidden(false)
+        }
+    }
+}

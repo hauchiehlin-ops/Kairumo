@@ -67,4 +67,24 @@ object SmartMagneticSnap {
 
         return MagneticSnapResult(current, null, false)
     }
+
+    /**
+     * 這一筆是不是「刻意畫的直線」。與 Apple 的 `isNearlyStraight` 同一條規則。
+     *
+     * 磁吸原本對每一筆都生效：寫字的最後一筆只要起訖連線碰巧接近水平，或終點離
+     * 格點不到 5 單位，終點就被拉去對齊，字會莫名其妙歪掉。磁吸是畫圖時把直線扶正
+     * 用的，不該碰手寫的字。每個中間點離起訖連線不超過線長的 8%（至少 3）才算直線。
+     */
+    fun isNearlyStraight(points: List<Offset>): Boolean {
+        if (points.size < 2) return false
+        val first = points.first()
+        val last = points.last()
+        val length = hypot(last.x - first.x, last.y - first.y)
+        if (length <= 18f) return false
+        val tolerance = max(3f, length * 0.08f)
+        return points.all { p ->
+            val d = abs((last.x - first.x) * (first.y - p.y) - (first.x - p.x) * (last.y - first.y)) / length
+            d <= tolerance
+        }
+    }
 }

@@ -3,6 +3,7 @@ package com.kairumo.padnote.audio
 import android.content.Context
 import com.kairumo.padnote.models.ModelDownloadManager
 import java.io.File
+import uniffi.padnote_core.localizeTranscriptScript
 import uniffi.padnote_core.whisperIsModelAvailable
 import uniffi.padnote_core.whisperTranscribePcm
 
@@ -71,7 +72,8 @@ object AudioTranscriber {
 
         return try {
             val result = whisperTranscribePcm(modelPath, pcm.toList(), languageTag)
-            val text = result.text.trim()
+            // 字體跟著介面語言（繁體介面 → 正體），規則在核心，與 Apple 同一份。
+            val text = localizeTranscriptScript(result.text.trim(), languageTag ?: "")
             if (text.isEmpty()) Outcome.NoSpeech else Outcome.Text(text)
         } catch (t: Throwable) {
             val message = t.message ?: ""

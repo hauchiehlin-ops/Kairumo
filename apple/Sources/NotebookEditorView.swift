@@ -585,6 +585,9 @@ struct CanvasRepresentable: UIViewRepresentable {
     var onNextPage: (() -> Void)?
     var onUndo: (() -> Void)?
     var onRedo: (() -> Void)?
+    /// 磁吸對齊開關。開啟時，**刻意畫的直線**的終點會被扶正到水平／垂直／45° 或格點，
+    /// 並呼叫 `onMagneticSnap` 顯示引導線。關閉時完全不碰筆跡。
+    var magneticSnapEnabled: Bool = false
     var onMagneticSnap: ((CGPoint, CGPoint) -> Void)?
 
     /// 🌟 方案 A+B：Apple Pencil 硬體落筆感知與手指單雙擊回呼
@@ -1039,6 +1042,17 @@ struct CanvasRepresentable: UIViewRepresentable {
         func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
             guard !isProgrammaticUpdate else { return }
             var effective = canvasView.drawing
+            // 磁吸要在存檔之前套用：先存再改的話，磁碟上那份是歪的，下次開啟才「彈回來」。
+            var magneticGuide: (CGPoint, CGPoint)?
+            if parent.magneticSnapEnabled, parent.selectedTool.isBrush,
+               effective.strokes.count > self.lastStrokeCountBeforeRefine,
+               let snapped = Self.magneticallySnapped(effective) {
+                isProgrammaticUpdate = true
+                canvasView.drawing = snapped.drawing
+                isProgrammaticUpdate = false
+                effective = snapped.drawing
+                magneticGuide = (snapped.start, snapped.end)
+            }
             if let corrected = parent.onDrawingChanged?(effective),
                corrected.strokes.count != effective.strokes.count {
                 // 收回的筆畫要真的從畫布上消失。
@@ -1091,17 +1105,9 @@ struct CanvasRepresentable: UIViewRepresentable {
                 self.shapeRefineTimer = work
             }
 
-            // ── 智慧磁吸對齊與幾何角度引導 (Smart Magnetic Snap) ─────────────────
-            if parent.onMagneticSnap != nil, parent.selectedTool.isBrush, count > self.lastStrokeCountBeforeRefine, let lastStroke = effective.strokes.last {
-                let strokeCount = lastStroke.path.count
-                if strokeCount >= 2 {
-                    let startPoint = lastStroke.path[0].location
-                    let endPoint = lastStroke.path[strokeCount - 1].location
-                    let snapResult = SmartMagneticSnap.snap(start: startPoint, current: endPoint, enableGrid: true)
-                    if snapResult.didSnap {
-                        parent.onMagneticSnap?(startPoint, snapResult.snappedPoint)
-                    }
-                }
+            // ── 智慧磁吸對齊的引導線（實際的扶正已在上面、存檔之前做完）──────────
+            if let (start, end) = magneticGuide {
+                parent.onMagneticSnap?(start, end)
             }
             self.lastStrokeCountBeforeRefine = count
 
@@ -1113,6 +1119,29 @@ struct CanvasRepresentable: UIViewRepresentable {
             if maxY > 0 && maxY + 200 > PageGeometry.height {
                 parent.onReachedPageBottom?()
             }
+        }
+
+        /// 把最後一筆（若是刻意畫的直線）的終點扶正。不是直線、或本來就貼齊，回 nil。
+        static func magneticallySnapped(_ drawing: PKDrawing)
+            -> (drawing: PKDrawing, start: CGPoint, end: CGPoint)?
+        {
+            guard let lastStroke = drawing.strokes.last, lastStroke.path.count >= 2 else { return nil }
+            var points: [PKStrokePoint] = Array(lastStroke.path)
+            let locations = points.map(\.location)
+            guard SmartMagneticSnap.isNearlyStraight(locations),
+                  let startPoint = locations.first, let endPoint = locations.last else { return nil }
+            let result = SmartMagneticSnap.snap(start: startPoint, current: endPoint, enableGrid: true)
+            guard result.didSnap, result.snappedPoint != endPoint else { return nil }
+            let tail = points[points.count - 1]
+            points[points.count - 1] = PKStrokePoint(
+                location: result.snappedPoint, timeOffset: tail.timeOffset, size: tail.size,
+                opacity: tail.opacity, force: tail.force, azimuth: tail.azimuth,
+                altitude: tail.altitude)
+            let path = PKStrokePath(controlPoints: points, creationDate: lastStroke.path.creationDate)
+            var strokes = drawing.strokes
+            strokes[strokes.count - 1] = PKStroke(
+                ink: lastStroke.ink, path: path, transform: lastStroke.transform, mask: lastStroke.mask)
+            return (PKDrawing(strokes: strokes), startPoint, result.snappedPoint)
         }
 
         /// 自訂筆頭游標。
@@ -1980,9 +2009,12 @@ public struct NotebookEditorView: View {
                     return
                 }
 
-                // 若當前在打字/非手繪模式，自動切換至手寫手繪模式，讓貼紙立即呈現與可編輯
-                if editorMode != .draw {
-                    editorMode = .draw
+                // 放置貼紙的浮層（拖曳、縮放、旋轉、確認）畫在物件層裡，而**手寫模式下
+                // 物件層不吃觸控**（見 `objectLayer(forPage:)`）。原本這裡切到手寫模式，
+                // 於是浮層上的「放置」按鈕根本按不到 —— 點下去變成在畫布上畫了一個點。
+                // 要切就切到打字模式，浮層才碰得到；確認後貼紙也是物件，同樣要在這個模式下才能動。
+                if editorMode != .type {
+                    editorMode = .type
                 }
 
                 // 計算貼紙置中位置：若拿得到 canvasView 則以可視區為準，否則以紙張中心為準
@@ -1999,7 +2031,10 @@ public struct NotebookEditorView: View {
 
                 // 若為自動化測試環境，直接蓋印以相容非互動 headless 測試流程
                 if ProcessInfo.processInfo.environment["KAIRUMO_UITEST"] == "1" {
-                    commitStickerDrawing(drawing, at: targetCenter, scale: 1.0, rotationDegrees: 0)
+                    insertStickerObject(PendingStickerPlacement(
+                        drawing: drawing,
+                        center: targetCenter,
+                        size: CGSize(width: baseW, height: baseH)))
                 } else {
                     // 進入互動式貼圖放置模式：使用者可全畫面自由拖曳定位、縮放大小、旋轉角度，滿意後再確認蓋印
                     self.pendingStickerPlacement = PendingStickerPlacement(
@@ -2921,15 +2956,15 @@ public struct NotebookEditorView: View {
         } label: {
             HStack(spacing: 3) {
                 Image(systemName: "chevron.left")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: EditorToolbarMetrics.icon, weight: .bold))
                 Image(systemName: "house.fill")
-                    .font(.system(size: 12))
+                    .font(.system(size: EditorToolbarMetrics.icon))
             }
             .foregroundColor(.white)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 5)
+            .padding(.horizontal, EditorToolbarMetrics.padding + 3)
+            .padding(.vertical, EditorToolbarMetrics.padding)
             .background(Color.accentColor)
-            .cornerRadius(7)
+            .cornerRadius(EditorToolbarMetrics.corner)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(localizationManager.localized("home"))
@@ -2943,11 +2978,11 @@ public struct NotebookEditorView: View {
             }
         } label: {
             Image(systemName: showStructureSidebar ? "sidebar.left" : "sidebar.leading")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: EditorToolbarMetrics.icon, weight: .semibold))
                 .foregroundColor(showStructureSidebar ? .accentColor : .primary)
-                .padding(5)
+                .padding(EditorToolbarMetrics.padding)
                 .background(showStructureSidebar ? Color.accentColor.opacity(0.15) : Color(uiColor: .tertiarySystemGroupedBackground))
-                .cornerRadius(7)
+                .cornerRadius(EditorToolbarMetrics.corner)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("editor.sidebar_toggle")
@@ -2963,9 +2998,9 @@ public struct NotebookEditorView: View {
                 }
             } label: {
                 Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 12, weight: .bold))
+                    .font(.system(size: EditorToolbarMetrics.icon, weight: .bold))
                     .foregroundColor(.white)
-                    .padding(5)
+                    .padding(EditorToolbarMetrics.padding)
                     .background(Color.accentColor, in: Circle())
                     .shadow(color: Color.accentColor.opacity(0.35), radius: 3, y: 1)
             }
@@ -2980,8 +3015,7 @@ public struct NotebookEditorView: View {
             showRenameAlert = true
         } label: {
             Text(notebook.displayTitle())
-                .font(.caption)
-                .fontWeight(.semibold)
+                .font(.system(size: EditorToolbarMetrics.label, weight: .semibold))
                 .lineLimit(1)
         }
         .buttonStyle(.plain)
@@ -2999,12 +3033,13 @@ public struct NotebookEditorView: View {
                 }
             } label: {
                 Image(systemName: "chevron.left.circle")
+                    .font(.system(size: EditorToolbarMetrics.icon))
             }
             .disabled(currentPageIndex <= 0)
             .accessibilityIdentifier("editor.page.prev")
 
             Text("\(currentPageIndex + 1)/\(max(1, notebook.pageCount))")
-                .font(.system(size: 11, weight: .medium))
+                .font(.system(size: EditorToolbarMetrics.label, weight: .medium))
                 .foregroundColor(.secondary)
                 .accessibilityIdentifier("editor.page.indicator")
 
@@ -3016,6 +3051,7 @@ public struct NotebookEditorView: View {
                 }
             } label: {
                 Image(systemName: "chevron.right.circle")
+                    .font(.system(size: EditorToolbarMetrics.icon))
             }
             .disabled(currentPageIndex >= notebook.pageCount - 1)
             .accessibilityIdentifier("editor.page.next")
@@ -3024,6 +3060,7 @@ public struct NotebookEditorView: View {
                 addNewPage()
             } label: {
                 Image(systemName: "plus.square.dashed")
+                    .font(.system(size: EditorToolbarMetrics.icon))
                     .foregroundColor(.accentColor)
             }
             .accessibilityIdentifier("editor.page.add")
@@ -3044,6 +3081,7 @@ public struct NotebookEditorView: View {
                 Image(systemName: pageDisplayMode == .continuous
                     ? "rectangle.split.1x2"
                     : "doc.plaintext")
+                    .font(.system(size: EditorToolbarMetrics.icon))
                     .foregroundColor(pageDisplayMode == .continuous ? .accentColor : .secondary)
             }
             .help(localizationManager.localized(
@@ -3073,6 +3111,10 @@ public struct NotebookEditorView: View {
                     presentFromMenu { showStickerLibrary = true }
                 } label: { Label(localizationManager.localized("sticker_library"), systemImage: "photo.on.rectangle") }
                     .accessibilityIdentifier("editor.insert.stickers")
+                Button {
+                    presentFromMenu { setMarqueeActive(!isMarqueeActive) }
+                } label: { Label(localizationManager.localized("marquee_select"), systemImage: "square.dashed") }
+                    .accessibilityIdentifier("editor.insert.marquee")
                 Button {
                     presentFromMenu { showAudioPicker = true }
                 } label: { Label(localizationManager.localized("insert_audio"), systemImage: "waveform.badge.plus") }
@@ -3179,11 +3221,11 @@ public struct NotebookEditorView: View {
             }
         } label: {
             Image(systemName: "ellipsis.circle.fill")
-                .font(.caption)
+                .font(.system(size: EditorToolbarMetrics.icon))
                 .foregroundColor(.accentColor)
-                .padding(5)
+                .padding(EditorToolbarMetrics.padding)
                 .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                .cornerRadius(6)
+                .cornerRadius(EditorToolbarMetrics.corner)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(localizationManager.localized("more_tools"))
@@ -3197,10 +3239,10 @@ public struct NotebookEditorView: View {
             } label: {
                 Circle()
                     .fill(audioManager.status == .recording ? Color.red : Color.orange)
-                    .frame(width: 12, height: 12)
-                    .padding(5)
+                    .frame(width: EditorToolbarMetrics.icon - 3, height: EditorToolbarMetrics.icon - 3)
+                    .padding(EditorToolbarMetrics.padding + 1.5)
                     .background((audioManager.status == .recording ? Color.red : Color.orange).opacity(0.15))
-                    .cornerRadius(6)
+                    .cornerRadius(EditorToolbarMetrics.corner)
             }
             .accessibilityIdentifier("editor.record")
         } else {
@@ -3236,11 +3278,11 @@ public struct NotebookEditorView: View {
                 }
             } label: {
                 Image(systemName: "mic.fill")
-                    .font(.caption2)
+                    .font(.system(size: EditorToolbarMetrics.icon))
                     .foregroundColor(.red)
-                    .padding(5)
+                    .padding(EditorToolbarMetrics.padding)
                     .background(Color(uiColor: .tertiarySystemGroupedBackground))
-                    .cornerRadius(6)
+                    .cornerRadius(EditorToolbarMetrics.corner)
             }
             .accessibilityIdentifier("editor.record")
         }
@@ -3286,11 +3328,11 @@ public struct NotebookEditorView: View {
                 .accessibilityIdentifier("editor.export.share")
         } label: {
             Image(systemName: "square.and.arrow.up")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.system(size: EditorToolbarMetrics.icon, weight: .semibold))
                 .foregroundColor(.white)
-                .padding(5)
+                .padding(EditorToolbarMetrics.padding)
                 .background(Color.accentColor)
-                .cornerRadius(6)
+                .cornerRadius(EditorToolbarMetrics.corner)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("editor.share")
@@ -3432,9 +3474,9 @@ public struct NotebookEditorView: View {
     /// 把左側資料夾欄收起來之後那塊空白更大，看起來像畫布破了一個洞。
     ///
     /// 連續模式一直是「縮到剛好放得下」，整頁模式沒跟上。現在兩邊同一套：
-    /// 放不下就等比縮小，放得下就維持原尺寸並置中。
+    /// 放不下就等比縮小，放得下就放大填滿（有上限）並置中。
     ///
-    /// 只縮不放：放大到超過原尺寸會讓筆跡變糊（圖層是先算繪再變換的）。
+    /// 視窗寬就放大到填滿可用寬度（上限見 `PageViewportLayout.maxFitScale`）。
     private var singlePageWorkArea: some View {
         GeometryReader { outer in
             // 只用寬度算一次「放得進視窗」的比例。鍵盤、錄音列、工具列等
@@ -3740,9 +3782,11 @@ public struct NotebookEditorView: View {
             // 不縮的話側欄一開，頁面右半邊就被切掉 —— 而使用者看不出那是
             // 「超出去」還是「畫布壞了」。
             //
-            // 只縮不放：放大到超過原尺寸會讓筆跡變糊（圖層是先算繪再變換的）。
+            // 視窗比紙張寬就放大到填滿（上限見 `PageViewportLayout.maxFitScale`），
+            // 不留兩片灰邊讓畫布看起來被框住。
             let available = max(outer.size.width - 32, 1)
-            let scale = min(1, available / PageGeometry.width)
+            let scale = PageViewportLayout.scale(
+                availableWidth: available, pageWidth: PageGeometry.width)
             continuousPages(scale: scale)
         }
     }
@@ -3778,7 +3822,9 @@ public struct NotebookEditorView: View {
                             // LazyVStack 會建立多頁畫布；不能讓最後建立的頁面覆蓋
                             // `canvasView`，否則貼紙可能蓋到別頁且存檔頁碼也錯。
                             canvasRef: { ref in
-                                if index == currentPageIndex { canvasView = ref }
+                                // 同上：不在畫面更新途中改 @State，且只在真的換了才寫。
+                                guard index == currentPageIndex, canvasView !== ref else { return }
+                                DispatchQueue.main.async { canvasView = ref }
                             },
                             onCanvasTap: { location in
                                 currentPageIndex = index
@@ -3981,13 +4027,11 @@ public struct NotebookEditorView: View {
                         ),
                         onCommit: {
                             if let p = self.pendingStickerPlacement {
-                                commitStickerDrawing(
-                                    p.drawing,
-                                    at: p.center,
-                                    scale: p.scale,
-                                    rotationDegrees: p.rotationDegrees
-                                )
+                                insertStickerObject(p)
                                 self.pendingStickerPlacement = nil
+                                // 手寫模式下物件不吃觸控，貼紙放完卻點不動等於又回到
+                                // 原本的問題。圖片拖放後也是切到打字模式。
+                                editorMode = .type
                                 showCanvasNotice(localizationManager.localized("sticker_placed_hint"))
                             }
                         },
@@ -4229,7 +4273,12 @@ public struct NotebookEditorView: View {
                     self.hasLassoSelection = hasSel
                 },
                 canvasRef: { ref in
-                    self.canvasView = ref
+                    // `updateUIView` 每次更新都會叫到這裡；直接寫 @State 就是在畫面更新途中改狀態
+                    // （SwiftUI 的 runtime issue「Modifying state during view update」，每個工作階段
+                    // 好幾十次），而且同一個物件重複指派也會再觸發一輪更新。
+                    // 只在真的換了才寫，並且挪到這一輪更新之後。
+                    guard self.canvasView !== ref else { return }
+                    DispatchQueue.main.async { self.canvasView = ref }
                 },
                 onScrollMetrics: { visible, fraction in
                     canvasVisibleFraction = visible
@@ -4270,6 +4319,7 @@ public struct NotebookEditorView: View {
                 },
                 onUndo: { performUndo() },
                 onRedo: { canvasView?.undoManager?.redo() },
+                magneticSnapEnabled: isMagneticSnapActive,
                 onMagneticSnap: { start, end in
                     magneticGuideStart = start
                     magneticGuideEnd = end
@@ -4580,7 +4630,7 @@ public struct NotebookEditorView: View {
             }
 
             // 🌟 筆跡磁吸對齊與幾何角度引導 (Smart Magnetic Snap Laser Guide)
-            if snapToGrid && editorMode == .draw && magneticGuideActive {
+            if isMagneticSnapActive && editorMode == .draw && magneticGuideActive {
                 Canvas { context, size in
                     var path = Path()
                     path.move(to: magneticGuideStart)
@@ -6900,6 +6950,10 @@ public struct NotebookEditorView: View {
         // 5. 格線/方格吸附開關
         Button {
             snapToGrid.toggle()
+            // 這顆開關只有一個效果：隨點隨寫的文字落在哪裡。按下去當場說清楚，
+            // 否則使用者只看到按鈕變色，不知道它到底管什麼。
+            showCanvasNotice(localizationManager.localized(
+                snapToGrid ? "snap_to_grid_on_notice" : "snap_to_grid_off_notice"))
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: snapToGrid ? "squareshape.split.3x3" : "squareshape.dashed.squareshape")
@@ -6981,8 +7035,7 @@ public struct NotebookEditorView: View {
 
         // 8. 框選模式
         Button {
-            isMarqueeActive.toggle()
-            if !isMarqueeActive { selectedObjectIds = [] }
+            setMarqueeActive(!isMarqueeActive)
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "square.dashed")
@@ -8452,61 +8505,53 @@ public struct NotebookEditorView: View {
         }
     }
 
-    private func commitStickerDrawing(
-        _ drawing: PKDrawing,
-        at targetCenter: CGPoint,
-        scale: CGFloat = 1.0,
-        rotationDegrees: Double = 0.0
-    ) {
-        let drawingCenter = CGPoint(x: drawing.bounds.midX, y: drawing.bounds.midY)
-        let radians = CGFloat(rotationDegrees * .pi / 180.0)
-        let cosA = cos(radians)
-        let sinA = sin(radians)
+    /// 把確認放置的貼紙變成**頁面上的物件**，不是烘進筆跡。
+    ///
+    /// # 為什麼不再烘成筆跡
+    ///
+    /// 原本確認之後貼紙被拆成一堆 `PKStroke` 混進手寫內容，於是它跟隨手寫的字
+    /// 沒有任何分別：點它沒有反應、沒有把手、沒有刪除鈕，只有切到套索再精準
+    /// 圈住才搬得動 —— 而使用者根本不知道要這麼做，回報的就是「確認後就無法
+    /// 移動、編輯或刪除」。
+    ///
+    /// 現在貼紙以透明底圖片物件進頁面，跟圖片同一套：點選出把手、拖曳搬移、
+    /// 縮放、旋轉、刪除、調圖層、框選、同步與匯出全部現成。放置時選的大小與
+    /// 角度原樣帶過去。
+    private func insertStickerObject(_ placement: PendingStickerPlacement) {
+        let b = placement.drawing.bounds
+        guard b.width > 0, b.height > 0 else { return }
+        // 與 `StickerRenderView` 同一個規則：在 (寬 × 縮放, 高 × 縮放) 的框裡等比置中。
+        let boxW = max(50, placement.size.width) * max(0.2, min(5, placement.scale))
+        let boxH = max(50, placement.size.height) * max(0.2, min(5, placement.scale))
+        let fit = min(boxW / b.width, boxH / b.height)
+        let size = CGSize(width: b.width * fit, height: b.height * fit)
 
-        // 🌟 將位移、縮放與旋轉直接烘焙至控制點 (controlPoints)，並將 transform 設為 .identity
-        // 徹底解決 PencilKit 在即時畫布 (Metal GPU Pipeline) 渲染時因 stroke.transform 矩陣未能即時重繪之缺陷
-        let translatedStrokes = drawing.strokes.map { stroke -> PKStroke in
-            var newPoints: [PKStrokePoint] = []
-            newPoints.reserveCapacity(stroke.path.count)
-            for i in 0..<stroke.path.count {
-                let pt = stroke.path[i]
-                let rawLoc = pt.location.applying(stroke.transform)
-                let ox = (rawLoc.x - drawingCenter.x) * scale
-                let oy = (rawLoc.y - drawingCenter.y) * scale
-                let rx = ox * cosA - oy * sinA
-                let ry = ox * sinA + oy * cosA
-                let finalLoc = CGPoint(x: targetCenter.x + rx, y: targetCenter.y + ry)
-                let finalSize = CGSize(
-                    width: max(0.5, pt.size.width * scale),
-                    height: max(0.5, pt.size.height * scale)
-                )
-                newPoints.append(PKStrokePoint(
-                    location: finalLoc,
-                    timeOffset: pt.timeOffset,
-                    size: finalSize,
-                    opacity: pt.opacity,
-                    force: pt.force,
-                    azimuth: pt.azimuth,
-                    altitude: pt.altitude
-                ))
+        // 3 倍像素：貼紙是向量，但存成圖片後放大會糊，預留縮放的餘裕。
+        let image = placement.drawing.image(from: b, scale: 3 * max(1, fit))
+        guard let fileName = store.saveAttachmentImage(image) else { return }
+        let attachment = NoteImageAttachment(
+            fileName: fileName,
+            pageIndex: currentPageIndex,
+            x: placement.center.x - size.width / 2,
+            y: placement.center.y - size.height / 2,
+            width: size.width,
+            height: size.height,
+            rotationDegrees: placement.rotationDegrees,
+            cornerRadius: 0,
+            hasShadow: false,
+            hasBorder: false,
+            filterStyle: .original,
+            chartSpecJSON: nil
+        )
+        if notebook.attachments == nil { notebook.attachments = [] }
+        notebook.attachments?.append(attachment)
+        store.updateNotebook(notebook)
+        if var dict = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(attachment))) as? [String: Any] {
+            if let imgData = image.pngData() {
+                dict["image_base64"] = imgData.base64EncodedString()
             }
-            let newPath = PKStrokePath(controlPoints: newPoints, creationDate: stroke.path.creationDate)
-            return PKStroke(ink: stroke.ink, path: newPath, transform: .identity, mask: stroke.mask)
+            collaborationManager.broadcastAttachmentUpsert(type: "image", itemDict: dict)
         }
-
-        let page = currentPageIndex
-        var newDrawing = canvasView?.drawing ?? drawingForPage(page)
-        newDrawing.strokes.append(contentsOf: translatedStrokes)
-        canvasView?.drawing = newDrawing
-        canvasView?.setNeedsDisplay()
-        if page == currentPageIndex {
-            self.currentDrawing = newDrawing
-        }
-        // 貼紙是程式加入的筆跡，不應只期待 PencilKit delegate 恰好回呼。
-        // 明確送進與手寫相同的 autosave 管線，連續頁面模式也會保存正確頁次。
-        recordDrawingEdit(page: page, drawing: newDrawing)
-        broadcastDrawingChange(page: page, drawing: newDrawing)
-        self.saveCurrentPageDrawing()
         PageThumbnailRenderer.invalidateAll()
     }
 
@@ -8532,7 +8577,7 @@ public struct NotebookEditorView: View {
             store.updateNotebook(notebook)
             let rec = store.addRecording(
                 title: NotebookStore.defaultRecordingTitle(),
-                durationSeconds: Int(result.duration),
+                durationSeconds: AudioRecorderManager.displaySeconds(of: result.url, fallback: result.duration),
                 fileName: fileName,
                 linkedNotebookId: notebook.id
             )
@@ -8789,16 +8834,16 @@ public struct NotebookEditorView: View {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "doc.on.doc")
-                    .font(.caption)
+                    .font(.system(size: EditorToolbarMetrics.icon))
                 Text(localizationManager.localized(
                     pageFormat(id: notebook.pageFormatId ?? defaultPageFormatId()).titleKey))
-                    .font(.system(size: 11))
+                    .font(.system(size: EditorToolbarMetrics.label))
             }
             .foregroundColor(.accentColor)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
+            .padding(.horizontal, EditorToolbarMetrics.padding + 2)
+            .padding(.vertical, EditorToolbarMetrics.padding)
             .background(Color(uiColor: .tertiarySystemGroupedBackground))
-            .cornerRadius(6)
+            .cornerRadius(EditorToolbarMetrics.corner)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(localizationManager.localized("page_format"))
@@ -8832,15 +8877,15 @@ public struct NotebookEditorView: View {
                 // 使用者要挑的是顏色，不是詞。
                 Circle()
                     .fill(Color(uiColor: UIColor(hexString: guidePalette(id: current).accentHex) ?? .systemIndigo))
-                    .frame(width: 11, height: 11)
+                    .frame(width: EditorToolbarMetrics.icon - 4, height: EditorToolbarMetrics.icon - 4)
                 Text(localizationManager.localized(guidePalette(id: current).nameKey))
-                    .font(.system(size: 11))
+                    .font(.system(size: EditorToolbarMetrics.label))
             }
             .foregroundColor(.accentColor)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 4)
+            .padding(.horizontal, EditorToolbarMetrics.padding + 2)
+            .padding(.vertical, EditorToolbarMetrics.padding)
             .background(Color(uiColor: .tertiarySystemGroupedBackground))
-            .cornerRadius(6)
+            .cornerRadius(EditorToolbarMetrics.corner)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -10069,16 +10114,45 @@ public struct NotebookEditorView: View {
         }
     }
 
+    /// 進入／離開框選。
+    ///
+    /// # 框選選的是「物件」，不是筆跡
+    ///
+    /// 圖片、貼紙、文字方塊、表格、圖形、錄音卡片…這些是物件，框選一次可以整組
+    /// 搬、複製、刪除。手寫的筆跡不是物件，要選它們用**套索**（手寫模式的筆具列）。
+    /// 兩者分工：物件用框選、筆跡用套索。
+    ///
+    /// 手寫模式下物件本來就不吃觸控，框了也動不了，所以進入時自動切到打字模式
+    /// （Android 一直是這樣做）。進入時說明怎麼操作，否則使用者面對一個空的選取列，
+    /// 不知道下一步是什麼。
+    private func setMarqueeActive(_ on: Bool) {
+        isMarqueeActive = on
+        if on {
+            if editorMode != .type { editorMode = .type }
+            showCanvasNotice(localizationManager.localized("marquee_hint"))
+        } else {
+            selectedObjectIds = []
+        }
+    }
+
     /// 框選模式的工具列。掛在畫布外面（工具列那一層），不隨畫布捲動 ——
     /// 跟著捲的話，選了下半頁的東西就得捲回去才按得到刪除。
     private var marqueeToolbar: some View {
         HStack(spacing: 10) {
             Image(systemName: "square.dashed.inset.filled")
                 .foregroundColor(.accentColor)
-            Text(localizationManager.localized("marquee_selected")
-                .replacingOccurrences(of: "%@", with: "\(selectedObjectIds.count)"))
-                .font(.caption)
-                .monospacedDigit()
+            if selectedObjectIds.isEmpty {
+                // 還沒選到東西時，顯示「怎麼選」而不是「已選 0 個」。
+                Text(localizationManager.localized("marquee_hint"))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+            } else {
+                Text(localizationManager.localized("marquee_selected")
+                    .replacingOccurrences(of: "%@", with: "\(selectedObjectIds.count)"))
+                    .font(.caption)
+                    .monospacedDigit()
+            }
 
             Divider().frame(height: 18)
 
@@ -10113,8 +10187,7 @@ public struct NotebookEditorView: View {
             Divider().frame(height: 18)
 
             Button {
-                isMarqueeActive = false
-                selectedObjectIds = []
+                setMarqueeActive(false)
             } label: {
                 Label(localizationManager.localized("done"), systemImage: "checkmark")
             }
@@ -11034,6 +11107,9 @@ struct AttachmentItemView: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
+                    // 圖示按鈕一定要有標籤：沒有的話 VoiceOver 念「按鈕」，
+                    // 互動矩陣（`InteractionMatrixAudit`）也找不到它。
+                    .accessibilityLabel(localizationManager.localized("action_delete"))
                 }
                 .offset(x: 10, y: -10)
 
@@ -11088,6 +11164,7 @@ struct AttachmentItemView: View {
                 }
             }
         }
+        .objectProbe("image")
         .padding(20)
         .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
         .animation(nil, value: dragOffset)
@@ -11467,6 +11544,7 @@ struct TextAttachmentItemView: View {
                 // 畫布上只保留編輯／邊框／刪除三個明確的動作。
             }
         }
+        .objectProbe("text")
         .padding(20)
         .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
         .animation(nil, value: dragOffset)
@@ -11657,6 +11735,7 @@ struct LinkAttachmentItemView: View {
                     }
             )
             .onTapGesture { isSelected.toggle() }
+            .objectProbe("link")
             .padding(20)
         .position(x: currentX + displayWidth / 2, y: currentY + displayHeight / 2)
         .animation(nil, value: dragOffset)
@@ -12021,6 +12100,7 @@ struct Model3DCanvasItemView: View {
             }
         }
         .frame(width: max(200, item.width))
+        .objectProbe("model3d")
         .padding(20)
         .position(x: currentX + item.width / 2, y: currentY + item.height / 2)
         .animation(nil, value: dragOffset)
@@ -12686,41 +12766,33 @@ private struct ImportPickersModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            // 統一由單一 fileImporter 呈現：避免多個 fileImporter 造成 SwiftUI 底層 UIDocumentPickerViewController 競爭互斥
-            .fileImporter(
-                isPresented: Binding(
-                    get: { activeImportSlot != nil },
-                    set: { if !$0 { activeImportSlot = nil } }
-                ),
-                allowedContentTypes: (activeImportSlot ?? currentSlot).map { FileImport.allowedTypes(for: $0) } ?? [.item],
-                allowsMultipleSelection: false
-            ) { result in
-                guard let slot = currentSlot ?? activeImportSlot else { return }
-                currentSlot = nil
-                activeImportSlot = nil
-                let destination: FileImport.Destination = (slot == .audio) ? .recordings : .attachments
-                guard let outcome = FileImport.take(result: result, slot: slot, into: destination) else { return }
-                if outcome.succeeded {
-                    switch slot {
-                    case .image:
-                        onImage(outcome)
-                    case .audio:
-                        onAudio(outcome)
-                    case .pdf:
-                        onPdf(outcome)
-                    case .document:
-                        onDocument(outcome)
-                    default:
-                        break
-                    }
-                } else {
-                    importErrorKey = outcome.errorKey
-                }
-            }
+            // 命令式呈現，見 `DocumentPickerPresenter` 的說明（`.fileImporter` 第二次起會被吞掉）。
             .onChange(of: activeImportSlot) { slot in
-                if let slot {
-                    currentSlot = slot
+                guard let slot else { return }
+                currentSlot = slot
+                let presented = DocumentPickerPresenter.present(
+                    types: FileImport.allowedTypes(for: slot)
+                ) { result in
+                    currentSlot = nil
+                    activeImportSlot = nil
+                    guard let result else { return }
+                    let destination: FileImport.Destination = (slot == .audio) ? .recordings : .attachments
+                    guard let outcome = FileImport.take(result: result, slot: slot, into: destination)
+                    else { return }
+                    if outcome.succeeded {
+                        switch slot {
+                        case .image: onImage(outcome)
+                        case .audio: onAudio(outcome)
+                        case .pdf: onPdf(outcome)
+                        case .document: onDocument(outcome)
+                        default: break
+                        }
+                    } else {
+                        importErrorKey = outcome.errorKey
+                    }
                 }
+                // 呈現不出去也要把槽位放掉，不然下一次要求是「nil → 同一個值」之外的卡死狀態。
+                if !presented { activeImportSlot = nil; currentSlot = nil }
             }
             .alert(
                 localizationManager.localized("import_failed_read"),

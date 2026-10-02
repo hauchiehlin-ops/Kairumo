@@ -117,9 +117,19 @@ public enum PageGeometry {
 ///
 /// 垂直空間刻意不參與比例計算。鍵盤、錄音列或工具列出現時只會遮住／減少
 /// 可見範圍，不應偷偷改變使用者正在看的縮放比例。
+///
+/// # 寬視窗要放大，不是留白
+///
+/// 原本「只縮不放」：視窗比紙張寬時，紙張維持 800pt 置中，兩側留下一大片灰。
+/// 那兩片灰看起來像畫布被框架卡住，而且 13 吋 iPad 橫放時兩側加起來超過紙張
+/// 本身的寬度。現在視窗寬就放大到填滿可用寬度，上限 `maxFitScale` ——
+/// 再大下去（Mac 全螢幕）筆跡會明顯變糊，寧可保留一點邊。
 public enum PageViewportLayout {
+    /// 自動貼合寬度時的放大上限。
+    public static let maxFitScale: CGFloat = 2
+
     public static func scale(availableWidth: CGFloat, pageWidth: CGFloat) -> CGFloat {
         guard pageWidth > 0 else { return 1 }
-        return min(1, max(availableWidth, 1) / pageWidth)
+        return min(maxFitScale, max(availableWidth, 1) / pageWidth)
     }
 }

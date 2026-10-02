@@ -432,6 +432,18 @@ public struct HomeWorkbenchView: View {
                     renamingNotebookId = nil
                 }
             }
+            // 首頁清單的播放失敗要讓人看見（只管清單裡的錄音；筆記頁上的卡片自己提示）。
+            .alert(localizationManager.localized("audio_play"), isPresented: Binding(
+                get: {
+                    audioManager.playbackFailure != nil
+                        && notebookStore.recordings.contains { $0.id == audioManager.lastPlaybackRequester }
+                },
+                set: { if !$0 { audioManager.playbackFailure = nil } }
+            )) {
+                Button(localizationManager.localized("done"), role: .cancel) {}
+            } message: {
+                Text(audioManager.playbackFailure ?? "")
+            }
             .alert(localizationManager.localized("rename_audio_card"), isPresented: Binding(
                 get: { renamingRecordingId != nil },
                 set: { if !$0 { renamingRecordingId = nil } }
@@ -1198,7 +1210,11 @@ public struct HomeWorkbenchView: View {
                         #if targetEnvironment(macCatalyst) || os(macOS)
                         audioManager.openRecordingsFolderInFinder()
                         #else
-                        shareRecordingURL = audioManager.recordingsDirectory
+                        // iPad／iPhone：先直接在「檔案」App 裡開到那個資料夾；開不了才給分享面板。
+                        // 原本一律跳分享面板，使用者以為這個資料夾「不存在」。
+                        audioManager.openRecordingsFolderInFinder {
+                            shareRecordingURL = audioManager.recordingsDirectory
+                        }
                         #endif
                     } label: {
                         HStack(spacing: 4) {
@@ -1267,7 +1283,9 @@ public struct HomeWorkbenchView: View {
                             #if targetEnvironment(macCatalyst) || os(macOS)
                             audioManager.openRecordingsFolderInFinder()
                             #else
-                            shareRecordingURL = audioManager.recordingsDirectory
+                            audioManager.openRecordingsFolderInFinder {
+                                shareRecordingURL = audioManager.recordingsDirectory
+                            }
                             #endif
                         } label: {
                             HStack(spacing: 4) {
@@ -2135,7 +2153,7 @@ public struct HomeWorkbenchView: View {
         return VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center) {
                 HStack(spacing: 6) {
-                    Image(systemName: "point.3.filled.connected.trianglepath")
+                    Image(systemName: "point.3.connected.trianglepath.dotted")
                         .font(.system(size: 13, weight: .semibold))
                         .foregroundColor(.indigo)
                     Text(localizationManager.localized("p2p_sync_tailscale_title"))
@@ -3163,7 +3181,7 @@ struct QuickAudioRecorderModal: View {
                                 let linkedId = targetNotebookId ?? notebookStore.recordingInbox().id
                                 notebookStore.addRecording(
                                     title: recordingTitle,
-                                    durationSeconds: Int(res.duration),
+                                    durationSeconds: AudioRecorderManager.displaySeconds(of: res.url, fallback: res.duration),
                                     fileName: fileName,
                                     linkedNotebookId: linkedId
                                 )
@@ -3214,7 +3232,7 @@ struct QuickAudioRecorderModal: View {
                                 let linkedId = targetNotebookId ?? notebookStore.recordingInbox().id
                                 notebookStore.addRecording(
                                     title: recordingTitle,
-                                    durationSeconds: Int(res.duration),
+                                    durationSeconds: AudioRecorderManager.displaySeconds(of: res.url, fallback: res.duration),
                                     fileName: fileName,
                                     linkedNotebookId: linkedId
                                 )
@@ -3333,6 +3351,8 @@ public struct AppDiagnosticsSheet: View {
     public var body: some View {
         NavigationStack {
             List {
+                PlatformSelfCheckSection()
+
                 Section(localizationManager.localized("app_version_info")) {
                     HStack {
                         Text(localizationManager.localized("version_number"))

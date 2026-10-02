@@ -102,21 +102,21 @@ final class OpusAudioPlayer {
         reachedEnd = false
 
         do {
-            #if os(iOS) || targetEnvironment(macCatalyst)
-            // Mac 沒有聽筒，呼叫 .defaultToSpeaker 會拋例外；Mac 上只設 category。
-            if ProcessInfo.processInfo.isiOSAppOnMac || ProcessInfo.processInfo.isMacCatalystApp {
-                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-            } else {
-                try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.defaultToSpeaker])
-            }
-            try AVAudioSession.sharedInstance().setActive(true)
-            #endif
-            if !engine.isRunning {
-                try engine.start()
-            }
+            try startEngine()
         } catch {
-            print("[OpusAudioPlayer] 引擎啟動失敗：\(error)")
-            return false
+            // 剛錄完音就按播放時，session 可能還沒從錄音狀態放開 ——
+            // 停用、等一下、再試一次，比直接放棄好。
+            print("[OpusAudioPlayer] 引擎啟動失敗，重試一次：\(error)")
+            #if os(iOS) || targetEnvironment(macCatalyst)
+            try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            #endif
+            Thread.sleep(forTimeInterval: 0.15)
+            do {
+                try startEngine()
+            } catch {
+                print("[OpusAudioPlayer] 引擎啟動失敗：\(error)")
+                return false
+            }
         }
 
         isRunning = true
@@ -125,6 +125,21 @@ final class OpusAudioPlayer {
         }
         node.play()
         return true
+    }
+
+    private func startEngine() throws {
+        #if os(iOS) || targetEnvironment(macCatalyst)
+        // **`.playback` 不能帶 `.defaultToSpeaker`。** 那個選項只適用於 `.playAndRecord`；
+        // 帶在 `.playback` 上，iPhone／iPad 的 `setCategory` 會失敗（系統日誌：
+        // "category option 'defaultToSpeaker' is only applicable with category 'playAndRecord'"），
+        // 引擎就起不來 —— 播放鈕按了沒聲音。Mac 的分支原本就不帶這個選項，所以 Mac 一直是好的：
+        // 這正是「Mac 可以播、iPad 不行」。`.playback` 本來就走喇叭，不需要它。
+        try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+        try AVAudioSession.sharedInstance().setActive(true)
+        #endif
+        if !engine.isRunning {
+            try engine.start()
+        }
     }
 
     func pause() {
