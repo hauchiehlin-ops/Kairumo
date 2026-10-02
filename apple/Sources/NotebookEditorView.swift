@@ -1194,8 +1194,13 @@ struct CanvasRepresentable: UIViewRepresentable {
                     }
                 }
 
-            case .lasso, .maskingTape:
+            case .lasso:
                 canvas.tool = PKLassoTool()
+
+            case .maskingTape:
+                // 遮蔽膠帶（Masking Tape）：自定義覆蓋層物件，不應指派為 PKLassoTool，
+                // 以免與套索工具混淆。畫布在膠帶工具啟動時停用繪畫筆刷以確保手勢完全由膠帶層接收。
+                break
             }
         }
 
@@ -4313,6 +4318,8 @@ public struct NotebookEditorView: View {
                 selectedColor: selectedColor,
                 onTapesChanged: { store.updateNotebook(notebook) }
             )
+            .allowsHitTesting(selectedTool == .maskingTape || !(notebook.tapeAttachments?.filter { $0.pageIndex == currentPageIndex }.isEmpty ?? true))
+            .zIndex(selectedTool == .maskingTape ? 4 : 2.5)
 
             // 🌟 專業鏡像對稱尺規視覺參考線
             if isSymmetryActive && editorMode == .draw {
@@ -12561,11 +12568,41 @@ public struct MaskingTapeOverlayView: View {
     
     public var body: some View {
         ZStack {
+            // 背景手勢接收層：僅在目前選取遮蔽膠帶工具時吃手勢，不影響其他畫筆與物件操作
+            if isActive {
+                Color.clear
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 4)
+                            .onChanged { value in
+                                if currentDragTape == nil {
+                                    dragStartPoint = value.startLocation
+                                }
+                                let x = min(dragStartPoint.x, value.location.x)
+                                let width = max(abs(value.location.x - dragStartPoint.x), 20)
+                                let height: CGFloat = 32.0
+                                let rect = CGRect(x: x, y: dragStartPoint.y - height / 2, width: width, height: height)
+                                
+                                currentDragTape = NoteTapeAttachment(pageIndex: pageIndex, rect: rect)
+                            }
+                            .onEnded { value in
+                                guard let dragTape = currentDragTape else { return }
+                                if notebook.tapeAttachments == nil {
+                                    notebook.tapeAttachments = []
+                                }
+                                notebook.tapeAttachments?.append(dragTape)
+                                currentDragTape = nil
+                                onTapesChanged()
+                            }
+                    )
+            }
+
             let tapes = notebook.tapeAttachments?.filter { $0.pageIndex == pageIndex } ?? []
             ForEach(tapes) { tape in
                 TapeView(
                     tape: tape,
                     isActive: isActive,
+                    tapeColor: selectedColor,
                     onToggleReveal: {
                         if let idx = notebook.tapeAttachments?.firstIndex(where: { $0.id == tape.id }) {
                             notebook.tapeAttachments?[idx].isRevealed.toggle()
@@ -12580,62 +12617,54 @@ public struct MaskingTapeOverlayView: View {
             }
             
             if let dragTape = currentDragTape {
-                Rectangle()
-                    .fill(selectedColor)
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(selectedColor.opacity(0.85))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .stroke(Color.accentColor, lineWidth: 1.5)
+                    )
                     .frame(width: dragTape.rect.width, height: dragTape.rect.height)
                     .position(x: dragTape.rect.midX, y: dragTape.rect.midY)
-                    .opacity(0.8)
+                    .shadow(color: Color.black.opacity(0.12), radius: 3, y: 1)
             }
         }
-        .background(
-            Color.white.opacity(0.001)
-                .allowsHitTesting(isActive)
-                .gesture(
-                    DragGesture(minimumDistance: 5)
-                        .onChanged { value in
-                            guard isActive else { return }
-                            if currentDragTape == nil {
-                                dragStartPoint = value.startLocation
-                            }
-                            let x = min(dragStartPoint.x, value.location.x)
-                            let width = abs(value.location.x - dragStartPoint.x)
-                            let height: CGFloat = 24.0
-                            let rect = CGRect(x: x, y: dragStartPoint.y - height / 2, width: max(width, 10), height: height)
-                            
-                            currentDragTape = NoteTapeAttachment(pageIndex: pageIndex, rect: rect)
-                        }
-                        .onEnded { value in
-                            guard isActive, let dragTape = currentDragTape else { return }
-                            if notebook.tapeAttachments == nil {
-                                notebook.tapeAttachments = []
-                            }
-                            notebook.tapeAttachments?.append(dragTape)
-                            currentDragTape = nil
-                            onTapesChanged()
-                        }
-                )
-        )
     }
 }
 
 private struct TapeView: View {
     let tape: NoteTapeAttachment
     let isActive: Bool
+    var tapeColor: Color = Color(red: 0.98, green: 0.93, blue: 0.67)
     let onToggleReveal: () -> Void
     let onRemove: () -> Void
     
     var body: some View {
-        Rectangle()
-            .fill(tape.isRevealed ? Color.gray.opacity(0.3) : Color.gray)
-            .frame(width: tape.rect.width, height: tape.rect.height)
-            .position(x: tape.rect.midX, y: tape.rect.midY)
-            .onTapGesture {
-                if isActive {
-                    onRemove()
-                } else {
-                    onToggleReveal()
+        ZStack(alignment: .trailing) {
+            RoundedRectangle(cornerRadius: 4)
+                .fill(tape.isRevealed ? tapeColor.opacity(0.20) : tapeColor.opacity(0.95))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 4)
+                        .stroke(tapeColor.opacity(tape.isRevealed ? 0.4 : 0.8), lineWidth: 1)
+                )
+                .shadow(color: Color.black.opacity(tape.isRevealed ? 0.02 : 0.08), radius: 2, y: 1)
+            
+            // 翻開提示小圖示或刪除按鈕
+            if isActive {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 14))
+                        .foregroundColor(.secondary)
+                        .padding(4)
                 }
+                .buttonStyle(.plain)
             }
+        }
+        .frame(width: tape.rect.width, height: tape.rect.height)
+        .position(x: tape.rect.midX, y: tape.rect.midY)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            onToggleReveal()
+        }
     }
 }
 
