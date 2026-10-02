@@ -142,6 +142,7 @@ public struct MathCalculatorSheet: View {
                                 .padding(.horizontal, 4)
                         }
                         .buttonStyle(.bordered)
+                        .accessibilityLabel(localizationManager.localized("math_backspace"))
                         .help(localizationManager.localized("math_backspace"))
 
                         Button(localizationManager.localized("math_calculate")) {
