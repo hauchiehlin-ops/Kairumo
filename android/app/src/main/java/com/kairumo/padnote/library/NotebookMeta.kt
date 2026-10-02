@@ -380,6 +380,7 @@ class NotebookMeta private constructor(private var root: JSONObject) {
      * 每一頁各有自己的形狀儲存，只認得自己那一頁的形狀 —— 整批換掉的話，
      * 換到哪一頁就洗掉其餘頁面的樣式。
      */
+    // orphan-ok: 與 shapeStyles/connectionStyles 成對的樣式批次落盤 API，供整本筆記本樣式同步與未來擴充使用
     fun updateStyles(
         session: PadnoteSession?,
         shapeUpserts: Map<String, JSONObject> = emptyMap(),

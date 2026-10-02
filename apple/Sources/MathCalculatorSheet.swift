@@ -19,7 +19,7 @@ public struct MathCalculatorSheet: View {
     @State private var currentResult: MathResult? = nil
     @State private var errorMessage: String? = nil
     @State private var keepCardBorder: Bool = true
-    @State private var selectedTab: Int = 0
+    @State private var selectedTab: PanelTab = .calculator
 
     // 分頁標籤索引
     private enum PanelTab: Int, CaseIterable {
@@ -204,10 +204,10 @@ public struct MathCalculatorSheet: View {
 
                 // 2. 分頁選單列
                 Picker("", selection: $selectedTab) {
-                    Text(localizationManager.localized("math_tab_calc")).tag(0)
-                    Text(localizationManager.localized("math_tab_calculus")).tag(1)
-                    Text(localizationManager.localized("math_tab_symbols")).tag(2)
-                    Text(localizationManager.localized("math_tab_units")).tag(3)
+                    Text(localizationManager.localized("math_tab_calc")).tag(PanelTab.calculator)
+                    Text(localizationManager.localized("math_tab_calculus")).tag(PanelTab.calculus)
+                    Text(localizationManager.localized("math_tab_symbols")).tag(PanelTab.symbols)
+                    Text(localizationManager.localized("math_tab_units")).tag(PanelTab.units)
                 }
                 .pickerStyle(.segmented)
                 .padding(.horizontal)
@@ -217,19 +217,19 @@ public struct MathCalculatorSheet: View {
                 TabView(selection: $selectedTab) {
                     // 分頁 1: 科學工程計算機按鍵盤
                     calculatorKeypadView
-                        .tag(0)
+                        .tag(PanelTab.calculator)
 
                     // 分頁 2: 微積分與工程數學快捷範本
                     calculusTemplatesView
-                        .tag(1)
+                        .tag(PanelTab.calculus)
 
                     // 分頁 3: 數學與特殊符號點選庫
                     symbolsPaletteView
-                        .tag(2)
+                        .tag(PanelTab.symbols)
 
                     // 分頁 4: 常用常數與單位
                     constantsView
-                        .tag(3)
+                        .tag(PanelTab.units)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
 
