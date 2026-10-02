@@ -26,13 +26,13 @@ data class SelfCheckResult(val id: String, val title: String, val status: Status
 
 object PlatformSelfCheck {
 
-    suspend fun run(context: Context, languageTag: String): List<SelfCheckResult> = listOf(
+    suspend fun run(context: Context): List<SelfCheckResult> = listOf(
         checkPlaybackPipeline(context),
         checkMicrophonePermission(context),
         checkLibraryFolder(context),
         checkFilePicker(context),
         checkTranscriptScript(),
-        checkFreeSpace(context),
+        checkFreeSpace(),
     )
 
     fun report(results: List<SelfCheckResult>, languageTag: String): String = buildString {
@@ -115,7 +115,7 @@ object PlatformSelfCheck {
         )
     }
 
-    private fun checkFreeSpace(context: Context): SelfCheckResult {
+    private fun checkFreeSpace(): SelfCheckResult {
         val mb = Environment.getDataDirectory().usableSpace / 1_048_576
         return SelfCheckResult(
             "storage.free", "Free storage",

@@ -213,6 +213,8 @@ final class DocumentPickerPresenter: NSObject, UIDocumentPickerDelegate {
         completion(.success(urls))
     }
 
+    // unused-param-ok: 簽名由 UIDocumentPickerDelegate 協定規定
+    // orphan-ok: 由 UIKit 透過協定呼叫，沒有 Swift 端的引用
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
         Self.current = nil
         completion(nil)

@@ -124,7 +124,7 @@ fun AppDiagnosticsDialog(
                                 onClick = {
                                     selfCheckRunning = true
                                     scope.launch {
-                                        selfCheck = PlatformSelfCheck.run(context, "")
+                                        selfCheck = PlatformSelfCheck.run(context)
                                         selfCheckRunning = false
                                     }
                                 }

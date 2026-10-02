@@ -19,7 +19,7 @@ class PlatformSelfCheckTest {
     fun coreChecksPassTwiceInARow() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         repeat(2) { round ->
-            val results = PlatformSelfCheck.run(context, "zh-Hant")
+            val results = PlatformSelfCheck.run(context)
             val byId = results.associateBy { it.id }
             for (id in listOf("audio.playback", "folder.library", "picker.presenter", "transcript.script")) {
                 val r = byId[id]
