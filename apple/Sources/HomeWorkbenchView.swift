@@ -332,23 +332,22 @@ public struct HomeWorkbenchView: View {
                         }
                     }
                 } else {
-                    ToolbarItem(placement: .primaryAction) {
-                        HStack(spacing: DS.Space.xs) {
-                            manualToolbarButton
-                            privacyToolbarButton
-                            diagnosticsToolbarButton
-                            languageToolbarMenu
-                        }
-                    }
-                }
-                #else
-                ToolbarItem(placement: .primaryAction) {
-                    HStack(spacing: DS.Space.xs) {
+                    // **用 ToolbarItemGroup，不要把四顆按鈕包進一個 HStack 當成單一項目**：
+                    // Mac（含 Mac Catalyst）會把單一項目收成一顆「溢出選單」，
+                    // 於是手冊、隱私權、診斷、語言四個入口只剩一個下拉鈕。
+                    ToolbarItemGroup(placement: .primaryAction) {
                         manualToolbarButton
                         privacyToolbarButton
                         diagnosticsToolbarButton
                         languageToolbarMenu
                     }
+                }
+                #else
+                ToolbarItemGroup(placement: .primaryAction) {
+                    manualToolbarButton
+                    privacyToolbarButton
+                    diagnosticsToolbarButton
+                    languageToolbarMenu
                 }
                 #endif
             }
