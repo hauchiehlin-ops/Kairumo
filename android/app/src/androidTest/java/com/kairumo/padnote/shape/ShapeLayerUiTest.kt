@@ -181,7 +181,11 @@ class ShapeLayerUiTest {
         assertEquals("點在線上的那一下是連接線的，不該再傳給父層", 0, parentTaps)
 
         // 點空白處：不能被連接線層吃掉 —— 否則「在空白處點一下新增文字方塊」就再也不會發生。
-        rule.onRoot().performTouchInput { click(Offset(330f * density, 520f * density)) }
+        // CI 模擬器只有 320dp 寬，不能用 x=330 這種固定畫面座標；點根節點
+        // 右下角內縮 20dp，在任何螢幕尺寸都真的落在可點擊的空白區。
+        rule.onRoot().performTouchInput {
+            click(bottomRight - Offset(20f * density, 20f * density))
+        }
         rule.waitForIdle()
         assertTrue("空白處的點擊要傳得到父層", parentTaps >= 1)
     }

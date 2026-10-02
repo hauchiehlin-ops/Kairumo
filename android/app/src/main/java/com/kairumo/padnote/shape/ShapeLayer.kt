@@ -8,6 +8,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
@@ -56,9 +57,7 @@ import com.kairumo.padnote.canvas.gesturesIf
 import com.kairumo.padnote.ui.LocalAppLanguage
 import uniffi.padnote_core.FfiPoint
 import kotlin.math.PI
-import kotlin.math.atan2
 import kotlin.math.cos
-import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.sin
 
@@ -204,13 +203,29 @@ private fun ConnectionView(
     onEdit: () -> Unit,
     onDelete: () -> Unit
 ) {
-    // 繪圖 Canvas 只負責畫線，不能在整頁大小的 Modifier 上掛 pointerInput。
-    // Compose 在 down 時就固定命中路徑；之後即使發現「沒點到線」而不 consume，
-    // 底下的畫布也不一定拿得到這次點擊。命中區改由下方每一段線的窄 Box 提供。
+    // 命中測試只在線附近成立，其餘地方**不消耗事件** —— 這一層是整頁大小，
+    // 一律吃下觸控的話，在空白處點一下新增文字方塊就再也不會發生。
+    val hitSlop = 14f
     Canvas(
         Modifier
             .fillMaxSize()
             .zIndex(zIndex)
+            .gesturesIf(interactive) {
+                pointerInput(geometry) {
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = true)
+                        val px = down.position.x / density
+                        val py = down.position.y / density
+                        if (geometry.distanceTo(px, py) > hitSlop) return@awaitEachGesture
+                        down.consume()
+                        val up = waitForUpOrCancellation()
+                        if (up != null) {
+                            up.consume()
+                            onSelect()
+                        }
+                    }
+                }
+            }
     ) {
         val s = density
         val path = Path().apply {
@@ -236,15 +251,6 @@ private fun ConnectionView(
         }
     }
 
-    if (interactive) {
-        ConnectionHitTargets(
-            linkId = link.id,
-            points = geometry.path,
-            zIndex = zIndex,
-            onSelect = onSelect
-        )
-    }
-
     val mid = geometry.midpoint()
     if (link.label.isNotEmpty()) {
         Text(
@@ -266,61 +272,6 @@ private fun ConnectionView(
                 LocalizationStrings.localized("delete", LocalAppLanguage.current), onDelete,
                 Modifier.offset(34.dp, 0.dp))
         }
-    }
-}
-
-/**
- * 只在連接線各段周圍建立觸控目標。
- *
- * 座標是頁面 dp；Compose 會自行依裝置 density 轉成 px，和上方 Canvas 手動乘上
- * density 後會落在同一個位置。命中帶兩側各14dp，也在線段兩端多留14dp，
- * 讓手指不需要精準壓在細線上。
- */
-@Composable
-private fun ConnectionHitTargets(
-    linkId: String,
-    points: List<FfiPoint>,
-    zIndex: Float,
-    onSelect: () -> Unit
-) {
-    val hitSlop = 14f
-    points.zipWithNext().forEachIndexed { index, (start, end) ->
-        val dx = end.x - start.x
-        val dy = end.y - start.y
-        val length = hypot(dx.toDouble(), dy.toDouble()).toFloat()
-        if (length <= 0.01f) return@forEachIndexed
-
-        val centerX = (start.x + end.x) / 2f
-        val centerY = (start.y + end.y) / 2f
-        val targetWidth = length + hitSlop * 2f
-        Box(
-            Modifier
-                .zIndex(zIndex)
-                .offset((centerX - targetWidth / 2f).dp, (centerY - hitSlop).dp)
-                .size(targetWidth.dp, (hitSlop * 2f).dp)
-                .graphicsLayer {
-                    rotationZ = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
-                }
-                .pointerInput(linkId, index, start, end) {
-                    awaitEachGesture {
-                        // 不在 down 就 consume。先讓父層的點擊偵測器進入
-                        // 這個手勢，再由這裡於 up 先消耗，父層就會正常
-                        // 收到取消並重置。若在 down 就消耗，父層可能把
-                        // 緊接著的下一次空白點擊當成上一個手勢的起點。
-                        val down = awaitFirstDown(requireUnconsumed = false)
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id }
-                                ?: return@awaitEachGesture
-                            if (!change.pressed) {
-                                change.consume()
-                                onSelect()
-                                break
-                            }
-                        }
-                    }
-                }
-        )
     }
 }
 
