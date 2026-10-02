@@ -6275,6 +6275,70 @@
     "zhHans": "将算式贴入画布",
     "zhHant": "將算式貼入畫布"
   },
+  "math_insert_card": {
+    "en": "Insert Formula Card",
+    "ja": "数式カードとして挿入",
+    "ko": "수식 카드로 삽입",
+    "th": "แทรกเป็นการ์ดสูตร",
+    "zhHans": "插入算式卡片",
+    "zhHant": "插入算式卡片"
+  },
+  "math_insert_editable": {
+    "en": "Insert Editable Text",
+    "ja": "編集可能なテキストとして挿入",
+    "ko": "편집 가능한 텍스트로 삽입",
+    "th": "แทรกเป็นข้อความที่แก้ไขได้",
+    "zhHans": "插入可编辑文字",
+    "zhHant": "插入可編輯文字"
+  },
+  "math_tab_calc": {
+    "en": "Calculator",
+    "ja": "関数電卓",
+    "ko": "공학용 계산기",
+    "th": "เครื่องคิดเลขวิทยาศาสตร์",
+    "zhHans": "科学计算器",
+    "zhHant": "科學計算機"
+  },
+  "math_tab_calculus": {
+    "en": "Calculus & Eng",
+    "ja": "微積分・工学数学",
+    "ko": "미적분 및 공학수학",
+    "th": "แคลคูลัสและวิศวกรรม",
+    "zhHans": "微积分与工数",
+    "zhHant": "微積分與工數"
+  },
+  "math_tab_symbols": {
+    "en": "All Math Symbols",
+    "ja": "数学記号一覧",
+    "ko": "전체 수학 기호",
+    "th": "สัญลักษณ์ทั้งหมด",
+    "zhHans": "数学符号库",
+    "zhHant": "數學符號庫"
+  },
+  "math_tab_units": {
+    "en": "Constants & Units",
+    "ja": "定数・単位",
+    "ko": "상수 및 단위",
+    "th": "ค่าคงที่และหน่วย",
+    "zhHans": "常数与单位",
+    "zhHant": "常數與單位"
+  },
+  "math_clear": {
+    "en": "Clear",
+    "ja": "クリア",
+    "ko": "지우기",
+    "th": "ล้าง",
+    "zhHans": "清除",
+    "zhHant": "清除"
+  },
+  "math_backspace": {
+    "en": "Delete",
+    "ja": "一文字削除",
+    "ko": "삭제",
+    "th": "ลบ",
+    "zhHans": "退格",
+    "zhHant": "退格"
+  },
   "math_placeholder": {
     "en": "e.g., 125 * 8 + 45",
     "ja": "例: 125 * 8 + 45",

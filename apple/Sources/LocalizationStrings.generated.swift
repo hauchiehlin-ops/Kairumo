@@ -6235,6 +6235,14 @@ extension LocalizationManager {
             .ko: "오스테나이트계 내식",
             .th: "ออสเทนนิติก ทนการกัดกร่อน"
         ],
+        "math_backspace": [
+            .zhHant: "退格",
+            .en: "Delete",
+            .zhHans: "退格",
+            .ja: "一文字削除",
+            .ko: "삭제",
+            .th: "ลบ"
+        ],
         "math_calc": [
             .zhHant: "算式計算",
             .en: "Math Calculator",
@@ -6258,6 +6266,14 @@ extension LocalizationManager {
             .ja: "カードの枠線を維持",
             .ko: "카드 테두리 유지",
             .th: "เก็บเส้นขอบการ์ด"
+        ],
+        "math_clear": [
+            .zhHant: "清除",
+            .en: "Clear",
+            .zhHans: "清除",
+            .ja: "クリア",
+            .ko: "지우기",
+            .th: "ล้าง"
         ],
         "math_error": [
             .zhHant: "算式格式無效或無法計算",
@@ -6315,6 +6331,22 @@ extension LocalizationManager {
             .ko: "캔버스에 삽입",
             .th: "แทรกลงในผืนผ้าใบ"
         ],
+        "math_insert_card": [
+            .zhHant: "插入算式卡片",
+            .en: "Insert Formula Card",
+            .zhHans: "插入算式卡片",
+            .ja: "数式カードとして挿入",
+            .ko: "수식 카드로 삽입",
+            .th: "แทรกเป็นการ์ดสูตร"
+        ],
+        "math_insert_editable": [
+            .zhHant: "插入可編輯文字",
+            .en: "Insert Editable Text",
+            .zhHans: "插入可编辑文字",
+            .ja: "編集可能なテキストとして挿入",
+            .ko: "편집 가능한 텍스트로 삽입",
+            .th: "แทรกเป็นข้อความที่แก้ไขได้"
+        ],
         "math_placeholder": [
             .zhHant: "例如: 125 * 8 + 45",
             .en: "e.g., 125 * 8 + 45",
@@ -6330,6 +6362,38 @@ extension LocalizationManager {
             .ja: "数学記号",
             .ko: "수학 기호",
             .th: "สัญลักษณ์ทางคณิตศาสตร์"
+        ],
+        "math_tab_calc": [
+            .zhHant: "科學計算機",
+            .en: "Calculator",
+            .zhHans: "科学计算器",
+            .ja: "関数電卓",
+            .ko: "공학용 계산기",
+            .th: "เครื่องคิดเลขวิทยาศาสตร์"
+        ],
+        "math_tab_calculus": [
+            .zhHant: "微積分與工數",
+            .en: "Calculus & Eng",
+            .zhHans: "微积分与工数",
+            .ja: "微積分・工学数学",
+            .ko: "미적분 및 공학수학",
+            .th: "แคลคูลัสและวิศวกรรม"
+        ],
+        "math_tab_symbols": [
+            .zhHant: "數學符號庫",
+            .en: "All Math Symbols",
+            .zhHans: "数学符号库",
+            .ja: "数学記号一覧",
+            .ko: "전체 수학 기호",
+            .th: "สัญลักษณ์ทั้งหมด"
+        ],
+        "math_tab_units": [
+            .zhHant: "常數與單位",
+            .en: "Constants & Units",
+            .zhHans: "常数与单位",
+            .ja: "定数・単位",
+            .ko: "상수 및 단위",
+            .th: "ค่าคงที่และหน่วย"
         ],
         "math_value_prefix": [
             .zhHant: "數值",

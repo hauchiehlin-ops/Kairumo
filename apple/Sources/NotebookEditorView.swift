@@ -2049,9 +2049,14 @@ public struct NotebookEditorView: View {
             }
         }
         .sheet(isPresented: $showMathCalculator) { resizableSheet {
-            MathCalculatorSheet { exprText, cardImage in
-                insertImageAttachment(cardImage)
-            }
+            MathCalculatorSheet(
+                onInsertFormula: { exprText, cardImage in
+                    insertImageAttachment(cardImage)
+                },
+                onInsertEditableText: { formulaText in
+                    insertFormulaText(formulaText)
+                }
+            )
         } }
         .sheet(isPresented: $showShapeStudio) { resizableSheet {
             ShapeStudioView { shapes, connections in
@@ -9499,6 +9504,59 @@ public struct NotebookEditorView: View {
         editingTextId = newBox.id
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
+    }
+
+    /// 將算式以可編輯的文字方塊插入畫布（使用者可隨意修改、縮放、變更字型顏色及刪除）
+    private func insertFormulaText(_ text: String) {
+        let printable = PageGeometry.printableRect
+        let availWidth: CGFloat = min(360, printable.width - 40)
+        let fontSize: CGFloat = 18
+        let calculatedHeight = max(52, RuledWriting.boxHeight(
+            text: text,
+            width: availWidth,
+            fontSize: fontSize,
+            bold: false,
+            lineSpacing: 0
+        ))
+        let targetX = printable.minX + 24
+        let targetY = max(printable.minY + 20, min(180, printable.maxY - calculatedHeight - 20))
+
+        let mathBox = NoteTextAttachment(
+            id: UUID().uuidString,
+            pageIndex: currentPageIndex,
+            text: text,
+            fontSize: fontSize,
+            isBold: false,
+            textColorHex: "#000000",
+            backgroundColorHex: "#F8F9FA",
+            hasBorder: true,
+            cornerRadius: 10,
+            x: targetX,
+            y: targetY,
+            width: availWidth,
+            height: calculatedHeight
+        )
+
+        if notebook.textAttachments == nil {
+            notebook.textAttachments = []
+        }
+        notebook.textAttachments?.append(mathBox)
+
+        var order = ObjectStacking.normalized(objects: pageStackableObjects, order: notebook.objectOrder(forPage: currentPageIndex))
+        order = ObjectStacking.bringToFront([mathBox.id], in: order)
+        notebook.setObjectOrder(order, forPage: currentPageIndex)
+
+        store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
+        if let data = try? JSONEncoder().encode(mathBox),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
+        }
+        editorMode = .type
+        DispatchQueue.main.async {
+            inlineEditingTextId = mathBox.id
+            editingTextId = mathBox.id
+        }
     }
 
     /// 將語音辨識/轉錄出的文字稿作為「隨點即書」自然排版文字插入在錄音卡片周遭，
