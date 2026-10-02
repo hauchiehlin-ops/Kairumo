@@ -1737,6 +1737,13 @@ public struct HomeWorkbenchView: View {
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
+                        // 識別碼必須掛在真正可操作的 accessibility element 上。
+                        // 掛在外層 VStack 時，畫面看得到卡片，但 XCUITest 的樹裡
+                        // 沒有 `home.notebooks.card.*`，所有要開編輯器的測試都會
+                        // 把它誤報成「種子筆記不存在」。
+                        //
+                        // 用 id 而不是序號：排序、新增或語言切換都不會改變它。
+                        .accessibilityIdentifier("home.notebooks.card.\(note.id)")
                     }
                     .padding(10)
                     .background(Color(uiColor: .secondarySystemGroupedBackground))
@@ -1745,16 +1752,6 @@ public struct HomeWorkbenchView: View {
                     .contextMenu {
                         notebookCardContextMenuItems(note: note)
                     }
-                    // 每一張卡片一個識別碼（S-263）。
-                    //
-                    // 在此之前只有整份清單有 `home.notebooks.list`，於是測試
-                    // 要開一本筆記只能**靠顯示文字**去找
-                    // （`app.staticTexts["Welcome to Kairumo"]`），而那讓測試的
-                    // 成敗取決於模擬器當下是什麼語言 —— 拍完中文截圖之後整套
-                    // 就會全紅，而那跟程式對不對一點關係都沒有。
-                    //
-                    // 用 id 而不是序號：序號會隨排序與新增而變。
-                    .accessibilityIdentifier("home.notebooks.card.\(note.id)")
                     // 拖到上面的資料夾膠囊上就分類完成（S-88）。
                     //
                     // 編輯器的側欄早就能這樣拖，首頁卻不行 —— 而首頁才是
