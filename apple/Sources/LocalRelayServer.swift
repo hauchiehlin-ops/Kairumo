@@ -102,49 +102,66 @@ public final class LocalRelayServer {
                 stopLocked()
             }
 
-            guard let nwPort = NWEndpoint.Port(rawValue: port) else {
-                outcome = .failure(RelayError.invalidPort(port))
-                return
-            }
-
-            let parameters = NWParameters.tcp
-            parameters.allowLocalEndpointReuse = true
-            let wsOptions = NWProtocolWebSocket.Options()
-            wsOptions.autoReplyPing = true
-            parameters.defaultProtocolStack.applicationProtocols.insert(wsOptions, at: 0)
-
-            do {
-                let newListener = try NWListener(using: parameters, on: nwPort)
-                // 廣播 mDNS 服務，讓區網內的其他裝置能自動發現（跨裝置即時同步）
-                newListener.service = NWListener.Service(name: "Kairumo_\(UUID().uuidString.prefix(8))", type: "_kairumosync._tcp", domain: "local.")
-                newListener.newConnectionHandler = { [weak self] connection in
-                    self?.accept(connection)
-                }
-                newListener.stateUpdateHandler = { [weak self] state in
-                    switch state {
-                    case .waiting(let error):
-                        // `waiting` 多半是埠被佔用而且還在等它釋放。
-                        // 不當成失敗，但也**不能**讓上層繼續宣稱自己在聽。
-                        self?.report(.failed(error.localizedDescription))
-                    case .failed(let error):
-                        // 這個 handler 已經在 queue 上執行，不能再 queue.sync 進去
-                        self?.stopLocked()
-                        self?.report(.failed(error.localizedDescription))
-                    case .ready:
-                        self?.report(.ready(port: port))
-                    default:
-                        break
-                    }
-                }
-                newListener.start(queue: queue)
-                self.listener = newListener
-                self.runningPort = port
-                outcome = .success(port)
-            } catch {
-                outcome = .failure(error)
-            }
+            startInternalLocked(port: port, enableBonjour: true, outcome: &outcome)
         }
         return outcome
+    }
+
+    private func startInternalLocked(port: UInt16, enableBonjour: Bool, outcome: inout Result<UInt16, Error>) {
+        guard let nwPort = NWEndpoint.Port(rawValue: port) else {
+            outcome = .failure(RelayError.invalidPort(port))
+            return
+        }
+
+        let parameters = NWParameters.tcp
+        parameters.allowLocalEndpointReuse = true
+        let wsOptions = NWProtocolWebSocket.Options()
+        wsOptions.autoReplyPing = true
+        parameters.defaultProtocolStack.applicationProtocols.insert(wsOptions, at: 0)
+
+        do {
+            let newListener = try NWListener(using: parameters, on: nwPort)
+            if enableBonjour {
+                // 廣播 mDNS 服務，讓區網內的其他裝置能自動發現（跨裝置即時同步）
+                // 類型與核心 lan_service_type 保持一致（_kairumo-sync._tcp）
+                newListener.service = NWListener.Service(name: "Kairumo_\(UUID().uuidString.prefix(8))", type: "_kairumo-sync._tcp", domain: "local.")
+            }
+            newListener.newConnectionHandler = { [weak self] connection in
+                self?.accept(connection)
+            }
+            newListener.stateUpdateHandler = { [weak self] state in
+                guard let self else { return }
+                switch state {
+                case .waiting(let error):
+                    // `waiting` 多半是埠被佔用而且還在等它釋放。
+                    // 不當成失敗，但也**不能**讓上層繼續宣稱自己在聽。
+                    self.report(.failed(error.localizedDescription))
+                case .failed(let error):
+                    // 檢查是否為 Bonjour 權限失敗（如 DNS-SD -65555 NoAuth 或 Local Network 權限未開放）
+                    let errStr = "\(error)"
+                    let isBonjourAuthFailure = enableBonjour && (errStr.contains("-65555") || errStr.lowercased().contains("noauth") || errStr.contains("kDNSServiceErr_NoAuth"))
+                    if isBonjourAuthFailure {
+                        print("⚠️ [LocalRelay] Bonjour mDNS 廣播被系統隱私拒絕 (-65555 NoAuth)，自動降級為純 TCP WebSocket 監聽")
+                        self.stopLocked()
+                        var retryOutcome: Result<UInt16, Error> = .success(port)
+                        self.startInternalLocked(port: port, enableBonjour: false, outcome: &retryOutcome)
+                        return
+                    }
+                    // 這個 handler 已經在 queue 上執行，不能再 queue.sync 進去
+                    self.stopLocked()
+                    self.report(.failed(error.localizedDescription))
+                case .ready:
+                    self.report(.ready(port: port))
+                default:
+                    break
+                }
+            }
+            newListener.start(queue: queue)
+            self.listener = newListener
+            self.runningPort = port
+        } catch {
+            outcome = .failure(error)
+        }
     }
 
     /// 關閉中繼服務並中斷所有連線
@@ -421,7 +438,7 @@ public final class LocalSyncDiscovery: ObservableObject {
         
         let parameters = NWParameters()
         parameters.includePeerToPeer = true
-        let browser = NWBrowser(for: .bonjour(type: "_kairumosync._tcp", domain: "local."), using: parameters)
+        let browser = NWBrowser(for: .bonjour(type: "_kairumo-sync._tcp", domain: "local."), using: parameters)
         
         browser.browseResultsChangedHandler = { [weak self] results, changes in
             let endpoints = results.map { $0.endpoint }

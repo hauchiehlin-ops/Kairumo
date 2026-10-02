@@ -38,6 +38,7 @@
 	<key>NSBonjourServices</key>
 	<array>
 		<string>_kairumo-sync._tcp</string>
+		<string>_kairumosync._tcp</string>
 	</array>
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>

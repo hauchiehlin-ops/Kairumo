@@ -2061,11 +2061,19 @@ public struct NotebookEditorView: View {
                     var placed = shape
                     placed.pageIndex = currentPageIndex
                     notebook.shapeAttachments?.append(placed)
+                    if let data = try? JSONEncoder().encode(placed),
+                       let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        collaborationManager.broadcastAttachmentUpsert(type: "shape", itemDict: dict)
+                    }
                 }
                 for connection in connections {
                     var placed = connection
                     placed.pageIndex = currentPageIndex
                     notebook.connectionAttachments?.append(placed)
+                    if let data = try? JSONEncoder().encode(placed),
+                       let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                        collaborationManager.broadcastAttachmentUpsert(type: "connection", itemDict: dict)
+                    }
                 }
                 store.updateNotebook(notebook)
                 PageThumbnailRenderer.invalidateAll()
@@ -2140,6 +2148,10 @@ public struct NotebookEditorView: View {
                 }
                 store.updateNotebook(notebook)
                 PageThumbnailRenderer.invalidateAll()
+                if let data = try? JSONEncoder().encode(created),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
+                }
             }
         } }
         .sheet(isPresented: $showLinkPreviewSheet) { resizableSheet {
@@ -2154,6 +2166,10 @@ public struct NotebookEditorView: View {
                 placed.pageIndex = currentPageIndex
                 notebook.linkAttachments?.append(placed)
                 store.updateNotebook(notebook)
+                if let data = try? JSONEncoder().encode(placed),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    collaborationManager.broadcastAttachmentUpsert(type: "link", itemDict: dict)
+                }
             }
         } }
         .sheet(isPresented: $showProColorPicker) { resizableSheet {
@@ -7689,6 +7705,17 @@ public struct NotebookEditorView: View {
                 }
                 store.updateNotebook(notebook)
             } else if attType == "image", let imgItem = try? JSONDecoder().decode(NoteImageAttachment.self, from: jsonData) {
+                // 若包含圖片 Base64，且本地尚未儲存該圖檔，立即寫入磁碟供 AttachmentsLayer 載入
+                if let b64 = itemDict["image_base64"] as? String,
+                   let imgData = Data(base64Encoded: b64),
+                   let remoteImg = UIImage(data: imgData) {
+                    let fileUrl = store.attachmentsDirectory.appending(path: imgItem.fileName)
+                    if !FileManager.default.fileExists(atPath: fileUrl.path) {
+                        try? imgData.write(to: fileUrl, options: .atomic)
+                    }
+                    _ = store.loadAttachmentImage(fileName: imgItem.fileName)
+                }
+
                 if let idx = notebook.attachments?.firstIndex(where: { $0.id == imgItem.id }) {
                     notebook.attachments?[idx] = imgItem
                 } else {
@@ -7696,6 +7723,7 @@ public struct NotebookEditorView: View {
                     notebook.attachments?.append(imgItem)
                 }
                 store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
             } else if attType == "3d", let modelItem = try? JSONDecoder().decode(Note3DAttachment.self, from: jsonData) {
                 if let idx = notebook.model3DAttachments?.firstIndex(where: { $0.id == modelItem.id }) {
                     notebook.model3DAttachments?[idx] = modelItem
@@ -7714,6 +7742,33 @@ public struct NotebookEditorView: View {
                 }
                 store.updateNotebook(notebook)
                 PageThumbnailRenderer.invalidateAll()
+            } else if attType == "shape", let shapeItem = try? JSONDecoder().decode(NoteShapeAttachment.self, from: jsonData) {
+                if let idx = notebook.shapeAttachments?.firstIndex(where: { $0.id == shapeItem.id }) {
+                    notebook.shapeAttachments?[idx] = shapeItem
+                } else {
+                    if notebook.shapeAttachments == nil { notebook.shapeAttachments = [] }
+                    notebook.shapeAttachments?.append(shapeItem)
+                }
+                store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+            } else if attType == "connection", let connItem = try? JSONDecoder().decode(NoteConnectionAttachment.self, from: jsonData) {
+                if let idx = notebook.connectionAttachments?.firstIndex(where: { $0.id == connItem.id }) {
+                    notebook.connectionAttachments?[idx] = connItem
+                } else {
+                    if notebook.connectionAttachments == nil { notebook.connectionAttachments = [] }
+                    notebook.connectionAttachments?.append(connItem)
+                }
+                store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+            } else if attType == "link", let linkItem = try? JSONDecoder().decode(NoteLinkAttachment.self, from: jsonData) {
+                if let idx = notebook.linkAttachments?.firstIndex(where: { $0.id == linkItem.id }) {
+                    notebook.linkAttachments?[idx] = linkItem
+                } else {
+                    if notebook.linkAttachments == nil { notebook.linkAttachments = [] }
+                    notebook.linkAttachments?.append(linkItem)
+                }
+                store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
             }
 
         case "attachment_delete":
@@ -7728,6 +7783,12 @@ public struct NotebookEditorView: View {
                 notebook.model3DAttachments?.removeAll { $0.id == attId }
             } else if attType == "table" {
                 notebook.tableAttachments?.removeAll { $0.id == attId }
+            } else if attType == "shape" {
+                notebook.shapeAttachments?.removeAll { $0.id == attId }
+            } else if attType == "connection" {
+                notebook.connectionAttachments?.removeAll { $0.id == attId }
+            } else if attType == "link" {
+                notebook.linkAttachments?.removeAll { $0.id == attId }
             }
             store.updateNotebook(notebook)
             PageThumbnailRenderer.invalidateAll()
@@ -9538,9 +9599,10 @@ public struct NotebookEditorView: View {
         }
         notebook.attachments?.append(newAttachment)
         store.updateNotebook(notebook)
-        PageThumbnailRenderer.invalidateAll()
-        if let data = try? JSONEncoder().encode(newAttachment),
-           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+        if var dict = (try? JSONSerialization.jsonObject(with: JSONEncoder().encode(newAttachment))) as? [String: Any] {
+            if let imgData = image.pngData() {
+                dict["image_base64"] = imgData.base64EncodedString()
+            }
             collaborationManager.broadcastAttachmentUpsert(type: "image", itemDict: dict)
         }
     }
