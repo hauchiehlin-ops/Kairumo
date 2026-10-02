@@ -211,16 +211,31 @@ mod wordlist_tests {
     #[test]
     fn a_typo_is_caught_by_the_checksum() {
         // 校驗和的意義就是「抄錯字當場被抓到」，而不是等到要救資料時。
+        //
+        // 12 個字只有 4 位元校驗和，所以**任何單一個替換字都有 1/16 的機率碰巧還能通過** ——
+        // 原本用隨機產生的復原碼、只換成一個固定的字，於是這條測試每 16 次就有 1 次隨機紅燈
+        // （CI 的 ubuntu 就紅過）。改成固定的熵、換 64 個不同的字：結果完全可重現，
+        // 而斷言的是真正的性質 —— 絕大多數替換都被抓到（期望約 94%，門檻 80%）。
         let words = english_wordlist();
-        let code = RecoveryCode::generate(&words).expect("產生復原碼");
-        let mut parts: Vec<String> = code.words().to_vec();
-        // 換掉第一個字（換成一個一定不同的）。
-        parts[0] = if parts[0] == "abandon" {
-            "ability".into()
-        } else {
-            "abandon".into()
-        };
-        assert!(RecoveryCode::parse(&parts.join(" "), &words).is_err());
+        let code = RecoveryCode::from_entropy(&[0x5A; 16], &words).expect("產生復原碼");
+        let original = code.words().to_vec();
+        let mut caught = 0;
+        let mut tried = 0;
+        for candidate in words.iter().take(65) {
+            if *candidate == original[0] {
+                continue;
+            }
+            let mut parts = original.clone();
+            parts[0] = (*candidate).to_string();
+            tried += 1;
+            if RecoveryCode::parse(&parts.join(" "), &words).is_err() {
+                caught += 1;
+            }
+        }
+        assert!(
+            caught * 5 >= tried * 4,
+            "只抓到 {caught}/{tried} 個抄錯的字，校驗和失效了"
+        );
     }
 }
 

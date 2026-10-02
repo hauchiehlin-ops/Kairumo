@@ -31,6 +31,10 @@ struct SelfCheckResult: Identifiable, Equatable {
 
 @MainActor
 final class PlatformSelfCheck: ObservableObject {
+    /// 自檢用的測試資料（簡體「語音識別」），用 Unicode 跳脫寫，不是給人看的介面文字。
+    private static let simplifiedSample = "\u{8BED}\u{97F3}\u{8BC6}\u{522B}"
+    private static let traditionalSample = "\u{8A9E}\u{97F3}\u{8B58}\u{5225}"
+
     @Published private(set) var results: [SelfCheckResult] = []
     @Published private(set) var isRunning = false
 
@@ -159,11 +163,11 @@ final class PlatformSelfCheck: ObservableObject {
 
     /// 核心的簡繁轉換有接上（繁體介面的轉錄不會是簡體）。
     private func checkTranscriptScript() async -> SelfCheckResult {
-        let converted = localizeTranscriptScript(text: "语音识别", uiLanguage: "zh-Hant")
-        let ok = converted == "語音識別"
+        let converted = localizeTranscriptScript(text: Self.simplifiedSample, uiLanguage: "zh-Hant")
+        let ok = converted == Self.traditionalSample
         return SelfCheckResult(
             id: "transcript.script", title: "Transcript script (zh-Hant)", status: ok ? .pass : .fail,
-            detail: "语音识别 → \(converted)")
+            detail: "\(Self.simplifiedSample) → \(converted)")
     }
 
     private func checkFreeSpace() async -> SelfCheckResult {
