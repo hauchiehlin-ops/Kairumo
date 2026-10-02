@@ -301,6 +301,59 @@ public struct CollaborationSheet: View {
                 .background(Color.blue.opacity(0.1))
                 .cornerRadius(10)
                 .accessibilityIdentifier("collaboration.hosting_relay")
+
+                if collaborationManager.isBonjourDegraded {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "info.circle.fill")
+                                .foregroundColor(.orange)
+                            Text(localizationManager.localized("bonjour_permission_title"))
+                                .font(.subheadline)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.primary)
+                            Spacer()
+                        }
+
+                        #if targetEnvironment(macCatalyst)
+                        Text(localizationManager.localized("bonjour_permission_hint_mac"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        #else
+                        Text(localizationManager.localized("bonjour_permission_hint_ios"))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                        #endif
+
+                        #if canImport(UIKit)
+                        Button {
+                            if let settingsUrl = URL(string: UIApplication.openSettingsURLString) {
+                                UIApplication.shared.open(settingsUrl)
+                            }
+                        } label: {
+                            HStack(spacing: 4) {
+                                Image(systemName: "gear")
+                                Text(localizationManager.localized("open_settings"))
+                            }
+                            .font(.caption)
+                            .fontWeight(.medium)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 6)
+                            .background(Color.orange.opacity(0.15))
+                            .foregroundColor(.orange)
+                            .cornerRadius(8)
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.top, 2)
+                        #endif
+                    }
+                    .padding(12)
+                    .background(Color.orange.opacity(0.08))
+                    .cornerRadius(10)
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 10)
+                            .stroke(Color.orange.opacity(0.3), lineWidth: 1)
+                    )
+                }
             }
 
             // 房間識別碼與快速複製

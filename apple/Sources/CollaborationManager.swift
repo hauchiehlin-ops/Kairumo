@@ -120,6 +120,8 @@ public class CollaborationManager: ObservableObject {
     /// 是這台裝置根本沒有開成房間。在 macOS 沙盒下，少了
     /// `com.apple.security.network.server` 權限就是這個症狀。
     @Published public var localRelayFailure: String? = nil
+    /// Bonjour mDNS 廣播被系統隱私拒絕（NoAuth -65555），但純 TCP 監聽仍運作中。
+    @Published public var isBonjourDegraded: Bool = false
 
     // MARK: - 離線暫存佇列與自動斷線重連
     @Published public var queuedOplogCount: Int = 0
@@ -323,13 +325,15 @@ public class CollaborationManager: ObservableObject {
         LocalRelayServer.shared.onStateChange = { [weak self] state in
             guard let self else { return }
             switch state {
-            case .ready(let boundPort):
+            case .ready(let boundPort, let isBonjourActive):
                 self.isHostingLocalRelay = true
+                self.isBonjourDegraded = !isBonjourActive
                 self.localRelayFailure = nil
                 self.lanRelayAddress = LocalRelayServer.lanIPv4Address()
                     .map { "ws://\($0):\(boundPort)" }
             case .failed(let why):
                 self.isHostingLocalRelay = false
+                self.isBonjourDegraded = false
                 self.lanRelayAddress = nil
                 self.localRelayFailure = String(
                     format: LocalizationManager.shared.localized("local_relay_failed"), why)

@@ -1302,6 +1302,30 @@ extension LocalizationManager {
             .ko: "스냅샷으로 만들 노트북 선택",
             .th: "เลือกสมุดบันทึกที่จะทำสแนปช็อต"
         ],
+        "bonjour_permission_hint_ios": [
+            .zhHant: "若需同 Wi-Fi 下其他裝置自動看見此房間，請前往「設定」>「Kairumo」>開啟「區域網路」。",
+            .en: "To let nearby devices discover this room automatically, please enable Local Network in Settings > Kairumo.",
+            .zhHans: "若需同 Wi-Fi 下其他设备自动发现此房间，请前往“设置”>“Kairumo”>开启“本地网络”。",
+            .ja: "近くの端末がこのルームを自動検出できるようにするには、「設定」>「Kairumo」>「ローカルネットワーク」をオンにしてください。",
+            .ko: "주변 기기가 이 방을 자동으로 찾을 수 있도록 '설정' > 'Kairumo' > '로컬 네트워크'를 켜주세요.",
+            .th: "หากต้องการให้อุปกรณ์ใกล้เคียงค้นพบห้องนี้โดยอัตโนมัติ โปรดเปิด เครือข่ายภายใน ใน การตั้งค่า > Kairumo"
+        ],
+        "bonjour_permission_hint_mac": [
+            .zhHant: "若需同 Wi-Fi 下其他裝置自動看見此房間，請前往「系統設定」>「隱私權與安全性」>「區域網路」，確認 Kairumo 為開啟狀態。",
+            .en: "To let nearby devices discover this room automatically, go to System Settings > Privacy & Security > Local Network and allow Kairumo.",
+            .zhHans: "若需同 Wi-Fi 下其他设备自动发现此房间，请前往“系统设置”>“隐私与安全性”>“本地网络”，允许 Kairumo。",
+            .ja: "近くの端末がこのルームを自動検出できるようにするには、「システム設定」>「プライバシーとセキュリティ」>「ローカルネットワーク」で Kairumo を許可してください。",
+            .ko: "주변 기기가 이 방을 자동으로 찾을 수 있도록 '시스템 설정' > '개인정보 보호 및 보안' > '로컬 네트워크'에서 Kairumo를 허용하세요.",
+            .th: "หากต้องการให้อุปกรณ์ใกล้เคียงค้นพบห้องนี้โดยอัตโนมัติ ให้ไปที่ การตั้งค่าระบบ > ความเป็นส่วนตัวและความปลอดภัย > เครือข่ายภายใน แล้วอนุญาต Kairumo"
+        ],
+        "bonjour_permission_title": [
+            .zhHant: "跨裝置自動發現提示",
+            .en: "Local Network Discovery Required",
+            .zhHans: "跨设备自动发现提示",
+            .ja: "ローカルネットワーク検出の設定",
+            .ko: "로컬 네트워크 자동 감지 안내",
+            .th: "การค้นหาอุปกรณ์ในเครือข่ายภายใน"
+        ],
         "border_color": [
             .zhHant: "邊框顏色",
             .en: "Border color",

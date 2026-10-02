@@ -56,7 +56,7 @@ public final class LocalRelayServer {
     /// 在 macOS 沙盒下，缺少 `com.apple.security.network.server` 權限
     /// 就是走這條路失敗的。
     public enum RelayState {
-        case ready(port: UInt16)
+        case ready(port: UInt16, isBonjourActive: Bool)
         case failed(String)
     }
 
@@ -151,7 +151,7 @@ public final class LocalRelayServer {
                     self.stopLocked()
                     self.report(.failed(error.localizedDescription))
                 case .ready:
-                    self.report(.ready(port: port))
+                    self.report(.ready(port: port, isBonjourActive: enableBonjour))
                 default:
                     break
                 }
