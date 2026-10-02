@@ -17,6 +17,9 @@
 
 import XCTest
 
+// 捏合手勢在 Mac Catalyst 的 XCUITest 裡不存在（`XCUIElement.pinch` 只有 iOS）。
+#if !targetEnvironment(macCatalyst)
+
 final class CanvasGestureTests: XCTestCase {
 
     /// 兩指捏合要真的改變縮放倍率。
@@ -108,3 +111,5 @@ final class CanvasGestureTests: XCTestCase {
         return value
     }
 }
+
+#endif

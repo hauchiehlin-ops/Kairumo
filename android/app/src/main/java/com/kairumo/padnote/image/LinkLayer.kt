@@ -27,6 +27,11 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import com.kairumo.padnote.LocalizationStrings
+import com.kairumo.padnote.ui.LocalAppLanguage
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
@@ -200,6 +205,7 @@ private fun LinkCardView(
         // 把手掛在旋轉**外面**：包進去的話它們會跟著轉，拖曳算出的位移
         // 會疊加自身旋轉，卡片會失控。與 Apple 端同一個做法。
         if (interactive && isSelected) {
+            val deleteDescription = LocalizationStrings.localized("action_delete", LocalAppLanguage.current)
             // 刪除（右上）。在此之前 Android 的連結卡片**刪不掉** ——
             // 插錯一張就只能整頁清掉。
             Box(
@@ -210,6 +216,8 @@ private fun LinkCardView(
                     .size(26.dp)
                     .clip(CircleShape)
                     .background(MaterialTheme.colorScheme.error)
+                    .testTag("link.card.delete")
+                    .semantics { contentDescription = deleteDescription }
                     .clickable { onDelete(link) },
                 contentAlignment = Alignment.Center
             ) { Text("\u2715", fontSize = 11.sp, color = Color.White) }

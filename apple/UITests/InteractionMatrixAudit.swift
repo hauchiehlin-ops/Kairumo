@@ -132,8 +132,15 @@ final class InteractionMatrixAudit: XCTestCase {
         enterTypingMode(app)
 
         var report: [String] = []
-        for orientation in [UIDeviceOrientation.portrait, .landscapeLeft] {
+        #if targetEnvironment(macCatalyst)
+        let orientations: [UIDeviceOrientation] = [.portrait]   // Mac 沒有裝置方向
+        #else
+        let orientations: [UIDeviceOrientation] = [.portrait, .landscapeLeft]
+        #endif
+        for orientation in orientations {
+            #if !targetEnvironment(macCatalyst)
             XCUIDevice.shared.orientation = orientation
+            #endif
             sleep(1)
             for kind in Self.kinds {
                 let el = object(app, kind.name)
@@ -154,7 +161,9 @@ final class InteractionMatrixAudit: XCTestCase {
                 }
             }
         }
+        #if !targetEnvironment(macCatalyst)
         XCUIDevice.shared.orientation = .portrait
+        #endif
         XCTAssertTrue(report.isEmpty, "互動矩陣（存在／尺寸／可點）：\n" + report.joined(separator: "\n"))
     }
 
@@ -227,5 +236,47 @@ final class InteractionMatrixAudit: XCTestCase {
             }
         }
         XCTAssertTrue(report.isEmpty, "互動矩陣（無障礙標籤）：\n" + report.joined(separator: "\n"))
+    }
+
+    /// 點文字方塊 → 進入就地編輯 → 輸入欄真的拿到鍵盤焦點。
+    /// 對應 `@FocusState` 在 `await` 之後寫入會被 SwiftUI 忽略的問題（「鍵盤時有時無」）。連做兩次。
+    func testTappingATextBoxGivesItKeyboardFocusEveryTime() {
+        let app = launch()
+        defer { app.terminate() }
+        guard openMatrixNotebook(app) else { return }
+        enterTypingMode(app)
+        let focused = NSPredicate(format: "hasKeyboardFocus == true")
+        for attempt in 1...2 {
+            let el = object(app, "text")
+            guard el.waitForExistence(timeout: 8), reveal(app, el) else { XCTFail("找不到文字方塊"); return }
+            el.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+            let field = app.textViews.matching(focused).firstMatch
+            let field2 = app.textFields.matching(focused).firstMatch
+            let ok = field.waitForExistence(timeout: 4) || field2.waitForExistence(timeout: 1)
+            XCTAssertTrue(ok, "第 \(attempt) 次點文字方塊，輸入欄沒有拿到鍵盤焦點")
+            // 點空白處結束編輯，再來一次。
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.7, dy: 0.8)).tap()
+            sleep(1)
+        }
+    }
+
+    /// 點空白處（隨點隨寫）→ 新方塊一出生就是編輯狀態 → 輸入欄拿到焦點。連做兩次。
+    /// 這條路徑是 `.task` 在 `await` 之後才寫 `@FocusState` 的那一條（見 `requestInlineFocus`）。
+    func testTapToWriteOnEmptySpaceFocusesTheNewBox() {
+        let app = launch()
+        defer { app.terminate() }
+        guard openMatrixNotebook(app) else { return }
+        enterTypingMode(app)
+        let focused = NSPredicate(format: "hasKeyboardFocus == true")
+        for attempt in 1...2 {
+            let page = find(app, "editor.canvas")
+            guard page.waitForExistence(timeout: 8) else { XCTFail("找不到畫布"); return }
+            page.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.55 + 0.1 * Double(attempt))).tap()
+            let ok = app.textViews.matching(focused).firstMatch.waitForExistence(timeout: 4)
+                || app.textFields.matching(focused).firstMatch.waitForExistence(timeout: 1)
+            XCTAssertTrue(ok, "第 \(attempt) 次點空白處，新文字方塊沒有拿到鍵盤焦點")
+            app.coordinate(withNormalizedOffset: CGVector(dx: 0.9, dy: 0.95)).tap()
+            sleep(1)
+        }
     }
 }

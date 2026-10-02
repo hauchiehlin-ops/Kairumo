@@ -106,15 +106,18 @@
 7. **Android 的『檔案選擇器』自檢誤報**：Android 11+ 沒在 manifest 宣告 `<queries>`，
    `queryIntentActivities` 一律回空。已補上宣告；自檢（與 Android 連兩次的契約測試）現在通過。
 
-### 已知存量（日誌閘門的『軟規則』，尚未修）
-- `Accessing FocusState's value outside of the body of a View`：就地編輯文字方塊的 `.task` 在 `await` 之後寫
-  `@FocusState`，SwiftUI 說這會變成常數綁定 —— 也就是「鍵盤時有時無」的可能原因（程式碼裡的註解早就提過這個症狀）。
+### 已知存量（日誌閘門的『軟規則』）
+- `Accessing FocusState's value outside of the body of a View`：就地編輯的 `.task` 在 `await` 之後寫 `@FocusState`。
+  **在模擬器上無法重現**：我加了兩條 UI 測試（點既有文字方塊、點空白處新建方塊，各兩次，斷言輸入欄拿到鍵盤焦點），
+  舊程式碼也通過、日誌也是 0 次。上一輪日誌裡的 114 次出自哪個操作沒查到。所以**沒有改程式碼**
+  （沒辦法證明修改有效，改了反而多一個無法驗證的行為變更）；兩條測試留著，實機上若真的出現『鍵盤時有時無』
+  就是下手的地方。
 - `Unable to render flattened version of PlatformViewRepresentableAdaptor<PlatformTextFieldAdaptor>`：
-  某處把含 `TextField` 的視圖拿去算繪成圖片（縮圖／匯出）。
+  專案裡沒有 `drawingGroup`／`compositingGroup`／`ImageRenderer`，找不到來源，模擬器上最近也沒再出現（0 次）。
 
 ### 還沒做到的
-- Android 的 L2 目前只涵蓋錄音卡片（`AudioLayerInteractionTest`：播放鈕、刪除鈕點得動、連點兩次）；
-  其他物件種類與 L5 差分還沒有。下一步是把 Apple 那張物件表搬過去。
+- Android 的 L2 涵蓋錄音卡、連結卡、形狀（`AudioLayerInteractionTest`、`ObjectLayersInteractionTest`）；
+  圖片與文字方塊還沒有，L5 差分也沒有。
 - 形狀的刪除鈕：XCUITest 送出的點擊到不了它（真實觸控可以，已手動驗證），所以矩陣對形狀只斷言
   「選取後有可點的刪除控制項」。這是工具限制，已在測試裡註明。
 - L4 的『檔案』App provider、真實麥克風、背景／前景切換，只有在使用者的實機上跑自檢才驗得到。
