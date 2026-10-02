@@ -9501,28 +9501,42 @@ public struct NotebookEditorView: View {
         PageThumbnailRenderer.invalidateAll()
     }
 
-    /// 將語音辨識/轉錄出的文字稿作為文字方塊插入在該錄音卡片下方
+    /// 將語音辨識/轉錄出的文字稿作為「隨點即書」自然排版文字插入在錄音卡片周遭，
+    /// 無框線、無預設灰底，高度隨內容自動伸縮，並切換至打字模式進入就地編輯以供後續編修。
     private func insertTranscriptText(_ text: String, for audio: NoteAudioAttachment) {
-        let boxWidth: CGFloat = max(240, audio.width)
-        let boxHeight: CGFloat = max(80, CGFloat(min(240, 40 + (text.count / 20) * 24)))
-        let targetX = audio.x
-        let targetY = audio.y + audio.height + 16
+        let printable = PageGeometry.printableRect
+        let startX = max(printable.minX, audio.x)
+        let midX = PageGeometry.width / 2
+        let availWidth: CGFloat
+        if startX < midX - 30 && printable.maxX > midX {
+            availWidth = max(180, midX - startX - 12)
+        } else {
+            availWidth = max(180, printable.maxX - startX)
+        }
+
+        let baseFontSize: CGFloat = activeTextAttachment?.fontSize ?? 16
+        let calculatedHeight = RuledWriting.boxHeight(
+            text: text,
+            width: availWidth,
+            fontSize: baseFontSize,
+            bold: false,
+            lineSpacing: 0
+        )
+        let targetY = max(printable.minY, min(audio.y + audio.height + 16, printable.maxY - calculatedHeight))
 
         let transcriptBox = NoteTextAttachment(
             id: UUID().uuidString,
             pageIndex: audio.pageIndex,
             text: text,
-            fontSize: 16,
+            fontSize: baseFontSize,
             isBold: false,
-            backgroundColorHex: "#F2F4F7",
-            hasBorder: true,
-            cornerRadius: 10,
-            borderColorHex: "#D0D5DD",
-            borderWidth: 1.0,
-            x: targetX,
+            textColorHex: activeTextAttachment?.textColorHex ?? "#000000",
+            backgroundColorHex: "clear",
+            hasBorder: false,
+            x: startX,
             y: targetY,
-            width: boxWidth,
-            height: boxHeight
+            width: availWidth,
+            height: calculatedHeight
         )
 
         if notebook.textAttachments == nil {

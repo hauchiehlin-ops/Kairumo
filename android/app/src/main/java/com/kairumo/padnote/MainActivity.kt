@@ -4421,18 +4421,33 @@ private fun InkScreen(
                                     return@launch
                                 }
                             }
-                            // 在錄音卡片下方插入文字方塊（與 Apple 端 insertTranscriptText 規格一致）
-                            val targetX = card.x
-                            val targetY = card.y + card.height + 16f
-                            val newBox = textStore.create(targetX, targetY)
+                            // 將語音轉錄出的文字作為「隨點即書」自然排版文字插入在錄音卡片下方，
+                            // 無框線、無預設灰底，依可用寬度動態排版，並切換至打字模式進入編輯以供後續編修（與 Apple 端一致）。
+                            val inset = com.kairumo.padnote.ink.PageGeometry.PRINTABLE_INSET
+                            val pageWidth = com.kairumo.padnote.ink.PageGeometry.width
+                            val pageHeight = com.kairumo.padnote.ink.PageGeometry.height
+                            val startX = maxOf(inset, card.x)
+                            val midX = pageWidth / 2f
+                            val availWidth = if (startX < midX - 30f && (pageWidth - inset) > midX) {
+                                maxOf(180f, midX - startX - 12f)
+                            } else {
+                                maxOf(180f, pageWidth - inset - startX)
+                            }
+                            val baseFontSize = 16f
+                            val charsPerLine = maxOf(10f, availWidth / (baseFontSize * 1.1f))
+                            val approxLines = text.split("\n").fold(0) { acc, line ->
+                                acc + maxOf(1, kotlin.math.ceil(maxOf(1, line.length) / charsPerLine).toInt())
+                            }
+                            val approxHeight = maxOf(48f, 28f + approxLines * (baseFontSize * 1.4f))
+                            val targetY = maxOf(inset, minOf(card.y + card.height + 16f, pageHeight - inset - approxHeight))
+
+                            val newBox = textStore.create(startX, targetY)
                             newBox.text = text
-                            newBox.width = maxOf(240f, card.width)
-                            newBox.height = maxOf(80f, minOf(240f, 40f + (text.length / 20) * 24f))
-                            newBox.backgroundColorHex = "#F2F4F7"
-                            newBox.borderColorHex = "#D0D5DD"
-                            newBox.hasBorder = true
-                            newBox.borderWidth = 1f
-                            newBox.cornerRadius = 10f
+                            newBox.fontSize = baseFontSize
+                            newBox.width = availWidth
+                            newBox.height = approxHeight
+                            newBox.backgroundColorHex = "clear"
+                            newBox.hasBorder = false
                             textStore.persist(newBox)
                             selectedTextId = newBox.id
                             editingText = newBox
