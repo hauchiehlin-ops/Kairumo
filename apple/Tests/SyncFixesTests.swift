@@ -9,6 +9,18 @@ import PencilKit
 import XCTest
 @testable import Kairumo
 
+/// 會呼叫 `persistData()` 的測試不能碰 `NotebookStore.shared`。
+///
+/// Apple 單元測試與後面的 UI 測試使用同一台 Simulator；shared store 寫進 App
+/// container 後，即使 `defer` 把記憶體陣列還原，磁碟上的測試資料仍會留給下一個
+/// `xcodebuild`。結果 UI 測試的種子筆記消失，所有要進編輯器的案例一起失敗。
+@MainActor
+private func isolatedNotebookStore() -> NotebookStore {
+    let dir = FileManager.default.temporaryDirectory
+        .appendingPathComponent("kairumo-sync-tests-\(UUID().uuidString)", isDirectory: true)
+    return NotebookStore(testDocumentsRoot: dir)
+}
+
 @MainActor
 final class SyncFixesTests: XCTestCase {
 
@@ -173,10 +185,7 @@ final class RecordingRenameSyncTests: XCTestCase {
 
     func testRenamingARecordingMadeOnAnotherDeviceUpdatesItsCardToo() {
         // 卡片上的錄音 id 是建立那台裝置的；這台改名時要用檔名找到卡片，名字才會同步回去。
-        let store = NotebookStore.shared
-        let savedNotebooks = store.notebooks
-        let savedRecordings = store.recordings
-        defer { store.notebooks = savedNotebooks; store.recordings = savedRecordings }
+        let store = isolatedNotebookStore()
 
         let rec = record("舊名字", file: "d.opus", id: "ipad-id")
         store.recordings = [rec]
@@ -240,9 +249,7 @@ final class RecordingTitleInPackageTests: XCTestCase {
     }
 
     func testImportedTitlesUpdateTheListButNotARenameMadeSinceTheExport() {
-        let store = NotebookStore.shared
-        let saved = store.recordings
-        defer { store.recordings = saved }
+        let store = isolatedNotebookStore()
         store.recordings = [
             AudioRecordingRecord(title: "舊", durationSeconds: 1, fileName: "a.opus"),
             AudioRecordingRecord(title: "我剛改的", durationSeconds: 1, fileName: "b.opus"),
@@ -255,10 +262,7 @@ final class RecordingTitleInPackageTests: XCTestCase {
     }
 
     func testRenamingARecordingMarksItsNotebookModifiedSoTheNextRoundExportsIt() {
-        let store = NotebookStore.shared
-        let savedNotebooks = store.notebooks
-        let savedRecordings = store.recordings
-        defer { store.notebooks = savedNotebooks; store.recordings = savedRecordings }
+        let store = isolatedNotebookStore()
 
         var book = NotebookDocument(title: "N", pageCount: 1)
         book.lastModifiedDate = Date(timeIntervalSince1970: 0)

@@ -115,7 +115,13 @@ jobs:
           # `|| rc=$?` 讓它落在條件語境裡，-e 不會觸發。
           rc=0
           sim_id="$(python3 scripts/pick-ios-simulator.py)"
-          xcrun simctl terminate "$sim_id" com.kairumo.padnote || true
+          # 上一個 xcodebuild 的 hosted unit tests 與 UI tests 共用 Simulator。
+          # 即使單元測試都應使用暫存 store，UI 閘門仍要從已知的乾淨狀態開始：
+          # 否則任何漏網的落盤測試都可能讓範例筆記消失，九條 UI 測試一起誤紅。
+          # erase 要求裝置已關機；對本來就是 Shutdown 的裝置再 shutdown 會回
+          # CoreSimulator 405，所以把那個預期錯誤安靜忽略。
+          xcrun simctl shutdown "$sim_id" >/dev/null 2>&1 || true
+          xcrun simctl erase "$sim_id"
           xcodebuild test -project apple/Kairumo.xcodeproj -scheme Kairumo \
             -destination "id=$sim_id" \
             -only-testing:KairumoUITests/SmokeUITests/testHomeScreenControlsAreReachable \
