@@ -82,7 +82,7 @@ final class InsertToolsAudit: XCTestCase {
         }
 
         element(app, "editor.more").tap()
-        guard tapMenuItem(app, label: "Insert 3D Model") else {
+        guard ScreenAudit.tapMenuItem(app, label: "Insert 3D Model") else {
             XCTFail("「更多」選單裡的 Insert 3D Model 點不到")
             return
         }
@@ -195,7 +195,7 @@ final class InsertToolsAudit: XCTestCase {
         }
 
         element(app, "editor.more").tap()
-        guard tapMenuItem(app, label: "Sticker Library") else {
+        guard ScreenAudit.tapMenuItem(app, label: "Sticker Library") else {
             XCTFail("「更多」選單裡的貼紙庫點不到")
             return
         }
@@ -262,62 +262,6 @@ final class InsertToolsAudit: XCTestCase {
         return app
     }
 
-    /// 用標籤找原生選單項目，必要時在選單內往下捲。
-    ///
-    /// 不能用 `app.buttons[label]`：SwiftUI `Menu` 交給 UIKit 後，同一列可能被
-    /// 回報為 Button、PopUpButton 或 MenuItem，typed query 會在快照時發生
-    /// Automation type mismatch。也不問 `isHittable`：畫面邊緣被裁掉的列沒有
-    /// 合法 activation point，XCTest 不是回 false，而是直接丟測試錯誤。
-    ///
-    /// 每滑一次都重新建 query，因為原生選單會回收離開畫面的 row。
-    private func visibleMenuItem(
-        _ app: XCUIApplication, label: String
-    ) -> XCUIElement? {
-        let window = app.windows.firstMatch.frame
-        let menuCollection = app.collectionViews.firstMatch
-        let viewport = menuCollection.exists
-            ? window.intersection(menuCollection.frame)
-            : window
-
-        for attempt in 0...6 {
-            // 原生 menu row 在 XCTest 的樹上不一定是 CollectionView 的孫節點，
-            // 不能把 query 限在 collection 裡。但編輯器背景可能也有同標籤
-            // 的工具列節點：把同標籤的都取出來，挑落在 menu frame 裡、
-            // 而且最寬的那個（menu row 會撐滿整列）。
-            let matches = app.descendants(matching: .any)
-                .matching(NSPredicate(format: "label == %@", label))
-            _ = matches.firstMatch.waitForExistence(timeout: attempt == 0 ? 3 : 1)
-            let candidates = matches.allElementsBoundByIndex.compactMap {
-                element -> (element: XCUIElement, frame: CGRect)? in
-                guard element.exists else { return nil }
-                let frame = element.frame
-                guard frame.width > 0, frame.height > 0,
-                      frame.midX >= viewport.minX, frame.midX <= viewport.maxX,
-                      viewport.intersects(frame)
-                else { return nil }
-                return (element, frame)
-            }.sorted { $0.frame.width > $1.frame.width }
-
-            if let (element, _) = candidates.first { return element }
-
-            guard attempt < 6 else { break }
-            // Lazy menu 還沒有算繪這列時，請原生容器自己滾動。
-            // 不回退到 app/ScrollView：那會滑背景畫布或收起選單。
-            let currentMenu = app.collectionViews.firstMatch
-            guard currentMenu.exists else { break }
-            currentMenu.swipeUp()
-        }
-        return nil
-    }
-
-    /// 用語意點擊讓 XCTest 自己把部分裁切的 row 滾到可點位置。
-    /// 這裡不先問 `isHittable`：原始 CI 失敗就是這個屬性在裁切列上拋錯。
-    private func tapMenuItem(_ app: XCUIApplication, label: String) -> Bool {
-        guard let item = visibleMenuItem(app, label: label) else { return false }
-        item.tap()
-        return true
-    }
-
     /// 關掉目前這張表，回到編輯器。
     ///
     /// 優先以指定的 `closeId` 或各表標準關閉鍵關閉；找不到才用下滑手勢。
@@ -369,7 +313,7 @@ final class InsertToolsAudit: XCTestCase {
             more.tap()
 
             // **一定要捲。** 這張選單有十九個項目，在手機上會捲動。
-            guard tapMenuItem(app, label: tool.menuLabel) else {
+            guard ScreenAudit.tapMenuItem(app, label: tool.menuLabel) else {
                 failures.append("\(tool.menuLabel)：選單裡找不到")
                 // 右側畫布在選單外，點它只會收選單。原本的 (0.1, 0.1)
                 // 正好是左上角「返回」，一次找不到會讓後面所有工具跟著失敗。
@@ -412,7 +356,7 @@ final class InsertToolsAudit: XCTestCase {
         var missing: [String] = []
         for label in ["Choose from Files", "Import an audio file", "Insert 3D Model"] {
             // **一定要捲。** 這張選單在手機上放不下所有項目。
-            if visibleMenuItem(app, label: label) == nil { missing.append(label) }
+            if ScreenAudit.visibleMenuItem(app, label: label) == nil { missing.append(label) }
         }
 
         XCTAssertTrue(

@@ -280,6 +280,50 @@ enum ScreenAudit {
             file: file, line: line)
     }
 
+    /// 用標籤找原生選單項目，必要時只在選單容器內往下捲。
+    ///
+    /// SwiftUI `Menu` 交給 UIKit 後，同一列可能被回報成 Button、PopUpButton
+    /// 或 MenuItem，所以不能用 typed query；裁切中的列也不能先問
+    /// `isHittable`，那會讓 XCTest 直接拋 snapshot 錯誤。
+    static func visibleMenuItem(
+        _ app: XCUIApplication, label: String
+    ) -> XCUIElement? {
+        let window = app.windows.firstMatch.frame
+        let menuCollection = app.collectionViews.firstMatch
+        let viewport = menuCollection.exists
+            ? window.intersection(menuCollection.frame)
+            : window
+
+        for attempt in 0...6 {
+            // 每次捲動後重建 query：原生選單會回收離開畫面的 row。
+            let matches = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label == %@", label))
+            _ = matches.firstMatch.waitForExistence(timeout: attempt == 0 ? 3 : 1)
+            let candidates = matches.allElementsBoundByIndex.compactMap {
+                element -> (element: XCUIElement, frame: CGRect)? in
+                guard element.exists else { return nil }
+                let frame = element.frame
+                guard frame.width > 0, frame.height > 0,
+                      frame.midX >= viewport.minX, frame.midX <= viewport.maxX,
+                      viewport.intersects(frame)
+                else { return nil }
+                return (element, frame)
+            }.sorted { $0.frame.width > $1.frame.width }
+
+            if let (element, _) = candidates.first { return element }
+            guard attempt < 6, menuCollection.exists else { break }
+            menuCollection.swipeUp()
+        }
+        return nil
+    }
+
+    /// 用語意點擊，讓 XCTest 自己處理部分裁切列的 activation point。
+    static func tapMenuItem(_ app: XCUIApplication, label: String) -> Bool {
+        guard let item = visibleMenuItem(app, label: label) else { return false }
+        item.tap()
+        return true
+    }
+
     /// 控制項 id → 英文標籤。只給 `elementFor` 當後備。
     ///
     /// # 為什麼需要後備

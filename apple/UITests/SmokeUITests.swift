@@ -965,21 +965,24 @@ extension SmokeUITests {
 
     /// 自訂工具列：十三個開關加上說明與還原，全部要在、而且點得到。
     ///
-    /// 入口在「更多」選單裡，而 SwiftUI 的 `Menu` 內容**不會出現在
-    /// XCUITest 的無障礙樹裡** —— 點開之後掃到的只有工具列那些控制項
-    /// （實測過，失敗訊息裡列的二十個識別碼全是 `editor.*` 工具列的）。
-    /// 所以這裡用啟動變數把表直接叫出來，驗的是**表本身**。
-    ///
-    /// 選單那顆入口因此沒有執行期測試守著，只有靜態的跨平台對照閘門
-    /// （它掃得到 `editor.customize_toolbar` 這個字面值）。記在 S-261d。
+    /// 入口在「更多」選單裡。選單項目的 identifier 進不了 UIKit 算繪的
+    /// 無障礙樹，但英文標籤仍在，所以沿用 InsertToolsAudit 的原生選單捲動
+    /// helper，實際走一次使用者路徑，而不是用啟動旗標跳過入口。
     func testToolbarCustomizationControlsAreReachable() {
-        let app = XCUIApplication()
-        app.launchEnvironment["KAIRUMO_UITEST"] = "1"
-        app.launchEnvironment["KAIRUMO_UITEST_TOOLBAR"] = "1"
-        app.launch()
+        let app = launch()
         XCTAssertTrue(app.wait(for: .runningForeground, timeout: 15))
 
         guard openSeedNotebook(app) else { return }
+
+        let more = app.descendants(matching: .any)
+            .matching(identifier: "editor.more").firstMatch
+        guard more.waitForExistence(timeout: 15), more.isHittable else {
+            return XCTFail("編輯器上沒有可操作的「更多」選單")
+        }
+        more.tap()
+        guard ScreenAudit.tapMenuItem(app, label: "Customize Toolbar") else {
+            return XCTFail("「更多」選單裡找不到 Customize Toolbar")
+        }
 
         let reset = app.descendants(matching: .any).matching(identifier: "toolbar.reset").firstMatch
         guard reset.waitForExistence(timeout: 15) else {

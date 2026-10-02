@@ -2201,18 +2201,6 @@ public struct NotebookEditorView: View {
         .sheet(isPresented: $showToolbarCustomization) {
             NavigationStack { ToolbarCustomizationView() }
         }
-        // UI 測試直接把這張表叫出來。
-        //
-        // 不是為了偷懶 —— 這個入口在「更多」選單裡，而 SwiftUI 的 `Menu`
-        // 內容**根本不會出現在 XCUITest 的無障礙樹裡**（點開之後掃到的只有
-        // 工具列那些控制項）。編輯器稽核那 40 項菜單內控制項全部進棘輪
-        // 也是同一個原因。走不到選單就驗不了這張表，而這張表值得驗 ——
-        // 十三個開關少一個，使用者就有一支筆關不掉。
-        .onAppear {
-            if ProcessInfo.processInfo.environment["KAIRUMO_UITEST_TOOLBAR"] == "1" {
-                showToolbarCustomization = true
-            }
-        }
         .sheet(isPresented: $showPalmThresholdSheet) {
             // 改完立刻套進仲裁器。存了卻要重開筆記本才生效的話，
             // 使用者會以為設定沒有存到，然後再調一次。
