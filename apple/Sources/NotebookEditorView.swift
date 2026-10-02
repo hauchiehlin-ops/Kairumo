@@ -1560,11 +1560,9 @@ public struct NotebookEditorView: View {
     @State private var deletedAttachmentBackup: (type: String, data: Any)? = nil
 
     private var isCollaborating: Bool {
-        if case .connected = collaborationManager.status {
-            return true
-        }
-        return false
+        collaborationManager.status != .disconnected || !collaborationManager.currentRoomId.isEmpty
     }
+
 
     // 筆記主模式：手繪 (Draw) vs 鍵盤打字 (Type)
     @State private var editorMode: EditorMode = .draw
@@ -2070,6 +2068,7 @@ public struct NotebookEditorView: View {
                     notebook.connectionAttachments?.append(placed)
                 }
                 store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
             }
         } }
         .sheet(isPresented: $showTableStudio) { resizableSheet {
@@ -2085,6 +2084,10 @@ public struct NotebookEditorView: View {
                 notebook.tableAttachments?.append(table)
                 store.updateNotebook(notebook)
                 PageThumbnailRenderer.invalidateAll()
+                if let data = try? JSONEncoder().encode(table),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
+                }
             }
         } }
         .sheet(item: $editingTable) { target in resizableSheet {
@@ -2097,6 +2100,11 @@ public struct NotebookEditorView: View {
                 table.y = notebook.tableAttachments?[index].y ?? table.y
                 notebook.tableAttachments?[index] = table
                 store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+                if let data = try? JSONEncoder().encode(table),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
+                }
             }
         } }
         .sheet(isPresented: $showChartStudio) { resizableSheet {
@@ -2160,6 +2168,11 @@ public struct NotebookEditorView: View {
                 att.pageIndex = currentPageIndex
                 notebook.model3DAttachments?.append(att)
                 store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+                if let data = try? JSONEncoder().encode(att),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    collaborationManager.broadcastAttachmentUpsert(type: "3d", itemDict: dict)
+                }
             }
         } }
         .sheet(isPresented: $showAssetLibrarySheet) { resizableSheet {
@@ -3300,6 +3313,10 @@ public struct NotebookEditorView: View {
                 notebook.tableAttachments?.append(table)
                 store.updateNotebook(notebook)
                 PageThumbnailRenderer.invalidateAll()
+                if let data = try? JSONEncoder().encode(table),
+                   let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+                    collaborationManager.broadcastAttachmentUpsert(type: "table", itemDict: dict)
+                }
             },
             onInsertImage: { showPhotoPicker = true }
         )
@@ -3969,8 +3986,11 @@ public struct NotebookEditorView: View {
                             table: tableBinding(for: item.id),
                             onEdit: { editingTable = item },
                             onDelete: {
-                                notebook.tableAttachments?.removeAll { $0.id == item.id }
+                                let id = item.id
+                                notebook.tableAttachments?.removeAll { $0.id == id }
                                 store.updateNotebook(notebook)
+                                PageThumbnailRenderer.invalidateAll()
+                                collaborationManager.broadcastAttachmentDelete(id: id, type: "table")
                             }
                         )
                         .zIndex(stacking.zIndex(for: item.id, kind: .table))
@@ -7684,6 +7704,16 @@ public struct NotebookEditorView: View {
                     notebook.model3DAttachments?.append(modelItem)
                 }
                 store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+            } else if attType == "table", let tableItem = try? JSONDecoder().decode(NoteTableAttachment.self, from: jsonData) {
+                if let idx = notebook.tableAttachments?.firstIndex(where: { $0.id == tableItem.id }) {
+                    notebook.tableAttachments?[idx] = tableItem
+                } else {
+                    if notebook.tableAttachments == nil { notebook.tableAttachments = [] }
+                    notebook.tableAttachments?.append(tableItem)
+                }
+                store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
             }
 
         case "attachment_delete":
@@ -7696,8 +7726,11 @@ public struct NotebookEditorView: View {
                 notebook.attachments?.removeAll { $0.id == attId }
             } else if attType == "3d" {
                 notebook.model3DAttachments?.removeAll { $0.id == attId }
+            } else if attType == "table" {
+                notebook.tableAttachments?.removeAll { $0.id == attId }
             }
             store.updateNotebook(notebook)
+            PageThumbnailRenderer.invalidateAll()
 
         case "comment_upsert":
             guard let pinDict = event.payload["pin"] as? [String: Any],
@@ -8458,9 +8491,13 @@ public struct NotebookEditorView: View {
         newDrawing.strokes.append(contentsOf: translatedStrokes)
         canvasView?.drawing = newDrawing
         canvasView?.setNeedsDisplay()
+        if page == currentPageIndex {
+            self.currentDrawing = newDrawing
+        }
         // 貼紙是程式加入的筆跡，不應只期待 PencilKit delegate 恰好回呼。
         // 明確送進與手寫相同的 autosave 管線，連續頁面模式也會保存正確頁次。
         recordDrawingEdit(page: page, drawing: newDrawing)
+        broadcastDrawingChange(page: page, drawing: newDrawing)
         self.saveCurrentPageDrawing()
         PageThumbnailRenderer.invalidateAll()
     }
@@ -9350,6 +9387,11 @@ public struct NotebookEditorView: View {
         notebook.setObjectOrder(order, forPage: targetPage)
 
         store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
+        if let data = try? JSONEncoder().encode(draft),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
+        }
         inlineEditingTextId = draft.id
         if openStudio {
             editingTextId = draft.id
@@ -9437,6 +9479,10 @@ public struct NotebookEditorView: View {
 
         store.updateNotebook(notebook)
         PageThumbnailRenderer.invalidateAll()
+        if let data = try? JSONEncoder().encode(transcriptBox),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
+        }
         editorMode = .type
         // 文字框先進入視圖樹，再要求就地編輯。和同一個動畫 transaction 一起
         // 設定時，FocusState 偶爾會早於 TextField 建立，鍵盤便時有時無。
@@ -9492,6 +9538,11 @@ public struct NotebookEditorView: View {
         }
         notebook.attachments?.append(newAttachment)
         store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
+        if let data = try? JSONEncoder().encode(newAttachment),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            collaborationManager.broadcastAttachmentUpsert(type: "image", itemDict: dict)
+        }
     }
 
     /// 把一段既有的錄音插到目前這一頁。
@@ -9921,6 +9972,20 @@ public struct NotebookEditorView: View {
     private func deleteSelection() {
         guard !selectedObjectIds.isEmpty else { return }
         let ids = selectedObjectIds
+        for id in ids {
+            if (notebook.attachments ?? []).contains(where: { $0.id == id }) {
+                collaborationManager.broadcastAttachmentDelete(id: id, type: "image")
+            }
+            if (notebook.textAttachments ?? []).contains(where: { $0.id == id }) {
+                collaborationManager.broadcastAttachmentDelete(id: id, type: "text")
+            }
+            if (notebook.model3DAttachments ?? []).contains(where: { $0.id == id }) {
+                collaborationManager.broadcastAttachmentDelete(id: id, type: "3d")
+            }
+            if (notebook.tableAttachments ?? []).contains(where: { $0.id == id }) {
+                collaborationManager.broadcastAttachmentDelete(id: id, type: "table")
+            }
+        }
         notebook.attachments?.removeAll { ids.contains($0.id) }
         notebook.textAttachments?.removeAll { ids.contains($0.id) }
         notebook.tableAttachments?.removeAll { ids.contains($0.id) }
@@ -9936,6 +10001,7 @@ public struct NotebookEditorView: View {
         }
         selectedObjectIds = []
         store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
     }
 
     private func clipboardObject(forId id: String) -> ClipboardObject? {
