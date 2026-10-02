@@ -4,6 +4,8 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
@@ -300,7 +302,23 @@ private fun ConnectionHitTargets(
                     rotationZ = Math.toDegrees(atan2(dy.toDouble(), dx.toDouble())).toFloat()
                 }
                 .pointerInput(linkId, index, start, end) {
-                    detectTapGestures(onTap = { onSelect() })
+                    awaitEachGesture {
+                        // 不在 down 就 consume。先讓父層的點擊偵測器進入
+                        // 這個手勢，再由這裡於 up 先消耗，父層就會正常
+                        // 收到取消並重置。若在 down 就消耗，父層可能把
+                        // 緊接著的下一次空白點擊當成上一個手勢的起點。
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id }
+                                ?: return@awaitEachGesture
+                            if (!change.pressed) {
+                                change.consume()
+                                onSelect()
+                                break
+                            }
+                        }
+                    }
                 }
         )
     }

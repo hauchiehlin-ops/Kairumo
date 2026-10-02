@@ -463,20 +463,6 @@ object ShapeGeometry {
             }
             return path.last()
         }
-
-        /** 點到路徑的最短距離（頁面點）。選取連接線用。 */
-        fun distanceTo(px: Float, py: Float): Float {
-            var best = Float.MAX_VALUE
-            for (i in 1 until path.size) {
-                val ax = path[i - 1].x; val ay = path[i - 1].y
-                val bx = path[i].x; val by = path[i].y
-                val dx = bx - ax; val dy = by - ay
-                val len2 = dx * dx + dy * dy
-                val t = if (len2 <= 0f) 0f else (((px - ax) * dx + (py - ay) * dy) / len2).coerceIn(0f, 1f)
-                best = minOf(best, hypot(px - (ax + dx * t), py - (ay + dy * t)))
-            }
-            return best
-        }
     }
 
     /**
