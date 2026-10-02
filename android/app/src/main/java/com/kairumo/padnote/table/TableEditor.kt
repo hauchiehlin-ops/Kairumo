@@ -72,127 +72,131 @@ fun TableEditor(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(l("cancel")) } },
         text = {
-            Column(
-                Modifier.verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // 即時預覽。沒有它的話，欄寬、字級、合併與表頭底色都要
-                // 「插進去才知道」—— 而那時候面板已經關了。與畫布走同一份算繪。
-                Text(l("table_preview"), style = MaterialTheme.typography.labelSmall)
-                Box(
-                    Modifier.height(height.value)
-                        .horizontalScroll(rememberScrollState())
-                        .verticalScroll(rememberScrollState())
+            // 內容與把手包進同一個 Column：AlertDialog 的 text 槽是 Box，
+            // 兩個兄弟會疊在一起，把手蓋住內容最上面 24dp（那一排點不到）。
+            Column {
+                Column(
+                    Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    TablePreview(table = draft, density = 1f)
-                }
+                    // 即時預覽。沒有它的話，欄寬、字級、合併與表頭底色都要
+                    // 「插進去才知道」—— 而那時候面板已經關了。與畫布走同一份算繪。
+                    Text(l("table_preview"), style = MaterialTheme.typography.labelSmall)
+                    Box(
+                        Modifier.height(height.value)
+                            .horizontalScroll(rememberScrollState())
+                            .verticalScroll(rememberScrollState())
+                    ) {
+                        TablePreview(table = draft, density = 1f)
+                    }
 
-                HorizontalDivider()
+                    HorizontalDivider()
 
-                // 快速行列規格選取
-                Row(
-                    Modifier.horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    listOf(2 to 2, 3 to 3, 4 to 4, 5 to 3, 3 to 5, 6 to 4).forEach { (r, c) ->
-                        TextButton(
-                            onClick = { mutate { resizeGrid(r, c) } }
-                        ) {
-                            Text("$r × $c")
+                    // 快速行列規格選取
+                    Row(
+                        Modifier.horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(2 to 2, 3 to 3, 4 to 4, 5 to 3, 3 to 5, 6 to 4).forEach { (r, c) ->
+                            TextButton(
+                                onClick = { mutate { resizeGrid(r, c) } }
+                            ) {
+                                Text("$r × $c")
+                            }
                         }
                     }
-                }
 
-                HorizontalDivider()
+                    HorizontalDivider()
 
-                // 格子
-                Column(
-                    Modifier
-                        .heightIn(max = 200.dp)
-                        .verticalScroll(rememberScrollState())
-                        .horizontalScroll(rememberScrollState())
-                ) {
-                    for (r in 0 until draft.rows) {
-                        Row {
-                            for (c in 0 until draft.cols) {
-                                if (draft.isCovered(r, c)) {
-                                    // 被合併蓋住的格子不給編輯 —— 它的內容不會被顯示，
-                                    // 讓人輸入等於讓人把字打進看不見的地方。
-                                    Box(Modifier.width(110.dp).padding(2.dp))
-                                } else {
-                                    OutlinedTextField(
-                                        value = draft.cell(r, c),
-                                        onValueChange = { text -> mutate { setCell(text, r, c) } },
-                                        modifier = Modifier
-                                            .width(110.dp)
-                                            .padding(2.dp),
-                                        singleLine = true,
-                                        textStyle = MaterialTheme.typography.bodySmall,
-                                        label = if (r == row && c == col) {
-                                            { Text("●", fontSize = 9.sp) }
-                                        } else null
-                                    )
+                    // 格子
+                    Column(
+                        Modifier
+                            .heightIn(max = 200.dp)
+                            .verticalScroll(rememberScrollState())
+                            .horizontalScroll(rememberScrollState())
+                    ) {
+                        for (r in 0 until draft.rows) {
+                            Row {
+                                for (c in 0 until draft.cols) {
+                                    if (draft.isCovered(r, c)) {
+                                        // 被合併蓋住的格子不給編輯 —— 它的內容不會被顯示，
+                                        // 讓人輸入等於讓人把字打進看不見的地方。
+                                        Box(Modifier.width(110.dp).padding(2.dp))
+                                    } else {
+                                        OutlinedTextField(
+                                            value = draft.cell(r, c),
+                                            onValueChange = { text -> mutate { setCell(text, r, c) } },
+                                            modifier = Modifier
+                                                .width(110.dp)
+                                                .padding(2.dp),
+                                            singleLine = true,
+                                            textStyle = MaterialTheme.typography.bodySmall,
+                                            label = if (r == row && c == col) {
+                                                { Text("●", fontSize = 9.sp) }
+                                            } else null
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
+
+                    HorizontalDivider()
+
+                    Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
+                        Text(l("table_header_row"))
+                        Switch(draft.headerRow, onCheckedChange = { on -> mutate { headerRow = on } })
+                    }
+
+                    Row(Modifier.horizontalScroll(rememberScrollState())) {
+                        TextButton(onClick = { mutate { insertRow(row + 1) } }) { Text(l("table_add_row")) }
+                        TextButton(
+                            onClick = { mutate { deleteRow(row) } },
+                            enabled = draft.rows > 1
+                        ) { Text(l("table_delete_row")) }
+                    }
+                    Row(Modifier.horizontalScroll(rememberScrollState())) {
+                        TextButton(onClick = { mutate { insertColumn(col + 1) } }) { Text(l("table_add_column")) }
+                        TextButton(
+                            onClick = { mutate { deleteColumn(col) } },
+                            enabled = draft.cols > 1
+                        ) { Text(l("table_delete_column")) }
+                    }
+                    Row(Modifier.horizontalScroll(rememberScrollState())) {
+                        TextButton(
+                            onClick = { mutate { merge(row, col, 1, 2) } },
+                            enabled = col + 1 < draft.cols
+                        ) { Text(l("table_merge_right")) }
+                        TextButton(
+                            onClick = { mutate { merge(row, col, 2, 1) } },
+                            enabled = row + 1 < draft.rows
+                        ) { Text(l("table_merge_down")) }
+                        TextButton(onClick = { mutate { unmerge(row, col) } }) { Text(l("table_unmerge")) }
+                    }
+
+                    HorizontalDivider()
+
+                    Text(l("table_width"))
+                    Slider(
+                        value = draft.width,
+                        onValueChange = { value -> mutate { width = value } },
+                        valueRange = 200f..760f
+                    )
+                    Text(l("table_font_size"))
+                    Slider(
+                        value = draft.fontSize,
+                        onValueChange = { value -> mutate { fontSize = value } },
+                        valueRange = 10f..24f,
+                        steps = 13
+                    )
+
+                    HorizontalDivider()
+                    TextButton(onClick = onDelete) { Text(l("action_delete")) }
                 }
-
-                HorizontalDivider()
-
-                Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
-                    Text(l("table_header_row"))
-                    Switch(draft.headerRow, onCheckedChange = { on -> mutate { headerRow = on } })
-                }
-
-                Row(Modifier.horizontalScroll(rememberScrollState())) {
-                    TextButton(onClick = { mutate { insertRow(row + 1) } }) { Text(l("table_add_row")) }
-                    TextButton(
-                        onClick = { mutate { deleteRow(row) } },
-                        enabled = draft.rows > 1
-                    ) { Text(l("table_delete_row")) }
-                }
-                Row(Modifier.horizontalScroll(rememberScrollState())) {
-                    TextButton(onClick = { mutate { insertColumn(col + 1) } }) { Text(l("table_add_column")) }
-                    TextButton(
-                        onClick = { mutate { deleteColumn(col) } },
-                        enabled = draft.cols > 1
-                    ) { Text(l("table_delete_column")) }
-                }
-                Row(Modifier.horizontalScroll(rememberScrollState())) {
-                    TextButton(
-                        onClick = { mutate { merge(row, col, 1, 2) } },
-                        enabled = col + 1 < draft.cols
-                    ) { Text(l("table_merge_right")) }
-                    TextButton(
-                        onClick = { mutate { merge(row, col, 2, 1) } },
-                        enabled = row + 1 < draft.rows
-                    ) { Text(l("table_merge_down")) }
-                    TextButton(onClick = { mutate { unmerge(row, col) } }) { Text(l("table_unmerge")) }
-                }
-
-                HorizontalDivider()
-
-                Text(l("table_width"))
-                Slider(
-                    value = draft.width,
-                    onValueChange = { value -> mutate { width = value } },
-                    valueRange = 200f..760f
-                )
-                Text(l("table_font_size"))
-                Slider(
-                    value = draft.fontSize,
-                    onValueChange = { value -> mutate { fontSize = value } },
-                    valueRange = 10f..24f,
-                    steps = 13
-                )
-
-                HorizontalDivider()
-                TextButton(onClick = onDelete) { Text(l("action_delete")) }
+                // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+                // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+                DialogResizeHandle(height, "tableEditor")
             }
-            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
-            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
-            DialogResizeHandle(height, "tableEditor")
         }
     )
 }

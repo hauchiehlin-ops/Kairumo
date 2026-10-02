@@ -491,13 +491,14 @@ public enum PageThumbnailRenderer {
         )
         let cg = ctx.cgContext
         let rotated = abs(item.canvasRotation.truncatingRemainder(dividingBy: 360)) > 0.01
+        // 一律存／還原圖形狀態：不透明度與虛線設定不能漏到下一個物件。
+        cg.saveGState()
         if rotated {
-            cg.saveGState()
             cg.translateBy(x: rect.midX, y: rect.midY)
             cg.rotate(by: CGFloat(item.canvasRotation) * .pi / 180)
             cg.translateBy(x: -rect.midX, y: -rect.midY)
         }
-        defer { if rotated { cg.restoreGState() } }
+        defer { cg.restoreGState() }
 
         // 表頭底色先畫，才會在格線與文字下面。
         let headerFill: UIColor = {
@@ -549,13 +550,14 @@ public enum PageThumbnailRenderer {
         let rect = CGRect(x: item.x, y: item.y, width: item.width, height: item.height)
         let cg = ctx.cgContext
         let rotated = abs(item.canvasRotation.truncatingRemainder(dividingBy: 360)) > 0.01
+        // 一律存／還原圖形狀態：不透明度與虛線設定不能漏到下一個物件。
+        cg.saveGState()
         if rotated {
-            cg.saveGState()
             cg.translateBy(x: rect.midX, y: rect.midY)
             cg.rotate(by: CGFloat(item.canvasRotation) * .pi / 180)
             cg.translateBy(x: -rect.midX, y: -rect.midY)
         }
-        defer { if rotated { cg.restoreGState() } }
+        defer { cg.restoreGState() }
 
         let path = UIBezierPath()
         path.move(to: points[0])
@@ -563,6 +565,10 @@ public enum PageThumbnailRenderer {
         // 線狀形狀（線／箭頭）不能收尾 —— 收了會多出一條回到起點的邊。
         if !item.isLinear { path.close() }
         path.lineWidth = item.lineWidth
+        let pattern = item.dash.pattern(lineWidth: item.lineWidth)
+        if !pattern.isEmpty { path.setLineDash(pattern, count: pattern.count, phase: 0) }
+        if item.dash == .dotted { path.lineCapStyle = .round }
+        if let opacity = item.opacity { cg.setAlpha(CGFloat(opacity)) }
 
         if !item.isLinear {
             let fill: UIColor = {
@@ -588,9 +594,15 @@ public enum PageThumbnailRenderer {
         }
 
         guard !item.label.isEmpty, item.acceptsText else { return }
+        var font = UIFont.systemFont(ofSize: item.fontSize ?? 14,
+                                     weight: (item.isBold ?? false) ? .bold : .regular)
+        if item.isItalic ?? false,
+           let italic = font.fontDescriptor.withSymbolicTraits(font.fontDescriptor.symbolicTraits.union(.traitItalic)) {
+            font = UIFont(descriptor: italic, size: font.pointSize)
+        }
         let attributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 13),
-            .foregroundColor: UIColor.label
+            .font: font,
+            .foregroundColor: item.textColorHex.flatMap { UIColor(hexString: $0) } ?? UIColor.label
         ]
         let size = (item.label as NSString).size(withAttributes: attributes)
         (item.label as NSString).draw(
@@ -617,16 +629,52 @@ public enum PageThumbnailRenderer {
         path.move(to: geometry.path[0])
         for point in geometry.path.dropFirst() { path.addLine(to: point) }
         path.lineWidth = item.lineWidth
+        let pattern = item.dash.pattern(lineWidth: item.lineWidth)
+        if !pattern.isEmpty { path.setLineDash(pattern, count: pattern.count, phase: 0) }
+        if item.dash == .dotted { path.lineCapStyle = .round }
         color.setStroke()
         path.stroke()
 
-        if geometry.arrowHead.count >= 3 {
-            let head = UIBezierPath()
-            head.move(to: geometry.arrowHead[0])
-            for point in geometry.arrowHead.dropFirst() { head.addLine(to: point) }
-            head.close()
-            color.setFill()
-            head.fill()
+        for cap in [geometry.startCap, geometry.endCap].compactMap({ $0 }) {
+            let shape = UIBezierPath()
+            switch cap.kind {
+            case .none:
+                continue
+            case .circle:
+                shape.append(UIBezierPath(ovalIn: CGRect(
+                    x: cap.center.x - cap.radius, y: cap.center.y - cap.radius,
+                    width: cap.radius * 2, height: cap.radius * 2)))
+            case .arrow, .hollow, .diamond:
+                guard cap.points.count >= 3 else { continue }
+                shape.move(to: cap.points[0])
+                for point in cap.points.dropFirst() { shape.addLine(to: point) }
+                shape.close()
+            }
+            if cap.kind == .hollow {
+                UIColor.white.setFill()
+                shape.fill()
+                shape.lineWidth = item.lineWidth
+                color.setStroke()
+                shape.stroke()
+            } else {
+                color.setFill()
+                shape.fill()
+            }
+        }
+
+        if !item.label.isEmpty {
+            let mid = geometry.midpoint
+            let attributes: [NSAttributedString.Key: Any] = [
+                .font: UIFont.systemFont(ofSize: 12),
+                .foregroundColor: UIColor.label
+            ]
+            let size = (item.label as NSString).size(withAttributes: attributes)
+            let box = CGRect(x: mid.x - size.width / 2 - 4, y: mid.y - size.height / 2 - 1,
+                             width: size.width + 8, height: size.height + 2)
+            UIColor.white.withAlphaComponent(0.9).setFill()
+            UIBezierPath(roundedRect: box, cornerRadius: 4).fill()
+            (item.label as NSString).draw(
+                at: CGPoint(x: box.minX + 4, y: box.minY + 1), withAttributes: attributes)
         }
     }
 

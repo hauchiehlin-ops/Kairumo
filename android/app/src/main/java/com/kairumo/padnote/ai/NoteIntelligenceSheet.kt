@@ -78,95 +78,99 @@ fun NoteIntelligenceSheet(
         onDismissRequest = onDismiss,
         title = { Text(l("ai_summary")) },
         text = {
-            Column(
-                modifier = Modifier.height(height.value).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                Text(
-                    l("ai_summary_desc"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+            // 內容與把手包進同一個 Column：AlertDialog 的 text 槽是 Box，
+            // 兩個兄弟會疊在一起，把手蓋住內容最上面 24dp（那一排點不到）。
+            Column {
+                Column(
+                    modifier = Modifier.height(height.value).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(
+                        l("ai_summary_desc"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
 
-                when (availability) {
-                    NoteIntelligence.Availability.UNSUPPORTED -> notice(l("ai_unsupported"))
-                    NoteIntelligence.Availability.NOT_READY -> notice(l("ai_not_ready"))
-                    NoteIntelligence.Availability.AVAILABLE -> {
-                        Button(
-                            onClick = {
-                                if (text.isBlank()) {
-                                    failure = l("ai_nothing_to_summarize")
-                                    return@Button
-                                }
-                                running = true
-                                failure = null
-                                scope.launch {
-                                    // **一定要在背景。** 核心那個呼叫是同步的，
-                                    // 模型一次要跑數秒到數十秒 —— 在主執行緒上
-                                    // 畫面會整個停住。
-                                    val s = withContext(Dispatchers.Default) {
-                                        NoteIntelligence.summarize(text, locale)
+                    when (availability) {
+                        NoteIntelligence.Availability.UNSUPPORTED -> notice(l("ai_unsupported"))
+                        NoteIntelligence.Availability.NOT_READY -> notice(l("ai_not_ready"))
+                        NoteIntelligence.Availability.AVAILABLE -> {
+                            Button(
+                                onClick = {
+                                    if (text.isBlank()) {
+                                        failure = l("ai_nothing_to_summarize")
+                                        return@Button
                                     }
-                                    val t = withContext(Dispatchers.Default) {
-                                        NoteIntelligence.extractTodos(text, locale)
+                                    running = true
+                                    failure = null
+                                    scope.launch {
+                                        // **一定要在背景。** 核心那個呼叫是同步的，
+                                        // 模型一次要跑數秒到數十秒 —— 在主執行緒上
+                                        // 畫面會整個停住。
+                                        val s = withContext(Dispatchers.Default) {
+                                            NoteIntelligence.summarize(text, locale)
+                                        }
+                                        val t = withContext(Dispatchers.Default) {
+                                            NoteIntelligence.extractTodos(text, locale)
+                                        }
+                                        running = false
+                                        if (s.ok) summary = s.summary else failure = s.error
+                                        // 待辦失敗不覆蓋摘要的錯誤訊息 —— 兩段紅字
+                                        // 只會更難讀。
+                                        if (t.ok) todos = t.todos
+                                        else if (failure == null) failure = t.error
+                                        hasResult = s.ok || t.ok
                                     }
-                                    running = false
-                                    if (s.ok) summary = s.summary else failure = s.error
-                                    // 待辦失敗不覆蓋摘要的錯誤訊息 —— 兩段紅字
-                                    // 只會更難讀。
-                                    if (t.ok) todos = t.todos
-                                    else if (failure == null) failure = t.error
-                                    hasResult = s.ok || t.ok
-                                }
-                            },
-                            enabled = !running,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                },
+                                enabled = !running,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                if (running) {
-                                    CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    if (running) {
+                                        CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                                    }
+                                    Text(if (running) l("ai_running") else l("ai_run"))
                                 }
-                                Text(if (running) l("ai_running") else l("ai_run"))
+                            }
+
+                            // 隱私這一句放在按鈕旁邊，不是藏在說明頁裡 ——
+                            // 使用者猶豫的那一刻就是按下去之前。
+                            Text(
+                                l("ai_on_device_note"),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    failure?.let { notice(it) }
+
+                    if (summary.isNotBlank()) {
+                        Text(l("ai_key_points"), fontWeight = FontWeight.SemiBold)
+                        Text(summary)
+                    }
+
+                    if (hasResult) {
+                        Text(l("ai_todos"), fontWeight = FontWeight.SemiBold)
+                        if (todos.isEmpty()) {
+                            // **沒有待辦是正常的答案**，不是錯誤。
+                            Text(
+                                l("ai_no_todos"),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        } else {
+                            todos.forEach { todo ->
+                                Text("${if (todo.done) "☑" else "☐"} ${todo.text}")
                             }
                         }
-
-                        // 隱私這一句放在按鈕旁邊，不是藏在說明頁裡 ——
-                        // 使用者猶豫的那一刻就是按下去之前。
-                        Text(
-                            l("ai_on_device_note"),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                 }
-
-                failure?.let { notice(it) }
-
-                if (summary.isNotBlank()) {
-                    Text(l("ai_key_points"), fontWeight = FontWeight.SemiBold)
-                    Text(summary)
-                }
-
-                if (hasResult) {
-                    Text(l("ai_todos"), fontWeight = FontWeight.SemiBold)
-                    if (todos.isEmpty()) {
-                        // **沒有待辦是正常的答案**，不是錯誤。
-                        Text(
-                            l("ai_no_todos"),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    } else {
-                        todos.forEach { todo ->
-                            Text("${if (todo.done) "☑" else "☐"} ${todo.text}")
-                        }
-                    }
-                }
+                // 底部的拖曳把手：往下拖變高（S-72）。
+                DialogResizeHandle(height, "noteIntelligence")
             }
-            // 底部的拖曳把手：往下拖變高（S-72）。
-            DialogResizeHandle(height, "noteIntelligence")
         },
         confirmButton = {
             if (hasResult) {

@@ -79,184 +79,188 @@ fun CollaborationSheet(
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text(l("done")) } },
         text = {
-            Column(
-                Modifier.height(height.value).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                StatusLine(manager, ::l)
+            // 內容與把手包進同一個 Column：AlertDialog 的 text 槽是 Box，
+            // 兩個兄弟會疊在一起，把手蓋住內容最上面 24dp（那一排點不到）。
+            Column {
+                Column(
+                    Modifier.height(height.value).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    StatusLine(manager, ::l)
 
-                when (val status = manager.status) {
-                    is CollaborationManager.Status.Connected -> {
-                        HorizontalDivider()
-                        Text(
-                            "${l("room_id")}：${status.roomId}",
-                            style = MaterialTheme.typography.bodyMedium,
-                            fontFamily = FontFamily.Monospace
-                        )
-
-                        if (manager.isHostingLocalRelay) {
-                            // 這台裝置正在當中繼。關掉 App 房間就沒了 ——
-                            // 使用者需要知道，不然只會覺得「別人突然都斷線」。
+                    when (val status = manager.status) {
+                        is CollaborationManager.Status.Connected -> {
+                            HorizontalDivider()
                             Text(
-                                l("hosting_local_relay"),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                "${l("room_id")}：${status.roomId}",
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontFamily = FontFamily.Monospace
                             )
-                        }
 
-                        Text(l("copy_encrypted_link"), style = MaterialTheme.typography.labelMedium)
-                        Text(
-                            manager.inviteLink,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontFamily = FontFamily.Monospace
-                        )
-                        if (manager.roomKeyBase64 != null) {
-                            Text(
-                                l("e2ee_protected_desc"),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(onClick = { copy(context, manager.inviteLink) }) {
-                                Text(l("copy_encrypted_link"))
+                            if (manager.isHostingLocalRelay) {
+                                // 這台裝置正在當中繼。關掉 App 房間就沒了 ——
+                                // 使用者需要知道，不然只會覺得「別人突然都斷線」。
+                                Text(
+                                    l("hosting_local_relay"),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
                             }
-                            OutlinedButton(onClick = { manager.disconnect() }) {
-                                Text(l("end_collaboration"))
+
+                            Text(l("copy_encrypted_link"), style = MaterialTheme.typography.labelMedium)
+                            Text(
+                                manager.inviteLink,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            if (manager.roomKeyBase64 != null) {
+                                Text(
+                                    l("e2ee_protected_desc"),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
                             }
-                        }
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                OutlinedButton(onClick = { copy(context, manager.inviteLink) }) {
+                                    Text(l("copy_encrypted_link"))
+                                }
+                                OutlinedButton(onClick = { manager.disconnect() }) {
+                                    Text(l("end_collaboration"))
+                                }
+                            }
 
-                        // 只貼房號、沒帶金鑰就加入的話，連得上、也看得到成員，
-                        // **但對方寫的每一個字都解不開** —— 畫面上什麼都不會
-                        // 發生，而使用者會以為是同步壞了。連上之後就講明白。
-                        if (!manager.isHost && manager.roomKeyBase64 == null) {
-                            Text(
-                                l("collab_key_missing"),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.error
-                            )
-                        }
+                            // 只貼房號、沒帶金鑰就加入的話，連得上、也看得到成員，
+                            // **但對方寫的每一個字都解不開** —— 畫面上什麼都不會
+                            // 發生，而使用者會以為是同步壞了。連上之後就講明白。
+                            if (!manager.isHost && manager.roomKeyBase64 == null) {
+                                Text(
+                                    l("collab_key_missing"),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
 
-                        if (manager.queuedOplogCount > 0) {
-                            Text(
-                                "${l("offline_queue_hint")}：${manager.queuedOplogCount}",
-                                style = MaterialTheme.typography.labelSmall
-                            )
-                        }
+                            if (manager.queuedOplogCount > 0) {
+                                Text(
+                                    "${l("offline_queue_hint")}：${manager.queuedOplogCount}",
+                                    style = MaterialTheme.typography.labelSmall
+                                )
+                            }
 
-                        HorizontalDivider()
-                        Text(l("online_participants"), style = MaterialTheme.typography.labelMedium)
-                        if (manager.peers.isEmpty()) {
-                            Text(
-                                l("local_relay_hint"),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        } else {
-                            for (peer in manager.peers) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Box(
-                                        Modifier
-                                            .size(14.dp)
-                                            .background(parseColor(peer.userColor), CircleShape)
-                                    )
-                                    Text(peer.userName, style = MaterialTheme.typography.bodyMedium)
-                                    Text(
-                                        peer.role,
-                                        style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                            HorizontalDivider()
+                            Text(l("online_participants"), style = MaterialTheme.typography.labelMedium)
+                            if (manager.peers.isEmpty()) {
+                                Text(
+                                    l("local_relay_hint"),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            } else {
+                                for (peer in manager.peers) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Box(
+                                            Modifier
+                                                .size(14.dp)
+                                                .background(parseColor(peer.userColor), CircleShape)
+                                        )
+                                        Text(peer.userName, style = MaterialTheme.typography.bodyMedium)
+                                        Text(
+                                            peer.role,
+                                            style = MaterialTheme.typography.labelSmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
                                 }
                             }
                         }
+
+                        else -> {
+                            HorizontalDivider()
+                            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { manager.createRoom() }) { Text(l("start_collaboration")) }
+                            }
+                            OutlinedTextField(
+                                value = joinInput,
+                                onValueChange = { joinInput = it },
+                                label = { Text(l("enter_room_id")) },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                            Button(
+                                onClick = { manager.joinRoom(joinInput) },
+                                enabled = joinInput.isNotBlank()
+                            ) { Text(l("join_room")) }
+                        }
                     }
 
-                    else -> {
-                        HorizontalDivider()
-                        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Button(onClick = { manager.createRoom() }) { Text(l("start_collaboration")) }
-                        }
+                    HorizontalDivider()
+                    if (editingServer) {
                         OutlinedTextField(
-                            value = joinInput,
-                            onValueChange = { joinInput = it },
-                            label = { Text(l("enter_room_id")) },
+                            value = serverInput,
+                            onValueChange = { serverInput = it },
+                            label = { Text(l("relay_server_address")) },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth()
                         )
-                        Button(
-                            onClick = { manager.joinRoom(joinInput) },
-                            enabled = joinInput.isNotBlank()
-                        ) { Text(l("join_room")) }
-                    }
-                }
-
-                HorizontalDivider()
-                if (editingServer) {
-                    OutlinedTextField(
-                        value = serverInput,
-                        onValueChange = { serverInput = it },
-                        label = { Text(l("relay_server_address")) },
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TextButton(onClick = {
-                            manager.saveServer(serverInput.trim())
-                            editingServer = false
-                        }) { Text(l("confirm")) }
-                        TextButton(onClick = {
-                            serverInput = manager.serverAddress
-                            editingServer = false
-                        }) { Text(l("cancel")) }
-                    }
-                    Text(
-                        l("local_relay_hint"),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    // **協同不限於同一個網路。** 核心的位址檢查一直允許
-                    // `wss://` 連到任何主機，但介面上從頭到尾只講區網位址，
-                    // 於是使用者合理地以為只能在同一個 Wi-Fi 用。
-                    Text(
-                        l("relay_remote_hint"),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "${l("relay_server_address")}：${manager.serverAddress}",
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                        TextButton(onClick = { editingServer = true }) { Text(l("reset")) }
-                    }
-                }
-
-                // 里程碑快照（S-99）。位置與 Apple 的協同面板一致 ——
-                // 另開一個入口只會讓兩個平台的操作路徑分家。
-                if (notebookId != null) {
-                    MilestoneSection(
-                        notebookId = notebookId,
-                        deviceId = deviceId,
-                        creatorName = creatorName,
-                        languageTag = languageTag,
-                        onRestored = {
-                            onRestored()
-                            onDismiss()
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextButton(onClick = {
+                                manager.saveServer(serverInput.trim())
+                                editingServer = false
+                            }) { Text(l("confirm")) }
+                            TextButton(onClick = {
+                                serverInput = manager.serverAddress
+                                editingServer = false
+                            }) { Text(l("cancel")) }
                         }
-                    )
+                        Text(
+                            l("local_relay_hint"),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        // **協同不限於同一個網路。** 核心的位址檢查一直允許
+                        // `wss://` 連到任何主機，但介面上從頭到尾只講區網位址，
+                        // 於是使用者合理地以為只能在同一個 Wi-Fi 用。
+                        Text(
+                            l("relay_remote_hint"),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "${l("relay_server_address")}：${manager.serverAddress}",
+                                style = MaterialTheme.typography.labelSmall
+                            )
+                            TextButton(onClick = { editingServer = true }) { Text(l("reset")) }
+                        }
+                    }
+
+                    // 里程碑快照（S-99）。位置與 Apple 的協同面板一致 ——
+                    // 另開一個入口只會讓兩個平台的操作路徑分家。
+                    if (notebookId != null) {
+                        MilestoneSection(
+                            notebookId = notebookId,
+                            deviceId = deviceId,
+                            creatorName = creatorName,
+                            languageTag = languageTag,
+                            onRestored = {
+                                onRestored()
+                                onDismiss()
+                            }
+                        )
+                    }
                 }
+                // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+                // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+                DialogResizeHandle(height, "collaboration")
             }
-            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
-            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
-            DialogResizeHandle(height, "collaboration")
         }
     )
 }

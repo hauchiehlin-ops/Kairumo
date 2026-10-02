@@ -162,7 +162,8 @@ private fun ImageObjectView(
             StyleHandle(
                 widthDp = image.width,
                 heightDp = image.height,
-                onTap = onEditStyle
+                onTap = onEditStyle,
+                objectId = image.id
             )
             ResizeHandle(
                 widthDp = image.width,

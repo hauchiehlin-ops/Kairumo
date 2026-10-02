@@ -60,10 +60,12 @@ struct FloatingPanel<Content: View>: View {
     /// 沒有這一步，使用者可以把面板拖出視窗外再也拉不回來 ——
     /// 位置是存在 `offset` 裡的，關掉重開還是在外面。
     private func clampedOffset(in size: CGSize, panelWidth: CGFloat) -> CGSize {
+        // 初始落點在右上角（面板一向從畫布右側浮出來）：基準 x 是最右邊，
+        // `offset.width` 是從那裡往左的位移，所以合法範圍是 [-(maxX + 半個面板), 0]。
         let maxX = max(0, size.width - panelWidth)
         let maxY = max(0, size.height - 120)
         return CGSize(
-            width: min(max(offset.width, -panelWidth / 2), maxX),
+            width: min(max(offset.width, -(maxX + panelWidth / 2)), 0) + maxX,
             height: min(max(offset.height, 0), maxY)
         )
     }

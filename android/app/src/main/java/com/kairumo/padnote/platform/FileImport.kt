@@ -45,7 +45,10 @@ object FileImport {
      */
     fun mimeTypes(slot: FfiImportSlot): Array<String> {
         val map = MimeTypeMap.getSingleton()
-        val exts = importExtensions(slot)
+        // 文件槽：pptx 核心只能存成「預覽用的嵌入區塊」（只知道張數），平台沒有原生元件
+        // 可以把投影片畫出來，收進來會是一個空白的東西 —— 在挑選器就不要列出
+        // （見 `DocumentImport`）。
+        val exts = importExtensions(slot).filter { !(slot == FfiImportSlot.DOCUMENT && it == "pptx") }
         val types = exts.mapNotNull { map.getMimeTypeFromExtension(it) }.distinct()
         return if (types.size < exts.size || types.isEmpty()) {
             // 萬用型別。Kotlin 的區塊註解可以巢狀，所以**不要**把這個

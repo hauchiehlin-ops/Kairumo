@@ -1721,6 +1721,33 @@ impl PadnoteSession {
         self.apply_transform(&object_id, Affine2::rotate_around(radians, cx, cy))
     }
 
+    /// 把物件的變換**設定**成 `[a, b, c, d, tx, ty]`（2×3 仿射矩陣，見 `Affine2`）。
+    ///
+    /// # 為什麼要有這一個
+    ///
+    /// 上面三個（`translate_object`／`scale_object`／`rotate_object`）底下都是
+    /// `SetObjectTransform` —— 它**設定**物件的變換，後一次呼叫**取代**前一次，
+    /// 不是疊上去。於是「又縮放、又旋轉、又搬動」永遠湊不出來：連續呼叫只會剩下最後一個，
+    /// 其餘的靜靜消失。連拖曳一個形狀（每一幀一次平移）重開之後也只剩最後一幀的位移。
+    ///
+    /// 平台要把「縮放＋旋轉＋位移」一起存進去，就得直接給完整的矩陣。
+    ///
+    /// 退化的矩陣（行列式為 0）與非有限數會被拒絕：套上去物件會整個消失，
+    /// 而且沒有任何方式從畫面上找回來。
+    pub fn set_object_transform(
+        &self,
+        object_id: String,
+        matrix: Vec<f32>,
+    ) -> Result<(), FfiError> {
+        let [a, b, c, d, tx, ty] = <[f32; 6]>::try_from(matrix)
+            .map_err(|_| FfiError::Failed("變換矩陣必須是 6 個數字".into()))?;
+        let t = Affine2 { a, b, c, d, tx, ty };
+        if ![a, b, c, d, tx, ty].iter().all(|v| v.is_finite()) || t.determinant().abs() < 1e-9 {
+            return Err(FfiError::Failed("變換矩陣無效".into()));
+        }
+        self.apply_transform(&object_id, t)
+    }
+
     // ---- 堆疊順序（S-46，需求 1）----
 
     /// 移到同層最上層。
@@ -3054,6 +3081,49 @@ mod tests {
         let t = s.object_transform(page, obj).unwrap();
         assert_eq!(t.len(), 6);
         assert_eq!((t[4], t[5]), (10.0, 20.0), "位移應反映在變換上");
+    }
+
+    #[test]
+    fn setting_a_full_transform_replaces_the_previous_one() {
+        let s = session("ffi-set-transform");
+        let page = s.first_page_id().unwrap();
+        let obj = s
+            .insert_shape(
+                page.clone(),
+                crate::ffi_shapes::FfiShapeKind::Process,
+                0.0,
+                0.0,
+                100.0,
+                50.0,
+                8.0,
+                "".into(),
+            )
+            .unwrap();
+
+        // 連續的「平移」是取代，不是疊加 —— 這是 `set_object_transform` 存在的理由。
+        s.translate_object(obj.clone(), 10.0, 0.0).unwrap();
+        s.translate_object(obj.clone(), 5.0, 0.0).unwrap();
+        let t = s.object_transform(page.clone(), obj.clone()).unwrap();
+        assert_eq!(t[4], 5.0, "後一次平移取代前一次");
+
+        // 縮放＋旋轉＋位移一次給齊。
+        let (sin, cos) = 0.5_f32.sin_cos();
+        let m = vec![2.0 * cos, 2.0 * sin, -3.0 * sin, 3.0 * cos, 40.0, 60.0];
+        s.set_object_transform(obj.clone(), m.clone()).unwrap();
+        let back = s.object_transform(page, obj.clone()).unwrap();
+        assert_eq!(back, m, "完整的矩陣原樣存進去");
+
+        // 壞輸入被拒絕，而且不會動到原本的變換。
+        assert!(s.set_object_transform(obj.clone(), vec![1.0, 0.0]).is_err());
+        assert!(
+            s.set_object_transform(obj.clone(), vec![0.0, 0.0, 0.0, 0.0, 1.0, 1.0])
+                .is_err(),
+            "退化矩陣會讓物件消失"
+        );
+        assert!(
+            s.set_object_transform(obj, vec![f32::NAN, 0.0, 0.0, 1.0, 0.0, 0.0])
+                .is_err()
+        );
     }
 
     #[test]

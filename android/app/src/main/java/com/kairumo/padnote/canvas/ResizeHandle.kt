@@ -10,9 +10,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.List
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
@@ -91,8 +94,13 @@ fun StyleHandle(
     widthDp: Float,
     heightDp: Float,
     onTap: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    /** 給了就在右上角多一顆「調整層級」鈕（見 [OrderHandle]）。 */
+    objectId: String? = null
 ) {
+    if (objectId != null) {
+        OrderHandle(objectId = objectId, widthDp = widthDp, heightDp = heightDp)
+    }
     Box(
         modifier = modifier.size((widthDp + HANDLE_DP).dp, (heightDp + HANDLE_DP).dp)
     ) {
@@ -109,6 +117,69 @@ fun StyleHandle(
                 tint = Color.White,
                 modifier = Modifier.size(16.dp).offset(5.dp, 5.dp)
             )
+        }
+    }
+}
+
+
+/**
+ * 由編輯器提供：調整某個物件的層級。沒有提供時（預覽、測試）按鈕不出現。
+ *
+ * 用 CompositionLocal 而不是一條條回呼往下傳 —— 每一種物件圖層都要它，
+ * 七份各自的簽章只會讓第八種物件漏掉。
+ */
+val LocalObjectReorder =
+    androidx.compose.runtime.compositionLocalOf<((String, ObjectStacking.Reorder) -> Unit)?> { null }
+
+/**
+ * 物件右上角的「層級」鈕：點開選單選「移到最上層／上移一層／下移一層／移到最下層」。
+ *
+ * 每個物件都要有 —— 圖層面板是整頁的總覽，而使用者想改的常常只是
+ * 「這一張被蓋住了，拉到前面來」，不該要他先去開面板、再找到那一列。
+ */
+@Composable
+fun OrderHandle(
+    objectId: String,
+    widthDp: Float,
+    heightDp: Float,
+    modifier: Modifier = Modifier
+) {
+    val reorder = LocalObjectReorder.current ?: return
+    var open by androidx.compose.runtime.remember(objectId) {
+        androidx.compose.runtime.mutableStateOf(false)
+    }
+    val language = LocalAppLanguage.current
+    Box(
+        modifier = modifier.size((widthDp + HANDLE_DP).dp, (heightDp + HANDLE_DP).dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .offset(x = (widthDp - HANDLE_DP / 2f).dp, y = (-HANDLE_DP / 2f).dp)
+                .size(HANDLE_DP.dp)
+                .background(MaterialTheme.colorScheme.tertiary, CircleShape)
+                .clickable { open = true }
+                .semantics {
+                    contentDescription = LocalizationStrings.localized("layers_panel", language)
+                }
+        ) {
+            Icon(
+                imageVector = Icons.Filled.List,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.size(16.dp).offset(5.dp, 5.dp)
+            )
+            androidx.compose.material3.DropdownMenu(
+                expanded = open,
+                onDismissRequest = { open = false }
+            ) {
+                for (op in ObjectStacking.Reorder.entries) {
+                    androidx.compose.material3.DropdownMenuItem(
+                        text = { androidx.compose.material3.Text(
+                            LocalizationStrings.localized(op.labelKey, language)) },
+                        onClick = { open = false; reorder(objectId, op) }
+                    )
+                }
+            }
         }
     }
 }

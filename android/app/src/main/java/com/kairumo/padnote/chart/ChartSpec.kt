@@ -298,10 +298,26 @@ object ChartAppearance {
     private const val OBJECT_VALUE = "chart"
     private const val CHART_KEY = "chart"
 
-    fun encode(spec: ChartSpec): String = JSONObject().apply {
-        put(OBJECT_KEY, OBJECT_VALUE)
-        put(CHART_KEY, JSONObject(spec.encodedJson()))
-    }.toString()
+    /** 圖表在 Apple 端是圖片物件，大小放在 `image` 底下 —— 與 `ImageAppearance` 同一組鍵。 */
+    private const val IMAGE_KEY = "image"
+
+    fun encode(spec: ChartSpec, width: Float? = null, height: Float? = null): String =
+        JSONObject().apply {
+            put(OBJECT_KEY, OBJECT_VALUE)
+            put(CHART_KEY, JSONObject(spec.encodedJson()))
+            if (width != null && height != null) {
+                put(IMAGE_KEY, JSONObject().put("width", width.toDouble()).put("height", height.toDouble()))
+            }
+        }.toString()
+
+    /** 外觀裡記的大小。沒有時回 `null`（舊檔），由呼叫端沿用核心記的尺寸。 */
+    fun size(json: String): Pair<Float, Float>? {
+        val image = runCatching { JSONObject(json) }.getOrNull()?.optJSONObject(IMAGE_KEY) ?: return null
+        if (!image.has("width") || !image.has("height")) return null
+        val w = image.getDouble("width").toFloat()
+        val h = image.getDouble("height").toFloat()
+        return if (w >= 16f && h >= 16f) w to h else null
+    }
 
     /** 從區塊外觀讀回規格。不是圖表時回 `null`。 */
     fun decode(json: String): ChartSpec? {

@@ -66,45 +66,49 @@ fun ShapePicker(
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text(l("cancel")) } },
         text = {
-            Column(
-                Modifier.height(height.value).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Text(l("shape_section_basic"), style = MaterialTheme.typography.titleSmall)
-                KindGrid(
-                    allShapeKinds().filter { it !in flowchartShapeKinds() },
-                    languageTag
-                ) { kind ->
-                    onCommit(listOf(NoteShape(kindName = NoteShape.nameOf(kind))), emptyList())
-                }
+            // 內容與把手包進同一個 Column：AlertDialog 的 text 槽是 Box，
+            // 兩個兄弟會疊在一起，把手蓋住內容最上面 24dp（那一排點不到）。
+            Column {
+                Column(
+                    Modifier.height(height.value).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(l("shape_section_basic"), style = MaterialTheme.typography.titleSmall)
+                    KindGrid(
+                        allShapeKinds().filter { it !in flowchartShapeKinds() },
+                        languageTag
+                    ) { kind ->
+                        onCommit(listOf(NoteShape(kindName = NoteShape.nameOf(kind))), emptyList())
+                    }
 
-                HorizontalDivider()
-                Text(l("shape_section_flowchart"), style = MaterialTheme.typography.titleSmall)
-                KindGrid(flowchartShapeKinds(), languageTag) { kind ->
-                    onCommit(listOf(NoteShape(kindName = NoteShape.nameOf(kind))), emptyList())
-                }
+                    HorizontalDivider()
+                    Text(l("shape_section_flowchart"), style = MaterialTheme.typography.titleSmall)
+                    KindGrid(flowchartShapeKinds(), languageTag) { kind ->
+                        onCommit(listOf(NoteShape(kindName = NoteShape.nameOf(kind))), emptyList())
+                    }
 
-                HorizontalDivider()
-                Text(l("shape_section_templates"), style = MaterialTheme.typography.titleSmall)
-                for (template in flowchartTemplates()) {
-                    TextButton(onClick = {
-                        val (shapes, connections) = insert(template)
-                        onCommit(shapes, connections)
-                    }) {
-                        Column(Modifier.fillMaxWidth()) {
-                            Text(template.id)
-                            Text(
-                                l("shape_node_count").replace("%@", "${template.nodes.size}"),
-                                fontSize = 10.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                    HorizontalDivider()
+                    Text(l("shape_section_templates"), style = MaterialTheme.typography.titleSmall)
+                    for (template in flowchartTemplates()) {
+                        TextButton(onClick = {
+                            val (shapes, connections) = insert(template)
+                            onCommit(shapes, connections)
+                        }) {
+                            Column(Modifier.fillMaxWidth()) {
+                                Text(template.id)
+                                Text(
+                                    l("shape_node_count").replace("%@", "${template.nodes.size}"),
+                                    fontSize = 10.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
+                // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+                // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+                DialogResizeHandle(height, "shapePicker")
             }
-            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
-            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
-            DialogResizeHandle(height, "shapePicker")
         }
     )
 }

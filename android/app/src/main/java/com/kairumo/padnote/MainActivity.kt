@@ -95,6 +95,7 @@ import com.kairumo.padnote.platform.DocsViewer
 import com.kairumo.padnote.platform.ExportPreviewDialog
 import com.kairumo.padnote.platform.Exporter
 import com.kairumo.padnote.platform.FileImport
+import com.kairumo.padnote.platform.DocumentImport
 import com.kairumo.padnote.platform.PdfPageInsertDialog
 import com.kairumo.padnote.platform.Handwriting
 import com.kairumo.padnote.sync.FolderSync
@@ -176,7 +177,9 @@ import com.kairumo.padnote.shape.LayerPanel
 import com.kairumo.padnote.shape.ObjectLayer
 import com.kairumo.padnote.shape.ShapePicker
 import com.kairumo.padnote.shape.ShapeStore
-import com.kairumo.padnote.shape.ShapeStyleDialog
+import com.kairumo.padnote.shape.ConnectionDraft
+import com.kairumo.padnote.shape.ConnectionEditDialog
+import com.kairumo.padnote.shape.ShapeEditDialog
 import com.kairumo.padnote.table.NoteTable
 import com.kairumo.padnote.table.TableEditor
 import com.kairumo.padnote.table.TableLayer
@@ -1505,7 +1508,12 @@ private fun InkScreen(
     var editingTable by remember { mutableStateOf<NoteTable?>(null) }
     /// 形狀的樣式編修對話框。strokeColorHex / fillColorHex / lineWidth 這三個
     /// 欄位一直都在、也一直跟著同步走，但過去沒有任何介面碰得到它們。
-    var editingShapeStyle by remember { mutableStateOf<NoteShape?>(null) }
+    var editingShape by remember { mutableStateOf<NoteShape?>(null) }
+    /** 被選取的連接線。連接線不在 `selectedShapeIds` 裡 —— 它不是形狀，沒有群組與對齊。 */
+    var selectedConnectionId by remember { mutableStateOf<String?>(null) }
+    var editingConnection by remember { mutableStateOf<NoteConnection?>(null) }
+    /** 拖曳連接點拉線時的預覽。 */
+    var connectionDraft by remember { mutableStateOf<ConnectionDraft?>(null) }
     var insertingTable by remember { mutableStateOf(false) }
     LaunchedEffect(notebook, pageId) { tableStore.load(); tableRevision++ }
     val maskingTapes = remember { mutableStateListOf<com.kairumo.padnote.canvas.NoteTape>() }
@@ -1748,7 +1756,10 @@ private fun InkScreen(
     // 所以放在同一個狀態裡。
     var pdfToInsert by remember { mutableStateOf<java.io.File?>(null) }
     val pdfMimeTypes = remember { FileImport.mimeTypes(FfiImportSlot.PDF) }
-        val documentMimeTypes = remember { FileImport.mimeTypes(FfiImportSlot.DOCUMENT) }
+    val documentMimeTypes = remember { FileImport.mimeTypes(FfiImportSlot.DOCUMENT) }
+    // 解析好、等著排進筆記的文件。排版要用到 `insertPageAfter`（定義在更後面），
+    // 所以挑選器只負責解析，實際放進筆記由後面的 LaunchedEffect 做。
+    var importedDocument by remember { mutableStateOf<DocumentImport.Parsed?>(null) }
     val documentPicker = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument()
     ) { uri ->
@@ -1758,30 +1769,19 @@ private fun InkScreen(
                 message = l10n(outcome.errorKey)
             } else {
                 val f = FileImport.fileFor(activity, outcome.storedName)
-                runCatching {
-                    val ext = outcome.displayName.substringAfterLast('.', "").lowercase()
-                    val session = notebook?.first
-                    if (session != null) {
-                        if (ext == "json") {
-                            session.importJson(f.readText())
-                            sessionRevision++
-                        } else if (ext == "md") {
-                            session.importMarkdown(f.readText())
-                            sessionRevision++
-                        } else {
-                            if (pageId != null) {
-                                session.importEmbedded(pageId, f.absolutePath)
-                                sessionRevision++
-                            } else {
-                                message = l10n("import_failed_read")
-                            }
-                        }
-                        if (pageId != null || ext == "json" || ext == "md") {
-                            message = l10n("import_success").replace("%@", outcome.displayName)
-                        }
+                // 副檔名要從**存下來的檔名**取 —— `displayName` 已經去掉副檔名了，
+                // 拿它判斷的話永遠是空字串。
+                val ext = outcome.storedName.substringAfterLast('.', "").lowercase()
+                if (ext == "pptx") {
+                    message = l10n("import_unsupported_type")
+                } else {
+                    try {
+                        importedDocument = DocumentImport.parse(activity.cacheDir, f, outcome.displayName)
+                    } catch (_: DocumentImport.EmptyDocumentException) {
+                        message = l10n("import_empty_file")
+                    } catch (_: Exception) {
+                        message = l10n("import_failed_read")
                     }
-                }.onFailure {
-                    message = l10n("import_failed_read")
                 }
             }
         }
@@ -2002,6 +2002,41 @@ private fun InkScreen(
         ObjectStacking.zIndex(id, kindOf[id] ?: ObjectStacking.Kind.TEXT, stackOrder)
     }
 
+    // 調整單一物件的層級（每個物件的把手、編輯面板共用）。
+    val objectReorder: (String, ObjectStacking.Reorder) -> Unit = { id, op ->
+        // 只寫這一頁，其餘頁面與其餘中繼資料欄位原封不動。
+        meta.setObjectOrder(notebook?.first, pageIndex, op.apply(id, stackOrder))
+        stackRevision++
+    }
+
+    // **新插入的物件一律放在最上層。**
+    //
+    // 沒有明確順序的物件，疊放次序由「型別的預設層級」決定 —— 圖片永遠在文字、
+    // 表格之下，於是新貼的圖片被舊的文字蓋住，看起來像沒插進去。掛在「出現了新 id」
+    // 這一個點上，而不是改每一個插入路徑：本機插入、匯入、範本全部會經過這裡。
+    // 基準要等這一頁的物件讀完才記（載入也會讓 id 一個個冒出來，那不是「新插入」）。
+    val latestStackItems by androidx.compose.runtime.rememberUpdatedState(stackItems)
+    var knownObjectIds by remember(pageId) { mutableStateOf<Set<String>?>(null) }
+    LaunchedEffect(pageId) {
+        kotlinx.coroutines.delay(1000)
+        knownObjectIds = latestStackItems.map { it.id }.toSet()
+    }
+    LaunchedEffect(stackItems, knownObjectIds) {
+        val known = knownObjectIds ?: return@LaunchedEffect
+        val fresh = stackItems.map { it.id }.filter { it !in known }
+        if (fresh.isEmpty()) return@LaunchedEffect
+        knownObjectIds = known + fresh
+        val freshSet = fresh.toSet()
+        meta.setObjectOrder(
+            notebook?.first, pageIndex,
+            ObjectStacking.withNewOnTop(
+                stackItems.filter { it.id !in freshSet }, meta.objectOrder(pageIndex), fresh)
+        )
+        stackRevision++
+        // 手寫模式下物件不吃觸控：剛插進來的東西會拖不動，看起來像插壞了。
+        if (editorMode == EditorMode.DRAW) editorMode = EditorMode.TYPE
+    }
+
     // 雲端同步（決策 D3 選項 A）：使用者挑一個資料夾，兩台裝置指同一個地方。
     // 備份檔：選一個既有的備份來復原。
     val backupPicker = rememberLauncherForActivityResult(
@@ -2121,6 +2156,64 @@ private fun InkScreen(
         pageCount = newCount
         pageIndex = targetIndex
         revision++
+    }
+
+    // 把解析好的文件排進**目前這一頁**：依文件順序由上往下，放不下的接到後面新插入的頁面。
+    importedDocument?.let { parsed ->
+        LaunchedEffect(parsed) {
+            val s = notebook?.first
+            if (s == null) { importedDocument = null; return@LaunchedEffect }
+            val base = pageIndex
+            val width = PageGeometry.width - PageGeometry.PRINTABLE_INSET * 2
+            val heights = parsed.pieces.map { piece ->
+                when (piece) {
+                    is DocumentImport.TextPiece ->
+                        DocumentImport.estimatedHeight(piece.text, 16f, width)
+                    is DocumentImport.TablePiece -> piece.table.apply { this.width = width.coerceAtMost(440f) }
+                        .layout().height.toFloat()
+                    is DocumentImport.ImagePiece -> {
+                        val bmp = android.graphics.BitmapFactory.decodeByteArray(piece.bytes, 0, piece.bytes.size)
+                        val w = minOf(width, bmp?.width?.toFloat() ?: width)
+                        if (bmp != null && bmp.width > 0) w * bmp.height / bmp.width else 180f
+                    }
+                }
+            }
+            val placements = DocumentImport.flow(heights)
+            val extraPages = placements.maxOf { it.pageOffset }
+            // 在目前這頁後面連續插入需要的頁數（每插一頁畫面會跳過去，最後跳回來）。
+            for (k in 0 until extraPages) insertPageAfter(base + k, null)
+            for ((piece, place) in parsed.pieces.zip(placements)) {
+                val targetPage = runCatching { s.pageIdAt((base + place.pageOffset).toUInt()) }.getOrNull()
+                    ?: continue
+                val x = PageGeometry.PRINTABLE_INSET
+                when (piece) {
+                    is DocumentImport.TextPiece -> {
+                        val box = TextBoxStore(s, targetPage).also { it.load() }.let { store ->
+                            store.create(x, place.y)
+                        }
+                        box.text = piece.text
+                        box.width = width
+                        box.height = heights[parsed.pieces.indexOf(piece)]
+                        // 與語音轉文字同一個外觀：無框線、透明底，像直接寫在紙上。
+                        box.backgroundColorHex = "clear"
+                        box.hasBorder = false
+                        TextBoxStore(s, targetPage).persist(box)
+                    }
+                    is DocumentImport.TablePiece ->
+                        TableStore(s, targetPage).create(
+                            piece.table.copyTable().apply { this.x = x; this.y = place.y })
+                    is DocumentImport.ImagePiece ->
+                        ImageStore(s, targetPage).insert(piece.bytes, "import")?.let { img ->
+                            img.x = x; img.y = place.y
+                            ImageStore(s, targetPage).persist(img)
+                        }
+                }
+            }
+            importedDocument = null
+            pageIndex = base
+            sessionRevision++
+            message = l10n("import_document_done")
+        }
     }
 
     /**
@@ -2441,6 +2534,7 @@ private fun InkScreen(
                         if (newMode == EditorMode.DRAW) {
                             selectedTextId = null
                             selectedShapeIds = emptySet()
+                            selectedConnectionId = null
                             selectedTableId = null
                             selectedChartId = null
                         }
@@ -3965,6 +4059,7 @@ private fun InkScreen(
                     canvasViewport = Size(it.width.toFloat(), it.height.toFloat())
                 }
         ) {
+        CompositionLocalProvider(com.kairumo.padnote.canvas.LocalObjectReorder provides objectReorder) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -4237,52 +4332,89 @@ private fun InkScreen(
             }
 
             // 形狀與連接線。
-            key(shapeRevision) {
-                ShapeLayer(
-                    zIndexOf = zIndexOf,
-                    interactive = editorMode == EditorMode.TYPE,
-                    shapes = shapeStore.all,
-                    connections = shapeStore.allConnections,
-                    density = canvasDensity,
-                    selectedIds = selectedShapeIds,
-                    onSelect = { id ->
-                        // 選到群組裡的一個就整組選起來 —— 那正是群組的意義。
-                        val mates = if (id == null) emptySet()
-                                    else ObjectLayer.groupMates(id, shapeStore.all)
-                        selectedShapeIds =
-                            if (selectedShapeIds.containsAll(mates) && mates.isNotEmpty()) {
-                                selectedShapeIds - mates
-                            } else {
-                                selectedShapeIds + mates
-                            }
-                    },
-                    onEditStyle = { editingShapeStyle = it },
-                    onEdit = { shape ->
-                        // 點兩下刪除選中的形狀 —— 插錯一個卻刪不掉是最惱人的。
-                        shapeStore.remove(shape)
-                        shapeRevision++
-                        selectedShapeIds = selectedShapeIds - shape.id
-                    },
-                    onChanged = { updated ->
-                        // 拖曳一個形狀時，同一組的其他成員要跟著走 ——
-                        // 不跟的話，群組起來的流程圖一拖就散開了。
-                        val previous = shapeStore.all.firstOrNull { it.id == updated.id }
-                        val dx = updated.x - (previous?.x ?: updated.x)
-                        val dy = updated.y - (previous?.y ?: updated.y)
-                        shapeStore.persist(updated)
-                        for (mate in ObjectLayer.groupMates(updated.id, shapeStore.all)) {
-                            if (mate == updated.id) continue
-                            shapeStore.all.firstOrNull { it.id == mate }?.let { other ->
-                                shapeStore.persist(
-                                    other.copyShape().apply { x += dx; y += dy }
-                                )
-                            }
+            //
+            // **不再用 `key(shapeRevision)` 整層重建。** 重建會把進行中的手勢拆掉 ——
+            // 拖曳、縮放、拉線都是「每一幀存檔、每一幀換新物件」，整層重建的話
+            // 手指還按著，接收手勢的節點已經不是原來那一個了。改成只讀版本號訂閱重組，
+            // 手勢節點在重組之間保持不變（手勢區塊讀的是最新的物件，見 ShapeLayer）。
+            @Suppress("UNUSED_VARIABLE") val shapeRevisionRead = shapeRevision
+            ShapeLayer(
+                zIndexOf = zIndexOf,
+                interactive = editorMode == EditorMode.TYPE,
+                shapes = shapeStore.all,
+                connections = shapeStore.allConnections,
+                density = canvasDensity,
+                selectedIds = selectedShapeIds,
+                selectedConnectionId = selectedConnectionId,
+                connectionDraft = connectionDraft,
+                onSelect = { id ->
+                    selectedConnectionId = null
+                    // 選到群組裡的一個就整組選起來 —— 那正是群組的意義。
+                    val mates = if (id == null) emptySet()
+                                else ObjectLayer.groupMates(id, shapeStore.all)
+                    selectedShapeIds =
+                        if (selectedShapeIds.containsAll(mates) && mates.isNotEmpty()) {
+                            selectedShapeIds - mates
+                        } else {
+                            selectedShapeIds + mates
                         }
-                        shapeRevision++
-                    },
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
+                },
+                onEdit = { shape ->
+                    selectedShapeIds = setOf(shape.id)
+                    selectedConnectionId = null
+                    editingShape = shape
+                },
+                onDelete = { shape ->
+                    shapeStore.remove(shape)
+                    selectedShapeIds = selectedShapeIds - shape.id
+                    if (editingShape?.id == shape.id) editingShape = null
+                    shapeRevision++
+                },
+                onChanged = { updated ->
+                    // 拖曳一個形狀時，同一組的其他成員要跟著走 ——
+                    // 不跟的話，群組起來的流程圖一拖就散開了。
+                    val previous = shapeStore.all.firstOrNull { it.id == updated.id }
+                    val dx = updated.x - (previous?.x ?: updated.x)
+                    val dy = updated.y - (previous?.y ?: updated.y)
+                    shapeStore.persist(updated)
+                    for (mate in ObjectLayer.groupMates(updated.id, shapeStore.all)) {
+                        if (mate == updated.id) continue
+                        shapeStore.all.firstOrNull { it.id == mate }?.let { other ->
+                            shapeStore.persist(
+                                other.copyShape().apply { x += dx; y += dy }
+                            )
+                        }
+                    }
+                    shapeRevision++
+                },
+                onSelectConnection = { id ->
+                    selectedConnectionId = id
+                    if (id != null) selectedShapeIds = emptySet()
+                },
+                onEditConnection = { link ->
+                    selectedConnectionId = link.id
+                    editingConnection = link
+                },
+                onDeleteConnection = { link ->
+                    shapeStore.remove(link)
+                    selectedConnectionId = null
+                    shapeRevision++
+                },
+                onConnectDrag = { from, anchor, start, current, finished ->
+                    if (!finished) {
+                        connectionDraft = ConnectionDraft(start.x, start.y, current.x, current.y)
+                    } else {
+                        connectionDraft = null
+                        val created = shapeStore.connectByDrag(from, anchor, current.x, current.y)
+                        if (created != null) {
+                            selectedShapeIds = emptySet()
+                            selectedConnectionId = created.id
+                            shapeRevision++
+                        }
+                    }
+                },
+                modifier = Modifier.fillMaxSize()
+            )
 
             // 表格疊在文字方塊之上。
             key(tableRevision) {
@@ -4674,6 +4806,7 @@ private fun InkScreen(
                     onDismiss = { showRadialMenu = false }
                 )
             }
+        }
         }
             // 放置討論圖釘：點哪裡就放哪裡（與 Apple 端同一個模式）。
             //
@@ -5341,15 +5474,45 @@ private fun InkScreen(
         )
     }
 
-    editingShapeStyle?.let { shape ->
-        ShapeStyleDialog(
+    editingShape?.let { shape ->
+        ShapeEditDialog(
             shape = shape,
             languageTag = deviceLanguageTag(),
-            onDismiss = { editingShapeStyle = null },
             onApply = { updated ->
                 shapeStore.persist(updated)
                 shapeRevision++
-            }
+            },
+            onDuplicate = { source ->
+                val copy = shapeStore.create(
+                    source.copyShape().apply { x += 24f; y += 24f; groupId = null })
+                selectedShapeIds = setOf(copy.id)
+                editingShape = copy
+                shapeRevision++
+            },
+            onDelete = { target ->
+                shapeStore.remove(target)
+                selectedShapeIds = selectedShapeIds - target.id
+                shapeRevision++
+            },
+            onReorder = { op -> objectReorder(shape.id, op) },
+            onDismiss = { editingShape = null }
+        )
+    }
+
+    editingConnection?.let { link ->
+        ConnectionEditDialog(
+            link = link,
+            languageTag = deviceLanguageTag(),
+            onApply = { updated ->
+                shapeStore.persist(updated)
+                shapeRevision++
+            },
+            onDelete = { target ->
+                shapeStore.remove(target)
+                selectedConnectionId = null
+                shapeRevision++
+            },
+            onDismiss = { editingConnection = null }
         )
     }
 
@@ -5386,6 +5549,9 @@ private fun InkScreen(
                 }
                 shapeRevision++
                 insertingShape = false
+                // 插入後切到打字模式 —— 手寫模式下物件不吃觸控，剛插進來的形狀
+                // 會拖不動、選不起來，看起來像插壞了（與圖片、PDF 頁面同一條規則）。
+                editorMode = EditorMode.TYPE
             },
             onDismiss = { insertingShape = false }
         )

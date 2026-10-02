@@ -88,33 +88,37 @@ fun ThemeToolsSheet(
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text(l("close")) } },
         text = {
-            Column(
-                Modifier.height(height.value).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    for (t in themeTabs()) {
-                        FilterChip(
-                            selected = t == tab,
-                            onClick = { tab = t },
-                            label = { Text(l(themeTabKey(t))) }
+            // 內容與把手包進同一個 Column：AlertDialog 的 text 槽是 Box，
+            // 兩個兄弟會疊在一起，把手蓋住內容最上面 24dp（那一排點不到）。
+            Column {
+                Column(
+                    Modifier.height(height.value).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        for (t in themeTabs()) {
+                            FilterChip(
+                                selected = t == tab,
+                                onClick = { tab = t },
+                                label = { Text(l(themeTabKey(t))) }
+                            )
+                        }
+                    }
+                    HorizontalDivider()
+
+                    when (tab) {
+                        FfiThemeTab.AESTHETIC -> AestheticSection(
+                            ::l, goldenSpiral, ruleOfThirds,
+                            onGoldenSpiralChange, onRuleOfThirdsChange, onPickColor, onInsertText, onDismiss
                         )
+                        FfiThemeTab.ENGINEERING -> EngineeringSection(::l, onInsertText, onDismiss)
+                        FfiThemeTab.DIGITAL -> DigitalSection(::l, onInsertText, onDismiss)
                     }
                 }
-                HorizontalDivider()
-
-                when (tab) {
-                    FfiThemeTab.AESTHETIC -> AestheticSection(
-                        ::l, goldenSpiral, ruleOfThirds,
-                        onGoldenSpiralChange, onRuleOfThirdsChange, onPickColor, onInsertText, onDismiss
-                    )
-                    FfiThemeTab.ENGINEERING -> EngineeringSection(::l, onInsertText, onDismiss)
-                    FfiThemeTab.DIGITAL -> DigitalSection(::l, onInsertText, onDismiss)
-                }
+                // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+                // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+                DialogResizeHandle(height, "themeTools")
             }
-            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
-            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
-            DialogResizeHandle(height, "themeTools")
         }
     )
 }

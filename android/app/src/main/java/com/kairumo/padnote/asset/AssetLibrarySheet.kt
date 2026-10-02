@@ -89,71 +89,75 @@ fun AssetLibrarySheet(
         confirmButton = {},
         dismissButton = { TextButton(onClick = onDismiss) { Text(l("close")) } },
         text = {
-            Column(
-                Modifier.height(height.value),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    label = { Text(l("search_assets_placeholder")) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = style == FfiAssetRenderStyle.BLUEPRINT,
-                        onClick = { style = FfiAssetRenderStyle.BLUEPRINT },
-                        label = { Text(l("style_blueprint")) }
-                    )
-                    FilterChip(
-                        selected = style == FfiAssetRenderStyle.SOLID,
-                        onClick = { style = FfiAssetRenderStyle.SOLID },
-                        label = { Text(l("style_solid")) }
-                    )
-                }
-
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.heightIn(max = 96.dp).verticalScroll(rememberScrollState())
+            // 內容與把手包進同一個 Column：AlertDialog 的 text 槽是 Box，
+            // 兩個兄弟會疊在一起，把手蓋住內容最上面 24dp（那一排點不到）。
+            Column {
+                Column(
+                    Modifier.height(height.value),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    FilterChip(
-                        selected = category == null,
-                        onClick = { category = null },
-                        label = { Text(l("all_themes")) }
+                    OutlinedTextField(
+                        value = query,
+                        onValueChange = { query = it },
+                        label = { Text(l("search_assets_placeholder")) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
-                    for (c in assetCategories()) {
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         FilterChip(
-                            selected = category == c,
-                            onClick = { category = c },
-                            label = { Text(l(assetCategoryKey(c))) }
+                            selected = style == FfiAssetRenderStyle.BLUEPRINT,
+                            onClick = { style = FfiAssetRenderStyle.BLUEPRINT },
+                            label = { Text(l("style_blueprint")) }
+                        )
+                        FilterChip(
+                            selected = style == FfiAssetRenderStyle.SOLID,
+                            onClick = { style = FfiAssetRenderStyle.SOLID },
+                            label = { Text(l("style_solid")) }
                         )
                     }
-                }
 
-                HorizontalDivider()
-
-                if (results.isEmpty()) {
-                    Text(
-                        l("no_assets_found"),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                } else {
-                    Column(
-                        Modifier.verticalScroll(rememberScrollState()),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    FlowRow(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        modifier = Modifier.heightIn(max = 96.dp).verticalScroll(rememberScrollState())
                     ) {
-                        for (item in results) {
-                            AssetRow(item, style, languageTag, ::l) { onInsert(item, style); onDismiss() }
+                        FilterChip(
+                            selected = category == null,
+                            onClick = { category = null },
+                            label = { Text(l("all_themes")) }
+                        )
+                        for (c in assetCategories()) {
+                            FilterChip(
+                                selected = category == c,
+                                onClick = { category = c },
+                                label = { Text(l(assetCategoryKey(c))) }
+                            )
+                        }
+                    }
+
+                    HorizontalDivider()
+
+                    if (results.isEmpty()) {
+                        Text(
+                            l("no_assets_found"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        Column(
+                            Modifier.verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            for (item in results) {
+                                AssetRow(item, style, languageTag, ::l) { onInsert(item, style); onDismiss() }
+                            }
                         }
                     }
                 }
+                // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+                // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+                DialogResizeHandle(height, "assetLibrary")
             }
-            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
-            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
-            DialogResizeHandle(height, "assetLibrary")
         }
     )
 }

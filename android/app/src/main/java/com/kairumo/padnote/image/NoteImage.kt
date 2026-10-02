@@ -74,7 +74,7 @@ object ImageAppearance {
      */
     // 「由別種物件算繪出來」的圖片。真身在筆記本中繼資料裡 ——
     // 不跳過的話同一個物件會出現兩份，各自能拖到不同的地方。
-    private val DERIVED = setOf("link", "model3d", "audio", "pin", "tape", "sticky", "rectitle")
+    private val DERIVED = setOf("link", "model3d", "audio", "pin", "tape", "sticky", "rectitle", "shapestyle", "connstyle")
 
     /** 這個區塊是不是衍生圖片（載入時要跳過）。 */
     fun isDerived(json: String?): Boolean {
@@ -96,6 +96,9 @@ object ImageAppearance {
         style.put("hasBorder", image.hasBorder)
         style.put("filterStyle", image.filterStyle.raw)
         style.put("fileName", image.fileName)
+        // 大小也帶著（核心的圖片區塊只在建立時記一次）。與 Apple 端同一組鍵。
+        style.put("width", image.width.toDouble())
+        style.put("height", image.height.toDouble())
         image.borderColorHex?.let { style.put("borderColorHex", it) }
         image.borderWidth?.let { style.put("borderWidth", it.toDouble()) }
         image.backgroundColorHex?.let { style.put("backgroundColorHex", it) }
@@ -115,6 +118,12 @@ object ImageAppearance {
     fun apply(json: String?, image: NoteImage) {
         val root = runCatching { JSONObject(json ?: return) }.getOrNull() ?: return
         val style = root.optJSONObject(IMAGE_KEY) ?: return
+        if (style.has("width") && style.getDouble("width") >= 16.0) {
+            image.width = style.getDouble("width").toFloat()
+        }
+        if (style.has("height") && style.getDouble("height") >= 16.0) {
+            image.height = style.getDouble("height").toFloat()
+        }
         if (style.has("rotationDegrees")) {
             image.rotationDegrees = style.getDouble("rotationDegrees").toFloat()
         }

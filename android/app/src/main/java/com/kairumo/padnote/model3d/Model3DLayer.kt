@@ -160,7 +160,8 @@ private fun Model3DView(
             StyleHandle(
                 widthDp = model.width,
                 heightDp = model.height,
-                onTap = { onEdit(model) }
+                onTap = { onEdit(model) },
+                objectId = model.id
             )
 
             ResizeHandle(

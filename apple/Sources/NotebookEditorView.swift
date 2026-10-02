@@ -1482,6 +1482,12 @@ public struct NotebookEditorView: View {
     @State private var showLayerPanel: Bool = false
     /// 圖層面板裡選取的形狀。多選才群組得起來。
     @State private var selectedShapeIds: Set<String> = []
+    /// 被選取的連接線（連接線不在 `selectedShapeIds` 裡 —— 它不是形狀，沒有群組與對齊）。
+    @State private var selectedConnectionId: String? = nil
+    @State private var editingShapeId: String? = nil
+    @State private var editingConnectionId: String? = nil
+    /// 拖曳連接點拉線時的預覽。
+    @State private var connectionDraft: (page: Int, start: CGPoint, current: CGPoint)? = nil
     /// 正在重新編修的表格。
     @State private var editingTable: NoteTableAttachment? = nil
     @State private var editingAttachmentId: String? = nil
@@ -1536,6 +1542,8 @@ public struct NotebookEditorView: View {
     @State private var marqueeStart: CGPoint? = nil
     @State private var marqueeCurrent: CGPoint? = nil
     @State private var selectedObjectIds: Set<String> = []
+    /// 已知的物件 id，用來認出「剛插入的」。`nil` 代表尚未建立基準（開啟筆記當下）。
+    @State private var knownObjectIds: Set<String>? = nil
     /// 整組拖曳時的即時位移。每一幀都寫回筆記的話，拖一次會存幾十次檔。
     @State private var groupDragOffset: CGSize = .zero
     @State private var objectClipboard: [ClipboardObject] = []
@@ -2024,7 +2032,7 @@ public struct NotebookEditorView: View {
             onPdf: { outcome in
                 pdfToInsert = store.importedFileURL(fileName: outcome.storedName)
             },
-            onDocument: { outcome in store.importDocument(notebookId: notebook.id, pageIndex: currentPageIndex, outcome: outcome) }
+            onDocument: { outcome in importDocumentOutcome(outcome) }
         ))
         .sheet(item: Binding(
             get: { pdfToInsert.map(IdentifiedURL.init) },
@@ -3365,6 +3373,9 @@ public struct NotebookEditorView: View {
                     canvasNoticeBanner(notice)
                 }
             }
+            .overlay { objectEditPanels }
+            .onAppear { if knownObjectIds == nil { knownObjectIds = Set(allObjectIds) } }
+            .onChange(of: allObjectIds.count) { _ in placeNewObjectsOnTop() }
         )
     }
 
@@ -3898,7 +3909,26 @@ public struct NotebookEditorView: View {
                        let from = notebook.shapeAttachments?.first(where: { $0.id == item.fromShapeId }),
                        let to = notebook.shapeAttachments?.first(where: { $0.id == item.toShapeId }),
                        let geometry = ShapeGeometry.connection(item, from: from, to: to) {
-                        ConnectionLineView(connection: item, geometry: geometry)
+                        ConnectionLineView(
+                            connection: item,
+                            geometry: geometry,
+                            isSelected: selectedConnectionId == item.id,
+                            onSelect: {
+                                selectedShapeIds = []
+                                selectedConnectionId = (selectedConnectionId == item.id) ? nil : item.id
+                            },
+                            onEdit: {
+                                selectedConnectionId = item.id
+                                editingConnectionId = item.id
+                                editingShapeId = nil
+                            },
+                            onDelete: { deleteConnection(item.id) }
+                        )
+                        // 線畫在它連著的兩個形狀的**下面**（見上面的說明），
+                        // 但仍然在更低層的其他物件之上。
+                        .zIndex(min(
+                            stacking.zIndex(for: from.id, kind: .shape),
+                            stacking.zIndex(for: to.id, kind: .shape)) - 0.1)
                     }
                 }
 
@@ -3908,20 +3938,33 @@ public struct NotebookEditorView: View {
                         ShapeAttachmentItemView(
                             shape: shapeBinding(for: item.id),
                             isSelected: selectedShapeIds.contains(item.id),
-                            onSelect: { toggleShapeSelection(item.id) },
+                            isSoleSelection: selectedShapeIds.count <= 1,
+                            onSelect: {
+                                selectedConnectionId = nil
+                                toggleShapeSelection(item.id)
+                            },
                             onMove: { delta in moveShapeGroup(item.id, by: delta) },
-                            onDelete: {
-                                notebook.shapeAttachments?.removeAll { $0.id == item.id }
-                                // 連著的線也要跟著走 —— 留著的話會指向一個不存在的
-                                // 形狀，畫面上是一條從空氣連出來的線。
-                                notebook.connectionAttachments?.removeAll {
-                                    $0.fromShapeId == item.id || $0.toShapeId == item.id
-                                }
-                                store.updateNotebook(notebook)
+                            onDelete: { deleteShape(item.id) },
+                            onEdit: {
+                                selectedShapeIds = [item.id]
+                                selectedConnectionId = nil
+                                editingShapeId = item.id
+                                editingConnectionId = nil
+                            },
+                            onConnectDrag: { anchor, start, current, finished in
+                                handleConnectDrag(
+                                    from: item.id, anchor: anchor, start: start,
+                                    current: current, finished: finished)
                             }
                         )
                         .zIndex(stacking.zIndex(for: item.id, kind: .shape))
                     }
+                }
+
+                // 拉線預覽。
+                if let draft = connectionDraft, draft.page == page {
+                    ConnectionDraftView(from: draft.start, to: draft.current)
+                        .zIndex(9000)
                 }
 
                 // 互動式貼圖定位與放置浮層（工作項：允許自由拖曳、縮放與旋轉貼圖位置）
@@ -3948,56 +3991,6 @@ public struct NotebookEditorView: View {
                         }
                     )
                     .zIndex(9999)
-                }
-
-                if showLayerPanel {
-                    FloatingPanel(
-                        title: localizationManager.localized("layers_panel"),
-                        onClose: { showLayerPanel = false }
-                    ) {
-                        VStack(spacing: 10) {
-                            // 跨型別的堆疊：圖片、文字、表格、圖表、3D、連結、
-                            // 形狀全部在同一份順序裡。使用者要的「圖層上下排序」
-                            // 指的是這個 —— 底下那個只認形狀。
-                            CanvasStackPanel(
-                                objects: pageStackableObjects,
-                                order: Binding(
-                                    get: {
-                                        ObjectStacking.normalized(
-                                            objects: pageStackableObjects,
-                                            order: notebook.objectOrder(forPage: currentPageIndex)
-                                        )
-                                    },
-                                    set: { updated in
-                                        // **只寫這一頁。** 整個欄位覆蓋掉的話，在第 2 頁
-                                        // 調一次順序，第 1 頁的順序就被清光了 ——
-                                        // 那是 v3.8.0 (32) 已經出貨的 bug。
-                                        notebook.setObjectOrder(updated, forPage: currentPageIndex)
-                                        store.updateNotebook(notebook)
-                                    }
-                                ),
-                                selection: $selectedShapeIds,
-                                onAlign: { mode, ids in alignSelectedObjects(mode, ids: ids) }
-                            )
-
-                            // 形狀的群組操作留在原本的面板 —— 群組是形狀專屬的
-                            // 概念（連接線要接得住），其餘型別沒有這回事。
-                            if !pageShapes.isEmpty {
-                                Divider()
-                                ObjectLayerPanel(
-                                    shapes: Binding(
-                                        get: { pageShapes },
-                                        set: { updated in replacePageShapes(with: updated) }
-                                    ),
-                                    selection: $selectedShapeIds,
-                                    groupingOnly: true
-                                )
-                            }
-                        }
-                    }
-                    .padding(.top, 24)
-                    .padding(.trailing, 24)
-                    .transition(.scale(scale: 0.95).combined(with: .opacity))
                 }
 
                 // 表格。與文字方塊一樣疊在墨跡之上，手寫模式下不攔截觸控。
@@ -4132,6 +4125,7 @@ public struct NotebookEditorView: View {
                 }
 
         }
+        .environment(\.objectReorder, { id, op in reorderObject(id, op) })
         .coordinateSpace(name: CanvasCoordinateSpace.name)
     }
 
@@ -4547,69 +4541,10 @@ public struct NotebookEditorView: View {
             // 🌟 線上多人即時彩色游標與筆尖浮層
             RemoteCursorsOverlay()
 
-            // 🌟 文字編修浮動面板
-            //
-            // 以前是 modal sheet，蓋住整個畫布 —— 要調一個文字方塊的排版，
-            // 卻看不到那個文字方塊。與圖片美化面板同樣的問題、同樣的解法：
-            // 浮在畫布上、標題列可以拖到一旁，改動直接反映在物件上。
-            if let id = editingTextId {
-                FloatingPanel(
-                    title: localizationManager.localized("text_studio"),
-                    onClose: { editingTextId = nil }
-                ) {
-                    WordTextStudioView(
-                        attachment: binding(forTextId: id),
-                        presentation: .inlinePanel
-                    ) { updated in
-                        if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
-                            notebook.textAttachments?[idx] = updated
-                            store.updateNotebook(notebook)
-                        }
-                    }
-                }
-                .padding(.top, 24)
-                .padding(.trailing, 24)
-                .transition(.scale(scale: 0.95).combined(with: .opacity))
-            }
-
-            // 🌟 圖片美化浮動面板
-            //
-            // 以前是 modal sheet，蓋住整個畫布 —— 調濾鏡時看不到自己在調
-            // 什麼。改成浮在畫布上、標題列可拖到一旁的面板：控制項與圖片
-            // 同時在畫面上，改動直接反映在物件上。
-            if let id = editingAttachmentId {
-                FloatingPanel(
-                    title: localizationManager.localized("image_beautify"),
-                    onClose: { editingAttachmentId = nil }
-                ) {
-                    VStack(spacing: 10) {
-                        // 這張圖如果是數字製圖，先給重新編修的入口 ——
-                        // 濾鏡與邊框改不了圖表裡的數字。
-                        if let spec = notebook.attachments?
-                            .first(where: { $0.id == id })?.chartSpec {
-                            Button {
-                                editingChartAttachmentId = ChartEditTarget(id: id, spec: spec)
-                            } label: {
-                                Label(localizationManager.localized("chart_edit"),
-                                      systemImage: "chart.bar.xaxis")
-                                    .frame(maxWidth: .infinity)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .controlSize(.small)
-                        }
-
-                        ImageEditControls(
-                            attachment: binding(for: id),
-                            onDone: { editingAttachmentId = nil },
-                            onDelete: {
-                                notebook.attachments?.removeAll { $0.id == id }
-                                store.updateNotebook(notebook)
-                                editingAttachmentId = nil
-                            }
-                        )
-                    }
-                }
-            }
+            // 文字／圖片編修面板與圖層面板已移到 `objectEditPanels`，掛在
+            // 兩種頁面模式共用的 `canvasWorkArea` 上 —— 原本掛在這裡，
+            // 層級低於畫布與文字輸入層（觸控被它們吃掉，面板關不掉），
+            // 而且連續模式根本不會走到這一段。
 
             // 🌟 聲筆動態同步與波形卡拉 OK 高亮 (Audio-Ink Karaoke Sync)
             if audioManager.isPlaying && !currentDrawing.strokes.isEmpty {
@@ -9679,6 +9614,115 @@ public struct NotebookEditorView: View {
         }
     }
 
+    /// 「匯入文件」：把檔案解析成原生物件，合併進**這本筆記**的目前頁面。
+    ///
+    /// 解析在暫存套件裡由核心做（見 `DocumentImport`）；這裡負責合併：
+    /// 超出頁高的內容接到後面新插入的頁面，不覆蓋既有頁面。失敗一律給提示 ——
+    /// 舊版只 `print`，使用者看到的是「點了沒反應」。
+    private func importDocumentOutcome(_ outcome: FileImport.Outcome) {
+        if outcome.fileExtension == "pptx" {
+            importErrorKey = "import_unsupported_type"
+            return
+        }
+        let url = store.importedFileURL(fileName: outcome.storedName)
+        let imported: NotebookPackageBridge.ImportedNotebook
+        do {
+            imported = try DocumentImport.parse(fileURL: url, title: outcome.displayName)
+        } catch DocumentImport.Failure.empty {
+            importErrorKey = "import_empty_file"
+            return
+        } catch {
+            importErrorKey = "import_failed_read"
+            return
+        }
+
+        saveCurrentPageDrawing()
+        let base = currentPageIndex
+        let doc = imported.document
+
+        // 區塊依 id（UUIDv7 ＝ 建立順序）排回文件順序，再由上往下排版 ——
+        // 核心建立區塊時沒有給位置，全部會落在同一點疊成一團。
+        enum Piece { case text(Int), table(Int), image(Int) }
+        var texts = doc.textAttachments ?? []
+        var tables = doc.tableAttachments ?? []
+        var images = doc.attachments ?? []
+        var pieces: [(id: String, piece: Piece)] = []
+        for (i, t) in texts.enumerated() { pieces.append((t.id, .text(i))) }
+        for (i, t) in tables.enumerated() { pieces.append((t.id, .table(i))) }
+        for (i, t) in images.enumerated() { pieces.append((t.id, .image(i))) }
+        // 依建立時間（UUIDv7 前 48 位元的毫秒時間戳）排回文件順序。**不能比整個 id** ——
+        // 同一毫秒內產生的 id 後面是隨機位元，字串順序跟建立順序無關。同一毫秒（匯入時
+        // 一股腦建出來，常態）維持各自在核心裡原本的順序。
+        pieces = pieces.enumerated().sorted { lhs, rhs in
+            let l = DocumentImport.timestampKey(lhs.element.id), r = DocumentImport.timestampKey(rhs.element.id)
+            return l != r ? l < r : lhs.offset < rhs.offset
+        }.map(\.element)
+
+        let contentWidth = PageGeometry.width - PageGeometry.printableInset * 2
+        let heights: [CGFloat] = pieces.map { entry in
+            switch entry.piece {
+            case .text(let i):
+                texts[i].width = contentWidth
+                texts[i].x = PageGeometry.printableInset
+                let h = DocumentImport.estimatedHeight(
+                    text: texts[i].text, fontSize: texts[i].fontSize, width: contentWidth)
+                texts[i].height = h
+                return h
+            case .table(let i):
+                tables[i].x = PageGeometry.printableInset
+                return tables[i].height
+            case .image(let i):
+                // 圖片寬度不超過內容區；等比縮小。
+                if images[i].width > contentWidth {
+                    let scale = contentWidth / images[i].width
+                    images[i].width = contentWidth
+                    images[i].height *= scale
+                }
+                images[i].x = PageGeometry.printableInset
+                return images[i].height
+            }
+        }
+        let placements = DocumentImport.flow(heights: heights)
+        var maxOffset = 0
+        for (entry, place) in zip(pieces, placements) {
+            maxOffset = max(maxOffset, place.pageOffset)
+            switch entry.piece {
+            case .text(let i): texts[i].y = place.y; texts[i].pageIndex = place.pageOffset
+            case .table(let i): tables[i].y = place.y; tables[i].pageIndex = place.pageOffset
+            case .image(let i): images[i].y = place.y; images[i].pageIndex = place.pageOffset
+            }
+        }
+        for k in 0..<maxOffset {
+            _ = store.insertPage(
+                notebookId: notebook.id, afterIndex: base + k,
+                paperId: notebook.paperId(forPage: base))
+        }
+        if maxOffset > 0, let updated = store.notebooks.first(where: { $0.id == notebook.id }) {
+            notebook = updated
+        }
+
+        // id 沿用暫存套件給的：每次匯入都是全新的暫存套件，所以同一個檔案
+        // 匯入兩次得到的是兩份獨立的物件，不會撞 id。
+        for var item in texts {
+            item.pageIndex = base + item.pageIndex
+            notebook.textAttachments = (notebook.textAttachments ?? []) + [item]
+        }
+        for var item in tables {
+            item.pageIndex = base + item.pageIndex
+            notebook.tableAttachments = (notebook.tableAttachments ?? []) + [item]
+        }
+        for var item in images {
+            guard let bytes = imported.imageData[item.fileName],
+                  let saved = store.saveImportedFile(data: bytes, extension: "png") else { continue }
+            item.fileName = saved
+            item.pageIndex = base + item.pageIndex
+            notebook.attachments = (notebook.attachments ?? []) + [item]
+        }
+        store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
+        showCanvasNotice(localizationManager.localized("import_document_done"))
+    }
+
     /// 把一段既有的錄音插到目前這一頁。
     ///
     /// 位置逐張往右下錯開。全部疊在同一點的話，插第二張時使用者會以為沒插進去。
@@ -9743,6 +9787,109 @@ public struct NotebookEditorView: View {
     private var pageShapes: [NoteShapeAttachment] {
         (notebook.shapeAttachments ?? []).filter { $0.pageIndex == currentPageIndex }
     }
+
+    // MARK: - 形狀與連接線的編修
+
+    /// 刪除一個形狀，連著它的線一起走。
+    ///
+    /// 留著的話會指向一個不存在的形狀，畫面上是一條從空氣連出來的線。
+    private func deleteShape(_ id: String) {
+        notebook.shapeAttachments?.removeAll { $0.id == id }
+        notebook.connectionAttachments?.removeAll { $0.fromShapeId == id || $0.toShapeId == id }
+        selectedShapeIds.remove(id)
+        if editingShapeId == id { editingShapeId = nil }
+        store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
+    }
+
+    private func deleteConnection(_ id: String) {
+        notebook.connectionAttachments?.removeAll { $0.id == id }
+        if selectedConnectionId == id { selectedConnectionId = nil }
+        if editingConnectionId == id { editingConnectionId = nil }
+        store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
+    }
+
+    private func duplicateShape(_ id: String) {
+        guard var copy = notebook.shapeAttachments?.first(where: { $0.id == id }) else { return }
+        var fresh = NoteShapeAttachment(
+            pageIndex: copy.pageIndex, kindName: copy.kindName,
+            x: copy.x + 24, y: copy.y + 24, width: copy.width, height: copy.height,
+            cornerRadius: copy.cornerRadius, label: copy.label,
+            strokeColorHex: copy.strokeColorHex, fillColorHex: copy.fillColorHex,
+            lineWidth: copy.lineWidth)
+        copy.groupId = nil
+        fresh.rotationDegrees = copy.rotationDegrees
+        fresh.dashStyle = copy.dashStyle; fresh.fontSize = copy.fontSize
+        fresh.textColorHex = copy.textColorHex; fresh.isBold = copy.isBold
+        fresh.isItalic = copy.isItalic; fresh.opacity = copy.opacity
+        notebook.shapeAttachments = (notebook.shapeAttachments ?? []) + [fresh]
+        store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
+        selectedShapeIds = [fresh.id]
+        editingShapeId = fresh.id
+    }
+
+    private func connectionBinding(for id: String) -> Binding<NoteConnectionAttachment> {
+        Binding(
+            get: {
+                notebook.connectionAttachments?.first(where: { $0.id == id })
+                    ?? NoteConnectionAttachment(id: id, fromShapeId: "", toShapeId: "")
+            },
+            set: { updated in
+                guard let index = notebook.connectionAttachments?
+                    .firstIndex(where: { $0.id == id }) else { return }
+                notebook.connectionAttachments?[index] = updated
+                store.updateNotebook(notebook)
+                PageThumbnailRenderer.invalidateAll()
+            }
+        )
+    }
+
+    /// 從形狀的連接點拉線。拖曳中畫預覽，放開時連到底下的形狀。
+    private func handleConnectDrag(
+        from sourceId: String, anchor: ShapeAnchorName,
+        start: CGPoint, current: CGPoint, finished: Bool
+    ) {
+        guard let source = notebook.shapeAttachments?.first(where: { $0.id == sourceId }) else { return }
+        guard finished else {
+            connectionDraft = (source.pageIndex, start, current)
+            return
+        }
+        connectionDraft = nil
+
+        // 放開的位置在哪個形狀上。越晚畫的越在上面，所以從後往前找。
+        let pageShapes = (notebook.shapeAttachments ?? []).filter {
+            $0.pageIndex == source.pageIndex && $0.id != sourceId && !$0.isLinear
+        }
+        let target = pageShapes.reversed().first { candidate in
+            // 轉過的形狀：把點轉回形狀自己的座標軸再判斷，才不會在轉 45° 的方塊邊角誤判。
+            let local = ShapeFrameMath.rotate(current, about: candidate.center, degrees: -candidate.canvasRotation)
+            return CGRect(x: candidate.x, y: candidate.y, width: candidate.width, height: candidate.height)
+                .insetBy(dx: -6, dy: -6).contains(local)
+        }
+        guard let target else { return }
+        // 入線位置：目標形狀上離放開點最近的連接點。
+        let toAnchor = ShapeAnchorName.allCases.min {
+            let a = target.anchorPoint($0), b = target.anchorPoint($1)
+            return hypot(a.x - current.x, a.y - current.y) < hypot(b.x - current.x, b.y - current.y)
+        } ?? .top
+
+        var connection = NoteConnectionAttachment(
+            pageIndex: source.pageIndex, fromShapeId: sourceId, toShapeId: target.id)
+        connection.fromAnchor = anchor.rawValue
+        connection.toAnchor = toAnchor.rawValue
+        notebook.connectionAttachments = (notebook.connectionAttachments ?? []) + [connection]
+        store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
+        selectedShapeIds = []
+        selectedConnectionId = connection.id
+        if let data = try? JSONEncoder().encode(connection),
+           let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            collaborationManager.broadcastAttachmentUpsert(type: "connection", itemDict: dict)
+        }
+    }
+
 
     /// 對齊目前選取的物件。
     ///
@@ -10193,12 +10340,263 @@ public struct NotebookEditorView: View {
         .allowsHitTesting(false)
     }
 
+    /// 文字編修、圖片編修、圖層三張浮動面板。
+    ///
+    /// **掛在 `canvasWorkArea`（兩種頁面模式共用的那一層），而且層級最高。**
+    ///
+    /// 這三張面板原本各自藏在畫布內部的 ZStack 裡，沒有 zIndex：
+    /// - 手寫模式下 PencilKit 畫布（zIndex 2）蓋在它上面，點關閉鈕變成在
+    ///   畫布上畫了一筆；
+    /// - 打字模式下全頁的文字輸入層（zIndex 2）與物件層（zIndex 3）也在它上面；
+    /// - 連續頁面模式根本不會走到那一段程式，編輯鈕按了完全沒有反應。
+    /// 症狀分別是「編輯視窗出現了卻關不掉」與「編輯鈕沒作用」。
+    @ViewBuilder
+    private var objectEditPanels: some View {
+        ZStack(alignment: .topTrailing) {
+        // 🌟 文字編修浮動面板
+        //
+        // 以前是 modal sheet，蓋住整個畫布 —— 要調一個文字方塊的排版，
+        // 卻看不到那個文字方塊。與圖片美化面板同樣的問題、同樣的解法：
+        // 浮在畫布上、標題列可以拖到一旁，改動直接反映在物件上。
+        if let id = editingTextId {
+            FloatingPanel(
+                title: localizationManager.localized("text_studio"),
+                onClose: { editingTextId = nil }
+            ) {
+                VStack(spacing: 10) {
+                    ObjectOrderBar(id: id)
+                    WordTextStudioView(
+                        attachment: binding(forTextId: id),
+                        presentation: .inlinePanel
+                    ) { updated in
+                        if let idx = notebook.textAttachments?.firstIndex(where: { $0.id == id }) {
+                            notebook.textAttachments?[idx] = updated
+                            store.updateNotebook(notebook)
+                        }
+                    }
+                }
+            }
+            .padding(.top, 24)
+            .padding(.trailing, 24)
+            .transition(.scale(scale: 0.95).combined(with: .opacity))
+        }
+
+        // 🌟 圖片美化浮動面板
+        //
+        // 以前是 modal sheet，蓋住整個畫布 —— 調濾鏡時看不到自己在調
+        // 什麼。改成浮在畫布上、標題列可拖到一旁的面板：控制項與圖片
+        // 同時在畫面上，改動直接反映在物件上。
+        if let id = editingAttachmentId {
+            FloatingPanel(
+                title: localizationManager.localized("image_beautify"),
+                onClose: { editingAttachmentId = nil }
+            ) {
+                VStack(spacing: 10) {
+                    ObjectOrderBar(id: id)
+                    // 這張圖如果是數字製圖，先給重新編修的入口 ——
+                    // 濾鏡與邊框改不了圖表裡的數字。
+                    if let spec = notebook.attachments?
+                        .first(where: { $0.id == id })?.chartSpec {
+                        Button {
+                            editingChartAttachmentId = ChartEditTarget(id: id, spec: spec)
+                        } label: {
+                            Label(localizationManager.localized("chart_edit"),
+                                  systemImage: "chart.bar.xaxis")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                    }
+
+                    ImageEditControls(
+                        attachment: binding(for: id),
+                        onDone: { editingAttachmentId = nil },
+                        onDelete: {
+                            notebook.attachments?.removeAll { $0.id == id }
+                            store.updateNotebook(notebook)
+                            editingAttachmentId = nil
+                        }
+                    )
+                }
+            }
+        }
+
+
+        // 形狀編修面板。與圖片、文字同一套 —— 浮在畫布上，改動即時反映在物件上。
+        if let id = editingShapeId,
+           notebook.shapeAttachments?.contains(where: { $0.id == id }) == true {
+            FloatingPanel(
+                title: localizationManager.localized("shape_edit"),
+                onClose: { editingShapeId = nil }
+            ) {
+                ShapeEditPanel(
+                    shape: shapeBinding(for: id),
+                    onDuplicate: { duplicateShape(id) },
+                    onDelete: { deleteShape(id) }
+                )
+            }
+            .padding(.top, 24)
+            .padding(.trailing, 24)
+            .transition(.scale(scale: 0.95).combined(with: .opacity))
+        }
+
+        if let id = editingConnectionId,
+           notebook.connectionAttachments?.contains(where: { $0.id == id }) == true {
+            FloatingPanel(
+                title: localizationManager.localized("connection_edit"),
+                onClose: { editingConnectionId = nil }
+            ) {
+                ConnectionEditPanel(
+                    connection: connectionBinding(for: id),
+                    onDelete: { deleteConnection(id) }
+                )
+            }
+            .padding(.top, 24)
+            .padding(.trailing, 24)
+            .transition(.scale(scale: 0.95).combined(with: .opacity))
+        }
+
+        if showLayerPanel {
+            FloatingPanel(
+                title: localizationManager.localized("layers_panel"),
+                onClose: { showLayerPanel = false }
+            ) {
+                VStack(spacing: 10) {
+                    // 跨型別的堆疊：圖片、文字、表格、圖表、3D、連結、
+                    // 形狀全部在同一份順序裡。使用者要的「圖層上下排序」
+                    // 指的是這個 —— 底下那個只認形狀。
+                    CanvasStackPanel(
+                        objects: pageStackableObjects,
+                        order: Binding(
+                            get: {
+                                ObjectStacking.normalized(
+                                    objects: pageStackableObjects,
+                                    order: notebook.objectOrder(forPage: currentPageIndex)
+                                )
+                            },
+                            set: { updated in
+                                // **只寫這一頁。** 整個欄位覆蓋掉的話，在第 2 頁
+                                // 調一次順序，第 1 頁的順序就被清光了 ——
+                                // 那是 v3.8.0 (32) 已經出貨的 bug。
+                                notebook.setObjectOrder(updated, forPage: currentPageIndex)
+                                store.updateNotebook(notebook)
+                            }
+                        ),
+                        selection: $selectedShapeIds,
+                        onAlign: { mode, ids in alignSelectedObjects(mode, ids: ids) }
+                    )
+
+                    // 形狀的群組操作留在原本的面板 —— 群組是形狀專屬的
+                    // 概念（連接線要接得住），其餘型別沒有這回事。
+                    if !pageShapes.isEmpty {
+                        Divider()
+                        ObjectLayerPanel(
+                            shapes: Binding(
+                                get: { pageShapes },
+                                set: { updated in replacePageShapes(with: updated) }
+                            ),
+                            selection: $selectedShapeIds,
+                            groupingOnly: true
+                        )
+                    }
+                }
+            }
+            .padding(.top, 24)
+            .padding(.trailing, 24)
+            .transition(.scale(scale: 0.95).combined(with: .opacity))
+        }
+
+
+        }
+        .environment(\.objectReorder, { id, op in reorderObject(id, op) })
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+        .zIndex(10_000)
+    }
+
+    /// 物件所在的頁面。找不到（已刪除）回傳 nil。
+    private func pageOfObject(_ id: String) -> Int? {
+        if let v = notebook.attachments?.first(where: { $0.id == id }) { return v.pageIndex }
+        if let v = notebook.shapeAttachments?.first(where: { $0.id == id }) { return v.pageIndex }
+        if let v = notebook.tableAttachments?.first(where: { $0.id == id }) { return v.pageIndex }
+        if let v = notebook.textAttachments?.first(where: { $0.id == id }) { return v.pageIndex }
+        if let v = notebook.linkAttachments?.first(where: { $0.id == id }) { return v.pageIndex }
+        if let v = notebook.model3DAttachments?.first(where: { $0.id == id }) { return v.pageIndex }
+        if let v = notebook.audioAttachments?.first(where: { $0.id == id }) { return v.pageIndex }
+        if let v = notebook.commentPins?.first(where: { $0.id == id }) { return v.pageIndex }
+        return nil
+    }
+
+    /// 調整單一物件的層級（選單、編輯面板共用）。
+    private func reorderObject(_ id: String, _ op: ObjectReorderOp) {
+        guard let page = pageOfObject(id) else { return }
+        let order = ObjectStacking.normalized(
+            objects: stackableObjects(forPage: page),
+            order: notebook.objectOrder(forPage: page))
+        notebook.setObjectOrder(op.apply(id, to: order), forPage: page)
+        store.updateNotebook(notebook)
+        PageThumbnailRenderer.invalidateAll()
+    }
+
+    /// 這本筆記上所有物件的 id（不含連接線）。用來偵測「新插入了什麼」。
+    private var allObjectIds: [String] {
+        var ids: [String] = []
+        ids += (notebook.attachments ?? []).map(\.id)
+        ids += (notebook.shapeAttachments ?? []).map(\.id)
+        ids += (notebook.tableAttachments ?? []).map(\.id)
+        ids += (notebook.textAttachments ?? []).map(\.id)
+        ids += (notebook.linkAttachments ?? []).map(\.id)
+        ids += (notebook.model3DAttachments ?? []).map(\.id)
+        ids += (notebook.audioAttachments ?? []).map(\.id)
+        return ids
+    }
+
+    /// **新插入的物件一律放在最上層。**
+    ///
+    /// 沒有明確順序的物件，疊放次序由「型別的預設層級」決定 —— 圖片永遠
+    /// 在文字、表格之下，於是新貼的圖片被舊的文字蓋住，看起來像沒插進去。
+    /// 這裡掛在「物件數量變了」這一個點上，而不是改每一個插入路徑：
+    /// 本機插入、匯入、範本、協同遠端寫入全部會經過同一處，不會漏。
+    private func placeNewObjectsOnTop() {
+        let ids = allObjectIds
+        defer { knownObjectIds = Set(ids) }
+        guard let known = knownObjectIds else { return }
+        let fresh = ids.filter { !known.contains($0) }
+        guard !fresh.isEmpty else { return }
+
+        var byPage: [Int: [String]] = [:]
+        for id in fresh {
+            if let page = pageOfObject(id) { byPage[page, default: []].append(id) }
+        }
+        for (page, newIds) in byPage {
+            let newSet = Set(newIds)
+            let existing = stackableObjects(forPage: page).filter { !newSet.contains($0.id) }
+            var order = ObjectStacking.normalized(
+                objects: existing, order: notebook.objectOrder(forPage: page))
+            order += newIds   // 到達順序＝插入順序
+            notebook.setObjectOrder(order, forPage: page)
+        }
+        store.updateNotebook(notebook)
+
+        // 手寫模式下物件不吃觸控：剛插進來的東西會拖不動、選不起來，看起來像插壞了
+        // （使用者回報「形狀無法編輯」「圖片的編輯鈕沒有作用」的一個原因）。
+        // 本機插入就切到打字模式，與 Android 同一條規則；遠端協同寫進來的不切，
+        // 別人插東西不該把我的筆搶走。
+        if editorMode == .draw && !isApplyingRemoteUpdate && !isCollaborating {
+            editorMode = .type
+        }
+    }
+
     /// 這一頁上所有可堆疊的物件，跨七種型別收成同一份清單。
     ///
     /// 名字取得出來就用內容（文字方塊取內文、形狀取標籤），取不出來就用型別名
     /// —— 面板上一整排「未命名」的話，使用者分不出哪一列是哪一個。
     private var pageStackableObjects: [StackableObject] {
-        let page = currentPageIndex
+        stackableObjects(forPage: currentPageIndex)
+    }
+
+    /// 指定頁面上的所有可堆疊物件。連續模式下每一頁各有自己的順序，
+    /// 不能只認焦點頁。
+    private func stackableObjects(forPage page: Int) -> [StackableObject] {
         let unnamed = localizationManager.localized("layer_unnamed")
         func title(_ raw: String, _ fallbackKey: String) -> String {
             let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -10521,6 +10919,7 @@ struct AttachmentItemView: View {
                         .rotationEffect(.degrees(attachment.canvasRotation))
                         .contextMenu {
                             ObjectFrameStyleMenu(style: $attachment)
+                            ObjectOrderMenu(id: attachment.id)
                             Divider()
                             Button(role: .destructive, action: onDelete) {
                                 Label(localizationManager.localized("delete"), systemImage: "trash")
@@ -10969,6 +11368,7 @@ struct TextAttachmentItemView: View {
                     onChange: broadcastTextChange,
                     schedule: afterContextMenuDismisses
                 )
+                ObjectOrderMenu(id: textItem.id)
 
                 Divider()
 
@@ -11179,6 +11579,13 @@ struct LinkAttachmentItemView: View {
             // 卡片本體跟著轉；把手掛在旋轉**外面**的 overlay ——
             // 包進去的話拖曳算出的角度會疊加自身旋轉，卡片會失控加速。
             .rotationEffect(.degrees(linkItem.canvasRotation))
+            .contextMenu {
+                ObjectOrderMenu(id: linkItem.id)
+                Divider()
+                Button(role: .destructive, action: onDelete) {
+                    Label(localizationManager.localized("delete"), systemImage: "trash")
+                }
+            }
             .overlay {
                 if isSelected {
                     GeometryReader { geo in
@@ -11555,6 +11962,7 @@ struct Model3DCanvasItemView: View {
             )
             .contextMenu {
                 ObjectFrameStyleMenu(style: $item)
+                ObjectOrderMenu(id: item.id)
                 Divider()
                 Button(role: .destructive, action: onDelete) {
                     Label(localizationManager.localized("delete"), systemImage: "trash")

@@ -414,6 +414,46 @@ extension LocalizationManager {
             .ko: "모든 테마",
             .th: "ทุกธีม"
         ],
+        "anchor_auto": [
+            .zhHant: "自動",
+            .en: "Auto",
+            .zhHans: "自动",
+            .ja: "自動",
+            .ko: "자동",
+            .th: "อัตโนมัติ"
+        ],
+        "anchor_bottom": [
+            .zhHant: "下",
+            .en: "Bottom",
+            .zhHans: "下",
+            .ja: "下",
+            .ko: "아래",
+            .th: "ล่าง"
+        ],
+        "anchor_left": [
+            .zhHant: "左",
+            .en: "Left",
+            .zhHans: "左",
+            .ja: "左",
+            .ko: "왼쪽",
+            .th: "ซ้าย"
+        ],
+        "anchor_right": [
+            .zhHant: "右",
+            .en: "Right",
+            .zhHans: "右",
+            .ja: "右",
+            .ko: "오른쪽",
+            .th: "ขวา"
+        ],
+        "anchor_top": [
+            .zhHant: "上",
+            .en: "Top",
+            .zhHans: "上",
+            .ja: "上",
+            .ko: "위",
+            .th: "บน"
+        ],
         "app_slogan": [
             .zhHant: "手寫與錄音雙向對齊 · 離線優先 · 開源透明",
             .en: "Dual Ink & Audio Sync · Offline First · Open Source",
@@ -1406,6 +1446,46 @@ extension LocalizationManager {
             .ko: "선택을 해제하고 이전 도구로 돌아가기",
             .th: "ยกเลิกการเลือกและกลับไปยังเครื่องมือก่อนหน้า"
         ],
+        "cap_arrow": [
+            .zhHant: "箭頭",
+            .en: "Arrow",
+            .zhHans: "箭头",
+            .ja: "矢印",
+            .ko: "화살표",
+            .th: "ลูกศร"
+        ],
+        "cap_circle": [
+            .zhHant: "圓點",
+            .en: "Circle",
+            .zhHans: "圆点",
+            .ja: "丸",
+            .ko: "원",
+            .th: "วงกลม"
+        ],
+        "cap_diamond": [
+            .zhHant: "菱形",
+            .en: "Diamond",
+            .zhHans: "菱形",
+            .ja: "ひし形",
+            .ko: "마름모",
+            .th: "ข้าวหลามตัด"
+        ],
+        "cap_hollow": [
+            .zhHant: "空心箭頭",
+            .en: "Hollow arrow",
+            .zhHans: "空心箭头",
+            .ja: "白抜き矢印",
+            .ko: "빈 화살표",
+            .th: "ลูกศรกลวง"
+        ],
+        "cap_none": [
+            .zhHant: "無",
+            .en: "None",
+            .zhHans: "无",
+            .ja: "なし",
+            .ko: "없음",
+            .th: "ไม่มี"
+        ],
         "card_style": [
             .zhHant: "卡片樣式",
             .en: "Card Style",
@@ -2358,6 +2438,62 @@ extension LocalizationManager {
             .ko: "확인",
             .th: "ตกลง"
         ],
+        "connection_edit": [
+            .zhHant: "編修連接線",
+            .en: "Edit Connector",
+            .zhHans: "编辑连接线",
+            .ja: "コネクタを編集",
+            .ko: "커넥터 편집",
+            .th: "แก้ไขเส้นเชื่อม"
+        ],
+        "connection_end_cap": [
+            .zhHant: "終點端點",
+            .en: "End end",
+            .zhHans: "终点端点",
+            .ja: "終点",
+            .ko: "끝점",
+            .th: "ปลายสิ้นสุด"
+        ],
+        "connection_from_anchor": [
+            .zhHant: "出線位置",
+            .en: "Exit point",
+            .zhHans: "出线位置",
+            .ja: "出発点",
+            .ko: "시작 위치",
+            .th: "จุดออก"
+        ],
+        "connection_handle": [
+            .zhHant: "拖曳到另一個形狀以連接",
+            .en: "Drag to another shape to connect",
+            .zhHans: "拖到另一个形状以连接",
+            .ja: "別の図形へドラッグして接続",
+            .ko: "다른 도형으로 드래그하여 연결",
+            .th: "ลากไปยังรูปร่างอื่นเพื่อเชื่อมต่อ"
+        ],
+        "connection_reverse": [
+            .zhHant: "反轉方向",
+            .en: "Reverse direction",
+            .zhHans: "反转方向",
+            .ja: "向きを反転",
+            .ko: "방향 반전",
+            .th: "กลับทิศทาง"
+        ],
+        "connection_route": [
+            .zhHant: "走線方式",
+            .en: "Routing",
+            .zhHans: "走线方式",
+            .ja: "ルーティング",
+            .ko: "경로 방식",
+            .th: "รูปแบบเส้นทาง"
+        ],
+        "connection_start_cap": [
+            .zhHant: "起點端點",
+            .en: "Start end",
+            .zhHans: "起点端点",
+            .ja: "始点",
+            .ko: "시작점",
+            .th: "ปลายเริ่มต้น"
+        ],
         "connection_status": [
             .zhHant: "連線狀態",
             .en: "Connection Status",
@@ -2365,6 +2501,14 @@ extension LocalizationManager {
             .ja: "接続状態",
             .ko: "연결 상태",
             .th: "สถานะการเชื่อมต่อ"
+        ],
+        "connection_to_anchor": [
+            .zhHant: "入線位置",
+            .en: "Entry point",
+            .zhHans: "入线位置",
+            .ja: "到達点",
+            .ko: "도착 위치",
+            .th: "จุดเข้า"
         ],
         "continue": [
             .zhHant: "繼續",
@@ -2645,6 +2789,30 @@ extension LocalizationManager {
             .ja: "三色配色",
             .ko: "3색 배색",
             .th: "สามสีเท่ากัน"
+        ],
+        "dash_dashed": [
+            .zhHant: "虛線",
+            .en: "Dashed",
+            .zhHans: "虚线",
+            .ja: "破線",
+            .ko: "파선",
+            .th: "เส้นประ"
+        ],
+        "dash_dotted": [
+            .zhHant: "點線",
+            .en: "Dotted",
+            .zhHans: "点线",
+            .ja: "点線",
+            .ko: "점선",
+            .th: "เส้นจุด"
+        ],
+        "dash_solid": [
+            .zhHant: "實線",
+            .en: "Solid",
+            .zhHans: "实线",
+            .ja: "実線",
+            .ko: "실선",
+            .th: "เส้นทึบ"
         ],
         "data_and_sync": [
             .zhHant: "資料與同步",
@@ -3803,6 +3971,22 @@ extension LocalizationManager {
             .ja: "フォルダ",
             .ko: "폴더",
             .th: "โฟลเดอร์"
+        ],
+        "font_bold": [
+            .zhHant: "粗體",
+            .en: "Bold",
+            .zhHans: "粗体",
+            .ja: "太字",
+            .ko: "굵게",
+            .th: "ตัวหนา"
+        ],
+        "font_italic": [
+            .zhHant: "斜體",
+            .en: "Italic",
+            .zhHans: "斜体",
+            .ja: "斜体",
+            .ko: "기울임",
+            .th: "ตัวเอียง"
         ],
         "font_mono": [
             .zhHant: "等寬",
@@ -5251,6 +5435,14 @@ extension LocalizationManager {
             .ja: "ドキュメントをインポート",
             .ko: "문서 가져오기"
         ],
+        "import_document_done": [
+            .zhHant: "已匯入文件到這本筆記",
+            .en: "Document imported into this note",
+            .zhHans: "已导入文档到这本笔记",
+            .ja: "ドキュメントをこのノートに取り込みました",
+            .ko: "문서를 이 노트로 가져왔습니다",
+            .th: "นำเข้าเอกสารลงในโน้ตนี้แล้ว"
+        ],
         "import_empty_file": [
             .zhHant: "這個檔案是空的 —— 它可能還在從雲端下載",
             .en: "That file is empty — it may still be downloading from your cloud",
@@ -5810,6 +6002,14 @@ extension LocalizationManager {
             .ja: "レイヤー",
             .ko: "레이어",
             .th: "เลเยอร์"
+        ],
+        "line_endpoint_handle": [
+            .zhHant: "拖曳端點",
+            .en: "Drag endpoint",
+            .zhHans: "拖动端点",
+            .ja: "端点をドラッグ",
+            .ko: "끝점 드래그",
+            .th: "ลากปลายเส้น"
         ],
         "line_spacing": [
             .zhHant: "行距",
@@ -8680,6 +8880,22 @@ extension LocalizationManager {
             .ko: "핸들을 끌어 회전하세요. 15° 부근에서 스냅됩니다",
             .th: "ลากที่จับเพื่อหมุน จะดูดเข้าทุก 15°"
         ],
+        "route_elbow": [
+            .zhHant: "直角折線",
+            .en: "Elbow",
+            .zhHans: "直角折线",
+            .ja: "直角",
+            .ko: "꺾은선",
+            .th: "เส้นหักมุม"
+        ],
+        "route_straight": [
+            .zhHant: "直線",
+            .en: "Straight",
+            .zhHans: "直线",
+            .ja: "直線",
+            .ko: "직선",
+            .th: "เส้นตรง"
+        ],
         "rule_of_thirds_desc": [
             .zhHant: "標準三等分縱橫輔助線與交會四點焦點指示",
             .en: "Standard 3x3 grid lines with 4 intersection power points",
@@ -9080,6 +9296,30 @@ extension LocalizationManager {
             .ko: "설정",
             .th: "การตั้งค่า"
         ],
+        "shape_change_kind": [
+            .zhHant: "形狀種類",
+            .en: "Shape type",
+            .zhHans: "形状种类",
+            .ja: "図形の種類",
+            .ko: "도형 종류",
+            .th: "ชนิดรูปร่าง"
+        ],
+        "shape_corner": [
+            .zhHant: "圓角",
+            .en: "Corner radius",
+            .zhHans: "圆角",
+            .ja: "角丸",
+            .ko: "모서리 반경",
+            .th: "รัศมีมุม"
+        ],
+        "shape_duplicate": [
+            .zhHant: "複製",
+            .en: "Duplicate",
+            .zhHans: "复制",
+            .ja: "複製",
+            .ko: "복제",
+            .th: "ทำสำเนา"
+        ],
         "shape_edit": [
             .zhHant: "編修形狀",
             .en: "Edit Shape",
@@ -9095,6 +9335,30 @@ extension LocalizationManager {
             .ja: "塗りつぶし",
             .ko: "채우기",
             .th: "สีพื้น"
+        ],
+        "shape_flowchart_hint": [
+            .zhHant: "點選形狀後，從四邊的「+」拖到另一個形狀即可連線",
+            .en: "Select a shape, then drag from a “+” on its edge to another shape to connect them",
+            .zhHans: "选中形状后，从四边的“+”拖到另一个形状即可连线",
+            .ja: "図形を選び、辺の「+」から別の図形へドラッグすると接続できます",
+            .ko: "도형을 선택한 뒤 가장자리의 “+”에서 다른 도형으로 드래그하면 연결됩니다",
+            .th: "เลือกรูปร่าง แล้วลากจาก “+” ที่ขอบไปยังรูปร่างอื่นเพื่อเชื่อมต่อ"
+        ],
+        "shape_geometry_section": [
+            .zhHant: "位置與大小",
+            .en: "Position & size",
+            .zhHans: "位置与大小",
+            .ja: "位置とサイズ",
+            .ko: "위치 및 크기",
+            .th: "ตำแหน่งและขนาด"
+        ],
+        "shape_height": [
+            .zhHant: "高",
+            .en: "Height",
+            .zhHans: "高",
+            .ja: "高さ",
+            .ko: "높이",
+            .th: "สูง"
         ],
         "shape_kind_arrow": [
             .zhHant: "箭頭",
@@ -9544,6 +9808,14 @@ extension LocalizationManager {
             .ko: "레이블",
             .th: "ป้ายกำกับ"
         ],
+        "shape_line_style": [
+            .zhHant: "線條樣式",
+            .en: "Line style",
+            .zhHans: "线条样式",
+            .ja: "線のスタイル",
+            .ko: "선 스타일",
+            .th: "ลักษณะเส้น"
+        ],
         "shape_line_width": [
             .zhHant: "線條粗細",
             .en: "Line Width",
@@ -9559,6 +9831,14 @@ extension LocalizationManager {
             .ja: "%@ 個のノード",
             .ko: "노드 %@개",
             .th: "%@ โหนด"
+        ],
+        "shape_rotation": [
+            .zhHant: "旋轉角度",
+            .en: "Rotation",
+            .zhHans: "旋转角度",
+            .ja: "回転角度",
+            .ko: "회전 각도",
+            .th: "มุมหมุน"
         ],
         "shape_section_basic": [
             .zhHant: "基本形狀",
@@ -9607,6 +9887,22 @@ extension LocalizationManager {
             .ja: "図形スタイル",
             .ko: "도형 스타일",
             .th: "สไตล์รูปทรง"
+        ],
+        "shape_text_section": [
+            .zhHant: "文字",
+            .en: "Text",
+            .zhHans: "文字",
+            .ja: "テキスト",
+            .ko: "텍스트",
+            .th: "ข้อความ"
+        ],
+        "shape_width": [
+            .zhHant: "寬",
+            .en: "Width",
+            .zhHans: "宽",
+            .ja: "幅",
+            .ko: "너비",
+            .th: "กว้าง"
         ],
         "share_invite_link": [
             .zhHant: "分享邀請連結",

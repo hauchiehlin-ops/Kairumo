@@ -317,6 +317,16 @@ enum NotebookPackageBridge {
                         cornerRadius: Float(shape.cornerRadius),
                         text: shape.label
                     ) else { continue }
+                    // 旋轉走核心的物件變換（繞中心旋轉），不另開欄位 ——
+                    // 線狀形狀的方向就是靠它：一條斜線在檔案裡是「扁外框 ＋ 旋轉」，
+                    // 沒帶旋轉的話，另一台裝置上它會變成外框的對角線。
+                    if abs(shape.canvasRotation.truncatingRemainder(dividingBy: 360)) > 0.01 {
+                        _ = try? session.rotateObject(
+                            objectId: objectId,
+                            radians: Float(shape.canvasRotation * .pi / 180),
+                            cx: Float(shape.x + shape.width / 2),
+                            cy: Float(shape.y + shape.height / 2))
+                    }
                     shapeObjectIds[shape.id] = objectId
                     summary.shapeCount += 1
                 }
@@ -343,16 +353,33 @@ enum NotebookPackageBridge {
                           let to = shapeObjectIds[link.toShapeId] else { continue }
                     let connectionId = stableBlockId(link.id)
                     if skipBlockIds.contains(connectionId) { continue }
+                    let fields = link.coreFields(
+                        from: document.shapeAttachments?.first { $0.id == link.fromShapeId },
+                        to: document.shapeAttachments?.first { $0.id == link.toShapeId })
                     _ = try session.insertConnectionWithId(
                         pageId: pageId,
                         objectId: connectionId,
                         fromObjectId: from, toObjectId: to,
-                        fromAnchor: .center, toAnchor: .center,
-                        route: .straight,
-                        startCap: .none, endCap: .arrow,
+                        fromAnchor: fields.fromAnchor, toAnchor: fields.toAnchor,
+                        route: fields.route,
+                        startCap: fields.startCap, endCap: fields.endCap,
                         label: link.label
                     )
                     summary.connectionCount += 1
+                }
+
+                // 形狀與連接線的樣式：一個物件一個信封（核心的形狀物件建立後不能改，也沒有顏色欄位）。
+                for shape in document.shapeAttachments?.filter({ $0.pageIndex == index }) ?? []
+                where shapeObjectIds[shape.id] != nil {
+                    try writeEnvelope(
+                        kind: "shapestyle", id: "style:" + stableBlockId(shape.id), payload: ShapeStyleMeta(from: shape),
+                        png: nil, x: shape.x, y: shape.y, width: 1, height: 1)
+                }
+                for link in document.connectionAttachments?.filter({ $0.pageIndex == index }) ?? []
+                where shapeObjectIds[link.fromShapeId] != nil && shapeObjectIds[link.toShapeId] != nil {
+                    try writeEnvelope(
+                        kind: "connstyle", id: "style:" + stableBlockId(link.id), payload: ConnectionStyleMeta(from: link),
+                        png: nil, x: 0, y: 0, width: 1, height: 1)
                 }
 
                 for image in document.attachments?.filter({ $0.pageIndex == index }) ?? [] {
@@ -629,6 +656,9 @@ enum NotebookPackageBridge {
         var pins: [NoteCommentPin] = []
         var tapes: [NoteTapeAttachment] = []
         var stickies: [StickyAnnotationAnchor] = []
+        /// 形狀與連接線的樣式，以物件 id（小寫）為鍵。
+        var shapeStyles: [String: ShapeStyleMeta] = [:]
+        var connectionStyles: [String: ConnectionStyleMeta] = [:]
         /// 檔名（小寫）→ 名字。
         var recordingTitles: [String: String] = [:]
     }
@@ -663,6 +693,12 @@ enum NotebookPackageBridge {
             if var item = ObjectEnvelope.decode(StickyAnnotationAnchor.self, kind: "sticky", from: appearance) {
                 item.pageIndex = pageIndex; out.stickies.append(item)
             }
+        case "shapestyle":
+            if let item = ObjectEnvelope.decode(ShapeStyleMeta.self, kind: "shapestyle", from: appearance),
+               let id = item.id { out.shapeStyles[id.lowercased()] = item }
+        case "connstyle":
+            if let item = ObjectEnvelope.decode(ConnectionStyleMeta.self, kind: "connstyle", from: appearance),
+               let id = item.id { out.connectionStyles[id.lowercased()] = item }
         case "rectitle":
             if let item = ObjectEnvelope.decode(RecordingTitle.self, kind: "rectitle", from: appearance) {
                 out.recordingTitles[item.fileName.lowercased()] = item.title
@@ -829,6 +865,14 @@ enum NotebookPackageBridge {
         for item in document.stickyAnchors ?? [] {
             envelope(kind: "sticky", id: item.id, payload: item,
                      x: CGFloat(item.anchorOriginX), y: CGFloat(item.anchorOriginY))
+        }
+        for item in document.shapeAttachments ?? [] {
+            envelope(kind: "shapestyle", id: "style:" + stableBlockId(item.id), payload: ShapeStyleMeta(from: item),
+                     x: item.x, y: item.y)
+        }
+        for item in document.connectionAttachments ?? [] {
+            envelope(kind: "connstyle", id: "style:" + stableBlockId(item.id), payload: ConnectionStyleMeta(from: item),
+                     x: 0, y: 0)
         }
         for (fileName, title) in recordingTitles {
             envelope(
@@ -1138,40 +1182,66 @@ enum NotebookPackageBridge {
                     guard let core = try session.shapeObject(
                         pageId: pageId, objectId: object.id
                     ) else { continue }
-                    // 位移走的是變換，不改寫形狀的原始邊界（ADR-0010）——
-                    // 不套上去的話，搬動過的形狀會跳回原位。
+                    // 位移與旋轉走的是變換，不改寫形狀的原始邊界（ADR-0010）——
+                    // 不套上去的話，搬動過的形狀會跳回原位、轉過的形狀會轉回正的。
+                    // 取**中心**經過變換後的位置當新的中心：純平移時等於原本的
+                    // `minX + dx`，有旋轉時也成立（繞中心旋轉不改變中心）。
                     let transform = (try? session.objectTransform(
                         pageId: pageId, objectId: object.id
                     )) ?? []
-                    let dx = transform.count >= 6 ? CGFloat(transform[4]) : 0
-                    let dy = transform.count >= 6 ? CGFloat(transform[5]) : 0
-                    shapes.append(
-                        NoteShapeAttachment(
-                            id: object.id,
-                            pageIndex: index,
-                            kindName: NoteShapeAttachment.name(of: core.kind),
-                            x: CGFloat(core.minX) + dx,
-                            y: CGFloat(core.minY) + dy,
-                            width: CGFloat(core.maxX - core.minX),
-                            height: CGFloat(core.maxY - core.minY),
-                            cornerRadius: CGFloat(core.cornerRadius),
-                            label: core.text,
-                            groupId: entry.groupId
-                        )
+                    let w = CGFloat(core.maxX - core.minX)
+                    let h = CGFloat(core.maxY - core.minY)
+                    var originX = CGFloat(core.minX)
+                    var originY = CGFloat(core.minY)
+                    var rotation: Double?
+                    var width = w, height = h
+                    if transform.count >= 6 {
+                        let cx0 = CGFloat(core.minX + core.maxX) / 2
+                        let cy0 = CGFloat(core.minY + core.maxY) / 2
+                        let nx = CGFloat(transform[0]) * cx0 + CGFloat(transform[2]) * cy0 + CGFloat(transform[4])
+                        let ny = CGFloat(transform[1]) * cx0 + CGFloat(transform[3]) * cy0 + CGFloat(transform[5])
+                        // 縮放：線性部分是「先縮放、再旋轉」，兩軸的縮放量是各自那一欄的長度。
+                        // 別台裝置縮放過形狀時，大小就是靠它回來的。
+                        let sx = CGFloat(hypot(transform[0], transform[1]))
+                        let sy = CGFloat(hypot(transform[2], transform[3]))
+                        if sx > 0.001, sy > 0.001 {
+                            width = w * sx
+                            height = h * sy
+                        }
+                        originX = nx - width / 2
+                        originY = ny - height / 2
+                        var degrees = Double(atan2(transform[1], transform[0])) * 180 / .pi
+                        if degrees < 0 { degrees += 360 }
+                        // 浮點誤差：轉了又轉回來會剩下 1e-5 度，不要當成「有旋轉」存下來。
+                        if degrees > 0.01 && degrees < 359.99 { rotation = degrees }
+                    }
+                    var imported = NoteShapeAttachment(
+                        id: object.id,
+                        pageIndex: index,
+                        kindName: NoteShapeAttachment.name(of: core.kind),
+                        x: originX,
+                        y: originY,
+                        width: width,
+                        height: height,
+                        cornerRadius: CGFloat(core.cornerRadius),
+                        label: core.text,
+                        groupId: entry.groupId
                     )
+                    imported.rotationDegrees = rotation
+                    shapes.append(imported)
                 case .connection:
                     guard let core = try session.connectionObject(
                         pageId: pageId, objectId: object.id
                     ) else { continue }
-                    connections.append(
-                        NoteConnectionAttachment(
-                            id: object.id,
-                            pageIndex: index,
-                            fromShapeId: core.fromObjectId,
-                            toShapeId: core.toObjectId,
-                            label: core.label
-                        )
+                    var imported = NoteConnectionAttachment(
+                        id: object.id,
+                        pageIndex: index,
+                        fromShapeId: core.fromObjectId,
+                        toShapeId: core.toObjectId,
+                        label: core.label
                     )
+                    imported.apply(core: core)
+                    connections.append(imported)
                 default:
                     continue
                 }
@@ -1208,6 +1278,25 @@ enum NotebookPackageBridge {
         if let json = session.notebookMeta(), let meta = NotebookMeta.decode(from: json) {
             meta.apply(to: &document)
             envelopeAuthoritative = meta.objectEnvelopes == 1
+            // 形狀與連接線的樣式（核心的物件模型沒有這些欄位）。
+            if let styles = meta.shapeStyles {
+                for i in shapes.indices {
+                    styles[shapes[i].id.lowercased()]?.apply(to: &shapes[i])
+                }
+            }
+            if let styles = meta.connectionStyles {
+                for i in connections.indices {
+                    styles[connections[i].id.lowercased()]?.apply(to: &connections[i])
+                }
+            }
+        }
+
+        // 形狀與連接線的樣式：逐物件信封為準（覆蓋在舊版中繼資料那份之上）。
+        for i in shapes.indices {
+            envelopes.shapeStyles[shapes[i].id.lowercased()]?.apply(to: &shapes[i])
+        }
+        for i in connections.indices {
+            envelopes.connectionStyles[connections[i].id.lowercased()]?.apply(to: &connections[i])
         }
 
         // 信封（逐物件）為準，中繼資料清單裡信封沒有的才補上 —— Android 與舊版只寫清單。

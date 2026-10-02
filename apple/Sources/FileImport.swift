@@ -48,9 +48,12 @@ enum FileImport {
     /// `importCheck` 會在挑完之後擋下不對的格式。把整個挑選器灰掉的話，
     /// 他會以為功能壞了。
     static func allowedTypes(for slot: FfiImportSlot) -> [UTType] {
-        var types = importExtensions(slot: slot).compactMap {
-            UTType(filenameExtension: $0)
-        }
+        // 文件槽：pptx 核心只能存成「預覽用的嵌入區塊」（只知道張數），
+        // 平台沒有原生元件可以把投影片畫出來，收進來會是一個空白的東西 ——
+        // 在挑選器就不要列出（見 `DocumentImport`）。
+        var types = importExtensions(slot: slot)
+            .filter { !(slot == .document && $0 == "pptx") }
+            .compactMap { UTType(filenameExtension: $0) }
         switch slot {
         case .audio:
             if !types.contains(.audio) { types.append(.audio) }

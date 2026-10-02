@@ -368,3 +368,100 @@ public struct CanvasStackPanel: View {
         order.filter { selection.contains($0) }
     }
 }
+
+// MARK: - 每個物件自己的排列入口
+
+/// 單一物件的排列動作。
+public enum ObjectReorderOp: CaseIterable {
+    case toFront, forward, backward, toBack
+
+    /// 套用到順序上。實作全部走上面四個純函式，確保選單、圖層面板與
+    /// 編輯面板行為一致。
+    public func apply(_ id: String, to order: [String]) -> [String] {
+        switch self {
+        case .toFront: return ObjectStacking.bringToFront([id], in: order)
+        case .forward: return ObjectStacking.bringForward([id], in: order)
+        case .backward: return ObjectStacking.sendBackward([id], in: order)
+        case .toBack: return ObjectStacking.sendToBack([id], in: order)
+        }
+    }
+
+    var key: String {
+        switch self {
+        case .toFront: return "layer_bring_front"
+        case .forward: return "layer_bring_forward"
+        case .backward: return "layer_send_backward"
+        case .toBack: return "layer_send_back"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .toFront: return "arrow.up.to.line"
+        case .forward: return "arrow.up"
+        case .backward: return "arrow.down"
+        case .toBack: return "arrow.down.to.line"
+        }
+    }
+}
+
+private struct ObjectReorderKey: EnvironmentKey {
+    static let defaultValue: ((String, ObjectReorderOp) -> Void)? = nil
+}
+
+extension EnvironmentValues {
+    /// 由物件層注入。每一種物件的選單都從這裡取得「調整自己的層級」的能力，
+    /// 而不是各自接一條回呼 —— 七種物件視圖、七份各自的簽章。
+    var objectReorder: ((String, ObjectReorderOp) -> Void)? {
+        get { self[ObjectReorderKey.self] }
+        set { self[ObjectReorderKey.self] = newValue }
+    }
+}
+
+/// 放進物件右鍵／長按選單的四個排列動作。
+struct ObjectOrderMenu: View {
+    let id: String
+    @Environment(\.objectReorder) private var reorder
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+
+    var body: some View {
+        if let reorder {
+            Menu {
+                ForEach(ObjectReorderOp.allCases, id: \.key) { op in
+                    Button {
+                        reorder(id, op)
+                    } label: {
+                        Label(localizationManager.localized(op.key), systemImage: op.symbol)
+                    }
+                }
+            } label: {
+                Label(localizationManager.localized("layers_panel"), systemImage: "square.3.layers.3d")
+            }
+        }
+    }
+}
+
+/// 編輯面板裡的一列排列按鈕。
+struct ObjectOrderBar: View {
+    let id: String
+    @Environment(\.objectReorder) private var reorder
+    @ObservedObject private var localizationManager = LocalizationManager.shared
+
+    var body: some View {
+        if let reorder {
+            HStack(spacing: 6) {
+                ForEach(ObjectReorderOp.allCases, id: \.key) { op in
+                    Button {
+                        reorder(id, op)
+                    } label: {
+                        Image(systemName: op.symbol).frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                    .help(localizationManager.localized(op.key))
+                    .accessibilityLabel(localizationManager.localized(op.key))
+                }
+            }
+        }
+    }
+}

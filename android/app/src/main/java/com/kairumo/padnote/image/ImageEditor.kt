@@ -63,82 +63,86 @@ fun ImageEditor(
         onDismissRequest = onDismiss,
         title = { Text(l("image_style")) },
         text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.height(height.value).verticalScroll(rememberScrollState())
-            ) {
-                Text(l("image_filter"), style = MaterialTheme.typography.labelMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    for (option in ImageFilterStyle.entries) {
+            // 內容與把手包進同一個 Column：AlertDialog 的 text 槽是 Box，
+            // 兩個兄弟會疊在一起，把手蓋住內容最上面 24dp（那一排點不到）。
+            Column {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.height(height.value).verticalScroll(rememberScrollState())
+                ) {
+                    Text(l("image_filter"), style = MaterialTheme.typography.labelMedium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (option in ImageFilterStyle.entries) {
+                            FilterChip(
+                                selected = filter == option,
+                                onClick = { filter = option },
+                                label = { Text(l(option.labelKey)) }
+                            )
+                        }
+                    }
+
+                    Text(l("image_corner_radius"), style = MaterialTheme.typography.labelMedium)
+                    Slider(
+                        value = corner,
+                        onValueChange = { corner = it },
+                        valueRange = 0f..32f
+                    )
+
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         FilterChip(
-                            selected = filter == option,
-                            onClick = { filter = option },
-                            label = { Text(l(option.labelKey)) }
+                            selected = shadow,
+                            onClick = { shadow = !shadow },
+                            label = { Text(l("image_shadow")) }
+                        )
+                        FilterChip(
+                            selected = border,
+                            onClick = { border = !border },
+                            label = { Text(l("object_show_border")) }
                         )
                     }
-                }
 
-                Text(l("image_corner_radius"), style = MaterialTheme.typography.labelMedium)
-                Slider(
-                    value = corner,
-                    onValueChange = { corner = it },
-                    valueRange = 0f..32f
-                )
-
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    FilterChip(
-                        selected = shadow,
-                        onClick = { shadow = !shadow },
-                        label = { Text(l("image_shadow")) }
-                    )
-                    FilterChip(
-                        selected = border,
-                        onClick = { border = !border },
-                        label = { Text(l("object_show_border")) }
-                    )
-                }
-
-                if (border) {
-                    Text(l("border_color"), style = MaterialTheme.typography.labelMedium)
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        // 與形狀樣式面板同一組色 —— 同一份筆記裡兩種物件的
-                        // 可選色不同，使用者會以為是兩套系統。來源在核心。
-                        for (hex in uniffi.padnote_core.borderPalette().map { it.hex }) {
-                            val color = parse(hex) ?: Color.Gray
-                            Box(
-                                modifier = Modifier.size(38.dp).clickable { borderHex = hex },
-                                contentAlignment = Alignment.Center
-                            ) {
+                    if (border) {
+                        Text(l("border_color"), style = MaterialTheme.typography.labelMedium)
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            // 與形狀樣式面板同一組色 —— 同一份筆記裡兩種物件的
+                            // 可選色不同，使用者會以為是兩套系統。來源在核心。
+                            for (hex in uniffi.padnote_core.borderPalette().map { it.hex }) {
+                                val color = parse(hex) ?: Color.Gray
                                 Box(
-                                    Modifier.size(26.dp).background(color, CircleShape).border(
-                                        if (borderHex == hex) 2.5.dp else 1.dp,
-                                        if (borderHex == hex) MaterialTheme.colorScheme.primary
-                                        else MaterialTheme.colorScheme.outline,
-                                        CircleShape
+                                    modifier = Modifier.size(38.dp).clickable { borderHex = hex },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        Modifier.size(26.dp).background(color, CircleShape).border(
+                                            if (borderHex == hex) 2.5.dp else 1.dp,
+                                            if (borderHex == hex) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.outline,
+                                            CircleShape
+                                        )
                                     )
-                                )
+                                }
                             }
                         }
                     }
+
+                    Text(l("image_rotate"), style = MaterialTheme.typography.labelMedium)
+                    Slider(
+                        value = rotation,
+                        onValueChange = { rotation = it },
+                        valueRange = 0f..360f
+                    )
+
+                    TextButton(
+                        onClick = { onDelete(); onDismiss() },
+                        modifier = Modifier.fillMaxWidth()
+                    ) { Text(l("delete"), color = MaterialTheme.colorScheme.error) }
                 }
-
-                Text(l("image_rotate"), style = MaterialTheme.typography.labelMedium)
-                Slider(
-                    value = rotation,
-                    onValueChange = { rotation = it },
-                    valueRange = 0f..360f
-                )
-
-                TextButton(
-                    onClick = { onDelete(); onDismiss() },
-                    modifier = Modifier.fillMaxWidth()
-                ) { Text(l("delete"), color = MaterialTheme.colorScheme.error) }
+                // 底部的拖曳把手：往下拖變高（S-72）。
+                DialogResizeHandle(height, "imageEditor")
             }
-            // 底部的拖曳把手：往下拖變高（S-72）。
-            DialogResizeHandle(height, "imageEditor")
         },
         confirmButton = {
             TextButton(onClick = {

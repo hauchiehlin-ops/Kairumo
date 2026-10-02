@@ -492,6 +492,13 @@ struct TableAttachmentItemView: View {
             // 表格本體跟著轉；把手掛在旋轉**外面**的 overlay ——
             // 包進去的話拖曳算出的角度會疊加自身旋轉，表格會失控加速。
             .rotationEffect(.degrees(table.canvasRotation))
+            .contextMenu {
+                ObjectOrderMenu(id: table.id)
+                Divider()
+                Button(role: .destructive, action: onDelete) {
+                    Label(localizationManager.localized("delete"), systemImage: "trash")
+                }
+            }
             .overlay {
                 if isSelected {
                     // 尺寸取實際版面框：表格高度由列數與內容決定，

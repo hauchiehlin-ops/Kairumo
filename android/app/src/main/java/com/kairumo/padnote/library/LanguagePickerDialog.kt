@@ -62,24 +62,28 @@ fun LanguagePickerDialog(
             }
         },
         text = {
-            Column(
-                Modifier.height(height.value).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                for ((tag, endonym) in languages) {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .selectable(selected = tag == current, onClick = { onPick(tag) }),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(selected = tag == current, onClick = { onPick(tag) })
-                        Text(endonym, style = MaterialTheme.typography.bodyLarge)
+            // 內容與把手包進同一個 Column：AlertDialog 的 text 槽是 Box，
+            // 兩個兄弟會疊在一起，把手蓋住內容最上面 24dp（那一排點不到）。
+            Column {
+                Column(
+                    Modifier.height(height.value).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    for ((tag, endonym) in languages) {
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .selectable(selected = tag == current, onClick = { onPick(tag) }),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(selected = tag == current, onClick = { onPick(tag) })
+                            Text(endonym, style = MaterialTheme.typography.bodyLarge)
+                        }
                     }
                 }
+                // 底部的拖曳把手：往下拖變高（S-72）。
+                DialogResizeHandle(height, "languagePicker")
             }
-            // 底部的拖曳把手：往下拖變高（S-72）。
-            DialogResizeHandle(height, "languagePicker")
         }
     )
 }

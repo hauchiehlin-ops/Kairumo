@@ -229,7 +229,8 @@ private fun TextBoxView(
             StyleHandle(
                 widthDp = box.width,
                 heightDp = box.height,
-                onTap = onEditStyle
+                onTap = onEditStyle,
+                objectId = box.id
             )
 
             // 右下角的縮放把手。原本 Android 完全沒有 —— 文字方塊的大小

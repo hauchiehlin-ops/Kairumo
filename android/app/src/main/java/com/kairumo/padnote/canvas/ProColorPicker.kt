@@ -62,54 +62,58 @@ fun ProColorPicker(
         onDismissRequest = onDismiss,
         title = { Text(l("pro_color")) },
         text = {
-            Column(
-                modifier = Modifier.height(height.value).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                for (group in groups) {
-                    Text(
-                        l(uniffi.padnote_core.designerPaletteGroupKey(group)),
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        for (entry in uniffi.padnote_core.designerPalette(group)) {
-                            val color = parse(entry.hex) ?: Color.Gray
-                            Box(
-                                // 命中區 42dp、色塊 32dp —— 與其他色票同一套作法。
-                                modifier = Modifier.size(42.dp).clickable { picked = entry.hex },
-                                contentAlignment = Alignment.Center
-                            ) {
+            // 內容與把手包進同一個 Column：AlertDialog 的 text 槽是 Box，
+            // 兩個兄弟會疊在一起，把手蓋住內容最上面 24dp（那一排點不到）。
+            Column {
+                Column(
+                    modifier = Modifier.height(height.value).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    for (group in groups) {
+                        Text(
+                            l(uniffi.padnote_core.designerPaletteGroupKey(group)),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold
+                        )
+                        FlowRow(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            for (entry in uniffi.padnote_core.designerPalette(group)) {
+                                val color = parse(entry.hex) ?: Color.Gray
                                 Box(
-                                    Modifier
-                                        .size(32.dp)
-                                        .background(color, RoundedCornerShape(6.dp))
-                                        .border(
-                                            if (picked == entry.hex) 3.dp else 1.dp,
-                                            if (picked == entry.hex) MaterialTheme.colorScheme.primary
-                                            else MaterialTheme.colorScheme.outline,
-                                            RoundedCornerShape(6.dp)
-                                        )
-                                )
+                                    // 命中區 42dp、色塊 32dp —— 與其他色票同一套作法。
+                                    modifier = Modifier.size(42.dp).clickable { picked = entry.hex },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        Modifier
+                                            .size(32.dp)
+                                            .background(color, RoundedCornerShape(6.dp))
+                                            .border(
+                                                if (picked == entry.hex) 3.dp else 1.dp,
+                                                if (picked == entry.hex) MaterialTheme.colorScheme.primary
+                                                else MaterialTheme.colorScheme.outline,
+                                                RoundedCornerShape(6.dp)
+                                            )
+                                    )
+                                }
                             }
                         }
                     }
-                }
 
-                picked?.let {
-                    Text(
-                        "${l("hex_code")} $it",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    picked?.let {
+                        Text(
+                            "${l("hex_code")} $it",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
+                // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+                // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+                DialogResizeHandle(height, "proColorPicker")
             }
-            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
-            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
-            DialogResizeHandle(height, "proColorPicker")
         },
         confirmButton = {
             TextButton(

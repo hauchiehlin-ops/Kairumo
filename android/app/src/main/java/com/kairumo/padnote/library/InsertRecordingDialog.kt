@@ -61,61 +61,65 @@ fun InsertRecordingDialog(
         onDismissRequest = onDismiss,
         title = { Text(l("insert_to_notebook")) },
         text = {
-            Column(
-                Modifier.height(height.value).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Text(recording.file.name, fontWeight = FontWeight.SemiBold)
-                Text(
-                    "${recording.bytes / 1024} KB",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-
-                Text(l("all_notebooks"), style = MaterialTheme.typography.labelSmall)
-                if (entries.isEmpty()) {
+            // 內容與把手包進同一個 Column：AlertDialog 的 text 槽是 Box，
+            // 兩個兄弟會疊在一起，把手蓋住內容最上面 24dp（那一排點不到）。
+            Column {
+                Column(
+                    Modifier.height(height.value).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(recording.file.name, fontWeight = FontWeight.SemiBold)
                     Text(
-                        l("notebook_empty"),
+                        "${recording.bytes / 1024} KB",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                }
-                for (entry in entries) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable {
-                                selected = entry
-                                page = page.coerceIn(1, maxOf(1, entry.pageCount))
-                            }
-                            .padding(vertical = 8.dp)
-                    ) {
-                        Text(entry.title, Modifier.weight(1f))
-                        if (entry.id == selected?.id) Text("✓")
-                    }
-                }
 
-                selected?.let { entry ->
-                    // 頁次要讓使用者選 —— 一律塞到第 1 頁的話，十頁的會議
-                    // 記錄裡那段錄音永遠離它對應的段落十頁遠，等於沒有插。
-                    Text(l("insert_audio_page"), style = MaterialTheme.typography.labelSmall)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(
-                            onClick = { if (page > 1) page-- },
-                            enabled = page > 1
-                        ) { Text("−") }
-                        Text("${l("page_label")} $page / ${maxOf(1, entry.pageCount)}")
-                        TextButton(
-                            onClick = { if (page < entry.pageCount) page++ },
-                            enabled = page < entry.pageCount
-                        ) { Text("＋") }
+                    Text(l("all_notebooks"), style = MaterialTheme.typography.labelSmall)
+                    if (entries.isEmpty()) {
+                        Text(
+                            l("notebook_empty"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    for (entry in entries) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    selected = entry
+                                    page = page.coerceIn(1, maxOf(1, entry.pageCount))
+                                }
+                                .padding(vertical = 8.dp)
+                        ) {
+                            Text(entry.title, Modifier.weight(1f))
+                            if (entry.id == selected?.id) Text("✓")
+                        }
+                    }
+
+                    selected?.let { entry ->
+                        // 頁次要讓使用者選 —— 一律塞到第 1 頁的話，十頁的會議
+                        // 記錄裡那段錄音永遠離它對應的段落十頁遠，等於沒有插。
+                        Text(l("insert_audio_page"), style = MaterialTheme.typography.labelSmall)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(
+                                onClick = { if (page > 1) page-- },
+                                enabled = page > 1
+                            ) { Text("−") }
+                            Text("${l("page_label")} $page / ${maxOf(1, entry.pageCount)}")
+                            TextButton(
+                                onClick = { if (page < entry.pageCount) page++ },
+                                enabled = page < entry.pageCount
+                            ) { Text("＋") }
+                        }
                     }
                 }
+                // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+                // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+                DialogResizeHandle(height, "insertRecording")
             }
-            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
-            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
-            DialogResizeHandle(height, "insertRecording")
         },
         confirmButton = {
             TextButton(

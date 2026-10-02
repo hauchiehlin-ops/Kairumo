@@ -88,6 +88,12 @@ struct NotebookMeta: Codable, Hashable {
     /// Android 改了清單會把旗標清掉（見 Android `NotebookMeta`），那一輪回到聯集。
     var objectEnvelopes: Int?
 
+    /// **舊版寫的**形狀與連接線樣式（整本一個暫存器，最後寫入者贏）。只讀、不再寫：
+    /// 現在每個形狀、每條連接線各是一個逐物件信封（`shapestyle`／`connstyle`，見
+    /// `ObjectEnvelope`），兩台裝置改不同形狀不會互相覆蓋。匯入時信封為準，這裡的當後備。
+    var shapeStyles: [String: ShapeStyleMeta]?
+    var connectionStyles: [String: ConnectionStyleMeta]?
+
     // MARK: - JSON
 
     private static let encoder: JSONEncoder = {

@@ -1520,6 +1520,23 @@ enum NotebookSyncCoordinator {
         keep(\.shapeAttachments); keep(\.connectionAttachments); keep(\.linkAttachments)
         keep(\.model3DAttachments); keep(\.audioAttachments); keep(\.commentPins)
         keep(\.tapeAttachments); keep(\.stickyAnchors)
+
+        // 形狀與連接線的外觀不在核心的物件模型裡 —— 匯入的版本只有幾何。
+        // 沒被上面「使用者剛改過」那條路保住的，也要把本機的外觀帶回來。
+        if var shapes = merged.shapeAttachments, let mine = local.shapeAttachments {
+            let byId = Dictionary(mine.map { ($0.id.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
+            for i in shapes.indices {
+                if let m = byId[shapes[i].id.lowercased()] { shapes[i].adoptStyle(from: m) }
+            }
+            merged.shapeAttachments = shapes
+        }
+        if var links = merged.connectionAttachments, let mine = local.connectionAttachments {
+            let byId = Dictionary(mine.map { ($0.id.lowercased(), $0) }, uniquingKeysWith: { first, _ in first })
+            for i in links.indices {
+                if let m = byId[links[i].id.lowercased()] { links[i].adoptStyle(from: m) }
+            }
+            merged.connectionAttachments = links
+        }
         return (merged, preserved)
     }
 

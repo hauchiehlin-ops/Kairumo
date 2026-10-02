@@ -316,6 +316,7 @@ struct AudioAttachmentItemView: View {
             isSelected.toggle()
         }
         .contextMenu {
+            ObjectOrderMenu(id: item.id)
             Button {
                 SheetCoordinator.shared.presentFromMenu {
                     performTranscribe()

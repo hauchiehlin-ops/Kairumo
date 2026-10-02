@@ -22,7 +22,44 @@ import uniffi.padnote_core.PadnoteSession
  *
  * 所以這裡的做法是：原樣讀進 `JSONObject`，只改自己要改的鍵，再原樣寫回去。
  */
-class NotebookMeta private constructor(private val root: JSONObject) {
+class NotebookMeta private constructor(private var root: JSONObject) {
+
+    /**
+     * 載入當下的樣子。落盤時拿它判斷「這個實例動過哪些鍵」。
+     *
+     * 編輯器裡同時有好幾個實例（編輯器本體、連續頁面模式的每一頁、形狀儲存……），
+     * 各自把**整份** `root` 寫回去的話，後寫的會把先寫的蓋掉 —— 一個實例改了
+     * 物件順序，另一個實例（載入時還沒有那個鍵的）下一次落盤就把它洗掉，
+     * 而且沒有任何錯誤。所以落盤時只寫**自己動過的鍵**，其餘的以磁碟上最新的為準。
+     */
+    private var snapshot: JSONObject = JSONObject(root.toString())
+
+    private fun flush(session: PadnoteSession?) {
+        if (session == null) return
+        runCatching {
+            val latest = runCatching { JSONObject(session.notebookMeta() ?: "{}") }
+                .getOrNull() ?: JSONObject()
+            val keys = HashSet<String>().apply {
+                root.keys().forEach { add(it) }
+                snapshot.keys().forEach { add(it) }
+            }
+            for (key in keys) {
+                val mine = root.opt(key)
+                val before = snapshot.opt(key)
+                val changed = when {
+                    mine == null && before == null -> false
+                    mine == null || before == null -> true
+                    else -> mine.toString() != before.toString()
+                }
+                if (!changed) continue
+                if (mine == null) latest.remove(key) else latest.put(key, mine)
+            }
+            session.setNotebookMeta(latest.toString())
+            // 之後的讀取要看得到別的實例剛寫的東西。
+            root = latest
+            snapshot = JSONObject(latest.toString())
+        }
+    }
 
     companion object {
         private const val KEY_ORDER_BY_PAGE = "objectOrderByPage"
@@ -79,6 +116,17 @@ class NotebookMeta private constructor(private val root: JSONObject) {
          */
         private const val KEY_STICKY_ANCHORS = "stickyAnchors"
 
+        /**
+         * 形狀與連接線的樣式，以物件 id 為鍵。**鍵名與 Apple 的
+         * `NotebookMeta.shapeStyles`／`connectionStyles` 一致。**
+         *
+         * 核心的形狀物件只有種類、外框、圓角與文字，而且建立之後沒有「修改」的 API；
+         * 顏色、粗細、虛實、字級、連接線的連接點與端點樣式核心完全沒有欄位。
+         * 整包放進這份同步的中繼資料，兩個平台讀寫同一組鍵。
+         */
+        private const val KEY_SHAPE_STYLES = "shapeStyles"
+        private const val KEY_CONNECTION_STYLES = "connectionStyles"
+
         fun load(session: PadnoteSession?): NotebookMeta {
             val json = runCatching { session?.notebookMeta() }.getOrNull()
             val obj = runCatching { JSONObject(json ?: "{}") }.getOrNull() ?: JSONObject()
@@ -115,13 +163,13 @@ class NotebookMeta private constructor(private val root: JSONObject) {
 
     fun setPageFormatId(session: PadnoteSession?, formatId: String) {
         root.put(KEY_PAGE_FORMAT, formatId)
-        runCatching { session?.setNotebookMeta(root.toString()) }
+        flush(session)
     }
 
     /** 建立筆記本時記下紙張，重開時版面才回得來。 */
     fun setPaperId(session: PadnoteSession?, paperId: String) {
         root.put(KEY_TEMPLATE, paperId)
-        runCatching { session?.setNotebookMeta(root.toString()) }
+        flush(session)
     }
 
     /**
@@ -131,7 +179,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
      */
     fun setPaletteId(session: PadnoteSession?, paletteId: String) {
         root.put(KEY_PALETTE, paletteId)
-        runCatching { session?.setNotebookMeta(root.toString()) }
+        flush(session)
     }
 
     /** 插入某一頁的樣板（S-93）。 */
@@ -146,7 +194,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         val safeIndex = atIndex.coerceIn(0, currentTemplates.size)
         currentTemplates.add(safeIndex, paperId)
         root.put(KEY_PAGE_TEMPLATES, JSONArray(currentTemplates))
-        runCatching { session?.setNotebookMeta(root.toString()) }
+        flush(session)
     }
 
     /**
@@ -208,7 +256,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
             root.put(KEY_ORDER_BY_PAGE, remapped)
         }
 
-        runCatching { session?.setNotebookMeta(root.toString()) }
+        flush(session)
     }
 
     /** 移除某一頁的樣板。 */
@@ -224,7 +272,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
             currentTemplates.removeAt(atIndex)
         }
         root.put(KEY_PAGE_TEMPLATES, JSONArray(currentTemplates))
-        runCatching { session?.setNotebookMeta(root.toString()) }
+        flush(session)
     }
 
     /**
@@ -244,7 +292,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         val map = root.optJSONObject(KEY_ORDER_BY_PAGE) ?: JSONObject()
         map.put(pageIndex.toString(), JSONArray(order))
         root.put(KEY_ORDER_BY_PAGE, map)
-        runCatching { session?.setNotebookMeta(root.toString()) }
+        flush(session)
     }
 
     /** 這本筆記的討論圖釘。Apple 端把它們放在這裡，核心沒有這個概念。 */
@@ -258,7 +306,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
     ) {
         root.remove(KEY_OBJECT_ENVELOPES)
         root.put(KEY_COMMENT_PINS, com.kairumo.padnote.comment.CommentPinCodec.encodeAll(pins))
-        runCatching { session?.setNotebookMeta(root.toString()) }
+        flush(session)
     }
 
     /**
@@ -274,7 +322,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
     ) {
         root.remove(KEY_OBJECT_ENVELOPES)
         root.put(KEY_LINKS, com.kairumo.padnote.image.LinkCodec.encodeAll(items))
-        runCatching { session?.setNotebookMeta(root.toString()) }
+        flush(session)
     }
 
     /** 這本筆記頁面上的錄音卡片。核心沒有對應的區塊型別，與連結卡片同一條路。 */
@@ -287,7 +335,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
     ) {
         root.remove(KEY_OBJECT_ENVELOPES)
         root.put(KEY_AUDIO, com.kairumo.padnote.audio.AudioCodec.encodeAll(items))
-        runCatching { session?.setNotebookMeta(root.toString()) }
+        flush(session)
     }
 
     fun models3D(): MutableList<com.kairumo.padnote.model3d.Model3DObject> =
@@ -300,7 +348,7 @@ class NotebookMeta private constructor(private val root: JSONObject) {
     ) {
         root.remove(KEY_OBJECT_ENVELOPES)
         root.put(KEY_MODELS_3D, com.kairumo.padnote.model3d.Model3DCodec.encodeAll(models))
-        runCatching { session?.setNotebookMeta(root.toString()) }
+        flush(session)
     }
 
     /** 手寫與文字動態流式錨定清單 (Fluid Sticky Annotations) */
@@ -319,7 +367,44 @@ class NotebookMeta private constructor(private val root: JSONObject) {
         anchors.forEach { arr.put(it.toJsonObject()) }
         root.remove(KEY_OBJECT_ENVELOPES)
         root.put(KEY_STICKY_ANCHORS, arr)
-        runCatching { session?.setNotebookMeta(root.toString()) }
+        flush(session)
+    }
+
+    /** 形狀樣式（物件 id → 樣式 JSON）。回傳的是副本，改了不會動到這份中繼資料。 */
+    fun shapeStyles(): Map<String, JSONObject> = styleMap(KEY_SHAPE_STYLES)
+
+    fun connectionStyles(): Map<String, JSONObject> = styleMap(KEY_CONNECTION_STYLES)
+
+    /**
+     * 增刪形狀與連接線的樣式並落盤（以物件 id 為鍵）。**只動這兩個鍵裡指到的項目**：
+     * 每一頁各有自己的形狀儲存，只認得自己那一頁的形狀 —— 整批換掉的話，
+     * 換到哪一頁就洗掉其餘頁面的樣式。
+     */
+    fun updateStyles(
+        session: PadnoteSession?,
+        shapeUpserts: Map<String, JSONObject> = emptyMap(),
+        shapeRemovals: Set<String> = emptySet(),
+        connectionUpserts: Map<String, JSONObject> = emptyMap(),
+        connectionRemovals: Set<String> = emptySet()
+    ) {
+        if (shapeUpserts.isEmpty() && shapeRemovals.isEmpty() &&
+            connectionUpserts.isEmpty() && connectionRemovals.isEmpty()) return
+        val shapes = root.optJSONObject(KEY_SHAPE_STYLES) ?: JSONObject()
+        val links = root.optJSONObject(KEY_CONNECTION_STYLES) ?: JSONObject()
+        shapeRemovals.forEach { shapes.remove(it) }
+        shapeUpserts.forEach { (k, v) -> shapes.put(k, v) }
+        connectionRemovals.forEach { links.remove(it) }
+        connectionUpserts.forEach { (k, v) -> links.put(k, v) }
+        root.put(KEY_SHAPE_STYLES, shapes)
+        root.put(KEY_CONNECTION_STYLES, links)
+        flush(session)
+    }
+
+    private fun styleMap(key: String): Map<String, JSONObject> {
+        val obj = root.optJSONObject(key) ?: return emptyMap()
+        val out = LinkedHashMap<String, JSONObject>()
+        for (k in obj.keys()) obj.optJSONObject(k)?.let { out[k.lowercase()] = JSONObject(it.toString()) }
+        return out
     }
 
     private fun JSONArray.toStringList(): List<String> =

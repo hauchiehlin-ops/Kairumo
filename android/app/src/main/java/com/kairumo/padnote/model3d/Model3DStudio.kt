@@ -118,125 +118,129 @@ fun Model3DStudio(
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text(l("cancel")) } },
         text = {
-            Column(
-                Modifier.height(height.value).verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // 即時預覽。改一個滑桿立刻看到結果 —— 這是整個面板存在的理由，
-                // 不然使用者是在盲調三個角度。
-                Box(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(180.dp)
-                        .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
+            // 內容與把手包進同一個 Column：AlertDialog 的 text 槽是 Box，
+            // 兩個兄弟會疊在一起，把手蓋住內容最上面 24dp（那一排點不到）。
+            Column {
+                Column(
+                    Modifier.height(height.value).verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Canvas(Modifier.fillMaxWidth().height(180.dp)) {
-                        Model3DRenderer.draw(this, preview, size.width, size.height)
-                    }
-                }
-
-                // 匯入本機檔案。放在形狀選擇**之前** —— 使用者來這裡多半是
-                // 因為手上有一個模型檔，內建幾何體是退路不是主角。
-                Text(l("import_my_files"), style = MaterialTheme.typography.labelMedium)
-                TextButton(
-                    onClick = {
-                        // 過濾條件來自核心，與 Apple 端收的格式完全一樣。
-                        // MIME 不可靠（很多 USDZ 會被報成 application/octet-stream），
-                        // 所以放行全部、由核心的 importCheck 依副檔名判斷。
-                        picker.launch(arrayOf("*/*"))
-                    },
-                    modifier = Modifier.testTag("model3d.import")
-                ) { Text(l("import_from_files")) }
-
-                if (importedName != null) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            importedName ?: "",
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier
-                                .weight(1f)
-                                .testTag("model3d.imported_name")
-                        )
-                        TextButton(onClick = { importedFile = null; importedName = null }) {
-                            Text("✕")
+                    // 即時預覽。改一個滑桿立刻看到結果 —— 這是整個面板存在的理由，
+                    // 不然使用者是在盲調三個角度。
+                    Box(
+                        Modifier
+                            .fillMaxWidth()
+                            .height(180.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(10.dp))
+                    ) {
+                        Canvas(Modifier.fillMaxWidth().height(180.dp)) {
+                            Model3DRenderer.draw(this, preview, size.width, size.height)
                         }
                     }
-                    // **照實講這一側畫不出來。** 讓使用者插進去之後才發現
-                    // 只有檔名，比事先說清楚糟得多。
-                    Text(
-                        l("import_model_android_note"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                if (importError.isNotEmpty()) {
-                    Text(
-                        importError,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.testTag("model3d.import_error")
-                    )
-                }
 
-                Text(
-                    l(if (importedFile == null) "geom_shape" else "import_builtin_shapes"),
-                    style = MaterialTheme.typography.labelMedium
-                )
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    for (kind in model3dKinds()) {
-                        val raw = model3dKindRaw(kind)
-                        FilterChip(
-                            selected = raw == kindRaw,
-                            onClick = { kindRaw = raw },
-                            // 六種立體的名稱是英文專有名詞（Sphere / Torus…），
-                            // 與 Apple 端的 displayName 一致，不另外翻譯。
-                            label = { Text(raw.replaceFirstChar { it.uppercase() }) }
-                        )
-                    }
-                }
+                    // 匯入本機檔案。放在形狀選擇**之前** —— 使用者來這裡多半是
+                    // 因為手上有一個模型檔，內建幾何體是退路不是主角。
+                    Text(l("import_my_files"), style = MaterialTheme.typography.labelMedium)
+                    TextButton(
+                        onClick = {
+                            // 過濾條件來自核心，與 Apple 端收的格式完全一樣。
+                            // MIME 不可靠（很多 USDZ 會被報成 application/octet-stream），
+                            // 所以放行全部、由核心的 importCheck 依副檔名判斷。
+                            picker.launch(arrayOf("*/*"))
+                        },
+                        modifier = Modifier.testTag("model3d.import")
+                    ) { Text(l("import_from_files")) }
 
-                Text(l("material_style"), style = MaterialTheme.typography.labelMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    for (m in model3dMaterials()) {
-                        val look = model3dMaterialLook(m)
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            modifier = Modifier.clickable { materialRaw = look.raw }
-                        ) {
-                            Box(
-                                Modifier
-                                    .size(34.dp)
-                                    .background(Model3DRenderer.materialColor(m), CircleShape)
-                                    .border(
-                                        if (look.raw == materialRaw) 2.dp else 1.dp,
-                                        if (look.raw == materialRaw) MaterialTheme.colorScheme.primary
-                                        else Color.Black.copy(alpha = 0.12f),
-                                        CircleShape
-                                    )
+                    if (importedName != null) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                importedName ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .testTag("model3d.imported_name")
                             )
-                            Text(l(look.nameKey), style = MaterialTheme.typography.labelSmall)
+                            TextButton(onClick = { importedFile = null; importedName = null }) {
+                                Text("✕")
+                            }
+                        }
+                        // **照實講這一側畫不出來。** 讓使用者插進去之後才發現
+                        // 只有檔名，比事先說清楚糟得多。
+                        Text(
+                            l("import_model_android_note"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    if (importError.isNotEmpty()) {
+                        Text(
+                            importError,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.testTag("model3d.import_error")
+                        )
+                    }
+
+                    Text(
+                        l(if (importedFile == null) "geom_shape" else "import_builtin_shapes"),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (kind in model3dKinds()) {
+                            val raw = model3dKindRaw(kind)
+                            FilterChip(
+                                selected = raw == kindRaw,
+                                onClick = { kindRaw = raw },
+                                // 六種立體的名稱是英文專有名詞（Sphere / Torus…），
+                                // 與 Apple 端的 displayName 一致，不另外翻譯。
+                                label = { Text(raw.replaceFirstChar { it.uppercase() }) }
+                            )
                         }
                     }
+
+                    Text(l("material_style"), style = MaterialTheme.typography.labelMedium)
+                    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        for (m in model3dMaterials()) {
+                            val look = model3dMaterialLook(m)
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.clickable { materialRaw = look.raw }
+                            ) {
+                                Box(
+                                    Modifier
+                                        .size(34.dp)
+                                        .background(Model3DRenderer.materialColor(m), CircleShape)
+                                        .border(
+                                            if (look.raw == materialRaw) 2.dp else 1.dp,
+                                            if (look.raw == materialRaw) MaterialTheme.colorScheme.primary
+                                            else Color.Black.copy(alpha = 0.12f),
+                                            CircleShape
+                                        )
+                                )
+                                Text(l(look.nameKey), style = MaterialTheme.typography.labelSmall)
+                            }
+                        }
+                    }
+
+                    AngleSlider("X", rotX) { rotX = it }
+                    AngleSlider("Y", rotY) { rotY = it }
+                    AngleSlider("Z", rotZ) { rotZ = it }
+
+                    Text("${l("model_scale")}：${"%.2f".format(scale)}", style = MaterialTheme.typography.labelMedium)
+                    Slider(value = scale, onValueChange = { scale = it }, valueRange = 0.4f..2.0f)
+
+                    OutlinedTextField(
+                        value = title,
+                        onValueChange = { title = it },
+                        label = { Text(l("model_title")) },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
-
-                AngleSlider("X", rotX) { rotX = it }
-                AngleSlider("Y", rotY) { rotY = it }
-                AngleSlider("Z", rotZ) { rotZ = it }
-
-                Text("${l("model_scale")}：${"%.2f".format(scale)}", style = MaterialTheme.typography.labelMedium)
-                Slider(value = scale, onValueChange = { scale = it }, valueRange = 0.4f..2.0f)
-
-                OutlinedTextField(
-                    value = title,
-                    onValueChange = { title = it },
-                    label = { Text(l("model_title")) },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
+                // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
+                DialogResizeHandle(height, "model3dStudio")
             }
-            // 底部的拖曳把手：往下拖變高。放在捲動容器**外面** ——
-            // 放進去的話把手會跟著內容捲走，捲到一半就再也找不到它。
-            DialogResizeHandle(height, "model3dStudio")
         }
     )
 }

@@ -38,7 +38,7 @@ import com.kairumo.padnote.LocalizationStrings
  * 重構為具備工程科學計算機、微積分與工數快捷模板、完整特殊符號庫、物理/數學常數，
  * 結果以可編輯的文字方塊插入畫布。
  */
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun MathCalculatorDialog(
     languageTag: String,

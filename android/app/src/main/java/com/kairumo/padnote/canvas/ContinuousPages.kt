@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -40,11 +41,25 @@ import com.kairumo.padnote.ink.InkCanvas
 import com.kairumo.padnote.ink.InkEngine
 import com.kairumo.padnote.ink.PageGeometry
 import com.kairumo.padnote.library.NotebookMeta
+import com.kairumo.padnote.shape.ConnectionDraft
+import com.kairumo.padnote.shape.ConnectionEditDialog
+import com.kairumo.padnote.shape.NoteConnection
+import com.kairumo.padnote.shape.NoteShape
+import com.kairumo.padnote.shape.ShapeEditDialog
 import com.kairumo.padnote.shape.ShapeLayer
 import com.kairumo.padnote.shape.ShapeStore
 import com.kairumo.padnote.table.TableLayer
 import com.kairumo.padnote.table.TableStore
+import com.kairumo.padnote.chart.ChartObject
+import com.kairumo.padnote.chart.ChartStudio
+import com.kairumo.padnote.image.ImageEditor
+import com.kairumo.padnote.image.NoteImage
+import com.kairumo.padnote.table.NoteTable
+import com.kairumo.padnote.table.TableEditor
+import com.kairumo.padnote.text.TextBox
+import com.kairumo.padnote.text.TextBoxEditor
 import com.kairumo.padnote.text.TextBoxLayer
+import com.kairumo.padnote.ui.LocalAppLanguage
 import com.kairumo.padnote.text.TextBoxStore
 import uniffi.padnote_core.PadnoteSession
 import uniffi.padnote_core.ToolKind
@@ -332,6 +347,50 @@ private fun ContinuousPage(
     }
 
     val interactive = editorMode == EditorMode.TYPE
+
+    // 這一頁的選取（單選，圖片／表格／圖表／文字／形狀共用一個 id —— id 在整頁內唯一）。
+    var selectedId by remember(pageId) { mutableStateOf<String?>(null) }
+    var selectedConnectionId by remember(pageId) { mutableStateOf<String?>(null) }
+    var connectionDraft by remember(pageId) { mutableStateOf<ConnectionDraft?>(null) }
+    var editingImage by remember(pageId) { mutableStateOf<NoteImage?>(null) }
+    var editingShape by remember(pageId) { mutableStateOf<NoteShape?>(null) }
+    var editingConnection by remember(pageId) { mutableStateOf<NoteConnection?>(null) }
+    var editingTable by remember(pageId) { mutableStateOf<NoteTable?>(null) }
+    var editingChart by remember(pageId) { mutableStateOf<ChartObject?>(null) }
+    var editingText by remember(pageId) { mutableStateOf<TextBox?>(null) }
+    // 切到手寫模式時清掉選取 —— 手寫模式下物件不吃觸控，留著把手只會擋住筆。
+    LaunchedEffect(editorMode) {
+        if (editorMode != EditorMode.TYPE) { selectedId = null; selectedConnectionId = null }
+    }
+
+    // **新插入的物件一律放在最上層**（理由與基準的算法見 MainActivity 裡同一段）。
+    var knownObjectIds by remember(pageId) { mutableStateOf<Set<String>?>(null) }
+    val currentItems = buildList {
+        imageStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.IMAGE, "")) }
+        shapeStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.SHAPE, "")) }
+        tableStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TABLE, "")) }
+        chartStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.CHART, "")) }
+        textStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TEXT, "")) }
+    }
+    val latestItems by androidx.compose.runtime.rememberUpdatedState(currentItems)
+    LaunchedEffect(pageId) {
+        kotlinx.coroutines.delay(1000)
+        knownObjectIds = latestItems.map { it.id }.toSet()
+    }
+    LaunchedEffect(revision, knownObjectIds) {
+        val known = knownObjectIds ?: return@LaunchedEffect
+        val fresh = latestItems.map { it.id }.filter { it !in known }
+        if (fresh.isEmpty()) return@LaunchedEffect
+        knownObjectIds = known + fresh
+        val freshSet = fresh.toSet()
+        meta.setObjectOrder(
+            session, pageIndex,
+            ObjectStacking.withNewOnTop(
+                latestItems.filter { it.id !in freshSet }, meta.objectOrder(pageIndex), fresh)
+        )
+        revision++
+    }
+
     val currentInkColor = remember(ink.colorRgba) {
         if (ink.colorRgba.size >= 4) {
             Color(
@@ -369,64 +428,120 @@ private fun ContinuousPage(
             acceptsInk = editorMode == EditorMode.DRAW
         )
 
-        key(revision) {
-            ImageLayer(
-                images = imageStore.all,
-                store = imageStore,
-                density = density,
-                selectedId = null,
-                interactive = interactive,
-                onSelect = {},
-                onEditStyle = {},
-                onChanged = { imageStore.persist(it); revision++ },
-                zIndexOf = zIndexOf,
-                modifier = Modifier.fillMaxSize()
-            )
+        // 選取與編輯。
+        //
+        // **連續模式原本完全沒有選取** —— 每一層都收到 `selectedId = null`、`onSelect = {}`，
+        // 物件選不起來，把手與編輯鈕就永遠不會出現（使用者看到的是「編輯鈕沒有作用」，
+        // 其實是根本沒有那顆鈕）。單頁模式有的選取、編輯面板、層級調整，這裡一樣要有。
+        CompositionLocalProvider(
+            com.kairumo.padnote.canvas.LocalObjectReorder provides { id, op ->
+                // 只寫這一頁，其餘頁面與其餘中繼資料欄位原封不動。
+                val items = buildList {
+                    imageStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.IMAGE, "")) }
+                    shapeStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.SHAPE, "")) }
+                    tableStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TABLE, "")) }
+                    chartStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.CHART, "")) }
+                    textStore.all.forEach { add(ObjectStacking.Item(it.id, ObjectStacking.Kind.TEXT, "")) }
+                }
+                val current = ObjectStacking.normalized(items, meta.objectOrder(pageIndex))
+                meta.setObjectOrder(session, pageIndex, op.apply(id, current))
+                revision++
+            }
+        ) {
+            key(revision) {
+                ImageLayer(
+                    images = imageStore.all,
+                    store = imageStore,
+                    density = density,
+                    selectedId = selectedId,
+                    interactive = interactive,
+                    onSelect = { selectedId = it; selectedConnectionId = null },
+                    onEditStyle = { editingImage = it },
+                    onChanged = { imageStore.persist(it); revision++ },
+                    zIndexOf = zIndexOf,
+                    modifier = Modifier.fillMaxSize()
+                )
+                TableLayer(
+                    interactive = interactive,
+                    tables = tableStore.all,
+                    density = density,
+                    selectedId = selectedId,
+                    onSelect = { selectedId = it; selectedConnectionId = null },
+                    onEdit = { editingTable = it },
+                    onChanged = { tableStore.persist(it); revision++ },
+                    zIndexOf = zIndexOf,
+                    modifier = Modifier.fillMaxSize()
+                )
+                ChartLayer(
+                    interactive = interactive,
+                    charts = chartStore.all,
+                    density = density,
+                    selectedId = selectedId,
+                    onSelect = { selectedId = it; selectedConnectionId = null },
+                    onEdit = { editingChart = it },
+                    onChanged = { chartStore.persist(it); revision++ },
+                    zIndexOf = zIndexOf,
+                    modifier = Modifier.fillMaxSize()
+                )
+                TextBoxLayer(
+                    interactive = interactive,
+                    boxes = textStore.all,
+                    density = density,
+                    selectedId = selectedId,
+                    onSelect = { selectedId = it; selectedConnectionId = null },
+                    onEditStyle = { editingText = it },
+                    onChanged = { textStore.persist(it); revision++ },
+                    zIndexOf = zIndexOf,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            // 形狀不放進 `key(revision)`：整層重建會把進行中的拖曳、縮放、拉線拆掉
+            // （理由見 MainActivity 裡同一段）。只讀版本號訂閱重組。
+            @Suppress("UNUSED_VARIABLE") val revisionRead = revision
             ShapeLayer(
                 interactive = interactive,
                 shapes = shapeStore.all,
                 connections = shapeStore.allConnections,
                 density = density,
-                selectedIds = emptySet(),
-                onSelect = {},
-                onEdit = {},
-                onEditStyle = {},
+                selectedIds = setOfNotNull(selectedId),
+                selectedConnectionId = selectedConnectionId,
+                connectionDraft = connectionDraft,
+                onSelect = { id ->
+                    selectedConnectionId = null
+                    selectedId = if (selectedId == id) null else id
+                },
+                onEdit = { shape -> selectedId = shape.id; editingShape = shape },
+                onDelete = { shape ->
+                    shapeStore.remove(shape)
+                    if (selectedId == shape.id) selectedId = null
+                    revision++
+                },
                 onChanged = { shapeStore.persist(it); revision++ },
                 zIndexOf = zIndexOf,
-                modifier = Modifier.fillMaxSize()
-            )
-            TableLayer(
-                interactive = interactive,
-                tables = tableStore.all,
-                density = density,
-                selectedId = null,
-                onSelect = {},
-                onEdit = {},
-                onChanged = { tableStore.persist(it); revision++ },
-                zIndexOf = zIndexOf,
-                modifier = Modifier.fillMaxSize()
-            )
-            ChartLayer(
-                interactive = interactive,
-                charts = chartStore.all,
-                density = density,
-                selectedId = null,
-                onSelect = {},
-                onEdit = {},
-                onChanged = { chartStore.persist(it); revision++ },
-                zIndexOf = zIndexOf,
-                modifier = Modifier.fillMaxSize()
-            )
-            TextBoxLayer(
-                interactive = interactive,
-                boxes = textStore.all,
-                density = density,
-                selectedId = null,
-                onSelect = {},
-                onEditStyle = {},
-                onChanged = { textStore.persist(it); revision++ },
-                zIndexOf = zIndexOf,
-                modifier = Modifier.fillMaxSize()
+                modifier = Modifier.fillMaxSize(),
+                onSelectConnection = { id ->
+                    selectedConnectionId = id
+                    if (id != null) selectedId = null
+                },
+                onEditConnection = { link -> selectedConnectionId = link.id; editingConnection = link },
+                onDeleteConnection = { link ->
+                    shapeStore.remove(link)
+                    selectedConnectionId = null
+                    revision++
+                },
+                onConnectDrag = { from, anchor, start, current, finished ->
+                    if (!finished) {
+                        connectionDraft = ConnectionDraft(start.x, start.y, current.x, current.y)
+                    } else {
+                        connectionDraft = null
+                        shapeStore.connectByDrag(from, anchor, current.x, current.y)?.let {
+                            selectedId = null
+                            selectedConnectionId = it.id
+                            revision++
+                        }
+                    }
+                }
             )
         }
 
@@ -437,6 +552,89 @@ private fun ContinuousPage(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(6.dp)
+        )
+    }
+
+    // ---- 編輯面板（與單頁模式同一批）----
+    val languageTag = LocalAppLanguage.current
+
+    editingImage?.let { image ->
+        ImageEditor(
+            image = image,
+            languageTag = languageTag,
+            onChanged = { imageStore.persist(it); revision++ },
+            onDelete = { imageStore.remove(image); selectedId = null; revision++ },
+            onDismiss = { editingImage = null }
+        )
+    }
+    editingShape?.let { shape ->
+        ShapeEditDialog(
+            shape = shape,
+            languageTag = languageTag,
+            onApply = { shapeStore.persist(it); revision++ },
+            onDuplicate = { source ->
+                val copy = shapeStore.create(source.copyShape().apply { x += 24f; y += 24f; groupId = null })
+                selectedId = copy.id
+                editingShape = copy
+                revision++
+            },
+            onDelete = { target -> shapeStore.remove(target); selectedId = null; revision++ },
+            onReorder = { op ->
+                val current = ObjectStacking.normalized(currentItems, meta.objectOrder(pageIndex))
+                meta.setObjectOrder(session, pageIndex, op.apply(shape.id, current))
+                revision++
+            },
+            onDismiss = { editingShape = null }
+        )
+    }
+    editingConnection?.let { link ->
+        ConnectionEditDialog(
+            link = link,
+            languageTag = languageTag,
+            onApply = { shapeStore.persist(it); revision++ },
+            onDelete = { target -> shapeStore.remove(target); selectedConnectionId = null; revision++ },
+            onDismiss = { editingConnection = null }
+        )
+    }
+    editingTable?.let { table ->
+        TableEditor(
+            table = table,
+            languageTag = languageTag,
+            isNew = false,
+            onCommit = { updated ->
+                // 位置原地保留：使用者只是改了裡面的內容。
+                tableStore.persist(updated.copyTable().apply { x = table.x; y = table.y })
+                revision++
+                editingTable = null
+            },
+            onDelete = { tableStore.remove(table); selectedId = null; revision++; editingTable = null },
+            onDismiss = { editingTable = null }
+        )
+    }
+    editingChart?.let { chart ->
+        androidx.compose.ui.window.Dialog(onDismissRequest = { editingChart = null }) {
+            androidx.compose.material3.Surface(shape = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)) {
+                ChartStudio(
+                    languageTag = languageTag,
+                    initial = chart.spec,
+                    onCommit = { spec ->
+                        // 位置與尺寸原地保留：使用者只是改了裡面的數字。
+                        chartStore.persist(chart.copy(spec = spec))
+                        revision++
+                        editingChart = null
+                    },
+                    onDismiss = { editingChart = null }
+                )
+            }
+        }
+    }
+    editingText?.let { box ->
+        TextBoxEditor(
+            box = box,
+            languageTag = languageTag,
+            onChanged = { textStore.persist(it); revision++ },
+            onDelete = { textStore.remove(box); selectedId = null; revision++; editingText = null },
+            onDismiss = { editingText = null }
         )
     }
 }

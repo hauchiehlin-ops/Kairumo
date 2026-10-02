@@ -9,6 +9,40 @@ package com.kairumo.padnote.canvas
  */
 object ObjectStacking {
 
+    /**
+     * 單一物件的四個排列動作。選單、編輯把手、圖層面板走同一組純函式，
+     * 結果才會一致（與 Apple 端的 `ObjectReorderOp` 對應）。
+     */
+    enum class Reorder(val labelKey: String) {
+        TO_FRONT("layer_bring_front"),
+        FORWARD("layer_bring_forward"),
+        BACKWARD("layer_send_backward"),
+        TO_BACK("layer_send_back");
+
+        fun apply(id: String, order: List<String>): List<String> {
+            val ids = setOf(id)
+            return when (this) {
+                TO_FRONT -> bringToFront(ids, order)
+                FORWARD -> bringForward(ids, order)
+                BACKWARD -> sendBackward(ids, order)
+                TO_BACK -> sendToBack(ids, order)
+            }
+        }
+    }
+
+    /**
+     * 新插入的物件放在最上層。
+     *
+     * 沒有明確順序的物件，疊放次序由「型別的預設層級」決定 —— 圖片永遠在文字、
+     * 表格之下，於是新貼的圖片被舊的文字蓋住，看起來像沒插進去。
+     * [fresh] 是這一輪新出現的 id（依到達順序），[existing] 是這一頁其餘的物件。
+     */
+    fun withNewOnTop(
+        existing: List<Item>,
+        order: List<String>,
+        fresh: List<String>
+    ): List<String> = normalized(existing, order) + fresh
+
     /** 物件型別。`defaultLayer` 是沒有明確順序時的層級。 */
     enum class Kind(val defaultLayer: Int) {
         IMAGE(0),

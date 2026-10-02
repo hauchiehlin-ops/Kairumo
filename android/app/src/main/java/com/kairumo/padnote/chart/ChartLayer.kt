@@ -12,6 +12,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.kairumo.padnote.canvas.gesturesIf
+import com.kairumo.padnote.canvas.MIN_OBJECT_HEIGHT_DP
+import com.kairumo.padnote.canvas.MIN_OBJECT_WIDTH_DP
+import com.kairumo.padnote.canvas.ResizeHandle
 import com.kairumo.padnote.canvas.StyleHandle
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -80,52 +83,74 @@ private fun ChartObjectView(
     val foreground = MaterialTheme.colorScheme.onSurface
     val grid = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f)
 
-    Box(
-        Modifier
-            .offset(chart.x.dp, chart.y.dp)
-            .zIndex(zIndex)
-            .size(chart.width.dp, chart.height.dp)
-            .border(
-                if (isSelected) 1.5.dp else 0.dp,
-                MaterialTheme.colorScheme.primary,
-                RoundedCornerShape(6.dp)
-            )
-            .gesturesIf(interactive) { pointerInput(chart.id) {
-                detectTapGestures(
-                    onTap = { onSelect(chart.id) },
-                    // 點兩下進編輯器 —— 這就是「可重新編修」在畫布上的入口。
-                    onDoubleTap = { onEdit(chart) }
+    // **把手必須在這個定位過的外層 Box 裡面。**
+    //
+    // 原本把手與圖表是兄弟：圖表自己 `offset(chart.x, chart.y)`，而把手沒有 ——
+    // 於是樣式（編輯）鈕永遠畫在畫布左上角附近，離圖表很遠，
+    // 使用者按右下／左下的編輯鈕「沒有作用」，其實是根本沒按到那顆鈕。
+    // 圖片、表格、文字方塊都是「外層定位、內層畫內容、把手在外層裡」，圖表跟上同一個結構。
+    Box(Modifier.offset(chart.x.dp, chart.y.dp).zIndex(zIndex)) {
+        Box(
+            Modifier
+                .size(chart.width.dp, chart.height.dp)
+                .border(
+                    if (isSelected) 1.5.dp else 0.dp,
+                    MaterialTheme.colorScheme.primary,
+                    RoundedCornerShape(6.dp)
                 )
-            } }
-            .gesturesIf(interactive) { pointerInput(chart.id) {
-                detectDragGestures { change, drag ->
-                    change.consume()
-                    onChanged(
-                        chart.copy(
-                            x = chart.x + drag.x / density,
-                            y = chart.y + drag.y / density
+                .gesturesIf(interactive) { pointerInput(chart.id) {
+                    detectTapGestures(
+                        onTap = { onSelect(chart.id) },
+                        // 點兩下進編輯器 —— 這就是「可重新編修」在畫布上的入口。
+                        onDoubleTap = { onEdit(chart) }
+                    )
+                } }
+                .gesturesIf(interactive) { pointerInput(chart.id) {
+                    detectDragGestures { change, drag ->
+                        change.consume()
+                        onChanged(
+                            chart.copy(
+                                x = chart.x + drag.x / density,
+                                y = chart.y + drag.y / density
+                            )
                         )
+                    }
+                } }
+        ) {
+            Canvas(Modifier.size(chart.width.dp, chart.height.dp)) {
+                val layout = ChartRenderer.layout(chart.spec, size.width, size.height) ?: return@Canvas
+                drawIntoCanvas { canvas ->
+                    ChartRenderer.draw(
+                        layout, canvas.nativeCanvas,
+                        foreground = foreground.toArgb(),
+                        gridColor = grid.toArgb()
                     )
                 }
-            } }
-    ) {
-        Canvas(Modifier.size(chart.width.dp, chart.height.dp)) {
-            val layout = ChartRenderer.layout(chart.spec, size.width, size.height) ?: return@Canvas
-            drawIntoCanvas { canvas ->
-                ChartRenderer.draw(
-                    layout, canvas.nativeCanvas,
-                    foreground = foreground.toArgb(),
-                    gridColor = grid.toArgb()
-                )
             }
         }
-    }
 
-    if (isSelected) {
-        StyleHandle(
-            widthDp = chart.width,
-            heightDp = chart.height,
-            onTap = { onEdit(chart) }
-        )
+        if (isSelected && interactive) {
+            StyleHandle(
+                widthDp = chart.width,
+                heightDp = chart.height,
+                onTap = { onEdit(chart) },
+                objectId = chart.id
+            )
+            // 縮放把手。圖表原本只能搬、不能縮放（Apple 端的圖表是圖片物件，有四角把手）。
+            ResizeHandle(
+                widthDp = chart.width,
+                heightDp = chart.height,
+                density = density,
+                onResize = { dw, dh ->
+                    onChanged(
+                        chart.copy(
+                            width = maxOf(MIN_OBJECT_WIDTH_DP, chart.width + dw),
+                            height = maxOf(MIN_OBJECT_HEIGHT_DP, chart.height + dh)
+                        )
+                    )
+                },
+                onCommit = {}
+            )
+        }
     }
 }

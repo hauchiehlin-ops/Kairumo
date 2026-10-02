@@ -25,6 +25,38 @@
 
 ---
 
+## 🟡 物件編修與圖層（2026-10-02）
+
+### ~~S-SHAPE-ENVELOPE~~ ✅ 形狀與連接線的樣式改成逐物件信封
+- 每個形狀、每條連接線各一個衍生圖片區塊（`shapestyle`／`connstyle`，payload 帶物件 id），
+  與 `ObjectEnvelope` 同一格式；Apple 與 Android 讀寫同一組。兩台裝置改不同形狀不再互相覆蓋
+  （Android `twoStoresEditingDifferentShapesDoNotOverwriteEachOther` 釘住）。
+- 筆記本中繼資料的 `shapeStyles`／`connectionStyles` 只讀（舊檔後備），不再寫。
+- 區塊 id 兩端都是 `stableBlockId("style:" + 小寫物件 id)`。**舊版 App 不認得這兩種衍生型別**，
+  會把它們當成 1×1 透明圖片載入 —— 升級期間混用舊版的裝置會看到多出幾張看不見的圖。
+
+### 🟡 S-ANDROID-CONTINUOUS-OBJECTS. Android 連續頁面模式仍缺連結卡片、3D、錄音卡片、圖釘層
+- 這一版補上了單頁模式有的**選取、編輯面板、層級調整、新物件置頂**（圖片、表格、
+  圖表、文字、形狀），但連續模式本來就沒有渲染連結／3D／錄音／圖釘 —— 沒動。
+
+### 🟡 S-IMPORT-PPTX. 文件匯入的 pptx
+- 核心 `accepted_extensions(Document)` 仍列 pptx（只能存成「預覽用的嵌入區塊」，只知道張數），
+  兩端平台**在挑選器過濾掉**（`FileImport`），因為沒有原生元件把投影片畫出來。
+  要不要把它從核心清單拿掉，取決於有沒有人要做投影片的算繪。
+
+### 🟡 S-ORPHAN-PANELTAB. `check-orphans.py` 在 HEAD 就紅
+- `apple/Sources/MathCalculatorSheet.swift:25` 的 `PanelTab` 沒有人引用（be092d5 帶進來的）。
+  這次沒有動它。
+
+### 🔴 待實機（程式與模擬器已驗，手感沒有）
+- Apple Pencil／手指在八個縮放把手、連接點「+」、線段端點上的命中與手感（模擬器只驗了
+  滑鼠式點按與拖曳）。
+- Android 實機上形狀把手的命中（Compose UI 測試與模擬器驗過）。
+- Android 的十三個對話框（`ImageEditor`、`TableEditor` …）為了修「拖曳把手蓋住內容最上面
+  24dp」做了**機械式的縮排包裝**，建議實機掃一遍。
+
+---
+
 ## 🔴 被硬體或資料卡住（程式已就緒）
 
 ### 🟡 S-OBJ-IDENTITY. 文字方塊等物件跨裝置同步會指數增生 —— **增生已止血（Apple），跨裝置刪除／文字編輯未支援**

@@ -37,7 +37,7 @@ enum ImageAppearance {
     /// 「由別種物件算繪出來」的圖片。匯入時要跳過它們 ——
     /// 真身在筆記本中繼資料裡，不跳過的話同一個物件會變成兩份，
     /// 而且各自能拖到不同的地方。
-    static let derivedObjects: Set<String> = ["link", "model3d", "audio", "pin", "tape", "sticky", "rectitle"]
+    static let derivedObjects: Set<String> = ["link", "model3d", "audio", "pin", "tape", "sticky", "rectitle", "shapestyle", "connstyle"]
 
     /// 標記一個「由別種物件算繪出來」的圖片區塊。
     static func encodeDerived(objectKind: String, fileName: String) -> String {
@@ -68,7 +68,11 @@ enum ImageAppearance {
             "hasShadow": item.hasShadow,
             "hasBorder": item.hasBorder,
             "filterStyle": item.filterStyle.rawValue,
-            "fileName": item.fileName
+            "fileName": item.fileName,
+            // 大小也帶著：核心的圖片區塊只在建立時記一次尺寸，之後在別的裝置上縮放的
+            // 結果沒有地方可以寫。以外觀裡的為準，兩個平台讀寫同一組鍵。
+            "width": Double(item.width),
+            "height": Double(item.height)
         ]
         // `nil` 的欄位不寫進去：接收端才分得出「沒設定」與「設成 0」。
         if let value = item.materialType?.rawValue { style["materialType"] = value }
@@ -107,6 +111,8 @@ enum ImageAppearance {
         }
 
         guard let style = root[imageKey] as? [String: Any] else { return }
+        if let value = style["width"] as? Double, value >= 16 { item.width = CGFloat(value) }
+        if let value = style["height"] as? Double, value >= 16 { item.height = CGFloat(value) }
         if let value = style["rotationDegrees"] as? Double { item.rotationDegrees = value }
         if let value = style["cornerRadius"] as? Double { item.cornerRadius = CGFloat(value) }
         if let value = style["hasShadow"] as? Bool { item.hasShadow = value }

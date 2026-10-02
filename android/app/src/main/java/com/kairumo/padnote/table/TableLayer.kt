@@ -150,7 +150,8 @@ private fun TableObjectView(
             StyleHandle(
                 widthDp = layout.width.toFloat(),
                 heightDp = layout.height.toFloat(),
-                onTap = { onEdit(table) }
+                onTap = { onEdit(table) },
+                objectId = table.id
             )
 
             RotationHandle(

@@ -54,6 +54,7 @@ class ChartStore(
             val json = runCatching { s.blockAppearance(blockId) }.getOrNull() ?: continue
             val spec = json?.let { ChartAppearance.decode(it) } ?: continue
             val chart = ChartObject(id = blockId, spec = spec)
+            val storedSize = ChartAppearance.size(json)
             runCatching { s.blockPosition(blockId) }.getOrNull()
                 ?.takeIf { it.size >= 2 }
                 ?.let { chart.x = it[0]; chart.y = it[1] }
@@ -61,6 +62,8 @@ class ChartStore(
             runCatching { s.imageBlockSize(blockId) }.getOrNull()
                 ?.takeIf { it.size >= 2 }
                 ?.let { chart.width = it[0]; chart.height = it[1] }
+            // 外觀裡記的大小比核心建立時記的新 —— 使用者縮放過的結果在那裡。
+            storedSize?.let { chart.width = it.first; chart.height = it.second }
             charts[blockId] = chart
         }
     }
@@ -96,7 +99,8 @@ class ChartStore(
         val s = session ?: return
         runCatching {
             s.setBlockPosition(chart.id, chart.x, chart.y)
-            s.setBlockAppearance(chart.id, ChartAppearance.encode(chart.spec))
+            s.setBlockAppearance(
+                chart.id, ChartAppearance.encode(chart.spec, chart.width, chart.height))
         }
     }
 
