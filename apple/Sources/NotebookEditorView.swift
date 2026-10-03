@@ -1897,10 +1897,17 @@ public struct NotebookEditorView: View {
             if effectiveToolbarMode == .draw {
                 if !isMinimalistCanvasActive && toolbarSettings.placement == .top {
                     drawingToolbar
-                        .transition(.move(edge: .top).combined(with: .opacity))
+                        .transition(.asymmetric(
+                            insertion: .opacity.combined(with: .scale(scale: 0.98, anchor: .top)),
+                            removal: .opacity
+                        ))
                 }
             } else {
                 wordModeToolbar
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .scale(scale: 0.98, anchor: .top)),
+                        removal: .opacity
+                    ))
             }
 
             // 3. 尺規旋轉與量測輔助列（若尺規開啟時顯示）
@@ -4384,6 +4391,12 @@ public struct NotebookEditorView: View {
                     } else if !isApplyingRemoteUpdate {
                         lastStrokeCount = newDrawing.strokes.count
                     }
+                    
+                    // 🌟 自動流式錨定：若落筆於既有文字方塊上方（圈註、畫底線、旁註），自動建立關聯錨定
+                    if !isApplyingRemoteUpdate && newDrawing.strokes.count > 0 {
+                        autoAnchorNewStrokesToOverlappingText(drawing: newDrawing)
+                    }
+                    
                     return newDrawing.strokes.count == rawDrawing.strokes.count
                         ? nil
                         : newDrawing
@@ -8399,30 +8412,62 @@ public struct NotebookEditorView: View {
             showCanvasNotice(localizationManager.localized("lasso_active_hint"))
             return
         }
+        
+        // 計算筆跡包圍盒與平均色彩（原地轉化：沿用位置、寬度、筆色）
+        var strokeBounds: CGRect = .null
+        var strokeColorHex: String = "#000000"
+        for stroke in drawing.strokes {
+            strokeBounds = strokeBounds.union(stroke.renderBounds)
+            var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+            if stroke.ink.color.getRed(&r, green: &g, blue: &b, alpha: &a) {
+                strokeColorHex = String(format: "#%02X%02X%02X", Int(r * 255), Int(g * 255), Int(b * 255))
+            }
+        }
+        if strokeBounds.isNull || !strokeBounds.width.isFinite || !strokeBounds.height.isFinite {
+            strokeBounds = CGRect(x: 160, y: 200, width: 340, height: 140)
+        }
+        
         let language = localizationManager.currentLanguage.rawValue
         Task { @MainActor in
             switch await HandwritingRecognizer.recognize(drawing: drawing, languageTag: language) {
             case .success(let groups):
                 let recognizedText = groups.map(\.text).joined(separator: "\n")
                 guard !recognizedText.isEmpty else { return }
+                
+                // 原地取代：產生對準原筆劃位置之 NoteTextAttachment
+                let pad: CGFloat = 8
                 let draft = NoteTextAttachment(
                     id: UUID().uuidString,
                     pageIndex: currentPageIndex,
                     text: recognizedText,
-                    fontSize: 18,
-                    textColorHex: "#000000",
+                    fontSize: max(16, min(32, strokeBounds.height / CGFloat(max(1, groups.count)) * 0.7)),
+                    textColorHex: strokeColorHex,
                     backgroundColorHex: "#FFFFFF",
-                    hasBorder: true,
-                    x: 160,
-                    y: 200,
-                    width: 340,
-                    height: 140
+                    hasBorder: false,
+                    x: max(PageGeometry.printableInset, strokeBounds.minX - pad),
+                    y: max(PageGeometry.printableInset, strokeBounds.minY - pad),
+                    width: max(120, strokeBounds.width + pad * 2),
+                    height: max(44, strokeBounds.height + pad * 2)
                 )
+                
                 if notebook.textAttachments == nil { notebook.textAttachments = [] }
                 notebook.textAttachments?.append(draft)
-                inlineEditingTextId = draft.id
+                
+                // 清空原筆畫（完成原地「墨水轉文字」）
+                self.currentDrawing = PKDrawing()
+                self.canvasView?.drawing = PKDrawing()
+                self.saveCurrentPageDrawing()
+                
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    editorMode = .type
+                    inlineEditingTextId = draft.id
+                    editingTextId = nil
+                }
                 store.updateNotebook(notebook)
                 PageThumbnailRenderer.invalidateAll()
+                #if os(iOS)
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                #endif
             case .failure:
                 break
             }
@@ -8531,6 +8576,51 @@ public struct NotebookEditorView: View {
         #if os(iOS)
         UIImpactFeedbackGenerator(style: .medium).impactOccurred()
         #endif
+    }
+
+    /// 自動判定新落筆跡是否與既有文字方塊高度重疊（> 40%），若是則自動關聯錨定（工作項 F4 v1）
+    private func autoAnchorNewStrokesToOverlappingText(drawing: PKDrawing) {
+        let pageTexts = (notebook.textAttachments ?? []).filter { $0.pageIndex == currentPageIndex }
+        guard !pageTexts.isEmpty else { return }
+
+        var updatedAnchors = notebook.stickyAnchors ?? []
+        var hasChanges = false
+
+        for textItem in pageTexts {
+            let textRect = CGRect(x: textItem.x, y: textItem.y, width: textItem.width, height: textItem.height)
+            var matchedIndices: [Int] = []
+            
+            for (idx, stroke) in drawing.strokes.enumerated() {
+                let strokeBounds = stroke.renderBounds
+                if textRect.intersects(strokeBounds) {
+                    let intersection = textRect.intersection(strokeBounds)
+                    let strokeArea = max(1.0, strokeBounds.width * strokeBounds.height)
+                    let intersectArea = intersection.width * intersection.height
+                    // 重疊面積或相交比例足夠視為對文字之圈註／劃線／旁註
+                    if intersectArea / strokeArea > 0.3 || textRect.contains(strokeBounds) {
+                        matchedIndices.append(idx)
+                    }
+                }
+            }
+
+            if !matchedIndices.isEmpty {
+                let anchor = StickyAnnotationAnchor(
+                    pageIndex: currentPageIndex,
+                    targetId: textItem.id,
+                    strokeIndices: matchedIndices,
+                    anchorOriginX: Float(textItem.x),
+                    anchorOriginY: Float(textItem.y)
+                )
+                updatedAnchors.removeAll { $0.targetId == textItem.id && $0.pageIndex == currentPageIndex }
+                updatedAnchors.append(anchor)
+                hasChanges = true
+            }
+        }
+
+        if hasChanges {
+            notebook.stickyAnchors = updatedAnchors
+            store.updateNotebook(notebook)
+        }
     }
 
     private func applyStabilizer(to drawing: PKDrawing) -> PKDrawing {
