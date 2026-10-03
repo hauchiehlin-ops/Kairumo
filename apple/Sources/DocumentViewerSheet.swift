@@ -56,22 +56,121 @@ public enum BundledDocument: String, Identifiable {
     }
 }
 
-/// 以 WKWebView 呈現本機 HTML 文件
+/// 以 WKWebView 呈現本機 HTML 文件。
+///
+/// # 為什麼這麼囉嗦
+///
+/// 回報是「點了操作手冊／隱私權政策，整頁空白」，而且只在實機（iPad、Mac）上發生；模擬器上正常。
+/// 空白的 WKWebView 沒有任何錯誤可看，常見成因有三個，這裡都擋：
+///
+/// 1. **初始 frame 是 `.zero`。** 在工作表／新視窗還沒排版完時建立，載入會在 0×0 的視圖上完成，
+///    之後放大也不一定會重畫。給一個非零的起始 frame，並在視圖真的有尺寸之後才載入。
+/// 2. **網頁內容行程被系統收掉**（記憶體壓力、App 在背景時），畫面就停在空白。
+///    `webViewWebContentProcessDidTerminate` 時重新載入。
+/// 3. **載入完了但頁面是空的**（腳本沒跑起來）。載入完成後量一下內文長度，太短就當成失敗：
+///    重試一次，仍然空白就改載公開網頁版，而不是讓使用者看一片白。
 struct DocumentWebView: UIViewRepresentable {
     let url: URL
+    /// 本機載入失敗時的備援（公開網頁版）。
+    var fallbackURL: URL? = nil
+
+    func makeCoordinator() -> Coordinator { Coordinator(url: url, fallbackURL: fallbackURL) }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
         config.defaultWebpagePreferences.allowsContentJavaScript = true
-        let webView = WKWebView(frame: .zero, configuration: config)
+        let webView = WKWebView(frame: CGRect(x: 0, y: 0, width: 320, height: 480), configuration: config)
+        webView.navigationDelegate = context.coordinator
         webView.isOpaque = false
         webView.backgroundColor = .systemBackground
-        // 讀取權限要給到文件所在的資料夾，否則同目錄的 manual.js 與 img/ 會載不進來
-        webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        webView.scrollView.backgroundColor = .systemBackground
+        webView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        context.coordinator.webView = webView
         return webView
     }
 
-    func updateUIView(_ uiView: WKWebView, context: Context) {}
+    func updateUIView(_ uiView: WKWebView, context: Context) {
+        // 有真實尺寸才載入第一次。
+        guard !context.coordinator.hasStartedLoading, uiView.bounds.width > 1, uiView.bounds.height > 1 else {
+            if !context.coordinator.hasStartedLoading {
+                DispatchQueue.main.async { [weak uiView] in
+                    guard let uiView else { return }
+                    context.coordinator.loadIfReady(uiView)
+                }
+            }
+            return
+        }
+        context.coordinator.loadIfReady(uiView)
+    }
+
+    final class Coordinator: NSObject, WKNavigationDelegate {
+        let url: URL
+        let fallbackURL: URL?
+        weak var webView: WKWebView?
+        private(set) var hasStartedLoading = false
+        private var retried = false
+        private var usedFallback = false
+
+        init(url: URL, fallbackURL: URL?) {
+            self.url = url
+            self.fallbackURL = fallbackURL
+        }
+
+        func loadIfReady(_ webView: WKWebView) {
+            guard !hasStartedLoading else { return }
+            guard webView.bounds.width > 1, webView.bounds.height > 1 else {
+                // 還沒排版完：下一個 run loop 再看一次（最多等一下，不會無限輪詢）。
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self, weak webView] in
+                    guard let self, let webView, !self.hasStartedLoading else { return }
+                    self.loadLocal(webView)
+                }
+                return
+            }
+            loadLocal(webView)
+        }
+
+        private func loadLocal(_ webView: WKWebView) {
+            hasStartedLoading = true
+            // 讀取權限要給到文件所在的資料夾，否則同目錄的 manual.js 與 img/ 會載不進來
+            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            // 頁面的腳本是在載入後才長出內容的；等一下再量。
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self, weak webView] in
+                guard let self, let webView else { return }
+                webView.evaluateJavaScript("document.body ? document.body.innerText.length : 0") { value, _ in
+                    let length = (value as? Int) ?? 0
+                    if length < 200 { self.recover(webView) }
+                }
+            }
+        }
+
+        // unused-param-ok: 簽名由 WKNavigationDelegate 規定；失敗原因不影響處理（一律重試／換備援）
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            recover(webView)
+        }
+
+        // unused-param-ok: 同上
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            recover(webView)
+        }
+
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            recover(webView)
+        }
+
+        /// 先重載一次本機；還是不行就換公開網頁版。
+        private func recover(_ webView: WKWebView) {
+            if !retried {
+                retried = true
+                webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+            } else if !usedFallback, let fallbackURL {
+                usedFallback = true
+                webView.load(URLRequest(url: fallbackURL))
+            }
+        }
+    }
 }
 
 /// 文件視窗的識別。
@@ -107,7 +206,7 @@ public struct DocumentWindowContent: View {
     public var body: some View {
         Group {
             if let document, let url = document.url {
-                DocumentWebView(url: url)
+                DocumentWebView(url: url, fallbackURL: document.onlineURL)
             } else {
                 DocumentMissingView()
             }
@@ -149,7 +248,7 @@ public struct DocumentViewerSheet: View {
         NavigationStack {
             Group {
                 if let url = document.url {
-                    DocumentWebView(url: url)
+                    DocumentWebView(url: url, fallbackURL: document.onlineURL)
                 } else {
                     DocumentMissingView()
                 }

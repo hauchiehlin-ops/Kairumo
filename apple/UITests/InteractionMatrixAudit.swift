@@ -279,4 +279,24 @@ final class InteractionMatrixAudit: XCTestCase {
             sleep(1)
         }
     }
+
+    /// 手寫模式下用手指輕點物件：直接切到打字模式，物件馬上可操作（不必使用者自己先去切模式）。
+    func testFingerTapOnAnObjectInDrawModeSwitchesToTyping() {
+        let app = launch()
+        defer { app.terminate() }
+        guard openMatrixNotebook(app) else { return }
+        let draw = find(app, "portal.draw")
+        if draw.waitForExistence(timeout: 8) { draw.tap() }
+        let img = object(app, "image")
+        guard img.waitForExistence(timeout: 8), reveal(app, img) else { XCTFail("找不到圖片"); return }
+        img.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let typing = find(app, "portal.type")
+        let selected = NSPredicate(format: "isSelected == true OR value CONTAINS[c] 'selected'")
+        _ = selected
+        // 切到打字模式後，圖片被點到就會出現刪除控制項（再點一次選取）。
+        img.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        XCTAssertTrue(
+            app.buttons.matching(NSPredicate(format: "label == 'Delete'")).firstMatch.waitForExistence(timeout: 4),
+            "手寫模式下輕點物件之後，沒有切到可操作的狀態（\(typing.exists)）")
+    }
 }

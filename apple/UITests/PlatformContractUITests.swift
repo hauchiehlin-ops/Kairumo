@@ -55,4 +55,24 @@ final class PlatformContractUITests: XCTestCase {
             XCTAssertTrue(row.exists, "自檢結果缺少 \(id)")
         }
     }
+
+    /// 操作手冊與隱私權政策打開之後不是空白（回報：實機上整頁空白）。
+    /// 量的是網頁裡真的有文字；兩份各開兩次。
+    func testBundledDocumentsAreNotBlank() {
+        let app = XCUIApplication()
+        app.launchEnvironment["KAIRUMO_UITEST"] = "1"
+        app.launch()
+        for label in ["User Manual", "Privacy Policy", "User Manual", "Privacy Policy"] {
+            let button = app.buttons.matching(NSPredicate(format: "label CONTAINS[c] %@", label)).firstMatch
+            guard button.waitForExistence(timeout: 15) else { XCTFail("首頁找不到 \(label)"); return }
+            button.tap()
+            let web = app.webViews.firstMatch
+            XCTAssertTrue(web.waitForExistence(timeout: 10), "\(label)：沒有網頁視圖")
+            let text = web.staticTexts.firstMatch
+            XCTAssertTrue(text.waitForExistence(timeout: 10), "\(label)：網頁是空白的（沒有任何文字）")
+            let done = app.buttons["Done"]
+            if done.waitForExistence(timeout: 3) { done.tap() }
+            _ = web.waitForNonExistence(timeout: 5)
+        }
+    }
 }

@@ -1407,6 +1407,9 @@ public struct NotebookEditorView: View {
         PageDisplayMode(rawValue: pageDisplayModeRaw) ?? .single
     }
     @State private var currentDrawing: PKDrawing = PKDrawing()
+    /// 最近一次真的寫進磁碟的筆跡（頁次 + 內容）。切換模式時用來判斷「這一頁其實沒變」，
+    /// 不必每次都同步序列化整頁筆跡（筆跡多的頁面，那一下就是點物件時的卡頓）。
+    @State private var lastPersistedInk: (page: Int, drawing: PKDrawing)? = nil
     /// 筆跡改動後「把這本筆記標記為剛改過」的去抖動計時器。
     ///
     /// 筆畫本身是**每次變動就落盤**的（見 `onDrawingChanged` 裡的
@@ -8158,9 +8161,14 @@ public struct NotebookEditorView: View {
             store.updateNotebook(notebook)
             return
         }
-        store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: currentDrawing)
-        pendingCoreInk[currentPageIndex] = currentDrawing
-        flushPendingCoreInk()
+        // 筆跡沒變就不重寫：模式切換、點物件前後都會呼叫這裡，而序列化＋寫檔＋推進核心是整頁的成本。
+        let unchanged = lastPersistedInk.map { $0.page == currentPageIndex && $0.drawing == currentDrawing } ?? false
+        if !unchanged {
+            store.saveDrawing(notebookId: notebook.id, pageIndex: currentPageIndex, drawing: currentDrawing)
+            pendingCoreInk[currentPageIndex] = currentDrawing
+            flushPendingCoreInk()
+            lastPersistedInk = (currentPageIndex, currentDrawing)
+        }
         notebook.lastModifiedDate = Date()
         store.updateNotebook(notebook)
     }
@@ -9265,6 +9273,22 @@ public struct NotebookEditorView: View {
                     inlineEditingTextId = existing.id
                     editingTextId = nil
                 }
+                return
+            }
+
+            // 手指輕點到文字以外的物件（圖片、形狀、表格、錄音卡…）：使用者要的是「選它」。
+            // 手寫模式下物件層不吃觸控，原本這一下什麼事都沒有（還多一顆墨點），使用者得自己先去切模式 ——
+            // 那就是『點物件取不到控制權』的卡頓感。現在直接切到打字模式，物件馬上可操作。
+            if isLocationInsideAnyObject(at: location, page: targetPage) {
+                removeTapDotStroke(near: location)
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    editorMode = .type
+                    inlineEditingTextId = nil
+                }
+                flashModeBadge()
+                #if os(iOS)
+                UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                #endif
                 return
             }
 
