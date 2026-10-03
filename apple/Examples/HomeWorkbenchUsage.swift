@@ -87,6 +87,9 @@ struct KairumoApp: App {
                 .task {
                     StartupLogger.log("KairumoApp.task: 冷啟動初始化同步")
                     try? await Task.sleep(nanoseconds: 1_000_000_000)
+                    // 自動清理暫存、過期模型殘檔與期滿的回收桶（見 `StorageSweeper`）。
+                    // 放在同步之前：此刻沒有任何上一輪的流程還在用 tmp，之後才會有新的。
+                    _ = await StorageSweeper.sweepAtLaunch(store: NotebookStore.shared)
                     await RecordingMigration.runIfNeeded(store: NotebookStore.shared)
                     NotebookStore.shared.refreshRecordings()
                     AutoSyncController.shared.start(

@@ -271,6 +271,10 @@ class MainActivity : ComponentActivity() {
         // 使用者會看到介面閃一下才變過去。
         applySyncedLanguage(this)
         com.kairumo.padnote.platform.StartupLogger.log("語言套用完成: ${deviceLanguageTag()}")
+        // 自動清理暫存、過期殘檔與期滿的回收桶（背景執行緒，不拖慢第一幀）。
+        Thread {
+            runCatching { com.kairumo.padnote.platform.StorageSweeper.sweepAtLaunch(applicationContext) }
+        }.start()
         setContent {
             // 用自己的主題，不用 MaterialTheme 的預設值（工作項 S-62）。
             // 預設值是 Material 的基準紫，而且**不跟隨深色模式** ——

@@ -3353,6 +3353,8 @@ public struct AppDiagnosticsSheet: View {
             List {
                 PlatformSelfCheckSection()
 
+                StorageUsageSection()
+
                 Section(localizationManager.localized("app_version_info")) {
                     HStack {
                         Text(localizationManager.localized("version_number"))

@@ -10728,6 +10728,14 @@ extension LocalizationManager {
             .ko: "녹음 중지",
             .th: "หยุดบันทึก"
         ],
+        "storage_caches": [
+            .zhHant: "快取",
+            .en: "Caches",
+            .zhHans: "缓存",
+            .ja: "キャッシュ",
+            .ko: "캐시",
+            .th: "แคช"
+        ],
         "storage_choose_parent": [
             .zhHant: "選擇文件資料夾…",
             .en: "Choose Document Folder…",
@@ -10735,6 +10743,22 @@ extension LocalizationManager {
             .ja: "書類フォルダを選択…",
             .ko: "문서 폴더 선택…",
             .th: "เลือกโฟลเดอร์เอกสาร…"
+        ],
+        "storage_clean_now": [
+            .zhHant: "立即清理",
+            .en: "Clean up now",
+            .zhHans: "立即清理",
+            .ja: "今すぐ整理",
+            .ko: "지금 정리",
+            .th: "ล้างข้อมูลตอนนี้"
+        ],
+        "storage_cleaned": [
+            .zhHant: "已釋放 %@。你的筆記與錄音不會被動到。",
+            .en: "Freed %@. Your notes and recordings are not touched.",
+            .zhHans: "已释放 %@。你的笔记与录音不会被动到。",
+            .ja: "%@ を解放しました。ノートと録音には触れていません。",
+            .ko: "%@ 확보했습니다. 노트와 녹음은 그대로입니다.",
+            .th: "คืนพื้นที่ %@ แล้ว โน้ตและการบันทึกเสียงของคุณไม่ถูกแตะต้อง"
         ],
         "storage_current_location": [
             .zhHant: "目前主要資料庫",
@@ -10776,6 +10800,14 @@ extension LocalizationManager {
             .ko: "이 폴더는 iCloud Drive로 동기화됩니다",
             .th: "โฟลเดอร์นี้ซิงก์ผ่าน iCloud Drive"
         ],
+        "storage_library": [
+            .zhHant: "筆記與錄音",
+            .en: "Notes & recordings",
+            .zhHans: "笔记与录音",
+            .ja: "ノートと録音",
+            .ko: "노트 및 녹음",
+            .th: "โน้ตและการบันทึกเสียง"
+        ],
         "storage_library_explainer": [
             .zhHant: "請選擇可在 Finder 或「檔案」中存取的資料夾。Kairumo 會在其中建立「Kairumo Doc」，安全搬移目前資料庫，並持續將筆記本、錄音與附件儲存到該位置。",
             .en: "Choose a folder you can access in Finder or Files. Kairumo creates “Kairumo Doc” there, moves the current library safely, and continuously saves notebooks, recordings, and attachments to that location.",
@@ -10807,6 +10839,14 @@ extension LocalizationManager {
             .ja: "データ保存先",
             .ko: "데이터 저장 위치",
             .th: "ตำแหน่งจัดเก็บข้อมูล"
+        ],
+        "storage_models": [
+            .zhHant: "已下載的模型",
+            .en: "Downloaded models",
+            .zhHans: "已下载的模型",
+            .ja: "ダウンロード済みモデル",
+            .ko: "다운로드한 모델",
+            .th: "โมเดลที่ดาวน์โหลด"
         ],
         "storage_move_cancelled": [
             .zhHant: "已取消搬移，沒有任何改動。",
@@ -10959,6 +10999,22 @@ extension LocalizationManager {
             .ja: "この場所はこの端末専用です。端末間の更新には安定したノート ID と、設定済みの Google Drive またはフォルダ同期を使用するため、Mac、iPhone、iPad、Android が別端末のローカルパスに依存することはありません。",
             .ko: "이 위치는 이 기기에만 적용됩니다. 기기 간 업데이트는 안정적인 노트 ID와 설정된 Google Drive 또는 폴더 동기화를 사용하므로 Mac, iPhone, iPad 및 Android는 다른 기기의 로컬 경로에 의존하지 않습니다.",
             .th: "ตำแหน่งนี้ใช้เฉพาะอุปกรณ์เครื่องนี้ การอัปเดตข้ามอุปกรณ์ใช้รหัสสมุดบันทึกที่คงที่และ Google Drive หรือการซิงค์โฟลเดอร์ที่คุณตั้งค่าไว้ ดังนั้น Mac, iPhone, iPad และ Android จะไม่พึ่งพาพาธภายในของอุปกรณ์อื่น"
+        ],
+        "storage_temp": [
+            .zhHant: "暫存檔",
+            .en: "Temporary files",
+            .zhHans: "临时文件",
+            .ja: "一時ファイル",
+            .ko: "임시 파일",
+            .th: "ไฟล์ชั่วคราว"
+        ],
+        "storage_title": [
+            .zhHant: "儲存空間",
+            .en: "Storage",
+            .zhHans: "存储空间",
+            .ja: "ストレージ",
+            .ko: "저장 공간",
+            .th: "พื้นที่จัดเก็บ"
         ],
         "stroke_color": [
             .zhHant: "線條顏色",

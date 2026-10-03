@@ -10797,6 +10797,14 @@ object LocalizationStrings {
             "ko" to "녹음 중지",
             "th" to "หยุดบันทึก"
         ),
+        "storage_caches" to mapOf(
+            "zh-Hant" to "快取",
+            "en" to "Caches",
+            "zh-Hans" to "缓存",
+            "ja" to "キャッシュ",
+            "ko" to "캐시",
+            "th" to "แคช"
+        ),
         "storage_choose_parent" to mapOf(
             "zh-Hant" to "選擇文件資料夾…",
             "en" to "Choose Document Folder…",
@@ -10804,6 +10812,22 @@ object LocalizationStrings {
             "ja" to "書類フォルダを選択…",
             "ko" to "문서 폴더 선택…",
             "th" to "เลือกโฟลเดอร์เอกสาร…"
+        ),
+        "storage_clean_now" to mapOf(
+            "zh-Hant" to "立即清理",
+            "en" to "Clean up now",
+            "zh-Hans" to "立即清理",
+            "ja" to "今すぐ整理",
+            "ko" to "지금 정리",
+            "th" to "ล้างข้อมูลตอนนี้"
+        ),
+        "storage_cleaned" to mapOf(
+            "zh-Hant" to "已釋放 %@。你的筆記與錄音不會被動到。",
+            "en" to "Freed %@. Your notes and recordings are not touched.",
+            "zh-Hans" to "已释放 %@。你的笔记与录音不会被动到。",
+            "ja" to "%@ を解放しました。ノートと録音には触れていません。",
+            "ko" to "%@ 확보했습니다. 노트와 녹음은 그대로입니다.",
+            "th" to "คืนพื้นที่ %@ แล้ว โน้ตและการบันทึกเสียงของคุณไม่ถูกแตะต้อง"
         ),
         "storage_current_location" to mapOf(
             "zh-Hant" to "目前主要資料庫",
@@ -10845,6 +10869,14 @@ object LocalizationStrings {
             "ko" to "이 폴더는 iCloud Drive로 동기화됩니다",
             "th" to "โฟลเดอร์นี้ซิงก์ผ่าน iCloud Drive"
         ),
+        "storage_library" to mapOf(
+            "zh-Hant" to "筆記與錄音",
+            "en" to "Notes & recordings",
+            "zh-Hans" to "笔记与录音",
+            "ja" to "ノートと録音",
+            "ko" to "노트 및 녹음",
+            "th" to "โน้ตและการบันทึกเสียง"
+        ),
         "storage_library_explainer" to mapOf(
             "zh-Hant" to "請選擇可在 Finder 或「檔案」中存取的資料夾。Kairumo 會在其中建立「Kairumo Doc」，安全搬移目前資料庫，並持續將筆記本、錄音與附件儲存到該位置。",
             "en" to "Choose a folder you can access in Finder or Files. Kairumo creates “Kairumo Doc” there, moves the current library safely, and continuously saves notebooks, recordings, and attachments to that location.",
@@ -10876,6 +10908,17 @@ object LocalizationStrings {
             "ja" to "データ保存先",
             "ko" to "데이터 저장 위치",
             "th" to "ตำแหน่งจัดเก็บข้อมูล"
+        )
+    )
+
+    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        "storage_models" to mapOf(
+            "zh-Hant" to "已下載的模型",
+            "en" to "Downloaded models",
+            "zh-Hans" to "已下载的模型",
+            "ja" to "ダウンロード済みモデル",
+            "ko" to "다운로드한 모델",
+            "th" to "โมเดลที่ดาวน์โหลด"
         ),
         "storage_move_cancelled" to mapOf(
             "zh-Hant" to "已取消搬移，沒有任何改動。",
@@ -10908,10 +10951,7 @@ object LocalizationStrings {
             "ja" to "コピー中：%1\$d／%2\$d ファイル…",
             "ko" to "복사 중: %1\$d/%2\$d 파일…",
             "th" to "กำลังคัดลอก %1\$d จาก %2\$d ไฟล์…"
-        )
-    )
-
-    private fun part17(): Map<String, Map<String, String>> = mapOf(
+        ),
         "storage_progress_verifying" to mapOf(
             "zh-Hant" to "驗證複製結果…",
             "en" to "Verifying the copy…",
@@ -11031,6 +11071,22 @@ object LocalizationStrings {
             "ja" to "この場所はこの端末専用です。端末間の更新には安定したノート ID と、設定済みの Google Drive またはフォルダ同期を使用するため、Mac、iPhone、iPad、Android が別端末のローカルパスに依存することはありません。",
             "ko" to "이 위치는 이 기기에만 적용됩니다. 기기 간 업데이트는 안정적인 노트 ID와 설정된 Google Drive 또는 폴더 동기화를 사용하므로 Mac, iPhone, iPad 및 Android는 다른 기기의 로컬 경로에 의존하지 않습니다.",
             "th" to "ตำแหน่งนี้ใช้เฉพาะอุปกรณ์เครื่องนี้ การอัปเดตข้ามอุปกรณ์ใช้รหัสสมุดบันทึกที่คงที่และ Google Drive หรือการซิงค์โฟลเดอร์ที่คุณตั้งค่าไว้ ดังนั้น Mac, iPhone, iPad และ Android จะไม่พึ่งพาพาธภายในของอุปกรณ์อื่น"
+        ),
+        "storage_temp" to mapOf(
+            "zh-Hant" to "暫存檔",
+            "en" to "Temporary files",
+            "zh-Hans" to "临时文件",
+            "ja" to "一時ファイル",
+            "ko" to "임시 파일",
+            "th" to "ไฟล์ชั่วคราว"
+        ),
+        "storage_title" to mapOf(
+            "zh-Hant" to "儲存空間",
+            "en" to "Storage",
+            "zh-Hans" to "存储空间",
+            "ja" to "ストレージ",
+            "ko" to "저장 공간",
+            "th" to "พื้นที่จัดเก็บ"
         ),
         "stroke_color" to mapOf(
             "zh-Hant" to "線條顏色",
@@ -11495,7 +11551,10 @@ object LocalizationStrings {
             "ja" to "クラウド同期",
             "ko" to "클라우드 동기화",
             "th" to "ซิงก์คลาวด์"
-        ),
+        )
+    )
+
+    private fun part18(): Map<String, Map<String, String>> = mapOf(
         "sync_status" to mapOf(
             "zh-Hant" to "狀態",
             "en" to "Status",
@@ -11551,10 +11610,7 @@ object LocalizationStrings {
             "ja" to "列を追加",
             "ko" to "열 추가",
             "th" to "เพิ่มคอลัมน์"
-        )
-    )
-
-    private fun part18(): Map<String, Map<String, String>> = mapOf(
+        ),
         "table_add_row" to mapOf(
             "zh-Hant" to "新增列",
             "en" to "Add Row",
@@ -12138,7 +12194,10 @@ object LocalizationStrings {
             "ja" to "30° 等角投影立体グリッド",
             "ko" to "30° 등각 투영 그리드",
             "th" to "กริดไอโซเมตริก 30°"
-        ),
+        )
+    )
+
+    private fun part19(): Map<String, Map<String, String>> = mapOf(
         "tmpl_isometric_desc" to mapOf(
             "zh-Hant" to "機械構件、三維產品外觀與爆炸透視專用",
             "en" to "Dedicated for mechanism components, 3D products & exploded views",
@@ -12194,10 +12253,7 @@ object LocalizationStrings {
             "ja" to "中心と4方向の枝の起点。点方眼つき",
             "ko" to "중앙 상자와 네 갈래 시작점, 점 모눈",
             "th" to "กล่องกลางและกิ่งสี่ทิศบนจุดตาราง"
-        )
-    )
-
-    private fun part19(): Map<String, Map<String, String>> = mapOf(
+        ),
         "tmpl_mobile_wireframe" to mapOf(
             "zh-Hant" to "行動端線框 (8pt Grid)",
             "en" to "Mobile Wireframe (8pt)",
@@ -12781,7 +12837,10 @@ object LocalizationStrings {
             "ja" to "同じノート内での並べ替えは「ページを上へ／下へ」",
             "ko" to "같은 노트 안에서는 ‘페이지 위로/아래로’를 쓰세요",
             "th" to "จัดลำดับในสมุดเดียวกันให้ใช้เลื่อนหน้าขึ้น/ลง"
-        ),
+        )
+    )
+
+    private fun part20(): Map<String, Map<String, String>> = mapOf(
         "transfer_would_empty_source" to mapOf(
             "zh-Hant" to "一本筆記至少要留一頁",
             "en" to "A notebook must keep at least one page",
@@ -12837,10 +12896,7 @@ object LocalizationStrings {
             "ja" to "ゴミ箱は空です",
             "ko" to "휴지통이 비어 있습니다",
             "th" to "ถังขยะว่างเปล่า"
-        )
-    )
-
-    private fun part20(): Map<String, Map<String, String>> = mapOf(
+        ),
         "trash_empty_action" to mapOf(
             "zh-Hant" to "清空回收桶",
             "en" to "Empty Trash",

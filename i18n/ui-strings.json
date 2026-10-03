@@ -13175,5 +13175,61 @@
     "th": "สีไฮไลต์",
     "zhHans": "荧光笔颜色",
     "zhHant": "螢光筆顏色"
+  },
+  "storage_title": {
+    "en": "Storage",
+    "ja": "ストレージ",
+    "ko": "저장 공간",
+    "th": "พื้นที่จัดเก็บ",
+    "zhHans": "存储空间",
+    "zhHant": "儲存空間"
+  },
+  "storage_library": {
+    "en": "Notes & recordings",
+    "ja": "ノートと録音",
+    "ko": "노트 및 녹음",
+    "th": "โน้ตและการบันทึกเสียง",
+    "zhHans": "笔记与录音",
+    "zhHant": "筆記與錄音"
+  },
+  "storage_temp": {
+    "en": "Temporary files",
+    "ja": "一時ファイル",
+    "ko": "임시 파일",
+    "th": "ไฟล์ชั่วคราว",
+    "zhHans": "临时文件",
+    "zhHant": "暫存檔"
+  },
+  "storage_caches": {
+    "en": "Caches",
+    "ja": "キャッシュ",
+    "ko": "캐시",
+    "th": "แคช",
+    "zhHans": "缓存",
+    "zhHant": "快取"
+  },
+  "storage_models": {
+    "en": "Downloaded models",
+    "ja": "ダウンロード済みモデル",
+    "ko": "다운로드한 모델",
+    "th": "โมเดลที่ดาวน์โหลด",
+    "zhHans": "已下载的模型",
+    "zhHant": "已下載的模型"
+  },
+  "storage_clean_now": {
+    "en": "Clean up now",
+    "ja": "今すぐ整理",
+    "ko": "지금 정리",
+    "th": "ล้างข้อมูลตอนนี้",
+    "zhHans": "立即清理",
+    "zhHant": "立即清理"
+  },
+  "storage_cleaned": {
+    "en": "Freed %@. Your notes and recordings are not touched.",
+    "ja": "%@ を解放しました。ノートと録音には触れていません。",
+    "ko": "%@ 확보했습니다. 노트와 녹음은 그대로입니다.",
+    "th": "คืนพื้นที่ %@ แล้ว โน้ตและการบันทึกเสียงของคุณไม่ถูกแตะต้อง",
+    "zhHans": "已释放 %@。你的笔记与录音不会被动到。",
+    "zhHant": "已釋放 %@。你的筆記與錄音不會被動到。"
   }
 }
