@@ -29,6 +29,30 @@ final class EditorStateMachineTests: XCTestCase {
         XCTAssertTrue(sm.isCanvasTapCreatesText)
     }
 
+    func testInlineInkBlockTemporarilyEnablesCanvasWhileMainModeStaysType() {
+        XCTAssertEqual(
+            EditorCanvasInputPolicy.effectiveMode(
+                mainMode: .type, isInlineInkEditing: true),
+            .draw
+        )
+        XCTAssertTrue(
+            EditorCanvasInputPolicy.acceptsInk(
+                mainMode: .type, isInlineInkEditing: true)
+        )
+    }
+
+    func testPlainTypeModeStillLocksCanvasInk() {
+        XCTAssertEqual(
+            EditorCanvasInputPolicy.effectiveMode(
+                mainMode: .type, isInlineInkEditing: false),
+            .type
+        )
+        XCTAssertFalse(
+            EditorCanvasInputPolicy.acceptsInk(
+                mainMode: .type, isInlineInkEditing: false)
+        )
+    }
+
     func testPencilTouchGuardInTypeMode() {
         let sm = EditorStateMachine()
         sm.setMode(.type)
@@ -236,5 +260,4 @@ extension EditorStateMachineTests {
         }
     }
 }
-
 

@@ -4192,7 +4192,7 @@ public struct NotebookEditorView: View {
 
             // 空白頁點擊與既有物件的互動分層。這個視圖和頁面套用完全相同
             // 的縮放／位移，因此 gesture 回傳的是正確的頁面座標。
-            if editorMode == .type {
+            if editorMode == .type && !isInlineInkEditing {
                 Color.clear
                     .frame(width: PageGeometry.width, height: currentPageHeight)
                     .contentShape(Rectangle())
@@ -4209,8 +4209,11 @@ public struct NotebookEditorView: View {
                 .frame(width: PageGeometry.width, height: currentPageHeight, alignment: .topLeading)
                 .scaleEffect(canvasZoomScale, anchor: .topLeading)
                 .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
-                .allowsHitTesting(editorMode == .type || inlineEditingTextId != nil || editingTextId != nil)
-                .zIndex((editorMode == .type || inlineEditingTextId != nil) ? 3 : 1)
+                .allowsHitTesting(
+                    !isInlineInkEditing
+                        && (editorMode == .type || inlineEditingTextId != nil || editingTextId != nil)
+                )
+                .zIndex((!isInlineInkEditing && (editorMode == .type || inlineEditingTextId != nil)) ? 3 : 1)
 
             CanvasRepresentable(
                 drawing: $currentDrawing,
@@ -4225,7 +4228,10 @@ public struct NotebookEditorView: View {
                 paperId: notebook.paperId(forPage: currentPageIndex),
                 paletteId: notebook.guidePaletteId,
                 pageHeight: currentPageHeight,
-                editorMode: editorMode,
+                // 打字模式中的「手繪區塊」是局部繪圖情境。主模式仍保持
+                // `.type`，但 PencilKit 必須收到 `.draw`，否則它會關掉自己的
+                // drawingGestureRecognizer，造成工具列已切到筆、畫布卻完全沒反應。
+                editorMode: effectiveCanvasMode,
                 onDrawingChanged: { rawDrawing -> PKDrawing? in
                     // **頁面框線就是編輯區域。**
                     var processedDrawing = enforcePrintableArea(rawDrawing)
@@ -4335,8 +4341,14 @@ public struct NotebookEditorView: View {
                     }
                 },
                 onPencilTouchBegan: { handlePencilTouchBegan() },
-                onCanvasDirectTap: { location in handleCanvasDirectTap(at: location) },
-                onCanvasDirectDoubleTap: { location in handleCanvasDirectDoubleTap(at: location) }
+                onCanvasDirectTap: { location in
+                    guard !isInlineInkEditing else { return }
+                    handleCanvasDirectTap(at: location)
+                },
+                onCanvasDirectDoubleTap: { location in
+                    guard !isInlineInkEditing else { return }
+                    handleCanvasDirectDoubleTap(at: location)
+                }
             )
             .accessibilityIdentifier("editor.canvas")
             // 從別的 App 把圖拖進來（工作項 S-68）。
@@ -4356,8 +4368,8 @@ public struct NotebookEditorView: View {
                         }
                 }
             )
-            .allowsHitTesting(editorMode == .draw)
-            .zIndex(editorMode == .draw ? 2 : 1)
+            .allowsHitTesting(isCanvasInkActive)
+            .zIndex(isCanvasInkActive ? 2 : 1)
 
             modeBadge
                 .padding(.top, DS.Space.s)
@@ -4808,6 +4820,23 @@ public struct NotebookEditorView: View {
             }
             return .type
         }
+    }
+
+    /// 打字模式中的手繪區塊仍使用同一張頁面畫布，只是暫時把輸入權交給墨跡層。
+    private var isInlineInkEditing: Bool {
+        editorMode == .type && activeInlineInkBlockId != nil
+    }
+
+    private var effectiveCanvasMode: EditorMode {
+        EditorCanvasInputPolicy.effectiveMode(
+            mainMode: editorMode,
+            isInlineInkEditing: isInlineInkEditing)
+    }
+
+    private var isCanvasInkActive: Bool {
+        EditorCanvasInputPolicy.acceptsInk(
+            mainMode: editorMode,
+            isInlineInkEditing: isInlineInkEditing)
     }
 
     private var contextualPortalState: DynamicPortalIsland.ContextualPortalState? {
@@ -6134,7 +6163,9 @@ public struct NotebookEditorView: View {
     private var drawingToolbar: AnyView { AnyView(drawingToolbarContent) }
 
     private func selectEditorTool(_ tool: EditorToolType) {
-        if editorMode != .draw {
+        // 在文件內的手繪區塊換筆，只換工具；不可順手把整份文件的主模式
+        // 改成手繪，否則「完成、回到文件」的情境會被拆掉。
+        if editorMode != .draw && !isInlineInkEditing {
             editorMode = .draw
             inlineEditingTextId = nil
         }
@@ -7980,7 +8011,7 @@ public struct NotebookEditorView: View {
     /// 打字模式下不理會：那時候畫布根本不收筆畫，換工具只會讓使用者切回
     /// 手寫時發現筆莫名其妙變了。
     private func applyPenControl(_ control: FfiPenControl, pressed: Bool) {
-        guard editorMode == .draw else { return }
+        guard isCanvasInkActive else { return }
 
         let settings = PenHardwareSettings.shared
         // 按著的控制項（側鍵、反向筆頭）放開時，只還原**我們自己切過去的
@@ -8160,6 +8191,13 @@ public struct NotebookEditorView: View {
             notebook.lastModifiedDate = Date()
             store.updateNotebook(notebook)
             return
+        }
+        // 模式切換會立即觸發 SwiftUI 更新；`@Binding` 的最後一次回寫有可能還
+        // 排在同一個 run loop 後面。此時若拿 `currentDrawing` 存檔並回灌 UI，
+        // 會把畫布上剛完成的多筆筆跡換成較舊的快照，看起來像切到打字模式後
+        // 大部分筆跡消失。可見的 PKCanvasView 才是切換瞬間的權威快照。
+        if let liveDrawing = canvasView?.drawing, liveDrawing != currentDrawing {
+            currentDrawing = liveDrawing
         }
         // 筆跡沒變就不重寫：模式切換、點物件前後都會呼叫這裡，而序列化＋寫檔＋推進核心是整頁的成本。
         let unchanged = lastPersistedInk.map { $0.page == currentPageIndex && $0.drawing == currentDrawing } ?? false
@@ -9219,7 +9257,8 @@ public struct NotebookEditorView: View {
 
     /// 🌟 全自動意圖感知：Apple Pencil 碰到畫布時自動切換至手繪模式，並收回未輸入完成的空白文字框
     private func handlePencilTouchBegan() {
-        if editorMode != .draw {
+        // 手繪區塊已經取得墨跡輸入權，不要再把頂層文件模式改成 `.draw`。
+        if editorMode != .draw && !isInlineInkEditing {
             withAnimation(.easeInOut(duration: 0.2)) {
                 editorMode = .draw
             }

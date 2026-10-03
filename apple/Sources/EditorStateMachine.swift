@@ -20,6 +20,27 @@ public enum EditorMode: String, CaseIterable, Identifiable, Sendable {
     public var isType: Bool { self == .type }
 }
 
+/// 主模式與情境式編輯共同決定畫布真正接收哪一種輸入。
+///
+/// 「手繪區塊」是打字文件中的局部手繪情境：頂層模式仍是 `.type`，但畫布
+/// 必須暫時以 `.draw` 運作。把這條規則集中在這裡，避免工具列已經顯示手繪、
+/// PencilKit 卻仍被打字模式鎖住的半套狀態。
+enum EditorCanvasInputPolicy {
+    static func effectiveMode(
+        mainMode: EditorMode,
+        isInlineInkEditing: Bool
+    ) -> EditorMode {
+        isInlineInkEditing ? .draw : mainMode
+    }
+
+    static func acceptsInk(
+        mainMode: EditorMode,
+        isInlineInkEditing: Bool
+    ) -> Bool {
+        effectiveMode(mainMode: mainMode, isInlineInkEditing: isInlineInkEditing) == .draw
+    }
+}
+
 /// 編輯器互動階段（遵循標準單一職責模式設計）
 public enum EditorInteractionPhase: Equatable, Sendable {
     /// 手寫中（PencilKit 啟用、筆跡預測活躍、畫布點擊不產生文字框）
