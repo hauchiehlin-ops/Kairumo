@@ -1658,6 +1658,7 @@ public struct NotebookEditorView: View {
     @State private var editingTextId: String? = nil
     /// 隨點隨打就地輸入狀態（連動 TextAttachmentItemView 的焦點與鍵盤）
     @State private var inlineEditingTextId: String? = nil
+    @State private var lastAddedTextId: String? = nil
     @State private var snapToGrid: Bool = true
     @State private var newTextDraft: NoteTextAttachment = NoteTextAttachment()
     @State private var showLinkPreviewSheet: Bool = false
@@ -8086,6 +8087,16 @@ public struct NotebookEditorView: View {
                 }
             }
             deletedAttachmentBackup = nil
+        } else if let addedId = lastAddedTextId,
+                  let textItem = notebook.textAttachments?.first(where: { $0.id == addedId }),
+                  textItem.text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            // 如果剛剛隨點隨打新增了空白文字方塊，復原會優先撤銷該文字方塊
+            if inlineEditingTextId == addedId { inlineEditingTextId = nil }
+            lastAddedTextId = nil
+            notebook.textAttachments?.removeAll { $0.id == addedId }
+            store.updateNotebook(notebook)
+            collaborationManager.broadcastAttachmentDelete(id: addedId, type: "text")
+            PageThumbnailRenderer.invalidateAll()
         } else {
             canvasView?.undoManager?.undo()
         }
@@ -9737,6 +9748,7 @@ public struct NotebookEditorView: View {
             collaborationManager.broadcastAttachmentUpsert(type: "text", itemDict: dict)
         }
         inlineEditingTextId = draft.id
+        lastAddedTextId = draft.id
         if openStudio {
             editingTextId = draft.id
         } else {
@@ -11513,6 +11525,7 @@ struct TextAttachmentItemView: View {
     @State private var isDragging: Bool = false
     @State private var hasBeenFocused: Bool = false
     @FocusState private var inlineFocused: Bool
+    @State private var showSlashMenu: Bool = false
 
     private var lockedByPeer: CollaboratorPeer? {
         collaborationManager.peers.first(where: { $0.selectedId == textItem.id })
@@ -11565,6 +11578,26 @@ struct TextAttachmentItemView: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: action)
     }
 
+    private func slashMenuItem(title: String, icon: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundColor(.accentColor)
+                    .frame(width: 20)
+                Text(title)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundColor(.primary)
+                Spacer()
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .background(Color.secondary.opacity(0.08))
+            .cornerRadius(6)
+        }
+        .buttonStyle(.plain)
+    }
+
     var body: some View {
         let currentX = textItem.x + dragOffset.width
         let currentY = textItem.y + dragOffset.height
@@ -11599,6 +11632,41 @@ struct TextAttachmentItemView: View {
                             .frame(maxWidth: .infinity, minHeight: 20, alignment: resolveFrameAlignment(textItem.alignmentRaw))
                             .focused($inlineFocused)
                             .accessibilityIdentifier("editor.text.inline_editor")
+                    }
+                    .overlay(alignment: .topLeading) {
+                        if showSlashMenu {
+                            VStack(alignment: .leading, spacing: 4) {
+                                slashMenuItem(title: "H1 標題", icon: "textformat.size.larger") {
+                                    textItem.text = ""
+                                    textItem.fontSize = 28
+                                    textItem.isBold = true
+                                    showSlashMenu = false
+                                }
+                                slashMenuItem(title: "H2 次標題", icon: "textformat.size") {
+                                    textItem.text = ""
+                                    textItem.fontSize = 22
+                                    textItem.isBold = true
+                                    showSlashMenu = false
+                                }
+                                slashMenuItem(title: "項目清單 (•)", icon: "list.bullet") {
+                                    textItem.text = "• "
+                                    showSlashMenu = false
+                                }
+                                slashMenuItem(title: "待辦核取方塊 (☐)", icon: "checklist") {
+                                    textItem.text = "☐ "
+                                    showSlashMenu = false
+                                }
+                                slashMenuItem(title: "引言區塊 (│)", icon: "text.quote") {
+                                    textItem.text = "│ "
+                                    showSlashMenu = false
+                                }
+                            }
+                            .padding(6)
+                            .background(Color(uiColor: .secondarySystemGroupedBackground))
+                            .cornerRadius(8)
+                            .shadow(color: Color.black.opacity(0.18), radius: 6, y: 3)
+                            .offset(y: -170)
+                        }
                     }
                     .overlay(alignment: .bottomTrailing) {
                         if !isTypeMode {
@@ -11842,8 +11910,41 @@ struct TextAttachmentItemView: View {
         // 方塊跟著內容長高（Word 的行為）。隨點即書的方塊一開始只有一行高，
         // 打到第二行時不長高的話，後面的字被方塊裁掉、看起來像「打了字沒出現」。
         // 內距固定 14（高度一律不小於 60），長高不會讓第一行跳離格線。
-        .onChange(of: textItem.text) { _ in
+        .onChange(of: textItem.text) { newText in
             guard isEditingInline else { return }
+
+            // 🌟 Markdown 前綴快捷排版（即打即轉）
+            if newText == "# " {
+                textItem.text = ""
+                textItem.fontSize = 28
+                textItem.isBold = true
+            } else if newText == "## " {
+                textItem.text = ""
+                textItem.fontSize = 22
+                textItem.isBold = true
+            } else if newText == "### " {
+                textItem.text = ""
+                textItem.fontSize = 18
+                textItem.isBold = true
+            } else if newText == "- " || newText == "* " {
+                textItem.text = "• "
+            } else if newText == "1. " {
+                textItem.text = "1. "
+            } else if newText == "[] " || newText == "[ ] " {
+                textItem.text = "☐ "
+            } else if newText == "[x] " {
+                textItem.text = "☑ "
+            } else if newText == "> " {
+                textItem.text = "│ "
+            }
+
+            // 🌟 斜線快捷選單觸發
+            if textItem.text == "/" {
+                showSlashMenu = true
+            } else if showSlashMenu && !textItem.text.hasPrefix("/") {
+                showSlashMenu = false
+            }
+
             let needed = RuledWriting.boxHeight(
                 text: textItem.text, width: textItem.width, fontSize: textItem.fontSize,
                 bold: textItem.isBold, lineSpacing: textItem.lineSpacing ?? 0)

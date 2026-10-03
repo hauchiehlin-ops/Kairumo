@@ -60,6 +60,7 @@ padnote-chart = { path = "../padnote-chart" }
 padnote-table = { path = "../padnote-table" }
 padnote-doc = { path = "../padnote-doc" }
 padnote-ink = { path = "../padnote-ink" }
+padnote-render = { path = "../padnote-render" }
 padnote-sync = { path = "../padnote-sync" }
 padnote-asr = { path = "../padnote-asr" }
 padnote-recognize = { path = "../padnote-recognize" }

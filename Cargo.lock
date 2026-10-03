@@ -2351,6 +2351,7 @@ dependencies = [
  "padnote-recognize",
  "padnote-recorder",
  "padnote-relay",
+ "padnote-render",
  "padnote-search",
  "padnote-shapes",
  "padnote-storage",

@@ -175,11 +175,34 @@ enum ProInkRenderer {
         return Cached(dabs: dabs, bounds: stroke.bounds)
     }
 
+    // MARK: - 紋理快取（由 padnote-core FFI 提供）
+    private static let grainSize: Int = 128
+    private static let grainCGImage: CGImage? = {
+        let bytes = brushPaperGrainTexture(width: UInt32(grainSize), height: UInt32(grainSize), scale: 4.0)
+        guard bytes.count == grainSize * grainSize else { return nil }
+        guard let provider = CGDataProvider(data: bytes as CFData) else { return nil }
+        return CGImage(
+            width: grainSize,
+            height: grainSize,
+            bitsPerComponent: 8,
+            bitsPerPixel: 8,
+            bytesPerRow: grainSize,
+            space: CGColorSpaceCreateDeviceGray(),
+            bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.none.rawValue),
+            provider: provider,
+            decode: nil,
+            shouldInterpolate: true,
+            intent: .defaultIntent
+        )
+    }()
+
     /// 把一筆畫的筆點畫進 `ctx`，只畫碰得到 `clip` 的那些。
-    static func draw(_ cached: Cached, color rgba: [UInt8], in ctx: CGContext, clip: CGRect) {
+    static func draw(_ cached: Cached, toolName: String = "", color rgba: [UInt8], in ctx: CGContext, clip: CGRect) {
         guard rgba.count == 4 else { return }
         let base = (r: CGFloat(rgba[0]) / 255, g: CGFloat(rgba[1]) / 255, b: CGFloat(rgba[2]) / 255)
         let strokeAlpha = CGFloat(rgba[3]) / 255
+        let needsGrain = (toolName == "charcoal" || toolName == "crayon") && grainCGImage != nil
+
         for dab in cached.dabs {
             let rx = CGFloat(dab.rx), ry = CGFloat(dab.ry)
             let reach = max(rx, ry)
@@ -199,6 +222,12 @@ enum ProInkRenderer {
             ctx.saveGState()
             ctx.translateBy(x: CGFloat(dab.x), y: CGFloat(dab.y))
             ctx.rotate(by: CGFloat(dab.angle))
+
+            if needsGrain, let grain = grainCGImage {
+                // 炭筆／蠟筆：套用底層紙張孔隙遮罩
+                ctx.clip(to: CGRect(x: -rx, y: -ry, width: rx * 2, height: ry * 2), mask: grain)
+            }
+
             if dab.softness > 0.3 {
                 // Stamp 筆刷紋理引擎：高斯漸層柔邊印章（Gaussian Stamp）
                 let colors = [
@@ -315,7 +344,7 @@ final class ProInkLayerView: UIView {
             } else {
                 ctx.setBlendMode(.normal)
             }
-            ProInkRenderer.draw(cached, color: stroke.colorRGBA, in: ctx, clip: rect)
+            ProInkRenderer.draw(cached, toolName: stroke.tool, color: stroke.colorRGBA, in: ctx, clip: rect)
             ctx.restoreGState()
         }
         if let live, let liveCache {
@@ -327,7 +356,7 @@ final class ProInkLayerView: UIView {
             } else {
                 ctx.setBlendMode(.normal)
             }
-            ProInkRenderer.draw(liveCache, color: live.colorRGBA, in: ctx, clip: rect)
+            ProInkRenderer.draw(liveCache, toolName: live.tool, color: live.colorRGBA, in: ctx, clip: rect)
             ctx.restoreGState()
         }
     }

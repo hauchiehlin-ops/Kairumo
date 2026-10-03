@@ -783,7 +783,20 @@ fn parse_svg(src: &str) -> Vec<FfiIconShape> {
     shapes
 }
 
+/// 產生決定性圓形高斯軟邊印章紋理：`size x size`（單通道灰階 R8Unorm 位元組）。
+#[uniffi::export]
+pub fn brush_gaussian_stamp_texture(size: u32) -> Vec<u8> {
+    padnote_render::BrushTextures::generate_gaussian_stamp(size)
+}
+
+/// 產生紙張孔隙紋理圖磚：`width x height`（單通道灰階 R8Unorm 位元組）。
+#[uniffi::export]
+pub fn brush_paper_grain_texture(width: u32, height: u32, scale: f32) -> Vec<u8> {
+    padnote_render::BrushTextures::generate_paper_grain(width, height, scale)
+}
+
 #[cfg(test)]
+
 mod tests {
     use super::*;
     use padnote_toolbar::tools::all_tools;
