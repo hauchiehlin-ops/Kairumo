@@ -166,6 +166,12 @@ public enum NoteTemplate: String, Codable, CaseIterable, Identifiable {
     case choreRoster = "chore_roster"
     case challenge21 = "challenge_21"
 
+    // ---- 學習 ----
+    // 核心目錄有、這個列舉原本漏掉的兩種。漏掉的後果：選單裡看得到，
+    // 點了卻什麼都沒發生（`NoteTemplate(paperId:)` 回 nil，選取被靜默略過）。
+    case english3Line = "english_3line"
+    case errorBook = "error_book"
+
     public var id: String { rawValue }
 
     /// 舊的十三個：中文 rawValue → 核心的英文 id。

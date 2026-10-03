@@ -17,7 +17,7 @@ import androidx.compose.ui.viewinterop.AndroidView
  * `file:///android_asset/` 底下的本機檔案，不載入任何外部內容。
  */
 @Composable
-fun DocsViewer(assetPath: String, modifier: Modifier = Modifier) {
+fun DocsViewer(assetPath: String, languageTag: String, modifier: Modifier = Modifier) {
     AndroidView(
         modifier = modifier,
         factory = { context ->
@@ -42,7 +42,8 @@ fun DocsViewer(assetPath: String, modifier: Modifier = Modifier) {
                 //
                 // charset 由文件自己宣告。少了它，WebView 只能猜編碼，中文會變成
                 // 一堆亂碼 —— Apple 端實際發生過這件事。
-                loadUrl("file:///android_asset/$assetPath")
+                // `?lang=`：語言已經在 App 裡選過，頁面就照那個語言顯示並隱藏自己的語言選單。
+                loadUrl("file:///android_asset/$assetPath?lang=$languageTag")
             }
         }
     )

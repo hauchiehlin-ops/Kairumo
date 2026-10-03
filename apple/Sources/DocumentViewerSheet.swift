@@ -77,7 +77,10 @@ public enum BundledDocument: String, Identifiable {
 /// 隱私權政策若為了顯示自己而連到第三方，就違反了它自己寫的承諾。
 struct DocumentWebView: UIViewRepresentable {
     let url: URL
-    func makeCoordinator() -> Coordinator { Coordinator(url: url) }
+    /// 介面語言（`zh-Hant`、`en`…）。語言已經在首頁選過，頁面就照它顯示並隱藏自己的語言選單（`?lang=`）。
+    var languageCode: String = LocalizationManager.shared.currentLanguage.rawValue
+
+    func makeCoordinator() -> Coordinator { Coordinator(url: url, languageCode: languageCode) }
 
     func makeUIView(context: Context) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -108,12 +111,21 @@ struct DocumentWebView: UIViewRepresentable {
 
     final class Coordinator: NSObject, WKNavigationDelegate {
         let url: URL
+        let languageCode: String
         weak var webView: WKWebView?
         private(set) var hasStartedLoading = false
         private var retried = false
 
-        init(url: URL) {
+        init(url: URL, languageCode: String) {
             self.url = url
+            self.languageCode = languageCode
+        }
+
+        /// 檔案網址加上 `?lang=`。
+        private var requestURL: URL {
+            var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            components?.queryItems = [URLQueryItem(name: "lang", value: languageCode)]
+            return components?.url ?? url
         }
 
         func loadIfReady(_ webView: WKWebView) {
@@ -132,7 +144,7 @@ struct DocumentWebView: UIViewRepresentable {
         private func loadLocal(_ webView: WKWebView) {
             hasStartedLoading = true
             // 讀取權限要給到文件所在的資料夾，否則同目錄的 manual.js 與 img/ 會載不進來
-            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+            webView.loadFileURL(requestURL, allowingReadAccessTo: url.deletingLastPathComponent())
         }
 
         // unused-param-ok: 簽名由 WKNavigationDelegate 規定
@@ -166,7 +178,7 @@ struct DocumentWebView: UIViewRepresentable {
         private func recover(_ webView: WKWebView) {
             guard !retried else { return }
             retried = true
-            webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
+            webView.loadFileURL(requestURL, allowingReadAccessTo: url.deletingLastPathComponent())
         }
     }
 }

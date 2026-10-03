@@ -70,6 +70,9 @@ final class PlatformContractUITests: XCTestCase {
             XCTAssertTrue(web.waitForExistence(timeout: 10), "\(label)：沒有網頁視圖")
             let text = web.staticTexts.firstMatch
             XCTAssertTrue(text.waitForExistence(timeout: 10), "\(label)：網頁是空白的（沒有任何文字）")
+            // 語言已在首頁選過：文件裡不該再有第二個語言選單。
+            XCTAssertFalse(web.otherElements["Language"].exists || web.popUpButtons.firstMatch.exists,
+                           "\(label)：內嵌文件仍然有自己的語言選單")
             let done = app.buttons["Done"]
             if done.waitForExistence(timeout: 3) { done.tap() }
             _ = web.waitForNonExistence(timeout: 5)

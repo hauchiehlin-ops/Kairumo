@@ -20,4 +20,14 @@ final class BundledDocsOfflineTests: XCTestCase {
             XCTAssertFalse(html.contains("fonts.googleapis.com"), "\(doc.rawValue) 仍然連到 Google Fonts")
         }
     }
+
+    /// App 內嵌的文件照 App 的語言顯示，不再自帶第二個語言選單（`?lang=` 參數）。
+    func testBundledDocumentsHonourTheAppLanguageParameter() throws {
+        for doc in [BundledDocument.manual, .privacy] {
+            let url = try XCTUnwrap(doc.url)
+            let html = try String(contentsOf: url, encoding: .utf8)
+            XCTAssertTrue(html.contains("get(\"lang\")"), "\(doc.rawValue) 沒有讀 ?lang= 參數")
+            XCTAssertTrue(html.contains("bar.style.display = \"none\""), "\(doc.rawValue) 沒有隱藏語言選單")
+        }
+    }
 }

@@ -426,6 +426,12 @@ try {
     else if (nav.includes("hans") || nav === "zh-cn") initial = "zh-Hans";
   }
 } catch (e) { /* ignore */ }
+// App 內嵌顯示時由 App 指定語言（`?lang=`）：語言已經在首頁選過，頁面上就不再放第二個語言選單。
+  // 公開網頁版沒有這個參數，仍然保留選單。
+  try {
+    const forced = new URLSearchParams(location.search).get("lang");
+    if (forced && DOC[forced]) { initial = forced; bar.style.display = "none"; }
+  } catch (e) { /* ignore */ }
 render(initial);
 </script>
 </body>

@@ -758,7 +758,7 @@ private fun NotebookHome(
                     ) {
                         TextButton(onClick = { homeDocs = null }) { Text(l("close")) }
                     }
-                    DocsViewer(asset, modifier = Modifier.fillMaxSize())
+                    DocsViewer(asset, languageTag = deviceLanguageTag(), modifier = Modifier.fillMaxSize())
                 }
             }
         }
@@ -5692,7 +5692,7 @@ private fun InkScreen(
                     ) {
                         TextButton(onClick = { docsAsset = null }) { Text(l10n("close")) }
                     }
-                    DocsViewer(asset, modifier = Modifier.fillMaxSize())
+                    DocsViewer(asset, languageTag = deviceLanguageTag(), modifier = Modifier.fillMaxSize())
                 }
             }
         }
