@@ -209,7 +209,12 @@ fn triangle_fit(
 ) -> (f32, Option<Vec<(f32, f32)>>) {
     let simplified = crate::geometry::simplify(points, diag * 0.08);
     // 閉合三角形通常簡化後頂點在 3~5 之間（首尾重複）
-    let vertices = if simplified.len() >= 4 && hypot(simplified[0].0 - simplified.last().unwrap().0, simplified[0].1 - simplified.last().unwrap().1) < diag * 0.25 {
+    let vertices = if simplified.len() >= 4
+        && hypot(
+            simplified[0].0 - simplified.last().unwrap().0,
+            simplified[0].1 - simplified.last().unwrap().1,
+        ) < diag * 0.25
+    {
         &simplified[..simplified.len() - 1]
     } else {
         &simplified[..]
@@ -232,7 +237,10 @@ fn triangle_fit(
         }
         let p0 = sorted[0];
         // p1: 離 p0 夠遠的點
-        let p1 = match sorted.iter().find(|p| hypot(p.0 - p0.0, p.1 - p0.1) > diag * 0.4) {
+        let p1 = match sorted
+            .iter()
+            .find(|p| hypot(p.0 - p0.0, p.1 - p0.1) > diag * 0.4)
+        {
             Some(&p) => p,
             None => return (f32::INFINITY, None),
         };
@@ -288,16 +296,13 @@ fn detect_arrow(points: &[(f32, f32)], _total_length: f32, diag: f32) -> Option<
     }
 
     // 找離起點最遠的點作為箭頭頂點（若有多個取最早到達者，即主幹終點）
-    let (head_idx, &(hx, hy)) = points
-        .iter()
-        .enumerate()
-        .max_by(|(i_a, a), (i_b, b)| {
-            let da = hypot(a.0 - first.0, a.1 - first.1);
-            let db = hypot(b.0 - first.0, b.1 - first.1);
-            da.partial_cmp(&db)
-                .unwrap_or(std::cmp::Ordering::Equal)
-                .then_with(|| i_b.cmp(i_a)) // 最早到達頂點的索引
-        })?;
+    let (head_idx, &(hx, hy)) = points.iter().enumerate().max_by(|(i_a, a), (i_b, b)| {
+        let da = hypot(a.0 - first.0, a.1 - first.1);
+        let db = hypot(b.0 - first.0, b.1 - first.1);
+        da.partial_cmp(&db)
+            .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| i_b.cmp(i_a)) // 最早到達頂點的索引
+    })?;
 
     // 箭頭頂點離起點必須佔有足夠比例的主幹長度，且通常在筆畫中後段（25%~90% 處）
     let stem_len = hypot(hx - first.0, hy - first.1);
@@ -596,7 +601,10 @@ mod tests {
         let mut pts = Vec::new();
         // 底邊 (0, 100) -> (100, 100)
         for i in 0..15 {
-            pts.push((i as f32 * (100.0 / 14.0), 100.0 + if i % 2 == 0 { 0.0 } else { 1.5 }));
+            pts.push((
+                i as f32 * (100.0 / 14.0),
+                100.0 + if i % 2 == 0 { 0.0 } else { 1.5 },
+            ));
         }
         // 右邊 (100, 100) -> (50, 10)
         for i in 0..15 {
