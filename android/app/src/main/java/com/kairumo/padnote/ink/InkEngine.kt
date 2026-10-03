@@ -342,6 +342,10 @@ class InkEngine(
             }
         }
 
+        if (finalPoints.size >= 3) {
+            finalPoints = uniffi.padnote_core.streamlineSmoothPoints(finalPoints, 0.35f, 1.0f, 0.20f)
+        }
+
         val target = session
         val page = pageId
         val coreId = if (target != null && page != null) {

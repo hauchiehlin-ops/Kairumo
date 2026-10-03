@@ -56,6 +56,42 @@ fn to_ink(p: &StrokePoint) -> InkPoint {
     }
 }
 
+fn from_ink(p: InkPoint) -> StrokePoint {
+    StrokePoint {
+        x: p.x,
+        y: p.y,
+        pressure: p.pressure,
+        tilt: p.tilt,
+        azimuth: p.azimuth,
+        dt_us: p.dt_us,
+        roll: p.roll,
+    }
+}
+
+/// 套用即時流線防抖（Streamline）、壓感伽瑪曲線（Gamma）與筆尾動態出鋒（Taper）。
+#[uniffi::export]
+pub fn streamline_smooth_points(
+    points: Vec<StrokePoint>,
+    amount: f32,
+    gamma: f32,
+    taper: f32,
+) -> Vec<StrokePoint> {
+    if points.is_empty() {
+        return Vec::new();
+    }
+    let pts: Vec<InkPoint> = points.iter().map(to_ink).collect();
+    let curve = padnote_ink::PressureCurve {
+        min_threshold: 0.02,
+        max_threshold: 0.98,
+        gamma: if gamma > 0.01 { gamma } else { 1.0 },
+    };
+    let mut smoothed = padnote_ink::apply_streamline(&pts, amount, curve);
+    if taper > 1e-4 {
+        padnote_ink::apply_taper(&mut smoothed, taper);
+    }
+    smoothed.into_iter().map(from_ink).collect()
+}
+
 /// 這支筆是不是由自繪引擎算繪（要呼叫 `brush_dabs`）。
 #[uniffi::export]
 pub fn brush_is_custom(tool: ToolKind) -> bool {
@@ -886,5 +922,51 @@ mod tests {
                 assert!(d.y > -10.0 && d.y < 34.0, "{t:?} 預覽超出上下：{d:?}");
             }
         }
+    }
+
+    #[test]
+    fn streamline_smooth_points_via_ffi_works() {
+        let pts = vec![
+            StrokePoint {
+                x: 0.0,
+                y: 0.0,
+                pressure: 0.5,
+                tilt: 0.0,
+                azimuth: 0.0,
+                dt_us: 0,
+                roll: 0.0,
+            },
+            StrokePoint {
+                x: 10.0,
+                y: 2.0,
+                pressure: 0.5,
+                tilt: 0.0,
+                azimuth: 0.0,
+                dt_us: 10,
+                roll: 0.0,
+            },
+            StrokePoint {
+                x: 20.0,
+                y: -2.0,
+                pressure: 0.5,
+                tilt: 0.0,
+                azimuth: 0.0,
+                dt_us: 20,
+                roll: 0.0,
+            },
+            StrokePoint {
+                x: 30.0,
+                y: 0.0,
+                pressure: 0.8,
+                tilt: 0.0,
+                azimuth: 0.0,
+                dt_us: 30,
+                roll: 0.0,
+            },
+        ];
+        let smoothed = streamline_smooth_points(pts.clone(), 0.5, 1.0, 0.25);
+        assert_eq!(smoothed.len(), pts.len());
+        // 尾部出鋒使得末點壓感顯著下降
+        assert!(smoothed.last().unwrap().pressure < 0.3);
     }
 }

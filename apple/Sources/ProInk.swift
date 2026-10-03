@@ -319,9 +319,18 @@ final class ProInkLayerView: UIView {
     }
 
     func endStroke() {
-        guard let stroke = live else { return }
+        guard var stroke = live else { return }
         live = nil
         liveCache = nil
+        if stroke.points.count >= 3 {
+            let pts = stroke.points.map {
+                StrokePoint(x: $0.x, y: $0.y, pressure: $0.pressure, tilt: $0.tilt, azimuth: $0.azimuth, dtUs: $0.dtUs, roll: $0.roll)
+            }
+            let smoothed = streamlineSmoothPoints(points: pts, amount: 0.35, gamma: 1.0, taper: 0.20)
+            stroke.points = smoothed.map {
+                ProPoint(x: $0.x, y: $0.y, pressure: $0.pressure, tilt: $0.tilt, azimuth: $0.azimuth, dtUs: $0.dtUs, roll: $0.roll)
+            }
+        }
         ownStrokes.append(stroke)
         setNeedsDisplay(stroke.bounds)
         persist()

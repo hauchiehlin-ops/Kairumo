@@ -883,6 +883,40 @@ impl PadnoteSession {
         Ok(())
     }
 
+    /// 智慧閉合向量填色（ColorDrop / Smart Fill）：
+    /// 在指定的頁面與種子點嘗試偵測封閉輪廓並自動填入填色多邊形筆跡。
+    /// 回傳新筆畫的 id（若未封閉或超出範圍則回傳 None）。
+    pub fn smart_fill_at(
+        &self,
+        page_id: String,
+        seed_x: f32,
+        seed_y: f32,
+        color_rgba: Vec<u8>,
+    ) -> Result<Option<String>, FfiError> {
+        let page = parse_uuid(&page_id)?;
+        let strokes = self.lock().visible_strokes(page)?;
+        let options = padnote_ink::FillOptions::default();
+        if let Some(fill) = padnote_ink::smart_fill(seed_x, seed_y, &strokes, options) {
+            let points: Vec<StrokePoint> = fill
+                .polygon
+                .into_iter()
+                .map(|(x, y)| StrokePoint {
+                    x,
+                    y,
+                    pressure: 0.5,
+                    tilt: 0.0,
+                    azimuth: 0.0,
+                    dt_us: 100,
+                    roll: 0.0,
+                })
+                .collect();
+            let new_id = self.add_stroke(page_id, ToolKind::Watercolor, color_rgba, 1.0, points)?;
+            Ok(Some(new_id))
+        } else {
+            Ok(None)
+        }
+    }
+
     /// 目前可見的筆畫摘要。
     ///
     /// 刻意不回傳全部取樣點 —— 一頁數萬個點跨 FFI 邊界會很慢。
@@ -2617,6 +2651,73 @@ mod tests {
 
         s.erase_stroke(page.clone(), stroke).unwrap();
         assert!(s.visible_strokes(page).unwrap().is_empty());
+    }
+
+    #[test]
+    fn smart_fill_via_session_creates_stroke() {
+        let s = session("smartfill");
+        let page = s.first_page_id().unwrap();
+
+        // 畫一個閉合正方形
+        let half = 30.0f32;
+        let (cx, cy) = (100.0f32, 100.0f32);
+        let pt = |x, y| StrokePoint {
+            x,
+            y,
+            pressure: 0.5,
+            tilt: 0.0,
+            azimuth: 0.0,
+            dt_us: 10,
+            roll: 0.0,
+        };
+        s.add_stroke(
+            page.clone(),
+            ToolKind::Fineliner,
+            vec![0, 0, 0, 255],
+            3.0,
+            vec![pt(cx - half, cy - half), pt(cx + half, cy - half)],
+        )
+        .unwrap();
+        s.add_stroke(
+            page.clone(),
+            ToolKind::Fineliner,
+            vec![0, 0, 0, 255],
+            3.0,
+            vec![pt(cx + half, cy - half), pt(cx + half, cy + half)],
+        )
+        .unwrap();
+        s.add_stroke(
+            page.clone(),
+            ToolKind::Fineliner,
+            vec![0, 0, 0, 255],
+            3.0,
+            vec![pt(cx + half, cy + half), pt(cx - half, cy + half)],
+        )
+        .unwrap();
+        s.add_stroke(
+            page.clone(),
+            ToolKind::Fineliner,
+            vec![0, 0, 0, 255],
+            3.0,
+            vec![pt(cx - half, cy + half), pt(cx - half, cy - half)],
+        )
+        .unwrap();
+
+        // 嘗試在中心填色
+        let filled_id = s
+            .smart_fill_at(page.clone(), cx, cy, vec![255, 0, 0, 180])
+            .unwrap();
+        assert!(filled_id.is_some(), "閉合區域應成功填色");
+
+        // 驗證總筆畫數由 4 增加到 5
+        let visible = s.visible_strokes(page.clone()).unwrap();
+        assert_eq!(visible.len(), 5);
+
+        // 在未閉合的空曠處填色應回傳 None
+        let unclosed = s
+            .smart_fill_at(page, 500.0, 500.0, vec![0, 255, 0, 180])
+            .unwrap();
+        assert!(unclosed.is_none());
     }
 
     // ---- 套索 ----
