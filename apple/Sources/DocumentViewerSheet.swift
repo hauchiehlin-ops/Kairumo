@@ -135,6 +135,8 @@ struct DocumentWebView: UIViewRepresentable {
             webView.loadFileURL(url, allowingReadAccessTo: url.deletingLastPathComponent())
         }
 
+        // unused-param-ok: 簽名由 WKNavigationDelegate 規定
+        // unused-param-ok: 簽名由 WKNavigationDelegate 規定
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
             // 頁面的腳本是在載入後才長出內容的；等一下再量。
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self, weak webView] in
