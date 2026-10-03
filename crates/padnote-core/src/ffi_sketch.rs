@@ -15,8 +15,10 @@ pub enum FfiRefinedKind {
     /// 沒認出特定圖形，只做了平滑。
     Freehand,
     Line,
+    Arrow,
     Ellipse,
     Rectangle,
+    Triangle,
 }
 
 impl From<RefinedKind> for FfiRefinedKind {
@@ -24,8 +26,10 @@ impl From<RefinedKind> for FfiRefinedKind {
         match kind {
             RefinedKind::Freehand => Self::Freehand,
             RefinedKind::Line => Self::Line,
+            RefinedKind::Arrow => Self::Arrow,
             RefinedKind::Ellipse => Self::Ellipse,
             RefinedKind::Rectangle => Self::Rectangle,
+            RefinedKind::Triangle => Self::Triangle,
         }
     }
 }

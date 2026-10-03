@@ -5859,6 +5859,14 @@ extension LocalizationManager {
             .ko: "노트에 삽입",
             .th: "แทรกลงในสมุดบันทึก"
         ],
+        "insert_vertical_space": [
+            .zhHant: "插入空白區域",
+            .en: "Insert Space",
+            .zhHans: "插入空白区域",
+            .ja: "スペースを挿入",
+            .ko: "공백 삽입",
+            .th: "แทรกช่องว่าง"
+        ],
         "interaction_arrow": [
             .zhHant: "手勢流程跳轉",
             .en: "Interaction Flows",

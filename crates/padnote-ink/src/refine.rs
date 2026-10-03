@@ -22,8 +22,10 @@ pub enum RefinedKind {
     /// 沒認出特定圖形，只做了平滑。
     Freehand,
     Line,
+    Arrow,
     Ellipse,
     Rectangle,
+    Triangle,
 }
 
 /// 美化後的筆畫。
@@ -109,6 +111,12 @@ fn detect_shape(points: &[(f32, f32)]) -> Option<(RefinedKind, Vec<(f32, f32)>)>
         return Some((RefinedKind::Line, line_points(first, last, count)));
     }
 
+    // ── 箭頭偵測 ──
+    // 使用者常畫一條線並在末端折回兩次或一次形成箭頭（或起點折回）。
+    if let Some(arrow_pts) = detect_arrow(points, total_length, diag) {
+        return Some((RefinedKind::Arrow, arrow_pts));
+    }
+
     let closed = start_end < diag * 0.28;
     if !closed || count < 10 {
         return None;
@@ -119,23 +127,21 @@ fn detect_shape(points: &[(f32, f32)]) -> Option<(RefinedKind, Vec<(f32, f32)>)>
     let rx = width / 2.0;
     let ry = height / 2.0;
 
-    // **兩種圖形一起評分，取誤差小的那個。**
-    //
-    // 原本（Apple 端）是先測橢圓、過門檻就收工，測不過才測矩形。問題是
-    // 那個門檻（平均正規化半徑誤差 < 0.28）連**矩形也過得了** —— 軸對齊
-    // 矩形的平均誤差算出來約 0.15。結果畫一個方框，美化之後變成橢圓，
-    // 矩形那一段幾乎是死碼。這裡改成兩邊都算成「離理想輪廓多遠 ÷ 對角線」，
-    // 同一個尺度上直接比大小，誰近算誰。
+    // **三種閉合圖形一起評分，取誤差最小的那個。**
+    // 圓形/橢圓、矩形、三角形同一個尺度上（離理想輪廓多遠 ÷ 對角線）直接比大小。
     let ellipse_err = ellipse_error(points, cx, cy, rx, ry) / diag;
     let rect_err = rectangle_error(points, min_x, max_x, min_y, max_y) / diag;
+    let (tri_err_val, tri_pts_opt) = triangle_fit(points, min_x, max_x, min_y, max_y, diag);
+    let tri_err = tri_err_val / diag;
 
-    // 兩邊都不像就別硬套。門檻是相對於對角線的比例，所以與圖形大小無關。
-    const MAX_FIT_ERROR: f32 = 0.06;
-    if ellipse_err.min(rect_err) > MAX_FIT_ERROR {
+    // 都不像就別硬套。門檻是相對於對角線的比例，所以與圖形大小無關。
+    const MAX_FIT_ERROR: f32 = 0.065;
+    let best_err = ellipse_err.min(rect_err).min(tri_err);
+    if best_err > MAX_FIT_ERROR {
         return None;
     }
 
-    if ellipse_err <= rect_err {
+    if (best_err - ellipse_err).abs() < 1e-5 {
         let is_circle = (width - height).abs() / width.max(height) < 0.22;
         let (fx, fy) = if is_circle {
             let r = (rx + ry) / 2.0;
@@ -146,10 +152,18 @@ fn detect_shape(points: &[(f32, f32)]) -> Option<(RefinedKind, Vec<(f32, f32)>)>
         return Some((RefinedKind::Ellipse, ellipse_points(cx, cy, fx, fy, count)));
     }
 
-    Some((
-        RefinedKind::Rectangle,
-        rectangle_points(min_x, max_x, min_y, max_y, count),
-    ))
+    if (best_err - rect_err).abs() < 1e-5 {
+        return Some((
+            RefinedKind::Rectangle,
+            rectangle_points(min_x, max_x, min_y, max_y, count),
+        ));
+    }
+
+    if let Some(tri_pts) = tri_pts_opt {
+        return Some((RefinedKind::Triangle, tri_pts));
+    }
+
+    None
 }
 
 /// 各點離該橢圓輪廓的平均距離（點）。
@@ -182,6 +196,188 @@ fn rectangle_error(points: &[(f32, f32)], min_x: f32, max_x: f32, min_y: f32, ma
         })
         .sum();
     sum / points.len() as f32
+}
+
+/// 尋找三角形頂點擬合並計算誤差。
+fn triangle_fit(
+    points: &[(f32, f32)],
+    min_x: f32,
+    max_x: f32,
+    min_y: f32,
+    max_y: f32,
+    diag: f32,
+) -> (f32, Option<Vec<(f32, f32)>>) {
+    let simplified = crate::geometry::simplify(points, diag * 0.08);
+    // 閉合三角形通常簡化後頂點在 3~5 之間（首尾重複）
+    let vertices = if simplified.len() >= 4 && hypot(simplified[0].0 - simplified.last().unwrap().0, simplified[0].1 - simplified.last().unwrap().1) < diag * 0.25 {
+        &simplified[..simplified.len() - 1]
+    } else {
+        &simplified[..]
+    };
+
+    let (v0, v1, v2) = if vertices.len() == 3 {
+        (vertices[0], vertices[1], vertices[2])
+    } else {
+        // 若簡化點數不剛好為 3，找極值三點：離中心最遠的三個角度分佈點
+        let cx = (min_x + max_x) / 2.0;
+        let cy = (min_y + max_y) / 2.0;
+        let mut sorted = points.to_vec();
+        sorted.sort_by(|a, b| {
+            let da = (a.0 - cx).powi(2) + (a.1 - cy).powi(2);
+            let db = (b.0 - cx).powi(2) + (b.1 - cy).powi(2);
+            db.partial_cmp(&da).unwrap_or(std::cmp::Ordering::Equal)
+        });
+        if sorted.len() < 3 {
+            return (f32::INFINITY, None);
+        }
+        let p0 = sorted[0];
+        // p1: 離 p0 夠遠的點
+        let p1 = match sorted.iter().find(|p| hypot(p.0 - p0.0, p.1 - p0.1) > diag * 0.4) {
+            Some(&p) => p,
+            None => return (f32::INFINITY, None),
+        };
+        // p2: 離 p0 與 p1 的連線最遠的點
+        let p2 = match sorted.iter().max_by(|a, b| {
+            let da = crate::geometry::distance_to_segment(**a, p0, p1);
+            let db = crate::geometry::distance_to_segment(**b, p0, p1);
+            da.partial_cmp(&db).unwrap_or(std::cmp::Ordering::Equal)
+        }) {
+            Some(&p) if crate::geometry::distance_to_segment(p, p0, p1) > diag * 0.25 => p,
+            _ => return (f32::INFINITY, None),
+        };
+        (p0, p1, p2)
+    };
+
+    // 計算三角形三邊的平均距離誤差
+    let tri_segments = [(v0, v1), (v1, v2), (v2, v0)];
+    let sum: f32 = points
+        .iter()
+        .map(|&p| {
+            tri_segments
+                .iter()
+                .map(|&(a, b)| crate::geometry::distance_to_segment(p, a, b))
+                .fold(f32::INFINITY, f32::min)
+        })
+        .sum();
+    let err = sum / points.len() as f32;
+
+    let target = polygon_points(&[v0, v1, v2, v0], points.len());
+    (err, Some(target))
+}
+
+/// 偵測單筆手繪箭頭（主幹 + 箭頭翼）
+fn detect_arrow(points: &[(f32, f32)], _total_length: f32, diag: f32) -> Option<Vec<(f32, f32)>> {
+    let count = points.len();
+    if count < 10 || diag < 30.0 {
+        return None;
+    }
+    // Ramer-Douglas-Peucker 簡化
+    let s = crate::geometry::simplify(points, diag * 0.08);
+    // 單筆畫箭頭通常簡化後有 3 到 7 個轉折點：
+    if s.len() < 3 || s.len() > 8 {
+        return None;
+    }
+
+    let first = *points.first()?;
+    let last = *points.last()?;
+
+    // 起點與終點距離不應過近（閉合圖形不是箭頭）
+    let start_end = hypot(first.0 - last.0, first.1 - last.1);
+    if start_end < diag * 0.35 {
+        return None;
+    }
+
+    // 找離起點最遠的點作為箭頭頂點（若有多個取最早到達者，即主幹終點）
+    let (head_idx, &(hx, hy)) = points
+        .iter()
+        .enumerate()
+        .max_by(|(i_a, a), (i_b, b)| {
+            let da = hypot(a.0 - first.0, a.1 - first.1);
+            let db = hypot(b.0 - first.0, b.1 - first.1);
+            da.partial_cmp(&db)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| i_b.cmp(i_a)) // 最早到達頂點的索引
+        })?;
+
+    // 箭頭頂點離起點必須佔有足夠比例的主幹長度，且通常在筆畫中後段（25%~90% 處）
+    let stem_len = hypot(hx - first.0, hy - first.1);
+    if stem_len < diag * 0.70 || head_idx < count * 25 / 100 || head_idx > count * 90 / 100 {
+        return None;
+    }
+
+    // 檢查前半段（主幹）是否足夠筆直
+    let stem_pts = &points[..=head_idx];
+    let (_, _, _, _, stem_path_len) = bounds_and_length(stem_pts);
+    if stem_len / stem_path_len.max(1.0) < 0.85 {
+        return None;
+    }
+
+    // 後半段（翼部）長度不應過長（通常為總長 10%~90%）
+    let tail_pts = &points[head_idx..];
+    let (_, _, _, _, tail_path_len) = bounds_and_length(tail_pts);
+    if tail_path_len < stem_len * 0.1 || tail_path_len > stem_len * 1.5 {
+        return None;
+    }
+
+    // 主幹方向單位向量
+    let dx = (hx - first.0) / stem_len;
+    let dy = (hy - first.1) / stem_len;
+
+    // 箭頭兩翼的長度與角度（約 25 度 ~ 30 度）
+    let wing_len = (stem_len * 0.22).clamp(12.0, 45.0);
+    let wing_angle: f32 = 0.45; // ~26 度
+    let cos_w = wing_angle.cos();
+    let sin_w = wing_angle.sin();
+
+    // 逆向反衝向量 (-dx, -dy) 旋轉
+    let w1 = (
+        hx + wing_len * (-dx * cos_w - -dy * sin_w),
+        hy + wing_len * (-dx * sin_w + -dy * cos_w),
+    );
+    let w2 = (
+        hx + wing_len * (-dx * cos_w + -dy * sin_w),
+        hy + wing_len * (dx * sin_w + -dy * cos_w),
+    );
+
+    // 檢查末端點是否都在箭頭頭部附近（兩翼展開區域）
+    let max_dist_to_head = tail_pts
+        .iter()
+        .map(|&(x, y)| hypot(x - hx, y - hy))
+        .fold(0.0, f32::max);
+    if max_dist_to_head > wing_len * 1.8 {
+        return None;
+    }
+
+    // 理想箭頭折線：起點 -> 箭頭頭部 -> 翼1 -> 箭頭頭部 -> 翼2
+    let arrow_skeleton = [first, (hx, hy), w1, (hx, hy), w2];
+    Some(polygon_points(&arrow_skeleton, count))
+}
+
+fn polygon_points(vertices: &[(f32, f32)], count: usize) -> Vec<(f32, f32)> {
+    if vertices.len() < 2 {
+        return vec![(0.0, 0.0); count];
+    }
+    let num_segs = vertices.len() - 1;
+    let pts_per_seg = (count / num_segs).max(2);
+    let mut out = Vec::with_capacity(num_segs * pts_per_seg);
+    for i in 0..num_segs {
+        let (x1, y1) = vertices[i];
+        let (x2, y2) = vertices[i + 1];
+        let limit = if i == num_segs - 1 {
+            count.saturating_sub(out.len())
+        } else {
+            pts_per_seg
+        };
+        for s in 0..limit {
+            let t = s as f32 / limit as f32;
+            out.push((x1 + (x2 - x1) * t, y1 + (y2 - y1) * t));
+        }
+    }
+    while out.len() < count {
+        out.push(*vertices.last().unwrap());
+    }
+    out.truncate(count);
+    out
 }
 
 fn line_points(start: (f32, f32), end: (f32, f32), count: usize) -> Vec<(f32, f32)> {
@@ -393,6 +589,59 @@ mod tests {
     fn a_two_point_stroke_is_returned_untouched() {
         let pts = vec![(0.0, 0.0), (10.0, 10.0)];
         assert_eq!(refine_stroke(&pts, 1.0).points, pts);
+    }
+
+    #[test]
+    fn a_rough_triangle_is_recognised() {
+        let mut pts = Vec::new();
+        // 底邊 (0, 100) -> (100, 100)
+        for i in 0..15 {
+            pts.push((i as f32 * (100.0 / 14.0), 100.0 + if i % 2 == 0 { 0.0 } else { 1.5 }));
+        }
+        // 右邊 (100, 100) -> (50, 10)
+        for i in 0..15 {
+            let t = i as f32 / 14.0;
+            pts.push((
+                100.0 + (50.0 - 100.0) * t + if i % 2 == 0 { 0.0 } else { -1.5 },
+                100.0 + (10.0 - 100.0) * t,
+            ));
+        }
+        // 左邊 (50, 10) -> (0, 100)
+        for i in 0..15 {
+            let t = i as f32 / 14.0;
+            pts.push((
+                50.0 + (0.0 - 50.0) * t + if i % 2 == 0 { 0.0 } else { 1.5 },
+                10.0 + (100.0 - 10.0) * t,
+            ));
+        }
+        let out = refine_stroke(&pts, 1.0);
+        assert_eq!(out.kind, RefinedKind::Triangle);
+    }
+
+    #[test]
+    fn a_rough_arrow_is_recognised() {
+        let mut pts = Vec::new();
+        // 主幹 (0, 50) -> (100, 50)
+        for i in 0..20 {
+            pts.push((i as f32 * 5.0, 50.0 + if i % 2 == 0 { 0.5 } else { -0.5 }));
+        }
+        // 箭翼1 (100, 50) -> (85, 35)
+        for i in 0..6 {
+            let t = i as f32 / 5.0;
+            pts.push((100.0 - 15.0 * t, 50.0 - 15.0 * t));
+        }
+        // 折返至頂點 (85, 35) -> (100, 50)
+        for i in 0..6 {
+            let t = i as f32 / 5.0;
+            pts.push((85.0 + 15.0 * t, 35.0 + 15.0 * t));
+        }
+        // 箭翼2 (100, 50) -> (85, 65)
+        for i in 0..6 {
+            let t = i as f32 / 5.0;
+            pts.push((100.0 - 15.0 * t, 50.0 + 15.0 * t));
+        }
+        let out = refine_stroke(&pts, 1.0);
+        assert_eq!(out.kind, RefinedKind::Arrow);
     }
 
     #[test]

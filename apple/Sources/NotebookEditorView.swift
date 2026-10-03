@@ -1600,6 +1600,9 @@ public struct NotebookEditorView: View {
     @State private var strokeWidth: CGFloat = 3.5
     @State private var isRulerActive: Bool = false
     @State private var rulerAngleGuide: Double = 0.0
+    @State private var isInsertSpaceActive: Bool = false
+    @State private var insertSpaceDividerY: CGFloat = 300.0
+    @State private var insertSpaceDragAccum: CGFloat = 0.0
     
     @State private var eraserMode: EraserMode = .stroke
     @State private var pixelEraserWidth: CGFloat = 20.0
@@ -3299,6 +3302,13 @@ public struct NotebookEditorView: View {
             }
 
             Section {
+                Button {
+                    withAnimation {
+                        insertSpaceDividerY = min(currentPageHeight - 100, max(150, canvasContentOffset.y + 300))
+                        isInsertSpaceActive.toggle()
+                    }
+                } label: { Label(localizationManager.localized("insert_vertical_space"), systemImage: "arrow.up.and.down.square") }
+                    .accessibilityIdentifier("editor.insert.space")
                 Button { withAnimation { showSketchRefineBar.toggle() } } label: { Label(localizationManager.localized("refine_sketch"), systemImage: "wand.and.stars") }
                     .accessibilityIdentifier("editor.insert.refine_sketch")
                 Button {
@@ -4541,6 +4551,57 @@ public struct NotebookEditorView: View {
                     }
                     .position(x: 400, y: currentPageHeight / 2)
                     .allowsHitTesting(false)
+            }
+
+            // 🌟 插入垂直空間分隔導引器（GoodNotes 風格空間插入條）
+            if isInsertSpaceActive {
+                ZStack(alignment: .leading) {
+                    Rectangle()
+                        .fill(Color.accentColor)
+                        .frame(height: 2)
+                    HStack(spacing: 8) {
+                        Image(systemName: "arrow.up.and.down.circle.fill")
+                            .font(.system(size: 20))
+                            .foregroundColor(.white)
+                        Text(localizationManager.localized("insert_vertical_space"))
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundColor(.white)
+                        Spacer()
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.18)) {
+                                isInsertSpaceActive = false
+                            }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundColor(.white.opacity(0.8))
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color.accentColor.opacity(0.95)).shadow(color: .black.opacity(0.2), radius: 4, y: 2))
+                    .offset(x: 20)
+                }
+                .frame(width: PageGeometry.width, height: 32)
+                .position(x: PageGeometry.width / 2, y: insertSpaceDividerY)
+                .scaleEffect(canvasZoomScale, anchor: .topLeading)
+                .offset(x: -canvasContentOffset.x, y: -canvasContentOffset.y)
+                .zIndex(5)
+                .gesture(
+                    DragGesture()
+                        .onChanged { val in
+                            let delta = val.translation.height - insertSpaceDragAccum
+                            insertSpaceDragAccum = val.translation.height
+                            let targetY = max(50, min(currentPageHeight + 200, insertSpaceDividerY + delta))
+                            insertSpaceDividerY = targetY
+                            if abs(delta) > 0.5 {
+                                applyVerticalSpaceInsertion(splitY: insertSpaceDividerY, deltaY: delta)
+                            }
+                        }
+                        .onEnded { _ in
+                            insertSpaceDragAccum = 0.0
+                        }
+                )
             }
 
 
@@ -6453,6 +6514,69 @@ public struct NotebookEditorView: View {
             self.saveCurrentPageDrawing()
             self.hasLassoSelection = false
         }
+    }
+
+    /// 在指定 Y 軸座標插入或調整垂直空間（GoodNotes 風格插入空間工具）
+    /// 將落在 splitY 以下的所有手寫筆畫與附件往下推移 deltaY，並相應增加頁面高度。
+    private func applyVerticalSpaceInsertion(splitY: CGFloat, deltaY: CGFloat) {
+        guard abs(deltaY) > 1.0 else { return }
+
+        // 1. 移動 PKDrawing 中落在 splitY 以下的筆畫
+        if let canvas = canvasView {
+            let currentStrokes = canvas.drawing.strokes
+            let shiftedStrokes = currentStrokes.map { stroke -> PKStroke in
+                let bounds = stroke.renderBounds
+                if bounds.minY >= splitY {
+                    var transform = stroke.transform
+                    transform = transform.translatedBy(x: 0, y: deltaY)
+                    return PKStroke(ink: stroke.ink, path: stroke.path, transform: transform, mask: stroke.mask)
+                }
+                return stroke
+            }
+            canvas.drawing = PKDrawing(strokes: shiftedStrokes)
+            self.currentDrawing = canvas.drawing
+            self.saveCurrentPageDrawing()
+        }
+
+        // 2. 移動落在 splitY 以下的文字附件方塊
+        if var attachments = notebook.textAttachments {
+            var changed = false
+            for i in 0..<attachments.count where attachments[i].pageIndex == currentPageIndex {
+                if attachments[i].y >= splitY {
+                    attachments[i].y = max(0, attachments[i].y + deltaY)
+                    changed = true
+                }
+            }
+            if changed {
+                notebook.textAttachments = attachments
+                store.updateNotebook(notebook)
+            }
+        }
+
+        // 3. 移動落在 splitY 以下的圖片物件
+        if var images = notebook.attachments {
+            var changed = false
+            for i in 0..<images.count where images[i].pageIndex == currentPageIndex {
+                if images[i].y >= splitY {
+                    images[i].y = max(0, images[i].y + deltaY)
+                    changed = true
+                }
+            }
+            if changed {
+                notebook.attachments = images
+                store.updateNotebook(notebook)
+            }
+        }
+
+        // 4. 動態調整該頁高度，確保下推內容完整容納
+        let newHeight = max(PageGeometry.height, currentPageHeight + deltaY)
+        if newHeight != currentPageHeight {
+            currentPageHeight = newHeight
+        }
+
+        // 觸覺回饋
+        let generator = UIImpactFeedbackGenerator(style: .light)
+        generator.impactOccurred()
     }
 
     private var drawingToolbarContent: some View {
