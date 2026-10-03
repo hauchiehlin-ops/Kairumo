@@ -9,13 +9,23 @@
 
 import SwiftUI
 
+public struct MathEditTarget: Identifiable, Hashable, Sendable {
+    public let id: String
+    public let formula: String
+
+    public init(id: String, formula: String) {
+        self.id = id
+        self.formula = formula
+    }
+}
+
 public struct MathCalculatorSheet: View {
     var onInsertFormula: (String, UIImage) -> Void
     var onInsertEditableText: ((String) -> Void)?
     @Environment(\.dismiss) private var dismiss
     @ObservedObject var localizationManager = LocalizationManager.shared
 
-    @State private var formulaInput: String = "125 * 8 + 45"
+    @State private var formulaInput: String
     @State private var currentResult: MathResult? = nil
     @State private var errorMessage: String? = nil
     @State private var keepCardBorder: Bool = true
@@ -99,9 +109,11 @@ public struct MathCalculatorSheet: View {
     ]
 
     public init(
+        initialFormula: String = "125 * 8 + 45",
         onInsertFormula: @escaping (String, UIImage) -> Void,
         onInsertEditableText: ((String) -> Void)? = nil
     ) {
+        self._formulaInput = State(initialValue: initialFormula)
         self.onInsertFormula = onInsertFormula
         self.onInsertEditableText = onInsertEditableText
     }

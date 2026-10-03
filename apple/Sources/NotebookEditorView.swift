@@ -1653,6 +1653,8 @@ public struct NotebookEditorView: View {
     @State private var editingAttachmentId: String? = nil
     /// 正在重新編修的圖表。帶著規格一起，`sheet(item:)` 才有東西可以開。
     @State private var editingChartAttachmentId: ChartEditTarget? = nil
+    /// 正在重新編修的算式卡片。
+    @State private var editingMathAttachmentId: MathEditTarget? = nil
 
     // Word 文字排版、網址預覽與專業調色狀態
     @State private var showWordStudio: Bool = false
@@ -1744,6 +1746,10 @@ public struct NotebookEditorView: View {
     /// 用來取消上一次的淡出排程：連續切換兩次時，第一次的排程不該把
     /// 第二次剛亮起的徽章關掉。
     @State private var modeBadgeToken: Int = 0
+
+    /// 工具切換快顯提示：點擊任一筆刷或工具時在工具列緊鄰處彈出提示工具名稱
+    @State private var activeToolToast: (name: String, icon: String)? = nil
+    @State private var toolToastToken: Int = 0
 
     /// 畫布上的提示（例如「超出可列印範圍」）。nil 代表沒有要說的話。
     @State private var canvasNotice: String?
@@ -2233,7 +2239,7 @@ public struct NotebookEditorView: View {
         .sheet(isPresented: $showMathCalculator) { resizableSheet {
             MathCalculatorSheet(
                 onInsertFormula: { exprText, cardImage in
-                    insertImageAttachment(cardImage)
+                    insertImageAttachment(cardImage, mathFormula: exprText)
                 },
                 onInsertEditableText: { formulaText in
                     insertFormulaText(formulaText)
@@ -2313,6 +2319,19 @@ public struct NotebookEditorView: View {
             ChartStudioView(editing: identifier.spec) { updatedSpec, updatedImage in
                 replaceChartAttachment(id: identifier.id, spec: updatedSpec, image: updatedImage)
             }
+        } }
+        // 重新編修算式卡片：回到原生的計算視窗，帶入原始輸入的算式
+        .sheet(item: $editingMathAttachmentId) { target in resizableSheet {
+            MathCalculatorSheet(
+                initialFormula: target.formula,
+                onInsertFormula: { exprText, cardImage in
+                    replaceMathAttachment(id: target.id, formula: exprText, image: cardImage)
+                },
+                onInsertEditableText: { formulaText in
+                    replaceMathAttachment(id: target.id, formula: formulaText, image: nil)
+                    insertFormulaText(formulaText)
+                }
+            )
         } }
         .sheet(isPresented: $showNoteIntelligence) { resizableSheet {
             NoteIntelligenceSheet(
@@ -4081,7 +4100,13 @@ public struct NotebookEditorView: View {
                         AttachmentItemView(
                             attachment: binding(for: item.id),
                             onEdit: {
-                                self.editingAttachmentId = item.id
+                                if let formula = item.mathFormula {
+                                    self.editingMathAttachmentId = MathEditTarget(id: item.id, formula: formula)
+                                } else if let spec = item.chartSpec {
+                                    self.editingChartAttachmentId = ChartEditTarget(id: item.id, spec: spec)
+                                } else {
+                                    self.editingAttachmentId = item.id
+                                }
                             },
                             onDelete: {
                                 deletedAttachmentBackup = (type: "image", data: item)
@@ -6371,6 +6396,49 @@ public struct NotebookEditorView: View {
         } else {
             selectedTool = tool
         }
+        flashToolToast(for: tool)
+    }
+
+    /// 點擊筆刷或繪圖工具時，在工具列緊鄰處顯示微型快顯提示，提示該工具名稱。
+    private func flashToolToast(for tool: EditorToolType) {
+        let localizedName = localizationManager.localized(tool.localizationKey)
+        toolToastToken += 1
+        let token = toolToastToken
+        withAnimation(.spring(response: 0.28, dampingFraction: 0.78)) {
+            activeToolToast = (name: localizedName, icon: tool.iconName)
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.3) {
+            guard toolToastToken == token else { return }
+            withAnimation(.easeInOut(duration: 0.24)) {
+                activeToolToast = nil
+            }
+        }
+    }
+
+    /// 緊鄰工具列的輕量快顯工具提示標籤
+    @ViewBuilder
+    private var toolToastIndicator: some View {
+        if let toast = activeToolToast {
+            HStack(spacing: 6) {
+                Image(systemName: toast.icon)
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundColor(.accentColor)
+                Text(toast.name)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.primary)
+            }
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(.ultraThinMaterial, in: Capsule())
+            .overlay(
+                Capsule().stroke(Color.accentColor.opacity(0.4), lineWidth: 1)
+            )
+            .shadow(color: Color.black.opacity(0.12), radius: 6, y: 2)
+            .transition(.scale(scale: 0.85).combined(with: .opacity))
+            .allowsHitTesting(false)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 4)
+        }
     }
 
     private func exitLassoMode() {
@@ -6631,6 +6699,9 @@ public struct NotebookEditorView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .overlay(alignment: .trailing) {
+                toolToastIndicator
+            }
         }
         .background(Color(uiColor: .tertiarySystemGroupedBackground))
         // 使用者把正在用的那一支關掉時要換一支，否則畫面上沒有任何按鈕
@@ -10052,6 +10123,7 @@ public struct NotebookEditorView: View {
     private func insertImageAttachment(
         _ image: UIImage,
         chartSpecJSON: String? = nil,
+        mathFormula: String? = nil,
         at dropPoint: CGPoint? = nil,
         page: Int? = nil
     ) {
@@ -10077,7 +10149,8 @@ public struct NotebookEditorView: View {
             hasShadow: true,
             hasBorder: false,
             filterStyle: .original,
-            chartSpecJSON: chartSpecJSON
+            chartSpecJSON: chartSpecJSON,
+            mathFormula: mathFormula
         )
         if notebook.attachments == nil {
             notebook.attachments = []
@@ -10259,6 +10332,24 @@ public struct NotebookEditorView: View {
         notebook.attachments?[index].chartSpecJSON = spec.encodedJSON()
         store.updateNotebook(notebook)
         editingChartAttachmentId = nil
+    }
+
+    /// 用新算出來的算式卡片取代原本那一張。
+    /// 若轉成文字方塊（image == nil），則從附件移除卡片。
+    private func replaceMathAttachment(id: String, formula: String, image: UIImage?) {
+        guard let index = notebook.attachments?.firstIndex(where: { $0.id == id }) else {
+            editingMathAttachmentId = nil
+            return
+        }
+        if let image = image, let fileName = store.saveAttachmentImage(image) {
+            notebook.attachments?[index].fileName = fileName
+            notebook.attachments?[index].mathFormula = formula
+        } else {
+            // 使用者選擇轉插入為可編輯文字方塊
+            notebook.attachments?.remove(at: index)
+        }
+        store.updateNotebook(notebook)
+        editingMathAttachmentId = nil
     }
 
     /// 目前這一頁的形狀，依堆疊順序。
@@ -10914,6 +11005,20 @@ public struct NotebookEditorView: View {
                         .controlSize(.small)
                     }
 
+                    // 這張圖如果是算式卡片，提供回到計算機重新求值的入口
+                    if let formula = notebook.attachments?
+                        .first(where: { $0.id == id })?.mathFormula {
+                        Button {
+                            editingMathAttachmentId = MathEditTarget(id: id, formula: formula)
+                        } label: {
+                            Label(localizationManager.localized("math_calc"),
+                                  systemImage: "function")
+                                .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                    }
+
                     ImageEditControls(
                         attachment: binding(for: id),
                         onDone: { editingAttachmentId = nil },
@@ -11503,13 +11608,14 @@ struct AttachmentItemView: View {
                 .offset(x: -8, y: -24)
             }
 
-            // 選取時顯示浮動小操作把手：編輯（美化）、邊框保留/刪除、刪除、右下角縮放把手
+            // 選取時顯示浮動小操作把手：編輯（依物件類型開啟專屬視窗）、刪除、右下角縮放把手
             if isSelected {
                 HStack(spacing: 6) {
                     Button {
                         onEdit()
                     } label: {
-                        Image(systemName: "slider.horizontal.3")
+                        let iconName = (attachment.mathFormula != nil) ? "function" : ((attachment.chartSpec != nil) ? "chart.bar.xaxis" : "slider.horizontal.3")
+                        Image(systemName: iconName)
                             .font(.system(size: 11, weight: .bold))
                             .foregroundColor(.white)
                             .padding(5)
@@ -11517,6 +11623,7 @@ struct AttachmentItemView: View {
                             .clipShape(Circle())
                     }
                     .buttonStyle(.plain)
+                    .accessibilityLabel(attachment.mathFormula != nil ? localizationManager.localized("math_calc") : (attachment.chartSpec != nil ? localizationManager.localized("chart_edit") : localizationManager.localized("image_beautify")))
 
                     // 邊框開關已移進「美化圖片」面板（`ImageEditControls` 的
                     // 「保留邊框」）。原本兩個地方都能改同一個值，畫布上那顆

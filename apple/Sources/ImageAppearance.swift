@@ -80,6 +80,7 @@ enum ImageAppearance {
         if let value = item.borderWidth { style["borderWidth"] = value }
         // "clear" 是哨符不是顏色 —— 原樣帶過去，不要走任何顏色轉換。
         if let value = item.backgroundColorHex { style["backgroundColorHex"] = value }
+        if let value = item.mathFormula { style["mathFormula"] = value }
 
         var root: [String: Any] = [
             objectKey: item.chartSpecJSON == nil ? imageObject : chartObject,
@@ -125,6 +126,7 @@ enum ImageAppearance {
         if let value = style["borderColorHex"] as? String { item.borderColorHex = value }
         if let value = style["borderWidth"] as? Double { item.borderWidth = CGFloat(value) }
         if let value = style["backgroundColorHex"] as? String { item.backgroundColorHex = value }
+        if let value = style["mathFormula"] as? String { item.mathFormula = value }
     }
 
     /// 這段外觀裡原本的檔名。

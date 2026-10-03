@@ -622,6 +622,9 @@ public struct NoteImageAttachment: Identifiable, Codable, Hashable, ObjectFrameS
     /// 這份 JSON 也會寫進 `.padnote` 套件的區塊外觀，所以在 Android 上
     /// 一樣改得動。
     public var chartSpecJSON: String?
+    /// 這張圖如果是算式便簽，這裡放原本輸入的算式表達式字串（例如 "125 * 8 + 45"）。
+    /// 有了它，算式卡片才能重新召喚原生的 MathCalculatorSheet 進行編輯與重新求值。
+    public var mathFormula: String?
 
     public init(
         id: String = UUID().uuidString,
@@ -640,7 +643,8 @@ public struct NoteImageAttachment: Identifiable, Codable, Hashable, ObjectFrameS
         borderColorHex: String? = nil,
         borderWidth: CGFloat? = nil,
         backgroundColorHex: String? = nil,
-        chartSpecJSON: String? = nil
+        chartSpecJSON: String? = nil,
+        mathFormula: String? = nil
     ) {
         self.id = id
         self.fileName = fileName
@@ -657,6 +661,7 @@ public struct NoteImageAttachment: Identifiable, Codable, Hashable, ObjectFrameS
         self.borderWidth = borderWidth
         self.backgroundColorHex = backgroundColorHex
         self.chartSpecJSON = chartSpecJSON
+        self.mathFormula = mathFormula
         self.filterStyle = filterStyle
         self.materialType = materialType
     }
